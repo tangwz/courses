@@ -59,6 +59,7 @@ test('full-text success reports recovery and returns plain excerpts', async () =
                   url: '/a/',
                   meta: { title: 'Tokenizer' },
                   excerpt: '<mark>Token</mark> ID',
+                  plain_excerpt: 'Token ID',
                 }),
               },
             ],
@@ -74,6 +75,35 @@ test('full-text success reports recovery and returns plain excerpts', async () =
   assert.deepEqual(result.results, [
     { url: '/a/', title: 'Tokenizer', excerpt: 'Token ID' },
   ]);
+});
+
+test('search decodes plain excerpts once and preserves literal markup', async () => {
+  const result = await searchCourses(
+    'body',
+    { base: '/' },
+    {
+      loadIndex: async () => ({
+        options: async () => {},
+        search: async () => ({
+          results: [
+            {
+              data: async () => ({
+                url: '/html/',
+                meta: { title: 'HTML' },
+                excerpt:
+                  '<mark>&lt;body&gt;</mark> &amp; x &lt; 3 &#x1F600; &amp;lt;',
+                plain_excerpt: '&lt;body&gt; &amp; x &lt; 3 &#x1F600; &amp;lt;',
+              }),
+            },
+          ],
+        }),
+      }),
+      fetchIndex: async () => {
+        throw new Error('Fallback must not run');
+      },
+    },
+  );
+  assert.equal(result.results[0].excerpt, '<body> & x < 3 \u{1F600} &lt;');
 });
 
 test('default fallback preserves the native fetch calling context', async () => {

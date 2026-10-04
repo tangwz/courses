@@ -1,4 +1,5 @@
 import { createRetryableLoader } from './resources';
+import { decodeHTML } from 'entities';
 
 export type SearchResult = { url: string; title: string; excerpt: string };
 export type Pagefind = {
@@ -12,6 +13,7 @@ export type Pagefind = {
         url: string;
         meta: { title: string };
         excerpt: string;
+        plain_excerpt: string;
       }>;
     }[];
   }>;
@@ -62,7 +64,7 @@ export async function searchCourses(
       results: data.map((item) => ({
         url: item.url,
         title: item.meta.title,
-        excerpt: item.excerpt.replace(/<[^>]*>/g, ''),
+        excerpt: decodeHTML(item.plain_excerpt),
       })),
     };
   } catch {
