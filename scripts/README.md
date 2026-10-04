@@ -45,6 +45,12 @@ npx --yes --package @playwright/cli playwright-cli --session apxml open https://
 /tmp/apxml-venv/bin/python scripts/verify_archive.py --require-full
 ```
 
+抓取脚本的错误恢复测试使用临时目录和模拟响应，不访问原站，也不会修改课程归档：
+
+```bash
+/tmp/apxml-venv/bin/python -m unittest discover -s tests -p '*_test.py'
+```
+
 独立检查正文文本、公式、表格单元格、图表数据和参考链接，并核对目录顺序及上一节/下一节导航：
 
 ```bash

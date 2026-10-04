@@ -426,7 +426,12 @@ def write_index(catalog, details, report):
         if detail:
             count = sum(len(ch['sections']) for ch in detail['chapters'])
             suffix = f' \u2014 {len(detail["chapters"])} \u7ae0 / {count} \u8282'
-        text.append(f'{index}. {md_link(course["title"], path.relative_to(ROOT) / "README.md")}{suffix}')
+        if (path / 'README.md').exists():
+            link = md_link(course['title'], path.relative_to(ROOT) / 'README.md')
+        else:
+            source_url = markdown_url(f'{BASE}/zh/courses/{course["slug"]}')
+            link = f'[{markdown_label(course["title"])}]({source_url})'
+        text.append(f'{index}. {link}{suffix}')
     text.extend(['', '## \u6293\u53d6\u8bb0\u5f55', '', '[\u6293\u53d6\u72b6\u6001](CRAWL_STATUS.md)', ''])
     (ROOT / 'README.md').write_text('\n'.join(text), encoding='utf-8')
     status = ['# \u6293\u53d6\u72b6\u6001', '', f'\u8bfe\u7a0b\u603b\u6570\uff1a{len(catalog)}', '', f'\u8bfe\u7a0b\u76ee\u5f55\uff1a{len(details)}', '',
@@ -602,7 +607,13 @@ def main():
     browser = Browser(args.cli, args.session, args.delay) if args.phase != 'render' else None
     catalog = crawl_catalog(browser)
     details = {}
-    report = {'source': BASE + '/zh/courses', 'course_count': len(catalog), 'errors': [], 'completed_sections': 0}
+    report = {
+        'source': BASE + '/zh/courses',
+        'course_count': len(catalog),
+        'errors': [],
+        'completed_sections': 0,
+        'total_sections': 0,
+    }
     for index, course in enumerate(catalog, 1):
         cache_path = CACHE / 'courses' / f'{course["slug"]}.json'
         try:
@@ -617,14 +628,15 @@ def main():
                 detail = extract_course(response['body'])
                 detail = {k: v for k, v in detail.items() if k not in {'svg_icon', 'cover_icon', 'cover_image'}}
                 save_json(cache_path, detail)
-            details[course['slug']] = detail
+            chapter_count = len(detail['chapters'])
+            section_count = sum(len(ch['sections']) for ch in detail['chapters'])
             render_curriculum(index, detail)
-            print(f'Curriculum {index}/{len(catalog)}: {detail["title"]} ({len(detail["chapters"])} chapters)', flush=True)
+            details[course['slug']] = detail
+            report['total_sections'] += section_count
+            print(f'Curriculum {index}/{len(catalog)}: {detail["title"]} ({chapter_count} chapters)', flush=True)
         except Exception as error:
             report['errors'].append({'url': f'{BASE}/zh/courses/{course["slug"]}', 'error': str(error)})
-            render_curriculum(index, course)
             print(f'ERROR {course["slug"]}: {error}', flush=True)
-        report['total_sections'] = sum(len(ch['sections']) for c in details.values() for ch in c['chapters'])
         write_index(catalog, details, report)
     if args.phase in {'sections', 'all', 'render'}:
         crawl_sections(browser, catalog, details, report, fetch_missing=args.phase != 'render')
