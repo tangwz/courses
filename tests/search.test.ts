@@ -75,3 +75,20 @@ test('full-text success reports recovery and returns plain excerpts', async () =
     { url: '/a/', title: 'Tokenizer', excerpt: 'Token ID' },
   ]);
 });
+
+test('default fallback preserves the native fetch calling context', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async function (this: unknown) {
+    assert.ok(this === undefined || this === globalThis);
+    return Response.json([
+      { url: '/a/', course: 'a', title: 'Token', excerpt: 'Text' },
+    ]);
+  };
+  try {
+    const result = await searchCourses('token', { base: '/' });
+    assert.equal(result.fallback, true);
+    assert.equal(result.results[0].url, '/a/');
+  } finally {
+    globalThis.fetch = original;
+  }
+});

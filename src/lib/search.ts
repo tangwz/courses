@@ -44,7 +44,10 @@ export function loadPagefind(base: string) {
 export async function searchCourses(
   query: string,
   { base, course }: { base: string; course?: string },
-  dependencies = { loadIndex: loadPagefind, fetchIndex: fetch },
+  dependencies = {
+    loadIndex: loadPagefind,
+    fetchIndex: (...args: Parameters<typeof fetch>) => fetch(...args),
+  },
 ): Promise<{ results: SearchResult[]; fallback: boolean }> {
   try {
     const index = await dependencies.loadIndex(base);
