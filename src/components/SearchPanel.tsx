@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ui } from '../lib/ui';
-import { loadPagefind, type SearchResult } from '../lib/search';
+import { searchCourses, type SearchResult } from '../lib/search';
 
 export default function SearchPanel({
   course,
@@ -47,52 +47,30 @@ export default function SearchPanel({
   }, []);
   useEffect(() => {
     let active = true;
+    setResults([]);
+    setError('');
+    setFallback(false);
     if (!query.trim()) {
-      setResults([]);
       setBusy(false);
       return;
     }
     setBusy(true);
     const timer = setTimeout(async () => {
       try {
-        const index = await loadPagefind(base);
-        const response = await index.search(query, {
-          filters: scope && course ? { course } : undefined,
+        const response = await searchCourses(query, {
+          base,
+          course: scope ? course : undefined,
         });
-        const data = await Promise.all(
-          response.results.slice(0, 30).map((result) => result.data()),
-        );
         if (active) {
-          setResults(
-            data.map((item) => ({
-              url: item.url,
-              title: item.meta.title,
-              excerpt: item.excerpt.replace(/<[^>]*>/g, ''),
-            })),
-          );
+          setResults(response.results);
+          setFallback(response.fallback);
           setError('');
         }
       } catch {
-        try {
-          const index: (SearchResult & { course: string })[] = await (
-            await fetch(base + 'search-index.json')
-          ).json();
-          if (active) {
-            setFallback(true);
-            setResults(
-              index
-                .filter(
-                  (item) =>
-                    (!scope || !course || item.course === course) &&
-                    (item.title + item.excerpt)
-                      .toLowerCase()
-                      .includes(query.toLowerCase()),
-                )
-                .slice(0, 30),
-            );
-          }
-        } catch {
-          if (active) setError(ui.noResults);
+        if (active) {
+          setResults([]);
+          setFallback(false);
+          setError(ui.searchError);
         }
       } finally {
         if (active) setBusy(false);
@@ -137,7 +115,7 @@ export default function SearchPanel({
       <div className="search-results" aria-live="polite">
         {busy ? (
           <p>{ui.searching}</p>
-        ) : !query ? (
+        ) : !query.trim() ? (
           <p>{ui.searchHint}</p>
         ) : !results.length ? (
           <p>{error || ui.noResults}</p>
@@ -150,7 +128,7 @@ export default function SearchPanel({
           ))
         )}
       </div>
-      {fallback && <small>{ui.devSearch}</small>}
+      {fallback && <small>{ui.fallbackSearch}</small>}
     </dialog>
   );
 }
