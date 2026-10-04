@@ -15,14 +15,13 @@ from crawl_apxml import CACHE, ROOT, load_json, chapter_dir, course_dir, section
 def main():
     report = dict(verifiedAt=datetime.now(timezone.utc).isoformat(), lessons=0, textErrors=[])
     manifest = load_json(ROOT / 'reports' / 'content-manifest.json')
-    selected = {entry['sourceId'] for entry in manifest['entries'] if entry['kind'] == 'lesson'}
+    if manifest.get('partial'):
+        raise ValueError('Partial content manifests cannot be used for full-site auditing')
     catalog = load_json(CACHE / 'catalog.json')
     for index, item in enumerate(catalog, 1):
         course = load_json(CACHE / 'courses' / f'{item["slug"]}.json')
         for chapter in course['chapters']:
             for lesson in chapter['sections']:
-                if lesson['id'] not in selected:
-                    continue
                 archive = section_path(chapter_dir(course_dir(index, course), chapter), lesson)
                 body = archive.read_text(encoding='utf-8').split('\n\n', 3)[3]
                 body = body.rsplit('\n---\n', 1)[0]

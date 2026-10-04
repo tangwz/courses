@@ -90,6 +90,12 @@ npm run content:prepare -- --course basics-model-evaluation-metrics
 
 转换后重新执行全量转换可以恢复完整内容清单。
 
+单课程清单需要显式指定验证范围；全站校验和正文独立对照会拒绝部分清单，避免把局部检查误报为完整验证：
+
+```bash
+npm run verify -- --course=basics-model-evaluation-metrics
+```
+
 ## 主要代码与验证
 
 - `src/layouts/ReaderLayout.astro`：静态正文、目录、大纲及上下篇导航。

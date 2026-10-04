@@ -24,6 +24,10 @@ const base = (process.env.SITE_BASE || '/').replace(/\/$/, '');
 const courseScope = process.argv
   .find((arg) => arg.startsWith('--course='))
   ?.split('=')[1];
+if (manifest.partial && !courseScope)
+  throw new Error(
+    'Partial content manifests require --course=<slug>; regenerate all content before full-site verification.',
+  );
 const routeSet = new Set();
 const decodeMeta = (text) =>
   Object.fromEntries(
