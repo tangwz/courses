@@ -106,3 +106,52 @@ test('grayscale pixel matrices use heatmaps instead of RGB image traces', () => 
   ]);
   assert.equal(definition.data[0].type, 'image');
 });
+test('grayscale comparisons share an absolute intensity scale without reversing unrelated axes', () => {
+  const definition = {
+    data: [
+      { type: 'image', z: [[50, 200]], yaxis: 'y' },
+      { type: 'image', z: [[150, 150]], yaxis: 'y2' },
+      { type: 'image', z: [[130, 160]], yaxis: 'y3' },
+      { type: 'image', z: [[10, 20]], zmin: 10, zmax: 20, yaxis: 'y5' },
+    ],
+    layout: { yaxis4: { autorange: true } },
+  };
+  const source = structuredClone(definition);
+  const normalized = normalizePlot(definition as never, false);
+  const traces = normalized.data as {
+    zmin: number;
+    zmax: number;
+    zauto: boolean;
+  }[];
+  assert.deepEqual(
+    traces.map(({ zmin, zmax, zauto }) => [zmin, zmax, zauto]),
+    [
+      [0, 255, false],
+      [0, 255, false],
+      [0, 255, false],
+      [10, 20, false],
+    ],
+  );
+  for (const key of ['yaxis', 'yaxis2', 'yaxis3', 'yaxis5']) {
+    assert.equal(
+      (normalized.layout as Record<string, { autorange: string }>)[key]
+        .autorange,
+      'reversed',
+    );
+  }
+  assert.equal(normalized.layout?.yaxis4?.autorange, true);
+  assert.deepEqual(definition, source);
+});
+
+test('RGB image traces and existing heatmap scales are preserved', () => {
+  const definition = {
+    data: [
+      { type: 'image', z: [[[128, 64, 32]]] },
+      { type: 'heatmap', z: [[0.2, 0.8]], zmin: 0, zmax: 1 },
+    ],
+  };
+  assert.deepEqual(
+    normalizePlot(definition as never, false).data,
+    definition.data,
+  );
+});

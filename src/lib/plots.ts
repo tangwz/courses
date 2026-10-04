@@ -49,6 +49,10 @@ export function normalizePlot(
       z?: unknown[][];
       colorscale?: string;
       showscale?: boolean;
+      zmin?: number | number[];
+      zmax?: number | number[];
+      zauto?: boolean;
+      yaxis?: string;
       colorbar?: unknown;
       marker?: { colorbar?: unknown };
     };
@@ -66,8 +70,13 @@ export function normalizePlot(
       t.type = 'heatmap';
       t.colorscale = 'Greys';
       t.showscale = false;
-      for (const axis of [layout.yaxis, layout.yaxis2, layout.yaxis3])
-        if (axis) axis.autorange = 'reversed';
+      t.zmin = typeof t.zmin === 'number' ? t.zmin : 0;
+      t.zmax = typeof t.zmax === 'number' ? t.zmax : 255;
+      t.zauto = false;
+      const axisKey = (t.yaxis || 'y').replace(/^y/, 'yaxis');
+      const axes = layout as Record<string, Partial<Plotly.LayoutAxis>>;
+      const axis = (axes[axisKey] ||= {});
+      axis.autorange = 'reversed';
     }
     return t as Plotly.Data;
   });
