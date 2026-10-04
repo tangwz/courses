@@ -144,6 +144,16 @@ for (const { entry, metadata, route } of sources) {
       errors.push(`Broken internal link: ${route} -> ${target}`);
     counts.links++;
   });
+  if (entry.kind === 'chapter') {
+    const directory = $('#chapter-lessons');
+    const outline = $('#reader-toc a[href="#chapter-lessons"]');
+    if (
+      directory.length !== 1 ||
+      outline.length !== 1 ||
+      directory.text() !== outline.text()
+    )
+      errors.push(`Chapter catalog outline mismatch: ${route}`);
+  }
   if (entry.kind === 'course') {
     const expected = JSON.parse(
       await readFile(`.crawl/cache/courses/${metadata.course}.json`, 'utf8'),
