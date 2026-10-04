@@ -1,7 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { normalizePlot } from '../src/lib/plots';
+import { createFrameRegistrar, normalizePlot } from '../src/lib/plots';
+import type * as Plotly from 'plotly.js';
+
+test('animation frames register once per chart across concurrent and repeated renders', async () => {
+  const register = createFrameRegistrar();
+  const first = {} as HTMLElement;
+  const second = {} as HTMLElement;
+  const frames = [{ data: [{ type: 'scatter', y: [1] }] }] as Plotly.Frame[];
+  const calls: Plotly.Root[] = [];
+  const plotly = {
+    addFrames: async (canvas: Plotly.Root) => {
+      calls.push(canvas);
+      return canvas as Plotly.PlotlyHTMLElement;
+    },
+  };
+  const initial = register(first, frames, plotly);
+  assert.equal(register(first, frames, plotly), initial);
+  await initial;
+  await register(first, frames, plotly);
+  await register(second, frames, plotly);
+  assert.deepEqual(calls, [first, second]);
+});
+
+test('failed animation frame registration can retry without repeating successful calls', async () => {
+  const register = createFrameRegistrar();
+  const canvas = {} as HTMLElement;
+  const frames = [{ data: [{ type: 'scatter', y: [1] }] }] as Plotly.Frame[];
+  let calls = 0;
+  const plotly = {
+    addFrames: async () => {
+      if (!calls++) throw new Error('Registration failed');
+      return canvas as Plotly.PlotlyHTMLElement;
+    },
+  };
+  await assert.rejects(register(canvas, frames, plotly), /Registration failed/);
+  await register(canvas, frames, plotly);
+  await register(canvas, frames, plotly);
+  assert.equal(calls, 2);
+});
 
 test('plot adaptation preserves source data and makes titles compatible with Plotly 3', () => {
   const definition = {

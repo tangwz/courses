@@ -134,6 +134,27 @@ export function normalizePlot(
     },
   };
 }
+export function createFrameRegistrar() {
+  const loaders = new WeakMap<
+    HTMLElement,
+    () => Promise<Plotly.PlotlyHTMLElement>
+  >();
+  return (
+    canvas: HTMLElement,
+    frames: Plotly.Frame[],
+    plotly: Pick<typeof Plotly, 'addFrames'>,
+  ) => {
+    let ensureFrames = loaders.get(canvas);
+    if (!ensureFrames) {
+      ensureFrames = createRetryableLoader(() =>
+        plotly.addFrames(canvas, frames),
+      );
+      loaders.set(canvas, ensureFrames);
+    }
+    return ensureFrames();
+  };
+}
+
 export function initPlots(runtimeUrl: string) {
   const figures = [
     ...document.querySelectorAll<HTMLElement>('[data-plot-url]'),
@@ -146,6 +167,7 @@ export function initPlots(runtimeUrl: string) {
     ),
   );
   const loaded = new Map<HTMLElement, PlotDefinition>();
+  const registerFrames = createFrameRegistrar();
   const widths = new WeakMap<HTMLElement, number>();
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
@@ -190,8 +212,9 @@ export function initPlots(runtimeUrl: string) {
         displaylogo: false,
         scrollZoom: false,
       });
-      if (definition.frames?.length)
-        await plotly.addFrames(canvas, definition.frames);
+      if (definition.frames?.length) {
+        await registerFrames(canvas, definition.frames, plotly);
+      }
       status.hidden = true;
       figure.dataset.plotLoaded = 'true';
     } catch (error) {
