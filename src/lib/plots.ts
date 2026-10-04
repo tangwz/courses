@@ -47,7 +47,7 @@ export function normalizePlot(
       mode?: string;
       orientation?: string;
       z?: unknown[][];
-      colorscale?: string;
+      colorscale?: Plotly.ColorScale;
       showscale?: boolean;
       zmin?: number | number[];
       zmax?: number | number[];
@@ -68,7 +68,10 @@ export function normalizePlot(
     }
     if (t.type === 'image' && typeof t.z?.[0]?.[0] === 'number') {
       t.type = 'heatmap';
-      t.colorscale = 'Greys';
+      t.colorscale = [
+        [0, 'rgb(0, 0, 0)'],
+        [1, 'rgb(255, 255, 255)'],
+      ];
       t.showscale = false;
       t.zmin = typeof t.zmin === 'number' ? t.zmin : 0;
       t.zmax = typeof t.zmax === 'number' ? t.zmax : 255;

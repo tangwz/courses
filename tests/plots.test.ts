@@ -156,6 +156,10 @@ test('grayscale pixel matrices use heatmaps instead of RGB image traces', () => 
   };
   const normalized = normalizePlot(definition as never, false);
   assert.equal(normalized.data[0].type, 'heatmap');
+  assert.deepEqual((normalized.data[0] as { colorscale: unknown }).colorscale, [
+    [0, 'rgb(0, 0, 0)'],
+    [1, 'rgb(255, 255, 255)'],
+  ]);
   assert.deepEqual((normalized.data[0] as { z: number[][] }).z, [
     [0, 255],
     [128, 64],
