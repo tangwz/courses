@@ -24,16 +24,24 @@ const { title, description = ui.library, reader = false, course } = Astro.props;
     <title>{title} · {ui.brand}</title>
     <script is:inline>
       try {
-        const settings = JSON.parse(
-          localStorage.getItem('course-reader-settings') || '{}',
-        );
-        const theme = settings.theme || 'system';
-        document.documentElement.dataset.theme =
-          theme === 'system'
-            ? matchMedia('(prefers-color-scheme: dark)').matches
-              ? 'dark'
-              : 'light'
-            : theme;
+        const readSettings = () => {
+          try {
+            return JSON.parse(
+              localStorage.getItem('course-reader-settings') || '{}',
+            );
+          } catch {
+            return {};
+          }
+        };
+        const media = matchMedia('(prefers-color-scheme: dark)');
+        const applyTheme = () => {
+          const theme = readSettings().theme || 'system';
+          document.documentElement.dataset.theme =
+            theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
+        };
+        applyTheme();
+        media.addEventListener('change', applyTheme);
+        const settings = readSettings();
         if (settings.fontSize)
           document.documentElement.style.setProperty(
             '--reader-font',
