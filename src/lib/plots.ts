@@ -8,6 +8,19 @@ type PlotDefinition = {
   config?: Partial<Plotly.Config>;
 };
 
+function normalizeTitles(value: unknown): void {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach(normalizeTitles);
+    return;
+  }
+  const object = value as Record<string, unknown>;
+  if (typeof object.title === 'string') object.title = { text: object.title };
+  for (const [key, child] of Object.entries(object)) {
+    if (key !== 'meta' && key !== 'customdata') normalizeTitles(child);
+  }
+}
+
 export function normalizePlot(
   definition: PlotDefinition,
   dark: boolean,
@@ -16,21 +29,16 @@ export function normalizePlot(
   const layout = structuredClone(definition.layout || {});
   const source = definition as PlotDefinition & Record<string, unknown>;
   if (source.layout_yaxis2)
-    layout.yaxis2 = source.layout_yaxis2 as Partial<Plotly.LayoutAxis>;
-  if (source.shapes) layout.shapes = source.shapes as Partial<Plotly.Shape>[];
-  if (source.grid) layout.grid = source.grid as Plotly.Layout['grid'];
+    layout.yaxis2 = structuredClone(
+      source.layout_yaxis2,
+    ) as Partial<Plotly.LayoutAxis>;
+  if (source.shapes)
+    layout.shapes = structuredClone(source.shapes) as Partial<Plotly.Shape>[];
+  if (source.grid)
+    layout.grid = structuredClone(source.grid) as Plotly.Layout['grid'];
   if (typeof source.showlegend === 'boolean')
     layout.showlegend = source.showlegend;
-  for (const object of [
-    layout,
-    layout.xaxis,
-    layout.yaxis,
-    layout.xaxis2,
-    layout.yaxis2,
-  ]) {
-    if (object && typeof object.title === 'string')
-      object.title = { text: object.title } as never;
-  }
+  normalizeTitles(layout);
   delete layout.width;
   layout.height = Math.min(650, Math.max(340, layout.height || 400));
   let data = definition.data.map((trace) => {
@@ -41,7 +49,11 @@ export function normalizePlot(
       z?: unknown[][];
       colorscale?: string;
       showscale?: boolean;
+      colorbar?: unknown;
+      marker?: { colorbar?: unknown };
     };
+    normalizeTitles(t.colorbar);
+    normalizeTitles(t.marker?.colorbar);
     if (t.type === 'line' || t.type === 'markers') {
       t.mode = t.type === 'line' ? 'lines' : 'markers';
       t.type = 'scatter';
