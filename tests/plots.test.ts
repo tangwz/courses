@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { normalizePlot } from '../src/lib/plots';
 
 test('plot adaptation preserves source data and makes titles compatible with Plotly 3', () => {
@@ -31,6 +32,61 @@ test('source timeline and profiling events render as duration bars', () => {
   assert.deepEqual((profile.data[0] as { base: number[] }).base, [100]);
   assert.deepEqual((profile.data[0] as { x: number[] }).x, [50]);
 });
+test('legacy traces preserve explicit modes and default only omitted modes', () => {
+  const definition = {
+    data: [
+      { type: 'line', mode: 'lines+markers', marker: { size: 8 } },
+      { type: 'line', mode: 'lines+text' },
+      { type: 'markers', mode: 'markers+text' },
+      { type: 'line', mode: 'none' },
+      { type: 'line' },
+      { type: 'markers' },
+    ],
+  };
+  const source = structuredClone(definition);
+  const normalized = normalizePlot(definition as never, false);
+  assert.deepEqual(
+    normalized.data.map((trace) => trace.type),
+    Array(6).fill('scatter'),
+  );
+  assert.deepEqual(
+    normalized.data.map((trace) => (trace as { mode: string }).mode),
+    ['lines+markers', 'lines+text', 'markers+text', 'none', 'lines', 'markers'],
+  );
+  assert.deepEqual((normalized.data[0] as { marker: unknown }).marker, {
+    size: 8,
+  });
+  assert.deepEqual(definition, source);
+});
+
+for (const id of [1532, 1542]) {
+  test(`committed line plot ${id} retains its point markers`, () => {
+    const definition = JSON.parse(
+      readFileSync(
+        new URL(
+          `../src/content/courses/linear-algebra-essentials-ml/plots/${id}-0.json`,
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    );
+    const source = structuredClone(definition);
+    const normalized = normalizePlot(definition, false);
+    const modes = normalized.data.map(
+      (trace) => (trace as { mode: string }).mode,
+    );
+    assert.ok(modes.includes('lines+markers'));
+    definition.data.forEach(
+      (trace: { type: string; mode: string }, index: number) => {
+        if (trace.type === 'line') {
+          assert.equal(normalized.data[index].type, 'scatter');
+          assert.equal(modes[index], trace.mode);
+        }
+      },
+    );
+    assert.deepEqual(definition, source);
+  });
+}
 test('all subplot axes and nested title containers retain their labels', () => {
   const definition = {
     data: [

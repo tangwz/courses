@@ -59,7 +59,7 @@ export function normalizePlot(
     normalizeTitles(t.colorbar);
     normalizeTitles(t.marker?.colorbar);
     if (t.type === 'line' || t.type === 'markers') {
-      t.mode = t.type === 'line' ? 'lines' : 'markers';
+      t.mode ??= t.type === 'line' ? 'lines' : 'markers';
       t.type = 'scatter';
     }
     if (t.type === 'timeline') {
