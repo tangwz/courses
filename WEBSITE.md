@@ -16,6 +16,7 @@
 npm ci
 npm run dev
 npm run check
+npm run format:check
 npm test
 NODE_OPTIONS=--max-old-space-size=8192 npm run build
 npm run verify
@@ -57,6 +58,8 @@ src/content/courses/
 ```
 
 课程 Markdown 插件将它转换为图表容器。构建时生成同课程下的 JSON 地址，浏览器只加载当前页的图表；Plotly 库在图表接近视口时才加载。源码 JSON 保持原样，运行时适配 Plotly 3 标题格式、旧 trace 类型和时间线数据。
+
+图表脚本加载失败后可以直接重试；搜索初始化失败后，新查询会重新加载全文搜索资源。全文搜索不可用时降级为标题和摘要搜索；两种索引都无法加载时显示错误并清除旧结果。灰度图像转换为热图时默认固定 0–255 的强度范围，源数据显式指定的范围会保留。
 
 原归档保留在根目录的编号课程文件夹中；原始证据在 `.crawl/cache/`。转换不会移动或删除它们。封面采用本地 SVG/CSS 排版，不依赖远程图片。正文里的原图片仍保留外链；原站签名链接可能过期，图片下载不属于本次范围。原站测验保留在线入口，未抓取登录后的题目。
 
@@ -103,3 +106,5 @@ npm run content:prepare -- --course basics-model-evaluation-metrics
 结果位于 `reports/`。`prototype-verification.json` 和 `prototype-content-verification.json` 保存首个课程的验证范围；`site-verification.json` 和 `rendered-content-verification.json` 保存全量验证结果；`reader-refinement-verification.json` 保存阅读器布局及交互检查结果；`reader-feature-removal-verification.json` 保存移除笔记与收藏后的交互检查结果。浏览器截图和检查产物位于 `output/playwright/`。
 
 新增课程时按课程目录维护 Markdown 与图表，更新元数据及顺序，然后执行类型检查、构建和全量验证。若新课程来自原站，先通过原抓取脚本更新缓存和编号归档，再转换。
+
+GitHub Actions 在 PR 和主分支更新时执行格式检查、类型检查、回归测试、完整归档校验、全量构建、页面校验和正文独立对照。工作流使用 `.nvmrc` 中的 Node.js 版本，依赖通过锁文件安装；Python 校验依赖固定在 `scripts/requirements.txt`。构建无需访问原站，浏览器仍可能请求正文保留的外链图片。
