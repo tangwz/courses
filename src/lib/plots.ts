@@ -1,4 +1,5 @@
 import { ui } from './ui';
+import { createRetryableLoader, loadScript } from './resources';
 import type * as Plotly from 'plotly.js';
 type PlotDefinition = {
   data: Plotly.Data[];
@@ -6,9 +7,6 @@ type PlotDefinition = {
   frames?: Plotly.Frame[];
   config?: Partial<Plotly.Config>;
 };
-let runtime: Promise<typeof Plotly>;
-const loadRuntime = () =>
-  (runtime ??= import('plotly.js-dist-min').then((module) => module.default));
 
 export function normalizePlot(
   definition: PlotDefinition,
@@ -112,11 +110,17 @@ export function normalizePlot(
     },
   };
 }
-export function initPlots() {
+export function initPlots(runtimeUrl: string) {
   const figures = [
     ...document.querySelectorAll<HTMLElement>('[data-plot-url]'),
   ];
   if (!figures.length) return;
+  const loadRuntime = createRetryableLoader(() =>
+    loadScript(
+      runtimeUrl,
+      () => (window as Window & { Plotly?: typeof Plotly }).Plotly,
+    ),
+  );
   const loaded = new Map<HTMLElement, PlotDefinition>();
   const widths = new WeakMap<HTMLElement, number>();
   const resizeObserver = new ResizeObserver((entries) => {
@@ -140,6 +144,7 @@ export function initPlots() {
   async function render(figure: HTMLElement) {
     const canvas = figure.querySelector<HTMLElement>('.plot-canvas')!;
     const status = figure.querySelector<HTMLElement>('.plot-status')!;
+    status.hidden = false;
     status.textContent = ui.loadingChart;
     try {
       const definition =

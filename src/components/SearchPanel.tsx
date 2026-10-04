@@ -1,23 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ui } from '../lib/ui';
-
-type Result = { url: string; title: string; excerpt: string };
-type Pagefind = {
-  options: (options: {baseUrl: string}) => Promise<void>;
-  search: (
-    query: string,
-    options: { filters?: Record<string, string> },
-  ) => Promise<{
-    results: {
-      data: () => Promise<{
-        url: string;
-        meta: { title: string };
-        excerpt: string;
-      }>;
-    }[];
-  }>;
-};
-let pagefind: Promise<Pagefind> | undefined;
+import { loadPagefind, type SearchResult } from '../lib/search';
 
 export default function SearchPanel({
   course,
@@ -28,7 +11,7 @@ export default function SearchPanel({
 }) {
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState(Boolean(course));
-  const [results, setResults] = useState<Result[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [fallback, setFallback] = useState(false);
   const [error, setError] = useState('');
@@ -72,12 +55,7 @@ export default function SearchPanel({
     setBusy(true);
     const timer = setTimeout(async () => {
       try {
-        const path = base.replace(/\/$/, '') + '/pagefind/pagefind.js';
-        pagefind ??= import(/* @vite-ignore */ path).then(async index => {
-          await index.options({baseUrl: base});
-          return index;
-        });
-        const index = await pagefind;
+        const index = await loadPagefind(base);
         const response = await index.search(query, {
           filters: scope && course ? { course } : undefined,
         });
@@ -96,7 +74,7 @@ export default function SearchPanel({
         }
       } catch {
         try {
-          const index: (Result & { course: string })[] = await (
+          const index: (SearchResult & { course: string })[] = await (
             await fetch(base + 'search-index.json')
           ).json();
           if (active) {
