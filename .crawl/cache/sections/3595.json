@@ -1,0 +1,61 @@
+{
+  "id": 3595,
+  "title": "使用 ChromaDB 客户端",
+  "meta_title": "使用 ChromaDB 客户端库",
+  "meta_description": "在 Python 中使用 ChromaDB 进行本地或客户端/服务器向量存储与查找。",
+  "content": "<p>ChromaDB 提供了一种对开发者友好的向量 (vector)存储与查找方式，因其简洁性、本地优先功能以及与流行 Python 数据科学工具的结合而受到青睐。它既可在内存中运行以用于快速测试，也能将数据保存到磁盘以在会话之间保持数据，或作为客户端/服务器应用运行。这种灵活性使其成为开发、原型制作和小型部署的合适选项。</p>\n<h3>开始使用 ChromaDB 客户端</h3>\n<p>首先，确保已安装 <code>chromadb</code> 库。如果尚未安装，可以使用 pip 进行安装：</p>\n<pre><code class=\"language-bash\">pip install chromadb\n</code></pre>\n<p>与 ChromaDB 交互的主要方式是通过其客户端对象。您实例化的客户端类型取决于您计划如何使用 ChromaDB：</p>\n<ol>\n<li>\n<p><strong>内存客户端：</strong> 非常适合临时使用、测试或不需要数据持久化的情况。进程结束时数据会丢失。</p>\n<pre><code class=\"language-python\">import chromadb\n\n# 创建一个内存客户端\nclient = chromadb.Client()\nprint(\"Client type: In-memory\")\n</code></pre>\n</li>\n<li>\n<p><strong>持久化客户端：</strong> 在指定目录下将数据存储到磁盘，使数据能在不同会话中存在。</p>\n<pre><code class=\"language-python\">import chromadb\n\n# 创建一个持久化客户端，将数据存储在 './chroma_db'\nclient = chromadb.PersistentClient(path=\"./chroma_db\")\nprint(\"Client type: Persistent\")\n</code></pre>\n</li>\n<li>\n<p><strong>HTTP 客户端：</strong> 连接到正在运行的 ChromaDB 服务器实例，通常用于生产或共享环境。您需要服务器的主机和端口。</p>\n<pre><code class=\"language-python\">import chromadb\n\n# 例子：连接到运行在 localhost:8000 的服务器\n# 如果不同，请替换为您的实际服务器主机和端口\ntry:\n    client = chromadb.HttpClient(host='localhost', port=8000)\n    print(\"Client type: HTTP Client (Connected)\")\nexcept Exception as e:\n    print(f\"Could not connect to ChromaDB server: {e}\")\n    print(\"请确保 ChromaDB 服务器正在指定的主机和端口运行。\")\n    # 适当处理连接错误\n    client = None # 将客户端设置为 None 或退出\n</code></pre>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-z3lqeq\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_client {\n    label = \"Python 应用\";\n    style=filled;\n    color=\"#e9ecef\";\n    Client [label=\"chromadb 客户端\\n(Client(), PersistentClient(), HttpClient())\"];\n  }\n\n  subgraph cluster_backend {\n     label = \"ChromaDB 后端\";\n     style=filled;\n     color=\"#dee2e6\";\n     InMemory [label=\"内存存储\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n     Persistent [label=\"持久化存储\\n(磁盘)\", shape=cylinder, fillcolor=\"#bac8ff\"];\n     Server [label=\"ChromaDB 服务器\\n(HTTP API)\", shape=component, fillcolor=\"#d0bfff\"];\n  }\n\n  Client -> InMemory [label=\"chromadb.Client()\"];\n  Client -> Persistent [label=\"chromadb.PersistentClient()\"];\n  Client -> Server [label=\"chromadb.HttpClient()\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-z3lqeq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ChromaDB 客户端连接到存储或服务器实例的不同方式。</p>\n</blockquote>\n<h3>使用集合</h3>\n<p>在 ChromaDB 中，数据被组织成<em>集合</em>。可以将集合看作关系数据库中的表或其它向量 (vector)数据库中的索引。每个集合通常存储相同维度的向量及其相关元数据。</p>\n<p>您可以使用 <code>create_collection()</code> 或 <code>get_or_create_collection()</code> 创建新集合或获取现有集合的句柄。后者通常更方便，因为如果集合已存在，它不会引发错误。</p>\n<pre><code class=\"language-python\"># 使用之前初始化的 'client' 变量（假设它不是 None）\nif client:\n    # 创建一个名为 'document_embeddings' 的新集合\n    # 如果已存在，这将引发错误\n    try:\n        collection = client.create_collection(\"document_embeddings\")\n        print(\"集合 'document_embeddings' 已创建。\")\n    except Exception as e:\n        print(f\"无法创建集合: {e}\")\n\n    # 获取或创建一个集合（更常用）\n    # 如果 'search_index' 存在，则获取它。否则，创建它。\n    collection = client.get_or_create_collection(\"search_index\")\n    print(f\"已获取或创建集合: {collection.name}\")\n\n    # 您可以在创建时指定嵌入函数\n    # 默认情况下，ChromaDB 使用 Sentence Transformers (all-MiniLM-L6-v2)\n    # 如果需要，稍后会介绍更多嵌入函数\n    # collection = client.get_or_create_collection(\n    #     name=\"my_custom_embeddings\",\n    #     embedding_function=custom_embedding_function # 替换为您的函数\n    # )\nelse:\n    print(\"ChromaDB 客户端未初始化。\")\n\n</code></pre>\n<h3>向集合添加数据</h3>\n<p>一旦您拥有一个集合对象，就可以使用 <code>add()</code> 方法添加数据。您需要为每个条目提供唯一 ID，通常您会提供原始文档（文本）和相关的元数据。</p>\n<p>如果您不直接指定嵌入 (embedding)，ChromaDB 配置的嵌入函数（默认的 Sentence Transformer，或您指定的函数）将自动从 <code>documents</code> 生成它们。</p>\n<pre><code class=\"language-python\">if client and collection: # 确保客户端和集合有效\n    try:\n        collection.add(\n            documents=[\n                \"This is the first document about apples.\",\n                \"The second document discusses oranges and citrus fruits.\",\n                \"A final document mentioning bananas and tropical fruits.\"\n            ],\n            metadatas=[\n                {\"source\": \"doc_1\", \"topic\": \"fruit\"},\n                {\"source\": \"doc_2\", \"topic\": \"fruit\"},\n                {\"source\": \"doc_3\", \"topic\": \"fruit\"}\n            ],\n            ids=[\"id1\", \"id2\", \"id3\"] # 每个文档的唯一 ID\n        )\n        print(\"已成功向集合添加 3 个文档。\")\n\n        # 您也可以添加带有预计算嵌入的数据\n        # 确保维度与集合的预期相符\n        # collection.add(\n        #     embeddings=[[0.1, 0.2, ...], [0.3, 0.4, ...]],\n        #     metadatas=[{\"source\": \"precomputed_1\"}, {\"source\": \"precomputed_2\"}],\n        #     ids=[\"pc_id1\", \"pc_id2\"]\n        # )\n\n    except Exception as e:\n        print(f\"添加文档出错: {e}\")\n        # 处理可能的问题，例如重复的 ID\nelse:\n    print(\"客户端或集合不可用于添加数据。\")\n</code></pre>\n<p><code>add()</code> 方法的主要参数 (parameter)：</p>\n<ul>\n<li><code>documents</code>：字符串列表（文本内容）。如果未提供嵌入且已配置嵌入函数，则需要此参数。</li>\n<li><code>embeddings</code>：列表/数组的列表（向量 (vector)嵌入）。如果未提供文档或您想使用预计算的向量，则需要此参数。</li>\n<li><code>metadatas</code>：字典列表，其中每个字典包含对应文档/嵌入的元数据键值对。</li>\n<li><code>ids</code>：唯一字符串列表，用于标识每个条目。这些是必需的，并且在集合内必须唯一。</li>\n</ul>\n<h3>查询集合</h3>\n<p>向量 (vector)数据库的主要功能是相似性查找。在 ChromaDB 中，您在集合对象上使用 <code>query()</code> 方法。您可以使用文本（文本将自动嵌入 (embedding)）进行查询，或直接提供查询向量。</p>\n<pre><code class=\"language-python\">if client and collection: # 确保客户端和集合有效\n    try:\n        # 使用文本查询 - ChromaDB 会自动嵌入查询文本\n        results = collection.query(\n            query_texts=[\"Tell me about tropical fruits\"],\n            n_results=2 # 请求最相似的 2 个结果\n        )\n        print(\"\\n查询结果 (文本查询):\")\n        print(results)\n\n        # 例子：使用预计算的嵌入向量进行查询\n        # 假设 'query_vector' 是正确维度的列表或 numpy 数组\n        # query_vector = [0.15, 0.25, ...] # 替换为实际向量\n        # results_embedding = collection.query(\n        #     query_embeddings=[query_vector],\n        #     n_results=1\n        # )\n        # print(\"\\n查询结果 (嵌入查询):\")\n        # print(results_embedding)\n\n    except Exception as e:\n        print(f\"\\n查询集合出错: {e}\")\nelse:\n    print(\"\\n客户端或集合不可用于查询。\")\n\n</code></pre>\n<p><code>query()</code> 方法返回一个字典，其中包含 <code>ids</code>、<code>distances</code>、<code>metadatas</code>、<code>embeddings</code> 和 <code>documents</code> 的列表，对应于找到的最近邻居。</p>\n<h3>使用元数据过滤</h3>\n<p>通常，您需要将语义相似性查找与基于元数据属性的过滤结合。ChromaDB 允许在 <code>query()</code> 方法中使用 <code>where</code> 参数 (parameter)来实现此功能。它接受一个字典来指定过滤条件。</p>\n<pre><code class=\"language-python\">if client and collection: # 确保客户端和集合有效\n    try:\n        # 查找与“柑橘”相似但仅来自 'doc_2' 的文档\n        filtered_results = collection.query(\n            query_texts=[\"citrus\"],\n            n_results=1,\n            where={\"source\": \"doc_2\"} # 过滤元数据字段 'source' 等于 'doc_2' 的项\n        )\n        print(\"\\n查询结果 (带 'where' 过滤器):\")\n        print(filtered_results)\n\n        # 示例：使用文档过滤器（简单情况不常用，更适用于复杂逻辑）\n        # filtered_results_doc = collection.query(\n        #     query_texts=[\"apples\"],\n        #     n_results=1,\n        #     where_document={\"$contains\": \"first\"} # 过滤包含单词“first”的文档\n        # )\n        # print(\"\\n查询结果 (带 'where_document' 过滤器):\")\n        # print(filtered_results_doc)\n\n    except Exception as e:\n        print(f\"\\n使用过滤器查询集合出错: {e}\")\nelse:\n    print(\"\\n客户端或集合不可用于带过滤器的查询。\")\n</code></pre>\n<p>ChromaDB 在 <code>where</code> 过滤器中支持多种运算符，例如 <code>$eq</code>（等于，默认）、<code>$ne</code>（不等于）、<code>$gt</code>（大于）、<code>$lt</code>（小于）、<code>$gte</code>（大于或等于）、<code>$lte</code>（小于或等于）、<code>$in</code>、<code>$nin</code>。有关完整的过滤功能，请参阅 ChromaDB 文档。</p>\n<h3>其他操作</h3>\n<p>ChromaDB 的客户端还提供用于管理数据的方法：</p>\n<ul>\n<li><code>get()</code>：按 ID 获取项目，可选择应用过滤器。</li>\n<li><code>update()</code>：修改现有项目（文档、嵌入 (embedding)、元数据）。</li>\n<li><code>upsert()</code>：如果 ID 不存在则添加项目，如果存在则更新项目。</li>\n<li><code>delete()</code>：按 ID 或通过应用过滤器删除项目。</li>\n<li><code>peek()</code>：从集合中获取少量项目（用于检查）。</li>\n<li><code>count()</code>：获取集合中的项目总数。</li>\n</ul>\n<pre><code class=\"language-python\">if client and collection: # 确保客户端和集合有效\n    try:\n        print(f\"\\n集合中的总项目数: {collection.count()}\")\n\n        # 按 ID 获取项目\n        item = collection.get(ids=[\"id1\"])\n        print(f\"\\n已获取项目 'id1': {item}\")\n\n        # 更新项目的元数据\n        collection.update(ids=[\"id1\"], metadatas=[{\"source\": \"doc_1_updated\", \"topic\": \"fruit\", \"reviewed\": True}])\n        item_updated = collection.get(ids=[\"id1\"])\n        print(f\"\\n已更新项目 'id1': {item_updated}\")\n\n        # 删除项目\n        collection.delete(ids=[\"id3\"])\n        print(f\"\\n删除 'id3' 后的项目数: {collection.count()}\")\n\n    except Exception as e:\n        print(f\"\\n执行其他操作时出错: {e}\")\nelse:\n    print(\"\\n客户端或集合不可用于其他操作。\")\n</code></pre>\n<p>ChromaDB 提供了一个简单直接且符合 Python 习惯的接口，用于构建向量 (vector)查找应用。它侧重于易用性和灵活的部署选项，使其成为入门的绝佳工具，也适用于那些托管式大型服务可能过于繁重或不必要的应用。请记住查阅 ChromaDB 官方文档，以获取最新的 API 详情和高级功能。</p>",
+  "slug": "working-with-chromadb",
+  "updates": [],
+  "references": [
+    {
+      "id": 9318,
+      "title": "ChromaDB Documentation",
+      "author": "ChromaDB Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.trychroma.com/",
+      "doi": "",
+      "note": "ChromaDB 的官方用户指南，详细介绍了客户端设置、集合管理、数据操作和高级功能。",
+      "order": 1,
+      "created_at": "2025-09-05T02:26:20.786922Z",
+      "updated_at": "2025-09-09T10:45:47.147994Z"
+    },
+    {
+      "id": 9319,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3973-3983",
+      "url": "https://arxiv.org/abs/1908.10084",
+      "doi": "10.48550/arXiv.1908.10084",
+      "note": "介绍了 Sentence-BERT，一种生成语义有意义的句子嵌入的方法，ChromaDB 默认使用其进行文本嵌入。",
+      "order": 2,
+      "created_at": "2025-09-05T02:26:21.440891Z",
+      "updated_at": "2025-09-09T10:45:48.023711Z"
+    },
+    {
+      "id": 9320,
+      "title": "Vector Databases: A Guide to Modern Data Storage for AI",
+      "author": "Alex Botez, Matt Rickard",
+      "year": "2024",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/vector-databases/9781098159183/",
+      "doi": "",
+      "note": "提供了向量数据库的基础知识、架构、应用场景以及它们如何与 AI 应用集成，为 ChromaDB 的作用提供了更广泛的背景。",
+      "order": 3,
+      "created_at": "2025-09-05T02:26:21.943030Z",
+      "updated_at": "2025-09-09T10:45:48.975798Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

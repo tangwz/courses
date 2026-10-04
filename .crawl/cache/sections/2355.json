@@ -1,0 +1,61 @@
+{
+  "id": 2355,
+  "title": "导入模块：import 语句",
+  "meta_title": "Python import 语句 | 使用模块",
+  "meta_description": "学习使用 `import` 语句将其他模块中的代码引入当前脚本的基本方法。",
+  "content": "<p>将代码组织成独立文件（模块）是一种有益的实践。要在另一个文件中使用一个文件的代码，Python 提供了 <code>import</code> 语句。这个语句是 Python 用于加载和使用其他模块中代码的基本机制。</p>\n<h3>基本 <code>import</code> 语句</h3>\n<p>使用模块最简单的方法是使用 <code>import</code> 关键字，后跟模块文件名（不带 <code>.py</code> 扩展名）。</p>\n<p>假设你想使用一些数学函数。Python 带有一个名为 <code>math</code> 的内置模块，其中包含许多实用的数学运算和常量。要使用它，你的脚本开头是：</p>\n<pre><code class=\"language-python\">import math\n</code></pre>\n<p>这行代码实际做了什么？</p>\n<ol>\n<li><strong>查找模块：</strong> Python 会在它所知道的特定目录列表中查找名为 <code>math.py</code> 的文件（或其它类型的模块，但目前主要针对 <code>.py</code> 文件）。此列表包括包含你当前脚本的目录和标准库位置。</li>\n<li><strong>运行模块（如果需要）：</strong> 如果模块在当前程序执行中尚未加载，Python 会运行 <code>math.py</code> 内部的代码。这使得 <code>math.py</code> 中定义的所有函数、变量和类都变得可用。</li>\n<li><strong>创建命名空间：</strong> 这点非常重要。<code>import math</code> 语句<em>不会</em>直接将 <code>math</code> 模块中的所有函数（如 <code>sqrt</code>）或常量（如 <code>pi</code>）复制到你当前脚本的主要工作区。相反，它在你的脚本命名空间中创建一个名称：<code>math</code>。这个 <code>math</code> 名称现在指向模块对象本身。</li>\n</ol>\n<h3>访问模块内容：点记法</h3>\n<p>因为 <code>import math</code> 创建了一个名为 <code>math</code> 的命名空间，你需要告诉 Python <em>在哪里</em>查找该模块中定义的函数或变量。你通过使用<strong>点记法</strong>来实现这一点：<code>module_name.item_name</code>。</p>\n<p>要使用 <code>math</code> 模块中的平方根函数 (<code>sqrt</code>)，你会这样写：</p>\n<pre><code class=\"language-python\">math.sqrt(16)\n</code></pre>\n<p>要访问常量 pi (<code>pi</code>)，你会这样写：</p>\n<pre><code class=\"language-python\">math.pi\n</code></pre>\n<p>这种显式的 <code>module_name.</code> 前缀很有好处，因为它能避免命名冲突。如果你在脚本中定义了自己的变量 <code>pi</code>，它不会与 <code>math.pi</code> 冲突，因为它们存在于不同的命名空间中。你的 <code>pi</code> 在主脚本的命名空间中，而数学常量则通过 <code>math</code> 命名空间访问。</p>\n<h3>示例：使用 <code>math</code> 模块</h3>\n<p>下面是一个完整、简单的脚本，演示了导入和使用方法：</p>\n<pre><code class=\"language-python\"># 导入整个 math 模块\nimport math\n\n# 计算 25 的平方根\nnumber = 25\nsquare_root = math.sqrt(number)\nprint(f\"The square root of {number} is {square_root}\") # 输出：25 的平方根是 5.0\n\n# 计算半径为 3 的圆的面积\nradius = 3\narea = math.pi * (radius ** 2) # 使用 math.pi 和幂运算符\nprint(f\"The area of a circle with radius {radius} is {area}\") # 输出：半径为 3 的圆的面积是 28.274333882308138\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li><code>import math</code> 使 <code>math</code> 模块可用。</li>\n<li><code>math.sqrt()</code> 调用 <code>math</code> 模块<em>内部</em>的 <code>sqrt</code> 函数。</li>\n<li><code>math.pi</code> 访问 <code>math</code> 模块<em>中的</em> <code>pi</code> 常量。</li>\n</ul>\n<h3>导入多个模块</h3>\n<p>如果你需要来自几个不同模块的函数或变量，可以单独导入它们。标准做法是将每个 import 语句放在文件的顶部，单独一行：</p>\n<pre><code class=\"language-python\">import math\nimport random # 另一个用于生成随机数的标准库模块\nimport os     # 用于与操作系统交互的模块\n\nprint(math.sqrt(100))\nprint(random.randint(1, 10)) # 获取一个 1 到 10 之间的随机整数\nprint(os.getcwd())           # 获取当前工作目录\n</code></pre>\n<p>这种简单的 <code>import module_name</code> 语句，结合点记法，是将外部代码引入 Python 脚本最常用和推荐的方式，它能确保代码清晰并避免名称冲突。在接下来的章节中，我们将了解 import 语句的变体，并进一步了解 Python 的标准库。</p>",
+  "slug": "python-import-statement",
+  "updates": [],
+  "references": [
+    {
+      "id": 4221,
+      "title": "The import system",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/import.html",
+      "doi": "",
+      "note": "这份官方文档权威地解释了 Python 的模块导入机制，包括模块搜索路径、执行和命名空间创建。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:31.055488Z",
+      "updated_at": "2025-09-07T21:05:20.136987Z"
+    },
+    {
+      "id": 4222,
+      "title": "Python Crash Course: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2023",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "552",
+      "url": "https://nostarch.com/products/python-crash-course-3rd-edition",
+      "doi": "",
+      "note": "提供对 Python 模块和 `import` 语句的实践性介绍，通过清晰的示例展示其用法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:31.059938Z",
+      "updated_at": "2025-09-07T21:05:29.698043Z"
+    },
+    {
+      "id": 4223,
+      "title": "Learning Python",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-python-5th/9781449355722/",
+      "doi": "",
+      "note": "Python 基础知识的综合指南，详细阐述模块、导入形式和底层命名空间模型，并提供广泛的解释。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:31.063599Z",
+      "updated_at": "2025-09-07T21:05:26.548564Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

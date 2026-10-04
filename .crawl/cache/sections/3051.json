@@ -1,0 +1,61 @@
+{
+  "id": 3051,
+  "title": "顺序适应与持续学习",
+  "meta_title": "大语言模型的顺序适应与持续学习",
+  "meta_description": "针对已微调模型适应新任务或数据分布的策略。",
+  "content": "<p>“模型通常需要持续学习。虽然微调 (fine-tuning)能使预训练 (pre-training)模型适应特定任务或情境，但模型常需<em>按序</em>学习。初始适应阶段后，可能会有新数据到来、需求变化或需要额外技能。这一过程，称为<strong>顺序适应</strong>或<strong>持续学习</strong>，是指在不每次从头开始微调的情况下，更新一个已经微调过的模型，以引入新的信息或能力。”</p>\n<p>设想一个基于历史支持工单微调的客服聊天机器人。随着新产品的推出或公司政策的变化，聊天机器人需要吸收这些新信息。如果仅仅用<em>新</em>数据来微调现有模型，会面临一个重要问题：<strong>灾难性遗忘</strong>。</p>\n<h3>灾难性遗忘的问题</h3>\n<p>灾难性遗忘指的是神经网络 (neural network)（包括大语言模型 (LLM)）在学习新任务时，会突然丧失在之前任务上表现的能力。在标准微调 (fine-tuning)过程中，梯度更新会修改模型参数 (parameter)，以减少当前批次数据（来自新任务）的损失。这些更新可能会覆盖对之前任务表现良好的参数配置，从而实际上抹去之前获得的知识。</p>\n<p>设想一个模型，先针对任务A（例如，总结医疗报告）进行微调，然后针对任务B（例如，回答患者关于药物的问题）进行后续微调。如果没有特别的干预，任务B的微调过程可能会大幅降低模型执行任务A的能力，即使任务A在不久前才成功习得。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sv5xik\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_0 {\n    label = \"初始状态\";\n    style=filled;\n    color=\"#e9ecef\";\n    BaseModel [label=\"预训练大语言模型\"];\n  }\n\n  subgraph cluster_1 {\n    label = \"阶段1：任务A适应\";\n    style=filled;\n    color=\"#a5d8ff\";\n    FT_A [label=\"在任务A数据上微调\"];\n    Model_A [label=\"针对任务A特化的模型\"];\n  }\n\n  subgraph cluster_2 {\n    label = \"阶段2：任务B适应（朴素方法）\";\n    style=filled;\n    color=\"#ffc9c9\";\n    FT_B [label=\"在任务B数据上微调\"];\n    Model_B [label=\"针对任务B特化的模型\"];\n    Forget [label=\"任务A性能的潜在遗忘\", shape=note, fillcolor=\"#ffec99\"];\n  }\n\n  BaseModel -> FT_A;\n  FT_A -> Model_A;\n  Model_A -> FT_B;\n  FT_B -> Model_B;\n  Model_B -> Forget [style=dashed, color=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sv5xik\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>朴素顺序适应的示意图。直接在任务B上进行微调会修改为任务A学习的参数，可能导致原始任务的性能下降。</p>\n</blockquote>\n<h3>需要顺序适应的情境</h3>\n<p>顺序适应在多种实际情况中都适用：</p>\n<ol>\n<li><strong>演变中的情境：</strong> 法律、医学或金融等情境持续演变。在这些情境中运行的模型必须适应新的法规、发现或市场状况，同时不遗忘基础知识。</li>\n<li><strong>技能累积：</strong> 组织可能希望一个模型随时间推移习得多种技能。例如，一个基础模型可以先微调 (fine-tuning)用于情感分析，随后用于命名实体识别，之后可能用于问答，同时保持对早期技能的熟练度。</li>\n<li><strong>个性化：</strong> 与用户交互的模型可能需要根据随时间累积的个人偏好或交互历史进行适应。</li>\n<li><strong>数据增量可用性：</strong> 有时，任务数据是逐步可用的。顺序适应允许模型随着更多数据的到来而改进，而无需在整个累积数据集上进行昂贵的再训练。</li>\n</ol>\n<h3>持续学习的策略</h3>\n<p>解决灾难性遗忘是成功顺序适应的中心议题。下一节将详细介绍具体的缓解技术，主要方法包括：</p>\n<ol>\n<li><strong>复习（或回放）：</strong> 在新任务（任务B）的训练过程中，包含一部分来自之前任务（任务A）的数据。这使得模型在学习新任务的同时保持在旧任务上的表现。难题在于存储或获取有代表性的旧数据以及增加的计算成本。</li>\n<li><strong>基于正则化 (regularization)的方法：</strong> 在后续微调 (fine-tuning)阶段，向损失函数 (loss function)添加一个正则化项。该项惩罚对之前任务重要的参数 (parameter)的改动，从而促进稳定性。弹性权重 (weight)整合（EWC）是一个典型例子。</li>\n<li><strong>参数隔离与扩展：</strong> 不更新所有参数，而是为特定任务分配专门的参数集。可以使用适配器模块等技术（在第4章讨论过），为新任务添加新的适配器，同时可能冻结基础模型和之前的适配器。这在物理上将负责不同任务的参数分开。</li>\n<li><strong>动态架构：</strong> 随着新任务的学习，修改模型架构本身，例如通过添加为新数据分布定制的新分支或模块。</li>\n</ol>\n<h3>平衡可塑性与稳定性</h3>\n<p>顺序适应围绕着管理<strong>稳定性-可塑性困境</strong>。模型需要足够的可塑性来有效学习新信息，但也需要稳定性来保留现有知识。朴素的微调 (fine-tuning)方法能最大限度地提高可塑性，但稳定性较差（灾难性遗忘）。反之，过度约束模型可能会保留旧知识，但会妨碍其适应新任务的能力。</p>\n<p>有效的持续学习策略旨在达成平衡，使模型能够随时间优雅地积累知识和技能。这需要仔细考量所选的适应技术、数据管理、计算预算以及如何衡量所有已学习任务的性能。</p>\n<p>下一节将更详细地检验旨在缓解灾难性遗忘的特定方法，从而实现大语言模型 (LLM)更有效的顺序适应。</p>",
+  "slug": "sequential-adaptation",
+  "updates": [],
+  "references": [
+    {
+      "id": 3342,
+      "title": "Overcoming catastrophic forgetting in neural networks",
+      "author": "James Kirkpatrick, Razvan Pascanu, Neil C. Rabinowitz, John P. Lillicrap, Peter Moreton, Gregory Sidorov, Niru Mahendran, Richard Hadsell, Demis Hassabis",
+      "year": "2017",
+      "publisher": "National Academy of Sciences",
+      "journal": "Proceedings of the National Academy of Sciences",
+      "volume": "114",
+      "pages": "3521-3526",
+      "url": "https://www.pnas.org/doi/10.1073/pnas.1611835114",
+      "doi": "10.1073/pnas.1611835114",
+      "note": "介绍了弹性权重固化（EWC），这是一种通过识别和保护对先前任务重要的参数来减轻灾难性遗忘的正则化方法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:41.445810Z",
+      "updated_at": "2025-09-09T02:44:39.226292Z"
+    },
+    {
+      "id": 3343,
+      "title": "A Comprehensive Survey of Continual Learning: Theory, Methodology, and Application",
+      "author": "Liyuan Wang, Xingxing Zhang, Maobin Li, Ling Luo, Jianchao Tan, Ruifeng Yuan, Jian Yang, Cong Chen, Xiaofeng Zhang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.14814",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2303.14814",
+      "doi": "10.48550/arXiv.2303.14814",
+      "note": "全面概述了持续学习，涵盖了各种策略、挑战和跨领域应用，包括与LLM顺序适应相关的讨论。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:41.702933Z",
+      "updated_at": "2025-09-09T02:44:34.681940Z"
+    },
+    {
+      "id": 3344,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍了低秩适应（LoRA），这是一种参数高效的微调技术，通过添加小的、任务特定的模块，在LLM的顺序学习场景中具有高度相关性。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:41.759358Z",
+      "updated_at": "2025-09-09T02:44:28.243433Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

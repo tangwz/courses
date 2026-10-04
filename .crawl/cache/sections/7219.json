@@ -1,0 +1,61 @@
+{
+  "id": 7219,
+  "title": "管理实验追踪",
+  "meta_title": "机器学习实验追踪 | 记录参数与指标",
+  "meta_description": "了解如何追踪机器学习实验，包括参数、指标和产物，以便有效地对比结果。",
+  "content": "<p>对代码、数据和模型进行版本控制有助于建立机器学习 (machine learning)的可复现性。尽管如此，还有一个核心问题：如何将特定的模型产物与其生成的具体训练过程联系起来？假设你训练了十几个模型，每个模型的设置都略有不同。一周后，你发现其中一个模型表现非常出色。你是否能准确地找回产生该模型时的代码版本、数据集哈希值和超参数 (parameter) (hyperparameter)组合？这就是实验追踪发挥作用的地方。</p>\n<p>可以将实验追踪看作机器学习项目的系统化实验笔记本。它的做法是系统地记录与每次训练运行相关的所有信息。通过这种方式，你可以创建一个完整且可审计的记录，连接每一个环节，将一个可能混乱的过程转变为规范且科学的过程。</p>\n<h3>实验追踪的目的</h3>\n<p>如果没有正式的追踪系统，机器学习 (machine learning)开发通常依赖于一些不可靠的方法，如电子表格、复杂的文件命名约定（如 <code>model_final_v2_with_more_data.pkl</code>）或零散的文本文件。这种方式容易出现人为错误，难以与团队成员共享，而且几乎无法扩展。当你正式追踪实验时，你会获得以下几个优势：</p>\n<ul>\n<li><strong>完全可复现性：</strong> 通过记录代码的 Git 提交记录、数据版本和训练运行的参数 (parameter)，你可以精确地重现任何实验。这对于调试、验证结果以及建立对模型的信任至关重要。</li>\n<li><strong>系统化对比：</strong> 结构化的日志让你能够轻松对比不同的训练运行。你可以分析更改超参数 (hyperparameter)如何影响模型准确性，或者查看哪组特征集效果最好，从而帮助你做出基于数据的决策。</li>\n<li><strong>提升协作效率：</strong> 当实验结果被集中记录时，团队成员可以查看彼此的工作，避免重复运行相同的实验，并能在现有发现的基础上继续开发。这种透明度加快了开发周期。</li>\n<li><strong>简化审计与调试：</strong> 如果部署的模型开始出现问题，你可以追溯其完整的演变过程。你可以定位到创建该模型时的确切代码、数据和配置，这是诊断问题的第一步。</li>\n</ul>\n<h3>实验中需要记录的内容</h3>\n<p>一个完整的实验日志应该捕获理解和复现训练运行所需的所有信息。这些组成部分通常分为四个主要类别。</p>\n<h4>参数 (parameter)</h4>\n<p>参数是配置训练运行的输入项。它们是你控制的设置。记录任何可能影响最终模型的因素都会很有帮助。</p>\n<ul>\n<li><strong>超参数 (hyperparameter)：</strong> 些是控制学习算法本身的设置，例如神经网络 (neural network)的 <code>learning_rate</code>（学习率）、决策树的 <code>max_depth</code>（最大深度）或随机森林中的 <code>n_estimators</code>（评估器数量）。</li>\n<li><strong>数据和特征参数：</strong> 这包括有关输入数据的信息，例如训练集的路径、图像分辨率或用于训练的特征列表。</li>\n<li><strong>运行参数：</strong> 其他配置详情，如用于初始化的 <code>random_seed</code>（随机种子），以确保随机过程是可重复的。</li>\n</ul>\n<h4>指标</h4>\n<p>指标是衡量模型性能的量化 (quantization)输出。它们告诉你模型在特定任务上的表现如何。</p>\n<ul>\n<li><strong>评估指标：</strong> 这些是在验证集或测试集上计算的汇总分数。例如分类任务中的<strong>准确率 (accuracy)</strong>、<strong>精确率 (precision)</strong>、<strong>召回率 (recall)</strong> 和 <strong>F1 分数 (F1-score)</strong>，或者是回归任务中的 <strong>均方误差 (MSE)</strong> 和 <strong>R 方 (R-squared)</strong>。</li>\n<li><strong>训练指标：</strong> 有时记录训练过程中变化的指标也很有用，例如每轮 (epoch) 后的训练损失和验证损失。这有助于诊断过拟合 (overfitting)等问题。</li>\n</ul>\n<h4>产物 (Artifacts)</h4>\n<p>产物是在训练运行期间和结束时产生的文件。记录产物意味着以一种将其直接连接到对应运行记录的方式进行存储。</p>\n<ul>\n<li><strong>模型文件：</strong> 序列化后的训练模型对象本身（例如 <code>.pkl</code>、<code>.h5</code> 或 <code>.pt</code> 文件）。这是最重要的产物。</li>\n<li><strong>可视化图表：</strong> 帮助你理解模型行为的图表，例如混淆矩阵、ROC 曲线或特征重要性图表。</li>\n<li><strong>输出文件：</strong> 任何其他生成的文件，例如包含模型在测试集上预测结果的 CSV 文件。</li>\n<li><strong>环境规范：</strong> 像 <code>requirements.txt</code> 这样的文件，列出了所使用的所有库的版本，确保软件环境也可以重现。</li>\n</ul>\n<h4>源码与数据标识符</h4>\n<p>为了完成可复现性链路，你必须将实验关联回版本化的代码和数据。</p>\n<ul>\n<li><strong>代码版本：</strong> 用于该次运行的代码的 Git 提交哈希值。</li>\n<li><strong>数据版本：</strong> 用于训练的数据集的哈希值或版本标识符，通常由 DVC 等工具管理。</li>\n</ul>\n<h3>实验追踪的工具与工作流</h3>\n<p>虽然你可以从将这些信息记录到简单的 JSON 文件开始，但这种方法很快就会变得难以管理和对比。专用工具旨在解决这个问题，它们提供用于记录的 API 和用于查看结果的用户界面。</p>\n<p>流行的开源工具如 <strong>MLflow Tracking</strong> 和 <strong>DVC Experiments</strong> 提供了管理此过程的结构化方法。一般的工作流如下：</p>\n<ol>\n<li><strong>代码埋点：</strong> 在训练脚本中，添加几行代码以连接到追踪服务。</li>\n<li><strong>开启运行：</strong> 在训练开始前，发出开启新实验运行的信号。</li>\n<li><strong>记录一切：</strong> 随着脚本执行，使用简单的命令记录参数 (parameter)、计算出的指标以及产生的任何产物。</li>\n<li><strong>结束运行：</strong> 训练完成后，发出运行结束的信号。</li>\n</ol>\n<p>这是一个简化的类 Python 示例，展示了这一过程，使用了模拟典型实验追踪库的函数：</p>\n<pre><code class=\"language-python\">import experiment_tracker as et\n\n# 定义超参数\nparams = {\n    \"learning_rate\": 0.01,\n    \"epochs\": 10,\n    \"optimizer\": \"Adam\"\n}\n\n# 1. 开启新运行\nwith et.start_run(run_name=\"adam_optimizer_run\"):\n\n    # 2. 记录参数\n    et.log_params(params)\n\n    # 加载数据并进行预处理\n    train_data, test_data = load_data(\"data/v2.0\")\n\n    # 训练模型\n    model = train_model(train_data, params)\n\n    # 评估模型\n    metrics = evaluate_model(model, test_data) # 例如，返回 {\"accuracy\": 0.92, \"loss\": 0.15}\n\n    # 3. 记录指标\n    et.log_metrics(metrics)\n\n    # 保存模型文件\n    model.save(\"model.h5\")\n\n    # 4. 将模型文件记录为产物\n    et.log_artifact(\"model.h5\")\n\n# 当 'with' 语句块退出时，运行会自动结束。\n</code></pre>\n<p>这段代码创建了一个自包含且可复现的记录。追踪工具存储所有这些信息，将记录的参数、指标和 <code>model.h5</code> 产物统一关联在一个运行 ID 下。</p>\n<h3>对比与分析结果</h3>\n<p>当你需要对比多次运行记录时，实验追踪的真正价值就会显现。你不需要翻阅文件和文件夹，而是可以使用工具的用户界面在一个整洁、可筛选的表格中查看所有运行情况。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-nqdeb\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=plaintext, fontname=\"Arial\"];\n    table [label=<\n        <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\" COLOR=\"#495057\">\n            <TR><TD BGCOLOR=\"#e9ecef\" COLSPAN=\"5\"><B>实验运行：预测客户流失</B></TD></TR>\n            <TR>\n                <TD BGCOLOR=\"#f8f9fa\"><B>运行 ID</B></TD>\n                <TD BGCOLOR=\"#f8f9fa\"><B>最大深度</B></TD>\n                <TD BGCOLOR=\"#f8f9fa\"><B>评估器数量</B></TD>\n                <TD BGCOLOR=\"#f8f9fa\"><B>准确率</B></TD>\n                <TD BGCOLOR=\"#f8f9fa\"><B>F1 分数</B></TD>\n            </TR>\n            <TR>\n                <TD>run_abc_123</TD>\n                <TD>5</TD>\n                <TD>100</TD>\n                <TD>0.88</TD>\n                <TD>0.85</TD>\n            </TR>\n            <TR>\n                <TD>run_def_456</TD>\n                <TD>5</TD>\n                <TD>200</TD>\n                <TD>0.89</TD>\n                <TD>0.86</TD>\n            </TR>\n            <TR>\n                <TD BGCOLOR=\"#d8f5a2\">run_ghi_789</TD>\n                <TD BGCOLOR=\"#d8f5a2\">10</TD>\n                <TD BGCOLOR=\"#d8f5a2\">100</TD>\n                <TD BGCOLOR=\"#d8f5a2\"><B>0.91</B></TD>\n                <TD BGCOLOR=\"#d8f5a2\"><B>0.89</B></TD>\n            </TR>\n            <TR>\n                <TD>run_jkl_012</TD>\n                <TD>10</TD>\n                <TD>200</TD>\n                <TD>0.90</TD>\n                <TD>0.88</TD>\n            </TR>\n        </TABLE>\n    >];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-nqdeb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>典型的实验追踪界面允许你对比运行记录。在这个例子中，你可以通过“准确率”等指标快速排序，找到表现最好的运行记录（<code>run_ghi_789</code>），并查看产生该结果的相应超参数 (parameter) (hyperparameter)（<code>max_depth=10</code>, <code>n_estimators=100</code>）。</p>\n</blockquote>\n<p>许多工具还提供可视化功能来对比运行，例如将超参数映射到结果的散点图，或显示不同模型的训练损失随时间下降情况的图表。这些视觉反馈对于建立直觉和指导下一组实验非常有价值。</p>\n<p>通过将实验追踪集成到你的工作流中，你可以为模型开发过程建立完整、可审计的历史记录。这种做法将版本化的代码、数据和模型紧密联系在一起，确保你的工作不仅有效，而且透明且可复现。</p>",
+  "slug": "managing-experiment-tracking",
+  "updates": [],
+  "references": [
+    {
+      "id": 20009,
+      "title": "MLflow Tracking",
+      "author": "The MLflow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow实验追踪组件的官方文档，提供实际指导和API详情。",
+      "order": 1,
+      "created_at": "2025-09-06T13:18:10.609942Z",
+      "updated_at": "2025-09-10T04:59:40.650628Z"
+    },
+    {
+      "id": 20010,
+      "title": "DVC Experiments",
+      "author": "DVC Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/user-guide/experiment-management",
+      "doi": "",
+      "note": "DVC实验管理功能的官方文档，详细说明如何追踪和比较机器学习实验。",
+      "order": 2,
+      "created_at": "2025-09-06T13:18:10.634456Z",
+      "updated_at": "2025-09-10T04:59:37.439362Z"
+    },
+    {
+      "id": 20012,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本关于设计完整机器学习系统的书籍，其中章节涵盖实验管理和可复现性实践。",
+      "order": 4,
+      "created_at": "2025-09-06T13:18:10.640160Z",
+      "updated_at": "2025-09-10T04:59:49.109971Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

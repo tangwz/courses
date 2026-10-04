@@ -1,0 +1,61 @@
+{
+  "id": 3500,
+  "title": "分布式强化学习方法",
+  "meta_title": "分布式强化学习 | 进阶强化学习",
+  "meta_description": "扩展强化学习训练的背后原理（例如，分布式数据收集，分布式训练）。",
+  "content": "<p>训练复杂的强化学习 (reinforcement learning)智能体，特别是那些在大状态空间上使用深度神经网络 (neural network)或需要大量环境交互的智能体，常常会超出单机计算的能力。正如本章前面关于优化部分所讨论的，扩展学习过程变得很有必要。分布式强化学习提供了并行计算的技术，主要侧重于加速两个主要瓶颈：环境交互（数据收集）和模型训练（梯度计算）。借助多台机器或多个处理单元，我们可以大幅减少训练出高效策略所需的实际运行时间。</p>\n<h3>扩展数据收集借助并行执行器</h3>\n<p>\"强化学习 (reinforcement learning)中最耗时的方面之一是与环境交互以收集经验。模拟器可能运行缓慢，且交互本身受时间限制。一种常见且有效的方法是使用多个“执行器”进程并行化这个数据收集过程。\"</p>\n<p>每个执行器运行一个环境实例，并使用当前策略的副本与其交互。这些执行器独立并并行运行，收集轨迹（状态、动作、奖励、下一状态的序列）。收集到的经验随后被汇总，通常发送给一个中心学习器或共享经验回放缓冲区。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-fdg43n\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n    edge [color=\"#adb5bd\"];\n\n    subgraph cluster_actors {\n        label = \"并行执行器\";\n        bgcolor=\"#dee2e6\";\n        style=filled;\n        node [fillcolor=\"#a5d8ff\"];\n        actor1 [label=\"执行器 1\\n(环境实例 1)\"];\n        actor2 [label=\"执行器 2\\n(环境实例 2)\"];\n        actorN [label=\"执行器 N\\n(环境实例 N)\"];\n    }\n\n    subgraph cluster_learner {\n         label = \"中心学习器 / 经验回放缓冲区\";\n         bgcolor=\"#dee2e6\";\n         style=filled;\n         node [fillcolor=\"#b2f2bb\"];\n        learner [label=\"学习器\\n(策略更新)\"];\n        buffer [label=\"经验回放缓冲区\"];\n        learner -> buffer [style=invis]; // To align them vertically\n    }\n\n\n    actor1 -> buffer [label=\"经验\\n(s, a, r, s&#39;)\"];\n    actor2 -> buffer [label=\"经验\\n(s, a, r, s&#39;)\"];\n    actorN -> buffer [label=\"经验\\n(s, a, r, s&#39;)\"];\n    buffer -> learner [label=\"采样批次\"];\n    learner -> actor1 [label=\"更新策略\", style=dashed];\n    learner -> actor2 [label=\"更新策略\", style=dashed];\n    learner -> actorN [label=\"更新策略\", style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-fdg43n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>典型的分布式数据收集配置。多个执行器并行与环境实例交互，将收集到的经验发送到中心经验回放缓冲区，该缓冲区将数据提供给学习器进行策略更新。更新后的策略会定期分发回执行器。</p>\n</blockquote>\n<p>这种方法显著增加了单位时间收集到的经验量。IMPALA 和 SEED RL 等架构非常依赖这一原理。</p>\n<h3>扩展训练借助分布式计算</h3>\n<p>第二个主要瓶颈是训练代表策略和/或价值函数的神经网络 (neural network)。随着模型变大和数据集（经验回放缓冲区）增长，梯度计算和参数 (parameter)更新变得计算密集。这里可以应用分布式深度学习 (deep learning)的标准技术。</p>\n<ul>\n<li><strong>数据并行：</strong> 这是最常见的方法。模型在多个处理单元（例如，GPU 或 TPU）上复制。数据集（或从经验回放缓冲区采样的批次）被分区，每个副本处理不同的分区以计算梯度。这些梯度随后通过参数服务器或更高效的全规约算法（例如 Horovod 或 NCCL 常用的环形全规约）进行汇总（例如，求平均），然后在所有副本上一致地更新模型参数。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-pr7608\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\"];\n    edge [color=\"#adb5bd\"];\n\n    subgraph cluster_data {\n        label=\"数据批次\";\n        style=dashed;\n        bgcolor=\"#e9ecef\";\n        node[shape=note, fillcolor=\"#ffec99\", style=filled];\n        Data [label=\"经验批次\"];\n        Shard1 [label=\"分片 1\"];\n        Shard2 [label=\"分片 2\"];\n        ShardN [label=\"分片 N\"];\n        Data -> {Shard1, Shard2, ShardN} [arrowhead=none];\n    }\n\n\n    subgraph cluster_gpus {\n        label = \"处理单元 (GPUs/TPUs)\";\n        bgcolor=\"#dee2e6\";\n        style=filled;\n        node [shape=component, fillcolor=\"#bac8ff\", style=filled];\n        GPU1 [label=\"设备 1\\n(模型副本)\"];\n        GPU2 [label=\"设备 2\\n(模型副本)\"];\n        GPUN [label=\"设备 N\\n(模型副本)\"];\n    }\n\n    subgraph cluster_aggregation {\n         label = \"梯度汇总\";\n         bgcolor=\"#dee2e6\";\n         style=filled;\n         node [shape=circle, fillcolor=\"#ffc9c9\", style=filled];\n         Aggregation [label=\"All-Reduce\\n或\\n参数\\n服务器\"];\n    }\n\n    Shard1 -> GPU1;\n    Shard2 -> GPU2;\n    ShardN -> GPUN;\n\n    GPU1 -> Aggregation [label=\"梯度 1\"];\n    GPU2 -> Aggregation [label=\"梯度 2\"];\n    GPUN -> Aggregation [label=\"梯度 N\"];\n\n    Aggregation -> GPU1 [label=\"汇总梯度\", style=dashed];\n    Aggregation -> GPU2 [label=\"汇总梯度\", style=dashed];\n    Aggregation -> GPUN [label=\"汇总梯度\", style=dashed];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-pr7608\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>分布式训练中的数据并行。一个数据批次被拆分到多个设备上，每个设备都持有一个模型副本。梯度在本地计算，然后进行汇总，之后再更新所有副本上的模型参数。</p>\n</blockquote>\n<ul>\n<li><strong>模型并行：</strong> 对于无法放入单个加速器内存的超大型模型，模型本身可以在多个设备之间分区。每个设备只计算模型操作的一部分。这在标准强化学习 (reinforcement learning)应用中不太常见，但可能与超大型基于 Transformer 的策略或复杂模型相关。</li>\n</ul>\n<h3>分布式强化学习 (reinforcement learning)架构</h3>\n<p>有几种有影响力的架构结合了分布式数据收集和训练原理：</p>\n<ol>\n<li>\n<p><strong>异步优势Actor-Critic (A3C)：</strong> 早期成功的分布式方法之一。A3C 使用多个工作器，每个工作器都有自己的环境实例和模型副本。工作器根据其交互在本地计算梯度，并异步更新一个中心全局模型。虽然它开创了先河，但异步更新可能导致工作器使用“过时”策略（未反映最新更新的策略），与同步方法相比，这可能导致不稳定或次优收敛。它通常不使用经验回放缓冲区。</p>\n</li>\n<li>\n<p><strong>同步优势Actor-Critic (A2C)：</strong> 一种同步变体，在这种变体中协调器等待所有执行器完成一段经验收集。梯度被计算（通常在执行器上或中心地），并在对中心模型应用单个更新步骤之前进行平均。这通常比 A3C 带来更稳定的训练和更好的硬件利用率（特别是 GPU），但可能受限于最慢的工作器。</p>\n</li>\n<li>\n<p><strong>IMPALA (重要性加权Actor-Learner架构)：</strong> 专为大规模并行设计。它显著分离了执行和学习。许多执行器运行策略的不同版本（落后于学习器），并将轨迹发送到中心学习器。学习器以大批次处理这些轨迹，使用一种称为 V-trace 的离策略校正技术来弥补策略滞后。这使得数据吞吐量 (throughput)极高。</p>\n</li>\n<li>\n<p><strong>SEED RL (可扩展、高效的深度强化学习)：</strong> 优化加速器（GPU/TPU）的使用。执行器只专注于环境步骤，并将观测值发送到中心学习器。运行在加速器上的学习器执行模型推断（为所有执行器计算动作）和训练更新（梯度计算）。这最大限度地减少了通信（只发送观测值和动作，而不是频繁发送完整的模型参数 (parameter)或梯度），并使强大的加速器得到高利用。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-g65hpf\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=rounded, fontname=\"sans-serif\"];\n    edge [color=\"#adb5bd\"];\n\n    subgraph cluster_a3c {\n        label=\"A3C (异步)\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#fcc2d7\", style=filled];\n        GlobalNet [label=\"全局网络\"];\n        subgraph cluster_workers_a3c {\n             label=\"工作器\";\n             style=dashed;\n             node [fillcolor=\"#eebefa\", style=filled];\n             W1_A3C [label=\"工作器 1\\n环境 + 网络副本\\n梯度计算\"];\n             WN_A3C [label=\"工作器 N\\n环境 + 网络副本\\n梯度计算\"];\n        }\n        W1_A3C -> GlobalNet [label=\"异步梯度\"];\n        WN_A3C -> GlobalNet [label=\"异步梯度\"];\n        GlobalNet -> W1_A3C [label=\"更新参数\", style=dashed];\n        GlobalNet -> WN_A3C [label=\"更新参数\", style=dashed];\n    }\n\n    subgraph cluster_seed {\n        label=\"SEED RL (中心化推断)\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\", style=filled];\n        LearnerGPU [label=\"学习器\\n(GPU/TPU)\\n模型推断\\n训练更新\"];\n        subgraph cluster_actors_seed {\n             label=\"执行器 (CPU)\";\n             style=dashed;\n             node [fillcolor=\"#96f2d7\", style=filled];\n             A1_SEED [label=\"执行器 1\\n环境步骤\"];\n             AN_SEED [label=\"执行器 N\\n环境步骤\"];\n        }\n        A1_SEED -> LearnerGPU [label=\"观测值\"];\n        AN_SEED -> LearnerGPU [label=\"观测值\"];\n        LearnerGPU -> A1_SEED [label=\"动作\", style=dashed];\n        LearnerGPU -> AN_SEED [label=\"动作\", style=dashed];\n    }\n\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-g65hpf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>A3C 和 SEED RL 架构的简化比较。A3C 使用工作器计算自己的梯度并进行异步更新。SEED RL 将模型推断和训练集中在加速器上，执行器主要处理环境交互。</p>\n</blockquote>\n<h3>实践考量</h3>\n<p>实施分布式强化学习 (reinforcement learning)系统会带来一些特有挑战：</p>\n<ul>\n<li><strong>通信：</strong> 在网络上，可能在数百或数千个进程之间传输数据（经验、观测值、动作、梯度、参数 (parameter)）可能成为瓶颈。高效的序列化和网络带宽很重要。SEED RL 等架构通过中心化推断来最大限度地减少这一点。</li>\n<li><strong>同步：</strong> 选择异步更新和同步更新涉及权衡。异步方法最初可能更简单，但可能因过时的梯度而导致不稳定。同步方法提供更高的稳定性，并且通常能更好地利用硬件，但需要协调机制（例如，屏障、全规约），并且可能因慢速工作器而变慢。</li>\n<li><strong>资源管理：</strong> 协调大量 CPU 执行器和可能多个 GPU/TPU 学习器需要基础设施管理，通常使用 Kubernetes 等集群管理器或专用工具。</li>\n<li><strong>框架：</strong> 像 Ray RLlib、Acme 或 Tianshou 这样的库提供了常见分布式模式（例如，并行环境、分布式经验回放缓冲区、具有分布式执行的 IMPALA 或 PPO 等特定算法）的高级抽象和实现，显著简化了开发。</li>\n</ul>\n<p>分布式系统对于扩展强化学习的实现能力非常有帮助。通过仔细权衡不同并行策略之间的利弊，并借助合适的框架，您可以在比单机更具挑战性的问题上更高效地训练更复杂的智能体。</p>",
+  "slug": "distributed-rl",
+  "updates": [],
+  "references": [
+    {
+      "id": 9644,
+      "title": "Asynchronous Methods for Deep Reinforcement Learning",
+      "author": "Volodymyr Mnih, Adrià Puigdomènech Badia, Mehdi Mirza, Alex Graves, Timothy P. Lillicrap, Tim Harley, David Silver, Koray Kavukcuoglu",
+      "year": "2016",
+      "publisher": "",
+      "journal": "ICML 2016",
+      "volume": "",
+      "pages": "1928-1937",
+      "url": "https://arxiv.org/abs/1602.01783",
+      "doi": "10.48550/arXiv.1602.01783",
+      "note": "介绍A3C，一种基础的异步分布式强化学习算法，对后续许多方法产生了影响。",
+      "order": 1,
+      "created_at": "2025-09-05T06:12:00.173289Z",
+      "updated_at": "2025-09-09T10:14:16.249688Z"
+    },
+    {
+      "id": 9645,
+      "title": "IMPALA: Scalable Distributed Deep-RL with Importance Weighted Actor-Learner Architectures",
+      "author": "Lasse Espeholt, Hubert Soyer, Remi Munos, Karen Simonyan, Vlad Mnih, Tom Ward, Yotam Doron, Vlad Firoiu, Tim Harley, Iain Dunning, Shane Legg, Koray Kavukcuoglu",
+      "year": "2018",
+      "publisher": "PMLR",
+      "journal": "Proceedings of the 35th International Conference on Machine Learning (ICML)",
+      "volume": "80",
+      "pages": "1407-1416",
+      "url": "http://proceedings.mlr.press/v80/espeholt18a.html",
+      "doi": "10.5555/3305890.3305963",
+      "note": "提出了IMPALA架构，通过使用V-trace离策略校正，显著提升了分布式强化学习的可扩展性和吞吐量。",
+      "order": 2,
+      "created_at": "2025-09-05T06:12:00.320879Z",
+      "updated_at": "2025-09-09T10:14:15.174101Z"
+    },
+    {
+      "id": 9647,
+      "title": "Distributed Reinforcement Learning: A Survey",
+      "author": "Xin Zhang, Bo Zhang, Hanjiang Hu, Chengdong Hu, Wei He",
+      "year": "2020",
+      "publisher": "Elsevier",
+      "journal": "Neurocomputing",
+      "volume": "418",
+      "pages": "19-33",
+      "url": "https://www.sciencedirect.com/science/article/pii/S092523122030990X",
+      "doi": "10.1016/j.neucom.2020.08.006",
+      "note": "提供了分布式强化学习方法的全面综述，涵盖了不同的架构、挑战和未来发展方向。",
+      "order": 4,
+      "created_at": "2025-09-05T06:12:00.329274Z",
+      "updated_at": "2025-09-09T10:14:22.295252Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

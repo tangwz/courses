@@ -1,0 +1,45 @@
+{
+  "id": 5146,
+  "title": "解析大型语言模型输出结构",
+  "meta_title": "解析大型语言模型输出结构 | LangChain 基础",
+  "meta_description": "使用 LangChain 输出解析器从大型语言模型响应中提取结构化数据。",
+  "content": "<p>虽然大型语言模型（LLM）擅长生成人类可读的文本，但应用程序通常需要更结构化的数据格式。一个大型语言模型可能会返回一段完美连贯的描述人物的文字，但您的应用程序可能需要将人物的姓名、职位和地点作为单独的字段。这就是 LangChain 的输出解析器发挥作用的地方。</p>\n<p>输出解析器是旨在组织大型语言模型文本输出的类。它们主要通过两种方式工作：</p>\n<ol>\n<li><strong>引导大型语言模型：</strong> 许多解析器可以生成特定的格式指令，这些指令会附加到您的提示中。这些指令引导大型语言模型生成解析器能理解的格式的输出（例如，“将您的答案作为 JSON 对象返回，包含 'name' 和 'age' 两个键。”）。</li>\n<li><strong>解析输出：</strong> 一旦大型语言模型响应，解析器会接收原始文本字符串，并将其转换为所需的 Python 数据结构，例如字典、列表或自定义对象。</li>\n</ol>\n<p>让我们查看 LangChain 中一些常用的输出解析器。</p>\n<h3>SimpleJsonOutputParser</h3>\n<p>顾名思义，<code>SimpleJsonOutputParser</code> 旨在解析大型语言模型输出中的简单 JSON 对象。当您需要一个直接的字典结构时，它非常有用。</p>\n<pre><code class=\"language-python\"># 假设 'llm' 是一个已初始化的 LangChain 大型语言模型实例\r\n# 并且已导入 'ChatPromptTemplate' 和 'StrOutputParser'\r\n\r\nfrom langchain_core.output_parsers import SimpleJsonOutputParser\r\nfrom langchain_core.prompts import ChatPromptTemplate\r\nfrom langchain_openai import ChatOpenAI # 示例大型语言模型提供商\r\n\r\n# 示例：替换为您实际的大型语言模型初始化\r\n# 确保在您的环境中设置了 OPENAI_API_KEY\r\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\")\r\n\r\n# 定义提示，请求 JSON 输出\r\nprompt_template = \"\"\"\r\n从以下职位描述中提取姓名和主要技能：\r\n{description}\r\n\r\n将结果作为 JSON 对象返回，包含 \"name\" 和 \"skill\" 两个键。\r\n\"\"\"\r\n\r\nprompt = ChatPromptTemplate.from_template(prompt_template)\r\n\r\n# 创建解析器实例\r\njson_parser = SimpleJsonOutputParser()\r\n\r\n# 创建链\r\nchain = prompt | llm | json_parser\r\n\r\n# 运行链\r\njob_description = \"我们正在招聘一名高级 Python 开发人员，精通 Web 框架和云服务。\"\r\nresult = chain.invoke({\"description\": job_description})\r\n\r\nprint(result)\r\n# 预期输出（可能因大型语言模型而略有不同）：\r\n# {'name': '高级 Python 开发人员', 'skill': 'Python'}\n</code></pre>\n<p>此解析器期望大型语言模型输出是一个包含有效 JSON 对象的字符串。如果大型语言模型未能生成有效的 JSON，它很可能会引发解析错误。</p>\n<h3>PydanticOutputParser</h3>\n<p>对于更复杂的数据结构和额外的验证，<code>PydanticOutputParser</code> 是一个很好的选择。它与 Pydantic 集成，Pydantic 是一个流行的用于数据验证和设置管理的 Python 库。您使用 Pydantic 模型定义所需的输出结构，解析器既负责生成格式指令，又将大型语言模型输出解析为您模型的一个实例。</p>\n<p>首先，使用 Pydantic 定义您的数据结构：</p>\n<pre><code class=\"language-python\"># 需要 'pip install pydantic'\r\nfrom pydantic import BaseModel, Field\r\nfrom typing import List\r\n\r\nclass PersonInfo(BaseModel):\r\n    name: str = Field(description=\"这个人的全名\")\r\n    age: int = Field(description=\"这个人的年龄\")\r\n    hobbies: List[str] = Field(description=\"这个人的爱好列表\")\n</code></pre>\n<p>现在，将 <code>PydanticOutputParser</code> 与此模型一起使用：</p>\n<pre><code class=\"language-python\">from langchain.output_parsers import PydanticOutputParser\r\nfrom langchain_core.prompts import PromptTemplate\r\n# 假设 'llm' 是一个已初始化的 LangChain 大型语言模型实例\r\n# from langchain_openai import ChatOpenAI\r\n# llm = ChatOpenAI(model=\"gpt-3.5-turbo\")\r\n\r\n# 设置解析器并注入指令到提示模板中。\r\nparser = PydanticOutputParser(pydantic_object=PersonInfo)\r\n\r\n# 获取用于引导大型语言模型的格式指令\r\nformat_instructions = parser.get_format_instructions()\r\n\r\n# 定义包含格式指令的提示模板\r\nprompt_template_str = \"\"\"\r\n从以下文本中提取一个人的信息：\r\n{text_input}\r\n\r\n{format_instructions}\r\n\"\"\"\r\n\r\nprompt = PromptTemplate(\r\n    template=prompt_template_str,\r\n    input_variables=[\"text_input\"],\r\n    partial_variables={\"format_instructions\": format_instructions}\r\n)\r\n\r\n# 创建链\r\nchain = prompt | llm | parser\r\n\r\n# 输入文本\r\ntext = \"Alice is 30 years old and enjoys painting, hiking, and coding.\"\r\n\r\n# 运行链\r\nperson_object = chain.invoke({\"text_input\": text})\r\n\r\nprint(person_object)\r\n# 预期输出：\r\n# name='Alice' age=30 hobbies=['painting', 'hiking', 'coding']\r\n\r\nprint(f\"姓名：{person_object.name}\")\r\nprint(f\"年龄：{person_object.age}\")\r\nprint(f\"爱好：{person_object.hobbies}\")\r\n# 姓名：Alice\r\n# 年龄：30\r\n# 爱好：['painting', 'hiking', 'coding']\n</code></pre>\n<p><code>get_format_instructions()</code> 方法会生成描述所需 JSON 模式（基于 Pydantic 模型）的文本，这有助于大型语言模型正确格式化其输出。使用 Pydantic 模型提供自动验证；如果大型语言模型输出不符合 <code>PersonInfo</code> 模式（例如，为年龄提供文本而不是数字），Pydantic 将引发验证错误。</p>\n<h3>CommaSeparatedListOutputParser</h3>\n<p>当您只需要一个项目列表时，<code>CommaSeparatedListOutputParser</code> 非常直接。它引导大型语言模型返回一个逗号分隔的列表，然后将该字符串解析为 Python 列表。</p>\n<pre><code class=\"language-python\">from langchain.output_parsers import CommaSeparatedListOutputParser\r\nfrom langchain_core.prompts import ChatPromptTemplate\r\n# 假设 'llm' 是一个已初始化的 LangChain 大型语言模型实例\r\n# from langchain_openai import ChatOpenAI\r\n# llm = ChatOpenAI(model=\"gpt-3.5-turbo\")\r\n\r\n# 创建解析器\r\nlist_parser = CommaSeparatedListOutputParser()\r\n\r\n# 获取格式指令\r\nformat_instructions = list_parser.get_format_instructions()\r\n\r\n# 定义提示\r\nprompt_template = \"\"\"\r\n列出 5 个流行的 Python Web 框架。\r\n{format_instructions}\r\n\"\"\"\r\nprompt = ChatPromptTemplate.from_template(prompt_template)\r\n\r\n# 创建链\r\nchain = prompt | llm | list_parser\r\n\r\n# 运行链\r\nresult = chain.invoke({}) # 此提示不需要特定输入\r\n\r\nprint(result)\r\n# 预期输出（列表顺序和具体框架可能有所不同）：\r\n# ['Django', 'Flask', 'FastAPI', 'Pyramid', 'Bottle']\n</code></pre>\n<h3>StructuredOutputParser</h3>\n<p><code>StructuredOutputParser</code> 提供一种更通用的方式来定义多个输出字段，而无需 Pydantic。您定义所需的字段及其描述。与 Pydantic 解析器一样，它会生成格式指令。</p>\n<pre><code class=\"language-python\">from langchain.output_parsers import StructuredOutputParser, ResponseSchema\r\nfrom langchain_core.prompts import PromptTemplate\r\n# 假设 'llm' 是一个已初始化的 LangChain 大型语言模型实例\r\n# from langchain_openai import ChatOpenAI\r\n# llm = ChatOpenAI(model=\"gpt-3.5-turbo\")\r\n\r\n# 定义所需的输出模式\r\nresponse_schemas = [\r\n    ResponseSchema(name=\"answer\", description=\"用户问题的答案。\"),\r\n    ResponseSchema(name=\"source\", description=\"用于找到答案的来源，如果可能应为网站 URL。\")\r\n]\r\n\r\n# 创建解析器\r\noutput_parser = StructuredOutputParser.from_response_schemas(response_schemas)\r\n\r\n# 获取格式指令\r\nformat_instructions = output_parser.get_format_instructions()\r\n\r\n# 定义提示模板\r\nprompt_template_str = \"\"\"\r\n尽可能准确地回答用户的问题。\r\n{format_instructions}\r\n问题：{question}\r\n\"\"\"\r\n\r\nprompt = PromptTemplate(\r\n    template=prompt_template_str,\r\n    input_variables=[\"question\"],\r\n    partial_variables={\"format_instructions\": format_instructions}\r\n)\r\n\r\n# 创建链\r\nchain = prompt | llm | output_parser\r\n\r\n# 运行链\r\nquestion = \"马来西亚的首都是哪里？\"\r\nresult = chain.invoke({\"question\": question})\r\n\r\nprint(result)\r\n# 预期输出（来源可能因大型语言模型而异或由其估计）：\r\n# {'answer': '马来西亚的首都是吉隆坡。', 'source': '一般知识 / 维基百科'}\n</code></pre>\n<h3>在链中整合解析器</h3>\n<p>如示例所示，输出解析器通常是 LangChain 链中的最后一步。基本结构是：</p>\n<p><code>提示 -> 大型语言模型 -> 输出解析器</code></p>\n<p>提示格式化输入并包含来自解析器的任何必要的格式指令。大型语言模型生成文本响应。然后，输出解析器接收此文本并将其转换为所需的 Python 结构。</p>\n<h3>处理解析错误</h3>\n<p>大型语言模型并非总是完美遵循指令。有时，它们的输出可能与解析器期望的格式不匹配（例如，JSON 中缺少引号，数据类型不正确）。当发生这种情况时，输出解析器的 <code>parse()</code> 方法通常会引发异常。</p>\n<p>在生产应用程序中，您需要错误处理。这可能涉及：</p>\n<ul>\n<li><strong>重试：</strong> 实现逻辑来捕获解析错误，可能会稍微修改提示（例如，提醒大型语言模型格式），然后再次尝试大型语言模型调用。LangChain 包含 <code>OutputFixingParser</code> 等机制，它尝试通过将错误反馈给大型语言模型来自动修复格式不正确的输出。</li>\n<li><strong>日志记录：</strong> 记录解析失败的实例，以便了解常见的失败模式。</li>\n<li><strong>默认值/回退：</strong> 如果解析反复失败，提供一个默认的结构化输出。</li>\n</ul>\n<p>选择正确的输出解析器取决于您需要提取的数据的复杂性以及您是否需要验证。它们是使大型语言模型输出在下游应用逻辑中可用的必要工具，将自由格式文本转换为可操作的结构化数据。</p>",
+  "slug": "langchain-output-parsers",
+  "updates": [],
+  "references": [
+    {
+      "id": 13688,
+      "title": "LangChain Expression Language (LCEL) and Output Parsers",
+      "author": "LangChain Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/model_io/output_parsers/",
+      "doi": "",
+      "note": "LangChain输出解析器的官方文档，提供详细解释、示例和在LCEL中的使用模式。",
+      "order": 1,
+      "created_at": "2025-09-05T08:37:50.194326Z",
+      "updated_at": "2025-09-10T12:18:10.916836Z"
+    },
+    {
+      "id": 13689,
+      "title": "Pydantic Documentation",
+      "author": "Pydantic Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/",
+      "doi": "",
+      "note": "Pydantic的权威指南，对于定义稳健的数据模式和验证至关重要，这些模式和验证被LangChain的PydanticOutputParser所使用。",
+      "order": 2,
+      "created_at": "2025-09-05T08:37:50.197908Z",
+      "updated_at": "2025-09-10T12:17:50.157790Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

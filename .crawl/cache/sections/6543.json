@@ -1,0 +1,61 @@
+{
+  "id": 6543,
+  "title": "为LLM交互设计工具接口",
+  "meta_title": "设计有效的LLM工具接口",
+  "meta_description": "学习设计工具接口（API）的原则，以促进与LLM代理的顺畅和准确交互。",
+  "content": "<p>当LLM代理需要执行超出其文本生成能力范围的操作时，它会求助于工具。LLM的意图与工具执行之间的桥梁是<strong>工具接口</strong>。将此接口看作一份契约：它规定了LLM如何向工具请求服务以及可以获得什么回报。设计良好的接口对于代理的可靠和有效行为是根本的。如果LLM不明白如何使用工具，或者误解了其功能，整个系统就可能出问题。</p>\n<p>本节侧重于专门为LLM交互设计这些接口的原则与实践。我们不只是在讨论代码中的函数签名；我们是在考虑LLM如何<em>感知</em>和<em>理解</em>工具的入口点。</p>\n<h3>工具接口的构成</h3>\n<p>核心来说，呈现给LLM的工具接口包含几个主要组成部分：</p>\n<ol>\n<li><strong>工具名称：</strong> 一个清晰、有描述性的名称，能暗示工具的功能（例如，<code>get_current_weather</code>，<code>send_email</code>）。这通常是LLM选择工具时使用的第一条信息。</li>\n<li><strong>工具描述：</strong> 简洁地说明工具的作用、目的以及何时使用。这对于LLM的决策过程极其重要。（我们将在“理解工具规格和描述”一节中详细阐述描述）。</li>\n<li><strong>输入参数 (parameter)：</strong>\n<ul>\n<li><strong>名称：</strong> 参数名称应直观且有意义（例如，<code>location</code> 而不是 <code>arg1</code>）。</li>\n<li><strong>类型：</strong> 为每个参数明确定义数据类型（例如，字符串、整数、布尔值、列表、对象）。这有助于LLM正确地格式化其请求。</li>\n<li><strong>描述：</strong> 对每个参数的说明，阐明其目的和任何特定的格式要求。</li>\n<li><strong>必需与可选：</strong> 指明是否必须提供某个参数。</li>\n</ul>\n</li>\n<li><strong>输出结构（返回值）：</strong> 定义工具成功执行后返回的内容，包括其数据类型和结构。这有助于LLM理解和处理工具的响应。</li>\n</ol>\n<p>以下图表说明了工具接口在LLM代理与底层工具逻辑之间进行交互调解的作用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-pm3yk6\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"filled\", fontname=\"sans-serif\", margin=0.2];\n    edge [fontname=\"sans-serif\", fontsize=10];\n\n    LLM [label=\"LLM代理\", fillcolor=\"#74c0fc\", fontcolor=\"#000000\"];\n    ToolInterface [label=\"工具接口\\n(名称, 参数, 描述, 输出模式)\", width=3, fillcolor=\"#ffe066\", fontcolor=\"#000000\"];\n    ToolLogic [label=\"工具内部逻辑\\n(例如：Python代码, API调用)\", width=2.5, fillcolor=\"#8ce99a\", fontcolor=\"#000000\"];\n\n    LLM -> ToolInterface [label=\"  使用接口定义调用工具\", taillabel=\"1.\", headlabel=\"2.\"];\n    ToolInterface -> ToolLogic [label=\"  传递结构化输入\", taillabel=\"3.\", headlabel=\"4.\"];\n    ToolLogic -> ToolInterface [label=\"  返回结果\", taillabel=\"5.\", headlabel=\"6.\"];\n    ToolInterface -> LLM [label=\"  向LLM提供结构化输出\", taillabel=\"7.\", headlabel=\"8.\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-pm3yk6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>工具接口充当一份明确定义的契约，指导LLM代理如何请求操作以及从工具的底层功能接收结果。</p>\n</blockquote>\n<p>有效设计这些组成部分可确保LLM能够准确选择、调用和理解您的工具返回的结果。</p>\n<h3>有效接口设计的指导原则</h3>\n<p>为LLM设计接口与为人类开发者设计传统API所需的心态略有不同。LLM会“读取”您的接口定义来理解功能。</p>\n<h4>1. 命名和描述的清晰度和表达力</h4>\n<ul>\n<li><strong>工具名称：</strong> 选择清晰、直接反映工具操作的名称。例如，<code>search_knowledge_base</code> 比 <code>kb_lookup</code> 更具表达力。</li>\n<li><strong>参数 (parameter)名称：</strong> 使用清晰指明预期输入的名称。如果工具发送消息，<code>recipient_email</code> 和 <code>message_body</code> 优于 <code>to_addr</code> 和 <code>payload</code>。</li>\n<li><strong>描述：</strong> 如前所述，描述非常重要。请确保它们是从LLM的角度编写的，即LLM正尝试判断此工具是否符合用户的请求。避免使用行话，除非预期LLM能够理解。</li>\n</ul>\n<h4>2. 定义明确的参数：类型、可选性和默认值</h4>\n<p>LLM在强类型和明确期望下工作效果最佳。</p>\n<ul>\n<li><strong>显式类型：</strong> 始终为每个参数指定数据类型（例如，<code>string</code>、<code>integer</code>、<code>boolean</code>、<code>array[string]</code>、<code>object</code>）。这通常通过像JSON Schema这样的模式定义完成，我们将在“工具输入和输出模式的最佳实践”中提及。\n<ul>\n<li>参数示例：<code>{\"name\": \"user_id\", \"type\": \"integer\", \"description\": \"用户的唯一标识符。\"}</code></li>\n</ul>\n</li>\n<li><strong>可选性：</strong> 明确将参数标记 (token)为 <code>required</code> 或 <code>optional</code>。这可以防止LLM遗漏必要信息时出现错误。</li>\n<li><strong>默认值：</strong> 对于可选参数，提供合理的默认值可以简化LLM的任务，因为它不需要总是指定所有选项。确保默认值已记录。</li>\n</ul>\n<blockquote>\n<p><strong>提示：</strong> 设计参数时，考虑LLM会自然地从用户请求中提取哪些信息。如果用户说“伦敦明天天气如何？”，那么参数 <code>city</code>（字符串，必需）和 <code>date</code>（字符串，可选，默认为今天）将很好地对应。</p>\n</blockquote>\n<h4>3. 为原子性和可组合性而设计</h4>\n<ul>\n<li><strong>单一职责：</strong> 每个工具理想情况下应执行一个特定的任务并做好它。一个名为 <code>manage_user_profile</code> 且处理获取、更新和删除配置文件的工具，其效果不如 <code>get_user_profile</code>、<code>update_user_profile</code> 和 <code>delete_user_profile</code> 等独立工具。</li>\n<li><strong>原子性对LLM为何重要：</strong>\n<ul>\n<li><strong>选择更简单：</strong> 对于LLM来说，在多个特定工具中进行选择比弄清楚如何使用多功能工具的哪种模式更容易。</li>\n<li><strong>减少错误面：</strong> 更简单的工具具有更简单的接口，从而减少了LLM在调用时出错的方式。</li>\n<li><strong>更好的可组合性：</strong> 原子工具可以更容易地被LLM按顺序组合以实现复杂目标（第三章：工具选择和编排中的一个主题）。</li>\n</ul>\n</li>\n</ul>\n<p>避免创建试图通过复杂参数处理过多不同操作的“万能工具”。虽然从代码角度看这可能显得高效，但这通常会使LLM难以理解接口。</p>\n<h4>4. 参数和返回结构的一致性</h4>\n<p>您的工具集中的一致性有助于LLM学习如何与其交互。</p>\n<ul>\n<li><strong>命名约定：</strong> 对工具和参数名称使用一致的大小写（例如，<code>snake_case</code> 或 <code>camelCase</code>）。</li>\n<li><strong>通用参数：</strong> 如果多个工具对类似实体进行操作，请为该实体使用相同的参数名称和结构（例如，如果多个工具操作项目，始终使用 <code>item_id: string</code>）。</li>\n<li><strong>标准化错误响应：</strong> 尽管详细的错误处理将在后面介绍，但工具的错误响应<em>结构</em>应保持一致。这使得LLM（或编排器）能够更可预测地处理故障。</li>\n<li><strong>可预测的输出：</strong> LLM需要知道会收到什么。如果一个工具可以根据输入返回不同的结构，则必须明确记录这一点，或者，更好地是，由不同的工具或不同的输出字段来处理。</li>\n</ul>\n<h4>5. 考虑LLM的视角</h4>\n<p>这也许是首要原则。总是问自己：“LLM会如何理解这个？”</p>\n<ul>\n<li><strong>自然语言对齐 (alignment)：</strong> 参数名称和描述应与自然语言中概念的表达方式保持一致。如果参数是 <code>target_date</code>，请确保其描述明确了格式期望（例如，“YYYY-MM-DD”），如果LLM需要生成它的话。</li>\n<li><strong>减少歧义：</strong> 如果像 <code>query</code> 这样的参数名称可能有多种含义，请使其描述非常具体（例如，“用于在公司公开文档中查找文章的搜索词。”）。</li>\n<li><strong>信息密度：</strong> 为LLM提供足够的信息以正确使用工具，但又不过多，以免使其难以处理。描述应简洁但全面。</li>\n</ul>\n<h3>向LLM传达接口细节</h3>\n<p>LLM不会直接读取您的Python函数签名或API代码。它依赖于该接口的<em>表示</em>，通常以结构化格式与自然语言描述一同提供。</p>\n<ul>\n<li><strong>工具清单/规格：</strong> 大多数LLM代理框架（如LangChain、LlamaIndex或OpenAI的函数调用）要求您使用特定结构（通常基于JSON）来定义工具。此结构包括名称、描述以及输入参数 (parameter)的模式（通常是JSON Schema）。</li>\n<li><strong>用于参数的JSON Schema：</strong> JSON Schema是一种词汇表 (vocabulary)，允许您注释和验证JSON文档。它被广泛用于定义工具输入的预期结构、类型和约束。\n<em>示例：<code>city</code> 参数的简单JSON Schema：</em>\n<pre><code class=\"language-json\">{\n  \"name\": \"location\",\n  \"description\": \"城市和州，例如：旧金山，加利福尼亚州\",\n  \"type\": \"string\",\n  \"required\": true\n}\n</code></pre>\n（我们将在“工具输入和输出模式的最佳实践”一节中更详细地阐述JSON Schema。）</li>\n<li><strong>输出模式：</strong> 同样，定义工具<em>返回</em>内容的模式很重要。这使得LLM能够预知响应的格式以及如何使用其中包含的信息。</li>\n</ul>\n<p>这些结构化定义的清晰度和准确性具有决定性作用。提供给LLM的定义与工具实际行为之间的任何不匹配都将导致错误和不可靠的代理表现。</p>\n<h3>接口设计中的常见问题</h3>\n<p>意识到常见的失误可以帮助您避免它们：</p>\n<ul>\n<li><strong>模糊或通用名称：</strong> <code>process_data</code> 或 <code>run_script</code> 对LLM来说信息量很少。</li>\n<li><strong>过于复杂的输入对象：</strong> 如果工具需要一个包含许多字段的深度嵌套JSON对象，LLM可能很难正确构建。考虑是否可以拆分工具，或者是否可以在内部处理一些复杂性。</li>\n<li><strong>隐式依赖：</strong> 如果 <code>parameter_b</code> 仅在 <code>parameter_a</code> 具有特定值时才有意义，这种条件逻辑必须在描述中极其清晰，或者理想情况下，如果LLM框架支持，由独立的工具或不同的操作模式来处理。</li>\n<li><strong>不一致的返回格式：</strong> 如果工具有时为相同的逻辑输出返回字符串，有时返回字符串列表，这会使LLM感到困惑。目标是单一、可预测的输出结构。</li>\n<li><strong>缺少单位或格式规范：</strong> 如果参数 (parameter)是 <code>duration</code>，它是秒、分钟还是小时？如果是 <code>date</code>，预期是什么格式？在参数描述中明确说明这些。</li>\n</ul>\n<h3>示例：简单计算器工具的接口</h3>\n<p>让我们为一个可以执行加法、减法、乘法和除法的基础计算器工具设计一个接口。</p>\n<p><strong>尝试1（不太理想）：单个 <code>calculate</code> 工具</strong></p>\n<ul>\n<li><strong>工具名称：</strong> <code>calculate</code></li>\n<li><strong>描述：</strong> “执行一项计算。”</li>\n<li><strong>参数 (parameter)：</strong>\n<ul>\n<li><code>operand1</code>：数字，“第一个数字”</li>\n<li><code>operand2</code>：数字，“第二个数字”</li>\n<li><code>operation</code>：字符串，“要执行的操作：'add'（加）、'subtract'（减）、'multiply'（乘）、'divide'（除）”</li>\n</ul>\n</li>\n<li><strong>输出：</strong> 一个数字（结果）。</li>\n</ul>\n<p>虽然这可行，但 <code>operation</code> 参数会使LLM的工作略微困难；它必须正确选择字符串。</p>\n<p><strong>尝试2（更原子化，通常更适合LLM）：独立工具</strong></p>\n<ul>\n<li><strong>工具1：<code>add_numbers</code></strong>\n<ul>\n<li><strong>描述：</strong> “将两个数字相加。”</li>\n<li><strong>参数：</strong> <code>num1</code>：数字，<code>num2</code>：数字</li>\n<li><strong>输出：</strong> 一个数字（和）。</li>\n</ul>\n</li>\n<li><strong>工具2：<code>subtract_numbers</code></strong>\n<ul>\n<li><strong>描述：</strong> “从第一个数字中减去第二个数字。”</li>\n<li><strong>参数：</strong> <code>num1</code>：数字，<code>num2</code>：数字</li>\n<li><strong>输出：</strong> 一个数字（差）。</li>\n</ul>\n</li>\n<li><strong>（<code>multiply_numbers</code> 和 <code>divide_numbers</code> 也类似）</strong></li>\n</ul>\n<p>这种原子化方法通常更容易让LLM准确选择。如果LLM判断需要“加法”，它会直接选择 <code>add_numbers</code>。这与原子性设计原则非常吻合。选择取决于LLM的能力以及代理框架如何处理工具选择，但从原子工具开始是一个良好的实践。</p>\n<p>设计有效的工具接口是一个迭代的过程。您可能会随着观察LLM代理如何与它们交互而改进您的接口。目标是让LLM尽可能容易地理解您的工具<em>做什么</em>、<em>何时</em>使用它以及<em>如何</em>提供必要的信息。这种细致的设计是构建可靠和有能力的LLM代理的根本。</p>",
+  "slug": "designing-tool-interfaces",
+  "updates": [],
+  "references": [
+    {
+      "id": 18187,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "官方文档，详细说明了如何通过提供结构化定义来提示大型语言模型调用外部函数，展示了工具接口的实际应用。",
+      "order": 1,
+      "created_at": "2025-09-06T12:18:36.688396Z",
+      "updated_at": "2026-02-04T11:30:44.058212Z"
+    },
+    {
+      "id": 18188,
+      "title": "JSON Schema: A Media Type for Describing JSON Documents",
+      "author": "Austin Wright, Geraint Luff, Henry Andrews",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Internet Engineering Task Force",
+      "volume": "",
+      "pages": "",
+      "url": "https://json-schema.org/specification-links.html#draft-2020-12",
+      "doi": "",
+      "note": "JSON Schema 的官方规范，提供了一种标准化方式来描述 JSON 文档的结构、数据类型和约束，对于定义工具的输入和输出参数至关重要。",
+      "order": 2,
+      "created_at": "2025-09-06T12:18:36.694049Z",
+      "updated_at": "2026-02-04T11:30:45.427778Z"
+    },
+    {
+      "id": 18189,
+      "title": "LangChain Tools documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZ0VtbChddJN4FZ357UvBYU0-chwGXfArs__i9XL9_tu8mfyKe8BNkkzqKJgGwBFMNpt2yfSp-wlJqAaVQOIWgpmB5MBMQEzTRJohBV3JxkS0Re23oW7zc6L-nwNbysjnuIHxLIFx3U5lDsBhmJA==",
+      "doi": "",
+      "note": "LangChain 框架中定义和集成工具的实用文档，为创建 LLM 代理的有效工具接口提供了具体示例和最佳实践。",
+      "order": 3,
+      "created_at": "2025-09-06T12:18:36.697068Z",
+      "updated_at": "2026-02-04T11:30:44.372556Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

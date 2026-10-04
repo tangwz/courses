@@ -1,0 +1,61 @@
+{
+  "id": 1247,
+  "title": "实践：检查图像属性",
+  "meta_title": "实践检查图像属性",
+  "meta_description": "动手实践，检查图像的尺寸、颜色通道和像素值。",
+  "content": "<p>使用 Python 和 OpenCV 库直接查看数字图像属性。这将巩固你对图像尺寸、颜色通道、数据类型和像素值的理解。</p>\n<p>首先，请确保你已经安装了 OpenCV (<code>pip install opencv-python</code>)，并且在你的 Python 脚本或 Jupyter Notebook 文件所在的目录中准备好一个图像文件（我们称之为 <code>example_image.jpg</code>）。</p>\n<h3>加载图像</h3>\n<p>我们首先导入 OpenCV 库，然后使用 <code>imread</code> 函数加载图像，这个函数我们已经在上一节中简单提及过。</p>\n<pre><code class=\"language-python\">import cv2\nimport numpy as np # 常用与 OpenCV 结合使用\n\n# 从文件加载图像\n# 标志 '1' 以彩色（BGR 格式）加载。使用 '0' 加载灰度图像。\nimage_path = 'example_image.jpg' # 替换为你的图像文件路径\nimg = cv2.imread(image_path, 1)\n\n# 检查图像是否成功加载\nif img is None:\n    print(f\"错误：无法读取图像文件：{image_path}\")\nelse:\n    print(\"图像加载成功！\")\n    # 接下来的步骤中我们将在此处添加更多代码\n</code></pre>\n<p>如果图像正确加载，<code>img</code> 变量现在将以 NumPy 数组的形式保存图像数据。如果出现错误信息，请再次确认图像文件路径是否正确，并且文件确实存在。</p>\n<h3>检查图像尺寸 (Shape)</h3>\n<p>图像大小是最基本属性之一。在 NumPy 数组中，图像大小存储在 <code>shape</code> 属性中。</p>\n<pre><code class=\"language-python\"># 确保图像已加载，再继续\nif img is not None:\n    # 获取图像尺寸\n    height, width, channels = img.shape\n    print(f\"图像高度：{height} 像素\")\n    print(f\"图像宽度：{width} 像素\")\n    print(f\"颜色通道数：{channels}\")\n\n    # 计算总像素数\n    total_pixels = height * width\n    print(f\"总像素数：{total_pixels}\")\n</code></pre>\n<p>当你用彩色图像运行这段代码时，<code>img.shape</code> 会返回一个包含三个值的元组：<code>(height, width, channels)</code>。</p>\n<ul>\n<li><strong>高度：</strong> 像素行数。</li>\n<li><strong>宽度：</strong> 像素列数。</li>\n<li><strong>通道数：</strong> 每个像素的值数量。对于 OpenCV 加载的标准彩色图像，这个值是 3，表示蓝色、绿色和红色（BGR）值。</li>\n</ul>\n<p><strong>如果是灰度图像呢？</strong>\n如果你以灰度模式加载图像（<code>cv2.imread(image_path, 0)</code>），<code>shape</code> 属性将只包含两个值：<code>(height, width)</code>。由于每个像素只有一个强度值，因此没有颜色通道的第三个维度。你需要稍微调 (fine-tuning)整代码来处理这种情况：</p>\n<pre><code class=\"language-python\"># 以灰度模式加载\nimg_gray = cv2.imread(image_path, 0)\n\nif img_gray is not None:\n    # 检查尺寸 - 如果尝试解包 3 个值会引发错误\n    if len(img_gray.shape) == 2:\n        height, width = img_gray.shape\nchannels = 1 # 灰度图像有 1 个通道\n        print(f\"(灰度) 高度: {height}, 宽度: {width}, 通道数: {channels}\")\n    # 处理可能意外加载的彩色图像（使用标志 0 时不应发生）\n    elif len(img_gray.shape) == 3:\n         height, width, channels = img_gray.shape\n         print(f\"(彩色？) 高度: {height}, 宽度: {width}, 通道数: {channels}\")\nelse:\n     print(f\"错误：无法读取图像文件：{image_path}\")\n</code></pre>\n<h3>检查数据类型</h3>\n<p>数字图像使用特定的数值数据类型存储像素值。这决定了每个像素分量的可能值范围。OpenCV 默认通常使用 <code>uint8</code>（无符号 8 位整数）。</p>\n<pre><code class=\"language-python\"># 确保图像已加载，再继续\nif img is not None:\n    # 获取图像数组的数据类型\n    data_type = img.dtype\n    print(f\"图像数据类型：{data_type}\")\n</code></pre>\n<p>输出很可能是 <code>uint8</code>。这意味着每个像素的每个颜色分量（B、G、R）都由一个介于 0 到 255（含）之间的整数表示。在执行图像操作时，了解数据类型很重要，因为操作可能依赖于这个范围。</p>\n<h3>访问像素值</h3>\n<p>我们可以使用数组索引访问特定像素的值。请记住，图像使用一个坐标系统，其原点 (0, 0) 位于左上角。第一个索引表示行（y 坐标，即高度），第二个索引表示列（x 坐标，即宽度）。</p>\n<pre><code class=\"language-python\"># 确保图像已加载，再继续\nif img is not None:\n    # 定义坐标 (y, x) - 记住 y 是行，x 是列\n    px_y, px_x = 50, 100 # 示例坐标\n\n    # 检查坐标是否在图像范围内\n    height, width, _ = img.shape\n    if 0 &#x3C;= px_y &#x3C; height and 0 &#x3C;= px_x &#x3C; width:\n        # 访问 (y, x) 处的像素值\n        pixel_value = img[px_y, px_x]\n        print(f\"({px_y}, {px_x}) 处的像素值：{pixel_value}\")\n\n        # 对于彩色图像 (BGR)，pixel_value 是一个数组 [蓝色, 绿色, 红色]\n        blue = pixel_value[0]\n        green = pixel_value[1]\n        red = pixel_value[2]\n        print(f\"  蓝色: {blue}, 绿色: {green}, 红色: {red}\")\n    else:\n        print(f\"坐标 ({px_y}, {px_x}) 超出图像边界 ({height}x{width})。\")\n\n    # 灰度图像示例（如果 img_gray 已加载）\n    if 'img_gray' in locals() and img_gray is not None:\n         height_g, width_g = img_gray.shape\n         if 0 &#x3C;= px_y &#x3C; height_g and 0 &#x3C;= px_x &#x3C; width_g:\n              pixel_intensity = img_gray[px_y, px_x]\n              print(f\"({px_y}, {px_x}) 处的灰度强度：{pixel_intensity}\")\n         else:\n              print(f\"灰度坐标 ({px_y}, {px_x}) 超出边界 ({height_g}x{width_g})。\")\n\n</code></pre>\n<p>对于彩色图像，<code>img[y, x]</code> 返回一个包含该特定像素的 B、G 和 R 值的列表或数组（请记住 OpenCV 默认使用 BGR 顺序，而不是 RGB）。对于灰度图像，<code>img_gray[y, x]</code> 返回一个表示强度值的单个整数。</p>\n<h3>完整示例</h3>\n<p>以下是一个结合了这些步骤的完整脚本：</p>\n<pre><code class=\"language-python\">import cv2\nimport numpy as np\n\n# --- 配置 ---\nimage_path = 'example_image.jpg' # 将此改为你的图像文件\npixel_coordinate_y = 50          # 如有需要，更改此坐标\npixel_coordinate_x = 100         # 如有需要，更改此坐标\n\n# --- 加载图像 ---\n# 以彩色加载\nimg_color = cv2.imread(image_path, 1)\n# 以灰度加载\nimg_gray = cv2.imread(image_path, 0)\n\nprint(f\"--- 彩色图像 ({image_path}) 的属性 ---\")\nif img_color is not None:\n    # 尺寸\n    height, width, channels = img_color.shape\n    print(f\"尺寸 (高x宽x通道): {height} x {width} x {channels}\")\n    print(f\"总像素数: {height * width}\")\n\n    # 数据类型\n    print(f\"数据类型: {img_color.dtype}\")\n\n    # 像素值\n    if 0 &#x3C;= pixel_coordinate_y &#x3C; height and 0 &#x3C;= pixel_coordinate_x &#x3C; width:\n        bgr_value = img_color[pixel_coordinate_y, pixel_coordinate_x]\n        print(f\"({pixel_coordinate_y}, {pixel_coordinate_x}) 处的 BGR 值: {bgr_value}\")\n    else:\n        print(f\"坐标 ({pixel_coordinate_y}, {pixel_coordinate_x}) 超出边界。\")\nelse:\n    print(\"错误：无法加载彩色图像。\")\n\nprint(f\"\\n--- 灰度图像 ({image_path}) 的属性 ---\")\nif img_gray is not None:\n    # 尺寸\n    height_g, width_g = img_gray.shape\n    print(f\"尺寸 (高x宽): {height_g} x {width_g}\")\n    print(f\"总像素数: {height_g * width_g}\")\n\n    # 数据类型\n    print(f\"数据类型: {img_gray.dtype}\")\n\n    # 像素值\n    if 0 &#x3C;= pixel_coordinate_y &#x3C; height_g and 0 &#x3C;= pixel_coordinate_x &#x3C; width_g:\n        intensity = img_gray[pixel_coordinate_y, pixel_coordinate_x]\n        print(f\"({pixel_coordinate_y}, {pixel_coordinate_x}) 处的强度值: {intensity}\")\n    else:\n        print(f\"坐标 ({pixel_coordinate_y}, {pixel_coordinate_x}) 超出边界。\")\nelse:\n    print(\"错误：无法加载灰度图像。\")\n\n</code></pre>\n<p><strong>试一试：</strong></p>\n<ul>\n<li>用你自己的图像运行脚本。</li>\n<li>更改 <code>pixel_coordinate_y</code> 和 <code>pixel_coordinate_x</code> 的值，以查看图像的不同区域。尝试靠近角落（例如 <code>0, 0</code>）和靠近中心的坐标。</li>\n<li>使用图像编辑工具找到特定像素的颜色，并查看它是否与脚本报告的 BGR 值匹配（请记住 BGR 顺序）。</li>\n<li>尝试加载不同的图像文件类型（例如 <code>.png</code>），查看属性是否保持一致。</li>\n</ul>\n<p>这项动手实践能让你具体感受图像是如何用数字表示的，为下一章做准备，届时我们将开始操作这些像素值以执行基本的图像处理。</p>",
+  "slug": "practice-exploring-image-properties",
+  "updates": [],
+  "references": [
+    {
+      "id": 587,
+      "title": "OpenCV-Python Tutorials",
+      "author": "OpenCV Community",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFZUanGu8XIWYL8VlTKBPYDh-K9BSZDQEnQl_D-_NymRIamZdAoswQvY2HU8lwbfSGYdsn4q5lFYqhgqqPtZrYBrQp9_wQk3rwuyxD2aswuJUQF3VXoLotcAZmGSsDGbd2PGL5MQxpEzLSyOKRQTmjgX97O",
+      "doi": "",
+      "note": "官方教程，涵盖使用Python的OpenCV进行基本图像操作，包括加载和检查图像属性。",
+      "order": 1,
+      "created_at": "2025-09-04T14:44:11.314567Z",
+      "updated_at": "2025-09-07T16:38:15.544122Z"
+    },
+    {
+      "id": 588,
+      "title": "NumPy User Guide - The N-dimensional array (ndarray)",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/quickstart.html#the-n-dimensional-array-ndarray",
+      "doi": "",
+      "note": "描述了OpenCV中用于表示图像的核心NumPy数组结构 (ndarray)，涵盖了形状和数据类型等属性。",
+      "order": 2,
+      "created_at": "2025-09-04T14:44:11.320350Z",
+      "updated_at": "2025-09-07T16:37:43.626851Z"
+    },
+    {
+      "id": 590,
+      "title": "Learning OpenCV 4 Computer Vision with Python 3",
+      "author": "Joseph Howse, Joe Minichino",
+      "year": "2020",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "372",
+      "url": "https://www.packtpub.com/product/learning-opencv-4-computer-vision-with-python-3-third-edition/9781789531619",
+      "doi": "",
+      "note": "提供使用OpenCV和Python的实用指导和示例，特别是关于加载图像和探查其属性。",
+      "order": 4,
+      "created_at": "2025-09-04T14:44:11.326148Z",
+      "updated_at": "2025-09-07T16:38:03.659140Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

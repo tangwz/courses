@@ -1,0 +1,45 @@
+{
+  "id": 7067,
+  "title": "专家卸载到 CPU 或 NVMe",
+  "meta_title": "MoE 专家卸载到 CPU/NVMe",
+  "meta_description": "卸载非活跃专家权重到 CPU 内存或 NVMe 等较慢的存储中，以减少 GPU 内存占用的方法。",
+  "content": "<p>专家混合模型（MoE）庞大的参数 (parameter)量是其最大的优势，也是部署时最主要的挑战。像 Mixtral 8x7B 这样的模型，每个 MoE 层包含八个不同专家的权重 (weight)，导致总参数大小远超绝大多数大型且昂贵的 GPU 加速器的容量。然而，在任何给定的前向传播过程中，每个 token 仅激活这些专家中的一到两个。这种计算稀疏性是管理推理 (inference)性能的主要方面。专家卸载运用这一特性，通过将大部分非活跃专家参数存储在一个更大、更经济的内存池中，例如系统内存或 NVMe 存储设备。</p>\n<p>基本原则是将 GPU 显存（VRAM）视为专家权重的高速、容量有限的缓存。我们不是将整个模型加载到 GPU 上，而是只加载非专家层（模型的骨干部分）和门控网络。专家权重本身存储在“芯片外部”，并根据需要动态移入显存。</p>\n<h3>内存与延迟的权衡</h3>\n<p>卸载并非没有代价。它解决了显存 (VRAM)容量问题，但代价是引入了数据传输延迟。通过 PCIe 总线将数 GB 的专家权重 (weight)从 CPU 内存或 NVMe 驱动器移动到 GPU 需要时间，此操作的速度比访问 GPU 高带宽内存 (HBM) 中已有的数据慢几个数量级。</p>\n<p>因此，卸载系统的性能受到这种权衡的制约。目标是设计一个能最大限度减少这些数据传输并尽可能隐藏其延迟的系统。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1i5b2ki\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    subgraph cluster_gpu {\n        label = \"GPU 显存\";\n        style=\"rounded\";\n        fillcolor=\"#a5d8ff44\";\n        Gating [label=\"门控网络\", fillcolor=\"#91a7ff\"];\n        Compute [label=\"专家计算\", fillcolor=\"#74c0fc\"];\n        Input [label=\"输入 Token\", shape=ellipse, fillcolor=\"#f8f9fa\"];\n        Output [label=\"输出\", shape=ellipse, fillcolor=\"#f8f9fa\"];\n        Cache [label=\"GPU 专家缓存\\n(例如：专家 3)\", shape=cylinder, fillcolor=\"#d0bfff\"];\n    }\n\n    subgraph cluster_system {\n        label = \"系统内存\";\n        style=\"rounded\";\n        fillcolor=\"#b2f2bb44\";\n        CPU_RAM [label=\"CPU 内存\\n(专家 1, 2, 4...N)\", shape=cylinder, fillcolor=\"#8ce99a\"];\n        NVME [label=\"NVMe 存储\\n(所有专家)\", shape=cylinder, fillcolor=\"#96f2d7\"];\n    }\n\n    PCIe [label=\"PCIe 总线\", shape=plaintext, fontcolor=\"#495057\"];\n\n    Input -> Gating;\n    Gating -> PCIe [label=\"请求专家 2\"];\n    PCIe -> CPU_RAM [style=dashed];\n    CPU_RAM -> PCIe [label=\"加载专家 2 权重\"];\n    PCIe -> Compute;\n    Compute -> Output;\n\n    Gating -> Cache [label=\"请求专家 3\\n(缓存命中)\", style=dotted, dir=back];\n    Cache -> Compute [style=dotted];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1i5b2ki\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>卸载专家前向传播的数据流。当所需专家不在 GPU 缓存中时，其权重必须通过 PCIe 总线从系统内存传输，这会引入延迟。</p>\n</blockquote>\n<h3>卸载策略</h3>\n<h4>卸载到 CPU 内存</h4>\n<p>这是最常见且平衡的方式。系统内存远大于 GPU 显存 (VRAM)且成本更低，同时仍提供合理的传输速度。</p>\n<p>工作流程如下：</p>\n<ol>\n<li><strong>初始化</strong>：模型的共享组件（注意力层、嵌入 (embedding)层、归一化 (normalization)层）和所有门控网络加载到 GPU 显存。所有专家权重 (weight)加载到 CPU 内存。</li>\n<li><strong>门控</strong>：对于输入的 token 批次，GPU 上的门控网络运行并确定每个 token 需要哪些专家。</li>\n<li><strong>传输</strong>：系统识别整个批次所需的唯一专家集合。对于 GPU 上尚不存在的每个所需专家，会启动异步内存复制操作，将权重从 CPU 内存传输到 GPU 显存中的分配缓冲区。</li>\n<li><strong>计算</strong>：一旦专家权重位于 GPU 上，相应的 token 就会被分派给它们进行计算。</li>\n<li><strong>逐出</strong>：计算完成后，如果内存允许，专家权重可以保留在 GPU 上；或者被逐出，为下一个所需专家腾出空间。</li>\n</ol>\n<p>使用异步复制操作（例如 PyTorch 中的 <code>torch.Tensor.to('cuda', non_blocking=True)</code>）很重要，因为它允许 CPU 在 GPU 忙于其他工作时准备下一次传输，部分隐藏了传输延迟。</p>\n<h4>卸载到 NVMe 存储</h4>\n<p>对于甚至可能不适合系统内存的超大型模型，或在内存有限的硬件上，卸载可以扩展到高速 NVMe 固态硬盘。这提供了对数 TB 存储的访问，但会带来严重的延迟开销。</p>\n<p>数据路径变得更长：<code>NVMe -> CPU 内存 -> GPU 显存</code>。尽管像 GPUDirect Storage 这样的技术可以创建从 NVMe 到 GPU 更直接的路径，但它们会增加系统复杂性。该策略通常保留用于离线、注重吞吐量 (throughput)的批处理作业，其中每 token 延迟不是首要考虑事项。</p>\n<h3>通过缓存提高性能</h3>\n<p>通过在 GPU 显存 (VRAM)中为专家权重 (weight)实现缓存，可以大幅减少卸载的延迟开销。一个简单的最近最少使用 (LRU) 缓存策略非常有效。GPU 分配其一部分显存来存储少量专家。</p>\n<p>当需要一个专家时：</p>\n<ul>\n<li><strong>缓存命中</strong>：如果专家已在 GPU 缓存中，它会立即被使用，不会发生数据传输。</li>\n<li><strong>缓存未命中</strong>：如果专家不在缓存中，系统必须从卸载位置（CPU 内存）获取它。如果缓存已满，最近最少使用的专家会从 GPU 中逐出，为传入的专家腾出空间。</li>\n</ul>\n<p>此缓存的大小是一个重要的超参数 (parameter) (hyperparameter)。更大的缓存会增加缓存命中的概率，从而降低平均延迟，但它也会消耗更多宝贵的 GPU 显存，而这些显存原本可以用于处理更大的批次。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1nz5ofr\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"专家缓存大小对推理延迟的影响\"},\"xaxis\":{\"title\":{\"text\":\"GPU 显存中缓存的专家数量（总共 64 个）\"}},\"yaxis\":{\"title\":{\"text\":\"每个 Token 的平均延迟 (ms)\"},\"range\":[5,35]},\"font\":{\"family\":\"sans-serif\"},\"plot_bgcolor\":\"#f8f9fa\",\"paper_bgcolor\":\"#ffffff\"},\"data\":[{\"x\":[0,4,8,16,32],\"y\":[32.5,18.1,11.2,7.4,5.8],\"type\":\"bar\",\"marker\":{\"color\":[\"#ff8787\",\"#ffd43b\",\"#69db7c\",\"#4dabf7\",\"#9775fa\"],\"line\":{\"width\":1,\"color\":\"#495057\"}}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1nz5ofr\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>GPU 专家缓存对推理 (inference)延迟的影响。即使是仅存储总专家一小部分的缓存，也能通过避免 PCIe 总线上的频繁数据传输来显著降低平均延迟。</p>\n</blockquote>\n<h3>一个实现示例</h3>\n<p>为具体说明这一点，可以考虑一个简化的 Python <code>OffloadedMoE</code> 层。这个示例展示了检查缓存和在未命中时加载专家的核心逻辑。</p>\n<pre><code class=\"language-python\">import torch\n\nclass OffloadedMoE(torch.nn.Module):\n    def __init__(self, experts, cache_size=4):\n        super().__init__()\n        # 专家最初在 CPU 上\n        self.experts_cpu = torch.nn.ModuleList(experts)\n        self.num_experts = len(experts)\n\n        # GPU 缓存管理\n        self.cache_size = cache_size\n        self.expert_cache_gpu = {} # 将 expert_id 映射到 GPU 张量\n        self.expert_cache_lru = [] # 按使用顺序存储 expert_id\n\n    def _load_expert_to_gpu(self, expert_id):\n        # 如果缓存已满则逐出\n        if len(self.expert_cache_lru) >= self.cache_size:\n            evict_id = self.expert_cache_lru.pop(0)\n            del self.expert_cache_gpu[evict_id]\n\n        # 将专家从 CPU 加载到 GPU\n        expert = self.experts_cpu[expert_id]\n        self.expert_cache_gpu[expert_id] = expert.to('cuda', non_blocking=True)\n        self.expert_cache_lru.append(expert_id)\n\n    def forward(self, x, gating_output):\n        # gating_output 包含路由器决策，例如专家索引\n        required_ids = torch.unique(gating_output.top_k_indices).tolist()\n\n        # 确保所有所需专家已加载\n        for expert_id in required_ids:\n            if expert_id not in self.expert_cache_gpu:\n                self._load_expert_to_gpu(expert_id)\n            else:\n                # 移动到 LRU 列表末尾以标记为最近使用\n                self.expert_cache_lru.remove(expert_id)\n                self.expert_cache_lru.append(expert_id)\n\n        # ... 将 token 分派给 GPU 上相应专家的逻辑 ...\n        # final_output = perform_expert_computation(x, self.expert_cache_gpu)\n        # return final_output\n</code></pre>\n<p>这个示例省略了复杂的 token 分派逻辑，但展示了缓存机制。像 <code>deepspeed-mii</code> 或 Hugging Face 的 <code>accelerate</code> 这样的生产系统提供了此模式的优化实现。通过将智能缓存与异步传输结合，专家卸载使得在普通硬件上运行大型 MoE 模型成为可能，从而普及了其使用。</p>",
+  "slug": "expert-offloading",
+  "updates": [],
+  "references": [
+    {
+      "id": 19079,
+      "title": "Big Model Inference",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/accelerate/en/concept_guides/big_model_inference",
+      "doi": "",
+      "note": "Hugging Face Accelerate 的官方文档，解释了将大型模型参数卸载到 CPU 和磁盘以在内存受限硬件上进行推理的实用方法。",
+      "order": 3,
+      "created_at": "2025-09-06T13:01:40.915061Z",
+      "updated_at": "2025-09-07T15:12:04.197728Z"
+    },
+    {
+      "id": 19080,
+      "title": "GPUDirect Storage",
+      "author": "NVIDIA",
+      "year": "2024",
+      "publisher": "NVIDIA",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.nvidia.com/gpudirect-storage",
+      "doi": "",
+      "note": "NVIDIA 关于 GPUDirect Storage 的技术概述，解释了它如何实现 NVMe 存储和 GPU 内存之间的直接数据路径，提高卸载的数据传输速度。",
+      "order": 4,
+      "created_at": "2025-09-06T13:01:40.919031Z",
+      "updated_at": "2025-09-07T15:11:53.351524Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

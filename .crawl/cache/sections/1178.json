@@ -1,0 +1,61 @@
+{
+  "id": 1178,
+  "title": "动手实践：绘制不同数据类型图表",
+  "meta_title": "练习 Matplotlib 条形图、直方图、饼图",
+  "meta_description": "应用所学知识，通过使用 Matplotlib 创建条形图、直方图和饼图。",
+  "content": "<p>通过示例数据制作条形图、直方图和饼图。这种动手操作的体验将帮助你巩固对每种 Matplotlib 图表类型使用时机和方法的理解。</p>\n<p>首先，请确保已导入 Matplotlib，通常使用以下标准约定：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np # 我们将使用 NumPy 生成一些示例数据\n</code></pre>\n<h3>实践 1：创建条形图</h3>\n<p>条形图非常适合比较不同类别之间的数量。假设我们想可视化一个小杂货摊中不同类型水果的销售数量。</p>\n<p><strong>数据：</strong>\n假设我们有以下销售数据：</p>\n<ul>\n<li>苹果：50 个单位</li>\n<li>橙子：35 个单位</li>\n<li>香蕉：65 个单位</li>\n<li>葡萄：42 个单位</li>\n</ul>\n<p><strong>步骤：</strong></p>\n<ol>\n<li><strong>准备数据：</strong> 为水果名称（类别）及其对应的销售数据（值）创建列表。</li>\n<li><strong>创建条形图：</strong> 使用 <code>plt.bar()</code> 函数，传入 x 轴的类别和 y 轴的值。</li>\n<li><strong>添加标签和标题：</strong> 使用 <code>plt.xlabel()</code>、<code>plt.ylabel()</code> 和 <code>plt.title()</code> 使图表易于理解。</li>\n<li><strong>显示图表：</strong> 使用 <code>plt.show()</code>。</li>\n</ol>\n<p><strong>代码：</strong></p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\n\n# 1. 准备数据\nfruit_names = ['Apples', 'Oranges', 'Bananas', 'Grapes']\nunits_sold = [50, 35, 65, 42]\n\n# 2. 创建条形图\nplt.figure(figsize=(6, 4)) # 可选：调整图表大小\nplt.bar(fruit_names, units_sold, color='#339af0') # 使用蓝色系的颜色\n\n# 3. 添加标签和标题\nplt.xlabel('水果类型')\nplt.ylabel('销售数量')\nplt.title('水果销售比较')\nplt.xticks(rotation=45) # 如果 x 轴标签重叠，则旋转\nplt.tight_layout() # 调整布局以防止标签重叠\n\n# 4. 显示图表\nplt.show()\n</code></pre>\n<p>运行此代码将生成一个条形图，显示每种水果的销售情况，从而轻松看出香蕉的销量最高。</p>\n<p><strong>挑战：</strong> 尝试修改上述代码，使用 <code>plt.barh()</code> 创建一个水平条形图。请记住相应地切换参数 (parameter)并调整标签（<code>plt.xlabel</code> 变为“销售数量”，<code>plt.ylabel</code> 变为“水果类型”）。</p>\n<h3>实践 2：生成直方图</h3>\n<p>直方图通过将数据分组到“箱”（bins）中并显示每个箱中观测值的频率，帮助我们理解单个数值变量的分布情况。让我们可视化一个班级的考试分数分布。</p>\n<p><strong>数据：</strong>\n我们将使用 NumPy 生成一些随机考试分数来模拟分布。假设分数为 100 分制，并且大致服从均值为 75 的正态分布。</p>\n<p><strong>步骤：</strong></p>\n<ol>\n<li><strong>生成示例数据：</strong> 使用 <code>np.random.normal()</code> 创建一个分数数组。</li>\n<li><strong>创建直方图：</strong> 使用 <code>plt.hist()</code>，传入数据并可选地指定箱的数量，或者让 Matplotlib 自行决定。</li>\n<li><strong>添加标签和标题：</strong> 为坐标轴添加标签，并给图表一个描述性标题。</li>\n<li><strong>显示图表：</strong> 使用 <code>plt.show()</code>。</li>\n</ol>\n<p><strong>代码：</strong></p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 1. 生成示例数据 (例如，100 个考试分数)\nnp.random.seed(42) # 为确保结果可重现\nexam_scores = np.random.normal(loc=75, scale=10, size=100)\n# 确保分数在实际范围内 (例如，0-100)\nexam_scores = np.clip(exam_scores, 0, 100)\n\n# 2. 创建直方图\nplt.figure(figsize=(7, 5))\nplt.hist(exam_scores, bins=10, color='#51cf66', edgecolor='black') # 使用 10 个箱，绿色\n\n# 3. 添加标签和标题\nplt.xlabel('考试分数')\nplt.ylabel('学生数量')\nplt.title('考试分数分布')\n\n# 4. 显示图表\nplt.show()\n</code></pre>\n<p>这段代码将生成一个直方图，显示在特定分数范围（即箱）内有多少学生得分。你可以通过改变 <code>bins</code> 参数 (parameter)（例如 <code>bins=5</code>，<code>bins=20</code>）来试着调整，看看它如何影响分布的呈现。</p>\n<h3>实践 3：制作饼图</h3>\n<p>饼图用于显示整体的比例。让我们可视化一个学生每月开支的百分比构成。</p>\n<p><strong>数据：</strong>\n假设开支分类如下：</p>\n<ul>\n<li>租金：40%</li>\n<li>食物：25%</li>\n<li>交通：15%</li>\n<li>水电费：10%</li>\n<li>娱乐：10%</li>\n</ul>\n<p><strong>步骤：</strong></p>\n<ol>\n<li><strong>准备数据：</strong> 为类别标签及其对应的百分比值创建列表。</li>\n<li><strong>创建饼图：</strong> 使用 <code>plt.pie()</code>，传入值和标签。使用 <code>autopct</code> 在扇区上显示百分比。</li>\n<li><strong>添加标题：</strong> 使用 <code>plt.title()</code>。添加 <code>plt.axis('equal')</code> 以确保饼图为圆形。</li>\n<li><strong>显示图表：</strong> 使用 <code>plt.show()</code>。</li>\n</ol>\n<p><strong>代码：</strong></p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\n\n# 1. 准备数据\nexpense_categories = ['Rent', 'Food', 'Transport', 'Utilities', 'Entertainment']\npercentages = [40, 25, 15, 10, 10]\ncolors = ['#748ffc', '#ff922b', '#51cf66', '#fcc419', '#f06595'] # 靛蓝色, 橙色, 绿色, 黄色, 粉色\n\n# 2. 创建饼图\nplt.figure(figsize=(6, 6))\nplt.pie(percentages, labels=expense_categories, colors=colors,\\n        autopct='%1.1f%%', # 将百分比格式化为一位小数\n        startangle=90)     # 从顶部（90度）开始绘制第一个扇区\n\n# 3. 添加标题并确保为圆形\nplt.title('每月开支细分')\nplt.axis('equal') # 相等纵横比确保饼图为圆形\n\n# 4. 显示图表\nplt.show()\n</code></pre>\n<p>这会生成一个饼图，说明学生预算是如何分配的。虽然它在显示简单比例时很有用，但请记住，当类别过多或比例非常相似时，饼图会变得难以阅读。对于比较而言，条形图通常是更好的选择。</p>\n<p>你现在已经练习了本章涵盖的基本图表类型：用于比较的条形图、用于分布的直方图和用于比例的饼图。你可以随意修改这些示例中的样本数据或参数 (parameter)，看看图表如何变化。这种尝试是培养直觉的好方法，能帮助你判断哪种图表最适合不同类型的数据和分析问题。</p>",
+  "slug": "practice-matplotlib-various-plots",
+  "updates": [],
+  "references": [
+    {
+      "id": 968,
+      "title": "Matplotlib Documentation",
+      "author": "The Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/",
+      "doi": "",
+      "note": "Matplotlib 库的官方全面文档，涵盖本节讨论的用于创建各种图表类型的所有函数、模块和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T15:12:34.610292Z",
+      "updated_at": "2025-09-07T16:29:15.742510Z"
+    },
+    {
+      "id": 969,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/",
+      "doi": "",
+      "note": "Python 科学计算和数据分析的基础指南，其中专门的 Matplotlib 章提供基本图表类型的实用实现。",
+      "order": 2,
+      "created_at": "2025-09-04T15:12:34.613100Z",
+      "updated_at": "2025-09-07T16:29:18.359863Z"
+    },
+    {
+      "id": 970,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "10.12987/9780691193950",
+      "note": "一份备受推崇的资源，阐明了有效数据可视化的原则和最佳实践，为针对不同数据和目的选择适当的图表类型提供指导。",
+      "order": 3,
+      "created_at": "2025-09-04T15:12:34.615694Z",
+      "updated_at": "2025-09-07T16:29:24.200671Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

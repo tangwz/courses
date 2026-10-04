@@ -1,0 +1,61 @@
+{
+  "id": 7464,
+  "title": "基于用户与基于物品的方法对比",
+  "meta_title": "基于用户与基于物品的协同过滤对比",
+  "meta_description": "比较和权衡两种主要的基于近邻的协同过滤方法。",
+  "content": "<p>基于近邻的协同过滤面临一个基本的路径选择：是寻找相似的用户，还是寻找相似的物品？这个选择引出了该领域的两种主要策略：基于用户的协同过滤 (UBCF) 和基于物品的协同过滤 (IBCF)。虽然两者都使用用户-物品交互矩阵，但它们在寻找“近邻”和生成推荐的方法上截然不同。理解它们的运行机制和权衡取舍，是设计有效系统的进步。</p>\n<h3>基于用户的协同过滤：寻找品味相投的伙伴</h3>\n<p>基于用户的方法或许是现实生活中推荐方式最直接的转化。其核心原则是：“喜欢过和你相同东西的用户，很可能也会喜欢你同样会喜欢的其他东西。”它的工作原理是识别出一群与目标用户品味特征相似的用户近邻，然后推荐这些近邻喜欢过但目标用户尚未见过的物品。</p>\n<p>该过程可以分解为以下步骤：</p>\n<ol>\n<li><strong>确定目标用户</strong>：选择想要为其生成推荐的用户。</li>\n<li><strong>寻找相似用户</strong>：扫描用户-物品矩阵，找到一组与目标用户相似度高的用户（即近邻）。这种相似度是根据他们共同评分过的物品计算出来的。我们将在后面的部分详细说明具体的计算指标。</li>\n<li><strong>确定候选物品</strong>：从这些相似用户近邻中，收集他们给出高分的所有物品。</li>\n<li><strong>生成推荐</strong>：过滤掉目标用户已经交互过的物品。从剩余物品中，根据邻居评分的加权平均值，为目标用户预测一个评分。预测评分最高的物品构成最终的推荐列表。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-paddae\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=true;\n    overlap=false;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n    edge [color=\"#868e96\"];\n\n    // 节点\n    subgraph cluster_users {\n        label=\"用户\";\n        style=\"filled,rounded\";\n        color=\"#e9ecef\";\n        You [label=\"你\", fillcolor=\"#74c0fc\", shape=ellipse];\n        UserA [label=\"用户 A\", fillcolor=\"#91a7ff\", shape=ellipse];\n        UserB [label=\"用户 B\", fillcolor=\"#91a7ff\", shape=ellipse];\n    }\n\n    subgraph cluster_items {\n        label=\"物品\";\n        style=\"filled,rounded\";\n        color=\"#e9ecef\";\n        M1 [label=\"物品 1\", fillcolor=\"#d8f5a2\"];\n        M2 [label=\"物品 2\", fillcolor=\"#d8f5a2\"];\n        M3 [label=\"物品 3 (推荐)\", fillcolor=\"#ffc9c9\", style=\"filled,dashed\"];\n    }\n\n    // 边\n    You -> M1 [label=\"喜欢\"];\n    You -> M2 [label=\"喜欢\"];\n    UserA -> M1 [label=\"喜欢\"];\n    UserA -> M2 [label=\"喜欢\"];\n    UserA -> M3 [label=\"喜欢\"];\n    UserB -> M1 [label=\"喜欢\"];\n    UserB -> M2 [label=\"喜欢\"];\n\n    // 相似性\n    You -> UserA [style=dashed, arrowhead=none, label=\" 相似\", color=\"#0ca678\", penwidth=2];\n    You -> UserB [style=dashed, arrowhead=none, label=\" 相似\", color=\"#0ca678\", penwidth=2];\n\n    // 推荐\n    M3 -> You [label=\" 推荐\", color=\"#f03e3e\", penwidth=2, style=bold, fontcolor=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-paddae\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基于用户的方法通过物品 1 和 2 的共同偏好历史，识别出用户 A 和 B 与“你”相似。由于用户 A 也喜欢物品 3，因此将物品 3 推荐给“你”。</p>\n</blockquote>\n<p>虽然直观，但基于用户的协同过滤有明显的缺点。随着用户数量增加，计算所有用户对之间的相似度会变得计算成本很高。此外，用户的品味可能经常变化，这意味着用户相似度矩阵需要不断重新计算以保持准确。</p>\n<h3>基于物品的协同过滤：发现相关产品</h3>\n<p>基于物品的方法改变了视角。它不再问“谁和你相似？”，而是问“哪些物品和你喜欢的物品相似？”。这种方法在电子商务中被广泛使用，例如“购买此商品的用户还购买了……”等功能。它根据物品之间的关系生成推荐，而不是根据用户之间的关系。</p>\n<p>基于物品的协同过滤流程如下：</p>\n<ol>\n<li><strong>构建物品相似度矩阵</strong>：首先计算所有物品对之间的相似度。如果两个物品经常被同一批用户评分或交互，则认为它们是相似的。这一步通常在离线完成，并可以定期更新。</li>\n<li><strong>确定用户喜欢的物品</strong>：针对目标用户，查找他们给出高分或有积极交互的物品。</li>\n<li><strong>寻找相似物品</strong>：对于用户喜欢的每个物品，从预先计算好的相似度矩阵中找到最相似的物品。</li>\n<li><strong>生成推荐</strong>：汇总这些相似物品，根据相似度分数和用户的原始评分计算每个物品的预测分，并将用户未曾见过的得分最高的物品推荐给他们。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-8h2qz\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=true;\n    overlap=false;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n    edge [color=\"#868e96\"];\n\n    // 节点\n    You [label=\"你\", fillcolor=\"#74c0fc\", shape=ellipse];\n\n    subgraph cluster_items {\n        label=\"物品\";\n        style=\"filled,rounded\";\n        color=\"#e9ecef\";\n        I1 [label=\"物品 1\", fillcolor=\"#d8f5a2\"];\n        I3 [label=\"物品 3 (推荐)\", fillcolor=\"#ffc9c9\", style=\"filled,dashed\"];\n    }\n\n    // 用于结构的不可见节点\n    subgraph cluster_other_users {\n        label=\"其他用户的行为\";\n        style=\"filled,rounded\";\n        color=\"#e9ecef\";\n        UserA [label=\"用户 A\", fillcolor=\"#ced4da\", shape=ellipse];\n        UserB [label=\"用户 B\", fillcolor=\"#ced4da\", shape=ellipse];\n    }\n\n    // 边\n    You -> I1 [label=\" 喜欢\", penwidth=2];\n\n    // 建立物品相似度的其他用户\n    UserA -> I1 [style=dotted];\n    UserA -> I3 [style=dotted];\n    UserB -> I1 [style=dotted];\n    UserB -> I3 [style=dotted];\n\n    // 相似性边\n    I1 -> I3 [style=dashed, arrowhead=none, label=\" 相似\", color=\"#0ca678\", penwidth=2];\n\n    // 推荐边\n    I3 -> You [label=\" 推荐\", color=\"#f03e3e\", penwidth=2, style=bold, fontcolor=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-8h2qz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基于物品的方法观察到“你”喜欢物品 1。它发现物品 3 与物品 1 相似，因为其他用户（A 和 B）往往对两者都喜欢。因此，物品 3 被推荐。</p>\n</blockquote>\n<p>在实际应用中，基于物品的协同过滤通常更受欢迎，原因有几点。系统中的物品数量通常比用户数量更稳定且更少。这意味着物品相似度矩阵不需要频繁更新，且可以离线计算，使系统在提供实时推荐时更具扩展性且速度更快。</p>\n<h3>做出选择：基于用户 vs. 基于物品</h3>\n<p>选择基于用户还是基于物品的方法取决于数据集和应用的具体特征。以下是它们属性的直接对比：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">属性</th>\n<th align=\"left\">基于用户的协同过滤 (UBCF)</th>\n<th align=\"left\">基于物品的协同过滤 (IBCF)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>核心逻辑</strong></td>\n<td align=\"left\">“找到和我相似的用户”</td>\n<td align=\"left\">“找到和我喜欢的物品相似的物品”</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>计算量</strong></td>\n<td align=\"left\">相似度矩阵随用户数增加 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>U</mi><mo>×</mo><mi>U</mi></mrow><annotation encoding=\"application/x-tex\">U \\times U</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">U</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">U</span></span></span></span>)。对于用户众多的系统而言成本很高。</td>\n<td align=\"left\">相似度矩阵随物品数增加 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>I</mi><mo>×</mo><mi>I</mi></mrow><annotation encoding=\"application/x-tex\">I \\times I</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">I</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">I</span></span></span></span>)。如果物品少于用户，则更易处理。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>稳定性</strong></td>\n<td align=\"left\">用户品味会变，因此相似性不稳定，需要频繁更新。</td>\n<td align=\"left\">物品关系相对静态。矩阵较稳定，更新频率较低。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>数据稀疏性</strong></td>\n<td align=\"left\">受影响较大，因为两个用户必须有足够数量的共同评分物品才能被视为相似。</td>\n<td align=\"left\">适应性更强。即使单个用户的评分很少，也可以可靠地计算物品相似度。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>扩展性</strong></td>\n<td align=\"left\">较低。随着用户基数增长，实时寻找用户近邻的速度会变慢。</td>\n<td align=\"left\">较高。物品相似度可以预先计算，使实时推荐非常迅速。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>惊喜度</strong></td>\n<td align=\"left\">通过借鉴相似用户的多样品味，可以产生更多新颖的推荐。</td>\n<td align=\"left\">倾向于推荐与用户已知物品非常相似的东西，可能限制了探索空间。</td>\n</tr>\n</tbody>\n</table>\n<p>在大多数现代应用中，特别是物品库比用户群更稳定的电子商务和媒体流媒体平台，<strong>基于物品的协同过滤是主流选择</strong>。它的扩展性和相似性模型的稳定性提供了显著的实际优势。正是出于这些原因，我们在本章的动手实践中将重点构建一个基于物品的过滤器。</p>",
+  "slug": "user-based-vs-item-based",
+  "updates": [],
+  "references": [
+    {
+      "id": 21050,
+      "title": "Item-Based Collaborative Filtering Recommendation Algorithms",
+      "author": "Badrul Munir Sarwar, George Karypis, Joseph A. Konstan, John Riedl",
+      "year": "2001",
+      "publisher": "Association for Computing Machinery",
+      "journal": "Proceedings of the Tenth International World Wide Web Conference, WWW 10, Hong Kong, China, May 1-5, 2001",
+      "volume": "",
+      "pages": "285-295",
+      "url": "https://doi.org/10.1145/371920.372071",
+      "doi": "10.1145/371920.372071",
+      "note": "介绍并详细阐述了基于物品的协同过滤，解释了其相对于基于用户的方法的优势。",
+      "order": 1,
+      "created_at": "2025-09-13T07:07:19.005899Z",
+      "updated_at": "2025-09-13T07:37:34.498874Z"
+    },
+    {
+      "id": 21051,
+      "title": "Recommender Systems: An Introduction",
+      "author": "Dietmar Jannach, Markus Zanker, Alexander Felfernig, Gerhard Friedrich",
+      "year": "2010",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.cambridge.org/9780521493369",
+      "doi": "",
+      "note": "一本关于推荐系统的标准教材，详细比较了基于用户和基于物品的协同过滤。",
+      "order": 2,
+      "created_at": "2025-09-13T07:07:19.011193Z",
+      "updated_at": "2025-09-13T07:37:34.149730Z"
+    },
+    {
+      "id": 21052,
+      "title": "A Survey of Collaborative Filtering Techniques for Recommender Systems",
+      "author": "Xiaoyuan Su, Taghi M. Khoshgoftaar",
+      "year": "2009",
+      "publisher": "Hindawi Publishing Corporation",
+      "journal": "Advances in Artificial Intelligence",
+      "volume": "2009",
+      "pages": "Article ID 421425",
+      "url": "https://doi.org/10.1155/2009/421425",
+      "doi": "10.1155/2009/421425",
+      "note": "一篇被广泛引用的综述，全面概述并比较了包括基于用户和基于物品方法在内的各种协同过滤技术。",
+      "order": 3,
+      "created_at": "2025-09-13T07:07:19.017641Z",
+      "updated_at": "2025-09-13T07:37:43.484261Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

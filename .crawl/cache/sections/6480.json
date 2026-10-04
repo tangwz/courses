@@ -1,0 +1,61 @@
+{
+  "id": 6480,
+  "title": "基于自编码器的生成模型介绍",
+  "meta_title": "基于自编码器的生成模型",
+  "meta_description": "生成模型概述以及 VAEs 等自编码器变体如何用于数据生成。",
+  "content": "<p>自编码器是降维和特征学习的有效工具。它们擅长学习输入数据的压缩表示，然后从这种表示中重建数据。然而，变分自编码器 (VAEs) 将自编码器框架引向了一个新的方向：生成建模。</p>\n<h3>什么是生成建模？</h3>\n<p>本质上，生成建模是关于教会机器创建新事物。生成模型不是学习从输入特征预测标签（例如在分类这种判别任务中），而是旨在学习数据本身的潜在概率分布。如果模型真正理解了数据的分布方式，那么它就可以用来<em>生成</em>看起来像是来自原始数据集的新颖合成数据样本。</p>\n<p>假设您有一个手写数字数据集。</p>\n<ul>\n<li><strong>判别模型</strong>可能会学习判断图像是否为“7”。它学习 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>标签</mtext><mi mathvariant=\"normal\">∣</mi><mtext>图像</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{标签} | \\text{图像})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">标签</span></span><span class=\"mord\">∣</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">图像</span></span><span class=\"mclose\">)</span></span></span></span>。</li>\n<li><strong>生成模型</strong>会学习使图像看起来像“7”或“3”或任何数字的特征。它试图学习 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>图像</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{图像})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">图像</span></span><span class=\"mclose\">)</span></span></span></span>。一旦训练完成，您可以让它“设想出”一个它从未见过的新数字图像。</li>\n</ul>\n<p>其应用非常广泛：创建逼真图像、生成新音乐作品、合成类人文本，甚至可以增强现有数据集以提高其他机器学习 (machine learning)模型的性能。</p>\n<h3>自编码器与生成的萌芽</h3>\n<p>您可能想知道我们熟悉的自编码器是如何融入这一情境的。回想一下基本的自编码器架构：编码器将输入数据 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span> 映射到低维潜在表示 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span>，解码器则尝试从 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 重建原始数据 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mover accent=\"true\"><mi>X</mi><mo>^</mo></mover></mrow><annotation encoding=\"application/x-tex\">\\hat{X}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9468em;\"></span><span class=\"mord accent\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.9468em;\"><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span><span style=\"top:-3.2523em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"accent-body\" style=\"left:-0.1667em;\"><span class=\"mord\">^</span></span></span></span></span></span></span></span></span></span>。</p>\n<pre><code>输入 (X) --> 编码器 --> 潜在空间 (z) --> 解码器 --> 重建输出 (X_hat)\n</code></pre>\n<p>解码器部分特别有意思。如果我们可以某种方式向其输入来自潜在空间 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 的有意义向量 (vector)，它原则上可以生成新数据。解码器已经学会将潜在空间中的点映射回原始数据空间。那么，自编码器难道不已经是一个生成模型了吗？</p>\n<p>不完全是，或者至少，默认情况下效果不太好。标准自编码器经过训练，擅长重建。它们的潜在空间 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 学习捕获实现这一目标所需的信息。然而，这种潜在空间的组织方式不一定有利于生成<em>新颖</em>、<em>多样</em>且<em>逼真</em>的样本。</p>\n<p>如果您从标准自编码器的潜在空间中选取一个随机点并将其通过解码器，输出可能嘈杂、无意义，或者不像您的原始数据集中的任何有效数据。自编码器已经学会将特定输入数据映射到潜在空间中的特定区域，但“中间”区域或远离这些映射的区域可能未定义，或导致重建效果差。该空间可能呈“块状”或有“空洞”。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-2s4qrl\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled,rounded\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; Input [label=\"输入数据 (X)\", fillcolor=\"#e9ecef\"]; subgraph cluster_latent { label=\"潜在空间比较\"; style=rounded; bgcolor=\"#f8f9fa\"; subgraph cluster_std { label=\"标准自编码器潜在空间\"; fillcolor=\"#ced4da\"; L_Std [label=\"映射的数据点\\n(可能稀疏、不规则)\", shape= Mrecord, fillcolor=\"#ffc9c9\"]; } subgraph cluster_vae { label=\"变分自编码器潜在空间\"; fillcolor=\"#ced4da\"; L_VAE [label=\"概率编码\\n(鼓励平滑、连续)\", shape= Mrecord, fillcolor=\"#b2f2bb\"]; } } Decoder [label=\"解码器 (生成器)\", fillcolor=\"#e9ecef\"]; Output_Std [label=\"生成的 X&#39;\\n(从采样z生成，常不真实)\", fillcolor=\"#ffc9c9\"]; Output_VAE [label=\"生成的 X&#39;\\n(从采样z生成，新颖、逼真)\", fillcolor=\"#b2f2bb\"]; Input -> L_Std [label=\" 编码器\"]; Input -> L_VAE [label=\" 概率\\n编码器\"]; L_Std -> Decoder [label=\" 采样 z\"]; L_VAE -> Decoder [label=\" 采样 z\"]; Decoder -> Output_Std; Decoder -> Output_VAE [style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-2s4qrl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是一个简化视图，比较了输入数据在标准自编码器和变分自编码器潜在空间中的可能表示方式，以及这对于使用解码器生成新数据的影响。</p>\n</blockquote>\n<h3>对结构化潜在空间的需求</h3>\n<p>为了有效利用类似自编码器的结构进行生成，我们需要潜在空间不仅仅是一个压缩室。我们需要它具有<em>结构化</em>和<em>连续性</em>。这意味着：</p>\n<ol>\n<li><strong>连续性</strong>：潜在空间中向量 (vector) <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 的微小变化，应导致生成输出 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mover accent=\"true\"><mi>X</mi><mo>^</mo></mover></mrow><annotation encoding=\"application/x-tex\">\\hat{X}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9468em;\"></span><span class=\"mord accent\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.9468em;\"><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span><span style=\"top:-3.2523em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"accent-body\" style=\"left:-0.1667em;\"><span class=\"mord\">^</span></span></span></span></span></span></span></span></span></span> 中语义上微小且有意义的变化。如果潜在空间中微小移动就将输出从“猫”急剧变为“汽车”，那么该空间对于平滑生成或插值没有太大用处。</li>\n<li><strong>完备性（或密度）</strong>：潜在空间中可以解码为逼真样本的区域应该足够密集。我们希望能够从潜在空间中选定的分布（例如高斯分布）中采样点，并有很高概率生成有意义的内容。</li>\n</ol>\n<p>标准自编码器不明确强制实施这些特性。它们的主要目标是最小化重建误差。这正是变分自编码器 (VAEs) 的用武之地。VAEs 是一种专门为生成建模而设计的自编码器。它们为编码器和潜在空间引入了概率机制，并结合了修改后的损失函数 (loss function)，以鼓励潜在空间具有这些理想特性。</p>\n<p>尽管它们仍然使用编码器-解码器架构，但 VAEs 不将输入映射到潜在空间中的单个点。相反，它们将其映射到概率分布的参数 (parameter)（例如高斯分布的均值和方差）。这种概率方法是它们生成多样且连贯的新样本能力的基础，也是我们将在本章中详细研究的内容。通过学习平滑且结构化的潜在空间，VAEs 为通过简单地从这个学习到的空间采样并将其通过解码器来生成新颖数据铺平了道路。</p>",
+  "slug": "generative-modeling-autoencoders-intro",
+  "updates": [],
+  "references": [
+    {
+      "id": 16946,
+      "title": "Auto-Encoding Variational Bayes",
+      "author": "Diederik P. Kingma and Max Welling",
+      "year": "2013",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1312.6114",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1312.6114",
+      "doi": "10.48550/arXiv.1312.6114",
+      "note": "介绍变分自编码器（VAE）框架的原始研究论文，概述其概率公式和证据下界（ELBO）目标。",
+      "order": 1,
+      "created_at": "2025-09-06T11:51:09.862323Z",
+      "updated_at": "2025-09-10T06:15:48.761633Z"
+    },
+    {
+      "id": 16947,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "629-655 (Chapter 20)",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "这本权威教科书的第20章全面概述了生成模型，包括对变分自编码器及其理论基础的详细解释。",
+      "order": 2,
+      "created_at": "2025-09-06T11:51:09.915568Z",
+      "updated_at": "2025-09-10T06:15:51.591211Z"
+    },
+    {
+      "id": 16948,
+      "title": "Tutorial on Variational Autoencoders",
+      "author": "Carl Doersch",
+      "year": "2016",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1606.05908",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1606.05908",
+      "doi": "10.48550/arXiv.1606.05908",
+      "note": "一篇易于理解且广泛引用的教程，清晰解释了变分自编码器，使实践者和研究人员能够理解其基础概念。",
+      "order": 3,
+      "created_at": "2025-09-06T11:51:09.917988Z",
+      "updated_at": "2025-09-10T06:15:49.765424Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

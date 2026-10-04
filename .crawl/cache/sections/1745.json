@@ -1,0 +1,61 @@
+{
+  "id": 1745,
+  "title": "动手实践：对数组进行计算",
+  "meta_title": "NumPy 操作实践",
+  "meta_description": "将算术、统计和逻辑运算应用到 NumPy 数组，包括广播。",
+  "content": "<p>通过例子展示算术运算、通用函数、统计计算、逻辑运算以及广播在NumPy数组上的应用。请确保已导入 NumPy，通常使用 <code>import numpy as np</code>。</p>\n<h3>准备工作</h3>\n<p>首先，我们创建一些数组来操作。我们将使用简单的数组，以便于理解计算过程。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 表示两个地点5天内的每日温度（摄氏度）的数组\ntemps_loc_a = np.array([15.0, 17.5, 18.0, 16.5, 19.0])\ntemps_loc_b = np.array([12.0, 14.0, 13.5, 15.0, 16.0])\n\n# 一个2D数组，表示3个传感器在4个时间点的读数（例如，电压）\nsensor_readings = np.array([[1.1, 1.2, 1.0, 1.3],\n                           [2.0, 2.2, 2.1, 1.9],\n                           [0.8, 0.7, 0.9, 0.8]])\n\nprint(\"地点A的温度:\", temps_loc_a)\nprint(\"地点B的温度:\", temps_loc_b)\nprint(\"传感器读数:\\n\", sensor_readings)\n</code></pre>\n<h3>1. 算术运算和通用函数 (ufuncs)</h3>\n<p>让我们执行一些基本计算。</p>\n<p><strong>a) 元素级加法:</strong> 计算每天两个地点的平均温度。</p>\n<pre><code class=\"language-python\"># 计算每天的温度总和\ndaily_sum = temps_loc_a + temps_loc_b\n\n# 计算每天的平均温度\ndaily_avg = daily_sum / 2.0\n# 或者更直接的方式: daily_avg = (temps_loc_a + temps_loc_b) / 2\n\nprint(\"每日总和:\", daily_sum)\nprint(\"每日平均温度:\", daily_avg)\n</code></pre>\n<p>请注意，加法 <code>+</code> 和除法 <code>/</code> 运算是如何逐元素应用的。</p>\n<p><strong>b) 温度转换:</strong> 将地点A的温度从摄氏度转换为华氏度。公式是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>F</mi><mo>=</mo><mo stretchy=\"false\">(</mo><mi>C</mi><mo>×</mo><mn>9</mn><mi mathvariant=\"normal\">/</mi><mn>5</mn><mo stretchy=\"false\">)</mo><mo>+</mo><mn>32</mn></mrow><annotation encoding=\"application/x-tex\">F = (C \\times 9/5) + 32</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">9/5</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">32</span></span></span></span>。</p>\n<pre><code class=\"language-python\">temps_fahrenheit_a = (temps_loc_a * 9/5) + 32\nprint(\"地点A的温度 (华氏度):\", temps_fahrenheit_a)\n</code></pre>\n<p>同样，乘法 <code>*</code> 和加法 <code>+</code> 会自动应用于每个元素。</p>\n<p><strong>c) 使用通用函数 (ufunc):</strong> 计算每个传感器读数的平方根（可能用于数据转换）。我们使用 <code>np.sqrt()</code>。</p>\n<pre><code class=\"language-python\">sqrt_readings = np.sqrt(sensor_readings)\nprint(\"传感器读数的平方根:\\n\", sqrt_readings)\n</code></pre>\n<p>NumPy 的 <code>np.sqrt</code> 函数对整个数组进行高效操作。</p>\n<h3>2. 数学和统计函数</h3>\n<p>现在我们来计算一些汇总统计量。</p>\n<p><strong>a) 总体统计:</strong> 找出地点A记录的总体最低、最高和平均温度。</p>\n<pre><code class=\"language-python\">min_temp_a = np.min(temps_loc_a)\nmax_temp_a = np.max(temps_loc_a)\navg_temp_a = np.mean(temps_loc_a)\nstd_dev_temp_a = np.std(temps_loc_a) # 标准差\n\nprint(f\"地点A - 最低温度: {min_temp_a:.2f} C\")\nprint(f\"地点A - 最高温度: {max_temp_a:.2f} C\")\nprint(f\"地点A - 平均温度: {avg_temp_a:.2f} C\")\nprint(f\"地点A - 标准差: {std_dev_temp_a:.2f} C\")\n</code></pre>\n<p><strong>b) 沿轴统计:</strong> 从 <code>sensor_readings</code> 数组中计算每个传感器的平均读数（跨时间）和每个时间点的平均读数（跨传感器）。</p>\n<p>请记住：</p>\n<ul>\n<li><code>axis=0</code> 沿行操作（为每列计算统计量）。</li>\n<li><code>axis=1</code> 沿列操作（为每行计算统计量）。</li>\n</ul>\n<pre><code class=\"language-python\"># 每个时间点的平均读数（跨传感器）- 行折叠\navg_reading_per_timepoint = np.mean(sensor_readings, axis=0)\n\n# 每个传感器的平均读数（跨时间）- 列折叠\navg_reading_per_sensor = np.mean(sensor_readings, axis=1)\n\nprint(\"每个时间点的平均读数:\", avg_reading_per_timepoint)\nprint(\"每个传感器的平均读数:\", avg_reading_per_sensor)\n</code></pre>\n<p>我们可以使用简单的条形图来可视化每个传感器的平均读数。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-h2wyhp\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"传感器 1\", \"传感器 2\", \"传感器 3\"], \"y\": [1.15, 2.05, 0.8], \"marker\": {\"color\": [\"#228be6\", \"#15aabf\", \"#40c057\"]}}], \"layout\": {\"title\": \"每个传感器的平均读数\", \"xaxis\": {\"title\": \"传感器\"}, \"yaxis\": {\"title\": \"平均电压\"}, \"margin\": {\"l\": 40, \"r\": 20, \"t\": 40, \"b\": 40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-h2wyhp\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>为每个传感器在所有时间点计算的平均电压读数。</p>\n</blockquote>\n<h3>3. 逻辑运算</h3>\n<p>让我们找出地点A温度高于17摄氏度的日期。</p>\n<pre><code class=\"language-python\"># 根据条件创建布尔数组\nhot_days_a = temps_loc_a > 17.0\nprint(\"地点A温度高于17摄氏度的日期:\", hot_days_a)\n\n# 使用布尔索引来选择那些日期的温度\nhot_temps_a = temps_loc_a[hot_days_a]\n# 你也可以一步完成: hot_temps_a = temps_loc_a[temps_loc_a > 17.0]\nprint(\"地点A高温日期的温度:\", hot_temps_a)\n\n# 有多少个高温日期？\nnum_hot_days = np.sum(hot_days_a) # True 计为 1，False 计为 0\nprint(\"温度高于17摄氏度的天数:\", num_hot_days)\n</code></pre>\n<p>比较表达式 <code>temps_loc_a > 17.0</code> 返回一个布尔数组 (<code>[False, True, True, False, True]</code>)。然后，此数组用作索引，只选择 <code>temps_loc_a</code> 中布尔数组对应值为 <code>True</code> 的元素。</p>\n<h3>4. 广播</h3>\n<p>如果形状兼容，广播允许在不同形状的数组之间进行操作。</p>\n<p><strong>a) 添加标量:</strong> 将一个常数调整值（例如 0.5）添加到所有传感器读数。</p>\n<pre><code class=\"language-python\">adjusted_readings = sensor_readings + 0.5\nprint(\"调整后的传感器读数:\\n\", adjusted_readings)\n</code></pre>\n<p>在这里，标量 <code>0.5</code> 被有效地“拉伸”或广播，以匹配 <code>sensor_readings</code> 的形状，然后进行加法运算。</p>\n<p><strong>b) 与一维数组操作:</strong> 假设我们为每个时间点设置了一个基线值（可能是前几天的平均值），并希望查看传感器1当前读数与此基线值的差异。</p>\n<pre><code class=\"language-python\">baseline_per_timepoint = np.array([1.0, 1.1, 0.9, 1.2])\nsensor1_readings = sensor_readings[0, :] # 第一行\n\ndifference_sensor1 = sensor1_readings - baseline_per_timepoint\nprint(\"传感器1读数:\", sensor1_readings)\nprint(\"每个时间点的基线值:\", baseline_per_timepoint)\nprint(\"传感器1的差异:\", difference_sensor1)\n</code></pre>\n<p><code>sensor1_readings</code> 和 <code>baseline_per_timepoint</code> 都是相同大小（4个元素）的一维数组，因此逐元素相减可以直接进行。</p>\n<p><strong>c) 将一维数组广播到二维数组:</strong> 现在，让我们从<em>所有</em>传感器读数中减去 <code>baseline_per_timepoint</code>。</p>\n<pre><code class=\"language-python\">difference_all_sensors = sensor_readings - baseline_per_timepoint\nprint(\"所有传感器与基线的差异:\\n\", difference_all_sensors)\n</code></pre>\n<p>这是如何工作的？<code>sensor_readings</code> 的形状是 <code>(3, 4)</code>，<code>baseline_per_timepoint</code> 的形状是 <code>(4,)</code>。NumPy 的广播规则从右到左比较维度：</p>\n<ol>\n<li>最后一个维度匹配（都为 4）。</li>\n<li><code>sensor_readings</code> 的下一个维度是 3，但 <code>baseline_per_timepoint</code> 没有更多维度了。\nNumPy 会沿着缺失的维度（本例中为行）“拉伸”或复制 <code>baseline_per_timepoint</code>，以有效地创建一个与 <code>sensor_readings</code> 匹配的 <code>(3, 4)</code> 数组。然后进行逐元素相减。就像 NumPy 执行了这样的减法：</li>\n</ol>\n<pre><code>[[1.1, 1.2, 1.0, 1.3],      [[1.0, 1.1, 0.9, 1.2],\n [2.0, 2.2, 2.1, 1.9],  -    [1.0, 1.1, 0.9, 1.2],\n [0.8, 0.7, 0.9, 0.8]]       [1.0, 1.1, 0.9, 1.2]]\n</code></pre>\n<h3>总结</h3>\n<p>在本次动手实践中，你应用了本章介绍的基本数值运算：</p>\n<ul>\n<li>执行了逐元素的<strong>算术运算</strong>，如加法和乘法。</li>\n<li>使用了<strong>通用函数</strong> (ufuncs)，如 <code>np.sqrt</code>。</li>\n<li>计算了整个数组和特定轴的<strong>统计指标</strong>（<code>np.mean</code>、<code>np.min</code>、<code>np.max</code>、<code>np.std</code>）。</li>\n<li>应用了<strong>逻辑运算</strong>（<code>></code>）来创建布尔数组，用于数据过滤（布尔索引）。</li>\n<li>运用<strong>广播</strong>在兼容但形状不同的数组之间执行操作（标量与数组，一维与二维）。</li>\n</ul>\n<p>这些操作是 NumPy 数值计算的核心，也是你将遇到的许多数据分析任务的根本。进一步尝试创建自己的数组，并尝试不同的函数和操作。</p>",
+  "slug": "array-calculations-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5445,
+      "title": "The N-dimensional array (ndarray)",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.html",
+      "doi": "",
+      "note": "提供NumPy数组的基本信息，包括创建、基本算术运算、通用函数和广播规则。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:23.899803Z",
+      "updated_at": "2025-09-08T02:34:37.247108Z"
+    },
+    {
+      "id": 5446,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "NumPy和Pandas数据操作的综合指南，详细介绍了所有数组运算、统计和广播。",
+      "order": 2,
+      "created_at": "2025-09-05T01:10:23.924367Z",
+      "updated_at": "2025-09-08T02:34:34.343874Z"
+    },
+    {
+      "id": 5447,
+      "title": "Data Science from Scratch: First Principles with Python",
+      "author": "Joel Grus",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/data-science-from/9781492041122/",
+      "doi": "",
+      "note": "阐述数据科学工具的基本原理，其中一章专门介绍NumPy的核心数组操作及其应用。",
+      "order": 3,
+      "created_at": "2025-09-05T01:10:23.927070Z",
+      "updated_at": "2025-09-08T02:34:39.331571Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

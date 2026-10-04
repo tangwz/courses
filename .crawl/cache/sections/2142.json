@@ -1,0 +1,61 @@
+{
+  "id": 2142,
+  "title": "从多种来源加载数据",
+  "meta_title": "使用Pandas加载数据（CSV、Excel、SQL）",
+  "meta_description": "学习如何将数据从CSV、Excel和SQL数据库等常见文件格式读取到Pandas DataFrames中。",
+  "content": "<p>数据载入DataFrame是使用Pandas处理数据的重要前提。幸运的是，Pandas提供了一系列函数，用于读取多种常见存储格式的数据。将文件或数据库中的数据加载到内存中作为DataFrame，通常是任何数据分析或机器学习 (machine learning)流程中的第一步。</p>\n<p>我们来看看如何从一些最常遇到的来源加载数据。</p>\n<h3>从CSV文件读取数据</h3>\n<p>逗号分隔值（CSV）文件可能是存储表格数据最常见的文本文件格式。每行通常代表一个记录，行内的值由分隔符（通常是逗号）分隔。Pandas为此提供了<code>read_csv()</code>函数。</p>\n<p>其最简单的用法是提供文件路径：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 假设 'data.csv' 在同一目录下\ndf_csv = pd.read_csv('data/sales_data.csv')\n\n# 显示前5行\nprint(df_csv.head())\n</code></pre>\n<p><code>read_csv()</code>函数功能非常多样，接受众多可选参数 (parameter)，以处理不同的文件结构和潜在问题：</p>\n<ul>\n<li><code>sep</code>或<code>delimiter</code>：指定用于分隔值的字符。虽然默认是逗号（<code>,</code>），您可能会遇到使用制表符（<code>\\t</code>）、分号（<code>;</code>）或其他字符的文件。\n<pre><code class=\"language-python\"># 制表符分隔文件的示例\ndf_tsv = pd.read_csv('data/product_data.tsv', sep='\\t')\n</code></pre>\n</li>\n<li><code>header</code>：指示哪一行（从0开始计数）包含列名。如果文件没有标题行，请设置<code>header=None</code>，Pandas将分配默认的数字列名（0, 1, 2...）。您还可以使用<code>names</code>参数提供一个名称列表。\n<pre><code class=\"language-python\"># 没有标题的文件，提供列名\ndf_no_header = pd.read_csv('data/log_data.csv', header=None, names=['timestamp', 'user_id', 'action'])\n</code></pre>\n</li>\n<li><code>index_col</code>：指定哪一列应用作DataFrame的索引（行标签）。这可以是列号或列名。\n<pre><code class=\"language-python\"># 使用 'transaction_id' 列作为索引\ndf_indexed = pd.read_csv('data/transactions.csv', index_col='transaction_id')\n</code></pre>\n</li>\n<li><code>usecols</code>：允许您通过提供列名或索引列表来只读取特定的列子集。这对于只需要某些特征的大文件很有用。\n<pre><code class=\"language-python\"># 只读取 'customer_id' 和 'purchase_amount' 列\ndf_subset = pd.read_csv('data/orders.csv', usecols=['customer_id', 'purchase_amount'])\n</code></pre>\n</li>\n<li><code>nrows</code>：只读取文件中指定数量的行，从文件开头开始。这有助于快速查看大文件，而无需将整个数据集加载到内存中。\n<pre><code class=\"language-python\"># 只读取前1000行\ndf_sample = pd.read_csv('data/large_dataset.csv', nrows=1000)\n</code></pre>\n</li>\n<li><code>encoding</code>：指定文件编码，如果它不是标准的UTF-8（例如，'latin1'，'iso-8859-1'）。不正确的编码可能导致错误或乱码。</li>\n</ul>\n<p>“查阅Pandas关于<code>pd.read_csv</code>的文档，以查看完整的参数列表；掌握这些选项对于处理各类数据文件是必不可少的。”</p>\n<h3>从Excel文件读取数据</h3>\n<p>Excel电子表格（<code>.xls</code>或<code>.xlsx</code>）是另一种常见的格式，尤其在商业环境中。Pandas使用<code>read_excel()</code>函数从这些文件加载数据。如果您尚未安装，可能需要安装<code>openpyxl</code>（用于<code>.xlsx</code>文件）或<code>xlrd</code>（用于较旧的<code>.xls</code>文件）等额外库（<code>pip install openpyxl xlrd</code>）。</p>\n<p>基本用法与<code>read_csv()</code>相似：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 从Excel文件的第一个工作表加载数据\ndf_excel = pd.read_excel('data/inventory.xlsx')\n\nprint(df_excel.head())\n</code></pre>\n<p>Excel文件的一个显著不同是它们可以包含多个工作表。<code>read_excel()</code>函数通过<code>sheet_name</code>参数 (parameter)处理这一点：</p>\n<ul>\n<li><code>sheet_name=None</code>：将所有工作表读取到DataFrames字典中，其中键是工作表名称，值是对应的DataFrame。</li>\n<li><code>sheet_name='SheetName'</code>：按名称读取指定的工作表。</li>\n<li><code>sheet_name=0</code>：读取第一个工作表（索引从0开始）。</li>\n<li><code>sheet_name=[0, 1, 'Summary']</code>：将多个特定工作表（按索引或名称）读取到DataFrames字典中。</li>\n</ul>\n<pre><code class=\"language-python\"># 从 'Q1_Sales' 工作表加载数据\ndf_q1 = pd.read_excel('data/regional_sales.xlsx', sheet_name='Q1_Sales')\n\n# 将所有工作表加载到字典中\nall_sheets_dict = pd.read_excel('data/regional_sales.xlsx', sheet_name=None)\ndf_q2 = all_sheets_dict['Q2_Sales'] # 访问 'Q2_Sales' 工作表的DataFrame\n</code></pre>\n<p><code>read_excel()</code>与<code>read_csv()</code>共享许多参数，例如<code>header</code>、<code>index_col</code>和<code>usecols</code>，从而可以精细控制电子表格数据的导入方式。</p>\n<h3>从SQL数据库读取数据</h3>\n<p>机器学习 (machine learning)数据常存在于关系型数据库（如PostgreSQL、MySQL、SQLite、SQL Server）中。Pandas可以使用<code>read_sql()</code>、<code>read_sql_query()</code>或<code>read_sql_table()</code>直接查询数据库并将结果加载到DataFrame中。</p>\n<p>这需要建立与数据库的连接。在Python中，执行此操作的标准方法是使用SQLAlchemy库（<code>pip install sqlalchemy</code>），该库为不同的数据库系统提供一致的接口。您还需要一个数据库特定的驱动程序（例如，PostgreSQL的<code>psycopg2</code>，MySQL的<code>mysql-connector-python</code>）。</p>\n<p>以下是使用SQLAlchemy和<code>read_sql_query()</code>的典型流程：</p>\n<ol>\n<li><strong>创建数据库引擎：</strong> 使用SQLAlchemy的<code>create_engine</code>函数和数据库连接字符串。</li>\n<li><strong>编写SQL查询：</strong> 定义SQL查询以获取所需数据。</li>\n<li><strong>使用Pandas执行：</strong> 将查询和引擎（或活动的连接）传递给<code>pd.read_sql_query()</code>。</li>\n</ol>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sqlalchemy import create_engine\n\n# SQLite示例（请替换为您的实际数据库连接字符串）\n# 格式：'dialect+driver://username:password@host:port/database'\n# SQLite连接字符串更简单：'sqlite:///path/to/your_database.db'\ndb_path = 'data/mydatabase.db'\nengine = create_engine(f'sqlite:///{db_path}')\n\n# 定义SQL查询\nquery = \"SELECT user_id, age, registration_date FROM users WHERE country = 'USA';\"\n\n# 使用查询和引擎加载数据\ntry:\n    with engine.connect() as connection:\n        df_sql = pd.read_sql_query(sql=query, con=connection)\n    print(df_sql.head())\nexcept Exception as e:\n    print(f\"连接数据库或执行查询出错：{e}\")\n\n# 另外，pd.read_sql通常可以判断是读取表还是执行查询\n# 读取整个 'products' 表\n# try:\n#     with engine.connect() as connection:\n#         df_table = pd.read_sql(sql='products', con=connection, index_col='product_id')\n#     print(df_table.head())\n# except Exception as e:\n#     print(f\"读取表出错：{e}\")\n\n</code></pre>\n<ul>\n<li><code>pd.read_sql_query(sql, con)</code>：使用提供的数据库连接（<code>con</code>）执行特定的SQL查询（<code>sql</code>）。</li>\n<li><code>pd.read_sql_table(table_name, con)</code>：读取由<code>table_name</code>指定的整个数据库表。</li>\n<li><code>pd.read_sql(sql, con)</code>：一个更通用的函数，可以委托给<code>read_sql_query</code>或<code>read_sql_table</code>。</li>\n</ul>\n<p>使用<code>pd.read_sql_*</code>函数将数据库数据直接集成到您的Pandas工作流程中非常高效。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-aahic4\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"]; edge [color=\"#495057\"]; subgraph cluster_sources { label = \"数据来源\"; style=filled; fillcolor=\"#f8f9fa\"; node [fillcolor=\"#a5d8ff\"]; csv [label=\"CSV文件\\n(data.csv)\"]; excel [label=\"Excel文件\\n(data.xlsx)\"]; db [label=\"SQL数据库\\n(db_connection)\"]; } subgraph cluster_pandas { label = \"Pandas函数\"; style=filled; fillcolor=\"#f8f9fa\"; node [shape=oval, fillcolor=\"#96f2d7\"]; read_csv [label=\"pd.read_csv()\"]; read_excel [label=\"pd.read_excel()\"]; read_sql [label=\"pd.read_sql()\"]; } dataframe [label=\"Pandas DataFrame\", shape=cylinder, fillcolor=\"#ffec99\"]; csv -> read_csv; excel -> read_excel; db -> read_sql; read_csv -> dataframe; read_excel -> dataframe; read_sql -> dataframe; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-aahic4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>常见数据源（CSV、Excel、SQL数据库）通过特定的Pandas函数（<code>pd.read_csv</code>、<code>pd.read_excel</code>、<code>pd.read_sql</code>）引入，以创建统一的DataFrame结构供分析使用。</p>\n</blockquote>\n<p>虽然CSV、Excel和SQL非常常见，Pandas也支持从许多其他格式读取数据，包括JSON（<code>pd.read_json</code>）、HTML表格（<code>pd.read_html</code>）、HDF5（<code>pd.read_hdf</code>）、Parquet（<code>pd.read_parquet</code>）等。基本原则保持不变：使用适当的<code>pd.read_*</code>函数，并配置其参数 (parameter)以正确解析源数据结构。熟练地从各种来源加载数据是数据处理和准备的一项基本技能。</p>",
+  "slug": "pandas-loading-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 3563,
+      "title": "Input/Output Tools (IO)",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html",
+      "doi": "",
+      "note": "Pandas 关于读写数据的官方用户指南部分，详细介绍了 read_csv、read_excel 和 read_sql 等函数及其众多参数。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:09.079238Z",
+      "updated_at": "2025-09-08T06:01:42.706747Z"
+    },
+    {
+      "id": 3564,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas 创始人撰写的权威指南，深入解释了数据结构和基本操作，包括详细介绍如何从各种格式加载数据。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:09.101371Z",
+      "updated_at": "2025-09-08T06:01:45.640924Z"
+    },
+    {
+      "id": 3565,
+      "title": "SQLAlchemy Engine Configuration",
+      "author": "The SQLAlchemy project team",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.sqlalchemy.org/en/20/core/engines.html",
+      "doi": "",
+      "note": "SQLAlchemy 中配置数据库引擎的官方文档，这对于建立 Pandas 用于从 SQL 数据库读取数据的连接至关重要。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:09.105121Z",
+      "updated_at": "2025-09-08T06:01:37.422947Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

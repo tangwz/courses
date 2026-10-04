@@ -1,0 +1,61 @@
+{
+  "id": 6562,
+  "title": "代理的运行循环",
+  "meta_title": "LLM代理中的观察与行动循环",
+  "meta_description": "了解代理遵循的观察、思考和行动的基本循环。",
+  "content": "<p>LLM代理不会仅仅完成一项任务就停止；它以持续的循环方式工作。可以这样理解：一个代理观察其所处环境（或任务的当前状态），根据这些观察和其目标思考下一步做什么，然后采取行动。这个序列不是一次性发生的。它会重复，让代理能够取得进展，适应新信息，并努力完成更复杂的任务目标。这个基本的重复过程通常被称为代理的运行循环。它说明了代理如何从简单地处理语言，到执行一系列行动。</p>\n<p>让我们来细分这个循环的主要阶段：</p>\n<ol>\n<li>\n<p><strong>观察（收集信息）</strong>\n代理在每个循环中的第一步是收集信息。这种“观察”可以有多种形式。它可能是你给出的初始指令，例如“为我总结这份文档”。它也可能是代理之前采取行动的结果，比如“搜索查询返回了三篇文章”或“尝试访问文件时发生错误”。或者，它可能是来自外部来源的新数据。本质上，代理正在收集它做出知情决策所需的当前数据点。这个步骤通常涉及检查其短期记忆，以理解当前情况相对于过去交互的背景。</p>\n</li>\n<li>\n<p><strong>思考（处理和规划）</strong>\n一旦代理有了观察结果，它就需要“思考”。这是大型语言模型（LLM），即代理的大脑，开始工作的阶段。LLM处理从观察中获得的新信息，考虑其总体目标（由其初始指令或提示定义），并决定下一步。这可能包括：</p>\n<ul>\n<li>分析观察结果：“用户需要摘要，我已经有了文档内容。”</li>\n<li>制定或更新计划：“步骤1：阅读文档。步骤2：识别要点。步骤3：生成摘要。”</li>\n<li>决定具体行动：“下一步行动是使用‘文本摘要’工具。”\nLLM将即时观察与更广泛的指令以及任何进行中的计划结合起来，以确定要做什么。</li>\n</ul>\n</li>\n<li>\n<p><strong>行动（执行和交互）</strong>\n在“思考”阶段之后，代理“行动”。行动是代理执行的任何操作。这可能是：</p>\n<ul>\n<li>为用户生成文本响应（例如：“这是您请求的摘要...”）。</li>\n<li>使用工具（例如，访问计算器、进行网络搜索或查询数据库）。</li>\n<li>调用外部API（例如，获取天气数据或发送电子邮件）。</li>\n<li>修改其内部状态或记忆（例如，记录子任务已完成）。\n如果代理在其思考阶段决定使用天气工具查询“巴黎”，那么行动将是以“巴黎”作为输入执行该工具。</li>\n</ul>\n</li>\n</ol>\n<p>这种观察-思考-行动的循环随后重复。行动的结果（例如，工具检索到的天气信息，或工具失败时的错误消息）成为循环下一次迭代的新观察结果。代理观察这个新状态，思考它在其目标背景下的含义，并决定随后的行动。这个过程会一直持续，直到代理成功完成其总体任务或被指示停止。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10tygpv\" \n              data-graph-definition='digraph G { graph [fontname=\"Arial\"]; node [fontname=\"Arial\", style=\"rounded,filled\"]; edge [fontname=\"Arial\"]; rankdir=TB; Observe [label=\"1. 观察\\n（收集当前状态、\\n用户输入、工具输出）\", shape=box, fillcolor=\"#a5d8ff\"]; Think [label=\"2. 思考\\n（LLM处理、\\n决定下一步、\\n更新计划）\", shape=box, fillcolor=\"#b2f2bb\"]; Act [label=\"3. 行动\\n（执行工具、\\n生成响应、\\n与环境交互）\", shape=box, fillcolor=\"#ffc9c9\"]; Goal_Check [label=\"目标达成？\", shape=diamond, fillcolor=\"#ffe066\"]; End [label=\"任务完成\\n或暂停\", shape=ellipse, fillcolor=\"#ced4da\"]; Observe -> Think [label=\"信息\"]; Think -> Act [label=\"决策/指令\"]; Act -> Goal_Check [label=\"结果/产出\"]; Goal_Check -> Observe [label=\"否，继续\"]; Goal_Check -> End [label=\"是\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10tygpv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LLM代理的运行循环涉及重复观察情况、思考下一步并采取行动，直到达成总体目标。</p>\n</blockquote>\n<p>这种运行循环使代理对各种任务特别有效。这种循环过程不是单一输入产生单一输出，它使代理能够：</p>\n<ul>\n<li><strong>管理多步骤任务</strong>：复杂目标可以分解并逐一处理，每个循环都取得进展。</li>\n<li><strong>适应新信息</strong>：如果行动不按计划进行（例如，工具返回错误），代理可以观察这个结果，思考替代方法，然后在下一个循环中采取不同行动。</li>\n<li><strong>保持持续交互</strong>：通过将观察结果（这可以包括之前的行动和思考历史，通常存储在记忆中）反馈到循环中，代理可以进行更连贯和更长的对话或过程。</li>\n</ul>\n<p>你可以看到，我们本章中讨论的代理核心组成部分，都这个循环中发挥各自的作用：</p>\n<ul>\n<li><strong>LLM</strong> 是“思考”阶段的引擎，执行推理 (inference)。</li>\n<li><strong>指令和提示</strong> 在每个“思考”阶段持续引导LLM的决策。</li>\n<li><strong>工具</strong> 是在“行动”阶段使用的工具，让代理能够执行多种操作。</li>\n<li><strong>短期记忆</strong> 非常重要。它在“观察”时被查阅，以提供先前循环的背景，并且通常在“思考”阶段期间或之后更新，包含新的学习或状态变化。</li>\n<li><strong>规划能力</strong>，帮助代理“先思考后行动”，在“思考”阶段中使用，以策略性地规划达到目标所需的行动序列。</li>\n</ul>\n<p>理解这种观察-思考-行动循环，是理解LLM代理如何运作并完成它们被设计用来执行的任务的根本所在。在下一节“简化的代理工作流程”中，我们将查看一个更具体的逐步示例，说明这个循环在实践中的应用。</p>",
+  "slug": "the-agents-operational-loop",
+  "updates": [],
+  "references": [
+    {
+      "id": 18600,
+      "title": "Artificial Intelligence: A Modern Approach",
+      "author": "Stuart J. Russell and Peter Norvig",
+      "year": "2020",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 2",
+      "url": "https://www.pearson.com/us/higher-education/program/Russell-Artificial-Intelligence-A-Modern-Approach-4th-Edition/PGM244975.html",
+      "doi": "",
+      "note": "一本基础教科书，定义了智能体及其操作循环，包括感知、动作和各种智能体程序。",
+      "order": 1,
+      "created_at": "2025-09-06T12:32:11.808030Z",
+      "updated_at": "2026-02-04T11:33:50.643504Z"
+    },
+    {
+      "id": 18601,
+      "title": "Reinforcement Learning: An Introduction",
+      "author": "Richard S. Sutton, Andrew G. Barto",
+      "year": "2018",
+      "publisher": "The MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3",
+      "url": "http://incompleteideas.net/book/the-book-2nd.html",
+      "doi": "",
+      "note": "介绍了智能体-环境交互循环，其中智能体观察状态、采取行动并接收新状态和奖励。",
+      "order": 2,
+      "created_at": "2025-09-06T12:32:11.812003Z",
+      "updated_at": "2026-02-04T11:33:50.861211Z"
+    },
+    {
+      "id": 18603,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, and Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2304.03442",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHyagDsSnq6s70sXKJYLpwobh78r67mYYjELUXqdfMtVbc3twjiyZooeDsm9r5MPDhm0sIpp6kEWceBIdVU9YIwAMHESJTIMPwr0HYcqagPwhPzgJl4hkABgklgr_oLEmaV9Jgtltg=",
+      "doi": "",
+      "note": "描述了一种采用观察-规划-反思循环的智能体架构，展示了具有记忆和规划的LLM驱动智能体复杂的运行循环。",
+      "order": 4,
+      "created_at": "2025-09-06T12:32:11.818709Z",
+      "updated_at": "2026-02-04T11:33:51.545671Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

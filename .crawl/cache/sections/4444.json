@@ -1,0 +1,45 @@
+{
+  "id": 4444,
+  "title": "实现 ReAct 智能体",
+  "meta_title": "实现 ReAct 智能体",
+  "meta_description": "构建基于 ReAct 架构的智能体的代码实现详情。",
+  "content": "<p>ReAct 框架将推理 (inference)（<code>Thought</code>）与环境交互（<code>Action</code>）结合起来，以使智能体能够执行任务。实现此类智能体需要精心设计提示、解析大型语言模型的结构化输出、执行动作以及管理迭代过程。</p>\n<h3>ReAct 运行周期</h3>\n<p>ReAct 智能体其核心在于一个循环中运作，逐步处理信息。每个步骤通常包含生成一个思考、根据该思考提出一个动作、执行该动作，并纳入由此产生的观察结果。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1wi99fx\" \n              data-graph-definition='digraph ReAct_Loop {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", color=\"#495057\", fontcolor=\"#495057\"];\n    edge [fontname=\"Arial\", color=\"#495057\", fontcolor=\"#495057\"];\n\n    Start [label=\"开始\\n(初始任务/查询)\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    Prompt [label=\"构建提示\\n(任务 + 历史)\", shape=note, style=filled, fillcolor=\"#ffec99\"];\n    LLM [label=\"大型语言模型推理\", shape=cylinder, style=filled, fillcolor=\"#eebefa\"];\n    Parse [label=\"解析输出\\n(思考, 动作)\", shape=cds, style=filled, fillcolor=\"#b2f2bb\"];\n    Thought [label=\"思考 (tᵢ)\", shape=plaintext];\n    Action [label=\"动作 (aᵢ)\", shape=plaintext];\n    Execute [label=\"执行动作\\n(调用工具/API)\", shape=invhouse, style=filled, fillcolor=\"#ffd8a8\"];\n    Observe [label=\"获取观察结果 (oᵢ)\", shape=parallelogram, style=filled, fillcolor=\"#bac8ff\"];\n    CheckDone [label=\"任务完成?\", shape=diamond, style=filled, fillcolor=\"#ffc9c9\"];\n    FinalAnswer [label=\"最终答案\", shape=ellipse, style=filled, fillcolor=\"#96f2d7\"];\n    UpdateHistory [label=\"更新历史\\n(tᵢ, aᵢ, oᵢ)\", shape=folder, style=filled, fillcolor=\"#d0bfff\"];\n\n    Start -> Prompt;\n    Prompt -> LLM;\n    LLM -> Parse;\n    Parse -> Thought [style=dashed, arrowhead=none];\n    Parse -> Action [style=dashed, arrowhead=none];\n    Parse -> CheckDone [label=\"动作是 &#39;最终答案&#39; 吗?\"];\n    CheckDone -> FinalAnswer [label=\"是\"];\n    CheckDone -> Execute [label=\"否\"];\n    Execute -> Observe;\n    Observe -> UpdateHistory;\n    UpdateHistory -> Prompt [label=\"追加 (tᵢ, aᵢ, oᵢ)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1wi99fx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ReAct 智能体内部的迭代流程，展示了从提示大型语言模型到解析其输出、执行动作、观察结果，以及更新上下文 (context)以进行下一个周期的过程。</p>\n</blockquote>\n<h3>结构化思考与动作的提示设计</h3>\n<p>ReAct 的有效性很大程度上取决于如何设计提示，以引导大型语言模型按所需的 <code>Thought: ... Action: ...</code> 格式生成输出。这通常通过少样本提示实现，即提示中包含成功推理 (inference)路径的示例。</p>\n<p>一个典型的 ReAct 提示结构可能如下所示：</p>\n<pre><code class=\"language-text\">You are an expert assistant designed to solve complex tasks by reasoning step-by-step and interacting with available tools.\n\nAvailable Tools:\n[\n  {\n    \"name\": \"Search\",\n    \"description\": \"执行网络搜索以查找最新信息。\",\n    \"arguments\": {\"query\": \"搜索查询字符串。\"}\n  },\n  {\n    \"name\": \"Calculator\",\n    \"description\": \"计算数学表达式。\",\n    \"arguments\": {\"expression\": \"要评估的数学表达式。\"}\n  },\n  # ... 可能会有更多工具\n]\n\nFollow this format strictly:\n\nQuestion: 用户的输入问题。\nThought: 你对当前状态、目标以及下一步要采取的动作的推理。\nAction: 要采取的动作。从可用工具列表中选择一个工具或使用 'Final Answer'。格式为 JSON 对象：{\"action\": \"ToolName\", \"action_input\": {\"arg1\": \"value1\", ...}} 或 {\"action\": \"Final Answer\", \"action_input\": \"你的最终答案在这里。\"}\n\n--- 之前步骤 ---\nThought: 之前思考 1...\nAction: {\"action\": \"PreviousAction1\", \"action_input\": {...}}\nObservation: 之前观察结果 1...\n\nThought: 之前思考 2...\nAction: {\"action\": \"PreviousAction2\", \"action_input\": {...}}\nObservation: 之前观察结果 2...\n\n--- 当前步骤 ---\nQuestion: {current_user_question}\nThought:\n</code></pre>\n<p><strong>提示设计考量：</strong></p>\n<ul>\n<li><strong>指令清晰度：</strong> 必须明确说明角色、可用工具和所需的输出格式。</li>\n<li><strong>工具描述：</strong> 工具描述应简洁但信息充足，以便大型语言模型理解其用途和所需参数 (parameter)。在提示中使用 JSON 或 YAML 等结构化格式定义工具很常见。</li>\n<li><strong>少样本示例（可选但建议）：</strong> 在初始提示中包含 1-3 个成功的 <code>思考 -> 动作 -> 观察结果</code> 序列示例，能显著提升大型语言模型遵循格式和推理模式的能力。</li>\n<li><strong>历史管理：</strong> <code>--- 之前步骤 ---</code> 部分很重要。它提供了正在进行的推理过程的上下文 (context)。随着交互的进行，此历史记录会增加。管理上下文长度的策略，例如总结早期步骤或使用滑动窗口，对于长时间任务变得很重要（在第 3 章中会更详细地介绍）。</li>\n<li><strong>停止序列：</strong> 为大型语言模型生成定义停止序列（例如 <code>Observation:</code>）有助于确保模型在生成 <code>动作</code> 后暂停，从而允许你的代码在提示下一步之前执行该动作。</li>\n</ul>\n<h3>解析大型语言模型输出</h3>\n<p>一旦大型语言模型生成其响应，就需要进行解析以提取 <code>思考</code> 和 <code>动作</code> 组件。通常使用正则表达式或字符串处理技术。对于格式为 JSON 的动作（如示例提示中所示），会使用 JSON 解析器。</p>\n<pre><code class=\"language-python\"># 简化的类似 Python 的解析伪代码\nllm_output = llm.generate(prompt) # 假设 llm_output 包含 \"Thought: ... \\nAction: ...\"\n\nthought = parse_thought(llm_output) # 提取 \"Thought:\" 之后和 \"Action:\" 之前的文本\naction_json_str = parse_action_string(llm_output) # 提取 \"Action:\" 之后的文本\n\ntry:\n    action_data = json.loads(action_json_str)\n    action_name = action_data.get(\"action\")\n    action_input = action_data.get(\"action_input\")\nexcept json.JSONDecodeError:\n    # 处理大型语言模型未生成有效 JSON 的情况\n    handle_parsing_error()\n    # 可能会要求大型语言模型重新格式化或尝试一个默认动作\n</code></pre>\n<p>解析过程中的错误处理很重要。大型语言模型有时可能无法严格遵守格式。你的实现需要处理格式不正确输出的策略，也许可以通过包含特定错误反馈的重新提示，或尝试一个默认的恢复动作。</p>\n<h3>动作执行与观察结果生成</h3>\n<p>解析后的 <code>action_name</code> 和 <code>action_input</code> 决定接下来会发生什么。</p>\n<ol>\n<li><strong>识别工具：</strong> 将 <code>action_name</code> 与系统中定义的可用工具/函数之一进行匹配。</li>\n<li><strong>验证输入：</strong> 检查 <code>action_input</code> 是否包含所选工具所需的参数 (parameter)。</li>\n<li><strong>执行：</strong> 使用提供的参数调用相应的函数或 API。</li>\n<li><strong>捕获结果：</strong> 工具执行的输出、成功/失败状态或错误消息将成为 <code>观察结果</code>。</li>\n</ol>\n<pre><code class=\"language-python\"># 简化的类似 Python 的执行伪代码\navailable_tools = {\n    \"Search\": search_function,\n    \"Calculator\": calculator_function\n}\n\nif action_name == \"Final Answer\":\n    # 任务已完成\n    final_response = action_input\n    mark_task_done()\nelif action_name in available_tools:\n    tool_function = available_tools[action_name]\n    try:\n        # 根据工具的预期参数验证 action_input\n        validate_tool_input(action_name, action_input)\n        observation = tool_function(**action_input) # 执行工具\n    except Exception as e:\n        # 将执行错误捕获为观察结果\n        observation = f\"Error executing {action_name}: {str(e)}\"\nelse:\n    # 处理大型语言模型虚构工具名称的情况\n    observation = f\"Error: Unknown action '{action_name}'. Please choose from available tools.\"\n\n# 观察结果现在已准备好添加到历史中，以用于下一个提示\n</code></pre>\n<p><code>观察结果</code> 应当信息丰富。如果搜索工具返回结果，观察结果可能是片段。如果计算器计算出一个值，该值就是观察结果。关键在于，如果工具失败，错误消息本身就会成为观察结果，使得智能体在下一个 <code>思考</code> 步骤中能够对失败进行推理 (inference)（例如，“思考：搜索失败因为查询格式不正确。我应该尝试重新措辞查询。”）。</p>\n<h3>循环管理与终止</h3>\n<p>核心循环通过将 <code>思考</code>、<code>动作</code> 和 <code>观察结果</code> 追加到提示的历史部分并生成下一步来继续。终止条件是必要的：</p>\n<ul>\n<li><strong>最终答案：</strong> 主要的成功条件是当智能体输出一个类似 <code>{\"action\": \"Final Answer\", \"action_input\": \"...\"}</code> 的动作时。</li>\n<li><strong>最大迭代次数：</strong> 设置步数限制以防止无限循环，特别是当智能体卡住时。</li>\n<li><strong>时间限制：</strong> 为整个任务设置超时。</li>\n<li><strong>错误阈值：</strong> 如果连续发生过多错误，则停止执行。</li>\n</ul>\n<p>实现 ReAct 需要协调这些组件：精心设计的提示、解析、可靠的工具执行以及通过迭代过程进行的清晰状态管理。接下来的部分将审视其他架构，但这里看到的结构化提示、解析和动作执行的原则是许多智能体系统的重要组成部分。本章后面的实践环节将涉及构建一个包含这些元素的 ReAct 智能体。</p>",
+  "slug": "implementing-react-agents",
+  "updates": [],
+  "references": [
+    {
+      "id": 7865,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍ReAct框架的原始研究论文，详细阐述了其概念设计以及在结合语言模型智能体的推理和行动方面的实际应用。",
+      "order": 1,
+      "created_at": "2025-09-05T01:48:27.309956Z",
+      "updated_at": "2025-09-10T07:56:43.050674Z"
+    },
+    {
+      "id": 7867,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "这篇基础性论文介绍了思维链提示技术，该技术指导LLM生成一系列中间推理步骤。此技术是ReAct框架中“思想”组件的直接前身和核心元素。",
+      "order": 3,
+      "created_at": "2025-09-05T01:48:27.317972Z",
+      "updated_at": "2025-09-10T07:56:43.625533Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

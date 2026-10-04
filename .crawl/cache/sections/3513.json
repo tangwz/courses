@@ -1,0 +1,61 @@
+{
+  "id": 3513,
+  "title": "降维技术概述",
+  "meta_title": "降维技术概述",
+  "meta_description": "PCA和UMAP等向量维度缩减方法的概览。",
+  "content": "<p>如前所述，嵌入 (embedding)模型通常会生成数百甚至数千个维度的向量 (vector)。尽管这些高维空间 (high-dimensional space)能够捕捉复杂关联，但它们也会带来一些难题，通常称为“维度灾难”。处理极高维度的数据可能导致：</p>\n<ol>\n<li><strong>计算成本增加：</strong> 随着维度数量增加，计算向量间距离或相似度的计算量会变得更大。精确的最近邻搜索变得异常缓慢。</li>\n<li><strong>存储需求增加：</strong> 存储数百万或数十亿个高维向量需要大量内存和硬盘空间。</li>\n<li><strong>数据稀疏化：</strong> 在高维空间中，数据点往往变得稀疏，即它们彼此之间距离较远。这有时会使距离度量变得不那么有意义。</li>\n<li><strong>可能降低性能：</strong> 对于某些算法，大量的维度可能引入噪声，从而可能妨碍后续任务的性能。</li>\n</ol>\n<p>降维技术提供了一种缓解这些问题的方法。其根本目的是将数据从高维空间转换为低维空间，同时尽可能保留原始数据中具有意义的特性。可以将其设想为在较少维度中创建原始数据的简洁概括或一个投影。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xcf4il\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=record, style=rounded, fontname=\"sans-serif\", fontsize=10];\n  edge [arrowhead=vee, color=\"#4263eb\", fontname=\"sans-serif\", fontsize=10];\n\n  subgraph cluster_0 {\n    label = \"高维数据\";\n    bgcolor = \"#bac8ff\";\n    node [shape=circle, label=\"\", width=0.2, height=0.2, fixedsize=true, color=\"#1c7ed6\"];\n    p1; p2; p3; p4; p5;\n  }\n\n  subgraph cluster_1 {\n    label = \"低维表示\";\n    bgcolor = \"#a5d8ff\";\n     node [shape=circle, label=\"\", width=0.15, height=0.15, fixedsize=true, color=\"#1098ad\"];\n    lp1; lp2; lp3; lp4; lp5;\n  }\n\n  dr_process [label=\"降维\n(例如，PCA，UMAP)\", shape=box, style=filled, fillcolor=\"#e9ecef\"];\n\n// Invisible edges for layout guidance if needed, connecting cluster\n  edge [style=invis, arrowhead=none];\n  p3 -> dr_process;\n  dr_process -> lp3;\n\n\n  // Visible edges showing the mapping concept\n  edge [style=solid, arrowhead=vee, constraint=false, color=\"#7048e8\"];\n  p1 -> lp1;\n  p2 -> lp2;\n  p3 -> lp3;\n  p4 -> lp4;\n  p5 -> lp5;\n\n\nlabel=\"高维数据点到低维空间的映射。\";\n  fontsize=12;\n  fontname=\"sans-serif\";\n  labelloc=\"b\"; // Place label at the bottom\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xcf4il\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>降维将点从高维映射到低维的一个示例。</p>\n</blockquote>\n<p>我们希望保留哪些特性？这取决于所用技术和目标：</p>\n<h3>常用降维技术</h3>\n<p>尽管算法众多，但您会遇到的两种常见方法是主成分分析（PCA）和均匀流形逼近与投影（UMAP）。</p>\n<h4>主成分分析（PCA）</h4>\n<p>PCA是一种线性技术，旨在数据中找到能捕获最大方差的方向（主成分）。设想旋转数据轴，使第一个新轴与最大散布方向对齐 (alignment)，第二个轴（与第一个轴正交）与次大散布方向对齐，依此类推。通过只保留前几个主成分，您可以在更少的维度中保留数据的大部分总体方差。当您关注的潜在结构与此方差相关时，它很有效。</p>\n<h4>均匀流形逼近与投影（UMAP）</h4>\n<p>UMAP是一种非线性技术，特别擅长保留数据的<em>局部</em>结构和拓扑特性。它力求确保高维空间 (high-dimensional space)中距离近的点在低维映射中仍保持距离近。UMAP常用于高维嵌入 (embedding)的可视化（例如将其降至2D或3D以作图），因为它能够展示那些可能被PCA等仅侧重全局方差的技术所掩盖的簇和关联。</p>\n<h3>优点与权衡</h3>\n<p>应用降维技术可以带来多项益处：</p>\n<ul>\n<li><strong>计算负荷减轻：</strong> 维度减少意味着距离计算更快，并可能加快ANN索引查找。</li>\n<li><strong>存储需求降低：</strong> 缩减后的向量 (vector)需要更少的内存和磁盘空间。</li>\n<li><strong>改善可视化效果：</strong> 将数据降至2或3维可以直接进行可视化，有助于理解数据结构。</li>\n<li><strong>噪声消除：</strong> 有时，较低的维度可以滤除噪声并提高特定任务的性能。</li>\n</ul>\n<p>然而，存在固有的权衡：</p>\n<ul>\n<li><strong>信息损失：</strong> 压缩数据不可避免地会丢弃一些信息。技巧在于为您的特定任务丢弃<em>最不重要的</em>信息。如果过度缩减导致失去区分密切相关项的细微特征，则可能严重损害相似度搜索的质量。</li>\n<li><strong>算法选择与调整：</strong> 选择正确的技术（PCA、UMAP或其他）并调整其参数 (parameter)（例如目标维度数量），需要理解其前提和影响。</li>\n</ul>\n<h3>与向量 (vector)数据库的关联</h3>\n<p>尽管现代向量数据库及其相关联的ANN索引算法（如HNSW，我们将在第3章讨论）专门设计用于高效处理高维向量，但对降维的认识仍然很有价值。</p>\n<ul>\n<li>它可以用作向量索引前的预处理步骤，尤其是在存储或计算资源严重受限，或者原始维度过高（例如数万）的情况下。</li>\n<li>它经常用于<em>可视化</em>嵌入 (embedding)的结构或搜索结果。</li>\n<li>了解这些原则有助于您理解向量表示细节、存储和查询速度之间的固有权衡，即使是直接使用高维索引。</li>\n</ul>\n<p>在实际应用中，对于许多使用现代嵌入模型（通常维度为384、768或1024）的语义搜索任务，开发者通常直接索引全维度向量，依赖ANN算法的能力。然而，降维仍然是数据科学家工具集中的一项重要方法，尤其适用于分析、可视化或资源受限的环境。</p>",
+  "slug": "dimensionality-reduction-introduction",
+  "updates": [],
+  "references": [
+    {
+      "id": 4330,
+      "title": "UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction",
+      "author": "Leland McInnes, John Healy, Nathaniel Saul, Lukas Großberger",
+      "year": "2018",
+      "publisher": "The Open Journal",
+      "journal": "Journal of Open Source Software",
+      "volume": "3",
+      "pages": "861",
+      "url": "https://joss.theoj.org/papers/10.21105/joss.00861",
+      "doi": "10.21105/joss.00861",
+      "note": "介绍统一流形近似与投影（UMAP）这一非线性降维技术的原始研究论文。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:44.982372Z",
+      "updated_at": "2025-09-09T10:44:38.580030Z"
+    },
+    {
+      "id": 4331,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "",
+      "note": "一本广泛使用的教科书，全面阐述主成分分析（PCA）、“维度灾难”以及各种其他降维方法，提供了坚实的统计学基础。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:44.986541Z",
+      "updated_at": "2025-09-09T10:44:46.935929Z"
+    },
+    {
+      "id": 4332,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/",
+      "doi": "",
+      "note": "一本详细介绍主成分分析（PCA）及其他线性和非线性降维方法的综合性教科书，涵盖了其底层数学原理。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:44.988951Z",
+      "updated_at": "2025-09-09T10:44:41.279712Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

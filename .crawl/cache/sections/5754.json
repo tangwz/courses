@@ -1,0 +1,61 @@
+{
+  "id": 5754,
+  "title": "在 PyTorch 中实现自定义数据集",
+  "meta_title": "PyTorch 自定义数据集 | torch.utils.data.Dataset",
+  "meta_description": "了解如何在 PyTorch 中创建自定义 `Dataset` 类以处理特殊数据源。",
+  "content": "<p>PyTorch 提供便捷的预构建数据集，尤其在 <code>torchvision.datasets</code> 中，但许多应用需要您处理自定义格式的数据或具有特定加载逻辑的数据。这时，PyTorch 的 <code>torch.utils.data.Dataset</code> 类就变得不可或缺。它提供一种灵活、符合 Python 习惯的方式，逐项定义数据如何访问和处理。对于习惯使用 <code>tf.data.Dataset.from_generator</code> 或在 <code>map</code> 操作中编写自定义解析函数的 TensorFlow 用户，PyTorch 的方法是创建一个继承自 <code>torch.utils.data.Dataset</code> 的 Python 类。</p>\n<h3>自定义数据集的构成</h3>\n<p>其核心是，您在 PyTorch 中创建的任何自定义数据集都将是一个继承 <code>torch.utils.data.Dataset</code> 的 Python 类。这个父类是一个抽象类，要创建一个可用数据集，您需要实现两个特殊方法：</p>\n<ol>\n<li><code>__len__(self)</code>: 此方法必须返回数据集中的样本总数。<code>DataLoader</code>（我们之前讨论过用于批处理和迭代）依赖此方法来确定数据集的范围。</li>\n<li><code>__getitem__(self, idx)</code>: 此方法负责根据给定索引 <code>idx</code> 获取单个数据样本。索引范围从 <code>0</code> 到 <code>len(self) - 1</code>。您通常在此方法中从文件中加载数据，执行必要的预处理，并应用数据转换。<code>DataLoader</code> 在构建批次时调用此方法来获取单个样本。</li>\n</ol>\n<p>可选地，但几乎总是，您还会实现 <code>__init__(self, ...)</code> 方法。此构造函数用于执行任何一次性设置，例如：</p>\n<ul>\n<li>加载标注或元数据（例如，从 CSV 文件）。</li>\n<li>构建数据样本的文件路径列表。</li>\n<li>如果可行，将小型数据集完全预加载到内存中。</li>\n<li>初始化将应用于数据的任何数据转换。</li>\n</ul>\n<p>让我们通过一个常见场景来说明这一点：创建一个数据集，用于处理按类标签命名的子目录结构中存储的图像。例如：</p>\n<pre><code>data_root/\n├── class_A/\n│   ├── image001.jpg\n│   ├── image002.png\n│   └── ...\n├── class_B/\n│   ├── image101.jpeg\n│   ├── image102.gif\n│   └── ...\n└── class_C/\n    ├── image201.jpg\n    └── ...\n</code></pre>\n<h3>构建自定义图像数据集</h3>\n<p>我们将创建一个 <code>CustomImageDataset</code> 类来处理这种结构。我们需要 Pillow (PIL) 或 OpenCV 等库来加载图像。在此示例中，我们假设 Pillow 已安装（<code>pip install Pillow</code>）。</p>\n<pre><code class=\"language-python\">import os\nfrom PIL import Image\nimport torch\nfrom torch.utils.data import Dataset\nfrom torchvision import transforms\n\nclass CustomImageDataset(Dataset):\n    def __init__(self, root_dir, transform=None):\n        \"\"\"\n        Args:\n            root_dir (string): 包含所有图像的目录，按类别组织。\n            transform (callable, optional): 可选的，应用于样本的数据转换。\n        \"\"\"\n        self.root_dir = root_dir\n        self.transform = transform\n        self.samples = []  # 存储 (图像路径, 类别索引) 元组的列表\n        self.classes = sorted(os.listdir(root_dir)) # 从文件夹名获取类别名称\n        self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}\n\n        for class_name in self.classes:\n            class_path = os.path.join(root_dir, class_name)\n            if not os.path.isdir(class_path):\n                continue\n            for img_name in os.listdir(class_path):\n                img_path = os.path.join(class_path, img_name)\n                if os.path.isfile(img_path): # 确保是文件\n                    item = (img_path, self.class_to_idx[class_name])\n                    self.samples.append(item)\n\n    def __len__(self):\n        return len(self.samples)\n\n    def __getitem__(self, idx):\n        if torch.is_tensor(idx):\n            idx = idx.tolist()\n\n        img_path, label = self.samples[idx]\n        \n        try:\n            image = Image.open(img_path).convert('RGB') # 确保图像是 RGB 格式\n        except IOError:\n            print(f\"警告：无法加载图像 {img_path}。跳过。\")\n            # 返回一个虚拟样本或引发错误，或者尝试下一个\n            # 为简单起见，如果此操作失败，我们递归地尝试获取下一个样本。\n            # 一种解决方案可能涉及在 __init__ 中过滤掉损坏的文件\n            # 或者返回一个占位符。\n            return self.__getitem__((idx + 1) % len(self.samples))\n\n\n        if self.transform:\n            image = self.transform(image)\n        \n        # 将标签转换为张量\n        label_tensor = torch.tensor(label, dtype=torch.long)\n\n        return image, label_tensor\n\n</code></pre>\n<p>让我们分解这个 <code>CustomImageDataset</code>：</p>\n<ul>\n<li>\n<p><strong><code>__init__(self, root_dir, transform=None)</code></strong>:</p>\n<ul>\n<li>它接受 <code>root_dir</code>（例如，<code>'data_root/'</code>）和一个可选的 <code>transform</code> 参数 (parameter)。</li>\n<li>它扫描 <code>root_dir</code> 以查找类别子目录。<code>self.classes</code> 存储这些子目录的名称（例如，<code>['class_A', 'class_B', 'class_C']</code>）。</li>\n<li><code>self.class_to_idx</code> 创建从类别名称到整数索引的映射（例如，<code>{'class_A': 0, 'class_B': 1, 'class_C': 2}</code>）。这是分类任务的标准做法。</li>\n<li>然后它遍历每个类别目录及其中的每个图像文件，用 <code>(图像路径, 类别索引)</code> 元组填充 <code>self.samples</code>。这个列表实际上成为了我们数据集的索引。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>__len__(self)</code></strong>:</p>\n<ul>\n<li>这很简单。它只是返回 <code>self.samples</code> 中收集的图像路径总数。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>__getitem__(self, idx)</code></strong>:</p>\n<ul>\n<li>这个方法是主要处理部分。给定一个索引 <code>idx</code>，它从 <code>self.samples</code> 中获取对应的 <code>img_path</code> 和 <code>label</code>。</li>\n<li>它使用 <code>Image.open(img_path).convert('RGB')</code> 打开图像。转换为 'RGB' 是处理不同通道数图像（如灰度或 RGBA）的良好做法。</li>\n<li>包含一个基本的 <code>try-except</code> 块来处理 <code>IOError</code>，这可能在图像文件损坏时发生。更完善的处理可能涉及在 <code>__init__</code> 期间预过滤损坏的文件。</li>\n<li>如果在实例化期间提供了 <code>transform</code>（例如，一系列 <code>torchvision.transforms</code>），它会应用于加载的图像。您可以在此放置调整大小、裁剪、转换为张量和归一化 (normalization)等操作。</li>\n<li>最后，它返回（可能经过转换的）图像及其标签作为 <code>torch.tensor</code>。标签被转换为 <code>torch.long</code> 张量，这通常是像 <code>torch.nn.CrossEntropyLoss</code> 这样的损失函数 (loss function)所期望的。</li>\n</ul>\n</li>\n</ul>\n<h3>使用您的自定义数据集</h3>\n<p>一旦定义，您就可以实例化您的 <code>CustomImageDataset</code> 并用 <code>DataLoader</code> 包装它，就像任何内置数据集一样：</p>\n<pre><code class=\"language-python\"># 定义数据转换\n# 例如：调整大小、转换为张量和归一化\ndata_transforms = transforms.Compose([\n    transforms.Resize((256, 256)),\n    transforms.CenterCrop(224),\n    transforms.ToTensor(),\n    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])\n])\n\n# 实例化数据集\nimage_dataset = CustomImageDataset(root_dir='path/to/your/data_root', transform=data_transforms)\n\n# 创建 DataLoader\n# 这将处理批处理、混洗和并行数据加载\nbatch_size = 32\ndata_loader = torch.utils.data.DataLoader(image_dataset, batch_size=batch_size, shuffle=True, num_workers=4)\n\n# 现在您可以在训练循环中遍历 data_loader\n# for inputs, labels in data_loader:\n#     # 您的训练代码在这里\n#     # inputs 将是图像张量的批次\n#     # labels 将是标签张量的批次\n#     pass\n</code></pre>\n<p>在这个设置中，<code>data_transforms</code> 是一个常见数据转换流程的示例，来自 <code>torchvision.transforms</code>。当 <code>data_loader</code> 请求一个批次时，它会多次内部调用 <code>image_dataset.__getitem__(idx)</code>，应用这些转换，然后将单个样本（图像张量和标签张量）整理成一个批次。</p>\n<h3>与 TensorFlow 的 <code>tf.data</code> 相关</h3>\n<p>如果您来自 TensorFlow，您可能通过以下方式实现了类似的自定义数据加载：</p>\n<ul>\n<li>为特定图像文件夹结构使用 <code>tf.keras.utils.image_dataset_from_directory</code>。</li>\n<li>编写一个 Python 生成器函数，然后用 <code>tf.data.Dataset.from_generator</code> 包装它。</li>\n<li>使用 <code>tf.data.Dataset.list_files</code> 获取文件路径，然后使用 <code>.map()</code> 方法和自定义函数（通常是 TensorFlow 操作或 <code>tf.py_function</code>）来加载和预处理每个文件。</li>\n</ul>\n<p>PyTorch 的 <code>Dataset</code> 类提供一种更直接、面向对象的方法。您将识别、加载和转换单个数据项的所有逻辑封装在一个 Python 类中。这通常感觉与标准 Python 编程习惯更紧密，并且更容易调试，因为您在 <code>__getitem__</code> 中处理的是常规 Python 对象和控制流。<code>DataLoader</code> 然后有效地在多个工作进程中并行执行 <code>__getitem__</code>。</p>\n<p>以下图表显示了 <code>DataLoader</code> 使用您的自定义 <code>Dataset</code> 的一般流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-xwg3kv\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n    DataLoader [label=\"数据加载器\", fillcolor=\"#74c0fc\"];\n    CustomDataset [label=\"您的自定义数据集类\\n（例如，CustomImageDataset）\", fillcolor=\"#91a7ff\"];\n    GetItem [label=\"__getitem__(idx)\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    DataStorage [label=\"数据存储\\n（磁盘文件、数据库等）\", shape=cylinder, fillcolor=\"#ced4da\"];\n    Transforms [label=\"数据转换\\n（例如，torchvision.transforms）\", shape=cds, fillcolor=\"#96f2d7\"];\n    Sample [label=\"数据样本\\n（图像张量、标签张量）\", shape=parallelogram, fillcolor=\"#ffec99\"];\n\n    DataLoader -> CustomDataset [label=\" 请求索引 (idx)\"];\n    CustomDataset -> GetItem [label=\" 调用方法\"];\n    GetItem -> DataStorage [label=\" 读取原始数据\"];\n    DataStorage -> GetItem [style=dashed];\n    GetItem -> Transforms [label=\" 应用（如果有）\"];\n    Transforms -> GetItem [style=dashed];\n    GetItem -> Sample [label=\" 返回处理后的\"];\n    Sample -> DataLoader [label=\" 传递给\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-xwg3kv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这个图表说明了 <code>DataLoader</code> 如何与您的自定义 <code>Dataset</code> 类（特别是其 <code>__getitem__</code> 方法）互动，以在批处理前获取和处理单个数据样本。</p>\n</blockquote>\n<h3>自定义数据集的良好做法</h3>\n<ul>\n<li><strong>按需加载</strong>: 在 <code>__getitem__</code> 内部执行 I/O 操作（如从磁盘读取文件），而不是在 <code>__init__</code> 中将所有内容加载到内存中，特别是对于大型数据集。这可以降低内存使用量并加快启动时间。<code>__init__</code> 理想情况下应侧重于收集元数据，例如文件路径和标签。</li>\n<li><strong>将数据转换作为参数 (parameter)</strong>: 将数据转换流程（例如 <code>torchvision.transforms.Compose</code> 对象）作为参数传递给数据集的 <code>__init__</code> 方法，并在 <code>__getitem__</code> 中应用它们。这使得您的数据集灵活，并允许用户轻松尝试不同的数据增强和预处理策略。</li>\n<li><strong>返回张量</strong>: 确保 <code>__getitem__</code> 返回 <code>torch.Tensor</code> 对象，因为这是 PyTorch 模型和损失函数 (loss function)所期望的。</li>\n<li><strong>处理损坏的数据</strong>: 在 <code>__getitem__</code> 中实现基本的错误处理，以应对文件损坏等情况。您可以选择跳过样本、返回占位符或记录警告。在 <code>__init__</code> 期间预过滤有问题的数据也可能有效。</li>\n<li><strong><code>__getitem__</code> 的效率</strong>: 保持 <code>__getitem__</code> 中的操作尽可能高效。由于它为每个样本调用，所以此处的任何瓶颈都会明显减慢您的训练速度，即使 <code>DataLoader</code> 中有多个 <code>num_workers</code>。</li>\n</ul>\n<p>通过熟练创建自定义 <code>Dataset</code>，您可以对数据加载流程进行精细控制，使得您能够在 PyTorch 项目中使用几乎任何数据源和结构。这与 <code>tf.data</code> 中有时更不透明或特定于框架的操作形成对比，提供了一条 Python 原生数据准备路径。</p>",
+  "slug": "custom-datasets-pytorch",
+  "updates": [],
+  "references": [
+    {
+      "id": 15896,
+      "title": "torch.utils.data.Dataset",
+      "author": "PyTorch Core Team",
+      "year": "2025",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset",
+      "doi": "",
+      "note": "PyTorch 基础 Dataset 类的官方 API 参考，详细说明了自定义数据加载以及与 DataLoader 交互所需的方法。",
+      "order": 1,
+      "created_at": "2025-09-06T10:56:45.069983Z",
+      "updated_at": "2025-09-10T02:20:11.345462Z"
+    },
+    {
+      "id": 15897,
+      "title": "torch.utils.data.DataLoader",
+      "author": "PyTorch Core Team",
+      "year": "2025",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader",
+      "doi": "",
+      "note": "DataLoader 的官方文档，它处理批处理、洗牌和多进程数据加载，与自定义 Dataset 协同工作。",
+      "order": 2,
+      "created_at": "2025-09-06T10:56:45.089961Z",
+      "updated_at": "2025-09-10T02:20:13.722557Z"
+    },
+    {
+      "id": 15898,
+      "title": "Learn the Basics - PyTorch Tutorials: Custom Datasets, Transforms and Models",
+      "author": "PyTorch Core Team",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/basics/data_tutorial.html",
+      "doi": "",
+      "note": "PyTorch 官方教程，提供一个实用的指南，通过示例说明如何实现自定义数据集、应用转换以及使用 DataLoader。",
+      "order": 3,
+      "created_at": "2025-09-06T10:56:45.102011Z",
+      "updated_at": "2025-09-10T02:20:20.075722Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,609 @@
+{
+  "id": 125,
+  "title": "高级 PyTorch",
+  "meta_title": "高级 PyTorch 课程：优化与分布式训练",
+  "meta_description": "学习 PyTorch 高级技术：内部机制、自定义自动求导、优化、分布式训练（DDP, FSDP）、模型部署，以及 CUDA 扩展。",
+  "description": "掌握 PyTorch 高级功能，用于构建复杂的深度学习模型。本课程涵盖 PyTorch 内部机制、自定义自动求导函数、前沿网络结构、高级优化策略、分布式训练、模型部署优化，以及自定义 C++/CUDA 扩展。获得处理复杂人工智能工程难题的能力。",
+  "short_description": "运用 PyTorch 的高级功能，构建、优化和部署复杂的深度学习模型。",
+  "excerpt": "通过掌握高级技术，提升您的 PyTorch 技能，这些技术包括分布式训练、模型优化、自定义扩展和复杂网络结构。",
+  "prerequisites": "PyTorch 中级知识，深度学习原理。",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "PyTorch 内部机制",
+      "description": "理解 PyTorch 张量和自动求导引擎的底层运行原理。"
+    },
+    {
+      "topic": "自定义操作",
+      "description": "实现自定义自动求导函数和 C++/CUDA 扩展，用于特殊运算。"
+    },
+    {
+      "topic": "高级结构",
+      "description": "构建复杂的模型，例如 Transformer、GNN 和 Normalizing Flow。"
+    },
+    {
+      "topic": "优化技术",
+      "description": "应用高级优化器、学习率调度器、混合精度训练和正则化。"
+    },
+    {
+      "topic": "分布式训练",
+      "description": "实现多种并行训练策略，包括 DDP、模型并行和 FSDP。"
+    },
+    {
+      "topic": "模型部署优化",
+      "description": "优化模型推理性能，运用 TorchScript、量化、剪枝和性能分析。"
+    }
+  ],
+  "duration": 36,
+  "slug": "advanced-pytorch",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-04T11:22:40.538441Z",
+  "updated_at": "2026-10-02T07:26:02.244967Z",
+  "chapters": [
+    {
+      "id": 624,
+      "title": "PyTorch 内部机制与自动求导",
+      "meta_title": "PyTorch 自动求导与内部机制解析",
+      "meta_description": "全面理解 PyTorch 的自动求导引擎、计算图、自定义函数和内存管理。",
+      "number": 1,
+      "slug": "pytorch-internals-autograd",
+      "content": "为了高效处理复杂任务，理解 PyTorch 的内部运作机制会有帮助。本章着重讲解基本构成要素：PyTorch 张量、自动求导（autograd）机制以及将它们联系起来的计算图。\r\n\r\n我们将研究张量的结构和内存管理方式。你会了解到操作执行时 PyTorch 如何动态构建计算图，以及 autograd 引擎如何遍历这些图来计算梯度，例如损失 $L$ 对权重 $w$ 的偏导数 $\\frac{\\partial L}{\\partial w}$。\r\n\r\n主要内容包括：\r\n*   `torch.Tensor` 的内部结构。\r\n*   动态计算图的创建和使用方式。\r\n*   autograd 引擎在反向传播过程中的逐步操作。\r\n*   通过 `torch.autograd.Function` 定义 `forward` 和 `backward` 方法来实现自定义操作。\r\n*   计算高阶梯度。\r\n*   检查梯度和可视化计算图的方法。\r\n*   PyTorch 中高效内存使用的注意事项。\r\n\r\n熟悉这些核心组成部分对于调试复杂模型、优化性能以及实现标准库之外的自定义功能都十分有益。最后，我们将通过一个实践练习来构建自己的 autograd 函数。",
+      "sections": [
+        {
+          "id": 2655,
+          "title": "张量实现细节",
+          "meta_title": "PyTorch张量实现细节",
+          "meta_description": "了解PyTorch张量的底层结构和内存布局。",
+          "slug": "tensor-implementation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2657,
+          "title": "理解计算图",
+          "meta_title": "PyTorch 计算图解析",
+          "meta_description": "了解 PyTorch 如何构建和使用动态计算图进行梯度计算。",
+          "slug": "computational-graph",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2662,
+          "title": "Autograd 引擎机制",
+          "meta_title": "PyTorch Autograd 引擎机制",
+          "meta_description": "检查 PyTorch 中自动微分的逐步过程。",
+          "slug": "autograd-mechanics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2665,
+          "title": "自定义 Autograd 函数：前向与反向",
+          "meta_title": "实现自定义 PyTorch Autograd 函数",
+          "meta_description": "学习为默认 autograd 未涵盖的操作定义自定义前向和反向传播。",
+          "slug": "custom-autograd-functions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2669,
+          "title": "高阶梯度计算",
+          "meta_title": "PyTorch 中的高阶梯度",
+          "meta_description": "理解并实现二阶及高阶梯度计算。",
+          "slug": "higher-order-gradients",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2671,
+          "title": "梯度查看与图可视化",
+          "meta_title": "PyTorch梯度查看与图可视化",
+          "meta_description": "用于调试梯度和使用TensorBoard等工具可视化计算图的方法。",
+          "slug": "gradient-inspection-visualization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2675,
+          "title": "内存管理考量",
+          "meta_title": "PyTorch Memory Management Strategies",
+          "meta_description": "Learn about PyTorch's memory allocation, caching, and strategies for efficient memory usage.",
+          "slug": "memory-management",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2679,
+          "title": "实践操作：构建自定义自动求导函数",
+          "meta_title": "实践：构建自定义PyTorch自动求导函数",
+          "meta_description": "实现并验证用于特定数学运算的自定义自动求导函数。",
+          "slug": "practice-custom-autograd",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 627,
+      "title": "进阶神经网络结构",
+      "meta_title": "PyTorch进阶神经网络结构",
+      "meta_description": "使用PyTorch实现Transformer、GNN、归一化流和神经常微分方程等尖端模型。",
+      "number": 2,
+      "slug": "advanced-network-architectures",
+      "content": "虽然像卷积神经网络（CNN）和循环神经网络（RNN）这样的基本网络设计能有效处理许多任务，但某些问题场景需要更专业的结构。本章将着重介绍如何使用PyTorch实现多种进阶神经网络模型。\r\n\r\n您将学习重要的现代结构及其实现细节。我们将逐个组件地介绍Transformer模型的构建，包括注意力机制。我们还将使用图神经网络（GNN）处理图结构数据，并运用PyTorch Geometric等库。此外，本章会介绍用于生成任务的归一化流（Normalizing Flows）、用于连续深度建模的神经常微分方程（Neural ODEs），以及针对少样本场景的元学习方法。侧重于理解这些构成要素，并在代码中构建这些复杂的模型。",
+      "sections": [
+        {
+          "id": 2684,
+          "title": "从组件构建Transformer模型",
+          "meta_title": "在PyTorch中实现Transformer",
+          "meta_description": "逐步构建Transformer模型，了解自注意力、多头注意力及位置编码。",
+          "slug": "implementing-transformers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2688,
+          "title": "高级注意力机制",
+          "meta_title": "PyTorch 中的高级注意力机制",
+          "meta_description": "研究标准自注意力之外的注意力变体，例如稀疏注意力与 Performer。",
+          "slug": "advanced-attention",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2691,
+          "title": "使用 PyTorch Geometric 的图神经网络",
+          "meta_title": "使用 PyTorch Geometric 的图神经网络 (GNN)",
+          "meta_description": "使用 PyTorch Geometric 库实现多种 GNN 结构 (GCN, GAT, GraphSAGE)。",
+          "slug": "graph-neural-networks",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2694,
+          "title": "用于生成建模的归一化流",
+          "meta_title": "PyTorch中用于生成模型的归一化流",
+          "meta_description": "理解和实现用于密度估计和生成任务的归一化流。",
+          "slug": "normalizing-flows",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2697,
+          "title": "神经常微分方程",
+          "meta_title": "PyTorch中的神经常微分方程 (Neural ODEs)",
+          "meta_description": "使用神经ODE和合适的求解器实现连续深度模型。",
+          "slug": "neural-odes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2700,
+          "title": "元学习算法",
+          "meta_title": "PyTorch 中的元学习算法（MAML）",
+          "meta_description": "实现元学习技术，如用于少样本学习的模型无关元学习（MAML）。",
+          "slug": "meta-learning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2704,
+          "title": "实践：实现自定义GNN层",
+          "meta_title": "实践：在PyTorch中实现自定义GNN层",
+          "meta_description": "从头开始为图神经网络构建自定义消息传递层。",
+          "slug": "practice-custom-gnn-layer",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 630,
+      "title": "优化技术与训练策略",
+      "meta_title": "PyTorch进阶：优化与训练技术",
+      "meta_description": "掌握PyTorch中的进阶优化器、学习率调度、正则化、混合精度训练和大型数据集处理。",
+      "number": 3,
+      "slug": "optimization-training-strategies",
+      "content": "高效训练复杂的深度学习模型通常需要的不只是标准优化器和固定学习率。本章侧重介绍提升收敛速度、模型泛化能力以及训练时资源效率的方法。\r\n\r\n你会了解除标准SGD或Adam之外的优化算法，例如AdamW和Lookahead。我们会讲解如何实现动态学习率调度，包括余弦退火和预热阶段，以精细调整训练过程。我们还会讲解正则化方法，例如标签平滑和高级权重衰减。\r\n\r\n此外，本章还会讨论实际训练中遇到的难题。你会学习一些技巧，例如梯度裁剪用于处理不稳定的梯度，以及梯度累积用于模拟更大的批量大小 ($N_{effective} = N_{accum} \\times N_{batch}$)。我们会介绍使用`torch.cuda.amp`进行自动混合精度 (AMP) 训练，以在兼容硬件上实现更快的计算和更少的内存占用。处理海量数据集的策略，例如使用`IterableDataset`，以及整合自动化超参数调整工具，构成本章的完整内容。",
+      "sections": [
+        {
+          "id": 2707,
+          "title": "高级优化器概述",
+          "meta_title": "PyTorch 中的高级优化器 (AdamW, Lookahead)",
+          "meta_description": "学习 Adam 之外的优化器，包括 AdamW、Lookahead、RAdam 及其具体应用场景。",
+          "slug": "sophisticated-optimizers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2710,
+          "title": "高级学习率调度",
+          "meta_title": "PyTorch中的高级学习率调度",
+          "meta_description": "实现学习率策略，如带重启的余弦退火、线性/多项式衰减和预热。",
+          "slug": "advanced-lr-scheduling",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2713,
+          "title": "正则化方法",
+          "meta_title": "PyTorch 中的高级正则化方法",
+          "meta_description": "应用如高级权重衰减方法、标签平滑和随机深度等技术。",
+          "slug": "advanced-regularization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2716,
+          "title": "梯度裁剪与累积",
+          "meta_title": "PyTorch 中的梯度裁剪与累积",
+          "meta_description": "实现梯度裁剪以避免梯度爆炸，并使用梯度累积以获得大有效批次大小。",
+          "slug": "gradient-clipping-accumulation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2719,
+          "title": "使用 torch.cuda.amp 进行混合精度训练",
+          "meta_title": "PyTorch 中的混合精度训练 (AMP)",
+          "meta_description": "在 NVIDIA GPU 上采用自动混合精度（AMP），以实现更快的训练和更少的内存占用。",
+          "slug": "mixed-precision-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2722,
+          "title": "处理大型数据集的策略",
+          "meta_title": "在 PyTorch 中使用 IterableDataset 处理大型数据集",
+          "meta_description": "使用 `IterableDataset` 和高效数据加载技术来处理无法载入内存的数据集。",
+          "slug": "large-dataset-strategies",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2725,
+          "title": "自动化超参数调整",
+          "meta_title": "PyTorch中的超参数调整：Optuna/Ray Tune的使用",
+          "meta_description": "将PyTorch模型与Optuna或Ray Tune等超参数优化库结合。",
+          "slug": "hyperparameter-tuning",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2728,
+          "title": "动手实战：实现混合精度训练",
+          "meta_title": "实践：在 PyTorch 中实现混合精度训练",
+          "meta_description": "将标准训练循环转换为使用自动混合精度 (AMP)，并观察性能变化。",
+          "slug": "practice-mixed-precision",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 634,
+      "title": "模型部署和性能优化",
+      "meta_title": "PyTorch 模型部署与性能优化",
+      "meta_description": "学习 TorchScript、量化、剪枝、性能分析、ONNX 导出以及 TorchServe，以实现高效的 PyTorch 模型部署。",
+      "number": 4,
+      "slug": "deployment-performance-optimization",
+      "content": "在开发和训练复杂的 PyTorch 模型之后，重点转向如何将它们投入实际应用。本章将介绍模型部署和性能优化，提供使模型在推理时更快、更小、更节省资源的方法。\r\n\r\n我们将介绍使用 TorchScript 进行模型序列化，学习跟踪和脚本两种方法。您将学习模型压缩技术，包括量化（静态、动态和量化感知训练）和剪枝策略，以减小模型大小和计算需求。我们将使用 PyTorch Profiler 来识别 CPU 和 GPU 执行中的性能瓶颈。此外，您还将学习将模型导出为 ONNX 格式以获得更广泛的兼容性，并学习使用 TorchServe 高效地提供模型服务。\r\n\r\n在本章结束时，您将掌握分析模型性能的实用技能，并运用多种优化技术，这对于将 PyTorch 模型从开发环境部署到生产环境是必不可少的。",
+      "sections": [
+        {
+          "id": 2730,
+          "title": "TorchScript 基础: 追踪与脚本化",
+          "meta_title": "PyTorch TorchScript 基础: 追踪与脚本化",
+          "meta_description": "了解 TorchScript 模型序列化中的追踪和脚本的区别。",
+          "slug": "torchscript-fundamentals",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2734,
+          "title": "模型量化技术",
+          "meta_title": "PyTorch模型量化技术（静态、动态、QAT）",
+          "meta_description": "应用动态量化、静态训练后量化（PTQ）和量化感知训练（QAT）。",
+          "slug": "quantization-techniques",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2737,
+          "title": "模型剪枝策略",
+          "meta_title": "PyTorch模型剪枝策略",
+          "meta_description": "实现结构化和无结构剪枝技术，以减小模型尺寸和计算量。",
+          "slug": "pruning-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2741,
+          "title": "PyTorch Profiler 性能分析",
+          "meta_title": "使用 PyTorch Profiler 进行瓶颈分析",
+          "meta_description": "使用内置分析器分析CPU和GPU执行时间及内存消耗。",
+          "slug": "pytorch-profiler",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2745,
+          "title": "通过外部库优化算子",
+          "meta_title": "使用 CuPy/Numba 优化 PyTorch CUDA 算子",
+          "meta_description": "整合 CuPy 或 Numba 中的自定义 CUDA 算子以加速特定操作。",
+          "slug": "optimizing-kernels",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2748,
+          "title": "模型导出为 ONNX 格式",
+          "meta_title": "将 PyTorch 模型导出为 ONNX",
+          "meta_description": "将 PyTorch 模型转换为开放神经网络交换 (ONNX) 格式，以实现互操作性。",
+          "slug": "exporting-onnx",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2751,
+          "title": "使用 TorchServe 提供模型服务",
+          "meta_title": "使用 TorchServe 提供 PyTorch 模型服务",
+          "meta_description": "使用 TorchServe 将 PyTorch 模型部署为生产就绪的Web服务。",
+          "slug": "torchserve",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2755,
+          "title": "实践：模型性能分析与量化",
+          "meta_title": "实践：剖析并量化 PyTorch 模型",
+          "meta_description": "使用性能分析工具找出性能瓶颈，并对模型应用训练后静态量化。",
+          "slug": "practice-profiling-quantization",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 637,
+      "title": "分布式训练与并行",
+      "meta_title": "PyTorch中的分布式训练与并行",
+      "meta_description": "学习分布式训练的理念，并在PyTorch中实现数据并行 (DDP)、模型并行、流水线并行和FSDP。",
+      "number": 5,
+      "slug": "distributed-training-parallelism",
+      "content": "现代深度学习模型经常超出单个GPU的内存容量，并且在大量数据集上训练可能需要不切实际的时间。本章侧重于PyTorch中的分布式训练和并行技术，以应对这些挑战。\r\n\r\n我们将研究跨多个GPU和节点扩展训练的方法。主要内容包括：\r\n\r\n*   与训练相关的分布式计算基本思想。\r\n*   数据并行，使用`DistributedDataParallel` (DDP)。\r\n*   处理极大型模型的方法，例如张量模型并行和流水线并行。\r\n*   内存高效的完全分片数据并行 (FSDP)。\r\n*   使用不同后端配置分布式环境。\r\n*   直接使用PyTorch的底层通信原语 (`torch.distributed`)。\r\n\r\n在本章结束时，您将明白如何应用各种并行处理策略，以更高效地训练更大的模型。",
+      "sections": [
+        {
+          "id": 2759,
+          "title": "分布式计算基本原理",
+          "meta_title": "用于深度学习的分布式计算原理",
+          "meta_description": "分布式系统相关术语概览，与训练大型模型有关（节点、秩、集体通信）。",
+          "slug": "distributed-concepts",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2763,
+          "title": "使用 DistributedDataParallel (DDP) 进行数据并行",
+          "meta_title": "PyTorch DistributedDataParallel (DDP) 用于数据并行",
+          "meta_description": "使用 DDP 实现高效的多 GPU/多节点数据并行。",
+          "slug": "distributed-data-parallel",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2765,
+          "title": "张量模型并行",
+          "meta_title": "PyTorch中的张量模型并行",
+          "meta_description": "当模型超出单个GPU内存时，将单个层或张量拆分到多个设备上。",
+          "slug": "tensor-model-parallelism",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2768,
+          "title": "流水线并行实现",
+          "meta_title": "PyTorch中的流水线并行",
+          "meta_description": "将模型层按顺序分配到多个设备上，以平衡计算并减少每个设备的内存使用。",
+          "slug": "pipeline-parallelism",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2770,
+          "title": "全分片数据并行（FSDP）",
+          "meta_title": "PyTorch中的全分片数据并行（FSDP）",
+          "meta_description": "实现FSDP以在数据并行工作器上分片模型参数、梯度和优化器状态。",
+          "slug": "fully-sharded-data-parallelism",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2772,
+          "title": "使用 torch.distributed 通信原语",
+          "meta_title": "使用 torch.distributed 通信原语",
+          "meta_description": "直接使用诸如 all_reduce、broadcast、scatter、gather 等集体通信操作。",
+          "slug": "torch-distributed-primitives",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2774,
+          "title": "设置分布式环境",
+          "meta_title": "设置 PyTorch 分布式环境 (NCCL, Gloo)",
+          "meta_description": "配置分布式训练任务，使用不同的通信后端（NCCL, Gloo）和进程组初始化。",
+          "slug": "distributed-environment-setup",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2776,
+          "title": "实践操作：设置DDP训练脚本",
+          "meta_title": "实践：设置分布式数据并行训练脚本",
+          "meta_description": "将单GPU训练脚本转换为使用分布式数据并行（DDP）进行多GPU训练。",
+          "slug": "practice-ddp-script",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 639,
+      "title": "自定义扩展与互操作性",
+      "meta_title": "PyTorch 自定义 C++/CUDA 扩展和互操作性",
+      "meta_description": "为 PyTorch 构建自定义 C++ 和 CUDA 扩展，与 NumPy 交互，并扩展 `nn.Module` 和 `optim.Optimizer` 等核心组件。",
+      "number": 6,
+      "slug": "custom-extensions-interoperability",
+      "content": "PyTorch 提供了丰富的工具集，但特定应用场景常常需要标准库中没有的操作或性能优化。\r\n本章将介绍如何将 PyTorch 的功能扩展到其标准 Python 应用编程接口之外。\r\n\r\n我们将构建自定义运算符，使用 C++ 和 CUDA 来应对对计算效率要求高或需要专用算法的场合。您将获得直接操作 PyTorch C++ 后端 (ATen) 的经验，学习管理 PyTorch 张量和 NumPy 数组之间的数据传输，并通过扩展 `torch.nn.Module` 和 `torch.optim.Optimizer` 来组织自定义网络组件和优化方法。此外，还将介绍使用外部函数接口 (FFI) 与现有 C 库进行交互的技术。学完本章，您将能够把自定义代码和外部库集成到您的 PyTorch 工作流程中。",
+      "sections": [
+        {
+          "id": 2778,
+          "title": "构建定制C++扩展",
+          "meta_title": "为PyTorch构建定制C++扩展",
+          "meta_description": "使用C++实现定制运算符，用于性能关键的代码或PyTorch中没有的操作。",
+          "slug": "custom-cpp-extensions",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2780,
+          "title": "构建自定义 CUDA 扩展",
+          "meta_title": "为 PyTorch 构建自定义 CUDA 扩展",
+          "meta_description": "用 CUDA C++ 编写自定义 GPU 内核，并将其整合到 PyTorch 工作流中。",
+          "slug": "custom-cuda-extensions",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2782,
+          "title": "使用 ATen 库",
+          "meta_title": "直接使用 PyTorch ATen 库",
+          "meta_description": "与 PyTorch 底层 C++ 张量库 (ATen) 交互，进行底层操作。",
+          "slug": "aten-library",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2784,
+          "title": "PyTorch 与 NumPy 的连接",
+          "meta_title": "连接 PyTorch 张量与 NumPy 数组",
+          "meta_description": "高效地在 PyTorch 张量与 NumPy 数组之间进行转换，并理解内存共享。",
+          "slug": "pytorch-numpy-interfacing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2785,
+          "title": "使用自定义模块扩展 torch.nn",
+          "meta_title": "使用自定义 PyTorch 模块扩展 torch.nn",
+          "meta_description": "创建复杂、可重用神经网络模块的实践建议。",
+          "slug": "custom-nn-modules",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2786,
+          "title": "扩展 torch.optim，使用自定义优化器",
+          "meta_title": "扩展 torch.optim，使用自定义 PyTorch 优化器",
+          "meta_description": "通过继承 Optimizer 类来实现自定义优化算法。",
+          "slug": "custom-optimizers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2787,
+          "title": "外部函数接口 (FFI)",
+          "meta_title": "PyTorch 外部函数接口 (FFI) 与 C",
+          "meta_description": "使用 FFI 技术将现有 C 库与 PyTorch 集成。",
+          "slug": "foreign-function-interfaces",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2788,
+          "title": "实践：构建一个简单的 CUDA 扩展",
+          "meta_title": "实践：构建一个简单的 PyTorch CUDA 扩展",
+          "meta_description": "在 PyTorch Python 脚本中创建、编译和使用一个基本的自定义 CUDA 核函数。",
+          "slug": "practice-cuda-extension",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

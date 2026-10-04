@@ -1,0 +1,61 @@
+{
+  "id": 5542,
+  "title": "简单管道编排原理",
+  "meta_title": "简单管道编排原理",
+  "meta_description": "初步了解数据管道运行的管理与调度。",
+  "content": "<p>你已经了解了数据管道的组成部分：提取数据、转换数据，并将其加载到有用之处。但是，构建管道只是工作的一部分。你实际如何<em>运行</em>它？如果某个步骤失败了会怎样？如果某个步骤依赖于另一个步骤先完成会怎样？这就是管道编排派上用场的地方。</p>\n<p>可以把数据管道看作一个多步骤的食谱。你不会随意开始混合食材；你会按顺序执行步骤。编排就是管理数据管道各步骤执行的过程，确保它们以正确的顺序、在正确的时间正常运行。</p>\n<h3>为何管理管道执行？</h3>\n<p>数据管道很少只运行一次。通常，你需要它们重复运行：</p>\n<ul>\n<li>也许你需要每小时获取新的销售数据。</li>\n<li>也许你需要每晚处理网站日志。</li>\n<li>或者当有新的数据文件上传时，管道应自动开始运行。</li>\n</ul>\n<p>每次手动触发这些管道会很繁琐且容易出错。编排使此过程自动化，让你的数据工作流程可靠且高效。</p>\n<h3>管道编排的核心思路</h3>\n<p>在基本层面上，编排管道包含几个主要思路：</p>\n<ol>\n<li>\n<p><strong>调度：</strong> 决定管道<em>何时</em>运行。常见的调度方法包括：</p>\n<ul>\n<li><strong>基于时间：</strong> 在特定时间间隔运行管道（例如，每小时、每天午夜、每周日）。这有助于定期更新数据。</li>\n<li><strong>基于事件：</strong> 响应特定事件触发管道（例如，新文件出现在存储位置、消息到达队列、另一个管道成功完成）。这使得数据处理更具动态性。</li>\n</ul>\n</li>\n<li>\n<p><strong>依赖关系：</strong> 管理管道内任务必须运行的顺序。许多管道中的任务依赖于之前任务的成功完成。例如，你无法转换尚未提取的数据，也无法加载尚未转换的数据。编排工具管理这些依赖关系，确保任务 B 只有在任务 A 成功完成后才开始。</p>\n</li>\n</ol>\n<p>让我们来看一个简单的依赖关系图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-19n9v98\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [color=\"#495057\", arrowhead=normal];\n\n  Extract [label=\"提取数据\\n(源 A)\", fillcolor=\"#a5d8ff\"];\n  Transform [label=\"转换数据\\n(清理与聚合)\", fillcolor=\"#96f2d7\"];\n  Load [label=\"加载数据\\n(数据仓库)\", fillcolor=\"#ffec99\"];\n  Report [label=\"生成报告\", fillcolor=\"#ffc9c9\"];\n\n  Extract -> Transform;\n  Transform -> Load;\n  Load -> Report;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-19n9v98\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的管道，显示任务按顺序执行。'转换数据' 依赖于 '提取数据'，'加载数据' 依赖于 '转换数据'，而 '生成报告' 依赖于 '加载数据'。</p>\n</blockquote>\n<ol start=\"3\">\n<li>\n<p><strong>监控：</strong> 跟踪管道运行。了解管道是否成功运行、是否失败、耗时多久，并可能收集其执行的其他指标，这些都很重要。监控有助于快速发现问题。</p>\n</li>\n<li>\n<p><strong>告警：</strong> 当出现问题时（例如管道失败或任务耗时远超预期），通知相关人员（例如数据工程团队）。这以便及时干预。</p>\n</li>\n<li>\n<p><strong>错误处理：</strong> 定义管道内任务失败时应采取的措施。选项可能包括：</p>\n<ul>\n<li><strong>重试：</strong> 自动再次尝试运行失败的任务，可能在短暂停留后。</li>\n<li><strong>停止：</strong> 如果特定任务失败，则停止整个管道运行。</li>\n<li><strong>跳过：</strong> 跳过失败的任务，并尝试继续执行后续的独立任务（请谨慎使用！）。</li>\n<li><strong>通知：</strong> 发送有关失败的告警。</li>\n</ul>\n</li>\n</ol>\n<h3>整合应用</h3>\n<p>假设我们的简单 ETL 管道需要每晚运行。一个编排系统会：</p>\n<ul>\n<li><strong>调度：</strong> 例如，每天凌晨 2:00 触发“提取”任务。</li>\n<li><strong>管理依赖关系：</strong> 确保“转换”仅在“提取”成功完成后才开始。如果“提取”失败，“转换”将不会运行。同理，“加载”等待“转换”完成。</li>\n<li><strong>监控：</strong> 记录每个任务和整个管道运行的开始时间、结束时间以及成功/失败状态。</li>\n<li><strong>处理错误：</strong> 如果“转换”任务失败，可以尝试重试两次。如果仍失败，则停止管道并发送告警。</li>\n</ul>\n<p>尽管你可以手动管理非常简单的管道，或使用基本的系统工具（例如 Linux/macOS 上的 <code>cron</code> 进行调度），但专业的工作流管理工具（你将在后面详细了解）通常用于处理更复杂数据管道的调度、依赖关系、监控和错误处理的复杂性。</p>\n<p>当你稍后在本章中练习设计第一个数据管道时，不仅仅要思考步骤（提取、转换、加载），还要思考这些步骤<em>如何</em>和<em>何时</em>运行，以及如果出现问题应如何处理。这就是管道编排的核心所在。</p>",
+  "slug": "simple-pipeline-orchestration",
+  "updates": [],
+  "references": [
+    {
+      "id": 15498,
+      "title": "Fundamentals of Data Engineering",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "447",
+      "url": "https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/",
+      "doi": "",
+      "note": "提供了数据工程原则的全面概述，包括管道设计和编排策略。",
+      "order": 1,
+      "created_at": "2025-09-06T10:46:34.821320Z",
+      "updated_at": "2025-09-11T02:50:09.837874Z"
+    },
+    {
+      "id": 15499,
+      "title": "Apache Airflow Documentation",
+      "author": "The Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://airflow.apache.org/docs/",
+      "doi": "",
+      "note": "Apache Airflow的官方指南，这是一个流行的开源平台，用于编排复杂的数据工作流，展示了调度、依赖和监控的实际应用。",
+      "order": 2,
+      "created_at": "2025-09-06T10:46:34.842271Z",
+      "updated_at": "2025-09-11T02:50:02.778970Z"
+    },
+    {
+      "id": 15500,
+      "title": "Data Pipelines Pocket Reference: Moving and Processing Data for Your Organization",
+      "author": "James Densmore",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "274",
+      "url": "https://www.oreilly.com/library/view/data-pipelines-pocket/9781492087814/",
+      "doi": "",
+      "note": "一本专注于构建和管理数据管道的实践指南，涵盖了各种编排模式和常见挑战。",
+      "order": 3,
+      "created_at": "2025-09-06T10:46:34.845237Z",
+      "updated_at": "2025-09-11T02:50:21.910628Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

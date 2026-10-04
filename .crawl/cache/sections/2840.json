@@ -1,0 +1,45 @@
+{
+  "id": 2840,
+  "title": "JAX 中的设备管理",
+  "meta_title": "JAX 设备管理",
+  "meta_description": "查询可用设备（CPU、GPU、TPU）并明确放置计算。",
+  "content": "<p>在使用 <code>pmap</code> 等原语将计算分布到多个设备之前，了解 JAX 如何识别和管理可用的硬件加速器是很重要的。JAX 会自动检测连接到您系统（或在分布式环境中分配）的 CPU、GPU 和 TPU，并提供工具来查看和操作它们。</p>\n<h3>查看可用设备</h3>\n<p>JAX 提供一些函数来查询它可以访问的计算资源。最基本的是 <code>jax.devices()</code>。它返回 JAX 可以在所有参与主机（在多主机设置中）或仅在本地主机（如果独立运行）上使用的所有设备列表。</p>\n<pre><code class=\"language-python\">import jax\n\n# 列出 JAX 可以全局看到的所有设备（在单主机中可能与 local_devices 相同）\nall_devices = jax.devices()\nprint(f\"All available devices: {all_devices}\")\n\n# 获取全局设备总数\nnum_devices = jax.device_count()\nprint(f\"Total number of devices: {num_devices}\")\n\n# 仅列出当前进程/主机上的本地设备\nlocal_devices_list = jax.local_devices()\nprint(f\"Local devices: {local_devices_list}\")\n\n# 获取本地设备数量\nnum_local_devices = jax.local_device_count()\nprint(f\"Number of local devices: {num_local_devices}\")\n\n# 示例输出（可能因硬件而异）\n# All available devices: [CpuDevice(id=0)] # 如果只有 CPU 可用\n# All available devices: [TpuDevice(id=0), TpuDevice(id=1), ...] # 在 TPU Pod 切片上\n# All available devices: [GpuDevice(id=0), GpuDevice(id=1)] # 在双 GPU 机器上\n\n# Total number of devices: 1\n# Local devices: [CpuDevice(id=0)]\n# Number of local devices: 1\n</code></pre>\n<p><code>jax.devices()</code> 或 <code>jax.local_devices()</code> 返回列表中每个元素都是一个 <code>Device</code> 对象。这些对象包含特定硬件的信息，例如其平台（<code>'cpu'</code>、<code>'gpu'</code>、<code>'tpu'</code>）、在该平台内的唯一 ID，以及在多主机情况下可能包含进程索引等其他属性。</p>\n<pre><code class=\"language-python\">if local_devices_list:\n    device = local_devices_list[0]\n    print(f\"First local device: ID={device.id}, Platform={device.platform}\")\n    # 示例输出：First local device: ID=0, Platform=gpu\n</code></pre>\n<p>区分 <code>jax.devices()</code> 和 <code>jax.local_devices()</code> 的差别在多主机 TPU 环境中特别重要。<code>jax.devices()</code> 提供所有连接到 TPU Pod 切片的主机上的全局视图，而 <code>jax.local_devices()</code> 仅显示直接连接到当前 Python 进程的设备。对于单主机 GPU 或 CPU 设置，这两个函数通常返回相同的列表。</p>\n<h3>默认设备放置</h3>\n<p>默认情况下，JAX 操作和数组创建以 <code>jax.local_devices()</code> 列出的第一个设备为目标，这通常是 <code>cpu:0</code>、<code>gpu:0</code> 或 <code>tpu:0</code>，具体取决于您的设置和后端配置。</p>\n<pre><code class=\"language-python\">import jax.numpy as jnp\n\n# 在默认设备上创建数组（通常是设备 0）\nx = jnp.ones((3, 3))\nprint(f\"Default device for x: {x.device()}\")\n\n# 示例输出：Default device for x: GpuDevice(id=0)\n</code></pre>\n<p>这种默认行为对于单设备工作流很方便，但对于分布式计算，您通常需要更明确的控制。</p>\n<h3>使用 <code>jax.device_put</code> 进行明确设备放置</h3>\n<p><code>jax.device_put()</code> 函数允许您明确地将 NumPy 数组或 Python 标量放置到特定的 JAX 设备上，返回一个位于该设备上的 <code>DeviceArray</code>（JAX 的数组类型）。</p>\n<p>其签名是 <code>jax.device_put(x, device=None)</code>。</p>\n<ul>\n<li><code>x</code>: 要放置的数据（例如，NumPy 数组、Python 标量/列表）。</li>\n<li><code>device</code>: 目标 <code>Device</code> 对象（从 <code>jax.devices()</code> 或 <code>jax.local_devices()</code> 获取）。如果为 <code>None</code>，则使用默认设备。</li>\n</ul>\n<pre><code class=\"language-python\">import numpy as np\n\nif num_local_devices > 1:\n    # 在主机 CPU 上创建 NumPy 数组\n    host_array = np.random.rand(2, 2)\n    print(f\"NumPy array type: {type(host_array)}\")\n\n    # 明确地将其放置到第二个可用的 JAX 设备上\n    target_device = jax.local_devices()[1]\n    device_array = jax.device_put(host_array, device=target_device)\n\n    print(f\"Placed array type: {type(device_array)}\")\n    print(f\"Array is now on device: {device_array.device()}\")\n\n    # 示例输出（在多 GPU 系统上）：\n    # NumPy array type: &#x3C;class 'numpy.ndarray'>\n    # Placed array type: &#x3C;class 'jaxlib.xla_extension.DeviceArray'>\n    # Array is now on device: GpuDevice(id=1)\n\nelif num_local_devices == 1:\n    print(\"只有一个本地设备可用，跳过明确放置示例。\")\n\nelse:\n    print(\"未找到 JAX 设备。\")\n</code></pre>\n<p><code>jax.device_put()</code> 之所以重要，是因为：</p>\n<ol>\n<li><strong>数据传输：</strong> 它是将数据从主机（CPU 内存，NumPy 数组所在的位置）移动到加速器设备（GPU/TPU 内存）的主要方式。</li>\n<li><strong>为 <code>pmap</code> 做准备：</strong> 使用 <code>pmap</code> 时，您通常在主机上准备数据分片，然后使用 <code>jax.device_put</code>（或依赖 <code>pmap</code> 的隐式放置）来确保数据在并行计算开始前位于正确的设备上。尽管 <code>pmap</code> 可以隐式处理输入参数 (parameter)的分布，但明确放置初始模型参数或状态有时对于清晰度或特定初始化模式来说是必要的。</li>\n<li><strong>控制计算位置：</strong> 尽管 <code>jit</code> 编译通常决定操作运行的位置，但 <code>jax.device_put</code> 可以影响初始数据的位置，这对于性能很重要，可以避免后续不必要的传输。</li>\n</ol>\n<h3>设备数据驻留</h3>\n<p>一旦数组被放置到设备上（无论是通过 <code>jax.device_put</code> 明确放置还是隐式放置），JAX 会尝试将涉及该数组的计算保留在同一设备上，以减少数据传输。涉及不同设备上数组的操作可能会触发数据移动或导致错误，如果该操作未跨设备定义。</p>\n<h3>设备可见性环境变量</h3>\n<p>您可以在导入 JAX <em>之前</em>使用环境变量来影响 JAX 可以看到的设备，特别是 GPU。最常用的是 <code>CUDA_VISIBLE_DEVICES</code>。</p>\n<pre><code class=\"language-bash\"># 示例：使 JAX（和其他 CUDA 应用程序）仅能看到 GPU 1\nexport CUDA_VISIBLE_DEVICES=1\npython my_jax_script.py\n</code></pre>\n<p>在 <code>my_jax_script.py</code> 中，<code>jax.local_devices()</code> 可能只会列出 <code>GpuDevice(id=0)</code>（因为 JAX 会从 0 开始重新编号可见设备），这实际对应于物理 GPU 1。设置 <code>CUDA_VISIBLE_DEVICES=\"\"</code> 通常会隐藏所有 GPU，强制 JAX 使用 CPU。</p>\n<p>JAX 也遵守 <code>JAX_PLATFORMS</code> 环境变量。如果设置了它，JAX 将仅初始化指定的平台后端（例如，<code>JAX_PLATFORMS=cpu</code> 或 <code>JAX_PLATFORMS=gpu</code>）。当有多个后端可用时，这有助于强制使用特定后端。</p>\n<p>掌握设备管理是分布式计算的根本。了解哪些设备可用、数据位于何处（<code>x.device()</code>）以及如何控制放置（<code>jax.device_put</code>）是有效使用 <code>pmap</code> 并扩展您的计算的前提条件。在接下来的章节中，我们将在此根本上实现并行执行模式。</p>",
+  "slug": "device-management-jax",
+  "updates": [],
+  "references": [
+    {
+      "id": 6628,
+      "title": "JAX Documentation: Working with multiple devices",
+      "author": "The JAX Authors",
+      "year": "2024",
+      "publisher": "The JAX Authors",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/multi_controller_intro.html",
+      "doi": "",
+      "note": "JAX多设备功能的官方指南，涵盖设备发现、放置以及跨各种硬件加速器的数据处理。",
+      "order": 1,
+      "created_at": "2025-09-05T01:27:41.740601Z",
+      "updated_at": "2025-09-08T07:14:54.476091Z"
+    },
+    {
+      "id": 6630,
+      "title": "XLA: Optimizing Compilers for Machine Learning",
+      "author": "The XLA Authors",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla",
+      "doi": "",
+      "note": "描述了XLA，这是JAX使用的领域特定编译器，用于为CPU、GPU和TPU生成高效机器代码，是JAX设备管理的基础。",
+      "order": 3,
+      "created_at": "2025-09-05T01:27:41.767357Z",
+      "updated_at": "2025-09-08T07:14:26.195371Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

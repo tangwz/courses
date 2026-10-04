@@ -1,0 +1,61 @@
+{
+  "id": 1631,
+  "title": "使用 INNER JOIN",
+  "meta_title": "如何在 SQL 中使用 INNER JOIN",
+  "meta_description": "了解 INNER JOIN 的语法和用法，以从两个表中检索匹配的行。",
+  "content": "<p>主键和外键在表之间创建关联，从而可以组合这些关联表中的数据。在 SQL 中，最常用且最基本的方法是使用 <code>INNER JOIN</code> 子句。</p>\n<p>可以把 <code>INNER JOIN</code> 看作一种根据公共列水平合并两个表的方法。它检查您指定的两个表中的行，并且只选择那些在指定“连接列”中值完全匹配的行对。如果一个表中的行在连接条件中没有在另一个表中找到对应的匹配项，那么它将不会出现在最终结果集中。</p>\n<h3><code>INNER JOIN</code> 语法</h3>\n<p>使用 <code>INNER JOIN</code> 的基本结构如下：</p>\n<pre><code class=\"language-sql\">SELECT table1.column1, table1.column2, table2.columnA, table2.columnB\nFROM table1\nINNER JOIN table2\nON table1.common_column = table2.common_column;\n\n</code></pre>\n<p>让我们分解一下这些组成部分：</p>\n<ol>\n<li><strong><code>SELECT table1.column1, table2.columnA ...</code></strong>：您指定希望在最终结果中看到的列。请注意，当两张表中有同名列（例如常见的 ID 列）时，或仅仅为了清晰起见，您需要用表名作为列名的前缀（<code>table1.column</code> 或 <code>table2.column</code>）。稍后我们将看到一种使用别名缩短表名的方法。</li>\n<li><strong><code>FROM table1</code></strong>：这表示连接中的第一个表（通常被称为“左”表）。</li>\n<li><strong><code>INNER JOIN table2</code></strong>：这指定了您要连接的第二个表（“右”表）以及连接类型（<code>INNER</code>）。</li>\n<li><strong><code>ON table1.common_column = table2.common_column</code></strong>：这是连接条件。它是最重要的部分，它告诉数据库这些表是如何关联的。您指定 <code>table1</code> 中的哪个列应该与 <code>table2</code> 中的哪个列匹配。通常，这涉及将一个表的主键与另一个表中的对应外键进行匹配。</li>\n</ol>\n<h3>示例：客户和订单</h3>\n<p>假设我们的数据库中有两个表：<code>Customers</code>（客户）和 <code>Orders</code>（订单）。</p>\n<p><strong><code>Customers</code>（客户）表：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">名</th>\n<th align=\"left\">姓</th>\n<th align=\"left\">城市</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Clara</td>\n<td align=\"left\">Oswald</td>\n<td align=\"left\">London</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Amy</td>\n<td align=\"left\">Pond</td>\n<td align=\"left\">Leadworth</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Donna</td>\n<td align=\"left\">Noble</td>\n<td align=\"left\">London</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Martha</td>\n<td align=\"left\">Jones</td>\n<td align=\"left\">London</td>\n</tr>\n</tbody>\n</table>\n<p><strong><code>Orders</code>（订单）表：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">订单ID</th>\n<th align=\"left\">产品</th>\n<th align=\"left\">数量</th>\n<th align=\"left\">客户ID</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Screwdriver</td>\n<td align=\"left\">1</td>\n<td align=\"left\">2</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">TARDIS Key</td>\n<td align=\"left\">1</td>\n<td align=\"left\">1</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">Celery</td>\n<td align=\"left\">5</td>\n<td align=\"left\">5</td>\n</tr>\n<tr>\n<td align=\"left\">104</td>\n<td align=\"left\">Scarf</td>\n<td align=\"left\">1</td>\n<td align=\"left\">2</td>\n</tr>\n</tbody>\n</table>\n<p><code>Customers</code> 表使用 <code>customer_id</code> 作为其主键。 <code>Orders</code> 表使用 <code>customer_id</code> 作为外键关联到 <code>Customers</code> 表。</p>\n<p>现在，假设我们想查看订单列表，并显示下单客户的姓名。我们需要来自两个表的信息。我们可以使用 <code>INNER JOIN</code> 来实现此目的：</p>\n<pre><code class=\"language-sql\">SELECT\n    O.order_id,\n    O.product,\n    C.first_name,\n    C.last_name\nFROM\n    Orders AS O\nINNER JOIN\n    Customers AS C\nON\n    O.customer_id = C.customer_id;\n</code></pre>\n<ul>\n<li>我们从 <code>Orders</code> 表中选择 <code>order_id</code> 和 <code>product</code>（使用 <code>O</code> 作为 <code>Orders</code> 的简称别名）。</li>\n<li>我们从 <code>Customers</code> 表中选择 <code>first_name</code> 和 <code>last_name</code>（使用 <code>C</code> 作为 <code>Customers</code> 的别名）。</li>\n<li>我们从 <code>Orders</code> 表开始。</li>\n<li>将其与 <code>Customers</code> 表进行 <code>INNER JOIN</code>。</li>\n<li>重要的 <code>ON</code> 子句指定了表之间的关联条件，即 <code>Orders</code> 表中的 <code>customer_id</code>（<code>O.customer_id</code>）与 <code>Customers</code> 表中的 <code>customer_id</code>（<code>C.customer_id</code>）匹配。</li>\n</ul>\n<h3>理解结果</h3>\n<p>运行此查询将产生以下结果：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">订单ID</th>\n<th align=\"left\">产品</th>\n<th align=\"left\">名</th>\n<th align=\"left\">姓</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Screwdriver</td>\n<td align=\"left\">Amy</td>\n<td align=\"left\">Pond</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">TARDIS Key</td>\n<td align=\"left\">Clara</td>\n<td align=\"left\">Oswald</td>\n</tr>\n<tr>\n<td align=\"left\">104</td>\n<td align=\"left\">Scarf</td>\n<td align=\"left\">Amy</td>\n<td align=\"left\">Pond</td>\n</tr>\n</tbody>\n</table>\n<p>请注意以下几点：</p>\n<ol>\n<li><strong>包含匹配的行</strong>：订单 101 关联到客户 2 (Amy Pond)，订单 102 关联到客户 1 (Clara Oswald)，订单 104 再次关联到客户 2 (Amy Pond)。所有这些都显示出来，因为在 <code>Orders</code> 和 <code>Customers</code> 表中都找到了匹配的 <code>customer_id</code>。</li>\n<li><strong>排除不匹配的行</strong>：\n<ul>\n<li>Donna Noble（客户 3）和 Martha Jones（客户 4）不在结果中，因为他们在 <code>Orders</code> 表中没有对应的订单。</li>\n<li>订单 103 不在结果中，因为其 <code>customer_id</code> (5) 在 <code>Customers</code> 表中不存在。</li>\n</ul>\n</li>\n</ol>\n<p>这种排除不匹配行的特性是 <code>INNER JOIN</code> 的显著特点。它只返回根据 <code>ON</code> 条件存在关联的行。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1deix7q\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=plaintext, fontname=\"Arial\"];\n  splines=false;\n\n  subgraph cluster_0 {\n    label = \"客户\";\n    bgcolor=\"#e9ecef\";\n    cust [label=<\n      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n        <TR><TD BGCOLOR=\"#adb5bd\"><B>客户ID</B></TD><TD BGCOLOR=\"#adb5bd\"><B>名</B></TD></TR>\n        <TR><TD PORT=\"c1\">1</TD><TD>Clara</TD></TR>\n        <TR><TD PORT=\"c2\">2</TD><TD>Amy</TD></TR>\n        <TR><TD PORT=\"c3\">3</TD><TD>Donna</TD></TR>\n        <TR><TD PORT=\"c4\">4</TD><TD>Martha</TD></TR>\n      </TABLE>\n    >];\n  }\n\n  subgraph cluster_1 {\n    label = \"订单\";\n    bgcolor=\"#e9ecef\";\n    ord [label=<\n      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n        <TR><TD BGCOLOR=\"#adb5bd\"><B>订单ID</B></TD><TD BGCOLOR=\"#adb5bd\"><B>产品</B></TD><TD BGCOLOR=\"#adb5bd\"><B>客户ID</B></TD></TR>\n        <TR><TD>101</TD><TD>Screwdriver</TD><TD PORT=\"o1\">2</TD></TR>\n        <TR><TD>102</TD><TD>TARDIS Key</TD><TD PORT=\"o2\">1</TD></TR>\n        <TR><TD>103</TD><TD>Celery</TD><TD PORT=\"o3\">5</TD></TR>\n        <TR><TD>104</TD><TD>Scarf</TD><TD PORT=\"o4\">2</TD></TR>\n      </TABLE>\n    >];\n  }\n\n  subgraph cluster_2 {\n    label = \"INNER JOIN 结果\";\n    bgcolor=\"#d0bfff\";\n    res [label=<\n      <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n        <TR><TD BGCOLOR=\"#9775fa\"><B>订单ID</B></TD><TD BGCOLOR=\"#9775fa\"><B>产品</B></TD><TD BGCOLOR=\"#9775fa\"><B>名</B></TD></TR>\n        <TR><TD>101</TD><TD>Screwdriver</TD><TD>Amy</TD></TR>\n        <TR><TD>102</TD><TD>TARDIS Key</TD><TD>Clara</TD></TR>\n        <TR><TD>104</TD><TD>Scarf</TD><TD>Amy</TD></TR>\n      </TABLE>\n    >];\n  }\n\n  cust:c1 -> ord:o2 [color=\"#7048e8\", style=dashed, arrowhead=none];\n  cust:c2 -> ord:o1 [color=\"#7048e8\", style=dashed, arrowhead=none];\n  cust:c2 -> ord:o4 [color=\"#7048e8\", style=dashed, arrowhead=none];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1deix7q\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图演示了 <code>INNER JOIN</code>。线条连接了 <code>Customers</code> 和 <code>Orders</code> 表中 <code>customer_id</code> 匹配的行。只有这些关联的行组成了最终的结果集。客户 3、客户 4 和订单 103 被排除在外，因为它们在另一个表中没有匹配项。</p>\n</blockquote>\n<p><code>INNER JOIN</code> 是组合关联数据的重要工具。熟练掌握其语法并理解它如何根据 <code>ON</code> 条件匹配行，对于有效查询关系型数据库非常重要。在接下来的部分中，我们将介绍如何连接两个以上的表以及如何使用别名使查询更简洁。</p>",
+  "slug": "using-inner-join",
+  "updates": [],
+  "references": [
+    {
+      "id": 3418,
+      "title": "7.2. Join Tables",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2025",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/17/tutorial-joins.html",
+      "doi": "",
+      "note": "PostgreSQL的官方文档，清晰解释了SQL JOIN子句，包括INNER JOIN的语法、行为和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:53.409516Z",
+      "updated_at": "2025-09-07T18:53:49.973988Z"
+    },
+    {
+      "id": 3423,
+      "title": "Learning SQL, 3rd Edition",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 9: Joining Tables",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492070851/",
+      "doi": "",
+      "note": "一本SQL基础知识的实用指南，其中有一个专门章节详细介绍了各种连接类型的使用，包括对INNER JOIN的详尽阐述。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:53.548282Z",
+      "updated_at": "2025-09-07T18:53:42.110779Z"
+    },
+    {
+      "id": 3425,
+      "title": "Database System Concepts, 7th Edition",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3: Introduction to SQL",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本广泛使用的数据库系统学术教材，在关系数据库理论和实际应用的背景下解释了SQL连接操作。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:53.676828Z",
+      "updated_at": "2025-09-07T18:53:22.028348Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

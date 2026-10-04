@@ -1,0 +1,45 @@
+{
+  "id": 5652,
+  "title": "生成简单分类数据",
+  "meta_title": "生成合成分类数据",
+  "meta_description": "基于预设类别或规则创建基本合成分类数据的示例。",
+  "content": "<p>在生成数值数据的同时，我们也常需要创建合成<em>分类</em>数据。分类数据代表着属于不同组或标签的特性，而非数值。例如产品类型（“电子产品”、“服装”、“杂货”）、用户状态（“活跃”、“不活跃”、“新用户”）或简单分类（“是”、“否”）。生成这类数据对于许多机器学习 (machine learning)任务（如分类问题）必不可少。</p>\n<h3>定义类别</h3>\n<p>在生成分类数据之前，你必须先定义可能类别的集合。这个集合代表着分类特征可以取的所有独有值。例如，如果你正在模拟客户满意度调查的回复，你的类别可能是：“非常满意”、“满意”、“中立”、“不满意”、“非常不满意”。</p>\n<h3>方法一：均匀随机抽样</h3>\n<p>生成分类值最直接的方法是简单地从你定义的集合中随机选择一个类别，其中每个类别被选中的机会均等。这类似于掷一个公平的骰子，其中每个面（类别）出现的概率是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn><mi mathvariant=\"normal\">/</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">1/N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">1/</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>， <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 是类别的总数。</p>\n<p>这种方法适用情况是，你没有关于每个类别预期频率的具体信息，或者你想要在初步测试时获得一个完全平衡的表示。</p>\n<p>假设我们的类别是 <code>['Red', 'Green', 'Blue']</code>。均匀随机抽样意味着每次我们生成一个数据点时，“红色”有 1/3 的机会，“绿色”有 1/3 的机会，“蓝色”有 1/3 的机会。</p>\n<p><strong>示例（类 Python 伪代码）：</strong></p>\n<pre><code class=\"language-python\">import random\n\ncategories = ['Red', 'Green', 'Blue']\n\n# 生成一个随机类别\nrandom_category = random.choice(categories)\nprint(random_category) # 输出可能是“红色”、“绿色”或“蓝色”\n\n# 生成 10 个随机类别\nsynthetic_data = [random.choice(categories) for _ in range(10)]\nprint(synthetic_data)\n# 示例输出：['Green', 'Blue', 'Green', 'Red', 'Blue', 'Blue', 'Red', 'Green', 'Green', 'Red']\n</code></pre>\n<h3>方法二：按指定概率抽样</h3>\n<p>通常，真实数据中的类别出现频率不均等。例如，在一个在线交易数据集中，“已完成”类别可能远比“失败”或“已退款”类别常见。为模拟这种情况，你可以为每个类别分配特定的概率。主要要求是所有类别的概率总和必须为 1.0（或 100%）。</p>\n<p>然后你根据这些分配的权重 (weight)或概率从类别中抽样。概率较高的类别将在生成的数据中更频繁地出现。</p>\n<p>假设我们想生成用户类型的数据，但我们预期大多数用户是“活跃”的。我们可以这样定义概率：</p>\n<ul>\n<li>“活跃”：70% (0.7)</li>\n<li>“不活跃”：20% (0.2)</li>\n<li>“新用户”：10% (0.1)</li>\n</ul>\n<p>概率总和 = 0.7 + 0.2 + 0.1 = 1.0。</p>\n<p><strong>示例（类 Python 伪代码）：</strong></p>\n<pre><code class=\"language-python\">import random\n\ncategories = ['Active', 'Inactive', 'New']\nprobabilities = [0.7, 0.2, 0.1]\n\n# 根据概率生成一个随机类别\nweighted_category = random.choices(categories, weights=probabilities, k=1)[0]\nprint(weighted_category) # 输出最可能是“活跃”\n\n# 生成 100 个随机类别\nsynthetic_data = random.choices(categories, weights=probabilities, k=100)\n# 统计出现次数以检查分布（近似值）\nfrom collections import Counter\nprint(Counter(synthetic_data))\n# 示例输出：Counter({'Active': 68, 'Inactive': 22, 'New': 10})\n</code></pre>\n<p>我们可以将目标概率与从生成样本中获得的频率进行可视化。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-mukntx\" \n              data-plot-definition='{\"layout\": {\"title\": \"分类数据生成：目标频率与样本频率对比\", \"xaxis\": {\"title\": \"类别\"}, \"yaxis\": {\"title\": \"频率 / 概率\"}, \"barmode\": \"group\"}, \"data\": [{\"type\": \"bar\", \"name\": \"目标概率\", \"x\": [\"活跃\", \"不活跃\", \"新用户\"], \"y\": [0.7, 0.2, 0.1], \"marker\": {\"color\": \"#228be6\"}}, {\"type\": \"bar\", \"name\": \"样本频率 (N=100)\", \"x\": [\"活跃\", \"不活跃\", \"新用户\"], \"y\": [0.68, 0.22, 0.10], \"marker\": {\"color\": \"#ff922b\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-mukntx\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>对比使用加权抽样从 100 个生成点样本中获得的所需概率分布与实际频率分布。样本频率与目标概率非常接近。</p>\n</blockquote>\n<h3>方法三：基于规则的生成</h3>\n<p>有时，一个数据点的类别取决于其他特征的值。这与前面提到的基于规则的系统有关。你可以定义明确的规则，根据其他生成数据满足的条件来分配类别。</p>\n<p>这种方法允许你在合成数据集中不同列之间引入简单的关系，使其可能比独立生成每一列更具真实感。</p>\n<p><strong>示例：</strong></p>\n<ul>\n<li><strong>年龄组：</strong> 如果你已经生成了数值型“年龄”特征，你可以使用规则创建一个分类型“年龄组”特征：\n<ul>\n<li>如果 <code>年龄 &#x3C; 18</code> 则 <code>年龄组 = “儿童”</code></li>\n<li>如果 <code>18 &#x3C;= 年龄 &#x3C; 65</code> 则 <code>年龄组 = “成人”</code></li>\n<li>如果 <code>年龄 >= 65</code> 则 <code>年龄组 = “老年人”</code></li>\n</ul>\n</li>\n<li><strong>产品推荐：</strong> 基于一个已生成的“购买历史”类别，你可能会分配一个“推荐产品类型”：\n<ul>\n<li>如果 <code>购买历史 = “电子产品”</code> 则 <code>推荐产品类型 = “配件”</code></li>\n<li>如果 <code>购买历史 = “图书”</code> 则 <code>推荐产品类型 = “文具”</code></li>\n</ul>\n</li>\n</ul>\n<p>基于规则的生成需要定义连接不同数据块的逻辑。虽然简单规则易于实现，但复杂的依赖关系可能需要更精细的方法。</p>\n<p><strong>示例（结合数值和基于规则的分类数据的类 Python 伪代码）：</strong></p>\n<pre><code class=\"language-python\">import random\n\ndef generate_age_group(age):\n  if age &#x3C; 18:\n    return '儿童'\n  elif 18 &#x3C;= age &#x3C; 65:\n    return '成人'\n  else:\n    return '老年人'\n\nsynthetic_data = []\nfor _ in range(5):\n  # 生成一个随机年龄（数值型）\n  age = random.randint(10, 80)\n  # 根据年龄生成年龄组（基于规则的分类型）\n  age_group = generate_age_group(age)\n  synthetic_data.append({'Age': age, 'Age Group': age_group})\n\nprint(synthetic_data)\n# 示例输出：\n# [{'Age': 45, 'Age Group': '成人'},\n#  {'Age': 12, 'Age Group': '儿童'},\n#  {'Age': 71, 'Age Group': '老年人'},\n#  {'Age': 25, 'Age Group': '成人'},\n#  {'Age': 66, 'Age Group': '老年人'}]\n</code></pre>\n<p>“这些基本方法——均匀抽样、加权抽样和基于规则的分配——为生成简单分类数据提供了依据。虽然它们可能无法捕捉分布和依赖关系的所有复杂性，但它们是创建基本合成数据集用于测试、开发或扩充有限数据的重要起点。随着学习的推进，你会遇到更多建立在这些基本原则之上的高级技术。”</p>",
+  "slug": "generating-simple-categorical-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 16126,
+      "title": "`random` - Generate pseudo-random numbers",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/random.html",
+      "doi": "",
+      "note": "Python内置模块的官方文档，涵盖了用于均匀和加权类别采样的`random.choice`和`random.choices`函数。",
+      "order": 1,
+      "created_at": "2025-09-06T11:00:22.190923Z",
+      "updated_at": "2025-09-10T13:14:35.794887Z"
+    },
+    {
+      "id": 16128,
+      "title": "Simulation Modeling and Analysis",
+      "author": "Averill M. Law",
+      "year": "2024",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "688",
+      "url": "https://averill-law.com/simulation-book/",
+      "doi": "",
+      "note": "模拟领域的经典著作，涵盖了从各种分布中生成随机变量的技术，包括与分类数据相关的离散分布。",
+      "order": 3,
+      "created_at": "2025-09-06T11:00:22.198637Z",
+      "updated_at": "2025-09-10T13:14:38.482657Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

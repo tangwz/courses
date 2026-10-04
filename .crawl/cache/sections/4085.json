@@ -1,0 +1,61 @@
+{
+  "id": 4085,
+  "title": "记录工件（模型、图表、文件）",
+  "meta_title": "使用 MLflow 记录工件",
+  "meta_description": "了解如何记录输出文件，例如训练好的模型、可视化内容和数据样本。",
+  "content": "<p>全面理解和重现机器学习 (machine learning)实验运行，需要跟踪超参数 (parameter) (hyperparameter)和性能指标之外的更多内容。完整的实验跟踪需要访问运行过程中产生的所有输出。这些输出在 MLflow 中称作<strong>工件</strong>，可包含各类文件，例如训练好的模型本身、性能的可视化内容、评估报告，甚至是处理过的数据子集。</p>\n<p>MLflow 提供简单的方法，将这些输出与你记录的参数和指标一同保存，直接关联到产生它们的具体运行。这确保了评估或重现结果所需的所有组成部分都存储在一起。</p>\n<h3>什么是工件？</h3>\n<p>可以将工件看作是你的机器学习 (machine learning)代码产生的、你希望为给定运行保存的任何文件输出。常见例子包括：</p>\n<ul>\n<li><strong>训练好的模型文件：</strong> 序列化的模型对象（例如，经过 pickle 序列化的 scikit-learn 模型、TensorFlow SavedModel、PyTorch <code>.pt</code> 文件）。</li>\n<li><strong>数据文件：</strong> 用于训练或评估的数据子集、特征重要性文件、配置文件。</li>\n<li><strong>图表和可视化内容：</strong> 图像，如混淆矩阵、ROC 曲线、学习曲线（例如，PNG、JPG、SVG 文件）。</li>\n<li><strong>报告：</strong> 总结评估结果或模型分析的文本或 HTML 文件。</li>\n</ul>\n<p>记录这些工件重要的原因有几点：</p>\n<ul>\n<li><strong>可重现性：</strong> 保存精确的模型文件，方便他人（或未来的自己）直接加载和使用。</li>\n<li><strong>分析：</strong> 可视化内容和报告能提供比仅凭指标更全面的了解。</li>\n<li><strong>调试：</strong> 中间数据或日志有助于诊断特定运行中的问题。</li>\n<li><strong>部署：</strong> 记录的模型工件通常可以直接用于部署管道。</li>\n</ul>\n<h3>记录单个文件</h3>\n<p>记录工件最基本的方式是使用 <code>mlflow.log_artifact()</code> 函数。此函数接受一个本地文件路径，并将其副本保存到该运行的工件存储库中。</p>\n<p>假设你已经用 Matplotlib 生成了一个图表，并将其保存到名为 <code>confusion_matrix.png</code> 的文件中。你可以这样记录它：</p>\n<pre><code class=\"language-python\">import mlflow\nimport matplotlib.pyplot as plt\n# 假设已定义 'model'、'X_test'、'y_test'\n# 并且你有一个函数 plot_confusion_matrix\n\n# 生成并保存图表\nfig, ax = plt.subplots()\n# plot_confusion_matrix(model, X_test, y_test, ax=ax) # 你的绘图逻辑\nax.set_title(\"Confusion Matrix\")\nplt.savefig(\"confusion_matrix.png\")\nplt.close(fig) # 关闭图表以释放内存\n\n# 启动 MLflow 运行（或使用现有运行）\nwith mlflow.start_run():\n    # 照常记录参数和指标...\n    mlflow.log_param(\"solver\", \"liblinear\")\n    mlflow.log_metric(\"accuracy\", 0.85)\n\n    # 将图表文件作为工件记录\n    mlflow.log_artifact(\"confusion_matrix.png\")\n\n    print(f\"运行 ID: {mlflow.active_run().info.run_id}\")\n    print(\"工件 'confusion_matrix.png' 已记录。\")\n\n</code></pre>\n<p>此代码运行后，<code>confusion_matrix.png</code> 文件将被复制到该运行的工件位置（通常在本地 <code>mlruns</code> 目录中，或在配置的远程存储中）。你可以指定可选的 <code>artifact_path</code> 参数 (parameter)，以便在工件存储中的子目录中组织工件。例如，<code>mlflow.log_artifact(\"confusion_matrix.png\", artifact_path=\"plots\")</code> 会将文件放入该运行工件视图中的 <code>plots</code> 文件夹内。</p>\n<h3>记录目录</h3>\n<p>有时你需要记录多个文件，可能它们包含在一个目录中。例如，你可能有一个包含多个图表或配置文件的目录。与其单独记录每个文件，不如使用 <code>mlflow.log_artifacts()</code>（注意复数 's'）。</p>\n<pre><code class=\"language-python\">import mlflow\nimport os\n\n# 创建一个包含一些虚拟文件的目录\nos.makedirs(\"run_outputs\", exist_ok=True)\nwith open(\"run_outputs/config.yaml\", \"w\") as f:\n    f.write(\"learning_rate: 0.01\\n\")\nwith open(\"run_outputs/feature_importances.txt\", \"w\") as f:\n    f.write(\"feature1: 0.8\\nfeature2: 0.2\\n\")\n\n# 启动 MLflow 运行\nwith mlflow.start_run():\n    mlflow.log_param(\"feature_set\", \"v2\")\n    mlflow.log_metric(\"auc\", 0.78)\n\n    # 记录整个目录\n    mlflow.log_artifacts(\"run_outputs\", artifact_path=\"outputs\")\n\n    print(f\"运行 ID: {mlflow.active_run().info.run_id}\")\n    print(\"目录 'run_outputs' 已记录到 'outputs'。\")\n\n# 如果需要，清理本地虚拟文件/目录\n# import shutil\n# shutil.rmtree(\"run_outputs\")\n</code></pre>\n<p>此命令将本地 <code>run_outputs</code> 目录的整个内容记录到该运行工件存储中的 <code>outputs</code> 子目录。</p>\n<h3>记录机器学习 (machine learning)模型</h3>\n<p>尽管你<em>可以</em>使用 <code>mlflow.log_artifact()</code> 记录模型文件，但 MLflow 提供了专门用于记录模型的函数，这些函数提供了重要的优势。这些函数通过特定框架的“风格”（例如 <code>mlflow.sklearn</code>、<code>mlflow.pytorch</code>、<code>mlflow.tensorflow</code> 等）提供，它们不仅保存模型文件，还包含额外元数据：</p>\n<ul>\n<li><strong>序列化格式：</strong> 记录模型保存的方式（例如，pickle、ONNX、SavedModel）。</li>\n<li><strong>依赖项：</strong> 在 <code>conda.yaml</code> 或 <code>requirements.txt</code> 文件中记录所需的库版本（如 scikit-learn、pandas）。</li>\n<li><strong>输入/输出Schema（可选）：</strong> 你可以定义预期的输入数据结构和模型的输出格式，这有助于验证和部署。</li>\n<li><strong><code>MLmodel</code> 文件：</strong> 一个重要的元数据文件，描述模型、其风格以及如何加载和使用它。</li>\n</ul>\n<p>使用这些函数使模型更独立，更容易在以后使用 MLflow 的模型服务或注册工具进行重用或部署。</p>\n<p>这里是使用 <code>mlflow.sklearn.log_model()</code> 的例子：</p>\n<pre><code class=\"language-python\">import mlflow\nimport mlflow.sklearn\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.datasets import make_classification\nfrom sklearn.metrics import accuracy_score\n\n# 生成样本数据\nX, y = make_classification(n_samples=1000, n_features=10, random_state=42)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\n# 训练一个简单模型\nmodel = LogisticRegression()\nmodel.fit(X_train, y_train)\ny_pred = model.predict(X_test)\naccuracy = accuracy_score(y_test, y_pred)\n\n# 启动 MLflow 运行\nwith mlflow.start_run() as run:\n    # 记录参数和指标\n    mlflow.log_param(\"model_type\", \"LogisticRegression\")\n    mlflow.log_metric(\"accuracy\", accuracy)\n\n    # 记录 scikit-learn 模型\n    # 'sk_model' 是工件存储中的目录名\n    # 'registered_model_name' 是可选的，用于注册模型\n    mlflow.sklearn.log_model(\n        sk_model=model,\n        artifact_path=\"sk_model\",\n        # input_example=X_train[:5], # 可选：记录输入 schema 示例\n        # signature=mlflow.models.infer_signature(X_train, model.predict(X_train)) # 可选：记录输入/输出签名\n    )\n\n    print(f\"运行 ID: {run.info.run_id}\")\n    print(\"模型已记录到工件路径 'sk_model'。\")\n    print(f\"准确度: {accuracy:.4f}\")\n</code></pre>\n<p>以这种方式记录模型时，MLflow 会在工件存储中创建一个目录（例如 <code>sk_model</code>），其中包含序列化模型文件（本例中为 <code>model.pkl</code>）、一个 <code>conda.yaml</code> 文件、一个 <code>requirements.txt</code> 文件以及 <code>MLmodel</code> 元数据文件。相比仅仅保存原始的 <code>.pkl</code> 文件，这种打包方式使得模型管理和重新部署变得显著更方便。</p>\n<h3>查看工件</h3>\n<p>工件记录后，你可以通过 MLflow UI 轻松访问它们。导航到特定运行的页面，你会找到一个“工件”部分。此部分提供一个文件浏览器界面，你可以在其中浏览目录并查看或下载记录的文件。作为工件记录的图像通常直接在 UI 中渲染，便于快速查看图表，比如前面提到的混淆矩阵示例。使用 <code>log_model</code> 函数记录的模型将显示 <code>MLmodel</code> 文件和关联的依赖文件。</p>\n<p>这里是一个记录的图表可能被可视化的简单例子（UI 如何渲染图像）：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-438pht\" \n              data-plot-definition='{\"layout\": {\"title\": \"ROC 曲线示例\", \"xaxis\": {\"title\": \"假阳性率\"}, \"yaxis\": {\"title\": \"真阳性率\"}, \"shapes\": [{\"type\": \"line\", \"x0\": 0, \"y0\": 0, \"x1\": 1, \"y1\": 1, \"line\": {\"color\": \"#adb5bd\", \"dash\": \"dash\"}}], \"legend\": {\"yanchor\": \"bottom\", \"y\": 0.01, \"xanchor\": \"right\", \"x\": 0.99}}, \"data\": [{\"x\": [0.0, 0.1, 0.2, 0.5, 0.8, 1.0], \"y\": [0.0, 0.3, 0.6, 0.85, 0.95, 1.0], \"mode\": \"lines\", \"name\": \"模型 A (AUC=0.82)\", \"line\": {\"color\": \"#339af0\"}}, {\"x\": [0.0, 0.2, 0.4, 0.7, 0.9, 1.0], \"y\": [0.0, 0.2, 0.5, 0.75, 0.90, 1.0], \"mode\": \"lines\", \"name\": \"模型 B (AUC=0.75)\", \"line\": {\"color\": \"#fa5252\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-438pht\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>ROC 曲线工件的可视化示例，可能在 MLflow UI 中显示或从数据生成。</p>\n</blockquote>\n<p>记录工件是有效实验追踪的基本组成部分。它确保你工作的重要输出（模型、图表、配置和报告）得以保存，并直接关联到产生它们的具体代码版本、参数 (parameter)和指标，大大提升你分析、重现和在此基础上进一步发展成果的能力。</p>",
+  "slug": "logging-artifacts-mlflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 7999,
+      "title": "MLflow Tracking",
+      "author": "The MLflow Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow 官方文档，详细介绍了其实验追踪功能，包括如何记录参数、指标以及尤其是模型和其他文件等工件。",
+      "order": 1,
+      "created_at": "2025-09-05T01:50:10.630040Z",
+      "updated_at": "2025-09-08T14:15:19.827625Z"
+    },
+    {
+      "id": 8001,
+      "title": "Building Machine Learning Powered Applications: Going from Idea to Product",
+      "author": "Emmanuel Ameisen",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.abebooks.com/book-search/isbn/9781492045113/",
+      "doi": "",
+      "note": "本书涵盖了将机器学习模型投入生产的实用方面，其中有关于实验追踪、模型版本控制以及在 MLOps 环境中记录工件对可复现性和部署重要性的章节。",
+      "order": 3,
+      "created_at": "2025-09-05T01:50:10.637546Z",
+      "updated_at": "2025-09-08T14:15:37.174765Z"
+    },
+    {
+      "id": 8002,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "这本关于 MLOps 原则的综合书籍专门讨论了实验追踪和数据版本控制，强调了在机器学习生命周期中管理和记录各种工件的关键作用。",
+      "order": 4,
+      "created_at": "2025-09-05T01:50:10.639963Z",
+      "updated_at": "2025-09-08T14:15:18.531499Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

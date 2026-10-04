@@ -1,0 +1,61 @@
+{
+  "id": 5545,
+  "title": "实践：勾勒基础数据管道",
+  "meta_title": "实践：勾勒基础数据管道",
+  "meta_description": "根据给定情况，在纸上设计一个简单的数据管道。",
+  "content": "<p>本练习要求你为一个常见情况勾勒出一个基础数据管道。这需要理解数据管道的组成部分——包括抽取、转换、加载——以及ETL和ELT之间的区别。目标不是编写代码，而是将数据流和涉及的步骤可视化。</p>\n<h3>场景：每日网站用户活动报告</h3>\n<p>想象一下你在一家电商公司工作。你的团队需要一份每日报告，概括每位用户在前一天访问网站的独立页面数量。这份报告将帮助市场团队了解用户活跃度。</p>\n<p>以下是你已知的信息：</p>\n<ol>\n<li><strong>数据源：</strong> 网站活动以JSON文件形式记录。每天生成一个新文件，包含当天所有的用户交互（点击、页面浏览）。文件中的每条记录都包含时间戳、用户ID、页面URL和其他详细信息。这些文件存储在指定的云存储位置。</li>\n<li><strong>要求：</strong> 在公司关系型数据库中生成一张汇总表。该表应包含三列：<code>report_date</code>（报告日期）、<code>user_id</code>（用户ID）和 <code>distinct_pages_visited</code>（访问的独立页面数）。</li>\n<li><strong>频率：</strong> 报告需要每天更新一次，汇总前一天的活动。</li>\n</ol>\n<h3>你的任务</h3>\n<p>勾勒一个数据管道以满足此要求。你可以在纸上绘制简单的图表（例如方框和箭头），或者使用文本编辑器列出步骤。</p>\n<p>在你的勾勒中考虑以下几点：</p>\n<ul>\n<li><strong>识别来源：</strong> 数据从何而来？</li>\n<li><strong>识别目标：</strong> 最终处理后的数据应存储在哪里？</li>\n<li><strong>抽取步骤：</strong> 你将如何从源获取数据？</li>\n<li><strong>转换步骤：</strong> 原始数据需要进行哪些处理才能满足报告要求？思考：\n<ul>\n<li>读取数据格式（JSON）。</li>\n<li>选择所需字段（用户ID，页面URL）。</li>\n<li>计算当天每位用户的独立页面访问次数。</li>\n<li>添加报告日期。</li>\n</ul>\n</li>\n<li><strong>加载步骤：</strong> 转换后的数据将如何进入目标数据库？</li>\n<li><strong>ETL还是ELT？</strong> 你的过程更接近抽取、转换、加载（ETL），还是抽取、加载、转换（ELT）？</li>\n<li><strong>编排：</strong> 这个管道将如何每天自动运行？（考虑简单的调度）</li>\n</ul>\n<p>花几分钟时间根据上述情况勾勒出你的管道。</p>\n<h3>示例勾勒与说明</h3>\n<p>这是勾勒此管道的一种可能方式。我们可以用一个简单图表将其直观地表示出来。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-19163jj\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled, color=\"#ced4da\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; splines=ortho; \"每日JSON日志\" [fillcolor=\"#a5d8ff\"]; \"关系型数据库表\" [fillcolor=\"#96f2d7\"]; \"每日调度器\" [shape=oval, fillcolor=\"#ffec99\"] \"每日JSON日志\" -> \"抽取每日日志文件\" [label=\" 读取\"]; \"抽取每日日志文件\" -> \"转换数据\" [label=\" 解析JSON\\n 过滤\\n 聚合\"]; \"转换数据\" -> \"加载汇总数据\" [label=\" 插入行\"]; \"加载汇总数据\" -> \"关系型数据库表\"; \"每日调度器\" -> \"抽取每日日志文件\" [label=\" 每日触发\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-19163jj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图表，说明了数据从JSON日志流向关系型数据库表的过程，由每日调度器触发。</p>\n</blockquote>\n<p>让我们分解与此图表对应的步骤：</p>\n<ol>\n<li><strong>来源：</strong> 存储在云存储中的每日JSON日志文件。</li>\n<li><strong>目标：</strong> 关系型数据库中一个名为<code>user_daily_activity</code>（例如）的表。</li>\n<li><strong>抽取：</strong> 一个进程从云存储中读取前一天的相关JSON日志文件。</li>\n<li><strong>转换：</strong>\n<ul>\n<li>该进程解析每条JSON记录。</li>\n<li>它提取 <code>user_id</code> 和 <code>page_url</code> 字段。</li>\n<li>它按 <code>user_id</code> 对记录进行分组。</li>\n<li>对于每个 <code>user_id</code>，它计算独立 <code>page_url</code> 值的数量。</li>\n<li>它添加生成报告的日期（例如，昨天的日期）。</li>\n</ul>\n</li>\n<li><strong>加载：</strong> 该进程将生成的汇总数据（报告日期、用户ID、访问的独立页面数）插入到数据库中的 <code>user_daily_activity</code> 表。</li>\n<li><strong>ETL还是ELT？</strong> 这种方法遵循 <strong>ETL</strong> 模式。数据被抽取、在内存或临时处理环境中转换（解析、聚合），<em>然后</em>最终结果被加载到数据库中。ELT方法可能会首先将原始JSON数据加载到数据库中的暂存区，然后使用SQL查询直接在数据库内进行转换和聚合。</li>\n<li><strong>编排：</strong> 设置一个简单的每日调度器（如cron作业或基础云调度服务），每天触发一次整个管道过程，通常在上一天的日志文件完成并可用后的清晨。</li>\n</ol>\n<h3>反思你的勾勒</h3>\n<p>将你的勾勒与示例进行比较。你是否识别出相似的步骤？</p>\n<ul>\n<li>你是否清楚地分离了抽取、转换和加载？</li>\n<li>你识别出哪些具体的转换？（例如，统计独立项、分组）</li>\n<li>你如何设想这个过程每天运行？</li>\n</ul>\n<p>本练习展示了本章讨论的组成部分如何组合起来解决实际的数据传输和处理问题。即使是简单的要求也需要仔细考虑数据流、处理步骤和调度。随着要求变得更复杂，这些管道设计自然会发展，融入更先进的工具和技术，你将在继续数据工程学习的过程中了解到这些。</p>",
+  "slug": "practice-sketching-basic-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 15518,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball, Margy Ross, Warren Thornthwaite, Joy Mundy",
+      "year": "2013",
+      "publisher": "Wiley",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.kimballgroup.com/data-warehouse-and-business-intelligence-resources/data-warehouse-and-business-intelligence-toolkit-books/data-warehouse-toolkit-3rd-edition/",
+      "doi": "",
+      "note": "提供数据仓库和抽取、转换、加载（ETL）过程的基础原则和设计模式，包括维度建模。",
+      "order": 1,
+      "created_at": "2025-09-06T10:47:18.195715Z",
+      "updated_at": "2025-09-11T02:52:16.727860Z"
+    },
+    {
+      "id": 15519,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "探讨设计数据密集型系统的基本原则和权衡，为管道中各种数据处理和存储组件提供适用见解。",
+      "order": 2,
+      "created_at": "2025-09-06T10:47:18.201147Z",
+      "updated_at": "2025-09-11T02:52:11.137937Z"
+    },
+    {
+      "id": 15521,
+      "title": "ETL vs. ELT: Key differences and how to choose",
+      "author": "Google Cloud",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/learn/data-engineering/etl-vs-elt",
+      "doi": "",
+      "note": "解释抽取、转换、加载（ETL）和抽取、加载、转换（ELT）范式之间的差异，并指导在数据管道设计中如何选择。",
+      "order": 4,
+      "created_at": "2025-09-06T10:47:18.206869Z",
+      "updated_at": "2025-09-11T02:52:14.690029Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

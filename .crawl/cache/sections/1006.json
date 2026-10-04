@@ -1,0 +1,45 @@
+{
+  "id": 1006,
+  "title": "查看已暂存与未暂存的修改",
+  "meta_title": "查看已暂存与未暂存的修改 | Git Diff 选项",
+  "meta_description": "理解如何使用 `git diff` 选项，例如 `--staged`（或 `--cached`），来比较已暂存的修改与上次提交。",
+  "content": "<p>Git diff 命令是检查仓库中不同状态之间差异的强大工具。默认情况下，不带任何额外参数 (parameter)运行 <code>git diff</code> 命令会比较您当前工作目录中的文件与暂存区（也称作索引）中的内容。虽然这种默认比较很有用，但有时您需要进行更具体的比较，尤其是在区分已暂存的修改和尚未暂存的修改时。理解这种区别有助于您编写精确的提交。</p>\n<p>让我们来明确这些比较：</p>\n<ol>\n<li><strong>未暂存的修改：</strong> 这些是您在工作目录中对已跟踪文件所做的修改，时间在您上次对它们运行 <code>git add</code> <em>之后</em>（如果您尚未暂存任何内容，则为自上次提交以来）。</li>\n<li><strong>已暂存的修改：</strong> 这些是您使用 <code>git add</code> 明确标记 (token)为要包含在<em>下一次</em>提交中的修改。它们位于暂存区，等待被永久记录。</li>\n</ol>\n<h3>查看未暂存的修改</h3>\n<p>要查看您在工作目录中<em>尚未</em>暂存的修改，您只需运行：</p>\n<pre><code class=\"language-sh\">git diff\n</code></pre>\n<p>这个命令会直接比较您工作目录中的文件与暂存区中的文件。如果您自上次提交以来没有暂存任何修改，这个命令实际上会显示您的工作目录与上次提交（HEAD）之间的差异。然而，一旦您使用 <code>git add</code> 暂存了一些修改，<code>git diff</code> 将只会显示在该暂存操作<em>之后</em>引入的差异。</p>\n<p>考虑以下步骤：</p>\n<ol>\n<li>\n<p>您有一个文件 <code>report.md</code>，它已被Git跟踪并提交。</p>\n</li>\n<li>\n<p>您编辑了 <code>report.md</code>，添加了一个新段落。</p>\n</li>\n<li>\n<p>运行 <code>git status</code> 会显示 <code>report.md</code> 已修改但未暂存。</p>\n</li>\n<li>\n<p>运行 <code>git diff</code> 会显示您刚刚在 <code>report.md</code> 中添加的行。</p>\n<pre><code class=\"language-diff\">diff --git a/report.md b/report.md\nindex e69de29..abcdef0 100644\n--- a/report.md\n+++ b/report.md\n@@ -0,0 +1,3 @@\n+这是第一行。\n+这是新添加的段落。\n+这是最后一行。\n\n</code></pre>\n<p><em>(为清晰起见，输出已简化)</em></p>\n</li>\n<li>\n<p>您暂存了文件：<code>git add report.md</code>。</p>\n</li>\n<li>\n<p>现在，再次运行 <code>git diff</code> 会显示<em>无输出</em>，因为您的工作目录中 <code>report.md</code> 的版本现在与暂存区中的版本完全一致。</p>\n</li>\n</ol>\n<h3>查看已暂存的修改</h3>\n<p>那么，您如何查看刚刚暂存的、准备进行下一次提交的修改呢？您需要将暂存区与上次提交（HEAD）进行比较。为此，Git 提供了 <code>--staged</code> 选项（或其旧的别名 <code>--cached</code>）：</p>\n<pre><code class=\"language-sh\">git diff --staged\n</code></pre>\n<p>or</p>\n<pre><code class=\"language-sh\">git diff --cached\n</code></pre>\n<p>这两个命令执行相同的功能：它们显示暂存区中记录的快照与上次提交（HEAD）所代表的快照之间的差异。这对于在运行 <code>git commit</code> 之前的最终检查大有帮助。</p>\n<p>让我们继续之前的例子：</p>\n<ol>\n<li>\n<p>您刚刚运行了 <code>git add report.md</code>。新段落现在已暂存。</p>\n</li>\n<li>\n<p>运行 <code>git status</code> 会显示 <code>report.md</code> 为“待提交的修改”。</p>\n</li>\n<li>\n<p>现在运行 <code>git diff --staged</code> 将会显示已暂存的 <code>report.md</code>（包含新段落）与上次提交中的版本（不含新段落）之间的差异。输出将与我们在暂存文件之前看到的 <code>git diff</code> 输出相似。</p>\n<pre><code class=\"language-diff\">diff --git a/report.md b/report.md\nindex e69de29..abcdef0 100644\n--- a/report.md\n+++ b/report.md\n@@ -0,0 +1,3 @@\n+这是第一行。\n+这是新添加的段落。\n+这是最后一行。\n\n</code></pre>\n<p><em>(为清晰起见，输出已简化)</em></p>\n</li>\n<li>\n<p>现在，想象您<em>再次</em>编辑 <code>report.md</code>，也许是修复了您刚添加的段落中的一个错别字，但您<em>没有</em>随后运行 <code>git add</code>。</p>\n</li>\n<li>\n<p>运行 <code>git diff</code>（不带任何选项）将只显示<em>最新</em>的修改（错别字修正），因为那是您的工作目录与暂存区之间的差异。</p>\n</li>\n<li>\n<p>运行 <code>git diff --staged</code> 将<em>仍然</em>显示段落的原始添加内容，因为那是暂存区中与上次提交相比的当前内容。</p>\n</li>\n</ol>\n<p>这种分离使您能够精确地控制和审查将要进入下一次提交的内容。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-h3mmu3\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  WD [label=\"工作目录\"];\n  SA [label=\"暂存区\\n(索引)\"];\n  HEAD [label=\"上次提交\\n(HEAD)\"];\n\n  // 工作流程边\n  WD -> SA [label=\"  git add\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n  SA -> HEAD [label=\"  git commit\", color=\"#0ca678\", fontcolor=\"#0ca678\"];\n\n  // 比较表示边\n  WD -> SA [style=dashed, color=\"#f03e3e\", arrowhead=none, constraint=false, label=\"  git diff\\n  (工作目录 vs 暂存区)  \", fontcolor=\"#f03e3e\", len=1.5];\n  SA -> HEAD [style=dashed, color=\"#ae3ec9\", arrowhead=none, constraint=false, label=\"  git diff --staged\\n  (暂存区 vs HEAD)  \", fontcolor=\"#ae3ec9\", len=1.5];\n\n  // 使元素对齐\n  { rank=same; WD; SA; HEAD }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-h3mmu3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表展示了 <code>git diff</code> 和 <code>git diff --staged</code> 所进行的比较。<code>git diff</code> 比较工作目录与暂存区，显示未暂存的修改。<code>git diff --staged</code> 比较暂存区与上次提交（HEAD），显示已暂存的、准备提交的修改。</p>\n</blockquote>\n<p>总结：</p>\n<ul>\n<li>使用 <code>git diff</code> 查看您尚未暂存的修改。</li>\n<li>使用 <code>git diff --staged</code> 查看您<em>已</em>暂存且即将提交的修改。</li>\n</ul>\n<p>掌握 <code>git diff</code> 的这两种用法，让您在提交之前对检查工作有更精细的控制，有助于您维护清晰易懂的项目历史。</p>",
+  "slug": "git-diff-staged-unstaged",
+  "updates": [],
+  "references": [
+    {
+      "id": 251,
+      "title": "git-diff(1)",
+      "author": "Git authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-diff",
+      "doi": "",
+      "note": "`git diff` 命令的官方文档，提供了比较工作目录、暂存区和提交等不同状态的完整参考。",
+      "order": 1,
+      "created_at": "2025-09-04T14:01:13.227416Z",
+      "updated_at": "2025-09-07T15:40:49.258973Z"
+    },
+    {
+      "id": 252,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "一本备受推崇的 Git 书籍，详细解释了暂存区、工作目录以及 `git diff` 在检查更改方面的各种用法。",
+      "order": 2,
+      "created_at": "2025-09-04T14:01:13.231756Z",
+      "updated_at": "2025-09-07T15:40:44.115988Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

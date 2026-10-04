@@ -1,0 +1,61 @@
+{
+  "id": 1191,
+  "title": "可视化联合分布 (jointplot)",
+  "meta_title": "使用 jointplot 呈现 Seaborn 联合分布",
+  "meta_description": "使用 jointplot 可视化两个变量之间的关系以及它们各自的分布。",
+  "content": "<p>虽然使用直方图或KDE图来了解单个变量的分布很有用，但我们通常需要明白两个变量如何相互影响。它们之间有关系吗？一个变量的分布是否会随着另一个变量的值而变化？将两个变量的<em>联合分布</em>可视化有助于回答这些问题。</p>\n<p>Seaborn 提供了一个方便的函数 <code>jointplot()</code>，专门为此目的而设计。它创建一个多面板图，既显示了两个变量之间的关系（联合分布），也显示了每个变量沿边距的各自分布（边际分布）。</p>\n<p>可以将其看作是结合了散点图（用于查看关系）和直方图（用于查看单独的分布），全部呈现在一个图中。</p>\n<h3>创建一个基本联合图</h3>\n<p>让我们使用 <code>jointplot()</code> 函数来查看 Seaborn 内置 <code>tips</code> 数据集中总账单金额与小费金额之间的关系。首先，我们需要加载数据并导入所需的库：</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport matplotlib.pyplot as plt\nimport pandas as pd\n\n# 加载示例 tips 数据集\ntips = sns.load_dataset(\"tips\")\n\n# 显示前几行以查看数据\nprint(tips.head())\n</code></pre>\n<p>现在，我们可以使用 <code>seaborn.jointplot()</code> 创建一个联合图：</p>\n<pre><code class=\"language-python\"># 创建 total_bill 和 tip 的联合图\nsns.jointplot(data=tips, x=\"total_bill\", y=\"tip\")\n\nplt.suptitle(\"总账单和小费金额的联合分布\", y=1.02) # 在图上方稍加标题\nplt.tight_layout() # 调整布局\nplt.show()\n</code></pre>\n<p>运行此代码后，您将看到一个包含三个部分的图：</p>\n<ol>\n<li><strong>中心图：</strong> 一个散点图，显示单个数据点，其中x轴是 <code>total_bill</code>，y轴是 <code>tip</code>。这有助于可视化这两个变量之间的关系或关联。默认情况下，<code>jointplot</code> 在此处使用散点图。</li>\n<li><strong>顶部边际图：</strong> 一个直方图（或KDE图），显示x轴变量 (<code>total_bill</code>) 的分布。</li>\n<li><strong>右侧边际图：</strong> 一个直方图（或KDE图），显示y轴变量 (<code>tip</code>) 的分布。</li>\n</ol>\n<p>这种组合视图使您能够同时评估 <code>total_bill</code> 和 <code>tip</code> 之间的关系，并独立地了解每个变量的形状、中心和离散程度。</p>\n<h3>不同类型的联合图</h3>\n<p>默认的 <code>jointplot</code> 在中心视图使用散点图，但您可以使用 <code>kind</code> 参数 (parameter)更改它。这使得您能够以不同的方式呈现联合分布，根据您的数据以及您想要突出的内容，这可能更合适。</p>\n<p><code>kind</code> 的常见选项包括：</p>\n<ul>\n<li><code>kind=\"scatter\"</code> (默认)：显示单个点。适用于点不重叠太多的小数据集。</li>\n<li><code>kind=\"kde\"</code>：对联合图（中心）和边际图都使用核密度估计。这显示了分布的平滑表示，有助于可视化点的密度。</li>\n<li><code>kind=\"hist\"</code>：对中心图使用2D直方图（类似热力图），对边际图使用标准直方图。适用于点重叠明显的大数据集。</li>\n<li><code>kind=\"hex\"</code>：类似于 <code>kind=\"hist\"</code>，但中心图使用六边形分箱而不是方形分箱。这是处理大数据集中重叠点的另一种方法。</li>\n<li><code>kind=\"reg\"</code>：在中心视图的散点图中添加回归线，并在边距显示带有直方图的KDE图。这有助于突出线性关系。</li>\n<li><code>kind=\"resid\"</code>：在中心图绘制线性回归的残差。这更专门用于检查线性模型的假设。</li>\n</ul>\n<p>让我们尝试创建一个带有核密度估计的联合图：</p>\n<pre><code class=\"language-python\"># 使用 KDE 创建联合图\nsns.jointplot(data=tips, x=\"total_bill\", y=\"tip\", kind=\"kde\")\n\nplt.suptitle(\"总账单和小费的联合 KDE 图\", y=1.02)\nplt.tight_layout()\nplt.show()\n</code></pre>\n<p>此图使用平滑曲线而非条形图或点。中心图显示等高线，其中较暗的区域表示数据点浓度较高。边际图是平滑的1D KDE曲线。</p>\n<p>这是一个使用六边形分箱的例子，它非常适合散点图变得拥挤的大数据集：</p>\n<pre><code class=\"language-python\"># 使用六边形分箱创建联合图\n# 使用稍大的数据集以获得更好效果（模拟）\nimport numpy as np\nnp.random.seed(0) # 用于重现性\ndata_large = pd.DataFrame({\n    'x_var': np.random.randn(1000),\n    'y_var': np.random.randn(1000) * 0.5 + np.random.randn(1000) * 0.2\n})\n\nsns.jointplot(data=data_large, x=\"x_var\", y=\"y_var\", kind=\"hex\", color=\"#4263eb\") # 使用靛蓝色\n\nplt.suptitle(\"更大数据的联合六边形图\", y=1.02)\nplt.tight_layout()\nplt.show()\n</code></pre>\n<p>在此六边形分箱图中，中心区域使用六边形，每个六边形的颜色强度表示落在其中的数据点数量。这避免了散点图中数据点过多时出现的重叠问题。</p>\n<p>您还可以使用 <code>color</code>、<code>height</code> 等参数（用于控制大小）进一步自定义外观，以及 <code>joint_kws</code>、<code>marginal_kws</code> 来向底层绘图函数传递特定参数。</p>\n<p><code>jointplot()</code> 是一个有用的工具，因为它将三个图打包成一个连贯的图形，提供双变量和单变量分布的简洁概述。在数据分析阶段，它特别有效，能够快速了解数值变量对之间的关系和分布。</p>",
+  "slug": "seaborn-jointplot",
+  "updates": [],
+  "references": [
+    {
+      "id": 819,
+      "title": "seaborn.jointplot",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.jointplot.html",
+      "doi": "",
+      "note": "`jointplot`函数的官方文档，详细说明其参数并展示用于可视化联合分布和边际分布的各种`kind`选项。",
+      "order": 1,
+      "created_at": "2025-09-04T15:02:06.919391Z",
+      "updated_at": "2025-09-07T16:20:59.515183Z"
+    },
+    {
+      "id": 820,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 4: Visualization With Seaborn",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.14-visualization-with-seaborn.html",
+      "doi": "",
+      "note": "该书关于Seaborn统计图的章节说明了如何使用`jointplot`来理解数值变量之间的关系。",
+      "order": 2,
+      "created_at": "2025-09-04T15:02:06.923916Z",
+      "updated_at": "2025-09-07T16:20:45.124393Z"
+    },
+    {
+      "id": 821,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "",
+      "note": "数据可视化设计指南，提供有效展示变量之间关系的原则，包括散点图、热图和等高线图。",
+      "order": 3,
+      "created_at": "2025-09-04T15:02:06.926546Z",
+      "updated_at": "2025-09-07T16:20:48.493698Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 8004,
+  "title": "实践操作：文件布局优化",
+  "meta_title": "动手操作：数据转换与区分存储",
+  "meta_description": "实践环节，将原始JSON转换为区分存储的Parquet，并将其登记为Iceberg表。",
+  "content": "<p>改进存储安排能将缓慢的查询变为高效的分析操作。原始数据湖中的文件通常以松散的JSON或CSV对象集合形式存储。虽然易于查看，但这些格式在分析过程中会导致高昂的输入/输出（I/O）成本，因为查询引擎必须读取每个字节来找到相关数据。将这些数据转换为Apache Parquet等列式格式，进行合理的区分存储，并使用Apache Iceberg等表格式进行登记，可以极大减少查询执行时扫描的数据量。</p>\n<p>在此实践环节中，你将模拟一个常见的数据工程处理流程：摄取原始服务器日志，将其转换为更好的存储方式，并衡量其结构上的好处。</p>\n<h3>情况介绍：高容量网络日志</h3>\n<p>设想一种情况，一个网络应用生成点击流数据。原始数据以JSON Lines格式送达对象存储桶中（如Amazon S3或Azure Data Lake Storage）。每个文件包含数千条跟踪用户互动的数据。</p>\n<p>一条数据看起来像这样：</p>\n<pre><code class=\"language-json\">{\"event_id\": \"u89-12\", \"timestamp\": \"2023-10-27T10:00:00Z\", \"event_type\": \"view_item\", \"item_id\": \"sku_123\", \"country\": \"US\"}\n</code></pre>\n<p>运行查询来统计特定日期来自“US”的事件，要求引擎打开每个JSON文件，解析文本，并在内存中筛选结果。这就是我们计划消除的“扫描密集型”模式。</p>\n<h3>分析转换流程</h3>\n<p>我们的目的是将这些数据从原始的“青铜”状态转移到结构化的“白银”状态。该转换包含三个具体改变：</p>\n<ol>\n<li><strong>格式转换：</strong> 将JSON（基于行）转换为Parquet（基于列）。</li>\n<li><strong>区分存储：</strong> 根据高层判断条件（例如日期）将文件组织到目录中。</li>\n<li><strong>编目：</strong> 将此布局登记到Apache Iceberg以处理元数据。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1aqgjba\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=rect, style=filled, fontname=\"Sans-Serif\"];\n\n    subgraph cluster_0 {\n        label=\"原始区域（青铜）\";\n        style=filled;\n        color=\"#f8f9fa\";\n        raw [label=\"原始JSON文件\\n(s3://bucket/raw/events/)\", fillcolor=\"#dee2e6\", color=\"#adb5bd\"];\n    }\n\n    subgraph cluster_1 {\n        label=\"转换逻辑\";\n        style=filled;\n        color=\"#f8f9fa\";\n        spark [label=\"Spark任务\\n(读取 → 区分存储 → 写入)\", fillcolor=\"#74c0fc\", color=\"#228be6\"];\n    }\n\n    subgraph cluster_2 {\n        label=\"改进后的区域（白银）\";\n        style=filled;\n        color=\"#f8f9fa\";\n\n        subgraph cluster_structure {\n            label=\"目录结构\";\n            style=dashed;\n            p1 [label=\"date=2023-10-27/\\npart-001.parquet\", fillcolor=\"#63e6be\", color=\"#0ca678\"];\n            p2 [label=\"date=2023-10-28/\\npart-002.parquet\", fillcolor=\"#63e6be\", color=\"#0ca678\"];\n        }\n\n        iceberg [label=\"Iceberg元数据\\n(快照与清单)\", fillcolor=\"#ffec99\", color=\"#f59f00\"];\n    }\n\n    raw -> spark;\n    spark -> p1;\n    spark -> p2;\n    spark -> iceberg [style=dotted];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1aqgjba\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这个工作流程将无结构的原始数据通过处理引擎传输，以生成由元数据管理的、结构化的、区分存储的目录布局。</p>\n</blockquote>\n<h3>步骤1：读取并查看原始数据</h3>\n<p>对于如此大的数据量，使用Apache Spark等分布式处理框架是标准做法。首先，我们读取原始JSON文件以推断其模式。虽然JSON很灵活，但如果数据集很大，模式推断过程可能会非常耗时。</p>\n<pre><code class=\"language-python\"># PySpark 代码\nraw_path = \"s3://bucket/raw/events/*.json\"\ndf = spark.read.json(raw_path)\n\n# 查看物理计划或模式\ndf.printSchema()\n</code></pre>\n<p>在此阶段，数据未压缩且为文本格式。如果数据集为100 GB的JSON，读取完整数据基本上需要100 GB的I/O。</p>\n<h3>步骤2：列式转换和压缩</h3>\n<p>我们将数据帧转换为Apache Parquet格式。Parquet采用列式存储，这意味着同一列中的值是连续存储的。这使得Snappy或Zstd等高效压缩算法得以应用，因为同类型数据（例如时间戳或整数）比混合类型数据压缩效果更好。</p>\n<p>压缩的数学影响很大。压缩比 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi></mrow><annotation encoding=\"application/x-tex\">R</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span></span></span></span> 定义为：</p>\n<p><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi><mo>=</mo><mfrac><mtext>未压缩大小</mtext><mtext>压缩后大小</mtext></mfrac></mrow><annotation encoding=\"application/x-tex\">R = \\frac{\\text{未压缩大小}}{\\text{压缩后大小}}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1.2173em;vertical-align:-0.345em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8723em;\"><span style=\"top:-2.655em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord text mtight\"><span class=\"mord cjk_fallback mtight\">压缩后大小</span></span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.394em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord text mtight\"><span class=\"mord cjk_fallback mtight\">未压缩大小</span></span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.345em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></p>\n<p>对于重复的日志数据，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi></mrow><annotation encoding=\"application/x-tex\">R</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span></span></span></span> 通常在4:1到10:1之间。这意味着100 GB的JSON数据集，在经过Snappy压缩并转换为Parquet格式后，可能只占用10-25 GB，立即将网络I/O减少75%或更多。</p>\n<h3>步骤3：选择区分存储方案</h3>\n<p>区分存储是物理布局设计中最为核心的决定。它根据列的不同值将数据分成子目录。这使得<strong>区分存储裁剪</strong>成为可能，查询引擎会跳过与查询过滤器不匹配的整个目录。</p>\n<p>不过，你必须小心选择区分存储列，以避免“小文件问题”。</p>\n<ul>\n<li><strong>高基数（不佳）：</strong> 根据<code>user_id</code>进行区分存储（数百万个独立值）会生成数百万个微小目录和文件。列出这些文件的开销会超过读取它们所需的时间。</li>\n<li><strong>低基数（较好）：</strong> 根据<code>event_date</code>进行区分存储（每天一个值）会生成可控的数据块。</li>\n</ul>\n<p>对于我们的网络日志，我们将根据<code>event_date</code>进行区分存储。</p>\n<pre><code class=\"language-python\"># 将数据写入为区分存储的Parquet文件\noutput_path = \"s3://bucket/silver/events/\"\n(df\n .write\n .mode(\"overwrite\")\n .partitionBy(\"event_date\")\n .format(\"parquet\")\n .save(output_path))\n</code></pre>\n<p>现在磁盘上的物理布局从扁平的文件列表变为分层结构：</p>\n<pre><code class=\"language-text\">/silver/events/event_date=2023-10-27/part-001.parquet\n/silver/events/event_date=2023-10-28/part-001.parquet\n</code></pre>\n<h3>步骤4：向Apache Iceberg登记</h3>\n<p>虽然目录区分存储有所帮助，但像S3这样的文件系统最终一致，并且列出数千个文件时速度较慢。Apache Iceberg通过维护一个元数据层（清单文件）来应对此情况，该层准确追踪哪些文件属于该表。这使得规划时间为O(1)而不是O(N)的目录列表时间。</p>\n<p>我们可以重写之前的操作，使其使用Iceberg格式。这需要你的Spark会话中配置一个Iceberg目录。</p>\n<pre><code class=\"language-python\"># 写入为Iceberg表\n(df\n .writeTo(\"prod.catalog.web_events\")\n .partitionedBy(df.event_date)\n .createOrReplace())\n</code></pre>\n<p>当你对这张表执行查询时，引擎会首先读取Iceberg元数据。</p>\n<pre><code class=\"language-sql\">SELECT count(*) \nFROM prod.catalog.web_events \nWHERE event_date = '2023-10-27';\n</code></pre>\n<p>因为元数据明确将<code>event_date='2023-10-27'</code>关联到特定文件，引擎会忽略所有其他数据，而无需接触那些无关区分存储的存储层。</p>\n<h3>性能比较</h3>\n<p>下图说明了在查询原始JSON、扁平Parquet和区分存储的Iceberg表之间，对于按单个日期筛选的查询而言，延迟差异。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-4b4143\" \n              data-plot-definition='{\"layout\": {\"title\": \"按文件布局划分的查询延迟（越低越好）\", \"xaxis\": {\"title\": \"存储布局\"}, \"yaxis\": {\"title\": \"执行时间（秒）\"}, \"width\": 600, \"height\": 400, \"plot_bgcolor\": \"#f8f9fa\"}, \"data\": [{\"type\": \"bar\", \"x\": [\"原始JSON\", \"扁平Parquet\", \"区分存储的Iceberg\"], \"y\": [120, 45, 5], \"marker\": {\"color\": [\"#fa5252\", \"#22b8cf\", \"#40c057\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-4b4143\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>从原始JSON过渡到区分存储的Iceberg能将查询执行时间减少几个数量级，原因在于数据跳过和高效解码。</p>\n</blockquote>\n<h3>改进效果概述</h3>\n<p>通过重构文件布局，你达成了三个结果：</p>\n<ol>\n<li><strong>降低存储成本：</strong> Parquet压缩降低了存储占用。</li>\n<li><strong>更快的查询：</strong> 列式存储剥离使得引擎只读取所需列（例如只读取<code>country</code>和<code>event_date</code>），而忽略庞大的<code>payload</code>列。</li>\n<li><strong>扫描效率：</strong> 区分存储和Iceberg元数据确保引擎只打开与所请求特定日期相关的文件。</li>\n</ol>\n<p>这个“白银”层现在可以作为后续支撑，供下游分析和机器学习 (machine learning)功能使用。</p>",
+  "slug": "practice-optimizing-file-layouts",
+  "updates": [],
+  "references": [
+    {
+      "id": 22179,
+      "title": "Apache Parquet",
+      "author": "Apache Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://parquet.apache.org/",
+      "doi": "",
+      "note": "Apache Parquet的官方文档，介绍了其列式存储格式、数据类型、压缩以及对数据湖中分析工作负载至关重要的性能优势。",
+      "order": 1,
+      "created_at": "2025-11-27T05:54:57.518836Z",
+      "updated_at": "2025-11-27T06:19:27.346939Z"
+    },
+    {
+      "id": 22181,
+      "title": "Apache Iceberg: A Table Format for Analytic Datasets",
+      "author": "Ryan Blue, Daniel Weeks, David Rolfe",
+      "year": "2020",
+      "publisher": "VLDB Endowment",
+      "journal": "Proceedings of the VLDB Endowment",
+      "volume": "13",
+      "pages": "3014-3028",
+      "url": "http://www.vldb.org/pvldb/vol13/p3014-blue.pdf",
+      "doi": "10.14778/3415494.3415555",
+      "note": "一篇介绍Apache Iceberg的基础性论文，解释了其架构、元数据存储、快照隔离以及它如何解决大规模数据湖表管理中的挑战。",
+      "order": 3,
+      "created_at": "2025-11-27T05:54:57.526087Z",
+      "updated_at": "2025-11-27T06:19:34.816408Z"
+    },
+    {
+      "id": 22182,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "这本权威书籍深入剖析了数据存储、检索和分区的基础原则，这些原则是本节讨论的数据湖优化策略的基础。",
+      "order": 4,
+      "created_at": "2025-11-27T05:54:57.530606Z",
+      "updated_at": "2025-11-27T06:19:28.658439Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

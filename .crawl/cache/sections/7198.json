@@ -1,0 +1,61 @@
+{
+  "id": 7198,
+  "title": "模型部署策略",
+  "meta_title": "机器学习模型部署策略 | 机器学习持续集成/持续部署 (CI/CD)",
+  "meta_description": "介绍将机器学习模型部署到生产环境中的不同策略。",
+  "content": "<p>当模型完成训练并经过验证后，它就具备了潜在的价值。然而，只有当模型的预测结果能够提供给用户或其他软件系统使用时，这种潜力才能转化为现实。这种从训练好的产出物转变为运行服务的转变被称为<strong>模型部署</strong>。在这个阶段，您的模型将走出实验室，开始在生产环境中履行其职责。</p>\n<p>选择合适的部署策略是一项重要的决策，这完全取决于应用程序的需求。需要考虑的首要问题是：<strong>您的应用程序何时以及如何需要预测结果？</strong> 答案将指引您选择常用的部署模式之一。</p>\n<h3>离线预测：批量处理数据</h3>\n<p>最简单的部署策略是离线预测（Batch Prediction），也称为离线评分。在这种方法中，模型一次性处理大量的数据观察值。这个过程通常按固定的时间表运行（例如每天一次），预测结果会存储在数据库或文件系统中以备后用。</p>\n<p>在以下情况下，您应该考虑使用离线预测策略：</p>\n<ul>\n<li><strong>不需要实时预测。</strong> 例如，计算每周销售预测或为每月营销活动进行客户细分。</li>\n<li><strong>正在处理海量数据。</strong> 一次性处理数 TB 的数据通常比逐个处理数据点更有效率。</li>\n<li><strong>延迟不是主要考虑因素。</strong> 为单个观察值生成预测所需的时间可能较长，因为作业针对的是吞吐量 (throughput)而非速度进行了优化。</li>\n<li></li>\n</ul>\n<p>典型的离线预测工作流程包括一个定时任务，该任务从数据仓库等源头读取输入数据，将其输入模型，并将生成的预测结果写入目标表。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-buywkk\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\"]; edge [color=\"#495057\"]; \"数据仓库\" [fillcolor=\"#a5d8ff\"]; \"预测存储\" [fillcolor=\"#b2f2bb\"]; \"批处理作业\" [shape=cylinder, fillcolor=\"#ffc9c9\"]; \"数据仓库\" -> \"批处理作业\" [label=\"输入数据\"]; \"批处理作业\" -> \"预测存储\" [label=\"预测结果\"]; {rank=same; \"数据仓库\"; \"预测存储\"}; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-buywkk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>离线预测系统的高层视图。定时任务批量处理数据并存储输出。</p>\n</blockquote>\n<h3>在线预测：按需提供预测</h3>\n<p>与离线方式不同，在线预测（Online Prediction）或实时服务会根据请求即时生成预测。模型被包装在 API 中并作为持久服务部署，通常位于负载均衡器之后，随时准备以极低的延迟响应传入的请求。</p>\n<p>这种策略对于需要立即反馈的应用程序非常有用。常见的使用案例包括：</p>\n<ul>\n<li>金融交易中的<strong>欺诈检测</strong>。</li>\n<li>用户浏览电子商务网站时的<strong>产品推荐</strong>。</li>\n<li>针对传入邮件的<strong>垃圾邮件过滤</strong>。</li>\n</ul>\n<p>在线服务架构通常比离线系统更复杂。它们需要可扩展的基础架构来处理请求流量，并且必须密切监控以确保高可用性和低延迟。模型通常通过 REST API 端点暴露，允许其他服务通过发送包含输入数据的简单 HTTP 请求来请求预测。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1rxwzqh\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\"]; edge [color=\"#495057\"]; \"用户应用\" [fillcolor=\"#a5d8ff\"]; \"模型 API\" [fillcolor=\"#fcc2d7\"]; \"用户应用\" -> \"模型 API\" [label=\"请求 (数据)\"]; \"模型 API\" -> \"用户应用\" [label=\"响应 (预测)\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1rxwzqh\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在线预测系统实时响应单个请求。</p>\n</blockquote>\n<h3>选择合适的路径</h3>\n<p>下表总结了这两种主要策略之间的主要区别。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特性</th>\n<th align=\"left\">离线预测</th>\n<th align=\"left\">在线预测</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>数据</strong></td>\n<td align=\"left\">大型、静态数据集</td>\n<td align=\"left\">单个或少量数据点</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>触发方式</strong></td>\n<td align=\"left\">定时触发（如每小时、每天）</td>\n<td align=\"left\">按需触发（API 调用）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>延迟</strong></td>\n<td align=\"left\">高（分钟到小时级）</td>\n<td align=\"left\">低（毫秒级）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>吞吐量 (throughput)</strong></td>\n<td align=\"left\">高</td>\n<td align=\"left\">低到高（可扩展）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>使用场景</strong></td>\n<td align=\"left\">非交互式报告</td>\n<td align=\"left\">交互式应用程序</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>基础设施</strong></td>\n<td align=\"left\">较简单（如 cron 任务）</td>\n<td align=\"left\">较复杂（如 API 服务器）</td>\n</tr>\n</tbody>\n</table>\n<p>在某些情况下，可能会使用混合方法。例如，电子商务网站可以利用离线任务在夜间为所有用户预先计算推荐，同时使用在线模型根据用户当前的会话进行实时调整。</p>\n<p>理解这些模式是设计高效 MLOps 工作流的基础。所选策略会直接影响模型的版本控制、测试、部署和监控方式，这些都是我们在本课程后续部分将要讨论的话题。</p>",
+  "slug": "model-deployment-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 19991,
+      "title": "Engineering MLOps: A Guide to System Design and Process Management for Machine Learning",
+      "author": "Noah Gift, Alfredo Deza",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-mlops/9781098103002/",
+      "doi": "",
+      "note": "提供MLOps系统设计和实施的实用指南，涵盖多种模型部署策略。",
+      "order": 1,
+      "created_at": "2025-09-06T13:17:57.143100Z",
+      "updated_at": "2025-09-10T05:00:53.345000Z"
+    },
+    {
+      "id": 19992,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "提供设计和构建生产就绪ML系统的全面见解，其中包含模型服务和部署模式的专门章节。",
+      "order": 2,
+      "created_at": "2025-09-06T13:17:57.147002Z",
+      "updated_at": "2025-09-10T05:00:47.336031Z"
+    },
+    {
+      "id": 19994,
+      "title": "CS 329S: Machine Learning Systems Design",
+      "author": "Chip Huyen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://stanford-cs329s.github.io/",
+      "doi": "",
+      "note": "提供涵盖机器学习系统设计和部署的讲义和作业，为模型服务提供实用考量。",
+      "order": 4,
+      "created_at": "2025-09-06T13:17:57.152830Z",
+      "updated_at": "2025-09-10T05:00:49.273012Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

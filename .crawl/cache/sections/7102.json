@@ -1,0 +1,61 @@
+{
+  "id": 7102,
+  "title": "语音可视化中的语谱图入门",
+  "meta_title": "语谱图入门",
+  "meta_description": "学习如何创建和解读语谱图，以可视化语音的频率内容随时间的变化。",
+  "content": "<p>波形图显示了信号随时间变化的幅度，但它隐藏了区分不同声音所必需的频率信息。另一方面，标准傅里叶变换提供的是整个音频片段中所有频率的概览，但它抹去了这些频率何时出现的信息。对于像语音这样的信号来说，这是一个很大的问题，因为其频率内容是时刻变化的。</p>\n<p>为了有效地分析语音，我们需要一种能同时保留时间和频率信息的方法。这正是<strong>语谱图</strong>的作用，它是一种视觉表示，呈现了信号的频率内容如何随时间变化。它是语音处理中最基本的工具之一。</p>\n<h3>短时傅里叶变换 (STFT)</h3>\n<p>语谱图是通过一种称为<strong>短时傅里叶变换 (STFT)</strong> 的过程生成的。STFT 不是一次性分析整个音频信号，而是将信号分解成短的、重叠的帧或窗口，通常长度为 20-30 毫秒。对于这些短帧中的每一个，我们可以假设信号是平稳的，这意味着其频率属性在该小时间段内没有太大变化。</p>\n<p>该过程如下：</p>\n<ol>\n<li><strong>加窗：</strong> 音频信号被分成小的、重叠的帧。对每个帧应用一个窗函数（如汉宁窗或汉明窗），以减少频谱泄漏，这是一种可能在帧边界出现的伪影。</li>\n<li><strong>傅里叶变换：</strong> 对每个加窗帧计算快速傅里叶变换 (FFT)。这将短时域信号转换为其频域表示，显示该特定帧中存在的每个频率的功率。</li>\n<li><strong>堆叠：</strong> 将所有帧得到的频率频谱并排放置，形成一个二维图像。</li>\n</ol>\n<p>这有效地创建了一个三维表示，其中x轴是时间，y轴是频率，每个点的颜色或强度代表特定时刻给定频率的幅度或功率。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6b7zfj\" \n              data-graph-definition='digraph G {\r\n    rankdir=TB;\r\n    splines=ortho;\r\n    node [shape=box, style=rounded, fontname=\"sans-serif\"];\r\n    edge [fontname=\"sans-serif\"];\r\n    graph [bgcolor=\"transparent\"];\r\n    subgraph cluster_0 {\r\n        label = \"音频信号 x[n]\";\r\n        style=dashed;\r\n        signal [shape=record, label=\"<f0>|<f1> 帧 1|<f2> 帧 2|<f3> 帧 3|<f4>\"];\r\n    }\r\n    subgraph cluster_1 {\r\n        label = \"计算每个帧的 FFT\";\r\n        style=dashed;\r\n        fft1 [label=\"FFT\", shape=ellipse, style=filled, fillcolor=\"#74c0fc\"];\r\n        fft2 [label=\"FFT\", shape=ellipse, style=filled, fillcolor=\"#74c0fc\"];\r\n        fft3 [label=\"FFT\", shape=ellipse, style=filled, fillcolor=\"#74c0fc\"];\r\n    }\r\n    spectrogram [label=\"语谱图\", shape=note, style=filled, fillcolor=\"#96f2d7\"];\r\n    signal:f1 -> fft1;\r\n    signal:f2 -> fft2;\r\n    signal:f3 -> fft3;\r\n    {fft1, fft2, fft3} -> spectrogram [style=dashed, arrowhead=none];\r\n    label=\"通过 STFT 创建语谱图的过程\";\r\n    fontname=\"sans-serif\";\r\n    fontsize=12;\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6b7zfj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>音频信号被分段成重叠的帧。对每个帧计算 FFT，然后将结果堆叠以形成最终的语谱图。</p>\n</blockquote>\n<h3>在语谱图中读取语音</h3>\n<p>语谱图将音频信号变成图像，使我们能够看到语音独特的模式。让我们看一下单词“speech”的语谱图并识别其组成部分。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-u4bi3u\" \n              data-plot-definition='{\"data\":[{\"z\":[[0,0.5,1,1.5,2],[2,2.5,3,3.5,4],[4,4.5,5,5.5,6],[6,6.5,7,7.5,8],[8,8.5,9,9.5,10]],\"type\":\"heatmap\",\"colorscale\":\"Viridis\",\"x\":[\"0.1\",\"0.2\",\"0.3\",\"0.4\",\"0.5\"],\"y\":[1000,2000,3000,4000,5000]}],\"layout\":{\"title\":\"示例语谱图\",\"xaxis\":{\"title\":\"时间 (秒)\"},\"yaxis\":{\"title\":\"频率 (赫兹)\"}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-u4bi3u\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>单词“speech”的语谱图显示了频率随时间的变化。</p>\n</blockquote>\n<ul>\n<li>\n<p><strong>元音：</strong> 语谱图最显著的特征是被称为<strong>共振峰</strong>的水平条。它们是声道的共振频率，在语谱图中显示为深色水平条带。共振峰的模式和间距定义了不同的元音声音。例如，在单词“speech”中，初始元音 /i/ 以一组特定的共振峰频率为特征。</p>\n</li>\n<li>\n<p><strong>擦音：</strong> 单词“speech”中的 /s/ 和 /ch/ 音是擦音的例子。这些辅音是通过将空气强行通过狭窄通道产生的，形成湍流、高频噪声。在语谱图上，它们显示为分散在高频范围内的弥散、混乱的能量团。</p>\n</li>\n<li>\n<p><strong>塞音：</strong> 塞音是像 /p/、/t/ 和 /k/ 这样的辅音，它们是通过阻塞气流然后突然放开产生的。这会在语谱图上产生短暂而尖锐的能量爆发。</p>\n</li>\n</ul>\n<p>理解语谱图为我们提供了可视化语音语音学特征的强大工具。元音的水平共振峰、擦音的嘈杂云团以及塞音的突然爆发为每种声音提供了独特的视觉特征，使我们能够分析和处理语音信号。</p>",
+  "slug": "introduction-to-spectrograms",
+  "updates": [],
+  "references": [
+    {
+      "id": 19481,
+      "title": "Discrete-Time Signal Processing",
+      "author": "Alan V. Oppenheim, Ronald W. Schafer, and John R. Buck",
+      "year": "2008",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "1144",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqFn6tteD_tULXOXRHIdlcl75wvdcA-xdSvxLAeh0Mhn2moD1cQffF3YWf_ac-dZhT70vP0jMFFvynAsWIs-t35Qvsz1XtG3Ue_6A_dsclhCMsZhEV3Dq8EM27_Tjm",
+      "doi": "",
+      "note": "这本基础教材对数字信号处理进行了全面的理论和实践阐述，包括傅里叶变换、短时傅里叶变换和窗函数技术的详细解释，这些对生成声谱图至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T13:08:24.849208Z",
+      "updated_at": "2025-09-10T04:14:42.716330Z"
+    },
+    {
+      "id": 19482,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本现代权威教材，广泛涵盖语音处理，清晰解释了声谱图、通过短时傅里叶变换的生成过程，以及它们在可视化和解释语音音素特征（如元音共振峰和辅音特征）中的应用。",
+      "order": 2,
+      "created_at": "2025-09-06T13:08:24.854758Z",
+      "updated_at": "2025-09-10T04:14:37.758657Z"
+    },
+    {
+      "id": 19483,
+      "title": "Automatic Speech Recognition - Lecture 3: Acoustic Features: MFCC and Spectrograms",
+      "author": "James R. Glass",
+      "year": "2003",
+      "publisher": "Massachusetts Institute of Technology (MIT OpenCourseWare)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-345-automatic-speech-recognition-spring-2003/lecture-notes/lecture-3/",
+      "doi": "",
+      "note": "这门麻省理工学院开放课程的讲座在语音识别背景下，对包括声谱图在内的声学特征进行了出色的学术介绍。它提供了对该主题的结构化教育视角。",
+      "order": 3,
+      "created_at": "2025-09-06T13:08:24.857703Z",
+      "updated_at": "2025-09-10T04:15:13.753237Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

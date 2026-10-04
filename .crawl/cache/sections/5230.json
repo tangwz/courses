@@ -1,0 +1,61 @@
+{
+  "id": 5230,
+  "title": "Docker 镜像基本知识",
+  "meta_title": "机器学习 Docker 镜像基础",
+  "meta_description": "查看与机器学习设置相关的 Docker 镜像、层和基础镜像。",
+  "content": "<p>容器化提供了一种有效方法来打包和隔离机器学习 (machine learning)应用程序，解决了依赖冲突等常见问题，并确保了不同环境之间的一致性。实现这一点的核心组成部分是 Docker 镜像。可以将 Docker 镜像看作是创建这些标准化环境的蓝图或模板。</p>\n<h3>什么是 Docker 镜像？</h3>\n<p>Docker 镜像是一个轻量、独立、可执行的软件包，包含运行软件所需的一切：代码、运行时（如 Python）、系统工具、系统库和配置。它是一个只读模板。当您想运行镜像定义的软件时，会创建一个 <em>容器</em>，它本质上是该镜像的一个运行实例。</p>\n<p>如果您熟悉面向对象编程，镜像就像一个类，而容器就像一个对象（类的实例）。或者，与虚拟化技术类比，镜像有点像虚拟机模板或快照，但它更轻量，因为它共享主机操作系统的内核，而不是打包一个完整的操作系统。</p>\n<p>对于机器学习 (machine learning)项目，镜像通常会包含：</p>\n<ul>\n<li>您的 Python 训练或推理 (inference)脚本。</li>\n<li>特定的 Python 解释器版本（例如 Python 3.9）。</li>\n<li>所有必需的库（例如 <code>tensorflow</code>、<code>pytorch</code>、<code>scikit-learn</code>、<code>pandas</code>、<code>numpy</code>），并锁定到特定版本。</li>\n<li>任何必要的系统级依赖或工具。</li>\n<li>您的应用程序所需的配置文件或环境变量定义。</li>\n</ul>\n<h3>分层文件系统</h3>\n<p>Docker 镜像不是一个整体的块。它们由一系列只读层构建而成，层层堆叠。每个层代表镜像 Dockerfile 中的一个指令，Dockerfile 是用于构建镜像的脚本。例如，安装系统包、复制源代码或设置环境变量通常会创建一个新层。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-a8k92c\" \n              data-graph-definition='digraph G {\n  rankdir=BT;\n  splines=ortho;\n  node [shape=box, style=filled, color=\"#ced4da\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_image {\n    label = \"Docker 镜像层\";\n    bgcolor=\"#f8f9fa\";\n    node [shape=box, style=filled, color=\"#ced4da\", fillcolor=\"#e9ecef\"];\n\n    app_code [label=\"您的应用程序代码\\n(例如 train.py)\"];\n    ml_libs [label=\"机器学习库\\n(例如 RUN pip install tensorflow)\"];\n    python [label=\"Python 运行时\\n(例如 RUN apt-get install python3)\"];\n    base_os [label=\"基础操作系统\\n(例如 FROM ubuntu:22.04)\"];\n\n    app_code -> ml_libs [minlen=1];\n    ml_libs -> python [minlen=1];\n    python -> base_os [minlen=1];\n  }\n\n  container_layer [label=\"可写容器层\\n(容器运行时创建)\", shape=box, style=\"filled,dashed\", color=\"#adb5bd\", fillcolor=\"#f8f9fa\"];\n  container_layer -> app_code [style=dashed, minlen=1];\n\n  run_label [label=\"docker run image_name\", shape=plaintext, fontname=\"Arial\"];\n  run_label -> container_layer [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-a8k92c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>镜像层的简化视图。Dockerfile 中的每个指令都会添加一个新层。当容器运行时，会在顶部添加一个薄的可写层。</p>\n</blockquote>\n<p>这种分层架构，通常通过 OverlayFS 等技术实现，具有多项优点，尤其与机器学习 (machine learning)相关：</p>\n<ol>\n<li><strong>效率：</strong> Docker 会缓存层。如果您修改 Dockerfile，Docker 只需重新构建已更改的层及其后续层。如果您的基础操作系统和大型机器学习库层未更改，那么重新构建镜像以包含更新的应用程序代码会快得多。</li>\n<li><strong>共享：</strong> 不同的镜像可以共享公共层。如果您有多个基于相同 Python 版本或相同 CUDA 基础镜像的机器学习镜像，该层在您的磁盘上只存储一次，并在它们之间共享。这在拉取镜像时节省了磁盘空间和网络带宽。</li>\n<li><strong>大小管理：</strong> 像 PyTorch 或 TensorFlow 这样的机器学习库，特别是支持 GPU 的库，可能非常大。了解层是优化镜像大小的第一步，我们稍后将使用多阶段构建等技术来介绍这个话题。</li>\n</ol>\n<h3>基础镜像</h3>\n<p>每个 Docker 镜像都从一个 <em>基础镜像</em> 开始。这在 Dockerfile 中通过 <code>FROM</code> 指令指定。基础镜像为您的环境提供了底层。机器学习 (machine learning)项目常用选项包括：</p>\n<ul>\n<li><strong>官方 Python 镜像：</strong> <code>python:3.10-slim-bullseye</code> 提供了一个基于 Debian 的最小环境，预装了特定 Python 版本。适用于一般 Python 应用程序。</li>\n<li><strong>操作系统镜像：</strong> <code>ubuntu:22.04</code> 或 <code>debian:bullseye</code> 提供更完整的 Linux 环境，如果您需要精简版 Python 镜像中未包含的特定系统工具或库。</li>\n<li><strong>供应商机器学习镜像：</strong> 像 NVIDIA 这样的公司提供了为 GPU 使用优化的基础镜像（<code>nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04</code>），其中包含必要的 CUDA 驱动和库。特定框架的镜像（<code>tensorflow/tensorflow:latest-gpu</code> 或 <code>pytorch/pytorch:latest</code>）在此基础上构建，添加机器学习框架本身。</li>\n</ul>\n<p>选择正确的基础镜像需要在大小、包含的组件以及与您需求的兼容性之间取得平衡。我们将在下一章中更详细地介绍这个选择过程。</p>\n<h3>镜像与容器的对比</h3>\n<p>明确区分镜像和容器是很重要的：</p>\n<ul>\n<li><strong>镜像：</strong> 包含应用程序及其依赖的只读模板。它独立于任何运行中的进程而存在。</li>\n<li><strong>容器：</strong> 镜像的一个可运行实例。当您执行 <code>docker run &#x3C;image_name></code> 时，Docker 会使用该镜像创建一个容器。</li>\n</ul>\n<p>主要区别在于，当容器创建时，会在只读镜像层之上添加一个薄的 <em>可写层</em>。容器运行期间进行的任何更改，例如写入日志文件、创建临时数据或修改容器文件系统内的配置，都发生在此可写层中。如果容器被删除，此可写层及其中的任何更改都将丢失，除非您明确使用 Docker 卷或绑定挂载等机制将数据持久化到容器生命周期之外，我们将在第 3 章中讨论这些机制。</p>\n<h3>不变性：实现可重复性的方法</h3>\n<p>Docker 镜像是不可变的。一旦镜像构建完成，就不能更改。如果您需要更新代码、更改依赖项或修改配置，您必须：</p>\n<ol>\n<li>修改源文件（例如，您的 Dockerfile 或应用程序代码）。</li>\n<li>从修改后的源文件构建一个 <em>新</em> 镜像。这个新镜像将拥有不同的 ID。</li>\n</ol>\n<p>这种不变性是机器学习 (machine learning)中实现可重复性的一个重要前提。镜像捕获了构建时环境、依赖项和代码的 <em>确切</em> 状态。如果您共享此镜像（例如，通过 Docker Hub 等注册表），其他人可以拉取并运行容器，确保他们拥有与您使用的完全相同的环境。这消除了在协作或部署机器学习模型时常遇到的“在我的机器上能跑”问题。</p>\n<p>理解 Docker 镜像、层、基础镜像以及镜像与容器关系的这些要点，为有效构建、管理和共享机器学习工作流所需的一致环境提供了依据。</p>",
+  "slug": "docker-image-fundamentals",
+  "updates": [],
+  "references": [
+    {
+      "id": 14083,
+      "title": "Docker overview",
+      "author": "Docker, Inc.",
+      "year": "2025",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/get-started/overview/",
+      "doi": "",
+      "note": "介绍 Docker 核心概念，例如镜像、容器、分层架构及其相互关系，作为基础技术参考。",
+      "order": 1,
+      "created_at": "2025-09-05T08:47:18.726275Z",
+      "updated_at": "2025-09-11T02:12:54.426221Z"
+    },
+    {
+      "id": 14084,
+      "title": "Docker Deep Dive: Zero to Docker Hero",
+      "author": "Nigel Poulton",
+      "year": "2025",
+      "publisher": "Self-published (via Leanpub)",
+      "journal": "",
+      "volume": "",
+      "pages": "280",
+      "url": "https://leanpub.com/dockerdeepdive",
+      "doi": "",
+      "note": "一本全面的指南，深入解释 Docker 镜像、Dockerfile、分层文件系统和容器构建过程。",
+      "order": 2,
+      "created_at": "2025-09-05T08:47:18.729907Z",
+      "updated_at": "2025-09-11T02:12:53.124510Z"
+    },
+    {
+      "id": 14085,
+      "title": "Practical MLOps: Operationalizing Machine Learning Models",
+      "author": "Noah Gift, Alfredo Deza",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "439",
+      "url": "https://books.google.com/books/about/Practical_MLOps_Operationalizing_Machin.html?id=lBwxEAAAQBAJ",
+      "doi": "",
+      "note": "涵盖容器化，尤其是 Docker 镜像在构建可复现和可扩展的机器学习工作流以及部署 ML 模型方面的应用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:47:18.732667Z",
+      "updated_at": "2025-09-11T02:12:53.398969Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5282,
+  "title": "返回预测结果和概率",
+  "meta_title": "返回机器学习预测结果与概率",
+  "meta_description": "构造 API 响应以返回模型预测结果、概率或其他相关信息。",
+  "content": "<p>机器学习 (machine learning)模型处理输入数据并生成预测后，请求-响应周期的最后一步是将这些结果发送回客户端。您如何构建此响应对于易用性以及与后续应用的集成很重要。仅仅返回原始数字或字符串通常是不够的。客户端通常会从一个定义良好的JSON对象中受益，该对象包含预测结果以及其他可能的相关信息，如置信度分数或概率。</p>\n<p>FastAPI 结合 Pydantic，使得使用响应模型来定义和执行这些响应结构变得直接简单。</p>\n<h3>构建预测响应</h3>\n<p>让我们从一个基本情况开始：一个预测单个类别标签的分类模型。虽然您可以只返回标签作为字符串，但更好的做法是将其封装在一个 JSON 对象中。这能提供上下文 (context)，并使 API 响应更具自我描述性。</p>\n<p>我们可以定义一个 Pydantic 模型来表示这种结构：</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\n\nclass PredictionResponse(BaseModel):\n    predicted_class: str = Field(..., description=\"预测的类别标签。\")\n    # 之后您可能还会添加其他字段，例如请求 ID 或模型版本\n</code></pre>\n<p>在您的端点中，您将在路径操作装饰器的 <code>response_model</code> 参数 (parameter)中使用此模型。FastAPI 会自动处理将返回值（例如字典或另一个 Pydantic 模型实例）序列化为符合 <code>PredictionResponse</code> 格式的 JSON。</p>\n<pre><code class=\"language-python\"># 假设 'model' 是您已加载的机器学习模型对象\n# 假设 'InputFeatures' 是您的 Pydantic 输入模型\n\n@app.post(\"/predict\", response_model=PredictionResponse)\nasync def make_prediction(features: InputFeatures):\n    # 1. 如有必要，对特征进行预处理\n    processed_data = preprocess(features.dict()) # 预处理示例\n\n    # 2. 从模型获取预测结果\n    #    假设 model.predict() 直接返回类别标签\n    prediction_label = model.predict(processed_data)\n\n    # 3. 返回符合响应模型的结果\n    return PredictionResponse(predicted_class=prediction_label)\n\n</code></pre>\n<p>这种方式确保响应格式一致，并自动将其包含在 FastAPI 生成的 API 文档中。</p>\n<h3>包含概率或置信度分数</h3>\n<p>对于许多分类任务，了解模型对其预测结果的置信度与预测结果本身同样重要。大多数分类模型可以输出每个可能类别的概率。例如，scikit-learn 分类器通常有一个 <code>predict_proba()</code> 方法，该方法返回一个包含每个类别概率的数组。</p>\n<p>返回这些概率能为客户端提供有用的背景信息。他们可以使用此信息来设置决策阈值，或识别需要人工审查的不确定预测。</p>\n<p>为了包含概率，我们扩展了 Pydantic 响应模型：</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\nfrom typing import List, Dict\n\nclass ProbabilityResponse(BaseModel):\n    predicted_class: str = Field(..., description=\"预测的类别标签。\")\n    probabilities: Dict[str, float] = Field(..., description=\"一个字典，将类别标签映射到其预测概率。\")\n    # 示例: {\"cat\": 0.95, \"dog\": 0.04, \"other\": 0.01}\n\n@app.post(\"/predict_proba\", response_model=ProbabilityResponse)\nasync def make_prediction_with_proba(features: InputFeatures):\n    processed_data = preprocess(features.dict())\n\n    # 假设 model.predict() 提供标签\n    prediction_label = model.predict(processed_data)\n\n    # 假设 model.predict_proba() 提供每个类别的概率\n    # 并且 model.classes_ 提供类别的顺序\n    proba_values = model.predict_proba(processed_data)[0] # 获取第一个（也是唯一一个）输入样本的概率\n    class_labels = model.classes_\n    probabilities_dict = {label: proba for label, proba in zip(class_labels, proba_values)}\n\n    # 排序概率以便于阅读（可选）\n    sorted_probabilities = dict(sorted(probabilities_dict.items(), key=lambda item: item[1], reverse=True))\n\n    return ProbabilityResponse(\n        predicted_class=prediction_label,\n        probabilities=sorted_probabilities\n    )\n\n</code></pre>\n<p>在此示例中，<code>ProbabilityResponse</code> 定义了一个结构，其中包含最可能的类别（<code>predicted_class</code>）以及一个字典（<code>probabilities</code>），该字典包含与每个可能类别相关的概率。端点从模型中获取预测结果和概率，并根据此结构进行打包。</p>\n<p>这些概率的可视化表示有时有助于理解模型的置信度分布。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1pcgliv\" \n              data-plot-definition='{\"layout\": {\"title\": \"类别概率示例\", \"xaxis\": {\"title\": \"概率\", \"range\": [0, 1]}, \"yaxis\": {\"title\": \"类别\", \"categoryorder\": \"total descending\"}, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 40, \"b\": 40}, \"height\": 250, \"width\": 400}, \"data\": [{\"type\": \"bar\", \"y\": [\"类别 A\", \"类别 B\", \"类别 C\", \"类别 D\"], \"x\": [0.75, 0.15, 0.08, 0.02], \"orientation\": \"h\", \"marker\": {\"color\": [\"#4263eb\", \"#adb5bd\", \"#adb5bd\", \"#adb5bd\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 250px;\"\n            >\n              <div id=\"plot-1pcgliv\" style=\"width: 100%; min-height: 250px;\"></div>\n            </div>\n          \n<blockquote>\n<p>单个输入实例在不同类别上的预测概率分布示例。类别 A 具有最高概率。</p>\n</blockquote>\n<h3>适应不同模型输出</h3>\n<p>您的响应模型结构应自然地反映您的特定机器学习 (machine learning)模型的输出：</p>\n<ul>\n<li><strong>回归模型</strong>: 您可能返回单个 <code>predicted_value</code>（浮点数）而不是 <code>predicted_class</code> 和 <code>probabilities</code>，并且可能包含一个 <code>confidence_interval</code>（例如，一个包含 <code>lower_bound</code> 和 <code>upper_bound</code> 的字典）。</li>\n<li><strong>多输出模型</strong>: 响应模型可能包含多个预测字段或预测/概率列表。</li>\n<li><strong>对象检测/图像分割</strong>: 响应可能涉及边界框列表（包含坐标和类别标签）或图像掩码。</li>\n</ul>\n<p>核心思路保持不变：定义一个 Pydantic 模型，精确描述预期的输出格式，并在端点装饰器的 <code>response_model</code> 参数 (parameter)中使用它。这为您的 API 使用者提供了清晰的约定，并使用了 FastAPI 的验证和文档功能。</p>\n<p>请记住，在返回浮点数（如概率）时，要考虑数值精度。您可能希望在返回响应之前，在端点逻辑中将它们四舍五入到合理的 H 位小数。此外，确保您的端点在预测过程中优雅地处理潜在错误，或许返回特定的 HTTP 错误代码和消息，而不是标准的预测响应。</p>",
+  "slug": "returning-predictions-probabilities",
+  "updates": [],
+  "references": [
+    {
+      "id": 14269,
+      "title": "Response Model",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/tutorial/response-model/",
+      "doi": "",
+      "note": "解释了如何在 FastAPI 路径操作中使用 `response_model` 参数，以利用 Pydantic 模型定义和验证 API 响应结构。",
+      "order": 1,
+      "created_at": "2025-09-05T08:50:16.273022Z",
+      "updated_at": "2025-09-09T14:13:11.604163Z"
+    },
+    {
+      "id": 14270,
+      "title": "Models",
+      "author": "Samuel Colvin and Pydantic contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/concepts/models/",
+      "doi": "",
+      "note": "提供了使用 Pydantic `BaseModel` 定义数据模型、字段和验证逻辑的全面指南，这是构建 FastAPI 响应的核心。",
+      "order": 2,
+      "created_at": "2025-09-05T08:50:16.282984Z",
+      "updated_at": "2025-09-09T14:13:01.044503Z"
+    },
+    {
+      "id": 14271,
+      "title": "1.1. Classification",
+      "author": "Scikit-learn developers",
+      "year": "2022",
+      "publisher": "Scikit-learn",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/1.1/modules/classification.html",
+      "doi": "",
+      "note": "介绍了分类算法及其常用方法，如 `predict` 和 `predict_proba`，用于从机器学习模型获取类别标签和概率估计。",
+      "order": 3,
+      "created_at": "2025-09-05T08:50:16.285158Z",
+      "updated_at": "2025-09-09T14:13:38.321345Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

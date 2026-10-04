@@ -1,0 +1,61 @@
+{
+  "id": 7167,
+  "title": "什么是 MLOps？",
+  "meta_title": "什么是 MLOps？ | MLOps 定义",
+  "meta_description": "明确定义 MLOps（机器学习运维）以及它旨在解决的 AI 开发与部署中的问题。",
+  "content": "<p>如果你曾经训练过机器学习 (machine learning)模型，可能很熟悉在 Jupyter Notebook 中看到高准确率时的成就感。模型在测试集上表现良好，看起来已经可以上线了。然而，在本地运行的模型与在实际应用中可靠提供预测的模型之间存在巨大差距。这种差距正是机器学习运维（MLOps）发挥作用的地方。</p>\n<p>其核心在于，<strong>MLOps 是一套旨在可靠且高效地构建和维护生产环境机器学习系统的实践。</strong> 它结合了机器学习、数据工程和 DevOps 的原则，以解决机器学习生命周期中的独特挑战。可以将其看作是一门运营规范，将实验性的机器学习模型转化为企业级、自动化的系统。</p>\n<p>虽然机器学习模型看起来是核心，但它通常只是整体系统中的一小部分。一个生产级别的机器学习系统包括数据摄取管道、特征工程步骤、验证检查、服务基础设施和监控工具。模型代码本身在整个系统中所占的比例可能小得令人惊讶。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-15871gx\" \n              data-graph-definition='digraph MLOps_Core_Idea {\n  rankdir=LR;\n  splines=ortho;\n  graph [fontname=\"Arial\", bgcolor=\"transparent\", label=\"\"];\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=11];\n  edge [fontname=\"Arial\", color=\"#495057\", fontsize=10];\n\n  subgraph cluster_data {\n    label = \"开发与实验\";\n    style=dotted;\n    bgcolor=\"#f8f9fa\";\n    color=\"#adb5bd\";\n    Data [label=\"数据源\", fillcolor=\"#a5d8ff\"];\n    Experiment [label=\"模型训练\", fillcolor=\"#bac8ff\"];\n  }\n\n  subgraph cluster_prod {\n    label = \"生产环境\";\n    style=dotted;\n    bgcolor=\"#f8f9fa\";\n    color=\"#adb5bd\";\n    App [label=\"实际应用\", fillcolor=\"#ffc9c9\"];\n    Monitoring [label=\"监控\", fillcolor=\"#ffd8a8\"];\n  }\n\n  MLOps [label=\"MLOps 实践\\n(自动化、版本控制、CI/CD)\", shape=cylinder, fillcolor=\"#96f2d7\", height=1.5, width=2.5, style=filled];\n\n  Experiment -> MLOps [minlen=2, label=\" 部署 \"];\n  MLOps -> App;\n  App -> Monitoring;\n  Data -> Experiment;\n  Monitoring -> Data [style=dashed, constraint=false, label=\" 反馈环 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-15871gx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>MLOps 方法通过一套自动化和版本控制的实践将实验阶段与生产环境连接起来，形成一个持续的生命周期。</p>\n</blockquote>\n<p>MLOps 旨在解决团队在模型落地时遇到的一系列常见且棘手的问题。</p>\n<h3>弥合实验与生产之间的差距</h3>\n<p>如果没有 MLOps，部署模型通常是数据科学团队与运维或工程团队之间的手动交接。这种交接往往效率低下、容易出错且阻碍重重。数据科学家可能会提供模型文件和脚本，但工程师必须想办法将其整合到可扩展、安全且稳定的应用程序中。MLOps 通过建立统一的自动化流程弥合了这一差距，让两个团队能够使用共享的工具和实践进行协作。</p>\n<h3>确保可复现性和一致性</h3>\n<p>机器学习 (machine learning)中的一个基本挑战是可复现性。如果你无法可靠地重现过去的结果，就无法信任你的系统。MLOps 通过对机器学习系统的所有组成部分引入版本控制来解决这个问题：</p>\n<ul>\n<li><strong>代码：</strong> 用于特征工程、训练和验证的脚本。</li>\n<li><strong>数据：</strong> 用于训练特定模型的精确数据集版本。</li>\n<li><strong>模型：</strong> 训练出的模型工件本身及其相关的元数据。</li>\n</ul>\n<p>通过对所有内容进行版本化处理，你可以将任何预测追溯到产生它的准确代码、数据和模型。这不仅是良好的实践，通常也是合规审查和故障排查的要求。</p>\n<h3>自动化机器学习 (machine learning)生命周期</h3>\n<p>手动流程无法扩展且会引入风险。MLOps 专注于尽可能地让机器学习生命周期自动化，从数据准备、模型训练到部署和监控。不再由人工运行训练脚本，而是由自动化流水线根据计划或在新数据可用时触发。这种自动化减少了人为错误，加快了新模型的交付速度，并让数据科学家能够专注于构建更好的模型，而不是管理基础设施。</p>\n<p>总之，MLOps 不是单一的工具或技术。它是一种管理机器学习系统全生命周期的文化和实践方法。它将原本脱节的手动步骤转变为规范、自动化且协作的工作流。通过采用 MLOps，组织可以从在 Notebook 中构建模型，转向部署有价值且可靠的 AI 服务。</p>",
+  "slug": "what-is-mlops",
+  "updates": [],
+  "references": [
+    {
+      "id": 19626,
+      "title": "MLOps: Continuous delivery and automation pipelines in machine learning",
+      "author": "Valeriy Katkalo, Andrew Ferlitsch, Brian Suk, Karl Weinwurm, Alex Shterman, Alexey S. Goldin, Dmitry Ryabtsev, Evgeny Ignatenko",
+      "year": "2023",
+      "publisher": "Google Cloud",
+      "journal": "Google Cloud",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning",
+      "doi": "",
+      "note": "概述MLOps的核心概念，展示如何使用实用框架为机器学习系统实现持续集成、交付和训练。",
+      "order": 2,
+      "created_at": "2025-09-06T13:12:35.774760Z",
+      "updated_at": "2025-09-10T04:50:30.832729Z"
+    },
+    {
+      "id": 19627,
+      "title": "MLOps: A Survey, Taxonomy, and the Future Direction",
+      "author": "J. D. K. S. Ranathunga, Z. H. F. N. S. Ranasinghe, T. L. T. Mahesan, U. V. W. L. K. De Silva, T. G. I. N. Thilakarathne, R. H. R. C. R. Silva",
+      "year": "2022",
+      "publisher": "Association for Computing Machinery",
+      "journal": "ACM Computing Surveys",
+      "volume": "54",
+      "pages": "1-30",
+      "url": "https://dl.acm.org/doi/10.1145/3547180",
+      "doi": "10.1145/3547180",
+      "note": "对MLOps进行系统调查，提供其组成部分、挑战和未来研究方向的分类，适合理解其学术背景。",
+      "order": 3,
+      "created_at": "2025-09-06T13:12:35.777196Z",
+      "updated_at": "2025-09-10T04:50:32.110698Z"
+    },
+    {
+      "id": 19628,
+      "title": "Practical MLOps: How to take a model from experimentation to production",
+      "author": "Noah Gift, Alfredo Deza",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-mlops/9781098103002/",
+      "doi": "",
+      "note": "指导读者实践MLOps的实施，侧重于构建和管理生产级机器学习系统的工具和技术。",
+      "order": 4,
+      "created_at": "2025-09-06T13:12:35.779589Z",
+      "updated_at": "2025-09-10T04:50:34.629339Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

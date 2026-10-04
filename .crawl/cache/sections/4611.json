@@ -1,0 +1,61 @@
+{
+  "id": 4611,
+  "title": "校准：选择有代表性的数据",
+  "meta_title": "PTQ的校准数据选择",
+  "meta_description": "了解校准的重要性以及如何选择合适的数据来确定量化参数。",
+  "content": "<p>训练后量化 (quantization)（PTQ）提供了一种无需重新训练即可量化预训练 (pre-training)模型的方法。许多PTQ方法，特别是静态量化，其中一个重要步骤是<strong>校准</strong>。可以将校准看作一个有针对性的测量过程。我们需要了解流经模型的典型值范围，特别是激活值，以便将它们有效地从<code>FP32</code>映射到<code>INT8</code>或<code>INT4</code>等低精度类型。</p>\n<p>为什么需要这种测量？尽管预训练模型的权重 (weight)是固定的，但激活值会根据输入模型的数据动态变化。简单使用<code>FP32</code>的整个理论范围会非常低效，导致<code>INT8</code>或<code>INT4</code>中有限范围的利用率低下。同样，尝试从整个原始训练数据集中确定范围可能计算量大，并可能被罕见的异常值影响。</p>\n<p>校准弥补了这一差距。它涉及将一小组经过仔细选择的输入数据输入原始<code>FP32</code>模型，并观察不同点（通常是我们要量化的层的输入）的激活值。目的不是重新训练模型，而是收集有关激活值分布的统计信息。</p>\n<h3>校准数据的作用</h3>\n<p>用于此过程的数据称为<strong>校准数据集</strong>。它的目的是<em>代表性地反映</em>模型在实际推理 (inference)过程中将遇到的输入。通过处理这些有代表性的数据，我们可以观察到每个层激活值的典型范围（例如，最小值和最大值）。这些观察到的范围随后用于计算特定的量化 (quantization)参数 (parameter)，主要是<strong>比例因子</strong> (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>s</mi></mrow><annotation encoding=\"application/x-tex\">s</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">s</span></span></span></span>) 和<strong>零点</strong> (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span>)，它们定义了浮点值与目标整数表示之间的映射。</p>\n<p>回顾基本量化公式：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>量化值</mtext><mo>=</mo><mtext>round</mtext><mo stretchy=\"false\">(</mo><mfrac><mtext>浮点值</mtext><mi>s</mi></mfrac><mo>+</mo><mi>z</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">\\text{量化值} = \\text{round}(\\frac{\\text{浮点值}}{s} + z)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">量化值</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0463em;vertical-align:-0.686em;\"></span><span class=\"mord text\"><span class=\"mord\">round</span></span><span class=\"mopen\">(</span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">s</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">浮点值</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span><span class=\"mclose\">)</span></span></span></span></span>\n<p>校准为确定激活值的最佳 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>s</mi></mrow><annotation encoding=\"application/x-tex\">s</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">s</span></span></span></span> 和 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 提供了经验依据，最大限度地减少了转换过程中的信息损失。</p>\n<h3>选择有代表性的数据</h3>\n<p>校准的有效性完全取决于校准数据集的质量和代表性。什么构成了“代表性”数据？</p>\n<ol>\n<li>\n<p><strong>分布匹配：</strong> 校准数据理想情况下应反映模型在其部署环境中将处理的数据的统计分布。如果您在一个大型语言模型（LLM）上使用维基百科文章进行校准，但将其部署用于客户服务聊天，那么校准期间观察到的激活范围可能无法准确反映生产环境中遇到的范围，这可能导致次优的量化 (quantization)和精度损失。</p>\n</li>\n<li>\n<p><strong>多样性：</strong> 数据应涵盖预期的输入多样性。对于大型语言模型（LLM）而言，这可能包括其预期处理的不同句子结构、主题、长度和交互类型。</p>\n</li>\n<li>\n<p><strong>规模：</strong> 校准通常不需要大量数据。通常，几百到几千个样本就足够了。</p>\n<ul>\n<li><em>样本过少：</em> 可能无法捕捉到激活值的真实方差和范围，导致参数 (parameter)选择不当（例如，截断常见值或浪费范围）。</li>\n<li><em>样本过多：</em> 会增加校准所需时间，并带来边际效益递减，可能与PTQ的“快速”特性相冲突。</li>\n</ul>\n<p>找到合适的规模通常需要一些经验性测试，但从大约100-1000个多样化样本开始是一个常见做法。</p>\n</li>\n</ol>\n<h3>校准数据的来源</h3>\n<p>您可以在哪里获取这些数据？常见来源包括：</p>\n<ul>\n<li><strong>原始训练数据集的子集：</strong> 如果训练数据准确反映了部署用例。</li>\n<li><strong>验证数据集：</strong> 常用，因为它代表模型尚未明确训练但预期表现良好的数据。\n\"*   <strong>未标记 (token)的生产数据：</strong> 如果可用，使用模型将看到的数据样本会非常有效。\"</li>\n</ul>\n<p>校准数据的特性应与预期推理 (inference)数据的特性保持一致。</p>\n<h3>校准数据的影响</h3>\n<p>将校准样本输入模型可以让我们捕获激活统计信息。例如，一种简单方法（MinMax量化 (quantization)）涉及记录所有校准样本中每个层观察到的最小和最大激活值。这些<code>min</code>和<code>max</code>值随后直接用于计算比例和零点。</p>\n<p>考虑处理校准数据后特定层的激活值分布：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-tsnoa7\" \n              data-plot-definition='{\"data\": [{\"x\": [-3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5], \"y\": [5, 10, 20, 40, 60, 80, 100, 110, 105, 85, 65, 45, 25, 15, 8, 4, 2, 1], \"type\": \"bar\", \"name\": \"激活值\", \"marker\": {\"color\": \"#228be6\"}}, {\"x\": [-3.2, -3.2], \"y\": [0, 110], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"观测最小值\", \"line\": {\"color\": \"#f03e3e\", \"dash\": \"dash\"}}, {\"x\": [4.8, 4.8], \"y\": [0, 110], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"观测最大值\", \"line\": {\"color\": \"#f03e3e\", \"dash\": \"dash\"}}], \"layout\": {\"title\": \"校准数据中的激活值分布\", \"xaxis\": {\"title\": \"激活值\"}, \"yaxis\": {\"title\": \"频率\"}, \"bargap\": 0.1, \"showlegend\": true}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-tsnoa7\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个直方图，显示了校准期间特定张量观测到的激活值频率。MinMax校准将使用观测到的最小值（-3.2）和最大值（4.8）来设置量化范围。</p>\n</blockquote>\n<p>如果校准数据不具代表性，观测到的<code>min</code>和<code>max</code>可能过窄（在推理 (inference)时截断常见值）或过宽（未充分利用<code>INT8</code>范围），这两种情况都会导致量化误差增大。</p>\n<h3>静态量化 (quantization)与动态量化中的校准</h3>\n<p>需要再次强调的是，这种使用数据集的明确校准步骤主要与<strong>静态量化</strong>相关。在静态PTQ中，我们基于校准数据预先计算权重 (weight)<em>和</em>激活值的量化参数 (parameter)（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>s</mi></mrow><annotation encoding=\"application/x-tex\">s</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">s</span></span></span></span>和<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span>）。这些参数随后被固定并在推理 (inference)期间使用。</p>\n<p>相比之下，<strong>动态量化</strong>通常只在离线状态下量化权重。激活值在推理期间“即时”量化。对于每个输入激活张量，其范围（最小值/最大值）是动态计算的，然后确定并应用量化参数。这避免了激活值需要单独校准数据集的问题，但在推理期间引入了动态计算这些范围的计算开销。</p>\n<p>因此，选择合适的校准数据是静态训练后量化技术获得良好性能的根本步骤。接下来的章节将介绍使用这些校准统计信息的不同算法，并比较静态方法与动态方法。</p>",
+  "slug": "ptq-calibration",
+  "updates": [],
+  "references": [
+    {
+      "id": 12084,
+      "title": "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference",
+      "author": "Benoit Jacob, Skirmantas Kligys, Bo Chen, Menglong Zhu, Matthew Tang, Andrew Howard, Hartwig Adam, Dmitry Kalenichenko",
+      "year": "2018",
+      "publisher": "IEEE",
+      "journal": "Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+      "volume": "",
+      "pages": "870-879",
+      "url": "https://doi.org/10.1109/CVPR.2018.00097",
+      "doi": "10.1109/CVPR.2018.00097",
+      "note": "一篇基础论文，介绍了训练后量化和量化感知训练的原理，详细阐述了激活校准在静态量化中的作用。",
+      "order": 1,
+      "created_at": "2025-09-05T07:57:24.442489Z",
+      "updated_at": "2025-09-08T14:42:30.702994Z"
+    },
+    {
+      "id": 12085,
+      "title": "Post Training Static Quantization",
+      "author": "PyTorch Documentation",
+      "year": "2019",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/quantization.html#post-training-static-quantization",
+      "doi": "",
+      "note": "提供了在PyTorch中实现静态训练后量化的实用指南和API细节，包括如何收集和使用校准数据。",
+      "order": 2,
+      "created_at": "2025-09-05T07:57:24.446416Z",
+      "updated_at": "2025-09-08T14:42:33.944372Z"
+    },
+    {
+      "id": 12086,
+      "title": "Integer Quantization for Deep Learning Inference: Principles and Empirical Advances",
+      "author": "Ron Banner, Yaniv Landa, Alexander Fefelov, Elad Hoffer",
+      "year": "2019",
+      "publisher": "Springer US",
+      "journal": "Journal of Signal Processing Systems",
+      "volume": "91",
+      "pages": "635-648",
+      "url": "https://link.springer.com/article/10.1007/s11265-019-01460-1",
+      "doi": "10.1007/s11265-019-01460-1",
+      "note": "讨论了整数量化的基本原理和进展，涵盖了激活范围估计以及使用校准数据确定比例因子和零点。",
+      "order": 3,
+      "created_at": "2025-09-05T07:57:24.450321Z",
+      "updated_at": "2025-09-08T14:42:29.726119Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 5140,
+  "title": "在 LangChain 中使用不同的 LLM 服务",
+  "meta_title": "在 LangChain 中使用 LLM 服务商 | 基础知识",
+  "meta_description": "使用 LangChain 整合各种 LLM 服务（OpenAI、Hugging Face Hub 等）。",
+  "content": "<p>LangChain 旨在提供一个标准接口，用于与各种大型语言模型（LLM）进行交互。这种设计很有价值，因为不同的 LLM 服务商通常有不同的 API、认证方法和配置参数 (parameter)。通过使用 LangChain 的模型组件，您可以编写不那么依赖于特定底层 LLM 服务的应用程序逻辑。</p>\n<p>这一点上，LangChain 的模型基类是：</p>\n<ol>\n<li><strong><code>LLM</code></strong>：此类主要用于执行文本补全的模型。您提供一个文本提示，模型会返回一个补全后的文本字符串。</li>\n<li><strong><code>ChatModel</code></strong>：此类专为优化对话交互的模型设计。与单个字符串提示不同，您通常提供一系列聊天消息（通常带有“系统”、“人类”、“AI”等角色），模型会返回一条聊天消息作为输出。</li>\n</ol>\n<p>尽管它们的输入/输出格式为匹配底层模型类型而略有不同，但 LangChain 仍力求在 <code>LLM</code> 和 <code>ChatModel</code> 的集成中提供一致的方法，例如 <code>invoke</code>、<code>stream</code> 和 <code>batch</code>。</p>\n<h3>整合特定服务商</h3>\n<p>LangChain 通过专门的集成包支持多种 LLM 服务商。您通常需要安装基础的 <code>langchain</code> 库以及您所需服务商的特定软件包（例如 <code>langchain-openai</code>、<code>langchain-huggingface</code>）。</p>\n<p>让我们看看如何为几个常见的服务商实例化模型对象。</p>\n<h4>OpenAI</h4>\n<p>OpenAI 模型（如 GPT-4、GPT-3.5 Turbo）得到广泛使用。LangChain 提供 <code>OpenAI</code>（用于较旧的补全端点）和 <code>ChatOpenAI</code>（用于聊天补全端点，这现在是标准方式）。</p>\n<p>要使用 <code>ChatOpenAI</code>，首先确保您已安装必要的软件包：</p>\n<pre><code class=\"language-bash\">pip install langchain-openai\n</code></pre>\n<p>您还需要设置您的 OpenAI API 密钥。正如第 2 章中讨论的，标准且安全的操作是将其设置为名为 <code>OPENAI_API_KEY</code> 的环境变量。LangChain 会自动查找此变量。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\n\n# 确保您的 OPENAI_API_KEY 已设置为环境变量\n# 示例：os.environ[\"OPENAI_API_KEY\"] = \"your_api_key_here\" # 不建议用于生产环境\n\n# 初始化 ChatOpenAI 模型实例\n# 默认情况下，它使用 OPENAI_API_KEY 环境变量\n# 您可以指定模型名称、温度等\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0.7)\n\n# 调用示例（ChatModels 期望消息）\nfrom langchain_core.messages import HumanMessage, SystemMessage\n\nmessages = [\n    SystemMessage(content=\"您是一个将英语翻译成法语的有用助手。\"),\n    HumanMessage(content=\"翻译这句话：'Hello, how are you?'\")\n]\n\n# 使用 invoke 方法进行单次调用\nresponse = llm.invoke(messages)\n\nprint(response.content)\n# 预期输出（可能略有不同）：Bonjour, comment ça va?\n</code></pre>\n<p>请注意，初始化涉及创建特定于服务商的类 (<code>ChatOpenAI</code>) 的实例，并传递诸如 <code>model</code> 和 <code>temperature</code> 等配置参数 (parameter)。实际的交互使用标准的 <code>invoke</code> 方法。</p>\n<h4>Hugging Face Hub</h4>\n<p>Hugging Face 托管了大量开源模型。LangChain 允许通过 <code>HuggingFaceHub</code> 类与 Hugging Face Hub 上托管的模型进行交互。</p>\n<p>首先，安装所需软件包：</p>\n<pre><code class=\"language-bash\">pip install langchain-huggingface huggingface_hub\n</code></pre>\n<p>您需要一个 Hugging Face API 令牌。将其设置为 <code>HUGGINGFACEHUB_API_TOKEN</code> 环境变量。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_huggingface import HuggingFaceHub\n\n# 确保您的 HUGGINGFACEHUB_API_TOKEN 已设置为环境变量\n# 示例：os.environ[\"HUGGINGFACEHUB_API_TOKEN\"] = \"your_hf_token_here\"\n\n# 初始化 HuggingFaceHub LLM 实例\n# 您必须指定模型仓库 ID\n# 示例：使用一个较小的免费模型进行演示\nhf_llm = HuggingFaceHub(\n    repo_id=\"google/flan-t5-small\",\n    model_kwargs={\"temperature\": 0.8, \"max_length\": 64}\n)\n\n# 调用示例（LLM 类期望一个字符串提示）\nprompt = \"将英语翻译成法语：'Hello, how are you?'\"\n\n# 使用 invoke 方法\nresponse = hf_llm.invoke(prompt)\n\nprint(response)\n# 预期输出（可能因模型而异）：Bonjour, comment allez-vous?\n</code></pre>\n<p>在这里，我们使用了 <code>LLM</code> 集成 (<code>HuggingFaceHub</code>)。我们为所需模型指定了 <code>repo_id</code>，并通过 <code>model_kwargs</code> 传递了模型特有的参数。同样，即使服务商和模型类型与 OpenAI 示例不同，交互仍使用标准的 <code>invoke</code> 方法。</p>\n<h3>抽象的优点</h3>\n<p>使用 LangChain 模型集成的主要优点是一致的接口。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1san33i\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_langchain {\n    label = \"LangChain 应用程序代码\";\n    bgcolor=\"#e9ecef\";\n    app_code [label=\"您的代码\\n(使用 llm.invoke, .stream 等)\"];\n  }\n\n  subgraph cluster_abstraction {\n     label = \"LangChain 模型抽象层\";\n     bgcolor=\"#dee2e6\";\n     node [fillcolor=\"#a5d8ff\"];\n     langchain_model [label=\"ChatModel / LLM 接口\\n(例如, ChatOpenAI, HuggingFaceHub)\"];\n  }\n\n   subgraph cluster_providers {\n     label = \"LLM 服务商 API\";\n     bgcolor=\"#ced4da\";\n     node [shape=cylinder, fillcolor=\"#ffec99\"];\n     openai_api [label=\"OpenAI API\"];\n     hf_api [label=\"Hugging Face API\"];\n     other_api [label=\"其他 API...\"];\n   }\n\n  app_code -> langchain_model [label=\"实例化并调用\"];\n  langchain_model -> openai_api [label=\"转换为对 的调用\"];\n  langchain_model -> hf_api [label=\"转换为对 的调用\"];\n  langchain_model -> other_api [style=dashed];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1san33i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LangChain 提供封装类（如 <code>ChatOpenAI</code>、<code>HuggingFaceHub</code>），它们实现了通用接口（<code>LLM</code> 或 <code>ChatModel</code>）。您的应用程序代码与此标准接口交互，而封装类则处理与实际服务商 API 通信的具体细节。</p>\n</blockquote>\n<p>这种设计让您可以：</p>\n<ol>\n<li><strong>更容易切换服务商：</strong> 如果您最初使用一个服务商（例如 OpenAI），后来决定切换到另一个（例如通过 Hugging Face 库或 Ollama 访问的自托管模型），您主要只需更改代码中模型实例化的部分。使用 <code>invoke</code>、<code>stream</code> 等的核心逻辑通常保持不变或只需少量修改。</li>\n<li><strong>试验不同的模型：</strong> 您可以通过在初始化时简单地更改 <code>model</code> 参数 (parameter)，来测试各种模型，即使是来自同一个服务商的模型（例如，在 <code>gpt-4</code> 和 <code>gpt-3.5-turbo</code> 之间切换）。</li>\n<li><strong>一致的配置：</strong> LangChain 尝试标准化 <code>temperature</code> 或 <code>max_tokens</code> 等常见参数，尽管特定于服务商的参数可能仍然存在（通常通过 <code>model_kwargs</code> 传递）。</li>\n</ol>\n<p>尽管由于模型能力和特定 API 功能的差异，完美的互换性并非总能实现，但 LangChain 显著减少了使用不同 LLM 后端的麻烦。在接下来的部分中，当您使用提示和输出解析器构建更复杂的工作流程时，这种一致的模型接口会变得越来越有用。</p>",
+  "slug": "langchain-llm-providers",
+  "updates": [],
+  "references": [
+    {
+      "id": 13232,
+      "title": "OpenAI API Reference: Chat Completions",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "详细介绍了用于创建聊天补全的 OpenAI 原生 API，为 LangChain 的 ChatOpenAI 集成提供了背景信息。",
+      "order": 2,
+      "created_at": "2025-09-05T08:29:53.186535Z",
+      "updated_at": "2025-09-10T12:00:58.976447Z"
+    },
+    {
+      "id": 13233,
+      "title": "Hugging Face Inference API Documentation",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/api-inference/",
+      "doi": "",
+      "note": "概述了 Hugging Face 用于托管模型的推理 API，LangChain 的 HuggingFaceHub 类使用此 API 进行集成。",
+      "order": 3,
+      "created_at": "2025-09-05T08:29:53.189241Z",
+      "updated_at": "2025-09-10T12:00:58.844413Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

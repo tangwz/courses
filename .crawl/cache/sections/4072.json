@@ -1,0 +1,61 @@
+{
+  "id": 4072,
+  "title": "在不同数据版本间切换",
+  "meta_title": "使用 DVC 切换数据版本",
+  "meta_description": "了解 Git 提交和 DVC 如何配合使用以检出特定版本的数据。",
+  "content": "<p>DVC 使用 <code>.dvc</code> 元数据文件跟踪数据文件，并将这些元数据文件提交到 Git。数据内容通过 <code>dvc push</code> 和 <code>dvc pull</code> 在本地机器和远程存储之间同步。DVC 与 Git 的这种集成使得切换不同版本的数据与代码一同进行成为可能，这是其主要功能之一。</p>\n<p>机器学习 (machine learning)项目经常涉及使用不同数据集或同一数据集的不同版本（例如，清理前和清理后，或使用不同特征集）进行试验。能够可靠地将项目数据恢复到特定的历史状态，对于再现性、调试和结果比较非常重要。DVC 与 Git 配合使用，使这个过程变得简单明了。</p>\n<h3>Git 与 DVC 在版本管理上的配合</h3>\n<p>核心思想是：<strong>Git 跟踪您的代码演变<em>以及</em>指向数据的指示，而 DVC 管理与这些指示关联的实际数据文件。</strong></p>\n<p>当您运行 <code>dvc add data.csv</code> 然后 <code>git add data.csv.dvc</code> 时，您是在告诉 Git 跟踪<em>元数据文件</em>（<code>data.csv.dvc</code>）。这个文件包含诸如 <code>data.csv</code> 实际内容的哈希值等信息，但不是内容本身。当您进行 Git 提交时，您就捕获了代码的状态以及当时 <code>.dvc</code> 文件的特定版本。</p>\n<p>可以这样理解：</p>\n<ul>\n<li><strong>Git 提交：</strong> 您的代码库的快照，以及一份指令列表（<code>.dvc</code> 文件），指定哪个版本的数据与该代码快照对应。</li>\n<li><strong>DVC 缓存/远程存储：</strong> 您的所有不同数据文件的实际存储位置，通过它们的内容哈希值进行索引。</li>\n</ul>\n<h3>数据版本切换流程</h3>\n<p>在项目历史中关联到特定时间点的数据版本之间切换，涉及一个两步过程：使用标准 Git 命令，然后使用一个 DVC 命令：</p>\n<ol>\n<li><strong>使用 <code>git checkout</code>：</strong> 检出对应所需项目状态的 Git 提交、分支或标签。此操作会更新 Git 在您的工作目录中跟踪的文件，包括 <code>.dvc</code> 文件。您的代码将恢复到该提交的状态，而且重要的一点是，<code>.dvc</code> 文件现在将指向与该提交关联的数据版本。</li>\n<li><strong>使用 <code>dvc checkout</code>：</strong> 在 Git 更新 <code>.dvc</code> 文件后，运行 <code>dvc checkout</code>。此命令指示 DVC 读取您工作目录中<em>当前</em>的 <code>.dvc</code> 文件并同步实际数据文件。DVC 将在其本地缓存中找到对应的数据内容（由 <code>.dvc</code> 文件中的哈希值识别），并将其放入您的工作空间，如果需要则覆盖以前的版本。</li>\n</ol>\n<p>让我们用一个例子来说明。假设您的 Git 历史中有两个重要的提交：</p>\n<ul>\n<li><code>commit-A</code>：使用了 <code>data/raw_images_v1.zip</code>。此提交中的 <code>data/raw_images_v1.zip.dvc</code> 文件指向此特定数据集版本的哈希值。</li>\n<li><code>commit-B</code>：将数据集更新到 <code>data/raw_images_v2.zip</code>（可能在一些清理或添加之后）。此提交中的 <code>data/raw_images_v1.zip.dvc</code> 文件指向这个<em>新</em>数据集版本的哈希值。</li>\n</ul>\n<p>假设您当前正在 <code>commit-B</code> 对应的状态下工作，但您想回溯并检查结果或使用 <code>commit-A</code> 中的数据重新运行分析。</p>\n<p><strong>步骤 1：切换 Git 历史</strong></p>\n<pre><code class=\"language-bash\"># 确保您当前的工作已保存或已提交\ngit status\n\n# 检出上一个提交\ngit checkout commit-A\n</code></pre>\n<p>此时，Git 会更新您的代码库并恢复 <code>commit-A</code> 中存在的 <code>data/raw_images_v1.zip.dvc</code> 文件。然而，您工作空间中实际的 <code>data/raw_images_v1.zip</code> 文件可能仍然是 <code>v2</code> 版本（或者如果您刚刚克隆了仓库，甚至可能缺失）。您的工作空间数据会暂时与 <code>.dvc</code> 元数据文件不同步。</p>\n<p><strong>步骤 2：使用 DVC 同步数据</strong></p>\n<pre><code class=\"language-bash\"># 告诉 DVC 根据当前的 .dvc 文件更新工作空间数据\ndvc checkout data/raw_images_v1.zip.dvc\n# 或者，更新仓库中所有由 DVC 跟踪的文件：\n# dvc checkout\n</code></pre>\n<p>DVC 读取 <code>data/raw_images_v1.zip.dvc</code>（它现在指向 <code>v1</code> 哈希），在其缓存中找到对应的 <code>v1</code> 数据，并将其放入您的 <code>data/</code> 目录，替换 <code>v2</code> 内容。您的工作空间现在准确反映了项目在 <code>commit-A</code> 时的状态，包括代码和数据。</p>\n<p>要返回 <code>commit-B</code> 的状态，您只需反向操作：</p>\n<pre><code class=\"language-bash\">git checkout commit-B\ndvc checkout\n</code></pre>\n<h3>如果数据不在本地缓存中怎么办？</h3>\n<p><code>dvc checkout</code> 命令依赖于所需的DVC数据版本存在于本地缓存中（通常位于 <code>.dvc/cache</code>）。如果您检出的 Git 提交所关联的数据尚未从远程存储下载（例如，在克隆仓库或切换到非常旧的分支之后），<code>dvc checkout</code> 可能会报告数据缺失。</p>\n<p>在这种情况下，您首先需要使用 <code>dvc pull</code> 从您配置的 DVC 远程存储中获取所需数据：</p>\n<pre><code class=\"language-bash\"># 在 git checkout commit-A 之后\n# 尝试同步工作空间数据\ndvc checkout\n\n# 如果由于缓存缺失而失败，则从远程拉取：\ndvc pull data/raw_images_v1.zip.dvc\n# 或者拉取当前提交的所有数据：\n# dvc pull\n\n# 现在数据已本地缓存，因此 checkout 将会成功\n# (注意：dvc pull 通常会隐式执行 checkout，\n# 但运行 dvc checkout 可确保工作空间与缓存同步)\ndvc checkout\n</code></pre>\n<p><code>dvc pull</code> 从远程获取与<em>当前</em> <code>.dvc</code> 文件对应的数据到本地缓存，并且通常也会直接更新工作空间文件。之后运行 <code>dvc checkout</code> 是一个好习惯，可以确保工作空间根据 Git 检出的 <code>.dvc</code> 文件与缓存正确同步。</p>\n<p>通过将 <code>git checkout</code> 用于管理代码和元数据历史，与 <code>dvc checkout</code>（以及在需要时使用 <code>dvc pull</code>）用于同步关联的大型数据文件结合起来，您获得了一种强大而可靠的方法来浏览机器学习 (machine learning)项目的完整历史。这种精确恢复过去状态的能力对于再现性和协作开发而言非常根本。</p>",
+  "slug": "switching-dvc-data-versions",
+  "updates": [],
+  "references": [
+    {
+      "id": 8205,
+      "title": "DVC Documentation",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "数据版本控制（DVC）命令和概念的官方参考，包括用于将数据版本与Git同步的`dvc checkout`和`dvc pull`。",
+      "order": 1,
+      "created_at": "2025-09-05T01:52:33.418424Z",
+      "updated_at": "2025-09-08T14:18:14.761130Z"
+    },
+    {
+      "id": 8206,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "Git的权威指南，涵盖了`git checkout`等核心概念和命令，这对于代码和元数据版本切换至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T01:52:33.423514Z",
+      "updated_at": "2025-09-08T14:18:07.190255Z"
+    },
+    {
+      "id": 8207,
+      "title": "Designing Machine Learning Systems: An Iterative Approach to Development, Deployment, and Maintenance",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "讨论构建稳健机器学习系统的最佳实践，提供了数据管理和重现性挑战的背景，而数据版本控制正是解决这些挑战的关键。",
+      "order": 3,
+      "created_at": "2025-09-05T01:52:33.425773Z",
+      "updated_at": "2025-09-08T14:18:17.747272Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

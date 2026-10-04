@@ -1,0 +1,911 @@
+{
+  "id": 175,
+  "title": "深度学习中的模型正则化与优化",
+  "meta_title": "深度学习正则化与优化技术",
+  "meta_description": "学习L1/L2正则化、Dropout、批量归一化、SGD、Adam及其他方法，以优化深度学习模型并防止过拟合。实用课程。",
+  "description": "<p>学习实用技术以防止深度学习 (deep learning)模型过拟合 (overfitting)，并提升其训练速度和表现。本课程涵盖L1/L2、Dropout和批量归一化 (normalization)等常见正则化 (regularization)方法，以及SGD、Momentum、RMSprop和Adam等标准优化算法。您将通过流行深度学习框架获得动手实践经验。</p>",
+  "short_description": "应用核心正则化和优化技术，以提升深度学习模型的泛化能力和训练效率。",
+  "excerpt": "通过掌握正则化和优化方法，改进你的深度学习模型。了解如何诊断过拟合，应用Dropout和L1/L2等技术，并选择合适的优化器以加快收敛。",
+  "prerequisites": "Python基础与深度学习基础",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "过拟合诊断",
+      "description": "通过学习曲线和验证指标，识别深度学习模型中的过拟合和欠拟合。"
+    },
+    {
+      "topic": "正则化方法",
+      "description": "理解并实现L1、L2、弹性网络正则化技术。"
+    },
+    {
+      "topic": "Dropout应用",
+      "description": "有效应用Dropout，以减少神经网络中的过拟合。"
+    },
+    {
+      "topic": "批量归一化",
+      "description": "实现批量归一化，以稳定并加速网络训练。"
+    },
+    {
+      "topic": "优化算法",
+      "description": "区分各种梯度下降优化算法（SGD、Momentum、RMSprop、Adam），并了解其工作原理。"
+    },
+    {
+      "topic": "超参数调优",
+      "description": "理解优化器、学习率和正则化超参数之间的关联。"
+    },
+    {
+      "topic": "实践应用",
+      "description": "在标准深度学习流程中通过常用框架实现正则化和优化技术。"
+    }
+  ],
+  "duration": 15,
+  "slug": "deep-learning-regularization-optimization",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-16T06:19:58.919707Z",
+  "updated_at": "2026-10-02T09:02:12.573031Z",
+  "chapters": [
+    {
+      "id": 924,
+      "title": "泛化能力的挑战",
+      "meta_title": "Deep Learning Generalization & Overfitting",
+      "meta_description": "Understand generalization, overfitting, underfitting, and the bias-variance tradeoff in deep learning. Learn diagnostic tools like learning curves.",
+      "number": 1,
+      "slug": "generalization-challenge",
+      "content": "构建深度学习模型的主要目标不仅仅是在训练数据上的表现；更是要确保模型在新的、未见过的数据上也能表现良好。这种能力被称为泛化。泛化效果不佳的模型常常会遇到过拟合（对训练数据学习得过于具体，甚至包含了噪声）或欠拟合（模型过于简单，无法捕捉数据的规律）的问题。\n\n在本章中，我们将为理解和改进泛化能力奠定开端。我们将定义泛化、过拟合和欠拟合。您将了解到深度学习背景下的偏差-方差权衡，以及如何使用学习曲线作为诊断工具。我们还将介绍正则化和优化在处理泛化问题中的作用，并引导您设置后续实践工作所需的软件环境。最后，您将练习通过视觉方式识别过拟合。",
+      "sections": [
+        {
+          "id": 4868,
+          "title": "模型泛化介绍",
+          "meta_title": "模型泛化简介",
+          "meta_description": "定义模型泛化及其在机器学习应用中的重要作用。",
+          "slug": "intro-model-generalization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4870,
+          "title": "理解欠拟合与过拟合",
+          "meta_title": "欠拟合与过拟合",
+          "meta_description": "阐述模型训练中欠拟合和过拟合的含义。",
+          "slug": "underfitting-overfitting",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4874,
+          "title": "深度学习中的偏差-方差权衡",
+          "meta_title": "深度学习中的偏差-方差权衡",
+          "meta_description": "具体讨论深度学习模型中的偏差-方差权衡。",
+          "slug": "bias-variance-tradeoff",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4877,
+          "title": "诊断模型表现：学习曲线",
+          "meta_title": "使用学习曲线诊断模型",
+          "meta_description": "学习如何解读学习曲线以诊断模型拟合问题。",
+          "slug": "learning-curves-diagnosis",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4881,
+          "title": "验证与交叉验证策略",
+          "meta_title": "验证与交叉验证方法",
+          "meta_description": "涵盖模型验证的策略，包括交叉验证技术。",
+          "slug": "validation-cross-validation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4884,
+          "title": "正则化与优化的作用",
+          "meta_title": "正则化与优化的作用",
+          "meta_description": "介绍正则化与优化如何帮助提升模型泛化能力。",
+          "slug": "role-regularization-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4886,
+          "title": "配置开发环境",
+          "meta_title": "配置开发环境",
+          "meta_description": "关于为课程实践配置所需工具和库的指南。",
+          "slug": "setup-dev-environment",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4889,
+          "title": "动手：过拟合的可视化",
+          "meta_title": "实践可视化过拟合",
+          "meta_description": "动手实践，使用学习曲线或模型预测来可视化过拟合。",
+          "slug": "practice-visualizing-overfitting",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 927,
+      "title": "权重正则化方法",
+      "meta_title": "L1 与 L2 权重正则化",
+      "meta_description": "理解并实现 L1、L2（权重衰减）和弹性网络正则化，通过惩罚大权重来防止过拟合。",
+      "number": 2,
+      "slug": "weight-regularization",
+      "content": "在确认过拟合是模型在训练数据上学习得过好，但对未见过的数据性能下降的普遍问题后，我们现在转向一种直接限制模型复杂度的方法：权重正则化。本章介绍通过根据网络权重的大小添加惩罚项来修改学习目标的方法。主要观点是，更简单的模型（通常表现为权重值较小）往往泛化能力更好。\n\n你将学习到：\n\n*   惩罚大权重的直观解释及其对模型复杂度的影响。\n*   **L2 正则化（权重衰减）**：如何通过添加与权重平方大小（$L_2$ 范数）成比例的惩罚来促使权重变小，以及其数学表述。\n*   **L1 正则化**：如何通过添加与权重绝对大小（$L_1$ 范数）成比例的惩罚项，以及它如何能够产生稀疏权重向量（特征选择）。\n*   L1 与 L2 正则化在效果和适用情况上的比较。\n*   **弹性网络正则化**：一种结合 L1 和 L2 惩罚项的方法。\n*   如何在常见的深度学习框架中通过代码示例实际实现这些方法。\n\n在本章结束时，你将学会如何应用这些方法来减少过拟合并提升神经网络的泛化能力。",
+      "sections": [
+        {
+          "id": 4894,
+          "title": "权重正则化背后的理念",
+          "meta_title": "权重正则化理念",
+          "meta_description": "说明通过惩罚大权重来简化模型的基本想法。",
+          "slug": "weight-regularization-intuition",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4896,
+          "title": "L2正则化（权重衰减）：机制",
+          "meta_title": "L2正则化机制",
+          "meta_description": "描述L2正则化（或权重衰减）在训练过程中如何起作用。",
+          "slug": "l2-regularization-mechanism",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4899,
+          "title": "L2 正则化：数学公式",
+          "meta_title": "L2正则化数学公式",
+          "meta_description": "介绍L2正则化的数学公式及其梯度。",
+          "slug": "l2-regularization-math",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4902,
+          "title": "L1 正则化：机制与稀疏性",
+          "meta_title": "L1 正则化与稀疏性",
+          "meta_description": "解释 L1 正则化如何作用以及它如何产生稀疏权重向量。",
+          "slug": "l1-regularization-mechanism-sparsity",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4905,
+          "title": "L1 正则化：数学表述",
+          "meta_title": "L1 正则化数学",
+          "meta_description": "介绍L1正则化的数学公式及其梯度。",
+          "slug": "l1-regularization-math",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4907,
+          "title": "L1和L2正则化的比较",
+          "meta_title": "L1与L2正则化的比较",
+          "meta_description": "讨论L1和L2正则化的差异、优点和缺点。",
+          "slug": "comparing-l1-l2",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4910,
+          "title": "弹性网络：L1与L2的结合",
+          "meta_title": "弹性网络正则化",
+          "meta_description": "介绍弹性网络，它将L1和L2惩罚项合并使用。",
+          "slug": "elastic-net-regularization",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4915,
+          "title": "权重正则化的实现",
+          "meta_title": "权重正则化的实现",
+          "meta_description": "演示如何在常见的深度学习框架中添加 L1/L2 正则化。",
+          "slug": "implementing-weight-regularization",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4920,
+          "title": "动手实践：将L1/L2应用于网络",
+          "meta_title": "L1/L2正则化的动手实践",
+          "meta_description": "实践环节：在神经网络中运用L1和L2正则化。",
+          "slug": "practice-applying-l1-l2",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 930,
+      "title": "丢弃法正则化",
+      "meta_title": "深度学习中的丢弃法正则化",
+      "meta_description": "了解丢弃法的工作原理，以防止神经元相互依赖并减少过拟合。在神经网络中实现丢弃法。",
+      "number": 3,
+      "slug": "dropout-regularization",
+      "content": "在我们了解了 L1 和 L2 等惩罚大权重值的权重正则化方法之后，接下来我们介绍一种截然不同的防止过拟合的方法：丢弃法。这种方法在每次训练更新中，通过随机将一部分神经元输出设为零来发挥作用。这有助于避免神经元之间出现复杂的相互依赖，即神经元过度依赖特定其他神经元的情况。\n\n本章将讲解丢弃法的工作原理，包括它在训练时如何运作，以及在推理时（测试阶段）激活值如何调整。我们将介绍常见的“倒置丢弃法”实现，讨论作为可调超参数的丢弃率 $p$，并提及在卷积网络和循环网络中应用丢弃法的考量。最后，你将通过实际例子了解如何使用标准深度学习框架将丢弃层整合到模型中。",
+      "sections": [
+        {
+          "id": 4924,
+          "title": "Dropout介绍：避免协同适应",
+          "meta_title": "Dropout简介",
+          "meta_description": "说明Dropout的原理及其避免协同适应的原因。",
+          "slug": "dropout-introduction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4927,
+          "title": "Dropout 在训练时的工作原理",
+          "meta_title": "Dropout 训练机制",
+          "meta_description": "详细说明在训练阶段应用 Dropout 的过程。",
+          "slug": "dropout-training-mechanism",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4929,
+          "title": "在测试时调整激活值",
+          "meta_title": "Dropout在测试时",
+          "meta_description": "说明在推断/测试期间如何处理Dropout，包括激活值调整。",
+          "slug": "dropout-test-time-scaling",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4931,
+          "title": "反转Dropout实现",
+          "meta_title": "反转Dropout实现",
+          "meta_description": "描述实践中广为采用的‘反转Dropout’技术。",
+          "slug": "inverted-dropout",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4934,
+          "title": "Dropout 比率作为超参数",
+          "meta_title": "Dropout 比率超参数",
+          "meta_description": "讨论 Dropout 比率超参数的选择与调整。",
+          "slug": "dropout-rate-hyperparameter",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4938,
+          "title": "卷积层和循环层的使用考量",
+          "meta_title": "CNN和RNN的Dropout",
+          "meta_description": "讨论在卷积层和循环层使用Dropout时需要注意的具体情况。",
+          "slug": "dropout-conv-recurrent",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4940,
+          "title": "在实践中应用Dropout",
+          "meta_title": "实现Dropout层",
+          "meta_description": "展示如何在深度学习框架中实现Dropout层。",
+          "slug": "implementing-dropout",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4944,
+          "title": "动手实践：添加 Dropout 层",
+          "meta_title": "动手实现 Dropout",
+          "meta_description": "将 Dropout 加入神经网络模型的实践环节。",
+          "slug": "practice-adding-dropout",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 933,
+      "title": "训练稳定性归一化技术",
+      "meta_title": "批归一化与层归一化",
+      "meta_description": "了解批归一化如何稳定训练、加速收敛并提供正则化作用。层归一化简介。",
+      "number": 4,
+      "slug": "normalization-techniques",
+      "content": "训练深度神经网络可能具有挑战性。在训练过程中，由于前层参数的变化，后续层输入的分布也会发生偏移。这种现象，被称为内部协变量偏移，会减慢训练速度，并使其对初始化和学习率变得敏感。\n\n本章着重介绍旨在解决这些问题的归一化方法。我们将查看：\n\n*   **内部协变量偏移**的理念及其对训练过程的影响。\n*   **批归一化**：它如何通过使用小批量统计数据（$ \\mu $ 和 $ \\sigma^2 $）来归一化层输入，其前向和反向传播计算，以及它在推断时的表现。\n*   批归一化的**优点**，包括更快的收敛、改进的稳定性以及轻微的正则化作用。\n*   在神经网络中**实现批归一化**的实际考虑。\n*   简要了解**层归一化**作为另一种方法。\n\n在本章结束时，你将明白归一化层如何有助于深度学习模型训练更稳定和高效。",
+      "sections": [
+        {
+          "id": 4949,
+          "title": "内部协变量偏移问题",
+          "meta_title": "内部协变量偏移问题",
+          "meta_description": "解释内部协变量偏移及其对深度网络训练的影响。",
+          "slug": "internal-covariate-shift",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4952,
+          "title": "批归一化介绍",
+          "meta_title": "批归一化介绍",
+          "meta_description": "介绍批归一化作为解决内部协变量偏移的方法。",
+          "slug": "intro-batch-normalization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4953,
+          "title": "批量归一化：前向传播计算",
+          "meta_title": "批量归一化前向传播",
+          "meta_description": "详细说明批量归一化前向传播中涉及的计算。",
+          "slug": "batch-norm-forward-pass",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4955,
+          "title": "批标准化：反向传播计算",
+          "meta_title": "批标准化反向传播",
+          "meta_description": "说明梯度如何通过批标准化层进行计算。",
+          "slug": "batch-norm-backward-pass",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4957,
+          "title": "批量归一化的好处",
+          "meta_title": "批量归一化的好处",
+          "meta_description": "讨论使用批量归一化的优点，包括更快的训练和正则化效果。",
+          "slug": "batch-norm-benefits",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4959,
+          "title": "测试时的批量归一化",
+          "meta_title": "测试时的批量归一化",
+          "meta_description": "阐述批量归一化在推理时如何使用总体统计量。",
+          "slug": "batch-norm-test-time",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4962,
+          "title": "网络中的考量与放置",
+          "meta_title": "批归一化放置",
+          "meta_description": "讨论实际考量，例如在网络中放置批归一化层的位置。",
+          "slug": "batch-norm-placement",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4964,
+          "title": "层归一化简介",
+          "meta_title": "层归一化简介",
+          "meta_description": "简要介绍层归一化作为一种替代的归一化技术。",
+          "slug": "intro-layer-normalization",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4966,
+          "title": "实现批量归一化",
+          "meta_title": "实现批量归一化",
+          "meta_description": "展示如何在深度学习框架中添加批量归一化层。",
+          "slug": "implementing-batch-norm",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4968,
+          "title": "动手实践：整合批标准化",
+          "meta_title": "批标准化的动手实践",
+          "meta_description": "关于将批标准化添加到神经网络的实践环节。",
+          "slug": "practice-integrating-batch-norm",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 935,
+      "title": "基本优化算法",
+      "meta_title": "SGD、动量与Nesterov优化器",
+      "meta_description": "理解随机梯度下降（SGD）、小批量梯度下降，以及动量和Nesterov加速梯度（NAG）等变体。",
+      "number": 5,
+      "slug": "foundational-optimizers",
+      "content": "在研究了通过正则化控制模型复杂度的方法之后，我们现在关注为深度学习模型寻找最优参数的过程。这个被称为优化的过程，是有效训练神经网络的核心。标准梯度下降提供了理论依据，但它应用于大型数据集时面临实际问题。\n\n本章介绍深度学习中使用的基本优化算法。我们首先回顾标准梯度下降，并讨论它的局限性。然后您将了解：\n\n*   **随机梯度下降（SGD）：** 一种计算高效的近似方法，使用单个数据点更新参数。\n*   **小批量梯度下降：** 一种广泛使用的方法，平衡了SGD和批量梯度下降的优点。\n*   **动量：** 一种加速SGD收敛的技术，特别是在梯度方向一致时，并抑制振荡。\n*   **Nesterov加速梯度（NAG）：** 对动量的一种改进，通常能带来更快的收敛。\n\n在本章结束时，您将理解这些核心算法的运作原理，它们各自的优缺点，以及它们在模型训练过程中如何应对复杂损失曲面带来的挑战。我们还将在实践中实现并比较这些优化器。",
+      "sections": [
+        {
+          "id": 4970,
+          "title": "回顾梯度下降",
+          "meta_title": "回顾梯度下降",
+          "meta_description": "回顾梯度下降优化的基本原理。",
+          "slug": "revisiting-gradient-descent",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4972,
+          "title": "标准梯度下降的难题",
+          "meta_title": "梯度下降难题",
+          "meta_description": "讨论批量梯度下降的局限性，如计算开销和局部最小值。",
+          "slug": "gradient-descent-challenges",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4974,
+          "title": "随机梯度下降（SGD）",
+          "meta_title": "随机梯度下降（SGD）",
+          "meta_description": "解释随机梯度下降（SGD）的原理和机制。",
+          "slug": "stochastic-gradient-descent-sgd",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4976,
+          "title": "小批量梯度下降",
+          "meta_title": "小批量梯度下降",
+          "meta_description": "描述小批量梯度下降是批量梯度下降（BGD）与随机梯度下降（SGD）之间的一个实用折中。",
+          "slug": "minibatch-gradient-descent",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4978,
+          "title": "SGD的挑战：噪声与局部最小值",
+          "meta_title": "SGD挑战",
+          "meta_description": "讨论SGD的问题，包括噪声更新以及如何避开局部最小值/鞍点。",
+          "slug": "sgd-challenges-noise-minima",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4981,
+          "title": "带动量的随机梯度下降：加速收敛",
+          "meta_title": "带动量的SGD",
+          "meta_description": "介绍动量法作为加速SGD收敛和抑制震荡的方法。",
+          "slug": "sgd-momentum",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4983,
+          "title": "涅斯捷罗夫加速梯度 (NAG)",
+          "meta_title": "涅斯捷罗夫加速梯度 (NAG)",
+          "meta_description": "阐述涅斯捷罗夫加速梯度 (NAG) 的更新规则及其优点。",
+          "slug": "nesterov-accelerated-gradient",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4985,
+          "title": "实现SGD和动量",
+          "meta_title": "实现SGD和动量",
+          "meta_description": "展示如何在深度学习框架中使用 SGD、动量和 NAG 优化器。",
+          "slug": "implementing-sgd-momentum",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4987,
+          "title": "实践：比较梯度下降、随机梯度下降和动量法",
+          "meta_title": "实践比较优化器",
+          "meta_description": "动手实践比较不同核心优化器的性能。",
+          "slug": "practice-comparing-optimizers",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 937,
+      "title": "自适应优化算法",
+      "meta_title": "自适应优化器：AdaGrad、RMSprop、Adam",
+      "meta_description": "学习自适应学习率优化算法包括AdaGrad、RMSprop和Adam，了解它们的机制和优点。",
+      "number": 6,
+      "slug": "adaptive-optimizers",
+      "content": "随机梯度下降（SGD）及其动量变体等优化器相比基本梯度下降有了显著改进，但它们通常依赖于一个学习率，这个学习率对所有参数一视同仁，或按照预设方案衰减。然而，深度网络中不同的参数可能需要不同的学习率调整，根据其梯度的历史信息。\n\n本章介绍自适应优化算法，旨在自动为每个参数独立调整学习率。我们将考察几种常用方法：\n\n*   **AdaGrad：** 根据每个参数的梯度平方和的历史数据，来调整学习率。\n*   **RMSprop：** 解决了AdaGrad学习率下降过快的问题，通过使用梯度平方的移动平均。\n*   **Adam（自适应矩估计）：** 结合了动量和RMSprop的思路，存储了梯度及其平方的移动平均值。\n\n您将学习自适应方法背后的动机，AdaGrad、RMSprop和Adam的具体更新机制，包括它们的数学基础和偏差修正技术。我们将讨论它们的优点、缺点，以及在标准深度学习框架中的实现细节。最后，我们将提供实用建议，用于为您的模型选择合适的优化器。",
+      "sections": [
+        {
+          "id": 4988,
+          "title": "自适应学习率的必要性",
+          "meta_title": "自适应学习率的必要性",
+          "meta_description": "阐明自适应学习率方法的发展原因。",
+          "slug": "need-adaptive-learning-rates",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4989,
+          "title": "AdaGrad：调整每个参数的学习率",
+          "meta_title": "AdaGrad 优化器说明",
+          "meta_description": "说明 AdaGrad 算法以及它如何根据过去的梯度调整学习率。",
+          "slug": "adagrad-optimizer",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4990,
+          "title": "AdaGrad 的局限性：学习率衰减",
+          "meta_title": "AdaGrad 的局限性",
+          "meta_description": "讨论 AdaGrad 中学习率激进衰减的问题。",
+          "slug": "adagrad-limitations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4991,
+          "title": "RMSprop：处理AdaGrad的局限性",
+          "meta_title": "RMSprop优化器说明",
+          "meta_description": "引入RMSprop，作为AdaGrad的一种优化，通过使用梯度平方的移动平均。",
+          "slug": "rmsprop-optimizer",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4992,
+          "title": "Adam：自适应矩估计",
+          "meta_title": "Adam 优化算法解析",
+          "meta_description": "讲解 Adam 优化算法，其整合了动量法和 RMSprop 的思路。",
+          "slug": "adam-optimizer",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4993,
+          "title": "Adam算法细致分析",
+          "meta_title": "Adam算法细致分析",
+          "meta_description": "详细说明Adam更新规则中的步骤，包括偏差校正。",
+          "slug": "adam-algorithm-breakdown",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4994,
+          "title": "Adamax 和 Nadam 变体（简要概述）",
+          "meta_title": "Adam 变体：Adamax 与 Nadam",
+          "meta_description": "简要提及 Adam 的其他变体，如 Adamax 和 Nadam。",
+          "slug": "adam-variants-adamax-nadam",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4995,
+          "title": "优化器选择指南",
+          "meta_title": "深度学习优化器选择",
+          "meta_description": "提供针对特定任务选择合适优化器的实用指导。",
+          "slug": "choosing-optimizers-guidelines",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4996,
+          "title": "实现 Adam 和 RMSprop",
+          "meta_title": "实现 Adam 与 RMSprop",
+          "meta_description": "介绍如何在深度学习框架中应用 Adam 和 RMSprop 优化器。",
+          "slug": "implementing-adam-rmsprop",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4997,
+          "title": "动手实践：优化器比较实验",
+          "meta_title": "动手实践：优化器比较",
+          "meta_description": "比较SGD、动量、RMSprop和Adam性能的实践课程。",
+          "slug": "practice-optimizer-comparison",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 938,
+      "title": "优化细节调整与超参数调整",
+      "meta_title": "学习率调度与超参数调整",
+      "meta_description": "介绍学习率调度、参数初始化等方法，以及调整学习率和批量大小等超参数的策略。",
+      "number": 7,
+      "slug": "optimization-refinements-tuning",
+      "content": "在介绍了基本和自适应优化算法之后，我们现在转向能改进训练过程的方法。选择Adam或SGD这样的优化器只是一个方面；实现高效训练和良好模型性能常常需要仔细关注初始化、学习率调整以及多种超参数的设置。\n\n本章将讨论这些重要的改进方法。我们将从参数初始化策略开始，例如Xavier和He初始化，这些策略旨在为模型设定合适的初始权重，以加快收敛速度。接下来讨论学习率调度，涵盖阶梯衰减、指数衰减和预热期等方法，这些方法能在训练过程中动态调整学习率 $ \\alpha $。最后，我们将讨论超参数调整，考虑网格搜索和随机搜索等系统化方式，以找到学习率、正则化强度（例如 $L_1$/$L_2$ 的 $ \\lambda $）和批量大小的有效值，包括批量大小与学习率之间的相互影响。\n\n学完本章后，您将明白如何应用这些方法并设置主要超参数，以提升深度学习模型的训练稳定性、速度和泛化能力。",
+      "sections": [
+        {
+          "id": 4998,
+          "title": "参数初始化的重要性",
+          "meta_title": "权重初始化的重要性",
+          "meta_description": "讨论为何恰当的权重初始化是成功训练的必要条件。",
+          "slug": "parameter-initialization-importance",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4999,
+          "title": "常见的初始化策略（戈洛特，何凯明）",
+          "meta_title": "戈洛特与何凯明初始化",
+          "meta_description": "解释戈洛特/Glorot和何凯明等常用的初始化方法。",
+          "slug": "initialization-strategies-xavier-he",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5000,
+          "title": "学习率调度的缘由",
+          "meta_title": "学习率调度的动机",
+          "meta_description": "解释训练期间调整学习率为何能提升性能。",
+          "slug": "learning-rate-schedules-motivation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5001,
+          "title": "步进衰减策略",
+          "meta_title": "步进衰减学习率策略",
+          "meta_description": "描述步进衰减学习率调度方法。",
+          "slug": "step-decay-lr-schedule",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5002,
+          "title": "指数衰减及其他调度方法",
+          "meta_title": "指数衰减及其他学习率调度",
+          "meta_description": "介绍多种学习率调度方法，如指数衰减和余弦退火。",
+          "slug": "other-lr-schedules",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5003,
+          "title": "预热策略",
+          "meta_title": "学习率预热",
+          "meta_description": "讲解学习率预热周期的原理和作用。",
+          "slug": "learning-rate-warmup",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5004,
+          "title": "调整超参数：学习率、正则化强度、批大小",
+          "meta_title": "超参数调整概述",
+          "meta_description": "讨论调整学习率、正则化参数和批大小等重要超参数的过程。",
+          "slug": "tuning-hyperparameters-overview",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5005,
+          "title": "批处理大小与学习率的关系",
+          "meta_title": "批处理大小与学习率",
+          "meta_description": "考察批处理大小与合适学习率的关系。",
+          "slug": "batch-size-learning-rate",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5006,
+          "title": "超参数：网格搜索与随机搜索的比较",
+          "meta_title": "网格搜索对比随机搜索",
+          "meta_description": "比较用于超参数优化的网格搜索和随机搜索方法。",
+          "slug": "grid-search-random-search",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5007,
+          "title": "实施学习率调度",
+          "meta_title": "实施学习率调度",
+          "meta_description": "展示如何在深度学习框架中实施学习率调度。",
+          "slug": "implementing-lr-scheduling",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5008,
+          "title": "实践：模型超参数调整",
+          "meta_title": "超参数调整实践",
+          "meta_description": "亲自动手调整深度学习模型的超参数。",
+          "slug": "practice-hyperparameter-tuning",
+          "order": 11,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 939,
+      "title": "技术组合与实际考量",
+      "meta_title": "结合正则化与优化策略",
+      "meta_description": "学习如何有效地结合不同的正则化和优化技术。讨论监控、早期停止和数据增强等实践要点。",
+      "number": 8,
+      "slug": "combining-techniques-practical",
+      "content": "之前的章节分别介绍了各种正则化方法（如L1/L2、Dropout）、归一化技术（如批量归一化）和优化算法（如SGD、Adam等）。基于这些前期内容，本章侧重于如何在实际的深度学习工作流程中有效地结合这些方法。\n\n你将学到：\n*   不同正则化和优化技术之间的相互影响。\n*   构建一个运用这些方法的典型训练过程。\n*   使用损失曲线和指标来监控训练进展。\n*   将早期停止作为一种额外的正则化策略来应用。\n*   结合Dropout和批量归一化时的具体考虑。\n*   数据增强如何提升模型泛化能力。\n*   选择合适技术组合的指导原则。\n*   解决与优化和正则化相关的常见训练问题。\n\n本章最后将通过一个实践练习，让你使用这些组合策略中的几种来构建和调整模型。",
+      "sections": [
+        {
+          "id": 5009,
+          "title": "正则化与优化之间的联动",
+          "meta_title": "联动：正则化与优化",
+          "meta_description": "讨论正则化技术与优化算法如何产生联动。",
+          "slug": "interaction-regularization-optimization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5010,
+          "title": "典型的深度学习训练流程",
+          "meta_title": "深度学习训练流程",
+          "meta_description": "概述一个标准的深度学习模型训练流程，结合了这些技术。",
+          "slug": "typical-training-workflow",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5011,
+          "title": "训练监控：损失曲线与指标",
+          "meta_title": "监控训练进程",
+          "meta_description": "使用损失曲线和相关性能指标进行训练监控的良好做法。",
+          "slug": "monitoring-training-metrics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5012,
+          "title": "提前停止作为正则化",
+          "meta_title": "提前停止用于正则化",
+          "meta_description": "说明提前停止作为一种简单而有效的正则化技术。",
+          "slug": "early-stopping-regularization",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5013,
+          "title": "结合 Dropout 与批归一化",
+          "meta_title": "结合 Dropout 与批归一化",
+          "meta_description": "讨论同时使用 Dropout 和批归一化时的考量和常见做法。",
+          "slug": "combining-dropout-batchnorm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5014,
+          "title": "数据增强作为隐式正则化",
+          "meta_title": "数据增强作为正则化",
+          "meta_description": "阐述数据增强如何作为一种隐式正则化形式。",
+          "slug": "data-augmentation-regularization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5015,
+          "title": "选择恰当的技术组合",
+          "meta_title": "选择正则化/优化组合",
+          "meta_description": "提供针对特定问题选择恰当方法组合的指导",
+          "slug": "choosing-technique-combination",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5016,
+          "title": "调试与优化/正则化相关的训练问题",
+          "meta_title": "调试优化问题",
+          "meta_description": "与优化和正则化相关的常见训练问题排查技巧。",
+          "slug": "debugging-training-issues",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5017,
+          "title": "动手实践：构建与调整正则化/优化模型",
+          "meta_title": "动手构建已调整模型",
+          "meta_description": "全面实践环节，使用组合方法构建模型并对其进行调整。",
+          "slug": "practice-building-tuned-model",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

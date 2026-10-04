@@ -1,0 +1,61 @@
+{
+  "id": 2041,
+  "title": "实现自定义评估指标",
+  "meta_title": "实现自定义评估指标",
+  "meta_description": "在训练期间创建并集成自定义评估指标。",
+  "content": "<p>虽然使用对数损失（LogLoss）或均方误差（Mean Squared Error）等标准损失函数 (loss function)来优化模型是常见做法，但模型成功的最终衡量标准通常依赖于领域特定条件或竞赛规则，这些内置目标无法直接体现。训练和验证期间使用的评估指标作为指示器，引导超参数 (parameter) (hyperparameter)调整并通过提前停止来提示何时终止训练。当准确率（Accuracy）、F1分数、AUC或RMSE等标准指标无法完全体现所需性能特征时，实现自定义评估指标就变得有必要。</p>\n<p>与必须提供梯度信息以驱动提升过程的自定义<em>损失函数</em>不同，自定义<em>评估指标</em>更为简单。它们的主要作用是在特定时间间隔（例如，每个提升轮次）根据真实标签和预测值量化 (quantization)性能。它们不直接影响梯度计算，但对追踪进展和就模型的充分性做出明智判断不可或缺。</p>\n<h3>为何使用自定义评估指标？</h3>\n<p>在以下几种情况中，您可能需要自定义评估指标：</p>\n<ol>\n<li><strong>业务场景的绩效衡量指标：</strong> 业务目标通常会转化为特定的绩效衡量指标（KPI）。例如，在金融领域，您可能更关心将超过某个阈值的大型预测误差最小化，而不是整体RMSE。在推荐系统中，像K均值平均精度（MAP@K）或归一化 (normalization)折现累积增益（NDCG）等指标可能比标准分类指标更适用。</li>\n<li><strong>竞赛要求：</strong> 机器学习 (machine learning)竞赛（例如，在Kaggle等平台上）经常规定独特的评估标准，例如用于一致性测量的二次加权Kappa（QWK）或精确率/召回率的自定义变体。训练一个模型以优化竞赛指标，即使仅用于监测和提前停止，也会带来优势。</li>\n<li><strong>复杂的性能方面：</strong> 有时，您需要衡量标准实现未能涵盖的性能方面，例如评估不同子组之间的公平性，或者对某些类型的错误施加更重的惩罚（非对称误差成本）。</li>\n<li><strong>监测不同方面：</strong> 您可以使用一种损失函数 (loss function)（例如，对数损失因其良好的数学属性）来优化模型，但使用更能反映最终用户体验的不同指标来监测性能（例如，针对不平衡分类问题的F1分数）。</li>\n</ol>\n<h3>自定义指标函数的结构</h3>\n<p>大多数流行的梯度提升库（XGBoost、LightGBM、CatBoost）都提供集成自定义评估逻辑的接口。虽然具体的参数 (parameter)名称可能略有不同，但基本结构通常是一致的。一个典型的Python自定义指标函数需要：</p>\n<ol>\n<li>接受预测值（<code>y_pred</code>）和真实标签（通常封装在特定库的数据结构中，如XGBoost的<code>DMatrix</code>或LightGBM的<code>Dataset</code>，可以从中提取真实标签<code>y_true</code>）。</li>\n<li>根据<code>y_true</code>和<code>y_pred</code>计算指标分数。</li>\n<li>以特定格式返回结果，通常是一个包含以下内容的元组：\n<ul>\n<li><code>metric_name</code>：标识指标的字符串（例如，<code>'custom_rmse'</code>）。</li>\n<li><code>metric_value</code>：计算得到的数值分数。</li>\n<li><code>is_higher_better</code>：一个布尔值，表示分数越高是否代表性能越好（例如，AUC为<code>True</code>，RMSE为<code>False</code>）。这一点对提前停止很重要。</li>\n</ul>\n</li>\n</ol>\n<p>让我们看看如何在实践中实现这一点。</p>\n<h3>在XGBoost中实现自定义指标</h3>\n<p>XGBoost通过其<code>xgb.train</code>函数中的<code>feval</code>参数 (parameter)或使用scikit-learn API时的<code>eval_metric</code>参数（该参数可接受可调用对象）支持自定义评估函数。对于<code>xgb.train</code>，函数签名应接受<code>preds</code>（预测值）和<code>dtrain</code>（一个包含真实标签的<code>xgb.DMatrix</code>对象）。</p>\n<pre><code class=\"language-python\">import numpy as np\nimport xgboost as xgb\nfrom sklearn.metrics import mean_absolute_percentage_error # 示例指标\n\n# 定义一个自定义评估指标：平均绝对百分比误差（MAPE）\n# 注意：XGBoost的预测结果在转换前可能是原始分数\n# 根据您的目标函数进行相应调整（例如，对二分类问题应用sigmoid）\ndef xg_mape(preds: np.ndarray, dtrain: xgb.DMatrix):\n    \"\"\"XGBoost的自定义MAPE指标\"\"\"\n    labels = dtrain.get_label()\n    # 确保标签没有除以零或接近零的情况\n    # 裁剪标签以避免不稳定，或适当处理\n    epsilon = 1e-6 \n    safe_labels = np.maximum(np.abs(labels), epsilon)\n    mape = np.mean(np.abs((labels - preds) / safe_labels))\n    return 'MAPE', mape # 默认情况下，如果未另行指定，XGBoost认为自定义指标越低越好\n\n# --- 示例数据（请替换为您的实际数据）---\nX_train = np.random.rand(100, 5)\ny_train = np.random.rand(100) * 10\nX_eval = np.random.rand(50, 5)\ny_eval = np.random.rand(50) * 10\n\ndtrain = xgb.DMatrix(X_train, label=y_train)\ndeval = xgb.DMatrix(X_eval, label=y_eval)\n\n# --- 使用自定义指标进行训练 ---\nparams = {\n    'objective': 'reg:squarederror',\n    'eta': 0.1,\n    'max_depth': 3\n}\n\nevals = [(dtrain, 'train'), (deval, 'eval')]\n\n# 将自定义函数传递给feval\n# 要用于提前停止，将maximize设置为False，因为MAPE应最小化\nbst = xgb.train(\n    params,\n    dtrain,\n    num_boost_round=100,\n    evals=evals,\n    feval=xg_mape,\n    # 使用自定义指标进行提前停止：\n    early_stopping_rounds=10, \n    # 指定maximize=False，因为MAPE越低越好\n    # 注意：默认情况下，XGBoost在evals_result中查看*最后一个*指标进行停止\n    # 或者在使用sklearn API的fit方法时明确指定指标。\n    # 对于xgb.train，它通常隐式使用'eval_metric'列表中的最后一个指标\n    # 或'maximize'中指定的指标。我们假设我们希望在eval-MAPE上停止。\n    # 如果存在多个指标，可能需要进行控制。\n    # 为了明确起见，请查看XGBoost文档中关于feval + early_stopping特定版本行为。\n    verbose_eval=10 # 每10轮打印一次评估结果\n)\n\nprint(f\"\\n验证集上的最佳MAPE: {bst.best_score}\") \n</code></pre>\n<p><em>请注意：</em> 当<code>xgb.train</code>与<code>feval</code>一起使用时，除非将<code>maximize=True</code>传递给<code>xgb.train</code>，否则XGBoost通常会假设指标应最小化。请查阅您特定版本的文档，特别是关于当使用多个标准和自定义指标时，提前停止是如何影响的。对于scikit-learn接口（<code>XGBRegressor</code>/<code>XGBClassifier</code>），您将可调用对象传递给<code>eval_metric</code>，并通过<code>eval_set</code>以及可能的专用提前停止参数来控制最大化。</p>\n<h3>在LightGBM中实现自定义指标</h3>\n<p>LightGBM使用与<code>lgb.train</code>中<code>feval</code>参数 (parameter)非常相似的机制。函数签名期望<code>preds</code>和<code>train_data</code>（一个<code>lgb.Dataset</code>对象）。</p>\n<pre><code class=\"language-python\">import numpy as np\nimport lightgbm as lgb\nfrom sklearn.metrics import matthews_corrcoef # 示例指标\n\n# 定义一个自定义评估指标：Matthews相关系数（MCC）\n# 假设是带有概率输出的二分类\ndef lgbm_mcc(preds: np.ndarray, train_data: lgb.Dataset):\n    \"\"\"LightGBM的自定义MCC指标\"\"\"\n    labels = train_data.get_label()\n    # 将概率转换为二元预测（阈值为0.5）\n    pred_labels = (preds > 0.5).astype(int)\n    mcc = matthews_corrcoef(labels, pred_labels)\n    # 返回格式：(指标名称, 值, 是否越高越好)\n    return 'MCC', mcc, True \n\n# --- 示例数据（请替换为您的实际数据）---\nX_train = np.random.rand(100, 5)\ny_train = np.random.randint(0, 2, size=100)\nX_eval = np.random.rand(50, 5)\ny_eval = np.random.randint(0, 2, size=50)\n\nlgb_train = lgb.Dataset(X_train, label=y_train)\nlgb_eval = lgb.Dataset(X_eval, label=y_eval, reference=lgb_train)\n\n# --- 使用自定义指标进行训练 ---\nparams = {\n    'objective': 'binary',\n    'metric': 'binary_logloss', # 仍可追踪标准指标\n    'boosting_type': 'gbdt',\n    'num_leaves': 31,\n    'learning_rate': 0.05,\n    'feature_fraction': 0.9\n}\n\nevals_result = {} # 用于存储评估结果\n\n# 将自定义函数列表传递给feval\nbst = lgb.train(\n    params,\n    lgb_train,\n    num_boost_round=100,\n    valid_sets=[lgb_train, lgb_eval],\n    valid_names=['train', 'eval'],\n    evals_result=evals_result,\n    feval=[lgbm_mcc], # 作为列表传递\n    callbacks=[\n        lgb.early_stopping(stopping_rounds=10, first_metric_only=False, verbose=True), \n        lgb.log_evaluation(period=10)\n    ]\n    # 提前停止将使用params['metric']中指定的指标\n    # 以及由feval函数返回的任何指标。它正确使用'is_higher_better'\n    # 标志。params中的'metric'参数决定优化目标。\n    # params中的'metric'和feval指标都会被监控用于提前停止。\n)\n\nprint(\"\\n包含自定义MCC的评估结果：\")\n# print(evals_result) # 完整历史记录\nprint(f\"验证集上的最佳MCC: {max(evals_result['eval']['MCC'])}\") \n</code></pre>\n<p>LightGBM要求自定义指标函数明确返回<code>is_higher_better</code>布尔值，这使得它与提前停止一起使用起来很简单。您可以在<code>feval</code>列表中传递多个自定义指标函数。</p>\n<h3>在CatBoost中实现自定义指标</h3>\n<p>CatBoost也通过其<code>fit</code>方法（针对<code>CatBoostClassifier</code>/<code>CatBoostRegressor</code>类）或<code>train</code>函数中的<code>eval_metric</code>参数 (parameter)支持自定义指标。您可以传递一个表示内置指标的字符串，或一个带有特定方法的Python对象（通常是一个类）。</p>\n<p>对于自定义指标，您通常需要定义一个至少包含以下方法的类：</p>\n<ul>\n<li><code>__init__(self)</code>：构造函数（可选）。</li>\n<li><code>is_max_optimal(self)</code>：如果指标值越高越好，则返回<code>True</code>，否则返回<code>False</code>。</li>\n<li><code>evaluate(self, approxes, target, weight)</code>：计算指标。\n<ul>\n<li><code>approxes</code>：包含每个文档的预测原始分数/值的列表的列表。对于多分类，每个类别一个列表。</li>\n<li><code>target</code>：真实标签。</li>\n<li><code>weight</code>：样本权重 (weight)（可以是<code>None</code>）。</li>\n<li>应返回一个元组：<code>（指标值之和，权重之和）</code>。CatBoost在内部对其进行平均。</li>\n</ul>\n</li>\n<li><code>get_final_error(self, error, weight)</code>：从<code>evaluate</code>返回的和中计算最终指标值。</li>\n</ul>\n<pre><code class=\"language-python\">import numpy as np\nfrom catboost import CatBoostClassifier, Pool\nfrom sklearn.metrics import f1_score # 示例指标\n\n# 定义一个用于F1分数的自定义指标类（二分类）\nclass CatBoostF1Metric:\n    def is_max_optimal(self):\n        # True，因为F1分数越高越好\n        return True\n\n    def evaluate(self, approxes, target, weight):\n        # approxes是列表的列表，二分类需要扁平化\n        # 内部列表包含原始预测分数（例如，对数几率）\n        # 使用sigmoid将原始分数转换为概率\n        assert len(approxes) == 1 # 预期二分类只有一个列表\n        preds_raw = np.array(approxes[0])\n        preds_prob = 1.0 / (1.0 + np.exp(-preds_raw))\n        \n        # 将概率转换为二元预测\n        pred_labels = (preds_prob > 0.5).astype(int)\n        \n        # 计算F1分数\n        f1 = f1_score(target, pred_labels)\n        \n        # CatBoost期望指标值之和与权重之和\n        # 对于在整个数据集上计算的F1，我们可以返回 (f1 * 计数, 计数)\n        # 或者，如果提供了权重，则进行处理。这里假设没有权重或权重相等。\n        count = len(target) if target is not None else 0\n        if count == 0:\n             return 0.0, 0.0 # 如果目标为空，避免除以零\n        \n        # 返回 (sum_metric, sum_weight)\n        # 这里，权重实际上是用于简单平均的样本数量\n        return f1 * count, count \n\n    def get_final_error(self, error_sum, weight_sum):\n        # 计算最终的平均误差\n        if weight_sum == 0:\n             return 0.0 # 避免除以零\n        return error_sum / weight_sum\n\n# --- 示例数据（请替换为您的实际数据）---\nX_train = np.random.rand(100, 5)\ny_train = np.random.randint(0, 2, size=100)\nX_eval = np.random.rand(50, 5)\ny_eval = np.random.randint(0, 2, size=50)\n\ntrain_pool = Pool(X_train, label=y_train)\neval_pool = Pool(X_eval, label=y_eval)\n\n# --- 使用自定义指标进行训练 ---\nmodel = CatBoostClassifier(\n    iterations=100,\n    learning_rate=0.1,\n    loss_function='Logloss',\n    custom_metric=[CatBoostF1Metric()], # 传递自定义指标类实例或列表\n    eval_metric='Logloss', # 仍可用于优化/报告的标准指标\n    early_stopping_rounds=10,\n    verbose=10\n)\n\nmodel.fit(\n    train_pool,\n    eval_set=eval_pool\n    # 默认情况下，CatBoost使用eval_metric中的第一个指标进行优化，\n    # 但会监控所有指定的指标（包括自定义指标）用于提前停止。\n    # 它使用自定义指标类中is_max_optimal()方法的结果。\n)\n\nprint(\"\\n训练期间（在评估集上）的自定义F1指标值：\")\neval_metrics = model.get_evals_result()\nif 'learn' in eval_metrics and 'CatBoostF1Metric' in eval_metrics['learn']:\n    print(f\"训练集F1: {eval_metrics['learn']['CatBoostF1Metric'][-1]:.4f}\")\nif 'validation' in eval_metrics and 'CatBoostF1Metric' in eval_metrics['validation']:\n    print(f\"评估集F1: {eval_metrics['validation']['CatBoostF1Metric'][-1]:.4f}\")\n\n</code></pre>\n<p>CatBoost为自定义指标提供的基于类的方法提供了一种结构化的方式来封装指标的逻辑和属性。请记住根据您的任务类型（二分类、多分类、回归）处理<code>approxes</code>的特定格式。</p>\n<h3>自定义指标的考量</h3>\n<ul>\n<li><strong>计算成本：</strong> 自定义指标会频繁评估，可能在每个提升轮次以及交叉验证折叠中进行。请确保您的实现计算高效。如果可能，请避免冗余计算或高度复杂的运算。向量 (vector)化操作（如NumPy）通常比显式循环更受欢迎。</li>\n<li><strong>正确性：</strong> 在将自定义指标函数或类集成到提升管道之前，请使用已知输入和预期输出来独立彻底测试它。在训练循环内调试可能会很困难。</li>\n<li><strong>与提前停止一起使用：</strong> <code>is_higher_better</code>标志（或CatBoost中的<code>is_max_optimal</code>方法）对于提前停止正确工作很重要。请确保它准确反映指标是应最大化还是最小化。提升库将使用此信息来判断验证集上的性能是否正在提升。</li>\n<li><strong>预测格式：</strong> 注意传递给您函数的预测（<code>preds</code>或<code>approxes</code>）的格式。它们可能是原始分数（例如，逻辑回归的对数几率）、概率或最终预测值，具体取决于库、目标函数和特定的API调用。根据需要调整您的指标计算（例如，如果需要，应用sigmoid或softmax）。</li>\n</ul>\n<p>通过实现自定义评估指标，您可以获得对模型性能如何追踪和评估的更细致控制，从而使评估过程更贴合您的机器学习 (machine learning)任务或业务目标的特定要求。此能力，结合自定义损失函数 (loss function)和可解释性工具，为构建高度定制化且有效的梯度提升模型提供了一个功能强大的工具集。</p>",
+  "slug": "custom-evaluation-metrics-boosting",
+  "updates": [],
+  "references": [
+    {
+      "id": 6385,
+      "title": "Custom Evaluation Metric",
+      "author": "XGBoost Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html#custom-evaluation-metric",
+      "doi": "",
+      "note": "官方文档，详细说明了如何在XGBoost中实现自定义评估指标 (feval)，包括参数规范和返回格式。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:08.674306Z",
+      "updated_at": "2025-09-08T05:35:22.497267Z"
+    },
+    {
+      "id": 6387,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.1007/978-0-387-84858-7",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "一本统计学习的经典教科书，全面介绍了各种机器学习算法、损失函数和模型评估的一般原则，对理解评估指标的理论基础有参考价值。",
+      "order": 3,
+      "created_at": "2025-09-05T01:22:08.681303Z",
+      "updated_at": "2025-09-08T05:35:24.965581Z"
+    },
+    {
+      "id": 6388,
+      "title": "Introduction to Information Retrieval",
+      "author": "Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze",
+      "year": "2008",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nlp.stanford.edu/IR-book/information-retrieval.html",
+      "doi": "",
+      "note": "一本权威的信息检索教科书，其中包含对平均精度均值 (MAP@K) 和归一化折损累计增益 (NDCG) 等高级评估指标的详细解释，特别适用于推荐系统和排序任务。",
+      "order": 4,
+      "created_at": "2025-09-05T01:22:08.684037Z",
+      "updated_at": "2025-09-08T05:35:20.755369Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

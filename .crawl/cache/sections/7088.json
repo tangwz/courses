@@ -1,0 +1,45 @@
+{
+  "id": 7088,
+  "title": "在 Python 中使用 Librosa 处理音频数据",
+  "meta_title": "在 Python 中使用 Librosa 处理音频",
+  "meta_description": "Python 中 Librosa 库用于加载、操作和分析音频文件的使用指南。",
+  "content": "<p>Python 自带处理文本和数字的功能，但处理音频需要专门的工具。原始音频数据是表示信号振幅随时间变化的数字序列，需要从文件中加载到程序可以操作的格式，最常见的是 NumPy 数组。这时，<code>Librosa</code>——一个功能强大且广受欢迎的 Python 音乐和音频分析包——就派上用场了。它提供加载、保存和分析音频的核心功能，作为我们语音识别流程的构建块。</p>\n<h3>安装 Librosa</h3>\n<p>在使用音频文件之前，你需要安装 <code>Librosa</code> 库。因为它在 Python 包索引 (PyPI) 上可用，所以你可以使用 <code>pip</code> 进行安装。还建议安装 <code>soundfile</code>，<code>Librosa</code> 用它作为后端来写入音频文件。</p>\n<pre><code class=\"language-bash\">pip install librosa soundfile\n</code></pre>\n<h3>加载音频文件</h3>\n<p>加载音频文件的主函数是 <code>librosa.load()</code>。这个单一函数处理很多复杂情况，例如解码不同的音频格式（如 .wav、.mp3）并将信号转换为标准化的数值格式。</p>\n<p>当你调用 <code>librosa.load()</code> 时，它会返回两个重要值：</p>\n<ol>\n<li><strong>时间序列 <code>y</code></strong>：一个 NumPy 数组，包含音频信号的振幅值。默认情况下，<code>Librosa</code> 会对数据进行归一化 (normalization)，使值范围在 -1.0 到 1.0 之间。这就是我们之前讨论的数字信号 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi><mo stretchy=\"false\">[</mo><mi>n</mi><mo stretchy=\"false\">]</mo></mrow><annotation encoding=\"application/x-tex\">x[n]</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">x</span><span class=\"mopen\">[</span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">]</span></span></span></span>。</li>\n<li><strong>采样率 <code>sr</code></strong>：每秒音频样本的数量。</li>\n</ol>\n<p>让我们看看它的作用。假设我们有一个名为 <code>sample_utterance.wav</code> 的音频文件。我们可以这样加载它：</p>\n<pre><code class=\"language-python\">import librosa\n\n# 定义音频文件路径\naudio_path = 'sample_utterance.wav'\n\n# 加载音频文件\ny, sr = librosa.load(audio_path)\n\nprint(f\"音频时间序列形状: {y.shape}\")\nprint(f\"采样率: {sr} Hz\")\n</code></pre>\n<p>如果你运行这段代码，你可能会看到类似这样的输出：</p>\n<pre><code>Audio time series shape: (110250,)\nSampling rate: 22050 Hz\n</code></pre>\n<p>这告诉我们音频信号 <code>y</code> 是一个包含 110,250 个样本的一维数组。采样率 <code>sr</code> 是 22,050 Hz，这是 <code>librosa.load()</code> 的默认值。这意味着 <code>Librosa</code> 在加载过程中已自动将音频重采样到此速率。音频的时长就是样本数量除以采样率：<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>110250</mn><mi mathvariant=\"normal\">/</mi><mn>22050</mn><mo>=</mo><mn>5</mn></mrow><annotation encoding=\"application/x-tex\">110250 / 22050 = 5</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">110250/22050</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">5</span></span></span></span> 秒。</p>\n<h3>控制采样率</h3>\n<p>对于语音识别，在所有数据中使用一致的采样率是很重要的。虽然 22,050 Hz 是音频处理中常见的默认值，但 16,000 Hz（或 16 kHz）的采样率是 ASR 的普遍标准。这个速率足以捕捉人类语音所需的频率，并有助于减少数据处理的计算成本。</p>\n<p>你可以使用 <code>librosa.load()</code> 中的 <code>sr</code> 参数 (parameter)来控制采样率：</p>\n<ul>\n<li><code>sr=16000</code>：加载音频并将其重采样到 16,000 Hz。</li>\n<li><code>sr=None</code>：以原始的、固有的采样率加载音频，避免任何重采样。</li>\n</ul>\n<p>让我们再次加载文件，但这次保留其固有采样率，然后将其重采样到 16 kHz。</p>\n<pre><code class=\"language-python\"># 以固有采样率加载\ny_native, sr_native = librosa.load(audio_path, sr=None)\nprint(f\"固有采样率: {sr_native} Hz\")\nprint(f\"固有采样率下的形状: {y_native.shape}\")\n\n# 加载并重采样到 16 kHz\ny_16k, sr_16k = librosa.load(audio_path, sr=16000)\nprint(f\"新采样率: {sr_16k} Hz\")\nprint(f\"16kHz 采样率下的形状: {y_16k.shape}\")\n</code></pre>\n<p>请注意，当我们重采样音频时，数组的形状是如何变化的。如果原始文件以 44.1 kHz 采样，将其重采样到 16 kHz 会得到一个更小的数组，因为表示相同音频时长所需的样本数更少。</p>\n<h3>基本音频操作</h3>\n<p><code>Librosa</code> 不仅用于加载数据；它还提供一套用于音频操作的工具。一个常见的预处理步骤是修剪语音中的开头和结尾静音。这很有用，因为它移除了信号中不包含语音的部分，使 ASR 模型关注于相关的音频。<code>librosa.effects.trim</code> 函数正是执行此操作。</p>\n<pre><code class=\"language-python\">import librosa.effects\n\n# 加载音频文件\ny, sr = librosa.load(audio_path, sr=16000)\n\n# 修剪开头和结尾的静音\ny_trimmed, _ = librosa.effects.trim(y)\n\nprint(f\"原始长度: {len(y)}\")\nprint(f\"修剪后长度: {len(y_trimmed)}\")\n</code></pre>\n<h3>音频波形可视化</h3>\n<p>我们从 <code>Librosa</code> 获得的音频时间序列数组 <code>y</code> 直接表示音频波形。将此数组对时间绘制，可以获得声音的可视化表示，这非常有启发性。x 轴表示时间，y 轴表示信号的振幅。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-kkv8lj\" \n              data-plot-definition='{\"layout\": {\"title\": \"音频波形\", \"xaxis\": {\"title\": \"时间 (样本)\"}, \"yaxis\": {\"title\": \"振幅\", \"range\": [-1, 1]}, \"width\": 700, \"height\": 350, \"template\": \"plotly_white\"}, \"data\": [{\"x\": [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300], \"y\": [0.0, 0.02, 0.05, 0.08, 0.1, 0.09, 0.05, 0.01, -0.04, -0.09, -0.15, -0.2, -0.24, -0.25, -0.23, -0.18, -0.12, -0.05, 0.0, 0.04, 0.06, 0.07, 0.06, 0.03, 0.0, -0.03, -0.07, -0.11, -0.16, -0.22, -0.3, -0.4, -0.5, -0.58, -0.62, -0.6, -0.55, -0.45, -0.32, -0.2, -0.1, 0.0, 0.12, 0.25, 0.4, 0.55, 0.68, 0.75, 0.78, 0.75, 0.68, 0.55, 0.4, 0.25, 0.1, -0.05, -0.15, -0.2, -0.22, -0.2, -0.15], \"mode\": \"lines\", \"name\": \"波形\", \"line\": {\"color\": \"#4263eb\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-kkv8lj\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>音频波形的可视化。信号的振幅在零点附近波动，声音越大的部分对应于更高的绝对振幅值。</p>\n</blockquote>\n<p>此图显示了信号的原始时域表示。在接下来的部分中，我们将了解如何将这个一维信号转换为更具信息量的二维表示——频谱图，它更适合语音识别模型。</p>",
+  "slug": "working-with-audio-data-python",
+  "updates": [],
+  "references": [
+    {
+      "id": 19262,
+      "title": "Discrete-Time Signal Processing",
+      "author": "Alan V. Oppenheim, Ronald W. Schafer, John R. Buck",
+      "year": "1999",
+      "publisher": "Prentice Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://library.rice.edu/catalog/98050398",
+      "doi": "",
+      "note": "数字信号处理的经典教材，解释了采样、离散时间信号及其表示等核心概念。",
+      "order": 2,
+      "created_at": "2025-09-06T13:04:26.973857Z",
+      "updated_at": "2025-09-10T04:08:08.460034Z"
+    },
+    {
+      "id": 19263,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "语音识别的综合教材，为音频预处理步骤和ASR系统特定采样率的重要性提供了背景知识。",
+      "order": 3,
+      "created_at": "2025-09-06T13:04:26.976931Z",
+      "updated_at": "2025-09-10T04:07:57.328933Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

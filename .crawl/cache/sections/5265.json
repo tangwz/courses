@@ -1,0 +1,61 @@
+{
+  "id": 5265,
+  "title": "设置工作目录和入口点",
+  "meta_title": "机器学习 Dockerfile 中的 WORKDIR、ENTRYPOINT、CMD",
+  "meta_description": "定义机器学习容器的执行环境和默认命令。",
+  "content": "<p>在为机器学习 (machine learning)项目创建 Docker 镜像时，在完成基础镜像的建立、依赖的安装以及使用 <code>COPY</code> 或 <code>ADD</code> 等指令将项目文件复制到镜像中等任务之后，有必要定义容器启动时的行为方式。具体来说，您需要告知 Docker 命令应在容器内部何处执行，以及默认应运行哪个命令。这通过 Dockerfile 中的 <code>WORKDIR</code>、<code>ENTRYPOINT</code> 和 <code>CMD</code> 指令来实现。它们对于让您的容器化机器学习应用可运行且易于使用非常重要。</p>\n<h3>使用 WORKDIR 设置执行环境</h3>\n<p><code>WORKDIR</code> 指令为 Dockerfile 中所有后续的 <code>RUN</code>、<code>CMD</code>、<code>ENTRYPOINT</code>、<code>COPY</code> 和 <code>ADD</code> 指令设置工作目录。可以将其理解为在构建和运行镜像的过程中更改当前目录 (<code>cd</code>)。</p>\n<p>如果未指定 <code>WORKDIR</code>，Docker 会在根目录 (<code>/</code>) 中执行后续命令。明确设置 <code>WORKDIR</code> 可以使您的 Dockerfile 指令更清晰，并减少对绝对路径的依赖。</p>\n<p><strong>优点：</strong></p>\n<ol>\n<li><strong>可读性：</strong> 避免在 Dockerfile 中分散使用绝对路径。</li>\n<li><strong>可移植性：</strong> 便于以后在镜像中重组项目结构。</li>\n<li><strong>一致性：</strong> 确保运行 Python 脚本等命令相对于已知项目目录执行。</li>\n</ol>\n<p><strong>示例：</strong></p>\n<p>假设您的宿主机上有一个机器学习 (machine learning)项目，其结构如下：</p>\n<pre><code>my_ml_project/\n├── Dockerfile\n├── requirements.txt\n├── src/\n│   ├── train.py\n│   └── predict.py\n└── data/\n    └── dataset.csv\n</code></pre>\n<p>与编写 <code>COPY src /app/src</code> 然后 <code>RUN python /app/src/train.py</code> 相比，您可以使用 <code>WORKDIR</code>：</p>\n<pre><code class=\"language-dockerfile\"># Dockerfile 片段\n# ... (FROM，安装依赖)\n\n# 设置工作目录\nWORKDIR /app\n\n# 相对于 WORKDIR 复制应用程序代码\nCOPY src/ ./src/\nCOPY requirements.txt .\n\n# 安装依赖 (pip install -r requirements.txt)\n\n# 复制数据（可能通过卷处理更好，参阅第 3 章）\nCOPY data/ ./data/\n\n# 后续命令如 CMD 或 ENTRYPOINT 将从 /app 运行\nCMD [\"python\", \"src/train.py\"]\n</code></pre>\n<p>在此示例中，<code>WORKDIR /app</code> 会创建 <code>/app</code> 目录（如果不存在），并将其设置为当前目录。<code>COPY</code> 指令现在使用相对目标路径（<code>./src/</code>、<code>.</code>、<code>./data/</code>），将文件复制<em>到</em> <code>/app</code> 中。最终的 <code>CMD</code> 在 <code>/app</code> 作为当前目录的假定下执行 <code>python src/train.py</code>。</p>\n<h3>使用 ENTRYPOINT 定义容器的可执行程序</h3>\n<p><code>ENTRYPOINT</code> 指令将容器配置为可执行程序运行。它指定了容器启动时<em>始终</em>会执行的命令。提供给 <code>docker run &#x3C;image> [arguments]</code> 的任何命令行参数 (parameter)都会附加到 <code>ENTRYPOINT</code> 命令之后。</p>\n<p><code>ENTRYPOINT</code> 常用于您希望容器的主要目的是运行特定应用程序或脚本的场景。</p>\n<p>有两种形式：</p>\n<ol>\n<li><strong>Exec 形式（推荐）：</strong> <code>ENTRYPOINT [\"executable\", \"param1\", \"param2\"]</code>\n<ul>\n<li>这是推荐的形式。它直接执行命令，不调用命令 shell。通过 <code>docker run</code> 传递的参数会直接附加在指定参数之后。</li>\n</ul>\n</li>\n<li><strong>Shell 形式：</strong> <code>ENTRYPOINT command param1 param2</code>\n<ul>\n<li>此形式在 shell (<code>/bin/sh -c</code>) 中运行命令。它对于环境变量替换很有用，但在信号处理或命令包含 shell 元字符时，可能会出现意外行为。</li>\n</ul>\n</li>\n</ol>\n<p><strong>示例 (Exec 形式)：</strong></p>\n<p>假设您希望容器始终执行 Python 脚本。</p>\n<pre><code class=\"language-dockerfile\"># Dockerfile 片段\n# ... (FROM、WORKDIR、COPY 等)\n\nENTRYPOINT [\"python\"]\n\n# 如果未向 docker run 提供参数，则运行此默认脚本\nCMD [\"src/train.py\"]\n</code></pre>\n<p>当您运行此容器时：</p>\n<ul>\n<li><code>docker run my-ml-image</code>：执行 <code>python src/train.py</code>（<code>CMD</code> 为 <code>ENTRYPOINT</code> 提供默认参数）。</li>\n<li><code>docker run my-ml-image src/predict.py --model /app/models/model.pkl</code>：执行 <code>python src/predict.py --model /app/models/model.pkl</code>（提供的参数会覆盖 <code>CMD</code> 并附加到 <code>ENTRYPOINT</code> 之后）。</li>\n</ul>\n<p><code>ENTRYPOINT</code> 确保 <code>python</code> 始终是主命令，使容器表现得像一个专用的 Python 脚本运行器。</p>\n<h3>使用 CMD 提供默认命令或参数 (parameter)</h3>\n<p><code>CMD</code> 指令为运行中的容器提供默认值。这些默认值可以包含可执行程序，但它们通常用于为 <code>ENTRYPOINT</code> 指定默认参数。如果单独使用，<code>CMD</code> 则指定要运行的默认命令。</p>\n<p>值得注意的是，如果用户向 <code>docker run &#x3C;image> [arguments]</code> 提供了参数，则整个 <code>CMD</code> 指令都会被覆盖。</p>\n<p><code>CMD</code> 也有三种形式：</p>\n<ol>\n<li><strong>Exec 形式（ENTRYPOINT 推荐）：</strong> <code>CMD [\"param1\",\"param2\"]</code>（用作 <code>ENTRYPOINT</code> 的默认参数）</li>\n<li><strong>Exec 形式（独立使用）：</strong> <code>CMD [\"executable\",\"param1\",\"param2\"]</code>（如果没有 <code>ENTRYPOINT</code>，则作为默认命令）</li>\n<li><strong>Shell 形式：</strong> <code>CMD command param1 param2</code>（通过 <code>/bin/sh -c</code> 运行的默认命令）</li>\n</ol>\n<p><strong>用例：</strong></p>\n<ol>\n<li>\n<p><strong><code>ENTRYPOINT</code> 的默认参数（最常见的组合使用方式）：</strong></p>\n<pre><code class=\"language-dockerfile\">WORKDIR /app\nCOPY src/ ./src/\nENTRYPOINT [\"python\", \"src/run_experiment.py\"]\n# 如果未通过 'docker run' 提供参数，则使用默认参数\nCMD [\"--data\", \"data/dataset.csv\", \"--epochs\", \"10\"]\n</code></pre>\n<ul>\n<li>运行 <code>docker run my-ml-image</code> 会执行：<code>python src/run_experiment.py --data data/dataset.csv --epochs 10</code></li>\n<li>运行 <code>docker run my-ml-image --data data/other.csv --epochs 20</code> 会执行：<code>python src/run_experiment.py --data data/other.csv --epochs 20</code>（<code>CMD</code> 被完全替换）。</li>\n</ul>\n</li>\n<li>\n<p><strong>默认命令（无 <code>ENTRYPOINT</code>）：</strong></p>\n<pre><code class=\"language-dockerfile\">WORKDIR /app\nCOPY src/ ./src/\n# 未定义 ENTRYPOINT\nCMD [\"python\", \"src/train.py\"]\n</code></pre>\n<ul>\n<li>运行 <code>docker run my-ml-image</code> 会执行：<code>python src/train.py</code></li>\n<li>运行 <code>docker run my-ml-image python src/predict.py</code> 会执行：<code>python src/predict.py</code>（整个默认 <code>CMD</code> 被提供的命令替换）。</li>\n</ul>\n</li>\n</ol>\n<h3>有效地结合使用 ENTRYPOINT 和 CMD</h3>\n<p>最常用且功能强大的模式是使用 <code>ENTRYPOINT</code> 指定固定的可执行程序（如 <code>python</code> 或包装脚本），并使用 <code>CMD</code> 指定默认的、可覆盖的参数 (parameter)（如脚本名称或默认超参数 (hyperparameter)）。</p>\n<p><strong>最佳实践：</strong></p>\n<ul>\n<li><strong>使用 <code>WORKDIR</code>：</strong> 始终设置 <code>WORKDIR</code> 以在容器内建立明确的执行环境。<code>/app</code> 是一个常见的约定。</li>\n<li><strong>偏好 Exec 形式：</strong> 对 <code>ENTRYPOINT</code> 和 <code>CMD</code> 都使用 JSON 数组语法（<code>[\"executable\", \"param1\"]</code>），以避免 shell 处理的怪异行为，并使参数处理更明确。</li>\n<li><strong><code>ENTRYPOINT</code> 用于可执行程序：</strong> 如果您的容器旨在运行特定命令或表现得像一个可执行程序，请使用 <code>ENTRYPOINT</code>。示例：<code>ENTRYPOINT [\"python\"]</code>，<code>ENTRYPOINT [\"./my_inference_server\"]</code>。</li>\n<li><strong><code>CMD</code> 用于默认值：</strong> 使用 <code>CMD</code> 为 <code>ENTRYPOINT</code> 提供默认参数，或指定一个易于覆盖的默认命令。示例：<code>CMD [\"my_script.py\", \"--default-flag\"]</code>。</li>\n</ul>\n<p>通过仔细定义 <code>WORKDIR</code>、<code>ENTRYPOINT</code> 和 <code>CMD</code>，您可以创建不仅可重现而且行为可预测、用户友好的 Docker 镜像，无论是运行训练任务还是部署模型。它们定义了与容器化机器学习 (machine learning)应用程序交互的界面。</p>",
+  "slug": "workdir-entrypoint-cmd",
+  "updates": [],
+  "references": [
+    {
+      "id": 14534,
+      "title": "Dockerfile reference",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/dockerfile/",
+      "doi": "",
+      "note": "官方文档，详细介绍了所有 Dockerfile 指令，包括 WORKDIR、ENTRYPOINT 和 CMD 的语法和用法示例。",
+      "order": 1,
+      "created_at": "2025-09-05T08:54:10.994843Z",
+      "updated_at": "2025-09-09T13:58:07.170496Z"
+    },
+    {
+      "id": 14535,
+      "title": "Docker: Up & Running: Shipping Reliable Containers in Production",
+      "author": "Sean P. Kane, Karl Matthias",
+      "year": "2018",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/docker-up-running/9781492087529/",
+      "doi": "",
+      "note": "一份实用指南，解释了 Docker 概念、Dockerfile 和生产环境中的容器化，有助于理解指令的上下文。",
+      "order": 2,
+      "created_at": "2025-09-05T08:54:11.001471Z",
+      "updated_at": "2025-09-09T13:58:27.395114Z"
+    },
+    {
+      "id": 14536,
+      "title": "Best practices for writing Dockerfiles",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/build/building/best-practices/",
+      "doi": "",
+      "note": "提供关于 Dockerfile 结构、提高效率以及有效管理 WORKDIR、ENTRYPOINT 和 CMD 等指令的官方建议和模式。",
+      "order": 3,
+      "created_at": "2025-09-05T08:54:11.006143Z",
+      "updated_at": "2025-09-09T13:58:10.056248Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

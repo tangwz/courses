@@ -1,0 +1,45 @@
+{
+  "id": 6100,
+  "title": "吞吐量批处理策略",
+  "meta_title": "推理批处理技术",
+  "meta_description": "实施动态批处理以提升总体推理吞吐量。",
+  "content": "<p>优化单个令牌生成（通过KV缓存和专用注意力机制 (attention mechanism)等方法）能够显著降低每一步的延迟和内存开销，但要最大化LLM推理 (inference)服务器的总体<em>吞吐量 (throughput)</em>，就需要同时处理多个请求。GPU是深度学习 (deep learning)的运算主力，在进行大型矩阵乘法时能达到最佳性能。逐个处理请求通常会导致GPU利用率不足，因为控制逻辑和步骤间的数据传输可能占据单个序列的大部分计算时间。批处理策略通过将多个推理请求组合在一起，让GPU并行处理它们，从而分摊开销并增加每秒生成的令牌数量。</p>\n<h2>静态批处理</h2>\n<p>静态批处理是最简单的方法。在这种方法中，推理 (inference)服务器会等待，直到预设数量的请求（<code>batch_size</code>）到达或发生超时。然后这些请求被分组，填充到批处理中最长序列的长度，并一起处理。</p>\n<p>填充是指在批处理中较短的序列后添加特殊令牌，使所有序列具有相同的长度。这会生成GPU上进行高效矩阵乘法所需的统一张量形状。注意力掩码在这里很实用，它能确保模型在自注意力 (self-attention)计算期间不会关注这些填充令牌。</p>\n<pre><code class=\"language-python\">import torch\n\n# 示例：准备一个静态批处理\nrequests = [\n    \"This is sequence one.\",\n    \"A shorter sequence.\",\n    \"This is the third sequence, and it's quite long.\"\n]\n\n# 假设分词器添加特殊令牌并转换为ID\n# 分词后的序列（简化ID）\nseq1_ids = [101, 2023, 2003, 5537, 2028, 1012, 102] # len=7\nseq2_ids = [101, 1037, 9087, 5537, 1012, 102]      # len=6\nseq3_ids = [\n    101, 2023, 2003, 1996, 2353, 5537, 1010, 1998, 2009, 1005, 1055,\n    3747, 2146, 1012, 102\n] # len=15\n\nsequences = [seq1_ids, seq2_ids, seq3_ids]\nmax_len = max(len(seq) for seq in sequences) # max_len = 15\npadding_token_id = 0 # 假设PAD令牌ID为0\n\npadded_sequences = []\nattention_masks = []\n\nfor seq in sequences:\n    pad_len = max_len - len(seq)\n    padded_seq = seq + [padding_token_id] * pad_len\n    # 屏蔽填充部分\n    attention_mask = ([1] * len(seq) +\n                      [0] * pad_len)\n\n    padded_sequences.append(padded_seq)\n    attention_masks.append(attention_mask)\n\n# 转换为张量作为模型输入\ninput_ids = torch.tensor(padded_sequences)\nattention_mask = torch.tensor(attention_masks)\n\nprint(\"Input IDs Shape:\", input_ids.shape) # torch.Size([3, 15])\nprint(\"Attention Mask Shape:\", attention_mask.shape) # torch.Size([3, 15])\n\n# 现在 input_ids 和 attention_mask 可以作为模型输入\n# model(input_ids=input_ids,\n#       attention_mask=attention_mask, ...)\n</code></pre>\n<p><strong>静态批处理的局限：</strong></p>\n<ul>\n<li><strong>低效：</strong> 大量计算资源浪费在填充令牌上，尤其当批处理中序列长度差异很大时。批处理时间由最长序列决定。</li>\n<li><strong>队头阻塞：</strong> 较短的请求可能会经历更高的延迟，因为它们需要等待足够多的请求来形成一个完整批处理，或者等待同一批处理中的一个长请求完成。</li>\n</ul>\n<h2>动态批处理</h2>\n<p>动态批处理旨在通过在小时间窗内对到达的请求进行分组，而不是等待固定的批处理大小，从而提高GPU利用率，优于静态批处理。这通常会导致批处理中的序列长度差异更大。尽管它仍然需要填充，但服务器可以更频繁地开始处理批处理。</p>\n<p>其主要思路是灵活性。服务器不使用固定的<code>batch_size</code>，而是在短时间内（例如10毫秒）积累请求，然后将所有已到达的请求作为一个批处理进行处理。</p>\n<pre><code class=\"language-python\"># 动态批处理的服务器逻辑\nimport time\nimport queue\n\nrequest_queue = queue.Queue()\nMAX_WAIT_TIME_MS = 10\nMAX_BATCH_SIZE = 16 # 可选的上限\n\ndef process_batch(batch):\n    # （与静态批处理类似的填充逻辑）\n    # ... 分词、填充、创建掩码 ...\n    # input_ids, attention_mask = prepare_batch(batch)\n    # with torch.no_grad():\n    #   outputs = model(input_ids=input_ids, attention_mask=attention_mask)\n    # ... 处理输出 ...\n    print(f\"Processed batch of size {len(batch)}\")\n\nwhile True:\n    batch = []\n    start_time = time.time()\n    while True:\n        try:\n            # 非阻塞检查新请求\n            request = request_queue.get_nowait()\n            batch.append(request)\n            if len(batch) >= MAX_BATCH_SIZE: # 如果达到最大大小\n                break\n        except queue.Empty:\n            # 检查是否超出等待时间\n            if (time.time() - start_time) * 1000 > MAX_WAIT_TIME_MS:\n                break\n            # 可选的短时间睡眠以避免忙等\n            time.sleep(0.001)\n\n    if batch:\n        process_batch(batch)\n    else:\n        # 没有请求，可能睡更长时间\n        time.sleep(0.01)\n</code></pre>\n<p>尽管动态批处理优于静态批处理，但它仍然存在填充效率低下的问题，并且在自回归 (autoregressive)生成过程中，整个批处理的进度由最慢（最长）的序列决定。如果一个序列需要500个令牌而其他序列只需要50个，那么批处理槽位将一直被占用，直到500个令牌的生成完成，这会导致批处理中已完成序列的GPU空闲（通常称为“气泡”）。</p>\n<h2>连续批处理</h2>\n<p>连续批处理（也称为迭代级调度或动态拆分融合）是一种更精巧的方法，旨在通过解决简单批处理方法的不足来最大化吞吐量 (throughput)。它将服务器级别的批处理与生成过程的迭代步骤分离。</p>\n<p>连续批处理不是处理一个固定批处理直到所有序列都完成，而是按迭代进行操作：</p>\n<ol>\n<li><strong>请求池：</strong> 维护一个当前正在生成中的活动请求池。</li>\n<li><strong>迭代批处理：</strong> 在每个生成步骤（即为所有活动序列生成下一个令牌时），从池中选择准备好生成下一个令牌的序列子集。然后从这些序列形成一个批处理。</li>\n<li><strong>前向传播：</strong> 对本次迭代的批处理执行一次前向传播（一个令牌生成步骤）。</li>\n<li><strong>更新池：</strong>\n<ul>\n<li>将新生成的令牌添加到已处理批处理中的每个序列。</li>\n<li>检查是否有任何序列达到其停止条件（例如，EOS令牌、最大长度）。如果达到，则将它们从活动池中移除并返回完成的结果。</li>\n<li>检查是否有新的传入请求，如果容量允许，则将其添加到活动池中。</li>\n</ul>\n</li>\n<li><strong>重复：</strong> 返回步骤2进行下一次生成迭代。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-j04u0f\" \n              data-graph-definition='digraph G { \n  rankdir=TB; \n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#adb5bd\", fontsize=11]; \n  edge [fontname=\"sans-serif\", color=\"#868e96\", fontsize=11]; \n  bgcolor=\"transparent\";\n\n  Requests [label=\"传入请求\"];\n  Pool [label=\"活动请求池\\n(序列A, 序列B, 序列C...)\"];\n  IterBatch [label=\"迭代批处理\\n(序列A[t], 序列B[t])\"];\n  GPU [label=\"GPU前向传播\\n(令牌生成)\"];\n  Completed [label=\"已完成请求\"];\n\n  Pool -> IterBatch [label=\" 选择准备好的 \"];\n  IterBatch -> GPU [label=\" 处理 \"];\n  GPU -> Pool [label=\" 更新状态 \\n 添加新令牌\"];\n  Pool -> Completed [label=\" 完成并移除 \"];\n  Requests -> Pool [label=\" 添加新请求 \"];\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-j04u0f\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>连续批处理的简化流程。从活动请求中形成迭代批处理，由GPU处理，然后用新令牌、已完成序列和传入请求更新请求池。</p>\n</blockquote>\n<p>主要的优点是，只要有<em>任何</em>活动序列准备好生成，GPU就会保持忙碌。当一个序列完成时，它在下一次迭代批处理中的位置可以立即被池中另一个序列或新到达的请求占用。这避免了静态/动态批处理中GPU等待批处理中最长序列完成的“气泡”问题。Orca、vLLM、TensorRT-LLM和Text Generation Inference (TGI) 等系统都实现了连续批处理的不同形式。</p>\n<h2>实现考量与权衡</h2>\n<ul>\n<li><strong>KV缓存管理：</strong> 批处理，特别是连续批处理，需要细致地管理KV缓存。批处理中的每个序列都需要在生成步骤中维护自己独立的KV缓存状态。这些可能数量众多且动态变化的缓存的内存分配和访问效率至关重要。PagedAttention是vLLM等系统中用于更高效管理KV缓存内存，减少碎片化的一种方法。</li>\n<li><strong>吞吐量 (throughput)与延迟：</strong> 批处理在根本上是用增加延迟来换取更高的吞吐量。将请求分组意味着与立即处理相比，某些请求在开始处理前会等待更长时间。然而，整个系统的容量（令牌/秒）会显著增加。批处理策略和参数 (parameter)（例如，最大批处理大小，动态批处理的等待时间）的选择取决于特定应用程序对延迟和吞吐量的要求。更大的批处理大小通常会增加吞吐量，但也会增加平均延迟。</li>\n<li><strong>框架支持：</strong> 深度学习 (deep learning)框架和专用服务工具包通常提供批处理实用程序。例如，当你向模型或分词 (tokenization)器 (tokenizer)提供输入列表时，Hugging Face的<code>transformers</code>库会自动处理填充和注意力掩码。专用的推理 (inference)服务器（Triton、TorchServe、TGI、vLLM）提供更先进的批处理功能，包括动态和连续批处理，并针对生产工作负载进行了优化。</li>\n</ul>\n<p>总而言之，批处理对于高效的LLM推理不可或缺。尽管静态批处理简单，但动态批处理，尤其是连续批处理，通过并行处理多个请求并动态管理跨生成步骤的工作负载，在GPU利用率和总体吞吐量方面提供了显著的改进。选择和调整正确的批处理策略是在大规模部署LLM时一个重要考量。</p>",
+  "slug": "batching-strategies-throughput",
+  "updates": [],
+  "references": [
+    {
+      "id": 16687,
+      "title": "vLLM: Efficient LLM Serving with PagedAttention",
+      "author": "Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Ion Stoica",
+      "year": "2023",
+      "publisher": "arXiv",
+      "journal": "arXiv preprint arXiv:2309.06180",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2309.06180",
+      "doi": "10.48550/arXiv.2309.06180",
+      "note": "介绍了 PagedAttention，一种用于 KV 缓存的内存管理技术，显著提升了 LLM 推理中连续批处理的效率。",
+      "order": 1,
+      "created_at": "2025-09-06T11:35:31.457170Z",
+      "updated_at": "2025-09-10T14:24:42.406630Z"
+    },
+    {
+      "id": 16689,
+      "title": "Text Generation Inference: A Production Ready Framework for LLM Serving",
+      "author": "Olivier Dehaene, Félix Marty, João Gante, Quentin Lhoest, Victor Sanh, et al.",
+      "year": "2023",
+      "publisher": "Hugging Face Blog",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/blog/text-generation-inference",
+      "doi": "",
+      "note": "详细介绍了 Hugging Face 的文本生成推理的架构和功能，其中包含了针对生产工作负载优化的连续批处理实现。",
+      "order": 3,
+      "created_at": "2025-09-06T11:35:31.462274Z",
+      "updated_at": "2025-09-10T14:24:45.349967Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

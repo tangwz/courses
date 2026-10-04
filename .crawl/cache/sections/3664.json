@@ -1,0 +1,45 @@
+{
+  "id": 3664,
+  "title": "动手实践：端到端RAG系统",
+  "meta_title": "动手实践：构建端到端RAG系统",
+  "meta_description": "构建并测试一个完整的基础RAG流程，使用示例数据、向量存储和大型语言模型。",
+  "content": "<p>好的，让我们把我们讨论过的思路和组成部分结合起来，构建并运行一个完整但基础的检索增强生成 (RAG)系统。这个实践练习展示了检索器和生成器如何一起运作，以使用外部知识回答问题。我们将使用常用模式和库模拟这些步骤，侧重于流程，而非详尽的实现细节。</p>\n<p>假设Python环境已设置并安装了所需库。这通常包括用于向量 (vector)嵌入 (embedding)的库（如<code>sentence-transformers</code>）、一个向量数据库客户端（如<code>chromadb</code>或<code>faiss-cpu</code>）以及一个大型语言模型接口（如<code>openai</code>或<code>huggingface_hub</code>）。为简化起见，我们可能用伪代码或高级框架调用来说明RAG系统的实现方法（例如LangChain或LlamaIndex中的调用）。</p>\n<h3>准备示例数据</h3>\n<p>首先，我们需要一个小型知识库。我们设想有几段关于太阳系不同行星的文本片段。在实际场景下，您会从文件中加载这些内容（如第3章所讨论），但在这里我们将直接定义它们：</p>\n<pre><code class=\"language-python\"># 代表我们知识库的示例文档\ndocuments = [\n    \"Mercury is the smallest planet in our Solar System and closest to the Sun.\",\n    \"Venus has a thick, toxic atmosphere filled with carbon dioxide and is perpetually shrouded in thick, yellowish clouds of sulfuric acid.\",\n    \"Earth is the third planet from the Sun and the only astronomical object known to harbor life.\",\n    \"Mars is often called the 'Red Planet' because of its reddish appearance, due to iron oxide prevalent on its surface.\"\n]\n\n# 在实际场景中，我们会在这里应用分块策略。\n# 为简化起见，我们将每个句子视为一个“块”。\n# 假设每个块都关联着元数据，例如{'source': 'solar_system_facts.txt', 'doc_id': i}。\ndocument_chunks = documents\n</code></pre>\n<p>在这里，我们通过将每个句子视为一个文档块来保持简单。请记住第3章中提到的，有效的文本分块对于大型文档很重要。</p>\n<h3>初始化核心组件</h3>\n<p>接下来，我们初始化主要组成部分：嵌入 (embedding)模型、向量 (vector)存储和大型语言模型。</p>\n<pre><code class=\"language-python\"># 1. 嵌入模型\n# 加载预训练模型以生成嵌入\n# （例如，来自sentence-transformers库）\n# embedding_model = SentenceTransformer('all-MiniLM-L6-v2')\n\n# 2. 向量存储（内存版ChromaDB示例）\n# import chromadb\n# client = chromadb.Client() # 内存客户端\n# vector_store = client.create_collection(\"solar_system\")\n\n# 3. 大型语言模型\n# 初始化与大型语言模型的连接\n# （例如，使用OpenAI的库或Hugging Face的transformers）\n# llm = OpenAI(api_key=\"YOUR_API_KEY\") # 或加载本地模型\n</code></pre>\n<p>这些步骤设置了所需工具：一个用于将文本转换为向量，一个用于高效存储和检索这些向量，以及一个用于根据输入提示生成文本。</p>\n<h3>索引数据</h3>\n<p>现在，我们处理文档块并将其存储在向量 (vector)存储中。这包括为每个块生成嵌入 (embedding)，并将块文本、其嵌入以及任何关联的元数据添加到向量数据库。</p>\n<pre><code class=\"language-python\"># （示例继续）\n\n# 为每个块生成嵌入\n# chunk_embeddings = embedding_model.encode(document_chunks)\n\n# 准备用于索引的数据（文本、嵌入、元数据）\n# ids = [f\"chunk_{i}\" for i in range(len(document_chunks))]\n# metadatas = [{'source': 'solar_system_facts.txt', 'doc_id': i} for i in range(len(document_chunks))]\n\n# 添加到向量存储\n# vector_store.add(\n#     embeddings=chunk_embeddings,\n#     documents=document_chunks,\n#     metadatas=metadatas,\n#     ids=ids\n# )\n\nprint(\"数据已成功索引到向量存储中。\")\n</code></pre>\n<p>完成此步骤后，我们的知识库就可以被查询了。向量存储现在可以执行相似性搜索，找到与用户问题相关的块。</p>\n<h3>定义RAG流程</h3>\n<p>我们现在定义核心逻辑，它接收用户查询，检索相关上下文 (context)，并使用大型语言模型生成答案。这可以封装在一个函数中，或者在使用框架时更常见地定义为一个链或序列。</p>\n<pre><code class=\"language-python\"># （示例）\n\ndef answer_query_with_rag(query: str):\n    # 1. 嵌入查询\n    # query_embedding = embedding_model.encode([query])[0]\n\n    # 2. 检索相关块\n    # 在向量存储中搜索top_k个最相似的块\n    # retrieved_results = vector_store.query(\n    #     query_embeddings=[query_embedding],\n    #     n_results=2 # 检索最相关的2个块\n    # )\n    # retrieved_docs = retrieved_results['documents'][0]\n    # print(f\"Retrieved Documents: {retrieved_docs}\") # 可选：检查检索到的上下文\n\n    # 3. 构建提示\n    # 将原始查询与检索到的上下文结合\n    # context_string = \"\\n\\n\".join(retrieved_docs)\n    # prompt_template = f\"\"\"\n    # 基于以下上下文，回答查询。\n    # 如果上下文中没有答案，请说明。\n\n    # 上下文：\n    # {context_string}\n\n    # 查询：{query}\n\n    # 答案：\n    # \"\"\"\n    # print(f\"Generated Prompt:\\n{prompt_template}\") # 可选：检查提示\n\n    # 4. 使用大型语言模型生成响应\n    # response = llm.complete(prompt=prompt_template) # 或等效的大型语言模型API调用\n    # generated_answer = response # 根据需要处理响应对象\n\n    # 为了演示，我们将返回占位符值\n    generated_answer = \"This is a placeholder answer based on retrieved context.\"\n    retrieved_docs = [\"Document 1 text...\", \"Document 2 text...\"]\n\n    return generated_answer, retrieved_docs\n\n</code></pre>\n<p>此函数概述了RAG流程：嵌入 (embedding)查询，搜索向量 (vector)存储，使用结果构建一个详细的提示，最后，用这个增强的提示调用大型语言模型。</p>\n<h3>运行和测试流程</h3>\n<p>我们来测试一下基础RAG系统，使用与我们已索引数据相关的问题。</p>\n<pre><code class=\"language-python\"># 示例查询\nuser_query = \"Which planet is closest to the sun?\"\n\n# 执行RAG流程\nfinal_answer, retrieved_context = answer_query_with_rag(user_query)\n\nprint(\"\\n\" + \"=\"*30)\nprint(f\"User Query: {user_query}\")\n# 在实际运行时，retrieved_context将包含实际的文档文本\nprint(f\"Retrieved Context: {retrieved_context}\")\nprint(f\"Generated Answer: {final_answer}\")\nprint(\"=\"*30 + \"\\n\")\n\n# 另一个示例查询\nuser_query_2 = \"What is Mars known for?\"\nfinal_answer_2, retrieved_context_2 = answer_query_with_rag(user_query_2)\n\nprint(\"=\"*30)\nprint(f\"User Query: {user_query_2}\")\nprint(f\"Retrieved Context: {retrieved_context_2}\")\nprint(f\"Generated Answer: {final_answer_2}\")\nprint(\"=\"*30)\n\n</code></pre>\n<p>如果这被完整实现，第一个查询理想情况下应检索到关于水星的块，大型语言模型应生成类似“水星是离太阳最近的行星”的答案。第二个查询应检索到关于火星的块，并生成一个提到其红色外观或“红色星球”昵称的答案。</p>\n<h3>流程可视化</h3>\n<p>我们刚刚实现的流程可以按以下方式可视化：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6mxvda\" \n              data-graph-definition='digraph RAG_Pipeline {\n    rankdir=LR;\n    node [shape=box, style=\"filled\", fillcolor=\"#a5d8ff\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    UserQuery [label=\"用户查询\", fillcolor=\"#ffec99\"];\n    EmbedQuery [label=\"嵌入查询\\n(嵌入模型)\", fillcolor=\"#bac8ff\"];\n    VectorStore [label=\"搜索向量存储\\n(ChromaDB/FAISS)\", shape=cylinder, fillcolor=\"#96f2d7\"];\n    RetrieveDocs [label=\"检索相关\\n文档块\", fillcolor=\"#b2f2bb\"];\n    FormatPrompt [label=\"格式化提示\\n(查询 + 上下文)\", fillcolor=\"#ffd8a8\"];\n    LLM [label=\"生成响应\\n(大型语言模型)\", fillcolor=\"#fcc2d7\"];\n    FinalAnswer [label=\"最终答案\", fillcolor=\"#ffec99\"];\n\n    UserQuery -> EmbedQuery;\n    EmbedQuery -> VectorStore [label=\"查询嵌入\"];\n    VectorStore -> RetrieveDocs [label=\"相似性搜索\"];\n    RetrieveDocs -> FormatPrompt [label=\"Top-k 块\"];\n    UserQuery -> FormatPrompt [label=\"原始查询\"];\n    FormatPrompt -> LLM [label=\"增强提示\"];\n    LLM -> FinalAnswer [label=\"生成文本\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6mxvda\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图示，显示了在此实践练习中构建的基础RAG流程中的操作顺序。</p>\n</blockquote>\n<h3>总结与后续步骤</h3>\n<p>恭喜！您已经完整体验了端到端RAG流程的构建与执行。我们将数据准备、向量 (vector)存储、检索、提示工程 (prompt engineering)和大型语言模型生成连接起来。</p>\n<p>“这个示例刻意保持简单。实际应用通常涉及更复杂的数据加载，更高级的分块策略，可能不同的嵌入 (embedding)模型或向量数据库，更复杂的提示模板，以及对未找到相关上下文 (context)等边缘情况的处理。”</p>\n<p>虽然它能运作，但这个基础系统的质量和可靠性仍有待确认。我们如何知道检索器是否找到了<em>最好的</em>上下文？我们如何评估大型语言模型生成的答案是否准确且忠实于检索到的信息？这些问题直接引向下一章，我们将研究评估RAG系统的方法以及提升其表现的策略。</p>",
+  "slug": "hands-on-end-to-end-rag",
+  "updates": [],
+  "references": [
+    {
+      "id": 10372,
+      "title": "ChromaDB Documentation",
+      "author": "The ChromaDB Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.trychroma.com/",
+      "doi": "",
+      "note": "ChromaDB的官方文档，这是一种流行的开源向量数据库，用于存储和检索向量嵌入，在RAG实践示例中有所展示。",
+      "order": 3,
+      "created_at": "2025-09-05T06:42:09.439347Z",
+      "updated_at": "2025-09-09T12:17:26.755386Z"
+    },
+    {
+      "id": 10373,
+      "title": "LangChain Documentation",
+      "author": "Harrison Chase and the LangChain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.langchain.com/",
+      "doi": "",
+      "note": "LangChain的官方文档，这是一个广泛使用的框架，简化了构建大型语言模型应用（包括RAG管道）的过程，在内容中被提及为高级框架示例。",
+      "order": 4,
+      "created_at": "2025-09-05T06:42:09.441812Z",
+      "updated_at": "2025-09-09T12:17:24.465096Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

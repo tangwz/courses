@@ -1,0 +1,61 @@
+{
+  "id": 2628,
+  "title": "实践：数据准备流程",
+  "meta_title": "实践：文本数据准备流程",
+  "meta_description": "为文本数据集构建一个可复用的数据准备流程。",
+  "content": "<p>文本预处理步骤被整合为一个可复用的流程。构建一个结构化的过程对于在训练、验证和新预测数据上一致地应用相同的转换非常有益。为文本数据创建一个流程是重点，它将原始句子转换为带填充的整数序列，使其适用于嵌入 (embedding)层以及随后的LSTM或GRU等循环层。</p>\n<h3>定义流程目标</h3>\n<p>我们的目标是创建一个函数或类，它接收一个原始文本文档列表（例如，句子或段落），并输出一个数值张量，其中每个文档都表示为一个整数序列，并填充到统一长度。</p>\n<h3>主要工具</h3>\n<p>我们将主要使用常见深度学习 (deep learning)框架中可用的工具。例如，TensorFlow/Keras 提供了 <code>tensorflow.keras.preprocessing.text.Tokenizer</code> 类和 <code>tensorflow.keras.preprocessing.sequence.pad_sequences</code> 函数，它们能处理大部分繁重工作。如果您使用 PyTorch，<code>torchtext</code> 等库提供类似功能。在此示例中，我们将展示如何使用 TensorFlow/Keras 工具。</p>\n<h3>流程步骤</h3>\n<p>我们的文本准备流程包含的主要步骤是：</p>\n<ol>\n<li><strong>拟合分词 (tokenization)器 (tokenizer)：</strong> 分析文本语料库以构建词汇表 (vocabulary)，并将词语映射到唯一的整数索引。此步骤通常仅在训练数据上执行，以避免验证集或测试集的数据泄露。</li>\n<li><strong>整数编码：</strong> 基于已拟合的词汇表，将每个文本文档转换为其对应的整数索引序列。</li>\n<li><strong>填充序列：</strong> 通过在较短序列的开头（'pre'）或结尾（'post'）添加填充标记 (token)（通常为0），确保所有整数序列具有相同长度。较长的序列可能会被截断。</li>\n</ol>\n<p>以下是流程图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1z12867\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled, rounded\"];\n  edge [color=\"#868e96\", fontname=\"sans-serif\"];\n\n  raw_text [label=\"原始文本字符串列表\"];\n  tokenizer [label=\"分词器\\n(在训练数据上拟合)\", shape= Mrecord, fillcolor=\"#d0bfff\"];\n  integer_seqs [label=\"整数序列列表\\n(长度可变)\", fillcolor=\"#a5d8ff\"];\n  padding [label=\"填充\\n(填充/截断)\", shape= Mrecord, fillcolor=\"#96f2d7\"];\n  padded_tensor [label=\"填充后的整数张量\\n(批次, 最大长度)\", shape=cylinder, fillcolor=\"#ffec99\"];\n\n  raw_text -> tokenizer [label=\" fit_on_texts \"];\n  tokenizer -> integer_seqs [label=\" texts_to_sequences \"];\n  integer_seqs -> padding;\n  padding -> padded_tensor [label=\" pad_sequences \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1z12867\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>文本数据准备流程将原始文本转换为固定大小的数值张量，适用于RNN输入。</p>\n</blockquote>\n<h3>实现流程</h3>\n<p>我们来逐步实现使用 TensorFlow/Keras 的过程。</p>\n<h4>1. 示例数据</h4>\n<p>首先，我们定义一些要处理的示例文本数据。</p>\n<pre><code class=\"language-python\"># 文本文档示例语料库\ncorpus = [\n    \"Recurrent networks process sequences.\",\n    \"LSTMs handle long dependencies.\",\n    \"Padding makes sequences uniform.\",\n    \"Embeddings represent words numerically.\"\n]\n\n# 稍后使用*相同*的已拟合流程处理的新数据\nnew_data = [\n    \"GRUs are another type of recurrent network.\",\n    \"Uniform sequence length is needed for batching.\"\n]\n</code></pre>\n<h4>2. 分词 (tokenization)与词汇表 (vocabulary)构建</h4>\n<p>我们初始化一个 <code>Tokenizer</code> 并在 <code>corpus</code> 上拟合它。<code>num_words</code> 参数 (parameter)将词汇表大小限制为最常用的词。设置 <code>oov_token</code> 确保稍后遇到的、不在初始拟合语料库中的词语被分配一个特殊的“词汇外”标记 (token)。</p>\n<pre><code class=\"language-python\">import numpy as np\nfrom tensorflow.keras.preprocessing.text import Tokenizer\nfrom tensorflow.keras.preprocessing.sequence import pad_sequences\n\n# 配置\nvocab_size = 20  # 要保留的最大词数\noov_tok = \"&#x3C;OOV>\" # 词汇外词语的标记\n\n# 初始化并拟合分词器\ntokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)\ntokenizer.fit_on_texts(corpus)\n\n# 显示学习到的词语索引（词汇表）\nword_index = tokenizer.word_index\nprint(\"词语索引:\")\n# 为简洁起见，显示一个子集\nprint({k: word_index[k] for k in list(word_index)[:15]})\n</code></pre>\n<p>此拟合过程构建内部词汇表。<code>word_index</code> 包含词语到整数的映射。请注意，<code>num_words</code> 控制编码期间使用的词汇表大小，而不是<code>word_index</code>本身的长度。分词器 (tokenizer)保留索引0并将OOV标记分配给索引1。</p>\n<h4>3. 整数编码</h4>\n<p>现在，我们使用已拟合的 <code>tokenizer</code> 将文本句子转换为整数序列。</p>\n<pre><code class=\"language-python\"># 将语料库转换为整数序列\nsequences = tokenizer.texts_to_sequences(corpus)\nprint(\"\\n原始语料库整数序列:\")\nfor seq in sequences:\n    print(seq)\n</code></pre>\n<p>每个整数列表都对应 <code>corpus</code> 中的一个句子，使用上一步学习到的索引。</p>\n<h4>4. 填充序列</h4>\n<p>序列目前长度不同。我们使用 <code>pad_sequences</code> 使其统一。<code>maxlen</code> 定义目标长度。<code>padding='post'</code> 在末尾添加填充（0），而 <code>truncating='post'</code> 在序列过长时从末尾移除元素。'pre' 也是一个常见选择，特别是对于LSTMs/GRUs，因为它将最新信息保留在序列的末尾。</p>\n<pre><code class=\"language-python\"># 填充配置\nmax_sequence_len = 10 # 定义最大长度\npadding_type = 'post'\ntruncation_type = 'post'\n\n# 填充序列\npadded_sequences = pad_sequences(sequences,\n                                 maxlen=max_sequence_len,\n                                 padding=padding_type,\n                                 truncating=truncation_type)\n\nprint(\"\\n填充后的语料库序列（张量形状：{}）:\".format(padded_sequences.shape))\nprint(padded_sequences)\n</code></pre>\n<p>输出 <code>padded_sequences</code> 现在是一个形状为 <code>(number_of_samples, max_sequence_len)</code> 的 NumPy 数组（或 TensorFlow 张量）。这是您的 RNN 模型中嵌入 (embedding)层期望的格式。索引 0 是默认的填充值。</p>\n<h4>5. 处理新数据</h4>\n<p>此流程的一个重要优点是，可以使用<em>已拟合</em>的分词器，对新的、未见过的数据应用<em>相同</em>的转换。</p>\n<pre><code class=\"language-python\"># 使用*相同*的分词器将新数据转换为整数序列\nnew_sequences = tokenizer.texts_to_sequences(new_data)\nprint(\"\\n新数据整数序列:\")\nfor seq in new_sequences:\n    print(seq) # 请注意原始拟合中不存在的词语的 OOV 标记（索引 1）\n\n# 使用*相同*的参数填充新序列\nnew_padded_sequences = pad_sequences(new_sequences,\n                                     maxlen=max_sequence_len,\n                                     padding=padding_type,\n                                     truncating=truncation_type)\n\nprint(\"\\n填充后的新数据序列（张量形状：{}）:\".format(new_padded_sequences.shape))\nprint(new_padded_sequences)\n</code></pre>\n<p>请注意，“grus”或“batching”等词语，如果不在原始 <code>corpus</code> 中，会被映射到 <code>oov_token</code> 索引（1）。这确保了处理的一致性。</p>\n<h3>封装流程</h3>\n<p>为了更好的可复用性，您可以将这些步骤封装到一个函数或类中。以下是函数式方法：</p>\n<pre><code class=\"language-python\">def create_text_pipeline(training_texts, max_vocab_size=10000, oov_token=\"&#x3C;OOV>\"):\n    \"\"\"在训练文本上拟合分词器。\"\"\"\n    tokenizer = Tokenizer(num_words=max_vocab_size, oov_token=oov_token)\n    tokenizer.fit_on_texts(training_texts)\n    return tokenizer\n\ndef preprocess_texts(texts, tokenizer, max_len, padding='post', truncating='post'):\n    \"\"\"使用已拟合的分词器应用分词和填充。\"\"\"\n    sequences = tokenizer.texts_to_sequences(texts)\n    padded = pad_sequences(sequences, maxlen=max_len, padding=padding, truncating=truncating)\n    return padded\n\n# --- 用法示例 ---\n# 1. 在训练数据上创建流程（拟合分词器）\ntrain_corpus = [\n    \"This is the first document.\",\n    \"This document is the second document.\",\n    \"And this is the third one.\",\n    \"Is this the first document?\",\n]\npipeline_tokenizer = create_text_pipeline(train_corpus, max_vocab_size=100)\npipeline_maxlen = 10 # Set based on analysis or requirement\n\n# 2. 处理训练数据\ntrain_padded = preprocess_texts(train_corpus, pipeline_tokenizer, pipeline_maxlen)\nprint(\"\\n--- 流程使用示例 ---\")\nprint(\"已处理训练数据形状:\", train_padded.shape)\n# print(train_padded) # （可选）打印数组\n\n# 3. 处理新/验证/测试数据\nvalidation_data = [\"This is another document to process.\"]\nvalidation_padded = preprocess_texts(validation_data, pipeline_tokenizer, pipeline_maxlen)\nprint(\"已处理验证数据形状:\", validation_padded.shape)\nprint(validation_padded)\n</code></pre>\n<h3>最终考量</h3>\n<ul>\n<li><strong>模型输入：</strong> <code>padded_sequences</code> 张量现在已准备就绪。模型中通常的下一步是 <code>Embedding</code> 层。此层将接收这些整数序列，并将每个整数转换为一个密集向量 (vector) (dense vector)表示。如果您使用填充值 0（默认值），请在 Keras 中配置 <code>Embedding</code> 层时使用 <code>mask_zero=True</code>，或确保随后的 RNN 层能适当地处理掩码，以便模型学会忽略这些填充步骤。</li>\n<li><strong>词汇表 (vocabulary)大小和 <code>maxlen</code>：</strong> 选择 <code>vocab_size</code> 和 <code>max_sequence_len</code> 涉及权衡。较大的值能捕获更多信息，但会增加模型大小、内存使用和计算量。请分析您的数据（例如，序列长度分布）以做出明智选择。</li>\n<li><strong>填充/截断策略：</strong> 'pre' 与 'post' 填充/截断有时会影响性能，特别是对于近期信息更重要的任务。可能需要进行实验。</li>\n<li><strong>集成：</strong> 无论何时向模型输入数据——在训练、评估和预测期间——都应一致地应用此预处理逻辑。<code>tf.data</code> 或 PyTorch <code>DataLoader</code> 等框架有助于将此类预处理步骤高效地集成到您的数据加载流程中。</li>\n</ul>\n<p>此实用流程提供了一种标准且可重复的方式来准备您的文本数据，在训练 LSTM 和 GRU 等复杂序列模型之前，这是一个基本步骤。</p>",
+  "slug": "practice-data-preparation-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 7598,
+      "title": "Keras preprocessing layers and utilities",
+      "author": "TensorFlow Developers",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/preprocessing",
+      "doi": "",
+      "note": "关于使用 Keras 工具（如 `Tokenizer` 和 `pad_sequences`）进行文本数据准备的指南。",
+      "order": 1,
+      "created_at": "2025-09-05T01:40:34.870605Z",
+      "updated_at": "2025-09-08T11:25:40.405652Z"
+    },
+    {
+      "id": 7599,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一份实用指南，展示了如何使用 Keras/TensorFlow 进行文本预处理、分词和填充技术。",
+      "order": 2,
+      "created_at": "2025-09-05T01:40:34.897818Z",
+      "updated_at": "2025-09-08T11:25:43.341740Z"
+    },
+    {
+      "id": 7600,
+      "title": "Speech and Language Processing (3rd ed. draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "广泛涵盖了基础文本处理组件，包括分词、词汇表创建和序列表示。",
+      "order": 3,
+      "created_at": "2025-09-05T01:40:34.901656Z",
+      "updated_at": "2025-09-08T11:25:36.432934Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

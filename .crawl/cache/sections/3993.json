@@ -1,0 +1,61 @@
+{
+  "id": 3993,
+  "title": "根据特定列识别重复项",
+  "meta_title": "在特定列中查找重复项",
+  "meta_description": "学习如何查找在列子集中具有相同值的记录。",
+  "content": "<p>有时，重复记录并非是另一行在所有列上的精确复制。相反，重复可能指的是只有<em>某些</em>特定列的值完全相同。以客户订单数据集为例。您可能因为同一客户在不同时间下了不同订单，而有该客户（由<code>customer_id</code>标识）的多条记录。尽管<code>order_id</code>或<code>order_date</code>可能不同，但如果您要计算独立客户数量，这些行根据<code>customer_id</code>代表的是同一个实体。</p>\n<p>识别这些“部分”重复项对于许多分析非常重要。如果您在分析独立客户数量、网站用户会话或单独的产品条目，您需要在为<em>特定情况</em>定义唯一性的列中寻找重复。忽略这一点可能导致计数虚高、统计数据偏差以及错误的结论。例如，如果您将每条订单记录都视为一个单独的客户，那么计算每个客户的平均订单价值将是不准确的。</p>\n<h3>选择识别列</h3>\n<p>第一步是确定哪个列或哪些列的组合能够独立标识您关注的实体。这个决定很大程度上取决于您的数据集和分析目标。</p>\n<ul>\n<li><strong>用户数据：</strong> <code>user_id</code>或<code>email</code>列通常作为独立标识符。</li>\n<li><strong>产品目录：</strong> <code>product_sku</code>或<code>isbn</code>可能标识独立产品。</li>\n<li><strong>事件日志：</strong> <code>session_id</code>和<code>user_id</code>之类的组合可能定义一个独立的会话。</li>\n<li><strong>人员记录：</strong> 有时，您可能需要<code>first_name</code>、<code>last_name</code>和<code>date_of_birth</code>等多个列来确立唯一性，尤其是在没有单独ID列的情况下。</li>\n</ul>\n<p>仔细考虑<em>针对您的特定任务</em>，什么才构成唯一记录。</p>\n<h3>使用编程工具查找部分重复项</h3>\n<p>大多数数据分析库都提供了简单的方法来根据列的子集检查重复项。我们来看看如何使用流行的Python库pandas来完成此操作。</p>\n<p>假设您有一个这样的DataFrame：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">customer_id</th>\n<th align=\"left\">name</th>\n<th align=\"left\">signup_date</th>\n<th align=\"left\">last_purchase</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Alice</td>\n<td align=\"left\">2023-01-15</td>\n<td align=\"left\">2023-05-20</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">Bob</td>\n<td align=\"left\">2023-02-10</td>\n<td align=\"left\">2023-06-11</td>\n</tr>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Alice</td>\n<td align=\"left\">2023-01-15</td>\n<td align=\"left\">2023-07-01</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">Charlie</td>\n<td align=\"left\">2023-03-05</td>\n<td align=\"left\">2023-03-05</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">Bob</td>\n<td align=\"left\">2023-02-10</td>\n<td align=\"left\">2023-08-15</td>\n</tr>\n</tbody>\n</table>\n<p>这里，第0行和第2行代表同一个客户（ID 101），第1行和第4行代表另一个客户（ID 102）。如果我们对独立客户感兴趣，<code>customer_id</code>列就是我们的标识符。</p>\n<p>我们可以使用pandas中的<code>duplicated()</code>方法，但这次我们指定<code>subset</code>参数 (parameter)：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\ndata = {'customer_id': [101, 102, 101, 103, 102],\n        'name': ['Alice', 'Bob', 'Alice', 'Charlie', 'Bob'],\n        'signup_date': ['2023-01-15', '2023-02-10', '2023-01-15', '2023-03-05', '2023-02-10'],\n        'last_purchase': ['2023-05-20', '2023-06-11', '2023-07-01', '2023-03-05', '2023-08-15']}\ndf = pd.DataFrame(data)\n\n# 根据'customer_id'检查重复项\n# Keep='first'表示将后续出现的项标记为重复\nduplicates_mask = df.duplicated(subset=['customer_id'], keep='first')\n\nprint(duplicates_mask)\n</code></pre>\n<p>此代码将输出一个布尔值Series：</p>\n<pre><code>0    False\n1    False\n2     True\n3    False\n4     True\ndtype: bool\n</code></pre>\n<p>这里，<code>False</code>表示<code>customer_id</code>是首次出现（或在之前的行中是唯一的），而<code>True</code>表示此<code>customer_id</code>已在较早的行中出现过。第2行被标记 (token)为<code>True</code>，因为<code>customer_id</code> 101在第0行出现过。第4行被标记为<code>True</code>，因为<code>customer_id</code> 102在第1行出现过。</p>\n<p>您可以使用此布尔掩码来筛选您的DataFrame，并查看基于特定列的重复条目：</p>\n<pre><code class=\"language-python\"># 显示根据'customer_id'标记为重复的行\nprint(df[duplicates_mask])\n</code></pre>\n<p>这会显示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">customer_id</th>\n<th align=\"left\">name</th>\n<th align=\"left\">signup_date</th>\n<th align=\"left\">last_purchase</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Alice</td>\n<td align=\"left\">2023-01-15</td>\n<td align=\"left\">2023-07-01</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">Bob</td>\n<td align=\"left\">2023-02-10</td>\n<td align=\"left\">2023-08-15</td>\n</tr>\n</tbody>\n</table>\n<p>如果唯一性由组合定义，您也可以在<code>subset</code>列表中指定多个列：</p>\n<pre><code class=\"language-python\"># 示例：根据'name'和'signup_date'同时检查重复项\nduplicates_combo_mask = df.duplicated(subset=['name', 'signup_date'], keep='first')\nprint(duplicates_combo_mask)\n\n# 在我们的示例数据中，结果与仅检查'customer_id'相同\n# 因为姓名/注册日期组合对于每个客户也是唯一的。\n# 0    False\n# 1    False\n# 2     True\n# 3    False\n# 4     True\n# dtype: bool\n</code></pre>\n<h3>可视化影响</h3>\n<p>根据特定列识别重复项，与查看完整行重复或原始行数相比，通常会呈现出数据的不同面貌。一个简单的可视化可以突显这一点。例如，我们可以计算总行数与根据我们选择的列得到的独立条目数量。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-jftged\" \n              data-plot-definition='{\"layout\": {\"title\": \"总行数与独立客户数对比\", \"xaxis\": {\"title\": \"类别\"}, \"yaxis\": {\"title\": \"数量\"}, \"bargap\": 0.2}, \"data\": [{\"type\": \"bar\", \"x\": [\"总行数\", \"独立客户数（按ID）\"], \"y\": [5, 3], \"marker\": {\"color\": [\"#339af0\", \"#20c997\"]}, \"name\": \"数量\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-jftged\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>对比展示了样本数据中记录总数与发现的独立客户ID数量。</p>\n</blockquote>\n<p>这清楚地表明，虽然我们总共有5条记录，但根据<code>customer_id</code>列，只有3个独立客户。</p>\n<p>根据特定列识别重复项是数据清洗中常见且重要的任务。它让您能够正确计算独立实体，避免重复处理，并确保您的分析反映数据的真实内在结构。下一步，将在下一节中说明，是如何处理这些已识别的重复项，这通常涉及有策略地删除它们。</p>",
+  "slug": "identifying-partial-duplicates",
+  "updates": [],
+  "references": [
+    {
+      "id": 10884,
+      "title": "pandas.DataFrame.duplicated",
+      "author": "pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.duplicated.html",
+      "doi": "",
+      "note": "pandas `duplicated()` 方法的官方文档，展示其如何使用 `subset` 参数查找部分重复项。",
+      "order": 1,
+      "created_at": "2025-09-05T06:55:21.987037Z",
+      "updated_at": "2025-09-08T13:03:49.195851Z"
+    },
+    {
+      "id": 10885,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于使用 Python 和 pandas 进行数据分析的常用书籍，涵盖数据清洗的实践方面，包括重复数据检测。",
+      "order": 2,
+      "created_at": "2025-09-05T06:55:21.990414Z",
+      "updated_at": "2025-09-08T13:03:57.378199Z"
+    },
+    {
+      "id": 10886,
+      "title": "Data Cleaning: Processes for Greater Data Quality",
+      "author": "Ingrid F. Schiefer, Stefan Rueger",
+      "year": "2019",
+      "publisher": "Springer Nature",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-3-030-22164-1",
+      "doi": "10.1007/978-3-030-22164-1",
+      "note": "本书介绍数据清洗原理和方法，为基于特定标准定义和识别重复数据提供背景。",
+      "order": 3,
+      "created_at": "2025-09-05T06:55:21.992729Z",
+      "updated_at": "2025-09-08T13:03:53.152573Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1882,
+  "title": "在Scikit-learn中应用编码器",
+  "meta_title": "在Scikit-learn中应用编码器",
+  "meta_description": "使用Scikit-learn中的`OneHotEncoder`和`OrdinalEncoder`。",
+  "content": "<p>将类别特征转换为数值表示是机器学习 (machine learning)中常见的必要步骤。这里将演示如何使用Scikit-learn的专用工具实现这些转换。Scikit-learn提供了<code>Transformer</code>类，例如<code>OneHotEncoder</code>和<code>OrdinalEncoder</code>，它们遵循标准的<code>fit</code>和<code>transform</code> API模式，保持了库内部的统一性。</p>\n<h3>使用OneHotEncoder</h3>\n<p>当类别特征没有内在顺序时，独热编码（One-Hot Encoding）是合适的。它将每个类别转换为一个新的二元特征（0或1）。Scikit-learn的<code>OneHotEncoder</code>是完成此任务的主要工具。</p>\n<p>我们来考虑一个带有类别特征的简单数据集：</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.preprocessing import OneHotEncoder\n\n# 示例数据\ndata = pd.DataFrame({'color': ['Red', 'Green', 'Blue', 'Green'], \n                     'size': ['M', 'L', 'S', 'M']})\n\nprint(\"原始数据:\")\nprint(data)\n\n# 选择要编码的类别列\ncategorical_features = ['color'] # 我们先编码 'color'\n</code></pre>\n<p>要对'color'列应用独热编码：</p>\n<ol>\n<li><strong>实例化编码器：</strong> 创建<code>OneHotEncoder</code>的一个实例。</li>\n<li><strong>拟合并转换：</strong> 对选定的数据使用<code>fit_transform</code>方法。此方法首先学习存在的唯一类别（<code>fit</code>），然后执行转换（<code>transform</code>）。</li>\n</ol>\n<pre><code class=\"language-python\"># 1. 实例化编码器\n# 默认情况下，它返回一个稀疏矩阵。为了演示，我们请求一个密集数组。\n# handle_unknown='ignore' 可以防止在转换过程中出现新类别时报错\nencoder_color = OneHotEncoder(sparse_output=False, handle_unknown='ignore') \n\n# 2. 拟合并转换 'color' 列\n# 编码器需要2D输入，所以我们使用双括号 [['color']]\nencoded_colors = encoder_color.fit_transform(data[['color']])\n\nprint(\"\\n已编码的 'color' 特征 (独热编码):\")\nprint(encoded_colors)\n\n# 获取新创建的特征名称\nfeature_names_color = encoder_color.get_feature_names_out(['color'])\nprint(\"\\n特征名称:\")\nprint(feature_names_color)\n\n# 与原始数据合并（可选，仅用于演示）\nencoded_df_color = pd.DataFrame(encoded_colors, columns=feature_names_color, index=data.index)\ndata_encoded = pd.concat([data.drop(columns=['color']), encoded_df_color], axis=1)\n\nprint(\"\\n已对 'color' 进行独热编码的数据:\")\nprint(data_encoded)\n</code></pre>\n<p><strong>输出:</strong></p>\n<pre><code>原始数据:\n   color size\n0    Red    M\n1  Green    L\n2   Blue    S\n3  Green    M\n\n已编码的 'color' 特征 (独热编码):\n[[0. 1. 0.]\n [1. 0. 0.]\n [0. 0. 1.]\n [1. 0. 0.]]\n\n特征名称:\n['color_Blue' 'color_Green' 'color_Red']\n\n已对 'color' 进行独热编码的数据:\n  size  color_Blue  color_Green  color_Red\n0    M         0.0          1.0        0.0\n1    L         1.0          0.0        0.0\n2    S         0.0          0.0        1.0\n3    M         1.0          0.0        0.0\n</code></pre>\n<p><strong><code>OneHotEncoder</code>的参数 (parameter)：</strong></p>\n<ul>\n<li><code>sparse_output</code>：默认为<code>True</code>，返回一个SciPy稀疏矩阵。当类别很多（因此产生许多大部分为零的列）时，稀疏矩阵能有效节省内存。将其设置为<code>False</code>可获得标准的NumPy密集数组，这可能在初始检查时更方便，但对于高基数特征，可能会占用大量内存。</li>\n<li><code>handle_unknown</code>：控制在<code>transform</code>期间遇到在<code>fit</code>期间未见的类别时的行为。默认的<code>'error'</code>会引发错误。使用<code>'ignore'</code>会将该未知类别的所有独热编码列赋值为零，这通常是一种实用的方法。</li>\n<li><code>categories</code>：默认情况下（<code>'auto'</code>），类别是从训练数据中推断的。如果需要，您可以提供一个特定的类别列表。</li>\n<li><code>drop</code>：可以设置为<code>'first'</code>或特定的类别值，以删除每个特征的一个二元列。这有助于在某些线性模型中避免多重共线性，但可能会使解释变得不那么直接。</li>\n</ul>\n<h3>使用OrdinalEncoder</h3>\n<p>当类别具有有意义的顺序时（例如，'low'、'medium'、'high'），<code>OrdinalEncoder</code>更为合适。它根据每个类别在指定顺序中的位置，为其分配一个整数值。</p>\n<p>我们来使用之前示例中的'size'列，假设顺序为 S &#x3C; M &#x3C; L。</p>\n<pre><code class=\"language-python\">from sklearn.preprocessing import OrdinalEncoder\n\n# 定义 'size' 特征的期望顺序\nsize_order = ['S', 'M', 'L']\n\n# 1. 实例化编码器，提供类别顺序\n# 'categories' 参数期望一个列表的列表，其中每个列表对应一个要编码的特征\nencoder_size = OrdinalEncoder(categories=[size_order]) \n\n# 2. 拟合并转换 'size' 列\n# 同样，使用双括号表示2D输入\nencoded_sizes = encoder_size.fit_transform(data[['size']])\n\nprint(\"\\n已编码的 'size' 特征 (序数编码):\")\nprint(encoded_sizes)\n\n# 将序数编码的列添加回DataFrame\ndata['size_encoded'] = encoded_sizes.astype(int) # 将浮点数输出转换为整数\n\nprint(\"\\n已对 'size' 进行序数编码的数据:\")\nprint(data) \n</code></pre>\n<p><strong>输出:</strong></p>\n<pre><code>已编码的 'size' 特征 (序数编码):\n[[1.]\n [2.]\n [0.]\n [1.]]\n\n已对 'size' 进行序数编码的数据:\n   color size  size_encoded\n0    Red    M             1\n1  Green    L             2\n2   Blue    S             0\n3  Green    M             1\n</code></pre>\n<p>请注意，'S'被映射为0，'M'被映射为1，'L'被映射为2，这遵循了我们提供的顺序。</p>\n<p><strong><code>OrdinalEncoder</code>的参数 (parameter)：</strong></p>\n<ul>\n<li><code>categories</code>：这是最重要的参数。它应该是一个列表，其中包含一个列表，对应于每个被编码的特征。每个内部列表指定了该特征的期望类别顺序。如果省略，编码器会根据数据中遇到的唯一值来确定顺序，这通常会导致序数数据的数值映射是任意且可能没有意义的。当为具有内在顺序的特征使用<code>OrdinalEncoder</code>时，请务必明确指定<code>categories</code>。</li>\n</ul>\n<h3>编码器在实际中的应用</h3>\n<p>这些示例展示了如何将编码器应用于单个列或列的子集。在典型的机器学习 (machine learning)工作流程中，您通常会遇到多个数值特征和类别特征。对不同的列应用不同的预处理步骤（例如，对数值特征进行缩放，对类别特征进行编码）是一个常见的需求。Scikit-learn的<code>ColumnTransformer</code>（通常在<code>Pipeline</code>中使用，第6章会介绍）正是为此类情况而设计的，它允许您以结构化的方式将不同的转换器应用于不同的列子集。</p>\n<p>选择正确的编码器（<code>OneHotEncoder</code>用于名义型特征，<code>OrdinalEncoder</code>用于序数型特征）并使用Scikit-learn的转换器API正确应用它们，是为有效模型训练准备数据的基本步骤。请记住，<code>OneHotEncoder</code>会显著增加数据的维度，而<code>OrdinalEncoder</code>则会强加一个顺序，如果<code>categories</code>参数 (parameter)使用不当，该顺序可能不存在或无法被正确反映。</p>",
+  "slug": "applying-encoders",
+  "updates": [],
+  "references": [
+    {
+      "id": 4095,
+      "title": "sklearn.preprocessing.OneHotEncoder",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html",
+      "doi": "",
+      "note": "Scikit-learn官方OneHotEncoder文档，提供其功能和参数的全面详细信息。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:14.340401Z",
+      "updated_at": "2025-09-08T03:06:01.216357Z"
+    },
+    {
+      "id": 4096,
+      "title": "sklearn.preprocessing.OrdinalEncoder",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OrdinalEncoder.html",
+      "doi": "",
+      "note": "Scikit-learn官方OrdinalEncoder文档，详细说明其用法、参数以及如何定义类别顺序。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:14.346453Z",
+      "updated_at": "2025-09-08T03:06:04.325836Z"
+    },
+    {
+      "id": 4097,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125965/",
+      "doi": "",
+      "note": "一本广受认可的实用指南，涵盖数据预处理，包括使用Scikit-learn的分类编码技术，并提供实际示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:14.349562Z",
+      "updated_at": "2025-09-08T03:06:23.075248Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

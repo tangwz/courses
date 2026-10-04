@@ -1,0 +1,45 @@
+{
+  "id": 7213,
+  "title": "数据版本控制简介",
+  "meta_title": "机器学习数据版本控制 | 简介",
+  "meta_description": "了解数据版本控制的基础知识，以及为什么跟踪数据集的变化与跟踪代码的变化同样必要。",
+  "content": "<p>Git 是跟踪源代码更改的标准工具。然而，在机器学习 (machine learning)项目中，代码只是故事的一部分。用于训练的数据对最终模型的行为同样有着显著影响，而且它的变动频率也与代码不相上下。我们会收集新数据、修复标注错误，并优化预处理步骤。如果缺乏一套跟踪这些变化的系统，复现结果的能力就会丧失。</p>\n<p>你可能会倾向于将 CSV 文件或图像目录与代码一起直接添加到 Git 仓库中。但这种方法很快就会遇到困难。Git 的设计初衷是通过逐行跟踪来处理文本文件，并未针对大型文件（通常是二进制数据）进行优化。将一个 2 GB 的数据集添加到 Git 仓库会使其变得臃肿。克隆仓库或切换分支等操作对每位团队成员来说都会变得极其缓慢，这违背了高效工作流的目标。</p>\n<h3>什么是数据版本控制？</h3>\n<p>数据版本控制是随时间跟踪数据集状态的实践，就像跟踪代码一样。它让你可以可靠地访问数据的任何历史版本。现代数据版本控制系统并不在 Git 中直接存储大型数据文件，而是使用<strong>指针</strong>。</p>\n<p>这些系统的工作原理是将大型数据文件存储在一个独立的、更合适的空间中，比如云存储（如 Amazon S3 或 Google Cloud Storage）或网络硬盘。而 Git 仓库中只存储一个包含元数据和数据集唯一标识符（哈希值）的小型指针文件。这个指针文件非常轻量且基于文本，非常适合 Git 管理。</p>\n<p>这种方法巧妙地将体积大、变动慢的数据与体积小、变动快的代码分离开来，同时利用 Git 将它们关联在一起。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-18rol1k\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"]; edge [fontname=\"Arial\"]; bgcolor=\"transparent\"; newrank=true; compound=true; subgraph cluster_repo { label=\"Git 仓库\"; style=\"rounded\"; color=\"#4263eb\"; fontcolor=\"#4263eb\"; train_py [label=\"train.py\", fillcolor=\"#a5d8ff\"]; data_v1_dvc [label=\"data.v1.dvc\\n(指针文件)\", fillcolor=\"#ffd8a8\"]; data_v2_dvc [label=\"data.v2.dvc\\n(指针文件)\", fillcolor=\"#ffd8a8\"]; {rank=same; train_py; data_v1_dvc; data_v2_dvc;} } subgraph cluster_storage { label=\"远程存储 (例如 S3)\"; style=\"rounded\"; color=\"#868e96\"; fontcolor=\"#868e96\"; data_v1 [label=\"dataset_v1.zip\\n(5 GB)\", shape=cylinder, fillcolor=\"#e9ecef\", height=1]; data_v2 [label=\"dataset_v2.zip\\n(5.2 GB)\", shape=cylinder, fillcolor=\"#e9ecef\", height=1]; {rank=same; data_v1; data_v2;} } data_v1_dvc -> data_v1 [lhead=cluster_storage, label=\"引用\", color=\"#495057\", style=dashed]; data_v2_dvc -> data_v2 [lhead=cluster_storage, label=\"引用\", color=\"#495057\", style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-18rol1k\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Git 仓库保持轻快，仅包含代码和轻量级指针文件。这些指针指向存储在独立远程存储系统中的大型数据文件，存储效率更高。</p>\n</blockquote>\n<h3>为什么数据版本控制很常用</h3>\n<p>实施数据版本控制可以解决机器学习 (machine learning)项目中的几个普遍难题，也是构建专业级系统的必要条件。</p>\n<h4>1. 可复现性</h4>\n<p>如果你需要重新训练半年前的模型来排查故障或满足审计要求，如何确定你使用的是完全相同的数据？如果数据在共享硬盘上被直接覆盖了，你就无法做到这一点。通过数据版本控制，你可以切换到当时的特定 Git 提交记录。这一操作不仅能恢复代码版本，还能恢复指针文件，从而让你找回用于该实验的精确数据集版本。</p>\n<h4>2. 调试与审计</h4>\n<p>假设一个新模型的性能突然下降。是代码改动、特征工程的缺陷，还是输入数据的偏移导致的？数据版本控制可以帮你隔离变量。通过对比高性能和低性能模型提交记录之间的指针文件，你可以快速确定数据是否发生了变化。这种将模型与其生成的精确代码和数据联系起来的血缘关系，对于审计和合规性也必不可少。</p>\n<h4>3. 协作</h4>\n<p>当多名团队成员处理同一个数据集时，版本很容易产生分歧。一个人可能在应用新的清洗脚本，而另一个人在添加新样本。数据版本控制工具提供了单一的事实来源。团队成员可以拉取最新的数据版本，根据自己的改动创建新版本，并推送新的指针文件。这使协作变得明确，防止了“在我的机器上能跑”的问题蔓延到数据层面。</p>\n<h3>简单的数据版本控制工作流</h3>\n<p>数据版本控制的工作流与你熟悉的 Git 代码工作流非常相似：</p>\n<ol>\n<li><strong>修改数据：</strong> 对数据集进行更改。这可能包括添加新图像、清洗 CSV 文件或生成新特征。</li>\n<li><strong>跟踪更改：</strong> 使用数据版本控制命令行工具“添加”新的或修改过的数据目录。该工具会计算数据的唯一哈希值，将其移动到缓存中，并准备一个新的指针文件。</li>\n<li><strong>提交指针：</strong> 生成的指针文件是一个小型文本文件（例如 <code>data.dvc</code>）。你将此文件暂存并提交到 Git。提交信息应描述数据的更改，例如“添加了 2024 年 7 月的销售数据”。</li>\n</ol>\n<p>现在，团队中的任何人都可以运行 <code>git pull</code> 来获取新的指针文件，然后使用数据版本控制工具同步其本地数据，仅下载已更改的文件。</p>\n<p>通过采用这种做法，你将数据视为开发生命周期中的一等公民。这种结构化的方法是构建可靠且可维护的机器学习 (machine learning)系统的底座，并为下一步——对代码和数据生成的模型进行版本控制——打下了良好的基础。</p>",
+  "slug": "introduction-to-data-versioning",
+  "updates": [],
+  "references": [
+    {
+      "id": 19840,
+      "title": "Data Version Control (DVC) Documentation",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "提供了数据和模型版本控制的官方指南，对实现所述概念至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T13:15:55.105680Z",
+      "updated_at": "2025-09-10T04:55:35.457432Z"
+    },
+    {
+      "id": 19841,
+      "title": "Introducing MLOps: How to Go from Idea to Production",
+      "author": "Mark Treveil, Nicolas Omont, Clément Stenac, Kenji Lefevre, Du Phan",
+      "year": "2020",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "183",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781098103554/",
+      "doi": "",
+      "note": "介绍了数据版本控制作为MLOps生命周期中的一项基本实践。",
+      "order": 2,
+      "created_at": "2025-09-06T13:15:55.109039Z",
+      "updated_at": "2025-09-10T04:56:13.387390Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

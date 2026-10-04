@@ -1,0 +1,45 @@
+{
+  "id": 4083,
+  "title": "记录参数和指标",
+  "meta_title": "使用 MLflow 记录参数和指标",
+  "meta_description": "使用 MLflow API 从训练脚本中记录超参数和评估指标。",
+  "content": "<p>要使用 MLflow 有效地跟踪机器学习 (machine learning)实验，调整代码以记录每次训练运行的重要信息至关重要。实验跟踪的中心是<em>参数 (parameter)</em>和<em>指标</em>。参数代表运行的输入配置，例如超参数 (hyperparameter)或特征选择。指标代表输出或结果，通常是评估分数或损失值，用于衡量运行的效果。</p>\n<p>MLflow 提供简洁的 Python API 来记录这些信息。您会用到两个主要函数：<code>mlflow.log_param()</code> 和 <code>mlflow.log_metric()</code>。</p>\n<h3>记录参数 (parameter)</h3>\n<p>参数是您在开始训练运行<em>之前</em>定义的设置。它们通常包括：</p>\n<ul>\n<li><strong>超参数 (hyperparameter)：</strong> 学习率、批大小、层数、正则化 (regularization)强度 (alpha)、树深度等。</li>\n<li><strong>输入特征：</strong> 哪些特征用于训练。</li>\n<li><strong>环境信息：</strong> 有时记录库版本或数据集标识符很有用（尽管我们稍后会看到更完善的方法来关联数据版本）。</li>\n</ul>\n<p>参数通常在 MLflow 运行开始时记录一次。您可以使用 <code>mlflow.log_param(key, value)</code> 记录单个参数，其中 <code>key</code> 是参数的字符串名称，<code>value</code> 是其值（支持字符串、数字或布尔类型）。</p>\n<p>要一次记录多个参数，您采用 <code>mlflow.log_params(params_dict)</code>，此处的 <code>params_dict</code> 是一个包含参数名称和值的字典。</p>\n<p>我们来看看实际操作中是怎样的。假设您正在训练一个分类模型，您可能希望记录正则化强度 (<code>alpha</code>) 和所用的求解器类型。</p>\n<pre><code class=\"language-python\">import mlflow\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.datasets import load_iris\nfrom sklearn.metrics import accuracy_score\n\n# 加载数据（示例）\nX, y = load_iris(return_X_y=True)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n\n# 定义参数\nalpha_val = 0.1\nsolver_type = 'liblinear'\n\n# 启动一个 MLflow 运行\nwith mlflow.start_run():\n    # 记录参数\n    mlflow.log_param(\"alpha\", alpha_val)\n    mlflow.log_param(\"solver\", solver_type)\n    print(f\"记录参数: alpha={alpha_val}, solver={solver_type}\")\n\n    # 实例化并训练模型\n    lr = LogisticRegression(C=1/alpha_val, solver=solver_type, random_state=42)\n    lr.fit(X_train, y_train)\n\n    # 进行预测\n    y_pred = lr.predict(X_test)\n\n    # 计算准确率（指标）\n    accuracy = accuracy_score(y_test, y_pred)\n    print(f\"模型准确率: {accuracy:.4f}\")\n\n    # 记录指标（下文会讲到）\n    mlflow.log_metric(\"accuracy\", accuracy)\n\nprint(\"MLflow 运行完成。\")\n</code></pre>\n<p>在这个代码片段中，在 <code>mlflow.start_run()</code> 上下文 (context)内部，我们明确地为 <code>alpha</code> 和 <code>solver</code> 调用了 <code>mlflow.log_param()</code>。这些值现在将与 MLflow 跟踪系统中的此特定运行关联起来。</p>\n<h3>记录指标</h3>\n<p>指标是运行的结果数值，用于衡量性能或表现。常见示例如下：</p>\n<ul>\n<li><strong>评估指标：</strong> 准确率、精确率、召回率、F1 分数、AUC、均方误差 (MSE)、R 平方。</li>\n<li><strong>损失值：</strong> 训练损失、验证损失。</li>\n<li><strong>资源使用：</strong> 训练时间、GPU 内存使用（对于基本跟踪不太常见，但可以记录）。</li>\n</ul>\n<p>指标可以在运行期间的任何时候使用 <code>mlflow.log_metric(key, value, step=None)</code> 记录。</p>\n<ul>\n<li><code>指标名称</code>：指标的字符串名称。</li>\n<li><code>值</code>：指标的数值。</li>\n<li><code>step</code>：一个可选整数，表示序列或时间步长（例如 epoch 编号）。如果提供，MLflow 将记录指标在这些步长中的历史数据。</li>\n</ul>\n<p>与参数 (parameter)类似，您采用一个字典使用 <code>mlflow.log_metrics(metrics_dict, step=None)</code> 来记录多个指标。</p>\n<p>让我们扩展之前的示例，来记录最终的准确率分数：</p>\n<pre><code class=\"language-python\"># （之前的代码：导入、数据加载、参数定义）\n\n# 启动一个 MLflow 运行\nwith mlflow.start_run():\n    # 记录参数\n    mlflow.log_param(\"alpha\", alpha_val)\n    mlflow.log_param(\"solver\", solver_type)\n\n    # 实例化并训练模型\n    lr = LogisticRegression(C=1/alpha_val, solver=solver_type, random_state=42)\n    lr.fit(X_train, y_train)\n\n    # 进行预测\n    y_pred = lr.predict(X_test)\n\n    # 计算准确率\n    accuracy = accuracy_score(y_test, y_pred)\n    print(f\"模型准确率: {accuracy:.4f}\")\n\n    # 记录最终的准确率指标\n    mlflow.log_metric(\"accuracy\", accuracy)\n    print(f\"已记录指标: accuracy={accuracy:.4f}\")\n\nprint(\"MLflow 运行完成。\")\n</code></pre>\n<p>这里，<code>mlflow.log_metric(\"accuracy\", accuracy)</code> 记录了最终的性能分数。</p>\n<h4>随时间记录指标</h4>\n<p>通常，您会希望跟踪指标在训练期间的变化情况，例如每个 epoch 后的损失。<code>step</code> 参数就是为此设计的。</p>\n<p>考虑一个简化的训练循环，我们模拟基于 epoch 的训练，并在每个步长记录损失：</p>\n<pre><code class=\"language-python\">import mlflow\nimport time\nimport random\n\n# 启动一个 MLflow 运行\nwith mlflow.start_run():\n    mlflow.log_param(\"learning_rate\", 0.01)\n    mlflow.log_param(\"epochs\", 5)\n\n    print(\"模拟训练循环中...\")\n    # 模拟多个 epoch 的训练\n    initial_loss = 1.0\n    for epoch in range(5):\n        # 模拟训练过程\n        time.sleep(0.5)\n        # 计算模拟损失（随机递减）\n        current_loss = initial_loss * (1 - random.uniform(0.1, 0.3))\n        initial_loss = current_loss\n\n        # 记录该 epoch 的损失指标\n        mlflow.log_metric(\"train_loss\", current_loss, step=epoch)\n        print(f\"Epoch {epoch}: 已记录 train_loss={current_loss:.4f}\")\n\n    # 记录最终指标（例如验证准确率）\n    final_val_accuracy = 0.85 + random.uniform(-0.05, 0.05)\n    mlflow.log_metric(\"validation_accuracy\", final_val_accuracy)\n    print(f\"最终 validation_accuracy={final_val_accuracy:.4f}\")\n\nprint(\"MLflow 运行完成。\")\n\n</code></pre>\n<p>在这个示例中，<code>mlflow.log_metric(\"train_loss\", current_loss, step=epoch)</code> 记录了每个 epoch 的损失值。当您在 MLflow UI 中查看此运行记录时，您将看到一个图表，显示训练损失如何随 epoch 递减。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ps5s0n\" \n              data-plot-definition='{\"layout\": {\"title\": \"每 Epoch 模拟训练损失\", \"xaxis\": {\"title\": \"Epoch\"}, \"yaxis\": {\"title\": \"训练损失\"}, \"template\": \"plotly_white\"}, \"data\": [{\"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"训练损失\", \"x\": [0, 1, 2, 3, 4], \"y\": [0.78, 0.61, 0.45, 0.35, 0.28], \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ps5s0n\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示例：使用步长记录的训练损失在 MLflow UI 中可能显示的效果。</p>\n</blockquote>\n<p>通过持续记录参数和指标，您为每个实验创建了详细记录。这极大地方便了您理解哪些设置产生了哪些结果，比较不同运行，并在之后重现成功的成果。使用这些函数记录的信息成为在 MLflow UI 中分析实验的依据，我们将在后续章节中研究这些内容。</p>",
+  "slug": "logging-params-metrics-mlflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 7981,
+      "title": "MLflow Tracking",
+      "author": "MLflow Documentation",
+      "year": "2024",
+      "publisher": "The MLflow Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow的官方文档，介绍了其实验跟踪功能，包括记录参数、指标和其他工件的详细API参考。",
+      "order": 1,
+      "created_at": "2025-09-05T01:49:53.967658Z",
+      "updated_at": "2025-09-08T14:11:08.345590Z"
+    },
+    {
+      "id": 7983,
+      "title": "MLOps Engineering at Scale: A Guide to Building and Deploying Machine Learning Systems",
+      "author": "Carl Osipov",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/mlops-engineering-at/9781098114418/",
+      "doi": "",
+      "note": "提供了MLOps的全面视角，其中包含实验跟踪、超参数管理以及通过指标监控模型性能的章节。",
+      "order": 3,
+      "created_at": "2025-09-05T01:49:53.973107Z",
+      "updated_at": "2025-09-08T14:11:22.224573Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

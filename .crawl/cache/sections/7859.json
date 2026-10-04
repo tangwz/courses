@@ -1,0 +1,45 @@
+{
+  "id": 7859,
+  "title": "处理连接生命周期",
+  "meta_title": "MCP连接生命周期",
+  "meta_description": "管理服务器启动、关闭和重连逻辑。",
+  "content": "<p>管理MCP客户端与服务器的连接，不仅仅是发送提示。与标准REST API中请求通常独立且无状态不同，MCP连接表示一个持久会话。客户端，无论是Claude桌面应用还是自定义实现，都必须启动服务器进程，协商功能，维护通信通道，并妥善处理终止。未能妥善管理此生命周期会导致僵尸进程、损坏的JSON-RPC流以及无响应的界面。</p>\n<h3>初始化握手</h3>\n<p>生命周期在客户端执行服务器二进制文件后立即开始。在任何资源或工具可以交换之前，客户端和服务器必须就协议版本及其各自的功能达成一致。此协商通过MCP规范定义的一个规范的初始化序列进行。</p>\n<p>当服务器进程启动时，它会监听<code>initialize</code>请求。客户端发送此请求，其中包含其支持的协议版本和一组功能（例如是否支持采样或根）。服务器处理此消息并以其自身功能回应，声明它提供了哪些资源、提示或工具。</p>\n<p>仅当客户端发送<code>initialized</code>通知时，握手才算完成。在此三步序列完成之前，服务器会拒绝所有其他请求。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1naq9v7\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  bgcolor=\"transparent\";\n  node [shape=box style=\"filled,rounded\" fontname=\"Helvetica\" fontsize=12 penwidth=0];\n  edge [fontname=\"Helvetica\" fontsize=10 color=\"#495057\"];\n\n  Client [label=\"客户端应用\" fillcolor=\"#a5d8ff\"];\n  Server [label=\"MCP 服务器\" fillcolor=\"#b2f2bb\"];\n\n  Client -> Server [label=\"1. 请求：initialize(版本, 功能)\"];\n  Server -> Client [label=\"2. 响应：服务器信息, 功能\"];\n  Client -> Server [label=\"3. 通知：已初始化\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1naq9v7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>初始化序列建立了客户端和服务器之间的契约。服务器在收到最终的initialized通知之前，无法发送资源更新。</p>\n</blockquote>\n<h3>传输稳定性和标准IO</h3>\n<p>在本地开发的默认配置中，MCP使用标准输入和输出（Stdio）作为传输层。这种架构对您编写服务器代码的方式施加了特定限制。因为<code>stdout</code>专用于JSON-RPC消息，任何杂散输出，例如用于调试的<code>print()</code>语句，都会损坏消息流。客户端将无法解析JSON并很可能终止连接。</p>\n<p>为保持稳定的生命周期，您必须确保所有日志都定向到<code>stderr</code>。官方的Python和TypeScript SDK在正确配置时会自动处理此问题，但必须避免直接写入标准输出。</p>\n<p>客户端也充当进程管理器。它持有服务器进程ID（PID）的句柄。如果客户端崩溃或关闭，操作系统会关闭连接到服务器<code>stdin</code>和<code>stdout</code>的管道。服务器实现会检测到此关闭（文件结束或EOF）并立即终止自身，以防止资源泄漏。</p>\n<h3>心跳和健康检查</h3>\n<p>连接建立后，客户端和服务器可能会长时间处于空闲状态。为确保连接保持活动状态且服务器进程未挂起，协议支持<code>ping</code>方法。</p>\n<p>客户端可以定期发送JSON-RPC <code>ping</code>请求。服务器必须返回空结果。如果服务器在超时时间内未能响应，客户端会认为连接已中断并启动终止过程。这种机制对于长时间运行的会话非常重要，因为在这些会话中可能会出现网络中断（在SSE的情况下）或进程调度器暂停。</p>\n<h3>优雅终止</h3>\n<p>连接的结束与开始同样重要。强制终止（发送SIGKILL）可能会导致数据库锁未释放或磁盘上留下临时文件。MCP规范允许一个优雅的关闭序列。</p>\n<p>理想情况下，客户端会发送通知或关闭输入流，以此向服务器发出关闭信号。在使用<code>asyncio</code>的Python中，这通常会在服务器的主事件循环中触发<code>CancelledError</code>。您的服务器代码应该捕获此信号或使用上下文 (context)管理器（<code>async with</code>）来执行清理任务。</p>\n<p>常见的清理任务包括：</p>\n<ul>\n<li>关闭数据库连接。</li>\n<li>取消订阅外部webhook。</li>\n<li>删除临时缓存文件。</li>\n</ul>\n<p>下图展示了服务器在典型会话期间经历的状态。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10ncfsc\" \n              data-graph-definition='digraph Lifecycle {\n  rankdir=TB;\n  bgcolor=\"transparent\";\n  node [shape=rect style=\"filled,rounded\" fillcolor=\"#e9ecef\" fontname=\"Helvetica\" penwidth=0];\n  edge [fontname=\"Helvetica\" fontsize=10 color=\"#495057\"];\n\n  Stopped [label=\"已停止\" fillcolor=\"#ffc9c9\"];\n  Starting [label=\"进程已启动\" fillcolor=\"#ffe066\"];\n  Negotiating [label=\"握手\" fillcolor=\"#ffec99\"];\n  Ready [label=\"活动/就绪\" fillcolor=\"#69db7c\"];\n  Closing [label=\"清理中\" fillcolor=\"#bac8ff\"];\n\n  Stopped -> Starting [label=\"客户端执行命令\"];\n  Starting -> Negotiating [label=\"Stdio 管道打开\"];\n  Negotiating -> Ready [label=\"功能已交换\"];\n  Ready -> Closing [label=\"文件结束或SIGINT\"];\n  Closing -> Stopped [label=\"退出码 0\"];\n  Ready -> Stopped [label=\"崩溃/错误\" style=\"dashed\" color=\"#fa5252\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10ncfsc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>有效的服务器状态流程从进程创建到活动功能交换，最终到清理。虚线表示绕过清理的不可恢复错误状态。</p>\n</blockquote>\n<h3>错误恢复策略</h3>\n<p>尽管有生命周期管理，错误仍会发生。如果服务器崩溃，客户端必须决定是否重启它。大多数客户端，包括Claude桌面版，都采用退避策略。它们可能会立即尝试重启服务器，但如果服务器在启动时反复崩溃（“崩溃循环”），客户端将禁用服务器以保护系统稳定性。</p>\n<p>开发服务器时，您可以通过使用适当的退出码来影响此行为。使用代码<code>0</code>退出通常表示主动关闭，而非零代码则表示错误。然而，最管用的恢复策略是通过将顶层工具执行逻辑封装在<code>try/except</code>块中，从而完全防止崩溃。这使得服务器能够针对特定请求返回JSON-RPC错误响应，同时保持主进程和连接存活。</p>\n<p>通过理解初始化、活动通信和终止这些状态，您可以确保您的MCP服务器在更广泛的AI生态系统中充当可靠的组件，而不是需要持续手动重启的脆弱脚本。</p>",
+  "slug": "handling-connection-lifecycles",
+  "updates": [],
+  "references": [
+    {
+      "id": 21961,
+      "title": "JSON-RPC 2.0",
+      "author": "JSON-RPC Working Group",
+      "year": "2010",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.jsonrpc.org/specification",
+      "doi": "",
+      "note": "定义了用于通信的远程过程调用协议，包括请求/响应结构和错误处理。",
+      "order": 1,
+      "created_at": "2025-11-19T12:06:43.659027Z",
+      "updated_at": "2025-11-19T12:51:58.645450Z"
+    },
+    {
+      "id": 21962,
+      "title": "`subprocess` - Subprocess management",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/subprocess.html",
+      "doi": "",
+      "note": "官方文档，用于管理子进程、处理其标准I/O流（stdin、stdout、stderr）以及理解进程终止。",
+      "order": 2,
+      "created_at": "2025-11-19T12:06:43.667635Z",
+      "updated_at": "2025-11-19T12:52:48.311189Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

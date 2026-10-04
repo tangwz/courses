@@ -1,0 +1,61 @@
+{
+  "id": 2275,
+  "title": "目标：最小化成本函数",
+  "meta_title": "最小化机器学习成本函数",
+  "meta_description": "解释为什么最小化成本函数能带来更好的模型表现。",
+  "content": "<p>在上一节中，我们介绍了成本函数（常称为损失函数 (loss function)），它们是衡量机器学习 (machine learning)模型表现好坏的一种方式。请记住，成本函数接收模型的预测值和实际目标值，并计算出一个单一数值，代表总误差或“成本”。高成本意味着模型的预测值与实际值偏离较远，而低成本则表示预测值更接近真实情况。</p>\n<p>那么，当我们训练机器学习模型时，目标是什么？通常是让模型尽可能准确。用成本函数的术语来说，这直接等同于找到能使成本函数产生<em>尽可能低的值</em>的模型参数 (parameter)。</p>\n<p>优化过程可以想象成调收音机。模型的参数（例如，如果拟合一条直线，就是斜率 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>m</mi></mrow><annotation encoding=\"application/x-tex\">m</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">m</span></span></span></span> 和截距 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span>）是你可以转动的旋钮。成本函数告诉你，在特定旋钮设置下，你有多少噪声（误差）。目标是调整这些旋钮，直到找到能提供最清晰信号的设置，这意味着最少的噪声，或者说最小成本。</p>\n<h3>为什么是最小化？</h3>\n<p>最小化成本函数是基本的，原因在于：</p>\n<ol>\n<li><strong>量化 (quantization)“最佳拟合”：</strong> 成本函数为模型的“最佳”提供了数学定义。通过最小化它，你正在根据该定义，找到能使模型尽可能好地拟合训练数据的参数 (parameter)。例如，最小化均方误差（MSE）意味着找到能减少预测值和实际值之间平均平方差的参数。</li>\n<li><strong>驱动学习：</strong> 调整模型参数以降低成本的过程，基本上就是许多机器学习 (machine learning)场景中“学习”的含义。模型会迭代地改变其参数，检查成本，然后再次调整，始终尝试趋向更低的成本值。</li>\n</ol>\n<p>考虑一个非常简单的情况，其中我们的成本只取决于一个参数，我们称之为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi></mrow><annotation encoding=\"application/x-tex\">w</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span></span></span></span>。当针对 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi></mrow><annotation encoding=\"application/x-tex\">w</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span></span></span></span> 的不同值进行绘制时，成本函数可能看起来像一个碗的形状。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-vgbzyo\" \n              data-plot-definition='{\"layout\": {\"title\": \"简单成本函数与参数\", \"xaxis\": {\"title\": \"参数 (w)\"}, \"yaxis\": {\"title\": \"成本\"}, \"showlegend\": false}, \"data\": [{\"x\": [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], \"y\": [25, 16, 9, 4, 1, 0, 1, 4, 9, 16, 25], \"mode\": \"lines+markers\", \"name\": \"成本\", \"marker\": {\"color\": \"#228be6\"}}, {\"x\": [0], \"y\": [0], \"mode\": \"markers\", \"name\": \"最小成本\", \"marker\": {\"color\": \"#f03e3e\", \"size\": 10, \"symbol\": \"x\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-vgbzyo\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的抛物线成本函数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mi>o</mi><mi>s</mi><mi>t</mi><mo>=</mo><msup><mi>w</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">Cost = w^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\">os</span><span class=\"mord mathnormal\">t</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>。目标是找到参数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi></mrow><annotation encoding=\"application/x-tex\">w</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span></span></span></span> 的值（在这种情况下，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">w=0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span>），该值对应曲线上的最低点，代表最小成本。</p>\n</blockquote>\n<p>我们的目标是找到那个碗最底部 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi></mrow><annotation encoding=\"application/x-tex\">w</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span></span></span></span> 的值。这种寻找函数输入（或多个输入）以产生最小输出值的过程称为<strong>优化</strong>。</p>\n<p>在机器学习中，我们正在优化模型的参数以最小化成本函数。虽然找到像 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mi>o</mi><mi>s</mi><mi>t</mi><mo>=</mo><msup><mi>w</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">Cost = w^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\">os</span><span class=\"mord mathnormal\">t</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span> 这样简单函数的最小值是直接的（显然在 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>w</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">w=0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span> 处），但实际机器学习模型的成本函数通常复杂得多，可能取决于数百万个参数。</p>\n<p>我们如何高效地找到这个最低点，尤其是在处理许多参数时？这就是微积分，特别是导数，发挥作用的地方。正如我们之前所看到的，导数告诉我们函数的斜率或变化率。我们可以使用斜率的这些信息来引导我们走向成本函数的最低点。这是梯度下降 (gradient descent)等算法背后的核心思想，我们接下来会介绍。</p>",
+  "slug": "minimizing-cost",
+  "updates": [],
+  "references": [
+    {
+      "id": 3851,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "这本基础著作详细阐述了成本函数及其最小化作为机器学习模型训练核心的原理。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:46.772609Z",
+      "updated_at": "2025-09-07T20:48:07.898907Z"
+    },
+    {
+      "id": 3852,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher M. Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-0-387-45528-0",
+      "doi": "10.1007/978-0-387-45528-0",
+      "note": "一本关于机器学习统计和数学背景的标准教材，涵盖了损失函数和优化作用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:46.776188Z",
+      "updated_at": "2025-09-07T20:48:10.755399Z"
+    },
+    {
+      "id": 3853,
+      "title": "Machine Learning (CS229) Lecture Notes",
+      "author": "Andrew Ng, Tengyu Ma",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "Notes 1-3",
+      "url": "https://cs229.stanford.edu/notes2023/cs229-notes.pdf",
+      "doi": "",
+      "note": "这些广泛使用的讲义清晰地介绍了成本函数及其在机器学习中最小化目标，包含实际示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:46.778394Z",
+      "updated_at": "2025-09-07T20:48:19.586723Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

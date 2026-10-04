@@ -1,0 +1,45 @@
+{
+  "id": 6973,
+  "title": "AI数据集存储方案",
+  "meta_title": "AI数据集存储方案",
+  "meta_description": "比较各种存储方案，从本地SSD到分布式文件系统，以管理大型AI数据集。",
+  "content": "<p>高性能GPU能够以惊人的速度处理数据，但其效率完全取决于数据传输的速度。当存储系统无法跟上计算引擎的需求时，就会产生输入/输出（I/O）瓶颈，导致昂贵的加速器闲置。对于机器学习 (machine learning)而言，数据集可达千兆字节（GB）至拍字节（PB），选择合适的存储方案是基础设施设计中的重要组成部分。</p>\n<p>AI的理想存储系统需平衡三个性能指标：吞吐量 (throughput)、延迟和容量。</p>\n<ul>\n<li><strong>吞吐量</strong> 是数据传输速率，通常以兆字节每秒（MB/s）或千兆字节每秒（GB/s）衡量。高吞吐量对于快速载入图像或视频帧等大数据批次到内存中非常重要。</li>\n<li><strong>延迟</strong> 是获取第一份数据所需的时间延迟，通常以微秒（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>s）或毫秒（ms）衡量。在训练由数百万个小文件组成的数据集时，低延迟非常重要，因为查找每个文件所花费的时间会累积起来。</li>\n<li><strong>容量</strong> 是系统可存储的数据总量。这是一个由数据集大小决定的直接要求。</li>\n</ul>\n<p>存储方案大致分为本地存储、网络附加存储和对象存储，每种都提供了这些性能指标的不同组合。</p>\n<h3>本地存储：高速直接访问</h3>\n<p>本地存储直接连接到执行计算的机器。这种物理接近性提供了尽可能低的延迟，并且凭借适当的技术，可实现最高的吞吐量 (throughput)。</p>\n<ul>\n<li><strong>硬盘驱动器（HDDs）：</strong> 这些是传统的旋转磁碟。虽然它们每千兆字节成本最低且容量大，但其机械特性导致高延迟和慢速传输。HDD通常过慢，不适合作为活跃训练数据集的主要存储，更适合长期归档或冷存储。</li>\n<li><strong>SATA固态硬盘（SSDs）：</strong> SSD使用闪存且无活动部件，因此其延迟大幅降低，吞吐量远高于HDD。SATA SSD是工作站处理中小型数据集（可存放在单个驱动器上）的良好选择。</li>\n<li><strong>NVMe固态硬盘（SSDs）：</strong> 非易失性内存高速（NVMe）是一种专门为SSD设计的协议，用于通过高速PCIe总线直接与CPU通信。这绕过了旧的、较慢的SATA接口，实现了惊人的速度。现代NVMe驱动器可提供超过7,000 MB/s的顺序读取速度，使其成为单节点训练的首选，在单节点训练中需要最大I/O性能来满足GPU的吞吐需求。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-px0gzp\" \n              data-plot-definition='{\"layout\":{\"barmode\":\"group\",\"title\":\"存储性能对比\",\"xaxis\":{\"title\":\"存储类型\",\"type\":\"category\"},\"yaxis\":{\"title\":\"吞吐量 (MB/s)\",\"color\":\"#4263eb\"},\"yaxis2\":{\"title\":\"延迟 (µs, 对数刻度)\",\"overlaying\":\"y\",\"side\":\"right\",\"type\":\"log\",\"autorange\":true,\"color\":\"#f03e3e\"},\"legend\":{\"x\":0.01,\"y\":0.99},\"font\":{\"family\":\"sans-serif\"}},\"data\":[{\"x\":[\"HDD\",\"SATA SSD\",\"NVMe SSD\"],\"y\":[150,550,7000],\"name\":\"吞吐量\",\"type\":\"bar\",\"marker\":{\"color\":\"#4263eb\"}},{\"x\":[\"HDD\",\"SATA SSD\",\"NVMe SSD\"],\"y\":[4000,75,25],\"name\":\"延迟\",\"type\":\"bar\",\"marker\":{\"color\":\"#ffc9c9\"},\"yaxis\":\"y2\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-px0gzp\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>常见本地存储类型的性能特征。请注意延迟使用对数刻度，这突显了设备类型之间数量级的差异。</p>\n</blockquote>\n<h3>网络与分布式存储</h3>\n<p>当数据集过大，无法存储在单台机器上，或需要多个计算节点同时访问以进行分布式训练时，您必须转向基于网络的解决方案。</p>\n<ul>\n<li>\n<p><strong>网络附加存储（NAS）：</strong> NAS是一种专用文件存储服务器，它通过局域网（LAN）向其他机器提供存储，通常使用NFS（网络文件系统）等协议。配备高速网络（10GbE或更快）的高性能NAS可以有效地向小型机器集群提供数据。然而，如果许多客户端同时发出请求，NAS设备本身可能成为单点故障和性能瓶颈。</p>\n</li>\n<li>\n<p><strong>分布式文件系统：</strong> 对于大规模操作，分布式文件系统通常是解决方案。这些系统将来自多个服务器（节点）的存储汇集到一个统一的命名空间中。数据分散在各个节点上，一个文件可以同时从多个磁盘并行读取，从而提供极高的聚合吞吐量 (throughput)。Ceph或Lustre等系统是高性能计算（HPC）和大型AI集群中使用的实例。它们设置和管理复杂，但提供单个NAS所不具备的扩展性和容错性。</p>\n</li>\n</ul>\n<h3>云对象存储</h3>\n<p>云提供商提供一种高度可扩展且持久的存储方法，即对象存储。Amazon S3、Google Cloud Storage (GCS) 和 Azure Blob Storage 等服务是云中数据存储的核心部分。</p>\n<p>对象存储不使用文件夹和文件的分层文件系统，而是将数据作为“对象”在扁平地址空间中管理。每个对象由数据本身、一些元数据和一个唯一ID组成。</p>\n<ul>\n<li><strong>优点：</strong> 对象存储提供几乎无限的容量、高持久性（数据在多个位置复制），以及存储海量数据的相对较低的成本。这使其成为构建“数据湖”来存储所有原始和已处理数据集的理想之地。</li>\n<li><strong>缺点：</strong> 通过互联网从对象存储访问数据会引入更高的延迟，与本地或基于局域网的存储相比。因此，它通常不用于高性能训练期间的直接访问。常见模式是使用对象存储作为持久的真实数据源，并在训练任务开始前，将所需的数据子集复制到计算实例上更快的本地NVMe存储中。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1jidu17\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=0.2]; edge [fontname=\"sans-serif\"]; bgcolor=\"transparent\"; newrank=true; \"计算单元\" [fillcolor=\"#a5d8ff\"]; \"NVMe 固态硬盘\" [fillcolor=\"#b2f2bb\"]; \"SATA 固态硬盘\" [fillcolor=\"#d8f5a2\"]; \"网络附加存储\" [fillcolor=\"#ffec99\"]; \"对象存储\" [fillcolor=\"#ffc9c9\"]; subgraph cluster_local { label=\"本地机器\"; color=\"#adb5bd\"; \"计算单元\" -> \"NVMe 固态硬盘\" [label=\"<100 微秒\\n~7 GB/秒\", fontsize=10]; \"计算单元\" -> \"SATA 固态硬盘\" [label=\"<150 微秒\\n~550 MB/秒\", fontsize=10]; } subgraph cluster_lan { label=\"本地网络 (LAN)\"; color=\"#adb5bd\"; \"网络附加存储\" -> \"计算单元\" [label=\">1 毫秒\\n~1 GB/秒\", fontsize=10, dir=back]; } subgraph cluster_wan { label=\"云/广域网\"; color=\"#adb5bd\"; \"对象存储\" -> \"计算单元\" [label=\">20 毫秒\\n可变\", fontsize=10, dir=back]; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1jidu17\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>AI存储方案的层级结构。性能通常会随着数据远离计算核心而下降，以速度换取更大的规模和共享能力。</p>\n</blockquote>\n<p>存储方案的选择涉及权衡。对于在笔记本电脑上工作的数据科学家来说，一个大容量的内置NVMe驱动器可能就足够了。对于一家初创公司来说，构建其第一个专用AI服务器时，由NVMe驱动器组成的RAID阵列是一个强大的起点。对于运行在数十个GPU上进行分布式训练的大型企业来说，分布式文件系统或结合云对象存储与高性能本地缓存的混合方法变得必要。理解这些权衡对于设计能够处理您的数据而不仅仅是模型的IT架构是根本性的。</p>",
+  "slug": "storage-solutions-for-ai-datasets",
+  "updates": [],
+  "references": [
+    {
+      "id": 20890,
+      "title": "Designing Machine Learning Systems",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "对机器学习系统设计提供了全面的视角，包含数据管理、存储考量以及生产级AI的架构选择。",
+      "order": 1,
+      "created_at": "2025-09-06T14:11:11.474225Z",
+      "updated_at": "2025-09-10T03:14:26.819232Z"
+    },
+    {
+      "id": 20891,
+      "title": "Storage for AI: Accelerating Your Deep Learning Workloads",
+      "author": "WekaIO",
+      "year": "2022",
+      "publisher": "WekaIO",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.weka.io/resources/storage-for-ai-accelerating-your-deep-learning-workloads/storage-for-ai-accelerating-your-deep-learning-workloads.pdf",
+      "doi": "",
+      "note": "分析深度学习对存储的特定要求，讨论NVMe、并行文件系统的作用，以及优化GPU加速工作负载I/O性能的方法。",
+      "order": 2,
+      "created_at": "2025-09-06T14:11:11.479537Z",
+      "updated_at": "2025-09-10T03:14:35.942362Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

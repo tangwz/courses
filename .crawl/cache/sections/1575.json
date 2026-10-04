@@ -1,0 +1,61 @@
+{
+  "id": 1575,
+  "title": "WHERE 子句筛选数据简介",
+  "meta_title": "使用 SQL WHERE 子句筛选数据",
+  "meta_description": "了解 WHERE 子句的目的和基本语法，以便根据条件筛选行。",
+  "content": "<p>使用 <code>SELECT</code> 语句从表中获取数据是 SQL 中的一个基本步骤。然而，仅仅选择所有数据通常会导致信息量过大。想象一个包含成千上万甚至数百万客户记录的表，您很少会一次性需要所有这些记录。相反，目标通常是专注于某个特定数据子集，例如来自特定城市的客户、在某个日期之后下的订单，或者某个价格范围内的产品。</p>\n<p>这就是 <code>WHERE</code> 子句的作用所在。它是 SQL 中用于 <strong>筛选行</strong> 的主要工具。可以将其看作是设置条件，每行数据都必须满足这些条件才能包含在您的查询结果中。如果一行数据满足 <code>WHERE</code> 子句中指定的条件，则保留它；否则，则丢弃它。</p>\n<h3>目的与位置</h3>\n<p><code>WHERE</code> 子句允许您指定搜索条件。它会在任何分组或排序发生<em>之前</em>，筛选由 <code>FROM</code> 子句返回的行。在基本的 <code>SELECT</code> 语句中，<code>WHERE</code> 子句紧随 <code>FROM</code> 子句之后：</p>\n<pre><code class=\"language-sql\">SELECT column1, column2, ...\nFROM table_name\nWHERE condition;\n</code></pre>\n<p>在这里，<code>condition</code> 代表一个逻辑表达式，对于 <code>table_name</code> 中的每一行，其评估结果为 TRUE、FALSE 或 UNKNOWN。只有 <code>condition</code> 评估结果为 TRUE 的行才会包含在最终的结果集中。</p>\n<h3>条件如何作用</h3>\n<p>条件通常涉及使用比较运算符（我们接下来会讲到）将列的值与特定值或另一列的值进行比较。例如，您可能希望找到所有年龄大于 30 岁的用户，或者所有总金额超过 $100 的订单。</p>\n<p>我们来看一个简单的 <code>Products</code> 表：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">产品ID</th>\n<th align=\"left\">产品名称</th>\n<th align=\"left\">类别</th>\n<th align=\"left\">价格</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">笔记本电脑</td>\n<td align=\"left\">科技</td>\n<td align=\"left\">1200</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">键盘</td>\n<td align=\"left\">科技</td>\n<td align=\"left\">75</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">咖啡杯</td>\n<td align=\"left\">家居</td>\n<td align=\"left\">15</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">办公椅</td>\n<td align=\"left\">办公</td>\n<td align=\"left\">250</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">无线鼠标</td>\n<td align=\"left\">科技</td>\n<td align=\"left\">25</td>\n</tr>\n</tbody>\n</table>\n<p>如果您只想查看“科技”类别的产品，您可以使用类似这样的 <code>WHERE</code> 子句：</p>\n<pre><code class=\"language-sql\">SELECT ProductID, ProductName, Price\nFROM Products\nWHERE Category = 'Tech';\n</code></pre>\n<p>当数据库处理此查询时，它会查看 <code>Products</code> 表中的每一行：</p>\n<ol>\n<li>第 1 行：<code>Category</code> 是 'Tech'。条件 <code>Category = 'Tech'</code> 为 TRUE。保留该行。</li>\n<li>第 2 行：<code>Category</code> 是 'Tech'。条件 <code>Category = 'Tech'</code> 为 TRUE。保留该行。</li>\n<li>第 3 行：<code>Category</code> 是 'Home'。条件 <code>Category = 'Tech'</code> 为 FALSE。丢弃该行。</li>\n<li>第 4 行：<code>Category</code> 是 'Office'。条件 <code>Category = 'Tech'</code> 为 FALSE。丢弃该行。</li>\n<li>第 5 行：<code>Category</code> 是 'Tech'。条件 <code>Category = 'Tech'</code> 为 TRUE。保留该行。</li>\n</ol>\n<p>结果输出为：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">产品ID</th>\n<th align=\"left\">产品名称</th>\n<th align=\"left\">价格</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">笔记本电脑</td>\n<td align=\"left\">1200</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">键盘</td>\n<td align=\"left\">75</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">无线鼠标</td>\n<td align=\"left\">25</td>\n</tr>\n</tbody>\n</table>\n<p>请注意，只有符合 <code>WHERE Category = 'Tech'</code> 条件的行才会被返回。另请注意，像 'Tech' 这样的文本值在 SQL 中通常用单引号 (<code>' '</code>) 括起来。数值通常不需要引号。</p>\n<p><code>WHERE</code> 子句是 SQL 中用于数据分析的非常有用的部分，它让您能够精确地获取所需数据。在接下来的部分中，我们将查看可用于构建更复杂的筛选条件的各种运算符。</p>",
+  "slug": "intro-filtering-where",
+  "updates": [],
+  "references": [
+    {
+      "id": 1905,
+      "title": "SELECT Statement: WHERE Clause",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html#SQL-WHERE",
+      "doi": "",
+      "note": "涵盖 SELECT 语句的基本语法和行为，特别详细说明了 PostgreSQL 中用于过滤行的 WHERE 子句。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:21.651350Z",
+      "updated_at": "2025-09-07T18:43:51.565035Z"
+    },
+    {
+      "id": 1906,
+      "title": "Learning SQL: Master SQL Fundamentals",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "380",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd-edition/9781492062634/",
+      "doi": "",
+      "note": "一本全面的 SQL 入门指南，包含专门章节讲解 WHERE 子句及其在数据过滤中的各种应用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:21.666540Z",
+      "updated_at": "2025-09-07T18:44:05.124150Z"
+    },
+    {
+      "id": 1907,
+      "title": "Databases: Relational Databases and SQL",
+      "author": "Jennifer Widom",
+      "year": "2013",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.edx.org/course/databases-relational-databases-and-sql",
+      "doi": "",
+      "note": "斯坦福大学的入门课程，涵盖数据库基础概念，包括对 SQL SELECT 和 WHERE 子句的详细解释和实践练习。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:21.669534Z",
+      "updated_at": "2025-09-07T18:43:58.792185Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

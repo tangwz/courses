@@ -1,0 +1,61 @@
+{
+  "id": 7798,
+  "title": "使用评估指标对LLM输出进行基准测试",
+  "meta_title": "使用评估指标进行基准测试",
+  "meta_description": "使用评估模块，利用标准指标来衡量您的LLM输出质量。",
+  "content": "<p>生成文本很简单，但衡量其质量却是一个较大的难题。您如何知道新的提示是否优于旧的？如何证明切换到更昂贵的模型是值得投入的？主观的人工评估既慢又昂贵。这就是自动化评估和基准测试发挥作用的地方。</p>\n<p>通过设定一套标准化测试并使用量化 (quantization)指标，您可以系统地衡量LLM应用程序的性能。这使您能够比较不同的提示、模型或配置，记录长期改进，并在上线前发现退步。</p>\n<h3>使用真实值指标进行评估</h3>\n<p>任何良好基准的根本是一组可靠指标，这些指标将模型的生成输出与“真实值”或参考答案进行对比。<code>evaluation</code> 模块提供多种标准、基于参考的指标，各自适用于不同任务。</p>\n<h4>词汇指标：BLEU、ROUGE和F1分数</h4>\n<p>词汇指标通过比较生成输出与参考文本之间的词语重叠来运作。</p>\n<p>**BLEU（Bilingual Evaluation Understudy）**起源于机器翻译，衡量准确率。它计算生成文本中有多少个n-gram（词语序列）出现在参考文本中。它还包括一个简短惩罚，以避免生成过短的输出。分数范围从0到1，其中1表示完美匹配。</p>\n<p>它最适用于词语选择和顺序有特定要求的任务，例如翻译或代码生成。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import calculate_bleu\n\nreference = \"The quick brown fox jumps over the lazy dog\"\ncandidate = \"The quick brown fox jumped over the lazy dog\"\n\n# 候选文本与参考文本有良好的n-gram重叠，但并非完美匹配\nbleu_score = calculate_bleu(candidate, reference)\nprint(f\"BLEU 分数: {bleu_score:.3f}\")\n</code></pre>\n<p>**ROUGE（Recall-Oriented Understudy for Gisting Evaluation）**常用于评估摘要。它通过检查参考文本中有多少个n-gram出现在生成输出中来衡量召回率。最常见的变体ROUGE-L使用最长公共子序列（LCS）来评分，使其对词语顺序更具弹性。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import calculate_rouge\n\nreference_summary = \"AI and machine learning are transforming technology with deep learning.\"\ngenerated_summary = \"AI is revolutionizing technology through machine learning and deep learning advances.\"\n\n# ROUGE-L适用于摘要，因为它能捕捉句子层面的结构\nrouge_l_scores = calculate_rouge(generated_summary, reference_summary, rouge_type=\"rouge-l\")\nprint(f\"ROUGE-L F1分数: {rouge_l_scores['fmeasure']:.3f}\")\n</code></pre>\n<p><strong>F1分数和精确匹配</strong>常见于问答任务。精确匹配要求生成输出与参考文本完全一致。F1分数提供了一种更宽容的替代方法，通过计算词元 (token)级别准确率和召回率的调和平均值，有效地衡量词语重叠，而不敏感于它们的顺序。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import calculate_f1_score, calculate_exact_match\n\nreference = \"William Shakespeare\"\ncandidate = \"Shakespeare\"\n\nf1 = calculate_f1_score(candidate, reference)\nexact_match = calculate_exact_match(candidate, reference)\n\nprint(f\"F1分数: {f1:.3f}\")\nprint(f\"精确匹配: {exact_match}\")\n</code></pre>\n<h4>语义相似度</h4>\n<p>词汇指标虽然快速且实用，但在生成输出语义正确但使用了不同词语时会失效。语义相似度通过将候选文本和参考文本都转换为向量 (vector)嵌入 (embedding)并衡量它们之间的余弦相似度来解决此问题。这捕捉的是意义上的相似，而非仅仅词语上的相似。</p>\n<p>分数接近1.0表示两个文本在意义上非常相似。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import calculate_semantic_similarity\n\nreference = \"The new feature improves system performance.\"\ncandidate = \"The update enhances the application's speed.\"\n\n# 词语不同，但意思相同\nsimilarity = calculate_semantic_similarity(candidate, reference)\nprint(f\"语义相似度: {similarity:.3f}\")\n</code></pre>\n<h3>构建并运行基准测试</h3>\n<p>基准测试是对标准化数据集进行结构化评估运行。该过程包含创建一组测试用例，定义如何针对它们运行您的系统，以及明确如何对结果进行评分。</p>\n<p>首先，您使用 <code>TestCase</code> 类定义您的评估数据集。每个测试用例将输入与预期输出配对，作为真实值。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import TestCase\n\ntest_cases = [\n    TestCase(\n        id=\"问答_Python创建者\",\n        input=\"Who created Python?\",\n        expected_output=\"吉多·范罗苏姆\"\n    ),\n    TestCase(\n        id=\"问答_机器学习定义\",\n        input=\"What is machine learning?\",\n        expected_output=\"机器学习是人工智能的一个子集，它使系统能够从数据中学习。\"\n    ),\n]\n</code></pre>\n<p>接下来，您需要一个函数来接收输入并生成输出。这通常是您的LLM生成逻辑。为测试目的，我们可以模拟它。</p>\n<pre><code class=\"language-python\">def simple_qa_generator(question: str) -> str:\n    \"\"\"一个简单的生成函数，用于演示。\"\"\"\n    if \"谁创建了python\" in question.lower():\n        return \"Python是由吉多·范罗苏姆创建的。\"\n    if \"机器学习\" in question.lower():\n        return \"机器学习是人工智能的一个分支，系统在此分支中从数据中学习。\"\n    return \"我不知道。\"\n</code></pre>\n<p>最后，您使用 <code>run_benchmark</code> 函数将这些组件组合起来。您提供测试用例、生成函数以及一个评估函数，该函数根据预期值对每个输出进行评分。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import run_benchmark, calculate_f1_score\n\n# 评估函数定义了如何对每个测试用例进行评分\ndef evaluate_answer(output: str, expected: str) -> float:\n    return calculate_f1_score(output, expected)\n\n# 运行基准测试\nbenchmark_result = run_benchmark(\n    test_cases=test_cases,\n    generator_fn=simple_qa_generator,\n    evaluator_fn=evaluate_answer,\n    threshold=0.5, # 分数达到0.5或更高即为“通过”\n    name=\"问答系统基准测试\"\n)\n\n# 打印结果\nprint(f\"通过率: {benchmark_result.pass_rate:.1f}%\")\nprint(f\"平均分数: {benchmark_result.average_score:.3f}\")\nprint(f\"通过: {benchmark_result.passed_tests} / {benchmark_result.total_tests}\")\n</code></pre>\n<p>输出为您提供了系统表现的概要。<code>pass_rate</code> 显示满足质量阈值的测试用例百分比，而 <code>average_score</code> 给出整个数据集的整体性能感知。分析单个分数可以帮助您发现系统存在问题的具体方面。</p>\n<h3>实际应用：比较提示模板</h3>\n<p>基准测试是在开发过程中做出数据驱动决策的很好的工具。例如，您可以使用它来确定多个提示模板中哪个表现最优。</p>\n<p><code>benchmark_prompts</code> 函数简化此过程。它针对一组测试输入，为每个提示模板运行基准测试并汇总结果。</p>\n<p>让我们比较三个不同提示，用于摘要任务。</p>\n<pre><code class=\"language-python\">from kerb.evaluation import benchmark_prompts, calculate_rouge\n\n# 三个待测试的不同提示\nprompts = [\n    (\"简洁\", \"总结: {input}\"),\n    (\"指导\", \"请对以下文本生成一个简洁的单句摘要: {input}\"),\n    (\"详细\", \"请分析以下文本，并生成一份涵盖主要点的详细摘要: {input}\"),\n]\n\n# 测试输入及其预期输出（真实值）\ntest_data = [\n    {\n        \"input\": \"Python is a high-level, interpreted programming language known for its clear syntax...\",\n        \"expected\": \"Python是一种多功能且易读的编程语言。\"\n    },\n    {\n        \"input\": \"Machine learning is a subset of AI that enables systems to learn from data...\",\n        \"expected\": \"机器学习是人工智能的一个分支，系统在此分支中从数据中学习。\"\n    }\n]\ntest_inputs = [item[\"input\"] for item in test_data]\nexpected_outputs = {item[\"input\"]: item[\"expected\"] for item in test_data}\n\n# 一个使用提示模板的模拟生成函数\ndef generator_with_template(template: str, input_text: str) -> str:\n    # 在实际应用中，这将调用LLM并使用格式化的提示\n    # 在此示例中，我们将根据关键词返回一个固定响应\n    if \"concise\" in template:\n        return \"这是一个简洁的摘要。\"\n    elif \"detailed\" in template:\n        return \"这是对所提供文本的一个非常详细和全面的摘要。\"\n    else:\n        return \"这是一个摘要。\"\n\n# 一个使用ROUGE-L的评估函数\ndef evaluate_summary(output: str, input_text: str) -> float:\n    expected = expected_outputs[input_text]\n    rouge_scores = calculate_rouge(output, expected, rouge_type=\"rouge-l\")\n    return rouge_scores['fmeasure']\n\n# 运行提示比较\nresults = benchmark_prompts(\n    prompts,\n    test_inputs,\n    generator_with_template,\n    evaluate_summary\n)\n\n# 分析结果\nfor name, result in results.items():\n    print(f\"\\n模板 '{name}':\")\n    print(f\"  平均分数: {result.average_score:.3f}\")\n\nbest_prompt = max(results.items(), key=lambda item: item[1].average_score)\nprint(f\"\\n表现最佳的提示: '{best_prompt[0]}'\")\n</code></pre>\n<p>通过运行此比较，您可以定量确定哪种提示结构根据您选择的指标产生最高质量的输出。这种系统方法用数据代替猜测，使您能够迭代改进和提升LLM应用程序，更加可靠。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ea4j55\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"提示模板性能比较\"},\"xaxis\":{\"title\":{\"text\":\"提示模板\"}},\"yaxis\":{\"title\":{\"text\":\"平均分数\"},\"range\":[0,1]},\"barmode\":\"group\",\"template\":\"plotly_white\"},\"data\":[{\"type\":\"bar\",\"name\":\"分数\",\"x\":[\"简洁\",\"指导\",\"详细\"],\"y\":[0.21,0.85,0.55],\"marker\":{\"color\":[\"#4dabf7\",\"#20c997\",\"#7950f2\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ea4j55\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>指导提示在所选指标上明显优于简洁和详细版本，为改进指明了明确方向。</p>\n</blockquote>",
+  "slug": "benchmarking-with-evaluation-metrics",
+  "updates": [],
+  "references": [
+    {
+      "id": 21615,
+      "title": "BLEU: a Method for Automatic Evaluation of Machine Translation",
+      "author": "Kishore Papineni, Salim Roukos, Todd Ward, Wei-Jing Zhu",
+      "year": "2002",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+      "volume": "",
+      "pages": "311-318",
+      "url": "https://aclanthology.org/P02-1040/",
+      "doi": "10.3115/1073083.1073135",
+      "note": "这篇基础论文介绍了BLEU，一种基于n-gram重叠的机器翻译和其他文本生成任务的广泛使用的评估指标。",
+      "order": 1,
+      "created_at": "2025-10-20T07:12:49.964696Z",
+      "updated_at": "2025-10-20T07:35:38.411921Z"
+    },
+    {
+      "id": 21616,
+      "title": "ROUGE: A Package for Automatic Evaluation of Summaries",
+      "author": "Chin-Yew Lin",
+      "year": "2004",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Text Summarization Branches Out",
+      "volume": "",
+      "pages": "74-81",
+      "url": "https://aclanthology.org/W04-1013/",
+      "doi": "10.3115/1621896.1621901",
+      "note": "这篇原始论文介绍了ROUGE，这是一套常用于评估摘要质量的指标，通过n-gram和最长公共子序列重叠来衡量召回率。",
+      "order": 2,
+      "created_at": "2025-10-20T07:12:49.969919Z",
+      "updated_at": "2025-10-20T07:35:41.905802Z"
+    },
+    {
+      "id": 21617,
+      "title": "Speech and Language Processing: An Introduction to Computational Linguistics, Speech Recognition, and Language Technology",
+      "author": "Daniel Jurafsky, James H. Martin",
+      "year": "2025",
+      "publisher": "Stanford University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "这是一本自然语言处理领域的标准教科书，涵盖了文本生成评估的基本概念，包括BLEU和ROUGE等词汇重叠指标，以及F1分数和精确匹配等问答指标。",
+      "order": 3,
+      "created_at": "2025-10-20T07:12:49.974214Z",
+      "updated_at": "2025-10-20T07:35:41.553443Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

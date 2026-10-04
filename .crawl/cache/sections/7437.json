@@ -1,0 +1,61 @@
+{
+  "id": 7437,
+  "title": "应用内置工具",
+  "meta_title": "LangChain 内置工具的应用方法",
+  "meta_description": "关于应用 LangChain 中预构建工具的说明，像是 Google Search、Wikipedia 和 Python REPL。",
+  "content": "<p>一个智能体的行动能力全靠它手头的工具。LangChain 提供了一个丰富的预构建工具库，可以将智能体连接到多种外部服务和数据源，从搜索引擎到科学计算器。凭借这些工具，您无需重新编写底层集成代码，即可让您的智能体具备强大的功用。</p>\n<h3>加载和应用简单工具</h3>\n<p>最直接的开始方法是动用一个无需外部配置的工具。<code>DuckDuckGoSearchRun</code> 工具就是一个很好的例子，因为它提供网页搜索服务，不需要 API 密钥。</p>\n<p>我们来初始化一个智能体，并为其提供这个搜索工具。智能体的推理 (inference)引擎——LLM，将可以判断何时及怎样动用搜索工具来回复询问。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain import hub\nfrom langchain.agents import create_react_agent, AgentExecutor\nfrom langchain_community.agent_toolkits import load_tools\n\n# 初始化LLM\n# 确保您的OPENAI_API_KEY已在环境中设定\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0)\n\n# 加载内置工具\n# LangChain提供了方便的辅助函数'load_tools'\ntools = load_tools([\"ddg-search\", \"llm-math\"], llm=llm)\n\n# 获取要应用的提示 - 您可以修改它！\n# 我们从LangChain Hub拉取标准的ReAct提示\nprompt = hub.pull(\"hwchase17/react\")\n\n# 初始化智能体\n# 我们使用create_react_agent构造函数来创建ReAct智能体\nagent = create_react_agent(llm, tools, prompt)\n\n# 创建一个智能体执行器来管理执行循环\nagent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)\n\n# 使用查询运行智能体\nquery = \"What was the score of the 2022 FIFA World Cup final, and what is that score raised to the power of 0.25?\"\nagent_executor.invoke({\"input\": query})\n</code></pre>\n<p>执行此代码时，<code>verbose=True</code> 参数 (parameter)可以让您看到智能体的推理步骤。您会看到类似以下内容的输出：</p>\n<pre><code class=\"language-text\">> Entering new AgentExecutor chain...\nThought: 我得找出2022年国际足联世界杯决赛的比分，接着算出该比分0.25次方的值。我将先搜索比分，再动用计算器做数学运算。\nAction: duckduckgo_search\n2022 FIFA Cup final score\nObservation: 2022年国际足联世界杯决赛比分为阿根廷 3–3 法国。阿根廷通过点球大战以 4–2 获胜。\nThought: 比赛期间的比分是3-3，这意味着总共进了6个球。我将计算6的0.25次方。\nAction: Calculator\nAction Input: 6^0.25\nObservation: 答案: 1.56508458007\nThought: 我现在有了最后回复。\nFinal Answer: 2022年国际足联世界杯决赛比分为3-3（阿根廷点球获胜）。总比分6的0.25次方约等于1.565。\n\n> Finished chain.\n</code></pre>\n<p>此输出显示了智能体的内部思维过程。它准确地辨认出两个子任务，为每一步选用了合适的工具，并将观察结果汇总成一个完整、合理的回复。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-wvm60c\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_agent {\n    label=\"智能体执行器\";\n    style=\"filled\";\n    color=\"#e9ecef\";\n    bgcolor=\"#f8f9fa\";\n    llm [label=\"LLM (推理引擎)\", shape=ellipse, fillcolor=\"#bac8ff\"];\n    prompt [label=\"用户查询:\\n&#39;谁赢得了2022年世界杯？&#39;\", shape=note, fillcolor=\"#ffec99\"];\n    tool_select [label=\"思考:\\n&#39;我需要查找最近的体育赛事结果。\\n我将动用搜索工具。&#39;\", shape=plaintext];\n    final_answer [label=\"生成最后回复\", shape=ellipse, fillcolor=\"#bac8ff\"];\n  }\n\n  subgraph cluster_tools {\n    label=\"可用工具\";\n    style=dotted;\n    search [label=\"搜索工具\\n(DuckDuckGo)\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n    calculator [label=\"计算器工具\\n(LLM-Math)\", shape=cylinder, fillcolor=\"#96f2d7\"];\n    wiki [label=\"维基百科工具\", shape=cylinder, fillcolor=\"#d0bfff\"];\n  }\n\n  prompt -> llm [label=\"1. 输入\"];\n  llm -> tool_select [label=\"2. 选取动作\"];\n  tool_select -> search [label=\"3. 挑选工具\", style=dashed];\n  search -> llm [label=\"4. 返回观察结果:\\n&#39;阿根廷击败法国...&#39; \"];\n  llm -> final_answer [label=\"5. 汇总\"];\n  final_answer -> output [label=\"6. 输出\", arrowhead=vee];\n  output [label=\"智能体回应:\\n&#39;阿根廷赢得了2022年世界杯。&#39;\", shape=note, fillcolor=\"#b2f2bb\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-wvm60c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了一个智能体如何接收用户查询，利用其LLM推理引擎挑选合适的工具（搜索），运行工具以获取观察结果，然后得出最后回复。</p>\n</blockquote>\n<h3>处理须用 API 密钥的工具</h3>\n<p>LangChain 许多功能强大的内置工具都是对第三方 API 的封装，像是 Google、Wikipedia 或 WolframAlpha 的 API。若要动用这些，您通常须安装提供商的 Python SDK 并将 API 密钥设定为环境变量。</p>\n<p>例如，若要动用 WolframAlpha 工具进行计算查询，您首先得从其开发者门户获取一个 AppID。</p>\n<ol>\n<li><strong>安装所需软件包：</strong>\n<pre><code class=\"language-bash\">pip install wolframalpha\n</code></pre>\n</li>\n<li><strong>设定环境变量：</strong>\n在您的终端或 <code>.env</code> 文件中，设定您的 AppID。\n<pre><code class=\"language-bash\">export WOLFRAM_ALPHA_APPID=\"YOUR_APP_ID_HERE\"\n</code></pre>\n</li>\n</ol>\n<p>环境变量设定好后，LangChain 的工具加载器即可自行配置该工具。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain import hub\nfrom langchain.agents import create_react_agent, AgentExecutor\nfrom langchain_community.agent_toolkits import load_tools\nimport os\n\n# 确保您的密钥已设为环境变量\n# os.environ[\"OPENAI_API_KEY\"] = \"sk-...\"\n# os.environ[\"WOLFRAM_ALPHA_APPID\"] = \"YOUR_APP_ID\"\n\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0)\n\n# 加载WolframAlpha工具\n# LangChain 自行查找并动用 WOLFRAM_ALPHA_APPID 环境变量\ntools = load_tools([\"wolfram-alpha\"], llm=llm)\n\nprompt = hub.pull(\"hwchase17/react\")\n\nagent = create_react_agent(llm, tools, prompt)\n\nagent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)\n\nagent_executor.invoke({\"input\": \"What is the second derivative of x^4 * sin(x)?\"})\n</code></pre>\n<p>智能体会明白此数学问题最适合由 WolframAlpha 处理，并将任务交由其处理。这种安装软件包并设定环境变量的做法适用于 LangChain 中大多数基于 API 的工具，这让增强智能体功用有了一个统一的方法。</p>\n<p>尽管内置工具能处理多种常见任务，但您通常需要让智能体使用您自己的内部 API 或专有数据源。下一节会讲怎样制作自定义工具，以赋予智能体这些特定功用。</p>",
+  "slug": "using-built-in-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 14701,
+      "title": "Agents",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.langchain.com/docs/concepts/agents/",
+      "doi": "",
+      "note": "为读者提供了使用 LangChain 构建和理解自主代理的全面指导，包括各种代理类型及其底层机制。",
+      "order": 1,
+      "created_at": "2025-09-05T09:01:32.119371Z",
+      "updated_at": "2025-09-11T06:06:20.942218Z"
+    },
+    {
+      "id": 14702,
+      "title": "Tools",
+      "author": "LangChain",
+      "year": "2025",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/agents/tools/",
+      "doi": "",
+      "note": "官方文档，详细说明了如何在 LangChain 代理中使用预构建工具与外部服务和数据源进行交互。",
+      "order": 2,
+      "created_at": "2025-09-05T09:01:32.124243Z",
+      "updated_at": "2025-09-11T06:06:33.171331Z"
+    },
+    {
+      "id": 14703,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍 ReAct 框架的基础研究论文，该框架结合了推理和行动以增强代理能力，与 AgentType.ZERO_SHOT_REACT_DESCRIPTION 直接相关。",
+      "order": 3,
+      "created_at": "2025-09-05T09:01:32.129400Z",
+      "updated_at": "2025-09-11T06:06:19.846897Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

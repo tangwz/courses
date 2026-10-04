@@ -1,0 +1,61 @@
+{
+  "id": 5296,
+  "title": "关注点分离",
+  "meta_title": "在 FastAPI 应用程序中分离关注点",
+  "meta_description": "关于分离 API 逻辑、业务逻辑（模型推理）和数据模型的最佳实践。",
+  "content": "<p>对相关端点进行分组是应用程序组织的一个步骤，通常可以通过 <code>APIRouter</code> 等工具实现。然而，为了实现真正可维护和可测试的代码，开发人员还必须考虑如何组织这些端点<em>内部</em>以及<em>支持</em>它们的逻辑。这时，关注点分离 (Separation of Concerns, SoC) 原则变得非常重要。SoC 主张将应用程序拆分为不同的部分，每个部分负责一项特定的职责。</p>\n<p>在服务机器学习 (machine learning)模型的 FastAPI 应用程序中，应用 SoC 通常意味着将代码库划分为逻辑层：</p>\n<ol>\n<li>\n<p><strong>API 层（表现/路由）：</strong> 此层负责处理 HTTP 请求和响应。它的职责包括：</p>\n<ul>\n<li>定义路径操作（<code>@router.post</code>、<code>@router.get</code> 等）。</li>\n<li>接收传入请求并解析路径参数 (parameter)、查询参数和请求体。</li>\n<li>使用 Pydantic 模型（来自数据层）进行自动数据验证和序列化。</li>\n<li>调用业务逻辑层中适当的函数或方法来执行实际工作。</li>\n<li>将业务逻辑层的结果格式化为 HTTP 响应，可能使用响应模型。</li>\n<li>处理 HTTP 特有的错误并返回相应的状态码。</li>\n<li>此逻辑通常位于 <code>routers/</code> 目录中的文件中（如前一节所述）。</li>\n</ul>\n</li>\n<li>\n<p><strong>业务逻辑层（服务/领域层）：</strong> 此层封装了应用程序的核心功能，独立于其通过 API 公开的方式。对于 ML API，这涉及：</p>\n<ul>\n<li>实现模型所需的数据预处理逻辑。</li>\n<li>加载机器学习模型（通常在应用程序启动期间或通过依赖注入管理）。</li>\n<li>执行模型推理 (inference)（<code>model.predict()</code>）。</li>\n<li>对模型的输出执行任何必要的后处理。</li>\n<li>包含任何其他应用程序特定的规则或工作流程。</li>\n<li>此逻辑应位于独立的 Python 模块中，通常放在 <code>services/</code> 或 <code>core_logic/</code> 等专用目录中。这些模块理想情况下不应了解 FastAPI 或 HTTP 的具体细节。</li>\n</ul>\n</li>\n<li>\n<p><strong>数据层（模型/Schema）：</strong> 此层定义了应用程序处理的数据的结构和验证规则。</p>\n<ul>\n<li>包含用于验证 API 层中请求体和格式化响应的 Pydantic 模型。</li>\n<li>还可能包括业务逻辑层使用的内部数据结构。</li>\n<li>这些模型通常分组在 <code>schemas.py</code> 等文件中或 <code>models/</code> 目录中（与包含序列化 ML 模型文件的目录不同）。</li>\n</ul>\n</li>\n</ol>\n<h3>实际结构示例</h3>\n<p>考虑一个遵循 SoC 的典型项目布局：</p>\n<pre><code>your_ml_api/\n├── app/\n│   ├── __init__.py\n│   ├── main.py                 # FastAPI 应用程序创建，包含路由\n│   ├── routers/\n│   │   ├── __init__.py\n│   │   └── inference.py        # API 层：模型推理路由\n│   ├── services/\n│   │   ├── __init__.py\n│   │   └── prediction.py       # 业务逻辑层：预测服务\n│   ├── schemas/\n│   │   ├── __init__.py\n│   │   └── prediction.py       # 数据层：Pydantic 输入/输出模型\n│   ├── core/                   # 可选：共享组件\n│   │   ├── __init__.py\n│   │   └── model_loader.py     # 加载 ML 模型的逻辑\n│   └── ml_models/              # 序列化模型文件的目录\n│       └── sentiment_model.joblib\n├── tests/\n│   └── ...                     # 应用程序测试\n└── requirements.txt\n</code></pre>\n<p>在此结构中：</p>\n<ul>\n<li><code>app/routers/inference.py</code> 处理 HTTP POST 预测请求。它使用来自 <code>app/schemas/prediction.py</code> 的 Pydantic 模型验证输入，并调用 <code>app/services/prediction.py</code> 中的函数或方法。</li>\n<li><code>app/services/prediction.py</code> 包含 <code>predict_sentiment</code> 函数（或类）。它接收验证过的数据，可能执行预处理，使用已加载的模型（可能从 <code>app/core/model_loader.py</code> 获取）进行预测，执行后处理，并返回结果。它不了解 HTTP 请求或 FastAPI 装饰器。</li>\n<li><code>app/schemas/prediction.py</code> 定义了 <code>PredictionInput</code> 和 <code>PredictionOutput</code> Pydantic 模型。</li>\n</ul>\n<h3>分离的优点</h3>\n<p>遵循这种分离方式带来很多优势：</p>\n<ul>\n<li><strong>提升可维护性：</strong> API 的更改（例如，更改端点路径）不需要修改核心预测逻辑。反之，更新预测逻辑（例如，添加预处理步骤）也无需更改 HTTP 处理代码，只要服务函数的签名保持兼容即可。</li>\n<li><strong>增强可测试性：</strong> 您可以独立于 API 层测试业务逻辑层（<code>services/prediction.py</code>）。您可以编写单元测试，直接使用各种输入调用预测函数，而无需使用 <code>TestClient</code> 模拟 HTTP 请求。同样，API 层可以通过模拟其调用的业务逻辑层进行测试。</li>\n<li><strong>提高复用性：</strong> 业务逻辑层可以潜在地在其他场景中复用，例如命令行工具或不同类型的应用程序接口，因为它与 Web 框架解耦了。</li>\n<li><strong>更清晰的代码库：</strong> 开发人员可以轻松找到特定类型的逻辑，使导航和调试更简单。</li>\n</ul>\n<p>FastAPI 的依赖注入系统（我们稍后会提到）通过允许您清晰地将服务类实例或其他依赖（如加载的模型）提供给 API 路由函数，从而进一步促进了这种分离，避免了它们之间的紧密耦合。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-xz59cd\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, margin=0.2];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  subgraph cluster_api {\n    label = \"API 层 (routers)\";\n    style=filled;\n    color=\"#a5d8ff\"; // light blue\n    node [style=filled, color=\"#74c0fc\"]; // medium blue\n    api_route [label=\"FastAPI 路由\\n(/predict)\"];\n  }\n\n  subgraph cluster_service {\n    label = \"业务逻辑层 (services)\";\n    style=filled;\n    color=\"#b2f2bb\"; // light green\n    node [style=filled, color=\"#8ce99a\"]; // medium green\n    service [label=\"预测服务\\n(预处理, 推理, 后处理)\"];\n  }\n\n   subgraph cluster_data {\n    label = \"数据层 (schemas)\";\n    style=filled;\n    color=\"#ffec99\"; // light yellow\n    node [style=filled, color=\"#ffe066\"]; // medium yellow\n    pydantic_models [label=\"Pydantic 模型\\n(输入/输出 Schema)\"];\n  }\n\n   subgraph cluster_ml {\n    label = \"ML 模型\";\n    style=filled;\n    color=\"#eebefa\"; // light grape\n    node [style=filled, color=\"#e599f7\"]; // medium grape\n    ml_model [label=\"已加载的 ML 模型\\n(model.predict)\"];\n  }\n\n  client [label=\"HTTP 客户端\", shape=cylinder, style=filled, color=\"#dee2e6\"]; // gray\n\n  client -> api_route [label=\"HTTP 请求\"];\n  api_route -> pydantic_models [label=\"验证输入\", style=dashed, dir=back];\n  api_route -> service [label=\"调用服务\"];\n  service -> ml_model [label=\"运行推理\"];\n  service -> api_route [label=\"返回结果\"];\n  api_route -> pydantic_models [label=\"格式化输出\", style=dashed];\n  api_route -> client [label=\"HTTP 响应\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-xz59cd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示一个请求在 FastAPI ML 应用程序中通过分离层的工作流程。客户端只与 API 层交互，API 层负责协调对业务逻辑层和数据层的调用。</p>\n</blockquote>",
+  "slug": "separating-concerns",
+  "updates": [],
+  "references": [
+    {
+      "id": 14046,
+      "title": "FastAPI Documentation: Bigger Applications",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/tutorial/bigger-applications/",
+      "doi": "",
+      "note": "解释了如何使用 APIRouter 和其他技术来构建大型 FastAPI 项目，符合关注点分离原则，以实现更好的组织结构。在线文档。",
+      "order": 2,
+      "created_at": "2025-09-05T08:46:47.875813Z",
+      "updated_at": "2025-09-09T14:04:09.223515Z"
+    },
+    {
+      "id": 14047,
+      "title": "Pydantic Documentation: Models",
+      "author": "Samuel Colvin",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/concepts/models/",
+      "doi": "",
+      "note": "详细介绍了 Pydantic 模型在数据验证、序列化和定义数据模式方面的创建和使用，这些是数据层的核心。在线文档。",
+      "order": 3,
+      "created_at": "2025-09-05T08:46:47.878845Z",
+      "updated_at": "2025-09-09T14:04:13.547145Z"
+    },
+    {
+      "id": 14048,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "367",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFNy7_Zv2EWaaVq_ribn524YxQi_wUuVwF0DFj_X2nue_aoFTpXN-0bUbVcIKWyy4ZbJRCAJVvxi6YV_sLjbRfAQHyKiFmOI7xzs71uA_-FGA9zsif3XrqjItWdi_82JidFBB2ZvLgMU1sc0QkYWZx1SIs1qXWVZNkhcM70GE-qtncwUo8ykzDKRtTOUFbF6CmjQVp5sETU",
+      "doi": "",
+      "note": "讨论了构建健壮机器学习系统的架构考量，包括部署、测试和维护的代码结构，与本节的机器学习上下文相关。",
+      "order": 4,
+      "created_at": "2025-09-05T08:46:47.883086Z",
+      "updated_at": "2025-09-09T14:04:14.351846Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

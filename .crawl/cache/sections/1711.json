@@ -1,0 +1,61 @@
+{
+  "id": 1711,
+  "title": "一维数组切片",
+  "meta_title": "切片一维 NumPy 数组",
+  "meta_description": "使用切片语法从一维 NumPy 数组中提取子序列。",
+  "content": "<p>访问单个元素可以提供精确控制。然而，通常需要处理一维数组中的一个序列或一段元素。切片操作可以让你根据索引范围取数组的一部分。如果你用过 Python 列表，会觉得 NumPy 的切片操作很熟悉，但它针对 NumPy 的数组结构做了优化。</p>\n<h3>一维数组切片的基础</h3>\n<p>对一维数组 <code>arr</code> 进行切片的语法是 <code>arr[start:stop:step]</code>。我们来分析一下这些组成部分：</p>\n<ul>\n<li><code>start</code>：切片开始的索引（包含）。如果省略，默认是数组的开头（索引 0）。</li>\n<li><code>stop</code>：切片结束的索引（不包含）。此索引处的元素<em>不</em>在切片结果中。如果省略，默认是数组的末尾。</li>\n<li><code>step</code>：选择元素之间的间隔。如果省略，默认是 1（即选择连续的元素）。</li>\n</ul>\n<p>我们来创建一个简单的数组进行操作：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个从0到9的一维数组\narr = np.arange(10)\nprint(arr)\n# 输出： [0 1 2 3 4 5 6 7 8 9]\n</code></pre>\n<p>现在，我们来看一些切片示例：</p>\n<ol>\n<li>\n<p><strong>选择从索引 2 开始直到（但不包括）索引 5 的元素：</strong></p>\n<pre><code class=\"language-python\">slice1 = arr[2:5]\nprint(slice1)\n# 输出： [2 3 4]\n</code></pre>\n<p>这选择了索引 2、3 和 4 处的元素。</p>\n</li>\n<li>\n<p><strong>选择从开头直到（但不包括）索引 4 的元素：</strong></p>\n<pre><code class=\"language-python\">slice2 = arr[:4] # 省略 'start' 默认是 0\nprint(slice2)\n# 输出： [0 1 2 3]\n</code></pre>\n<p>这选择了从索引 0 开始直到（但不包括）索引 4 的元素。</p>\n</li>\n<li>\n<p><strong>选择从索引 5 开始到末尾的元素：</strong></p>\n<pre><code class=\"language-python\">slice3 = arr[5:] # 省略 'stop' 默认到末尾\nprint(slice3)\n# 输出： [5 6 7 8 9]\n</code></pre>\n<p>这选择了从索引 5 开始直到最后一个元素。</p>\n</li>\n<li>\n<p><strong>选择整个数组：</strong></p>\n<pre><code class=\"language-python\">slice4 = arr[:] # 省略 'start' 和 'stop'\nprint(slice4)\n# 输出： [0 1 2 3 4 5 6 7 8 9]\n</code></pre>\n</li>\n</ol>\n<h3>使用步长值</h3>\n<p><code>step</code> 值让你能选择不连续的元素：</p>\n<ol>\n<li>\n<p><strong>选择每隔一个元素：</strong></p>\n<pre><code class=\"language-python\">slice5 = arr[::2] # 选择从头到尾每隔一个元素\nprint(slice5)\n# 输出： [0 2 4 6 8]\n</code></pre>\n</li>\n<li>\n<p><strong>在指定范围（索引 1 到 7）内选择每隔一个元素：</strong></p>\n<pre><code class=\"language-python\">slice6 = arr[1:7:2] # 从 1 开始，在 7 之前停止，步长为 2\nprint(slice6)\n# 输出： [1 3 5]\n</code></pre>\n</li>\n</ol>\n<h3>切片中的负索引</h3>\n<p>就像访问单个元素一样，你可以在切片中使用负索引。<code>-1</code> 指代最后一个元素，<code>-2</code> 指代倒数第二个，以此类推。</p>\n<ol>\n<li>\n<p><strong>选择最后 3 个元素：</strong></p>\n<pre><code class=\"language-python\">slice7 = arr[-3:]\nprint(slice7)\n# 输出： [7 8 9]\n</code></pre>\n</li>\n<li>\n<p><strong>选择从开头直到最后 2 个元素之前的元素：</strong></p>\n<pre><code class=\"language-python\">slice8 = arr[:-2]\nprint(slice8)\n# 输出： [0 1 2 3 4 5 6 7]\n</code></pre>\n</li>\n<li>\n<p><strong>使用负步长反转数组：</strong></p>\n<pre><code class=\"language-python\">reversed_arr = arr[::-1]\nprint(reversed_arr)\n# 输出： [9 8 7 6 5 4 3 2 1 0]\n</code></pre>\n</li>\n</ol>\n<h3>切片是视图，不是副本</h3>\n<p>这是 NumPy 切片的一个重要方面：数组的切片返回的是数组数据的<em>视图</em>而不是<em>副本</em>。这意味着切片只是观察<em>相同</em>底层数据的一种不同方式。修改切片中的元素会影响到原始数组。</p>\n<p>我们来看一下实际效果：</p>\n<pre><code class=\"language-python\">print(\"原始数组：\", arr)\n# 原始数组： [0 1 2 3 4 5 6 7 8 9]\n\n# 创建一个切片\narr_slice = arr[5:8]\nprint(\"切片：\", arr_slice)\n# 切片： [5 6 7]\n\n# 修改切片中的一个元素\narr_slice[1] = 999\nprint(\"修改后的切片：\", arr_slice)\n# 修改后的切片： [  5 999   7]\n\n# 检查原始数组\nprint(\"切片修改后的原始数组：\", arr)\n# 切片修改后的原始数组： [  0   1   2   3   4   5 999   7   8   9]\n</code></pre>\n<p>可以看到，修改 <code>arr_slice</code> 中索引 1 处的元素（它对应于原始 <code>arr</code> 中索引 6 处的元素）也改变了 <code>arr</code> 中的值。这种行为的目的是为了提高性能和内存效率，因为它避免了不必要的数据重复，特别是对于数据分析和科学计算中常见的大型数组。</p>\n<p>如果你明确需要一个切片的副本，以便修改不会影响原始数据，可以使用 <code>copy()</code> 方法：</p>\n<pre><code class=\"language-python\">arr_copy = arr[5:8].copy()\narr_copy[1] = 111 # 修改副本\n\nprint(\"原始数组：\", arr)      # 不受副本修改的影响\n# 原始数组： [  0   1   2   3   4   5 999   7   8   9]\nprint(\"复制的切片：\", arr_copy)\n# 复制的切片： [  5 111   7]\n</code></pre>\n<p>理解切片以及视图与副本的区别，对于有效地处理数据和避免 NumPy 代码中意料之外的副作用非常重要。</p>",
+  "slug": "slicing-1d-arrays",
+  "updates": [],
+  "references": [
+    {
+      "id": 1731,
+      "title": "Indexing",
+      "author": "The NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "涵盖NumPy数组索引和切片以及关键的视图与副本行为的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:24:58.931409Z",
+      "updated_at": "2025-09-08T05:06:20.261108Z"
+    },
+    {
+      "id": 1732,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Python数据科学的经典教材，详细说明了NumPy数组操作，包括一维切片语法和视图与副本的区别。",
+      "order": 2,
+      "created_at": "2025-09-04T16:24:58.935061Z",
+      "updated_at": "2025-09-08T05:06:26.873379Z"
+    },
+    {
+      "id": 1733,
+      "title": "The NumPy array object: Indexing and Slicing",
+      "author": "SciPy Lecture Notes Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scipy-lectures.org/intro/numpy/array_object.html#indexing-and-slicing",
+      "doi": "",
+      "note": "广泛使用的资源，提供NumPy数组索引和切片的实用、以代码为中心的示例和解释，强化了步长值和负索引等概念。",
+      "order": 3,
+      "created_at": "2025-09-04T16:24:58.937671Z",
+      "updated_at": "2025-09-08T05:06:16.571833Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

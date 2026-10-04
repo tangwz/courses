@@ -1,0 +1,683 @@
+{
+  "id": 199,
+  "title": "变分自编码器：高级技术与表征学习",
+  "meta_title": "高级变分自编码器与表征学习技术",
+  "meta_description": "掌握高级变分自编码器 (VAE) 架构、推断方法和解耦技术，以实现精密表征学习。",
+  "description": "本课程详尽讲解变分自编码器 (VAE) 及其在表征学习中的应用。内容涵盖高级 VAE 架构、精密推断方法、旨在获得解耦表征以及它们在复杂数据类型上的扩展。本课程专为人工智能工程师和研究人员设计，侧重于前沿 VAE 模型的理论基础和实际实现。",
+  "short_description": "应用高级变分自编码器技术，进行有效的表征学习和生成建模。",
+  "excerpt": "掌握高级变分自编码器 (VAE) 架构、推断方法和解耦技术，以实现精密表征学习。本课程适合旨在应用前沿生成模型的人工智能工程师和研究人员。",
+  "prerequisites": "深度学习、数学、Python基础",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "高级变分自编码器架构",
+      "description": "实现并批判性评估一系列高级变分自编码器架构，包括 CVAE、VQ-VAE 和分层 VAE。"
+    },
+    {
+      "topic": "精密推断方法",
+      "description": "应用并分析高级变分推断技术，如 IWAE 和结构化后验方法，以提升 VAE 性能。"
+    },
+    {
+      "topic": "解耦表征学习",
+      "description": "开发用于学习解耦表征的 VAE 模型，并使用既定指标和理论体系评估其质量。"
+    },
+    {
+      "topic": "变分自编码器的数学原理",
+      "description": "获得对支配变分自编码器的数学原理的透彻理解，包括 ELBO、重参数化和 KL 散度。"
+    },
+    {
+      "topic": "变分自编码器在复杂数据中的应用",
+      "description": "调整并实现变分自编码器，用于建模序列、结构化和高维数据，例如文本、图和图像。"
+    },
+    {
+      "topic": "混合生成模型",
+      "description": "分析并构建结合变分自编码器与其他生成技术的混合模型，如 VAE-GAN，以增强其能力。"
+    }
+  ],
+  "duration": 60,
+  "slug": "vae-representation-learning",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-06-05T14:10:48.142665Z",
+  "updated_at": "2026-10-02T05:03:33.283864Z",
+  "chapters": [
+    {
+      "id": 1130,
+      "title": "概率生成模型与表示学习的基本原理",
+      "meta_title": "概率模型与表示学习概览",
+      "meta_description": "回顾概率生成模型与高级表示学习要点，为复杂的 VAE 做铺垫。",
+      "number": 1,
+      "slug": "probabilistic-models-representation-foundations",
+      "content": "本章为我们学习变分自编码器奠定必要知识。我们将首先从高级角度审视概率生成模型，理解它们如何旨在捕捉数据底层分布。我们还将讲解表示学习的核心原理，侧重于数据如何转化为对后续任务更有用的形式。这些基本议题对理解复杂 VAE 的架构和运行方式很有帮助。\n\n我们的学习将从概率模型的高级视角开始，然后进入潜在变量模型的理论与表述。你将掌握表示学习的核心原理以及评估表示质量的方法，包括既定度量标准。回顾标准自编码器将阐明它们在生成任务中的局限性，从而强调了对 VAE 等模型的需求。我们还将考量信息论在表示学习中的作用。完成本章将为你提供必要的背景知识，以便有效学习后续的 VAE 内容。",
+      "sections": [
+        {
+          "id": 6267,
+          "title": "概率模型：高级视角",
+          "meta_title": "概率模型的高级视角",
+          "meta_description": "对与生成学习相关的概率建模体系进行细致审视。",
+          "slug": "probabilistic-models-advanced-perspective",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6269,
+          "title": "隐变量模型：理论与公式化",
+          "meta_title": "隐变量模型理论",
+          "meta_description": "隐变量模型的详细理论与数学公式化。",
+          "slug": "latent-variable-models-theory",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6272,
+          "title": "表示学习的基本原理",
+          "meta_title": "表示学习的基本原理",
+          "meta_description": "讨论表示学习的基本目标和理想属性。",
+          "slug": "representation-learning-core-principles",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6274,
+          "title": "评估表示质量：衡量指标与方法",
+          "meta_title": "表示质量评估",
+          "meta_description": "学得表示质量的评估方法与衡量指标。",
+          "slug": "evaluating-representation-quality",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6276,
+          "title": "重温自编码器：生成任务的局限性",
+          "meta_title": "自编码器生成方面的局限",
+          "meta_description": "对标准自编码器及其生成方面不足的评价。",
+          "slug": "autoencoders-revisited-limitations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6279,
+          "title": "表征学习中的信息论",
+          "meta_title": "表征学习中的信息论",
+          "meta_description": "互信息等信息论原理在表征学习中的作用。",
+          "slug": "information-theory-representation-learning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1132,
+      "title": "变分自编码器：数学原理",
+      "meta_title": "变分自编码器：数学原理",
+      "meta_description": "理解VAEs的严谨数学推导，以及ELBO、重参数化和KL散度。包含实践实现。",
+      "number": 2,
+      "slug": "vaes-mathematical-deep-dive",
+      "content": "在确立了概率生成模型和表示学习的要点之后，本章侧重介绍变分自编码器（VAEs）的数学构造。对这些数学原理的扎实理解，对于有效使用和扩展VAEs来说是不可或缺的。\n\n在这里，你将学习从变分推断的原理推导出VAEs。我们将分析证据下界 (ELBO)，通常写作 $L_{ELBO}$，它构成了训练VAEs的主要目标函数。你将理解重参数化技巧，这是一个重要技巧，它使通过随机隐变量进行基于梯度的优化成为可能。Kullback-Leibler (KL) 散度（通常写作 $D_{KL}(q(z|x) || p(z))$）在VAEs目标函数中的作用和解释也将被详细阐述。此外，我们还将涵盖编码器和解码器网络的设计考虑因素，讨论常见的VAEs训练难题，并分析VAEs目标函数的不同表达形式。本章包含一个实践部分，关于如何实现一个VAEs并执行诊断，以将理论与应用联系起来。",
+      "sections": [
+        {
+          "id": 6284,
+          "title": "VAE推导：变分推断",
+          "meta_title": "VAE推导：通过变分推断方法",
+          "meta_description": "逐步推导变分自编码器，运用变分推断的原理。",
+          "slug": "vae-derivation-variational-inference",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6287,
+          "title": "证据下界 (ELBO) 公式",
+          "meta_title": "VAE 中的 ELBO 公式",
+          "meta_description": "VAE 中证据下界 (ELBO) 的详细公式和阐释。",
+          "slug": "elbo-formulation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6289,
+          "title": "重参数化技巧",
+          "meta_title": "重参数化技巧解析",
+          "meta_description": "了解重参数化技巧在变分自编码器中实现梯度优化的作用。",
+          "slug": "reparameterization-trick",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6293,
+          "title": "VAE中的KL散度：作用与解释",
+          "meta_title": "VAE中的KL散度",
+          "meta_description": "VAE目标函数中KL散度项的功能、特点及其解读。",
+          "slug": "kl-divergence-vaes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6296,
+          "title": "VAE 编码器和解码器网络设计",
+          "meta_title": "VAE 编码器和解码器设计",
+          "meta_description": "设计 VAE 中高效编码器和解码器网络的架构考量。",
+          "slug": "vae-encoder-decoder-design",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6300,
+          "title": "常见 VAE 训练问题",
+          "meta_title": "VAE 训练问题",
+          "meta_description": "处理 VAE 训练中常见的问题，例如后验坍缩和模糊样本生成。",
+          "slug": "vae-training-difficulties",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6303,
+          "title": "VAE目标函数分析",
+          "meta_title": "VAE目标函数分析",
+          "meta_description": "对VAE目标函数不同公式的数学分析。",
+          "slug": "analysis-vae-objectives",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6305,
+          "title": "VAE 实现与诊断：动手操作",
+          "meta_title": "VAE 实现与诊断实践",
+          "meta_description": "从零开始实现 VAE，并进行诊断以了解其行为。",
+          "slug": "practice-vae-implementation-diagnostics",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1135,
+      "title": "VAE 进阶架构与改进",
+      "meta_title": "进阶 VAE 架构：CVAE、VQ-VAE、Beta-VAE",
+      "meta_description": "学习条件 VAE、VQ-VAE、分层 VAE 和 Beta-VAE 等进阶 VAE 架构，以增强生成能力。",
+      "number": 3,
+      "slug": "advanced-vae-architectures",
+      "content": "在明确了变分自编码器（VAE）的数学原理，包括证据下界（ELBO）$L_{ELBO}$ 和重参数化技巧之后，我们现在将关注点转移到架构提升上。尽管标准 VAE 为生成建模和表征学习提供了强力框架，但它的能力可以大大扩展。本章审视多种进阶 VAE 架构与改进，旨在解决常见问题，例如提升样本真实度、处理更复杂的数据类型，以及获得更有结构或可解释的潜在空间。\n\n我们将研究条件 VAE（CVAE）如何根据特定属性实现受控数据生成。你将了解到分层 VAE 如何建模具有多层抽象的数据，以及矢量量化 VAE（VQ-VAE）如何引入离散潜在变量，通常会得到更清晰的生成样本。此外，我们还将介绍自回归解码器和归一化流等强大组件的结合，以创建更具表达力的 VAE。本章还将介绍 Beta-VAE 和 FactorVAE 等特定改进，它们旨在提升所学表征的解耦效果。每个部分都将帮助你做好准备，以实现和评估这些精密模型。",
+      "sections": [
+        {
+          "id": 6307,
+          "title": "用于可控生成的条件变分自编码器 (CVAE)",
+          "meta_title": "条件变分自编码器 (CVAE)",
+          "meta_description": "了解条件变分自编码器 (CVAE) 如何根据特定属性或条件生成数据。",
+          "slug": "conditional-vaes-cvaes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6310,
+          "title": "用于复杂数据结构的层次化 VAE",
+          "meta_title": "层次化 VAE",
+          "meta_description": "研究用于建模具有多级抽象程度的数据的层次化 VAE。",
+          "slug": "hierarchical-vaes",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6314,
+          "title": "向量量化变分自编码器 (VQ-VAE)",
+          "meta_title": "向量量化变分自编码器 (VQ-VAE)",
+          "meta_description": "理解使用向量量化方法实现离散潜在表示的VQ-VAE。",
+          "slug": "vector-quantized-vaes-vq-vaes",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6317,
+          "title": "变分自编码器中的自回归解码器",
+          "meta_title": "变分自编码器中的自回归解码器",
+          "meta_description": "使用强大的自回归模型（如 PixelCNN）作为VAE中的解码器，以提升样本质量。",
+          "slug": "autoregressive-decoders-vaes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6322,
+          "title": "灵活先验和后验的归一化流",
+          "meta_title": "VAE 中的归一化流",
+          "meta_description": "将归一化流并入 VAE 中，以学习更具表达力的先验和近似后验。",
+          "slug": "normalizing-flows-vaes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6325,
+          "title": "用于解耦表示的Beta-VAE",
+          "meta_title": "用于解耦的Beta-VAE",
+          "meta_description": "研究 Beta-VAE 及其促进解耦潜在表示的机制。",
+          "slug": "beta-vaes",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6329,
+          "title": "FactorVAE 和总相关性 VAE (TCVAE)",
+          "meta_title": "FactorVAE 和 TCVAE",
+          "meta_description": "FactorVAE 和 TCVAE 等先进 VAE 变体，通过最小化总相关性来改善分离性。",
+          "slug": "factorvaes-tcvaes",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6332,
+          "title": "动手实践：实现高级VAE架构",
+          "meta_title": "高级VAE架构实现",
+          "meta_description": "实现并比较CVAE和VQ-VAE等多种高级VAE架构。",
+          "slug": "practice-advanced-vae-architectures",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1139,
+      "title": "VAE中的推断方法与摊销",
+      "meta_title": "VAE推断方法：IWAE、摊销与结构化变分推断",
+      "meta_description": "考察VAE中的高级推断方法，包括IWAE、摊销推断和结构化变分推断，以获得更好的后验近似。",
+      "number": 4,
+      "slug": "vae-inference-techniques",
+      "content": "变分自编码器（VAE）的性能取决于其近似后验 $q_\\phi(z|x)$ 与真实后验 $p_\\theta(z|x)$ 的匹配程度。尽管证据下界（$ELBO$）提供了一个可计算的目标，但通常对简单的摊销推断网络 $q_\\phi(z|x)$ 的依赖会限制模型的表达能力和此界限的紧密程度。本章侧重于改进VAE推断部分的方法。\n\n我们将详细考察摊销变分推断，讨论其实用优势和固有假设，例如均值场近似。你将学习旨在克服这些限制的方法，包括用于获得更灵活后验形式的结构化变分推断，以及用于实现更紧密$ELBO$估计的重要性加权自编码器（IWAE）。我们还会介绍其他方法，如半摊销推断、辅助变量的使用以及对抗性变分贝叶斯（AVB），以进一步提高后验近似的准确度。到本章末尾，你将明白如何选择和应用这些高级推断策略，以构建具有改进性能特点的VAE。",
+      "sections": [
+        {
+          "id": 6335,
+          "title": "摊销变分推断：优点与局限",
+          "meta_title": "摊销变分推断",
+          "meta_description": "详细分析摊销变分推断、其效率以及固有的局限性。",
+          "slug": "amortized-variational-inference",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6337,
+          "title": "平均场近似的局限性",
+          "meta_title": "平均场近似的局限性",
+          "meta_description": "理解变分后验中平均场假设所施加的限制。",
+          "slug": "mean-field-approximations-limitations",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6339,
+          "title": "VAE 中的结构化变分推断",
+          "meta_title": "结构化变分推断",
+          "meta_description": "用于捕获潜在变量中依赖关系的结构化变分推断方法。",
+          "slug": "structured-variational-inference",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6341,
+          "title": "重要性加权自编码器 (IWAE)",
+          "meta_title": "重要性加权自编码器 (IWAE)",
+          "meta_description": "使用IWAE获取更紧密的ELBO下界及提升生成性能。",
+          "slug": "importance-weighted-autoencoders-iwaes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6344,
+          "title": "辅助变量与半分摊变分推断",
+          "meta_title": "辅助变量与半分摊变分推断",
+          "meta_description": "在 VAE 中使用辅助变量和半分摊推断方案。",
+          "slug": "auxiliary-variables-semi-amortized-vi",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6346,
+          "title": "使用隐式模型的变分推断",
+          "meta_title": "使用隐式模型的VI",
+          "meta_description": "考察当后验或先验是隐式模型时的变分推断。",
+          "slug": "variational-inference-implicit-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6350,
+          "title": "对抗变分贝叶斯 (AVB)",
+          "meta_title": "对抗变分贝叶斯 (AVB)",
+          "meta_description": "利用对抗训练实现VAE中更灵活的变分推断。",
+          "slug": "adversarial-variational-bayes-avb",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6352,
+          "title": "实践：实现IWAE和进阶推断",
+          "meta_title": "IWAE实现实践",
+          "meta_description": "实现重要性加权自编码器并尝试其他进阶推断方法。",
+          "slug": "practice-iwaes-advanced-inference",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1141,
+      "title": "解耦表示学习与变分自编码器 (VAEs)",
+      "meta_title": "解耦表示学习与变分自编码器 (VAEs)",
+      "meta_description": "学习使用变分自编码器实现和评估解耦表示的技术与指标。",
+      "number": 5,
+      "slug": "disentangled-representation-learning-vaes",
+      "content": "在前几章中，我们研究了变分自编码器 (VAEs) 如何学习数据的潜在表示。表示学习的一个重要目标是找出数据中潜在的变动因素，这些因素不仅紧凑而且有意义。本章讨论 *解耦表示学习*，这是一个关注训练模型（尤其是 VAEs）的方面，使其学习到的表示中，每个潜在维度都对应于数据中存在的独立、可解释的生成因素。例如，对于人脸图像，解耦表示可以将头发颜色、姿态或情感等因素分离到独立的潜在变量中。\n\n我们将首先考虑定义解耦的不同方法以及实现解耦的相应难点。您将了解到用于量化解耦程度的常用评估指标，例如互信息间隙 (MIG)、独立属性可预测性 (SAP) 以及解耦性、完备性和信息性 (DCI)。本章接下来将研究 VAE 目标函数中的 $KL$ 散度项如何影响解耦，从而产生了像 $\\beta$-VAEs 这样的模型。我们还将讲解旨在提高解耦效果的方法，包括 FactorVAEs 和总相关性 VAEs (TCVAEs)，这些方法更直接地处理潜在编码中的统计独立性。将讨论与信息瓶颈理论和群论观点的理论关联，以及该方面固有的局限性和可识别性问题。最后，您将通过训练用于解耦的 VAEs 并使用已确立的评估指标来评估它们的性能，从而获得实践经验。",
+      "sections": [
+        {
+          "id": 6355,
+          "title": "定义解耦：公式化与难题",
+          "meta_title": "定义解耦",
+          "meta_description": "形式化定义以及实现和衡量解耦的固有难题。",
+          "slug": "defining-disentanglement",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6357,
+          "title": "解耦量化指标",
+          "meta_title": "解耦指标 (MIG, SAP, DCI)",
+          "meta_description": "对量化解耦的常见指标的概述，如 MIG、SAP 和 DCI。",
+          "slug": "disentanglement-metrics",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6359,
+          "title": "KL正则化对解耦的影响",
+          "meta_title": "KL正则化与解耦",
+          "meta_description": "分析KL散度项在VAE中促进解耦表征的作用。",
+          "slug": "kl-regularization-disentanglement",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6361,
+          "title": "信息瓶颈理论与用于解耦的VAEs",
+          "meta_title": "用于解耦的信息瓶颈",
+          "meta_description": "联系信息瓶颈理论与VAEs，着眼于解耦因素的学习。",
+          "slug": "information-bottleneck-vaes-disentanglement",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6364,
+          "title": "解耦的对抗训练",
+          "meta_title": "对抗解耦",
+          "meta_description": "采用对抗目标以促使潜在空间解耦。",
+          "slug": "adversarial-disentanglement",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6366,
+          "title": "解耦的群论方法",
+          "meta_title": "群论解耦",
+          "meta_description": "探讨群论作为理解和实现解耦的框架。",
+          "slug": "group-theoretic-disentanglement",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6369,
+          "title": "解耦表示学习中的识别问题与局限",
+          "meta_title": "解耦的识别问题与局限",
+          "meta_description": "讨论解耦表示学习中的理论限制和识别问题。",
+          "slug": "identifiability-disentanglement-limitations",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6371,
+          "title": "动手实践：训练与评估解耦变分自编码器",
+          "meta_title": "解耦变分自编码器实践",
+          "meta_description": "训练变分自编码器（例如 Beta-VAE）以实现解耦，并使用标准指标评估结果。",
+          "slug": "practice-disentangled-vaes",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1143,
+      "title": "VAEs在处理序列和结构化数据中的应用",
+      "meta_title": "VAEs在序列和结构化数据中的应用：循环VAE、图VAE",
+      "meta_description": "将VAEs应用于序列数据 (循环VAE) 和结构化数据 (图VAE)，包括自然语言处理和时间序列等应用。",
+      "number": 6,
+      "slug": "vaes-sequential-structured-data",
+      "content": "前几章主要关注的是将样本视为独立数据的VAEs，例如单个图像。然而，许多数据集都具有固有结构。例如，文本数据由有序的词语序列构成，时间序列数据表现出时间上的关联性，而社交网络或分子则最适合以图的形式表示。本章将对VAE框架进行扩展，以有效建模此类序列化和结构化信息。\n\n您将学习如何：\n*   调整VAE架构以处理序列数据，从而得到循环VAEs (RVAEs) 等模型，适用于时间序列建模等任务。\n*   在VAEs中加入注意力机制，以捕捉序列中常存在的长距离关联性。\n*   专门为图结构数据开发VAEs，实现在网络和关系数据上的表示学习。\n*   了解这些VAE变体在自然语言处理等方面以及用于分析动态系统方面的应用。\n*   了解针对时间数据设计的VAEs与已有状态空间模型之间的联系。\n\n学完本章后，您将能够将VAEs应用于更广范围的复杂数据形式，捕捉其中包含的丰富关联性。",
+      "sections": [
+        {
+          "id": 6373,
+          "title": "循环变分自编码器 (RVAE) 用于时间序列建模",
+          "meta_title": "循环变分自编码器 (RVAE)",
+          "meta_description": "在VAE中使用循环神经网络来建模时间序列等顺序数据。",
+          "slug": "recurrent-vaes-rvaes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6374,
+          "title": "序列VAE的注意力机制",
+          "meta_title": "带注意力的VAE",
+          "meta_description": "将注意力机制融入VAE，以改进序列中长距离依赖性的建模。",
+          "slug": "vaes-attention-sequences",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6375,
+          "title": "图VAEs用于结构化数据表示学习",
+          "meta_title": "图VAEs",
+          "meta_description": "开发VAEs，以学习图结构数据的表示。",
+          "slug": "graph-vaes",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6376,
+          "title": "自然语言处理中的 VAE",
+          "meta_title": "自然语言处理中的 VAE",
+          "meta_description": "VAEs 在自然语言处理中的应用，例如可控文本生成和文本潜空间操作。",
+          "slug": "vaes-natural-language-processing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6377,
+          "title": "视频与动态系统中的时序变分自编码器",
+          "meta_title": "视频时序变分自编码器",
+          "meta_description": "利用为时序数据设计的变分自编码器来建模视频及其他动态系统。",
+          "slug": "temporal-vaes-video",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6378,
+          "title": "状态空间模型与变分自编码器的关联",
+          "meta_title": "状态空间模型与变分自编码器",
+          "meta_description": "研究经典状态空间模型与变分自编码器在动态系统中的关系。",
+          "slug": "state-space-models-vaes",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6379,
+          "title": "实践：为序列数据实现VAE",
+          "meta_title": "序列数据VAE实践",
+          "meta_description": "为序列数据任务实现VAE架构，例如文本生成或时间序列预测。",
+          "slug": "practice-vaes-sequential-data",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1144,
+      "title": "VAE的进阶议题与应用拓展",
+      "meta_title": "VAE进阶应用与混合模型 (VAE-GAN)",
+      "meta_description": "了解VAE进阶应用，例如半监督学习、异常检测以及VAE-GAN等混合模型。",
+      "number": 7,
+      "slug": "advanced-vae-topics-extensions",
+      "content": "在对变分自编码器（VAE）的核心原理、高级架构和精密推理方法有所了解后，本章将视野拓宽，以考查其拓展应用以及与其他机器学习方法的结合。\n\n您将掌握以下技能：\n*   在半监督学习场景中应用VAE。\n*   运用VAE进行异常检测和分布外数据识别。\n*   认识VAE与生成对抗网络（GAN）的比较优势与不足。\n*   构建并剖析VAE-GAN和对抗性自编码器（AAE）等混合模型。\n*   明确VAE在基于模型的强化学习中的作用。\n*   学习去噪VAE等方法，以使模型不易受输入扰动影响，并提升特征学习能力。\n*   审视专门用于VAE训练的高级优化策略。\n\n本章还包含关于实现混合VAE-GAN模型的实践练习，让您能够应用这些拓展知识点。",
+      "sections": [
+        {
+          "id": 6380,
+          "title": "使用变分自编码器（VAE）的半监督学习",
+          "meta_title": "使用变分自编码器（VAE）的半监督学习",
+          "meta_description": "将变分自编码器（VAE）应用于半监督学习任务，结合使用有标签和无标签数据。",
+          "slug": "semi-supervised-learning-vaes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6381,
+          "title": "VAEs在异常和分布外数据检测中的应用",
+          "meta_title": "VAEs在异常检测中的应用",
+          "meta_description": "运用 VAEs 基于重建误差或潜在空间检测异常和分布外样本。",
+          "slug": "vaes-anomaly-detection",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6382,
+          "title": "生成对抗网络 (GANs) 对比 变分自编码器 (VAEs)：一项比较分析",
+          "meta_title": "GANs 与 VAEs 比较",
+          "meta_description": "对 VAEs 和 GANs 的详细比较，概述它们各自的优点和缺点。",
+          "slug": "gans-vs-vaes-comparison",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6383,
+          "title": "混合模型：VAE-GAN与对抗式自编码器 (AAE)",
+          "meta_title": "混合模型：VAE-GANs, AAEs",
+          "meta_description": "学习将VAE与对抗训练相结合的混合生成模型，例如VAE-GAN和AAE。",
+          "slug": "hybrid-models-vae-gans-aaes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6384,
+          "title": "VAE在基于模型的强化学习中的应用",
+          "meta_title": "VAE在强化学习中的应用",
+          "meta_description": "VAE在基于模型的强化学习中学习环境动态或紧凑状态表示的作用。",
+          "slug": "vaes-reinforcement-learning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6385,
+          "title": "去噪VAE与输入扰动鲁棒性",
+          "meta_title": "去噪VAE与鲁棒性",
+          "meta_description": "通过去噪目标和输入扰动增强VAE鲁棒性和特征学习。",
+          "slug": "denoising-vaes-robustness",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6386,
+          "title": "变分自编码器（VAE）的优化进阶策略",
+          "meta_title": "VAE进阶优化",
+          "meta_description": "专为训练大规模和复杂VAE设计的优化技术和学习率计划。",
+          "slug": "advanced-optimization-vaes",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6387,
+          "title": "动手实践：实施 VAE-GAN 混合架构",
+          "meta_title": "VAE-GAN 混合模型实践",
+          "meta_description": "实施和试验 VAE-GAN 混合模型，以提升样本质量或进行特征表征学习。",
+          "slug": "practice-hybrid-vae-gan",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

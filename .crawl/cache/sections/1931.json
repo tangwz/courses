@@ -1,0 +1,61 @@
+{
+  "id": 1931,
+  "title": "动机：克服固定长度上下文向量的不足",
+  "meta_title": "注意力机制的缘由",
+  "meta_description": "理解早期编码器-解码器模型中固定上下文向量的限制。",
+  "content": "<p>循环神经网络 (neural network)（RNN）及其变体，如LSTM和GRU，通过维护一个隐藏状态来处理序列。尽管这些模型对许多序列任务有效，但一个主要限制源于其核心机制：无论输入序列长度如何，都将其所有信息压缩成一个固定大小的隐藏状态向量 (vector)（或在编码-解码器设置中的上下文 (context)向量）。</p>\n<p>以标准序列到序列（seq2seq）模型为例，它常用于机器翻译等任务。编码器逐步处理输入序列，并在每一步更新其隐藏状态。编码器的最终隐藏状态，通常称为上下文向量，旨在总结整个输入序列。这个单一向量随后被传递给解码器，解码器将其用作初始状态来生成输出序列。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sp6e1v\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10]; edge [fontname=\"Arial\", fontsize=9]; bgcolor=\"transparent\"; subgraph cluster_encoder { label=\"编码器\"; color=\"#adb5bd\"; fontcolor=\"#495057\"; style=\"rounded\"; node [fillcolor=\"#e9ecef\"]; x1 -> x2 -> x3 -> C [label=\"处理输入\"]; C [label=\"固定上下文向量\\n(最终隐藏状态)\", shape=cylinder, fillcolor=\"#ffc9c9\"]; } subgraph cluster_decoder { label=\"解码器\"; color=\"#adb5bd\"; fontcolor=\"#495057\"; style=\"rounded\"; node [fillcolor=\"#e9ecef\"]; C -> y1 -> y2 -> y3 [label=\"生成输出\"]; } x1 [label=\"输入 1\"]; x2 [label=\"输入 2\"]; x3 [label=\"输入...\"]; y1 [label=\"输出 1\"]; y2 [label=\"输出 2\"]; y3 [label=\"输出...\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sp6e1v\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>传统编码器-解码器架构的简化视图。编码器输出一个固定大小的上下文向量<code>C</code>，它表示整个输入，并成为解码器获取输入信息的唯一来源。</p>\n</blockquote>\n<p>这个固定大小的上下文向量代表着一个固有的信息瓶颈。想象一下，尝试将冗长的段落或文档总结成一个简短的句子；细节必然会丢失。同样，随着序列长度的增加，迫使模型将长输入序列（例如，翻译中的复杂句子）的所有细节编码到一个向量中，变得越来越困难。解码器的性能根本上受到这个单一总结向量的质量和完整性的制约。在编码器的序列处理过程中，来自输入序列早期部分的信息可能会被后续输入“覆盖”或稀释。</p>\n<p>这个瓶颈使得解码器在生成输出的不同部分时，难以访问输入中特定且相关的信息片段。例如，在翻译句子时，特定输出词的选择可能严重依赖于<em>输入</em>句子开头附近的一个特定词语或短语。仅仅依赖最终压缩的上下文向量，使得访问这种特定且远距离的信息变得不可靠。</p>\n<p>为了克服这一限制，我们需要一种机制，它允许模型（特别是解码器）在输出生成过程的每一步“回看”编码器隐藏状态的整个序列（或输入的表示）。模型不应仅仅依赖一个单一的静态总结，而应能够根据它当时试图预测的内容，动态地为输入序列的不同部分分配不同程度的重要性。</p>\n<p>这就是<strong>注意力机制 (attention mechanism)</strong>背后的主要原因。它提供了一种方法，可以创建针对每个输出步骤专门定制的动态的、依赖于上下文的输入序列总结。与其将所有内容压缩到一个固定向量中，注意力机制允许模型选择性地关注最相关的输入元素，从而有效地绕过固定上下文瓶颈。</p>\n<p>接下来各部分将详细说明这种注意力机制的实现方式，从查询（Queries）、键（Keys）和值（Values）的基本抽象开始，最终形成在Transformer架构中被普遍使用的缩放点积注意力公式。</p>",
+  "slug": "motivation-for-attention",
+  "updates": [],
+  "references": [
+    {
+      "id": 3006,
+      "title": "Sequence to Sequence Learning with Neural Networks",
+      "author": "Ilya Sutskever, Oriol Vinyals, Quoc V. Le",
+      "year": "2014",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "27",
+      "pages": "",
+      "url": "https://neurips.cc/paper/2014/file/a14ac55a4f27472c86fdcdba2aebf3a3-Paper.pdf",
+      "doi": "",
+      "note": "介绍了使用固定长度上下文向量的序列到序列模型，明确了本节讨论的架构限制。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:01.911458Z",
+      "updated_at": "2025-09-07T19:36:45.063355Z"
+    },
+    {
+      "id": 3007,
+      "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+      "author": "Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio",
+      "year": "2014",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR 2015)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/pdf/1409.0473",
+      "doi": "10.48550/arXiv.1409.0473",
+      "note": "提出了注意力机制，用以解决序列到序列模型中固定长度上下文向量的瓶颈问题。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:02.213835Z",
+      "updated_at": "2025-09-07T19:36:55.021180Z"
+    },
+    {
+      "id": 3008,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "30",
+      "pages": "5998-6008",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf",
+      "doi": "",
+      "note": "介绍了Transformer架构，该架构完全采用注意力机制，无需循环即可高效处理序列。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:02.246548Z",
+      "updated_at": "2025-09-07T19:36:39.967892Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

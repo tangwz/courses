@@ -1,0 +1,61 @@
+{
+  "id": 7131,
+  "title": "理解维特比算法",
+  "meta_title": "ASR中的维特比算法",
+  "meta_description": "对维特比算法的原理说明，它是一种用于找到最可能路径的动态规划方法。",
+  "content": "<p>寻找最佳词语序列是一个重大的计算难题。对于给定的音频输入，可能的句子数量庞大到惊人。解码器计算每个可能句子的概率的暴力尝试法根本不可行。对于一个包含50,000词的词汇表 (vocabulary)，即使一个简短的10词句子，也有<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>50</mn><mo separator=\"true\">,</mo><msup><mn>000</mn><mn>10</mn></msup></mrow><annotation encoding=\"application/x-tex\">50,000^{10}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1.0085em;vertical-align:-0.1944em;\"></span><span class=\"mord\">50</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">00</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">10</span></span></span></span></span></span></span></span></span></span></span></span>种潜在组合。我们急需一种效率更高的办法，在这个庞大的搜索空间中找到出路。</p>\n<p>这正是维特比算法发挥作用之处。它是一种高效算法，属于被称为<em>动态规划</em>的一类方法。动态规划的核心思想是将一个复杂问题分解成一系列简单的子问题，每个子问题只解决一次并存储其解决方案。维特比算法运用此原则来找到模型中最可能的状态序列，在我们的情境中，这对应于最可能的词语序列。</p>\n<h3>穿越时间的路径</h3>\n<p>想象解码过程是在一个网格中寻找最佳路径，这个网格通常被称为<strong>篱笆图</strong>或<strong>格子图</strong>。网格中的每一列代表一个时间点（对应于一个音频帧或片段），每一列中的每个节点代表在该时间点可能说出的词语（或音素）。</p>\n<p>该算法每次一个时间步地从左到右在篱笆图中移动。在每一步，它计算到达<em>每个</em>可能词语的最可能路径。维特比算法的重要发现是：为了找到到达当前时间步某个词语的最佳路径，你只需要知道到达<em>所有</em>前一时间步词语的最佳路径。你不需要记住每条可能路径的完整历史。</p>\n<p>通过扩展前一步的最佳路径并加入新的成本（基于声学和语言模型概率），算法找到新的最佳路径集合。然后它丢弃所有其他不太可能的路径。这种持续修剪不可能路径的做法，正是该算法如此高效的原因。</p>\n<h3>示例说明</h3>\n<p>假设在听到一些音频后，解码器试图在两个部分句子之间做出选择：“recognize speech”和“wreck a nice beach”。声学模型可能会发现这两个短语听起来相似。然而，语言模型知道“recognize speech”比“wreck a nice speech”是更常见的短语。</p>\n<p>维特比算法将按以下步骤进行：</p>\n<ol>\n<li><strong>时间步 1：</strong> 它考虑音频的第一部分。声学模型对“recognize”和“wreck a nice”都给出高分。算法将两者都保留为可能性。</li>\n<li><strong>时间步 2：</strong> 它分析下一段音频，听起来像“speech”。解码器现在评估四条潜在路径：\n<ul>\n<li><code>recognize</code> -> <code>speech</code></li>\n<li><code>recognize</code> -> <code>beach</code></li>\n<li><code>wreck a nice</code> -> <code>speech</code></li>\n<li><code>wreck a nice</code> -> <code>beach</code></li>\n</ul>\n</li>\n<li><strong>计算与修剪：</strong> 对于这四条路径中的每一条，解码器通过结合声学分数（音频与词语的匹配程度）和语言模型分数（词语序列的可能性）来计算一个总分数。\n<ul>\n<li><code>P(音频 | \"recognize speech\") * P(\"recognize speech\")</code> 很可能得分很高。</li>\n<li><code>P(音频 | \"wreck a nice beach\") * P(\"wreck a nice beach\")</code> 也将有相当高的分数。</li>\n<li>然而，像<code>recognize</code> -> <code>beach</code>和<code>wreck a nice</code> -> <code>speech</code>这样的路径，其语言模型概率会非常低。算法会为它们分配低分，并有效地将它们从考虑中移除。</li>\n</ul>\n</li>\n<li><strong>回溯：</strong> 到达音频末尾后，算法确定总体概率最高的路径的最后一个词。从那里，它通过保存的指针向后追溯，在每个时间步重建唯一的最佳词语序列。</li>\n</ol>\n<p>下图显示了此过程。在每个时间步，算法扩展前一步幸存下来的路径。不太可能的路径（虚线）被丢弃，只保留到达每个词语的最可能路径。通过从末尾回溯找到最终的最佳路径。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1pszegr\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    splines=true;\n    node [shape=circle, style=filled, fontname=\"sans-serif\", fixedsize=true, width=1.1, height=1.1];\n    edge [fontname=\"sans-serif\", fontsize=10];\n    graph [fontname=\"sans-serif\", label=\"维特比路径搜索\", labelloc=t, fontsize=14];\n\n    subgraph cluster_0 {\n        label=\"开始\";\n        style=invis;\n        start [label=\"开始\", shape=plaintext, fontsize=12];\n    }\n\n    subgraph cluster_1 {\n        label=\"时间步1的假设\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        rec [label=\"recognize\", fillcolor=\"#a5d8ff\"];\n        wreck [label=\"wreck a nice\", fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_2 {\n        label=\"时间步2的假设\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        speech [label=\"speech\", fillcolor=\"#a5d8ff\"];\n        beach [label=\"beach\", fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_3 {\n        label=\"结束\";\n        style=invis;\n        end_node [label=\"结束\", shape=plaintext, fontsize=12];\n    }\n\n    start -> rec [label=\" P(rec|start)\"];\n    start -> wreck [label=\" P(wreck|start)\"];\n\n    rec -> speech [label=\" P(speech|rec)\", penwidth=2.5, color=\"#fd7e14\"];\n    rec -> beach [label=\" P(beach|rec)\", style=dashed, color=\"#adb5bd\"];\n\n    wreck -> speech [label=\" P(speech|wreck)\", style=dashed, color=\"#adb5bd\"];\n    wreck -> beach [label=\" P(beach|wreck)\", penwidth=2.5, color=\"#fd7e14\"];\n\n    speech -> end_node [penwidth=2.5, color=\"#fd7e14\"];\n    beach -> end_node [style=dashed, color=\"#adb5bd\"];\n\n    {rank=same; start;}\n    {rank=same; rec; wreck;}\n    {rank=same; speech; beach;}\n    {rank=same; end_node;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1pszegr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个显示维特比搜索的简化格子图。算法根据结合声学和语言模型的分数评估转换。不太可能的路径被修剪（灰色虚线），而最可能路径（橙色）则通过从得分最高的最终状态回溯构建。</p>\n</blockquote>\n<h3>其工作原理</h3>\n<p>维特比算法保证能找到穿过篱笆图的唯一最佳路径。它这样做而无需评估每一个可能性。通过在每个时间步做出局部最优决策（即只保留到达每个词语的最佳路径），它达到了全局最优解。这种将一个难以处理的问题转化为可管理的问题的做法，是现代ASR系统如何快速准确地生成转录的根本方法。</p>",
+  "slug": "understanding-the-viterbi-algorithm",
+  "updates": [],
+  "references": [
+    {
+      "id": 19310,
+      "title": "Error Bounds for Convolutional Codes and an Asymptotically Optimum Decoding Algorithm",
+      "author": "Andrew J. Viterbi",
+      "year": "1967",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Information Theory",
+      "volume": "13",
+      "pages": "260-269",
+      "url": "https://ieeexplore.ieee.org/document/1054010",
+      "doi": "10.1109/TIT.1967.1054010",
+      "note": "首次提出Viterbi算法的原始论文。",
+      "order": 1,
+      "created_at": "2025-09-06T13:05:13.228538Z",
+      "updated_at": "2025-09-10T03:47:44.929781Z"
+    },
+    {
+      "id": 19311,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2023",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本全面的教材，涵盖了隐马尔可夫模型和语音识别背景下的Viterbi算法。",
+      "order": 2,
+      "created_at": "2025-09-06T13:05:13.233119Z",
+      "updated_at": "2025-09-10T03:47:47.242916Z"
+    },
+    {
+      "id": 19312,
+      "title": "A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition",
+      "author": "Lawrence R. Rabiner",
+      "year": "1989",
+      "publisher": "IEEE",
+      "journal": "Proceedings of the IEEE",
+      "volume": "77",
+      "pages": "257-286",
+      "url": "https://ieeexplore.ieee.org/document/18626",
+      "doi": "10.1109/5.18626",
+      "note": "一篇被广泛引用的教程，深入解释了隐马尔可夫模型及其在语音识别中的应用，包括Viterbi算法。",
+      "order": 3,
+      "created_at": "2025-09-06T13:05:13.237158Z",
+      "updated_at": "2025-09-10T03:47:38.357498Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 5151,
+  "title": "理解用于顺序操作的链",
+  "meta_title": "理解 LangChain 链式机制 | LangChain 高阶应用",
+  "meta_description": "了解链如何连接多个LLM调用或构成部分形成序列。",
+  "content": "<p>LangChain包含主要的构成部分，例如与语言模型交互、编写有效的提示以及解析生成的结果。尽管这些单独的元素本身已很强大，但许多应用需要多次调用大型语言模型。通常，你需要执行一系列操作，其中一步的输出会作为下一步的输入。这就是LangChain链式机制发挥作用的地方。</p>\n<p>可以将链视为你的大型语言模型工作流的流水线。它们提供了一种结构化的方式，将多个构成部分（例如大型语言模型、提示模板、输出解析器，甚至其他链）连接成一个连贯的序列。通过将这些元素连接起来，你可以构建执行多步推理 (inference)、数据转换或任务分解的应用。</p>\n<h3>链的顺序特性</h3>\n<p>其核心是，链按照预定的顺序执行一系列步骤。其显著特点是，序列中一个步骤生成的输出通常会成为后续步骤的输入。这允许你通过将复杂的任务分解为更小、更易管理的部分来组织它们。</p>\n<p>例如，设想你想要：</p>\n<ol>\n<li>获取产品描述。</li>\n<li>根据描述生成一个简短、吸引人的营销口号。</li>\n<li>将该口号翻译成法语。</li>\n</ol>\n<p>这需要两次独立的LLM调用。链允许你按顺序执行这些调用，自动将第一步生成的口号传递给翻译步骤。</p>\n<h3>简单链：LLMChain</h3>\n<p>最基本的链类型是<code>LLMChain</code>，我们之前提到过。它结合了提示模板、语言模型，以及可选的输出解析器。虽然简单，但<code>LLMChain</code>实例是常用于更复杂的顺序链中的构成单元。</p>\n<pre><code class=\"language-python\"># 假设 'llm' 是一个已初始化的语言模型实例\n# 假设 'prompt_template' 是一个已初始化的 PromptTemplate 实例\n\nfrom langchain.chains import LLMChain\n\n# LLMChain 接收一个提示模板和一个 LLM\nbasic_chain = LLMChain(llm=llm, prompt=prompt_template)\n\n# 你可以通过为提示提供输入变量来运行它\ninput_data = {\"product\": \"A durable, lightweight hiking backpack\"}\nresponse = basic_chain.run(input_data)\nprint(response)\n# 预期输出：由 LLM 根据提示生成的字符串\n</code></pre>\n<h3>连接链：SimpleSequentialChain</h3>\n<p>对于每个步骤接收一个字符串输入并产生一个字符串输出的直接序列，LangChain提供了<code>SimpleSequentialChain</code>。它接收一个链列表并按顺序执行它们，将一个的输出直接作为下一个的输入。</p>\n<p>让我们来实践口号生成和翻译的例子：</p>\n<pre><code class=\"language-python\"># 假设 'llm' 是一个已初始化的语言模型实例\nfrom langchain.prompts import PromptTemplate\nfrom langchain.chains import LLMChain, SimpleSequentialChain\n\n# 链 1：生成口号\ntemplate1 = \"Generate a catchy, short marketing slogan for a {product_description}.\"\nprompt1 = PromptTemplate(input_variables=[\"product_description\"], template=template1)\nchain_one = LLMChain(llm=llm, prompt=prompt1)\n\n# 链 2：将口号翻译成法语\ntemplate2 = \"Translate the following slogan into French: {slogan}\"\nprompt2 = PromptTemplate(input_variables=[\"slogan\"], template=template2)\nchain_two = LLMChain(llm=llm, prompt=prompt2)\n\n# 使用 SimpleSequentialChain 组合它们\noverall_chain = SimpleSequentialChain(chains=[chain_one, chain_two], verbose=True)\n\n# 运行组合链\nproduct_info = \"waterproof, solar-powered camping lantern\"\nfrench_slogan = overall_chain.run(product_info)\nprint(french_slogan)\n</code></pre>\n<p>当你运行此代码时，<code>SimpleSequentialChain</code>会首先使用 <code>product_info</code> 执行 <code>chain_one</code>。输出字符串（口号）随后会自动作为输入（<code>slogan</code>）传递给 <code>chain_two</code>。最终输出是 <code>chain_two</code> 的结果（法语翻译）。<code>verbose=True</code> 参数 (parameter)通过打印中间步骤来帮助呈现此流程。</p>\n<h3>处理多个输入/输出：SequentialChain</h3>\n<p><code>SimpleSequentialChain</code> 方便但有局限，仅限于步骤之间进行单个字符串输入/输出。如果后续步骤需要多个先前步骤生成的信息，或者一个步骤产生多个输出怎么办？这时就用到更通用的 <code>SequentialChain</code>。</p>\n<p><code>SequentialChain</code> 允许你明确定义序列中每个链的输入和输出变量。这提供更大的控制权，以便管理数据如何在步骤间流动。</p>\n<p>考虑一个场景：</p>\n<ol>\n<li>给出主题，生成简要说明。</li>\n<li>给出说明，识别主要关键词。</li>\n<li>给出主题和关键词，撰写一个简短的引言段落。</li>\n</ol>\n<p>请注意，步骤3需要来自步骤1（原始主题）和步骤2（关键词）的输入。</p>\n<pre><code class=\"language-python\"># 假设 'llm' 是一个已初始化的语言模型实例\nfrom langchain.prompts import PromptTemplate\nfrom langchain.chains import LLMChain, SequentialChain\n\n# 链 1：生成解释\ntemplate_explain = \"Provide a brief explanation of the topic: {topic}\"\nprompt_explain = PromptTemplate(input_variables=[\"topic\"], template=template_explain)\n# 输出默认为 'text'，我们将其重命名以增加清晰度\nchain_explain = LLMChain(llm=llm, prompt=prompt_explain, output_key=\"explanation\")\n\n# 2：识别关键词\ntemplate_keywords = \"Identify the main keywords in the following text:\\n{explanation}\"\nprompt_keywords = PromptTemplate(input_variables=[\"explanation\"], template=template_keywords)\nchain_keywords = LLMChain(llm=llm, prompt=prompt_keywords, output_key=\"keywords\")\n\n# 链 3：撰写引言\ntemplate_intro = \"Write a short introductory paragraph about {topic} using these keywords: {keywords}\"\nprompt_intro = PromptTemplate(input_variables=[\"topic\", \"keywords\"], template=template_intro)\nchain_intro = LLMChain(llm=llm, prompt=prompt_intro, output_key=\"intro_paragraph\")\n\n# 使用 SequentialChain 组合\ncomplex_chain = SequentialChain(\n    chains=[chain_explain, chain_keywords, chain_intro],\n    input_variables=[\"topic\"], # 整个序列的输入\n    # 序列的输出变量（指定你想要的）\n    output_variables=[\"explanation\", \"keywords\", \"intro_paragraph\"],\n    verbose=True\n)\n\n# 运行复杂链\ninput_topic = \"Quantum Computing\"\nresult = complex_chain({\"topic\": input_topic})\nprint(\"\\n--- 结果 ---\")\nprint(f\"解释:\\n{result['explanation']}\")\nprint(f\"\\n关键词:\\n{result['keywords']}\")\nprint(f\"\\n引言段落:\\n{result['intro_paragraph']}\")\n\n</code></pre>\n<p>在 <code>SequentialChain</code> 中，你为整个序列定义 <code>input_variables</code>，并定义希望在最后返回的 <code>output_variables</code>。LangChain根据每个 <code>LLMChain</code> 中指定的 <code>output_key</code> 和后续链期望的 <code>input_variables</code>，自动管理中间输出（<code>explanation</code> 和 <code>keywords</code>）。</p>\n<h3>链流程可视化</h3>\n<p>理解数据流很重要，尤其当链变得更复杂时。这是一个简单的图表，表示 <code>SimpleSequentialChain</code> 示例（口号生成和翻译）：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-69xvkc\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#adb5bd\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  start [label=\"产品描述\\n(输入)\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n  chain1 [label=\"链 1：\\n生成口号\\n(LLM)\", fillcolor=\"#ffec99\"];\n  intermediate [label=\"生成口号\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  chain2 [label=\"链 2：\\n翻译口号\\n(LLM)\", fillcolor=\"#b2f2bb\"];\n  end [label=\"法语口号\\n(输出)\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n\n  start -> chain1;\n  chain1 -> intermediate [label=\" 输出 \"];\n  intermediate -> chain2 [label=\" 输入 \"];\n  chain2 -> end;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-69xvkc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表展示了对产品描述进行顺序处理，通过两个LLM链来生成翻译后的口号。</p>\n</blockquote>\n<h3>使用链的好处</h3>\n<p>在LangChain应用中使用链带来多项益处：</p>\n<ul>\n<li><strong>模块化：</strong> 链鼓励将大型、复杂的任务分解为更小、独立且更易管理的步骤。</li>\n<li><strong>可重用性：</strong> 独立的链（如翻译链或摘要链）可以在你的应用的不同部分甚至不同项目中重用。</li>\n<li><strong>可读性和可维护性：</strong> 明确定义操作序列，使你的应用逻辑更容易理解、调试和修改，与手动编写复杂、嵌套的LLM调用相比，有明显优势。</li>\n<li><strong>抽象性：</strong> 链隐藏了管理中间输入和输出的底层复杂性，让你能专注于整体工作流逻辑。</li>\n</ul>\n<p>链提供了一种构建顺序工作流的强大机制。然而，有些任务需要更动态的行为，其中下一步不是预先确定的，而是取决于前一步的结果。对于这类情况，LangChain 提供了代理（Agents），它们发挥LLM的推理 (inference)能力来决定下一步要执行的动作。我们将在后续章节中讨论代理（Agents）。</p>",
+  "slug": "langchain-chains-sequential-ops",
+  "updates": [],
+  "references": [
+    {
+      "id": 13025,
+      "title": "Chains",
+      "author": "LangChain Authors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPzn1iW6eHH6lSS6zlkkojSfl2T8Byg7nolL13nzn6xq5d5O8fNtBo_pE7YxWZbyR4hsQTIQn_jEhJnj-5vFMLlrkRE0L0fgRc65hfLc-1tJ8xT97Bg3SD7iECWwwYPmKHtAQuMVCzLw9VA4E4FygZ9WUogkuzWQd7Jzk=",
+      "doi": "",
+      "note": "LangChain链的官方文档，包含其目的、类型和实现细节。",
+      "order": 1,
+      "created_at": "2025-09-05T08:26:56.246995Z",
+      "updated_at": "2025-09-09T03:02:34.196073Z"
+    },
+    {
+      "id": 13027,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "介绍了“思维链”提示技术，这在概念上支撑了将复杂问题分解为大型语言模型顺序推理步骤的思想。",
+      "order": 3,
+      "created_at": "2025-09-05T08:26:56.264540Z",
+      "updated_at": "2025-09-09T03:02:15.980346Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

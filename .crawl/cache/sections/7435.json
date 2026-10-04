@@ -1,0 +1,45 @@
+{
+  "id": 7435,
+  "title": "代理和工具介绍",
+  "meta_title": "LangChain代理与工具解读",
+  "meta_description": "了解代理的主要思想，它们使用大型语言模型作为推理引擎来决定采取哪些行动。",
+  "content": "<p>工作流可以预先确定执行路径来构建。例如，标准的链或<code>RunnableSequence</code>遵循固定的、开发者定义的步骤序列。这种方法对于结构化任务是有效的，但它缺乏处理事先不知道解决方案路径的问题的灵活性。为了解决这个问题，引入了<strong>代理</strong>。</p>\n<p>代理不仅使用大型语言模型来处理文本，还将其作为决策的推理 (inference)引擎。代理不会遵循僵化的序列，而是根据用户目标和可用资源动态选择一系列要采取的行动。它在一个循环中运行，不断观察其环境，思考最佳的下一步行动，并执行它，直到最初的目标达成。</p>\n<h3>代理循环：思考、行动、观察</h3>\n<p>每个代理的核心都是一个推理 (inference)循环。在现代LangChain开发中，这通常通过状态图（经由LangGraph）来实现，它协调了流程。这个循环使代理能够规划和执行可能需要获取外部信息或进行计算的多步任务。</p>\n<p>该过程通常遵循以下步骤：</p>\n<ol>\n<li><strong>目标</strong>：代理从用户那里收到一个高层次的目标（例如，“微软现任CEO是谁？他们上任时的股价是多少？”）。</li>\n<li><strong>思考</strong>：大型语言模型作为代理的大脑，分析目标。它考虑可用的工具并制定计划。它可能会思考：“要回答这个问题，我首先需要找到CEO是谁以及他们何时上任。一个网页搜索工具会很合适。”</li>\n<li><strong>行动</strong>：大型语言模型输出要采取的具体行动，指明使用哪个工具以及提供什么输入。例如，它可能决定使用<code>Search</code>工具，输入“微软现任CEO”。</li>\n<li><strong>观察</strong>：代理运行时调用带有给定输入的指定工具。工具运行（例如，执行网页搜索）并返回一个结果。这个结果称为观察。</li>\n<li><strong>重复</strong>：观察结果被传回大型语言模型。大型语言模型现在有了新信息并重新评估其计划。它可能会思考：“我发现萨蒂亚·纳德拉于2014年2月4日成为CEO。现在我需要找到那天的数据。” 然后它选择另一个行动，也许是使用一个金融数据工具。</li>\n</ol>\n<p>这个思考、行动和观察的循环会重复，直到大型语言模型确定它已收集到足够的信息来充分回答用户的原始目标。届时，它会中断循环并生成最终回应。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1v05b90\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\", color=\"#868e96\"];\n    edge [fontname=\"Arial\"];\n\n    UserInput [label=\"用户目标\", fillcolor=\"#bac8ff\"];\n    LLM [label=\"大型语言模型\\n(推理引擎)\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    Tool [label=\"工具执行\", shape=diamond, style=\"rounded,filled\", fillcolor=\"#96f2d7\"];\n    Observation [label=\"观察\\n(工具输出)\", fillcolor=\"#b2f2bb\"];\n    FinalAnswer [label=\"最终答案\", fillcolor=\"#c0eb75\"];\n\n    UserInput -> LLM [label=\"开始\"];\n    LLM -> Tool [label=\"行动\"];\n    Tool -> Observation [label=\"结果\"];\n    Observation -> LLM [label=\"反馈\"];\n    LLM -> FinalAnswer [label=\"结束\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1v05b90\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>代理遵循的推理循环。大型语言模型反复选择一个工具，执行它，并使用结果观察来指导其下一步决策，直到目标达成。</p>\n</blockquote>\n<h3>工具：代理的能力</h3>\n<p>代理的能力受限于它能使用的工具。一个<strong>工具</strong>是一个接口，它允许代理与外部环境进行互动。在LangChain中，工具本质上是一个具有特定用途的函数，它附带一个大型语言模型可以理解的名称和描述。</p>\n<p>工具的例子包括：</p>\n<ul>\n<li><strong>网页搜索</strong>：一个查询如Google或DuckDuckGo等搜索引擎的工具。</li>\n<li><strong>Python REPL</strong>：一个可以执行任意Python代码的工具。</li>\n<li><strong>数据库查询</strong>：一个对数据库运行SQL查询的工具。</li>\n<li><strong>API调用器</strong>：一个用于向外部API发出请求的通用工具。</li>\n</ul>\n<p>工具的<strong>核心所在</strong>是其<strong>描述</strong>。大型语言模型不知道工具的代码如何工作；它完全依赖工具的描述来决定何时以及如何使用它。一个写得好的描述是具体的，并清楚地解释了工具做什么、预期的输入是什么以及它返回什么。</p>\n<p>例如，考虑一个公司内部API的自定义工具：</p>\n<ul>\n<li><strong>好的描述</strong>：<code>当你需要查找客户订单的当前发货状态时有用。输入应为一个有效的订单ID。</code></li>\n<li><strong>差的描述</strong>：<code>运行查询。</code></li>\n</ul>\n<p>第一个描述为大型语言模型提供了关于工具目的和输入要求的明确指示，使其能够做出明智的决定。第二个描述过于模糊，很可能会导致代理要么忽略该工具，要么错误地使用它。通过为代理配备一套描述良好的工具，你赋予它执行超出大型语言模型自身内置知识的复杂、多步任务的能力。</p>",
+  "slug": "introduction-to-agents-and-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 14677,
+      "title": "Agents",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.langchain.com/agents",
+      "doi": "",
+      "note": "LangChain框架中开发和使用智能体及工具的官方文档，为实现智能体循环提供了实用指导和示例。",
+      "order": 2,
+      "created_at": "2025-09-05T08:59:45.738844Z",
+      "updated_at": "2025-09-11T04:13:11.175301Z"
+    },
+    {
+      "id": 14678,
+      "title": "Tool use",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQExbCw8PYfkDlckFTnG4_PzJJ1kcYl-WdTERZbDg-6MyWLt17Z44L7_KDQoQrVlxqbZ1WMsQOjeQ5p_2ZcXtYKKU8c8Xxo6j1ty1Ot8g1aDFPWXfqaSNgTCDD2-LZ_8kjwc11JcUKO29vu3mNCVvsvi2ay2",
+      "doi": "",
+      "note": "解释了OpenAI模型如何通过生成结构化JSON调用来使用外部工具，这是LLM智能体与环境交互的基本机制。",
+      "order": 3,
+      "created_at": "2025-09-05T08:59:45.840042Z",
+      "updated_at": "2025-09-11T04:13:15.711097Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

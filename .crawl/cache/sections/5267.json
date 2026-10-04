@@ -1,0 +1,61 @@
+{
+  "id": 5267,
+  "title": "动手实践：构建 Scikit-learn 环境",
+  "meta_title": "练习构建 Scikit-learn Docker 环境",
+  "meta_description": "创建 Dockerfile 以构建包含 Python、Scikit-learn 和 pandas 的镜像。",
+  "content": "<p>这个动手练习将构建一个简单的 Docker 镜像，其中包含使用 Python 和常用的 Scikit-learn 库，以及用于数据处理的 pandas 库的标准机器学习 (machine learning)环境。这个镜像将为开发和运行基于 Scikit-learn 的模型提供一个统一的基础。</p>\n<p><strong>目标：</strong> 创建一个安装了 Python 3.9、pip、Scikit-learn 和 pandas 的 Docker 镜像。</p>\n<p><strong>前提条件：</strong></p>\n<ul>\n<li>你的机器上已安装并运行 Docker Desktop 或 Docker Engine。</li>\n<li>用于创建文件的文本编辑器。</li>\n<li>终端或命令提示符。</li>\n</ul>\n<h3>步骤 1：设置项目目录</h3>\n<p>首先，为本次练习创建一个专用目录。这有助于我们保持文件整洁。</p>\n<pre><code class=\"language-bash\">mkdir sklearn-env\ncd sklearn-env\n</code></pre>\n<p>在此目录中，我们将放置 <code>Dockerfile</code> 和 <code>requirements.txt</code> 文件。</p>\n<h3>步骤 2：在 <code>requirements.txt</code> 中定义依赖项</h3>\n<p>使用 <code>requirements.txt</code> 文件是管理 Python 包依赖项的常用方式。Docker 可以使用此文件来高效安装所需的库。</p>\n<p>在 <code>sklearn-env</code> 目录中创建一个名为 <code>requirements.txt</code> 的文件，内容如下：</p>\n<pre><code class=\"language-text\"># requirements.txt\nscikit-learn==1.2.2\npandas==1.5.3\n</code></pre>\n<p><em>注意：我们指定了特定版本以实现可重现性。你可能需要根据项目需求调整这些版本，但通常建议使用特定版本以获得统一的环境。</em></p>\n<h3>步骤 3：创建 <code>Dockerfile</code></h3>\n<p>现在，在 <code>sklearn-env</code> 目录中创建核心文件：<code>Dockerfile</code>（无扩展名）。添加以下指令：</p>\n<pre><code class=\"language-dockerfile\"># 用于基本 Scikit-learn 环境的 Dockerfile\n\n# 1. 选择基础镜像\nFROM python:3.9-slim\n\n# 2. 设置容器内的工作目录\nWORKDIR /app\n\n# 3. 首先复制 requirements 文件以利用 Docker 缓存\nCOPY requirements.txt .\n\n# 4. 安装 Python 依赖项\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 5. （可选）设置容器启动时运行的默认命令\nCMD [\"python\"]\n</code></pre>\n<p>让我们分析一下这个 <code>Dockerfile</code>：</p>\n<ul>\n<li><code>FROM python:3.9-slim</code>：我们从官方的 Python 基础镜像开始。我们选择了 3.9 版本和 <code>slim</code> 变体，它比默认标签更小，减少了最终镜像的大小，同时仍提供了一个可用的 Python 环境。</li>\n<li><code>WORKDIR /app</code>：这设置了容器内后续命令（<code>COPY</code>、<code>RUN</code>、<code>CMD</code>、<code>ENTRYPOINT</code>）的工作目录。如果目录不存在，<code>WORKDIR</code> 会创建它。设置一个专用工作目录是一个好习惯。</li>\n<li><code>COPY requirements.txt .</code>：这将 <code>requirements.txt</code> 文件从你的构建上下文 (context)（<code>sklearn-env</code> 目录）复制到容器的工作目录（<code>/app</code>）。我们是在运行 <code>pip install</code> <em>之前</em>复制的。Docker 以层的方式构建镜像。如果 <code>requirements.txt</code> 自上次构建以来没有更改，Docker 可以重用后续 <code>RUN</code> 指令的缓存层，显著加快重新构建的速度。</li>\n<li><code>RUN pip install --no-cache-dir -r requirements.txt</code>：这在容器内执行 <code>pip install</code> 命令。\n<ul>\n<li><code>--no-cache-dir</code>：此选项禁用 pip 的缓存，这有助于减小镜像大小，因为最终镜像中不需要缓存。</li>\n<li><code>-r requirements.txt</code>：告诉 pip 安装指定文件中列出的软件包。</li>\n</ul>\n</li>\n<li><code>CMD [\"python\"]</code>：这定义了在没有指定命令的情况下从此镜像启动容器时运行的默认命令。在这种情况下，它将启动一个交互式 Python 解释器。</li>\n</ul>\n<h3>步骤 4：构建 Docker 镜像</h3>\n<p>现在，在你的终端中导航到 <code>sklearn-env</code> 目录（如果你不在那里），并运行 <code>docker build</code> 命令：</p>\n<pre><code class=\"language-bash\">docker build -t sklearn-env:1.0 .\n</code></pre>\n<p>让我们分解这个命令：</p>\n<ul>\n<li><code>docker build</code>：从 <code>Dockerfile</code> 构建镜像的命令。</li>\n<li><code>-t sklearn-env:1.0</code>：<code>-t</code> 标志为镜像指定名称和可选的标签（版本）。这里，我们将其命名为 <code>sklearn-env</code> 并标记 (token)为 <code>1.0</code>。添加标签使得以后引用该镜像更方便。</li>\n<li><code>.</code>：这指定了构建上下文 (context)。Docker 会在当前目录（<code>.</code>）中寻找 <code>Dockerfile</code>，并将该目录（及其子目录）中的文件发送到 Docker 守护进程以执行构建。</li>\n</ul>\n<p>你将看到 Docker 执行 <code>Dockerfile</code> 中定义的每个步骤。它会下载基础镜像（如果尚未存在），然后运行每条指令，为镜像创建层。</p>\n<h3>步骤 5：验证镜像</h3>\n<p>构建成功完成后，你可以验证环境是否已正确设置。从镜像运行一个临时容器并检查已安装的软件包版本：</p>\n<pre><code class=\"language-bash\">docker run --rm -it sklearn-env:1.0 python -c \"import sklearn; import pandas; print(f'Scikit-learn version: {sklearn.__version__}'); print(f'Pandas version: {pandas.__version__}')\"\n</code></pre>\n<ul>\n<li><code>docker run</code>：从镜像运行容器的命令。</li>\n<li><code>--rm</code>：容器退出时自动移除。这对于短暂的验证任务很有用。</li>\n<li><code>-it</code>：以交互模式（<code>-i</code>）运行容器并分配一个伪 TTY（<code>-t</code>），让你能够与它交互（尽管对于这个特定命令并非严格必需，但这是常见做法）。</li>\n<li><code>sklearn-env:1.0</code>：我们刚刚构建的镜像的名称和标签。</li>\n<li><code>python -c \"...\"</code>：这会覆盖默认的 <code>CMD</code> 并在容器内执行一个特定的 Python 命令。该命令会导入库并打印它们的版本。</li>\n</ul>\n<p>你应该看到类似于此的输出（如果你更改了 <code>requirements.txt</code>，确切版本可能会略有不同）：</p>\n<pre><code>Scikit-learn version: 1.2.2\nPandas version: 1.5.3\n</code></pre>\n<p>如果你看到版本号正确打印出来，恭喜你！你已成功构建了一个包含可重现 Scikit-learn 环境的 Docker 镜像。这个镜像现在可以与同事共享，或用作特定训练或推理 (inference)脚本容器化的基础，确保每个人都使用相同的依赖项集。</p>",
+  "slug": "practice-build-sklearn-env",
+  "updates": [],
+  "references": [
+    {
+      "id": 14584,
+      "title": "Overview of a Dockerfile",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/dockerfile/",
+      "doi": "",
+      "note": "全面介绍 Dockerfile 语法、指令以及构建 Docker 镜像的最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-05T08:54:59.155574Z",
+      "updated_at": "2025-09-09T13:59:44.636621Z"
+    },
+    {
+      "id": 14585,
+      "title": "Scikit-learn User Guide",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/user_guide.html",
+      "doi": "",
+      "note": "scikit-learn 官方用户指南，涵盖机器学习任务的使用，为围绕其构建的环境提供了背景信息。",
+      "order": 2,
+      "created_at": "2025-09-05T08:54:59.162521Z",
+      "updated_at": "2025-09-09T13:59:36.194376Z"
+    },
+    {
+      "id": 14586,
+      "title": "Installing Python packages",
+      "author": "Python Packaging Authority",
+      "year": "2024",
+      "publisher": "Python Packaging Authority",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/en/latest/guides/installing/",
+      "doi": "",
+      "note": "Python 包管理官方指南，包含 pip 和 requirements.txt 的使用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:54:59.165368Z",
+      "updated_at": "2025-09-09T13:59:47.257608Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

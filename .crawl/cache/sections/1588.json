@@ -1,0 +1,61 @@
+{
+  "id": 1588,
+  "title": "使用 LIKE 进行模式匹配",
+  "meta_title": "SQL LIKE 操作符用于模式匹配",
+  "meta_description": "使用 LIKE 操作符和通配符（%、_）根据模式筛选文本数据。",
+  "content": "<p>在 SQL 中筛选行通常涉及精确匹配 (<code>=</code>)、比较 (<code>></code>, <code>&#x3C;</code>)、范围 (<code>BETWEEN</code>) 或列表成员 (<code>IN</code>)。然而，有时您需要根据<em>模式</em>而不是精确值来查找数据。这在处理文本数据时很常见。例如，您可能需要查找来自特定域的所有电子邮件地址、所有以特定前缀开头的产品代码，或所有包含特定字母序列的名称。</p>\n<p>SQL 提供了 <code>LIKE</code> 操作符来达成这个目的。它用于 <code>WHERE</code> 子句中，以在字符串列（如 <code>VARCHAR</code>、<code>TEXT</code> 等）中搜索指定的模式。</p>\n<h3>使用 <code>LIKE</code> 操作符</h3>\n<p>使用 <code>LIKE</code> 的基本语法很简单：</p>\n<pre><code class=\"language-sql\">SELECT column1, column_name\nFROM table_name\nWHERE column_name LIKE 'pattern';\n</code></pre>\n<p>这个“模式”不仅仅是字面字符串；它包含被称为<strong>通配符</strong>的特殊字符，这些字符可以实现灵活的匹配。</p>\n<h3>模式匹配的通配符</h3>\n<p>与 <code>LIKE</code> 操作符一起使用的主要通配符有两种：</p>\n<ol>\n<li><strong>百分号 (<code>%</code>)</strong>：代表零个、一个或多个字符。它是最灵活的通配符。</li>\n<li><strong>下划线 (<code>_</code>)</strong>：代表恰好一个字符。</li>\n</ol>\n<p>我们通过一些例子来看看它们是如何运作的。假设我们有一个 <code>products</code> 表，其中包含 <code>product_name</code> 列。</p>\n<ul>\n<li>\n<p><strong>查找以 'C' 开头的名称</strong>：\n要查找所有名称以字母 'C' 开头的产品，您可以在 'C' 后面加上 <code>%</code>。<code>%</code> 匹配 'C' 后面的任何字符序列（或无字符）。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE 'C%';\n</code></pre>\n<p>这将匹配 'Chair'、'Computer'、'Cable'、'Cap' 等。</p>\n</li>\n<li>\n<p><strong>查找以 't' 结尾的名称</strong>：\n要查找以 't' 结尾的名称，将 <code>%</code> 放在 't' 的前面。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE '%t';\n</code></pre>\n<p>这可能匹配 'Shirt'、'Hat'、'Carpet'、'Widget'。</p>\n</li>\n<li>\n<p><strong>查找包含 'Desk' 的名称</strong>：\n要查找名称中任何位置包含 'Desk' 的名称，将 <code>%</code> 放在 'Desk' 的前面和后面。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE '%Desk%';\n</code></pre>\n<p>这将匹配 'Standing Desk'、'Desk Lamp'、'Office Desk Set'。</p>\n</li>\n<li>\n<p><strong>查找以 'L' 开头并以 'p' 结尾的名称</strong>：\n您可以结合字面字符和通配符。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE 'L%p';\n</code></pre>\n<p>这可能匹配 'Laptop'、'Lamp'。</p>\n</li>\n</ul>\n<p>现在我们来看看下划线 (<code>_</code>)。</p>\n<ul>\n<li>\n<p><strong>查找第二个字母是 'a' 的名称</strong>：\n下划线 <code>_</code> 用作恰好一个字符的占位符。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE '_a%';\n</code></pre>\n<p>这将匹配 'Table'、'Lamp'、'Keyboard'（因为 'a' 是第二个字母，且 <code>%</code> 匹配其余部分）。它<em>不会</em>匹配 'Apple'（其中 'a' 是第一个字母）。</p>\n</li>\n<li>\n<p><strong>查找以 'P' 开头的四个字母的名称</strong>：\n您可以使用多个下划线。</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE 'P___';\n</code></pre>\n<p>这将匹配 'Pens'、'Pins'，假设这些是仅有的以 'P' 开头的四个字母的产品名称。它不会匹配 'Paper'（5个字母）或 'Pen'（3个字母）。</p>\n</li>\n</ul>\n<h3>组合通配符</h3>\n<p>您可以在同一个模式中混合使用 <code>%</code> 和 <code>_</code> 进行更具体的搜索。</p>\n<ul>\n<li>\n<p><strong>查找第二个字母是 'o' 且名称后续包含 'er' 的名称</strong>：</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name LIKE '_o%er%';\n</code></pre>\n<p>这可能匹配 'Monitor'、'Power Cord'、'Folder'。</p>\n</li>\n</ul>\n<h3>大小写敏感性</h3>\n<p>一个重要之处是，<code>LIKE</code> 在大小写敏感性（即 'a' 是否匹配 'A'）方面的行为取决于您使用的具体数据库系统，有时也取决于其配置。</p>\n<ul>\n<li><strong>PostgreSQL</strong>：<code>LIKE</code> 默认区分大小写。它提供 <code>ILIKE</code> 用于不区分大小写的匹配。</li>\n<li><strong>MySQL</strong>：大小写敏感性取决于表的排序规则设置，但通常默认为不区分大小写。</li>\n<li><strong>SQL Server</strong>：敏感性取决于数据库或列的排序规则。</li>\n</ul>\n<p>如果您不确定大小写敏感性，请务必查看您特定数据库系统的文档或进行测试。如果您需要特定的行为（区分大小写或不区分大小写），请在您的数据库系统中查找相应的操作符或函数。</p>\n<h3>查找<em>不</em>匹配的内容：<code>NOT LIKE</code></h3>\n<p>就像其他比较操作符一样，您可以使用 <code>NOT</code> 来否定 <code>LIKE</code>。要查找所有名称<em>不</em>以 'S' 开头的产品，您可以使用：</p>\n<pre><code class=\"language-sql\">SELECT product_name\nFROM products\nWHERE product_name NOT LIKE 'S%';\n</code></pre>\n<h3>综合应用：示例场景</h3>\n<p>我们使用一个 <code>customers</code> 表，其中包含 <code>first_name</code>、<code>last_name</code> 和 <code>email</code> 列。</p>\n<ul>\n<li>\n<p><strong>查找名字以 'J' 开头的客户</strong>：</p>\n<pre><code class=\"language-sql\">SELECT first_name, last_name\nFROM customers\nWHERE first_name LIKE 'J%';\n</code></pre>\n</li>\n<li>\n<p><strong>查找电子邮件地址来自 'datastyle.com' 的客户</strong>：</p>\n<pre><code class=\"language-sql\">SELECT first_name, email\nFROM customers\nWHERE email LIKE '%@datastyle.com';\n</code></pre>\n</li>\n<li>\n<p><strong>查找姓氏恰好是5个字母长并以 's' 结尾的客户</strong>：</p>\n<pre><code class=\"language-sql\">SELECT last_name\nFROM customers\nWHERE last_name LIKE '____s';\n</code></pre>\n</li>\n<li>\n<p><strong>查找名字不包含字母 'a' 的客户（不区分大小写，假设 ILIKE 可用或 LIKE 不区分大小写）</strong>：</p>\n<pre><code class=\"language-sql\">-- 使用 ILIKE（PostgreSQL 示例）\nSELECT first_name\nFROM customers\nWHERE first_name NOT ILIKE '%a%';\n\n-- 或者如果 LIKE 不区分大小写（MySQL 默认示例）\nSELECT first_name\nFROM customers\nWHERE first_name NOT LIKE '%a%';\n</code></pre>\n</li>\n</ul>\n<p><code>LIKE</code> 操作符及其通配符 <code>%</code> 和 <code>_</code> 结合使用，提供了一种根据模式筛选文本数据的方法，极大地扩展了 <code>WHERE</code> 子句的功能。请记住根据您的数据库系统考虑大小写敏感性。</p>",
+  "slug": "pattern-matching-like",
+  "updates": [],
+  "references": [
+    {
+      "id": 4391,
+      "title": "Learning SQL: Master the Fundamentals of Relational Databases",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "380",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492057604/",
+      "doi": "",
+      "note": "一本全面介绍SQL基础知识的书籍，包括LIKE操作符和使用通配符的多种模式匹配技术。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:52.460680Z",
+      "updated_at": "2025-09-07T18:58:51.411095Z"
+    },
+    {
+      "id": 4392,
+      "title": "PostgreSQL Documentation: Pattern Matching",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/functions-matching.html",
+      "doi": "",
+      "note": "PostgreSQL模式匹配操作符的官方文档，详细说明了LIKE、用于不区分大小写匹配的ILIKE以及正则表达式。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:52.492880Z",
+      "updated_at": "2025-09-07T18:58:31.797990Z"
+    },
+    {
+      "id": 4393,
+      "title": "MySQL 8.0 Reference Manual: String Comparison Functions and Operators",
+      "author": "Oracle and/or its affiliates",
+      "year": "2023",
+      "publisher": "Oracle",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dev.mysql.com/doc/refman/8.0/en/string-comparison-functions.html",
+      "doi": "",
+      "note": "MySQL字符串比较函数的官方文档，详细介绍了LIKE操作符及其在字符集和排序规则方面的影响，这些因素会影响大小写敏感性。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:52.495633Z",
+      "updated_at": "2025-09-07T18:58:33.060226Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

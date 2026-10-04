@@ -1,0 +1,61 @@
+{
+  "id": 4213,
+  "title": "硬件考量：内存",
+  "meta_title": "本地LLM的内存需求",
+  "meta_description": "了解为何内存对载入LLM很重要，以及您可能需要多少。",
+  "content": "<p>随机存取存储器（RAM）是一个主要影响您可以在本地运行哪些大型语言模型（LLM）以及它们运行情况的因素。您可以把内存想象成您电脑的工作台：它是临时的高速存储空间，电脑在其中存储正在处理的数据和程序。</p>\n<h2>内存对LLM为何重要</h2>\n<p>当您想使用LLM时，首要步骤是将模型数据载入内存。LLM之所以“大”，主要是因为它们包含数十亿个参数 (parameter)，这些参数本质上是模型用于进行预测的学习数值。模型运行时，所有这些参数都需要一个存放的地方，这个地方主要是您系统的内存，特别是当您没有专用GPU或GPU内存（VRAM）不足时。</p>\n<p>充足内存的重要性如下：</p>\n<ol>\n<li><strong>模型载入：</strong> 整个模型，或至少是当前所需的部分，必须从您的存储设备（如SSD或HDD）载入到速度快得多的内存中。如果内存不足以容纳模型，您将无法载入它，或者系统可能会尝试使用较慢的存储设备作为溢出内存（称为“交换”或“分页”），导致性能大幅下降。</li>\n<li><strong>推理 (inference)计算：</strong> 除了存储模型的参数外，运行模型（这一过程称为“推理”，即它根据您的输入生成文本）需要额外的内存来保存中间计算结果和输入数据本身（您的提示和生成的文本）。</li>\n</ol>\n<h2>多少内存才够用？</h2>\n<p>所需内存量直接取决于您打算运行的LLM模型大小。模型大小通常以数十亿参数 (parameter)来衡量（例如，7B代表70亿参数，13B代表130亿参数）。</p>\n<p>对于未优化的模型，一个非常粗略的经验法则是，您所需的内存略高于模型大小（以GB为单位），再乘以每个参数的大小（通常为2字节或更多）。例如，一个每个参数占用2字节的7B参数模型，仅参数部分就需要大约 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>7</mn><mo>×</mo><mn>2</mn><mo>=</mo><mn>14</mn></mrow><annotation encoding=\"application/x-tex\">7 \\times 2 = 14</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">7</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">2</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">14</span></span></span></span> GB内存，此外还需要额外的内存用于计算和操作系统。</p>\n<p>然而，现代技术已显著提高效率。<strong>量化 (quantization)</strong>，我们将在第三章详细介绍这一过程，减少了每个参数所需的内存量，通常能将内存需求减少50-75%或更多，同时对许多任务的质量影响极小。这使得在消费级硬件上运行大型模型成为可能。</p>\n<p>以下是一些通用指导原则，请记住，这些是<em>估计值</em>，实际使用情况在很大程度上取决于特定的模型格式（例如GGUF，稍后会讨论）和量化级别：</p>\n<ul>\n<li><strong>最低要求（小型模型/尝试）：</strong> 8 GB内存可能让您运行非常小的模型（例如1B-3B参数）或少量化后稍大的模型，但性能可能较慢，且您需要关闭其他应用程序。</li>\n<li><strong>建议用于常见模型（例如7B）：</strong> 16 GB内存通常是一个实用的起点，可以舒适地运行流行的量化7B模型，同时兼容您的操作系统和其他基本应用程序。</li>\n<li><strong>适用于大型模型（例如13B+）：</strong> 32 GB内存提供更大的灵活性，让您更流畅地运行良好量化的13B模型，甚至是一些更大的模型（如经过大量量化的30B+模型）。它还为操作系统和其他任务提供了更多余量。</li>\n<li><strong>爱好者/超大型模型：</strong> 如果您计划运行量化程度较低的较大模型（30B+），或者尝试运行多个模型或更复杂的工作流程，64 GB或更多内存将有所助益。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1s19m1g\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\":\"量化模型所需内存估算\", \"x\":0.5}, \"xaxis\": {\"title\":\"模型大小（十亿参数）\"}, \"yaxis\": {\"title\":\"估算最低内存（GB）\"}, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 50, \"b\": 40}}, \"data\": [{\"type\": \"bar\", \"x\": [\"~3B\", \"~7B\", \"~13B\"], \"y\": [4, 6, 10], \"marker\": {\"color\": \"#228be6\"}, \"name\": \"所需内存\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1s19m1g\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>载入和运行常用量化LLM模型（例如4位量化）所需的内存估算。包含操作系统和推理 (inference)开销的小部分余量。实际需求有所不同。</p>\n</blockquote>\n<p>请记得考虑您的操作系统（Windows、macOS、Linux）以及任何后台应用程序，它们也会占用内存。您电脑上显示的内存量是<em>总内存</em>；LLM<em>可用</em>的内存会更少。</p>\n<h2>内存不足时会怎样？</h2>\n<p>如果您尝试载入一个所需内存超过可用内存的模型，很可能会发生以下两种情况之一：</p>\n<ol>\n<li><strong>载入失败：</strong> 尝试载入模型的软件（例如Ollama或LM Studio，将在第四章介绍）很可能会报告错误并无法载入模型。</li>\n<li><strong>速度极慢（交换）：</strong> 操作系统可能会尝试通过使用硬盘或SSD作为临时内存来弥补（这被称为交换或分页）。由于存储设备的读写速度比内存慢数个数量级，LLM的性能将变得极其缓慢，使其几乎无法使用。</li>\n</ol>\n<h2>内存与显存 (VRAM)对比</h2>\n<p>区分系统内存和显卡内存（视频内存，即VRAM）很有必要，我们将在下一节讨论。如果您有一个性能良好的GPU并具备充足的VRAM，LLM的部分（或者如果VRAM足够大，则整个模型）可以载入到GPU上进行更快的处理。然而，系统内存仍然有其作用：</p>\n<ul>\n<li>如果VRAM不足，它可能会容纳模型的部分（这称为模型拆分）。</li>\n<li>如果您没有合适的GPU或选择完全在CPU上运行模型，它就是主要使用的内存。</li>\n</ul>\n<h2>检查您的内存</h2>\n<p>正如本章后面“检查您的系统配置”部分所提及的，您可以轻松地查阅电脑有多少内存：</p>\n<ul>\n<li><strong>Windows：</strong> 任务管理器（性能选项卡）或系统信息。</li>\n<li><strong>macOS：</strong> 关于本机 -> 内存选项卡。</li>\n<li><strong>Linux：</strong> 终端中的 <code>free -h</code> 命令或系统监视器应用程序。</li>\n</ul>\n<p>在您开始下载模型之前，了解您系统的内存容量非常重要。它直接影响您可以进行本地运行的模型类型。尽管量化 (quantization)等技术有助于提升硬件的效用，拥有充足的内存能够为初次使用本地LLM提供更流畅和灵活的体验。</p>",
+  "slug": "hardware-ram",
+  "updates": [],
+  "references": [
+    {
+      "id": 11283,
+      "title": "Computer Organization and Design RISC-V Edition: The Hardware/Software Interface",
+      "author": "David A. Patterson, John L. Hennessy",
+      "year": "2020",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/computer-organization-and-design-risc-v-edition/patterson/978-0-12-820331-6",
+      "doi": "",
+      "note": "涵盖计算机体系结构基础知识的经典教科书，包括内存层次结构、RAM、虚拟内存和交换，这些是理解硬件限制的核心概念。",
+      "order": 1,
+      "created_at": "2025-09-05T07:09:20.491700Z",
+      "updated_at": "2025-09-09T13:14:47.300161Z"
+    },
+    {
+      "id": 11284,
+      "title": "A Survey of Quantization Methods for Efficient Neural Network Inference",
+      "author": "Gyeong-Nam Jung, Jae-Hong Lee, Min-Su Song, Jae-Joon Han",
+      "year": "2020",
+      "publisher": "MDPI",
+      "journal": "Sensors",
+      "volume": "20",
+      "pages": "5953",
+      "url": "https://www.mdpi.com/1424-8220/20/20/5953",
+      "doi": "10.3390/s20205953",
+      "note": "对各种神经网络量化技术的全面回顾，与课程中降低LLM内存需求的“量化”部分直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T07:09:20.520588Z",
+      "updated_at": "2025-09-09T13:14:39.220157Z"
+    },
+    {
+      "id": 11285,
+      "title": "Large Model Inference",
+      "author": "Hugging Face Team",
+      "year": "2023",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/accelerate/main/en/usage_guides/big_model_inference",
+      "doi": "",
+      "note": "官方文档，描述了高效运行大型模型的策略，涵盖了内存考量和卸载等技术，这些与RAM和VRAM的使用有关。",
+      "order": 3,
+      "created_at": "2025-09-05T07:09:20.524360Z",
+      "updated_at": "2025-09-09T13:14:47.891491Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4484,
+  "title": "图中的控制流处理",
+  "meta_title": "优化ML计算图中的控制流",
+  "meta_description": "讨论优化以图形式表示的条件执行和循环的策略。",
+  "content": "<p>虽然许多机器学习 (machine learning)模型可以表示为静态有向无环图（DAG），但应用程序常需要通过条件执行（if/else）和循环（while/for）来表达动态行为。在图表示中妥善处理这种控制流对ML编译器来说是一项主要难题，它会影响执行其他优化的能力以及最终的运行时性能。</p>\n<p>与静态图中直接的数据依赖不同，控制流引入了关于哪些操作会执行以及条件依赖的不确定性。优化这些结构需要专门方法，以理解控制流操作的语义及其与数据流的协同作用。</p>\n<h3>在ML图中表示控制流</h3>\n<p>在优化控制流之前，我们需要一种在图中表示它的方式。常见的方法包括：</p>\n<ol>\n<li><strong>函数式控制流操作符：</strong> 高级框架常提供<code>If</code>、<code>Cond</code>、<code>WhileLoop</code>或<code>Scan</code>等特定操作符。这些操作符封装了表示条件分支或循环体的整个子图。TensorFlow的<code>tf.cond</code>和<code>tf.while_loop</code>，或JAX的<code>lax.cond</code>和<code>lax.scan</code>就是例子。编译器将它们视为特殊节点，根据输入条件或循环状态管理其所包含子图的执行。</li>\n<li><strong>显式控制边：</strong> 较低层级的图表示，特别是那些更接近传统编译器IR的表示，可能在数据边旁使用显式控制边。像<code>Merge</code>、<code>Switch</code>和<code>Enter</code>/<code>Exit</code>（在TensorFlow的GraphDef中常见）这样的节点根据布尔条件指导执行和数据的流动。这种表示使控制流结构更明确，但管理起来可能复杂。</li>\n<li><strong>基于区域的控制流（例如MLIR）：</strong> 像MLIR这样的系统使用附带“区域”（操作块）的操作。控制流操作如<code>scf.if</code>（结构化控制流方言）或<code>cf.cond_br</code>（控制流方言）包含表示“then”和“else”分支或循环体的区域。这种结构化方法结合了函数式操作符的特点和显式块结构，有助于在明确的范围内进行分析和转换。</li>\n</ol>\n<p>表示方式的选择常取决于抽象级别。高级图通常使用函数式操作符，这些操作符在编译过程中会逐步降级为更显式的形式。</p>\n<h3>图控制流的优化技术</h3>\n<p>优化带有控制流的图涉及调整标准编译器技术，并发展针对ML计算结构的新方法。</p>\n<h4>谓词提升与下沉</h4>\n<p>与传统编译器中的代码移动类似，操作有时可以跨越控制流边界进行移动。</p>\n<ul>\n<li><strong>提升：</strong> 如果条件分支或循环内部的操作不依赖于<em>仅</em>在该分支/循环中计算的任何值，并且无论选择哪条路径都需要执行它（或如果在控制流结构合并<em>之后</em>需要其结果），则可能可以将其“提升”到控制流结构之前。如果该操作出现在多个分支中，这可以减少重复计算。</li>\n<li><strong>下沉：</strong> 相反，如果分支前的操作<em>仅</em>在特定分支内使用，则可以将其“下沉”到该分支中。如果未执行该分支，这可以避免不必要的运算。</li>\n</ul>\n<p>依赖性分析在这里很重要。我们必须确保移动操作不会违反任何数据依赖关系并保持原始程序语义。</p>\n<h4>分支简化与合并</h4>\n<p>当控制<code>If</code>操作的条件可以静态评估时（例如，它仅依赖于常量或静态形状信息），编译器可以执行分支消除。</p>\n<ul>\n<li><strong>常量条件：</strong> 如果条件始终为真或始终为假，则整个<code>If</code>结构可以被对应于被选用分支的子图替换，而另一个分支可以完全剪除。</li>\n<li><strong>合并相同操作：</strong> 如果“then”和“else”分支都在其开始或结束处立即执行相同的操作，则该操作可以移到条件结构外部（在条件检查之前或分支合并之后），从而简化这两个分支。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-13c6zn3\" \n              data-graph-definition='digraph BranchSimplification {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [color=\"#868e96\"];\n\n  subgraph cluster_before {\n    label = \"简化前\";\n    bgcolor=\"#f8f9fa\";\n    Cond_B [label=\"条件\", shape=diamond, style=filled, color=\"#4c6ef5\", fillcolor=\"#dbe4ff\"];\n    ThenOp_B [label=\"操作A(x)\", color=\"#12b886\", fillcolor=\"#c3fae8\"];\n    ElseOp_B [label=\"操作A(x)\", color=\"#12b886\", fillcolor=\"#c3fae8\"]; // 相同操作\n    Merge_B [label=\"合并\", shape=invtriangle, style=filled, color=\"#495057\", fillcolor=\"#dee2e6\"];\n    Input_B [label=\"输入x\", shape=ellipse, style=filled, color=\"#adb5bd\"];\n\n    Input_B -> Cond_B;\n    Cond_B -> ThenOp_B [label=\" 真\"];\n    Cond_B -> ElseOp_B [label=\" 假\"];\n    ThenOp_B -> Merge_B;\n    ElseOp_B -> Merge_B;\n  }\n\n  subgraph cluster_after {\n    label = \"合并后\";\n    bgcolor=\"#f8f9fa\";\n    Cond_A [label=\"条件\", shape=diamond, style=filled, color=\"#4c6ef5\", fillcolor=\"#dbe4ff\"];\n    MergedOp_A [label=\"操作A(x)\", color=\"#12b886\", fillcolor=\"#c3fae8\"]; // 已移动的操作\n    ThenSubGraph_A [label=\"Then分支\\n(剩余部分)\", shape=box, style=\"rounded,dashed\"];\n    ElseSubGraph_A [label=\"Else分支\\n(剩余部分)\", shape=box, style=\"rounded,dashed\"];\n     Merge_A [label=\"合并\", shape=invtriangle, style=filled, color=\"#495057\", fillcolor=\"#dee2e6\"];\n    Input_A [label=\"输入x\", shape=ellipse, style=filled, color=\"#adb5bd\"];\n\n    Input_A -> MergedOp_A;\n    MergedOp_A -> Cond_A;\n    Cond_A -> ThenSubGraph_A [label=\" 真\"];\n    Cond_A -> ElseSubGraph_A [label=\" 假\"];\n    ThenSubGraph_A -> Merge_A;\n    ElseSubGraph_A -> Merge_A;\n  }\n\n  // 用于布局的隐形边\n  edge [style=invis];\n  Merge_B -> Input_A;\n\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-13c6zn3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>两个'then'和'else'分支中都存在的相同操作<code>OpA(x)</code>被提升到条件分割之前，从而简化了图结构。</p>\n</blockquote>\n<h4>图层面的循环优化</h4>\n<p>标准循环优化在图转换中也有其对应：</p>\n<ul>\n<li><strong>循环展开：</strong> 对于已知迭代次数较少的循环，编译器可以多次复制循环体子图，消除循环控制开销。这对于循环分支开销较高的硬件目标尤其有效。然而，它会增加代码大小。</li>\n<li><strong>循环不变代码外提：</strong> 循环体子图内部的操作，如果其输入在迭代过程中不发生变化（即，它们仅依赖于循环外部的输入或常量），则可以移到循环外部，通常在循环开始之前。这可以避免每次迭代中的重复计算。识别循环不变式需要仔细分析流入和流出循环体子图的数据依赖关系。</li>\n<li><strong>循环剥离：</strong> 有时循环的前几次或后几次迭代是特殊情况。剥离涉及将这些迭代从主循环体中提取出来，从而使主循环更简单，或者使得能够对剥离的迭代或剩余的循环进行进一步优化。</li>\n</ul>\n<h4>与其他优化的关系</h4>\n<p>控制流使其他图遍历（如操作符融合）变得复杂。跨控制流边界融合操作通常很复杂，除非满足特定条件，否则通常不允许。例如，如果有利，可以将条件操作前的一个操作与<em>两个</em>分支中的操作融合，但仅在一个分支内融合操作需要仔细处理。</p>\n<ul>\n<li><strong>分支/循环内部融合：</strong> 优化器常侧重于在条件分支或循环体定义的子图<em>内部</em>应用融合。</li>\n<li><strong>推测执行：</strong> 在某些情况下，编译器可能会在条件完全确定之前，推测性地执行来自可能分支的代码，但这需要硬件支持和仔细管理，以便在推测错误时丢弃结果。与CPU指令调度相比，这在图级ML优化中不太常见。</li>\n</ul>\n<p>妥善处理控制流对于优化具有动态行为的模型十分重要，例如循环神经网络 (neural network)（RNN）、处理变长序列的模型，或具有条件动作的强化学习 (reinforcement learning)智能体。此处讨论的技术使得编译器能够简化图结构、减少重复工作，并即使在存在条件逻辑和循环的情况下也能实现高效执行，为后续的张量级优化提供条件。</p>",
+  "slug": "graph-control-flow",
+  "updates": [],
+  "references": [
+    {
+      "id": 12777,
+      "title": "Compilers: Principles, Techniques, and Tools",
+      "author": "Alfred V. Aho, Monica S. Lam, Ravi Sethi, and Jeffrey D. Ullman",
+      "year": "2006",
+      "publisher": "Pearson Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFyzuTL11I_NDOJ8tPDgt2HH-3PXkTlW27CpYqYvp5fYAkgabbqIMTBQxN9-pNG9UHbAaD9f7qmTGgvFYnNbPKE_BX86YZ3Tek4O5xqnNwozvalwQjYulOyoAIyivKSa0SskrqQq33NsU-IwYw9rTkg9tLvUUIopfoI33RzLU=",
+      "doi": "",
+      "note": "一本经典而全面的教科书，涵盖了基础的编译器优化，包括控制流分析、循环优化和代码移动技术等详细内容。",
+      "order": 1,
+      "created_at": "2025-09-05T08:18:30.354952Z",
+      "updated_at": "2025-09-10T09:12:18.551325Z"
+    },
+    {
+      "id": 12778,
+      "title": "MLIR: A Compiler Infrastructure for the End of Moore's Law",
+      "author": "Chris Lattner, Mehdi Amini, River Riddle, Albert Cohen, Alan Mycroft, Oleksandr Zinenko, Andy Davis, and Jacques Pienaar",
+      "year": "2021",
+      "publisher": "Association for Computing Machinery (ACM)",
+      "journal": "ACM Transactions on Architecture and Code Optimization (TACO)",
+      "volume": "18",
+      "pages": "1-29",
+      "url": "https://dl.acm.org/doi/10.1145/3473551",
+      "doi": "10.1145/3473551",
+      "note": "介绍了MLIR框架，解释了其通过区域和方言（如`scf`和`cf`）来表示和优化结构化控制流的设计。",
+      "order": 2,
+      "created_at": "2025-09-05T08:18:30.360109Z",
+      "updated_at": "2025-09-10T09:12:34.922651Z"
+    },
+    {
+      "id": 12780,
+      "title": "Better performance with tf.function",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "TensorFlow Documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/function",
+      "doi": "",
+      "note": "官方指南，解释了如何在TensorFlow模型中使用`tf.function`，包括它在追踪过程中如何处理和优化`tf.cond`和`tf.while_loop`等动态控制流操作。",
+      "order": 4,
+      "created_at": "2025-09-05T08:18:30.370765Z",
+      "updated_at": "2025-09-10T09:12:08.184859Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

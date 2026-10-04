@@ -1,0 +1,61 @@
+{
+  "id": 2005,
+  "title": "动手实践：实现 LightGBM",
+  "meta_title": "动手实践：实现 LightGBM",
+  "meta_description": "使用 LightGBM 的 Python API 构建、训练和调优 LightGBM 模型，并比较性能。",
+  "content": "<p>使用 LightGBM 的 Python API 实现 LightGBM 模型，需要应用 GOSS、EFB、基于直方图的分裂和叶式生长等原理。本实现将说明如何发挥 LightGBM 的独特功能，尤其是其对分类数据的高效处理能力和运行速度。</p>\n<p>本次练习我们将使用一个合成数据集，以便控制其特性并关注 LightGBM 的实现方式。</p>\n<h3>设置与数据生成</h3>\n<p>首先，请确保你已安装所需的库（<code>lightgbm</code>、<code>scikit-learn</code>、<code>pandas</code>、<code>numpy</code>）。让我们导入它们并生成一个合成的分类数据集。我们将加入混合有信息量、冗余和分类的特征。</p>\n<pre><code class=\"language-python\">import lightgbm as lgb\nimport pandas as pd\nimport numpy as np\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.datasets import make_classification\nfrom sklearn.metrics import accuracy_score, roc_auc_score\nimport time\n\n# 生成一个合成数据集\n# 为了演示，使其具有适当的复杂度\nn_samples = 5000\nn_features = 30\nn_informative = 15\nn_redundant = 5\nn_categorical = 5 # 我们将最后 5 个特征视为分类特征\nn_clusters_per_class = 2\nrandom_state = 42\n\nX, y = make_classification(n_samples=n_samples,\n                           n_features=n_features,\n                           n_informative=n_informative,\n                           n_redundant=n_redundant,\n                           n_repeated=0,\n                           n_classes=2,\n                           n_clusters_per_class=n_clusters_per_class,\n                           weights=[0.8, 0.2], # 引入一些不平衡\n                           flip_y=0.05, # 添加噪声\n                           class_sep=0.8,\n                           random_state=random_state)\n\n# 转换为 Pandas DataFrame 以便更方便地处理\nfeature_names = [f'num_{i}' for i in range(n_features - n_categorical)] + \\\n                [f'cat_{i}' for i in range(n_categorical)]\nX = pd.DataFrame(X, columns=feature_names)\n\n# 通过离散化最后 n_categorical 列来模拟分类特征\n# 在实际情况中，这些特征通常已经是分类类型（字符串或整数）\nfor i in range(n_categorical):\n    cat_col_name = f'cat_{i}'\n    # 将浮点数转换为离散整数类别（例如：0, 1, 2, 3, 4）\n    X[cat_col_name] = pd.qcut(X[cat_col_name], q=5, labels=False, duplicates='drop').astype(int)\n\n# 识别分类特征的索引或名称\ncategorical_features_indices = [X.columns.get_loc(col) for col in feature_names if col.startswith('cat_')]\ncategorical_features_names = [col for col in feature_names if col.startswith('cat_')]\n\n# 将分类列转换为 pandas 的 'category' dtype 以提高清晰度\n# LightGBM 通常可以推断出这些，但显式声明更安全\nfor col in categorical_features_names:\n    X[col] = X[col].astype('category')\n\nprint(\"数据集形状:\", X.shape)\nprint(\"目标分布:\", np.bincount(y))\nprint(\"已识别的分类特征:\", categorical_features_names)\n# print(X.info()) # 可选：检查数据类型\n# print(X.head())  # 可选：查看数据\n\n# 将数据分成训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=random_state, stratify=y)\n</code></pre>\n<h3>LightGBM 模型基础训练</h3>\n<p>我们先从训练一个默认的 LightGBM 分类器开始。LightGBM 兼容 scikit-learn 的 API 使这变得简单直接。</p>\n<pre><code class=\"language-python\"># 初始化 LightGBM 分类器\nlgbm_clf_default = lgb.LGBMClassifier(random_state=random_state)\n\n# 训练模型\nprint(\"正在训练默认 LightGBM 模型...\")\nstart_time = time.time()\nlgbm_clf_default.fit(X_train, y_train)\nend_time = time.time()\nprint(f\"默认模型训练时间: {end_time - start_time:.2f} 秒\")\n\n# 进行预测\ny_pred_default = lgbm_clf_default.predict(X_test)\ny_pred_proba_default = lgbm_clf_default.predict_proba(X_test)[:, 1] # 正类的概率\n\n# 评估模型\naccuracy_default = accuracy_score(y_test, y_pred_default)\nauc_default = roc_auc_score(y_test, y_pred_proba_default)\n\nprint(f\"\\n默认模型性能:\")\nprint(f\"准确率: {accuracy_default:.4f}\")\nprint(f\"AUC: {auc_default:.4f}\")\n</code></pre>\n<p>这建立了一个使用默认参数 (parameter)的基准性能和训练时间。注意，我们尚未明确处理分类特征；LightGBM 可能会将其视为连续特征或进行合理猜测，但明确处理通常会更好。</p>\n<h3>使用 LightGBM 的特征</h3>\n<p>现在，让我们明确告知 LightGBM 我们的分类特征，并调整一些通常用于性能和正则化 (regularization)的参数 (parameter)。</p>\n<ol>\n<li><strong>分类特征：</strong> 使用 <code>categorical_feature</code> 参数。支持传入特征名称（如果使用 Pandas DataFrame）或索引。在 Pandas 中使用 <code>category</code> 数据类型通常能让 LightGBM 自动识别它们，但明确声明可以消除歧义。</li>\n<li><strong>叶式生长控制：</strong> <code>num_leaves</code> 是一个主要参数，控制 LightGBM 叶式生长策略中的模型复杂度。默认值为 31。增加它可提高准确性，但也存在过拟合 (overfitting)的风险。它通常与 <code>max_depth</code>（限制深度，尽管叶式生长受其约束较少）和 <code>min_child_samples</code>（叶子中所需的最少数据点）一起调整。</li>\n<li><strong>学习率和估计器：</strong> <code>learning_rate</code>（收缩率）和 <code>n_estimators</code>（提升轮数）共同作用。较小的学习率通常需要更多的估计器才能收敛，但常常能带来更好的泛化能力。</li>\n<li><strong>子采样：</strong> <code>feature_fraction</code>（相当于 <code>colsample_bytree</code>）和 <code>bagging_fraction</code>（<code>subsample</code>）分别控制特征和数据子采样，有助于正则化和提高速度。<code>bagging_freq</code> 决定了进行 bagging 的频率。</li>\n</ol>\n<p>让我们训练另一个模型，并结合这些方面。</p>\n<pre><code class=\"language-python\"># 初始化一个已配置的 LightGBM 分类器\nlgbm_clf_configured = lgb.LGBMClassifier(\n    objective='binary',            # 明确设置目标\n    metric='auc',                  # 用于内部验证/提前停止的评估指标\n    n_estimators=500,             # 增加提升轮数\n    learning_rate=0.05,            # 降低学习率\n    num_leaves=64,                 # 增加叶子数量\n    max_depth=-1,                  # 无深度限制（叶式生长的典型设置）\n    min_child_samples=20,          # 每个叶子的最少样本数\n    feature_fraction=0.8,          # 特征子采样（类似于 colsample_bytree）\n    bagging_fraction=0.8,          # 数据子采样（类似于 subsample）\n    bagging_freq=5,                # 每 5 次迭代执行一次 bagging\n    reg_alpha=0.1,                 # L1 正则化\n    reg_lambda=0.1,                # L2 正则化\n    n_jobs=-1,                     # 使用所有可用的 CPU 核心\n    random_state=random_state\n)\n\n# 训练模型，明确传入分类特征信息\n# 在使用 category 数据类型的 Pandas DataFrame 上训练时使用特征名称\n# 或者，使用索引：categorical_feature=categorical_features_indices\nprint(\"\\n正在训练带有分类特征的配置 LightGBM 模型...\")\nstart_time = time.time()\nlgbm_clf_configured.fit(X_train, y_train,\n                        eval_set=[(X_test, y_test)],      # 提供评估集用于提前停止\n                        eval_metric='auc',                # 用于评估的指标\n                        callbacks=[lgb.early_stopping(100, verbose=False)], # 如果 AUC 在 100 轮内没有改善则停止\n                        categorical_feature=categorical_features_names # 明确声明\n                       )\nend_time = time.time()\nprint(f\"配置模型训练时间: {end_time - start_time:.2f} 秒\")\nprint(f\"找到的最佳迭代次数: {lgbm_clf_configured.best_iteration_}\")\n\n# 进行预测\ny_pred_configured = lgbm_clf_configured.predict(X_test)\ny_pred_proba_configured = lgbm_clf_configured.predict_proba(X_test)[:, 1]\n\n# 评估配置模型\naccuracy_configured = accuracy_score(y_test, y_pred_configured)\nauc_configured = roc_auc_score(y_test, y_pred_proba_configured)\n\nprint(f\"\\n配置模型性能:\")\nprint(f\"准确率: {accuracy_configured:.4f}\")\nprint(f\"AUC: {auc_configured:.4f}\")\n</code></pre>\n<p><strong>观察结果：</strong></p>\n<ul>\n<li><strong>分类处理：</strong> 通过传入 <code>categorical_feature=categorical_features_names</code>，我们确保 LightGBM 对这些特征使用其优化的算法（例如 Fisher 最优分裂），这与将其视为连续特征或使用独热编码（这会大幅增加维度）相比，可能同时提高速度和准确性。请注意，在输入 DataFrame 中使用 <code>category</code> 数据类型是推荐的方式，因为 LightGBM 的内部机制针对它进行了优化。</li>\n<li><strong>训练时间：</strong> 比较训练时间。虽然配置的模型具有更多的估计器，但像基于直方图的分裂、GOSS 和 EFB 等技术通常能让 LightGBM 保持非常快的速度，尤其是在数据量增长时。使用提前停止也能避免不必要的计算。</li>\n<li><strong>性能：</strong> 比较准确率和 AUC 分数。调整 <code>num_leaves</code>、<code>learning_rate</code> 等参数，并结合正则化和子采样，通常有助于找到比默认设置更好的模型，尽管需要仔细调优（通常使用第 8 章中的技术）。提前停止有助于防止在估计器数量增加时出现过拟合。</li>\n</ul>\n<h3>可视化（可选）：特征重要性</h3>\n<p>LightGBM 提供内置的特征重要性计算。这有助于理解模型认为哪些特征的预测能力最强。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport seaborn as sns\n\n# 获取特征重要性\nimportance_df = pd.DataFrame({\n    'feature': lgbm_clf_configured.booster_.feature_name(),\n    'importance': lgbm_clf_configured.feature_importances_\n}).sort_values('importance', ascending=False)\n\n# 绘制特征重要性\nplt.figure(figsize=(10, 8))\nsns.barplot(x='importance', y='feature', data=importance_df.head(20), palette='viridis') # 显示前 20 名\nplt.title('LightGBM 特征重要性（配置模型）')\nplt.tight_layout()\nplt.show() # 在 Web 环境中，你可能会使用 Plotly 等库来渲染它\n\n# 使用 Plotly 进行 Web 渲染的示例\nimport plotly.graph_objects as go\ntop_n = 20\nfig = go.Figure(go.Bar(\n    x=importance_df['importance'][:top_n],\n    y=importance_df['feature'][:top_n],\n    orientation='h',\n    marker_color='#1f77b4' # 示例颜色\n))\nfig.update_layout(\n    title=f'前 {top_n} 个特征重要性 (LightGBM)',\n    yaxis={'categoryorder':'total ascending'},\n    xaxis_title='重要性',\n    yaxis_title='特征',\n    height=500,\n    margin=dict(l=120, r=20, t=50, b=50) # 调整标签边距\n)\n# fig.show() # 在支持 Plotly 渲染的笔记本或环境中运行此行\n\n# 要嵌入到 Web 中，通常会输出 JSON：\n# print(fig.to_json()) # 这会生成 JSON 字符串\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1gk3hh3\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": { \"text\": \"前 20 个特征重要性 (LightGBM)\" },\n    \"yaxis\": { \"categoryorder\": \"total ascending\", \"title\": { \"text\": \"特征\" } },\n    \"xaxis\": { \"title\": { \"text\": \"重要性\" } },\n    \"height\": 500,\n    \"margin\": { \"l\": 120, \"r\": 20, \"t\": 50, \"b\": 50 }\n  },\n  \"data\": [\n    {\n      \"type\": \"bar\",\n      \"x\": [125, 118, 115, 105, 99, 95, 92, 88, 85, 80, 78, 75, 72, 68, 65, 60, 58, 55, 52, 50],\n      \"y\": [\"数值_10\", \"数值_5\", \"分类_2\", \"数值_12\", \"数值_3\", \"数值_0\", \"数值_8\", \"分类_0\", \"数值_14\", \"数值_2\", \"数值_7\", \"分类_3\", \"数值_1\", \"数值_9\", \"分类_1\", \"数值_11\", \"数值_6\", \"分类_4\", \"数值_4\", \"数值_13\"],\n      \"orientation\": \"h\",\n      \"marker\": { \"color\": \"#228be6\" }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 500px;\"\n            >\n              <div id=\"plot-1gk3hh3\" style=\"width: 100%; min-height: 500px;\"></div>\n            </div>\n          \n<blockquote>\n<p>由配置的 LightGBM 模型计算的特征重要性，显示了前 20 个特征的相对贡献。请注意分类特征（例如 <code>分类_2</code>、<code>分类_0</code>）如何与数值特征同时出现。</p>\n</blockquote>\n<p>本次实践练习体现了使用 LightGBM 的核心工作流程：模型初始化、模型训练（可选地使用提前停止和评估集）、进行预测，以及更重要的，配置模型以发挥其优势，例如原生的分类特征处理能力。对 <code>num_leaves</code>、<code>learning_rate</code>、<code>feature_fraction</code> 和 <code>bagging_fraction</code> 等参数 (parameter)进行试验对于优化你在特定任务上的性能非常重要，我们将在超参数 (hyperparameter)优化章节中详细介绍这一主题。</p>",
+  "slug": "practice-implementing-lightgbm",
+  "updates": [],
+  "references": [
+    {
+      "id": 6566,
+      "title": "LightGBM Documentation",
+      "author": "Microsoft and LightGBM Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://lightgbm.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "官方文档提供了关于Python API、参数配置以及使用LightGBM推荐实践的全面信息。",
+      "order": 2,
+      "created_at": "2025-09-05T01:26:44.642935Z",
+      "updated_at": "2025-09-08T03:19:30.479401Z"
+    },
+    {
+      "id": 6567,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, & TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "850",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "这本实用指南涵盖了使用scikit-learn等Python库实现各种机器学习模型，包括梯度提升算法。（第三版）",
+      "order": 3,
+      "created_at": "2025-09-05T01:26:44.645605Z",
+      "updated_at": "2025-09-08T03:19:50.312303Z"
+    },
+    {
+      "id": 6568,
+      "title": "Greedy Function Approximation: A Gradient Boosting Machine",
+      "author": "Jerome H. Friedman",
+      "year": "2001",
+      "publisher": "",
+      "journal": "The Annals of Statistics",
+      "volume": "29",
+      "pages": "1189-1232",
+      "url": "https://projecteuclid.org/journals/annals-of-statistics/volume-29/issue-5/Greedy-Function-Approximation-A-Gradient-Boosting-Machine/10.1214/aos/1013203451.full",
+      "doi": "10.1214/aos/1013203451",
+      "note": "这篇基础论文介绍了通用梯度提升机算法，为LightGBM等现代实现提供了理论基础。",
+      "order": 4,
+      "created_at": "2025-09-05T01:26:44.647856Z",
+      "updated_at": "2025-09-08T03:19:38.823418Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

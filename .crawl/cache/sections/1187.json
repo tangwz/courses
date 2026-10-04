@@ -1,0 +1,61 @@
+{
+  "id": 1187,
+  "title": "使用 Seaborn 绘制折线图 (lineplot)",
+  "meta_title": "使用 Seaborn 绘制折线图",
+  "meta_description": "学习使用 Seaborn 的 lineplot 函数创建折线图，常用于时间序列或趋势。",
+  "content": "<p>折线图是显示连续变量（通常是时间或位置）趋势的基本图表。尽管 Matplotlib 提供了 <code>plot()</code> 函数来创建基本折线图，但 Seaborn 的 <code>lineplot()</code> 函数功能更丰富，尤其适合处理 X 轴上每个点有多个观测值的数据集，或需要根据分类变量区分线条的情形。</p>\n<p><code>seaborn.lineplot()</code> 用于处理 Pandas DataFrames，可以自动聚合数据，并显示趋势线周围的置信区间等统计估计值。</p>\n<h3>绘制基本折线图</h3>\n<p>让我们从一个简单示例开始。假设我们有表示多天温度读数的数据。Seaborn 让绘图变得简单，尤其当您的数据在 Pandas DataFrame 中时。</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n# 示例数据：10 天的温度\ndays = np.arange(1, 11)\ntemperature = np.array([15, 16, 18, 17, 19, 21, 20, 22, 21, 23])\n\n# 创建 DataFrame\ntemp_df = pd.DataFrame({'Day': days, 'Temperature': temperature})\n\n# 使用 Seaborn 绘制折线图\nplt.figure(figsize=(8, 4)) # 设置图表大小，便于阅读\nsns.lineplot(x='Day', y='Temperature', data=temp_df)\n\nplt.title('10 天温度趋势')\nplt.xlabel('天')\nplt.ylabel('温度 (°C)')\nplt.grid(True, linestyle='--', alpha=0.6) # 添加浅色网格\nplt.show()\n</code></pre>\n<p>这段代码生成一个简单的折线图，显示温度趋势。请注意我们如何将 DataFrame <code>temp_df</code> 传递给 <code>data</code> 参数 (parameter)，并使用字符串指定 X 轴和 Y 轴的列名。Seaborn 内部处理映射。</p>\n<h3>使用 <code>hue</code> 显示多条线</h3>\n<p><code>seaborn.lineplot()</code> 的一个重要优点是，能够使用 <code>hue</code> 参数 (parameter)根据分类变量绘制多条线。这有助于比较不同组的趋势。</p>\n<p>假设我们有两个不同城市 A 和 B 的温度数据。</p>\n<pre><code class=\"language-python\"># 两个城市的示例数据\ndays = np.arange(1, 11)\ntemp_A = np.array([15, 16, 18, 17, 19, 21, 20, 22, 21, 23])\ntemp_B = np.array([12, 13, 14, 13, 15, 16, 17, 18, 19, 18])\n\n# 创建适合 Seaborn 的“长格式”DataFrame\ndata_list = []\nfor i in range(len(days)):\n    data_list.append({'Day': days[i], 'Temperature': temp_A[i], 'City': 'City A'})\n    data_list.append({'Day': days[i], 'Temperature': temp_B[i], 'City': 'City B'})\n\nmulti_city_df = pd.DataFrame(data_list)\n\n# 显示 DataFrame 的前几行\n# print(multi_city_df.head())\n#    Day  Temperature    City\n# 0    1           15  City A\n# 1    1           12  City B\n# 2    2           16  City A\n# 3    2           13  City B\n# 4    3           18  City A\n\n# 为每个城市绘制不同线条的折线图\nplt.figure(figsize=(8, 4))\nsns.lineplot(x='Day', y='Temperature', hue='City', data=multi_city_df, marker='o') # 添加标记\n\nplt.title('按城市区分的温度趋势')\nplt.xlabel('天')\nplt.ylabel('温度 (°C)')\nplt.grid(True, linestyle='--', alpha=0.6)\nplt.legend(title='城市') # 优化图例\nplt.show()\n</code></pre>\n<p>Seaborn 自动为代表“城市 A”和“城市 B”的线条分配不同颜色（由 <code>hue</code> 参数控制），并添加图例。您还可以根据其他分类变量，使用标记 (token)样式 (<code>style</code>) 或线宽 (<code>size</code>) 来区分线条。</p>\n<h3>聚合与置信区间</h3>\n<p>如果同一城市同一天有多个温度读数，会发生什么？默认情况下，<code>seaborn.lineplot()</code> 会聚合每个 X 值对应的多个测量值（计算平均值），并绘制此中心趋势。它还通过绘制置信区间（通常为 95% 置信区间）作为线条周围的阴影区域，来显示此估计值周围的不确定性。</p>\n<p>我们来模拟每天有多个读数的数据：</p>\n<pre><code class=\"language-python\"># 模拟城市 A 每天的多个读数\nnp.random.seed(42) # 为了可重复性\ndays_repeated = np.repeat(np.arange(1, 11), 5) # 每天 5 个读数\ntemp_A_noisy = np.concatenate([np.random.normal(loc=temp, scale=1.5, size=5) for temp in temp_A])\n\nnoisy_df = pd.DataFrame({'Day': days_repeated, 'Temperature': temp_A_noisy})\n\n# 绘制折线图 - Seaborn 默认计算平均值和 95% 置信区间\nplt.figure(figsize=(8, 4))\nsns.lineplot(x='Day', y='Temperature', data=noisy_df, marker='o')\n\nplt.title('城市 A 温度趋势（含置信区间）')\nplt.xlabel('天')\nplt.ylabel('温度 (°C)')\nplt.grid(True, linestyle='--', alpha=0.6)\nplt.show()\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-9eygdw\" \n              data-plot-definition='{\"data\":[{\"x\":[1,2,3,4,5,6,7,8,9,10],\"y\":[15.54,16.12,17.46,17.14,18.89,20.95,20.14,21.74,20.48,22.92],\"mode\":\"lines+markers\",\"name\":\"平均温度\",\"line\":{\"color\":\"#228be6\"},\"marker\":{\"symbol\":\"circle\",\"size\":6}},{\"x\":[1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10],\"y\":[17.66,13.41,17.76,14.47,19.25,15.66,18.34,15.93,20.64,17.13,22.10,19.80,21.70,18.57,23.24,20.23,22.04,18.92,24.47,21.37,17.66,13.41,17.76,14.47,19.25,15.66,18.34,15.93,20.64,17.13,22.10,19.80,21.70,18.57,23.24,20.23,22.04,18.92,24.47,21.37],\"fill\":\"tonexty\",\"mode\":\"lines\",\"line\":{\"width\":0},\"fillcolor\":\"rgba(34, 139, 230, 0.2)\",\"hoverinfo\":\"skip\",\"showlegend\":false,\"name\":\"置信区间上限\"},{\"x\":[1,2,3,4,5,6,7,8,9,10],\"y\":[13.41,14.47,15.66,15.93,17.13,19.80,18.57,20.23,18.92,21.37],\"fill\":\"tonexty\",\"mode\":\"lines\",\"line\":{\"width\":0},\"fillcolor\":\"rgba(34, 139, 230, 0.2)\",\"hoverinfo\":\"skip\",\"showlegend\":false,\"name\":\"置信区间下限\"}],\"layout\":{\"title\":{\"text\":\"城市 A 温度趋势（平均值和 95% 置信区间）\"},\"xaxis\":{\"title\":{\"text\":\"天\"}},\"yaxis\":{\"title\":{\"text\":\"温度 (°C)\"}},\"hovermode\":\"x unified\",\"width\":600,\"height\":400,\"showlegend\":true,\"legend\":{\"title\":{\"text\":\"\"}}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-9eygdw\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>城市 A 的平均每日温度，阴影区域代表围绕平均值的 95% 置信区间，数据基于每天的多个模拟读数。</p>\n</blockquote>\n<p>阴影区域显示了每天温度测量值的变化性或不确定性。这种自动统计估计是 Seaborn 的一个强大功能。</p>\n<p>如果您不想显示置信区间，可以通过将 <code>errorbar</code> 参数 (parameter)设置为 <code>None</code> 来禁用它：</p>\n<pre><code class=\"language-python\"># 绘制不含置信区间的图\nplt.figure(figsize=(8, 4))\nsns.lineplot(x='Day', y='Temperature', data=noisy_df, errorbar=None, marker='o') # 禁用置信区间\n\nplt.title('城市 A 温度趋势（仅平均值）')\nplt.xlabel('天')\nplt.ylabel('温度 (°C)')\nplt.grid(True, linestyle='--', alpha=0.6)\nplt.show()\n</code></pre>\n<p>您还可以使用 <code>estimator</code> 参数（例如 <code>estimator=np.median</code>）将聚合函数从平均值更改为其他值，例如中位数或标准差。</p>\n<h3>与 Matplotlib 自定义项结合使用</h3>\n<p>请记住，Seaborn 图表是基于 Matplotlib 的。在使用 Seaborn 创建图表后，您仍然可以使用 <code>plt.title()</code>、<code>plt.xlabel()</code>、<code>plt.ylabel()</code>、<code>plt.grid()</code> 和 <code>plt.legend()</code> 等 Matplotlib 函数来自定义图表外观，正如我们在上述示例中所做的那样。</p>\n<p>总而言之，<code>seaborn.lineplot()</code> 提供便捷而强大的方法来创建信息丰富的折线图，尤其适用于：</p>\n<ul>\n<li>显示随时间或序列变化的趋势。</li>\n<li>方便地直接从 Pandas DataFrames 绘图。</li>\n<li>使用 <code>hue</code>、<code>style</code> 或 <code>size</code> 比较不同类别之间的趋势。</li>\n<li>当每个 X 值有多个观测值时，自动计算并显示统计聚合值（如平均值）和置信区间。</li>\n</ul>",
+  "slug": "seaborn-line-plots",
+  "updates": [],
+  "references": [
+    {
+      "id": 906,
+      "title": "seaborn.lineplot",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.lineplot.html",
+      "doi": "",
+      "note": "Seaborn的lineplot函数的官方API文档，详细说明了创建折线图的参数、用法和示例，包括统计估计和分类映射。",
+      "order": 1,
+      "created_at": "2025-09-04T15:08:18.894112Z",
+      "updated_at": "2025-09-07T16:26:32.102239Z"
+    },
+    {
+      "id": 907,
+      "title": "Plotting statistical relationships with `relplot()` and `lineplot()`",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/tutorial/relational.html",
+      "doi": "",
+      "note": "Seaborn关系图的教程，包括lineplot，解释了统计估计、置信区间以及将分类变量映射到颜色、样式和大小等图属性的原理。",
+      "order": 2,
+      "created_at": "2025-09-04T15:08:18.897728Z",
+      "updated_at": "2025-09-07T16:26:37.187455Z"
+    },
+    {
+      "id": 908,
+      "title": "Chapter 4.14. Visualization with Seaborn",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.14-visualization-with-seaborn.html",
+      "doi": "",
+      "note": "一本Python数据可视化指南，为Matplotlib和Seaborn提供了基础，并演示了如何有效使用Seaborn进行统计图形绘制。",
+      "order": 3,
+      "created_at": "2025-09-04T15:08:18.900155Z",
+      "updated_at": "2025-09-07T16:26:31.482654Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

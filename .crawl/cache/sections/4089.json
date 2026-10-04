@@ -1,0 +1,61 @@
+{
+  "id": 4089,
+  "title": "比较实验运行",
+  "meta_title": "MLflow中的实验运行比较",
+  "meta_description": "使用MLflow UI和API比较不同运行，并识别表现出色的模型。",
+  "content": "<p>比较一个实验中记录的多次运行，对于理解不同参数 (parameter)如何影响结果以及识别最有前景的模型是必不可少的。MLflow为此类分析提供了很好的工具，既可以通过其用户界面进行可视化操作，也可以通过其API进行编程操作。这种比较是有效改进模型的基础。</p>\n<h2>MLflow UI中的可视化比较</h2>\n<p>MLflow UI通常是查看概览和比较实验中不同尝试最快捷的方式。</p>\n<ol>\n<li>\n<p><strong>进入你的实验</strong>：启动MLflow UI（通常在终端中运行<code>mlflow ui</code>），然后进入包含你想要比较的运行的特定实验。你会看到一个列出所有运行的表格，其中显示了一些默认参数 (parameter)和指标。</p>\n</li>\n<li>\n<p><strong>选择要比较的运行</strong>：勾选你感兴趣的要比较的运行旁边的方框。</p>\n</li>\n<li>\n<p><strong>点击“比较”</strong>：一旦你选择了两个或更多运行，“比较”按钮就会在表格顶部附近变为可用。点击此按钮会带你进入一个专门的比较视图。</p>\n</li>\n</ol>\n<h3>理解比较视图</h3>\n<p>比较视图提供了几种分析选定运行的方式：</p>\n<ul>\n<li>\n<p><strong>参数 (parameter)比较</strong>：一个表格突出显示了选定运行中参数的差异。所有选定运行中相同的参数通常默认隐藏，以便关注变化之处。这有助于快速查看进行了哪些超参数 (hyperparameter)调整。</p>\n</li>\n<li>\n<p><strong>指标比较</strong>：类似地，一个表格显示了每个选定运行的已记录指标。这允许直接比较准确性、损失、精确度或召回率等性能指标。</p>\n</li>\n<li>\n<p><strong>平行坐标图</strong>：此图提供了多维视图，可视化不同参数组合如何与结果（指标）关联。每个运行由一条穿过代表所选参数和指标的坐标轴的线表示。这有助于识别关联和权衡。例如，你可能会看到较低的学习率往往会带来更高的准确性，但只在一定程度上。</p>\n</li>\n<li>\n<p><strong>散点图</strong>：你可以生成散点图来查看任意两个参数、一个参数与一个指标，或两个指标之间的关系。例如，将<code>learning_rate</code>与<code>validation_accuracy</code>绘图，可以显示此特定超参数如何影响所选运行的性能。</p>\n</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1470g4p\" \n              data-plot-definition='{\"layout\": {\"title\": \"超参数与指标比较\", \"xaxis\": {\"title\": \"学习率\"}, \"yaxis\": {\"title\": \"验证准确性\"}}, \"data\": [{\"type\": \"scatter\", \"mode\": \"markers\", \"x\": [0.01, 0.001, 0.005, 0.01, 0.001], \"y\": [0.85, 0.92, 0.90, 0.86, 0.91], \"marker\": {\"color\": \"#228be6\", \"size\": 10}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1470g4p\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较在不同学习率下、多个运行中获得的验证准确性。</p>\n</blockquote>\n<ul>\n<li><strong>等高线图</strong>：如果比较涉及三个变量（例如，两个超参数和一个指标）的运行，等高线图可以将指标在参数空间中可视化。</li>\n</ul>\n<p>使用这些UI功能，你可以根据参数或指标筛选运行、对它们排序，并直观查看输入（参数、代码版本）和输出（指标、工件）之间的关系。这种交互式查看对于理解模型行为很有帮助。</p>\n<h2>使用MLflow API进行编程比较</h2>\n<p>虽然UI非常适合交互式查看，但你可能需要进行更复杂的分析、自动化比较或将比较结果整合到报告中。MLflow Python API为此提供了<code>mlflow.search_runs</code>函数。</p>\n<p><code>mlflow.search_runs</code>允许你根据不同条件在一个或多个实验中查询运行。你可以使用类似SQL的查询语言来筛选应用于参数 (parameter)、指标和运行属性（如标签或开始时间）的运行。</p>\n<p>以下是如何使用它：</p>\n<pre><code class=\"language-python\">import mlflow\nimport pandas as pd\n\n# 如果不是本地，请确保已连接到正确的MLflow跟踪服务器\n# mlflow.set_tracking_uri(\"http://your-mlflow-server:5000\")\n\n# 指定要搜索的实验ID\n# 你可以从UI或使用mlflow.get_experiment_by_name获取实验ID\nexperiment_name = \"MNIST Classification\"\nexperiment = mlflow.get_experiment_by_name(experiment_name)\nexperiment_ids = [experiment.experiment_id] # 可以是ID列表\n\n# 定义过滤字符串（可选）\n# 示例：查找学习率 > 0.001 且准确性 > 0.9 的运行\nfilter_string = \"params.learning_rate > '0.001' and metrics.accuracy > 0.9\"\n\n# 定义排序（可选）\n# 示例：按准确性降序排列\norder_by = [\"metrics.accuracy DESC\"]\n\n# 将运行结果获取到Pandas DataFrame中\nruns_df = mlflow.search_runs(\n    experiment_ids=experiment_ids,\n    filter_string=filter_string,\n    order_by=order_by\n)\n\n# 显示前几行和选定列\n# 注意：参数以'params.'为前缀，指标以'metrics.'为前缀，标签以'tags.'为前缀\nprint(runs_df[['run_id', 'params.learning_rate', 'params.epochs', 'metrics.accuracy', 'metrics.loss']].head())\n\n# 使用Pandas进行进一步分析\nif not runs_df.empty:\n    best_run = runs_df.iloc[0] # 因为我们按准确性降序排列\n    print(f\"\\n最佳运行ID: {best_run['run_id']}\")\n    print(f\"  学习率: {best_run['params.learning_rate']}\")\n    print(f\"  训练轮数: {best_run['params.epochs']}\")\n    print(f\"  准确性: {best_run['metrics.accuracy']:.4f}\")\n    print(f\"  损失: {best_run['metrics.loss']:.4f}\")\nelse:\n    print(\"没有找到符合条件的运行。\")\n\n</code></pre>\n<p>此代码片段演示了如何：</p>\n<ol>\n<li>连接到MLflow（如果未设置，则隐式使用本地）。</li>\n<li>获取你感兴趣的实验ID。</li>\n<li>定义过滤条件以缩小运行范围（例如，特定参数范围、最小指标值）。</li>\n<li>指定结果的排序方式（例如，找出准确性最高的运行）。</li>\n<li>将运行数据检索到Pandas DataFrame中，这便于分析。</li>\n<li>分析DataFrame以找出最佳运行或进行其他比较。</li>\n</ol>\n<p>使用<code>mlflow.search_runs</code>为你提供了灵活性，可以将实验比较直接整合到你的分析脚本或自动化报告流程中。你可以通过编程轻松比较数百或数千个运行，以识别趋势、最佳参数范围，或根据你定义的条件确定性能最佳的模型。</p>\n<p>通过系统地记录你的实验并利用MLflow的比较工具，你将从临时性的试错方式转变为更结构化、数据驱动的模型开发方法。这显著提高了你理解结果的能力、更快地迭代以及复现成功的成果。</p>",
+  "slug": "comparing-mlflow-runs",
+  "updates": [],
+  "references": [
+    {
+      "id": 8270,
+      "title": "MLflow Tracking: Record and Compare Runs",
+      "author": "MLflow Project",
+      "year": "2024",
+      "publisher": "MLflow Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow跟踪功能的官方文档，包含用于可视化比较的UI和用于程序化分析实验运行的API。",
+      "order": 1,
+      "created_at": "2025-09-05T01:53:28.357800Z",
+      "updated_at": "2025-09-08T14:18:53.790521Z"
+    },
+    {
+      "id": 8271,
+      "title": "Building Machine Learning Powered Applications: Going from Idea to Product",
+      "author": "Emmanuel Ameisen",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHX08wu1dnqSFLjZ9Ykd0iO8e70XaAmrfRjHMe0JbpHNN51ImPF3TEUnVmXmJrJTaD4Iz-TPIURkvXjHbFIOkt2c0HU89rh7_MnN5Xp851IyQNoo2EB-zmLqyx97_y_0p9IiyTlWCug8duwJlXf-yI4RHoeBC0l0x5YPVqn1CtLAjKGmVXMCnjznm90cZxeDuZ_aHkIGsOpWbA6VTv0OQ==",
+      "doi": "",
+      "note": "一本关于MLOps生命周期的实用指南，强调结构化实验跟踪和比较对于有效模型开发与迭代的重要性。",
+      "order": 2,
+      "created_at": "2025-09-05T01:53:28.378547Z",
+      "updated_at": "2025-09-08T14:18:59.950830Z"
+    },
+    {
+      "id": 8272,
+      "title": "MLflow: An Open Platform for the Machine Learning Lifecycle",
+      "author": "Andrew Chen, Aaron J. Meng, Shreya Makkar, Sue Ann Hong, Michael Armbrust, Sameer Singh, Andrew Fogarty, Matei Zaharia",
+      "year": "2020",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data (SIGMOD '20)",
+      "volume": "",
+      "pages": "1819–1826",
+      "url": "https://dl.acm.org/doi/10.1145/3318534.3329623",
+      "doi": "10.1145/3318534.3329623",
+      "note": "介绍MLflow的原始论文，详细阐述其架构和功能，包括用于管理和比较机器学习实验的跟踪组件。",
+      "order": 3,
+      "created_at": "2025-09-05T01:53:28.381166Z",
+      "updated_at": "2025-09-08T14:19:00.813217Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

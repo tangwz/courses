@@ -1,0 +1,45 @@
+{
+  "id": 2346,
+  "title": "将数据写入文件",
+  "meta_title": "Python 文件写入 | write() 方法",
+  "meta_description": "学习如何将字符串和其他数据写入文件，覆盖现有内容或创建新文件。",
+  "content": "<p>Python 允许您将数据写入文件。这项功能对于保存程序输出、存储用户生成的内容或创建配置文件非常重要。</p>\n<h3>以写入模式打开文件</h3>\n<p>要写入文件，您需要以允许写入的模式打开它。主要的写入模式是 <code>'w'</code>。您将其与 <code>open()</code> 函数一起使用，就像用于读取的 <code>'r'</code> 一样：</p>\n<pre><code class=\"language-python\"># 以写入模式打开 'output.txt'\n# 如果 'output.txt' 存在，其内容将被擦除！\n# 如果它不存在，则会创建它。\nfile_object = open('output.txt', 'w')\n# ... 执行写入操作 ...\nfile_object.close() # 记得关闭\n</code></pre>\n<p><strong>重要提示：</strong> 以 <code>'w'</code> 模式打开文件有一个值得注意的副作用。如果文件已存在，其全部内容将立即被擦除。如果文件不存在，Python 会为您创建它。使用 <code>'w'</code> 模式时务必非常小心，以避免意外数据丢失。</p>\n<p>与读取文件一样，建议使用 <code>with</code> 语句来处理文件，因为它即使在发生错误时也能自动关闭文件：</p>\n<pre><code class=\"language-python\"># 推荐方式：使用 'with' 语句\nwith open('output.txt', 'w') as f:\n    # 'f' 是我们的文件对象，已准备好写入\n    pass # 我们会在这里添加写入操作\n# 退出 'with' 块时，文件会自动关闭\n</code></pre>\n<h3>使用 <code>write()</code> 方法</h3>\n<p>一旦文件以写入模式（或稍后讨论的追加模式）打开，您就可以使用文件对象的 <code>write()</code> 方法将字符串数据写入其中。此方法接受一个字符串参数 (parameter)，并将其写入文件中当前所在位置。</p>\n<p>让我们将一个简单的句子写入名为 <code>greeting.txt</code> 的文件：</p>\n<pre><code class=\"language-python\"># 定义我们要写入的文本\nmessage = \"Hello from Python!\\n\" # 注意换行符 \\n\n\ntry:\n    # 使用 'with' 以写入模式打开文件\n    with open('greeting.txt', 'w') as f:\n        f.write(message) # 将字符串写入文件\n    print(\"成功写入 greeting.txt\")\n\n    # 可选：通过重新读取文件来验证\n    with open('greeting.txt', 'r') as f:\n        content = f.read()\n        print(\"文件内容：\")\n        print(content)\n\nexcept IOError as e:\n    print(f\"发生错误：{e}\")\n\n</code></pre>\n<p>如果您运行此代码，它将：</p>\n<ol>\n<li>在您的脚本所在目录中创建（或覆盖）一个名为 <code>greeting.txt</code> 的文件。</li>\n<li>将字符串 <code>\"Hello from Python!\\n\"</code> 写入该文件。</li>\n<li>打印一条成功消息。</li>\n<li>（可选部分）再次以读取模式打开文件并打印其内容，以确认写入操作。</li>\n</ol>\n<p>请注意 <code>message</code> 字符串末尾的 <code>\\n</code>。这是换行符。<code>write()</code> 方法在写入字符串后不会自动添加换行符。如果您希望后续写入的内容出现在新行上，则必须在要写入的字符串中明确包含 <code>\\n</code>。</p>\n<h3>写入多行</h3>\n<p>如果您需要写入多行文本，有以下几种选择：</p>\n<ol>\n<li>\n<p><strong>多次调用 <code>write()</code>：</strong> 为每行调用 <code>write()</code>，确保每个字符串以 <code>\\n</code> 结尾。</p>\n<pre><code class=\"language-python\">lines_to_write = [\n    \"第一行。\\n\",\n    \"第二行。\\n\",\n    \"第三行。\\n\"\n]\n\ntry:\n    with open('multiple_lines.txt', 'w') as f:\n        for line in lines_to_write:\n            f.write(line) # 写入每一行，包括其换行符\n    print(\"成功写入多行。\")\nexcept IOError as e:\n    print(f\"发生错误：{e}\")\n\n</code></pre>\n<p>这将创建 <code>multiple_lines.txt</code>，其中列表中的每个字符串都单独占一行。</p>\n</li>\n<li>\n<p><strong>使用 <code>writelines()</code>：</strong> 此方法接受一个字符串列表（或任何可迭代对象），并将每个字符串写入文件。与 <code>write()</code> 一样，它不会自动添加换行符；如果需要，您的字符串必须已经包含它们。</p>\n<pre><code class=\"language-python\">lines_to_write = [\n    \"报告标题\\n\",\n    \"--------------\\n\",\n    \"数据点 1: 值 A\\n\",\n    \"数据点 2: 值 B\\n\"\n]\n\ntry:\n    with open('report.txt', 'w') as f:\n        f.writelines(lines_to_write) # 写入列表中所有字符串\n    print(\"成功使用 writelines() 写入报告。\")\nexcept IOError as e:\n    print(f\"发生错误：{e}\")\n</code></pre>\n<p>这与循环方法达到了相同的结果，但对于已经包含换行符的字符串列表来说，它可能稍微更简洁。</p>\n</li>\n</ol>\n<h3>写入非字符串数据</h3>\n<p><code>write()</code> 方法严格要求一个字符串参数 (parameter)。如果您有其他类型的数据，例如数字（整数或浮点数），则在写入之前必须使用 <code>str()</code> 将它们转换为字符串。</p>\n<pre><code class=\"language-python\">item = \"小部件\"\nquantity = 15\nprice = 29.95\ntotal_cost = quantity * price\n\ntry:\n    with open('order_summary.txt', 'w') as f:\n        f.write(\"订单摘要\\n\")\n        f.write(\"=============\\n\")\n        f.write(\"项目: \" + item + \"\\n\")\n        f.write(\"数量: \" + str(quantity) + \"\\n\") # 将整数转换为字符串\n        f.write(\"每件价格: $\" + str(price) + \"\\n\") # 将浮点数转换为字符串\n        f.write(\"总成本: $\" + str(total_cost) + \"\\n\") # 将浮点数转换为字符串\n    print(\"成功写入订单摘要。\")\nexcept IOError as e:\n    print(f\"发生错误：{e}\")\n</code></pre>\n<p>在此示例中，<code>quantity</code>、<code>price</code> 和 <code>total_cost</code> 都是数值类型。我们使用 <code>str()</code> 将它们转换为字符串，以便它们可以与其他字符串连接，并使用 <code>f.write()</code> 写入文件。</p>\n<p>请记住，写入文件是一种常见操作。始终使用 <code>with</code> 语句以确保文件得到正确处理，并留意 <code>'w'</code> 模式覆盖现有文件的行为。在下一节中，我们将介绍如何在不擦除文件原有内容的情况下向其添加数据。</p>",
+  "slug": "python-writing-files",
+  "updates": [],
+  "references": [
+    {
+      "id": 5730,
+      "title": "Reading and Writing Files; open() Built-in Function",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files",
+      "doi": "",
+      "note": "Python文件I/O操作的官方文档，包括文件模式、`write()`和`writelines()`等方法，以及用于文件处理的`with`语句。此资源提供了Python中文件写入工作的权威规范。",
+      "order": 1,
+      "created_at": "2025-09-05T01:16:02.908370Z",
+      "updated_at": "2025-09-07T21:14:12.935698Z"
+    },
+    {
+      "id": 5732,
+      "title": "6.0001 Introduction to Computer Science and Programming in Python",
+      "author": "Ana Bell, Eric Grimson, John Guttag",
+      "year": "2016",
+      "publisher": "Massachusetts Institute of Technology",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+      "doi": "",
+      "note": "麻省理工学院开放课程的一门计算机科学入门课程，其讲义和作业涵盖Python中的文件I/O，为学习这些操作提供了结构化的学术背景。",
+      "order": 3,
+      "created_at": "2025-09-05T01:16:02.927035Z",
+      "updated_at": "2025-09-07T21:14:05.919537Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

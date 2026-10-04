@@ -1,0 +1,61 @@
+{
+  "id": 2722,
+  "title": "处理大型数据集的策略",
+  "meta_title": "在 PyTorch 中使用 IterableDataset 处理大型数据集",
+  "meta_description": "使用 `IterableDataset` 和高效数据加载技术来处理无法载入内存的数据集。",
+  "content": "<p>当数据集大到无法在系统内存（RAM）中轻松容纳时，使用 PyTorch 映射式 <code>Dataset</code> 的标准数据加载方法会成为瓶颈或完全不可行。映射式数据集实现了 <code>__getitem__</code> 和 <code>__len__</code>，通常假设可以按索引随机访问任何项目，并且可能需要预先加载整个数据集的元数据。这里说明了专门为处理这些巨型数据集而设计的策略，侧重于使用 <code>IterableDataset</code> 高效地传输数据。</p>\n<h2>映射式数据集处理大型数据的局限性</h2>\n<p>想象一个存储在数千个文件中的 TB 级图像数据集。一个标准 <code>Dataset</code> 可能会尝试在其 <code>__init__</code> 方法中构建所有文件路径和对应标签的列表。即使图像本身没有加载，仅这些元数据就可能超出可用内存。此外，如果数据需要从大型压缩文件或数据库查询中按顺序读取，<code>__getitem__</code> 的随机访问要求可能效率低下。打乱大型映射式数据集通常也涉及创建一个覆盖整个数据集大小 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>) 的打乱索引列表，这对于大型 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 来说同样需要大量内存。</p>\n<h2>使用 IterableDataset 流式传输数据</h2>\n<p>PyTorch 提供了一种替代方案：<code>torch.utils.data.IterableDataset</code>。您无需定义 <code>__getitem__</code> 和 <code>__len__</code>，而是实现 <code>__iter__</code> 方法。此方法应返回一个迭代器，每次生成一个样本。此方法根本不同；它将数据集视为数据流，而非可索引的集合。</p>\n<p><code>IterableDataset</code> 特别适合以下情况：</p>\n<ol>\n<li>数据天然可流式传输（例如，从大型文本文件读取行、传感器数据、网络日志）。</li>\n<li>按索引访问数据成本高昂或不可能。</li>\n<li>数据集大小未知或无限。</li>\n<li>随机访问并非训练期间的主要要求。</li>\n</ol>\n<p>这是一个从大文件中逐行读取样本的实现方式：</p>\n<pre><code class=\"language-python\">import torch\nfrom torch.utils.data import IterableDataset, DataLoader\n\nclass LargeTextFileDataset(IterableDataset):\n    def __init__(self, file_path, tokenizer):\n        super().__init__()\n        self.file_path = file_path\n        self.tokenizer = tokenizer\n\n    def __iter__(self):\n        # 迭代器在此处为每个 epoch/worker 创建\n        file_iterator = open(self.file_path, 'r')\n        # map 函数将处理函数应用于迭代器中的每一行\n        return map(self.tokenizer, file_iterator)\n\n# 用法：\n# tokenizer = lambda line: torch.tensor([int(x) for x in line.strip().split(',')])\n# dataset = LargeTextFileDataset('very_large_data.csv', tokenizer)\n# loader = DataLoader(dataset, batch_size=32)\n#\n# for batch in loader:\n#     # 处理批次数据\n#     pass\n</code></pre>\n<p>在此示例中，<code>open(self.file_path, 'r')</code> 返回一个遍历文件行的迭代器。然后 <code>map</code> 函数在 <code>DataLoader</code> 请求时，对每一行进行延迟处理（应用 <code>tokenizer</code>）。没有尝试将整个文件加载到内存中。</p>\n<h2>使用 IterableDataset 处理多进程加载</h2>\n<p>当使用 <code>DataLoader</code> 且 <code>num_workers > 0</code> 时，每个工作进程会获得 <code>IterableDataset</code> 实例的一个<em>副本</em>。一个重要方面是，需要确保每个工作进程处理数据流中不同的部分，以避免重复。如果处理不当，每个工作进程都可能从头开始读取同一个大文件，导致重复工作和不正确的有效批次构成。</p>\n<p>解决此问题的标准方法是在 <code>__iter__</code> 方法中使用 <code>torch.utils.data.get_worker_info()</code>：</p>\n<pre><code class=\"language-python\">import torch\nimport math\nfrom torch.utils.data import IterableDataset, DataLoader, get_worker_info\n\nclass ShardedLargeFileDataset(IterableDataset):\n    def __init__(self, file_path, processor_fn):\n        super().__init__()\n        self.file_path = file_path\n        self.processor_fn = processor_fn\n        # 如果需要分片，确定文件大小或行/记录数量\n        # self.num_records = self._get_num_records(file_path) # 辅助函数示例\n\n    def _get_records_iterator(self):\n        # 将此替换为遍历您的特定数据记录/文件的逻辑\n        with open(self.file_path, 'r') as f:\n            for line in f:\n                yield line # 生成原始记录\n\n    def __iter__(self):\n        worker_info = get_worker_info()\n        record_iterator = self._get_records_iterator()\n\n        if worker_info is None:  # 单进程加载\n            worker_id = 0\n            num_workers = 1\n        else:  # 多进程加载\n            worker_id = worker_info.id\n            num_workers = worker_info.num_workers\n\n        # 基础工作进程分片：每个工作进程处理每第 N 条记录\n        # 更复杂的分片可能涉及字节偏移量或文件拆分\n        sharded_iterator = (record for i, record in enumerate(record_iterator) if i % num_workers == worker_id)\n\n        # 在工作进程的迭代器链中应用处理\n        processed_iterator = map(self.processor_fn, sharded_iterator)\n        return processed_iterator\n\n# 使用示例：\n# processor = lambda line: torch.tensor([float(x) for x in line.strip().split()])\n# dataset = ShardedLargeFileDataset('massive_dataset.txt', processor)\n# loader = DataLoader(dataset, batch_size=64, num_workers=4)\n#\n# for batch in loader:\n#     # 训练步骤...\n#     pass\n</code></pre>\n<p>在此改进示例中，<code>get_worker_info()</code> 提供当前工作进程的 <code>id</code> 和总 <code>num_workers</code> 数量。然后代码过滤基础 <code>record_iterator</code>，使得工作进程 <code>k</code> 只处理 <code>index % num_workers == k</code> 的记录。这确保每个工作进程获得数据流中独有的、交错的子集。请注意，根据数据格式和存储方式，可能需要更复杂的分片（例如，将整个文件或字节范围分配给工作进程）。</p>\n<h2>打乱 Iterable 数据集</h2>\n<p>打乱 <code>IterableDataset</code> 实例需要不同的策略，不同于映射式数据集。由于没有全局索引，您不能简单地打乱索引。常见方法包括：</p>\n<ol>\n<li><strong>打乱缓冲区：</strong> 维护一个样本缓冲区，从中随机选择样本来生成，并从底层迭代器中重新填充缓冲区。这提供了近似的打乱效果。PyTorch 的 <code>DataLoader</code> 不直接提供 <code>IterableDataset</code> 的此功能，但像 <code>torchdata</code>（PyTorch 领域库生态系统的一部分）这样的库提供了具有打乱功能的 DataPipes（例如，<code>shuffle</code>、<code>sharding_filter</code>）。</li>\n<li><strong>预先打乱数据：</strong> 如果可行，在训练开始前离线打乱源数据本身。例如，如果您的数据包含许多小文件，您可以在每个 epoch 中打乱 <code>IterableDataset</code> 处理的文件列表。</li>\n<li><strong>结合 Iterable 和映射式：</strong> 使用 <code>IterableDataset</code> 流式传输数据块（例如文件路径或记录标识符），并在每个工作进程内使用映射式 <code>Dataset</code> 从该数据块加载和处理项目，从而允许在数据块内部进行打乱。</li>\n</ol>\n<p>选择取决于数据规模、所需的随机性程度以及您可以承受的开销。</p>\n<h2>优化数据管道</h2>\n<p>无论您使用映射式还是可迭代数据集，优化数据加载管道对训练性能非常重要，特别是对于 I/O 可能成为瓶颈的大型数据集。</p>\n<ul>\n<li><strong>预处理：</strong> 尽可能<em>离线</em>执行计算密集型预处理（例如复杂特征提取、大型图像大小调整或使用大型词汇表 (vocabulary)进行分词 (tokenization)）。将预处理后的数据存储为高效格式（例如 TFRecord、HDF5、Parquet 或自定义二进制格式）。像 <code>webdataset</code> 这样的库旨在高效流式传输存储为 tar 归档文件的大型数据集，通常与 <code>IterableDataset</code> 配合使用。</li>\n<li><strong><code>DataLoader</code> 参数 (parameter)：</strong>\n<ul>\n<li><code>num_workers</code>：将 <code>num_workers</code> 设置为 <code>> 0</code> 可启用数据加载的多进程处理。最优值取决于 CPU 核心数、批次大小、数据处理复杂度和 I/O 速度。一个常见的起始点是可用 CPU 核心数，但需要进行实验。工作进程过少会导致数据加载瓶颈；过多则会引起开销或耗尽系统资源。</li>\n<li><code>pin_memory=True</code>：如果将数据加载到 GPU 上，将其设置为 <code>True</code> 会告诉 <code>DataLoader</code> 将获取的张量放入固定（页锁定）内存。这使得使用 <code>tensor.to('cuda', non_blocking=True)</code> 从 CPU 到 GPU 的异步数据传输更快。</li>\n<li><code>prefetch_factor</code> (PyTorch 1.7+)：控制每个工作进程预取多少批次。默认值 (2) 通常足够，但如果工作进程有时速度较慢，增加此值可能有助于隐藏数据加载延迟。</li>\n</ul>\n</li>\n</ul>\n<p>以下图表说明了带有多个工作进程的 <code>DataLoader</code> 如何使用分片处理 <code>IterableDataset</code>：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-dzqcen\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fontname=\"Helvetica\", fontsize=10];\n    edge [fontname=\"Helvetica\", fontsize=9];\n\n    subgraph cluster_source {\n        label = \"大型数据源（例如，文件/流）\";\n        style=filled;\n        color=\"#e9ecef\"; // gray\n        node [fillcolor=\"#ced4da\"]; // gray\n        DataSource [label=\"记录 1\\n记录 2\\n记录 3\\n记录 4\\n记录 5\\n记录 6\\n...\", shape=folder];\n    }\n\n    subgraph cluster_dataset {\n         label = \"IterableDataset 实例\";\n         style=filled;\n         color=\"#a5d8ff\"; // blue\n         node [fillcolor=\"#74c0fc\"]; // blue\n         IterableDS [label=\"IterableDataset\\n__iter__()\"];\n     }\n\n    subgraph cluster_loader {\n        label = \"DataLoader (num_workers=2)\";\n        style=filled;\n        color=\"#b2f2bb\"; // green\n        node [fillcolor=\"#8ce99a\"]; // green\n\n        Worker0 [label=\"工作进程 0\"];\n        Worker1 [label=\"工作进程 1\"];\n    }\n\n    subgraph cluster_gpu {\n        label = \"训练进程 (GPU)\";\n        style=filled;\n        color=\"#ffc9c9\"; // red\n        node [fillcolor=\"#ffa8a8\"]; // red\n        Model [label=\"模型训练循环\"];\n    }\n\n    DataSource -> IterableDS [label=\" 生成流\"];\n    IterableDS -> Worker0 [label=\" 为工作进程 0\\n 生成迭代器\\n （记录 0, 2, 4, ...）\"];\n    IterableDS -> Worker1 [label=\" 为工作进程 1\\n 生成迭代器\\n （记录 1, 3, 5, ...）\"];\n\n    Worker0 -> Model [label=\" 生成批次 0, 批次 2, ...\"];\n    Worker1 -> Model [label=\" 生成批次 1, 批次 3, ...\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-dzqcen\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>IterableDataset</code> 和两个 <code>DataLoader</code> 工作进程的数据流。数据集向每个工作进程提供迭代器，并通过分片确保每个工作进程处理独特的数据，从而实现训练循环的并行数据加载。</p>\n</blockquote>\n<p>通过使用 <code>IterableDataset</code>、细致的工作进程分片和优化数据加载管道，可以有效训练 PyTorch 模型，即便数据集远超系统内存容量，克服了大规模深度学习 (deep learning)的一个重要障碍。这些技术通常与本章讨论的其他方法结合使用，例如梯度累积，以管理数据大小和计算限制。</p>",
+  "slug": "large-dataset-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 6782,
+      "title": "torch.utils.data - PyTorch documentation",
+      "author": "PyTorch Authors",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/data.html",
+      "doi": "",
+      "note": "提供了PyTorch数据加载工具的文档，包括映射式和可迭代数据集、`DataLoader`配置以及多worker处理。",
+      "order": 1,
+      "created_at": "2025-09-05T01:28:45.737081Z",
+      "updated_at": "2025-09-08T07:03:24.744495Z"
+    },
+    {
+      "id": 6783,
+      "title": "TorchData | DataPipes",
+      "author": "PyTorch Authors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/data/main/index.html",
+      "doi": "",
+      "note": "介绍了`torchdata`库，该库扩展了PyTorch的数据加载能力，为可迭代数据集提供了DataPipes以实现高级流式传输和混洗。",
+      "order": 2,
+      "created_at": "2025-09-05T01:28:45.748120Z",
+      "updated_at": "2025-09-08T07:03:23.368681Z"
+    },
+    {
+      "id": 6785,
+      "title": "Designing Machine Learning Systems: An Introduction to the Field of MLOps",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "提供了构建机器学习系统的实践视角，包括数据管道、存储和大型数据集处理策略的讨论，与优化数据加载相关。",
+      "order": 4,
+      "created_at": "2025-09-05T01:28:45.753981Z",
+      "updated_at": "2025-09-08T07:03:25.436259Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

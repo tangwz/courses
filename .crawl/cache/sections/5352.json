@@ -1,0 +1,61 @@
+{
+  "id": 5352,
+  "title": "使用环境变量配置应用程序",
+  "meta_title": "使用环境变量配置应用",
+  "meta_description": "在 Docker 容器中，使用环境变量来配置应用程序设置。",
+  "content": "<p>将 FastAPI 应用程序打包成 Docker 容器，就创建了一个独立的单元。然而，应用程序在不同环境中的运行方式很少完全相同。你可能需要针对开发和生产使用不同的数据库连接字符串，用于外部服务的不同 API 密钥，或者只是一个不同的日志级别来调试。将这些配置值直接硬编码到应用程序代码中会缺乏灵活性，并带来安全风险，特别是对于敏感信息。</p>\n<p>在容器化环境中，一种标准且有效的方法是通过<strong>环境变量</strong>来管理配置。这些变量存在于应用程序代码之外，位于应用程序运行的操作系统或容器环境中。这种方法将配置与应用程序逻辑分离，使你的 Docker 镜像更易于迁移和适应。</p>\n<h3>为什么要使用环境变量进行配置？</h3>\n<p>使用环境变量具有以下几个重要优势：</p>\n<ol>\n<li><strong>跨环境的灵活性：</strong> 你可以构建一个 Docker 镜像，并通过在启动容器时设置不同的环境变量，将其部署到不同的环境（开发、测试、生产）。仅仅为了调整配置，不需要修改代码或重新构建镜像。</li>\n<li><strong>提升安全性：</strong> 敏感信息，如 API 密钥、数据库密码或秘密密钥，绝不应硬编码在源代码中或直接集成到 Docker 镜像中。环境变量提供了一种在运行时将这些秘密注入容器的机制，使它们不会出现在版本控制和镜像层中。</li>\n<li><strong>遵循十二要素应用原则：</strong> 将配置存储在环境中是<a href=\"https://12factor.net/config\">十二要素应用方法论</a>的一项基本原则，该方法论是一套被广泛认可的、用于构建现代可伸缩 Web 应用程序的最佳实践。</li>\n</ol>\n<h3>在 Python 中访问环境变量</h3>\n<p>Python 的标准库提供了 <code>os</code> 模块，用于与操作系统交互，包括访问环境变量。读取它们的主要方式是使用 <code>os.environ</code>，其行为类似于一个字典。</p>\n<pre><code class=\"language-python\">import os\n\n# 访问环境变量\n# 如果变量未设置，使用 os.environ['VAR_NAME'] 将引发 KeyError。\n# api_key = os.environ['MY_API_KEY']\n\n# 一种更安全的方法：使用 .get() 并提供可选的默认值\napi_key = os.environ.get('MY_API_KEY', 'default_key_if_not_set')\nmodel_path = os.environ.get('MODEL_PATH', './models/default_model.joblib') # 机器学习模型路径示例\nlog_level = os.environ.get('LOG_LEVEL', 'INFO')\n\nprint(f\"API Key: {api_key}\")\nprint(f\"Model Path: {model_path}\")\nprint(f\"Log Level: {log_level}\")\n</code></pre>\n<p>通常建议使用 <code>os.environ.get('VAR_NAME', default_value)</code> 或 <code>os.getenv('VAR_NAME', default_value)</code>，因为它允许你在环境变量未设置时提供默认值，从而防止应用程序因缺少配置而崩溃。</p>\n<h3>使用 Pydantic Settings 进行结构化配置</h3>\n<p>尽管 <code>os.environ.get</code> 在简单情况下效果良好，但管理大量配置变量可能会变得繁琐。FastAPI 集成了 Pydantic，它提供了一种强大的方法来管理应用程序设置，包括自动从环境变量中读取。</p>\n<p>Pydantic 的设置管理（现在常通过 <code>pydantic-settings</code> 库使用）允许你使用 Pydantic 模型定义配置模式。Pydantic 会尝试从环境变量中加载模型字段的值，并自动执行类型转换和验证。</p>\n<p>首先，确保你已安装 <code>pydantic-settings</code>：</p>\n<pre><code class=\"language-bash\">pip install pydantic-settings\n</code></pre>\n<p>现在，你可以定义一个设置类：</p>\n<pre><code class=\"language-python\"># config.py\nfrom pydantic_settings import BaseSettings, SettingsConfigDict\nfrom typing import Optional\n\nclass AppSettings(BaseSettings):\n    # Pydantic 将自动尝试从环境变量加载这些值\n    # 示例：APP_TITLE 将从环境变量 APP_TITLE 中加载\n    app_title: str = \"ML Model API\"\n    log_level: str = \"INFO\"\n    model_path: str = \"./models/default_model.joblib\"\n    api_key: Optional[str] = None # 可选秘密信息的示例\n\n    # 配置 Pydantic 设置\n    model_config = SettingsConfigDict(\n        # 环境变量通常为大写，但 Pydantic 默认不区分大小写\n        case_sensitive=False,\n        # 在开发期间，你可以选择从 .env 文件加载（需要 python-dotenv）\n        # env_file = '.env'\n    )\n\n# 创建一个在整个应用程序中使用的单一实例\nsettings = AppSettings()\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li><code>AppSettings</code> 继承自 <code>pydantic_settings.BaseSettings</code>。</li>\n<li>类中定义的字段（<code>app_title</code>、<code>log_level</code>、<code>model_path</code>、<code>api_key</code>）代表应用程序的配置设置。</li>\n<li>Pydantic 会尝试查找与字段名称匹配的环境变量（默认不区分大小写）。例如，它会查找 <code>APP_TITLE</code>、<code>LOG_LEVEL</code>、<code>MODEL_PATH</code> 和 <code>API_KEY</code>。</li>\n<li>默认值直接在类定义中提供。</li>\n<li>类型提示（例如 <code>str</code>、<code>Optional[str]</code>）确保加载的值被正确解析和验证。如果环境变量存在但无法转换为指定类型（例如，为 <code>int</code> 字段提供“not-an-integer”），Pydantic 将引发验证错误。</li>\n</ul>\n<p>然后，你可以在 FastAPI 应用程序中需要配置值的地方导入并使用 <code>settings</code> 实例，通常是使用依赖注入：</p>\n<pre><code class=\"language-python\"># main.py（或你的相关路由文件）\nfrom fastapi import FastAPI, Depends\nfrom .config import AppSettings, settings # 导入实例\n\n# 获取设置的依赖函数\ndef get_settings() -> AppSettings:\n    return settings\n\napp = FastAPI()\n\n@app.get(\"/info\")\nasync def info(current_settings: AppSettings = Depends(get_settings)):\n    # 通过依赖访问设置\n    return {\n        \"app_title\": current_settings.app_title,\n        \"log_level\": current_settings.log_level,\n        \"model_path_configured\": current_settings.model_path\n    }\n\n# 如果不使用 Depends，你也可以直接使用 settings 实例\nprint(f\"Starting application: {settings.app_title}\")\n# ... 应用程序的其他设置\n</code></pre>\n<p>使用 Pydantic <code>BaseSettings</code> 提供了一种结构化、已验证且类型安全的方式来处理从环境中加载的配置。</p>\n<h3>为 Docker 容器设置环境变量</h3>\n<p>既然你的应用程序知道如何读取环境变量，那么如何将它们提供给 Docker 容器呢？有几种常见方法：</p>\n<ol>\n<li>\n<p><strong>在 Dockerfile 中使用 <code>ENV</code> 指令：</strong>\n你可以在 <code>Dockerfile</code> 中直接设置默认环境变量。这些值会被构建到镜像中。这适用于非敏感的默认值或不太可能在不同环境之间频繁更改的变量。</p>\n<pre><code class=\"language-dockerfile\"># Dockerfile 片段\nFROM python:3.9-slim\n\nWORKDIR /app\n\nCOPY ./requirements.txt /app/requirements.txt\nRUN pip install --no-cache-dir -r requirements.txt\n\nCOPY ./app /app/app\nCOPY ./models /app/models # 假设模型已被复制\n\n# 设置默认环境变量\nENV LOG_LEVEL=\"INFO\"\nENV MODEL_PATH=\"/app/models/iris_model.joblib\"\nENV APP_TITLE=\"Default ML API Title\"\n\n# 暴露 FastAPI 将运行的端口\nEXPOSE 8000\n\n# 使用 Uvicorn 运行应用程序的命令\nCMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n</code></pre>\n<p>使用 <code>ENV</code> 设置的变量在镜像构建过程中可用，并且在容器从该镜像启动时作为默认值。</p>\n</li>\n<li>\n<p><strong>使用 <code>docker run -e</code> 或 <code>--env</code> 标志：</strong>\n在启动容器时，你可以使用 <code>-e</code> 或 <code>--env</code> 标志来覆盖 <code>ENV</code> 的默认值或提供额外的环境变量。这是在运行时提供特定于环境的配置或秘密信息的最常用方法。</p>\n<pre><code class=\"language-bash\"># 运行容器，覆盖 LOG_LEVEL 并设置特定的 API_KEY\ndocker run -d -p 8000:8000 \\\n  -e LOG_LEVEL=\"DEBUG\" \\\n  -e API_KEY=\"secret-prod-api-key-12345\" \\\n  -e APP_TITLE=\"Production ML Service\" \\\n  your-fastapi-image-name:latest\n</code></pre>\n<p>每个 <code>-e</code> 标志设置一个环境变量（<code>VAR_NAME=value</code>）。这种方法使敏感数据不直接存在于镜像中。</p>\n</li>\n<li>\n<p><strong>使用环境变量文件（<code>--env-file</code>）：</strong>\n为了管理大量变量，尤其是在开发期间或与 Docker Compose 等工具一起使用时，你可以将它们放在一个文件（例如 <code>.env</code>）中，并将文件路径传递给 <code>docker run</code> 命令。</p>\n<pre><code class=\"language-bash\"># .env 文件示例（例如 config.env）\nLOG_LEVEL=DEBUG\nAPI_KEY=local-dev-key-abcdef\nMODEL_PATH=/app/models/dev_model.joblib\nAPP_TITLE=Development ML API\n</code></pre>\n<pre><code class=\"language-bash\"># 使用环境变量文件运行容器\ndocker run -d -p 8000:8000 --env-file ./config.env your-fastapi-image-name:latest\n</code></pre>\n<p>Docker 会将文件中的每一行读取为 <code>KEY=VALUE</code> 对，并在容器内设置相应的环境变量。通过 <code>-e</code> 设置的变量通常会覆盖 <code>--env-file</code> 中的变量。</p>\n</li>\n</ol>\n<h3>处理敏感信息</h3>\n<p>尽管环境变量相对于硬编码秘密信息是一个大幅改进，但请注意，在某些环境中，它们可能仍然通过容器检查工具或日志可见。对于高度敏感的生产秘密，请考虑使用专用的秘密管理系统（如 HashiCorp Vault、AWS Secrets Manager、Google Secret Manager、Azure Key Vault）。这些系统提供更多的安全特性，例如访问控制、审计和秘密轮换。集成这些系统通常涉及在应用程序启动时获取秘密或使用 sidecar 容器，这是一种更高级的部署模式，超出了本节的即时范围，但对于生产环境的安全加固需要了解。然而，对于许多应用程序而言，谨慎管理的环境变量在安全性和简单性之间提供了良好的平衡。</p>\n<p>通过运用环境变量，特别是当与 Pydantic 的设置管理结合使用时，你可以创建灵活、可移植且更安全的容器化 FastAPI 应用程序，以适应不同的部署阶段。这种做法对于构建能够轻松适应其运行环境的应用程序非常重要。</p>",
+  "slug": "configuring-environment-variables",
+  "updates": [],
+  "references": [
+    {
+      "id": 14449,
+      "title": "os - Miscellaneous operating system interfaces",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/os.html",
+      "doi": "",
+      "note": "Python `os`模块的官方文档，详细介绍了如何与操作系统交互并访问环境变量。",
+      "order": 2,
+      "created_at": "2025-09-05T08:52:55.211769Z",
+      "updated_at": "2025-09-09T14:15:39.979917Z"
+    },
+    {
+      "id": 14450,
+      "title": "Settings management",
+      "author": "Pydantic Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/usage/settings/",
+      "doi": "",
+      "note": "Pydantic-settings 的官方文档，解释了结构化配置管理，包括从环境变量加载带类型验证的设置。",
+      "order": 3,
+      "created_at": "2025-09-05T08:52:55.214721Z",
+      "updated_at": "2025-09-09T14:15:41.217890Z"
+    },
+    {
+      "id": 14451,
+      "title": "Set environment variables (-e, --env, --env-file)",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file",
+      "doi": "",
+      "note": "Docker 官方文档，关于如何使用 `docker run -e` 和 `--env-file` 管理容器的环境变量，这对于容器化应用配置至关重要。",
+      "order": 4,
+      "created_at": "2025-09-05T08:52:55.221284Z",
+      "updated_at": "2025-09-09T14:15:43.757777Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

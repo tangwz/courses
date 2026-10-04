@@ -1,0 +1,61 @@
+{
+  "id": 3347,
+  "title": "离线存储的可扩展性设计",
+  "meta_title": "可扩展离线特征存储设计模式",
+  "meta_description": "构建离线存储架构，用于大规模批量处理、历史分析和模型训练。",
+  "content": "<p>在线存储满足低延迟服务需求，而离线特征存储则为模型训练、复杂特征工程和历史分析提供了重要基础。其设计必须优先考虑高效且经济地处理海量数据，这些数据通常涵盖数月甚至数年的历史特征值。可扩展性不仅仅指存储容量；它还包含生成特征和组装训练数据集的计算效率。</p>\n<h3>可扩展离线存储的核心要求</h3>\n<p>结构良好的离线存储满足了多项基本需求：</p>\n<ol>\n<li><strong>数据量处理：</strong> 必须能够存储可能达到TB或PB级的历史特征数据，涵盖了长时间段内的大量实体和特征。</li>\n<li><strong>高效批量处理：</strong> 需要与分布式处理框架（例如Apache Spark, Flink, Dask）集成，用于大规模特征计算和获取。</li>\n<li><strong>时间点正确性：</strong> 必须有助于创建训练数据集，这些数据集准确反映特定历史事件时间已知的特征值，从而防止数据泄露。</li>\n<li><strong>分析访问：</strong> 应允许数据科学家和分析师查看历史特征分布、执行特征分析并调试潜在问题。</li>\n<li><strong>成本效益：</strong> 与大型历史数据集相关的存储和计算成本必须是可管理的。</li>\n</ol>\n<h3>常见架构模式</h3>\n<p>离线存储的架构通常建立在组织生态系统中现有的大规模数据存储方案之上。</p>\n<h4>数据湖集成</h4>\n<p>这可以说是构建可扩展离线特征存储的最普遍模式。它使用云对象存储（例如Amazon S3, Google Cloud Storage, Azure Data Lake Storage）作为主要存储层。</p>\n<ul>\n<li><strong>优势：</strong>\n<ul>\n<li><strong>可扩展性与持久性：</strong> 利用云对象存储几乎无限的可扩展性和高持久性。</li>\n<li><strong>成本效益：</strong> 对象存储提供了低存储成本，特别是在使用适当的存储类别和生命周期策略时。</li>\n<li><strong>解耦：</strong> 将存储与计算分离，允许灵活使用不同的处理引擎。</li>\n<li><strong>生态系统集成：</strong> 与Spark, Flink, Presto/Trino以及其他数据处理工具的原生集成。</li>\n</ul>\n</li>\n<li><strong>实施细节：</strong>\n<ul>\n<li><strong>文件格式：</strong> 数据通常以优化的列式格式存储，例如Apache Parquet。Parquet提供了高效的压缩和编码方案，并支持谓词下推，显著加快了仅需部分列的查询速度。</li>\n<li><strong>表格式：</strong> 现代表格式，如Delta Lake、Apache Iceberg或Apache Hudi，正越来越多地应用于对象存储之上。这些格式提供了ACID事务、模式演变管理和时间旅行能力，简化了数据管理，并实现了可靠的时间点查询。</li>\n<li><strong>分区：</strong> 数据在对象存储内部进行策略性分区（例如，按日期、实体类型、特征组），通过裁剪不相关的数据分区来优化查询性能。</li>\n</ul>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-kl6uwz\" \n              data-graph-definition='digraph DataLakeOfflineStore {\n    rankdir=LR;\n    node [shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n    edge [arrowhead=vee];\n\n    subgraph cluster_sources {\n        label = \"数据源\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        node [shape=box, style=rounded, fillcolor=\"#ffffff\"];\n        Source1 [label=\"流数据\"];\n        Source2 [label=\"批量数据 (数据库, 日志)\"];\n    }\n\n    subgraph cluster_compute {\n        label = \"批量特征计算\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        node [shape=box, style=filled, fillcolor=\"#a5d8ff\"];\n        Spark [label=\"Apache Spark / Flink\"];\n    }\n\n    subgraph cluster_storage {\n        label = \"离线存储 (数据湖)\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        node [shape=folder, style=filled, fillcolor=\"#ffec99\"];\n        ObjectStore [label=\"对象存储 (S3/GCS/ADLS)\\n[Parquet / Delta / Iceberg]\"];\n        Partitioning [label=\"分区文件夹\\n(例如, /feature_group/dt=YYYY-MM-DD/)\"];\n        ObjectStore -> Partitioning [style=invis]; // 布局提示\n    }\n\n    subgraph cluster_consumers {\n        label = \"消费者\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        node [shape=box, style=filled];\n        Training [label=\"模型训练\", fillcolor=\"#b2f2bb\"];\n        Analytics [label=\"数据分析\", fillcolor=\"#b2f2bb\"];\n        OnlineIngestion [label=\"摄取到在线存储\", fillcolor=\"#bac8ff\"];\n    }\n\n    Source1 -> Spark;\n    Source2 -> Spark;\n    Spark -> ObjectStore [label=\"写入特征\"];\n    ObjectStore -> Spark [label=\"读取用于训练/分析\"];\n    Spark -> Training;\n    Spark -> Analytics;\n    Spark -> OnlineIngestion;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-kl6uwz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基于数据湖的离线特征存储的数据流，显示了数据源、批量计算、存储和消费者。</p>\n</blockquote>\n<h4>数据仓库集成</h4>\n<p>另一种选择是，离线存储可以使用云数据仓库（例如Google BigQuery, Snowflake, Amazon Redshift, Azure Synapse Analytics）实现。</p>\n<ul>\n<li><strong>优势：</strong>\n<ul>\n<li><strong>SQL接口：</strong> 熟悉SQL接口，用于数据操作和查询。</li>\n<li><strong>托管服务：</strong> 与从头管理数据湖堆栈相比，降低了运维开销。</li>\n<li><strong>优化查询引擎：</strong> 用于分析工作负载的高性能查询执行。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>成本：</strong> 可能比对象存储更昂贵，特别是对于非常大的数据集或高计算使用量。</li>\n<li><strong>灵活性：</strong> 对于某些类型的复杂、非SQL的转换（这些转换通常使用Spark/Flink完成）可能灵活性较低。</li>\n<li><strong>潜在耦合：</strong> 存储与特定数据仓库计算引擎之间的耦合更紧密。</li>\n</ul>\n</li>\n</ul>\n<h4>混合方法</h4>\n<p>组织通常采用混合策略。原始数据可能进入数据湖，使用Spark进行转换，然后精炼后的特征可能会同时加载到数据湖（以获得最大灵活性和归档）和数据仓库（以便于SQL访问和BI集成）。</p>\n<h3>离线存储中的数据建模和组织</h3>\n<p>无论底层存储系统如何，数据的组织方式对于可扩展性和可用性都很重要。</p>\n<ul>\n<li><strong>以实体为中心与特征组表：</strong> 特征通常根据主要实体（例如，<code>customer_daily_features</code>）组织成表，或者根据计算它们的逻辑进行分组（例如，<code>user_ad_interaction_features</code>）。</li>\n<li><strong>时间戳：</strong> 每个特征记录都必须至少有两个重要的时间戳：\n\"    1.  <strong>事件时间戳：</strong> 与特征描述或派生自的事件相关联的时间（例如，交易时间、点击时间）。\"\n2.  <strong>计算时间戳：</strong> 特征值计算完成并存储可用的时间。</li>\n<li><strong>分区：</strong> 有效的分区对于性能非常重要。常见策略包括按日期分区（例如，<code>dt=YYYY-MM-DD</code>），以及可能的二级分区键，如实体类型或区域。需要仔细规划，避免创建过多的小分区（损害文件列表性能）或过大的分区（降低查询并行性）。倾斜的分区也可能造成瓶颈。</li>\n<li><strong>文件/表格式再议：</strong> 使用列式格式（Parquet）是标准做法。采用表格式（Delta Lake, Iceberg, Hudi）显著简化了更新、删除和时间旅行查询的管理，这些对于时间点正确性非常基础。这些格式维护事务日志和文件版本的元数据，使得能够进行“显示表在时间戳T时的状态”这样的查询。</li>\n</ul>\n<h3>实现可扩展性</h3>\n<p>离线存储中的可扩展性意味着要处理数据量、特征复杂度和查询负载的增长。</p>\n<ul>\n<li><strong>计算扩展：</strong> 利用分布式处理引擎的弹性。像Spark这样的框架可以根据特征计算或训练数据生成任务的工作负载需求，动态扩展工作节点。</li>\n<li><strong>存储扩展：</strong> 云对象存储提供了固有的可扩展性。数据仓库也提供了扩展存储和计算的机制，尽管通常具有不同的成本模型。</li>\n<li><strong>查询优化：</strong> 采用谓词下推（在存储层过滤数据）、投影下推（仅读取必要列）等技术，以及在数据湖之上可能使用查询加速引擎（例如Presto, Trino）。</li>\n<li><strong>成本优化：</strong> 在对象存储中使用分层存储（例如，将旧数据移动到不常用访问层），实施数据生命周期策略以过期旧数据，优化计算任务以高效使用资源，并为处理集群选择适当的实例类型。</li>\n</ul>\n<h3>确保时间点正确性</h3>\n<p>离线存储的一个主要功能是为模型训练提供历史准确的特征集。使用在与训练标签关联的事件时间戳<em>之后</em>计算的特征，会导致数据泄露，并使得模型在评估中表现不切实际地好，但在生产中表现不佳。</p>\n<p>离线存储设计通过以下方式方便时间点连接：</p>\n<ol>\n<li><strong>存储时间戳：</strong> 可靠地存储每个特征值的事件时间戳和计算时间戳。</li>\n<li><strong>时间旅行查询：</strong> 使用表格式（Delta, Iceberg），这些格式允许查询特征表在特定时间戳<code>AS OF</code>时的状态。</li>\n<li><strong>连接逻辑：</strong> 实现逻辑（通常在Spark或查询引擎中），将所需训练事件列表（每个事件都有一个<code>event_timestamp</code>）与特征表连接，确保对于每个事件，只选择<code>event_timestamp</code>（或计算时间戳，具体取决于确切要求）<em>小于或等于</em>训练事件<code>event_timestamp</code>的特征值。</li>\n</ol>\n<p>设计可扩展的离线存储需要仔细考虑底层存储技术、数据组织、文件格式、分区策略以及与大规模计算引擎的集成。它是构建可靠模型训练和特征分析的重要组成部分。</p>",
+  "slug": "offline-store-design",
+  "updates": [],
+  "references": [
+    {
+      "id": 4744,
+      "title": "The Lakehouse: A New Generation of Open Platforms for Data Management and ML",
+      "author": "Armbrust, Michael and Ghodsi, Ali and Xin, Reynold S. and Zaharia, Matei",
+      "year": "2021",
+      "publisher": "",
+      "journal": "11th Biennial Conference on Innovative Data Systems Research (CIDR '21)",
+      "volume": "",
+      "pages": "",
+      "url": "http://cidrdb.org/cidr2021/papers/cidr2021_paper17.pdf",
+      "doi": "",
+      "note": "介绍了数据湖仓架构，该架构结合了数据湖的灵活性和数据仓库的特性，对构建可扩展离线特征存储和利用现代表格式具有高度相关性。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:35.909019Z",
+      "updated_at": "2025-09-09T09:34:30.836746Z"
+    },
+    {
+      "id": 4745,
+      "title": "Apache Parquet",
+      "author": "The Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://parquet.apache.org/",
+      "doi": "",
+      "note": "Apache Parquet 的官方文档，这是一种列式存储格式，对于离线存储中大规模特征数据的有效存储、压缩和检索至关重要。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:35.912606Z",
+      "updated_at": "2025-09-09T09:34:21.378673Z"
+    },
+    {
+      "id": 4746,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://martin.kleppmann.com/2017/03/27/designing-data-intensive-applications.html",
+      "doi": "",
+      "note": "一本关于构建可扩展和可靠数据系统的指南，涵盖了数据模型、存储、索引和分布式系统等基础原则，这些构成了离线特征存储设计的基础。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:35.916086Z",
+      "updated_at": "2025-09-09T09:34:30.121998Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

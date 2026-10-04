@@ -1,0 +1,61 @@
+{
+  "id": 5118,
+  "title": "人类偏好数据收集",
+  "meta_title": "人类偏好数据收集策略",
+  "meta_description": "用于收集人类比较反馈的方法和界面。",
+  "content": "<p>训练一个能体现人类偏好的奖励模型 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi><mi>M</mi></mrow><annotation encoding=\"application/x-tex\">RM</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span></span></span></span>) 是主要目标。随之而来的问题是：如何获得代表这些偏好的数据？<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi><mi>M</mi></mrow><annotation encoding=\"application/x-tex\">RM</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span></span></span></span> 通过人类认为“好”或“坏”的AI行为示例来学习，这些行为是针对特定提示而产生的。收集人类偏好数据的实际过程在此阐述，这些数据是训练有效奖励模型的依据。</p>\n<p>最普遍的做法是采用<strong>成对比较</strong>。我们不要求标注员给单一回复打上绝对质量分（这会非常主观且不一致），而是向他们展示一个提示和两个由语言模型生成的不同回复。标注员的任务仅仅是选择他们偏好哪个回复。这种相对判断对人类而言通常更容易，也更便于保持一致。</p>\n<h3>成对比较的工作流程</h3>\n<p>\"1.  <strong>提示选择：</strong> 输入提示的来源通常是与先前模型版本的互动，或是经过整理的数据集，这些数据集旨在包含各种主题和风格（例如：问题、指令、创意写作提示）。提示的分布会显著影响所生成奖励模型的覆盖范围。\"\n2.  <strong>回复生成：</strong> 对于每个提示，会生成多个回复。这些回复通常来自：\n*   正在微调 (fine-tuning)的语言模型的不同版本（例如：基础SFT模型与早期RLHF调优检查点）。\n*   同一模型采用不同的解码策略（例如：改变温度或top-p采样）。\n*   不同语言模型的输出。\n3.  <strong>人工标注：</strong> 标注员会收到提示，以及一对生成的回复（通常会匿名化，并随机排序为回复A和回复B）。他们根据预设的评判标准（例如：有用性、无害性、准确性、遵循指令的情况）选择偏好的回复。通常也包含“质量相同”或“无法判断”的选项。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-36shw2\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#adb5bd\"]; Prompt -> ResponseA [label=\" 生成\"]; Prompt -> ResponseB [label=\" 生成\"]; ResponseA -> Choice [label=\" 呈现\"]; ResponseB -> Choice [label=\" 呈现\"]; Choice [label=\"标注员选择：\\n- A更好\\n- B更好\\n- 相同/无法判断\", shape=ellipse, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Prompt [label=\"输入提示\", color=\"#1c7ed6\"]; ResponseA [label=\"模型回复A\"]; ResponseB [label=\"模型回复B\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-36shw2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是一个成对偏好标注任务的简化示意图。标注员比较针对单个提示的两个回复，并标明其偏好。</p>\n</blockquote>\n<p>这种成对方法直接支持了前述的布拉德利-特里模型等训练目标，其中奖励模型学会分配分数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>R</mi><mi>M</mi><mo stretchy=\"false\">(</mo><mtext>提示</mtext><mo separator=\"true\">,</mo><mtext>回复</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">RM(\\text{提示}, \\text{回复})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">提示</span></span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">回复</span></span><span class=\"mclose\">)</span></span></span></span>，使得分数差异能预测一个回复比另一个更受偏好的可能性。</p>\n<h3>其他收集方法</h3>\n<p>尽管成对比较是主要方式，但也存在其他方法：</p>\n<ul>\n<li><strong>K向排序：</strong> 标注员对两个以上回复进行排序（例如，将3或4个回复从最佳到最差排序）。这能为每个提示收集更多信息，但会增加标注员的认知负担。</li>\n<li><strong>绝对评分：</strong> 标注员给每个回复分配一个分数（例如，1-5星，或李克特量表上的数值分数）。尽管看似直接，但用绝对分数来实现标注员之间的校准和一致性是出了名的困难。这些分数通常无论如何都需要后期处理才能转换为相对偏好。</li>\n</ul>\n<p>对于RLHF中训练奖励模型而言，成对比较通常能在标注效率和数据质量之间提供良好的平衡。</p>\n<h3>标注员管理与指导</h3>\n<p>偏好数据的质量取决于人工标注员。需要考量的事项有：</p>\n<ul>\n<li><strong>标注员来源：</strong> 标注员可以是内部专家、专业的承包团队，或是众包工作者。选择取决于预算、规模、所需专业知识和质量控制需求。高级RLHF通常会受益于熟悉特定对齐 (alignment)目标（例如：识别不易察觉的有害性或提高事实准确性）的训练有素的标注员。</li>\n<li><strong>清晰的指令：</strong> 详细的指导说明不可或缺。这些说明必须明确偏好的评判标准（例如：“回复A是否比回复B更有用且无害？”）。好的和坏的回复示例、边缘情况以及如何处理不明确之处都是必要的。</li>\n<li><strong>培训与校准：</strong> 标注员需要接受关于指导说明的培训，并可能进行校准练习，其中他们的判断将与黄金标准或专家共识进行比较。持续监测标注员之间的一致性，有助于发现不协调或误解。</li>\n<li><strong>界面设计：</strong> 标注工具应清晰、高效，并尽量减少偏差。随机化回复的顺序（A与B）可以避免位置偏见。界面应流畅地展示提示和回复对，记录选择，最好还能允许添加可选评论，解释偏好的理由，这对于分析很有价值。</li>\n</ul>\n<h3>数据质量与偏差</h3>\n<p>收集偏好数据容易遇到多种挑战：</p>\n<ul>\n<li><strong>标注员分歧：</strong> 人类自然会有分歧。高分歧率可能表明指导说明不清晰、提示不明确，或偏好确实主观。分析分歧模式很重要。</li>\n<li><strong>标注员偏差：</strong> 个别标注员可能存在固有的偏见，体现在他们的偏好中。汇集来自不同标注员的判断有助于减少这种情况。</li>\n<li><strong>提示代表性：</strong> 如果用于数据收集的提示不能反映最终模型将遇到的提示分布，那么学习到的奖励模型可能无法很好地推广。</li>\n<li><strong>系统钻空子：</strong> 标注员可能会形成与预期偏好标准不一致的启发式方法，尤其是在按任务付费且缺乏足够质量控制的情况下。</li>\n</ul>\n<p>周密的规划、清晰的指导、严格的标注员培训和持续的质量监控，对于收集高保真度的偏好数据是必要的，这些数据能支持训练出有用的奖励模型。该数据集通常包含（提示、选中回复、驳回回复）元组，它将成为下一阶段——训练奖励模型本身的输入。</p>",
+  "slug": "preference-data-collection",
+  "updates": [],
+  "references": [
+    {
+      "id": 13087,
+      "title": "Deep Reinforcement Learning from Human Preferences",
+      "author": "Paul F Christiano, Jan Leike, Tom Brown, Miljan Martic, Shane Legg, Dario Amodei",
+      "year": "2017",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems 30",
+      "volume": "30",
+      "pages": "",
+      "url": "https://proceedings.neurips.cc/paper/2017/file/d5e2c0adad503c91f91df240d0cd4e49-Paper.pdf",
+      "doi": "",
+      "note": "这篇开创性论文介绍了通过人类反馈学习奖励函数的方法，特别是成对比较，这是后来应用于语言模型对齐的核心技术。",
+      "order": 1,
+      "created_at": "2025-09-05T08:27:59.169378Z",
+      "updated_at": "2025-09-10T11:44:01.609242Z"
+    },
+    {
+      "id": 13088,
+      "title": "Learning to summarize with human feedback",
+      "author": "Nisan Stiennon, Long Ouyang, Jeff Wu, Daniel M. Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul Christiano",
+      "year": "2020",
+      "publisher": "",
+      "journal": "NeurIPS 2020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2009.01325",
+      "doi": "10.48550/arXiv.2009.01325",
+      "note": "这篇基础性论文展示了如何应用人类反馈强化学习，通过成对偏好训练奖励模型以实现文本摘要。",
+      "order": 2,
+      "created_at": "2025-09-05T08:27:59.201740Z",
+      "updated_at": "2025-09-10T02:14:07.696446Z"
+    },
+    {
+      "id": 13090,
+      "title": "Machine Learning: A Probabilistic Perspective",
+      "author": "Kevin P. Murphy",
+      "year": "2012",
+      "publisher": "The MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 28",
+      "url": "https://books.google.com/books/about/Machine_Learning_A_Probabilistic_Perspect.html?id=yC3L0oXy_ZgC",
+      "doi": "",
+      "note": "第28章全面讨论了用于排序和序数回归的概率模型，包括用于成对偏好的Bradley-Terry模型。",
+      "order": 4,
+      "created_at": "2025-09-05T08:27:59.400893Z",
+      "updated_at": "2025-09-10T11:42:31.748363Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

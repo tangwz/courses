@@ -1,0 +1,61 @@
+{
+  "id": 3246,
+  "title": "实践：设计安全防护规范",
+  "meta_title": "Practice Designing LLM Guardrails",
+  "meta_description": "Practice defining specifications for input/output guardrails for a hypothetical LLM application.",
+  "content": "<p>一个动手练习，主要围绕构建更安全的LLM系统的一个基本步骤：定义清晰且可执行的安全防护规范。安全防护在更大的系统架构中充当重要的安全检查。在编写任何实现代码之前，仔细定义<em>每个</em>安全防护应该做什么、<em>何时</em>启动以及应该采取<em>什么措施</em>，这非常重要。这个规划阶段有助于确保全面覆盖潜在风险，并为开发和测试提供蓝图。</p>\n<h3>背景设定：一个客户支持聊天机器人</h3>\n<p>想象一下，您是负责为在线电子产品零售商“GizmoGalaxy”部署一个由LLM驱动的聊天机器人的团队成员。该聊天机器人的主要功能是回答客户关于产品、订单状态和退货政策的问题。它应该有帮助、有礼貌，并保持专注于相关主题。</p>\n<p>您的任务是为几个安全防护设计详细规范，以确保聊天机器人安全且适当地运行。</p>\n<h3>识别潜在风险</h3>\n<p>根据应用场景（电子商务客户支持），思考聊天机器人可能遇到或引发的潜在风险。考虑以下方面：</p>\n<ul>\n<li><strong>生成有害内容：</strong> 输出冒犯性、歧视性或不安全的内容。</li>\n<li><strong>个人身份信息（PII）处理：</strong> 不恰当地询问或泄露敏感客户数据（电子邮件、电话、地址、信用卡号）。</li>\n<li><strong>偏离主题的对话：</strong> 被卷入与GizmoGalaxy业务无关的讨论（政治、个人观点、生成创意小说）。</li>\n<li><strong>滥用/骚扰：</strong> 处理来自用户的辱骂或骚扰性语言。</li>\n<li><strong>提示注入/操纵：</strong> 用户试图欺骗聊天机器人使其忽略指令或执行非预期操作。</li>\n<li><strong>提供不准确信息：</strong> 提供不准确的产品细节、政策信息或订单状态（尽管这与有用性/准确性有重叠，但如果导致不良客户结果，则具有安全影响）。</li>\n</ul>\n<h3>定义安全防护规范：一种结构化方法</h3>\n<p>一个好的规范是实现和测试的清晰约定。我们将使用结构化模板。对于您设计的每个安全防护，请定义以下组成部分：</p>\n<ul>\n<li><strong>安全防护ID：</strong> 一个唯一标识符（例如，<code>INPUT-TOX-001</code>，<code>OUTPUT-PII-001</code>）。</li>\n<li><strong>类别：</strong> 检查的类型（例如，输入验证、输出过滤、主题控制、PII检测、毒性检测、提示注入防御）。</li>\n<li><strong>说明：</strong> 简要说明此安全防护旨在减轻的风险及其预期功能。</li>\n<li><strong>触发条件：</strong> 启动安全防护的具体标准。这是其核心逻辑。请精确。例如：\n<ul>\n<li>输入文本被Model XYZ归类为“严重毒性”，置信度 > 0.85。</li>\n<li>输出文本包含与常见信用卡格式正则表达式匹配的序列。</li>\n<li>用户输入在一次对话中提及禁止主题（在相关列表中定义）超过两次。</li>\n<li>输入包含与已知提示注入技术相关的模式（例如，“忽略之前的指令……”）。</li>\n</ul>\n</li>\n<li><strong>措施：</strong> 安全防护被触发时系统的具体响应。例如：\n<ul>\n<li><strong>阻止：</strong> 阻止输入/输出被处理/显示。</li>\n<li><strong>净化：</strong> 修改输入/输出（例如，掩盖检测到的PII）。</li>\n<li><strong>回退响应：</strong> 提供预定义的、安全的响应（例如，“我无法讨论与GizmoGalaxy产品或服务无关的话题。”，“请避免使用冒犯性语言。”）。</li>\n<li><strong>记录事件：</strong> 记录触发事件以进行监控和分析。</li>\n<li><strong>上报：</strong> 标记 (token)对话以便人工审查。</li>\n<li><strong>请求澄清：</strong> 要求用户重新表达其请求。</li>\n</ul>\n</li>\n<li><strong>配置参数 (parameter)（可选）：</strong> 任何可调整的设置，例如置信度阈值、允许/不允许术语列表或正则表达式。</li>\n<li><strong>评估指标：</strong> 您将如何衡量此安全防护的有效性？请考虑既要防止损害，又要尽量减少不必要的干预。例如：\n<ul>\n<li>特定有害内容类型的检测率。</li>\n<li>误报率（阻止/标记良性内容）。</li>\n<li>成功提示注入尝试的减少（通过红队演练测量）。</li>\n</ul>\n</li>\n<li><strong>优先级：</strong> 此安全防护的相对重要性（例如，高、中、低）。重要的安全防护（如PII过滤或严重毒性阻止）通常是高优先级。</li>\n</ul>\n<h3>安全防护规范示例</h3>\n<p>我们来指定一个安全防护，以阻止聊天机器人讨论敏感政治话题。</p>\n<ul>\n<li><strong>安全防护ID：</strong> <code>INPUT-TOPIC-001</code></li>\n<li><strong>类别：</strong> 输入验证 / 主题控制</li>\n<li><strong>说明：</strong> 阻止聊天机器人参与敏感政治话题的讨论，确保其保持专注于GizmoGalaxy的客户支持任务。</li>\n<li><strong>触发条件：</strong>\n<ul>\n<li>输入文本被“政治主题分类器”模型分类，置信度 > 0.90。</li>\n<li><em>或</em> 输入文本包含“敏感政治术语列表”中的关键词（例如，特定政治人物姓名、有争议的立法标识符）。</li>\n</ul>\n</li>\n<li><strong>措施：</strong>\n<ul>\n<li>记录触发事件，包括检测到的主题/关键词和置信度。</li>\n<li>返回预定义的回退响应：“很抱歉，我只能协助回答与GizmoGalaxy产品、订单和政策相关的问题。我今天还能为您提供其他帮助吗？”</li>\n</ul>\n</li>\n<li><strong>配置参数 (parameter)：</strong>\n<ul>\n<li><code>topic_confidence_threshold</code>：0.90</li>\n<li><code>sensitive_political_terms_list</code>：包含关键词的配置文件路径。</li>\n</ul>\n</li>\n<li><strong>评估指标：</strong>\n<ul>\n<li>被归类为“政治类”的对话轮次减少。</li>\n<li>误报率（相关、切题的输入被错误标记 (token)为政治类的百分比）。</li>\n</ul>\n</li>\n<li><strong>优先级：</strong> 中</li>\n</ul>\n<h3>轮到您了：设计安全防护规范</h3>\n<p>现在，应用此结构为GizmoGalaxy聊天机器人设计<strong>三个</strong>不同安全防护的规范。您可以从之前识别的风险中选择，或者考虑其他风险。目标是在类别上多样化（例如，一个输入、一个输出、一个与PII或毒性相关）。</p>\n<p>在您的<code>触发条件</code>和<code>措施</code>中要具体。思考潜在的复杂性：</p>\n<ol>\n<li><strong>用于检测用户滥用（输入）的安全防护：</strong>\n<ul>\n<li>您将如何定义触发器？（关键词？情感？分类模型？）</li>\n<li>什么措施是合适的？（警告？立即阻止？根据严重程度采取不同措施？）</li>\n</ul>\n</li>\n<li><strong>用于防止PII泄露（输出）的安全防护：</strong>\n<ul>\n<li>它应该寻找哪些具体的PII类型？（电子邮件、电话、地址、信用卡？）</li>\n<li>您将如何定义触发模式？（正则表达式？命名实体识别？）</li>\n<li>应该采取什么措施？（掩盖？阻止整个响应？）</li>\n</ul>\n</li>\n<li><strong>用于检测潜在提示注入（输入）的安全防护：</strong>\n<ul>\n<li>哪些模式可能表示注入尝试？（像“忽略指令”、“您现在是……”这样的短语，或不寻常的格式？）</li>\n<li>应该采取什么措施？（阻止？记录？谨慎回应？）</li>\n</ul>\n</li>\n</ol>\n<h3>规范的考量因素</h3>\n<p>设计规范是第一步。在您优化这些规范时，请考虑：</p>\n<ul>\n<li><strong>安全防护间的相互作用：</strong> 多个安全防护可能如何相互影响？执行顺序重要吗？例如，毒性检查应该在主题控制之前还是之后发生？</li>\n<li><strong>性能影响：</strong> 复杂的检查（例如运行多个分类模型）会增加延迟。您如何平衡安全覆盖范围与可接受的响应时间？</li>\n<li><strong>可测试性：</strong> 您将如何有效地测试每个安全防护？这包括测试其捕获有害内容的能力（真阳性）以及阻止无害内容的倾向（误报）。红队演练在这里尤其重要。</li>\n<li><strong>可维护性：</strong> 列表（关键词、敏感术语）和模型将如何更新？阈值将如何根据性能监控随时间调整？</li>\n<li><strong>透明度：</strong> 尽管您可能不会向最终用户展示确切的内部逻辑，但请考虑如何解释或记录系统的安全行为，以满足之前讨论的透明度需求。</li>\n</ul>\n<p>完成这个练习让您对定义安全机制所需的细致思考有了实际的体会。这些规范成为开发人员实现安全防护以及测试人员验证其有效性的宝贵资料，构成了更安全LLM系统文档的核心部分。</p>",
+  "slug": "practice-designing-guardrail-specification",
+  "updates": [],
+  "references": [
+    {
+      "id": 9269,
+      "title": "Ethical and Social Risks of Harm from Language Models",
+      "author": "Laura Weidinger, John Mellor, Maribeth Rauh, Conor Griffin, Jonathan Uesato, Po-Sen Huang, Myra Cheng, Mia Glaese, Borja Balle, Atoosa Kasirzadeh, Zac Kenton, Sasha Brown, Will Hawkins, Tom Stepleton, Courtney Biles, Abeba Birhane, Julia Haas, Laura Rimell, Lisa Anne Hendricks, William Isaac, Sean Legassick, Geoffrey Irving, Iason Gabriel",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2112.04359",
+      "doi": "10.48550/arXiv.2112.04359",
+      "note": "提供了大型语言模型风险及潜在缓解策略的全面分类，对于理解潜在危害的识别至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T02:23:28.084821Z",
+      "updated_at": "2025-09-08T12:07:22.669726Z"
+    },
+    {
+      "id": 9271,
+      "title": "NeMo Guardrails: A Toolkit for Building Safer LLM Applications",
+      "author": "The NVIDIA NeMo Team",
+      "year": "2023",
+      "publisher": "NVIDIA",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.nvidia.com/blog/nemo-guardrails-a-toolkit-for-building-safer-llm-applications/",
+      "doi": "",
+      "note": "介绍了一个用于在LLM应用中定义和实施护栏的实用框架，提供了对实际实现和设计考量的见解。",
+      "order": 3,
+      "created_at": "2025-09-05T02:23:28.099944Z",
+      "updated_at": "2025-09-08T12:07:38.335718Z"
+    },
+    {
+      "id": 9272,
+      "title": "Responsible AI Principles",
+      "author": "Google",
+      "year": "2018",
+      "publisher": "Google AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ai.google/responsibility/principles/",
+      "doi": "",
+      "note": "概述了人工智能开发的道德原则，为LLM系统中设计安全护栏提供了更广泛的背景和动力。",
+      "order": 4,
+      "created_at": "2025-09-05T02:23:28.102706Z",
+      "updated_at": "2025-09-08T12:07:20.121356Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

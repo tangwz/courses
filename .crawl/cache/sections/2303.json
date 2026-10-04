@@ -1,0 +1,61 @@
+{
+  "id": 2303,
+  "title": "嵌套控制结构",
+  "meta_title": "Python 嵌套循环与条件语句 | 复杂逻辑",
+  "meta_description": "了解如何将控制结构（循环和条件语句）彼此嵌套，以完成更复杂的逻辑。",
+  "content": "<p>程序可以使用 <code>if</code>、<code>elif</code> 和 <code>else</code> 条件性地执行代码，并使用 <code>while</code> 和 <code>for</code> 循环重复执行操作。将这些结构组合起来能发挥更大的能力。控制流语句可以放置在其他控制流语句的<em>内部</em>。这种技术称为<strong>嵌套</strong>，它允许程序构建更复杂的逻辑。</p>\n<p>设想你需要在一个操作之前检查多个条件，或者你需要对另一个重复中处理的每个项目执行重复任务。嵌套使这成为可能。</p>\n<h3>嵌套条件语句</h3>\n<p>你可以将 <code>if</code>、<code>elif</code> 或 <code>else</code> 语句放置在另一个 <code>if</code>、<code>elif</code> 或 <code>else</code> 块的内部。这允许你只在满足主要条件时才检查次要条件。</p>\n<p>考虑一个需要检查某人是否符合特定折扣条件的情形：他们必须是学生<em>并且</em>拥有有效的身份证件。</p>\n<pre><code class=\"language-python\">is_student = True\nhas_valid_id = False\nage = 20\n\nprint(\"正在检查折扣资格...\")\n\nif age &#x3C; 25: # 外部条件：年龄检查\n    print(\"年龄要求符合。\")\n    if is_student: # 内部条件 1：学生身份\n        print(\"学生身份确认。\")\n        if has_valid_id: # 内部条件 2：身份证件检查\n            print(\"有效身份证件确认。\")\n            print(\"恭喜！您符合折扣条件。\")\n        else: # 内部 else（属于身份证件检查）\n            print(\"未找到有效身份证件。不适用折扣。\")\n    else: # 内部 else（属于学生身份检查）\n        print(\"不是学生。不适用折扣。\")\nelse: # 外部 else（属于年龄检查）\n    print(\"年龄要求不符合。不适用折扣。\")\n\nprint(\"资格检查完成。\")\n</code></pre>\n<p>请注意缩进。内部的 <code>if</code>/<code>else</code> 块比外部的 <code>if</code>/<code>else</code> 块缩进更多。Python 使用这种缩进来判断哪些语句属于哪个块。只有当前面的外部条件 (<code>age &#x3C; 25</code>) 评估为 <code>True</code> 时，才会执行内部检查（学生身份、有效身份证件）。</p>\n<h3>嵌套循环</h3>\n<p>循环也可以嵌套。一个常见的用途是遍历多维数据结构（如网格或表格），或者处理来自不同序列的项目组合。</p>\n<h4>嵌套 <code>for</code> 循环</h4>\n<p>假设你想为一个小的 3x2 网格打印所有可能的坐标对 (x, y)，（其中 x 从 0 到 2，y 从 0 到 1）。</p>\n<pre><code class=\"language-python\">print(\"正在生成网格坐标：\")\n\n# 外部循环遍历 x 值\nfor x in range(3): # x 将是 0, 1, 2\n    # 内部循环为每个 x 遍历 y 值\n    for y in range(2): # y 将是 0, 1\n        print(f\"  ({x}, {y})\") # 打印坐标对\n\nprint(\"坐标生成完成。\")\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Generating grid coordinates:\n  (0, 0)\n  (0, 1)\n  (1, 0)\n  (1, 1)\n  (2, 0)\n  (2, 1)\nCoordinate generation finished.\n</code></pre>\n<p>执行过程如下：</p>\n<ol>\n<li>外部循环从 <code>x = 0</code> 开始。</li>\n<li>内部循环在 <code>x = 0</code> 时完全运行。它首先迭代 <code>y = 0</code>，然后是 <code>y = 1</code>，打印 <code>(0, 0)</code> 和 <code>(0, 1)</code>。</li>\n<li>内部循环在 <code>x = 0</code> 时结束。</li>\n<li>外部循环进入下一次迭代，将 <code>x</code> 设置为 <code>1</code>。</li>\n<li>内部循环在 <code>x = 1</code> 时再次完全运行。它首先迭代 <code>y = 0</code>，然后是 <code>y = 1</code>，打印 <code>(1, 0)</code> 和 <code>(1, 1)</code>。</li>\n<li>内部循环在 <code>x = 1</code> 时结束。</li>\n<li>外部循环继续，将 <code>x</code> 设置为 <code>2</code>。</li>\n<li>内部循环在 <code>x = 2</code> 时最后一次完全运行，打印 <code>(2, 0)</code> 和 <code>(2, 1)</code>。</li>\n<li>两个循环都已完成。</li>\n</ol>\n<p>内部循环会为外部循环的<em>每一次迭代</em>完成其所有迭代。</p>\n<h4>嵌套 <code>while</code> 循环</h4>\n<p>你也可以嵌套 <code>while</code> 循环，但这需要仔细管理循环条件以避免无限循环。</p>\n<pre><code class=\"language-python\">outer_count = 0\nprint(\"外部循环开始...\")\nwhile outer_count &#x3C; 2:\n    print(f\"外部循环迭代 {outer_count}\")\n    inner_count = 0\n    # 内部循环在 inner_count &#x3C; 3 时运行\n    while inner_count &#x3C; 3:\n        print(f\"  内部循环迭代 {inner_count}\")\n        inner_count += 1 # 重要：更新内部循环变量\n    outer_count += 1 # 重要：更新外部循环变量\nprint(\"外部循环完成。\")\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Outer loop starting...\nOuter loop iteration 0\n  Inner loop iteration 0\n  Inner loop iteration 1\n  Inner loop iteration 2\nOuter loop iteration 1\n  Inner loop iteration 0\n  Inner loop iteration 1\n  Inner loop iteration 2\nOuter loop finished.\n</code></pre>\n<p>与嵌套 <code>for</code> 循环一样，内部 <code>while</code> 循环会在外部 <code>while</code> 循环的每次迭代中运行直到完成。确保<em>两个</em>循环的条件最终都会变为 <code>False</code>。</p>\n<h3>结合循环与条件语句</h3>\n<p>最常见的模式之一是将条件语句嵌套在循环内部，反之亦然。</p>\n<h4>循环内部的 <code>if</code> 语句</h4>\n<p>这非常普遍。你遍历一个序列，并且只在满足某个项目的特定条件时才执行操作。</p>\n<p>示例：只打印列表中偶数。</p>\n<pre><code class=\"language-python\">numbers = [11, 22, 37, 44, 58, 61, 76]\nprint(\"找到的偶数：\")\n\nfor num in numbers:\n    # 检查列表中每个数字的条件\n    if num % 2 == 0: # 数字是否能被 2 整除？\n        print(f\"  {num}\")\n\nprint(\"搜索完成。\")\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Even numbers found:\n  22\n  44\n  58\n  76\nSearch complete.\n</code></pre>\n<p><code>for</code> 循环遍历 <code>numbers</code> 列表中的每个 <code>num</code>。在循环内部，<code>if</code> 语句检查当前的 <code>num</code> 是否为偶数。只有当条件 <code>num % 2 == 0</code> 为真时，<code>print()</code> 语句才会执行。</p>\n<h4><code>if</code> 语句内部的循环</h4>\n<p>你可能希望只在某个条件为真时才执行循环。</p>\n<p>示例：如果列表不为空，打印其内容。</p>\n<pre><code class=\"language-python\">data = [\"apple\", \"banana\", \"cherry\"]\n# data = [] # 尝试取消注释此行以查看区别\n\nif data: # 检查列表是否不为空（非空列表类似 True）\n    print(\"正在处理数据项：\")\n    for item in data:\n        print(f\"  - {item}\")\nelse:\n    print(\"没有数据项可处理。\")\n</code></pre>\n<p><strong>输出（使用原始 <code>data</code> 列表）：</strong></p>\n<pre><code>Processing data items:\n  - apple\n  - banana\n  - cherry\n</code></pre>\n<p><strong>输出（如果 <code>data = []</code> 被取消注释）：</strong></p>\n<pre><code>No data items to process.\n</code></pre>\n<p>在这里，<code>for</code> 循环嵌套在 <code>if</code> 块内部。它只在初始的 <code>if data:</code> 检查通过（表示列表不为空）时运行。</p>\n<h3>缩进的重要性</h3>\n<p>请记住，Python 使用缩进来定义代码块。对于嵌套结构，正确的缩进绝对必要。每层嵌套都需要额外的缩进（通常是 4 个空格）。不正确的缩进将导致 <code>IndentationError</code> 错误，或者更糟的是，代码能运行但产生错误的结果，因为逻辑未按你的意图解析。</p>\n<pre><code class=\"language-python\"># 正确缩进\nfor i in range(2):\n    print(f\"Outer {i}\")\n    if i == 0:\n        print(\"  内部检查 i=0\") # 在 if 下缩进\n    for j in range(2):\n        print(f\"    内部循环 {j}\") # 在内部 for 下缩进\n\n# 不正确缩进（可能导致错误或错误逻辑）\n# for i in range(2):\n# print(f\"外部 {i}\") # 错误：需要缩进块\n# if i == 0:\n# print(\"  内部检查 i=0\")\n# for j in range(2):\n# print(f\"    内部循环 {j}\") # 错误或范围不正确\n</code></pre>\n<h3>保持嵌套的可读性</h3>\n<p>虽然嵌套很有用，但深度嵌套的结构（例如，一个循环内套一个循环，一个 <code>if</code> 内套另一个循环）会变得非常难以阅读和理解。通常，尝试将嵌套限制在两到三层。如果你发现需要更深的嵌套，请考虑是否可以将逻辑分解为更小、独立的函数（你将在第 5 章中学习到）。</p>\n<p>嵌套控制结构允许你通过组合简单的 <code>if</code>、<code>while</code> 和 <code>for</code> 语句来创建复杂的程序流程。掌握嵌套并密切注意缩进是编写高效 Python 代码的重要步骤。</p>",
+  "slug": "python-nested-control-structures",
+  "updates": [],
+  "references": [
+    {
+      "id": 6337,
+      "title": "The Python Tutorial - 4. More Control Flow Tools",
+      "author": "Guido van Rossum and the Python Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/controlflow.html",
+      "doi": "",
+      "note": "提供了Python中`if`、`for`和`while`语句的官方基础解释，这些语句构成了嵌套结构的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T01:21:31.415661Z",
+      "updated_at": "2025-09-07T21:24:09.844247Z"
+    },
+    {
+      "id": 6338,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "一本优秀的编程初学者实践指南，涵盖了条件语句和循环，包括自然引出嵌套的例子。",
+      "order": 2,
+      "created_at": "2025-09-05T01:21:31.424269Z",
+      "updated_at": "2025-09-07T21:24:10.959551Z"
+    },
+    {
+      "id": 6340,
+      "title": "Introduction to Computer Science and Programming in Python (MIT 6.0001SC)",
+      "author": "Ana Bell, Eric Grimson, and John Guttag",
+      "year": "2016",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001sc-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+      "doi": "",
+      "note": "提供了来自一门备受推崇的入门编程课程的结构化讲义和习题集，涵盖了控制流和嵌套结构。",
+      "order": 4,
+      "created_at": "2025-09-05T01:21:31.429041Z",
+      "updated_at": "2025-09-07T21:24:13.606751Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

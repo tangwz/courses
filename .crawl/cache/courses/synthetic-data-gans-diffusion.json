@@ -1,0 +1,539 @@
+{
+  "id": 191,
+  "title": "高级合成数据生成：GAN和扩散模型",
+  "meta_title": "高级合成数据：GAN与扩散模型课程",
+  "meta_description": "关于合成数据生成的高级课程，涵盖GAN和扩散模型。学习实现、优化和评估技术。",
+  "description": "掌握使用生成对抗网络（GAN）和扩散模型生成合成数据的复杂技术。本课程涵盖高级架构、训练策略、评估方法及实际实现细节，旨在创建高保真合成数据集。\n\n您将学习实现和优化如StyleGAN、CycleGAN、去噪扩散概率模型（DDPM）和基于分数的生成模型等前沿模型。通过严谨的理论理解和动手编程，解决训练稳定性、模式崩溃和样本质量评估等问题。",
+  "short_description": "实现和评估用于高质量合成数据生成的高级GAN和扩散模型。",
+  "excerpt": "实现和优化用于高质量合成数据生成的前沿生成对抗网络和扩散模型。",
+  "prerequisites": "需有扎实机器学习背景和Python能力。",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "高级GAN架构",
+      "description": "实现和训练如StyleGAN、ProGAN和CycleGAN等复杂GAN模型，用于高分辨率图像合成和域适应。"
+    },
+    {
+      "topic": "扩散模型理论与实现",
+      "description": "理解去噪扩散概率模型（DDPM）和基于分数的模型的数学原理，并从零开始实现它们。"
+    },
+    {
+      "topic": "训练稳定性与优化",
+      "description": "应用高级技术以稳定GAN和扩散模型训练，诊断模式崩溃等问题，并优化性能。"
+    },
+    {
+      "topic": "条件生成技术",
+      "description": "开发能基于特定属性、标签或其他输入生成合成数据的模型。"
+    },
+    {
+      "topic": "合成数据评估",
+      "description": "运用高级量化和定性指标，严谨评估生成合成数据的保真度和多样性。"
+    },
+    {
+      "topic": "潜在空间操作",
+      "description": "分析并操作生成模型的潜在空间，以实现受控数据合成和特征编辑。"
+    }
+  ],
+  "duration": 40,
+  "slug": "synthetic-data-gans-diffusion",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-29T07:23:29.861717Z",
+  "updated_at": "2026-10-01T22:55:40.071872Z",
+  "chapters": [
+    {
+      "id": 1026,
+      "title": "生成模型基本原理回顾",
+      "meta_title": "生成模型基本原理温习",
+      "meta_description": "回顾生成模型、概率分布的主要思想，以及高维数据生成中的难题。",
+      "number": 1,
+      "slug": "generative-modeling-foundations-revisited",
+      "content": "构建StyleGAN或扩散模型等复杂的生成模型，需要对背后原理有扎实的理解。本章将重温学习更精进方法前需要的基本知识。\n\n我们将首先回顾用于生成的概率建模，重点在于模型如何旨在获取数据分布，该分布通常表示为 $p_{data}(x)$。我们将对生成模型的主要类型进行分类，以明确GAN和扩散模型的归属。\n\n接着，我们会谈及生成图像或音频等高维数据时遇到的常见难题，包括如何管理其复杂性并保证输出多样性。之后，我们将重新温习生成对抗网络（GANs）的主要思想，回顾其核心组成部分，如生成器 $G$ 和判别器 $D$，以及它们的对抗训练目标，该目标常常表述为极小极大博弈：\n$$ \\min_G \\max_D V(D, G) = \\mathbb{E}_{x \\sim p_{data}(x)}[\\log D(x)] + \\mathbb{E}_{z \\sim p_z(z)}[\\log(1 - D(G(z)))] $$\n最后，我们将介绍扩散模型背后的直观理解，涵盖其前向（加噪）和反向（去噪）过程的主要思想。\n\n完成本章可确保您已温习所需知识，能够应对之后章节介绍的进阶架构、训练方法和评估方法。",
+      "sections": [
+        {
+          "id": 5628,
+          "title": "用于生成的概率建模",
+          "meta_title": "用于生成的概率建模",
+          "meta_description": "回顾生成模型中概率论的基本理论。",
+          "slug": "probabilistic-modeling-generation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5630,
+          "title": "生成模型分类",
+          "meta_title": "生成模型分类",
+          "meta_description": "对生成建模的不同方法进行分类（基于似然的、隐式的）。",
+          "slug": "taxonomy-generative-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5634,
+          "title": "高维数据生成中的挑战",
+          "meta_title": "高维数据生成中的挑战",
+          "meta_description": "讨论维度灾难和模式崩溃等常见难题。",
+          "slug": "high-dimensional-synthesis-challenges",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5637,
+          "title": "GAN 核心",
+          "meta_title": "GAN 核心",
+          "meta_description": "重温GAN目标函数、最小-最大博弈及训练动态。",
+          "slug": "gan-fundamentals",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5640,
+          "title": "扩散模型原理介绍",
+          "meta_title": "扩散模型原理介绍",
+          "meta_description": "扩散模型正向与逆向过程概述",
+          "slug": "diffusion-model-concepts-intro",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1029,
+      "title": "高级GAN架构与技术",
+      "meta_title": "高级GAN架构与技术",
+      "meta_description": "学习并实践StyleGAN、ProGAN和CycleGAN等前沿GAN模型。",
+      "number": 2,
+      "slug": "advanced-gan-architectures-techniques",
+      "content": "在回顾了GAN基础知识之后，本章考察了生成对抗网络设计中的几项重要进展。虽然基本的GAN提供了一个起点，但它们在输出分辨率、训练稳定性和生成过程控制方面常遇到局限。在此，我们将学习专门为应对这些问题而开发的架构。\n\n我们将涉及：\n\n*   **渐进式增长GAN (ProGAN):** 一种能实现稳定训练的方法，通过逐步增加网络深度来生成高分辨率图像。\n*   **基于风格的生成器 (StyleGAN变体):** 那些能对图像属性提供更好控制的模型，借助风格混合和自适应实例归一化 (AdaIN) 等技术。\n*   **非配对图像到图像转换 (CycleGAN):** 一种采用循环一致性损失 ($L_{\\text{cyc}}$) 的方法，用于域适配，无需配对训练样本。\n\n此外，我们将研究根据特定输入生成数据的方法，引入注意力机制以捕获长程依赖，以及分析和操作潜在空间 $z$ 来影响生成输出的技术。一个动手实践部分将侧重于实现StyleGAN架构的核心组成部分。",
+      "sections": [
+        {
+          "id": 5644,
+          "title": "渐进式生成对抗网络 (ProGAN)",
+          "meta_title": "渐进式生成对抗网络 (ProGAN)",
+          "meta_description": "理解用于高分辨率图像合成的逐层训练。",
+          "slug": "progressive-growing-gans",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5647,
+          "title": "基于风格的生成器（StyleGAN变体）",
+          "meta_title": "基于风格的生成器（StyleGAN）",
+          "meta_description": "分析StyleGAN中的AdaIN、映射网络和风格混合。",
+          "slug": "style-based-generators-stylegan",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5651,
+          "title": "非配对图像到图像转换 (CycleGAN)",
+          "meta_title": "CycleGAN 非配对图像转换",
+          "meta_description": "为域适应实现CycleGAN，无需配对数据。",
+          "slug": "cyclegan-unpaired-translation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5654,
+          "title": "条件生成对抗网络：架构与控制",
+          "meta_title": "条件生成对抗网络架构",
+          "meta_description": "实现多种方法来控制GAN的生成结果。",
+          "slug": "conditional-gan-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5657,
+          "title": "GAN中的注意力机制",
+          "meta_title": "GAN中的注意力机制",
+          "meta_description": "在GAN中整合自注意力及其他注意力模块。",
+          "slug": "attention-mechanisms-gans",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5660,
+          "title": "分析与调整GAN潜在空间",
+          "meta_title": "GAN潜在空间调整",
+          "meta_description": "通过潜在向量理解和控制GAN输出的技术。",
+          "slug": "gan-latent-space-manipulation",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5664,
+          "title": "动手实践：实现StyleGAN组件",
+          "meta_title": "动手实践：StyleGAN的实现",
+          "meta_description": "StyleGAN核心构成模块的代码实现。",
+          "slug": "practice-implementing-stylegan",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1033,
+      "title": "GAN训练稳定性与优化",
+      "meta_title": "GAN训练稳定性与优化",
+      "meta_description": "解决常见的GAN训练问题，如模式坍塌和梯度消失，使用进阶方法。",
+      "number": 3,
+      "slug": "gan-training-stability-optimization",
+      "content": "生成对抗网络能生成令人印象深刻的结果，但其训练过程常不稳定。在最小最大目标函数 $$ \\min_G \\max_D V(D, G) $$ 中，实现生成器 $G$ 与判别器 $D$ 之间的收敛常常有难度，这会引起样本质量差或多样性不足等问题。\n\n本章提供实用的方法来诊断并解决这些训练难题。您将学到：\n*   识别出模式坍塌、训练震荡和散度等常见问题。\n*   实施瓦瑟斯坦GAN（带梯度惩罚WGAN-GP）和最小二乘GAN（LSGAN）等替代损失函数，以提高稳定性。\n*   应用正则化技术，包括谱归一化，到生成器和判别器。\n*   运用双时间尺度更新规则 (TTUR) 等优化策略。\n*   制定针对GAN的有效超参数调优方法。\n\n我们将涵盖这些技术背后的原理，并引导您实现WGAN-GP等核心解决方案。",
+      "sections": [
+        {
+          "id": 5667,
+          "title": "诊断训练不稳定：振荡与发散",
+          "meta_title": "诊断GAN训练不稳定",
+          "meta_description": "识别不稳定的GAN训练迹象和表现。",
+          "slug": "diagnosing-gan-instability",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5671,
+          "title": "模式坍塌：原因与缓解策略",
+          "meta_title": "GAN模式坍塌缓解",
+          "meta_description": "了解模式坍塌和批次鉴别等技术。",
+          "slug": "gan-mode-collapse-mitigation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5674,
+          "title": "替代损失函数（WGAN, WGAN-GP, LSGAN）",
+          "meta_title": "GAN替代损失函数",
+          "meta_description": "实现Wasserstein GAN、梯度惩罚和最小二乘GAN目标函数。",
+          "slug": "alternative-gan-loss-functions",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5677,
+          "title": "GAN 的正则化方法",
+          "meta_title": "GAN 正则化方法",
+          "meta_description": "应用谱归一化、一致性正则化及其他方法。",
+          "slug": "gan-regularization-techniques",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5679,
+          "title": "双时间尺度更新规则 (TTUR)",
+          "meta_title": "GAN TTUR 优化",
+          "meta_description": "为生成器和判别器使用不同的学习率。",
+          "slug": "gan-ttur-optimization",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5682,
+          "title": "GAN的超参数调整策略",
+          "meta_title": "GAN超参数调整策略",
+          "meta_description": "调整学习率、批大小和网络结构的最佳实践。",
+          "slug": "gan-hyperparameter-tuning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5685,
+          "title": "动手实践：WGAN-GP 的实现",
+          "meta_title": "动手实践：WGAN-GP 的实现",
+          "meta_description": "带梯度惩罚的 Wasserstein GAN 代码实现。",
+          "slug": "practice-implementing-wgan-gp",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1036,
+      "title": "扩散模型：理论与进阶实现",
+      "meta_title": "扩散模型：理论与进阶实现",
+      "meta_description": "详细探讨扩散模型的数学原理、DDPM、基于分数的模型以及高效采样。",
+      "number": 4,
+      "slug": "diffusion-models-theory-implementation",
+      "content": "在我们学习了生成对抗网络之后，本章介绍扩散模型，这是一种独特且有效的生成建模方法。这些模型通过逐步向数据点添加噪声，然后学习逆向去噪过程，在生成高质量数据（特别是图像）方面取得了卓越成果。\n\n本章涵盖以下几个方面：\n*   将扩散过程与随机微分方程（$SDE$）联系起来的数学基础。\n*   去噪扩散概率模型（DDPM）的公式和实现细节，包括其具体目标函数，例如实践中常用的简化目标函数：$$L_{simple}(\\theta) = \\mathbb{E}_{t, \\mathbf{x}_0, \\boldsymbol{\\epsilon}} \\left[ \\| \\boldsymbol{\\epsilon} - \\boldsymbol{\\epsilon}_\\theta(\\sqrt{\\bar{\\alpha}_t}\\mathbf{x}_0 + \\sqrt{1-\\bar{\\alpha}_t}\\boldsymbol{\\epsilon}, t) \\|^2 \\right]$$。\n*   扩散模型与基于分数的生成建模之间的关联，通过分数匹配和朗之万动力学等思想。\n*   加速采样过程的方法，例如去噪扩散隐式模型（DDIM），以及使用分类器引导或无分类器引导来控制生成的技术。\n*   常用的神经网络结构，尤其是用于噪声预测的U-Net结构。\n*   通过动手编码环节构建基础的DDPM，以巩固理解。\n\n您将理解扩散模型背后的理论，以及有效实现和改进它们的实际考量。",
+      "sections": [
+        {
+          "id": 5688,
+          "title": "数学基本原理：随机微分方程",
+          "meta_title": "扩散SDE基本原理",
+          "meta_description": "理解扩散模型的连续时间表述。",
+          "slug": "diffusion-sde-foundations",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5693,
+          "title": "去噪扩散概率模型 (DDPM)",
+          "meta_title": "DDPM 理论与实现",
+          "meta_description": "DDPM 前向与逆向过程以及损失函数的详细分析。",
+          "slug": "ddpm-theory-implementation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5695,
+          "title": "基于得分的生成模型",
+          "meta_title": "基于得分的生成模型",
+          "meta_description": "将扩散模型与得分匹配和朗之万动力学关联起来。",
+          "slug": "score-based-generative-modeling",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5699,
+          "title": "改进技术：DDIM和方差调度",
+          "meta_title": "DDIM与方差调度",
+          "meta_description": "实现去噪扩散隐式模型（DDIM）以加快采样。",
+          "slug": "ddim-variance-schedules",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5704,
+          "title": "分类器引导与无分类器引导",
+          "meta_title": "扩散模型分类器引导",
+          "meta_description": "利用分类器或联合训练控制扩散模型输出的方法。",
+          "slug": "diffusion-classifier-guidance",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5706,
+          "title": "扩散模型 (U-Net) 的结构考量",
+          "meta_title": "扩散模型结构 (U-Net)",
+          "meta_description": "为扩散模型设计有效的神经网络骨干。",
+          "slug": "diffusion-model-architectures",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5711,
+          "title": "动手实践：构建基础DDPM",
+          "meta_title": "动手实践：实现DDPM",
+          "meta_description": "去噪扩散概率模型的代码实现。",
+          "slug": "practice-implementing-ddpm",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1040,
+      "title": "合成数据质量评估",
+      "meta_title": "合成数据质量评估",
+      "meta_description": "学习用于严谨评估生成数据质量的进阶指标和技术。",
+      "number": 5,
+      "slug": "evaluating-synthetic-data-quality",
+      "content": "生成合成数据只是第一步。训练好GAN或扩散模型后，如何判断生成的样本质量是否过关呢？仅仅查看几个例子可能会产生误导。本章侧重于严谨衡量生成模型所产合成数据的质量、多样性和逼真度所需的方法。\n\n你将了解评估生成模型时固有的难点，例如简单指标如准确率并不适用。我们将介绍既定的定量指标，如Inception Score (IS) 和 Fréchet Inception Distance (FID)，并理解它们的计算方式和解读方法。你还将研究像Kernel Inception Distance (KID) 这样的分布指标，以及GAN特有的指标，例如衡量潜在空间质量的Perceptual Path Length (PPL)。\n\n除了自动化指标之外，我们还将讨论定性评估技术，以及评估基于条件（例如类别标签）生成数据的模型时的具体考量。最后，你将获得编写代码计算FID的动手实践经验，FID是一种广泛使用的标准指标。本章结束时，你将拥有一个能够有效评估生成模型输出结果的工具集。",
+      "sections": [
+        {
+          "id": 5715,
+          "title": "生成模型评估中的难题",
+          "meta_title": "生成模型评估中的难题",
+          "meta_description": "讨论量化样本质量与多样性的困难。",
+          "slug": "generative-evaluation-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5717,
+          "title": "定量指标：IS、FID、精确率、召回率",
+          "meta_title": "定量评估指标 (IS, FID)",
+          "meta_description": "理解并实现Inception分数、Fréchet Inception距离和相关指标。",
+          "slug": "quantitative-evaluation-metrics",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5719,
+          "title": "分布度量：核Inception距离 (KID)",
+          "meta_title": "分布度量：KID",
+          "meta_description": "使用核Inception距离评估分布相似性。",
+          "slug": "distributional-metrics-kid",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5721,
+          "title": "生成对抗网络（GAN）的感知路径长度（PPL）",
+          "meta_title": "生成对抗网络（GAN）的感知路径长度（PPL）",
+          "meta_description": "衡量GAN中潜在空间插值质量。",
+          "slug": "perceptual-path-length-ppl",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5723,
+          "title": "定性评估方法",
+          "meta_title": "Qualitative Evaluation Methods",
+          "meta_description": "Visual inspection techniques and human studies for assessment.",
+          "slug": "qualitative-evaluation-methods",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5724,
+          "title": "评估条件生成模型",
+          "meta_title": "评估条件生成",
+          "meta_description": "评估条件模型准确性和可控性的专属度量方法。",
+          "slug": "evaluating-conditional-generation",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5726,
+          "title": "动手实践：计算FID分数",
+          "meta_title": "动手实践：计算FID",
+          "meta_description": "实现计算数据集间Fréchet Inception Distance的代码。",
+          "slug": "practice-calculating-fid",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1042,
+      "title": "高级应用与整合",
+      "meta_title": "高级应用与整合",
+      "meta_description": "整合GANs和扩散模型，用于处理如文本生成图像和数据扩充等复杂任务。",
+      "number": 6,
+      "slug": "advanced-applications-integration",
+      "content": "基于对高级GANs和扩散模型的已有理解，本章着重于将这些技术应用于复杂的生成任务，并整合不同的方法。我们从各个模型家族的核心机制转向它们在复杂场景中的实际部署。\n\n你将学习如何将生成扩展到高分辨率，以及如何构建能根据文本描述合成图像的模型，这常涉及条件控制机制。我们将研究生成数据用于扩充训练集的情况，以及它在隐私保护场景中可能扮演的角色。此外，本章还将介绍这些生成原理在视频合成中的扩展应用，并审视结合了GANs和扩散模型元素的混合架构。讨论内容包括训练大型模型所需计算资源的重要管理考量。实际实现侧重于构建一个条件图像生成系统。",
+      "sections": [
+        {
+          "id": 5729,
+          "title": "高分辨率生成策略",
+          "meta_title": "高分辨率生成策略",
+          "meta_description": "组合技术用于生成百万像素图像。",
+          "slug": "high-resolution-synthesis",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5730,
+          "title": "文本到图像生成架构",
+          "meta_title": "文本到图像生成架构",
+          "meta_description": "实现根据文本描述生成图像的模型（例如，使用CLIP）。",
+          "slug": "text-to-image-synthesis",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5731,
+          "title": "合成数据：扩充与隐私保护",
+          "meta_title": "合成数据：扩充与隐私保护",
+          "meta_description": "运用生成模型扩充数据集并保护隐私的可能性。",
+          "slug": "synthetic-data-augmentation-privacy",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5732,
+          "title": "使用生成模型进行视频生成",
+          "meta_title": "使用生成模型进行视频生成",
+          "meta_description": "将图像生成技术应用于序列视频数据。",
+          "slug": "video-generation-generative",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5733,
+          "title": "结合GAN与扩散模型",
+          "meta_title": "结合GAN与扩散模型",
+          "meta_description": "结合两种模型之长的方法。",
+          "slug": "combining-gans-diffusion",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5734,
+          "title": "计算考量与扩展",
+          "meta_title": "计算考量与扩展",
+          "meta_description": "管理训练大型生成模型所需的计算资源。",
+          "slug": "computational-considerations-scaling",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5735,
+          "title": "实践操作：条件图像生成",
+          "meta_title": "实践操作：条件生成",
+          "meta_description": "根据类别标签实现条件GAN或扩散模型。",
+          "slug": "practice-conditional-generation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,445 @@
+{
+  "id": 169,
+  "title": "专家混合：高级架构、训练与扩展",
+  "meta_title": "专家混合：架构、训练与扩展指南",
+  "meta_description": "关于MoE架构、先进训练技巧（路由、负载均衡）以及大型AI模型分布式扩展策略的专家指南。",
+  "description": "构建、训练并扩展领先的专家混合（MoE）模型。本课程涵盖先进架构设计、复杂的训练方法（包括路由与负载均衡优化），以及稀疏专家模型分布式扩展的高效策略。",
+  "short_description": "掌握构建、训练与扩展高级专家混合模型以实现最佳性能。",
+  "excerpt": "掌握构建、优化和部署大规模专家混合模型的先进技巧，侧重于架构、训练稳定性与高效扩展。",
+  "prerequisites": "高级深度学习知识",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "高级MoE架构",
+      "description": "分析并实现区别于基础设计的精巧MoE架构变体。"
+    },
+    {
+      "topic": "专家路由机制",
+      "description": "理解并实践先进路由算法以及用于条件计算的门控网络。"
+    },
+    {
+      "topic": "MoE训练动态",
+      "description": "应对MoE训练中的难题，包括负载均衡、路由器优化与专家特化。"
+    },
+    {
+      "topic": "分布式训练优化",
+      "description": "应用特别为稀疏MoE模型定制的先进分布式训练技巧。"
+    },
+    {
+      "topic": "MoE扩展策略",
+      "description": "实践结合模型、数据与流水线并行的高效MoE扩展策略。"
+    },
+    {
+      "topic": "性能分析与调优",
+      "description": "分析、评估与调整大规模MoE模型在分布式环境下的性能。"
+    }
+  ],
+  "duration": 24,
+  "slug": "mixture-of-experts",
+  "level": 4,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-16T03:01:52.977943Z",
+  "updated_at": "2026-10-02T07:49:22.288185Z",
+  "chapters": [
+    {
+      "id": 897,
+      "title": "稀疏专家模型基本原理",
+      "meta_title": "稀疏专家模型基本原理",
+      "meta_description": "回顾条件计算的核心思想以及专家混合模型在模型扩展方面的动机。",
+      "number": 1,
+      "slug": "moe-foundations-sparse-models",
+      "content": "本章旨在帮助您理解专家混合 (MoE) 模型。我们首先分析条件计算的原理，这是使稀疏模型能够高效扩展的核心思想。您将了解MoE模型如何通过对每个输入选择性地激活其一小部分参数（即“专家”）来与标准密集网络不同。\r\n\r\n我们将定义MoE层的基本结构，并比较稀疏与密集激活模式的计算特点。本章最后会提出标准MoE层的数学公式，详细说明输入token如何通过门控网络$G(x)$路由到特定的专家网络$E_i(x)$，以及它们的输出如何组合。这种组合通常表示为：\r\n\r\n$$y = \\sum_{i=1}^{N} G(x)_i E_i(x)$$\r\n\r\n在此公式中，$G(x)_i$表示专家$i$的门控决策或权重，$N$是专家总数。在后续章节中处理高级MoE架构和训练过程之前，理解这些基本原理是必要的。",
+      "sections": [
+        {
+          "id": 4681,
+          "title": "条件计算原理",
+          "meta_title": "条件计算原理说明",
+          "meta_description": "理解神经网络中条件计算的理论基础和优势。",
+          "slug": "conditional-computation-principles",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4682,
+          "title": "稀疏专家混合模型（MoE）方法",
+          "meta_title": "稀疏MoE模式概述",
+          "meta_description": "介绍稀疏专家混合模型的根本结构。",
+          "slug": "sparse-moe-paradigm",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4683,
+          "title": "对比密集激活与稀疏激活",
+          "meta_title": "模型中的密集激活与稀疏激活",
+          "meta_description": "比较密集模型与稀疏MoE模型的计算和参数效率。",
+          "slug": "dense-vs-sparse-activation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4684,
+          "title": "基本MoE层的数学表述",
+          "meta_title": "MoE层的数学表述",
+          "meta_description": "详细阐述基本MoE层前向传播的数学公式。",
+          "slug": "mathematical-formulation-moe",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 898,
+      "title": "进阶 MoE 架构",
+      "meta_title": "进阶 MoE 架构与设计",
+      "meta_description": "分析精巧的 MoE 架构变体以提高性能和专业性。",
+      "number": 2,
+      "slug": "advanced-moe-architectures",
+      "content": "基于先前介绍的稀疏专家混合模型的基础概念，本章会审视更精巧的架构变体。MoE 模型的效用往往取决于其组件的设计，尤其是负责将令牌路由到专家的门控网络。\r\n\r\n我们将分析设计有效门控网络的技术，包括 $top-k$ 路由以及在训练中引入噪声以增加路由选择的多样性。您会学习分层 MoE 结构，这种结构通过将专家排布在多层中，从而实现更细致的专业分工。我们将比较不同的路由架构，例如线性、非线性和基于注意力的机制，并评估它们的优缺点。\r\n\r\n进一步的讨论将涉及实际考量，例如确定适当的专家容量和规模，以及改善门控网络自身稳定性与学习动态的方法。本章最后会有一个实践练习，着重于在代码中实现定制门控机制。",
+      "sections": [
+        {
+          "id": 4685,
+          "title": "设计有效的门控网络",
+          "meta_title": "设计MoE门控网络",
+          "meta_description": "设计路由器/门控机制的方法，包括top-k选择和噪声门。",
+          "slug": "designing-gating-networks",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4686,
+          "title": "分层MoE结构",
+          "meta_title": "分层MoE结构",
+          "meta_description": "审视具有多层专家路由的架构，以实现更精细的专业化。",
+          "slug": "hierarchical-moe-structures",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4687,
+          "title": "路由架构：线性、非线性、基于注意力",
+          "meta_title": "MoE路由架构变体",
+          "meta_description": "比较门控网络的不同架构选择。",
+          "slug": "router-architectures-variants",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4688,
+          "title": "专家容量与规模考量",
+          "meta_title": "MoE专家容量与规模",
+          "meta_description": "确定专家最佳数量和规模的策略。",
+          "slug": "expert-capacity-sizing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4689,
+          "title": "路由器稳定化技术",
+          "meta_title": "MoE 路由器稳定化技术",
+          "meta_description": "提升门控网络的稳定性和学习机制的方法。",
+          "slug": "router-stabilization-techniques",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4690,
+          "title": "动手实践：实现自定义门控机制",
+          "meta_title": "实践：实现自定义 MoE 门控",
+          "meta_description": "不同门控网络架构的代码实现。",
+          "slug": "practice-custom-gating",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 899,
+      "title": "训练动态与优化",
+      "meta_title": "MoE训练动态与优化方法",
+      "meta_description": "解决MoE模型训练中的难题，侧重于负载均衡、路由学习及稳定性。",
+      "number": 3,
+      "slug": "moe-training-dynamics-optimization",
+      "content": "在确定了专家混合模型的基本原理和架构变体之后，本章将重点介绍如何有效训练这些模型的实际操作。与密集型模型相比，训练稀疏MoE模型会带来特有的难题，主要在于确保专家间的计算均衡以及路由机制的稳定学习。\r\n\r\n我们将考察负载均衡这一重要问题，即输入分配不均给专家可能导致效率低下并影响模型性能。您将了解到辅助损失函数，这些函数通常以 $$L_{total} = L_{task} + \\alpha L_{aux}$$ 的形式添加到主任务损失中，目的是促进训练期间更均匀的专家利用。我们将介绍 $L_{aux}$ 的常见形式以及调整均衡系数 $\\alpha$ 的方法。\r\n\r\n此外，还将讨论优化路由或门控网络本身的策略，以确保其能学习到有效的专业分工而不会出现塌陷。我们将处理实际考量，例如如何处理超出专家容量的令牌（“丢弃令牌”），以及诊断专家未能区分其功能的情况。最后，我们将研究优化器和学习率调度等标准选择如何影响MoE训练的稳定性。本章以侧重于负载均衡方法的实践实现练习作为结尾。",
+      "sections": [
+        {
+          "id": 4691,
+          "title": "MoE 中的负载均衡问题",
+          "meta_title": "MoE 中的负载均衡问题",
+          "meta_description": "了解训练过程中专家使用不均衡的原因和后果。",
+          "slug": "moe-load-balancing-problem",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4692,
+          "title": "辅助损失函数用于负载均衡",
+          "meta_title": "专家混合模型负载均衡的辅助损失函数",
+          "meta_description": "审视常用的辅助损失（如 Z-损失、CV-损失），以鼓励均衡路由。",
+          "slug": "auxiliary-loss-load-balancing",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4693,
+          "title": "路由优化策略",
+          "meta_title": "MoE 路由优化策略",
+          "meta_description": "确保路由器学习有效分工而不发生崩溃的技术。",
+          "slug": "router-optimization-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4694,
+          "title": "处理丢弃令牌",
+          "meta_title": "MoE 中处理丢弃令牌",
+          "meta_description": "专家容量超出时管理令牌的策略。",
+          "slug": "handling-dropped-tokens",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4695,
+          "title": "专家特化退化及预防",
+          "meta_title": "MoE专家特化退化预防",
+          "meta_description": "诊断并预防专家未能实现特化的情况。",
+          "slug": "expert-specialization-collapse",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4696,
+          "title": "优化器选择与超参数的影响",
+          "meta_title": "MoE 的优化器选择与超参数",
+          "meta_description": "研究优化器（AdamW 等）和学习率对 MoE 稳定性的影响。",
+          "slug": "optimizer-hyperparameters-moe",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4697,
+          "title": "实践操作：实现和调整负载均衡损失",
+          "meta_title": "实践：实现MoE负载均衡损失",
+          "meta_description": "MoE训练中辅助损失函数的代码实现与调整。",
+          "slug": "practice-load-balancing-loss",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 900,
+      "title": "扩展 MoE 模型：分布式训练",
+      "meta_title": "使用分布式训练扩展 MoE 模型",
+      "meta_description": "实施专为大规模专家混合模型定制的高级分布式训练策略。",
+      "number": 4,
+      "slug": "scaling-moe-distributed-training",
+      "content": "基于之前讨论的架构设计和训练机制，本章侧重于扩展专家混合模型以应对大规模应用的实际需要。MoE 模型庞大的体量和独有的稀疏激活模式，与密集型架构相比，带来特殊困难，常常使得标准数据并行化方法无法单独胜任。\r\n\r\n在此，您将学习专门为 MoE 模型调整的分布式训练策略。我们将考察 *专家并行*，这是一种将 MoE 层中的各个专家分散到不同处理单元上的方法。您将学习如何将其与现有数据并行和流水线并行策略结合，以有效管理计算负载和内存占用。\r\n\r\n本章重要篇幅讨论 MoE 训练中固有的通信开销，尤其是将令牌表示 ($x$) 路由到其指定专家 ($E_j$) 所需的 *All-to-All* 通信步骤，这些专家可能位于不同设备上。从原理上讲，这涉及根据门控决策 ($g(x)$) 对令牌进行映射：\r\n$$\r\nx_{\\text{on device } i} \\xrightarrow{g(x)} E_{j (\\text{on device } k)}\r\n$$\r\n我们将讨论优化这些通信模式的方法，例如计算-通信重叠。此外，我们还将提及为方便实施分布式 MoE 训练而开发的软件库和框架。实践练习将包括为 MoE 模型配置分布式设置。",
+      "sections": [
+        {
+          "id": 4698,
+          "title": "分布式MoE训练中的难点",
+          "meta_title": "分布式MoE训练中的难点",
+          "meta_description": "识别分布式MoE特有的通信瓶颈和内存限制。",
+          "slug": "distributed-moe-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4699,
+          "title": "专家并行：在不同设备上分配专家",
+          "meta_title": "MoE模型的专家并行",
+          "meta_description": "理解并实现专家并行，以扩展MoE层。",
+          "slug": "expert-parallelism-moe",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4700,
+          "title": "专家并行与数据并行的结合",
+          "meta_title": "MoE 中专家并行与数据并行的结合",
+          "meta_description": "结合专家并行与数据并行，实现高效分布式训练。",
+          "slug": "expert-data-parallelism-integration",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4701,
+          "title": "All-to-All 通信模式",
+          "meta_title": "MoE 训练中的 All-to-All 通信",
+          "meta_description": "分析专家并行所需的 All-to-All 通信及其优化方法。",
+          "slug": "all-to-all-communication-moe",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4702,
+          "title": "MoE 模型的流水线并行",
+          "meta_title": "MoE 模型的流水线并行",
+          "meta_description": "将流水线并行应用于 MoE 架构，以进一步缓解内存限制。",
+          "slug": "pipeline-parallelism-moe",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4703,
+          "title": "通信优化方法（例如，重叠）",
+          "meta_title": "分布式MoE的通信优化",
+          "meta_description": "减少大规模MoE训练中通信开销的方法。",
+          "slug": "communication-optimization-distributed-moe",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4704,
+          "title": "用于分布式MoE的框架和库 (例如：DeepSpeed, Tutel)",
+          "meta_title": "用于分布式MoE训练的框架",
+          "meta_description": "概述有助于高效实现分布式MoE的库。",
+          "slug": "frameworks-distributed-moe",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4705,
+          "title": "实践：配置分布式MoE训练",
+          "meta_title": "实践：配置分布式MoE训练",
+          "meta_description": "使用相关框架设置并运行MoE模型的分布式训练任务。",
+          "slug": "practice-distributed-moe-config",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 901,
+      "title": "推理优化与部署",
+      "meta_title": "MoE推理优化与部署",
+      "meta_description": "优化稀疏MoE模型推理性能及部署的方法。",
+      "number": 5,
+      "slug": "moe-inference-optimization-deployment",
+      "content": "在MoE架构和分布式训练的基本原理已确立之后，现在我们将重点转向通过推理优化和部署，使这些模型为实际使用做好准备。虽然稀疏性在训练计算上带来优势，但它在高效推理方面引入了独特的考量，例如如何有效管理延迟和内存。本章将介绍解决这些问题的方法。我们将探讨的方法包括专门的批处理方法、针对MoE结构改进的模型压缩方法、借助硬件加速、优化推理时的路由器行为，以及适用于大型稀疏模型的部署模式。",
+      "sections": [
+        {
+          "id": 4706,
+          "title": "稀疏模型的推理难题",
+          "meta_title": "MoE 推理挑战",
+          "meta_description": "讨论 MoE 模型推理期间的延迟、吞吐量和内存问题。",
+          "slug": "moe-inference-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4707,
+          "title": "MoE推理的批处理策略",
+          "meta_title": "MoE推理的批处理策略",
+          "meta_description": "分析动态批处理和令牌路由如何影响推理效率。",
+          "slug": "batching-strategies-moe-inference",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4708,
+          "title": "MoE 模型压缩方法",
+          "meta_title": "MoE 模型压缩方法",
+          "meta_description": "针对 MoE 组成部分应用剪枝、量化和蒸馏。",
+          "slug": "model-compression-moe",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4709,
+          "title": "硬件加速的考量",
+          "meta_title": "MoE 推理的硬件加速",
+          "meta_description": "利用专用硬件（GPU、TPU）进行高效稀疏计算。",
+          "slug": "hardware-acceleration-moe",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4710,
+          "title": "路由器缓存与优化",
+          "meta_title": "MoE 路由器缓存与优化",
+          "meta_description": "提升推理过程中门控网络表现的方法。",
+          "slug": "router-caching-optimization-inference",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4711,
+          "title": "大型稀疏模型的部署模式",
+          "meta_title": "大型稀疏模型的部署模式",
+          "meta_description": "在生产环境中高效服务MoE模型的策略。",
+          "slug": "deployment-patterns-sparse-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4712,
+          "title": "动手实践：MoE 推理性能分析",
+          "meta_title": "实践：MoE 推理性能分析",
+          "meta_description": "分析MoE模型在不同批处理条件下的延迟和吞吐量。",
+          "slug": "practice-profiling-moe-inference",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,45 @@
+{
+  "id": 2350,
+  "title": "使用不同的文件模式",
+  "meta_title": "Python文件模式 | r, w, a, +, b 说明",
+  "meta_description": "了解打开文件时使用的不同模式（例如，'r'、'w'、'a'、'rb'、'wb'），以控制读写权限和二进制/文本处理。",
+  "content": "<p>在Python中使用<code>open()</code>函数打开文件时，您需要告知Python您打算<em>如何</em>操作该文件。您想从中读取内容吗？写入新内容，这可能会覆盖现有内容吗？或者只是在文件末尾添加一些信息？您的意图通过<code>mode</code>参数 (parameter)来指定。</p>\n<p>如果您不提供<code>mode</code>参数，Python会默认您想以文本模式读取文件，这等同于指定<code>'rt'</code>。然而，明确您的意图是良好的编程习惯。让我们来看看可用的不同模式。</p>\n<h3>主要模式</h3>\n<p>这些字母定义了您希望执行的主要操作：</p>\n<ul>\n<li>\n<p><strong><code>'r'</code> (读取)</strong>: 这是默认模式。它以读取方式打开文件。如果文件不存在，Python将引发<code>FileNotFoundError</code>。文件指针（指示当前的读写位置）位于文件开头。</p>\n<pre><code class=\"language-python\"># 以读取方式打开 data.txt (明确指定)\ntry:\n    with open('data.txt', 'r') as f:\n        content = f.read()\n        print(\"文件内容:\", content)\nexcept FileNotFoundError:\n    print(\"错误: data.txt 未找到。\")\n</code></pre>\n</li>\n<li>\n<p><strong><code>'w'</code> (写入)</strong>: 此模式以写入方式打开文件。<strong>请注意：</strong> 如果文件已存在，其内容将立即被擦除（截断）。如果文件不存在，则会创建新文件。文件指针位于文件开头。</p>\n<pre><code class=\"language-python\"># 以写入方式打开 output.txt。如果文件不存在则创建，如果存在则擦除现有内容。\nwith open('output.txt', 'w') as f:\n    f.write(\"这是第一行。\\n\")\n    f.write(\"这会覆盖文件中之前的所有内容。\")\n</code></pre>\n</li>\n<li>\n<p><strong><code>'a'</code> (追加)</strong>: 此模式以追加方式打开文件。任何写入文件的数据都将添加到文件末尾。如果文件不存在，则会创建新文件。文件指针位于文件末尾，因此不会覆盖现有内容。这对于向日志文件添加条目等任务很有用。</p>\n<pre><code class=\"language-python\"># 以追加方式打开 log.txt。如果文件不存在则创建。\nwith open('log.txt', 'a') as f:\n    f.write(\"添加了新的日志条目。\\n\")\n</code></pre>\n</li>\n<li>\n<p><strong><code>'x'</code> (独占创建)</strong>: 此模式专门用于创建<em>新</em>文件并以写入方式打开它。如果文件已存在，Python将引发<code>FileExistsError</code>。这可以防止在您打算创建新文件时，意外覆盖现有文件。</p>\n<pre><code class=\"language-python\"># 尝试创建新配置文件；如果文件已存在则失败。\ntry:\n    with open('config_new.ini', 'x') as f:\n        f.write(\"[Settings]\\n\")\n        f.write(\"Mode=Test\\n\")\n        print(\"config_new.ini 创建成功。\")\nexcept FileExistsError:\n    print(\"错误: config_new.ini 已存在。无法覆盖。\")\n</code></pre>\n</li>\n</ul>\n<h3>模式修饰符</h3>\n<p>您可以将主要模式与额外的修饰符组合使用：</p>\n<ul>\n<li>\n<p><strong><code>'t'</code> (文本模式)</strong>: 此修饰符表明文件应作为文本处理。如果没有指定其他修饰符，这是<em>默认</em>修饰符。在文本模式下，Python会处理编码（写入时将字符串转换为字节，读取时将字节转换为字符串），并自动将特定于平台的行结束符（如Linux/macOS上的<code>\\n</code>和Windows上的<code>\\r\\n</code>）转换为Python标准<code>\\n</code>。因此，<code>'r'</code>与<code>'rt'</code>相同，<code>'w'</code>与<code>'wt'</code>相同。</p>\n</li>\n<li>\n<p><strong><code>'b'</code> (二进制模式)</strong>: 此修饰符表明文件应作为原始字节序列处理。当处理非文本文件时，例如图像、音频文件、可执行程序，或任何需要精确字节级控制的数据时，请使用此模式。在二进制模式下，不执行编码/解码或行结束符转换。数据以<code>bytes</code>对象的形式读写。可以将其与主要模式组合使用，例如：<code>'rb'</code>（读取二进制）、<code>'wb'</code>（写入二进制）、<code>'ab'</code>（追加二进制）、<code>'xb'</code>（独占创建二进制）。</p>\n<pre><code class=\"language-python\"># 示例: 将原始字节写入文件\ndata_to_write = b'\\x00\\x10\\xFF\\xEE' # 字节字面量\nwith open('binary_data.bin', 'wb') as f:\n    f.write(data_to_write)\n\n# 示例: 从文件读取原始字节\nwith open('binary_data.bin', 'rb') as f:\n    read_data = f.read()\n    print(\"读取的二进制数据:\", read_data)\n</code></pre>\n</li>\n<li>\n<p><strong><code>'+'</code> (更新模式)</strong>: 此修饰符允许在同一个文件对象上进行读取<em>和</em>写入操作。它必须与主要模式之一（<code>'r'</code>、<code>'w'</code>或<code>'a'</code>）组合使用。</p>\n<ul>\n<li><strong><code>'r+'</code></strong>: 以读写方式打开文件。文件指针位于开头。文件<em>必须</em>存在（与<code>'r'</code>类似）。</li>\n<li><strong><code>'w+'</code></strong>: 以写读方式打开文件。如果文件不存在则创建，如果存在则截断（与<code>'w'</code>类似）。文件指针位于开头。</li>\n<li><strong><code>'a+'</code></strong>: 以追加和读取方式打开文件。如果文件不存在则创建。对于写入操作，文件指针最初位于文件<em>末尾</em>。读取位置取决于您在文件中寻址的位置。</li>\n</ul>\n<p>使用<code>'+'</code>模式需要仔细管理文件指针（使用<code>seek()</code>等方法，此处未详细说明），以便在期望的位置读写数据。</p>\n<pre><code class=\"language-python\"># 示例: 使用 'r+' 读取然后覆盖文件的一部分\n# 假设文件 'data.txt' 包含 \"Line 1\\nLine 2\\n\"\ntry:\n    with open('data.txt', 'r+') as f:\n        content = f.read()\n        print(\"原始内容:\", content)\n        # 将指针移回开头以覆盖\n        f.seek(0)\n        f.write(\"已覆盖!\")\n        # 注意: 如果新内容较短，原始内容的其余部分可能会保留\nexcept FileNotFoundError:\n    print(\"错误: data.txt 未找到。\")\n</code></pre>\n</li>\n</ul>\n<h3>常用模式总结</h3>\n<table>\n<thead>\n<tr>\n<th align=\"left\">模式</th>\n<th align=\"left\">描述</th>\n<th align=\"left\">文件存在时的行为</th>\n<th align=\"left\">文件不存在时的行为</th>\n<th align=\"left\">指针位置</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>r</code></td>\n<td align=\"left\">读取 (文本，默认)</td>\n<td align=\"left\">从开头读取</td>\n<td align=\"left\"><code>FileNotFoundError</code></td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>w</code></td>\n<td align=\"left\">写入 (文本)</td>\n<td align=\"left\">截断 (擦除)</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>a</code></td>\n<td align=\"left\">追加 (文本)</td>\n<td align=\"left\">追加到末尾</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">末尾</td>\n</tr>\n<tr>\n<td align=\"left\"><code>x</code></td>\n<td align=\"left\">独占创建 (文本)</td>\n<td align=\"left\"><code>FileExistsError</code></td>\n<td align=\"left\">创建</td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>rb</code></td>\n<td align=\"left\">读取 (二进制)</td>\n<td align=\"left\">从开头读取</td>\n<td align=\"left\"><code>FileNotFoundError</code></td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>wb</code></td>\n<td align=\"left\">写入 (二进制)</td>\n<td align=\"left\">截断 (擦除)</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>ab</code></td>\n<td align=\"left\">追加 (二进制)</td>\n<td align=\"left\">追加到末尾</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">末尾</td>\n</tr>\n<tr>\n<td align=\"left\"><code>r+</code></td>\n<td align=\"left\">读写 (文本)</td>\n<td align=\"left\">从开头读写</td>\n<td align=\"left\"><code>FileNotFoundError</code></td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>w+</code></td>\n<td align=\"left\">写读 (文本)</td>\n<td align=\"left\">截断 (擦除)</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">开头</td>\n</tr>\n<tr>\n<td align=\"left\"><code>a+</code></td>\n<td align=\"left\">追加和读取 (文本)</td>\n<td align=\"left\">追加到末尾</td>\n<td align=\"left\">创建</td>\n<td align=\"left\">末尾 (写入时)</td>\n</tr>\n</tbody>\n</table>\n<p>选择正确的模式对于安全高效地操作文件非常重要。始终考虑是否需要保留现有数据、文件是否必须已存在，以及您是在处理文本数据还是原始二进制数据。如示例所示，使用<code>with</code>语句可以确保即使发生错误，文件也会自动关闭，这对于可靠的文件处理是必不可少的。</p>",
+  "slug": "python-file-modes",
+  "updates": [],
+  "references": [
+    {
+      "id": 6370,
+      "title": "Built-in Functions - open()",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/functions.html#open",
+      "doi": "",
+      "note": "`open()` 函数的官方参考文献，详细说明所有可用模式和参数。",
+      "order": 1,
+      "created_at": "2025-09-05T01:21:57.095804Z",
+      "updated_at": "2025-09-07T21:27:20.783511Z"
+    },
+    {
+      "id": 6371,
+      "title": "Chapter 10: Files and Exceptions",
+      "author": "Eric Matthes",
+      "year": "2019",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 10",
+      "url": "https://www.oreilly.com/library/view/python-crash-course/9781492071271/ch10.html",
+      "doi": "",
+      "note": "对文件读写和异常处理的实用介绍。",
+      "order": 2,
+      "created_at": "2025-09-05T01:21:57.153903Z",
+      "updated_at": "2025-09-07T21:27:31.890048Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

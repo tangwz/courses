@@ -1,0 +1,61 @@
+{
+  "id": 1201,
+  "title": "降维思路介绍",
+  "meta_title": "降维思路概览",
+  "meta_description": "简要介绍为何以及如何在EDA后使用降维（如PCA）的方法。",
+  "content": "<p>在处理数据时，我们有时会遇到一个难题：特征过多，也称作高维度。尽管细致的EDA有助于我们理解每个变量，但管理数百或数千个特征可能会变得繁琐，甚至对后续的分析或建模不利。降维是一组用于减少特征数量的技术，同时力求保留原始数据集中重要的信息。</p>\n<h3>为什么要降维？</h3>\n<p>处理高维数据会带来一些难题：</p>\n<ol>\n<li><strong>维度灾难：</strong> 随着特征数量的增加，它们所代表的空间体积呈指数级增长。因此，可用数据变得稀疏。这种稀疏性使得查找有意义的模式更加困难，因为数据点彼此之间往往相距很远。统计方法和机器学习 (machine learning)算法可能表现不佳，因为在更高维度中，可靠的估计需要更多的数据。</li>\n<li><strong>多重共线性与冗余：</strong> 我们早期的双变量分析，特别是相关性热图，可能已显示某些特征之间存在强关联。高度关联的特征通常包含冗余信息。包含所有这些特征可能会使模型复杂化，而不会增加多少预测价值，有时甚至会导致算法中的数值不稳定。</li>\n<li><strong>计算成本：</strong> 处理和建模包含大量特征的数据集需要大量的计算资源（内存和处理时间）。降维可以使计算更快、更可行。</li>\n<li><strong>模型简洁性与可解释性：</strong> 具有较少特征的简单模型通常更容易理解、解释和说明。降维可以带来更精简的模型。</li>\n<li><strong>过拟合 (overfitting)：</strong> 在高维数据上训练的模型更容易过拟合。这意味着模型过于拟合训练数据的噪声和特定模式，未能很好地泛化到新的、未见过的数据。减少特征有助于降低此风险。</li>\n<li><strong>可视化：</strong> 人类只能在2维或3维空间中轻松地进行数据可视化。降维技术对于将高维数据投影到较低维度（通常是2D或3D）以进行视觉分析非常重要。</li>\n</ol>\n<h3>降维的核心思路</h3>\n<p>主要目标是将数据从高维空间 (high-dimensional space)转换到低维空间，同时尽量减少重要信息的损失。实现此目的有两种主要方法：</p>\n<ol>\n<li>\n<p><strong>特征选择：</strong> 这种方法选择原始特征的一个子集，并丢弃其余部分。选择过程通常基于在EDA中获得的见解或通过使用统计度量进行。例如：</p>\n<ul>\n<li>移除方差极低的特征（它们变化不大，因此包含的信息很少）。</li>\n<li>移除与其他特征高度关联的特征（从一组高度关联的特征中只保留一个）。</li>\n<li>使用统计测试或分数来评估每个特征与目标变量之间的关系（如果适用）。\n特征选择保留了所选特征的原始含义和可解释性。</li>\n</ul>\n</li>\n<li>\n<p><strong>特征提取（投影）：</strong> 这种方法通过组合或转换原始特征来创建<em>新的</em>、更少的特征。这些新特征旨在获取原始数据中最重要的信息或方差。这里最知名的方法是主成分分析（PCA）。</p>\n</li>\n</ol>\n<ul>\n<li><strong>主成分分析（PCA）：</strong> PCA在数据方差最大的方向上找到新的轴（主成分）。这些成分是原始特征的线性组合，并且彼此正交（不相关）。成分根据它们捕获的方差量进行排序。通过只保留前几个捕获大部分总方差的主成分，我们可以减少维度。尽管这种方法很强大，但缺点是这些新成分是原始成分的组合，可能更难直接解释。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-qzwgrt\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", color=\"#ced4da\", fillcolor=\"#e9ecef\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_0 {\n    label = \"原始高维数据\";\n    bgcolor=\"#f8f9fa\";\n    node [fillcolor=\"#a5d8ff\"];\n    F1 [label=\"特征 1\"];\n    F2 [label=\"特征 2\"];\n    Fdots [label=\"...\", shape=plaintext];\n    Fn [label=\"特征 N\"];\n  }\n\n  subgraph cluster_1 {\n     label = \"降维方法\";\n     bgcolor=\"#f8f9fa\";\n     node[fillcolor=\"#96f2d7\"]\n     Algo [label=\"算法\\n（如：PCA，选择）\"];\n  }\n\n  subgraph cluster_2 {\n    label = \"降维后的低维数据\";\n    bgcolor=\"#f8f9fa\";\n    node [fillcolor=\"#ffec99\"];\n    C1 [label=\"成分 1\\n（或选定特征 1）\"];\n    C2 [label=\"成分 2\\n（或选定特征 2）\"];\n    Cdots [label=\"...\", shape=plaintext];\n    Ck [label=\"成分 k\\n（或选定特征 k）\\n(k < N)\"];\n  }\n\n  {F1, F2, Fn} -> Algo [ arrowhead=\"none\", minlen=2 ];\n  Algo -> {C1, C2, Ck};\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-qzwgrt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>降维流程：原始特征由算法处理（可以是选择或像PCA这样的提取），以生成较小的一组特征或成分。</p>\n</blockquote>\n<h3>在数据分析工作流程中的作用</h3>\n<p>降维通常被认为是数据预处理步骤，在初始EDA<em>之后</em>执行，但在应用复杂机器学习 (machine learning)算法<em>之前</em>进行。从EDA中获得的见解，例如理解特征分布、识别关联以及检测异常值，对于有效选择和应用适合的降维技术非常有益。</p>\n<p>虽然我们不会在本课程中实现像PCA这样的具体算法，但理解降维的<em>原因</em>和<em>内容</em>很重要。它为如何通过EDA获得的详细理解来指导数据简化策略、可能提升模型性能以及使结果更易于解释或可视化提供了背景，尤其是在处理复杂的高维数据集时。请记住，降维涉及权衡；减少特征可能会简化数据，但也可能导致一些信息丢失。使用它的决定取决于你分析的具体目标和数据集的特点。</p>",
+  "slug": "intro-dimensionality-reduction",
+  "updates": [],
+  "references": [
+    {
+      "id": 431,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "",
+      "note": "涵盖统计学习方法的综合教材，包括对高维数据和维度概念的讨论。",
+      "order": 1,
+      "created_at": "2025-09-04T14:30:48.668653Z",
+      "updated_at": "2025-09-07T16:16:52.761931Z"
+    },
+    {
+      "id": 432,
+      "title": "A Tutorial on Principal Component Analysis",
+      "author": "Jonathon Shlens",
+      "year": "2014",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1404.1100",
+      "doi": "10.48550/arXiv.1404.1100",
+      "note": "被广泛引用的教程，提供了主成分分析（PCA）的清晰解释。",
+      "order": 2,
+      "created_at": "2025-09-04T14:30:48.671509Z",
+      "updated_at": "2025-09-07T16:16:47.375074Z"
+    },
+    {
+      "id": 433,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher M. Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.springer.com/gp/book/9780387310732",
+      "doi": "",
+      "note": "机器学习的标准教材；第12章对降维方法进行了严谨的处理。",
+      "order": 3,
+      "created_at": "2025-09-04T14:30:48.674334Z",
+      "updated_at": "2025-09-07T16:16:48.569911Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

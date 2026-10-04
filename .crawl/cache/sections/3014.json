@@ -1,0 +1,45 @@
+{
+  "id": 3014,
+  "title": "提示词的版本控制",
+  "meta_title": "提示词的版本控制",
+  "meta_description": "在开发过程中管理和追踪提示词变更的优化做法。",
+  "content": "<p>随着您对提示词 (prompt)进行迭代，根据评估结果优化指令、添加示例或调整上下文 (context)，您会很快发现追踪这些变更变得非常必要。就像源代码一样，提示词是您应用程序开发过程中的核心资产。如果没有系统的方法来管理它们的演进，您就有丢失有效版本、引入回退或难以重现以前结果的风险。这时，版本控制系统，尤其是 Git，就变得必不可少。</p>\n<p>将版本控制原则应用于您的提示词带来多项重要好处：</p>\n<ol>\n<li><strong>追踪历史：</strong> 您可以获得提示词每次变更的完整历史记录。您可以查看谁在何时更改了什么，以及理想情况下为什么更改（通过提交信息）。这对于理解提示词如何达到当前状态非常有帮助。</li>\n<li><strong>可重现性：</strong> 如果新的提示词迭代表现不佳或破坏了功能，版本控制允许您轻松恢复到先前已知可用的版本。这个安全网鼓励尝试。</li>\n<li><strong>协作：</strong> 当多个团队成员进行提示词工程时，版本控制系统可以避免冲突的变更，并为所有提示词提供一个中心、共享的真实来源。团队成员可以审查彼此的提示词修改。</li>\n<li><strong>实验：</strong> 版本控制使得尝试不同提示词变体变得安全。您可以创建单独的分支来测试新想法（例如添加思维链推理 (inference)或尝试少样本示例），而不会影响主要工作提示词。</li>\n<li><strong>将提示词与性能关联：</strong> 通过将提交哈希与评估结果关联，您可以明确地将特定提示词版本与观察到的性能指标关联起来，使您的变更影响清晰可见。</li>\n</ol>\n<h3>使用 Git 实现提示词 (prompt)版本控制</h3>\n<p>最常用且有效的方法是使用 Git 对提示词进行版本控制，这与管理源代码所用的工具相同。以下是具体做法：</p>\n<p><strong>1. 将提示词存储在您的代码库中：</strong>\n将您的提示词文件视为任何其他开发产物。将它们直接存储在您项目的 Git 仓库中。</p>\n<ul>\n<li><strong>文件格式：</strong> 纯文本文件（<code>.txt</code>）或 Markdown（<code>.md</code>）对于简单提示词通常足够。如果您的提示词涉及复杂的结构或模板化（这在框架中会更常见），请考虑使用结构化格式，例如 YAML（<code>.yaml</code>）或 JSON（<code>.json</code>）。这些格式更易于程序化解析，并能清楚地划分提示词的不同部分（指令、示例、输入占位符）。</li>\n<li><strong>组织方式：</strong> 在您的代码库中创建一个专用目录，也许命名为 <code>prompts/</code> 或 <code>prompt_templates/</code>，用于存储这些文件。您可以根据应用程序功能或任务进一步组织它们（例如，<code>prompts/summarization/</code>，<code>prompts/qa_system/</code>）。</li>\n</ul>\n<p><strong>2. 编写有意义的提交信息：</strong>\n这点很重要。像“更新了提示词”这样的提交信息没有帮助。相反，请描述<em>什么</em>改变了以及<em>为什么</em>改变。良好的提交信息可以充当您迭代过程的文档。</p>\n<ul>\n<li><strong>示例：</strong>\n<ul>\n<li><code>feat(prompts): 为分类任务添加两样本示例</code></li>\n<li><code>fix(prompts): 澄清摘要器提示词中的 JSON 输出结构</code></li>\n<li><code>perf(prompts): 缩短合规性提示词的上下文以减少 token 数量</code></li>\n<li><code>refactor(prompts): 重写指令以提高清晰度</code></li>\n</ul>\n</li>\n</ul>\n<p><strong>3. 使用分支进行实验：</strong>\n善用 Git 分支同时管理不同方向的提示词开发。如果您想测试一种明显不同的方法，请创建一个新分支：</p>\n<pre><code class=\"language-bash\"># 切换到主分支（如果不在主分支）\ngit checkout main\n\n# 创建并切换到新的实验分支\ngit checkout -b experiment/try-role-prompting\n\n# 在此分支中修改您的提示词文件...\n# git add prompts/your_prompt.txt\n# git commit -m \"实验：测试分配“专家分析师”角色\"\n\n# 在此分支上评估提示词...\n</code></pre>\n<p>如果实验成功，您可以将分支合并回您的主开发线。如果失败，您可以简单地丢弃该分支，不动您的主要提示词。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1x2ugvt\" \n              data-graph-definition='digraph PromptVersions {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  A [label=\"v1.0 (基础提示词)\\nCommit: abc123\", fillcolor=\"#a5d8ff\", style=filled];\n  B [label=\"v1.1 (优化指令)\\nCommit: def456\", fillcolor=\"#a5d8ff\", style=filled];\n  C [label=\"v1.0-实验-思维链 (添加思维链示例)\\nCommit: ghi789\", fillcolor=\"#ffec99\", style=filled];\n  D [label=\"v1.2 (合并思维链实验)\\nCommit: jkl012\", fillcolor=\"#a5d8ff\", style=filled];\n  E [label=\"v1.1-实验-格式 (尝试 JSON 输出)\\nCommit: mno345\", fillcolor=\"#ffc9c9\", style=filled]; // 失败的实验\n\n  A -> B [label=\" 主分支 \"];\n  A -> C [label=\" 实验分支 \"];\n  B -> E [label=\" 实验分支 (已丢弃)\"];\n  B -> D [label=\" 主分支 \"];\n  C -> D [label=\" 合并成功的实验 \"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1x2ugvt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是 Git 分支如何用于管理提示词实验的简化视图。每个方框代表一个已提交的提示词版本，可能位于不同分支。</p>\n</blockquote>\n<p><strong>4. 记录提示词元 (token)数据：</strong>\n虽然 Git 追踪变更，但它本身不存储与提示词版本相关的<em>上下文 (context)</em>或<em>性能</em>。考虑添加元数据：</p>\n<ul>\n<li><strong>在注释中：</strong> 在提示词文件本身内包含注释，详细说明其目的、它设计的LMM目标，以及在成功测试期间使用的重要生成参数 (parameter)（如温度）。</li>\n<li><strong>README 文件：</strong> 在您的提示词目录中添加一个 <code>README.md</code> 文件，解释每个提示词文件的目的以及使用的任何约定。</li>\n<li><strong>记录结果：</strong> 当您运行评估时（如前一部分所述），在结果旁边记录所测试提示词版本的 Git 提交哈希。这建立了一个可追溯的记录，将特定的提示词代码与其性能关联起来。</li>\n</ul>\n<p>通过将提示词视为开发流程中的一等公民并应用标准版本控制实践，您为系统化提示词工程奠定根基。这种方法确保您的进度得到追踪，实验易于管理，协作有效，最终带来更可靠、更高性能的 LLM 应用程序。尽管专业的提示词管理平台正在出现，但掌握这些 Git 版本控制基本技巧会带来直接且显著的益处。</p>",
+  "slug": "version-control-for-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 9012,
+      "title": "Pro Git",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "Git的基础指南，解释了其对管理提示演变至关重要的概念和操作。",
+      "order": 1,
+      "created_at": "2025-09-05T02:13:44.916863Z",
+      "updated_at": "2025-09-09T04:58:03.591458Z"
+    },
+    {
+      "id": 9013,
+      "title": "Prompt Engineering Guide",
+      "author": "Prompt Engineering Guide Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.promptingguide.ai/",
+      "doi": "",
+      "note": "一个全面的、社区维护的资源，详细介绍了提示设计、迭代和最佳实践。",
+      "order": 2,
+      "created_at": "2025-09-05T02:13:44.920803Z",
+      "updated_at": "2025-09-09T04:58:10.510598Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

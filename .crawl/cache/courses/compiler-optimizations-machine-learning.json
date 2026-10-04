@@ -1,0 +1,435 @@
+{
+  "id": 247,
+  "title": "机器学习编译优化",
+  "meta_title": "机器学习编译优化：TVM、MLIR与XLA",
+  "meta_description": "掌握AI编译器技术。学习图下沉、核函数融合、循环分块和MLIR，实现高性能机器学习推理。",
+  "description": "机器学习模型需要大量计算资源，因此需要将高级框架高效地转换为机器码。本课程介绍Apache TVM、XLA和MLIR等深度学习编译器的架构与工程原理。本课程讲述从计算图到硬件专用二进制文件的转换流程。\n\n学员将分析中间表示（IR）、图级优化（包含算子融合和布局转换）以及循环优化（如分块和向量化）。课程内容包含多面体模型、自动调度策略以及GPU和专用加速器的内存层次管理。重点在于软件逻辑与硬件限制如何相互配合，以最大化吞吐量并减少延迟。",
+  "short_description": "应用编译器技术，转换并优化深度学习模型，以实现高性能硬件运行。",
+  "excerpt": "掌握AI编译器的工程技术。学习中间表示、图下沉、循环分块以及使用TVM、MLIR和Triton进行硬件专用代码生成。",
+  "prerequisites": "扎实的Python基础，熟悉机器学习基础知识。",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "中间表示",
+      "description": "设计并操作用于张量计算的高级与低级中间表示。"
+    },
+    {
+      "topic": "图优化",
+      "description": "实现图级转换，如算子融合、常量折叠和死代码消除。"
+    },
+    {
+      "topic": "循环转换",
+      "description": "应用高级循环优化，如分块、展开和重排序，以最大化缓存局部性。"
+    },
+    {
+      "topic": "MLIR架构",
+      "description": "运用多级中间表示框架构建自定义方言与下沉流水线。"
+    },
+    {
+      "topic": "自动调优",
+      "description": "制定自动核函数搜索和成本建模策略，以确定最佳执行调度。"
+    }
+  ],
+  "duration": 28,
+  "slug": "compiler-optimizations-machine-learning",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-24T10:13:26.056284Z",
+  "updated_at": "2026-10-02T07:25:30.622509Z",
+  "chapters": [
+    {
+      "id": 1378,
+      "title": "深度学习编译器的结构",
+      "meta_title": "深度学习编译器架构与IR",
+      "meta_description": "了解深度学习编译器的架构。学习计算图、张量抽象和编译生命周期。",
+      "number": 1,
+      "slug": "anatomy-deep-learning-compilers",
+      "content": "深度学习框架通过灵活、动态的抽象机制优先考虑开发人员的生产力。然而，硬件加速器要求静态、高度优化的指令流，以实现最高效率。深度学习编译器通过将高级数学描述转换为可执行机器码来弥合这一差距。此转换过程包含不同的阶段，这些阶段逐步降低抽象层次，从逻辑运算符转变为硬件原语。\n\n与侧重于标量逻辑和复杂流程控制的通用编译器不同，AI编译器主要面向大规模并行和张量代数。优化主要单元从基本块转变为计算图。这种结构差异决定了编译器如何表示、分析和转换代码。例如，一个在数学上表示为 $$C = A \\times B$$ 的简单矩阵乘法，涉及关于形状和数据类型的高级语义，这些语义在编译的初始阶段必须得到保留。\n\n本章确立了编译流程的架构基础。我们将首先定义张量处理单元与标准CPU相比的具体要求。你将分析有向无环图 (DAG) 作为模型执行的核心数据结构的作用，并研究静态单赋值 (SSA) 形式如何促进神经网络中的依赖项跟踪。\n\n我们还将区分中间表示 (IR) 的两种主要类型。你将识别图级别IR的特点，这类IR处理逻辑简化，以及指令级别IR的特点，这类IR处理内存分配和循环调度。本章以一个实践环节结束，在该环节中你将检查TVM的Relay IR的结构，以在一个生产级系统中观察这些原理。",
+      "sections": [
+        {
+          "id": 7912,
+          "title": "编译流程概览",
+          "meta_title": "AI编译流程阶段",
+          "meta_description": "概述了从前端解析到后端代码生成的端到端编译流程。",
+          "slug": "compilation-pipeline-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7913,
+          "title": "计算图和有向无环图",
+          "meta_title": "AI编译器中的计算图",
+          "meta_description": "分析有向无环图（DAG）作为表示模型执行的主要数据结构。",
+          "slug": "computational-graphs-dags",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7915,
+          "title": "ML 中的静态单赋值",
+          "meta_title": "机器学习中的 SSA 形式",
+          "meta_description": "考察静态单赋值 (SSA) 形式及其在张量依赖项分析中的作用。",
+          "slug": "static-single-assignment-ml",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7918,
+          "title": "高级IR与低级IR",
+          "meta_title": "高级IR与低级IR",
+          "meta_description": "辨析用于逻辑操作的图级IR与用于硬件指令的低级IR。",
+          "slug": "high-level-vs-low-level-ir",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7920,
+          "title": "动手实践：检查 Relay IR",
+          "meta_title": "实践：检查 Relay IR",
+          "meta_description": "一个关于在 TVM 中可视化和检查 Relay 中间表示的实践环节。",
+          "slug": "hands-on-inspecting-relay-ir",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1381,
+      "title": "图级转换",
+      "meta_title": "图级优化方法",
+      "meta_description": "学习图级优化：算子融合、常量折叠和神经网络中的公共子表达式消除。",
+      "number": 2,
+      "slug": "graph-level-transformations",
+      "content": "当高级框架将模型降级为中间表示 (IR) 后，由此产生的计算图表示了操作的逻辑流程。然而，将此图直接翻译成机器码通常会导致次优的性能。将每个节点作为单独的核（kernel）执行会引入大量的调度开销，并对内存带宽造成不必要的负担。本章侧重于在编译器生成具体的硬件指令之前，优化此图的结构。\n\n这里的首要目标是减少内存访问和核（kernel）启动的次数。例如，执行像如下的操作：\n\n$$C = \\text{ReLU}(A + B)$$\n\n如果作为两个不同的核（kernel）执行，则需要将 $A + B$ 的结果写入全局内存，然后立即将其读回以进行激活函数运算。通过应用图级转换，编译器可以将这些操作融合成一个核（kernel），将中间数据保留在寄存器或缓存中。\n\n您将学到如何实现具体的优化流程，例如算子融合（operator fusion），它将兼容的节点合并以提高局部性。本文档还包含代数简化（algebraic simplification），它借助数学属性用更廉价的替代方案替换开销大的操作。我们将审视布局转换（layout transformations），确保张量以 $NCHW$ 或 $NHWC$ 等内存格式存储，这些格式与目标硬件的访问模式一致。最后，本章讲述了通用清理流程，例如死代码消除（DCE）和公共子表达式消除（CSE），以确保图只包含必要的计算。",
+      "sections": [
+        {
+          "id": 7922,
+          "title": "算子融合策略",
+          "meta_title": "算子融合：垂直与水平",
+          "meta_description": "垂直与水平算子融合技术，以减少核函数启动开销和内存访问。",
+          "slug": "operator-fusion-strategies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7923,
+          "title": "代数简化",
+          "meta_title": "编译器中的代数简化",
+          "meta_description": "运用代数规则简化张量表达式并减少计算复杂度。",
+          "slug": "algebraic-simplification",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7924,
+          "title": "布局转换",
+          "meta_title": "张量布局转换 (NCHW/NHWC)",
+          "meta_description": "通过在NCHW和NHWC等格式之间转换张量布局，优化内存访问模式。",
+          "slug": "layout-transformation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7925,
+          "title": "死代码消除与公共子表达式消除",
+          "meta_title": "ML 图中的 DCE 和 CSE",
+          "meta_description": "移除冗余计算和未使用的图节点，以简化执行。",
+          "slug": "dead-code-cse",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7926,
+          "title": "动手实践：实现融合遍",
+          "meta_title": "实践：编写融合遍",
+          "meta_description": "编写自定义编译器遍，以识别并融合计算图中的兼容算子。",
+          "slug": "hands-on-implementing-fusion-pass",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1382,
+      "title": "内核优化与循环调度",
+      "meta_title": "循环优化与内核调度",
+      "meta_description": "掌握机器学习内核的循环优化：分块、向量化、循环展开和重排序，以获得最高吞吐量。",
+      "number": 3,
+      "slug": "kernel-optimization-loop-schedules",
+      "content": "图级转换主要用于减少算子启动的开销以及管理它们之间内存的负担。但是，大部分执行时间都花费在算子本身内部。这些内核通常由执行线性代数运算的密集嵌套循环组成。将数学逻辑直接转换为代码，常常因为缓存使用效率不高和指令级并行性未被充分发挥，导致性能达不到最佳。\n\n本章侧重于循环优化的机制。我们区分计算（程序算什么）与调度（程序怎么执行）。例如，矩阵乘法在数学上可以这样定义：\n\n$$C_{i,j} = \\sum_{k} A_{i,k} \\times B_{k,j}$$\n\n尽管结果$C_{i,j}$保持不变，但处理器遍历$i$、$j$和$k$的顺序会极大地影响吞吐量。您将学习如何调整这些循环嵌套，以适应底层硬件架构。\n\n我们将考察几种具体的调度原语，例如：\n\n*   **循环分块（Loop Tiling）：** 将迭代空间划分为更小的块，以充分利用L1和L2缓存中的数据。\n*   **向量化（Vectorization）：** 将标量操作映射到SIMD（单指令多数据）通道，以便每个周期处理多个元素。\n*   **重排序与循环展开（Reordering and Unrolling）：** 修改循环结构以隐藏内存延迟并减少分支预测开销。\n\n通过应用这些技术，您将可以把一个通用但运行缓慢的实现转变为高性能内核。这个过程构成了编译器将抽象张量操作映射到具体机器码的工程依据。",
+      "sections": [
+        {
+          "id": 7927,
+          "title": "循环优化空间",
+          "meta_title": "认识循环优化空间",
+          "meta_description": "定义循环变换的搜索范围，以及内核调度中的权衡。",
+          "slug": "loop-optimization-space",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7930,
+          "title": "循环分块与块化",
+          "meta_title": "用于缓存局部性的循环分块",
+          "meta_description": "实施循环分块以提高缓存层级中的数据重用并减少内存带宽压力。",
+          "slug": "loop-tiling-blocking",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7932,
+          "title": "向量化与SIMD",
+          "meta_title": "向量化与SIMD指令",
+          "meta_description": "将标量操作映射到单指令多数据（SIMD）通道以实现并行处理。",
+          "slug": "vectorization-simd",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7934,
+          "title": "循环重排与展开",
+          "meta_title": "循环重排与展开",
+          "meta_description": "调整循环迭代顺序并展开循环，以隐藏延迟并提高流水线使用效率。",
+          "slug": "loop-reordering-unrolling",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7936,
+          "title": "动手实践：优化矩阵乘法",
+          "meta_title": "实践：优化矩阵乘法",
+          "meta_description": "对矩阵乘法核心应用分块和向量化调度，以衡量性能提升。",
+          "slug": "hands-on-optimizing-matrix-multiplication",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1384,
+      "title": "MLIR 架构",
+      "meta_title": "MLIR 框架及方言",
+      "meta_description": "MLIR 概述：方言、Linalg、Affine 转换以及渐进式降低流程。",
+      "number": 4,
+      "slug": "mlir-infrastructure",
+      "content": "传统编译器架构通常促使从源代码迅速转换为低级表示。这种做法对于标量CPU指令固然有效，但它常会丢失有助于高效优化密集矩阵计算的结构信息。MLIR（多级中间表示）解决了这一局限，它使不同抽象级别的操作能够在同一模块中共存。这种架构支持渐进式降低，在此过程中，高级张量语义（例如形状信息 $$[N, C, H, W]$$）会得到保留和优化，然后才会转换为硬件专用指令。\n\n本单元审视MLIR体系的模块化组件。我们将着重说明“方言”这一结构，它作为操作和类型的逻辑分组。你将学习用于表示结构化线性代数的 `linalg` 方言，以及用于内存依赖性分析的 `affine` 方言。本文还详细介绍了用于转换中间表示的模式重写架构。到本章结束时，你将了解如何定义自定义方言，并实现一个降低pass，将抽象逻辑转换为像LLVM IR这样的可执行目标。",
+      "sections": [
+        {
+          "id": 7939,
+          "title": "MLIR 架构和方言",
+          "meta_title": "MLIR 架构和方言",
+          "meta_description": "了解 MLIR 可扩展的架构以及方言在表示中的作用。",
+          "slug": "mlir-architecture-dialects",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7941,
+          "title": "Linalg 方言",
+          "meta_title": "理解 Linalg 方言",
+          "meta_description": "使用 Linalg 方言表示结构化的张量操作，适用于缓冲化和融合。",
+          "slug": "linalg-dialect",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7943,
+          "title": "仿射方言与分析",
+          "meta_title": "用于多面体优化的仿射方言",
+          "meta_description": "利用仿射方言进行多面体优化和依赖性分析。",
+          "slug": "affine-dialect-analysis",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7946,
+          "title": "模式重写与降级",
+          "meta_title": "模式重写与降级",
+          "meta_description": "定义重写模式并将方言降级到可执行目标的机制。",
+          "slug": "pattern-rewriting-lowering",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7948,
+          "title": "动手实践：创建自定义方言",
+          "meta_title": "实践：自定义 MLIR 方言",
+          "meta_description": "逐步实现一个最小的自定义 MLIR 方言和降级过程。",
+          "slug": "hands-on-creating-custom-dialect",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1386,
+      "title": "硬件感知代码生成",
+      "meta_title": "GPU代码生成与Tensor Cores",
+      "meta_description": "为GPU生成代码。包含内存层级结构、存储体冲突、warp分歧以及Tensor Core内部函数。",
+      "number": 5,
+      "slug": "hardware-aware-code-generation",
+      "content": "到目前为止，编译流程处理的是张量操作的抽象表示。图级转换和循环分块提升了总体数据局部性，但它们本身并未考虑目标设备的物理特性。为实现最高吞吐量，编译器必须将中间表示（IR）直接映射到硬件的指令集和内存层级结构。\n\n本章着重介绍图形处理器（GPU）的代码生成策略，以NVIDIA架构作为主要参考。你将了解抽象循环嵌套如何转换为CUDA执行模型。此过程包括将逻辑迭代映射到线程块和单个线程，同时确保内存合并以最大化带宽使用率。\n\n高效的内存访问通常是深度学习工作负载中的限制因素。我们将分析GPU内存层级结构，具体来说，是数据从全局内存到共享内存和寄存器的移动。你将学习避免共享内存中存储体冲突的对策，当多个线程同时尝试访问同一存储体中不同地址时，就会发生这种冲突。\n\n本文还将介绍专用硬件单元的使用。现代加速器提供矩阵乘累加单元，例如Tensor Cores，它们提供比标准浮点单元高得多的算术密度。你将学习编译器如何发出必要的内部函数以针对这些单元。例如，一个标准的矩阵乘法运算\n\n$$C_{m,n} = \\sum_{k} A_{m,k} \\times B_{k,n}$$\n\n必须分解成与硬件特定操作数大小和数据类型相符的片段。\n\n最后，我们将推出Triton，一种语言和编译器，旨在自动化许多此类复杂的内存管理任务。在本章结束时，你将明白生成高性能核函数背后的机制，以及决定其效率的具体限制条件。",
+      "sections": [
+        {
+          "id": 7951,
+          "title": "GPU 内存层次结构映射",
+          "meta_title": "映射到 GPU 内存层次结构",
+          "meta_description": "在 GPU 架构上将数据映射到全局、共享和寄存器内存的策略。",
+          "slug": "gpu-memory-hierarchy-mapping",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7953,
+          "title": "线程绑定与Warp分化",
+          "meta_title": "线程绑定与分化",
+          "meta_description": "管理线程块执行并尽量减少warp分化，以实现连贯的控制流。",
+          "slug": "thread-binding-warp-divergence",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7955,
+          "title": "张量核内联函数",
+          "meta_title": "张量核编程",
+          "meta_description": "在专用加速器上使用硬件内联函数进行混合精度矩阵乘法。",
+          "slug": "tensor-core-intrinsics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7957,
+          "title": "共享内存体位与冲突",
+          "meta_title": "避免共享内存体位冲突",
+          "meta_description": "组织数据访问模式以防止体位冲突和序列化的技术。",
+          "slug": "shared-memory-banking-conflicts",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7959,
+          "title": "动手实践：编写 Triton 核函数",
+          "meta_title": "实践：Triton 核函数开发",
+          "meta_description": "使用 Triton 语言开发高性能 GPU 核函数，以避免底层的 CUDA 复杂之处。",
+          "slug": "hands-on-writing-triton-kernels",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1388,
+      "title": "自动调优与搜索空间",
+      "meta_title": "自动调优与成本模型",
+      "meta_description": "通过自动调优实现优化自动化。了解编译器中的搜索空间、遗传算法和成本模型。",
+      "number": 6,
+      "slug": "auto-tuning-search-spaces",
+      "content": "手动优化代码需要为循环分块、向量化和循环展开选择具体参数。对于单个矩阵乘法核，可能的有效调度方案数量很大。如果一个循环嵌套有 $I, J, K$ 维，并且我们应用分块因子 $t_i, t_j, t_k$，那么仅这些参数的潜在组合可以计算为：\n\n$$ S = |T_i| \\times |T_j| \\times |T_k| $$\n\n当与循环重排、线程绑定和内存范围决策结合时，总的配置空间呈指数级增长。这使得手动调优对于复杂的神经网络来说不切实际。\n\n本章讨论通过自动调优实现内核生成的自动化。我们将优化搜索空间定义为给定计算图的所有合法变换的集合。你将学习编译器如何定义这些空间，并使用模拟退火和遗传算法等搜索算法来找出高性能调度方案。\n\n在硬件上评估每个候选调度方案会产生瓶颈。为解决这个问题，我们引入了统计成本模型。这些模型使用机器学习预测特定配置的吞吐量，使搜索算法无需硬件执行即可估计性能。本文介绍了AutoTVM和Ansor等现代框架的架构，并对比了基于模板的方法和基于生成的方法。你将学习如何配置这些系统，以自动找到深度学习算子的最优参数。",
+      "sections": [
+        {
+          "id": 7962,
+          "title": "定义搜索空间",
+          "meta_title": "定义优化搜索空间",
+          "meta_description": "构建用于有效程序转换和调度的参数化搜索空间。",
+          "slug": "defining-search-space",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7964,
+          "title": "搜索算法：从随机到遗传",
+          "meta_title": "编译器的搜索算法",
+          "meta_description": "评估模拟退火、演化算法和强化学习在遍历搜索空间中的应用。",
+          "slug": "search-algorithms-random-genetic",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7966,
+          "title": "机器学习成本模型",
+          "meta_title": "基于机器学习的成本模型",
+          "meta_description": "构建预测模型以估计特定配置的运行时间，无需完整执行。",
+          "slug": "machine-learning-cost-models",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7967,
+          "title": "Ansor 和 AutoTVM 架构",
+          "meta_title": "Ansor 和 AutoTVM 架构",
+          "meta_description": "分析 Ansor 和 AutoTVM 等现代自动调度器的设计。",
+          "slug": "ansor-autotvm-architecture",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7968,
+          "title": "动手实践：ResNet块的自动调优",
+          "meta_title": "实践：ResNet自动调优",
+          "meta_description": "使用自动调度器查找ResNet中卷积层的最佳配置。",
+          "slug": "hands-on-auto-tuning-resnet",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

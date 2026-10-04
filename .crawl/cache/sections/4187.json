@@ -1,0 +1,45 @@
+{
+  "id": 4187,
+  "title": "为NLP模型生成对抗性文本",
+  "meta_title": "为NLP模型生成对抗性文本",
+  "meta_description": "研究用于文本分类、翻译和生成任务的对抗样本生成方法。",
+  "content": "<p>尽管计算机视觉中的对抗样本已得到充分研究，但处理文本数据带来了独特的难题，需要不同的方法。与图像中连续的像素值不同，文本由字符或词语（标记 (token)）等离散单元构成。这种离散性质意味着我们不能像使用FGSM或PGD等方法处理图像那样，简单地添加小的、通过梯度计算得到的扰动。词嵌入 (embedding)向量 (vector)的微小改动不一定对应另一个有效的词语。</p>\n<p>因此，生成对抗性文本涉及修改离散的标记序列，目标是实现两个主要目的：</p>\n<ol>\n<li><strong>引发错误分类：</strong> 使目标NLP模型（例如情感分析器、文本分类器、翻译模型）产生不正确的输出。</li>\n<li><strong>保持可用性/合理性：</strong> 确保修改后的文本在语法上正确，与原文语义相似（以欺骗人类或下游任务），并保持流畅。</li>\n</ol>\n<p>同时实现这两个目的很困难。激进的修改可能很容易欺骗模型，但对人类读者来说会变得毫无意义。细微的改动可能保留意义，但未能改变模型的预测。</p>\n<h3>文本攻击策略</h3>\n<p>对NLP模型的对抗性攻击通常在字符、词语或句子层面进行操作。</p>\n<h4>字符级扰动</h4>\n<p>这些攻击涉及对词语中的字符进行微小改动。常用方法包括：</p>\n<ul>\n<li><strong>插入：</strong> 添加字符（例如，“great” -> “greaat”）。</li>\n<li><strong>删除：</strong> 移除字符（例如，“positive” -> “postive”）。</li>\n<li><strong>替换：</strong> 交换字符，通常是相邻字符（例如，“review” -> “reveiw”）或视觉上相似的字符（例如，将 'l' 替换为 '1'，或将 'o' 替换为 '0'）。</li>\n<li><strong>Unicode同形字：</strong> 使用来自不同Unicode块的视觉上相同的字符。</li>\n</ul>\n<p>字符级攻击可以不明显，但可能很容易被拼写检查器或简单的预处理步骤检测到。它们有时会扰乱分词 (tokenization)过程，可能对下游模型的性能产生显著影响。</p>\n<h4>词语级扰动</h4>\n<p>这些是目前最常见且通常更有效的方法。它们涉及替换、插入或删除整个词语。</p>\n<ul>\n<li>\n<p><strong>同义词替换：</strong> 这是一种广泛使用的方法。原文中的词语被替换为同义词。核心挑战在于选择满足以下条件的同义词：</p>\n<ul>\n<li>在上下文 (context)中语义恰当。</li>\n<li>充分保留原文意义。</li>\n<li>能有效改变模型的预测。</li>\n</ul>\n<p>寻找合适的候选词通常涉及WordNet等资源，或借助词嵌入 (embedding)（例如Word2Vec、GloVe、BERT嵌入）来寻找嵌入空间中相近的词语。然而，嵌入空间中的接近度并不总是保证上下文的恰当性或语义等价性。</p>\n</li>\n<li>\n<p><strong>词语插入/删除：</strong> 添加中性词语（例如“the”、“a”、“is”）或删除看似不重要的词语有时足以改变模型的预测，特别是当模型严重依赖于特定关键词或序列模式时。</p>\n</li>\n<li>\n<p><strong>词语重排：</strong> 改变词语的顺序，尽管这通常会对语法和意义产生显著影响。</p>\n</li>\n</ul>\n<p>典型的词语级攻击流程包括：</p>\n<ol>\n<li><strong>识别重要词语：</strong> 确定输入文本中哪些词语对模型的预测影响最大。这有时可以使用基于梯度的显著性方法（计算相对于词嵌入的梯度）或基于遮挡的方法（测量移除词语时预测的变化）进行近似。</li>\n<li><strong>生成候选替换词：</strong> 对于已识别的重要词语，寻找潜在的替代品（例如，同义词、嵌入空间中的邻近词语）。</li>\n<li><strong>选择最佳候选词：</strong> 选择能最大化错误分类几率的替换词，同时最小化语义偏差并保持语法正确性。这通常涉及一种搜索策略。</li>\n</ol>\n<h4>句子级扰动</h4>\n<p>这些攻击在句子层面修改结构或内容。</p>\n<ul>\n<li><strong>释义：</strong> 生成表达相同意义但使用不同措辞和结构的替代句子或短语。这可以通过基于规则的系统、回译（翻译成另一种语言再译回）或训练用于释义的生成模型来完成。这些攻击通常非常有效且隐蔽，但生成计算成本较高。</li>\n<li><strong>句子插入/删除：</strong> 添加或移除整个句子，可能显著改变上下文。</li>\n</ul>\n<h3>搜索与优化</h3>\n<p>由于文本修改的搜索空间非常大且离散，寻找最佳扰动通常需要启发式搜索算法。</p>\n<ul>\n<li><strong>贪心搜索：</strong> 迭代地进行单一最佳修改（例如，最能增加目标错误类概率的同义词替换），直到攻击成功或达到限制。</li>\n<li><strong>束搜索：</strong> 在每一步维护多个有前景的修改序列（束），比贪心搜索更全面地探索搜索空间。</li>\n</ul>\n<p>搜索过程中的目标函数通常会平衡模型对目标（错误）类别的预测分数与语义相似性、语法正确性以及修改数量相关的约束。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1oe08n\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.1];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_original {\n        label = \"原始句子\";\n        style=filled;\n        color=\"#e9ecef\";\n        orig [label=\"这部电影太棒了！\"];\n        sentiment_orig [label=\"情感：积极\", shape=ellipse, style=filled, color=\"#b2f2bb\"];\n        orig -> sentiment_orig [label=\" 模型预测\"];\n    }\n\n    subgraph cluster_attack {\n        label = \"对抗性攻击（同义词替换）\";\n        style=filled;\n        color=\"#e9ecef\";\n        attack_step1 [label=\"识别&#39;fantastic&#39;为重要词\"];\n        attack_step2 [label=\"寻找同义词：\\n &#39;amazing&#39;, &#39;superb&#39;, &#39;terrible&#39;\"];\n        attack_step3 [label=\"测试&#39;terrible&#39;\"];\n    }\n\n    subgraph cluster_adversarial {\n        label = \"对抗性句子\";\n        style=filled;\n        color=\"#e9ecef\";\n        adv [label=\"这部电影太糟糕了！\"];\n        sentiment_adv [label=\"情感：消极\", shape=ellipse, style=filled, color=\"#ffc9c9\"];\n        adv -> sentiment_adv [label=\" 模型预测\"];\n    }\n\n    orig -> attack_step1 [style=dashed];\n    attack_step1 -> attack_step2;\n    attack_step2 -> attack_step3;\n    attack_step3 -> adv [style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1oe08n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是一个使用同义词替换进行词语级攻击的简化例子，旨在翻转句子的预测情感。攻击者识别出一个有影响力的词语（“fantastic”），寻找同义词（包括一个情感相反的词语，“terrible”），并替换它以创建对抗样本。</p>\n</blockquote>\n<h3>约束与评估</h3>\n<p>与通过 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>L</mi><mi>p</mi></msub></mrow><annotation encoding=\"application/x-tex\">L_p</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9694em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">L</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">p</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span> 范数衡量的图像扰动不同，评估文本扰动需要不同的度量标准：</p>\n<ul>\n<li><strong>扰动大小：</strong> 修改字符/词语的数量或百分比。</li>\n<li><strong>语义相似性：</strong> 使用嵌入 (embedding)余弦相似度（例如，通用句子编码器）或人工评估来衡量。</li>\n<li><strong>语法正确性：</strong> 使用自动化工具或人工判断来评估。</li>\n<li><strong>攻击成功率：</strong> 成功引发错误分类的样本百分比。</li>\n</ul>\n<p>TextAttack等框架提供了各种基于文本的对抗性攻击实现和评估工具，促进了该方向的研究和基准测试。由于语言的离散、结构化和语义性质，生成有效且不易察觉的对抗性文本仍然是一个重要的难题。</p>",
+  "slug": "adversarial-text-nlp",
+  "updates": [],
+  "references": [
+    {
+      "id": 11352,
+      "title": "Generative Adversarial Examples for Text Classification",
+      "author": "Moustafa Alzantot, Yash Sharma, Ahmed Elgohary, Bo-Jhang Ho, Mani Srivastava, Kai-Wei Chang",
+      "year": "2018",
+      "publisher": "",
+      "journal": "EMNLP 2018 (Conference on Empirical Methods in Natural Language Processing)",
+      "volume": "",
+      "pages": "3682-3693",
+      "url": "https://arxiv.org/abs/1804.07998",
+      "doi": "10.48550/arXiv.1804.07998",
+      "note": "提出了一种开创性的词级对抗性攻击（TextFooler），利用遗传算法，基于词嵌入进行同义词替换。",
+      "order": 1,
+      "created_at": "2025-09-05T07:13:56.069976Z",
+      "updated_at": "2025-09-08T14:33:30.187032Z"
+    },
+    {
+      "id": 11354,
+      "title": "Is BERT Really Robust? A Strong Baseline for Text Adversarial Attacks",
+      "author": "Di Jin, Zhijing Jin, Joey Tianyi Zhou, Peter Szolovits",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Proceedings of the AAAI Conference on Artificial Intelligence",
+      "volume": "34",
+      "pages": "8089-8096",
+      "url": "https://arxiv.org/abs/1907.11932",
+      "doi": "10.48550/arXiv.1907.11932",
+      "note": "提出了一种针对文本分类的强大基线攻击（PWWS），有效利用BERT等上下文嵌入进行语义更佳的词替换。",
+      "order": 3,
+      "created_at": "2025-09-05T07:13:56.106652Z",
+      "updated_at": "2025-09-08T14:33:27.058840Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

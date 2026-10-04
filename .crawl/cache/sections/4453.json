@@ -1,0 +1,45 @@
+{
+  "id": 4453,
+  "title": "基于图的推理结构",
+  "meta_title": "智能体中的基于图的推理结构",
+  "meta_description": "考察使用图结构来管理复杂的推理状态与规划。",
+  "content": "<p>尽管像 ReAct 和思维树这样的架构为智能体推理 (inference)提供了结构化方法，但它们常在执行循环或生成文本中隐式地处理思维或状态的流动。基于图的推理结构提供了一种不同的途径，通过使状态、规划、知识和动作之间的关系变得<em>明确</em>来实现。这种明确的表示，通常采用 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>G</mi><mo>=</mo><mo stretchy=\"false\">(</mo><mi>V</mi><mo separator=\"true\">,</mo><mi>E</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">G=(V, E)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">G</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0576em;\">E</span><span class=\"mclose\">)</span></span></span></span> 的形式，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>V</mi></mrow><annotation encoding=\"application/x-tex\">V</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span></span></span></span> 代表实体（如思维、状态或子目标），<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>E</mi></mrow><annotation encoding=\"application/x-tex\">E</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0576em;\">E</span></span></span></span> 代表它们之间的关系或转换，提供了一种有效的方法来管理智能体内部复杂的认知过程。</p>\n<h3>用图表示认知过程</h3>\n<p>在智能体系统的背景下，图可以模拟推理 (inference)过程的多个方面：</p>\n<ol>\n<li><strong>规划图：</strong> 节点可以表示规划中的子任务或里程碑，而有向边表示依赖关系或先决条件。例如，一个“计划欧洲度假”的任务可能分解为“研究目的地”、“预订航班”、“预订住宿”等节点，边表示研究必须在预订之前进行。这通常会形成一个有向无环图（DAG）。</li>\n<li><strong>状态空间图：</strong> 节点表示智能体可能所处的不同状态，边表示导致状态之间转换的动作或事件。这对于审视可能的结果或理解系统动态很有帮助。</li>\n<li><strong>知识图：</strong> 节点表示实体（如事物、物品、事实），边表示它们之间的关系（例如，“巴黎”位于“法国”）。这使得智能体能够明确地整合并基于结构化知识进行推理，可能将从向量 (vector)存储中取回的信息与内在联系相结合。</li>\n<li><strong>思维或论证图：</strong> 类似于思维树，但可能更加灵活。节点可以是独立的想法、假设或论点，而边表示支持、矛盾、细化或依赖关系。这允许非树状结构，例如合并来自不同推理路径的证据。</li>\n</ol>\n<h3>实现方面的考量</h3>\n<p>实现基于图的推理 (inference)需要审慎思考如何构建、更新和使用图。</p>\n<ul>\n<li><strong>动态构建：</strong> 图通常不是静态的。随着智能体进行推理、行动和观察，必须添加或修改新的节点（例如，新想法、发现的事实、已完成的任务）和边（新的关系或依赖）。大型语言模型本身可以在此扮演重要角色，例如通过输出可解析为图更新的结构化信息，或根据其推理直接提出图修改建议。</li>\n<li><strong>数据结构：</strong> 标准图库（如 Python 的 <code>NetworkX</code>）通常足以进行内存中的图管理。对于更大、持久的知识图或状态表示，图数据库（例如 Neo4j、ArangoDB）提供可伸缩性、查询能力（如 Cypher）和持久性。</li>\n<li><strong>大型语言模型与图的交互：</strong> 一个重要的设计难题是定义大型语言模型流畅的文本生成与图的结构化特性之间的接口。大型语言模型如何查询图以获取相关背景？大型语言模型的输出如何转换为图结构？可能涉及的方法包括：\n<ul>\n<li>将相关图部分序列化到大型语言模型提示中。</li>\n<li>微调 (fine-tuning)大型语言模型以输出图修改命令。</li>\n<li>使用函数调用与图管理模块进行交互。</li>\n</ul>\n</li>\n</ul>\n<h3>运用图算法</h3>\n<p>一旦推理 (inference)过程或知识库被表示为图，就可以应用标准图算法来提升智能体的能力：</p>\n<ul>\n<li><strong>路径寻找：</strong> 像 Dijkstra 算法或 A* 算法可以找到规划图或状态空间图中最短或成本最低的步骤序列。</li>\n<li><strong>拓扑排序：</strong> 对于表示规划的 DAG，拓扑排序会产生一个符合所有依赖的有效执行顺序。</li>\n<li><strong>中心性分析：</strong> 识别具有高中心性（例如，度、中介性）的节点可以突出知识图中的重要事物或规划中的核心步骤。</li>\n<li><strong>社区检测：</strong> 将相关事物或子任务分组可以帮助组织信息或分解问题。</li>\n<li><strong>遍历（广度优先搜索，深度优先搜索）：</strong> 系统地考察状态空间图或思维图中的可能性。</li>\n</ul>\n<h3>示例：简单任务规划图</h3>\n<p>考虑一个负责撰写和发布博客文章的智能体。其推理 (inference)和规划过程可能表示如下：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-i3xypy\" \n              data-graph-definition='digraph PlanGraph {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  Start [label=\"目标:\\n发布博客文章\", shape=ellipse, fillcolor=\"#d0bfff\"];\n  Research [label=\"研究主题\"];\n  Outline [label=\"创建大纲\"];\n  Draft [label=\"撰写内容\"];\n  Edit [label=\"编辑与校对\"];\n  Format [label=\"网络格式化\"];\n  Publish [label=\"发布文章\", shape=ellipse, fillcolor=\"#96f2d7\"];\n\n  Start -> Research;\n  Research -> Outline;\n  Outline -> Draft;\n  Draft -> Edit;\n  Edit -> Format;\n  Format -> Publish;\n\n  // 添加一个细化循环的可能性\n  Edit -> Draft [style=dashed, label=\"需要修订\", color=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-i3xypy\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的有向无环图表示发布博客文章的步骤和依赖关系。虚线可以表示潜在的反馈循环或修订。</p>\n</blockquote>\n<h3>优点与权衡</h3>\n<p>使用明确的图结构提供了多项益处：</p>\n<ul>\n<li><strong>处理复杂的依赖关系：</strong> 图自然地表示错综复杂的关系，而这些关系在线性文本或简单循环中可能难以处理。</li>\n<li><strong>模块化与组合性：</strong> 不同的推理 (inference)模块或知识源可以表示为子图并进行组合。</li>\n<li><strong>可视化与调试：</strong> 明确的结构允许对智能体的规划、知识状态或推理路径进行可视化，极大地辅助调试和分析。</li>\n<li><strong>结构化知识整合：</strong> 提供了一种正式方式，将大型语言模型推理与结构化数据库或知识库相结合。</li>\n</ul>\n<p>然而，也存在一些权衡：</p>\n<ul>\n<li><strong>实现开销：</strong> 与更简单的基于提示的方法相比，构建、维护和查询图结构增加了复杂度。</li>\n<li><strong>可伸缩性：</strong> 非常大的图可能会变得计算密集。</li>\n<li><strong>大型语言模型整合：</strong> 弥合非结构化大型语言模型生成与结构化图操作之间的鸿沟，仍然是一个活跃的演进方向。</li>\n</ul>\n<p>基于图的推理是一种有力的技术，用于专家级智能体设计，特别适合涉及复杂规划、明确知识表示，或推理过程可解释性重要的任务。它与 ReAct 和思维树等其他架构相辅相成，通过提供一个明确、可操作的结构来管理智能体的认知状态和规划。</p>",
+  "slug": "graph-based-reasoning",
+  "updates": [],
+  "references": [
+    {
+      "id": 8268,
+      "title": "Knowledge Graphs Meet Large Language Models: A Survey",
+      "author": "Ruosong He, Dongbo Feng, Jin He, Shaohong Huang, Guandong Chen, Yu Li, and Jianwu Wu",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.17649",
+      "volume": "",
+      "pages": "20 pages",
+      "url": "https://arxiv.org/abs/2303.17649",
+      "doi": "10.48550/arXiv.2303.17649",
+      "note": "一项关于知识图谱与大型语言模型集成的全面调查，涵盖各种应用和研究方向。",
+      "order": 3,
+      "created_at": "2025-09-05T01:53:27.368830Z",
+      "updated_at": "2025-09-10T08:05:23.377707Z"
+    },
+    {
+      "id": 8269,
+      "title": "Voyager: An Open-Ended Embodied Agent with Large Language Models",
+      "author": "Chia-Wen Kuo, Zsolt Kira",
+      "year": "2023",
+      "publisher": "",
+      "journal": "CVPR-23",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.16295",
+      "doi": "10.48550/arXiv.2305.16295",
+      "note": "提出了一种由LLM驱动的代理，它使用迭代提示机制和以图形式表示的技能库进行开放式学习和探索。",
+      "order": 4,
+      "created_at": "2025-09-05T01:53:27.371366Z",
+      "updated_at": "2025-09-10T08:05:20.805137Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2102,
+  "title": "张量索引与切片",
+  "meta_title": "PyTorch张量索引与切片",
+  "meta_description": "使用各种索引和切片技术访问和修改张量元素。",
+  "content": "<p>访问和修改张量的特定部分是处理深度学习 (deep learning)数据时常有的需求。无论您是需要选择单个数据点、提取一批训练样本、裁剪图像补丁，还是挑选特定特征，PyTorch都提供了强大且灵活的索引和切片机制，类似于NumPy数组中的那些，但PyTorch的机制与GPU加速和自动微分功能相集成。</p>\n<h3>基本索引</h3>\n<p>访问张量元素最直接的方式是使用标准的Python整数索引。请记住，PyTorch张量与Python列表和NumPy数组一样，使用0作为起始索引。</p>\n<p>对于一维张量，您可以使用其索引访问元素：</p>\n<pre><code class=\"language-python\">import torch\r\n\r\n# 创建一个一维张量\r\nx_1d = torch.tensor([10, 11, 12, 13, 14])\r\nprint(f\"原始一维张量:\\n{x_1d}\")\r\n\r\n# 访问第一个元素\r\nfirst_element = x_1d[0]\r\nprint(f\"\\n第一个元素 (x_1d[0]): {first_element}, 类型: {type(first_element)}\")\r\n\r\n# 访问最后一个元素\r\nlast_element = x_1d[-1]\r\nprint(f\"最后一个元素 (x_1d[-1]): {last_element}\")\r\n\r\n# 修改一个元素\r\nx_1d[1] = 110\r\nprint(f\"\\n修改后的张量:\\n{x_1d}\")\n</code></pre>\n<p>注意，访问单个元素会返回一个包含单个值的<code>torch.Tensor</code>（一个0维张量或标量），而不是一个标准的Python数字，除非您使用<code>.item()</code>明确提取它。元素的修改是原地进行的。</p>\n<p>对于多维张量，您需要为每个维度提供索引，并用逗号分隔：</p>\n<pre><code class=\"language-python\"># 创建一个二维张量 (例如，一个小矩阵)\r\nx_2d = torch.tensor([[1, 2, 3],\r\n                     [4, 5, 6],\r\n                     [7, 8, 9]])\r\nprint(f\"原始二维张量:\\n{x_2d}\")\r\n\r\n# 访问第0行第1列的元素\r\nelement_0_1 = x_2d[0, 1]\r\nprint(f\"\\n在 [0, 1] 的元素: {element_0_1}\")\r\n\r\n# 访问整个第一行 (索引0)\r\nfirst_row = x_2d[0] # or x_2d[0, :]\r\nprint(f\"\\n第一行 (x_2d[0]): {first_row}\")\r\n\r\n# 访问整个第二列 (索引1)\r\nsecond_col = x_2d[:, 1]\r\nprint(f\"第二列 (x_2d[:, 1]): {second_col}\")\r\n\r\n# 修改一个元素\r\nx_2d[1, 1] = 55\r\nprint(f\"\\n修改后的二维张量:\\n{x_2d}\")\n</code></pre>\n<p>提供的索引数量少于维数时，会沿剩余维度选择一个完整的子张量。例如，<code>x_2d[0]</code> 会选择整个第一行。</p>\n<h3>张量切片</h3>\n<p>切片允许您沿张量维度选择一系列元素。语法是 <code>start:stop:step</code>，其中 <code>start</code> 是包含的，<code>stop</code> 是不包含的，而 <code>step</code> 定义了间隔。省略 <code>start</code> 默认为0，省略 <code>stop</code> 默认为维度的末尾，省略 <code>step</code> 默认为1。</p>\n<pre><code class=\"language-python\"># 创建一个一维张量\r\ny_1d = torch.arange(10) # Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])\r\nprint(f\"原始一维张量: {y_1d}\")\r\n\r\n# 选择从索引2开始到（不包含）索引5的元素\r\nslice1 = y_1d[2:5]\r\nprint(f\"\\n切片 y_1d[2:5]: {slice1}\")\r\n\r\n# 选择从开头到索引4的元素\r\nslice2 = y_1d[:4]\r\nprint(f\"切片 y_1d[:4]: {slice2}\")\r\n\r\n# 选择从索引6到末尾的元素\r\nslice3 = y_1d[6:]\r\nprint(f\"切片 y_1d[6:]: {slice3}\")\r\n\r\n# 选择每隔一个的元素\r\nslice4 = y_1d[::2]\r\nprint(f\"切片 y_1d[::2]: {slice4}\")\r\n\r\n# 选择从索引1到7的元素，步长为2\r\nslice5 = y_1d[1:8:2]\r\nprint(f\"切片 y_1d[1:8:2]: {slice5}\")\r\n\r\n# 反转张量\r\nslice6 = y_1d.flip(dims=[0])\r\nprint(f\"使用 .flip(dims=[0]) 反转后的张量: {slice6}\")\n</code></pre>\n<p>切片对多维张量的工作方式类似。您可以将整数索引和切片结合使用：</p>\n<pre><code class=\"language-python\"># 创建一个3x4张量\r\nx_2d = torch.tensor([[ 0,  1,  2,  3],\r\n                     [ 4,  5,  6,  7],\r\n                     [ 8,  9, 10, 11]])\r\nprint(f\"原始二维张量:\\n{x_2d}\")\r\n\r\n# 选择前两行以及第1和第2列\r\nsub_tensor1 = x_2d[0:2, 1:3]\r\nprint(f\"\\n切片 x_2d[0:2, 1:3]:\\n{sub_tensor1}\")\r\n\r\n# 选择所有行，但只选择最后两列\r\nsub_tensor2 = x_2d[:, -2:]\r\nprint(f\"\\n切片 x_2d[:, -2:]:\\n{sub_tensor2}\")\r\n\r\n# 选择第一行，从第1列到末尾\r\nsub_tensor3 = x_2d[0, 1:]\r\nprint(f\"\\n切片 x_2d[0, 1:]:\\n{sub_tensor3}\")\r\n\r\n# 选择第0行和第2行（使用步长），所有列\r\nsub_tensor4 = x_2d[::2, :]\r\nprint(f\"\\n切片 x_2d[::2, :]:\\n{sub_tensor4}\")\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1q3anad\" \n              data-graph-definition='digraph G {\r\n    rankdir=LR;\r\n    node [shape=plaintext];\r\n    subgraph cluster_0 {\r\n        label = \"原始张量 (x_2d)\";\r\n        style=filled;\r\n        color=\"#e9ecef\";\r\n        a [label=<\r\n        <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\r\n         <TR><TD BGCOLOR=\"#ced4da\">0</TD><TD BGCOLOR=\"#ced4da\">1</TD><TD BGCOLOR=\"#ced4da\">2</TD><TD BGCOLOR=\"#ced4da\">3</TD></TR>\r\n         <TR><TD BGCOLOR=\"#ced4da\">4</TD><TD BGCOLOR=\"#ced4da\">5</TD><TD BGCOLOR=\"#ced4da\">6</TD><TD BGCOLOR=\"#ced4da\">7</TD></TR>\r\n         <TR><TD BGCOLOR=\"#ced4da\">8</TD><TD BGCOLOR=\"#ced4da\">9</TD><TD BGCOLOR=\"#ced4da\">10</TD><TD BGCOLOR=\"#ced4da\">11</TD></TR>\r\n        </TABLE>>];\r\n    }\r\n    subgraph cluster_1 {\r\n        label = \"切片: x_2d[0:2, 1:3]\";\r\n        style=filled;\r\n        color=\"#a5d8ff\";\r\n        b [label=<\r\n        <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\r\n         <TR><TD BGCOLOR=\"#74c0fc\">1</TD><TD BGCOLOR=\"#74c0fc\">2</TD></TR>\r\n         <TR><TD BGCOLOR=\"#74c0fc\">5</TD><TD BGCOLOR=\"#74c0fc\">6</TD></TR>\r\n        </TABLE>>];\r\n    }\r\n     a -> b [style=invis]; // Edge to enforce layout if needed\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1q3anad\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>张量 <code>x_2d</code> 使用 <code>x_2d[0:2, 1:3]</code> 进行切片的视觉表示。由于切片索引遵循“左闭右开”原则（即不包含结束索引），这选择了索引为 0 和 1 的行，以及索引为 1 和 2 的列。</p>\n</blockquote>\n<p>切片的一个重要特性（与某些其他形式的索引不同）是，返回的张量通常与原始张量共享底层存储。修改切片会修改原始张量。</p>\n<pre><code class=\"language-python\">print(f\"修改切片前的原始 x_2d:\\n{x_2d}\")\r\n\r\n# 获取一个切片\r\nsub_tensor = x_2d[0:2, 1:3]\r\n\r\n# 修改切片\r\nsub_tensor[0, 0] = 101\r\n\r\nprint(f\"\\n修改后的切片:\\n{sub_tensor}\")\r\nprint(f\"\\n修改切片后的原始 x_2d:\\n{x_2d}\") # 注意变化！\n</code></pre>\n<p>如果您需要一个不共享内存的副本，请在切片上使用 <code>.clone()</code>: <code>sub_tensor_copy = x_2d[0:2, 1:3].clone()</code>。</p>\n<h3>布尔索引 (遮罩)</h3>\n<p>您可以使用布尔张量来索引另一个张量。布尔张量的形状必须能够广播到被索引张量的形状（通常，它们的形状完全相同）。只有布尔张量中对应 <code>True</code> 值的元素（即“遮罩”）才会被选中。这对于根据条件筛选数据非常有用。</p>\n<pre><code class=\"language-python\"># 创建一个张量\r\ndata = torch.tensor([[1, 2], [3, 4], [5, 6]])\r\nprint(f\"原始数据张量:\\n{data}\")\r\n\r\n# 创建一个布尔遮罩 (例如，选择大于3的元素)\r\nmask = data > 3\r\nprint(f\"\\n布尔遮罩 (data > 3):\\n{mask}\")\r\n\r\n# 应用遮罩\r\nselected_elements = data[mask]\r\nprint(f\"\\n通过遮罩选择的元素:\\n{selected_elements}\")\r\nprint(f\"所选元素的形状: {selected_elements.shape}\")\r\n\r\n# 根据条件修改元素\r\ndata[data &#x3C;= 3] = 0\r\nprint(f\"\\n将小于等于3的元素设置为零后的数据:\\n{data}\")\n</code></pre>\n<p>布尔索引通常返回一个包含所有选定元素的一维张量。与切片不同，它<em>不</em>保留原始形状。此外，布尔索引通常会创建一个副本，而不是一个视图。</p>\n<p>您可以将布尔索引与其他形式结合使用。例如，根据应用于其中一列的条件选择行：</p>\n<pre><code class=\"language-python\"># 选择第一列大于2的行\r\nrow_mask = data[:, 0] > 2\r\nprint(f\"\\n行遮罩 (data[:, 0] > 2): {row_mask}\")\r\n\r\nselected_rows = data[row_mask, :] # 使用 ':' 选择所选行中的所有列\r\n# Or simply: data[row_mask] - PyTorch 通常会推断出完整的行选择\r\nprint(f\"\\n第一列大于2的行:\\n{selected_rows}\")\n</code></pre>\n<h3>整数数组索引</h3>\n<p>除了单个整数和切片，您还可以使用列表或一维整数张量沿维度进行索引。这使得您可以按任意顺序选择元素，或多次选择相同的元素。</p>\n<pre><code class=\"language-python\">x = torch.arange(10, 20) # Tensor([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])\r\nprint(f\"原始一维张量: {x}\")\r\n\r\nindices = torch.tensor([0, 4, 2, 2]) # 注意索引2的重复\r\nselected = x[indices]\r\nprint(f\"\\n使用索引 {indices} 选择的元素: {selected}\")\r\n\r\n# 对于二维张量\r\ny = torch.arange(12).reshape(3, 4)\r\n# [[ 0,  1,  2,  3],\r\n#  [ 4,  5,  6,  7],\r\n#  [ 8,  9, 10, 11]]\r\nprint(f\"\\n原始二维张量:\\n{y}\")\r\n\r\n# 选择特定行\r\nrow_indices = torch.tensor([0, 2])\r\nselected_rows = y[row_indices] # 选择第0行和第2行\r\nprint(f\"\\n使用索引 {row_indices} 选择的行:\\n{selected_rows}\")\r\n\r\n# 选择特定列\r\ncol_indices = torch.tensor([1, 3])\r\nselected_cols = y[:, col_indices] # 从所有行中选择第1列和第3列\r\nprint(f\"\\n使用索引 {col_indices} 选择的列:\\n{selected_cols}\")\r\n\r\n# 使用索引对选择特定元素\r\nrow_idx = torch.tensor([0, 1, 2])\r\ncol_idx = torch.tensor([1, 3, 0])\r\nselected_elements = y[row_idx, col_idx] # 选择 (0,1), (1,3), (2,0) -> [1, 7, 8]\r\nprint(f\"\\n使用 (row_idx, col_idx) 选择的特定元素:\\n{selected_elements}\")\n</code></pre>\n<p>与布尔索引类似，整数数组索引通常返回一个新的张量（一个副本），而不是原始张量存储的视图。输出的形状取决于索引方法。当选择完整的行或列时，其他维度会被保留。当为多个维度提供索引数组（例如 <code>y[row_idx, col_idx]</code>）时，结果通常是一个对应于所选元素的一维张量。</p>\n<p>掌握这些索引和切片技术能够精准地控制张量数据，为后续步骤中的数据准备、特征提取以及模型输入输出的操作奠定根基。</p>",
+  "slug": "tensor-indexing-slicing",
+  "updates": [],
+  "references": [
+    {
+      "id": 2421,
+      "title": "PyTorch Documentation: Tensor Operations - Indexing and Slicing",
+      "author": "PyTorch Core Team",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/tensors.html",
+      "doi": "",
+      "note": "官方文档提供了PyTorch张量索引、切片和高级选择技术的全面细节。",
+      "order": 1,
+      "created_at": "2025-09-04T16:52:46.597059Z",
+      "updated_at": "2025-09-07T20:22:48.702843Z"
+    },
+    {
+      "id": 2422,
+      "title": "Deep Learning with PyTorch",
+      "author": "Eli Stevens, Luca Antiga, and Thomas Viehmann",
+      "year": "2020",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 4: Representing Real-World Data",
+      "url": "https://www.manning.com/books/deep-learning-with-pytorch",
+      "doi": "",
+      "note": "提供了PyTorch基础知识的书籍深度论述，包括张量操作和内存管理的详细说明。",
+      "order": 2,
+      "created_at": "2025-09-04T16:52:50.502935Z",
+      "updated_at": "2025-09-07T20:22:42.803011Z"
+    },
+    {
+      "id": 2424,
+      "title": "PyTorch for Former Torchies (Tensor Views Section)",
+      "author": "PyTorch Core Team",
+      "year": "2024",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/former_torchies/tensor_tutorial.html#views",
+      "doi": "",
+      "note": "解释了PyTorch中张量视图的概念，阐明了操作何时返回视图或副本及其影响。",
+      "order": 3,
+      "created_at": "2025-09-04T16:52:50.796819Z",
+      "updated_at": "2025-09-07T20:22:47.579731Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

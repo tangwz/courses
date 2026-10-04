@@ -1,0 +1,61 @@
+{
+  "id": 2067,
+  "title": "混合精度训练",
+  "meta_title": "Transformer的混合精度训练",
+  "meta_description": "使用较低精度格式（如FP16）以加快训练并减少内存占用。",
+  "content": "<p>使用标准32位浮点精度（FP32）训练大型Transformer模型会消耗大量计算资源并占用大量内存。混合精度训练提供了一个有效的办法，它在较低精度格式（如16位浮点数FP16或BF16）下执行某些操作，同时将主权重 (weight)等主要部分保留在FP32中。这种方式能显著加快计算速度并减少内存占用，通常对最终模型的精度影响很小或没有影响。</p>\n<h3>动机：速度与内存</h3>\n<p>现代硬件加速器，特别是配备NVIDIA Tensor Cores等专用单元的GPU，在较低精度（FP16或BF16）下执行矩阵乘法操作时，相比FP32能提供很大的性能提升。以16位精度执行前向和后向传播的部分步骤，直接意味着更快的训练迭代。</p>\n<p>此外，与FP32相比，使用16位格式可将存储激活值、梯度和可能的模型权重 (weight)所需的内存减半。这种内存节省使得以下成为可能：</p>\n<ol>\n<li>训练使用FP32时无法放入内存的更大模型。</li>\n<li>使用更大的批处理大小，这可以提高梯度准确性并可能加快收敛速度。</li>\n<li>减少分布式训练设置中的通信开销。</li>\n</ol>\n<h3>混合精度训练的工作原理</h3>\n<p>主要思想是发挥较低精度在速度和内存上的优势，用于大部分计算，同时通过策略性地使用FP32来保持数值稳定性。虽然实现方式略有不同，并且通常由深度学习 (deep learning)框架自动处理，但典型过程包含多个组成部分：</p>\n<ol>\n<li><strong>FP32主权重 (weight)：</strong> 模型权重的主要副本通常保存在FP32中。这确保了权重更新（涉及随时间累积的小梯度值）不会受到16位格式有限精度的影响。</li>\n<li><strong>FP16/BF16计算：</strong> 在前向和后向传播过程中，权重被转换为FP16或BF16，用于自注意力 (self-attention)层和前馈层中的矩阵乘法等计算密集型操作。在这些传播过程中生成的激活值和梯度也以较低精度格式存储。</li>\n<li><strong>损失缩放：</strong> FP16的动态范围比FP32小很多。在FP16中计算的梯度，特别是对于深层网络或小损失值，可能变为零（下溢）。为避免此情况，计算出的损失值在反向传播 (backpropagation)开始<em>之前</em>会乘以一个缩放因子。这会放大梯度，将它们推入FP16的可表示范围。</li>\n<li><strong>权重更新：</strong> 在更新FP32主权重之前，计算出的梯度（FP16/BF16格式且已放大）会除以相同的缩放因子，以使它们恢复到正确的数量级。这些未缩放的梯度随后被转换为FP32，并使用选定的优化器（例如AdamW）来更新FP32主权重。</li>\n</ol>\n<p>现代框架通常使用<em>动态损失缩放</em>，其中缩放因子在训练期间自动调整。如果检测到溢出（梯度变为<code>Inf</code>或<code>NaN</code>），缩放因子会减小。如果梯度在一定步数内保持稳定，缩放因子可能会增加，以更好地使用FP16的动态范围。</p>\n<h3>FP16与BF16的选择</h3>\n<p>使用两种常见的16位格式：</p>\n<ul>\n<li><strong>FP16 (IEEE 半精度)：</strong> 使用1位符号位、5位指数位和10位尾数位。它比BF16提供更高的精度，但与FP32相比动态范围小得多。这个有限的范围使其更容易受到下溢和溢出的影响，因此需要仔细的损失缩放。大多数现代GPU都对FP16有出色的硬件支持。</li>\n<li><strong>BF16 (BFloat16)：</strong> 使用1位符号位、8位指数位（与FP32相同）和7位尾数位。它的主要优点是动态范围与FP32相似，因此远不那么容易出现下溢/溢出问题。损失缩放通常不需要或只需要更简单的静态缩放。然而，它比FP16提供较低的精度（尾数位更少）。在TPU和新一代GPU（例如NVIDIA Ampere及更高版本）中很常见对它的硬件支持。</li>\n</ul>\n<p>选择通常取决于硬件是否可用。如果两者都支持，BF16可能会提供稍微简单的训练设置，因为它在数值范围上具有鲁棒性，而FP16在其更高精度有利的场景下可能会略微更好，前提是使用了有效的损失缩放。</p>\n<h3>实际实施</h3>\n<p>深度学习 (deep learning)框架提供方便的API，通过最少的代码改动来实现混合精度训练。</p>\n<ul>\n<li>\n<p><strong>PyTorch：</strong> 使用<code>torch.cuda.amp</code>（自动混合精度）模块。它提供上下文 (context)管理器（<code>autocast</code>）和梯度缩放工具（<code>GradScaler</code>）。</p>\n<pre><code class=\"language-python\"># 示例草图 (PyTorch)\nimport torch\nfrom torch.cuda.amp import GradScaler, autocast\n\nscaler = GradScaler()\nmodel = YourTransformerModel().cuda()\noptimizer = torch.optim.AdamW(model.parameters(), lr=...)\n\nfor inputs, targets in dataloader:\n    inputs, targets = inputs.cuda(), targets.cuda()\n\n    optimizer.zero_grad()\n\n    # 将上下文管理器中的操作转换为FP16/BF16\n    with autocast(dtype=torch.float16): # 或者如果支持/需要，使用torch.bfloat16\n        outputs = model(inputs)\n        loss = compute_loss(outputs, targets)\n\n    # 缩放损失。在缩放后的损失上调用backward()以创建缩放后的梯度。\n    scaler.scale(loss).backward()\n\n    # scaler.step()首先取消优化器分配参数的梯度缩放。\n    # 如果梯度不是inf/NaN，则调用optimizer.step()。\n    scaler.step(optimizer)\n\n    # 更新下一个迭代的缩放因子。\n    scaler.update()\n</code></pre>\n</li>\n<li>\n<p><strong>TensorFlow：</strong> 使用<code>tf.keras.mixed_precision</code> API。您可以设置全局策略或按层应用它。当使用<code>model.fit</code>时，TensorFlow会自动处理损失缩放。</p>\n<pre><code class=\"language-python\"># 示例草图 (TensorFlow)\nimport tensorflow as tf\n\n# 设置全局策略（例如，'mixed_float16'）\npolicy = tf.keras.mixed_precision.Policy('mixed_float16')\ntf.keras.mixed_precision.set_global_policy(policy)\n\n# 像往常一样构建模型\ninputs = tf.keras.Input(...)\n# ... 定义Transformer层 ...\noutputs = tf.keras.layers.Dense(vocab_size, activation='softmax', dtype='float32')(x) # 输出层通常保留在FP32中\nmodel = tf.keras.Model(inputs=inputs, outputs=outputs)\n\noptimizer = tf.keras.optimizers.AdamW(...)\n# 当使用混合策略时，model.fit会自动处理损失缩放\nmodel.compile(optimizer=optimizer, loss='...', metrics=[...])\nmodel.fit(dataset, epochs=...)\n</code></pre>\n</li>\n</ul>\n<p>虽然混合精度训练非常有效，但建议监控训练稳定性，并偶尔将最终模型性能与基线FP32运行进行比较，尤其是在首次将其应用于新架构或任务时。某些数值操作，例如大范围约简或需要高精度的计算，有时可能会因框架启发式算法而从自动转换中排除，或可能需要手动配置以保留在FP32中。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-11t3sbz\" \n              data-plot-definition='{\"data\": [{\"x\": [\"FP32 Baseline\", \"Mixed Precision (FP16/BF16)\"], \"y\": [100, 180], \"type\": \"bar\", \"name\": \"相对速度（百分比）\", \"marker\": {\"color\": \"#4263eb\"}}, {\"x\": [\"FP32 Baseline\", \"Mixed Precision (FP16/BF16)\"], \"y\": [100, 55], \"type\": \"bar\", \"name\": \"相对内存占用（百分比）\", \"marker\": {\"color\": \"#12b886\"}}], \"layout\": {\"title\": {\"text\": \"混合精度训练的优点（示意）\"}, \"yaxis\": {\"title\": {\"text\": \"相对百分比（%）\"}}, \"barmode\": \"group\", \"legend\": {\"title\":{\"text\":\"指标\"}}, \"margin\": {\"l\": 50, \"r\": 10, \"t\": 40, \"b\": 40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-11t3sbz\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示意性比较，显示混合精度训练可能带来的速度提升（例如，快1.8倍）和内存节省（例如，减少45%）。实际收益取决于模型、硬件和具体的实现方式。</p>\n</blockquote>\n<p>混合精度训练已成为深度学习从业者工具箱中的一项标准技术，特别是对于Transformer等资源密集型模型。通过智能地结合较低精度计算和保持数值稳定性的机制，它使得训练迭代更快，并且在现有硬件限制下使用更大、能力更强的模型成为可能。</p>",
+  "slug": "mixed-precision-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 6195,
+      "title": "Mixed-Precision Training of Deep Neural Networks",
+      "author": "Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu",
+      "year": "2018",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1710.03740",
+      "doi": "10.48550/arXiv.1710.03740",
+      "note": "介绍了混合精度训练的基础技术，包括FP32主权重和损失缩放，这些技术构成了现代实现的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T01:19:53.429791Z",
+      "updated_at": "2025-09-07T19:51:03.017420Z"
+    },
+    {
+      "id": 6196,
+      "title": "Automatic Mixed Precision (AMP) Examples",
+      "author": "PyTorch Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/amp_examples.html",
+      "doi": "",
+      "note": "官方指南，提供了使用PyTorch的`torch.cuda.amp`模块实现混合精度训练的实际示例和详细信息。",
+      "order": 2,
+      "created_at": "2025-09-05T01:19:53.432935Z",
+      "updated_at": "2025-09-07T19:51:00.806881Z"
+    },
+    {
+      "id": 6197,
+      "title": "Mixed precision",
+      "author": "TensorFlow Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/mixed_precision",
+      "doi": "",
+      "note": "TensorFlow Keras中启用混合精度训练的官方指南，说明了策略配置和自动损失缩放。",
+      "order": 3,
+      "created_at": "2025-09-05T01:19:53.435069Z",
+      "updated_at": "2025-09-07T19:51:03.000418Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

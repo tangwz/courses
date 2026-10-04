@@ -1,0 +1,45 @@
+{
+  "id": 6886,
+  "title": "MLJ 管道介绍",
+  "meta_title": "MLJ 管道介绍 | Julia 机器学习工作流程",
+  "meta_description": "理解在 MLJ.jl 中使用管道的理念及其优点，以简化机器学习工作流程。",
+  "content": "<p>随着您的机器学习 (machine learning)项目复杂度增加，涉及数据准备、特征转换和模型训练等多个阶段，单独管理这些步骤会变得繁琐，并可能导致工作难以复现。MLJ.jl 提供了一种管理此类工作流程的有效抽象方式：管道。</p>\n<p>MLJ.jl 中的管道允许您将一系列操作串联起来，将整个序列视为一个单一的复合模型。想象一下您数据的装配线：原始数据从一端进入，经过一系列转换和处理步骤，训练好的模型或预测结果从另一端输出。这种方法将机器学习任务不同部分之间常有的临时连接规范化。</p>\n<p>使用管道具有几个重要的优点。首先，它们为您的机器学习代码带来了结构和清晰性。整个工作流程在一个地方定义，而不是分散的代码片段，这使其更易于理解和维护。其次，管道自动化了这些步骤的执行。一旦定义，您就可以使用单个命令拟合和预测整个管道，就像任何其他 MLJ 模型一样。</p>\n<p>这种结构化方法极大地帮助了可复现性。通过封装从初始数据转换到最终预测的整个过程，管道确保每次都以相同的顺序应用相同的步骤。此外，管道促进了模块化。您可以通过简单地替换管道内的组件，轻松尝试不同的预处理技术或模型，而不扰乱整体结构。当您想使用相同的预处理设置比较不同模型架构的性能时，这特别有用。</p>\n<p>在 MLJ.jl 中，管道通常通过组合单个操作来构建，这些操作可以包括数据预处理器（如标准化器或编码器）和机器学习模型。一个操作的输出直接成为下一个操作的输入。整个管道一旦构建，就如同一个标准的 MLJ 模型。它可以拟合数据，用于进行预测，甚至调优以获得最佳性能。</p>\n<p>下图呈现了一个作为管道组织的通用机器学习工作流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hm2pr7\" \n              data-graph-definition='digraph G { rankdir=TB; bgcolor=\"transparent\"; node [shape=box, style=\"filled,rounded\", fontname=\"inherit\"]; \"原始数据\" [fillcolor=\"#adb5bd\", fontcolor=\"#212529\"]; \"数据清洗\" [fillcolor=\"#74c0fc\", fontcolor=\"#212529\"]; \"特征工程\" [fillcolor=\"#74c0fc\", fontcolor=\"#212529\"]; \"模型训练与超参数调优\" [fillcolor=\"#69db7c\", fontcolor=\"#212529\"]; \"已训练模型 / 预测结果\" [fillcolor=\"#3bc9db\", fontcolor=\"#212529\"]; \"原始数据\" -> \"数据清洗\"; \"数据清洗\" -> \"特征工程\"; \"特征工程\" -> \"模型训练与超参数调优\"; \"模型训练与超参数调优\" -> \"已训练模型 / 预测结果\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hm2pr7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的机器学习工作流程，被封装为管道。数据按顺序流经预处理阶段到模型训练，最终生成训练好的模型或预测结果。</p>\n</blockquote>\n<p>在此图中，数据源自某个起点，并经过不同阶段。每个框代表一个独立的操作或一组相关操作。例如，“数据清洗”可能涉及处理缺失值和移除异常值，而“特征工程”可能包括创建新的预测变量或转换现有变量。这些预处理步骤为“模型训练与超参数 (parameter) (hyperparameter)调优”阶段准备数据。最后，管道输出一个“已训练模型”，可用于对新数据进行“预测”，或者如果应用于测试集，则可能直接输出预测结果。</p>\n<p>MLJ 管道的优点与 MLJ 生态系统中的其他功能结合时会更明显。例如，您可以使用交叉验证评估整个管道，并调优跨越管道不同阶段的超参数，所有这些都可以在一个统一的框架内进行。这种整合方法简化了构建和优化可靠机器学习系统的过程。您不仅仅是在单独调优一个模型；您是在优化从数据到预测的整个路径。</p>\n<p>在接下来的章节中，我们将考察构建这些管道的实际方面。您将学习如何定义预处理步骤，集成模型，并使用 MLJ.jl 的语法将它们串联起来。我们还将讲解如何管理这些管道，包括保存和加载它们，这对于部署您的工作或与他人共享很重要。</p>",
+  "slug": "mlj-pipelines-introduction",
+  "updates": [],
+  "references": [
+    {
+      "id": 20269,
+      "title": "Composing Models: Pipelines",
+      "author": "The MLJ.jl Developers",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlj.sciml.ai/dev/composing_models/",
+      "doi": "",
+      "note": "MLJ.jl的官方文档，详细介绍了如何在框架内构建和使用机器学习管道。",
+      "order": 1,
+      "created_at": "2025-09-06T13:59:29.342357Z",
+      "updated_at": "2025-09-11T08:47:15.250117Z"
+    },
+    {
+      "id": 20270,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "提供了构建健壮机器学习系统的全面视角，包含有关工作流管理、MLOps实践和可复现性的讨论。",
+      "order": 2,
+      "created_at": "2025-09-06T13:59:29.362616Z",
+      "updated_at": "2025-09-11T08:47:00.486343Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

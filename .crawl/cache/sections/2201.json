@@ -1,0 +1,61 @@
+{
+  "id": 2201,
+  "title": "保存和加载模型检查点",
+  "meta_title": "保存与加载 PyTorch 模型 | 检查点",
+  "meta_description": "介绍在训练期间保存模型状态，以及随后加载用于推理或继续训练的方法。",
+  "content": "<p>深度学习 (deep learning)模型的训练通常耗时，根据模型复杂度和数据集大小，可能需要数小时甚至数天。每次因系统中断、后续微调 (fine-tuning)或仅为预测而停止时都从头开始训练是不现实的。因此，保存和加载模型检查点变得非常重要。</p>\n<p>检查点记录了训练过程在特定时刻的状态，方便您日后恢复。有效保存和加载 PyTorch 模型和训练状态是必要的组成部分。</p>\n<h3>应该保存什么？</h3>\n<p>保存检查点时，您需要根据目的决定需要哪些信息。通常，您至少会保存模型的参数 (parameter)。如果您打算恢复训练，还应保存优化器的状态，以及当前周期数和最新验证损失等其他元数据。</p>\n<p>PyTorch 模型有一个内部状态字典，通过 <code>model.state_dict()</code> 访问，其中包含模型各层的所有学习参数（权重 (weight)和偏置 (bias)）。这是保存模型学习信息建议的方式。</p>\n<p>为什么保存 <code>state_dict</code> 而不是整个模型对象（例如 <code>torch.save(model, PATH)</code>）？保存 <code>state_dict</code> 更具弹性，也更不容易出问题。对整个模型对象进行序列化保存会存储保存时使用的特定代码结构。如果您之后重构或更改模型类定义，加载序列化对象可能会失败或导致意外行为。仅保存状态字典将学习参数与代码结构分离，使加载更稳定。</p>\n<p>同样，Adam 或 SGD 等优化器也有内部状态（例如，动量缓冲区、自适应学习率），这些状态在训练过程中会变化。为了精确地恢复训练，您应该使用 <code>optimizer.state_dict()</code> 保存优化器的状态。</p>\n<h3>使用 <code>torch.save</code> 保存检查点</h3>\n<p>PyTorch 使用 <code>torch.save()</code> 来序列化和保存对象。要保存检查点，您通常会创建一个字典，其中包含模型的状态字典、优化器的状态字典以及任何其他相关信息，然后保存这个字典。</p>\n<p>以下是在训练循环中保存检查点的常见模式：</p>\n<pre><code class=\"language-python\"># 假设 model, optimizer, epoch, loss 已定义\n# PATH = \"path/to/your/checkpoint.pth\" # 定义您的保存路径\n\ncheckpoint = {\n    'epoch': epoch + 1, # 保存下一个要开始的周期数\n    'model_state_dict': model.state_dict(),\n    'optimizer_state_dict': optimizer.state_dict(),\n    'loss': loss, # 或者可以是验证损失\n    # 添加任何其他您想保存的指标或信息\n    # 'validation_accuracy': val_acc,\n}\n\ntorch.save(checkpoint, PATH)\nprint(f\"检查点已在周期 {epoch} 保存到 {PATH}\")\n</code></pre>\n<p>您可以定期（例如，每 10 个周期）保存检查点，或在模型在验证集上取得新最佳表现时保存。</p>\n<h3>使用 <code>torch.load</code> 和 <code>load_state_dict</code> 加载检查点</h3>\n<p>要加载检查点，您首先使用 <code>torch.load()</code> 从文件中反序列化保存的字典。然后，您需要将状态字典加载回您的模型和优化器实例中。</p>\n<p><strong>注意：</strong> 在加载模型和优化器状态之前，您必须先创建它们的实例。<code>load_state_dict()</code> 方法将参数 (parameter)加载<em>到</em>一个现有对象中；它不会重新创建对象本身。</p>\n<h4>加载用于推理 (inference)</h4>\n<p>如果您只需要模型进行预测（推理），并且不打算恢复训练，通常只需加载 <code>model_state_dict</code>。</p>\n<pre><code class=\"language-python\"># 首先，实例化您的模型结构\nmodel = YourModelClass(*args, **kwargs)\n# 定义您保存的检查点路径\nPATH = \"path/to/your/checkpoint.pth\"\n\n# 加载检查点字典\ncheckpoint = torch.load(PATH)\n\n# 从检查点加载模型状态字典\nmodel.load_state_dict(checkpoint['model_state_dict'])\n\n# 将模型设置为评估模式\nmodel.eval()\n\n# 现在模型已准备好进行推理\n# with torch.no_grad():\n#     outputs = model(inputs)\n</code></pre>\n<p>设置 <code>model.eval()</code> 很关键，因为它会禁用 Dropout 等层，并使用运行统计数据对批量归一化 (normalization)层进行归一化，这是推理时的正确操作。</p>\n<h4>加载以恢复训练</h4>\n<p>如果您想从上次中断的地方继续训练，您需要加载模型和优化器的状态，并获取其他已保存的元数据，例如周期数。</p>\n<pre><code class=\"language-python\"># 首先实例化模型和优化器\nmodel = YourModelClass(*args, **kwargs)\noptimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) # 或您选择的优化器\n\n# 定义路径\nPATH = \"path/to/your/checkpoint.pth\"\nstart_epoch = 0\nbest_loss = float('inf') # 示例：初始化最佳损失\n\n# 检查检查点是否存在以进行加载\nif os.path.exists(PATH):\n    checkpoint = torch.load(PATH)\n    model.load_state_dict(checkpoint['model_state_dict'])\n    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])\n    start_epoch = checkpoint['epoch']\n    best_loss = checkpoint['loss'] # 加载之前的损失\n    print(f\"检查点已加载。从周期 {start_epoch} 继续训练\")\n\n# 将模型设置为训练模式\nmodel.train()\n\n# 现在您可以继续训练循环，从 start_epoch 开始\n# for epoch in range(start_epoch, num_epochs):\n#     # ... 训练步骤 ...\n</code></pre>\n<p>设置 <code>model.train()</code> 可确保 Dropout 和批量归一化等层在训练期间表现正常。</p>\n<h3>处理 CPU/GPU 设备映射</h3>\n<p>有时，您可能会保存一个在 GPU 上训练的模型，然后需要在只有 CPU 的机器上加载它，反之亦然。默认情况下，<code>torch.load()</code> 会尝试将张量加载到它们保存时所在的设备上。如果该设备不可用，这可能会导致错误。</p>\n<p>为了处理这种情况，您可以使用 <code>torch.load()</code> 中的 <code>map_location</code> 参数 (parameter)。</p>\n<pre><code class=\"language-python\"># 将在 GPU 上训练的模型加载到 CPU\ncheckpoint = torch.load(PATH, map_location=torch.device('cpu'))\nmodel.load_state_dict(checkpoint['model_state_dict'])\n\n# 将任何模型加载到当前可用设备（如果 GPU 可用则使用 GPU，否则使用 CPU）\ndevice = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\ncheckpoint = torch.load(PATH, map_location=device)\nmodel.load_state_dict(checkpoint['model_state_dict'])\n# 记住也要将您的模型移到设备上\nmodel.to(device)\n</code></pre>\n<p>保存和加载检查点是深度学习 (deep learning)工作流程中很普通的一部分。通过熟练掌握使用 <code>torch.save</code>、<code>torch.load</code> 和 <code>load_state_dict</code> 的这些方法，您可以保证训练进程安全，模型可以重复使用，并且训练过程面对中断时表现稳定。请记住，为了获得最大的适应性和稳定性，要保存模型和优化器的 <code>state_dict</code>，以及相关的元数据。</p>",
+  "slug": "saving-loading-model-checkpoints",
+  "updates": [],
+  "references": [
+    {
+      "id": 6410,
+      "title": "Saving and Loading Models",
+      "author": "Matthew Inkawhich",
+      "year": "2024",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/saving_loading_models.html",
+      "doi": "",
+      "note": "官方教程，详细介绍了保存和恢复PyTorch模型和优化器的方法及最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:26.116929Z",
+      "updated_at": "2025-09-07T20:39:54.214909Z"
+    },
+    {
+      "id": 6411,
+      "title": "PyTorch Recipes: Saving and Loading a General Checkpoint for Inference and Training",
+      "author": "PyTorch Team",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/saving_loading_models.html",
+      "doi": "",
+      "note": "一个实用的教程，展示了如何保存和加载通用检查点，包括模型、优化器和训练元数据。",
+      "order": 2,
+      "created_at": "2025-09-05T01:22:26.120992Z",
+      "updated_at": "2025-09-07T20:40:04.031665Z"
+    },
+    {
+      "id": 6412,
+      "title": "Deep Learning with PyTorch",
+      "author": "Eli Stevens, Luca Antiga, and Thomas Viehmann",
+      "year": "2020",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-pytorch",
+      "doi": "",
+      "note": "一本使用PyTorch进行深度学习的综合指南，涵盖了在完整训练流程中模型持久化的内容。",
+      "order": 3,
+      "created_at": "2025-09-05T01:22:26.123825Z",
+      "updated_at": "2025-09-07T20:39:53.483602Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

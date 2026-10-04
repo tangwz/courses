@@ -1,0 +1,61 @@
+{
+  "id": 2378,
+  "title": "动手实践：定义一个简单类",
+  "meta_title": "Python 面向对象编程练习 | 定义简单类",
+  "meta_description": "通过定义一个包含属性和方法的简单类并从它创建对象，练习面向对象编程的基本内容。",
+  "content": "<p>让我们将本章所学内容付诸实践。我们将定义一个简单类，从它创建对象，并与这些对象的属性和方法进行互动。这个动手实践将帮助你更好地明白类如何作为蓝图，而对象则是从这些蓝图实际构建的事物。</p>\n<p>假设我们想在程序中表示狗。每只狗可能都有名字和品种。狗也能执行动作，比如吠叫。让我们用一个类来表示这一点。</p>\n<h3>定义 <code>Dog</code> 类</h3>\n<p>使用 <code>class</code> 关键字，然后指定类的名称（按照惯例，类名以大写字母开头）。</p>\n<pre><code class=\"language-python\">class Dog:\n    pass # 'pass' 是一个占位符，表示“暂时不做任何事”\n</code></pre>\n<p>这是最简单的类定义。它目前没有太多功能，但这是一个有效的起点。</p>\n<h3>使用 <code>__init__</code> 初始化对象</h3>\n<p>为了让我们的 <code>Dog</code> 对象有功能，它们需要名字和品种之类的数据。我们使用特殊的 <code>__init__</code> 方法（常被称为构造函数）来设置对象创建时的初始状态。</p>\n<p>请记住，类中任何方法的第一个参数 (parameter)通常命名为 <code>self</code>。它指代正在创建或操作的特定实例（对象）。</p>\n<pre><code class=\"language-python\">class Dog:\n    # __init__ 方法用于初始化新的 Dog 对象\n    def __init__(self, name, breed):\n        # 'self' 指代正在创建的实例\n        # 我们将传入的名字和品种存储为该实例的属性\n        self.name = name\n        self.breed = breed\n        print(f\"Dog object named '{self.name}' created!\")\n\n# 现在，当我们创建 Dog 对象时，__init__ 会自动运行\n</code></pre>\n<p>在 <code>__init__</code> 内部，我们接收 <code>name</code> 和 <code>breed</code> 作为参数（除了 <code>self</code>）。然后，我们使用 <code>self.attribute_name = value</code> 将这些值分配给对象的属性。因此，<code>self.name = name</code> 在正在创建的特定 <code>Dog</code> 对象上创建一个名为 <code>name</code> 的属性，并将提供的 <code>name</code> 值赋给它。类似地，<code>self.breed = breed</code> 存储品种。</p>\n<h3>使用方法添加行为</h3>\n<p>对象不仅能保存数据；它们还能执行动作。我们将这些动作定义为类中的方法。方法是定义在类内部的函数。让我们添加一个 <code>bark</code> 方法。</p>\n<pre><code class=\"language-python\">class Dog:\n    def __init__(self, name, breed):\n        self.name = name\n        self.breed = breed\n        print(f\"Dog object named '{self.name}' created!\")\n\n    # 定义 Dog 可以执行的动作的方法\n    def bark(self):\n        # 方法也把 'self' 作为第一个参数\n        # 这使得方法可以访问对象的属性\n        print(f\"{self.name} says: Woof!\")\n\n</code></pre>\n<p>注意 <code>bark</code> 方法也将 <code>self</code> 作为其第一个参数 (parameter)。这很重要，因为它允许方法访问对象自身的数据，比如它的 <code>name</code> 属性（<code>self.name</code>）。</p>\n<h3>创建和使用 <code>Dog</code> 对象（实例）</h3>\n<p>现在我们有了 <code>Dog</code> 的蓝图（类），就可以创建实际的 <code>Dog</code> 对象（实例）。创建实例看起来就像调用类名，就像调用函数一样，并传入 <code>__init__</code> 方法所需的参数 (parameter)（不包括 <code>self</code>，Python 会自动处理）。</p>\n<pre><code class=\"language-python\"># 创建第一个 Dog 实例\ndog1 = Dog(\"Buddy\", \"Golden Retriever\")\n\n# 创建第二个 Dog 实例\ndog2 = Dog(\"Lucy\", \"Poodle\")\n</code></pre>\n<p>运行这段代码时，每次对象创建都会调用 <code>__init__</code> 方法，你会看到“Dog object created!”的消息打印出来。我们现在有了两个独立的 <code>Dog</code> 对象，分别存储在变量 <code>dog1</code> 和 <code>dog2</code> 中。</p>\n<h3>访问属性和调用方法</h3>\n<p>有了对象后，你可以使用点号表示法（<code>object.attribute_name</code>）访问其属性，并使用点号表示法后跟括号（<code>object.method_name()</code>）调用其方法。</p>\n<pre><code class=\"language-python\"># 访问 dog1 的属性\nprint(f\"{dog1.name} is a {dog1.breed}.\") # 输出：Buddy 是一只金毛寻回犬。\n\n# 访问 dog2 的属性\nprint(f\"{dog2.name} is a {dog2.breed}.\") # 输出：Lucy 是一只贵宾犬。\n\n# 调用 dog1 的 bark 方法\ndog1.bark() # 输出：Buddy 说：汪！\n\n# 调用 dog2 的 bark 方法\ndog2.bark() # 输出：Lucy 说：汪！\n</code></pre>\n<p>注意 <code>dog1.bark()</code> 打印了 Buddy 的名字，而 <code>dog2.bark()</code> 打印了 Lucy 的名字。尽管它们共享类中相同的 <code>bark</code> 方法定义，但由于 <code>self</code> 参数 (parameter)，该方法作用于被调用的特定对象。</p>\n<h3>完整示例代码</h3>\n<p>这是我们的简单 <code>Dog</code> 类及其用法的完整代码：</p>\n<pre><code class=\"language-python\"># 定义 Dog 类\nclass Dog:\n    # 构造函数，用于初始化属性\n    def __init__(self, name, breed):\n        self.name = name  # 赋值名字属性\n        self.breed = breed # 赋值品种属性\n        print(f\"Dog object named '{self.name}' of breed '{self.breed}' created.\")\n\n    # 狗的行为方法\n    def bark(self):\n        print(f\"{self.name} says: Woof!\")\n\n    # 另一个示例方法\n    def describe(self):\n        print(f\"This dog is named {self.name} and is a {self.breed}.\")\n\n# --- 使用类 ---\n\n# 创建 Dog 类的实例（对象）\nmy_dog = Dog(\"Rex\", \"German Shepherd\")\nyour_dog = Dog(\"Daisy\", \"Beagle\")\n\nprint(\"\\n--- 访问属性 ---\")\n# 使用点号表示法访问对象属性\nprint(f\"我的狗的名字: {my_dog.name}\")\nprint(f\"你的狗的品种: {your_dog.breed}\")\n\nprint(\"\\n--- 调用方法 ---\")\n# 使用点号表示法调用对象方法\nmy_dog.bark()\nyour_dog.bark()\n\nmy_dog.describe()\nyour_dog.describe()\n\n</code></pre>\n<p>自己运行这段代码。尝试在 <code>__init__</code> 方法中添加更多属性（比如 <code>age</code>），或者创建更多方法（比如 <code>wag_tail()</code>）。这种动手操作对于理解 OOP 如何通过将数据（属性）和行为（方法）组合成称为对象的逻辑单元来帮助组织代码非常有用。</p>",
+  "slug": "practice-oop-class",
+  "updates": [],
+  "references": [
+    {
+      "id": 6507,
+      "title": "The Python Tutorial: Classes",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/classes.html",
+      "doi": "",
+      "note": "官方文档，解释Python类、方法定义、对象实例化和属性访问。",
+      "order": 1,
+      "created_at": "2025-09-05T01:24:51.290251Z",
+      "updated_at": "2025-09-07T21:32:28.517556Z"
+    },
+    {
+      "id": 6508,
+      "title": "Fluent Python, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "1014",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056345/",
+      "doi": "",
+      "note": "详细介绍Python的对象模型，包括特殊方法和如何有效设计类。",
+      "order": 2,
+      "created_at": "2025-09-05T01:24:51.295676Z",
+      "updated_at": "2025-09-07T21:32:38.033931Z"
+    },
+    {
+      "id": 6509,
+      "title": "Learning Python, 5th Edition",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/learning-python-5th/9781449355739/",
+      "doi": "",
+      "note": "Python的综合指南，包含关于面向对象编程原则和实现的专门章节。",
+      "order": 3,
+      "created_at": "2025-09-05T01:24:51.298185Z",
+      "updated_at": "2025-09-07T21:32:43.969482Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

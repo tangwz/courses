@@ -1,0 +1,45 @@
+{
+  "id": 5196,
+  "title": "有效提示的原则",
+  "meta_title": "有效提示的原则 | 提示工程",
+  "meta_description": "编写提示的基本指导方针，旨在产生所需的LLM响应。",
+  "content": "<p>与大型语言模型（LLM）进行有效交流，取决于对提示工程 (prompt engineering)艺术与技巧的掌握。提示是指导模型行为的主要工具。把它看作是为一位能力很强但有时会逐字理解的助手提供指令或设定任务，而不是简单的搜索查询。编写清晰、具体并提供足够背景信息的提示，是你实现Python应用中可靠和有用结果的根本保证。</p>\n<p>让我们分析支撑有效提示的要点原则。遵循这些指导方针将显著提升LLM响应的质量和可预测性。</p>\n<h3>清晰具体</h3>\n<p>模糊是良好LLM输出的敌人。模糊的提示常导致宽泛、无用甚至错误的响应，因为模型有太多解释空间。</p>\n<ul>\n<li><strong>明确说明任务：</strong> 清晰地阐明你希望LLM做什么。与其说“告诉我关于Python列表的信息”，不如试试“解释Python列表，包括如何创建它们，以及<code>append()</code>和<code>pop()</code>等常用方法，并提供一个简单的代码示例。”</li>\n<li><strong>定义范围和限制：</strong> 如果任务范围较广，请缩小范围。与其说“写一封营销邮件”，不如说“为一门面向中级开发者的新Python在线课程写一封营销邮件。强调LangChain和RAG部分。字数限制在150字以内，并包含访问课程页面的行动号召。”</li>\n<li><strong>避免使用行话（除非合适）：</strong> 如果预期受众或所需角色理解特定行话，请使用它。否则，请选择更清晰、更普遍理解的术语。</li>\n</ul>\n<p>思考一下区别：</p>\n<ul>\n<li><strong>模糊：</strong> <code>prompt = \"Summarize this article.\"</code></li>\n<li><strong>具体：</strong> <code>prompt = \"Summarize the main findings of the following article in three bullet points, suitable for a non-technical audience.\"</code></li>\n</ul>\n<p>第二个提示就所需输出格式、目标受众和侧重，为模型提供了更清晰的指令。</p>\n<h3>提供充足背景信息</h3>\n<p>LLM不具备你具体情况或对话前几部分的固有知识，除非你提供。背景信息能帮助模型定位，使其能生成更相关和准确的响应。</p>\n<ul>\n<li><strong>背景信息：</strong> 包含模型理解请求所需的必要细节。如果请求代码修改，请提供原始代码。如果讨论特定话题，请提供简要总结或相关摘录。</li>\n<li><strong>对话历史：</strong> 在多轮交互（如聊天机器人）中，包含相关的过往消息。许多框架会自动处理此部分，但理解这个原则很重要。</li>\n<li><strong>相关数据：</strong> 如果任务涉及特定数据（例如，总结用户反馈），请将这些数据直接包含在提示中，或确保模型可以访问它（正如我们将在RAG系统中看到的那样）。</li>\n</ul>\n<p>示例：</p>\n<ul>\n<li><strong>无背景信息：</strong> <code>prompt = \"Is this approach suitable?\"</code> （模型不知道“这种方法”是什么）。</li>\n<li><strong>有背景信息：</strong>\n<pre><code class=\"language-python\">original_code = \"\"\"\ndef process_data(data):\n    # ... 复杂处理 ...\n    return result\n\"\"\"\nprompt = f\"\"\"\n给定以下Python代码：\n{original_code}\n我计划重构它，通过将其拆分为更小的辅助函数来提高可读性。\n这种方法适合提升可维护性吗？请解释原因。\n\"\"\"\n</code></pre>\n这个提示提供了必要的代码和用户目标，使LLM能够提供有见地的建议。</li>\n</ul>\n<h3>定义角色或身份</h3>\n<p>指导LLM扮演特定角色或身份，能显著影响其响应的风格、语气、深度和侧重。这有助于使输出符合预期。</p>\n<ul>\n<li><strong>专家角色：</strong> “扮演一位高级数据科学家...”，“你是一位严谨的代码审查员...”，“以宪法专家身份回应...”</li>\n<li><strong>目标受众适应：</strong> “像是在和一位高中生交谈一样解释这个概念。”，“面向工程领域受众描述技术细节。”</li>\n<li><strong>创意角色：</strong> “以莎士比亚的风格写作...”，“以一位机智的海盗身份回应...”</li>\n</ul>\n<p>示例：</p>\n<ul>\n<li><strong>通用：</strong> <code>prompt = \"Explain the benefits of using virtual environments in Python.\"</code></li>\n<li><strong>基于角色：</strong> <code>prompt = \"Act as a Python programming instructor. Explain the benefits of using virtual environments in Python to a beginner programmer, emphasizing why it prevents dependency conflicts.\"</code></li>\n</ul>\n<p>角色设定鼓励使用教学语气，并将解释侧重于与目标受众相关的一个特定好处。</p>\n<h3>指定输出格式</h3>\n<p>LLM可以生成多种格式的文本。明确要求特定结构，能使输出更可预测，也更容易解析或直接在你的应用代码中使用。</p>\n<ul>\n<li><strong>结构化数据：</strong> 请求JSON、CSV、XML或YAML等格式。对模式（键、数据类型）保持精确。</li>\n<li><strong>文本格式：</strong> 请求要点、编号列表、Markdown表格、特定标题，或带语言标注的代码块。</li>\n<li><strong>长度限制：</strong> 指定所需输出长度（例如，“一个段落”，“少于100字”，“提供一个简明摘要”）。</li>\n</ul>\n<p>示例：</p>\n<ul>\n<li><strong>非结构化：</strong> <code>prompt = \"Extract the main points from the meeting notes.\"</code></li>\n<li><strong>结构化：</strong>\n<pre><code class=\"language-python\">meeting_notes = \"\"\"\n会议记录 - 凤凰项目启动\n参会者：爱丽丝、鲍勃、查理\n日期：2023-10-27\n- 爱丽丝介绍了项目目标：2024年第一季度前启动。\n- 鲍勃讨论了资源分配。还需要2名工程师。\n- 查理概述了初始技术栈：Python, FastAPI, PostgreSQL。\n- 行动项：鲍勃下周前完成工程师分配。联系方式：bob@example.com\n\"\"\"\nprompt = f\"\"\"\n从以下会议记录中：\n---\n{meeting_notes}\n---\n提取项目名称、参会者（字符串列表形式），以及任何行动项（包含负责人和截止日期，如果提及）。\n以JSON对象形式提供输出，键为：'project_name', 'attendees', 'action_items'（一个对象列表，每个对象包含'task', 'owner', 'deadline'）。\n如果未找到某个值，则使用null。\n\"\"\"\n</code></pre>\n</li>\n</ul>\n<p>这指导LLM生成易于解析的JSON：</p>\n<pre><code class=\"language-json\">{\n  \"project_name\": \"凤凰项目\",\n  \"attendees\": [\"爱丽丝\", \"鲍勃\", \"查理\"],\n  \"action_items\": [\n    {\n      \"task\": \"完成工程师分配\",\n      \"owner\": \"鲍勃\",\n      \"deadline\": \"下周\"\n    }\n  ]\n}\n</code></pre>\n<h3>设定限制和界限</h3>\n<p>通过定义模型<em>应该</em>做什么和<em>不应该</em>做什么来指导它。这有助于防止不相关、不合需要或不安全的内容。</p>\n<ul>\n<li><strong>语气和风格：</strong> “使用正式语气。”，“避免技术行话。”，“保持鼓励。”</li>\n<li><strong>内容包含/排除：</strong> “只侧重软件方面。”，“不要提及具体价格。”，“包含欧洲历史的例子。”</li>\n<li><strong>安全/道德准则：</strong> “不要生成有害内容。”，“避免偏见性语言。”（虽然模型有内置的安全措施，但加强限制也会有帮助）。</li>\n</ul>\n<p>示例：</p>\n<ul>\n<li><strong>开放式：</strong> <code>prompt = \"Write a comparison between LangChain and LlamaIndex.\"</code></li>\n<li><strong>受限：</strong> <code>prompt = \"Write a balanced comparison between LangChain and LlamaIndex for building RAG systems. Focus on their core strengths in data indexing and workflow orchestration. Keep the tone objective and avoid declaring one as definitively 'better'. Limit the response to two paragraphs.\"</code></li>\n</ul>\n<h3>从简开始，逐步完善</h3>\n<p>尽管复杂的提示可以获得复杂的结果，但通常最好从简单的提示开始，然后逐步完善。</p>\n<ol>\n<li><strong>起草基本提示：</strong> 为核心任务编写一个直接指令。</li>\n<li><strong>测试并观察：</strong> 运行提示并分析输出。它符合基本要求吗？它在哪里不足？</li>\n<li><strong>完善并添加元素：</strong> 根据观察到的输出和你的目标，逐步增加具体性、背景信息、角色、格式指令或限制。</li>\n<li><strong>重新测试：</strong> 评估改进后的提示。重复完善过程，直到输出持续满足你的需求。</li>\n</ol>\n<p>这个迭代过程比试图一次性完善一个高度复杂的提示更易于管理。它能够有条理地进行调试和改进。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-164s9ow\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [color=\"#495057\"];\n\n  Start [label=\"开始简单提示\"];\n  Test [label=\"测试提示\"];\n  Observe [label=\"分析输出\"];\n  Refine [label=\"完善/添加元素\\n(清晰度、背景、格式、角色...)\"];\n  End [label=\"输出可接受吗？\", shape=diamond, fillcolor=\"#ffec99\"];\n\n  Start -> Test;\n  Test -> Observe;\n  Observe -> End;\n  End -> Refine [label=\" 否 \"];\n  Refine -> Test;\n  End -> Finish [label=\" 是 \", shape=plaintext];\n  Finish [label=\"完成\", shape=plaintext];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-164s9ow\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>提示完善的迭代方法。</p>\n</blockquote>\n<p>掌握这些原则，为提示工程 (prompt engineering)打下了坚实的底子。通过在指令中做到清晰、提供背景、注意角色、指定格式和设定限制，并采用迭代完善过程，你将显著提高你从LLM获取高质量、可预测响应的能力，在你的Python应用中。这些要点为少样本提示等更高级技术铺平了道路，我们接下来将分析这些技术。</p>",
+  "slug": "principles-effective-prompting",
+  "updates": [],
+  "references": [
+    {
+      "id": 12907,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFQ-6ez4eBZFxqXDsgeaNyFCvpMDo1NOdJRvK2ziS9W67BXCZSezOJB8cXJyb4KMR_wojHaGOnBDQ6Ays1Mg3C7InL22xWQkC0X_ys4fywH0TbfMf02knyDKA==",
+      "doi": "",
+      "note": "介绍设计有效提示语的基本技术和最佳实践，涵盖清晰度、具体性、上下文和迭代改进。",
+      "order": 1,
+      "created_at": "2025-09-05T08:24:59.565828Z",
+      "updated_at": "2025-09-09T03:03:01.665382Z"
+    },
+    {
+      "id": 12908,
+      "title": "Introduction to prompt design",
+      "author": "Google Cloud",
+      "year": "2025",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEjT2eL5WDrIV1J5f_2z80DaqOR7CkoX1tBBMC-tIX1NU9f5L9jJuLI00MCGh9r3fhFteKos7bqgxykxFRMTTcs-XwINsK0DsSfDsWNIakWG0dEwmNrvwcbzVr7Nyvd5fRRlKRp4KELcdgMOYWGWijkOm344FDHPw7iTHlgadmSNdzKPAU_WDJBupV0VqKzy2pwxT6Rsdxp_g=",
+      "doi": "",
+      "note": "提供制作清晰有效提示语的指南和示例，强调清晰度、指令和提供上下文等原则。",
+      "order": 2,
+      "created_at": "2025-09-05T08:24:59.573617Z",
+      "updated_at": "2025-09-09T03:03:07.078178Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

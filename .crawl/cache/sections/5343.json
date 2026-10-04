@@ -1,0 +1,45 @@
+{
+  "id": 5343,
+  "title": "Compose 中的环境变量",
+  "meta_title": "在 Docker Compose 中使用环境变量",
+  "meta_description": "在 `docker-compose.yml` 中使用环境变量向服务传递配置。",
+  "content": "<p>使用 Docker Compose 编排多容器应用时，有效的配置是必需的。堆栈中的服务，例如需要数据库凭据的推理 (inference) API 或需要特定超参数 (parameter) (hyperparameter)的训练作业，通常需要外部设置才能正常运行。针对每个容器手动通过复杂的 <code>docker run</code> 命令传递这些参数很快就会变得不切实际。</p>\n<p>Docker Compose 提供了一种结构化且方便的方式来通过环境变量管理服务配置，可以直接在 <code>docker-compose.yml</code> 文件中定义，也可以通过外部文件引入。这种方法集中了配置，使您的多容器机器学习 (machine learning)应用更易于管理、调整和在不同环境中部署。</p>\n<h3>在 <code>docker-compose.yml</code> 中定义环境变量</h3>\n<p>设置服务环境变量最直接的方法是在 <code>docker-compose.yml</code> 中其定义中使用 <code>environment</code> 键。您可以将这些变量定义为列表或映射（字典）形式。</p>\n<p><strong>使用列表形式：</strong></p>\n<p>这通常是首选格式，因为它很明确，并且避免了潜在的类型解释问题。列表中的每个项都是 <code>VARIABLE=value</code> 格式的字符串。</p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nversion: '3.8'\nservices:\n  training_job:\n    build: ./training_app\n    image: my_training_app:latest\n    environment:\n      - LEARNING_RATE=0.01\n      - EPOCHS=50\n      - MODEL_OUTPUT_DIR=/app/outputs\n      - WANDB_API_KEY=${WANDB_API_KEY_HOST} # 从宿主环境获取值\n</code></pre>\n<p>在此示例中，<code>LEARNING_RATE</code>、<code>EPOCHS</code> 和 <code>MODEL_OUTPUT_DIR</code> 是直接设置的。<code>WANDB_API_KEY</code> 展示了如何从运行 <code>docker-compose up</code> 的宿主机的环境中替换值。如果 <code>WANDB_API_KEY_HOST</code> 在您的宿主机上已设置，其值将被分配给容器内的 <code>WANDB_API_KEY</code>。如果宿主机上未设置，容器内的 <code>WANDB_API_KEY</code> 变量将为空。</p>\n<p><strong>使用映射形式：</strong></p>\n<p>另外，您可以使用字典格式。</p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nversion: '3.8'\nservices:\n  inference_api:\n    build: ./inference_api\n    image: my_inference_api:latest\n    environment:\n      MODEL_PATH: /models/latest.pkl\n      API_PORT: 8000\n      DATABASE_URL: ${DB_CONNECTION_STRING} # 从宿主环境获取值\n    ports:\n      - \"8000:8000\" # 将宿主端口 8000 映射到容器端口 8000\n</code></pre>\n<p>此处，<code>MODEL_PATH</code> 和 <code>API_PORT</code> 已设置。请注意，Compose 通常会将映射格式中的所有值转换为字符串。如果您的应用期望数字类型（如端口号），它需要内部处理字符串到数字的转换。<code>DATABASE_URL</code> 再次显示了从宿主环境中的替换。</p>\n<h3>替换宿主环境变量</h3>\n<p>如上所示，Compose 允许您将宿主机环境中的变量注入到容器环境中。这对于敏感信息（如 API 密钥或数据库密码）或在开发、测试和生产环境之间变化的设置非常有用。</p>\n<p>语法是 <code>${HOST_VARIABLE}</code>。如果 <code>HOST_VARIABLE</code> 在宿主机上存在，则使用其值。否则，行为取决于您是否提供默认值：</p>\n<ul>\n<li><code>${HOST_VARIABLE}</code>：如果在宿主机上未设置，容器内的变量将为空字符串。</li>\n<li><code>${HOST_VARIABLE:-default}</code>：如果在宿主机上未设置，容器内的变量将获得 <code>default</code> 值。</li>\n<li><code>${HOST_VARIABLE:?error message}</code>：如果在宿主机上未设置，Compose 将停止并显示错误消息。</li>\n</ul>\n<p>带默认值的示例：</p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nservices:\n  worker:\n    image: my_worker:latest\n    environment:\n      - QUEUE_NAME=${JOB_QUEUE:-default_queue}\n      - LOG_LEVEL=${LOG_LEVEL:-INFO}\n</code></pre>\n<p>如果 <code>JOB_QUEUE</code> 在宿主机上未设置，容器内的 <code>QUEUE_NAME</code> 将是 <code>default_queue</code>。类似地，<code>LOG_LEVEL</code> 默认为 <code>INFO</code>。</p>\n<h3>使用 <code>.env</code> 文件进行本地开发</h3>\n<p>不建议将配置，尤其是秘密信息，直接硬编码到 <code>docker-compose.yml</code> 中。将此类文件提交到版本控制会暴露敏感数据。管理特定环境变量的常见做法，尤其是在本地开发期间，是使用一个环境文件，通常命名为 <code>.env</code>。</p>\n<p>Docker Compose 会自动在您运行 <code>docker-compose up</code> 命令的目录（或使用 <code>--project-directory</code> 标志指定的项目目录）中查找名为 <code>.env</code> 的文件。定义在此 <code>.env</code> 文件中的变量将自动替换到您的 <code>docker-compose.yml</code> 文件中使用 <code>${VARIABLE}</code> 语法的地方。</p>\n<p><strong><code>.env</code> 文件示例：</strong></p>\n<pre><code class=\"language-bash\"># .env（此文件通常应添加到 .gitignore 中）\nDB_USER=ml_user\nDB_PASSWORD=supersecretdevpassword\nDB_HOST=db # 在 docker-compose.yml 中定义的服务名称\nDB_NAME=mldatabase\nAPI_KEY=dev-abc123xyz\n</code></pre>\n<p><strong>使用 <code>.env</code> 变量的 <code>docker-compose.yml</code> 示例：</strong></p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nversion: '3.8'\nservices:\n  api:\n    build: ./api\n    image: my_ml_api:latest\n    environment:\n      - DATABASE_USER=${DB_USER}\n      - DATABASE_PASSWORD=${DB_PASSWORD}\n      - DATABASE_HOST=${DB_HOST}\n      - DATABASE_NAME=${DB_NAME}\n      - EXTERNAL_SERVICE_KEY=${API_KEY}\n    depends_on:\n      - db\n    ports:\n      - \"5000:5000\"\n\n  db:\n    image: postgres:14-alpine\n    environment:\n      # PostgreSQL 镜像使用这些特定环境变量\n      POSTGRES_USER: ${DB_USER}\n      POSTGRES_PASSWORD: ${DB_PASSWORD}\n      POSTGRES_DB: ${DB_NAME}\n    volumes:\n      - db_data:/var/lib/postgresql/data\n\nvolumes:\n  db_data:\n</code></pre>\n<p>当您运行 <code>docker-compose up</code> 时，Compose 会读取 <code>.env</code> 文件，找到 <code>DB_USER=ml_user</code>，并将 <code>ml_user</code> 替换到 <code>docker-compose.yml</code> 文件中所有出现 <code>${DB_USER}</code> 的位置。这使得您的秘密信息不被版本控制系统追踪，同时为您的服务提供必要的配置。请记住将 <code>.env</code> 添加到您的 <code>.gitignore</code> 文件中！</p>\n<h3>使用 <code>env_file</code> 指定环境文件</h3>\n<p>尽管自动加载 <code>.env</code> 文件很方便，但有时您需要更多的控制，也许需要在不同情况下使用不同的环境文件（例如，<code>.env.dev</code>、<code>.env.prod</code>、<code>.env.test</code>）。服务定义中的 <code>env_file</code> 指令允许您指定一个或多个自定义环境文件。</p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nversion: '3.8'\nservices:\n  inference_service:\n    build: ./inference\n    image: my_predictor:latest\n    # 首先从 ./config/.prod.env 加载变量，\n    # 然后是 ./config/.common.env，覆盖重复项\n    env_file:\n      - ./config/.prod.env\n      - ./config/.common.env\n    environment:\n      # 此处定义的变量将覆盖来自 env_file 的变量\n      - LOG_LEVEL=INFO\n</code></pre>\n<p>通过 <code>env_file</code> 加载的变量会设置在容器的环境中。如果您列出多个文件，它们将按顺序读取，后面文件中定义的变量会覆盖前面文件中的变量。直接在 <code>environment</code> 键下定义的变量优先于通过 <code>env_file</code> 加载的变量。</p>\n<h3>优先级顺序</h3>\n<p>理解环境变量的应用顺序很重要：</p>\n<ol>\n<li>在 <code>docker-compose.yml</code> 中服务的 <code>environment</code> 部分定义的变量。</li>\n<li>通过命令行使用 <code>docker-compose run -e VARIABLE=value ...</code> 传递的变量（仅适用于 <code>run</code>）。</li>\n<li>使用 <code>env_file</code> 指令定义的变量。</li>\n<li>来自自动加载的 <code>.env</code> 文件的变量（用于 <code>docker-compose.yml</code> 中的替换）。</li>\n<li>在宿主环境中定义的变量（用于 <code>docker-compose.yml</code> 中的替换）。</li>\n<li>使用 Dockerfile 中的 <code>ENV</code> 指令定义的变量。</li>\n</ol>\n<p>此列表中后设置的变量会被先设置的变量覆盖。</p>\n<h3>传递字面量美元符号</h3>\n<p>如果您需要容器内的环境变量实际包含美元符号（$），您需要在 <code>docker-compose.yml</code> 文件中使用 <code>$$</code> 进行转义。</p>\n<pre><code class=\"language-yaml\"># docker-compose.yml\nservices:\n  my_service:\n    image: some_image\n    environment:\n      - CONFIG_VAR=uses_a_literal_$$VAR # 在容器内部变为 CONFIG_VAR=uses_a_literal_$VAR\n</code></pre>\n<p>通过运用 <code>environment</code> 键、宿主变量替换、<code>.env</code> 文件以及 <code>env_file</code> 指令，Docker Compose 为配置您的多容器机器学习 (machine learning)应用提供了灵活且安全的方法。这使您能够将配置与应用程序代码和 Docker 镜像分离，使您的设置在不同开发和部署阶段更具可移植性且更易于管理。</p>",
+  "slug": "compose-environment-variables",
+  "updates": [],
+  "references": [
+    {
+      "id": 14318,
+      "title": "Environment variables in Compose",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/compose/environment-variables/",
+      "doi": "",
+      "note": "官方文档，全面指导如何在 Docker Compose 中定义、替换和管理环境变量，包括 .env 文件和优先级规则。",
+      "order": 1,
+      "created_at": "2025-09-05T08:51:03.638950Z",
+      "updated_at": "2025-09-11T02:22:00.697558Z"
+    },
+    {
+      "id": 14319,
+      "title": "Docker in Action, Third Edition",
+      "author": "Jeff Nickoloff, Stephen Kuenzli",
+      "year": "2019",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "350",
+      "url": "https://www.manning.com/books/docker-in-action-second-edition",
+      "doi": "",
+      "note": "本书介绍了 Docker 和 Docker Compose，其中包含关于服务配置和多容器设置中环境变量管理最佳实践的专章。",
+      "order": 2,
+      "created_at": "2025-09-05T08:51:03.665073Z",
+      "updated_at": "2025-09-11T02:21:59.477129Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

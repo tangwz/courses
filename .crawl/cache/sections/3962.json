@@ -1,0 +1,45 @@
+{
+  "id": 3962,
+  "title": "准确率：一个简单的起始指标",
+  "meta_title": "计算模型准确率",
+  "meta_description": "定义并学习如何计算分类模型的准确率。",
+  "content": "<p>在理解了分类模型如何进行预测之后，最自然的问题是：“模型预测正确的频率是多少？” 这直接引出了准确率，它可能是评估分类性能最直观的指标。</p>\n<h3>什么是准确率？</h3>\n<p>准确率衡量模型的整体正确性。它告诉我们模型正确分类的预测数量占总预测数量的比例。可以将其视为模型的命中率。如果模型的准确率为0.9，则表示它正确预测了90%所见样本的类别标签。</p>\n<h3>计算准确率</h3>\n<p>准确率的计算简单直接。您只需统计模型正确预测的数量，然后将其除以模型做出的总预测数量。</p>\n<p>公式为：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>准确率</mtext><mo>=</mo><mfrac><mtext>正确预测数量</mtext><mtext>总预测数量</mtext></mfrac></mrow><annotation encoding=\"application/x-tex\">\\text{准确率} = \\frac{\\text{正确预测数量}}{\\text{总预测数量}}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">准确率</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0463em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">总预测数量</span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">正确预测数量</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></span>\n<p>当预测类别标签与给定数据点的实际类别标签一致时，即发生“正确预测”。“总预测数量”通常是指测试集（您用于评估模型的数据）中的数据点总数。</p>\n<h3>一个简单的例子</h3>\n<p>设想我们有一个简单的分类模型，旨在预测邮件是“垃圾邮件”还是“非垃圾邮件”。我们用10封模型未曾见过的邮件测试该模型。结果如下：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">实际标签</th>\n<th align=\"left\">预测标签</th>\n<th align=\"left\">正确？</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">非垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">垃圾邮件</td>\n<td align=\"left\">是</td>\n</tr>\n</tbody>\n</table>\n<p>我们来统计一下：</p>\n<ul>\n<li><strong>总预测数量：</strong> 我们评估了10封邮件。</li>\n<li><strong>正确预测数量：</strong> 查看“正确？”列，我们数到8个“是”的条目。</li>\n</ul>\n<p>现在，我们应用该公式：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>准确率</mtext><mo>=</mo><mfrac><mn>8</mn><mn>10</mn></mfrac><mo>=</mo><mn>0.8</mn></mrow><annotation encoding=\"application/x-tex\">\\text{准确率} = \\frac{8}{10} = 0.8</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">准确率</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0074em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3214em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">10</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">8</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.8</span></span></span></span></span>\n<p>因此，我们的邮件垃圾邮件过滤模型在此测试集上的准确率为0.8，即80%。这意味着模型正确分类了10封邮件中的8封。</p>\n<p>我们可以将这种简单的计数可视化：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-9xe7\" \n              data-plot-definition='{\"layout\": {\"title\": \"预测结果（10封邮件）\", \"xaxis\": {\"title\": \"结果\"}, \"yaxis\": {\"title\": \"邮件数量\"}, \"bargap\": 0.2, \"autosize\": true, \"height\": 350}, \"data\": [{\"type\": \"bar\", \"x\": [\"正确预测\", \"错误预测\"], \"y\": [8, 2], \"marker\": {\"color\": [\"#40c057\", \"#fa5252\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-9xe7\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>邮件垃圾邮件示例中正确和错误预测的计数。</p>\n</blockquote>\n<h3>解释准确率</h3>\n<p>准确率分数范围从0（意味着模型所有预测都错误）到1（意味着模型所有预测都正确）。较高的准确率通常表示模型性能更好。它能快速、整体地概括模型表现。</p>\n<p>由于易于理解和计算，准确率常常是人们首先关注的指标。然而，尽管有用，准确率不总能提供模型性能的全貌。在下一节中，我们将研究仅凭准确率可能产生误导的情况。</p>",
+  "slug": "accuracy-metric",
+  "updates": [],
+  "references": [
+    {
+      "id": 10679,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher M. Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.springer.com/book/9780387310732",
+      "doi": "",
+      "note": "一本综合性教材，介绍统计机器学习，包括分类和性能评估。",
+      "order": 1,
+      "created_at": "2025-09-05T06:52:13.619431Z",
+      "updated_at": "2025-09-08T13:29:37.889632Z"
+    },
+    {
+      "id": 10680,
+      "title": "`sklearn.metrics.accuracy_score`",
+      "author": "Scikit-learn Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html",
+      "doi": "",
+      "note": " `accuracy_score` 函数的官方文档，详细说明其在 Python 中的使用和实现。",
+      "order": 2,
+      "created_at": "2025-09-05T06:52:13.622788Z",
+      "updated_at": "2025-09-08T13:29:40.532298Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

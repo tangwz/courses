@@ -1,0 +1,61 @@
+{
+  "id": 1363,
+  "title": "创建新特征的动机",
+  "meta_title": "特征创建的动机",
+  "meta_description": "了解如何创建新的、信息量大的特征来捕捉数据中的复杂模式。",
+  "content": "<p>您已经学习了如何清洗、填充、编码和缩放原始数据集中的特征。这些是为机器学习 (machine learning)算法准备数据的必要步骤。然而，有时原始特征，即使经过仔细准备，也未能完全体现模型实现最佳性能所需的底层模式或关系。这正是特征创建发挥作用的地方。</p>\n<p>将您最初拥有的特征视为基本构建块。特征创建是通过巧妙地组合或转换这些块来构建新的、信息量更大的特征的过程。为什么要这样做呢？因为目标是让模型更容易完成学习任务。</p>\n<h3>明确模式</h3>\n<p>机器学习 (machine learning)模型从它们获得的数据中学习模式。有些模型，例如线性回归或逻辑回归，天生擅长发现线性关系。然而，如果特征与目标变量之间的真实关系更复杂或非线性，它们可能会遇到困难。</p>\n<p>考虑预测房价。一个简单的线性模型可能会将 <code>square_footage</code>（面积）和 <code>number_of_bedrooms</code>（卧室数量）作为独立的输入。但也许每平方英尺的价值会根据房屋大小而显著变化。大房子每平方英尺的价格可能低于设计精巧的小房子。原始特征 <code>square_footage</code> 和 <code>number_of_bedrooms</code> 未能直接表示这种交互。通过创建一个新特征，例如 <code>price_per_square_foot</code>（如果训练期间价格已知，尽管它通常是目标）或一个交互项，例如 <code>square_footage * number_of_bedrooms</code>，我们使这种潜在关系明确，有助于模型更好地学习。</p>\n<p>同样，如果一个关系遵循曲线，例如 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi><mo>≈</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">y \\approx x^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6776em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>，只使用 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span> 作为特征的线性模型将提供不佳的拟合。创建一个新特征，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>x</mi><mtext>平方</mtext></msub><mo>=</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">x_{平方} = x^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.5806em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3283em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord cjk_fallback mtight\">平方</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>，使得线性模型能够有效地拟合二次关系。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-dsosvx\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fillcolor=\"#e9ecef\", style=filled];\n  edge [fontname=\"sans-serif\"];\n\n  subgraph cluster_0 {\n    label = \"原始特征\";\n    bgcolor=\"#f8f9fa\";\n    Raw1 [label=\"特征 A\"];\n    Raw2 [label=\"特征 B\"];\n  }\n\n  subgraph cluster_1 {\n    label = \"构建特征\";\n    bgcolor=\"#f8f9fa\";\n    Eng1 [label=\"A * B\\n(交互)\", fillcolor=\"#d0bfff\"];\n    Eng2 [label=\"A²\\n(多项式)\", fillcolor=\"#96f2d7\"];\n    Eng3 [label=\"f(B)\\n(转换)\", fillcolor=\"#ffec99\"];\n  }\n\n  Model [label=\"机器学习模型\", shape=ellipse, fillcolor=\"#a5d8ff\", style=filled];\n\n  Raw1 -> Model [label=\"信息有限\", style=dashed, color=\"#adb5bd\"];\n  Raw2 -> Model [label=\"信息有限\", style=dashed, color=\"#adb5bd\"];\n\n  Raw1 -> Eng1;\n  Raw2 -> Eng1;\n  Raw1 -> Eng2;\n  Raw2 -> Eng3;\n\n  Eng1 -> Model [color=\"#7048e8\"];\n  Eng2 -> Model [color=\"#0ca678\"];\n  Eng3 -> Model [color=\"#f59f00\"];\n\n  {rank=same; Raw1; Raw2;}\n  {rank=same; Eng1; Eng2; Eng3;}\n  {rank=same; Model;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-dsosvx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该流程图展示了与仅仅依赖原始特征相比，构建特征如何能为机器学习模型提供更直接的输入。</p>\n</blockquote>\n<h3>融入领域知识</h3>\n<p>通常，您掌握着关于问题领域的知识，而这些知识并未直接编码在原始数据变量中。特征创建是将这种理解注入建模过程的主要方式。</p>\n<p>例如，如果您有 <code>transaction_timestamp</code>（交易时间戳）数据，原始时间戳可能不是许多模型最有用的格式。领域知识表明，像 <code>day_of_week</code>（星期几）、<code>month</code>（月份）或 <code>hour_of_day</code>（一天中的小时）等因素可能是顾客行为的重要预测因素。提取这些组成部分会创建新的特征，明确表示可能与预测任务相关的时间模式。同样，将 <code>date_of_birth</code>（出生日期）特征转换为 <code>age</code>（年龄）是一个常见的、由领域知识驱动的特征创建步骤。</p>\n<h3>简化模型复杂性</h3>\n<p>有时，创建合适的特征使得您能够有效地使用更简单、更易于解释的模型。与其强迫一个复杂模型（例如深度神经网络 (neural network)或非常深的决策树）从原始特征中学习复杂的交互，不如预先构建捕捉这些交互的特征。这可能使得更简单的模型，如正则化 (regularization)线性回归，能够实现相似甚至更好的性能，而且通常还具有训练更快、解释更容易的额外好处。</p>\n<p>在本章中，我们将介绍几种系统地创建新特征的方法：</p>\n<ul>\n<li><strong>交互项：</strong> 特征的乘法或加法组合。</li>\n<li><strong>多项式特征：</strong> 创建现有数值特征的幂。</li>\n<li><strong>日期/时间提取：</strong> 从时间数据中提取有意义的组成部分。</li>\n<li><strong>分箱：</strong> 将数值数据分组到类别箱中。</li>\n</ul>\n<p>通过掌握这些技术，您通常可以显著提升模型的预测准确性及其泛化到新的、未见数据的能力。让我们首先看一下如何生成交互特征。</p>",
+  "slug": "motivation-feature-creation",
+  "updates": [],
+  "references": [
+    {
+      "id": 1114,
+      "title": "An Introduction to Statistical Learning: With Applications in R",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani",
+      "year": "2013",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "10.1007/978-1-4614-7138-7",
+      "note": "一本基础统计学习教材，涵盖数据准备和特征工程在模型开发中的关键作用。",
+      "order": 1,
+      "created_at": "2025-09-04T15:23:55.777000Z",
+      "updated_at": "2025-09-07T16:52:42.716161Z"
+    },
+    {
+      "id": 1115,
+      "title": "Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists",
+      "author": "Alice Zheng and Amanda Casari",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/",
+      "doi": "",
+      "note": "这本书提供了一份实用而全面的特征工程指南，详细阐述了其重要性及各种技术。",
+      "order": 2,
+      "created_at": "2025-09-04T15:23:55.779967Z",
+      "updated_at": "2025-09-07T16:52:32.704483Z"
+    },
+    {
+      "id": 1116,
+      "title": "CS229 Lecture Notes",
+      "author": "Andrew Ng",
+      "year": "2018",
+      "publisher": "Stanford University",
+      "journal": "Stanford University",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.kaggle.com/code/pranavthebest/cs-229-machine-learning-notes-autumn-2018",
+      "doi": "",
+      "note": "这些被广泛引用的斯坦福机器学习课程讲义讨论了适当的特征表示对于有效模型学习的必要性。",
+      "order": 3,
+      "created_at": "2025-09-04T15:23:55.783060Z",
+      "updated_at": "2025-09-07T16:52:49.713608Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

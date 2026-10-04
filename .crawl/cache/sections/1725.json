@@ -1,0 +1,61 @@
+{
+  "id": 1725,
+  "title": "动手实践：从数组中选择数据",
+  "meta_title": "练习 NumPy 索引",
+  "meta_description": "应用各种索引和切片技术来选择和修改 NumPy 数组中的数据。",
+  "content": "<p>NumPy 数组中数据访问和修改的各种选择方法的实际应用。这包括基本索引、切片、布尔索引和花式索引。</p>\n<p>首先，请确保已导入 NumPy。如果您正在 Jupyter Notebook 或 Python 脚本中进行操作，请从这一行开始：</p>\n<pre><code class=\"language-python\">import numpy as np\n</code></pre>\n<h3>准备示例数组</h3>\n<p>我们需要一些数组来操作。让我们创建一个简单的一维数组和一个二维数组。</p>\n<pre><code class=\"language-python\"># 一维数组\narr1d = np.arange(10) # 创建数组 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\nprint(\"一维数组:\")\nprint(arr1d)\n\n# 二维数组 (3 行, 4 列)\narr2d = np.array([[ 1,  2,  3,  4],\n                  [ 5,  6,  7,  8],\n                  [ 9, 10, 11, 12]])\nprint(\"\\n二维数组:\")\nprint(arr2d)\n</code></pre>\n<h3>基本索引和切片</h3>\n<p>请记住，索引用于访问单个元素，而切片用于提取子数组。</p>\n<p><strong>练习 1：访问元素</strong></p>\n<ol>\n<li>从 <code>arr1d</code> 中获取索引为 3 的元素。</li>\n<li>从 <code>arr2d</code> 中获取第二行（索引 1）第三列（索引 2）的元素。</li>\n</ol>\n<pre><code class=\"language-python\"># 1. arr1d 中索引为 3 的元素\nelement_1d = arr1d[3]\nprint(f\"arr1d 中索引为 3 的元素: {element_1d}\")\n\n# 2. arr2d 中第 1 行第 2 列的元素\nelement_2d = arr2d[1, 2] # 或者 arr2d[1][2]\nprint(f\"arr2d 中第 1 行第 2 列的元素: {element_2d}\")\n</code></pre>\n<p><strong>练习 2：数组切片</strong></p>\n<ol>\n<li>从 <code>arr1d</code> 中获取前 5 个元素。</li>\n<li>从 <code>arr1d</code> 中获取从索引 5 开始的所有元素。</li>\n<li>从 <code>arr2d</code> 中获取前两行。</li>\n<li>从 <code>arr2d</code> 中获取前两列。</li>\n<li>从 <code>arr2d</code> 的右上角提取一个 2x2 的子数组（行 0-1，列 2-3）。</li>\n</ol>\n<pre><code class=\"language-python\"># 1. arr1d 的前 5 个元素\nslice1 = arr1d[:5]\nprint(f\"\\narr1d 的前 5 个元素: {slice1}\")\n\n# 2. arr1d 中从索引 5 开始的所有元素\nslice2 = arr1d[5:]\nprint(f\"arr1d 中从索引 5 开始的所有元素: {slice2}\")\n\n# 3. arr2d 的前两行\nslice3 = arr2d[:2] # 行 0 和 1\nprint(\"\\narr2d 的前两行:\")\nprint(slice3)\n\n# 4. arr2d 的前两列\nslice4 = arr2d[:, :2] # 所有行，列 0 和 1\nprint(\"\\narr2d 的前两列:\")\nprint(slice4)\n\n# 5. arr2d 的右上角 2x2 子数组\nslice5 = arr2d[:2, 2:] # 行 0-1，列 2-3\nprint(\"\\narr2d 的右上角 2x2 子数组:\")\nprint(slice5)\n</code></pre>\n<h3>布尔索引</h3>\n<p>布尔索引允许基于条件进行选择。</p>\n<p><strong>练习 3：条件选择</strong></p>\n<ol>\n<li>从 <code>arr1d</code> 中选择所有大于 5 的元素。</li>\n<li>从 <code>arr2d</code> 中选择所有第一列（索引 0）的元素大于 4 的行。</li>\n</ol>\n<pre><code class=\"language-python\"># 1. arr1d 中大于 5 的元素\nbool_mask_1d = arr1d > 5\nselected_1d = arr1d[bool_mask_1d]\nprint(f\"\\narr1d 中大于 5 的元素: {selected_1d}\")\n# 您也可以一步完成：arr1d[arr1d > 5]\n\n# 2. arr2d 中第一个元素大于 4 的行\nbool_mask_2d = arr2d[:, 0] > 4 # 对第一列施加条件\nselected_rows_2d = arr2d[bool_mask_2d]\nprint(\"\\narr2d 中第一个元素大于 4 的行:\")\nprint(selected_rows_2d)\n</code></pre>\n<h3>花式索引</h3>\n<p>花式索引使用索引数组来选择元素。</p>\n<p><strong>练习 4：使用索引数组选择</strong></p>\n<ol>\n<li>从 <code>arr1d</code> 中选择索引为 1、3 和 7 的元素。</li>\n<li>从 <code>arr2d</code> 中选择索引为 0 和 2 的行。</li>\n<li>从 <code>arr2d</code> 中选择坐标为 (0, 1)、(1, 3) 和 (2, 0) 的元素。</li>\n</ol>\n<pre><code class=\"language-python\"># 1. 从 arr1d 中选择特定索引\nindices_1d = np.array([1, 3, 7])\nselected_fancy_1d = arr1d[indices_1d]\nprint(f\"\\narr1d 中索引 {indices_1d} 处的元素: {selected_fancy_1d}\")\n\n# 2. 从 arr2d 中选择特定行\nrow_indices = np.array([0, 2])\nselected_fancy_rows = arr2d[row_indices] # 选择整行\nprint(\"\\narr2d 中索引 0 和 2 的行:\")\nprint(selected_fancy_rows)\n\n# 3. 使用坐标对从 arr2d 中选择特定元素\nrow_coords = np.array([0, 1, 2])\ncol_coords = np.array([1, 3, 0])\nselected_fancy_elements = arr2d[row_coords, col_coords]\nprint(f\"\\narr2d 中坐标为 (0,1), (1,3), (2,0) 的元素: {selected_fancy_elements}\")\n</code></pre>\n<h3>修改数组子集</h3>\n<p>您可以使用任何这些索引方法对选定的部分赋值。请记住，切片通常返回<em>视图</em>，这意味着修改会影响原始数组，而花式索引通常返回<em>副本</em>。</p>\n<p><strong>练习 5：更新数组值</strong></p>\n<ol>\n<li>将 <code>arr1d</code> 中索引为 0 的元素更改为 99。</li>\n<li>将 <code>arr1d</code> 的前 3 个元素更改为 100。</li>\n<li>将 <code>arr1d</code> 中所有偶数元素更改为 0。</li>\n<li>在 <code>arr2d</code> 中，将 (1, 1) 处的元素更改为 -5。</li>\n<li>在 <code>arr2d</code> 中，将整个最后一行（索引 2）更改为只包含值 13。</li>\n</ol>\n<pre><code class=\"language-python\">print(\"\\n修改前的原始 arr1d:\", arr1d)\nprint(\"修改前的原始 arr2d:\\n\", arr2d)\n\n# 1. 修改 arr1d 中的单个元素\narr1d_copy1 = arr1d.copy() # 在副本上操作，以保留原始数据供后续步骤使用\narr1d_copy1[0] = 99\nprint(\"\\n1. arr1d 将索引 0 设置为 99 后的结果:\", arr1d_copy1)\n\n# 2. 修改 arr1d 中的切片\narr1d_copy2 = arr1d.copy()\narr1d_copy2[:3] = 100\nprint(\"2. arr1d 将前 3 个元素设置为 100 后的结果:\", arr1d_copy2)\n\n# 3. 根据条件修改 arr1d\narr1d_copy3 = arr1d.copy()\narr1d_copy3[arr1d_copy3 % 2 == 0] = 0 # 使用布尔索引进行赋值\nprint(\"3. arr1d 将偶数设置为 0 后的结果:\", arr1d_copy3)\n\n# 4. 修改 arr2d 中的单个元素\narr2d_copy1 = arr2d.copy()\narr2d_copy1[1, 1] = -5\nprint(\"\\n4. arr2d 将元素 (1,1) 设置为 -5 后的结果:\\n\", arr2d_copy1)\n\n# 5. 修改 arr2d 的整行\narr2d_copy2 = arr2d.copy()\narr2d_copy2[2] = 13 # 将标量赋值给整个行切片\n# 或者：arr2d_copy2[2, :] = 13\nprint(\"5. arr2d 将最后一行设置为 13 后的结果:\\n\", arr2d_copy2)\n\n</code></pre>\n<p>这些练习涵盖了您在 NumPy 数组中操作数据的主要方式。熟练掌握这些选择和修改方法对于为数据分析或模型训练做准备至关重要。您还可以进一步尝试组合使用这些方法，例如，从通过布尔条件选择的行中选择特定列。</p>",
+  "slug": "selecting-array-data-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5516,
+      "title": "NumPy User Guide: Indexing",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "NumPy的官方用户指南，提供了所有索引和切片技术的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-05T01:11:13.812706Z",
+      "updated_at": "2025-09-08T02:38:30.405123Z"
+    },
+    {
+      "id": 5517,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本关于Python数据处理的权威书籍，其中包含专门解释NumPy数组、索引和切片的章节。",
+      "order": 2,
+      "created_at": "2025-09-05T01:11:13.832219Z",
+      "updated_at": "2025-09-08T02:38:20.084511Z"
+    },
+    {
+      "id": 5518,
+      "title": "NumPy: the array object - Indexing and Slicing",
+      "author": "Gaël Varoquaux, Emmanuelle Gouillart, and Olav Vahtras",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scipy-lectures.org/intro/numpy/array_object.html#indexing-and-slicing",
+      "doi": "",
+      "note": "一个广泛使用的教育资源，提供了NumPy数组索引和切片清晰的解释和实际示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:11:13.836648Z",
+      "updated_at": "2025-09-08T02:38:24.783505Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5294,
+  "title": "使用路由组织项目",
+  "meta_title": "使用路由组织 FastAPI 项目",
+  "meta_description": "使用 APIRouter 将您的应用划分为逻辑模块，便于维护。",
+  "content": "<p>随着您的 FastAPI 应用用于部署机器学习 (machine learning)模型而日益发展，将所有 API 端点都放在一个 Python 文件（例如 <code>main.py</code>）中很快就会变得难以管理。代码将变得更难查找、维护和调试。API 的不同逻辑部分，例如预测端点、状态检查或模型管理路由，会混杂在一起。</p>\n<p>FastAPI 为此提供了一个整洁的解决方案：<code>APIRouter</code>。您可以将 <code>APIRouter</code> 看作一个迷你 FastAPI 应用。它允许您将相关路径操作（即端点）组合在一起，通常放在独立的 Python 模块中，然后将它们连接回您的主 <code>FastAPI</code> 应用实例。这种模块化方法是构建大型、结构良好的服务的基础。</p>\n<h3>介绍 APIRouter</h3>\n<p>一个 <code>APIRouter</code> 的运作方式与主 <code>FastAPI</code> 应用对象非常相似。您可以在 <code>APIRouter</code> 实例上定义路径操作（使用 <code>@router.get</code>、<code>@router.post</code> 等装饰器），就像在 <code>app</code> 实例上定义一样。</p>\n<p>让我们看看如何使用它。假设您想将模型预测端点分离到自己的模块中。</p>\n<p>首先，创建一个新文件，例如 <code>routers/predictions.py</code>。在此文件中，您导入 <code>APIRouter</code> 并创建一个实例：</p>\n<pre><code class=\"language-python\"># routers/predictions.py\nfrom fastapi import APIRouter\nfrom pydantic import BaseModel\n\n# 如果需要，定义您的输入/输出 Pydantic 模型\nclass PredictionInput(BaseModel):\n    feature1: float\n    feature2: str\n    # ... 其他特征\n\nclass PredictionOutput(BaseModel):\n    prediction: float\n    probability: float | None = None\n\n# 创建路由实例\nrouter = APIRouter()\n\n# 在路由实例上定义路径操作\n@router.post(\"/make\", response_model=PredictionOutput)\nasync def make_prediction(data: PredictionInput):\n    \"\"\"\n    接收输入数据并返回模型预测结果。\n    （实际的模型加载和推理逻辑将在此处）\n    \"\"\"\n    # 模型推理逻辑的占位符\n    prediction_value = 1.0 # 替换为实际的 model.predict(...)\n    probability_value = 0.85 # 如果您的模型提供概率，则替换\n\n    # 在这里，您通常会：\n    # 1. 预处理输入数据 (data.dict())\n    # 2. 从您加载的机器学习模型获取预测结果\n    # 3. 如果有必要，对结果进行后处理\n    # 4. 返回结构化的输出\n\n    return PredictionOutput(prediction=prediction_value, probability=probability_value)\n\n@router.get(\"/info\")\nasync def get_model_info():\n    \"\"\"\n    返回关于预测模型的基本信息。\n    \"\"\"\n    return {\"model_name\": \"ExamplePredictor\", \"version\": \"1.0\"}\n\n# 您可以在此处添加更多与预测相关的端点...\n</code></pre>\n<p>请注意，我们使用 <code>@router.post</code> 和 <code>@router.get</code>，而不是 <code>@app.post</code> 和 <code>@app.get</code>。函数签名和 Pydantic 模型的使用方式保持完全一致。</p>\n<h3>在主应用中包含路由</h3>\n<p>现在，您需要让您的主 <code>FastAPI</code> 应用了解这个路由。在 <code>main.py</code> 中（或者主 <code>FastAPI</code> 实例定义的位置），您导入路由对象并使用 <code>app.include_router()</code> 方法。</p>\n<pre><code class=\"language-python\"># main.py\nfrom fastapi import FastAPI\nfrom routers import predictions # 导入包含路由的模块\n\n# 创建主 FastAPI 应用实例\napp = FastAPI(\n    title=\"ML Model Prediction Service\",\n    description=\"API for serving predictions from an ML model.\",\n    version=\"0.1.0\"\n)\n\n# 包含预测路由\napp.include_router(predictions.router)\n\n@app.get(\"/\")\nasync def read_root():\n    ```python\n    return {\"message\": \"Prediction API!\"}\n</code></pre>\n<h1>您也可以在此处包含其他路由</h1>\n<h1>from routers import monitoring</h1>\n<h1>app.include_router(monitoring.router)</h1>\n<pre><code>\n通过这种设置，在 `routers/predictions.py` 中定义的端点（`/make` 和 `/info`）现在是您主应用的一部分。FastAPI 在内部处理路由。当对 `/make` 或 `/info` 的请求到达时，它将被定向到 `predictions` 路由中对应的函数。\n\n### 使用前缀和标签组织 URL\n\n`include_router` 方法提供有用的参数，有助于更好地组织，特别是在 API 文档和 URL 结构方面。\n\n*   **`prefix`**: 为路由中定义的所有路由添加路径前缀。这非常适合将端点分组到一个共同的路径段下。\n*   **`tags`**: 为路由中的所有路由分配标签。这些标签用于在自动生成的 API 文档（如 Swagger UI）中对操作进行分组。\n\n让我们修改 `main.py` 以使用这些参数：\n\n```python\n# main.py (updated)\nfrom fastapi import FastAPI\nfrom routers import predictions\n\napp = FastAPI(\n    title=\"ML Model Prediction Service\",\n    description=\"API for serving predictions from an ML model.\",\n    version=\"0.1.0\"\n)\n\n# 包含带前缀和标签的预测路由\napp.include_router(\n    predictions.router,\n    prefix=\"/predict\", # predictions.router 中的所有路由现在都以 /predict 开头\n    tags=[\"Predictions\"] # 在文档中将这些端点分组到“预测”下\n)\n\n@app.get(\"/\")\nasync def read_root():\n    ```python\n    return {\"message\": \"Prediction API!\"}\n</code></pre>\n<pre><code>\n现在，之前在 `/make` 访问的端点将在 `/predict/make` 可用，而 `/info` 将在 `/predict/info` 可用。在您的交互式 API 文档（通常在 `/docs` 找到）中，您将看到这些端点整齐地分组在“预测”标签下。\n\n```graphviz\ndigraph G {\n  rankdir=LR;\n  graph [bgcolor=transparent, fontname=\"Arial\"];\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\", fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_main {\n    label = \"main.py\";\n    style=\"filled,rounded\";\n    color=\"#dee2e6\";\n    bgcolor=\"#f8f9fa\";\n    main_app [label=\"app = FastAPI()\"];\n    include_call [label=\"app.include_router(\\n  predictions.router,\\n  prefix='/predict',\\n  tags=['Predictions']\\n)\", shape=invhouse];\n    main_app -> include_call [label=\" 配置 \"];\n  }\n\n  subgraph cluster_router {\n    label = \"routers/predictions.py\";\n    style=\"filled,rounded\";\n    color=\"#dee2e6\";\n    bgcolor=\"#f8f9fa\";\n    router_instance [label=\"router = APIRouter()\"];\n    predict_endpoint [label=\"@router.post('/make')\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    info_endpoint [label=\"@router.get('/info')\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    router_instance -> predict_endpoint;\n    router_instance -> info_endpoint;\n  }\n\n  include_call -> router_instance [label=\" 包含 \"];\n}\n</code></pre>\n<blockquote>\n<p>示意图显示了主应用如何包含预测路由模块。<code>include_router</code> 调用指定了 <code>/predict</code> 前缀并分配了“预测”标签。</p>\n</blockquote>\n<p>使用 <code>APIRouter</code> 是构建可维护和可伸缩的 FastAPI 应用的重要一步。它使您能够：</p>\n<ol>\n<li><strong>关注点分离</strong>：将与特定功能（如预测、用户管理、数据预处理）相关的代码保留在独立的模块中。</li>\n<li><strong>提高可读性</strong>：文件更小，更易于理解和查找。</li>\n<li><strong>促进协作</strong>：不同的团队成员可以同时处理不同的路由，减少合并冲突。</li>\n<li><strong>组织 URL</strong>：使用前缀创建逻辑 URL 结构（例如，<code>/api/v1/predict/...</code>）。</li>\n<li><strong>增强文档</strong>：使用标签对自动生成的 API 文档中的相关端点进行分组。</li>\n</ol>\n<p>随着您的机器学习 (machine learning) API 的发展，尽早采用路由将在长期为您节省大量精力，并构成组织良好的项目结构的支柱。</p>",
+  "slug": "organizing-project-routers",
+  "updates": [],
+  "references": [
+    {
+      "id": 13943,
+      "title": "Bigger Applications - Routers",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/tutorial/bigger-applications/#routers",
+      "doi": "",
+      "note": "FastAPI官方文档的这一部分是理解和实现`APIRouter`进行模块化应用程序设计的权威来源。",
+      "order": 1,
+      "created_at": "2025-09-05T08:45:28.718437Z",
+      "updated_at": "2025-09-09T14:00:51.911244Z"
+    },
+    {
+      "id": 13944,
+      "title": "Building Data Science Applications with FastAPI",
+      "author": "François Voron",
+      "year": "2023",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "422",
+      "url": "https://www.packtpub.com/product/building-data-science-applications-with-fastapi/9781803240034",
+      "doi": "",
+      "note": "为构建FastAPI应用程序提供实践指导，包括`APIRouter`的使用，特别适合部署机器学习模型和数据科学解决方案。",
+      "order": 2,
+      "created_at": "2025-09-05T08:45:28.722117Z",
+      "updated_at": "2025-09-09T14:01:10.522029Z"
+    },
+    {
+      "id": 13945,
+      "title": "Building Microservices: Designing Fine-Grained Systems",
+      "author": "Sam Newman",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "612",
+      "url": "https://www.oreilly.com/library/view/building-microservices-2nd/9781492034018/",
+      "doi": "",
+      "note": "虽然不专门针对FastAPI，但本书阐述了基本的软件架构原则，如模块化和关注点分离，`APIRouter`有助于实现这些原则以构建组织良好的API服务。",
+      "order": 3,
+      "created_at": "2025-09-05T08:45:28.728569Z",
+      "updated_at": "2025-09-09T14:01:05.616213Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

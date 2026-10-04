@@ -1,0 +1,61 @@
+{
+  "id": 7416,
+  "title": "动手实践：构建结构化数据提取器",
+  "meta_title": "实践：使用LangChain构建数据提取器",
+  "meta_description": "一个动手实践，用于构建一个应用，该应用使用提示和输出解析器从非结构化文本中提取结构化信息。",
+  "content": "<p>本实践练习侧重于通过结合模型和提示来组织数据，从而构建一个一体化的LLM应用。此应用展示了LLM开发中的一种常见模式：将非结构化文本作为输入，并生成结构化、机器可读的数据作为输出。目标是构建一个能够读取简短传记并提取人物姓名、职位和公司等特定信息的应用。</p>\n<p>这个过程使用模型原生的结构化输出能力，有效结合了生成和解析。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-s3b6p9\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\"];\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    input [label=\"非结构化文本\\n（例如，“Sarah 是一名主管……”）\", fillcolor=\"#a5d8ff\"];\n    prompt [label=\"提示模板\"];\n    model [label=\"LLM (ChatOpenAI)\\n+ 结构化输出\", fillcolor=\"#bac8ff\"];\n    output [label=\"结构化数据\\n（人物档案对象）\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n\n    input -> prompt [label=\"query\"];\n    prompt -> model;\n    model -> output [label=\"PersonProfile\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-s3b6p9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据提取工作流程。非结构化文本通过提示进行格式化，模型被配置为直接返回结构化的Python对象。</p>\n</blockquote>\n<h3>第一步：使用Pydantic定义数据模式</h3>\n<p>在提取信息之前，我们必须首先定义所需的数据结构。模式作为我们输出的契约，确保一致性和可预测性。Pydantic库是Python中数据验证的标准，并与LangChain良好兼容。</p>\n<p>我们来定义一个<code>PersonProfile</code>模式，包含姓名、职位和公司。我们还可以添加描述来引导LLM准确识别每一项信息。</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\nfrom typing import Optional\n\nclass PersonProfile(BaseModel):\n    \"\"\"一个人职业档案的结构化表示。\"\"\"\n    name: str = Field(description=\"此人的全名。\")\n    title: str = Field(description=\"此人的专业职称或职位。\")\n    company: str = Field(description=\"此人所属的公司名称。\")\n    years_of_experience: Optional[int] = Field(\n        None, description=\"专业工作经验的总年数。\"\n    )\n</code></pre>\n<p>通过创建这个类，我们为LLM建立了一个清晰的目标格式。<code>Field</code>中的描述帮助模型理解每个属性的语义。</p>\n<h3>第二步：配置模型和提示</h3>\n<p>定义好数据模式后，我们现在可以设置提取器了。像OpenAI的<code>gpt-4o-mini</code>这样的现代LLM原生支持结构化输出，这比基于提示的解析更可靠。</p>\n<p>我们将使用<code>.with_structured_output()</code>方法将我们的Pydantic模式绑定到模型。这会告诉模型将其输出符合<code>PersonProfile</code>类。我们还定义了一个简单的提示模板，将输入文本传递给模型。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate\n\n# 定义提示模板\nprompt = ChatPromptTemplate.from_template(\"从以下文本中提取信息。\\n文本：{query}\")\n\n# 初始化模型\nllm = ChatOpenAI(temperature=0, model=\"gpt-4o-mini\")\n\n# 配置模型以进行结构化输出\nstructured_llm = llm.with_structured_output(PersonProfile)\n</code></pre>\n<p>此配置通过在内部处理模式注入和解析逻辑来简化流程。</p>\n<h3>第三步：将组件组合成一个链</h3>\n<p>现在，我们使用LangChain表达式语言（LCEL）将组件连接起来，形成一个处理管道。管道符号（<code>|</code>）连接元素，创建一个序列，其中一步的输出成为下一步的输入。</p>\n<pre><code class=\"language-python\"># 创建链\nextractor_chain = prompt | structured_llm\n</code></pre>\n<p>运行这个链很简单。我们只需提供<code>query</code>变量。</p>\n<h3>第四步：运行提取器</h3>\n<p>我们用一段示例文本测试我们的提取器。我们将调用链并检查输出。</p>\n<pre><code class=\"language-python\"># 输入文本\ntext_input = \"\"\"\nAlex Thompson is the Senior Data Scientist at InnovateCorp, \nwhere he has been leading the AI research division for the past 5 years.\n\"\"\"\n\n# 调用链\nresult = extractor_chain.invoke({\"query\": text_input})\n\n# 打印结构化输出\nprint(result)\nprint(f\"\\n结果类型: {type(result)}\")\n</code></pre>\n<p>预期输出将是一个<code>PersonProfile</code>对象，而不是一个简单的字符串或字典。</p>\n<pre><code class=\"language-text\">name='Alex Thompson' title='Senior Data Scientist' company='InnovateCorp' years_of_experience=5\n\n结果类型: &#x3C;class '__main__.PersonProfile'>\n</code></pre>\n<p>成功。该链正确处理了非结构化句子并返回了一个Pydantic对象。我们现在可以使用标准对象属性（例如<code>result.name</code>或<code>result.company</code>）可靠地访问数据。此示例表明，使用模型的结构化输出能力建立了从非结构化语言到结构化数据的可靠桥梁。</p>",
+  "slug": "practice-structured-data-extractor",
+  "updates": [],
+  "references": [
+    {
+      "id": 14758,
+      "title": "LangChain Output Parsers Documentation",
+      "author": "LangChain Developers",
+      "year": "2025",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCO9WufQGs-hS3hYFbUueyeEDnmLLN2OFxSuzd0ZhyEgIqOPdYu6oo_oXHwtVwFrve8wYIsoPFPGHmmNr7WyCH6g6TzbmoyqwQlE2NhYTUgA_iA9O80GRWeLpwJGYtYB39rpjnRQd1KlwjlKutWxYp5qIoc2k=",
+      "doi": "",
+      "note": "官方指南，关于将LLM输出转换为结构化格式。",
+      "order": 1,
+      "created_at": "2025-09-05T09:06:03.111400Z",
+      "updated_at": "2025-09-11T10:46:34.197303Z"
+    },
+    {
+      "id": 14759,
+      "title": "Pydantic v2: Models Documentation",
+      "author": "Pydantic Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/usage/models/",
+      "doi": "",
+      "note": "关于使用Pydantic的`BaseModel`和`Field`定义数据模式的详情。",
+      "order": 2,
+      "created_at": "2025-09-05T09:06:03.116098Z",
+      "updated_at": "2025-09-11T10:46:01.880655Z"
+    },
+    {
+      "id": 14760,
+      "title": "Prompt Engineering for Developers Course",
+      "author": "Andrew Ng, Isa Fulford",
+      "year": "2023",
+      "publisher": "DeepLearning.AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearning.ai/courses/chatgpt-prompt-engineering-for-developers/",
+      "doi": "",
+      "note": "提供设计有效LLM提示的实用方法。",
+      "order": 3,
+      "created_at": "2025-09-05T09:06:03.118718Z",
+      "updated_at": "2025-09-11T10:46:11.600560Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

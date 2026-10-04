@@ -1,0 +1,61 @@
+{
+  "id": 1810,
+  "title": "添加新列",
+  "meta_title": "在 Pandas DataFrame 中添加新列",
+  "meta_description": "根据现有列或常量值在 DataFrame 中创建新列。",
+  "content": "<p>通常，你加载的原始数据不包含分析所需的所有信息。你可能需要根据现有数据计算新值或添加分类标签。Pandas 让向 DataFrame 添加新列变得简单。</p>\n<p>添加新列最直接的方法是向尚不存在的列名赋值数据。可以把它想象成向字典添加新条目，但其中的“值”通常是 Series、数组，或一个会被广播到所有行的单个值。</p>\n<h3>赋值常量值</h3>\n<p>让我们从一个简单的 DataFrame 开始：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'col_A': [10, 20, 30, 40],\n        'col_B': [5, 15, 25, 35]}\ndf = pd.DataFrame(data)\nprint(\"Original DataFrame:\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">原始 DataFrame:\n   col_A  col_B\n0     10      5\n1     20     15\n2     30     25\n3     40     35\n</code></pre>\n<p>如果你想添加一个新列，其中每一行都具有相同的值（一个标量值），你可以直接赋值它：</p>\n<pre><code class=\"language-python\"># 添加一个名为 'source' 的列，其值为常量字符串\ndf['source'] = 'dataset_1'\n\n# 添加一个名为 'version' 的列，其值为常量数字\ndf['version'] = 1.0\n\nprint(\"\\nDataFrame after adding constant columns:\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">添加常量列后的 DataFrame:\n   col_A  col_B     source  version\n0     10      5  dataset_1      1.0\n1     20     15  dataset_1      1.0\n2     30     25  dataset_1      1.0\n3     40     35  dataset_1      1.0\n</code></pre>\n<p>Pandas 自动将单个值 'dataset_1' 和数字 1.0 广播，分别填充新列 'source' 和 'version' 中的所有行。</p>\n<h3>根据现有数据创建列</h3>\n<p>一种非常常见的操作是根据涉及一个或多个现有列的计算来创建新列。由于 Pandas 操作通常是矢量化 (quantization)的（像 NumPy 一样），你可以高效地执行这些计算。</p>\n<p>我们来添加一个列 'col_C'，它是 'col_A' 和 'col_B' 的和：</p>\n<pre><code class=\"language-python\"># 通过将 'col_A' 和 'col_B' 相加来创建 'col_C'\ndf['col_C'] = df['col_A'] + df['col_B']\n\nprint(\"\\nDataFrame after adding calculated column 'col_C':\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">添加计算列 'col_C' 后的 DataFrame:\n   col_A  col_B     source  version  col_C\n0     10      5  dataset_1      1.0     15\n1     20     15  dataset_1      1.0     35\n2     30     25  dataset_1      1.0     55\n3     40     35  dataset_1      1.0     75\n</code></pre>\n<p>加法操作是针对每一行进行元素级的。你可以使用任何标准算术运算符（+、-、*、/、%）或 NumPy 等库中更复杂的函数。</p>\n<p>例如，我们添加另一个列 'col_D'，它是 'col_A' 除以 10 的结果：</p>\n<pre><code class=\"language-python\"># 通过将 'col_A' 除以 10 来创建 'col_D'\ndf['col_D'] = df['col_A'] / 10\n\nprint(\"\\nDataFrame after adding calculated column 'col_D':\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">添加计算列 'col_D' 后的 DataFrame:\n   col_A  col_B     source  version  col_C  col_D\n0     10      5  dataset_1      1.0     15    1.0\n1     20     15  dataset_1      1.0     35    2.0\n2     30     25  dataset_1      1.0     55    3.0\n3     40     35  dataset_1      1.0     75    4.0\n</code></pre>\n<h3>赋值列表或 NumPy 数组</h3>\n<p>你也可以通过赋值一个 Python 列表或 NumPy 数组来添加新列。主要要求是列表或数组的长度必须与 DataFrame 中的行数（其索引长度）匹配。</p>\n<pre><code class=\"language-python\"># 使用 Python 列表添加列 'col_E'\nnew_values_list = [100, 200, 300, 400]\ndf['col_E'] = new_values_list\n\n# 使用 NumPy 数组添加列 'col_F'\nnew_values_np = np.array([0.1, 0.2, 0.3, 0.4])\ndf['col_F'] = new_values_np\n\nprint(\"\\nDataFrame after adding columns from list and NumPy array:\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">从列表和 NumPy 数组添加列后的 DataFrame:\n   col_A  col_B     source  version  col_C  col_D  col_E  col_F\n0     10      5  dataset_1      1.0     15    1.0    100    0.1\n1     20     15  dataset_1      1.0     35    2.0    200    0.2\n2     30     25  dataset_1      1.0     55    3.0    300    0.3\n3     40     35  dataset_1      1.0     75    4.0    400    0.4\n</code></pre>\n<p>如果长度不匹配，Pandas 将引发 <code>ValueError</code>。</p>\n<h3>赋值 Pandas Series</h3>\n<p>你也可以赋值一个现有的 Pandas Series 来创建新列。这样做时，Pandas 会根据 Series 和 DataFrame 的 <strong>索引</strong> 来对齐 (alignment)数据。如果索引匹配，值会相应地放置。如果索引不完全对齐，DataFrame 中没有在 Series 中找到匹配索引的行，在新列中将获得一个缺失值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>)。</p>\n<p>我们来创建一个索引稍有不同的 Series：</p>\n<pre><code class=\"language-python\">s = pd.Series([500, 600, 700], index=[1, 2, 4]) # 注意索引：1, 2, 4\nprint(\"\\nSeries 's' to be added:\")\nprint(s)\n\n# 使用 Series 's' 添加 'col_G'\ndf['col_G'] = s\n\nprint(\"\\nDataFrame after adding column 'col_G' from Series 's':\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">要添加的 Series 's':\n1    500\n2    600\n4    700\ndtype: int64\n\n从 Series 's' 添加列 'col_G' 后的 DataFrame:\n   col_A  col_B     source  version  col_C  col_D  col_E  col_F  col_G\n0     10      5  dataset_1      1.0     15    1.0    100    0.1    NaN\n1     20     15  dataset_1      1.0     35    2.0    200    0.2  500.0\n2     30     25  dataset_1      1.0     55    3.0    300    0.3  600.0\n3     40     35  dataset_1      1.0     75    4.0    400    0.4    NaN\n</code></pre>\n<p>请注意，<code>col_G</code> 仅在索引 1 和 2 处有值，与 Series <code>s</code> 匹配。DataFrame 中的索引 0 和 3 在 <code>s</code> 中不存在，因此它们获得了 <code>NaN</code>。<code>s</code> 中索引 4 的值被忽略了，因为 DataFrame 没有索引 4。这种索引对齐行为是 Pandas 的一个基本特点，可以避免数据错位导致的错误。</p>\n<p>能够添加新列，特别是派生列，是数据准备中的重要一步。它让你能够构建新特征、规范化数据，或只是更有效地组织信息以进行分析或建模。</p>",
+  "slug": "adding-new-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 4518,
+      "title": "Pandas User Guide: Basics - Column selection, addition, deletion",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#column-selection-addition-deletion",
+      "doi": "",
+      "note": "官方文档，提供了在Pandas DataFrame中添加和操作列的基本细节，包括常量赋值和派生列。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:09.603338Z",
+      "updated_at": "2025-09-08T05:15:00.651541Z"
+    },
+    {
+      "id": 4521,
+      "title": "Pandas User Guide: Basics - Alignment",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#alignment",
+      "doi": "",
+      "note": "解释了Pandas中索引对齐的关键概念，这说明了数据如何匹配以及在分配索引不同的Series时如何出现缺失值（NaN）。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:09.607713Z",
+      "updated_at": "2025-09-08T05:14:59.508762Z"
+    },
+    {
+      "id": 4523,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "Pandas创建者的基础著作，提供了数据结构、数据操作（包括添加和转换DataFrame列）的深度解释和示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:09.609846Z",
+      "updated_at": "2025-09-08T05:14:54.602162Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

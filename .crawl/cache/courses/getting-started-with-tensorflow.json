@@ -1,0 +1,579 @@
+{
+  "id": 103,
+  "title": "TensorFlow 入门",
+  "meta_title": "TensorFlow 入门：构建与训练机器学习模型",
+  "meta_description": "学习TensorFlow要点。使用Keras构建、训练和评估模型。内容包括张量、tf.data、模型保存等，适合中级机器学习实践者。",
+  "description": "<p>使用TensorFlow及其高级Keras API来构建、训练和评估机器学习 (machine learning)模型。本课程提供TensorFlow主要组成部分、数据处理、模型构建和部署准备方面的实用指导，学员需具备机器学习的初步知识。</p>",
+  "short_description": "使用TensorFlow和Keras API构建、训练和评估机器学习模型。",
+  "excerpt": "学习使用TensorFlow实现机器学习模型。涵盖张量操作、Keras模型构建、训练循环、数据管线和模型保存。",
+  "prerequisites": "机器学习入门和Python",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "TensorFlow 核心操作",
+      "description": "操作张量，执行数学运算，并理解自动微分。"
+    },
+    {
+      "topic": "Keras API 模型构建",
+      "description": "使用Keras中的Sequential和Functional API来构建模型。"
+    },
+    {
+      "topic": "模型训练与评估",
+      "description": "使用恰当的优化器和损失函数编译模型，通过fit()方法训练模型，并评估其性能。"
+    },
+    {
+      "topic": "数据输入管线",
+      "description": "使用tf.data API创建高效的数据加载管线。"
+    },
+    {
+      "topic": "模型保存",
+      "description": "保存和加载训练好的TensorFlow模型及权重。"
+    },
+    {
+      "topic": "TensorBoard 集成",
+      "description": "使用TensorBoard可视化训练指标和模型图。"
+    }
+  ],
+  "duration": 18,
+  "slug": "getting-started-with-tensorflow",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-04T02:08:48.047072Z",
+  "updated_at": "2026-10-02T07:41:38.416902Z",
+  "chapters": [
+    {
+      "id": 491,
+      "title": "TensorFlow 基本知识与环境设置",
+      "meta_title": "TensorFlow 入门与环境设置",
+      "meta_description": "TensorFlow 2.x 概述、其架构以及为 CPU 和 GPU 执行设置开发环境。",
+      "number": 1,
+      "slug": "tensorflow-fundamentals-setup",
+      "content": "本章介绍使用 TensorFlow 2.x 所需的基本知识和准备工作。我们首先将了解 TensorFlow 本身的结构和目的。您将学习如何使用 `pip` 和 `conda` 等常用工具配置开发环境。\r\n\r\n我们将说明在 CPU 与 GPU 上运行 TensorFlow 计算的实际区别，以及如何相应地配置您的系统。按照设置说明，我们将提供验证安装是否正常工作的步骤，包括检查 GPU 是否可用。最后，我们将介绍更广泛的 TensorFlow 生态系统，简要提及 Keras 和 TensorBoard 等主要组成部分，它们将在后续章节中使用。本章完成后，您将拥有一个正确配置的 TensorFlow 环境。",
+      "sections": [
+        {
+          "id": 1672,
+          "title": "TensorFlow 2.x 简介",
+          "meta_title": "TensorFlow 2.x 简介",
+          "meta_description": "了解 TensorFlow 2.x 在机器学习中的目的和架构。",
+          "slug": "intro-tensorflow-2",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1675,
+          "title": "配置开发环境",
+          "meta_title": "TensorFlow 开发环境配置",
+          "meta_description": "安装 TensorFlow 和配置系统的指南 (pip, conda)。",
+          "slug": "setting-up-environment",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1678,
+          "title": "CPU 与 GPU 的考量",
+          "meta_title": "TensorFlow CPU 与 GPU 的使用",
+          "meta_description": "了解 TensorFlow 中 CPU 和 GPU 执行的区别以及如何配置 GPU 支持。",
+          "slug": "cpu-vs-gpu",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1681,
+          "title": "验证您的安装",
+          "meta_title": "验证TensorFlow安装",
+          "meta_description": "确认您的TensorFlow安装正常工作的步骤，包括GPU检测。",
+          "slug": "verifying-installation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1684,
+          "title": "TensorFlow 生态系统概览",
+          "meta_title": "TensorFlow 生态系统概览",
+          "meta_description": "简要介绍 Keras、TensorBoard 和 TensorFlow Hub 等相关库和工具。",
+          "slug": "tensorflow-ecosystem-overview",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 494,
+      "title": "TensorFlow核心要点",
+      "meta_title": "TensorFlow 张量、操作与梯度",
+      "meta_description": "了解 TensorFlow 的基本构建块：张量、变量、自动微分（AutoDiff）以及图执行。",
+      "number": 2,
+      "slug": "core-tensorflow-concepts",
+      "content": "TensorFlow环境配置完成后，本章将介绍用于构建和训练机器学习模型的必要基本构建块。我们将讲解主要数据结构——张量（Tensor），以及主要操作和像自动微分这样的要点。\r\n\r\n具体来说，您将学会：\r\n*   定义并理解 TensorFlow **张量**，包括它们的属性，例如形状（例如，$(batch\\_size, features)$）和数据类型（$dtype$）。\r\n*   执行张量的多种**操作**，从基本算术到矩阵运算。\r\n*   使用 `tf.Variable` 来管理**可变状态**，对于保存训练期间会变化的模型参数非常重要。\r\n*   使用**自动微分**通过 `tf.GradientTape` 计算梯度，这是模型优化背后的机制。\r\n*   将 Python 函数转换为优化后的 TensorFlow 图，以提升性能，使用 `tf.function`。\r\n\r\n掌握这些要点为有效使用 TensorFlow 的更高级别 API 提供了必要的知识储备，我们将在后续章节中介绍。",
+      "sections": [
+        {
+          "id": 1688,
+          "title": "理解张量",
+          "meta_title": "理解 TensorFlow 张量",
+          "meta_description": "了解 TensorFlow 张量、它们的特性（形状、数据类型）以及与 NumPy 数组的区别。",
+          "slug": "understanding-tensors",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1691,
+          "title": "张量运算",
+          "meta_title": "TensorFlow 张量运算",
+          "meta_description": "对张量执行数学、逻辑和处理操作。",
+          "slug": "tensor-operations",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1694,
+          "title": "TensorFlow 中的变量",
+          "meta_title": "TensorFlow 模型参数的变量",
+          "meta_description": "了解 `tf.Variable` 如何保存模型权重等可变状态。",
+          "slug": "variables-tensorflow",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1698,
+          "title": "使用 GradientTape 进行自动微分",
+          "meta_title": "TensorFlow 自动微分 (AutoDiff)",
+          "meta_description": "了解 TensorFlow 如何使用 tf.GradientTape 自动计算梯度。",
+          "slug": "automatic-differentiation-gradienttape",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1701,
+          "title": "tf.function 介绍",
+          "meta_title": "使用 tf.function 进行图执行",
+          "meta_description": "学习如何使用 tf.function 装饰器将 Python 函数编译成 TensorFlow 图以提高性能。",
+          "slug": "introduction-tf-function",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1704,
+          "title": "练习：张量操作与梯度",
+          "meta_title": "实践 TensorFlow 张量与梯度",
+          "meta_description": "动手练习创建张量、执行操作和计算梯度。",
+          "slug": "practice-tensors-gradients",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 497,
+      "title": "使用 Keras 构建模型",
+      "meta_title": "使用 TensorFlow Keras API 构建机器学习模型",
+      "meta_description": "学习在 TensorFlow 中使用 Keras 顺序 (Sequential) 和函数式 (Functional) API 构建神经网络。",
+      "number": 3,
+      "slug": "building-models-keras",
+      "content": "结合已掌握的 TensorFlow 张量和操作基本原理，我们现在将学习构建机器学习模型。TensorFlow 将 Keras 集成作为其高级应用程序编程接口 (API)，它简化了神经网络架构的定义过程。这种方法使得您可以将更多精力放在模型设计上，而不是低级操作细节。\r\n\r\n在本章中，您将学习如何:\r\n\r\n*   认识 Keras 在 TensorFlow 生态系统中的作用，以实现高效模型开发。\r\n*   使用 Keras 顺序 (Sequential) API 构建由线性堆叠层组成的模型。\r\n*   使用函数式 (Functional) API 定义更复杂的模型结构，包括多输入或多输出的模型。\r\n*   识别并使用常见层类型（如 `Dense`、`Conv2D`、`Dropout`）和激活函数（如 ReLU、Sigmoid、Softmax）作为构建模块。\r\n*   了解创建自定义层和模型以满足特定需求的基本方法。\r\n\r\n最后，我们将应用所学知识来构建一个基本的分类模型，让您获得 Keras 工作流从定义到实例化的实践经验。",
+      "sections": [
+        {
+          "id": 1707,
+          "title": "Keras：TensorFlow 的高级 API",
+          "meta_title": "Keras 作为 TensorFlow 的高级 API",
+          "meta_description": "Keras 概览及其在简化 TensorFlow 模型构建中的作用。",
+          "slug": "keras-high-level-api",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1708,
+          "title": "Sequential 模型 API",
+          "meta_title": "Keras Sequential 模型 API 指南",
+          "meta_description": "使用 Keras Sequential 模型构建简单、线性的层堆叠。",
+          "slug": "sequential-model-api",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1712,
+          "title": "Keras 常用层",
+          "meta_title": "Keras 常用层简介",
+          "meta_description": "介绍 Keras 基本层：Dense、Conv2D、MaxPooling2D、Flatten、Dropout、LSTM。",
+          "slug": "common-keras-layers",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1715,
+          "title": "激活函数",
+          "meta_title": "Keras 中的激活函数",
+          "meta_description": "了解并应用 ReLU、Sigmoid、Softmax 等常见激活函数。",
+          "slug": "activation-functions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1718,
+          "title": "复杂模型的函数式API",
+          "meta_title": "Keras 复杂模型函数式API",
+          "meta_description": "使用函数式API构建具有非线性拓扑、共享层或多输入/输出的模型。",
+          "slug": "functional-api-complex-models",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1721,
+          "title": "自定义层和模型 (简介)",
+          "meta_title": "自定义 Keras 层/模型简介",
+          "meta_description": "简要介绍通过继承 Keras 类创建自定义层和模型的方法。",
+          "slug": "custom-layers-models-intro",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1724,
+          "title": "动手实践：构建分类器",
+          "meta_title": "动手实践：构建 Keras 分类器模型",
+          "meta_description": "练习使用 Sequential 和 Functional 两种 Keras API 构建简单的图像分类器。",
+          "slug": "hands-on-building-classifier",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 500,
+      "title": "模型的训练与评估",
+      "meta_title": "训练与评估TensorFlow Keras模型",
+      "meta_description": "使用TensorFlow内置功能和回调函数编译、训练并评估您的Keras模型。",
+      "number": 4,
+      "slug": "training-evaluating-models",
+      "content": "既然您已经使用Keras API构建了模型，本章将讲解训练模型并评估其性能的重要步骤。首先，我们将通过`model.compile()`配置学习过程，您将选择合适的损失函数（如回归任务的均方误差 $MSE$ 或分类任务的交叉熵），选择指导学习的优化器（如Adam或$SGD$），并定义用于观察进度的指标（如准确率）。\r\n\r\n接着，您将学习如何使用`model.fit()`将数据喂入模型并执行训练循环，理解批次（epochs）和批处理大小（batch size）等参数。随后，我们将介绍使用`model.evaluate()`评估训练好的模型在测试数据上的效果，并使用`model.predict()`对新输入生成预测。最后，我们将介绍Keras回调函数，包括用于保存训练进度的`ModelCheckpoint`，用于防止过拟合的`EarlyStopping`，以及整合TensorBoard以展示训练指标和模型图。本章最后将通过结合这些技术的实践练习进行总结。",
+      "sections": [
+        {
+          "id": 1729,
+          "title": "编译模型：损失函数",
+          "meta_title": "Keras 模型编译：损失函数",
+          "meta_description": "为不同机器学习任务（回归、分类）选择合适的损失函数。",
+          "slug": "compiling-loss-functions",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1732,
+          "title": "编译模型：优化器",
+          "meta_title": "Keras模型编译：优化器",
+          "meta_description": "理解与选择Adam、SGD、RMSprop等优化器用于模型训练。",
+          "slug": "compiling-optimizers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1734,
+          "title": "编译模型：指标",
+          "meta_title": "Keras 模型编译：指标",
+          "meta_description": "选择指标（例如，准确率、精度、召回率、MSE）以监控训练和评估。",
+          "slug": "compiling-metrics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1737,
+          "title": "使用 model.fit() 进行训练",
+          "meta_title": "使用 Keras model.fit() 训练模型",
+          "meta_description": "使用 fit 方法训练模型，理解轮次、批量大小和验证分割。",
+          "slug": "training-model-fit",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1740,
+          "title": "使用 model.evaluate() 评估模型表现",
+          "meta_title": "使用 Keras model.evaluate() 评估模型",
+          "meta_description": "使用 evaluate 方法评估您训练好的模型在未见过的数据上的表现。",
+          "slug": "evaluating-model-evaluate",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1743,
+          "title": "使用 model.predict() 进行预测",
+          "meta_title": "使用 Keras model.predict() 进行预测",
+          "meta_description": "使用 predict 方法对新数据生成预测。",
+          "slug": "making-predictions-predict",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1746,
+          "title": "训练时使用回调",
+          "meta_title": "训练时使用 Keras 回调",
+          "meta_description": "使用 ModelCheckpoint、EarlyStopping 和 TensorBoard 等回调，以更好地控制训练。",
+          "slug": "using-callbacks-training",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1748,
+          "title": "使用 TensorBoard 可视化训练",
+          "meta_title": "使用 TensorBoard 可视化 TensorFlow 训练",
+          "meta_description": "设置和使用 TensorBoard 回调来可视化指标、图表和直方图。",
+          "slug": "visualizing-tensorboard",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1752,
+          "title": "实践：训练与监控",
+          "meta_title": "实践TensorFlow模型训练与监控",
+          "meta_description": "动手实践模型的编译、训练、评估以及使用回调和TensorBoard。",
+          "slug": "practice-training-monitoring",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 504,
+      "title": "tf.data 数据输入管道",
+      "meta_title": "使用 tf.data 的高效数据输入管道",
+      "meta_description": "学习使用 tf.data API 为 TensorFlow 模型构建可扩展且高性能的数据输入管道。",
+      "number": 5,
+      "slug": "data-input-pipelines-tfdata",
+      "content": "高效的数据处理对于训练机器学习模型很重要，尤其是在处理大型数据集时，I/O可能成为主要的瓶颈。TensorFlow 的 `tf.data` API 提供了一种强大而灵活的方式，用于构建高性能的输入管道，将数据提取和转换与模型训练分离。\r\n\r\n在本章中，你将学会高效地使用 `tf.data` API。我们将学习以下内容：\r\n*   从多种来源创建 `tf.data.Dataset` 对象，包括内存中的数组（NumPy, Tensors）、Python 生成器，以及 TFRecord 等优化过的文件格式。\r\n*   使用 `map()` 进行元素级预处理、`batch()` 进行数据分组、`shuffle()` 进行随机化以及 `prefetch()` 进行性能优化等方法，应用常见的数据转换。\r\n*   将你的自定义 `tf.data` 管道方便地与 Keras `model.fit()` API 集成，用于训练和评估。\r\n*   在管道中直接实现图像数据增强等技术。\r\n\r\n完成本章后，你将能够为你的 TensorFlow 模型构建可扩展且高效的数据加载机制。",
+      "sections": [
+        {
+          "id": 1757,
+          "title": "为什么选择 tf.data？",
+          "meta_title": "使用 tf.data API 的优点",
+          "meta_description": "了解使用 tf.data 处理大型数据集和提升性能的优势。",
+          "slug": "why-tf-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1759,
+          "title": "从张量、NumPy 和生成器创建数据集",
+          "meta_title": "从多种来源创建 tf.data 数据集",
+          "meta_description": "学习如何从内存数据（张量、NumPy 数组）和 Python 生成器创建 tf.data.Dataset 对象。",
+          "slug": "creating-datasets-sources",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1762,
+          "title": "使用 TFRecord 文件",
+          "meta_title": "使用 tf.data 处理 TFRecord 文件",
+          "meta_description": "使用 TensorFlow 推荐的 TFRecord 格式高效读写数据。",
+          "slug": "working-tfrecord-files",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1766,
+          "title": "应用转换：map()",
+          "meta_title": "使用 tf.data.Dataset.map() 进行数据预处理",
+          "meta_description": "使用 map 转换对数据集中的每个元素应用预处理函数。",
+          "slug": "applying-transformations-map",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1769,
+          "title": "批处理与混洗",
+          "meta_title": "使用 tf.data 对数据进行批处理和混洗",
+          "meta_description": "配置批处理和混洗以实现有效的 tf.data 模型训练。",
+          "slug": "batching-shuffling",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1772,
+          "title": "为提高性能而预取",
+          "meta_title": "使用 tf.data.Dataset.prefetch() 提升性能",
+          "meta_description": "理解并应用预取以使数据预处理和模型执行重叠。",
+          "slug": "prefetching-performance",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1775,
+          "title": "将 tf.data 与 model.fit() 结合使用",
+          "meta_title": "将 tf.data 数据集与 Keras model.fit() 结合使用",
+          "meta_description": "如何将 tf.data.Dataset 对象直接传递给 Keras 的 fit、evaluate 和 predict 方法。",
+          "slug": "integrating-tfdata-modelfit",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1779,
+          "title": "使用 tf.data 进行图像数据增强",
+          "meta_title": "使用 tf.data 进行图像数据增强",
+          "meta_description": "在你的 tf.data 管道中执行常用图像增强技术。",
+          "slug": "image-data-augmentation-tfdata",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1782,
+          "title": "动手实践：构建图像数据管道",
+          "meta_title": "动手操作：使用 tf.data 构建图像数据管道",
+          "meta_description": "练习创建用于加载、预处理和增强图像数据的完整 tf.data 数据管道。",
+          "slug": "hands-on-image-data-pipeline",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 508,
+      "title": "保存和加载模型",
+      "meta_title": "保存与加载TensorFlow Keras模型",
+      "meta_description": "学习保存和加载TensorFlow模型权重及整个模型架构的不同方法。",
+      "number": 6,
+      "slug": "saving-loading-models",
+      "content": "在投入时间和计算资源训练机器学习模型后，您会希望保存其学习到的状态。保存模型可以让您稍后停止并恢复训练，无需重新训练即可用于对新数据进行预测，或者与他人分享。本章侧重于TensorFlow和Keras中模型保存的实用方法。\r\n\r\n您将学习如何：\r\n*   在训练期间使用检查点定期保存模型权重。\r\n*   仅保存模型学习到的参数（权重）。\r\n*   保存完整的模型，包括其架构、权重和优化器配置。\r\n*   了解标准的TensorFlow `SavedModel` 格式，该格式适用于部署。\r\n*   加载以前保存的权重或整个模型，用于推断或继续训练。\r\n*   了解TensorFlow Hub以获取预训练模型组件。\r\n\r\n我们将介绍可用的不同方法，并讨论何时使用每种方法，以确保您能有效管理训练好的模型。",
+      "sections": [
+        {
+          "id": 1785,
+          "title": "为什么要保存和加载模型？",
+          "meta_title": "保存和加载模型的作用",
+          "meta_description": "了解模型持久化的原因，例如恢复训练或部署模型。",
+          "slug": "why-save-load-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1787,
+          "title": "训练期间保存检查点",
+          "meta_title": "Keras 训练期间保存检查点",
+          "meta_description": "使用 ModelCheckpoint 回调函数定期保存模型权重或整个模型。",
+          "slug": "saving-checkpoints-during-training",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1790,
+          "title": "仅保存权重",
+          "meta_title": "保存和载入 Keras 模型权重",
+          "meta_description": "学习如何仅保存模型的训练好的参数（权重）。",
+          "slug": "saving-weights-only",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1792,
+          "title": "保存整个模型（架构 + 权重 + 优化器状态）",
+          "meta_title": "保存整个 Keras 模型（架构、权重）",
+          "meta_description": "保存完整的模型配置、权重和优化器状态。",
+          "slug": "saving-entire-model",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1795,
+          "title": "TensorFlow SavedModel 形式",
+          "meta_title": "TensorFlow SavedModel 形式解析",
+          "meta_description": "理解用于部署和共享的标准 TensorFlow SavedModel 形式。",
+          "slug": "tensorflow-savedmodel-format",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1797,
+          "title": "加载预训练模型",
+          "meta_title": "加载预训练 Keras 模型",
+          "meta_description": "如何加载已提前保存了权重或完整结构的模型。",
+          "slug": "loading-pretrained-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1800,
+          "title": "TensorFlow Hub 简介",
+          "meta_title": "TensorFlow Hub (TF Hub) 简介",
+          "meta_description": "简要介绍 TensorFlow Hub，用于重复使用预训练模型组件。",
+          "slug": "introduction-tensorflow-hub",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1803,
+          "title": "练习：模型训练的保存与恢复",
+          "meta_title": "练习模型训练的保存与恢复",
+          "meta_description": "动手实践保存模型检查点并恢复它们以继续训练或用于推理。",
+          "slug": "practice-saving-restoring-training",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

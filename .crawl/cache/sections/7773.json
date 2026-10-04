@@ -1,0 +1,61 @@
+{
+  "id": 7773,
+  "title": "RAG 系统构成",
+  "meta_title": "RAG 系统构成",
+  "meta_description": "回顾检索增强生成系统的完整架构，从数据到响应。",
+  "content": "<p>检索增强生成 (RAG)系统通过连接外部知识库来扩展标准大型语言模型。模型不再仅依赖其训练数据，而是可以获取相关且最新的信息来回答问题。这个过程并非单一一体；它是一个多阶段的流程，包含两个主要阶段：用于数据准备的离线<strong>索引流程</strong>和用于回答用户查询的在线<strong>检索与生成流程</strong>。</p>\n<p>理解这种两部分架构是构建和排查 RAG 系统的核心。索引阶段用于准备您的知识，而检索和生成阶段则使用这些知识来创建有据可循的回答。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6gdc6n\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", color=\"#adb5bd\", fontname=\"sans-serif\"]; edge [color=\"#adb5bd\", fontname=\"sans-serif\"]; subgraph cluster_0 { style=\"rounded,filled\"; fillcolor=\"#f8f9fa\"; color=\"#ced4da\"; label=\"索引流程 (离线)\"; doc_loader [label=\"载入文档\", fillcolor=\"#a5d8ff\"]; chunker [label=\"切分文档\", fillcolor=\"#a5d8ff\"]; embedder [label=\"生成嵌入\", fillcolor=\"#a5d8ff\"]; vector_db [label=\"向量数据库\", shape=cylinder, fillcolor=\"#96f2d7\"]; doc_loader -> chunker; chunker -> embedder; embedder -> vector_db; } subgraph cluster_1 { style=\"rounded,filled\"; fillcolor=\"#f8f9fa\"; color=\"#ced4da\"; label=\"检索与生成流程 (在线)\"; user_query [label=\"用户查询\", shape=ellipse, fillcolor=\"#ffec99\"]; query_embedder [label=\"生成查询嵌入\", fillcolor=\"#ffe066\"]; search [label=\"搜索索引\", fillcolor=\"#ffe066\"]; augment [label=\"扩充提示词\", fillcolor=\"#ffd8a8\"]; llm [label=\"LLM 生成\", fillcolor=\"#ffc9c9\"]; answer [label=\"有据回答\", shape=ellipse, fillcolor=\"#b2f2bb\"]; user_query -> query_embedder; query_embedder -> search; vector_db -> search; search -> augment; user_query -> augment; augment -> llm; llm -> answer; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6gdc6n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>RAG 系统两个主要阶段的概览。索引流程准备知识库，而检索流程则在推理 (inference)时使用它来回答查询。</p>\n</blockquote>\n<h3>索引流程</h3>\n<p>在回答任何问题之前，您需要从源文档中构建一个可搜索的知识库。这通常是离线进行的，包含一系列数据处理步骤。</p>\n<h4>1. 载入文档</h4>\n<p>第一步是载入您的数据。这可以是文本文件、PDF、Markdown 文档的集合，或是从网站抓取的内容。在之前的章节中，您已经了解了 <code>document</code> 模块如何处理各种来源并将其转换为标准化格式。目的是将您的原始文本载入内存以便进行处理。</p>\n<h4>2. 切分文档</h4>\n<p>大型文档太大，无法完全放入大型语言模型的上下文 (context)窗口。此外，对整个文档进行搜索效率不高，而且可能会返回嘈杂、不相关的信息。为解决此问题，您需要将文档分割成更小、更易于管理的部分，即“块”。</p>\n<p>高效的切分对 RAG 系统的表现有很大作用。块应足够小，以包含具体、集中的信息，但也要足够大，以保留有意义的上下文。您在第四章中了解的递归字符切分或基于句子的分窗等策略，旨在创建语义连贯的块。</p>\n<h4>3. 生成嵌入 (embedding)</h4>\n<p>拥有文档块后，您需要一种方法来根据意义而非仅仅关键词来搜索它们。这时嵌入的作用就在于此。使用嵌入模型，每段文本块都会被转换为一个数值向量 (vector)，代表其语义内容。这些向量是语义搜索的根基。<code>embed_batch</code> 函数非常适合高效地一次性为所有块生成嵌入。</p>\n<h4>4. 存储到向量索引</h4>\n<p>拥有每个块的嵌入后，您需要一个地方来存储它们，以实现快速和可扩展的检索。<strong>向量索引</strong>（或向量数据库）是一种为此目的而设计的专门数据结构。它对高维向量进行索引，以便您可以快速找到与给定查询向量最相似的向量（及其对应的文本块）。虽然本课程为了演示使用简单的内存搜索，但生产系统通常会使用专门的向量数据库，例如 Pinecone、Weaviate 或 Chroma。</p>\n<h3>检索与生成流程</h3>\n<p>这是在线阶段，每当用户提交查询时就会执行。它使用预先构建的索引来查找相关信息并生成回答。</p>\n<h4>1. 用户查询和查询嵌入 (embedding)</h4>\n<p>该过程始于用户的提问，例如，“如何在 Python FastAPI 应用中实现身份验证？”。就像文档块一样，这个查询会使用相同的嵌入模型转换为嵌入向量 (vector)。这确保了查询和文档在相同的向量空间中表示，使它们可以进行比较。</p>\n<h4>2. 检索：搜索向量索引</h4>\n<p>然后使用查询向量来搜索向量索引。该索引执行相似性搜索（通常使用余弦相似性）来查找与查询向量最接近的文档块向量。这些块被认为是与用户问题语义上最相关的。</p>\n<p><code>retrieval</code> 模块提供了 <code>semantic_search</code> 等函数来执行此操作。您会检索到前 k 个最相关的结果，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 是一个可配置的数字（通常介于 3 到 5 之间）。</p>\n<pre><code class=\"language-python\"># 在实际应用中，文档和嵌入会预先计算\n# 并存储在向量索引中。\n# 为演示目的，我们直接传递它们。\n\n# 嵌入用户查询\nquery_embedding = embed(\"How do I implement authentication in Python?\")\n\n# 查找前 3 个最相关的文档块\nretrieved_results = semantic_search(\n    query_embedding=query_embedding,\n    documents=all_document_chunks,\n    document_embeddings=all_chunk_embeddings,\n    top_k=3\n)\n\n# 'retrieved_results' 现在包含最相关的文本块\nfor result in retrieved_results:\n    print(f\"检索到的文档 (得分: {result.score:.2f}):\")\n    print(f\"{result.document.content[:150]}...\")\n</code></pre>\n<h4>3. 扩充提示词 (prompt)</h4>\n<p>这是检索增强生成 (RAG)中的“增强”部分。您不是将用户查询直接发送给大型语言模型，而是构建一个新的、更详细的提示词。这个提示词包含检索到的文档块作为上下文 (context)，以及原始查询。</p>\n<p>这为大型语言模型提供了生成准确回答所需的具体信息。<code>results_to_context</code> 函数有助于将检索到的文档格式化为清晰的字符串，以便插入到提示词模板中。</p>\n<pre><code class=\"language-python\"># 将检索到的搜索结果格式化为单个字符串\ncontext_string = results_to_context(retrieved_results)\n\n# 为大型语言模型创建扩充提示词\naugmented_prompt = f\"\"\"根据以下上下文回答问题。\n\n上下文：\n{context_string}\n\n问题：如何在 Python 中实现身份验证？\n\n回答：\"\"\"\n</code></pre>\n<h4>4. 生成回答</h4>\n<p>最后，扩充后的提示词会发送给一个大型语言模型。模型使用提供的上下文来生成一个基于您的文档信息的回答。因为大型语言模型在其提示词中直接拥有相关事实，所以它“产生幻觉 (hallucination)”或提供不正确信息的可能性大大降低。最终的回答是准确、相关并基于您的特定知识库的。</p>\n<p>至此，RAG 系统的构成便讲解完毕。通过将数据准备与查询处理分开，您可以创建一个高效的系统，能够针对大量私有或最新信息回答问题。现在，我们继续构建您的第一个端到端检索流程。</p>",
+  "slug": "rag-system-anatomy",
+  "updates": [],
+  "references": [
+    {
+      "id": 21612,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "NeurIPS 2020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍了检索增强生成（RAG）架构，阐述了其将外部知识与语言模型结合的核心组件。",
+      "order": 1,
+      "created_at": "2025-10-20T07:12:28.667946Z",
+      "updated_at": "2025-10-20T07:35:10.952949Z"
+    },
+    {
+      "id": 21613,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3971-3981",
+      "url": "https://arxiv.org/abs/1908.10084",
+      "doi": "10.48550/arXiv.1908.10084",
+      "note": "介绍了Sentence-BERT，一种生成语义上有意义的句子嵌入的方法，这对于RAG系统中的语义搜索和检索至关重要。",
+      "order": 2,
+      "created_at": "2025-10-20T07:12:28.676880Z",
+      "updated_at": "2025-10-20T07:35:18.053448Z"
+    },
+    {
+      "id": 21614,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyue Zhang, Jiaqi Guo, Qinyuan Ye, Xuanjing Huang, Donglin Wang, Jiawei Liu, ZHAO-YAN LI and Haizhou Shi",
+      "year": "2023",
+      "publisher": "arXiv",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.44525",
+      "doi": "10.48550/arXiv.2312.44525",
+      "note": "对RAG系统进行全面综述，涵盖了其架构、组件、优化策略和当前研究方向。",
+      "order": 3,
+      "created_at": "2025-10-20T07:12:28.679909Z",
+      "updated_at": "2025-10-20T07:35:25.490084Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

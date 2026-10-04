@@ -1,0 +1,61 @@
+{
+  "id": 4095,
+  "title": "为集成构建项目结构",
+  "meta_title": "为 DVC/MLflow 构建机器学习项目结构",
+  "meta_description": "组织项目仓库以适应DVC和MLflow的最佳实践。",
+  "content": "<p>组织良好的项目结构是成功集成DVC数据版本控制和MLflow实验追踪的重要前提。虽然没有单一的强制布局，但采用常规结构能大幅提升清晰度、可维护性和协作性，尤其当项目复杂度增加时。这种结构有助于分离数据、源代码、配置和输出等职责，使得人工和自动化工具都能更方便地管理。</p>\n<p>接下来，我们来了解一种在同时使用DVC和MLflow时组织机器学习 (machine learning)项目的常见且有效的方式。</p>\n<h3>主要目录和文件</h3>\n<p>典型的项目布局通常包含以下组件：</p>\n<ul>\n<li><strong><code>data/</code></strong>: 此目录存放您的数据集。它可能包含子目录，如用于存放原始、未经修改数据的<code>data/raw</code>，以及用于存放经过清洗或转换、可用于建模数据的<code>data/processed</code>。DVC主要用于追踪此目录的内容，通常通过创建<code>.dvc</code>文件，这些文件充当指向实际存储在其他地方（如云存储）的数据的指针。大型数据文件本身通常会添加到<code>.gitignore</code>中。</li>\n<li><strong><code>src/</code></strong>: 包含您的源代码，通常是Python (<code>.py</code>) 文件。这包括用于数据加载、预处理、特征工程、模型训练、评估以及可能的实用工具函数的脚本或模块。此代码使用 Git 进行版本控制。</li>\n<li><strong><code>models/</code></strong>: 这是保存训练好的模型制品（例如，序列化的模型文件如<code>.pkl</code>或<code>.h5</code>）的潜在位置。如果模型文件较大，可以使用DVC追踪它们，或者在实验运行期间使用MLflow直接将其作为制品记录。选择取决于您的工作流程需求。</li>\n<li><strong><code>notebooks/</code></strong>: 通常用于使用Jupyter笔记本 (<code>.ipynb</code>) 进行探索性数据分析 (EDA)、初步实验和可视化。虽然对探索有帮助，但通常建议将笔记本中可重用或生产环境的代码重构到<code>src/</code>目录下的Python脚本中，以便更好地进行测试、模块化和在自动化流水线中使用。</li>\n<li><strong><code>dvc.yaml</code></strong>: 此文件是定义DVC流水线的核心。它概述了您工作流程的各个阶段（例如，处理数据、训练模型）、它们的依赖项（输入数据、代码）、要执行的命令以及输出（处理后的数据、模型、指标）。我们将在后续章节中详细查看此文件。</li>\n<li><strong><code>params.yaml</code></strong>: 一种常见做法是将项目参数 (parameter)，特别是模型训练的超参数 (hyperparameter)或数据处理的配置设置，存储在一个专用的YAML文件中。这使得参数明确且易于追踪。DVC流水线和MLflow都可以从此文件中读取，从而确保一致性。对<code>params.yaml</code>的更改由Git追踪。</li>\n<li><strong><code>requirements.txt</code> 或 <code>environment.yml</code></strong>: 定义Python包依赖的标准文件。指定依赖项对确保项目环境能够准确重现非常重要。</li>\n<li><strong><code>mlruns/</code></strong>: 如果您尚未配置远程追踪服务器，这是MLflow存储实验追踪数据（参数、指标、制品）的默认本地目录。此目录几乎总应包含在<code>.gitignore</code>中。</li>\n<li><strong><code>.dvc/</code></strong>: 包含DVC的内部文件，包括配置、缓存目录结构等。此目录由DVC管理，也应在<code>.gitignore</code>中。</li>\n<li><strong><code>.gitignore</code></strong>: 对于任何使用Git的项目来说，这是一个重要文件。它告诉Git哪些文件或目录应被忽略。当使用DVC和MLflow时，忽略由DVC追踪的大型数据文件、DVC缓存、MLflow的本地追踪目录 (<code>mlruns/</code>)、虚拟环境目录以及其他不适用于Git版本控制的生成文件非常重要。</li>\n</ul>\n<h3>项目结构示例</h3>\n<p>以下是典型项目布局的可视化表示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1g7bbs2\" \n              data-graph-definition='digraph project_structure {\n  rankdir=LR;\n  node [shape=folder, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Arial\"];\n  edge [arrowhead=none, color=\"#adb5bd\"];\n\n  project_root [label=\"项目根目录/\", shape=folder, fillcolor=\"#74c0fc\"];\n\n  // 主要目录\n  data [label=\"data/\"];\n  src [label=\"src/\"];\n  models [label=\"models/\"];\n  notebooks [label=\"notebooks/\"];\n  dvc_internal [label=\".dvc/\", fillcolor=\"#ced4da\"];\n  mlruns [label=\"mlruns/\", fillcolor=\"#ced4da\"];\n\n  // 文件\n  dvc_yaml [label=\"dvc.yaml\", shape=note, fillcolor=\"#ffec99\"];\n  params_yaml [label=\"params.yaml\", shape=note, fillcolor=\"#ffec99\"];\n  reqs [label=\"requirements.txt\", shape=note, fillcolor=\"#b2f2bb\"];\n  gitignore [label=\".gitignore\", shape=note, fillcolor=\"#dee2e6\"];\n  readme [label=\"README.md\", shape=note, fillcolor=\"#e9ecef\"];\n\n  // 子目录/文件\n  data_raw [label=\"raw/\", shape=folder, fillcolor=\"#d0bfff\"];\n  data_processed [label=\"processed/\", shape=folder, fillcolor=\"#d0bfff\"];\n  data_dvc_file [label=\"dataset.csv.dvc\", shape=note, fillcolor=\"#eebefa\"];\n  src_py [label=\"train.py\", shape=note, fillcolor=\"#96f2d7\"];\n  models_pkl [label=\"model.pkl.dvc\", shape=note, fillcolor=\"#eebefa\"]; // 例如，如果由 DVC 追踪\n  notebook_ipynb [label=\"eda.ipynb\", shape=note, fillcolor=\"#ffd8a8\"];\n\n\n  // 连接\n  project_root -> data;\n  project_root -> src;\n  project_root -> models;\n  project_root -> notebooks;\n  project_root -> dvc_internal;\n  project_root -> mlruns;\n  project_root -> dvc_yaml;\n  project_root -> params_yaml;\n  project_root -> reqs;\n  project_root -> gitignore;\n  project_root -> readme;\n\n  data -> data_raw;\n  data -> data_processed;\n  data -> data_dvc_file; // DVC 文件与占位符或实际数据目录并存\n  src -> src_py;\n  models -> models_pkl;\n  notebooks -> notebook_ipynb;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1g7bbs2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个常见的项目布局，将数据、源代码、模型、笔记本、配置（<code>params.yaml</code>）、DVC流水线定义（<code>dvc.yaml</code>）和被忽略的目录（<code>.dvc/</code>、<code>mlruns/</code>）进行分离。</p>\n</blockquote>\n<h3>对工作流程的意义</h3>\n<p>此结构有助于集成工作流程：</p>\n<ol>\n<li><strong>数据管理：</strong> 原始数据放入<code>data/raw</code>中。DVC追踪更改（例如，<code>dvc add data/raw/your_data.csv</code>）。处理后的数据可能放入<code>data/processed</code>中，同样由DVC追踪。实际的大文件被Git忽略，但小型<code>.dvc</code>指针文件会提交。</li>\n<li><strong>代码开发：</strong> <code>src/</code>中的脚本执行诸如数据处理、模型训练和评估等任务。这些脚本的更改由Git追踪。</li>\n<li><strong>配置：</strong> <code>params.yaml</code>中的参数 (parameter)由<code>src/</code>中的脚本读取。参数的更改由Git追踪。</li>\n<li><strong>实验追踪：</strong> 当<code>src/train.py</code>运行时，它使用MLflow记录参数（可能从<code>params.yaml</code>读取）、指标和制品（如模型，这些模型可能保存到<code>models/</code>或直接记录）。MLflow会记录此信息，并将其链接到所用代码的特定Git提交。</li>\n<li><strong>流水线编排：</strong> <code>dvc.yaml</code>定义了执行<code>src/</code>中脚本的阶段，使用由<code>.dvc</code>文件（或<code>params.yaml</code>）指定的数据，并产生输出（如由DVC追踪的处理数据或模型，或指标文件）。</li>\n</ol>\n<h3>理由和最佳实践</h3>\n<ul>\n<li><strong>职责分离：</strong> 使数据、代码、配置和生成输出区分开来，使项目更易于理解和管理。</li>\n<li><strong>依赖明确：</strong> 使代码、数据和配置的位置显而易见。DVC等工具可以根据此结构自动检测依赖项。</li>\n<li><strong>协作：</strong> 标准结构降低了新团队成员理解项目流程的障碍。</li>\n<li><strong>自动化：</strong> 简化自动化工作流程（例如，ML的CI/CD流水线）的创建，因为脚本、数据和配置的路径是可预测的。</li>\n<li><strong><code>.gitignore</code> 非常重要：</strong> 正确配置<code>.gitignore</code>是阻止大型数据文件、临时MLflow日志或DVC缓存内容提交到Git仓库的重要一步。它确保Git只追踪代码、配置和DVC元数据文件。</li>\n</ul>\n<p>以下是此类项目中<code>.gitignore</code>的示例片段：</p>\n<pre><code class=\"language-gitignore\"># DVC 相关\n.dvc/cache\n.dvc/tmp\n.dvc/lock\n/data/raw/ # 如果由 DVC 管理，则忽略原始数据\n/data/processed/ # 如果由 DVC 管理，则忽略处理后的数据\n/models/ # 如果由 DVC 管理或通过 MLflow 记录，则忽略模型\n\n# MLflow 相关\nmlruns/\n\n# Python 相关\n__pycache__/\n*.pyc\n*.pyo\n*.pyd\n.env\nvenv/\nenv/\n*.egg-info/\ndist/\nbuild/\n\n# 笔记本相关\n.ipynb_checkpoints\n\n# 操作系统相关\n.DS_Store\nThumbs.db\n</code></pre>\n<blockquote>\n<p>为使用DVC和MLflow的项目量身定制的<code>.gitignore</code>规则示例。根据您使用<code>dvc add</code>追踪的特定文件或目录，调整<code>/data/raw/</code>等路径。</p>\n</blockquote>\n<p>从项目一开始就采用这样的结构，为集成DVC和MLflow提供了一个坚实框架，使得机器学习 (machine learning)系统更加有条理、可重现和可维护。虽然此模板可以作为一个良好的起点，但请随意根据您项目的具体要求和规模进行调整。</p>",
+  "slug": "structuring-projects-integration",
+  "updates": [],
+  "references": [
+    {
+      "id": 7820,
+      "title": "DVC Documentation",
+      "author": "Iterative.ai",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "这是理解 DVC 功能（包括数据版本控制、管道和 dvc.yaml 文件结构）的主要资源。",
+      "order": 1,
+      "created_at": "2025-09-05T01:47:50.723394Z",
+      "updated_at": "2025-09-10T01:46:51.252259Z"
+    },
+    {
+      "id": 7821,
+      "title": "MLflow Documentation",
+      "author": "Databricks",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mlflow.org/docs/latest/index.html",
+      "doi": "",
+      "note": "MLflow 的官方指南，涵盖实验追踪、模型日志记录以及 mlruns/ 目录的组织。",
+      "order": 2,
+      "created_at": "2025-09-05T01:47:50.728055Z",
+      "updated_at": "2025-09-09T02:56:56.854229Z"
+    },
+    {
+      "id": 7823,
+      "title": "MLOps with DVC and MLflow: A Quickstart Guide",
+      "author": "Iterative.ai",
+      "year": "2023",
+      "publisher": "Iterative.ai",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/blog/mlops-dvc-mlflow-quickstart",
+      "doi": "",
+      "note": "本指南演示了如何将 DVC 用于数据和管道版本控制，并结合 MLflow 进行实验追踪，展示了实用的项目设置。",
+      "order": 4,
+      "created_at": "2025-09-05T01:47:50.733755Z",
+      "updated_at": "2025-09-09T02:57:04.586692Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 6531,
+  "title": "动手实践：构思一个简单模型",
+  "meta_title": "实践：构思基础多模态模型",
+  "meta_description": "一项动手活动，用于针对特定任务构思或勾勒一个简单的多模态AI模型。",
+  "content": "<p>构建一个简单的多模态 (multimodal)AI模型，需要理解其必要组成部分。这些组成部分包括：如何从文本和图像等不同类型的数据中提取重要信息（特征），使用的简单处理单元（神经网络 (neural network)层）的类型，模型如何通过损失函数 (loss function)和训练进行学习，以及如何利用评估指标来衡量它们的表现。</p>\n<p>现在，是时候进行动手实践了。别担心，你不需要编写任何代码。相反，你将扮演AI系统设计师的角色，勾勒出一个简单多模态模型的方案。这关乎理解我们所学到的各个部分如何组合起来解决问题。</p>\n<h3>任务：自动图像描述</h3>\n<p>让我们选择一个经典的多模态 (multimodal)任务：<strong>图像描述</strong>。目标很明确：给定一张图像，AI系统应生成一个简短的文本句子，描述图像中的内容。例如，如果你给它一张猫坐在垫子上的图片，它可能会生成描述“一只猫坐在垫子上。”</p>\n<p>这是一个很好的练习任务，因为它清楚地涉及两种不同类型的数据（模态）：</p>\n<ul>\n<li><strong>输入：</strong> 图像。</li>\n<li><strong>输出：</strong> 文本（一个描述性句子）。</li>\n</ul>\n<p>我们的任务是概述一个系统如何使用我们讨论过的组件来实现这一点。</p>\n<h3>步骤 1：理解和处理图像（图像特征提取）</h3>\n<p>首先，我们的系统需要“感知”并理解输入图像。如你所知，图像对于计算机而言只是一系列像素值。原始像素本身对于直接理解内容而言信息量不足。我们需要提取更有意义的<strong>特征</strong>。</p>\n<p>设想一个<strong>图像特征提取器</strong>组件。它的任务是接收原始图像，并将其转换为一组数值特征，以表示重要的视觉信息。这可以包括关于物体、颜色、纹理及其关系的信息。在更先进的系统中，通常使用一种名为卷积神经网络 (neural network)（CNN）的神经网络来完成此任务，但对于我们的勾勒，只需想象一个盒子，它接收图像并输出一组丰富的图像特征。这些特征通常是数字列表或向量 (vector)，用于总结图像的内容。</p>\n<h3>步骤 2：生成描述性文本（文本生成）</h3>\n<p>一旦我们有了图像特征，下一步就是生成文本描述。描述是一系列词语。这意味着我们的模型需要一个组件，能够一个接一个地生成词语，形成一个连贯的句子来描述图像特征。</p>\n<p>我们称之为<strong>文本生成模块</strong>。此模块将把图像特征（在步骤1中生成）作为其输入。根据这些特征，它需要决定用哪个词开始句子，然后哪个词应该跟在后面，依此类推，直到形成一个完整的描述。这有点像你描述一张图片的方式，从最显著的部分开始添加细节。像循环神经网络 (neural network)（RNN）这样的组件常用于此类序列生成任务，因为它们可以记住已生成的内容，从而指导后续生成。</p>\n<h3>步骤 3：勾勒模型架构</h3>\n<p>现在，让我们设想这些部分如何连接。图像输入进来，经过图像特征提取器，然后这些特征进入文本生成模块，从而产生描述。</p>\n<p>此图显示了这一流程的简单示意：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6ltfmt\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", fontsize=10];\n    node [shape=box, style=\"filled\", fontname=\"sans-serif\", fontsize=10];\n    edge [fontname=\"sans-serif\", fontsize=10];\n\n    img_input [label=\"图像\\n(输入模态)\", fillcolor=\"#b2f2bb\"];\n\n    feature_extractor [label=\"图像特征提取器\\n(例如，将像素处理为特征)\", fillcolor=\"#96f2d7\"];\n\n    decoder [label=\"文本生成模块\\n(例如，序列处理器)\", fillcolor=\"#bac8ff\"];\n\n    text_output [label=\"文本描述\\n(输出模态)\", fillcolor=\"#ffec99\"];\n\n    img_input -> feature_extractor [label=\" 提供图像数据\"];\n    feature_extractor -> decoder [label=\" 馈送图像特征\"];\n    decoder -> text_output [label=\" 生成词语序列\"];\n\n    subgraph cluster_components {\n        label = \"图像描述模型的组件\";\n        style = \"rounded,dashed\";\n        color = \"#adb5bd\";\n        bgcolor = \"#e9ecef\";\n        feature_extractor;\n        decoder;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6ltfmt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图像描述模型的基本概述。图像经过处理以提取特征，然后这些特征由文本生成模块用于创建描述性文本。</p>\n</blockquote>\n<p>此图显示了一个常见模式：“编码器”部分（图像特征提取器）将输入图像处理成有用的表示，而“解码器”部分（文本生成模块）则接收此表示并生成输出序列（描述）。</p>\n<h3>步骤 4：它是如何学习的？（训练概述）</h3>\n<p>那么，我们有了一个结构。但是这个系统如何学习生成<em>优质</em>描述呢？它通过实例学习！在<strong>训练阶段</strong>，我们会向模型展示数千甚至数百万张图像，每张图像都配有一个或多个由人类编写的描述（这些被称为“真实”描述）。</p>\n<p>对于每张图像，模型会尝试生成一个描述。然后，我们会使用<strong>损失函数 (loss function)</strong>。此函数将模型生成的描述与该图像的真实描述进行比较。如果生成的描述与人类编写的描述差异很大，损失函数会给出高“错误”分数。如果非常相似，分数则较低。</p>\n<p>训练的目标是调整图像特征提取器和文本生成模块的内部设置（参数 (parameter)），使得损失函数产生的错误分数在所有训练样本上尽可能小。模型有效地学习关联图像中的模式与语言中的模式。</p>\n<h3>步骤 5：它工作正常吗？（基本评估）</h3>\n<p>训练完成后，我们需要检查我们的图像描述系统在它之前从未见过的新图像上的表现如何。这就是<strong>评估</strong>。</p>\n<p>有几种方法可以做到这一点：</p>\n<ul>\n<li><strong>人工判断：</strong> 我们可以简单地查看为新图像生成的描述，并判断它们是否准确、相关且语法正确。</li>\n<li><strong>自动指标：</strong> 还有一些自动化指标（如BLEU、METEOR、CIDEr，我们曾简要提及）用于比较机器生成的描述与一个或多个人类编写的参考描述。这些指标通常计算重叠的词语或词语序列。</li>\n</ul>\n<p>一个好的模型不仅能生成准确的描述，而且听起来也很自然。</p>\n<h3>轮到你了：勾勒一个不同的简单模型</h3>\n<p>现在轮到你来思考一个略有不同任务的组件了。</p>\n<p><strong>任务设想：简单的视觉是/否问题</strong></p>\n<p>设想你希望构建一个系统，它接收两个输入：</p>\n<ol>\n<li>一张图像。</li>\n<li>一个关于图像的基于文本的简单是/否问题（例如，“图片里有狗吗？”）。</li>\n</ol>\n<p>系统应输出简单的“是”或“否”。这是视觉问答（VQA）的一个简化版本。</p>\n<p>思考并写下你对以下各项的想法：</p>\n<ul>\n<li><strong>输入：</strong> 你的系统需要处理哪两种类型的数据（模态）？</li>\n<li><strong>特征提取：</strong> 你将如何从每种输入类型中获取有用的特征？图像需要哪种组件？文本问题呢？</li>\n<li><strong>信息组合：</strong> 系统需要同时考虑图像内容和问题才能得出答案。图像特征和问题特征可能如何组合？（你可以回顾第三章中讨论的组合策略——早期、中期或晚期——从宏观层面思考）。</li>\n<li><strong>输出：</strong> 系统的最终输出是什么？一个组件如何做出这个最终的“是”或“否”决定？</li>\n<li><strong>训练与评估（总体）：</strong> 简要地说，这样的系统会如何学习？它需要什么样的数据？你如何知道它是否正确回答了问题？</li>\n</ul>\n<p>勾勒出你的想法。如果有所帮助，你可以画一个类似于上面所示的简单框图。这里的目标不是找到“完美”的架构，而是练习思考如何组合不同的AI组件来处理多模态 (multimodal)问题。这项练习有助于巩固你对我们所学基本构造的理解。祝你好运！</p>",
+  "slug": "hands-on-conceptualizing-simple-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 18404,
+      "title": "Show and Tell: A Neural Image Caption Generator",
+      "author": "Oriol Vinyals, Alexander Toshev, Samy Bengio, and Dumitru Erhan",
+      "year": "2015",
+      "publisher": "",
+      "journal": "IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+      "volume": "",
+      "pages": "3156-3164",
+      "url": "https://arxiv.org/abs/1411.4555",
+      "doi": "10.48550/arXiv.1411.4555",
+      "note": "介绍了使用CNN进行特征提取和LSTM进行文本生成的图像字幕编码器-解码器模型，与模型概念化直接相关。",
+      "order": 1,
+      "created_at": "2025-09-06T12:24:40.326812Z",
+      "updated_at": "2025-09-10T07:03:11.521653Z"
+    },
+    {
+      "id": 18405,
+      "title": "VQA: Visual Question Answering",
+      "author": "Aishwarya Agrawal, Jiasen Lu, Stanislaw Antol, Margaret Mitchell, C. Lawrence Zitnick, Dhruv Batra, Devi Parikh",
+      "year": "2015",
+      "publisher": "",
+      "journal": "International Conference on Computer Vision (ICCV)",
+      "volume": "",
+      "pages": "2901-2909",
+      "url": "https://arxiv.org/abs/1505.00468",
+      "doi": "10.48550/arXiv.1505.00468",
+      "note": "介绍了视觉问答 (VQA) 任务和数据集，概述了结合图像和文本特征来回答问题的早期模型。",
+      "order": 2,
+      "created_at": "2025-09-06T12:24:40.333936Z",
+      "updated_at": "2025-09-10T07:02:48.467736Z"
+    },
+    {
+      "id": 18406,
+      "title": "CS231n: Convolutional Neural Networks for Visual Recognition",
+      "author": "Fei-Fei Li, Ehsan Adeli, Justin Johnson, Zane Durante",
+      "year": "2025",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://cs231n.stanford.edu/",
+      "doi": "",
+      "note": "一门成熟的课程，涵盖了卷积神经网络 (CNN)、循环神经网络 (RNN)、训练过程、损失函数和评估指标的基本概念。",
+      "order": 3,
+      "created_at": "2025-09-06T12:24:40.337890Z",
+      "updated_at": "2025-09-10T07:02:44.238390Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

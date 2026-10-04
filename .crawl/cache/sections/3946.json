@@ -1,0 +1,61 @@
+{
+  "id": 3946,
+  "title": "机器学习工作流程概述",
+  "meta_title": "机器学习工作流程步骤",
+  "meta_description": "了解部署在构建和使用机器学习模型的整个流程中的位置。",
+  "content": "<p>机器学习 (machine learning)模型的开发常被描述为一系列最终形成训练模型的步骤。然而，训练只是整个流程的一部分。为了了解部署在其中所处的位置，我们来看看实现机器学习方案所涉及的典型阶段。与其说它是一条严格的线性路径，不如说它是一个迭代过程，后期阶段的经验常能指导前期阶段。</p>\n<p>以下是机器学习工作流程的常见划分：</p>\n<ol>\n<li>\n<p><strong>问题定义与范围界定：</strong></p>\n<ul>\n<li>您希望通过机器学习解决什么具体问题？（例如：识别垃圾邮件、预测房价、产品推荐）。</li>\n<li>有哪些数据可能可用？</li>\n<li>您将如何衡量成功？对于业务或应用目标，哪些衡量指标很重要（例如：准确率、预测速度、成本节约）？</li>\n<li>这种初步界定很根本；定义错误的问题或成功标准可能导致模型在技术上可靠却无法提供实际价值。</li>\n</ul>\n</li>\n<li>\n<p><strong>数据收集与准备：</strong></p>\n<ul>\n<li><strong>数据获取：</strong> 获取训练和评估模型所需的原始数据。这可能来自数据库、日志、API 或外部来源。\n\"    *   <strong>数据清洗：</strong> 处理缺失值、纠正错误、移除重复项并处理不一致性。数据很少是完美的。\"</li>\n<li><strong>探索性数据分析 (EDA)：</strong> 通过可视化和汇总统计，理解数据的特性、分布和关系。</li>\n<li><strong>特征工程：</strong> 将原始数据转换为特征，这些特征是模型的输入信号。这可能涉及从现有特征创建新特征、对数值进行缩放或编码分类变量。此阶段通常占用项目大量时间。</li>\n</ul>\n</li>\n<li>\n<p><strong>模型训练与选择：</strong></p>\n<ul>\n<li><strong>算法选择：</strong> 根据问题类型（分类、回归、聚类）、数据特性和项目目标，选择适合的机器学习算法。</li>\n<li><strong>训练：</strong> 将准备好的数据输入所选算法以学习模式。这涉及调整算法参数 (parameter)（超参数 (hyperparameter)）以优化性能。</li>\n<li><strong>实验：</strong> 通常会训练并比较多种算法和配置。</li>\n</ul>\n</li>\n<li>\n<p><strong>模型评估：</strong></p>\n<ul>\n<li><strong>离线测试：</strong> 在训练期间未曾见过的一个独立数据集（测试集）上评估已训练模型的表现。常见衡量指标包括分类的准确率、精确率、召回率，或回归的均方误差（MSE）。</li>\n<li><strong>验证：</strong> 确保模型符合在第一阶段定义的成功标准。它的表现是否足以解决预期的困扰？</li>\n</ul>\n</li>\n<li>\n<p><strong>模型部署：</strong></p>\n<ul>\n<li>在此阶段，我们将经过验证的模型提供给用户或其他系统使用。</li>\n<li>它涉及打包模型、其依赖项以及任何必要的预处理步骤。</li>\n<li>创建接口（比如一个Web API），以便其他人可以将新数据发送给模型并接收预测结果。</li>\n<li>设置稳定运行模型所需的基础设施。</li>\n<li><strong>此阶段是本课程的主要关注点。</strong> 没有部署，模型就只是一项研究成果，无法持续提供价值。</li>\n</ul>\n</li>\n<li>\n<p><strong>监控与维护：</strong></p>\n<ul>\n<li><strong>性能追踪：</strong> 持续监控模型在实际运行环境中的预测和表现。预测结果是否仍然准确？</li>\n<li><strong>概念漂移检测：</strong> 识别输入数据的模式是否随时间变化，这可能导致模型性能下降。</li>\n<li><strong>再训练：</strong> 定期使用新数据再训练模型，以保持其准确性和时效性。</li>\n<li><strong>系统健康：</strong> 监控托管模型的基础设施（例如：服务器负载、响应时间）。</li>\n</ul>\n</li>\n</ol>\n<p>以下图表阐明了此工作流程，并突出其周期性：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1pqo6fb\" \n              data-graph-definition='digraph ML_Workflow {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  Problem [label=\"1. 问题定义\", fillcolor=\"#a5d8ff\"];\n  Data [label=\"2. 数据收集\\n& 准备\", fillcolor=\"#96f2d7\"];\n  Train [label=\"3. 模型训练\\n& 选择\", fillcolor=\"#ffec99\"];\n  Eval [label=\"4. 模型评估\", fillcolor=\"#ffd8a8\"];\n  Deploy [label=\"5. 部署\", fillcolor=\"#fcc2d7\", style=\"filled,bold\", color=\"#e64980\"];\n  Monitor [label=\"6. 监控\\n& 维护\", fillcolor=\"#bac8ff\"];\n\n  Problem -> Data;\n  Data -> Train;\n  Train -> Eval;\n  Eval -> Deploy [label=\"模型已验证\"];\n  Eval -> Train [label=\"需要改进\", style=dashed];\n  Deploy -> Monitor;\n  Monitor -> Data [label=\"再训练/新数据\", style=dashed];\n  Monitor -> Problem [label=\"重新界定范围\", style=dashed];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1pqo6fb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的机器学习工作流程，强调了部署阶段和迭代反馈循环。</p>\n</blockquote>\n<p>正如图表所示，部署并非最终一步，而是模型开始与实际情况交互的转换点。监控反馈通常会循环回溯，触发再训练、进一步的数据收集，甚至重新评估最初的问题定义。理解这种更广泛的背景有助于我们明白，为生产环境的严苛要求准备模型为何是一项重要的能力。</p>",
+  "slug": "ml-workflow-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 10709,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本关于整个机器学习系统生命周期的综合指南，涵盖从问题定义、数据工程到生产环境中的模型部署和监控。",
+      "order": 1,
+      "created_at": "2025-09-05T06:52:39.939715Z",
+      "updated_at": "2025-09-08T13:15:57.109325Z"
+    },
+    {
+      "id": 10710,
+      "title": "Rules of Machine Learning: Best Practices for ML Engineering",
+      "author": "Martin Zinkevich",
+      "year": "2017",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+      "doi": "",
+      "note": "提供了来自Google的实用建议和最佳实践，用于构建和部署机器学习系统，涵盖工作流程的各个阶段。",
+      "order": 2,
+      "created_at": "2025-09-05T06:52:39.952175Z",
+      "updated_at": "2025-09-08T13:15:53.114168Z"
+    },
+    {
+      "id": 10711,
+      "title": "Introducing MLOps: How to go from Model-centric to Data-centric AI",
+      "author": "Mark Treveil, Nicolas Omont, Clément Stenac, Kenji Lefevre, Du Phan",
+      "year": "2020",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "183",
+      "url": "https://learning.oreilly.com/library/view/introducing-mlops/9781492083283/",
+      "doi": "",
+      "note": "介绍了MLOps的原则和实践，侧重于机器学习模型的运营化及其在生产环境中的生命周期管理。",
+      "order": 3,
+      "created_at": "2025-09-05T06:52:39.954463Z",
+      "updated_at": "2025-09-08T13:16:28.309723Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

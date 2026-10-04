@@ -1,0 +1,61 @@
+{
+  "id": 7162,
+  "title": "实时流式ASR的考虑事项",
+  "meta_title": "实时流式ASR的考虑事项",
+  "meta_description": "关于构建用于实时流式音频输入的ASR系统所需面临的挑战和架构改动的概述。",
+  "content": "<p>ASR系统通常在离线或批处理模式下运行。在这种模式下，提供一个完整的音频文件，模型处理它，然后返回一份完整的转录文本。这种方法非常适合转录录制的讲座或采访。然而，对于语音助手、实时字幕或听写等应用，系统必须在语音发出时即时处理音频，并以最小的延迟交付结果。应对这一需求是实时流式ASR的难题。</p>\n<p>从离线模型转向流式模型不仅仅是一个小调整。它需要对模型架构和整个处理流程进行根本性的改变，以解决两个主要限制：延迟和因果关系。</p>\n<h3>因果关系：无法预知未来</h3>\n<p>您已经学习过的许多高性能架构，例如双向LSTM（BiLSTM）或标准Transformer，都是非因果的。BiLSTM会正向和反向处理序列，这意味着它在时间 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi></mrow><annotation encoding=\"application/x-tex\">t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6151em;\"></span><span class=\"mord mathnormal\">t</span></span></span></span> 对一个词的预测依赖于所有其他词，包括它后面的词。同样，Transformer中的自注意力 (self-attention)机制 (attention mechanism)会查看整个输入序列来计算其表示。</p>\n<p>这是实时系统不具备的。为了以低延迟生成转录文本，模型只能使用它已经接收到的音频。它不能等待用户说完话才开始转录。这意味着任何用于流式处理的模型都必须是<strong>因果的</strong>，仅基于过去和现在的信息进行预测。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ehwtob\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled\", fontname=\"sans-serif\", margin=0.2];\n    edge [fontname=\"sans-serif\"];\n\n    subgraph cluster_0 {\n        label = \"离线模型（双向）\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        color=\"#ced4da\";\n        b1 [label=\"t-1\", fillcolor=\"#a5d8ff\"];\n        b2 [label=\"t\", fillcolor=\"#74c0fc\"];\n        b3 [label=\"t+1\", fillcolor=\"#a5d8ff\"];\n        b1 -> b2 [color=\"#1c7ed6\"];\n        b2 -> b3 [color=\"#1c7ed6\"];\n        b3 -> b2 [dir=back, color=\"#f03e3e\"];\n        b2 -> b1 [dir=back, color=\"#f03e3e\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"流式模型（单向/因果）\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        color=\"#ced4da\";\n        u1 [label=\"t-1\", fillcolor=\"#a5d8ff\"];\n        u2 [label=\"t\", fillcolor=\"#74c0fc\"];\n        u3 [label=\"t+1\", fillcolor=\"#a5d8ff\"];\n        u1 -> u2 [color=\"#1c7ed6\"];\n        u2 -> u3 [color=\"#1c7ed6\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ehwtob\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>双向模型与因果、单向模型中的数据流。双向模型使用未来信息（红色箭头），因此不适用于实时应用。因果模型仅处理过去和现在的信息（蓝色箭头）。</p>\n</blockquote>\n<h3>基于分块的处理与状态管理</h3>\n<p>实现流式处理的最常见方法是将传入音频分成小的、连续的段进行处理，这些段通常称为分块。例如，一个系统可能会缓冲200毫秒的音频，处理它，发出部分转录文本，然后处理下一个200毫秒的分块。</p>\n<p>这带来了一个新问题：上下文 (context)。声学模型需要来自先前分块的上下文才能理解当前分块。如果您将每个分块视为独立输入，模型将在边界处遇到困难。例如，一个音素可能正好在两个分块之间被分割。</p>\n<p>为解决此问题，流式系统必须是<strong>有状态的</strong>。如果您使用基于RNN的架构，这很简单。处理分块 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 后，RNN的最终隐藏状态会被保存，并用作处理分块 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">N+1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 的初始隐藏状态。这使得信息能够跨越分块边界流动，从而让模型记住之前说过的内容。对于基于Transformer的模型，可以通过缓存先前分块的注意力层的键和值来维持类似的状态。</p>\n<h3>语音活动检测 (VAD)</h3>\n<p>流式ASR系统不应持续处理音频。处理静音或背景噪声会浪费大量的计算资源。此外，系统需要一个信号来知道何时一个话语完成，以便它可以最终确定转录文本并为下一个话语重置。</p>\n<p>这是**语音活动检测（VAD）**模块的任务。VAD是一个更小、高效的模型或算法，其作用只有一个：区分语音和非语音。ASR流程使用VAD作为守门员：</p>\n<ol>\n<li><strong>监听：</strong> VAD分析传入的音频流。</li>\n<li><strong>触发：</strong> 当VAD检测到语音开始时，它会向主ASR模型发出信号，启动处理和转录。</li>\n<li><strong>完成：</strong> 当VAD在语音后检测到足够长的静音时，它会发出信号表示话语可能已完成。ASR系统随后可以最终确定其假设，返回完整的转录文本，并重置其状态，等待下一个VAD触发。</li>\n</ol>\n<h3>流式友好架构与解码</h3>\n<p>虽然可以将带有CTC的单向LSTM用于流式处理，但某些架构本身更适合这项任务。</p>\n<ul>\n<li>\n<p><strong>RNN-Transducer (RNN-T)：</strong> 这种模型是设备上和流式ASR的常用选择。与CTC不同，CTC需要完整的序列（或分块）来计算其损失，而RNN-T为每个输入时间步生成一个输出符号。它将编码器网络（如LSTM）与一个“预测网络”结合，该网络对纯文本上下文 (context)进行建模。一个联合网络随后结合它们的输出来预测下一个字符。这种逐步输出非常适合流式处理。</p>\n</li>\n<li>\n<p><strong>分块式Transformer：</strong> 为了使Transformer具有因果性，需要修改自注意力 (self-attention)机制 (attention mechanism)。注意力不再关注整个序列，而是被限制在一个固定大小的“向前看窗口”或“左侧上下文”内。通过分块处理音频并缓存过去分块的表示，这些模型可以有效地模拟音频流上的滑动注意力窗口，将Transformer的优点与低延迟处理的要求相结合。</p>\n</li>\n</ul>\n<p>最后，解码过程也发生变化。流式解码器不再生成一份最终的转录文本，而是必须随着每个新音频分块的到来而不断更新其假设。这意味着用户将看到转录文本实时出现，有时还会自我修正，因为模型会获得更多上下文。管理这一过程以提供稳定且可读的实时输出是一个重要的用户体验难题。</p>",
+  "slug": "real-time-streaming-asr",
+  "updates": [],
+  "references": [
+    {
+      "id": 19469,
+      "title": "Sequence Transduction with Recurrent Neural Networks",
+      "author": "Alex Graves",
+      "year": "2012",
+      "publisher": "",
+      "journal": "International Conference of Machine Learning (ICML) 2012 Workshop on Representation Learning",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1211.3711",
+      "doi": "10.48550/arXiv.1211.3711",
+      "note": "这篇基础性论文介绍了循环神经网络换能器 (RNN-T)，它是流式 ASR 的关键架构，因为它能够逐个步骤输出，无需等待完整的输入序列。",
+      "order": 1,
+      "created_at": "2025-09-06T13:08:08.223912Z",
+      "updated_at": "2025-09-10T04:13:24.676221Z"
+    },
+    {
+      "id": 19471,
+      "title": "Robust Voice Activity Detection Using Deep Neural Networks",
+      "author": "Xiang Zhang, S. M. Ahadi, V. Ramana Rao, T. J. Cox",
+      "year": "2013",
+      "publisher": "ISCA (International Speech Communication Association)",
+      "journal": "Interspeech 2013",
+      "volume": "",
+      "pages": "1578-1582",
+      "url": "https://doi.org/10.21437/Interspeech.2013-402",
+      "doi": "10.21437/Interspeech.2013-402",
+      "note": "本文探讨了深度神经网络在语音活动检测中的应用，这是实时流式 ASR 系统中管理计算资源和话语边界的重要组成部分。",
+      "order": 3,
+      "created_at": "2025-09-06T13:08:08.239627Z",
+      "updated_at": "2025-09-10T04:13:31.785176Z"
+    },
+    {
+      "id": 19472,
+      "title": "Deep Learning in Spoken Language Processing: From Speech Recognition to Text-to-Speech",
+      "author": "Li Deng, Xiao Li",
+      "year": "2019",
+      "publisher": "Academic Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/deep-learning-in-spoken-language-processing/deng/978-0-12-813589-9",
+      "doi": "10.1016/C2016-0-03004-7",
+      "note": "本书全面概述了应用于口语处理的深度学习技术，包括对各种 ASR 架构及其在离线和流式模式下相关实际考量的讨论。",
+      "order": 4,
+      "created_at": "2025-09-06T13:08:08.242296Z",
+      "updated_at": "2025-09-10T04:13:38.181595Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

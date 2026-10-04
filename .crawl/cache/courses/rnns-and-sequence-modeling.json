@@ -1,0 +1,955 @@
+{
+  "id": 122,
+  "title": "循环神经网络与序列建模",
+  "meta_title": "RNN与序列建模课程 | 学习LSTM与GRU",
+  "meta_description": "循环神经网络（RNN）、LSTM和GRU在序列建模中的中级课程。内容包括理论、时序反向传播、实现与实际应用。",
+  "description": "学习构建和训练循环神经网络（RNN），包括长短期记忆网络（LSTM）和门控循环单元（GRU），用于高效处理时间序列分析和自然语言处理等序列建模任务。本课程讲解其基本结构、训练方法和使用常用深度学习框架的实际操作。",
+  "short_description": "掌握构建和训练RNN、LSTM和GRU，用于时间序列分析和自然语言处理等序列建模任务。",
+  "excerpt": "精通RNN、LSTM和GRU。理解序列数据处理、时序反向传播，并构建用于自然语言处理和时间序列预测的模型。",
+  "prerequisites": "Python和机器学习基础",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "RNN基础",
+      "description": "理解简单循环神经网络的结构和运作方式。"
+    },
+    {
+      "topic": "RNN训练",
+      "description": "掌握时序反向传播（BPTT）的方法以及梯度消失/爆炸等难题。"
+    },
+    {
+      "topic": "高级架构",
+      "description": "学习长短期记忆网络（LSTM）和门控循环单元（GRU）的结构和功能。"
+    },
+    {
+      "topic": "实现",
+      "description": "使用标准深度学习库实现RNN、LSTM和GRU。"
+    },
+    {
+      "topic": "序列数据处理",
+      "description": "为循环模型准备并预处理序列数据（文本、时间序列）。"
+    },
+    {
+      "topic": "序列建模任务",
+      "description": "将RNN应用于分类、预测和生成等常见序列建模问题。"
+    }
+  ],
+  "duration": 22,
+  "slug": "rnns-and-sequence-modeling",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-04T09:18:57.843645Z",
+  "updated_at": "2026-10-02T08:39:25.219141Z",
+  "chapters": [
+    {
+      "id": 605,
+      "title": "序列数据简介",
+      "meta_title": "序列数据简介 | 循环神经网络课程",
+      "meta_description": "了解序列数据类型（文本、时间序列）以及为什么序列建模任务需要循环神经网络等专门模型。",
+      "number": 1,
+      "slug": "introduction-sequential-data",
+      "content": "我们遇到的大部分数据都具有固有的顺序。比如句子中的单词、随时间变化的股票价格，或者设备传感器读数。这种顺序有作用的信息，被称为序列数据。传统机器学习模型通常独立处理输入，当顺序中包含有价值的信息时，这种做法就不合适了。\r\n\r\n本章为理解和处理序列数据做好准备。我们将会了解：\r\n\r\n*   什么是序列数据，并给出文本和时间序列等具体例子。\r\n*   定义序列的特点，比如时间依赖性和可变长度。\r\n*   为什么传统前馈网络在序列处理任务中表现不足。\r\n*   将原始序列数据转换为机器学习模型能理解的数值格式的方法。\r\n*   使用序列模型处理的常见问题概览，包括预测、分类和生成。\r\n\r\n在本章结束时，你将清晰地了解序列数据的本质以及为什么需要专门的处理方法，为后续章节中学习循环神经网络做好铺垫。",
+      "sections": [
+        {
+          "id": 2512,
+          "title": "理解序列数据",
+          "meta_title": "什么是序列数据？",
+          "meta_description": "查看序列数据的例子，包括文本、时间序列、音频和视频。",
+          "slug": "understanding-sequential-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2513,
+          "title": "序列数据的特点",
+          "meta_title": "序列数据特点",
+          "meta_description": "讨论序列中的时间关联性、长度可变性和顺序重要性等特性。",
+          "slug": "characteristics-sequence-data",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2516,
+          "title": "序列模型的需求",
+          "meta_title": "为什么需要序列模型？",
+          "meta_description": "理解为何标准前馈网络不足以处理序列信息。",
+          "slug": "need-for-sequence-models",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2520,
+          "title": "将序列数字表示",
+          "meta_title": "数值序列表示",
+          "meta_description": "学习将序列转换为适合机器学习的数字格式的方法。",
+          "slug": "representing-sequences-numerically",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2523,
+          "title": "常见的序列建模任务",
+          "meta_title": "序列建模任务概览",
+          "meta_description": "序列预测、分类和生成等任务的概览。",
+          "slug": "common-sequence-modeling-tasks",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 606,
+      "title": "循环神经网络基本原理",
+      "meta_title": "RNN基本原理 | 循环神经网络",
+      "meta_description": "学习简单循环神经网络（RNN）的基本结构、运行方式和数学表示。",
+      "number": 2,
+      "slug": "rnn-fundamentals",
+      "content": "在上一章中，我们已经了解了序列数据的特点以及标准前馈网络的局限性，现在我们将重点放在专门为处理序列而设计的模型上。本章将介绍循环神经网络（RNN）的基本知识。\r\n\r\n您将学习RNN的核心思想：即逐个元素地处理序列，同时保持内部的“记忆”或隐藏状态。我们将分析一个简单RNN单元的结构，理解在时间步 $t$ 的输入 $x_t$ 如何与前一个隐藏状态 $h_{t-1}$ 结合，以生成当前隐藏状态 $h_t$ 和一个可选输出 $y_t$。控制此过程的数学运算，通常表示为：\r\n\r\n$$h_t = f(W_{hh}h_{t-1} + W_{xh}x_t + b_h)$$\r\n$$y_t = g(W_{hy}h_t + b_y)$$\r\n\r\n（其中 $f$ 和 $g$ 是激活函数，如 $\\tanh$ 或 sigmoid）将进行详细说明。我们将展示信息如何随时间流动，并介绍RNN的重要训练算法：随时间反向传播（BPTT），包括网络展开的思想。\r\n\r\n在本章结束时，您将掌握基本RNN的运行原理以及其训练过程的运作方式。",
+      "sections": [
+        {
+          "id": 2526,
+          "title": "核心思想：迭代处理序列",
+          "meta_title": "RNN核心思想：迭代处理",
+          "meta_description": "阐述一步步处理序列元素并维持状态的基本原理。",
+          "slug": "core-idea-iterative-processing",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2528,
+          "title": "简单RNN架构",
+          "meta_title": "简单RNN架构讲解",
+          "meta_description": "详细说明基本RNN单元的结构，包含输入、隐藏状态和输出。",
+          "slug": "simple-rnn-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2530,
+          "title": "隐藏状态的作用",
+          "meta_title": "RNN 隐藏状态的作用",
+          "meta_description": "理解隐藏状态如何充当记忆，从之前的步骤传递信息。",
+          "slug": "role-of-hidden-state",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2532,
+          "title": "RNN 单元的数学表述",
+          "meta_title": "RNN 单元数学表述",
+          "meta_description": "展示简单 RNN 中隐藏状态和输出计算的方程。",
+          "slug": "math-rnn-cell",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2533,
+          "title": "循环神经网络中的信息流动",
+          "meta_title": "RNN信息流动",
+          "meta_description": "形象化信息如何通过展开的RNN跨时间步传播。",
+          "slug": "information-flow-rnns",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2535,
+          "title": "沿时间的反向传播 (BPTT)",
+          "meta_title": "沿时间的反向传播（BPTT）",
+          "meta_description": "阐述通过在时间步间反向传播误差来训练RNN的算法。",
+          "slug": "backpropagation-through-time-bptt",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2537,
+          "title": "展开网络进行训练",
+          "meta_title": "RNN展开以进行训练",
+          "meta_description": "描述将循环结构展开为类前馈网络以进行BPTT的思路。",
+          "slug": "unrolling-rnn-training",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 608,
+      "title": "构建简单RNN",
+      "meta_title": "构建简单RNN | RNN实现",
+      "meta_description": "学习使用Python和深度学习框架API实现基本的循环神经网络。",
+      "number": 3,
+      "slug": "building-simple-rnns",
+      "content": "在了解了简单循环神经网络的主要思想和数学原理，包括时间反向传播（BPTT）的工作方式之后，我们现在将重点转向实现。本章将指导您完成使用常用工具构建第一个RNN模型的实际步骤。\r\n\r\n您将学习如何：\r\n\r\n*   配置您的Python环境，安装所需的深度学习库（TensorFlow或PyTorch）。\r\n*   使用框架API来定义 `SimpleRNN` 层。\r\n*   正确管理循环层所需的输入和输出张量形状，通常表示为 `(batch_size, time_steps, features)`。\r\n*   将这些层组合成一个完整的序列模型。\r\n*   构建基本的训练循环，根据损失函数来输入数据并更新模型权重。\r\n*   将这些步骤应用于一个涉及简单序列预测的实践案例。\r\n\r\n在本章结束时，您将把RNN的理论知识转化为可运行的代码，为您处理更复杂的架构和应用做好准备。",
+      "sections": [
+        {
+          "id": 2539,
+          "title": "搭建开发环境",
+          "meta_title": "RNN开发环境搭建",
+          "meta_description": "关于为RNN开发配置Python和所需库（TensorFlow/PyTorch, NumPy）的指南。",
+          "slug": "setting-up-environment",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2541,
+          "title": "RNN 单元实现",
+          "meta_title": "RNN 单元实现",
+          "meta_description": "展示 RNN 单元实现的主要逻辑，采用基本操作（可选）。",
+          "slug": "conceptual-rnn-cell-implementation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2543,
+          "title": "使用框架API构建简单RNN层",
+          "meta_title": "TensorFlow/PyTorch SimpleRNN层",
+          "meta_description": "演示如何在流行的深度学习框架中使用内置的SimpleRNN层。",
+          "slug": "framework-apis-simple-rnn",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2545,
+          "title": "处理输入与输出形状",
+          "meta_title": "RNN 输入/输出形状",
+          "meta_description": "讲解 RNN 层预期的输入（批次、时间步、特征）和输出形状。",
+          "slug": "handling-input-output-shapes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2547,
+          "title": "构建一个简单RNN模型",
+          "meta_title": "构建一个简单RNN模型",
+          "meta_description": "使用框架API组建简单RNN模型的步骤。",
+          "slug": "constructing-basic-rnn-model",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2549,
+          "title": "RNN 的训练循环",
+          "meta_title": "RNN 训练循环结构",
+          "meta_description": "概述 RNN 模型的典型训练循环结构。",
+          "slug": "training-loop-rnns",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2551,
+          "title": "动手实践：简单序列预测",
+          "meta_title": "动手：简单序列预测",
+          "meta_description": "用于训练基本RNN的合成序列预测任务代码示例。",
+          "slug": "practice-simple-sequence-prediction",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 610,
+      "title": "RNN训练中的难点",
+      "meta_title": "RNN训练难题 | 梯度消失",
+      "meta_description": "了解RNN训练中常见的困难，尤其是梯度消失和梯度爆炸问题，以及缓解它们的方法。",
+      "number": 4,
+      "slug": "rnn-training-challenges",
+      "content": "在学习了循环神经网络的基础结构和实现方式后，我们现在来讨论它们在训练过程中遇到的实际困难。循环神经网络，尤其是在处理长序列时，在时间反向传播算法中会表现出数值不稳定性。\r\n\r\n本章讨论两个主要难题：**梯度消失问题**，即误差信号在时间上反向传播时呈指数级减小（梯度趋近于$0$）；以及**梯度爆炸问题**，即这些信号变得非常大（梯度变得数值不稳定）。这两个问题都严重影响了网络学习跨越遥远时间步依赖关系的能力，而这正是使用循环神经网络的主要原因之一。\r\n\r\n你将学习这些梯度问题产生的原因，并了解缓解它们的常用方法。我们将介绍如何使用梯度裁剪来控制梯度爆炸，讨论有效的权重初始化策略，并考虑不同激活函数在循环层中的影响。了解这些训练机制对于构建和调整有效的序列模型非常重要。",
+      "sections": [
+        {
+          "id": 2553,
+          "title": "梯度消失问题",
+          "meta_title": "RNN中的梯度消失",
+          "meta_description": "说明为什么在BPTT过程中梯度会变得非常小，从而阻碍长距离依赖的学习。",
+          "slug": "problem-vanishing-gradients",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2555,
+          "title": "梯度爆炸问题",
+          "meta_title": "RNN中的梯度爆炸",
+          "meta_description": "解释梯度为何会变得过大，从而导致训练不稳定。",
+          "slug": "problem-exploding-gradients",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2556,
+          "title": "长期依赖学习的影响",
+          "meta_title": "梯度问题和长期依赖",
+          "meta_description": "讨论梯度消失/爆炸如何阻止循环神经网络有效捕获长期模式",
+          "slug": "impact-long-range-dependencies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2558,
+          "title": "梯度裁剪解析",
+          "meta_title": "梯度裁剪方法",
+          "meta_description": "描述梯度裁剪作为一种对抗梯度爆炸的技巧。",
+          "slug": "gradient-clipping-explained",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2560,
+          "title": "权重初始化策略",
+          "meta_title": "RNN权重初始化",
+          "meta_description": "讨论适用于循环层的权重初始化方法。",
+          "slug": "weight-initialization-strategies",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2562,
+          "title": "激活函数考量",
+          "meta_title": "RNN的激活函数",
+          "meta_description": "回顾RNN中常用的激活函数（例如，tanh，ReLU）及其特性。",
+          "slug": "activation-functions-considerations",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 611,
+      "title": "长短期记忆 (LSTM) 网络",
+      "meta_title": "LSTM 网络 | 长短期记忆",
+      "meta_description": "学习长短期记忆（LSTM）网络的架构和机制，该网络旨在克服RNN训练中的挑战。",
+      "number": 5,
+      "slug": "long-short-term-memory-lstm",
+      "content": "我们之前讨论了训练简单循环神经网络（RNN）的困难之处，特别是梯度消失和梯度爆炸问题。这些问题使得基本RNN难以捕捉序列中相距较远元素之间的依赖关系。\r\n\r\n本章介绍长短期记忆（LSTM）网络，这是一种专门的RNN架构，旨在克服这些局限。我们将观察让LSTM能够选择性地记忆或遗忘长序列中信息的核心组成部分。\r\n\r\n您将学到：\r\n\r\n*   调节网络内信息流动的*门控机制*的原理。\r\n*   LSTM单元的详细结构，包括**遗忘门**、**输入门**和**输出门**。\r\n*   **细胞状态**如何作为信息的传送带，使其在网络中传输时极少衰减。\r\n*   控制LSTM单元内部更新的数学运算（$ \\sigma $，$ \\tanh $）。\r\n*   为什么LSTM在需要建模长距离依赖关系的任务中，通常比简单RNN更有效。\r\n\r\n在本章结束时，您将理解LSTM单元的内部工作原理，并认识到它们在现代序列建模中的重要性。",
+      "sections": [
+        {
+          "id": 2564,
+          "title": "通过门控应对循环神经网络的局限",
+          "meta_title": "LSTM中的门控机制",
+          "meta_description": "介绍门控机制作为一种控制信息流和缓解梯度问题的方式。",
+          "slug": "addressing-rnn-limitations-gating",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2566,
+          "title": "LSTM单元结构",
+          "meta_title": "LSTM单元结构概述",
+          "meta_description": "介绍LSTM单元内的主要组成部分。",
+          "slug": "lstm-cell-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2568,
+          "title": "遗忘门",
+          "meta_title": "LSTM遗忘门说明",
+          "meta_description": "详细说明遗忘门在控制记忆保留方面的功能和计算。",
+          "slug": "lstm-forget-gate",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2570,
+          "title": "输入门",
+          "meta_title": "LSTM输入门解析",
+          "meta_description": "详细说明输入门在更新细胞状态时的功能和计算方法。",
+          "slug": "lstm-input-gate",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2572,
+          "title": "更新细胞状态",
+          "meta_title": "LSTM细胞状态更新",
+          "meta_description": "解释细胞状态如何基于遗忘门和输入门进行修改。",
+          "slug": "lstm-updating-cell-state",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2573,
+          "title": "输出门",
+          "meta_title": "LSTM输出门详解",
+          "meta_description": "详细说明输出门在生成隐藏状态中的功能和计算。",
+          "slug": "lstm-output-gate",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2575,
+          "title": "LSTM单元中的信息流动",
+          "meta_title": "LSTM中的信息流动",
+          "meta_description": "展示LSTM单元中信息和梯度流经门与状态的路径。",
+          "slug": "lstm-information-flow",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2577,
+          "title": "LSTM 的优势",
+          "meta_title": "LSTM 相对于简单 RNN 的优势",
+          "meta_description": "概述 LSTM 相较于简单 RNN 在学习长期依赖关系方面为何更有效。",
+          "slug": "advantages-of-lstms",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 613,
+      "title": "门控循环单元 (GRUs)",
+      "meta_title": "GRU 网络 | 门控循环单元",
+      "meta_description": "了解门控循环单元 (GRUs)，这是一种更精简、参数更少的 LSTM 替代方案。",
+      "number": 6,
+      "slug": "gated-recurrent-units-gru",
+      "content": "虽然长短期记忆 (LSTM) 网络提供了一种使用多个门控来获取长期依赖关系的有效方法，但门控循环单元 (GRUs) 提供了一种相关且通常更简单的替代方案。\r\n\r\n本章介绍 GRU 架构。我们将查看它的组成部分，特别是**更新门** ($z_t$) 和**重置门** ($r_t$)，并了解它们如何共同作用以控制信息流动并更新隐藏状态。我们将了解候选隐藏状态是如何计算并与先前的隐藏状态结合的。\r\n\r\n我们还将直接比较 GRU 和 LSTM，讨论它们的结构差异、相对计算效率，并为特定序列建模任务选择合适的门控单元提供实用指导。",
+      "sections": [
+        {
+          "id": 2580,
+          "title": "介绍GRU：一种更简洁的门控架构",
+          "meta_title": "GRU介绍",
+          "meta_description": "呈现GRU作为一种替代的门控RNN架构，通常比LSTM更简洁。",
+          "slug": "introducing-grus",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2582,
+          "title": "GRU 单元结构",
+          "meta_title": "GRU 单元结构",
+          "meta_description": "描述 GRU 单元的组成部分，侧重于更新门和重置门。",
+          "slug": "gru-cell-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2584,
+          "title": "更新门",
+          "meta_title": "GRU更新门解析",
+          "meta_description": "说明更新门在平衡上一个和候选隐藏状态中的作用。",
+          "slug": "gru-update-gate",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2586,
+          "title": "重置门",
+          "meta_title": "GRU 重置门作用",
+          "meta_description": "说明重置门在决定遗忘多少过去信息方面的作用。",
+          "slug": "gru-reset-gate",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2588,
+          "title": "计算候选隐藏状态",
+          "meta_title": "GRU候选隐藏状态",
+          "meta_description": "说明GRU单元中候选隐藏状态的计算方式。",
+          "slug": "gru-candidate-hidden-state",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2590,
+          "title": "计算最终隐藏状态",
+          "meta_title": "GRU 最终隐藏状态计算",
+          "meta_description": "显示如何使用更新门计算最终隐藏状态。",
+          "slug": "gru-final-hidden-state",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2592,
+          "title": "GRU与LSTM的比较",
+          "meta_title": "GRU与LSTM比较",
+          "meta_description": "讨论GRU与LSTM架构之间的异同及权衡。",
+          "slug": "comparing-gru-lstm",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2594,
+          "title": "计算效率考量",
+          "meta_title": "GRU计算效率",
+          "meta_description": "分析GRU与LSTM相比因门控数量较少而带来的计算成本。",
+          "slug": "gru-computational-efficiency",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2596,
+          "title": "何时选择 GRU 或 LSTM",
+          "meta_title": "GRU 和 LSTM 的选择",
+          "meta_description": "为不同任务和数据集选择 GRU 或 LSTM 提供实用指导。",
+          "slug": "when-to-choose-gru-lstm",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 615,
+      "title": "实现 LSTM 和 GRU",
+      "meta_title": "实现 LSTM 和 GRU | 代码示例",
+      "meta_description": "使用 TensorFlow 或 PyTorch 实现 LSTM 和 GRU 网络的实践指南，包括堆叠和双向变体。",
+      "number": 7,
+      "slug": "implementing-lstm-gru",
+      "content": "在审视了长短期记忆网络（LSTM）和门控循环单元（GRU）的理论原理，包括其旨在管理信息流并缓解简单RNN中梯度问题的内部门控结构（LSTM中的$f_t, i_t, o_t$，GRU中的$z_t, r_t$）之后，我们现在开始进行它们的实际操作。\r\n\r\n本章着重于使用当代深度学习框架将理论转化为可运行的代码。您将学习实例化由库API提供的LSTM和GRU层，配置它们的主要参数（如隐藏单元数量和激活函数选择），并处理输入和输出所需的预期三维张量形状（批次大小、时间步长、特征）。我们还将通过堆叠循环层来构建更复杂的模型，以提升表示能力，并实施双向处理，让网络能从序列的前向和后向处理中考虑上下文。一个实际的编码示例将通过将LSTM或GRU模型应用于情感分析任务来巩固这些思想。",
+      "sections": [
+        {
+          "id": 2598,
+          "title": "在深度学习框架中使用LSTM层",
+          "meta_title": "TensorFlow/PyTorch LSTM层",
+          "meta_description": "演示在常用框架中使用内置LSTM层API。",
+          "slug": "using-lstm-layers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2600,
+          "title": "在深度学习框架中使用GRU层",
+          "meta_title": "TensorFlow/PyTorch GRU 层",
+          "meta_description": "展示在常用框架中使用内置GRU层API的方法。",
+          "slug": "using-gru-layers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2602,
+          "title": "配置 LSTM/GRU 层参数",
+          "meta_title": "LSTM/GRU 层配置",
+          "meta_description": "说明常用的参数，如单元数量、激活函数和返回序列。",
+          "slug": "configuring-lstm-gru-parameters",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2604,
+          "title": "堆叠循环层",
+          "meta_title": "堆叠RNN（LSTM/GRU）",
+          "meta_description": "通过堆叠多个LSTM或GRU层来实现深度RNN。",
+          "slug": "stacking-recurrent-layers",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2606,
+          "title": "理解双向循环神经网络",
+          "meta_title": "双向循环神经网络解释",
+          "meta_description": "解释双向LSTM/GRU的原理，以便在前向和后向两个方向处理序列。",
+          "slug": "understanding-bidirectional-rnns",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2608,
+          "title": "实现双向层",
+          "meta_title": "实现双向LSTM/BiGRU",
+          "meta_description": "说明如何在框架中实现LSTM/GRU层的双向封装。",
+          "slug": "implementing-bidirectional-layers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2610,
+          "title": "动手实践：情感分析",
+          "meta_title": "动手实践：使用LSTM/GRU进行情感分析",
+          "meta_description": "使用代码示例实现LSTM或GRU模型，用于文本情感分类任务。",
+          "slug": "practice-sentiment-analysis",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 617,
+      "title": "为循环神经网络准备序列数据",
+      "meta_title": "为循环神经网络准备序列数据 | 数据预处理",
+      "meta_description": "学习对文本和时间序列数据进行预处理的重要方法，以有效应用于 RNN、LSTM 和 GRU 模型。",
+      "number": 8,
+      "slug": "preparing-sequence-data",
+      "content": "循环神经网络、LSTM 和 GRU 模型需要数值张量格式的输入数据，通常具有像 $(batch, time\\_steps, features)$ 这样的特定形状。然而，实际中的序列数据，例如原始文本或时间序列测量值，很少以这种即用型格式存在。本章侧重于弥补这一差距的必要步骤。\r\n\r\n您将学到将序列数据转换为适用于循环模型的结构的常用方法。对于文本数据，这包括以下步骤：\r\n\r\n*   **分词**: 将文本拆分为独立的单元（词或字符）。\r\n*   **词汇表构建**: 建立从词元到唯一整数的映射。\r\n*   **整数编码**: 将词元序列转换为数值序列。\r\n*   **嵌入**: 使用嵌入层将整数表示为密集向量（在此处介绍，通常作为模型的一部分进行训练）。\r\n*   **填充与掩码**: 处理批次中长度不同的序列。\r\n\r\n对于时间序列数据，我们将介绍标准化和创建观测值滑动窗口等方法。最后，我们将讨论如何将准备好的数据组织成批次，以便进行高效的模型训练。学完本章，您将能够构建数据管道，对常见序列数据集进行预处理，以便输入到循环神经网络中。",
+      "sections": [
+        {
+          "id": 2612,
+          "title": "文本数据预处理概述",
+          "meta_title": "文本数据预处理步骤",
+          "meta_description": "概述为自然语言处理任务清洗和准备文本数据的常见步骤。",
+          "slug": "text-data-preprocessing-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2613,
+          "title": "分词与词汇表构建",
+          "meta_title": "RNN的分词与词汇表",
+          "meta_description": "说明如何将文本分解为标记，并创建从标记到整数的映射。",
+          "slug": "tokenization-vocabulary-building",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2615,
+          "title": "整数编码序列",
+          "meta_title": "文本序列的整数编码",
+          "meta_description": "根据词汇表将分词序列转换为整数序列。",
+          "slug": "integer-encoding-sequences",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2616,
+          "title": "嵌入层介绍",
+          "meta_title": "词嵌入介绍",
+          "meta_description": "说明嵌入层将整数编码词元表示为密集向量的用途。",
+          "slug": "introduction-embedding-layers",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2619,
+          "title": "处理变长序列",
+          "meta_title": "处理变长序列",
+          "meta_description": "讨论批处理中处理不同长度序列的必要性。",
+          "slug": "handling-variable-length-sequences",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2620,
+          "title": "序列填充",
+          "meta_title": "序列填充方法",
+          "meta_description": "实现填充以使批次中的所有序列具有相同长度。",
+          "slug": "padding-sequences",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2622,
+          "title": "填充值的掩码处理",
+          "meta_title": "RNN中的掩码处理",
+          "meta_description": "解释掩码处理的想法，以指示RNN层忽略填充的时间步。",
+          "slug": "masking-padded-values",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2624,
+          "title": "序列数据批处理",
+          "meta_title": "循环神经网络(RNN)的序列数据批处理",
+          "meta_description": "关于如何创建适用于循环神经网络训练的序列数据批次的方法。",
+          "slug": "batching-sequential-data",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2626,
+          "title": "时间序列数据预处理",
+          "meta_title": "时间序列数据预处理",
+          "meta_description": "介绍时间序列数据的具体预处理步骤，例如归一化和窗口化。",
+          "slug": "preprocessing-time-series-data",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2628,
+          "title": "实践：数据准备流程",
+          "meta_title": "实践：文本数据准备流程",
+          "meta_description": "为文本数据集构建一个可复用的数据准备流程。",
+          "slug": "practice-data-preparation-pipeline",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 620,
+      "title": "序列建模应用方法",
+      "meta_title": "RNN 应用方法 | 序列建模",
+      "meta_description": "了解将 RNN、LSTM 和 GRU 应用于预测、分类和生成等任务的方法。",
+      "number": 9,
+      "slug": "sequence-modeling-applications",
+      "content": "已经掌握了循环神经网络（RNN）的基本结构，包括 LSTM 和 GRU 在内，并学会了如何实现和训练它们，我们现在将注意力转向它们在实际中的运用。理解这些模型的运行机制非常重要，但它们的价值体现在解决具体的序列建模问题上。\r\n\r\n本章介绍将 RNN 应用于各种任务的常用方法。你将了解到：\r\n\r\n*   **序列预测：** 预测序列中未来值的策略，侧重于时间序列分析。我们将考察多对一和多对多预测等模型配置。\r\n*   **序列分类：** 为整个序列分配类别标签的方法，例如判断句子的情感或对文档主题进行分类。\r\n*   **序列生成：** 基于学习到的模式创建新序列的方法，常用于文本生成任务。\r\n*   **进阶内容：** 简要介绍编码器-解码器架构（序列到序列模型）和注意力机制，它们增强了序列模型处理更复杂任务的能力。\r\n\r\n我们将讨论每种应用类型特定的模型结构和输出处理方式，为你构建解决各种序列相关问题的模型做好准备。实际案例将结合之前介绍的框架，演示这些方法。",
+      "sections": [
+        {
+          "id": 2631,
+          "title": "序列预测方法",
+          "meta_title": "使用RNN进行序列预测",
+          "meta_description": "讨论使用RNN进行序列预测的方法，包括时间序列预测。",
+          "slug": "sequence-prediction-approaches",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2633,
+          "title": "时间序列预测模型",
+          "meta_title": "RNN用于时间序列预测",
+          "meta_description": "描述时间序列任务的模型架构（例如，多对一，多对多）。",
+          "slug": "time-series-forecasting-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2635,
+          "title": "序列分类技术",
+          "meta_title": "使用RNN进行序列分类",
+          "meta_description": "阐述如何调整RNN输出以适应情感分析或主题分类等分类任务。",
+          "slug": "sequence-classification-techniques",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2637,
+          "title": "文本分类模型",
+          "meta_title": "RNN 用于文本分类",
+          "meta_description": "详细说明使用 RNN 最终隐藏状态或池化输出来进行文本分类的常见模式。",
+          "slug": "text-classification-models",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2639,
+          "title": "序列生成方法",
+          "meta_title": "RNN序列生成",
+          "meta_description": "讨论生成新序列的方法，例如字符级或词级文本生成。",
+          "slug": "sequence-generation-methods",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2641,
+          "title": "文本生成模型",
+          "meta_title": "用于文本生成的RNN",
+          "meta_description": "详细说明如何设置模型以预测序列中的下一个元素来生成文本。",
+          "slug": "text-generation-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2642,
+          "title": "编码器-解码器架构简介",
+          "meta_title": "编码器-解码器架构简介",
+          "meta_description": "简要介绍使用循环神经网络的序列到序列（Seq2Seq）架构。",
+          "slug": "introduction-encoder-decoder",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2643,
+          "title": "注意力机制概览",
+          "meta_title": "注意力机制概览",
+          "meta_description": "简要介绍注意力机制增强序列模型的理念。",
+          "slug": "overview-attention-mechanisms",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2644,
+          "title": "实战：时间序列预测",
+          "meta_title": "实战：使用循环神经网络进行时间序列预测",
+          "meta_description": "实现LSTM或GRU模型，用于解决时间序列预测的实际问题。",
+          "slug": "practice-time-series-forecasting",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 621,
+      "title": "评估与调优序列模型",
+      "meta_title": "评估与调优RNN模型 | LSTM GRU调优",
+      "meta_description": "学习如何评估基于RNN的序列模型性能，并应用调优技术以获得更好的结果。",
+      "number": 10,
+      "slug": "evaluating-tuning-sequence-models",
+      "content": "在构建了RNN、LSTM和GRU等模型之后，接下来自然要衡量它们的有效性，并对其进行改进以达到最佳表现。仅仅构建模型是不够的；通过严谨的评估和系统的调优来理解其优点和缺点，对于实际使用非常重要。\r\n\r\n本章提供进行此过程所需的工具和方法。你将学习到：\r\n\r\n*   如何为不同的序列建模任务选择和解释合适的评估指标：\r\n    *   分类：准确率、精确率、召回率、F1分数。\r\n    *   预测（例如时间序列）：均方误差（$MSE$）、平均绝对误差（$MAE$）。\r\n    *   生成（例如语言建模）：困惑度。\r\n*   模型行为的可视化方法，以帮助理解和调试。\r\n*   超参数调优的策略，包括调整学习率、网络结构（单元数、层数）和序列长度。\r\n*   减轻循环网络中过拟合的技术，例如dropout及其针对循环网络的变体。\r\n*   诊断和解决序列模型训练过程中出现常见问题的指导。\r\n\r\n在本章结束时，你将能够准确衡量序列模型的性能，并应用标准技术来改进它们在特定任务上的表现。",
+      "sections": [
+        {
+          "id": 2645,
+          "title": "序列分类的评估指标",
+          "meta_title": "序列分类衡量标准",
+          "meta_description": "讨论序列背景下的标准分类衡量标准（准确率、精确率、召回率、F1）。",
+          "slug": "metrics-sequence-classification",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2646,
+          "title": "序列预测的评估指标",
+          "meta_title": "序列预测指标",
+          "meta_description": "讨论适用于类似回归的序列任务（MSE、MAE）的指标，例如时间序列预测。",
+          "slug": "metrics-sequence-prediction",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2647,
+          "title": "序列生成模型的评估指标",
+          "meta_title": "序列生成评估指标",
+          "meta_description": "介绍常用于评估序列生成模型（例如，语言模型）的困惑度等指标。",
+          "slug": "metrics-sequence-generation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2648,
+          "title": "可视化模型行为",
+          "meta_title": "可视化RNN行为",
+          "meta_description": "用于可视化隐藏状态、激活值或注意力权重（如果适用）的技术，以理解模型决策。",
+          "slug": "visualizing-model-behavior",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2649,
+          "title": "超参数调整策略",
+          "meta_title": "RNN超参数调整",
+          "meta_description": "调整重要超参数的指南：学习率、批次大小、单元数量、层数、序列长度。",
+          "slug": "hyperparameter-tuning-strategies",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2650,
+          "title": "RNN的正则化方法",
+          "meta_title": "RNN中的正则化（Dropout）",
+          "meta_description": "应用Dropout等正则化方法（包括循环Dropout变体）以防止过拟合。",
+          "slug": "regularization-techniques-rnns",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2651,
+          "title": "常见训练问题的排查",
+          "meta_title": "循环神经网络训练问题排查",
+          "meta_description": "诊断循环神经网络训练中收敛缓慢、发散或泛化能力差等问题。",
+          "slug": "troubleshooting-common-training-issues",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2652,
+          "title": "实践：调整RNN模型",
+          "meta_title": "实践：RNN超参数调整",
+          "meta_description": "亲手实践应用调整技巧，以改进先前构建的RNN模型。",
+          "slug": "practice-tuning-rnn-model",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

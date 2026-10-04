@@ -1,0 +1,61 @@
+{
+  "id": 1821,
+  "title": "应用多种聚合操作",
+  "meta_title": "Pandas GroupBy 多种聚合",
+  "meta_description": "使用 .agg() 同时计算每个组的多个汇总统计量。",
+  "content": "<p>分析分组数据时，仅计算平均值或总和等单一汇总统计量通常不够。您可能希望同时查看每个组的几种不同汇总信息。例如，对于每个产品类别，您可能想了解总销售额 <em>和</em> 平均销售额。Pandas 提供了灵活的方法，通过 GroupBy 对象的 <code>agg()</code> 方法来实现这一点。</p>\n<p>让我们从一个表示销售数据的示例 DataFrame 开始：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'Category': ['Electronics', 'Clothing', 'Electronics', 'Clothing', 'Groceries', 'Electronics', 'Groceries'],\n        'Product': ['Laptop', 'T-Shirt', 'Mouse', 'Jeans', 'Apples', 'Keyboard', 'Bananas'],\n        'Sales': [1200, 25, 20, 50, 5, 75, 3],\n        'Quantity': [1, 2, 1, 1, 10, 1, 8]}\ndf = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(df)\n\n# 按类别分组\ngrouped = df.groupby('Category')\n</code></pre>\n<p>运行此代码将显示我们的初始数据：</p>\n<pre><code>Original DataFrame:\n      Category   Product  Sales  Quantity\n0  Electronics    Laptop   1200         1\n1     Clothing   T-Shirt     25         2\n2  Electronics     Mouse     20         1\n3     Clothing     Jeans     50         1\n4    Groceries    Apples      5        10\n5  Electronics  Keyboard     75         1\n6    Groceries   Bananas      3         8\n</code></pre>\n<h3>使用列表应用多个函数</h3>\n<p>应用多个聚合函数最简单的方法是向 <code>agg()</code> 方法传递一个函数名称列表（作为字符串）。Pandas 会将列表中的每个函数应用于分组选择中的每个数值列。</p>\n<pre><code class=\"language-python\"># 计算每个类别中销售额和数量的总和与平均值\nmulti_agg_list = grouped[['Sales', 'Quantity']].agg(['sum', 'mean'])\n\nprint(\"\\n使用列表进行多重聚合:\")\nprint(multi_agg_list)\n</code></pre>\n<p>输出显示了每个类别中 'Sales' 和 'Quantity' 列的总和与平均值：</p>\n<pre><code>Multiple aggregations using a list:\n             Sales        Quantity     \n               sum     mean      sum mean\nCategory                                \nClothing        75    37.50        3  1.5\nElectronics   1295  431.67        3  1.0\nGroceries        8     4.00       18  9.0\n</code></pre>\n<p>请注意，结果具有分层列标签（MultiIndex）。顶层表示原始列（'Sales'，'Quantity'），第二层表示聚合函数（'sum'，'mean'）。</p>\n<h3>使用字典为每列指定聚合</h3>\n<p>如果您想对不同的列应用不同的函数怎么办？例如，您可能希望按类别获取总销售额（<code>sum</code>），但获取平均数量（<code>mean</code>）。您可以通过向 <code>agg()</code> 传递一个字典来实现这一点。字典的键应该是您要聚合的列名，值应该是应用于该特定列的函数（或函数列表）。</p>\n<pre><code class=\"language-python\"># 计算每个类别的销售总额和平均数量\nmulti_agg_dict = grouped.agg({\n    'Sales': 'sum',       # 对 'Sales' 列应用求和\n    'Quantity': 'mean'    # 对 'Quantity' 列应用平均值\n})\n\nprint(\"\\n使用字典进行多重聚合:\")\nprint(multi_agg_dict)\n</code></pre>\n<p>这会得到一个更整洁的输出，没有分层列，因为每个指定的聚合都会产生一个单独的输出列：</p>\n<pre><code>Multiple aggregations using a dictionary:\n             Sales  Quantity\nCategory                    \nClothing        75       1.5\nElectronics   1295       1.0\nGroceries        8       9.0\n</code></pre>\n<p>您还可以使用字典中的列表对特定列应用多个函数：</p>\n<pre><code class=\"language-python\"># 计算销售额的总和与平均值，以及数量的总和\nmulti_agg_dict_list = grouped.agg({\n    'Sales': ['sum', 'mean'], # 对 'Sales' 应用求和与平均值\n    'Quantity': 'sum'         # 对 'Quantity' 应用求和\n})\n\nprint(\"\\n使用函数列表的字典聚合:\")\nprint(multi_agg_dict_list)\n</code></pre>\n<p>现在输出仅在 'Sales' 列中具有分层列，因为对其应用了多个函数：</p>\n<pre><code>Dictionary aggregation with a list of functions:\n             Sales        Quantity\n               sum     mean      sum\nCategory                          \nClothing        75    37.50        3\nElectronics   1295  431.67        3\nGroceries        8     4.00       18\n</code></pre>\n<h3>命名聚合以获得更清晰的输出</h3>\n<p>虽然字典方法很有用，但管理潜在复杂的层次结构列名可能会变得繁琐。一种更现代且通常更清晰的方法是使用 <em>命名聚合</em>。这允许您明确定义输出列的名称。</p>\n<p>您向 <code>agg()</code> 传递关键字参数 (parameter)，其中关键字是您想要的输出列名。与每个关键字关联的值是一个元组，包含 <code>(要聚合的列名, 聚合函数)</code>。</p>\n<pre><code class=\"language-python\"># 计算每个类别的总销售额、平均数量和产品计数\nnamed_agg = grouped.agg(\n    Total_Sales = pd.NamedAgg(column='Sales', aggfunc='sum'),\n    Avg_Quantity = pd.NamedAgg(column='Quantity', aggfunc='mean'),\n    Num_Products = pd.NamedAgg(column='Product', aggfunc='count') # 对非数值数据也可以聚合\n)\n\nprint(\"\\n命名聚合以获得更清晰的输出列:\")\nprint(named_agg)\n</code></pre>\n<p>这会生成一个 DataFrame，其列名清晰地反映了执行的特定聚合操作：</p>\n<pre><code>Named aggregations for clearer output columns:\n             Total_Sales  Avg_Quantity  Num_Products\nCategory                                            \nClothing              75           1.5             2\nElectronics         1295           1.0             3\nGroceries              8           9.0             2\n</code></pre>\n<p>当应用多个可能不同的聚合操作时，通常推荐使用这种命名聚合语法（<code>pd.NamedAgg</code>），因为它能使代码更易读，并产生可预测的输出结构。</p>\n<p>您甚至可以在 <code>agg()</code> 中应用使用 <code>def</code> 或 lambda 表达式定义的自定义函数，尽管对于标准统计数据，内置函数名（作为字符串）通常已足够且更高效。</p>\n<p>能够使用 <code>agg()</code> 计算每个组的多个汇总统计量是数据分析中非常常见且实用的模式，它能让您快速从分组数据中生成有洞察力的汇总信息。</p>",
+  "slug": "applying-multiple-aggregations",
+  "updates": [],
+  "references": [
+    {
+      "id": 2475,
+      "title": "GroupBy: split-apply-combine",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html",
+      "doi": "",
+      "note": "官方用户指南中解释pandas数据分组核心概念和各种聚合技术的部分，包括应用多个函数和命名聚合。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:02.919784Z",
+      "updated_at": "2025-09-08T05:13:36.698926Z"
+    },
+    {
+      "id": 2483,
+      "title": "pandas.DataFrameGroupBy.agg",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.core.groupby.DataFrameGroupBy.agg.html",
+      "doi": "",
+      "note": "`GroupBy`对象上`agg()`方法的官方API文档，详细说明了其参数以及应用多个聚合的不同使用模式。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:03.930429Z",
+      "updated_at": "2025-09-08T05:13:33.391237Z"
+    },
+    {
+      "id": 2487,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "关于Python和pandas数据分析的奠基性著作，由pandas的创建者撰写。它全面涵盖了数据分组和聚合技术。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:04.200284Z",
+      "updated_at": "2025-09-08T05:13:40.599092Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

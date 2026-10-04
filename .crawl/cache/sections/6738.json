@@ -1,0 +1,45 @@
+{
+  "id": 6738,
+  "title": "分层任务分解的提示策略",
+  "meta_title": "面向智能体的分层任务提示",
+  "meta_description": "了解引导智能体完成分层任务网络的提示工程技巧。",
+  "content": "<p>当任务变得非常复杂时，一个平铺的、按顺序的步骤列表通常不足以进行有效的智能体规划。分层任务分解提供了一种更有条理的方法，使智能体能够将一个大目标分解为多个抽象级别。这涵盖了从高层阶段到具体的、可执行的步骤，反映了人类管理复杂项目的方式。您的提示是引导AI智能体构建这些多级计划的主要工具。</p>\n<p><strong>在提示中定义分层级别。</strong> 您的初始提示应指导智能体识别整体目标的主要阶段或组成部分。这涉及使用清晰的语言和暗示多级结构的关键词。例如，您可以指示智能体以“主要阶段”、“首要目标”或“顶层任务”的思路进行思考。您还可以指定所需的初始级别数量或大致的粒度。提示可以这样写：“您的目标是 [复杂目标，例如，“组织一次部门范围内的机器学习 (machine learning)研讨会”]。请将其分解为3-5个主要阶段。对于每个阶段，提供简要描述并列出其主要可交付成果。”这会引导智能体创建层级的第一个层次。</p>\n<p><strong>递归分解和粒度。</strong> 一旦识别出顶层任务，后续的提示或更详细的初始提示可以指示智能体进一步分解这些任务。这个过程可以是迭代的；智能体可能会识别出仍过于宽泛的子任务，并需要进一步分解。目标是在最低级别实现“可执行步骤”。您可以通过以下方式提示这一点：“对于识别出的每个阶段，列出完成它所需的具体子任务。确保每个子任务足够小，可以被视为一个单一的、可管理的动作，或一小组密切相关的动作，可以在几个小时内完成。”为了管理复杂性，您可能添加条件分解逻辑：“如果一个子任务预计需要超过4小时才能完成，请将其进一步分解为更小的子任务。”</p>\n<p><strong>在智能体输出中表示层级结构。</strong> 指导智能体如何格式化其输出以清晰地表示层级结构是很重要的。这有助于人工审查，并允许智能体在必要时解析自己的计划，以进行后续步骤，如执行监控或重新规划。常见格式包括：</p>\n<ul>\n<li>嵌套的Markdown列表，以便于阅读。</li>\n<li>带有嵌套数组或对象的JSON对象，用于结构化数据处理。</li>\n<li>缩进文本，用于简单的视觉层级。</li>\n</ul>\n<p>A请求特定格式的提示片段可能是：“……将此计划以JSON对象形式呈现，其中每个主要阶段都是一个键。每个阶段的值应是一个包含‘description’和‘sub_tasks’数组的对象。‘sub_tasks’中的每个项也应是一个对象，包含‘description’，如果发生进一步分解，则可选地包含另一个‘sub_tasks’数组。”</p>\n<p>下面是一个示例图，说明了“推出新产品”等任务的样本层级结构。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-p8z7ex\" \n              data-graph-definition='digraph G { graph [fontname=\"Arial\"]; rankdir=TB; node [shape=record, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10]; edge [color=\"#495057\"]; \"推出新产品\" [fillcolor=\"#339af0\", fontcolor=\"white\", fontsize=12]; \"市场研究\" [fillcolor=\"#74c0fc\"]; \"产品开发\" [fillcolor=\"#74c0fc\"]; \"营销与销售计划\" [fillcolor=\"#74c0fc\"]; \"启动运营\" [fillcolor=\"#74c0fc\"]; \"推出新产品\" -> \"市场研究\"; \"推出新产品\" -> \"产品开发\"; \"推出新产品\" -> \"营销与销售计划\"; \"推出新产品\" -> \"启动运营\"; \"市场研究\" -> \"确定目标受众\"; \"市场研究\" -> \"竞争对手分析\"; \"产品开发\" -> \"设计与原型制作\"; \"产品开发\" -> \"生产设置\"; \"设计与原型制作\" [fillcolor=\"#a5d8ff\"]; \"设计与原型制作\" -> \"UI/UX设计\"; \"设计与原型制作\" -> \"构建原型\"; \"营销与销售计划\" -> \"制定营销活动\"; \"营销与销售计划\" -> \"销售团队培训\"; \"确定目标受众\" [fillcolor=\"#e9ecef\"]; \"竞争对手分析\" [fillcolor=\"#e9ecef\"]; \"生产设置\" [fillcolor=\"#e9ecef\"]; \"UI/UX设计\" [fillcolor=\"#e9ecef\"]; \"构建原型\" [fillcolor=\"#e9ecef\"]; \"制定营销活动\" [fillcolor=\"#e9ecef\"]; \"销售团队培训\" [fillcolor=\"#e9ecef\"]; \"启动运营\" -> \"最终检查\"; \"启动运营\" -> \"上线\"; \"最终检查\" [fillcolor=\"#e9ecef\"]; \"上线\" [fillcolor=\"#e9ecef\"];}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-p8z7ex\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>“推出新产品”任务的分层分解，说明了主要阶段（例如，市场研究、产品开发）及其嵌套子任务，直到更具体的行动。</p>\n</blockquote>\n<p><strong>提示依赖关系和关联。</strong> 除了简单的父子关系，有效的层级规划还需要识别任务<em>之间</em>的依赖关系。这些依赖关系可以存在于同一分支内或层级结构的不同分支之间。您可以为此提示：“分析所有识别出的子任务。识别任何一个子任务必须在另一个子任务开始前完成的依赖关系。例如，‘市场研究’下的‘竞争对手分析’必须在‘营销与销售计划’下的‘制定营销活动’最终确定之前完成。清晰地列出这些依赖关系。”这使得智能体能够构建一个更可执行的计划，考虑操作的正确顺序。</p>\n<p><strong>在分解过程中保持上下文 (context)和重点。</strong> 当智能体将任务细致分解为层级结构时，存在它可能忽视总体目标或父任务上下文的风险。提示可以通过在要求分解其子任务时重申高层目标来帮助保持这种重点。例如：“我们目前处于‘推出新产品’项目的‘产品开发’阶段。子任务‘设计与原型制作’需要进一步分解。请列出‘设计与原型制作’的具体步骤，同时牢记整体产品发布目标和目标用户体验。”</p>\n<p><strong>实用示例：规划技术文档项目。</strong>\n假设智能体的目标是：“为新的软件API创建全面的技术文档。”\n分层分解提示可能如下所示：</p>\n<pre><code>Objective: Create comprehensive technical documentation for our new 'GeoSpatial API'.\n\nInstructions:\n1. Break down this objective into 3-4 main sections for the documentation (e.g., Introduction, API Reference, Tutorials, Deployment Guide).\n2. For each main section, list the main topics or sub-sections that need to be written.\n3. For each topic/sub-section, if it's still too broad, break it down further into specific, actionable writing tasks. Each lowest-level task should be something that can realistically be completed in a few hours.\n4. Identify and list any necessary dependencies between tasks (e.g., API Reference for an endpoint must be drafted before a Tutorial using that endpoint can be finalized).\n5. Present the complete plan as a nested markdown list, using indentation to show hierarchy.\n\nExample of expected output structure for a sub-task:\n- API Reference\n  - Endpoints\n    - /geocode\n      - Task: Document request parameters\n      - Task: Document response format\n      - Task: Provide example request/response\n</code></pre>\n<p>此提示指导智能体形成一个结构化的分层计划，指定了期望的输出格式、最细粒度任务的详细程度以及考虑依赖关系的需要。</p>\n<p><strong>分层分解在智能体规划中的优点。</strong>\n通过精心设计的提示采用分层任务分解具有以下几个优势：</p>\n<ul>\n<li><strong>复杂目标的清晰度：</strong> 它通过将大型、艰巨的项目分解为可管理的部分，使其变得易于理解和处理。</li>\n<li><strong>提升重点：</strong> 允许智能体和任何人类监督者专注于项目的特定部分，而不会被其整体所压倒。</li>\n<li><strong>增强适应性：</strong> 当需求变更或出现意外问题时，修改分层计划中的特定分支或子任务通常比彻底修改一个庞大的、顺序的计划更容易。这与在其他地方讨论的迭代规划和再规划过程尤其相关。</li>\n<li><strong>更好的资源分配和任务指派：</strong> 不同层级中清晰定义的子任务可以更方便地估算工作量、分配资源，甚至将计划的一部分指派给其他专业智能体或自动化流程。</li>\n</ul>\n<p>通过培养您在分层任务分解提示方面的技能，使AI智能体能够处理更具雄心和多方面的目标。这包括指导智能体不仅是<em>分解什么</em>，还包括<em>如何</em>构建分解、合适的分解深度以及如何表示生成的计划以便有效使用。这种能力是更复杂智能体行为（包括动态计划调整和执行管理）的根本所在。</p>",
+  "slug": "prompt-strategies-hierarchical-tasks",
+  "updates": [],
+  "references": [
+    {
+      "id": 18563,
+      "title": "Hierarchical Task Network (HTN) Planning",
+      "author": "Subbarao Kambhampati, Dana S. Nau, Mausam",
+      "year": "2012",
+      "publisher": "",
+      "journal": "AI Magazine",
+      "volume": "33",
+      "pages": "93-102",
+      "url": "https://ojs.aaai.org/index.php/aimagazine/article/view/2415",
+      "doi": "10.1609/aimag.v33i2.2415",
+      "note": "全面概述了分层任务网络(HTN)规划，这是人工智能中将复杂目标分解为结构化子任务的基础方法。",
+      "order": 1,
+      "created_at": "2025-09-06T12:30:40.775874Z",
+      "updated_at": "2025-09-11T08:27:04.141166Z"
+    },
+    {
+      "id": 18566,
+      "title": "Chain of Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "介绍了思维链提示技术，它引导大型语言模型生成一系列中间推理步骤，这对复杂的任务分解和规划很有用。",
+      "order": 4,
+      "created_at": "2025-09-06T12:30:40.809845Z",
+      "updated_at": "2025-09-11T08:26:14.599234Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2896,
+  "title": "JAX 与 NumPy 的集成",
+  "meta_title": "JAX 与 NumPy 的集成",
+  "meta_description": "JAX 数组和 NumPy 数组之间数据转换的优良做法。",
+  "content": "<p>将 JAX 计算与现有工具和库结合是常见需求。鉴于 NumPy 在科学 Python 生态系统中的核心作用，理解 JAX 数组和 NumPy 数组之间如何高效地交互非常重要。JAX 被有意设计为具有类似 NumPy 的 API（<code>jax.numpy</code>），这简化了此过程，但有一些重要的区别和性能考量需要记住，特别是在处理硬件加速器时。</p>\n<h3>理解 JAX 数组与 NumPy 数组的区别</h3>\n<p>本质上，一个标准的 <code>numpy.ndarray</code> 存在于宿主主内存（CPU RAM）中。对 NumPy 数组的操作由 CPU 执行。</p>\n<p>相反，<code>jax.Array</code> 代表由 JAX 管理的数据。尽管它<em>可以</em>存在于 CPU 上，但其主要优势在于它能够存在于 GPU 或 TPU 等加速器上。此外，<code>jax.Array</code> 对象是 JAX 变换（<code>jit</code>、<code>grad</code>、<code>vmap</code> 等）和编译计算的操作数。</p>\n<p>这种潜在驻留位置（CPU 与加速器）和预期用途（标准计算与变换/编译计算）上的不同是为何需要仔细管理转换的主要原因。</p>\n<h3>将 NumPy 数组转换为 JAX 数组</h3>\n<p>你通常会从使用 NumPy 加载或生成的数据开始（例如，加载数据集、初始参数 (parameter)），并需要将其移入 JAX 生态系统，可能移至加速器上。</p>\n<p>最直接的方法是使用 <code>jax.numpy.array()</code>：</p>\n<pre><code class=\"language-python\">import numpy as np\nimport jax\nimport jax.numpy as jnp\n\n# 在宿主 CPU 上创建一个 NumPy 数组\nnumpy_arr = np.array([1.0, 2.0, 3.0], dtype=np.float32)\nprint(f\"Original NumPy array type: {type(numpy_arr)}\")\nprint(f\"Original NumPy array device: (Implicitly Host CPU)\")\n\n# 转换为 JAX 数组\njax_arr = jnp.array(numpy_arr)\nprint(f\"Converted JAX array type: {type(jax_arr)}\")\n\n# 检查 JAX 数组的设备（将是 JAX 的默认后端）\nprint(f\"Converted JAX array device: {jax_arr.device()}\")\n</code></pre>\n<p>当你调用 <code>jnp.array(numpy_arr)</code> 时，JAX 会从 NumPy 数组（在宿主内存中）获取数据，并可能将其复制到默认 JAX 设备（如果可用，可能是 GPU 或 TPU，否则是 CPU 后端）。</p>\n<p>为了更明确地控制 JAX 数组应放置在哪个设备上，请使用 <code>jax.device_put()</code>：</p>\n<pre><code class=\"language-python\"># 假设你有多个设备，例如 GPU\navailable_devices = jax.devices()\nprint(f\"Available JAX devices: {available_devices}\")\n\nif len(available_devices) > 1:\n    target_device = available_devices[1] # 示例：放置在第二个设备上\nelse:\n    target_device = available_devices[0] # 回退到第一个/唯一设备\n\n# 明确地将 NumPy 数据放置到目标 JAX 设备上\njax_arr_explicit = jax.device_put(numpy_arr, device=target_device)\nprint(f\"Explicitly placed JAX array device: {jax_arr_explicit.device()}\")\n</code></pre>\n<p><code>jax.device_put</code> 在管理分布式计算或确保特定加速器硬件的数据局部性时很有用。</p>\n<h3>将 JAX 数组转换为 NumPy 数组</h3>\n<p>反之，你可能需要将 JAX 计算的结果带回宿主 CPU，以便保存、使用 Matplotlib 等库绘图，或使用标准 Python/NumPy 工具进一步处理。</p>\n<p>做到这一点的一种标准方法是使用 <code>numpy.array()</code> 构造函数或函数：</p>\n<pre><code class=\"language-python\"># 假设 jax_arr 是 JAX 计算的结果\n# 例如:\nkey = jax.random.PRNGKey(0)\njax_arr = jax.random.normal(key, (3,)) * 2.0 + 1.0\nprint(f\"JAX array: {jax_arr}\")\nprint(f\"JAX array device: {jax_arr.device()}\")\n\n# 将 JAX 数组转换回 NumPy 数组\nnumpy_result = np.array(jax_arr)\n\nprint(f\"Converted NumPy array type: {type(numpy_result)}\")\nprint(f\"Converted NumPy array value: {numpy_result}\")\n# 对于 NumPy 数组，设备隐含为宿主 CPU\n</code></pre>\n<p><strong>重要的性能考量：</strong> 将 <code>jax.Array</code>（可能位于 GPU/TPU 上）转换为 <code>numpy.ndarray</code> 需要 JAX 执行以下操作：</p>\n<ol>\n<li>确保生成 <code>jax_arr</code> 的计算已在设备上完成。</li>\n<li>将数据从设备内存（GPU/TPU）传输回宿主 CPU 内存。</li>\n</ol>\n<p>因为 JAX 操作默认异步执行（见第 2 章，“异步调度”），这种转换充当一个同步点。调用 <code>np.array(jax_arr)</code> 的 Python 代码将阻塞，直到数据在宿主上可用。因此，在对性能要求高的循环中，频繁地从 JAX 转换回 NumPy 会通过停滞 Python 解释器并强制进行不必要的设备到宿主数据传输和同步来严重降低性能。</p>\n<h3>NumPy 互操作性的优良做法</h3>\n<ol>\n<li><strong>在内部循环中尽量减少转换：</strong> 避免在频繁执行的代码路径中在 JAX 和 NumPy 数组之间进行转换，特别是在使用 <code>@jax.jit</code> 装饰的函数中。每次转换都涉及开销（潜在的数据传输、同步）。</li>\n<li><strong>在边界处转换：</strong> 主要在计算工作流的开始和结束时执行转换。使用 NumPy 加载数据，使用 <code>jnp.array</code> 或 <code>jax.device_put</code> 将其转换为 JAX 数组，运行你的核心 JAX 计算，并且仅在需要保存、可视化或与非 JAX 库交互时，才使用 <code>np.array()</code> 将最终结果转换回 NumPy。</li>\n<li><strong>为明确性使用 <code>jax.device_put</code>：</strong> 当将数据移入 JAX 时，特别是在多设备场景中，使用 <code>jax.device_put</code> 可以使你的设备放置意图更加明确。</li>\n<li><strong>注意同步：</strong> 请记住，<code>np.array(jax_array)</code> 会隐式调用 <code>jax_array.block_until_ready()</code>。如果你只需要触发同步而不需要数据传输（例如，为了精确计时），请直接在 JAX 数组上使用 <code>.block_until_ready()</code>。</li>\n<li><strong>为保持一致性使用 <code>jax.numpy</code>：</strong> 在你的 JAX 代码中，尽可能优先使用 <code>jax.numpy</code> 函数而不是 <code>numpy</code> 函数。<code>jnp</code> 函数操作 <code>jax.Array</code> 对象，并与 JAX 变换和编译集成。将 NumPy 数组直接传递给 <code>jnp</code> 函数通常会因为隐式转换而起作用，但依赖这种做法有时会掩盖性能成本。</li>\n</ol>\n<p>通过理解 JAX 和 NumPy 数组的特性以及它们之间转换的含义，你可以确保 JAX 与更广泛的科学 Python 生态系统之间的数据高效流动。将转换，特别是 JAX 到 NumPy 的转换，视为可能开销大的操作，并将其战略性地放置在你的程序架构中。</p>",
+  "slug": "integrating-jax-numpy",
+  "updates": [],
+  "references": [
+    {
+      "id": 2352,
+      "title": "JAX NumPy",
+      "author": "JAX developers",
+      "year": "current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/jax.numpy.html",
+      "doi": "",
+      "note": "解释了 jax.numpy API、其与 NumPy 的相似性以及底层 jax.Array 类型。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:25.277455Z",
+      "updated_at": "2025-09-08T07:11:49.470665Z"
+    },
+    {
+      "id": 2354,
+      "title": "Device and memory considerations",
+      "author": "JAX developers",
+      "year": "current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/device_and_memory_considerations.html",
+      "doi": "",
+      "note": "详细说明了 jax.Array 设备放置、jax.device_put、异步调度和同步，与性能考量直接相关。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:25.376863Z",
+      "updated_at": "2025-09-08T07:11:50.306999Z"
+    },
+    {
+      "id": 2357,
+      "title": "JAX: Composable transformations of Python+NumPy programs",
+      "author": "James Bradbury, Roy Frostig, Peter Hawkins, Matthew J. Johnson, Chris Leary, Skye Wanderman-Milne, and Adam Paszke",
+      "year": "2018",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/google/jax",
+      "doi": "",
+      "note": "描述 JAX 架构的奠基性技术报告，包括其类 NumPy API 和加速器集成机制。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:25.389608Z",
+      "updated_at": "2025-09-08T07:11:52.204115Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

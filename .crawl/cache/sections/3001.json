@@ -1,0 +1,61 @@
+{
+  "id": 3001,
+  "title": "管理提示长度和上下文窗口",
+  "meta_title": "管理提示长度和上下文窗口",
+  "meta_description": "应对LLM上下文窗口限制的策略。",
+  "content": "<p>在提示工程 (prompt engineering)中，一个主要的实际限制是模型的<strong>上下文 (context)窗口</strong>。它指的是大型语言模型（LLM）在任何给定时间可以处理的最大信息量，以token衡量。此限制包括您在输入提示中提供的所有内容以及生成的输出。可以将其视为模型的短期记忆。</p>\n<p>理解和管理这一限制对于构建可靠的应用非常重要。如果您的组合输入和期望输出超过模型的上下文窗口，API调用可能会失败，或者更糟糕的是，模型可能会静默地截断输入，导致上下文不完整，并可能产生无意义或不正确的回复。</p>\n<h3>Token：上下文 (context)的构成要素</h3>\n<p>大型语言模型不直接处理原始文本。相反，它们将文本分解成更小的单元，称为<strong>token</strong>。一个token可以是一个词、一个词的一部分（子词 (subword)），甚至只是一个字符或标点符号。文本被分词 (tokenization)的确切方式取决于所使用的具体模型。对于英文文本，一个常见的经验法则，是一个token大致对应4个字符或约0.75个词，但这只是一个近似值。</p>\n<p>例如，短语“LLM context windows”可能被不同模型以不同方式分词，比如：<code>[\"LLM\", \"Ġcontext\", \"Ġwindows\"]</code>（3个token）或 <code>[\"L\", \"LM\", \"Ġcontext\", \"Ġwindow\", \"s\"]</code>（5个token）。值得记住的是，标点符号和空格也占用token。</p>\n<p>不同模型有不同的上下文窗口大小，从几千个token（例如4,096）到超过十万个（例如128,000或更多）不等。虽然更大的窗口提供更大的灵活性，但它们通常伴随更高的API费用和可能增加的处理时间（延迟）。</p>\n<h3>管理上下文 (context)长度的策略</h3>\n<p>有效管理上下文窗口需要确保您的提示包含必要信息且不超过限制。以下是几种常用策略：</p>\n<ol>\n<li>\n<p><strong>提示简洁性：</strong> 这是最直接的方法。审阅您的指令、上下文和示例。能否让它们更清晰、更直接，而不丢失核心含义？删除冗余短语、不必要的客套话或过度冗长的描述。这直接符合之前讨论过的有效提示设计原则。</p>\n</li>\n<li>\n<p><strong>总结：</strong> 如果您需要从长篇文档或冗长对话历史中提供背景信息，请考虑先进行总结。</p>\n<ul>\n<li><strong>手动总结：</strong> 您或用户明确地创建简洁的摘要。</li>\n<li><strong>LLM辅助总结：</strong> 使用单独的LLM调用来总结文本，然后再将其包含在主提示中。请注意，这会增加一个额外的步骤，从而增加延迟和成本。</li>\n</ul>\n</li>\n<li>\n<p><strong>分块：</strong> 当处理需要被处理或查询的非常大的文档时，将文档分解成更小、易于管理的块，每个块都能各自适应上下文窗口。您可以按顺序处理每个块，或使用一些方法（稍后在RAG背景下讨论）来识别并只获取用于特定查询的最相关的块。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-or8qli\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    doc [label=\"大型文档\\n(超出上下文大小)\"];\n    subgraph cluster_chunks {\n        label = \"分块过程\";\n        style=dashed;\n        bgcolor=\"#f8f9fa\";\n        chunk1 [label=\"块 1\"];\n        chunk2 [label=\"块 2\"];\n        chunkN [label=\"块 N\"];\n    }\n    proc [label=\"单独\\n处理\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n\n    doc -> chunk1 [label=\"拆分\"];\n    doc -> chunk2 [label=\"拆分\"];\n    doc -> chunkN [label=\"拆分\"];\n    chunk1 -> proc;\n    chunk2 -> proc;\n    chunkN -> proc;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-or8qli\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将大型文档拆分成更小的块，每个块都在模型的上下文窗口内单独处理。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>滑动窗口（用于对话）：</strong> 在聊天机器人应用或涉及长时间交互的场景中，您可能只在提示中保留对话历史的最近部分。例如，始终包含系统消息、最后的用户查询以及最后的N轮交流。这可以防止提示无限增长，但有丢失对话早期上下文的风险。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1dlmbn9\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\", arrowhead=none];\n\n    subgraph cluster_history {\n        label = \"完整对话历史\";\n        style=dashed;\n        bgcolor=\"#f8f9fa\";\n        t1 [label=\"第 1 轮\"];\n        t2 [label=\"第 2 轮\"];\n        t3 [label=\"第 3 轮\"];\n        t4 [label=\"第 4 轮\"];\n        t5 [label=\"第 5 轮 (当前)\"];\n        t1 -> t2 -> t3 -> t4 -> t5;\n    }\n\n    subgraph cluster_window {\n         label = \"滑动窗口 (大小=3)\";\n         style=filled;\n         fillcolor=\"#d0bfff\";\n         wt3 [label=\"第 3 轮\"];\n         wt4 [label=\"第 4 轮\"];\n         wt5 [label=\"第 5 轮\"];\n         wt3 -> wt4 -> wt5;\n    }\n    prompt [label=\"LLM 的提示\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n\n    wt3 -> prompt [style=invis]; // 用于定位集群相对于提示\n    t5 -> wt5 [style=dotted, arrowhead=normal, constraint=false, label=\"已包含\"];\n    t4 -> wt4 [style=dotted, arrowhead=normal, constraint=false, label=\"已包含\"];\n    t3 -> wt3 [style=dotted, arrowhead=normal, constraint=false, label=\"已包含\"];\n    t2 -> wt3 [style=dotted, arrowhead=none, constraint=false, label=\"已排除\", color=\"#adb5bd\"];\n    t1 -> wt3 [style=dotted, arrowhead=none, constraint=false, label=\"已排除\", color=\"#adb5bd\"];\n\n    cluster_window -> prompt [arrowhead=normal, label=\"输入\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1dlmbn9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>滑动窗口方法只保留对话中最近的轮次（例如3轮）作为上下文。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>结构化数据和选择性包含：</strong> 与其包含原始文本，不如以更结构化、token高效的格式（比如简洁的JSON或键值对）表示信息。同时，识别并只包含任务所需的绝对必要的信息片段，而不是提供可能不相关的广泛背景。像语义搜索这样的方法（在第六章中介绍）可以帮助从更大的知识库中自动识别这些相关片段。</p>\n</li>\n<li>\n<p><strong>模型选择：</strong> 如果您的任务根本上需要同时处理大量文本，您可能需要选择一个特别设计有更大上下文窗口的模型。评估与这些更大模型相关的成本、延迟和性能权衡。</p>\n</li>\n</ol>\n<h3>估算Token数量</h3>\n<p>为了主动管理上下文 (context)限制，在将提示发送到API之前估算其将消耗的token数量是有帮助的。许多LLM提供商为此提供实用工具或指导。例如，OpenAI提供了<code>tiktoken</code> Python库，它允许您根据其模型使用的特定编码来计算token。</p>\n<pre><code class=\"language-python\"># 使用OpenAI的tiktoken示例\n# import tiktoken\n\n# # 加载适用于模型的编码（例如，GPT-4的“cl100k_base”\n# # encoding = tiktoken.get_encoding(\"cl100k_base\")\n\n# # prompt_text = \"This is an example prompt.\"\n# # tokens = encoding.encode(prompt_text)\n# # num_tokens = len(tokens)\n\n# # print(f\"Text: '{prompt_text}'\")\n# # print(f\"Tokens: {tokens}\")\n# # print(f\"Number of tokens: {num_tokens}\")\n\n# # 记住要同时考虑输入token和预期的最大输出token\n# # # total_tokens_needed = num_tokens + max_output_tokens\n# # # if total_tokens_needed > model_context_limit:\n# # #     # 实施管理策略（总结、分块等）\n</code></pre>\n<p>记住要考虑的不仅仅是您的输入提示的token数量，还有您期望模型在其回复中生成的最大token数量。输入和最大输出token的总和必须保持在模型的上下文限制内。</p>\n<h3>平衡考量：上下文 (context)管理中的权衡</h3>\n<p>选择正确的方法通常涉及到权衡：</p>\n<ul>\n<li><strong>简洁性：</strong> 可能需要仔细编辑。</li>\n<li><strong>总结：</strong> 可能会丢失细节或具体信息；LLM总结会增加成本/延迟。</li>\n<li><strong>分块：</strong> 增加应用复杂性；需要逻辑来管理块并可能聚合结果。</li>\n<li><strong>滑动窗口：</strong> 可能导致对话中重要长期上下文的丢失。</li>\n<li><strong>更大上下文模型：</strong> 通常每次API调用成本更高，且可能更慢。</li>\n</ul>\n<p>最佳方法取决于您的具体应用需求、您的数据特性以及您所处的限制条件（成本、延迟、复杂性）。迭代测试（我们接下来将讨论）对于找到有效管理上下文窗口的最佳平衡很重要。</p>",
+  "slug": "managing-prompt-length-context",
+  "updates": [],
+  "references": [
+    {
+      "id": 4018,
+      "title": "Managing tokens",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/text-generation/managing-tokens",
+      "doi": "",
+      "note": "提供了关于理解和管理OpenAI模型令牌限制的重要指导，包括上下文窗口和令牌估计等概念。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:05.665037Z",
+      "updated_at": "2025-09-09T01:55:37.338343Z"
+    },
+    {
+      "id": 4020,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS 2020)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍了检索增强生成（RAG），这是一种通过从大型语料库中检索相关信息来扩展LLM知识、解决上下文限制的方法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:05.975807Z",
+      "updated_at": "2025-09-09T01:55:29.768157Z"
+    },
+    {
+      "id": 4024,
+      "title": "Claude 2.1: New features and pricing",
+      "author": "Anthropic",
+      "year": "2023",
+      "publisher": "Anthropic",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.anthropic.com/news/claude-2-1",
+      "doi": "",
+      "note": "宣布Claude 2.1推出20万令牌的上下文窗口，讨论其处理长篇内容的能力以及在大上下文环境中召回面临的挑战。",
+      "order": 4,
+      "created_at": "2025-09-04T16:56:06.099678Z",
+      "updated_at": "2025-09-09T01:55:29.931259Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

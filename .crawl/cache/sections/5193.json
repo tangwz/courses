@@ -1,0 +1,61 @@
+{
+  "id": 5193,
+  "title": "实践：构建一个简单的RAG应用",
+  "meta_title": "实践：简单的RAG应用 | 构建RAG系统",
+  "meta_description": "动手练习：使用Python工具构建一个基本的RAG应用。",
+  "content": "<p>构建一个基本的检索增强生成 (RAG)（Retrieval-Augmented Generation, RAG）应用，需使用Python和LlamaIndex，它将大型语言模型（LLM）与外部数据源相结合。构建RAG应用的过程包括摄取少量文本数据，使用嵌入 (embedding)对其进行索引，然后使用大型语言模型进行查询，先获取相关背景信息。向量 (vector)存储在此过程中促进了大型语言模型与数据的连接。</p>\n<h3>目标</h3>\n<p>创建一个简单的问答应用，使用RAG根据一组给定的文本文档来回答问题。</p>\n<h3>准备工作</h3>\n<p>开始之前，请确保已安装所需的库。你主要需要LlamaIndex和一个大型语言模型提供商库（如<code>openai</code>）。你还需要一个用于向量 (vector)存储组件的库；我们在这里将使用FAISS，它需要<code>faiss-cpu</code>包（如果你有兼容的GPU并安装了CUDA，则需要<code>faiss-gpu</code>）。</p>\n<pre><code class=\"language-bash\">pip install llama-index openai faiss-cpu python-dotenv\n</code></pre>\n<p>请记住安全地设置你的API密钥，例如，使用环境变量和<code>python-dotenv</code>库，如第2章所述。本例中，我们假设你的OpenAI API密钥可通过名为<code>OPENAI_API_KEY</code>的环境变量访问。</p>\n<h3>第一步：设置和导入</h3>\n<p>首先导入LlamaIndex所需的组件并配置你的环境。</p>\n<pre><code class=\"language-python\">import os\nimport logging\nimport sys\nfrom dotenv import load_dotenv\n\n# 加载环境变量（特别是OPENAI_API_KEY）\nload_dotenv()\n\n# 可选：配置日志以提高可见性\n# logging.basicConfig(stream=sys.stdout, level=logging.INFO)\n# logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))\n\nfrom llama_index.core import (\n    VectorStoreIndex,\n    SimpleDirectoryReader,\n    StorageContext,\n    load_index_from_storage,\n    Document\n)\nfrom llama_index.vector_stores.faiss import FaissVectorStore\nfrom llama_index.embeddings.openai import OpenAIEmbedding # 或使用其他嵌入模型\nfrom llama_index.core.node_parser import SentenceSplitter\nfrom llama_index.llms.openai import OpenAI # 或使用其他大型语言模型\n\nimport faiss # 向量存储库\n\n# 检查API密钥是否可用\nif os.getenv(\"OPENAI_API_KEY\") is None:\n    raise ValueError(\"OPENAI_API_KEY environment variable not set.\")\n\nprint(\"设置完成。库已导入，API密钥已加载。\")\n</code></pre>\n<p>此代码导入了LlamaIndex的核心类、FAISS向量 (vector)存储集成、OpenAI嵌入 (embedding)和大型语言模型类，并检查所需的API密钥。</p>\n<h3>第二步：准备示例数据</h3>\n<p>对于一个简单的RAG系统，我们需要一些可供查询的数据。我们不从文件加载数据，而是直接将一些文本片段定义为LlamaIndex的<code>Document</code>对象。这使得示例更易于独立运行。</p>\n<pre><code class=\"language-python\"># 创建示例文档对象\ntext1 = \"\"\"\n生成式预训练Transformer 3 (GPT-3) 是一种自回归语言模型，\n于2020年发布，使用深度学习生成类人文本。\n给定一个初始文本作为提示，它会生成继续该提示的文本。\n\"\"\"\n\ntext2 = \"\"\"\n检索增强生成（RAG）通过整合外部知识来增强大型语言模型（LLMs）。\n在生成回答之前，RAG模型从预定义的知识源，如文档集合或数据库中获取相关信息。\n然后，这种获取到的背景信息被用来指导和奠定生成过程，\n从而产生更准确和真实的回答。\n\"\"\"\n\ntext3 = \"\"\"\n向量嵌入将文本（或其他数据类型）表示为高维空间中的数值向量。\n相似的思想或文本被映射到该空间中相近的点。\n这使得语义搜索更为高效，查询能够根据含义而不是仅仅基于关键词匹配来寻找文档。\n这些嵌入对于RAG系统中的检索步骤很重要。\n\"\"\"\n\ndocuments = [\n    Document(text=text1, doc_id=\"doc_gpt3\"),\n    Document(text=text2, doc_id=\"doc_rag\"),\n    Document(text=text3, doc_id=\"doc_embeddings\")\n]\n\nprint(f\"已创建 {len(documents)} 个示例文档。\")\n</code></pre>\n<p>我们创建了三段与大型语言模型、RAG和嵌入 (embedding)相关的不同文本，并将每段文本包装成一个<code>Document</code>对象。分配<code>doc_id</code>是追踪来源的良好做法。</p>\n<h3>第三步：初始化嵌入 (embedding)模型和大型语言模型</h3>\n<p>我们需要指定使用哪个嵌入模型将文本转换为向量 (vector)，以及使用哪个大型语言模型来生成最终回答。LlamaIndex集成了各种提供商；这里我们使用OpenAI。</p>\n<pre><code class=\"language-python\"># 初始化嵌入模型\nembed_model = OpenAIEmbedding()\n\n# 初始化大型语言模型\nllm = OpenAI(model=\"gpt-3.5-turbo\") # 或者选择其他模型，如gpt-4\n\nprint(\"已初始化OpenAI嵌入模型和大型语言模型。\")\n</code></pre>\n<h3>第四步：设置向量 (vector)存储</h3>\n<p>现在，让我们创建一个我们选择的向量存储FAISS的实例。我们定义向量的维度，这取决于所使用的嵌入 (embedding)模型（OpenAI的<code>text-embedding-ada-002</code>，作为<code>OpenAIEmbedding</code>的默认模型，生成1536维向量）。</p>\n<pre><code class=\"language-python\"># OpenAI ada-002向量的维度\nd = 1536\nfaiss_index = faiss.IndexFlatL2(d) # 使用L2距离进行相似度计算\n\n# 实例化FaissVectorStore\nvector_store = FaissVectorStore(faiss_index=faiss_index)\n\nprint(\"FAISS向量存储已初始化。\")\n</code></pre>\n<p>我们创建一个基本的FAISS索引（<code>IndexFlatL2</code>），它适用于可以进行详尽搜索的小型数据集。<code>IndexFlatL2</code>计算查询向量和所有已索引向量之间的L2（欧几里得）距离，以找到最近的邻居。</p>\n<h3>第五步：创建索引</h3>\n<p>文档、嵌入 (embedding)模型和向量 (vector)存储都准备就绪后，我们就可以创建索引了。LlamaIndex处理文档分块（如果需要）、为每个块生成嵌入以及将它们存储到向量存储中的过程。我们还将定义一个存储上下文 (context)以链接向量存储。</p>\n<pre><code class=\"language-python\"># 定义一个使用我们FAISS向量存储的存储上下文\nstorage_context = StorageContext.from_defaults(vector_store=vector_store)\n\n# 定义一个文本分割器（可选但推荐）\n# 这有助于在需要时分解更大的文档\nnode_parser = SentenceSplitter(chunk_size=100, chunk_overlap=20)\n\n# 构建索引\n# 此过程包括：\n# 1. 将文档解析为节点（块）\n# 2. 使用embed_model为每个节点生成嵌入\n# 3. 将节点及其嵌入存储在vector_store中\nindex = VectorStoreIndex.from_documents(\n    documents,\n    storage_context=storage_context,\n    embed_model=embed_model,\n    node_parser=node_parser, # 使用已定义的解析器\n    llm=llm # 关联大型语言模型以进行潜在的索引时操作\n)\n\nprint(\"索引已创建，数据已嵌入到FAISS中。\")\n\n# 可选：将索引保存到磁盘以备后用\n# index.storage_context.persist(\"./my_rag_index\")\n# print(\"索引已保存到磁盘。\")\n\n# 可选：如果索引存在，则从磁盘加载\n# try:\n#     storage_context = StorageContext.from_defaults(\n#         vector_store=vector_store, persist_dir=\"./my_rag_index\"\n#     )\n#     index = load_index_from_storage(storage_context, embed_model=embed_model, llm=llm)\n#     print(\"索引已从磁盘加载。\")\n# except FileNotFoundError:\n#     print(\"磁盘上未找到索引，正在创建新索引。\")\n#     # （如上所示构建索引的代码）\n#     index.storage_context.persist(\"./my_rag_index\")\n\n</code></pre>\n<p>这里，<code>VectorStoreIndex.from_documents</code>是核心函数。它接收我们的<code>Document</code>对象列表，通过<code>embed_model</code>协调嵌入的生成，使用<code>node_parser</code>将文本分割成可管理的块（节点），并将结果存储在<code>storage_context</code>中定义的<code>vector_store</code>中。在索引时关联大型语言模型可能用于某些高级索引策略，但对于这个基本设置并非严格必需。我们还展示了用于持久化和重新加载索引的注释代码，这对于索引耗时较长的大型数据集很有用。</p>\n<h3>第六步：创建查询引擎</h3>\n<p>为了与已索引的数据交互，LlamaIndex提供了查询引擎。一个基本的查询引擎会根据查询从索引中获取相关背景信息，然后将查询和背景信息传递给大型语言模型进行合成。</p>\n<pre><code class=\"language-python\"># 从索引创建查询引擎\n# similarity_top_k=2 表示获取最相似的2个节点\nquery_engine = index.as_query_engine(similarity_top_k=2, llm=llm)\n\nprint(\"查询引擎已创建。\")\n</code></pre>\n<p><code>as_query_engine()</code>是索引对象上的一个便捷方法。我们指定<code>similarity_top_k=2</code>以获取向量 (vector)存储中与每个查询最相关的两个文本块（节点）。大型语言模型实例再次传递，用于最终的答案生成步骤。</p>\n<h3>第七步：查询数据</h3>\n<p>最后，让我们提出一个与已索引文档相关的问题。</p>\n<pre><code class=\"language-python\"># 定义一个查询\nquery_text = \"RAG如何改进大型语言模型的回答？\"\n\n# 执行查询\nresponse = query_engine.query(query_text)\n\n# 打印回答\nprint(\"\\n查询：\", query_text)\nprint(\"\\n回答：\")\nprint(response) # 大型语言模型合成的回答\n\n# 可选：查看获取到的源节点\n# print(\"\\n源节点：\")\n# for node in response.source_nodes:\n#     print(f\"  得分: {node.score:.4f}\")\n#     print(f\"  内容: {node.get_content().strip()}\")\n#     print(\"-\" * 20)\n</code></pre>\n<p><code>query_engine.query()</code>方法执行RAG过程：</p>\n<ol>\n<li>它接收<code>query_text</code>。</li>\n<li>使用<code>embed_model</code>为查询生成嵌入 (embedding)。</li>\n<li>在<code>vector_store</code> (FAISS) 中搜索与查询嵌入最接近的<code>similarity_top_k</code>个节点。</li>\n<li>构建一个包含原始<code>query_text</code>和获取到的节点内容的新提示。</li>\n<li>将这个增强的提示发送给大型语言模型。</li>\n<li>返回大型语言模型生成的回答。</li>\n</ol>\n<h3>预期结果</h3>\n<p>当你运行整个脚本时，你将看到类似这样的输出（大型语言模型的具体回答措辞可能略有不同）：</p>\n<pre><code>设置完成。库已导入，API密钥已加载。\n已创建 3 个示例文档。\n已初始化OpenAI嵌入模型和大型语言模型。\nFAISS向量存储已初始化。\n索引已创建，数据已嵌入到FAISS中。\n查询引擎已创建。\n\n查询：RAG如何改进大型语言模型的回答？\n\n回答：\n检索增强生成（RAG）通过整合外部知识来增强大型语言模型（LLMs）。在生成回答之前，RAG模型从预定义的知识源，如文档集合或数据库中获取相关信息。然后，这种获取到的背景信息被用来指导和奠定生成过程，从而产生更准确和真实的回答。\n</code></pre>\n<p>如果你取消注释打印源节点的代码，你将看到从文档中获取到的具体文本块（可能是<code>doc_rag</code>的内容，也可能根据相似度得分包含<code>doc_embeddings</code>），大型语言模型使用这些文本块来组织其回答。</p>\n<h3>总结</h3>\n<p>在此实践环节中，你成功构建了一个使用Python、LlamaIndex、OpenAI和FAISS的基本RAG流程。你摄取了文本数据，创建了向量 (vector)嵌入 (embedding)，将它们存储在向量数据库中，并使用查询引擎获取相关背景信息，然后从大型语言模型生成一个基于信息的回答。这体现了RAG的核心流程：先获取相关信息，然后根据这些信息生成回答。你可以通过更改数据源、嵌入模型、向量存储或大型语言模型来调整此模式，以构建更复杂的RAG应用。</p>",
+  "slug": "practice-simple-rag-application",
+  "updates": [],
+  "references": [
+    {
+      "id": 13828,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "NeurIPS 2020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "本文介绍了RAG框架，结合了预训练参数化和非参数化记忆，以实现更好的开放域问答。",
+      "order": 1,
+      "created_at": "2025-09-05T08:41:20.726405Z",
+      "updated_at": "2025-09-10T12:24:15.915285Z"
+    },
+    {
+      "id": 13829,
+      "title": "LlamaIndex Documentation",
+      "author": "LlamaIndex",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.llamaindex.ai/en/stable/",
+      "doi": "",
+      "note": "LlamaIndex的官方文档，提供了构建集成外部数据（包括RAG系统）的LLM应用的指南和API参考。",
+      "order": 2,
+      "created_at": "2025-09-05T08:41:20.730313Z",
+      "updated_at": "2025-09-10T12:24:04.285592Z"
+    },
+    {
+      "id": 13831,
+      "title": "OpenAI API Documentation",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs",
+      "doi": "",
+      "note": "OpenAI语言模型和嵌入服务的官方文档，提供了将它们集成到RAG应用所需的信息。",
+      "order": 4,
+      "created_at": "2025-09-05T08:41:20.736312Z",
+      "updated_at": "2025-09-10T12:24:18.844278Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

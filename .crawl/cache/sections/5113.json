@@ -1,0 +1,61 @@
+{
+  "id": 5113,
+  "title": "认识LLM API",
+  "meta_title": "认识LLM API | Python LLM 交互",
+  "meta_description": "概述LLM API的工作方式，包含请求/响应结构。",
+  "content": "<p>为了连接您的Python应用程序与大型语言模型的强大功能，我们依赖于应用程序编程接口（API）。您可以将API视为LLM服务提供的一个明确的约定或菜单。您的应用程序（客户端）使用此菜单向LLM提供方的服务器请求特定服务（如生成文本或回答问题）。服务器处理请求并返回响应，通常包含LLM的输出。</p>\n<p>这种通过互联网进行的客户端-服务器交互通常遵循Web API的原则，主要使用HTTP(S)。让我们分析一下典型的LLM API交互的主要构成部分。</p>\n<h3>API调用的构成</h3>\n<p>当您的Python代码与LLM API交互时，它会构建一个包含特定信息的HTTP请求。LLM提供方的服务器接收此请求，处理后返回HTTP响应。</p>\n<ol>\n<li>\n<p><strong>端点URL:</strong> 这是您发送请求的特定网络地址。LLM提供方会发布不同的端点以支持不同功能（例如，文本补全、嵌入 (embedding)、模型列表）。例如，一个端点可能看起来像 <code>https://api.example-llm-provider.com/v1/chat/completions</code>。<code>v1</code> 通常表示API版本。</p>\n</li>\n<li>\n<p><strong>HTTP方法:</strong> 这个动词告诉服务器客户端希望执行什么操作。发送提示并获取补全时，几乎普遍使用 <code>POST</code> 方法，因为您正在向服务器发送数据（提示和参数 (parameter)）以创建新资源（即补全）。其他方法如 <code>GET</code> 可能用于获取信息，例如可用模型。</p>\n</li>\n<li>\n<p><strong>请求头:</strong> 这些提供关于请求的元数据。常见请求头包括：</p>\n<ul>\n<li><code>Authorization</code>: 包含凭据（通常是API密钥或令牌）以验证您的请求。我们将在“安全设置API密钥”一节中介绍如何安全地获取和管理这些信息。</li>\n<li><code>Content-Type</code>: 指定请求体中发送数据的格式，LLM API通常是 <code>application/json</code>。</li>\n<li><code>Accept</code>: 告诉服务器客户端偏好的响应格式（通常也是 <code>application/json</code>）。</li>\n</ul>\n</li>\n<li>\n<p><strong>请求体:</strong> 对于 <code>POST</code> 请求，这包含发送到服务器的实际数据负载。对于LLM API，这通常以JSON格式组织，并包含：</p>\n<ul>\n<li>针对LLM的提示或消息。</li>\n<li>您想使用的特定模型（例如，<code>gpt-3.5-turbo</code>，<code>claude-3-opus-20240229</code>）。</li>\n<li>用于控制生成过程的参数，例如 <code>temperature</code>（随机性）、<code>max_tokens</code>（响应长度限制）、<code>stop</code> 序列等。</li>\n</ul>\n<p><em>最小请求体示例 (JSON):</em></p>\n<pre><code class=\"language-json\">{\n  \"model\": \"example-model-v1\",\n  \"messages\": [\n    {\"role\": \"user\", \"content\": \"解释API调用的含义。\"}\n  ],\n  \"max_tokens\": 100,\n  \"temperature\": 0.7\n}\n</code></pre>\n</li>\n<li>\n<p><strong>响应:</strong> 处理请求后，服务器返回一个HTTP响应，包含：</p>\n<ul>\n<li><strong>状态码:</strong> 表示结果的标准HTTP代码（例如，<code>200 OK</code> 表示成功，<code>401 Unauthorized</code> 表示API密钥无效，<code>429 Too Many Requests</code> 表示速率限制，<code>500 Internal Server Error</code> 表示服务器内部错误）。</li>\n<li><strong>请求头:</strong> 类似于请求头，提供关于响应的元数据。</li>\n<li><strong>响应体:</strong> 通常包含LLM生成的输出，通常也是JSON格式。这可能包括文本补全、使用统计（令牌计数）以及生成停止的原因。</li>\n</ul>\n<p><em>最小响应体示例 (JSON):</em></p>\n<pre><code class=\"language-json\">{\n  \"id\": \"chatcmpl-12345abcde\",\n  \"object\": \"chat.completion\",\n  \"created\": 1700000000,\n  \"model\": \"example-model-v1\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"An API call is like ordering from a restaurant menu...\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 15,\n    \"completion_tokens\": 55,\n    \"total_tokens\": 70\n  }\n}\n</code></pre>\n</li>\n</ol>\n<h3>请求-响应流程</h3>\n<p>这种交互可以看作是一场直接对话：您的应用程序发送一个结构化请求，API服务器返回一个结构化响应。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-4ydpzz\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n    edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n    Client [label=\"您的Python\\n应用程序\", fillcolor=\"#a5d8ff\"];\n    Server [label=\"LLM 提供方\\nAPI 服务器\", fillcolor=\"#ffec99\"];\n\n    Client -> Server [label=\"  HTTP 请求\\n  (端点, 方法, 请求头, 请求体)\\n  - 提示\\n  - 参数 (模型, 温度等)\\n  - API 密钥\"];\n    Server -> Client [label=\"  HTTP 响应\\n  (状态码, 响应头, 响应体)\\n  - LLM 输出\\n  - 使用信息\\n  - 停止原因\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-4ydpzz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图表显示了客户端应用程序与LLM API服务器之间的基本交互。</p>\n</blockquote>\n<p>理解这种结构非常重要。它明确了您需要发送哪些信息（提示、参数 (parameter)、API密钥）以及您可以预期收到哪些信息（LLM的响应、使用数据）。尽管不同提供方（如OpenAI、Anthropic、Google）的具体细节略有不同，但使用HTTP(S)端点、方法、请求头和JSON负载的核心原则保持不变。</p>\n<p>这种标准化方法使开发者能够与复杂的AI模型交互，而无需管理底层基础设施，只需使用熟悉的Web协议和数据格式。既然我们已经了解了API调用涉及的内容，后续章节将向您展示如何使用Python库构建和发送这些请求。</p>",
+  "slug": "understanding-llm-apis",
+  "updates": [],
+  "references": [
+    {
+      "id": 12947,
+      "title": "Chat completions API reference",
+      "author": "OpenAI",
+      "year": "2025",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "提供了构建请求和解释响应的详细官方文档，适用于最常用的LLM聊天API之一，展示了所讨论概念的实际应用。",
+      "order": 1,
+      "created_at": "2025-09-05T08:25:42.172888Z",
+      "updated_at": "2025-09-09T03:22:30.169191Z"
+    },
+    {
+      "id": 12948,
+      "title": "HTTP",
+      "author": "MDN Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP",
+      "doi": "",
+      "note": "提供了关于HTTP协议基础的全面且易懂的解释，包括方法、头部、状态码和客户端-服务器交互，这些都是LLM API的构建基础。",
+      "order": 2,
+      "created_at": "2025-09-05T08:25:42.177824Z",
+      "updated_at": "2025-09-09T03:21:35.112458Z"
+    },
+    {
+      "id": 12949,
+      "title": "Requests: HTTP for Humans™",
+      "author": "Kenneth Reitz and the Requests Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://requests.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "流行Python `requests` 库的官方文档，该库是进行HTTP请求和与API交互的标准工具，直接支持Python中的实际应用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:25:42.180452Z",
+      "updated_at": "2025-09-09T03:21:33.795918Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

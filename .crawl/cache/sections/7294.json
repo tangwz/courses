@@ -1,0 +1,61 @@
+{
+  "id": 7294,
+  "title": "实践：评估微调模型",
+  "meta_title": "实践：评估微调大型语言模型",
+  "meta_description": "一次实操练习，将定量和定性评估方法应用于您已微调的模型。",
+  "content": "<p>您已成功训练了一个模型，但在严格衡量其表现之前，此过程尚未完成。本次实践将指导您完成评估我们之前练习中微调 (fine-tuning)模型的主要步骤。我们将结合自动化定量指标与人工定性审查，以全面认识模型的长处和局限。</p>\n<h3>评估准备</h3>\n<p>在开始之前，请确保您的环境已备妥。我们将需要微调 (fine-tuning)模型适配器、原始基础模型，以及最重要的是一个独立测试数据集。机器学习 (machine learning)的一项基本原则是，模型必须在训练或验证期间从未见过的数据上进行评估，以获得对其泛化能力的公正评估。</p>\n<p>模型评估的步骤包括：</p>\n<ol>\n<li>加载基础模型并合并已训练的LoRA适配器。</li>\n<li>为测试集中的每个条目生成输出。</li>\n<li>计算定量指标（ROUGE、BLEU、困惑度）。</li>\n<li>对部分输出进行定性审查。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-185otyw\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\"]; edge [fontname=\"sans-serif\"]; \"测试数据集\" [fillcolor=\"#a5d8ff\"]; \"微调模型\" [fillcolor=\"#d0bfff\"]; \"预测结果\" [fillcolor=\"#b2f2bb\"]; \"定量指标\" [fillcolor=\"#ffec99\"]; \"定性审查\" [fillcolor=\"#ffc9c9\"]; \"最终评估\" [fillcolor=\"#96f2d7\"]; \"测试数据集\" -> \"微调模型\" [label=\" 输入\"]; \"微调模型\" -> \"预测结果\"; \"预测结果\" -> \"定量指标\" [label=\" 计算得分\"]; \"预测结果\" -> \"定性审查\" [label=\" 人工审查\"]; \"定量指标\" -> \"最终评估\"; \"定性审查\" -> \"最终评估\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-185otyw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>评估过程，从数据输入到最终评估。</p>\n</blockquote>\n<p>首先，让我们安装Hugging Face的<code>evaluate</code>库，它提供了对常用指标的便捷使用。</p>\n<pre><code class=\"language-bash\">pip install evaluate rouge_score\n</code></pre>\n<h3>加载微调 (fine-tuning)模型和数据</h3>\n<p>我们将从加载基础模型并应用我们已训练的LoRA适配器开始。在本次练习中，假设您的LoRA适配器配置和权重 (weight)保存在一个名为<code>./my-lora-adapter</code>的目录中。我们还将从训练中使用的数据集中加载测试部分。</p>\n<pre><code class=\"language-python\">import torch\nfrom transformers import AutoModelForCausalLM, AutoTokenizer\nfrom peft import PeftModel\nfrom datasets import load_dataset\n\n# 定义模型和适配器路径\nbase_model_id = \"meta-llama/Llama-2-7b-hf\"\nadapter_path = \"./my-lora-adapter\"\n\n# 加载基础模型\nbase_model = AutoModelForCausalLM.from_pretrained(\n    base_model_id,\n    torch_dtype=torch.bfloat16,\n    device_map=\"auto\"\n)\n\n# 加载分词器\ntokenizer = AutoTokenizer.from_pretrained(base_model_id)\n\n# 加载LoRA模型\nmodel = PeftModel.from_pretrained(base_model, adapter_path)\nmodel.eval()\n\n# 加载测试数据集\ntest_dataset = load_dataset(\"samsum\", split=\"test\")\n</code></pre>\n<blockquote>\n<p><strong>注意：</strong> 对于推理 (inference)，通常使用<code>model.merge_and_unload()</code>将LoRA权重直接合并到基础模型中。这会创建一个标准模型产物，从而简化部署，因为您在推理时不再需要PEFT库。我们在此将它们分开，是为了说明其组成部分。</p>\n</blockquote>\n<h3>生成预测</h3>\n<p>模型和数据准备就绪后，下一步是为测试数据集中的每个样本生成预测。我们将遍历数据集，像训练时一样格式化输入提示，对其进行分词 (tokenization)，并将其传递给模型的<code>generate</code>方法。我们将同时存储模型的输出（预测）和真实摘要（参考）。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom tqdm import tqdm\n\n# 为了本例，我们为部分样本生成预测\ntest_samples = test_dataset.select(range(100))\n\npredictions = []\nreferences = []\n\nfor sample in tqdm(test_samples):\n    prompt = f\"\"\"\n    Summarize the following conversation.\n\n    {sample[\"dialogue\"]}\n\n    Summary:\n    \"\"\"\n\n    input_ids = tokenizer(prompt, return_tensors=\"pt\").input_ids.to(\"cuda\")\n\n    # 生成输出\n    with torch.no_grad():\n        outputs = model.generate(\n            input_ids=input_ids, \n            max_new_tokens=50, \n            do_sample=True, \n            top_p=0.9, \n            temperature=0.1\n        )\n\n    # 解码输出和参考\n    prediction = tokenizer.decode(outputs[0], skip_special_tokens=True)\n    # 清理输出，仅获取摘要\n    summary = prediction.split(\"Summary:\")[1].strip()\n\n    predictions.append(summary)\n    references.append(sample[\"summary\"])\n</code></pre>\n<h3>定量评估</h3>\n<p>既然我们有了<code>predictions</code>和<code>references</code>，就可以计算自动化指标了。</p>\n<h4>ROUGE和BLEU</h4>\n<p>ROUGE（面向召回率的摘要评估辅助工具）是一组用于评估自动摘要和机器翻译的指标。它通过将自动生成的摘要或译文与一组参考摘要（通常是人工生成的）进行比较来运作。例如，ROUGE-L衡量的是最长公共子序列。</p>\n<p>BLEU（双语评估辅助工具）是另一个常用指标，主要用于翻译，它通过比较候选文本与参考文本的n-gram来衡量精度。</p>\n<pre><code class=\"language-python\">import evaluate\n\n# 加载ROUGE指标\nrouge_metric = evaluate.load(\"rouge\")\n\n# 计算得分\nrouge_scores = rouge_metric.compute(predictions=predictions, references=references)\nprint(rouge_scores)\n</code></pre>\n<p>输出将是一个包含不同ROUGE得分的字典，例如<code>rouge1</code>、<code>rouge2</code>和<code>rougeL</code>。这些数值提供了一种标准化方法来比较模型表现。通常，更高的得分表示与参考文本的对齐 (alignment)程度更好。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-12q9ot\" \n              data-plot-definition='{\"data\":[{\"x\":[\"ROUGE-1\",\"ROUGE-2\",\"ROUGE-L\"],\"y\":[0.421,0.255,0.389],\"type\":\"bar\",\"marker\":{\"color\":\"#228be6\"}, \"name\": \"模型A\"}],\"layout\":{\"title\":{\"text\":\"ROUGE评估得分\"},\"xaxis\":{\"title\":\"指标\"},\"yaxis\":{\"title\":\"得分\",\"range\":[0,0.5]},\"font\":{\"family\":\"sans-serif\"},\"paper_bgcolor\":\"#ffffff\",\"plot_bgcolor\":\"#e9ecef\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-12q9ot\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>某次评估运行的ROUGE得分。ROUGE-1衡量的是一元词重叠，ROUGE-2衡量的是二元词重叠，ROUGE-L衡量的是最长公共子序列。</p>\n</blockquote>\n<h4>困惑度</h4>\n<p>困惑度衡量概率分布或概率模型预测样本的优劣。在语言模型中，它可以被理解为模型在遇到测试集时的“惊讶”程度。它由交叉熵损失计算得出，通常表示为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>e</mi><mrow><mi>l</mi><mi>o</mi><mi>s</mi><mi>s</mi></mrow></msup></mrow><annotation encoding=\"application/x-tex\">e^{loss}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8491em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">e</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8491em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0197em;\">l</span><span class=\"mord mathnormal mtight\">oss</span></span></span></span></span></span></span></span></span></span></span></span>。较低的困惑度得分表示模型对其预测更有信心，这是一个理想的特性。</p>\n<p>计算困惑度要求我们在不更新任何梯度的情况下，计算测试集上的损失。</p>\n<pre><code class=\"language-python\"># 一个计算困惑度的简化函数\ndef calculate_perplexity(model, tokenizer, data, device=\"cuda\"):\n    total_loss = 0\n    total_tokens = 0\n\n    for sample in tqdm(data):\n        text = sample[\"dialogue\"] + \" \" + sample[\"summary\"]\n        inputs = tokenizer(text, return_tensors=\"pt\", max_length=1024, truncation=True)\n\n        input_ids = inputs.input_ids.to(device)\n        target_ids = input_ids.clone()\n\n        with torch.no_grad():\n            outputs = model(input_ids, labels=target_ids)\n            loss = outputs.loss\n\n        total_loss += loss.item() * input_ids.size(1)\n        total_tokens += input_ids.size(1)\n\n    avg_loss = total_loss / total_tokens\n    perplexity = torch.exp(torch.tensor(avg_loss))\n\n    return perplexity.item()\n\n# 计算测试样本的困惑度\nperplexity_score = calculate_perplexity(model, tokenizer, test_samples)\nprint(f\"困惑度: {perplexity_score:.2f}\")\n</code></pre>\n<p>较低的困惑度，例如得分<code>15.43</code>，表明模型已很好地掌握了目标领域的模式。</p>\n<h3>定性评估</h3>\n<p>指标提供了高层面的概括，但它们并非包罗万象。模型可能获得良好的ROUGE得分，但生成的摘要可能存在事实错误或风格生硬。此时，定性分析就显得有必要了。</p>\n<p>通过人工检查模型的输出，您可以检查：</p>\n<ul>\n<li><strong>连贯性：</strong> 输出是否合乎逻辑？</li>\n<li><strong>相关性：</strong> 摘要是否切题并抓住了主要内容？</li>\n<li><strong>事实准确性：</strong> 模型是否编造细节（幻觉 (hallucination)）？</li>\n<li><strong>简洁性：</strong> 摘要是否简洁明了？</li>\n</ul>\n<p>让我们并排查看几个例子。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">输入对话</th>\n<th align=\"left\">参考摘要</th>\n<th align=\"left\">模型生成的摘要</th>\n<th align=\"left\">分析</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>Amanda: Can you pick up dinner tonight? &#x3C;br> Ben: Sure, what do you want? &#x3C;br> Amanda: Pizza would be great. &#x3C;br> Ben: Ok, I'll grab it on my way home.</code></td>\n<td align=\"left\">Amanda让Ben回家路上取披萨当晚餐。</td>\n<td align=\"left\">Ben下班回家路上会去取披萨当晚餐。</td>\n<td align=\"left\"><strong>好。</strong> 模型正确识别了主要内容，并生成了流畅、准确的摘要。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>Chloe: The project deadline is Friday. &#x3C;br> David: I know, I'm almost done with the report. I just need to add the final charts. &#x3C;br> Chloe: Great, send it over when you're ready.</code></td>\n<td align=\"left\">David正在完成一份报告，其中包含图表，项目截止日期是周五。</td>\n<td align=\"left\">David需要完成他的报告。截止日期是周五。</td>\n<td align=\"left\"><strong>一般。</strong> 摘要是正确的，但遗漏了关于图表的具体细节。它不如参考摘要信息量大。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>Eve: I'm thinking of booking a flight to Paris. &#x3C;br> Frank: Nice! When are you going? &#x3C;br> Eve: Maybe in May. It's lovely there in the spring.</code></td>\n<td align=\"left\">Eve正在计划去巴黎旅行，可能在五月。</td>\n<td align=\"left\">Eve正在预订下周去巴黎度假的机票，并将入住大酒店。</td>\n<td align=\"left\"><strong>差（幻觉）。</strong> 模型编造了对话中没有的细节（度假、下周、大酒店）。</td>\n</tr>\n</tbody>\n</table>\n<p>这种人工审查是评估循环中不可或缺的一部分。它提供了定量得分无法提供的见解，帮助您找出可以通过整理更好的训练数据或调整微调 (fine-tuning)过程来解决的具体失败模式。通过结合定量和定性方法，您将获得对模型真实表现的全面理解。</p>",
+  "slug": "practice-evaluating-fine-tuned-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 20193,
+      "title": "ROUGE: A Package for Automatic Evaluation of Summaries",
+      "author": "Chin-Yew Lin",
+      "year": "2004",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Text Summarization Branches Out",
+      "volume": "",
+      "pages": "74-81",
+      "url": "https://aclanthology.org/W04-1013/",
+      "doi": "",
+      "note": "介绍了ROUGE指标，广泛用于评估自动摘要。",
+      "order": 1,
+      "created_at": "2025-09-06T13:20:46.962154Z",
+      "updated_at": "2025-09-10T05:10:10.947898Z"
+    },
+    {
+      "id": 20194,
+      "title": "BLEU: a Method for Automatic Evaluation of Machine Translation",
+      "author": "Kishore Papineni, Salim Roukos, Todd Ward, Wei-Jing Zhu",
+      "year": "2002",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+      "volume": "",
+      "pages": "311–318",
+      "url": "https://aclanthology.org/P02-1040/",
+      "doi": "10.3115/1073083.1073135",
+      "note": "提出了BLEU评分，是评估机器翻译质量的标准指标。",
+      "order": 2,
+      "created_at": "2025-09-06T13:20:46.965273Z",
+      "updated_at": "2025-09-10T05:10:11.429440Z"
+    },
+    {
+      "id": 20196,
+      "title": "Speech and Language Processing (3rd Edition Draft)",
+      "author": "Daniel Jurafsky, James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "涵盖自然语言处理概念的教材，包括第3章中困惑度的定义和计算。",
+      "order": 4,
+      "created_at": "2025-09-06T13:20:46.969538Z",
+      "updated_at": "2025-09-10T05:10:12.358948Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1169,
+  "title": "相关性可视化：热力图",
+  "meta_title": "使用Seaborn的相关性热力图",
+  "meta_description": "使用热力图可视化多个数值变量的相关矩阵。",
+  "content": "<p>如前一节所述，计算相关系数为我们提供了数值变量对之间线性关联的精确数值。然而，当处理包含大量数值特征的数据集时，仅仅查看相关值表格可能会让人难以招架。很难快速了解关联的整体结构或找出最强的关联。这就是图形表示变得特别有用的地方。</p>\n<p>热力图是一种出色的工具，用于可视化数字矩阵，其中单个值由颜色表示。在双变量分析中，我们经常使用热力图来可视化数值变量的相关矩阵。这能同时提供多变量之间关系的即时、直观概览。</p>\n<h3>为什么用热力图表示相关性？</h3>\n<p>假设您有10个数值变量。计算每对变量之间的相关性会产生 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mo>×</mo><mn>10</mn><mo>=</mo><mn>100</mn></mrow><annotation encoding=\"application/x-tex\">10 \\times 10 = 100</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">100</span></span></span></span> 个相关值（尽管它是对称的，所以包含对角线在内共有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mo>+</mo><mo stretchy=\"false\">(</mo><mn>9</mn><mo>×</mo><mn>10</mn><mi mathvariant=\"normal\">/</mi><mn>2</mn><mo stretchy=\"false\">)</mo><mo>=</mo><mn>55</mn></mrow><annotation encoding=\"application/x-tex\">10 + (9 \\times 10 / 2) = 55</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">9</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">10/2</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">55</span></span></span></span> 个唯一值）。手动比较这55个值效率低下。热力图通过以下方式解决了这个问题：</p>\n<ol>\n<li><strong>信息浓缩：</strong> 它以紧凑的视觉格式呈现整个相关矩阵。</li>\n<li><strong>突出模式：</strong> 强正相关（接近+1）、强负相关（接近-1）和弱相关（接近0）通过颜色强度很容易区分。</li>\n<li><strong>促进比较：</strong> 它能够快速视觉比较不同变量对之间的相关强度。</li>\n<li><strong>识别潜在问题：</strong> 高度相关变量的聚集（潜在多重共线性）变得一目了然。</li>\n</ol>\n<h3>创建相关矩阵</h3>\n<p>在能够可视化之前，我们需要相关矩阵本身。Pandas DataFrame为此提供了一个便捷的<code>.corr()</code>方法。假设您有一个包含数值数据的DataFrame <code>df</code>：</p>\n<pre><code class=\"language-python\"># 如有必要，只选择数值列\r\nnumerical_df = df.select_dtypes(include=['int64', 'float64'])\r\n\r\n# 计算相关矩阵\r\ncorrelation_matrix = numerical_df.corr()\r\n\r\n# 显示矩阵（可选，但有助于验证）\r\nprint(correlation_matrix)\n</code></pre>\n<p>这个<code>correlation_matrix</code>是一个DataFrame，其索引和列都是来自<code>numerical_df</code>的数值变量名称，单元格中的值是这些变量之间的皮尔逊相关系数。</p>\n<h3>用Seaborn生成热力图</h3>\n<p>Seaborn库，它构建在Matplotlib之上，提供了一个专为此目的设计的简单函数<code>heatmap()</code>。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\r\nimport seaborn as sns\r\nimport pandas as pd\r\nimport numpy as np # 样本数据常用\r\n\r\n# --- 样本数据生成 ---\r\n# 在实际情况中，您将使用已加载的DataFrame 'df'\r\nnp.random.seed(42)\r\ndata = np.random.rand(100, 5)\r\ncolumns = ['Feature_A', 'Feature_B', 'Feature_C', 'Feature_D', 'Feature_E']\r\ndf = pd.DataFrame(data, columns=columns)\r\n# 为演示引入一些相关性\r\ndf['Feature_B'] = df['Feature_B'] + df['Feature_A'] * 0.6 + np.random.rand(100) * 0.2\r\ndf['Feature_D'] = df['Feature_D'] - df['Feature_C'] * 0.7 + np.random.rand(100) * 0.15\r\ndf['Feature_E'] = df['Feature_E'] + df['Feature_A'] * 0.4 - df['Feature_C'] * 0.3 + np.random.rand(100)*0.1\r\n# --- 样本数据结束 ---\r\n\r\n# 选择数值列（如果尚未完成）\r\nnumerical_df = df.select_dtypes(include=['float64', 'int64'])\r\n# 计算相关矩阵\r\ncorrelation_matrix = numerical_df.corr()\r\n\r\n\r\n# 设置图表大小以提高可读性\r\nplt.figure(figsize=(8, 6))\r\n\r\n# 生成热力图\r\nsns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=\".2f\")\r\n\r\n# 添加标题\r\nplt.title('数值特征的相关矩阵')\r\n\r\n# 显示图表\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1169_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T035243Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=bfc329659884821dca70773eab26deb4d91d4cfca8f5a77fbddeaca6221ba29f\" alt=\"Image 19\">\r\n我们来分析一下<code>sns.heatmap()</code>中使用的重要参数 (parameter)：</p>\n<ul>\n<li><code>correlation_matrix</code>：这是主要输入，一个包含相关值的Pandas DataFrame。</li>\n<li><code>annot=True</code>：这会在热力图单元格上直接显示相关系数值。强烈推荐此项，以便进行精确理解。</li>\n<li><code>cmap='coolwarm'</code>：这设置了颜色映射。'coolwarm'是相关性分析的好选择，因为它是一种发散型配色：它使用冷色（如蓝色）表示负相关，暖色（如红色）表示正相关，以及中性色（白色/浅灰色）表示接近零的相关性。还有许多其他颜色映射可用（例如，'viridis'、'plasma'、'RdBu_r'）。</li>\n<li><code>fmt=\".2f\"</code>：这会格式化注释文本（如果<code>annot=True</code>则显示的数字），使其显示两位小数。</li>\n</ul>\n<h3>解读热力图</h3>\n<p>生成的热力图提供了视觉概览：</p>\n<ol>\n<li><strong>颜色强度：</strong> 每个单元格中颜色的强度和色调表示相关性的强弱和方向。请参照热力图旁边的颜色条图例。在'coolwarm'颜色图中，深红色表示强正相关，深蓝色表示强负相关，接近白色的浅色表示弱相关。</li>\n<li><strong>对角线：</strong> 从左上到右下的对角线始终显示相关性为1（完全正相关），因为任何变量都与其自身完全相关。这些单元格通常是根据颜色映射的极端值而最亮或最暗的。</li>\n<li><strong>对称性：</strong> 热力图沿主对角线对称，因为变量A与变量B之间的相关性与变量B与变量A之间的相关性相同（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mi>o</mi><mi>r</mi><mi>r</mi><mo stretchy=\"false\">(</mo><mi>A</mi><mo separator=\"true\">,</mo><mi>B</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mi>C</mi><mi>o</mi><mi>r</mi><mi>r</mi><mo stretchy=\"false\">(</mo><mi>B</mi><mo separator=\"true\">,</mo><mi>A</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">Corr(A, B) = Corr(B, A)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">or</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">r</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">A</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">or</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">r</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mclose\">)</span></span></span></span>）。</li>\n<li><strong>标注：</strong> 如果<code>annot=True</code>，每个单元格中的数值会给出精确的相关系数。</li>\n<li><strong>识别模式：</strong> 注意对角线以外的亮色/暗色方块。这些表明存在相互高度相关的一组变量。另外，寻找主要为一种颜色的行或列，这表示某个变量与许多其他变量存在强关联（正或负）。</li>\n</ol>\n<p>这是一个使用Plotly进行交互式模拟的例子，模拟类似输出：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-5hw6lz\" \n              data-plot-definition='{\"layout\": {\"title\": \"相关性热力图\", \"xaxis\": {\"tickangle\": -45, \"side\": \"bottom\"}, \"yaxis\": {\"autorange\": \"reversed\"}, \"coloraxis\": {\"colorscale\": [[0.0, \"#4263eb\"], [0.5, \"#e9ecef\"], [1.0, \"#f03e3e\"]], \"cmin\": -1, \"cmax\": 1, \"colorbar\": {\"title\": \"相关性\"}}}, \"data\": [{\"type\": \"heatmap\", \"z\": [[1.00, 0.65, 0.05, 0.02, 0.38], [0.65, 1.00, -0.08, -0.05, 0.31], [0.05, -0.08, 1.00, -0.72, -0.31], [0.02, -0.05, -0.72, 1.00, 0.09], [0.38, 0.31, -0.31, 0.09, 1.00]], \"x\": [\"Feature_A\", \"Feature_B\", \"Feature_C\", \"Feature_D\", \"Feature_E\"], \"y\": [\"Feature_A\", \"Feature_B\", \"Feature_C\", \"Feature_D\", \"Feature_E\"], \"hoverongaps\": false, \"text\": [[\"1.00\", \"0.65\", \"0.05\", \"0.02\", \"0.38\"], [\"0.65\", \"1.00\", \"-0.08\", \"-0.05\", \"0.31\"], [\"0.05\", \"-0.08\", \"1.00\", \"-0.72\", \"-0.31\"], [\"0.02\", \"-0.05\", \"-0.72\", \"1.00\", \"0.09\"], [\"0.38\", \"0.31\", \"-0.31\", \"0.09\", \"1.00\"]], \"texttemplate\": \"%{text}\", \"hoverinfo\": \"x+y+z\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-5hw6lz\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个可视化五种特征相关矩阵的热力图。红色表示正相关，蓝色表示负相关，较浅的色调表示较弱的相关。标注显示了具体的关联系数。注意特征C和特征D之间存在强负相关（-0.72），以及特征A和特征B之间存在强正相关（0.65）。</p>\n</blockquote>\n<p>热力图提供了一种有效的方法，可以快速评估数值数据中的相关结构。它们是数据分析的常见组成部分，有助于指导特征选择，识别建模中潜在的多重共线性，并有助于更好地了解变量之间如何关联。</p>",
+  "slug": "visualizing-correlation-heatmaps",
+  "updates": [],
+  "references": [
+    {
+      "id": 353,
+      "title": "seaborn.heatmap",
+      "author": "Waskom, Michael L. and the Seaborn development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.heatmap.html",
+      "doi": "",
+      "note": "Seaborn中用于生成统计热图的官方Python文档。",
+      "order": 1,
+      "created_at": "2025-09-04T14:25:05.787457Z",
+      "updated_at": "2025-09-07T16:13:03.590028Z"
+    },
+    {
+      "id": 354,
+      "title": "pandas.DataFrame.corr",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html",
+      "doi": "",
+      "note": "详细说明如何在Pandas DataFrame中计算列间成对相关性的官方文档。",
+      "order": 2,
+      "created_at": "2025-09-04T14:25:05.791347Z",
+      "updated_at": "2025-09-07T16:12:51.493859Z"
+    },
+    {
+      "id": 355,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "McKinney, Wes",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本关于使用Pandas和Matplotlib等Python库进行数据操作和分析的指南，这些库在EDA中经常使用。",
+      "order": 3,
+      "created_at": "2025-09-04T14:25:05.794864Z",
+      "updated_at": "2025-09-07T16:12:53.587982Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

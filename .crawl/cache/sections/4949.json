@@ -1,0 +1,61 @@
+{
+  "id": 4949,
+  "title": "内部协变量偏移问题",
+  "meta_title": "内部协变量偏移问题",
+  "meta_description": "解释内部协变量偏移及其对深度网络训练的影响。",
+  "content": "<p>训练深度神经网络 (neural network)涉及到根据计算出的梯度更新其所有层的参数 (parameter)（权重 (weight)和偏置 (bias)）。假设网络中间有一层，比如层 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>L</mi></mrow><annotation encoding=\"application/x-tex\">L</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">L</span></span></span></span>。它的学习过程，即参数调整方式，在很大程度上依赖于它从前一层 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>L</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">L-1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">L</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 接收到的输入数据。</p>\n<p>然而，问题在于：在训练过程中，层 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>L</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">L-1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">L</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 的参数，以及之前所有层的参数，也在不断变化。随着这些前层更新其权重和偏置，它们产生的输出数据分布会发生偏移。因此，输入到层 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>L</mi></mrow><annotation encoding=\"application/x-tex\">L</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">L</span></span></span></span> 的数据分布在整个训练过程中并不会保持固定。这种在训练期间内部层输入数据分布发生变化的情况，被称为<strong>内部协变量偏移</strong>。</p>\n<p>这种持续的偏移给深度网络的训练带来了若干难题：</p>\n<h3>收敛速度变慢</h3>\n<p>网络中的每一层都在试图学习其输入的有用表示或转换。当输入数据的分布不断变化时，该层就像在追逐一个移动的目标。它必须不断调整，不仅要学习任务所需的映射，还要弥补其传入数据统计量的偏移。这使得学习过程效率降低，并且通常需要使用较小的学习率来防止参数 (parameter)更新变得不稳定，从而显著延长了整体训练时间。</p>\n<h3>梯度稳定性问题</h3>\n<p>许多激活函数 (activation function)，特别是sigmoid和双曲正切（tanh），当其输入变得非常大或非常小（正或负）时会饱和。如果内部协变量偏移将某层的输入推入这些饱和区域，激活函数的梯度将接近于零。在反向传播 (backpropagation)过程中，这些微小的梯度会阻碍信息流回前层，导致梯度消失问题，并使这些层的学习停滞不前。尽管像ReLU（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mi>max</mi><mo>⁡</mo><mo stretchy=\"false\">(</mo><mn>0</mn><mo separator=\"true\">,</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">f(x) = \\max(0, x)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mop\">max</span><span class=\"mopen\">(</span><span class=\"mord\">0</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span></span></span></span>）这样的非饱和激活函数可以避免正输入的饱和问题，但输入分布的不稳定偏移仍可能导致梯度过大或神经元实际上“死亡”（总是输出零）等问题。</p>\n<h3>对参数 (parameter)初始化的敏感性</h3>\n<p>因为初始分布对后续的偏移有很大影响，所以初始权重 (weight)和偏置 (bias)的选择变得相当重要。不良的初始化可能使网络一开始就处于层输入分布不佳的状态（例如，立即导致饱和或零激活），这使得训练难以顺利进行。网络可能会陷入停滞或需要更长时间才能找到一个好的解路径。</p>\n<h3>难以使用较高的学习率</h3>\n<p>为了在输入分布发生偏移时保持稳定性，优化器通常需要使用较小的学习率。如果学习率过高，基于当前输入分布的参数 (parameter)更新在下一步分布偏移后可能变得不合适甚至有害，从而导致振荡或发散。这种限制阻碍了我们快速穿越损失空间。</p>\n<p>让我们考虑一个简化的情况，看看层输入的统计量可能如何漂移。下图说明了如果没有应用归一化 (normalization)，输入到特定层的激活值的均值和标准差在不同训练批次中可能如何变化。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-phwl0x\" \n              data-plot-definition='{\"data\":[{\"x\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],\"y\":[0.6,0.9,-0.1,1.2,1.0,-0.4,1.6,1.9,0.4,-0.7,2.1,2.0,0.2,-1.1,2.4,2.7,0.6,-1.4,3.0,2.8],\"mode\":\"lines\",\"name\":\"激活均值\",\"line\":{\"color\":\"#4263eb\"}},{\"x\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],\"y\":[1.1,1.3,1.6,1.0,1.9,2.2,1.2,2.6,2.9,1.4,3.3,3.0,1.6,3.6,3.9,1.9,4.2,4.6,2.3,4.9],\"mode\":\"lines\",\"name\":\"激活标准差\",\"line\":{\"color\":\"#d6336c\"}}],\"layout\":{\"title\":{\"text\":\"层输入统计量随批次漂移\",\"x\":0.5,\"font\":{\"size\":16}},\"xaxis\":{\"title\":\"训练批次索引\"},\"yaxis\":{\"title\":\"统计量值\"},\"legend\":{\"x\":0.01,\"y\":0.99,\"bgcolor\":\"rgba(255,255,255,0.6)\"},\"paper_bgcolor\":\"#f8f9fa\",\"plot_bgcolor\":\"#f8f9fa\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-phwl0x\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了层输入激活值的均值和标准差在连续训练批次中可能出现的波动。这些偏移说明了内部协变量偏移。</p>\n</blockquote>\n<p>如图中所示，一个层可能在不同批次接收到统计特性显著不同的输入。这种不稳定要求该层进行调整，并使整体优化动态变得复杂。</p>\n<p>旨在对抗内部协变量偏移的方法旨在稳定这些分布。通过对每层的输入进行归一化，我们可以创建一个更一致的学习环境，这可能带来更快的训练、更高的学习率以及对初始化敏感性的降低。批归一化（Batch Normalization），我们接下来将要介绍的，它是实现这种稳定化最常用和有效的方法之一。</p>",
+  "slug": "internal-covariate-shift",
+  "updates": [],
+  "references": [
+    {
+      "id": 12845,
+      "title": "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift",
+      "author": "Sergey Ioffe, Christian Szegedy",
+      "year": "2015",
+      "publisher": "Proceedings of Machine Learning Research (PMLR)",
+      "journal": "Proceedings of the 32nd International Conference on Machine Learning (ICML)",
+      "volume": "37",
+      "pages": "448-456",
+      "url": "http://proceedings.mlr.press/v37/ioffe15.pdf",
+      "doi": "10.5555/3045118.3045167",
+      "note": "介绍了内部协变量偏移的概念，并提出批量归一化作为稳定深度网络训练的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:24:08.678986Z",
+      "updated_at": "2025-09-08T15:26:51.177084Z"
+    },
+    {
+      "id": 12846,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "提供深度学习的全面学术概述，包括对内部协变量偏移及其对优化影响的详细解释。",
+      "order": 2,
+      "created_at": "2025-09-05T08:24:08.972347Z",
+      "updated_at": "2025-09-08T15:26:46.968913Z"
+    },
+    {
+      "id": 12847,
+      "title": "How Does Batch Normalization Help Optimization?",
+      "author": "Shibani Santurkar, Dimitris Tsipras, Andrew Ilyas, Aleksander Madry",
+      "year": "2018",
+      "publisher": "Neural Information Processing Systems Foundation, Inc. (NeurIPS)",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "31",
+      "pages": "",
+      "url": "https://proceedings.neurips.cc/paper/2018/file/f8685e18a02f232a76ae39f280c41097-Paper.pdf",
+      "doi": "10.55917/fu.2018.528",
+      "note": "研究了批量归一化有效性的潜在原因，表明它主要通过使损失地形更平滑来辅助优化，而不仅仅是减少内部协变量偏移。",
+      "order": 3,
+      "created_at": "2025-09-05T08:24:09.144843Z",
+      "updated_at": "2025-09-08T15:26:58.545583Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

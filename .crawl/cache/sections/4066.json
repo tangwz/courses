@@ -1,0 +1,61 @@
+{
+  "id": 4066,
+  "title": "跟踪数据文件和目录",
+  "meta_title": "使用 DVC add 跟踪数据",
+  "meta_description": "学习如何使用 'dvc add' 开始对数据集进行版本管理，并理解 .dvc 文件的作用。",
+  "content": "<p><code>dvc add</code> 命令用于告诉 DVC 应管理项目仓库中的哪些数据文件或目录。它是将数据集、模型或其他大型制品置于 DVC 控制下的主要方式，用 Git 可以有效跟踪的小型占位符文件替换大型文件本身。</p>\n<h3>将文件和目录添加到 DVC 跟踪</h3>\n<p>可以把 <code>dvc add</code> 看作 <code>git add</code> 的等效操作，但它是专门为那些您不希望直接存储在 Git 历史记录中的数据文件而设计的。当您对文件或目录运行 <code>dvc add</code> 时，DVC 会在后台执行多项操作：</p>\n<ol>\n<li><strong>分析数据：</strong> 它检查目标文件或目标目录的内容。</li>\n<li><strong>计算哈希值：</strong> DVC 根据数据内容计算一个唯一的校验和（哈希值）。这个哈希值作为数据此特定版本的唯一标识。默认情况下，它使用 MD5 算法，但也可以配置其他算法。</li>\n<li><strong>将数据存储到缓存中：</strong> DVC 将实际数据文件移动或复制（取决于您的配置和文件系统）到其内部缓存目录，通常位于 <code>.dvc/cache</code>。数据使用哈希值作为其标识的一部分进行存储，即使项目中有多个相同文件，也能避免重复。</li>\n<li><strong>创建 <code>.dvc</code> 文件：</strong> 它在数据的原始位置创建一个小型文本文件，在原始名称后添加 <code>.dvc</code>（例如，<code>data/images.zip</code> 变为 <code>data/images.zip.dvc</code>）。此文件包含元数据，包括原始数据的哈希值、大小和路径。这个 <code>.dvc</code> 文件充当指针或占位符。</li>\n<li><strong>更新 <code>.gitignore</code>：</strong> DVC 会自动将与原始数据文件或目录路径匹配的模式添加到您项目的 <code>.gitignore</code> 文件中。这很重要，因为它指示 Git 忽略大型数据文件，从而防止意外提交到您的 Git 仓库。</li>\n</ol>\n<h3>理解 <code>.dvc</code> 文件</h3>\n<p><code>.dvc</code> 文件是 DVC 如何与 Git 集成的核心。它是一个小型、人类可读的文件，通常采用 YAML 格式，包含 DVC 正在跟踪的数据的元数据。让我们看一个例子。如果您运行 <code>dvc add data/raw/iris.csv</code>，生成的 <code>data/raw/iris.csv.dvc</code> 文件可能如下所示：</p>\n<pre><code class=\"language-yaml\"># data/raw/iris.csv.dvc\nouts:\n- md5: a304afb96070e7f03cecfa36f6517373\n  size: 3858\n  path: iris.csv\n</code></pre>\n<p>以下是这些字段的含义：</p>\n<ul>\n<li><code>outs</code>: 定义此 <code>.dvc</code> 文件跟踪的输出。</li>\n<li><code>md5</code>: DVC 为 <code>iris.csv</code> 计算的唯一内容哈希值（校验和）。如果 <code>iris.csv</code> 的内容发生变化，此哈希值也将变化。</li>\n<li><code>size</code>: 原始数据文件的大小（以字节为单位）。</li>\n<li><code>path</code>: 原始数据文件的路径，相对于 <code>.dvc</code> 文件所在位置。</li>\n</ul>\n<p>由于 <code>.dvc</code> 文件是小型文本文件，它们非常适合使用 Git 进行版本管理。当您提交 <code>.dvc</code> 文件时，您实质上是记录了一个指向数据特定版本（由哈希值标识）的指针，而无需将数据本身存储在 Git 中。</p>\n<h3>实际示例</h3>\n<p>让我们跟踪一个数据文件：</p>\n<pre><code class=\"language-bash\"># 假设您有一个数据集文件：data/features.csv\n# 以及一个训练好的模型文件：models/model.pkl\n\n# 跟踪数据集\ndvc add data/features.csv\n\n# 跟踪模型\ndvc add models/model.pkl\n</code></pre>\n<p>运行这些命令后，您将看到新文件（<code>data/features.csv.dvc</code>、<code>models/model.pkl.dvc</code>）以及对 <code>.gitignore</code> 的修改。</p>\n<p>现在，让我们跟踪一个包含图像的整个目录：</p>\n<pre><code class=\"language-bash\"># 假设您有一个目录：data/raw_images/，其中包含许多 jpg 文件\n\n# 跟踪整个目录\ndvc add data/raw_images\n</code></pre>\n<p>这会创建一个单独的 <code>data/raw_images.dvc</code> 文件。该文件将包含 <code>dvc add</code> 执行时 <code>data/raw_images</code> 目录中<em>所有</em>文件的元数据（包括哈希值）。DVC 通过根据内容哈希值单独缓存目录中的每个文件来优化存储。<code>.gitignore</code> 文件也将更新以忽略 <code>data/raw_images/</code> 目录本身。</p>\n<h3>DVC + Git 工作流程</h3>\n<p>使用 DVC 添加数据后的标准工作流程是将更改提交到 Git：</p>\n<ol>\n<li><strong>使用 DVC 暂存数据：</strong> 运行 <code>dvc add &#x3C;您的数据文件或目录></code>。</li>\n<li><strong>使用 Git 暂存 <code>.dvc</code> 文件和 <code>.gitignore</code>：</strong> 运行 <code>git add &#x3C;您的数据文件或目录>.dvc .gitignore</code>。（使用 <code>git add .</code> 通常也有效，但请确保您理解正在暂存的内容）。</li>\n<li><strong>使用 Git 提交：</strong> 运行 <code>git commit -m \"跟踪初始数据集版本\"</code>。</li>\n</ol>\n<p>这个序列确保您的 Git 提交历史包含 <code>.dvc</code> 指针文件，将您的代码版本与 DVC 管理的特定数据版本关联起来。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1gpyf9o\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=folder, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\", fontsize=10];\n\n  subgraph cluster_git {\n    label = \"Git 跟踪\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [fillcolor=\"#a5d8ff\"]; // Blue for Git-tracked\n    dvc_file [label=\".dvc 文件\\n(元数据/指针)\", shape=note];\n    gitignore [label=\".gitignore\", shape=note];\n  }\n\n  subgraph cluster_dvc {\n     label = \"DVC 管理\";\n     style=dashed;\n     color=\"#adb5bd\";\n     node [fillcolor=\"#ffd8a8\"]; // Orange for DVC-managed\n     cache [label=\".dvc/cache\\n(实际数据内容)\", shape=cylinder];\n  }\n\n  subgraph cluster_workspace {\n    label = \"工作区\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [fillcolor=\"#b2f2bb\"]; // Green for workspace files\n    data [label=\"大型数据文件\\n(例如, data.zip)\"];\n  }\n\n  dvc_add [label=\"dvc add data.zip\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n  git_add [label=\"git add data.zip.dvc .gitignore\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n  git_commit [label=\"git commit\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n\n  dvc_add -> data [style=invis]; // Position command near data\n  dvc_add -> dvc_file [label=\" 创建\"];\n  dvc_add -> gitignore [label=\" 更新\"];\n  dvc_add -> cache [label=\" 将数据存储到\"];\n\n  // Sequence edges\n  dvc_add -> git_add [style=dashed, arrowhead=open, constraint=false, color=\"#868e96\"];\n  git_add -> git_commit [style=dashed, arrowhead=open, constraint=false, color=\"#868e96\"];\n\n  dvc_file -> cache [label=\" 通过哈希值引用内容\", style=dotted, color=\"#495057\"];\n\n  {rank=same; dvc_add; data}\n  {rank=same; git_add; dvc_file; gitignore}\n  {rank=same; git_commit; cache}\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1gpyf9o\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 <code>dvc add</code> 跟踪数据的流程：该命令从工作区获取大型数据文件，将其内容存储到 DVC 缓存中，并创建一个小型 <code>.dvc</code> 元数据文件。这个 <code>.dvc</code> 文件，连同对 <code>.gitignore</code> 的更改，随后由 Git 使用标准的 <code>git add</code> 和 <code>git commit</code> 命令进行跟踪。</p>\n</blockquote>\n<p>通过使用 <code>dvc add</code>，您在项目代码（由 Git 管理）及其关联数据（由 DVC 管理）之间建立了重要的连接。这种分离使您的 Git 仓库保持精简和快速，同时确保数据的历史被可靠地跟踪。下一步是学习如何使用远程存储来共享和获取这些版本化的数据。</p>",
+  "slug": "tracking-data-with-dvc",
+  "updates": [],
+  "references": [
+    {
+      "id": 7924,
+      "title": "DVC add Command Reference",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/command-reference/add",
+      "doi": "",
+      "note": "`dvc add` 命令的官方文档，详细说明了其用法和可用选项。",
+      "order": 1,
+      "created_at": "2025-09-05T01:49:05.436430Z",
+      "updated_at": "2025-09-08T14:12:16.274812Z"
+    },
+    {
+      "id": 7925,
+      "title": "How DVC Works",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "Iterative, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/start",
+      "doi": "",
+      "note": "解释了 DVC 的基本工作原理，包括数据缓存、.dvc 文件及其与 Git 的集成方式。",
+      "order": 2,
+      "created_at": "2025-09-05T01:49:05.445125Z",
+      "updated_at": "2025-09-08T14:12:27.467885Z"
+    },
+    {
+      "id": 7926,
+      "title": "Introducing MLOps: How to go from Model to Production",
+      "author": "Mark Treveil, Nicolas Omont, Aurélien Géron, Clement Stenac, Mickaël Bertrand, Patrick Brady, Aditya Joshi, Michel Lutz, Hervé Siby, Rik van der Burgt, Kevin Van der Burgt, Roel Van der Burgt, Manon Van der Burgt, and Alice Zheng",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781098103131/",
+      "doi": "",
+      "note": "提供了 MLOps 实践的全面概述，包括数据管理和版本控制策略，为 DVC 等工具提供了背景信息。",
+      "order": 3,
+      "created_at": "2025-09-05T01:49:05.448301Z",
+      "updated_at": "2025-09-08T14:12:53.477580Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

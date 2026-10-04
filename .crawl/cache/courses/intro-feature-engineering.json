@@ -1,0 +1,669 @@
+{
+  "id": 94,
+  "title": "特征工程介绍",
+  "meta_title": "特征工程技术课程",
+  "meta_description": "机器学习特征工程中级课程。学习使用Python进行数据清洗、编码、缩放、转换和选择。",
+  "description": "<p>学习将原始数据转化为机器学习 (machine learning)模型有用特征的必要技术。本课程涵盖数据准备、特征创建、缩放、编码和选择方法，并会应用Pandas和Scikit-learn等Python库。</p>",
+  "short_description": "学习如何准备、创建和选择实用特征，以提升机器学习模型性能。",
+  "excerpt": "掌握从原始数据创建实用特征的技巧与原理，以提升机器学习模型性能。",
+  "prerequisites": "Python基础，需掌握Pandas。",
+  "cover_color": "teal",
+  "learning_outcomes": [
+    {
+      "topic": "数据准备",
+      "description": "实施妥善处理缺失数据和异常值的方案。"
+    },
+    {
+      "topic": "特征转换",
+      "description": "对数值特征应用多种缩放和转换技术。"
+    },
+    {
+      "topic": "分类特征编码",
+      "description": "比较并应用不同方法对分类变量进行编码。"
+    },
+    {
+      "topic": "特征创建",
+      "description": "使用交互项和多项式特征，从现有数据生成新特征。"
+    },
+    {
+      "topic": "特征选择",
+      "description": "应用过滤法、包裹法和嵌入法选择相关特征。"
+    },
+    {
+      "topic": "实践应用",
+      "description": "在实际场景中，应用Pandas和Scikit-learn进行特征工程。"
+    }
+  ],
+  "duration": 15,
+  "slug": "intro-feature-engineering",
+  "level": 2,
+  "category": "Data Science",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-03T15:35:41.762569Z",
+  "updated_at": "2026-10-02T06:13:29.377164Z",
+  "chapters": [
+    {
+      "id": 442,
+      "title": "特征在机器学习中的作用",
+      "meta_title": "机器学习中特征的作用",
+      "meta_description": "了解特征工程为何对机器学习模型的准确性和性能很重要。回顾机器学习工作流程。",
+      "number": 1,
+      "slug": "feature-engineering-foundations",
+      "content": "机器学习模型从数据中学习规律。然而，收集到的原始数据往往不适合模型高效学习。从原始数据中选择、转换和生成输入变量（即特征）的过程称为特征工程。本章将提供理解此过程的初步介绍。\r\n\r\n首先，您将把特征工程放置在更广泛的机器学习工作流程中。我们将定义什么是“特征”，并考察特征的质量和相关性如何直接影响模型的学习和泛化能力。我们还将查看常见的数据类型，例如数值数据和类别数据，以及它们所需的具体考量。最后，本章将提供特征工程中涉及的主要任务的高级概览，为后续章节中详细介绍的技术做好准备。",
+      "sections": [
+        {
+          "id": 1299,
+          "title": "重温机器学习工作流程",
+          "meta_title": "机器学习工作流程回顾",
+          "meta_description": "回顾标准机器学习流程以及特征工程在其中的位置。",
+          "slug": "ml-workflow-revisit",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1301,
+          "title": "什么是特征？",
+          "meta_title": "理解特征",
+          "meta_description": "定义机器学习数据集中的特征及其特点。",
+          "slug": "what-is-a-feature",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1304,
+          "title": "特征质量对模型表现的影响",
+          "meta_title": "特征质量影响",
+          "meta_description": "分析特征的质量和相关性如何直接影响模型的准确性和泛化能力。",
+          "slug": "feature-quality-impact",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1305,
+          "title": "常见数据类型及对应的问题",
+          "meta_title": "特征工程中的数据类型",
+          "meta_description": "识别数据集中遇到的常见数据类型（数值型、类别型、文本型、时间序列型）。",
+          "slug": "common-data-types",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1307,
+          "title": "特征工程任务概览",
+          "meta_title": "特征工程任务概览",
+          "meta_description": "介绍特征工程的主要分类：数据清洗、转换、创建和选择。",
+          "slug": "feature-engineering-tasks-overview",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 443,
+      "title": "处理缺失数据",
+      "meta_title": "缺失数据处理方法",
+      "meta_description": "学习在机器学习数据集中识别和填补缺失值的策略。",
+      "number": 2,
+      "slug": "handling-missing-data",
+      "content": "实际数据集经常不完整。机器学习算法通常无法直接处理缺失值，因此数据预处理是必需的第一步。本章介绍管理缺失数据的方法。\r\n\r\n您将学习使用 Pandas 识别数据中缺失项的方法。我们将考察导致数据缺失的常见原因，例如完全随机缺失 (MCAR)、随机缺失 (MAR) 和非随机缺失 (MNAR)。然后着重介绍实际的填补策略，从均值、中位数和众数填补等简单方法开始。您还将学习创建指示特征，以保留缺失值原始位置的信息。更高级的方法，包括 Scikit-learn 中的 K-近邻 (KNN) 填补器和迭代填补器，将用于多元填补。最后，我们将比较这些不同的方法，以帮助您选择适用于您具体情况的策略。本章包含应用这些方法的实践练习。",
+      "sections": [
+        {
+          "id": 1309,
+          "title": "识别缺失值",
+          "meta_title": "识别缺失值",
+          "meta_description": "在Pandas DataFrame中检测缺失数据点的方法。",
+          "slug": "identifying-missing-values",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1311,
+          "title": "缺失数据机制 (MCAR, MAR, MNAR)",
+          "meta_title": "缺失数据机制",
+          "meta_description": "理解数据为何会缺失的不同理论原因 (MCAR, MAR, MNAR)。",
+          "slug": "missing-data-mechanisms",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1313,
+          "title": "简单填充策略：均值、中位数、众数",
+          "meta_title": "简单填充方法",
+          "meta_description": "对数值和分类特征应用均值、中位数和众数等基本填充技法。",
+          "slug": "simple-imputation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1314,
+          "title": "创建缺失值指示器",
+          "meta_title": "缺失值指示器特征",
+          "meta_description": "生成二元指示器列，以标记原始缺失数据的存在。",
+          "slug": "missing-value-indicators",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1316,
+          "title": "多变量填充：KNN填充器",
+          "meta_title": "KNN填充技术",
+          "meta_description": "使用K近邻算法，根据相似的数据点进行缺失值填充。",
+          "slug": "knn-imputation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1318,
+          "title": "多元插补：迭代插补器",
+          "meta_title": "迭代插补方法",
+          "meta_description": "迭代使用回归模型估算并填补缺失值。",
+          "slug": "iterative-imputation",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1320,
+          "title": "比较插补方法",
+          "meta_title": "比较缺失数据插补",
+          "meta_description": "讨论不同插补技术的优缺点及其对模型的影响。",
+          "slug": "comparing-imputation-methods",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1322,
+          "title": "动手实践：填充缺失数据",
+          "meta_title": "实践缺失数据填充",
+          "meta_description": "使用Scikit-learn和Pandas将各种填充技术应用于数据集。",
+          "slug": "practice-imputing-missing-data",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 445,
+      "title": "类别特征编码",
+      "meta_title": "类别特征编码方法",
+      "meta_description": "学习将类别数据转换为数值表示的多种技术，以用于机器学习模型。",
+      "number": 3,
+      "slug": "encoding-categorical-features",
+      "content": "许多数据集包含类别特征，表示产品类型、地理位置或用户群等信息。这些特征通常包含有价值的预测信息，但大多数机器学习算法需要数值输入。本章侧重于解决这一问题，介绍将类别数据转换为合适数值表示的方法。\r\n\r\n你将学会：\r\n\r\n*   区分标称型和序数型类别数据，并理解这种差异对编码的重要性。\r\n*   实现常见的编码策略，例如独热编码、序数编码、目标编码、二进制编码和哈希编码。\r\n*   处理针对具有大量独特类别（高基数）的特征进行编码的特定难题。\r\n*   比较不同编码技术之间的权衡。\r\n\r\n我们将使用 Pandas 和 Scikit-learn 等 Python 库应用这些技术，为你的类别数据在机器学习模型中的有效使用做好准备。",
+      "sections": [
+        {
+          "id": 1324,
+          "title": "分类数据的难点",
+          "meta_title": "分类数据的难点",
+          "meta_description": "了解为什么分类特征在模型训练前需要特殊处理。",
+          "slug": "categorical-data-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1325,
+          "title": "标称类别与序数类别",
+          "meta_title": "标称数据与序数数据",
+          "meta_description": "区分标称分类变量和序数分类变量及其编码影响。",
+          "slug": "nominal-ordinal-categories",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1327,
+          "title": "标称特征的独热编码",
+          "meta_title": "独热编码技术",
+          "meta_description": "实现独热编码并讨论其优点和潜在的缺点（维度）。",
+          "slug": "one-hot-encoding",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1329,
+          "title": "有序特征的序数编码",
+          "meta_title": "序数编码技术",
+          "meta_description": "当类别具有有意义的顺序时，应用序数编码。",
+          "slug": "ordinal-encoding",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1330,
+          "title": "高基数特征的处理",
+          "meta_title": "处理高基数",
+          "meta_description": "处理具有大量唯一值分类特征的方法。",
+          "slug": "high-cardinality-features",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1332,
+          "title": "目标编码（均值编码）",
+          "meta_title": "目标编码技术",
+          "meta_description": "实现目标编码，使用目标变量对类别进行编码，并讨论正则化。",
+          "slug": "target-encoding",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1333,
+          "title": "二进制编码",
+          "meta_title": "二进制编码方法",
+          "meta_description": "与独热编码相比，使用二进制编码作为一种维度降低手段。",
+          "slug": "binary-encoding",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1334,
+          "title": "哈希编码器",
+          "meta_title": "哈希编码技术",
+          "meta_description": "运用哈希技巧对分类特征进行编码，处理高基数和在线学习场景。",
+          "slug": "hashing-encoder",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1335,
+          "title": "比较编码方法",
+          "meta_title": "比较分类编码",
+          "meta_description": "评估不同分类编码技术之间的权衡。",
+          "slug": "comparing-encoding-methods",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1336,
+          "title": "动手实践：应用编码技术",
+          "meta_title": "实践分类编码",
+          "meta_description": "使用 Pandas 和 Scikit-learn 在数据集上实现并比较各种编码方法。",
+          "slug": "practice-encoding-techniques",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 446,
+      "title": "特征缩放与变换",
+      "meta_title": "特征缩放与变换",
+      "meta_description": "学习缩放数值特征的方法，以及应用变换来改变数据分布。",
+      "number": 4,
+      "slug": "feature-scaling-transformation",
+      "content": "既然我们有了处理类别数据的方法，我们接下来看数值特征。原始数值特征的范围和分布会直接影响对特征尺度敏感的算法的有效性，例如基于距离的方法或使用梯度下降的方法。本章主要介绍通过调整数值数据的尺度和分布来准备数据进行模型训练的技术。\r\n\r\n我们将介绍常见的缩放方法，包括标准化（$Z$-score scaling），它使数据具有零均值和单位方差（$Z = \\frac{x - \\mu}{\\sigma}$），以及归一化（Min-Max scaling），它将数值限制在 [0, 1] 等特定区间。我们也将介绍适用于含有异常值数据的鲁棒缩放（Robust Scaling）。此外，你还将学习对数、Box-Cox 和 Yeo-Johnson 等变换方法，用来改变偏斜分布，并使数据更适合某些模型假设。本章将指导你如何有效地选择和应用这些技术，使用 Scikit-learn。",
+      "sections": [
+        {
+          "id": 1337,
+          "title": "特征缩放的必要性",
+          "meta_title": "为何需要特征缩放",
+          "meta_description": "理解特征缩放对于基于距离的算法和梯度下降优化的重要原因。",
+          "slug": "need-for-scaling",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1338,
+          "title": "标准化 (Z-score 缩放)",
+          "meta_title": "标准化缩放 (Z-score)",
+          "meta_description": "使用StandardScaler将数据转换为均值为零、方差为一的形式。",
+          "slug": "standardization-scaling",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1339,
+          "title": "归一化（最小-最大值缩放）",
+          "meta_title": "归一化缩放（最小-最大值）",
+          "meta_description": "应用 MinMaxScaler 将特征缩放至特定范围，通常是 [0, 1]。",
+          "slug": "normalization-scaling",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1340,
+          "title": "处理异常值的缩放",
+          "meta_title": "抗异常值缩放方法",
+          "meta_description": "使用`RobustScaler`，它基于百分位数缩放数据，使其对异常值不敏感。",
+          "slug": "robust-scaling",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1341,
+          "title": "对偏斜数据的对数变换",
+          "meta_title": "对数变换",
+          "meta_description": "应用对数变换以减少正偏斜数据中的偏斜度。",
+          "slug": "log-transformation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1342,
+          "title": "Box-Cox 变换",
+          "meta_title": "Box-Cox 变换",
+          "meta_description": "使用 Box-Cox 变换来稳定方差并使数据更接近高斯分布（适用于正值数据）。",
+          "slug": "box-cox-transformation",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1343,
+          "title": "Yeo-Johnson 变换",
+          "meta_title": "Yeo-Johnson 变换",
+          "meta_description": "应用 Yeo-Johnson 变换，它与 Box-Cox 类似，但支持零值和负值。",
+          "slug": "yeo-johnson-transformation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1353,
+          "title": "分位数变换",
+          "meta_title": "分位数变换",
+          "meta_description": "根据分位数将特征转换为符合均匀或正态分布。",
+          "slug": "quantile-transformation",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1356,
+          "title": "选择合适的缩放/转换方法",
+          "meta_title": "选择缩放方法",
+          "meta_description": "根据数据特点和模型选择来挑选合适的缩放或转换方法的指南。",
+          "slug": "choosing-scaling-method",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1361,
+          "title": "动手实践：特征缩放与转换",
+          "meta_title": "实践特征缩放",
+          "meta_description": "使用 Scikit-learn 应用不同的缩放和转换方法，并分析它们的作用。",
+          "slug": "practice-scaling-transforming",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 451,
+      "title": "特征构建",
+      "meta_title": "特征构建方法",
+      "meta_description": "学习如何从现有特征中构建新特征，以期提升模型性能。",
+      "number": 5,
+      "slug": "feature-creation",
+      "content": "在前几章中，我们已经对现有数据特征进行了准备和转换，现在我们将重点转向构造全新的特征。构建有信息量的特征对于提升模型性能非常重要，因为新特征可以捕捉到复杂的关系或业务背景下的独特理解，而这些仅凭原始变量可能无法显现。\r\n\r\n本章介绍从数据中构造有用特征的方法：\r\n\r\n*   **交互特征：** 学习如何组合两个或更多特征以捕获它们共同产生的影响，例如，通过计算它们的乘积 $f_{interaction} = f_1 \\times f_2$。\r\n*   **多项式特征：** 从数值特征中产生高阶项（如 $f_{squared} = f_1^2$），以帮助模型捕获非线性模式。\r\n*   **日期/时间特征提取：** 了解将时间戳数据分解为有用组成部分的方法，例如年、月、周几或小时。\r\n*   **分箱：** 理解如何将连续数值数据转换为离散的类别箱。\r\n*   **特定业务背景下的特征构建：** 简要讨论理解问题业务背景如何指导相关特征的构造。\r\n\r\n我们将使用Python实现这些技术，主要借助Pandas进行数据处理，并使用Scikit-learn提供的专门特征工程工具。",
+      "sections": [
+        {
+          "id": 1363,
+          "title": "创建新特征的动机",
+          "meta_title": "特征创建的动机",
+          "meta_description": "了解如何创建新的、信息量大的特征来捕捉数据中的复杂模式。",
+          "slug": "motivation-feature-creation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1366,
+          "title": "交互特征",
+          "meta_title": "交互特征",
+          "meta_description": "通过组合两个或多个现有特征（例如，乘积、和、差）来创建新特征。",
+          "slug": "interaction-features",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1374,
+          "title": "多项式特征",
+          "meta_title": "多项式特征",
+          "meta_description": "生成多项式特征（例如平方项、立方项、高次项）以对非线性关系进行建模。",
+          "slug": "polynomial-features",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1377,
+          "title": "基于日期/时间数据的特征构建",
+          "meta_title": "日期/时间特征构建",
+          "meta_description": "从时间戳特征中提取年、月、日、星期几、小时等组成部分。",
+          "slug": "datetime-feature-creation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1379,
+          "title": "数值特征分箱",
+          "meta_title": "数值特征分箱",
+          "meta_description": "通过将连续数值特征的值分组到不同的箱中，将其转换为分类特征。",
+          "slug": "binning-numerical-features",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1382,
+          "title": "领域特征工程",
+          "meta_title": "领域特征工程",
+          "meta_description": "阐述专业知识在创建有意义、针对特定问题的特征方面的作用。",
+          "slug": "domain-specific-features",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1385,
+          "title": "自动化特征生成（引言）",
+          "meta_title": "自动化特征生成简介",
+          "meta_description": "简要介绍旨在自动化特征生成过程的工具和技术。",
+          "slug": "automated-feature-creation-intro",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1389,
+          "title": "动手实践：构建新特征",
+          "meta_title": "实践特征构建",
+          "meta_description": "使用 Pandas 和 Scikit-learn 构建交互特征、多项式特征和基于日期的特征。",
+          "slug": "practice-engineering-features",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 455,
+      "title": "特征选择",
+      "meta_title": "特征选择方法",
+      "meta_description": "学习选择最相关特征的方法，以减少维度并提升模型的泛化能力。",
+      "number": 6,
+      "slug": "feature-selection",
+      "content": "在之前的步骤中生成了可能许多特征后，接下来的任务是确定哪些对模型构建最有价值。包含不相关或冗余的特征会增加计算成本，使模型难以理解，并可能导致过拟合。特征选择旨在从原始数据集中识别并保留那些信息量最大的特征。\r\n\r\n本章将介绍系统性减少特征数量的方法，同时保持甚至提高模型性能。您将了解到：\r\n\r\n*   **过滤法：** 这些方法根据特征的统计特性进行评估，例如方差（使用`VarianceThreshold`）或与目标变量的关系（使用ANOVA F值或$χ^2$等检验），不涉及特定的机器学习模型。\r\n*   **封装法：** 这些方法使用预测模型对特征子集进行评分。我们将介绍递归特征消除（RFE）等方法，该方法会迭代地移除贡献最小的特征。\r\n*   **嵌入法：** 这些方法将特征选择直接融入模型训练过程中。例如L1正则化（Lasso），它可以将不重要特征的系数收缩为零，以及使用从随机森林等树形算法获得的特征重要性得分。\r\n\r\n学完本章，您将能够运用Scikit-learn等库中的各种特征选择策略，构建更高效、更实用的机器学习模型。",
+      "sections": [
+        {
+          "id": 1392,
+          "title": "特征选择的重要性",
+          "meta_title": "特征选择的重要性",
+          "meta_description": "讨论特征选择的优势：降低复杂性、提高性能、改善可解释性。",
+          "slug": "importance-feature-selection",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1394,
+          "title": "过滤方法概述",
+          "meta_title": "过滤方法概述",
+          "meta_description": "介绍独立于机器学习算法评估特征的过滤方法。",
+          "slug": "filter-methods-overview",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1397,
+          "title": "过滤方法：方差阈值",
+          "meta_title": "方差阈值选择",
+          "meta_description": "移除低方差特征。",
+          "slug": "filter-variance-threshold",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1401,
+          "title": "过滤方法：单变量统计检验（ANOVA F值，卡方）",
+          "meta_title": "单变量统计检验",
+          "meta_description": "应用ANOVA F值（回归）和卡方（分类）等统计检验进行特征选择。",
+          "slug": "filter-univariate-tests",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1404,
+          "title": "过滤方法：相关性分析",
+          "meta_title": "相关性分析选择",
+          "meta_description": "识别并移除高度相关的特征，以降低多重共线性。",
+          "slug": "filter-correlation-analysis",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1407,
+          "title": "封装器方法概述",
+          "meta_title": "封装器方法概述",
+          "meta_description": "介绍使用特定机器学习模型评估特征子集的封装器方法。",
+          "slug": "wrapper-methods-overview",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1410,
+          "title": "封装方法：递归特征消除 (RFE)",
+          "meta_title": "递归特征消除 (RFE)",
+          "meta_description": "应用 RFE 递归地移除基于模型表现的最不重要的特征。",
+          "slug": "wrapper-rfe",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1412,
+          "title": "封装方法：序列特征选择 (SFS)",
+          "meta_title": "序列特征选择 (SFS)",
+          "meta_description": "应用前向或后向序列特征选择算法。",
+          "slug": "wrapper-sfs",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1413,
+          "title": "嵌入式方法概览",
+          "meta_title": "嵌入式方法概览",
+          "meta_description": "嵌入式方法简介，其中特征选择是模型训练过程的一部分。",
+          "slug": "embedded-methods-overview",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1415,
+          "title": "嵌入式方法：正则化（Lasso L1）",
+          "meta_title": "Lasso (L1) 正则化",
+          "meta_description": "使用 Lasso 回归（L1 正则化），它通过将系数收缩到零来自动实现特征选择。",
+          "slug": "embedded-lasso-l1",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1418,
+          "title": "嵌入式方法：基于树的特征重要性",
+          "meta_title": "基于树的特征重要性",
+          "meta_description": "从随机森林或梯度提升等基于树的模型中提取特征重要性。",
+          "slug": "embedded-tree-importance",
+          "order": 11,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1421,
+          "title": "动手实践：特征选择",
+          "meta_title": "实践特征选择",
+          "meta_description": "使用Scikit-learn应用过滤、包装（RFE）和嵌入（Lasso，树重要性）方法。",
+          "slug": "practice-selecting-features",
+          "order": 12,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

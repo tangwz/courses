@@ -1,0 +1,61 @@
+{
+  "id": 2109,
+  "title": "NumPy 数组简介",
+  "meta_title": "NumPy 数组 (ndarray) 简介",
+  "meta_description": "理解 NumPy 的 ndarray 对象、其属性以及相对于标准 Python 列表的优势。",
+  "content": "<p>Python 列表虽然灵活，但在机器学习 (machine learning)中进行数值计算时，其性能表现不足。它们是可能分散在内存中的不同 Python 对象的集合，导致按元素进行的算术运算效率低下。NumPy 通过提供一种专门的数据结构——N维数组，即 <code>ndarray</code>——解决了这个问题。</p>\n<p><code>ndarray</code> 是一个值网格，所有值类型相同，并由非负整数元组索引。可将其视为同质数据的容器。这种同质性与 Python 列表有重要区别，是 NumPy 效率的核心。由于所有元素类型相同（例如，所有都是 64 位浮点数或 32 位整数），NumPy 可以将它们存储在连续的内存块中。这使得操作可以通过预编译的 C 代码快速执行，通常称之为<em>向量 (vector)化操作</em>，从而避免了 Python 循环和对每个元素进行类型检查带来的开销。</p>\n<p>比较主要区别：</p>\n<ul>\n<li><strong>Python 列表：</strong> 可容纳不同类型的元素（例如，<code>[1, \"two\", 3.0]</code>）。元素是 Python 对象，可能在内存中相距很远。操作通常需要显式的 Python 循环。</li>\n<li><strong>NumPy 数组 (<code>ndarray</code>)：</strong> 容纳单一的指定数据类型元素（例如，<code>int64</code>、<code>float32</code>）。元素在内存中紧凑存储。操作通常是向量化 (quantization)的，以 C 语言的速度一次性作用于整个数组。</li>\n</ul>\n<p>我们来看一个基本示例。可以从 Python 列表创建 NumPy 数组：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个 Python 列表\nmy_list = [1, 2, 3, 4, 5]\n\n# 从列表中创建一个 NumPy 数组\nmy_array = np.array(my_list)\n\nprint(my_array)\nprint(type(my_array))\n</code></pre>\n<p>执行此代码将输出：</p>\n<pre><code>[1 2 3 4 5]\n&#x3C;class 'numpy.ndarray'>\n</code></pre>\n<p>请注意，输出 <code>[1 2 3 4 5]</code> 没有像 Python 列表表示那样带有逗号。这是一个不明显的视觉提示，表明你正在处理 NumPy 数组。</p>\n<h3>NumPy 数组的属性</h3>\n<p>每个 <code>ndarray</code> 实例都有描述其结构和数据类型的重要属性。理解这些属性是有效使用 NumPy 所必需的。我们来创建一个稍微复杂一点的数组来展示：</p>\n<pre><code class=\"language-python\"># 创建一个二维数组（一个矩阵）\nmatrix_array = np.array([[1.0, 2.0, 3.0],\n                         [4.0, 5.0, 6.0]])\n\nprint(f\"数组:\\n{matrix_array}\\n\")\nprint(f\"维度数量 (ndim): {matrix_array.ndim}\")\nprint(f\"数组形状 (shape): {matrix_array.shape}\")\nprint(f\"元素总数 (size): {matrix_array.size}\")\nprint(f\"元素数据类型 (dtype): {matrix_array.dtype}\")\nprint(f\"每个元素的字节大小 (itemsize): {matrix_array.itemsize}\")\nprint(f\"元素占用的总字节数 (nbytes): {matrix_array.nbytes}\")\n</code></pre>\n<p>输出展示了这些属性：</p>\n<pre><code>Array:\n[[1. 2. 3.]\n [4. 5. 6.]]\n\nNumber of dimensions (ndim): 2\nShape of the array (shape): (2, 3)\nTotal number of elements (size): 6\nData type of elements (dtype): float64\nSize in bytes of each element (itemsize): 8\nTotal bytes consumed by elements (nbytes): 48\n</code></pre>\n<p>我们来分析这些属性的含义：</p>\n<ul>\n<li><code>ndim</code>：数组的轴（维度）数量。我们的 <code>matrix_array</code> 是二维的（行和列）。像 <code>my_array</code> 这样的简单数组的 <code>ndim</code> 将为 1。</li>\n<li><code>shape</code>：一个整数元组，指示数组沿每个维度的尺寸。对于 <code>matrix_array</code>，<code>(2, 3)</code> 表示 2 行 3 列。对于 <code>my_array</code>，形状将是 <code>(5,)</code>，表示一个包含 5 个元素的单维度。<code>shape</code> 是最常用的属性之一。</li>\n<li><code>size</code>：数组中的元素总数。这是 <code>shape</code> 元组中元素的乘积（<code>matrix_array</code> 的结果是 <code>2 * 3 = 6</code>）。</li>\n<li><code>dtype</code>：一个对象，描述数组中元素的数据类型。NumPy 支持广泛的数值类型（例如，<code>int32</code>、<code>int64</code>、<code>float32</code>、<code>float64</code>、<code>complex128</code>），以及布尔型（<code>bool</code>）和对象类型。<code>float64</code> 表示 64 位浮点数。NumPy 通常从输入推断数据类型，但你也可以在创建时明确指定（在下一节中介绍）。</li>\n<li><code>itemsize</code>：数组中每个元素的字节大小。一个 <code>float64</code> 元素占用 8 字节（64 位 / 8 位/字节）。</li>\n<li><code>nbytes</code>：数组元素占用的总字节数。这简单来说就是 <code>size * itemsize</code>（<code>matrix_array</code> 为 <code>6 * 8 = 48</code> 字节）。请注意，这不包括数组对象本身的开销，但它提供了数据内存使用情况的良好衡量。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1s4e8vn\" \n              data-graph-definition='digraph NDimArray {\n    rankdir=LR;\n    node [shape=plaintext];\n\n    subgraph cluster_1d {\n        label = \"一维数组 (my_array)\";\n        bgcolor=\"#e9ecef\";\n        arr1d [label=<<TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\"><TR><TD BGCOLOR=\"#a5d8ff\">1</TD><TD BGCOLOR=\"#a5d8ff\">2</TD><TD BGCOLOR=\"#a5d8ff\">3</TD><TD BGCOLOR=\"#a5d8ff\">4</TD><TD BGCOLOR=\"#a5d8ff\">5</TD></TR></TABLE>>];\n        attr1d [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"2\">\n            <TR><TD ALIGN=\"LEFT\">维度数量:</TD><TD ALIGN=\"LEFT\">1</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">形状:</TD><TD ALIGN=\"LEFT\">(5,)</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">大小:</TD><TD ALIGN=\"LEFT\">5</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">数据类型:</TD><TD ALIGN=\"LEFT\">int64 (推断)</TD></TR>\n            </TABLE>\n        >];\n    }\n\n    subgraph cluster_2d {\n        label = \"二维数组 (matrix_array)\";\n        bgcolor=\"#e9ecef\";\n        arr2d [label=<<TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n            <TR><TD BGCOLOR=\"#ffe066\">1.0</TD><TD BGCOLOR=\"#ffe066\">2.0</TD><TD BGCOLOR=\"#ffe066\">3.0</TD></TR>\n            <TR><TD BGCOLOR=\"#ffe066\">4.0</TD><TD BGCOLOR=\"#ffe066\">5.0</TD><TD BGCOLOR=\"#ffe066\">6.0</TD></TR>\n            </TABLE>>];\n        attr2d [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"2\">\n            <TR><TD ALIGN=\"LEFT\">维度数量:</TD><TD ALIGN=\"LEFT\">2</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">形状:</TD><TD ALIGN=\"LEFT\">(2, 3)</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">大小:</TD><TD ALIGN=\"LEFT\">6</TD></TR>\n            <TR><TD ALIGN=\"LEFT\">数据类型:</TD><TD ALIGN=\"LEFT\">float64</TD></TR>\n            </TABLE>\n        >];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1s4e8vn\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一维和二维 NumPy 数组及其基本属性的视觉比较。</p>\n</blockquote>\n<h3>为何使用 NumPy 数组？</h3>\n<p>内存效率、向量 (vector)化操作和便捷功能的结合，使 NumPy 数组成为 Python 数据科学生态系统中数值数据的标准。</p>\n<ol>\n<li><strong>性能：</strong> NumPy 数组上的操作比 Python 列表上的等效操作明显更快，特别是对于大型数据集。这种速度来源于使用优化的预编译 C 代码以及在连续内存块中处理数据。</li>\n<li><strong>内存占用：</strong> 对于相同数量的数值元素，NumPy 数组比 Python 列表占用更少的内存，因为它们没有与为每个元素存储完整 Python 对象相关的开销。</li>\n<li><strong>便捷性：</strong> NumPy 提供了一个全面的高级函数库，用于数学运算、线性代数、傅里叶变换、随机数生成等，所有这些都旨在与 <code>ndarray</code> 对象高效配合。你可以用简洁的代码执行复杂的计算。</li>\n</ol>\n<p>Pandas（我们将在下一章介绍）等库将其核心数据结构（Series 和 DataFrame）直接构建在 NumPy 数组之上。Scikit-learn 等机器学习 (machine learning)库期望数据以 NumPy 数组或兼容结构的形式提供。因此，熟练掌握 NumPy 数组不仅有帮助；它对于机器学习中的中级 Python 编程来说非常重要。</p>\n<p>在接下来的章节中，我们将学习如何以各种方式创建数组、访问和修改其元素，并使用 NumPy 广泛的功能执行强大的计算。</p>",
+  "slug": "intro-numpy-arrays",
+  "updates": [],
+  "references": [
+    {
+      "id": 2367,
+      "title": "NumPy user guide",
+      "author": "NumPy community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.html",
+      "doi": "",
+      "note": "NumPy 数组基础知识的官方文档，包括创建、基本属性和数据类型。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:25.949884Z",
+      "updated_at": "2025-09-08T03:09:33.393164Z"
+    },
+    {
+      "id": 2368,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本广泛引用的书籍，详细介绍了 NumPy 作为 Python 数据科学生态系统中数据操作底层结构的重要作用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:25.954506Z",
+      "updated_at": "2025-09-08T03:09:33.878060Z"
+    },
+    {
+      "id": 2369,
+      "title": "NumPy: A Fast Array Language for Scientific Computing",
+      "author": "Travis E. Oliphant",
+      "year": "2007",
+      "publisher": "IEEE Computer Society",
+      "journal": "Computing in Science & Engineering",
+      "volume": "9",
+      "pages": "10-20",
+      "url": "https://ieeexplore.ieee.org/document/4164160",
+      "doi": "10.1109/MCSE.2007.58",
+      "note": "NumPy 创建者的原始学术论文，阐述了 `ndarray` 用于科学计算的设计和效率优势。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:25.967774Z",
+      "updated_at": "2025-09-08T03:09:36.778077Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

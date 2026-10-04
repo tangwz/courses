@@ -1,0 +1,61 @@
+{
+  "id": 6786,
+  "title": "数组：有序、可变集合",
+  "meta_title": "Julia数组：创建、索引、修改",
+  "meta_description": "学习如何创建、初始化、访问元素和修改数组，Julia的主要可变集合。",
+  "content": "<p>数组是Julia中存储和管理有序项目列表的基本方式。可以将数组视为一系列编号的容器，每个容器都可以容纳一条数据，只要知道容器的编号，就可以访问或更改其内容。因为数组按特定顺序保存项目并允许更改其内容，所以它们对于各种编程任务都非常有用，例如存储学生姓名列表或管理图像中的像素数据。一维数组在Julia中通常称为<code>Vector</code>。</p>\n<h3>创建数组</h3>\n<p>在Julia中创建数组有几种方法。最直接的方法是列出您希望在数组中的元素，用逗号分隔，并用方括号<code>[]</code>括起来。</p>\n<pre><code class=\"language-julia\"># 整数数组\nscores = [90, 85, 92, 78, 95]\n\n# 字符串数组\nnames = [\"Alice\", \"Bob\", \"Charlie\"]\n\n# 数组也可以保存混合数据类型\nmixed_data = [10, \"Julia\", 3.14, true]\n</code></pre>\n<p>当您创建像上面<code>mixed_data</code>那样包含混合数据类型的数组时，Julia会将其设为<code>Any</code>类型的数组，这意味着它可以保存任何类型的值。虽然这很灵活，但如果您的数组存储相同类型的元素，通常会更高效和清晰。您可以在创建数组时指定其类型：</p>\n<pre><code class=\"language-julia\"># 专门用于64位浮点数的数组\ntemperatures = Float64[23.5, 24.1, 22.8]\n\n# 专门用于整数的数组\nquantities = Int[10, 20, 5]\n</code></pre>\n<p>您还可以创建一个空数组，以后可能需要用数据填充它：</p>\n<pre><code class=\"language-julia\"># 可以保存任何类型的空数组 (Vector{Any})\nempty_list = []\n\n# 旨在保存字符串的空数组\nempty_strings = String[]\n</code></pre>\n<p>Julia还提供函数来创建带有初始占位符值的数组：</p>\n<ul>\n<li><code>zeros(T, n)</code> 创建一个长度为<code>n</code>的数组，填充类型为<code>T</code>的零。如果省略<code>T</code>，则默认为<code>Float64</code>。</li>\n<li><code>ones(T, n)</code> 创建一个长度为<code>n</code>的数组，填充类型为<code>T</code>的壹。如果省略<code>T</code>，则默认为<code>Float64</code>。</li>\n<li><code>fill(value, n)</code> 创建一个长度为<code>n</code>的数组，填充<code>value</code>。</li>\n</ul>\n<pre><code class=\"language-julia\">initial_zeros = zeros(3)         # [0.0, 0.0, 0.0]\ninitial_ones_int = ones(Int, 4)  # [1, 1, 1, 1]\ndefault_values = fill(\"pending\", 2) # [\"待处理\", \"待处理\"]\n</code></pre>\n<h3>理解索引：基于1的索引</h3>\n<p>要操作数组中的元素，您需要知道它们的位置，即<em>索引</em>。Julia（以及其他一些科学计算语言）的一个重要特点是数组是<strong>基于1的索引</strong>。这意味着第一个元素位于索引1，第二个元素位于索引2，依此类推。如果您使用过像Python或C++这样使用基于0索引的语言，这可能会有所不同。</p>\n<p>考虑我们的<code>scores</code>数组：<code>[90, 85, 92, 78, 95]</code></p>\n<ul>\n<li>值<code>90</code>位于索引1。</li>\n<li>值<code>85</code>位于索引2。</li>\n<li>...而<code>95</code>位于索引5。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ekrk3j\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=plaintext]; tbl [label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#e9ecef\"><TR><TD BGCOLOR=\"#ced4da\" ALIGN=\"RIGHT\"><FONT POINT-SIZE=\"10\">数组 `scores`</FONT></TD><TD BGCOLOR=\"#adb5bd\"><B>索引 1</B></TD><TD BGCOLOR=\"#adb5bd\"><B>索引 2</B></TD><TD BGCOLOR=\"#adb5bd\"><B>索引 3</B></TD><TD BGCOLOR=\"#adb5bd\"><B>索引 4</B></TD><TD BGCOLOR=\"#adb5bd\"><B>索引 5</B></TD></TR><TR><TD BGCOLOR=\"#ced4da\" ALIGN=\"RIGHT\"><FONT POINT-SIZE=\"10\">值</FONT></TD><TD BGCOLOR=\"#a5d8ff\">90</TD><TD BGCOLOR=\"#a5d8ff\">85</TD><TD BGCOLOR=\"#a5d8ff\">92</TD><TD BGCOLOR=\"#a5d8ff\">78</TD><TD BGCOLOR=\"#a5d8ff\">95</TD></TR></TABLE>>]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ekrk3j\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>scores</code>数组及其基于1的索引和对应值。</p>\n</blockquote>\n<h3>访问元素</h3>\n<p>您可以通过在数组名称后使用方括号指定索引来检索数组中的元素。</p>\n<pre><code class=\"language-julia\">scores = [90, 85, 92, 78, 95]\n\nfirst_score = scores[1]   # 访问第一个元素：90\nthird_score = scores[3]   # 访问第三个元素：92\n\nprintln(\"第一个分数是：\", first_score)\nprintln(\"第三个分数是：\", third_score)\n</code></pre>\n<p>Julia提供了一个方便的关键字<code>end</code>来引用数组的最后一个索引。当您不知道数组的确切长度或想访问靠近末尾的元素时，这很有用。</p>\n<pre><code class=\"language-julia\">last_score = scores[end]      # 访问最后一个元素：95\nsecond_to_last = scores[end-1] # 访问倒数第二个元素：78\n\nprintln(\"最后一个分数：\", last_score)\nprintln(\"倒数第二个分数：\", second_to_last)\n</code></pre>\n<p>如果您尝试访问超出数组有效范围的索引（例如，索引0，或大于数组长度的索引），Julia将抛出<code>BoundsError</code>。</p>\n<p><strong>数组切片</strong>\n您还可以提取数组的一部分，称为<em>切片</em>。切片会创建一个新数组，其中包含指定范围的元素。您可以使用<code>start_index:end_index</code>语法定义切片。</p>\n<pre><code class=\"language-julia\">scores = [90, 85, 92, 78, 95, 88, 70]\n\n# 获取从索引2到索引4的元素\nmiddle_scores = scores[2:4]  # 结果：[85, 92, 78]\nprintln(\"中间分数：\", middle_scores)\n\n# 获取从索引3到末尾的元素\nscores_from_third = scores[3:end] # 结果：[92, 78, 95, 88, 70]\nprintln(\"从第三个开始的分数：\", scores_from_third)\n\n# 获取前三个元素\nfirst_three = scores[1:3] # 结果：[90, 85, 92]\nprintln(\"前三个分数：\", first_three)\n</code></pre>\n<p>请记住，切片会创建数组该部分的<em>副本</em>，而不是对原始数组的视图（默认情况下）。修改切片不会影响原始数组。</p>\n<h3>修改数组：可变性的作用</h3>\n<p>Julia中的数组是<em>可变的</em>，这意味着您可以在创建它们之后更改其内容。您可以更改单个元素、添加新元素或删除现有元素。</p>\n<p><strong>更改元素</strong>\n要更改特定索引处的元素，请为其赋值：</p>\n<pre><code class=\"language-julia\">tasks = [\"Write report\", \"Send emails\", \"Meeting at 3 PM\"]\nprintln(\"原始任务：\", tasks)\n\n# 更新第一个任务\ntasks[1] = \"Finalize report\"\nprintln(\"更新后的任务：\", tasks) # Output: [\"Finalize report\", \"Send emails\", \"Meeting at 3 PM\"]\n\n# 更改最后一个任务\ntasks[end] = \"Team meeting at 3 PM\"\nprintln(\"进一步更新的任务：\", tasks) # Output: [\"Finalize report\", \"Send emails\", \"Team meeting at 3 PM\"]\n</code></pre>\n<p><strong>添加元素</strong>\nJulia提供了几个函数来向数组添加元素。Julia中许多修改其参数 (parameter)的函数名称都以感叹号（<code>!</code>）结尾。这是一个约定，旨在提醒您该函数将直接更改其某个输入。</p>\n<ul>\n<li><code>push!(array, item)</code>: 将<code>item</code>添加到<code>array</code>的末尾。</li>\n<li><code>append!(array, collection)</code>: 将<code>collection</code>中的所有元素添加到<code>array</code>的末尾。</li>\n</ul>\n<pre><code class=\"language-julia\">numbers = [10, 20, 30]\nprintln(\"初始数字：\", numbers)\n\npush!(numbers, 40)\nprintln(\"push!后：\", numbers) # Output: [10, 20, 30, 40]\n\nnew_items = [50, 60]\nappend!(numbers, new_items)\nprintln(\"append!后：\", numbers) # Output: [10, 20, 30, 40, 50, 60]\n</code></pre>\n<p><strong>删除元素</strong>\n同样，也有用于删除元素的函数：</p>\n<ul>\n<li><code>pop!(array)</code>: 从<code>array</code>中删除最后一个元素并返回它。</li>\n<li><code>popfirst!(array)</code>: 从<code>array</code>中删除第一个元素并返回它。</li>\n<li><code>splice!(array, index_or_range, [replacement_values...])</code>: 删除<code>index_or_range</code>处的元素，并可选地插入<code>replacement_values</code>。如果没有提供替换值，则只删除。</li>\n</ul>\n<pre><code class=\"language-julia\">items = [\"A\", \"B\", \"C\", \"D\", \"E\"]\nprintln(\"原始项目：\", items)\n\nlast_item = pop!(items)\nprintln(\"删除的最后一个项目：\", last_item) # Output: \"E\"\nprintln(\"pop!后的项目：\", items)    # Output: [\"A\", \"B\", \"C\", \"D\"]\n\nfirst_item = popfirst!(items)\nprintln(\"删除的第一个项目：\", first_item) # Output: \"A\"\nprintln(\"popfirst!后的项目：\", items) # Output: [\"B\", \"C\", \"D\"]\n\n# 删除索引2处的元素 (\"C\")\nremoved_middle = splice!(items, 2)\nprintln(\"删除的中间项目：\", removed_middle) # Output: \"C\" (as a single-element array in some contexts, or just the element)\nprintln(\"splice!后的项目：\", items) # Output: [\"B\", \"D\"]\n</code></pre>\n<p>注意：<code>splice!</code> 将删除的元素作为数组返回。</p>\n<h3>有用的数组函数和属性</h3>\n<p>Julia提供了许多内置函数来有效地操作数组：</p>\n<ul>\n<li>\n<p><code>length(array)</code>: 返回数组中的元素数量。</p>\n<pre><code class=\"language-julia\">my_list = [5, 10, 15, 20]\nprintln(\"my_list 的长度：\", length(my_list)) # Output: 4\n</code></pre>\n</li>\n<li>\n<p><code>isempty(array)</code>: 如果数组没有元素，则返回<code>true</code>，否则返回<code>false</code>。</p>\n<pre><code class=\"language-julia\">empty_arr = []\nprintln(\"empty_arr 为空吗？\", isempty(empty_arr)) # Output: true\nprintln(\"my_list 为空吗？\", isempty(my_list))   # Output: false\n</code></pre>\n</li>\n<li>\n<p><code>eltype(array)</code>: 返回数组旨在保存的元素的类型。</p>\n<pre><code class=\"language-julia\">int_array = [1, 2, 3]\nprintln(\"int_array 的元素类型：\", eltype(int_array)) # Output: Int64 (or Int32 depending on system)\n\nany_array = [1, \"hello\", 3.0]\nprintln(\"any_array 的元素类型：\", eltype(any_array)) # Output: Any\n</code></pre>\n</li>\n<li>\n<p><code>size(array)</code>: 返回一个包含数组维度的元组。对于向量 (vector)（一维数组），它是一个1元组 <code>(长度,)</code>。</p>\n<pre><code class=\"language-julia\">vector_example = [10, 20, 30, 40]\nprintln(\"vector_example 的大小：\", size(vector_example)) # Output: (4,)\n</code></pre>\n</li>\n<li>\n<p><code>in(item, array)</code> 或 <code>item ∈ array</code>: 检查<code>item</code>是否存在于<code>array</code>中。</p>\n<pre><code class=\"language-julia\">fruits = [\"apple\", \"banana\", \"cherry\"]\nprintln(\"'banana' 在 fruits 中吗？\", \"banana\" in fruits) # Output: true\nprintln(\"'orange' 在 fruits 中吗？\", \"orange\" ∈ fruits) # Output: false (您可以输入 ∈ 作为 \\in TAB)\n</code></pre>\n</li>\n</ul>\n<h3>关于数组类型的一个说明</h3>\n<p>如前所述，Julia数组是有类型的。当您创建<code>[1, 2, 3]</code>时，Julia会将其推断为<code>Vector{Int}</code>（在大多数系统上更具体地说是<code>Vector{Int64}</code>）。如果您创建<code>[1.0, 2.5, 3.1]</code>，它将变为<code>Vector{Float64}</code>。如果您混合类型，如<code>[1, \"two\", 3.0]</code>，Julia会使用<code>Vector{Any}</code>。</p>\n<p>使用特定类型的数组（如<code>Vector{Int}</code>）通常比<code>Vector{Any}</code>具有更好的性能，因为当Julia确切知道数组保存何种数据时，它可以进行更多优化。然而，当您确实需要在同一个集合中存储不同类型的项目时，<code>Vector{Any}</code>提供了灵活性。</p>\n<p>数组是Julia中数据操作的根本。它们的有序性和可变性使其适用于许多任务。随着您的学习，您会遇到多维数组（矩阵等）和更高级的数组操作，但这种创建、访问和修改一维数组（向量 (vector)）的基本方式将对您非常有帮助。</p>",
+  "slug": "arrays-ordered-mutable-collections",
+  "updates": [],
+  "references": [
+    {
+      "id": 20400,
+      "title": "Multi-dimensional Arrays",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/arrays/",
+      "doi": "",
+      "note": "Julia数组功能的官方文档，涵盖向量和多维数组的创建、索引和修改。",
+      "order": 1,
+      "created_at": "2025-09-06T14:02:00.426124Z",
+      "updated_at": "2025-09-10T02:42:38.484667Z"
+    },
+    {
+      "id": 20401,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens, Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://benlauwens.github.io/ThinkJulia.jl/latest/book.html",
+      "doi": "",
+      "note": "一本介绍性教材，提供学习Julia的结构化方法，其中包含关于数组和集合的专门章节。",
+      "order": 2,
+      "created_at": "2025-09-06T14:02:00.461146Z",
+      "updated_at": "2025-09-10T02:42:36.426104Z"
+    },
+    {
+      "id": 20402,
+      "title": "Types",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "The Julia Language",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/types/",
+      "doi": "",
+      "note": "解释Julia类型系统的官方文档，它是类型化数组（例如 `Vector{Int}` 与 `Vector{Any}`）行为和性能特点的基础。",
+      "order": 3,
+      "created_at": "2025-09-06T14:02:00.469800Z",
+      "updated_at": "2025-09-10T02:42:28.356063Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

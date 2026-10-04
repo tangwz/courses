@@ -1,0 +1,451 @@
+{
+  "id": 129,
+  "title": "Transformer模型入门",
+  "meta_title": "Transformer模型解析 | AI课程",
+  "meta_description": "掌握Transformer模型的核心知识。内容涵盖注意力机制、自注意力、编码器-解码器构架，专为AI工程师设计。",
+  "description": "理解Transformer模型的根本构架与运作方式。本课程涵盖注意力机制、编码器-解码器结构，以及其在自然语言处理方面取得顶尖成果的核心要素。",
+  "short_description": "掌握Transformer模型的核心构架和注意力机制，它们在顶尖自然语言处理应用中的应用。",
+  "excerpt": "全面掌握Transformer的构架，包括自注意力、多头注意力和位置编码，并学习这些组成部分如何共同发挥作用。",
+  "prerequisites": "机器学习与Python要点",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "注意力机制",
+      "description": "阐述注意力的含义，并区分不同的注意力机制。"
+    },
+    {
+      "topic": "自注意力",
+      "description": "说明自注意力如何让模型评估序列中不同词语的重要性。"
+    },
+    {
+      "topic": "Transformer构架",
+      "description": "概述Transformer模型的组成部分，包括编码器和解码器堆叠。"
+    },
+    {
+      "topic": "多头注意力",
+      "description": "理解多头注意力的原理及实现方法。"
+    },
+    {
+      "topic": "位置编码",
+      "description": "阐明引入序列顺序信息的必要性及具体做法。"
+    },
+    {
+      "topic": "初步实现",
+      "description": "使用深度学习框架实现Transformer构架的核心构成。"
+    }
+  ],
+  "duration": 10,
+  "slug": "introduction-to-transformer-models",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-05T01:35:31.432714Z",
+  "updated_at": "2026-10-02T07:39:56.741653Z",
+  "chapters": [
+    {
+      "id": 660,
+      "title": "序列建模与注意力机制基础",
+      "meta_title": "序列建模与注意力基础 | Transformer 课程",
+      "meta_description": "回顾 RNN 在序列建模中的难点，并引入注意力机制作为一种解决方案。",
+      "number": 1,
+      "slug": "sequence-modeling-attention-fundamentals",
+      "content": "本章侧重于理解 Transformer 架构所需的基本知识。我们首先考察涉及序列数据的常见任务，例如机器翻译或文本生成，以及在有效处理此类信息（尤其是在长序列情况下）时固有的难点。\n\n为了建立一个基准，我们将简要回顾循环神经网络（RNNs），这是一种处理序列数据的标准方法。随后，我们将讨论 RNN 的实际局限性，包括捕捉长距离依赖和计算瓶颈等问题。\n\n此次讨论为引入注意力机制的核心思想奠定基础。你将了解到注意力机制如何为模型提供一种方式，使其在生成输出时选择性地关注输入序列的相关部分。我们将介绍如何使用查询、键和值（$Q$、$K$、$V$）这些思想来计算注意力分数的高层工作原理，以及这些分数如何用于创建加权上下文向量，这些是本课程后续章节中讨论的更高级机制的构成要素。\n\n在本章结束时，你将理解：\n*   序列到序列任务带来的挑战。\n*   RNN 的基本运作方式和局限性。\n*   注意力机制的基本原理。\n*   计算注意力分数和上下文向量的一般过程。",
+      "sections": [
+        {
+          "id": 2953,
+          "title": "序列到序列任务的挑战",
+          "meta_title": "序列到序列任务挑战",
+          "meta_description": "了解序列到序列任务中建模长距离依赖的难题。",
+          "slug": "sequence-to-sequence-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2956,
+          "title": "回顾：循环神经网络 (RNN)",
+          "meta_title": "RNN序列建模回顾",
+          "meta_description": "简要回顾循环神经网络在序列数据处理中的架构和运作方式。",
+          "slug": "recap-rnns",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2957,
+          "title": "传统循环神经网络方法的局限性",
+          "meta_title": "RNN在实践中的局限",
+          "meta_description": "讨论RNN中的梯度消失问题、长序列处理困难和顺序计算瓶颈。",
+          "slug": "rnn-limitations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2961,
+          "title": "注意力机制原理介绍",
+          "meta_title": "神经网络中注意力机制的原理",
+          "meta_description": "介绍注意力机制的核心思想：让模型能够关注输入中的相关部分。",
+          "slug": "attention-mechanism-concept",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2964,
+          "title": "注意力分数计算：一个宏观视角",
+          "meta_title": "注意力分数计算的宏观视角",
+          "meta_description": "解释基于查询、键和值向量的注意力分数计算的总体过程。",
+          "slug": "attention-score-calculation-overview",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2966,
+          "title": "来自注意力权重的上下文向量",
+          "meta_title": "使用注意力生成上下文向量",
+          "meta_description": "描述如何使用注意力权重生成输入序列的加权概括（上下文向量）。",
+          "slug": "attention-context-vectors",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 663,
+      "title": "自注意力与多头注意力",
+      "meta_title": "自注意力与多头注意力 | Transformer模型",
+      "meta_description": "阐述Transformer模型中使用的缩放点积注意力与多头注意力机制。",
+      "number": 2,
+      "slug": "self-attention-multi-head-attention",
+      "content": "基于先前介绍的注意力机制，本章将着重介绍Transformer模型中使用的特定注意力机制。我们将研究自注意力，这是一种技术，允许模型在处理某个特定词语时，衡量*同一*输入序列内不同词语的重要性。\n\n您将学习输入嵌入如何投影到查询($Q$)、键($K$)和值($V$)向量，这些向量构成了计算注意力分数的依据。我们将详细说明缩放点积注意力公式：\n\n$$ \\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V $$\n\n这里 $d_k$ 是键向量的维度。\n\n此外，我们将研究多头注意力。这种方法涉及并行运行缩放点积注意力机制多次，使用不同的、经过学习的$Q$、$K$和$V$线性投影。这使得模型能够共同关注来自不同表示子空间的信息，在不同的位置上。我们将介绍其工作原理以及其有效性背后的原理。最后，本章包含一个实践练习，您将使用深度学习库实现缩放点积注意力机制。",
+      "sections": [
+        {
+          "id": 2969,
+          "title": "自注意力的原理",
+          "meta_title": "理解自注意力机制",
+          "meta_description": "说明自注意力如何让输入能够彼此互动，并在同一序列内确定焦点。",
+          "slug": "self-attention-idea",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2972,
+          "title": "自注意力机制中的查询、键和值向量",
+          "meta_title": "查询、键、值向量解析",
+          "meta_description": "阐述从输入嵌入生成查询（Q）、键（K）和值（V）向量的过程及其作用。",
+          "slug": "query-key-value-vectors",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2975,
+          "title": "缩放点积注意力机制",
+          "meta_title": "缩放点积注意力详解",
+          "meta_description": "解释缩放点积注意力的公式和运作方式，包括缩放因子。",
+          "slug": "scaled-dot-product-attention",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2977,
+          "title": "自注意力得分可视化",
+          "meta_title": "自注意力得分可视化",
+          "meta_description": "说明注意力得分如何显示序列中不同位置间的关联。",
+          "slug": "visualizing-self-attention",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2980,
+          "title": "多头注意力简介",
+          "meta_title": "多头注意力简介",
+          "meta_description": "阐述并行使用多个注意力头的理由。",
+          "slug": "multi-head-attention-introduction",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2983,
+          "title": "多头注意力机制如何运作",
+          "meta_title": "多头注意力机制的原理",
+          "meta_description": "描述了Q、K、V的拆分、注意力应用、结果拼接以及最终线性投影的流程。",
+          "slug": "multi-head-attention-mechanics",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2985,
+          "title": "多头注意力机制的优势",
+          "meta_title": "多头注意力的优势",
+          "meta_description": "讨论多个注意力头如何使模型关注不同的表示子空间。",
+          "slug": "multi-head-attention-benefits",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2988,
+          "title": "动手实践：实现缩放点积注意力",
+          "meta_title": "实践：实现缩放点积注意力",
+          "meta_description": "使用深度学习库实现缩放点积注意力方式的代码讲解。",
+          "slug": "practice-scaled-dot-product-attention",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 666,
+      "title": "Transformer 编码器-解码器架构",
+      "meta_title": "Transformer 编码器-解码器架构",
+      "meta_description": "了解 Transformer 的完整架构，包括编码器/解码器堆栈、位置编码和残差连接。",
+      "number": 3,
+      "slug": "transformer-encoder-decoder-architecture",
+      "content": "在上一章了解了核心注意力机制后，我们将这些部件组合起来，以构建完整的 Transformer 架构。本章将详细介绍模型的结构，解释编码器和解码器堆栈如何在序列到序列任务中配合工作。\n\n您将了解以下内容：\n\n*   整体编码器-解码器布局。\n*   输入处理，包括词元嵌入以及使用正弦和余弦函数等位置编码技术加入位置信息。\n*   编码器层的结构，包含多头自注意力模块和逐位置前馈网络。\n*   解码器层的结构，包括遮蔽多头自注意力、编码器-解码器注意力和前馈网络。\n*   残差连接和层归一化（`Add & Norm`）在稳定网络和改善梯度流动中的作用。\n*   解码器输出如何通过线性层和 Softmax 函数转换为最终词元概率。\n*   一个实践实现部分，重点在于构建单个编码器层。\n\n在本章结束时，您将理解这些不同部分如何组合形成完整的 Transformer 模型，以及每个组件设计背后的原理。",
+      "sections": [
+        {
+          "id": 2991,
+          "title": "整体架构概览",
+          "meta_title": "Transformer 模型架构概览",
+          "meta_description": "提供完整的编码器-解码器结构的整体示意图和解释。",
+          "slug": "transformer-architecture-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2994,
+          "title": "输入嵌入层",
+          "meta_title": "Transformer模型中的输入嵌入层",
+          "meta_description": "说明输入标记如何转换为向量表示。",
+          "slug": "input-embedding-layer",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2995,
+          "title": "位置信息的必要性",
+          "meta_title": "位置信息的必要性",
+          "meta_description": "讨论Transformer模型为何需要显式位置信息，因为它缺乏循环性。",
+          "slug": "positional-information-need",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2997,
+          "title": "位置编码说明",
+          "meta_title": "位置编码说明",
+          "meta_description": "说明用于位置编码的正弦和余弦函数，以及它们如何与嵌入向量相加。",
+          "slug": "positional-encoding-explained",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3000,
+          "title": "编码器层堆叠",
+          "meta_title": "Transformer 编码器层堆叠解析",
+          "meta_description": "详细说明单个编码器层的组件：多头自注意力机制和位置级别前馈网络。",
+          "slug": "encoder-stack",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3003,
+          "title": "加法与归一化层 (残差连接)",
+          "meta_title": "Transformer 中的加法与归一化层",
+          "meta_description": "说明残差连接和层归一化在稳定训练中的作用。",
+          "slug": "add-norm-layers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3004,
+          "title": "逐位置前馈网络",
+          "meta_title": "逐位置前馈网络",
+          "meta_description": "描述在每个位置独立应用的前馈网络的结构和功能。",
+          "slug": "position-wise-feed-forward",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3007,
+          "title": "解码器堆栈",
+          "meta_title": "Transformer解码器堆栈说明",
+          "meta_description": "详细说明单个解码器层的组成部分：遮蔽多头自注意力、编码器-解码器注意力以及前馈网络。",
+          "slug": "decoder-stack",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3010,
+          "title": "带掩码的多头自注意力",
+          "meta_title": "带掩码的多头自注意力",
+          "meta_description": "说明掩码如何保证解码器预测仅基于先前位置的输出。",
+          "slug": "masked-multi-head-attention",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3012,
+          "title": "编码器-解码器注意力机制",
+          "meta_title": "编码器-解码器注意力机制",
+          "meta_description": "描述解码器如何关注编码器堆栈的输出。",
+          "slug": "encoder-decoder-attention",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3015,
+          "title": "最终线性层和Softmax",
+          "meta_title": "最终线性层和Softmax",
+          "meta_description": "解释解码器输出如何转换为词汇表上的最终概率分布。",
+          "slug": "final-linear-softmax",
+          "order": 11,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3018,
+          "title": "动手实践：构建编码器层",
+          "meta_title": "实践：构建 Transformer 编码器层",
+          "meta_description": "实现单个 Transformer 编码器层的代码演示。",
+          "slug": "practice-encoder-layer",
+          "order": 12,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 671,
+      "title": "Transformer模型的训练与实现",
+      "meta_title": "Transformer模型训练与实现",
+      "meta_description": "涵盖Transformer训练的实践要点，包括分词、优化和基本的实现步骤。",
+      "number": 4,
+      "slug": "training-implementing-transformers",
+      "content": "在前面章节对Transformer模型的架构，包括注意力机制和编解码器结构进行了详细说明后，本章我们将把这些原理付诸实践。本章将讨论训练和实现Transformer模型的必要步骤。\n\n您将了解如何为Transformer准备数据，包括常见的分词技术，如字节对编码（BPE），以及如何创建格式正确的输入批次，包括填充和注意力掩码。之后，我们将考察训练过程本身，讨论合适的损失函数（如交叉熵）、Transformer模型常用的优化算法（如Adam）、学习率调度技术以及像Dropout这样的正则化方法。最后，我们将概述如何将前面讨论的组件组装成一个基本可运行的模型，并简要介绍提供预训练Transformer实现方式的库的运用。",
+      "sections": [
+        {
+          "id": 3020,
+          "title": "数据准备：分词",
+          "meta_title": "Transformer模型的分词处理",
+          "meta_description": "讨论Transformer模型中常见的分词策略，例如WordPiece、BPE和SentencePiece。",
+          "slug": "data-preparation-tokenization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3023,
+          "title": "构建输入批次",
+          "meta_title": "为训练构建输入批次",
+          "meta_description": "说明如何准备分词后的序列、注意力掩码和填充，以进行批次训练。",
+          "slug": "creating-input-batches",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3026,
+          "title": "序列任务的损失函数",
+          "meta_title": "序列任务的损失函数",
+          "meta_description": "回顾训练Transformer时常用的损失函数，比如交叉熵损失。",
+          "slug": "loss-functions-sequence-tasks",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3028,
+          "title": "优化策略",
+          "meta_title": "Transformer模型的优化策略",
+          "meta_description": "讨论Adam等优化器以及Transformer模型中常用的学习率调度方法。",
+          "slug": "optimization-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3030,
+          "title": "正则化方法",
+          "meta_title": "正则化方法（Dropout）",
+          "meta_description": "解释Dropout在Transformer架构中的应用。",
+          "slug": "regularization-techniques",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3033,
+          "title": "基本实现概述",
+          "meta_title": "Transformer基本实现概述",
+          "meta_description": "概述从组件构建和训练一个简单Transformer模型的步骤。",
+          "slug": "basic-implementation-overview",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3035,
+          "title": "使用预训练模型库（简述）",
+          "meta_title": "使用预训练Transformer库",
+          "meta_description": "简要介绍Hugging Face Transformers等库如何使用预训练模型。",
+          "slug": "using-pretrained-libraries-brief",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3036,
+          "title": "实践：组装一个基本Transformer",
+          "meta_title": "实践：组装一个基本Transformer",
+          "meta_description": "将已实现的组件（编码器、解码器）组合起来，形成一个可用的Transformer模型结构。",
+          "slug": "practice-assembling-transformer",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

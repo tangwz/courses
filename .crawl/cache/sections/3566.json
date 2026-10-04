@@ -1,0 +1,61 @@
+{
+  "id": 3566,
+  "title": "数据准备与分块处理",
+  "meta_title": "数据准备与分块方法",
+  "meta_description": "为有效嵌入和搜索准备及分割大型文档的方法。",
+  "content": "<p>有效的语义搜索在很大程度上依赖于输入到嵌入 (embedding)模型的数据的质量和格式。原始数据，无论是从网站抓取、从文档提取还是从数据库获取，通常都无法直接用于向量 (vector)化。就像生食材烹饪前需要准备一样，您的数据也需要在有效嵌入和索引前进行清洗和结构化。本节主要介绍数据准备的关键步骤，以及将大量信息分割成可管理、语义相关的块的处理方法。妥善处理这个阶段对于构建能够根据含义获取真正相关结果的搜索系统来说非常重要。</p>\n<h3>数据清洗的重要性</h3>\n<p>在考虑分割数据之前，我们必须确保数据是干净的。嵌入 (embedding)模型功能强大，但对噪声很敏感。文本中不相关的内容会稀释所得向量 (vector)中捕获的语义含义，导致搜索结果的准确性降低。常见的清洗步骤包括：</p>\n<ol>\n<li><strong>移除无关内容：</strong> 这包括删除HTML标签（如<code>&#x3C;p></code>、<code>&#x3C;div></code>）、CSS样式、JavaScript代码、网站导航栏、页眉、页脚、广告以及不构成内容核心含义的样板文本。这里通常会使用正则表达式或专门的HTML解析库（例如Python中的BeautifulSoup）。</li>\n<li><strong>处理不同格式：</strong> 您的数据可能来自各种来源：PDF、Word文档、纯文本文件、数据库条目。在进一步处理之前，您需要一个流程将这些数据转换为统一的文本格式（通常是纯文本）。大多数编程语言中都有处理常见文档类型的库。</li>\n<li><strong>规范化（可选）：</strong> 根据嵌入模型和任务的不同，您可能会考虑文本规范化步骤，例如将文本转换为小写、删除标点符号，甚至纠正常见拼写错误。但是，请谨慎操作，因为这些步骤有时会消除重要的细节（例如，代码中的大小写敏感性）。请在您的特定应用中测试规范化的影响。</li>\n</ol>\n<h3>为何需要分块</h3>\n<p>数据的大小是为嵌入 (embedding)模型准备数据时的一个主要考量。当前大多数嵌入模型，特别是基于Transformer的模型，都有最大输入序列长度限制，通常以tokens（大致对应于词或子词 (subword)）来衡量。例如，许多BERT变体的限制是512个tokens。尝试嵌入远超此限制的文档，将导致错误，或者更常见的是截断——模型会直接忽略超出其限制的文本，从而丢失有价值的信息。</p>\n<p>除了这个技术限制，还有重要的语义原因需要分块：</p>\n<ol>\n<li><strong>嵌入的精确性：</strong> 嵌入一个非常长的文档（即使可能）通常会得到一个表示整个文本<em>平均</em>含义的向量 (vector)。这会模糊子部分中讨论的具体细节或主题。针对某个特定点的搜索查询可能与整个文档的平均向量匹配不佳。</li>\n<li><strong>检索粒度：</strong> 当用户提出问题时，他们通常需要一个具体的答案，而不是一个可能隐藏着答案的100页文档。分块让搜索系统能够识别并获取更小、更集中的文本段落，这些段落直接对应查询的语义含义。这会带来更好的用户体验。</li>\n</ol>\n<p>因此，将大型文档分解为更小、更连贯的块是构建语义搜索系统中一种普遍且必要的做法。</p>\n<h3>文本分块方法</h3>\n<p>分块的目的是创建足够小、适合嵌入 (embedding)模型，同时尽可能保留语义上下文 (context)的文本片段。没有唯一的“最佳”方法；最适合的方法取决于您的数据性质和应用程序的需求。以下是常见的分块技术：</p>\n<h4>1. 固定大小分块</h4>\n<p>这是最简单的方法：将文本分割成固定长度的片段，长度可以按字符或tokens衡量。</p>\n<ul>\n<li><strong>描述：</strong> 每隔<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>个字符或<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>个tokens分割文档。</li>\n<li><strong>优点：</strong> 非常容易实现。分块大小可预测。</li>\n<li><strong>缺点：</strong> 如果按字符计数，文本很可能在句中甚至词中被截断。这种突然的分割会切断语义连接，降低所得嵌入的质量。上下文经常在边界处丢失。</li>\n</ul>\n<h4>2. 固定大小重叠分块</h4>\n<p>为了减轻固定大小分块中上下文丢失的问题，一种常见的改进方法是在连续块之间引入重叠。</p>\n<ul>\n<li><strong>描述：</strong> 每隔<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>个字符/tokens分割文档，但使每个块与前一个块重叠<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>M</mi></mrow><annotation encoding=\"application/x-tex\">M</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span></span></span></span>个字符/tokens。例如，块1可能是字符0-1000，块2可能是字符800-1800，块3可能是字符1600-2600，依此类推（重叠200个字符）。</li>\n<li><strong>优点：</strong> 有助于在块边界处保留上下文。一个在块末尾被分割的句子很可能完整地包含在下一个块的开头附近。</li>\n<li><strong>缺点：</strong> 增加了生成的总块数，从而增加了嵌入和索引的存储和计算成本。引入了数据冗余。选择合适的重叠大小需要进行实验。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-wpvvig\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", height=0.2, fontname=\"sans-serif\", fontsize=10];\n    edge [arrowhead=none, penwidth=2, color=\"#adb5bd\"];\n\n    subgraph cluster_0 {\n        label = \"固定大小 (无重叠)\";\n        style=dashed; color=\"#adb5bd\"; fontname=\"sans-serif\"; fontsize=11;\n        a1 [label=\"块 1\"];\n        a2 [label=\"块 2\"];\n        a3 [label=\"块 3\"];\n        a1 -> a2;\n        a2 -> a3;\n    }\n\n    subgraph cluster_1 {\n        label = \"固定大小 (有重叠)\";\n        style=dashed; color=\"#adb5bd\"; fontname=\"sans-serif\"; fontsize=11;\n        node [fillcolor=\"#a5d8ff\"];\n        edge [color=\"#74c0fc\"];\n\n        b1_1 [label=\"部分 1\"];\n        b1_2 [label=\"重叠 A\", fillcolor=\"#4dabf7\"];\n        b2_1 [label=\"重叠 A\", fillcolor=\"#4dabf7\"];\n        b2_2 [label=\"部分 2\"];\n        b2_3 [label=\"重叠 B\", fillcolor=\"#4dabf7\"];\n        b3_1 [label=\"重叠 B\", fillcolor=\"#4dabf7\"];\n        b3_2 [label=\"部分 3\"];\n\n        {rank=same; b1_1; b1_2;}\n        {rank=same; b2_1; b2_2; b2_3;}\n        {rank=same; b3_1; b3_2;}\n\n        b1_1 -> b1_2 [style=invis]; // Invisible edge for layout\n        b2_1 -> b2_2 [style=invis];\n        b2_2 -> b2_3 [style=invis];\n        b3_1 -> b3_2 [style=invis];\n\n        edge [tailport=e, headport=w, constraint=false];\n        b1_2 -> b2_1;\n        b2_3 -> b3_1;\n\n        subgraph cluster_b1 { label=\"块 1\"; color=\"#74c0fc\"; b1_1; b1_2; }\n        subgraph cluster_b2 { label=\"块 2\"; color=\"#74c0fc\"; b2_1; b2_2; b2_3; }\n        subgraph cluster_b3 { label=\"块 3\"; color=\"#74c0fc\"; b3_1; b3_2; }\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-wpvvig\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>可视化比较有重叠和无重叠的分块。重叠的块（底部）共享部分内容（深蓝色），以在边界处保持上下文。</p>\n</blockquote>\n<h4>3. 内容感知分块 (语义分块)</h4>\n<ul>\n<li><strong>描述：</strong> 使用自然分隔符分割文本，例如段落（<code>\\n\\n</code>）、句子（使用NLTK或spaCy等NLP句子分词 (tokenization)器 (tokenizer)），或由标题或其他标记 (token)指示的逻辑部分。</li>\n<li><strong>优点：</strong> 倾向于生成语义上更连贯的块，因为它尊重作者预期的结构。不太可能不自然地分割相关联的观点。</li>\n<li><strong>缺点：</strong> 实现起来可能更复杂，尤其是在需要NLP库进行句子边界检测时。块大小可能高度可变——有些段落或部分可能非常长，可能仍然超出模型限制，而另一些可能非常短。可能需要组合多种方法（例如，按段落分割，如果段落过长则再按句子分割）。</li>\n</ul>\n<h4>4. 递归分块</h4>\n<p>这通常是一种实用且有效的折衷办法，旨在尊重语义边界，同时将块保持在大小限制内。</p>\n<ul>\n<li><strong>描述：</strong> 从一组潜在分隔符列表开始，按从最大逻辑单元到最小的顺序排列（例如，<code>[\"\\n\\n\", \"\\n\", \". \", \" \", \"\"]</code>）。尝试使用第一个分隔符分割文本。如果任何结果块仍然过大，则将列表中的<em>下一个</em>分隔符递归应用于这些过大的块。继续此过程，直到所有块都低于所需的大小限制。通常与重叠结合使用。</li>\n<li><strong>优点：</strong> 适应文本结构。在可能的情况下，优先保持更大的语义单元（如段落）的完整性，但在需要满足大小限制时，会退回到更小的单元（句子、单词）。相对有效。</li>\n<li><strong>缺点：</strong> 实现比固定大小分块略微复杂。分割的质量仍然取决于源文本中分隔符的一致性。</li>\n</ul>\n<h3>选择合适的分块方法</h3>\n<p>最好的分块方法取决于几个因素：</p>\n<ul>\n<li><strong>数据特点：</strong> 您的文本是结构良好、段落和部分清晰（如文章或文档），还是更自由的形式（如聊天记录或转录）？是否存在非常长、不间断的段落？</li>\n<li><strong>嵌入 (embedding)模型限制：</strong> 了解您选择的嵌入模型的最大序列长度。目标是使块大小远低于此限制，为模型可能添加的特殊tokens留出空间。</li>\n<li><strong>检索目标：</strong> 您需要获取精确的句子、整个段落还是更大的部分？这会影响您的目标块大小。</li>\n<li><strong>复杂性与性能：</strong> 较简单的方法（固定大小）实现起来更快，但相关性可能较低。更复杂的方法（递归、内容感知）需要更多工作，但可以带来更好的语义表示和搜索结果。</li>\n</ul>\n<p>通常会尝试不同的分块方法和参数 (parameter)（块大小、重叠），并使用本章后续讨论的指标评估它们对下游搜索性能的影响。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-rpjugq\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"固定 (无重叠)\", \"固定 (有重叠)\", \"段落分割\", \"递归\"], \"y\": [65, 72, 78, 80], \"marker\": {\"color\": [\"#ffc9c9\", \"#a5d8ff\", \"#b2f2bb\", \"#ffec99\"], \"line\": {\"color\": \"#495057\", \"width\": 1}}, \"name\": \"相关性评分\"}], \"layout\": {\"title\": {\"text\": \"不同分块方法下的检索相关性\", \"font\": {\"family\": \"sans-serif\", \"size\": 16, \"color\": \"#495057\"}}, \"xaxis\": {\"title\": {\"text\": \"分块方法\", \"font\": {\"family\": \"sans-serif\", \"size\": 12, \"color\": \"#495057\"}}, \"tickfont\": {\"family\": \"sans-serif\", \"size\": 11, \"color\": \"#495057\"}}, \"yaxis\": {\"title\": {\"text\": \"相关性评分 (例如，NDCG@10)\", \"font\": {\"family\": \"sans-serif\", \"size\": 12, \"color\": \"#495057\"}}, \"range\": [0, 100], \"tickfont\": {\"family\": \"sans-serif\", \"size\": 11, \"color\": \"#495057\"}}, \"margin\": {\"l\": 60, \"r\": 20, \"t\": 40, \"b\": 50}, \"paper_bgcolor\": \"#ffffff\", \"plot_bgcolor\": \"#e9ecef\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-rpjugq\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较显示，与简单的固定大小方法相比，更具上下文 (context)感知能力的分块方法可能会带来更好的搜索相关性评分。实际结果很大程度上取决于数据和任务。</p>\n</blockquote>\n<h3>实现方面的考量</h3>\n<ul>\n<li><strong>库：</strong> 尽可能使用现有库。像LangChain这样的框架提供了各种<code>TextSplitter</code>实现（如RecursiveCharacterTextSplitter, MarkdownTextSplitter等）。NLTK和spaCy等NLP库提供句子分词 (tokenization)功能。</li>\n<li><strong>元数据：</strong> 这非常重要。当您创建块时，您<em>必须</em>在每个块的向量 (vector)旁边存储元数据。最起码，这应包括原始文档的ID以及该块在该文档中的位置或标识符。其他有用的元数据可能包括标题、页码或时间戳。这使得您在搜索时可以获取该块，然后可能为用户获取完整的源文档或周边上下文 (context)。</li>\n</ul>\n<p>总之，准备和分块您的数据不只是一项初步工作；它是构建语义搜索系统中的一个关键设计环节。细致的清洗可以去除噪声，而有效的分块则能确保您的数据符合模型限制，并生成集中、语义有意义的向量。在这里做出的选择直接影响最终搜索结果的粒度和相关性。</p>",
+  "slug": "data-preparation-chunking",
+  "updates": [],
+  "references": [
+    {
+      "id": 4249,
+      "title": "Speech and Language Processing (3rd edition draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "自然语言处理基础的综合资源，涵盖文本规范化、分词和语言预处理技术，与数据清洗相关。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:34.265991Z",
+      "updated_at": "2025-09-09T10:42:08.623486Z"
+    },
+    {
+      "id": 4250,
+      "title": "Text splitters",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEEeZpodIWtLeNYAMmbi2zasqt27QvWP5XE8lxzNXnimFiRO7auHMAIxUdLFsCRMuTJvM4sDlCYrLxpwE9p98lSXU7zSeRiAMWY3ypD6tfjmtwN0kacZTpIqIG-ZEmAsfchu8zGjd7lHHwj-Nzumvsqs1IPHQ==",
+      "doi": "",
+      "note": "官方文档，详细介绍了各种文本分块策略及其实现，包括固定大小、递归和重叠方法，提供实用指导。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:34.269500Z",
+      "updated_at": "2025-09-09T10:42:17.834370Z"
+    },
+    {
+      "id": 4251,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang",
+      "year": "2024",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.10997",
+      "doi": "10.48550/arXiv.2312.10997",
+      "note": "一项关于检索增强生成（RAG）的调查，讨论了数据准备和分块对于基于大型语言模型的系统中有效检索的重要性。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:34.273353Z",
+      "updated_at": "2025-09-09T10:42:11.143664Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

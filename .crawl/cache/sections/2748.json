@@ -1,0 +1,61 @@
+{
+  "id": 2748,
+  "title": "模型导出为 ONNX 格式",
+  "meta_title": "将 PyTorch 模型导出为 ONNX",
+  "meta_description": "将 PyTorch 模型转换为开放神经网络交换 (ONNX) 格式，以实现互操作性。",
+  "content": "<p>虽然 TorchScript 在 PyTorch 生态系统中提供了一种序列化 PyTorch 模型的方法，但为了实现更广泛的互操作性，通常需要一种标准化格式。开放神经网络 (neural network)交换 (ONNX) 格式满足了这一要求，它定义了一个开放标准来表示机器学习 (machine learning)模型。将您的 PyTorch 模型导出为 ONNX 可以使它们在多种平台和推理 (inference)引擎上运行，例如 ONNX Runtime、TensorRT、OpenVINO 以及各种移动/边缘设备，并且通常可以从这些运行时提供的硬件特定优化中获益。将 PyTorch 模型转换为 ONNX 格式的过程进行了详细说明。</p>\n<h3>ONNX 在部署中的作用</h3>\n<p>ONNX 充当中间表示形式。您可以使用 PyTorch 灵活的环境训练模型，然后将训练好的模型图及其学习到的参数 (parameter)导出到 <code>.onnx</code> 文件。此文件随后可以由任何 ONNX 兼容的运行时加载和执行。这种解耦显著简化了部署过程，因为您不需要在每个目标部署系统上都安装 PyTorch。它还通过允许专用运行时应用图优化并更有效地使用加速器，从而提升了性能，这可能比通用框架更有效。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1eiknb6\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n    edge [color=\"#495057\"];\n\n    pytorch [label=\"PyTorch 训练\", fillcolor=\"#a5d8ff\"];\n    onnx_export [label=\"torch.onnx.export()\", shape=ellipse, fillcolor=\"#ffd8a8\"];\n    onnx_file [label=\"Model.onnx\", shape=note, fillcolor=\"#b2f2bb\"];\n\n    subgraph cluster_inference {\n        label = \"推理环境\";\n        style=filled;\n        color=\"#dee2e6\";\n        node [shape=box, style=filled, fillcolor=\"#ced4da\"];\n        ort [label=\"ONNX Runtime\"];\n        trt [label=\"NVIDIA TensorRT\"];\n        openvino [label=\"Intel OpenVINO\"];\n        coreml [label=\"Apple Core ML\"];\n        other [label=\"其他运行时...\"];\n    }\n\n    pytorch -> onnx_export;\n    onnx_export -> onnx_file;\n    onnx_file -> ort [label=\"加载并运行\"];\n    onnx_file -> trt [label=\"加载并运行\"];\n    onnx_file -> openvino [label=\"加载并运行\"];\n    onnx_file -> coreml [label=\"加载并运行\"];\n    onnx_file -> other [label=\"加载并运行\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1eiknb6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>工作流程示意 PyTorch 模型导出到 ONNX 以及随后在各种推理 (inference)运行时中的部署。</p>\n</blockquote>\n<h3>使用 <code>torch.onnx.export</code> 导出模型</h3>\n<p>PyTorch 在 <code>torch.onnx</code> 模块中提供了 <code>torch.onnx.export()</code> 函数作为此转换的主要工具。此函数的核心功能通常是利用追踪来记录当样本输入通过模型时执行的操作，并将这些操作转换为其 ONNX 等效项。</p>\n<p>该函数签名有几个重要参数 (parameter)：</p>\n<pre><code class=\"language-python\">torch.onnx.export(\n    model,               # 要导出的模型 (torch.nn.Module)\n    args,                # 用于追踪的模型输入元组\n    f,                   # 输出路径（字符串）或类文件对象\n    export_params=True,  # 在文件中存储训练过的参数\n    opset_version=None,  # ONNX 算子集版本\n    do_constant_folding=True, # 执行常量折叠优化\n    input_names=None,    # ONNX 图中输入节点名称列表\n    output_names=None,   # ONNX 图中输出节点名称列表\n    dynamic_axes=None    # 指定动态维度的字典\n    # ... 其他参数\n)\n</code></pre>\n<p>参数</p>\n<ul>\n<li><code>model</code>：您的 <code>torch.nn.Module</code> 实例。如果模型在训练和推理 (inference)之间的行为（例如 dropout 或批归一化 (normalization)）有所不同，请确保其处于评估模式 (<code>model.eval()</code>)。</li>\n<li><code>args</code>：一个元组，包含具有正确数据类型和形状的示例输入，这些是您的模型 <code>forward</code> 方法所期望的。此输入用于追踪执行路径。重要地，<code>args</code> 中的形状定义了导出的 ONNX 图中的输入形状，除非使用了 <code>dynamic_axes</code>。</li>\n<li><code>f</code>：<code>.onnx</code> 模型将要保存的文件路径。</li>\n<li><code>export_params</code>：如果为 <code>True</code>（默认），模型的训练权重 (weight)将直接嵌入 (embedding)到 ONNX 文件中，使其成为自包含文件。</li>\n<li><code>opset_version</code>：指定要使用的 ONNX 算子集版本。不同的版本支持不同的算子集和功能。选择正确的 opset 对于与目标推理运行时的兼容性很重要。请查阅目标运行时的文档以获取支持的 opset。常见选择介于 11 到 17 之间，但新版本会定期发布。</li>\n<li><code>input_names</code> / <code>output_names</code>：可选的字符串列表，为 ONNX 图中的输入和输出节点提供有意义的名称。这提高了可读性，并使得在运行时使用 ONNX 模型时更容易提供数据和获取结果。</li>\n<li><code>dynamic_axes</code>：这是处理可变输入/输出形状的一个非常重要的参数。</li>\n</ul>\n<h3>处理动态形状</h3>\n<p>追踪本质上会捕获所提供 <code>args</code> 的特定形状。如果您的模型需要处理不同维度的输入（例如，NLP 模型中的可变批大小或序列长度），您必须使用 <code>dynamic_axes</code> 参数 (parameter)来指定这一点。</p>\n<p><code>dynamic_axes</code> 是一个字典，其中键是前面定义的 <code>input_names</code> 或 <code>output_names</code>，值是另一个字典，将轴索引映射到描述性名称。例如，要指定名为 'input_ids' 的输入的批大小（轴 0）和序列长度（轴 1）可以变化，您可以使用：</p>\n<pre><code class=\"language-python\">dynamic_axes = {\n    'input_ids': {0: 'batch_size', 1: 'sequence_length'}, # 输入轴定义\n    'output_logits': {0: 'batch_size'}                  # 输出轴定义\n}\n</code></pre>\n<p>这会告诉导出器不要将这些维度硬编码到图中，从而允许 ONNX 运行时处理沿这些指定轴具有不同大小的输入并生成输出。</p>\n<h3>导出实践示例</h3>\n<p>我们来导出一个简单的卷积模型。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.onnx\n\n# 定义一个简单的 CNN 模型\nclass SimpleCNN(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)\n        self.relu = nn.ReLU()\n        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)\n        self.fc1 = nn.Linear(16 * 16 * 16, 10) # 假设输入图像为 32x32\n\n    def forward(self, x):\n        x = self.pool(self.relu(self.conv1(x)))\n        x = torch.flatten(x, 1) # 展平除批次维度外的所有维度\n        x = self.fc1(x)\n        return x\n\n# 实例化模型并设置为评估模式\nmodel = SimpleCNN()\nmodel.eval()\n\n# 创建与预期维度匹配的虚拟输入（批大小、通道、高度、宽度）\n# 注意：这里批大小设置为 1，但我们会使其变为动态\ndummy_input = torch.randn(1, 3, 32, 32, requires_grad=False)\n\n# 定义输入和输出名称\ninput_names = [\"input_image\"]\noutput_names = [\"output_logits\"]\n\n# 定义动态轴（使批大小动态化）\ndynamic_axes_config = {\n    'input_image': {0: 'batch_size'}, # 输入的可变批大小\n    'output_logits': {0: 'batch_size'} # 输出的可变批大小\n}\n\n# 指定输出文件路径\nonnx_model_path = \"simple_cnn.onnx\"\n\n# 导出模型\ntorch.onnx.export(\n    model,\n    dummy_input,\n    onnx_model_path,\n    export_params=True,\n    opset_version=12, # 选择合适的 opset 版本\n    do_constant_folding=True,\n    input_names=input_names,\n    output_names=output_names,\n    dynamic_axes=dynamic_axes_config\n)\n\nprint(f\"模型已导出到 {onnx_model_path}\")\n</code></pre>\n<h3>常见的导出挑战</h3>\n<p>虽然 <code>torch.onnx.export</code> 对许多模型都适用，但您可能会遇到一些问题：</p>\n<ol>\n<li>\n<p><strong>不支持的 PyTorch 算子：</strong> 并非每个 PyTorch 函数或模块在目标 ONNX <code>opset_version</code> 中都有直接的等效项。如果追踪器遇到不支持的操作，导出将会失败。解决方案包括：</p>\n<ul>\n<li>重写 PyTorch 代码以使用 ONNX 兼容的操作。</li>\n<li>选择一个可能支持该算子的不同（通常是更新的）<code>opset_version</code>。</li>\n<li>实现自定义 ONNX 算子（一个涉及 C++ 的高级主题）。</li>\n<li>如果操作仅在训练期间发生，请确保模型处于 <code>eval()</code> 模式。</li>\n</ul>\n</li>\n<li>\n<p><strong>动态控制流：</strong> 追踪难以处理依赖于数据的控制流（例如，条件或迭代次数取决于张量值的 <code>if</code> 语句或循环）。虽然 <code>torch.jit.script</code> 有时可以捕获此类逻辑，但将脚本化模型导出到 ONNX 也可能具有挑战性。通常需要简化控制流或使其与数据无关。</p>\n</li>\n<li>\n<p><strong>Opset 兼容性：</strong> 导出的 ONNX 模型必须使用目标推理 (inference)引擎（例如 ONNX Runtime）支持的 opset 版本。请务必查看运行时的文档以了解兼容的 opset。</p>\n</li>\n</ol>\n<h3>验证导出模型</h3>\n<p>导出后，验证 ONNX 模型的正确性很重要。一种常见的方法是使用 <code>onnxruntime</code> 库：</p>\n<pre><code class=\"language-python\">import onnxruntime as ort\nimport numpy as np\n\n# 加载 ONNX 模型\nort_session = ort.InferenceSession(onnx_model_path)\n\n# 准备输入数据（需要是 NumPy 数组）\n# 创建一个不同批大小的输入以测试动态轴\ntest_input_np = np.random.randn(4, 3, 32, 32).astype(np.float32) # 批大小 = 4\n\n# 运行推理\nort_inputs = {ort_session.get_inputs()[0].name: test_input_np}\nort_outputs = ort_session.run(None, ort_inputs)\nonnx_result = ort_outputs[0]\n\n# 与 PyTorch 输出进行比较（可选，但建议）\n# 如果 ONNX Runtime 使用 CPU，请确保模型在 CPU 上以便直接比较\nmodel.cpu()\ndummy_input = torch.from_numpy(test_input_np)\nwith torch.no_grad():\n    pytorch_result = model(dummy_input).numpy()\n\n# 检查输出是否接近（允许存在潜在的微小数值差异）\nif np.allclose(pytorch_result, onnx_result, rtol=1e-03, atol=1e-05):\n    print(\"验证成功：ONNX Runtime 输出与 PyTorch 输出一致。\")\nelse:\n    print(\"验证失败：输出不一致。\")\n    # 可能需要进一步调试\n</code></pre>\n<p>此验证步骤有助于确保转换过程没有引入错误，并且模型在目标运行时环境中表现符合预期，至少在数值上是这样。</p>\n<p>导出到 ONNX 是一种有用的技术，可以使您的先进 PyTorch 模型可移植，并为在各种硬件和软件平台上的高效部署做好准备。掌握这一过程，包括处理动态形状和解决常见问题，是使您的深度学习 (deep learning)应用程序投入生产的重要一步。</p>",
+  "slug": "exporting-onnx",
+  "updates": [],
+  "references": [
+    {
+      "id": 6913,
+      "title": "`torch.onnx` - PyTorch Documentation",
+      "author": "PyTorch Contributors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/onnx.html",
+      "doi": "",
+      "note": "关于将 PyTorch 模型导出到 ONNX 格式的指南，包含 `torch.onnx.export` 参数和示例。",
+      "order": 1,
+      "created_at": "2025-09-05T01:29:38.072039Z",
+      "updated_at": "2025-09-08T07:04:47.788736Z"
+    },
+    {
+      "id": 6914,
+      "title": "Open Neural Network Exchange (ONNX)",
+      "author": "ONNX Community",
+      "year": "2024",
+      "publisher": "LF AI & Data Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://onnx.ai/",
+      "doi": "",
+      "note": "ONNX 格式的官方资源，详细介绍了其标准、优势和生态系统。",
+      "order": 2,
+      "created_at": "2025-09-05T01:29:38.307985Z",
+      "updated_at": "2025-09-08T07:04:43.882527Z"
+    },
+    {
+      "id": 6915,
+      "title": "ONNX Runtime Documentation",
+      "author": "Microsoft",
+      "year": "2024",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://onnxruntime.ai/docs/",
+      "doi": "",
+      "note": "ONNX Runtime 用于模型推理的文档，包括会话创建和输入/输出处理。",
+      "order": 3,
+      "created_at": "2025-09-05T01:29:38.332443Z",
+      "updated_at": "2025-09-08T07:04:48.107959Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

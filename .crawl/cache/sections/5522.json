@@ -1,0 +1,61 @@
+{
+  "id": 5522,
+  "title": "实践：模拟数据提取",
+  "meta_title": "实践模拟数据提取",
+  "meta_description": "参与一项简单的活动，模拟从示例文件中提取数据。",
+  "content": "<p>模拟从常见来源（一个简单的逗号分隔值（CSV）文件）中提取数据的过程，可以演示提取阶段如何运作。这项练习有助于巩固对数据如何在ETL工作流程中初步获取的认识。</p>\n<h3>场景：提取客户订单</h3>\n<p>假设您在一家在线零售商工作。每天都会生成一个名为 <code>orders.csv</code> 的新文件，其中包含已下订单的详细信息。您的任务是提取这些数据，以便后续处理。</p>\n<h3>表示源数据</h3>\n<p>假设今天的 <code>orders.csv</code> 文件如下所示：</p>\n<pre><code class=\"language-csv\">OrderID,CustomerID,OrderDate,Amount,Status\n101,CUST-A,2023-10-26,150.00,Shipped\n102,CUST-B,2023-10-26,75.50,Processing\n103,CUST-A,2023-10-27,210.25,Shipped\n104,CUST-C,2023-10-28,30.00,Pending\n</code></pre>\n<p>这是结构化数据。每行表示一个订单，值之间用逗号分隔。第一行是表头，定义了字段（列）。</p>\n<h3>模拟连接</h3>\n<p>在真实的ETL管道中，专用工具或脚本会建立与 <code>orders.csv</code> 所在文件系统（或数据库、或API端点）的连接。对于本次模拟，我们假设已成功连接并可以访问文件内容。</p>\n<h3>模拟完全提取</h3>\n<p>如前所述，完全提取涉及从源读取<em>整个</em>数据集。如果我们对 <code>orders.csv</code> 执行完全提取，拉入ETL流程的原始数据将类似于这样（此处表示为记录列表）：</p>\n<pre><code>[\n  {\"OrderID\": \"101\", \"CustomerID\": \"CUST-A\", \"OrderDate\": \"2023-10-26\", \"Amount\": \"150.00\", \"Status\": \"Shipped\"},\n  {\"OrderID\": \"102\", \"CustomerID\": \"CUST-B\", \"OrderDate\": \"2023-10-26\", \"Amount\": \"75.50\", \"Status\": \"Processing\"},\n  {\"OrderID\": \"103\", \"CustomerID\": \"CUST-A\", \"OrderDate\": \"2023-10-27\", \"Amount\": \"210.25\", \"Status\": \"Shipped\"},\n  {\"OrderID\": \"104\", \"CustomerID\": \"CUST-C\", \"OrderDate\": \"2023-10-28\", \"Amount\": \"30.00\", \"Status\": \"Pending\"}\n]\n</code></pre>\n<p>请注意，数据是完全按照文件中的样子提取的，包括以字符串形式表示的数据类型。结构（字段名称）是从表头行中获取的。这是下一阶段的原始材料。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1h0dv5g\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [color=\"#495057\", fontname=\"sans-serif\"];\n  Source [label=\"orders.csv\\n(源文件)\", shape=note, fillcolor=\"#a5d8ff\"];\n  ExtractionProcess [label=\"提取\\n过程\", fillcolor=\"#96f2d7\"];\n  ExtractedData [label=\"原始提取\\n数据\", shape=cylinder, fillcolor=\"#ffec99\"];\n  Source -> ExtractionProcess [label=\"读取所有数据\"];\n  ExtractionProcess -> ExtractedData;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1h0dv5g\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个图表，展示了完全提取过程如何读取整个源文件（<code>orders.csv</code>）以生成原始提取数据。</p>\n</blockquote>\n<h3>模拟增量提取</h3>\n<p>现在，假设一段时间过去了，<code>orders.csv</code> 文件中添加了一个新订单：</p>\n<pre><code class=\"language-csv\">OrderID,CustomerID,OrderDate,Amount,Status\n101,CUST-A,2023-10-26,150.00,Shipped\n102,CUST-B,2023-10-26,75.50,Processing\n103,CUST-A,2023-10-27,210.25,Shipped\n104,CUST-C,2023-10-28,30.00,Pending\n105,CUST-B,2023-10-28,99.99,Processing  &#x3C;-- 新订单\n</code></pre>\n<p>如果我们采用增量提取策略，目的是<em>只</em>提取自上次提取以来新增或更改的数据。假设我们的ETL流程记录了上次提取的 <code>OrderID</code>（即104），它将查询或扫描源以查找ID大于104的订单。</p>\n<p>在本次模拟中，增量提取将仅产生新记录：</p>\n<pre><code>[\n  {\"OrderID\": \"105\", \"CustomerID\": \"CUST-B\", \"OrderDate\": \"2023-10-28\", \"Amount\": \"99.99\", \"Status\": \"Processing\"}\n]\n</code></pre>\n<p>如果源数据集很大且变化相对较小，这比重新提取整个文件效率高得多。识别变化的逻辑（例如使用ID、时间戳或CDC方法）是增量策略的重要组成部分。</p>\n<h3>处理提取问题（模拟）</h3>\n<p>如果源文件有错误怎么办？例如：</p>\n<pre><code class=\"language-csv\">OrderID,CustomerID,OrderDate,Amount,Status\n101,CUST-A,2023-10-26,150.00,Shipped\n102,CUST-B,2023-10-26,,Processing  &#x3C;-- 缺少金额\n103,CUST-A,2023-10-27,210.25,Shipped\n</code></pre>\n<p>在提取过程中，程序可能会遇到 <code>OrderID</code> 102 的 <code>Amount</code> 缺失情况。根据ETL工具或脚本处理错误的配置：</p>\n<ol>\n<li>整个提取可能失败。</li>\n<li>程序可能继续运行，但记录该特定记录的错误。</li>\n<li>该记录可能被提取，但 <code>Amount</code> 的值为null或为空。</li>\n</ol>\n<p>通常，提取的目的只是<em>获取</em>数据，无论好坏。数据的清洗和验证通常在转换阶段进行。因此，一个常见的结果是提取出带有缺失值标记 (token)的记录：</p>\n<pre><code>[\n  {\"OrderID\": \"101\", \"CustomerID\": \"CUST-A\", \"OrderDate\": \"2023-10-26\", \"Amount\": \"150.00\", \"Status\": \"Shipped\"},\n  {\"OrderID\": \"102\", \"CustomerID\": \"CUST-B\", \"OrderDate\": \"2023-10-26\", \"Amount\": \"\", \"Status\": \"Processing\"}, // 注意：金额为空\n  {\"OrderID\": \"103\", \"CustomerID\": \"CUST-A\", \"OrderDate\": \"2023-10-27\", \"Amount\": \"210.25\", \"Status\": \"Shipped\"}\n]\n</code></pre>\n<h3>概述</h3>\n<p>本次模拟演示了从一个简单的CSV文件中提取数据。我们看到了：</p>\n<ul>\n<li>源数据如何表示（结构化CSV）。</li>\n<li>完全提取如何复制整个数据集。</li>\n<li>增量提取如何只针对新增或更改的数据，通常能提高效率。</li>\n<li>在提取过程中可能遇到缺失数据等基本问题，尽管处理这些问题通常推迟到转换阶段。</li>\n</ul>\n<p>您现在对提取过程有了更具体的认识。它旨在可靠地从数据源获取所需的原始数据，并为ETL管道中的后续步骤做好准备。接下来，我们将考察转换阶段发生的事情，在该阶段，这些原始数据将被清洗、重塑和丰富。</p>",
+  "slug": "practice-simulating-extraction",
+  "updates": [],
+  "references": [
+    {
+      "id": 15355,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling, 3rd Edition",
+      "author": "Ralph Kimball and Margy Ross",
+      "year": "2013",
+      "publisher": "Wiley",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801",
+      "doi": "",
+      "note": "一本基础著作，解释了数据仓库、ETL流程以及各种数据提取策略，包括全量和增量加载。",
+      "order": 1,
+      "created_at": "2025-09-06T10:44:06.469023Z",
+      "updated_at": "2025-09-10T05:40:50.785182Z"
+    },
+    {
+      "id": 15356,
+      "title": "Fundamentals of Data Engineering",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "450 pages",
+      "url": "https://www.oreilly.com/library/view/fundamentals-of-data-engineering/9781098108250/",
+      "doi": "",
+      "note": "一本当代指南，涵盖了现代数据工程实践，其中包含专门介绍数据摄取、提取方法和管道设计的部分。",
+      "order": 2,
+      "created_at": "2025-09-06T10:44:06.472927Z",
+      "updated_at": "2025-09-10T05:41:03.391226Z"
+    },
+    {
+      "id": 15357,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "本书提供了对数据系统的理解，涵盖了数据存储、处理和流等主题，这些主题与构建强大的数据提取组件相关。",
+      "order": 3,
+      "created_at": "2025-09-06T10:44:06.475918Z",
+      "updated_at": "2025-09-10T05:40:55.449985Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 1573,
+  "title": "动手实践：编写基本 SELECT 查询",
+  "meta_title": "练习编写 SQL SELECT 语句",
+  "meta_description": "动手练习编写简单的 SELECT 查询，以从示例表中获取数据。",
+  "content": "<p>编写基本的 <code>SELECT</code> 查询包括指定列、使用别名和限制结果，需要进行动手实践。通过实际例子进行操作有助于巩固理解，并建立编写 SQL 查询的信心。</p>\n<p>在这些练习中，我们假设您正在使用一个包含几个简单表的数据库：<code>Customers</code>、<code>Products</code> 和 <code>Orders</code>。让我们简单看一下它们的结构：</p>\n<ul>\n<li><strong><code>Customers</code> 表：</strong> 包含客户信息。\n<ul>\n<li>列：<code>CustomerID</code>、<code>FirstName</code>、<code>LastName</code>、<code>Email</code>、<code>City</code>、<code>Country</code></li>\n</ul>\n</li>\n<li><strong><code>Products</code> 表：</strong> 包含产品信息。\n<ul>\n<li>列：<code>ProductID</code>、<code>ProductName</code>、<code>Category</code>、<code>Price</code></li>\n</ul>\n</li>\n<li><strong><code>Orders</code> 表：</strong> 包含订单信息。\n<ul>\n<li>列：<code>OrderID</code>、<code>CustomerID</code>、<code>OrderDate</code>、<code>TotalAmount</code></li>\n</ul>\n</li>\n</ul>\n<p>现在我们开始编写一些查询。</p>\n<h3>练习 1：选择特定列</h3>\n<p>您的第一个任务是获取 <code>Customers</code> 表中所有客户的名字、姓氏和电子邮件地址。</p>\n<p><strong>查询：</strong></p>\n<pre><code class=\"language-sql\">SELECT\n  FirstName,\n  LastName,\n  Email\nFROM\n  Customers;\n</code></pre>\n<p><strong>解释：</strong></p>\n<ul>\n<li><code>SELECT FirstName, LastName, Email</code>：这部分精确指定了您要获取哪些列。我们列出所需的列名，并用逗号分隔。</li>\n<li><code>FROM Customers</code>：这表示您要从哪个表中获取数据。</li>\n</ul>\n<p><strong>预期结果（示例）：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">FirstName</th>\n<th align=\"left\">LastName</th>\n<th align=\"left\">Email</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Anna</td>\n<td align=\"left\">Smith</td>\n<td align=\"left\"><a href=\"mailto:anna.s@example.com\">anna.s@example.com</a></td>\n</tr>\n<tr>\n<td align=\"left\">Ben</td>\n<td align=\"left\">Jones</td>\n<td align=\"left\"><a href=\"mailto:ben.jones@sample.org\">ben.jones@sample.org</a></td>\n</tr>\n<tr>\n<td align=\"left\">Clara</td>\n<td align=\"left\">Davis</td>\n<td align=\"left\"><a href=\"mailto:c.davis@mail.net\">c.davis@mail.net</a></td>\n</tr>\n<tr>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n</tr>\n</tbody>\n</table>\n<p>此查询只返回 <code>Customers</code> 表中存在的每一行的三个指定列。</p>\n<h3>练习 2：选择所有列并限制数量</h3>\n<p>接下来，假设您需要快速查看最初几条产品记录。获取 <code>Products</code> 表中列出的前 5 个产品的所有可用信息。</p>\n<p><strong>查询：</strong></p>\n<pre><code class=\"language-sql\">SELECT\n  *\nFROM\n  Products\nLIMIT 5;\n</code></pre>\n<p><strong>解释：</strong></p>\n<ul>\n<li><code>SELECT *</code>：星号（<code>*</code>）是一种从表中选择所有列的简写方式，无需单独列出它们。</li>\n<li><code>FROM Products</code>：指定我们正在查询 <code>Products</code> 表。</li>\n<li><code>LIMIT 5</code>：此子句将输出限制为数据库遇到的前 5 行。除非使用 <code>ORDER BY</code> 子句（稍后介绍），否则确切顺序可能不同，但 <code>LIMIT</code> 保证返回的最大行数。请注意，在某些 SQL 方言中，用于限制结果的具体关键字可能略有不同（例如，SQL Server 中的 <code>TOP 5</code>，Oracle 中的 <code>FETCH FIRST 5 ROWS ONLY</code>）。我们将使用 <code>LIMIT</code>，因为它在 PostgreSQL 和 MySQL 等系统中很常用。</li>\n</ul>\n<p><strong>预期结果（示例）：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">ProductID</th>\n<th align=\"left\">ProductName</th>\n<th align=\"left\">Category</th>\n<th align=\"left\">Price</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">Electronics</td>\n<td align=\"left\">1200.00</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Keyboard</td>\n<td align=\"left\">Accessories</td>\n<td align=\"left\">75.00</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Mouse</td>\n<td align=\"left\">Accessories</td>\n<td align=\"left\">25.50</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Monitor</td>\n<td align=\"left\">Electronics</td>\n<td align=\"left\">300.00</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">Web Development Book</td>\n<td align=\"left\">Books</td>\n<td align=\"left\">49.99</td>\n</tr>\n</tbody>\n</table>\n<p>此查询获取所有列（<code>ProductID</code>、<code>ProductName</code>、<code>Category</code>、<code>Price</code>），但仅限于找到的前 5 条产品行。</p>\n<h3>练习 3：使用列别名以求清晰</h3>\n<p>有时，原始列名不适合用于报告或分析。让我们从 <code>Products</code> 表中获取产品名称及其价格，但将列分别显示为 <code>Item</code> 和 <code>Cost</code>。</p>\n<p><strong>查询：</strong></p>\n<pre><code class=\"language-sql\">SELECT\n  ProductName AS Item,\n  Price AS Cost\nFROM\n  Products;\n</code></pre>\n<p><strong>解释：</strong></p>\n<ul>\n<li><code>SELECT ProductName AS Item</code>：我们选择 <code>ProductName</code> 列，但使用 <code>AS</code> 关键字在输出中为其分配别名 <code>Item</code>。</li>\n<li><code>Price AS Cost</code>：类似地，选择 <code>Price</code> 列并为其指定别名 <code>Cost</code>。</li>\n<li><code>FROM Products</code>：我们仍在查询 <code>Products</code> 表。</li>\n</ul>\n<p><strong>预期结果（示例）：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">Item</th>\n<th align=\"left\">Cost</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">1200.00</td>\n</tr>\n<tr>\n<td align=\"left\">Keyboard</td>\n<td align=\"left\">75.00</td>\n</tr>\n<tr>\n<td align=\"left\">Mouse</td>\n<td align=\"left\">25.50</td>\n</tr>\n<tr>\n<td align=\"left\">Monitor</td>\n<td align=\"left\">300.00</td>\n</tr>\n<tr>\n<td align=\"left\">Web Development Book</td>\n<td align=\"left\">49.99</td>\n</tr>\n<tr>\n<td align=\"left\">Data Science Handbook</td>\n<td align=\"left\">59.95</td>\n</tr>\n<tr>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n</tr>\n</tbody>\n</table>\n<p>结果集现在使用别名 <code>Item</code> 和 <code>Cost</code> 作为列标题，这取决于上下文 (context)，可能使输出更具用户友好性。</p>\n<h3>练习 4：结合使用别名和限制结果</h3>\n<p>让我们结合所学内容。假设您只需要少量订单标识符及其日期列表。从 <code>Orders</code> 表中获取任意 3 份订单的 <code>OrderID</code> 和 <code>OrderDate</code>。将 <code>OrderID</code> 显示为 <code>OrderNumber</code>，将 <code>OrderDate</code> 显示为 <code>DatePlaced</code>。</p>\n<p><strong>查询：</strong></p>\n<pre><code class=\"language-sql\">SELECT\n  OrderID AS OrderNumber,\n  OrderDate AS DatePlaced\nFROM\n  Orders\nLIMIT 3;\n</code></pre>\n<p><strong>解释：</strong></p>\n<p>此查询演示了如何结合本章中的多个内容：</p>\n<ul>\n<li><code>SELECT OrderID AS OrderNumber, OrderDate AS DatePlaced</code>：选择特定列并使用 <code>AS</code> 分配别名（<code>OrderNumber</code>、<code>DatePlaced</code>），以提高可读性。</li>\n<li><code>FROM Orders</code>：将 <code>Orders</code> 表指定为数据源。</li>\n<li><code>LIMIT 3</code>：将输出限制为数据库为此查询返回的前 3 行。</li>\n</ul>\n<p><strong>预期结果（示例）：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">OrderNumber</th>\n<th align=\"left\">DatePlaced</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">2023-10-26</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">2023-10-27</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">2023-10-27</td>\n</tr>\n</tbody>\n</table>\n<p>此实用查询有效地获取了一小部分标记 (token)清晰的订单数据。</p>\n<p>这些练习涵盖了使用 <code>SELECT</code> 获取数据的核心方法，包括选择特定或所有列、使用别名重命名列以及限制结果的大小。随着您的学习，您将在这些基础上执行更复杂的过滤、排序和计算。尝试这些查询，尝试更改列名、别名和 <code>LIMIT</code> 值，看看结果如何变化。</p>",
+  "slug": "practice-basic-select",
+  "updates": [],
+  "references": [
+    {
+      "id": 4295,
+      "title": "SELECT",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html",
+      "doi": "",
+      "note": "详细解释了PostgreSQL中SELECT语句的完整语法和用法，包括选择特定列、使用别名以及LIMIT子句。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:39.568294Z",
+      "updated_at": "2025-09-07T18:57:51.812666Z"
+    },
+    {
+      "id": 4297,
+      "title": "Learning SQL: Master SQL Fundamentals",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492057563/",
+      "doi": "",
+      "note": "一本全面的指南，涵盖了基本的SQL查询语法，包括如何选择数据、使用列别名以及限制返回的行数。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:39.576381Z",
+      "updated_at": "2025-09-07T18:58:14.816187Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

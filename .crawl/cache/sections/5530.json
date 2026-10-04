@@ -1,0 +1,45 @@
+{
+  "id": 5530,
+  "title": "ELT流程解析",
+  "meta_title": "ELT（提取、加载、转换）流程说明",
+  "meta_description": "了解提取、加载、转换 (ELT) 数据集成模式所包含的步骤。",
+  "content": "<p>数据管道中有一种常见模式：<strong>提取、加载、转换 (ELT)</strong>。顾名思义，ELT改变了操作顺序。它不是在数据传输过程中进行转换，而是首先将原始或经过少量处理的数据直接加载到目标系统，然后 <em>在该</em> 目标系统内执行转换。</p>\n<p>这种方法随着强大、可扩展的云数据仓库和数据湖的兴起而变得更受欢迎。这些系统通常拥有强大的计算能力，能高效地处理大规模转换。</p>\n<p>下面我们来分解ELT流程：</p>\n<h3>提取</h3>\n<p>此步骤与ETL中的“提取”阶段相同。数据从其原始来源获取。这些来源多种多样，包括：</p>\n<ul>\n<li>关系型数据库（如PostgreSQL、MySQL）</li>\n<li>NoSQL数据库</li>\n<li>应用程序编程接口 (API)</li>\n<li>日志文件</li>\n<li>存储系统中的文件（如CSV、JSON、Parquet文件）</li>\n</ul>\n<p>这里的目的就是将数据从源系统取出。</p>\n<h3>加载</h3>\n<p>这与ETL的主要不同点。在ELT模式中，提取的数据几乎立即加载到目标存储系统，通常是数据湖或数据仓库。可能会进行少量清理或结构化，但主要的转换工作被推迟。</p>\n<p>例如，来自API的原始JSON数据可以直接加载到数据仓库内的暂存表或区域，或者作为文件放入数据湖。在这个阶段，数据结构不一定严格强制执行。这使得数据摄入更快，因为管道无需等待可能耗时的转换。</p>\n<h3>转换</h3>\n<p>只有当数据存在于目标系统（数据仓库或数据湖）中之后，转换步骤才会发生。数据工程师或分析师随后可以运用目标系统本身的加工能力，对数据进行清洗、丰富、聚合、连接和重塑，使其成为分析或应用程序所需的格式。</p>\n<p>通常，此转换步骤是在数据仓库中使用SQL执行，或者使用像Apache Spark这样的处理框架，这些框架可以直接在数据湖或数据仓库中的数据上运行。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-4fmbyh\" \n              data-graph-definition='digraph G { rankdir=TD; node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\"]; edge [color=\"#495057\", arrowhead=vee]; \"数据源\" [fillcolor=\"#ffec99\", color=\"#f59f00\"]; \"提取\" [fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"]; \"加载\" [fillcolor=\"#ffc9c9\", color=\"#f03e3e\"]; \"目标系统（数据湖/数据仓库）\" [shape=cylinder, fillcolor=\"#eebefa\", color=\"#ae3ec9\"]; \"转换\" [fillcolor=\"#b2f2bb\", color=\"#37b24d\"]; \"可用数据（分析、应用）\" [shape=ellipse, fillcolor=\"#ced4da\", color=\"#495057\"]; \"数据源\" -> \"提取\" [label=\" 获取数据 \"]; \"提取\" -> \"加载\" [label=\" 移动原始数据 \"]; \"加载\" -> \"目标系统（数据湖/数据仓库）\" [label=\" 存储原始数据 \"]; \"目标系统（数据湖/数据仓库）\" -> \"转换\" [label=\" 就地处理 \"]; \"转换\" -> \"可用数据（分析、应用）\" [label=\" 提供分析结果 \"]; }\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-4fmbyh\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图表展示了ELT管道中的操作顺序：从来源提取数据，将其加载到目标系统，然后在该系统内进行转换。</p>\n</blockquote>\n<h3>为何选择ELT？</h3>\n<p>ELT方法有诸多优点，尤其是在现代数据环境中：</p>\n<ol>\n<li><strong>更快的摄入速度：</strong> 由于转换不在加载前进行，数据能更快地在目标系统中可用。</li>\n<li><strong>灵活性：</strong> 原始数据存储在目标系统中。这意味着您可以稍后为不同目的应用不同的转换，而无需重新提取数据。如果分析需求改变，可以将新的转换逻辑应用于现有原始数据。</li>\n<li><strong>发挥目标系统能力：</strong> 云数据仓库（如Google BigQuery、Amazon Redshift、Snowflake）和数据湖查询引擎设计上能高效处理大规模数据。ELT正是发挥了这种能力进行转换。</li>\n<li><strong>处理多样数据：</strong> ELT很适合数据湖，您可以在其中存储结构化、半结构化和非结构化数据。您可以先加载所有数据，然后决定如何处理和组织它们（有时称为“读时模式”）。</li>\n</ol>\n<h3>ELT与ETL：主要区别</h3>\n<p>根本区别在于转换发生的时间。</p>\n<ul>\n<li><strong>ETL：</strong> 提取 -> <strong>转换</strong> -> 加载（转换发生在加载到最终目标 <em>之前</em>）。</li>\n<li><strong>ELT：</strong> 提取 -> <strong>加载</strong> -> 转换（转换发生在加载到目标 <em>之后</em>）。</li>\n</ul>\n<p>处理大量数据、使用强大的云数据平台以及需要转换灵活时，ELT通常是更优选的方法。您先加载原始材料，然后在您的“厨房”（数据仓库或数据湖）中决定配方。</p>",
+  "slug": "elt-process-explained",
+  "updates": [],
+  "references": [
+    {
+      "id": 15098,
+      "title": "Designing Data-Intensive Applications",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "全面介绍数据系统，涵盖数据存储、处理以及ELT等架构模式的相关主题。",
+      "order": 1,
+      "created_at": "2025-09-05T14:35:37.627515Z",
+      "updated_at": "2025-09-11T02:37:37.030611Z"
+    },
+    {
+      "id": 15099,
+      "title": "Data Engineering with Apache Spark, Delta Lake, and Lakehouse",
+      "author": "Manoj Kukreja",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "480",
+      "url": "https://www.oreilly.com/library/view/data-engineering-with/9781098111244/",
+      "doi": "",
+      "note": "详细阐述使用Spark和Delta Lake的现代数据工程实践，涵盖ELT核心的数据湖和湖仓架构。",
+      "order": 2,
+      "created_at": "2025-09-05T14:35:37.639701Z",
+      "updated_at": "2025-09-11T02:38:10.523905Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

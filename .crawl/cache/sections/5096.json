@@ -1,0 +1,61 @@
+{
+  "id": 5096,
+  "title": "函数近似的简介",
+  "meta_title": "强化学习中函数近似的简介",
+  "meta_description": "了解在处理大型状态空间时函数近似的需求。",
+  "content": "<p>Q学习和SARSA等传统方法依赖表格来存储每个状态或状态-动作对的价值估计（Q值）。当状态和动作的数量足够小、可管理时，例如在简单的网格环境或井字棋游戏中，这种方法效果很好。</p>\n<p>然而，许多有趣的问题具有庞大甚至无限的状态空间。请看以下情况：</p>\n<ul>\n<li><strong>从像素玩Atari游戏：</strong> 状态是屏幕上的原始像素数据。即使是低分辨率屏幕（例如84x84像素）和少量颜色，也可能产生远超宇宙中原子数量的可能状态。存储Q表是不可能的。</li>\n<li><strong>机器人控制：</strong> 机器人的状态可能涉及关节角度、速度、传感器读数（如激光雷达或摄像头输入），所有这些都可以是连续值。存在无限多的状态。</li>\n<li><strong>金融建模：</strong> 市场状态可能涉及大量连续指标，导致庞大的状态空间。</li>\n</ul>\n<p>在这些情况下，由于<strong>维度灾难</strong>，表格方法完全失效。我们面临两个主要难题：</p>\n<ol>\n<li><strong>内存：</strong> 我们根本没有足够的内存来存储Q表。</li>\n<li><strong>学习时间与泛化能力：</strong> 即使我们有足够的内存，代理也需要不切实际的时间来访问并学习哪怕是一小部分可能状态的值。此外，代理将无法<strong>泛化</strong>其知识。学习一个特定状态不会提供关于相似的、以前未见过状态的信息。如果屏幕像素略微改变，表格方法会将其视为一个全新的状态，需要单独学习。</li>\n</ol>\n<p>为了应对这些复杂的大规模问题，我们需要一种更具可扩展性的方法。我们不再为每个状态-动作对存储显式值，而是可以使用参数 (parameter)化函数来近似价值函数。这种技术被称为<strong>函数近似</strong>。</p>\n<p>其核心思想是使用一个函数，我们称之为<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mover accent=\"true\"><mi>Q</mi><mo>^</mo></mover><mo stretchy=\"false\">(</mo><mi>s</mi><mo separator=\"true\">,</mo><mi>a</mi><mo separator=\"true\">;</mo><mi>θ</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">\\hat{Q}(s, a; \\theta)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1.1968em;vertical-align:-0.25em;\"></span><span class=\"mord accent\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.9468em;\"><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord mathnormal\">Q</span></span><span style=\"top:-3.2523em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"accent-body\" style=\"left:-0.1667em;\"><span class=\"mord\">^</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1944em;\"><span></span></span></span></span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">s</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mpunct\">;</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span><span class=\"mclose\">)</span></span></span></span>，它将状态<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>s</mi></mrow><annotation encoding=\"application/x-tex\">s</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">s</span></span></span></span>（可能还有动作<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>a</mi></mrow><annotation encoding=\"application/x-tex\">a</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">a</span></span></span></span>）作为输入，并输出真实Q值<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Q</mi><mo stretchy=\"false\">(</mo><mi>s</mi><mo separator=\"true\">,</mo><mi>a</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">Q(s, a)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">Q</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">s</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mclose\">)</span></span></span></span>的<em>估计</em>。该函数有一组参数，记为<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>θ</mi></mrow><annotation encoding=\"application/x-tex\">\\theta</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span></span></span></span>，我们将根据代理的经验对其进行学习和调整。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-116fobi\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_0 {\n        label = \"表格方法\";\n        bgcolor=\"#e9ecef\";\n        T_State [label=\"状态 (s)\", style=filled, fillcolor=\"#dee2e6\"];\n        T_Table [label=\"Q表\\n(查找)\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n        T_Value [label=\"精确Q(s, a)\", style=filled, fillcolor=\"#dee2e6\"];\n        T_State -> T_Table [label=\" 查找 s 的条目\"];\n        T_Table -> T_Value [label=\" 读取值\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"函数近似\";\n        bgcolor=\"#e9ecef\";\n        FA_State [label=\"状态 (s)\", style=filled, fillcolor=\"#dee2e6\"];\n        FA_Func [label=\"近似函数\\n(参数 θ)\", shape=parallelogram, style=filled, fillcolor=\"#a5d8ff\"];\n        FA_Value [label=\"近似Q̂(s, a; θ)\", style=filled, fillcolor=\"#dee2e6\"];\n        FA_State -> FA_Func [label=\" 输入 s\"];\n        FA_Func -> FA_Value [label=\" 计算值\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-116fobi\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较表格查找与函数近似获取Q值的方法。函数近似使用参数化函数来估计值，从而实现可扩展性和泛化。</p>\n</blockquote>\n<p>函数近似带来了显著的优势：</p>\n<ul>\n<li><strong>紧凑表示：</strong> 我们无需存储可能数十亿或数万亿的Q值，只需存储函数的参数<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>θ</mi></mrow><annotation encoding=\"application/x-tex\">\\theta</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span></span></span></span>。参数的数量通常远小于状态的数量。</li>\n<li><strong>泛化能力：</strong> 这可能是最重要的优点。如果函数近似器学习到良好的表示，它就可以根据未见过状态与已见过状态的相似性，为其估计合理的Q值。这使得代理能够在新的情况下做出明智的决策。</li>\n<li><strong>处理连续空间：</strong> 参数化函数，尤其是神经网络 (neural network)，可以自然地处理连续输入特征，使其适用于状态或动作空间连续且表格方法根本不可行的问题。</li>\n</ul>\n<p>各种类型的函数都可以作为近似器，包括线性函数、决策树和瓦片编码。然而，对于涉及图像或复杂状态表示等高维输入的复杂问题，<strong>深度神经网络</strong>已证明异常有效。它们学习分层特征和建模复杂非线性关系的能力，使其成为强大的Q函数近似器。</p>\n<p>在本章中，我们将专门侧重于使用深度神经网络来近似动作价值函数<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Q</mi><mo stretchy=\"false\">(</mo><mi>s</mi><mo separator=\"true\">,</mo><mi>a</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">Q(s, a)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">Q</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">s</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mclose\">)</span></span></span></span>。这种结合构成了深度Q网络（DQN）的根基，标志着从表格方法向前迈出的重要一步，并使强化学习 (reinforcement learning)能够处理远为复杂得多的任务。我们现在将介绍如何构建和训练这样的网络。</p>",
+  "slug": "function-approximation-intro",
+  "updates": [],
+  "references": [
+    {
+      "id": 12904,
+      "title": "Reinforcement Learning: An Introduction",
+      "author": "Richard S. Sutton and Andrew G. Barto",
+      "year": "2018",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapters 9-11",
+      "url": "http://incompleteideas.net/book/the-book-2nd.html",
+      "doi": "",
+      "note": "一本经典且全面的教材，涵盖强化学习的理论基础，包括对函数逼近方法的详细介绍。",
+      "order": 1,
+      "created_at": "2025-09-05T08:24:58.480641Z",
+      "updated_at": "2025-09-08T16:21:13.626956Z"
+    },
+    {
+      "id": 12905,
+      "title": "Human-level control through deep reinforcement learning",
+      "author": "Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis",
+      "year": "2015",
+      "publisher": "Springer Nature",
+      "journal": "Nature",
+      "volume": "518",
+      "pages": "529-533",
+      "url": "https://www.nature.com/articles/nature14236",
+      "doi": "10.1038/nature14236",
+      "note": "引入深度Q网络（DQN）的开创性论文，展示了使用深度强化学习和函数逼近在Atari游戏上达到人类水平的性能。",
+      "order": 2,
+      "created_at": "2025-09-05T08:24:58.483785Z",
+      "updated_at": "2025-09-08T16:21:23.264185Z"
+    },
+    {
+      "id": 12906,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapters 6-8",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本权威教材，全面介绍了深度学习，包括神经网络的架构和训练，这对于理解DQN中的函数逼近至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T08:24:58.487049Z",
+      "updated_at": "2025-09-08T16:21:11.638279Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

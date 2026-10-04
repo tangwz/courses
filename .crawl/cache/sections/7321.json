@@ -1,0 +1,45 @@
+{
+  "id": 7321,
+  "title": "通过 Ingress 暴露服务",
+  "meta_title": "使用 Kubernetes Ingress 暴露服务",
+  "meta_description": "了解如何使用 Ingress 控制器和 Ingress 资源来管理服务的外部访问，通常用于 HTTP/S 路由。",
+  "content": "<p>虽然 <code>NodePort</code> 和 <code>LoadBalancer</code> 等 <code>Service</code> 对象提供了暴露应用程序的实用方法，但它们通常伴随着运维上的权衡。<code>NodePort</code> 在每个节点上通过一个随机的高端口暴露应用，这对于标准的 Web 流量并不理想。而 <code>LoadBalancer</code> 类型的服务通常会为每个服务配置一个专用的、特定于云平台的 L4 负载均衡器。随着应用规模扩大，包含许多微服务时，这种方式可能会变得成本高昂且难以管理。对于通过 HTTP 和 HTTPS 通信的 Web 应用，需要一种更智能的应用层路由机制。</p>\n<p>这就是 <code>Ingress</code> 资源提供更完善解决方案的地方。Ingress 并不是一种 Service 类型。相反，它是一个 API 对象，充当集群路由规则的集合。它允许你定义外部流量（主要是 HTTP 和 HTTPS）应如何根据主机名或 URL 路径指向内部 Service。这为你的整个应用技术栈提供了一个单一且稳定的入口点，整合了路由逻辑并简化了外部访问管理。</p>\n<h3>Ingress 控制器 (Ingress Controller)</h3>\n<p>有一点非常重要：Ingress 资源本身不执行任何操作。它只是一组被动的规则。要使这些规则生效，你需要在集群中运行 <strong>Ingress 控制器</strong>。Ingress 控制器是实际的软件，是以 Pod 形式运行的特定工作负载，它监听集群中定义的 Ingress 资源，并配置反向代理（如 NGINX、HAProxy 或 Traefik）来实现指定的路由。</p>\n<p>大多数 Kubernetes 集群默认不安装 Ingress 控制器。你或集群管理员必须选择并部署一个。一旦 Ingress 控制器运行起来，它就会监视 Kubernetes API 服务器中任何新增或更新的 Ingress 资源，并相应地重新配置自身。</p>\n<p>流量流向通常是这样的：外部客户端向单个负载均衡器发送请求，该负载均衡器将流量引导至 Ingress 控制器。然后，控制器检查请求的主机名和路径，参考从 Ingress 资源中获取的路由规则，并将流量转发到相应的内部 Service 及其后端的 Pod。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1bljhd\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  graph [bgcolor=\"transparent\", fontname=\"helvetica\"];\n  node [shape=box, style=\"rounded\", fontname=\"helvetica\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"helvetica\"];\n\n  subgraph cluster_external {\n    label=\"外部网络\";\n    bgcolor=\"#f8f9fa\";\n    style=\"rounded\";\n    User [label=\"用户\\n(example.com)\", shape=oval, fillcolor=\"#bac8ff\"];\n  }\n\n  subgraph cluster_k8s {\n    label=\"Kubernetes 集群\";\n    bgcolor=\"#f1f3f5\";\n    style=\"rounded\";\n\n    IngressController [label=\"Ingress 控制器\\n(例如 NGINX)\", shape=component, fillcolor=\"#ffc9c9\"];\n    \n    subgraph cluster_services {\n      label=\"服务 (Services)\";\n      bgcolor=\"#e9ecef\";\n      style=\"rounded\";\n      ServiceAPI [label=\"api-service\\n(ClusterIP)\", fillcolor=\"#96f2d7\"];\n      ServiceUI [label=\"ui-service\\n(ClusterIP)\", fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_pods {\n      label=\"Pod 列表\";\n      bgcolor=\"#e9ecef\";\n      style=\"rounded\";\n      PodAPI1 [label=\"Pod (API)\", fillcolor=\"#63e6be\"];\n      PodAPI2 [label=\"Pod (API)\", fillcolor=\"#63e6be\"];\n      PodUI1 [label=\"Pod (UI)\", fillcolor=\"#74c0fc\"];\n      PodUI2 [label=\"Pod (UI)\", fillcolor=\"#74c0fc\"];\n    }\n\n    ServiceAPI -> {PodAPI1, PodAPI2};\n    ServiceUI -> {PodUI1, PodUI2};\n  }\n  \n  User -> IngressController [label=\"HTTP 请求\"];\n  IngressController -> ServiceAPI [label=\"路由: /api\"];\n  IngressController -> ServiceUI [label=\"路由: /\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1bljhd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Ingress 控制器接收所有传入流量，并根据你在 Ingress 资源中定义的规则将其路由到不同的内部服务。</p>\n</blockquote>\n<h3>定义 Ingress 清单</h3>\n<p>与其它 Kubernetes 对象一样，Ingress 资源也是使用 YAML 清单定义的。其规格（spec）包含路由流量的规则。这些规则可以基于请求的主机名（基于主机的路由）或其 URL 路径（基于路径的路由）。</p>\n<p>让我们看一个定义了基于路径路由的清单。在这里，指向 <code>example.com/api</code> 的流量被发送到一个服务，而指向 <code>example.com/</code> 的流量被发送到另一个服务。</p>\n<pre><code class=\"language-yaml\">apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: my-application-ingress\n  annotations:\n    nginx.ingress.kubernetes.io/rewrite-target: /\nspec:\n  rules:\n  - http:\n      paths:\n      - path: /api\n        pathType: Prefix\n        backend:\n          service:\n            name: api-service\n            port:\n              number: 8080\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: ui-service\n            port:\n              number: 80\n</code></pre>\n<p>让我们拆解一下 <code>spec</code> 部分：</p>\n<ul>\n<li><strong><code>rules</code></strong>: 路由规则列表。每条规则应用于特定的主机，虽然这里没有指定主机，这意味着它适用于所有入站流量。</li>\n<li><strong><code>http.paths</code></strong>: 路径及其对应后端的列表。</li>\n<li><strong><code>path</code></strong>: 要匹配的 URL 路径。在本例中为 <code>/api</code> 和 <code>/</code>。</li>\n<li><strong><code>pathType</code></strong>: 指定 <code>path</code> 的匹配方式。<code>Prefix</code> 匹配以指定路径开头的任何 URL。<code>Exact</code> 则要求完全匹配。</li>\n<li><strong><code>backend.service</code></strong>: 定义匹配该路径的流量的目标 Service。它指定了 Service 的名称 (<code>name</code>) 和要连接的端口号 (<code>port</code>)。</li>\n</ul>\n<p>注解（Annotations），如 <code>nginx.ingress.kubernetes.io/rewrite-target</code>，通常用于提供针对所使用的特定 Ingress 控制器的额外配置。</p>\n<p>你还可以配置基于主机的路由，通常称为虚拟托管。这允许你通过 Ingress 控制器管理的同一个外部 IP 地址，将不同主机名的流量引导至不同的服务。</p>\n<pre><code class=\"language-yaml\">apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: virtual-host-ingress\nspec:\n  rules:\n  - host: api.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: api-service\n            port:\n              number: 8080\n  - host: app.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: ui-service\n            port:\n              number: 80\n</code></pre>\n<p>在这个例子中，对 <code>api.example.com</code> 的请求被路由到 <code>api-service</code>，而对 <code>app.example.com</code> 的请求被路由到 <code>ui-service</code>。</p>\n<h3>TLS 终止 (TLS Termination)</h3>\n<p>Ingress 的另一个显著能力是管理 TLS 终止。你无需在每个单独的应用 Pod 中配置 TLS 证书，而是可以在 Ingress 控制器处集中处理这一职责。这简化了证书管理，意味着集群内部从控制器到 Pod 的流量可以使用标准的、未加密的 HTTP。</p>\n<p>要启用 TLS，首先需要将证书和私钥存储在 Kubernetes 的 <code>Secret</code> 中。</p>\n<pre><code class=\"language-bash\">kubectl create secret tls my-tls-secret --cert=path/to/tls.crt --key=path/to/tls.key\n</code></pre>\n<p>然后，在 Ingress 清单中引用此 Secret：</p>\n<pre><code class=\"language-yaml\">apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: secure-ingress\nspec:\n  tls:\n  - hosts:\n    - app.example.com\n    secretName: my-tls-secret\n  rules:\n  - host: app.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend:\n          service:\n            name: ui-service\n            port:\n              number: 80\n</code></pre>\n<p><code>spec</code> 中的 <code>tls</code> 部分指示 Ingress 控制器对所有发往 <code>app.example.com</code> 的流量使用来自 <code>my-tls-secret</code> 的证书。控制器将处理与客户端的 TLS 握手，然后将解密后的流量转发给 <code>ui-service</code>。</p>\n<p>通过使用 Ingress，你获得了一种强大且灵活的方法来管理应用的外部访问。它整合了入口点，降低了与多个负载均衡器相关的成本，并在集群边缘集中处理了路由和安全逻辑。</p>",
+  "slug": "exposing-services-with-ingress",
+  "updates": [],
+  "references": [
+    {
+      "id": 19999,
+      "title": "Ingress",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/ingress/",
+      "doi": "",
+      "note": "提供了 Kubernetes Ingress API 对象的定义和操作原理，及其在路由外部 HTTP/HTTPS 流量到集群服务中的作用。",
+      "order": 1,
+      "created_at": "2025-09-06T13:18:00.598866Z",
+      "updated_at": "2025-09-10T05:21:49.071454Z"
+    },
+    {
+      "id": 20001,
+      "title": "Kubernetes in Action",
+      "author": "Marko Lukša",
+      "year": "2017",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action",
+      "doi": "",
+      "note": "对 Kubernetes 概念进行了广泛的解释，包括关于网络、服务和 Ingress 的详细章节，为其操作提供了全面的背景信息。",
+      "order": 3,
+      "created_at": "2025-09-06T13:18:00.631127Z",
+      "updated_at": "2025-09-10T05:21:50.129428Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

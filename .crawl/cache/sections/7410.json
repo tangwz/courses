@@ -1,0 +1,61 @@
+{
+  "id": 7410,
+  "title": "与LLM和聊天模型交互",
+  "meta_title": "在LangChain中使用LLM和聊天模型",
+  "meta_description": "了解LangChain中普通LLM与聊天模型的区别，以及如何针对特定任务使用它们。",
+  "content": "<p>LangChain提供了一个统一的接口，用于与多种语言模型交互，屏蔽了OpenAI、Anthropic或Hugging Face等提供商之间具体的API差异。这种标准化让您只需少量代码改动即可在模型间切换。此抽象的核心是两种主要类型的模型：<code>LLM</code>和<code>Chat Model</code>。了解它们的不同是构建高效应用的第一步。</p>\n<h3>LLM接口：直接的文本输入，文本输出模型</h3>\n<p><code>LLM</code>类代表了与语言模型最直接的交互方式。它基于简单的文本输入、文本输出模式运行。您提供一个字符串作为提示，模型返回一个字符串作为补全或答案。此接口最适合用于设计为文本补全的模型，例如旧模型或经过特定指令调整的补全模型。</p>\n<p>将此接口视为一个直接的函数调用，其中输入和输出都是纯文本。</p>\n<pre><code class=\"language-python\"># 请确保安装所需的包：\n# pip install langchain-openai\n\nimport os\nfrom langchain_openai import OpenAI\n\n# 设置您的API密钥\n# os.environ[\"OPENAI_API_KEY\"] = \"YOUR_API_KEY\"\n\n# 实例化模型\n# 我们指定'gpt-3.5-turbo-instruct'，它专为此补全式接口设计。\nllm = OpenAI(model=\"gpt-3.5-turbo-instruct\")\n\n# 准备输入字符串\nprompt = \"What is the capital of Japan?\"\n\n# 调用模型\nresponse = llm.invoke(prompt)\n\nprint(response)\n# 预期输出：\n# 日本的首都是东京。\n</code></pre>\n<p><code>invoke</code>方法将提示发送到模型的API，并直接返回生成的文本。这种方法对于摘要、翻译或回答事实性问题等单轮任务很高效，而无需会话背景。</p>\n<h3>ChatModel接口：管理结构化对话</h3>\n<p>相对而言，<code>ChatModel</code>接口专为更复杂的对话式交互设计。大多数现代且功能强的模型，例如GPT-4或Claude 3，都为聊天格式做了优化。<code>ChatModel</code>接收一个消息对象列表作为输入，而非单个字符串。这种结构让模型能够明白对话背景，包括谁说了什么。</p>\n<p>消息主要有三种类型：</p>\n<ul>\n<li><strong><code>SystemMessage</code></strong>：这设定AI的整体基调和指令。它就像给模型一个角色设定或一套在整个对话中要遵循的规则。它通常是列表中的第一个消息。</li>\n<li><strong><code>HumanMessage</code></strong>：这代表用户输入。</li>\n<li><strong><code>AIMessage</code></strong>：这代表模型自身的先前回复。通过在输入中包含<code>AIMessage</code>对象，您可以为模型提供对话历史。</li>\n</ul>\n<p>让我们看看这如何与<code>ChatOpenAI</code>一起使用，它是OpenAI模型的聊天专用集成。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain_core.messages import HumanMessage, SystemMessage\n\n# 实例化聊天模型\nchat = ChatOpenAI(model=\"gpt-4o\")\n\n# 准备消息列表\nmessages = [\n    SystemMessage(content=\"You are a helpful assistant that translates English to French.\"),\n    HumanMessage(content=\"Hello, how are you?\"),\n]\n\n# 调用模型\nresponse = chat.invoke(messages)\n\nprint(response)\n# 预期输出：\n# AIMessage(content='Bonjour, comment allez-vous ?', response_metadata=...)\n\n# 若要获取文本内容，请访问 .content 属性\nprint(response.content)\n# 预期输出：\n# Bonjour, comment allez-vous ?\n</code></pre>\n<p>请注意，输出不是字符串，而是一个<code>AIMessage</code>对象。此对象在其<code>.content</code>属性中包含字符串内容，以及来自API响应的其他有用元数据。这种结构化的输入和输出使得<code>ChatModel</code>成为构建聊天机器人、多步推理 (inference)代理或任何对话历史很要紧的应用的首选。</p>\n<h3>两种接口的比较</h3>\n<p>这两种模型类型之间的区分反映了LLM的发展。早期模型主要是文本补全器，而现代模型则被微调 (fine-tuning)为会话助手。下图描绘了每种接口的不同数据流。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-lqfk85\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", splines=ortho];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_llm {\n        label = \"LLM接口\";\n        style = \"rounded\";\n        bgcolor = \"#f8f9fa\";\n\n        llm_input [label=\"输入\\n(字符串)\", shape=note, fillcolor=\"#a5d8ff\"];\n        llm_model [label=\"LLM\\n(例如，gpt-3.5-turbo-instruct)\", fillcolor=\"#ced4da\"];\n        llm_output [label=\"输出\\n(字符串)\", shape=note, fillcolor=\"#96f2d7\"];\n        llm_input -> llm_model -> llm_output;\n    }\n\n    subgraph cluster_chat {\n        label = \"ChatModel接口\";\n        style = \"rounded\";\n        bgcolor = \"#f8f9fa\";\n\n        chat_input [label=\"输入\\n([SystemMessage,\\nHumanMessage,\\nAIMessage])\", shape=note, fillcolor=\"#a5d8ff\"];\n        chat_model [label=\"ChatModel\\n(例如，ChatOpenAI)\", fillcolor=\"#ced4da\"];\n        chat_output [label=\"输出\\n(AIMessage)\", shape=note, fillcolor=\"#96f2d7\"];\n        chat_input -> chat_model -> chat_output;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-lqfk85\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>LLM</code>接口处理单个字符串，而<code>ChatModel</code>接口处理结构化的消息列表，使其适用于对话情境。</p>\n</blockquote>\n<p>以下是区别汇总：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特点</th>\n<th align=\"left\">LLM接口</th>\n<th align=\"left\">ChatModel接口</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>输入格式</strong></td>\n<td align=\"left\">单个文本字符串。</td>\n<td align=\"left\">一个消息对象列表（<code>SystemMessage</code>、<code>HumanMessage</code>等）。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>输出格式</strong></td>\n<td align=\"left\">单个文本字符串。</td>\n<td align=\"left\">一个包含内容和元数据的<code>AIMessage</code>对象。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>常见用途</strong></td>\n<td align=\"left\">简单的文本补全、摘要、单轮问答。</td>\n<td align=\"left\">对话代理、多轮对话、角色扮演场景。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>底层模型</strong></td>\n<td align=\"left\">为文本补全做了优化（例如，<code>gpt-3.5-turbo-instruct</code>）。</td>\n<td align=\"left\">为遵循指令和对话做了优化（例如，<code>gpt-4o</code>、<code>claude-3-sonnet</code>）。</td>\n</tr>\n</tbody>\n</table>\n<p>一般来说，您应优先使用<code>ChatModel</code>，因为它们是大多数现代高性能语言模型的标准。</p>\n<p>在明确了如何与模型沟通后，下一步是掌握如何制定指令。现在我们将关注<code>PromptTemplates</code>，它能让您为这些模型构建动态且可复用的输入。</p>",
+  "slug": "interfacing-with-llms-chat-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 14668,
+      "title": "Models",
+      "author": "LangChain Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/model_io/language_models/",
+      "doi": "",
+      "note": "官方文档，解释了 LangChain 中 LLM 和 ChatModel 接口及其用法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:59:03.334325Z",
+      "updated_at": "2025-09-11T04:15:06.338148Z"
+    },
+    {
+      "id": 14669,
+      "title": "Chat Completions API",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/gpt/chat-completions-api",
+      "doi": "",
+      "note": "提供 OpenAI 聊天模型的规范，详细说明 LangChain ChatModel 接口所抽象的消息格式（系统、用户、助手）。",
+      "order": 2,
+      "created_at": "2025-09-05T08:59:03.349443Z",
+      "updated_at": "2025-09-11T04:15:03.553351Z"
+    },
+    {
+      "id": 14671,
+      "title": "Claude API",
+      "author": "Anthropic",
+      "year": "2024",
+      "publisher": "Anthropic",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.anthropic.com/claude/reference/getting-started-with-the-claude-api",
+      "doi": "",
+      "note": "Anthropic Claude 模型的官方文档，展示了另一个主要供应商与 LangChain ChatModel 集成的会话式 AI 方法。",
+      "order": 4,
+      "created_at": "2025-09-05T08:59:03.363302Z",
+      "updated_at": "2025-09-11T04:14:53.897137Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

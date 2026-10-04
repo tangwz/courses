@@ -1,0 +1,45 @@
+{
+  "id": 3965,
+  "title": "准确率何时会产生误导",
+  "meta_title": "准确率指标的局限性",
+  "meta_description": "理解准确率不是衡量好指标的场景，例如不平衡数据集。",
+  "content": "<p>准确率虽然能快速概括整体正确性（即总预测中正确部分的比例），但有时它可能过于乐观地甚至误导性地展现模型表现。在处理<strong>不平衡数据集</strong>时，这种情况时常发生。</p>\n<h3>不平衡问题</h3>\n<p>不平衡数据集是指其中一类观测数量远少于其他类别的数据集。可以考虑以下任务：</p>\n<ul>\n<li>发现罕见疾病（多数患者是健康的）。</li>\n<li>识别欺诈性信用卡交易（多数交易是合法的）。</li>\n<li>过滤垃圾邮件（多数邮件可能不是垃圾邮件）。</li>\n</ul>\n<p>在这些情况下，一个类别（“多数”类别，如健康患者或合法交易）的数量远超另一个类别（“少数”类别，如患病患者或欺诈交易）。</p>\n<p>让我们再次考虑我们的欺诈识别例子。假设我们有1,000笔交易数据。</p>\n<ul>\n<li>990笔交易是<strong>合法</strong>的（多数类别）。</li>\n<li>10笔交易是<strong>欺诈</strong>的（少数类别）。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ybjvla\" \n              data-plot-definition='{\"layout\": {\"title\": \"欺诈示例中的类别分布\", \"xaxis\": {\"title\": \"交易类型\"}, \"yaxis\": {\"title\": \"交易数量\"}, \"bargap\": 0.2, \"autosize\": true}, \"data\": [{\"type\": \"bar\", \"x\": [\"合法\", \"欺诈\"], \"y\": [990, 10], \"marker\": {\"color\": [\"#1c7ed6\", \"#f03e3e\"]}, \"name\": \"数量\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ybjvla\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>绝大多数交易是合法的，而欺诈性交易很少见。</p>\n</blockquote>\n<p>现在，假设我们构建一个非常简单的（也许是朴素的）分类模型。这个模型不是很复杂；它只是简单地预测<strong>每笔交易都是合法</strong>的。它从不标记 (token)任何交易为欺诈。</p>\n<p>这个模型的准确率是多少？让我们计算：</p>\n<ul>\n<li>对于990笔合法交易，模型正确预测为“合法”。即990个正确预测。</li>\n<li>对于10笔欺诈交易，模型错误预测为“合法”。即10个错误预测。</li>\n</ul>\n<p>正确预测的总数是990。预测总数是1000。</p>\n<p>准确率是：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>准确率</mtext><mo>=</mo><mfrac><mtext>正确预测数量</mtext><mtext>总预测数量</mtext></mfrac><mo>=</mo><mfrac><mn>990</mn><mn>1000</mn></mfrac><mo>=</mo><mn>0.99</mn></mrow><annotation encoding=\"application/x-tex\">\\text{准确率} = \\frac{\\text{正确预测数量}}{\\text{总预测数量}} = \\frac{990}{1000} = 0.99</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">准确率</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0463em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">总预测数量</span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">正确预测数量</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0074em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3214em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">1000</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">990</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.99</span></span></span></span></span>\n<p>99%的准确率！这听起来很棒，对吗？</p>\n<h3>为什么99%的准确率在此处具有误导性</h3>\n<p>问题在于：尽管模型达到了99%的准确率，但它完全未能完成其预期任务，即<strong>识别欺诈</strong>。它正确识别了所有合法交易，但却遗漏了<em>每一笔</em>欺诈交易。一个未能发现任何欺诈的模型，即使其整体准确率得分很高，也几乎是无用的。</p>\n<p>出现这种情况，是因为多数类示例的庞大数量主导了准确率的计算。模型仅通过正确识别最常见的结果就能获得高分。在少量少数类示例上产生的错误几乎不影响总体百分比。</p>\n<p>“在许多应用中，尤其涉及不平衡数据时，正确识别少数类别通常是最重要的目标。漏掉一笔欺诈交易可能比错误分类一笔合法交易的代价要大得多。同样，未能发现罕见疾病可能导致严重后果。”</p>\n<p>因此，在这种情况下仅依赖准确率可能导致部署的模型在我们最关心的任务上表现不佳。这强调了需要其他评估指标，这些指标能让我们更清楚地了解模型在<em>每个</em>类别，特别是少数类别上的表现。接下来我们将讨论的，从混淆矩阵中得出的指标，如精确率和召回率，有助于提供这种更全面的认识。</p>",
+  "slug": "accuracy-limitations",
+  "updates": [],
+  "references": [
+    {
+      "id": 10796,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "这本书提供了机器学习的实用入门指南，其中一个章节专门讨论分类指标，清晰地解释了准确度在不平衡数据集中的局限性，并介绍了替代的评估指标。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:56.666776Z",
+      "updated_at": "2025-09-08T13:37:25.529371Z"
+    },
+    {
+      "id": 10797,
+      "title": "Data Mining: Concepts and Techniques",
+      "author": "Jiawei Han, Micheline Kamber, and Jian Pei",
+      "year": "2011",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1",
+      "doi": "",
+      "note": "这是一本关于数据挖掘的综合性教材，其中详细讨论了分类模型的评估，强调了为什么准确度在倾斜的类别分布中可能不足，以及其他指标的重要性。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:56.670544Z",
+      "updated_at": "2025-09-08T13:37:05.945748Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

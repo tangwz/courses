@@ -1,0 +1,61 @@
+{
+  "id": 3531,
+  "title": "元数据过滤",
+  "meta_title": "向量数据库中的元数据过滤",
+  "meta_description": "将向量相似性搜索与基于关联元数据字段的过滤结合。",
+  "content": "<p>“虽然使用相似性搜索查找最接近的向量 (vector)是一项强大的功能，但应用程序通常需要对结果进行更精细的控制。想象一下，你在产品数据库中搜索与你上传图片视觉上相似的鞋子。你可能会得到靴子、运动鞋和凉鞋的结果。但如果你只想要尺码为10、目前有库存的运动鞋怎么办？这时，元数据过滤就变得必不可少了。”</p>\n<p>元数据指与每个向量关联的补充性结构化信息。这可以包括时间戳、类别、用户ID、产品属性（如尺码、颜色、品牌）、地理位置、访问权限或与你的应用场景相关的任何其他描述性数据。向量数据库通常将这些元数据与向量本身一同存储，通常在与向量相同的记录或文档结构中。</p>\n<p>元数据过滤的主要目的是将向量相似性搜索的语义能力与传统的基于属性的过滤结合起来。你不再只是询问“找到与此查询向量最相似的向量”，而是可以问“找到与此查询向量最相似<em>且满足这些具体元数据条件的向量</em>”。</p>\n<h3>为何使用元数据过滤？</h3>\n<ol>\n<li><strong>提高相关性：</strong> 过滤器将搜索结果缩小到精确匹配用户需求的项目，而不仅仅是语义相似度。搜索与给定摘要相似的研究论文是有用的，但按发表年份或作者进行过滤会使结果更有针对性。</li>\n<li><strong>个性化：</strong> 过滤器可用于根据用户个人资料、过往互动或权限定制搜索结果。例如，推荐与用户阅读历史相似的文章（向量 (vector)搜索），同时过滤掉他们已读过的文章（元数据过滤）。</li>\n<li><strong>强制执行约束：</strong> 应用程序可能需要强制执行业务规则或约束，例如根据可用性、价格范围或地理区域过滤产品。</li>\n</ol>\n<h3>过滤如何进行</h3>\n<p>向量 (vector)数据库通常与近似最近邻 (ANN) 搜索过程结合实现元数据过滤。主要有两种策略：</p>\n<ol>\n<li>\n<p><strong>预过滤（先过滤后搜索）：</strong> 数据库首先识别所有元数据匹配指定过滤条件的向量。然后，ANN 搜索<em>只</em>在此向量子集内执行。如果过滤器具有高度选择性（即，它显著减少了候选数量），此方法可以显著加快速度，因为计算密集型 ANN 搜索在较小数据集上运行。然而，它要求底层索引结构能高效支持在搜索前进行过滤。</p>\n</li>\n<li>\n<p><strong>后过滤（先搜索后过滤）：</strong> 数据库首先执行ANN搜索，纯粹基于向量相似度找到前k个最相似的向量。然后，它过滤此初始结果集，移除任何元数据不匹配指定过滤条件的向量。此方法更简单，并且适用于任何ANN索引。然而，如果初始ANN搜索返回许多后来被过滤掉的候选，可能会效率低下，浪费计算资源。如果过滤器移除了初始前k个结果的很大一部分，你最终获得的结果数量可能会少于请求。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1i7r2p7\" \n              data-graph-definition='digraph FilteringStrategies {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.15];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_pre {\n        label = \"预过滤\";\n        style=dashed;\n        color=\"#adb5bd\";\n\n        AllData [label=\"完整数据集\"];\n        Filter [label=\"应用元数据过滤器\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n        FilteredData [label=\"过滤后的子集\"];\n        ANNSearchPre [label=\"ANN 搜索\", style=filled, fillcolor=\"#ffec99\"];\n        ResultsPre [label=\"最终结果\", shape= Mdiamond, style=filled, fillcolor=\"#b2f2bb\"];\n\n        AllData -> Filter;\n        Filter -> FilteredData;\n        FilteredData -> ANNSearchPre;\n        ANNSearchPre -> ResultsPre;\n    }\n\n    subgraph cluster_post {\n        label = \"后过滤\";\n        style=dashed;\n        color=\"#adb5bd\";\n\n        AllData2 [label=\"完整数据集\"];\n        ANNSearchPost [label=\"ANN 搜索\", style=filled, fillcolor=\"#ffec99\"];\n        InitialResults [label=\"初始ANN候选\"];\n        FilterPost [label=\"应用元数据过滤器\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n        ResultsPost [label=\"最终结果\", shape= Mdiamond, style=filled, fillcolor=\"#b2f2bb\"];\n\n        AllData2 -> ANNSearchPost;\n        ANNSearchPost -> InitialResults;\n        InitialResults -> FilterPost;\n        FilterPost -> ResultsPost;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1i7r2p7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>预过滤（ANN搜索前过滤）和后过滤（ANN搜索后过滤）工作流程的比较。</p>\n</blockquote>\n<p>现代向量数据库通常采用复杂的索引技术，以实现高效的预过滤，或将过滤功能紧密集成到ANN搜索图遍历（如HNSW算法）中，旨在获得预过滤的性能优势，同时避免其局限性。</p>\n<h3>指定过滤器</h3>\n<p>指定过滤器的具体语法因不同的向量 (vector)数据库平台而异，但基本原理相似。你通常会将过滤表达式作为搜索查询的一部分提供，通常使用熟悉的逻辑运算符（AND、OR、NOT）和比较运算符（等于、大于、小于、在列表中等）应用于元数据字段。</p>\n<p>例如，查询可能如下所示：</p>\n<pre><code>查找与 query_vector 相似的向量\n其中 metadata.category = \"运动鞋\"\n  并且 metadata.size = 10\n  并且 metadata.in_stock = true\n限制 10 条\n</code></pre>\n<h3>性能考量</h3>\n<ul>\n<li><strong>过滤器选择性：</strong> 高度选择性（只匹配一小部分数据）的过滤器能让预过滤策略极大受益。选择性较低的过滤器在预过滤或后过滤下的性能可能类似。</li>\n<li><strong>索引类型：</strong> 某些ANN索引类型比其他类型更适合高效的预过滤。数据库的实现细节在此处影响很大。</li>\n<li><strong>元数据复杂度：</strong> 涉及多个字段和运算符的复杂过滤条件会增加开销。适当地索引元数据字段（类似于传统数据库）有时可以提升过滤性能。</li>\n</ul>\n<p>“元数据过滤将向量 (vector)搜索从纯粹的相似性查询转变为多功能的查询机制，能够处理复杂需求。它弥合了语义理解与结构化数据约束之间的差距，使你能够基于向量数据构建更精确、相关且有用的应用程序。在后续的学习中，理解如何有效运用元数据对于优化搜索性能和相关性将很重要。”</p>",
+  "slug": "vector-db-metadata-filtering",
+  "updates": [],
+  "references": [
+    {
+      "id": 5340,
+      "title": "Filtering in Qdrant: How it works and why it’s important",
+      "author": "Kacper Łukawski",
+      "year": "2022",
+      "publisher": "Qdrant",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://qdrant.tech/articles/filtering/",
+      "doi": "",
+      "note": "详细解释了元数据过滤策略（预过滤、后过滤）及其在生产型向量数据库中的应用。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:50.806566Z",
+      "updated_at": "2025-09-09T10:47:49.959421Z"
+    },
+    {
+      "id": 5341,
+      "title": "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs",
+      "author": "Yu. A. Malkov, D. A. Yashunin",
+      "year": "2018",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "volume": "40",
+      "pages": "2192-2202",
+      "url": "https://ieeexplore.ieee.org/document/8040446",
+      "doi": "10.1109/TPAMI.2017.2762879",
+      "note": "描述了许多向量数据库使用的核心HNSW算法，为如何在这些结构上集成或应用过滤提供了背景。最初以预印本形式发布在arXiv上。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:50.819973Z",
+      "updated_at": "2025-09-09T10:47:52.840464Z"
+    },
+    {
+      "id": 5344,
+      "title": "Filtering Nearest Neighbors for Hybrid Search",
+      "author": "Haoxiang Li, Yandi Li, Minjia Zhang, Song Liu, Jian Li",
+      "year": "2023",
+      "publisher": "VLDB Endowment",
+      "journal": "Proceedings of the VLDB Endowment",
+      "volume": "16",
+      "pages": "3676-3689",
+      "url": "https://www.vldb.org/pvldb/vol16/p3676-li.pdf",
+      "doi": "10.14778/3611477.3611502",
+      "note": "讨论了将元数据过滤高效集成到近似最近邻搜索中的高级技术，涵盖了各种策略及其性能影响。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:50.827668Z",
+      "updated_at": "2025-09-09T10:47:57.059279Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

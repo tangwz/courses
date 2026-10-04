@@ -1,0 +1,61 @@
+{
+  "id": 7428,
+  "title": "RAG系统架构",
+  "meta_title": "RAG系统架构详解",
+  "meta_description": "了解检索增强生成系统的组件和工作流程，从数据摄取到回答生成。",
+  "content": "<p>检索增强生成 (RAG)系统（RAG）通过结构化的多阶段流程运行，旨在使大型语言模型（LLM）的回复基于外部数据。此过程可分为两个主要阶段：离线索引阶段，在此阶段准备知识库；以及在线检索与生成阶段，实时响应用户查询。掌握这种两部分架构是构建高效RAG应用的基础。</p>\n<p>下图展示了完整的流程，说明了数据在索引期间如何处理以及查询如何处理以生成回答。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-bp2hnw\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  splines=ortho;\n  node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=0.2];\n  edge [fontname=\"sans-serif\"];\n  bgcolor=\"transparent\";\n  compound=true;\n\n  subgraph cluster_indexing {\n    label=\"索引流程 (离线)\";\n    style=\"rounded,filled\";\n    fillcolor=\"#e9ecef\";\n    fontcolor=\"#495057\";\n    color=\"#adb5bd\";\n    node [fillcolor=\"#a5d8ff\"];\n    edge [color=\"#495057\"];\n    D [label=\"源文档\\n(PDF, TXT, HTML)\"];\n    L [label=\"文档加载器\"];\n    S [label=\"文本分块器\"];\n    E [label=\"嵌入模型\"];\n    V [label=\"向量存储\"];\n    D -> L -> S -> E -> V;\n  }\n\n  subgraph cluster_query {\n    label=\"查询流程 (在线)\";\n    style=\"rounded,filled\";\n    fillcolor=\"#e9ecef\";\n    fontcolor=\"#495057\";\n    color=\"#adb5bd\";\n    node [fillcolor=\"#ffec99\"];\n    edge [color=\"#495057\"];\n    U [label=\"用户查询\"];\n    E2 [label=\"嵌入模型\", fillcolor=\"#a5d8ff\"];\n    R [label=\"检索器\"];\n    P [label=\"提示模板\"];\n    A [label=\"LLM\"];\n    Ans [label=\"基于事实的回答\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n    \n    U -> E2;\n    E2 -> R;\n    R -> P;\n    U -> P;\n    P -> A;\n    A -> Ans;\n  }\n\n  R -> V [style=dashed, arrowhead=vee, label=\"相似性搜索\", ltail=cluster_query, lhead=cluster_indexing];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-bp2hnw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>RAG工作流程包含一个离线索引流程用于准备数据，以及一个在线查询流程用于生成回答。检索器在向量 (vector)存储中查找相关背景信息，这些信息被整理成供LLM使用的提示。</p>\n</blockquote>\n<p>我们来更详细地审视每个阶段。</p>\n<h2>索引流程</h2>\n<p>索引流程的目标是将非结构化文档集合转换为结构化、可搜索的知识库。这是一个准备步骤，通常在有新数据时运行一次或定期运行。它包含一系列数据处理操作。</p>\n<h3>1. 加载</h3>\n<p>此流程始于您的原始数据，这些数据可以有多种格式，例如PDF文件、网页、文本文件或数据库条目。<code>DocumentLoader</code> 用于将这些数据摄取为LangChain可处理的标准化格式。每个加载的来源都表示为一个 <code>Document</code> 对象，其中包含文本内容和相关的元数据。</p>\n<h3>2. 分块</h3>\n<p>大型文档通常会超出LLM的上下文 (context)窗口，并且不利于进行精确检索。如果您提供一个100页的文档作为特定问题的背景，模型可能难以找到相关信息。为此，<code>TextSplitters</code> 用于将大型 <code>Document</code> 对象拆分为更小、更易于处理的块。分块的技巧在于创建足够小以提高处理效率，但又足够大以保持其语义的块。</p>\n<h3>3. 嵌入 (embedding)</h3>\n<p>文本分块后，需要将其转换为机器可用于比较的格式。这就是嵌入的作用。嵌入模型（一个独立的神经网络 (neural network)）将每个文本块转换为高维数值向量 (vector)。这些向量的设计使得具有相似语义的文本块在向量空间中彼此靠近。例如，“如何制作披萨”的向量会比“股票市场趋势”的向量更接近“披萨面团配方”的向量。</p>\n<h3>4. 存储</h3>\n<p>索引的最后一步是将文本块及其对应的嵌入 (embedding)向量 (vector)存储在一个名为 <code>VectorStore</code> 的专用数据库中。这种类型的数据库经过优化，可对高维向量执行极快的相似性搜索。给定一个输入向量，向量存储可以高效地找到其索引中最相似的向量，通常使用近似最近邻 (ANN) 等算法。常见的向量存储包括FAISS、Chroma和Pinecone。</p>\n<h2>检索与生成流程</h2>\n<p>此流程在用户提交查询时启动。它使用预先构建的索引来获取相关信息并生成准确的回答。</p>\n<h3>1. 查询嵌入 (embedding)</h3>\n<p>用户的查询（一段文本字符串）会通过与索引阶段相同的嵌入模型。这将查询转换为向量 (vector)，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>v</mi><mi>q</mi></msub></mrow><annotation encoding=\"application/x-tex\">v_q</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7167em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0359em;\">q</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span>，使其与文档块向量 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>v</mi><mi>d</mi></msub></mrow><annotation encoding=\"application/x-tex\">v_d</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.5806em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3361em;\"><span style=\"top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">d</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span> 处于相同的向量空间中。这一步很要紧，因为它使我们能够直接比较查询的含义与文档块的含义。</p>\n<h3>2. 检索</h3>\n<p>查询向量 (vector) <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>v</mi><mi>q</mi></msub></mrow><annotation encoding=\"application/x-tex\">v_q</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7167em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0359em;\">q</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span> 被发送到 <code>VectorStore</code>。存储执行相似性搜索，计算查询向量与索引中所有文档块向量之间的距离。返回相似性得分最高的“top-k”块（即向量空间中距离最小的块）。此组件由 <code>Retriever</code> 管理，<code>Retriever</code> 配置用于获取给定查询最相关的文档。</p>\n<h3>3. 增强与生成</h3>\n<p>检索到的文本块充当“增强”的背景信息。它们被传递给 <code>PromptTemplate</code> 组件，该组件将它们与原始用户查询组合成一个格式化的字符串。提示通常看起来像这样：</p>\n<blockquote>\n<p>\"请根据以下背景信息回答问题。</p>\n<p>背景信息：\n[检索到的块1文本]\n[检索到的块2文本]\n...</p>\n<p>问题：[原始用户查询]\"</p>\n</blockquote>\n<p>LLM随后 <em>仅</em> 基于提示中提供的信息来生成回答。这使得模型使用文档中真实、最新的数据，而不是仅仅依赖其内部预训练 (pre-training)的知识。结果是基于事实、准确且特定于您数据集的回复。</p>\n<p>通过将此流程分解为这些不同阶段，RAG系统提供了一种高效且模块化的方式，为LLM增加外部知识。在接下来的章节中，我们将审视利用LangChain实现此架构中每个组件的实际方法。</p>",
+  "slug": "architecture-of-rag",
+  "updates": [],
+  "references": [
+    {
+      "id": 14664,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "33",
+      "pages": "9459-9474",
+      "url": "https://doi.org/10.48550/arXiv.2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍了检索增强生成（RAG）的概念和初始架构。",
+      "order": 1,
+      "created_at": "2025-09-05T08:58:46.841322Z",
+      "updated_at": "2025-09-11T04:12:45.556934Z"
+    },
+    {
+      "id": 14665,
+      "title": "RAG (Retrieval Augmented Generation) Concepts",
+      "author": "LangChain documentation contributors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/concepts/#rag",
+      "doi": "",
+      "note": "在LangChain框架内，提供了RAG系统组件的实用概述。",
+      "order": 2,
+      "created_at": "2025-09-05T08:58:46.859433Z",
+      "updated_at": "2025-09-11T04:12:37.748470Z"
+    },
+    {
+      "id": 14667,
+      "title": "Text Splitters",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG-MRXaWNhSOKsVG2vFJao1O-JcA23ily_vNveEXwuuH8EX-MPvCwlKEqgERid35purnimGykhH1s0MDbbWHuO7uNPTGwUAaegWAMaa3alDUhyh7flCqDQ-P9Yu8GRikAJz3hQnIDiDEgs0h2W--RbBvZdUHQk=",
+      "doi": "",
+      "note": "详细介绍了为RAG将文档分割成更小、语义连贯的块的各种策略和考量。",
+      "order": 4,
+      "created_at": "2025-09-05T08:58:46.865894Z",
+      "updated_at": "2025-09-11T04:12:52.565811Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

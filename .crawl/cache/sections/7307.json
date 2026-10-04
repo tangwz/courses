@@ -1,0 +1,61 @@
+{
+  "id": 7307,
+  "title": "健康检查：存活探针与就绪探针",
+  "meta_title": "Kubernetes 存活探针与就绪探针",
+  "meta_description": "了解如何配置存活探针和就绪探针，以帮助 Kubernetes 管理应用程序的健康状况和可用性。",
+  "content": "<p>Pod 的生命周期阶段（如 <code>Running</code> 或 <code>Failed</code>）提供了容器状态的高层视图，但它们并不总是能反映应用程序的运行状况。例如，一个处于 <code>Running</code> 状态的容器内部，应用程序可能已经死锁、陷入死循环，或者无法连接数据库。从外部看，进程似乎正在运行，但对用户来说，应用程序已经失效。Kubernetes 通过健康检查（health probes）解决了这一问题，它允许 Kubelet 从 Pod 内部主动检查应用程序的健康状况。</p>\n<p>通过配置探针，您可以让 Kubernetes 直接询问您的应用程序：“你还好吗？”。根据返回的结果，Kubernetes 可以自动重启出现故障的容器，或暂时停止向其发送流量，从而构建出更具弹性且具备自愈能力的系统。</p>\n<p>您可以为容器配置两种主要的探针类型：存活探针（liveness probes）和就绪探针（readiness probes）。</p>\n<h3>存活探针：应用程序是否还在运行？</h3>\n<p>存活探针用于检查容器是否仍在运行并有响应。如果存活探针失败达到指定次数，Kubelet 会认为应用程序处于无法恢复的状态（如死锁）。其处理方式虽然果断但也有效：直接杀死该容器。根据 Pod 的 <code>restartPolicy</code>（重启策略），通常会启动一个新容器来替换它。这是实现自动化恢复的核心机制。</p>\n<p>以一个存在内存泄漏的应用程序为例。它可能在运行数小时内表现正常，但最终会变得无响应。存活探针可以检测到这种无响应状态并触发重启，从而在无需人工干预的情况下使应用程序恢复到健康状态。</p>\n<p>下面是一个包含简单 HTTP 存活探针的 Pod 配置清单示例：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Pod\nmetadata:\n  name: liveness-probe-pod\nspec:\n  containers:\n  - name: my-app\n    image: nginx\n    ports:\n    - containerPort: 80\n    livenessProbe:\n      httpGet:\n        path: /\n        port: 80\n      initialDelaySeconds: 5\n      periodSeconds: 10\n</code></pre>\n<p>在此配置中：</p>\n<ul>\n<li><code>httpGet</code>：Kubelet 将向容器 80 端口的 <code>/</code> 路径发送 HTTP GET 请求。返回码在 200 到 399 之间被视为成功。</li>\n<li><code>initialDelaySeconds: 5</code>：Kubelet 会在容器启动 5 秒后执行第一次探针检查。这为应用程序提供了初始化时间。</li>\n<li><code>periodSeconds: 10</code>：探针将每 10 秒执行一次。</li>\n</ul>\n<h3>就绪探针：应用程序是否已准备好接收流量？</h3>\n<p>就绪探针用于确定容器是否已准备好开始接收网络流量。一个 Pod 可能处于存活状态，但尚未就绪。例如，应用程序可能需要在启动时加载大型配置文件或预热缓存。在此期间，它正在运行（并且能通过存活探针检查），但向其发送用户流量会导致错误。</p>\n<p>如果就绪探针失败，Kubelet <em>不会</em> 重启容器。相反，它会向 Kubernetes 控制平面发出信号，表明该 Pod 尚未就绪。随后，Endpoints 控制器会将该 Pod 的 IP 地址从指向它的所有 Service 中移除。在就绪探针再次成功之前，流量不会被路由到该 Pod。这对于实现零停机部署和更新非常有用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-993x2p\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Helvetica\"];\n\n    subgraph cluster_liveness {\n        label = \"存活探针\";\n        style = \"rounded\";\n        bgcolor = \"#ffc9c9\";\n        Liveness [label=\"Kubelet 执行\\n存活探针\"];\n        L_Success [label=\"探针成功\", fillcolor=\"#b2f2bb\"];\n        L_Failure [label=\"探针失败\", fillcolor=\"#ffa8a8\"];\n        L_Continue [label=\"容器继续\\n运行\"];\n        L_Restart [label=\"Kubelet 重启\\n容器\", fillcolor=\"#f03e3e\", fontcolor=\"white\"];\n\n        Liveness -> L_Success [label=\" 正常 \"];\n        Liveness -> L_Failure [label=\" 失败 \"];\n        L_Success -> L_Continue;\n        L_Failure -> L_Restart;\n    }\n\n    subgraph cluster_readiness {\n        label = \"就绪探针\";\n        style = \"rounded\";\n        bgcolor = \"#a5d8ff\";\n        Readiness [label=\"Kubelet 执行\\n就绪探针\"];\n        R_Success [label=\"探针成功\", fillcolor=\"#b2f2bb\"];\n        R_Failure [label=\"探针失败\", fillcolor=\"#ffa8a8\"];\n        R_Add [label=\"Pod 被添加到\\nService 端点\"];\n        R_Remove [label=\"Pod 从 Service\\n端点中移除\", fillcolor=\"#fa5252\", fontcolor=\"white\"];\n\n        Readiness -> R_Success [label=\" 正常 \"];\n        Readiness -> R_Failure [label=\" 失败 \"];\n        R_Success -> R_Add;\n        R_Failure -> R_Remove;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-993x2p\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>存活探针和就绪探针的决策流程。存活探针失败会导致容器重启，而就绪探针失败会导致流量从该 Pod 移开。</p>\n</blockquote>\n<h3>探针机制</h3>\n<p>Kubernetes 提供了三种实现探针检查的方法：</p>\n<ol>\n<li>\n<p><strong><code>httpGet</code></strong>：对容器 IP 地址上的特定路径和端口执行 HTTP GET 请求。这是 Web 应用程序最常用的探针类型。</p>\n<pre><code class=\"language-yaml\">livenessProbe:\n  httpGet:\n    path: /healthz\n    port: 8080\n</code></pre>\n</li>\n<li>\n<p><strong><code>tcpSocket</code></strong>：尝试在指定的端口上打开 TCP 套接字。如果能建立连接，则探针成功。这适用于非 HTTP 类型的应用程序，例如数据库。</p>\n<pre><code class=\"language-yaml\">readinessProbe:\n  tcpSocket:\n    port: 5432\n</code></pre>\n</li>\n<li>\n<p><strong><code>exec</code></strong>：在容器内执行命令。如果命令退出的状态码为 0，则探针成功。这为编写自定义健康检查脚本提供了极大的灵活性。</p>\n<pre><code class=\"language-yaml\">livenessProbe:\n  exec:\n    command:\n    - cat\n    - /tmp/health\n</code></pre>\n<p>仅当容器内 <code>/tmp/health</code> 文件存在且可读时，此 <code>exec</code> 探针才会成功。</p>\n</li>\n</ol>\n<h3>配置探针行为</h3>\n<p>通过几个参数 (parameter)，您可以微调 (fine-tuning)探针的时间设置，以匹配应用程序的行为。配置不当可能会导致容器被不必要地重启，或者流量被发送到尚未准备就绪的应用程序。</p>\n<ul>\n<li><code>initialDelaySeconds</code>：容器启动后，在执行第一次检查之前等待的秒数。将其设置得足够长以允许应用程序完成启动非常重要。</li>\n<li><code>periodSeconds</code>：执行检查的频率（以秒为单位）。默认为 10。</li>\n<li><code>timeoutSeconds</code>：探针超时后的秒数。默认为 1。如果探针超时，则被视为失败。</li>\n<li><code>failureThreshold</code>：探针失败后，Kubernetes 在将容器标记 (token)为不健康（针对存活探针）或未就绪（针对就绪探针）之前将重试的次数。默认为 3。</li>\n<li><code>successThreshold</code>：探针失败后，被视为成功所需的连续成功最小次数。默认为 1。</li>\n</ul>\n<p>下面是一个更完整的示例，展示了同时包含存活探针和就绪探针的详细配置：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Pod\nmetadata:\n  name: fully-probed-pod\nspec:\n  containers:\n  - name: api-server\n    image: my-company/api-server:1.2.0\n    ports:\n    - containerPort: 8080\n\n    # 检查应用是否存活；如果不存活，则重启它\n    livenessProbe:\n      httpGet:\n        path: /healthz\n        port: 8080\n      initialDelaySeconds: 15\n      timeoutSeconds: 2\n      periodSeconds: 20\n      failureThreshold: 3\n\n    # 检查应用是否准备好接收流量\n    readinessProbe:\n      httpGet:\n        path: /readyz\n        port: 8080\n      initialDelaySeconds: 5\n      timeoutSeconds: 1\n      periodSeconds: 10\n      failureThreshold: 2\n</code></pre>\n<p>在此清单中，就绪探针比存活探针更早开始检查（<code>initialDelaySeconds: 5</code>）且频率更高（<code>periodSeconds: 10</code>）。这使得 Kubernetes 能够快速确定应用程序是否可以接收流量。存活探针则设置得更宽松（<code>initialDelaySeconds: 15</code>），在决定重启之前给应用程序更多时间从临时问题中恢复。通过使用不同的 <code>/healthz</code> 和 <code>/readyz</code> 端点，应用程序可以独立报告其存活状态和就绪状态。</p>\n<p>合理配置健康探针是在 Kubernetes 上构建可靠应用程序的基础。它们将您的部署从简单的进程管理器转变为一个能够自动处理常见应用程序故障的自愈系统。</p>",
+  "slug": "health-probes-liveness-readiness",
+  "updates": [],
+  "references": [
+    {
+      "id": 19984,
+      "title": "Configure Liveness, Readiness and Startup Probes",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/",
+      "doi": "",
+      "note": "这份官方指南提供了在 Kubernetes 中配置活性、就绪性和启动探针的全面说明。",
+      "order": 1,
+      "created_at": "2025-09-06T13:17:50.285019Z",
+      "updated_at": "2025-09-10T05:22:37.461275Z"
+    },
+    {
+      "id": 19985,
+      "title": "Kubernetes in Action, Second Edition",
+      "author": "Marko Lukša, Kevin Conner",
+      "year": "2026",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action-second-edition",
+      "doi": "",
+      "note": "一本广受好评的 Kubernetes 书籍，详细解释了其概念，包括健康探针如何支持应用管理。",
+      "order": 2,
+      "created_at": "2025-09-06T13:17:50.290192Z",
+      "updated_at": "2025-09-10T05:22:38.246115Z"
+    },
+    {
+      "id": 19986,
+      "title": "Cloud Native DevOps with Kubernetes: Building, Deploying, and Scaling Modern Applications in the Cloud",
+      "author": "Justin Domingus, John Arundel",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/cloud-native-devops/9781098116811/",
+      "doi": "",
+      "note": "这本书提供了使用 Kubernetes 构建和运行云原生应用的实践建议，包括通过健康检查设计弹性系统的章节。",
+      "order": 3,
+      "created_at": "2025-09-06T13:17:50.292985Z",
+      "updated_at": "2025-09-10T05:22:51.018333Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5172,
+  "title": "加载数据 (文档、网页)",
+  "meta_title": "使用 LlamaIndex 加载数据 | LlamaIndex 基础",
+  "meta_description": "使用 LlamaIndex 数据加载器从各类来源摄取信息。",
+  "content": "<p>在大型语言模型 (LLM) 使用你的特定数据之前，这些数据必须先转换为 LlamaIndex 能理解的格式。这一第一步是将原始信息（无论是简单的文本文件、PDF 文档、网页，甚至是数据库）从其来源转换为标准化表示。LlamaIndex 通过通常称为 <code>Readers</code> (读取器) 或 <code>Data Loaders</code> (数据加载器) 的组件来处理这个数据摄取过程。</p>\n<p>LlamaIndex 中数据的基本单位是 <code>Document</code> 对象。<code>Document</code> 通常包含从源中提取的文本内容，以及相关的元数据（例如文件名或 URL）。读取器的主要作用是从特定来源获取输入数据，并生成一个或多个 <code>Document</code> 对象。</p>\n<p>让我们看看如何从常见来源加载数据。</p>\n<h3>使用读取器加载数据</h3>\n<p>读取器隐藏了访问和解析不同文件类型及数据源的复杂性。LlamaIndex 为许多常见格式提供了内置读取器，并在 LlamaIndex Hub 中维护了一个更大的集合，用于更专用来源。</p>\n<p>一般模式包括导入相应的读取器，实例化它（通常指向数据源），然后调用其 <code>load_data()</code> 方法。</p>\n<pre><code class=\"language-python\"># 示例结构（具体读取器不同）\nfrom llama_index.core import SimpleDirectoryReader # 或其他特定读取器\n\n# 实例化读取器，指向数据源\n# 对于基于文件的读取器，这通常是目录路径\nreader = SimpleDirectoryReader(\"./data_directory\")\n\n# 将数据加载到 Document 对象中\ndocuments = reader.load_data()\n\n# 现在 'documents' 是一个 LlamaIndex Document 对象的列表\nprint(f\"Loaded {len(documents)} document(s).\")\n# 示例输出：访问第一个文档的文本\nif documents:\n    print(f\"First document text snippet: {documents[0].text[:100]}...\")\n</code></pre>\n<h3>读取本地文件 (<code>SimpleDirectoryReader</code>)</h3>\n<p>最常见的任务之一是从本地机器上存储的文件加载数据。<code>SimpleDirectoryReader</code> 是一个处理此任务的多功能工具。默认情况下，只要安装了必要的底层库，它就可以处理各种文件类型，例如 <code>.txt</code>、<code>.pdf</code>、<code>.docx</code>、<code>.json</code>、<code>.md</code> 等。</p>\n<pre><code class=\"language-python\"># 确保特定文件类型可能需要必要的库\n# pip install llama-index pypdf # 例如：支持 PDF\n\nfrom llama_index.core import SimpleDirectoryReader\n\n# 将 SimpleDirectoryReader 指向包含你文档的文件夹\nreader = SimpleDirectoryReader(\"./path/to/your/docs\")\ndocuments = reader.load_data()\n\nprint(f\"Successfully loaded {len(documents)} documents from the directory.\")\n</code></pre>\n<p><code>SimpleDirectoryReader</code> 会遍历指定目录。对于它找到的每个受支持文件，它会提取文本内容并创建一个 <code>Document</code> 对象。文档的元数据通常会自动包含文件路径和名称。你可以配置它以递归搜索子目录或过滤特定文件扩展名。</p>\n<h3>加载网页</h3>\n<p>为了直接从网页摄取内容，LlamaIndex 提供了专为网页抓取设计的读取器。一个常用选择是 <code>SimpleWebPageReader</code>（或者有时是其他使用 <code>BeautifulSoup</code> 等库的读取器或框架中的集成功能）。</p>\n<p>通常你需要安装用于网络请求和 HTML 解析的库。</p>\n<pre><code class=\"language-python\"># 安装必要的库\n# pip install llama-index beautifulsoup4\n\nfrom llama_index.core import SimpleWebPageReader\n\n# 要加载的 URL 列表\nurls = [\"https://www.example.com/page1\", \"https://www.anothersite.org/article\"]\n\n# 实例化读取器\n# 设置 html_to_text=True 以尝试进行基本的 HTML 标签移除\nreader = SimpleWebPageReader(html_to_text=True)\n\n# 从 URL 加载数据\n# 注意：这将返回一个 Document 列表，每个 URL 对应一个\nweb_documents = reader.load_data(urls)\n\nprint(f\"Loaded content from {len(web_documents)} web page(s).\")\nif web_documents:\n    print(f\"Snippet from first web page: {web_documents[0].text[:150]}...\")\n\n</code></pre>\n<blockquote>\n<p>网页读取器从每个 URL 获取 HTML 内容，可选地处理它以提取主要文本内容，并为每个页面创建一个 <code>Document</code> 对象。URL 通常存储在文档的元数据中。</p>\n</blockquote>\n<h3>图示：数据加载过程</h3>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-rzayq4\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_source {\n    label = \"数据源\";\n    style=filled;\n    color=\"#e9ecef\";\n    TextFile [label=\"文本文件 (.txt)\", shape=note, fillcolor=\"#a5d8ff\"];\n    PDFFile [label=\"PDF 文件 (.pdf)\", shape=note, fillcolor=\"#ffc9c9\"];\n    WebPage [label=\"网页 (URL)\", shape=note, fillcolor=\"#b2f2bb\"];\n  }\n\n  subgraph cluster_loader {\n     label = \"LlamaIndex 读取器\";\n     style=filled;\n     color=\"#e9ecef\";\n     node [fillcolor=\"#ffd8a8\"];\n     SimpleDirReader [label=\"SimpleDirectoryReader\"];\n     WebReader [label=\"SimpleWebPageReader\"];\n  }\n\n   subgraph cluster_output {\n     label = \"输出\";\n     style=filled;\n     color=\"#e9ecef\";\n     node [fillcolor=\"#d0bfff\", shape=component];\n     Doc1 [label=\"文档 1\\n(文本 + 元数据)\"];\n     Doc2 [label=\"文档 2\\n(文本 + 元数据)\"];\n     DocN [label=\"文档 N\\n(文本 + 元数据)\"];\n   }\n\n\n  TextFile -> SimpleDirReader [label=\"读取\"];\n  PDFFile -> SimpleDirReader [label=\"读取\"];\n  WebPage -> WebReader [label=\"读取\"];\n\n  SimpleDirReader -> Doc1 [label=\"创建\"];\n  SimpleDirReader -> Doc2 [label=\"创建\"];\n  WebReader -> DocN [label=\"创建\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-rzayq4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>来自各类来源（如文本文件、PDF 或网页）的数据由相应的 LlamaIndex 读取器（例如 <code>SimpleDirectoryReader</code>、<code>SimpleWebPageReader</code>）处理，以创建包含文本和元数据的标准化 <code>Document</code> 对象。</p>\n</blockquote>\n<h3>处理多样化数据源</h3>\n<p>LlamaIndex 支持除简单文件和网页之外的多种数据源。通过内置读取器以及 LlamaIndex Hub（一个社区注册中心）上提供的丰富集合，你可以连接到：</p>\n<ul>\n<li>数据库 (SQL, NoSQL)</li>\n<li>API (Slack, Google Drive 等)</li>\n<li>结构化数据格式 (CSV, JSON)</li>\n<li>音频和视频 (需要转录服务)</li>\n</ul>\n<p>查看 <a href=\"https://docs.llamaindex.ai/en/stable/module_guides/loading/connector.html\">LlamaIndex 文档</a> 或 <a href=\"https://llamahub.ai/\">LlamaIndex Hub</a> 可以看到可用连接器的广度。安装和使用这些通常遵循类似模式：安装依赖项，导入特定的读取器，使用必要的配置（如 API 密钥或连接字符串）实例化它，然后调用 <code>load_data()</code>。</p>\n<p>这个加载阶段的结果是一致的：一个 <code>Document</code> 对象列表。这些对象作为标准化输入，用于为 LLM 准备数据的下一个重要步骤：索引。</p>",
+  "slug": "llamaindex-loading-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 13161,
+      "title": "LlamaIndex Documentation: Data Connectors",
+      "author": "LlamaIndex",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.llamaindex.ai/en/stable/module_guides/loading/data_connectors.html",
+      "doi": "",
+      "note": "LlamaIndex数据加载器的官方指南，包括`SimpleDirectoryReader`和`SimpleWebPageReader`，以及连接到各种数据源。",
+      "order": 1,
+      "created_at": "2025-09-05T08:28:57.658062Z",
+      "updated_at": "2025-09-09T03:27:25.754384Z"
+    },
+    {
+      "id": 13162,
+      "title": "LlamaIndex Documentation: Document",
+      "author": "LlamaIndex",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.llamaindex.ai/en/stable/module_guides/concepts/document.html",
+      "doi": "",
+      "note": "定义了LlamaIndex中的`Document`对象、其结构和元数据处理。",
+      "order": 2,
+      "created_at": "2025-09-05T08:28:57.670731Z",
+      "updated_at": "2025-09-09T03:27:23.359027Z"
+    },
+    {
+      "id": 13163,
+      "title": "LlamaHub: Community Data Loaders",
+      "author": "LlamaIndex",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://llamahub.ai/",
+      "doi": "",
+      "note": "一个社区贡献的数据加载器仓库，用于将各种数据源与LlamaIndex集成。",
+      "order": 3,
+      "created_at": "2025-09-05T08:28:57.674001Z",
+      "updated_at": "2025-09-09T03:27:14.216200Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

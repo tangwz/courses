@@ -1,0 +1,45 @@
+{
+  "id": 2333,
+  "title": "理解变量作用域（局部与全局）",
+  "meta_title": "Python 变量作用域 | 局部变量与全局变量",
+  "meta_description": "明白局部变量（在函数内部定义）和全局变量（在函数外部定义）之间的区别。",
+  "content": "<p>当你开始编写函数时，你会注意到一个重要点：并非所有变量都能在程序的任何地方被访问。你定义变量的位置决定了你可以在哪里使用它。这个理念被称为<strong>变量作用域</strong>。明白作用域对于组织代码和避免意外行为很根本。</p>\n<p>把它想象成房子里有不同的房间。有些物品属于特定房间（比如浴室里的牙刷），而另一些则可能在很多地方都能用到（比如主电源开关）。变量的运作方式类似。</p>\n<h3>局部变量：函数内部</h3>\n<p>你在函数定义<em>内部</em>定义的变量被称为<strong>局部变量</strong>。它们只存在于那个特定的函数内部。一旦函数执行完毕，这些变量就会消失，它们的内存也会被释放。尝试从函数外部访问局部变量会导致错误。</p>\n<p>考虑这个例子：</p>\n<pre><code class=\"language-python\">def greet_user():\n    message = \"Hello from inside the function!\" # message 变量是 greet_user 函数的局部变量\n    print(message)\n\ngreet_user()\n\n# 现在，让我们尝试在函数外部访问 'message'：\n# print(message) # 这一行将导致 NameError\n</code></pre>\n<p>如果你运行这段代码并取消注释最后一行，Python 将会停止并报告一个 <code>NameError</code>。出现这种情况是因为 <code>message</code> 变量只存在于 <code>greet_user</code> 函数的作用域内。在该函数之外，Python 不知道 <code>message</code> 指的是什么。</p>\n<p>这种局部性实际上是一个很有用的特点。这表示你可以在不同的函数内部使用 <code>i</code>、<code>count</code> 或 <code>temp</code> 等常用变量名，而不用担心它们相互干扰。每个函数都有它自己的私有工作区来存放局部变量。</p>\n<h3>全局变量：(几乎)处处可访问</h3>\n<p>在任何函数定义<em>外部</em>定义的变量被称为<strong>全局变量</strong>。它们存在于脚本的主体部分，通常被称为全局作用域或模块作用域。这些变量通常可以在脚本中的任何地方被访问（读取），包括在它们之后定义的任何函数内部。</p>\n<p>让我们看一个例子：</p>\n<pre><code class=\"language-python\">app_version = \"1.0\" # app_version 是一个全局变量\n\ndef display_version():\n    print(\"Inside the function, app version is:\", app_version) # 访问全局变量\n\nprint(\"Outside the function, app version is:\", app_version)\ndisplay_version()\n</code></pre>\n<p>运行这段代码会产生：</p>\n<pre><code class=\"language-text\">Outside the function, app version is: 1.0\nInside the function, app version is: 1.0\n</code></pre>\n<p>正如你所看到的，<code>display_version</code> 函数可以毫无问题地读取全局变量 <code>app_version</code> 的值。</p>\n<h3>Python 如何查找变量：查找顺序</h3>\n<p>当你在函数内部使用变量名时，Python 遵循特定的顺序来找出它指的是哪个值：</p>\n<ol>\n<li><strong>局部作用域：</strong> Python 首先检查在当前函数<em>内部</em>是否定义了同名变量。</li>\n<li><strong>全局作用域：</strong> 如果在局部作用域中没有找到该变量，Python 就会检查它是否存在于<em>全局</em>作用域（所有函数之外）。</li>\n</ol>\n<p>(注意：还有其他作用域，比如闭包函数作用域和内置作用域，但目前，明白局部和全局之间的区别是最重要的一步。)</p>\n<p>这个查找顺序解释了为什么函数可以访问全局变量，而外部代码不能访问局部变量。</p>\n<h3>局部变量与全局变量冲突时：遮蔽</h3>\n<p>如果你在函数内部定义一个局部变量，其名称与全局变量<em>相同</em>，会发生什么？</p>\n<pre><code class=\"language-python\">animal = \"Global Fox\" # 全局变量\n\ndef print_local_animal():\n    animal = \"Local Bear\" # 同名的局部变量\n    print(\"Inside function:\", animal)\n\nprint(\"Outside function (before call):\", animal)\nprint_local_animal()\nprint(\"Outside function (after call):\", animal)\n</code></pre>\n<p>输出：</p>\n<pre><code class=\"language-text\">Outside function (before call): Global Fox\nInside function: Local Bear\nOutside function (after call): Global Fox\n</code></pre>\n<p>在 <code>print_local_animal</code> 函数内部，赋值语句 <code>animal = \"Local Bear\"</code> 创建了一个<em>新的</em>、名为 <code>animal</code> 的局部变量。这个局部变量在函数作用域内具有优先权，实际上隐藏或“遮蔽”了同名的全局变量。当 <code>print_local_animal</code> 执行完毕时，它的局部 <code>animal</code> 变量就会消失。重要的是，全局 <code>animal</code> 变量在此过程中始终保持不变。</p>\n<p>这种行为可以避免函数仅仅因为在局部使用了相同的名称而意外修改全局变量。</p>\n<h3>修改全局变量：<code>global</code> 关键字</h3>\n<p>通常，函数应该对其输入（参数 (parameter)）进行操作并产生输出（返回值）。这使得它们自成一体且更容易理解。然而，在某些情况下，函数可能需要明确修改一个全局变量。</p>\n<p>如果你尝试在函数内部为一个与全局变量同名的变量赋值，Python 会认为你想创建一个<em>新的局部变量</em>（如遮蔽示例所示）。要告诉 Python 你实际上想要修改<em>全局</em>变量，你必须在函数内部给它赋值<em>之前</em>使用 <code>global</code> 关键字。</p>\n<pre><code class=\"language-python\">counter = 0 # 全局变量\n\ndef increment_counter():\n    global counter # 声明要使用全局变量 'counter'\n    counter += 1   # 修改全局变量\n    print(\"Counter inside function:\", counter)\n\nprint(\"Counter before:\", counter)\nincrement_counter()\nincrement_counter()\nprint(\"Counter after:\", counter)\n</code></pre>\n<p>输出：</p>\n<pre><code class=\"language-text\">Counter before: 0\nCounter inside function: 1\nCounter inside function: 2\nCounter after: 2\n</code></pre>\n<p>在这里，<code>global counter</code> 告诉 <code>increment_counter</code> 函数，<code>counter</code> 指的是全局作用域中的变量，而不是一个新的局部变量。因此，<code>counter += 1</code> 操作修改的是原始的全局变量。</p>\n<p><strong>谨慎使用 <code>global</code>：</strong> 尽管 <code>global</code> 关键字提供了一种修改全局状态的方法，但通常建议谨慎使用它。修改全局变量的函数可能会产生从函数调用处不易察觉的副作用。这会使你的程序更难于理解和调试。通常，更好的做法是让函数<code>返回</code>新值，并在需要时由函数外部的代码更新全局变量。</p>\n<pre><code class=\"language-python\"># 替代方法（通常更受推荐）\ncounter = 0 # 全局变量\n\ndef calculate_new_count(current_count):\n    # 这个函数不直接修改全局状态\n    return current_count + 1\n\nprint(\"Counter before:\", counter)\ncounter = calculate_new_count(counter) # 根据返回值更新全局变量\nprint(\"Counter after first update:\", counter)\ncounter = calculate_new_count(counter)\nprint(\"Counter after second update:\", counter)\n</code></pre>\n<p>输出：</p>\n<pre><code class=\"language-text\">Counter before: 0\nCounter after first update: 1\nCounter after second update: 2\n</code></pre>\n<p>这种替代方法达到了同样的效果，但使函数（<code>calculate_new_count</code>）保持自包含，并且不直接修改全局变量。</p>\n<p>明白局部作用域和全局作用域之间的区别对于编写清晰、正确且易于维护的 Python 函数是很根本的。这有助于你管理程序中数据的位置，并避免对变量进行意外修改。</p>",
+  "slug": "python-variable-scope",
+  "updates": [],
+  "references": [
+    {
+      "id": 5926,
+      "title": "The Python Tutorial: More Control Flow Tools - Defining Functions",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+      "doi": "",
+      "note": "Python官方文档的这一部分清晰地介绍了函数，涵盖了局部变量和`global`关键字。",
+      "order": 1,
+      "created_at": "2025-09-05T01:17:24.414587Z",
+      "updated_at": "2025-09-07T21:16:14.103690Z"
+    },
+    {
+      "id": 5928,
+      "title": "Fluent Python, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "1012",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056345/",
+      "doi": "",
+      "note": "本书全面指导Python，包含对作用域规则、闭包和LEGB规则的详细讨论，有助于更全面的理解。",
+      "order": 3,
+      "created_at": "2025-09-05T01:17:24.422296Z",
+      "updated_at": "2025-09-07T21:16:13.099059Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

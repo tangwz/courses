@@ -1,0 +1,61 @@
+{
+  "id": 5219,
+  "title": "打包您的 Python LLM 应用程序",
+  "meta_title": "打包 Python LLM 应用程序 | 部署",
+  "meta_description": "组织和打包您的 LLM 应用程序代码用于部署的方法。",
+  "content": "<p>将您的大型语言模型 (LLM) 应用程序从本地开发机器迁移到生产环境需要仔细准备。仅仅复制 Python 脚本不足以实现可靠且可扩展的部署。应用程序打包涉及将代码、依赖项和配置组织成一种标准格式，以便于在其他地方安装和运行。适当的打包确保一致性，简化部署，并使您的应用程序更容易管理。</p>\n<h3>组织您的项目</h3>\n<p>在您打包应用程序之前，它需要一个逻辑结构。一个组织良好的项目更容易理解、维护和打包。虽然没有单一的强制性结构，但一种常见且有效的布局会将应用程序代码、测试、配置和文档分开。</p>\n<p>考虑为典型的 LLM 应用程序（例如使用 FastAPI 和 LangChain 构建的应用程序）采用这样的结构：</p>\n<pre><code>my_llm_app/\n├── app/                     # 主应用程序源代码\n│   ├── __init__.py\n│   ├── main.py              # FastAPI 应用程序定义\n│   ├── chains.py            # LangChain 或工作流逻辑\n│   ├── models.py            # 用于 API I/O 的 Pydantic 模型\n│   └── utils.py             # 辅助函数\n├── tests/                   # 单元和集成测试\n│   ├── __init__.py\n│   ├── test_chains.py\n│   └── test_api.py\n├── .env.example             # 示例环境变量\n├── config.yaml              # 静态配置（可选）\n├── Dockerfile               # 构建 Docker 镜像的说明\n├── pyproject.toml           # 项目元数据和构建配置 (PEP 517/518)\n├── README.md                # 项目文档\n└── requirements.txt         # 应用程序依赖项\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1kq5v2x\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=folder, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [arrowhead=none];\n\n  root [label=\"my_llm_app\"];\n  app [label=\"app\"];\n  tests [label=\"tests\"];\n  env [label=\".env.example\", shape=note, fillcolor=\"#fff3bf\"];\n  config [label=\"config.yaml\", shape=note, fillcolor=\"#fff3bf\"];\n  dockerfile [label=\"Dockerfile\", shape=note, fillcolor=\"#d0bfff\"];\n  pyproject [label=\"pyproject.toml\", shape=note, fillcolor=\"#a5d8ff\"];\n  readme [label=\"README.md\", shape=note, fillcolor=\"#b2f2bb\"];\n  reqs [label=\"requirements.txt\", shape=note, fillcolor=\"#ffec99\"];\n\n  subgraph cluster_app {\n    label = \"\";\n    bgcolor=\"transparent\";\n    node [shape=note, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    app_init [label=\"__init__.py\"];\n    app_main [label=\"main.py\"];\n    app_chains [label=\"chains.py\"];\n    app_models [label=\"models.py\"];\n    app_utils [label=\"utils.py\"];\n    app_main -> app_chains -> app_models -> app_utils -> app_init [style=invis]; // 布局辅助\n  }\n\n  subgraph cluster_tests {\n      label = \"\";\n      bgcolor=\"transparent\";\n      node [shape=note, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n      tests_init [label=\"__init__.py\"];\n      tests_chains [label=\"test_chains.py\"];\n      tests_api [label=\"test_api.py\"];\n      tests_api -> tests_chains -> tests_init [style=invis]; // 布局辅助\n  }\n\n  root -> app;\n  root -> tests;\n  root -> env;\n  root -> config;\n  root -> dockerfile;\n  root -> pyproject;\n  root -> readme;\n  root -> reqs;\n\n  app -> app_init;\n  app -> app_main;\n  app -> app_chains;\n  app -> app_models;\n  app -> app_utils;\n\n  tests -> tests_init;\n  tests -> tests_chains;\n  tests -> tests_api;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1kq5v2x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>适用于 Python LLM 应用程序的典型项目结构，将源代码 (<code>app</code>)、测试 (<code>tests</code>)、配置和打包文件分开。</p>\n</blockquote>\n<p>这种结构清楚地表明了项目的不同部分所在位置。<code>app</code> 目录包含核心逻辑，<code>tests</code> 保存测试，而像 <code>.env.example</code> 和 <code>config.yaml</code> 这样的配置文件管理设置。<code>pyproject.toml</code> 文件在定义项目元数据和构建系统要求方面越来越成为标准，而 <code>requirements.txt</code> 则列出了直接依赖项。</p>\n<h3>管理依赖项</h3>\n<p>您的 LLM 应用程序可能依赖于像 <code>langchain</code>、<code>llamaindex</code>、<code>openai</code>、<code>fastapi</code>、<code>pydantic</code> 等外部库。这些依赖项必须明确声明，以便它们可以在任何环境中保持一致地安装。</p>\n<p>管理依赖项的标准方法是使用 <code>requirements.txt</code> 文件。此文件仅仅列出所需的包，理想情况下会固定特定版本。固定版本（例如 <code>langchain==0.1.16</code>）可以防止在依赖项的新版本发布时出现不兼容更改而导致的意外中断。</p>\n<p>您可以根据当前的开发环境（最好是虚拟环境）使用 <code>pip</code> 生成此文件：</p>\n<pre><code class=\"language-bash\"># 首先激活您的虚拟环境\n# 例如：source venv/bin/activate\n\npip freeze > requirements.txt\n</code></pre>\n<p>尽管 <code>pip freeze</code> 会捕获环境中的所有内容，但通常更好的做法是手动整理 <code>requirements.txt</code>，只列出应用程序需要的直接依赖项。让 <code>pip</code> 解析子依赖项。对于更复杂的依赖项管理，特别是管理开发、测试和生产的不同依赖项集合时，像 <code>pip-tools</code> 或 <code>Poetry</code> 这样的工具会很有益，它们通常与 <code>pyproject.toml</code> 集成。</p>\n<h3>处理配置</h3>\n<p>LLM 应用程序通常需要 API 密钥等敏感信息，或模型名称、端点和阈值等配置细节。将这些信息直接硬编码到源代码中是不安全且不灵活的。</p>\n<p>最佳实践要求将配置与代码分离：</p>\n<ol>\n<li><strong>环境变量：</strong> 使用环境变量在运行时注入配置。这在容器化和云环境中很常见。像 <code>python-dotenv</code> 这样的工具可以在开发期间从 <code>.env</code> 文件加载变量。请记住将 <code>.env</code> 添加到您的 <code>.gitignore</code> 文件中，以避免提交秘密信息。</li>\n<li><strong>配置文件：</strong> 使用 YAML (<code>config.yaml</code>) 或 TOML 等格式存储敏感度较低或结构更规整的配置。在应用程序代码中加载这些文件。</li>\n</ol>\n<p>您的应用程序代码应该在启动时读取这些配置。例如，使用 Pydantic 的设置管理或像 <code>os.getenv()</code> 这样的库来读取环境变量。</p>\n<h3>创建构建制品：Wheel 文件</h3>\n<p>分发 Python 包的标准方法是使用“wheel”格式（<code>.whl</code> 文件）。Wheel 文件是一种预构建的包制品，它比源发行版 (<code>sdist</code>) 安装快得多，因为它通常可以跳过带有 C 扩展的包所需的编译步骤。它将您的代码和元数据打包成标准化结构。</p>\n<p>要构建 Wheel 文件，您首先需要定义项目的元数据。现代标准是使用 <code>pyproject.toml</code> 文件 (PEP 621)。这是一个最小示例：</p>\n<pre><code class=\"language-toml\"># pyproject.toml\n\n[build-system]\nrequires = [\"setuptools>=61.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"my_llm_app\"\nversion = \"0.1.0\"\nauthors = [\n  { name=\"Your Name\", email=\"your.email@example.com\" },\n]\ndescription = \"一个示例 LLM 应用程序。\"\nreadme = \"README.md\"\nrequires-python = \">=3.9\"\nclassifiers = [\n    \"Programming Language :: Python :: 3\",\n    \"License :: OSI Approved :: MIT License\", # 选择您的许可证\n    \"Operating System :: OS Independent\",\n]\ndependencies = [\n    \"fastapi\",\n    \"uvicorn[standard]\",\n    \"langchain\",\n    \"openai\",\n    \"python-dotenv\",\n    # 在此处添加 requirements.txt 中的其他直接依赖项\n]\n\n[project.urls]\nHomepage = \"https://github.com/yourusername/my_llm_app\" # 可选\n\n# 定义命令行脚本（入口点）\n[project.scripts]\nmy-llm-cli = \"app.cli:main\" # 如果您有 CLI 界面，则为示例\n</code></pre>\n<p>此文件指定了项目名称、版本、作者、描述、Python 版本要求，并且重要地，还指定了依赖项（应与您的 <code>requirements.txt</code> 文件保持一致）。它还定义了构建系统（在此例中为 <code>setuptools</code>）。</p>\n<p>有了 <code>pyproject.toml</code> 文件，您可以使用标准 <code>build</code> 工具构建 Wheel 文件：</p>\n<pre><code class=\"language-bash\"># 如果您尚未安装构建工具，请先安装\npip install build\n\n# 构建 wheel 和源发行版\npython -m build\n</code></pre>\n<p>此命令将创建一个 <code>dist/</code> 目录，其中包含 <code>.whl</code> 文件（即 wheel 文件）和 <code>.tar.gz</code> 文件（即源发行版）。Wheel 文件 (<code>dist/my_llm_app-0.1.0-py3-none-any.whl</code>) 是您通常用于部署的制品。它封装了您的应用程序代码和元数据，可以随时通过 <code>pip install dist/my_llm_app-0.1.0-py3-none-any.whl</code> 进行安装。</p>\n<h3>定义入口点</h3>\n<p>如果您的应用程序包含命令行界面 (CLI) 或需要作为特定脚本运行，您可以在 <code>pyproject.toml</code> 文件的 <code>[project.scripts]</code> 表下定义“入口点”。</p>\n<p>例如，<code>my-llm-cli = \"app.cli:main\"</code> 意味着在安装 Wheel 文件后，环境中将有一个名为 <code>my-llm-cli</code> 的命令可用，该命令会执行 <code>app/cli.py</code> 模块中的 <code>main</code> 函数。这对于管理任务或与您的 LLM 应用程序进行简单的命令行交互很有用。对于使用 Uvicorn 等工具提供服务的 Web 应用程序，入口点可能是 Web 服务器命令本身，指向您的 FastAPI 或 Flask 应用程序实例（例如 <code>uvicorn app.main:app</code>）。</p>\n<p>通过遵循这些打包步骤、组织您的项目、管理依赖项、安全地处理配置以及构建一个可分发的 Wheel 文件，您将创建一个标准化且可重现的制品。这个打包好的应用程序为部署的后续步骤奠定了根基，例如使用 Docker 进行容器化，我们将在随后进行介绍。</p>",
+  "slug": "packaging-python-llm-app",
+  "updates": [],
+  "references": [
+    {
+      "id": 12890,
+      "title": "Packaging Python Projects",
+      "author": "Python Packaging Authority (PyPA)",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/en/latest/tutorials/packaging-projects/",
+      "doi": "",
+      "note": "PyPA官方教程，详细介绍了现代Python项目打包，包括pyproject.toml元数据、构建wheel包和依赖声明。",
+      "order": 1,
+      "created_at": "2025-09-05T08:24:47.009579Z",
+      "updated_at": "2025-09-09T03:13:04.844242Z"
+    },
+    {
+      "id": 12891,
+      "title": "PEP 621 -- Storing project metadata in pyproject.toml",
+      "author": "Brett Cannon, Dustin Ingram, Paul Ganssle, Pradyun Gedam, Sébastien Eustace, Thomas Kluyver, Tzu-ping Chung",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Python Enhancement Proposals",
+      "volume": "",
+      "pages": "",
+      "url": "https://peps.python.org/pep-0621/",
+      "doi": "",
+      "note": "定义了在pyproject.toml中指定Python项目元数据的标准，是现代打包和构建系统的核心。",
+      "order": 2,
+      "created_at": "2025-09-05T08:24:47.013233Z",
+      "updated_at": "2025-09-09T03:13:06.027902Z"
+    },
+    {
+      "id": 12893,
+      "title": "Structuring Your Project",
+      "author": "Kenneth Reitz and Tanya Schlusser",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python-guide.org/writing/structure/",
+      "doi": "",
+      "note": "提供关于如何组织Python项目以形成可维护且可扩展结构的实用指导。",
+      "order": 4,
+      "created_at": "2025-09-05T08:24:47.018032Z",
+      "updated_at": "2025-09-09T03:13:13.205391Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

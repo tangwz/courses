@@ -1,0 +1,61 @@
+{
+  "id": 7589,
+  "title": "偏依赖图用于模型解释",
+  "meta_title": "结合梯度提升机使用偏依赖图",
+  "meta_description": "通过偏依赖图（PDPs）可视化特征与模型预测之间的关系，以提升模型可解释性。",
+  "content": "<p>特征重要性得分提供了梯度提升机（GBM）依赖哪些特征的概要视图。然而，这些得分只按预测能力对特征进行排名，未能解释特征与模型预测之间关系的本质。例如，特征值增加会导致更高的预测值还是更低的预测值？这种关系是线性的，还是更为复杂的？偏依赖图（PDPs）用于回答这些具体问题。</p>\n<h3>“是什么”背后的“怎么样”</h3>\n<p>偏依赖图显示了一两个特征对模型预测结果的边际效应。简单来说，它显示了当你改变一个特征的值而保持所有其他特征不变时，模型预测值平均如何变化。这使得你能够分离并可视化模型所学到的特定输入与其输出之间的关系。</p>\n<p>计算方法是通过平均化数据集中所有其他特征的影响。对于选定的特征，过程如下：</p>\n<ol>\n<li>为目标特征创建一系列值（网格）。</li>\n<li>对于网格中的每个值，将其替换为数据集中每个样本中该特征的值。</li>\n<li>模型对每个修改后的样本进行预测。</li>\n<li>对所有样本的预测值进行平均。</li>\n<li>将这个平均预测值与网格中的特征值进行绘制。</li>\n</ol>\n<p>结果是一条线或一个曲面，它将预期预测值可视化为目标特征的函数。</p>\n<h3>使用Scikit-Learn生成偏依赖图</h3>\n<p>Scikit-Learn在<code>sklearn.inspection</code>模块中提供了一个方便且强大的工具来创建这些图表。<code>PartialDependenceDisplay</code>类及其<code>from_estimator</code>方法处理整个计算和绘图过程。</p>\n<p>我们首先在加州住房数据集上训练一个<code>GradientBoostingRegressor</code>。</p>\n<pre><code class=\"language-python\">from sklearn.datasets import fetch_california_housing\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.ensemble import GradientBoostingRegressor\nfrom sklearn.inspection import PartialDependenceDisplay\nimport matplotlib.pyplot as plt\n\n# 加载并准备数据\nhousing = fetch_california_housing()\nX_train, X_test, y_train, y_test = train_test_split(\n    housing.data, housing.target, test_size=0.2, random_state=42\n)\nfeature_names = housing.feature_names\n\n# 训练一个GBM模型\ngbm = GradientBoostingRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)\ngbm.fit(X_train, y_train)\n</code></pre>\n<p>有了训练好的模型，为像中位数收入（<code>MedInc</code>）这样的单个特征创建偏依赖图直接简单。</p>\n<pre><code class=\"language-python\"># 为'MedInc'特征创建并显示偏依赖图\nfig, ax = plt.subplots(figsize=(8, 6))\nPartialDependenceDisplay.from_estimator(\n    gbm,\n    X_train,\n    features=['MedInc'], # 或使用索引: features=[0]\n    feature_names=feature_names,\n    ax=ax\n)\nplt.show()\n</code></pre>\n<h3>解释单特征偏依赖图</h3>\n<p>上面的代码生成一个单特征偏依赖图，它显示了一个特征与模型预测之间的关系。<code>MedInc</code>的图表看起来像这样。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-kb3afl\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"中位数收入 (MedInc)\"},\"yaxis\":{\"title\":\"偏依赖\"},\"title\":\"房价对中位数收入的偏依赖\",\"template\":\"plotly_white\",\"font\":{\"family\":\"sans-serif\"}},\"data\":[{\"x\":[1.625,2.1666,2.7082,3.2498,3.7914,4.333,4.8746,5.4162,5.9578,6.4994,7.041,7.5826,8.1242,8.6658,9.2074,9.749,10.2906,10.8322,11.3738,11.9154,12.457,12.9986,13.5402,14.0818,14.6234],\"y\":[1.359,1.602,1.871,2.153,2.417,2.651,2.861,3.053,3.238,3.411,3.582,3.742,3.896,4.045,4.181,4.307,4.423,4.529,4.62,4.693,4.75,4.793,4.825,4.849,4.869],\"mode\":\"lines\",\"type\":\"scatter\",\"line\":{\"color\":\"#228be6\",\"width\":3}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-kb3afl\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>随着中位数收入的增加，平均预测房价稳步上升，但对于非常高的收入，其效应开始趋于平稳。</p>\n</blockquote>\n<p>从这张图表中，我们可以得出明确的结论：我们的GBM模型学到了中位数收入与房价之间存在正向、非线性关系。预测值在收入达到约9之前急剧上升，之后额外收入的边际效益减弱。这比简单地说明<code>MedInc</code>是主要的特征，提供了更为详细的解释。</p>\n<h3>使用双特征偏依赖图可视化特征交互</h3>\n<p>偏依赖不限于单个特征。通过同时绘制两个特征，我们可以可视化它们对预测的交互作用。这有助于回答诸如“特征A的效应是否依赖于特征B的值？”这样的问题。</p>\n<p>我们来查看中位数收入（<code>MedInc</code>）与平均房间数（<code>AveRooms</code>）之间的交互。</p>\n<pre><code class=\"language-python\"># 创建并显示双特征偏依赖图\nfig, ax = plt.subplots(figsize=(9, 7))\nPartialDependenceDisplay.from_estimator(\n    gbm,\n    X_train,\n    features=['MedInc', 'AveRooms'],\n    feature_names=feature_names,\n    ax=ax\n)\nplt.show()\n</code></pre>\n<p>这将生成一个2D热力图，其中颜色代表平均预测值。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ual11w\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"中位数收入 (MedInc)\"},\"yaxis\":{\"title\":\"平均房间数 (AveRooms)\"},\"title\":\"中位数收入与平均房间数的交互作用\",\"template\":\"plotly_white\",\"font\":{\"family\":\"sans-serif\"}},\"data\":[{\"x\":[1.625,2.1666,2.7082,3.2498,3.7914,4.333,4.8746,5.4162,5.9578,6.4994,7.041,7.5826],\"y\":[3.479,4.108,4.737,5.366,5.995,6.624,7.253,7.882,8.511,9.14,9.769,10.398],\"z\":[[1.09,1.17,1.25,1.33,1.4,1.46,1.52,1.57,1.61,1.65,1.68,1.71],[1.44,1.54,1.63,1.72,1.8,1.87,1.94,2.0,2.05,2.09,2.12,2.15],[1.8,1.91,2.02,2.12,2.21,2.29,2.36,2.43,2.48,2.53,2.56,2.59],[2.12,2.25,2.37,2.49,2.59,2.68,2.76,2.83,2.9,2.95,2.99,3.02],[2.4,2.54,2.68,2.81,2.93,3.03,3.12,3.2,3.27,3.33,3.37,3.41],[2.63,2.79,2.95,3.1,3.22,3.34,3.44,3.53,3.61,3.67,3.72,3.76],[2.84,3.02,3.19,3.35,3.5,3.62,3.73,3.83,3.92,3.99,4.04,4.09],[3.03,3.22,3.41,3.59,3.75,3.89,4.01,4.12,4.22,4.30,4.36,4.41],[3.21,3.42,3.62,3.81,3.98,4.14,4.27,4.39,4.50,4.58,4.65,4.70],[3.38,3.60,3.81,4.01,4.20,4.36,4.50,4.64,4.75,4.84,4.91,4.97],[3.54,3.77,4.00,4.22,4.41,4.59,4.74,4.89,5.01,5.11,5.18,5.25],[3.70,3.95,4.19,4.42,4.62,4.81,4.98,5.13,5.26,5.36,5.44,5.52]],\"type\":\"heatmap\",\"colorscale\":\"YlOrRd\",\"colorbar\":{\"title\":\"预测值\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ual11w\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>最高的预测房价（最深的红色）出现在中位数收入和平均房间数都较高时。</p>\n</blockquote>\n<p>热力图显示，最高的预测房价出现在右上角，即<code>MedInc</code>和<code>AveRooms</code>都较大时。它还表明，当平均收入已经很高时，房间数量的增加对价格有更强的正向作用。这种交互作用比单独分析每个特征，提供了更全面的模型逻辑情况。</p>\n<h3>主要考量</h3>\n<p>尽管偏依赖图功能强大，但它基于一个核心假设：你所绘制的特征与模型中的其他特征不相关。该方法通过改变一个特征的值，同时保持其他特征不变来运作。如果两个特征高度相关（例如，年龄和经验年限），这个过程可能会创建非常不现实甚至不可能的数据点，从而可能导致具有误导性的图表。</p>\n<p>此外，偏依赖图显示的是整个数据集的<em>平均</em>效应。它有时会掩盖更复杂的关系，即某个特征以不同方式影响数据的不同子集。对于需要单个样本层面解释的场景，可以使用更高级的技术，例如个体条件期望（ICE）图。</p>\n<p>尽管存在这些局限性，偏依赖图仍然是解释梯度提升机（GBM）的不可或缺的工具。它们弥合了知道<em>哪些</em>特征是主要的，以及理解它们<em>如何</em>驱动模型预测之间的差距，将一个复杂的模型变得更加透明和易于理解。</p>",
+  "slug": "gbm-partial-dependence-plots",
+  "updates": [],
+  "references": [
+    {
+      "id": 21413,
+      "title": "Interpretable Machine Learning: A Guide for Making Black Box Models Explainable",
+      "author": "Christoph Molnar",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "19 Partial Dependence Plot (PDP)",
+      "url": "https://christophm.github.io/interpretable-ml-book/pdp.html",
+      "doi": "",
+      "note": "提供了对部分依赖图的全面解释，包括其计算、解释、局限性以及与个体条件期望（ICE）图的关系。",
+      "order": 1,
+      "created_at": "2025-09-30T05:42:29.699194Z",
+      "updated_at": "2025-09-30T05:55:53.228816Z"
+    },
+    {
+      "id": 21414,
+      "title": "sklearn.inspection.PartialDependenceDisplay",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.inspection.PartialDependenceDisplay.html",
+      "doi": "",
+      "note": "Scikit-learn 中生成部分依赖图的官方文档，详细说明了其与 `from_estimator` 的用法。",
+      "order": 2,
+      "created_at": "2025-09-30T05:42:29.702483Z",
+      "updated_at": "2025-09-30T05:55:43.820558Z"
+    },
+    {
+      "id": 21415,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "Section 10.13.2",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "一本基础教材，介绍了部分依赖图作为模型解释技术，并为梯度提升机提供了理论基础。",
+      "order": 3,
+      "created_at": "2025-09-30T05:42:29.704840Z",
+      "updated_at": "2025-09-30T05:56:02.224346Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7312,
+  "title": "定义 Deployment 清单",
+  "meta_title": "如何定义 Kubernetes Deployment 清单",
+  "meta_description": "在 YAML 中编写 Deployment 清单的指南，包括指定期望的副本数、容器镜像和更新策略。",
+  "content": "<p>Deployment 提供了一种在 Kubernetes 中管理应用程序期望状态的方法。Deployment 清单是一个描述这种期望状态的 YAML 文件。你不需要分步骤告诉 Kubernetes “要做什么”，而是告诉它你“想要什么”结果。随后，Deployment 控制器会执行相关工作，使集群的当前状态与你声明的状态保持一致。</p>\n<p>这种方式更加可靠且可预测。清单作为应用程序部署的版本控制文档，定义了从容器镜像到运行副本数量以及更新策略的所有内容。</p>\n<h3>Deployment 清单的结构</h3>\n<p>Deployment 清单在 Pod 清单结构的基础上，增加了用于管理副本和更新的字段。让我们来看一个典型的 Nginx Web 服务器清单。</p>\n<pre><code class=\"language-yaml\"># nginx-deployment.yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: nginx-deployment\n  labels:\n    app: nginx\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: nginx\n  template:\n    metadata:\n      labels:\n        app: nginx\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.21.6\n        ports:\n        - containerPort: 80\n</code></pre>\n<p>该清单包含四个必需的顶级字段：<code>apiVersion</code>、<code>kind</code>、<code>metadata</code> 和 <code>spec</code>。</p>\n<ul>\n<li><strong><code>apiVersion: apps/v1</code></strong>：这指定了用于创建此对象的 Kubernetes API 版本。Deployment 属于 <code>apps</code> API 组，<code>v1</code> 是其稳定版本。</li>\n<li><strong><code>kind: Deployment</code></strong>：这确定了要创建的对象类型。</li>\n<li><strong><code>metadata</code></strong>：这包含有助于唯一标识对象的数据，例如它的 <code>name</code>（名称）和描述性的 <code>labels</code>（标签）。虽然 Deployment 对象本身的标签用于组织管理，但 <code>spec</code> 内部的标签则具有实际的功能作用。</li>\n<li><strong><code>spec</code></strong>：你可以在此处定义 Deployment 的期望状态。这是最核心的部分，包含了应用程序运行方式的逻辑。</li>\n</ul>\n<h3>Deployment 规范 (<code>spec</code>)</h3>\n<p><code>spec</code> 字段是 Deployment 的重心，详细说明了控制器的指令。它由三个主要字段组成：<code>replicas</code>、<code>selector</code> 和 <code>template</code>。</p>\n<h4><code>replicas</code></h4>\n<p>这个字段很好理解。它指定了你希望运行的 Pod 期望数量。在我们的示例中，<code>replicas: 3</code> 告诉 Kubernetes 确保始终有三个符合此应用程序模板的 Pod 在运行。如果某个 Pod 发生故障，控制器会自动创建一个新 Pod 以维持三个副本的数量。</p>\n<h4><code>selector</code></h4>\n<p><code>selector</code>（选择器）字段告诉 Deployment 控制器要管理哪些 Pod。它通过匹配 <code>matchLabels</code> 中定义的标签来实现这一点。在我们的示例中，选择器是 <code>{ \"matchLabels\": { \"app\": \"nginx\" } }</code>。这意味着 Deployment 将查找并管理任何带有 <code>app: nginx</code> 标签的 Pod。</p>\n<p>控制器选择器与 Pod 标签之间的这种关联非常基础。选择器必须与 <code>template</code> 部分中分配给 Pod 的标签相匹配。如果它们不匹配，Deployment 会创建 Pod 但无法找到它们，从而导致不断创建 Pod 的死循环。</p>\n<h4><code>template</code></h4>\n<p><code>template</code> 字段 (<code>spec.template</code>) 是 Deployment 将要创建的 Pod 的蓝图。其内容与独立的 Pod 清单几乎完全相同，包含自己的 <code>metadata</code> 和 <code>spec</code>。</p>\n<ul>\n<li><strong><code>template.metadata.labels</code></strong>：这些是应用于由 Deployment 创建的每个 Pod 的标签。这些标签必须与 Deployment 的 <code>spec.selector.matchLabels</code> 匹配。在我们的示例中，模板中的 <code>app: nginx</code> 与选择器匹配，从而将 Pod 正确关联到 Deployment。</li>\n<li><strong><code>template.spec</code></strong>：这定义了将在每个 Pod 内部运行的容器规范，就像标准的 Pod 清单一样。你可以指定容器的 <code>name</code>（名称）、要使用的容器 <code>image</code>（镜像）以及容器将暴露的任何 <code>ports</code>（端口）。</li>\n</ul>\n<p>下图说明了这些组件是如何连接的。Deployment 并不直接管理 Pod，而是管理一个 ReplicaSet，由 ReplicaSet 进而确保正确数量的 Pod 正在运行。选择器是连接这三个对象的机制。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1n2m2hk\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n    edge [fontname=\"Helvetica\", fontsize=10];\n\n    subgraph cluster_deployment {\n        label=\"Deployment: nginx-deployment\";\n        bgcolor=\"#a5d8ff\";\n        deployment [label=\"类型: Deployment\\n---\\n规范:\\n  副本数: 3\\n  选择器:\\n    匹配标签:\\n      应用: nginx\", fillcolor=\"#d0bfff\"];\n    }\n\n    subgraph cluster_replicaset {\n        label=\"ReplicaSet: nginx-deployment-xyz\";\n        bgcolor=\"#96f2d7\";\n        replicaset [label=\"类型: ReplicaSet\\n---\\n选择器:\\n  应用: nginx\", fillcolor=\"#b2f2bb\"];\n    }\n\n    subgraph cluster_pods {\n        label=\"Pods\";\n        bgcolor=\"#e9ecef\";\n        pod1 [label=\"Pod\\n---\\n元数据:\\n  标签:\\n    应用: nginx\", fillcolor=\"#ced4da\"];\n        pod2 [label=\"Pod\\n---\\n元数据:\\n  标签:\\n    应用: nginx\", fillcolor=\"#ced4da\"];\n        pod3 [label=\"Pod\\n---\\n元数据:\\n  标签:\\n    应用: nginx\", fillcolor=\"#ced4da\"];\n    }\n\n    deployment -> replicaset [label=\" 管理\"];\n    replicaset -> {pod1, pod2, pod3} [label=\" 管理\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1n2m2hk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Deployment 创建并管理一个 ReplicaSet。Deployment 规范中定义的选择器被 ReplicaSet 用于识别和管理 Pod，而这些 Pod 是根据 Pod 模板创建的。</p>\n</blockquote>\n<p>当你使用 <code>kubectl apply -f nginx-deployment.yaml</code> 之类的命令应用此清单时，Kubernetes 控制平面会读取它并创建一个 Deployment 对象。随后，Deployment 控制器创建一个相应的 ReplicaSet，而 ReplicaSet 控制器则创建那三个 Pod。从那时起，控制器会持续运行，以确保集群状态符合此定义。</p>",
+  "slug": "defining-deployment-manifest",
+  "updates": [],
+  "references": [
+    {
+      "id": 19820,
+      "title": "Deployments",
+      "author": "Kubernetes Authors",
+      "year": "N/A",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/",
+      "doi": "",
+      "note": "Kubernetes Deployments的官方文档，解释其规范以及如何管理期望的应用状态，包括与ReplicaSet和Pod的交互。",
+      "order": 1,
+      "created_at": "2025-09-06T13:15:39.079390Z",
+      "updated_at": "2025-09-10T05:18:31.416164Z"
+    },
+    {
+      "id": 19821,
+      "title": "Kubernetes in Action, Second Edition",
+      "author": "Marko Lukša, Kevin Conner",
+      "year": "2026",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action-second-edition",
+      "doi": "",
+      "note": "一本综合性书籍，提供Kubernetes组件的实践见解和详细解释，包括Deployment及其相关控制器的结构和功能。",
+      "order": 2,
+      "created_at": "2025-09-06T13:15:39.086294Z",
+      "updated_at": "2025-09-10T05:18:31.920977Z"
+    },
+    {
+      "id": 19822,
+      "title": "Kubernetes Controllers",
+      "author": "Kubernetes Authors",
+      "year": "N/A",
+      "publisher": "Kubernetes Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/architecture/controller/",
+      "doi": "",
+      "note": "Kubernetes控制器架构作用的官方文档，控制器为Deployment等对象实现声明式期望状态管理。",
+      "order": 3,
+      "created_at": "2025-09-06T13:15:39.088991Z",
+      "updated_at": "2025-09-10T05:18:32.082931Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

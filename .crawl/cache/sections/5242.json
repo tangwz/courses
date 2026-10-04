@@ -1,0 +1,61 @@
+{
+  "id": 5242,
+  "title": "Pandas DataFrame 用于数据准备",
+  "meta_title": "机器学习流程中的 Pandas DataFrame",
+  "meta_description": "了解 Pandas DataFrame 如何促进机器学习模型的数据加载、清理和转换。",
+  "content": "<p>NumPy 支持高效的数值计算。机器学习 (machine learning)工作流通常涉及处理结构化表格数据——类似于电子表格或数据库表的各类数据集，其中行表示观察值，列表示特征。Pandas 库，特别是其 <code>DataFrame</code> 对象，是处理此类结构化表格数据的主要工具。Pandas 在内部使用 NumPy 构建，提供高级数据结构和操作工具，旨在提高数据分析和准备任务的清晰度和效率。</p>\n<p>可以将 Pandas <code>DataFrame</code> 视为一种二维、大小可变且可能包含异构数据类型的表格数据结构，具有标签轴（行和列）。您可以将其想象成这样：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1347nz9\" \n              data-graph-definition='digraph DataFrame {\n    rankdir=LR;\n    node [shape=plaintext, fontname=\"Arial\"];\n    edge [arrowhead=none];\n\n    DF [label=<\n    <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n    <TR><TD BGCOLOR=\"#e9ecef\">索引</TD><TD BGCOLOR=\"#a5d8ff\">特征 A</TD><TD BGCOLOR=\"#b2f2bb\">特征 B</TD><TD BGCOLOR=\"#ffec99\">特征 C</TD></TR>\n    <TR><TD BGCOLOR=\"#e9ecef\">0</TD><TD>1.2</TD><TD>&#39;P1&#39;</TD><TD>True</TD></TR>\n    <TR><TD BGCOLOR=\"#e9ecef\">1</TD><TD>3.5</TD><TD>&#39;P2&#39;</TD><TD>False</TD></TR>\n    <TR><TD BGCOLOR=\"#e9ecef\">2</TD><TD>0.8</TD><TD>&#39;P1&#39;</TD><TD>True</TD></TR>\n    <TR><TD BGCOLOR=\"#e9ecef\">...</TD><TD>...</TD><TD>...</TD><TD>...</TD></TR>\n    </TABLE>\n    >];\n\n    Index [label=\"行标签\\n(索引对象)\", shape=rect, style=filled, fillcolor=\"#e9ecef\"];\n    Cols [label=\"列标签\", shape=rect, style=filled, fillcolor=\"#dee2e6\"];\n    Data [label=\"数据\\n(通常是 NumPy ndarray)\", shape=rect, style=filled, fillcolor=\"#ced4da\"];\n\n    DF -> Index [style=invis]; // 用于布局的不可见边\n    DF -> Cols [style=invis];\n    DF -> Data [style=invis];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1347nz9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>DataFrame 由带标签的行（索引）、带标签的列和实际数据组成，这些数据通常在内部存储为 NumPy 数组，从而实现对不同数据类型的高效操作。</p>\n</blockquote>\n<p>Pandas 擅长简化必要的数据准备步骤，在将数据输入机器学习模型之前，这些步骤是不可或缺的。</p>\n<h3>加载和检查数据</h3>\n<p>常见的首个步骤是从文件（如 CSV）加载数据。Pandas 使这一过程变得简单直观：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 从 CSV 文件加载数据\ntry:\n    # 假设 'dataset.csv' 文件存在，包含 'feature1'、'feature2'、'target' 等列\n    df = pd.read_csv('dataset.csv')\n    print(\"数据加载成功。\")\nexcept FileNotFoundError:\n    # 如果文件未找到，则创建示例 DataFrame\n    print(\"未找到 dataset.csv。正在创建示例 DataFrame。\")\n    data = {'feature1': [1.0, 2.5, 0.8, 4.2],\n            'feature2': ['A', 'B', 'A', 'C'],\n            'target': [0, 1, 0, 1]}\n    df = pd.DataFrame(data)\n\n# 显示前 5 行\nprint(\"前 5 行：\")\nprint(df.head())\n\n# 获取 DataFrame 的简洁汇总信息\nprint(\"\\nDataFrame 信息：\")\ndf.info()\n\n# 获取数值列的描述性统计信息\nprint(\"\\n描述性统计：\")\nprint(df.describe())\n</code></pre>\n<p><code>.head()</code> 方法能快速显示前几行，<code>.info()</code> 提供包含数据类型和每列非空值数量的汇总（这对于查找缺失数据很必要），而 <code>.describe()</code> 则提供数值列的统计汇总（计数、均值、标准差、最小值、最大值、四分位数）。</p>\n<h3>选择和筛选数据</h3>\n<p>机器学习 (machine learning)通常需要处理特定的数据子集，例如选择输入特征或根据条件筛选样本。Pandas 提供直观的方法来完成这些操作，可以使用标签 (<code>.loc</code>) 或整数位置 (<code>.iloc</code>)：</p>\n<pre><code class=\"language-python\"># 选择单列（返回 Pandas Series）\nfeature1_data = df['feature1']\nprint(\"\\n已选择 'feature1' 列 (Series)：\")\nprint(feature1_data.head())\n\n# 选择多列（返回 DataFrame）\nfeatures = df[['feature1', 'feature2']]\nprint(\"\\n已选择 'feature1' 和 'feature2' 列 (DataFrame)：\")\nprint(features.head())\n\n# 根据索引标签选择行（例如，索引为 0 和 2 的行）\n# 注意：.loc 使用标签。如果索引是默认整数，则它使用这些整数。\nrows_0_2 = df.loc[[0, 2]]\nprint(\"\\n索引为 0 和 2 的行：\")\nprint(rows_0_2)\n\n# 根据整数位置选择行（前 3 行）\nfirst_3_rows = df.iloc[0:3] # 注意：切片不包含结束索引\nprint(\"\\n使用 iloc 的前 3 行：\")\nprint(first_3_rows)\n\n# 根据条件筛选行\n# 选择 'feature1' 大于 1.0 的行\nfiltered_df = df[df['feature1'] > 1.0]\nprint(\"\\nfeature1 大于 1.0 的行：\")\nprint(filtered_df)\n</code></pre>\n<p>这些选择方法通常高效，特别是与迭代 Python 列表或字典相比。</p>\n<h3>处理缺失数据</h3>\n<p>\"数据集经常包含缺失值（通常表示为 <code>NaN</code>，即非数字）。大多数机器学习 (machine learning)算法无法直接处理缺失数据，这使得处理缺失数据成为一个必要的预处理步骤。Pandas 提供便捷的工具：\"</p>\n<pre><code class=\"language-python\"># 创建包含缺失值的示例 DataFrame\ndata_missing = {'col1': [1, 2, None, 4, 5],\n                'col2': [None, 'B', 'C', 'D', None]}\ndf_missing = pd.DataFrame(data_missing)\nprint(\"\\n包含缺失值的 DataFrame：\")\nprint(df_missing)\n\n# 检查缺失值（返回布尔型 DataFrame）\nprint(\"\\n缺失值检查：\")\nprint(df_missing.isnull())\n\n# 统计每列的缺失值数量\nprint(\"\\n每列的缺失值数量：\")\nprint(df_missing.isnull().sum())\n\n# 选项 1：删除包含任何缺失值的行\ndf_dropped_rows = df_missing.dropna()\nprint(\"\\n删除包含 NaN 的行后的 DataFrame：\")\nprint(df_dropped_rows)\n\n# 选项 2：填充缺失值（例如，数值型数据用均值填充，或用特定值填充）\n# 计算 'col1' 的均值 - 使用原始 df_missing 进行计算\ncol1_mean = df_missing['col1'].mean()\ndf_filled = df_missing.copy() # 在副本上操作\n\n# 用 'col1' 的均值填充其中的 NaN\ndf_filled['col1'] = df_filled['col1'].fillna(col1_mean)\n# 用占位符（如 'Unknown'）填充 'col2' 中的 NaN\ndf_filled['col2'] = df_filled['col2'].fillna('Unknown')\n\nprint(f\"\\n填充 NaN 后的 DataFrame（col1 使用均值={col1_mean:.2f} 填充）：\")\nprint(df_filled)\n</code></pre>\n<p>选择删除还是填充取决于缺失数据的数量和具体问题。填充（插补）通常能保留更多数据，但需要仔细权衡插补策略。Pandas 的操作，例如 <code>.fillna()</code>，通常实现得高效。</p>\n<h3>数据转换与特征工程</h3>\n<p>Pandas 使得修改现有列或创建新列变得容易，这对于特征工程非常重要：</p>\n<pre><code class=\"language-python\"># 对列应用函数（例如，对 'feature1' 进行平方）\ndf['feature1_squared'] = df['feature1'].apply(lambda x: x**2)\nprint(\"\\n包含 'feature1_squared' 的 DataFrame：\")\nprint(df.head())\n\n# 将分类值映射为数值（简单示例）\n# 实际操作中，请使用独热编码等技术（将在后续或机器学习课程中介绍）\nmapping = {'A': 0, 'B': 1, 'C': 2}\n# 在映射前检查 'feature2' 是否存在\nif 'feature2' in df.columns:\n    df['feature2_mapped'] = df['feature2'].map(mapping)\n    print(\"\\n包含 'feature2_mapped' 的 DataFrame：\")\n    print(df.head())\nelse:\n    print(\"\\nDataFrame 中未找到 'feature2'，跳过映射。\")\n</code></pre>\n<p>许多 Pandas 操作是<em>向量 (vector)化</em>的，意味着它们可以一次性处理整个数组（列），而无需显式的 Python 循环。这利用了底层的 NumPy 数组和 C 实现，从而与纯 Python 中的逐行处理相比，带来显著的性能提升。</p>\n<h3>分组与聚合</h3>\n<p>Pandas 的 <code>.groupby()</code> 功能允许基于列值进行高效的数据聚合。这对于了解类别内的数据分布或创建聚合特征很有用。</p>\n<pre><code class=\"language-python\"># 按 'feature2' 分组，并计算每个组中 'feature1' 的均值\nif 'feature2' in df.columns:\n    grouped_means = df.groupby('feature2')['feature1'].mean()\n    print(\"\\n'feature1' 按 'feature2' 分组后的均值：\")\n    print(grouped_means)\nelse:\n     print(\"\\nDataFrame 中未找到 'feature2'，跳过分组。\")\n</code></pre>\n<h3>为何机器学习 (machine learning)要用 Pandas DataFrame？</h3>\n<p>尽管 Python 列表和字典可以存储数据，但它们在表格数据操作方面缺乏 Pandas DataFrame 的专业功能和性能优化：</p>\n<ol>\n<li><strong>效率：</strong> 使用 NumPy 进行数值数据的快速向量 (vector)化操作。能在同一结构中处理异构数据类型。</li>\n<li><strong>功能：</strong> 丰富多样的内置函数，用于数据加载、清理、转换、合并、重塑和聚合。</li>\n<li><strong>处理缺失数据：</strong> 集成工具，用于检测和处理缺失值。</li>\n<li><strong>基于标签的索引：</strong> 使用有意义的标签进行直观的数据选择和对齐 (alignment)。</li>\n<li><strong>集成性：</strong> 可与其他科学计算 Python 库集成，如 Matplotlib（可视化）、Scikit-learn（机器学习）和 Statsmodels（统计建模）。</li>\n</ol>\n<p>使用 Pandas DataFrame 可以高效且有效地准备数据，为后续的机器学习建模步骤奠定良好基础。了解其结构和核心操作对于任何使用 Python 处理结构化数据的机器学习实践者来说都不可或缺。随着我们学习的推进，我们将看到这些操作的性能特点（通常与 NumPy 和底层算法有关）如何影响机器学习流程的整体速度。</p>",
+  "slug": "pandas-dataframes-ml",
+  "updates": [],
+  "references": [
+    {
+      "id": 14396,
+      "title": "Pandas documentation",
+      "author": "The Pandas Development Team",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/",
+      "doi": "",
+      "note": "Pandas所有功能和数据结构的权威综合参考，包括DataFrame、数据加载、操作和清洗。",
+      "order": 1,
+      "created_at": "2025-09-05T08:52:10.368077Z",
+      "updated_at": "2025-09-11T02:01:49.494024Z"
+    },
+    {
+      "id": 14397,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "由Pandas的创建者撰写，本书详细解释了Pandas DataFrame及其在数据分析和准备中的使用，并提供了实际示例。",
+      "order": 2,
+      "created_at": "2025-09-05T08:52:10.373044Z",
+      "updated_at": "2025-09-11T02:02:04.266706Z"
+    },
+    {
+      "id": 14398,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "在机器学习工作流程的背景下，提供了使用Pandas进行数据准备的实践指导，展示了在模型训练前如何使用DataFrame。",
+      "order": 3,
+      "created_at": "2025-09-05T08:52:10.376899Z",
+      "updated_at": "2025-09-11T02:01:53.991653Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

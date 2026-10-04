@@ -1,0 +1,61 @@
+{
+  "id": 4488,
+  "title": "实践操作：实现组合操作遍",
+  "meta_title": "实践操作：实现算子组合操作遍",
+  "meta_description": "在计算图表示上练习实现一个简单的算子组合操作遍。",
+  "content": "<p>“让我们从图优化策略的理论讨论转向实际实现。本节提供一个动手练习，专注于构建一个基本的算子组合操作遍。尽管编译器框架使用高度复杂的图重写引擎和成本模型，但构建一个简化版本有助于巩固模式匹配和图转换的核心思想。”</p>\n<p>我们将侧重于组合在卷积神经网络 (neural network) (CNN)中常见的一个序列：一个 <code>Conv2D</code> 操作，接着一个 <code>BiasAdd</code>，最后是一个 <code>ReLU</code> 激活。将这些组合为一个 <code>FusedConv2D_BiasAdd_ReLU</code> 操作可以显著减少内存带宽使用和核启动开销，特别是在GPU等加速器上。</p>\n<h3>表示计算图</h3>\n<p>在实现组合操作遍之前，我们需要为计算图提供一个表示方式。对于本次练习，我们将使用一个简单的Python结构。假设我们的图节点表示为对象或字典，至少包含以下内容：</p>\n<ul>\n<li><code>id</code>: 节点的唯一标识符。</li>\n<li><code>op_type</code>: 操作类型（例如，'Conv2D'，'BiasAdd'，'ReLU'，'Input'，'FusedOp'）。</li>\n<li><code>inputs</code>: 向此节点提供输入的节点 <code>id</code> 列表。</li>\n<li><code>outputs</code>: 消耗此节点输出的节点 <code>id</code> 列表。</li>\n<li><code>attributes</code>: 包含操作特定参数 (parameter)的字典（例如，'Conv2D' 的步长、填充）。</li>\n</ul>\n<p>图本身可以是这些节点的集合（例如，字典或列表），可能还包含遍历图或按ID查找节点的方法。</p>\n<h3>识别组合模式</h3>\n<p>我们的目标是查找与 <code>Conv2D -> BiasAdd -> ReLU</code> 模式匹配的子图。这需要遍历图并检查节点序列。一种常见方法是按拓扑顺序遍历所有节点（如果对于此特定模式而言循环不是主要问题，则可以简单地遍历所有节点）。</p>\n<p>对于每个识别为 <code>Conv2D</code> 的节点：</p>\n<ol>\n<li>检查它是否只有一个输出连接。当操作只有一个消费者时，图组合通常会简化，尽管多消费者场景可以使用更复杂的逻辑处理。</li>\n<li>检查消费节点是否是 <code>BiasAdd</code> 操作。</li>\n<li>检查 <code>BiasAdd</code> 节点是否也只有一个输出连接。</li>\n<li>检查 <code>BiasAdd</code> 的消费节点是否是 <code>ReLU</code> 操作。</li>\n</ol>\n<p>如果所有这些条件都满足，我们就找到了一个目标组合模式的实例。</p>\n<p>让我们在组合前可视化该模式：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-19gtcmn\" \n              data-graph-definition='digraph BeforeFusion {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Arial\", color=\"#adb5bd\"];\n  edge [fontname=\"Arial\"];\n\n  Input [label=\"输入张量\", fillcolor=\"#a5d8ff\"];\n  Weights [label=\"卷积权重\", fillcolor=\"#ffec99\"];\n  Bias [label=\"偏置向量\", fillcolor=\"#ffd8a8\"];\n\n  Conv [label=\"Conv2D\", fillcolor=\"#74c0fc\"];\n  Add [label=\"BiasAdd\", fillcolor=\"#ffc078\"];\n  Relu [label=\"ReLU\", fillcolor=\"#b2f2bb\"];\n  Consumer [label=\"消费操作\", fillcolor=\"#e9ecef\"];\n\n  Input -> Conv;\n  Weights -> Conv;\n  Conv -> Add [label=\"特征图\"];\n  Bias -> Add;\n  Add -> Relu [label=\"带偏置图\"];\n  Relu -> Consumer [label=\"激活图\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-19gtcmn\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的计算图段，包含组合前的卷积、偏置 (bias)加法和ReLU激活。</p>\n</blockquote>\n<h3>实现图重写逻辑</h3>\n<p>一旦识别出模式 <code>(Conv -> Add -> Relu)</code>，图就需要进行转换：</p>\n<ol>\n<li><strong>创建融合节点：</strong> 实例化一个新节点，例如 <code>FusedNode</code>，其 <code>op_type = 'FusedConv2D_BiasAdd_ReLU'</code>。</li>\n<li><strong>连接输入：</strong> <code>FusedNode</code> 的输入应是原始 <code>Conv</code> 节点的输入（输入张量和权重 (weight)）以及来自 <code>BiasAdd</code> 节点的偏置 (bias)输入。</li>\n<li><strong>连接输出：</strong> 原本消费 <code>ReLU</code> 节点输出的节点现在应该消费 <code>FusedNode</code> 的输出。相应地更新它们的 <code>inputs</code> 列表。</li>\n<li><strong>更新节点集合：</strong> 从图的节点集合中移除原始的 <code>Conv</code>、<code>Add</code> 和 <code>Relu</code> 节点，并添加新的 <code>FusedNode</code>。</li>\n<li><strong>属性处理：</strong> <code>FusedNode</code> 需要继承相关属性。例如，它需要原始 <code>Conv</code> 节点的卷积参数 (parameter)（步长、填充）。ReLU 激活已包含的事实可以作为属性存储在 <code>FusedNode</code> 内。</li>\n</ol>\n<p>以下是一个 Python 代码片段，说明了核心重写逻辑（假设 <code>graph</code> 是一个图对象，具有 <code>get_node</code>、<code>add_node</code>、<code>remove_node</code> 和 <code>update_edge</code> 等方法）：</p>\n<pre><code class=\"language-python\">import uuid # 用于生成唯一ID\n\ndef fuse_conv_bias_relu(graph, conv_node_id):\n    \"\"\"\n    尝试从 conv_node_id 开始组合 Conv2D -> BiasAdd -> ReLU。如果发生组合，返回 True，否则返回 False。\n    \"\"\"\n    conv_node = graph.get_node(conv_node_id)\n    if conv_node.op_type != 'Conv2D' or len(conv_node.outputs) != 1:\n        return False\n\n    add_node_id = conv_node.outputs[0]\n    add_node = graph.get_node(add_node_id)\n    if add_node is None or add_node.op_type != 'BiasAdd' or len(add_node.outputs) != 1:\n        return False\n    # 假设 BiasAdd 输入顺序：[卷积输出, 偏置向量]\n    if len(add_node.inputs) != 2 or add_node.inputs[0] != conv_node_id:\n        return False\n    bias_node_id = add_node.inputs[1]\n\n    relu_node_id = add_node.outputs[0]\n    relu_node = graph.get_node(relu_node_id)\n    if relu_node is None or relu_node.op_type != 'ReLU':\n        # 注意：我们可能允许 ReLU 有多个消费者\n        return False\n\n    print(f\"找到模式: {conv_node.id} -> {add_node.id} -> {relu_node.id}\")\n\n    # 1. 创建融合节点\n    fused_node_id = f\"fused_{uuid.uuid4().hex[:6]}\"\n    fused_node_attrs = conv_node.attributes.copy() # 继承卷积属性\n    fused_node_attrs['activation'] = 'ReLU'       # 标记激活类型\n    fused_node_inputs = [conv_node.inputs[0], conv_node.inputs[1], bias_node_id] # 输入，权重，偏置\n\n    # 2. 存储 ReLU 节点的原始输出\n    original_relu_outputs = list(relu_node.outputs) # 修改前复制\n\n    # 3. 创建融合节点结构（取决于您的图表示）\n# 此部分 - 请根据您的 Node/Graph 类结构进行调整\n    graph.add_node(\n        id=fused_node_id,\n        op_type='FusedConv2D_BiasAdd_ReLU',\n        inputs=fused_node_inputs,\n        outputs=original_relu_outputs, # 最初连接到 ReLU 的消费者\n        attributes=fused_node_attrs\n    )\n\n    # 4. 更新原始 ReLU 节点的消费者\n    for consumer_id in original_relu_outputs:\n        consumer_node = graph.get_node(consumer_id)\n        if consumer_node:\n             # 查找 relu_node_id 作为输入的位置，并替换为 fused_node_id\n             try:\n                 idx = consumer_node.inputs.index(relu_node_id)\n                 consumer_node.inputs[idx] = fused_node_id\n             except ValueError:\n                 print(f\"警告: 消费者 {consumer_id} 未将 {relu_node_id} 列为输入。\")\n\n    # 5. 更新连接到原始节点的生产者\n    # Conv 和 Bias 的输入现在是融合节点的输入，已在步骤 3 中处理。\n    # 我们需要确保原始输入节点 *不再* 指向已删除的节点\n    # 并且在需要时 *指向* 新的融合节点（取决于表示方式）。\n    # 为简单起见，这里我们假设边的更新主要通过消费者的 'inputs' 列表发生。\n\n\n    # 6. 移除原始节点\n    graph.remove_node(conv_node_id)\n    graph.remove_node(add_node_id)\n    graph.remove_node(relu_node_id)\n\n    print(f\"成功组合到节点 {fused_node_id}\")\n    return True\n\n# --- 示例用法 ---\n# 假设 'graph' 已填充节点\n# for node_id in list(graph.nodes.keys()): # 迭代键的副本\n#     if graph.get_node(node_id) and graph.get_node(node_id).op_type == 'Conv2D':\n#          fuse_conv_bias_relu(graph, node_id)\n\n</code></pre>\n<p>应用此转换后，图段将如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-127nur2\" \n              data-graph-definition='digraph AfterFusion {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Arial\", color=\"#adb5bd\"];\n  edge [fontname=\"Arial\"];\n\n  Input [label=\"输入张量\", fillcolor=\"#a5d8ff\"];\n  Weights [label=\"卷积权重\", fillcolor=\"#ffec99\"];\n  Bias [label=\"偏置向量\", fillcolor=\"#ffd8a8\"];\n\n  FusedOp [label=\"融合Conv2D\\n(BiasAdd+ReLU)\", fillcolor=\"#748ffc\"];\n  Consumer [label=\"消费操作\", fillcolor=\"#e9ecef\"];\n\n  Input -> FusedOp;\n  Weights -> FusedOp;\n  Bias -> FusedOp;\n  FusedOp -> Consumer [label=\"激活图\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-127nur2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>应用组合操作遍后，将三个操作组合为一个的计算图段。</p>\n</blockquote>\n<h3>进阶考量</h3>\n<p>本示例简化了许多方面：</p>\n<ul>\n<li><strong>成本模型：</strong> 我们无条件地进行了组合。真正的编译器会使用成本模型来判断组合是否对目标硬件有利。有时，组合过多操作可能导致寄存器压力或指令缓存问题，从而抵消其优势。这还可能阻碍其他更有利的优化。</li>\n<li><strong>模式复杂性：</strong> 组合不限于线性链。编译器处理逐元素操作、分支和更复杂的模式。定义这些模式并确保正确性需要强大的图匹配能力。</li>\n<li><strong>目标感知：</strong> 高效组合核的可用性取决于硬件。编译器后端必须知道目标（CPU、GPU、加速器）是否提供了 <code>FusedConv2D_BiasAdd_ReLU</code> 的优化实现。如果否，组合可能不会带来性能提升，甚至需要为组合操作生成复杂的代码。NVIDIA 的 cuDNN 或 Intel 的 oneDNN 等库对哪些组合是实际可行的有很大影响。</li>\n<li><strong>数据布局：</strong> 组合决策通常与数据布局转换（NCHW vs. NHWC）相互影响。最佳组合策略可能会根据所选布局而变化。\n\"*   <strong>图表示：</strong> 编译器使用更结构化的IR，例如MLIR，融合可能涉及方言转换和对特定操作及类型进行操作的模式重写框架。\"</li>\n<li><strong>正确性：</strong> 确保组合操作与原始序列语义等效非常重要，特别是关于数值精度和边缘情况的处理（例如，如果中间类型改变，则舍入模式不同）。</li>\n</ul>\n<p>本次实践练习提供了一个起始的认识，了解图级组合操作遍如何运行。在此基础上，您可以研究更复杂的模式，集成成本模型，并考虑目标特定的限制，从而更接近于生产级ML编译器中的复杂优化遍。</p>",
+  "slug": "practice-implementing-fusion",
+  "updates": [],
+  "references": [
+    {
+      "id": 12808,
+      "title": "TVM: An Automated End-to-End Optimizing Compiler for Deep Learning",
+      "author": "Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy",
+      "year": "2018",
+      "publisher": "USENIX Association",
+      "journal": "13th USENIX Symposium on Operating Systems Design and Implementation (OSDI '18)",
+      "volume": "",
+      "pages": "578-594",
+      "url": "https://www.usenix.org/conference/osdi18/presentation/chen",
+      "doi": "10.5555/3295964.3295982",
+      "note": "介绍了TVM，一个用于深度学习的端到端优化编译器，涵盖了操作符融合等图级别优化和针对特定目标的代码生成。",
+      "order": 1,
+      "created_at": "2025-09-05T08:21:15.125092Z",
+      "updated_at": "2025-09-10T11:04:24.795419Z"
+    },
+    {
+      "id": 12809,
+      "title": "MLIR: A Compiler Infrastructure for the End of Moores Law",
+      "author": "Chris Lattner, Jacques Pienaar, River Riddle, Albert Cohen, Agustin Cosgaya, Andrew Davis, Diego Novillo, Nicolas Vasilache, Stephen Neuendorffer, Stephan Herhut, Jeffrey W. Seutter, Justin Tan, Eugene Zhuravlev, Andrei Lutas",
+      "year": "2021",
+      "publisher": "ACM",
+      "journal": "ACM Transactions on Architecture and Code Optimization (TACO)",
+      "volume": "18",
+      "pages": "1-27",
+      "url": "https://dl.acm.org/doi/10.1145/3471018",
+      "doi": "10.1145/3471018",
+      "note": "详细介绍了MLIR，一个灵活的编译器基础设施，支持针对不同硬件后端的图转换和优化设计与实现。",
+      "order": 2,
+      "created_at": "2025-09-05T08:21:15.308713Z",
+      "updated_at": "2025-09-10T11:04:20.468239Z"
+    },
+    {
+      "id": 12810,
+      "title": "XLA: Optimizing Compiler for Machine Learning",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla/",
+      "doi": "",
+      "note": "XLA的官方文档，XLA是谷歌用于机器学习的优化编译器，概述了其图级别优化和操作符融合的实际应用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:21:15.322292Z",
+      "updated_at": "2025-09-10T11:04:15.143632Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7771,
+  "title": "进行语义搜索",
+  "meta_title": "进行语义搜索",
+  "meta_description": "实现语义搜索功能，以查找针对给定查询最相关的文档片段。",
+  "content": "<p>语义搜索是检索系统的核心组成部分。这种方式采用文本嵌入 (embedding)和向量 (vector)相似度，根据查询的含义和意图来查找信息。与依赖精确词语匹配的传统关键词搜索不同，语义搜索可以帮助你找到相关文档，即使这些文档不包含搜索查询中使用的确切词语。</p>\n<p>该过程是你刚学到的工具的直接应用。为了找到给定查询最相关的文档，你将执行以下步骤：</p>\n<ol>\n<li>为用户查询生成一个嵌入。</li>\n<li>将此查询嵌入与知识库中所有文档片段的预计算嵌入进行比较。</li>\n<li>计算每个文档片段的相似度分数（使用余弦相似度）。</li>\n<li>将文档片段从高分到低分排序，以识别出最相关的。</li>\n</ol>\n<h3>批量计算相似度</h3>\n<p>虽然你可以循环遍历每个文档嵌入 (embedding)并逐一计算其与查询嵌入的相似度，但这种方式效率不高，特别是当文档数量很多时。更高效的方法是在一次优化操作中计算所有相似度。</p>\n<p><code>batch_similarity</code> 函数正是为此目的而设计的。它接收一个查询向量 (vector)和一系列文档向量，然后高效地计算查询与每个文档之间的相似度。</p>\n<p>下面是如何实现一个基本的语义搜索功能：</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, embed_batch, batch_similarity\n\n# 1. 你的文档片段集合\ndocuments = [\n    \"Python 是一种高级编程语言\",\n    \"机器学习模型从数据中学习模式\",\n    \"自然语言处理帮助计算机理解文本\",\n    \"深度神经网络有多层\",\n    \"数据科学结合了统计学和编程\",\n]\n\n# 2. 预计算所有文档的嵌入\ndoc_embeddings = embed_batch(documents)\n\n# 3. 定义一个搜索查询并生成其嵌入\nquery = \"我想了解人工智能和神经网络\"\nquery_embedding = embed(query)\n\n# 4. 计算所有文档与查询的相似度分数\nsimilarities = batch_similarity(query_embedding, doc_embeddings, metric=\"cosine\")\n\n# 5. 将文档及其分数结合，并按相关性排序\nresults = sorted(zip(documents, similarities), key=lambda x: x[1], reverse=True)\n\n# 显示前3个结果\nprint(f\"查询: '{query}'\\n\")\nprint(\"前3个结果:\")\nfor i, (doc, score) in enumerate(results[:3], 1):\n    print(f\"{i}. [{score:.4f}] {doc}\")\n</code></pre>\n<p>请注意，排名靠前的结果“深度神经网络 (neural network)有多层”与查询没有太多共同关键词。然而，由于它们的嵌入在向量空间中距离很近，系统正确地将其识别为最相关的文档。</p>\n<h3>高效获取前K个结果</h3>\n<p>对整个相似度列表进行排序效果不错，但对于仅需要少量排名靠前结果的应用，有更直接的方法。<code>top_k_similar</code> 函数经过优化，可以在不排序整个集合的情况下找到 <code>k</code> 个最相似的向量 (vector)。它返回一个与得分最高的文档对应的索引列表。</p>\n<p>这在RAG系统中尤其有用，在RAG系统中，通常只需要将3-5个最相关的片段传递给LLM。</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, embed_batch, top_k_similar, cosine_similarity\n\ndocuments = [\n    \"Python 是一种高级编程语言\",\n    \"机器学习模型从数据中学习模式\",\n    \"自然语言处理帮助计算机理解文本\",\n    \"深度神经网络有多层\",\n    \"数据科学结合了统计学和编程\",\n    \"软件工程涉及系统设计与构建\",\n]\ndoc_embeddings = embed_batch(documents)\n\nquery = \"编程语言和软件开发\"\nquery_embedding = embed(query)\n\n# 获取前3个最相似文档的索引\ntop_3_indices = top_k_similar(query_embedding, doc_embeddings, k=3)\n\nprint(f\"查询: '{query}'\\n\")\nprint(\"使用 top_k_similar 的前3个结果:\")\nfor rank, idx in enumerate(top_3_indices, 1):\n    # 我们可以通过只计算排名靠前索引的相似度来获取分数\n    similarity = cosine_similarity(query_embedding, doc_embeddings[idx])\n    print(f\"{rank}. [{similarity:.4f}] {documents[idx]}\")\n</code></pre>\n<p>使用 <code>top_k_similar</code> 通常比 <code>batch_similarity</code> 加上完全排序更快，内存效率更高，使其成为大多数生产场景中进行检索的首选方法。</p>\n<h3>构建一个简单的搜索引擎</h3>\n<p>有了这些组件，你可以将逻辑封装到一个简单、可重用的搜索类中。这是构建更复杂检索系统的基本模式。该类将处理文档索引（预计算嵌入 (embedding)）和执行搜索。</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, embed_batch, top_k_similar, cosine_similarity\n\nclass SimpleSearchEngine:\n    \"\"\"一个基本的语义搜索引擎。\"\"\"\n\n    def __init__(self, documents: list[str]):\n        self.documents = documents\n        print(f\"正在索引 {len(documents)} 个文档...\")\n        self.embeddings = embed_batch(documents)\n        print(\"索引完成。\")\n\n    def search(self, query: str, top_k: int = 3) -> list[dict]:\n        \"\"\"搜索相关文档。\"\"\"\n        query_emb = embed(query)\n        top_indices = top_k_similar(query_emb, self.embeddings, k=top_k)\n\n        results = []\n        for idx in top_indices:\n            sim = cosine_similarity(query_emb, self.embeddings[idx])\n            results.append({\n                'document': self.documents[idx],\n                'score': sim,\n                'index': idx\n            })\n        return results\n\n# 文档集合\ndocuments = [\n    \"Python 是一种高级编程语言\",\n    \"机器学习模型从数据中学习模式\",\n    \"自然语言处理帮助计算机理解文本\",\n    \"人工智能使机器能够思考\",\n    \"软件工程涉及系统设计与构建\"\n]\n\n# 创建并使用搜索引擎\nengine = SimpleSearchEngine(documents)\n\n# 执行搜索\nsearch_query = \"人工智能和计算机思维\"\nsearch_results = engine.search(search_query, top_k=2)\n\nprint(f\"\\n搜索: '{search_query}'\")\nfor i, result in enumerate(search_results, 1):\n    print(f\"  {i}. [{result['score']:.4f}] {result['document']}\")\n</code></pre>\n<p>这个简单的类演示了完整的端到端流程：通过创建嵌入来索引文档，然后利用这些嵌入在查询时查找相关信息。</p>\n<h3>使用阈值处理不相关查询</h3>\n<p>检索系统中一个常见难题是处理知识库中没有相关文档的查询。在这种情况下，语义搜索仍然会返回<em>最不相似</em>的文档，即使它们的相似度分数非常低。这可能导致LLM接收到不相关的内容，并生成质量不佳或错误的回复。</p>\n<p>为了解决这个问题，你可以应用一个相似度分数阈值。如果没有文档达到最低分数，你可以得出结论，没有相关结果。</p>\n<pre><code class=\"language-python\"># 假设 'doc_embeddings' 和 'documents' 已经定义\nquery = \"量子计算\" # 一个在我们的少量集合中不存在的话题\nquery_embedding = embed(query)\n\n# 计算所有文档的相似度\nsimilarities = batch_similarity(query_embedding, doc_embeddings)\n\n# 根据阈值过滤结果\nthreshold = 0.3\nrelevant_results = [\n    (doc, sim) for doc, sim in zip(documents, similarities) if sim > threshold\n]\n\nprint(f\"查询: '{query}'\")\nprint(f\"相似度高于 {threshold} 的结果:\")\n\nif relevant_results:\n    for doc, sim in sorted(relevant_results, key=lambda x: x[1], reverse=True):\n        print(f\"  [{sim:.4f}] {doc}\")\nelse:\n    print(f\"  没有找到高于阈值 {threshold} 的结果\")\n    best_match_score = max(similarities)\n    best_match_doc = documents[similarities.index(best_match_score)]\n    print(f\"  (低于阈值的最佳匹配: [{best_match_score:.4f}] {best_match_doc})\")\n</code></pre>\n<p>选择合适的阈值取决于具体的应用场景，并且通常需要根据你的数据集进行实验。一个好的起始范围通常在0.25到0.4之间。通过过滤掉低质量的结果，你可以确保传递给语言模型的内容既相关又有用，这是任何RAG系统性能的根本保证。</p>",
+  "slug": "performing-semantic-search",
+  "updates": [],
+  "references": [
+    {
+      "id": 21722,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3972-3982",
+      "url": "https://doi.org/10.48550/arXiv.1908.10084",
+      "doi": "10.48550/arXiv.1908.10084",
+      "note": "本文介绍了Sentence-BERT，它是BERT的改进版本，能够生成有语义意义的句子嵌入，适用于语义相似度搜索等任务。",
+      "order": 1,
+      "created_at": "2025-10-20T07:25:04.247530Z",
+      "updated_at": "2025-10-20T07:49:36.597655Z"
+    },
+    {
+      "id": 21724,
+      "title": "Introduction to Information Retrieval",
+      "author": "Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze",
+      "year": "2008",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nlp.stanford.edu/IR-book/",
+      "doi": "",
+      "note": "这本广泛使用的教科书提供了信息检索的基本概念，包括向量空间模型和排序，这些与理解语义搜索相关。",
+      "order": 3,
+      "created_at": "2025-10-20T07:25:04.256190Z",
+      "updated_at": "2025-10-20T07:49:27.274499Z"
+    },
+    {
+      "id": 21725,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 33 (NeurIPS 2020)",
+      "volume": "33",
+      "pages": "9459-9474",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "本文介绍了检索增强生成（RAG）框架，它将预训练的检索器与生成器结合，以改进知识密集型NLP任务，与文中提到的RAG系统直接相关。",
+      "order": 4,
+      "created_at": "2025-10-20T07:25:04.261608Z",
+      "updated_at": "2025-10-20T07:49:37.394791Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

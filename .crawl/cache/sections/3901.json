@@ -1,0 +1,61 @@
+{
+  "id": 3901,
+  "title": "实践：构建优化的RAG管道",
+  "meta_title": "实践构建优化的RAG管道",
+  "meta_description": "构建并评估一个结合先进索引和检索方法的RAG系统。",
+  "content": "<p>本实践练习着重于构建一个在基础向量 (vector)搜索上改进的检索增强生成（RAG）管道。它结合了适用于生产环境的先进文档处理、混合检索和重排序技术。目标是通过使用多种检索信号并在生成前优化检索到的上下文 (context)，来构建一个提供更相关、更准确答案的系统。</p>\n<p>假设您有一系列文档（例如，PDF或Markdown格式的技术文章、项目说明或研究报告），希望将其用作问答系统的知识库。</p>\n<p><strong>先决条件：</strong> 请确保已安装所需的库：</p>\n<pre><code class=\"language-bash\">pip install langchain langchain-openai langchain-community langchain-chroma langchain-text-splitters sentence-transformers tiktoken pypdf rank_bm25\npip install unstructured # For more document types\n</code></pre>\n<p>您还需要访问一个大型语言模型（如OpenAI的模型），并可能需要将API密钥设置为环境变量。</p>\n<h3>1. 高级文档加载与分块</h3>\n<p>我们不使用简单的固定大小分块，而是采用<code>RecursiveCharacterTextSplitter</code>，它首先尝试根据语义边界（段落、句子）进行拆分，然后再按字符计数。这通常能更好地保持上下文 (context)。我们还需要处理加载可能不同类型的文档。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_community.document_loaders import PyPDFLoader, DirectoryLoader\nfrom langchain_text_splitters import RecursiveCharacterTextSplitter\nfrom langchain_openai import OpenAIEmbeddings\nfrom langchain_chroma import Chroma\n\n# 根据您的文档路径和类型进行配置\nDOCS_PATH = \"./your_documents\"\n# 使用 DirectoryLoader 实现灵活性，如果需要，可按文件类型配置加载器\n# 示例：为简化起见，此处仅加载PDF\nloader = DirectoryLoader(DOCS_PATH, glob=\"**/*.pdf\", loader_cls=PyPDFLoader, show_progress=True)\ndocuments = loader.load()\n\n# 高级分块策略\ntext_splitter = RecursiveCharacterTextSplitter(\n    chunk_size=1000,\n    chunk_overlap=200, # 重叠有助于维持分块间的上下文\n    length_function=len,\n    add_start_index=True, # 对后续潜在的父文档检索有用\n)\nchunks = text_splitter.split_documents(documents)\n\nprint(f\"已加载 {len(documents)} 份文档。\")\nprint(f\"已拆分为 {len(chunks)} 个分块。\")\n\n# 初始化嵌入模型（如果使用OpenAI，请确保已设置 OPENAI_API_KEY）\nembeddings = OpenAIEmbeddings(model=\"text-embedding-3-small\")\n</code></pre>\n<p>如果您有其他文件类型，请考虑使用<code>UnstructuredMarkdownLoader</code>或<code>langchain_community.document_loaders</code>中的其他特定加载器。<code>RecursiveCharacterTextSplitter</code>的参数 (parameter)（<code>chunk_size</code>、<code>chunk_overlap</code>）通常需要根据您的文档特点和下游大型语言模型上下文窗口大小进行调整。</p>\n<h3>2. 混合搜索索引</h3>\n<p>一个高效的RAG系统通常能从结合密集（向量 (vector)）和稀疏（基于关键词）检索中获益。我们将设置这两种方式。</p>\n<p><strong>a) 密集检索（向量存储）</strong></p>\n<p>我们将文档分块索引到向量存储中。此处我们使用<code>langchain-chroma</code>作为本地示例，但您可以根据需要替换为自己偏好的生产级向量存储（如Pinecone、Weaviate等）。</p>\n<pre><code class=\"language-python\"># 初始化向量存储并索引分块\nvectorstore = Chroma.from_documents(\n    documents=chunks,\n    embedding=embeddings,\n    persist_directory=\"./chroma_db_hybrid\" # 选择一个目录来保存索引\n)\nvector_retriever = vectorstore.as_retriever(search_kwargs={\"k\": 10}) # 最初检索更多以进行重排序\n\nprint(\"向量存储已初始化，分块已索引。\")\n</code></pre>\n<p><strong>b) 稀疏检索（BM25）</strong></p>\n<p>BM25 (Best Matching 25) 是一种流行的基于关键词的算法。LangChain通过社区包提供了相应的检索器。</p>\n<pre><code class=\"language-python\">from langchain_community.retrievers import BM25Retriever\n\n# BM25 需要分块的原始文本\n# 确保您的“chunks”包含 page_content 属性\nbm25_retriever = BM25Retriever.from_documents(chunks)\nbm25_retriever.k = 10 # 根据关键词检索前10个结果\n\nprint(\"BM25 检索器已初始化。\")\n</code></pre>\n<h3>3. 使用EnsembleRetriever实现混合搜索</h3>\n<p>现在，使用<code>EnsembleRetriever</code>组合密集和稀疏检索器。这可以对每种方法的贡献进行加权。最佳权重 (weight)通常取决于特定的数据集和查询类型，并且需要实验来确定。</p>\n<pre><code class=\"language-python\">from langchain.retrievers import EnsembleRetriever\n\n# 初始化集成检索器\nensemble_retriever = EnsembleRetriever(\n    retrievers=[bm25_retriever, vector_retriever],\n    weights=[0.4, 0.6] # 示例权重：稍微优先向量搜索\n)\n\nprint(\"集成检索器已创建。\")\n\n# 测试检索（可选）\n# sample_query = \"什么是提示工程的最佳实践？\"\n# retrieved_docs = ensemble_retriever.invoke(sample_query)\n# print(f\"为示例查询检索到 {len(retrieved_docs)} 份文档。\")\n</code></pre>\n<h3>4. 实现重排序</h3>\n<p>混合搜索会检索出各种文档，但其中一些可能仅是边缘相关的。使用计算密集型交叉编码器模型进行重排序，可以显著提升传递给大型语言模型的最终上下文 (context)质量。</p>\n<p>我们使用<code>ContextualCompressionRetriever</code>，它封装了我们的集成检索器并应用了一个重排序模型。</p>\n<pre><code class=\"language-python\">from langchain.retrievers.document_compressors import CrossEncoderReranker\nfrom langchain_community.cross_encoders import HuggingFaceCrossEncoder\nfrom langchain.retrievers import ContextualCompressionRetriever\n\n# 初始化交叉编码器模型\n# 像 'cross-encoder/ms-marco-MiniLM-L-6-v2' 这样的模型高效且有成效\nmodel = HuggingFaceCrossEncoder(model_name=\"cross-encoder/ms-marco-MiniLM-L-6-v2\")\n\n# 初始化重排序压缩器\ncompressor = CrossEncoderReranker(model=model, top_n=5) # 重排序后保留最相关的5份文档\n\n# 创建压缩检索器\ncompression_retriever = ContextualCompressionRetriever(\n    base_compressor=compressor,\n    base_retriever=ensemble_retriever # 使用混合检索器作为基础\n)\n\nprint(\"重排序检索器已配置。\")\n\n# 测试带重排序的检索（可选）\n# reranked_docs = compression_retriever.invoke(sample_query)\n# print(f\"为示例查询重排序到 {len(reranked_docs)} 份文档。\")\n# 比较 reranked_docs 与 retrieved_docs 的内容\n</code></pre>\n<p><code>top_n</code>参数 (parameter)控制重排序后保留的文档数量。这有助于大型语言模型聚焦于最有用的信息，并符合上下文窗口的限制。</p>\n<h3>5. 使用LCEL构建完整的RAG链</h3>\n<p>最后，使用LangChain表达式语言（LCEL）将优化后的检索器集成到完整的RAG链中。该链使用我们的<code>compression_retriever</code>获取上下文 (context)，将其格式化为提示，发送给大型语言模型，并解析输出。</p>\n<pre><code class=\"language-python\">from langchain_core.prompts import ChatPromptTemplate\nfrom langchain_core.runnables import RunnablePassthrough\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.output_parsers import StrOutputParser\n\n# 初始化大型语言模型\nllm = ChatOpenAI(model_name=\"gpt-3.5-turbo\", temperature=0) # 或 gpt-4, claude 等\n\n# 定义提示模板\ntemplate = \"\"\"您是一个问答助手。\n仅使用以下检索到的上下文来回答问题。\n如果您无法从上下文中得知答案，请直接说您不知道。\n请保持回答简洁，并直接基于提供的信息。\n\n上下文：\n{context}\n\n问题: {question}\n\n回答：\"\"\"\nprompt = ChatPromptTemplate.from_template(template)\n\n# 辅助函数，用于格式化检索到的文档\ndef format_docs(docs):\n    return \"\\n\\n\".join(doc.page_content for doc in docs)\n\n# 构建RAG链\nrag_chain = (\n    {\"context\": compression_retriever | format_docs, \"question\": RunnablePassthrough()}\n    | prompt\n    | llm\n    | StrOutputParser()\n)\n\nprint(\"优化后的RAG链已构建。\")\n</code></pre>\n<p>这种LCEL结构清晰地定义了数据流：用户的提问（<code>RunnablePassthrough()</code>）被传递，同时也被<code>compression_retriever</code>用于获取和格式化上下文。然后，这些内容在提示模板中组合，由大型语言模型处理，并解析最终的字符串输出。</p>\n<h3>6. 调用与评估方法</h3>\n<p>您现在可以使用用户提问来调用链：</p>\n<pre><code class=\"language-python\">query = \"请解释RAG中的混合搜索概念。\"\nfinal_answer = rag_chain.invoke(query)\nprint(\"\\n--- 最终回答 ---\")\nprint(final_answer)\n\nquery_2 = \"法国的首都是哪里？\" # 超出上下文的问题示例\nfinal_answer_2 = rag_chain.invoke(query_2)\nprint(\"\\n--- 最终回答 2 ---\")\nprint(final_answer_2)\n</code></pre>\n<p><strong>流程可视化：</strong></p>\n<p>这是我们构建的管道图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-37i6v\" \n              data-graph-definition='digraph RAG_Pipeline {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    UserQuery [label=\"用户查询\"];\n    QueryTransform [label=\"可选：\\n查询转换\\n（例如，HyDE）\"];\n    BM25 [label=\"BM25 检索器\\n（稀疏）\", style=\"filled\", fillcolor=\"#a5d8ff\"];\n    VectorStore [label=\"向量存储\\n检索器（密集）\", style=\"filled\", fillcolor=\"#bac8ff\"];\n    Ensemble [label=\"集成检索器\\n（组合与加权）\", style=\"filled\", fillcolor=\"#d0bfff\"];\n    Reranker [label=\"交叉编码器\\n重排序器\", style=\"filled\", fillcolor=\"#eebefa\"];\n    Format [label=\"格式化上下文\"];\n    LLM [label=\"大型语言模型\\n（生成答案）\", style=\"filled\", fillcolor=\"#b2f2bb\"];\n    FinalAnswer [label=\"最终答案\"];\n\n    UserQuery -> QueryTransform [style=dashed, label=\"如果使用\"];\n    UserQuery -> BM25;\n    UserQuery -> VectorStore;\n    QueryTransform -> BM25 [style=dashed];\n    QueryTransform -> VectorStore [style=dashed];\n\n    BM25 -> Ensemble;\n    VectorStore -> Ensemble;\n    Ensemble -> Reranker;\n    Reranker -> Format;\n    Format -> LLM [label=\"上下文\"];\n    UserQuery -> LLM [label=\"原始查询\"];\n    LLM -> FinalAnswer;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-37i6v\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>优化后的RAG管道流程，在大型语言模型生成最终答案之前，结合了混合搜索和重排序阶段。虚线表示可选的查询转换。</p>\n</blockquote>\n<p><strong>评估：</strong> 这个优化后的管道应比仅进行基础向量 (vector)搜索的RAG产生更好的结果。然而，细致的评估是必要的。如第5章所述，可以使用LangSmith等工具来追踪执行过程，并定义在代表性的问答对数据集上评估的指标（例如，RAGAS指标，如忠实性、上下文 (context)准确性、上下文召回率、答案相关性）。将此管道的性能与更简单的基线进行比较，以量化 (quantization)混合搜索和重排序所带来的改进。调整集成权重 (weight)（<code>EnsembleRetriever</code>中的<code>weights</code>）以及重排序后保留的文档数量（<code>CrossEncoderReranker</code>中的<code>top_n</code>）是根据评估结果进行的常见优化步骤。</p>\n<p>本练习提供了一个面向生产的RAG系统模板。您可以通过集成查询转换（如HyDE）、实现父文档检索策略以获得更好的上下文，以及针对您的文档语料库优化数据加载/分块来进一步提升它。请记住，监控（第5章）和部署实践（第7章）对于在生产环境中保持性能和可靠性是必要的。</p>",
+  "slug": "practice-optimized-rag-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 11219,
+      "title": "Passage Re-ranking with BERT",
+      "author": "Rodrigo Nogueira, Kyunghyun Cho",
+      "year": "2019",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1901.04085",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1901.04085",
+      "doi": "10.48550/arXiv.1901.04085",
+      "note": "这项有影响力的工作展示了如何使用像BERT这样的大型预训练语言模型进行检索到的段落重排序，为交叉编码器重排序器奠定了基础。",
+      "order": 3,
+      "created_at": "2025-09-05T07:05:03.203747Z",
+      "updated_at": "2025-09-10T01:43:52.527518Z"
+    },
+    {
+      "id": 11220,
+      "title": "LangChain Documentation",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/",
+      "doi": "",
+      "note": "官方文档提供了使用LangChain构建RAG管道的实践指南、API参考和示例，包括高级检索和使用LCEL构建链。",
+      "order": 4,
+      "created_at": "2025-09-05T07:05:03.212068Z",
+      "updated_at": "2025-09-10T01:43:53.539640Z"
+    },
+    {
+      "id": 11221,
+      "title": "RAGAS: A Framework for Automated Evaluation of Retrieval Augmented Generation Systems",
+      "author": "Shahul Es, Jithin James, Luis Espinosa-Anke, Steven Schockaert",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2309.15217",
+      "doi": "10.48550/arXiv.2309.15217",
+      "note": "这篇论文介绍了RAGAS，一个用于自动评估检索增强生成（RAG）系统的框架，提供了评估忠实度和上下文准确性等方面的指标。",
+      "order": 5,
+      "created_at": "2025-09-05T07:05:03.236083Z",
+      "updated_at": "2025-09-10T01:43:55.266635Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

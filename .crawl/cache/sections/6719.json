@@ -1,0 +1,61 @@
+{
+  "id": 6719,
+  "title": "给智能体分配角色和人设",
+  "meta_title": "智能体角色扮演与人设提示",
+  "meta_description": "使用提示工程来分配特定角色和人设，以影响智能体回应和行为。",
+  "content": "<p>给智能体分配特定的角色或人设，是引导其行为并优化其互动的一种有效方法。这项技术不只是简单的任务指示；它赋予智能体一个性格、一种视角，通常还带有一套专用的沟通风格或知识范围。通过设定一个人设，你可以显著影响智能体如何解读请求、组织回应，甚至在其运作流程中做出判断。</p>\n<h3>在提示中定义角色和人设</h3>\n<p>分配角色或人设通常在提示的开头进行，或作为系统消息的一部分。核心思路是告诉大型语言模型在执行任务时，它应当扮演“谁”。这可以是一个简单的职务名称，也可以是一份详细的性格描述。</p>\n<p><strong>分配方法：</strong></p>\n<ol>\n<li>\n<p><strong>直接角色分配：</strong> 这是最直接的方法。你明确说明智能体的角色。</p>\n<ul>\n<li>示例：<code>你是一家SaaS公司的有用客户支持助手。</code></li>\n<li>示例：<code>扮演一位专业的SQL开发者。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>带特点的人设描述：</strong> 为了更细致的控制，你可以描述人设的特点、专长、语气，甚至是动机。</p>\n<ul>\n<li>示例：<code>你是“数据机器人”，一个友善且有耐心的市场数据分析师。你的目标是帮助非技术用户理解复杂的数据集。请简单解释技术术语，并随时提供进一步澄清。你的回应应具有鼓励性和支持性。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>上下文 (context)角色暗示：</strong> 有时，角色可以通过整体背景和指示来暗示，但明确分配通常对于保持行为一致性更可靠。</p>\n</li>\n</ol>\n<p>考虑一个负责生成营销文案的智能体的以下提示片段：</p>\n<pre><code class=\"language-text\">System: 你是“市场高手”，一个风趣有创意的营销文案撰稿人，专长于为科技初创公司创作吸引人的社交媒体内容。你的语气应热情且略显非正式。侧重突出独特卖点，并包含明确的行动号召。避免使用企业行话。\nUser: 为我们新的效率应用“任务大师”生成三条推文。\n</code></pre>\n<p>在这个示例中，“市场高手”不只是一个标签。它设定了对风格（风趣、有创意、热情、非正式）、范围（科技初创公司、社交媒体）以及具体输出要求（突出独特卖点、行动号召、避免行话）的预期。</p>\n<h3>使用角色和人设的益处</h3>\n<p>在智能体提示中引入人设，为智能体控制和表现提供了多个优势：</p>\n<ul>\n<li><strong>提高一致性：</strong> 具有明确人设的智能体，在多个互动或工作流步骤中更有可能保持一致的语气、风格和方法。这使得智能体的行为更可预测且可靠。</li>\n<li><strong>增强相关性和具体性：</strong> 人设可以引导智能体引用特定类型的信息或遵循某些沟通惯例。例如，被分配“学术研究员”人设的智能体，可能会生成比“友善导师”人设更正式且引用较多的文本。</li>\n<li><strong>更好的任务契合度：</strong> 你可以设计特别适合某些任务的人设。“怀疑评论员”人设可能在发现论证中的缺陷方面表现出色，而“乐观集思者”人设则可以产生更多有创意的想法。</li>\n<li><strong>模拟专业性：</strong> 尽管大型语言模型不具备真正的理解，但人设可以引导它生成回应，仿佛它具有专业知识。这通过指示它采用特定方面的专家的沟通模式和知识侧重来实现。</li>\n<li><strong>改善用户体验：</strong> 对于对话式智能体，人设可以使互动感觉更自然、引人入胜，或更适合目标受众。一个财务咨询智能体可能会采用正式且谨慎的人设，而一个儿童故事讲述智能体则会是异想天开且富有鼓励性的。</li>\n</ul>\n<p>下图展示了人设指示如何在智能体内部作为大型语言模型的引导层。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1d6o062\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"sans-serif\"];\n\n    UserInput [label=\"用户输入 / 任务\", fillcolor=\"#a5d8ff\"];\n    PersonaInstruction [label=\"人设指示\\n（例如，“你是一位乐于助人的专家”）\", fillcolor=\"#b2f2bb\"];\n    CorePrompt [label=\"核心任务提示\\n（指示、工具、背景）\", fillcolor=\"#ffd8a8\"];\n    LLM [label=\"大型语言模型\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n    AgentOutput [label=\"智能体输出 / 行动\", fillcolor=\"#bac8ff\"];\n\n    UserInput -> CorePrompt;\n    PersonaInstruction -> CorePrompt [label=\" 影响解读\"];\n    CorePrompt -> LLM [label=\" 馈送至\"];\n    LLM -> AgentOutput;\n\n    subgraph cluster_prompt {\n        label = \"组合提示工程\";\n        style=filled;\n        color=\"#dee2e6\";\n        PersonaInstruction;\n        CorePrompt;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1d6o062\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>人设指示与其他提示元素结合，以影响大型语言模型的处理和后续输出。</p>\n</blockquote>\n<h3>编写有效人设：注意事项</h3>\n<p>尽管功能强大，但编写有效人设需要思考和反复尝试。以下是一些要记住的几点：</p>\n<ol>\n<li>\n<p><strong>清晰和具体：</strong> 模糊的人设描述会导致智能体行为不一致或不可预测。你对期望的特点、知识范围和沟通风格越具体，大型语言模型就越能遵循人设。</p>\n<ul>\n<li><em>效果不佳：</em> <code>成为一名乐于助人的助手。</code></li>\n<li><em>效果更好：</em> <code>你是“支持机器人_v2”，是InnovateSoft CRM的技术支持助手。你的主要目标是快速准确地解决用户问题。请清晰沟通，必要时提供分步指示，即使面对沮丧的用户也要保持耐心和专业的语气。如果你无法解决问题，请解释原因，并将问题连同摘要一起升级给人工客服。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>提示的一致性：</strong> 对于多轮对话或复杂工作流，人设可能需要强化。虽然大型语言模型有上下文 (context)窗口，但最初的人设指示在多轮之后可能会失去影响力。定期提醒智能体其角色，或确保人设是持久系统消息的一部分，可以帮助保持角色特性。</p>\n</li>\n<li>\n<p><strong>平衡人设与任务指示：</strong> 人设应支持任务，而非与之冲突。如果一个人设过于僵硬，或其特点与任务要求不符，它可能会阻碍表现。例如，一个过于冗长的“故事讲述者”人设可能不适合需要简洁摘要的任务。</p>\n</li>\n<li>\n<p><strong>避免过度限制：</strong> 虽然具体性是好的，但过于详细或限制性的人设可能会限制智能体处理新情况或在需要时发挥创意的能力。找到一个平衡点，既能提供清晰的引导，又不会扼杀大型语言模型的能力。</p>\n</li>\n<li>\n<p><strong>反复尝试和测试：</strong> 最佳人设定义常常通过实验显现。测试不同的措辞、详细程度和特点组合。观察智能体的回应，并根据结果调整人设提示。对相同任务的不同人设提示进行A/B测试会非常有启发性。</p>\n</li>\n<li>\n<p><strong>伦理考量：</strong> 请注意你创建的人设，特别是如果它们可能固化刻板印象，或误导用户关于智能体的能力或性质（例如，使人工智能看起来像人类）。</p>\n</li>\n</ol>\n<h3>实际案例</h3>\n<p>让我们看看人设如何影响智能体在不同情境下的输出。</p>\n<p><strong>情境 1：代码解释</strong></p>\n<ul>\n<li><strong>任务：</strong> 向初学者解释一段Python代码。</li>\n<li><strong>人设 1（无特定人设，仅任务）：</strong>\n<ul>\n<li>提示：<code>解释这段Python代码：def greet(name): return f\"Hello, {name}!\"</code></li>\n<li>潜在输出：“这段代码定义了一个名为<code>greet</code>的函数，它接受一个参数 (parameter)<code>name</code>，并返回一个字符串，该字符串将‘Hello, ’与<code>name</code>的值和一个感叹号连接起来。”</li>\n</ul>\n</li>\n<li><strong>人设 2（“耐心导师”）：</strong>\n<ul>\n<li>提示：<code>你是“代码帮手”，一位有耐心的编程导师。用简单的语言向完全的初学者解释这段Python代码：def greet(name): return f\"Hello, {name}!\"</code></li>\n<li>潜在输出：“好的，我们来把它分解开来！这段小小的Python代码创建了一个名为<code>greet</code>的特殊命令。把它想象成一个食谱。这个<code>greet</code>食谱需要一个配料，我们称之为<code>name</code>。当你使用<code>greet</code>命令并给它一个名字（比如‘爱丽丝’）时，它会为你制作一条友好的消息，说‘你好，爱丽丝！’引号前的<code>f</code>和花括号<code>{name}</code>是一种巧妙的Python方式，可以将我们<code>name</code>配料的值直接放入消息中。所以，这只是一种简单的制作个性化问候语的方法！”</li>\n</ul>\n</li>\n</ul>\n<p>“耐心导师”人设产生的解释更易于理解且富有鼓励性，适合目标受众。</p>\n<p><strong>情境 2：集思广益</strong></p>\n<ul>\n<li><strong>任务：</strong> 为环保水瓶生成营销口号。</li>\n<li><strong>人设 1（“严谨分析师”）：</strong>\n<ul>\n<li>提示：<code>你是一位侧重可持续发展的市场分析师。为一款新型环保水瓶生成三条营销口号。</code></li>\n<li>潜在输出：\n<ol>\n<li>“可持续补水：减少你的环境影响。”</li>\n<li>“环保选择：负责任的饮水方式。”</li>\n<li>“耐用且环保：一次一小口，投资更美好的未来。”</li>\n</ol>\n</li>\n</ul>\n</li>\n<li><strong>人设 2（“创意先锋”）：</strong>\n<ul>\n<li>提示：<code>你是“创意火花”，一个极富创意的广告大师，以其前卫且令人难忘的活动而闻名。跳出思维定式！为一款新型环保水瓶生成三条营销口号。</code></li>\n<li>潜在输出：\n<ol>\n<li>“地球也口渴。负责任地饮水。”</li>\n<li>“不只一个水瓶。它是一种宣言。（一种绿色的宣言）。”</li>\n<li>“告别塑料，拥抱精彩。你的环保补水好搭档。”</li>\n</ol>\n</li>\n</ul>\n</li>\n</ul>\n<p>“创意先锋”人设产生的口号在语气和风格上截然不同，展现了人设如何直接影响智能体的创意产出。</p>\n<h3>人设与高级智能体行为</h3>\n<p>分配角色和人设不只是改变智能体的语言。它能细微影响其推理 (inference)、问题解决和工具使用方法。例如：</p>\n<ul>\n<li>具有“首席侦探”人设的智能体，在分析问题时可能会被引导提出更多澄清问题，或在得出结论前系统地列出证据。</li>\n<li>具有“谨慎财务顾问”人设的智能体，可能更倾向于使用搜索工具复核信息，或在执行金融交易前请求确认（如果智能体具备此类能力）。</li>\n</ul>\n<p>当与本章中讨论的其他高级提示技术结合时，例如少量示例（展现人设实际运作）或思维链提示（人设“以角色身份思考”），人设分配成为塑造复杂智能体行为的更强大工具。随着你发展自己的智能体工作流，请考虑一个人设良好的人设如何增强智能体的效力，并使其行动更紧密地符合你的预期目标。这为将人设与其他控制机制（例如，用于引导的少量示例，接下来会讲到）以及像CoT和ToT这样的推理框架结合奠定了基础。</p>",
+  "slug": "assigning-roles-personas-agents",
+  "updates": [],
+  "references": [
+    {
+      "id": 18169,
+      "title": "Training language models to follow instructions with human feedback",
+      "author": "Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Gray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "35",
+      "pages": "27730-27744",
+      "url": "https://openreview.net/forum?id=V_Va_J8G-IW",
+      "doi": "",
+      "note": "关于使大型语言模型遵循指令的基础研究，这是在提示中分配角色和角色设定的有效性的基础。",
+      "order": 1,
+      "created_at": "2025-09-06T12:18:15.361285Z",
+      "updated_at": "2025-09-11T05:00:22.602139Z"
+    },
+    {
+      "id": 18170,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2304.03442",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2304.03442",
+      "doi": "10.48550/arXiv.2304.03442",
+      "note": "提出了一个用于创建具有不同角色设定和记忆的AI代理的框架，展示了角色分配如何影响复杂的交互行为。",
+      "order": 2,
+      "created_at": "2025-09-06T12:18:15.365931Z",
+      "updated_at": "2025-09-11T04:59:23.969021Z"
+    },
+    {
+      "id": 18171,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "官方指南，提供了提示工程的实用策略，包括有效使用系统消息和明确的角色来指导大型语言模型的行为。",
+      "order": 3,
+      "created_at": "2025-09-06T12:18:15.373206Z",
+      "updated_at": "2025-09-11T04:59:53.633596Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

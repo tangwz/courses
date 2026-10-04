@@ -1,0 +1,61 @@
+{
+  "id": 1003,
+  "title": "动手实践：初始化并进行首次提交",
+  "meta_title": "Git实践：初始化仓库并提交",
+  "meta_description": "按照分步实践教程，初始化仓库、添加文件并进行首次提交。",
+  "content": "<p>本节提供动手实践，引导你创建第一个Git仓库，添加文件并提交它们。通过此练习，你将熟悉Git的基本工作流程。</p>\n<h3>设置你的项目</h3>\n<p>首先，你需要为项目设定一个存放位置。打开你的终端或命令行工具。为本次练习创建一个新目录并进入该目录：</p>\n<pre><code class=\"language-sh\">mkdir my-git-project\ncd my-git-project\n</code></pre>\n<p>这个目录 <code>my-git-project</code> 目前只是一个普通文件夹。Git尚未跟踪其中的任何内容。</p>\n<h3>初始化仓库</h3>\n<p>现在，让我们将此目录变为一个Git仓库。使用 <code>git init</code> 命令：</p>\n<pre><code class=\"language-sh\">git init\n</code></pre>\n<p>你会看到类似这样的输出：</p>\n<pre><code>Initialized empty Git repository in /path/to/your/my-git-project/.git/\n</code></pre>\n<p>这个命令会创建一个名为 <code>.git</code> 的隐藏子目录。这个 <code>.git</code> 目录包含你的仓库所有必要的文件和元数据，包括历史记录、配置和对象数据库。通常你不需要直接操作 <code>.git</code> 目录。</p>\n<h3>检查状态</h3>\n<p>让我们看看Git对我们新仓库的看法。使用 <code>git status</code> 命令：</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<p>输出将类似这样：</p>\n<pre><code>On branch main\n\nNo commits yet\n\nnothing to commit (create/copy files and use \"git add\" to track)\n</code></pre>\n<p>这告诉我们几点信息：</p>\n<ul>\n<li>我们正在 <code>main</code> 分支上（在旧版Git中可能是 <code>master</code>，但 <code>main</code> 是当前的默认值）。</li>\n<li>仓库历史中还没有提交。</li>\n<li>工作目录相对于仓库是干净的。没有被跟踪的文件有改动，也没有新文件被暂存。</li>\n</ul>\n<h3>创建并暂存文件</h3>\n<p>让我们创建第一个项目文件。使用你首选的文本编辑器或 <code>echo</code> 等命令来创建一个简单的 <code>README.md</code> 文件：</p>\n<pre><code class=\"language-sh\"># 使用 echo (在 Linux/macOS/Git Bash 上)\necho \"# My Awesome Project\" > README.md\n\n# 或者使用文本编辑器手动创建文件并添加一些文本。\n</code></pre>\n<p>现在，再次运行 <code>git status</code>：</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<p>输出已改变：</p>\n<pre><code>On branch main\n\nNo commits yet\n\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        README.md\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n</code></pre>\n<p>Git看到了新的 <code>README.md</code> 文件，但告诉我们它是“未跟踪”的。这意味着文件存在于你的工作目录中，但Git尚未跟踪其历史。</p>\n<p>为了开始跟踪文件并为下一次提交做准备，我们需要使用 <code>git add</code> 将其添加到暂存区：</p>\n<pre><code class=\"language-sh\">git add README.md\n</code></pre>\n<p>此命令告诉Git：“我希望将 <code>README.md</code> 的当前状态包含在下一次快照（提交）中。”</p>\n<p>让我们再一次检查状态：</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<p>输出现在显示：</p>\n<pre><code>On branch main\n\nNo commits yet\n\nChanges to be committed:\n  (use \"git rm --cached &#x3C;file>...\" to unstage)\n        new file:   README.md\n</code></pre>\n<p><code>README.md</code> 现在被列在“将要提交的更改”下。它已从工作目录状态（未跟踪）移动到暂存区。</p>\n<p>这是你刚刚经历的状态的简单示意图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-tanwsi\" \n              data-graph-definition='digraph GitWorkflow { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10]; edge [fontname=\"Arial\", fontsize=10]; \"工作目录\" -> \"暂存区\" [label=\"git add\"]; \"暂存区\" -> \"仓库 (.git)\" [label=\"git commit\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-tanwsi\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>文件通过 <code>git add</code> 从工作目录移动到暂存区，然后通过 <code>git commit</code> 永久保存到仓库历史中。</p>\n</blockquote>\n<h3>进行首次提交</h3>\n<p>文件已暂存并准备就绪。让我们使用 <code>git commit</code> 创建项目历史的第一个快照。我们将使用 <code>-m</code> 标志直接从命令行提供一个描述性提交消息。</p>\n<pre><code class=\"language-sh\">git commit -m \"Initial commit: Add README.md\"\n</code></pre>\n<p>你会看到类似这样的输出：</p>\n<pre><code>[main (root-commit) abc1234] Initial commit: Add README.md\n 1 file changed, 1 insertion(+)\n create mode 100644 README.md\n</code></pre>\n<p>这确认提交已创建。</p>\n<ul>\n<li><code>[main (root-commit) abc1234]</code> 表明了分支 (<code>main</code>)，它是最开始的提交 (<code>root-commit</code>)，以及唯一提交哈希的开头 (<code>abc1234</code>)。你的哈希值会不同。</li>\n<li>其余部分总结了此次提交中包含的更改（1 个文件更改，1 行插入，<code>README.md</code> 被创建）。</li>\n</ul>\n<p>现在，<code>git status</code> 显示什么？</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<p>输出：</p>\n<pre><code>On branch main\nnothing to commit, working tree clean\n</code></pre>\n<p>所有内容都已提交！你的工作目录与仓库中存储的最新快照一致，并且暂存区是空的。</p>\n<h3>查看历史</h3>\n<p>你可以使用 <code>git log</code> 查看你刚刚进行的提交：</p>\n<pre><code class=\"language-sh\">git log\n</code></pre>\n<p>输出将显示有关你提交的详细信息：</p>\n<pre><code>commit abc1234567890def1234567890abcdef12345678 (HEAD -> main)\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Mon Oct 26 10:30:00 2023 -0700\n\n    Initial commit: Add README.md\n</code></pre>\n<p>这显示了完整的提交哈希、作者和电子邮件（来自你的Git配置）、日期以及提交消息。</p>\n<h3>使用 <code>.gitignore</code> 忽略文件</h3>\n<p>通常，项目会生成你不想包含在Git历史中的临时文件、日志或构建产物。让我们模拟这种情况。</p>\n<p>创建一个临时文件：</p>\n<pre><code class=\"language-sh\">echo \"Temporary scratch notes\" > notes.tmp\n</code></pre>\n<p>检查状态：</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<pre><code>On branch main\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        notes.tmp\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n</code></pre>\n<p>Git认为 <code>notes.tmp</code> 是未跟踪的。要告诉Git忽略此文件以及任何以 <code>.tmp</code> 结尾的文件，创建一个名为 <code>.gitignore</code> 的文件（注意开头的点）：</p>\n<pre><code class=\"language-sh\"># On Linux/macOS/Git Bash:\necho \"*.tmp\" > .gitignore\n\n# On Windows PowerShell (to avoid UTF-16 encoding issues):\n\"*.tmp\" | Out-File -FilePath .gitignore -Encoding ascii\n</code></pre>\n<p>这创建了 <code>.gitignore</code> 文件并向其中添加了模式 <code>*.tmp</code>。星号 <code>*</code> 用作通配符，匹配任何字符序列。</p>\n<blockquote>\n<p><strong>针对 Windows PowerShell 的说明：</strong> 在 Windows PowerShell 5.1 中，默认使用 <code>></code> 会以 UTF-16LE 编码重定向文本，Git 无法正常解析该编码。请使用 <code>Out-File -Encoding ascii</code> 或标准的无 BOM 的 UTF-8。</p>\n</blockquote>\n<p>现在，再次检查状态：</p>\n<pre><code class=\"language-sh\">git status\n</code></pre>\n<pre><code>On branch main\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        .gitignore\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n</code></pre>\n<p>注意 <code>notes.tmp</code> 不再被列出！Git现在根据 <code>.gitignore</code> 中的规则忽略它。然而，<code>.gitignore</code> 文件本身是新的且未跟踪的。由于像忽略规则这样的配置 <em>应该</em> 成为项目历史的一部分（以便其他使用该仓库的人也能从中受益），让我们添加并提交它：</p>\n<pre><code class=\"language-sh\">git add .gitignore\ngit commit -m \"Add .gitignore to exclude temporary files\"\n</code></pre>\n<p>最后一次检查状态和日志：</p>\n<pre><code class=\"language-sh\">git status\ngit log\n</code></pre>\n<p><code>git status</code> 应该报告 <code>nothing to commit, working tree clean</code>。<code>git log</code> 现在将显示你的历史中有两次提交。</p>\n<p>恭喜！你已成功初始化了一个Git仓库，将文件添加到暂存区，创建提交以保存项目快照，并配置Git忽略特定文件。你已练习了使用Git时会经常用到的核心工作流程。</p>",
+  "slug": "practice-init-commit",
+  "updates": [],
+  "references": [
+    {
+      "id": 448,
+      "title": "Git - Getting Started - Git Basics",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/",
+      "doi": "",
+      "note": "官方文档，涵盖了 init、add、commit、status 和 log 等基本 Git 命令以及核心工作流程。",
+      "order": 1,
+      "created_at": "2025-09-04T14:32:11.913071Z",
+      "updated_at": "2025-09-07T15:50:20.386969Z"
+    },
+    {
+      "id": 449,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "一本关于 Git 的权威书籍，提供了 Git 概念、命令和仓库结构的全面解释，适合所有技能水平的读者。",
+      "order": 2,
+      "created_at": "2025-09-04T14:32:11.915980Z",
+      "updated_at": "2025-09-07T15:50:10.025373Z"
+    },
+    {
+      "id": 450,
+      "title": "Basic Git Commands",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "Atlassian",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/basic-git-commands",
+      "doi": "",
+      "note": "一个易于理解的在线教程，提供了仓库初始化、暂存更改、提交和查看历史记录的清晰解释和实用示例。",
+      "order": 3,
+      "created_at": "2025-09-04T14:32:11.919318Z",
+      "updated_at": "2025-09-07T15:50:25.128988Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

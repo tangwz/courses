@@ -1,0 +1,61 @@
+{
+  "id": 1762,
+  "title": "使用 TFRecord 文件",
+  "meta_title": "使用 tf.data 处理 TFRecord 文件",
+  "meta_description": "使用 TensorFlow 推荐的 TFRecord 格式高效读写数据。",
+  "content": "<p>虽然直接从 NumPy 数组或 Python 生成器加载数据对于较小的数据集很有效，但当处理非常大的数据集时，如果它们无法完全放入内存或涉及从大量小文件缓慢加载数据，这种方式可能会变得效率低下。读取数据涉及文件打开、关闭和查找等额外开销，如果管理不当，这些开销可能会占据处理时间的大部分。</p>\n<p>TensorFlow 提供了一种专门为其数据管道优化的文件格式：<strong>TFRecord</strong>。TFRecord 文件将你的数据存储为一系列二进制记录。将数据序列化为这种格式并顺序读回，可以大幅提高 I/O 性能，尤其是在处理存储在网络文件系统或机械硬盘上的大型数据集时。它是 TensorFlow 推荐的训练数据格式。</p>\n<h3>TFRecord 文件的结构</h3>\n<p>TFRecord 文件（<code>.tfrecord</code> 或 <code>.tfrec</code>）本质上包含一系列变长二进制字符串。每个字符串代表一个数据记录（例如，一张图片及其标签）。TensorFlow 内部使用 Protocol Buffers (protobufs) 来组织这些记录。具体来说，每个记录通常是一个序列化的 <code>tf.train.Example</code> 消息。</p>\n<p><code>tf.train.Example</code> 是一个灵活的容器，设计用于存放键值对，键是字符串（特征名称），值是 <code>tf.train.Feature</code> 消息。</p>\n<pre><code>tf.train.Example {\n  features: tf.train.Features {\n    feature: map&#x3C;string, tf.train.Feature> {\n      \"image_raw\": tf.train.Feature { bytes_list: tf.train.BytesList {...} },\n      \"label\":     tf.train.Feature { int64_list: tf.train.Int64List {...} },\n      \"height\":    tf.train.Feature { int64_list: tf.train.Int64List {...} },\n      \"width\":     tf.train.Feature { int64_list: tf.train.Int64List {...} },\n      \"caption\":   tf.train.Feature { bytes_list: tf.train.BytesList {...} }\n    }\n  }\n}\n</code></pre>\n<p><code>tf.train.Feature</code> 消息本身可以包含以下三种列表类型之一：</p>\n<ol>\n<li><code>tf.train.BytesList</code>: 用于二进制字符串（如序列化图像数据）或 UTF-8 字符串。</li>\n<li><code>tf.train.FloatList</code>: 用于浮点数值（float32, float64）。</li>\n<li><code>tf.train.Int64List</code>: 用于整数值（布尔型、枚举型、int32、uint32、int64、uint64）。</li>\n</ol>\n<p>这种结构允许你在单一记录格式中存储不同类型的数据。例如，一张图片可以存储为原始字节 (<code>BytesList</code>)，其标签存储为整数 (<code>Int64List</code>)，而边界框坐标则可能存储为浮点数 (<code>FloatList</code>)。</p>\n<h3>将数据写入 TFRecord 文件</h3>\n<p>要创建一个 TFRecord 文件，你需要将原始数据转换为 <code>tf.train.Example</code> 协议缓冲区，然后使用 <code>tf.io.TFRecordWriter</code> 将这些序列化的协议写入文件。</p>\n<p>我们通过一个例子来说明，假设我们有图像数据（作为字节字符串）和相应的整数标签。</p>\n<p>首先，我们需要辅助函数来轻松地从标准 Python/NumPy 类型创建 <code>tf.train.Feature</code> 消息：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport numpy as np\n\n# Helper functions to create tf.train.Feature\ndef _bytes_feature(value):\n  \"\"\"从字符串/字节返回一个 bytes_list。\"\"\"\n  if isinstance(value, type(tf.constant(0))): # 如果它是一个张量\n    value = value.numpy() # 获取其值\n  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))\n\ndef _float_feature(value):\n  \"\"\"从浮点数/双精度数返回一个 float_list。\"\"\"\n  if not isinstance(value, list):\n    value = [value]\n  return tf.train.Feature(float_list=tf.train.FloatList(value=value))\n\ndef _int64_feature(value):\n  \"\"\"从布尔型/枚举型/整型/无符号整型返回一个 int64_list。\"\"\"\n  if not isinstance(value, list):\n    value = [value]\n  return tf.train.Feature(int64_list=tf.train.Int64List(value=value))\n\n# 示例：假设你有图像字节和标签\n# 替换为你的实际数据加载逻辑\nimage_bytes = tf.io.encode_jpeg(np.random.randint(0, 256, size=(64, 64, 3), dtype=np.uint8)).numpy()\nlabel = 5 # 示例类别标签\n\n# 创建一个将特征名称映射到 Feature 协议的字典\nfeature_dict = {\n    'image_raw': _bytes_feature(image_bytes),\n    'label': _int64_feature(label),\n}\n\n# 使用字典创建一个 Features 消息\nfeatures = tf.train.Features(feature=feature_dict)\n\n# 使用 Features 消息创建一个 Example 消息\nexample_proto = tf.train.Example(features=features)\n\n# 将 Example 消息序列化为二进制字符串\nserialized_example = example_proto.SerializeToString()\n\n# 现在，将此（以及可能许多其他）写入 TFRecord 文件\ntfrecord_filename = 'data.tfrecord'\n\n# 使用 tf.io.TFRecordWriter 写入序列化的示例\nwith tf.io.TFRecordWriter(tfrecord_filename) as writer:\n  # 在循环中写入多个示例以处理真实数据集\n  writer.write(serialized_example)\n  # writer.write(another_serialized_example)\n  # ...\n</code></pre>\n<p>在典型的工作流程中，你会迭代你的数据集（例如，图像文件路径和标签），加载每个样本，使用上面定义的结构将其转换为 <code>tf.train.Example</code>，然后将其序列化并写入 <code>TFRecordWriter</code>。你还可以将数据分割成多个 TFRecord 文件（分片），以便日后更好地并行读取。</p>\n<h3>从 TFRecord 文件读取数据</h3>\n<p>读回数据涉及使用 <code>tf.data.TFRecordDataset</code> 并解析序列化的 <code>tf.train.Example</code> 消息。</p>\n<ol>\n<li>\n<p><strong>创建 <code>TFRecordDataset</code></strong>：此数据集从一个或多个 TFRecord 文件中读取原始的、序列化的协议缓冲区字符串。</p>\n<pre><code class=\"language-python\"># 可以提供一个文件名列表，用于分片数据\nraw_dataset = tf.data.TFRecordDataset([tfrecord_filename])\n\n# raw_dataset 现在生成序列化的 tf.train.Example 字符串\nfor raw_record in raw_dataset.take(1):\n    print(repr(raw_record))\n</code></pre>\n</li>\n<li>\n<p><strong>定义解析函数</strong>：由于数据集生成序列化的字符串，你需要将其解析回张量。这需要定义你期望在每个 <code>tf.train.Example</code> 中找到的数据结构。你创建一个 <code>feature_description</code> 字典，将特征名称映射到解析指令（<code>tf.io.FixedLenFeature</code> 用于固定大小的特征，或 <code>tf.io.VarLenFeature</code> 用于变长特征）。</p>\n<pre><code class=\"language-python\"># 定义你在写入时使用的特征结构\nfeature_description = {\n    'image_raw': tf.io.FixedLenFeature([], tf.string), # 0维字符串张量\n    'label': tf.io.FixedLenFeature([], tf.int64),   # 0维 int64 张量\n}\n\n# 用于解析单个 tf.train.Example 协议的函数\ndef _parse_function(example_proto):\n  # 使用上述字典解析输入的 `tf.train.Example` 协议。\n  return tf.io.parse_single_example(example_proto, feature_description)\n</code></pre>\n</li>\n<li>\n<p><strong>映射解析函数</strong>：使用 <code>dataset.map()</code> 将解析函数应用于原始数据集中的每个元素。</p>\n<pre><code class=\"language-python\">parsed_dataset = raw_dataset.map(_parse_function)\n\n# parsed_dataset 现在生成张量字典\nfor features in parsed_dataset.take(1):\n  print(f\"Label: {features['label'].numpy()}\")\n  # 图像仍是原始字节，需要解码\n  image_tensor = tf.io.decode_jpeg(features['image_raw'])\n  print(f\"Image shape: {image_tensor.shape}\")\n</code></pre>\n</li>\n<li>\n<p><strong>进一步处理（解码、预处理）</strong>：通常，存储在 TFRecord 中的数据（如图像字节）需要进一步解码或预处理。你可以在 <code>map</code> 函数内部添加这些步骤，或者链接额外的 <code>map</code> 调用。</p>\n<pre><code class=\"language-python\">def _decode_and_preprocess(features):\n    # 解码 JPEG 图像\n    image = tf.io.decode_jpeg(features['image_raw'], channels=3)\n    # 调整大小或应用其他预处理\n    image = tf.image.resize(image, [128, 128])\n    image = tf.cast(image, tf.float32) / 255.0 # 归一化\n    label = features['label']\n    return image, label\n\n# 应用解码和预处理\nprocessed_dataset = parsed_dataset.map(_decode_and_preprocess)\n\n# 现在数据集生成 (image_tensor, label_tensor) 元组\nfor image, label in processed_dataset.take(1):\n    print(f\"Processed Image shape: {image.shape}, Label: {label.numpy()}\")\n</code></pre>\n</li>\n</ol>\n<h3>与完整 <code>tf.data</code> 管道集成</h3>\n<p>真正的优势在于你将 TFRecord 读取与其他 <code>tf.data</code> 转换（如洗牌、批处理和预取）结合起来时：</p>\n<pre><code class=\"language-python\"># 假设你有多个 TFRecord 文件（分片）\nfilenames = tf.data.Dataset.list_files(\"data_*.tfrecord\")\n\n# 交错读取多个文件以更好地洗牌\ndataset = filenames.interleave(tf.data.TFRecordDataset,\n                               cycle_length=tf.data.AUTOTUNE,\n                               num_parallel_calls=tf.data.AUTOTUNE)\n\n# 洗牌、解析、解码、预处理、批处理、预取\nBUFFER_SIZE = 10000\nBATCH_SIZE = 32\n\ndataset = dataset.shuffle(BUFFER_SIZE)\ndataset = dataset.map(_parse_function, num_parallel_calls=tf.data.AUTOTUNE)\ndataset = dataset.map(_decode_and_preprocess, num_parallel_calls=tf.data.AUTOTUNE)\ndataset = dataset.batch(BATCH_SIZE)\ndataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)\n\nprint(dataset)\n\n# 此数据集现在已准备好传递给 model.fit()\n# model.fit(dataset, epochs=10)\n</code></pre>\n<p>使用 <code>tf.data.AUTOTUNE</code> 允许 TensorFlow 根据可用系统资源动态调整 map 操作的并行度以及预取缓冲区大小，从而简化性能优化。</p>\n<h3>何时使用 TFRecord</h3>\n<p>TFRecord 在以下情况下特别有益：</p>\n<ul>\n<li>你的数据集太大，无法完全放入内存。</li>\n<li>你正在通过网络或从较慢的存储读取数据，且顺序读取更快时。</li>\n<li>你想为 TensorFlow 应用程序标准化你的数据存储格式。</li>\n<li>你需要最大限度地提高输入管道吞吐量 (throughput)，以保持 GPU 或 TPU 繁忙。</li>\n</ul>\n<p>虽然创建 TFRecord 文件会增加一个初始数据准备步骤，但训练期间潜在的性能提升，特别是对于大型数据集和长时间训练运行，通常值得付出。对于可以轻松放入内存的较小数据集，直接从 NumPy 数组加载可能更简单和足够。</p>",
+  "slug": "working-tfrecord-files",
+  "updates": [],
+  "references": [
+    {
+      "id": 3095,
+      "title": "TFRecord and tf.Example",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/tutorials/load_data/tfrecord",
+      "doi": "",
+      "note": "TensorFlow关于在数据管道中使用TFRecord文件和`tf.train.Example`协议缓冲区进行高效数据存储的官方指南。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:12.808676Z",
+      "updated_at": "2025-09-08T02:51:37.554844Z"
+    },
+    {
+      "id": 3096,
+      "title": "tf.data: Build TensorFlow input pipelines",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/data",
+      "doi": "",
+      "note": "全面的官方指南，涵盖`tf.data` API，包括`TFRecordDataset`、数据集转换、性能优化和`AUTOTUNE`等概念，用于构建稳健的数据输入管道。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:12.816936Z",
+      "updated_at": "2025-09-08T02:51:38.911463Z"
+    },
+    {
+      "id": 3097,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, & TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 13",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本广受认可的书籍，提供了TensorFlow数据管道的实用解释和代码示例，特别涵盖了TFRecord文件及其用法。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:12.822185Z",
+      "updated_at": "2025-09-08T02:51:43.330711Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

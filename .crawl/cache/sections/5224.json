@@ -1,0 +1,61 @@
+{
+  "id": 5224,
+  "title": "LLM项目的版本控制与CI/CD",
+  "meta_title": "LLM项目的版本控制与CI/CD | 运维",
+  "meta_description": "将Git、持续集成和持续部署实践应用于LLM项目。",
+  "content": "<p>将版本控制和自动化流水线等规范的开发实践应用于LLM应用，其重要性与传统软件相同。对于LLM系统的部署和运行，系统地管理代码、提示词 (prompt)、配置和部署流程对于可靠性、协作和可维护性变得非常必要。LLM项目引入了独特的方面，例如提示词、评估数据集以及可能较大的模型工件，这些方面在标准工作流程中需要仔细权衡。</p>\n<h3>LLM资产的版本控制</h3>\n<p>使用版本控制系统（VCS），通常是Git，对于管理LLM项目的演进非常重要。它提供了变更历史，促进了协作，并允许进行实验而不破坏主代码库的稳定性。</p>\n<p><strong>Git中应跟踪的内容：</strong></p>\n<ul>\n<li>**源代码：**所有Python脚本，包括应用逻辑、API交互代码、工作流定义（例如LangChain链/代理）、数据处理脚本和实用函数。</li>\n<li>**提示词 (prompt)：**将提示词视为核心部分。将它们存储在仓库中的专用文件（例如<code>.txt</code>、<code>.md</code>或YAML/JSON等结构化格式）中。对提示词进行版本控制，可以跟踪实验、还原变更，并明白提示词修改如何影响性能。</li>\n<li>**配置文件：**LLM提供商的设置、模型参数 (parameter)（温度、最大令牌数）、流水线配置、向量 (vector)存储设置等。确保API密钥等敏感信息<em>不</em>硬编码，而是使用环境变量或秘密管理工具安全管理（如第2章所述）；配置文件可能引用这些变量。</li>\n<li><strong>需求文件：</strong><code>requirements.txt</code>或<code>pyproject.toml</code>（如果使用Poetry或类似工具）以确保可复现的环境。</li>\n<li>**基础设施即代码（IaC）：**定义部署基础设施的文件，例如用于容器化的<code>Dockerfile</code>或Terraform、AWS CloudFormation等工具的配置。</li>\n<li>**测试和评估代码：**单元测试、集成测试和评估脚本（第9章中讨论）。</li>\n<li>**小型评估数据集：**如果评估数据集足够小，直接对其进行版本控制会很方便，便于复现。</li>\n</ul>\n<p><strong>通常<em>不</em>应跟踪的内容：</strong></p>\n<ul>\n<li>**大型模型文件：**LLM权重 (weight)通常有数GB大小，不应存放在Git仓库中。可以通过模型中心（如Hugging Face Hub）按名称/版本引用它们，或将其存储在专用的工件注册中心（如MLflow模型注册表、带版本控制的AWS S3）中。</li>\n<li>**大型数据集：**与模型类似，用于RAG或微调 (fine-tuning)的大型数据集应外部存储（云存储、数据库），并可能使用DVC（数据版本控制）等工具进行版本管理，DVC与Git集成以跟踪数据指针。</li>\n<li>**秘密信息和API密钥：**切勿直接提交敏感凭据。使用环境变量、<code>.env</code>文件（添加到<code>.gitignore</code>中）或专用秘密管理服务。</li>\n<li>**虚拟环境：**您的<code>venv</code>或<code>conda</code>环境文件夹应通过<code>.gitignore</code>排除。</li>\n<li>**日志和临时文件：**运行时生成的临时文件（<code>.log</code>、<code>__pycache__</code>、中间输出）也应被忽略。</li>\n</ul>\n<p><strong>分支策略：</strong></p>\n<p>Gitflow或GitHub Flow等标准Git分支模型运作良好。考虑为特定实验创建分支：</p>\n<ul>\n<li>尝试新的提示词变体。</li>\n<li>集成不同的LLM模型。</li>\n<li>测试新的RAG检索策略。</li>\n<li>实现新的代理工具。</li>\n</ul>\n<p>这能隔离实验性工作，让您轻松比较结果或放弃失败的尝试，而不影响主开发线。使用描述性提交消息，解释变更背后的<em>原因</em>，特别是对于提示词修改或参数调优。</p>\n<h3>持续集成（CI）</h3>\n<p>持续集成自动化了将多位贡献者的代码变更频繁合并到中央仓库的过程。每次合并都会触发自动构建和测试序列，使团队能够尽早发现集成问题。</p>\n<p><strong>LLM项目的典型CI流水线：</strong></p>\n<ol>\n<li>**触发：**在<code>git push</code>到特定分支（例如<code>main</code>、<code>develop</code>）或拉取请求等事件上自动启动。</li>\n<li>**检出代码：**从仓库中获取最新代码。</li>\n<li>**设置环境：**创建干净的环境并安装依赖项（使用<code>pip install -r requirements.txt</code>）。</li>\n<li>**代码检查与格式化：**运行<code>flake8</code>、<code>mypy</code>和<code>black</code>等工具，以强制执行代码风格并捕获静态错误。</li>\n<li>**单元测试：**执行针对单个函数和类的快速测试（例如，提示词 (prompt)模板格式化、输出解析器逻辑）。此处通常需要模拟外部API调用。</li>\n<li>**集成测试：**运行验证组件之间交互的测试。这可能涉及短序列的调用，可能使用模拟的LLM响应或查询小型本地向量 (vector)存储以测试RAG组件。请注意成本和延迟；如果可能，在标准CI运行中避免大量LLM API调用。</li>\n<li>**（有条件的）评估运行：**对于重要的分支或拉取请求，您可能会使用预定义的数据集和指标触发更全面的评估运行（如第9章所述）。此步骤可能更慢、更昂贵，因此它可能运行频率较低或需要特定的触发器/标签。</li>\n<li>**构建工件：**如果所有先前步骤都通过，流水线可能会构建Docker镜像或打包应用以进行部署。</li>\n</ol>\n<p>GitHub Actions、GitLab CI、Jenkins或CircleCI等流行的CI/CD平台可用于使用存储在仓库中的配置文件（通常是YAML）来实现这些流水线。</p>\n<h3>持续部署/交付（CD）</h3>\n<p>持续部署（或交付）通过自动将验证过的代码变更部署到预生产或生产环境来扩展CI。</p>\n<ul>\n<li>**持续交付：**CI流水线生成部署工件（例如，Docker镜像）。通常需要在发布到生产环境之前进行手动批准。</li>\n<li>**持续部署：**成功的CI构建会自动部署到生产环境，无需人工干预。这需要对自动化测试和评估策略有高度的信心。</li>\n</ul>\n<p><strong>典型的CD工作流：</strong></p>\n<ol>\n<li>**触发：**通常在特定分支（例如<code>main</code>）上的CI运行成功后启动。</li>\n<li>**部署到预生产环境：**自动将构建的工件（例如Docker容器）部署到镜像生产环境的预生产环境。</li>\n<li>**自动化验收测试：**对实时预生产环境运行测试（例如，检查API端点健康状况，执行端到端工作流测试）。</li>\n<li>**手动批准（仅限交付）：**团队成员审查预生产部署并批准推送到生产环境。</li>\n<li>**部署到生产环境：**自动将工件部署到生产环境。蓝绿部署（部署到并行环境然后切换流量）或金丝雀发布（逐步向部分用户推出变更）等高级策略可以最大限度地减少停机时间和风险。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ylk6uk\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_CI {\n    label = \"持续集成 (CI)\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n    node [fillcolor=\"#a5d8ff\"];\n\n    Commit [label=\"提交\\n(代码, 提示词, 配置)\"];\n    Lint [label=\"代码检查与格式化\"];\n    UnitTests [label=\"单元测试\"];\n    IntegrationTests [label=\"集成测试\"];\n    Build [label=\"构建工件\\n(例如, Docker镜像)\"];\n    Eval [label=\"评估\\n(可选/有条件)\", fillcolor=\"#ffe066\"];\n\n    Commit -> Lint;\n    Lint -> UnitTests;\n    UnitTests -> IntegrationTests;\n    IntegrationTests -> Eval;\n    Eval -> Build;\n    IntegrationTests -> Build [label=\"跳过评估\"]; // Allow skipping optional eval\n  }\n\n  subgraph cluster_CD {\n    label = \"持续部署/交付 (CD)\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n    node [fillcolor=\"#b2f2bb\"];\n\n    DeployStaging [label=\"部署到预生产环境\"];\n    AcceptanceTests [label=\"验收测试\"];\n    ManualApproval [label=\"手动批准\\n(仅限交付)\", shape=ellipse, fillcolor=\"#ffd8a8\"];\n    DeployProd [label=\"部署到生产环境\"];\n\n    Build -> DeployStaging [ltail=cluster_CI];\n    DeployStaging -> AcceptanceTests;\n    AcceptanceTests -> ManualApproval;\n    ManualApproval -> DeployProd;\n    AcceptanceTests -> DeployProd [label=\"自动 (部署)\"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ylk6uk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>描绘LLM应用CI/CD流水线的简化图示。</p>\n</blockquote>\n<h3>为LLM特性调整CI/CD</h3>\n<ul>\n<li>**提示词 (prompt)管理：**由于提示词是版本化的，CI流水线可以加入验证提示词格式的步骤，甚至运行基本测试以确保它们不会立即破坏下游的解析逻辑。CD流程确保正确的提示词版本与应用代码一起部署。</li>\n<li>**模型版本管理：**应用配置（在Git中管理）应指定正在使用的LLM版本。CI/CD流水线确保部署的应用使用预期的模型版本。更新模型可能涉及更改配置并运行流水线进行测试和部署。</li>\n<li>**评估集成：**决定何时以及如何运行CI/CD中的评估（第9章）非常重要。频繁、轻量级的检查可以在CI中运行，而更广泛、可能成本更高的评估可能会手动、每晚或在生产发布前触发。这些评估的结果应与代码变更一同跟踪。</li>\n<li>**成本和延迟：**LLM API调用会增加测试的成本和延迟。通过使用模拟、存根、小型测试模型或缓存响应来优化CI流水线，在适当情况下，将对生产级LLM的调用保留给必要的集成、评估或验收测试。</li>\n</ul>\n<p>实施版本控制和CI/CD实践不仅仅是为了自动化；它关乎建立对LLM应用行为的信心，实现更快的迭代，并确保您部署的系统可靠且可维护。这些实践构成了成功在生产环境中运行LLM应用所需的运营支柱的重要组成部分。</p>",
+  "slug": "version-control-cicd-llm",
+  "updates": [],
+  "references": [
+    {
+      "id": 13796,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "这本关于Git的权威书籍可在线免费获取，涵盖了版本控制的各个方面，从基本命令到高级分支策略，对于管理LLM项目资产至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T08:40:19.113583Z",
+      "updated_at": "2025-09-10T12:23:25.026683Z"
+    },
+    {
+      "id": 13797,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "386",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107963/",
+      "doi": "",
+      "note": "本书涵盖了MLOps的最佳实践，包括机器学习系统的数据版本控制、模型版本控制和CI/CD，提供了直接适用于LLM项目部署和操作的框架。",
+      "order": 3,
+      "created_at": "2025-09-05T08:40:19.115715Z",
+      "updated_at": "2025-09-10T12:23:48.876012Z"
+    },
+    {
+      "id": 13798,
+      "title": "Data Version Control (DVC) Documentation",
+      "author": "Iterative.ai",
+      "year": "Ongoing",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "DVC的官方文档，DVC是与Git结合版本控制大型数据集和模型工件的关键工具，专门解决了LLM项目处理大量数据的独特挑战。",
+      "order": 4,
+      "created_at": "2025-09-05T08:40:19.119079Z",
+      "updated_at": "2025-09-10T12:23:27.775414Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

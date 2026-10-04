@@ -1,0 +1,61 @@
+{
+  "id": 4944,
+  "title": "动手实践：添加 Dropout 层",
+  "meta_title": "动手实现 Dropout",
+  "meta_description": "将 Dropout 加入神经网络模型的实践环节。",
+  "content": "<p>通过向神经网络 (neural network)添加 Dropout 层，可以应用这一正则化 (regularization)技术。使用 PyTorch 等框架将 Dropout 集成到模型中非常简单。接下来将演示如何添加 <code>nn.Dropout</code> 层，并讨论其对训练过程的影响。</p>\n<p>假设我们有一个用于分类任务的简单多层感知器 (MLP)。一个没有 Dropout 的架构如下所示：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\nclass SimpleMLP(nn.Module):\n    def __init__(self, input_size, hidden_size1, hidden_size2, output_size):\n        super(SimpleMLP, self).__init__()\n        self.layer_1 = nn.Linear(input_size, hidden_size1)\n        self.relu_1 = nn.ReLU()\n        self.layer_2 = nn.Linear(hidden_size1, hidden_size2)\n        self.relu_2 = nn.ReLU()\n        self.output_layer = nn.Linear(hidden_size2, output_size)\n\n    def forward(self, x):\n        x = self.layer_1(x)\n        x = self.relu_1(x)\n        x = self.layer_2(x)\n        x = self.relu_2(x)\n        x = self.output_layer(x)\n        return x\n\n# 示例实例化\n# model_no_dropout = SimpleMLP(input_size=784, hidden_size1=256, hidden_size2=128, output_size=10)\n# print(model_no_dropout)\n</code></pre>\n<p>这是一个标准的前馈网络。如果此模型在数据集上容易出现过拟合 (overfitting)，我们可以引入 Dropout 层。</p>\n<h3>添加 Dropout 层</h3>\n<p>PyTorch 中的 <code>nn.Dropout</code> 模块实现了 Dropout 技术。它接受 Dropout 概率 <code>p</code> 作为参数 (parameter)，即训练期间任何给定神经元输出被设置为零的概率。通常的做法是将 Dropout 层放在隐藏层的激活函数 (activation function)之后。</p>\n<p>以下是修改 <code>SimpleMLP</code> 以包含 Dropout 的方式：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\nclass MLPWithDropout(nn.Module):\n    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, dropout_prob=0.5):\n        super(MLPWithDropout, self).__init__()\n        self.layer_1 = nn.Linear(input_size, hidden_size1)\n        self.relu_1 = nn.ReLU()\n        # 在第一个隐藏层激活后应用 Dropout\n        self.dropout_1 = nn.Dropout(p=dropout_prob)\n        self.layer_2 = nn.Linear(hidden_size1, hidden_size2)\n        self.relu_2 = nn.ReLU()\n        # 在第二个隐藏层激活后应用 Dropout\n        self.dropout_2 = nn.Dropout(p=dropout_prob)\n        self.output_layer = nn.Linear(hidden_size2, output_size)\n\n    def forward(self, x):\n        x = self.layer_1(x)\n        x = self.relu_1(x)\n        x = self.dropout_1(x) # 应用 dropout\n        x = self.layer_2(x)\n        x = self.relu_2(x)\n        x = self.dropout_2(x) # 应用 dropout\n        x = self.output_layer(x)\n        return x\n\n# 使用默认 Dropout 概率 0.5 的示例实例化\nmodel_with_dropout = MLPWithDropout(input_size=784, hidden_size1=256, hidden_size2=128, output_size=10)\nprint(model_with_dropout)\n\n# 或者指定不同的概率\n# model_with_dropout_p25 = MLPWithDropout(input_size=784, hidden_size1=256, hidden_size2=128, output_size=10, dropout_prob=0.25)\n# print(model_with_dropout_p25)\n\n</code></pre>\n<p>在修改后的版本中：</p>\n<ol>\n<li>我们向构造函数添加了 <code>dropout_prob</code> 参数，默认值为 0.5，这是一个常用的初始值。</li>\n<li>我们使用指定的概率实例化了 <code>nn.Dropout</code> 层（<code>self.dropout_1</code>、<code>self.dropout_2</code>）。</li>\n<li>在 <code>forward</code> 方法中，我们在隐藏层的 ReLU 激活之后立即应用这些 Dropout 层。注意，Dropout 通常不应用于输出层。</li>\n</ol>\n<h3>训练模式与评估模式</h3>\n<p>使用 Dropout（以及批归一化 (normalization)等其他层）时，必须区分训练和评估阶段。</p>\n<ul>\n<li><strong>训练期间：</strong> 激活 Dropout，随机将神经元输出置零以防止共适应。</li>\n<li><strong>评估/推断期间：</strong> 使用完整的网络能力。Dropout 应该关闭，通常 Dropout 前一层的输出会按 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">(1-p)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">1</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">p</span><span class=\"mclose\">)</span></span></span></span> 的因子进行缩放，以补偿训练期间活跃神经元较少的情况（在调用 <code>model.eval()</code> 时，PyTorch 的 <code>nn.Dropout</code> 会自动处理此缩放，这被称为“反向 Dropout”技术）。</li>\n</ul>\n<p>PyTorch 模型通过特定的模式来处理这些行为。必须显式切换它们：</p>\n<ul>\n<li><code>model.train()</code>：将模型设为训练模式。Dropout 层处于开启状态。</li>\n<li><code>model.eval()</code>：将模型设为评估模式。Dropout 层处于关闭状态，激活值会得到正确缩放。</li>\n</ul>\n<p>以下是典型训练循环中的代码结构：</p>\n<pre><code class=\"language-python\"># 假设 model, train_loader, val_loader, optimizer, criterion 已定义\n\nnum_epochs = 10\n\nfor epoch in range(num_epochs):\n    # --- 训练阶段 ---\n    model_with_dropout.train() # 将模型设置为训练模式\n    train_loss = 0.0\n    for data, target in train_loader: # 遍历训练批次\n        optimizer.zero_grad()\n        output = model_with_dropout(data)\n        loss = criterion(output, target)\n        loss.backward()\n        optimizer.step()\n        train_loss += loss.item() * data.size(0)\n    train_loss /= len(train_loader.dataset)\n    print(f\"Epoch {epoch+1} Training Loss: {train_loss:.4f}\")\n\n    # --- 验证阶段 ---\n    model_with_dropout.eval() # 将模型设置为评估模式\n    val_loss = 0.0\n    with torch.no_grad(): # 验证时不计算梯度\n        for data, target in val_loader: # 遍历验证批次\n            output = model_with_dropout(data)\n            loss = criterion(output, target)\n            val_loss += loss.item() * data.size(0)\n    val_loss /= len(val_loader.dataset)\n    print(f\"Epoch {epoch+1} Validation Loss: {val_loss:.4f}\")\n\n# --- 在测试集上进行最终评估 ---\n# model_with_dropout.eval() # 确保模型处于评估模式\n# with torch.no_grad():\n#    # 执行测试...\n</code></pre>\n<p>在验证或测试时忘记切换到 <code>model.eval()</code> 是常见错误。这会导致预测结果具有随机性（由于 Dropout 仍处于开启状态），并因输出未经过正确缩放而导致性能衡量不准。</p>\n<h3>可视化 Dropout 的效果</h3>\n<p>Dropout 通常有助于缩小训练性能与验证性能之间的差距，从而减少过拟合 (overfitting)。虽然使用 Dropout 可能会使训练损失略微升高或收敛变慢（因为网络在每次迭代中都在发生变化），但与出现过拟合且未开启 Dropout 的模型相比，验证损失通常更低且更稳定。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-7z9q21\" \n              data-plot-definition='{\"layout\": {\"title\": \"Effect of Dropout on Learning Curves\", \"xaxis\": {\"title\": \"Epoch\"}, \"yaxis\": {\"title\": \"Loss\", \"range\": [0, 1.5]}, \"legend\": {\"title\": \"Legend\"}, \"autosize\": true}, \"data\": [{\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [1.2, 0.8, 0.6, 0.45, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1], \"mode\": \"lines+markers\", \"name\": \"Train Loss (No Dropout)\", \"line\": {\"color\": \"#74c0fc\"}}, {\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [1.1, 0.85, 0.75, 0.72, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0], \"mode\": \"lines+markers\", \"name\": \"Val Loss (No Dropout)\", \"line\": {\"color\": \"#ff8787\"}}, {\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [1.3, 1.0, 0.8, 0.7, 0.6, 0.55, 0.5, 0.48, 0.46, 0.44], \"mode\": \"lines+markers\", \"name\": \"Train Loss (Dropout p=0.5)\", \"line\": {\"color\": \"#1c7ed6\"}}, {\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [1.15, 0.92, 0.8, 0.72, 0.68, 0.65, 0.63, 0.61, 0.6, 0.59], \"mode\": \"lines+markers\", \"name\": \"Val Loss (Dropout p=0.5)\", \"line\": {\"color\": \"#f03e3e\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-7z9q21\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>有无 Dropout 模型的训练和验证损失曲线对比。可以看到，未启用 Dropout 的模型验证损失开始上升（过拟合），而启用 Dropout 的模型验证损失保持在较低且更稳定的水平，尽管其训练损失略高。</p>\n</blockquote>\n<h3>进一步实验</h3>\n<p>通过以上内容，你已经了解了基本的实现方法。接下来可以尝试：</p>\n<ul>\n<li><strong>Dropout 率 (<code>p</code>)：</strong> 尝试不同的数值（如 0.2、0.3、0.5）。更高的数值提供更强的正则化 (regularization)，但如果设置过高，可能会降低收敛速度或导致欠拟合 (underfitting)。</li>\n<li><strong>放置位置：</strong> 虽然在全连接层的激活函数 (activation function)后放置 Dropout 很常见，但也可以尝试在激活前放置，或仅在特定层使用。</li>\n<li><strong>组合使用：</strong> 将 Dropout 与 L2 权重 (weight)衰减等其他正则化技术结合，观察它们的共同作用。</li>\n</ul>\n<p>添加 Dropout 是应对过拟合 (overfitting)的有效手段。请务必正确使用 <code>model.train()</code> 和 <code>model.eval()</code>，以确保它在不同阶段按预期工作。</p>",
+  "slug": "practice-adding-dropout",
+  "updates": [],
+  "references": [
+    {
+      "id": 13708,
+      "title": "Dropout: A Simple Way to Prevent Overfitting in Neural Networks",
+      "author": "Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov",
+      "year": "2014",
+      "publisher": "",
+      "journal": "Journal of Machine Learning Research (JMLR)",
+      "volume": "15",
+      "pages": "1929-1958",
+      "url": "https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf",
+      "doi": "",
+      "note": "这篇开创性论文介绍了Dropout技术，展示了其在防止神经网络过拟合方面的有效性。",
+      "order": 1,
+      "created_at": "2025-09-05T08:38:13.042728Z",
+      "updated_at": "2025-09-08T15:49:42.471124Z"
+    },
+    {
+      "id": 13710,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本权威教科书，在深度学习的广泛背景下，为Dropout正则化提供了全面的理论基础和详细解释。",
+      "order": 3,
+      "created_at": "2025-09-05T08:38:13.050783Z",
+      "updated_at": "2025-09-08T15:49:28.367193Z"
+    },
+    {
+      "id": 13711,
+      "title": "CS231n: Convolutional Neural Networks for Visual Recognition - Lecture Notes on Regularization",
+      "author": "Stanford University",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://cs231n.github.io/neural-networks-2/#reg",
+      "doi": "",
+      "note": "提供对Dropout清晰直观的解释，包括实践实现细节、反向Dropout的概念及其在防止过拟合方面的作用。",
+      "order": 4,
+      "created_at": "2025-09-05T08:38:13.055091Z",
+      "updated_at": "2025-09-08T15:49:33.071876Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3863,
+  "title": "将元数据与向量一同高效索引",
+  "meta_title": "用于过滤的高效元数据索引",
+  "meta_description": "为支持快速元数据过滤而设计数据库模式和索引的策略。",
+  "content": "<p>根据相关元数据限制向量 (vector)搜索结果是许多LLM应用中的常见需求，例如查找特定日期之后创建的相关文档或特定价格范围的产品。 简单地检索大量向量然后进行过滤（后过滤）通常会浪费计算资源。 预过滤，即在最近邻搜索<em>之前</em>缩小潜在向量候选项的范围，通常更高效，但其效果很大程度上取决于元数据如何与向量本身一起存储和索引。 实现这一目标的有效策略将被讨论。</p>\n<p>主要难点在于数据存储可能存在分离。 向量索引为高维相似性搜索而优化，可能位于专用引擎（如Faiss、HNSWlib）或专用向量数据库中，而元数据通常存在于传统数据库（SQL、NoSQL）或搜索引擎（如Elasticsearch）中。 跨这些系统进行查询会引入网络延迟和同步复杂性，削弱了低延迟搜索的目标。</p>\n<h3>利用原生向量 (vector)数据库功能</h3>\n<p>现代向量数据库（例如Milvus、Pinecone、Weaviate、Qdrant）旨在直接解决这种集成难题。 它们通常允许您将元数据（常被称为 <code>payload</code> 或 <code>attributes</code>）直接与每个向量一同存储。 这种共同位置是高效过滤的基础。</p>\n<p>当元数据原生存储时，向量数据库可以在这些属性上构建二级索引，实现快速过滤。 向量数据库中常见的元数据索引技术包括：</p>\n<ol>\n<li><strong>倒排索引：</strong> 适用于对分类或关键词数据的精确匹配进行过滤（例如，<code>status: \"published\"</code>，<code>tags: [\"python\", \"vector search\"]</code>）。 该索引将元数据值映射到拥有这些值的向量ID。</li>\n<li><strong>B-树或类似结构：</strong> 对数值或时间戳数据进行范围查询时高效（例如，<code>price > 100.0</code>，<code>timestamp &#x3C; 1678886400</code>）。 这些有序树结构可以快速识别匹配指定范围的向量。</li>\n<li><strong>地理空间索引：</strong> 用于根据地理位置数据进行过滤的专用索引（如R-树）。</li>\n</ol>\n<p>通过使用这些二级索引，数据库可以高效地执行预过滤。 当查询同时包含向量嵌入 (embedding)和元数据过滤器时，系统首先使用元数据索引来识别满足过滤条件的向量ID候选集合。 然后，近似最近邻（ANN）搜索<em>只</em>在与这些候选ID对应的向量上执行。 这与搜索整个数据集或执行后过滤相比，大幅减少了所需的距离计算次数。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1uy5vb5\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\", fontcolor=\"#868e96\"];\n\n    subgraph cluster_integrated {\n        label = \"集成向量数据库\";\n        style=filled;\n        color=\"#e9ecef\";\n        bgcolor=\"#f8f9fa\";\n\n        Query [label=\"查询\\n(向量 + 过滤：\\n分类=&#39;技术&#39;)\", shape=cylinder, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n        MetadataIndex [label=\"元数据索引\\n（例如，针对“category”的\\n倒排索引）\", color=\"#ae3ec9\"];\n        VectorIndex [label=\"向量索引\\n（例如，HNSW）\", color=\"#40c057\"];\n        CandidateIDs [label=\"候选ID\\n（分类=&#39;技术&#39;）\", shape=note, color=\"#fd7e14\"];\n        FilteredVectors [label=\"匹配“技术”的向量\", shape=cylinder, style=dashed];\n        Results [label=\"Top-K结果\", shape=cylinder, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n\n        Query -> MetadataIndex [label=\"1. 过滤\"];\n        MetadataIndex -> CandidateIDs [label=\"2. 获取ID\"];\n        CandidateIDs -> FilteredVectors [label=\"3. 识别向量\"];\n        Query -> VectorIndex [label=\"4. ANN搜索\\n（在过滤后的集合上）\"];\n        FilteredVectors -> VectorIndex;\n        VectorIndex -> Results [label=\"5. 返回\"];\n    }\n\n     subgraph cluster_separate {\n        label = \"分离系统（预过滤效率较低）\";\n        style=filled;\n        color=\"#e9ecef\";\n        bgcolor=\"#f8f9fa\";\n\n        Query2 [label=\"查询\\n(向量 + 过滤：\\n分类=&#39;技术&#39;)\", shape=cylinder, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n        MetadataDB [label=\"元数据数据库\\n（例如，SQL/NoSQL）\", color=\"#ae3ec9\"];\n        VectorDB [label=\"向量数据库/索引\\n（仅限向量）\", color=\"#40c057\"];\n        CandidateIDs2 [label=\"候选ID\\n（分类=&#39;技术&#39;）\", shape=note, color=\"#fd7e14\"];\n        Results2 [label=\"Top-K结果\", shape=cylinder, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n\n        Query2 -> MetadataDB [label=\"1. 过滤元数据\"];\n        MetadataDB -> CandidateIDs2 [label=\"2. 获取ID\"];\n        CandidateIDs2 -> VectorDB [label=\"3. 按ID查询向量\\n（可能存在延迟）\"];\n        Query2 -> VectorDB [label=\" \"]; // 隐式查询向量部分\n        VectorDB -> Results2 [label=\"4. 返回\"];\n\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1uy5vb5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>预过滤的查询流程比较。集成系统利用内部元数据索引在ANN搜索之前快速找到候选向量。分离系统则需要额外步骤先查询元数据存储，可能增加延迟。</p>\n</blockquote>\n<h3>高效索引的模式设计</h3>\n<p>您如何构建元数据会显著影响索引效率和过滤性能。 请考虑以下几点：</p>\n<ul>\n<li><strong>数据类型：</strong> 使用适当的数据类型。 数值字段支持范围查询，而字符串字段适用于关键词或标签匹配。 使用过于宽泛的类型（例如，将数字存储为字符串）可能会阻碍高效索引和查询。</li>\n<li><strong>基数：</strong> 具有非常高基数（许多唯一值，如用户ID或精确时间戳）的字段，如果精确匹配不是主要使用场景，可能不太适合某些索引类型（如简单的倒排索引）。 基于范围的索引或专用结构可能更佳。</li>\n<li><strong>规范化：</strong> 与关系数据库通常追求规范化不同，在向量 (vector)数据库的背景下，为了性能，通常更推荐将相关的可过滤属性直接反规范化到向量的元数据负载中。 避免连接是很重要的。</li>\n<li><strong>粒度：</strong> 确定合适的详细程度。 索引过于细粒度的元数据可能会增加存储和索引开销，而过滤性能却没有相应的好处。</li>\n</ul>\n<h3>处理分离的向量 (vector)和元数据存储</h3>\n<p>尽管集成系统通常因性能而受青睐，但有时您可能需要处理向量和元数据分离存储的遗留系统或架构。</p>\n<ol>\n<li><strong>两阶段查询：</strong> 这里最常见的方法包括首先使用过滤条件查询元数据存储（例如，Elasticsearch集群或SQL数据库）以检索相关文档/向量ID列表。 然后，将此ID列表传递给向量搜索引擎，<em>仅</em>在这些特定向量上执行最近邻搜索。 这避免了搜索整个向量空间，但引入了初始元数据查询的延迟和潜在的网络开销。 元数据存储能够非常快速地返回ID是很重要的。</li>\n<li><strong>后过滤扩增：</strong> 如前所述，从向量存储中检索比所需更多的向量（例如，Top <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>k</mi><mo mathvariant=\"normal\" lspace=\"0em\" rspace=\"0em\">′</mo></msup><mo>=</mo><mn>10</mn><mo>×</mo><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k' = 10 \\times k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7519em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.7519em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">′</span></span></span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span>）。 单独获取这些 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>k</mi><mo mathvariant=\"normal\" lspace=\"0em\" rspace=\"0em\">′</mo></msup></mrow><annotation encoding=\"application/x-tex\">k'</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7519em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.7519em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">′</span></span></span></span></span></span></span></span></span></span></span></span> 候选的元数据。 在您的应用逻辑中根据元数据条件过滤此扩增集合，以得到最终的 Top <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span>。 这增加了向量搜索本身的计算开销（查找 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>k</mi><mo mathvariant=\"normal\" lspace=\"0em\" rspace=\"0em\">′</mo></msup></mrow><annotation encoding=\"application/x-tex\">k'</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7519em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.7519em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">′</span></span></span></span></span></span></span></span></span></span></span></span> 个邻居而非 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 个），并且需要获取和处理额外的元数据。</li>\n</ol>\n<p>两种分离存储方法通常会导致更高的延迟和更低的吞吐量 (throughput)，与具有原生元数据索引的集成系统相比，特别是在需要实时响应的应用中。 两个存储之间的数据同步也成为一个操作上的考量。</p>\n<h3>索引权衡</h3>\n<p>索引元数据并非没有成本。 您需要考虑：</p>\n<ul>\n<li><strong>存储成本：</strong> 元数据索引会在向量 (vector)和原始元数据之上额外占用磁盘或内存空间。</li>\n<li><strong>摄入速度：</strong> 构建和更新元数据索引会在数据摄入和更新期间增加开销。 写入量大的系统需要平衡索引的完整性和摄入吞吐量 (throughput)。</li>\n<li><strong>查询速度：</strong> 这是您可以获得收益的地方。 精心设计的元数据索引能大幅加快过滤搜索，特别是预过滤。</li>\n</ul>\n<p>最佳平衡很大程度上取决于您的应用特定需求：读/写比例、查询复杂度、延迟目标以及元数据过滤器的性质。</p>\n<p>总之，高效地将元数据与向量一同索引，不仅仅是为了方便，更是实现高性能过滤向量搜索的必要条件。 利用现代向量数据库的功能，将向量和元数据存储与适当的二级索引策略结合，通常是在要求严苛的LLM应用中，减少延迟并最大化预过滤操作效率的最有效方法。 在设计您的系统时，请仔细考虑您的模式以及存储、摄入速度和查询性能之间的权衡，以选择合适的索引策略。</p>",
+  "slug": "indexing-metadata-efficiently",
+  "updates": [],
+  "references": [
+    {
+      "id": 10249,
+      "title": "Filtering",
+      "author": "Qdrant Documentation Team",
+      "year": "2024",
+      "publisher": "Qdrant",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://qdrant.tech/documentation/concepts/filtering/",
+      "doi": "",
+      "note": "提供了关于元数据过滤如何在Qdrant向量数据库中高效实现和使用的实际示例和解释，涵盖了各种过滤器类型及其与向量搜索的整合。",
+      "order": 1,
+      "created_at": "2025-09-05T06:39:55.659745Z",
+      "updated_at": "2025-09-10T01:24:16.269521Z"
+    },
+    {
+      "id": 10250,
+      "title": "Schema Concepts",
+      "author": "Weaviate Team",
+      "year": "2024",
+      "publisher": "Weaviate",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://weaviate.io/developers/weaviate/concepts/schema/",
+      "doi": "",
+      "note": "解释了在Weaviate中定义和管理元数据模式的原则，阐明了周到的模式设计如何在向量数据库中支持高效的索引和过滤操作。",
+      "order": 2,
+      "created_at": "2025-09-05T06:39:55.663470Z",
+      "updated_at": "2025-09-10T01:24:21.448010Z"
+    },
+    {
+      "id": 10252,
+      "title": "Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs",
+      "author": "Yu. A. Malkov, D. A. Yashunin",
+      "year": "2018",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "volume": "40",
+      "pages": "737-746",
+      "url": "https://ieeexplore.ieee.org/document/8144723",
+      "doi": "10.1109/TPAMI.2017.2762878",
+      "note": "描述了分层可导航小世界（HNSW）算法，这是一种广泛使用的近似最近邻（ANN）方法，通过高效元数据索引实现的预过滤策略显著提升了其性能。",
+      "order": 4,
+      "created_at": "2025-09-05T06:39:55.668564Z",
+      "updated_at": "2025-09-10T01:24:50.803008Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

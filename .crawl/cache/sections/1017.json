@@ -1,0 +1,61 @@
+{
+  "id": 1017,
+  "title": "在分支上进行提交",
+  "meta_title": "如何在 Git 分支上进行提交",
+  "meta_description": "了解提交是如何添加到当前活跃分支的，不影响其他分支。",
+  "content": "<p>使用 <code>git branch &#x3C;branch-name></code> 创建分支，以及使用 <code>git switch &#x3C;branch-name></code>（或旧的 <code>git checkout &#x3C;branch-name></code>）切换您的工作焦点到另一个分支，是 Git 中的基本操作。切换分支时，特殊的 <code>HEAD</code> 指针会改变其指向的提交，并更新您工作目录中的文件以匹配该提交的快照。</p>\n<p>那么，当您切换到一个新分支后进行更改时会发生什么？流程与您在第2章学到的标准 Git 工作流完全相同：您修改文件，使用 <code>git add</code> 暂存这些更改，然后使用 <code>git commit</code> 记录一个快照。</p>\n<p>这里重要的一点是<em>上下文 (context)</em>。当您运行 <code>git commit</code> 时，Git 会创建一个新的提交对象，其父提交是 <code>HEAD</code> 在此提交<em>之前</em>所指向的提交。由于 <code>HEAD</code> 现在指向您当前分支的最新提交，新提交只会延长<em>该分支</em>的历史。其他分支完全不会察觉到这些新提交，也不会受到影响，直到您决定合并它们（我们很快就会讲到）。</p>\n<p>可以这样理解：创建并切换到一个新分支，就为您的项目创建了一条并行的历史线。在此新分支上进行的提交会将其事件添加到其特定的历史线上，而原始的历史线（例如 <code>main</code> 分支）则保持不变。</p>\n<p>让我们来看一个示意图。假设您的 <code>main</code> 分支上有几个提交。然后，您创建一个名为 <code>feature</code> 的新分支并切换到它。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ibysla\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fixedsize=true, width=0.3, height=0.3, fontname=\"Arial\", fontsize=9];\n  edge [arrowhead=none, color=\"#868e96\"];\n\n  // 提交\n  c0 [label=\"C0\", fillcolor=\"#ced4da\"];\n  c1 [label=\"C1\", fillcolor=\"#ced4da\"];\n\n  // 结构\n  c0 -> c1;\n\n  // 分支标签\n  main [shape=plaintext, label=\"main\", fontname=\"Arial\", fontsize=10];\n  feature [shape=plaintext, label=\"feature\", fontname=\"Arial\", fontsize=10];\n  HEAD [shape=plaintext, label=\"HEAD\", fontname=\"Arial\", fontsize=10];\n\n  main -> c1 [style=dashed, arrowhead=normal, constraint=false, color=\"#1c7ed6\"];\n  feature -> c1 [style=dashed, arrowhead=normal, constraint=false, color=\"#12b886\"];\n  HEAD -> feature [style=dotted, arrowhead=none, constraint=false, color=\"#e64980\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ibysla\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>最初，<code>main</code> 和新 <code>feature</code> 分支都指向同一个提交 (C1)。<code>HEAD</code> 指向 <code>feature</code>，因为这是您切换到的分支。</p>\n</blockquote>\n<p>现在，如果您在 <code>feature</code> 分支上进行更改、添加并提交：</p>\n<pre><code class=\"language-bash\"># (假设您当前在 'feature' 分支上)\n# 编辑一个文件，例如，向 'feature_details.txt' 添加内容\necho \"正在开发新功能\" > feature_details.txt\ngit add feature_details.txt\ngit commit -m \"开始开发功能 X\"\n</code></pre>\n<p>Git 创建了一个新提交（我们称之为 C2），其父提交是 C1。<code>feature</code> 分支指针向前移动，指向这个新提交 C2。<code>main</code> 分支指针<em>没有移动</em>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1vhz3c2\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fixedsize=true, width=0.3, height=0.3, fontname=\"Arial\", fontsize=9];\n  edge [arrowhead=none, color=\"#868e96\"];\n\n  // 提交\n  c0 [label=\"C0\", fillcolor=\"#ced4da\"];\n  c1 [label=\"C1\", fillcolor=\"#ced4da\"];\n  c2 [label=\"C2\", fillcolor=\"#63e6be\"]; // 浅青色表示功能提交\n\n  // 结构\n  c0 -> c1 -> c2;\n\n  // 分支标签\n  main [shape=plaintext, label=\"main\", fontname=\"Arial\", fontsize=10];\n  feature [shape=plaintext, label=\"feature\", fontname=\"Arial\", fontsize=10];\n  HEAD [shape=plaintext, label=\"HEAD\", fontname=\"Arial\", fontsize=10];\n\n  main -> c1 [style=dashed, arrowhead=normal, constraint=false, color=\"#1c7ed6\"];\n  feature -> c2 [style=dashed, arrowhead=normal, constraint=false, color=\"#12b886\"];\n  HEAD -> feature [style=dotted, arrowhead=none, constraint=false, color=\"#e64980\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1vhz3c2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>feature</code> 分支已推进到提交 C2，而 <code>main</code> 仍停留在 C1。<code>HEAD</code> 仍然跟随 <code>feature</code>。</p>\n</blockquote>\n<p>如果您切换回 <code>main</code> 分支 (<code>git switch main</code>) 并进行一个不同的提交（例如 C3，修复一个错误），那个提交将会在 <code>main</code> 分支的历史线上添加到 C1 <em>之后</em>，与 <code>feature</code> 分支上的 C2 完全独立。</p>\n<pre><code class=\"language-bash\">git switch main\n# 已切换到 'main' 分支\n# 编辑一个不同的文件，例如，修复 'main_code.py' 中的问题\necho \"print('bug fixed!')\" > main_code.py\ngit add main_code.py\ngit commit -m \"修复 main 上的严重错误\"\n# 现在 HEAD 指向 main，而 main 指向 C3\n</code></pre>\n<p>现在的历史记录看起来是这样，在 C1 之后有两条独立的发展线：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-o2l0ag\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fixedsize=true, width=0.3, height=0.3, fontname=\"Arial\", fontsize=9];\n  edge [arrowhead=none, color=\"#868e96\"];\n\n  // 提交\n  c0 [label=\"C0\", fillcolor=\"#ced4da\"];\n  c1 [label=\"C1\", fillcolor=\"#ced4da\"];\n  c2 [label=\"C2\", fillcolor=\"#63e6be\"]; // 浅青色表示功能提交\n  c3 [label=\"C3\", fillcolor=\"#74c0fc\"]; // 浅蓝色表示主分支提交\n\n  // 结构\n  c0 -> c1;\n  c1 -> c2; // 功能分支路径\n  c1 -> c3; // 主分支路径\n\n  // 分支标签\n  main [shape=plaintext, label=\"main\", fontname=\"Arial\", fontsize=10];\n  feature [shape=plaintext, label=\"feature\", fontname=\"Arial\", fontsize=10];\n  HEAD [shape=plaintext, label=\"HEAD\", fontname=\"Arial\", fontsize=10];\n\n  main -> c3 [style=dashed, arrowhead=normal, constraint=false, color=\"#1c7ed6\"];\n  feature -> c2 [style=dashed, arrowhead=normal, constraint=false, color=\"#12b886\"];\n  HEAD -> main [style=dotted, arrowhead=none, constraint=false, color=\"#e64980\"]; // HEAD 现在指向 main\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-o2l0ag\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>提交历史已分叉。C2 仅存在于 <code>feature</code> 分支上，而 C3 仅存在于 <code>main</code> 分支上。<code>HEAD</code> 指向 <code>main</code>。</p>\n</blockquote>\n<p>您可以使用 <code>git log</code> 加上一些有用的选项来查看这种分支结构：</p>\n<pre><code class=\"language-bash\">git log --oneline --graph --all\n</code></pre>\n<ul>\n<li><code>--oneline</code>：将每个提交显示为一行（提交哈希值和消息）。</li>\n<li><code>--graph</code>：绘制一个基于文本的图表，显示分支和合并历史。</li>\n<li><code>--all</code>：显示所有分支的提交，而不仅仅是当前分支的提交。</li>\n</ul>\n<p>输出将以图形方式显示分叉情况，类似于上面的示意图。</p>\n<p>这种隔离是 Git 分支强大之处的根本。您可以在自己的分支上开发新功能或修复错误，而无需担心会破坏主代码库的稳定性或干扰其他分支上的工作。每个分支都记录了一系列独立的提交，这些提交都基于一个共同的起点。稍后，您将学习如何使用 <code>git merge</code> 将这些独立的历史记录重新组合。</p>",
+  "slug": "making-commits-on-branch",
+  "updates": [],
+  "references": [
+    {
+      "id": 271,
+      "title": "Pro Git",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "涵盖了Git分支的基本机制、HEAD指针的作用以及新提交如何扩展当前分支的历史，尤其是在第3.1和3.2章中，包括本节中展示的可视化内容。",
+      "order": 1,
+      "created_at": "2025-09-04T14:02:35.345730Z",
+      "updated_at": "2025-09-07T15:44:07.198116Z"
+    },
+    {
+      "id": 272,
+      "title": "Git - git-commit Documentation",
+      "author": "The Git Development Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-commit",
+      "doi": "",
+      "note": "解释`git commit`命令、其选项以及它如何创建新的提交对象并推进当前分支指针的官方文档。",
+      "order": 2,
+      "created_at": "2025-09-04T14:02:35.350202Z",
+      "updated_at": "2025-09-07T15:44:03.502123Z"
+    },
+    {
+      "id": 273,
+      "title": "Git - git-branch Documentation",
+      "author": "The Git Development Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-branch",
+      "doi": "",
+      "note": "详细说明`git branch`命令的官方文档，该命令用于创建、列出和删除分支，为分支概念提供上下文。",
+      "order": 3,
+      "created_at": "2025-09-04T14:02:35.352495Z",
+      "updated_at": "2025-09-07T15:44:16.529178Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

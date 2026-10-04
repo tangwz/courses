@@ -1,0 +1,61 @@
+{
+  "id": 4288,
+  "title": "常见交互方式",
+  "meta_title": "大语言模型基本交互方式",
+  "meta_description": "简单的交互方式示例，如问答和文本补全。",
+  "content": "<p>既然你已经了解了什么是提示，如何提问、给出指令，以及上下文 (context)窗口和温度的作用，让我们来看看在与本地大语言模型 (LLM)交互时，这些元素是如何结合在一起的一些常见方法。这些交互方式是你有效使用模型的基础要素。</p>\n<h3>问答 (Q&#x26;A)</h3>\n<p>这可能是与大语言模型 (LLM)交互最直接的方式。你提出问题，模型根据其训练时使用的海量文本数据提供回答。</p>\n<p><strong>示例：</strong></p>\n<ul>\n<li>\n<p><strong>事实回忆：</strong></p>\n<pre><code class=\"language-prompt\">What is the main purpose of the GGUF model format?\n</code></pre>\n<p>大语言模型可能会解释，GGUF旨在高效加载和运行模型，特别是在消费级硬件（CPU和GPU）上，通常会结合量化 (quantization)技术。</p>\n</li>\n<li>\n<p><strong>解释说明：</strong></p>\n<pre><code class=\"language-prompt\">Explain what 'model parameters' mean in the context of LLMs, like in \"a 7B parameter model\". Keep it simple.\n</code></pre>\n<p>模型可能会解释说，参数 (parameter)就像模型在训练过程中学到的内部“旋钮”或变量，更多的参数通常意味着模型更大，可能更具能力（但也会占用更多资源）。</p>\n</li>\n</ul>\n<p>上下文 (context)窗口允许大语言模型使用对话的先前轮次（直到其上下文限制）来理解后续问题。例如，在提出一个问题后，你可以接着问：</p>\n<pre><code class=\"language-prompt\">How does that compare to the older GGML format?\n</code></pre>\n<p>模型应该明白“那个”指的是GGUF。</p>\n<h3>文本补全与生成</h3>\n<p>大语言模型 (LLM)的基本工作原理是预测下一个词元 (token)（单词或单词的一部分）。你可以直接提供句子、段落、列表甚至故事的开头，让模型继续生成。</p>\n<p><strong>示例：</strong></p>\n<ul>\n<li>\n<p><strong>启发思路：</strong></p>\n<pre><code class=\"language-prompt\">To optimize an LLM for local use, one common technique is\n</code></pre>\n<p>模型可能会补全为“……量化 (quantization)，这会减少模型的体积和计算需求。”</p>\n</li>\n<li>\n<p><strong>生成列表：</strong></p>\n<pre><code class=\"language-prompt\">List four hardware components important for running local LLMs:\n1.\n</code></pre>\n<p>模型很可能会继续列出 CPU、RAM、GPU（如果可用）和存储空间等项目。</p>\n</li>\n<li>\n<p><strong>创意写作：</strong></p>\n<pre><code class=\"language-prompt\">The command line flickered. The model finished downloading. He typed 'ollama run llama3' and hit Enter. Suddenly,\n</code></pre>\n<p>大语言模型会根据这个开头生成故事的下一部分。</p>\n</li>\n</ul>\n<h3>摘要总结</h3>\n<p>通常，你可能有一大段文本，需要将其浓缩成要点。这是一种常见的基于指令的任务。</p>\n<p><strong>提示结构示例：</strong></p>\n<pre><code class=\"language-prompt\">Summarize the following article about local LLM privacy benefits into two sentences:\n\n[Insert article text here about data staying on the user's machine, not being sent to third-party servers, etc.]\n</code></pre>\n<p>模型会尝试提取所提供文本的要旨。请注意，大语言模型 (LLM)的上下文 (context)窗口限制了它一次可以处理的文本量。对于非常长的文档，你可能需要分块进行总结。</p>\n<h3>改述与重写</h3>\n<p>有时你需要用不同的方式表达一个想法。你可以指示大语言模型 (LLM)改写文本，以使其更清晰、更简洁或拥有不同的语气。</p>\n<p><strong>示例：</strong></p>\n<ul>\n<li>\n<p><strong>简化：</strong></p>\n<pre><code class=\"language-prompt\">Rewrite this sentence in simpler terms: \"GPU acceleration significantly mitigates the latency inherent in LLM inference.\"\n</code></pre>\n<p>模型可能会回答：“使用好的显卡能让大语言模型响应速度快很多。”</p>\n</li>\n<li>\n<p><strong>改变语气：</strong></p>\n<pre><code class=\"language-prompt\">Rewrite the following user review in a more professional tone:\n\n\"Dude, setting up Ollama was super easy! Got Llama 3 running in like 5 mins. Way better than messing with cloud APIs lol.\"\n</code></pre>\n<p>模型可能会生成如下内容：“Ollama的设置过程非常直接，使得Llama 3模型在大约五分钟内即可运行。这为基于云的API解决方案提供了一个便利的替代方案。”</p>\n</li>\n</ul>\n<h3>头脑风暴与想法生成</h3>\n<p>你可以使用本地大语言模型 (LLM)作为头脑风暴的伙伴，生成想法，提出替代方案，或思考各种可能性。</p>\n<p><strong>示例：</strong></p>\n<ul>\n<li>\n<p><strong>项目想法：</strong></p>\n<pre><code class=\"language-prompt\">Suggest three simple project ideas that could use a local LLM for text processing.\n</code></pre>\n<p>模型可能会给出一些想法，例如用于笔记的本地聊天机器人、离线总结网页文章的工具，或者一个简单的命令行助手。</p>\n</li>\n<li>\n<p><strong>内容创作：</strong></p>\n<pre><code class=\"language-prompt\">Give me five potential titles for a tutorial about choosing the right local LLM model.\n</code></pre>\n</li>\n</ul>\n<p>调整<code>温度</code>设置（如果你的工具支持）可以影响头脑风暴。较高的温度（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>T</mi><mo>></mo><mn>1.0</mn></mrow><annotation encoding=\"application/x-tex\">T > 1.0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7224em;vertical-align:-0.0391em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1.0</span></span></span></span>）通常会带来更多样和出乎意料的建议，而较低的温度（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>T</mi><mo>&#x3C;</mo><mn>1.0</mn></mrow><annotation encoding=\"application/x-tex\">T &#x3C; 1.0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7224em;vertical-align:-0.0391em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">&#x3C;</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1.0</span></span></span></span>）则会产生更集中和可预测的想法。</p>\n<h3>简单代码片段（谨慎使用）</h3>\n<p>许多大语言模型 (LLM)都经过代码训练，能够生成各种编程语言的简单片段。这对于快速示例或样板代码很有用。</p>\n<p><strong>示例：</strong></p>\n<pre><code class=\"language-prompt\">Write a basic Python function that takes a person's name as input and returns a greeting message.\n</code></pre>\n<p>模型可能会输出：</p>\n<pre><code class=\"language-python\">def greet(name):\n  \"\"\"返回一个简单的问候消息。\"\"\"\n  return f\"Hello, {name}!\"\n\n# 使用示例：\nprint(greet(\"Alice\"))\n</code></pre>\n<p><strong>重要提示：</strong> 务必谨慎对待大语言模型生成的代码。特别是作为初学者，在依赖任何代码片段之前，都应仔细检查、理解并测试它。大语言模型可能会犯错，生成效率低下的代码，甚至包含安全漏洞的代码。将其视为一个有用的起点，而非一个万无一失的解决方案。</p>\n<p>这些方式代表了与本地大语言模型交互的常见起点。随着经验的增长，你会找到如何结合和改进这些技巧来完成更复杂的任务。关键在于通过结构清晰的提示进行有效沟通。</p>",
+  "slug": "common-interaction-patterns",
+  "updates": [],
+  "references": [
+    {
+      "id": 11428,
+      "title": "Language Models are Few-Shot Learners",
+      "author": "Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei",
+      "year": "2020",
+      "publisher": "MIT Press",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "1877–1901",
+      "url": "https://proceedings.neurips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html",
+      "doi": "10.5555/3495724.3495883",
+      "note": "这篇基础性论文展示了大型语言模型如何通过少样本提示执行问答和文本生成等多种任务，这是常见交互模式的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T07:17:33.158461Z",
+      "updated_at": "2025-09-09T13:26:45.826455Z"
+    },
+    {
+      "id": 11430,
+      "title": "Prompt Engineering Guide",
+      "author": "Lilian Weng and Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.promptingguide.ai/",
+      "doi": "",
+      "note": "这份全面的在线指南提供了与大型语言模型有效交互的实用策略和模式，涵盖了各种提示技巧和常见用例。",
+      "order": 3,
+      "created_at": "2025-09-05T07:17:33.207840Z",
+      "updated_at": "2025-09-09T13:26:18.298025Z"
+    },
+    {
+      "id": 11431,
+      "title": "InCoder: A Generative Model for Code Infilling and Synthesis",
+      "author": "Daniel Fried, Armen Aghajanyan, Jessy Lin, Sida Wang, Eric Wallace, Freda Shi, Ruiqi Zhong, Wen-tau Yih, Luke Zettlemoyer, Mike Lewis",
+      "year": "2023",
+      "publisher": "",
+      "journal": "ICLR",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2204.05999",
+      "doi": "10.48550/arXiv.2204.05999",
+      "note": "本文介绍了一种专门用于代码生成和补全的生成模型，展示了本节讨论的LLM重要能力。",
+      "order": 4,
+      "created_at": "2025-09-05T07:17:33.210523Z",
+      "updated_at": "2025-09-09T13:26:20.042638Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2375,
+  "title": "__init__ 方法（构造函数）",
+  "meta_title": "Python __init__ 方法 | 类构造函数",
+  "meta_description": "了解特殊的 `__init__` 方法，它作为构造函数在对象创建时用于初始化其状态。",
+  "content": "<p>当你从一个类创建对象时，通常会希望立即设定它的初始状态。例如，如果你有一个 <code>Dog</code> 类，你可能希望在创建 <code>Dog</code> 对象时就指定它的名字和品种，而不是先创建一个普通的狗，然后再设定其属性。</p>\n<p>Python 为此提供了一个特殊方法：<code>__init__</code>。每当你创建一个类的新实例（对象）时，此方法都会自动被调用。因为它初始化了对象的状态，所以常被称为类的构造函数，尽管从技术上讲，它初始化的是一个已经创建好的对象。<code>__init__</code> 这个名字前后都有双下划线，表明它是 Python 识别的特殊方法。</p>\n<h3>定义和使用 <code>__init__</code></h3>\n<p>你在类定义中定义 <code>__init__</code>，就像定义其他方法一样。第一个参数 (parameter)必须始终是 <code>self</code>，它指向正在创建的类的具体实例。在 <code>self</code> 之后，你可以定义额外参数来接收初始化对象所需的数据。</p>\n<p>在 <code>__init__</code> 方法内部，你通常使用 <code>self.attribute_name = value</code> 语法将这些参数传入的值赋给对象的属性。</p>\n<p>让我们修改 <code>Dog</code> 类示例，加入 <code>__init__</code> 方法：</p>\n<pre><code class=\"language-python\">class Dog:\n    def __init__(self, name, breed):\n        # 当创建 Dog 对象时，此方法会自动被调用\n        print(f\"正在创建名为 {name} 的新 Dog 对象...\")\n\n        # 将提供的名字和品种赋值给 'self' 对象的属性\n        self.name = name\n        self.breed = breed\n        self.tricks = [] # 为技巧初始化一个空列表\n\n    def add_trick(self, trick):\n        self.tricks.append(trick)\n        print(f\"{self.name} 学会了一个新技巧：{trick}！\")\n\n# 现在，当我们创建 Dog 对象时，必须提供名字和品种\ndog1 = Dog(\"Buddy\", \"Golden Retriever\")\ndog2 = Dog(\"Lucy\", \"Beagle\")\n\n# 属性在创建时由 __init__ 设定\nprint(f\"{dog1.name} 是一只 {dog1.breed}。\") # 输出：Buddy is a Golden Retriever.\nprint(f\"{dog2.name} 是一只 {dog2.breed}。\") # 输出：Lucy is a Beagle.\n\n# 我们仍然可以调用其他方法\ndog1.add_trick(\"fetch\")\nprint(f\"{dog1.name} 的技巧：{dog1.tricks}\") # 输出：Buddy's tricks: ['fetch']\n</code></pre>\n<h3>工作原理</h3>\n<ol>\n<li><strong>实例化：</strong> 当你写 <code>dog1 = Dog(\"Buddy\", \"Golden Retriever\")</code> 时，Python 首先创建一个新的空 <code>Dog</code> 对象。</li>\n<li><strong>调用 <code>__init__</code>：</strong> Python 接着自动在这个新创建的对象上调用 <code>__init__</code> 方法。</li>\n<li><strong>参数 (parameter)传递：</strong> 对象本身作为第一个参数 (<code>self</code>) 传递，你在括号中提供的任何参数（<code>\"Buddy\"</code>、<code>\"Golden Retriever\"</code>）则作为后续参数（<code>name</code>、<code>breed</code>）传递。</li>\n<li><strong>属性赋值：</strong> 在 <code>__init__</code> 内部，代码 <code>self.name = name</code> 将值 <code>\"Buddy\"</code> 赋给 <code>dog1</code> 对象的 <code>name</code> 属性。类似地，<code>self.breed = breed</code> 将 <code>\"Golden Retriever\"</code> 赋给 <code>breed</code> 属性。<code>self.tricks = []</code> 这一行则为此特定的狗实例将 <code>tricks</code> 属性初始化为空列表。</li>\n<li><strong>返回：</strong> <code>__init__</code> 方法没有显式 <code>return</code> 值（它隐式返回 <code>None</code>）。它的作用是修改 <code>self</code> 对象。实例化过程（<code>Dog(...)</code>）会返回完全初始化好的对象，然后将其赋值给变量 <code>dog1</code>。</li>\n</ol>\n<p>使用 <code>__init__</code> 是确保对象在创建时拥有有效且明确的初始状态的常用方式。它让你的类更容易被正确使用，因为它清楚地说明了在对象创建时需要哪些信息。你也可以直接在 <code>__init__</code> 中为属性设置默认值，就像我们为 <code>self.tricks = []</code> 所做的那样。</p>",
+  "slug": "python-init-method",
+  "updates": [],
+  "references": [
+    {
+      "id": 6295,
+      "title": "Classes",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/classes.html",
+      "doi": "",
+      "note": "官方文档，涵盖Python的类语法、对象实例化以及`__init__`方法在对象初始化中的作用。",
+      "order": 1,
+      "created_at": "2025-09-05T01:20:57.028630Z",
+      "updated_at": "2025-09-07T21:22:13.817246Z"
+    },
+    {
+      "id": 6296,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "一本实用的Python入门书籍，包含对类、对象和`__init__`方法的清晰解释，适合初学者。",
+      "order": 2,
+      "created_at": "2025-09-05T01:20:57.031610Z",
+      "updated_at": "2025-09-07T21:22:03.581399Z"
+    },
+    {
+      "id": 6297,
+      "title": "Fluent Python, 2nd Edition: Clear, Concise, and Effective Programming",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056340/",
+      "doi": "",
+      "note": "本书对Python的对象模型和特殊方法进行了全面检查，在对象创建和数据模型的背景下详细说明了`__init__`。",
+      "order": 3,
+      "created_at": "2025-09-05T01:20:57.036765Z",
+      "updated_at": "2025-09-07T21:22:14.968272Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

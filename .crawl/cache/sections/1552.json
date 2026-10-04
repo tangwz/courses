@@ -1,0 +1,61 @@
+{
+  "id": 1552,
+  "title": "理解数据类型",
+  "meta_title": "常见 SQL 数据类型解析",
+  "meta_description": "介绍 SQL 数据库中使用的基本数据类型，如 INTEGER、VARCHAR、DATE 等。",
+  "content": "<p>让我们巩固对表、列和行的理解。在定义表中的列时，我们不仅会给它命名；还会明确它能存放什么<em>种类</em>的数据。这种设定被称为列的<strong>数据类型</strong>。</p>\n<p>可以把数据类型看作是你列的规则。就像你不会把汤装在筛子里一样，你也不会把“Hello World”这样的文本存储在一个只用于数字的列中。定义数据类型非常重要，因为它能确保：</p>\n<ol>\n<li><strong>数据完整性：</strong> 避免意外插入错误类型的数据（例如，将文本插入日期列）。</li>\n<li><strong>存储效率：</strong> 数据库系统能根据值的类型，了解要为每个值分配多少空间。</li>\n<li><strong>正确操作：</strong> 它使数据库能够执行有意义的操作（例如，你可以对数字求和，但不能对文本求和）。</li>\n</ol>\n<p>尽管不同数据库系统（如PostgreSQL、MySQL、SQL Server、SQLite）之间的具体名称和功能可能略有不同，但核心思想和常见类型大体一致。以下是你经常会遇到的主要类别：</p>\n<h3>数值类型</h3>\n<p>这些类型用于处理数值数据。</p>\n<ul>\n<li><strong>INTEGER（或 INT）：</strong> 用于存储整数（不带小数点的数字）。示例包括用户ID（如 <code>101</code>、<code>102</code>）、数量（<code>5</code>、<code>100</code>）或计数。它们可以是正数或负数。还存在 <code>SMALLINT</code>、<code>TINYINT</code>、<code>BIGINT</code> 等变体，用于存储较小或较大范围的整数，以优化存储空间。</li>\n<li><strong>DECIMAL（或 NUMERIC）：</strong> 用于需要精确度的数字，特别是货币或金融计算。通常需要指定总位数（精度）和小数点后的位数（标度）。例如，<code>DECIMAL(10, 2)</code> 可以存储最多10位数字的数字，其中2位用于小数部分（例如，<code>12345678.99</code>）。</li>\n<li><strong>FLOAT、REAL、DOUBLE PRECISION：</strong> 这些用于近似值数字，通常用于科学计算，在这些计算中，精确度不如处理非常宽泛的值范围（包括非常小或非常大的数字）那么关键。它们使用浮点表示法，有时可能导致小的舍入差异。</li>\n</ul>\n<h3>字符串（字符）类型</h3>\n<p>这些类型用于存储文本数据。</p>\n<ul>\n<li><strong>VARCHAR(n)：</strong> 表示<em>可变字符</em>。这是最常见的文本类型之一。它存储长度可变的字符串，最长可达由 <code>n</code> 指定的长度。例如，<code>VARCHAR(255)</code> 可以存储0到255个字符长的任何文本字符串。数据库只使用实际存储字符所需的空间，加上少量额外开销。当文本长度变化很大时使用此类型，例如姓名、地址或描述。</li>\n<li><strong>CHAR(n)：</strong> 表示<em>固定字符</em>。此类型存储固定长度的字符串，长度由 <code>n</code> 指定。如果你插入的字符串短于 <code>n</code>，数据库通常会用空格填充它以达到准确的长度 <code>n</code>。如果字符串更长，它可能会被截断或引发错误，这取决于数据库系统。在某些情况下，如果数据长度始终相同（例如，使用 <code>CHAR(2)</code> 存储两位国家代码，如 <code>US</code>、<code>CA</code>、<code>GB</code>），<code>CHAR</code> 的查询速度可能会稍快。</li>\n<li><strong>TEXT：</strong> 用于存储长篇文本数据，如文章、评论或详细描述，其最大长度可能超过 <code>VARCHAR</code> 通常能轻松支持的范围。<code>TEXT</code> 的确切长度限制在不同数据库系统之间差异很大，但通常非常大。</li>\n</ul>\n<h3>日期和时间类型</h3>\n<p>这些类型专门用于存储时间信息。</p>\n<ul>\n<li><strong>DATE：</strong> 只存储日期（年、月和日）。示例：<code>2023-10-27</code>。</li>\n<li><strong>TIME：</strong> 只存储一天中的时间（时、分和秒，有时包含小数秒）。示例：<code>14:35:10</code>。</li>\n<li><strong>TIMESTAMP（或 DATETIME）：</strong> 同时存储日期和时间信息。示例：<code>2023-10-27 14:35:10.123</code>。这些类型常用于记录事件，例如记录订单下达时间或记录最后更新时间。某些系统存储相对于UTC（协调世界时）的时间戳信息，这有助于管理时区。</li>\n</ul>\n<h3>布尔类型</h3>\n<ul>\n<li><strong>BOOLEAN：</strong> 表示逻辑上的 <code>TRUE</code> 或 <code>FALSE</code> 值。某些数据库系统没有特定的 <code>BOOLEAN</code> 类型，可能会转而使用小的整数类型（如 <code>TINYINT(1)</code>，其中 <code>0</code> 表示 <code>FALSE</code>，<code>1</code> 表示 <code>TRUE</code>）。用于标志或状态指示器，例如 <code>is_active</code>、<code>has_paid</code> 或 <code>email_verified</code>。</li>\n</ul>\n<h3>表结构中的数据类型可视化</h3>\n<p>让我们看看这些类型在一个简单的 <code>Customers</code> 表中如何应用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-l87k57\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=record, fontname=\"Arial\", fontsize=10, style=filled, fillcolor=\"#e9ecef\"];\n  edge [arrowhead=none, color=\"#495057\"];\n\n  Customers [\n    label = \"{ <hdr> 客户表 | \\l \\\n              <c1> 客户ID | \\l \\\n              <c2> 名字 | \\l \\\n              <c3> 姓氏 | \\l \\\n              <c4> 邮箱 | \\l \\\n              <c5> 注册日期 | \\l \\\n              <c6> 总花费 | \\l \\\n              <c7> 是否高级会员 | \\l \\\n             }\"\n    fillcolor=\"#a5d8ff\"\n  ];\n\n  DataTypes [\n    label = \"{ <hdr> 数据类型 | \\l \\\n              <t1> INTEGER | \\l \\\n              <t2> VARCHAR(50) | \\l \\\n              <t3> VARCHAR(50) | \\l \\\n              <t4> VARCHAR(100) | \\l \\\n              <t5> DATE | \\l \\\n              <t6> DECIMAL(10, 2) | \\l \\\n              <t7> BOOLEAN | \\l \\\n            }\"\n    fillcolor=\"#96f2d7\"\n  ];\n\n  Customers:c1 → DataTypes:t1 [label=\" 主键\"];\n  Customers:c2 -> DataTypes:t2;\n  Customers:c3 -> DataTypes:t3;\n  Customers:c4 -> DataTypes:t4;\n  Customers:c5 -> DataTypes:t5;\n  Customers:c6 -> DataTypes:t6;\n  Customers:c7 -> DataTypes:t7;\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-l87k57\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图表显示了 <code>Customers</code> 表中的列及其对应的 SQL 数据类型。<code>customer_id</code> 通常是 <code>INTEGER</code> 类型，用作唯一标识符（主键）。姓名和邮箱使用 <code>VARCHAR</code> 存储可变长度文本。<code>signup_date</code> 使用 <code>DATE</code>。<code>total_spent</code> 使用 <code>DECIMAL</code> 存储精确的货币值，而 <code>is_premium</code> 使用 <code>BOOLEAN</code> 存储真/假状态。</p>\n</blockquote>\n<p>在设计表时选择适当的数据类型是重要一步。它能确保你的数据存储正确且高效，使后续使用SQL查询和分析变得更轻松、更可靠。随着课程的进行，你将看到这些类型如何影响我们编写查询的方式，尤其是在筛选和执行计算时。</p>",
+  "slug": "understanding-data-types",
+  "updates": [],
+  "references": [
+    {
+      "id": 2167,
+      "title": "PostgreSQL: Documentation - Chapter 8. Data Types",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/datatype.html",
+      "doi": "",
+      "note": "提供PostgreSQL中所有数据类型的全面详细信息，包括其用法和存储特性。这有助于用户理解通用数据类型原则的具体实现。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:01.957819Z",
+      "updated_at": "2025-09-07T18:50:05.715759Z"
+    },
+    {
+      "id": 2172,
+      "title": "MySQL 8.0 Reference Manual :: 11 Data Types",
+      "author": "Oracle and/or its affiliates",
+      "year": "2023",
+      "publisher": "Oracle",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dev.mysql.com/doc/refman/8.0/en/data-types.html",
+      "doi": "",
+      "note": "MySQL支持的数据类型的权威指南，对于理解不同数据库系统中类型定义的异同至关重要。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:04.146112Z",
+      "updated_at": "2025-09-07T18:50:15.756958Z"
+    },
+    {
+      "id": 2174,
+      "title": "Learning SQL",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "380",
+      "url": "https://books.google.com/books/about/Learning_SQL.html?id=9w9cDwAAQBAJ",
+      "doi": "",
+      "note": "一本广受认可的SQL基础入门教材，包含关于数据类型及其在数据库设计中实际应用的章节。第3版。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:04.213509Z",
+      "updated_at": "2025-09-07T18:50:25.785900Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

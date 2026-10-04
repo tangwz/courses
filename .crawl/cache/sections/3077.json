@@ -1,0 +1,61 @@
+{
+  "id": 3077,
+  "title": "使用输出解析器",
+  "meta_title": "使用输出解析器处理大型语言模型响应",
+  "meta_description": "使用框架组件或自定义代码将大型语言模型输出解析为可用格式。",
+  "content": "<p>大型语言模型会生成文本。尽管这些文本可能正是人类读者所希望的，但应用程序通常需要更结构化的数据格式，例如 Python 字典或列表，以便进行后续操作。依赖大型语言模型<em>总是</em>生成完全符合直接程序化使用的格式化输出，通常并不可靠。即使经过仔细的提示，响应中也可能包含变体、无关文本或格式不一致的情况。</p>\n<p>这就是输出解析器的用武之地。输出解析器是一种组件或函数，旨在接收大型语言模型的原始字符串输出，并将其转换为应用程序可以轻松使用的结构化格式。可以把它想象成一个转换器，将大型语言模型的自然语言（或类似结构化语言）响应转换成精确的数据结构。</p>\n<h3>输出解析器的作用</h3>\n<p>输出解析器的主要目标是弥合大型语言模型生成的非结构化或半结构化文本与下游应用程序逻辑对结构化数据的要求之间的差距。</p>\n<p>假设一个场景，您提示大型语言模型从一段文本中提取一个人的姓名和电子邮件地址，并以 JSON 格式返回。大型语言模型可能会返回类似如下内容：</p>\n<pre><code class=\"language-text\">Okay, here is the extracted information in JSON format:\n{\n  \"name\": \"Bob Smith\",\n  \"email\": \"bob.smith@example.com\"\n}\nI hope this helps!\n</code></pre>\n<p>您的应用程序需要字典 <code>{\"name\": \"Bob Smith\", \"email\": \"bob.smith@example.com\"}</code>，而不是周围的对话文本。输出解析器处理这种提取和转换。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-7b7xr7\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\"]; edge [fontname=\"Arial\"]; llm [label=\"大型语言模型\"]; raw_output [label=\"原始字符串输出\\n(含嵌入式JSON的文本)\"]; parser [label=\"输出解析器\"]; structured_data [label=\"结构化数据\\n(Python 字典)\"]; app_logic [label=\"应用程序逻辑\"]; llm -> raw_output; raw_output -> parser [label=\" 处理 \"]; parser -> structured_data [label=\" 转换 \"]; structured_data -> app_logic [label=\" 消费 \"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-7b7xr7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图说明了输出解析器如何将大型语言模型原始输出转换为应用程序逻辑可用的结构化数据。</p>\n</blockquote>\n<h3>常见解析方法</h3>\n<p>存在多种解析大型语言模型输出的方法，从简单的字符串操作到复杂的库组件：</p>\n<ol>\n<li>\n<p><strong>基本字符串操作：</strong> 对于非常简单且高度可预测的输出，标准的 Python 字符串方法（<code>find</code>、<code>split</code>、切片）或正则表达式（<code>re</code> 模块）有时就足够了。例如，如果您期望大型语言模型<em>只</em>返回一个数字，您可以在去除空格后尝试直接使用 <code>int()</code> 或 <code>float()</code> 转换输出。</p>\n<ul>\n<li><strong>优点：</strong> 适用于简单情况，无外部依赖。</li>\n<li><strong>缺点：</strong> 极其脆弱。如果大型语言模型添加任何额外词语、略微改变格式或产生意外输出，就很容易失败。通常不建议用于除最简单概念验证之外的任何情况。</li>\n</ul>\n</li>\n<li>\n<p><strong>解析明确要求的格式（例如 JSON）：</strong> 一种更常见的方法是提示大型语言模型以 JSON 等标准格式生成响应。然后您可以使用标准库来解析这种格式。</p>\n<pre><code class=\"language-python\">import json\nimport re\n\nllm_output = \"\"\"\nSure, here's the JSON:\n{\n  \"item\": \"Laptop\",\n  \"quantity\": 1,\n  \"features\": [\"16GB RAM\", \"512GB SSD\", \"14-inch display\"]\n}\nLet me know if you need anything else.\n\"\"\"\n\n# 尝试使用正则表达式查找 JSON 块（简单示例）\njson_match = re.search(r'\\{.*\\}', llm_output, re.DOTALL)\n\nparsed_data = None\nif json_match:\n    json_string = json_match.group(0)\n    try:\n        parsed_data = json.loads(json_string)\n        print(\"成功解析 JSON:\")\n        print(parsed_data)\n        # 现在您可以访问 parsed_data['item'] 这样的数据\n    except json.JSONDecodeError:\n        print(\"错误：未能从提取的字符串中解码 JSON。\")\n        # 处理错误（例如，记录日志、重试、回退）\nelse:\n    print(\"错误：未能在大型语言模型输出中找到 JSON 块。\")\n    # 处理错误\n\n</code></pre>\n<ul>\n<li><strong>优点：</strong> 使用标准、经过充分测试的库（<code>json</code>）。比基本字符串操作更具弹性。</li>\n<li><strong>缺点：</strong> 仍然需要从可能包含对话的输出中找到实际的 JSON。大型语言模型可能会生成格式错误的 JSON，导致 <code>json.loads()</code> 失败。处理这些错误需要额外的逻辑。</li>\n</ul>\n</li>\n<li>\n<p><strong>使用框架特定的输出解析器：</strong> 像 LangChain 这样的大型语言模型应用程序框架提供了专用的输出解析器组件，可以直接集成到其工作流程中。这些解析器通常与提示模板结合使用，其中包含对大型语言模型的格式说明。</p>\n<ul>\n<li><strong>LangChain 解析器：</strong> LangChain 提供多种输出解析器，例如：\n<ul>\n<li><code>SimpleJsonOutputParser</code>: 类似于手动 JSON 解析方法，但已集成到框架的链结构中。</li>\n<li><code>PydanticOutputParser</code>: 允许您使用 Pydantic 模型定义所需的输出结构（我们将在“数据验证技术”部分详细介绍）。它会自动为提示生成格式说明，<em>并</em>将大型语言模型输出解析为 Pydantic 对象，同时进行验证。</li>\n<li><code>CommaSeparatedListOutputParser</code>: 解析预期为逗号分隔的项目列表的响应。</li>\n<li><code>DatetimeOutputParser</code>: 尝试从输出中解析日期和时间。</li>\n</ul>\n</li>\n</ul>\n<p>这些框架解析器抽象了提取和解析的一些样板代码。它们通常包含自动将格式说明添加到发送给大型语言模型的提示中的机制，从而提高了以所需格式接收输出的可能性。</p>\n<pre><code class=\"language-python\"></code></pre>\n</li>\n</ol>\n<h1>使用 LangChain 的示例（细节取决于具体解析器）</h1>\n<pre><code>from langchain_core.output_parsers import SimpleJsonOutputParser\nfrom langchain_core.prompts import PromptTemplate\nfrom langchain_openai import ChatOpenAI # 示例模型\n\n# 假设 llm 是一个已初始化的 LangChain 模型实例（例如 ChatOpenAI）\n# llm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0) # 占位符\n\n# 1. 定义解析器\nparser = SimpleJsonOutputParser()\n\n# 2. 创建一个包含格式说明的提示模板\n#    （框架解析器通常提供获取这些说明的方法）\ntemplate_str = \"\"\"\nExtract the requested information as a JSON object.\nInput text: {input_text}\nFormat Instructions: {format_instructions}\n\"\"\"\nprompt = PromptTemplate(\n    template=template_str,\n    input_variables=[\"input_text\"],\n    partial_variables={\"format_instructions\": parser.get_format_instructions()} # 示例方法\n)\n\n# 3. 创建一个结合提示、模型和解析器的链\n# chain = prompt | llm | parser # 使用 LangChain 表达式语言 (LCEL)\n\n# 4. 调用链\n# input_text = \"Extract name: John Doe, age: 42\"\n# try:\n#     structured_output = chain.invoke({\"input_text\": input_text})\n#     print(\"解析后的输出:\", structured_output)\n# except Exception as e:\n#     print(f\"解析或大型语言模型调用出错: {e}\")\n#     # 处理错误\n\n```\n*   **优点：** 更好地与开发框架集成，通常包含格式说明生成，鼓励关注点分离（解析逻辑被封装），可能提供更精细的错误处理或重试逻辑（稍后介绍）。\n*   **缺点：** 引入了对特定框架的依赖。\n</code></pre>\n<h3>对可靠性的重要性</h3>\n<p>使用输出解析器是构建更可靠的大型语言模型应用程序的重要一步。通过明确定义大型语言模型原始文本应如何转换为可用数据结构，您将应用程序的核心逻辑与大型语言模型原始输出的不一致性分离开来。这使得您的代码更清晰，更易于测试，并且在大型语言模型的响应格式略有偏差时更不容易出错。解析器，特别是与验证（我们的下一个话题）结合使用时，构成了确保数据从大型语言模型流入应用程序时的完整性的重要一层。</p>",
+  "slug": "using-output-parsers",
+  "updates": [],
+  "references": [
+    {
+      "id": 8609,
+      "title": "Output Parsers",
+      "author": "The LangChain Team",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/model_io/output_parsers/",
+      "doi": "",
+      "note": "LangChain框架中各种输出解析器实现的官方文档，包含示例和使用指南。",
+      "order": 1,
+      "created_at": "2025-09-05T02:07:21.671521Z",
+      "updated_at": "2025-09-09T04:49:45.195913Z"
+    },
+    {
+      "id": 8610,
+      "title": "`json` - JSON encoder and decoder",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/json.html",
+      "doi": "",
+      "note": "Python `json` 模块的官方文档，该模块对于将 JSON 字符串解析为 Python 数据结构至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T02:07:21.681437Z",
+      "updated_at": "2025-09-09T04:49:22.585174Z"
+    },
+    {
+      "id": 8611,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and Pydantic contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/",
+      "doi": "",
+      "note": "Pydantic 的文档，这是一个数据验证和配置管理库，常与 LLM 输出解析器结合使用，用于定义和验证结构化数据。",
+      "order": 3,
+      "created_at": "2025-09-05T02:07:21.686943Z",
+      "updated_at": "2025-09-09T04:49:31.099034Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

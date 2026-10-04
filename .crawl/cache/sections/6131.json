@@ -1,0 +1,45 @@
+{
+  "id": 6131,
+  "title": "为预训练阶段生成指令式数据",
+  "meta_title": "用于预训练的合成指令数据",
+  "meta_description": "生成指令遵循数据的方法，以改进大语言模型在预训练期间的能力。",
+  "content": "<p>虽然预训练 (pre-training)的大部分通常依赖于大量非结构化文本进行下一词预测，但在这一基础阶段引入指令式数据可以带来重要好处。传统上，教模型遵循指令是在微调 (fine-tuning)阶段进行的。然而，在早期引入指令遵循元素可以使模型对面向任务的提示更敏感，可能使后续微调数据效率更高且效果更佳。目标不是在预训练期间完全训练一个指令遵循模型，而是使其熟悉指令的<em>格式</em>和<em>意图</em>，促使其内部表示更利于任务适应。</p>\n<p>这种方法巧妙地转变了部分预训练目标，从纯粹的通用文本预测性建模转向识别和处理暗示特定任务的结构化提示。这有助于模型明白，有些输入序列不仅仅是需要完成的续写，而是需要执行的指令。</p>\n<h3>何者属于预训练 (pre-training)阶段的指令式数据？</h3>\n<p>指令式数据在预训练阶段不需要像专门用于指令微调 (fine-tuning)（IFT）的数据集那样复杂或精心整理。主要目的是让模型接触指令的结构，而不是追求完美的回应。可以将其视为一种“更轻量级”的指令数据形式。</p>\n<p>例如包括：</p>\n<ul>\n<li>简单问答对：\"问：马来西亚的首都是哪里？答：吉隆坡。\"</li>\n<li>基本命令-回应格式：\"翻译成印度尼西亚语：Hello. -> Halo。\"</li>\n<li>任务形式的文本：\"总结以下段落：[段落文本] 总结：[总结文本]\"</li>\n</ul>\n<p>其主要特点是存在明确的文本信号，表示请求或查询，之后通常紧跟着相应的完成内容或答案。这种结构有助于模型区分描述性文本和可操作提示。</p>\n<h3>生成指令式数据的方法</h3>\n<p>为预训练 (pre-training)创建指令式数据可以通过多种方法实现，通常旨在扩大规模和增加多样性，而非追求微调 (fine-tuning)所需的精细程度。</p>\n<h4>1. 转换现有预训练数据</h4>\n<p>您现有的大型预训练语料库可以是一个来源。</p>\n<ul>\n<li><strong>启发式转换</strong>：脚本可以识别类似问题的句子（例如，以问号结尾或以“Wh-”词开头的句子），并将其与后续句子或段落配对作为答案。这是一种近似方法，但可以产生大量合理的配对。</li>\n<li><strong>内容重构</strong>：文档的某些部分，如“操作指南”、常见问题解答或教程，通常具有固有的指令格式。这些可以通过程序解析并重新格式化。例如，教程中的一个步骤可以成为指令，该步骤的解释可以作为回应。</li>\n</ul>\n<h4>2. 借助大语言模型 (LLM)生成</h4>\n<p>更先进的大语言模型可以用来生成指令式数据。这类似于简化版的方法，如Self-Instruct。</p>\n<ul>\n<li><strong>基于种子的生成</strong>：从一小组多样化的种子指令开始。提示一个有能力的大语言模型执行：\n<ul>\n<li>生成精神相似但内容不同的新指令。</li>\n<li>为这些指令生成合理的回应（即使不总是完全符合事实或完整）。\n对于预训练，重点是指令类型的多样性（例如，“解释”、“列出”、“翻译”、“分类”、“总结”）以及它们涵盖的主题。生成的输出无需完美无瑕，因为模型主要学习的是指令-回应模式。</li>\n</ul>\n</li>\n<li><strong>基于大语言模型的生成示例提示</strong>：\n<ul>\n<li>生成指令的例子：\"生成一个关于计算机编程的简单问题。\"</li>\n<li>在给定指令和上下文 (context)的情况下生成回应的例子：\"根据指令‘总结这篇关于光合作用的文本’和以下文本：‘{photosynthesis_article_snippet}’，写一个简短的总结。\"</li>\n</ul>\n</li>\n</ul>\n<h4>3. 基于模板的生成</h4>\n<p>这种方法涉及创建预定义的指令模板，并用特定的实体、思想或数据填充它们。</p>\n<ul>\n<li><strong>模板</strong>：定义如下模式：\n<ul>\n<li>\"什么是{思想}？\"</li>\n<li>\"解释{项1}和{项2}之间的区别。\"</li>\n<li>\"提供{类别}的三个例子。\"</li>\n</ul>\n</li>\n<li><strong>填充物</strong>：从您的通用预训练语料库或其他结构化数据源（例如，知识库）中提取命名实体、名词或思想，以填充这些模板中的占位符。</li>\n<li><strong>输出生成</strong>：如果问题是事实性的（例如，“{国家}的首都是哪里？”），输出可以从知识库中获取，或者由另一个模型生成，甚至可以是简单的占位符，如果主要目标是教授指令格式。</li>\n</ul>\n<p>下图描绘了将合成指令式数据纳入预训练的一般流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-13910ae\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n    rawData [label=\"通用预训练数据\\n(例如，网络抓取、书籍)\", fillcolor=\"#a5d8ff\"];\n    instructionSeeds [label=\"种子指令\\n(可选，少量)\", fillcolor=\"#ffec99\"];\n    generationEngine [label=\"指令生成引擎\\n(大语言模型、模板、启发式方法)\", fillcolor=\"#b2f2bb\"];\n    syntheticInstructions [label=\"合成指令式数据\\n(指令，（可选）输出)\", fillcolor=\"#d0bfff\"];\n    combinedData [label=\"组合预训练语料库\", fillcolor=\"#ffd8a8\"];\n    llm [label=\"大型语言模型\", shape=cylinder, style=\"filled\", fillcolor=\"#ced4da\"];\n    pretrainedLLM [label=\"预训练大语言模型\\n(指令理解能力提升)\", shape=cylinder, style=\"filled\", fillcolor=\"#96f2d7\"];\n\n    rawData -> generationEngine [label=\"提供内容/主题\", color=\"#228be6\"];\n    instructionSeeds -> generationEngine [label=\"提供指引/示例\", color=\"#f59f00\"];\n    generationEngine -> syntheticInstructions [label=\"生成\", color=\"#37b24d\"];\n    rawData -> combinedData [label=\"大部分数据\", color=\"#228be6\"];\n    syntheticInstructions -> combinedData [label=\"小比例（例如，1-10%）\", color=\"#7048e8\"];\n    combinedData -> llm [label=\"在其上预训练\", color=\"#fd7e14\"];\n    llm -> pretrainedLLM [color=\"#0ca678\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-13910ae\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个流程图，描绘了通用预训练数据和可选种子指令如何输入到一个生成合成指令式数据的引擎。这种合成数据随后以小比例与通用数据混合，用于预训练大语言模型，以期增强其指令理解能力。</p>\n</blockquote>\n<h3>预训练 (pre-training)中的重要考量</h3>\n<p>将指令式数据融入预训练时，有几个因素值得关注：</p>\n<ul>\n<li><strong>比例</strong>：指令式数据与通用预训练数据的比率是一个重要的超参数 (parameter) (hyperparameter)。一种常见做法是将合成指令数据保持为总预训练语料库中相对较小的一部分，可能在1%到10%的范围内。过多可能过早地使模型专门化，或削弱其广泛知识的获取。过少可能没有明显影响。</li>\n<li><strong>质量对比数量</strong>：与微调 (fine-tuning)不同，微调中输出质量非常重要，而预训练可以更宽容。主要益处通常来自对指令<em>结构</em>的接触。虽然严重的S实性错误或有害内容应被过滤，但生成回应中的轻微不完美可能是可接受的，特别是如果目标是教模型识别并尝试任务。</li>\n<li><strong>指令多样性</strong>：力求多种指令类型。这包括问题、生成命令（例如，“写一个故事”）、提取（“找出提到的人物”）、分类（“这是正面的还是负面的？”）、总结、翻译、简单推理 (inference)等等。多样性有助于模型普遍理解指令。</li>\n<li><strong>指令复杂度</strong>：对于预训练，通常从更简单的指令开始会更有益处。模型正在学习<code>提示 -> 回应</code>的基本模式，其中提示表示一项任务。过于复杂或多轮指令通常更适合后续的微调阶段。</li>\n<li><strong>对泛化能力的影响</strong>：这种方法的一个动机是提高模型在未见任务上的零样本或少样本学习 (few-shot learning)能力。通过在预训练期间看到指令格式，模型可能在没有明确微调的情况下，更好地理解新指令。</li>\n</ul>\n<p>在预训练期间引入指令式数据并非要取代专门的微调，而是一种补充策略。它旨在打下更好的基础，使大语言模型 (LLM)在其后续发展周期中，更易于接受并适应特定任务的指令调优。预先接触过这些格式的模型，有望更有效地学习指令遵循行为，并可能在需要理解和执行指令的下游任务上取得更高的表现。</p>",
+  "slug": "instruction-data-pretraining",
+  "updates": [],
+  "references": [
+    {
+      "id": 16199,
+      "title": "Self-Instruct: Aligning Language Models with Self-Generated Instructions",
+      "author": "Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa Liu, Noah A. Smith, Daniel Khashabi, Hannaneh Hajishirzi",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL)",
+      "volume": "1",
+      "pages": "7095-7111",
+      "url": "https://arxiv.org/abs/2212.10560",
+      "doi": "10.48550/arXiv.2212.10560",
+      "note": "提出了一种利用大型语言模型生成自身指令遵循数据的方法，为创建合成指令风格示例提供了可扩展的途径。",
+      "order": 2,
+      "created_at": "2025-09-06T11:01:31.820009Z",
+      "updated_at": "2025-09-11T03:15:54.739724Z"
+    },
+    {
+      "id": 16200,
+      "title": "Textbooks Are All You Need",
+      "author": "Zui Chen, Lei Cao, Sam Madden",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2306.11696",
+      "volume": "",
+      "pages": "6",
+      "url": "https://arxiv.org/abs/2306.11696",
+      "doi": "10.48550/arXiv.2306.11696",
+      "note": "强调了高质量、精选和合成数据（包括由大型语言模型生成的指令风格数据）对于高效、有效的LLM预训练的重要性。",
+      "order": 3,
+      "created_at": "2025-09-06T11:01:31.822684Z",
+      "updated_at": "2025-09-11T03:15:55.884073Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7268,
+  "title": "获取和选择高质量数据集",
+  "meta_title": "LLM 微调的数据集获取",
+  "meta_description": "寻找和评估公共及私有数据集的方法，以实现您的特定微调目标。",
+  "content": "<p>“输入垃圾，输出垃圾”的原则在微调 (fine-tuning)中尤其适用。模型的学习能力直接受您提供的数据限制。微调工作流程中起始且可能最具份量的一步是找到并验证一个数据源，该数据源能精确反映您希望模型掌握的特定知识或行为。这个过程需要仔细评估潜在的数据集，无论它们是公开可用的还是来自内部私有来源。</p>\n<h3>公共数据源与私有数据源</h3>\n<p>寻找合适数据的途径将带您了解两大类主要来源：公共和私有。</p>\n<p><strong>公共数据集</strong>易于获取，通常是绝佳的起点。它们通常可以在研究资料库、数据共享平台和开源项目中找到。</p>\n<ul>\n<li><strong>Hugging Face Hub：</strong> Hub 是一个不可或缺的资源，托管着数千个可通过 <code>datasets</code> 库访问的数据集。您可以按任务（例如，文本生成、摘要）、语言和许可证进行筛选。像 <code>databricks/dolly-15k</code>（指令遵循）或 <code>samsum</code>（对话摘要）这样的数据集是流行的起始选择。</li>\n<li><strong>学术资料库：</strong> Papers with Code、arXiv 和大学托管的数据门户等平台是用于学术研究的高质量、精心整理数据集的宝库。这些数据集通常文档齐全并有基准。</li>\n<li><strong>政府和非营利组织数据：</strong> 许多政府机构（例如 data.gov）和非营利组织会发布大量文本数据，这些数据可以适用于法律或医疗应用等特定应用方向。</li>\n</ul>\n<p><strong>私有数据集</strong>是组织专有的。这通常是最有价值的数据，因为它对您的用例来说是独特的。示例包括：</p>\n<ul>\n<li>公司内部文档或知识库。</li>\n<li>客户支持聊天记录或支持工单。</li>\n<li>历史代码库及其文档。</li>\n<li>存档报告和分析。</li>\n</ul>\n<p>虽然私有数据具有独特的优势，但它通常需要更密集的清洗和结构化，因为它最初并非为机器学习 (machine learning)目的而创建。</p>\n<h3>数据集评估框架</h3>\n<p>一旦您发现潜在数据集，就必须严格按照多项标准对其进行评估。在此阶段选择不当会在稍后造成重大问题，任何超参数 (parameter) (hyperparameter)调整都无法弥补。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1lbjoi9\" \n              data-graph-definition='digraph G { rankdir=TB; graph [bgcolor=\"transparent\", fontname=\"Arial\"]; node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", color=\"#495057\", fillcolor=\"#e9ecef\"]; edge [color=\"#495057\"]; start [label=\"识别潜在\n数据集\", shape=ellipse, fillcolor=\"#a5d8ff\"]; relevance [label=\"数据是否与\n您的目标应用方向和任务相关？\"]; quality [label=\"数据质量是否高？\n（干净、一致、准确）\"]; license [label=\"许可证是否允许\n您的预期用途？\"]; size [label=\"数据集大小是否\n足以完成任务？\"]; select [label=\"选择数据集进行\n预处理\", shape=ellipse, fillcolor=\"#96f2d7\"]; reject [label=\"拒绝数据集\n或修正\", shape=ellipse, fillcolor=\"#ffc9c9\"]; start -> relevance; relevance -> quality [label=\"  是\"]; relevance -> reject [label=\"  否\"]; quality -> license [label=\"  是\"]; quality -> reject [label=\"  否\"]; license -> size [label=\"  是\"]; license -> reject [label=\"  否\"]; size -> select [label=\"  是\"]; size -> reject [label=\"  否\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1lbjoi9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个用于评估微调 (fine-tuning)候选数据集的决策框架。</p>\n</blockquote>\n<h4>1. 相关性和针对性</h4>\n<p>数据集必须与您的目标应用方向以及您希望模型执行的特定任务紧密对齐 (alignment)。</p>\n<ul>\n<li><strong>应用方向对齐：</strong> 如果您正在构建一个法律助手，电影剧本数据集是不相关的。您需要法律文件、案例摘要或法律问答。数据中的词汇、语法和实体必须与目标应用的一致。</li>\n<li><strong>任务对齐：</strong> 如果您希望模型成为聊天机器人，长篇论文数据集就不适合。您需要对话数据。如果目标是代码生成，您需要代码示例与自然语言描述配对。</li>\n</ul>\n<p>相关性不匹配是微调项目失败最常见的原因。模型将学习您呈现给它的内容，因此请呈现您希望它生成的内容。</p>\n<h4>2. 数据质量</h4>\n<p>高质量数据是干净、一致且准确的。低质量数据会引入噪声，这可能会混淆模型，导致性能不佳、幻觉 (hallucination)或加强不良行为。检查数据集时，请寻找：</p>\n<ul>\n<li><strong>噪声：</strong> 数据抓取中是否存在伪影，例如 HTML 标签（<code>&#x3C;p></code>、<code>&#x3C;div></code>）、Markdown 格式或样板文本（“点击此处订阅”）？</li>\n<li><strong>不一致性：</strong> 格式是否统一？对于问答数据集，所有示例的结构是否都是 <code>{\"question\": \"...\", \"answer\": \"...\"}</code>，还是格式不规则？不一致的标签或结构会降低学习效果。</li>\n<li><strong>准确性：</strong> 事实是否正确？信息是否最新？对于指令遵循数据集，输出是否实际遵循指令？向模型输入不准确的信息会使其生成不准确的内容。</li>\n</ul>\n<p>小而高质量的数据集几乎总是优于大量、有噪声的数据集。</p>\n<h4>3. 多样性</h4>\n<p>一个好的数据集应该包含多样化的示例，覆盖您的目标应用方向的广度。如果您正在微调一个模型来回答有关特定软件库的问题，您的数据应包含所有主要模块的示例，而不仅仅是最受欢迎的那个。缺乏多样性会导致模型过拟合 (overfitting)于它见过的少数模式，使其变得脆弱，无法泛化到略有不同的输入。</p>\n<p>例如，如果您的所有指令示例都以“请解释...”开头，模型可能会对以“什么是...”开头的提示感到困难。</p>\n<h4>4. 数据集大小</h4>\n<p>一个常见问题是：“我需要多少数据？”没有单一答案，所需数量取决于：</p>\n<ul>\n<li><strong>任务复杂度：</strong> 教模型一种新的说话风格所需的数据量少于教它一个像有机化学这样新的复杂学科。</li>\n<li><strong>基础模型的知识：</strong> 如果基础模型已经对相关内容有丰富的知识（例如，在特定类型的医学文本上微调通用模型），那么您所需的数据量会少于引入一个全新主题的情况。</li>\n</ul>\n<p>对于许多指令微调任务，仅需几百到几千个高质量示例即可获得明显的改善。对于在特定应用方向进行完全微调，您可能需要数万个或更多示例。从小规模、高质量的数据集开始，评估结果，如有必要再进行扩展。</p>\n<h4>5. 许可证和使用权限</h4>\n<p>这是一个非技术性但极为有价值的核查点，尤其对于商业应用而言。数据集是创作作品，并附带规定其使用方式的许可证。</p>\n<ul>\n<li><strong>宽松许可证：</strong> MIT、Apache 2.0 和 CC0 等许可证通常可安全用于商业用途。</li>\n<li><strong>版权共享（Copyleft）许可证：</strong> GPL 或 CC BY-SA 等许可证可能要求您以相同许可证共享您的衍生模型或数据。</li>\n<li><strong>非商业许可证：</strong> 许多学术数据集发布的许可证明确禁止商业用途。</li>\n</ul>\n<p>在投入时间预处理数据集之前，务必检查许可证。Hugging Face Hub 会方便地列出每个数据集的许可证，使此检查变得简单。未能遵守许可条款可能会产生严重的法律后果。</p>",
+  "slug": "sourcing-selecting-datasets",
+  "updates": [],
+  "references": [
+    {
+      "id": 19581,
+      "title": "Datasets: A Hugging Face library for accessing and sharing datasets",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/datasets/index",
+      "doi": "",
+      "note": "Hugging Face `datasets` 库的官方文档，该库提供了高效加载、处理和共享机器学习数据集（包括用于微调大型语言模型的数据集）的工具。",
+      "order": 1,
+      "created_at": "2025-09-06T13:12:05.635747Z",
+      "updated_at": "2025-09-08T03:51:11.931667Z"
+    },
+    {
+      "id": 19582,
+      "title": "A Survey on Data-Centric AI: From Data to Model",
+      "author": "Hongzhi Wang, Peiran Ma, Yanli Li, Donghui Lin, Mengyuan Zhang, Jiancheng Li",
+      "year": "2023",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Knowledge and Data Engineering",
+      "volume": "35",
+      "pages": "12245-12260",
+      "url": "https://ieeexplore.ieee.org/document/10271173",
+      "doi": "10.1109/TKDE.2023.3320623",
+      "note": "这篇综述全面回顾了以数据为中心的人工智能，包括数据质量、数据处理及其对模型性能影响的讨论，与数据集的选择和准备高度相关。",
+      "order": 2,
+      "created_at": "2025-09-06T13:12:05.847216Z",
+      "updated_at": "2025-09-08T03:51:38.145262Z"
+    },
+    {
+      "id": 19583,
+      "title": "About The Licenses",
+      "author": "Creative Commons",
+      "year": "2024",
+      "publisher": "Creative Commons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://creativecommons.org/licenses/",
+      "doi": "",
+      "note": "解释不同知识共享许可协议及其含义的官方指南，对于理解公共数据集在商业和研究环境中的使用权利至关重要。",
+      "order": 3,
+      "created_at": "2025-09-06T13:12:05.850515Z",
+      "updated_at": "2025-09-08T03:51:15.082758Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7479,
+  "title": "为推荐系统评估拆分数据",
+  "meta_title": "为推荐系统评估拆分数据",
+  "meta_description": "学习从用户-项目交互数据中创建训练集和测试集的正确技术。",
+  "content": "<p>在计算任何性能指标之前，必须先准备好数据。典型的监督机器学习 (machine learning)通常使用类似 <code>scikit-learn</code> 的 <code>train_test_split</code> 函数来随机打乱并划分数据集。然而，对于推荐系统来说，这种随机方法不仅效果不佳，还可能产生极具误导性的结果。</p>\n<h3>随机拆分的缺陷</h3>\n<p>推荐往往是一项具有时效性的任务。我们希望根据用户<em>过去</em>的行为来预测他们<em>未来</em>会喜欢什么。随机拆分违背了这一基本的时序逻辑。</p>\n<p>假设一个用户在一周内评价了三部电影：周一评价了电影 A，周三评价了电影 B，周五评价了电影 C。随机拆分可能会将电影 A 和电影 C 的评分放入训练集，而将电影 B 的评分放入测试集。这样，模型就会在预测目标事件发生之前和之后的数据上同时进行训练。这种来自未来的“数据泄露”给模型带来了在实际环境中并不存在的优势，导致性能指标虚高，产生一种错误的信心。</p>\n<h3>时序感知的拆分策略</h3>\n<p>为线下评估创建训练集和测试集最可靠的方法是模拟时间的流动。这种过程通常被称为时序拆分或基于时间的拆分，它确保你始终基于过去的事件来预测未来的事件。</p>\n<p>标准做法是执行按用户拆分：对于每个用户，将其最近的交互留作测试集，而将其较早的交互用于训练。这种“留一法”（leave-one-out）将最后一次交互用于测试，是一种常用且有效的方法。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1evvdji\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  splines=ortho;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fillcolor=\"#e9ecef\"];\n  edge [fontname=\"Helvetica\"];\n\n  subgraph cluster_userA {\n    label=\"用户 A 的交互\";\n    bgcolor=\"#f8f9fa\";\n    A1 [label=\"交互 1\\n(t=1)\"];\n    A2 [label=\"交互 2\\n(t=2)\"];\n    A3 [label=\"交互 3\\n(t=3)\"];\n    A_Test [label=\"交互 4\\n(t=4)\", fillcolor=\"#ffc9c9\"];\n    A1 -> A2 -> A3 -> A_Test [style=invis];\n  }\n\n  subgraph cluster_userB {\n    label=\"用户 B 的交互\";\n    bgcolor=\"#f8f9fa\";\n    B1 [label=\"交互 1\\n(t=5)\"];\n    B2 [label=\"交互 2\\n(t=6)\"];\n    B_Test [label=\"交互 3\\n(t=7)\", fillcolor=\"#ffc9c9\"];\n    B1 -> B2 -> B_Test [style=invis];\n  }\n\n  TrainSet [label=\"训练集\", shape=cylinder, fillcolor=\"#a5d8ff\", margin=0.2];\n  TestSet [label=\"测试集\", shape=cylinder, fillcolor=\"#ffc9c9\", margin=0.2];\n\n  {A1, A2, A3, B1, B2} -> TrainSet [color=\"#495057\"];\n  {A_Test, B_Test} -> TestSet [color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1evvdji\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>对于每个用户，交互按时间排序。最近的一次交互被放入测试集（红色），而之前的所有交互构成训练集（蓝色）。</p>\n</blockquote>\n<h3>在代码中实现按用户的时序拆分</h3>\n<p>让我们看看如何使用 <code>pandas</code> 来实现这一点。我们假设你的数据在一个 DataFrame 中，包含 <code>user_id</code>、<code>item_id</code> 和一个表示交互发生时间的 <code>timestamp</code> 列。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 假设 'ratings_df' 是一个包含 user_id, item_id, rating 和 timestamp 的 DataFrame\n# 示例 DataFrame：\ndata = {'user_id': [1, 1, 1, 2, 2, 3, 3, 3, 3, 4],\n        'item_id': [101, 102, 103, 101, 104, 102, 103, 105, 106, 107],\n        'rating': [5, 4, 3, 4, 5, 2, 5, 4, 3, 5],\n        'timestamp': [978300760, 978300761, 978300762, 978300763, 978300764,\n                      978300765, 978300766, 978300767, 978300768, 978300769]}\nratings_df = pd.DataFrame(data)\n\n# 确保 DataFrame 已正确排序\nratings_df = ratings_df.sort_values(by=['user_id', 'timestamp'])\n\n# 创建空列表来保存数据\ntrain_data = []\ntest_data = []\n\n# 按用户分组并拆分数据\nfor user_id, group in ratings_df.groupby('user_id'):\n    # 用户必须有超过一个评分才能进入测试集\n    if len(group) > 1:\n        # 最后一次交互进入测试集\n        test_data.append(group.iloc[-1:])\n        # 其他所有交互进入训练集\n        train_data.append(group.iloc[:-1])\n\n# 将 DataFrame 列表合并回单个 DataFrame\ntrain_df = pd.concat(train_data)\ntest_df = pd.concat(test_data)\n\nprint(\"训练集大小:\", len(train_df))\nprint(\"测试集大小:\", len(test_df))\n</code></pre>\n<p>在这段代码中，我们首先按用户然后再按时间对所有交互进行排序。<code>groupby('user_id')</code> 操作允许我们独立处理每个用户的时间线。对于交互次数超过一次的用户，我们使用 <code>iloc[-1:]</code> 选取他们的最后一次交互放入测试集，并使用 <code>iloc[:-1]</code> 选取之前的所有交互放入训练集。</p>\n<h3>数据拆分的注意事项</h3>\n<p>这种时序拆分方法很可靠，但还有一些细节需要处理。</p>\n<ul>\n<li>\n<p><strong>只有一次交互的用户：</strong> 上述代码正确处理了仅与一个项目发生过交互的用户。由于 <code>len(group)</code> 不会大于 1，在此实现中，他们的单次交互不会被添加到任何一个集合中。这通常是符合预期的，因为你无法对只有一个数据点的用户进行训练后再测试。他们存在于历史数据中，但被排除在评估集之外。</p>\n</li>\n<li>\n<p><strong>确保测试集的有效性：</strong> 你的目标是衡量模型向现有用户推荐项目的效果。这意味着 <code>test_df</code> 中的每个用户和每个项目最好也出现在 <code>train_df</code> 中。如果一个用户的<em>唯一</em>交互就是其最新的一次（按照我们的逻辑这不可能发生），或者如果一个项目第一次出现在测试集中，你的模型可能无法做出预测。这就是在评估中表现出来的冷启动问题。对于协同过滤等算法的标准评估，你可能需要增加一个步骤来过滤测试集，确保其中的用户和项目在训练期间都已出现过。</p>\n</li>\n</ul>\n<p>现在，你的数据已经正确划分为尊重过去的训练集和代表未来的测试集，可以开始训练模型并使用接下来的指标来观察其表现了。</p>",
+  "slug": "splitting-data-for-evaluation",
+  "updates": [],
+  "references": [
+    {
+      "id": 21053,
+      "title": "Recommender Systems Handbook",
+      "author": "Francesco Ricci, Lior Rokach, Bracha Shapira (Editors)",
+      "year": "2022",
+      "publisher": "Springer US",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-1-0716-2580-5",
+      "doi": "10.1007/978-1-0716-2580-5",
+      "note": "一本关于推荐系统的综合参考文献，包含对评估方法和适当数据分割策略重要性的详细讨论，特别是如何处理时间动态。",
+      "order": 1,
+      "created_at": "2025-09-13T07:07:40.856124Z",
+      "updated_at": "2025-09-13T07:38:00.998844Z"
+    },
+    {
+      "id": 21054,
+      "title": "On the Difficulty of Reproducing Recommendation System Evaluations",
+      "author": "Luca Cremonesi, Luigi Dacrema, and Francesco Ricci",
+      "year": "2019",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 13th ACM Conference on Recommender Systems (RecSys '19)",
+      "volume": "",
+      "pages": "18-26",
+      "url": "https://dl.acm.org/doi/10.1145/3298689.3346995",
+      "doi": "10.1145/3298689.3346995",
+      "note": "一篇重要论文，探讨了评估推荐系统时的挑战和常见陷阱，强调了需要稳健的实验设置，包括时间数据分割，以确保可靠的性能指标。",
+      "order": 2,
+      "created_at": "2025-09-13T07:07:40.861118Z",
+      "updated_at": "2025-09-13T07:37:57.843113Z"
+    },
+    {
+      "id": 21055,
+      "title": "Applied Predictive Modeling",
+      "author": "Max Kuhn and Kjell Johnson",
+      "year": "2013",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "315-316",
+      "url": "https://link.springer.com/book/10.1007/978-1-4614-6849-3",
+      "doi": "10.1007/978-1-4614-6849-3",
+      "note": "这本教科书提供了构建和评估预测模型的实践指导。第10章涵盖了数据分割策略，包括对时间序列数据的具体考量，这构成了推荐系统中时间分割的理论基础。",
+      "order": 3,
+      "created_at": "2025-09-13T07:07:40.863714Z",
+      "updated_at": "2025-09-13T07:37:55.805763Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

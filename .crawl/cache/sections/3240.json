@@ -1,0 +1,45 @@
+{
+  "id": 3240,
+  "title": "内容审核集成",
+  "meta_title": "将内容审核与LLM集成",
+  "meta_description": "将外部内容审核服务或模型集成到LLM应用中。",
+  "content": "<p>对齐 (alignment)技术旨在让LLM本身更安全，但这些方法很少是万无一失的。模型仍然可能生成不期望的、有害的或违反政策的内容，特别是在遇到新颖输入或对抗性提示时。集成专用的内容审核功能提供了必要的第二道防线，在LLM的输出到达最终用户或影响下游流程<em>之前</em>对其进行检查。此处详细介绍将此类审核机制纳入LLM应用架构的策略。</p>\n<p>在此文中，内容审核指分析文本（无论是用户输入还是LLM输出）以识别并过滤违反预设政策的内容的过程。这些政策通常针对以下类别：</p>\n<ul>\n<li>仇恨言论和骚扰</li>\n<li>露骨或血腥暴力</li>\n<li>性露骨内容</li>\n<li>宣传非法行为或危险活动</li>\n<li>个人身份信息 (PII)</li>\n<li>错误信息或虚假信息（尽管这更难可靠地自动化）</li>\n<li>垃圾邮件或不必要的商业内容</li>\n</ul>\n<p>有效集成审核有助于执行平台安全标准、遵守法规并维护用户信任。</p>\n<h3>LLM工作流程中的集成点</h3>\n<p>LLM应用中有两个主要的内容审核应用点：</p>\n<ol>\n<li>\n<p><strong>输入审核（预处理）：</strong> 在将用户的提示发送给LLM之前进行分析。</p>\n<ul>\n<li><strong>目的：</strong> 阻止用户故意尝试引出有害内容、检查漏洞（如第5章讨论的提示注入尝试），或提交滥用文本。</li>\n<li><strong>优势：</strong> 可以在LLM处理请求之前停止有害交互，可能节省计算资源并缩小攻击面。</li>\n<li><strong>缺点：</strong> 如果不仔细调整，可能会无意中阻止合法提示。在交互开始时增加延迟。可能无法捕获看似无害输入生成的有害<em>输出</em>。</li>\n</ul>\n</li>\n<li>\n<p><strong>输出审核（后处理）：</strong> 在向用户显示LLM生成的响应之前进行分析。</p>\n<ul>\n<li><strong>目的：</strong> 捕获LLM本身生成的任何有害、偏见或不适当的内容，即使已进行对齐 (alignment)工作。</li>\n<li><strong>优势：</strong> 直接处理用户将看到的内容。作为最终安全检查。通常被认为是LLM应用中最重要的审核点。</li>\n<li><strong>缺点：</strong> 在LLM生成响应<em>之后</em>增加延迟。需要处理您自己系统可能生成的有害内容。</li>\n</ul>\n</li>\n</ol>\n<p>一种常见且通常有效的策略是，将<strong>输出审核</strong>作为标准做法实施，并可选择性地添加<strong>输入审核</strong>，如果特定威胁模型（例如，用户滥用行为的高风险）需要。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1l7ug8j\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  User [label=\"用户输入\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  App [label=\"应用前端/后端\"];\n  InputMod [label=\"输入审核检查\", fillcolor=\"#ffec99\"];\n  LLM [label=\"大型语言模型\", fillcolor=\"#b2f2bb\"];\n  OutputMod [label=\"输出审核检查\", fillcolor=\"#ffec99\"];\n  FinalResp [label=\"最终响应\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  BlockedInput [label=\"已阻止/错误消息\", shape=cds, fillcolor=\"#ffc9c9\"];\n  BlockedOutput [label=\"已阻止/安全备用\", shape=cds, fillcolor=\"#ffc9c9\"];\n\n  User -> App [label=\" 发送提示 \"];\n  subgraph cluster_optional_input {\n    label = \"可选输入阶段\";\n    style=dashed; color=\"#adb5bd\";\n    App -> InputMod [label=\" 进行检查 \"];\n    InputMod -> LLM [label=\" 如果通过 \", color=\"#37b24d\"];\n    InputMod -> BlockedInput [label=\" 如果有害 \", color=\"#f03e3e\"];\n    BlockedInput -> User;\n  }\n  subgraph cluster_no_input_mod {\n      App -> LLM [label=\" 直接（如果没有输入审核） \"];\n  }\n\n  LLM -> OutputMod [label=\" 生成响应 \"];\n  OutputMod -> FinalResp [label=\" 如果通过 \", color=\"#37b24d\"];\n  OutputMod -> BlockedOutput [label=\" 如果有害 \", color=\"#f03e3e\"];\n  FinalResp -> User [label=\" 显示 \"];\n  BlockedOutput -> User [label=\" 显示备用 \"];\n\n  {rank=same; InputMod; LLM;}\n  {rank=same; BlockedInput; BlockedOutput;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1l7ug8j\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LLM应用中包含可选输入审核和标准输出审核的典型工作流程。任一阶段检测到有害内容都会导致阻止或提供安全备用响应。</p>\n</blockquote>\n<h3>选择审核工具</h3>\n<p>有几种类型的工具可以进行内容审核，每种都有其取舍：</p>\n<ul>\n<li>\n<p><strong>关键词/正则表达式过滤器：</strong> 最简单的方法涉及禁止词列表或匹配有害模式的正则表达式。</p>\n<ul>\n<li><em>优点：</em> 易于实现，计算成本低，逻辑透明。</li>\n<li><em>缺点：</em> 非常脆弱，容易被拼写错误、变体字或同义词绕过。误报率高（例如，在讨论历史时阻止“刺客”）和漏报率高（遗漏有害内容）。单独使用通常不足以保证安全。</li>\n</ul>\n</li>\n<li>\n<p><strong>机器学习 (machine learning)分类器：</strong> 这些模型经过专门训练，将文本分类到不同类别（例如，“仇恨言论”、“性露骨内容”、“安全”）。</p>\n<ul>\n<li><em>优点：</em> 比简单过滤器更能理解语境。对简单规避技术更具弹性。可以为分类提供置信度分数。</li>\n<li><em>缺点：</em> 需要大量带标签的训练数据。可能从训练数据中继承偏差。可能仍然容易受到复杂的对抗性攻击。计算成本可能比简单过滤器高。性能因具体任务和数据质量而异。</li>\n</ul>\n</li>\n<li>\n<p><strong>第三方审核API：</strong> 几家提供商通过API调用提供专门的内容审核服务（例如，OpenAI审核端点、Google Cloud自然语言API、AWS Comprehend，以及像Perspective API这样的专业厂商）。</p>\n<ul>\n<li><em>优点：</em> 现成的解决方案，通常使用大型、复杂的模型。集成相对容易。提供商管理模型更新和维护。</li>\n<li><em>缺点：</em> 每次API调用的成本。网络请求引入的延迟。数据隐私考量（向第三方发送用户/LLM文本）。对底层模型和分类逻辑的控制较少。潜在的厂商锁定。</li>\n</ul>\n</li>\n<li>\n<p><strong>混合方法：</strong> 结合多种方法通常会产生最佳结果。例如，使用快速关键词过滤器捕获明显违规，然后对更模糊的案例使用ML分类器或API调用。</p>\n</li>\n<li>\n<p><strong>人工干预（HITL）：</strong> 整合人工审核员来处理自动化系统不确定的标记 (token)内容、管理用户申诉，或提供反馈以改进自动化模型。HITL对于准确性和公平性很重要，但会增加显著的操作复杂性和成本。</p>\n</li>\n</ul>\n<p>对于需要可靠安全性的高级LLM应用，仅依赖关键词过滤器是不够的。通常建议使用<strong>ML分类器</strong>（无论是自托管还是通过第三方API）。</p>\n<h3>实施考量</h3>\n<p>集成审核需要仔细考量：</p>\n<ul>\n<li><strong>API调用：</strong> 当使用外部API或作为端点提供服务的内部ML模型时，请构建您的应用逻辑，将相关文本（输入提示或LLM输出）发送到审核服务并接收分类结果。这通常涉及标准的REST API调用。</li>\n<li><strong>延迟预算：</strong> 每次审核检查都会增加延迟。特别是输出审核，会延迟用户看到的响应。请考量您的应用可接受的延迟。策略包括：\n<ul>\n<li>优化审核模型/服务以提高速度。</li>\n<li>选择地理位置接近的API端点。</li>\n<li>对于不太重要的审核任务，可考虑使用异步检查（尽管实时阻止通常需要同步检查）。</li>\n</ul>\n</li>\n<li><strong>根据审核结果采取行动：</strong> 根据审核结果定义明确的行动：\n<ul>\n<li><strong>阻止：</strong> 如果以高置信度检测到有害内容，则完全丢弃输入/输出。</li>\n<li><strong>备用响应：</strong> 提供通用、安全的响应，而不是被阻止的内容（例如，“我无法回应此请求。请尝试其他内容。”）。</li>\n<li><strong>日志记录：</strong> 始终记录审核事件（输入/输出文本、分类结果、置信度分数、采取的行动），用于监控、分析和潜在的人工复核。</li>\n<li><strong>阈值调整：</strong> ML分类器通常返回置信度分数（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>p</mi><mo stretchy=\"false\">(</mo><mtext>有害</mtext><mi mathvariant=\"normal\">∣</mi><mtext>文本</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">p(\\text{有害}| \\text{文本})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">p</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">有害</span></span><span class=\"mord\">∣</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">文本</span></span><span class=\"mclose\">)</span></span></span></span>）。设定采取行动的适当阈值。较低的阈值会提高安全性，但可能导致更多误报（阻止安全内容）。较高的阈值会减少误报，但会增加遗漏有害内容的风险。这种取舍需要根据应用风险承受能力进行仔细平衡。</li>\n</ul>\n</li>\n<li><strong>错误处理：</strong> 如果审核服务失败或超时会怎样？实施弹性错误处理，例如默认采取安全状态（例如，阻止内容或提供特定错误消息）。</li>\n<li><strong>上下文 (context)管理：</strong> 标准审核工具通常单独分析文本。在会话应用中，语句的有害性可能取决于之前的对话回合。将相关的会话历史传递给审核工具（如果支持）可以提高准确性，但会增加复杂性和成本。</li>\n</ul>\n<p>内容审核的集成不是一项一次性任务。它需要持续监控其有效性（误报/漏报率），更新模型或规则以处理新的滥用方式，并随着平台标准的演变调整策略。它构成本章讨论的系统级安全架构的必要组成部分，补充对齐 (alignment)技术和防护措施，以创建更可靠的LLM应用。</p>",
+  "slug": "content-moderation-integration",
+  "updates": [],
+  "references": [
+    {
+      "id": 8613,
+      "title": "Moderation Guide",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cookbook.openai.com/examples/how_to_use_the_moderation_api",
+      "doi": "",
+      "note": "使用知名第三方内容审核API处理LLM输入和输出的实践指南。",
+      "order": 1,
+      "created_at": "2025-09-05T02:07:29.293237Z",
+      "updated_at": "2025-09-09T09:07:33.836684Z"
+    },
+    {
+      "id": 8614,
+      "title": "Red Teaming Language Models to Reduce Harms: Methods, Scaling Behaviors, and Lessons Learned",
+      "author": "Deep Ganguli, Liane Lovitt, Jackson Kernion, Amanda Askell, Yuntao Bai, Saurav Kadavath, Ben Mann, Ethan Perez, Nicholas Schiefer, Kamal Ndousse, Andy Jones, Sam Bowman, Anna Chen, Tom Conerly, Nova DasSarma, Dawn Drain, Nelson Elhage, Sheer El-Showk, Stanislav Fort, Zac Hatfield-Dodds, Tom Henighan, Danny Hernandez, Tristan Hume, Josh Jacobson, Scott Johnston, Shauna Kravec, Catherine Olsson, Sam Ringer, Eli Tran-Johnson, Dario Amodei, Tom Brown, Nicholas Joseph, Sam McCandlish, Chris Olah, Jared Kaplan, Jack Clark",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2209.07858",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2209.07858",
+      "doi": "10.48550/arXiv.2209.07858",
+      "note": "讨论识别和缓解大型语言模型中危害的方法，为内容审核系统作为辅助防御层提供背景。",
+      "order": 2,
+      "created_at": "2025-09-05T02:07:29.299640Z",
+      "updated_at": "2025-09-09T09:07:05.241339Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

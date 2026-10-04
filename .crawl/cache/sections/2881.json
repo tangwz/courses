@@ -1,0 +1,61 @@
+{
+  "id": 2881,
+  "title": "编写自定义训练循环",
+  "meta_title": "TensorFlow 自定义训练循环实现",
+  "meta_description": "通过使用 tf.GradientTape 编写您自己的训练循环，获得对训练过程的完全控制。",
+  "content": "<p>虽然 <code>model.fit()</code> 为大多数标准训练场景提供了便捷的抽象，但常常会出现需要对训练过程进行更精细控制的情况。实现自定义训练循环可以赋予您这种控制能力，允许进行非标准梯度更新、复杂的指标计算，或与Keras回调不易处理的外部系统集成。这里将详细说明如何使用TensorFlow的核心组件构建这些循环。</p>\n<h3>为何编写自定义训练循环？</h3>\n<p>当您需要时，可以选择自定义训练循环：</p>\n<ul>\n<li><strong>实现非标准训练算法：</strong> 例如，训练生成对抗网络 (GAN)（GANs）通常涉及使用不同损失函数 (loss function)，交替更新模型的不同部分（生成器和判别器）。</li>\n<li><strong>应用自定义梯度处理：</strong> 您可能需要裁剪梯度，根据梯度值应用自定义正则化 (regularization)，或在特定条件下仅更新模型的特定层。</li>\n<li><strong>获得指标更新和日志记录的细粒度控制：</strong> 尽管Keras回调提供了定制功能，但自定义循环在何时以及如何计算、汇总和记录指标方面提供了完全的自主权。</li>\n<li><strong>集成外部逻辑：</strong> 您可能需要与其他系统交互，或在训练迭代中执行复杂的状体管理。</li>\n<li><strong>理解底层机制：</strong> 从头开始构建训练循环有助于巩固您对TensorFlow和Keras如何执行优化的理解。</li>\n</ul>\n<h3>核心组件</h3>\n<p>自定义训练循环主要协调这些组件之间的交互：</p>\n<ol>\n<li><strong>模型：</strong> 您的 <code>tf.keras.Model</code> 实例（通过Sequential、函数式API或子类化创建）。</li>\n<li><strong>数据集：</strong> 一个 <code>tf.data.Dataset</code>，提供输入特征和目标标签的批次数据。</li>\n<li><strong>损失函数 (loss function)：</strong> 一个可调用函数（如 <code>tf.keras.losses.SparseCategoricalCrossentropy</code>），根据模型预测和真实标签计算损失值。</li>\n<li><strong>优化器：</strong> <code>tf.keras.optimizers.Optimizer</code> 的一个实例（例如 <code>tf.keras.optimizers.Adam</code>），负责将梯度应用于模型的可训练变量。</li>\n<li><strong><code>tf.GradientTape</code>：</strong> 自动微分的引擎。它会记录在其上下文 (context)内执行的操作，允许您计算目标（通常是损失）相对于源变量（通常是模型的可训练变量）的梯度。</li>\n<li><strong>指标：</strong> <code>tf.keras.metrics.Metric</code> 实例（例如 <code>tf.keras.metrics.Accuracy</code>），用于在训练和评估期间跟踪性能。</li>\n</ol>\n<h3>自定义训练循环的结构</h3>\n<p>其基本结构涉及嵌套循环：一个用于迭代周期（epochs）的外部循环，以及一个用于每个迭代周期内批次（batches）的内部循环。</p>\n<p>以下是内部（批次）循环中典型步骤的分解：</p>\n<ol>\n<li><strong>获取数据：</strong> 从数据集迭代器中获取下一批数据（<code>x_batch</code>，<code>y_batch</code>）。</li>\n<li><strong>开始记录：</strong> 打开 <code>tf.GradientTape</code> 上下文 (context)。TensorFlow将监控在此块内访问的涉及可训练 <code>tf.Variable</code> 对象的运算。\n<pre><code class=\"language-python\">with tf.GradientTape() as tape:\n    # 此处记录的操作\n</code></pre>\n</li>\n<li><strong>前向传播：</strong> 用输入批次调用模型以获取预测。如果您的模型包含 <code>Dropout</code> 或 <code>BatchNormalization</code> 等在训练和推断期间行为不同的层，请确保传递 <code>training=True</code>。\n<pre><code class=\"language-python\">y_pred = model(x_batch, training=True)\n</code></pre>\n</li>\n<li><strong>计算损失：</strong> 使用您选择的损失函数 (loss function)，计算模型预测和真实标签之间的损失。\n<pre><code class=\"language-python\">loss_value = loss_fn(y_batch, y_pred)\n# 如果损失函数涉及层添加的正则化项，\n# 您可能需要添加 model.losses\nloss_value += sum(model.losses)\n</code></pre>\n</li>\n<li><strong>计算梯度：</strong> 使用tape计算损失相对于模型的可训练变量的梯度。\n<pre><code class=\"language-python\">grads = tape.gradient(loss_value, model.trainable_variables)\n</code></pre>\n</li>\n<li><strong>应用梯度：</strong> 让优化器使用计算出的梯度更新模型的权重 (weight)。\n<pre><code class=\"language-python\">optimizer.apply_gradients(zip(grads, model.trainable_variables))\n</code></pre>\n</li>\n<li><strong>更新指标：</strong> 根据批次结果更新您所选指标的状态。\n<pre><code class=\"language-python\">train_accuracy_metric.update_state(y_batch, y_pred)\ntrain_loss_metric.update_state(loss_value)\n</code></pre>\n</li>\n</ol>\n<p>外部（迭代周期）循环处理诸如遍历数据集以完成一次完整传递、在每个迭代周期开始时重置指标、记录结果以及可能运行一个验证循环等任务。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sug9jv\" \n              data-graph-definition='digraph TrainingLoop {\n    rankdir=TB;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.1];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    Start [label=\"开始迭代周期循环\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    EndEpoch [label=\"结束迭代周期循环\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    StartBatch [label=\"开始批次循环\", shape=ellipse, style=filled, fillcolor=\"#b2f2bb\"];\n    EndBatch [label=\"结束批次循环\", shape=ellipse, style=filled, fillcolor=\"#b2f2bb\"];\n\n    ResetMetrics [label=\"重置指标\\n(例如，准确率，平均损失)\"];\n    GetData [label=\"获取下一批次\\n(x_batch, y_batch)\"];\n    OpenTape [label=\"打开 tf.GradientTape\"];\n    ForwardPass [label=\"前向传播：\\ny_pred = model(x_batch, training=True)\"];\n    CalcLoss [label=\"计算损失：\\nloss = loss_fn(y_batch, y_pred)\"];\n    CalcGrads [label=\"计算梯度：\\ngrads = tape.gradient(loss, vars)\"];\n    ApplyGrads [label=\"应用梯度：\\noptimizer.apply_gradients(...)\"];\n    UpdateMetrics [label=\"更新训练指标\\n(例如，acc.update_state(...))\"];\n    LogResults [label=\"记录迭代周期结果\"];\n    Validation [label=\"运行验证循环\\n(可选)\", style=dashed];\n\n    Start -> ResetMetrics [label=\"迭代周期开始\"];\n    ResetMetrics -> StartBatch;\n    StartBatch -> GetData [label=\"批次开始\"];\n    GetData -> OpenTape;\n    OpenTape -> ForwardPass;\n    ForwardPass -> CalcLoss;\n    CalcLoss -> CalcGrads;\n    CalcGrads -> ApplyGrads;\n    ApplyGrads -> UpdateMetrics;\n    UpdateMetrics -> EndBatch [label=\"批次结束\"];\n    EndBatch -> GetData [label=\"更多批次？\"];\n\n    EndBatch -> LogResults [label=\"迭代周期结束\"];\n    LogResults -> Validation;\n    Validation -> EndEpoch;\n    EndEpoch -> Start [label=\"更多迭代周期？\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sug9jv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个自定义训练循环的典型流程图，显示了迭代周期和批次迭代以及梯度计算和应用。</p>\n</blockquote>\n<h3>示例：一个基本的自定义训练循环</h3>\n<p>让我们用一个简单的例子来说明。假设您有一个编译好的Keras模型（<code>model</code>）、一个优化器（<code>optimizer</code>）、一个损失函数 (loss function)（<code>loss_fn</code>）、训练数据（<code>train_dataset</code>）以及指标（<code>train_loss_metric</code>，<code>train_accuracy_metric</code>）。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n\n# 假设 model, optimizer, loss_fn, train_dataset 已定义\n# 假设 train_loss_metric = tf.keras.metrics.Mean(name='train_loss')\n# 假设 train_accuracy_metric = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')\n\nepochs = 5\n\n# 定义用于提升性能的训练步骤函数\n@tf.function\ndef train_step(x_batch, y_batch):\n    with tf.GradientTape() as tape:\n        predictions = model(x_batch, training=True)\n        loss = loss_fn(y_batch, predictions)\n        # 如果存在正则化损失，请添加\n        loss += sum(model.losses)\n\n    gradients = tape.gradient(loss, model.trainable_variables)\n    optimizer.apply_gradients(zip(gradients, model.trainable_variables))\n\n    # 更新指标\n    train_loss_metric.update_state(loss)\n    train_accuracy_metric.update_state(y_batch, predictions)\n\n# 训练循环\nfor epoch in range(epochs):\n    print(f\"\\nStart of epoch {epoch+1}\")\n\n    # 在每个迭代周期开始时重置指标\n    train_loss_metric.reset_state()\n    train_accuracy_metric.reset_state()\n\n    # 遍历数据集的批次\n    for step, (x_batch_train, y_batch_train) in enumerate(train_dataset):\n        train_step(x_batch_train, y_batch_train)\n\n        # 每N个批次记录一次（可选）\n        if step % 100 == 0:\n             print(f\"Step {step}: Loss: {train_loss_metric.result():.4f}, Accuracy: {train_accuracy_metric.result():.4f}\")\n\n    # 在每个迭代周期结束时显示指标\n    train_loss = train_loss_metric.result()\n    train_acc = train_accuracy_metric.result()\n    print(f\"Epoch {epoch+1}: Training Loss: {train_loss:.4f}, Training Accuracy: {train_acc:.4f}\")\n\n    # 可选：在此处运行一个验证循环，结构类似\n    # 但无需 GradientTape 和梯度应用。请记住调用\n    # model(x_val_batch, training=False)。\n</code></pre>\n<h3>善用 <code>tf.function</code> 提升性能</h3>\n<p>请注意示例中应用于 <code>train_step</code> 函数的 <code>@tf.function</code> 装饰器。这对于性能很重要。TensorFlow会分析装饰函数内的Python代码，并生成一个优化的计算图。<code>train_step</code> 的后续调用会直接执行此图，从而在大多数操作中绕过较慢的Python解释器。</p>\n<p>使用 <code>@tf.function</code> 时，请注意以下几点：</p>\n<ul>\n<li><strong>追踪：</strong> TensorFlow会追踪函数（在Python中运行它），以便在首次使用一组唯一的输入签名（形状和数据类型）调用时构建图。在函数内部创建Python变量或执行带有副作用的操作可能导致意想不到的行为或频繁的重新追踪，从而降低性能提升。对于需要在图内跨调用保持和修改的状态，请使用 <code>tf.Variable</code>。</li>\n<li><strong>控制流：</strong> 如果条件或循环边界依赖于张量，请使用TensorFlow的控制流操作（<code>tf.cond</code>，<code>tf.while_loop</code>），而不是Python的 <code>if</code>/<code>for</code>/<code>while</code>，以确保它们是图的一部分。</li>\n</ul>\n<h3>处理训练与推断行为</h3>\n<p>许多层，尤其是 <code>tf.keras.layers.BatchNormalization</code> 和 <code>tf.keras.layers.Dropout</code>，在训练和推断期间行为不同。批归一化 (normalization)在训练期间更新其移动均值和方差，但在推断期间使用它们进行归一化。Dropout在训练期间随机将激活设为零，但在推断期间不活跃。</p>\n<p>在调用模型时正确传入 <code>training</code> 参数 (parameter)非常重要：</p>\n<ul>\n<li><code>model(inputs, training=True)</code>：在训练步骤期间的 <code>GradientTape</code> 上下文 (context)内。</li>\n<li><code>model(inputs, training=False)</code>：在执行验证或训练后进行预测时。</li>\n</ul>\n<p>忘记这一点可能导致结果不正确或模型无法正常训练。</p>\n<h3>自定义循环 对比 <code>model.fit()</code></h3>\n<p>在 <code>model.fit()</code> 和自定义循环之间进行选择涉及便利性与控制权之间的权衡：</p>\n<ul>\n<li><strong>在以下情况下使用 <code>model.fit()</code>：</strong>\n<ul>\n<li>您的训练过程是标准的（前向传播、损失、梯度、优化器步骤）。</li>\n<li>您希望快速实现，并受益于Keras回调、简易的分布式策略集成和进度记录等内置功能。</li>\n<li>您的定制需求可以通过自定义层、损失、指标或标准回调来满足。</li>\n</ul>\n</li>\n<li><strong>在以下情况下使用自定义训练循环：</strong>\n<ul>\n<li>您需要完全控制梯度计算和应用过程（例如，梯度裁剪、GANs）。</li>\n<li>您需要实现复杂、非标准的更新规则或指标计算。</li>\n<li>您正在进行需要修改核心训练算法的研究。</li>\n<li>您希望更好地理解训练机制。</li>\n</ul>\n</li>\n</ul>\n<p>掌握自定义训练循环有助于您实现几乎任何训练算法，突破标准工作流，从而精确地定制TensorFlow以满足您的高级建模要求。</p>",
+  "slug": "custom-training-loops",
+  "updates": [],
+  "references": [
+    {
+      "id": 6958,
+      "title": "Automatic differentiation with tf.GradientTape",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/autodiff",
+      "doi": "",
+      "note": "此官方文档解释了`tf.GradientTape`用于自动微分的原理和用法，这是在任何自定义训练循环中计算梯度的基础机制。",
+      "order": 2,
+      "created_at": "2025-09-05T01:30:02.416940Z",
+      "updated_at": "2025-09-09T02:28:08.261141Z"
+    },
+    {
+      "id": 6959,
+      "title": "Better performance with tf.function",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/function",
+      "doi": "",
+      "note": "本指南提供了关于使用`@tf.function`优化TensorFlow代码以提升性能的见解，这是实现自定义训练步骤时的一个重要考量。",
+      "order": 3,
+      "created_at": "2025-09-05T01:30:02.424924Z",
+      "updated_at": "2025-09-09T02:28:17.774777Z"
+    },
+    {
+      "id": 6960,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本涵盖TensorFlow和Keras的综合性书籍，提供了实际示例和自定义组件的详细解释，包括与构建自定义训练循环相关的方面（第4版）。",
+      "order": 4,
+      "created_at": "2025-09-05T01:30:02.431262Z",
+      "updated_at": "2025-09-09T02:28:19.195176Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

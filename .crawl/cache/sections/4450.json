@@ -1,0 +1,61 @@
+{
+  "id": 4450,
+  "title": "思维树（ToT）应对复杂问题",
+  "meta_title": "思维树（ToT）应对问题",
+  "meta_description": "了解 ToT 架构，用于推理中的审慎搜索和回溯。",
+  "content": "<p>尽管像 ReAct 这样的框架擅长以序列方式交织推理 (inference)和行动，但当面对需要考虑多种可能性或大量回溯的问题时，它们有时会显得不足。复杂的任务通常涉及搜索空间，其中最佳路径并非显而易见，单一的推理路径可能导致死胡同。在这种情况下，思维树（ToT）架构提供了一个有力的替代方案。</p>\n<p>ToT 明确地将问题解决过程建模为在推理步骤（或称“思维”）树中的查找。ToT 不会在每一步都只依赖于单一的思维或行动，而是允许代理生成多个潜在思维，评估它们的价值，并有策略地检查推理树中最可行的分支。这种方法与人类解决问题的方式相似，我们在进行下一步之前通常会考虑多种选择。</p>\n<h3>思维树的核心机制</h3>\n<p>ToT 过程可以分解为在树状结构中管理的几个不同操作，该结构通常表示为图 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>G</mi><mo>=</mo><mo stretchy=\"false\">(</mo><mi>V</mi><mo separator=\"true\">,</mo><mi>E</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">G=(V, E)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">G</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0576em;\">E</span><span class=\"mclose\">)</span></span></span></span>，其中节点 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>V</mi></mrow><annotation encoding=\"application/x-tex\">V</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span></span></span></span> 是状态（表示部分解决方案或中间思维），边 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>E</mi></mrow><annotation encoding=\"application/x-tex\">E</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0576em;\">E</span></span></span></span> 表示基于生成的思维在状态之间的转换。</p>\n<ol>\n<li>\n<p><strong>思维生成：</strong> 在树中的任何给定节点（状态），会提示大型语言模型（LLM）生成多个（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span>）不同的潜在下一步或延续。这些“思维”代表了从当前状态处理问题的不同方式。例如，如果解决一个数学问题，不同的思维可能对应于应用不同的定理或代数运算。提示可能明确要求多种多样的延续。</p>\n</li>\n<li>\n<p><strong>状态评估：</strong> 每个生成的思维都会引向一个新的潜在状态。ToT 的一个重要组成部分是评估这些状态质量或前景的能力。这种评估引导搜索过程。评估可以通过以下方式进行：</p>\n<ul>\n<li><strong>LLM 自我评估：</strong> 提示 LLM 分配一个分数（例如，1-10分制）或对状态进行分类（例如，“有前景”、“可能死胡同”、“已完成”）。这需要精心设计的评估提示。</li>\n<li><strong>启发式方法：</strong> 设计针对具体问题的启发式方法，根据诸如朝着目标前进的程度、约束满足情况或估计的剩余工作量等标准来评估状态。</li>\n<li><strong>外部反馈：</strong> 如果可能，使用外部工具或模拟器来验证状态（例如，运行生成的代码，检查知识库）。</li>\n</ul>\n</li>\n<li>\n<p><strong>搜索算法：</strong> 有了生成的思维和评估过的状态，搜索算法会查看这棵树。常见的选择包括：</p>\n<ul>\n<li><strong>广度优先搜索（BFS）：</strong> 逐层搜索树。它系统性强，但如果分支因子（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span>）较大，计算成本可能会很高。</li>\n<li><strong>深度优先搜索（DFS）：</strong> 在回溯之前，会深入搜索一个分支。如果某个特定路径存在解决方案，它可以更快地找到，但可能会陷入次优分支。</li>\n<li><strong>集束搜索（Beam Search）：</strong> 一种启发式搜索，它在每个层级只保留前 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span> 个最有前景的状态，其余的则进行剪枝。这平衡了搜索广度与计算成本。</li>\n<li><strong>A* 搜索：</strong> 利用启发式估计来优先查找看起来更接近目标的节点。需要一个明确的成本函数和启发式方法。</li>\n</ul>\n</li>\n</ol>\n<p>搜索会持续进行，直到达到目标状态，资源（如计算预算或最大深度）耗尽，或没有有前景的分支剩余。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-h5m4rv\" \n              data-graph-definition='graph G {\n  layout=dot;\n  rankdir=TB;\n  node [shape=ellipse, style=filled, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  // 节点（思维/状态）\n  Root [label=\"初始问题\", fillcolor=\"#a5d8ff\"];\n  T1A [label=\"思维 1A\\n(评估: 0.8)\", fillcolor=\"#b2f2bb\"];\n  T1B [label=\"思维 1B\\n(评估: 0.5)\", fillcolor=\"#ffec99\"];\n  T1C [label=\"思维 1C\\n(评估: 0.2, 已剪枝)\", fillcolor=\"#ffc9c9\", shape=box]; // 已剪枝\n\n  T2A1 [label=\"思维 2A.1\\n(评估: 0.9)\", fillcolor=\"#b2f2bb\"];\n  T2A2 [label=\"思维 2A.2\\n(评估: 0.7)\", fillcolor=\"#c0eb75\"];\n\n  T2B1 [label=\"思维 2B.1\\n(评估: 0.6)\", fillcolor=\"#ffe066\"];\n\n  Goal [label=\"找到解决方案\", shape=doubleoctagon, fillcolor=\"#96f2d7\"];\n\n  // 边（转换）\n  Root -- T1A;\n  Root -- T1B;\n  Root -- T1C;\n\n  T1A -- T2A1;\n  T1A -- T2A2;\n\n  T1B -- T2B1;\n\n  T2A1 -- Goal;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-h5m4rv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>思维树查找过程的简化表示。节点代表从思维派生出的状态，颜色表示评估分数（绿色=高，黄色=中，红色=低/已剪枝），搜索会朝着目标状态推进。</p>\n</blockquote>\n<h3>优点与应用场景</h3>\n<p>ToT 显著增强了代理应对以下类型问题的能力：</p>\n<ul>\n<li><strong>需要进行查找：</strong> 具有广泛搜索空间或需要创意解决方案的问题（例如，头脑风暴、数学发现、像下棋这样的复杂规划）。</li>\n<li><strong>自我修正有益：</strong> 评估步骤使得代理能够辨识前景不佳的路径并回溯，避免了线性推理 (inference)中固有的承诺错误。</li>\n<li><strong>审慎思考能改善结果：</strong> 考虑多个观点或中间解决方案会带来更好最终结果的任务。</li>\n</ul>\n<p>与 ReAct 的线性思维-行动循环相比，ToT 允许在提交行动或结束推理步骤<em>之前</em>进行并行查找和明确的替代方案比较。它通过将 LLM 生成多样文本的固有能力构建为对可能推理链空间进行的搜索问题，从而提供了一种结构化的管理方式。</p>\n<h3>专家实践者实施时的考量</h3>\n<p>有效实施 ToT 需要仔细考虑几个方面：</p>\n<ul>\n<li><strong>提示设计：</strong> 制作有效的提示来生成多样化的思维（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 个选项）并准确评估状态质量并非易事。提示需要清晰定义每一步的任务（生成 vs. 评估）以及所需的输出格式。</li>\n<li><strong>计算开销：</strong> 与线性方法相比，在每一步生成和评估多个思维会大幅增加 LLM 调用次数。这会影响延迟和成本。像集束搜索（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>b</mi><mo>&#x3C;</mo><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">b &#x3C; k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7335em;vertical-align:-0.0391em;\"></span><span class=\"mord mathnormal\">b</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">&#x3C;</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span>）或基于评估分数进行激进剪枝的策略对于应对这种复杂性是必不可少的。</li>\n<li><strong>状态表示与管理：</strong> 有效存储树结构、节点状态（可以是冗长的文本）、评估分数和已访问路径很重要。根据规模，这可能涉及内存数据结构或外部存储。</li>\n<li><strong>启发式方法开发：</strong> 启发式搜索策略（集束搜索、A*）的成功很大程度上取决于状态评估函数的质量。开发针对问题领域量身定制的、有效且计算成本低的启发式方法通常是一项重要的工程难题。</li>\n<li><strong>停止标准：</strong> 定义何时停止搜索非常重要。这可能是达到最大深度或节点数量，找到满足特定条件的解决方案，或耗尽计算预算。</li>\n</ul>\n<p>思维树代表了 LLM 代理在实现更审慎推理 (inference)方面迈出的一大步。通过将中间推理步骤的生成和评估构建为搜索过程，ToT 使代理能够处理超出简单线性架构的复杂问题。尽管计算上更为密集，但它查找、评估和回溯的能力使其成为需要精密问题解决能力的任务的宝贵工具。</p>",
+  "slug": "tree-of-thoughts-complex-solving",
+  "updates": [],
+  "references": [
+    {
+      "id": 8236,
+      "title": "Tree of Thoughts: Deliberate Problem Solving with Large Language Models",
+      "author": "Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, Karthik Narasimhan",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.10601",
+      "doi": "10.48550/arXiv.2305.10601",
+      "note": "介绍Tree of Thoughts框架、其机制和实证结果的原始论文。",
+      "order": 1,
+      "created_at": "2025-09-05T01:52:58.389716Z",
+      "updated_at": "2025-09-10T08:03:55.237367Z"
+    },
+    {
+      "id": 8238,
+      "title": "Self-Consistency Improves Chain of Thought Reasoning",
+      "author": "Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed Chi, Sharan Narang, Aakanksha Chowdhery, Denny Zhou",
+      "year": "2023",
+      "publisher": "",
+      "journal": "ICLR 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2203.11171",
+      "doi": "10.48550/arXiv.2203.11171",
+      "note": "介绍自洽性，一种通过生成多条推理路径并进行多数投票来改进LLM推理的方法。与多路径推理相关。",
+      "order": 3,
+      "created_at": "2025-09-05T01:52:58.427950Z",
+      "updated_at": "2025-09-10T08:03:55.699725Z"
+    },
+    {
+      "id": 8239,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "描述ReAct，一个顺序推理和行动框架，与ToT的基于树的探索形成对比。",
+      "order": 4,
+      "created_at": "2025-09-05T01:52:58.431989Z",
+      "updated_at": "2025-09-10T08:03:55.003945Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5397,
+  "title": "实操：修改带注意力机制的 U-Net",
+  "meta_title": "实践：为扩散 U-Net 添加注意力",
+  "meta_description": "在一个扩散模型的基准 U-Net 架构中实现注意力机制。",
+  "content": "<p>此处，一个标准的 U-Net 块被修改为包含注意力机制 (attention mechanism)。加入注意力，特别是自注意力 (self-attention)，能让模型捕捉图像特征中的长距离关联，这对于生成有逻辑的结构很有益处。重点在于把一个空间自注意力层加到扩散模型中 U-Net 架构常见的残差块里。</p>\n<p>我们假设你对 PyTorch 和 U-Net 的基本组成部分（卷积层、归一化 (normalization)、激活函数 (activation function)、残差连接）有一定了解。我们的目标是增强一个已有的块结构。</p>\n<h3>前提条件：一个基本的残差块</h3>\n<p>我们从 U-Net 中常用的典型残差块开始。它可能看起来像这样（简化版）：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass ResidualBlock(nn.Module):\n    def __init__(self, in_channels, out_channels, time_emb_dim=None):\n        super().__init__()\n        self.norm1 = nn.GroupNorm(32, in_channels)\n        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)\n\n        # 可选的时间嵌入投影\n        self.time_mlp = None\n        if time_emb_dim is not None:\n            self.time_mlp = nn.Sequential(\n                nn.SiLU(),\n                nn.Linear(time_emb_dim, out_channels * 2) # 用于缩放和偏移\n            )\n\n        self.norm2 = nn.GroupNorm(32, out_channels)\n        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)\n        self.activation = nn.SiLU() # Swish 激活函数很常用\n\n        # 跳跃连接匹配\n        if in_channels != out_channels:\n            self.skip_connection = nn.Conv2d(in_channels, out_channels, kernel_size=1)\n        else:\n            self.skip_connection = nn.Identity()\n\n    def forward(self, x, t_emb=None):\n        residual = x\n\n        h = self.norm1(x)\n        h = self.activation(h)\n        h = self.conv1(h)\n\n        if self.time_mlp is not None and t_emb is not None:\n            time_encoding = self.time_mlp(t_emb)\n            time_encoding = time_encoding.view(h.shape[0], h.shape[1] * 2, 1, 1)\n            scale, shift = torch.chunk(time_encoding, 2, dim=1)\n            h = self.norm2(h) * (1 + scale) + shift # 调节特征\n        else:\n             h = self.norm2(h) # 如果没有时间嵌入调节，则应用归一化\n\n        h = self.activation(h)\n        h = self.conv2(h)\n\n        return h + self.skip_connection(residual)\n\n</code></pre>\n<p>这个 <code>ResidualBlock</code> 包含了组归一化 (normalization)、卷积层、一个激活函数 (activation function) (SiLU)，并处理残差连接，以及可选的时间嵌入 (embedding)调节。</p>\n<h3>实现一个多头自注意力 (self-attention)块</h3>\n<p>现在，我们来定义一个适用于图像特征的自注意力块。由于标准多头自注意力 (MHSA) 作用于序列，我们需要将 2D 空间特征图重塑为序列。</p>\n<pre><code class=\"language-python\">import math\n\nclass AttentionBlock(nn.Module):\n    def __init__(self, channels, num_heads=8):\n        super().__init__()\n        assert channels % num_heads == 0, f\"Channels ({channels}) must be divisible by num_heads ({num_heads})\"\n        self.num_heads = num_heads\n        self.head_dim = channels // num_heads\n        self.scale = 1 / math.sqrt(self.head_dim)\n\n        self.norm = nn.GroupNorm(32, channels)\n        # 查询、键、值投影\n        self.to_qkv = nn.Conv2d(channels, channels * 3, kernel_size=1)\n        # 输出投影\n        self.to_out = nn.Conv2d(channels, channels, kernel_size=1)\n\n    def forward(self, x):\n        b, c, h, w = x.shape\n        residual = x\n\n        qkv = self.to_qkv(self.norm(x))\n        # 重塑以进行注意力计算：(b, c, h, w) -> (b, c, h*w) -> (b, num_heads, head_dim, h*w) -> (b*num_heads, head_dim, h*w)\n        q, k, v = qkv.chunk(3, dim=1)\n\n        q = q.reshape(b * self.num_heads, self.head_dim, h * w)\n        k = k.reshape(b * self.num_heads, self.head_dim, h * w)\n        v = v.reshape(b * self.num_heads, self.head_dim, h * w)\n\n        # 带缩放的点积注意力\n        # (b*num_heads, head_dim, h*w) @ (b*num_heads, h*w, head_dim) -> (b*num_heads, h*w, h*w)\n        attention_scores = torch.bmm(q.transpose(1, 2), k) * self.scale\n        attention_probs = F.softmax(attention_scores, dim=-1)\n\n        # (b*num_heads, h*w, h*w) @ (b*num_heads, head_dim, h*w)' -> (b*num_heads, h*w, head_dim)\n        out = torch.bmm(attention_probs, v.transpose(1, 2))\n\n        # 重塑回原形：(b*num_heads, h*w, head_dim) -> (b, num_heads, h*w, head_dim) -> (b, c, h, w)\n        out = out.transpose(1, 2).reshape(b, c, h, w)\n\n        out = self.to_out(out)\n\n        return out + residual # 添加残差连接\n</code></pre>\n<p><code>AttentionBlock</code> 中的要点：</p>\n<ol>\n<li>我们在注意力计算前使用 <code>GroupNorm</code>，这是常见做法。</li>\n<li><code>to_qkv</code> 使用 1x1 卷积将输入投影为查询、键和值。</li>\n<li>空间维度 <code>(h, w)</code> 被展平为序列长度 <code>h*w</code>。</li>\n<li>进行标准带缩放的点积注意力计算。</li>\n<li>输出被重塑回 <code>(b, c, h, w)</code>。</li>\n<li>最后的 1x1 卷积将特征投影回。</li>\n<li>添加了残差连接。</li>\n</ol>\n<h3>将注意力整合到 U-Net 中</h3>\n<p>注意力块通常插入在残差块之后，尤其是在较低空间分辨率（U-Net 更深层）处，因为这些地方的特征图较小（例如 16x16 或 8x8），计算成本也更易于管理。</p>\n<p>以下是你可能修改 U-Net 结构的方式，特别是在编码器或解码器循环内：</p>\n<pre><code class=\"language-python\"># U-Net 编码器循环中的代码片段示例\n\n# ...之前的层...\nx = ResidualBlock(in_channels, out_channels, time_emb_dim)(x, t_emb)\n\n# 如果维度合适（例如，较低分辨率），则添加注意力块\nif x.shape[-1] &#x3C;= 16: # 在 16x16 或更低分辨率时应用注意力\n    x = AttentionBlock(out_channels, num_heads=8)(x)\n\n# ...可能还有更多残差块或池化...\n</code></pre>\n<p>类似地，在解码器中：</p>\n<pre><code class=\"language-python\"># U-Net 解码器循环中的代码片段示例\n\n# ...上采样和连接...\nx = ResidualBlock(in_channels, out_channels, time_emb_dim)(x, t_emb)\n\n# 添加与编码器一致的注意力块\nif x.shape[-1] &#x3C;= 16:\n    x = AttentionBlock(out_channels, num_heads=8)(x)\n\n# ...更多层...\n</code></pre>\n<p>下图展示了注意力块可能在 U-Net 层的一系列操作中放置的位置。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1cblph3\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    Input [label=\"输入特征 (x)\"];\n    ResBlock [label=\"残差块\", fillcolor=\"#a5d8ff\"];\n    AttnBlock [label=\"注意力块\", fillcolor=\"#ffec99\"];\n    Output [label=\"输出特征\"];\n\n    Input -> ResBlock;\n    ResBlock -> AttnBlock [label=\"若分辨率低\"];\n    AttnBlock -> Output;\n    ResBlock -> Output [label=\"若分辨率高\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1cblph3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图示了特征流经标准残差块，在为该层生成最终输出之前，可能紧随其后的是一个注意力块。</p>\n</blockquote>\n<h3>试验和考量</h3>\n<p>现在你有了这些构建模块，请思考以下几点：</p>\n<ol>\n<li><strong>放置位置：</strong> 尝试将注意力块放置在不同的分辨率位置。太早添加（高分辨率）可能导致高昂的计算成本。仅在瓶颈处添加可能限制其效果。常见的选择是在较低分辨率层中的每个残差块之后添加它们。</li>\n<li><strong>头数：</strong> <code>num_heads</code> 参数 (parameter)控制注意力机制 (attention mechanism)的细致程度。更多的头能够关注不同的特征子空间，但会略微增加计算量。诸如 4、8 或 16 这样的值很常见。确保通道维度可以被 <code>num_heads</code> 整除。</li>\n<li><strong>交叉注意力：</strong> 对于条件模型（例如，文本到图像），你将实现一个 <code>CrossAttentionBlock</code>，作为自注意力 (self-attention)的一种替代或补充。键和值输入将来自条件上下文 (context)（例如，投影的文本嵌入 (embedding)），而查询将来自图像特征 <code>x</code>。这通常与自注意力放置在类似的位置。</li>\n<li><strong>计算成本：</strong> 注意力机制，特别是自注意力，其计算成本与序列长度（这里是 <code>h*w</code>）呈二次方关系。这就是为什么它们通常被限制在较低分辨率的原因。</li>\n<li><strong>训练稳定性：</strong> 确保在注意力块周围使用适当的归一化 (normalization)（如这里使用的 <code>GroupNorm</code>）和残差连接，以保持训练的稳定性。</li>\n</ol>\n<p>通过整合注意力机制，你的 U-Net 能更好地建模复杂的空间关系，并可能更有效地整合条件信息，从而提升你的扩散模型的能力。记得仔细测试这些修改，同时监测样本质量和训练性能。</p>",
+  "slug": "practice-unet-attention-modification",
+  "updates": [],
+  "references": [
+    {
+      "id": 14623,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "30",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍了Transformer架构和多头自注意力机制，这对于本节中实现的注意力模块至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T08:55:50.466025Z",
+      "updated_at": "2025-09-10T02:19:28.184318Z"
+    },
+    {
+      "id": 14624,
+      "title": "Denoising Diffusion Probabilistic Models",
+      "author": "Jonathan Ho, Ajay Jain, Pieter Abbeel",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2006.11239",
+      "doi": "10.48550/arXiv.2006.11239",
+      "note": "提出了去噪扩散概率模型及其基于U-Net的架构，其中包含了注意力机制，这对于扩散模型中的时间嵌入和U-Net设计尤为重要。",
+      "order": 2,
+      "created_at": "2025-09-05T08:55:50.472902Z",
+      "updated_at": "2025-09-10T02:19:34.920604Z"
+    },
+    {
+      "id": 14625,
+      "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "author": "Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer",
+      "year": "2022",
+      "publisher": "",
+      "journal": "CVPR 2022",
+      "volume": "",
+      "pages": "10684-10695",
+      "url": "https://arxiv.org/abs/2112.10752",
+      "doi": "10.48550/arXiv.2112.10752",
+      "note": "介绍了潜在扩散模型，展示了一种高级的U-Net架构，该架构广泛使用自注意力和交叉注意力进行高分辨率条件图像生成，为生成式AI中带注意力的U-Net提供了实践背景。",
+      "order": 3,
+      "created_at": "2025-09-05T08:55:50.476044Z",
+      "updated_at": "2025-09-10T02:19:26.463547Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

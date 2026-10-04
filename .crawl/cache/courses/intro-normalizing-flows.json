@@ -1,0 +1,367 @@
+{
+  "id": 262,
+  "title": "归一化流简介",
+  "meta_title": "生成式人工智能中的归一化流",
+  "meta_description": "学习使用 PyTorch 构建归一化流。掌握可逆变换、变量替换以及用于密度估计的自回归模型。",
+  "description": "<p>本课程讲解生成模型中归一化 (normalization)流的运行机制。你将学习如何通过可逆变换，将简单的基础分布转化为复杂的概率分布。课程内容涵盖变量替换定理的数学原理、雅可比行列式，以及 RealNVP 和掩码自回归 (autoregressive)流等标准流模型的结构。通过 PyTorch 代码实现，你将构建并训练流模型，用于生成数据及进行精确的密度估计。</p>",
+  "short_description": "使用 PyTorch 构建并训练可逆神经网络，实现精确密度估计与数据生成。",
+  "excerpt": "学习使用 PyTorch 构建与训练归一化流模型，进行精确密度估计和生成式建模。",
+  "prerequisites": "微积分、概率论及 Python 基础",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "数学基础",
+      "description": "应用变量替换定理和雅可比行列式计算精确的概率密度。"
+    },
+    {
+      "topic": "流模型架构",
+      "description": "动手实现耦合层、掩码自回归流和平面流等模型结构。"
+    },
+    {
+      "topic": "密度估计",
+      "description": "使用精确极大似然估计方法训练流模型。"
+    },
+    {
+      "topic": "生成式建模",
+      "description": "利用逆向过程从学习到的复杂概率分布中高效采样。"
+    }
+  ],
+  "duration": 8,
+  "slug": "intro-normalizing-flows",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2026-02-21T03:26:20.638294Z",
+  "updated_at": "2026-10-02T06:00:44.059604Z",
+  "chapters": [
+    {
+      "id": 1448,
+      "title": "可逆变换的数学原理",
+      "meta_title": "标准化流的数学基础",
+      "meta_description": "学习标准化流的数学原理，包括随机变量、变量代换定理以及雅可比行列式。",
+      "number": 1,
+      "slug": "mathematics-invertible-transformations",
+      "content": "标准化流基于特定的数学前提运行。它们利用一系列可逆函数，将简单的已知概率分布映射到高度复杂的目标分布。为了在 PyTorch 中构建并训练这些模型，我们首先需要明确概率密度在变换过程中的更新规则。\n\n以来自简单基础分布的随机变量 $z$ 为例。如果对其应用一个可逆函数 $f$，我们会得到一个新的随机变量 $x = f(z)$。它们概率密度之间的关系由变量代换定理定义：\n\n$$p(x) = p(z) \\left| \\det \\frac{\\partial z}{\\partial x} \\right|$$\n\n本章重点讲解使该方程生效的数学机制。你将学习如何应用变量代换定理来追踪不同函数间的密度变化。我们将学习雅可比矩阵及其行列式，它用于衡量数学变换过程中空间体积的膨胀或收缩程度。\n\n你还将学会区分流模型的前向运算和逆向运算。前向计算用于评估数据的精确概率密度，而逆向计算则让我们能从学习到的分布中采样新的数据点。本章最后设有一个编程练习，你将编写 Python 代码来计算简单数学函数的雅可比行列式，为后续章节实现完整的流层做好准备。",
+      "sections": [
+        {
+          "id": 8253,
+          "title": "随机变量与分布",
+          "meta_title": "随机变量与分布",
+          "meta_description": "理解生成建模中连续随机变量和基概率分布的基础知识。",
+          "slug": "random-variables-distributions",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8254,
+          "title": "变量代换定理",
+          "meta_title": "变量代换定理",
+          "meta_description": "应用变量代换定理，通过数学函数实现概率分布的映射。",
+          "slug": "change-of-variables-theorem",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8255,
+          "title": "计算雅可比行列式",
+          "meta_title": "计算雅可比行列式",
+          "meta_description": "计算雅可比行列式以评估数学变换过程中的体积变化。",
+          "slug": "computing-jacobian-determinants",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8256,
+          "title": "前向传播与反向传播",
+          "meta_title": "流模型中的前向与反向传播",
+          "meta_description": "区分用于密度估计的前向变换和用于数据采样的反向变换。",
+          "slug": "forward-and-inverse-passes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8257,
+          "title": "雅可比矩阵计算实践",
+          "meta_title": "雅可比矩阵计算实践",
+          "meta_description": "通过编写 Python 代码为简单的数学变换计算雅可比行列式，应用所学知识。",
+          "slug": "calculating-jacobians-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1449,
+      "title": "构建标准化流",
+      "meta_title": "构建基础标准化流",
+      "meta_description": "通过堆叠可逆变换并实现平面流来构建基础标准化流。",
+      "number": 2,
+      "slug": "building-normalizing-flows",
+      "content": "在上一章中，我们利用变量代换定理和雅可比行列式，确定了通过可逆函数映射随机变量的数学规则。现在，我们将应用这些数学原理来构建实用的生成模型。\n\n单一的变换通常不足以模拟高度复杂的概率分布。为了构建具有高度灵活性的模型，我们将多个简单的可逆变换按顺序堆叠。如果我们从简单基础分布中的样本 $z_0$ 开始，可以应用一系列共 $K$ 次变换来生成最终样本 $z_K$：\n\n$$z_K = f_K \\circ f_{K-1} \\circ \\dots \\circ f_1(z_0)$$\n\n这个复合函数构成了标准化流的基础。通过定义合适的基础分布（例如各向同性高斯分布），我们可以让样本通过这一系列变换，从而逼近高度复杂的数据分布。\n\n本章重点介绍组装这些模型的机制。你将学习标准化流的正式定义，并了解如何为任务选择合适的基础分布。我们将分析平面流（planar flows）和径向流（radial flows）等具体架构，仔细观察它们的数学公式以及缩放方式。\n\n最后，你将从理论转向应用。你将编写 PyTorch 代码，从零开始实现一个平面流层，并训练它来映射简单的二维数据集。在本模块结束时，你将学会如何将数学定义转化为 Python 中可运行的生成模型。",
+      "sections": [
+        {
+          "id": 8258,
+          "title": "定义规范化流",
+          "meta_title": "定义规范化流",
+          "meta_description": "了解规范化流的形式化定义，以及它是如何扩展到复杂分布的。",
+          "slug": "defining-a-normalizing-flow",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8259,
+          "title": "堆叠变换",
+          "meta_title": "堆叠可逆变换",
+          "meta_description": "组合多个简单变换以创建表达能力极强的生成模型。",
+          "slug": "stacking-transformations",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8260,
+          "title": "平面流与径向流",
+          "meta_title": "平面流与径向流",
+          "meta_description": "分析平面和径向标准化流的架构与数学公式。",
+          "slug": "planar-and-radial-flows",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8261,
+          "title": "选择基础分布",
+          "meta_title": "选择基础分布",
+          "meta_description": "为您的流模型选择合适的基础分布，例如各向同性高斯分布。",
+          "slug": "choosing-base-distributions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8262,
+          "title": "实现平面流练习",
+          "meta_title": "实现平面流练习",
+          "meta_description": "编写 PyTorch 代码来实现平面流层，并将其应用于一个简单的二维数据集。",
+          "slug": "implementing-planar-flows-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1450,
+      "title": "自回归流",
+      "meta_title": "自回归归一化流",
+      "meta_description": "构建用于生成模型的自回归流，内容涵盖掩码自编码器、MAF 和逆自回归流。",
+      "number": 3,
+      "slug": "autoregressive-flows",
+      "content": "在上一章中，我们通过叠加简单的数学变换构建了基本的归一化流。虽然平面流和径向流具有一定功能，但在处理高维分布时往往难以扩展。为了解决这一限制，我们转而使用自回归模型。\n\n自回归模型将联合概率分布分解为一系列条件概率的乘积。从数学表达上看，$n$ 维变量 $x$ 的联合概率 $p(x)$ 可以写成：\n\n$$p(x) = \\prod_{i=1}^{n} p(x_i | x_1, x_2, ..., x_{i-1})$$\n\n通过强制执行这种结构，我们能确保概率分布的有效性，并自然地生成下三角雅可比（Jacobian）矩阵。下三角雅可比矩阵使行列式计算变得简单且高效，将时间复杂度从 $O(D^3)$ 降低到 $O(D)$。\n\n本章主要介绍自回归流的设计与实现。你将学习用于分布估计的掩码自编码器（MADE）架构，该架构利用二进制掩码来强制执行自回归特性，而无需依赖缓慢的顺序循环。随后，你将对比两种标准架构：掩码自回归流（MAF）和逆自回归流（IAF）。MAF 针对快速密度评估进行了优化，使其在精确最大似然估计方面表现出色。IAF 则针对快速采样速度进行了优化，更适合生成合成数据。\n\n最后，你将通过编写 Python 和 PyTorch 代码来实现掩码线性层，从而构建出你自己的自回归流模型。",
+      "sections": [
+        {
+          "id": 8263,
+          "title": "自回归生成模型",
+          "meta_title": "自回归生成模型",
+          "meta_description": "了解自回归模型如何分解联合概率以进行密度估计。",
+          "slug": "autoregressive-generative-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8264,
+          "title": "分布估算遮罩自编码器",
+          "meta_title": "用于分布估算的遮罩自编码器",
+          "meta_description": "了解 MADE 架构如何利用二进制遮罩高效地强制执行自回归特性。",
+          "slug": "masked-autoencoders-distributions",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8265,
+          "title": "掩码自回归流 (MAF)",
+          "meta_title": "掩码自回归流 (MAF)",
+          "meta_description": "学习掩码自回归流模型及其快速密度评估能力。",
+          "slug": "masked-autoregressive-flow",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8266,
+          "title": "逆自回归流",
+          "meta_title": "逆自回归流 (IAF)",
+          "meta_description": "分析逆自回归流模型及其如何优化采样速度。",
+          "slug": "inverse-autoregressive-flow",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8267,
+          "title": "构建自回归模型实践",
+          "meta_title": "构建自回归模型实践",
+          "meta_description": "在 PyTorch 中构建掩码线性层，作为自回归流的基础。",
+          "slug": "building-autoregressive-models-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1451,
+      "title": "耦合架构",
+      "meta_title": "流模型中的耦合架构",
+      "meta_description": "利用仿射耦合层和多尺度设计，实现 RealNVP 和 Glow 等耦合架构。",
+      "number": 4,
+      "slug": "coupling-architectures",
+      "content": "自回归流提供了一种对概率分布建模的有效方法，但它们存在结构上的局限性。由于按顺序处理数据，这类模型通常在一个方向上运行很快，而在另一个方向上则很慢。如果模型生成数据的速度很快，那么它计算概率密度的速度往往会变慢。\n\n为了在正向和反向过程中都获得高效的性能，我们采用耦合架构。这些设计将输入数据分为两部分。第一部分直接通过该层而不发生改变。然后，模型使用这一未改变的部分来确定第二部分变换所需的参数。\n\n以输入向量 $x$ 为例，将其分为 $x_1$ 和 $x_2$ 两部分。仿射耦合层通过以下运算得出输出 $y$：\n\n$$ y_1 = x_1 $$\n\n$$ y_2 = x_2 \\odot \\exp(s(x_1)) + t(x_1) $$\n\n由于前半部分保持不变，该变换的雅可比矩阵是三角矩阵。无论神经网络 $s$ 和 $t$ 的构成多么复杂，这一特性都能让你几乎瞬间算出行列式并完成逆变换。\n\n在本章中，你将学习如何构建这些计算效率极高的模型。你将分析 RealNVP 架构，重点了解它如何使用棋盘格掩码和通道掩码来处理图像的不同部分。你还将研究多尺度架构，即通过在不同阶段丢弃变量来降低计算成本。随后，你将学习 Glow 模型，了解激活归一化（Activation Normalization）和 $1 \\times 1$ 可逆卷积如何提升训练稳定性和模型表现。\n\n在本章末尾，你将通过 PyTorch 从零开始构建仿射耦合层，在 Python 代码中应用这些数学原理。",
+      "sections": [
+        {
+          "id": 8268,
+          "title": "仿射耦合层",
+          "meta_title": "仿射耦合层",
+          "meta_description": "使用仿射耦合层设计易于求逆的变换。",
+          "slug": "affine-coupling-layers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8269,
+          "title": "RealNVP 架构",
+          "meta_title": "RealNVP 架构",
+          "meta_description": "分析 RealNVP，这是一种利用棋盘格和通道掩码的高度可扩展流架构。",
+          "slug": "realnvp-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8270,
+          "title": "多尺度架构",
+          "meta_title": "多尺度架构",
+          "meta_description": "使用多尺度架构降低计算成本并获取层次化特征。",
+          "slug": "multi-scale-architectures",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8271,
+          "title": "ActNorm 与可逆卷积",
+          "meta_title": "ActNorm 与可逆卷积",
+          "meta_description": "了解 Glow 模型中的创新点，包括激活归一化和 1x1 卷积。",
+          "slug": "actnorm-invertible-convolutions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8272,
+          "title": "实现耦合层实践",
+          "meta_title": "实现耦合层实践",
+          "meta_description": "编写代码构建功能完备的仿射耦合层，并将其集成到神经网络中。",
+          "slug": "implementing-coupling-layer-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1452,
+      "title": "训练流模型",
+      "meta_title": "训练标准化流",
+      "meta_description": "使用精确极大似然估计、数据去量化和采样技术来训练标准化流模型。",
+      "number": 5,
+      "slug": "training-flow-models",
+      "content": "前面的章节侧重于构建标准化流的架构。从自回归模型到仿射耦合层，你现在已经掌握了将简单概率分布映射到复杂分布所需的结构组件。接下来的步骤是优化这些神经网络以拟合实际数据。\n\n本章将介绍训练流模型的运作方式。与许多依赖近似计算的生成方法不同，标准化流允许进行精确的密度评估。这一数学特性意味着我们可以直接使用精确极大似然估计来训练这些模型。我们将通过最小化负对数似然损失来构建目标函数。从数学角度来看，对于数据点 $x$、可逆变换 $f$ 和基础分布 $Z$，精确对数似然的计算方式如下：\n\n$$ \\log p_X(x) = \\log p_Z(f(x)) + \\log \\left| \\det \\frac{\\partial f(x)}{\\partial x} \\right| $$\n\n你将学习如何在 PyTorch 中实现自定义损失函数，通过结合基础分布的密度与雅可比行列式来计算该方程。\n\n由于标准化流严格运行在连续概率分布上，因此将其应用于数字图像等离散数据格式时，需要特定的预处理步骤。我们将实现数据去量化方法，为离散值添加连续噪声，从而防止模型给特定点分配无限大的密度。你将编写均匀去量化和变分去量化程序，将离散输入转换为适合网络的连续信号。\n\n在完成优化过程的讲解后，我们将转而关注数据生成。你将编写必要的采样程序，执行逆向数学运算，从学习到的分布中生成新的合成样本。最后，你将通过在标准数据集上训练一个完整的连续标准化流模型并评估生成结果，来整合这些内容。",
+      "sections": [
+        {
+          "id": 8273,
+          "title": "极大似然估计",
+          "meta_title": "流模型的极大似然估计",
+          "meta_description": "构建使用精确极大似然训练标准化流的目标函数。",
+          "slug": "maximum-likelihood-estimation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8274,
+          "title": "密度估计的损失函数",
+          "meta_title": "密度估计中的损失函数",
+          "meta_description": "实现包含雅可比行列式的负对数似然损失函数。",
+          "slug": "loss-functions-density-estimation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8275,
+          "title": "数据去量化方法",
+          "meta_title": "数据去量化方法",
+          "meta_description": "应用均匀去量化和变分去量化，将离散数据转换为连续信号。",
+          "slug": "data-dequantization-methods",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8276,
+          "title": "采样流程",
+          "meta_title": "流模型的采样流程",
+          "meta_description": "执行逆变换，从训练好的流模型中生成新的合成样本。",
+          "slug": "sampling-procedures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8277,
+          "title": "正规化流训练实践",
+          "meta_title": "正规化流训练实践",
+          "meta_description": "在标准数据集上训练完整的连续正规化流模型，并评估其生成效果。",
+          "slug": "training-normalizing-flow-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4007,
+  "title": "识别不正确的数据类型",
+  "meta_title": "如何检查列数据类型",
+  "meta_description": "使用编程工具检查分配给列的当前数据类型。",
+  "content": "<p>正如我们在章节简介中讨论的，确保您的数据列具有正确的<em>数据类型</em>对于可靠的分析来说非常重要。对存储为文本的数字执行数学运算，或者尝试对仅仅是字符串的日期进行按时间顺序排序，通常会导致错误或不正确的结果。想象一下，尝试计算 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>5</mn><mo>+</mo><mn>10</mn></mrow><annotation encoding=\"application/x-tex\">5 + 10</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">5</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">10</span></span></span></span>；如果将'5'视为文本字符'5'而不是数值5，结果会非常不同。在解决这些问题之前，我们首先需要准确地确定数据集中每个列当前分配的数据类型。</p>\n<p>幸运的是，大多数数据分析工具都提供了简单的方法来检查数据类型。如果您正在使用Python和pandas库（这在数据处理中非常常见），您可以在加载数据后轻松检查数据类型。</p>\n<p>考虑一个包含产品信息的小型数据集。我们可以将其加载到pandas DataFrame中，然后使用<code>.dtypes</code>属性检查数据类型。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport io\n\n# 模拟从文件加载的示例数据\ndata = \"\"\"ProductID,ProductName,Price,StockCount,LastUpdated,IsActive\n101,Widget A,\"50.99\",500,2023-10-26,True\n102,Gadget B,\"120.50\",150,2023-10-25,False\n103,Thingamajig,\"15.00\",\" N/A\",2023-10-26,True\n104,Doohickey,\"75.25\",200,2023-10-27,True\n\"\"\"\n\n# 使用 io.StringIO 模拟读取 CSV 文件\ndf = pd.read_csv(io.StringIO(data))\n\n# 显示每列的数据类型\nprint(df.dtypes)\n</code></pre>\n<p>执行这段代码通常会打印出类似如下的输出：</p>\n<pre><code>ProductID        int64\nProductName     object\nPrice           object\nStockCount      object\nLastUpdated     object\nIsActive          bool\ndtype: object\n</code></pre>\n<p>让我们解释一下这段输出，以了解我们数据当前的状况：</p>\n<ul>\n<li><code>int64</code>: 这表示64位整数，即整数。在我们的示例中，<code>ProductID</code>已被正确识别为整数列。</li>\n<li><code>object</code>: 这是pandas中常见的数据类型，通常表示该列包含字符串（文本）。它也可能意味着该列包含不同数据类型的混合。请注意，<code>ProductName</code>、<code>Price</code>、<code>StockCount</code>和<code>LastUpdated</code>都被归类为<code>object</code>。\n<ul>\n<li><code>ProductName</code>预期是文本，因此<code>object</code>在这里是合适的。</li>\n<li><code>Price</code>包含数值，但因为在示例数据中它们被括在引号中（例如，<code>\"50.99\"</code>），pandas将其解释为文本字符串。这对于计算是不正确的。</li>\n<li><code>StockCount</code>包含数字，但也包括一个非数字字符串<code>\" N/A\"</code>。这种不一致性迫使pandas对整个列使用通用的<code>object</code>类型，从而阻止了数值运算。</li>\n<li><code>LastUpdated</code>包含日期，但它们目前存储为简单的文本字符串。</li>\n</ul>\n</li>\n<li><code>bool</code>: 这代表布尔值，可以是<code>True</code>或<code>False</code>。<code>IsActive</code>列被正确地推断为布尔类型。</li>\n</ul>\n<p>您可能还会遇到其他数据类型，例如：</p>\n<ul>\n<li><code>float64</code>: 用于64位浮点数（带小数的数字，如 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>3.14</mn></mrow><annotation encoding=\"application/x-tex\">3.14</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">3.14</span></span></span></span> 或 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>98.6</mn></mrow><annotation encoding=\"application/x-tex\">98.6</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">98.6</span></span></span></span>）。</li>\n<li><code>datetime64[ns]</code>: Pandas中日期和时间值的专用类型（<code>[ns]</code>表示纳秒精度）。列需要显式转换才能达到此类型。</li>\n<li><code>category</code>: 一种特殊类型，用于具有有限且固定唯一值集合的列（例如“低”、“中”、“高”）。</li>\n</ul>\n<p><code>object</code>数据类型通常表明某列需要关注。虽然它适合真正的文本字段，但出现在预期为数值、日期/时间或布尔类型的列中时，通常表明存在潜在问题。这可能由于以下原因：</p>\n<ul>\n<li>数字格式为文本（例如，<code>'123'</code>、<code>'$5.00'</code>）。</li>\n<li>日期以各种字符串格式存储（例如，<code>'10/26/2023'</code>、<code>'26-Oct-2023'</code>）。</li>\n<li>布尔值以不一致的字符串形式表示（例如，<code>'True'</code>、<code>'false'</code>、<code>'Y'</code>、<code>'N'</code>）。</li>\n<li>数值数据中混有非数字字符（例如，<code>'5 apples'</code>、<code>'10 kg'</code>）。</li>\n<li>缺失数据表示不一致（例如，<code>'N/A'</code>、<code>'missing'</code>、<code>'?'</code>）。</li>\n</ul>\n<p>这里有一张汇总表，说明了推断数据类型可能不正确的常见情况：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">示例列内容</th>\n<th align=\"left\">可能推断的类型</th>\n<th align=\"left\">期望/正确类型</th>\n<th align=\"left\">常见不匹配原因</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>'101'</code>、<code>'102'</code>、<code>'103'</code></td>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>int64</code></td>\n<td align=\"left\">数字被引号括起或作为文本读取。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>'99.9'</code>、<code>'15.5'</code>、<code>'NA'</code></td>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>float64</code></td>\n<td align=\"left\">混合了类似数字的字符串和非数字文本。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>'$10.50'</code>、<code>'€20.00'</code></td>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>float64</code></td>\n<td align=\"left\">货币符号阻碍了直接的数值读取。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>'2023-11-01'</code>、<code>'01/11/2023'</code></td>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>datetime64[ns]</code></td>\n<td align=\"left\">日期以文本字符串形式存储。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>'Yes'</code>、<code>'No'</code>、<code>'TRUE'</code></td>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>bool</code></td>\n<td align=\"left\">布尔值以各种文本字符串形式存储。</td>\n</tr>\n<tr>\n<td align=\"left\"><code>1</code>、<code>2</code>、<code>3</code> (邮政编码)</td>\n<td align=\"left\"><code>int64</code></td>\n<td align=\"left\"><code>object</code> / <code>category</code></td>\n<td align=\"left\">不应进行数学运算的数字编码。</td>\n</tr>\n</tbody>\n</table>\n<p>使用像<code>.dtypes</code>这样的函数或属性是诊断数据类型问题的主要第一步。通过检查输出，您可以确定哪些列未以其适当的格式存储。一旦识别出来，您就可以应用后续章节中涵盖的转换技术，以确保您的数据结构正确，从而进行有意义的分析。</p>",
+  "slug": "identifying-incorrect-data-types",
+  "updates": [],
+  "references": [
+    {
+      "id": 10819,
+      "title": "Dtype introduction",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#dtype-introduction",
+      "doi": "",
+      "note": "Pandas数据类型的官方指南，包含如何检查和解释`dtypes`属性。",
+      "order": 1,
+      "created_at": "2025-09-05T06:54:23.362515Z",
+      "updated_at": "2025-09-08T13:00:29.630962Z"
+    },
+    {
+      "id": 10820,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781491957653/",
+      "doi": "",
+      "note": "使用pandas进行数据操作的基础资源，包含理解和清洗数据类型的部分。",
+      "order": 2,
+      "created_at": "2025-09-05T06:54:23.366011Z",
+      "updated_at": "2025-09-08T13:00:28.514924Z"
+    },
+    {
+      "id": 10821,
+      "title": "Practical Data Cleaning: The Essential Guide to Tidy Your Data",
+      "author": "Andreas Kretz",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-data-cleaning/9781098135832/",
+      "doi": "",
+      "note": "提供了识别和纠正数据类型问题的实用策略和示例，作为核心数据清洗任务。",
+      "order": 3,
+      "created_at": "2025-09-05T06:54:23.369717Z",
+      "updated_at": "2025-09-08T13:00:46.374176Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

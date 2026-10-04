@@ -1,0 +1,61 @@
+{
+  "id": 4887,
+  "title": "常见层类型：全连接层",
+  "meta_title": "Keras 全连接层说明",
+  "meta_description": "在 Keras 中了解并实现全连接（Dense）层。",
+  "content": "<p>神经网络 (neural network)中最基本且最常遇到的层类型是 <code>Dense</code> 层，通常被称为全连接层。它作为神经网络架构的基本构建块。</p>\n<p><code>Dense</code> 层实现以下运算：</p>\n<p><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>输出</mtext><mo>=</mo><mtext>激活</mtext><mo stretchy=\"false\">(</mo><mtext>点积</mtext><mo stretchy=\"false\">(</mo><mtext>输入</mtext><mo separator=\"true\">,</mo><mtext>核</mtext><mo stretchy=\"false\">)</mo><mo>+</mo><mtext>偏置</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">输出 = 激活(点积(输入, 核) + 偏置)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">输出</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord cjk_fallback\">激活</span><span class=\"mopen\">(</span><span class=\"mord cjk_fallback\">点积</span><span class=\"mopen\">(</span><span class=\"mord cjk_fallback\">输入</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord cjk_fallback\">核</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord cjk_fallback\">偏置</span><span class=\"mclose\">)</span></span></span></span></p>\n<p>让我们逐一分析：</p>\n<ol>\n<li><code>输入</code>：这是该层的张量输入。对于模型中的第一层，你需要指定其形状。对于后续层，Keras 会根据前一层的输出形状自动推断输入形状。</li>\n<li><code>核</code>：这是该层的权重 (weight)矩阵。它是训练过程中学习到的核心组成部分之一。该层会将输入张量乘以这个核矩阵。</li>\n<li><code>偏置</code>：这是一个偏置 (bias)向量 (vector)，也是一个可学习的参数 (parameter)。它被加到点积的结果上。添加偏置会增加模型的灵活性，使其能更好地拟合数据。可以把它看作简单线性方程 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi><mo>=</mo><mi>m</mi><mi>x</mi><mo>+</mo><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">y = mx + b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">m</span><span class=\"mord mathnormal\">x</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span> 中的 y 轴截距。</li>\n<li><code>激活</code>：这是一个应用于结果的逐元素激活函数 (activation function)。激活函数为网络引入非线性，使其能够学习复杂的模式。我们将在下一节详细介绍激活函数，常见的例子包括 ReLU、Sigmoid 和 Softmax。</li>\n</ol>\n<p><code>Dense</code> 层的主要特点是其“全连接”性质。<code>Dense</code> 层中的每个神经元（或单元）都接收来自前一层中<em>每个</em>神经元的输入。这种全面的连接性使该层能够学习前一层输出所表示的所有特征之间的相互作用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-d0wieg\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=circle, style=filled, color=\"#a5d8ff\", fixedsize=true, width=0.5]; subgraph cluster_0 { label = \"前一层 / 输入\"; bgcolor=\"#e9ecef\"; node [color=\"#74c0fc\"]; i1 [label=\"N1\"]; i2 [label=\"N2\"]; i3 [label=\"N3\"]; } subgraph cluster_1 { label = \"全连接层 (单元数=2)\"; bgcolor=\"#e9ecef\"; node [color=\"#4dabf7\"]; d1 [label=\"U1\"]; d2 [label=\"U2\"]; } i1 -> {d1, d2} [color=\"#adb5bd\", penwidth=0.5]; i2 -> {d1, d2} [color=\"#adb5bd\", penwidth=0.5]; i3 -> {d1, d2} [color=\"#adb5bd\", penwidth=0.5]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-d0wieg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>全连接 <code>Dense</code> 层的可视化图。前一层的每个神经元（N1、N2、N3）都连接到 <code>Dense</code> 层中的每个单元（U1、U2）。</p>\n</blockquote>\n<h3>在 Keras 中实现全连接层</h3>\n<p>在 Keras 中，你可以使用 <code>keras.layers.Dense</code> 轻松添加 <code>Dense</code> 层。你需要指定的最重要参数 (parameter)是 <code>units</code>。</p>\n<ul>\n<li>\n<p><code>units</code>：这个正整数定义了输出空间的维度，这相当于该层中神经元的数量。例如，<code>units=64</code> 表示该层将输出一个形状为 <code>(batch_size, 64)</code> 的张量。<code>units</code> 的选择影响了层的表示能力。更多的单元可能使层学习更复杂的模式，但也会增加参数数量和过拟合 (overfitting)的风险。</p>\n</li>\n<li>\n<p><code>activation</code>：此参数指定要使用的激活函数 (activation function)。你可以提供内置激活函数（如 <code>'relu'</code> 或 <code>'softmax'</code>）的名称，或传递一个可调用激活函数对象。如果你不指定激活函数，则不应用任何激活（它使用线性激活，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>a</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">a(x)=x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span>）。</p>\n</li>\n<li>\n<p><code>input_shape</code>：对于 <code>Sequential</code> 模型中的<em>第一</em>层，Keras 需要知道输入数据的形状。你可以使用 <code>input_shape</code> 参数指定这一点，它应该是一个元组（例如，对于展平的 28x28 图像，<code>input_shape=(784,)</code>）。你无需包含批次维度。对于后续层，Keras 会自动推断输入形状。</p>\n</li>\n</ul>\n<p>以下是如何在简单的 <code>Sequential</code> 模型中使用 <code>Dense</code> 层：</p>\n<pre><code class=\"language-python\">import keras\nfrom keras import layers\n\n# 定义输入形状（例如，用于展平的 MNIST 图像）\ninput_shape = (784,)\n\nmodel = keras.Sequential(\n    [\n        # 第一个全连接层：需要输入形状\n        layers.Dense(units=128, activation='relu', input_shape=input_shape, name='hidden_layer_1'),\n\n        # 第二个全连接层：输入形状从前一层的输出（128 个单元）推断\n        layers.Dense(units=64, activation='relu', name='hidden_layer_2'),\n\n        # 输出层：10 个单元（例如，用于 10 个数字类别），softmax 激活用于分类\n        layers.Dense(units=10, activation='softmax', name='output_layer')\n    ],\n    name=\"simple_mlp\"\n)\n\n# 显示模型的架构和参数\nmodel.summary()\n</code></pre>\n<p>执行 <code>model.summary()</code> 将输出详细说明层、它们的输出形状以及可训练参数的数量。请注意参数数量如何与输入维度、单元数量以及每层的偏置 (bias)相关。例如，<code>hidden_layer_1</code> 具有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>784</mn><mo>×</mo><mn>128</mn></mrow><annotation encoding=\"application/x-tex\">784 \\times 128</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">784</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">128</span></span></span></span> 个权重 (weight)加上 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>128</mn></mrow><annotation encoding=\"application/x-tex\">128</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">128</span></span></span></span> 个偏置。</p>\n<h3>作用和用途</h3>\n<p>全连接层用途多样：</p>\n<ul>\n<li><strong>隐藏层：</strong> 它们构成了标准前馈网络（多层感知器或 MLP）的骨干。堆叠多个带有非线性激活的 <code>Dense</code> 层，使网络能够学习输入数据的分层表示。</li>\n<li><strong>输出层：</strong> 它们常被用作分类和回归模型中的最终层。\n<ul>\n<li>对于二元分类，一个具有 1 个单元和 <code>sigmoid</code> 激活的 <code>Dense</code> 层是常见的。</li>\n<li>对于多类别分类，使用一个具有 <code>N</code> 个单元（N 是类别数量）和 <code>softmax</code> 激活的 <code>Dense</code> 层。</li>\n<li>对于回归任务，使用一个具有 1 个单元（或更多，用于多输出回归）且通常没有激活（线性激活）的 <code>Dense</code> 层。</li>\n</ul>\n</li>\n<li><strong>特征提取后：</strong> 在更复杂的架构中，例如卷积神经网络 (neural network) (CNN) 或循环神经网络 (RNN)，<code>Dense</code> 层通常被放置在主要的特征提取块（卷积层或循环层）<em>之后</em>，以便根据提取的特征执行最终的分类或回归。</li>\n</ul>\n<p><code>Dense</code> 层是你在 Keras 中构建各种神经网络架构时将广泛使用的基本组成部分。了解其操作方式以及如何配置它是掌握实际深度学习 (deep learning)开发的重要一步。</p>",
+  "slug": "dense-layers",
+  "updates": [],
+  "references": [
+    {
+      "id": 12050,
+      "title": "keras.layers.Dense",
+      "author": "Keras Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://keras.io/api/layers/core_layers/dense/",
+      "doi": "",
+      "note": "Keras Dense层的官方文档，提供详细的API用法和参数。",
+      "order": 1,
+      "created_at": "2025-09-05T07:56:46.018263Z",
+      "updated_at": "2025-09-08T15:15:39.678261Z"
+    },
+    {
+      "id": 12051,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "提供了神经网络的综合学术基础，包括全连接层的数学原理。",
+      "order": 2,
+      "created_at": "2025-09-05T07:56:46.022060Z",
+      "updated_at": "2025-09-08T15:15:36.413012Z"
+    },
+    {
+      "id": 12052,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Hands_On_Machine_Learning_with_Scikit_Le.html?id=3VwOEAAAQBAJ",
+      "doi": "",
+      "note": "提供了使用Keras实现Dense层和神经网络的实用示例和解释。（第4版）",
+      "order": 3,
+      "created_at": "2025-09-05T07:56:46.024803Z",
+      "updated_at": "2025-09-08T15:15:50.690937Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

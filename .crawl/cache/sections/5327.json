@@ -1,0 +1,61 @@
+{
+  "id": 5327,
+  "title": "使用后台任务",
+  "meta_title": "使用FastAPI后台任务",
+  "meta_description": "在返回响应后执行任务，适用于日志记录、通知或非关键的后处理。",
+  "content": "<p>有时，您的API端点需要执行一些不直接影响发送给客户端的响应的操作。例如，在成功返回预测结果后，您可能希望将请求和响应的详细信息记录到单独的文件或数据库中，发送通知，或启动清理流程。在发送响应<em>之前</em>执行这些操作会增加客户端不必要的延迟。</p>\n<p>FastAPI提供了一种便捷的机制，称为<strong>后台任务</strong>，正是为了处理这些情况。后台任务是在响应已发送到客户端<em>之后</em>执行的函数。这确保了客户端能尽快收到响应，而服务器则独立处理这些后续操作。</p>\n<p>可以将其比作在邮局寄送包裹。您的主要目标是获得包裹已寄出的收据（API响应）。打印一份关于包裹内容的详细内部报告（后台任务）可以在您带着收据离开后进行。</p>\n<h3>后台任务的工作方式</h3>\n<p>FastAPI通过在同一个事件循环中运行后台任务（或者为传递给后台任务的阻塞函数使用线程池）来管理它们，但重要的是，它不会在发送HTTP响应之前<code>等待</code>它们完成。</p>\n<p>要使用后台任务，您需要：</p>\n<ol>\n<li>从<code>fastapi</code>导入<code>BackgroundTasks</code>类。</li>\n<li>在您的路径操作函数中定义一个类型提示为<code>BackgroundTasks</code>的参数 (parameter)。FastAPI的依赖注入系统将自动提供此类的实例。</li>\n<li>在您的端点逻辑中，调用<code>BackgroundTasks</code>实例上的<code>add_task()</code>方法。此方法将要执行的函数作为第一个参数，后面是该函数所需的任何参数和关键字参数。</li>\n</ol>\n<p>让我们看一个例子。假设我们有一个预测端点，并且我们希望在返回预测结果<em>之后</em>，将输入特征和预测结果记录到一个文件中。</p>\n<pre><code class=\"language-python\">from fastapi import FastAPI, BackgroundTasks\nfrom pydantic import BaseModel\nimport time\nimport json\n\n# 假设 predict_model 函数存在并返回预测结果\n# def predict_model(features):\n#     # 模拟模型推理\n#     time.sleep(0.1)\n#     prediction = sum(features) * 0.5 # 模拟预测逻辑\n#     return {\"prediction\": prediction}\n\n# 假设 load_model 已在其他地方调用以获取 'model' 对象（如果需要）\n\napp = FastAPI()\n\nclass FeaturesInput(BaseModel):\n    sepal_length: float\n    sepal_width: float\n    petal_length: float\n    petal_width: float\n\nclass PredictionOutput(BaseModel):\n    prediction: float\n\ndef log_prediction_details(input_data: dict, output_data: dict):\n    \"\"\"一个用于将预测详情记录到文件的简单函数。\"\"\"\n    log_entry = {\"input\": input_data, \"output\": output_data, \"timestamp\": time.time()}\n    try:\n        with open(\"prediction_log.jsonl\", \"a\") as f:\n            f.write(json.dumps(log_entry) + \"\\n\")\n        print(\"后台任务：已记录预测详情。\")\n    except Exception as e:\n        # 重要提示：在后台任务本身内处理错误\n        print(f\"后台任务错误：记录预测详情失败：{e}\")\n\n\n@app.post(\"/predict_log_later\", response_model=PredictionOutput)\nasync def predict_and_log(\n    features: FeaturesInput,\n    background_tasks: BackgroundTasks # 依赖注入\n):\n    \"\"\"\n    此端点用于进行预测并在后台记录详情。\n    \"\"\"\n    input_dict = features.dict()\n    # 替换为您的实际模型预测逻辑\n    # 例如：result = model.predict([list(input_dict.values())])[0]\n    # 使用模拟预测进行演示\n    prediction_result = {\"prediction\": (input_dict[\"sepal_length\"] + input_dict[\"petal_length\"]) * 0.8}\n\n    # 将日志记录函数添加到后台任务中\n    background_tasks.add_task(\n        log_prediction_details, # 要运行的函数\n        input_dict,             # 函数的参数\n        prediction_result       # 更多参数\n    )\n\n    # 响应在此处发送，在 log_prediction_details 完成之前\n    return prediction_result\n\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们定义了<code>log_prediction_details</code>，它接收输入和输出数据并将其写入文件<code>prediction_log.jsonl</code>。</li>\n<li><code>predict_and_log</code>端点依赖于<code>BackgroundTasks</code>。</li>\n<li>在端点内部，获取<code>prediction_result</code>后，我们调用<code>background_tasks.add_task()</code>，传入我们的日志记录函数和必要的数据（<code>input_dict</code>，<code>prediction_result</code>）。</li>\n<li>端点立即返回<code>prediction_result</code>。</li>\n<li>FastAPI确保<code>log_prediction_details(input_dict, prediction_result)</code>在稍后运行，而不会阻塞响应。</li>\n</ol>\n<h3>后台任务在ML API中的应用场景</h3>\n<ul>\n<li><strong>详细日志记录</strong>：如上所示，记录大量信息而不会延迟客户端。</li>\n<li><strong>通知</strong>：发送关于特定预测结果的电子邮件或Slack消息（例如，检测到高风险预测）。</li>\n<li><strong>更新监控系统</strong>：将关于预测延迟、输入数据分布或模型性能的指标推送到监控仪表板。</li>\n<li><strong>简单缓存更新</strong>：使相关缓存条目失效或更新。</li>\n<li><strong>触发异步工作流程</strong>：向队列（如RabbitMQ或Kafka）发送消息，以启动更复杂的下游处理（例如，根据实时预测启动批处理分析）。</li>\n</ul>\n<h3>重要事项</h3>\n<p>尽管后台任务很有用，但它们也有局限性：</p>\n<ul>\n<li><strong>不保证执行</strong>：它们在与FastAPI应用程序相同的进程中运行。如果服务器进程在任务完成<em>之前</em>崩溃或重启，任务可能会丢失。它们不适用于<em>必须</em>完成的关键操作。为了保证执行，请使用专用的任务队列系统，如Celery或Redis Queue (RQ)。</li>\n<li><strong>错误处理</strong>：由于响应已经发送，后台任务中的错误不会自动通知客户端。您必须在后台任务函数<em>内部</em>实现错误处理（例如，<code>try...except</code>块）和日志记录，以检测和诊断故障。</li>\n<li><strong>资源消耗</strong>：后台任务仍然会消耗服务器资源（CPU、内存、I/O）。在后台运行过多计算密集型任务仍然可能降低API服务器对后续请求的整体性能和响应能力。如果您的后台任务涉及大量计算（如模型再训练），通常最好将其卸载到单独的工作进程或系统。</li>\n</ul>\n<p>后台任务提供了一种简单有效的方法，通过将非必要操作推迟到响应发送后执行，从而提高API端点的感知性能。它们在ML模型服务场景中尤其适用于日志记录、通知和触发其他非关键异步操作。请记住它们在可靠性和资源使用方面的局限性，并在核心操作不需要任务绝对成功完成时选择它们。</p>",
+  "slug": "using-background-tasks",
+  "updates": [],
+  "references": [
+    {
+      "id": 14253,
+      "title": "Background Tasks",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/tutorial/background-tasks/",
+      "doi": "",
+      "note": "FastAPI官方文档，包含后台任务的使用和实现。",
+      "order": 1,
+      "created_at": "2025-09-05T08:50:01.517772Z",
+      "updated_at": "2025-09-09T14:10:50.354972Z"
+    },
+    {
+      "id": 14254,
+      "title": "Celery: Distributed Task Queue",
+      "author": "Ask Solem & contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.celeryq.dev/en/stable/",
+      "doi": "",
+      "note": "Celery的官方文档，该系统用于可靠的分布式任务处理，被提及作为关键操作的替代方案。",
+      "order": 2,
+      "created_at": "2025-09-05T08:50:01.629578Z",
+      "updated_at": "2025-09-09T14:10:50.523992Z"
+    },
+    {
+      "id": 14255,
+      "title": "Fluent Python",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056355/",
+      "doi": "",
+      "note": "包含Python异步编程与`asyncio`的部分，对于理解FastAPI的事件循环很有帮助。",
+      "order": 3,
+      "created_at": "2025-09-05T08:50:01.640780Z",
+      "updated_at": "2025-09-09T14:11:07.310904Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

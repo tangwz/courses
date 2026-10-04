@@ -1,0 +1,45 @@
+{
+  "id": 7985,
+  "title": "事务事实表",
+  "meta_title": "事务事实表设计",
+  "meta_description": "在事务事实表中建模离散事件。",
+  "content": "<p>事务事实表在维度建模中代表最基础的粒度。它们对应于时间点发生的事件。当客户进行购买、机器记录错误或用户点击链接时，操作系统会记录事务。这些独立的动作中的每一个都会在事实表中生成一行。</p>\n<p>事务事实表的主要特点是其粒度。粒度是可用的最细致的细节级别。对于零售业务，粒度通常是收据上每一行商品对应一行，而不仅仅是每张收据一行。如果客户在一个购物篮中购买了五种不同的产品，事务事实表会记录五条独立的行。这种细致的级别使得分析最为灵活，因为你可以将数据汇总到业务所需的任何聚合级别。</p>\n<h3>事务事实表的结构</h3>\n<p>事务事实表由两种主要类型的列组成：外键和度量。外键将事件关联到相关的维度表，提供谁、什么、何地以及何时等背景信息。度量是事件生成的数值数据点，例如销售数量或总金额。</p>\n<p>有时，你会遇到一些数据元素，它们作用类似维度，但由于其事务独有性，不适合放入独立的维度表。发票编号或事务ID就是典型例子。这些被称为退化维度。它们保留在事实表中，以便按父事务进行分组，同时避免连接到庞大、低价值维度表的额外开销。</p>\n<p>下图展示了一个标准销售事务模式。请注意中心事实表如何存储度量值并关联到描述性维度。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1fgnzpk\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=rect, style=filled, fontname=\"Arial\", fontsize=12];\n    edge [color=\"#adb5bd\"];\n\n    /* 事实表 */\n    Fact_Sales [label=\"Fact_Sales\\n(事务粒度)|Date_Key (FK)\\nStore_Key (FK)\\nProduct_Key (FK)\\nCustomer_Key (FK)\\nInvoice_Number (退化维度)\\nQuantity (度量)\\nUnit_Price (度量)\\nSales_Amount (度量)\", fillcolor=\"#4dabf7\", fontcolor=\"white\", width=2.5];\n\n    /* 维度表 */\n    Dim_Date [label=\"Dim_Date\\n|Date_Key (PK)\\n年\\n季度\\n月\\n周几\", fillcolor=\"#e9ecef\", fontcolor=\"#495057\"];\n    Dim_Store [label=\"Dim_Store\\n|Store_Key (PK)\\n商店名称\\n区域\\n经理\", fillcolor=\"#e9ecef\", fontcolor=\"#495057\"];\n    Dim_Product [label=\"Dim_Product\\n|Product_Key (PK)\\n产品名称\\n类别\\n品牌\", fillcolor=\"#e9ecef\", fontcolor=\"#495057\"];\n    Dim_Customer [label=\"Dim_Customer\\n|Customer_Key (PK)\\n名称\\n客群\\n会员等级\", fillcolor=\"#e9ecef\", fontcolor=\"#495057\"];\n\n    /* 关系 */\n    Dim_Date -> Fact_Sales;\n    Dim_Store -> Fact_Sales;\n    Dim_Product -> Fact_Sales;\n    Dim_Customer -> Fact_Sales;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1fgnzpk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个事务事实表连接到四个维度的结构视图。Fact_Sales表包含外键、退化维度和可加性度量。</p>\n</blockquote>\n<h3>可加性与稀疏性</h3>\n<p>事务事实表天然具有可加性。这意味着其中包含的度量可以在所有关联维度上进行求和。这一特性大大简化了分析。你可以按天、按商店、按产品类别或按客户群对<code>Sales_Amount</code>进行求和，而无需应用复杂的业务逻辑。</p>\n<p>例如，要计算总收入，算术操作非常简单：</p>\n<p><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>总收入</mtext><mo>=</mo><mo>∑</mo><mo stretchy=\"false\">(</mo><mtext>销售金额</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">总收入 = \\sum (\\text{销售金额})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">总收入</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mop op-symbol small-op\" style=\"position:relative;top:0em;\">∑</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">销售金额</span></span><span class=\"mclose\">)</span></span></span></span></p>\n<p>这与快照表（如银行余额）中的半可加性度量不同，后者无法在时间维度上求和。</p>\n<p>另一个显著特点是稀疏性。事务事实表是稀疏的，因为它们只包含实际发生的事件对应的行。如果某个产品在特定日期没有销售，那么表中不会有该产品-日期组合的行。不会插入“零”行来表示没有活动。这种效率使得表能够扩展到数十亿行，同时保持聚合查询的高性能。</p>\n<h3>分析数据</h3>\n<p>当查询事务事实表时，你几乎总是在执行聚合操作。虽然原始表存储的是单个商品项级别的数据，但业务报告通常需要汇总视图。</p>\n<p>考虑一个分析师需要了解特定月份按产品类别划分的销售业绩的场景。该查询将细粒度的事务行聚合为更高级别的度量。</p>\n<pre><code class=\"language-sql\">SELECT \n    d.Category,\n    SUM(f.Quantity) as 总单位数,\n    SUM(f.Sales_Amount) as 总收入,\n    COUNT(DISTINCT f.Invoice_Number) as 总订单数\nFROM Fact_Sales f\nJOIN Dim_Product p ON f.Product_Key = p.Product_Key\nJOIN Dim_Date d ON f.Date_Key = d.Date_Key\nWHERE d.Month = '2023-10'\nGROUP BY p.Category;\n</code></pre>\n<p>在此查询中，<code>COUNT(DISTINCT f.Invoice_Number)</code>利用退化维度来统计唯一的购物篮，而<code>SUM</code>操作提供总数量和总价值。从这个聚合视图深入到单个事务的能力是这种模式的一个主要优点。</p>\n<h3>处理增长和分区</h3>\n<p>由于事务事实表记录每个独立的事件，它们会快速增长。在高数据量环境（如网站分析或物联网传感器日志）中，这些表每小时可以摄取数百万行。尽管现代云数据仓库可以处理海量数据集，但高效的物理设计对于保持查询速度是必要的。</p>\n<p>事务表最常见的优化措施是按时间分区。由于大多数分析查询都按日期范围（例如“过去30天”或“今年至今”）筛选，在日期列上对表进行物理分区可以使数据库引擎只扫描相关文件。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-11tmo4n\" \n              data-plot-definition='{\"layout\": {\"title\": \"查询性能：扫描数据与分区\", \"xaxis\": {\"title\": \"查询时间范围 (天)\"}, \"yaxis\": {\"title\": \"扫描数据量 (GB)\"}, \"template\": \"simple_white\"}, \"data\": [{\"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"全表扫描\", \"x\": [1, 7, 30, 90], \"y\": [100, 100, 100, 100], \"line\": {\"color\": \"#fa5252\"}}, {\"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"分区剪枝\", \"x\": [1, 7, 30, 90], \"y\": [1.1, 7.7, 33, 99], \"line\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-11tmo4n\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>分区表与非分区表在查询期间扫描数据量的比较。分区确保扫描的数据量与请求的时间范围成比例。</p>\n</blockquote>\n<p>如图所示，如果不分区，查询一天的数据可能扫描整个表的历史数据。而通过分区，扫描仅限于该特定日期的数据。</p>\n<h3>何时选择此模式</h3>\n<p>在以下情况使用事务事实表：</p>\n<ol>\n<li>你需要以最细致的级别分析单个事件。</li>\n<li>度量值天然具有可加性（求和、计数）。</li>\n<li>你需要能够按关联维度的任意组合对数据进行分组。</li>\n<li>事件的缺失意味着没有活动（稀疏性）。</li>\n</ol>\n<p>虽然事务事实表非常灵活，但并非适用于所有问题。如果你需要分析实体的状态（如当前库存水平）或完成某个过程所需的时间（如订单履行时长），你会发现从原始事务计算这些状态需要复杂且开销大的子查询。对于这些情况，我们转向快照事实表和累积快照事实表，我们将在后续章节中介绍它们。</p>",
+  "slug": "transactional-fact-tables",
+  "updates": [],
+  "references": [
+    {
+      "id": 22007,
+      "title": "Star Schema The Complete Reference",
+      "author": "Christopher Adamson",
+      "year": "2010",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "486",
+      "url": "https://books.google.com/books/about/Star_Schema_The_Complete_Reference.html?id=oG0NtwAACAAJ",
+      "doi": "",
+      "note": "星型模式设计的详细解释，包括事实表和维度表的结构及关系。",
+      "order": 2,
+      "created_at": "2025-11-27T04:46:31.598191Z",
+      "updated_at": "2025-11-27T06:02:35.837506Z"
+    },
+    {
+      "id": 22009,
+      "title": "Data Warehouse Design: Modern Principles and Best Practices",
+      "author": "Stefano Rizzi, Luca Varesio, Matteo Golfarelli",
+      "year": "2018",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mheducation.com/highered/product/data-warehouse-design-rizzi-varesio-golfarelli/9781260455855.html",
+      "doi": "",
+      "note": "探讨现代数据仓库设计原则，包括大型事实表的分区等物理设计考量。",
+      "order": 4,
+      "created_at": "2025-11-27T04:46:31.602952Z",
+      "updated_at": "2025-11-27T06:02:38.080497Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

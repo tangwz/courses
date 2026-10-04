@@ -1,0 +1,45 @@
+{
+  "id": 5333,
+  "title": "Docker Compose 简介",
+  "meta_title": "Docker Compose 简介",
+  "meta_description": "理解 Docker Compose 的作用及其基本语法 (`docker-compose.yml`)。",
+  "content": "<p>使用单独的 <code>docker run</code> 命令管理关联服务（例如 API、数据库或处理工作器）很快就会变得繁琐。您需要手动配置网络以使它们能够通信，管理启动顺序，一致地处理端口映射，并且每次启动或停止应用程序环境时都重复这些步骤。这种手动过程不仅乏味，而且容易出错，特别是随着服务数量的增加。</p>\n<p>Docker Compose 提供了一种更具结构化且高效的方法。它是一个专门为定义和运行多容器 Docker 应用程序而构建的工具。您无需发出带有复杂参数 (parameter)的多个 <code>docker run</code> 命令，而是将您的整个应用程序堆栈（包括所有服务、网络和卷）都在一个配置文件中描述。</p>\n<p>这个配置文件，通常命名为 <code>docker-compose.yml</code>，使用 YAML（YAML Ain't Markup Language）格式，该格式旨在易于人类阅读。在此文件中，您以声明方式定义应用程序的构成。您指定每个服务应使用的镜像（例如您的 ML 推理 (inference) API 或 PostgreSQL 数据库）、它们应如何联网、应暴露哪些端口以及数据应如何使用卷持久化。</p>\n<p>使用 Docker Compose 的主要优点是简化操作。通过一个命令，通常是 <code>docker-compose up</code>，Compose 会读取您的 <code>docker-compose.yml</code> 文件，并负责创建（并可选地构建）必要的镜像、设置网络、创建卷，以及以正确的顺序和配置启动所有已定义的容器。同样，<code>docker-compose down</code> 会停止并移除与您的应用程序堆栈相关的容器、网络和卷。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1t87d0a\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  subgraph cluster_0 {\n    label = \"手动 `docker run`\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [shape=box, style=filled, color=\"#a5d8ff\"];\n    \"run_db\" [label=\"docker run ... db_image\"];\n    \"run_api\" [label=\"docker run ... api_image\"];\n    \"run_worker\" [label=\"docker run ... worker_image\"];\n    \"run_db\" -> \"run_api\" [style=invis];\n    \"run_api\" -> \"run_worker\" [style=invis];\n  }\n\n  subgraph cluster_1 {\n    label = \"Docker Compose\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [shape= Msquare, style=filled];\n    \"compose_up\" [label=\"docker-compose up\", color=\"#74c0fc\"];\n    \"compose_file\" [label=\"docker-compose.yml\\n(定义 db, api, worker)\", shape=note, color=\"#ffec99\"];\n    \"compose_up\" -> \"compose_file\" [dir=back];\n\n    subgraph cluster_2 {\n      label = \"受管容器\";\n      style=filled;\n      color=\"#dee2e6\";\n      node [shape=box, style=filled, color=\"#96f2d7\"];\n      \"cont_db\" [label=\"数据库容器\"];\n      \"cont_api\" [label=\"API 容器\"];\n      \"cont_worker\" [label=\"工作器容器\"];\n      \"cont_db\" -> \"cont_api\" [style=invis];\n      \"cont_api\" -> \"cont_worker\" [style=invis];\n     }\n     \"compose_up\" -> \"cont_db\" [lhead=cluster_2];\n\n  }\n    \"run_api\" -> \"compose_up\" [style=invis, weight=100]; \n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1t87d0a\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示从多个 <code>docker run</code> 命令到单个 <code>docker-compose up</code> 命令管理在 <code>docker-compose.yml</code> 中定义的应用程序的转变。</p>\n</blockquote>\n<p>虽然 Docker Compose 可以在多种环境下使用，但它对于为多组件机器学习 (machine learning)应用程序设置本地开发和测试环境特别有效。它使开发人员能够快速启动工作所需的整个堆栈，确保不同机器之间的一致性。在接下来的章节中，我们将查看 <code>docker-compose.yml</code> 文件的结构，并学习如何为常见的机器学习工作流定义服务、网络和卷。</p>",
+  "slug": "docker-compose-intro",
+  "updates": [],
+  "references": [
+    {
+      "id": 13903,
+      "title": "Overview of Docker Compose",
+      "author": "Docker Documentation",
+      "year": "Accessed 2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/compose/overview/",
+      "doi": "",
+      "note": "这份官方指南介绍了Docker Compose在定义和运行多容器应用程序方面的作用。",
+      "order": 1,
+      "created_at": "2025-09-05T08:44:54.805145Z",
+      "updated_at": "2025-09-11T02:10:37.310488Z"
+    },
+    {
+      "id": 13904,
+      "title": "Get started with Docker Compose",
+      "author": "Docker Documentation",
+      "year": "Accessed 2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/compose/gettingstarted/",
+      "doi": "",
+      "note": "提供使用Docker Compose设置多服务应用程序的实用步骤和示例。",
+      "order": 2,
+      "created_at": "2025-09-05T08:44:54.836891Z",
+      "updated_at": "2025-09-11T02:10:39.581561Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

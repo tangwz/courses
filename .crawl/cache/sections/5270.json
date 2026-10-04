@@ -1,0 +1,45 @@
+{
+  "id": 5270,
+  "title": "理解容器存储",
+  "meta_title": "Docker容器存储方式概览",
+  "meta_description": "介绍Docker容器存储和访问数据的方法。",
+  "content": "<p>正如我们所说，机器学习 (machine learning)工作流程对数据有很强的依赖。你需要数据集来训练模型，在长时间训练过程中可能会生成中间检查点，最终还需要保存训练好的模型文件。在使用容器时，了解数据如何处理非常重要，因为其默认行为不适合数据持久化。</p>\n<p>容器运行时，Docker 在只读镜像层之上创建了一个可写层。可以将镜像视为蓝图，容器则是根据该蓝图构建的运行实例。运行中的应用程序所做的任何更改，例如创建新文件、修改现有文件或下载数据，都会写入到这个容器特有的可写层。</p>\n<p>这里的重点是，这个可写层是<em>临时的</em>。它与单个容器实例的生命周期关联紧密。当容器停止并移除时（这经常发生，例如更新应用程序或仅仅清理资源时），这个可写层及其包含的所有数据都会被永久删除。想象一下，下载了一个大型数据集或完成了数小时的模型训练，结果却在容器移除时所有成果都消失了。这显然不适用于大多数机器学习任务。</p>\n<p>我们需要独立于容器生命周期持久化存储数据的方式。我们需要以下机制：</p>\n<ol>\n<li><strong>数据持久化：</strong> 确保数据集、日志、模型检查点和最终模型在容器重启或移除后仍然存在。</li>\n<li><strong>数据共享：</strong> 让宿主机的数据在容器<em>内部</em>可用（例如开发阶段的源代码或本地数据集）。</li>\n<li><strong>数据解耦：</strong> 将应用程序逻辑（在容器镜像中）与它操作的数据分离。</li>\n</ol>\n<p>Docker 提供了两种主要机制来实现这些目标，它们是容器化机器学习应用中数据管理的主要方式：</p>\n<ul>\n<li><strong>绑定挂载：</strong> 这些机制将宿主机文件系统中的文件或目录直接映射到容器中。在容器中进行的更改会反映到宿主机上，反之亦然。</li>\n<li><strong>卷：</strong> 这些是由 Docker 自身管理的存储区域。它们存储在宿主机文件系统中的特定部分，由 Docker 管理，但其确切位置通常无需直接交互。卷是持久化容器生成数据的推荐方式。</li>\n</ul>\n<p>下图展示了容器的临时层与这些持久化存储选项之间的关系。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ehi0xi\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Helvetica\"];\n  subgraph cluster_host {\n    label=\"宿主机文件系统\";\n    style=filled;\n    color=\"#e9ecef\";\n    host_dir [label=\"宿主机目录\\n(/path/to/data)\", fillcolor=\"#a5d8ff\"];\n    docker_managed [label=\"Docker管理区域\\n(例如：/var/lib/docker/volumes)\", fillcolor=\"#96f2d7\", shape=folder];\n  }\n  subgraph cluster_container {\n    label=\"容器\";\n    style=filled;\n    color=\"#dee2e6\";\n    container_fs [label=\"容器可写层\\n(临时 - 移除后丢失)\", fillcolor=\"#ffc9c9\"];\n    container_mount_bind [label=\"挂载点\\n(/data_bind)\", fillcolor=\"#a5d8ff\"];\n    container_mount_volume [label=\"挂载点\\n(/data_volume)\", fillcolor=\"#96f2d7\"];\n  }\n  container_fs -> container_mount_bind [style=invis]; // ensure layout\n  container_fs -> container_mount_volume [style=invis]; // ensure layout\n\n  edge [fontname=\"Helvetica\", fontsize=10];\n  host_dir -> container_mount_bind [label=\"绑定挂载\\n(直接连接)\"];\n  docker_managed -> container_mount_volume [label=\"卷\\n(Docker管理)\"];\n\n  {rank=same; host_dir; docker_managed;}\n  {rank=same; container_fs; container_mount_bind; container_mount_volume;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ehi0xi\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>容器可写层中的数据在容器移除时会丢失。绑定挂载直接链接到宿主机文件系统，而卷提供Docker管理的持久化存储。</p>\n</blockquote>\n<p>理解容器内部临时存储与外部挂载持久化存储之间的这种区别，是有效管理容器化机器学习项目中的数据集、模型及其他文件的第一步。在后续章节中，我们将详细研究绑定挂载和卷，讨论它们在不同机器学习场景中的用例、优点和缺点。</p>",
+  "slug": "container-storage-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 13950,
+      "title": "Manage data in Docker",
+      "author": "Docker Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/storage/",
+      "doi": "",
+      "note": "官方文档，说明 Docker 的存储机制，包括容器可写层的特性、绑定挂载和卷在数据持久化方面的作用。",
+      "order": 1,
+      "created_at": "2025-09-05T08:45:33.774315Z",
+      "updated_at": "2025-09-11T02:11:23.915359Z"
+    },
+    {
+      "id": 13952,
+      "title": "Building Machine Learning Powered Applications: Going from Idea to Product",
+      "author": "Emmanuel Ameisen",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "257",
+      "url": "https://www.barnesandnoble.com/w/building-machine-learning-powered-applications-emmanuel-ameisen/1136458284",
+      "doi": "",
+      "note": "讨论部署机器学习应用程序的实践方面，包括在容器化环境中管理数据和模型工件的策略。",
+      "order": 3,
+      "created_at": "2025-09-05T08:45:33.780656Z",
+      "updated_at": "2025-09-11T02:12:06.028911Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

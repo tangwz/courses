@@ -1,0 +1,61 @@
+{
+  "id": 4889,
+  "title": "动手：过拟合的可视化",
+  "meta_title": "实践可视化过拟合",
+  "meta_description": "动手实践，使用学习曲线或模型预测来可视化过拟合。",
+  "content": "<p>在前面的章节中，我们讲解了泛化、过拟合 (overfitting)和欠拟合 (underfitting)的思想。你学习了学习曲线如何作为一种诊断工具，显示训练表现和验证表现之间的差异。现在，让我们将这些知识付诸实践，生成一个可能出现过拟合的情境并直接将其可视化。这项练习将巩固你对如何运用性能指标和模型行为来发现过拟合的理解。</p>\n<p>我们将使用一个简单的回归问题：将模型拟合到从已知函数生成并添加了噪声的数据。通过比较一个简单模型和一个复杂模型，我们可以观察到复杂模型如何学习训练数据中的噪声，从而导致在未见过的数据上表现不佳。</p>\n<h3>场景设置</h3>\n<p>为了顺利进行，请准备好Python环境，并安装PyTorch、NumPy和Matplotlib（或其他绘图库，如Plotly或Seaborn）。</p>\n<p>“我们将基于一个简单的底层函数（如正弦波或低次多项式）创建一个小型合成数据集，并添加一些随机噪声。这种噪声模拟了数据中存在的不完美和随机变化。”</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.optim as optim\nimport numpy as np\nimport matplotlib.pyplot as plt\n\n# 生成合成数据\ntorch.manual_seed(42) # 为了结果可复现\nn_samples = 30\nX = torch.linspace(-np.pi, np.pi, n_samples).unsqueeze(1)\n# 真实函数：sin(x) + 小线性趋势\ny_true = torch.sin(X) + 0.1 * X\n# 添加噪声\ny = y_true + torch.randn(X.size()) * 0.2\n\n# 划分为训练集和验证集（简单划分仅为演示）\nn_train = 20\nX_train, y_train = X[:n_train], y[:n_train]\nX_val, y_val = X[n_train:], y[n_train:]\n\n# 绘图函数\ndef plot_data(X_train, y_train, X_val, y_val, X_full=None, y_pred=None, model_name=None):\n    plt.figure(figsize=(8, 5))\n    plt.scatter(X_train.numpy(), y_train.numpy(), label='Training Data', c='#1f77b4', s=50, alpha=0.7)\n    plt.scatter(X_val.numpy(), y_val.numpy(), label='Validation Data', c='#ff7f0e', s=50, alpha=0.7, marker='x')\n    if X_full is not None and y_pred is not None:\n        plt.plot(X_full.numpy(), y_pred.detach().numpy(), label=f'{model_name} Prediction', c='#2ca02c', linewidth=2)\n    plt.xlabel(\"Feature (X)\")\n    plt.ylabel(\"Target (y)\")\n    plt.legend()\n    plt.grid(True, linestyle='--', alpha=0.5)\n    plt.title(\"Synthetic Data and Model Fit\")\n    plt.show()\n\n# 绘制生成的数据\n# plot_data(X_train, y_train, X_val, y_val) # 取消注释以查看原始数据\n</code></pre>\n<h3>模型定义</h3>\n<p>现在，让我们使用PyTorch定义两个神经网络 (neural network)模型。一个将相对简单，另一个将明显更复杂（具有更多层或神经元），使其在我们的小型数据集上容易过拟合 (overfitting)。</p>\n<pre><code class=\"language-python\"># 简单模型（可能欠拟合或拟合良好）\nclass SimpleModel(nn.Module):\n    def __init__(self):\n        super().__init__()\n        # 一个简单的线性层可能欠拟合，我们尝试一个小型的多层感知器\n        self.layer1 = nn.Linear(1, 10)\n        self.activation = nn.ReLU()\n        self.output_layer = nn.Linear(10, 1)\n\n    def forward(self, x):\n        x = self.activation(self.layer1(x))\n        x = self.output_layer(x)\n        return x\n\n# 复杂模型（容易过拟合）\nclass ComplexModel(nn.Module):\n    def __init__(self):\n        super().__init__()\n        # 更多层和神经元\n        self.layer1 = nn.Linear(1, 128)\n        self.activation1 = nn.ReLU()\n        self.layer2 = nn.Linear(128, 128)\n        self.activation2 = nn.ReLU()\n        self.layer3 = nn.Linear(128, 64)\n        self.activation3 = nn.ReLU()\n        self.output_layer = nn.Linear(64, 1)\n\n    def forward(self, x):\n        x = self.activation1(self.layer1(x))\n        x = self.activation2(self.layer2(x))\n        x = self.activation3(self.layer3(x))\n        x = self.output_layer(x)\n        return x\n\nsimple_model = SimpleModel()\ncomplex_model = ComplexModel()\n</code></pre>\n<h3>模型训练</h3>\n<p>我们将使用标准的训练循环来训练这两个模型。我们将使用均方误差（MSE）作为损失函数 (loss function)，并使用Adam优化器（我们稍后会详细介绍，但这是一个常见默认设置）。我们将跟踪每个周期的训练损失和验证损失。</p>\n<pre><code class=\"language-python\">def train_model(model, X_train, y_train, X_val, y_val, epochs=2000, lr=0.005):\n    criterion = nn.MSELoss()\n    optimizer = optim.Adam(model.parameters(), lr=lr)\n\n    train_losses = []\n    val_losses = []\n\n    for epoch in range(epochs):\n        model.train() # 将模型设置为训练模式\n\n        # 前向传播\n        outputs = model(X_train)\n        loss = criterion(outputs, y_train)\n\n        # 反向传播和优化\n        optimizer.zero_grad()\n        loss.backward()\n        optimizer.step()\n\n        # 在验证集上评估\n        model.eval() # 将模型设置为评估模式\n        with torch.no_grad():\n            val_outputs = model(X_val)\n            val_loss = criterion(val_outputs, y_val)\n\n        train_losses.append(loss.item())\n        val_losses.append(val_loss.item())\n\n        if (epoch + 1) % 200 == 0:\n            print(f'Epoch [{epoch+1}/{epochs}], Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}')\n\n    return train_losses, val_losses\n\nprint(\"训练简单模型...\")\nsimple_train_losses, simple_val_losses = train_model(simple_model, X_train, y_train, X_val, y_val)\n\nprint(\"\\n训练复杂模型...\")\ncomplex_train_losses, complex_val_losses = train_model(complex_model, X_train, y_train, X_val, y_val)\n\n</code></pre>\n<h3>可视化 1：学习曲线</h3>\n<p>学习曲线绘制了训练损失和验证损失随周期变化的情况。它们是诊断拟合问题的主要工具。</p>\n<ul>\n<li><strong>良好拟合：</strong> 训练损失和验证损失下降并收敛。</li>\n<li><strong>欠拟合 (underfitting)：</strong> 两种损失均保持高位或过早稳定。</li>\n<li><strong>过拟合 (overfitting)：</strong> 训练损失持续下降，而验证损失开始增加或在明显更高的水平上稳定。</li>\n</ul>\n<p>让我们绘制两个模型的学习曲线。</p>\n<pre><code class=\"language-plotly\">{\"layout\": {\"title\": \"学习曲线：简单模型 vs. 复杂模型\", \"xaxis\": {\"title\": \"周期\"}, \"yaxis\": {\"title\": \"均方误差损失\", \"type\": \"log\"}, \"legend\": {\"title\": \"图例\"}, \"width\": 700, \"height\": 450}, \"data\": [{\"x\": [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000], \"y\": [0.15, 0.10, 0.08, 0.06, 0.05, 0.045, 0.04, 0.038, 0.037, 0.036, 0.035, 0.034, 0.033, 0.032, 0.031, 0.030, 0.030, 0.029, 0.029, 0.028], \"mode\": \"lines\", \"name\": \"简单 - 训练损失\", \"line\": {\"color\": \"#1f77b4\"}}, {\"x\": [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000], \"y\": [0.18, 0.14, 0.12, 0.10, 0.09, 0.08, 0.075, 0.07, 0.068, 0.067, 0.066, 0.065, 0.064, 0.063, 0.062, 0.061, 0.061, 0.060, 0.060, 0.059], \"mode\": \"lines\", \"name\": \"简单 - 验证损失\", \"line\": {\"color\": \"#aec7e8\", \"dash\": \"dash\"}}, {\"x\": [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000], \"y\": [0.05, 0.02, 0.01, 0.005, 0.003, 0.002, 0.0015, 0.001, 0.0008, 0.0006, 0.0005, 0.0004, 0.0003, 0.00025, 0.0002, 0.00018, 0.00016, 0.00015, 0.00014, 0.00013], \"mode\": \"lines\", \"name\": \"复杂 - 训练损失\", \"line\": {\"color\": \"#ff7f0e\"}}, {\"x\": [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000], \"y\": [0.10, 0.08, 0.09, 0.11, 0.13, 0.15, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.41, 0.42], \"mode\": \"lines\", \"name\": \"复杂 - 验证损失\", \"line\": {\"color\": \"#ffbb78\", \"dash\": \"dash\"}}]\n</code></pre>\n<blockquote>\n<p>简单模型和复杂模型的学习曲线比较。注意y轴采用对数刻度。复杂模型显示训练损失（下降）和验证损失（增加）之间存在明显背离，表明过拟合。简单模型的损失收敛得更紧密。（注意：实际损失值取决于具体的运行；这些仅作说明。）</p>\n</blockquote>\n<p>观察学习曲线。复杂模型的训练损失可能降得很低，表明它很好地拟合了训练数据。然而，它的验证损失在最初下降后，可能会开始增加或在远高于训练损失的水平上稳定。这种不断扩大的差异是经典的过拟合迹象。简单模型可能差异较小，或者两种损失都可能稳定，这表明其复杂度不足以导致过拟合（或者甚至有点欠拟合）。</p>\n<h3>可视化 2：模型预测</h3>\n<p>另一种可视化过拟合 (overfitting)的方法，尤其是在回归问题中，是绘制模型的预测与实际数据点的对比图。过拟合的模型通常会显示过度的波动，试图穿过每个训练数据点，包括噪声。</p>\n<pre><code class=\"language-python\"># 绘制预测结果\nsimple_model.eval()\ncomplex_model.eval()\n\nwith torch.no_grad():\n    # 使用完整的X范围来绘制曲线\n    y_pred_simple = simple_model(X) \n    y_pred_complex = complex_model(X)\n\n# 绘制简单模型的拟合\nplot_data(X_train, y_train, X_val, y_val, X, y_pred_simple, \"Simple Model\")\n\n# 绘制复杂模型的拟合\nplot_data(X_train, y_train, X_val, y_val, X, y_pred_complex, \"Complex Model\")\n\n# 可选：绘制真实的底层函数\nplt.figure(figsize=(8, 5))\nplt.scatter(X_train.numpy(), y_train.numpy(), label='Training Data', c='#1f77b4', s=50, alpha=0.7)\nplt.scatter(X_val.numpy(), y_val.numpy(), label='Validation Data', c='#ff7f0e', s=50, alpha=0.7, marker='x')\nplt.plot(X.numpy(), y_true.numpy(), label='True Function', c='black', linestyle=':', linewidth=2)\nplt.plot(X.numpy(), y_pred_complex.detach().numpy(), label='Complex Model Prediction', c='#d62728', linewidth=2) # 过拟合模型使用红色\nplt.xlabel(\"Feature (X)\")\nplt.ylabel(\"Target (y)\")\nplt.legend()\nplt.ylim(y.min()-0.5, y.max()+0.5) # 调整y轴限制以获得更好的视图\nplt.grid(True, linestyle='--', alpha=0.5)\nplt.title(\"Complex Model vs. True Function\")\nplt.show()\n\n</code></pre>\n<p>当你查看这些图时：</p>\n<ol>\n<li><strong>简单模型：</strong> 预测曲线应相对平滑。它可能无法捕捉训练数据的所有细节，但它可能代表了总体趋势，没有剧烈波动。</li>\n<li><strong>复杂模型：</strong> 该模型的预测曲线可能会剧烈摆动，尤其是在训练点之间。它过于努力地适应每个训练数据点，包括噪声。这种复杂的曲线通常会导致验证点（橙色“x”标记 (token)）的预测效果不佳，并且很可能在从真实底层函数中抽取的任何新数据上表现不佳。与真实函数（如果绘制）的比较凸显了过拟合模型偏离的程度。</li>\n</ol>\n<h3>要点总结</h3>\n<p>这项实践练习体现了两种识别过拟合 (overfitting)的可视化方法：</p>\n<ol>\n<li><strong>学习曲线：</strong> 观察训练损失和验证损失随周期变化的差异。</li>\n<li><strong>模型预测：</strong> 看到模型拟合了训练数据中的噪声，导致生成一个过于复杂的函数，与底层模式不符。</li>\n</ol>\n<p>识别过拟合是第一步。后续章节将介绍正则化 (regularization)（L1/L2、Dropout、批量归一化 (normalization)）等方法以及复杂的优化算法，它们旨在解决这个问题，并帮助我们的模型更好地泛化到未见过的数据。</p>",
+  "slug": "practice-visualizing-overfitting",
+  "updates": [],
+  "references": [
+    {
+      "id": 13783,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "对深度学习的全面介绍，涵盖了泛化、过拟合和模型复杂性等基础概念。",
+      "order": 1,
+      "created_at": "2025-09-05T08:40:01.422684Z",
+      "updated_at": "2025-09-08T15:50:14.381332Z"
+    },
+    {
+      "id": 13784,
+      "title": "PyTorch Documentation",
+      "author": "PyTorch Contributors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/index.html",
+      "doi": "",
+      "note": "PyTorch 深度学习框架的官方文档，提供了实践中使用的模块、优化器和数据处理的详细信息。",
+      "order": 2,
+      "created_at": "2025-09-05T08:40:01.699577Z",
+      "updated_at": "2025-09-08T15:50:22.731238Z"
+    },
+    {
+      "id": 13785,
+      "title": "Machine Learning Yearning",
+      "author": "Andrew Ng",
+      "year": "2018",
+      "publisher": "deeplearning.ai",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearning.ai/machine-learning-yearning/",
+      "doi": "",
+      "note": "构建机器学习系统的实用指南，提供了使用学习曲线诊断和解决过拟合和欠拟合的策略。",
+      "order": 3,
+      "created_at": "2025-09-05T08:40:01.734332Z",
+      "updated_at": "2025-09-08T15:50:22.633555Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

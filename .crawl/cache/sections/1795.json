@@ -1,0 +1,45 @@
+{
+  "id": 1795,
+  "title": "TensorFlow SavedModel 形式",
+  "meta_title": "TensorFlow SavedModel 形式解析",
+  "meta_description": "理解用于部署和共享的标准 TensorFlow SavedModel 形式。",
+  "content": "<p>保存检查点或仅保存模型权重 (weight)在开发和训练时很有用，但部署模型通常需要更全面、标准化的格式。TensorFlow 为此提供了 <code>SavedModel</code> 这种格式。它是保存一个完整的 TensorFlow 程序（包括模型架构、训练好的权重以及计算图本身）的推荐方式，这种格式是语言无关且可恢复的。</p>\n<p>可以将 <code>SavedModel</code> 看作是训练好的模型的自包含包。它存储权重并捕获执行推断所需的实际 TensorFlow 图操作。这使其非常适合于可能没有用于定义模型的原始 Python 代码的环境，例如：</p>\n<ul>\n<li><strong>TensorFlow Serving：</strong> 一个为在生产环境中服务机器学习 (machine learning)模型而设计的高性能系统。</li>\n<li><strong>TensorFlow Lite：</strong> 用于在移动设备、微控制器和其他边缘设备上部署模型。</li>\n<li><strong>TensorFlow.js：</strong> 用于在网页浏览器或 Node.js 应用中直接运行模型。</li>\n<li>与可能使用不同编程语言或环境的其他人共享模型。</li>\n</ul>\n<h3>以 SavedModel 形式保存</h3>\n<p>以 SavedModel 形式保存 Keras 模型很简单。如果你使用 <code>model.save()</code> 方法并提供一个没有 <code>.h5</code> 或 <code>.weights.h5</code> 扩展名的目录路径，TensorFlow 会默认采用 SavedModel 形式。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n# 假设 'model' 是你训练好的 Keras 模型\n# model = tf.keras.Sequential([...])\n# model.compile(...)\n# model.fit(...)\n\n# 以 SavedModel 形式保存模型\nmodel.save(\"my_first_savedmodel\")\n</code></pre>\n<p>此命令会创建一个名为 <code>my_first_savedmodel</code> 的目录（或你指定的任何路径）。与仅保存权重 (weight)（通常会创建带 <code>.weights.h5</code> 或 <code>.keras</code> 扩展名的一个或多个文件）不同，以 SavedModel 形式保存会创建特定的目录结构。</p>\n<h3>SavedModel 目录的结构</h3>\n<p>让我们查看 <code>model.save()</code> 创建的目录内容：</p>\n<ul>\n<li><strong><code>saved_model.pb</code></strong>：这是 SavedModel 的核心。它是一个协议缓冲区文件，包含序列化的 <code>MetaGraphDef</code>。每个 <code>MetaGraphDef</code> 都包含图结构（即 <code>GraphDef</code>）、变量信息、资产详情，以及重要的模型签名（我们接下来会介绍这些）。</li>\n<li><strong><code>variables/</code></strong>：这个子目录保存了模型变量（权重 (weight)和偏差）的训练值。数据通常被分片到多个文件（<code>variables.data-xxxxx-of-yyyyy</code> 和 <code>variables.index</code>）中，以便高效加载。</li>\n<li><strong><code>assets/</code></strong>：一个可选目录。如果你的模型依赖外部文件（如文本处理的词汇文件或查找表），它们会被复制到这里。这保证了 SavedModel 的自包含性。</li>\n<li><strong><code>fingerprint.pb</code></strong>：包含用于标识 SavedModel 形式版本和创建者的元数据。</li>\n<li><strong><code>keras_metadata.pb</code></strong>：（可选，但从 Keras 保存时通常会存在）此文件存储有关模型架构、损失函数 (loss function)、优化器状态和指标的 Keras 特有信息。这使得 <code>tf.keras.models.load_model</code> 能够完美重建原始 Keras 模型对象，从而可以使用 Keras API 进行进一步的训练或修改。</li>\n</ul>\n<pre><code class=\"language-text\">my_first_savedmodel/\n├── assets/\n├── variables/\n│   ├── variables.data-00000-of-00001\n│   └── variables.index\n├── fingerprint.pb\n├── keras_metadata.pb  # Keras 特有信息\n└── saved_model.pb     # 计算图和签名\n</code></pre>\n<h3>签名：定义模型端点</h3>\n<p>SavedModel 的一个重要特点是<strong>签名</strong>的理念。签名定义了模型导出的一个特定函数或计算。它指定了特定任务（通常是推断）的预期输入张量和结果输出张量。可以将它们视为模型计算图的定义入口点。</p>\n<p>当你保存 Keras 模型时，它通常会自动导出一个名为 <code>serving_default</code> 的默认签名。这个签名通常对应于模型的正向传播（<code>call</code> 方法或 <code>predict</code> 行为），接收模型的输入并产生其输出。</p>\n<p>对于像 TensorFlow Serving 这样的部署系统，这些签名是必不可少的。它们准确地告诉服务系统如何与加载的模型交互以获取预测。你还可以使用 <code>tf.function</code> 为不同的功能定义自定义签名，并在保存标准 Keras <code>Model</code> 类之外构建的模型时或在导出特定预处理步骤时指定输入签名。</p>\n<h3>加载 SavedModel</h3>\n<p>你可以使用 <code>tf.keras.models.load_model()</code> 加载以此形式保存的模型：</p>\n<pre><code class=\"language-python\"># 从目录加载模型\nloaded_model = tf.keras.models.load_model(\"my_first_savedmodel\")\n\n# 验证其是否为相同类型的对象\nprint(type(loaded_model))\n# &#x3C;class 'keras.src.engine.sequential.Sequential'> (or Functional, etc.)\n\n# 你现在可以用它进行预测、评估，甚至继续训练\n# predictions = loaded_model.predict(new_data)\n</code></pre>\n<p>由于包含了 <code>keras_metadata.pb</code> 文件，<code>load_model</code> 成功地重建了原始的 Keras <code>Sequential</code>（或 <code>Functional</code>）模型对象，其中包含其架构、权重 (weight)，如果保存了，甚至还包含优化器状态。</p>\n<p>另外，你可以使用更低层次的 <code>tf.saved_model.load()</code> 函数：</p>\n<pre><code class=\"language-python\">loaded_generic = tf.saved_model.load(\"my_first_savedmodel\")\n\n# 这会返回不同类型的对象\nprint(type(loaded_generic))\n# &#x3C;class 'tensorflow.python.saved_model.load.Loader._recreate_base_user_object.&#x3C;locals>._UserObject'>\n\n# 访问默认的服务签名\ninference_func = loaded_generic.signatures[\"serving_default\"]\n\n# 使用签名进行推断（需要 Tensor 格式的输入）\n# output_tensor = inference_func(tf.constant(input_data_as_numpy))['output_layer_name']\n</code></pre>\n<p>使用 <code>tf.saved_model.load()</code> 会得到一个更通用的 TensorFlow 对象。如果你不需要完整的 Keras 模型结构，这会很有用，例如将其集成到非 Keras 的 TensorFlow 代码中，或者在 Keras 不可用的部署环境中。你主要通过其定义的签名来与之交互。</p>\n<p>总之，SavedModel 形式是 TensorFlow 用于序列化模型以进行部署和共享的标准。它将图、权重和资产打包成一种自包含、语言无关的形式，使其与 TensorFlow Serving、Lite 和 JS 兼容。尽管在开发过程中保存权重或使用检查点很方便，但 SavedModel 是将模型投入实际应用的优选。</p>",
+  "slug": "tensorflow-savedmodel-format",
+  "updates": [],
+  "references": [
+    {
+      "id": 4190,
+      "title": "TensorFlow SavedModel Guide",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/saved_model",
+      "doi": "",
+      "note": "介绍了保存完整TensorFlow程序的标准格式，涵盖其结构、组件和主要应用。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:27.425839Z",
+      "updated_at": "2025-09-08T02:57:47.809597Z"
+    },
+    {
+      "id": 4193,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "一本实用的书籍，介绍模型保存和部署策略，包括TensorFlow SavedModel。",
+      "order": 4,
+      "created_at": "2025-09-04T16:56:27.481841Z",
+      "updated_at": "2025-09-08T02:58:12.764702Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

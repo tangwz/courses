@@ -1,0 +1,45 @@
+{
+  "id": 1722,
+  "title": "修改数组子集",
+  "meta_title": "修改 NumPy 数组子集",
+  "meta_description": "为 NumPy 数组的特定元素或切片赋值。",
+  "content": "<p>各种索引方法能够选择 NumPy 数组的特定元素或部分。这些强大的选择方法被用来<em>更改</em>数组中的值。这是在数据分析和机器学习 (machine learning)任务中进行数据清理、转换和处理的一项基本操作。</p>\n<p>核心思想很简单：任何您用来选择数据的方法，只要在赋值运算符 (<code>=</code>) 的左侧使用，都可以用来为选定元素赋新值。</p>\n<h3>为单个元素赋值</h3>\n<p>就像您使用方括号 <code>[]</code> 和索引来访问元素一样，您也可以使用相同的语法来为该特定位置赋新值。</p>\n<p>对于一维数组：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个简单的一维数组\narr1d = np.arange(10)\nprint(\"原始一维数组:\", arr1d)\n# 输出: 原始一维数组: [0 1 2 3 4 5 6 7 8 9]\n\n# 修改索引为 5 的元素\narr1d[5] = 99\nprint(\"修改后的一维数组:\", arr1d)\n# 输出: 修改后的一维数组: [ 0  1  2  3  4 99  6  7  8  9]\n</code></pre>\n<p>对于二维数组，您使用 <code>[行, 列]</code> 记法：</p>\n<pre><code class=\"language-python\"># 创建一个二维数组\narr2d = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])\nprint(\"原始二维数组:\\n\", arr2d)\n# 输出:\n# 原始二维数组:\n#  [[1 2 3]\n#  [4 5 6]\n#  [7 8 9]]\n\n# 修改第 1 行、第 2 列的元素\narr2d[1, 2] = -5\nprint(\"修改后的二维数组:\\n\", arr2d)\n# 输出:\n# 修改后的二维数组:\n#  [[ 1  2  3]\n#  [ 4  5 -5]\n#  [ 7  8  9]]\n</code></pre>\n<h3>修改数组切片</h3>\n<p>切片允许您选择一系列元素。您可以为整个切片赋一个单一值，或者赋一个与切片形状匹配的数组值。</p>\n<p><strong>为切片赋标量值：</strong></p>\n<p>当您为切片赋一个单一标量值（例如一个数字）时，NumPy 会使用<em>广播</em>机制，用该值填充整个选定的切片。</p>\n<pre><code class=\"language-python\"># 重新创建一维数组\narr1d = np.arange(10)\nprint(\"原始一维数组:\", arr1d)\n# 输出: 原始一维数组: [0 1 2 3 4 5 6 7 8 9]\n\n# 将值 100 赋给从索引 2 开始（不包括 5）的元素\narr1d[2:5] = 100\nprint(\"修改后的切片（标量）:\", arr1d)\n# 输出: 修改后的切片（标量）: [  0   1 100 100 100   5   6   7   8   9]\n</code></pre>\n<p>对于二维数组，这同样适用：</p>\n<pre><code class=\"language-python\"># 重新创建二维数组\narr2d = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])\nprint(\"原始二维数组:\\n\", arr2d)\n# 输出:\n# 原始二维数组:\n#  [[1 2 3]\n#  [4 5 6]\n#  [7 8 9]]\n\n# 将 0 赋给左上角的 2x2 子数组\narr2d[0:2, 0:2] = 0\nprint(\"修改后的切片（标量，二维）:\\n\", arr2d)\n# 输出:\n# 修改后的切片（标量，二维）:\n#  [[0 0 3]\n#  [0 0 6]\n#  [7 8 9]]\n</code></pre>\n<p><strong>为切片赋数组：</strong></p>\n<p>您也可以将另一个数组（或列表）赋给切片，前提是您要赋的数组的形状与您选择的切片的形状匹配。</p>\n<pre><code class=\"language-python\"># 重新创建一维数组\narr1d = np.arange(10)\nprint(\"原始一维数组:\", arr1d)\n# 输出: 原始一维数组: [0 1 2 3 4 5 6 7 8 9]\n\n# 将列表中的值赋给切片\narr1d[5:8] = [55, 66, 77]\nprint(\"修改后的切片（数组）:\", arr1d)\n# 输出: 修改后的切片（数组）: [ 0  1  2  3  4 55 66 77  8  9]\n\n# 尝试赋值一个形状不匹配的数组会导致错误\n# arr1d[5:8] = [1, 2] # 这将引发 ValueError\n</code></pre>\n<p><strong>关于切片与视图的重要提示：</strong> 当您修改一个切片时，通常是直接修改原始数组。这是因为切片通常返回原始数据的<em>视图</em>，而不是副本。请注意这一点，因为通过切片视图所做的更改会反映在原始数组中。</p>\n<pre><code class=\"language-python\">arr = np.arange(5)\nprint(\"原始数组:\", arr) # [0 1 2 3 4]\narr_slice = arr[1:4]\nprint(\"切片:\", arr_slice)    # [1 2 3]\n\narr_slice[:] = 99 # 修改切片的所有元素\nprint(\"修改后的切片:\", arr_slice) # [99 99 99]\nprint(\"切片修改后的原始数组:\", arr) # [ 0 99 99 99  4]\n</code></pre>\n<p>请注意，修改 <code>arr_slice</code> 也改变了 <code>arr</code>。</p>\n<h3>使用布尔索引进行修改</h3>\n<p>布尔索引对于更改满足特定条件的元素非常有用。您将布尔条件放在方括号内。所有条件评估为 <code>True</code> 的元素都将被选中进行赋值。</p>\n<pre><code class=\"language-python\"># 创建一个包含正数和负数的数组\ndata = np.array([-1, 5, -3, 0, 8, -2, 4])\nprint(\"原始数据:\", data)\n# 输出: 原始数据: [-1  5 -3  0  8 -2  4]\n\n# 将所有负数赋为 0\ndata[data &#x3C; 0] = 0\nprint(\"替换负数后的数据:\", data)\n# 输出: 替换负数后的数据: [0 5 0 0 8 0 4]\n\n# 为满足另一个条件的元素赋特定值\ndata[data > 5] = 500\nprint(\"将大于 5 的值设限后的数据:\", data)\n# 输出: 将大于 5 的值设限后的数据: [  0   5   0   0 500   0   4]\n</code></pre>\n<p>同样，广播机制也适用。当您赋一个单一标量值（如上面的 <code>0</code> 或 <code>500</code>）时，它会被赋给所有通过布尔条件选中的元素。</p>\n<h3>使用高级索引进行修改</h3>\n<p>高级索引使用整数数组来指定您要访问或修改的元素的索引。这使得选择和更改非连续元素成为可能。</p>\n<pre><code class=\"language-python\"># 创建一个一维数组\narr = np.zeros(10, dtype=int) # 包含十个零的数组\nprint(\"初始数组:\", arr)\n# 输出: 初始数组: [0 0 0 0 0 0 0 0 0 0]\n\n# 使用高级索引设置特定元素\nindices_to_change = [1, 4, 7, 8]\narr[indices_to_change] = 99\nprint(\"高级索引赋值后的数组:\", arr)\n# 输出: 高级索引赋值后的数组: [ 0 99  0  0 99  0  0 99 99  0]\n\n# 您也可以赋值一个与索引数量匹配的序列\nnew_values = [11, 44, 77, 88]\narr[indices_to_change] = new_values\nprint(\"赋值序列后的数组:\", arr)\n# 输出: 赋值序列后的数组: [ 0 11  0  0 44  0  0 77 88  0]\n</code></pre>\n<p>高级索引也可以用于多维数组：</p>\n<pre><code class=\"language-python\"># 创建一个二维数组\narr2d = np.arange(12).reshape((3, 4))\nprint(\"原始二维数组:\\n\", arr2d)\n# 输出:\n# 原始二维数组:\n#  [[ 0  1  2  3]\n#  [ 4  5  6  7]\n#  [ 8  9 10 11]]\n\n# 使用行和列索引数组选择特定元素\nrows = np.array([0, 1, 2])\ncols = np.array([1, 2, 0]) # 选择元素 (0,1), (1,2), (2,0)\n\n# 为选定的元素赋值\narr2d[rows, cols] = -1\nprint(\"修改后的二维数组（高级索引）:\\n\", arr2d)\n# 输出:\n# 修改后的二维数组（高级索引）:\n#  [[ 0 -1  2  3]\n#  [ 4  5 -1  7]\n#  [-1  9 10 11]]\n</code></pre>\n<p>主要内容是，相同的灵活选择机制对于赋值操作同样有效。</p>\n<p>能够使用索引、切片、布尔条件或索引数组选择数据的子集，然后直接修改这些子集，是 NumPy 中数据操作的根本。在为数据分析或机器学习 (machine learning)模型准备数据时，您会经常使用这些技巧。</p>",
+  "slug": "modifying-array-subsets",
+  "updates": [],
+  "references": [
+    {
+      "id": 5428,
+      "title": "Indexing",
+      "author": "NumPy community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "提供了关于各种 NumPy 索引方法的全面细节，包括如何使用直接索引、切片、布尔索引和高级索引修改数组元素，以及关于数组视图的重要信息。",
+      "order": 1,
+      "created_at": "2025-09-04T17:00:21.222342Z",
+      "updated_at": "2025-09-08T02:35:35.087984Z"
+    },
+    {
+      "id": 5429,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Python 数据处理的权威参考书，提供了 NumPy 数组索引、切片和赋值操作的实用指导，这对于数据清洗和转换至关重要。",
+      "order": 2,
+      "created_at": "2025-09-04T17:00:21.228537Z",
+      "updated_at": "2025-09-08T02:35:43.582092Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

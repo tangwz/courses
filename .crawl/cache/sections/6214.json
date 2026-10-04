@@ -1,0 +1,61 @@
+{
+  "id": 6214,
+  "title": "使用 Airflow 或 Kubeflow 进行工作流编排",
+  "meta_title": "RAG 工作流编排 | Airflow 与 Kubeflow",
+  "meta_description": "借助 Apache Airflow 或 Kubeflow 等工具，大规模编排复杂的 RAG 工作流。",
+  "content": "<p>在您将大规模检索增强生成 (RAG) 系统投入运行的过程中，管理数据处理、模型执行和基础设施配合的交互会成为一项主要的挑战。一个典型的 RAG 系统包含多个阶段：数据摄取、分块、向量 (vector)化、索引、检索、重排序、生成以及持续的评估和更新。可靠、高效且大规模地执行这些阶段需要一个工作流编排方案。Apache Airflow 和 Kubeflow Pipelines 等工具正是在此派上用场，为自动化、调度和监控您的 RAG 工作流提供支持。</p>\n<h3>RAG 编排的必要性</h3>\n<p>大规模 RAG 流程并非简单的线性脚本。它们涉及：</p>\n<ul>\n<li><strong>复杂的依赖关系</strong>：向量 (vector)生成必须在文档分块之后；索引更新依赖于新的向量。</li>\n<li><strong>不同类型的任务</strong>：操作可以包含大规模数据处理（用于摄取的 Spark 作业）、GPU 密集型任务（向量生成、LLM 推理 (inference)）以及 API 调用（向量数据库更新）。</li>\n<li><strong>错误处理和重试</strong>：分布式系统容易出现暂时性故障。单个阶段必须使用适当的退避策略重试，而不能破坏整个工作流。</li>\n<li><strong>监控和日志</strong>：集中跟踪每个阶段的进度、故障和性能指标，对运行情况了解很重要。</li>\n<li><strong>调度</strong>：对知识库的定期更新或模型的定期微调 (fine-tuning)需要按计划执行。</li>\n<li><strong>参数 (parameter)化</strong>：工作流常需要使用不同的配置运行（例如，新数据集、不同的向量模型）。</li>\n</ul>\n<p>工作流编排器提供框架，将这些复杂过程定义为可管理、可观察和可重复的有向无环图 (DAG) 或管道。</p>\n<h3>Apache Airflow 在 RAG 工作流中的应用</h3>\n<p>Apache Airflow 是一个广泛使用的平台，用于以编程方式编写、调度和监控工作流。其核心抽象是 DAG，代表一组具有定义依赖关系的任务。对于大规模 RAG 系统，Airflow 提供很大的灵活性。</p>\n<h4>在 Airflow 中设计 RAG DAG</h4>\n<p>一个结构良好的 RAG 系统 Airflow DAG 可以管理从原始数据源到更新的向量 (vector)索引和微调 (fine-tuning)模型的端到端数据管道。RAG DAG 的考虑因素包含：</p>\n<ul>\n<li><strong>模块化</strong>：将 RAG 流程分解为细粒度任务（操作器）。例如：\n<ul>\n<li><code>FetchNewDataSourceOperator</code>：拉取新的或更新的文档。</li>\n<li><code>ChunkDocumentsOperator</code>：将文档拆分为可管理的部分。</li>\n<li><code>GenerateEmbeddingsOperator</code>：为分块创建向量。</li>\n<li><code>UpdateVectorDBOperator</code>：将新向量更新或插入到向量数据库中。</li>\n<li><code>RetrainRetrieverOperator</code>：定期微调检索模型。</li>\n<li><code>EvaluateRAGQualityOperator</code>：在新系统上运行评估套件。</li>\n</ul>\n</li>\n<li><strong>幂等性</strong>：确保任务可以安全地重复运行。例如，<code>UpdateVectorDBOperator</code> 应该妥善处理重复数据或使用版本控制。</li>\n<li><strong>动态 DAG</strong>：如果您为不同领域或客户管理多个 RAG 系统，Airflow 基于 Python 的 DAG 定义允许根据配置文件动态生成 DAG，从而减少样板代码。</li>\n<li><strong>分支和条件逻辑</strong>：实现逻辑，例如，如果数据漂移低于某个阈值，则跳过 LLM 微调，或者如果数据质量检查失败，则触发警报。</li>\n</ul>\n<h4>RAG 的 Airflow 操作器和执行器</h4>\n<p>Airflow 的强大之处在于其丰富的操作器集和可插拔的执行器架构。</p>\n<ul>\n<li><strong>操作器</strong>：\n<ul>\n<li><code>PythonOperator</code>：用于任何 RAG 阶段的自定义 Python 逻辑。</li>\n<li><code>KubernetesPodOperator</code>：运行容器化 RAG 组件的理想选择（例如，使用特定支持 GPU 的镜像进行向量生成，或自定义处理脚本）。这允许每个步骤拥有其隔离、定义明确的环境。</li>\n<li><code>SparkSubmitOperator</code> 或 <code>DatabricksRunNowOperator</code>：用于使用 Spark 进行大规模数据摄取和预处理步骤。</li>\n<li><code>DockerOperator</code>：如果未使用 Kubernetes，则用于在 Docker 容器中运行任务。</li>\n<li>自定义操作器：开发操作器以直接与您的向量数据库 API、LLM 服务端点或其他专业服务交互。</li>\n</ul>\n</li>\n<li><strong>执行器</strong>：\n<ul>\n<li><code>CeleryExecutor</code> 或 <code>CeleryKubernetesExecutor</code>：用于在工作节点集群中分发任务，对于处理许多并行 RAG 工作流或高吞吐量 (throughput)数据处理很重要。</li>\n<li><code>KubernetesExecutor</code>：为每个 Airflow 任务动态启动一个新 Pod，提供出色的隔离和资源管理，如果您的 RAG 组件已经容器化，则特别适合。</li>\n</ul>\n</li>\n</ul>\n<h4>扩展与监控</h4>\n<p>对于大规模 RAG，请为 Airflow 配置足够的 worker 资源和并行度。将 Airflow 的日志与您的中心化日志系统（例如，ELK stack、Splunk）集成。使用 Airflow 的 UI 监控 DAG 运行、任务持续时间和故障。可以将自定义指标从 Airflow 任务推送到 Prometheus 或类似系统，以跟踪 RAG 特定关键绩效指标，如“每次运行处理的文档数”或“平均向量生成时间”。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-12dxsyb\" \n              data-graph-definition='digraph RAG_Workflow {\n  rankdir=LR;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n\n  subgraph cluster_data_prep {\n    label = \"数据准备管道\";\n    bgcolor=\"#f8f9fa\";\n    raw_data [label=\"原始数据源\", shape=cylinder, fillcolor=\"#ced4da\"];\n    ingest [label=\"摄取新/更新数据\", fillcolor=\"#a5d8ff\"];\n    chunk [label=\"分块文档\", fillcolor=\"#a5d8ff\"];\n    embed [label=\"生成向量\", fillcolor=\"#a5d8ff\"];\n    index [label=\"更新向量索引\", fillcolor=\"#a5d8ff\"];\n\n    raw_data -> ingest;\n    ingest -> chunk;\n    chunk -> embed;\n    embed -> index;\n  }\n\n  subgraph cluster_query_time {\n    label = \"查询时 RAG\";\n    bgcolor=\"#fff3bf\";\n    query [label=\"用户查询\", shape=ellipse, fillcolor=\"#ffd43b\"];\n    retrieve [label=\"检索上下文\", fillcolor=\"#ffec99\"];\n    rerank [label=\"重排序结果（可选）\", fillcolor=\"#ffec99\"];\n    generate [label=\"生成回复（LLM）\", fillcolor=\"#ffec99\"];\n    response [label=\"答案\", shape=ellipse, fillcolor=\"#ffd43b\"];\n\n    query -> retrieve;\n    retrieve -> rerank;\n    rerank -> generate;\n    generate -> response;\n    index -> retrieve [style=dotted, label=\"知识库\"];\n  }\n\n  subgraph cluster_maintenance {\n    label = \"维护与评估\";\n    bgcolor=\"#e6fcf5\";\n    evaluate [label=\"评估 RAG 质量\", fillcolor=\"#96f2d7\"];\n    finetune_llm [label=\"微调 LLM（可选）\", fillcolor=\"#96f2d7\"];\n    finetune_retriever [label=\"微调检索器（可选）\", fillcolor=\"#96f2d7\"];\n\n    index -> evaluate [style=dashed];\n    evaluate -> finetune_llm [style=dashed];\n    evaluate -> finetune_retriever [style=dashed];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-12dxsyb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的 RAG 工作流，呈现了数据准备、查询时操作和维护任务，这些可以作为一系列依赖步骤进行编排。</p>\n</blockquote>\n<h3>Kubeflow Pipelines 在 RAG 工作流中的应用</h3>\n<p>Kubeflow Pipelines 是一个平台，用于构建和部署可扩展和可移植的机器学习 (machine learning)工作流，它建立在 Kubernetes 之上。对于机器学习实验、模型版本控制以及与 Kubernetes 生态系统的紧密集成是优先事项的 RAG 系统，它特别适合。</p>\n<h4>在 Kubeflow 中设计 RAG 管道</h4>\n<p>在 Kubeflow Pipelines 中，工作流被定义为“管道”，管道中的每个步骤都是一个“组件”。组件通常是具有定义明确的输入和输出的容器化应用。</p>\n<ul>\n<li><strong>组件化</strong>：每个 RAG 阶段（数据摄取、预处理、向量 (vector)化、模型训练/微调 (fine-tuning)、评估）都成为一个 Kubeflow 组件。这提高了可重用性和模块化。\n<ul>\n<li>示例：一个 <code>document-chunker</code> 组件将数据集 URI 作为输入，并输出分块文档的 URI。一个 <code>embedding-generator</code> 组件将分块数据 URI 和向量模型 URI 作为输入，输出向量。</li>\n</ul>\n</li>\n<li><strong>工件跟踪</strong>：Kubeflow Pipelines 自动跟踪每个组件生成的工件（数据集、模型、指标）。这对于可复现性和血缘关系很重要的 RAG 系统非常有用，例如，跟踪特定文档集使用了哪个版本的向量模型。</li>\n<li><strong>SDK 定义</strong>：管道通常使用 Python 中的 Kubeflow Pipelines SDK 定义，允许编程构建和参数 (parameter)化。</li>\n</ul>\n<h4>Kubeflow 组件和 Kubernetes 原生功能</h4>\n<p>Kubeflow 将 Kubernetes 的全部能力用于 RAG 工作流：</p>\n<ul>\n<li><strong>容器原生</strong>：每个步骤都作为 Kubernetes Pod 运行，确保环境一致性，并运用 Kubernetes 进行资源请求（CPU、GPU、内存）、扩展和调度。</li>\n<li><strong>以 ML 为中心的集成</strong>：Kubeflow 很容易与其生态系统中的其他 MLOps 工具集成：\n<ul>\n<li><strong>Katib</strong> 用于检索模型、重排序器，甚至生成 LLM 参数的超参数 (hyperparameter)调优。</li>\n<li><strong>KFServing（现 KServe）</strong> 用于部署最终的 RAG 应用（例如，接受查询并返回 RAG 生成答案的 API 端点）或单个模型组件。</li>\n</ul>\n</li>\n<li><strong>缓存</strong>：Kubeflow Pipelines 支持组件执行缓存。如果组件的输入未改变，它可以重用之前运行的输出，明显加快 RAG 数据处理管道的开发和重复运行。</li>\n</ul>\n<h4>Kubeflow Pipelines 在 RAG 中的出色表现时机</h4>\n<p>Kubeflow Pipelines 是一个很好的选择，如果：</p>\n<ul>\n<li>您的 RAG 系统涉及频繁试验不同的向量模型、LLM 或微调策略。</li>\n<li>您需要对 ML 组件进行可靠的工件跟踪和版本控制。</li>\n<li>您的团队已经熟练掌握 Kubernetes 和容器化。</li>\n<li>您计划采用其他 Kubeflow 组件以获得全面的 MLOps 方案。</li>\n</ul>\n<h3>RAG 编排中 Airflow 和 Kubeflow 的选择</h3>\n<p>Airflow 和 Kubeflow Pipelines 都是 RAG 系统能胜任的编排器。选择通常取决于具体的项目需求、团队专长和现有基础设施：</p>\n<table>\n<thead>\n<tr>\n<th>特点方面</th>\n<th>Apache Airflow</th>\n<th>Kubeflow Pipelines</th>\n<th>RAG 的最佳适配</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><strong>主要侧重</strong></td>\n<td>通用 ETL、数据管道</td>\n<td>ML 工作流、实验</td>\n<td>如果 ML 实验是核心，则选 Kubeflow；如果更广泛的 ETL 和数据集成是主要考量，则选 Airflow。</td>\n</tr>\n<tr>\n<td><strong>任务定义</strong></td>\n<td>基于 Python 的 DAG、多样化操作器</td>\n<td>容器化组件、Python SDK</td>\n<td>Airflow 为不同系统提供更多内置操作器；Kubeflow 从一开始就强制容器化。</td>\n</tr>\n<tr>\n<td><strong>ML 集成</strong></td>\n<td>良好，通过 Python/自定义操作器</td>\n<td>原生，与 Kubeflow 生态系统深度集成</td>\n<td>Kubeflow 适合在其生态系统内与超参数 (parameter) (hyperparameter)调优、模型服务紧密结合。</td>\n</tr>\n<tr>\n<td><strong>工件跟踪</strong></td>\n<td>通过 XComs 提供基本功能，可扩展</td>\n<td>内置，工件和跟踪</td>\n<td>Kubeflow 为 RAG 模型和数据集提供即用的工件管理。</td>\n</tr>\n<tr>\n<td><strong>生态系统</strong></td>\n<td>成熟，大型社区，广泛集成</td>\n<td>发展中，Kubernetes 原生，侧重 ML</td>\n<td>Airflow 适合通用数据生态系统；Kubeflow 适合已投资 Kubernetes 及其 ML 工具的情况。</td>\n</tr>\n<tr>\n<td><strong>可扩展性</strong></td>\n<td>高度可扩展（Celery、Kubernetes 执行器）</td>\n<td>通过 Kubernetes 本身就可扩展</td>\n<td>两者都扩展良好，但如果已在使用 Kubernetes，Kubeflow 的 K8s 原生方法可能更直接。</td>\n</tr>\n<tr>\n<td><strong>用户界面</strong></td>\n<td>丰富的 UI，用于 DAG 监控和管理</td>\n<td>UI 侧重于管道运行、工件、实验</td>\n<td>Airflow 的 UI 在不同工作流的运行监控方面通常更成熟。</td>\n</tr>\n</tbody>\n</table>\n<p><strong>混合方法</strong>：使用 Airflow 编排 Kubeflow Pipelines 也是可行。例如，一个 Airflow DAG 可以触发一个 Kubeflow Pipeline 来处理 RAG 系统的机器学习 (machine learning)密集型部分（如模型微调 (fine-tuning)和评估），而 Airflow 则处理更广泛的数据摄取和调度。</p>\n<h3>分布式 RAG 的高级编排考量</h3>\n<p>无论选择哪种工具，对于大规模分布式 RAG 系统来说，一些高级编排模式都很重要：</p>\n<ul>\n<li><strong>完善的错误处理和重试策略</strong>：对与分布式组件（例如，负载下的向量 (vector)数据库、受速率限制的 LLM API）交互的任务，实现指数退避、抖动和条件重试。在可能的情况下，设计为优雅降级。</li>\n<li><strong>状态管理和恢复</strong>：对于长时间运行的 RAG 工作流（例如，索引数 TB 数据），确保编排器可以从故障点恢复，而不是重新启动整个过程。这通常涉及仔细的任务设计和外部状态持久化。</li>\n<li><strong>大规模幂等性</strong>：对于数据摄取和索引任务非常重要。确保由于暂时性故障或手动触发而重新运行任务不会导致向量存储或知识库中的数据重复或损坏。</li>\n<li><strong>动态参数 (parameter)化和配置</strong>：您的 RAG 工作流应通过编排器实现高度可配置。这包括指定数据源、向量模型版本、LLM 端点、任务的资源分配以及评估指标的阈值。将这些配置存储在版本控制系统中。</li>\n<li><strong>警报和主动监控</strong>：将您的编排器与全面的监控系统（例如 Prometheus、Grafana）和警报工具（例如 PagerDuty、Slack）集成。为管道故障、任务超出 SLA、资源耗尽以及 RAG 质量指标明显下降定义警报。</li>\n<li><strong>回填和再处理</strong>：设计工作流以高效处理回填（使用新逻辑或模型处理历史数据）或特定数据子集的再处理。这通常需要可以对定义的数据分区或时间范围进行操作的任务。</li>\n</ul>\n<p>通过仔细选择和配置像 Airflow 或 Kubeflow Pipelines 这样的工作流编排器，并实施这些高级模式，您可以为大规模分布式 RAG 系统构建有韧性、可管理和可扩展的运行过程。这为生产级 AI 的持续部署、监控和改进循环打下良好基础。</p>",
+  "slug": "rag-workflow-orchestration-airflow-kubeflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 15679,
+      "title": "Apache Airflow Documentation",
+      "author": "Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://airflow.apache.org/docs/",
+      "doi": "",
+      "note": "Airflow架构、操作符、执行器以及数据管道定义最佳实践的全面指南。",
+      "order": 1,
+      "created_at": "2025-09-06T10:53:20.734843Z",
+      "updated_at": "2025-09-11T03:25:38.512361Z"
+    },
+    {
+      "id": 15680,
+      "title": "Kubeflow Pipelines Documentation",
+      "author": "The Kubeflow Project Authors",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.kubeflow.org/docs/pipelines/",
+      "doi": "",
+      "note": "Kubeflow Pipelines组件、SDK、工件追踪和Kubernetes集成的官方文档。",
+      "order": 2,
+      "created_at": "2025-09-06T10:53:20.794316Z",
+      "updated_at": "2025-09-11T03:25:40.405849Z"
+    },
+    {
+      "id": 15682,
+      "title": "TFX: A TensorFlow-Based Production Machine Learning Platform",
+      "author": "Zhitao Li, Weiwei Yang, Hongjun Wu, Jun Zhang, Hongxia Yang, Jianshu Chen and Xiaodong Zhang",
+      "year": "2019",
+      "publisher": "Association for Computing Machinery",
+      "journal": "Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining",
+      "volume": "",
+      "pages": "2275-2285",
+      "url": "https://dl.acm.org/doi/10.1145/3292500.3330682",
+      "doi": "10.1145/3292500.3330682",
+      "note": "介绍一个全面的生产机器学习平台，展示管道编排、数据验证和模型管理的原则。",
+      "order": 4,
+      "created_at": "2025-09-06T10:53:20.801484Z",
+      "updated_at": "2025-09-11T03:25:55.409454Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

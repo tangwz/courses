@@ -1,0 +1,61 @@
+{
+  "id": 5032,
+  "title": "设计前馈网络架构",
+  "meta_title": "设计前馈网络架构",
+  "meta_description": "关于选择前馈网络中层数和神经元数量的考量。",
+  "content": "<p>在了解了神经网络 (neural network)的基本组成部分——神经元、层和激活函数 (activation function)之后，我们现在来思考一个核心设计问题：如何组织这些组成部分以建立有效的前馈网络？决定架构，特别是隐藏层的数量以及每层内的神经元数量，对模型从数据中学习和泛化能力有重要影响。没有一个万能公式；架构设计通常依据启发式方法、问题复杂度和经验性实验。</p>\n<h3>隐藏层数量如何确定？</h3>\n<p>网络的“深度”指的是它包含的隐藏层数量。</p>\n<ul>\n<li><strong>零个隐藏层：</strong> 这种配置会产生一个单层感知器（如果使用适当的激活函数 (activation function)，则是逻辑/Softmax回归）。如第1章所述，这些模型只能学习线性可分模式。</li>\n<li><strong>一个隐藏层：</strong> 具有一个隐藏层的网络理论上能力很强。<strong>通用近似定理</strong>指出，只要有足够的神经元，一个包含有限数量神经元和合适非线性激活函数的前馈网络，能够以任意精度近似任何连续函数。这相当了不起。对于许多较简单的问题，一个隐藏层通常就足够了。</li>\n<li><strong>两个或更多隐藏层（深度网络）：</strong> 尽管一个隐藏层在<em>理论上</em>可以近似任何函数，但深度网络（即具有多个隐藏层的网络）通常能更高效地学习复杂模式。更深的架构使得网络能学习分层特征。早期层可能学习简单特征（如图像中的边缘或纹理），而后续层将这些组合起来以识别更复杂的结构（如形状或物体）。对于复杂任务的给定精度水平，深度网络可能比只有一个隐藏层的宽而浅的网络所需的总神经元数量（以及参数 (parameter)）更少。</li>\n</ul>\n<p>增加网络深度会带来一系列挑战：</p>\n<ul>\n<li><strong>梯度消失/爆炸：</strong> 训练非常深的神经网络 (neural network)可能会很困难，因为在反向传播 (backpropagation)过程中梯度会变得非常小或非常大（我们稍后会更详细地讨论这一点）。谨慎的权重 (weight)初始化、非饱和激活函数（如ReLU）和批量归一化 (normalization)等技术有助于缓解这种情况。</li>\n<li><strong>计算成本：</strong> 更多层意味着在训练（前向和反向传播）和推理 (inference)过程中需要更多计算。</li>\n<li><strong>过拟合 (overfitting)：</strong> 深度网络有更多的参数和容量，如果正则化 (regularization)不当，会增加对训练数据过拟合的风险。</li>\n</ul>\n<p><strong>指导原则：</strong> 从简单开始。最初使用一到两个隐藏层。如果模型欠拟合 (underfitting)（未能捕捉到训练数据中的模式），则考虑逐渐增加深度或宽度。</p>\n<h3>每个隐藏层有多少神经元？</h3>\n<p>层的“宽度”指的是它包含的神经元数量。这决定了该层在该抽象层次上的表示能力。</p>\n<ul>\n<li><strong>神经元过少：</strong> 如果隐藏层中的神经元过少，网络可能缺乏学习数据潜在复杂性的能力。这会导致<strong>欠拟合 (underfitting)</strong>，模型即使在训练数据上表现也很差。</li>\n<li><strong>神经元过多：</strong> 使用比所需数量多得多的神经元会使网络容易<strong>过拟合 (overfitting)</strong>。模型可能会开始记忆训练样本，包括它们的噪声，而不是学习可泛化的模式。这会导致在训练集上表现良好，但在未见数据上表现不佳。神经元过多还会增加计算需求和训练时间。尽管正则化 (regularization)（第6章）等技术可以帮助控制更宽网络中的过拟合，但使用过多神经元通常效率低下。</li>\n</ul>\n<p><strong>常见启发式方法和模式：</strong></p>\n<ul>\n<li><strong>输入/输出关系：</strong> 一种常见做法是选择隐藏层中的神经元数量，使其介于输入层大小和输出层大小之间。</li>\n<li><strong>2的幂次：</strong> 通常，层的大小选择为2的幂次（例如，32、64、128、256、512），部分原因是GPU等硬件上的计算效率，但这并非严格要求。</li>\n<li><strong>漏斗形结构：</strong> 一种流行方法是逐渐减少连续隐藏层中的神经元数量（例如，输入 -> 512 -> 256 -> 128 -> 输出）。这类似于将信息压缩，直到得到进行最终预测所需的核心特征。</li>\n<li><strong>宽度不变：</strong> 有时，所有隐藏层可能具有相同数量的神经元。</li>\n</ul>\n<p><strong>指导原则：</strong> 最佳神经元数量高度依赖于特定数据集和问题。它是您需要调整的主要超参数 (parameter) (hyperparameter)之一。从基于输入/输出大小或常见做法（例如，漏斗形结构）的合理数量开始，然后进行实验。监控验证集性能以检查是否欠拟合或过拟合，并相应地调整层大小。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-a43h5c\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fixedsize=true, width=0.5];\n  edge [arrowhead=none];\n\n  subgraph cluster_0 {\n    label = \"输入层\";\n    bgcolor=\"#e9ecef\";\n    i1; i2; i3; i4;\n  }\n\n  subgraph cluster_1 {\n    label = \"隐藏层1 (漏斗形)\";\n    bgcolor=\"#dee2e6\";\n    h11; h12; h13;\n  }\n\n  subgraph cluster_2 {\n    label = \"隐藏层2 (漏斗形)\";\n    bgcolor=\"#ced4da\";\n    h21; h22;\n  }\n\n   subgraph cluster_3 {\n    label = \"输出层\";\n    bgcolor=\"#e9ecef\";\n    o1 [fillcolor=\"#b2f2bb\"];\n  }\n\n  {i1, i2, i3, i4} -> {h11, h12, h13};\n  {h11, h12, h13} -> {h21, h22};\n  {h21, h22} -> o1;\n\n  // Add labels for clarity if needed, or keep it clean\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-a43h5c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>前馈网络常使用“漏斗形”结构，在连续的隐藏层中减少神经元数量。</p>\n</blockquote>\n<h3>输出层配置</h3>\n<p>请记住，输出层的设计完全由任务决定：</p>\n<ul>\n<li><strong>回归：</strong> 通常是一个神经元，使用线性（或无）激活函数 (activation function)。</li>\n<li><strong>二分类：</strong> 一个神经元，使用Sigmoid激活函数。</li>\n<li><strong>多分类：</strong> <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>个神经元（其中<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>是类别数量），使用Softmax激活函数。</li>\n</ul>\n<h3>迭代和实验</h3>\n<p>设计网络架构很少是一次性完成的过程。它通常涉及：</p>\n<ol>\n<li>从基于问题类型和启发式方法的合理基线架构开始。</li>\n<li>训练模型并在验证集上评估其性能。</li>\n<li>观察模型是否欠拟合 (underfitting)或过拟合 (overfitting)。</li>\n<li>根据评估结果，迭代调整架构（增加/移除层，改变层宽度）和超参数 (parameter) (hyperparameter)（如学习率，稍后讨论）。</li>\n<li>采用正则化 (regularization)（第6章）等技术以提高泛化能力。</li>\n</ol>\n<p>自动化超参数调整技术可以系统地尝试不同架构，但理解这些设计原则为做出明智选择和指导搜索过程提供了良好根基。</p>\n<p>例如，在PyTorch中定义一个简单的全连接前馈网络可能看起来像这样，明确显示了层维度：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\nclass SimpleMLP(nn.Module):\n    def __init__(self, input_size, hidden_size1, hidden_size2, output_size):\n        super(SimpleMLP, self).__init__()\n        self.layer1 = nn.Linear(input_size, hidden_size1)\n        self.relu1 = nn.ReLU()\n        self.layer2 = nn.Linear(hidden_size1, hidden_size2)\n        self.relu2 = nn.ReLU()\n        self.output_layer = nn.Linear(hidden_size2, output_size)\n        # 输出激活函数（例如 nn.Sigmoid() 或 nn.Softmax(dim=1)）\n        # 通常会在该层之后应用或由损失函数处理。\n\n    def forward(self, x):\n        x = self.layer1(x)\n        x = self.relu1(x)\n        x = self.layer2(x)\n        x = self.relu2(x)\n        x = self.output_layer(x)\n        return x\n\n# 示例实例化：\ninput_dim = 784  # 例如，用于平展的28x28 MNIST图像\nh1_dim = 128\nh2_dim = 64\noutput_dim = 10  # 例如，用于10个数字类别\n\nmodel = SimpleMLP(input_dim, h1_dim, h2_dim, output_dim)\nprint(model)\n</code></pre>\n<p>这个例子定义了一个网络，包含一个输入层、两个隐藏层（分别为128和64个神经元，使用ReLU激活函数 (activation function)）以及一个输出层。具体神经元数量（128、64）代表了基于所讨论原则的设计选择。随着学习的推进，您将培养直觉并使用系统方法来完善这些架构决策，以解决您的特定问题。</p>",
+  "slug": "designing-feedforward-networks",
+  "updates": [],
+  "references": [
+    {
+      "id": 13663,
+      "title": "Multilayer feedforward networks are universal approximators",
+      "author": "Kurt Hornik, Maxwell Stinchcombe, and Halbert White",
+      "year": "1989",
+      "publisher": "Elsevier",
+      "journal": "Neural Networks",
+      "volume": "2",
+      "pages": "359-366",
+      "url": "https://www.sciencedirect.com/science/article/pii/0893608089900208",
+      "doi": "10.1016/0893-6080(89)90020-8",
+      "note": "本文提供了通用逼近定理的正式证明，指出单隐藏层的感知机网络可以逼近任何连续函数。",
+      "order": 1,
+      "created_at": "2025-09-05T08:37:25.686225Z",
+      "updated_at": "2025-09-08T16:16:20.389234Z"
+    },
+    {
+      "id": 13664,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "这本标准教材涵盖了深度学习的核心概念，包括网络架构、设计原则和训练挑战的详细讨论。",
+      "order": 2,
+      "created_at": "2025-09-05T08:37:25.691700Z",
+      "updated_at": "2025-09-08T16:16:17.351884Z"
+    },
+    {
+      "id": 13665,
+      "title": "Understanding the difficulty of training deep feedforward neural networks",
+      "author": "Xavier Glorot, Yoshua Bengio",
+      "year": "2010",
+      "publisher": "PMLR",
+      "journal": "Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics (AISTATS)",
+      "volume": "9",
+      "pages": "249-256",
+      "url": "https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf",
+      "doi": "10.5555/3104322.3104344",
+      "note": "本文研究了深度网络中的梯度消失和梯度爆炸问题，并提出了 Xavier 初始化等自适应权重初始化方案。",
+      "order": 3,
+      "created_at": "2025-09-05T08:37:25.694421Z",
+      "updated_at": "2025-09-08T16:16:31.367899Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

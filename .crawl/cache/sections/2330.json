@@ -1,0 +1,45 @@
+{
+  "id": 2330,
+  "title": "函数参数与实参",
+  "meta_title": "Python 函数参数与实参 | 传递数据",
+  "meta_description": "了解如何在函数定义中设定参数以及在调用函数时传递实参。",
+  "content": "<p>使用 <code>def</code> 关键字定义基本函数可以打包代码。但当你能向函数<em>传递</em>信息时，它们会变得非常实用。想象一个问候用户的函数；它需要知道用户的名字。或者一个将两个数字相加的函数；它需要知道要加哪两个数字。这就是参数 (parameter)和实参的作用。</p>\n<ul>\n<li><strong>参数：</strong> 它们是在函数定义中括号内列出的名称。可以把它们看作是占位符或变量，在函数被调用时会接收值。</li>\n<li><strong>实参：</strong> 它们是你在调用函数时实际传递给函数的值。这些值会被赋值给对应的参数。</li>\n</ul>\n<p>让我们来看一个简单示例：</p>\n<pre><code class=\"language-python\"># 定义一个带有一个名为 'user_name' 的参数的函数\ndef greet(user_name):\n  \"\"\"打印一个简单的问候语。\"\"\"\n  print(f\"Hello, {user_name}!\")\n\n# 调用函数，传入实参 \"Alice\"\ngreet(\"Alice\")\n\n# 再次调用函数，传入不同的实参\ngreet(\"Bob\")\n</code></pre>\n<p>在这段代码中：</p>\n<ol>\n<li><code>def greet(user_name):</code> 中的 <code>user_name</code> 是<strong>参数</strong>。它是函数内部的一个占位符，代表我们想要问候的名字。</li>\n<li><code>\"Alice\"</code> 和 <code>\"Bob\"</code> 是<strong>实参</strong>。它们是我们在<em>调用</em> <code>greet</code> 函数时提供的具体值。当 <code>greet(\"Alice\")</code> 运行时，值 <code>\"Alice\"</code> 会被赋值给函数内部的 <code>user_name</code> 参数。</li>\n</ol>\n<h3>传递多个实参</h3>\n<p>函数可以接受多个参数 (parameter)，在定义时用逗号分隔。调用函数时，你按照相同的顺序提供对应的实参。这被称为使用<strong>位置实参</strong>，因为实参的位置决定了哪个参数会接收哪个实参。</p>\n<pre><code class=\"language-python\">def describe_pet(animal_type, pet_name):\n  \"\"\"显示宠物的信息。\"\"\"\n  print(f\"I have a {animal_type}.\")\n  print(f\"My {animal_type}'s name is {pet_name}.\")\n\n# 使用位置实参调用\ndescribe_pet(\"hamster\", \"Harry\")\nprint(\"---\") # 仅用于分隔输出\ndescribe_pet(\"dog\", \"Willie\")\n</code></pre>\n<p>输出：</p>\n<pre><code>I have a hamster.\nMy hamster's name is Harry.\n---\nI have a dog.\nMy dog's name is Willie.\n</code></pre>\n<p>在这里，首次调用 <code>describe_pet(\"hamster\", \"Harry\")</code> 时：</p>\n<ul>\n<li><code>\"hamster\"</code>（第一个实参）被赋值给 <code>animal_type</code>（第一个参数）。</li>\n<li><code>\"Harry\"</code>（第二个实参）被赋值给 <code>pet_name</code>（第二个参数）。</li>\n</ul>\n<p>顺序很重要。如果你调用 <code>describe_pet(\"Max\", \"cat\")</code>，输出将不正确，因为 <code>\"Max\"</code> 会被赋值给 <code>animal_type</code>，而 <code>\"cat\"</code> 会被赋值给 <code>pet_name</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-d6ovvp\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_call {\n    label = \"函数调用: describe_pet(\\\"hamster\\\", \\\"Harry\\\")\";\n    style=dashed;\n    arg1 [label=\"\\\"hamster\\\"\\n(实参 1)\"];\n    arg2 [label=\"\\\"Harry\\\"\\n(实参 2)\"];\n  }\n\n  subgraph cluster_def {\n    label = \"函数定义: def describe_pet(animal_type, pet_name):\";\n    style=dashed;\n    param1 [label=\"animal_type\\n(参数 1)\"];\n    param2 [label=\"pet_name\\n(参数 2)\"];\n  }\n\n  arg1 -> param1 [label=\"按位置匹配\"];\n  arg2 -> param2 [label=\"按位置匹配\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-d6ovvp\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>位置实参到参数的对应关系。第一个实参对应第一个参数，第二个实参对应第二个参数，依此类推。</p>\n</blockquote>\n<h3>关键字实参</h3>\n<p>Python 也支持使用<strong>关键字实参</strong>。这需要指定参数 (parameter)名，后跟等号（<code>=</code>）和你想要传递的值。</p>\n<pre><code class=\"language-python\">def describe_pet(animal_type, pet_name):\n  \"\"\"显示宠物的信息。\"\"\"\n  print(f\"I have a {animal_type}.\")\n  print(f\"My {animal_type}'s name is {pet_name}.\")\n\n# 使用关键字实参调用\ndescribe_pet(animal_type=\"hamster\", pet_name=\"Harry\")\nprint(\"---\")\n# 关键字实参的顺序不重要\ndescribe_pet(pet_name=\"Willie\", animal_type=\"dog\")\n</code></pre>\n<p>输出：</p>\n<pre><code>I have a hamster.\nMy hamster's name is Harry.\n---\nI have a dog.\nMy dog's name is Willie.\n</code></pre>\n<p>使用关键字实参时：</p>\n<ul>\n<li>你明确地将实参值与参数名关联起来（<code>pet_name=\"Willie\"</code>）。</li>\n<li>你提供关键字实参的顺序不重要，因为 Python 会按名称匹配它们。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1mleod3\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_call {\n    label = \"函数调用: describe_pet(pet_name=\\\"Willie\\\", animal_type=\\\"dog\\\")\";\n    style=dashed;\n    kwarg1 [label=\"pet_name=\\\"Willie\\\"\\n(关键字实参)\"];\n    kwarg2 [label=\"animal_type=\\\"dog\\\"\\n(关键字实参)\"];\n  }\n\n  subgraph cluster_def {\n    label = \"函数定义: def describe_pet(animal_type, pet_name):\";\n    style=dashed;\n    param1 [label=\"animal_type\\n(参数 1)\"];\n    param2 [label=\"pet_name\\n(参数 2)\"];\n  }\n\n  kwarg1 -> param2 [label=\"按名称匹配\"];\n  kwarg2 -> param1 [label=\"按名称匹配\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1mleod3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>关键字实参到参数的对应关系。实参根据指定的名称与参数匹配，无论顺序如何。</p>\n</blockquote>\n<h3>结合位置实参和关键字实参</h3>\n<p>调用函数时，你可以混合使用位置实参和关键字实参。但有一个规则：<strong>位置实参必须在关键字实参之前。</strong></p>\n<pre><code class=\"language-python\">def describe_pet(animal_type, pet_name):\n  \"\"\"显示宠物的信息。\"\"\"\n  print(f\"I have a {animal_type}.\")\n  print(f\"My {animal_type}'s name is {pet_name}.\")\n\n# 有效：位置实参在前\ndescribe_pet(\"cat\", pet_name=\"Whiskers\")\n\n# 无效：关键字实参后不能跟位置实参\n# describe_pet(animal_type=\"dog\", \"Buddy\") # 这会导致 SyntaxError\n</code></pre>\n<h3>为什么要两者都用？</h3>\n<ul>\n<li><strong>位置实参</strong> 对于参数 (parameter)较少、顺序明确的函数来说，通常更简洁。</li>\n<li><strong>关键字实参</strong> 可以提高可读性，特别是对于参数很多或参数含义从位置上不明确的函数。它们还允许你跳过具有默认值的参数（我们接下来会讲到）。</li>\n</ul>\n<p>理解如何使用参数和实参将数据传递给函数，是编写灵活可复用代码的根本。你现在可以编写每次调用时处理不同数据的函数了。</p>",
+  "slug": "python-function-parameters-arguments",
+  "updates": [],
+  "references": [
+    {
+      "id": 3396,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition",
+      "doi": "",
+      "note": "一本广泛使用的入门书籍，提供了定义函数和处理各种参数类型的实用示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:51.124657Z",
+      "updated_at": "2025-09-07T21:07:37.753334Z"
+    },
+    {
+      "id": 3397,
+      "title": "Python Functions",
+      "author": "Nick Parlante",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developers.google.com/edu/python/",
+      "doi": "",
+      "note": "一个在线教程，系统介绍了Python函数，包括参数传递。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:51.127386Z",
+      "updated_at": "2025-09-07T21:07:58.119041Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2248,
+  "title": "搭建 Python 环境 (Linux)",
+  "meta_title": "在 Linux 上安装 Python | 设置指南",
+  "meta_description": "在 Linux 发行版上安装 Python 并设置开发环境的分步说明。",
+  "content": "<p>Linux 发行版通常预装了 Python，因为许多系统工具都依赖它运行。但是，预装版本可能不是最新版，或者你的项目可能需要特定版本。检查你的 Python 安装，并在必要时安装或更新 Python 是重要的。</p>\n<h3>检查你当前的 Python 版本</h3>\n<p>首先，打开你的终端应用程序。这是你与系统进行交互的命令行界面。你通常可以在应用程序菜单中搜索“终端”来找到它。</p>\n<p>终端打开后，你可以检查 Python 3（当前标准）是否已安装以及你拥有的版本。输入以下命令并按回车键：</p>\n<pre><code class=\"language-bash\">python3 --version\n</code></pre>\n<p>如果 Python 3 已安装，你将看到类似这样的输出（确切的版本号可能不同）：</p>\n<pre><code>Python 3.10.4\n</code></pre>\n<p>如果出现“命令未找到”之类的错误，则 Python 3 很可能未安装，或者不在你的系统 PATH 中（系统查找可执行程序的目录列表）。</p>\n<p>你也可以尝试：</p>\n<pre><code class=\"language-bash\">python --version\n</code></pre>\n<p>在一些较旧的系统或配置不同的系统上，<code>python</code> 可能指向 Python 2，它已不再受支持，不应用于新的开发。如果此命令显示的版本以 <code>2.x.x</code> 开头，你的工作应明确使用 <code>python3</code> 命令。如果显示 <code>3.x.x</code> 版本，那么 <code>python</code> 和 <code>python3</code> 可能在你系统上是同一安装的别名。为了确保一致性和清晰度，尤其是在初学阶段，通常最稳妥的做法是明确使用 <code>python3</code> 命令。</p>\n<h3>使用发行版包管理器安装 Python</h3>\n<p>在 Linux 上安装或更新 Python 的推荐方式是通过你的发行版内置的包管理器。这可以确保 Python 与系统其他部分正确集成，并妥善处理依赖项。以下是一些常用 Linux 发行版的命令：</p>\n<p><strong>对于 Debian、Ubuntu 及其衍生版（如 Linux Mint）：</strong></p>\n<ol>\n<li>\n<p>首先，更新你的软件包列表以获得最新的可用版本：</p>\n<pre><code class=\"language-bash\">sudo apt update\n</code></pre>\n<p><code>sudo</code> 表示“superuser do”（超级用户执行），它赋予后续命令管理员权限。你很可能会被要求输入密码。<code>apt</code> 是包管理器。<code>update</code> 用于刷新可用软件包列表。</p>\n</li>\n<li>\n<p>安装 Python 3、pip（Python 包安装器）和 venv（用于创建虚拟环境）：</p>\n<pre><code class=\"language-bash\">sudo apt install python3 python3-pip python3-venv\n</code></pre>\n<p>此命令指示 <code>apt</code> <code>install</code> 指定的软件包。<code>python3</code> 是解释器本身，<code>python3-pip</code> 让你能够安装额外的 Python 库，而 <code>python3-venv</code> 协助处理项目特定的依赖项（我们稍后会提到）。</p>\n</li>\n</ol>\n<p><strong>对于 Fedora：</strong></p>\n<ol>\n<li>\n<p>更新你的软件包列表：</p>\n<pre><code class=\"language-bash\">sudo dnf check-update\n</code></pre>\n<p>Fedora 使用 <code>dnf</code> 包管理器。</p>\n</li>\n<li>\n<p>安装 Python 3 和 pip：</p>\n<pre><code class=\"language-bash\">sudo dnf install python3 python3-pip\n</code></pre>\n<p>（<code>python3-venv</code> 的功能通常随 Fedora 上的主 <code>python3</code> 软件包一同提供。）</p>\n</li>\n</ol>\n<p><strong>对于 Arch Linux 及其衍生版（如 Manjaro）：</strong></p>\n<ol>\n<li>\n<p>同步软件包数据库并更新系统：</p>\n<pre><code class=\"language-bash\">sudo pacman -Syu\n</code></pre>\n<p>Arch 使用 <code>pacman</code> 包管理器。<code>-Syu</code> 刷新软件包列表并升级已安装的软件包。</p>\n</li>\n<li>\n<p>安装 Python 3 和 pip：</p>\n<pre><code class=\"language-bash\">sudo pacman -S python python-pip\n</code></pre>\n<p>在 Arch 上，软件包名称通常是 <code>python</code>（表示最新的 Python 3）和 <code>python-pip</code>。</p>\n</li>\n</ol>\n<p>如果你使用的是不同的 Linux 发行版，请查阅其文档以获取相应的包管理器命令（例如，openSUSE 使用 <code>zypper</code>，较旧的 CentOS/RHEL 使用 <code>yum</code>）。软件包名称通常很相近（<code>python3</code>、<code>python3-pip</code>）。</p>\n<h3>验证安装</h3>\n<p>运行安装命令后，验证 Python 3 和 pip 是否已正确安装。打开一个新的终端窗口或再次输入命令：</p>\n<pre><code class=\"language-bash\">python3 --version\npip3 --version\n</code></pre>\n<p>你现在应该会看到安装的版本号无误地打印到控制台。看到这些版本号就表明你的 Python 开发环境已在 Linux 机器上准备就绪。</p>\n<p>Python 安装后，你现在可以开始与 Python 解释器进行交互或编写你的第一个脚本，这些内容我们将在接下来的部分中介绍。使用发行版的包管理器通常是在 Linux 上管理主要 Python 安装的最简单且非常有效的方法。</p>",
+  "slug": "python-setup-linux",
+  "updates": [],
+  "references": [
+    {
+      "id": 6225,
+      "title": "Python Setup and Usage: Using Python on Unix platforms",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/using/unix.html",
+      "doi": "",
+      "note": "这份官方文档详细介绍了在类Unix系统（包括Linux）上安装和管理Python的方法，其中包含使用系统包管理器，与Linux环境设置直接相关。",
+      "order": 1,
+      "created_at": "2025-09-05T01:20:09.213775Z",
+      "updated_at": "2025-09-07T21:21:50.511367Z"
+    },
+    {
+      "id": 6226,
+      "title": "Installation",
+      "author": "The pip developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pip.pypa.io/en/stable/installation/",
+      "doi": "",
+      "note": "pip（Python包安装器）的官方安装指南，涵盖了多种安装方法和包管理的重要信息。",
+      "order": 2,
+      "created_at": "2025-09-05T01:20:09.217040Z",
+      "updated_at": "2025-09-07T21:21:46.694849Z"
+    },
+    {
+      "id": 6227,
+      "title": "venv - Creation of virtual environments",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "解释如何使用`venv`创建隔离的Python虚拟环境的官方文档，这是依赖项管理的基本实践。",
+      "order": 3,
+      "created_at": "2025-09-05T01:20:09.221007Z",
+      "updated_at": "2025-09-07T21:21:53.415746Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

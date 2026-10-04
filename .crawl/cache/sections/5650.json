@@ -1,0 +1,61 @@
+{
+  "id": 5650,
+  "title": "生成简单的数值数据",
+  "meta_title": "生成人工数值数据",
+  "meta_description": "使用简单方法生成基础人工数值数据的示例。",
+  "content": "<p>我们已经讨论了使用统计分布和基于规则的系统生成数据的一般思路。现在，让我们将这些思路付诸实践，创建一些简单的数值人工数据。数值数据代表数量或测量值（如年龄、温度或价格），是许多数据集中不可或缺的组成部分。</p>\n<h3>从统计分布生成数字</h3>\n<p>生成人工数值数据最直接的方法之一是从已知的统计分布中抽取样本。可以将分布视为一个蓝图，它描述了不同数值出现的可能性。</p>\n<h4>均匀分布</h4>\n<p>假设您需要为模拟生成客户年龄，但您只知道年龄范围在18到80岁之间，并且没有任何理由认为该范围内某个年龄比其他年龄更有可能出现。均匀分布对此非常适用。它为指定范围 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">[</mo><mi>a</mi><mo separator=\"true\">,</mo><mi>b</mi><mo stretchy=\"false\">]</mo></mrow><annotation encoding=\"application/x-tex\">[a, b]</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">[</span><span class=\"mord mathnormal\">a</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">b</span><span class=\"mclose\">]</span></span></span></span> 内的所有值分配相同的概率。</p>\n<p>要从均匀分布生成数字，您需要定义最小值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>a</mi></mrow><annotation encoding=\"application/x-tex\">a</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">a</span></span></span></span>) 和最大值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span>)。然后，您可以在此区间内随机选择数字，每个数字被选中的机会相同。</p>\n<p>例如，要生成18到80岁之间的5个模拟年龄：</p>\n<pre><code class=\"language-python\"># 伪代码示例\nimport random\n\nmin_age = 18\nmax_age = 80\nnumber_of_samples = 5\nsynthetic_ages = []\n\nfor _ in range(number_of_samples):\n  # 生成 min_age 和 max_age 之间的随机浮点数\n  age = random.uniform(min_age, max_age)\n  # 通常，我们可能需要整数（如年龄）\n  synthetic_ages.append(int(age))\n\nprint(synthetic_ages)\n# 可能的输出: [45, 22, 71, 58, 30]\n</code></pre>\n<p>如果我们以这种方式生成大量数据点，它们将相当均匀地分布在18-80的范围内。</p>\n<h4>正态（高斯）分布</h4>\n<p>如果您需要生成围绕某个中心值聚集的数据怎么办？例如，模拟成年男性的身高，他们的身高往往围绕平均身高波动。正态分布（常称为高斯分布或钟形曲线）在此非常适用。</p>\n<p>要使用正态分布，您需要两个参数 (parameter)：</p>\n<ol>\n<li><strong>均值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>)</strong>: 数据点倾向于聚集的中心值。</li>\n<li><strong>标准差 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>)</strong>: 衡量数据与均值分散程度的指标。较小的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span> 表示数据点紧密聚集在均值附近，而较大的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span> 表示数据分布更广。</li>\n</ol>\n<p>让我们生成5个模拟身高（厘米），假设均值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>) 为175厘米，标准差 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>) 为7厘米。</p>\n<pre><code class=\"language-python\"># 伪代码示例\nimport random\n\nmean_height = 175\nstd_dev_height = 7\nnumber_of_samples = 5\nsynthetic_heights = []\n\nfor _ in range(number_of_samples):\n  # 从正态分布生成随机数\n  height = random.gauss(mean_height, std_dev_height)\n  # 四舍五入到合理的精度，例如一位小数\n  synthetic_heights.append(round(height, 1))\n\nprint(synthetic_heights)\n# 可能的输出: [178.2, 166.5, 175.1, 184.0, 172.9]\n</code></pre>\n<p>大多数生成的升高将接近175厘米，而较少的值会出现在较远的位置。生成许多值将产生特征性的钟形。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-13ene8r\" \n              data-plot-definition='{\"layout\": {\"title\": \"模拟身高（正态分布）\", \"xaxis\": {\"title\": \"身高 (cm)\"}, \"yaxis\": {\"title\": \"计数\"}, \"bargap\": 0.1, \"template\": \"plotly_white\"}, \"data\": [{\"type\": \"histogram\", \"x\": [178.2, 166.5, 175.1, 184.0, 172.9, 174.5, 180.1, 169.8, 176.3, 171.0, 177.5, 168.9, 173.3, 175.8, 170.5, 181.2, 174.9, 168.1, 176.9, 172.1, 179.5, 173.8, 165.0, 175.5, 182.0, 171.8, 176.0, 169.2, 174.1, 178.8], \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-13ene8r\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个直方图，显示了使用均值为175厘米、标准差为7厘米的正态分布生成的模拟身高。大多数值都聚集在175厘米附近。</p>\n</blockquote>\n<p>还存在其他分布（如用于等待时间的指数分布，或用于计数的泊松分布），但均匀分布和正态分布是生成简单数值数据的优秀起点。</p>\n<h3>使用规则生成数字</h3>\n<p>有时，数值数据遵循特定的模式或依赖于其他值。基于规则的系统允许您明确定义这些模式。</p>\n<h4>顺序值</h4>\n<p>最简单的规则是生成顺序数字。这对于创建唯一标识符（ID）来说很常见。</p>\n<pre><code class=\"language-python\"># 伪代码示例\nstart_id = 1001\nnumber_of_records = 5\nsynthetic_ids = []\n\nfor i in range(number_of_records):\n  synthetic_ids.append(start_id + i)\n\nprint(synthetic_ids)\n# 输出: [1001, 1002, 1003, 1004, 1005]\n</code></pre>\n<h4>基于其他值的计算</h4>\n<p>您可能需要基于另一个模拟（或真实）值来生成一个值。例如，根据 <code>base_price</code> 和 <code>tax_amount</code> 计算 <code>total_price</code>。</p>\n<pre><code class=\"language-python\"># 伪代码示例\n# 假设 base_prices 是之前生成的，例如使用分布生成\nbase_prices = [50.0, 120.0, 75.5]\nsynthetic_totals = []\ntax_rate = 0.08 # 8% 税率\n\nfor price in base_prices:\n  tax_amount = price * tax_rate\n  total_price = price + tax_amount\n  synthetic_totals.append(round(total_price, 2))\n\nprint(synthetic_totals)\n# 输出: [54.0, 129.6, 81.54]\n</code></pre>\n<h4>条件规则</h4>\n<p>规则也可以包含条件。例如，传感器读数可能取决于一天中的时间。</p>\n<pre><code class=\"language-python\"># 伪代码示例 - 简化版\n# 假设 'hour_of_day' 已生成或已知 (0-23)\nsynthetic_temperatures = []\nhours = [6, 14, 22] # 早上, 下午, 晚上\n\nfor hour in hours:\n  if 6 &#x3C;= hour &#x3C; 12: # 早上\n    # 较低的温度范围\n    temp = random.uniform(15, 20)\n  elif 12 &#x3C;= hour &#x3C; 18: # 下午\n    # 较高的温度范围\n    temp = random.uniform(22, 28)\n  else: # 傍晚/夜晚\n    # 温度下降\n    temp = random.uniform(18, 22)\n  synthetic_temperatures.append(round(temp, 1))\n\nprint(synthetic_temperatures)\n# 可能的输出: [17.8, 25.1, 19.5]\n</code></pre>\n<p>这些基于规则的方法使您能够将特定的逻辑或关系直接嵌入 (embedding)到人工数据生成过程中。</p>\n<p>通过结合从分布中抽样和应用规则，您可以开始创建反映真实数据集中可能存在的简单模式和特点的数值人工数据。下一节将介绍生成分类数据的类似技术。</p>",
+  "slug": "generating-simple-numerical-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 15925,
+      "title": "Probability & Statistics for Engineers & Scientists",
+      "author": "Ronald E. Walpole, Raymond H. Myers, Sharon L. Myers, Keying E. Ye",
+      "year": "2016",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.pearson.com/us/higher-education/product/Walpole-Probability-Statistics-for-Engineers-Scientists-9th-Edition/9780134115856.html",
+      "doi": "",
+      "note": "一本广泛使用的教科书，介绍了概率和统计学的基本概念，包括均匀分布和正态分布等多种分布，对于从统计模型生成数据至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T10:57:19.220889Z",
+      "updated_at": "2025-09-10T13:10:39.182929Z"
+    },
+    {
+      "id": 15926,
+      "title": "`random` - Generate pseudo-random numbers",
+      "author": "Python Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/random.html",
+      "doi": "",
+      "note": "Python `random` 模块的官方文档，提供了在伪代码示例中用于生成均匀、正态（高斯）和其他分布的数字的详细信息和示例。",
+      "order": 2,
+      "created_at": "2025-09-06T10:57:19.225012Z",
+      "updated_at": "2025-09-10T13:10:29.647715Z"
+    },
+    {
+      "id": 15928,
+      "title": "Simulation Modeling and Analysis",
+      "author": "Averill M. Law",
+      "year": "2015",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mheducation.com/highered/product/simulation-modeling-analysis-law/M9780073401324.html",
+      "doi": "",
+      "note": "一本基础性教科书，涵盖了仿真建模的原理和技术，包括从各种分布生成随机变量的方法，与所讨论的采样方法直接相关。",
+      "order": 4,
+      "created_at": "2025-09-06T10:57:19.233014Z",
+      "updated_at": "2025-09-10T13:10:32.397063Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

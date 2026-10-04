@@ -1,0 +1,61 @@
+{
+  "id": 1770,
+  "title": "将数据写入 CSV 文件",
+  "meta_title": "将 DataFrame 写入 CSV 文件 Pandas",
+  "meta_description": "使用 `.to_csv()` 方法将 Pandas DataFrame 保存到 CSV 文件，并控制输出选项。",
+  "content": "<p>在 Pandas DataFrame 中处理数据时，保存处理结果或整理后的数据集是常见需求，以便将来使用、分享或作为其他过程的输入。正如 <code>pd.read_csv()</code> 是读取 CSV 数据的标准方式一样，将 DataFrame 数据写回到 CSV 文件的相应方法是 <code>.to_csv()</code>。</p>\n<p>CSV（逗号分隔值）格式因其简单性以及与众多应用程序（包括 Microsoft Excel 或 Google Sheets 等电子表格软件、数据库和其他编程环境）的兼容性，仍然是交换表格数据被广泛使用的标准。</p>\n<h3><code>to_csv()</code> 的基本用法</h3>\n<p><code>.to_csv()</code> 最基本的用法是在您的 DataFrame 对象上调用它，并提供您希望保存数据的文件路径。</p>\n<p>假设我们有以下 DataFrame，它可能是在之前的步骤中创建或修改的：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'col_A': [1, 2, 3, 4, 5],\n        'col_B': ['apple', 'banana', 'orange', 'grape', 'kiwi'],\n        'col_C': [0.1, 0.2, np.nan, 0.4, 0.5]}\ndf_to_save = pd.DataFrame(data)\n\nprint(df_to_save)\n# 预期输出:\n#    col_A   col_B  col_C\n# 0      1   apple    0.1\n# 1      2  banana    0.2\n# 2      3  orange    NaN\n# 3      4   grape    0.4\n# 4      5    kiwi    0.5\n</code></pre>\n<p>要将此 DataFrame 保存到当前工作目录中名为 <code>output_data.csv</code> 的文件，您只需运行：</p>\n<pre><code class=\"language-python\">df_to_save.to_csv('output_data.csv')\n</code></pre>\n<p>如果您用文本编辑器打开 <code>output_data.csv</code>，您会看到类似以下内容：</p>\n<pre><code class=\"language-csv\">,col_A,col_B,col_C\n0,1,apple,0.1\n1,2,banana,0.2\n2,3,orange,\n3,4,grape,0.4\n4,5,kiwi,0.5\n</code></pre>\n<p>请注意以下几点：</p>\n<ol>\n<li>所有值都由逗号分隔。</li>\n<li>列标题（<code>col_A</code>、<code>col_B</code>、<code>col_C</code>）作为第一行包含在内。</li>\n<li>DataFrame 的索引（0、1、2、3、4）已作为第一列写入，并且它没有列头名称。</li>\n</ol>\n<p>通常，您可能不想在输出文件中包含 DataFrame 索引，特别是如果它只是默认的整数索引（0、1、2...），不表示有意义的数据。</p>\n<h3>控制输出：常用参数 (parameter)</h3>\n<p><code>.to_csv()</code> 方法提供多种参数来自定义输出文件。以下是一些最常用的参数：</p>\n<h4><code>index</code> 参数</h4>\n<p>正如所见，默认行为是写入 DataFrame 索引。为了避免这种情况，请将 <code>index</code> 参数设置为 <code>False</code>。这是一个非常普遍的需求。</p>\n<pre><code class=\"language-python\"># 保存时不包含 DataFrame 索引\ndf_to_save.to_csv('output_data_no_index.csv', index=False)\n</code></pre>\n<p>现在，<code>output_data_no_index.csv</code> 将会是这样：</p>\n<pre><code class=\"language-csv\">col_A,col_B,col_C\n1,apple,0.1\n2,banana,0.2\n3,orange,\n4,grape,0.4\n5,kiwi,0.5\n</code></pre>\n<p>这种格式通常更整洁，更适合导入到可能生成自己行标识符的其他系统中。</p>\n<h4><code>header</code> 参数</h4>\n<p>同样地，您有时可能希望省略标题行（即列名）。这可以通过将 <code>header</code> 参数设置为 <code>False</code> 来完成。</p>\n<pre><code class=\"language-python\"># 保存时不包含标题行（也不包含索引）\ndf_to_save.to_csv('output_data_no_header.csv', index=False, header=False)\n</code></pre>\n<p><code>output_data_no_header.csv</code> 的内容将是：</p>\n<pre><code class=\"language-csv\">1,apple,0.1\n2,banana,0.2\n3,orange,\n4,grape,0.4\n5,kiwi,0.5\n</code></pre>\n<p>相比于省略索引，这不太常见，但在特定情况下会有用，例如向已包含标题的现有文件追加数据。</p>\n<h4><code>sep</code> 参数</h4>\n<p>尽管 CSV 代表逗号分隔值，但数据文件有时会使用不同的字符（分隔符）来分隔字段。常见的替代选项包括制表符（<code>\\t</code>）、分号（<code>;</code>）或竖线（<code>|</code>）。<code>sep</code> 参数允许您指定分隔符。例如，要创建一个制表符分隔值（TSV）文件：</p>\n<pre><code class=\"language-python\"># 保存为 TSV 文件（制表符分隔），不包含索引\ndf_to_save.to_csv('output_data.tsv', index=False, sep='\\t')\n</code></pre>\n<p>打开 <code>output_data.tsv</code> 会显示字段由制表符而不是逗号分隔。</p>\n<h4><code>na_rep</code> 参数</h4>\n<p>请注意，在默认输出中，<code>col_C</code> 中缺失的 <code>NaN</code> 值导致 CSV 中出现一个空字段（<code>3,orange,,</code>）。您可以使用 <code>na_rep</code> 参数为缺失值指定一个自定义的字符串表示。</p>\n<pre><code class=\"language-python\"># 保存时用 'MISSING' 表示 NaN 值，不包含索引\ndf_to_save.to_csv('output_data_na_rep.csv', index=False, na_rep='MISSING')\n</code></pre>\n<p>文件 <code>output_data_na_rep.csv</code> 将包含：</p>\n<pre><code class=\"language-csv\">col_A,col_B,col_C\n1,apple,0.1\n2,banana,0.2\n3,orange,MISSING\n4,grape,0.4\n5,kiwi,0.5\n</code></pre>\n<h4><code>columns</code> 参数</h4>\n<p>如果您只想保存 DataFrame 中一部分列，可以向 <code>columns</code> 参数提供一个列名列表。</p>\n<pre><code class=\"language-python\"># 只保存 'col_A' 和 'col_B' 列，不包含索引\ndf_to_save.to_csv('output_data_subset.csv', index=False, columns=['col_A', 'col_B'])\n</code></pre>\n<p>文件 <code>output_data_subset.csv</code> 将只包含这两列的数据：</p>\n<pre><code class=\"language-csv\">col_A,col_B\n1,apple\n2,banana\n3,orange\n4,grape\n5,kiwi\n</code></pre>\n<h4><code>encoding</code> 参数</h4>\n<p>文本文件使用特定的字符编码存储。虽然通常默认处理正确（Pandas 通常默认使用 'utf-8'，它具有广泛的兼容性），但有时如果接收系统有要求，或者您的数据包含需要特定编码（如 'latin1' 或 'cp1252'）的特殊字符，您可能需要指定不同的编码。</p>\n<pre><code class=\"language-python\"># 使用特定编码保存（例如 latin1）\n# df_to_save.to_csv('output_data_encoding.csv', index=False, encoding='latin1')\n# 注意：通常首选 utf-8（默认），除非您有特殊需求。\n</code></pre>\n<p>有效保存数据与加载数据同样重要。<code>.to_csv()</code> 方法提供灵活的选项，以确保您的 DataFrame 以所需格式导出，准备好用于存储、分享或数据工作流程的后续步骤。请记住，将 <code>index=False</code> 通常是一个好的做法，除非您的 DataFrame 索引包含需要明确在输出文件中保留的重要信息。</p>",
+  "slug": "writing-csv-files",
+  "updates": [],
+  "references": [
+    {
+      "id": 3589,
+      "title": "pandas.DataFrame.to_csv",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html",
+      "doi": "",
+      "note": "Pandas DataFrame.to_csv 方法的官方文档，列出了所有参数和使用示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:13.082972Z",
+      "updated_at": "2025-09-08T05:11:57.130813Z"
+    },
+    {
+      "id": 3590,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本关于使用Python和Pandas进行数据操作的经典书籍，涵盖数据加载、保存和一般的DataFrame操作。（第三版）",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:13.124420Z",
+      "updated_at": "2025-09-08T05:12:02.153139Z"
+    },
+    {
+      "id": 3591,
+      "title": "Hands-On Data Analysis with Pandas: A Practical Guide to Building Powerful Data Analysis Pipelines",
+      "author": "Stefanie Molin",
+      "year": "2021",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/hands-on-data-analysis-with-pandas-second-edition/9781800563456",
+      "doi": "",
+      "note": "一份使用Pandas进行数据分析的实用指南，包括数据导出功能，例如保存到CSV。（第二版）",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:13.127728Z",
+      "updated_at": "2025-09-08T05:12:11.994101Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

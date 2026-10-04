@@ -1,0 +1,45 @@
+{
+  "id": 1269,
+  "title": "边缘检测原理",
+  "meta_title": "边缘检测原理说明",
+  "meta_description": "介绍寻找边界和剧烈强度变化的方法。",
+  "content": "<p>我们来思考一下，是什么让图像的某些部分显得突出。想象一下，你正在看一张包含一个简单黑方块在白色背景上的图片。你的眼睛会立即注意到边界，即黑白交界的那条线。在计算机视觉中，这些边界被称为<strong>边缘</strong>。</p>\n<p>边缘代表图像中像素强度发生剧烈、显著变化的位置。可以将其想象成当你从一个像素移动到其相邻像素时，亮度或颜色值突然跳变或下降。这些变化通常对应着场景中的重要情况：</p>\n<ul>\n<li>两个不同物体之间的边界。</li>\n<li>单个物体相对于其背景的轮廓。</li>\n<li>表面方向或材料属性的变化。</li>\n<li>场景光照的变化，例如阴影的边缘。</li>\n</ul>\n<p>识别这些边缘是理解图像内容的基础一步。为什么呢？因为边缘通常勾勒出物体的形状。如果能可靠地找到边缘，我们就能开始识别物体的位置、它们的基本形状以及它们在空间上的相互关系。边缘检测简化了图像，减少了需要处理的数据量，同时保留了关于物体边界的重要结构信息。</p>\n<p>那么，计算机如何<em>找到</em>这些强度变化呢？主要思路是寻找像素值快速变化的区域。我们可以使用<strong>图像梯度</strong>来数学化地衡量这种变化。梯度衡量图像中每个点强度变化的<em>速率</em>（幅度）和<em>方向</em>。</p>\n<p>想象一个简单的一维信号，比如沿着一行像素的强度值。边缘在这种信号中会表现为陡峭的上升或下降台阶。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-3ac1ku\" \n              data-plot-definition='{\"data\": [{\"x\": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [50, 50, 50, 50, 50, 200, 200, 200, 200, 200, 200], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"强度曲线\", \"line\": {\"color\": \"#228be6\"}, \"marker\": {\"color\": \"#228be6\"}}], \"layout\": {\"title\": \"穿过边缘的简化一维强度曲线\", \"xaxis\": {\"title\": \"像素位置（沿直线）\"}, \"yaxis\": {\"title\": \"像素强度\"}, \"height\": 300}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-3ac1ku\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>沿穿过边缘的直线上的像素强度简化视图。在像素位置5附近的急剧跳跃显示出强烈的强度变化，这标志着一个边缘。</p>\n</blockquote>\n<p>梯度在二维图像中具有两个分量：一个衡量水平方向的强度变化（记作 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>G</mi><mi>x</mi></msub></mrow><annotation encoding=\"application/x-tex\">G_x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8333em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">G</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">x</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span>），另一个衡量垂直方向的变化（记作 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>G</mi><mi>y</mi></msub></mrow><annotation encoding=\"application/x-tex\">G_y</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9694em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">G</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0359em;\">y</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span>）。</p>\n<ul>\n<li>强的水平梯度 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>G</mi><mi>x</mi></msub></mrow><annotation encoding=\"application/x-tex\">G_x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8333em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">G</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">x</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span>) 表示垂直边缘（强度随从左到右移动而变化）。</li>\n<li>强的垂直梯度 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>G</mi><mi>y</mi></msub></mrow><annotation encoding=\"application/x-tex\">G_y</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9694em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">G</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0359em;\">y</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span>) 表示水平边缘（强度随从上到下移动而变化）。</li>\n</ul>\n<p>梯度的<strong>幅度</strong>告诉我们边缘的<em>强度</em>（强度变化的剧烈程度）。幅度越大意味着边缘越明显。梯度的<strong>方向</strong>或朝向告诉我们强度变化最快的方向，这个方向垂直于边缘本身。</p>\n<p>因此，边缘检测算法旨在计算图像中的这些梯度，并找出梯度幅度高的像素。不同的算法，如Sobel算子（我们接下来会看到），提供了近似这些梯度的方法，而其他算法，如Canny边缘检测器，则基于此来精炼检测到的边缘，使它们更细、更连贯。理解这种寻找剧烈强度变化的基本思路是这些技术的基础。</p>",
+  "slug": "edge-detection-concepts",
+  "updates": [],
+  "references": [
+    {
+      "id": 508,
+      "title": "Computer Vision: Algorithms and Applications",
+      "author": "Richard Szeliski",
+      "year": "2022",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://szeliski.org/Book/",
+      "doi": "",
+      "note": "这本教材全面介绍了计算机视觉。它包含图像梯度、边缘检测原理和各种边缘检测算法的讨论，是理解基本概念的相关资源。",
+      "order": 1,
+      "created_at": "2025-09-04T14:37:34.843448Z",
+      "updated_at": "2025-09-07T16:32:18.935368Z"
+    },
+    {
+      "id": 510,
+      "title": "A Computational Approach to Edge Detection",
+      "author": "John Canny",
+      "year": "1986",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "volume": "PAMI-8",
+      "pages": "679-698",
+      "url": "https://ieeexplore.ieee.org/document/4767851",
+      "doi": "10.1109/TPAMI.1986.4767851",
+      "note": "这篇开创性论文介绍了Canny边缘检测算法。它概述了有效边缘检测的标准，包括检测、定位和对边缘的单一响应，基于梯度幅度和方向分析。",
+      "order": 3,
+      "created_at": "2025-09-04T14:37:34.848843Z",
+      "updated_at": "2025-09-07T16:32:21.378110Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

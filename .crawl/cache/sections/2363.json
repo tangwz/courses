@@ -1,0 +1,61 @@
+{
+  "id": 2363,
+  "title": "Scikit-learn API 和估计器接口",
+  "meta_title": "Scikit-learn 估计器 API 指南",
+  "meta_description": "了解 Scikit-learn API 契约和设计原则，用于创建兼容组件。",
+  "content": "<p>为有效扩展 Scikit-learn，您的自定义组件必须与其现有基础设施流畅地集成，特别是管道（pipelines）、网格搜索（grid search）和交叉验证工具。这种集成取决于遵循一套一致的设计原则和接口，通常被称为 Scikit-learn API。了解这个 API 是构建强大、可重用自定义估计器和转换器的第一步。</p>\n<p>其核心是，Scikit-learn 处理被称为 <strong>估计器</strong> 的对象。估计器是任何能够从数据中学习的对象。这种学习通过其 <code>fit(X, y=None)</code> 方法发生。<code>X</code> 通常代表输入特征（通常是形状为 <code>[n_samples, n_features]</code> 的 NumPy 数组或稀疏矩阵），而 <code>y</code> 代表监督学习 (supervised learning)任务中的目标值（形状为 <code>[n_samples]</code> 的 NumPy 数组）。对于无监督学习 (unsupervised learning)，<code>y</code> 通常被省略或忽略。</p>\n<h3>核心估计器接口</h3>\n<p>每个 Scikit-learn 估计器都应遵循以下基本约定：</p>\n<ol>\n<li>\n<p><strong>通过 <code>__init__</code> 进行初始化</strong>：估计器的所有参数 (parameter)都应直接作为公共属性访问，并在对象的 <code>__init__</code> 方法中设置。这些参数控制估计器的行为（例如，模型中的正则化 (regularization)强度，分解中的组件数量）。重要的是，<code>__init__</code> <em>不应</em> 执行任何实际的学习或数据验证；其唯一目的是存储传递给它的参数。避免将数据（<code>X</code> 或 <code>y</code>）传递给构造函数。</p>\n</li>\n<li>\n<p><strong>学习到的属性</strong>：在 <code>fit</code> 方法中从数据中学习到的属性必须以一个下划线 (<code>_</code>) 结尾。例子包括线性模型中的 <code>coef_</code> 或 PCA 中的 <code>components_</code>。此约定将初始化期间设置的超参数 (hyperparameter)与拟合期间学习到的参数区分开来。</p>\n</li>\n<li>\n<p><strong><code>fit</code> 方法</strong>：这是核心学习方法。它将训练数据 <code>X</code>（以及监督估计器的 <code>y</code>）作为输入。其主要职责是估计并存储学习到的参数（以 <code>_</code> 结尾的属性）。一个重点是，<code>fit</code> 方法应始终返回估计器实例本身（<code>self</code>）。这允许方法链式调用，例如 <code>estimator.fit(X_train).predict(X_test)</code>。</p>\n</li>\n</ol>\n<pre><code class=\"language-python\"># Scikit-learn 兼容估计器的基本结构\nfrom sklearn.base import BaseEstimator, ClassifierMixin # 分类器示例\n\nclass MyCustomClassifier(BaseEstimator, ClassifierMixin):\n    def __init__(self, hyperparameter1=1.0, hyperparameter2='default'):\n        # 存储实例化时传入的超参数\n        self.hyperparameter1 = hyperparameter1\n        self.hyperparameter2 = hyperparameter2\n        # 在此处不进行数据处理或学习！\n\n    def fit(self, X, y):\n        # 1. 验证输入数据 X 和 y（可选但建议）\n        #    from sklearn.utils.validation import check_X_y, check_array, check_is_fitted\n        #    X, y = check_X_y(X, y)\n\n        # 2. 根据 X、y 和 self.hyperparameter1 等执行学习过程。\n        #    例如，计算一些内部模型状态。\n        #    ... 学习逻辑 ...\n\n        # 3. 存储以一个下划线结尾的学习到的属性\n        self.learned_parameter_ = \"从数据中导出的某个值\"\n        self.n_features_in_ = X.shape[1] # 常见的学习到的属性\n\n        # 4. 返回实例\n        return self\n\n    def predict(self, X):\n        # 1. 检查 fit 是否已被调用\n        #    check_is_fitted(self)\n\n        # 2. 验证输入数据 X\n        #    X = check_array(X)\n\n        # 3. 使用 self.learned_parameter_ 和 X 进行预测\n        #    ... 预测逻辑 ...\n        #    predictions = ...\n        # return predictions\n\n        # 占位符实现\n        # 在实际分类器中，这将使用 learned_parameter_\n        # from sklearn.utils.validation import check_is_fitted, check_array\n        # check_is_fitted(self)\n        # X = check_array(X)\n        # 在此处实现预测逻辑\n        pass # 替换为实际的预测逻辑\n\n    # 根据估计器类型（ClassifierMixin 添加默认的 score 方法），可能需要其他方法，如 predict_proba, score 等。\n</code></pre>\n<h3>转换器：数据修改</h3>\n<p>转换器是用于数据预处理和特征工程的特定类型估计器。除了 <code>fit</code> 方法外，它们还实现另外两个重要方法：</p>\n<ol>\n<li><strong><code>transform(X)</code></strong>：接收输入数据 <code>X</code> 并返回 <code>X</code> 的 <em>转换后</em> 版本。此方法不应修改估计器的状态；它只使用在 <code>fit</code> 期间学习到的参数 (parameter)。</li>\n<li><strong><code>fit_transform(X, y=None)</code></strong>：一个便捷方法，在 <em>相同</em> 数据 <code>X</code> 上执行拟合和转换。它通常比分别调用 <code>fit</code> 和 <code>transform</code> 更具计算效率。Scikit-learn 在 <code>TransformerMixin</code> 中提供了默认实现，但如果需要提高性能，您可以重写它。默认实现只是调用 <code>self.fit(X, y).transform(X)</code>。</li>\n</ol>\n<pre><code class=\"language-python\"># Scikit-learn 兼容转换器的基本结构\nfrom sklearn.base import BaseEstimator, TransformerMixin\n\nclass MyCustomTransformer(BaseEstimator, TransformerMixin):\n    def __init__(self, include_feature_indices=None):\n        self.include_feature_indices = include_feature_indices\n        # 此处不进行学习\n\n    def fit(self, X, y=None):\n        # 如有需要，从 X 中学习（例如，用于缩放的最小值/最大值）\n        # 存储以一个下划线 '_' 结尾的学习到的属性\n        # 例如：self.min_ = X.min(axis=0)\n        self.n_features_in_ = X.shape[1]\n        # 返回 self\n        return self\n\n    def transform(self, X):\n        # 检查 fit 是否已被调用\n        # from sklearn.utils.validation import check_is_fitted, check_array\n        # check_is_fitted(self)\n        # X = check_array(X)\n\n        # 使用学习到的属性（如果有）和超参数（如 self.include_feature_indices）应用转换\n        # transformed_X = ... 逻辑 ...\n        # return transformed_X\n\n        # 占位符实现\n        # 在实际转换器中，这将使用 fit 中学习到的参数\n        # from sklearn.utils.validation import check_is_fitted, check_array\n        # check_is_fitted(self)\n        # X = check_array(X)\n        # 在此处实现转换逻辑\n        pass # 替换为实际的转换逻辑\n</code></pre>\n<h3>预测器：进行预测</h3>\n<p>预测器是能够根据新输入数据进行预测的估计器。它们实现一个 <code>predict(X)</code> 方法，该方法接收未见过的数据 <code>X</code> 并根据 <code>fit</code> 中学习到的状态返回预测结果。存在不同类型的预测器：</p>\n<ul>\n<li><strong>分类器</strong>：预测分类标签。通常实现 <code>predict_proba(X)</code>（获取每个类别的概率估计）和 <code>score(X, y)</code>（评估准确性）。继承自 <code>ClassifierMixin</code>。</li>\n<li><strong>回归器</strong>：预测连续值。通常实现 <code>score(X, y)</code>（通常是 R 方系数）。继承自 <code>RegressorMixin</code>。</li>\n<li><strong>聚类器</strong>：将样本分配给聚类（无监督）。可以实现 <code>predict(X)</code>（分配给最近的聚类）或 <code>fit_predict(X)</code>（拟合并返回训练数据的聚类标签）。继承自 <code>ClusterMixin</code>。</li>\n</ul>\n<h3>重要辅助类和函数</h3>\n<p>Scikit-learn 在 <code>sklearn.base</code> 中提供了基类和混合类以简化开发：</p>\n<ul>\n<li><strong><code>BaseEstimator</code></strong>：基础的基类。提供 <code>get_params()</code> 和 <code>set_params()</code> 的默认实现。强烈建议继承它。\n<ul>\n<li><strong><code>get_params(deep=True)</code></strong>：返回一个字典，将参数 (parameter)名称（如在 <code>__init__</code> 中定义的）映射到其当前值。对于 <code>Pipeline</code> 和 <code>GridSearchCV</code> 等元估计器检查和克隆估计器是必不可少的。</li>\n<li><strong><code>set_params(**params)</code></strong>：设置估计器的参数。也被元估计器广泛使用，特别是在超参数 (hyperparameter)调优方面。</li>\n</ul>\n</li>\n<li><strong>混合类（<code>TransformerMixin</code>, <code>ClassifierMixin</code>, <code>RegressorMixin</code>, <code>ClusterMixin</code>）</strong>：根据您实现的核心方法提供常用方法的默认实现。例如，<code>TransformerMixin</code> 根据您的 <code>fit</code> 和 <code>transform</code> 提供 <code>fit_transform</code>。<code>ClassifierMixin</code> 基于您的 <code>predict</code> 提供一个基于准确性的默认 <code>score</code> 方法。</li>\n</ul>\n<p>此外，<code>sklearn.utils.validation</code> 模块包含对可靠估计器非常重要的函数：</p>\n<ul>\n<li><strong><code>check_X_y(X, y, ...)</code></strong>：验证输入特征 <code>X</code> 和目标 <code>y</code>，将它们转换为标准 NumPy 数组并检查一致性（例如，样本数量）。</li>\n<li><strong><code>check_array(X, ...)</code></strong>：验证输入特征 <code>X</code>。在 <code>predict</code> 或 <code>transform</code> 中使用，在这些方法中 <code>y</code> 不存在。</li>\n<li><strong><code>check_is_fitted(estimator, attributes=None)</code></strong>：通过验证学习到的属性（那些以 <code>_</code> 结尾的）是否存在来检查估计器是否已拟合。在 <code>predict</code>、<code>transform</code> 或其他依赖拟合状态的方法开始时调用此函数。</li>\n</ul>\n<h3>为何遵循 API？</h3>\n<p>遵循这些约定可确保您的自定义组件在 Scikit-learn 生态系统中正常运行：</p>\n<ul>\n<li><strong>互操作性</strong>：自定义估计器可以与标准组件一起放入 Scikit-learn <code>Pipeline</code> 对象中。</li>\n<li><strong>超参数 (parameter) (hyperparameter)调优</strong>：<code>GridSearchCV</code> 和 <code>RandomizedSearchCV</code> 可以检查（<code>get_params</code>）和修改（<code>set_params</code>）您的估计器的超参数。</li>\n<li><strong>模型评估</strong>：标准评估工具和交叉验证函数将正常工作。</li>\n<li><strong>一致性</strong>：熟悉 Scikit-learn 的用户会发现您的自定义组件使用起来很直观。</li>\n</ul>\n<p>通过掌握 Scikit-learn API 原则，使用 <code>__init__</code> 处理超参数，<code>fit</code> 进行学习，使用尾随下划线存储学习到的状态，并运用基类和验证工具，您将获得构建复杂自定义机器学习 (machine learning)组件的能力，这些组件可以完美地集成到既定工作流程中。后续部分将指导您实现这些原则以创建自定义转换器和估计器。</p>",
+  "slug": "scikit-learn-estimator-interface",
+  "updates": [],
+  "references": [
+    {
+      "id": 2761,
+      "title": "Developing your own scikit-learn estimators",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/developers/develop.html",
+      "doi": "",
+      "note": "提供创建与Scikit-learn生态系统集成的自定义组件的指导和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:33.176168Z",
+      "updated_at": "2025-09-08T03:13:31.278512Z"
+    },
+    {
+      "id": 2762,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGwyGbJdJeY6OdVoEBkAerpkAlnQS6H4QoBiPh_YlzgAc-6FhRUK3pEyQz-Tx2cFmnjDPBearYVm4LZwogz23B2ASYkos6TTdlQBp2S6PEWPAJXHwJl_iUVnIY-eQOumVg8u_JiRa2ju_pQ5_L1IT1pG-uaW19J9_-Xv1gTK6gv8PrpsoFzhiA=",
+      "doi": "",
+      "note": "一本广泛使用的教科书，为在Scikit-learn框架内实现自定义估计器提供了实用说明和代码示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:33.281053Z",
+      "updated_at": "2025-09-08T03:13:41.076441Z"
+    },
+    {
+      "id": 2767,
+      "title": "Scikit-learn: Machine Learning in Python",
+      "author": "Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake Vanderplas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, Édouard Duchesnay",
+      "year": "2011",
+      "publisher": "JMLR, Inc.",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "12",
+      "pages": "2825-2830",
+      "url": "http://www.jmlr.org/papers/volume12/pedregosa11a/pedregosa11a.pdf",
+      "doi": "10.5555/1953048.2078195",
+      "note": "介绍Scikit-learn库的原始学术论文，阐述了其设计原则和整体架构，包括估计器接口。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:33.377602Z",
+      "updated_at": "2025-09-08T03:13:33.220700Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

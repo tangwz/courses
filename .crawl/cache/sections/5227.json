@@ -1,0 +1,45 @@
+{
+  "id": 5227,
+  "title": "什么是FastAPI？",
+  "meta_title": "什么是FastAPI？",
+  "meta_description": "了解FastAPI Web框架的特点和用途。",
+  "content": "<p>FastAPI是一个现代Python Web框架，专门设计用于创建API，特别是RESTful API。它因其高性能和开发者友好的特性而表现突出，是服务机器学习 (machine learning)模型等应用的优秀选择。</p>\n<p>FastAPI建立在两个主要组成部分之上：Starlette和Pydantic，它继承并结合了它们的优点：</p>\n<ol>\n<li><strong>Starlette：</strong> 提供底层的ASGI（异步服务器网关接口）支撑。ASGI是Flask和Django等框架使用的传统WSGI（Web服务器网关接口）的后续。ASGI对异步操作的原生支持使FastAPI应用能够高效处理许多并发连接，这对于Web应用中常见的I/O密集型任务（如网络请求或文件读取）尤其有益。</li>\n<li><strong>Pydantic：</strong> 处理数据验证、序列化和文档生成。FastAPI广泛使用Python类型提示。通过基于这些类型提示使用Pydantic模型定义数据结构，FastAPI自动验证传入的请求数据，序列化传出的响应数据，并生成交互式API文档。</li>\n</ol>\n<h3>核心特点</h3>\n<p>FastAPI在设计时考虑了多个目标，直接解决了旧框架中存在的一些局限性：</p>\n<ul>\n<li>\n<p><strong>高性能：</strong> 借助Starlette和异步编程（<code>async</code>/<code>await</code>），FastAPI是现有最快的Python Web框架之一，对于I/O密集型任务，其性能常能媲美NodeJS和Go。在服务机器学习 (machine learning)模型时，这种速度很有利，因为最小化API延迟通常很重要。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-19ql16u\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_wsgi {\n        label = \"同步（例如，WSGI）\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        node [fillcolor=\"#a5d8ff\"];\n\n        req1_wsgi [label=\"请求 1\"];\n        proc1_wsgi [label=\"处理请求 1\\n（阻塞I/O）\"];\n        res1_wsgi [label=\"响应 1\"];\n\n        req2_wsgi [label=\"请求 2\"];\n        proc2_wsgi [label=\"等待\"];\n        proc2_cont_wsgi [label=\"处理请求 2\"];\n        res2_wsgi [label=\"响应 2\"];\n\n        req1_wsgi -> proc1_wsgi [label=\" 进入\"];\n        proc1_wsgi -> res1_wsgi [label=\" 完成\"];\n        req2_wsgi -> proc2_wsgi [label=\" 到达\"];\n        proc2_wsgi -> proc2_cont_wsgi [label=\" 请求 1后启动\", style=dashed];\n        proc2_cont_wsgi -> res2_wsgi [label=\" 完成\"];\n    }\n\n    subgraph cluster_asgi {\n        label = \"异步（FastAPI/ASGI）\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        node [fillcolor=\"#96f2d7\"];\n\n        req1_asgi [label=\"请求 1\"];\n        proc1_start_asgi [label=\"开始处理 1\"];\n        io1_asgi [label=\"等待I/O 1\"];\n        proc1_end_asgi [label=\"恢复处理 1\"];\n        res1_asgi [label=\"响应 1\"];\n\n        req2_asgi [label=\"请求 2\"];\n        proc2_start_asgi [label=\"开始处理 2\"];\n        io2_asgi [label=\"等待I/O 2\"];\n        proc2_end_asgi [label=\"恢复处理 2\"];\n        res2_asgi [label=\"响应 2\"];\n\n        req1_asgi -> proc1_start_asgi [label=\" 进入\"];\n        proc1_start_asgi -> io1_asgi [label=\" 让出\"];\n        io1_asgi -> proc1_end_asgi [label=\" I/O完成\", style=dashed];\n        proc1_end_asgi -> res1_asgi [label=\" 完成\"];\n\n        req2_asgi -> proc2_start_asgi [label=\" 进入\"];\n        proc2_start_asgi -> io2_asgi [label=\" 让出\"];\n        io2_asgi -> proc2_end_asgi [label=\" I/O完成\", style=dashed];\n        proc2_end_asgi -> res2_asgi [label=\" 完成\"];\n\n        // 以视觉方式指示并发（简化）\n        proc1_start_asgi -> proc2_start_asgi [style=invis]; // 允许请求2在请求1等待时启动\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-19ql16u\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>请求处理模型的简化比较。像FastAPI这样的异步框架可以在等待I/O操作时处理其他任务，从而提高并发性。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>编码快速：</strong> 旨在提高开发速度。自动数据验证和文档生成等功能大大减少了样板代码。</p>\n</li>\n<li>\n<p><strong>更少错误：</strong> 使用Python类型提示可以实现出色的编辑器支持（自动补全、类型检查），在开发阶段而非运行时捕获许多错误。Pydantic的严格验证可以阻止无效数据在您的应用程序中传播。</p>\n</li>\n<li>\n<p><strong>直观易用：</strong> 出色的编辑器支持和清晰的结构使开发更轻松。自动文档意味着您的API规范始终与代码保持同步。</p>\n</li>\n<li>\n<p><strong>易于使用：</strong> 设计为易于使用和学习。文档全面且提供许多示例。</p>\n</li>\n<li>\n<p><strong>基于标准：</strong> 完全符合API的开放标准：用于API文档的OpenAPI（以前称为Swagger）和用于数据验证的JSON Schema。</p>\n</li>\n</ul>\n<h3>为什么将FastAPI用于机器学习 (machine learning)部署？</h3>\n<p>虽然本章节提到了API的一般基础知识，但FastAPI的特定功能与部署机器学习模型的要求很好地契合：</p>\n<ul>\n<li><strong>数据验证：</strong> 机器学习模型通常要求输入数据采用非常特定的格式（例如，具有特定数据类型的某些特征）。Pydantic模型允许您精确定义这种预期的输入结构。FastAPI会自动根据此模型验证传入请求，如果数据不正确，则会在数据到达模型预测代码之前返回清晰的错误。类似地，您也可以定义预测输出的结构。</li>\n<li><strong>性能：</strong> 尽管机器学习模型推理 (inference)本身可能是CPU密集型（稍后讨论），但周围的API操作（接收请求、预处理输入、后处理输出、网络通信）能从ASGI的异步处理中极大受益，使服务器能够高效管理多个并发预测请求。</li>\n<li><strong>自动文档：</strong> 自动生成的交互式文档（通常通过Swagger UI在<code>/docs</code>和<code>/redoc</code>提供）非常有帮助。它让数据科学家、前端开发人员或您的机器学习API的其他使用者能够准确理解如何构建他们的请求以及预期何种响应，这些信息可以直接从运行中的应用程序获取。他们甚至可以直接在浏览器中测试端点。</li>\n<li><strong>Python生态系统：</strong> 作为一个Python框架，FastAPI自然地与数据科学和机器学习的庞大Python生态系统（scikit-learn、TensorFlow、PyTorch、Pandas、NumPy等）集成。</li>\n</ul>\n<p>本质上，FastAPI提供了一种现代化、高性能且开发者友好的方式，将您训练好的机器学习模型封装成可靠的Web API，弥合了模型开发与生产部署之间的差距。接下来的部分将介绍API的原理并设置您的环境，以便开始使用FastAPI进行构建。</p>",
+  "slug": "what-is-fastapi",
+  "updates": [],
+  "references": [
+    {
+      "id": 13956,
+      "title": "FastAPI",
+      "author": "Sebastián Ramírez",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "提供FastAPI框架的全面文档、教程和说明，包括其设计原则以及与Starlette和Pydantic的集成。",
+      "order": 1,
+      "created_at": "2025-09-05T08:45:44.114597Z",
+      "updated_at": "2025-09-09T14:01:24.151462Z"
+    },
+    {
+      "id": 13958,
+      "title": "Pydantic",
+      "author": "Samuel Colvin",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/",
+      "doi": "",
+      "note": "Pydantic的官方文档，这是一个使用Python类型注解的数据验证和设置管理库。",
+      "order": 3,
+      "created_at": "2025-09-05T08:45:44.122102Z",
+      "updated_at": "2025-09-09T14:01:25.813350Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,387 @@
+{
+  "id": 248,
+  "title": "机器学习编译器优化入门",
+  "meta_title": "机器学习编译器优化培训 | 中级课程",
+  "meta_description": "学习ML编译器架构、图优化和内核调优。运用实用技术，提升神经网络的硬件运行效率。",
+  "description": "机器学习模型，特别是深度神经网络，需要大量计算资源。尽管PyTorch和TensorFlow等框架为模型设计提供了高级抽象，但要在特定硬件上高效运行这些模型，需要在编译器层面进行优化。本课程介绍机器学习编译器的架构和运行机制，重点讲述如何将高级计算图转换为高效的机器码。\n\n您将学习ML模型从图捕获到代码生成的整个生命周期。课程内容包含中间表示（IR）、图级转换以及低级循环优化。您将了解编译器如何进行算子融合、内存布局重写以及硬件专用指令映射。本课程还介绍自动调优策略，这些策略用于在无需手动干预的情况下找到最优执行方案。通过学习这些内容，您将获得使用现代编译器栈检查、调试和提升模型性能所需的技术能力。",
+  "short_description": "学习机器学习编译器如何将计算图转换为高效、硬件专用的机器码。",
+  "excerpt": "学习如何通过图转换、循环优化和自动调优技术来优化机器学习模型以供硬件执行。",
+  "prerequisites": "基础机器学习和编程知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "编译器架构",
+      "description": "理解ML编译器栈的组成部分，包括前端、中间表示和后端代码生成。"
+    },
+    {
+      "topic": "图优化",
+      "description": "将算子融合、常量折叠和死代码消除等高级转换应用于计算图。"
+    },
+    {
+      "topic": "循环调度",
+      "description": "实施分块、向量化和循环重排等低级优化，以最大限度地提升硬件利用率。"
+    },
+    {
+      "topic": "自动调优",
+      "description": "配置并运行自动化搜索过程，以找到特定硬件目标的最优参数。"
+    }
+  ],
+  "duration": 12,
+  "slug": "intro-ml-compiler-optimization",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-24T10:13:56.450597Z",
+  "updated_at": "2026-10-02T06:14:13.848043Z",
+  "chapters": [
+    {
+      "id": 1379,
+      "title": "机器学习编译栈",
+      "meta_title": "机器学习编译栈 | 编译器架构",
+      "meta_description": "认识机器学习编译器栈。学习有关优化鸿沟、AOT与JIT编译以及图捕获机制。",
+      "number": 1,
+      "slug": "ml-compilation-stack",
+      "content": "现代深度学习框架提供一个抽象层，将模型设计与硬件执行分离。当您在Python中定义神经网络时，您是在描述数学意图，而不是明确的机器指令。例如，一个线性层操作在数学上表示为：\n\n$$y = Wx + b$$\n\n为了在GPU或专用加速器上高效执行此操作，高级Python代码必须被转换为优化的二进制内核。这种转换是机器学习编译栈的主要功能。\n\n本章审视实现此转换的架构。与为通用标量逻辑进行优化的标准编译器不同，机器学习编译器侧重于张量代数和大规模并行性。我们将阐明为何通过解释器直接执行对生产工作负载常常不足，以及特定编译阶段如何解决性能瓶颈。\n\n您将学习以下核心内容：\n\n*   **框架-硬件鸿沟：** 分析解释型语言中动态分派和内存管理引入的开销。\n*   **编译器结构：** 明确前端、优化器和后端代码生成器的作用。\n*   **编译策略：** 比较预先（AOT）编译和即时（JIT）编译这两种模型部署方法。\n*   **图捕获：** 明晰工具如何追踪执行过程，以构建静态计算图。\n\n到本章结束时，您将掌握机器学习操作符从一行Python代码到硬件指令的生命周期，并拥有一个已配置好的环境，可用于查看编译器内部运作。",
+      "sections": [
+        {
+          "id": 7914,
+          "title": "框架与硬件的差距",
+          "meta_title": "ML 中的框架与硬件差距",
+          "meta_description": "分析高级ML框架与硬件执行要求之间的效率隔阂。",
+          "slug": "framework-hardware-gap",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7916,
+          "title": "ML 编译器的结构",
+          "meta_title": "ML 编译器的结构",
+          "meta_description": "ML 编译器各组成部分的说明：前端、优化器和后端代码生成器。",
+          "slug": "anatomy-ml-compiler",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7917,
+          "title": "AOT 与 JIT 编译",
+          "meta_title": "AOT 与 JIT 编译策略",
+          "meta_description": "比较用于模型部署的即时 (JIT) 编译和提前 (AOT) 编译策略。",
+          "slug": "aot-vs-jit-compilation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7919,
+          "title": "追踪与图捕获",
+          "meta_title": "追踪与图捕获方法",
+          "meta_description": "了解编译器如何从 PyTorch 等动态框架中捕获计算图。",
+          "slug": "tracing-graph-capture",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7921,
+          "title": "环境设置实践",
+          "meta_title": "动手实践：编译器环境设置",
+          "meta_description": "搭建TVM或MLIR等工具开发环境的实用指南。",
+          "slug": "environment-setup-practice",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1380,
+      "title": "中间表示",
+      "meta_title": "ML编译器中的中间表示",
+      "meta_description": "学习ML中的中间表示 (IR)。理解计算图、张量形状和数据流依赖。",
+      "number": 2,
+      "slug": "intermediate-representations",
+      "content": "在使用深度学习框架时，您使用高级Python抽象来定义模型。然而，为了为GPU或加速器生成高效的机器代码，编译器需要一个更具结构性和明确的程序视图。这种内部格式称为中间表示 (IR)。IR充当框架前端和硬件后端之间的通用语言，使编译器能够分析代码结构，而不必依赖源语言的特殊性。\n\n在本章中，我们将考察机器学习模型如何转换为计算图。与标准软件编译器中使用的通用IR不同，ML编译器IR是特定于领域的。它们将张量操作视为一等公民。您将看到模型如何表示为有向无环图 (DAG)，其中节点表示运算符，例如卷积或矩阵乘法，边表示数据流。\n\n我们将介绍以下核心内容：\n\n*   **数据流图：** 操作之间的依赖关系如何决定执行顺序并实现并行。\n*   **张量元数据：** 编译器如何管理形状信息和数据类型 (dtypes)。例如，验证形状为 $(M, K)$ 和 $(K, N)$ 的张量之间的矩阵乘法会产生形状为 $(M, N)$ 的输出。\n*   **形状编译：** 静态形状（维度在编译时已知）和动态形状（维度根据运行时输入而定）之间的区别。\n\n最后，我们将练习检查TVM或MLIR等工具生成的IR。能够读取这种表示形式是调试图转换和理解某些优化成功或失败原因的必备技能。到本节结束时，您将对编译器在开始优化过程之前如何看待您的神经网络有一个清晰的思维模型。",
+      "sections": [
+        {
+          "id": 7928,
+          "title": "中间表示（IR）的作用",
+          "meta_title": "IR在编译器中的作用",
+          "meta_description": "了解为何中间表示对于实现平台无关优化是必需的。",
+          "slug": "role-of-ir",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7929,
+          "title": "数据流图与依赖关系",
+          "meta_title": "数据流图与依赖关系",
+          "meta_description": "说明数据流图中的节点和边如何表示运算及数据依赖。",
+          "slug": "dataflow-graphs-dependencies",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7931,
+          "title": "张量形状与数据类型",
+          "meta_title": "管理张量形状与类型",
+          "meta_description": "了解编译器如何处理张量元数据，包括形状推断和数据类型精度。",
+          "slug": "tensor-shapes-dtypes",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7933,
+          "title": "静态形状与动态形状",
+          "meta_title": "静态与动态形状的处理",
+          "meta_description": "区分静态和动态形状编译及其对性能的影响。",
+          "slug": "static-vs-dynamic-shapes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7935,
+          "title": "查看IR结构",
+          "meta_title": "实践：查看IR结构",
+          "meta_description": "练习可视化并检查一个简单神经网络的中间表示。",
+          "slug": "inspecting-ir-structure",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1383,
+      "title": "图级别优化",
+      "meta_title": "图级别优化 | 算子融合",
+      "meta_description": "掌握图级别优化。学习算子融合、常量折叠和布局转换，以提升模型效率。",
+      "number": 3,
+      "slug": "graph-level-optimizations",
+      "content": "一旦机器学习模型被转换为中间表示 (IR)，其计算的逻辑结构就确定了。然而，初始图通常反映了用户定义的高级Python代码，优先考虑API的易用性而非执行效率。直接运行此图通常会导致次优的性能，原因在于过多的内存访问和重复计算。\n\n本章介绍图级别优化，这些是应用于计算图的架构层面转换，在代码生成开始之前进行。这些优化过程会重写图的结构，以减少计算开销和内存带宽占用，同时确保数学结果保持不变。\n\n您将学习编译器如何分析数据流来执行**算子融合**，这是一种将多个操作合并到一个核中的过程。例如，计算逐元素加法，然后是一个激活函数，例如$y = \\text{ReLU}(x + b)$，通常需要将中间和写入主内存并再次读取。这种合并使得硬件可以在数据仍在寄存器或缓存中时对其执行激活操作。\n\n我们还将涉及以下优化技术：\n\n*   **常量折叠：** 在编译时计算具有静态输入的表达式，以便将其从运行时执行中移除。\n*   **死代码消除：** 识别并移除不影响最终输出的图节点。\n*   **内存布局转换：** 调整张量存储格式 (例如从NCHW切换到NHWC)，以更好地与硬件特定的内存访问模式配合。\n*   **公共子表达式消除：** 检测图中重复的计算，并重构数据流，以便只计算一次结果。\n\n在本节结束时，您将掌握检查计算图的技能，并能够实现自定义优化过程以编程方式修改其结构。",
+      "sections": [
+        {
+          "id": 7937,
+          "title": "算子融合策略",
+          "meta_title": "算子融合策略",
+          "meta_description": "将多个操作合并到一个内核中的技术，以减少内存访问。",
+          "slug": "operator-fusion-strategies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7938,
+          "title": "常量折叠与传播",
+          "meta_title": "常量折叠优化",
+          "meta_description": "了解编译器如何在编译阶段预计算常量表达式。",
+          "slug": "constant-folding-propagation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7940,
+          "title": "死代码消除",
+          "meta_title": "机器学习图中的死代码消除",
+          "meta_description": "识别并移除计算图中未使用的节点以最小化占用。",
+          "slug": "dead-code-elimination",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7942,
+          "title": "内存布局转换",
+          "meta_title": "内存布局：NCHW 与 NHWC 对比",
+          "meta_description": "理解数据布局（NCHW 与 NHWC）对硬件性能的作用以及编译器如何对其进行改写。",
+          "slug": "memory-layout-transformation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7944,
+          "title": "公共子表达式消除",
+          "meta_title": "公共子表达式消除",
+          "meta_description": "发现并重用图结构中的重复计算。",
+          "slug": "common-subexpression-elimination",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7945,
+          "title": "实现图优化通道",
+          "meta_title": "实践：实现图优化通道",
+          "meta_description": "编写自定义图优化通道，以编程方式转换模型结构。",
+          "slug": "implementing-graph-pass",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1385,
+      "title": "核心与循环优化",
+      "meta_title": "核心循环优化 | 分块与向量化",
+      "meta_description": "增进你对循环优化的理解。不同方法包含分块、向量化和循环展开，适用于CPU和GPU。",
+      "number": 4,
+      "slug": "kernel-loop-optimization",
+      "content": "图级转换安排操作员之间的数据流，但它们不规定单个操作如何在硬件上执行。即使图结构已优化，神经网络的性能也很大程度上受制于核心内部代码的效率。本章将关注点从高层图转向执行实际计算的底层循环嵌套。\n\n张量操作的直接实现通常只用到处理器理论峰值性能的一小部分。举例来说，一个定义为 $C_{ij} = \\sum_k A_{ik} B_{kj}$ 的简单矩阵乘法循环，通常会因内存访问模式不佳而性能受损。在现代硬件上，瓶颈往往是数据从主内存移动到寄存器的延迟，而非算术逻辑单元（ALU）的速度。\n\n在本模块中，我们考察编译器如何重写循环结构以最大化算术密度。你将学会操作程序的迭代空间，以提升缓存局部性和指令并行性。课程内容包含具体转换方法，例如：\n\n*   **循环分块 (Loop Tiling)：** 将大型循环分解成适合CPU或GPU缓存层次的小块。\n*   **向量化 (Vectorization)：** 将标量操作转换为向量操作，以使用SIMD（单指令多数据）指令。\n*   **循环展开和重排序 (Unrolling and Reordering)：** 减少控制流开销，并为处理器同时执行指令提供可能性。\n\n我们还会讨论通过将数据传输与计算重叠来隐藏内存延迟的策略。到本章结束时，你将明白如何检查循环嵌套并应用一系列调度原语，以针对特定硬件目标优化矩阵乘法核心。",
+      "sections": [
+        {
+          "id": 7947,
+          "title": "循环分块与缓存局部性",
+          "meta_title": "循环分块提升缓存效率",
+          "meta_description": "将循环拆分为更小的块（瓦片），以确保数据能放入CPU或GPU缓存中。",
+          "slug": "loop-tiling-cache-locality",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7949,
+          "title": "SIMD 矢量化",
+          "meta_title": "矢量化与 SIMD 指令",
+          "meta_description": "将标量操作转换为矢量操作，以利用 SIMD 硬件指令。",
+          "slug": "vectorization-for-simd",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7950,
+          "title": "循环展开与重排序",
+          "meta_title": "循环展开与重排序",
+          "meta_description": "减少循环控制开销，并通过展开实现指令级并行。",
+          "slug": "loop-unrolling-reordering",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7952,
+          "title": "并行策略",
+          "meta_title": "线程并行策略",
+          "meta_description": "将循环迭代映射到多个线程以进行多核执行。",
+          "slug": "parallelization-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7954,
+          "title": "内存延迟隐藏",
+          "meta_title": "内存延迟隐藏方法",
+          "meta_description": "调度算术和内存操作，使其重叠以避免处理器停滞。",
+          "slug": "memory-latency-hiding",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7956,
+          "title": "矩阵乘法实践",
+          "meta_title": "实践：优化矩阵乘法",
+          "meta_description": "将循环优化应用于矩阵乘法内核，以测试性能提升。",
+          "slug": "matrix-multiplication-practice",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1387,
+      "title": "自动调优与代码生成",
+      "meta_title": "自动调优与代码生成",
+      "meta_description": "了解自动化搜索空间、成本模型以及LLVM和CUDA等代码生成后端。",
+      "number": 5,
+      "slug": "auto-tuning-code-generation",
+      "content": "手动优化循环嵌套需要大量工程投入。开发者需要选择具体的瓦片大小、向量长度和展开因子，以最大限度地发挥硬件性能。然而，最佳配置会依据目标硬件架构而定。在服务器级GPU上表现良好的调度，常常在移动CPU或边缘加速器上产生不佳的效果。为解决此问题，现代机器学习编译器采用自动调优策略，将优化视为一个搜索问题。\n\n本章考察如何自动化选择高效的循环调度。我们首先定义搜索空间，它代表着某个操作符的所有有效代码变换的集合。如果一个操作符涉及一个大小为 $N$ 的循环，我们希望将其拆分为大小为 $T$ 的瓦片，搜索空间会包含 $N$ 的所有有效除数。你将看到成本模型如何评估这些候选方案，以预测性能，无需在物理硬件上完全运行每个变体。\n\n接下来将讲到处理这些搜索空间的具体算法。我们将考察编译器如何运用统计方法和机器学习模型来预测调度方案的性能，有效地引导搜索找到最优参数，比随机抽样更有效率。\n\n最后，我们讲解代码生成阶段。一旦选定最佳调度，编译器必须将高级中间表示 (IR) 转换为可执行指令。我们将分析后端如何将IR降低为低级格式，例如用于CPU目标的LLVM IR或用于NVIDIA GPU的CUDA源代码。在本节结束时，你将能够配置自动化调优会话，并检查生成的机器代码生成流水线。",
+      "sections": [
+        {
+          "id": 7958,
+          "title": "定义搜索空间",
+          "meta_title": "定义优化搜索空间",
+          "meta_description": "构建循环调度和配置的参数空间。",
+          "slug": "defining-search-space",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7960,
+          "title": "自动调优中的成本模型",
+          "meta_title": "ML 编译的成本模型",
+          "meta_description": "使用统计和基于机器学习的成本模型来预测给定调度的性能。",
+          "slug": "cost-models-auto-tuning",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7961,
+          "title": "自动化调度搜索",
+          "meta_title": "自动化调度搜索算法",
+          "meta_description": "用于在搜索空间中寻找最佳执行参数的算法。",
+          "slug": "automated-schedule-search",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7963,
+          "title": "代码生成后端",
+          "meta_title": "LLVM 和 CUDA 代码生成",
+          "meta_description": "高层 IR 如何降低到 LLVM IR 或 CUDA 源代码的概述。",
+          "slug": "code-generation-backends",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7965,
+          "title": "运行自动调优会话",
+          "meta_title": "实践：自动调优神经网络",
+          "meta_description": "配置并执行自动调优会话，以优化特定的神经网络层。",
+          "slug": "running-auto-tuning-session",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

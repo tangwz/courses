@@ -1,0 +1,61 @@
+{
+  "id": 4064,
+  "title": "在项目中设置DVC",
+  "meta_title": "如何设置DVC",
+  "meta_description": "关于在Git仓库中初始化DVC并配置远程存储的指南。",
+  "content": "<p>将数据版本控制（DVC）引入您的机器学习 (machine learning)项目，首先需要在项目目录下对其进行初始化。因为DVC设计为与Git配合使用，所以其主要条件是您的项目已经是一个Git仓库。如果您尚未初始化Git，请先进行此操作：</p>\n<pre><code class=\"language-bash\"># 进入您的项目根目录\ncd path/to/your-ml-project\n\n# 初始化Git（如果尚未完成）\ngit init\n# 添加并提交您现有的项目文件\ngit add .\ngit commit -m \"Initial project commit\"\n</code></pre>\n<p>Git设置好后，您现在可以将DVC引入项目结构中。</p>\n<h3><code>dvc init</code> 命令</h3>\n<p>初始化DVC的命令很简单：<code>dvc init</code>。从您的Git仓库根目录运行此命令。</p>\n<pre><code class=\"language-bash\"># 确保您位于Git仓库的根目录\ncd path/to/your-ml-project\n\n# 初始化DVC\ndvc init\n</code></pre>\n<p>执行 <code>dvc init</code> 会进行几项操作：</p>\n<ol>\n<li><strong>创建 <code>.dvc</code> 目录：</strong> 此目录类似于Git的 <code>.git</code> 目录。DVC在此处存储其内部信息，包括配置文件、缓存目录结构（即使缓存本身位于别处），以及与被追踪数据相关的元文件。通常情况下，除非您了解其影响，否则不应手动修改 <code>.dvc</code> 内部的文件。</li>\n<li><strong>创建 <code>.dvc/config</code> 文件：</strong> 这是您的DVC项目的主要配置文件。它用于定义远程存储位置、缓存设置以及其他DVC行为。初始时，它可能非常简洁。</li>\n<li><strong>创建 <code>.dvcignore</code> 文件：</strong> 类似于 <code>.gitignore</code>，此文件告诉DVC要忽略哪些文件或模式。这有助于防止DVC追踪不应作为数据工件进行版本控制的临时文件、日志或输出。例如，您可能将虚拟环境目录或IDE配置文件夹添加到 <code>.dvcignore</code>。</li>\n<li><strong>打印指导信息：</strong> 该命令通常会输出确认初始化成功的消息，并提示后续步骤，通常涉及将新创建的DVC文件添加到Git。</li>\n</ol>\n<p>以下是初始化后DVC如何融入项目结构的视图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1wsyept\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=folder, style=filled, fillcolor=\"#e9ecef\"];\n    edge [arrowhead=vee];\n\n    subgraph cluster_git_repo {\n        label=\"Git仓库 (your-ml-project)\";\n        style=filled;\n        color=\"#dee2e6\";\n        bgcolor=\"#f8f9fa\";\n\n        git_files [label=\"项目代码\\n(.py, config.yaml)\", shape=box, fillcolor=\"#ced4da\"];\n        dvc_meta [label=\".dvc 目录\", fillcolor=\"#ffec99\"];\n        dvcignore [label=\".dvcignore\", shape=note, fillcolor=\"#ffec99\"];\n        git_dir [label=\".git 目录\", style=dashed, color=\"#adb5bd\", fillcolor=\"#e9ecef\"];\n\n        dvc_config [label=\"配置\", shape=note, fillcolor=\"#ffe066\"];\n        dvc_internal [label=\"DVC内部文件\", shape=note, fillcolor=\"#ffe066\"];\n\n        git_files -> dvc_meta [style=invis]; // 布局提示\n        dvc_meta -> dvcignore [style=invis];\n        dvcignore -> git_dir [style=invis];\n\n        dvc_meta -> dvc_config [dir=none, style=dashed];\n        dvc_meta -> dvc_internal [dir=none, style=dashed];\n    }\n\n     subgraph cluster_storage {\nlabel=\"数据存储\";\n        style=dashed;\n        color=\"#adb5bd\";\n        bgcolor=\"#f8f9fa\";\n        dvc_cache [label=\"DVC缓存\\n(包含大文件)\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n     }\n\n    dvc_meta -> dvc_cache [label=\" 管理\", color=\"#1c7ed6\", style=dashed, constraint=false];\n\n\n    {rank=same; git_files; dvc_meta; dvcignore; git_dir} // Align items\n    {rank=same; dvc_config; dvc_internal;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1wsyept\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>运行 <code>dvc init</code> 后，<code>.dvc</code> 目录和 <code>.dvcignore</code> 文件会在您的Git仓库中创建。DVC使用这些文件来管理元数据，而大型数据文件则存储在单独的缓存位置。</p>\n</blockquote>\n<h3>将DVC配置提交到Git</h3>\n<p>DVC设计的一个重要方面是，其配置文件和元数据文件（如 <code>.dvc</code> 目录内容和我们稍后会讲到的指针文件）<em>就是</em>要由Git追踪的。这确保了项目的状态，包括哪些数据版本与哪些代码版本关联，都能完全记录在Git历史中。</p>\n<p>运行 <code>dvc init</code> 后，您应该立即将创建的DVC文件添加到Git暂存区并提交它们：</p>\n<pre><code class=\"language-bash\"># 查看状态以查看新的DVC文件\ngit status\n\n# 添加 .dvc 目录和 .dvcignore 文件\ngit add .dvc .dvcignore\n\n# 提交这些更改\ngit commit -m \"在项目中初始化DVC\"\n</code></pre>\n<p>提交这些文件可确保任何克隆您的仓库并安装了DVC的人都可以立即开始使用DVC命令，例如 <code>dvc pull</code>，以获取与特定Git提交对应的正确数据版本。</p>\n<h3>初始配置概述</h3>\n<p>由 <code>dvc init</code> 创建的 <code>.dvc/config</code> 文件包含项目特定的设置。虽然我们稍后会详细介绍远程存储的配置（第2.6节：连接DVC到远程存储），但查看初始文件是什么样子会很有用：</p>\n<pre><code class=\"language-ini\"># 全新执行 'dvc init' 后 .dvc/config 的内容\n[core]\n    remote = # 尚未配置默认远程存储\n[cache]\n    # 默认缓存设置可能会出现在这里，例如，缓存类型\n    # 类型 = 硬链接、符号链接、复制（DVC根据操作系统/文件系统确定默认值）\n</code></pre>\n<p>初始时，没有配置远程存储。您需要明确设置一个远程位置（例如S3存储桶、GCS存储桶、Azure Blob存储容器，甚至只是文件系统上的另一个目录），DVC将把实际数据文件推送到那里，以便共享和备份。此配置步骤对于协作以及将数据存储在本地存储之外非常重要。</p>\n<p>DVC初始化完毕并且其配置文件已提交到Git，您的项目现在已准备好进行下一步：告诉DVC它应该开始追踪哪些具体的数据文件或目录。</p>",
+  "slug": "setting-up-dvc",
+  "updates": [],
+  "references": [
+    {
+      "id": 7859,
+      "title": "DVC Documentation: Get Started",
+      "author": "Iterative.ai",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/start",
+      "doi": "",
+      "note": "DVC 安装和初始项目设置的官方指南，包括 `dvc init` 命令和生成的项目结构。",
+      "order": 1,
+      "created_at": "2025-09-05T01:48:18.212906Z",
+      "updated_at": "2025-09-08T14:09:15.388244Z"
+    },
+    {
+      "id": 7860,
+      "title": "Git - Book: Getting Started - Git Basics",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Getting-Started-Git-Basics",
+      "doi": "",
+      "note": "理解 Git 初始化和基本版本控制的基础资源，这是 DVC 的先决条件。",
+      "order": 2,
+      "created_at": "2025-09-05T01:48:18.218656Z",
+      "updated_at": "2025-09-10T01:47:05.929651Z"
+    },
+    {
+      "id": 7861,
+      "title": "Practical MLOps: How to Take Machine Learning Models from Prototype to Production",
+      "author": "Noah Gift, Alfredo Deza",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "458",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH0sKCpVt6AoOw_48fDDRDx3S2Pp0toW97m4e4vQ8EG63xn2XgbXrkpcmmqD4cMDJj5HaUQkf_8Z1hugFw1fuakAUSoQgztJC3FNe9qeaxJBfyVx9LYk5M8XE9Mgy-1b5DBzNiS9tOa4G1yNm44O5kwaGD5KOAFgaF8gqMqBIE==",
+      "doi": "",
+      "note": "提供 MLOps 工作流程中数据版本控制的更广泛背景，阐明了 DVC 等工具对机器学习项目的重要性。",
+      "order": 3,
+      "created_at": "2025-09-05T01:48:18.221828Z",
+      "updated_at": "2025-09-10T01:47:24.236476Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

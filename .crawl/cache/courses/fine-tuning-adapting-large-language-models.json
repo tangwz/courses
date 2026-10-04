@@ -1,0 +1,683 @@
+{
+  "id": 130,
+  "title": "大型语言模型的微调与调整",
+  "meta_title": "大型语言模型高阶微调与调整技术",
+  "meta_description": "大型语言模型微调高阶课程。学习PEFT（LoRA、QLoRA）、指令微调、特定方向调整、优化及评估。",
+  "description": "<p>掌握针对特定任务与应用方向定制预训练 (pre-training)大型语言模型的高级能力。本课程讲授先进的微调 (fine-tuning)方法、参数 (parameter)高效微调技术（PEFT）、数据准备策略及严谨的模型评估实践。通过动手实践，学员将学习如何优化大型语言模型性能，有效管理计算资源，并根据专业需求调整模型。</p>",
+  "short_description": "掌握定制和优化大型语言模型的技术，使其适用于特定任务和应用方向。",
+  "excerpt": "掌握调整大型语言模型的高阶技术。实践全量微调，应用如LoRA和QLoRA等参数高效微调（PEFT）方法，优化训练过程，并评估特定大型语言模型表现。",
+  "prerequisites": "机器学习与Transformer基础知识",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "高阶微调策略",
+      "description": "实践并区分全量微调与各类参数高效微调（PEFT）方法。"
+    },
+    {
+      "topic": "调整模型的数据准备",
+      "description": "为指令微调和特定方向调整构建高质量数据集，并应对数据质量与数量的难题。"
+    },
+    {
+      "topic": "PEFT技术应用",
+      "description": "应用如LoRA、QLoRA和Adapter模块等技术，以高效调整大型模型。"
+    },
+    {
+      "topic": "训练优化",
+      "description": "使用梯度累积和混合精度训练等技术，优化微调过程以提升计算效率。"
+    },
+    {
+      "topic": "模型评估",
+      "description": "对微调模型进行全面评估，审视其在标准指标之外的表现，包含指令遵循和偏差分析。"
+    },
+    {
+      "topic": "部署考量",
+      "description": "分析微调后大型语言模型部署的实际要点，包括模型序列化和模型服务策略。"
+    }
+  ],
+  "duration": 28,
+  "slug": "fine-tuning-adapting-large-language-models",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-05T01:35:49.189915Z",
+  "updated_at": "2026-10-02T07:50:03.154833Z",
+  "chapters": [
+    {
+      "id": 662,
+      "title": "大型语言模型适应原理",
+      "meta_title": "大型语言模型适应原理",
+      "meta_description": "认识预训练LLM适应的原理，迁移学习的具体方面，以及微调时的架构考量。",
+      "number": 1,
+      "slug": "llm-adaptation-foundations",
+      "content": "预训练大型语言模型（LLM）具备广泛的能力，但特定应用需要它们表现出定制化的行为。本章将为有效适应这些模型打下铺垫。我们将首先简要回顾预训练模型及支撑它们的Transformer架构的基本思想。\r\n\r\n你将了解为何通用预训练模型通常需要针对特定任务或用途进行进一步调整。我们将考察LLM适应与自然语言处理中既有的迁移学习思想之间的联系。此外，我们将分析LLM的底层架构如何影响适应策略的选择及其效果。最后，本章将概括介绍可用于微调的不同方法，从修改所有模型参数到更节省资源的多种方法，为后续章节的详细讨论做好准备。",
+      "sections": [
+        {
+          "id": 2955,
+          "title": "回顾：预训练语言模型和Transformer",
+          "meta_title": "回顾预训练模型和Transformer",
+          "meta_description": "简要回顾Transformer架构和大型语言模型预训练的原理。",
+          "slug": "recap-pretrained-transformers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2959,
+          "title": "微调和适配的必要性",
+          "meta_title": "为何微调大型语言模型",
+          "meta_description": "讨论预训练模型的局限性以及进行特定任务和特定专业适配的原因。",
+          "slug": "need-for-fine-tuning",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2962,
+          "title": "自然语言处理中的迁移学习方法",
+          "meta_title": "自然语言处理中的迁移学习方法",
+          "meta_description": "回顾迁移学习理念在自然语言处理和大型语言模型中的应用。",
+          "slug": "transfer-learning-nlp",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2965,
+          "title": "微调时的架构考量",
+          "meta_title": "LLM微调的架构考量",
+          "meta_description": "分析LLM架构如何影响微调策略及可能的结果。",
+          "slug": "architecture-fine-tuning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2968,
+          "title": "微调方法概述",
+          "meta_title": "LLM微调方法概述",
+          "meta_description": "介绍微调方法的各种方式，从全参数更新到高效技术。",
+          "slug": "overview-fine-tuning-approaches",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 664,
+      "title": "微调数据准备",
+      "meta_title": "大型语言模型微调的进阶数据准备",
+      "meta_description": "学习获取、清洗和格式化数据的技巧，专门用于大型语言模型的指令微调和特定用途调整。",
+      "number": 2,
+      "slug": "data-preparation-fine-tuning",
+      "content": "微调后的大型语言模型的表现，根本上取决于其在适应期间学习所用的数据。本章提供构建和格式化数据集的方法，这些数据集专为指令遵循和特定用途调整而设计。\r\n\r\n您将了解指令微调背后的原理，以及获取、创建和组织有效指令数据集的实用方法。我们将介绍监督式微调 (SFT) 所需的特定格式，并研究为特定用途调整模型时特有的数据考量。此外，我们还将讨论处理数据有限或不平衡情况的策略，并介绍文本数据增强方法，以提升微调效果。目标是使您掌握准备高质量数据的技能，以有效引导大型语言模型实现预期的行为和能力。",
+      "sections": [
+        {
+          "id": 2971,
+          "title": "指令微调原则",
+          "meta_title": "大型语言模型的指令微调原则",
+          "meta_description": "理解指令微调的要点及其对大型语言模型可控性与任务执行的影响。",
+          "slug": "instruction-tuning-principles",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2974,
+          "title": "指令数据集的获取与构建",
+          "meta_title": "获取与构建指令数据集",
+          "meta_description": "从不同来源创建高质量指令遵循数据集的方法。",
+          "slug": "constructing-instruction-datasets",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2978,
+          "title": "监督微调（SFT）的数据格式化",
+          "meta_title": "监督微调的数据格式化",
+          "meta_description": "为有效对 LLM 进行监督微调，组织提示和回复。",
+          "slug": "formatting-sft-data",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2981,
+          "title": "域适应数据要求",
+          "meta_title": "LLM 域适应数据要求",
+          "meta_description": "为模型适应识别和收集与特定目标行业相关的数据。",
+          "slug": "domain-adaptation-data",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2986,
+          "title": "数据稀缺与不平衡的处理",
+          "meta_title": "处理大型语言模型微调中的数据稀缺问题",
+          "meta_description": "当目标数据有限或不平衡时，有效微调大型语言模型的策略。",
+          "slug": "handling-data-scarcity-imbalance",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2989,
+          "title": "文本数据扩充技术",
+          "meta_title": "用于微调的文本数据扩充",
+          "meta_description": "提升微调鲁棒性的文本数据扩充进阶技术。",
+          "slug": "data-augmentation-text",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2992,
+          "title": "实践：准备指令微调数据集",
+          "meta_title": "实践：指令微调数据集准备",
+          "meta_description": "动手实践环节，关于清洗和格式化用于指令微调的数据集。",
+          "slug": "practice-instruction-dataset-prep",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 667,
+      "title": "全参数微调",
+      "meta_title": "全参数LLM微调技术",
+      "meta_description": "全面介绍LLM全微调方法、挑战、正则化和优化策略。",
+      "number": 3,
+      "slug": "full-parameter-fine-tuning",
+      "content": "在准备好适应所需的必要数据集后，我们现在转向修改预训练大型语言模型本身的方法。本章侧重于**全参数微调**，这种方式是根据新的任务特定数据更新原始模型中的每个权重（$\\theta$）。\r\n\r\n您将学习此过程的核心机制，包括：\r\n\r\n*   建立和配置用于微调的完整训练循环。\r\n*   选择合适的超参数（例如学习率（$\\eta$）和批处理大小）的策略。\r\n*   如正则化等技术，以防止目标数据集上的过拟合。\r\n*   管理所需大量计算资源的方法。\r\n*   保存训练进度检查点和恢复任务的最佳实践。\r\n\r\n在本章结束时，您将理解全微调的完整工作流程，并通过动手实践获得实际经验，为以后理解更资源高效的方法打下基础。",
+      "sections": [
+        {
+          "id": 2996,
+          "title": "全参数微调的机制",
+          "meta_title": "大语言模型全参数微调的机制",
+          "meta_description": "了解大语言模型在全参数微调过程中所有参数的更新方式。",
+          "slug": "mechanism-full-fine-tuning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2999,
+          "title": "设置训练循环",
+          "meta_title": "设置大语言模型微调训练循环",
+          "meta_description": "配置全参数微调训练过程所需的组成部分，包括优化器和调度器。",
+          "slug": "setting-up-training-loop",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3002,
+          "title": "超参数调优策略",
+          "meta_title": "全参数微调的超参数调优",
+          "meta_description": "针对学习率、批次大小和其他超参数进行调优的先进方法，以获得最佳性能。",
+          "slug": "hyperparameter-tuning-full",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3006,
+          "title": "防止过拟合的正则化方法",
+          "meta_title": "大型语言模型微调中的正则化方法",
+          "meta_description": "在全参数微调期间应用随机失活、权重衰减及其他方法来缓解过拟合。",
+          "slug": "regularization-fine-tuning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3009,
+          "title": "计算资源管理",
+          "meta_title": "全参数微调的计算资源管理",
+          "meta_description": "应对全参数微调中显著的内存和计算需求的相关策略。",
+          "slug": "managing-compute-full-tuning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3013,
+          "title": "检查点保存与训练恢复",
+          "meta_title": "大型语言模型训练中的检查点保存与恢复",
+          "meta_description": "有效保存模型状态和恢复长时间微调任务的最佳实践。",
+          "slug": "checkpointing-resuming-training",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3017,
+          "title": "动手实践：全参数微调较小规模的LLM",
+          "meta_title": "实操：全参数微调较小规模的LLM",
+          "meta_description": "使用一个常用库在可控规模下实现全参数微调过程。",
+          "slug": "practice-full-fine-tuning",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 670,
+      "title": "参数高效微调 (PEFT) 方法",
+      "meta_title": "用于大型语言模型的参数高效微调 (PEFT)",
+      "meta_description": "详细研究 PEFT 技术，包括 LoRA、QLoRA、适配器、提示微调和前缀微调，以便有效调整大型语言模型。",
+      "number": 4,
+      "slug": "parameter-efficient-fine-tuning",
+      "content": "完全微调会更新大型语言模型中的每个参数，这需要大量的计算资源和内存。这通常使得在没有专用硬件的情况下调整最大型的模型变得不切实际。本章介绍参数高效微调 (PEFT) 方法，作为一种节省资源的替代方案。\r\n\r\nPEFT 技术只修改模型参数的一小部分，大大减少了计算开销和存储需求，同时在特定任务上通常能达到与完全微调相近的性能。\r\n\r\n你将学习几种主要 PEFT 方法的原理和实现：\r\n\r\n*   **低秩适应 (LoRA)：** 将可训练的低秩矩阵注入到 Transformer 层中。\r\n*   **量化 LoRA (QLoRA)：** 将 LoRA 与量化结合，以实现更大的内存节省。\r\n*   **适配器模块 (Adapter Modules)：** 在现有架构内插入小的、可训练的瓶颈层。\r\n*   **提示微调 (Prompt Tuning) 和前缀微调 (Prefix Tuning)：** 学习添加到输入或隐藏状态前的连续嵌入，同时保持基本模型不变。\r\n\r\n我们将分析每种技术背后的机制，比较它们各自的优点和权衡，并通过使用常用库进行实践。在本章末尾，你将了解如何选择和运用合适的 PEFT 方法来高效调整大型语言模型。",
+      "sections": [
+        {
+          "id": 3021,
+          "title": "参数高效性的原理",
+          "meta_title": "大型语言模型调优中参数高效性的原理",
+          "meta_description": "了解 PEFT 的缘由，侧重于计算成本和存储空间减少。",
+          "slug": "rationale-parameter-efficiency",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3024,
+          "title": "低秩适配 (LoRA)",
+          "meta_title": "低秩适配 (LoRA) 解析",
+          "meta_description": "详细解读 LoRA 方法论、数学公式和实现细节。",
+          "slug": "lora-introduction",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3027,
+          "title": "量化低秩适配 (QLoRA)",
+          "meta_title": "量化LoRA (QLoRA) 解读",
+          "meta_description": "了解 QLoRA 如何将量化与 LoRA 结合以进一步提高效率。",
+          "slug": "qlora-introduction",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3031,
+          "title": "适配器模块",
+          "meta_title": "用于LLM微调的适配器模块",
+          "meta_description": "介绍将小型、可训练的适配器层插入到LLM结构中的方法。",
+          "slug": "adapter-modules",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3034,
+          "title": "提示调整",
+          "meta_title": "LLM适配的提示调整",
+          "meta_description": "了解如何在保持基础LLM冻结的同时调整连续提示嵌入。",
+          "slug": "prompt-tuning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3037,
+          "title": "前缀微调",
+          "meta_title": "用于LLM适配的前缀微调",
+          "meta_description": "了解将连续前缀预置到输入序列前的技术。",
+          "slug": "prefix-tuning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3040,
+          "title": "PEFT 方法比较",
+          "meta_title": "PEFT 方法比较 (LoRA, 适配器等)",
+          "meta_description": "分析不同 PEFT 方法在性能、效率和复杂性方面的权衡。",
+          "slug": "comparison-peft-techniques",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3042,
+          "title": "使用 Hugging Face PEFT 库进行实现",
+          "meta_title": "使用 Hugging Face 库实现 PEFT",
+          "meta_description": "使用 Hugging Face PEFT 库应用各种技术的实用指南。",
+          "slug": "implementing-peft-huggingface",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3044,
+          "title": "动手实践：使用 LoRA 进行微调",
+          "meta_title": "实践：使用 LoRA 微调大型语言模型",
+          "meta_description": "针对特定下游任务实现 LoRA 微调。",
+          "slug": "practice-lora-fine-tuning",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3047,
+          "title": "实操：使用QLoRA进行微调",
+          "meta_title": "实操：使用QLoRA微调大型语言模型",
+          "meta_description": "实现QLoRA微调，侧重内存效率。",
+          "slug": "practice-qlora-fine-tuning",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 673,
+      "title": "高阶微调策略",
+      "meta_title": "高阶大型语言模型微调策略",
+      "meta_description": "涵盖多任务微调、序列式调整、人类反馈强化学习 (RLHF) 基本原理，以及灾难性遗忘的缓解方法。",
+      "number": 5,
+      "slug": "advanced-fine-tuning-strategies",
+      "content": "本章在模型运用全参数更新和高效技术进行调整的方法之上，侧重于更复杂的微调场景。\r\n\r\n您将学习到在一个模型上训练多个目标（多任务微调）以及按顺序更新模型并管理知识保留（序列式调整）的策略。\r\n\r\n我们将介绍旨在应对灾难性遗忘的方法，帮助模型在引入新数据或新目标时，保持在先前学习过的任务上的性能。此外，本节介绍人类反馈强化学习 (RLHF)。我们将阐述其主要组成部分：训练奖励模型，$r_\\phi(x, y)$，以获取偏好，以及使用策略优化算法，例如近端策略优化 (PPO)，根据这些偏好调整语言模型，$\\pi_\\theta(y|x)$。这些技术是调整大型语言模型行为以满足特定需求的进阶方法。",
+      "sections": [
+        {
+          "id": 3049,
+          "title": "多任务微调",
+          "meta_title": "Multi-Task Fine-tuning for LLMs",
+          "meta_description": "Techniques for training a single LLM to perform multiple tasks simultaneously or sequentially.",
+          "slug": "multi-task-fine-tuning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3051,
+          "title": "顺序适应与持续学习",
+          "meta_title": "大语言模型的顺序适应与持续学习",
+          "meta_description": "针对已微调模型适应新任务或数据分布的策略。",
+          "slug": "sequential-adaptation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3053,
+          "title": "减轻灾难性遗忘",
+          "meta_title": "LLM调整中减轻灾难性遗忘",
+          "meta_description": "诸如EWC（弹性权重整合）和参数隔离等方法，用于保留先前任务的知识。",
+          "slug": "mitigating-catastrophic-forgetting",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3055,
+          "title": "人类反馈强化学习 (RLHF) 介绍",
+          "meta_title": "LLM 对齐的人类反馈强化学习 (RLHF) 概述",
+          "meta_description": "RLHF 过程的理念概述：奖励模型构建与使用 PPO 进行策略优化。",
+          "slug": "intro-rlhf",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3057,
+          "title": "奖励模型训练",
+          "meta_title": "用于RLHF的奖励模型训练",
+          "meta_description": "训练模型以根据比较数据预测人类偏好的方法。",
+          "slug": "reward-model-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3059,
+          "title": "使用 PPO 进行策略优化",
+          "meta_title": "RLHF 中 LLM 使用 PPO 进行策略优化",
+          "meta_description": "理解近端策略优化算法，用于基于奖励模型微调大语言模型。",
+          "slug": "policy-optimization-ppo",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3062,
+          "title": "高级适应中的挑战",
+          "meta_title": "高级大语言模型适应的挑战",
+          "meta_description": "讨论高级微调中的稳定性问题、奖励欺骗和对齐复杂性。",
+          "slug": "challenges-advanced-adaptation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 675,
+      "title": "微调模型的评估与分析",
+      "meta_title": "评价微调大型语言模型",
+      "meta_description": "评价大型语言模型（LLM）表现的进阶方法，除了准确率之外，还包含指令遵循、偏见检测、稳定性检查和错误分析。",
+      "number": 6,
+      "slug": "evaluation-analysis-fine-tuned-models",
+      "content": "对大型语言模型进行微调后，评价其真实表现是一个重要步骤。仅仅使用标准自然语言处理（NLP）指标，往往难以充分反映生成模型表现的精细特征，特别是在特定任务或应用范围中。本章提供了进行全面评估所需的方法。\r\n\r\n我们将处理传统指标的不足之处，并介绍专门适用于评价微调大型语言模型的技术。您将学习系统方法来评估指令遵循情况、检查事实准确性以及是否生成了无根据的陈述（幻觉），并分析模型输出中可能存在的偏见。此外，我们涵盖了测试模型对不同输入稳定性的方法、模型校准的重要性，以及定性分析和结构化人工反馈在了解模型的真正能力和局限方面所起到的必要作用。",
+      "sections": [
+        {
+          "id": 3063,
+          "title": "传统自然语言处理评估指标的局限性",
+          "meta_title": "大型语言模型传统自然语言处理指标的局限性",
+          "meta_description": "批判性分析BLEU、ROUGE和准确率等指标在评估大型语言模型复杂能力时的不足。",
+          "slug": "limitations-standard-metrics",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3065,
+          "title": "评估指令遵循能力",
+          "meta_title": "评估LLM指令遵循",
+          "meta_description": "衡量模型如何遵循复杂指令的框架和基准。",
+          "slug": "evaluating-instruction-following",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3068,
+          "title": "评估事实准确性和幻觉",
+          "meta_title": "评估大型语言模型的事实准确性与幻觉",
+          "meta_description": "用于评估微调模型事实正确性及产生幻觉倾向的方法和数据集。",
+          "slug": "assessing-factual-accuracy",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3070,
+          "title": "偏见与公平性评估方法",
+          "meta_title": "微调LLM的偏见与公平性评估",
+          "meta_description": "用于检测和测量模型输出中社会偏见的方法和工具（例如，Bias Bench, StereoSet）。",
+          "slug": "bias-fairness-assessment",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3071,
+          "title": "鲁棒性评估（对抗性攻击、分布外数据）",
+          "meta_title": "微调大语言模型的鲁棒性评估",
+          "meta_description": "测试模型针对分布外数据和常见对抗性扰动的表现。",
+          "slug": "robustness-evaluation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3073,
+          "title": "模型校准评估",
+          "meta_title": "评估大型语言模型校准",
+          "meta_description": "评估模型置信度分数的可信度。",
+          "slug": "model-calibration-assessment",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3076,
+          "title": "定性分析与错误分类",
+          "meta_title": "LLM的定性分析与错误分类",
+          "meta_description": "人工审查模型输出并分类常见失败模式的系统化方法。",
+          "slug": "qualitative-analysis-error-categorization",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3078,
+          "title": "人工评估规范",
+          "meta_title": "大型语言模型的人工评估规范",
+          "meta_description": "设计并执行大型语言模型主观表现的有效人工评估。",
+          "slug": "human-evaluation-protocols",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3080,
+          "title": "实践：分析模型输出中的错误",
+          "meta_title": "实践：分析微调LLM的输出",
+          "meta_description": "对微调模型的输出进行定性分析，以找出规律和错误。",
+          "slug": "practice-analyzing-model-outputs",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 677,
+      "title": "优化与部署考量",
+      "meta_title": "优化与部署经过微调的LLM",
+      "meta_description": "用于优化经过微调的LLM以进行推断的方法，包括量化、剪枝、高效服务策略以及MLOps整合。",
+      "number": 7,
+      "slug": "optimization-deployment-considerations",
+      "content": "在为特定任务调整好大型语言模型后，重心将转向如何使其在实际使用场景中实用且高效。本章将讨论优化模型并准备其进行部署的步骤。\r\n\r\n您将研究在微调过程中提升资源利用率的方法，包括梯度累积和混合精度训练（例如，使用 $fp16$ 而非 $fp32$）等节省内存的技术。我们还将介绍使用分布式计算配置来加速训练的方法。\r\n\r\n训练结束后，您将学习微调后的优化方法，例如量化（降低权重精度，可能降至 $int8$ 或更低）和剪枝，以减小模型大小和推断延迟。本章还详细说明了模型打包、将PEFT适配器合并回基础模型权重的方法、选择适合LLM的推断服务框架，以及为已部署模型制定监控规范。",
+      "sections": [
+        {
+          "id": 3083,
+          "title": "训练时的内存优化",
+          "meta_title": "LLM微调时的内存优化",
+          "meta_description": "梯度累积、激活检查点和混合精度训练（AMP）等方法。",
+          "slug": "memory-optimization-training",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3085,
+          "title": "使用分布式策略加速训练",
+          "meta_title": "用于大型语言模型微调的分布式训练策略",
+          "meta_description": "概述数据并行、张量并行和流水线并行（例如DeepSpeed、FSDP）。",
+          "slug": "distributed-training-strategies",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3087,
+          "title": "微调后优化：量化",
+          "meta_title": "大型语言模型微调后量化",
+          "meta_description": "在微调后应用量化技术（例如GPTQ、AWQ），以减少模型大小并加速推理。",
+          "slug": "post-tuning-quantization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3089,
+          "title": "微调后优化：剪枝",
+          "meta_title": "LLM微调后剪枝",
+          "meta_description": "移除微调模型中冗余参数的方法。",
+          "slug": "post-tuning-pruning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3092,
+          "title": "合并 PEFT 适配器",
+          "meta_title": "将 PEFT 适配器合并到基础 LLM 中",
+          "meta_description": "将 LoRA 或其他适配器权重合并到基础模型中以进行部署的方法。",
+          "slug": "merging-peft-adapters",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3094,
+          "title": "模型序列化与打包",
+          "meta_title": "微调LLM的序列化与打包",
+          "meta_description": "保存和分发微调模型文件的格式与实践。",
+          "slug": "model-serialization-packaging",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3096,
+          "title": "推理服务框架",
+          "meta_title": "大型语言模型推理服务框架",
+          "meta_description": "概述针对大型语言模型服务进行优化的框架（例如：vLLM、TGI、Triton）。",
+          "slug": "inference-serving-frameworks",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3098,
+          "title": "生产环境中微调模型的监控",
+          "meta_title": "生产环境中微调LLM的监控",
+          "meta_description": "部署后跟踪性能、数据漂移和潜在问题的策略。",
+          "slug": "monitoring-fine-tuned-models",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

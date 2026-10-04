@@ -1,0 +1,61 @@
+{
+  "id": 3481,
+  "title": "多智能体强化学习中的通信协议",
+  "meta_title": "多智能体强化学习中的通信 | 高级强化学习",
+  "meta_description": "实现智能体之间显式或隐式通信的方法。",
+  "content": "<p>在许多多智能体情境中，尤其是在合作情境中，仅拥有局部观测的智能体难以有效协调。想象一下，你正在和几个帮手组装一件复杂的家具，而每个人都只能看到自己周围的环境。如果没有通信，协调同时举起或传递部件等行动会变得极其困难，从而导致效率低下或失败。同样地，在多智能体强化学习 (reinforcement learning)中，让智能体共享信息能显著提升集体表现，克服局部可观测性带来的限制，并可能稳定面对由其他适应性智能体引起的非平稳性问题时的学习过程。本节介绍如何将通信整合到多智能体强化学习框架中。</p>\n<p>通信协议定义了智能体交换信息的机制。大体上，我们可以将这些机制分为显式通信和隐式通信。</p>\n<h3>显式通信</h3>\n<p>显式通信涉及智能体主动发送和接收消息，这些消息中包含旨在辅助协调的信息。这类似于人类之间的口头或书面交流。设计有效的显式通信协议需要回答几个问题：应该发送什么信息？如何编码？接收到的消息如何整合到智能体的决策过程中？</p>\n<p>已有多种方法被提出：</p>\n<ol>\n<li>\n<p><strong>学习到的连续消息：</strong> 智能体学习生成连续向量 (vector)作为消息。这些消息通常由其他智能体的神经网络 (neural network)与它们的局部观测一起处理。</p>\n<ul>\n<li><strong>CommNet (通信神经网络)：</strong> 由Sukhbaatar等人（2016）提出，CommNet允许智能体广播连续的通信向量。每个智能体根据自己的前一状态、观测以及上一步从其他智能体接收到的通信向量的<em>平均值</em>来计算其隐藏状态。这种平均操作允许梯度在训练期间在智能体之间流动，有助于同时进行通信和行动策略的端到端学习。通信步骤可以在单个时间步内迭代进行，使信息得以进一步传播。</li>\n<li><strong>DIAL (可微分智能体间学习)：</strong> Foerster等人（2016）引入了DIAL，专注于在合作任务中学习离散消息的通信协议。一个重要贡献是在训练期间通过通信通道传递梯度，即使在执行时消息是离散的。在训练期间，会发送连续的“消息”（通信网络的输出，通常通过一个<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>tanh</mi><mo>⁡</mo></mrow><annotation encoding=\"application/x-tex\">\\tanh</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mop\">tanh</span></span></span></span>激活函数 (activation function)）。一个离散化单元（例如添加噪声和阈值处理，或使用Gumbel-Softmax技巧）生成用于执行的离散消息，而连续值则允许梯度在集中训练期间反向传播 (backpropagation)。这有助于端到端地学习有效的通信策略。</li>\n</ul>\n</li>\n<li>\n<p><strong>学习到的离散消息：</strong> 智能体学习从预定义的离散词汇表 (vocabulary)中选择消息（例如发送特定令牌或符号）。这可能更具可解释性，但通常需要强化学习 (reinforcement learning)技术（如REINFORCE）来学习通信策略本身，因为离散选择会阻断梯度。</p>\n</li>\n<li>\n<p><strong>门控机制和注意力：</strong> 不断发送消息可能效率低下或信息过载。门控机制使智能体能够学习<em>何时</em>通信。注意力机制 (attention mechanism)，例如TarMAC（目标多智能体通信，Das等人，2019）中使用的机制，允许智能体学习<em>与谁</em>通信或<em>关注哪些</em>消息，将带宽集中在相关信息上。智能体可以根据其当前状态计算对潜在通信伙伴或传入消息的注意力权重 (weight)。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1d8uk9x\" \n              data-graph-definition='digraph CommunicationFlow {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#dee2e6\", style=\"filled, rounded\"];\n    edge [color=\"#868e96\"];\n\n    subgraph cluster_agent1 {\n        label = \"智能体 1\";\n        bgcolor=\"#e9ecef\";\n        A1_Obs [label=\"局部观测 (o1)\"];\n        A1_Net [label=\"策略/价值网络\"];\n        A1_Action [label=\"行动 (a1)\"];\n        A1_CommOut [label=\"发送消息 (m1)\"];\n        A1_CommIn [label=\"接收消息 (m2)\"];\n        A1_Obs -> A1_Net;\n        A1_CommIn -> A1_Net;\n        A1_Net -> A1_Action;\n        A1_Net -> A1_CommOut;\n    }\n\n    subgraph cluster_agent2 {\n        label = \"智能体 2\";\n        bgcolor=\"#e9ecef\";\n        A2_Obs [label=\"局部观测 (o2)\"];\n        A2_Net [label=\"策略/价值网络\"];\n        A2_Action [label=\"行动 (a2)\"];\n        A2_CommOut [label=\"发送消息 (m2)\"];\n        A2_CommIn [label=\"接收消息 (m1)\"];\n        A2_Obs -> A2_Net;\n        A2_CommIn -> A2_Net;\n        A2_Net -> A2_Action;\n        A2_Net -> A2_CommOut;\n    }\n\n    subgraph cluster_env {\n        label = \"环境\";\n        bgcolor=\"#f8f9fa\";\n        Env [label=\"状态 (s)\", shape=ellipse, fillcolor=\"#ced4da\"];\n    }\n\n    A1_Action -> Env [label=\" a1 \"];\n    A2_Action -> Env [label=\" a2 \"];\n    Env -> A1_Obs [label=\" o1, r1 \"];\n    Env -> A2_Obs [label=\" o2, r2 \"];\n\n    A1_CommOut -> A2_CommIn [label=\" 显式 \\n 通信 \", style=dashed, color=\"#1c7ed6\"];\n    A2_CommOut -> A1_CommIn [style=dashed, color=\"#1c7ed6\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1d8uk9x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>两个智能体之间的显式通信路径。每个智能体的网络接收局部观测和传入消息，生成行动和传出消息。</p>\n</blockquote>\n<h3>隐式通信</h3>\n<p>隐式通信发生在智能体在不发送显式消息的情况下协调其行为时。相反地，它们可能通过观察其他智能体的行为或行为对环境的影响，来推断其意图或未来行动。</p>\n<ul>\n<li><strong>通过行动：</strong> 智能体的行动直接影响环境状态，然后被其他智能体观测到。这种观测携带了关于行动智能体策略或意图的信息。例如，在交通情境中，一辆汽车减速隐式地表明它打算让行或转弯。</li>\n<li><strong>心智理论：</strong> 更复杂的智能体可能会建立其他智能体的内部模型，试图根据以往的经历预测它们的目标和行动。这种预测能力允许主动协调。</li>\n<li><strong>集中训练（CTDE）：</strong> 像MADDPG这类先前讨论过的方法，在训练期间使用一个集中式评论家，该评论家可以访问所有智能体的观测和行动。尽管执行是去中心化的（行动者只使用局部观测），但集中训练过程通过优化联合行动价值函数来隐式协调策略。评论家在学习期间充当中央协调器，引导行动者走向互利的策略，而无需在执行时进行显式消息传递。</li>\n</ul>\n<h3>通信学习中的挑战</h3>\n<ol>\n<li><strong>可扩展性：</strong> 随着智能体数量的增加，显式通信协议可能面临挑战。潜在通信通道的数量呈二次方增长（在N个智能体系统中，成对通信为<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><msup><mi>N</mi><mn>2</mn></msup><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(N^2)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1.0641em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span><span class=\"mclose\">)</span></span></span></span>），聚合消息（如CommNet中）可能成为瓶颈或稀释信息。注意力机制 (attention mechanism)有所帮助，但未能完全解决扩展性问题。\n\"2.  <strong>带宽限制：</strong> 在实际应用中（例如机器人），通信带宽可能有限或成本较高。协议需要高效，发送简洁而富有信息量的消息。\"</li>\n<li><strong>信用分配：</strong> 当一个团队成功或失败时，很难确定哪些消息是有用的，哪些是无用的。这使得学习过程变得复杂，特别是在直接使用强化学习 (reinforcement learning)训练通信策略时。像DIAL这类允许梯度通过通信通道的技术缓解了这个问题，但它们依赖于集中训练。</li>\n<li><strong>涌现 (emergence)与设计：</strong> 通信协议应该事先严格设计，还是应该从学习过程中自然涌现？学习到的通信提供了灵活性，但可能导致人类难以理解的协议。</li>\n</ol>\n<p>整合通信，无论是显式的还是隐式的，是开发复杂多智能体强化学习系统的一个重要方面。方法选择通常取决于具体的任务要求、所需的合作程度、环境的限制（如局部可观测性或通信限制）以及所涉及的智能体数量。随着多智能体强化学习的不断发展，开发更具可扩展性、可解释性的通信策略仍然是一个活跃的研究方向。</p>",
+  "slug": "communication-marl",
+  "updates": [],
+  "references": [
+    {
+      "id": 9770,
+      "title": "Learning to Communicate with Deep Reinforcement Learning",
+      "author": "Jakob Foerster, Yannis Assael, Nando de Freitas, Shimon Whiteson",
+      "year": "2016",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems 29 (NIPS 2016)",
+      "volume": "",
+      "pages": "",
+      "url": "https://papers.nips.cc/paper_files/paper/2016/file/4890d4ba1138431e7b76778e35272a27-Paper.pdf",
+      "doi": "",
+      "note": "提出了DIAL，一个在多智能体强化学习中学习离散通信协议的框架，训练时利用可微分通信通道进行梯度回传。",
+      "order": 2,
+      "created_at": "2025-09-05T06:29:55.805613Z",
+      "updated_at": "2025-09-09T10:34:15.695662Z"
+    },
+    {
+      "id": 9771,
+      "title": "TarMAC: Targeted Multi-Agent Communication",
+      "author": "Abhishek Das, Samyak Parajuli, Souvik Bhattacharya, Akshat Rastogi, Stefano Ermon, Joshua Meier, Andrew M. Saxe, Dhruv Batra, Devi Parikh",
+      "year": "2019",
+      "publisher": "Proceedings of Machine Learning Research",
+      "journal": "Proceedings of the 36th International Conference on Machine Learning (ICML)",
+      "volume": "PMLR 97",
+      "pages": "1530-1539",
+      "url": "http://proceedings.mlr.press/v97/das19a/das19a.pdf",
+      "doi": "10.48550/arXiv.1906.01220",
+      "note": "介绍了用于多智能体通信的注意力机制，使智能体能够选择性地关注相关消息和伙伴以增强协调。",
+      "order": 3,
+      "created_at": "2025-09-05T06:29:55.808061Z",
+      "updated_at": "2025-09-09T10:33:54.914334Z"
+    },
+    {
+      "id": 9772,
+      "title": "Multi-Agent Reinforcement Learning: A Review of Foundational Concepts and Recent Trends",
+      "author": "Peter Kairouz, H. Brendan McMahan, Brendan Avent, Aurélien Bellet, Mehdi Bennis, Arjun Nitin Bhagoji, Kallista Bonawitz, Zachary Charles, Graham Cormode, Rachel Cummings, Rafael G. L. D’Oliveira, Hubert Eichner, Salim El Rouayheb, David Evans, Josh Gardner, Zachary Garrett, Adrià Gascón, Badih Ghazi, Phillip B. Gibbons, Marco Gruteser, Zaid Harchaoui, Chaoyang He, Lie He, Zhouyuan Huo, Ben Hutchinson, Justin Hsu, Martin Jaggi, Tara Javidi, Gauri Joshi, Mikhail Khodak, Jakub Konecný, Aleksandra Korolova, Farinaz Koushanfar, Sanmi Koyejo, Tancrède Lepoint, Yang Liu, Prateek Mittal, Mehryar Mohri, Richard Nock, Ayfer Özgür, Rasmus Pagh, Hang Qi, Daniel Ramage, Ramesh Raskar, Mariana Raykova, Dawn Song, Weikang Song, Sebastian U. Stich, Ziteng Sun, Ananda Theertha Suresh, Florian Tramèr, Praneeth Vepakomma, Jianyu Wang, Li Xiong, Zheng Xu, Qiang Yang, Felix X. Yu, Han Yu and Sen Zhao",
+      "year": "2021",
+      "publisher": "Now Publishers",
+      "journal": "Foundations and Trends® in Machine Learning",
+      "volume": "14",
+      "pages": "1-210",
+      "url": "https://www.nowpublishers.com/article/Details/MAL-083",
+      "doi": "10.1561/2200000083",
+      "note": "对多智能体强化学习的全面回顾，涵盖基础概念、通信挑战和各类解决方案，对更广泛的背景有益。",
+      "order": 4,
+      "created_at": "2025-09-05T06:29:55.810405Z",
+      "updated_at": "2025-09-09T10:34:02.645226Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5262,
+  "title": "复制代码和文件",
+  "meta_title": "将项目代码复制到 Docker 镜像中",
+  "meta_description": "有效使用 COPY 和 ADD 指令以包含您的机器学习脚本和必要文件。",
+  "content": "<p>将项目代码和相关文件引入 Docker 镜像，可以确保容器具备执行机器学习 (machine learning)任务所需的一切，例如训练模型或运行推理 (inference)服务。此步骤通常在 <code>Dockerfile</code> 中定义好基础环境和安装依赖之后进行。完成此操作的主要指令是 <code>COPY</code> 和 <code>ADD</code>。</p>\n<h3>使用 COPY 指令</h3>\n<p><code>COPY</code> 指令是最直接、最常用的一种方法，用于将文件从本地机器（特别是<em>构建上下文 (context)</em>）复制到镜像文件系统中。它的语法很简单：</p>\n<pre><code class=\"language-dockerfile\">COPY &#x3C;src>... &#x3C;dest>\n</code></pre>\n<ul>\n<li><code>&#x3C;src></code>: 指定您要复制的本地机器上的文件或目录（相对于构建上下文根目录）。您可以指定多个源。支持通配符。</li>\n<li><code>&#x3C;dest></code>: 指定源文件/目录应复制到容器镜像内部的路径。如果目标路径不存在，Docker 将创建它。如果源是目录，则目标路径必须以 <code>/</code> 结尾或是一个已存在的目录。</li>\n</ul>\n<p>对于一个典型的机器学习 (machine learning)项目，结构上包含一个存放 Python 代码的 <code>src</code> 目录并且根目录下有一个 <code>requirements.txt</code> 文件，您可以像这样使用 <code>COPY</code>：</p>\n<pre><code class=\"language-dockerfile\"># 定义工作目录（前面已介绍）\nWORKDIR /app\n\n# 先复制 requirements 文件以利用缓存\nCOPY requirements.txt .\n\n# 安装依赖（前面已介绍）\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 复制项目其余代码\nCOPY ./src ./src\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们将容器内的工作目录设置为 <code>/app</code>。</li>\n<li>我们将 <code>requirements.txt</code> 从构建上下文根目录复制到镜像内的 <code>/app</code> 目录。</li>\n<li>我们运行 <code>pip install</code>。</li>\n<li>我们将本地 <code>src</code> 目录的内容复制到镜像内 <code>/app</code> 目录下的一个名为 <code>src</code> 的目录中（即 <code>/app/src</code>）。</li>\n</ol>\n<p>这种顺序对于构建性能很重要，我们稍后在讨论构建缓存时会提到。</p>\n<h3>理解 ADD 指令</h3>\n<p>Docker 也提供了 <code>ADD</code> 指令，它的语法与 <code>COPY</code> 类似：</p>\n<pre><code class=\"language-dockerfile\">ADD &#x3C;src>... &#x3C;dest>\n</code></pre>\n<p><code>ADD</code> 对于本地文件和目录执行与 <code>COPY</code> 相同的功能，但包含两个额外特性：</p>\n<ol>\n<li><strong>URL 获取</strong>: 如果 <code>&#x3C;src></code> 是一个 URL，Docker 将从该 URL 下载文件并将其复制到 <code>&#x3C;dest></code>。权限设置为 600。</li>\n<li><strong>归档文件自动解压</strong>: 如果 <code>&#x3C;src></code> 是一个识别出的压缩归档格式（例如 <code>tar</code>, <code>gzip</code>, <code>bzip2</code>, <code>xz</code>），Docker 将自动将其解压到 <code>&#x3C;dest></code> 中作为一个目录。</li>\n</ol>\n<p>尽管这些特性可能看起来很便利，但它们也可能使您的构建较难预测。例如，在构建过程中从 URL 下载会将镜像构建过程与网络可用性和远程源的稳定性耦合起来。自动解压有时会根据归档结构产生意外结果。</p>\n<p><strong>建议：</strong> 为清晰和可预测性，对于传输本地文件和目录，<strong>优先选择 <code>COPY</code> 而非 <code>ADD</code></strong>。仅在您特别需要其 URL 下载或自动解压功能时才使用 <code>ADD</code>，并理解潜在影响。对于下载文件，通常更好的做法是在 <code>RUN</code> 指令中使用 <code>curl</code> 或 <code>wget</code> 等工具，这样可以对下载过程有更多的控制（例如，错误处理、重试）。</p>\n<h3>使用 .dockerignore 避免不需要的文件</h3>\n<p>当您运行 <code>docker build</code> 时，Docker 客户端首先将指定为构建上下文 (context)的目录（通常是 <code>.</code>）打包并发送到 Docker 守护进程。此上下文包含所有文件和子目录。发送大型、不必要的文件（例如数据集、虚拟环境、Git 历史、IDE 配置）会减慢构建过程，如果意外复制，还可能使您的镜像变得臃肿。</p>\n<p>为防止这种情况，在您的构建上下文根目录（与 <code>Dockerfile</code> 相同的目录）中创建一个名为 <code>.dockerignore</code> 的文件。列出您要排除的文件或目录，使用类似于 <code>.gitignore</code> 的语法。</p>\n<p>这是一个典型机器学习 (machine learning)项目的 <code>.dockerignore</code> 示例：</p>\n<pre><code class=\"language-.dockerignore\"># Git 文件\n.git\n.gitignore\n\n# Python 虚拟环境\nvenv/\n*.pyc\n__pycache__/\n\n# IDE / 编辑器特定文件\n.vscode/\n.idea/\n*.swp\n\n# 大型数据文件（稍后通过卷/挂载管理）\ndata/\ndatasets/\n\n# 模型文件（如果较大或单独管理）\nmodels/\n*.pt\n*.h5\n*.onnx\n*.pkl\n\n# Docker 文件\nDockerfile\n.dockerignore\n\n# 其他临时或本地文件\n*.log\nnotebooks/output/\n</code></pre>\n<p>通过使用 <code>.dockerignore</code>，您可以确保只有必要的代码和配置文件被发送到守护进程，并通过 <code>COPY</code> 或 <code>ADD</code> 可用于复制到您的镜像中。这会带来更快的构建速度和更小、更安全的镜像。</p>\n<h3>优化复制操作以实现构建缓存</h3>\n<p>Docker 分层构建镜像。<code>Dockerfile</code> 中的每个指令（如 <code>RUN</code>, <code>COPY</code>, <code>ADD</code>）都会创建一个新层。Docker 会使用构建缓存：如果与 <code>COPY</code> 指令相关的文件自上次构建以来没有更改，并且之前的层也已缓存，Docker 会重用现有层，而不是再次执行该指令。</p>\n<p>这对于耗时步骤（如依赖安装）尤为重要。考虑以下两种方法：</p>\n<p><strong>不太理想：</strong></p>\n<pre><code class=\"language-dockerfile\">WORKDIR /app\nCOPY . . # 一次性复制所有内容\nRUN pip install -r requirements.txt\n# ... Dockerfile 的其余部分\n</code></pre>\n<p>如果您的项目中有<em>任何</em>文件发生更改（即使是微小的代码修改），<code>COPY . .</code> 层就会失效，Docker <em>必须</em>重新运行可能耗时的 <code>pip install</code> 命令，即使 <code>requirements.txt</code> 没有更改。</p>\n<p><strong>更优：</strong></p>\n<pre><code class=\"language-dockerfile\">WORKDIR /app\n\n# 1. 仅复制 requirements 文件\nCOPY requirements.txt .\n\n# 2. 安装依赖\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 3. 复制应用程序代码的其余部分\nCOPY . .\n# ... Dockerfile 的其余部分\n</code></pre>\n<p>在这个改进版本中：</p>\n<ul>\n<li>如果只有您的 Python 代码（<code>.py</code> 文件）更改，Docker 会重用包括 <code>RUN pip install</code> 步骤在内的所有缓存层（因为 <code>requirements.txt</code> 没有更改）。它只需要重新执行最后的 <code>COPY . .</code> 指令，这非常快。</li>\n<li>只有当 <code>requirements.txt</code> 文件本身被修改时，依赖安装层才会被重新构建。</li>\n</ul>\n<p>经过周全考虑地组织 <code>COPY</code> 指令，将依赖定义与应用程序代码分开，可以显著加快迭代开发周期。</p>\n<h3>处理模型文件和其他大型文件</h3>\n<p>您应该将预训练 (pre-training)模型、数据集或其他大型文件直接 <code>COPY</code> 到您的镜像中吗？</p>\n<ul>\n<li><strong>优点：</strong> 创建一个自包含的镜像。容器启动时已包含这些文件。适用于运行时所需的小型、相对稳定的文件。</li>\n<li><strong>缺点：</strong> 显著增加镜像大小。更新文件需要重建整个镜像。共享大型镜像效率低下。如果在镜像中分发专有模型/数据，可能违反许可。</li>\n</ul>\n<p>通常，对于数据集以及较大或频繁更新的模型文件，将它们直接复制到镜像中<strong>不是</strong>推荐的做法。使用 Docker 卷或绑定挂载的替代策略提供更大的灵活性和更高的效率。这些技术允许您将数据和文件与镜像本身分离，使更新更简便，并保持镜像更小。我们将在第 3 章“容器中的数据和模型管理”中详细介绍这些数据管理技术。</p>\n<p>目前请您理解，<code>COPY</code> 和 <code>ADD</code> 对于将您的<em>应用程序代码</em>和<em>配置</em>放入镜像不可或缺。使用 <code>.dockerignore</code> 排除不必要的文件，并组织您的 <code>COPY</code> 操作，以最大限度地发挥 Docker 构建缓存的优势。</p>",
+  "slug": "copying-code-artifacts",
+  "updates": [],
+  "references": [
+    {
+      "id": 14477,
+      "title": "Dockerfile reference",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/dockerfile/",
+      "doi": "",
+      "note": "官方文档，详细介绍了 `COPY` 和 `ADD` 指令、其语法和操作差异。",
+      "order": 1,
+      "created_at": "2025-09-05T08:53:20.101781Z",
+      "updated_at": "2025-09-10T02:00:54.843872Z"
+    },
+    {
+      "id": 14479,
+      "title": "Dockerfile best practices (Leverage build cache)",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#leverage-build-cache",
+      "doi": "",
+      "note": "关于组织 Dockerfile 指令以最大限度地利用构建缓存（特别是依赖项安装）的官方建议。",
+      "order": 3,
+      "created_at": "2025-09-05T08:53:20.111431Z",
+      "updated_at": "2025-09-10T02:00:50.413382Z"
+    },
+    {
+      "id": 14480,
+      "title": "Hands-On Docker for Data Science: Build, Scale, and Deploy Containerized Models and Applications",
+      "author": "Vignesh Sukumar",
+      "year": "2020",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/hands-on-docker-for-data-science/9781838827303",
+      "doi": "",
+      "note": "一本实用书籍，展示了 Docker 在数据科学中的应用，包括在机器学习项目中有效使用 Dockerfile 指令。",
+      "order": 4,
+      "created_at": "2025-09-05T08:53:20.114357Z",
+      "updated_at": "2025-09-10T02:00:52.756714Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

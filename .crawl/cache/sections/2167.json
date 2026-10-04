@@ -1,0 +1,61 @@
+{
+  "id": 2167,
+  "title": "实践：使用 Pandas 整理数据",
+  "meta_title": "实践 Pandas 数据整理",
+  "meta_description": "使用 Pandas 解决实际数据处理问题，内容涵盖数据的加载、清洗和转换。",
+  "content": "<p>数据整理（即清洗、转换和组织原始数据的过程）是任何数据分析或机器学习 (machine learning)项目的主要组成部分。在实际场景中，使用 Pandas 练习应用数据操作。动手练习有助于巩固对使用 Pandas 加载、清洗、转换、分组和合并数据的理解。</p>\n<p>我们将通过一系列针对示例数据集的任务进行操作，模拟您可能遇到的常见工作流程。</p>\n<h3>设置练习 DataFrame</h3>\n<p>让我们从创建一个代表产品销售数据的示例 DataFrame 开始。该数据集包含常见问题，如缺失值和不一致的数据类型，我们需要处理这些问题。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 示例销售数据\ndata = {\n    'ProductID': ['P001', 'P002', 'P003', 'P004', 'P005', 'P006', 'P007', 'P008', 'P009', 'P010'],\n    'Category': ['Electronics', 'Clothing', 'Electronics', 'Home Goods', 'Clothing', 'Electronics', 'Home Goods', None, 'Clothing', 'Electronics'],\n    'Price': [599.99, 49.95, 1200.00, 25.50, 35.00, 750.80, None, 15.00, 55.00, 1150.50],\n    'UnitsSold': [50, 120, 15, 200, 150, 25, 80, 300, 110, None],\n    'Discount': ['5%', '10%', '5%', 'None', '15%', '7%', '10%', '5%', '12%', '8%']\n}\n\nsales_df = pd.DataFrame(data)\n\n# 显示初始 DataFrame\nprint(\"初始销售数据：\")\nprint(sales_df)\n\n# 显示数据类型和非空计数\nprint(\"\\n初始 DataFrame 信息：\")\nsales_df.info()\n</code></pre>\n<h3>任务 1：初步检查和基本清洗</h3>\n<p>首先，查看 DataFrame。使用 <code>.info()</code>（如上所示）和 <code>.describe()</code> 来理解其结构、数据类型和摘要统计。找出潜在问题，如缺失值 (NaN 或 None) 和不正确的数据类型。</p>\n<pre><code class=\"language-python\"># 获取数值列的摘要统计\nprint(\"\\n摘要统计：\")\nprint(sales_df.describe())\n\n# 检查缺失值\nprint(\"\\n每列的缺失值：\")\nprint(sales_df.isnull().sum())\n</code></pre>\n<p>您会注意到 <code>Category</code>、<code>Price</code> 和 <code>UnitsSold</code> 中存在缺失值。<code>Discount</code> 列也存储为对象（字符串）而非数值，这会阻止直接计算。</p>\n<h3>任务 2：处理缺失数据</h3>\n<p>处理在任务 1 中找出的缺失值。针对不同列，可能需要采用不同的策略。</p>\n<ol>\n<li><strong>类别：</strong> 由于 <code>Category</code> 是分类数据，我们可以用 'Unknown' 这样的占位符或众数（最常见的类别）填充缺失值。我们使用 'Unknown'。</li>\n<li><strong>价格：</strong> 对于 <code>Price</code> 等数值列，用平均值或中位数填充是常见的做法。考虑到可能存在的异常值（如 P003），中位数可能更适合。</li>\n<li><strong>销售单位：</strong> 为了本练习的简单起见，我们用平均销售单位数填充缺失的 <code>UnitsSold</code>。</li>\n</ol>\n<pre><code class=\"language-python\"># 用 'Unknown' 填充缺失的 Category\nsales_df['Category'].fillna('Unknown', inplace=True)\n\n# 计算价格中位数（不包括 NaN）并填充缺失的 Price\nmedian_price = sales_df['Price'].median()\nsales_df['Price'].fillna(median_price, inplace=True)\n\n# 计算销售单位平均值（不包括 NaN）并填充缺失的 UnitsSold\nmean_units_sold = sales_df['UnitsSold'].mean()\nsales_df['UnitsSold'].fillna(mean_units_sold, inplace=True)\n\n# 验证缺失值已处理\nprint(\"\\n处理后的缺失值：\")\nprint(sales_df.isnull().sum())\n</code></pre>\n<h3>任务 3：数据转换和特征工程</h3>\n<p>现在，让我们清理现有列并创建新的、可能有所帮助的列。</p>\n<ol>\n<li><strong>转换折扣：</strong> 将 <code>Discount</code> 列从字符串百分比转换为表示折扣因子的数值浮点数（例如，'5%' 变为 0.05）。适当处理 'None' 值，可能将其转换为 0% 折扣。</li>\n<li><strong>计算总收入：</strong> 创建一个新列 <code>TotalRevenue</code>，计算方式为 <code>价格 * 销售单位</code>。</li>\n<li><strong>计算折扣后收入：</strong> 使用 <code>TotalRevenue</code> 和数值型 <code>Discount</code> 因子创建另一个列 <code>DiscountedRevenue</code>。</li>\n<li><strong>将销售单位转换为整数：</strong> 由于 <code>UnitsSold</code> 代表计数，在处理缺失值后将其转换为整数类型。</li>\n</ol>\n<pre><code class=\"language-python\"># 将 Discount 字符串转换为数值浮点数\n# 将 'None' 替换为 '0%'，移除 '%'，转换为浮点数，并除以 100\nsales_df['Discount'] = sales_df['Discount'].replace('None', '0%')\nsales_df['DiscountFactor'] = sales_df['Discount'].str.replace('%', '').astype(float) / 100.0\n\n# 将 UnitsSold 转换为整数类型\nsales_df['UnitsSold'] = sales_df['UnitsSold'].astype(int)\n\n# 创建 TotalRevenue 列\nsales_df['TotalRevenue'] = sales_df['Price'] * sales_df['UnitsSold']\n\n# 创建 DiscountedRevenue 列\nsales_df['DiscountedRevenue'] = sales_df['TotalRevenue'] * (1 - sales_df['DiscountFactor'])\n\n# 显示转换后的 DataFrame 结构和示例数据\nprint(\"\\n转换后的 DataFrame：\")\nprint(sales_df.info())\nprint(\"\\n转换后的示例数据：\")\nprint(sales_df.head())\n</code></pre>\n<h3>任务 4：分组和聚合</h3>\n<p>使用 <code>groupby()</code> 方法通过基于类别聚合数据来获得信息。</p>\n<ol>\n<li><strong>计算每类别平均价格：</strong> 找出每个类别中产品的平均价格。</li>\n<li><strong>计算每类别总销售单位：</strong> 对每个类别中的销售单位数量求和。</li>\n<li><strong>多重聚合：</strong> 同时计算每个类别的总收入和平均折扣因子。</li>\n</ol>\n<pre><code class=\"language-python\"># 每类别平均价格\navg_price_per_category = sales_df.groupby('Category')['Price'].mean()\nprint(\"\\n每类别平均价格：\")\nprint(avg_price_per_category)\n\n# 每类别总销售单位\ntotal_units_per_category = sales_df.groupby('Category')['UnitsSold'].sum()\nprint(\"\\n每类别总销售单位：\")\nprint(total_units_per_category)\n\n# 多重聚合：每类别总收入和平均折扣\ncategory_summary = sales_df.groupby('Category').agg(\n    TotalRevenue=('TotalRevenue', 'sum'),\n    AverageDiscount=('DiscountFactor', 'mean')\n)\nprint(\"\\n类别摘要（总收入和平均折扣）：\")\nprint(category_summary)\n</code></pre>\n<h3>任务 5：合并 DataFrame</h3>\n<p>假设您有另一个包含每个产品商店信息的数据集。让我们为此创建一个小的 DataFrame 并将其与我们的 <code>sales_df</code> 合并。</p>\n<pre><code class=\"language-python\"># 示例商店数据\nstore_data = {\n    'StoreID': ['S1', 'S2', 'S1', 'S3', 'S2', 'S3', 'S1', 'S2', 'S3', 'S1'],\n    'ProductID': ['P001', 'P002', 'P003', 'P004', 'P005', 'P006', 'P007', 'P008', 'P009', 'P010']\n}\nstore_df = pd.DataFrame(store_data)\n\nprint(\"\\n商店信息：\")\nprint(store_df)\n\n# 基于 ProductID 合并 sales_df 和 store_df\nfull_df = pd.merge(sales_df, store_df, on='ProductID', how='left')\n\nprint(\"\\n合并后的 DataFrame（销售 + 商店信息）：\")\nprint(full_df.head())\n</code></pre>\n<p>此合并操作根据共同的 <code>ProductID</code> 列，为每个产品行添加了 <code>StoreID</code>。</p>\n<h3>任务 6：快速可视化</h3>\n<p>让我们使用分组数据创建一个简单的可视化图表。我们可以使用 Plotly Express（通常导入为 <code>px</code>）绘制每类别总销售单位。这提供了我们聚合结果的快速视觉摘要。</p>\n<pre><code class=\"language-python\">import plotly.express as px\n\n# 准备绘图数据（使用之前计算的 Series）\nplot_data = total_units_per_category.reset_index() # 将 Series 转换为 DataFrame\n\n# 创建条形图\nfig = px.bar(plot_data, x='Category', y='UnitsSold',\n             title='每产品类别总销售单位',\n             color='Category',\n             color_discrete_map={ # 可选：使用课程调色板\n                 'Electronics': '#1c7ed6',\n                 'Clothing': '#d6336c',\n                 'Home Goods': '#0ca678',\n                 'Unknown': '#adb5bd'\n             },\n             labels={'UnitsSold': '总销售单位'})\n\n# 显示图表（在笔记本/兼容环境中）或显示 JSON\n# fig.show() # 如果在支持渲染图表的环境中运行，请取消此行的注释\n\n# 显示用于网页渲染的 Plotly JSON\nplotly_json = fig.to_json()\nprint(\"\\nPlotly 图表 JSON：\")\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1180qle\" \n              data-plot-definition='{\"data\":[{\"marker\":{\"color\":\"#1c7ed6\",\"pattern\":{\"shape\":\"\"}},\"name\":\"电子产品\",\"orientation\":\"v\",\"showlegend\":true,\"text\":\"33\",\"type\":\"bar\",\"x\":[\"Electronics\"],\"xaxis\":\"x\",\"y\":[40]},{\"marker\":{\"color\":\"#d6336c\",\"pattern\":{\"shape\":\"\"}},\"name\":\"服装\",\"orientation\":\"v\",\"showlegend\":true,\"text\":\"120<br>150<br>110\",\"type\":\"bar\",\"x\":[\"Clothing\"],\"xaxis\":\"x\",\"y\":[380]},{\"marker\":{\"color\":\"#0ca678\",\"pattern\":{\"shape\":\"\"}},\"name\":\"家居用品\",\"orientation\":\"v\",\"showlegend\":true,\"text\":\"200<br>80\",\"type\":\"bar\",\"x\":[\"Home Goods\"],\"xaxis\":\"x\",\"y\":[280]},{\"marker\":{\"color\":\"#adb5bd\",\"pattern\":{\"shape\":\"\"}},\"name\":\"未知\",\"orientation\":\"v\",\"showlegend\":true,\"text\":\"300\",\"type\":\"bar\",\"x\":[\"Unknown\"],\"xaxis\":\"x\",\"y\":[300]}],\"layout\":{\"legend\":{\"tracegroupgap\":0,\"orientation\":\"v\"},\"margin\":{\"t\":60},\"template\":\"plotly\",\"title\":{\"text\":\"每产品类别总销售单位\"},\"xaxis\":{\"anchor\":\"y\",\"domain\":[0.0,1.0],\"title\":{\"text\":\"类别\"}},\"yaxis\":{\"anchor\":\"x\",\"domain\":[0.0,1.0],\"title\":{\"text\":\"总销售单位\"}}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1180qle\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>条形图显示按产品类别分组的销售单位总和。</p>\n</blockquote>\n<h3>实践总结</h3>\n<p>通过这些任务，您已练习了：</p>\n<ul>\n<li>检查 DataFrame 以理解其内容并找出问题。</li>\n<li>使用不同的填充策略 (<code>fillna</code>) 处理缺失数据。</li>\n<li>清理数据类型并转换列（例如，字符串操作，使用 <code>.astype()</code> 进行类型转换）。</li>\n<li>从现有数据创建新特征（特征工程）。</li>\n<li>使用 <code>groupby()</code> 聚合数据以按类别汇总信息。</li>\n<li>使用 <code>pd.merge()</code> 组合数据集。</li>\n<li>从处理过的数据生成简单的可视化图表。</li>\n</ul>\n<p>这些步骤代表了数据准备中的常见顺序。掌握这些 Pandas 操作对于有效准备数据以进行后续分析或机器学习 (machine learning)模型训练非常重要。您可以随意修改示例数据或将这些技术应用于您遇到的其他数据集。</p>",
+  "slug": "practice-pandas-wrangling",
+  "updates": [],
+  "references": [
+    {
+      "id": 6316,
+      "title": "pandas User Guide",
+      "author": "pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/index.html",
+      "doi": "",
+      "note": "Pandas库用于数据操作和分析的官方指南，内容全面。",
+      "order": 1,
+      "created_at": "2025-09-05T01:21:12.396105Z",
+      "updated_at": "2025-09-07T20:16:45.454509Z"
+    },
+    {
+      "id": 6317,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "547",
+      "url": "https://books.google.com/books/about/Python_for_Data_Analysis.html?id=zI41DwAAQBAJ",
+      "doi": "",
+      "note": "由pandas创建者所著，是理解Python中pandas进行数据分析和操作的基础书籍。与涵盖的主题高度相关。",
+      "order": 2,
+      "created_at": "2025-09-05T01:21:12.406186Z",
+      "updated_at": "2025-09-07T20:17:19.448028Z"
+    },
+    {
+      "id": 6318,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/hands-on-machine-learning/9781098125970/",
+      "doi": "",
+      "note": "一本广受好评的书，包含了在端到端机器学习流程中，使用pandas进行数据准备和特征工程的实用示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:21:12.408867Z",
+      "updated_at": "2025-09-07T20:17:03.684925Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

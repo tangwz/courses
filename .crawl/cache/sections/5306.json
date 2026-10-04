@@ -1,0 +1,61 @@
+{
+  "id": 5306,
+  "title": "Docker Compose在训练环境中的应用简介",
+  "meta_title": "使用Docker Compose构建简单机器学习训练堆栈",
+  "meta_description": "使用Docker Compose定义并运行多容器训练设置（例如：训练容器 + 数据库）。",
+  "content": "<p>使用<code>docker run</code>运行单独的训练作业为可复现性提供了很大的好处。然而，许多机器学习 (machine learning)工作流程不仅仅涉及一个训练脚本容器。你可能需要一个数据库来获取训练数据或记录指标，一个消息队列来触发作业，或者一个单独的服务来管理实验配置。仅仅使用<code>docker run</code>命令来管理多个相互连接的容器的生命周期、网络和数据持久性，很快就会变得繁琐且容易出错。</p>\n<p>这正是Docker Compose发挥作用的地方。Docker Compose是一个专门用于定义和运行多容器Docker应用的工具。你无需为每个容器发出复杂的<code>docker run</code>命令，而是将整个应用堆栈，包括其服务、网络和卷，在一个名为<code>docker-compose.yml</code>的声明式YAML文件中进行描述。</p>\n<h3>定义多容器训练环境</h3>\n<p>设想一个场景，你的训练脚本需要：</p>\n<ol>\n<li>从一个由简单Web服务提供的配置文件中读取超参数 (parameter) (hyperparameter)。</li>\n<li>从数据库中获取训练数据标识符。</li>\n<li>运行训练过程本身。</li>\n<li>将输出指标和模型工件写回到共享卷，或者将它们记录到数据库中。</li>\n</ol>\n<p>尝试用单独的<code>docker run</code>命令来编排这一切，将需要手动设置网络进行通信，管理容器启动顺序，以及在容器间一致地处理卷挂载。Docker Compose极大地简化了这些操作。</p>\n<p>使用Compose，你可以在<code>docker-compose.yml</code>文件中将每个组件（训练脚本容器、数据库容器、配置服务容器）定义为一个单独的<em>服务</em>。Compose处理底层的Docker操作，例如：</p>\n<ul>\n<li><strong>创建共享网络：</strong> 在同一Compose文件中定义的服务会自动放置在共享网络上，使它们能够使用服务名称作为主机名，轻松发现彼此并进行通信。</li>\n<li><strong>管理卷：</strong> 你可以在Compose文件中定义卷，并将它们附加到相关服务，以确保数据持久性和共享。</li>\n<li><strong>编排启动和停止：</strong> 像<code>docker-compose up</code>这样的命令会按照正确的依赖顺序（如果已指定）启动所有定义的服务，而<code>docker-compose down</code>则会干净地停止并删除它们。</li>\n</ul>\n<h3>一个基本示例结构</h3>\n<p>考虑一个简化的训练设置，只包含训练容器和一个用于记录结果的PostgreSQL数据库。一个<code>docker-compose.yml</code>文件可能如下所示：</p>\n<pre><code class=\"language-yaml\">version: '3.8' # 指定Compose文件版本\n\nservices:\n  # 训练脚本的服务\n  training:\n    build: . # 指示Compose从当前目录的Dockerfile构建镜像\n    volumes:\n      - ./data:/app/data # 将本地数据目录挂载到容器中\n      - model_output:/app/output # 挂载一个命名卷用于模型输出\n    environment:\n      - DB_HOST=db # 使用服务名“db”作为主机名\n      - DB_NAME=training_logs\n      - DB_USER=trainer\n      - DB_PASSWORD=secretpass\n    depends_on: # 确保数据库在训练服务之前启动\n      - db\n    # command: python train.py --config /app/config.yaml # 可选的命令覆盖\n\n  # PostgreSQL数据库服务\n  db:\n    image: postgres:14-alpine # 使用预构建的PostgreSQL镜像\n    volumes:\n      - db_data:/var/lib/postgresql/data # 挂载一个命名卷用于持久化数据库数据\n    environment:\n      - POSTGRES_DB=training_logs\n      - POSTGRES_USER=trainer\n      - POSTGRES_PASSWORD=secretpass\n\n# 定义命名卷用于持久化存储\nvolumes:\n  db_data:\n  model_output:\n</code></pre>\n<p>在这个示例中：</p>\n<ul>\n<li>我们定义了两个<code>services</code>：<code>training</code>和<code>db</code>。</li>\n<li><code>training</code>服务使用本地的<code>Dockerfile</code>构建其镜像。</li>\n<li><code>db</code>服务使用公共的<code>postgres</code>镜像。</li>\n<li><code>volumes</code>用于输入数据（<code>./data</code>绑定挂载）、输出模型（<code>model_output</code>命名卷）和持久化数据库存储（<code>db_data</code>命名卷）。</li>\n<li><code>environment</code>变量配置了两个服务，特别是为<code>training</code>服务提供了数据库连接详情。<code>DB_HOST</code>设置为<code>db</code>，这是PostgreSQL容器的服务名称，Compose使其在内部网络上可解析。</li>\n<li><code>depends_on</code>确保<code>db</code>服务在<code>training</code>服务尝试连接之前启动。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-kwhik2\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_compose {\n    label = \"Docker Compose 环境\";\n    bgcolor = \"#e9ecef\";\n    style = \"filled,rounded\";\n    margin = 20;\n\n    training [label=\"训练服务\\n(Python 脚本)\", fillcolor=\"#a5d8ff\", style=filled];\n    db [label=\"数据库服务\\n(PostgreSQL)\", fillcolor=\"#b2f2bb\", style=filled];\n    config [label=\"配置服务\\n(可选示例)\", fillcolor=\"#ffec99\", style=filled, peripheries=2, style=\"filled,dashed\"]; // Dashed border indicates optional\n\n    training -> db [label=\" 写入日志\\n 读取数据ID\"];\n    training -> config [label=\" 读取超参数\", style=dashed]; // Dashed line for optional interaction\n\n    subgraph cluster_vols {\n        label = \"卷\";\n        style = \"dotted\";\n        bgcolor = \"#dee2e6\";\n        vol_output [label=\"model_output\", shape=cylinder, fillcolor=\"#ced4da\", style=filled];\n        vol_db [label=\"db_data\", shape=cylinder, fillcolor=\"#ced4da\", style=filled];\n    }\n\n    training -> vol_output [label=\"保存模型\"];\n    db -> vol_db [label=\"持久化数据\"];\n  }\n\n  user [label=\"开发者 / CI\", shape=actor, style=filled, fillcolor=\"#ffc9c9\"];\n  user -> training [label=\" docker-compose up\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-kwhik2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图描绘了<code>docker-compose.yml</code>文件中定义的服务。<code>training</code>和<code>db</code>等服务通过Compose管理的共享网络进行通信。卷（<code>model_output</code>，<code>db_data</code>）提供持久化存储。图中还显示了一个可选的配置服务。</p>\n</blockquote>\n<h3>运行训练堆栈</h3>\n<p>定义好<code>docker-compose.yml</code>文件后，启动整个堆栈就非常简单，只需运行：</p>\n<pre><code class=\"language-bash\">docker-compose up --build\n</code></pre>\n<p><code>--build</code>标志告诉Compose在启动容器之前为<code>training</code>服务构建镜像。如果镜像已存在且<code>Dockerfile</code>或其上下文 (context)未更改，Compose将重用现有镜像，除非指定了<code>--build</code>。</p>\n<p>要停止并移除Compose文件中定义的容器、网络以及可能的卷，请使用：</p>\n<pre><code class=\"language-bash\">docker-compose down\n</code></pre>\n<p>使用Docker Compose显著简化了更成熟的机器学习 (machine learning)训练管道中常见的多容器设置的管理。它提供了一种标准化的方式来定义和共享开发或测试环境，这些环境能紧密反映生产部署的某些方面，从而提高可复现性。尽管像Kubernetes这样强大的编排系统常用于大规模分布式训练，但Docker Compose对于本地开发、测试以及管理中等复杂度的训练堆栈来说是一个非常有价值的工具。接下来的部分将详细介绍容器化训练脚本的具体技术，以及如何处理配置和GPU使用等相关方面。</p>",
+  "slug": "docker-compose-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 14445,
+      "title": "Docker Compose overview",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/compose/",
+      "doi": "",
+      "note": "Docker Compose的官方文档，涵盖其核心概念、YAML文件结构、服务、网络、卷以及常用命令。",
+      "order": 1,
+      "created_at": "2025-09-05T08:52:54.538192Z",
+      "updated_at": "2025-09-10T02:00:01.749755Z"
+    },
+    {
+      "id": 14446,
+      "title": "Docker: Up & Running: Building Portable Linux Container Applications",
+      "author": "Sean P. Kane, Karl Matthias",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/docker-up-running/9781098135899/",
+      "doi": "",
+      "note": "提供Docker的深入指南，包括详细解释如何使用Docker Compose定义和运行多容器应用。",
+      "order": 2,
+      "created_at": "2025-09-05T08:52:54.545025Z",
+      "updated_at": "2025-09-10T02:00:37.781550Z"
+    },
+    {
+      "id": 14447,
+      "title": "Building Machine Learning Pipelines",
+      "author": "Hannes Hapke and Catherine Nelson",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "364",
+      "url": "https://www.oreilly.com/library/view/building-machine-learning/9781492053151/",
+      "doi": "",
+      "note": "探讨容器化作为可重现机器学习管道的基础组成部分，为在MLOps中使用Docker Compose等工具提供背景。",
+      "order": 3,
+      "created_at": "2025-09-05T08:52:54.547931Z",
+      "updated_at": "2025-09-10T02:00:20.591510Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

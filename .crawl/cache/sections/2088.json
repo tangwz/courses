@@ -1,0 +1,45 @@
+{
+  "id": 2088,
+  "title": "高级函数参数",
+  "meta_title": "Python 高级函数参数（*args, **kwargs）",
+  "meta_description": "掌握 `*args` 和 `**kwargs` 的使用，以创建灵活的 Python 函数。",
+  "content": "<p>创建函数，特别是那些为数据分析或机器学习 (machine learning)工作流程设计、需要重复使用的复杂函数时，经常会遇到事先无法确定用户可能需要传递多少参数 (parameter)的情况。Python 提供强大的机制来处理这种灵活性：<code>*args</code> 用于可变非关键字参数，<code>**kwargs</code> 用于可变关键字参数。</p>\n<h3>接受任意数量的位置参数 (parameter)：<code>*args</code></h3>\n<p>有时，您希望函数接受任意数量的位置参数。例如，设想一个旨在计算多个测量值平均值的函数，但每次调用时测量值的数量可能会不同。这时 <code>*args</code> 就派上用场了。</p>\n<p>当您定义一个前面带有星号 (<code>*</code>) 的函数参数（例如 <code>*args</code>）时，Python 会将函数调用期间传递的任何额外位置参数收集到一个元组中，并将其赋值给该参数。<code>args</code> 这个名称是一个惯例，但从技术上讲，您可以使用任何有效的变量名（例如 <code>*numbers</code>、<code>*values</code>）。</p>\n<p>请看这个示例：</p>\n<pre><code class=\"language-python\">def calculate_sum(*numbers):\r\n  \"\"\"计算任意数量数值参数的总和。\"\"\"\r\n  print(f\"接收到的参数作为元组: {numbers}\")\r\n  total = 0\r\n  for number in numbers:\r\n    total += number\r\n  return total\r\n\r\n# 用不同数量的参数调用函数\r\nsum1 = calculate_sum(1, 2, 3)\r\nprint(f\"总和 1: {sum1}\")\r\n\r\nsum2 = calculate_sum(10, 20, 30, 40, 50)\r\nprint(f\"总和 2: {sum2}\")\r\n\r\nsum3 = calculate_sum(5)\r\nprint(f\"总和 3: {sum3}\")\r\n\r\nsum4 = calculate_sum() # 即使没有额外参数也能正常工作\r\nprint(f\"总和 4: {sum4}\")\n</code></pre>\n<p>在每次调用中，参数 <code>1, 2, 3</code> 或 <code>10, 20, 30, 40, 50</code> 等会被收集到函数内的 <code>numbers</code> 元组中。这使得 <code>calculate_sum</code> 函数无论提供了多少数字都能有效运行。这种模式在数据科学中对于可能从可变数量的输入数组或列中聚合数据的函数很有用。</p>\n<h3>接受任意数量的关键字参数 (parameter)：<code>**kwargs</code></h3>\n<p>同样，您可能需要一个函数来接受任意数量的关键字参数（以 <code>key=value</code> 格式传递的参数）。这在为一个过程设置可选的配置参数或定义元数据时很常见。Python 为此使用双星号 (<code>**</code>) 语法，通常是 <code>**kwargs</code>（关键字参数）。</p>\n<p>当 <code>**kwargs</code> 用于函数定义时，Python 会将任何与其它已定义参数名不匹配的关键字参数收集到一个字典中。字典的键是参数名（字符串形式），值是对应的参数值。</p>\n<p>让我们看一个模拟记录处理详情的函数的例子：</p>\n<pre><code class=\"language-python\">def log_processing_step(step_name, status, **details):\r\n  \"\"\"记录数据处理步骤的详情。\"\"\"\r\n  print(f\"--- 日志条目 ---\")\r\n  print(f\"步骤: {step_name}\")\r\n  print(f\"状态: {status}\")\r\n  if details:\r\n    print(\"附加详情：\")\r\n    for key, value in details.items():\r\n      print(f\"  {key}: {value}\")\r\n  print(f\"-----------------\\n\")\r\n\r\n# 用不同的关键字参数调用函数\r\nlog_processing_step(\"Data Loading\", \"Success\", source_file=\"data.csv\", rows_loaded=1500)\r\n\r\nlog_processing_step(\"Feature Scaling\", \"Completed\", method=\"StandardScaler\", columns_scaled=5)\r\n\r\nlog_processing_step(\"Model Training\", \"Warning\", algorithm=\"LinearRegression\") # 没有额外详情\n</code></pre>\n<p>在第一次调用中，<code>source_file=\"data.csv\"</code> 和 <code>rows_loaded=1500</code> 被收集到 <code>details</code> 字典中：<code>{'source_file': 'data.csv', 'rows_loaded': 1500}</code>。在第二次调用中，<code>details</code> 变为 <code>{'method': 'StandardScaler', 'columns_scaled': 5}</code>。在第三次调用中，<code>details</code> 是一个空字典。这使得 <code>log_processing_step</code> 能够灵活处理不同级别的详情，这是一种在配置 Scikit-learn 等库中的步骤或定义绘图函数参数时经常出现的模式。</p>\n<h3>结合使用 <code>*args</code> 和 <code>**kwargs</code></h3>\n<p>您可以在同一个函数定义中同时使用 <code>*args</code> 和 <code>**kwargs</code> 来接受任意位置参数 (parameter)和关键字参数。函数定义中参数的标准顺序是：</p>\n<ol>\n<li>标准位置参数</li>\n<li><code>*args</code></li>\n<li>标准仅限关键字参数（如果有）</li>\n<li><code>**kwargs</code></li>\n</ol>\n<p>这是一个包含两者的示例：</p>\n<pre><code class=\"language-python\">def flexible_function(required_param, *args, default_kwarg='default', **kwargs):\r\n  \"\"\"演示如何使用标准参数、*args、默认关键字参数和**kwargs。\"\"\"\r\n  print(f\"必选参数: {required_param}\")\r\n  print(f\"默认关键字参数: {default_kwarg}\")\r\n\r\n  if args:\r\n    print(f\"位置参数 (*args): {args}\")\r\n\r\n  if kwargs:\r\n    print(f\"关键字参数 (**kwargs): {kwargs}\")\r\n  print(\"-\" * 20)\r\n\r\nflexible_function(10)\r\nflexible_function(20, 100, 200)\r\nflexible_function(30, default_kwarg='custom')\r\nfle_function(40, 101, 102, config_option='A', user_id=99)\r\nfle_function(50, config_option='B', user_id=100, default_kwarg='overridden')\n</code></pre>\n<p>注意看不同参数组合是如何正确赋值给 <code>required_param</code>、<code>args</code>、<code>default_kwarg</code> 和 <code>kwargs</code> 的。</p>\n<h3>函数调用时的参数 (parameter)解包</h3>\n<p>星号 (<code>*</code>) 和双星号 (<code>**</code>) 运算符也可以在 <em>调用</em> 函数时使用。这允许您将序列（如列表或元组）“解包”为位置参数，将字典“解包”为关键字参数。</p>\n<pre><code class=\"language-python\">def process_data(id, value, category):\r\n  \"\"\"一个期望三个特定参数的简单函数。\"\"\"\r\n  print(f\"处理 ID: {id}, 值: {value}, 类别: {category}\")\r\n\r\n# 存储在列表/元组中的数据\r\ndata_list = [101, 55.5, 'Electronics']\r\nprocess_data(*data_list) # 将列表解包为位置参数\r\n\r\n# 存储在字典中的数据\r\ndata_dict = {'id': 202, 'value': 78.9, 'category': 'Clothing'}\r\nprocess_data(**data_dict) # 将字典解包为关键字参数\r\n\r\n# 也可以结合使用：\r\nmore_data_dict = {'value': 15.2, 'category': 'Books'}\r\nprocess_data(303, **more_data_dict) # 位置传递 'id'，其他通过字典传递\n</code></pre>\n<p>当函数调用的参数是动态生成或存储在数据结构中时，这种解包机制非常有用。</p>\n<p>了解 <code>*args</code> 和 <code>**kwargs</code> 对于编写灵活的 Python 函数很重要。在数据科学和机器学习 (machine learning)中，这种灵活性使您能够创建更通用的工具，优雅地处理不同的输入，并通过可选参数配置模型训练或数据转换管道等复杂操作，从而编写出更具复用性和可维护性的代码。</p>",
+  "slug": "advanced-function-arguments",
+  "updates": [],
+  "references": [
+    {
+      "id": 4752,
+      "title": "Fluent Python: Clear, Concise, and Effective Programming",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056300/",
+      "doi": "",
+      "note": "一本关于Python高级特性的综合指南，清晰地说明了灵活函数参数及其在函数设计中的实际应用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:36.773282Z",
+      "updated_at": "2025-09-07T20:04:10.742208Z"
+    },
+    {
+      "id": 4753,
+      "title": "Python Cookbook, 3rd Edition",
+      "author": "David Beazley and Brian K. Jones",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "706",
+      "url": "https://www.vitalsource.com/products/python-cookbook-david-beazley-brian-k-jones-v9781449357368",
+      "doi": "",
+      "note": "提供了Python高级编程的实用技巧和解决方案，包括在函数中处理可变位置参数和关键字参数的具体技术。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:36.790150Z",
+      "updated_at": "2025-09-07T20:04:12.818443Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

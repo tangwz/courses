@@ -1,0 +1,771 @@
+{
+  "id": 102,
+  "title": "强化学习导论",
+  "meta_title": "强化学习导论课程",
+  "meta_description": "学习强化学习原理、Q学习和DQN等算法以及实现技术。构建智能体。中级水平。",
+  "description": "<p>学习强化学习 (reinforcement learning)（RL）的基本原理，包括马尔可可夫决策过程、Q学习、SARSA以及深度Q网络概览。本课程提供理论知识和实践应用能力，用于构建通过与环境交互学习最优行为的智能体。适合具有机器学习 (machine learning)基本知识的工程师和开发人员。</p>",
+  "short_description": "使用Q学习和DQN等核心强化学习技术，构建能通过交互学习最优策略的智能体。",
+  "excerpt": "掌握强化学习的实践技能。理解Q学习和SARSA等核心算法，并使用Python在模拟环境中实现能进行决策的智能体。",
+  "prerequisites": "机器学习和Python编程知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "强化学习基本原理",
+      "description": "理解强化学习的核心组成部分：智能体、环境、状态、动作、奖励、策略。"
+    },
+    {
+      "topic": "马尔可夫决策过程",
+      "description": "使用MDPs表述问题并理解其性质。"
+    },
+    {
+      "topic": "值函数与贝尔曼方程",
+      "description": "掌握状态值函数和动作值函数的原理并推导贝尔曼方程。"
+    },
+    {
+      "topic": "无模型学习",
+      "description": "实现并区分蒙特卡洛和时序差分学习方法（Q学习、SARSA）。"
+    },
+    {
+      "topic": "函数逼近",
+      "description": "在强化学习中应用函数逼近技术，处理大规模状态空间。"
+    },
+    {
+      "topic": "深度Q网络（DQN）",
+      "description": "理解DQN的基本原理及其组成部分，如经验回放。"
+    },
+    {
+      "topic": "强化学习实现",
+      "description": "使用Python和相关库构建并训练简单的强化学习智能体。"
+    }
+  ],
+  "duration": 24,
+  "slug": "intro-to-reinforcement-learning",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-04T01:15:40.134381Z",
+  "updated_at": "2026-10-02T08:16:48.495399Z",
+  "chapters": [
+    {
+      "id": 475,
+      "title": "强化学习基本原理",
+      "meta_title": "强化学习基本原理：智能体、环境、奖励",
+      "meta_description": "理解强化学习系统的基本组成部分，包括智能体、环境、状态、动作和奖励。",
+      "number": 1,
+      "slug": "foundations-reinforcement-learning",
+      "content": "本章为理解强化学习 (RL) 奠定基础。我们将从定义强化学习开始，并将其与其他机器学习方法进行比较。您将了解到下列核心组成部分：做出决策的*智能体*、智能体运行所在的*环境*、描述情境的*状态*、智能体可采取的*动作*，以及作为反馈收到的*奖励*。\r\n\r\n我们将考察智能体的行为如何由*策略*决定，以及学习过程如何通过*交互循环*展开。*回合式*任务和*持续性*任务之间的区别也将得到解释。最后，我们将讲解如何使用 Gymnasium 和 NumPy 等库搭建 Python 环境的实际步骤。掌握这些原理是构建能够学习最优行为的智能体的第一步。",
+      "sections": [
+        {
+          "id": 1549,
+          "title": "什么是强化学习？",
+          "meta_title": "强化学习是什么",
+          "meta_description": "清晰说明强化学习的模式以及它与其他机器学习类型的区别。",
+          "slug": "what-is-reinforcement-learning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1551,
+          "title": "智能体与环境",
+          "meta_title": "强化学习智能体与环境互动",
+          "meta_description": "阐明强化学习中智能体与环境的作用及其互动方式。",
+          "slug": "agents-and-environments",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1555,
+          "title": "状态、动作与奖励",
+          "meta_title": "强化学习中的状态、动作、奖励",
+          "meta_description": "了解强化学习的基本要素：表示情境的状态、可用的动作以及作为反馈的奖励。",
+          "slug": "states-actions-rewards",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1558,
+          "title": "策略：将状态映射到动作",
+          "meta_title": "强化学习中的策略",
+          "meta_description": "说明强化学习中策略的含义以及它们如何决定智能体的行为。",
+          "slug": "policies-mapping-states-actions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1561,
+          "title": "强化学习工作流程：交互循环",
+          "meta_title": "强化学习交互循环",
+          "meta_description": "描述典型强化学习设置中智能体与环境交互的循环过程。",
+          "slug": "rl-workflow-interaction-loops",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1565,
+          "title": "强化学习任务类型：回合制与连续制",
+          "meta_title": "回合制与连续制强化学习任务",
+          "meta_description": "区分有自然终点（回合制）和无限期运行（连续制）的强化学习任务。",
+          "slug": "episodic-vs-continuing-tasks",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1569,
+          "title": "强化学习与其他学习类型的比较",
+          "meta_title": "强化学习与监督/无监督学习的比较",
+          "meta_description": "比较和对比强化学习与监督和无监督机器学习方法。",
+          "slug": "comparing-rl-other-learning",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1571,
+          "title": "为强化学习搭建Python环境",
+          "meta_title": "强化学习的Python环境设置",
+          "meta_description": "关于安装强化学习开发所需Python库（如Gymnasium、NumPy）的指南。",
+          "slug": "setting-up-python-environment-rl",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 478,
+      "title": "马尔可夫决策过程 (MDPs)",
+      "meta_title": "强化学习中的马尔可夫决策过程 (MDPs)",
+      "meta_description": "了解如何使用马尔可夫决策过程 (MDPs) 对序贯决策问题进行正式建模。",
+      "number": 2,
+      "slug": "markov-decision-processes-mdps",
+      "content": "在智能体、环境及其互动这些核心思想之上，我们现在需要一个正式的框架来描述强化学习所解决的问题。本章将介绍马尔可夫决策过程 (MDPs)，这是一种对序贯决策问题进行建模的常用数学工具，这类问题中的结果部分随机，部分受决策者控制。\r\n\r\n你将了解如何定义一个MDP的主要组成部分：\r\n*   环境可能处于的状态集合 ($S$)。\r\n*   智能体可以采取的动作集合 ($A$)。\r\n*   状态转移概率 ($P$)，它定义了环境的动态特性 ($P(s'|s, a)$)。\r\n*   奖励函数 ($R$)，它规定了即时反馈 ($R(s, a, s')$)。\r\n*   折扣因子 ($\\gamma$)，它用来管理未来奖励的重要性。\r\n\r\n我们将研究智能体的行为如何由策略 ($\\pi$) 来定义，以及如何使用价值函数 ($V^\\pi$ 和 $Q^\\pi$) 来评估状态和状态-动作对的“优劣”。这将帮助我们理解MDP框架下强化学习的目标：即找到一个最优策略 ($\\pi^*$)，使其最大化预期累积奖励。",
+      "sections": [
+        {
+          "id": 1576,
+          "title": "序贯决策建模",
+          "meta_title": "序贯决策模型",
+          "meta_description": "介绍对具有长期影响的决策问题进行建模的挑战。",
+          "slug": "modeling-sequential-decision-making",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1581,
+          "title": "MDP的正式定义",
+          "meta_title": "马尔可夫决策过程的正式定义",
+          "meta_description": "定义MDP的组成部分：状态、动作、转移概率、奖励和折扣因子。",
+          "slug": "formal-definition-mdp",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1583,
+          "title": "状态转移概率",
+          "meta_title": "MDPs中的状态转移概率",
+          "meta_description": "理解状态转移概率如何建模环境的动态特性。",
+          "slug": "state-transition-probabilities",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1586,
+          "title": "奖励函数",
+          "meta_title": "MDP奖励函数说明",
+          "meta_description": "说明奖励函数在马尔可夫决策过程中定义目标的作用。",
+          "slug": "reward-functions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1589,
+          "title": "回报：未来累积奖励",
+          "meta_title": "强化学习中回报的计算",
+          "meta_description": "将“回报”定义为智能体旨在最大化的总贴现奖励。",
+          "slug": "return-cumulative-future-rewards",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1592,
+          "title": "未来奖励的折现",
+          "meta_title": "马尔可夫决策过程和强化学习中的折现因子",
+          "meta_description": "解释马尔可夫决策过程中的折现因子伽马 (\\gamma) 的作用和影响。",
+          "slug": "discounting-future-rewards",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1596,
+          "title": "策略与价值函数 (Vπ, Qπ)",
+          "meta_title": "MDP中的策略与价值函数",
+          "meta_description": "介绍状态价值函数 (Vπ) 和动作价值函数 (Qπ) 及其与策略的关系。",
+          "slug": "policies-value-functions",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1599,
+          "title": "寻找最优策略",
+          "meta_title": "MDP 中的最优策略和价值函数",
+          "meta_description": "定义最优策略 ($π*$) 和最优价值函数 ($V*$, $Q*$) 及其意义。",
+          "slug": "finding-optimal-policies",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 482,
+      "title": "估算值函数",
+      "meta_title": "估算值函数：贝尔曼方程",
+      "meta_description": "学习用于计算值函数的贝尔曼方程，并介绍动态规划方法。",
+      "number": 3,
+      "slug": "estimating-value-functions",
+      "content": "在上一章中，我们使用马尔可夫决策过程 (MDP) 对序列决策问题进行了形式化。我们定义了状态、动作、奖励，以及最大化未来累积奖励（回报）的目标。一个核心思想是值函数，它量化了智能体在遵循策略 $\\pi$ 时，处于特定状态 ($V^{\\pi}(s)$) 或在某个状态采取特定动作 ($Q^{\\pi}(s,a)$) 的优劣程度。\r\n\r\n本章将着重介绍计算这些值函数的方法。我们将引入**贝尔曼方程**，它根据后继状态的期望值来表示状态或状态-动作对的价值。这些方程构成了许多强化学习算法的依据。\r\n\r\n具体来说，您将学到：\r\n\r\n*   **贝尔曼期望方程**，它递归地关联了策略 $\\pi$ 的值函数与自身。\r\n*   **贝尔曼最优方程**，它定义了最优策略 $\\pi^*$ 的值函数。\r\n*   **动态规划 (DP)** 方法，特别是**策略迭代**和**值迭代**，它们在*给定环境完整模型（MDP）*的情况下，能够计算最优策略和值函数。\r\n*   **动态规划的局限性**，特别是它对已知模型的依赖，这为后续章节讨论的无模型方法提供了理由。\r\n\r\n学完本章，您将明白当环境动态完全已知时，如何从理论上计算最优值函数和策略。",
+      "sections": [
+        {
+          "id": 1604,
+          "title": "贝尔曼期望方程",
+          "meta_title": "贝尔曼期望方程解析",
+          "meta_description": "推导并理解 Vπ 和 Qπ 的贝尔曼期望方程。",
+          "slug": "bellman-expectation-equation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1607,
+          "title": "贝尔曼最优方程",
+          "meta_title": "贝尔曼最优方程说明",
+          "meta_description": "推导并理解V*和Q*的贝尔曼最优方程。",
+          "slug": "bellman-optimality-equation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1610,
+          "title": "求解贝尔曼方程 (概述)",
+          "meta_title": "求解贝尔曼方程的方法",
+          "meta_description": "概述求解贝尔曼方程的方法。",
+          "slug": "solving-bellman-equations-overview",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1612,
+          "title": "动态规划：策略迭代",
+          "meta_title": "策略迭代算法说明",
+          "meta_description": "描述策略迭代算法（策略评估和策略改进步骤）。",
+          "slug": "dynamic-programming-policy-iteration",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1615,
+          "title": "动态规划：值迭代",
+          "meta_title": "值迭代算法说明",
+          "meta_description": "描述了直接寻找最优值函数的值迭代算法。",
+          "slug": "dynamic-programming-value-iteration",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1619,
+          "title": "动态规划的局限性",
+          "meta_title": "动态规划在强化学习中的局限性",
+          "meta_description": "讨论动态规划方法对理想环境模型的要求。",
+          "slug": "limitations-dynamic-programming",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 484,
+      "title": "蒙特卡洛方法",
+      "meta_title": "强化学习中的蒙特卡洛方法",
+      "meta_description": "学习使用蒙特卡洛方法进行预测和控制的免模型强化学习。",
+      "number": 4,
+      "slug": "monte-carlo-methods",
+      "content": "在前几章中，我们建立了马尔可夫决策过程（MDPs）的框架，并使用动态规划方法寻找最优策略。动态规划的一个主要局限是需要环境的完整模型，包括状态转移概率和奖励函数。通常，这样的模型是不可用的。\r\n\r\n本章介绍蒙特卡洛（MC）方法，这是一类免模型的强化学习算法。蒙特卡洛方法直接从经验片段中学习，无需预先知道环境的运行方式。它们通过平均从交互序列（片段）中获得的样本回报来运作。\r\n\r\n在这里，您将侧重于：\r\n\r\n*   从完整片段中学习的基本思想。\r\n*   使用蒙特卡洛进行*预测*：估计状态价值函数 $V^\\pi$。\r\n*   应用蒙特卡洛进行*控制*：通过估计动作价值函数 $Q^\\pi$ 来寻找最优策略。\r\n*   了解*同策略*和*异策略*蒙特卡洛方法之间的区别。\r\n*   应对蒙特卡洛控制中探索的需求，例如，使用 $\\epsilon$-柔性策略。\r\n*   实现基本的蒙特卡洛预测。\r\n\r\n通过学习蒙特卡洛方法，您将了解如何纯粹从采样经验中学习最优行为，这是解决环境规则未知问题所需的一个步骤。",
+      "sections": [
+        {
+          "id": 1622,
+          "title": "基于完整回合的学习",
+          "meta_title": "基于回合的学习：蒙特卡洛方法",
+          "meta_description": "介绍蒙特卡洛方法如何通过完整回合中的样本回报进行学习。",
+          "slug": "learning-from-complete-episodes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1624,
+          "title": "蒙特卡洛预测：估计 Vπ",
+          "meta_title": "蒙特卡洛预测用于价值估计",
+          "meta_description": "解释首次访问和每次访问蒙特卡洛方法，用于估计状态值函数。",
+          "slug": "monte-carlo-prediction",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1628,
+          "title": "蒙特卡洛控制：估算 Qπ",
+          "meta_title": "蒙特卡洛控制用于最优策略",
+          "meta_description": "将MC预测扩展到控制，通过估算动作价值函数（Qπ）。",
+          "slug": "monte-carlo-control",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1632,
+          "title": "同策略学习与异策略学习对比",
+          "meta_title": "同策略与异策略强化学习方法对比",
+          "meta_description": "区分同策略（学习所遵循的策略）和异策略（学习不同的策略）方法。",
+          "slug": "on-policy-vs-off-policy-learning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1635,
+          "title": "无非固定起点MC控制",
+          "meta_title": "使用$\\epsilon$-柔性策略的MC控制",
+          "meta_description": "讨论类似$\\epsilon$-柔性策略的技术，以确保同策略MC控制中的试探。",
+          "slug": "mc-control-no-exploring-starts",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1638,
+          "title": "同策略首次访问蒙特卡洛控制的实现",
+          "meta_title": "实现同策略首次访问蒙特卡洛控制",
+          "meta_description": "概述同策略首次访问蒙特卡洛控制的算法。",
+          "slug": "on-policy-first-visit-mc-control",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1640,
+          "title": "离策略蒙特卡洛预测与控制简介",
+          "meta_title": "离策略蒙特卡洛方法简介",
+          "meta_description": "介绍离策略蒙特卡洛方法中重要性采样的思路。",
+          "slug": "off-policy-mc-prediction-control",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1641,
+          "title": "实践：实现蒙特卡洛预测",
+          "meta_title": "实践实现蒙特卡洛预测",
+          "meta_description": "动手编码实践，实现基本的蒙特卡洛预测算法。",
+          "slug": "practice-implementing-mc-prediction",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 487,
+      "title": "时序差分学习",
+      "meta_title": "强化学习中的时序差分（TD）学习",
+      "meta_description": "了解时序差分（TD）学习，包括SARSA和Q学习算法。",
+      "number": 5,
+      "slug": "temporal-difference-learning",
+      "content": "在上一章中，我们审视了蒙特卡洛方法，这类方法只在一个完整的回合结束后才更新价值估计。这意味着必须等待最终结果确定，该回合的学习才能进行。\r\n\r\n时序差分（TD）学习提供了一种不同的方式，它使得每一步之后都能进行更新。\r\n\r\nTD方法直接从经验中学习，这一点与蒙特卡洛方法相似。然而，与蒙特卡洛不同的是，它们部分基于其他*当前已学到*的估计来更新价值估计，而无需等待回合的最终结果。这种技术被称为自举。它使得TD方法能够从不完整的回合中学习，并且在实际中通常比蒙特卡洛方法收敛更快。\r\n\r\n本章将介绍时序差分学习的基础内容。我们将涉及：\r\n\r\n*   用于估计状态价值函数 $V_\\pi$ 的基本TD预测算法TD(0)。\r\n*   与蒙特卡洛方法相比，TD学习的优势。\r\n*   两种主要的TD控制算法：SARSA（状态-动作-奖励-状态-动作，一种同策略方法）和Q学习（一种常用的离策略方法）。我们将分析它们的更新规则和主要区别。\r\n*   预期SARSA的介绍。\r\n*   Q学习算法在解决简单控制任务中的实际实现。\r\n\r\n在本章结束时，你将了解TD方法如何运作，并能够实现核心的TD算法，用于预测和控制问题。",
+      "sections": [
+        {
+          "id": 1642,
+          "title": "从不完整的回合中学习",
+          "meta_title": "TD 学习：从经验的每一步学习",
+          "meta_description": "说明时序差分学习作为一种基于其他已学习估计（自举）来更新估计值的方法。",
+          "slug": "learning-from-incomplete-episodes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1643,
+          "title": "TD(0) 预测：估计 Vπ",
+          "meta_title": "TD(0) Prediction for State Value Estimation",
+          "meta_description": "Explain the simplest TD method, TD(0), for estimating state-value functions.",
+          "slug": "td-0-prediction",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1644,
+          "title": "TD学习相对于蒙特卡洛方法的优势",
+          "meta_title": "TD Learning vs Monte Carlo Methods",
+          "meta_description": "Compare the benefits of TD learning (e.g., learning online, handling continuing tasks) versus MC methods.",
+          "slug": "advantages-td-learning-over-mc",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1645,
+          "title": "SARSA：同策略TD控制",
+          "meta_title": "SARSA算法：同策略TD控制",
+          "meta_description": "介绍SARSA算法，用于学习动作价值函数和同策略地改进策略。",
+          "slug": "sarsa-on-policy-td-control",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1646,
+          "title": "Q学习：离策略TD控制",
+          "meta_title": "Q学习算法：离策略TD控制",
+          "meta_description": "描述Q学习算法，一种流行的离策略TD控制方法。",
+          "slug": "q-learning-off-policy-td-control",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1647,
+          "title": "比较 SARSA 与 Q-学习",
+          "meta_title": "SARSA 与 Q-学习的比较",
+          "meta_description": "突出 SARSA 与 Q-学习在更新规则和行为方式上的差异。",
+          "slug": "comparing-sarsa-q-learning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1648,
+          "title": "期望SARSA",
+          "meta_title": "期望SARSA算法",
+          "meta_description": "介绍期望SARSA作为一种替代的TD控制算法。",
+          "slug": "expected-sarsa",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1649,
+          "title": "动手实践：Q-学习的实现",
+          "meta_title": "实践Q-学习算法的实现",
+          "meta_description": "为像Gridworld这样的简单环境实现Q-学习算法。",
+          "slug": "hands-on-implementing-q-learning",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 488,
+      "title": "强化学习中的函数逼近",
+      "meta_title": "强化学习中的函数逼近",
+      "meta_description": "学习如何使用函数逼近技术（线性模型、神经网络）来处理强化学习中的大型状态空间。",
+      "number": 6,
+      "slug": "function-approximation-rl",
+      "content": "到目前为止，我们已经学习了蒙特卡洛和时序差分学习等方法，这些方法都依赖于维护一个将每个状态或状态-动作对映射到值的表格。这种方法适用于状态数量可控的问题。然而，许多实际问题涉及的状态空间非常庞大，甚至是连续的，这使得表格方法由于内存和计算要求而变得不切实际。\r\n\r\n本章将通过引入**函数逼近**来解决这一挑战。我们不再为每个状态存储精确的值，而是使用一个参数化函数来逼近值函数，该函数的参数数量远少于状态数量。我们的目标是从已见过的状态泛化到未见过的状态。\r\n\r\n你将学习：\r\n\r\n*   为什么函数逼近对于大规模强化学习问题是必需的。\r\n*   如何使用适合函数逼近器的特征向量来表示状态。\r\n*   逼近值函数的方法，最初侧重于线性函数。\r\n*   如何使用梯度下降，特别是半梯度方法，基于强化学习经验更新逼近器的参数。\r\n*   非线性函数逼近器（例如神经网络）的介绍，以捕捉更复杂的值函数形状。\r\n\r\n到本章结束时，你将理解如何将强化学习算法应用于状态空间太大而无法用简单表格处理的问题。",
+      "sections": [
+        {
+          "id": 1650,
+          "title": "处理大规模状态空间",
+          "meta_title": "RL中大规模状态空间的挑战",
+          "meta_description": "讨论为什么表格方法在具有庞大或连续状态空间的环境中会失效。",
+          "slug": "handling-large-state-spaces",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1651,
+          "title": "价值函数近似 (VFA)",
+          "meta_title": "价值函数近似方法",
+          "meta_description": "介绍使用参数化函数近似价值函数的思想。",
+          "slug": "value-function-approximation-vfa",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1652,
+          "title": "状态表示的特征向量",
+          "meta_title": "使用特征向量表示状态",
+          "meta_description": "解释如何使用适用于函数逼近器的特征向量来表示状态。",
+          "slug": "feature-vectors-state-representation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1653,
+          "title": "价值函数逼近的线性方法",
+          "meta_title": "强化学习中的线性函数逼近",
+          "meta_description": "描述如何使用线性模型来逼近价值函数。",
+          "slug": "linear-methods-vfa",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1654,
+          "title": "用于参数学习的梯度下降",
+          "meta_title": "强化学习函数近似中的梯度下降",
+          "meta_description": "应用随机梯度下降 (SGD) 来学习函数近似器的参数。",
+          "slug": "gradient-descent-parameter-learning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1655,
+          "title": "半梯度 TD 方法",
+          "meta_title": "半梯度 TD 方法说明",
+          "meta_description": "说明为什么带有函数逼近的 TD 方法使用半梯度更新。",
+          "slug": "semi-gradient-td-methods",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1656,
+          "title": "使用神经网络进行价值函数近似",
+          "meta_title": "神经网络用于价值函数近似",
+          "meta_description": "介绍神经网络作为强化学习中强大的非线性函数近似器。",
+          "slug": "using-neural-networks-vfa",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1657,
+          "title": "实践：应用线性价值函数近似",
+          "meta_title": "实践：线性价值函数近似",
+          "meta_description": "在一个合适的问题上，使用线性方法实现价值函数近似。",
+          "slug": "practice-applying-linear-vfa",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 489,
+      "title": "深度Q网络(DQN)简介",
+      "meta_title": "深度Q网络(DQN)简介",
+      "meta_description": "了解深度Q网络(DQN)的基本内容，它将Q学习与深度神经网络进行结合。",
+      "number": 7,
+      "slug": "introduction-deep-q-networks-dqn",
+      "content": "在前一章函数逼近的思想之上，我们现在将重点放在Q学习与深度神经网络的结合。这种结合，即深度Q网络(DQN)，使智能体能够学到有效的策略，即使是在高维状态空间的环境中，例如游戏中的原始像素输入。\r\n\r\n本章将阐述DQN的工作方式。我们首先会讨论使用深度神经网络来逼近动作值函数$Q(s, a; \\theta)$的动因，这里$\\theta$代表网络参数。然后我们会分析在使用强化学习数据训练这些网络时可能出现的内在不稳定性，例如连续样本之间的关联性，以及训练过程中目标值不断变化的问题。你会学到两种主要方法来缓解这些问题：经验回放，它随机存储并抽取过去的转移数据；以及使用独立的、周期性更新的目标网络来提供稳定的Q值目标。在本章结束时，你将明白标准DQN算法的构成，以及其主要组成部分的设计原理。",
+      "sections": [
+        {
+          "id": 1658,
+          "title": "Q学习与深度学习的结合",
+          "meta_title": "深度Q学习：Q学习 + 神经网络",
+          "meta_description": "说明深度神经网络作为Q学习函数逼近器的应用缘由。",
+          "slug": "combining-q-learning-deep-learning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1659,
+          "title": "强化学习中神经网络的难题",
+          "meta_title": "强化学习中神经网络的稳定性问题",
+          "meta_description": "讨论在强化学习中训练神经网络时，由相关数据和移动目标引起的不稳定性问题。",
+          "slug": "challenges-neural-networks-rl",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1660,
+          "title": "经验回放机制",
+          "meta_title": "深度Q网络中的经验回放说明",
+          "meta_description": "说明如何存储和采样过去的经验（经验回放）以提高稳定性。",
+          "slug": "experience-replay-mechanism",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1661,
+          "title": "固定Q目标 (目标网络)",
+          "meta_title": "DQN中的固定Q目标和目标网络",
+          "meta_description": "描述了使用独立目标网络以稳定Q学习更新的方法。",
+          "slug": "fixed-q-targets-target-networks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1662,
+          "title": "DQN 算法结构",
+          "meta_title": "深度 Q-网络 (DQN) 算法结构",
+          "meta_description": "概述了包含经验回放和目标网络的完整深度 Q-网络算法。",
+          "slug": "dqn-algorithm-structure",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1663,
+          "title": "DQN 的网络结构设计考量",
+          "meta_title": "DQN 网络架构设计",
+          "meta_description": "简要讨论DQN常用的神经网络架构，根据输入类型（例如图像使用CNN）进行区分。",
+          "slug": "architectural-considerations-dqns",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1664,
+          "title": "动手实践：构建一个基础DQN",
+          "meta_title": "练习构建一个简单的DQN代理",
+          "meta_description": "基础DQN代理的代码演练或简单实现。",
+          "slug": "hands-on-building-basic-dqn",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 490,
+      "title": "策略梯度方法简介",
+      "meta_title": "强化学习中的策略梯度方法简介",
+      "meta_description": "了解策略梯度方法，这是一种直接优化策略的强化学习方法。",
+      "number": 8,
+      "slug": "introduction-policy-gradient-methods",
+      "content": "到目前为止，我们一直专注于基于价值的强化学习方法。我们学习了如何估计状态 ($V(s)$) 或状态-动作对 ($Q(s,a)$) 的价值，并基于这些价值来得出策略。本章将介绍一种不同的方法：策略梯度方法。\r\n\r\n使用策略梯度方法，我们直接学习一个参数化的策略，记作 $\\pi_\\theta(a|s)$。我们不先估计价值函数，而是旨在优化策略参数 $\\theta$ 以最大化预期回报。这种方法在具有连续动作空间的环境中或当我们希望学习随机策略时特别适用。\r\n\r\n在本章中，你将学习到：\r\n\r\n*   直接参数化和优化策略的基本思想。\r\n*   策略梯度定理背后的主要思想，它为这些方法提供了理论基础。\r\n*   REINFORCE 算法，一种基础的蒙特卡洛策略梯度技术。\r\n*   如何使用基线来帮助降低策略梯度估计中内在的方差。\r\n*   Actor-Critic 方法的简要介绍，这些方法结合了基于价值和基于策略学习的特点。\r\n*   基于策略和基于价值方法之间的权衡。\r\n\r\n我们将从原理上讲解这些算法，并指导你实现一个基本的 REINFORCE 智能体。",
+      "sections": [
+        {
+          "id": 1665,
+          "title": "直接学习策略",
+          "meta_title": "强化学习中的直接策略优化",
+          "meta_description": "介绍直接对策略进行参数化和优化的思想，而不是价值函数。",
+          "slug": "learning-policies-directly",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1666,
+          "title": "策略梯度定理 (理念)",
+          "meta_title": "策略梯度定理基本原理",
+          "meta_description": "阐述策略梯度定理的主要思想，避免过多数学细节。",
+          "slug": "policy-gradient-theorem-concept",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1667,
+          "title": "REINFORCE 算法",
+          "meta_title": "REINFORCE：蒙特卡洛策略梯度",
+          "meta_description": "描述 REINFORCE 算法，这是一种基本的蒙特卡洛策略梯度方法。",
+          "slug": "reinforce-algorithm",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1668,
+          "title": "降低方差的基线",
+          "meta_title": "在策略梯度中使用基线",
+          "meta_description": "说明减去基线（如状态值）如何降低策略梯度估计中的方差。",
+          "slug": "baselines-variance-reduction",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1669,
+          "title": "Actor-Critic 方法概述",
+          "meta_title": "Actor-Critic 方法概述",
+          "meta_description": "简要介绍 Actor-Critic 架构，其结合了基于策略和基于价值的方法。",
+          "slug": "actor-critic-methods-overview",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1670,
+          "title": "对比基于价值和基于策略的方法",
+          "meta_title": "基于价值与基于策略的强化学习方法",
+          "meta_description": "讨论基于价值（如Q-学习）和基于策略的方法的优缺点。",
+          "slug": "comparing-value-policy-based-methods",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1671,
+          "title": "实践：实现 REINFORCE",
+          "meta_title": "实践 REINFORCE 算法的实现",
+          "meta_description": "实现 REINFORCE 算法的简化版本。",
+          "slug": "practice-implementing-reinforce",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

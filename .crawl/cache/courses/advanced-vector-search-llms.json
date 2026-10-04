@@ -1,0 +1,505 @@
+{
+  "id": 149,
+  "title": "大型语言模型应用高级向量检索",
+  "meta_title": "高级向量检索：LLM应用技术",
+  "meta_description": "学习高级向量检索优化、索引、混合方法，以及扩展，面向高性能LLM应用和RAG系统。",
+  "description": "掌握精巧的向量检索技术，以提升大型语言模型应用的性能和关联性。本课程介绍先进的索引算法、优化策略、混合检索方法，以及在生产环境中扩展向量检索系统。适合希望构建高性能语义检索和检索增强生成（RAG）系统的工程师。",
+  "short_description": "应用精巧的向量检索方法，创建高性能语义检索和RAG系统。",
+  "excerpt": "实施并优化尖端向量检索方案，面向高要求的LLM应用，侧重于性能、可扩展性和关联性。",
+  "prerequisites": "机器学习与向量检索入门知识",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "高级索引算法",
+      "description": "实施并剖析复杂的近似最近邻（ANN）索引结构，如HNSW、IVF变体和基于图的方法。"
+    },
+    {
+      "topic": "向量检索优化",
+      "description": "应用量化（标量、乘积）等技术、先进过滤和硬件考量，以优化检索延迟和吞吐量。"
+    },
+    {
+      "topic": "混合检索实现",
+      "description": "将向量检索与传统方法（如关键词检索（BM25）和图技术）结合，以提升关联性。"
+    },
+    {
+      "topic": "元数据过滤策略",
+      "description": "设计并实施高效的预过滤和后过滤机制，使用相关元数据。"
+    },
+    {
+      "topic": "可扩展性与部署",
+      "description": "架构并管理分布式向量检索系统，面向大规模生产环境下的LLM应用。"
+    },
+    {
+      "topic": "性能调优",
+      "description": "调整索引参数和查询执行计划，以实现召回率、精确度和速度之间的最佳平衡。"
+    }
+  ],
+  "duration": 22,
+  "slug": "advanced-vector-search-llms",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-08T09:13:02.835965Z",
+  "updated_at": "2026-10-02T06:14:04.725858Z",
+  "chapters": [
+    {
+      "id": 779,
+      "title": "近似最近邻算法",
+      "meta_title": "进阶近似最近邻算法：用于向量搜索",
+      "meta_description": "HNSW、IVF、PQ及其他进阶近似最近邻（ANN）算法的详尽解读，应用于向量搜索。",
+      "number": 1,
+      "slug": "ann-algorithms",
+      "content": "在高维空间中查找查询向量的精确最近邻点，这在使用大型语言模型（LLM）的嵌入时很常见，但其扩展性较差。采用精确 $k$-NN 在数百万甚至数十亿向量中匹配最接近点，这对于诸多应用而言，计算耗费巨大，难以执行。\r\n\r\n近似最近邻（ANN）算法通过舍弃完全精确度，换取搜索速度的极大提高，从而提供了实用方案。\r\n\r\n本章将主要讲解几种广泛应用的ANN技术的核心运作方式，它们对于创建高效的向量搜索系统非常必要。我们将考察分层可导航小世界（HNSW）、倒排文件索引（IVF）的不同形式以及乘积量化（PQ）的构建与查询过程。我们还将介绍其他图结构方法，并探讨在选择合适算法时，如何根据构建时间、内存占用和查询表现等因素进行主要考量。本章最后会安排一次关于HNSW实现和调整的实际操作环节。",
+      "sections": [
+        {
+          "id": 3843,
+          "title": "重温向量嵌入与搜索基础",
+          "meta_title": "向量嵌入与搜索回顾",
+          "meta_description": "简要回顾向量嵌入、相似性度量标准和基本的最近邻搜索挑战。",
+          "slug": "vector-search-fundamentals-recap",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3845,
+          "title": "分层可导航小世界 (HNSW) 内部机制",
+          "meta_title": "HNSW 算法内部机制说明",
+          "meta_description": "HNSW 算法的详细说明，涵盖图构建、搜索过程和参数调整。",
+          "slug": "hnsw-internals",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3847,
+          "title": "倒排文件索引 (IVF) 变体",
+          "meta_title": "高级IVF索引变体",
+          "meta_description": "对IVFADC、IVFPQ及其他倒排文件索引变体的分析，以实现高效向量搜索。",
+          "slug": "ivf-variations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3849,
+          "title": "乘积量化 (PQ) 工作原理",
+          "meta_title": "乘积量化 (PQ) 解析",
+          "meta_description": "理解乘积量化的工作原理，实现向量压缩和更快搜索。",
+          "slug": "product-quantization-mechanics",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3851,
+          "title": "其他基于图的近似最近邻（ANN）方法（例如，NSG，Vamana）",
+          "meta_title": "替代的基于图的ANN算法",
+          "meta_description": "概述替代的基于图的ANN算法，如Navigating Spreading-out Graphs（NSG）和Vamana。",
+          "slug": "other-graph-ann-methods",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3853,
+          "title": "选择合适的近似最近邻算法：性能取舍",
+          "meta_title": "选择近似最近邻算法：性能取舍",
+          "meta_description": "比较近似最近邻算法的构建时间、索引大小、搜索速度、召回率和内存占用。",
+          "slug": "ann-algorithm-selection-tradeoffs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3854,
+          "title": "HNSW的实战操作：实现与调优",
+          "meta_title": "HNSW实战：实现与调优",
+          "meta_description": "关于实现HNSW索引并针对特定数据集调整其参数的实践环节。",
+          "slug": "hands-on-implementing-tuning-hnsw",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 781,
+      "title": "向量搜索性能与效率的优化",
+      "meta_title": "向量搜索性能优化技术",
+      "meta_description": "学习优化向量搜索速度、内存使用和效率的技术，包括量化和过滤。",
+      "number": 2,
+      "slug": "optimizing-vector-search-performance",
+      "content": "基于前一章的近似最近邻算法，本章将集中讨论优化向量搜索性能和资源使用的实际需求。低搜索延迟、高查询吞吐量和高效的内存管理，对于部署高效的LLM应用来说非常重要。\r\n\r\n本章将介绍实现这些目标的方法。我们将讨论向量压缩技术，例如标量量化（$SQ$）和乘积量化（$PQ$），以及其优化型（$OPQ$）变体。你将学习实现高效元数据过滤的策略，并比较前置过滤和后置过滤机制。此外，本章还将讨论硬件加速选项，如CPU SIMD指令和GPU，以及内存管理和缓存方法。完成本章学习将让你掌握实用技术，以调整向量搜索操作，提升速度和效率。",
+      "sections": [
+        {
+          "id": 3857,
+          "title": "量化技术：标量量化与乘积量化",
+          "meta_title": "标量量化与乘积量化技术对比",
+          "meta_description": "对比标量量化（SQ）和乘积量化（PQ）在向量压缩和性能优化方面的应用。",
+          "slug": "quantization-scalar-vs-product",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3859,
+          "title": "实现优化乘积量化 (OPQ)",
+          "meta_title": "实现优化乘积量化",
+          "meta_description": "应用优化乘积量化 (OPQ) 以提升PQ效果的方法。",
+          "slug": "implementing-opq",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3861,
+          "title": "二进制哈希与局部敏感哈希 (LSH) 回顾",
+          "meta_title": "二进制哈希与 LSH 概览",
+          "meta_description": "回顾二进制哈希方法与局部敏感哈希（LSH）用于近似搜索的原理。",
+          "slug": "binary-hashing-lsh-refresher",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3862,
+          "title": "高级过滤策略：预过滤与后过滤",
+          "meta_title": "向量搜索中的预过滤与后过滤",
+          "meta_description": "分析预过滤和后过滤与元数据的权衡及实施细节。",
+          "slug": "advanced-filtering-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3863,
+          "title": "将元数据与向量一同高效索引",
+          "meta_title": "用于过滤的高效元数据索引",
+          "meta_description": "为支持快速元数据过滤而设计数据库模式和索引的策略。",
+          "slug": "indexing-metadata-efficiently",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3865,
+          "title": "硬件加速考量 (CPU SIMD, GPU)",
+          "meta_title": "向量搜索的硬件加速",
+          "meta_description": "使用 CPU 单指令多数据指令和图形处理器来加速距离计算和搜索操作。",
+          "slug": "hardware-acceleration-considerations",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3867,
+          "title": "内存管理与缓存策略",
+          "meta_title": "向量搜索的内存管理与缓存",
+          "meta_description": "优化内存使用和为向量索引实施有效缓存的方法。",
+          "slug": "memory-management-caching",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3870,
+          "title": "实践：应用量化与过滤",
+          "meta_title": "实践：向量搜索优化",
+          "meta_description": "动手实践，应用量化和过滤技术以提升搜索性能。",
+          "slug": "practice-quantization-filtering",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 783,
+      "title": "混合搜索方法",
+      "meta_title": "混合搜索方法，提升相关性",
+      "meta_description": "将向量搜索与关键词、图及其他方法结合，构建有效的混合搜索系统。",
+      "number": 3,
+      "slug": "hybrid-search-approaches",
+      "content": "向量搜索提供强大的语义匹配能力。然而，仅依赖向量相似度有时可能无法给出最相关的结果，尤其是在精确词语匹配或特定关键词限制重要时。\r\n\r\n本章着重介绍混合搜索方法，这些方法通过将向量搜索与BM25等算法实现的关键词检索等既有方法结合，从而缓解这些局限性。我们将探讨实现这些组合系统的策略，包括合并不同来源结果的技术（结果融合）和有效的重排序方法。您将获得关于构建和调整混合系统的实用知识，以提升要求高应用的搜索相关性。",
+      "sections": [
+        {
+          "id": 3872,
+          "title": "纯向量搜索的局限性",
+          "meta_title": "了解向量搜索的局限性",
+          "meta_description": "讨论纯向量搜索可能不足之处，例如精确关键词匹配或冷启动。",
+          "slug": "limitations-pure-vector-search",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3873,
+          "title": "结合关键词搜索（BM25, TF-IDF）",
+          "meta_title": "关键词搜索（BM25）与向量搜索的结合",
+          "meta_description": "关于稠密向量检索与稀疏关键词方法（如BM25）结合的方式。",
+          "slug": "integrating-keyword-search",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3876,
+          "title": "结果合并与排序方法",
+          "meta_title": "混合检索结果结合与排序",
+          "meta_description": "用于合并和重新排序来自多种检索方法（向量、关键词）结果的技术。",
+          "slug": "result-fusion-ranking-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3877,
+          "title": "倒数排序融合（RRF）及其他融合算法",
+          "meta_title": "混合搜索中的倒数排序融合 (RRF)",
+          "meta_description": "实现倒数排序融合并研究用于组合搜索结果的其他算法。",
+          "slug": "rrf-fusion-algorithms",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3879,
+          "title": "基于图的向量搜索增强",
+          "meta_title": "运用图来增强向量搜索",
+          "meta_description": "借助知识图谱或其他图结构来提升向量搜索的上下文或结果。",
+          "slug": "graph-based-augmentation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3881,
+          "title": "多模态搜索的考量",
+          "meta_title": "多模态混合搜索的考量",
+          "meta_description": "构建涉及多种数据模态（文本、图像）的混合搜索系统的挑战与策略。",
+          "slug": "multi-modal-search-considerations",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3883,
+          "title": "动手实践：构建混合搜索流程",
+          "meta_title": "动手实践：构建混合搜索系统",
+          "meta_description": "实施混合搜索系统，结合向量和关键词检索的实践环节。",
+          "slug": "hands-on-hybrid-search-pipeline",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 785,
+      "title": "面向生产系统的向量搜索扩容",
+      "meta_title": "向量搜索扩容：生产策略",
+      "meta_description": "为大规模生产LLM应用设计和管理可扩展的分布式向量搜索系统。",
+      "number": 4,
+      "slug": "scaling-vector-search-production",
+      "content": "构建高效的向量搜索索引并对本地查询进行优化是基础步骤。然而，将这些系统迁移到处理真实流量和海量数据集时，会带来独特的运维和架构挑战。当向量数量 $N$ 增长到数十亿规模，且查询吞吐量 ($QPS$) 需要保持高水平时，前面讨论的单节点方法将变得不足。\r\n\r\n本章将着重介绍在生产规模下构建和管理能可靠、高效运行的向量搜索系统所需的策略和架构模式。你将了解到：\r\n\r\n*   针对向量搜索设计分布式系统架构。\r\n*   实现分片技术，以在多台机器上对大型索引进行分区。\r\n*   通过复制确保高可用性和容错性。\r\n*   使用负载均衡有效分配查询负载。\r\n*   监控向量搜索系统的主要性能指标。\r\n*   管理实时环境中的索引更新和维护。\r\n*   考虑大型部署的成本影响和优化策略。\r\n\r\n到本章结束时，你将理解构建能够支持严苛、大规模LLM应用的向量搜索方案所需的工程原理。",
+      "sections": [
+        {
+          "id": 3885,
+          "title": "分布式向量数据库架构",
+          "meta_title": "分布式向量数据库架构",
+          "meta_description": "常见分布式向量数据和搜索工作负载架构概览。",
+          "slug": "distributed-vector-db-architectures",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3887,
+          "title": "向量索引的分片策略",
+          "meta_title": "向量索引分片策略",
+          "meta_description": "将大型向量索引分区到多个分片以实现扩展性的技术。",
+          "slug": "sharding-strategies-vector-indexes",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3888,
+          "title": "复制与高可用性",
+          "meta_title": "向量搜索的复制与高可用性",
+          "meta_description": "通过复制确保分布式向量搜索系统的容错性和高可用性。",
+          "slug": "replication-high-availability",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3890,
+          "title": "负载均衡搜索查询",
+          "meta_title": "向量搜索查询的负载均衡",
+          "meta_description": "有效分配传入搜索查询到可用搜索节点的策略。",
+          "slug": "load-balancing-search-queries",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3892,
+          "title": "向量搜索性能指标监控",
+          "meta_title": "向量搜索性能指标监控",
+          "meta_description": "为监控系统运行状况，确定并跟踪必要指标（延迟、召回率、QPS、资源利用率）。",
+          "slug": "monitoring-vector-search-metrics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3894,
+          "title": "生产环境中索引的更新与维护",
+          "meta_title": "向量索引更新与维护",
+          "meta_description": "有效更新和维护生产环境中大型向量索引的方法。",
+          "slug": "index-updates-maintenance-production",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3896,
+          "title": "大规模部署的成本优化",
+          "meta_title": "向量搜索规模化中的成本优化",
+          "meta_description": "管理和优化大型向量搜索系统相关基础设施成本的技巧。",
+          "slug": "cost-optimization-large-scale",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3898,
+          "title": "实践：配置分布式系统",
+          "meta_title": "实践：分布式向量搜索配置",
+          "meta_description": "关于配置分布式向量数据库分片与复制的指导练习或模拟。",
+          "slug": "practice-distributed-setup-conceptual",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 787,
+      "title": "高级调优与评估",
+      "meta_title": "高级向量搜索调优与评估",
+      "meta_description": "微调向量搜索参数，并使用合适的指标和方法严格评估性能。",
+      "number": 5,
+      "slug": "advanced-tuning-evaluation",
+      "content": "构建和部署向量搜索系统，需要仔细考虑性能与相关性之间的权衡。本章介绍系统化方法，用于微调系统参数并进行严格评估，以确保您的实现达成目标。\r\n\r\n您将学习使用重要的评估指标，包括Recall@k、Precision@k和查询延迟，来衡量系统效能。我们将介绍构建合适真实数据集的方法，这对于可靠评估非常重要。本章详细说明了分析主要索引参数敏感性的技术，例如HNSW中的`efSearch`或IVF索引中的`nprobe`，以了解它们对性能的影响。\r\n\r\n此外，我们将考察设置A/B测试的实际策略，以比较不同的搜索配置；诊断常见的相关性问题；区分离线和在线评估方法；并根据特定应用需求调整调优方法，例如与更宽泛的语义搜索任务相比，针对检索增强生成（RAG）的应用。目标是为您提供优化和验证您先进向量搜索解决方案的工具。",
+      "sections": [
+        {
+          "id": 3900,
+          "title": "评估指标再审视：召回率、准确率、延迟",
+          "meta_title": "向量搜索评估指标回顾",
+          "meta_description": "详细查看召回率、准确率、延迟、QPS以及其他与向量搜索评估相关的指标。",
+          "slug": "evaluation-metrics-revisited",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3902,
+          "title": "构建用于评估的真实标准数据集",
+          "meta_title": "创建向量搜索评估的真实标准",
+          "meta_description": "创建可靠真实标准数据集以评估搜索相关性的方法与挑战。",
+          "slug": "building-ground-truth-datasets",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3904,
+          "title": "参数敏感度分析 (HNSW, IVF)",
+          "meta_title": "ANN参数敏感度分析",
+          "meta_description": "系统分析ANN主要参数（如efConstruction、efSearch、nprobe）对性能的影响。",
+          "slug": "parameter-sensitivity-analysis",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3906,
+          "title": "搜索算法的 A/B 测试框架",
+          "meta_title": "向量搜索算法的 A/B 测试",
+          "meta_description": "设计和实施 A/B 测试，以对比生产环境中不同向量搜索配置或算法的效果。",
+          "slug": "ab-testing-search-algorithms",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3909,
+          "title": "调试搜索相关性问题",
+          "meta_title": "调试向量搜索相关性问题",
+          "meta_description": "诊断和处理向量搜索系统相关性不足问题的办法。",
+          "slug": "debugging-search-relevance-issues",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3911,
+          "title": "在线与离线评估方法",
+          "meta_title": "在线与离线向量搜索评估",
+          "meta_description": "比较使用真值的离线评估与使用用户交互数据的在线评估。",
+          "slug": "online-offline-evaluation",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3912,
+          "title": "针对特定应用需求的调整（RAG 与 语义搜索）",
+          "meta_title": "针对RAG与语义搜索调整向量搜索",
+          "meta_description": "根据主要应用是RAG还是通用语义搜索来调整优化策略。",
+          "slug": "tuning-for-application-needs",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3914,
+          "title": "动手实践：全面性能评估",
+          "meta_title": "实践：向量搜索性能评估",
+          "meta_description": "实践环节，使用标准指标对向量搜索设置进行全面的性能评估。",
+          "slug": "hands-on-performance-evaluation",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

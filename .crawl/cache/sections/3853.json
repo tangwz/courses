@@ -1,0 +1,61 @@
+{
+  "id": 3853,
+  "title": "选择合适的近似最近邻算法：性能取舍",
+  "meta_title": "选择近似最近邻算法：性能取舍",
+  "meta_description": "比较近似最近邻算法的构建时间、索引大小、搜索速度、召回率和内存占用。",
+  "content": "<p>选择最适合的近似最近邻（ANN）算法并非放之四海而皆准的方案。HNSW、IVF 变体、PQ 以及其他基于图的方法等近似最近邻（ANN）算法，每种都有其独特的优缺点。选择合适的方法取决于您 LLM 应用的具体要求，尤其要权衡搜索速度、准确性（召回率）、内存占用、索引构建时间和可维护性。</p>\n<p>接下来，我们将细分比较这些算法的主要方面，以及不同方法表现如何。</p>\n<h3>核心权衡维度</h3>\n<p>评估 ANN 算法时，请考虑以下因素：</p>\n<ol>\n<li><strong>搜索速度（延迟 / 每秒查询次数 - QPS）：</strong> 算法为给定查询向量 (vector)找到近似近邻的速度有多快？这通常是面向用户的应用的一个重要指标。在可接受的延迟下，更高的 QPS 通常是期望的。</li>\n<li><strong>召回率：</strong> 算法在其近似集合中检索到真实 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 个最近邻的百分比是多少？更高的召回率意味着更好的准确性，但这通常以牺牲速度或内存为代价。召回率和速度之间的取舍是 ANN 的基本考量。</li>\n<li><strong>内存占用（索引大小）：</strong> 存储索引结构需要多少内存？这是一个主要限制，特别是对于非常大的数据集。像乘积量化 (quantization)（PQ）这样的技术专门设计用于减少内存占用，但这通常以牺牲部分召回率为代价。</li>\n<li><strong>索引构建时间：</strong> 从向量数据集构建 ANN 索引需要多长时间？对于静态数据集，这可能是一次性成本。对于需要频繁更新的动态数据集，构建时间（或执行增量更新的能力）变得更加重要。</li>\n<li><strong>可更新性：</strong> 在初始构建后，新向量可以多容易地添加到索引中，或删除或修改现有向量？某些结构（如 HNSW）允许相对容易地进行增量添加，而其他结构（如某些 IVF 变体）在发生重大变更后，可能需要部分或完全重建以获得最佳性能。</li>\n</ol>\n<h3>算法特点和权衡</h3>\n<p>让我们根据这些维度分析主要竞争者：</p>\n<h4>分层可导航小世界（HNSW）</h4>\n<ul>\n<li><strong>优点：</strong> 经过适当调整后，与其他方法相比，通常能提供领先的搜索速度和高召回率。很好地处理高维数据。支持相对高效的增量添加。</li>\n<li><strong>缺点：</strong> 由于存储每个向量 (vector)的图链接（可能跨多个层），内存占用高。索引构建时间可能较长，尤其是在使用高质量构建参数 (parameter)（<code>efConstruction</code>、<code>M</code>）时。调整参数（<code>efConstruction</code>、<code>M</code>、<code>efSearch</code>）需要仔细实验，以平衡构建时间、内存、搜索速度和召回率。删除元素可能很复杂，并且如果缺乏维护，性能可能会随时间下降。</li>\n<li><strong>最适合：</strong> 需要低延迟和高召回率，且内存资源充足的应用。数据集增量增长的场景。</li>\n</ul>\n<h4>倒排文件索引（IVF）变体（IVFADC、IVFPQ）</h4>\n<ul>\n<li><strong>优点：</strong> 与 HNSW 相比，内存占用显著降低，特别是与乘积量化 (quantization)（IVFPQ）结合时。构建时间通常比 HNSW 快。索引结构更简单。</li>\n<li><strong>缺点：</strong> 搜索速度和召回率高度依赖于 <code>nprobe</code> 参数（要搜索的倒排列表或桶的数量）。较低的 <code>nprobe</code> 速度快但召回率较低；较高的 <code>nprobe</code> 改善召回率但增加延迟，可能抵消对探测桶中精确搜索的速度优势。如果数据分布与初始聚类不匹配，性能可能会下降。添加新向量可能需要定期重新聚类和重建以获得最佳性能。在极高召回率目标（>0.95-0.99）下不如 HNSW 有效。</li>\n<li><strong>最适合：</strong> 内存占用是主要限制的非常大的数据集。适度召回率可接受，或延迟要求不那么严格，从而允许使用更高 <code>nprobe</code> 的应用。常与 PQ 结合使用，以显著节省内存。</li>\n</ul>\n<h4>乘积量化（PQ）</h4>\n<ul>\n<li><strong>优点：</strong> 主要是一种向量压缩技术。大幅减少存储向量（原始向量或 IVF 残差）的内存占用。通过使用预计算查找表（非对称距离计算 - ADC）加快距离计算。</li>\n<li><strong>缺点：</strong> 这是一种有损压缩方法，本质上会降低准确性/召回率。质量很大程度上取决于用于生成码本的训练数据以及子空间数量（<code>m</code>）和每个子空间的中心点数量（<code>k_s</code>）。需要训练步骤。</li>\n<li><strong>最适合：</strong> 与 IVF 等索引结构（形成 IVFPQ）结合使用，以管理庞大数据集的内存。也可用于检索后对由另一种 ANN 方法检索的候选进行重排。</li>\n</ul>\n<h4>其他基于图的方法（例如，NSG、Vamana）</h4>\n<ul>\n<li><strong>优点：</strong> 通常旨在改进 HNSW 的某些方面，例如可能更简单的图构建规则、不同的邻居选择策略或理论属性。可以达到有竞争力的性能。</li>\n<li><strong>缺点：</strong> 在生产系统中可能不如 HNSW 或 IVF 成熟或普及。调整参数和特定性能特征可能显著不同。与 HNSW/IVF 相比，在标准库中的可用性可能有限。</li>\n<li><strong>最适合：</strong> 在 HNSW 的特定权衡（例如内存）有问题，且替代图结构提供优势的情况下。通常在研究或专业实现中讨论。</li>\n</ul>\n<h3>量化 (quantization)的影响</h3>\n<p>需重申的是，量化（PQ、SQ、OPQ）通常叠加在 IVF 等索引结构之上。它主要通过减少内存和可能更快的距离计算来换取召回率。当您看到“IVFPQ”时，这意味着 IVF 结构定位候选桶（<code>nprobe</code>），并在这些桶中，使用压缩的 PQ 码近似计算距离。这种组合对于在大规模下平衡性能和资源使用非常有效。</p>\n<h3>过滤和更新</h3>\n<p>尽管稍后会更详细讨论，但请考虑您的应用是否需要根据元数据过滤结果（例如，“查找与 X 类似但仅在日期 Y 之后创建的文档”）。预过滤（在 ANN 搜索之前应用过滤器）通常更高效但更难实现，可能偏向于自然划分数据（如 IVF）的索引类型。后过滤（先进行 ANN 搜索，然后过滤结果）更简单但效率较低，因为它可能会检索到许多不相关的候选。添加或删除向量 (vector)的便利性也各不相同；HNSW 通常处理添加优于删除，而 IVF 在多次更新后可能需要定期重建以获得最佳性能。</p>\n<h3>做出决策：实用方法</h3>\n<ol>\n<li><strong>定义优先级：</strong> 什么最重要？是亚毫秒级延迟？99% 的召回率？最大限度地减少内存使用？平衡这些相互竞争的需求是主要难题。</li>\n<li><strong>表征数据：</strong> 多少向量 (vector)？维度是多少？数据分布是否倾斜？</li>\n<li><strong>考虑动态性：</strong> 数据集是静态的还是不断更新的？更新频率如何？</li>\n<li><strong>评估资源：</strong> 您的生产环境的内存和 CPU/GPU 限制是什么？</li>\n<li><strong>广泛基准测试：</strong> 理论比较很有用，但<strong>始终</strong>在您的特定数据集和查询负载上对不同的算法（HNSW、IVFPQ 等）及其重要参数 (parameter)（<code>efSearch</code>、<code>nprobe</code>、PQ 设置）进行基准测试。测量延迟、召回率（使用真实子集）、QPS 和内存使用。</li>\n</ol>\n<p>以下图表提供了一个简化的相对比较：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1ewfl7h\" \n              data-plot-definition='{\"layout\": {\"title\": \"近似最近邻算法的相对权衡\", \"barmode\": \"group\", \"yaxis\": {\"title\": \"相对性能/成本\"}, \"xaxis\": {\"title\": \"指标\"}, \"legend\": {\"traceorder\": \"normal\"}}, \"data\": [{\"type\": \"bar\", \"name\": \"HNSW\", \"x\": [\"搜索速度\", \"召回率\", \"内存占用\", \"构建时间\"], \"y\": [0.9, 0.9, 0.3, 0.4], \"marker\": {\"color\": \"#4263eb\"}}, {\"type\": \"bar\", \"name\": \"IVF+PQ\", \"x\": [\"搜索速度\", \"召回率\", \"内存占用\", \"构建时间\"], \"y\": [0.7, 0.7, 0.8, 0.7], \"marker\": {\"color\": \"#12b886\"}}, {\"type\": \"bar\", \"name\": \"精确 k-NN (基线)\", \"x\": [\"搜索速度\", \"召回率\", \"内存占用\", \"构建时间\"], \"y\": [0.1, 1.0, 0.6, 1.0], \"marker\": {\"color\": \"#adb5bd\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1ewfl7h\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>近似最近邻算法的相对比较。较高的条形图表示速度和召回率的性能更好，但内存占用和构建时间的成本更高。精确 k-NN 作为基线显示（完美召回，但搜索速度非常慢）。数值仅供参考。</p>\n</blockquote>\n<p>归根结底，选择合适的 ANN 算法是一个经验过程。从最符合您的主要限制的算法（例如，IVF 用于内存受限的场景，HNSW 侧重于延迟/召回率）开始，然后严格调整和基准测试，为您的特定 LLM 应用找到最佳操作点。</p>",
+  "slug": "ann-algorithm-selection-tradeoffs",
+  "updates": [],
+  "references": [
+    {
+      "id": 10267,
+      "title": "Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs",
+      "author": "Yury Malkov, Dmitry Yashunin",
+      "year": "2018",
+      "publisher": "IEEE Computer Society",
+      "journal": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+      "volume": "42",
+      "pages": "824-836",
+      "url": "https://doi.org/10.1109/TPAMI.2018.2889473",
+      "doi": "10.1109/TPAMI.2018.2889473",
+      "note": "介绍了分层可导航小世界图 (HNSW) 算法，详细说明其结构、构建和搜索过程，这是一种最先进的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T06:40:15.804833Z",
+      "updated_at": "2025-09-10T01:26:06.203782Z"
+    },
+    {
+      "id": 10269,
+      "title": "Billion-scale similarity search with GPUs",
+      "author": "Jeff Johnson, Matthijs Douze, Hervé Jégou",
+      "year": "2019",
+      "publisher": "IEEE-Institute of Electrical and Electronics Engineers Inc.",
+      "journal": "IEEE Transactions on Big Data",
+      "volume": "7",
+      "pages": "535-547",
+      "url": "https://doi.org/10.1109/TBDATA.2019.2921572",
+      "doi": "10.1109/TBDATA.2019.2921572",
+      "note": "描述了 Faiss 库，提供了各种 ANN 算法（包括 HNSW 和 IVF 变体）的高效实现，并提供了对其性能权衡的实际见解。",
+      "order": 3,
+      "created_at": "2025-09-05T06:40:15.824006Z",
+      "updated_at": "2025-09-09T12:45:41.796944Z"
+    },
+    {
+      "id": 10270,
+      "title": "Approximate Nearest Neighbor Search: A Survey",
+      "author": "Pengfei Zhang, Haonan Lu, Runzhe Zhao, Xiang Wang, Jiahui Zhang, Zhaoxin Zhang, Kai Zheng",
+      "year": "2023",
+      "publisher": "Association for Computing Machinery",
+      "journal": "ACM Computing Surveys",
+      "volume": "56",
+      "pages": "1-40",
+      "url": "https://dl.acm.org/doi/10.1145/3606990",
+      "doi": "10.1145/3606990",
+      "note": "一篇新的综述，提供了近似最近邻搜索算法的广泛概述和分类，涵盖了各种技术及其比较方面。",
+      "order": 4,
+      "created_at": "2025-09-05T06:40:15.826340Z",
+      "updated_at": "2025-09-10T01:26:02.089042Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

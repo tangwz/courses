@@ -1,0 +1,45 @@
+{
+  "id": 1794,
+  "title": "动手实践：并行计算",
+  "meta_title": "并行计算pmap实操",
+  "meta_description": "练习使用 `jax.pmap` 在可用设备上并行处理简单计算。",
+  "content": "<p><code>jax.pmap</code> 的实际应用涉及在可用设备上分发一个简单计算。<code>pmap</code> 遵循单程序多数据 (SPMD) 原则：相同的 Python 函数代码在所有参与设备上运行，但每个设备获取输入数据的各自部分。</p>\n<p>对于这些示例，JAX 将自动使用所有可用设备（如果未找到 GPU/TPU，则使用 CPU 核心；或使用所有可用 GPU/TPU）。您可以使用 <code>jax.device_count()</code> 查看 JAX 识别的设备数量。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport numpy as np\n\n# 检查可用设备\nnum_devices = jax.device_count()\nprint(f\"Number of devices available: {num_devices}\")\n\n# 获取设备列表\ndevices = jax.devices()\nprint(f\"Available devices: {devices}\")\n</code></pre>\n<p>如果您在只有 CPU 的机器上运行此代码，<code>jax.device_count()</code> 可能会返回 1 或 JAX 配置为视为独立设备的 CPU 核心数量（通常默认是 1，除非另行配置）。如果您有多个 GPU 或在 TPU Pod 切片上，它将报告可用加速器的数量。当 <code>num_devices > 1</code> 时，<code>pmap</code> 展现其真正的作用。即使只有一个设备，代码也会运行，但不会进行跨设备并行执行。</p>\n<h3>示例 1：简单数据并行</h3>\n<p>让我们定义一个我们想并行运行的简单函数：将数组乘以 2。</p>\n<pre><code class=\"language-python\"># 一个逐元素应用的简单函数\ndef scale_by_two(x):\n  print(\"Compiling and running scale_by_two...\") # 看看 JAX 何时进行追踪/运行\n  return x * 2\n</code></pre>\n<p>现在，让我们创建一些数据。对于 <code>pmap</code>，输入数据需要跨设备分片（分割）。最简单的方法是确保输入数组有一个前导轴，其大小等于设备数量。沿此轴的每个切片将发送到相应的设备。</p>\n<pre><code class=\"language-python\"># 创建可跨设备分割的数据\n# 让我们创建一个前导维度等于设备数量的数组\ndata_size_per_device = 4\ntotal_data_size = num_devices * data_size_per_device\nglobal_data = jnp.arange(total_data_size)\n\n# 重塑数据，使第一个维度与设备数量匹配\n# 每一行将发送到一个设备\nsharded_data = global_data.reshape((num_devices, data_size_per_device))\n\nprint(f\"Global data shape: {global_data.shape}\")\nprint(f\"Sharded data shape: {sharded_data.shape}\")\nprint(f\"Sharded data:\\n{sharded_data}\")\n</code></pre>\n<p>接下来，我们使用 <code>jax.pmap</code> 转换我们的函数。默认情况下，<code>pmap</code> 假设输入参数 (parameter)的第一个轴（轴 0）应映射到各个设备。</p>\n<pre><code class=\"language-python\"># 对我们的函数应用 pmap\nparallel_scale = jax.pmap(scale_by_two)\n\n# 在分片数据上运行并行函数\nresult = parallel_scale(sharded_data)\n\n# 让我们查看结果\nprint(f\"\\nOutput shape: {result.shape}\")\nprint(f\"Output type: {type(result)}\")\nprint(f\"Output content:\\n{result}\")\n</code></pre>\n<p>您应该注意到：</p>\n<ol>\n<li>“正在编译和运行...”消息最初可能每个设备打印一次（或由于缓存只打印一次），表明该函数正在为设备进行追踪和编译。</li>\n<li>输出 <code>result</code> 与输入 <code>sharded_data</code> 具有相同的形状。它是一个 JAX <code>ShardedDeviceArray</code>（或根据 JAX 版本而定的类似类型），表示数据分布在各个设备上。</li>\n<li>输出的每个切片对应于 <code>scale_by_two</code> 在每个设备上应用于相应输入切片的结果。例如，如果 <code>num_devices=2</code>，<code>result</code> 的第一行 <code>[0*2, 1*2, 2*2, 3*2]</code> 是在设备 0 上计算的，第二行 <code>[4*2, 5*2, 6*2, 7*2]</code> 是在设备 1 上计算的。</li>\n</ol>\n<h3>示例 2：使用 <code>in_axes</code> 指定轴</h3>\n<p>如果我们的函数接受多个参数 (parameter)，我们只希望对其中一些参数进行并行处理，或者在不同的轴上进行并行处理，该怎么办？这就是 <code>pmap</code> 的 <code>in_axes</code> 参数的作用。</p>\n<p><code>in_axes</code> 指定每个输入参数的哪个轴应该被映射。它可以是一个整数（轴索引）、<code>None</code>（将参数广播到所有设备），或者一个与参数数量匹配的元组/列表。</p>\n<p>让我们修改我们的函数，使其接受两个参数：一个要分片的数组 <code>x</code> 和一个要广播的标量 <code>y</code>。</p>\n<pre><code class=\"language-python\"># 接受两个参数的函数\ndef scale_and_add(x, y):\n  print(f\"Compiling and running scale_and_add on device {jax.process_index()}...\")\n  return x * 2 + y\n\n# x 的数据保持不变\n# sharded_data = jnp.arange(num_devices * data_size_per_device).reshape((num_devices, data_size_per_device))\n\n# 要广播的标量值\nscalar_y = jnp.float32(100.0)\n\n# 应用 pmap，指定每个参数如何处理\n# x (sharded_data)：映射轴 0\n# y (scalar_y)：广播（将相同值发送到所有设备）\nparallel_scale_add = jax.pmap(scale_and_add, in_axes=(0, None))\n\n# 运行并行函数\nresult_add = parallel_scale_add(sharded_data, scalar_y)\n\nprint(f\"\\nInput x shape: {sharded_data.shape}\")\nprint(f\"Input y: {scalar_y}\")\nprint(f\"\\nOutput shape: {result_add.shape}\")\nprint(f\"Output content:\\n{result_add}\")\n</code></pre>\n<p>这里，<code>in_axes=(0, None)</code> 告诉 <code>pmap</code>：</p>\n<ul>\n<li>对于第一个参数 (<code>x</code>)，沿轴 0 分割它，并将每个切片发送到一个设备。</li>\n<li>对于第二个参数 (<code>y</code>)，将 <em>整个</em> 值 <code>scalar_y</code> 发送到 <em>每个</em> 设备。</li>\n</ul>\n<p>结果 <code>result_add</code> 将再次具有形状 <code>(num_devices, data_size_per_device)</code>，其中每个元素在其各自设备上计算为 <code>x_slice * 2 + 100.0</code>。</p>\n<h3>示例 3：使用 <code>lax.psum</code> 进行集合操作</h3>\n<p>并行计算中一个常见需求是汇集来自不同设备的结果。例如，计算每个设备上独立计算的值的总和或平均值。JAX 在 <code>jax.lax</code> 中为此目的提供了集合原语。这些操作仅在经过 <code>pmap</code> 处理的函数 <em>内部</em> 有效。</p>\n<p>让我们计算所有设备上所有已处理元素的总和。</p>\n<pre><code class=\"language-python\"># 包含集合操作（跨设备求和）的函数\ndef scale_and_sum(x):\n  print(f\"Compiling and running scale_and_sum on device {jax.process_index()}...\")\n  scaled_x = x * 2\n  # 首先 *在每个设备上* 计算和\n  local_sum = jnp.sum(scaled_x)\n  # 现在，将所有设备的本地和求和\n  global_sum = jax.lax.psum(local_sum, axis_name='devices')\n  # 注意：现在每个设备都持有相同的“global_sum”\n  return scaled_x, global_sum\n\n# 我们需要告知 pmap psum 中使用的轴名称\n# 名称 'devices' 是任意的，但在 pmap 和 psum 之间必须匹配\nparallel_scale_sum = jax.pmap(scale_and_sum, axis_name='devices')\n\n# 运行并行函数\nsharded_data = jnp.arange(num_devices * data_size_per_device).reshape((num_devices, data_size_per_device))\nresult_scaled, result_sum = parallel_scale_sum(sharded_data)\n\n# 手动计算预期全局和以进行验证\nexpected_sum = jnp.sum(jnp.arange(total_data_size) * 2)\n\nprint(f\"\\nOutput scaled data shape: {result_scaled.shape}\")\nprint(f\"Output scaled data:\\n{result_scaled}\") # 仍然是分片的\nprint(f\"\\nOutput sum shape: {result_sum.shape}\") # 应该被复制\nprint(f\"Output sum (replicated across devices):\\n{result_sum}\")\nprint(f\"Expected global sum: {expected_sum}\")\n\n# 验证所有设备上的和是否相同\n# （为演示目的，从第一个设备访问数据）\nprint(f\"Sum computed by pmap (device 0): {result_sum[0]}\")\n</code></pre>\n<p>本示例中的要点：</p>\n<ol>\n<li>我们在 <code>jax.pmap</code> 中定义了 <code>axis_name='devices'</code>。此名称逻辑上将参与并行计算的设备分组。</li>\n<li>函数内部，<code>jax.lax.psum(local_sum, axis_name='devices')</code> 执行求和归约。它取每个设备上独立计算的 <code>local_sum</code>，并将这些值在名称为 <code>'devices'</code> 的所有设备组中求和。</li>\n<li><code>psum</code> 返回的 <code>global_sum</code> 在所有设备上都被 <em>复制</em>。请注意 <code>result_sum</code> 的形状是 <code>(num_devices,)</code>，并且其所有元素都相同，持有真实的合计总和。<code>result_scaled</code> 数组仍然像以前一样是分片的。</li>\n</ol>\n<p>这些动手实践示例说明了使用 <code>jax.pmap</code> 进行数据并行的核心机制：包括准备分片数据、使用 <code>in_axes</code> 映射函数参数 (parameter)、并行执行函数以及使用 <code>psum</code> 等集合操作进行跨设备通信。这为在多个加速器上扩展 JAX 计算（特别是大型机器学习 (machine learning)模型训练）奠定了基础。</p>",
+  "slug": "hands-on-parallel-computation",
+  "updates": [],
+  "references": [
+    {
+      "id": 5590,
+      "title": "jax.pmap",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.pmap.html",
+      "doi": "",
+      "note": "JAX `pmap` 的官方API参考，说明其参数及设备间并行计算行为。",
+      "order": 1,
+      "created_at": "2025-09-05T01:12:30.856716Z",
+      "updated_at": "2025-09-08T04:59:04.992124Z"
+    },
+    {
+      "id": 5591,
+      "title": "Distributed arrays and pmap",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_pmap.html",
+      "doi": "",
+      "note": "关于使用 `pmap` 进行数据并行的实用指南，内容涵盖数据分片、`in_axes`、`axis_name` 和集合操作等。",
+      "order": 2,
+      "created_at": "2025-09-05T01:12:30.867782Z",
+      "updated_at": "2025-09-08T04:59:10.440010Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

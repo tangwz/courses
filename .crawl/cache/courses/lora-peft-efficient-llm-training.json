@@ -1,0 +1,539 @@
+{
+  "id": 157,
+  "title": "进阶LoRA与PEFT方法：大型语言模型微调",
+  "meta_title": "进阶LoRA与PEFT：高效LLM训练 | 课程",
+  "meta_description": "进阶LoRA、QLoRA和PEFT课程，专注高效LLM微调。学习原理、实现、优化与评估。",
+  "description": "掌握高效大型语言模型（LLM）微调的高级方法，运用低秩适配（LoRA）及其他参数高效微调（PEFT）手段。本课程介绍尖端LLM调整的理论原理、复杂实现和优化策略。学员将熟练应用LoRA、QLoRA、适配器微调等方法，侧重于性能、内存效率和实际应用中的难题。",
+  "short_description": "应用进阶LoRA和PEFT方法，高效微调大型语言模型，优化性能与内存。",
+  "excerpt": "实现并优化进阶LoRA、QLoRA及其他PEFT方法，以高效进行LLM微调，面向资深AI工程师。",
+  "prerequisites": "Python, 深度学习, 大型语言模型",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "PEFT基础",
+      "description": "分析全面微调的局限性以及参数高效方法的数学原理。"
+    },
+    {
+      "topic": "LoRA实现",
+      "description": "在标准Transformer架构中实现并配置LoRA层。"
+    },
+    {
+      "topic": "进阶LoRA变体",
+      "description": "实现并评估QLoRA和LoRA合并策略等高级技巧。"
+    },
+    {
+      "topic": "PEFT方法比较",
+      "description": "比较分析各种PEFT方法（适配器、前缀微调、提示微调）的性能和计算成本。"
+    },
+    {
+      "topic": "PEFT优化",
+      "description": "优化PEFT训练流程，包括基础设施考量、优化器和调试策略。"
+    },
+    {
+      "topic": "性能评估",
+      "description": "评估不同PEFT方法在下游任务中的性能、鲁棒性及局限。"
+    }
+  ],
+  "duration": 18,
+  "slug": "lora-peft-efficient-llm-training",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-10T04:45:46.859403Z",
+  "updated_at": "2026-10-02T07:25:23.564775Z",
+  "chapters": [
+    {
+      "id": 815,
+      "title": "回顾微调与效率的必要性",
+      "meta_title": "LLM 微调难题与 PEFT 简介",
+      "meta_description": "了解全量 LLM 微调的瓶颈以及参数高效微调（PEFT）的动因。",
+      "number": 1,
+      "slug": "fine-tuning-efficiency-foundations",
+      "content": "大型语言模型（LLMs）微调是一种常用方法，用于使其适应特定任务。然而，修改包含数十亿参数的模型的所有参数（这些参数通常表示为权重矩阵 $W$），会产生大量的计算和内存开销。本章考察了伴随全量微调而来的这些难题。\r\n\r\n您将了解到：\r\n*   全量微调具体的内存、计算和存储需求。\r\n*   促使参数高效替代方法不可或缺的因素。\r\n*   奇异值分解（SVD）的数学背景，这与理解 LoRA 等方法有关，LoRA 常用于低秩近似，例如 $$M \\approx U \\Sigma V^T$$。\r\n*   各种参数高效微调（PEFT）方法的分类。\r\n\r\n这些基础内容将说明为何 PEFT 方法变得不可或缺，并介绍本课程中涵盖的各类技术。",
+      "sections": [
+        {
+          "id": 4109,
+          "title": "全量微调的计算成本",
+          "meta_title": "大型语言模型全量微调成本",
+          "meta_description": "分析与大型模型传统全量微调相关的内存、计算和存储需求。",
+          "slug": "full-fine-tuning-costs",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4110,
+          "title": "参数效率的必要性",
+          "meta_title": "参数高效微调的必要性",
+          "meta_description": "讨论开发参数高效微调替代方案的推动因素。",
+          "slug": "parameter-efficiency-imperative",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4112,
+          "title": "数学预备知识：奇异值分解",
+          "meta_title": "奇异值分解 (SVD) 回顾",
+          "meta_description": "回顾奇异值分解及其在深度学习中与低秩矩阵近似的相关性。",
+          "slug": "svd-preliminaries",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4114,
+          "title": "参数高效微调方法的分类",
+          "meta_title": "PEFT 方法分类概述",
+          "meta_description": "介绍 PEFT 技术的不同类别：附加、选择性和重参数化方法。",
+          "slug": "peft-taxonomy",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 816,
+      "title": "低秩适配 (LoRA) 详解",
+      "meta_title": "低秩适配 (LoRA) 详细解读",
+      "meta_description": "了解 LoRA 用于 LLM 的理论依据、数学表述和实际实现。",
+      "number": 2,
+      "slug": "lora-in-depth",
+      "content": "第1章概述了微调大型语言模型所涉及的计算和内存挑战。本章将通过着重介绍低秩适配 (LoRA) 来解决这些问题，LoRA是一种特定且广泛使用的参数高效微调 (PEFT) 技术。\r\n\r\n我们从 LoRA 背后的核心假设开始：模型权重在适配过程中产生的变化 $\\Delta W$ 具有较低的“内在秩”。这意味着 $\\Delta W$ 可以通过两个小得多的矩阵 $B$ 和 $A$ 的乘积来有效近似。\r\n\r\n$$ \\Delta W \\approx BA $$\r\n\r\n这里 $W \\in \\mathbb{R}^{d \\times k}$，$B \\in \\mathbb{R}^{d \\times r}$，$A \\in \\mathbb{R}^{r \\times k}$，并且秩 $r \\ll \\min(d, k)$。\r\n\r\n在本章中，您将学到：\r\n\r\n*   LoRA 的理论依据和数学表述。\r\n*   LoRA 如何将权重更新分解为低秩矩阵（$A$ 和 $B$）。\r\n*   选择秩 $r$ 和配置缩放参数 $\\alpha$ 的实际考量。\r\n*   如何在神经网络层内，特别是线性层中实现 LoRA 修改。\r\n*   将 LoRA 集成到标准 Transformer 模块中的方法，针对注意力机制或前馈网络等特定组件。\r\n\r\n通过本章的学习，您将理解 LoRA 的运行机制，并能够实现其基本形式，以进行高效的 LLM 微调。",
+      "sections": [
+        {
+          "id": 4116,
+          "title": "LoRA 假说：适配的低本征秩",
+          "meta_title": "LoRA 假说：低本征秩",
+          "meta_description": "理解 LoRA 背后的核心假定，即模型适配的低本征维度。",
+          "slug": "lora-hypothesis-intrinsic-rank",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4118,
+          "title": "LoRA的数学表述",
+          "meta_title": "LoRA的数学表述",
+          "meta_description": "阐述定义LoRA更新矩阵的数学方程以及它们在模型权重上的使用。",
+          "slug": "lora-mathematical-formulation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4119,
+          "title": "权重更新矩阵的分解",
+          "meta_title": "LoRA中的权重更新分解",
+          "meta_description": "分析LoRA如何将权重更新分解为低秩矩阵（A和B）。",
+          "slug": "lora-decomposing-updates",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4121,
+          "title": "秩选择策略",
+          "meta_title": "LoRA 秩选择策略",
+          "meta_description": "阐述 LoRA 中秩 'r' 选取的理论考量与实践方法。",
+          "slug": "lora-rank-selection",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4123,
+          "title": "缩放参数 Alpha",
+          "meta_title": "LoRA 缩放参数 Alpha",
+          "meta_description": "阐述LoRA调整中缩放参数Alpha的作用及效果。",
+          "slug": "lora-scaling-alpha",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4125,
+          "title": "LoRA 层的实施",
+          "meta_title": "LoRA 层代码实施",
+          "meta_description": "分步指南，介绍如何为线性层以及其他可能的层类型实施 LoRA 更改。",
+          "slug": "implementing-lora-layers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4127,
+          "title": "将 LoRA 融入 Transformer 架构",
+          "meta_title": "LoRA 在 Transformer 中的整合",
+          "meta_description": "显示如何在 Transformer 模型中具体应用于注意力层和前馈层。",
+          "slug": "lora-integration-transformers",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4129,
+          "title": "实际操作：应用基础LoRA",
+          "meta_title": "实际操作：将LoRA用于大型语言模型",
+          "meta_description": "练习会话，使用基础LoRA配置实现和训练语言模型。",
+          "slug": "practice-applying-lora",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 818,
+      "title": "PEFT 方法概览",
+      "meta_title": "LoRA 之外的 PEFT 方法概览",
+      "meta_description": "了解其他主要的 PEFT 技术，例如适配器微调、前缀微调和提示微调。",
+      "number": 3,
+      "slug": "peft-methodologies-survey",
+      "content": "在确立了低秩适配 (LoRA) 的原理与实现后，我们将视野转向其他主要的参数高效微调 (PEFT) 技术。本章将比较介绍为应对大型语言模型 (LLM) 微调计算需求而发展的不同方法。\r\n\r\n你将了解：\r\n\r\n*   **适配器微调 (Adapter Tuning):** 了解如何在预训练模型层中插入小型、可训练的适配器模块。我们将介绍它们的架构和实现细节。\r\n*   **前缀微调 (Prefix Tuning):** 考察如何通过向输入或隐藏状态添加可调的连续向量前缀，从而调整模型行为，同时不修改核心权重。\r\n*   **提示微调 (Prompt Tuning):** 研究侧重于学习软提示嵌入的技术，这提供了一种高效指导模型输出的方式。\r\n\r\n在本次概述中，我们将分析每种方法的架构差异、引入的可训练参数数量以及典型的性能特点。我们还将比较它们在训练和推理期间的内存使用和计算需求，为在特定限制和目标下选择合适的技术提供参考。本章最后将以一个实现适配器微调的实践练习结束。",
+      "sections": [
+        {
+          "id": 4131,
+          "title": "适配器微调：架构与原理",
+          "meta_title": "适配器微调架构",
+          "meta_description": "解释适配器模块的架构以及它们如何插入到预训练模型中。",
+          "slug": "adapter-tuning-architecture",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4133,
+          "title": "适配器微调的实现细节",
+          "meta_title": "适配器微调的实现",
+          "meta_description": "涵盖适配器层的实现和训练策略的实际操作方面。",
+          "slug": "adapter-tuning-implementation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4135,
+          "title": "前缀微调：通过连续前缀进行调节",
+          "meta_title": "前缀微调的原理与机制",
+          "meta_description": "了解前缀微调如何将可调节的连续向量添加到输入序列嵌入中。",
+          "slug": "prefix-tuning-theory",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4137,
+          "title": "提示词微调与P-Tuning变体",
+          "meta_title": "提示词微调与P-Tuning",
+          "meta_description": "讨论提示词微调及其变体（如P-Tuning），侧重于可学习的提示词嵌入。",
+          "slug": "prompt-tuning-variations",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4138,
+          "title": "比较分析：参数与性能的权衡",
+          "meta_title": "PEFT 方法比较：参数与性能",
+          "meta_description": "分析不同PEFT方法在可调参数数量和任务表现方面的权衡。",
+          "slug": "peft-comparison-parameters-performance",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4140,
+          "title": "内存与计算开销",
+          "meta_title": "PEFT方法的内存与计算需求",
+          "meta_description": "比较各种PEFT技术在训练和推理过程中的内存使用和计算开销。",
+          "slug": "peft-memory-compute-footprints",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4142,
+          "title": "动手实践：实施适配器微调",
+          "meta_title": "动手：实施适配器微调",
+          "meta_description": "侧重于使用适配器模块实施和微调大型语言模型的实践环节。",
+          "slug": "practice-implementing-adapters",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 820,
+      "title": "进阶LoRA实现方法和变体",
+      "meta_title": "进阶LoRA技术和QLoRA",
+      "meta_description": "了解进阶LoRA技术，包括初始化、合并、量化 (QLoRA) 和组合方法。",
+      "number": 4,
+      "slug": "advanced-lora-variants",
+      "content": "在之前建立的低秩适配（LoRA）基础理解之上，本章着重介绍高级实现方法和变体，以提高其性能、效率和适用性。我们将考察超出基础LoRA设置的技术，以应对实际LLM微调场景中遇到的具体问题。\r\n\r\n您将学习以下内容：\r\n\r\n*   **初始化策略：** 设置LoRA矩阵（$A$和$B$）初始值的不同方法及其对训练过程的影响。\r\n*   **权重合并：** 将训练好的LoRA适配器权重整合回原始模型层的方法，从而简化部署并可能提高推理速度。\r\n*   **量化LoRA (QLoRA)：** QLoRA 背后的原理，该技术通过在训练LoRA适配器时对基础模型应用量化（例如，4位NormalFloat，$NF4$）来大幅降低内存需求。我们将介绍实现细节，包括双层量化和分页优化器的使用。\r\n*   **组合方法：** LoRA如何与其他参数高效微调（PEFT）技术结合，以可能取得更好效果。\r\n\r\n本章包含实用指导，并以一个侧重于为高效LLM微调实现QLoRA的实践练习作结。",
+      "sections": [
+        {
+          "id": 4144,
+          "title": "LoRA 初始化策略",
+          "meta_title": "LoRA 初始化策略",
+          "meta_description": "讨论LoRA矩阵（A和B）的不同初始化方法及其对训练稳定性的作用。",
+          "slug": "lora-initialization-strategies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4146,
+          "title": "训练后合并LoRA权重",
+          "meta_title": "合并LoRA权重：方法与影响",
+          "meta_description": "解释将LoRA权重并回基础模型的步骤以及对部署的意义。",
+          "slug": "merging-lora-weights",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4148,
+          "title": "量化LoRA (QLoRA)：原理",
+          "meta_title": "量化LoRA (QLoRA) 原理",
+          "meta_description": "阐述QLoRA背后的原理，包含4比特NormalFloat (NF4) 量化和双重量化。",
+          "slug": "qlora-principles",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4150,
+          "title": "QLoRA 实现细节",
+          "meta_title": "QLoRA 实现细节",
+          "meta_description": "涵盖实现QLoRA微调的实际步骤和库支持。",
+          "slug": "qlora-implementation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4151,
+          "title": "分页优化器提升内存效率",
+          "meta_title": "分页优化器与QLoRA",
+          "meta_description": "说明分页优化器（例如AdamW 8位）如何在QLoRA训练期间进一步降低内存使用。",
+          "slug": "qlora-paged-optimizers",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4152,
+          "title": "将LoRA与其他PEFT方法结合",
+          "meta_title": "将LoRA与其他PEFT方法结合",
+          "meta_description": "探讨LoRA与适配器或提示调优等方法结合的策略，以期获得潜在的性能提升。",
+          "slug": "combining-lora-other-peft",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4154,
+          "title": "动手实践：实现 QLoRA",
+          "meta_title": "动手实践：实现 QLoRA 微调",
+          "meta_description": "实践环节：运用 QLoRA 高效微调大型语言模型。",
+          "slug": "practice-implementing-qlora",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 822,
+      "title": "优化、部署与实际考量",
+      "meta_title": "优化和部署 PEFT 方法 | LoRA 与适配器",
+      "meta_description": "侧重于使用 PEFT 技术微调模型时的训练、优化和部署的实际方面。",
+      "number": 5,
+      "slug": "peft-optimization-deployment",
+      "content": "前几章介绍了参数高效微调 (PEFT) 方法（例如 LoRA、QLoRA 和适配器微调）的运作原理。本章将重点转向使用这些技术微调模型时，有效训练、优化和部署所涉及的实际考量。我们将讨论在实际中成功应用 PEFT 所需的操作方面。\r\n\r\n在本章中，您将学习如何：\r\n*   评估基础设施需求，包括 PEFT 任务所需的 GPU 显存、计算能力和软件环境。\r\n*   配置合适的优化器，例如 AdamW 或其内存高效变体（如 8 位 Adam），以及专用于 PEFT 的学习率调度器。\r\n*   实现同时处理多个 PEFT 适配器的策略，从而便于多任务微调。\r\n*   诊断并解决 PEFT 训练任务实施和执行过程中出现的常见问题。\r\n*   采用性能分析技术来衡量并提高 GPU 利用率、内存消耗和吞吐量。\r\n*   调整分布式训练框架，包括 DDP 和 DeepSpeed ZeRO，以进行大规模 PEFT 微调。\r\n*   制定部署模型的方法，这些模型使用可互换的 PEFT 适配器以实现高效推理服务。\r\n\r\n通过讲解这些主题，本章将使您掌握改进 PEFT 工作流程的知识，以获得最佳性能、资源管理和部署能力。",
+      "sections": [
+        {
+          "id": 4156,
+          "title": "PEFT 训练所需的基础设施要求",
+          "meta_title": "PEFT 训练的基础设施需求",
+          "meta_description": "详细说明实现有效 PEFT 训练所需的硬件（GPU 内存、计算能力）和软件要求。",
+          "slug": "peft-infrastructure-requirements",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4158,
+          "title": "用于PEFT的优化器和学习率调度器",
+          "meta_title": "PEFT的优化器与调度器",
+          "meta_description": "讨论适用于PEFT的优化器（AdamW，8比特Adam）和学习率调度策略。",
+          "slug": "peft-optimizers-schedulers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4160,
+          "title": "多适配器/多任务训练方法",
+          "meta_title": "多适配器与多任务PEFT训练",
+          "meta_description": "了解同时训练多个PEFT适配器以处理不同任务或数据集的策略。",
+          "slug": "peft-multi-adapter-training",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4162,
+          "title": "调试 PEFT 实现",
+          "meta_title": "PEFT 实现问题调试",
+          "meta_description": "LoRA、QLoRA 及其他 PEFT 方法的常见问题与调试技巧。",
+          "slug": "debugging-peft-implementations",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4165,
+          "title": "PEFT 训练与推理的性能分析",
+          "meta_title": "PEFT 性能分析",
+          "meta_description": "分析 PEFT 工作流程中 GPU 利用率、内存使用和吞吐量的工具和方法。",
+          "slug": "peft-performance-profiling",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4167,
+          "title": "PEFT 的分布式训练方法",
+          "meta_title": "PEFT 的分布式训练方法",
+          "meta_description": "调整分布式训练框架（DDP、DeepSpeed ZeRO），以实现高效的PEFT微调。",
+          "slug": "peft-distributed-training",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4169,
+          "title": "使用 PEFT 适配器部署模型",
+          "meta_title": "使用 PEFT 适配器部署模型",
+          "meta_description": "讨论用于推理的可互换 PEFT 适配器模型的部署方案。",
+          "slug": "serving-peft-models",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4171,
+          "title": "动手实践：使用多个 LoRA 适配器进行微调",
+          "meta_title": "实践：多适配器 LoRA 训练",
+          "meta_description": "练习配置并训练一个使用多个 LoRA 适配器完成不同模拟任务的模型。",
+          "slug": "practice-multi-adapter-lora",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 824,
+      "title": "评估 PEFT 性能和局限性",
+      "meta_title": "评估 PEFT 性能 & 理解局限性",
+      "meta_description": "全面评估各种 PEFT 方法的有效性、鲁棒性和局限性。",
+      "number": 6,
+      "slug": "evaluating-peft-limitations",
+      "content": "在介绍了 LoRA、QLoRA 和其他参数高效微调（PEFT）技术的实现细节之后，下一步是评估它们的有效性并了解它们之间的权衡。本章侧重于定量和定性评估这些微调方法。\r\n\r\n我们将考察适用于 PEFT 的标准性能指标，进行与完整微调的基准比较，分析模型的稳定性和泛化能力，研究潜在的灾难性遗忘，提供计算成本的详细分析，并讨论与这些技术相关的当前局限性以及未解决的研究问题。理解这些评估维度对于在具体场景中选择和部署 PEFT 策略做出明智的决定是必要的。",
+      "sections": [
+        {
+          "id": 4173,
+          "title": "PEFT评估的常用指标",
+          "meta_title": "PEFT有效性评估的衡量指标",
+          "meta_description": "定义并讨论用于评估PEFT方法在下游NLU/NLG任务上表现的常用衡量指标。",
+          "slug": "peft-evaluation-metrics",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4175,
+          "title": "PEFT 与完全微调的对比评估",
+          "meta_title": "PEFT 与完全微调的对比评估",
+          "meta_description": "分析PEFT方法与传统完全微调在多种任务和模型尺寸上的对比评估结果。",
+          "slug": "peft-vs-full-finetuning-benchmarks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4177,
+          "title": "分析模型的抗干扰能力和泛化能力",
+          "meta_title": "PEFT抗干扰能力和泛化能力分析",
+          "meta_description": "研究PEFT模型对数据范围偏移的抗干扰能力及其泛化能力。",
+          "slug": "peft-robustness-generalization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4178,
+          "title": "研究灾难性遗忘",
+          "meta_title": "PEFT 中的灾难性遗忘",
+          "meta_description": "评估 PEFT 方法与完全微调相比，缓解或表现出灾难性遗忘的程度。",
+          "slug": "peft-catastrophic-forgetting",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4180,
+          "title": "计算成本分析再议",
+          "meta_title": "PEFT 计算成本详细分析",
+          "meta_description": "详细比较不同 PEFT 策略的训练时间、推理延迟和内存使用情况。",
+          "slug": "peft-computational-cost-revisited",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4182,
+          "title": "当前局限性与待解决的研究问题",
+          "meta_title": "PEFT的局限性与研究方向",
+          "meta_description": "讨论当前PEFT技术的已知局限性，并强调活跃的研究方面。",
+          "slug": "peft-limitations-research",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

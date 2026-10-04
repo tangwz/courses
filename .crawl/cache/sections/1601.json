@@ -1,0 +1,45 @@
+{
+  "id": 1601,
+  "title": "使用 COUNT 统计行数",
+  "meta_title": "在 SQL 中使用 COUNT 函数",
+  "meta_description": "了解如何在列中统计行数或非空值。",
+  "content": "<p>原始数据通常需要汇总，以便提供有价值的信息。最基本的汇总之一就是简单地计数：我们有多少客户？昨天下了多少订单？售出了多少种不同的产品？SQL 为此提供了一个专门的聚合函数：<code>COUNT</code>。</p>\n<p><code>COUNT</code> 函数统计满足特定条件的行数。我们来看看它的常见形式。</p>\n<h3>统计所有行：<code>COUNT(*)</code></h3>\n<p><code>COUNT</code> 最直接的用法是使用星号 (<code>*</code>)。<code>COUNT(*)</code> 仅统计一个表或由 <code>WHERE</code> 子句定义的查询结果中的总行数。</p>\n<p><strong>语法：</strong></p>\n<pre><code class=\"language-sql\">SELECT COUNT(*)\nFROM table_name;\n</code></pre>\n<p><strong>示例：</strong></p>\n<p>假设我们有一个 <code>Customers</code> 表，如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">名</th>\n<th align=\"left\">姓</th>\n<th align=\"left\">电子邮件</th>\n<th align=\"left\">城市</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Alice</td>\n<td align=\"left\">Smith</td>\n<td align=\"left\"><a href=\"mailto:alice.s@example.com\">alice.s@example.com</a></td>\n<td align=\"left\">London</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Bob</td>\n<td align=\"left\">Jones</td>\n<td align=\"left\"><a href=\"mailto:bob.j@example.com\">bob.j@example.com</a></td>\n<td align=\"left\">Manchester</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Charlie</td>\n<td align=\"left\">Brown</td>\n<td align=\"left\">NULL</td>\n<td align=\"left\">London</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Diana</td>\n<td align=\"left\">Prince</td>\n<td align=\"left\"><a href=\"mailto:diana.p@example.com\">diana.p@example.com</a></td>\n<td align=\"left\">Birmingham</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">Edward</td>\n<td align=\"left\">King</td>\n<td align=\"left\"><a href=\"mailto:edward.k@example.com\">edward.k@example.com</a></td>\n<td align=\"left\">London</td>\n</tr>\n</tbody>\n</table>\n<p>要查找表中的客户总数，您将运行：</p>\n<pre><code class=\"language-sql\">SELECT COUNT(*)\nFROM Customers;\n</code></pre>\n<p><strong>结果：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">统计(*)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">5</td>\n</tr>\n</tbody>\n</table>\n<p>此查询返回 5，因为 <code>Customers</code> 表中有五行。</p>\n<h3>统计列中的非 NULL 值：<code>COUNT(column_name)</code></h3>\n<p>有时，您可能不想统计所有行，而是统计特定列中具有非 NULL 值的行数。为此，您将列名放在括号内。</p>\n<p><strong>语法：</strong></p>\n<pre><code class=\"language-sql\">SELECT COUNT(column_name)\nFROM table_name;\n</code></pre>\n<p><strong>示例：</strong></p>\n<p>使用相同的 <code>Customers</code> 表，我们来统计有多少客户提供了电子邮件地址。我们以 <code>email</code> 列为目标：</p>\n<pre><code class=\"language-sql\">SELECT COUNT(email)\nFROM Customers;\n</code></pre>\n<p><strong>结果：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">统计(email)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">4</td>\n</tr>\n</tbody>\n</table>\n<p>请注意，结果是 4，而不是 5。这是因为 <code>COUNT(email)</code> 会忽略 <code>email</code> 列值为 <code>NULL</code> 的行（客户 ID 3）。<code>COUNT(*)</code> 统计行数，而 <code>COUNT(column_name)</code> 统计该列中所有行中的非 NULL 值。</p>\n<h3>统计列中的唯一值：<code>COUNT(DISTINCT column_name)</code></h3>\n<p>通常，您需要知道一个列中有多少个<em>唯一</em>值。例如，我们的客户居住在多少个不同的城市？在 <code>COUNT</code> 中使用 <code>DISTINCT</code> 关键字可以实现此目的。</p>\n<p><strong>语法：</strong></p>\n<pre><code class=\"language-sql\">SELECT COUNT(DISTINCT column_name)\nFROM table_name;\n</code></pre>\n<p><strong>示例：</strong></p>\n<p>我们来统计我们的 <code>Customers</code> 表中不同城市的数量：</p>\n<pre><code class=\"language-sql\">SELECT COUNT(DISTINCT city)\nFROM Customers;\n</code></pre>\n<p><strong>结果：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">统计(DISTINCT city)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">3</td>\n</tr>\n</tbody>\n</table>\n<p>此查询返回 3，因为尽管有 5 行，但列出的城市是 'London'、'Manchester'、'London'、'Birmingham' 和 'London'。不同的城市是 London、Manchester 和 Birmingham。如果列中存在 <code>NULL</code> 值，则不计入 <code>DISTINCT</code> 统计。</p>\n<h3>在 COUNT 中使用别名</h3>\n<p><code>COUNT</code> 结果的默认列名（例如 <code>COUNT(*)</code> 或 <code>COUNT(email)</code>）并不总是具有描述性。您可以使用 <code>AS</code> 关键字分配一个更具意义的名称，这会创建一个别名。</p>\n<p><strong>示例：</strong></p>\n<p>我们来重命名我们之前的示例的输出：</p>\n<pre><code class=\"language-sql\">-- 客户总数\nSELECT COUNT(*) AS total_customers\nFROM Customers;\n\n-- 有电子邮件的客户数量\nSELECT COUNT(email) AS customers_with_email\nFROM Customers;\n\n-- 不同的客户城市数量\nSELECT COUNT(DISTINCT city) AS distinct_customer_cities\nFROM Customers;\n</code></pre>\n<p><strong>结果：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">total_customers</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">5</td>\n</tr>\n</tbody>\n</table>\n<table>\n<thead>\n<tr>\n<th align=\"left\">customers_with_email</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">4</td>\n</tr>\n</tbody>\n</table>\n<table>\n<thead>\n<tr>\n<th align=\"left\">distinct_customer_cities</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">3</td>\n</tr>\n</tbody>\n</table>\n<p>使用别名可以使输出更清晰、更容易理解，特别是当您开始在单个查询中组合多个聚合函数时。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-r1tyq\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"客户数据统计\"},\"xaxis\":{\"title\":{\"text\":\"统计类型\"}},\"yaxis\":{\"title\":{\"text\":\"记录数量\"}},\"barmode\":\"group\"},\"data\":[{\"type\":\"bar\",\"name\":\"客户总数\",\"x\":[\"统计\"],\"y\":[5],\"marker\":{\"color\":\"#228be6\"}},{\"type\":\"bar\",\"name\":\"有电子邮件的客户\",\"x\":[\"统计\"],\"y\":[4],\"marker\":{\"color\":\"#12b886\"}},{\"type\":\"bar\",\"name\":\"不同城市\",\"x\":[\"统计\"],\"y\":[3],\"marker\":{\"color\":\"#fab005\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-r1tyq\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>来自 <code>Customers</code> 表的不同统计比较：总行数 vs. 非 NULL 电子邮件 vs. 不同城市。</p>\n</blockquote>\n<h3>将 <code>COUNT</code> 与 <code>WHERE</code> 结合使用</h3>\n<p>像 <code>COUNT</code> 这样的聚合函数是在 <code>WHERE</code> 子句过滤行<em>之后</em>应用的。这意味着您可以统计满足特定条件的行数。</p>\n<p><strong>示例：</strong></p>\n<p>有多少客户居住在 London？</p>\n<pre><code class=\"language-sql\">SELECT COUNT(*) AS london_customers\nFROM Customers\nWHERE city = 'London';\n</code></pre>\n<p><strong>结果：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">london_customers</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">3</td>\n</tr>\n</tbody>\n</table>\n<p>数据库首先过滤 <code>Customers</code> 表以仅包含 <code>city</code> 为 'London' 的行，然后 <code>COUNT(*)</code> 统计那些过滤后的行。</p>\n<p><code>COUNT</code> 函数是汇总数据的基本构成要素。您会经常使用它，通常与 <code>GROUP BY</code> 子句结合使用（我们很快就会介绍），以统计不同类别中的项目，例如统计每个客户下的订单数量。</p>",
+  "slug": "counting-rows-count",
+  "updates": [],
+  "references": [
+    {
+      "id": 2055,
+      "title": "PostgreSQL: Documentation: 16: 9.20. Aggregate Functions",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/functions-aggregate.html",
+      "doi": "",
+      "note": "解释了COUNT聚合函数及其不同形式（COUNT(*)、COUNT(表达式)、COUNT(DISTINCT 表达式)），以及它与NULL值的行为，与本节内容直接相关。",
+      "order": 1,
+      "created_at": "2025-09-04T16:38:24.445731Z",
+      "updated_at": "2025-09-07T18:45:04.027532Z"
+    },
+    {
+      "id": 2056,
+      "title": "COUNT (Transact-SQL)",
+      "author": "Microsoft Learn",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learn.microsoft.com/en-us/sql/t-sql/functions/count-transact-sql",
+      "doi": "",
+      "note": "提供了SQL Server中COUNT函数的具体语法和示例，涵盖了本节讨论的所有形式，包括与DISTINCT和WHERE子句的用法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:38:24.449266Z",
+      "updated_at": "2025-09-07T18:44:49.599162Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

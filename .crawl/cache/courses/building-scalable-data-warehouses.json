@@ -1,0 +1,367 @@
+{
+  "id": 251,
+  "title": "构建规模化数据仓库",
+  "meta_title": "规模化数据仓库课程 | 高级工程",
+  "meta_description": "学习构建规模化数据仓库。讲解MPP架构、查询优化、CDC和治理在Snowflake和BigQuery上的应用。",
+  "description": "<p>本课程解析现代数据仓库的高级架构模式，侧重于Snowflake、BigQuery和Redshift等大规模并行处理 (MPP) 系统。内容讲解高吞吐量 (throughput)数据摄取、包含Data Vault在内的复杂建模方法，以及分布式系统的查询性能调优。您将实现数据分区、实体化视图和自动化治理等方案。课程内容重视技术实施和架构决策，旨在帮助工程师应对TB级以上数据集的数据平台扩展。</p>",
+  "short_description": "在现代MPP系统上，架构并优化高性能数据仓库以处理TB级数据。",
+  "excerpt": "掌握高级数据仓库架构、性能调优和规模化建模方法，适用于现代云平台。",
+  "prerequisites": "SQL与数据仓库经验",
+  "cover_color": "cyan",
+  "learning_outcomes": [
+    {
+      "topic": "架构设计",
+      "description": "设计采用计算与存储分离原则的分布式存储系统。"
+    },
+    {
+      "topic": "性能调优",
+      "description": "通过剪枝、聚类和实体化视图优化查询执行计划。"
+    },
+    {
+      "topic": "高级建模",
+      "description": "实现Data Vault和维度建模策略，以适应演进模式。"
+    },
+    {
+      "topic": "数据治理",
+      "description": "自动化基于角色的访问控制和行级安全策略。"
+    }
+  ],
+  "duration": 15,
+  "slug": "building-scalable-data-warehouses",
+  "level": 3,
+  "category": "Data Engineering",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-25T06:55:30.989766Z",
+  "updated_at": "2026-10-02T05:48:21.925068Z",
+  "chapters": [
+    {
+      "id": 1399,
+      "title": "MPP 架构与存储原理",
+      "meta_title": "MPP 架构与存储原理 | 数据仓库",
+      "meta_description": "理解 MPP 架构、列式存储和微分区在 Snowflake 和 Redshift 等现代数据仓库中的应用。",
+      "number": 1,
+      "slug": "mpp-architecture-storage-internals",
+      "content": "高容量分析设计的数据仓库，其运作原理与传统事务型数据库有所不同。当数据集超出单个服务器的承载能力时，性能表现有赖于系统分发工作的效率。本章考察大规模并行处理（MPP）的运作方式，其中无共享架构使多个计算节点能够同时处理数据片段。\n\n如果大小为 $D$ 的数据集分布在 $n$ 个节点上，则单个节点的理想处理负载接近：\n\n$$ L = \\frac{D}{n} $$\n\n在实际生产中实现这种理论效率，需要对存储原理有扎实的了解。我们将分析现代平台如何将计算与存储分离，使工程师能够根据工作负载需求而非存储容量独立调整资源。\n\n本内容包括数据的物理组织，比较行式存储与BigQuery、Redshift和Snowflake中使用的列式格式。您将回顾压缩算法如何减少I/O开销，以及元数据如何通过微分区使查询引擎忽略不相关的数据块。学完本模块后，您将能够检查存储配置文件，并评估架构选择如何直接影响查询延迟和成本。",
+      "sections": [
+        {
+          "id": 8021,
+          "title": "大规模并行处理的基本原理",
+          "meta_title": "MPP基本原理 | 分布式计算",
+          "meta_description": "学习大规模并行处理（MPP）和无共享架构的核心思想。",
+          "slug": "mpp-fundamentals",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8022,
+          "title": "计算与存储分离",
+          "meta_title": "计算与存储分离架构",
+          "meta_description": "分析计算资源与存储层分离的优势及实现方式。",
+          "slug": "decoupling-compute-storage",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8023,
+          "title": "列式存储格式与压缩",
+          "meta_title": "列式存储与压缩算法",
+          "meta_description": "对数据仓库中使用的列式存储格式和压缩算法进行技术细致分析。",
+          "slug": "columnar-storage-compression",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8024,
+          "title": "微分区与元数据管理",
+          "meta_title": "微分区与元数据 | Snowflake",
+          "meta_description": "自动微分区和元数据服务如何实现高效数据获取。",
+          "slug": "micro-partitioning-metadata",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8025,
+          "title": "实践：检查存储配置",
+          "meta_title": "实践：存储配置与分区",
+          "meta_description": "实践环节，分析云数据仓库中的存储配置和分区分布。",
+          "slug": "practice-inspecting-storage",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1400,
+      "title": "大规模数据建模进阶",
+      "meta_title": "高级数据建模 | Data Vault 与 SCD",
+      "meta_description": "实践高级数据建模技术，包括 Data Vault 2.0 和复杂的 SCD 模式。",
+      "number": 2,
+      "slug": "advanced-data-modeling-scale",
+      "content": "大规模并行处理 (MPP) 系统中的数据建模，需要将重心从存储资源节约转向计算优化和灵活性。像第三范式 (3NF) 这样的传统方法，常因分布式节点间大量数据混洗而产生明显的性能开销。即使标准的星型模式对展现层有效，但在PB级规模环境中，处理频繁结构变动或高速数据摄入时，也可能变得僵化。\n\n本章将审视旨在支持可扩展性和迭代开发的架构模式。您将首先评估维度建模在分布式存储环境中的具体局限。接着，内容会转到 Data Vault 2.0，您将学习构建 Hubs、Links 和 Satellites，以实现业务键与其描述性属性的分离。我们还会介绍摄入和查询 JSON 和 Parquet 等半结构化数据格式的技术方法，这里将采用原生SQL扩展，而不是外部ETL流程。本节最后将介绍管理模式演进的技术，使您的数据仓库能够适应源系统变化，同时不破坏现有数据约定。",
+      "sections": [
+        {
+          "id": 8026,
+          "title": "大数据中的维度建模限制",
+          "meta_title": "大数据中维度建模的局限",
+          "meta_description": "评估传统星型模式在PB级环境中的局限性",
+          "slug": "dimensional-modeling-constraints",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8027,
+          "title": "Data Vault 2.0 实施模式",
+          "meta_title": "Data Vault 2.0 实施指南",
+          "meta_description": "构建中心表、链接表和卫星表，以实现可审计、灵活的数据仓库。",
+          "slug": "data-vault-implementation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8028,
+          "title": "处理半结构化数据",
+          "meta_title": "在SQL中查询JSON和Parquet",
+          "meta_description": "原生摄取、展平及查询嵌套JSON/Parquet数据的方法。",
+          "slug": "handling-semi-structured-data",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8029,
+          "title": "模式演变与版本管理",
+          "meta_title": "模式演变策略",
+          "meta_description": "在生产数据管道中管理破坏性更改和模式漂移。",
+          "slug": "schema-evolution-versioning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8030,
+          "title": "动手实践：设计数据保险库",
+          "meta_title": "实践：数据保险库建模",
+          "meta_description": "从原始数据源设计并实现数据保险库架构的实际练习。",
+          "slug": "practice-designing-data-vault",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1401,
+      "title": "高吞吐量数据摄取管道",
+      "meta_title": "数据摄取管道 | CDC 与批处理",
+      "meta_description": "构建可靠的摄取管道，运用 CDC、幂等性和微批处理策略。",
+      "number": 3,
+      "slug": "high-throughput-ingestion",
+      "content": "在配置好底层存储引擎并定义了数据模型后，重点将转向填充数据仓库。数据摄取是原始信息的入口。在大规模场景下，简单地复制文件是不够的。必须考虑网络不稳定、模式演变以及入站事件的速度。本章介绍将数据可靠地从源系统传输到分析环境而不降低性能所需的工程模式。\n\n我们首先分析变更数据捕获 (CDC) 架构。与会给源数据库带来负担的基于查询的轮询不同，基于日志的 CDC 从事务日志中捕获二进制事件，以近实时方式同步状态。接下来，我们讨论幂等性在管道设计中的数学必要性。幂等过程确保重新运行失败的作业不会导致重复记录。形式上，对于数据转换函数 $f(x)$，幂等性保证：\n\n$$f(f(x)) = f(x)$$\n\n这一特性使您能够在网络故障常见的分布式环境中安全地重试管道。\n\n最后几节将比较微批加载和持续流式传输之间的权衡。尽管流式传输提供更低的延迟，但它在文件碎片和计算成本方面带来了挑战。我们还将评估管理迟到数据和水印的方法，以保持时间序列表中的时间准确性。在本章结束时，您将能够设计出平衡延迟要求与资源效率的摄取系统。",
+      "sections": [
+        {
+          "id": 8031,
+          "title": "变更数据捕获架构",
+          "meta_title": "变更数据捕获 (CDC) 架构",
+          "meta_description": "实现基于日志的CDC，以进行接近实时的数据同步。",
+          "slug": "cdc-architectures",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8032,
+          "title": "数据管道中的幂等性",
+          "meta_title": "数据工程中的幂等性",
+          "meta_description": "设计保证精确一次处理逻辑的管道",
+          "slug": "idempotency-pipelines",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8033,
+          "title": "微批处理与流式摄取",
+          "meta_title": "微批处理与流式摄取",
+          "meta_description": "数据仓库中连续流式处理与微批加载的权衡",
+          "slug": "micro-batch-streaming",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8034,
+          "title": "处理延迟到达的数据",
+          "meta_title": "处理延迟到达的数据",
+          "meta_description": "处理乱序事件和水位线管理的策略。",
+          "slug": "late-arriving-data",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8035,
+          "title": "实践操作：构建CDC管道",
+          "meta_title": "实践：构建CDC管道",
+          "meta_description": "使用开源连接器和目标数据仓库构建可运行的CDC管道。",
+          "slug": "practice-cdc-pipeline",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1402,
+      "title": "查询优化与性能调优",
+      "meta_title": "SQL查询优化 | 性能调优",
+      "meta_description": "掌握查询优化：执行计划、修剪、连接策略和物化视图。",
+      "number": 4,
+      "slug": "query-optimization-performance",
+      "content": "在太字节级数据集上执行SQL，不仅仅需要语法正确，它还要求理解底层的分布式机制。当查询在一个大规模并行处理（MPP）系统上运行时，引擎会将声明性逻辑转换为物理执行计划。此计划决定了计算节点如何访问存储层，以及数据在聚合和连接操作期间如何在网络中传输。\n\n在这种环境中，性能瓶颈通常源于过度的I/O或网络拥塞。未能有效使用存储布局的查询，会迫使系统读取不必要的微分区，从而增加成本和延迟。执行分布式查询所需的时间，可以通过对可用节点上的扫描、混洗和处理时间求和来近似计算：\n\n$$ T_{total} \\approx \\frac{V_{scan}}{R_{disk}} + \\frac{V_{shuffle}}{R_{network}} + \\frac{I_{cpu}}{P_{nodes}} $$\n\n其中，$V$ 代表数据量，$P$ 代表并行度。减少$V_{scan}$和$V_{shuffle}$是性能调优的主要目标。\n\n在本节中，我们将审视直接影响这些变量的架构决策。我们首先分析查询执行计划，以显示表示查询阶段的有向无环图（DAG）。您将学会识别特定的操作符，例如 `TableScan` 或 `Exchange`，这些操作符表明资源竞争。\n\n接下来，内容转入存储优化技术。我们讨论如何定义聚簇键以实现分区修剪，从而允许引擎跳过不符合查询谓词的数据块。我们还将区分广播连接和混洗连接策略，确定何时在节点间复制维度表，以及何时重新分发事实表。最后，我们使用持久化层，采用物化视图和缓存机制，以避免重复工作负载中的重复计算。",
+      "sections": [
+        {
+          "id": 8036,
+          "title": "分析查询执行计划",
+          "meta_title": "阅读SQL查询执行计划",
+          "meta_description": "解读DAG和执行配置文件以识别性能瓶颈",
+          "slug": "query-execution-plans",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8037,
+          "title": "分区剪枝与聚簇键",
+          "meta_title": "分区剪枝与聚簇策略",
+          "meta_description": "配置聚簇键以最大化分区剪枝效率。",
+          "slug": "pruning-clustering-keys",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8038,
+          "title": "连接策略：广播连接与洗牌连接",
+          "meta_title": "广播连接与洗牌连接",
+          "meta_description": "了解分布式连接算法和网络数据传输开销。",
+          "slug": "join-strategies-broadcast-shuffle",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8039,
+          "title": "物化视图与缓存层",
+          "meta_title": "物化视图与结果缓存",
+          "meta_description": "利用预计算视图和缓存以减少计算延迟。",
+          "slug": "materialized-views-caching",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8040,
+          "title": "动手实践：优化高延迟查询",
+          "meta_title": "实践：SQL 性能优化",
+          "meta_description": "重构低效查询并应用聚类以提升性能指标。",
+          "slug": "practice-tuning-queries",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1403,
+      "title": "治理、安全与可观测性",
+      "meta_title": "数据治理 & 安全 | RBAC & RLS",
+      "meta_description": "实施企业级安全、RBAC、行级安全以及成本监控。",
+      "number": 5,
+      "slug": "governance-security-observability",
+      "content": "数据仓库的扩展不只是管理存储容量或优化查询延迟。随着数据量的增长，管理访问和监控资源消耗的难度也随之增加。如果没有严密的管控措施，高性能系统很快会成为安全隐患或财务负担。\n\n本章侧重于维持安全和可观测环境所需的运营框架。我们将审视如何构建基于角色的访问控制（RBAC）以高效管理权限，避免通常与手动用户管理相关的管理开销。您将学会实施精细化的安全措施，特别是用于保护敏感字段的动态数据屏蔽和行级安全（RLS）。例如，我们将定义策略，即查询仅当用户的属性 $A$ 与数据的安全标签 $T$ 匹配时才返回结果集 $R$，从而确保用户只能访问与其角色相关的数据。\n\n我们还将处理运行大规模并行处理（MPP）系统的财务方面。本内容涉及可观测性的方法，包括跟踪信用额度使用情况和配置自动化资源监控器。您将实施配额和自动暂停策略，以防止基于消费的云模型中常见的预算超支。到本节结束时，您将能够应用伴随数据基础设施扩展的自动化治理规则。",
+      "sections": [
+        {
+          "id": 8041,
+          "title": "基于角色的访问控制层级结构",
+          "meta_title": "数据仓库中的RBAC层级结构",
+          "meta_description": "构建细粒度权限模型和角色继承。",
+          "slug": "rbac-hierarchies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8042,
+          "title": "动态数据屏蔽与令牌化",
+          "meta_title": "动态数据屏蔽技术",
+          "meta_description": "通过基于策略的动态屏蔽和令牌化保护个人身份信息。",
+          "slug": "dynamic-masking-tokenization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8043,
+          "title": "行级安全实现",
+          "meta_title": "实现行级安全",
+          "meta_description": "编写安全谓词策略以在行级别限制数据访问。",
+          "slug": "row-level-security",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8044,
+          "title": "资源监控与成本管控",
+          "meta_title": "仓库成本管控与监控",
+          "meta_description": "设置配额、信用点监控器和自动暂停策略。",
+          "slug": "resource-monitoring-cost",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8045,
+          "title": "动手实践：配置安全策略",
+          "meta_title": "实践：RBAC 与行级安全",
+          "meta_description": "将 RBAC 角色和行级安全策略应用于样本数据集。",
+          "slug": "practice-security-policies",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

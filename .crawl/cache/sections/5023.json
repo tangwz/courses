@@ -1,0 +1,61 @@
+{
+  "id": 5023,
+  "title": "多层感知机 (MLP)：添加层次",
+  "meta_title": "多层感知机 (MLP)",
+  "meta_description": "介绍带有隐藏层的多层感知机（前馈网络）的原理。",
+  "content": "<p>单层感知机虽然是基础，但存在一个显著的局限性：它只能学习线性可分模式。像经典的XOR（异或）函数这样的问题超出了它的能力范围，因为在输入空间中，这些类别（0和1输出）无法通过一条直线来分开。为了处理这种非线性关系，我们需要为网络结构引入更多的复杂性。多层感知机（MLP）便因此出现。</p>\n<p>多层感知机背后的主要思想简单而有效：在输入层和输出层之间插入一个或多个神经元层。这些中间层被称为<strong>隐藏层</strong>。它们之所以“隐藏”，是因为它们的输出不直接作为网络的最终结果被观察到；相反，它们充当后续层的输入。</p>\n<h3>多层感知机的架构</h3>\n<p>多层感知机由以下部分组成：</p>\n<ol>\n<li><strong>输入层：</strong> 这一层接收初始数据（特征）。这一层中的神经元数量与输入数据中的特征数量相对应。它不执行计算；它只是将数据传递给第一个隐藏层。</li>\n<li><strong>隐藏层：</strong> 一个或多个位于输入层和输出层之间的层。每个隐藏层包含一定数量的神经元（也称为隐藏单元）。这些神经元执行计算：它们对前一层的输出进行加权求和，添加一个偏置 (bias)，并应用一个激活函数 (activation function)。隐藏层的存在使得网络能够从数据中学习复杂的模式和表示。</li>\n<li><strong>输出层：</strong> 产生网络预测的最终层。这一层中使用的神经元数量和激活函数取决于具体的任务（例如，一个神经元使用Sigmoid激活函数用于二分类，多个神经元使用Softmax用于多分类，或者一个神经元使用线性激活函数用于回归）。</li>\n</ol>\n<p>在多层感知机中，信息通常沿一个方向流动：从输入层，经过隐藏层，到达输出层。这种架构被称为<strong>前馈网络</strong>。在前向传播（预测阶段）期间，层结构内部没有循环或将信息回传的连接。通常，一层中的每个神经元都连接到后续层中的<em>每个</em>神经元，形成所谓的<strong>全连接层</strong>或密集层。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1q3g46\" \n              data-graph-definition='digraph MLP { rankdir=LR; splines=line; nodesep=0.5; node [shape=circle, style=filled, margin=0.1, width=0.4, height=0.4, fixedsize=true]; edge [arrowsize=0.7]; {rank=min; node [fillcolor=\"#a5d8ff\"]; \"x1\" [label=\"x₁\"]; \"x2\" [label=\"x₂\"]; } {rank=same; node [fillcolor=\"#96f2d7\"]; \"h1\" [label=\"h₁\"]; \"h2\" [label=\"h₂\"]; \"h3\" [label=\"h₃\"]; } {rank=max; node [fillcolor=\"#ffc9c9\"]; \"y\" [label=\"y\"]; } \"x1\" -> \"h1\"; \"x1\" -> \"h2\"; \"x1\" -> \"h3\"; \"x2\" -> \"h1\"; \"x2\" -> \"h2\"; \"x2\" -> \"h3\"; \"h1\" -> \"y\"; \"h2\" -> \"y\"; \"h3\" -> \"y\"; label = \"多层感知机结构\"; labelloc=b; fontname=\"Helvetica\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1q3g46\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的多层感知机，包含一个输入层（2个神经元）、一个隐藏层（3个神经元）和一个输出层（1个神经元）。连接表示信息的前馈流动。</p>\n</blockquote>\n<h3>克服线性局限</h3>\n<p>隐藏层如何解决单层感知机面临的问题？主要在于多层结构与<em>非线性</em>激活函数 (activation function)的结合（我们将在下一章中详细探讨）。</p>\n<p>设想第一个隐藏层中的每个神经元学习一个简单的线性边界，类似于单个感知机。然而，这些神经元的输出在经过非线性激活函数转换后，成为下一层的输入。随后层中的神经元可以组合这些非线性变换。</p>\n<p>实际上，隐藏层学习将输入数据转换为新的表示空间。在这个转换后的空间中，最初的非线性可分问题可以变为线性可分。对于XOR问题，隐藏层可以学习表示，使得属于不同类别的点随后可以通过输出层神经元用一条直线分开。增加层次（更多层）使得网络能够从数据中学习日益复杂的函数和分层特征。</p>\n<p>为了使多层感知机学习非线性函数，隐藏神经元中使用的激活函数<em>必须</em>是非线性的（例如，Sigmoid、Tanh、ReLU）。如果整个网络中只使用线性激活函数，那么整个多层感知机，无论有多少层，都将在数学上退化为一个等效的单层线性模型，从而使我们回到感知机的局限性。</p>\n<p>总而言之，多层感知机通过引入隐藏层克服了单层模型的限制。这些层结合非线性激活函数，使得多层感知机能够学习输入和输出之间复杂的非线性映射，使其成为各种机器学习 (machine learning)任务的有力工具。它们为许多更高级深度学习 (deep learning)架构奠定了根基。</p>",
+  "slug": "multi-layer-perceptrons-mlps",
+  "updates": [],
+  "references": [
+    {
+      "id": 13410,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础性教材，全面涵盖了深度学习的理论基础和实际应用，包括对多层感知器及其学习非线性函数能力的详细解释。",
+      "order": 1,
+      "created_at": "2025-09-05T08:32:46.937416Z",
+      "updated_at": "2025-09-08T16:10:47.162241Z"
+    },
+    {
+      "id": 13411,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher M. Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/",
+      "doi": "",
+      "note": "一本经典的教科书，对神经网络进行了严谨的介绍，详细阐述了多层感知器的架构和处理复杂数据模式的计算能力。",
+      "order": 2,
+      "created_at": "2025-09-05T08:32:46.942520Z",
+      "updated_at": "2025-09-08T16:10:55.035504Z"
+    },
+    {
+      "id": 13412,
+      "title": "Neural Networks and Deep Learning",
+      "author": "Michael Nielsen",
+      "year": "2015",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://neuralnetworksanddeeplearning.com/chap1.html",
+      "doi": "",
+      "note": "一个易于理解的在线教材章节，解释了单层感知器的局限性（如XOR问题），并介绍了多层感知器的架构以应对这些非线性挑战。",
+      "order": 3,
+      "created_at": "2025-09-05T08:32:46.945399Z",
+      "updated_at": "2025-09-08T16:10:52.548312Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

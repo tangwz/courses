@@ -1,0 +1,61 @@
+{
+  "id": 5187,
+  "title": "搭建一个基础向量库",
+  "meta_title": "搭建一个基础向量库 | RAG 系统",
+  "meta_description": "配置和使用Chroma或FAISS等简易向量库用于RAG。",
+  "content": "<p>检索增强生成（RAG）通过在生成过程中从外部数据源检索相关信息来增强大型语言模型（LLMs）。实现这一检索的核心组件是<strong>向量 (vector)库</strong>，有时也称为向量数据库。使用Python搭建和操作基础向量库构成了你的RAG系统的一个根基部分。</p>\n<h3>为什么选择向量 (vector)库？</h3>\n<p>你可能会疑惑，为什么我们不能只使用标准数据库或搜索引擎。传统方法搜索的是精确的关键词匹配，而RAG则需要理解用户查询与数据源中信息之间的<em>语义含义</em>或<em>上下文 (context)相似性</em>。这就是向量嵌入 (embedding)和向量库的用武之地：</p>\n<ol>\n<li><strong>存储嵌入：</strong> 向量库专门用于存储高维数值向量（嵌入），这些向量代表文本段落、图像或其他数据类型的语义含义。</li>\n<li><strong>高效相似性搜索：</strong> 它们的主要功能是执行快速高效的相似性搜索。给定一个查询向量（代表用户的问题），向量库能够快速找到其索引中在嵌入空间中“最接近”的向量，通常使用近似最近邻（ANN）算法。这些最接近的向量对应于你原始数据中语义上最相关的信息片段。</li>\n</ol>\n<p>可以把它想象成在图书馆整理书籍，不是仅仅通过书名或作者（关键词）来整理，而是通过它们讨论的根本主题和思想（语义含义）来整理。向量库能让你的应用程序快速找到最相关的“思想向量”。</p>\n<h3>选择一个基础向量 (vector)库</h3>\n<p>对于许多开发任务、原型或处理中等规模数据集的应用程序来说，简单、通常自包含的向量库就足够了，并且易于管理。Python生态系统中两个受欢迎的选择是：</p>\n<ul>\n<li><strong>ChromaDB：</strong> 一个开源的嵌入 (embedding)数据库，设计宗旨是易于使用。它可以在内存中运行，持久化到磁盘，或以客户端/服务器模式操作。</li>\n<li><strong>FAISS (Facebook AI Similarity Search)：</strong> 一个高度优化的库，用于稠密向量的高效相似性搜索和聚类。它通常被其他库用作后端引擎，但也可以直接使用。</li>\n</ul>\n<p>我们的示例将主要使用ChromaDB，因为它有直接的API和最低的设置要求。</p>\n<h3>搭建和使用ChromaDB</h3>\n<p>让我们逐步完成安装ChromaDB、添加数据和执行相似性搜索的过程。</p>\n<h4>1. 安装</h4>\n<p>首先，使用pip安装所需的库：</p>\n<pre><code class=\"language-bash\">pip install chromadb\n</code></pre>\n<p>你可能还需要一个嵌入 (embedding)模型提供者库，这取决于你如何生成嵌入（例如，<code>sentence-transformers</code>、<code>openai</code>、<code>cohere</code>）。我们暂时假定你有一个函数或机制可以将文本转换为向量 (vector)。</p>\n<h4>2. 初始化</h4>\n<p>你可以选择在内存中使用ChromaDB（脚本结束时数据会丢失），或者配置它将数据持久化到磁盘。</p>\n<pre><code class=\"language-python\">import chromadb\n\n# 内存客户端（最容易上手）\n# client = chromadb.Client()\n\n# 持久化客户端（将数据保存到 'my_chroma_db' 目录）\nclient = chromadb.PersistentClient(path=\"./my_chroma_db\")\n\n# 创建或获取一个集合（类似于SQL数据库中的表）\n# 集合需要一个嵌入函数或显式的嵌入向量。\n# 为简单起见，这里我们将使用Chroma默认基于SentenceTransformer的\n# 嵌入函数。在实际使用中，你通常会配置一个特定的嵌入函数。\n# 注意：首次使用时可能会下载模型。\ntry:\n    collection = client.get_collection(name=\"my_documents\")\n    print(\"集合 'my_documents' 已经存在。\")\nexcept Exception:\n    print(\"正在创建集合 'my_documents'...\")\n    # 如果使用Chroma的默认嵌入函数，请确保已安装sentence-transformers\n    # 和torch（`pip install sentence-transformers torch`）\n    # 或者提供你自己的嵌入函数: client.create_collection(name=\"my_documents\", embedding_function=my_embedding_function)\n    collection = client.create_collection(name=\"my_documents\")\n    print(\"集合已创建。\")\n\n</code></pre>\n<p>这里，<code>PersistentClient</code>告诉ChromaDB将其数据保存到指定目录。<code>collection</code>是你存储向量、原始文本（文档）以及任何相关元数据的地方。Chroma需要知道如何嵌入文本，这可以通过提供一个<code>embedding_function</code>或直接添加预先计算好的向量来实现。Chroma的默认设置通常足以满足最初的试验。</p>\n<h4>3. 添加数据（索引）</h4>\n<p>现在，我们向集合中添加一些文本文档。ChromaDB将自动使用其配置的嵌入函数（本例中为默认函数）将文本转换为向量，然后进行存储。</p>\n<pre><code class=\"language-python\"># 要添加的数据\ndocuments = [\n    \"埃菲尔铁塔是法国巴黎战神广场上的一座熟铁格子塔。\",\n    \"中国长城是一系列由石头、砖块、夯土、木材和其他材料构成的防御工事。\",\n    \"光合作用是植物和其他生物用来将光能转化为化学能的过程。\",\n    \"Python编程语言广泛应用于Web开发、数据科学和人工智能方面。\"\n]\nmetadatas = [\n    {\"source\": \"wiki-地标\", \"topic\": \"建筑\"},\n    {\"source\": \"wiki-地标\", \"topic\": \"建筑\"},\n    {\"source\": \"wiki-生物学\", \"topic\": \"科学\"},\n    {\"source\": \"wiki-编程\", \"topic\": \"技术\"}\n]\nids = [\"doc1\", \"doc2\", \"doc3\", \"doc4\"] # 每个文档的唯一ID\n\n# 将文档添加到集合\n# 如果没有明确提供，ChromaDB会自动处理嵌入生成。\ntry:\n    collection.add(\n        documents=documents,\n        metadatas=metadatas,\n        ids=ids\n    )\n    print(f\"已向集合添加 {len(ids)} 个文档。\")\nexcept ValueError as e:\n    print(f\"添加文档出错（可能存在重复项？）：{e}\")\n    # 处理多次运行脚本时ID可能已存在的情况\n    # 为简单起见，这里我们只打印错误信息。\n\n</code></pre>\n<p>我们提供了文本内容（<code>documents</code>）、可选的<code>metadatas</code>（稍后用于过滤）以及每个条目的唯一<code>ids</code>。</p>\n<h4>4. 查询（相似性搜索）</h4>\n<p>向量库的核心目的就是检索。让我们提出一个问题，并找到最相关的文档。</p>\n<pre><code class=\"language-python\">query_text = \"什么是流行的人工智能语言？\"\nn_results = 2 # 要检索的最相似文档数量\n\n# 执行相似性搜索\nresults = collection.query(\n    query_texts=[query_text],\n    n_results=n_results,\n    # 可选：include=['documents', 'distances', 'metadatas'] # 指定返回内容\n)\n\nprint(f\"\\n查询：{query_text}\")\nprint(f\"找到 {len(results.get('ids', [[]])[0])} 个结果：\")\n\n# 处理并显示结果\nretrieved_ids = results.get('ids', [[]])[0]\nretrieved_docs = results.get('documents', [[]])[0]\nretrieved_metadatas = results.get('metadatas', [[]])[0]\nretrieved_distances = results.get('distances', [[]])[0]\n\nfor i in range(len(retrieved_ids)):\n    print(f\"  ID: {retrieved_ids[i]}\")\n    print(f\"  距离：{retrieved_distances[i]:.4f}\") # 距离越小 = 越相似\n    print(f\"  元数据：{retrieved_metadatas[i]}\")\n    print(f\"  文档：{retrieved_docs[i]}\")\n    print(\"-\" * 20)\n\n</code></pre>\n<p>ChromaDB接收<code>query_text</code>，自动使用与存储文档相同的过程对其进行嵌入，并执行相似性搜索（可能是在嵌入空间中的余弦相似度或欧几里得距离）以找到<code>n_results</code>个最接近的向量。结果包含ID、原始文档、元数据和表示相似度的距离分数（通常越低越好）。正如所料，关于AI语言的查询应该检索到关于Python的文档。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ekqb2g\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n    subgraph cluster_indexing {\n        label = \"索引过程\";\n        labelloc=\"t\";\n        style=dashed; color=\"#adb5bd\";\n        node [fillcolor=\"#96f2d7\"]; // Teal light\n        Text [label=\"源文本\\n(&#39;The Python programming...&#39;)\"];\n        Embed1 [label=\"嵌入模型\"];\n        VectorStore [label=\"ChromaDB\\n集合\", shape=cylinder, fillcolor=\"#a5d8ff\"]; // Blue light\n\n        Text -> Embed1 [label=\"生成嵌入\"];\n        Embed1 -> VectorStore [label=\"存储向量、文本、元数据\"];\n    }\n\n    subgraph cluster_querying {\n        label = \"查询过程\";\n        labelloc=\"t\";\n        style=dashed; color=\"#adb5bd\";\n        node [fillcolor=\"#ffec99\"]; // Yellow light\n        Query [label=\"用户查询\\n(&#39;What is a popular language for AI?&#39;)\"];\n        Embed2 [label=\"嵌入模型\\n(与索引过程相同)\"];\n        SimilaritySearch [label=\"相似性搜索\\n(查找最接近的向量)\", shape=diamond, fillcolor=\"#bac8ff\"]; // Indigo light\n\n        Query -> Embed2 [label=\"生成嵌入\"];\n        Embed2 -> SimilaritySearch;\n        VectorStore -> SimilaritySearch [label=\"搜索存储的向量\"];\n        SimilaritySearch -> Results [label=\"检索文本、元数据、距离\"];\n    }\n    Results [label=\"检索结果\\n(&#39;The Python programming...&#39;)\", shape=note, fillcolor=\"#fcc2d7\"]; // Pink light\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ekqb2g\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是数据在ChromaDB等向量库中进行索引和查询时的流程图。文本被转换为嵌入并存储；查询被嵌入并与存储的向量进行比较，以找到相关信息。</p>\n</blockquote>\n<h3>与框架集成</h3>\n<p>LangChain和LlamaIndex等库通常提供对向量 (vector)库的更高层抽象。你通常只需配置一次向量库（如我们上面所做），然后将<code>collection</code>对象或基于它构建的专门<code>Retriever</code>对象传递给框架。</p>\n<p>例如，在LangChain中，你可能会将一个Chroma集合包装到一个<code>Chroma</code>向量库对象中，并将其用作RAG链中的检索器：</p>\n<pre><code class=\"language-python\"># 示例代码片段（假定已安装LangChain）\n# from langchain_community.vectorstores import Chroma\n# from langchain_core.embeddings import Embeddings # 基类\n\n# 假定 'client' 和 'collection_name' 已如前定义\n# 并且 'embedding_function' 是一个兼容LangChain的嵌入对象\n# vector_store = Chroma(\n#     client=client,\n#     collection_name=\"my_documents\",\n#     embedding_function=embedding_function # 例如，OpenAIEmbeddings()\n# )\n# retriever = vector_store.as_retriever(search_kwargs={\"k\": 3})\n\n# 'retriever' 现在可以在LangChain RAG链中使用\n</code></pre>\n<p>同样地，LlamaIndex使用向量库作为其<code>VectorStoreIndex</code>的一部分，以管理节点嵌入 (embedding)的存储和检索。</p>\n<h3>基础向量 (vector)库的考量</h3>\n<p>虽然它们非常适合上手，但请记住以下几点：</p>\n<ul>\n<li><strong>可扩展性：</strong> 内存中或简单的基于文件的持久化可能难以应对数十亿向量或非常高的查询负载。</li>\n<li><strong>管理：</strong> 你需要负责管理底层存储、备份和潜在的扩展需求。</li>\n<li><strong>功能：</strong> 它们可能缺乏专用、托管向量数据库中的高级功能，例如实时更新、细粒度访问控制或复杂的过滤能力。</li>\n</ul>\n<p>对于较小的项目或初期开发，像ChromaDB这样的存储提供了一种很好的平衡，兼顾了简单性和能力。随着你的需求增长，你可以考察更复杂的自托管选项（例如Weaviate、Qdrant）或托管云服务（例如Pinecone、Google Vertex AI Matching Engine、Azure AI Search）。</p>\n<p>搭建并填充好基础向量库后，你就拥有了核心检索机制。下一步是将这个检索器集成到完整的RAG流程中，与大型语言模型结合，根据检索到的上下文 (context)生成信息丰富的回复。</p>",
+  "slug": "setting-up-basic-vector-store",
+  "updates": [],
+  "references": [
+    {
+      "id": 13476,
+      "title": "ChromaDB Documentation",
+      "author": "Chroma",
+      "year": "2024",
+      "publisher": "Chroma",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.trychroma.com/",
+      "doi": "",
+      "note": "开源嵌入式数据库的官方文档。它提供了安装、配置和实际使用 ChromaDB API 以管理集合并执行相似性搜索的全面指南。",
+      "order": 1,
+      "created_at": "2025-09-05T08:34:05.284494Z",
+      "updated_at": "2025-09-10T12:04:18.659146Z"
+    },
+    {
+      "id": 13478,
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "author": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova",
+      "year": "2018",
+      "publisher": "",
+      "journal": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)",
+      "volume": "1",
+      "pages": "4171-4186",
+      "url": "https://arxiv.org/abs/1810.04805",
+      "doi": "10.48550/arXiv.1810.04805",
+      "note": "介绍了 BERT 模型，这是预训练上下文文本嵌入的里程碑。这项工作对于理解文本如何转化为捕获语义的高维向量，从而实现向量存储中的语义搜索是基础性的。",
+      "order": 3,
+      "created_at": "2025-09-05T08:34:05.305220Z",
+      "updated_at": "2025-09-10T12:04:15.037764Z"
+    },
+    {
+      "id": 13479,
+      "title": "Natural Language Processing with Transformers: Building Innovative Applications with 🤗Transformers",
+      "author": "Lewis Tunstall, Leandro von Werra, Thomas Wolf",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/natural-language-processing/9781098103231/",
+      "doi": "",
+      "note": "这本书深入解释了现代 NLP 技术，包括基于 Transformer 的模型如何生成向量嵌入。它为在 RAG 等应用中使用这些嵌入，以及理解向量存储的作用提供了背景。",
+      "order": 4,
+      "created_at": "2025-09-05T08:34:05.308389Z",
+      "updated_at": "2025-09-10T12:04:25.349372Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

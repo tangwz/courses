@@ -1,0 +1,61 @@
+{
+  "id": 7027,
+  "title": "机器学习团队的成本归因与分摊模型",
+  "meta_title": "机器学习的成本归因与分摊模型",
+  "meta_description": "建立标记策略和报告方法，以准确分配成本给具体的项目、团队或模型。",
+  "content": "<p>一旦您不再局限于孤立的实验，仅仅停留在“能运行就行”的心态，对于一个可持续的人工智能平台来说是远远不够的。如果不清楚谁在花费什么，以及为什么花费，云账单就会变成一个不透明且令人担忧的数字。建立成本归因模型是您对机器学习 (machine learning)基础设施获得财务控制的首要、不可协商的步骤。其目标是将您的云账单从一个单一庞大的数字，转变为一份详细、可操作的报告，将每一笔花费与特定的团队、项目乃至每一次训练运行关联起来。</p>\n<h3>基础：细粒度的标记 (token)策略</h3>\n<p>云计算中的成本归因，其根本在于一套严格且全面的标记策略。标记是附加到资源上的简单键值对。对于机器学习 (machine learning)工作负载，通用的标记策略是不够的。您必须设计一个能够反映机器学习开发和操作特定维度的方案。</p>\n<p>设计良好的标记方案应通过编程方式强制执行。云服务提供商提供了强制执行标记策略的服务，例如AWS服务控制策略 (SCPs)、Azure策略或GCP组织策略。这些可以配置为阻止创建缺少所需标记的资源。</p>\n<p>您的标记策略应至少包含：</p>\n<ul>\n<li><code>ml-team</code>：负责该资源的团队（例如，<code>fraud-detection</code>，<code>personalization</code>）。</li>\n<li><code>ml-project</code>：该资源支持的特定项目或模型（例如，<code>bert-classifier-v2</code>，<code>recommendation-engine</code>）。</li>\n<li><code>ml-workload-type</code>：正在进行的工作类型（例如，<code>training</code>，<code>inference</code>，<code>data-processing</code>，<code>notebook</code>）。</li>\n<li><code>ml-environment</code>：部署阶段（例如，<code>dev</code>，<code>staging</code>，<code>prod</code>）。</li>\n<li><code>ml-experiment-id</code>：特定训练运行的唯一标识符，以便对实验成本进行细致分析。</li>\n</ul>\n<p>这里是一个策略片段示例，可用于强制所有新的EC2实例都存在 <code>ml-team</code> 标记：</p>\n<pre><code class=\"language-json\">{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Sid\": \"EnforceTeamTagOnEC2\",\n      \"Effect\": \"Deny\",\n      \"Action\": \"ec2:RunInstances\",\n      \"Resource\": \"arn:aws:ec2:*:*:instance/*\",\n      \"Condition\": {\n        \"Null\": {\n          \"aws:RequestTag/ml-team\": \"true\"\n        }\n      }\n    }\n  ]\n}\n</code></pre>\n<p>如果请求中不存在 <code>ml-team</code> 标记，此策略将拒绝 <code>ec2:RunInstances</code> API 调用，从而有效地强制开发人员和自动化脚本遵守标记方案。</p>\n<h3>分摊与内部计费模型</h3>\n<p>有了标记 (token)策略，您就可以实施一个成本报告系统。主要有两种模型：分摊和内部计费。</p>\n<ul>\n<li>\n<p><strong>分摊：</strong> 该模型侧重于成本透明度。您将发生的费用“展示给”相应的团队，但实际上并不在内部转移资金。其目标是通过让团队了解其财务影响，培养责任感并鼓励节约成本的行为。对于大多数组织而言，这是理想的起点。它在文化上造成的干扰较小，侧重于平台团队与机器学习 (machine learning)团队之间的教育和合作。</p>\n</li>\n<li>\n<p><strong>内部计费：</strong> 这是一种更正式的会计实践，由中央IT或MLOps平台团队直接向其他业务部门收取其资源消耗的费用。这为团队带来了直接的财务激励，促使其进行优化。但是，它需要组织具备高度的成熟度、准确的成本归因以及明确的争议处理流程。有缺陷的内部计费系统可能会造成内部摩擦并阻碍实验。</p>\n</li>\n</ul>\n<p>我们建议从分摊模型开始。一旦归因系统被证明准确并得到所有团队的信任，如果组织结构有此需求，您可以考虑演进到内部计费模型。</p>\n<h3>归因直接成本和共享成本</h3>\n<p>成本归因并非总是一帆风顺。有些成本直接与单个团队的工作负载相关，而另一些则由惠及多个团队的共享基础设施产生。</p>\n<h4>直接成本归因</h4>\n<p>直接成本最易于处理。为特定训练任务配置的GPU实例，如果标记 (token)为<code>ml-project: fraud-classifier-v3</code>，其全部成本可以直接分配给该项目。同样，单个团队使用的数据集的存储成本也可以直接归因。您的标记策略是实现这一目标的主要手段。</p>\n<h4>共享成本归因</h4>\n<p>共享成本带来了更大的挑战。您如何分配共享Kubernetes控制平面、像Prometheus这样的中央监控堆栈或多租户特征存储的成本？简单地平均分摊账单是不公平的，并且会掩盖真正的成本驱动因素。更公平的方法是根据消耗指标按比例分摊这些共享成本。</p>\n<p>以下是一些常见策略：</p>\n<ul>\n<li><strong>Kubernetes 集群：</strong> 根据每个团队Pod在计费周期内的CPU和内存 <code>requests</code> 总量，按比例分摊控制平面和共享节点的成本。此方法将成本与预留容量关联起来。</li>\n<li><strong>共享存储/数据库：</strong> 对于共享数据湖，您可以根据团队特定前缀下存储的数据量来归因成本（例如，<code>s3://my-datalake/fraud-team/</code>）。对于共享数据库或特征存储，您可以使用每个团队服务发起的读/写操作数量。</li>\n<li><strong>网络：</strong> 出口数据传输成本可能尤其难以归因。如果您使用Istio等服务网格，可以使用其遥测数据来跟踪服务间的流量，并将出口成本归因于发起外部请求的特定团队的服务。</li>\n</ul>\n<p>下图说明了云账单中的成本如何首先被分流到直接成本和共享成本桶中，然后再分配给各个团队。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-18lbciw\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    subgraph cluster_cloud {\n        label=\"云账单\";\n        bgcolor=\"#b2f2bb\";\n        Bill [label=\"总支出\", shape=note, fillcolor=\"#d8f5a2\"];\n    }\n\n    subgraph cluster_resources {\n        label=\"云资源\";\n        bgcolor=\"#e9ecef\";\n        GPU [label=\"EC2 GPU 实例\\n(已标记)\", fillcolor=\"#dee2e6\"];\n        S3 [label=\"S3 存储桶\\n(按前缀标记)\", fillcolor=\"#dee2e6\"];\n        K8s [label=\"共享 K8s 集群\", fillcolor=\"#dee2e6\"];\n        Feast [label=\"共享特征存储\", fillcolor=\"#dee2e6\"];\n    }\n    \n    subgraph cluster_allocation {\n        label=\"成本分配逻辑\";\n        bgcolor=\"#a5d8ff\";\n        Direct [label=\"直接归因\\n(通过标记)\", fillcolor=\"#bac8ff\"];\n        Shared [label=\"共享成本池\", fillcolor=\"#bac8ff\"];\n        ProrateK8s [label=\"按 Pod 请求\\n比例分摊\", fillcolor=\"#d0bfff\"];\n        ProrateFeast [label=\"按 API 调用\\n比例分摊\", fillcolor=\"#d0bfff\"];\n    }\n\n    subgraph cluster_teams {\n        label=\"机器学习团队\";\n        bgcolor=\"#ffc9c9\";\n        TeamA [label=\"团队 A\\n(欺诈检测)\", fillcolor=\"#ffd8a8\"];\n        TeamB [label=\"团队 B\\n(推荐)\", fillcolor=\"#ffd8a8\"];\n    }\n\n    Bill -> {GPU, S3, K8s, Feast} [style=invis];\n    \n    GPU -> Direct [label=\"直接\"];\n    S3 -> Direct [label=\"直接\"];\n    \n    K8s -> Shared [label=\"共享\"];\n    Feast -> Shared [label=\"共享\"];\n\n    Direct -> {TeamA, TeamB} [label=\"根据标记 100%\"];\n    Shared -> {ProrateK8s, ProrateFeast};\n    ProrateK8s -> {TeamA, TeamB} [label=\"例如，60% / 40%\"];\n    ProrateFeast -> {TeamA, TeamB} [label=\"例如，25% / 75%\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-18lbciw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>成本从单一云账单流向多个团队的归因过程，区分直接分配的成本和从共享资源池按比例分摊的成本。</p>\n</blockquote>\n<h3>构建分摊仪表盘</h3>\n<p>最后一步是以清晰易懂的格式呈现这些信息。每个团队都应有一个专属仪表盘，用于可视化其支出。这些仪表盘不仅适用于管理者；它们是工程师了解其架构选择和实验成本影响的重要工具。</p>\n<p>一个好的分摊仪表盘应允许用户根据您定义的标记 (token)（<code>ml-project</code>、<code>ml-workload-type</code>和<code>ml-environment</code>）过滤和分组成本。堆叠条形图是展示团队支出构成的一种有效方式。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-pyhnue\" \n              data-plot-definition='{\"data\":[{\"x\":[\"Project-Cerberus\",\"Project-Hydra\",\"Project-Strix\"],\"y\":[2200,4500,1300],\"name\":\"训练计算\",\"type\":\"bar\",\"marker\":{\"color\":\"#fd7e14\"}},{\"x\":[\"Project-Cerberus\",\"Project-Hydra\",\"Project-Strix\"],\"y\":[1800,800,2500],\"name\":\"推理计算\",\"type\":\"bar\",\"marker\":{\"color\":\"#4263eb\"}},{\"x\":[\"Project-Cerberus\",\"Project-Hydra\",\"Project-Strix\"],\"y\":[500,1200,400],\"name\":\"数据存储\",\"type\":\"bar\",\"marker\":{\"color\":\"#868e96\"}},{\"x\":[\"Project-Cerberus\",\"Project-Hydra\",\"Project-Strix\"],\"y\":[750,750,750],\"name\":\"共享平台费用\",\"type\":\"bar\",\"marker\":{\"color\":\"#be4bdb\"}}],\"layout\":{\"barmode\":\"stack\",\"title\":{\"text\":\"欺诈检测团队项目月度成本\"},\"xaxis\":{\"title\":\"项目\"},\"yaxis\":{\"title\":\"成本 (美元)\"},\"font\":{\"family\":\"sans-serif\"},\"paper_bgcolor\":\"#ffffff\",\"plot_bgcolor\":\"#e9ecef\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-pyhnue\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>单个机器学习 (machine learning)团队的月度成本细分，展示了每个项目的总支出如何由不同工作负载类型和共享平台费用构成。</p>\n</blockquote>\n<p>通过实施这些归因和分摊方法，您创建了一个将技术活动与财务结果相联系的反馈循环。这种透明度有助于团队做出更明智、更具成本效益的决策，将财务管理从自上而下的指令转变为共享的工程责任。这是所有后续成本优化工作得以开展的依据。</p>",
+  "slug": "cost-attribution-showback-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 18800,
+      "title": "FinOps: A Guide To Cloud Financial Management",
+      "author": "J.R. Storment, Mike Fuller",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/cloud-finops-2nd/9781492098348/",
+      "doi": "",
+      "note": "提供云财务管理的基本原则和实践，涵盖FinOps框架内的成本分配、预算、预测以及展示/分摊模型。",
+      "order": 1,
+      "created_at": "2025-09-06T12:46:08.577660Z",
+      "updated_at": "2025-09-10T03:22:01.113435Z"
+    },
+    {
+      "id": 18801,
+      "title": "What are Service Control Policies?",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scp.html",
+      "doi": "",
+      "note": "官方文档解释AWS服务控制策略，包含如何对EC2实例等资源强制执行标记策略的示例，支持编程实现成本归因。",
+      "order": 2,
+      "created_at": "2025-09-06T12:46:08.592561Z",
+      "updated_at": "2025-09-10T03:21:29.740286Z"
+    },
+    {
+      "id": 18803,
+      "title": "AWS Well-Architected Framework - Cost Optimization Pillar",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/cost-optimization.html",
+      "doi": "",
+      "note": "概述云架构中实现成本效益的原则和建议，包括成本可见性、归因和基于消费的模型，适用于基于云的机器学习基础设施。",
+      "order": 4,
+      "created_at": "2025-09-06T12:46:08.599567Z",
+      "updated_at": "2025-09-10T03:21:31.542544Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

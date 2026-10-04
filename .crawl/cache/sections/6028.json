@@ -1,0 +1,45 @@
+{
+  "id": 6028,
+  "title": "DeepSpeed 介绍",
+  "meta_title": "DeepSpeed 框架介绍",
+  "meta_description": "DeepSpeed 功能概览（ZeRO、卸载、流水线并行）",
+  "content": "<p>要在大规模模型上实现数据并行（DP）、张量并行（TP）和流水线并行（PP）等分布式训练策略，需要用到实用的工具。虽然PyTorch等框架提供了基本的分布式数据并行（<code>DistributedDataParallel</code>），但训练拥有数千亿甚至数万亿参数 (parameter)的模型，需要更精密的内存管理和扩展能力。为此，专门的库变得不可或缺。</p>\n<p>DeepSpeed由微软研究院开发，是一个开源的深度学习 (deep learning)优化库，旨在显著提高大型模型训练的速度和规模，同时最大限度地减少所需的硬件资源。它与PyTorch结合使用，提供了一系列优化功能，解决了大型训练中遇到的主要瓶颈，特别是GPU内存限制。</p>\n<p>标准数据并行中的根本问题是内存冗余。参与DP的每个GPU通常都包含模型权重 (weight)、梯度和优化器状态（如Adam中的动量和方差缓冲区）的完整副本。对于拥有数十亿参数的模型，仅优化器状态所需的内存（通常以32位精度（FP32）存储）就可以超过即使是高端GPU的可用内存。考虑一个拥有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 亿参数的模型。权重可能需要 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> GB（FP32）或 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>2</mn></mrow><annotation encoding=\"application/x-tex\">2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">2</span></span></span></span> GB（FP16）。然而，Adam优化器状态通常每个参数需要额外 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>16</mn></mrow><annotation encoding=\"application/x-tex\">16</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">16</span></span></span></span> 字节（动量 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> 字节，方差 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> 字节，FP32主权重 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> 字节，如果使用FP16，梯度 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> 字节），这意味着 <em>每个GPU</em> 额外增加 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>16</mn></mrow><annotation encoding=\"application/x-tex\">16</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">16</span></span></span></span> GB。这很快就变得难以维持。</p>\n<p>DeepSpeed通过几种创新的技术来应对这一问题及其他扩展难题：</p>\n<ol>\n<li>\n<p><strong>ZeRO（零冗余优化器）：</strong> 这可以说是DeepSpeed最受认可的贡献。ZeRO是一系列优化方法，旨在消除数据并行训练中的内存冗余。ZeRO不是在所有数据并行GPU上复制优化器状态、梯度，甚至可能模型权重，而是将这些状态分区到可用设备上。这意味着每个GPU只保留整体状态的一部分，从而大幅减少了每个设备的内存占用。我们将在下一节中查看ZeRO的不同阶段（阶段1、阶段2和阶段3）。</p>\n</li>\n<li>\n<p><strong>内存卸载：</strong> DeepSpeed允许将训练状态的部分（优化器状态、激活或参数）从GPU内存卸载到主机CPU的主内存甚至NVMe固态硬盘。虽然访问CPU内存或NVMe比GPU HBM慢，但卸载不常访问的状态可以释放宝贵的GPU内存，从而能够训练比原本能容纳的更大的模型。</p>\n</li>\n<li>\n<p><strong>高效流水线并行：</strong> 除了用于数据并行的ZeRO之外，DeepSpeed还包含其自身高度优化的流水线并行实现。这使用户能够将模型的层分区到多个GPU上，减少每个GPU激活所需的内存，并通过分散计算图来支持更大的模型。</p>\n</li>\n<li>\n<p><strong>自定义内核和优化器：</strong> DeepSpeed通常包含高度优化的CUDA内核，用于大型模型中常见的操作，例如自定义Transformer层或像FusedAdam这样高效的优化器，它们将多个步骤组合到一个内核启动中以获得更好的性能。</p>\n</li>\n<li>\n<p><strong>简化的混合精度训练：</strong> 它提供了易于使用的工具，用于管理FP16或BF16混合精度训练，包括自动损失缩放。</p>\n</li>\n</ol>\n<p>DeepSpeed的设计目标之一是易于集成。对于许多常见的使用场景，特别是使用ZeRO时，对现有PyTorch训练脚本只需进行最小的改动。核心修改通常包括使用DeepSpeed的<code>initialize</code>函数封装模型、优化器和数据加载器。</p>\n<p>以下是DeepSpeed集成的示意图：</p>\n<pre><code class=\"language-python\">import torch\nimport deepspeed\n\n# 假设模型、优化器、数据加载器已经是已定义的PyTorch对象\n# DeepSpeed设置的配置字典（例如，ZeRO阶段，批次大小）\nconfig_params = {\n    \"train_batch_size\": 32,\n    \"gradient_accumulation_steps\": 1,\n    \"optimizer\": {\n        \"type\": \"AdamW\",\n        \"params\": {\n            \"lr\": 1e-5\n        }\n    },\n    \"fp16\": {\n        \"enabled\": True # 示例：启用混合精度\n    },\n    \"zero_optimization\": {\n        \"stage\": 2 # 示例：启用ZeRO阶段2\n    }\n    # ... 其他DeepSpeed配置\n}\n\n# 初始化DeepSpeed引擎\nmodel_engine, optimizer, _, _ = deepspeed.initialize(\n    model=model,\n    optimizer=optimizer, # 传递原始优化器\n    config_params=config_params\n)\n\n# 训练循环修改：\n# 将 model(inputs) 替换为 model_engine(inputs)\n# 将 loss.backward() 替换为 model_engine.backward(loss)\n# 将 optimizer.step() 替换为 model_engine.step()\n\nfor batch in dataloader:\n    inputs, labels = batch\n    inputs = inputs.to(model_engine.local_rank) # 将数据移动到正确的设备\n    labels = labels.to(model_engine.local_rank)\n\n    outputs = model_engine(inputs)\n    loss = calculate_loss(outputs, labels) # 你的损失计算\n\n    model_engine.backward(loss)\n    model_engine.step()\n</code></pre>\n<p>在此代码片段中，<code>deepspeed.initialize</code>接受标准PyTorch模型和优化器，以及一个配置字典（<code>config_params</code>），并返回一个<code>model_engine</code>。这个引擎在训练循环中取代了原始模型，并且它的方法（<code>backward</code>、<code>step</code>）根据提供的配置处理分布式训练、梯度累积、混合精度和ZeRO优化的复杂性。</p>\n<p>DeepSpeed提供了一整套工具，旨在使大型语言模型的训练更易于进行且更高效。它通过ZeRO专注于内存优化，结合对卸载和流水线并行的支持，使其成为工程师扩展模型规模的有力选择。我们现在将更仔细地查看ZeRO优化器的不同阶段。</p>",
+  "slug": "introduction-deepspeed",
+  "updates": [],
+  "references": [
+    {
+      "id": 16350,
+      "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models",
+      "author": "Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, and Yuxiong He",
+      "year": "2020",
+      "publisher": "IEEE",
+      "journal": "SC '20: Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis",
+      "volume": "",
+      "pages": "1–16",
+      "url": "https://doi.org/10.1109/SC44002.2020.9251842",
+      "doi": "10.1109/SC44002.2020.9251842",
+      "note": "介绍了ZeRO（零冗余优化器）技术系列，这是DeepSpeed在大型模型训练中大幅减少内存占用的基础性贡献，通过对优化器状态、梯度和参数进行分区实现。",
+      "order": 1,
+      "created_at": "2025-09-06T11:04:58.288383Z",
+      "updated_at": "2025-09-10T13:40:55.119725Z"
+    },
+    {
+      "id": 16351,
+      "title": "DeepSpeed Documentation",
+      "author": "Microsoft DeepSpeed Team",
+      "year": "2024",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://deepspeed.readthedocs.io/",
+      "doi": "",
+      "note": "DeepSpeed的官方综合文档，提供安装、配置、API使用以及包括ZeRO、内存卸载和流水线并行在内的所有功能的详细指南和实践示例。",
+      "order": 2,
+      "created_at": "2025-09-06T11:04:58.292176Z",
+      "updated_at": "2025-09-10T13:40:20.622229Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

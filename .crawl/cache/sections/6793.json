@@ -1,0 +1,45 @@
+{
+  "id": 6793,
+  "title": "在 Julia 中定义和调用函数",
+  "meta_title": "在 Julia 中定义和调用函数：语法指南",
+  "meta_description": "学习在 Julia 中定义自己的函数以及如何使用实参调用它们的语法。",
+  "content": "<p>随着程序变得更复杂，你常常会发现在多个地方编写相同或非常相似的代码块。这种重复会使代码更长，更难阅读，更容易出错。如果你需要修改那部分逻辑，你将不得不找到并更新每个实例。函数提供了一种简洁的解决方案，它允许你将一系列操作打包成一个独立的、命名的单元。你只需定义这个单元一次，然后就可以根据需要多次执行或“调用”它，每次可能使用不同的输入。这种方法对于编写结构良好、易于维护和高效的 Julia 代码非常重要。</p>\n<h3>Julia 函数的结构</h3>\n<p>在 Julia 中，你使用 <code>function</code> 关键字来定义一个函数，其后是函数名、一对括号中包含的参数 (parameter)列表，然后是函数体。函数的定义以 <code>end</code> 关键字结束。</p>\n<p>这是通用结构：</p>\n<pre><code class=\"language-julia\">function function_name(parameter1, parameter2, ...)\n    # 代码块：函数执行的语句\n    # ...\n    return result # 可选：将一个值返回给调用者\nend\n</code></pre>\n<p>我们来分解一下：</p>\n<ul>\n<li><strong><code>function</code></strong>: 这个关键字表示函数定义的开始。</li>\n<li><strong><code>function_name</code></strong>: 这是你给函数起的名称。你稍后将使用此名称调用函数。好的函数名通常具有描述性，并遵循 Julia 的约定，即使用小写字母，如果需要，单词之间用下划线分隔（例如，<code>calculate_area</code>）。</li>\n<li><strong><code>parameters</code> (例如，<code>parameter1</code>, <code>parameter2</code>)</strong>: 这些是函数被调用时期望接收的值（输入）的占位符。参数在函数内表现为局部变量。如果函数不需要任何输入，你仍然使用空括号：<code>function_name()</code>。</li>\n<li><strong>函数体</strong>: 这些是 <code>function</code> 和 <code>end</code> 之间缩进的代码行。你在这里编写函数执行时将执行的指令。</li>\n<li><strong><code>return result</code></strong>: <code>return</code> 关键字用于指定函数应输出的值。当 <code>return</code> 语句执行时，函数会立即停止并将 <code>result</code> 返回给调用它的程序部分。如果函数没有显式 <code>return</code> 语句，它会自动返回其主体中最后计算的表达式的值。对于初学者来说，使用显式 <code>return</code> 通常更清晰。</li>\n<li><strong><code>end</code></strong>: 这个关键字标志着函数定义的结束。</li>\n</ul>\n<h3>定义你的第一个函数</h3>\n<p>让我们从一个非常简单的函数开始，它不接受任何输入，也不显式返回任何值。它的目的只是打印一句问候语。</p>\n<pre><code class=\"language-julia\">function say_hello()\n    println(\"来自 Julia 函数的问候！\")\nend\n</code></pre>\n<p>在这个例子中：</p>\n<ul>\n<li><code>say_hello</code> 是函数名。</li>\n<li>它不接受参数 (parameter)，因此括号 <code>()</code> 是空的。</li>\n<li>函数体由一个 <code>println</code> 语句组成。</li>\n<li>没有显式 <code>return</code> 语句。当被调用时，它将执行 <code>println</code>，然后隐式返回一个特殊值 <code>nothing</code>。</li>\n</ul>\n<p>现在，让我们定义一个接受输入（参数）并返回计算值的函数。</p>\n<pre><code class=\"language-julia\">function add_two_numbers(x, y)\n    sum_value = x + y\n    return sum_value\nend\n</code></pre>\n<p>这里：</p>\n<ul>\n<li><code>add_two_numbers</code> 是函数名。</li>\n<li>它接受两个参数：<code>x</code> 和 <code>y</code>。当我们调用这个函数时，需要提供两个值，它们将分别赋值给 <code>x</code> 和 <code>y</code>。</li>\n<li>在函数内部，<code>sum_value = x + y</code> 计算两个参数的和并将其存储在局部变量 <code>sum_value</code> 中。</li>\n<li><code>return sum_value</code> 将计算出的和返回给调用者。</li>\n</ul>\n<h3>调用函数</h3>\n<p>定义函数并不会执行它。它只是告诉 Julia 函数的作用。要运行函数内部的代码，你必须“调用”它。你通过写函数名，后面跟括号来调用函数。如果函数需要参数 (parameter)（为其形参提供的值），你就在括号内部提供它们。</p>\n<p>让我们调用刚刚定义的函数：</p>\n<pre><code class=\"language-julia\"># 调用 say_hello 函数\nsay_hello()\n</code></pre>\n<p>当 Julia 遇到 <code>say_hello()</code> 时，它会执行 <code>say_hello</code> 函数内部的 <code>println(\"来自 Julia 函数的问候！\")</code> 语句。输出将是：</p>\n<pre><code>来自 Julia 函数的问候！\n</code></pre>\n<p>现在，让我们调用 <code>add_two_numbers</code>。因为它需要两个实参，我们需要提供它们。函数返回的值可以存储在变量中，也可以直接使用。</p>\n<pre><code class=\"language-julia\"># 使用实参 5 和 10 调用 add_two_numbers\nfirst_sum = add_two_numbers(5, 10)\nprintln(\"第一个和是：\", first_sum)\n\n# 再次使用不同的实参调用它\nsecond_sum = add_two_numbers(3.14, 2.71)\nprintln(\"第二个和是：\", second_sum)\n</code></pre>\n<p>输出：</p>\n<pre><code>第一个和是：15\n第二个和是：5.85\n</code></pre>\n<p>请注意 <code>add_two_numbers(5, 10)</code> 如何将 <code>5</code> 传递给函数内的形参 <code>x</code>，将 <code>10</code> 传递给形参 <code>y</code>。函数计算 <code>5 + 10</code>，返回 <code>15</code>，然后将其存储在 <code>first_sum</code> 变量中。可重用性很明显：我们用不同的输入调用了相同的 <code>add_two_numbers</code> 函数，得到了不同的结果，而无需重写加法逻辑。</p>\n<p>以下图表说明了调用 <code>first_sum = add_two_numbers(5, 10)</code> 时的执行流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1d7idrr\" \n              data-graph-definition='digraph FunctionCallFlow {\n    rankdir=TB;\n    node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_caller {\n        label = \"调用者范围\";\n        style=\"filled\";\n        fillcolor=\"#f8f9fa\";\n        caller_start [label=\"1. 程序执行遇到调用：\\nresult = add_two_numbers(5, 10)\"];\n        caller_resume [label=\"5. 执行继续，`result` 现在是 15。\\nprintln(\\\"第一个和是：\\\", result)\"];\n        caller_start -> caller_resume [style=invis]; // 调用者内部的控制流\n    }\n\n    subgraph cluster_function {\n        label = \"函数：add_two_numbers(x, y)\";\n        style=\"filled\";\n        fillcolor=\"#e8f5e9\"; // 浅绿色\n        func_entry [label=\"2. 控制转移。参数赋值：\\nx = 5, y = 10\"];\n        func_calc [label=\"3. 函数体执行：\\nsum_value = x + y (sum_value = 15)\"];\n        func_return [label=\"4. `return sum_value` 执行。\\n值 15 被送回。\"];\n        func_entry -> func_calc -> func_return;\n    }\n\n    caller_start -> func_entry [label=\"使用实参 (5, 10) 调用\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n    func_return -> caller_resume [label=\"返回值 (15)\", color=\"#37b24d\", fontcolor=\"#37b24d\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1d7idrr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>函数调用期间控制流和数据的过程。程序将实参传递给函数，函数执行并返回一个值，然后程序从中断处继续执行。</p>\n</blockquote>\n<p>区分形参和实参很重要：</p>\n<ul>\n<li><strong>形参</strong> 是函数定义中列出的变量名（例如，<code>add_two_numbers(x, y)</code> 中的 <code>x</code> 和 <code>y</code>）。它们就像占位符。</li>\n<li><strong>实参</strong> 是你调用函数时传递给函数的实际值（例如，<code>add_two_numbers(5, 10)</code> 中的 <code>5</code> 和 <code>10</code>）。</li>\n</ul>\n<h3>短函数语法</h3>\n<p>对于可以在单行代码中表达的非常简单的函数，Julia 提供了一种更紧凑的语法。这通常用于数学运算或简单的转换。</p>\n<p>语法是：\n<code>function_name(parameter1, parameter2, ...) = expression</code></p>\n<p>例如，我们的 <code>add_two_numbers</code> 函数可以简洁地写成：</p>\n<pre><code class=\"language-julia\">add_two_numbers_short(x, y) = x + y\n</code></pre>\n<p>以及一个将数字求平方的函数：</p>\n<pre><code class=\"language-julia\">square(n) = n * n\n</code></pre>\n<p>你调用这些短形式函数的方式与使用 <code>function...end</code> 块定义的函数完全相同：</p>\n<pre><code class=\"language-julia\">another_sum = add_two_numbers_short(7, 8)\nprintln(\"短函数求和：\", another_sum) # 输出：短函数求和：15\n\nsquared_value = square(9)\nprintln(\"9 的平方是：\", squared_value)       # 输出：9 的平方是：81\n</code></pre>\n<p>这种紧凑形式仅仅是标准 <code>function...end</code> 定义的“语法糖”，当函数体只是一个提供返回值的表达式时。它可以使你的简单操作代码更易读。</p>\n<p>通过定义和调用函数，你开始构建更结构化、更易于管理的程序。你将逻辑封装成可重用部分，使你的代码更容易理解、测试和修改。随着我们继续，你将学习更多关于函数实参、返回值以及其他使函数成为 Julia 中功能强大的工具的特性。</p>",
+  "slug": "defining-calling-functions-julia",
+  "updates": [],
+  "references": [
+    {
+      "id": 20316,
+      "title": "Functions",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/functions/",
+      "doi": "",
+      "note": "Julia官方手册中关于函数定义、参数、返回值及不同语法形式的全面概述。",
+      "order": 1,
+      "created_at": "2025-09-06T14:00:28.409762Z",
+      "updated_at": "2025-09-10T02:42:08.844166Z"
+    },
+    {
+      "id": 20317,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens and Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3",
+      "url": "https://benlauwens.github.io/ThinkJulia.jl/latest/book.html",
+      "doi": "",
+      "note": "一本优秀的入门教材，使用Julia教授编程基础知识，包括函数定义、参数和调用约定的详细解释。",
+      "order": 2,
+      "created_at": "2025-09-06T14:00:28.417016Z",
+      "updated_at": "2025-09-10T02:42:31.432486Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

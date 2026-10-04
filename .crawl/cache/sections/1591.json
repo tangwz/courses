@@ -1,0 +1,61 @@
+{
+  "id": 1591,
+  "title": "使用 ORDER BY 排序结果",
+  "meta_title": "使用 ORDER BY 子句排序 SQL 结果",
+  "meta_description": "学习如何根据一个或多个列，按升序 (ASC) 或降序 (DESC) 排序查询结果。",
+  "content": "<p>SQL 查询可以用来选择特定列并使用 <code>WHERE</code> 子句过滤行。然而，查询返回的行并没有确定的顺序，除非明确指定。通常，你会希望看到排序后的结果，也许是为了找出最高或最低值，或者仅仅是为了更清晰地展示信息。<code>ORDER BY</code> 子句提供了这个功能。它允许你指定用于排序结果集的列。</p>\n<h3>基本排序</h3>\n<p><code>ORDER BY</code> 子句通常添加到 <code>SELECT</code> 语句的末尾，通常在 <code>FROM</code> 和 <code>WHERE</code> 子句（如果存在）之后。你指定要排序的列。</p>\n<p>假设我们有一个 <code>products</code> 表，其中包含 <code>product_name</code>、<code>category</code> 和 <code>price</code> 等列。如果你想按产品名称的字母顺序排列产品列表，你可以这样写：</p>\n<pre><code class=\"language-sql\">SELECT product_name, category, price\nFROM products\nORDER BY product_name;\n</code></pre>\n<p>默认情况下，<code>ORDER BY</code> 按升序排序数据（文本从 A 到 Z，数字从小到大）。</p>\n<h3>指定排序方向：ASC 和 DESC</h3>\n<p>尽管升序 (<code>ASC</code>) 是默认的，但你可以明确指定它，也可以要求降序 (<code>DESC</code>)。</p>\n<ul>\n<li><code>ASC</code>：升序（从低到高，A 到 Z）。如果你不指定任何内容，这是默认值。</li>\n<li><code>DESC</code>：降序（从高到低，Z 到 A）。</li>\n</ul>\n<p>要将产品从最贵到最便宜排序，你可以使用 <code>DESC</code>：</p>\n<pre><code class=\"language-sql\">SELECT product_name, category, price\nFROM products\nORDER BY price DESC;\n</code></pre>\n<p>如果你想明确按产品名称的字母顺序（升序）排序，你可以这样写：</p>\n<pre><code class=\"language-sql\">SELECT product_name, category, price\nFROM products\nORDER BY product_name ASC;\n</code></pre>\n<p>尽管 <code>ASC</code> 在这里是可选的，但明确指定它可以提高可读性。</p>\n<h3>按多个列排序</h3>\n<p>如果你按一个列排序，而该列有多个行具有相同的值，会发生什么？例如，如果你按 <code>category</code> 排序产品，<em>相同</em>类别中的产品如何排序？默认情况下，它们的顺序不确定。</p>\n<p>你可以指定次要（或第三个等）排序列来控制组内的顺序。在 <code>ORDER BY</code> 子句中列出这些列，用逗号分隔。排序是按顺序进行的：数据首先按列出的第一个列排序。然后，对于第一个列值相同的任何行，数据将按列出的第二个列排序，依此类推。</p>\n<p>让我们首先按类别（字母顺序）排序产品，然后，在每个类别内，按价格（从高到低）排序：</p>\n<pre><code class=\"language-sql\">SELECT product_name, category, price\nFROM products\nORDER BY category ASC, price DESC;\n</code></pre>\n<p>在此查询中：</p>\n<ol>\n<li>所有行首先按 <code>category</code> 升序排序（例如，'Electronics' 在 'Home Goods' 之前）。</li>\n<li>在每个类别中（例如，所有 'Electronics' 产品），行然后按 <code>price</code> 降序排序（最贵的电子产品在该类别组中首先出现）。</li>\n</ol>\n<p>你可以在同一个 <code>ORDER BY</code> 子句中为不同的列混合使用 <code>ASC</code> 和 <code>DESC</code>。</p>\n<h3>将 ORDER BY 与 WHERE 结合使用</h3>\n<p><code>ORDER BY</code> 子句与 <code>WHERE</code> 子句结合使用效果很好。数据库首先根据 <code>WHERE</code> 条件过滤行，然后根据 <code>ORDER BY</code> 的规定对<em>结果</em>行进行排序。</p>\n<p>例如，要找出 'Electronics' 类别中价格低于 500 美元的所有产品，并按价格从低到高排序：</p>\n<pre><code class=\"language-sql\">SELECT product_name, category, price\nFROM products\nWHERE category = 'Electronics' AND price &#x3C; 500\nORDER BY price ASC; -- ASC is optional here\n</code></pre>\n<p>请记住 <code>SELECT</code> 语句中子句的标准顺序：</p>\n<ol>\n<li><code>SELECT</code> 列...</li>\n<li><code>FROM</code> 表...</li>\n<li><code>WHERE</code> 条件...</li>\n<li><code>ORDER BY</code> 列...</li>\n<li><code>LIMIT</code> 数量...（如果使用，通常在最后或 <code>ORDER BY</code> 之后）</li>\n</ol>\n<h3>关于 NULL 值的说明</h3>\n<p><code>NULL</code> 值在排序时的处理方式在不同的数据库系统（如 PostgreSQL、MySQL、SQL Server）之间可能有所不同。有些系统在升序排序时将 <code>NULL</code> 值放在前面，降序排序时放在后面，而另一些系统则可能相反，或者提供 <code>NULLS FIRST</code> 或 <code>NULLS LAST</code> 等语法来明确控制。对于基本排序，只需注意 <code>NULL</code> 值可能出现在排序结果的开头或结尾。</p>\n<p>排序是使查询结果易于理解的基本组成部分。<code>ORDER BY</code> 子句为你提供了对展示顺序的精确控制，允许你根据一个或多个列以升序或降序逻辑地安排数据。这对于查找极端值、直观地对相关项进行分组或准备报告都非常有价值。</p>",
+  "slug": "sorting-results-orderby",
+  "updates": [],
+  "references": [
+    {
+      "id": 4953,
+      "title": "SELECT Statement",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2025",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html",
+      "doi": "",
+      "note": "官方文档，详细介绍了 `SELECT` 语句及其 `ORDER BY` 子句，包括排序方向、多列排序以及 `NULL` 值的具体处理方式。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:00.794740Z",
+      "updated_at": "2025-09-07T19:00:56.299788Z"
+    },
+    {
+      "id": 4955,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本关于数据库系统的标准学术教科书，在关系型数据库的背景下涵盖了SQL基础知识，包括 `ORDER BY` 子句。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:00.862114Z",
+      "updated_at": "2025-09-07T19:00:55.909014Z"
+    },
+    {
+      "id": 4956,
+      "title": "Intro to SQL: Querying and managing data",
+      "author": "Khan Academy",
+      "year": "2023",
+      "publisher": "Khan Academy",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.khanacademy.org/computing/computer-programming/sql",
+      "doi": "",
+      "note": "一个入门级的在线课程，清晰地解释了SQL基础概念，包括如何使用 `ORDER BY` 子句排序查询结果，并提供了实用示例。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:00.865072Z",
+      "updated_at": "2025-09-07T19:01:08.111615Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

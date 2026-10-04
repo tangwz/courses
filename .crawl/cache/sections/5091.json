@@ -1,0 +1,61 @@
+{
+  "id": 5091,
+  "title": "RLHF流程简介",
+  "meta_title": "RLHF流程总览",
+  "meta_description": "RLHF的三大主要阶段：SFT、奖励模型构建和RL微调。",
+  "content": "<p>强化学习 (reinforcement learning)人类反馈（RLHF）是一种旨在解决对齐 (alignment)难题并克服纯监督方法局限性的标准流程。这种多阶段方法旨在引导大型语言模型（LLMs）生成更符合人类偏好和指示的输出。它通常包含三个不同阶段：</p>\n<ol>\n<li>\n<p><strong>监督微调 (fine-tuning)（SFT）：</strong> 这一初始阶段使用精心整理的高质量提示和期望响应数据集，将预训练 (pre-training)的LLM适应到目标应用方向或风格。可以将其看作是教授模型预期的基本格式和风格。其成果是一个“SFT模型”，作为后续强化学习阶段的起点。尽管有帮助，但单独的SFT往往难以涵盖人类偏好的全部范围，尤其是在处理复杂指示、安全性或像实用性这类细微特点时。我们之前讨论过它的局限性。</p>\n</li>\n<li>\n<p><strong>奖励模型构建（RM）：</strong> 由于我们希望根据人类偏好优化模型，但又因为成本和延迟，在强化学习训练期间无法与人类进行交互查询，所以我们首先训练一个单独的模型来<em>预测</em>人类偏好。这就是奖励模型（RM）。为了训练它，我们收集人类反馈数据。通常，针对一个给定的提示，会向人类展示由SFT模型（或其他模型）生成的多个响应，并要求他们进行排序或选择最佳响应。这种偏好数据（例如，其中一个响应优于另一个的响应对）用于训练RM。RM以提示和生成的响应作为输入，输出一个标量<em>奖励</em>分数，该分数理想情况下与人类偏好该响应的可能性相关。</p>\n</li>\n<li>\n<p><strong>强化学习微调（PPO）：</strong> 在最后阶段，SFT模型（现在作为初始<em>策略</em>）使用强化学习进行进一步微调。环境包括接收提示、生成响应，并从RM获得奖励。目标是调整策略模型的参数 (parameter)，以最大化RM预测的预期奖励，有效地教导模型生成RM评分高的响应（从而人类也可能偏好）。近端策略优化（PPO）常在此处使用。此阶段一个重要方面是在更新后的策略和原始SFT策略之间施加约束，通常使用Kullback-Leibler（KL）散度。这种KL惩罚防止强化学习过程与SFT模型学到的知识和分布产生过大偏差，有助于保持语言连贯性，并避免策略以不切实际的方式为奖励模型“过度优化”（奖励作弊）。</p>\n</li>\n</ol>\n<p>这个序列构成了RLHF的核心流程。每个阶段都在前一阶段的基础上建立，从一个通用能力模型开始，训练一个偏好预测器，最后针对该预测器优化模型。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-51k52d\" \n              data-graph-definition='digraph RLHF_Pipeline {\n    rankdir=LR;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n    edge [fontname=\"Arial\", color=\"#495057\"];\n\n    subgraph cluster_SFT {\n        label = \"阶段1：SFT\";\n        style=filled;\n        color=\"#dee2e6\";\n        node [fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"];\n        Pretrained_LLM [label=\"预训练LLM\"];\n        SFT_Data [label=\"演示数据\\n(提示，良好响应)\", shape=cylinder, fillcolor=\"#fff3bf\", color=\"#f59f00\"];\n        SFT_Model [label=\"SFT模型\"];\n        Pretrained_LLM -> SFT_Model [label=\" 微调 \"];\n        SFT_Data -> SFT_Model;\n    }\n\n    subgraph cluster_RM {\n        label = \"阶段2：奖励模型构建\";\n        style=filled;\n        color=\"#dee2e6\";\n        node [fillcolor=\"#b2f2bb\", color=\"#37b24d\"];\n        RM_Data [label=\"偏好数据\\n(提示，选择响应，拒绝响应)\", shape=cylinder, fillcolor=\"#ffc9c9\", color=\"#f03e3e\"];\n        Reward_Model [label=\"奖励模型（RM）\"];\n        SFT_Model_Copy [label=\"SFT模型（或其他策略）\", shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"]; // 代表用于生成响应以供排序的模型\n        SFT_Model_Copy -> RM_Data [label=\" 生成响应以供排序 \"];\n        RM_Data -> Reward_Model [label=\" 训练 \"];\n    }\n\n    subgraph cluster_RL {\n        label = \"阶段3：强化学习微调\";\n        style=filled;\n        color=\"#dee2e6\";\n        node [fillcolor=\"#bac8ff\", color=\"#4263eb\"];\n        RL_Policy [label=\"策略模型\\n(从SFT模型初始化)\"];\n        PPO [label=\"PPO算法\"];\n        Final_Model [label=\"对齐的LLM\"];\n        RM_Copy [label=\"奖励模型（RM）\", shape=box, style=\"rounded,filled\", fillcolor=\"#b2f2bb\", color=\"#37b24d\"]; // 代表用于评分的已训练RM\n        SFT_Ref [label=\"SFT模型（KL参考）\", shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"]; // 代表用于KL惩罚的SFT模型\n\n        RL_Policy -> PPO [label=\" 更新策略 \"];\n        PPO -> Final_Model [label=\" 输出 \"];\n        RM_Copy -> PPO [label=\" 计算奖励 \"];\n        SFT_Ref -> PPO [label=\" 计算KL惩罚 \"];\n    }\n\n    // 阶段间连接\nSFT_Model -> SFT_Model_Copy [style=invis]; // 确保在RM数据生成前使用SFT模型\n    SFT_Model -> RL_Policy [label=\" 初始化策略 \", style=dashed, color=\"#495057\"];\n    SFT_Model -> SFT_Ref [label=\" 复制作为参考 \", style=dashed, color=\"#495057\"];\n    Reward_Model -> RM_Copy [label=\" 使用已训练的RM \", style=dashed, color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-51k52d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示了RLHF流程的三个主要阶段：监督微调（SFT）、奖励模型构建（RM）以及使用PPO的强化学习（RL）微调。该图展示了模型和数据在这些阶段之间的流动。</p>\n</blockquote>\n<p>后续章节将详细介绍每个阶段的实现细节、挑战以及不同变体，首先将更仔细地审视SFT阶段。理解这个整体结构为后续的技术探讨提供了必要的背景信息。</p>",
+  "slug": "intro-rlhf-process",
+  "updates": [],
+  "references": [
+    {
+      "id": 13399,
+      "title": "Training language models to follow instructions with human feedback",
+      "author": "Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "doi": "10.48550/arXiv.2203.02155",
+      "note": "这篇基础论文概述了通过人类反馈强化学习（RLHF）使大型语言模型与人类指令和偏好对齐的完整流程，详细介绍了监督微调、奖励建模和基于PPO的强化学习。",
+      "order": 1,
+      "created_at": "2025-09-05T08:32:35.014632Z",
+      "updated_at": "2025-09-10T11:48:44.391191Z"
+    },
+    {
+      "id": 13400,
+      "title": "Proximal Policy Optimization Algorithms",
+      "author": "John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov",
+      "year": "2017",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1707.06347",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1707.06347",
+      "doi": "10.48550/arXiv.1707.06347",
+      "note": "介绍了近端策略优化（PPO）算法，这是一种策略梯度方法，因其稳定性和效率而在RLHF的强化学习微调阶段被广泛采用。",
+      "order": 2,
+      "created_at": "2025-09-05T08:32:35.022381Z",
+      "updated_at": "2025-09-10T11:48:43.955667Z"
+    },
+    {
+      "id": 13401,
+      "title": "Learning to summarize with human feedback",
+      "author": "Nisan Stiennon, Long Ouyang, Jeff Wu, Daniel M. Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul Christiano",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2009.01325",
+      "doi": "10.48550/arXiv.2009.01325",
+      "note": "一项早期重要工作，展示了RLHF流程在特定语言任务中的应用：训练模型生成与人类偏好对齐的摘要。",
+      "order": 3,
+      "created_at": "2025-09-05T08:32:35.030738Z",
+      "updated_at": "2025-09-10T11:48:51.007895Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

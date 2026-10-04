@@ -1,0 +1,61 @@
+{
+  "id": 1902,
+  "title": "使用 ColumnTransformer 构建复杂管道",
+  "meta_title": "使用 ColumnTransformer 构建复杂的 Scikit-learn 管道",
+  "meta_description": "使用 `ColumnTransformer` 对不同列应用不同的预处理步骤。",
+  "content": "<p>在机器学习 (machine learning)中，将多个预处理和建模步骤按顺序连接起来是常见的做法。数据集通常包含不同类型的特征，例如数值型、类别型和文本型，每种特征都需要独特的预处理技术。例如，将单一的缩放器应用于数值型和类别型列通常是不合适的。当转换按顺序应用时，每个步骤通常会处理前一个操作的整个输出。这种方法不适用于对原始特征的不同子集应用不同的转换。</p>\n<p>这时，Scikit-learn 的 <code>ColumnTransformer</code> 就发挥作用了。它允许您<em>并行地</em>将不同的转换器应用于输入数据的不同列。应用每个转换器得到的结果会水平拼接，形成最终的转换后数据集，然后该数据集可以传递给更大管道中的下一步，通常是一个估计器。</p>\n<h3>ColumnTransformer 的工作原理</h3>\n<p>主要思路是指定哪些转换器应该应用于哪些列。您需要向 <code>ColumnTransformer</code> 提供一个元组列表，每个元组包含：</p>\n<ol>\n<li><strong>名称：</strong> 一个唯一的字符串，用于标识转换步骤（例如，<code>'numerical_scaling'</code>，<code>'categorical_encoding'</code>）。</li>\n<li><strong>转换器：</strong> 一个已实例化的 Scikit-learn 转换器（例如，<code>StandardScaler()</code>，<code>OneHotEncoder()</code>），甚至可以是 <code>Pipeline</code> 本身。</li>\n<li><strong>列：</strong> 指定转换器应应用于哪些列。这可以是一个列名列表、列索引列表、一个切片、一个布尔掩码，或者通常是 <code>make_column_selector</code> 的输出。</li>\n</ol>\n<p>让我们通过一个例子来说明。假设一个数据集包含数值特征（年龄、收入）和一个类别特征（城市）。我们希望对数值特征进行缩放，并对类别特征进行独热编码。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\nfrom sklearn.compose import ColumnTransformer, make_column_selector\nfrom sklearn.preprocessing import StandardScaler, OneHotEncoder\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.model_selection import train_test_split\n\n# 示例数据\ndata = {\n    'age': [25, 45, 30, 55, 40, 28],\n    'income': [50000, 80000, 60000, 120000, 75000, 52000],\n    'city': ['New York', 'London', 'Paris', 'New York', 'London', 'Paris'],\n    'target': [0, 1, 0, 1, 1, 0]\n}\ndf = pd.DataFrame(data)\nX = df[['age', 'income', 'city']]\ny = df['target']\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n\n# 为不同列类型定义预处理步骤\n# 为方便起见，使用 make_column_selector\npreprocessor = ColumnTransformer(\n    transformers=[\n        ('num', StandardScaler(), make_column_selector(dtype_include=np.number)),\n        ('cat', OneHotEncoder(handle_unknown='ignore'), make_column_selector(dtype_include=object))\n    ],\n    remainder='passthrough' # 保留其他列（如果有）\n)\n\n# 创建包含预处理器和分类器的完整管道\nmodel_pipeline = Pipeline(steps=[\n    ('preprocessor', preprocessor),\n    ('classifier', LogisticRegression())\n])\n\n# 拟合管道\nmodel_pipeline.fit(X_train, y_train)\n\n# 进行预测（预处理会自动应用）\npredictions = model_pipeline.predict(X_test)\n\nprint(\"示例预测结果:\", predictions)\nprint(\"管道得分:\", model_pipeline.score(X_test, y_test))\n\n# 您可以查看 ColumnTransformer 内部已拟合的转换器\n# 访问预处理步骤\nct = model_pipeline.named_steps['preprocessor']\n# 访问拟合在数值列上的缩放器\nscaler = ct.named_transformers_['num']\nprint(\"\\n拟合缩放器的均值:\", scaler.mean_)\n# 访问拟合在类别列上的独热编码器\nencoder = ct.named_transformers_['cat']\nprint(\"拟合编码器的类别:\", encoder.categories_)\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们使用 <code>make_column_selector(dtype_include=np.number)</code> 选择所有数值数据类型的列（<code>age</code>，<code>income</code>）。<code>StandardScaler</code> 应用于这些列。</li>\n<li>我们使用 <code>make_column_selector(dtype_include=object)</code> 选择对象数据类型的列（<code>city</code>），在 Pandas 中通常是字符串。<code>OneHotEncoder</code> 应用于此列。<code>handle_unknown='ignore'</code> 是一个有用的参数 (parameter)，如果编码器在测试集中遇到训练期间未曾见过的类别，它会避免错误发生；它只是将其编码为全零。</li>\n<li><code>ColumnTransformer</code> 将这些转换器应用于各自的列。</li>\n<li>输出结果（缩放后的数值列和编码后的类别列）会并排拼接。</li>\n<li>然后，这些组合的、经过预处理的数据被送入主 <code>Pipeline</code> 中的 <code>LogisticRegression</code> 分类器。</li>\n</ol>\n<h3>处理剩余列：<code>remainder</code> 参数 (parameter)</h3>\n<p>在 <code>transformers</code> 列表中，那些未被任何转换器选中的列会发生什么？这由 <code>ColumnTransformer</code> 的 <code>remainder</code> 参数控制：</p>\n<ul>\n<li><code>remainder='drop'</code>（默认）：任何未被任何转换器明确选择的列都会从数据集中删除。使用此默认设置时请注意，因为您可能会无意中丢失特征。</li>\n<li><code>remainder='passthrough'</code>：任何未被选择的列都会被保留并附加到指定转换的输出中。它们的值保持不变。如果您有不需要预处理或由后续步骤处理的列，这会很有用。</li>\n<li><code>remainder=&#x3C;估计器></code>：您还可以指定一个转换器（如 <code>SimpleImputer</code> 或 <code>StandardScaler</code>）应用于所有剩余列。</li>\n</ul>\n<p>选择正确的 <code>remainder</code> 设置对于确保所有必要特征都得到正确处理并最终送达估计器非常重要。</p>\n<h3>指定列</h3>\n<p>除了 <code>make_column_selector</code> 之外，您还可以使用以下方式为 <code>ColumnTransformer</code> 中的每个转换器指定列：</p>\n<ul>\n<li><strong>列名列表：</strong> <code>['age', 'income']</code></li>\n<li><strong>整数索引列表：</strong> <code>[0, 1]</code></li>\n<li><strong>切片：</strong> <code>slice(0, 2)</code></li>\n<li><strong>布尔掩码：</strong> <code>[True, True, False]</code></li>\n</ul>\n<p>与使用整数索引相比，使用 <code>make_column_selector</code> 通常更受青睐，因为它对列顺序的变化或增删的适应性更强，不易出错。</p>\n<h3>工作流程可视化</h3>\n<p>我们可以可视化结合 <code>ColumnTransformer</code> 和 <code>Pipeline</code> 创建的结构：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-dcvvp8\" \n              data-graph-definition='digraph G { rankdir=LR; splines=ortho; node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10]; edge [fontsize=10]; \"输入数据 (X)\" -> \"预处理器 (ColumnTransformer)\" [label=\" \"]; subgraph cluster_ct { style=dashed; label=\"ColumnTransformer (&#39;预处理器&#39;)\"; color=\"#adb5bd\"; \"预处理器 (ColumnTransformer)\" -> \"数值 (StandardScaler)\" [label=\"[age, income]\"]; \"预处理器 (ColumnTransformer)\" -> \"类别 (OneHotEncoder)\" [label=\"[city]\"]; \"数值 (StandardScaler)\" -> \"拼接\" [label=\"缩放后的数据\"]; \"类别 (OneHotEncoder)\" -> \"拼接\" [label=\"编码后的数据\"]; } \"拼接\" -> \"分类器 (LogisticRegression)\" [label=\"处理后的特征\"]; \"分类器 (LogisticRegression)\" -> \"预测结果 (y_pred)\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-dcvvp8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图显示了输入数据如何通过 ColumnTransformer（'预处理器'）进行分割。数值列进入 StandardScaler（'数值'），类别列进入 OneHotEncoder（'类别'）。它们的输出被拼接，然后传递给 LogisticRegression 分类器（'分类器'）。</p>\n</blockquote>\n<h3>ColumnTransformer 与网格搜索</h3>\n<p>在 <code>Pipeline</code> 中使用 <code>ColumnTransformer</code> 可以与 <code>GridSearchCV</code> 协同工作。您可以调整 <code>ColumnTransformer</code> 内转换器和最终估计器的超参数 (parameter) (hyperparameter)。参数名称通过步骤名用双下划线 (<code>__</code>) 分隔来构建。</p>\n<p>例如，要调整 <code>ColumnTransformer</code>（名为 <code>'preprocessor'</code>）内部 <code>OneHotEncoder</code>（名为 <code>'cat'</code>）的 <code>handle_unknown</code> 参数，参数网格键将是 <code>'preprocessor__cat__handle_unknown'</code>。要调整 <code>LogisticRegression</code>（名为 <code>'classifier'</code>）的 <code>C</code> 参数，键是 <code>'classifier__C'</code>。</p>\n<pre><code class=\"language-python\"># 上述管道的 GridSearchCV 示例参数网格\nparam_grid = {\n    'preprocessor__num__with_mean': [True, False], # StandardScaler 的参数\n    'preprocessor__cat__handle_unknown': ['ignore', 'error'], # OneHotEncoder 的参数\n    'classifier__C': [0.1, 1.0, 10.0] # LogisticRegression 的参数\n}\n\n# 然后 GridSearchCV 将使用此 'param_grid' 应用于 'model_pipeline'\n# from sklearn.model_selection import GridSearchCV\n# grid_search = GridSearchCV(model_pipeline, param_grid, cv=5)\n# grid_search.fit(X_train, y_train)\n</code></pre>\n<p><code>ColumnTransformer</code> 是 Scikit-learn 中构建实际机器学习 (machine learning)管道的基本工具，尤其是在处理常见的多样化数据集时。它允许简洁、模块化且正确地应用根据特定特征类型量身定制的预处理步骤，同时与 Scikit-learn 的模型评估和选择体系很好地结合。</p>",
+  "slug": "columntransformer-pipelines",
+  "updates": [],
+  "references": [
+    {
+      "id": 5087,
+      "title": "Column Transformer with Mixed Types (User Guide)",
+      "author": "Scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html#column-transformer",
+      "doi": "",
+      "note": "Scikit-learn官方用户指南中关于ColumnTransformer的章节，介绍了其目的、参数和用法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:19.098118Z",
+      "updated_at": "2025-09-08T05:17:56.395805Z"
+    },
+    {
+      "id": 5088,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本关于构建机器学习管道的实践指导书，详细讨论了使用ColumnTransformer进行异构数据预处理。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:19.142786Z",
+      "updated_at": "2025-09-08T05:18:00.224645Z"
+    },
+    {
+      "id": 5089,
+      "title": "Scikit-learn: Machine Learning in Python",
+      "author": "Fabian Pedregosa, GaÃ«l Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake Vanderplas, Alexandre Passos, David Courn­apeau, Matthieu Brucher, Matthieu Perrot, Ã‰douard Duchesnay",
+      "year": "2011",
+      "publisher": "JMLR",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "12",
+      "pages": "2825−2830",
+      "url": "https://www.jmlr.org/papers/v12/pedregosa11a.html",
+      "doi": "10.5555/1953048.2078195",
+      "note": "介绍Scikit-learn库的学术论文，详细阐述了其设计原则和模块化架构，为ColumnTransformer等工具提供了基础。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:19.147069Z",
+      "updated_at": "2025-09-08T05:18:01.701640Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

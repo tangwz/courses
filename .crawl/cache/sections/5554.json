@@ -1,0 +1,45 @@
+{
+  "id": 5554,
+  "title": "操作关系型数据库 (SQL 基础)",
+  "meta_title": "关系型数据库操作与 SQL 基础",
+  "meta_description": "学习关系型数据库的基本原理和进行交互的基本 SQL 命令。",
+  "content": "<p>关系型数据库是数据存储的核心，提供了一种结构化的方式来组织和访问信息。可以将它们想象成组织严密的数字文件柜，数据以表的形式存储。这些表类似于电子表格，行代表单个记录（例如特定客户或产品），列代表这些记录的属性或特征（例如客户姓名或产品价格）。</p>\n<p>“关系”部分来源于表之间链接数据的能力。例如，您可能有一个<code>Customers</code>表，另一个是<code>Orders</code>表。您无需在<code>Orders</code>表中重复客户信息，而是可以在它们之间建立关系，通常使用唯一标识符。这种结构化方法确保了数据的一致性并减少了冗余。</p>\n<p>用于与关系型数据库通信的标准语言是 <strong>SQL（结构化查询语言）</strong>。几乎每个关系型数据库系统（如 PostgreSQL、MySQL、SQL Server、Oracle）都理解 SQL。作为数据工程师，扎实掌握 SQL 对于提取、转换和加载存储在这些系统中的数据是必不可少的。</p>\n<h3>表、列和行</h3>\n<p>关系型数据库的核心是<strong>表</strong>。</p>\n<ul>\n<li><strong>列：</strong> 定义所存储数据的属性。每列都有特定的数据类型（例如文本、数字、日期）。例如，在<code>Products</code>表中，列可能包括<code>product_id</code>（数字）、<code>name</code>（文本）和<code>price</code>（数字）。</li>\n<li><strong>行：</strong> 表示表中的单个记录或条目。每行包含表结构中定义的每个列的值。例如，<code>Products</code>表中的一行可能表示一个单独的项，如（'101'，'Laptop'，1200.00）。</li>\n</ul>\n<pre><code class=\"language-text\">Table: 产品\r\n+------------+----------+--------+\r\n| product_id | name     | price  |  &#x3C;- 列（属性）\r\n+------------+----------+--------+\r\n| 101        | Laptop   | 1200.00|  &#x3C;- 行（记录 1）\r\n| 102        | Keyboard |   75.00|  &#x3C;- 行（记录 2）\r\n| 103        | Monitor  |  300.00|  &#x3C;- 行（记录 3）\r\n+------------+----------+--------+\n</code></pre>\n<h3>主键和外键</h3>\n<p>为了管理关系并确保唯一性，关系型数据库使用键：</p>\n<ul>\n<li><strong>主键：</strong> 一个列（或一组列），其值唯一标识表中的每一行。在我们的<code>Products</code>表中，<code>product_id</code>很可能就是主键。没有两个产品可以拥有相同的<code>product_id</code>。</li>\n<li><strong>外键：</strong> 一个列（或一组列），在一个表中引用另一个表中的主键。这在表之间创建了链接或关系。例如，<code>Orders</code>表可能有一个<code>product_id</code>列，它指回<code>Products</code>表中的<code>product_id</code>，从而将每个订单行项目链接到特定产品。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1sql381\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=plaintext]; edge [arrowhead=none]; tbl1 [label=< <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD COLSPAN=\"2\" BGCOLOR=\"#a5d8ff\">产品</TD></TR> <TR><TD BGCOLOR=\"#dee2e6\"><B>产品ID (主键)</B></TD><TD>INTEGER</TD></TR> <TR><TD>名称</TD><TD>VARCHAR</TD></TR> <TR><TD>价格</TD><TD>DECIMAL</TD></TR> </TABLE> >]; tbl2 [label=< <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD COLSPAN=\"3\" BGCOLOR=\"#ffc9c9\">订单</TD></TR> <TR><TD BGCOLOR=\"#dee2e6\"><B>订单ID (主键)</B></TD><TD>INTEGER</TD></TR> <TR><TD>订单日期</TD><TD>DATE</TD></TR> <TR><TD>产品ID (外键)</TD><TD>INTEGER</TD></TR> </TABLE> >]; tbl2:f2 -> tbl1:f0 [arrowhead=crow, arrowtail=none, label=\" 引用\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1sql381\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>示意图说明了<code>Products</code>表和<code>Orders</code>表之间通过外键建立的关系。</p>\n</blockquote>\n<h3>SQL：交互语言</h3>\n<p>SQL 允许您在数据库上执行各种操作。这些命令通常分为几类：</p>\n<ol>\n<li><strong>数据定义语言 (DDL)：</strong> 用于定义或修改数据库结构。\n<ul>\n<li><code>CREATE TABLE</code>：创建一个新表。</li>\n<li><code>ALTER TABLE</code>：修改现有表（例如，添加列）。</li>\n<li><code>DROP TABLE</code>：删除一个表。</li>\n</ul>\n</li>\n<li><strong>数据操作语言 (DML)：</strong> 用于管理表内的数据。\n<ul>\n<li><code>INSERT</code>：向表中添加新行（记录）。</li>\n<li><code>UPDATE</code>：修改现有行。</li>\n<li><code>DELETE</code>：删除行。</li>\n</ul>\n</li>\n<li><strong>数据查询语言 (DQL)：</strong> 用于检索数据（通常被认为是 DML 的一部分）。\n<ul>\n<li><code>SELECT</code>：从一个或多个表中获取数据。</li>\n</ul>\n</li>\n</ol>\n<h3>基本 SQL 操作</h3>\n<p>让我们使用<code>Products</code>表示例来了解一些基本 SQL 命令。</p>\n<p><strong>创建表</strong>\r\n您定义表名及其列以及它们的数据类型。</p>\n<pre><code class=\"language-sql\">CREATE TABLE Products (\r\n    product_id INT PRIMARY KEY,\r\n    name VARCHAR(100),\r\n    price DECIMAL(10, 2)\r\n);\n</code></pre>\n<p>此命令创建了包含三列的<code>Products</code>表：<code>product_id</code>作为整数和主键，<code>name</code>作为文本（最多100个字符），以及<code>price</code>作为十进制数字。</p>\n<p><strong>插入数据</strong>\r\n向表中添加记录：</p>\n<pre><code class=\"language-sql\">INSERT INTO Products (product_id, name, price)\r\nVALUES (101, 'Laptop', 1200.00);\r\n\r\nINSERT INTO Products (product_id, name, price)\r\nVALUES (102, 'Keyboard', 75.00);\n</code></pre>\n<p><strong>查询数据 (<code>SELECT</code>)</strong>\r\n这可能是最常用的 SQL 命令。它用于检索数据。</p>\n<p>获取所有产品的全部列：</p>\n<pre><code class=\"language-sql\">SELECT * FROM Products;\n</code></pre>\n<p><code>*</code>符号是“所有列”的简写。</p>\n<p>获取所有产品的名称和价格：</p>\n<pre><code class=\"language-sql\">SELECT name, price FROM Products;\n</code></pre>\n<p><strong>筛选数据 (<code>WHERE</code>)</strong>\r\n您可以指定条件以仅检索匹配的行。</p>\n<p>查找价格低于 100 美元的产品：</p>\n<pre><code class=\"language-sql\">SELECT name, price\r\nFROM Products\r\nWHERE price &#x3C; 100.00;\n</code></pre>\n<p>这将返回“Keyboard”。</p>\n<p><strong>更新数据 (<code>UPDATE</code>)</strong>\r\n修改现有记录。使用<code>WHERE</code>子句指定要更新<em>哪些</em>行非常重要，否则您可能会更新表中的所有行！</p>\n<p>更改“Laptop”的价格：</p>\n<pre><code class=\"language-sql\">UPDATE Products\r\nSET price = 1150.00\r\nWHERE product_id = 101;\n</code></pre>\n<p><strong>删除数据 (<code>DELETE</code>)</strong>\r\n从表中删除行。同样，<code>WHERE</code>子句对于定位特定行很重要。没有它，您将面临删除所有内容的风险！</p>\n<p>删除“Keyboard”产品：</p>\n<pre><code class=\"language-sql\">DELETE FROM Products\r\nWHERE product_id = 102;\n</code></pre>\n<h3>关系型数据库的优点</h3>\n<p>关系型数据库受欢迎的原因有几个：</p>\n<ul>\n<li><strong>数据完整性：</strong> 诸如主键、外键和约束之类的功能有助于确保数据准确性和一致性。</li>\n<li><strong>ACID 合规性：</strong> 它们通常遵循 ACID 属性（原子性、一致性、隔离性、持久性），这些属性确保数据库事务可靠地处理。这对于处理财务或关键操作数据的系统来说非常重要。\n<ul>\n<li><em>原子性</em>：确保事务中的所有操作要么全部成功完成，要么全部不完成。</li>\n<li><em>一致性</em>：保证事务将数据库从一个有效状态带到另一个有效状态。</li>\n<li><em>隔离性</em>：确保并发事务互不干扰。</li>\n<li><em>持久性</em>：确保一旦事务提交，即使在系统故障的情况下也保持提交状态。</li>\n</ul>\n</li>\n<li><strong>结构化数据处理：</strong> 它们擅长管理定义明确的结构化数据。</li>\n<li><strong>成熟技术：</strong> SQL 和关系型数据库已经存在数十年，从而带来了稳定技术、大量文档和庞大社区。</li>\n</ul>\n<h3>常见使用场景</h3>\n<p>您会发现关系型数据库为以下系统提供支持：</p>\n<ul>\n<li>在线事务处理 (OLTP) 系统，如电子商务网站、银行应用程序和预订系统。</li>\n<li>商业智能 (BI) 和报告应用程序，其中分析结构化数据。</li>\n<li>许多需要持久化、结构化存储的 Web 应用程序。</li>\n</ul>\n<h3>局限性</h3>\n<p>尽管功能强大，关系型数据库也有局限性：</p>\n<ul>\n<li><strong>可伸缩性：</strong> 传统关系型数据库的横向扩展（增加更多机器）与某些 NoSQL 替代方案相比可能更复杂，尤其是在极高负载下。</li>\n<li><strong>灵活性：</strong> 它们不太适合处理非结构化数据（如文本文档、图像）或结构频繁变化的数据。预先定义模式是标准做法。</li>\n</ul>\n<p>理解如何使用 SQL 与关系型数据库进行交互是数据工程师的一项基本技能。它们通常是数据提取到管道的源系统，或是清理和转换后的数据加载以供分析的目标系统。在后面的实践部分，您将亲自动手创建一张简单的表。</p>",
+  "slug": "working-with-relational-databases",
+  "updates": [],
+  "references": [
+    {
+      "id": 15018,
+      "title": "Learning SQL",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd-edition/9781492057604/",
+      "doi": "",
+      "note": "一本学习不同关系数据库系统 SQL 语法和操作的实用指南。",
+      "order": 2,
+      "created_at": "2025-09-05T14:34:06.065272Z",
+      "updated_at": "2025-09-11T02:30:39.665067Z"
+    },
+    {
+      "id": 15019,
+      "title": "PostgreSQL Documentation: The SQL Language",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/tutorial-sql.html",
+      "doi": "",
+      "note": "官方文档，提供了 PostgreSQL 中 SQL 语言的概述和教程。",
+      "order": 3,
+      "created_at": "2025-09-05T14:34:06.074566Z",
+      "updated_at": "2025-09-11T02:30:40.020672Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

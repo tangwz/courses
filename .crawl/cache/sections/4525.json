@@ -1,0 +1,61 @@
+{
+  "id": 4525,
+  "title": "动手实践：构建协作代理团队",
+  "meta_title": "动手实践：构建协作代理团队",
+  "meta_description": "使用AutoGen等框架实现一个简单的多代理系统，用于协作任务。",
+  "content": "<p>使用AutoGen框架构建一个基础的协作代理团队。AutoGen为构建涉及多个代理的应用提供了灵活的抽象，这些代理可以互相交流和一起操作。目的是创建一个系统，其中一个代理充当研究员，另一个充当撰写者，它们合作生成一篇技术博客文章的提纲，根据用户的请求来完成。</p>\n<p>这个实践练习假设您已经安装了AutoGen (<code>pip install pyautogen</code>) 并且已配置好一个LLM端点（例如，通过环境变量如<code>OPENAI_API_KEY</code>或<code>OAI_CONFIG_LIST</code> JSON文件）。我们将侧重于设置代理、确定其角色、通过群聊建立交流，并启动协作任务。</p>\n<h3>设置环境和LLM配置</h3>\n<p>首先，确保您的环境已准备就绪。通常，AutoGen使用配置列表来指明要用的LLM。您可以使用环境变量或从JSON文件载入它。例如，一个<code>OAI_CONFIG_LIST</code>文件可能像这样：</p>\n<pre><code class=\"language-json\">[\n    {\n        \"model\": \"gpt-4-turbo-preview\",\n        \"api_key\": \"YOUR_API_KEY\"\n    }\n]\n</code></pre>\n<p>在我们的Python脚本中，我们将载入这个配置：</p>\n<pre><code class=\"language-python\">import autogen\nimport os\n\n# 从环境变量或文件载入LLM配置\n# 示例假设设置了OAI_CONFIG_LIST环境变量，\n# 指向JSON字符串或文件路径。\n# 替换为您的具体配置方法。\nconfig_list = autogen.config_list_from_json(\n    env_or_file=\"OAI_CONFIG_LIST\",\n    filter_dict={\n        \"model\": [\"gpt-4-turbo-preview\"] # 或您偏好的模型\n    }\n)\n\n# LLM的配置参数\nllm_config = {\n    \"timeout\": 600,\n    \"cache_seed\": 42, # 对于非确定性结果，使用None\n    \"config_list\": config_list,\n    \"temperature\": 0, # 较低的temperature可获得更确定的输出\n}\n</code></pre>\n<h3>定义代理角色</h3>\n<p>我们的协作团队需要三个核心组成部分：</p>\n<ol>\n<li><strong>用户代理：</strong> 代表人类用户，启动任务并可能提供反馈。如果需要，它还可以执行代码，但此处我们不侧重于该功能。</li>\n<li><strong>研究员代理：</strong> 一个基于LLM的助手，负责收集有关请求主题的信息。</li>\n<li><strong>撰写者代理：</strong> 另一个基于LLM的助手，负责将收集到的信息组织成博客文章提纲。</li>\n</ol>\n<p>让我们使用AutoGen的<code>UserProxyAgent</code>和<code>AssistantAgent</code>来定义这些代理：</p>\n<pre><code class=\"language-python\"># 定义用户代理\n# 充当发起者，如果需要可以执行代码（human_input_mode=\"TERMINATE\" 表示在一次交互后停止）\nuser_proxy = autogen.UserProxyAgent(\n   name=\"User_Proxy\",\n   system_message=\"寻求博客文章提纲的人类用户。\",\n   code_execution_config=False, # 本示例不需要代码执行\n   human_input_mode=\"TERMINATE\", # 在收到最终回复后停止\n   is_termination_msg=lambda x: x.get(\"content\", \"\").rstrip().endswith(\"TERMINATE\"),\n)\n\n# 定义研究员代理\nresearcher = autogen.AssistantAgent(\n    name=\"Researcher\",\n    llm_config=llm_config,\n    system_message=\"您是一位专业研究员。您的任务是寻找有关给定技术主题的相关信息和要点。请专注于准确性和深入性。不要撰写最终提纲，只提供研究结果。\"\n)\n\n# 定义撰写者代理\nwriter = autogen.AssistantAgent(\n    name=\"Writer\",\n    llm_config=llm_config,\n    system_message=\"您是一位专业技术撰写者。您的任务是将研究员提供的研究结果组织成清晰、有逻辑的博客文章提纲。包括引言、概念、实际案例（如适用）、结论等部分。确保结构流畅。以单词 TERMINATE 结束您的回复。\"\n)\n</code></pre>\n<p>注意每个助手代理的不同<code>system_message</code>。这对于引导他们在团队中的行为和专业分工非常重要。撰写者最终消息中的<code>TERMINATE</code>关键词以及<code>UserProxyAgent</code>中的<code>is_termination_msg</code>检查有助于控制对话流程。</p>\n<h3>建立交流协议：群聊</h3>\n<p>AutoGen通过<code>GroupChat</code>促成多代理对话。我们将已定义的代理加入一个群组，并实例化一个<code>GroupChatManager</code>来协调交互。</p>\n<pre><code class=\"language-python\"># 创建群聊\ngroupchat = autogen.GroupChat(\n    agents=[user_proxy, researcher, writer],\n    messages=[],\n    max_round=10 # 设置对话轮数的上限\n)\n\n# 创建群聊管理器\nmanager = autogen.GroupChatManager(\n    groupchat=groupchat,\n    llm_config=llm_config\n)\n</code></pre>\n<p><code>max_round</code>参数 (parameter)可避免无限循环并控制资源使用。<code>GroupChatManager</code>使用其自身的LLM配置来根据对话历史决定下一个发言的代理，除非提供了特定的发言者选择方法。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-37uqs0\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#4263eb\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\"];\n\n  UserProxy [label=\"用户代理\\n(发起者)\"];\n  Manager [label=\"群聊管理器\\n(协调者)\", shape=ellipse, color=\"#1c7ed6\"];\n  Researcher [label=\"研究员代理\\n(LLM)\", color=\"#1098ad\"];\n  Writer [label=\"撰写者代理\\n(LLM)\", color=\"#0ca678\"];\n\n  UserProxy -> Manager [label=\"启动任务\"];\n  Manager -> Researcher [label=\"要求研究\"];\n  Researcher -> Manager [label=\"提供结果\"];\n  Manager -> Writer [label=\"要求撰写提纲\"];\n  Writer -> Manager [label=\"提供提纲\\n(以 TERMINATE 结束)\"];\n  Manager -> UserProxy [label=\"交付最终提纲\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-37uqs0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>AutoGen群聊中博客文章提纲任务的基本交互流程。</p>\n</blockquote>\n<h3>启动协作</h3>\n<p>代理和交流结构确定后，<code>UserProxyAgent</code>现在可以通过向<code>GroupChatManager</code>发送初始消息来启动任务。</p>\n<pre><code class=\"language-python\"># 定义任务提示\ntask_prompt = \"\"\"\n请研究大型语言模型中检索增强生成（RAG）的核心思想，并创建一个博客文章提纲，涵盖其重要性、组成部分、典型工作流程和常见问题。\n\"\"\"\n\n# 启动聊天\nuser_proxy.initiate_chat(\n    manager,\n    message=task_prompt,\n)\n</code></pre>\n<h3>运行与观察</h3>\n<p>执行此脚本将触发多代理交互。</p>\n<ol>\n<li><code>UserProxyAgent</code>将<code>task_prompt</code>发送给<code>GroupChatManager</code>。</li>\n<li><code>Manager</code>根据提示和代理角色，可能会首先选择<code>Researcher</code>发言。</li>\n<li><code>Researcher</code>处理请求，执行其“研究”（由LLM根据其内部知识模拟），并将其研究结果发布到聊天中。</li>\n<li><code>Manager</code>收到研究结果，并在看到需要提纲后，选择<code>Writer</code>。</li>\n<li><code>Writer</code>接收研究员的输入，根据其指令组织内容，创建提纲，附加<code>TERMINATE</code>，并将其发布到聊天中。</li>\n<li><code>Manager</code>将<code>Writer</code>的最终消息转发给<code>UserProxyAgent</code>。</li>\n<li><code>UserProxyAgent</code>看到消息中的<code>TERMINATE</code>条件满足，便结束了聊天。</li>\n</ol>\n<p>您将在控制台输出中观察到对话的展开，显示代理之间交换的消息。<code>Writer</code>的最终输出应是请求的博客文章提纲。</p>\n<h3>扩展和考量</h3>\n<p>此示例为使用AutoGen进行协作型MAS提供了基础模式。对于与专家级开发相关的更复杂情况，请考虑：</p>\n<ul>\n<li><strong>更专业的角色：</strong> 如果任务需要，引入用于编辑、事实核查或代码生成的代理。</li>\n<li><strong>复杂的发言者选择：</strong> 在<code>GroupChat</code>内实现自定义的发言者转换逻辑，而不是仅仅依赖于基于LLM的管理器。</li>\n<li><strong>MAS中的工具使用：</strong> 使用AutoGen的函数调用功能，为代理（例如研究员）配备工具（如网络搜索API）。</li>\n<li><strong>错误处理与恢复：</strong> 实现策略，使代理能够处理其他代理失败或提供错误信息的情况。</li>\n<li><strong>状态管理：</strong> 对于更长或更复杂的协作，为每个代理或共享内存空间整合内存机制（如第3章所述）。</li>\n<li><strong>替代框架：</strong> 了解CrewAI或LangGraph等框架，它们为多代理工作流程提供了不同的抽象（例如，基于角色的定义、状态图执行）。</li>\n</ul>\n<p>这个动手实践练习展示了设置和运行简单多代理系统的核心机制。基于这些思想，可以开发出更复杂、更有能力的应用程序，其中专业的LLM代理合作完成单个代理无法实现的目标。</p>",
+  "slug": "practical-collaborative-agent-team",
+  "updates": [],
+  "references": [
+    {
+      "id": 8547,
+      "title": "AutoGen: Multi-Agent Conversation Framework",
+      "author": "Microsoft",
+      "year": "2024",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://microsoft.github.io/autogen/",
+      "doi": "",
+      "note": "AutoGen框架的官方文档，提供构建多智能体LLM应用的指南和API参考。",
+      "order": 1,
+      "created_at": "2025-09-05T02:00:26.225823Z",
+      "updated_at": "2025-09-10T08:11:40.889432Z"
+    },
+    {
+      "id": 8548,
+      "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+      "author": "Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu, Beibin Li, Erkang Zhu, Li Jiang, Xiaoyun Zhang, Shaokun Zhang, Jiale Liu, Ahmed Hassan Awadallah, Ryen W White, Doug Burger, Chi Wang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2308.08155",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2308.08155",
+      "doi": "10.48550/arXiv.2308.08155",
+      "note": "介绍用于构建多智能体LLM系统的AutoGen框架，阐述其设计原则和协作AI的能力。",
+      "order": 2,
+      "created_at": "2025-09-05T02:00:26.327981Z",
+      "updated_at": "2025-09-10T08:11:33.085720Z"
+    },
+    {
+      "id": 8549,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS) 2020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍检索增强生成（RAG）的基础论文，一种通过从外部知识源检索信息来增强LLM的方法。",
+      "order": 4,
+      "created_at": "2025-09-05T02:00:26.341696Z",
+      "updated_at": "2025-09-10T08:11:29.299752Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

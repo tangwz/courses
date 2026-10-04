@@ -1,0 +1,45 @@
+{
+  "id": 5555,
+  "title": "加载策略：完整加载",
+  "meta_title": "ETL 加载策略：完整加载解析",
+  "meta_description": "了解如何使用新数据集完全覆盖目标数据的过程。",
+  "content": "<p>你已在转换阶段抽取、清理并整理好数据，使其成为理想的格式。现在，是时候将这些处理过的数据迁移到最终目的地了。最直接的方法之一就是采用<strong>完整加载</strong>策略。</p>\n<p>想象你有一块白板（你的目标表）和一系列笔记（你的转换数据）。完整加载就像完全擦除整个白板，然后将你所有的现有笔记都写上去。每次运行该过程时，你都会清空所有内容，并根据最新的转换数据重写一切。</p>\n<h3>完整加载的工作原理</h3>\n<p>完整加载（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>L</mi><mrow><mi>f</mi><mi>u</mi><mi>l</mi><mi>l</mi></mrow></msub></mrow><annotation encoding=\"application/x-tex\">L_{full}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9694em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">L</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3361em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.1076em;\">f</span><span class=\"mord mathnormal mtight\">u</span><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0197em;\">l</span><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0197em;\">l</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span>）是一种数据加载策略，用于将全部数据从源系统迁移到目标系统。此过程通常包含一些特定步骤。</p>\n<ol>\n<li><strong>准备：</strong> ETL 过程完成抽取和转换步骤，生成可供加载的数据集。</li>\n<li><strong>目标准备（可选但常见）：</strong> 目标表中现有数据通常会被完全移除。这在 SQL 数据库中常用 <code>TRUNCATE TABLE</code> 命令完成，它通常比逐行删除（<code>DELETE FROM table</code>）更快。有时，表甚至可能被删除并重建，特别是当涉及模式变更时。</li>\n<li><strong>数据加载：</strong> 整个转换后的数据集被插入到当前为空的目标表。</li>\n</ol>\n<p>该过程确保在加载操作完成后，目标表包含转换阶段为该次特定运行生成的数据集的准确副本。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1lsibhn\" \n              data-graph-definition='digraph FullLoad {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  subgraph cluster_etl {\n    label = \"ETL 过程\";\n    bgcolor=\"#dee2e6\";\n    style=filled;\n    color=\"#adb5bd\";\n    Extract [label=\"抽取数据\\n(源)\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n    Transform [label=\"转换数据\", shape=Mdiamond, fillcolor=\"#96f2d7\"];\n    Extract -> Transform [label=\"原始数据\"];\n  }\n\n  subgraph cluster_target {\n     label = \"目标系统\";\n     bgcolor=\"#dee2e6\";\n     style=filled;\n     color=\"#adb5bd\";\n     TargetBefore [label=\"目标表\\n(包含旧数据)\", fillcolor=\"#ffc9c9\"];\n     Truncate [label=\"清空表\\n(空表)\", shape=invhouse, fillcolor=\"#ffd8a8\"];\n     TargetAfter [label=\"目标表\\n(包含新数据)\", fillcolor=\"#b2f2bb\"];\n     TargetBefore -> Truncate [label=\"清空\"];\n     Truncate -> TargetAfter [label=\"加载\"];\n  }\n\n  Transform -> Truncate [label=\"转换数据\", style=dashed];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1lsibhn\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张描绘完整加载过程的图表。数据被抽取并转换。目标表在加载转换后的数据之前被清空，完全替换掉之前的内容。</p>\n</blockquote>\n<h3>何时使用完整加载</h3>\n<p>尽管简单，完整加载并非总是最佳选择，特别是对于非常大的数据集。然而，它通常适用于以下几种情况：</p>\n<ul>\n<li><strong>首次数据加载：</strong> 首次填充数据仓库或目标表时，完整加载是一种自然的方法。</li>\n<li><strong>小型数据集：</strong> 如果数据量相对较小，擦除并重新加载所有内容可能比弄清变更内容更快、更简单。“小”是相对的，取决于你的系统性能和可接受的加载时间窗口。</li>\n<li><strong>非重要历史数据：</strong> 如果目标系统不需要保留历史状态（例如，它只需要<em>当前</em>状态），完整加载会大大简化流程。</li>\n<li><strong>缺乏变更追踪：</strong> 当源系统未提供可靠方法来识别自上次抽取以来<em>哪些</em>数据已变更时（例如时间戳或版本号），完整加载可能是确保目标反映当前源状态的唯一可行方式。</li>\n<li><strong>开发和测试：</strong> 完整加载常用于开发或测试环境，因为它们易于重置并确保已知状态。</li>\n<li><strong>维度表：</strong> 有时，数据仓库中较小的维度表（描述产品、客户或时间等业务实体的数据表）会被完整重新加载，因为它们不会变得过大，并且倾向于采用简单性。</li>\n</ul>\n<h3>完整加载的优点</h3>\n<ul>\n<li><strong>简单性：</strong> 逻辑直观明了。你不需要复杂的机制来追踪变更、处理更新或管理删除。擦除并替换即可。</li>\n<li><strong>保证一致性（加载后）：</strong> 成功完整加载后，目标表在那个时间点完美映射源数据（经过转换阶段处理的）。</li>\n<li><strong>更简单的错误恢复：</strong> 如果完整加载中途失败，你通常只需再次清空目标并重启加载过程，而无需担心部分更新问题。</li>\n</ul>\n<h3>完整加载的缺点</h3>\n<ul>\n<li><strong>大型数据低效率：</strong> 每次重新加载数百万或数十亿行会消耗大量时间、网络带宽和计算资源。加载时间可能变得过长，无法接受。</li>\n<li><strong>历史数据丢失：</strong> 由于你擦除目标数据，因此会丢失<em>该特定表内</em>的任何历史记录，除非你预先设计系统来归档数据。</li>\n<li><strong>潜在停机/锁定：</strong> 清空和加载大量数据可能会锁定目标表，使其在加载过程中无法被其他应用程序读写。</li>\n<li><strong>资源密集：</strong> 源系统和目标系统在完整加载操作期间都会承受重负载。</li>\n</ul>\n<p>完整加载策略提供了一种基本方法来填充目标系统。它的简单性使其具有吸引力，特别是对于小型数据集或初始加载。然而，它在处理大型数据量时的局限性常常促使数据工程师考虑其他方法，例如增量加载，我们将在后面讨论。</p>",
+  "slug": "loading-strategy-full-load",
+  "updates": [],
+  "references": [
+    {
+      "id": 14959,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball, Margy Ross",
+      "year": "2013",
+      "publisher": "John Wiley & Sons, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801",
+      "doi": "",
+      "note": "数据仓库和ETL原理的基础指南，描述了包括全量加载在内的各种加载策略。",
+      "order": 1,
+      "created_at": "2025-09-05T14:33:18.874305Z",
+      "updated_at": "2025-09-08T03:42:03.579016Z"
+    },
+    {
+      "id": 14960,
+      "title": "Fundamentals of Data Engineering: Plan and Build Robust Data Systems",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "450",
+      "url": "https://books.google.com/books?id=z1F7EAAAQBAJ",
+      "doi": "",
+      "note": "涵盖了现代数据工程实践，包括ETL管道设计和不同的数据加载方法。",
+      "order": 2,
+      "created_at": "2025-09-05T14:33:18.878551Z",
+      "updated_at": "2025-09-08T03:42:14.098027Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

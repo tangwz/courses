@@ -1,0 +1,45 @@
+{
+  "id": 5978,
+  "title": "数据获取的法律考量",
+  "meta_title": "数据获取的法律事宜",
+  "meta_description": "简要介绍文本数据收集中的版权和许可问题。",
+  "content": "<p>获取数TB的文本数据是一项工程难题，而处理围绕这些数据的法律问题同样重要，尤其是考虑到LLM预训练 (pre-training)所涉及的规模。不当使用数据可能导致巨大的法律风险、声誉损害，并可能使训练中的大量投入作废。作为这些模型的工程师，了解基本的法律界限并非要成为律师，而是要实行负责任的数据获取做法，并识别潜在的危险信号。</p>\n<h3>版权与合理使用考量</h3>\n<p>大多数创意作品，包括网站文本、书籍和文章，在创作时即自动受到版权保护。这赋予创作者复制、分发和创建衍生作品的独占权利。训练大型语言模型（LLM）可以说涉及复制（将数据复制到训练集中）并可能创建衍生作品（模型的输出）。</p>\n<p>未经许可使用受版权保护的材料构成侵权，除非适用例外情况。在美国，最相关的例外是“合理使用”。合理使用会考量以下因素：</p>\n<ol>\n<li>使用目的和性质（例如，商业用途对比非营利教育用途）。</li>\n<li>受版权保护作品的性质。</li>\n<li>使用部分的数量和实质性。</li>\n<li>使用对受版权保护作品潜在市场的影响。</li>\n</ol>\n<p>合理使用原则在LLM训练中的应用，目前是激烈法律争论和活跃诉讼的焦点。支持合理使用的观点常围绕训练过程（使用文本提取统计模式而非展示原始内容）以及AI进步的公共利益。反对观点则强调复制的数据量以及LLM可能生成与原始作品竞争的输出。作为一名工程师，您应假定使用受版权保护的数据存在风险，并且合理使用抗辩并非万无一失。记录您的数据来源及其包含的理由是很重要的。</p>\n<h3>数据许可</h3>\n<p>除了默认的版权保护外，数据常在特定许可下共享。理解这些许可非常必要。</p>\n<ul>\n<li><strong>宽松的开放许可：</strong> 通常优先选择如知识共享零（CC0）、CC BY、MIT或Apache 2.0等许可。\n<ul>\n<li><code>CC0</code>：公共领域奉献，限制最少。</li>\n<li><code>CC BY</code>：要求署名。</li>\n<li><code>CC BY-SA</code>：要求署名，并要求衍生作品（可能包括使用该数据训练的模型，但这有争议）以相同或兼容的许可（ShareAlike，即“相同方式共享”）发布。</li>\n<li><code>MIT/Apache 2.0</code>：常用于代码，但有时也适用于数据集，通常宽松，但要求保留许可文本和版权声明。</li>\n</ul>\n</li>\n<li><strong>限制性许可：</strong> 某些数据集可能带有禁止商业使用（<code>CC BY-NC</code>）、限制衍生作品（<code>CC BY-ND</code>）的许可，或带有特定限制的自定义许可。通过私人协议或数据供应商获取的数据也将有合同限制。</li>\n<li><strong>默示许可：</strong> 有时，数据在没有明确许可的情况下公开发布。其法律地位可能不明确。</li>\n</ul>\n<p>维护数据来源并追踪每个进入训练语料库的数据片段所关联的许可，是一项重要的工程任务。这些元数据对于合规审计和风险管理是必要的。简单的追踪可能涉及将许可信息与数据集标识符一起存储。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ecmf1e\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, color=\"#dee2e6\", fontsize=11];\n  edge [color=\"#868e96\", fontsize=11];\n\n  subgraph cluster_sources {\n    label = \"数据来源\";\n    style=filled;\n    color=\"#e9ecef\";\n    WebCrawl [label=\"网络爬取\\n(混合/未知)\"];\n    BooksCorpus [label=\"图书语料库\\n(有版权?)\"];\n    GitHub [label=\"GitHub 代码\\n(MIT, Apache, GPL...)\"];\n    Wikipedia [label=\"维基百科\\n(CC BY-SA)\"];\n  }\n\n  subgraph cluster_corpus {\n     label = \"训练语料库\";\n     style=filled;\n     color=\"#e9ecef\";\n     Dataset [label=\"聚合数据集\\n(需追踪许可)\", shape=cylinder, color=\"#ced4da\"];\n  }\n\n  WebCrawl -> Dataset [label=\" 已过滤\"];\n  BooksCorpus -> Dataset [label=\" 已抽样\"];\n  GitHub -> Dataset [label=\" 已处理\"];\n  Wikipedia -> Dataset [label=\" 已包含\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ecmf1e\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>简化流程图，展示不同许可类型的数据源如何汇入中央训练语料库，并强调追踪的必要性。</p>\n</blockquote>\n<h3>网络爬取实践</h3>\n<p>获取网络数据需要技术和法律上的细致考量。</p>\n<ul>\n<li>\n<p><code>robots.txt</code>：该文件为网络爬虫提供指令。尽管其并非在所有地方都具有法律约束力，但忽视它（尤其是<code>Disallow</code>指令）通常被认为是糟糕的做法，可能违反服务条款，并增加法律风险。遵守<code>robots.txt</code>是负责任爬取行为的常规部分。</p>\n<p>您可以使用Python的<code>urllib.robotparser</code>来检查<code>robots.txt</code>：</p>\n<pre><code class=\"language-python\">import urllib.robotparser\nimport urllib.request\n\n# 网站 robots.txt 的 URL\nrobots_url = 'https://example.com/robots.txt'\n# 您的爬虫的用户代理字符串\nuser_agent = 'MyLLMDataCrawler/1.0 (+http://mycrawlerinfo.example.com)'\n# 您打算爬取的 URL\nurl_to_check = 'https://example.com/private/data'\n\nrp = urllib.robotparser.RobotFileParser()\n\ntry:\n    # 设置超时是个好习惯\n    with urllib.request.urlopen(robots_url, timeout=10) as response:\n        # 读取并解码内容\n        content = response.read().decode('utf-8')\n        rp.parse(content.splitlines())\n\n        # 检查您的用户代理是否允许抓取\n        if rp.can_fetch(user_agent, url_to_check):\n            print(f\"允许爬取 {url_to_check}\")\n            # 继续抓取 url_to_check\n        else:\n            print(f\"robots.txt 禁止爬取 {url_to_check}\")\n\nexcept urllib.error.URLError as e:\n    print(f\"访问 robots.txt 时出错 {robots_url}: {e}\")\nexcept Exception as e:\n    print(f\"解析 robots.txt 时出错: {e}\")\n\n# 始终在请求之间设置礼貌的延迟\n# import time\n# time.sleep(5) # 等待 5 秒钟，再向同一服务器发送下一个请求\n</code></pre>\n</li>\n<li>\n<p><strong>服务条款 (ToS)：</strong> 网站通常有服务条款页面，列明允许的使用方式。许多网站明确禁止自动化爬取。违反服务条款可能被视为违约，在某些司法管辖区（例如美国《计算机欺诈和滥用法案》- CFAA 下），可能被视为未经授权的访问，尽管CFAA应用于公共网站爬取的情况在法律上也有争议。始终审查主要数据源的服务条款。</p>\n</li>\n<li>\n<p><strong>服务器负载：</strong> 激进的爬取可能使网站服务器过载，可能导致拒绝服务。这不道德，并可能导致IP封禁或法律投诉。实行礼貌的爬取做法：遵守<code>robots.txt</code>中的<code>Crawl-delay</code>指令，使用适当的用户代理，并实行速率限制。</p>\n</li>\n</ul>\n<h3>个人可识别信息 (PII)</h3>\n<p>大型数据集，尤其是网络爬取数据，常包含个人可识别信息（姓名、电子邮件地址、电话号码、财务详情、健康信息）。使用个人可识别信息进行训练会带来显著的隐私风险，并可能违反欧洲的GDPR（通用数据保护条例）或CCPA（加州消费者隐私法案）等法规。</p>\n<p>尽管第7章讨论了数据清洗技术，包括使用正则表达式或命名实体识别（NER）模型进行个人可识别信息清除，但大规模实现完美的个人可识别信息移除极其困难。模型记忆并可能“反刍”在训练期间学到的个人可识别信息的风险是一个严重问题。通过仔细选择来源和过滤来最大限度地减少个人可识别信息的摄入是必要的步骤。</p>\n<h3>数据溯源与审慎</h3>\n<p>最终，负责任的数据获取涉及周密的规划和文档记录。保持清晰的记录，包括：</p>\n<ul>\n<li>数据集的每个部分来自何处。</li>\n<li>获取时所依据的许可或法律基础。</li>\n<li>应用的任何预处理步骤（特别是过滤或个人可识别信息清除）。</li>\n</ul>\n<p>这种溯源信息对于确保合规性、调试模型行为（例如，追踪偏差或毒性来源）以及回应潜在的法律询问具有极高价值。大型语言模型训练数据的法律环境是变化的；请咨询熟悉相关司法管辖区数据隐私和知识产权法的法律专家。您作为工程师的职责是构建能够遵守法律要求的系统，并通过严谨的数据处理实践来促进风险管理。</p>",
+  "slug": "data-acquisition-legal-considerations",
+  "updates": [],
+  "references": [
+    {
+      "id": 16785,
+      "title": "Generative AI and Copyright Law",
+      "author": "Pamela Samuelson",
+      "year": "2023",
+      "publisher": "AAAS",
+      "journal": "Science",
+      "volume": "381",
+      "pages": "158-161",
+      "url": "https://www.science.org/doi/10.1126/science.adh9429",
+      "doi": "10.1126/science.adh9429",
+      "note": "对现有著作权法，特别是合理使用原则，如何应用于生成式人工智能系统及其训练数据的学术考察。",
+      "order": 1,
+      "created_at": "2025-09-06T11:42:46.430435Z",
+      "updated_at": "2025-09-10T14:56:34.236144Z"
+    },
+    {
+      "id": 16788,
+      "title": "Data Protection in the Age of Large Language Models: A Legal and Technical Review",
+      "author": "Maximilian P. Zinkus, Jacob W. Jurecki, and Brian H. Bix",
+      "year": "2023",
+      "publisher": "John Wiley & Sons, Inc.",
+      "journal": "Journal of Legal Studies Education",
+      "volume": "40",
+      "pages": "103-143",
+      "url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/jlse.12185",
+      "doi": "10.1111/jlse.12185",
+      "note": "本综述涉及大数据模型训练中与数据隐私、个人身份信息 (PII) 以及GDPR和CCPA等法规合规性相关的挑战和风险。",
+      "order": 4,
+      "created_at": "2025-09-06T11:42:46.441461Z",
+      "updated_at": "2025-09-10T14:56:38.063938Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

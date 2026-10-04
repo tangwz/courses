@@ -1,0 +1,495 @@
+{
+  "id": 140,
+  "title": "向量数据库与语义搜索实现",
+  "meta_title": "向量数据库与语义搜索课程 | 中级AI",
+  "meta_description": "向量数据库与语义搜索中级课程。学习ANN索引、嵌入模型，并使用Python及向量数据库构建搜索应用。",
+  "description": "<p>学习构建和部署基于向量 (vector)数据库的语义搜索系统。本课程涵盖向量嵌入 (embedding)、近似最近邻 (ANN) 算法、数据库结构以及常用工具的实践操作。培养您所需的能力，以制作能理解内容而非仅匹配关键词的应用。</p>",
+  "short_description": "运用向量数据库和嵌入技术实现语义搜索应用。",
+  "excerpt": "构建智能搜索应用。掌握向量嵌入、数据库索引技术（如ANN），并使用主流向量数据库实现语义搜索流程。",
+  "prerequisites": "Python基础, 数据知识。",
+  "cover_color": "blue",
+  "learning_outcomes": [
+    {
+      "topic": "向量嵌入",
+      "description": "掌握不同数据类型向量嵌入模型的生成与应用。"
+    },
+    {
+      "topic": "向量数据库架构",
+      "description": "阐述现代向量数据库的核心组成部分和设计原则。"
+    },
+    {
+      "topic": "ANN算法",
+      "description": "比较并区分不同的近似最近邻搜索算法及其权衡点。"
+    },
+    {
+      "topic": "语义搜索流程",
+      "description": "设计并搭建数据索引和执行语义查询的流程。"
+    },
+    {
+      "topic": "实践操作",
+      "description": "运用流行的向量数据库库和平台，构建功能完善的语义搜索应用。"
+    },
+    {
+      "topic": "性能调优",
+      "description": "评估并调整索引参数，以达到最佳搜索性能和资源使用效率。"
+    }
+  ],
+  "duration": 20,
+  "slug": "vector-databases-semantic-search",
+  "level": 2,
+  "category": "Database",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-06T06:03:03.682071Z",
+  "updated_at": "2026-10-02T08:37:06.797831Z",
+  "chapters": [
+    {
+      "id": 730,
+      "title": "向量嵌入与向量空间",
+      "meta_title": "向量嵌入与向量空间 | 课程第一章",
+      "meta_description": "回顾向量嵌入（文本、图像）、嵌入模型（Transformer）、维度和相似度度量。动手生成嵌入。",
+      "number": 1,
+      "slug": "embeddings-vector-spaces-foundation",
+      "content": "为了构建能够理解含义的系统，我们首先需要一种将文本或图像等数据以数值形式表示的方法。本章主要讲解向量嵌入。向量嵌入作为这种数值表示方法，将数据点放置在高维向量空间中。\n\n我们将从回顾不同类型数据如何转换为向量开始。您将学习常见的嵌入模型，特别是基于Transformer架构的模型，并讨论向量维度对系统性能的影响。我们还将介绍降维技术。向量处理的一个重要方面是衡量它们的相似性；因此，我们将比较余弦相似度 ($cos(\\theta)$)、欧几里得距离 ($||\\vec{a} - \\vec{b}||_2$) 和点积 ($\\vec{a} \\cdot \\vec{b}$) 等度量指标。最后，您将通过使用Python库生成嵌入并计算它们的相似性来应用这些知识。",
+      "sections": [
+        {
+          "id": 3505,
+          "title": "从数据到向量：回顾",
+          "meta_title": "数据到向量转换回顾",
+          "meta_description": "快速回顾将数据（文本、图像、音频）表示为数值向量的思想。",
+          "slug": "data-to-vectors-refresher",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3507,
+          "title": "嵌入模型概述",
+          "meta_title": "嵌入模型概述（Transformer）",
+          "meta_description": "不同嵌入技术的概览，主要介绍基于Transformer的模型，如BERT和Sentence-BERT。",
+          "slug": "embedding-models-survey",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3510,
+          "title": "理解向量维度",
+          "meta_title": "理解向量维度",
+          "meta_description": "讨论向量维度大小对存储、计算和性能的影响。",
+          "slug": "vector-dimensionality-understanding",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3513,
+          "title": "降维技术概述",
+          "meta_title": "降维技术概述",
+          "meta_description": "PCA和UMAP等向量维度缩减方法的概览。",
+          "slug": "dimensionality-reduction-introduction",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3515,
+          "title": "测量向量空间中的相似度",
+          "meta_title": "向量相似度指标（余弦、欧几里得）",
+          "meta_description": "比较常见距离指标：余弦相似度、欧几里得距离和点积。",
+          "slug": "vector-similarity-metrics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3518,
+          "title": "动手实践：生成与比较嵌入",
+          "meta_title": "实践：生成与比较嵌入",
+          "meta_description": "使用 Python 库为样本文本数据生成嵌入并比较它们的相似度。",
+          "slug": "practice-generating-comparing-embeddings",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 733,
+      "title": "向量数据库介绍",
+      "meta_title": "向量数据库介绍 | 课程第二章",
+      "meta_description": "学习向量数据库的核心组成部分、架构、数据模型、CRUD操作及扩展性考量。",
+      "number": 2,
+      "slug": "introducing-vector-databases",
+      "content": "在上一章中，我们已了解数据如何转换为有意义的向量表示。现在我们要解决一个实际问题：如何存储、管理并高效查找这些高维向量？传统的结构化（关系型）或非结构化（NoSQL）数据库通常不适合在此所需的主要操作：使用相似性度量（例如 $cosine\\_similarity$ 或欧氏距离 ($$d(p, q) = \\sqrt{\\sum_{i=1}^{n}(p_i - q_i)^2}$$)）在高维空间中查找与查询向量最接近的向量。\n\n本章将介绍向量数据库，它们是专门为处理这些特殊需求而设计的系统。我们将了解它们的核心架构组成部分，并理解它们与传统数据库的区别。您将学习用于向量及其相关元数据的常用数据模型，在此场景下，基本的创建、读取、更新和删除（CRUD）操作如何工作，以及将向量相似性搜索与基于元数据属性的过滤相结合的能力。我们还将讨论关于这些数据库扩展性以处理大量向量数据的基本考量。到本章结束时，您将对向量数据库的相关知识及其运行原理有初步的认识。",
+      "sections": [
+        {
+          "id": 3520,
+          "title": "什么是向量数据库？",
+          "meta_title": "界定向量数据库",
+          "meta_description": "区分向量数据库与传统数据库；侧重于向量自身的操作。",
+          "slug": "defining-vector-database",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3523,
+          "title": "核心架构组成部分",
+          "meta_title": "向量数据库架构组成部分",
+          "meta_description": "向量数据库中存储引擎、索引服务和查询处理器的概述。",
+          "slug": "vector-db-architecture-components",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3526,
+          "title": "数据模型与数据结构定义",
+          "meta_title": "Vector Database Data Models and Schemas",
+          "meta_description": "How vector data and associated metadata are typically structured and stored.",
+          "slug": "vector-db-data-models-schemas",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3528,
+          "title": "向量操作：CRUD",
+          "meta_title": "向量数据库 CRUD 操作",
+          "meta_description": "专门针对向量数据执行创建、读取、更新和删除操作。",
+          "slug": "vector-db-crud-operations",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3531,
+          "title": "元数据过滤",
+          "meta_title": "向量数据库中的元数据过滤",
+          "meta_description": "将向量相似性搜索与基于关联元数据字段的过滤结合。",
+          "slug": "vector-db-metadata-filtering",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3533,
+          "title": "扩展考量",
+          "meta_title": "向量数据库扩展考量",
+          "meta_description": "介绍处理大型向量数据集的分片和复制等方法。",
+          "slug": "vector-db-scaling-considerations",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3536,
+          "title": "实践操作：向量数据库基本交互",
+          "meta_title": "实践：向量数据库基本交互",
+          "meta_description": "设置本地向量数据库实例（例如ChromaDB、Qdrant），并执行基本的CRUD操作。",
+          "slug": "practice-basic-vector-db-interaction",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 736,
+      "title": "近似最近邻 (ANN) 搜索",
+      "meta_title": "近似最近邻搜索 | 课程第三章",
+      "meta_description": "理解 ANN 原理，比较算法（HNSW、IVF、LSH），学习索引调整，并评估性能权衡。",
+      "number": 3,
+      "slug": "approximate-nearest-neighbor-search",
+      "content": "在庞大的高维向量集合中查找*精确*最近邻，计算成本可能非常高，对于交互式应用来说通常速度过慢。在处理向量数据库的规模时，对每次查询都执行穷举搜索通常不切实际。\n\n本章将通过引入近似最近邻 (ANN) 搜索来应对这一挑战。您将了解到为何近似处理通常是必要的，以及 ANN 算法如何通过牺牲少量准确性来换取搜索速度和资源使用方面的大幅提升，从而提供一个实用的解决方案。\n\n我们将涵盖：\n\n*   高维空间中精确最近邻搜索的计算限制。\n*   ANN 的核心原理，特别是搜索召回率与延迟等性能指标之间的权衡。\n*   常见 ANN 算法的概述，包括分层可导航小世界 (HNSW)、倒排文件索引 (IVF) 和局部敏感哈希 (LSH)，并解释它们各自的工作方式。\n*   用于构建和调整 ANN 索引的主要参数（例如，$ef\\_construction$、$ef\\_search$、$nlist$、$m$）及其影响。\n*   使用相关指标评估 ANN 索引有效性和效率的方法。\n\n本章最后将通过一个动手实践环节结束，您将尝试构建不同的 ANN 索引并观察由此产生的性能表现。",
+      "sections": [
+        {
+          "id": 3539,
+          "title": "近似的需求",
+          "meta_title": "近似近邻搜索的必要性",
+          "meta_description": "为什么精确近邻搜索对高维向量来说计算成本高。",
+          "slug": "need-for-ann-search",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3541,
+          "title": "ANN 的核心思想",
+          "meta_title": "近似最近邻 (ANN) 搜索的核心思想",
+          "meta_description": "了解搜索准确度（召回率）与速度/资源消耗之间的平衡。",
+          "slug": "core-ann-concepts",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3544,
+          "title": "算法概览：HNSW",
+          "meta_title": "ANN算法概览：HNSW",
+          "meta_description": "了解分层可导航小世界（HNSW）图，以实现高效搜索。",
+          "slug": "ann-algorithm-hnsw",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3547,
+          "title": "算法概述：IVF",
+          "meta_title": "ANN算法概述：IVF",
+          "meta_description": "了解倒排文件索引 (IVF) 方法和量化。",
+          "slug": "ann-algorithm-ivf",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3549,
+          "title": "算法概述：LSH",
+          "meta_title": "ANN算法概述：LSH",
+          "meta_description": "介绍局部敏感哈希（LSH）族在近似搜索中的应用。",
+          "slug": "ann-algorithm-lsh",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3552,
+          "title": "索引参数与调优",
+          "meta_title": "ANN 索引参数与调优",
+          "meta_description": "调整不同ANN索引的`ef_construction`、`ef_search`、`nlist`、`m`等参数。",
+          "slug": "ann-indexing-parameters-tuning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3554,
+          "title": "评估 ANN 性能",
+          "meta_title": "评估 ANN 性能指标",
+          "meta_description": "评估 ANN 索引质量的指标，包括召回率、延迟和吞吐量。",
+          "slug": "evaluating-ann-performance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3558,
+          "title": "动手实践：调整索引参数的试验",
+          "meta_title": "实践：调整索引参数的试验",
+          "meta_description": "在示例数据上构建不同的ANN索引并比较它们的性能特点。",
+          "slug": "practice-experimenting-index-parameters",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 739,
+      "title": "构建语义搜索系统",
+      "meta_title": "构建语义搜索系统 | 课程第四章",
+      "meta_description": "设计语义搜索流程，了解查询处理、排序、混合搜索和评估指标。",
+      "number": 4,
+      "slug": "building-semantic-search-systems",
+      "content": "在已了解向量嵌入、数据库结构以及近似最近邻搜索机制之后，我们现在将重心放在如何将这些元素组装成可用的语义搜索系统。本章将从理解各个组成部分转向构建驱动智能搜索应用的端到端流程。\n\n您将学会如何：\n*   设计语义搜索流程的架构，涵盖从数据摄取到结果呈现的环节。\n*   应用策略，有效准备和分块数据以进行向量化。\n*   处理用户查询，生成合适的嵌入，并管理搜索执行。\n*   实施对搜索结果进行排序和重新排序的方法，以提升相关性。\n*   结合语义搜索与传统关键词方法（混合搜索）。\n*   使用通用指标评估语义搜索系统的性能和质量。\n\n我们将审视构建基于含义检索信息的系统所涉及的实际步骤，并将其与传统关键词匹配进行对比。动手实践部分将指导您设计处理搜索请求并从向量索引中返回相关结果的核心逻辑。",
+      "sections": [
+        {
+          "id": 3560,
+          "title": "语义搜索与关键词搜索再比较",
+          "meta_title": "语义搜索与关键词搜索对比",
+          "meta_description": "对比理解含义与匹配词语的方法和益处。",
+          "slug": "semantic-vs-keyword-revisited",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3562,
+          "title": "语义搜索流程的架构",
+          "meta_title": "语义搜索流程的架构",
+          "meta_description": "涉及的组成部分：数据获取、嵌入生成、索引、查询嵌入、搜索和排序。",
+          "slug": "semantic-search-pipeline-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3566,
+          "title": "数据准备与分块处理",
+          "meta_title": "数据准备与分块方法",
+          "meta_description": "为有效嵌入和搜索准备及分割大型文档的方法。",
+          "slug": "data-preparation-chunking",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3567,
+          "title": "查询处理与向量化",
+          "meta_title": "查询处理与向量化",
+          "meta_description": "将用户搜索请求转换为适用于相似性搜索的向量。",
+          "slug": "query-processing-embedding",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3570,
+          "title": "结果排序与再排序",
+          "meta_title": "结果排序与再排序策略",
+          "meta_description": "根据相关性及其他可能因素对搜索结果进行排序的方法。",
+          "slug": "result-ranking-reranking",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3573,
+          "title": "实现混合搜索",
+          "meta_title": "实现混合搜索方案",
+          "meta_description": "将语义搜索结果与传统关键词搜索分数（例如BM25）结合起来。",
+          "slug": "implementing-hybrid-search",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3576,
+          "title": "评估语义搜索相关性",
+          "meta_title": "评估语义搜索相关性",
+          "meta_description": "NDCG、MAP 和 Recall@K 等衡量指标，用于评估搜索结果的质量。",
+          "slug": "evaluating-semantic-search-relevance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3579,
+          "title": "动手实践：设计搜索查询流程",
+          "meta_title": "实践：设计搜索查询流程",
+          "meta_description": "概述并实现处理用户查询、搜索向量索引和返回结果的逻辑。",
+          "slug": "practice-designing-search-query-flow",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 741,
+      "title": "向量数据库的应用实践",
+      "meta_title": "向量数据库的应用实践 | 课程第五章",
+      "meta_description": "使用流行的向量数据库（Pinecone、Weaviate、Milvus、Chroma）实现解决方案，处理大数据集，并考虑系统监控。",
+      "number": 5,
+      "slug": "vector-databases-in-practice",
+      "content": "在对向量嵌入、数据库结构和近似最近邻搜索算法有了基本认识之后，我们将重点转向它们的实际使用。本章连接理论与实践，说明如何使用特定的向量数据库系统来构建可用的语义搜索方案。\n\n您将直接操作包括 Pinecone、Weaviate、Milvus 和 ChromaDB 在内的流行向量数据库的客户端库。我们将介绍常见的工作流程：连接数据库、定义数据结构或集合、同时索引向量数据和元数据，以及执行相似性搜索（通常与元数据过滤结合使用）。\n\n此外，我们还会讨论实用考量，比如选择合适的数据库平台（托管式或自建式）、有效索引大量数据的策略，以及监控系统运行状况和性能的基本方法。本章最后将通过一个实践练习，让您整合这些组成部分，从而搭建一个虽小但完整的语义搜索应用。",
+      "sections": [
+        {
+          "id": 3583,
+          "title": "选择向量数据库平台",
+          "meta_title": "选择向量数据库平台",
+          "meta_description": "选择托管型或自建型向量数据库方案时需考虑的因素。",
+          "slug": "choosing-vector-db-platform",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3585,
+          "title": "使用 Pinecone 客户端",
+          "meta_title": "使用 Pinecone 客户端库",
+          "meta_description": "使用 Pinecone Python 客户端进行连接、索引和查询。",
+          "slug": "working-with-pinecone",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3589,
+          "title": "使用 Weaviate 客户端",
+          "meta_title": "使用 Weaviate 客户端库",
+          "meta_description": "使用 Weaviate Python 客户端定义模式、导入数据和进行类似 GraphQL 的查询。",
+          "slug": "working-with-weaviate",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3591,
+          "title": "使用 Milvus 客户端",
+          "meta_title": "使用 Milvus 客户端库",
+          "meta_description": "使用 Milvus Python 客户端进行集合、分区、索引和搜索操作。",
+          "slug": "working-with-milvus",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3595,
+          "title": "使用 ChromaDB 客户端",
+          "meta_title": "使用 ChromaDB 客户端库",
+          "meta_description": "在 Python 中使用 ChromaDB 进行本地或客户端/服务器向量存储与查找。",
+          "slug": "working-with-chromadb",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3598,
+          "title": "高效索引大型数据集",
+          "meta_title": "高效索引大型数据集",
+          "meta_description": "数据载入和索引过程中的批处理与并行处理策略。",
+          "slug": "indexing-large-datasets",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3600,
+          "title": "监控与维护",
+          "meta_title": "向量数据库监控与维护",
+          "meta_description": "可观察性方面：监控索引大小、查询延迟和系统健康。",
+          "slug": "vector-db-monitoring-maintenance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3603,
+          "title": "动手实践：构建小型语义搜索应用",
+          "meta_title": "实践：构建小型语义搜索应用",
+          "meta_description": "整合一个嵌入模型、一个向量数据库客户端和一个简单的网页框架（如 Flask/FastAPI）来创建一个功能性应用。",
+          "slug": "practice-build-semantic-search-app",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,447 @@
+{
+  "id": 225,
+  "title": "大语言模型微调入门",
+  "meta_title": "大语言模型微调课程：实用指南",
+  "meta_description": "学习微调大语言模型。本课程涉及数据准备、全参数微调、LoRA等PEFT方法及用于定制任务的模型评估。",
+  "description": "<p>本课程提供预训练 (pre-training)大语言模型 (LLM)定制的技术指南。您将学习完整的工作流程，从准备自定义数据集到应用多种微调 (fine-tuning)技术，包括全参数 (parameter)更新和LoRA等参数高效方法。本课程旨在培养您调整大语言模型以适应特定任务的实践能力，侧重于实现细节和模型性能评估。课程结束后，您将能够修改现有基础模型，使其更好地满足特定信息类型和功能需求。</p>",
+  "short_description": "调整预训练语言模型以适应特定任务，采用全参数与参数高效微调方法。",
+  "excerpt": "一份调整预训练大语言模型的实用指南。学习数据准备、全参数微调、LoRA等PEFT方法及模型评估，以构建定制AI应用。",
+  "prerequisites": "Python和机器学习基本知识",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "数据准备",
+      "description": "构建与预处理适用于基于指令或对话微调的自定义数据集。"
+    },
+    {
+      "topic": "微调技术",
+      "description": "在基础模型上实现全参数和参数高效微调 (PEFT) 方法。"
+    },
+    {
+      "topic": "LoRA实现",
+      "description": "应用低秩适应 (LoRA) 高效微调大型模型，同时降低计算开销。"
+    },
+    {
+      "topic": "模型评估",
+      "description": "采用定量指标和定性分析，评估微调模型的性能。"
+    }
+  ],
+  "duration": 12,
+  "slug": "introduction-to-llm-fine-tuning",
+  "level": 2,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-07-25T07:34:48.785716Z",
+  "updated_at": "2026-10-02T05:55:18.883822Z",
+  "chapters": [
+    {
+      "id": 1263,
+      "title": "模型定制的根基",
+      "meta_title": "大型语言模型定制的根基",
+      "meta_description": "了解预训练与微调之间的区别，学习何时对大型语言模型进行微调，并配置合适的开发环境。",
+      "number": 1,
+      "slug": "foundations-of-model-customization",
+      "content": "本章介绍模型定制的基本原理。预训练大型语言模型虽具备通用本领，但微调是使其适应特定功能或方面。我们将首先界定微调的含义，并阐述它在目标、数据需求和计算开销上与初始预训练过程有何不同。\n\n本章的一个核心议题是何时进行微调的实际决定。我们将提出一个分析架构，帮助您判断微调是否为解决问题的正确途径，并将其与高级提示或检索增强生成（RAG）等其他方法进行比较。随后，您将获得关于不同定制策略的概括性总结，涵盖从全参数更新到计算效率更高的办法。微调与迁移学习原理之间的联系也将得到阐释。\n\n为接下来的实践操作做准备，本章最后将提供配置您的开发环境的指导。我们将逐步讲解 PyTorch、Transformers 库以及 Hugging Face 生态系统中的其他组成部分的设置，确保您为后续章节拥有一个可用的设置。",
+      "sections": [
+        {
+          "id": 7262,
+          "title": "什么是微调？",
+          "meta_title": "什么是大型语言模型微调？",
+          "meta_description": "大型语言模型微调的清晰定义及其在模型专门化中的作用。",
+          "slug": "what-is-fine-tuning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7263,
+          "title": "预训练与微调的比较",
+          "meta_title": "大型语言模型（LLM）的预训练与微调",
+          "meta_description": "比较从零开始预训练和微调现有模型的目标、数据需求和计算成本。",
+          "slug": "pre-training-vs-fine-tuning",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7264,
+          "title": "何时进行微调：一个分析体系",
+          "meta_title": "何时微调大型语言模型",
+          "meta_description": "一个分析体系，用于判断相比于提示或检索增强生成（RAG），微调是否为合适的方法。",
+          "slug": "when-to-fine-tune",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7265,
+          "title": "微调策略概述",
+          "meta_title": "LLM微调策略概述",
+          "meta_description": "对不同微调方法（包括全参数微调和参数高效方法）的概述。",
+          "slug": "overview-of-fine-tuning-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7266,
+          "title": "迁移学习在大型语言模型中的作用",
+          "meta_title": "大型语言模型中的迁移学习",
+          "meta_description": "了解迁移学习的原理如何被应用于调整通用大型语言模型以适应特定的下游任务。",
+          "slug": "role-of-transfer-learning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7267,
+          "title": "配置开发环境",
+          "meta_title": "配置 LLM 微调开发环境",
+          "meta_description": "配置 PyTorch、Transformers 和 Hugging Face 生态环境的分步指南。",
+          "slug": "setting-up-development-environment",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1264,
+      "title": "用于微调的数据准备",
+      "meta_title": "用于大型语言模型微调的数据准备",
+      "meta_description": "学习如何获取、清洗和组织高质量数据集，以用于微调大型语言模型。",
+      "number": 2,
+      "slug": "data-preparation-for-fine-tuning",
+      "content": "模型表现，很大程度上取决于其训练数据的质量。在您通过微调改变模型表现之前，必须先收集一个能清晰且统一体现期望能力的数据集。本章将系统地指导您如何准备高质量数据，从而让大型语言模型具备特定能力。\n\n您将学习创建可供模型使用的数据集的完整流程。我们会讲到：\n\n*   **数据获取与结构化：** 寻找合适的公开或私有数据，并将其组织成指令遵循或对话对 $(x, y)$ 等有效格式的方法。\n*   **数据清洗与预处理：** 移除噪声、处理不一致性、以及文本标准化的实用技术，以提升训练稳定性和最终模型表现。\n*   **分词：** 将文本转换为模型所需数字格式的过程，包括处理特殊词元、填充和截断的策略。\n\n本章最后包含一个实践练习，您将运用这些技术，将原始文本数据处理成一个结构化、已分词的、可用于微调的数据集。",
+      "sections": [
+        {
+          "id": 7268,
+          "title": "获取和选择高质量数据集",
+          "meta_title": "LLM 微调的数据集获取",
+          "meta_description": "寻找和评估公共及私有数据集的方法，以实现您的特定微调目标。",
+          "slug": "sourcing-selecting-datasets",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7269,
+          "title": "指令式与对话式数据格式",
+          "meta_title": "指令式与对话式数据格式",
+          "meta_description": "了解指令遵循型和对话型数据格式的区别及其组织方式。",
+          "slug": "instruction-vs-conversational-data-formats",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7270,
+          "title": "数据清洗和预处理技术",
+          "meta_title": "用于微调的数据清洗",
+          "meta_description": "清洗文本数据的实用技术，以提高模型在训练期间的性能和稳定性。",
+          "slug": "data-cleaning-preprocessing-techniques",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7271,
+          "title": "构建和组织定制数据集",
+          "meta_title": "为微调构建定制数据集",
+          "meta_description": "关于如何从原始文本构建自己的数据集并正确格式化以进行训练的指引。",
+          "slug": "creating-structuring-custom-datasets",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7272,
+          "title": "用于微调的分词",
+          "meta_title": "用于大型语言模型微调的分词",
+          "meta_description": "了解分词策略以及如何处理特殊分词、填充和截断以便进行微调。",
+          "slug": "tokenization-for-fine-tuning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7273,
+          "title": "动手实践：构建微调数据集",
+          "meta_title": "动手实践：构建微调数据集",
+          "meta_description": "一次实践活动，您将在其中将原始文本数据处理成可用于微调的结构化、经过分词的数据集。",
+          "slug": "hands-on-building-a-dataset",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1265,
+      "title": "全参数微调",
+      "meta_title": "全参数大型语言模型微调指南",
+      "meta_description": "了解全参数微调的原理、资源管理、超参数配置以及训练过程监控。",
+      "number": 3,
+      "slug": "full-parameter-fine-tuning",
+      "content": "准备好数据集后，你就可以开始训练过程了。本章介绍全参数微调，这是一种更新预训练模型中所有参数，使其适应你新任务的方法。这种方式直接修改模型的全部权重。\n\n此过程基于梯度下降方法。模型参数，记作 $\\theta$，根据你数据集计算出的损失进行调整。在每个训练步骤中，更新遵循以下一般形式：\n\n$$ \\theta_{new} = \\theta_{old} - \\eta \\cdot \\nabla L(\\theta_{old}) $$\n\n其中，$\\eta$ 表示学习率，$\\nabla L(\\theta_{old})$ 是损失函数对模型参数的梯度。与更高效的方法不同，此更新应用于模型的所有数百万或数十亿个参数。\n\n在本章中，我们将介绍应用这项技术的实际操作方面。你将学习如何：\n\n*   选择合适的基础模型架构。\n*   处理大量的计算负担和内存占用。\n*   配置训练参数，包括学习率、批量大小和训练轮数。\n*   解读训练和验证损失曲线，以诊断性能。\n*   保存所得模型，并正确加载模型进行推理。\n\n本章最后包含一个实践练习，你将应用这些步骤从头到尾微调一个小型模型。",
+      "sections": [
+        {
+          "id": 7274,
+          "title": "全参数微调的工作原理",
+          "meta_title": "全LLM微调的机制",
+          "meta_description": "解释全参数微调如何工作，即在训练期间更新所有模型权重。",
+          "slug": "mechanics-of-full-fine-tuning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7275,
+          "title": "全参数微调的架构考量",
+          "meta_title": "全参数微调架构",
+          "meta_description": "选择适合全参数微调的基础模型架构时的考量。",
+          "slug": "architectural-considerations-full-fine-tuning",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7276,
+          "title": "计算资源管理",
+          "meta_title": "微调时GPU内存的处理",
+          "meta_description": "在资源密集型全参数微调期间管理GPU内存和计算负载的方法。",
+          "slug": "managing-computational-resources",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7277,
+          "title": "配置训练参数及超参数",
+          "meta_title": "LLM微调超参数",
+          "meta_description": "关于如何设置学习率、批处理大小、训练轮次以及其他主要超参数以实现有效训练的指南。",
+          "slug": "configuring-training-arguments-hyperparameters",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7278,
+          "title": "监控训练：损失与指标",
+          "meta_title": "监控 LLM 训练损失和指标",
+          "meta_description": "如何解读训练和验证损失曲线，以诊断过拟合或欠拟合。",
+          "slug": "monitoring-training-loss-metrics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7279,
+          "title": "保存和加载精调模型",
+          "meta_title": "保存和加载精调 LLM",
+          "meta_description": "保存模型检查点和加载完全精调模型进行推理的最佳实践。",
+          "slug": "saving-loading-fine-tuned-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7280,
+          "title": "实践：小型模型上的全参数微调",
+          "meta_title": "实践：大型语言模型全参数微调",
+          "meta_description": "一个在更小、更易于管理的语言模型上执行端到端全参数微调的动手环节。",
+          "slug": "practice-full-fine-tuning",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1266,
+      "title": "参数高效微调 (PEFT)",
+      "meta_title": "参数高效微调 (PEFT)",
+      "meta_description": "学习现代、高效的LLM微调技术，例如LoRA和QLoRA，以调整模型并降低计算成本。",
+      "number": 4,
+      "slug": "parameter-efficient-fine-tuning-peft",
+      "content": "上一章讲解了全参数微调，这种办法会更新模型中的每个权重。这种办法虽然有效，但随着模型参数量达到数十亿，其计算成本变得难以承受。对GPU内存和计算能力的高要求，使全参数微调在许多实际应用中无法实现。\n\n本章介绍参数高效微调 (PEFT)，这是一系列旨在以显著更少计算资源调整大型模型的技术。我们将重点介绍低秩适应 (LoRA)，它会冻结原始模型权重并注入更小、可训练的矩阵。LoRA并非更新庞大的原始权重矩阵 $W_0$，而是学习一个低秩更新，$$ \\Delta W = BA $$，其中 $A$ 和 $B$ 中的参数数量远小于 $W_0$。你将学习如何使用Hugging Face的`PEFT`库来实现这一点。\n\n我们还将考察量化如何进一步减少内存占用，从而引出像QLoRA这样的方法。本章最后将进行PEFT与全参数微调的比较分析，明确两者在性能和资源使用上的权衡。完成本章后，你将掌握实用技能，能够在消费级硬件上将现代、高效的微调方法应用于超大型模型。",
+      "sections": [
+        {
+          "id": 7281,
+          "title": "参数高效微调概述",
+          "meta_title": "PEFT概述",
+          "meta_description": "了解PEFT方法在消费级硬件上微调超大型模型的理由和优势。",
+          "slug": "introduction-to-peft",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7282,
+          "title": "低秩适应（LoRA）：原理与运作",
+          "meta_title": "LoRA：原理与运作",
+          "meta_description": "详细解释 LoRA 的原理、通过插入低秩矩阵的工作方式以及其实际益处。",
+          "slug": "lora-theory-and-operation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7283,
+          "title": "使用PEFT库实现LoRA",
+          "meta_title": "使用Hugging Face PEFT实现LoRA",
+          "meta_description": "一份关于如何使用Hugging Face PEFT库将LoRA应用于Transformer模型的实用指南。",
+          "slug": "implementing-lora-with-peft-library",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7284,
+          "title": "量化及其对微调的影响 (QLoRA)",
+          "meta_title": "量化与 QLoRA 详解",
+          "meta_description": "了解模型量化如何减少内存使用，并支持 QLoRA 等技术，从而实现更高效的微调。",
+          "slug": "quantization-and-qlora",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7285,
+          "title": "其他PEFT方法：概述",
+          "meta_title": "其他PEFT方法概述",
+          "meta_description": "简要介绍替代PEFT方法，包括基于适配器的方法和前缀调整。",
+          "slug": "other-peft-methods-survey",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7286,
+          "title": "PEFT与完全微调的优劣对比",
+          "meta_title": "PEFT与完全微调对比",
+          "meta_description": "关于PEFT与完全微调在性能、成本及训练时间上的优劣分析。",
+          "slug": "comparing-peft-full-fine-tuning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7287,
+          "title": "动手实践：使用 LoRA 进行微调",
+          "meta_title": "实践：使用 LoRA 微调 LLM",
+          "meta_description": "一个循序渐进的编码会话，您将使用 LoRA 和 PEFT 库微调大型语言模型。",
+          "slug": "hands-on-fine-tuning-with-lora",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1267,
+      "title": "评估与部署",
+      "meta_title": "LLM评估与部署",
+      "meta_description": "学习如何使用量化和定性指标来评估你微调后的LLM性能，并为其部署做准备。",
+      "number": 5,
+      "slug": "evaluation-and-deployment",
+      "content": "完成微调过程后，下一步自然是评估模型的性能并为其推理做好准备。模型的价值取决于其在特定任务上的有效性，本章将介绍衡量这些有效性并使其投入实际使用的方法。\n\n我们将从建立一个评估框架开始。这包括应用ROUGE、BLEU和困惑度等量化指标，这些指标可以来源于交叉熵损失 $H(p,q)$，通常表示为 $2^{H(p,q)}$。除了这些自动化分数外，你还将学习进行定性评估，即通过人工判断来检查输出的连贯性和相关性。然后，你将了解如何构建自动化流程来系统地应用这些技术。\n\n本章最后将连接评估与部署。这包括将训练好的PEFT适配器与基础模型合并以创建独立成品，以及为最终模型的高效推理做准备等实际操作步骤。",
+      "sections": [
+        {
+          "id": 7288,
+          "title": "界定生成型任务的性能指标",
+          "meta_title": "生成式大型语言模型的性能指标",
+          "meta_description": "如何为摘要、翻译和文本生成等不同生成任务选择合适的性能指标。",
+          "slug": "defining-performance-metrics",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7289,
+          "title": "定量评估：ROUGE、BLEU 和困惑度",
+          "meta_title": "大语言模型定量评估",
+          "meta_description": "介绍文本生成常用的自动化指标，包括ROUGE、BLEU和困惑度，以及如何计算它们。",
+          "slug": "quantitative-evaluation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7290,
+          "title": "定性评估：人工参与评估",
+          "meta_title": "LLM 定性评估",
+          "meta_description": "通过人工审查对模型输出进行定性评估的方法，以衡量连贯性和相关性等方面。",
+          "slug": "qualitative-evaluation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7291,
+          "title": "构建评估流程",
+          "meta_title": "构建LLM评估流程",
+          "meta_description": "如何构建自动化流程，以系统地评估针对保留测试集的模型检查点。",
+          "slug": "building-evaluation-pipeline",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7292,
+          "title": "将适配器与基础模型合并的方法",
+          "meta_title": "将 LoRA 适配器与 LLM 合并",
+          "meta_description": "了解如何将训练好的 PEFT 适配器（如 LoRA）合并到基础模型权重中，以实现独立部署。",
+          "slug": "merging-peft-adapters",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7293,
+          "title": "为推理准备模型",
+          "meta_title": "为推理准备LLM",
+          "meta_description": "为高效推理准备微调模型的最后步骤，包括量化和模型格式转换。",
+          "slug": "preparing-models-for-inference",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7294,
+          "title": "实践：评估微调模型",
+          "meta_title": "实践：评估微调大型语言模型",
+          "meta_description": "一次实操练习，将定量和定性评估方法应用于您已微调的模型。",
+          "slug": "practice-evaluating-fine-tuned-model",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

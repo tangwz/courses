@@ -1,0 +1,61 @@
+{
+  "id": 1787,
+  "title": "训练期间保存检查点",
+  "meta_title": "Keras 训练期间保存检查点",
+  "meta_description": "使用 ModelCheckpoint 回调函数定期保存模型权重或整个模型。",
+  "content": "<p>训练深度学习 (deep learning)模型常常是耗时的过程，有时需要数小时、数天甚至数周，这取决于模型的复杂程度和数据集的大小。在如此漫长的训练过程中，可能会出现各种问题：断电、系统崩溃，或者仅仅是需要暂停并在之后恢复。如果没有保存进度的机制，你可能会丢失宝贵的计算时间，以及训练期间可能获得的模型最佳版本。</p>\n<p>保存<em>检查点</em>在深度学习模型训练中必不可少。检查点保存是指在训练过程中，定期或在满足特定条件时保存模型的状态。TensorFlow 的 Keras API 提供了一种便捷的方法，可以使用回调来实现这一点。</p>\n<h3>ModelCheckpoint 回调函数</h3>\n<p>Keras 中用于保存检查点的主要工具是 <code>tf.keras.callbacks.ModelCheckpoint</code> 回调函数。回调函数是一个对象，可以在训练的不同阶段执行操作（例如，在周期开始或结束时，在处理批次之前或之后）。<code>ModelCheckpoint</code> 回调函数专门监控训练过程，并根据配置的条件保存模型。</p>\n<p>你可以通过创建 <code>ModelCheckpoint</code> 回调函数的一个实例，并将其作为 <code>model.fit()</code> 方法中的 <code>callbacks</code> 列表参数 (parameter)传递，来使用它。</p>\n<p>我们来看一下它的主要配置选项：</p>\n<ul>\n<li><code>filepath</code>: 这是检查点文件将保存的路径。你可以在文件名中包含格式选项，使每次保存的文件名都是独立的，并包含周期数和被监控指标的值。例如：\n<ul>\n<li><code>'model_checkpoint.weights.h5'</code> : 保存到单个文件（每次都会覆盖，除非 <code>save_best_only=True</code>）。</li>\n<li><code>'checkpoints/epoch_{epoch:02d}-val_loss_{val_loss:.2f}.weights.h5'</code>: 创建类似 <code>epoch_01-val_loss_0.54.weights.h5</code>、<code>epoch_02-val_loss_0.51.weights.h5</code> 等文件。这会保存多个周期的检查点。</li>\n</ul>\n</li>\n<li><code>monitor</code>: 指定要监控的指标。常见选择包括 <code>'val_loss'</code>（验证损失）或 <code>'val_accuracy'</code>（验证准确率）。回调函数将使用此指标的值来判断当前模型是否比之前最佳的模型“更好”。如果未指定，回调函数将在不考虑性能指标的情况下运行（例如，无论性能如何，每个周期都保存）。</li>\n<li><code>save_best_only</code>: 如果为 <code>True</code>，回调函数只在被监控的指标相较于训练过程中目前为止的最佳值有所改进时保存检查点。这对于只保留性能最好的模型检查点非常有帮助。如果为 <code>False</code>，它会在由 <code>save_freq</code> 定义的每个时间段结束时保存模型。</li>\n<li><code>save_weights_only</code>: 如果为 <code>True</code>，只保存模型的权重 (weight)（可学习参数的值）。这会使检查点文件更小。如果为 <code>False</code>，则保存整个模型，包括其架构、权重和优化器的状态。保存整个模型可以让你重新创建模型，并在中断的地方精确地恢复训练。</li>\n<li><code>mode</code>: 决定改进是指最小化还是最大化被监控的指标。选项包括 <code>'min'</code>、<code>'max'</code> 或 <code>'auto'</code>。如果 <code>monitor</code> 设置为 <code>'val_loss'</code>，<code>'auto'</code> 会正确推断为 <code>'min'</code>。如果设置为 <code>'val_accuracy'</code>，<code>'auto'</code> 会推断为 <code>'max'</code>。明确设置它可以避免不确定性。</li>\n<li><code>save_freq</code>: 定义保存检查点的频率。\n<ul>\n<li><code>'epoch'</code>（默认）：在每个周期结束时保存。</li>\n<li>整数值（例如，<code>1000</code>）：在每指定数量的批次后保存。</li>\n</ul>\n</li>\n</ul>\n<h3>示例：根据验证损失保存最佳模型</h3>\n<p>我们来演示如何使用 <code>ModelCheckpoint</code>，根据验证损失只保存目前为止观察到的最佳模型的权重 (weight)。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport numpy as np\n\n# 假设 'model' 是一个已编译的 Keras 模型\n# 假设 'x_train'、'y_train'、'x_val'、'y_val' 是你的训练和验证数据\n\n# 定义保存检查点的路径\ncheckpoint_filepath = 'best_model.weights.h5'\n\n# 创建 ModelCheckpoint 回调函数\n# 监控验证损失，只保存最佳权重\nmodel_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(\n    filepath=checkpoint_filepath,\n    save_weights_only=True,\n    monitor='val_loss',\n    mode='min',\n    save_best_only=True)\n\n# 训练模型，包含回调函数\nprint(\"开始使用检查点回调函数进行训练...\")\nhistory = model.fit(x_train, y_train,\n                    epochs=50,\n                    batch_size=32,\n                    validation_data=(x_val, y_val),\n                    callbacks=[model_checkpoint_callback]) # 将回调函数传递给训练\n\nprint(f\"训练完成。最佳模型权重已保存到 {checkpoint_filepath}\")\n\n# 稍后，你可以将这些权重加载到具有相同架构的模型中\n# model.load_weights(checkpoint_filepath)\n# print(\"模型权重已从检查点加载。\")\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们定义了 <code>checkpoint_filepath</code>，最佳权重将存储在此处。</li>\n<li>我们创建一个 <code>ModelCheckpoint</code> 实例。\n<ul>\n<li><code>save_weights_only=True</code>：我们只保存权重。</li>\n<li><code>monitor='val_loss'</code>：我们监控验证损失。</li>\n<li><code>mode='min'</code>：改进意味着验证损失减小。</li>\n<li><code>save_best_only=True</code>：只有迄今为止观察到的最低 <code>val_loss</code> 对应的检查点才会被保存/覆盖。</li>\n</ul>\n</li>\n<li>我们将此回调函数作为列表传递给 <code>model.fit()</code> 的 <code>callbacks</code> 参数 (parameter)。</li>\n</ol>\n<p>在训练期间，Keras 会在每个周期结束时评估验证损失。如果损失相对于所有之前的周期有所改进（减小），当前模型权重将被保存到 <code>best_model.weights.h5</code>，覆盖任何之前的版本。如果损失没有改进，该周期不会保存任何文件。在训练结束时，<code>best_model.weights.h5</code> 将包含获得最低验证损失的周期中的权重。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ql38mr\" \n              data-graph-definition='digraph CheckpointFlow {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  Start [label=\"开始训练\"];\n  Epoch1 [label=\"周期 1 结束\\nval_loss = 0.6\"];\n  Save1 [label=\"保存检查点\\n(best_model.weights.h5)\", shape=note, style=filled, fillcolor=\"#96f2d7\"];\n  Epoch2 [label=\"周期 2 结束\\nval_loss = 0.5\"];\n  Save2 [label=\"保存检查点\\n(覆盖 best_model.weights.h5)\", shape=note, style=filled, fillcolor=\"#96f2d7\"];\n  Epoch3 [label=\"周期 3 结束\\nval_loss = 0.55\"];\n  Skip3 [label=\"跳过保存\\n(损失 > 0.5)\", shape=note, style=filled, fillcolor=\"#ffc9c9\"];\n  EpochN [label=\"周期 N 结束\\nval_loss = ...\"];\n  End [label=\"训练完成\"];\n\n  Start -> Epoch1;\n  Epoch1 -> Save1 [label=\" 初始保存 \"];\n  Save1 -> Epoch2;\n  Epoch2 -> Save2 [label=\" 0.5 < 0.6 \"];\n  Save2 -> Epoch3;\n  Epoch3 -> Skip3 [label=\" 0.55 > 0.5 \"];\n  Skip3 -> EpochN;\n  EpochN -> End [label=\" ... \"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ql38mr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图演示了当 <code>save_best_only=True</code> 且 <code>monitor='val_loss'</code> 时 <code>ModelCheckpoint</code> 的行为。只有当验证损失有所改进时才保存检查点。</p>\n</blockquote>\n<h3>保存整个模型</h3>\n<p>如果你设置 <code>save_weights_only=False</code>（默认值），Keras 会保存整个模型：</p>\n<ul>\n<li>模型的架构（层、连接）。</li>\n<li>模型的权重 (weight)。</li>\n<li>在 <code>model.compile()</code> 中指定的训练配置（损失、优化器、指标）。</li>\n<li>优化器的状态（允许你从中断的地方精确地恢复训练）。</li>\n</ul>\n<p>这会以 TensorFlow 的 <code>SavedModel</code> 格式保存（如果文件路径不以 <code>.h5</code> 结尾），或以旧的 Keras HDF5 格式保存（如果文件路径以 <code>.h5</code> 结尾）。<code>SavedModel</code> 格式通常更值得推荐。</p>\n<pre><code class=\"language-python\"># 定期保存整个模型的示例\ncheckpoint_filepath_full = 'checkpoints/model_epoch_{epoch:02d}.keras' # 使用 .keras 格式用于 SavedModel\n\nfull_model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(\n    filepath=checkpoint_filepath_full,\n    save_weights_only=False, # 保存整个模型\n    monitor='val_accuracy',  # 监控验证准确率\n    mode='max',              # 改进意味着准确率提高\n    save_best_only=False,    # 在每个周期结束时保存\n    save_freq='epoch'        # 明确指定保存频率\n)\n\n# 使用此回调函数训练模型\n# history = model.fit(..., callbacks=[full_model_checkpoint_callback])\n</code></pre>\n<p>此配置会在每个周期结束时保存完整的模型，到根据周期数命名的目录结构中（如果使用像 <code>.keras</code> 这样的 SavedModel 格式）或单个文件（如果使用 <code>.h5</code>）。这会占用更多磁盘空间，但会捕获恢复模型或恢复训练所需的所有内容。</p>\n<p>只保存权重还是保存整个模型，这取决于你的需求。如果你只需要学习到的参数 (parameter)用于推理 (inference)或微调 (fine-tuning)，保存权重就足够了，而且效率更高。如果你需要恢复训练或部署具有完整配置的模型，保存整个模型更受欢迎。</p>\n<p>有效使用检查点能确保你的训练成果得以保留，让你能够从中断中恢复，并保留模型性能最佳的版本。接下来的部分将介绍如何加载这些已保存的权重和模型。</p>",
+  "slug": "saving-checkpoints-during-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 2067,
+      "title": "tf.keras.callbacks.ModelCheckpoint",
+      "author": "TensorFlow Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/ModelCheckpoint",
+      "doi": "",
+      "note": "详细介绍 `tf.keras.callbacks.ModelCheckpoint` 回调函数、其参数及用法的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:38:27.689544Z",
+      "updated_at": "2025-09-08T02:49:28.423688Z"
+    },
+    {
+      "id": 2068,
+      "title": "Save and load Keras models",
+      "author": "TensorFlow Developers",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/tutorials/keras/save_and_load",
+      "doi": "",
+      "note": "解释保存和加载 Keras 模型及权重（包括 SavedModel 等不同格式）的各种方法的官方指南。",
+      "order": 2,
+      "created_at": "2025-09-04T16:38:27.692218Z",
+      "updated_at": "2025-09-08T02:49:25.776132Z"
+    },
+    {
+      "id": 2069,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "一本使用 Keras 和 TensorFlow 进行深度学习的实践指南，提供模型训练和保存技术的解释。",
+      "order": 3,
+      "created_at": "2025-09-04T16:38:27.695376Z",
+      "updated_at": "2025-09-08T02:49:17.785080Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

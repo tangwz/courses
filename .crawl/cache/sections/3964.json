@@ -1,0 +1,45 @@
+{
+  "id": 3964,
+  "title": "可视化缺失数据模式",
+  "meta_title": "缺失数据的视觉模式",
+  "meta_description": "使用简单的图表了解缺失值的分布和模式。",
+  "content": "<p>只计算缺失值能告知有多少空缺，但不能说明它们在哪里，或为何存在。缺失值是随机分散的，还是集中在特定行或列中？某些列是否倾向于同时出现缺失值？将缺失数据的分布情况可视化，有助于回答这些问题，并为如何处理它们提供有用的信息。查看这些模式通常可以提示数据是完全随机缺失、基于其他观察到的数据随机缺失，还是基于未观察到的因素或缺失值本身系统性缺失。</p>\n<h3>为何要将缺失数据可视化？</h3>\n<p>与仅查看统计摘要相比，直观地观察模式有以下几个好处：</p>\n<ol>\n<li><strong>明确范围：</strong> 快速了解哪些列的缺失数据问题最严重。</li>\n<li><strong>发现关联：</strong> 查看某一列中的缺失情况是否与另一列的缺失情况相关。例如，如果<code>email_address</code>缺失，<code>phone_number</code>是否也经常缺失？这可能意味着联系信息收集存在问题。</li>\n<li><strong>发现结构性问题：</strong> 模式可能会反映出与数据收集或合并相关的问题。例如，如果在某个特定时间段或特定群体中所有值都缺失。</li>\n<li><strong>指导处理策略：</strong> 了解模式有助于选择更好的处理方法。广泛的随机缺失可能更适合填充，而集中在少数行的缺失值则可能允许删除。系统性缺失需要更周密的考虑。</li>\n</ol>\n<h3>常见的可视化方法</h3>\n<p>我们来看看几种简单直接的方法来显示数据缺失的位置。</p>\n<h4>每列缺失值条形图</h4>\n<p>最简单有效的一种可视化方式是条形图，显示数据集中每列的缺失值数量或百分比。这能立刻标出需要最多关注的列。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1js3ko5\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"CustomerID\", \"Age\", \"Income\", \"LastPurchaseDate\", \"EmailOptIn\"], \"y\": [0, 5, 55, 15, 0], \"marker\": {\"color\": [\"#adb5bd\", \"#4dabf7\", \"#fa5252\", \"#ff922b\", \"#adb5bd\"]}}], \"layout\": {\"title\": \"每列缺失值计数\", \"xaxis\": {\"title\": \"列名\"}, \"yaxis\": {\"title\": \"缺失值数量\"}, \"height\": 350, \"width\": 500, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 50, \"b\": 40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-1js3ko5\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此条形图清晰显示，与“Age”和“LastPurchaseDate”相比，“Income”列有大量缺失条目，而“CustomerID”和“EmailOptIn”则没有缺失。</p>\n</blockquote>\n<h4>缺失数据热力图</h4>\n<p>热力图可以提供更细致的视图，显示行和列中缺失值的确切位置。在一个典型的表示中，你可能会将整个数据集（或样本）看作一个网格，其中单元格根据数据是否存在而着色不同。</p>\n<p>设想一个网格，其中每行代表一条记录（例如客户），每列代表一个特征（例如年龄、收入）。如果数据存在，我们可以将单元格涂成浅灰色；如果数据缺失，则涂成深灰色或红色等显眼颜色。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1wudl0u\" \n              data-plot-definition='{\"data\": [{\"type\": \"heatmap\", \"z\": [[1, 1, 0, 1, 1], [1, 0, 0, 1, 1], [1, 1, 1, 1, 1], [1, 1, 0, 0, 1], [1, 1, 1, 1, 1], [1, 1, 0, 1, 1], [1, 1, 1, 1, 1], [0, 1, 0, 1, 1]], \"x\": [\"Feat1\", \"Feat2\", \"Feat3\", \"Feat4\", \"Feat5\"], \"y\": [\"Rec1\", \"Rec2\", \"Rec3\", \"Rec4\", \"Rec5\", \"Rec6\", \"Rec7\", \"Rec8\"], \"colorscale\": [[0, \"#495057\"], [1, \"#e9ecef\"]], \"showscale\": false}], \"layout\": {\"title\": \"缺失数据存在性热力图（深色 = 缺失）\", \"xaxis\": {\"title\": \"特征\", \"side\": \"top\"}, \"yaxis\": {\"title\": \"记录\", \"autorange\": \"reversed\", \"tickvals\": [], \"showticklabels\": false}, \"height\": 300, \"width\": 400, \"margin\": {\"l\": 20, \"r\": 20, \"t\": 60, \"b\": 20}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1wudl0u\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此热力图显示了8条记录在5个特征上的数据存在情况。深色单元格表示缺失值。我们可以观察到一些模式，例如特征3有多个缺失值，记录8的特征1开始处有缺失值。记录4在特征3和特征4中都有缺失数据。</p>\n</blockquote>\n<p>虽然专业库提供了更高级的图表，如矩阵图或树状图来显示缺失数据的相关性，但这些基本的条形图和热力图为理解数据集中的缺失数据提供了一个好的开始。</p>\n<h3>解读这些模式</h3>\n<p>查看这些可视化图时，请自问：</p>\n<ul>\n<li><strong>缺失值是否集中在特定列中？</strong> (如条形图所示)。高百分比可能需要删除列或进行仔细的填充。</li>\n<li><strong>缺失值是否集中在特定行中？</strong> (可以从热力图中推断)。如果只有少数行有大量缺失值，那么删除这些行可能是一种选择。</li>\n<li><strong>不同列的缺失值之间是否存在关系？</strong> (热力图有时可以暗示这一点)。如果列<code>A</code>和<code>B</code>经常同时出现缺失值，它们可能存在关联，从而影响填充方法的选择。</li>\n<li><strong>缺失情况是随机的，还是有其结构？</strong> 热力图上的大块缺失数据可能表明存在系统性问题（例如，某个时期内未收集数据）。</li>\n</ul>\n<p>了解这些模式不仅仅是学术活动。它直接影响你接下来会学到的技术，比如决定是否可以删除数据，或哪种填充方法（如使用均值、中位数或众数）最适合某一列。目视检查可以提供仅靠统计摘要无法提供的信息。</p>",
+  "slug": "visualizing-missing-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 10775,
+      "title": "Flexible Imputation of Missing Data, Second Edition",
+      "author": "Stef van Buuren",
+      "year": "2018",
+      "publisher": "Chapman and Hall/CRC",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://stefvanbuuren.name/fimd/",
+      "doi": "10.1201/9780429492202",
+      "note": "一本标准教材，涵盖缺失数据处理的理论与实践，包括模式可视化的重要性。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:36.788037Z",
+      "updated_at": "2025-09-08T12:59:52.205103Z"
+    },
+    {
+      "id": 10776,
+      "title": "Data Mining: Concepts and Techniques",
+      "author": "Jiawei Han, Micheline Kamber and Jian Pei",
+      "year": "2011",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/data-mining/han/978-0-12-381479-1",
+      "doi": "",
+      "note": "一本广受认可的教材，其中包含专门介绍数据预处理技术的章节，包括处理和可视化缺失值的方法。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:36.793157Z",
+      "updated_at": "2025-09-08T12:59:45.897051Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7436,
+  "title": "代理、工具和工具集架构",
+  "meta_title": "代理、工具、工具集架构",
+  "meta_description": "了解代理、它们可用的工具（例如搜索引擎）以及工具集（工具的集合）之间的关系。",
+  "content": "<p>链式流程执行预设的步骤序列，而代理则在一个推理 (inference)和行动的动态循环中运行。这种行为并非由单一的、整体式对象管理，而是由一个包含三个主要组成部分的协作架构管理：<strong>代理</strong>、它能使用的<strong>工具</strong>以及协调整个过程的<strong>运行时</strong>（通常使用 <strong>LangGraph</strong> 构建）。理解这些部分如何相互配合，对于构建高效的代理系统来说是基本的。</p>\n<h3>代理：推理 (inference)引擎</h3>\n<p>代理的核心是决策组件。然而，它并非像Python类那样是一个独立的程序代码。相反，LangChain中的“代理”是一种抽象，它将语言模型与提示词 (prompt)和定义的工具模式结合起来。这种结合将一个通用LLM转变为一个能够推动任务前进的推理引擎。</p>\n<p>提示词指导LLM遵循一个特定的思考过程，这个过程常被称为“推理循环”。ReAct（推理与行动）等框架使用的一种常见模式，要求模型将其思考分解为明确的步骤：</p>\n<ul>\n<li><strong>思考</strong>：代理的内心独白，它在此分析当前情况，评估实现目标的进展，并决定下一步做什么。</li>\n<li><strong>行动</strong>：代理决定用来取得进展的特定工具。具有<strong>工具调用</strong>能力的现代LLM将其生成为结构化对象，而非原始文本。</li>\n<li><strong>行动输入</strong>：要传递给所选工具的参数 (parameter)或查询。</li>\n<li><strong>观察</strong>：执行工具返回的结果，代理将在其下一个“思考”步骤中使用此结果。</li>\n</ul>\n<p>LLM生成遵循这种结构的输出。代理的唯一职责是根据先前的行动和观察历史，产生下一个思考和行动。</p>\n<h3>工具：代理的能力</h3>\n<p>如果代理是大脑，那么工具就是它的双手。工具是代理可以调用以在LLM外部进行交互的函数或服务。代理需要做的任何事情，从网页搜索到查询数据库或计算数字，都作为工具公开。</p>\n<p>每个工具都由两个主要属性定义：</p>\n<ol>\n<li><strong>功能</strong>：实际执行的代码。这可以是一个公共API的包装器、一个Python函数，甚至是另一个LangChain链。</li>\n<li><strong>描述</strong>：对工具作用、输入应是什么以及它返回什么的清晰、自然语言描述。</li>\n</ol>\n<p>描述非常必要。代理的LLM没有工具代码的固有知识；它<em>完全</em>依赖于描述来判断哪个工具适合给定任务。一个准确反映工具用途和输入格式的良好描述，决定了一个代理是高效工作还是持续失败。</p>\n<p>例如，一个<code>SearchTool</code>可能有一个这样的描述：“当您需要回答有关时事的问题或在互联网上查找信息时很有用。”</p>\n<h3>工具集：组织能力</h3>\n<p>工具集简单来说是旨在协同工作以完成特定场景中任务的工具集合。您可以加载一个工具集，它提供预配置的能力集合，而不是逐个加载工具。</p>\n<p>例如，LangChain提供一个<code>SQLDatabaseToolkit</code>，其中包含用于以下目的的工具：</p>\n<ul>\n<li>列出数据库中的表。</li>\n<li>检查特定表的模式。</li>\n<li>执行SQL查询。</li>\n<li>检查SQL查询是否存在语法错误。</li>\n</ul>\n<p>使用工具集简化了设置，并确保代理具有一组一致的相关能力，以便与特定系统交互。</p>\n<h3>运行时循环</h3>\n<p>运行时环境是将所有组件聚合在一起并驱动代理运行的系统。它负责执行使代理实现自主的循环。尽管<code>AgentExecutor</code>类是管理此循环的传统方式，但现代LangChain应用通常使用<strong>LangGraph</strong>来定义这种协调。这使得可以更好地控制状态和执行流。</p>\n<p>以下是运行时管理的逐步执行流程：</p>\n<ol>\n<li>它接收用户的初始输入或目标（例如，“上届超级碗的比分是多少？谁是MVP？”）。</li>\n<li>它调用代理（带有提示词 (prompt)/工具的LLM），并传递输入和所有先前的步骤。</li>\n<li>代理进行推理 (inference)并输出下一个要执行的<code>行动</code>（例如，对“搜索”的结构化工具调用）以及<code>行动输入</code>（例如，“第57届超级碗比分和MVP”）。</li>\n<li>运行时解析此输出以识别工具及其输入。</li>\n<li>它调用指定的工具并提供输入。</li>\n<li>工具执行并返回一个结果，该结果被格式化为<code>观察</code>（例如，“堪萨斯城酋长队以38-35击败费城老鹰队。帕特里克·马霍姆斯是MVP。”）。</li>\n<li>运行时获取此<code>观察</code>并更新交互的状态（历史）。</li>\n<li>它重复此过程，将更新后的历史传递回代理进行下一步推理。代理可能会看到结果并决定其任务已完成。</li>\n<li>一旦代理回应“最终答案”或文本消息而非工具调用，运行时就会停止循环并将此最终回应返回给用户。</li>\n</ol>\n<p>下图说明了组件之间的这种交互流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-v6reph\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Helvetica\"];\n    edge [fontname=\"Helvetica\"];\n\n    User [fillcolor=\"#a5d8ff\"];\n    Runtime [fillcolor=\"#ffec99\", shape=cylinder, label=\"代理运行时\\n(LangGraph)\"];\n    AgentLLM [label=\"代理\\n(LLM + 工具)\", fillcolor=\"#b2f2bb\"];\n    Tools [shape=folder, label=\"工具\\n(搜索, 计算器, API)\", fillcolor=\"#fcc2d7\"];\n\n    User -> Runtime [label=\"1. 输入目标\"];\n    Runtime -> AgentLLM [label=\"2. 调用并带入目标与历史\"];\n    AgentLLM -> Runtime [label=\"3. 返回工具调用\"];\n    Runtime -> Tools [label=\"4. 执行工具\"];\n    Tools -> Runtime [label=\"5. 返回观察\"];\n    Runtime -> AgentLLM [label=\"6. 调用并带入更新后的历史\", style=dashed];\n    AgentLLM -> Runtime [label=\"7. 返回最终答案\"];\n    Runtime -> User [label=\"8. 输出结果\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-v6reph\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>代理运行时循环。它协调用户、推理代理（LLM）和可用工具之间的交互，直到产生最终答案。</p>\n</blockquote>\n<p>这种模块化架构带来了极大的灵活性。您可以更换LLM、修改代理的提示词，或添加新的自定义工具，而无需改变底层运行时逻辑。在接下来的章节中，我们将通过为代理配备预构建和自定义工具来解决问题，从而将这种架构付诸实践。</p>",
+  "slug": "agent-tool-toolkit-architecture",
+  "updates": [],
+  "references": [
+    {
+      "id": 14690,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "ICLR",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct框架，结合推理和行动来增强智能体能力。",
+      "order": 1,
+      "created_at": "2025-09-05T09:00:45.870475Z",
+      "updated_at": "2025-09-11T06:04:54.259987Z"
+    },
+    {
+      "id": 14691,
+      "title": "Agents",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://api.python.langchain.com/en/latest/agents/",
+      "doi": "",
+      "note": "LangChain智能体模块的官方文档，包含其组件和使用方法。",
+      "order": 2,
+      "created_at": "2025-09-05T09:00:45.874240Z",
+      "updated_at": "2025-09-11T06:05:10.379240Z"
+    },
+    {
+      "id": 14693,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "提出了一种提示方法，使大型语言模型能够执行复杂的推理步骤。",
+      "order": 4,
+      "created_at": "2025-09-05T09:00:45.879038Z",
+      "updated_at": "2025-09-11T06:04:47.627620Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

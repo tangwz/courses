@@ -1,0 +1,61 @@
+{
+  "id": 5100,
+  "title": "虚拟环境 (venv, conda)",
+  "meta_title": "虚拟环境 (venv, conda) | 环境配置",
+  "meta_description": "了解并使用虚拟环境，有效管理项目依赖。",
+  "content": "<p>随着您开始构建更复杂的 Python 应用程序，尤其是在像 LLM 开发这样快速变化的方面，您会很快遇到一个常见问题：管理项目依赖。想象一下，您正在处理两个不同的 LLM 项目。项目 A 需要某个特定库（例如 <code>langchain</code>）的 1.5 版本，而项目 B 需要更新的 1.8 版本。如果您将这些库全局安装在您的系统上，当您切换到另一个项目时，一个项目将不可避免地出现问题。这是因为全局 Python 安装通常一次只能支持给定库的一个版本。</p>\n<p>此时，虚拟环境变得不可或缺。虚拟环境本质上是一个隔离的目录，其中包含一个特定的 Python 解释器及其自己的一组已安装的包，独立于您系统的全局 Python 安装或其他虚拟环境。可以将其视为每个项目的独立工作区。</p>\n<p>使用虚拟环境有几个显著的优点：</p>\n<ol>\n<li><strong>依赖隔离：</strong> 每个项目都可以有自己特定的一组依赖项（和版本），而不会干扰其他项目。这避免了前面描述的“依赖地狱”情况。</li>\n<li><strong>可复现性：</strong> 通过列出项目的准确依赖（通常在 <code>requirements.txt</code> 文件中，接下来会讲到），您或合作者可以轻松地在其他地方重新创建相同的环境。</li>\n<li><strong>整洁性：</strong> 它使您的全局 Python 安装保持整洁，不受项目特定包的影响。</li>\n</ol>\n<p>两个主要工具常用于创建和管理 Python 虚拟环境：<code>venv</code> 和 <code>conda</code>。</p>\n<h3>使用 <code>venv</code></h3>\n<p><code>venv</code> 是 Python 3.3 及更高版本中包含的、用于创建虚拟环境的标准轻量级工具。对于许多 Python 项目，它通常足够了，包括主要依赖通过 <code>pip</code> 安装的 Python 包的典型 LLM 应用程序。</p>\n<p><strong>使用 <code>venv</code> 创建环境</strong></p>\n<p>要使用 <code>venv</code> 创建虚拟环境，在您的终端或命令提示符中，进入项目根目录并运行以下命令：</p>\n<pre><code class=\"language-bash\">python -m venv .venv\n</code></pre>\n<ul>\n<li><code>python -m venv</code> 调用 <code>venv</code> 模块。</li>\n<li><code>.venv</code> 是为存放虚拟环境的目录选择的名称。使用 <code>.venv</code> 或 <code>venv</code> 是一个常见做法，在类 Unix 系统上，以点号开头通常会默认隐藏该目录。您可以选择任何名称，但保持一致性会有帮助。</li>\n</ul>\n<p>此命令会创建 <code>.venv</code> 目录。该目录包含用于创建它的 Python 解释器的一个副本或符号链接，以及像 <code>lib/pythonX.Y/site-packages</code>（在 Linux/macOS 上）或 <code>Lib\\\\site-packages</code>（在 Windows 上）这样的子目录，项目特定的包将安装在那里。</p>\n<p><strong>激活环境</strong></p>\n<p>在使用环境之前，您需要激活它。激活会修改您 shell 的路径设置，以便 <code>python</code> 和 <code>pip</code> 等命令指向虚拟环境目录中的版本，而不是全局版本。激活命令根据您的操作系统的不同而略有差异：</p>\n<ul>\n<li>\n<p><strong>在 macOS 和 Linux 上 (bash/zsh)：</strong></p>\n<pre><code class=\"language-bash\">source .venv/bin/activate\n</code></pre>\n</li>\n<li>\n<p><strong>在 Windows 上 (命令提示符)：</strong></p>\n<pre><code class=\"language-cmd\">.venv\\\\Scripts\\\\activate.bat\n</code></pre>\n</li>\n<li>\n<p><strong>在 Windows 上 (PowerShell)：</strong></p>\n<pre><code class=\"language-powershell\">.venv\\\\Scripts\\\\Activate.ps1\n</code></pre>\n<p>（注意：您可能需要先调整 PowerShell 执行策略：<code>Set-ExecutionPolicy RemoteSigned -Scope CurrentUser</code>）</p>\n</li>\n</ul>\n<p>激活后，您的 shell 提示符通常会改变以表明当前激活的环境，通常会以 <code>(.venv)</code> 作为提示符前缀。现在，任何使用 <code>pip</code> 安装的包都将放入 <code>.venv</code> 目录中，专属于此项目。</p>\n<p><strong>停用环境</strong></p>\n<p>当您完成项目工作或想切换到另一个项目时，只需运行：</p>\n<pre><code class=\"language-bash\">deactivate\n</code></pre>\n<p>此命令会将您的 shell 恢复到之前的状态，再次使用全局 Python 安装。</p>\n<h3>使用 <code>conda</code></h3>\n<p><code>conda</code> 是一个跨平台的包和环境管理系统，随 Anaconda 和 Miniconda 发行版提供。尽管 <code>venv</code> 主要处理 Python 包，但 <code>conda</code> 与语言无关，擅长管理复杂的依赖，包括非 Python 库（如用于 GPU 加速的 CUDA，这与本地运行 LLM 相关）甚至 Python 解释器本身。</p>\n<p><strong>使用 <code>conda</code> 创建环境</strong></p>\n<p>如果您已安装 Anaconda 或 Miniconda，可以使用以下命令创建新环境：</p>\n<pre><code class=\"language-bash\">conda create --name myenv python=3.10\n</code></pre>\n<ul>\n<li><code>conda create --name myenv</code> 创建一个名为 <code>myenv</code> 的新环境。选择一个描述性的名称。</li>\n<li><code>python=3.10</code> 指定在此环境中安装的 Python 版本。<code>conda</code> 可以在您的系统上同时管理多个 Python 版本，这些版本在不同的环境中隔离。您可以省略版本以获取与您的 <code>conda</code> 安装关联的默认版本。</li>\n</ul>\n<p><code>conda</code> 将确定必要的依赖项，向您显示一个计划，并在创建环境之前请求确认。</p>\n<p><strong>激活环境</strong></p>\n<p>要激活 <code>conda</code> 环境：</p>\n<pre><code class=\"language-bash\">conda activate myenv\n</code></pre>\n<p>与 <code>venv</code> 类似，您的提示符通常会改变以表明当前激活的环境，例如 <code>(myenv)</code>。</p>\n<p><strong>停用环境</strong></p>\n<p>要停用当前的 <code>conda</code> 环境并返回到默认环境（或之前激活的环境）：</p>\n<pre><code class=\"language-bash\">deactivate\n</code></pre>\n<h3>您应该使用哪个工具？</h3>\n<ul>\n<li><strong><code>venv</code>：</strong> 对于大多数依赖项可通过 <code>pip</code> 获取的纯 Python 项目，通常更推荐使用。它内置、轻量，并且紧密遵循标准的 Python 实践。如果您的 LLM 工作流程主要涉及像 <code>langchain</code>、<code>openai</code>、<code>llamaindex</code> 等库以及标准数据科学工具（<code>pandas</code>、<code>numpy</code>），那么 <code>venv</code> 通常是更简单、更直接的选择。</li>\n<li><strong><code>conda</code>：</strong> 如果您的项目在 Python 包中包含复杂的依赖项（例如 C 库、特定版本的系统工具），或者如果您需要轻松管理不同的 Python 版本，或者如果您已经在使用 Anaconda 生态系统（在数据科学中很常见），它是一个更好的选择。某些涉及本地模型运行或特定硬件加速的 LLM 任务可能会从 <code>conda</code> 管理系统级依赖的能力中受益。</li>\n</ul>\n<p>对于本课程，除非您有指向 <code>conda</code> 的特定需求，推荐使用 <strong><code>venv</code></strong>，因为它简单且与 Python 直接集成。核心要点是：<strong>每个项目选择一个工具并持续使用</strong>。无论您选择哪个工具，在开始项目工作时，激活环境都应该是您采取的第一步。这确保您始终将包安装到预期隔离空间中并在其中运行代码，从而防止冲突并使您的 LLM 开发过程更加顺畅。</p>",
+  "slug": "virtual-environments-venv-conda",
+  "updates": [],
+  "references": [
+    {
+      "id": 13033,
+      "title": "venv - Creation of virtual environments",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "Python 内置 `venv` 模块的官方文档，解释了如何创建和管理虚拟环境。",
+      "order": 1,
+      "created_at": "2025-09-05T08:27:06.056850Z",
+      "updated_at": "2025-09-09T03:25:13.798963Z"
+    },
+    {
+      "id": 13034,
+      "title": "Managing environments",
+      "author": "Anaconda, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html",
+      "doi": "",
+      "note": "官方文档，提供了使用 `conda` 创建、激活和管理独立环境及软件包的说明。",
+      "order": 2,
+      "created_at": "2025-09-05T08:27:06.061491Z",
+      "updated_at": "2025-09-09T03:25:14.246435Z"
+    },
+    {
+      "id": 13035,
+      "title": "The Hitchhiker's Guide to Python! - Virtual Environments",
+      "author": "Kenneth Reitz and Tanya Schlusser",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python-guide.org/dev/virtualenvs/",
+      "doi": "",
+      "note": "一份广受认可的社区风格指南和资源，涵盖 Python 开发实践，其中包括关于虚拟环境的详细部分。",
+      "order": 3,
+      "created_at": "2025-09-05T08:27:06.064574Z",
+      "updated_at": "2025-09-09T03:25:02.785929Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

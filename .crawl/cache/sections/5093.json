@@ -1,0 +1,61 @@
+{
+  "id": 5093,
+  "title": "表格方法的局限性",
+  "meta_title": "表格强化学习方法的局限性",
+  "meta_description": "了解表格方法为何在大型或连续状态/动作空间中失效。",
+  "content": "<p>Q-learning和SARSA为理解强化学习 (reinforcement learning)的更新机制提供了坚实的基础，但当问题超出简单范畴时，它们对表格表示的依赖便会面临显著障碍。这些“查找表”方法为每个状态或状态-动作对存储一个明确的值，在离散状态和动作数量可控的环境中表现良好。然而，随着环境复杂度的增加，它们的实用性会迅速减弱。</p>\n<p>主要的问题常被称为<strong>维度灾难</strong>。设想将Q-learning应用于控制一个多关节的机械臂。每个关节的角度都可以是一个状态变量。即使我们将每个角度离散化为例如10个可能的值，对于6个关节，我们也将有<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mn>10</mn><mn>6</mn></msup></mrow><annotation encoding=\"application/x-tex\">10^6</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\">1</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">6</span></span></span></span></span></span></span></span></span></span></span>（一百万）种可能的状态配置。如果再加入每个关节的速度，数量还会进一步增多。对于具有连续状态变量（如传感器读数或物理空间中的物体位置）的环境，状态的数量在理论上是无限的。对连续空间进行粗略离散化会导致信息缺失，而精细离散化则会使状态数量再次变得无法管理。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1b3tcef\" \n              data-plot-definition='{\"layout\": {\"title\": \"状态空间随特征增加而增长\", \"xaxis\": {\"title\": \"特征数量\"}, \"yaxis\": {\"title\": \"状态数量（对数刻度）\", \"type\": \"log\", \"dtick\": 2}, \"width\": 600, \"height\": 400, \"margin\": {\"l\": 80, \"r\": 50, \"t\": 50, \"b\": 50}, \"plot_bgcolor\": \"#e9ecef\", \"paper_bgcolor\": \"#ffffff\"}, \"data\": [{\"type\": \"bar\", \"x\": [1, 2, 5, 10], \"y\": [10, 100, 100000, 10000000000], \"marker\": {\"color\": \"#228be6\"}, \"name\": \"状态（每个特征10个离散值）\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-1b3tcef\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>随着更多特征的加入，独立状态的数量呈指数级增长，假设每个特征有10个离散值。这使得为所有状态存储一张表很快就变得不切实际。</p>\n</blockquote>\n<p>这种指数级增长会带来几个实际问题：</p>\n<ol>\n<li>\n<p><strong>内存需求：</strong> 存储一个庞大的表格需要大量的内存。对于围棋这样的问题，可能的棋盘位置数量（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>></mo><msup><mn>10</mn><mn>170</mn></msup></mrow><annotation encoding=\"application/x-tex\">> 10^{170}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.5782em;vertical-align:-0.0391em;\"></span><span class=\"mrel\">></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\">1</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">170</span></span></span></span></span></span></span></span></span></span></span></span>）远远超出任何可想象的计算机内存容量。我们根本无法创建一个足够大的Q表。</p>\n</li>\n<li>\n<p><strong>计算成本：</strong> 学习每个状态的值需要多次访问该状态（或状态-动作对）。在非常大的状态空间中，智能体可能需要很长时间才能遇到大多数状态，更不用说频繁访问它们以获得准确的值估计。训练变得计算上无法承受。</p>\n</li>\n<li>\n<p><strong>泛化能力不足：</strong> 表格方法独立对待每个状态。了解一个状态无法为其他可能非常相似的状态提供任何信息。例如，在视觉场景中稍微改变一个物体的位置，就会在表格表示中产生一个<em>新</em>的状态。智能体无法运用其从几乎完全相同的先前状态获得的经验。它必须从头开始学习这个“新”状态的值。从常理来看，我们希望智能体能将所学知识泛化到类似情境中。</p>\n</li>\n</ol>\n<p>类似的问题也会出现在<strong>大型或连续动作空间</strong>中。虽然不总是遇到与状态空间相同的指数级障碍，但需要计算和比较大量离散动作的Q值，或在Q-learning更新期间在一个连续动作范围内找到最大值，同样会变得计算密集。</p>\n<p>\"这些局限性清楚表明，表格方法不足以应对许多具有高维状态空间、连续变量或需要泛化的问题。为了应对这些问题，我们需要一种近似值函数（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>V</mi><mo stretchy=\"false\">(</mo><mi>s</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">V(s)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">s</span><span class=\"mclose\">)</span></span></span></span>或<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Q</mi><mo stretchy=\"false\">(</mo><mi>s</mi><mo separator=\"true\">,</mo><mi>a</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">Q(s, a)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">Q</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">s</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mclose\">)</span></span></span></span>）的方法，而不是为每个条目显式存储它。这是函数近似的核心思路，我们将在下一章中介绍，从深度Q网络（DQN）开始。\"</p>",
+  "slug": "tabular-methods-limitations",
+  "updates": [],
+  "references": [
+    {
+      "id": 13220,
+      "title": "Reinforcement Learning: An Introduction",
+      "author": "Richard S. Sutton and Andrew G. Barto",
+      "year": "2018",
+      "publisher": "A Bradford Book, The MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://incompleteideas.net/book/the-book-2nd.html",
+      "doi": "",
+      "note": "这本书全面阐释了表格方法及其局限性（如维度灾难），以及向函数逼近的根本性转变。",
+      "order": 1,
+      "created_at": "2025-09-05T08:29:45.776388Z",
+      "updated_at": "2025-09-10T11:34:34.423880Z"
+    },
+    {
+      "id": 13221,
+      "title": "Human-level control through deep reinforcement learning",
+      "author": "Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis",
+      "year": "2015",
+      "publisher": "",
+      "journal": "Nature",
+      "volume": "518",
+      "pages": "529–533",
+      "url": "https://www.nature.com/articles/nature14236",
+      "doi": "10.1038/nature14236",
+      "note": "这篇开创性论文介绍了深度Q网络（DQN），展示了深度神经网络如何克服在高维状态空间环境中表格方法的局限性。",
+      "order": 2,
+      "created_at": "2025-09-05T08:29:45.780522Z",
+      "updated_at": "2025-09-10T11:34:44.651700Z"
+    },
+    {
+      "id": 13222,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "这本权威教材全面解释了深度学习，为理解神经网络如何在现代强化学习中用于函数逼近提供了必要背景。",
+      "order": 3,
+      "created_at": "2025-09-05T08:29:45.787502Z",
+      "updated_at": "2025-09-10T11:34:35.984018Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

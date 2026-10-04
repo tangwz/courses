@@ -1,0 +1,45 @@
+{
+  "id": 7786,
+  "title": "实施规划-执行型智能体",
+  "meta_title": "实施规划-执行型智能体",
+  "meta_description": "介绍一种不同的智能体架构，在这种架构中，智能体首先制定计划，然后逐步执行。",
+  "content": "<p>对于需要动态、分步调整的任务，一种常见做法是ReAct模式。然而，有些问题通过更具结构性、更具前瞻性的方法会做得更好。另一种架构是规划-执行型智能体。与其在每一步都重复紧密的“思考-行动-观察”循环，该智能体首先制定一个完整的、多步骤的计划，然后按顺序执行。</p>\n<p>这种规划与执行的分离对于行动序列大体上可预测，并且不依赖于每一步高度可变结果的任务很有效。</p>\n<h3>规划-执行型智能体的结构</h3>\n<p>该架构包含两个不同的阶段：</p>\n<ol>\n<li><strong>规划阶段</strong>：一个专门的<strong>规划器</strong>组件，由大型语言模型（LLM）驱动，接收高层级目标。它的唯一职责是将此目标分解成一个具体的、有序的步骤列表。此阶段的输出是一个<code>Plan</code>对象，它作为整个任务的蓝图。</li>\n<li><strong>执行阶段</strong>：一个<strong>执行器</strong>组件遍历生成计划中的步骤。对于每一步，它执行所需的操作。执行器可以是一个简单的函数调用机制，甚至是一个ReAct智能体，其任务是完成那一个步骤。</li>\n</ol>\n<p>这种工作流程确保智能体在开始前有一个清晰的前进路径，降低偏离轨道的风险。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1vlj05c\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\"];\n    node [shape=box, style=rounded, fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_planning {\n        label=\"规划阶段\";\n        bgcolor=\"#e9ecef\";\n        Goal [label=\"高层级目标\", style=\"filled\", fillcolor=\"#a5d8ff\"];\n        Planner [label=\"规划器\\n(LLM调用)\"];\n        Plan [label=\"生成计划\\n(步骤1, 步骤2, ...)\", shape=note, style=\"filled\", fillcolor=\"#b2f2bb\"];\n        Goal -> Planner;\n        Planner -> Plan;\n    }\n\n    subgraph cluster_execution {\n        label=\"执行阶段\";\n        bgcolor=\"#e9ecef\";\n        Executor [label=\"执行器智能体\"];\n        Step1 [label=\"执行步骤 1\"];\n        Step2 [label=\"执行步骤 2\"];\n        StepN [label=\"...\"];\n        Result [label=\"最终结果\", style=\"filled\", fillcolor=\"#d8f5a2\"];\n\n        Executor -> Step1 -> Step2 -> StepN -> Result;\n    }\n\n    Plan -> Executor [lhead=cluster_execution, style=dashed, label=\" 执行器接收计划\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1vlj05c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>规划-执行工作流程将任务分为一个规划阶段，LLM在此生成一系列步骤，和一个执行阶段，智能体在此按顺序执行每个步骤。</p>\n</blockquote>\n<h3>创建并执行计划</h3>\n<p><code>agent</code>模块提供规划和执行两方面的工具。<code>Planner</code>类使用LLM根据给定目标生成一个<code>Plan</code>对象。</p>\n<p>例如，我们可以设置一个规划器，它使用一个模拟的LLM来生成步骤。在实际应用中，<code>llm_func</code>会调用像GPT-4或Claude 3这样强大的模型。</p>\n<pre><code class=\"language-python\">from kerb.agent.planning import Planner, Plan\n\ndef planner_llm(prompt: str) -> str:\n    \"\"\"一个生成计划的模拟LLM。\"\"\"\n    if \"data analysis\" in prompt.lower():\n        return \"\"\"1. 从源加载数据集。\n2. 清理并预处理数据。\n3. 执行探索性数据分析（EDA）。\n4. 生成可视化和摘要报告。\"\"\"\n    return \"1. 步骤 A\\n2. 步骤 B\"\n\n# 使用我们的LLM函数创建一个规划器\nplanner = Planner(llm_func=planner_llm)\n\n# 为高层级目标生成计划\ngoal = \"创建数据分析流程\"\ngenerated_plan = planner.create_plan(goal)\n\nprint(f\"目标: {generated_plan.goal}\")\nprint(\"\\n生成步骤:\")\nfor i, step in enumerate(generated_plan.steps, 1):\n    print(f\"  {i}. {step}\")\n</code></pre>\n<p><code>PlanAndExecuteAgent</code>类对整个工作流程进行了抽象。你向它提供一个用于规划的LLM函数，它统筹计划的创建和每一步的执行。</p>\n<p>这里是一个<code>PlanAndExecuteAgent</code>的完整示例，它首先制定一个分析客户反馈的计划，然后执行该计划。</p>\n<pre><code class=\"language-python\">\"\"\"08_agent_planning.py\"\"\"\n\nfrom kerb.agent.patterns import PlanAndExecuteAgent\n\ndef planner_llm(prompt: str) -> str:\n    \"\"\"用于规划的LLM。\"\"\"\n    if \"plan\" in prompt.lower() or \"analyze customer feedback\" in prompt.lower():\n        return \"\"\"1. 研究情感分析主题。\n2. 分析反馈以确定主要主题。\n3. 撰写调查结果摘要。\n4. 审阅并敲定报告。\"\"\"\n    return \"正在创建计划...\"\n\ndef main():\n    \"\"\"运行智能体规划示例。\"\"\"\n\n    print(\"=\"*80)\n    print(\"规划-执行型智能体示例\")\n    print(\"=\"*80)\n\n    # 创建智能体\n    pae_agent = PlanAndExecuteAgent(\n        name=\"PlanExecuteAgent\",\n        llm_func=planner_llm,\n        max_iterations=5\n    )\n\n    goal = \"分析客户反馈\"\n    print(f\"\\n目标: {goal}\")\n    print(f\"\\n智能体: {pae_agent.name}\")\n    print(\"\\n正在运行规划-执行型智能体...\")\n    print(\"-\"*80)\n\n    result = pae_agent.run(goal)\n\n    print(f\"\\n结果:\")\n    print(\"-\"*80)\n    print(f\"状态: {result.status.value}\")\n    print(f\"已采取步骤: {len(result.steps)}\")\n    print(f\"输出: {result.output[:100]}...\")\n\n    # 显示执行流程，突出规划步骤\n    print(\"\\n执行流程:\")\n    print(\"-\"*80)\n    for i, step in enumerate(result.steps, 1):\n        print(f\"\\n[{i}] \", end=\"\")\n        if step.thought:\n            # 第一个“思考”通常就是计划本身\n            print(f\"思考:\\n{step.thought}\")\n        if step.action:\n            print(f\"    行动: {step.action}\")\n\nif __name__ == \"__main__\":\n    main()\n</code></pre>\n<p>智能体执行的第一步通常包含一个“思考”，该“思考”会制定整个计划。随后的步骤则侧重于执行计划的每个部分。</p>\n<h3>失败处理与重新规划</h3>\n<p>规划-执行型智能体的一个主要难题是其刚性。如果早期步骤失败或环境意外变化，原始计划可能会失效。实现时必须包含一个<strong>重新规划</strong>的机制。</p>\n<p>重新规划涉及：</p>\n<ol>\n<li>在步骤执行过程中发现失败。</li>\n<li>捕获来自失败步骤的观察结果或错误消息。</li>\n<li>将原始目标、失败的计划和错误反馈给规划器。</li>\n<li>生成一个新的、修正后的计划，以应对失败。</li>\n</ol>\n<p>例如，如果一个“将应用程序部署到生产环境”的计划在“运行测试”步骤失败了，因为构建错误，重新规划循环将生成一个新计划，例如：</p>\n<ol>\n<li>调试构建问题。</li>\n<li>修正代码库中的错误。</li>\n<li>重新运行测试。</li>\n<li>构建应用程序。</li>\n<li>部署到生产环境。</li>\n</ol>\n<p>尽管<code>PlanAndExecuteAgent</code>提供高级统筹，你也可以通过围绕<code>Planner</code>和执行器构建一个循环来实施自定义的重新规划逻辑。<code>kerb.agent.planning.replan</code>函数提供实用工具来辅助此过程。</p>\n<h3>何时选用规划-执行型智能体</h3>\n<p>这种架构并非ReAct的普适替代品。每种模式都有其优势。</p>\n<p><strong>在以下情况时，选择规划-执行型智能体：</strong></p>\n<ul>\n<li><strong>任务很复杂且需要预见性。</strong> 提前分解大问题很有好处。</li>\n<li><strong>步骤大多可预测。</strong> 环境稳定，且一步的结果不会剧烈改变下一步。</li>\n<li><strong>可检查的计划很有价值。</strong> 生成的计划本身可以由人审阅，或用于进度追踪。</li>\n<li><strong>你希望尽量减少迭代式LLM调用。</strong> 单次、全面的规划调用可能比ReAct循环中的多次小型调用更高效。</li>\n</ul>\n<p><strong>在以下情况时，坚持使用ReAct智能体：</strong></p>\n<ul>\n<li><strong>任务具有试探性。</strong> 智能体需要在每一步对新信息作出反应。</li>\n<li><strong>环境高度动态。</strong> 智能体必须持续调整其策略。</li>\n<li><strong>需要即时反馈。</strong> “思考-行动-观察”循环为快速纠正提供了紧密的反馈。</li>\n</ul>\n<p>例如，生成研究报告非常适合规划-执行型智能体（研究、列提纲、起草、审阅）。相反地，浏览网页以寻找复杂问题的答案更适合ReAct智能体，因为它需要在每一步对搜索结果作出反应。</p>",
+  "slug": "plan-and-execute-agents",
+  "updates": [],
+  "references": [
+    {
+      "id": 21744,
+      "title": "Artificial Intelligence: A Modern Approach",
+      "author": "Stuart Russell and Peter Norvig",
+      "year": "2020",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aima.cs.berkeley.edu/",
+      "doi": "",
+      "note": "这本教科书提供了智能体、经典规划和各种AI架构的基础知识，为计划-执行范式提供了背景。",
+      "order": 1,
+      "created_at": "2025-10-20T07:27:39.653620Z",
+      "updated_at": "2025-10-20T07:51:41.407472Z"
+    },
+    {
+      "id": 21747,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "这篇论文介绍了ReAct模式，这是一种将推理和行动紧密结合在思-行-观循环中的智能体架构，常与计划-执行智能体进行对比。",
+      "order": 4,
+      "created_at": "2025-10-20T07:27:39.666251Z",
+      "updated_at": "2025-10-20T07:51:34.227783Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

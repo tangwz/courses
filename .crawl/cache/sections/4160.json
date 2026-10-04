@@ -1,0 +1,45 @@
+{
+  "id": 4160,
+  "title": "多适配器/多任务训练方法",
+  "meta_title": "多适配器与多任务PEFT训练",
+  "meta_description": "了解同时训练多个PEFT适配器以处理不同任务或数据集的策略。",
+  "content": "<p>参数 (parameter)高效微调 (fine-tuning)方法显著减少了可训练参数的数量，为模型针对多个下游任务进行微调提供了可能性。一个重要优势是能够为一个单一的冻结基础模型训练和管理多个适配器，使其能够在不产生存储多个完整模型副本的高昂成本的情况下，专注于各种任务或专业方面。本节详细介绍同时或顺序管理和训练这些多适配器的策略。</p>\n<h3>多适配器训练的原因</h3>\n<p>在相同的基础模型上训练多个适配器有以下几个目的：</p>\n<ol>\n<li><strong>多任务学习：</strong> 为不同任务（例如，摘要、翻译、情感分析）训练不同的适配器，利用基础LLM的通用能力，同时在轻量级适配器内专精任务特定知识。</li>\n<li><strong>专业化：</strong> 使用相同的基础模型，开发在特定专业方面（例如，医疗、法律、金融）进行微调 (fine-tuning)的适配器。</li>\n<li><strong>个性化：</strong> 创建用户特定的适配器，根据个人偏好或数据调整模型行为，同时在用户之间共享核心模型。</li>\n<li><strong>增量学习：</strong> 通过训练新适配器来引入新功能或更新现有功能，而不影响之前训练过的适配器，也无需从头开始重新训练。</li>\n<li><strong>效率：</strong> 只存储每个任务的小适配器权重 (weight)，而不是整个模型的多个副本，大幅节省存储空间。在推理 (inference)过程中，可以在需要时加载相应的适配器。</li>\n</ol>\n<h3>训练多个适配器的策略</h3>\n<p>为一个基础模型训练多个适配器主要有以下几种方法：</p>\n<h4>1. 顺序训练</h4>\n<p>这是最直接的方法。您一次为一个特定任务训练一个适配器。</p>\n<ul>\n<li>\n<p><strong>过程：</strong></p>\n<ol>\n<li>加载预训练 (pre-training)的基础模型（通常是量化 (quantization)的，例如，使用QLoRA的前提条件）。</li>\n<li>初始化或加载<em>第一个</em>适配器（例如，<code>adapter_task_A</code>）的权重 (weight)。</li>\n<li>配置PEFT设置（如LoRA配置）以仅针对<code>adapter_task_A</code>的权重。</li>\n<li>在任务A的数据上训练模型。只更新<code>adapter_task_A</code>的权重。</li>\n<li>保存训练好的<code>adapter_task_A</code>权重。</li>\n<li>对<code>adapter_task_B</code>重复步骤2-5，使用任务B的数据，确保在此阶段只有<code>adapter_task_B</code>的权重是可训练的。对所有适配器继续此过程。</li>\n</ol>\n</li>\n<li>\n<p><strong>优点：</strong> 实现和管理简单。每次训练运行都是独立的，简化了调试。</p>\n</li>\n<li>\n<p><strong>缺点：</strong> 如果需要很多适配器，可能会很耗时。未能利用同时处理不同任务数据所带来的潜在计算效率。</p>\n</li>\n</ul>\n<h4>2. 交错或混合批次训练</h4>\n<p>这种方法通过构建包含不同任务数据样本的批次，在同一个训练循环中训练多个适配器。</p>\n<ul>\n<li>\n<p><strong>过程：</strong></p>\n<ol>\n<li>加载预训练的基础模型。</li>\n<li>初始化或加载<em>所有</em>适配器配置及其权重（例如，<code>adapter_task_A</code>、<code>adapter_task_B</code>）。</li>\n<li>修改数据集加载和批次整理过程：批次中的每个样本必须与其目标适配器关联（例如，通过任务ID或适配器名称）。批次可以包含针对不同适配器的样本。</li>\n<li>修改模型的正向传播：核心基础模型计算执行一次。然后，根据与每个样本（或样本组）关联的任务ID，应用相应的适配器权重（例如，LoRA矩阵A和B）。</li>\n<li>修改反向传播 (backpropagation)和优化器步骤：梯度必须<em>只</em>针对每个特定样本在正向传播中激活的适配器权重进行计算。该批次中非活动适配器的梯度应被置零或被优化器忽略。</li>\n<li>管理优化器状态：可以为每个适配器使用单独的优化器实例，或者在一个优化器中仔细管理状态，以确保更新正确应用于各自的适配器参数 (parameter)。</li>\n</ol>\n</li>\n<li>\n<p><strong>正向传播逻辑（伪代码）：</strong></p>\n</li>\n</ul>\n<pre><code class=\"language-python\"># 假设批次包含带有'adapter_name'标签的样本\nbase_output = base_model(input_ids, attention_mask)\nfinal_output = {} # 存储每个适配器的输出\n\nfor adapter_name in unique_adapter_names_in_batch:\n    # 选择此适配器的样本\n    adapter_mask = [sample['adapter_name'] == adapter_name for sample in batch]\n    adapter_input_indices = ... # 根据adapter_mask获取索引\n\n    # 应用特定适配器\n    # 注意：这要求模型架构支持动态适配器选择\n    adapter_output = get_adapter_layer(adapter_name)(base_output[adapter_input_indices])\n\n    # 组合或存储适配器特定输出\n    final_output[adapter_name] = adapter_output\n\n# 损失计算基于final_output和每个任务的标签\n</code></pre>\n<ul>\n<li><strong>优点：</strong> 潜在地更具计算效率，尤其是在基础模型计算占主导地位的情况下。允许在单次运行中动态平衡任务训练。</li>\n<li><strong>缺点：</strong> 实现起来复杂很多。需要仔细处理批处理、正向/反向传播和优化器状态。调试可能具有挑战性。</li>\n</ul>\n<p>Hugging Face的<code>peft</code>等库提供了简化混合批次训练的抽象。使用<code>PeftModel.add_adapter()</code>和<code>PeftModel.set_adapter()</code>可以管理多个适配器配置，尽管混合批次的训练循环逻辑通常仍需要自定义实现。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-cq489c\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, color=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  subgraph cluster_model {\n    label = \"冻结的基础LLM\";\n    bgcolor=\"#dee2e6\";\n    BaseModel [label=\"基础模型权重 (已冻结)\", shape=cylinder, color=\"#adb5bd\"];\n  }\n\n  subgraph cluster_adapters {\n    label = \"可训练适配器\";\n    bgcolor=\"#fcc2d7\";\n    AdapterA [label=\"适配器 A (例如，LoRA A/B)\\n任务：摘要\", shape=component, color=\"#f06595\"];\n    AdapterB [label=\"适配器 B (例如，LoRA A/B)\\n任务：翻译\", shape=component, color=\"#f06595\"];\n    AdapterC [label=\"适配器 C (例如，LoRA A/B)\\n任务：编码\", shape=component, color=\"#f06595\"];\n  }\n\n  Input [label=\"输入数据\\n(按任务标记)\", shape=folder, color=\"#a5d8ff\"];\n\n  Routing [label=\"基于任务的路由\", shape=diamond, color=\"#ffec99\"];\n\n  Input -> Routing [label=\"批次\"];\n  Routing -> BaseModel [label=\"正向传播\"];\n  BaseModel -> AdapterA [label=\"基础输出\", style=dashed];\n  BaseModel -> AdapterB [label=\"基础输出\", style=dashed];\n  BaseModel -> AdapterC [label=\"基础输出\", style=dashed];\n\n  AdapterA -> OutputA [label=\"任务 A 输出\"];\n  AdapterB -> OutputB [label=\"任务 B 输出\"];\n  AdapterC -> OutputC [label=\"任务 C 输出\"];\n\n  OutputA [label=\"摘要\", shape=ellipse, color=\"#96f2d7\"];\n  OutputB [label=\"翻译\", shape=ellipse, color=\"#96f2d7\"];\n  OutputC [label=\"代码\", shape=ellipse, color=\"#96f2d7\"];\n\n  {rank=same; AdapterA; AdapterB; AdapterC;}\n  {rank=same; OutputA; OutputB; OutputC;}\n\n  # 梯度只回流到活动适配器\n  OutputA -> AdapterA [label=\"损失 A 梯度\", style=dotted, dir=back, color=\"#f03e3e\", constraint=false];\n  OutputB -> AdapterB [label=\"损失 B 梯度\", style=dotted, dir=back, color=\"#f03e3e\", constraint=false];\n  OutputC -> AdapterC [label=\"损失 C 梯度\", style=dotted, dir=back, color=\"#f03e3e\", constraint=false];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-cq489c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用共享基础模型进行多适配器训练的架构图。输入数据在经过冻结的基础模型后，会被路由到相应的适配器（例如，LoRA层）。反向传播期间的梯度只更新与特定任务样本对应的适配器的权重。</p>\n</blockquote>\n<h3>技术要点</h3>\n<ul>\n<li><strong>适配器管理：</strong> 为适配器使用清晰的命名约定。库通常提供加载、保存、激活和停用与<code>PeftModel</code>关联的特定适配器的函数。</li>\n<li><strong>优化器状态：</strong> 对于混合批次训练，为每个适配器使用单独的优化器通常是最简洁的方法，尽管这可能会略微增加内存使用。如果使用单个优化器，请确保它正确处理与不同适配器对应的参数 (parameter)组，这可能需要自定义逻辑来屏蔽批次中非活动适配器的梯度。内存高效优化器（如8位Adam）在此处很有益。</li>\n<li><strong>批次构建：</strong> 在创建混合批次时，决定从不同任务中采样数据的策略。选项包括均匀采样、按数据集大小比例采样，或根据任务性能动态调整采样率。这会影响学习动态。</li>\n<li><strong>梯度累积：</strong> 此技术完全兼容且通常很有用，尤其是在混合批次的情况下。在进行单个优化器步骤之前，在多个微批次（可能包含各种任务的样本）上累积梯度。</li>\n<li><strong>内存占用：</strong> 尽管每个适配器都很小，但与顺序训练或单适配器PEFT相比，同时将许多适配器加载到GPU内存中进行混合训练会增加整体内存需求。基础模型的QLoRA等量化 (quantization)技术变得更加重要。评估训练速度（混合批次）和内存限制之间的权衡。</li>\n<li><strong>兼容性：</strong> 确保所使用的PEFT方法（LoRA、Adapters等）和具体实现支持多适配器场景所需的动态选择或并发应用。</li>\n</ul>\n<p>有效管理多个适配器能够创建高度通用、能高效处理各种任务的模型，这代表了PEFT方法论相对于传统完整微调 (fine-tuning)的重要操作优势。顺序训练和混合批次训练之间的选择取决于适配器的数量、计算资源以及对实现复杂度的容忍度。</p>",
+  "slug": "peft-multi-adapter-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 7992,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍了低秩适应（LoRA），这是一种基础的参数高效微调方法，构成了多适配器策略的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T01:50:00.607481Z",
+      "updated_at": "2025-09-09T12:51:31.440354Z"
+    },
+    {
+      "id": 7994,
+      "title": "PEFT (Parameter-Efficient Fine-tuning) Library Documentation",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/peft/index",
+      "doi": "",
+      "note": "Hugging Face PEFT库的官方文档，提供了实现和管理适配器的实用指南，包括处理多个适配器的功能。",
+      "order": 3,
+      "created_at": "2025-09-05T01:50:00.628297Z",
+      "updated_at": "2025-09-09T12:51:22.257405Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

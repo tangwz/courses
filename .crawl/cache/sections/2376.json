@@ -1,0 +1,45 @@
+{
+  "id": 2376,
+  "title": "`self` 参数说明",
+  "meta_title": "Python `self` 参数 | 对象方法说明",
+  "meta_description": "阐明类方法中惯用的 `self` 参数的用途，该参数指向实例本身。",
+  "content": "<p>Python 类中定义的方法，例如 <code>__init__</code> 方法或其他自定义方法，几乎总是将 <code>self</code> 作为第一个参数 (parameter)。<code>self</code> 究竟是什么，它为什么会出现在那里？</p>\n<p>回想一下从类创建对象（实例）的过程。你可以从同一个类蓝图创建多个对象，每个对象都有一组自己的属性值。例如：</p>\n<pre><code class=\"language-python\">class Dog:\n    def __init__(self, name, breed):\n        # 为这个特定狗的属性赋值\n        self.name = name\n        self.breed = breed\n\n    def describe(self):\n        # 使用这个特定狗的名称和品种\n        print(f\"This dog is named {self.name} and is a {self.breed}.\")\n\n# 创建两个不同的 Dog 对象\ndog1 = Dog(\"Buddy\", \"Golden Retriever\")\ndog2 = Dog(\"Lucy\", \"Poodle\")\n</code></pre>\n<p>现在，假设你对这些对象中的一个调用 <code>describe</code> 方法：</p>\n<pre><code class=\"language-python\">dog1.describe()\n# 输出：这条狗名叫 Buddy，是金毛寻回犬。\n\ndog2.describe()\n# 输出：这条狗名叫 Lucy，是贵宾犬。\n</code></pre>\n<p>当调用 <code>dog1.describe()</code> 时，<code>describe</code> 方法怎么知道它应该使用名称“Buddy”和品种“Golden Retriever”？同样地，当调用 <code>dog2.describe()</code> 时，它又怎么知道使用“Lucy”和“Poodle”呢？</p>\n<p><code>self</code> 在这里发挥作用。当你像 <code>my_object.my_method(arg1, arg2)</code> 这样调用一个对象的方法时，Python 会自动将对象本身（在此例中是 <code>my_object</code>）作为<em>第一个</em>参数传递给该方法。按照惯例，方法定义中的这个第一个参数被命名为 <code>self</code>。</p>\n<p>因此，在 <code>describe</code> 方法定义中：</p>\n<pre><code class=\"language-python\">def describe(self):\n    print(f\"This dog is named {self.name} and is a {self.breed}.\")\n</code></pre>\n<p><code>self</code> 作为对调用该方法的特定实例（对象）的引用。</p>\n<ul>\n<li>当 <code>dog1.describe()</code> 运行时，<code>self</code> 指向 <code>dog1</code> 对象。因此，<code>self.name</code> 访问 <code>dog1.name</code>（“Buddy”），<code>self.breed</code> 访问 <code>dog1.breed</code>（“Golden Retriever”）。</li>\n<li>当 <code>dog2.describe()</code> 运行时，<code>self</code> 指向 <code>dog2</code> 对象。因此，<code>self.name</code> 访问 <code>dog2.name</code>（“Lucy”），<code>self.breed</code> 访问 <code>dog2.breed</code>（“Poodle”）。</li>\n</ul>\n<p>简单来说，<code>self</code> 让方法的代码能够访问它所处理的特定对象实例的属性和其他方法。你可以使用 <code>self.attribute_name</code> 来获取该特定对象的属性值，或者使用 <code>self.method_name()</code> 来调用该对象的另一个方法。</p>\n<p><strong>为什么叫 <code>self</code>？</strong></p>\n<p>尽管 <code>self</code> 在 Python 中不是保留关键字（例如 <code>def</code>、<code>class</code> 或 <code>if</code>），但它是一个根深蒂固的约定。理论上，你可以将这个第一个参数命名为其他名称，例如 <code>this_object</code> 或 <code>instance</code>：</p>\n<pre><code class=\"language-python\"># 理论上可行，但不推荐\nclass Cat:\n    def __init__(this_cat, name):\n        this_cat.name = name # 使用 'this_cat' 而不是 'self'\n\n    def meow(this_cat):\n        print(f\"{this_cat.name} says Meow!\") # 再次使用 'this_cat'\n\nmy_cat = Cat(\"Whiskers\")\nmy_cat.meow()\n# 输出：Whiskers 说喵！\n</code></pre>\n<p>然而，强烈不建议使用 <code>self</code> 以外的任何名称。遵循 <code>self</code> 的约定能让你的代码立即被其他 Python 开发者（以及你未来的自己！）识别和理解。这是定义实例方法时你应该始终遵循的规范做法。</p>\n<p>总而言之，<code>self</code> 是 Python 类中实例方法第一个参数的惯用名称。它代表实例（对象）本身，使得方法可以访问对象的特定属性并调用其其他方法。无论何时你在对象上调用方法，Python 都会自动将该实例作为这个第一个参数传递。</p>",
+  "slug": "python-self-parameter",
+  "updates": [],
+  "references": [
+    {
+      "id": 6382,
+      "title": "The Python Tutorial - 9. Classes",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/classes.html",
+      "doi": "",
+      "note": "官方文档，解释Python的类语法、实例创建和方法定义，其中演示了`self`的用法。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:07.644749Z",
+      "updated_at": "2025-09-07T21:29:13.330697Z"
+    },
+    {
+      "id": 6383,
+      "title": "Learning Python",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "1640",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQES0klGthI-24AoeX5qF3mgmL7_KBQD8pXTvjAij0qkOYwd64GnovP4a2woXhOJBRriSht-_aTipg_onbAes0F_xUJLtizgPV-OvypY5e5OMZ5C1hRt_wkXDmq3mHHuDqGSqTeTrdGfI3avXQlMzZWU-nVAIEwdkth_dBPrOtIMRSU=",
+      "doi": "",
+      "note": "一本关于Python的综合性书籍，涵盖面向对象编程基础知识以及通过`self`实现方法和实例属性的机制。第5版。",
+      "order": 2,
+      "created_at": "2025-09-05T01:22:07.650578Z",
+      "updated_at": "2025-09-07T21:29:22.722360Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4102,
+  "title": "复现 DVC 流水线",
+  "meta_title": "复现 DVC 流水线",
+  "meta_description": "使用 'dvc repro' 在依赖项变化时自动重新运行流水线阶段。",
+  "content": "<p>机器学习 (machine learning)工作流可以使用 <code>dvc stage add</code> 或通过直接编辑 <code>dvc.yaml</code> 定义为一系列相互关联的阶段。每个阶段都定义了依赖项（输入数据、代码脚本、参数 (parameter)）和输出（处理过的数据、模型、指标）。这种定义方式构建了一个有向无环图（DAG），其优势不只在于可视化，还在于自动化。DVC 提供了一个功能强大的命令 <code>dvc repro</code>，可以自动检测更改并重新运行流水线的必要部分，使所有内容保持最新。</p>\n<h3><code>dvc repro</code> 的作用</h3>\n<p>假设您修改了 <code>params.yaml</code> 文件中的一个参数 (parameter)，更新了数据清洗脚本，或者收到了新版本的原始数据集。手动重新运行所有后续步骤既繁琐又容易出错。您是否记得在清洗后运行特征工程步骤？您是否使用新特征重新训练了模型？</p>\n<p><code>dvc repro</code> 会自动处理这些。当您执行它时，DVC 会执行以下操作：</p>\n<ol>\n<li><strong>检查依赖项：</strong> 它检查 <code>dvc.yaml</code> 中定义的阶段。对于每个阶段，它会计算其依赖项（文件、目录、参数值、命令）的当前哈希值（例如 MD5）。</li>\n<li><strong>比较哈希值：</strong> 它将这些当前哈希值与上次成功执行阶段时记录在 <code>dvc.lock</code> 文件中的哈希值进行比较。</li>\n<li><strong>识别过时阶段：</strong> 如果某个阶段的任何依赖项哈希值已更改，DVC 会将该阶段及其所有依赖其输出的下游阶段标记 (token)为“过时”。</li>\n<li><strong>执行过时阶段：</strong> DVC 按照正确的拓扑顺序（遵循依赖项）重新运行与过时阶段关联的命令。</li>\n<li><strong>更新锁定文件：</strong> 阶段成功执行后，DVC 会使用其依赖项和输出的新哈希值更新 <code>dvc.lock</code> 文件。</li>\n</ol>\n<p>这个过程确保您的流水线输出始终与输入、代码和参数的当前状态保持一致。</p>\n<h3><code>dvc repro</code> 的工作原理：内部机制</h3>\n<p>其奥妙在于 <code>dvc.yaml</code> 和 <code>dvc.lock</code> 之间的关联。</p>\n<ul>\n<li><code>dvc.yaml</code>：定义了流水线的<em>结构</em>。它列出了阶段、它们的命令、依赖项 (<code>deps</code>)、参数 (parameter) (<code>params</code>) 和输出 (<code>outs</code>)。</li>\n<li><code>dvc.lock</code>：记录了流水线上次成功运行时的<em>状态</em>。它存储了每个阶段所有依赖项和输出的精确哈希值，<em>即它们在阶段上次完成时的状态</em>。</li>\n</ul>\n<p>当您运行 <code>dvc repro</code> 时，DVC 实际上会询问：“项目的当前状态（<code>dvc.yaml</code> 中定义的文件、参数）是否与 <code>dvc.lock</code> 中记录的状态匹配？” 如果不匹配，它会重新执行必要的命令来同步它们并更新 <code>dvc.lock</code>。</p>\n<p>我们来可视化这个流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1emra4u\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    start [label=\"运行 &#39;dvc repro&#39;\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    check_yaml [label=\"从 dvc.yaml\\n读取阶段\"];\n    check_deps [label=\"计算依赖项、\\n参数、命令的\\n当前哈希值\"];\n    compare_lock [label=\"与 dvc.lock\\n比较哈希值\"];\n    is_outdated [label=\"阶段是否过时？\", shape=diamond, style=filled, fillcolor=\"#ffec99\"];\n    execute [label=\"执行阶段\\n命令\", style=filled, fillcolor=\"#b2f2bb\"];\n    update_lock [label=\"用新哈希值\\n更新 dvc.lock\"];\n    next_stage [label=\"检查下一阶段\"];\n    done [label=\"流水线已是最新\", shape=ellipse, style=filled, fillcolor=\"#dee2e6\"];\n\n    start -> check_yaml;\n    check_yaml -> check_deps;\n    check_deps -> compare_lock;\n    compare_lock -> is_outdated;\n    is_outdated -> execute [label=\" 是\"];\n    is_outdated -> next_stage [label=\" 否\"];\n    execute -> update_lock;\n    update_lock -> next_stage;\n    next_stage -> check_deps [label=\" 更多阶段 \"];\n    next_stage -> done [label=\" 没有更多阶段 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1emra4u\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图说明了针对单个阶段执行 <code>dvc repro</code> 时的决策过程。</p>\n</blockquote>\n<h3>运行 <code>dvc repro</code></h3>\n<p>执行此命令很简单。在您的终端中，导航到项目根目录（<code>.dvc</code> 所在的位置），然后运行：</p>\n<pre><code class=\"language-bash\">dvc repro\n</code></pre>\n<p>DVC 将分析 <code>dvc.yaml</code> 中定义的流水线并执行任何过时的阶段。您将看到输出，指示正在检查哪些阶段以及正在运行哪些阶段。</p>\n<h3>复现特定阶段</h3>\n<p>有时，您可能只想复现流水线的特定部分。例如，也许您只更改了训练脚本 (<code>train.py</code>)，并且知道它只影响 <code>train</code> 阶段和随后的 <code>evaluate</code> 阶段。您可以让 DVC 针对特定阶段甚至特定输出文件进行操作。</p>\n<p>要复现单个阶段及其所有下游内容：</p>\n<pre><code class=\"language-bash\"># 复现 'train' 阶段以及所有依赖其输出的阶段\ndvc repro train\n</code></pre>\n<p>要仅复现流水线直到特定文件生成为止：</p>\n<pre><code class=\"language-bash\"># 通过运行其父阶段 ('train') 来确保 'model.pkl' 是最新的，\n# 如果有任何上游阶段过时，则运行这些必要的上游阶段。\ndvc repro model.pkl\n</code></pre>\n<p>这种有针对性的复现可以节省大量时间，尤其是在只修改了小部分的复杂流水线中。</p>\n<h3>使用 <code>--dry</code> 预览更改</h3>\n<p>在进行可能耗时的计算之前，您可以执行“空运行”。<code>--dry</code> 标志告诉 <code>dvc repro</code> 执行依赖项检查并报告 <em>将</em> 运行哪些阶段，但不会实际运行它们的命令。</p>\n<pre><code class=\"language-bash\">dvc repro --dry\n</code></pre>\n<p>这有助于验证您的更改对流水线执行计划是否产生了预期的影响。</p>\n<h3>使用 <code>--force</code> 强制复现</h3>\n<p>有时，您可能希望强制重新运行某个阶段，即使 DVC 认为它是最新的。如果某个阶段具有您想再次捕获的非确定性行为，或者 DVC 未跟踪的外部因素（如软件库更新）可能会影响输出，则这可能是必要的。请谨慎使用 <code>--force</code> 标志。</p>\n<p>要强制复现特定阶段：</p>\n<pre><code class=\"language-bash\"># 强制运行 'featurize' 阶段，无论依赖项是否更改\ndvc repro --force featurize\n</code></pre>\n<p>要强制复现整个流水线：</p>\n<pre><code class=\"language-bash\"># 谨慎使用！\ndvc repro --force\n</code></pre>\n<h3>复现后提交更改</h3>\n<p>在 <code>dvc repro</code> 成功完成后，<code>dvc.lock</code> 文件将被更新以反映流水线的新状态。由于 <code>dvc.lock</code> 跟踪状态并确保可复现性，因此将此文件与您对代码、参数 (parameter) (<code>params.yaml</code>) 或流水线定义 (<code>dvc.yaml</code>) 所做的任何更改一起提交到 Git 中是必要的：</p>\n<pre><code class=\"language-bash\"># 运行 'dvc repro' 后\ngit add dvc.lock params.yaml src/train.py dvc.yaml\ngit commit -m \"Update training parameters and retrain model\"\n\n# 如果生成并跟踪了新的数据输出\ndvc push\n</code></pre>\n<p>通过使用 <code>dvc repro</code>，您可以确保任何查看此 Git 提交的人都可以通过运行 <code>dvc pull</code> 接着运行 <code>dvc repro</code> 轻松复现完全相同的输出（尽管如果他们查看 <code>dvc.lock</code> 已更新的提交，<code>dvc repro</code> 通常会报告所有内容都是最新的）。此命令是您的 DVC 管理项目中实现自动化和可靠复现性的基本方式。在接下来的部分中，我们将看到如何将 MLflow 日志集成到这些可复现的 DVC 流水线中。</p>",
+  "slug": "reproducing-dvc-pipelines",
+  "updates": [],
+  "references": [
+    {
+      "id": 8044,
+      "title": "Reproducing DVC pipelines",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/command-reference/repro",
+      "doi": "",
+      "note": "详细说明`dvc repro`命令、其功能以及`dvc.yaml`和`dvc.lock`文件作用的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T01:50:41.835585Z",
+      "updated_at": "2025-09-08T14:14:26.141912Z"
+    },
+    {
+      "id": 8046,
+      "title": "Introducing MLOps: How to Go from Experimentation to Production",
+      "author": "Mark Treveil, Nicolas Omont, Rishabh Bahri, Aurélien Géron, Saska Mojsilovic, Joshua Prud'homme, Alex Ratner",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781492083283/",
+      "doi": "",
+      "note": "涵盖了MLOps的原则和实践，包括版本控制、可复现性以及管道自动化对于高效机器学习部署的必要性。",
+      "order": 3,
+      "created_at": "2025-09-05T01:50:41.843003Z",
+      "updated_at": "2025-09-08T14:14:31.309342Z"
+    },
+    {
+      "id": 8047,
+      "title": "How DVC Works",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "Iterative, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/start/data-management/data-versioning",
+      "doi": "",
+      "note": "解释了DVC用于数据和模型版本控制、依赖跟踪以及管道执行的核心机制，为`dvc repro`提供了背景信息。",
+      "order": 4,
+      "created_at": "2025-09-05T01:50:41.845194Z",
+      "updated_at": "2025-09-08T14:14:41.735396Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5414,
+  "title": "管理 Kubernetes 中的 GPU 节点",
+  "meta_title": "Kubernetes 集群中的 GPU 节点管理",
+  "meta_description": "配置带有 GPU 节点的 Kubernetes 集群并处理设备插件的需求。",
+  "content": "<p>在 Kubernetes 上部署扩散模型，在处理标准 CPU 工作负载之外，会带来一些特定要求。去噪过程的计算密集型特性要求使用专用硬件，主要是图形处理单元（GPU）。仅仅在集群节点中拥有 GPU 硬件是不够的；Kubernetes 需要一种方式来识别、管理并将这些资源分配给需要它们的 Pod。</p>\n<h3>启用 GPU 感知：设备插件框架</h3>\n<p>原生的 Kubernetes 不自带感知供应商专用硬件，如 GPU。为了解决此问题，Kubernetes 提供了一个设备插件框架。此框架允许硬件供应商（如 NVIDIA 或 AMD）或第三方开发插件，这些插件运行在每个节点上，检测特定硬件资源（例如 GPU），向 Kubelet（主要节点代理）报告其可用性，并管理其对容器的分配。</p>\n<p>对于 NVIDIA GPU，最常用的方案是适用于 Kubernetes 的 NVIDIA 设备插件。此插件自动识别节点上可用的 NVIDIA GPU 数量和类型，并将其作为 Kubernetes 集群内的可调度资源暴露。</p>\n<h3>安装 NVIDIA 设备插件</h3>\n<p>安装通常涉及部署一个 DaemonSet。DaemonSet 确保设备插件 Pod 的一个副本在集群中的每个（或选定子集）节点上运行。这使得每个能够运行 GPU 工作负载的节点都能报告其 GPU 资源。</p>\n<p>安装方式会因您的集群环境（如 EKS、GKE、AKS 等托管式云 Kubernetes，或自管理集群）而略有差异，但通常是应用 NVIDIA 提供的 YAML 清单。</p>\n<p>例如，使用 <code>kubectl</code>：</p>\n<pre><code class=\"language-yaml\"># 示例命令，请参考 NVIDIA 官方文档获取最新的清单\nkubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.1/nvidia-device-plugin.yml\n</code></pre>\n<p>在安装插件之前，请确保您的 GPU 节点主机操作系统上已安装相应的 NVIDIA 驱动程序。设备插件依赖于这些驱动程序与硬件通信。主机操作系统、容器镜像中使用的 CUDA 工具包版本以及 GPU 硬件本身的驱动程序兼容性是一个重要方面。</p>\n<h3>在 Pod 规范中请求 GPU 资源</h3>\n<p>一旦设备插件运行并已向 Kubernetes API 服务器注册了 GPU 资源，您就可以在 Pod 规范中请求 GPU，这很像请求 CPU 或内存。资源名称通常是供应商专有的，对于 NVIDIA GPU，它是 <code>nvidia.com/gpu</code>。</p>\n<p>这里是一个 Deployment 清单的示例片段，它为其容器请求一个 NVIDIA GPU：</p>\n<pre><code class=\"language-yaml\">apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: diffusion-worker\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: diffusion-worker\n  template:\n    metadata:\n      labels:\n        app: diffusion-worker\n    spec:\n      containers:\n      - name: diffusion-container\n        image: your-registry/your-diffusion-app:latest\n        resources:\n          limits:\n            nvidia.com/gpu: 1 # 请求 1 个 NVIDIA GPU\n          requests:\n            nvidia.com/gpu: 1 # 可选，但如果设置了 limits，则建议也设置 requests\n        # ... 其他容器配置 (端口、环境变量等)\n</code></pre>\n<p>当此 Pod 被调度时，Kubernetes 调度器将只考虑拥有至少一个 <code>nvidia.com/gpu</code> 资源且该资源可用且未分配的节点。所选节点上的 Kubelet 通过与设备插件协作，会将一个特定的 GPU 设备分配给容器，并使其在容器环境中可用（通常通过设备挂载）。</p>\n<h3>隔离 GPU 工作负载：标签、污点和容忍度</h3>\n<p>在许多生产环境中，将特定节点专门用于 GPU 工作负载是一种期望的做法，以提升资源利用率并降低成本，并阻止非 GPU 工作负载占用昂贵的 GPU 实例上的资源。Kubernetes 为此提供了多种方式：</p>\n<ol>\n<li>\n<p><strong>节点标签：</strong> 您可以为您的 GPU 节点应用自定义标签。例如：<code>kubectl label node &#x3C;您的 GPU 节点名称> hardware-type=nvidia-gpu</code>。</p>\n</li>\n<li>\n<p><strong>节点选择器/亲和性：</strong> 在您的 Pod 规范中，您可以使用 <code>nodeSelector</code> 或更复杂的 <code>nodeAffinity</code> 规则，以确保您的扩散模型 Pod 只被调度到带有 <code>hardware-type=nvidia-gpu</code> 标签的节点上。</p>\n<pre><code class=\"language-yaml\"># 使用 nodeSelector 的示例\nspec:\n  nodeSelector:\n    hardware-type: nvidia-gpu\n  containers:\n    # ... 容器规范如上\n</code></pre>\n</li>\n<li>\n<p><strong>污点和容忍度：</strong> 为避免非 GPU 工作负载被调度到昂贵的 GPU 节点上，您可以为 GPU 节点“标记 (token)污点”。污点会排斥 Pod，除非 Pod 具有匹配的“容忍度”。</p>\n<ul>\n<li>\n<p>标记 GPU 节点污点：<code>kubectl taint nodes &#x3C;您的 GPU 节点名称> nvidia.com/gpu=present:NoSchedule</code></p>\n</li>\n<li>\n<p>为您的 GPU Pod 规范添加容忍度：</p>\n<pre><code class=\"language-yaml\">spec:\n  tolerations:\n  - \"nvidia.com/gpu\"\n    operator: \"Exists\"\n    effect: \"NoSchedule\"\n  containers:\n    # ... 容器规范如上，包括 GPU 请求\n</code></pre>\n</li>\n</ul>\n</li>\n</ol>\n<p>这种组合确保只有明确请求 GPU <em>并</em> 容忍 <code>nvidia.com/gpu</code> 污点的 Pod 才会被调度到 GPU 节点上。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1k9ywji\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#adb5bd\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n  subgraph cluster_kube {\n    label = \"Kubernetes 控制平面\";\n    bgcolor=\"#e9ecef\";\n    Scheduler [label=\"调度器\"];\n    APIServer [label=\"API 服务器\"];\n  }\n\n  subgraph cluster_nodes {\n    label = \"工作节点\";\n    bgcolor=\"#e9ecef\";\n\n    subgraph cluster_gpu_node {\n        label = \"GPU 节点\\n标签: hardware-type=nvidia-gpu\\n污点: nvidia.com/gpu=present:NoSchedule\";\n        bgcolor=\"#d0bfff\"; // violet shade\n        Kubelet_GPU [label=\"Kubelet\"];\n        DevicePlugin [label=\"NVIDIA 设备插件\", shape=cylinder, color=\"#7048e8\"]; // Darker violet\n        GPU [label=\"GPU 硬件\", shape=component, color=\"#9775fa\"]; // Lighter violet\n        Pod_GPU [label=\"扩散 Pod\\n请求: nvidia.com/gpu: 1\\n容忍: nvidia.com/gpu\", color=\"#7048e8\", fontcolor=\"#ffffff\"]; // Darker violet\n        Kubelet_GPU -> DevicePlugin [label=\"管理\"];\n        DevicePlugin -> GPU [label=\"检测与分配\"];\n        DevicePlugin -> Kubelet_GPU [label=\"报告资源\"];\n        Kubelet_GPU -> Pod_GPU [label=\"分配 GPU\"];\n    }\n\n    subgraph cluster_cpu_node {\n        label = \"CPU 节点\";\n        bgcolor=\"#a5d8ff\"; // blue shade\n        Kubelet_CPU [label=\"Kubelet\"];\n        Pod_CPU [label=\"其他 Pod\", color=\"#1c7ed6\", fontcolor=\"#ffffff\"]; // Darker blue\n        Kubelet_CPU -> Pod_CPU [label=\"管理\"];\n    }\n  }\n\n  Scheduler -> Kubelet_GPU [label=\"分配 GPU Pod（容忍污点，匹配选择器）\"];\n  Scheduler -> Kubelet_CPU [label=\"分配 CPU Pod\"];\n  Kubelet_GPU -> APIServer [label=\"报告状态\"];\n  Kubelet_CPU -> APIServer [label=\"报告状态\"];\n\n  label=\"Kubernetes GPU 节点管理\";\n  fontsize=12;\n  fontcolor=\"#495057\";\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1k9ywji\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图描绘了 Kubernetes 调度器如何根据 GPU 需求、节点标签、污点和容忍度分配 Pod，并由 NVIDIA 设备插件提供支持。</p>\n</blockquote>\n<h3>GPU 节点管理的注意事项</h3>\n<ul>\n<li><strong>驱动一致性：</strong> 请确保主机节点上的 NVIDIA 驱动程序与容器内使用的 CUDA 版本以及设备插件版本兼容。不匹配是导致问题的原因之一。</li>\n<li><strong>资源监控：</strong> 使用与设备插件兼容的工具（例如，使用 <code>dcgm-exporter</code> 的 Prometheus）监控节点上的 GPU 利用率、内存使用情况和温度。这对于识别性能瓶颈和支持自动扩缩容决策很有帮助。</li>\n<li><strong>多实例 GPU (MIG)：</strong> 对于较新的 NVIDIA 架构（如 A100），MIG 支持将单个物理 GPU 划分为多个更小、完全隔离的 GPU 实例。NVIDIA 设备插件支持 MIG，从而实现更细粒度的资源分配，适用于不需要整个 GPU 的工作负载，有望提高利用率并降低成本。配置时需要特定的节点设置和 Pod 规范中相应的资源请求（例如，<code>nvidia.com/mig-1g.5gb: 1</code>）。</li>\n<li><strong>更新与维护：</strong> 更新 GPU 驱动程序或设备插件通常需要仔细协调，可能涉及排空节点，以减少对正在运行的推理 (inference)服务的影响。</li>\n</ul>\n<p>在 Kubernetes 中有效管理 GPU 节点，对于可靠且高效地部署扩散模型来说非常重要。通过使用设备插件、资源请求、标签、污点和容忍度，您可以对调度进行精确控制，以确保您的计算密集型生成工作负载能够获取所需硬件资源，同时优化集群利用率。这为构建可扩展且高效益的推理基础设施创造了条件。</p>",
+  "slug": "managing-gpu-nodes-kubernetes",
+  "updates": [],
+  "references": [
+    {
+      "id": 15124,
+      "title": "Device Plugins",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/",
+      "doi": "",
+      "note": "Kubernetes官方文档，解释了设备插件框架，该框架使Kubernetes能够发现和管理GPU等特定厂商硬件。",
+      "order": 1,
+      "created_at": "2025-09-05T14:36:02.110783Z",
+      "updated_at": "2025-09-10T02:30:02.792820Z"
+    },
+    {
+      "id": 15125,
+      "title": "NVIDIA device plugin for Kubernetes",
+      "author": "NVIDIA Corporation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/NVIDIA/k8s-device-plugin",
+      "doi": "",
+      "note": "NVIDIA Kubernetes设备插件的官方GitHub仓库，提供安装说明、使用详情和源代码。",
+      "order": 2,
+      "created_at": "2025-09-05T14:36:02.154177Z",
+      "updated_at": "2025-09-10T02:30:00.822562Z"
+    },
+    {
+      "id": 15127,
+      "title": "Multi-Instance GPU (MIG) User Guide for Kubernetes",
+      "author": "NVIDIA Corporation",
+      "year": "2024",
+      "publisher": "NVIDIA Corporation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.nvidia.com/datacenter/tesla/mig-user-guide/",
+      "doi": "",
+      "note": "NVIDIA官方用户指南，说明了如何在Kubernetes中配置和使用多实例GPU（MIG）与NVIDIA设备插件，从而实现更精细的GPU资源分配。",
+      "order": 4,
+      "created_at": "2025-09-05T14:36:02.172092Z",
+      "updated_at": "2025-09-10T02:30:11.715577Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,481 @@
+{
+  "id": 219,
+  "title": "专家混合模型：核心思想与实践应用",
+  "meta_title": "专家混合（MoE）模型课程：高级实现",
+  "meta_description": "关于专家混合（MoE）模型的高级课程。学习为大规模MoE模型实现高级路由、分布式训练策略以及高效推理。",
+  "description": "本课程是关于构建和部署专家混合（MoE）模型的技术课程。它详细阐述了MoE架构，从基本数学原理到高级实现策略。您将学习构建、训练和优化稀疏模型，侧重于高级路由算法、分布式训练技术以及大规模应用所需的高效推理方法。本课程内容涵盖MoE层与现代Transformer架构的整合，以及管理其性能的实践考量。",
+  "short_description": "构建、训练和优化稀疏专家混合模型，用于大规模人工智能应用。",
+  "excerpt": "关于实现专家混合（MoE）模型的高级课程。学习为大规模稀疏模型构建高级路由、分布式训练策略以及高效推理。",
+  "prerequisites": "深度学习与Transformer",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "高级MoE实现",
+      "description": "实现用于MoE层的多种路由机制，包括带噪Top-k和Switch式路由。"
+    },
+    {
+      "topic": "大规模训练",
+      "description": "应用专家并行和其他分布式训练技术，有效扩展MoE模型。"
+    },
+    {
+      "topic": "性能优化",
+      "description": "开发并应用负载均衡损失函数，以避免专家塌缩并提升训练稳定性。"
+    },
+    {
+      "topic": "高效推理",
+      "description": "构建优化的推理管线，运用专家卸载和量化等技术用于稀疏模型。"
+    },
+    {
+      "topic": "架构整合",
+      "description": "将MoE层整合到现有Transformer模型中，并分析其性能权衡。"
+    }
+  ],
+  "duration": 16,
+  "slug": "mixture-of-experts-advanced-implementation",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-07-07T16:11:57.858777Z",
+  "updated_at": "2026-10-02T08:19:54.772761Z",
+  "chapters": [
+    {
+      "id": 1232,
+      "title": "专家混合模型的核心原理",
+      "meta_title": "MoE 模型原理：架构与理论",
+      "meta_description": "回顾稀疏门控MoE模型的核心架构，包括门控网络、专家专业化和负载均衡损失。",
+      "number": 1,
+      "slug": "foundations-of-moe-models",
+      "content": "传统上，扩展深度学习模型需要让每个组成部分都变大，这会大大增加计算成本。专家混合 (MoE) 模型提出了一种不同的方法。它们通过引入一组被称为“专家”的专门化子网络来提升模型容量，并动态地将每个输入标记路由到这些专家中的一小部分。这使得参数数量可以大幅增加，同时单次前向传播所需的计算量不会按比例增加。\n\n本章确立了这些稀疏架构的核心原理。我们将首先分析其主要组成部分：学习如何路由输入的**门控网络**，以及发展出专门功能的**专家网络**。然后，我们将分析MoE层的完整数学公式。对于输入 $x$，其输出 $y(x)$ 是专家输出的稀疏加权和：\n\n$$\ny(x) = \\sum_{i=1}^{N} g(x)_i E_i(x)\n$$\n\n在此公式中，$g(x)_i$ 是专家 $i$ 的门控值，$E_i(x)$ 是该专家的输出。你将学会如何实现稀疏性，通常做法是确保对于任何给定输入，大多数 $g(x)_i$ 值都为零。\n\n训练这些模型有一些独特的考量。我们将介绍用于负载均衡的辅助损失函数，这些函数促使标记在所有专家之间均匀分布。这是防止常见训练不稳定现象（如专家崩溃，即少数专家被过度使用而其他专家没有得到训练）的必要方法。最后，本章将通过从头构建一个基本的MoE层来运用这些思想。",
+      "sections": [
+        {
+          "id": 7044,
+          "title": "稀疏门控专家混合架构概述",
+          "meta_title": "稀疏门控专家混合架构概述",
+          "meta_description": "稀疏门控专家混合架构、其组成部分及其在稀疏建模中的作用的技术综述。",
+          "slug": "sparsely-gated-moe-architecture",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7045,
+          "title": "门控网络：公式与作用",
+          "meta_title": "MoE门控网络说明",
+          "meta_description": "了解门控网络将token路由到专家的数学公式和运作方式。",
+          "slug": "gating-network-formulation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7046,
+          "title": "专家网络：专精与容量",
+          "meta_title": "MoE专家网络：专精与容量",
+          "meta_description": "介绍MoE模型中的专家网络如何形成专门的功能并提升模型的整体容量。",
+          "slug": "expert-networks-specialization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7047,
+          "title": "MoE层的数学表述",
+          "meta_title": "MoE层的数学表述",
+          "meta_description": "对完整MoE层的详细数学分解，结合了门控和专家计算。",
+          "slug": "mathematical-formulation-moe-layer",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7048,
+          "title": "负载均衡和辅助损失",
+          "meta_title": "MoE 负载均衡和辅助损失",
+          "meta_description": "了解在训练期间用于促使所有专家之间负载均衡分布的辅助损失函数。",
+          "slug": "load-balancing-auxiliary-losses",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7049,
+          "title": "MoE 训练中的难题：专家退化",
+          "meta_title": "MoE 训练挑战：专家退化",
+          "meta_description": "分析 MoE 模型中的常见训练问题，着重于专家退化现象和路由不稳定性。",
+          "slug": "moe-training-challenges",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7050,
+          "title": "与密集模型扩展的比较",
+          "meta_title": "MoE与密集模型扩展对比",
+          "meta_description": "比较专家混合模型与传统密集模型架构在参数和计算方面的扩展特性。",
+          "slug": "moe-vs-dense-model-scaling",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7051,
+          "title": "动手实践：实现一个基本 MoE 层",
+          "meta_title": "动手实践：在 PyTorch 中实现一个基本 MoE 层",
+          "meta_description": "一个实用指南，介绍如何使用 PyTorch 框架从零开始实现一个可用的混合专家层。",
+          "slug": "hands-on-basic-moe-layer",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1233,
+      "title": "进阶路由机制",
+      "meta_title": "进阶 MoE 路由：Top-k、Switch 和 Soft MoE",
+      "meta_description": "学习实现和分析进阶路由机制，包括噪声 Top-k 门控、基于哈希的路由和 Switch Transformers。",
+      "number": 2,
+      "slug": "advanced-routing-mechanisms",
+      "content": "专家混合模型（MoE）的性能很大程度上取决于其路由机制。该部分负责将每个输入 token 引导至一小部分专家。此路由判定的质量直接影响模型的性能、训练稳定性和计算效率。尽管标准的 Top-k 路由器是一个可行的起点，但它可能导致负载不均衡等问题，例如有些专家持续被过度选用，而另一些则未得到充分使用。\n\n本章介绍一系列进阶路由机制，旨在解决基础门控的局限性。我们将考量不同路由算法之间的权衡，包括它们的计算成本、对负载均衡的影响以及对专家分工的影响。\n\n在本章中，你将学习实现和分析几种重要的路由策略：\n\n*   **噪声 Top-k 门控：** 一种向门控 logits $h(x)$ 引入噪声的技术，以在训练期间改善负载分配。\n*   **Switch Transformers：** 一种通过将每个 token 发送到仅一个专家 ($k=1$) 来简化路由的架构，从而减少通信开销。\n*   **基于哈希的路由：** 一种使用哈希函数进行 token 分配的确定性方法，消除了对学习型门控网络的需要。\n*   **Soft MoE：** 一种完全可微的方法，计算所有专家的加权平均值，创建“软”分配而非硬性离散选择。\n\n我们还将介绍分析路由器决策的方法，以理解专业化是如何形成的。本章最后是实践部分，你将实现这些不同的路由器，以对它们的运作机制和性能特征获得实际理解。",
+      "sections": [
+        {
+          "id": 7052,
+          "title": "Top-k门控及其变体的分析",
+          "meta_title": "MoE中Top-k门控的分析",
+          "meta_description": "对MoE模型中用于专家选择的标准Top-k门控机制及其变体的技术分析。",
+          "slug": "analysis-top-k-gating",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7053,
+          "title": "噪声Top-k门控实现负载均衡",
+          "meta_title": "噪声Top-k门控用于MoE负载均衡",
+          "meta_description": "理解如何通过向Top-k门控函数添加噪声来改进负载均衡和训练稳定性。",
+          "slug": "noisy-top-k-gating",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7054,
+          "title": "基于哈希的确定性选择路由",
+          "meta_title": "MoE模型中的基于哈希路由",
+          "meta_description": "考察基于哈希的路由，作为学习型门控的一种确定性替代方案，用于将令牌分配给专家。",
+          "slug": "hash-based-routing",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7055,
+          "title": "Switch Transformer：简化路由",
+          "meta_title": "Switch Transformer与简化路由",
+          "meta_description": "了解Switch Transformer架构，它通过为每个令牌只选择一个专家来简化路由。",
+          "slug": "switch-transformers-routing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7056,
+          "title": "软MoE：可微分路由",
+          "meta_title": "软MoE：可微分MoE路由",
+          "meta_description": "了解软MoE，一种使用所有专家加权组合来创建完全可微分路由系统的方法。",
+          "slug": "soft-moe-differentiable-routing",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7057,
+          "title": "路由决策与专长化分析",
+          "meta_title": "MoE路由决策分析",
+          "meta_description": "检查和分析路由器输出的方法，以理解训练期间专家专长化如何形成。",
+          "slug": "analyzing-routing-decisions",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7058,
+          "title": "动手实践：实现不同的路由策略",
+          "meta_title": "实践：实现并比较 MoE 路由器",
+          "meta_description": "对多种高级路由算法的实际实现，并比较其性能特点。",
+          "slug": "hands-on-implementing-routing-strategies",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1234,
+      "title": "大规模MoE的训练与优化",
+      "meta_title": "训练与优化大规模MoE模型",
+      "meta_description": "学习MoE的分布式训练技术，包括专家并行化、管理容量因子和微调策略。",
+      "number": 3,
+      "slug": "training-large-scale-moes",
+      "content": "实现混合专家（MoE）层只是问题的一部分。有效训练它，特别是在处理包含数百或数千个专家的模型时，会带来一系列独特的工程难题。标准训练过程对于这些稀疏架构通常不足够，它们需要专用技术来管理庞大的参数数量并保持稳定性。\n\n本章将从架构理论转向训练和优化的实际操作。您将学习从头开始成功训练大规模MoE模型以及微调现有模型所需的方法。\n\n*   **分布式训练：** 我们将介绍专家并行化，这是一种在多个设备上分配专家的技术。您将学习如何将其与数据并行化和模型并行化结合以实现最高效率。\n*   **性能调优：** 我们将分析**容量因子**，这是一个平衡计算负载与令牌损失的重要超参数，以及它对模型性能的直接影响。\n*   **训练稳定性：** 您将学习识别并缓解常见的训练不稳定问题，例如由路由器的$z$-损失引起的问题，这是辅助负载平衡损失函数的一个组成部分。\n*   **精度与内存：** 我们检查混合精度格式的使用，特别是**BFloat16**，以减少内存开销并加速计算，同时不牺牲模型质量。\n*   **微调：** 您将学习有效适应大型预训练MoE模型以用于下游任务的策略，这是一个常见且实用的应用场景。\n\n本章最后将有一个实践练习，您将配置一个分布式训练任务，将这些技术应用于一个大规模MoE模型。",
+      "sections": [
+        {
+          "id": 7059,
+          "title": "分布式训练中的专家并行",
+          "meta_title": "MoE模型训练的专家并行",
+          "meta_description": "了解如何运用专家并行将专家分散到多个设备上，以进行大规模模型训练。",
+          "slug": "expert-parallelism-distributed-training",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7060,
+          "title": "结合模型并行、数据并行与专家并行",
+          "meta_title": "结合MoE并行策略",
+          "meta_description": "结合数据并行、模型并行与专家并行以高效训练超大型专家混合模型的策略。",
+          "slug": "combining-parallelism-strategies",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7061,
+          "title": "容量因子及其对性能的影响",
+          "meta_title": "MoE容量因子与性能",
+          "meta_description": "分析容量因子的作用，它是一个控制每个专家处理多少令牌的缓冲区，并分析其对性能的影响。",
+          "slug": "capacity-factor-performance",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7062,
+          "title": "缓解路由器Z损失不稳的办法",
+          "meta_title": "缓解MoE路由器Z损失不稳",
+          "meta_description": "学习如何稳定路由器的Z损失，它是辅助损失的一个部分，可能引起训练不稳。",
+          "slug": "mitigating-router-z-loss-instability",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7063,
+          "title": "精度及其作用：BFloat16训练",
+          "meta_title": "使用BFloat16精度的MoE训练",
+          "meta_description": "审视BFloat16及其他混合精度格式在减少内存占用和加速MoE训练中的应用。",
+          "slug": "precision-bfloat16-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7064,
+          "title": "预训练MoE模型的微调策略",
+          "meta_title": "预训练MoE模型的微调",
+          "meta_description": "用于在下游任务上有效微调大型预训练专家混合模型的先进策略。",
+          "slug": "fine-tuning-pretrained-moe",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7065,
+          "title": "实践：配置分布式训练作业",
+          "meta_title": "实践：配置分布式MoE训练作业",
+          "meta_description": "一份关于如何使用并行库设置和配置大型MoE模型的分布式训练作业的实用指南。",
+          "slug": "practice-distributed-moe-training",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1235,
+      "title": "高效的MoE模型推理",
+      "meta_title": "高效MoE推理：优化技巧",
+      "meta_description": "掌握MoE模型推理的优化，掌握专家卸载、量化和推测解码等方式的使用。",
+      "number": 4,
+      "slug": "efficient-moe-inference",
+      "content": "训练一个专家混合模型是整个流程的一部分。将这些模型投入生产环境进行推理，会带来一系列特有的难题，这些难题主要与它们巨大的内存占用以及稀疏激活的计算方式有关。尽管MoE模型的稀疏性使其训练计算量（$FLOPs$）相对于参数数量而言容易应对，但其这一特点却也给低延迟服务带来了特殊的挑战。\n\n本章将介绍优化MoE模型推理的实用方法。我们将介绍处理高内存占用的方法，包括将不活跃的专家模型卸载到CPU内存或NVMe中。你将学会如何应用适合稀疏计算的专门批处理策略，通过量化和蒸馏进行模型压缩，并使用推测解码来加快token生成。最终，你将能够为大型稀疏模型搭建一个高效的推理流程。",
+      "sections": [
+        {
+          "id": 7066,
+          "title": "推理面临的困难：内存与延迟",
+          "meta_title": "MoE模型推理中的困难：内存与延迟",
+          "meta_description": "分析与MoE模型推理相关的具体难点，包括高内存需求和稀疏激活造成的延迟。",
+          "slug": "moe-inference-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7067,
+          "title": "专家卸载到 CPU 或 NVMe",
+          "meta_title": "MoE 专家卸载到 CPU/NVMe",
+          "meta_description": "卸载非活跃专家权重到 CPU 内存或 NVMe 等较慢的存储中，以减少 GPU 内存占用的方法。",
+          "slug": "expert-offloading",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7068,
+          "title": "稀疏激活的批处理策略",
+          "meta_title": "MoE推理批处理策略",
+          "meta_description": "了解专门的批处理和令牌调度策略，这些策略旨在处理MoE推理过程中的稀疏激活模式。",
+          "slug": "moe-batching-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7069,
+          "title": "MoE 模型压缩的模型蒸馏",
+          "meta_title": "MoE 模型蒸馏与压缩",
+          "meta_description": "使用知识蒸馏将大型 MoE 模型压缩成更小的密集模型，以实现更高效的部署。",
+          "slug": "moe-model-distillation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7070,
+          "title": "MoE层量化技术",
+          "meta_title": "MoE层的量化",
+          "meta_description": "应用量化方法以减少路由网络和专家网络的内存占用并加速计算。",
+          "slug": "moe-quantization-techniques",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7071,
+          "title": "使用MoE模型进行推测解码",
+          "meta_title": "使用MoE模型进行推测解码",
+          "meta_description": "如何使用小型密集模型协助大型MoE模型进行推测解码以减少推理延迟。",
+          "slug": "speculative-decoding-moe",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7072,
+          "title": "动手实践：构建优化推理管线",
+          "meta_title": "动手实践：构建优化MoE推理管线",
+          "meta_description": "一个实践环节，专注于为稀疏MoE模型构建高效推理服务器，并包含优化方法。",
+          "slug": "hands-on-optimized-moe-inference",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1236,
+      "title": "MoE在现代架构中的应用",
+      "meta_title": "MoE在Transformer架构中的应用",
+      "meta_description": "了解在何处以及如何将MoE层融入Transformer、视觉Transformer和多模态模型以提升性能。",
+      "number": 5,
+      "slug": "integrating-moe-into-architectures",
+      "content": "前几章阐明了单个专家混合层的工作原理。现在，我们将讨论如何将其融入现代神经网络架构，实现其实际应用。MoE最常见的用途是增加模型容量，同时不按比例增加计算开销，这通常通过用MoE层替换标准前馈网络（FFN）来实现。\n\n本章将为这一融入过程提供技术指南。本章将涉及：\n\n*   在Transformer模型中，用稀疏MoE层替换密集型FFN块的具体方法。\n*   架构方面的考虑，包括为实现最佳性能而放置MoE层的频率和深度。\n*   MoE理念在视觉Transformer (ViT)和多模态系统中的适配。\n*   模型参数与计算量（FLOPs）之间平衡关系的定量分析。\n\nMoE的一个主要优势在于将总参数与单次前向传播所需的计算分离。一个MoE模型可能包含 $N$ 个专家，但对于任何给定的词元，门控网络会将其路由到少数 $k$ 个专家子集，其中 $k \\ll N$。因此，总计算开销是 $k$ 的函数，而模型的总参数量是 $N$ 的函数。这种关系可以表示为：\n\n$$\n\\text{Total Parameters} \\propto N \\times \\text{Parameters per Expert}\n$$\n\n$$\n\\text{Computational FLOPs} \\propto k \\times \\text{FLOPs per Expert}\n$$\n\n本章最后会有一个动手练习，你将修改一个标准Transformer实现以使用稀疏MoE层，从而将这些架构理念付诸实践。",
+      "sections": [
+        {
+          "id": 7073,
+          "title": "将FFN替换为Transformer中的MoE层",
+          "meta_title": "将FFN替换为Transformer中的MoE层",
+          "meta_description": "关于在Transformer架构中用MoE层替代标准前馈网络（FFN）模块的指导。",
+          "slug": "replacing-ffn-with-moe",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7074,
+          "title": "MoE 层的位置：频率与部位",
+          "meta_title": "MoE 层的最佳放置",
+          "meta_description": "分析关于 MoE 层应以何种频率和在何种深度放置的架构考量，以获得最佳性能。",
+          "slug": "placement-of-moe-layers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7075,
+          "title": "视觉Transformer (ViT) 中的MoE",
+          "meta_title": "视觉Transformer (ViT) 中的混合专家",
+          "meta_description": "调整并应用混合专家理论到视觉Transformer架构，以完成图像处理任务。",
+          "slug": "moe-in-vision-transformers",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7076,
+          "title": "多模态模型中的MoE",
+          "meta_title": "多模态模型中的专家混合",
+          "meta_description": "考察MoE在一个统一模型中处理不同模态（如图像、文本、音频）的使用。",
+          "slug": "moe-in-multimodal-models",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7077,
+          "title": "架构变体及其特性",
+          "meta_title": "MoE 架构变体：GLaM, ST-MoE",
+          "meta_description": "对值得注意的MoE架构（例如GLaM和ST-MoE）及其独特的架构特性和贡献的介绍。",
+          "slug": "moe-architectural-variants",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7078,
+          "title": "分析参数与FLOPs的权衡",
+          "meta_title": "分析MoE参数与FLOPs的权衡",
+          "meta_description": "定量观察MoE模型如何显著增加参数数量，同时保持计算FLOPs可控。",
+          "slug": "moe-parameter-flops-tradeoffs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7079,
+          "title": "实践：修改Transformer模型以使用MoE",
+          "meta_title": "实践：修改Transformer模型以使用MoE层",
+          "meta_description": "一次动手操作，你将对一个现有的密集型Transformer模型进行修改，以加入稀疏MoE层。",
+          "slug": "practice-modifying-transformer-moe",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

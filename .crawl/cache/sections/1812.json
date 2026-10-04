@@ -1,0 +1,61 @@
+{
+  "id": 1812,
+  "title": "修改现有列",
+  "meta_title": "修改 Pandas DataFrame 列",
+  "meta_description": "执行函数或进行计算以更新现有列中的值。",
+  "content": "<p>修改现有列中的信息是数据准备中一项常见工作。你可能需要根据当前值进行计算、标准化文本格式、更改数据类型，或者执行自定义转换。Pandas为此提供了多种灵活的方法。</p>\n<h3>直接赋值与向量 (vector)化操作</h3>\n<p>修改列的最简单方式通常是通过直接的算术或逻辑运算。由于 Pandas 构建于 NumPy 之上，这些运算通常是向量化 (quantization)的，这意味着它们会逐元素高效地执行，无需显式循环。</p>\n<p>例如，假设你有一个 DataFrame，其中包含摄氏度温度，你想将它们转换为华氏度。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 示例 DataFrame\ndata = {'City': ['London', 'Paris', 'Tokyo'],\n        'Temp_C': [12, 15, 8]}\ndf = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(df)\n\n# 在新列中将 'Temp_C' 列转换为华氏度\ndf['Temp_F'] = df['Temp_C'] * 9/5 + 32\n\nprint(\"\\n已添加华氏度列的 DataFrame:\")\nprint(df)\n\n# 或者，覆盖原始列（请谨慎使用）\n# df['Temp_C'] = df['Temp_C'] * 9/5 + 32\n# df = df.rename(columns={'Temp_C': 'Temp_F'}) # 如果覆盖，则重命名\n</code></pre>\n<p>这种向量化方式适用于加法（<code>+</code>）、减法（<code>-</code>）、乘法（<code>*</code>）、除法（<code>/</code>）、幂运算（<code>**</code>）以及其他标准数学运算。</p>\n<h3>使用 <code>apply()</code> 方法执行自定义函数</h3>\n<p>有时，你需要的转换比简单的算术更复杂。你可能有一个自定义函数，想将其执行到列（Pandas Series）中的每个元素。<code>apply()</code> 方法在此处很有用。</p>\n<p>假设我们想将温度归类为'Cold'（冷）、'Mild'（温和）或'Warm'（暖）。</p>\n<pre><code class=\"language-python\"># 定义一个函数来分类温度\ndef categorize_temp(temp):\n  if temp &#x3C; 10:\n    return 'Cold'\n  elif 10 &#x3C;= temp &#x3C; 20:\n    return 'Mild'\n  else:\n    return 'Warm'\n\n# 将此函数执行到 'Temp_C' 列\ndf['Temp_Category'] = df['Temp_C'].apply(categorize_temp)\n\nprint(\"\\n带有温度类别的 DataFrame:\")\nprint(df)\n</code></pre>\n<p>你也可以将 <code>apply()</code> 与 lambda 函数结合使用，进行更简洁的一次性任务：</p>\n<pre><code class=\"language-python\"># 示例：使用 lambda 函数计算温度的平方\ndf['Temp_C_Squared'] = df['Temp_C'].apply(lambda x: x**2)\n\nprint(\"\\n带有温度平方的 DataFrame:\")\nprint(df)\n</code></pre>\n<p><code>apply()</code> 方法很灵活，但如果存在针对你任务的向量 (vector)化操作或更专门的函数，有时它的速度会比这些方法慢。</p>\n<h3>使用 <code>replace()</code> 替换值</h3>\n<p>如果你需要替换列中的特定值，<code>replace()</code> 方法会非常实用。你可以替换单个值，或提供一个字典来同时替换多个值。</p>\n<pre><code class=\"language-python\"># 带有分类数据的示例 DataFrame\ndata_cat = {'ID': [101, 102, 103, 104],\n            'Grade': ['A', 'B', 'C', 'B'],\n            'Status': ['Pass', 'Pass', 'Fail', 'Pass']}\ndf_cat = pd.DataFrame(data_cat)\n\nprint(\"原始分类 DataFrame:\")\nprint(df_cat)\n\n# 在 'Status' 列中将 'Fail' 替换为 'Did Not Pass'\ndf_cat['Status'] = df_cat['Status'].replace('Fail', 'Did Not Pass')\n\nprint(\"\\n替换 'Fail' 后的 DataFrame:\")\nprint(df_cat)\n\n# 使用字典替换多个等级\ngrade_map = {'A': 'Excellent', 'B': 'Good', 'C': 'Fair'}\ndf_cat['Grade_Desc'] = df_cat['Grade'].replace(grade_map)\n\nprint(\"\\n替换多个等级后的 DataFrame:\")\nprint(df_cat)\n</code></pre>\n<h3>使用 <code>map()</code> 进行值替换</h3>\n<p>与 <code>replace()</code> 相似，Series 上的 <code>map()</code> 方法可以用来根据字典（或另一个 Series，或一个函数）替换每个值。当你希望根据预设的对应关系将<em>所有</em>现有值映射到新值时，它会特别有用。在映射字典中找不到的值将变为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>。</p>\n<pre><code class=\"language-python\"># 示例 Series\ns = pd.Series(['cat', 'dog', 'rabbit', 'cat'])\nprint(\"原始 Series:\")\nprint(s)\n\n# 将动物名称映射到声音\nanimal_sounds = {'cat': 'meow', 'dog': 'bark'}\nsounds = s.map(animal_sounds)\n\nprint(\"\\n映射后的 Series（未知值变为 NaN）：\")\nprint(sounds)\n</code></pre>\n<p><code>replace()</code> 针对要更改的个别值，而 <code>map()</code> 常用于基于查找的全面转换。</p>\n<h3>使用 <code>.str</code> 进行字符串操作</h3>\n<p>Pandas 通过包含字符串（对象 dtype）的 Series 上的 <code>.str</code> 访问器，提供了一套强大的字符串处理方法。这让你能轻松地对整个列执行向量 (vector)化的常见字符串操作。</p>\n<pre><code class=\"language-python\"># 带有文本数据的示例 DataFrame\ndata_text = {'Product': ['Apple iPhone 14', 'SAMSUNG GALAXY S23', 'google pixel 7'],\n             'Code': ['APL-14', 'SAM-S23', 'GGL-PX7']}\ndf_text = pd.DataFrame(data_text)\n\nprint(\"原始文本 DataFrame:\")\nprint(df_text)\n\n# 将 'Product' 名称转换为小写\ndf_text['Product_Lower'] = df_text['Product'].str.lower()\n\n# 将 'Code' 分割成 'Brand' 和 'Model'\ndf_text[['Brand_Code', 'Model_Code']] = df_text['Code'].str.split('-', expand=True)\n\n# 检查 'Product' 是否包含 'galaxy' (不区分大小写)\ndf_text['Has_Galaxy'] = df_text['Product'].str.contains('GALAXY', case=False)\n\nprint(\"\\n字符串操作后的 DataFrame:\")\nprint(df_text)\n</code></pre>\n<p>其他常见的 <code>.str</code> 方法包括 <code>startswith()</code>、<code>endswith()</code>、<code>replace()</code>、<code>len()</code>、<code>strip()</code>、<code>get()</code> 等等。它们在清理和标准化文本数据方面非常实用。</p>\n<h3>使用 <code>astype()</code> 更改列数据类型</h3>\n<p>有时，数据加载时的数据类型不正确。例如，数字可能被读取为字符串（对象类型），或者在处理缺失值后你可能想将浮点数转换为整数。<code>astype()</code> 方法可以更改列的数据类型。</p>\n<pre><code class=\"language-python\"># 带有混合类型的示例 DataFrame\ndata_types = {'ID': ['101', '102', '103'],\n              'Value': [20.5, 15.0, 33.8],\n              'Category': ['X', 'Y', 'X']}\ndf_types = pd.DataFrame(data_types)\n\nprint(\"带有数据类型的原始 DataFrame:\")\nprint(df_types)\nprint(df_types.dtypes)\n\n# 将 'ID' 从对象（字符串）转换为整数\ndf_types['ID'] = df_types['ID'].astype(int)\n\n# 将 'Value' 从浮点数转换为整数（截断小数部分）\ndf_types['Value_Int'] = df_types['Value'].astype(int)\n\n# 将 'Category' 转换为更节省内存的 'category' 数据类型\ndf_types['Category'] = df_types['Category'].astype('category')\n\nprint(\"\\n更改数据类型后的 DataFrame:\")\nprint(df_types)\nprint(df_types.dtypes)\n</code></pre>\n<p>更改类型时请务必小心。如果转换不可行（例如，尝试将 'hello' 这样的字符串转换为整数），Pandas 将引发错误。在使用 <code>astype()</code> 之前，请确认你的数据适合目标类型。对于涉及潜在错误或缺失值的转换，你可能需要先整理数据，或使用像 <code>pd.to_numeric(errors='coerce')</code> 这样的函数，它会将无法转换的值变为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>。</p>\n<p>修改现有列是数据整理的核心部分。通过结合直接操作、<code>apply()</code>、<code>replace()</code>、字符串方法和类型转换，你可以很好地调整数据，使其符合分析所需的格式。</p>",
+  "slug": "modifying-existing-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 5385,
+      "title": "pandas User Guide",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html",
+      "doi": "",
+      "note": "pandas的官方文档，涵盖了基本功能、数据结构以及多种数据操作方法，包括直接赋值、apply()、replace()、map()、字符串方法和类型转换。",
+      "order": 1,
+      "created_at": "2025-09-04T16:59:52.297883Z",
+      "updated_at": "2025-09-08T02:36:09.119027Z"
+    },
+    {
+      "id": 5386,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "由pandas创建者撰写的权威指南，提供了使用pandas进行数据整理和操作的广泛解释和实用示例，与修改现有列直接相关。",
+      "order": 2,
+      "created_at": "2025-09-04T16:59:52.308803Z",
+      "updated_at": "2025-09-08T02:36:14.381815Z"
+    },
+    {
+      "id": 5387,
+      "title": "Broadcasting",
+      "author": "The NumPy community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.broadcasting.html",
+      "doi": "",
+      "note": "解释了NumPy中广播的基本概念，这是Pandas用于高效元素级列修改的矢量化操作背后的机制。",
+      "order": 3,
+      "created_at": "2025-09-04T16:59:52.311396Z",
+      "updated_at": "2025-09-08T02:36:07.352384Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

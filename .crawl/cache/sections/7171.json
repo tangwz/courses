@@ -1,0 +1,61 @@
+{
+  "id": 7171,
+  "title": "为什么机器学习需要 MLOps",
+  "meta_title": "为什么 MLOps 很重要？| MLOps 的优势",
+  "meta_description": "了解 MLOps 对于可靠、高效地将机器学习项目从原型扩展到生产环境的重要性。",
+  "content": "<p>在 Jupyter notebook 中表现出色的机器学习 (machine learning)模型只是一个好的开始，但只有在生产系统中运行，它才能产生实际的业务价值。开发环境与实际应用之间的这种差距，往往是许多机器学习项目停滞或失败的地方。臭名昭著的“在我的机器上能运行”问题在机器学习中被放大，因为这里的“机器”不仅包括代码，还包括用于训练模型的特定数据集、库和配置。</p>\n<p>MLOps 是连接这一差距的学科。它提供的工具和实践可以解决将机器学习视为工程职能而非纯研究活动时出现的各种挑战。让我们看看为什么这种操作上的严谨性如此必要。</p>\n<h3>机器学习 (machine learning)系统的组成部分</h3>\n<p>在传统的软件开发中，主要管理的对象是代码。而在机器学习中，系统由三个同等重要的部分组成：代码、数据和模型本身。其中任何一个环节的变化都可能显著改变系统的行为，且通常以出人意料的方式发生。MLOps 提供了一套框架，用同样的规范来管理这三个要素。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xglpi9\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\", fontname=\"sans-serif\"]; edge [color=\"#495057\"]; \"机器学习系统\" [fillcolor=\"#37b24d\", color=\"#37b24d\", fontcolor=\"white\"]; 代码 -> \"机器学习系统\"; 数据 -> \"机器学习系统\"; 模型 -> \"机器学习系统\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xglpi9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>机器学习系统是代码、数据和已训练模型的产物。必须管理好这三者以确保可靠性。</p>\n</blockquote>\n<h3>模型退化的隐形失效</h3>\n<p>与大多数传统软件不同，部署后的机器学习 (machine learning)模型即使代码没有任何改动，也可能开始失效。这种现象被称为<strong>模型退化</strong>或<strong>概念漂移</strong>，当模型在生产环境中遇到的实际数据统计特性与训练数据发生偏离时，就会发生这种情况。</p>\n<p>例如，根据去年的数据训练的客户流失预测模型，由于客户行为、市场状况或产品功能的改变，在今天的表现可能会很差。这种性能下降通常是隐形的；应用程序不会崩溃，但其预测会变得不够准确，从而随时间推移逐渐失去效用。MLOps 建立了监控和自动再训练流水线，用于检测并应对这种退化。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-w15g4n\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"模型性能随时间的退化情况\"},\"xaxis\":{\"title\":{\"text\":\"部署后的时间\"}},\"yaxis\":{\"title\":{\"text\":\"模型准确率\"}, \"range\":[0.7, 1.0]}, \"font\":{\"family\":\"sans-serif\"}, \"margin\":{\"t\":40, \"b\":40}},\"data\":[{\"x\":[\"第1周\", \"第4周\", \"第8周\", \"第12周\", \"第16周\"],\"y\":[0.95, 0.93, 0.88, 0.82, 0.79],\"type\":\"scatter\",\"mode\":\"lines+markers\",\"name\":\"准确率\",\"line\":{\"color\":\"#f03e3e\"}, \"marker\":{\"color\":\"#fa5252\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-w15g4n\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>如果不进行再训练，随着生产数据与原始训练数据的偏离，模型的准确率通常会下降。</p>\n</blockquote>\n<h3>对可复现性的需求</h3>\n<p>想象一下，如果你被要求调试为什么你的模型在六个月前做出了某个错误的预测。为了调查原因，你需要重新构建当时系统的完全一致的状态。这意味着需要访问：</p>\n<ul>\n<li>训练代码的准确版本。</li>\n<li>用于训练的准确数据集。</li>\n<li>准确的模型产物及其超参数 (parameter) (hyperparameter)。</li>\n<li>所有软件库和依赖项的版本。</li>\n</ul>\n<p>如果没有系统化的方法，重新组合出这种状态几乎是不可能的。<strong>可复现性</strong>是指能够可靠地重新创建模型及其结果的能力。这对于调试、合规性监管、审计以及建立对机器学习 (machine learning)系统的信任都必不可少。MLOps 通过对所有组件进行版本控制来实现这一点。</p>\n<h3>管理实验周期</h3>\n<p>开发一个好的机器学习 (machine learning)模型很少是一个线性过程。它是一个循环往复的实验周期。数据科学家会测试数据特征、算法和调优参数 (parameter)的无数种组合，以找到满足性能指标的模型。</p>\n<p>如果没有结构化的流程，这可能会导致混乱。我们将很难追踪哪些实验是成功的，使用了哪些参数，或者为什么一个模型比另一个模型表现更好。MLOps 引入了<strong>实验追踪</strong>实践，允许团队以集中且系统的方式记录、比较和管理实验结果。这使原本可能杂乱的研究过程变成了一个有组织且可审计的工作流。</p>\n<h3>消除团队间的隔阂</h3>\n<p>在许多组织中，数据科学家和 IT 运维团队在各自独立的孤岛中工作。数据科学家专注于在研究环境中构建模型，而运维团队负责部署和维护稳定的基础设施。这经常会产生摩擦，因为在孤立环境中开发的模型往往无法满足生产环境的操作要求。</p>\n<p>MLOps 创建了一个共享的框架、语言和自动化流水线，将这两个世界连接起来。它培养了一种协作文化，让数据科学家能够了解操作层面的限制，而运维团队也能理解机器学习 (machine learning)模型独特的生命周期。这种整合对于将模型顺利且高效地从原型推向生产至关重要。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1eymlu5\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\"]; subgraph cluster_0 { label = \"孤岛式方法\"; color=\"#f03e3e\"; fontcolor=\"#f03e3e\"; \"数据科学\" [fillcolor=\"#a5d8ff\"]; \"运维\" [fillcolor=\"#a5d8ff\"]; \"数据科学\" -> \"运维\" [label=\"  模型交付  \", color=\"#f03e3e\", fontcolor=\"#f03e3e\", style=dashed, arrowhead=normal]; } subgraph cluster_1 { label = \"集成式 MLOps 方法\"; color=\"#37b24d\"; fontcolor=\"#37b24d\"; \"数据科学团队\" [fillcolor=\"#b2f2bb\"]; \"运维团队\" [fillcolor=\"#b2f2bb\"]; \"MLOps 流水线\" [fillcolor=\"#96f2d7\", shape=cylinder]; \"数据科学团队\" -> \"MLOps 流水线\" [dir=both]; \"运维团队\" -> \"MLOps 流水线\" [dir=both]; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1eymlu5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>MLOps 用集成的自动化流水线取代了脱节的交付，统一了开发与运维。</p>\n</blockquote>\n<p>总而言之，MLOps 是必不可少的，因为它将机器学习从手工制作转变为可靠且可扩展的工程学科。它提供了克服构建和维护数据学习型软件系统挑战所需的结构和自动化手段。如果没有这些实践，即使是最准确的模型也面临着仅作为孤立实验的风险，永远无法实现其全部潜在价值。</p>",
+  "slug": "why-mlops-is-necessary",
+  "updates": [],
+  "references": [
+    {
+      "id": 19743,
+      "title": "Hidden Technical Debt in Machine Learning Systems",
+      "author": "D. Sculley, Gary Holt, Daniel Golovin, Eugene Davydov, Todd Phillips, Dietmar Ebner, Vinay Chaudhary, Michael Young, Jean-François Crespo, Dan Dennison",
+      "year": "2015",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems 28",
+      "volume": "28",
+      "pages": "2503-2511",
+      "url": "http://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf",
+      "doi": "",
+      "note": "这篇基础性论文讨论了机器学习系统中常被忽视的工程和运营挑战，强调了模型开发之外对健壮实践的需求。",
+      "order": 1,
+      "created_at": "2025-09-06T13:14:28.988640Z",
+      "updated_at": "2025-09-10T04:53:09.275775Z"
+    },
+    {
+      "id": 19744,
+      "title": "Engineering MLOps: From Model to Production",
+      "author": "Emmanuel Raj Lakshmanan, Anurag Singh",
+      "year": "2022",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/engineering-mlops",
+      "doi": "",
+      "note": "一本关于在生产环境中构建和维护机器学习系统的实用指南，涵盖从实验到部署和监控的MLOps完整生命周期。",
+      "order": 2,
+      "created_at": "2025-09-06T13:14:28.995970Z",
+      "updated_at": "2025-09-10T04:53:05.541084Z"
+    },
+    {
+      "id": 19746,
+      "title": "MLOps: A Guide to Production Machine Learning",
+      "author": "Google Cloud",
+      "year": "2021",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning",
+      "doi": "",
+      "note": "这份来自行业主要参与者的权威指南详细介绍了MLOps的原则和实践，用于构建稳健和可扩展的机器学习系统。",
+      "order": 4,
+      "created_at": "2025-09-06T13:14:29.004823Z",
+      "updated_at": "2025-09-10T04:53:03.820048Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

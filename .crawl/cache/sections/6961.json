@@ -1,0 +1,61 @@
+{
+  "id": 6961,
+  "title": "人工智能工作负载概览",
+  "meta_title": "人工智能工作负载：训练与推理的对比",
+  "meta_description": "了解人工智能训练与推理工作负载之间的区别及其各自的计算需求。",
+  "content": "<p>在选择硬件或配置云实例之前，您必须首先了解您希望它完成的工作性质。在人工智能领域，这项工作分为两种主要且本质上不同的工作负载类型：<strong>训练</strong>和<strong>推理 (inference)</strong>。尽管它们都涉及神经网络 (neural network)和数据，但它们的计算模式、资源需求和性能目标却有所不同。掌握这种区别是构建高效且经济的基础设施的第一步。</p>\n<h3>训练阶段：塑造模型</h3>\n<p>训练是教授机器学习 (machine learning)模型的过程。就像学生学习教科书一样，模型通过处理大量数据集并调整其内部参数 (parameter)来最大程度地减少预测误差。这是一个迭代的、计算量大的且通常耗时的过程。</p>\n<p>大多数深度学习 (deep learning)训练的核心是一系列矩阵运算。神经网络 (neural network)的运作涉及一个正向传播过程，其中输入数据通过网络生成预测；以及一个反向传播 (backpropagation)过程（反向传播），其中模型计算其预测中的误差并使用该误差更新其参数或权重 (weight)。这个循环会重复进行，通常针对数百万或数十亿个样本，经历许多次迭代，称为“纪元”（epochs）。</p>\n<p>训练的计算特点如下：</p>\n<ul>\n<li><strong>高并行度：</strong> 单个训练步骤涉及数千或数百万次独立的计算，最显著的是矩阵乘法 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mo>=</mo><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">C = A \\cdot B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>)。这种工作负载非常适合图形处理单元（GPU）的架构，GPU包含数千个核心，旨在同时对不同数据执行相同的指令。</li>\n<li><strong>大数据量和模型大小：</strong> 训练需要将模型的参数、反向传播过程中计算的梯度以及批量的训练数据保存在内存中。对于现代语言模型或高分辨率计算机视觉模型等大型模型，这可能需要数十甚至数百GB的高速内存（GPU上的显存 (VRAM)）。</li>\n<li><strong>迭代性与长时间运行：</strong> 单次训练运行可能持续数小时、数天甚至数周。目标是实现模型尽可能高的准确率，因此总训练时间是一个重要指标。基础设施必须稳定并具备持久性。</li>\n<li><strong>高吞吐量 (throughput)：</strong> 在训练过程中，目标是在最短的时间内处理尽可能多的数据。这意味着需要优化整个流程，从快速数据存储和加载到处理器上的高效计算，以最大化数据吞吐量。</li>\n</ul>\n<h3>推理 (inference)阶段：模型投入使用</h3>\n<p>推理是使用经过充分训练的模型对新的、未见过的数据进行预测的过程。一旦模型训练完成，其参数 (parameter)就被固定。它不再学习，而是运用所学知识。这相当于学生完成学业后参加考试。</p>\n<p>推理工作负载包含一次通过网络的正向传播。一个输入，例如图像或一行文本，提供给模型，模型随后执行计算并输出结果，例如对象分类或语言翻译。</p>\n<p>推理的计算特点如下：</p>\n<ul>\n<li><strong>低延迟：</strong> 对于许多应用，特别是面向用户的应用，预测必须几乎即时返回。用户等待产品推荐或自动驾驶汽车识别行人时，无法容忍长时间的延迟。获得单个预测所需的时间（延迟）通常是最重要的性能指标。</li>\n<li><strong>高吞吐量 (throughput)（并发请求）：</strong> 一个已部署的模型可能需要同时为数千名用户提供预测。系统必须能够处理大量并发、独立的请求，这是一个称为吞吐量的指标。</li>\n<li><strong>计算效率：</strong> 与训练不同，推理不涉及反向传播 (backpropagation)。它是一个单一的、计算量较小的传播。尽管GPU仍然非常有效，但功能强大的CPU或专门的、更小的加速器通常是更具成本效益的选择，特别是当延迟要求不在个位数毫秒范围时。</li>\n<li><strong>部署灵活性：</strong> 推理可以在任何地方发生：在大型数据中心、本地服务器，甚至在智能手机或传感器等小型边缘设备上。这要求模型针对不同的硬件和功耗限制进行优化。</li>\n</ul>\n<h3>两种工作负载的区别</h3>\n<p>下图展示了训练和推理 (inference)各自不同的流程和优先事项。训练是一个循环的、高负荷的过程，侧重于模型优化；而推理是一个线性的、轻量级的过程，侧重于速度和效率。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xwj83v\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Inter\", bgcolor=\"transparent\", compound=true];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Inter\", color=\"#ced4da\", fillcolor=\"#f8f9fa\"];\n    edge [fontname=\"Inter\", color=\"#495057\"];\n\n    subgraph cluster_training {\n        label = \"训练工作负载\";\n        style=\"rounded\";\n        bgcolor=\"#fff4e6\";\n        fontcolor=\"#495057\";\n        node [fillcolor=\"#ffd8a8\"];\n        edge [color=\"#fd7e14\"];\n\n        train_data [label=\"大型数据集\"];\n        initial_model [label=\"模型（初始权重）\"];\n        train_compute [label=\"计算\\n(大规模并行)\\nGPU密集型\", shape=cylinder, fillcolor=\"#ffc9c9\"];\n        optimizer [label=\"优化器\\n(反向传播)\", shape=cds, fillcolor=\"#ffc9c9\"];\n        final_model [label=\"已训练模型\\n(最终权重)\", fillcolor=\"#b2f2bb\", color=\"#37b24d\", style=\"rounded,filled\"];\n\n        train_data -> train_compute;\n        initial_model -> train_compute [lhead=cluster_training, label=\" 开始\"];\n        train_compute -> optimizer;\n        optimizer -> train_compute [label=\" 迭代与优化 (纪元)\", style=dashed, constraint=false];\n        optimizer -> final_model [ltail=cluster_training, label=\" 完成\"];\n    }\n\n    subgraph cluster_inference {\n        label = \"推理工作负载\";\n        style=\"rounded\";\n        bgcolor=\"#e7f5ff\";\n        fontcolor=\"#495057\";\n        node [fillcolor=\"#a5d8ff\"];\n        edge [color=\"#1c7ed6\"];\n\n        new_data [label=\"新数据点\"];\n        trained_model_inf [label=\"已训练模型\\n(固定权重)\", fillcolor=\"#b2f2bb\", color=\"#37b24d\", style=\"rounded,filled\"];\n        inf_compute [label=\"计算\\n(正向传播)\\n延迟敏感\", shape=cylinder, fillcolor=\"#d0bfff\"];\n        prediction [label=\"预测\", shape=ellipse];\n\n        new_data -> inf_compute;\n        trained_model_inf -> inf_compute;\n        inf_compute -> prediction;\n    }\n\n    final_model -> trained_model_inf [style=invis]; // 用于布局\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xwj83v\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>两种不同的人工智能工作负载。训练是一个迭代循环，侧重于产生高质量模型。推理是从新数据到使用已训练模型进行预测的直接路径。</p>\n</blockquote>\n<p>这些区别直接决定了您的基础设施选择。专为快速训练实验而构建的系统将优先考虑配备高速互连的强大多GPU服务器。相反，为大规模经济高效推理而设计的基础设施可能使用一组小型CPU实例或专用推理芯片。理解您正在为哪种工作负载进行优化，是所有其他基础设施决策的依据。</p>",
+  "slug": "introduction-to-ai-workloads",
+  "updates": [],
+  "references": [
+    {
+      "id": 20265,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "这本综合性教材提供了深度学习的数学和概念基础，包括对神经网络架构、训练算法（如反向传播）以及模型训练和推理之间区别的详细解释。",
+      "order": 1,
+      "created_at": "2025-09-06T13:59:28.039828Z",
+      "updated_at": "2025-09-11T03:32:31.911498Z"
+    },
+    {
+      "id": 20267,
+      "title": "MLOps Engineering at Scale",
+      "author": "Carl Osipov",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFV2wqVaUe0u2_3wo560qN1-1_h4qx1IABwZa2_A8h4_44dv9xWzMD7gZBGvh8AxQz-ygFqXyhgG7YrGQEwR6rf6Abt8-Ug80fRDJCRhiQ4xBvcChsEdQNllp_L8mdpFhC8-wJ_n_wGs9X9dbKGuW37z-GEGG4KDGkCFlKwMwzj8G2l",
+      "doi": "",
+      "note": "为设计和管理生产中的机器学习系统提供实用指导，包括构建优化AI工作负载训练和推理阶段基础设施的架构考量。",
+      "order": 3,
+      "created_at": "2025-09-06T13:59:28.056727Z",
+      "updated_at": "2025-09-11T03:32:47.626340Z"
+    },
+    {
+      "id": 20268,
+      "title": "CS230: Deep Learning",
+      "author": "Andrew Ng, Kian Katanforoosh",
+      "year": "2024",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs230.stanford.edu/",
+      "doi": "",
+      "note": "这门备受推崇的斯坦福大学课程提供了全面的深度学习材料，包括区分AI模型训练和推理计算需求及硬件要求的讲座和资源。",
+      "order": 4,
+      "created_at": "2025-09-06T13:59:28.060838Z",
+      "updated_at": "2025-09-11T03:32:35.731160Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

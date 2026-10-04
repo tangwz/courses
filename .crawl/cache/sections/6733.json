@@ -1,0 +1,45 @@
+{
+  "id": 6733,
+  "title": "智能体系统中AI规划概述",
+  "meta_title": "智能体AI规划要点",
+  "meta_description": "了解AI规划的要点及其与创建自主智能体系统的关联性。",
+  "content": "<p>为有效处理复杂、多步骤的目标，AI智能体需要做的不仅仅是对即时输入做出反应。它们必须具备预判、制定策略和规划行动序列的能力。这种前瞻性和系统性方法通过<strong>AI规划</strong>来实现。智能体系统中的规划，特别是在基于大型语言模型（LLM）构建的系统中，是指智能体确定行动方案以从初始状态过渡到期望目标状态的过程。这比简单的指令执行有了显著提升；它赋予了智能体在达成目标方面一定程度的自主性。</p>\n<p>AI智能体规划的重要性不言而喻。设想一个智能体，任务是组织完整的旅行行程，包括航班、住宿和活动，同时要遵守预算和特定偏好。一个纯粹的反应型智能体将会遇到困难，很可能在海量的独立查询和工具使用中迷失，缺乏连贯的策略。然而，一个规划型智能体可以把这个大目标分解成可管理的子目标（例如，查找航班，然后预订酒店，再研究活动），考虑依赖关系（例如，在预订酒店前预订特定日期的航班），并且在计划某一部分出现问题时进行调整。规划使智能体能够处理不确定性，高效管理资源（例如API调用限制或计算开销），并最终实现更精细的成果。</p>\n<p>那么，我们如何让一个主要用于生成文本的LLM进行这种规划呢？这就是提示工程 (prompt engineering)发挥核心作用的地方。尽管LLM本身不像传统AI系统那样具备经典的“规划算法”，但我们可以通过精心构建的提示来引导其推理 (inference)能力，以模拟规划过程。您的提示将用于：</p>\n<ol>\n<li><strong>明确定义总体目标</strong>：成功是什么样子的？</li>\n<li><strong>提供必要的背景信息</strong>：这包括限制条件、偏好、可用工具以及关于当前情况的相关信息。</li>\n<li><strong>指导智能体如何进行规划</strong>：这可能涉及要求它“逐步思考”、“创建任务列表”或“考虑可能的障碍”。</li>\n<li><strong>指定期望的规划输出格式</strong>：结构化的规划对于智能体（以及您，开发者）来说更容易遵循和管理。</li>\n</ol>\n<p>实质上，您正在使用提示来引导LLM的生成能力，以产生连贯且可执行的计划。智能体的“规划模块”，通常是一个响应这些专门提示的LLM，它接收一个高层次的目标并制定一个结构化的操作序列。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-j34mu\" \n              data-graph-definition='digraph AI_Planning_Flow {\n    rankdir=LR;\n    graph [fontname=\"sans-serif\", bgcolor=\"transparent\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#212529\"];\n    edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n    Goal [label=\"已定义的目标\\n(例如，&#39;组织一场网络研讨会&#39;)\", fillcolor=\"#a5d8ff\"];\n    Agent [label=\"智能体的规划能力\\n(由提示引导的LLM)\", fillcolor=\"#ffe066\", shape=ellipse];\n    Plan [label=\"生成的计划\\n(1. 选择主题和演讲者\\n2. 确定日期和平台\\n3. 宣传活动\\n4. 进行网络研讨会)\", fillcolor=\"#96f2d7\", peripheries=2];\n    Execution [label=\"任务执行\", fillcolor=\"#b2f2bb\", shape=parallelogram];\n\n    Goal -> Agent [label=\"提供目标\"];\n    Agent -> Plan [label=\"制定\"];\n    Plan -> Execution [label=\"指导\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-j34mu\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图说明了大致流程，其中已定义的目标由智能体的规划能力处理，这种能力受提示工程引导，以生成可执行的计划，该计划随后指导任务执行。</p>\n</blockquote>\n<p>从提示智能体的角度来看，规划问题的核心要素通常包括理解或定义：</p>\n<ul>\n<li><strong>初始状态</strong>：智能体当前可用的情况或信息。</li>\n<li><strong>目标状态</strong>：期望的结果，在提示中清晰表达。</li>\n<li><strong>可用行动或工具</strong>：智能体可以执行的操作集，LLM需要了解这些以便将其纳入规划。</li>\n<li><strong>规划本身</strong>：智能体设计的所选行动或子任务序列。</li>\n</ul>\n<p>在本章中，我们将审视特定的提示工程技术，以影响此规划活动的每个阶段。您将学习如何精心制作提示，帮助智能体明确和优化目标，将复杂问题分解为更直接的步骤，有效整合限制，甚至在情况变化时进行迭代再规划。了解AI规划的这些根本要点是构建更强大、更自主的智能体系统的第一步。后续章节将提供实用的策略和示例，通过精确的提示设计来达成这些结果。</p>",
+  "slug": "introduction-ai-planning-agent-systems",
+  "updates": [],
+  "references": [
+    {
+      "id": 18032,
+      "title": "Artificial Intelligence: A Modern Approach",
+      "author": "Stuart Russell and Peter Norvig",
+      "year": "2020",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aima.cs.berkeley.edu/",
+      "doi": "",
+      "note": "这本经典教科书提供了AI规划算法、代理架构和问题解决策略的基础知识，对于理解代理规划的理论基础至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T12:15:59.150976Z",
+      "updated_at": "2025-09-11T08:17:34.380379Z"
+    },
+    {
+      "id": 18033,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "35",
+      "pages": "24824-24837",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "这篇开创性论文介绍了“思维链”提示方法，旨在引导大型语言模型进行多步骤推理，这与指导LLM制定结构化计划直接相关。",
+      "order": 2,
+      "created_at": "2025-09-06T12:15:59.159015Z",
+      "updated_at": "2025-09-11T08:18:20.786838Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

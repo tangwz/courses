@@ -1,0 +1,45 @@
+{
+  "id": 1629,
+  "title": "SQL JOINs 简介",
+  "meta_title": "SQL JOIN 操作简介",
+  "meta_description": "概述不同 JOIN 类型及其在组合表数据中的作用。",
+  "content": "<p>关系数据库中的数据通常分布在多个表中，以保持组织性和减少冗余。例如，您可能有一个表列出客户详情，而另一个表列出这些客户下的订单。为了分析客户的订单模式，您需要一种方法来关联这两个表中的信息。SQL 为此提供了一个强大的机制：<code>JOIN</code> 操作。</p>\n<p>SQL 中的 <code>JOIN</code> 子句用于根据表之间相关列的值来组合来自两个或更多表的行。可以将其视为水平地拼接表，其中特定列中的值相匹配。这种关系通常通过使用主键和外键来建立，它们充当表之间的链接，确保数据的完整性。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1azksv0\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=none, margin=0];\n  tbl1 [label=<\n    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n      <TR><TD COLSPAN=\"2\" BGCOLOR=\"#a5d8ff\">客户</TD></TR>\n      <TR><TD BGCOLOR=\"#dee2e6\">客户ID (主键)</TD><TD>姓名</TD></TR>\n      <TR><TD>1</TD><TD>Alice</TD></TR>\n      <TR><TD>2</TD><TD>Bob</TD></TR>\n      <TR><TD>3</TD><TD>Charlie</TD></TR>\n    </TABLE>\n  >];\n  tbl2 [label=<\n    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n      <TR><TD COLSPAN=\"3\" BGCOLOR=\"#ffec99\">订单</TD></TR>\n      <TR><TD BGCOLOR=\"#dee2e6\">订单ID (主键)</TD><TD>产品</TD><TD BGCOLOR=\"#ced4da\">客户ID (外键)</TD></TR>\n      <TR><TD>101</TD><TD>笔记本电脑</TD><TD>1</TD></TR>\n      <TR><TD>102</TD><TD>键盘</TD><TD>2</TD></TR>\n      <TR><TD>103</TD><TD>鼠标</TD><TD>1</TD></TR>\n      <TR><TD>104</TD><TD>显示器</TD><TD>4</TD></TR>\n    </TABLE>\n  >];\n  tbl1:e -> tbl2:w [label=\"  通过 \\n  客户ID  \\n  连接  \", fontsize=10];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1azksv0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>通过 <code>CustomerID</code> 列连接 <code>Customers</code> (客户) 表和 <code>Orders</code> (订单) 表的视图。</p>\n</blockquote>\n<p>尽管这个想法看起来简单，但连接表有不同的方式，取决于您希望在结果集中包含哪些行。SQL 提供多种 <code>JOIN</code> 操作类型以应对不同情况：</p>\n<h3>常用 SQL JOIN 类型</h3>\n<ol>\n<li>\n<p><strong><code>INNER JOIN</code></strong>：这是最常用的连接类型。它只返回在 <em>两个</em> 表中都满足连接条件的行。如果一个客户没有下订单，结果中将不会出现该客户或任何订单信息。同样，如果一个订单引用的 <code>CustomerID</code> 不存在于 <code>Customers</code> 表中（在适当的外键约束下不应发生这种情况），该订单将不会被包含。它根据连接列找出两个表的交集。</p>\n</li>\n<li>\n<p><strong><code>LEFT JOIN</code></strong> (或 <code>LEFT OUTER JOIN</code>)：此连接返回左表（<code>FROM</code> 子句中列出的第一个表）中的 <em>所有</em> 行以及右表（<code>JOIN</code> 子句中指定的表）中的匹配行。如果左表中的某行在右表中没有匹配项，结果仍将包含左表中的该行，但从右表选择的所有列将显示 <code>NULL</code> 值。当您希望获取主表（例如，所有客户）的所有信息，无论它们在次表（例如，订单）中是否有匹配记录时，这非常有用。</p>\n</li>\n<li>\n<p><strong><code>RIGHT JOIN</code></strong> (或 <code>RIGHT OUTER JOIN</code>)：这是 <code>LEFT JOIN</code> 的反向操作。它返回右表中的 <em>所有</em> 行以及左表中的匹配行。如果右表中的某行在左表中没有匹配项，结果将显示左表列的 <code>NULL</code> 值。</p>\n</li>\n<li>\n<p><strong><code>FULL OUTER JOIN</code></strong>：当在左表或右表中存在匹配时，此连接返回所有行。它实际上结合了 <code>LEFT JOIN</code> 和 <code>RIGHT JOIN</code> 的结果。任何表中特有的行都将被包含，并在没有找到匹配项的表的列中填充 <code>NULL</code> 值。</p>\n</li>\n</ol>\n<p>了解不同类型的连接是有益的，而 <code>INNER JOIN</code> 非常重要，在数据分析中广泛用于组合相关数据。本章将主要聚焦于 <code>INNER JOIN</code>。在接下来的小节中，我们将仔细查看编写 <code>INNER JOIN</code> 子句的语法、如何指定连接条件以及如何有效应用它来组合来自多个表的数据。</p>",
+  "slug": "intro-sql-joins",
+  "updates": [],
+  "references": [
+    {
+      "id": 2769,
+      "title": "PostgreSQL 16.2 Documentation: 7.2. Table Expressions - Joins Between Tables",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-JOINS",
+      "doi": "",
+      "note": "提供了领先关系数据库系统中SQL JOIN语法和行为的权威信息。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:33.423722Z",
+      "updated_at": "2025-09-07T18:48:14.142663Z"
+    },
+    {
+      "id": 2771,
+      "title": "Practical SQL, 2nd Edition: A Complete Guide to Storytelling with Data",
+      "author": "Anthony DeBarros",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/practical-sql-2nd-edition/",
+      "doi": "",
+      "note": "一本实用的指南，包含许多在数据分析中使用SQL的示例，并全面涵盖了各种JOIN类型。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:33.666425Z",
+      "updated_at": "2025-09-07T18:48:01.842657Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

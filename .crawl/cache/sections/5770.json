@@ -1,0 +1,61 @@
+{
+  "id": 5770,
+  "title": "TorchScript 在模型序列化方面的简介",
+  "meta_title": "PyTorch TorchScript 用于模型序列化",
+  "meta_description": "了解 TorchScript (JIT 编译) 如何创建可序列化和可优化的 PyTorch 模型以供部署。",
+  "content": "<p>当您将模型从 PyTorch 灵活的 Python 开发训练环境转为生产部署时，通常需要一种方法将模型序列化为独立于 Python、可优化且可移植的格式。这就是 TorchScript 的作用。可以将其看作一座桥梁，将您的动态 PyTorch 模型转换为更静态、图表般的表示形式，以便在各种环境中运行，包括 C++ 运行时、移动设备或 Python 可能不够理想或性能不足的服务器。</p>\n<p>对于熟悉 TensorFlow 的人来说，TorchScript 的作用类似于 <code>tf.function</code> 将 Python 代码转换为 TensorFlow 图，以及 SavedModel 如何将此图与权重 (weight)一起打包以供部署。尽管 PyTorch 的即时执行（定义即运行）因其即时性和 Python 式的风格而非常适合研究和实验，但生产环境通常能从静态图表示所提供的优化和可移植性中获益。</p>\n<h3>什么是 TorchScript？</h3>\n<p>TorchScript 是 PyTorch 模型的一种中间表示 (IR)。它允许您创建可序列化和可优化的模型版本，这些版本不依赖于 Python 运行时。这意味着您可以在 Python 中定义模型，然后将其转换为 TorchScript 以便：</p>\n<ol>\n<li><strong>保存和加载：</strong> 将模型的架构和学习到的参数 (parameter)存储在一个单一、可移植的文件中。</li>\n<li><strong>优化：</strong> TorchScript 表示可以进行各种基于图的优化（如运算符融合），从而加快执行速度。</li>\n<li><strong>部署：</strong> 在没有 Python 解释器的环境中运行模型，例如使用 LibTorch 的 C++ 应用程序或在移动平台上。</li>\n</ol>\n<p>TorchScript 本质上捕获了模型的计算图，使其更适用于这些训练后操作。</p>\n<h3>创建 TorchScript 模型：追踪与脚本化</h3>\n<p>有两种主要方法可以将您的 PyTorch <code>nn.Module</code> 转换为 TorchScript 模块：追踪和脚本化。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-kzlnz0\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    python_model [label=\"PyTorch 模型\\n(Python/nn.Module)\", fillcolor=\"#d0bfff\"];\n    torchscript_model [label=\"TorchScript 模型\\n(.pt 文件)\", fillcolor=\"#96f2d7\"];\n    deployment [label=\"部署\\n(C++、移动端、服务器)\", fillcolor=\"#b2f2bb\"];\n\n    subgraph cluster_conversion {\n        label = \"转换方法\";\n        style=dashed;\n        color=\"#adb5bd\";\n        bgcolor=\"#f8f9fa\";\n        node [fillcolor=\"#a5d8ff\"];\n        trace [label=\"torch.jit.trace()\"];\n        script [label=\"torch.jit.script()\"];\n    }\n\n    python_model -> trace [label=\" 示例输入\"];\n    python_model -> script [label=\" 代码分析\"];\n    trace -> torchscript_model;\n    script -> torchscript_model;\n    torchscript_model -> deployment [label=\" 加载与运行\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-kzlnz0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>从 Python 定义的 <code>nn.Module</code> 到可部署的 TorchScript 模型，可通过追踪或脚本化完成。</p>\n</blockquote>\n<h4>1. 使用 <code>torch.jit.trace</code> 进行追踪</h4>\n<p>追踪的工作原理是使用一些示例输入执行您的模型一次。PyTorch 会记录所有在这些输入流经模型时执行的操作，从而有效地“追踪”一条路径。这条被记录的操作序列随后形成了 TorchScript 图。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\n# 一个简单的演示模型\nclass SimpleNet(nn.Module):\n    def __init__(self):\n        super(SimpleNet, self).__init__()\n        self.linear1 = nn.Linear(10, 20)\n        self.relu = nn.ReLU()\n        self.linear2 = nn.Linear(20, 5)\n\n    def forward(self, x):\n        x = self.linear1(x)\n        x = self.relu(x)\n        x = self.linear2(x)\n        return x\n\n# 实例化模型\nmodel = SimpleNet()\nmodel.eval() # 设置为评估模式\n\n# 提供一个示例输入张量\nexample_input = torch.randn(1, 10) # 批大小 1，10 个特征\n\n# 追踪模型\ntry:\n    traced_model = torch.jit.trace(model, example_input)\n    print(\"模型追踪成功！\")\n    # 您可以检查“代码”（图表的 Python 类似表示）\n    # print(traced_model.code)\nexcept Exception as e:\n    print(f\"追踪过程中出错：{e}\")\n\n# 保存追踪的模型\ntraced_model_path = \"traced_simple_net.pt\"\ntraced_model.save(traced_model_path)\nprint(f\"追踪的模型已保存到 {traced_model_path}\")\n\n# 加载追踪的模型\nloaded_traced_model = torch.jit.load(traced_model_path)\nprint(\"追踪的模型加载成功。\")\n\n# 您现在可以使用加载的追踪模型进行推理\noutput = loaded_traced_model(example_input)\nprint(\"从加载的追踪模型输出：\", output.shape)\n</code></pre>\n<p><strong>追踪的优点：</strong></p>\n<ul>\n<li>使用简单：只需提供一个示例输入即可。</li>\n<li>适用于控制流直接、静态的模型（即操作不根据输入值改变）。</li>\n</ul>\n<p><strong>追踪的局限性：</strong></p>\n<ul>\n<li>不捕获依赖数据的控制流：如果您的模型包含根据实际张量值行为不同的 <code>if</code> 语句或循环，追踪只会记录您提供的特定 <code>example_input</code> 所采用的路径。其他路径可能会被遗漏。例如，如果 <code>if</code> 条件取决于 <code>x.sum() > 0</code> 且您的示例输入使其为真，那么 <code>else</code> 分支将不会是追踪图的一部分。</li>\n</ul>\n<h4>2. 使用 <code>torch.jit.script</code> 进行脚本化</h4>\n<p>另一方面，脚本化涉及 TorchScript 编译器直接分析您的 Python 源代码（特别是 <code>forward</code> 方法及其调用的任何函数或模块）。它将此 Python 代码转换为 TorchScript 中间表示。这种方法对于具有动态控制流的模型更有效。</p>\n<p>您可以将 <code>@torch.jit.script</code> 作为装饰器应用于函数或整个 <code>nn.Module</code>。对于 <code>nn.Module</code>，它通常会编译 <code>forward</code> 方法以及您显式装饰或从 <code>forward</code> 中调用的任何其他方法。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\nclass ScriptableNet(nn.Module):\n    def __init__(self, D_in, H, D_out):\n        super(ScriptableNet, self).__init__()\n        self.linear1 = nn.Linear(D_in, H)\n        self.linear2 = nn.Linear(H, D_out)\n\n    def forward(self, x: torch.Tensor, use_relu: bool) -> torch.Tensor:\n        h_relu = torch.relu(self.linear1(x))\n        # 控制流示例\n        if use_relu:\n            y_pred = self.linear2(h_relu)\n        else:\n            y_pred = self.linear2(self.linear1(x)) # 第一层输出不应用 ReLU\n        return y_pred\n\n# 实例化模型\nscript_model_instance = ScriptableNet(10, 20, 5)\nscript_model_instance.eval()\n\n# 脚本化模型实例\ntry:\n    scripted_model = torch.jit.script(script_model_instance)\n    print(\"模型脚本化成功！\")\n    # 您可以检查生成的“代码”\n    # print(scripted_model.code)\nexcept Exception as e:\n    print(f\"脚本化过程中出错：{e}\")\n\n\n# 保存脚本化的模型\nscripted_model_path = \"scripted_net.pt\"\nscripted_model.save(scripted_model_path)\nprint(f\"脚本化的模型已保存到 {scripted_model_path}\")\n\n# 加载脚本化的模型\nloaded_scripted_model = torch.jit.load(scripted_model_path)\nprint(\"脚本化的模型加载成功。\")\n\n# 使用不同的控制流路径进行测试\nexample_input = torch.randn(1, 10)\noutput_with_relu = loaded_scripted_model(example_input, True)\noutput_without_relu = loaded_scripted_model(example_input, False)\n\nprint(\"带 ReLU 路径的输出：\", output_with_relu.shape)\nprint(\"不带 ReLU 路径的输出：\", output_without_relu.shape)\n</code></pre>\n<p><strong>脚本化的优点：</strong></p>\n<ul>\n<li>捕获动态控制流：依赖张量值的 <code>if</code> 语句、循环和其他 Python 结构通常会得到保留。</li>\n<li>对复杂模型更有效。</li>\n</ul>\n<p><strong>脚本化的注意事项：</strong></p>\n<ul>\n<li>TorchScript 兼容性：您的 Python 代码必须符合 TorchScript 语言子集。并非所有 Python 功能都受支持。常见问题源于高度动态的 Python 功能或某些全局变量的使用。</li>\n<li>类型注解：虽然并非总是严格要求，但提供类型提示（例如 <code>x: torch.Tensor</code>）可以显著帮助 TorchScript 编译器理解您的代码，这通常是一个好的做法。</li>\n</ul>\n<p>您也可以脚本化单独的函数：</p>\n<pre><code class=\"language-python\">@torch.jit.script\ndef custom_activation(input_tensor: torch.Tensor) -> torch.Tensor:\n    if input_tensor.mean() > 0:\n        return torch.relu(input_tensor)\n    else:\n        return torch.sigmoid(input_tensor)\n\nexample_tensor = torch.randn(5)\nprint(custom_activation(example_tensor))\nexample_tensor_neg_mean = torch.tensor([-1.0, -2.0, -0.5])\nprint(custom_activation(example_tensor_neg_mean))\n</code></pre>\n<h3>使用 TorchScript 的好处</h3>\n<p>一旦您的模型采用 TorchScript 格式，您将获得多项优势：</p>\n<ul>\n<li><strong>序列化和可移植性：</strong> <code>traced_model.save()</code> 或 <code>scripted_model.save()</code> 保存的 <code>.pt</code> 文件包含模型的架构（以图的形式）及其参数 (parameter)（权重 (weight)和偏置 (bias)）。这个单一文件可以在其他 Python 环境中加载，或者更重要地，在使用 LibTorch 的 C++ 等非 Python 环境中加载。这对于部署不希望或无法提供完整 Python 堆栈的模型来说非常重要。</li>\n<li><strong>性能优化：</strong> TorchScript 允许 PyTorch 执行图级别优化。例如，它可以将多个操作融合到一个更高效的内核中，从而可能加快推理 (inference)速度。它还减少了模型核心逻辑执行期间 Python 解释器的开销。</li>\n<li><strong>框架独立性（在某种程度上）：</strong> 尽管它仍然是 PyTorch 格式，但序列化的模型不依赖于定义它的原始 Python 源代码。</li>\n</ul>\n<h3>何时选择追踪与脚本化</h3>\n<ul>\n<li><strong>从追踪开始：</strong> 如果您的模型是标准的 <code>nn.Sequential</code> 或具有非常线性、静态的操作流，<code>torch.jit.trace</code> 通常是获取 TorchScript 模型最快捷、最简单的方法。</li>\n<li><strong>复杂模型转向脚本化：</strong> 如果您的模型使用依赖于输入数据的控制流（例如 <code>if x.sum() > 0: ... else: ...</code>），或者如果追踪未能捕获完整行为，<code>torch.jit.script</code> 是更可靠的方法。</li>\n<li><strong>混合方法：</strong> 您也可以混合使用追踪和脚本化的模块。例如，一个复杂的子模块可以被脚本化，然后使用该子模块的更大模型可能会被追踪。</li>\n</ul>\n<p>TorchScript 是一种功能强大的机制，可将您的 PyTorch 模型从研发阶段带入生产环境。通过将模型转换为这种可序列化和优化的格式，您可以使它们适用于更广泛的部署情况，从而摆脱 Python 解释器的限制，并实现与各种应用环境的集成。这是重要的一步，类似于 TensorFlow 开发者如何使用 SavedModels 来打包其训练好的模型以用于推理 (inference)引擎和服务平台。在接下来的部分中，我们将简要介绍 ONNX 以实现更广泛的互操作性，以及 TorchServe 用于部署这些模型。</p>",
+  "slug": "torchscript-serialization-pytorch",
+  "updates": [],
+  "references": [
+    {
+      "id": 15969,
+      "title": "TorchScript Reference",
+      "author": "PyTorch Contributors",
+      "year": "2018",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/jit.html",
+      "doi": "",
+      "note": "提供了TorchScript设计、追踪、脚本化和部署能力的详细解释，是其使用的主要资源。",
+      "order": 1,
+      "created_at": "2025-09-06T10:58:00.376283Z",
+      "updated_at": "2025-09-10T02:21:02.543316Z"
+    },
+    {
+      "id": 15970,
+      "title": "Save and load Keras models",
+      "author": "TensorFlow Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/saved_model",
+      "doi": "",
+      "note": "通过描述SavedModel在TensorFlow生态系统中如何实现模型序列化和部署，为TensorFlow用户提供了对比视角。",
+      "order": 2,
+      "created_at": "2025-09-06T10:58:00.435855Z",
+      "updated_at": "2025-09-10T02:20:56.682295Z"
+    },
+    {
+      "id": 15971,
+      "title": "PyTorch C++ Frontend (LibTorch) Documentation",
+      "author": "PyTorch Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/cppdocs/frontend.html",
+      "doi": "",
+      "note": "详细介绍了使用LibTorch在C++应用程序中加载和执行TorchScript模型的过程，这是一个重要的部署目标。",
+      "order": 3,
+      "created_at": "2025-09-06T10:58:00.439019Z",
+      "updated_at": "2025-09-10T02:20:57.850591Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

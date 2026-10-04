@@ -1,0 +1,45 @@
+{
+  "id": 1700,
+  "title": "理解数组数据类型",
+  "meta_title": "NumPy数组数据类型 (dtypes)",
+  "meta_description": "了解NumPy中可用的不同数值数据类型以及如何指定它们。",
+  "content": "<p>NumPy数组的一个基本特点是它们是同质的；单个数组中的所有元素必须是相同的数据类型。这与标准的Python列表不同，后者可以在同一个列表中包含各种类型的元素（如整数、字符串和浮点数）。这种同质性是NumPy高效能与性能的基础，使得数值运算能够进行优化、低层次的实现。</p>\n<p>数组元素的具体数据类型存储在一个名为 <code>dtype</code>（数据类型的缩写）的特殊属性中。理解并有时控制 <code>dtype</code> 对于以下几个方面很重要：</p>\n<ol>\n<li><strong>内存占用：</strong> 不同的数据类型需要不同的内存量。一个64位整数（<code>int64</code>）比32位整数（<code>int32</code>）或8位整数（<code>int8</code>）使用更多的内存。选择最小的合适类型可以显著减少大型数组的内存占用。</li>\n<li><strong>性能：</strong> 对特定类型数组（特别是数值类型）的操作可以由底层的C或Fortran代码更快地执行，因为这些操作无需标准Python中所需的类型检查开销。</li>\n<li><strong>精度和范围：</strong> 浮点类型（<code>float32</code>，<code>float64</code>）提供不同级别的精度。整数类型能表示的数值范围也不同。选择正确的类型可以确保计算准确并避免潜在的溢出错误。</li>\n</ol>\n<h3>常见NumPy数据类型</h3>\n<p>NumPy支持比标准Python更丰富的数值类型。以下是一些最常见的类型：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">类型</th>\n<th align=\"left\">字符串代码</th>\n<th align=\"left\">说明</th>\n<th align=\"left\">示例</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></td>\n<td align=\"left\"><code>i1</code>, <code>i2</code>, <code>i4</code>, <code>i8</code></td>\n<td align=\"left\">有符号整数（8、16、32或64位）</td>\n<td align=\"left\"><code>-128</code> 到 <code>127</code> (<code>i1</code>)</td>\n</tr>\n<tr>\n<td align=\"left\"><code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td>\n<td align=\"left\"><code>u1</code>, <code>u2</code>, <code>u4</code>, <code>u8</code></td>\n<td align=\"left\">无符号整数（非负数）</td>\n<td align=\"left\"><code>0</code> 到 <code>255</code> (<code>u1</code>)</td>\n</tr>\n<tr>\n<td align=\"left\"><code>float16</code>, <code>float32</code>, <code>float64</code></td>\n<td align=\"left\"><code>f2</code>, <code>f4</code>, <code>f8</code></td>\n<td align=\"left\">浮点数（半精度、单精度、双精度）</td>\n<td align=\"left\"><code>3.14159</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>complex64</code>, <code>complex128</code></td>\n<td align=\"left\"><code>c8</code>, <code>c16</code></td>\n<td align=\"left\">复数（由两个32位或64位浮点数表示）</td>\n<td align=\"left\"><code>1 + 2j</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>bool</code></td>\n<td align=\"left\"><code>?</code></td>\n<td align=\"left\">布尔类型，存储 <code>True</code> 和 <code>False</code> 值</td>\n<td align=\"left\"><code>True</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>object</code></td>\n<td align=\"left\"><code>O</code></td>\n<td align=\"left\">Python对象类型</td>\n<td align=\"left\"><code>(1, 'a')</code>, <code>[1, 2]</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>string_</code></td>\n<td align=\"left\"><code>S</code></td>\n<td align=\"left\">固定长度ASCII字符串类型（例如，<code>S10</code>表示长度为10的字符串）</td>\n<td align=\"left\"><code>'numpy'</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>unicode_</code></td>\n<td align=\"left\"><code>U</code></td>\n<td align=\"left\">固定长度Unicode类型（例如，<code>U10</code>表示长度为10的字符串）</td>\n<td align=\"left\"><code>'你好'</code></td>\n</tr>\n</tbody>\n</table>\n<p><em>注意：</em> 默认的整数类型（<code>int_</code>）和浮点类型（<code>float_</code>）通常分别对应<code>int64</code>和<code>float64</code>，这取决于您的系统架构。但在需要特定精度或大小时，明确指定是一个好的做法。</p>\n<h3>查看数组的数据类型</h3>\n<p>您可以使用NumPy数组的<code>dtype</code>属性轻松查看其数据类型。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 从整数列表创建一个数组\narr_int = np.array([1, 2, 3, 4])\nprint(f\"Array: {arr_int}\")\nprint(f\"Data Type: {arr_int.dtype}\")\n\n# 从包含浮点数的列表创建一个数组\narr_float = np.array([1.0, 2.5, 3.0, 4.8])\nprint(f\"\\nArray: {arr_float}\")\nprint(f\"Data Type: {arr_float.dtype}\")\n\n# 如果类型混合，NumPy会自动进行类型提升\narr_mixed = np.array([1, 2, 3.5, 4]) # 包含整数和一个浮点数\nprint(f\"\\nArray: {arr_mixed}\")\nprint(f\"Data Type: {arr_mixed.dtype}\") # 结果dtype是float64\n</code></pre>\n<p>Output:</p>\n<pre><code>Array: [1 2 3 4]\nData Type: int64\n\nArray: [1.  2.5 3.  4.8]\nData Type: float64\n\nArray: [1.  2.  3.5 4. ]\nData Type: float64\n</code></pre>\n<p>请注意最后一个例子，由于列表中既包含整数又包含浮点数，NumPy自动推断出可以容纳所有元素的最通用类型，在本例中是<code>float64</code>。</p>\n<h3>创建时指定数据类型</h3>\n<p>您不必依赖NumPy的自动推断。在创建数组时，可以使用<code>dtype</code>参数 (parameter)明确指定所需的数据类型。这对于控制内存占用或确保特定精度很有用。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 指定float32\narr_float32 = np.array([1, 2, 3], dtype=np.float32)\nprint(f\"Array: {arr_float32}\")\nprint(f\"Data Type: {arr_float32.dtype}\")\n\n# 指定int8（注意范围）\narr_int8 = np.array([10, 20, 127], dtype=np.int8)\nprint(f\"\\nArray: {arr_int8}\")\nprint(f\"Data Type: {arr_int8.dtype}\")\n\n# 使用字符串代码也有效\narr_complex = np.array([1+1j, 2+2j], dtype='c8') # complex64\nprint(f\"\\nArray: {arr_complex}\")\nprint(f\"Data Type: {arr_complex.dtype}\")\n\n# 使用创建函数\nzeros_uint16 = np.zeros(5, dtype=np.uint16)\nprint(f\"\\nArray: {zeros_uint16}\")\nprint(f\"Data Type: {zeros_uint16.dtype}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Array: [1. 2. 3.]\nData Type: float32\n\nArray: [ 10  20 127]\nData Type: int8\n\nArray: [1.+1.j 2.+2.j]\nData Type: complex64\n\nArray: [0 0 0 0 0]\nData Type: uint16\n</code></pre>\n<h3>使用<code>astype</code>更改数据类型</h3>\n<p>有时，您需要将现有数组转换为不同的数据类型。<code>astype()</code>方法会创建一个<em>新</em>数组，其类型为您指定的类型，同时复制原始数据并根据需要进行类型转换。它不会修改原始数组，除非您将结果重新赋值回原始变量名。</p>\n<pre><code class=\"language-python\">import numpy as np\n\narr_float = np.array([1.1, 2.7, 3.5, 4.9])\nprint(f\"Original Array: {arr_float}\")\nprint(f\"Original dtype: {arr_float.dtype}\")\n\n# 转换为整数类型（截断小数部分）\narr_int = arr_float.astype(np.int32)\nprint(f\"\\nConverted to int32: {arr_int}\")\nprint(f\"New dtype: {arr_int.dtype}\")\n\n# 将整数数组转换为布尔类型\narr_num = np.array([0, 1, 5, 0, -2])\nprint(f\"\\nNumeric Array: {arr_num}\")\narr_bool = arr_num.astype(np.bool_) # 零变为False，非零变为True\nprint(f\"Converted to bool: {arr_bool}\")\nprint(f\"New dtype: {arr_bool.dtype}\")\n\n# 将整数数组转换为字符串\narr_str = arr_int.astype(np.string_)\nprint(f\"\\nConverted to string: {arr_str}\")\nprint(f\"New dtype: {arr_str.dtype}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Original Array: [1.1 2.7 3.5 4.9]\nOriginal dtype: float64\n\nConverted to int32: [1 2 3 4]\nNew dtype: int32\n\nNumeric Array: [ 0  1  5  0 -2]\nConverted to bool: [False  True  True False  True]\nNew dtype: bool\n\nConverted to string: [b'1' b'2' b'3' b'4']\nNew dtype: |S11\n</code></pre>\n<p><strong>注意：</strong> 使用 <code>astype()</code> 时请注意。将浮点数转换为整数会截断小数部分，而不是四舍五入。将高精度类型（如<code>float64</code>）转换为低精度类型（如<code>float32</code>）可能导致精度丢失。将数据转换为范围较小的类型（如<code>int64</code>转换为<code>int8</code>）可能导致意料之外的结果或错误，如果值超出目标类型的限制。</p>\n<p>理解NumPy的数据类型是一个基本步骤。它让您能够通过做出明智的选择，来存储和处理您的数值数据，从而编写出更节省内存、运行更快的代码。随着您处理更大规模的数据集，选择正确 <code>dtype</code> 的影响会变得越来越重要。</p>",
+  "slug": "array-data-types",
+  "updates": [],
+  "references": [
+    {
+      "id": 2912,
+      "title": "Data types",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.html#data-types",
+      "doi": "",
+      "note": "官方且最具权威性的资源，用于理解 NumPy 数组的数据类型，详细说明其特性、内存使用情况以及如何有效地管理它们。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:51.554696Z",
+      "updated_at": "2025-09-08T05:13:56.520368Z"
+    },
+    {
+      "id": 2913,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于使用 Python 进行数据分析的基准书籍，为 NumPy 数组及其数据类型在数据处理工作流中的实际应用和解释提供了指导。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:51.571023Z",
+      "updated_at": "2025-09-08T05:13:55.897365Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

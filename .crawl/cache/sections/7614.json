@@ -1,0 +1,45 @@
+{
+  "id": 7614,
+  "title": "常见图机器学习任务",
+  "meta_title": "图机器学习任务详解",
+  "meta_description": "标准图学习任务概述：节点分类、链路预测和图分类。",
+  "content": "<p>利用图数据结构进行机器学习 (machine learning)为预测任务提供了独特的契机。这涉及到调整常见的机器学习方法，以利用图的结构特征。我们旨在解决的问题通常分为三个主要类别，其区别在于预测层面：节点级、边级或整个图级。</p>\n<h3>节点级任务：节点分类</h3>\n<p>图机器学习 (machine learning)中最常见的任务是<strong>节点分类</strong>。其目标是预测图中每个节点的属性或标签。你可以将其理解为补全整个网络中缺失的信息。对于这项任务，通常会给定一个图，其中一部分节点已经带有标签。模型的任务是利用节点特征和图结构来预测剩余未标记 (token)节点的标签。</p>\n<p>这通常是一个<em>半监督</em>学习问题，因为我们利用已标记节点和未标记节点之间的连接来传递信息并做出预测。</p>\n<p>一个经典的例子是引用网络中的文档分类。想象一个图，其中的节点是研究论文，如果一篇论文引用了另一篇，则存在一条边。已知少数论文标有其学科（例如“物理”、“计算机科学”、“生物”），任务是为网络中其余的论文分类。模型会学习到，相互引用或被相似论文引用的论文很可能属于同一学科。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1rpo08u\" \n              data-graph-definition='graph G { rankdir=TB; layout=neato; node[style=filled, shape=circle]; edge[color=\"#868e96\"]; A[label=\"?\", pos=\"1,1!\", fillcolor=\"#e9ecef\"]; B[label=\"\", pos=\"0,2!\", fillcolor=\"#74c0fc\"]; C[label=\"\", pos=\"2,2!\", fillcolor=\"#74c0fc\"]; D[label=\"\", pos=\"0,0!\", fillcolor=\"#ff8787\"]; E[label=\"\", pos=\"2,0!\", fillcolor=\"#ff8787\"]; A--B; A--C; A--D; B--C; D--E; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1rpo08u\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>简单网络中的节点分类任务。模型必须根据中心灰色节点的特征及其与已标记的蓝色和红色节点的连接来预测其标签。</p>\n</blockquote>\n<p>其他应用包括：</p>\n<ul>\n<li><strong>社交网络：</strong> 识别用户角色或标记恶意账户。</li>\n<li><strong>蛋白质相互作用网络：</strong> 根据蛋白质与已知蛋白质的相互作用来预测其功能。</li>\n</ul>\n<h3>边级任务：链路预测</h3>\n<p>另一个基础任务是<strong>链路预测</strong>，它侧重于节点之间的关系。其目标是预测两个节点之间是否缺失了原本应该存在的边。它解决的是这样的问题：“给定两个节点，它们连接的可能性有多大？”</p>\n<p>这个问题通过将现有边视为正例，将一部分不存在的边视为负例来构建。随后，模型学习一个函数，为节点对的连接可能性进行打分。</p>\n<p>链路预测的一个常见应用是推荐系统。</p>\n<ul>\n<li><strong>电子商务：</strong> 在用户和产品的图中，链路预测可以建议用户可能喜欢哪些产品，通过预测“用户-购买-产品”这条边来有效地推荐商品。</li>\n<li><strong>社交媒体：</strong> LinkedIn 或 Facebook 等平台上的好友推荐是链路预测的直接应用，系统会预测你可能认识谁。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-eu8ktr\" \n              data-graph-definition='graph G {\r\n  layout=neato;\r\n  node[style=filled, shape=circle, fillcolor=\"#a5d8ff\"];\r\n  edge[color=\"#868e96\"];\r\n  A; B; C; D; E; F; G;\r\n  A--B; A--C; B--C;\r\n  D--E; D--F; E--F;\r\n  B--G; E--G;\r\n  B--D [style=dashed, color=\"#f03e3e\", label=\"?\"];\r\n}\r\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-eu8ktr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>链路预测旨在确定两个节点（如节点 B 和 D）之间是否应存在边，这两个节点目前属于不同的社区，但共享一个共同的邻居 G。</p>\n</blockquote>\n<p>这项技术在生物学中也很有用，用于预测未发现的蛋白质相互作用，或在交通运输中识别地点之间未来的高流量路线。</p>\n<h3>图级任务：图分类</h3>\n<p>最后，有些问题要求我们对整个图做出预测。在<strong>图分类</strong>中，任务是为整个图分配一个标签。这类似于图像分类，但我们分类的不是像素网格，而是由节点和边构成的网络。</p>\n<p>这项任务常见于数据集由许多独立的小型图（而非单个大图）组成的场景。模型必须学会从整个图中提取结构和基于特征的信息，将其聚合成固定大小的表示，然后将该表示传递给分类器。</p>\n<p>一个突出的应用是在化学和药物研发中。分子可以表示为图，其中原子是节点，化学键是边。可以训练图分类模型来预测分子的性质，如毒性、溶解度，或者它是否能成为针对特定疾病的有效药物。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-pgsep3\" \n              data-graph-definition='digraph G {\r\n  subgraph cluster_0 {\r\n    label = \"类别：有毒\";\r\n    node[style=filled, fillcolor=\"#ffc9c9\"];\r\n    edge[color=\"#868e96\"];\r\n    A1 -> B1; B1 -> C1; C1 -> A1;\r\n  }\r\n  subgraph cluster_1 {\r\n    label = \"类别：无毒\";\r\n    node[style=filled, fillcolor=\"#b2f2bb\"];\r\n    edge[color=\"#868e96\"];\r\n    A2 -> B2; B2 -> C2; C2 -> D2;\r\n  }\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-pgsep3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在图分类中，模型学习为整个图分配标签。例如，区分分子结构以预测其性质。</p>\n</blockquote>\n<p>其他应用包括：</p>\n<ul>\n<li><strong>计算机视觉：</strong> 对场景图进行分类，以理解图像的高层内容。</li>\n<li><strong>社交网络分析：</strong> 根据通信模式将在线社区分类为良性或极端主义。</li>\n</ul>\n<h3>任务总结</h3>\n<p>这三类任务为在结构化数据上应用机器学习 (machine learning)提供了框架。下表总结了它们的目标和输出。</p>\n<table>\n<thead>\n<tr>\n<th>任务</th>\n<th>层面</th>\n<th>目标</th>\n<th>输出示例</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><strong>节点分类</strong></td>\n<td>节点</td>\n<td>为每个节点预测一个标签</td>\n<td>研究论文的类别</td>\n</tr>\n<tr>\n<td><strong>链路预测</strong></td>\n<td>边 (链路)</td>\n<td>预测边的存在性</td>\n<td>“好友建议”二元标记 (token)（是/否）</td>\n</tr>\n<tr>\n<td><strong>图分类</strong></td>\n<td>图</td>\n<td>为整个图预测一个标签</td>\n<td>分子的毒性</td>\n</tr>\n</tbody>\n</table>\n<p>虽然还存在社区检测和图回归等其他任务，但这三者构成了大多数 GNN 应用的基石。在本课程中，我们将重点构建节点分类模型，因为它为理解图神经网络 (neural network)的运行机制提供了极佳的基础。</p>",
+  "slug": "common-graph-ml-tasks",
+  "updates": [],
+  "references": [
+    {
+      "id": 21480,
+      "title": "Graph Neural Networks",
+      "author": "William L. Hamilton",
+      "year": "2020",
+      "publisher": "Morgan & Claypool Publishers",
+      "journal": "Synthesis Lectures on Artificial Intelligence and Machine Learning",
+      "volume": "14, No. 3",
+      "pages": "1-159",
+      "url": "https://www.cs.mcgill.ca/~wham/gl_book.pdf",
+      "doi": "10.2200/S01045ED1V01Y202009AIM046",
+      "note": "对图神经网络的简明介绍，涵盖了基本概念、模型架构以及在各种图机器学习任务中的应用。",
+      "order": 2,
+      "created_at": "2025-09-30T09:32:32.153616Z",
+      "updated_at": "2025-09-30T09:47:46.281820Z"
+    },
+    {
+      "id": 21481,
+      "title": "CS224W: Machine Learning with Graphs",
+      "author": "Jure Leskovec",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs224w.stanford.edu/",
+      "doi": "",
+      "note": "一门广受认可的大学课程的官方材料，专注于图上的机器学习，提供有关各种图任务的讲座和作业。",
+      "order": 3,
+      "created_at": "2025-09-30T09:32:32.157758Z",
+      "updated_at": "2025-09-30T09:47:04.638402Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

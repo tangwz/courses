@@ -1,0 +1,489 @@
+{
+  "id": 184,
+  "title": "生成式AI扩散模型入门",
+  "meta_title": "生成式AI扩散模型：入门",
+  "meta_description": "了解扩散模型如何用于生成式AI。理解正向/反向过程、U-Net结构、训练、采样（DDPM/DDIM）和条件生成。",
+  "description": "理解用于生成任务的扩散模型的原理与实现。本课程讲解正向和反向扩散过程、U-Net等网络结构、训练步骤以及采样与条件生成输出的方法。学习相关知识，以创建AI生成图像及其他数据。",
+  "short_description": "理解并实现扩散模型，以生成新颖图像和数据。",
+  "excerpt": "学习扩散模型（包括DDPM和DDIM）的核心机制，并获得实现和指导生成式AI系统的实践经验。",
+  "prerequisites": "Python与机器学习知识",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "扩散过程机制",
+      "description": "解释正向（加噪）和反向（去噪）过程的数学表述。"
+    },
+    {
+      "topic": "模型结构",
+      "description": "理解U-Net结构在扩散模型中的作用与构成。"
+    },
+    {
+      "topic": "训练与损失",
+      "description": "描述扩散模型中使用的训练目标和损失函数。"
+    },
+    {
+      "topic": "采样技术",
+      "description": "实现DDPM等采样步骤，并了解DDIM等更快的方法。"
+    },
+    {
+      "topic": "条件生成",
+      "description": "应用基本方法，利用条件信息引导生成过程。"
+    },
+    {
+      "topic": "实现要点",
+      "description": "使用深度学习框架构建并训练一个简单的扩散模型。"
+    }
+  ],
+  "duration": 18,
+  "slug": "intro-diffusion-models",
+  "level": 2,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-27T04:13:48.007446Z",
+  "updated_at": "2026-10-02T05:55:18.933838Z",
+  "chapters": [
+    {
+      "id": 987,
+      "title": "生成模型简介",
+      "meta_title": "扩散模型相关生成模型简介",
+      "meta_description": "回顾生成模型（VAEs，GANs），并介绍扩散模型的核心思想作为一种替代方法。",
+      "number": 1,
+      "slug": "generative-modeling-fundamentals",
+      "content": "生成模型学习生成与给定数据集相似的新数据样本。本章提供所需知识，以便后续专门讲解扩散模型。\r\n\r\n我们将首先简要回顾常见的生成模型类型，如变分自编码器（VAEs）和生成对抗网络（GANs），以了解它们的目标和运行机制。然后，我们将讨论这些模型面临的难题，说明促成扩散技术发展的原因。\r\n\r\n扩散模型的核心思想包含两个过程：系统地向数据添加噪声直至其变为纯噪声，然后学习反转此过程，从噪声开始生成数据。我们将介绍这一核心思想。最后，我们将建立用于描述这些模型的高级概率框架，为您后续章节的数学细节做好准备。\r\n\r\n完成本章后，您将了解扩散模型的运行背景，并掌握其基本运行原理。",
+      "sections": [
+        {
+          "id": 5359,
+          "title": "生成模型概述",
+          "meta_title": "生成模型概述",
+          "meta_description": "简要回顾变分自编码器（VAE）和生成对抗网络（GAN）等常见生成模型类别及其目标。",
+          "slug": "overview-generative-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5362,
+          "title": "扩散模型的缘由",
+          "meta_title": "扩散模型的缘由",
+          "meta_description": "讨论扩散模型旨在应对的其他生成式模型的问题。",
+          "slug": "motivation-diffusion-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5365,
+          "title": "核心思路：噪声与去噪",
+          "meta_title": "扩散模型的核心思路：噪声与去噪",
+          "meta_description": "介绍扩散模型的主要理念：迭代地添加噪声并学习逆转该过程。",
+          "slug": "core-idea-noise-denoise",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5368,
+          "title": "概率框架概述",
+          "meta_title": "概率框架概述",
+          "meta_description": "确立扩散模型数据生成的整体概率视角。",
+          "slug": "probabilistic-framework-intro",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 990,
+      "title": "前向扩散过程",
+      "meta_title": "前向扩散过程解释",
+      "meta_description": "详述扩散模型中前向加噪过程的数学步骤和性质。",
+      "number": 2,
+      "slug": "forward-diffusion-process",
+      "content": "本章讲解扩散模型的第一个组成部分：前向过程。这个过程系统地在初始数据点（例如一张图片）上添加噪声，经过许多步直到其接近纯高斯噪声。理解这种受控的退化很重要，因为扩散模型的生成能力来自于学习逆转这个过程。\r\n\r\n我们将首先将前向过程定义为马尔可夫链，每一步都依据预定的方差计划（$\\beta_t$）添加少量高斯噪声。你将学到描述单个加噪步骤的数学方程，通常写为 $q(x_t | x_{t-1})$，以及一个有用的闭式表达式，它允许我们从初始数据$x_0$在任意时间步$t$直接采样得到噪声状态$x_t$，无需遍历所有中间步骤。我们将分析这个前向机制的性质，并以一个模拟噪声添加的实践练习作为结尾，其中包含代码示例。",
+      "sections": [
+        {
+          "id": 5370,
+          "title": "定义马尔可夫链",
+          "meta_title": "定义前向马尔可夫链",
+          "meta_description": "将逐步加噪过程建立为马尔可夫链。",
+          "slug": "defining-markov-chain",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5372,
+          "title": "高斯噪声调度",
+          "meta_title": "高斯噪声调度",
+          "meta_description": "理解如何使用预定义的方差调度逐步添加噪声。",
+          "slug": "gaussian-noise-schedule",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5376,
+          "title": "每一步的数学表示",
+          "meta_title": "每一步的数学表示",
+          "meta_description": "推导在单个时间步 $t$ 添加噪声的公式。",
+          "slug": "math-formulation-per-step",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5378,
+          "title": "从中间步骤采样",
+          "meta_title": "从中间步骤采样",
+          "meta_description": "一个封闭形式的方程，可以直接从原始数据x_0采样得到含噪声版本x_t。",
+          "slug": "sampling-intermediate-steps",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5380,
+          "title": "前向过程的性质",
+          "meta_title": "前向过程的性质",
+          "meta_description": "分析前向扩散过程的特征和结果。",
+          "slug": "properties-forward-process",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5385,
+          "title": "实践：模拟正向扩散",
+          "meta_title": "实践：模拟正向扩散",
+          "meta_description": "动手使用代码在简单数据上模拟正向加噪过程。",
+          "slug": "practice-simulating-forward-diffusion",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 993,
+      "title": "逆向扩散过程",
+      "meta_title": "逆向扩散过程：去噪",
+      "meta_description": "说明扩散模型如何学习反转加噪过程，从而从噪声生成数据。",
+      "number": 3,
+      "slug": "reverse-diffusion-process",
+      "content": "在上一章中，我们讨论了正向扩散过程，在该过程中，我们经过一系列时间步逐步向数据添加高斯噪声，直到只剩下噪声。现在，我们关注其逆向操作：逆向扩散过程。这是生成部分，我们旨在从纯噪声开始并逐步去噪，以生成一个与原始数据分布相似的样本。\r\n\r\n本章介绍这种反转是如何实现的。由于直接计算真实逆向概率 $p(x_{t-1}|x_t)$ 通常难以处理，我们将学习如何对其进行近似。\r\n\r\n您将学习到：\r\n\r\n*   逆向过程的目标：估计转移概率 $p(x_{t-1}|x_t)$。\r\n*   为什么直接计算很困难，以及如何使用神经网络进行近似。\r\n*   我们如何对逆向过程进行参数化，通常是通过训练一个网络来预测时间步 $t$ 时添加的噪声 $\\epsilon$。\r\n*   定义了单一步去噪的数学表述，使我们能够从 $x_t$ 得到 $x_{t-1}$ 的估计。\r\n\r\n在本章结束时，您将明白扩散模型如何通过系统地反转加噪过程来学习生成数据。",
+      "sections": [
+        {
+          "id": 5388,
+          "title": "目标：逆转马尔可夫链",
+          "meta_title": "目标：逆转马尔可夫链",
+          "meta_description": "定义逆向过程的目标：估计$p(x_{t-1}|x_t)$。",
+          "slug": "goal-reversing-markov-chain",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5392,
+          "title": "逼近逆向转移",
+          "meta_title": "逼近逆向转移",
+          "meta_description": "为什么真实的逆向转移难以处理以及我们如何逼近它。",
+          "slug": "approximating-reverse-transition",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5395,
+          "title": "使用神经网络参数化逆向过程",
+          "meta_title": "参数化逆向过程",
+          "meta_description": "使用神经网络预测逆向转移的噪声或均值。",
+          "slug": "parameterizing-reverse-process",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5398,
+          "title": "预测噪声分量",
+          "meta_title": "预测噪声分量",
+          "meta_description": "将网络的任务表述为预测在时间步 t 添加的噪声。",
+          "slug": "predicting-noise-component",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5400,
+          "title": "去噪步骤的数学表达",
+          "meta_title": "去噪的数学表达",
+          "meta_description": "控制逆向（去噪）过程单一步骤的方程。",
+          "slug": "math-formulation-denoising-step",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 995,
+      "title": "模型架构与训练",
+      "meta_title": "扩散模型架构（U-Net）与训练",
+      "meta_description": "介绍扩散模型中常用的 U-Net 架构以及训练目标。",
+      "number": 4,
+      "slug": "model-architecture-training",
+      "content": "在确立了正向和逆向扩散过程的数学体系后，我们现在将说明如何实现逆向（去噪）步骤。这需要一个可训练的模型，它能够根据含噪声数据 $x_t$ 学习估算在特定时间步 $t$ 所添加的噪声。\r\n\r\n本章主要说明这一核心模型的架构和训练流程。我们将介绍：\r\n\r\n*   **U-Net 架构：** 考察 U-Net 的结构，这是一种常用于处理图像类数据并保留空间信息的卷积网络，这对于噪声预测是不可或缺的。\r\n*   **时间步整合：** 提供扩散时间步 $t$ 作为网络输入的方法，使其能够相应地调整预测。\r\n*   **训练目标：** 定义损失函数，通常是实际添加的噪声与网络预测的噪声之间的均方误差 (MSE)。我们将简要提及它与整体概率目标之间的关联。\r\n*   **训练算法：** 概述使用批次数据训练噪声预测网络的分步流程。\r\n*   **实际配置：** 讨论在代码中实现 U-Net 和时间步嵌入的重要方面。\r\n\r\n完成本章后，你将理解扩散模型中使用的神经网络的设计原则以及训练它执行去噪任务的流程。",
+      "sections": [
+        {
+          "id": 5403,
+          "title": "用于噪声预测的U-Net架构",
+          "meta_title": "用于噪声预测的U-Net架构",
+          "meta_description": "详细查看U-Net结构：下采样、瓶颈、上采样和跳跃连接。",
+          "slug": "unet-architecture-noise-prediction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5406,
+          "title": "整合时间步信息",
+          "meta_title": "在U-Net中整合时间步信息",
+          "meta_description": "使U-Net适应当前扩散时间步t的方法 (例如，正弦编码)。",
+          "slug": "integrating-timestep-information",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5409,
+          "title": "定义训练目标",
+          "meta_title": "定义训练目标",
+          "meta_description": "了解损失函数：通常是预测噪声与实际噪声之间的均方误差。",
+          "slug": "defining-training-objective",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5410,
+          "title": "简化训练损失的推导",
+          "meta_title": "简化训练损失的推导",
+          "meta_description": "对证据下界（ELBO）的简化认识，它引出了实用的损失函数。",
+          "slug": "simplified-training-loss-derivation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5413,
+          "title": "训练算法",
+          "meta_title": "扩散模型训练算法",
+          "meta_description": "训练扩散模型的逐步过程。",
+          "slug": "training-algorithm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5416,
+          "title": "动手实践：搭建U-Net",
+          "meta_title": "动手实践：搭建U-Net",
+          "meta_description": "实现U-Net架构和时间步编码的代码示例。",
+          "slug": "hands-on-unet-setup",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 997,
+      "title": "采样与生成过程",
+      "meta_title": "从扩散模型中采样 (DDPM与DDIM)",
+      "meta_description": "学习如何通过运行逆向扩散过程来生成新的数据点，包括DDPM和更快的DDIM采样。",
+      "number": 5,
+      "slug": "sampling-generation-process",
+      "content": "在我们已经弄清扩散模型如何训练以预测损坏数据中的噪声之后，本章将侧重于其逆向操作：生成新的数据样本。我们将了解如何从纯噪声（通常从高斯分布 $x_T \\sim \\mathcal{N}(0, \\mathbf{I})$ 中采样）开始，并迭代应用所学到的逆向扩散过程，以生成一个干净的数据点 $x_0$。\r\n\r\n您将学习标准去噪扩散概率模型（DDPM）采样算法的标准步骤。接下来，我们将介绍去噪扩散隐式模型（DDIM），这是一种相关但通常更快的采样技术，可在速度和样本质量之间提供不同的平衡。最后，我们将讨论在代码中构建这些采样循环所需的实现细节。",
+      "sections": [
+        {
+          "id": 5418,
+          "title": "从噪声生成数据",
+          "meta_title": "从噪声生成数据",
+          "meta_description": "从高斯噪声开始并迭代去噪的整体过程。",
+          "slug": "generating-data-from-noise",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5420,
+          "title": "DDPM采样算法",
+          "meta_title": "DDPM采样算法",
+          "meta_description": "去噪扩散概率模型（DDPM）采样的分步流程。",
+          "slug": "ddpm-sampling-algorithm",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5423,
+          "title": "理解采样方差",
+          "meta_title": "理解采样方差",
+          "meta_description": "随机性在采样过程中的作用。",
+          "slug": "understanding-sampling-variance",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5424,
+          "title": "加速采样方法介绍：DDIM",
+          "meta_title": "加速采样方法介绍：DDIM",
+          "meta_description": "去噪扩散隐式模型（DDIM）的动机和基本思路。",
+          "slug": "intro-faster-sampling-ddim",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5427,
+          "title": "DDIM采样算法",
+          "meta_title": "DDIM采样算法",
+          "meta_description": "比较DDIM更新规则与DDPM，并阐述其对更快、确定性采样的影响。",
+          "slug": "ddim-sampling-algorithm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5430,
+          "title": "DDPM与DDIM的权衡",
+          "meta_title": "DDPM与DDIM的权衡",
+          "meta_description": "比较生成速度、样本质量和随机性。",
+          "slug": "tradeoffs-ddpm-ddim",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5433,
+          "title": "动手实践：实现采样循环",
+          "meta_title": "动手实践：实现采样循环",
+          "meta_description": "实现DDPM和DDIM两种采样过程的代码示例。",
+          "slug": "practice-implementing-sampling-loops",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1000,
+      "title": "扩散模型的条件生成",
+      "meta_title": "扩散模型的条件生成",
+      "meta_description": "引导扩散模型生成过程的方法，这些方法基于类别标签或文本等条件信息。",
+      "number": 6,
+      "slug": "conditional-generation-diffusion",
+      "content": "迄今为止，我们已经了解了扩散模型如何通过逆转加噪过程来生成数据，其起点是纯随机噪声 $x_T \\sim \\mathcal{N}(0, \\mathbf{I})$。这会产生反映训练数据分布的样本，但无法对输出进行精确控制。\r\n\r\n然而，我们通常希望引导生成过程。例如，我们可能想生成特定物体类别的图像，或者根据文本描述创建图像。本章将介绍用于 *条件* 生成的方法，使我们能够根据额外信息（通常表示为条件 $y$）影响扩散模型的输出。\r\n\r\n我们将考察诸如分类器引导等技术，其中一个独立的分类模型有助于将采样引向所需属性。随后我们将研究无分类器引导（CFG），这是一种广泛使用的方法，通过修改训练和采样流程，无需外部分类器即可实现类似控制。最后，我们将提及基于文本提示的条件设置的基础知识，这是现代文本到图像模型背后的重要技术。\r\n\r\n本章结束时，您将理解如何实现并应用这些引导技术，以便更好地控制扩散模型的生成能力。",
+      "sections": [
+        {
+          "id": 5436,
+          "title": "条件生成的动因",
+          "meta_title": "条件生成的动因",
+          "meta_description": "为什么控制生成模型的输出通常很有必要。",
+          "slug": "motivation-conditional-generation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5438,
+          "title": "分类器引导",
+          "meta_title": "分类器引导解析",
+          "meta_description": "使用单独的分类器模型，将扩散过程引导至所需类别。",
+          "slug": "classifier-guidance",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5441,
+          "title": "无分类器引导 (CFG)",
+          "meta_title": "无分类器引导 (CFG) 解释",
+          "meta_description": "通过联合训练条件和无条件模型，实现在无显式分类器的情况下进行引导的技术。",
+          "slug": "classifier-free-guidance",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5444,
+          "title": "实现分类器无关引导",
+          "meta_title": "实现分类器无关引导",
+          "meta_description": "修改用于CFG的网络输入和采样过程。",
+          "slug": "implementing-classifier-free-guidance",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5445,
+          "title": "文本条件要点",
+          "meta_title": "扩散模型的文本条件要点",
+          "meta_description": "介绍如何将文本嵌入（例如，来自CLIP的）加入扩散模型中。",
+          "slug": "text-conditioning-basics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5448,
+          "title": "用于条件生成的架构修改",
+          "meta_title": "用于条件生成的架构修改",
+          "meta_description": "说明如何调整U-Net（例如，使用交叉注意力）以接收条件输入。",
+          "slug": "architecture-modifications-conditioning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5451,
+          "title": "动手实践：应用引导",
+          "meta_title": "动手实践：应用引导",
+          "meta_description": "代码示例说明如何在采样过程中实现并使用无分类器引导。",
+          "slug": "hands-on-applying-guidance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

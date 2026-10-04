@@ -1,0 +1,61 @@
+{
+  "id": 7430,
+  "title": "文档分块处理",
+  "meta_title": "LangChain 中的文本分块器",
+  "meta_description": "学习如何将大文档分割成更小、语义上连贯的片段，以适合进行嵌入处理的方法。",
+  "content": "<p>在使用大型语言模型（LLM）应用程序时，文档通常以 <code>Document</code> 对象形式存在，这类对象可能包含大量文本。直接将大型文档喂给LLM进行问答处理是不切实际的，主要有以下两个原因。首先，它很可能会超出模型的上下文 (context)窗口限制。其次，提供一大段不集中的文本会使模型难以找到回答查询所需的具体信息。</p>\n<p>解决方法是将大文档分解成更小、语义上有意义的片段。这个过程，被称为文本分块或切分，是为RAG系统准备数据的一个必要步骤。目的是创建足够小以供嵌入 (embedding)模型高效处理，同时又足够大以保持其原始上下文的文本片段。</p>\n<h3>分块的权衡：大小与上下文 (context)</h3>\n<p>选择合适的分块大小需要一个精妙的平衡。如果分块过小，语义上下文可能会丢失。例如，一个只包含“这是一个重大突破”的片段，如果缺少解释“它”指代何物的前文句子，就会变得毫无意义。另一方面，如果分块过大，它们可能包含不相关的信息，在检索时产生噪声，使向量 (vector)搜索更难找到最相关的段落。这通常被称为“迷失中间”问题，即有价值的信息被埋藏在一个大的、嘈杂的文本块中。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1uc7zfe\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n    edge [fontname=\"sans-serif\"];\n\n    subgraph cluster_0 {\n        label = \"文档文本\";\n        bgcolor=\"#f8f9fa\";\n        style=\"rounded\";\n        node [shape=plaintext];\n        doc [label=\"该系统采用Transformer架构。此模型在一个大型语料库上训练。它取得了先进的成果。\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"小分块（上下文缺失）\";\n        bgcolor=\"#ffc9c9\";\n        style=\"rounded\";\n        node [fillcolor=\"#ffa8a8\", color=\"#f03e3e\"];\n        a1 [label=\"该系统采用一个\"];\n        a2 [label=\"Transformer架构。\"];\n        a3 [label=\"此模型训练于\"];\n        a4 [label=\"一个大型语料库。\"];\n        a1 -> a2; a2 -> a3; a3 -> a4;\n    }\n\n    subgraph cluster_2 {\n        label = \"大分块（噪声/不相关信息）\";\n        bgcolor=\"#a5d8ff\";\n        style=\"rounded\";\n        node [fillcolor=\"#74c0fc\", color=\"#1c7ed6\"];\n        b1 [label=\"该系统采用Transformer架构。此模型在一个大型语料库上训练。它取得了先进的成果。工程团队由五名成员组成。项目截止日期延长了两周。\"];\n    }\n\n    subgraph cluster_3 {\n        label = \"理想分块（平衡）\";\n        bgcolor=\"#b2f2bb\";\n        style=\"rounded\";\n        node [fillcolor=\"#8ce99a\", color=\"#37b24d\"];\n        c1 [label=\"该系统采用Transformer架构。\"];\n        c2 [label=\"此模型在一个大型语料库上训练。\"];\n        c3 [label=\"它取得了先进的成果。\"];\n        c1 -> c2; c2 -> c3;\n    }\n\n    doc -> {a1, b1, c1} [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1uc7zfe\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>同一文本的不同分块策略。小分块可能导致语义碎片化，而大分块则可能引入噪声。目的是找到一个能保持语义上下文的平衡点。</p>\n</blockquote>\n<h3>递归字符分块</h3>\n<p>LangChain 中文本分块最推荐和通用的方法是 <code>RecursiveCharacterTextSplitter</code>。该分块器不是基于固定字符进行分割，而是使用一个有优先级的分隔符列表。它尝试使用列表中的第一个分隔符分割文本（默认是 <code>[\"\\n\\n\", \"\\n\", \" \", \"\"]</code>）。如果生成的分块仍然过大，它会转向下一个分隔符，依此类推。</p>\n<p>这种分层方法与书面文本的结构自然吻合。它首先尝试保持段落完整，然后是句子，最后是单词，以确保生成的分块在语义上尽可能连贯。</p>\n<p>两个主要参数 (parameter)控制其行为：</p>\n<ul>\n<li><code>chunk_size</code>：定义每个分块的最大长度，以字符为单位。</li>\n<li><code>chunk_overlap</code>：指定相邻分块之间重叠的字符数。这是一个有用的功能，有助于保持上下文 (context)的连续性。如果一个句子在一个分块的末尾被截断，重叠会确保它在下一个分块中得到完整呈现，从而减少句子之间关系丢失的可能性。</li>\n</ul>\n<p>以下是您在实践中如何使用它：</p>\n<pre><code class=\"language-python\">from langchain_text_splitters import RecursiveCharacterTextSplitter\n\n# 从文档加载的一些长文本\nlong_text = \"\"\"LangChain 提供了一个全面的框架，用于构建 LLM 应用程序。它简化了模型链、提示管理以及连接数据源的过程。\n\n它的主要组件之一是 TextSplitter。此实用程序对检索增强生成 (RAG) 至关重要，因为它将大文档分解为可管理的分块。这些分块随后被嵌入并存储在向量数据库中以进行高效检索。分块大小和重叠的选择对应用程序性能有很大影响。\"\"\"\n\n# 初始化分块器\ntext_splitter = RecursiveCharacterTextSplitter(\n    chunk_size=150,\n    chunk_overlap=20\n)\n\n# 分割文档\nchunks = text_splitter.split_text(long_text)\n\n# 打印生成的分块\nfor i, chunk in enumerate(chunks):\n    print(f\"--- Chunk {i+1} ---\\n{chunk}\\n\")\n</code></pre>\n<p>运行这段代码会产生以下输出，展示了文本是如何被分割的，同时重叠部分保持了边界处的上下文。</p>\n<pre><code class=\"language-text\">--- Chunk 1 ---\nLangChain 提供了一个全面的框架，用于构建 LLM 应用程序。它简化了模型链、提示管理以及连接\n\n--- Chunk 2 ---\n连接到数据源。\n\n它的主要组件之一是 TextSplitter。此实用程序对检索增强生成 (RAG) 至关重要，因为它\n\n--- Chunk 3 ---\n它将大文档分解为可管理的分块。这些分块随后被嵌入并存储在向量数据库中以进行高效检索。分块的选择\n\n--- Chunk 4 ---\n分块大小和重叠对应用程序性能有很大影响。\n</code></pre>\n<p>重叠部分清晰可见；“连接”出现在第一个分块的末尾和第二个分块的开头，确保整个短语可用于上下文。</p>\n<h3>选择合适的分块大小</h3>\n<p>最佳 <code>chunk_size</code> 取决于您的数据具体情况以及您打算使用的嵌入 (embedding)模型。大多数嵌入模型都有输入token限制（例如，512或1024个token），您希望您的分块能舒适地符合该限制。字符数不直接对应token数，但一个常见的经验法则是，英文中一个token大约是四个字符。</p>\n<p>对于许多应用程序而言，一个好的起始点是 <code>chunk_size</code> 约为1000个字符，<code>chunk_overlap</code> 为200个字符。这些值提供了一个坚实的平衡，但您应该通过实验来找到最适合您用例的设置。可视化分块后的长度分布可以帮助确认您的配置是否按预期运行。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1jtk2b\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"分块长度分布\"},\"xaxis\":{\"title\":{\"text\":\"分块长度（字符数）\"}},\"yaxis\":{\"title\":{\"text\":\"数量\"}},\"bargap\":0.1,\"paper_bgcolor\":\"#f8f9fa\",\"plot_bgcolor\":\"#f8f9fa\"},\"data\":[{\"type\":\"histogram\",\"x\":[149,148,148,84],\"marker\":{\"color\":\"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1jtk2b\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个直方图，显示示例中生成的四个分块的长度。大多数接近 <code>chunk_size</code> 限制150个字符，最后一个分块较短。</p>\n</blockquote>\n<h3>其他分块策略</h3>\n<p>虽然 <code>RecursiveCharacterTextSplitter</code> 是一个可靠的默认选项，但 LangChain 也提供了为不同需求定制的其他分块器：</p>\n<ul>\n<li><strong>CharacterTextSplitter:</strong> 最简单的分块器。它基于单个分隔符字符（例如 <code>\\n</code>）分割文本。它速度快，但与递归方法相比，在保留语义边界方面的效果较差。</li>\n<li><strong>TokenTextSplitter:</strong> 此分块器根据特定数量的token而不是字符来分割文本。这是一种更精确的方法，用于确保分块不超过LLM的上下文 (context)限制，但它需要一个外部tokenizer，例如OpenAI的 <code>tiktoken</code>。</li>\n</ul>\n<p>例如，使用 <code>TokenTextSplitter</code> 的方式如下：</p>\n<pre><code class=\"language-python\">from langchain_text_splitters import TokenTextSplitter\n\n# 此分块器需要一个tokenizer\ntoken_splitter = TokenTextSplitter(\n    chunk_size=50, # 以token为单位的大小\n    chunk_overlap=10, # 以token为单位的重叠\n    model_name=\"gpt-4o\" # 指定模型以确保准确的token计数\n)\n\ntoken_chunks = token_splitter.split_text(long_text)\n</code></pre>\n<p>这种方法在模型将处理的内容方面提供了更可预测的分块大小。然而，对于大多数通用RAG系统，<code>RecursiveCharacterTextSplitter</code> 在性能和简洁性之间提供了有效的平衡。</p>\n<p>现在，我们的文档已经被处理成定义清晰、语义上有意义的分块，下一步是将其转换为机器可以用于相似性比较的格式：数值向量 (vector)，即嵌入 (embedding)。</p>",
+  "slug": "splitting-documents",
+  "updates": [],
+  "references": [
+    {
+      "id": 14705,
+      "title": "LangChain Text Splitters",
+      "author": "LangChain Development Team",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE20vPxAG1wcwUYIGPPIV6anAwi-5JQ1gLjPAPVhbH7fwdrvYVDoezvXot1dyN6gxal17mlrkxINHUl2p2L53IKvET8Xmb_uQjPtCNLGjvLMGv7e8FwBIs3Jy6P4CoYUhIXZuceO-q_oeMBD5jh3Me9XjGCHSY=",
+      "doi": "",
+      "note": "官方文档，详细介绍了 LangChain 中的各种文本拆分策略，包括 `RecursiveCharacterTextSplitter` 和 `TokenTextSplitter`，对实际实现至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T09:01:46.810614Z",
+      "updated_at": "2025-09-11T06:07:22.013899Z"
+    },
+    {
+      "id": 14706,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "NeurIPS 2020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "这篇论文介绍了检索增强生成（RAG）框架，为将文档拆分为可管理块提供了理论背景，这是高效信息检索的基本预处理步骤。",
+      "order": 2,
+      "created_at": "2025-09-05T09:01:46.816152Z",
+      "updated_at": "2025-09-11T06:06:58.376866Z"
+    },
+    {
+      "id": 14707,
+      "title": "Lost in the Middle: How Language Models Use Long Contexts",
+      "author": "Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua, Fabio Petroni, Percy Liang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Transactions of the Association for Computational Linguistics (TACL)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2307.03172",
+      "doi": "10.48550/arXiv.2307.03172",
+      "note": "研究了语言模型在处理长输入上下文时的表现，指出了“中间丢失”现象，文本分块策略旨在通过提供集中的文本段来克服这一问题。",
+      "order": 3,
+      "created_at": "2025-09-05T09:01:46.818755Z",
+      "updated_at": "2025-09-11T06:07:06.102337Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

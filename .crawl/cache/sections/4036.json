@@ -1,0 +1,45 @@
+{
+  "id": 4036,
+  "title": "格式化实操",
+  "meta_title": "实操基本数据格式化",
+  "meta_description": "将文本规范化和简单格式化方法应用于示例数据。",
+  "content": "<p>让我们将本章介绍的方法用于实际。你已经学习了如何规范文本大小写、去除多余空格、进行简单替换以及处理基本的单位转换。现在，我们将使用一个数据集来演练，以巩固这些技能。运用这些方法是为数据分析做准备的常见环节。</p>\n<p>假设我们有一个小型数据集，包含产品信息，它可能来自不同来源或通过手动录入。通常情况下，这类数据会存在需要处理的不一致。</p>\n<p>这是我们初始数据的简化视图：</p>\n<table>\n<thead>\n<tr>\n<th>ID</th>\n<th>产品名称</th>\n<th>产地</th>\n<th>重量字符串</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>'  Super Widget '</td>\n<td>'usa'</td>\n<td>'5 kg'</td>\n</tr>\n<tr>\n<td>2</td>\n<td>' Power Gadget '</td>\n<td>'USA'</td>\n<td>'11 lbs'</td>\n</tr>\n<tr>\n<td>3</td>\n<td>'Flexo Thing'</td>\n<td>' U.S.A. '</td>\n<td>'2 kg'</td>\n</tr>\n<tr>\n<td>4</td>\n<td>'Super Widget'</td>\n<td>'Canada'</td>\n<td>'7 kg'</td>\n</tr>\n<tr>\n<td>5</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'15 lbs'</td>\n</tr>\n<tr>\n<td>6</td>\n<td>'Flexo Thing '</td>\n<td>'United States'</td>\n<td>'2.1 kg'</td>\n</tr>\n</tbody>\n</table>\n<p>我们能看到几个问题：</p>\n<ul>\n<li><code>ProductName</code> 含有开头/结尾的空格。</li>\n<li><code>Origin</code> 的大小写不一致（'usa'、'USA'、'U.S.A.'、'United States'），并且有周边空格。</li>\n<li><code>WeightStr</code> 既有千克（'kg'）也有磅（'lbs'），而且值以字符串形式与单位组合存储。</li>\n</ul>\n<p>我们的目标是清理这些数据，使其统一并适合分析。我们假设使用Python中常用的数据处理工具pandas库，但这些方法广泛适用。</p>\n<h3>第一步：规范文本大小写和去除空格</h3>\n<p>首先，我们来处理 <code>Origin</code> 和 <code>ProductName</code> 列。我们想要统一的大小写（选择小写）并且没有多余的空格。</p>\n<p><strong>处理 <code>Origin</code>：</strong></p>\n<ol>\n<li>将所有条目转换为小写。</li>\n<li>去除开头和结尾的空格。</li>\n</ol>\n<pre><code class=\"language-python\"># 使用pandas的例子\n# 转换为小写\ndf['Origin'] = df['Origin'].str.lower()\n# 去除开头/结尾空格\ndf['Origin'] = df['Origin'].str.strip()\n</code></pre>\n<p><strong>处理 <code>ProductName</code>：</strong></p>\n<ol>\n<li>去除开头和结尾的空格。</li>\n</ol>\n<pre><code class=\"language-python\"># 使用pandas的例子\ndf['ProductName'] = df['ProductName'].str.strip()\n</code></pre>\n<p>完成这些步骤后，我们的 <code>Origin</code> 和 <code>ProductName</code> 列看起来是这样：</p>\n<table>\n<thead>\n<tr>\n<th>ID</th>\n<th>产品名称</th>\n<th>产地</th>\n<th>重量字符串</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>'Super Widget'</td>\n<td>'usa'</td>\n<td>'5 kg'</td>\n</tr>\n<tr>\n<td>2</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'11 lbs'</td>\n</tr>\n<tr>\n<td>3</td>\n<td>'Flexo Thing'</td>\n<td>'u.s.a.'</td>\n<td>'2 kg'</td>\n</tr>\n<tr>\n<td>4</td>\n<td>'Super Widget'</td>\n<td>'canada'</td>\n<td>'7 kg'</td>\n</tr>\n<tr>\n<td>5</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'15 lbs'</td>\n</tr>\n<tr>\n<td>6</td>\n<td>'Flexo Thing'</td>\n<td>'united states'</td>\n<td>'2.1 kg'</td>\n</tr>\n</tbody>\n</table>\n<h3>第二步：简单字符串替换</h3>\n<p><code>Origin</code> 列改善了，但我们仍然有 'usa'、'u.s.a.' 和 'united states' 等不同形式。我们应该将它们规范化为一种格式，例如 'usa'。</p>\n<p>我们可以为此使用字符串替换。</p>\n<pre><code class=\"language-python\"># 使用pandas的例子\nreplace_map = {\n    'u.s.a.': 'usa',\n    'united states': 'usa'\n}\ndf['Origin'] = df['Origin'].replace(replace_map)\n</code></pre>\n<p>现在，<code>Origin</code> 列保持一致：</p>\n<table>\n<thead>\n<tr>\n<th>ID</th>\n<th>产品名称</th>\n<th>产地</th>\n<th>重量字符串</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>'Super Widget'</td>\n<td>'usa'</td>\n<td>'5 kg'</td>\n</tr>\n<tr>\n<td>2</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'11 lbs'</td>\n</tr>\n<tr>\n<td>3</td>\n<td>'Flexo Thing'</td>\n<td>'usa'</td>\n<td>'2 kg'</td>\n</tr>\n<tr>\n<td>4</td>\n<td>'Super Widget'</td>\n<td>'canada'</td>\n<td>'7 kg'</td>\n</tr>\n<tr>\n<td>5</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'15 lbs'</td>\n</tr>\n<tr>\n<td>6</td>\n<td>'Flexo Thing'</td>\n<td>'usa'</td>\n<td>'2.1 kg'</td>\n</tr>\n</tbody>\n</table>\n<h3>第三步：基本单位转换</h3>\n<p><code>WeightStr</code> 列混合了单位（'kg' 和 'lbs'），并且数据以文本形式存储。为了进行计算，我们需要一个带有统一单位的数值列。让我们将所有单位转换为千克（kg）。</p>\n<p>转换系数大约是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn><mtext> 磅</mtext><mo>=</mo><mn>0.453592</mn><mtext> 千克</mtext></mrow><annotation encoding=\"application/x-tex\">1 \\text{ 磅} = 0.453592 \\text{ 千克}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">1</span><span class=\"mord text\"><span class=\"mord\"> </span><span class=\"mord cjk_fallback\">磅</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">0.453592</span><span class=\"mord text\"><span class=\"mord\"> </span><span class=\"mord cjk_fallback\">千克</span></span></span></span></span>。</p>\n<p>这通常涉及几个子步骤：</p>\n<ol>\n<li>从单位（'kg' 或 'lbs'）中分离出数值。</li>\n<li>将数值部分转换为浮点数。</li>\n<li>识别单位为 'lbs' 的行并应用转换系数。</li>\n<li>将结果存储在一个新的数值列中，例如命名为 <code>Weight_kg</code>。</li>\n</ol>\n<pre><code class=\"language-python\"># 使用pandas的例子（步骤）\n\n# 1. 提取数值和单位（例如，使用字符串分割或正则表达式）\n# 例子：'5 kg' -> (5.0, 'kg'), '11 lbs' -> (11.0, 'lbs')\n# 将这些存储在临时列中，例如 'WeightValue' 和 'WeightUnit'\ndf[['WeightValue', 'WeightUnit']] = df['WeightStr'].str.extract(r'(\\d+\\.?\\d*)\\s*(\\w+)')\ndf['WeightValue'] = df['WeightValue'].astype(float)\n\n# 2. 定义转换系数\nlbs_to_kg = 0.453592\n\n# 3. 在需要的地方应用转换\n# 创建新列，最初复制千克值\ndf['Weight_kg'] = df['WeightValue']\n# 找到单位是 'lbs' 的行并应用转换\nlbs_mask = df['WeightUnit'].str.lower() == 'lbs'\ndf.loc[lbs_mask, 'Weight_kg'] = df.loc[lbs_mask, 'WeightValue'] * lbs_to_kg\n\n# 4. (可选) 删除临时/原始列\n# df = df.drop(columns=['WeightStr', 'WeightValue', 'WeightUnit'])\n</code></pre>\n<p>应用转换后，我们的数据集看起来整洁很多，拥有了一个专门的数值列来表示以千克为单位的重量：</p>\n<table>\n<thead>\n<tr>\n<th>ID</th>\n<th>产品名称</th>\n<th>产地</th>\n<th>重量字符串</th>\n<th>WeightValue</th>\n<th>WeightUnit</th>\n<th>Weight_kg</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>'Super Widget'</td>\n<td>'usa'</td>\n<td>'5 kg'</td>\n<td>5.0</td>\n<td>'kg'</td>\n<td>5.000000</td>\n</tr>\n<tr>\n<td>2</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'11 lbs'</td>\n<td>11.0</td>\n<td>'lbs'</td>\n<td>4.989512</td>\n</tr>\n<tr>\n<td>3</td>\n<td>'Flexo Thing'</td>\n<td>'usa'</td>\n<td>'2 kg'</td>\n<td>2.0</td>\n<td>'kg'</td>\n<td>2.000000</td>\n</tr>\n<tr>\n<td>4</td>\n<td>'Super Widget'</td>\n<td>'canada'</td>\n<td>'7 kg'</td>\n<td>7.0</td>\n<td>'kg'</td>\n<td>7.000000</td>\n</tr>\n<tr>\n<td>5</td>\n<td>'Power Gadget'</td>\n<td>'usa'</td>\n<td>'15 lbs'</td>\n<td>15.0</td>\n<td>'lbs'</td>\n<td>6.803880</td>\n</tr>\n<tr>\n<td>6</td>\n<td>'Flexo Thing'</td>\n<td>'usa'</td>\n<td>'2.1 kg'</td>\n<td>2.1</td>\n<td>'kg'</td>\n<td>2.100000</td>\n</tr>\n</tbody>\n</table>\n<p>如果需要，我们可以将 <code>Weight_kg</code> 列四舍五入到合理的小数位数，然后如果不再需要，可以删除中间列（<code>WeightStr</code>、<code>WeightValue</code>、<code>WeightUnit</code>）。</p>\n<h3>实操总结</h3>\n<p>通过这些步骤，我们应用了本章介绍的格式化方法：</p>\n<ul>\n<li>规范了 <code>Origin</code> 列的文本大小写。</li>\n<li>去除了 <code>ProductName</code> 和 <code>Origin</code> 开头/结尾的空格。</li>\n<li>使用字符串替换统一了 <code>Origin</code> 列中的不同形式。</li>\n<li>对重量数据进行了基本单位转换，创建了一个统一的数值型 <code>Weight_kg</code> 列。</li>\n</ul>\n<p>我们的数据集现在大幅更一致，更易于进行分析或与其他数据合并。本实操练习说明了这些看似简单的格式化步骤如何成为构建可靠数据集的重要组成部分。</p>",
+  "slug": "formatting-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 11045,
+      "title": "Working with text data",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/text.html",
+      "doi": "",
+      "note": "pandas官方字符串操作方法指南，有助于文本数据清洗和标准化。",
+      "order": 1,
+      "created_at": "2025-09-05T06:58:07.711471Z",
+      "updated_at": "2025-09-08T13:06:51.838168Z"
+    },
+    {
+      "id": 11046,
+      "title": "Python for Data Analysis: Data Wrangling with pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本使用pandas进行数据操作的基础书籍，包括实用的数据清洗技巧。",
+      "order": 2,
+      "created_at": "2025-09-05T06:58:07.715556Z",
+      "updated_at": "2025-09-08T13:07:01.864992Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

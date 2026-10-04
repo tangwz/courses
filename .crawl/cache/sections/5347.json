@@ -1,0 +1,61 @@
+{
+  "id": 5347,
+  "title": "构建和运行 Docker 容器",
+  "meta_title": "构建与运行 Docker 容器",
+  "meta_description": "用于构建 Docker 镜像和从这些镜像运行容器的命令。",
+  "content": "<p>一个 <code>Dockerfile</code> 充当着容器化 FastAPI 应用的蓝图。利用这份蓝图，可以构建一个实际的镜像，然后基于该镜像启动一个容器。这个过程涉及两个主要的 Docker 命令：<code>docker build</code> 和 <code>docker run</code>。</p>\n<h3>使用 <code>docker build</code> 构建 Docker 镜像</h3>\n<p><code>docker build</code> 命令用于从 <code>Dockerfile</code> 和一个“上下文 (context)”创建 Docker 镜像。上下文是指位于指定 <code>PATH</code> 或 <code>URL</code> 中的文件集合。这些文件在构建过程中会发送给 Docker 守护进程。</p>\n<p>你最常用的语法是：</p>\n<pre><code class=\"language-bash\">docker build -t &#x3C;image_name>:&#x3C;tag> &#x3C;path_to_build_context>\n</code></pre>\n<p>我们来分解一下各部分：</p>\n<ul>\n<li><code>docker build</code>：命令本身。</li>\n<li><code>-t &#x3C;image_name>:&#x3C;tag></code>：这个选项是 <code>--tag</code> 的缩写，非常重要。它允许你为镜像指定一个易读的名称和标签。格式通常是 <code>repository_name:tag</code>。\n<ul>\n<li><code>repository_name</code>：通常反映应用程序的名称，例如 <code>fastapi-ml-api</code>。</li>\n<li><code>tag</code>：表示特定版本或变体，例如 <code>v1.0</code>、<code>latest</code> 或 Git 提交哈希。使用 <code>latest</code> 很常见，但在生产环境中应谨慎使用，因为指定具体版本更有利于复现。</li>\n<li>示例：<code>-t fastapi-ml-api:latest</code> 或 <code>-t mycompany/prediction-service:0.1.0</code>。使用标签会使你之后管理和引用镜像时更加方便。</li>\n</ul>\n</li>\n<li><code>&#x3C;path_to_build_context></code>：这指定了你的 <code>Dockerfile</code> 和它需要的应用程序文件（例如你的 Python 代码、<code>requirements.txt</code> 以及如果直接复制的话可能还有模型文件）的位置。最常见的情况是，你会从项目根目录（<code>Dockerfile</code> 所在的目录）运行此命令，因此路径只需是 <code>.</code>（代表当前目录）。</li>\n</ul>\n<p>当你执行 <code>docker build</code> 时，Docker 守护进程会执行以下操作：</p>\n<ol>\n<li>将构建上下文（指定路径中的所有文件）发送给守护进程。请注意构建上下文中不需要的大文件；使用 <code>.dockerignore</code> 文件（类似于 <code>.gitignore</code>）来排除它们，以加快构建速度。</li>\n<li>读取 <code>Dockerfile</code>。</li>\n<li>按顺序执行 <code>Dockerfile</code> 中的每条指令。每条指令通常会在镜像中创建一个新的层。</li>\n<li>使用构建缓存：如果一条指令及其输入文件自上次构建以来没有改变，Docker 会重用缓存中已有的层，从而显著加快后续构建的速度。这体现了在 <code>Dockerfile</code> 中有效组织指令顺序的重要性（例如，在复制更常变化的应用程序代码之前，先复制并安装依赖项）。</li>\n<li>成功完成后，输出新构建镜像的 ID。如果你使用了 <code>-t</code> 标志，它还会将你选择的名称和标签与此镜像 ID 关联起来。</li>\n</ol>\n<p><strong>示例：</strong></p>\n<p>假设你的 <code>Dockerfile</code> 位于当前目录，并且与你的应用程序代码（<code>main.py</code>、<code>requirements.txt</code>、模型文件等）在一起，你会这样构建镜像：</p>\n<pre><code class=\"language-bash\">docker build -t fastapi-ml-api:latest .\n</code></pre>\n<p>你会看到输出详细说明构建过程的每一步。完成后，你可以使用 <code>docker images</code> 列出本地镜像，看到带有 <code>latest</code> 标签的 <code>fastapi-ml-api</code>。</p>\n<h3>使用 <code>docker run</code> 运行 Docker 容器</h3>\n<p>现在你已经有了包含你的 FastAPI 应用程序、其依赖项和 ML 模型的 Docker 镜像，你可以使用 <code>docker run</code> 命令从它创建并启动一个容器。</p>\n<p>基本语法是：</p>\n<pre><code class=\"language-bash\">docker run [OPTIONS] &#x3C;image_name>:&#x3C;tag>\n</code></pre>\n<p>以下是一些你经常会用到的选项（<code>[OPTIONS]</code>）：</p>\n<ul>\n<li><code>-p &#x3C;host_port>:&#x3C;container_port></code>：这是端口映射选项，是 <code>--publish</code> 的缩写。它将你的宿主机上的一个端口连接到容器内部的一个端口。\n<ul>\n<li><code>container_port</code>：你的应用程序在容器内部监听的端口（例如，在你的 <code>CMD</code> 指令中指定的端口，如 <code>uvicorn main:app --host 0.0.0.0 --port 80</code>）。在容器内部使用 <code>0.0.0.0</code> 作为主机地址，可以使其从容器的网络命名空间外部访问。</li>\n<li><code>host_port</code>：你将用于从宿主机的浏览器或诸如 <code>curl</code> 等工具访问应用程序的端口。</li>\n<li>示例：<code>-p 8000:80</code> 将宿主机上的 8000 端口映射到容器内部的 80 端口。然后你就可以通过 <code>http://localhost:8000</code> 访问你的 API 了。</li>\n</ul>\n</li>\n<li><code>-d</code>：这会以分离模式运行容器，意味着它在后台运行，你的终端会被释放。如果没有 <code>-d</code>，你的终端将连接到容器的输出（日志）。</li>\n<li><code>--name &#x3C;container_name></code>：为你的运行中容器指定一个名称。如果你不提供名称，Docker 会生成一个随机名称。为容器命名会使它们更容易管理（例如，停止、删除、检查）。示例：<code>--name ml_api_instance_1</code>。</li>\n<li><code>-e &#x3C;VARIABLE_NAME>=&#x3C;value></code>：在容器内部设置环境变量。这是向应用程序传递配置设置的常用方式，下一节会提到。示例：<code>-e MODEL_PATH=/app/models/model.pkl</code>。</li>\n<li><code>--rm</code>：容器退出时自动删除。适用于临时容器或在开发过程中使用，以避免系统被停止的容器占用空间。</li>\n</ul>\n<p><strong>示例：</strong></p>\n<p>要基于我们之前构建的镜像运行一个容器，将宿主机的 8000 端口映射到容器的 80 端口（假设你的 <code>Dockerfile</code> 的 <code>CMD</code> 在 80 端口运行 Uvicorn），并以分离模式运行：</p>\n<pre><code class=\"language-bash\">docker run -d -p 8000:80 --name my_api fastapi-ml-api:latest\n</code></pre>\n<p>运行此命令后，Docker 将输出新启动容器的唯一 ID。</p>\n<h3>检查和管理容器</h3>\n<p>一旦你的容器开始运行（特别是在分离模式下），你可能会想与其进行交互：</p>\n<ul>\n<li><strong>检查运行中的容器</strong>：使用 <code>docker ps</code>。这会列出所有当前运行的容器，显示它们的 ID、名称、镜像来源、状态、端口等。添加 <code>-a</code> 标志（<code>docker ps -a</code>）可以查看所有容器，包括已停止的容器。</li>\n<li><strong>查看日志</strong>：如果以分离模式运行，你可以使用 <code>docker logs &#x3C;container_name_or_id></code> 查看应用程序日志（Uvicorn 的标准输出/标准错误）。使用 <code>-f</code> 标志（<code>docker logs -f &#x3C;container_name_or_id></code>）可以实时跟踪日志。</li>\n<li><strong>停止容器</strong>：使用 <code>docker stop &#x3C;container_name_or_id></code>。</li>\n<li><strong>启动已停止的容器</strong>：使用 <code>docker start &#x3C;container_name_or_id></code>。</li>\n<li><strong>删除容器</strong>：使用 <code>docker rm &#x3C;container_name_or_id></code>。通常你需要先停止容器才能删除它，除非你使用强制标志 <code>-f</code>。使用 <code>docker run --rm</code> 可以避免手动执行此操作。</li>\n<li><strong>访问 API</strong>：通过上面的示例 <code>docker run</code> 命令，你应该能够从宿主机通过 <code>http://localhost:8000</code> 访问你的 API 端点（例如，通过 <code>http://localhost:8000/docs</code> 访问 Swagger UI）。</li>\n</ul>\n<p>使用 <code>docker build</code> 和 <code>docker run</code> 构成了将你的应用程序代码和 <code>Dockerfile</code> 转换为运行中的、隔离的服务的核心工作流程。通过构建镜像，你将应用程序及其所有依赖项打包在一起，包括特定的 Python 解释器和 ML 模型本身。将此镜像作为容器运行可提供一致的环境，确保无论容器部署在哪里，你的应用程序行为都一致。</p>",
+  "slug": "building-running-docker-containers",
+  "updates": [],
+  "references": [
+    {
+      "id": 14222,
+      "title": "docker build",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/cli/docker/build/",
+      "doi": "",
+      "note": "`docker build` 命令的官方文档，详细说明了其语法、选项以及如何从 Dockerfile 和构建上下文创建 Docker 镜像。",
+      "order": 1,
+      "created_at": "2025-09-05T08:49:31.282353Z",
+      "updated_at": "2025-09-09T14:11:27.293061Z"
+    },
+    {
+      "id": 14223,
+      "title": "docker run",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/cli/docker/run/",
+      "doi": "",
+      "note": "`docker run` 命令的官方文档，描述了其语法、端口映射、分离模式、命名和环境变量等选项，用于启动容器。",
+      "order": 2,
+      "created_at": "2025-09-05T08:49:31.291824Z",
+      "updated_at": "2025-09-09T14:11:28.764326Z"
+    },
+    {
+      "id": 14224,
+      "title": "The Docker Deep Dive",
+      "author": "Nigel Poulton",
+      "year": "2023",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.amazon.com/Docker-Deep-Dive-Nigel-Poulton/dp/0138247070",
+      "doi": "",
+      "note": "一份全面的指南，讲解 Docker 基础知识，包括镜像、容器、Dockerfile 以及构建/运行工作流程，提供概念和实践细节。",
+      "order": 3,
+      "created_at": "2025-09-05T08:49:31.298713Z",
+      "updated_at": "2025-09-09T14:11:42.715504Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

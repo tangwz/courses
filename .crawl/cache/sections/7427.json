@@ -1,0 +1,45 @@
+{
+  "id": 7427,
+  "title": "实践：构建一个带记忆的聊天机器人",
+  "meta_title": "实践：构建一个LangChain聊天机器人",
+  "meta_description": "一个实操练习，用于创建一个能记住之前对话内容的聊天机器人，它使用ConversationBufferMemory。",
+  "content": "<p>构建一个能记住之前对话的简单聊天机器人，需要在实践中应用记忆组件。这个实操例子展示了如何将记忆对象整合到链中，以便在对话的多个轮次中保持状态。</p>\n<h3>环境设置</h3>\n<p>首先，让我们准备环境。我们需要安装必要的库并配置API密钥。本例将使用OpenAI API，但其原理适用于LangChain支持的任何LLM。</p>\n<pre><code class=\"language-python\"># 确保已安装所需的库\n# pip install langchain langchain-openai langchain-community python-dotenv\n\nimport os\nfrom dotenv import load_dotenv\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder\nfrom langchain_core.chat_history import InMemoryChatMessageHistory\nfrom langchain_core.runnables.history import RunnableWithMessageHistory\n\n# 从.env文件加载环境变量\nload_dotenv()\n\n# 建议将您的API密钥设置为环境变量\n# os.environ[\"OPENAI_API_KEY\"] = \"your_api_key_here\"\n</code></pre>\n<h3>无状态性问题：快速回顾</h3>\n<p>在添加记忆之前，让我们快速说明我们正在解决的问题。如果没有记忆组件，每次对LLM的调用都是独立的。如果您提出一个后续问题，模型将无法了解您之前陈述的背景。</p>\n<p>考虑以下对话：</p>\n<ol>\n<li><strong>用户：</strong> “我最喜欢的动物是墨西哥钝口螈。”</li>\n<li><strong>LLM：</strong> “这是一个有趣的偏好！墨西哥钝口螈是一种迷人的两栖动物。”</li>\n<li><strong>用户：</strong> “我最喜欢的动物是什么？”</li>\n<li><strong>LLM（无记忆）：</strong> “抱歉，我不知道您最喜欢的动物是什么。您没有告诉我。”</li>\n</ol>\n<p>模型在后续问题上失败了，因为第三轮对话的处理完全独立于第一轮。</p>\n<h3>构建对话链</h3>\n<p>为了解决这个问题，我们将使用LangChain的<code>RunnableWithMessageHistory</code>。这个工具将标准链（模型+提示）包装起来，并根据会话ID自动管理从历史存储读写数据。</p>\n<h4>1. 初始化LLM和提示</h4>\n<p>我们首先定义模型和提示模板。提示必须包含一个消息历史的占位符，这样模型才能看到之前的轮次。</p>\n<pre><code class=\"language-python\"># 初始化LLM\nllm = ChatOpenAI(model_name=\"gpt-3.5-turbo\", temperature=0.7)\n\n# 定义提示模板\n# 我们包含一个系统消息来设定行为，一个历史记录的占位符，\n# 以及一个新用户输入的模板。\nprompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"你是一个友好的助手，会记住对话中的细节。\"),\n    MessagesPlaceholder(variable_name=\"chat_history\"),\n    (\"human\", \"{input}\")\n])\n\n# 创建基本链\nchain = prompt | llm\n</code></pre>\n<p><code>variable_name=\"chat_history\"</code>告知系统将过去的消息注入何处。</p>\n<h4>2. 定义历史存储</h4>\n<p>接下来，我们需要一种方式来存储对话数据。本例中，我们将使用一个简单的字典来存放<code>InMemoryChatMessageHistory</code>对象，以会话ID为键。在生产应用中，您可能会在这里使用Redis等数据库。</p>\n<pre><code class=\"language-python\"># 存储不同会话对话历史的字典\nstore = {}\n\ndef get_session_history(session_id: str) -> InMemoryChatMessageHistory:\n    if session_id not in store:\n        store[session_id] = InMemoryChatMessageHistory()\n    return store[session_id]\n</code></pre>\n<h4>3. 用记忆包装链</h4>\n<p>现在我们使用<code>RunnableWithMessageHistory</code>来包装我们的基本链。这个对象连接我们的链、历史工厂函数以及提示中使用的特定键。</p>\n<pre><code class=\"language-python\"># 创建对话可运行对象\nconversation = RunnableWithMessageHistory(\n    chain,\n    get_session_history,\n    input_messages_key=\"input\",\n    history_messages_key=\"chat_history\"\n)\n</code></pre>\n<p>我们指定<code>input_messages_key=\"input\"</code>以匹配我们提示中的<code>{input}</code>变量，并指定<code>history_messages_key=\"chat_history\"</code>以匹配<code>MessagesPlaceholder</code>。</p>\n<h3>与有状态聊天机器人交互</h3>\n<p>现在，让我们测试聊天机器人。我们使用<code>.invoke()</code>方法，传入输入和一个包含<code>session_id</code>的<code>config</code>字典。这个ID让系统获取正确的历史记录。</p>\n<p><strong>首次交互：</strong>\n我们提供一些初始信息。</p>\n<pre><code class=\"language-python\"># 带有特定会话ID的第一个用户输入\nconfig = {\"configurable\": {\"session_id\": \"user_123\"}}\n\nresponse = conversation.invoke(\n    {\"input\": \"你好，我叫克拉拉。我正在构建一个聊天机器人。\"},\n    config=config\n)\n\nprint(response.content)\n</code></pre>\n<p>聊天机器人会提供友好的问候。<code>InMemoryChatMessageHistory</code>现在已将我们的输入和模型的响应存储在键<code>user_123</code>下。</p>\n<p><strong>第二次交互：</strong>\n现在进行真正的测试。让我们问一个依赖于第一条消息上下文 (context)的后续问题。</p>\n<pre><code class=\"language-python\"># 使用相同会话ID的第二个用户输入\nresponse = conversation.invoke(\n    {\"input\": \"我叫什么名字？\"},\n    config=config\n)\n\nprint(response.content)\n</code></pre>\n<p>预期输出将类似于：</p>\n<pre><code>你的名字是克拉拉。\n</code></pre>\n<p>成功了。模型正确识别了名称，因为可运行对象获取了<code>user_123</code>的历史记录，将其插入到提示中，并将完整的背景信息发送给LLM。</p>\n<h3>带记忆的对话流程</h3>\n<p>每次交互的流程遵循清晰的循环模式，这确保了背景信息的保存和利用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1jvsh94\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    UserInput [label=\"1. 用户输入\\n(带session_id调用invoke)\", fillcolor=\"#a5d8ff\"];\n    MemoryRead [label=\"2. 获取历史\\n(调用get_session_history)\", fillcolor=\"#ffd8a8\"];\n    Prompt [label=\"3. 格式化提示\\n(注入历史和新输入)\", fillcolor=\"#b2f2bb\"];\n    LLM [label=\"4. LLM调用\\n(生成响应)\", fillcolor=\"#d0bfff\"];\n    Output [label=\"5. AI输出\\n(例如，“你的名字是克拉拉。”)\", fillcolor=\"#a5d8ff\"];\n    MemoryWrite [label=\"6. 更新历史\\n(将新一轮对话附加到存储)\", fillcolor=\"#ffd8a8\"];\n\n    UserInput -> MemoryRead [label=\"invoke() 被调用\"];\n    MemoryRead -> Prompt;\n    Prompt -> LLM;\n    LLM -> Output;\n    Output -> MemoryWrite;\n    MemoryWrite -> UserInput [style=dashed, label=\"准备好接收下一个输入\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1jvsh94\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了单个对话轮次的生命周期。可运行对象从历史存储中读取数据，格式化提示，从LLM获取响应，然后将新的交互写回存储，为下一轮对话做好准备。</p>\n</blockquote>\n<p>这个实践展示了构建有状态应用的基本机制。虽然将所有历史保存在内存中很简单，但对于短会话来说它很强大。对于需要非常长对话的应用，您可以采用策略来总结旧消息或截断历史记录，这可以通过修改历史记录获取或链步骤中的逻辑来处理。</p>",
+  "slug": "practice-chatbot-with-memory",
+  "updates": [],
+  "references": [
+    {
+      "id": 14773,
+      "title": "LangChain Documentation: Memory",
+      "author": "LangChain Developers",
+      "year": "2023",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFqyvncGEdXeL47cu4U9WK_3JSKANf1TNua9EAQZsb4aiCj8MrhD0_1Bn0cfqPSoOq9Fs03NmnskNM638oKjoxlEYVufMLchTZJpDUnnVWsnvnf56tP2TE5S4n9WlIhr5-T194HOrKcfySXk7Yh4B5dYJ7UXyx0Hycyiik=",
+      "doi": "",
+      "note": "LangChain官方内存模块文档，解释了不同内存类型及其在对话应用链中的使用方法。",
+      "order": 1,
+      "created_at": "2025-09-05T09:07:04.953887Z",
+      "updated_at": "2025-09-11T10:50:02.591414Z"
+    },
+    {
+      "id": 14775,
+      "title": "LangChain for LLM Application Development",
+      "author": "Harrison Chase, Andrew Ng",
+      "year": "2023",
+      "publisher": "DeepLearning.AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/",
+      "doi": "",
+      "note": "一个在线短课程，涵盖了LangChain的核心概念，包括用于构建对话式AI代理的内存实现的实践演示。",
+      "order": 3,
+      "created_at": "2025-09-05T09:07:04.962040Z",
+      "updated_at": "2025-09-11T10:49:31.275382Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

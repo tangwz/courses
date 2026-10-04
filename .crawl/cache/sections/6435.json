@@ -1,0 +1,67 @@
+{
+  "id": 6435,
+  "title": "评估重建质量",
+  "meta_title": "评估自动编码器重建",
+  "meta_description": "评估训练好的自动编码器重建输入数据效果的方法，检查质量。",
+  "content": "<p>训练过程完成后，下一步是确定你的自编码器在重建输入数据方面表现如何。训练期间，模型努力使损失函数 (loss function)（如均方误差，MSE）最小化。现在，我们需要公正评估它在<strong>从未见过的数据</strong>上的表现。</p>\n<h3>为什么要在未见过的数据上评估？</h3>\n<p>你可能会想，为什么不能只看训练过程的最终损失值。因为训练损失只告诉我们模型在学习过的数据上的表现，而不能说明它对新的、未见过的数据的泛化能力。一个模型可能在训练数据上表现完美，但在新数据上却表现不佳，这被称为<strong>过拟合 (overfitting)</strong>。为了得到更可靠的评估，我们使用一个独立的“测试集”，它包含训练阶段未使用过的样本。</p>\n<h3>使用损失函数 (loss function)量化 (quantization)重建质量</h3>\n<p>定量评估重建质量最直接的方法是使用测试集计算损失函数。如果你训练自编码器是为了最小化 MSE，那么你将计算测试集中原始图像与重建图像之间的 MSE。</p>\n<p>记住均方误差（MSE）的公式：\r\n<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>L</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">,</mo><mover accent=\"true\"><mi>x</mi><mo>^</mo></mover><mo stretchy=\"false\">)</mo><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><msubsup><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></msubsup><mo stretchy=\"false\">(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><msub><mover accent=\"true\"><mi>x</mi><mo>^</mo></mover><mi>i</mi></msub><msup><mo stretchy=\"false\">)</mo><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">L(x, \\hat{x}) = \\frac{1}{N} \\sum_{i=1}^{N} (x_i - \\hat{x}_i)^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">L</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord accent\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.6944em;\"><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord mathnormal\">x</span></span><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"accent-body\" style=\"left:-0.2222em;\"><span class=\"mord\">^</span></span></span></span></span></span></span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1.3262em;vertical-align:-0.345em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8451em;\"><span style=\"top:-2.655em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.109em;\">N</span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.394em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">1</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.345em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mop\"><span class=\"mop op-symbol small-op\" style=\"position:relative;top:0em;\">∑</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.9812em;\"><span style=\"top:-2.4003em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\">i</span><span class=\"mrel mtight\">=</span><span class=\"mord mtight\">1</span></span></span></span><span style=\"top:-3.2029em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.109em;\">N</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2997em;\"><span></span></span></span></span></span></span><span class=\"mopen\">(</span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1.0641em;vertical-align:-0.25em;\"></span><span class=\"mord\"><span class=\"mord accent\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.6944em;\"><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord mathnormal\">x</span></span><span style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"accent-body\" style=\"left:-0.2222em;\"><span class=\"mord\">^</span></span></span></span></span></span></span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mclose\"><span class=\"mclose\">)</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>\r\n这里，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span> 代表原始输入，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mspace linebreak=\"newline\"></mspace><mi>h</mi><mi>a</mi><mi>t</mi><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">\\\\hat{x}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"mspace newline\"></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">ha</span><span class=\"mord mathnormal\">t</span><span class=\"mord\"><span class=\"mord mathnormal\">x</span></span></span></span></span> 是重建输出，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 是像素数量。<strong>较低的 MSE 值</strong>表示重建输出平均而言更接近原始输入，这表明重建质量更好。</p>\n<p>在 Keras 中，一旦模型训练完成，你可以使用 <code>autoencoder.evaluate()</code> 方法轻松评估其性能：</p>\n<pre><code class=\"language-python\"># 假设 x_test 是你预处理过的测试数据集\r\n# 对于自编码器，评估的输入和目标是相同的\r\ntest_loss = autoencoder.evaluate(x_test, x_test, verbose=0)\r\nprint(f\"Test MSE: {test_loss}\")\n</code></pre>\n<p><code>autoencoder.evaluate()</code> 方法计算提供的 <code>x_test</code> 数据上的损失。由于自动编码器旨在重建其输入，因此评估的输入和目标都是 <code>x_test</code>。<code>test_loss</code> 变量将保存测试集的 MSE。</p>\n<h3>解释损失值</h3>\n<p>那么，你得到的测试损失数值意味着什么呢？</p>\n<ul>\n<li><strong>越低越好</strong>：通常，较低的损失值是理想的。它表明原始图像与重建图像之间的像素级差异很小。</li>\n<li><strong>情境很重要</strong>：“好”的损失值取决于数据的复杂性和具体问题。例如，重建简单的 MNIST 数字可能会产生非常低的 MSE，而重建复杂的高分辨率图像即使对于表现良好的模型，也可能导致较高的 MSE。</li>\n<li><strong>并非全部</strong>：尽管数值损失提供了有价值的客观衡量，但它并不总是能全面反映感知质量。两个重建图像可能具有相似的 MSE 值，但一个在视觉上可能看起来更好或更连贯。</li>\n</ul>\n<p>这种数值评估平均表明了重建图像与原始图像的接近程度。良好的重建质量（低误差）意味着编码器在瓶颈层中学会了创建有用的、压缩的表示，解码器可以从中有效重建原始数据。</p>\n<p>尽管这种定量衡量很重要，但它通常需要辅以对重建图像的定性、视觉检查。眼见为实。在下一节，我们将进行此项操作，让你更直观地感受自动编码器的表现。</p>",
+  "slug": "assessing-reconstruction-quality",
+  "updates": [
+    {
+      "message": "更新以使用 Pytorch 和 Keras 3 代替 Tensorflow",
+      "created_at": "2025-09-05T05:11:18.869833Z",
+      "updated_at": "2025-09-05T05:11:18.869845Z"
+    }
+  ],
+  "references": [
+    {
+      "id": 17436,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "为深度学习提供理论基础，涵盖自编码器、均方误差等损失函数，以及过拟合和在未见数据上评估等基本概念。相关章节讨论前馈网络、正则化和自编码器。",
+      "order": 1,
+      "created_at": "2025-09-06T11:59:32.780008Z",
+      "updated_at": "2025-09-10T06:12:27.856043Z"
+    },
+    {
+      "id": 17437,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "提供使用 Keras 进行深度学习的实践指南，演示如何训练模型、在测试集上评估其性能以及在 Keras 环境中解释损失值。第二版。",
+      "order": 2,
+      "created_at": "2025-09-06T11:59:32.878657Z",
+      "updated_at": "2025-09-10T06:12:26.876092Z"
+    },
+    {
+      "id": 17438,
+      "title": "`tf.keras.Model.evaluate`",
+      "author": "Keras Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate",
+      "doi": "",
+      "note": "Keras 中 `evaluate` 方法的官方文档，详细说明其用法、参数和返回值，用于评估模型性能。",
+      "order": 3,
+      "created_at": "2025-09-06T11:59:32.883738Z",
+      "updated_at": "2025-09-10T06:12:44.884158Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

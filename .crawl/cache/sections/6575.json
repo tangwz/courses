@@ -1,0 +1,61 @@
+{
+  "id": 6575,
+  "title": "管理工具调用间的依赖关系",
+  "meta_title": "处理工具链中的依赖关系",
+  "meta_description": "了解如何在序列中管理一个工具的输出成为另一个工具输入的情况。",
+  "content": "<p>当智能体需要完成一项任务，而单个工具不足以处理时，它通常会将多个工具串联起来使用。在这些多步骤的流程中，一个工具的输出常常会成为后续工具所需的信息。这种信息流动会产生依赖关系：工具B在工具A提供所需数据之前无法执行其功能。有效管理这些依赖关系对于构建能够执行复杂计划的精巧智能体来说是基础。</p>\n<p>设想一个智能体负责规划周末行程。它可能首先使用 <code>get_flight_prices</code> 工具。该工具的输出，比如最便宜的航班选项及其日期和时间，随后成为 <code>book_hotel</code> 工具的重要输入，该工具需要知道抵达和离开日期才能找到合适的住宿。如果没有航班详情，酒店预订工具就无法进行。这是一种常见的模式：一个步骤的成功执行能使下一个步骤得以进行。</p>\n<h3>识别和传递依赖数据</h3>\n<p>智能体，或您设计的底层编排逻辑，需要一种方式来理解和管理这些数据交接。通常有两种方式处理这些依赖关系：</p>\n<ol>\n<li>\n<p><strong>智能体驱动的数据流：</strong> LLM本身作为其推理 (inference)过程的一部分，可以确定 <code>tool_A_output</code> 的输出应作为 <code>tool_B</code> 的 <code>parameter_x</code> 使用。这在很大程度上依赖于编写良好的工具描述（如第1章所述），这些描述清楚地指明了工具的输出和所需的输入。LLM会根据工具A的结果，生成带有必要数据映射的工具B调用。</p>\n</li>\n<li>\n<p><strong>编排器管理的数据流：</strong> 在更结构化的智能体框架或定制编排器中，您可能明确定义数据如何在工具之间流动。编排器执行工具A，捕获其输出，然后在工具B需要运行时，以程序方式将输出的相关部分传递给工具B。</p>\n</li>\n</ol>\n<p>无论LLM还是编排器主要管理数据流，数据传递的机制通常涉及以下方法之一：</p>\n<h4>直接输出到输入映射</h4>\n<p>这是最直接的方法。智能体（或编排器）获取前一个工具的直接输出，并将其作为参数 (parameter)传递给下一个工具。</p>\n<p>例如，如果 <code>tool_A</code> 返回一个JSON对象，如 <code>{\"user_id\": \"123\", \"email\": \"user@example.com\"}</code>，而 <code>tool_B</code> 需要一个 <code>user_identifier</code>，系统会将 <code>tool_A_output.user_id</code> 映射到 <code>tool_B</code> 的 <code>user_identifier</code> 参数。</p>\n<pre><code class=\"language-python\"># 演示性的Python类伪代码\nuser_data_from_tool_A = agent.execute_tool(\"fetch_user_profile\", user_name=\"Alice\")\n# user_data_from_tool_A 可能是：{\"id\": \"u456\", \"preferences\": [\"music\", \"hiking\"]}\n\nif user_data_from_tool_A and user_data_from_tool_A.get(\"id\"):\n    recommendations = agent.execute_tool(\n        \"get_recommendations\",\n        user_id=user_data_from_tool_A[\"id\"],\n        categories=user_data_from_tool_A.get(\"preferences\", [])\n    )\n    # 处理推荐结果\nelse:\n    # 处理user_id缺失或tool_A执行失败的情况\n    print(\"Could not retrieve user ID to get recommendations.\")\n</code></pre>\n<p>在此代码片段中，<code>user_data_from_tool_A</code> 中的 <code>id</code> 字段直接用作 <code>get_recommendations</code> 的 <code>user_id</code> 参数。</p>\n<h4>使用共享上下文 (context)或暂存区</h4>\n<p>对于更复杂的序列，或者当多个先前的工具输出共同构成后续工具的输入时，共享上下文（有时称为“暂存区”或“内存”）会非常有效。每个工具可以将其结果写入这个共享空间中明确定义的位置。随后的工具可以从该上下文中读取，以获取其所需的输入。</p>\n<p>考虑一个帮助用户分析销售数据的智能体：</p>\n<ol>\n<li><code>Tool_LoadData</code>：将CSV中的销售数据加载到上下文中，作为 <code>context[\"sales_data\"]</code>。</li>\n<li><code>Tool_FilterData</code>：获取 <code>context[\"sales_data\"]</code>，应用过滤器（例如，针对特定区域），并将结果写入 <code>context[\"filtered_sales_data\"]</code>。</li>\n<li><code>Tool_CalculateTotal</code>：读取 <code>context[\"filtered_sales_data\"]</code> 并计算总数，将其写入 <code>context[\"total_sales_for_region\"]</code>。</li>\n<li><code>Tool_GenerateReport</code>：读取 <code>context[\"total_sales_for_region\"]</code> 和 <code>context[\"filtered_sales_data\"]</code> 以生成摘要。</li>\n</ol>\n<pre><code class=\"language-python\"># 演示性的上下文使用\nagent_context = {}\n\n# 步骤 1：获取用户位置\nlocation_data = agent.execute_tool(\"get_user_location\") # 例如，{\"city\": \"London\", \"country\": \"UK\"}\nif location_data and location_data.get(\"city\"):\n    agent_context[\"user_city\"] = location_data[\"city\"]\nelse:\n    # 处理获取位置失败的情况\n    agent_context[\"user_city\"] = \"default_city\" # 备用方案或错误处理\n\n# 步骤 2：根据上下文中的位置获取天气\nif \"user_city\" in agent_context:\n    weather_report = agent.execute_tool(\"get_weather_forecast\", city=agent_context[\"user_city\"])\n    # weather_report 可能是：{\"temperature_celsius\": 15, \"condition\": \"Cloudy\"}\n    if weather_report:\n        agent_context[\"current_temp_celsius\"] = weather_report.get(\"temperature_celsius\")\n        agent_context[\"current_condition\"] = weather_report.get(\"condition\")\n\n# 步骤 3：根据上下文中的天气建议活动\nif \"current_temp_celsius\" in agent_context and \"current_condition\" in agent_context:\n    activity_suggestion = agent.execute_tool(\n        \"suggest_activity\",\n        temperature=agent_context[\"current_temp_celsius\"],\n        weather_condition=agent_context[\"current_condition\"]\n    )\n    print(f\"Suggested activity: {activity_suggestion}\")\n</code></pre>\n<p>虽然这种方式灵活，但使用共享上下文需要仔细管理，以避免键名冲突，并确保数据不会被意外覆盖或变得过时。</p>\n<h4>工具间的数据转换</h4>\n<p>有时，一个工具的输出格式与下一个工具所需的输入格式不完全一致。例如，<code>Tool_A</code> 可能输出摄氏温度，但 <code>Tool_B</code> 期望华氏温度。或者 <code>Tool_A</code> 返回一个复杂对象，而 <code>Tool_B</code> 只需其中的一个字段。</p>\n<p>在这种情况下，需要一个转换步骤。这种转换可以是：</p>\n<ul>\n<li><strong>由LLM执行：</strong> 如果LLM在编排调用，它可能会被指示（或自行推断）重新格式化或提取数据。例如，“从天气工具的输出中获取 'temp_c' 字段，将其转换为华氏温度，并将其用作服装建议工具的 'temperature' 输入。”</li>\n<li><strong>由编排器处理：</strong> 您的智能体编排代码可以包含小型实用函数或步骤来执行这些转换。这对于精确的数值转换或结构改变通常更可靠。</li>\n<li><strong>内置于消费工具中：</strong> 工具B可以设计为接受多种格式或在内部执行常见转换，但这会使工具B更复杂。</li>\n</ul>\n<p>目标是确保传递给工具的数据结构和格式能够被工具可靠地处理。您的工具的清晰输入和输出模式，如第1章所述，能大大简化这一点。</p>\n<h3>可视化工具链中的数据流</h3>\n<p>当您可以可视化数据流时，理解依赖关系会变得更容易。对于一系列工具，您可以将其视为一个有向图，其中节点是工具，边表示数据传递。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-83tega\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled\", fillcolor=\"#a5d8ff\", fontname=\"Arial\"]; edge [fontname=\"Arial\", fontsize=10]; ToolA [label=\"获取用户资料\\n(输出：user_id, email)\"]; ToolB [label=\"获取订单历史\\n(输入：user_id)\"]; ToolC [label=\"汇总近期订单\\n(输入：order_list)\"]; Data1 [label=\"user_id\", shape=oval, style=\"filled\", fillcolor=\"#ffec99\"]; Data2 [label=\"order_list\", shape=oval, style=\"filled\", fillcolor=\"#ffec99\"]; ToolA -> Data1 [label=\"提供\"]; Data1 -> ToolB [label=\"输入至\"]; ToolB -> Data2 [label=\"提供\"]; Data2 -> ToolC [label=\"输入至\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-83tega\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的数据流图，显示 <code>ToolA</code> 向 <code>ToolB</code> 提供 <code>user_id</code>，然后 <code>ToolB</code> 向 <code>ToolC</code> 提供 <code>order_list</code>。</p>\n</blockquote>\n<p>这种可视化表示有助于设计和调试复杂的工具交互，确保链中的每个工具都从其前序工具接收到所需的输入。</p>\n<h3>处理依赖调用中的故障</h3>\n<p>管理依赖关系的一个重要方面是，决定如果链中的前一个工具失败或未返回预期数据时该怎么做。如果 <code>Tool_A</code> 失败，<code>Tool_B</code>（它依赖于 <code>Tool_A</code> 的输出）就无法按计划进行。</p>\n<p>处理此类故障的策略包括：</p>\n<ul>\n<li><strong>重试失败的工具：</strong> 也许故障是暂时的。</li>\n<li><strong>使用备用值或默认值：</strong> 如果适用于任务。</li>\n<li><strong>调用替代工具：</strong> 如果有其他工具可以提供类似数据。</li>\n<li><strong>终止当前子任务：</strong> 并向智能体或用户报告失败。</li>\n<li><strong>重新规划：</strong> 智能体可能需要设计一个新的工具调用序列。</li>\n</ul>\n<p>我们将在本章后面的“工具链中从故障中恢复”部分更详细地讨论错误恢复。现在，认识到依赖管理策略必须考虑到潜在的上游故障是很重要的。</p>\n<h3>依赖管理的好实践</h3>\n<p>在设计使用工具序列的智能体时，请考虑以下实践：</p>\n<ul>\n<li><strong>清晰的工具签名：</strong> 确保您的工具定义（描述、输入参数 (parameter)、输出模式）精确。这使得LLM和任何编排代码都能更容易地理解生成和消费的数据。</li>\n<li><strong>标准化数据格式：</strong> 工具输出首选JSON等常见且易于解析的数据格式。这简化了数据交换和转换。</li>\n<li><strong>隔离转换逻辑：</strong> 如果需要数据转换，请尝试隔离此逻辑。它可以是编排器中的一个小型专用函数，或是对LLM的特定指令，而不是用过多的输入灵活性来增加主要工具的负担。</li>\n<li><strong>减少复杂相互依赖：</strong> 如果您发现依赖关系过于复杂交织，这可能表明您的工具粒度过细，或者任务分解可以改进。在可能的情况下，目标是实现清晰、大多线性的流程，或者包含良好的分支。</li>\n<li><strong>显式与隐式依赖：</strong> 注意依赖关系是在编排逻辑中显式声明，还是由LLM隐式处理。显式声明通常更可靠且易于调试，而LLM处理的依赖关系提供更大的灵活性，但可能更难预测。</li>\n</ul>\n<p>通过深思熟虑地管理数据如何在工具之间流动，您可以使您的LLM智能体能够执行更精巧、多步骤的任务，从简单的工具调用转向协调的工作流程。这种将输出连接到输入的能力使得智能体能够在前一个结果的基础上构建，并实现更重要的目标。</p>",
+  "slug": "tool-dependency-management",
+  "updates": [],
+  "references": [
+    {
+      "id": 18138,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "ICLR 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "",
+      "note": "介绍了LLM代理的ReAct范式，通过共享暂存器迭代地推理、通过工具行动和观察，有效管理顺序工具调用和数据流。",
+      "order": 1,
+      "created_at": "2025-09-06T12:17:44.918173Z",
+      "updated_at": "2026-02-04T11:30:56.062914Z"
+    },
+    {
+      "id": 18140,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2304.03442",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG7Y8y1_fQg3YQhuKau9-lnC7M1Ycbvqa-s6Hc84zve_3w_T0suvLm7A_L0n1rLLEE9CZuCX29wo35IwaaCbcnYlsXv4rDiEqxUr-1CTl001yW-ew2bYXXAQF3dPl8NaD9wnrYOOAQ=",
+      "doi": "",
+      "note": "详细介绍了一种具有长期记忆和规划的代理架构，阐明了复杂多步骤行为是如何编排的，以及代理的内部状态（上下文）如何通过交互和工具使用而演变。",
+      "order": 3,
+      "created_at": "2025-09-06T12:17:44.945455Z",
+      "updated_at": "2026-02-04T11:30:56.906080Z"
+    },
+    {
+      "id": 18141,
+      "title": "Agents",
+      "author": "LangChain documentation team",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFfd8S-Z46DQ_1enKWzl0UbdBqYEh7OyEB8i3r2CW8DPBrrjC2xwgUWMeTfEuNhgupDQgPVaDqp0RuAAuGixyewMU0wZJvLXA1AcocSQe0DsaD72-e-m2xqYn5QKPz2OkovG_9tdaodC3oXGWKMBgOWu9ejbw==",
+      "doi": "",
+      "note": "提供了构建链式工具LLM代理的实际示例和架构模式，在一个流行框架中展示了编排器管理的数据流、共享上下文和直接输出到输入的映射。",
+      "order": 4,
+      "created_at": "2025-09-06T12:17:44.948238Z",
+      "updated_at": "2026-02-04T11:30:56.324844Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

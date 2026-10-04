@@ -1,0 +1,61 @@
+{
+  "id": 7601,
+  "title": "CatBoost的有序提升和对称树",
+  "meta_title": "CatBoost的有序提升和对称树",
+  "meta_description": "分析CatBoost用于防止目标泄漏的有序提升方法，以及它为加快预测速度而使用的对称（或称无意识）树。",
+  "content": "<p>CatBoost 包含两种主要的架构设计，以提高其预测准确性和效率：有序提升和对称树的使用。这些特点共同作用，创建一个既强大又不易过拟合 (overfitting)的模型，通常只需少量调优。</p>\n<h3>有序提升：防止目标泄漏的方法</h3>\n<p>在标准的梯度提升实现中，算法迭代地将新树拟合到先前模型预测的残差或梯度上。当计算一个数据点的残差时，模型可以获取该数据点在初始数据集中的真实目标值。这会引入一个不易察觉但要紧的问题，称为<strong>目标泄漏</strong>。模型无意中从它试图预测的值本身进行学习，这可能导致模型在训练数据上表现出色，但对新的、未见过的数据泛化能力不足。</p>\n<p>CatBoost 通过一种称为<strong>有序提升</strong>的技术来缓解这个问题。其主要原理是确保对于任何给定数据点，用于计算其梯度的模型并未使用该数据点的标签进行训练。</p>\n<p>为了高效实现这一点，CatBoost 使用训练数据的随机排列。在构建新树时，过程被修改：为了计算排列中样本 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span> 的残差，它只使用基于前 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">i-1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7429em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">i</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 个样本训练的模型。这种顺序确保了模型对任何样本的预测都不会受到该样本自身目标值的“偏向”影响。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-j1qsec\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"];\n    edge [fontname=\"Arial\", color=\"#495057\"];\n\n    subgraph cluster_0 {\n        label = \"有序提升过程（针对一次排列）\";\n        bgcolor=\"#e9ecef\";\n        style=\"rounded\";\n\n        p0 [label=\"模型_0\\n(初始)\", fillcolor=\"#ced4da\"];\n        p1 [label=\"样本 1\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n        p2 [label=\"样本 2\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n        p3 [label=\"样本 i\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n        pn [label=\"样本 N\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n\n        m1 [label=\"模型_1\\n(在样本 1 上训练)\"];\n        m2 [label=\"模型_2\\n(在样本 1-2 上训练)\"];\n        mi [label=\"模型_i\\n(在样本 1 到 i 上训练)\"];\n\n        p0 -> p1 [label=\" 预测样本 1\\n 计算残差 1 \"];\n        p1 -> m1 [label=\" 更新 \"];\n        m1 -> p2 [label=\" 预测样本 2\\n 计算残差 2 \"];\n        p2 -> m2 [label=\" 更新 \"];\n        m2 -> p3 [label=\"...\", style=dashed];\n        p3 -> mi [label=\" 更新 \"];\n        mi -> pn [label=\"...\", style=dashed];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-j1qsec\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>对于随机排列中的每个样本，CatBoost 使用仅基于前序样本训练的模型来计算当前残差。这种有序方法避免了模型在训练过程中从目标变量中泄漏信息。</p>\n</blockquote>\n<p>尽管这个过程看起来复杂，CatBoost 使用多重排列和高效数据结构，使其既快速又有效，这为其在构建泛化能力强的模型方面提供了显著优点。</p>\n<h3>对称树：以简洁实现速度和稳定性</h3>\n<p>CatBoost 的第二个主要创新是使用<strong>对称树</strong>，也称为<em>无意识决策树</em>。大多数梯度提升库，如XGBoost和LightGBM，构建的树可能是不平衡或非对称的。在这些树中，在某个深度对一个特征进行划分，可能导致左右分支出现不同的划分特征和条件。</p>\n<p>CatBoost 采取了不同的方法。对称树对给定深度级别的所有节点应用<em>完全相同的划分准则</em>。这意味着树的每一层都根据相同的单一特征和条件来划分数据，形成一个完全平衡且结构简洁的树。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-x8kajl\" \n              data-graph-definition='digraph G {\n    graph [fontname=\"Arial\"];\n    node [fontname=\"Arial\", style=\"filled\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_0 {\n        label = \"标准非对称树\";\n        bgcolor=\"#e9ecef\";\n        style=\"rounded\";\n\n        a1 [label=\"特征 A > 10?\", fillcolor=\"#a5d8ff\"];\n        a2 [label=\"特征 B < 5?\", fillcolor=\"#a5d8ff\"];\n        a3 [label=\"叶子 1\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        a4 [label=\"叶子 2\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        a5 [label=\"特征 C > 2.5?\", fillcolor=\"#a5d8ff\"];\n        a6 [label=\"叶子 3\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        a7 [label=\"叶子 4\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n\n        a1 -> a2 [label=\"真\"];\n        a1 -> a5 [label=\"假\"];\n        a2 -> a3 [label=\"真\"];\n        a2 -> a4 [label=\"假\"];\n        a5 -> a6 [label=\"真\"];\n        a5 -> a7 [label=\"假\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"CatBoost 对称树\";\n        bgcolor=\"#e9ecef\";\n        style=\"rounded\";\n\n        b1 [label=\"特征 X > 0.5?\", fillcolor=\"#ffd8a8\"];\n        b2 [label=\"特征 Y < 20?\", fillcolor=\"#d0bfff\"];\n        b3 [label=\"特征 Y < 20?\", fillcolor=\"#d0bfff\"];\n        b4 [label=\"叶子 1\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        b5 [label=\"叶子 2\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        b6 [label=\"叶子 3\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n        b7 [label=\"叶子 4\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n\n        b1 -> b2 [label=\"真\"];\n        b1 -> b3 [label=\"假\"];\n        b2 -> b4 [label=\"真\"];\n        b2 -> b5 [label=\"假\"];\n        b3 -> b6 [label=\"真\"];\n        b3 -> b7 [label=\"假\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-x8kajl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>标准非对称树与CatBoost对称树的比较。在对称树中，同一层的所有节点（例如，第二层，以紫色表示）使用相同的划分条件（<code>特征 Y &#x3C; 20?</code>）。</p>\n</blockquote>\n<p>这种设计选择有两个主要优点：</p>\n<ol>\n<li>\n<p><strong>预测效率</strong>：对称树的规则、可预测结构对于现代CPU和GPU来说效率极高。无需遍历一系列复杂的<code>if-then-else</code>分支，可以使用高度优化、矢量化 (quantization)的操作来计算预测。这通常使得CatBoost在推理 (inference)（预测阶段）时速度极快。</p>\n</li>\n<li>\n<p><strong>内置正则化 (regularization)</strong>：严格的结构约束避免了树变得过于复杂并针对单个训练样本进行定制。通过迫使模型在每一层找到适用于大量数据段的简单而有力的规则，它自然地抵制过拟合 (overfitting)。这是一种非常有效的正则化形式，内嵌于模型的架构中。</p>\n</li>\n</ol>\n<p>总而言之，有序提升和对称树使CatBoost成为一个高效的算法。有序提升有助于确保模型学习通用模式而不是记住训练数据，而对称树为集成模型中的每个弱学习器提供了快速且可靠的支持。</p>",
+  "slug": "catboost-ordered-boosting",
+  "updates": [],
+  "references": [
+    {
+      "id": 21363,
+      "title": "CatBoost: Unbiased Gradient Boosting with Categorical Features",
+      "author": "Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Dorogush, Andrey Gulin",
+      "year": "2018",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 31 (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.55986/neurips.2018.0cce69792070659637c38bc8f7c6530a",
+      "doi": "10.55986/neurips.2018.0cce69792070659637c38bc8f7c6530a",
+      "note": "这篇基础论文介绍了 CatBoost 算法，详细阐述了其核心创新，包括通过有序提升来对抗目标泄漏，以及使用对称（遗忘）决策树来实现高效预测和正则化。",
+      "order": 1,
+      "created_at": "2025-09-30T05:38:41.215194Z",
+      "updated_at": "2025-09-30T05:51:07.329274Z"
+    },
+    {
+      "id": 21364,
+      "title": "CatBoost Documentation",
+      "author": "Yandex",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://catboost.ai/docs/",
+      "doi": "",
+      "note": "官方文档提供了全面的指南、实用示例以及对 CatBoost 功能（包括有序提升和对称树）的解释。",
+      "order": 2,
+      "created_at": "2025-09-30T05:38:41.222284Z",
+      "updated_at": "2025-09-30T05:51:04.898788Z"
+    },
+    {
+      "id": 21365,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "hastie.su.domains/ElemStatLearn",
+      "doi": "",
+      "note": "一本经典的机器学习算法教科书，提供了决策树、提升和集成方法的基础理解，为 CatBoost 在正则化和模型复杂性方面的架构选择提供了背景。",
+      "order": 3,
+      "created_at": "2025-09-30T05:38:41.224631Z",
+      "updated_at": "2025-09-30T05:51:07.431532Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

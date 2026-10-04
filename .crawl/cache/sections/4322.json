@@ -1,0 +1,61 @@
+{
+  "id": 4322,
+  "title": "混合精度量化策略",
+  "meta_title": "混合精度LLM量化",
+  "meta_description": "设计并运用针对LLM不同部分采用不同精度级别的策略。",
+  "content": "<p>统一量化 (quantization)，即对整个模型应用单一精度级别（如INT8或INT4），虽然简单，但通常是一种粗略的工具。大型语言模型（LLM）的某些部分对精度损失的敏感度天生高于其他部分。对敏感组件进行激进量化可能导致模型准确性或下游任务性能出现不可接受的下降。反之，将整个模型保持在较高精度级别可能无法满足严格的内存或延迟要求。</p>\n<p>混合精度量化提供了一种更精细的方法。其核心思想是根据模型不同部分的敏感度以及目标硬件的能力，策略性地应用不同的数值精度。这可以最大限度地提高计算效率和模型压缩率，同时最大限度地减少对预测性能的影响。例如，您可以将大部分计算量大的矩阵乘法量化为INT8甚至INT4，而将层归一化 (normalization)、激活函数 (activation function)或最终输出层等更敏感的组件保持在FP16或BF16精度。</p>\n<h3>设计混合精度策略</h3>\n<p>制定有效的混合精度策略需要仔细分析并考虑以下几个方面：</p>\n<ol>\n<li>\n<p><strong>敏感度分析：</strong> 识别哪些层或操作受精度降低的影响最大，这是非常重要的。</p>\n<ul>\n<li><strong>经验分析：</strong> 这涉及逐个（或分组）量化 (quantization)特定层或模块，并使用相关指标（例如困惑度、任务准确性）在验证集上评估其影响。这种方法虽然直接，但计算量可能很大，需要多次部分量化和评估运行。</li>\n<li><strong>启发式方法：</strong> 经验和架构理解可以提供有用的捷径。例如：\n<ul>\n<li><em>输入嵌入 (embedding)层和输出层：</em> 这些层通常处理直接输入表示或最终预测，可能更敏感。将它们保持在更高精度（例如FP16/BF16）是一种常见做法。</li>\n<li><em>激活函数 (activation function)和归一化 (normalization)：</em> 非线性激活函数（如GeLU）或归一化层（LayerNorm）可能具有数值稳定性要求，更高精度能更好地满足这些要求。</li>\n<li><em>注意力机制 (attention mechanism)：</em> 在注意力块内部，不同的组件（Q、K、V投影、softmax、输出投影）可能表现出不同的敏感度。Softmax由于其指数函数特性，通常保持在FP16/FP32精度。</li>\n</ul>\n</li>\n<li><strong>分析方法：</strong> Hessian分析（检查损失函数 (loss function)的二阶导数）等技术可以提供参数 (parameter)对量化噪声敏感度的理论估计。与较大Hessian特征值相关的参数通常更敏感。这些方法虽然功能强大，但会增加分析复杂性。</li>\n</ul>\n</li>\n<li>\n<p><strong>硬件能力：</strong> 目标部署硬件对精度选择影响很大。现代GPU和加速器通常具有专用单元，可以为特定格式（例如INT8张量核心）提供显著加速。最优策略会运用这些硬件加速。如果设备提供卓越的INT8性能但INT4支持有限，即使从模型大小角度看纯INT4量化似乎可行，优先INT8的策略可能也更受青睐。</p>\n</li>\n<li>\n<p><strong>量化粒度：</strong> 正如之前讨论的（每张量与每通道/每组），粒度与混合精度相互关联。一个层可能对权重 (weight)使用每通道INT8量化，但对激活值使用每张量FP16。</p>\n</li>\n</ol>\n<h3>常见的混合精度模式</h3>\n<p>实践中出现了一些模式：</p>\n<ul>\n<li><strong>权重 (weight)与激活精度：</strong> 通常，权重可以比激活值更激进地量化 (quantization)。一种常见策略是权重采用INT4或NF4，激活值采用INT8或FP16。这平衡了权重量化带来的内存节省与推理 (inference)过程中保持激活值动态范围的需求。</li>\n<li><strong>特定层类型精度：</strong> 根据层类型分配精度是直接的做法。例如：\n<ul>\n<li>Transformer块（注意力+MLP）：INT8或INT4权重，INT8激活。</li>\n<li>嵌入 (embedding)层：FP16/BF16。</li>\n<li>层归一化 (normalization)：FP16/BF16。</li>\n<li>最终输出/LM头部：FP16/BF16。</li>\n</ul>\n</li>\n<li><strong>异常值感知精度：</strong> 如果某些层表现出明显的激活异常值（这对于低精度量化造成问题），这些特定层可能会保持在更高精度，或者将细粒度缩放或异常值截断等特定技术与混合精度结合使用。</li>\n<li><strong>混合PTQ/QAT：</strong> 某些方法可能对大多数层使用PTQ，但选择性地对最敏感的层应用QAT以恢复准确性，从而形成量化方法和可能精度的组合。</li>\n</ul>\n<h3>实施与评估</h3>\n<p>实施混合精度量化 (quantization)通常涉及配置量化框架，以指定模型图内不同模块或操作所需的精度。这可能涉及根据模块名称或类型定义规则。然后，底层推理 (inference)运行时（如TensorRT、ONNX Runtime或自定义内核）必须支持涉及多种数据类型的操作的有效执行。</p>\n<p>评估过程仍然非常重要。不仅要衡量标准准确性指标，还要衡量目标硬件上的推理延迟和内存占用。目标是找到权衡曲线上的最优解。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-272h8g\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": \"准确性与速度/压缩的权衡示意图\",\n    \"xaxis\": { \"title\": \"压缩率/加速比（相对）\" },\n    \"yaxis\": { \"title\": \"模型准确性（例如：困惑度）\" },\n    \"legend\": { \"title\": \"量化策略\" },\n    \"template\": \"plotly_white\",\n    \"shapes\": [\n      {\n        \"type\": \"line\",\n        \"x0\": 1,\n        \"y0\": 7.5,\n        \"x1\": 4.5,\n        \"y1\": 7.5,\n        \"line\": { \"color\": \"#868e96\", \"width\": 1, \"dash\": \"dash\" }\n      },\n      {\n        \"type\": \"line\",\n        \"x0\": 1,\n        \"y0\": 8.0,\n        \"x1\": 1,\n        \"y1\": 9.5,\n        \"line\": { \"color\": \"#868e96\", \"width\": 1, \"dash\": \"dash\" }\n      }\n    ],\n    \"annotations\": [\n      {\n        \"x\": 1,\n        \"y\": 9.5,\n        \"text\": \"基线（FP16）\",\n        \"showarrow\": false,\n        \"xanchor\": \"left\",\n        \"yanchor\": \"top\"\n      },\n      {\n        \"x\": 4.5,\n        \"y\": 7.5,\n        \"text\": \"激进量化（统一INT4）\",\n        \"showarrow\": false,\n        \"xanchor\": \"right\",\n        \"yanchor\": \"bottom\"\n      }\n    ]\n  },\n  \"data\": [\n    {\n      \"type\": \"scatter\",\n      \"mode\": \"markers+lines\",\n      \"name\": \"统一INT8\",\n      \"x\": [2],\n      \"y\": [9.0],\n      \"marker\": { \"color\": \"#228be6\", \"size\": 10 }\n    },\n    {\n      \"type\": \"scatter\",\n      \"mode\": \"markers+lines\",\n      \"name\": \"混合精度（INT8/FP16）\",\n      \"x\": [2.5],\n      \"y\": [9.2],\n      \"marker\": { \"color\": \"#12b886\", \"size\": 10 }\n    },\n    {\n      \"type\": \"scatter\",\n      \"mode\": \"markers+lines\",\n      \"name\": \"混合精度（INT4/INT8/FP16）\",\n      \"x\": [3.5],\n      \"y\": [8.8],\n      \"marker\": { \"color\": \"#fab005\", \"size\": 10 }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-272h8g\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>模型准确性（困惑度越低越好）与不同量化策略下的压缩和加速的综合效益之间的权衡。混合精度方法旨在以相似或更高的效率水平实现比激进统一量化更好的准确性。</p>\n</blockquote>\n<p>通过仔细选择不同模型组件的精度，混合精度量化提供了一个有力的工具来应对模型大小、推理速度、硬件能力和任务性能之间复杂的关系，使得在资源受限情境下部署高效LLM成为可能，而统一量化可能在此情境下不足。下一节将检查硬件如何专门加速这些量化操作。</p>",
+  "slug": "mixed-precision-quantization",
+  "updates": [],
+  "references": [
+    {
+      "id": 8371,
+      "title": "LLM.int8(): 8-bit Matrix Multiplication for Large Language Models",
+      "author": "Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer",
+      "year": "2022",
+      "publisher": "",
+      "journal": "NeurIPS 2022",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2208.07339",
+      "doi": "10.48550/arXiv.2208.07339",
+      "note": "引入了一种将大型语言模型量化为8位的关键技术，通过将异常值维度保持在更高精度，这是一种针对敏感激活范围的混合精度处理形式。",
+      "order": 1,
+      "created_at": "2025-09-05T01:55:27.270392Z",
+      "updated_at": "2025-09-09T11:32:34.850344Z"
+    },
+    {
+      "id": 8372,
+      "title": "QLoRA: Efficient Finetuning of Quantized LLMs on Consumer GPUs",
+      "author": "Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2305.14314",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.14314",
+      "doi": "10.48550/arXiv.2305.14314",
+      "note": "提出了一种使用4位NormalFloat量化微调大型语言模型的内存高效方法，展示了一种实用的混合精度策略，其中权重被高度量化，但计算保持更高精度。",
+      "order": 2,
+      "created_at": "2025-09-05T01:55:27.325288Z",
+      "updated_at": "2025-09-09T11:32:37.224832Z"
+    },
+    {
+      "id": 8373,
+      "title": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration",
+      "author": "Ji Lin, Jiaming Tang, Haotian Tang, Shang Yang, Wei-Ming Chen, Wei-Chen Wang, Guangxuan Xiao, Xingyu Dang, Chuang Gan, Song Han",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2306.00978",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2306.00978",
+      "doi": "10.48550/arXiv.2306.00978",
+      "note": "提出了一种激活感知型权重量化方法，用于保留显著权重，通过根据激活敏感性优先处理不同的精度级别，自然地形成了混合精度策略。",
+      "order": 3,
+      "created_at": "2025-09-05T01:55:27.330335Z",
+      "updated_at": "2025-09-09T11:32:34.561878Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

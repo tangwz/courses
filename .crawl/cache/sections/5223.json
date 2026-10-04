@@ -1,0 +1,61 @@
+{
+  "id": 5223,
+  "title": "监控已部署的应用程序",
+  "meta_title": "监控已部署的LLM应用程序 | 运维",
+  "meta_description": "用于监控已部署LLM应用性能、成本和健康状况的工具和技术。",
+  "content": "<p>您的LLM应用程序部署并可访问后，工作并未结束。为确保其稳定运行、表现良好并控制预算，需要持续观察。监控已部署的应用程序，特别是涉及LLM的应用程序，面临独特的挑战，因为它们固有的非确定性、可能的高运营成本以及“高质量”输出的主观性。有效的监控提供所需的可见性，以维护应用程序的健康状态、优化性能和管理开支。</p>\n<h3>LLM应用程序的监控方面</h3>\n<p>为全面了解已部署的应用程序，请关注跟踪以下几类指标：</p>\n<ol>\n<li>\n<p><strong>性能指标：</strong> 这些指标直接影响用户体验。</p>\n<ul>\n<li><strong>延迟：</strong> 应用程序处理请求并返回响应需要多长时间？跟踪平均、中位数和百分位延迟（例如P95、P99），以了解典型和最差情况下的性能。高延迟会使用户感到沮丧，并表明存在瓶颈。</li>\n<li><strong>吞吐量 (throughput)：</strong> 应用程序每单位时间（例如每秒请求数）可以处理多少请求？这对于了解容量和扩展需求很重要。</li>\n</ul>\n</li>\n<li>\n<p><strong>资源利用率：</strong> 监控支持应用程序的基础设施。</p>\n<ul>\n<li><strong>CPU/内存使用情况：</strong> 跟踪应用程序容器或虚拟机对计算资源的消耗。高使用率可能需要扩容或代码优化。</li>\n<li><strong>GPU使用情况（如果适用）：</strong> 如果您自行托管模型或使用GPU加速任务，请监控GPU利用率和内存，以确保高效使用。</li>\n<li><strong>网络I/O：</strong> 监控数据传输速率，特别是当您的应用程序涉及大量数据上传/下载或频繁的外部API调用时。</li>\n</ul>\n</li>\n<li>\n<p><strong>成本监控：</strong> LLM API及其运行的基础设施可能产生显著成本。</p>\n<ul>\n<li><strong>LLM API成本：</strong> 跟踪每次调用提供商API（如OpenAI、Anthropic等）的token使用情况（输入和输出token）。如果可能，将成本与特定功能或用户操作关联起来。大多数提供商提供仪表板，但将成本跟踪集成到您的监控系统可以提供统一的视图。</li>\n<li><strong>基础设施成本：</strong> 监控来自您的云提供商的计算实例、无服务器功能、数据库、存储和网络流量的相关成本。</li>\n</ul>\n</li>\n<li>\n<p><strong>应用程序特定和质量指标：</strong> 这些是根据您的LLM应用程序的功能和行为定制的。</p>\n<ul>\n<li><strong>错误率：</strong> 跟踪不同类型错误的频率：来自API端点的HTTP错误、LLM API错误（例如，速率限制、内容过滤）、数据解析错误、代理系统中工具执行失败，或特定链组件中的失败。</li>\n<li><strong>LLM响应质量：</strong> 这通常是最难自动化但很重要的。根据您的应用程序，您可能跟踪：\n<ul>\n<li><em>相关性：</em> 对于RAG系统，检索到的文档或最终答案与查询的相关程度如何？</li>\n<li><em>幻觉 (hallucination)率：</em> LLM生成事实不准确或无意义信息的频率如何？这通常需要定期的人工评估或根据真实数据进行自动化检查。</li>\n<li><em>格式依从性：</em> 如果您期望结构化输出（例如JSON），LLM未能生成正确格式的频率如何？</li>\n<li><em>有害性/安全性：</em> 监控响应是否违反安全准则。</li>\n</ul>\n</li>\n<li><strong>用户反馈：</strong> 如果可能，收集关于响应质量的明确（例如点赞/点踩）或隐含（例如用户点击重试）反馈。</li>\n</ul>\n</li>\n</ol>\n<h3>监控工具和技术</h3>\n<p>通常需要结合多种工具和技术才能进行有效监控：</p>\n<ul>\n<li>\n<p><strong>结构化日志：</strong> 在整个应用程序中实现全面的日志记录。记录重要事件：传入请求、传出LLM API调用（包括提示，减去敏感数据）、接收到的响应、检索到的上下文 (context)（针对RAG）、代理做出的决策、遇到的错误以及时间信息。使用JSON等结构化格式，以便下游系统更轻松地解析和分析。Python内置的<code>logging</code>模块可以为此进行配置。</p>\n</li>\n<li>\n<p><strong>应用性能监控（APM）：</strong> APM工具能够提供对应用程序性能的详细可见性。它们会自动对您的代码进行插桩（对于FastAPI或Flask等常用框架通常只需最少配置），以追踪请求流经不同组件的情况、测量数据库查询时间、跟踪外部API调用并收集系统指标。例子包括Datadog、New Relic、Dynatrace，以及供应商中立的OpenTelemetry标准，该标准提供用于生成遥测数据（追踪、指标、日志）的库和规范。</p>\n</li>\n<li>\n<p><strong>LLM可观测性平台：</strong> 这是一类不断增长的工具，专门为监控LLM应用程序而设计。LangSmith（来自LangChain）、Weights &#x26; Biases (W&#x26;B Prompts)、TruLens或Arize AI等平台提供针对LLM工作流的功能：</p>\n<ul>\n<li>追踪复杂的LangChain/LlamaIndex序列（链、代理）。</li>\n<li>记录提示、响应和中间结果。</li>\n<li>计算并跟踪每次LLM调用的成本。</li>\n<li>将评估指标（例如，相关性、忠实度）集成到追踪中。</li>\n<li>调试特定失败或质量不佳的交互。</li>\n</ul>\n</li>\n<li>\n<p><strong>云提供商监控工具：</strong> 运用您的云提供商提供的监控服务（例如AWS CloudWatch、Google Cloud Monitoring、Azure Monitor）。这些工具对于跟踪基础设施层面的指标（CPU、内存、网络）、收集日志、设置基本仪表板以及根据支出阈值配置成本警报非常有用。</p>\n</li>\n</ul>\n<h3>实施有效监控</h3>\n<p>仅仅收集数据是不够的；您需要使其可操作。</p>\n<ul>\n<li>\n<p><strong>仪表板：</strong> 在仪表板上可视化最重要的指标。这使您能够快速评估应用程序的健康状况并发现趋势或异常。一个好的仪表板可能会显示：</p>\n<ul>\n<li>过去24小时的P95延迟。</li>\n<li>按类型划分的错误率细目。</li>\n<li>每日/每周LLM API成本趋势。</li>\n<li>资源利用水平。</li>\n<li>质量指标（如果可用）。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-5i6bit\" \n              data-plot-definition='{\"layout\": {\"title\": \"API请求延迟 (P95) 随时间变化\", \"xaxis\": {\"title\": \"日期\"}, \"yaxis\": {\"title\": \"延迟 (毫秒)\", \"range\": [500, 2500]}, \"template\": \"plotly_white\"}, \"data\": [{\"x\": [\"2023-10-01\", \"2023-10-02\", \"2023-10-03\", \"2023-10-04\", \"2023-10-05\", \"2023-10-06\", \"2023-10-07\"], \"y\": [850, 920, 880, 1500, 1650, 950, 900], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"P95 延迟\", \"line\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-5i6bit\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>API请求在一周内的P95延迟，显示周中可能存在性能问题。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>告警：</strong> 配置告警以便在突破重要阈值时主动通知您。例子包括：</p>\n<ul>\n<li>10分钟内错误率超过5%。</li>\n<li>P99延迟超过3秒。</li>\n<li>LLM API成本相对于基线突然激增。</li>\n<li>CPU利用率持续高于85%。</li>\n<li>检测到大量响应被标记 (token)为违反安全规定。</li>\n</ul>\n</li>\n<li>\n<p><strong>反馈回路：</strong> 监控数据对于迭代改进价值巨大。使用监控获得的洞察来：</p>\n<ul>\n<li>识别并修复性能瓶颈。</li>\n<li>根据质量指标或用户反馈优化提示或RAG策略。</li>\n<li>调整资源分配以优化成本。</li>\n<li>根据错误率优先处理bug修复。</li>\n</ul>\n</li>\n</ul>\n<p>监控不是一次性设置，而是一个持续过程。随着您的应用程序演进、模型更新或使用模式改变，您的监控策略必须进行调整。持续观察是生产环境中运行可靠、高效和高质量LLM应用程序的根本。</p>",
+  "slug": "monitoring-deployed-llm-apps",
+  "updates": [],
+  "references": [
+    {
+      "id": 13616,
+      "title": "OpenTelemetry Documentation",
+      "author": "OpenTelemetry Authors",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://opentelemetry.io/docs/",
+      "doi": "",
+      "note": "OpenTelemetry 标准的官方文档，涵盖应用程序可观测性的追踪、指标和日志。",
+      "order": 2,
+      "created_at": "2025-09-05T08:36:34.595656Z",
+      "updated_at": "2025-09-10T12:16:57.780203Z"
+    },
+    {
+      "id": 13617,
+      "title": "LangSmith Documentation",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.smith.langchain.com/",
+      "doi": "",
+      "note": "LangSmith 的官方文档，一个用于追踪、调试和评估 LLM 应用程序的 LLM 可观测性平台。",
+      "order": 3,
+      "created_at": "2025-09-05T08:36:34.598011Z",
+      "updated_at": "2025-09-10T12:17:02.723185Z"
+    },
+    {
+      "id": 13618,
+      "title": "Holistic Evaluation of Language Models",
+      "author": "Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew T. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Transactions on Machine Learning Research",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "doi": "10.48550/arXiv.2211.09110",
+      "note": "提出了一个语言模型全面评估框架，对于在生产环境中定义和跟踪质量指标有帮助。",
+      "order": 4,
+      "created_at": "2025-09-05T08:36:34.600285Z",
+      "updated_at": "2025-09-10T12:17:01.458184Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4285,
+  "title": "温度与创造力",
+  "meta_title": "大型语言模型温度设置详解",
+  "meta_description": "了解某些工具中的“温度”设置及其对文本输出随机性的影响。",
+  "content": "<p>编写提示有助于告诉您的本地大型语言模型 (LLM) 您希望它做什么。提出清晰问题并给出具体指令是实现此目标的主要技能。然而，有时您可能会注意到 LLM 的回复风格各异。它们可能非常直接且可预测，或者更具想象力且出人意料。影响此的一个因素是常被称为“温度”的参数 (parameter)。</p>\n<p>将温度看作是控制大型语言模型输出随机性或“创造性”的调节旋钮。在生成文本时，模型会不断计算下一个词（或更准确地说，是 token）的概率。温度设置会调整模型使用这些概率的方式。</p>\n<ul>\n<li>\n<p><strong>低温度（例如，接近 0 的值，如 0.1 到 0.5）：</strong> 在低温度下，模型确定性更强，更集中。它强烈倾向于选择计算概率最高的词。这使得输出高度可预测、一致且常常重复。如果您以非常低的温度多次提出相同问题，您很可能会得到几乎相同的答案。此设置对需要精确性和依据事实的任务很有用，例如提取特定信息或根据严格规则生成代码。</p>\n</li>\n<li>\n<p><strong>高温度（例如，大于 1 的值，如 1.1 到 2.0）：</strong> 在高温度下，模型更具“冒险性”。它增加了选择可能性较低词语的机会，有效地使概率分布变得“平坦”。这带来更多的随机性、惊喜和创造性。然而，如果温度设置过高，生成的文本可能会变得不连贯、毫无意义或偏离原始提示的上下文 (context)。高温度对于头脑风暴、创作小说或生成不同类型的想法很有意思，但需要小心使用。</p>\n</li>\n<li>\n<p><strong>中等温度（例如，0.7 到 1.0 左右的值）：</strong> 此范围通常提供可预测性与创造性之间的平衡。模型遵循最可能的路径，但允许一定的变化。许多聊天应用程序在此范围内使用默认温度进行一般性对话。</p>\n</li>\n</ul>\n<p>让我们用一个简化的例子来说明。想象模型已处理了输入“The cat sat on the”，并需要选择下一个词。它计算了潜在词语的概率：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">词语</th>\n<th align=\"left\">概率 (原始, T=1.0)</th>\n<th align=\"left\">概率 (低温度, 例如 0.2)</th>\n<th align=\"left\">概率 (高温度, 例如 1.5)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">mat</td>\n<td align=\"left\">0.80</td>\n<td align=\"left\">~0.99</td>\n<td align=\"left\">~0.60</td>\n</tr>\n<tr>\n<td align=\"left\">chair</td>\n<td align=\"left\">0.15</td>\n<td align=\"left\">~0.01</td>\n<td align=\"left\">~0.25</td>\n</tr>\n<tr>\n<td align=\"left\">windowsill</td>\n<td align=\"left\">0.04</td>\n<td align=\"left\">&#x3C;0.01</td>\n<td align=\"left\">~0.10</td>\n</tr>\n<tr>\n<td align=\"left\">moon</td>\n<td align=\"left\">0.01</td>\n<td align=\"left\">&#x3C;0.01</td>\n<td align=\"left\">~0.05</td>\n</tr>\n</tbody>\n</table>\n<p>在低温度下，模型几乎肯定会选择“mat”。在高温度下，“chair”、“windowsill”甚至毫无意义的“moon”都成为模型更可能选择的选项，导致更多样化（且可能奇怪）的输出。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-7bilen\" \n              data-plot-definition='{\"layout\": {\"title\": \"温度对下一词概率的影响\", \"xaxis\": {\"title\": \"下一词选择\"}, \"yaxis\": {\"title\": \"概率\", \"range\": [0, 1]}, \"barmode\": \"group\"}, \"data\": [{\"x\": [\"mat\", \"chair\", \"windowsill\", \"moon\"], \"y\": [0.80, 0.15, 0.04, 0.01], \"type\": \"bar\", \"name\": \"温度=1.0 (原始)\", \"marker\": {\"color\": \"#339af0\"}}, {\"x\": [\"mat\", \"chair\", \"windowsill\", \"moon\"], \"y\": [0.99, 0.01, 0.00, 0.00], \"type\": \"bar\", \"name\": \"温度=0.2 (低)\", \"marker\": {\"color\": \"#1c7ed6\"}}, {\"x\": [\"mat\", \"chair\", \"windowsill\", \"moon\"], \"y\": [0.60, 0.25, 0.10, 0.05], \"type\": \"bar\", \"name\": \"温度=1.5 (高)\", \"marker\": {\"color\": \"#a5d8ff\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-7bilen\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>“The cat sat on the”之后下一个词在不同温度设置下的概率。低温度强烈偏爱最可能的词（“垫子”），而高温度使不太常见的词更有可能被选中。</p>\n</blockquote>\n<h3>温度设置在哪里</h3>\n<p>您不会总是直接看到温度设置，尤其是在最简单的命令行交互中。然而，像 LM Studio 这样的图形工具通常会显著显示它。查找聊天或模型设置面板中标有“Temperature”的滑块或输入字段。它通常允许 0 到 2 之间的值。一些命令行工具或库（例如通过其 API 使用 Ollama 时）也允许您设置温度，但这可能需要特定的标志或配置选项。</p>\n<h3>何时调整温度</h3>\n<p>选择合适的温度取决于您的目标：</p>\n<ul>\n<li>\n<p><strong>低温度 (0.1 - 0.5) 适用于：</strong></p>\n<ul>\n<li>精确性很重要的事实问答。</li>\n<li>严格依据源内容进行文本摘要。</li>\n<li>代码生成或精确遵循复杂指令。</li>\n<li>对相同输入获得一致的输出。</li>\n</ul>\n</li>\n<li>\n<p><strong>中等温度 (0.6 - 1.0) 适用于：</strong></p>\n<ul>\n<li>一般聊天机器人对话。</li>\n<li>平衡的创意写作（例如，撰写电子邮件、起草内容）。</li>\n<li>保持连贯性仍然重要的头脑风暴。</li>\n</ul>\n</li>\n<li>\n<p><strong>高温度 (1.1 - 2.0) 适用于：</strong></p>\n<ul>\n<li>生成高度创造性或出人意料的文本（诗歌、小说）。</li>\n<li>尝试多种可能性或替代措辞。</li>\n<li>尝试使模型摆脱重复循环（谨慎使用）。</li>\n</ul>\n</li>\n</ul>\n<h3>尝试不同温度设置</h3>\n<p>理解温度的最佳方式是实践。在像 LM Studio 这样的工具中，尝试使用相同的提示词 (prompt)和不同的温度设置：</p>\n<ol>\n<li>提出一个简单问题（例如，“法国的首都是什么？”），并将温度设置为 0.1。然后再次提问。注意其一致性。</li>\n<li>将温度设置为 1.5，再次提出相同问题。再次提问。观察其变化，以及可能出现的错误或无关信息。</li>\n<li>给出诸如“写一首关于下雨天的短诗”这样的指令。分别用 0.5、1.0 和 1.5 的温度尝试。比较其结构、措辞和整体创造性。</li>\n</ol>\n<p>温度是您影响大型语言模型输出<em>风格</em>和<em>多变性</em>的主要方式之一，补充您通过提示对<em>内容</em>的控制。理解并调整它，能让您更好地控制与本地大型语言模型的交互。</p>",
+  "slug": "temperature-creativity",
+  "updates": [],
+  "references": [
+    {
+      "id": 11397,
+      "title": "The Curious Case of Neural Text Degeneration",
+      "author": "Ari Holtzman, Janine Bierner, Matthew Mitchell, Hannah Wallace, Peter Clark, and Noah A. Smith",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/pdf/1904.09751.pdf",
+      "doi": "",
+      "note": "讨论了包括温度在内的各种解码策略如何影响生成文本的质量和多样性，特别解决了重复和乏味的问题。",
+      "order": 1,
+      "created_at": "2025-09-05T07:16:00.059829Z",
+      "updated_at": "2025-09-09T13:25:27.083597Z"
+    },
+    {
+      "id": 11398,
+      "title": "Text Generation Strategies",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/main/en/generation_strategies",
+      "doi": "",
+      "note": "官方文档，解释了流行的Hugging Face `transformers` 库中各种文本生成参数和方法，包括温度采样。",
+      "order": 2,
+      "created_at": "2025-09-05T07:16:00.294858Z",
+      "updated_at": "2025-09-09T13:25:25.858133Z"
+    },
+    {
+      "id": 11399,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本基础教材，涵盖了语言建模和文本生成的原理，为自然语言处理中概率分布和采样的理论提供了背景。",
+      "order": 3,
+      "created_at": "2025-09-05T07:16:00.298382Z",
+      "updated_at": "2025-09-09T13:25:23.273248Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

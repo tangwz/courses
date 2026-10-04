@@ -1,0 +1,61 @@
+{
+  "id": 2930,
+  "title": "JAX 生态系统库（Flax, Haiku）简介",
+  "meta_title": "JAX 生态系统库：Flax 与 Haiku",
+  "meta_description": "概述基于 JAX 构建的流行神经网络库，用于模型结构化和训练循环。",
+  "content": "<p>尽管 JAX 提供了强大的核心原语（<code>jit</code>、<code>grad</code>、<code>vmap</code>、<code>pmap</code>），用于加速和分布式数值计算，但仅使用这些工具构建、训练和管理大型、复杂的机器学习 (machine learning)模型可能会变得繁琐。处理可能复杂的状，例如模型参数 (parameter)、优化器统计数据和随机数生成器（RNG）种子，需要仔细管理，尤其是在多个设备上分发计算时。</p>\n<p>基于 JAX 构建的神经网络 (neural network)库便派上用场。它们提供更高层次的抽象，用于定义模型架构、管理状态和组织训练循环，让您更专注于模型设计和训练逻辑，而非低层次的实现细节。JAX 生态系统中有两个主要库：Flax 和 Haiku。它们提供不同的编程风格，但共同目标都是简化 JAX 框架内复杂模型的开发。</p>\n<h3>Flax：结构化模块与显式状态</h3>\n<p>Flax 由 Google 开发，提供以 <code>linen</code> 模块（<code>flax.linen</code>）为核心的函数式方法。它强调显式状态管理，这意味着模型参数 (parameter)和其他状态变量（如批归一化 (normalization)统计数据）通常在模块方法之外处理。</p>\n<p>Flax 的主要特点包括：</p>\n<ol>\n<li><strong>模块系统（<code>flax.linen</code>）</strong>：模型通过继承 <code>nn.Module</code> 定义。层和子模块在 <code>setup</code> 方法中定义。前向传播逻辑位于 <code>__call__</code> 方法（或其他命名方法）中。</li>\n<li><strong>显式初始化</strong>：模块参数并非在模块实例化时创建，而是在第一次调用时（或通过 <code>module.init</code> 显式创建），这需要一个示例输入和一个 RNG 密钥。这分离了模块结构定义与实际参数值。</li>\n<li><strong>函数式 <code>apply</code></strong>：<code>apply</code> 方法用于使用特定参数和状态执行前向传播。这种函数式特性使其易于与 JAX 变换配合使用。</li>\n<li><strong>PyTree 状态</strong>：参数和其他状态通常存储在 JAX 识别为 PyTree 的嵌套 Python 结构中（如字典或自定义类）。这使它们与 <code>jax.jit</code>、<code>jax.grad</code> 等兼容。</li>\n<li><strong>TrainState</strong>：Flax 经常鼓励使用 <code>flax.training.train_state.TrainState</code> 等辅助类，将模型的 apply 函数、参数和优化器状态捆绑在一起，从而简化训练循环。</li>\n</ol>\n<p>以下是一个简单的 Flax 模块示例：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport flax.linen as nn\n\nclass SimpleMLP(nn.Module):\n  features: list[int] # 定义层大小的列表，例如 [128, 64, 10]\n\n  @nn.compact # 允许在 __call__ 中内联定义子模块\n  def __call__(self, x):\n    for i, feat in enumerate(self.features):\n      x = nn.Dense(features=feat, name=f'dense_{i}')(x)\n      if i != len(self.features) - 1: # 对除最后一层外的所有层应用 ReLU\n        x = nn.relu(x)\n    return x\n\n# --- 用法 ---\nkey = jax.random.PRNGKey(0)\ninput_shape = (1, 28*28) # 示例：批大小为 1，扁平化的 MNIST 图像\ndummy_input = jnp.ones(input_shape)\noutput_features = [128, 10] # 定义层大小\n\nmodel = SimpleMLP(features=output_features)\n\n# 初始化参数（需要随机数生成器和虚拟输入）\nparams = model.init(key, dummy_input)['params']\nprint(f\"参数 PyTree 结构：\\n{jax.tree_util.tree_map(lambda x: x.shape, params)}\")\n\n# 应用模型（前向传播）\noutput = model.apply({'params': params}, dummy_input)\nprint(f\"\\n输出形状：{output.shape}\")\n</code></pre>\n<p>在大型模型的背景下，Flax 的结构化方法有助于组织复杂的架构。其显式状态管理与 JAX 的函数式方法非常契合，并简化了使用 <code>pmap</code> 在分布式设备间传递参数和状态。</p>\n<h3>Haiku：面向对象风格与隐式状态管理</h3>\n<p>Haiku 由 DeepMind 开发，提供另一种编程模型，感觉更类似于 PyTorch 等面向对象的框架，同时仍与 JAX 的函数式特性保持根本兼容。</p>\n<p>Haiku 的重要特点包括：</p>\n<ol>\n<li><strong>模块系统（<code>hk.Module</code>）</strong>：模型通过继承 <code>hk.Module</code> 定义。层通常在 <code>__init__</code> 方法中实例化，类似于 PyTorch。</li>\n<li><strong>隐式参数 (parameter)创建</strong>：参数是在变换函数中首次调用层时隐式创建的。Haiku 在内部管理参数和状态存储。</li>\n<li><strong><code>hk.transform</code></strong>：这是核心函数，它将纯粹的函数式计算（适用于 JAX 变换）与面向对象的模块定义分离。它将一个实例化并调用 Haiku 模块的函数转换为一对函数：<code>init</code>（用于初始化参数）和 <code>apply</code>（用于前向传播）。</li>\n<li><strong>内部状态管理</strong>：Haiku 在 <code>hk.transform</code> 上下文 (context)的幕后处理参数和状态（如 RNG 序列或批归一化 (normalization)统计数据）的传递和管理。</li>\n</ol>\n<p>以下是一个使用 Haiku 的示例，类似于 Flax MLP：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport haiku as hk\n\nclass SimpleMLP(hk.Module):\n  def __init__(self, features: list[int], name: str | None = None):\n    super().__init__(name=name)\n    self.features = features\n\n  def __call__(self, x):\n    for i, feat in enumerate(self.features):\n      # 在 Haiku 中，层通常在此处内联创建\n      x = hk.Linear(output_size=feat, name=f'linear_{i}')(x)\n      if i != len(self.features) - 1:\n        x = jax.nn.relu(x)\n    return x\n\n# --- 用法 ---\n# 定义使用 Haiku 模块的前向函数\ndef forward_fn(x):\n  output_features = [128, 10]\n  mlp = SimpleMLP(features=output_features)\n  return mlp(x)\n\n# 变换函数\nmodel = hk.transform(forward_fn)\n\nkey = jax.random.PRNGKey(0)\ninput_shape = (1, 28*28)\ndummy_input = jnp.ones(input_shape)\n\n# 初始化参数（只需要 RNG 和虚拟输入）\nparams = model.init(key, dummy_input)\nprint(f\"参数 PyTree 结构：\\n{jax.tree_util.tree_map(lambda x: x.shape, params)}\")\n\n# 应用模型（前向传播，只需要参数和输入）\noutput = model.apply(params, key, dummy_input) # 注意：如果模块使用随机性，Haiku apply 通常也需要 RNG\nprint(f\"\\n输出形状：{output.shape}\")\n\n</code></pre>\n<p>Haiku 的 <code>hk.transform</code> 机制巧妙地弥合了有状态的面向对象模块定义与 JAX 对纯函数的要求之间的差距。这可以让来自其他框架的用户感到更熟悉。对于大型模型，Haiku 提供清晰的状态管理，并与 JAX 变换和分布式原语良好集成。</p>\n<h3>为何大型模型要使用这些库？</h3>\n<p>尽管您<em>可以</em>在原生 JAX 中构建一切，但 Flax 和 Haiku 提供显著优势，尤其随着模型复杂性和规模的增加：</p>\n<ol>\n<li><strong>组织性</strong>：它们强制实行结构，使复杂的模型架构更易于定义、阅读和维护。</li>\n<li><strong>状态管理</strong>：它们提供系统化的方式来处理参数 (parameter)、优化器状态、批统计数据和 RNG 密钥，减少样板代码和潜在错误。在使用 <code>pmap</code> 处理跨多个设备的分布式状态时，这一点尤为重要。</li>\n<li><strong>减少样板代码</strong>：应用层、管理参数和与优化器集成等常见模式得到简化。</li>\n<li><strong>可组合性</strong>：模块可以轻松嵌套和重用。</li>\n<li><strong>生态集成</strong>：它们通常附带用于检查点、指标日志记录和管理训练循环的工具，这些对于大规模实验十分重要。</li>\n</ol>\n<p>Flax 和 Haiku 之间的选择通常取决于风格偏好。Flax 更显式地函数化，需要手动传递状态；而 Haiku 使用 <code>hk.transform</code> 提供更面向对象的感受，并带有隐式状态管理。两者都是基于相同 JAX 核心构建的强大工具，能够在规模上构建和训练复杂模型。了解这些库如何组织代码和管理状态，是应用本章其余部分讨论的大规模技术（例如集成 <code>pmap</code> 进行数据并行或实现检查点策略）的根本。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1g88oy3\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", color=\"#ced4da\", fillcolor=\"#e9ecef\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  subgraph cluster_raw_jax {\n    label = \"原生 JAX\";\n    bgcolor=\"#f8f9fa\";\n    style=filled;\n    color=\"#dee2e6\";\n    raw_params [label=\"参数 (PyTree)\", fillcolor=\"#ffec99\"];\n    raw_state [label=\"其他状态\\n(RNGs, BN 统计等)\", fillcolor=\"#ffec99\"];\n    raw_func [label=\"纯函数\\n(例如，apply_fn(params, state, x))\", fillcolor=\"#a5d8ff\"];\n    raw_params -> raw_func;\n    raw_state -> raw_func;\n  }\n\n  subgraph cluster_flax {\n    label = \"Flax (nn.Module)\";\n    bgcolor=\"#f8f9fa\";\n    style=filled;\n    color=\"#dee2e6\";\n    flax_module [label=\"模块实例\\n(定义结构)\", fillcolor=\"#d0bfff\"];\n    flax_params [label=\"参数 (PyTree)\\n(外部管理，\\n例如 TrainState)\", fillcolor=\"#ffec99\"];\n    flax_state [label=\"模块状态\\n(BN 统计等)\", fillcolor=\"#ffec99\"];\n    flax_apply [label=\"module.apply(variables, x)\\n(纯函数)\", fillcolor=\"#a5d8ff\"];\n    flax_module -> flax_apply [style=dashed, label=\" 定义逻辑 \"];\n    flax_params -> flax_apply [label=\" 作为输入 \"];\n    flax_state -> flax_apply [label=\" 作为输入 \"];\n   }\n\n  subgraph cluster_haiku {\n    label = \"Haiku (hk.Module + hk.transform)\";\n    bgcolor=\"#f8f9fa\";\n    style=filled;\n    color=\"#dee2e6\";\n    haiku_def [label=\"前向函数\\n(实例化 hk.Modules)\", fillcolor=\"#d0bfff\"];\n    haiku_transform [label=\"hk.transform()\"];\n    haiku_init [label=\"transformed.init()\\n(创建参数)\", fillcolor=\"#96f2d7\"];\n    haiku_apply [label=\"transformed.apply()\\n(纯函数)\", fillcolor=\"#a5d8ff\"];\n    haiku_params [label=\"参数 (PyTree)\\n(由 apply 内部管理)\", fillcolor=\"#ffec99\"];\n\n    haiku_def -> haiku_transform;\n    haiku_transform -> haiku_init;\n    haiku_transform -> haiku_apply;\n    haiku_params -> haiku_apply [style=dashed, label=\" 由其管理 \"];\n   }\n\n  raw_jax [label=\"原生 JAX 方法\", shape=plaintext, fontcolor=\"#495057\"];\n  flax [label=\"Flax 方法\", shape=plaintext, fontcolor=\"#495057\"];\n  haiku [label=\"Haiku 方法\", shape=plaintext, fontcolor=\"#495057\"];\n\n  // Position labels above clusters (may need adjustment)\n  raw_jax -> cluster_raw_jax [style=invis, len=0.1];\n  flax -> cluster_flax [style=invis, len=0.1];\n  haiku -> cluster_haiku [style=invis, len=0.1];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1g88oy3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>原生 JAX、Flax 和 Haiku 中状态处理的比较。原生 JAX 需要手动管理。Flax 使用显式状态传递，通常捆绑在一起。Haiku 使用 <code>hk.transform</code> 在其 <code>apply</code> 函数中隐式管理状态。</p>\n</blockquote>",
+  "slug": "introduction-jax-ecosystem-libraries",
+  "updates": [],
+  "references": [
+    {
+      "id": 6583,
+      "title": "Flax Documentation",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://flax.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "Flax的官方文档，Flax是一个基于JAX构建的神经网络库，详细介绍了其模块系统、显式状态管理和用于训练循环的`TrainState`。",
+      "order": 2,
+      "created_at": "2025-09-05T01:27:23.901248Z",
+      "updated_at": "2025-09-08T07:12:46.617634Z"
+    },
+    {
+      "id": 6584,
+      "title": "Haiku Documentation",
+      "author": "DeepMind",
+      "year": "2024",
+      "publisher": "DeepMind",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dm-haiku.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "Haiku的官方文档，Haiku是DeepMind的JAX兼容神经网络库，解释了其通过`hk.transform`实现隐式状态管理的面向对象风格。",
+      "order": 3,
+      "created_at": "2025-09-05T01:27:24.086142Z",
+      "updated_at": "2025-09-08T07:12:44.397155Z"
+    },
+    {
+      "id": 6585,
+      "title": "Haiku: JAX at DeepMind",
+      "author": "DeepMind",
+      "year": "2020",
+      "publisher": "DeepMind Blog",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://deepmind.com/blog/article/using-jax-to-accelerate-our-research",
+      "doi": "",
+      "note": "DeepMind介绍Haiku的一篇文章，讨论了其设计原则、动机以及如何将面向对象编程与JAX的函数式范式结合。",
+      "order": 4,
+      "created_at": "2025-09-05T01:27:24.152943Z",
+      "updated_at": "2025-09-08T07:13:01.961144Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

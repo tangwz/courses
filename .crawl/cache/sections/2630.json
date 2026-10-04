@@ -1,0 +1,61 @@
+{
+  "id": 2630,
+  "title": "网络剪枝技术",
+  "meta_title": "网络剪枝技术（权重剪枝、滤波器剪枝）",
+  "meta_description": "介绍从训练好的网络中移除冗余权重或滤波器以减小模型大小和计算量的方法。",
+  "content": "<p>如前所述，部署大型卷积神经网络 (neural network) (CNN)通常需要方法，使其更紧凑、计算成本更低。网络剪枝是一种普遍使用的方法，它通过从训练好的网络中移除多余的参数 (parameter)或结构来解决这个问题，目的是减小其大小和推理 (inference)成本，同时对准确性影响很小。其基本思路是，许多深度学习 (deep learning)模型存在大量冗余参数，包含许多对最终预测贡献很小的权重 (weight)甚至整个滤波器。</p>\n<h3>剪枝的理由</h3>\n<p>深度神经网络 (neural network)性能高常部分原因在于其参数 (parameter)量大。然而，研究和实践表明，许多参数在训练后可以移除，而准确性损失不大。这种冗余可能源于优化过程或最初的网络设计。剪枝方法通过识别并移除不重要的部分来解决这一冗余问题。目的是在原训练好的网络中找到一个更小的子网络，其表现几乎一样好。</p>\n<h3>网络剪枝的种类</h3>\n<p>剪枝方法可以根据所移除元素的细致程度进行大体分类：</p>\n<h4>非结构化剪枝（权重 (weight)剪枝）</h4>\n<p>这是最细致的剪枝形式。网络层（卷积层或全连接层）中的单个权重根据某种重要性标准（通常是其大小）来确定。大小低于某个阈值的权重被设置为零。</p>\n<ul>\n<li><strong>流程：</strong>\n<ol>\n<li>训练一个密集网络直到收敛。</li>\n<li>根据单个权重的绝对大小（或其他标准）进行排序。</li>\n<li>设定一个目标稀疏度水平（例如，移除80%的权重）。</li>\n<li>将大小最小的权重置为零，以达到目标稀疏度。</li>\n<li>对剩余的非零权重进行微调 (fine-tuning)，以恢复剪枝过程中损失的准确性。</li>\n</ol>\n</li>\n<li><strong>特点：</strong>\n<ul>\n<li>得到稀疏权重矩阵，其中零值不规则分布。</li>\n<li>可以实现非常高的压缩比（移除很大比例的权重）。</li>\n<li>需要专用硬件或软件库（例如，稀疏矩阵乘法程序）来实现推理 (inference)速度的明显提升，因为标准硬件通常不能有效加速任意稀疏模式的计算。</li>\n<li>微调步骤对于恢复性能很必要。</li>\n</ul>\n</li>\n</ul>\n<p>微调过程有助于网络适应权重的移除。通常，这包含用固定为零的剪枝权重重新训练网络，只让剩余的权重进行调整。</p>\n<h4>结构化剪枝</h4>\n<p>结构化剪枝不是移除单个权重，而是移除网络的整个结构元素。这使得所得网络更小，在标准硬件上天生更快，无需专用稀疏计算库。常见形式有：</p>\n<ul>\n<li>\n<p><strong>滤波器剪枝：</strong> 从卷积层中移除整个滤波器（及其对应的特征图）。如果从第<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span>层剪枝一个滤波器，那么第<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">i+1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7429em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">i</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>层的相应输入通道也会被有效移除。</p>\n</li>\n<li>\n<p><strong>通道剪枝：</strong> 类似于滤波器剪枝，移除整个通道。</p>\n</li>\n<li>\n<p><strong>神经元剪枝：</strong> 从全连接层中移除整个神经元（权重矩阵中的列）。</p>\n</li>\n<li>\n<p><strong>流程：</strong></p>\n<ol>\n<li>训练一个密集网络。</li>\n<li>计算每个结构（例如，滤波器、通道）的重要性分数。常用的标准包含滤波器权重的L1或L2范数、滤波器在数据集中产生的平均激活值，或基于梯度的评定方法。</li>\n<li>根据重要性分数对结构进行排序。</li>\n<li>移除得分最低的结构，以达到目标削减水平。</li>\n<li>微调更小、剪枝后的网络。</li>\n</ol>\n</li>\n<li>\n<p><strong>特点：</strong></p>\n<ul>\n<li>得到更小、更密集的网络（或滤波器/神经元更少的层）。</li>\n<li>在标准硬件（CPU、GPU）上直接转化为更少的计算量（FLOPs）和内存使用。</li>\n<li>可能无法达到非结构化剪枝的理论压缩比，但通常能带来更好的实际加速。</li>\n<li>微调仍然非常需要。</li>\n</ul>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-uhqc65\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n\n  subgraph cluster_0 {\n    label = \"非结构化剪枝\";\n    bgcolor=\"#f8f9fa\";\n    U_Node1 [label=\"权重矩阵\\n(密集)\", shape=square, fillcolor=\"#a5d8ff\"];\n    U_Node2 [label=\"权重矩阵\\n(稀疏)\", shape=square, fillcolor=\"#ffc9c9\"];\n    U_Node1 -> U_Node2 [label=\" 将单个\\n 权重\\n 置零\"];\n    node [shape=point, style=invis]; p1; p2; p3; p4; p5; p6; p7; p8; p9;\n    p1 -> p2 -> p3 [style=invis];\n    p4 -> p5 -> p6 [style=invis];\n    p7 -> p8 -> p9 [style=invis];\n    U_Node2 -> p5 [style=invis]; // 视觉上居中稀疏矩阵\n  }\n\n  subgraph cluster_1 {\n    label = \"结构化剪枝（滤波器剪枝）\";\n    bgcolor=\"#f8f9fa\";\n    S_Node1 [label=\"卷积层滤波器\\n(例如，64个滤波器)\", fillcolor=\"#a5d8ff\"];\n    S_Node2 [label=\"卷积层滤波器\\n(例如，32个滤波器)\", fillcolor=\"#b2f2bb\"];\n    S_Node1 -> S_Node2 [label=\" 移除\\n 整个\\n 滤波器\"];\n  }\n\n  U_Node1 [pos=\"0,1!\"];\n  U_Node2 [pos=\"2,1!\"];\n  S_Node1 [pos=\"5,1!\"];\n  S_Node2 [pos=\"7,1!\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-uhqc65\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>非结构化（权重）剪枝得到稀疏矩阵与结构化（滤波器）剪枝得到更小、密集层的对比。</p>\n</blockquote>\n<h3>剪枝流程和标准</h3>\n<p>一个典型的剪枝流程包含迭代地进行剪枝和微调 (fine-tuning)：</p>\n<ol>\n<li><strong>训练：</strong> 训练原始的大模型直到收敛。</li>\n<li><strong>剪枝：</strong> 选择一个剪枝方法（非结构化/结构化）和标准（例如，大小、范数）。根据此标准移除一部分网络组件。</li>\n<li><strong>微调：</strong> 重新训练剪枝后的网络若干个周期，让剩余参数 (parameter)进行调整并恢复准确性。</li>\n<li><strong>迭代：</strong> 重复步骤2和3，直到达到所需的稀疏度或大小削减水平，或者直到准确性降至可接受的阈值以下。</li>\n</ol>\n<p>选择识别不重要组件的合适<strong>标准</strong>很重要：</p>\n<ul>\n<li><strong>基于大小：</strong> 最简单且通常有效的方法。假设大小小的参数贡献较少。对于结构化剪枝，常用滤波器/通道内权重 (weight)的L1或L2范数。</li>\n<li><strong>基于梯度：</strong> 在训练期间使用梯度信息来评估参数的重要性。移除后导致损失函数 (loss function)增加最小的参数可能被认为不那么重要。</li>\n<li><strong>基于激活：</strong> 分析神经元或滤波器产生的输出激活。例如，在许多输入上持续产生接近零激活的滤波器可能被剪枝。</li>\n<li><strong>其他标准：</strong> 更复杂的方法可能包含分析损失函数的Hessian矩阵或使用敏感度分析。</li>\n</ul>\n<h3>考虑因素和权衡</h3>\n<ul>\n<li><strong>稀疏度水平：</strong> 确定剪枝多少通常靠经验。剪枝过于激进会不可逆地损害性能，而剪枝太少则收效甚微。迭代剪枝可以逐步减少。</li>\n<li><strong>准确性恢复：</strong> 微调 (fine-tuning)几乎总是必需的。学习率和微调的持续时间需要仔细调整。有时，由于正则化 (regularization)作用，剪枝后准确性甚至会略微提高，但更普遍的情况是会略有下降。</li>\n<li><strong>硬件/库支持：</strong> 如前所述，非结构化剪枝带来的实际加速很大程度上取决于是否具备能高效处理稀疏计算的优化库或硬件加速器。结构化剪枝通常能在商用硬件上提供更可预测的加速。</li>\n<li><strong>层敏感性：</strong> 网络中不同层对剪枝可能有不同的敏感性。早期层通常学习通用特征，可能比后面的层更敏感。一些方法包含对不同层应用不同的剪枝比例。</li>\n</ul>\n<p>网络剪枝提供了一系列有效方法来降低深度学习 (deep learning)模型的复杂性。通过仔细移除多余的权重 (weight)或结构并微调剩余网络，可以显著减小模型大小和计算需求，使模型更适合在受限环境中部署。非结构化剪枝和结构化剪枝之间的选择通常取决于具体的硬件目标以及压缩比和实际加速实现难易程度之间的权衡。</p>",
+  "slug": "network-pruning-techniques",
+  "updates": [],
+  "references": [
+    {
+      "id": 3749,
+      "title": "Learning both Weights and Connections for Efficient Neural Networks",
+      "author": "Song Han, Jeff Pool, John Tran, William J. Dally",
+      "year": "2015",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "28",
+      "pages": "1135-1143",
+      "url": "https://proceedings.neurips.cc/paper/2015/file/ae0eb3eed39d2bcef846ba727407cffe-Paper.pdf",
+      "doi": "",
+      "note": "介绍基于幅度的非结构化剪枝和迭代训练-剪枝-微调方法的开创性工作。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:33.874950Z",
+      "updated_at": "2025-09-08T06:37:58.427076Z"
+    },
+    {
+      "id": 3750,
+      "title": "Pruning Filters for Efficient ConvNets",
+      "author": "Hao Li, Asim Kadav, Igor Durdanovic, Hanan Samet, and Hans Peter Graf",
+      "year": "2017",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "1683",
+      "url": "https://arxiv.org/abs/1608.08710",
+      "doi": "10.48550/arXiv.1608.08710",
+      "note": "基于L1范数移除整个卷积核的结构化剪枝开创性工作，展示了实际加速效果。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:33.961499Z",
+      "updated_at": "2025-09-08T06:37:40.701655Z"
+    },
+    {
+      "id": 3751,
+      "title": "Deep Learning Model Compression: A Comprehensive Survey",
+      "author": "Haitao Yang, Wenqi Li, Pengyu Li, Bingqiang Jin, and Haoliang Li",
+      "year": "2020",
+      "publisher": "Elsevier",
+      "journal": "Neurocomputing",
+      "volume": "420",
+      "pages": "494-522",
+      "url": "https://www.sciencedirect.com/science/article/pii/S092523122030806X",
+      "doi": "10.1016/j.neucom.2020.07.067",
+      "note": "全面概述模型压缩技术，包括网络剪枝（非结构化和结构化）、量化和知识蒸馏。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:33.971002Z",
+      "updated_at": "2025-09-08T06:37:36.241196Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

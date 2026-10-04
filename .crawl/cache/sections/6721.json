@@ -1,0 +1,61 @@
+{
+  "id": 6721,
+  "title": "智能体提示中的思维链与思维树",
+  "meta_title": "智能体推理的 CoT 与 ToT 提示",
+  "meta_description": "采用思维链和思维树提示来提升智能体的推理和问题解决能力。",
+  "content": "<p>在构建更自主、更智能的智能体时，仅仅告诉智能体<em>做什么</em>通常是不够的。为了让智能体有效处理复杂的多步骤任务，它们需要像人类一样“思考”问题。两种提示框架，思维链（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mi>o</mi><mi>T</mi></mrow><annotation encoding=\"application/x-tex\">CoT</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\">o</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span></span></span></span>）和思维树（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>T</mi><mi>o</mi><mi>T</mi></mrow><annotation encoding=\"application/x-tex\">ToT</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span><span class=\"mord mathnormal\">o</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span></span></span></span>），能够引导智能体的推理 (inference)过程，从而使任务执行更可靠。这些技术对于提升智能体控制不可或缺。</p>\n<h3>通过思维链（CoT）引发分步推理 (inference)</h3>\n<p>思维链提示鼓励大型语言模型（LLM）在得出最终答案或行动之前，逐步阐明其推理过程。智能体不会直接输出解决方案，而是首先生成一系列中间思考，这些思考逻辑地引出结果。</p>\n<p>对于智能体工作流程，CoT 非常有帮助，原因如下：</p>\n<ol>\n<li><strong>提高准确性</strong>：将问题分解为更小、更易于管理的步骤，通常能带来更准确的结果，特别是对于需要算术、常识或符号推理的任务。</li>\n<li><strong>增强可解释性</strong>：通过展现推理路径，您可以更好地理解智能体做出特定决策或选择特定行动的<em>原因</em>。这对于调试和建立对智能体行为的信任非常重要。</li>\n<li><strong>更好地处理复杂指令</strong>：当智能体需要遵循多部分指令时，CoT 有助于确保所有部分都得到系统性处理。</li>\n</ol>\n<p>您可以通过以下几种方式在智能体提示中引导 CoT：</p>\n<ul>\n<li><strong>明确指令</strong>：只需添加诸如“一步一步地思考”、“在采取行动前解释你的推理”或“让我们把这个问题分解开”之类的短语。\n<pre><code>User: 规划一个为期三天的巴黎之旅，侧重于艺术博物馆和历史遗迹。\nAgent Prompt:\n你的任务是规划一次旅行。请一步一步地思考来构建行程。\n\nThought:\n用户想要一个为期三天的巴黎之旅，侧重于艺术和历史。\n第1天：侧重中心历史遗迹。上午：巴黎圣母院（外观/区域），圣礼拜堂。下午：卢浮宫。\n第2天：侧重艺术和另一个街区。上午：奥赛博物馆。下午：蒙马特高地和圣心大教堂。\n第3天：凡尔赛宫或不同类型的博物馆。上午：凡尔赛宫（至少需要半天）。下午：罗丹博物馆或游览玛莱区以感受历史氛围。\n我应该将其呈现为一个结构化的计划。\n\nAction:\n{\n  \"plan\": [\n    {\"day\": 1, \"morning\": \"巴黎圣母院区域和圣礼拜堂\", \"afternoon\": \"卢浮宫\"},\n    {\"day\": 2, \"morning\": \"奥赛博物馆\", \"afternoon\": \"蒙马特高地和圣心大教堂\"},\n    {\"day\": 3, \"morning\": \"凡尔赛宫\", \"afternoon\": \"罗丹博物馆或玛莱区游览\"}\n  ]\n}\n</code></pre>\n</li>\n<li><strong>少量示例</strong>：在提示中提供一个或多个示例，展示所需的分步思考过程，然后是行动。这通常是最有效的方法。</li>\n<li><strong>结构化输出</strong>：将您的提示设计为在“行动”字段之前期望一个“思考”或“推理”字段。这强制智能体阐明其思考过程。</li>\n</ul>\n<p>通过鼓励有条理的方法，CoT 帮助智能体在内部模拟解决问题的路径，使其行动更审慎，更不容易出现简单错误。</p>\n<h3>通过思维树（ToT）检查多条推理 (inference)路径</h3>\n<p>虽然 CoT 引导智能体沿着单一的线性推理路径前进，但思维树提示将其推进了一步。ToT 使得智能体能够同时审查多个推理路径或备选方案，评估它们的潜力，然后决定要沿着哪条路径执行，或者结合不同路径的见解。这类似于智能体在采取行动之前考虑几种“如果……会怎样”的场景或不同的策略。</p>\n<p>当出现以下情况时，ToT 对智能体尤其有益：</p>\n<ul>\n<li><strong>问题复杂且没有单一明显解决方案时。</strong> 例如，策略性游戏或复杂的谈判任务。</li>\n<li><strong>推理链中的早期步骤不确定时。</strong> ToT 允许智能体审查不同假设的后果。</li>\n<li><strong>智能体需要执行自我修正或回溯时。</strong> 如果一条推理路径遇到死胡同，智能体可以切换到更有前景的分支。</li>\n</ul>\n<p>实现一个完整的 ToT 系统通常不仅仅涉及单个提示；它通常需要一个智能体架构，该架构可以管理多个“思考状态”，为每个状态生成潜在的下一步（思考），评估这些思考，并使用搜索算法（如广度优先或深度优先搜索）来遍历思考的“树”。</p>\n<p>然而，您可以设计提示，鼓励智能体在其推理循环中表现出类似 ToT 的行为：</p>\n<ul>\n<li><strong>提示备选方案</strong>：“考虑解决此问题的三种不同方法。列出每种方法的优缺点。”</li>\n<li><strong>条件规划</strong>：“如果首次尝试使用工具 A 失败，您使用工具 B 或其他方法的备用计划是什么？”</li>\n<li><strong>路径自我评估</strong>：“生成一个可能的计划。然后，批判性评估该计划的潜在缺陷或改进空间。如果发现重大缺陷，建议一个备选方案。”</li>\n</ul>\n<p>例如，一个负责调试代码的智能体可能会使用类似 ToT 的提示：</p>\n<pre><code>User: 数据处理的 Python 脚本在处理大文件时出现 MemoryError 错误。\nAgent Prompt:\n分析问题并提出解决方案。考虑多种方法。\n\nThought:\n用户的脚本在处理大文件时出现 MemoryError。这通常意味着它一次性加载了太多数据到内存中。\n方法 1：分块处理文件。\n  - 优点：处理大文件内存问题的标准解决方案。降低峰值内存使用。\n  - 缺点：如果数据依赖存在于不同块之间，可能会使处理逻辑复杂化。\n方法 2：优化数据结构。\n  - 优点：可以在不根本改变文件 I/O 的情况下减少内存占用。\n  - 缺点：如果文件确实非常大，可能不够。取决于数据和当前结构的具体情况。\n方法 3：使用更节省内存的库或工具。\n  - 优点：可能存在现成的解决方案（例如，Python 的 Dask、Vaex）。\n  - 缺点：引入新的依赖；可能需要学习新的 API。\n\nEvaluation: 分块（方法 1）通常是解决这类问题最直接有效的第一步。我会建议这个方法，如果分块对于他们特定的逻辑难以实现，也许会作为次要考虑提及数据结构优化。\n\nAction:\n{\n  \"suggestion\": \"为了解决 MemoryError，最常见的解决方案是分块处理文件，而不是一次性将整个文件加载到内存中。您可以读取文件的一部分，处理它，然后再读取下一部分。您能向我展示您脚本中读取和处理文件的部分吗？或者，考虑您的数据结构是否可以优化以提高内存效率（例如，使用生成器、更紧凑的类型）。\",\n  \"next_step\": \"request_code_snippet\"\n}\n</code></pre>\n<p>以下图表说明了 CoT 和 ToT 之间推理流程的差异：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-9efpbg\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", margin=0.2];\n  edge [fontname=\"Arial\", color=\"#495057\"];\n\n  subgraph cluster_cot {\n    label=\"思维链 (CoT)\";\n    bgcolor=\"#e9ecef\";\n    style=\"rounded\";\n    node [fillcolor=\"#a5d8ff\"];\n    CoT_Start [label=\"问题\"];\n    CoT_S1 [label=\"思考 1\"];\n    CoT_S2 [label=\"思考 2\"];\n    CoT_S3 [label=\"思考 3\"];\n    CoT_End [label=\"解决方案\"];\n    CoT_Start -> CoT_S1 -> CoT_S2 -> CoT_S3 -> CoT_End;\n  }\n\n  subgraph cluster_tot {\n    label=\"思维树 (ToT)\";\n    bgcolor=\"#e9ecef\";\n    style=\"rounded\";\n    node [fillcolor=\"#96f2d7\"];\n    ToT_Start [label=\"问题\"];\n    ToT_T1_1 [label=\"思考 1a\"];\n    ToT_T1_2 [label=\"思考 1b\"];\n    ToT_T2_1a [label=\"思考 2a (来自 1a)\"];\n    ToT_T2_1b_Dead [label=\"思考 2b (来自 1a)\\n(死胡同)\", fillcolor=\"#ffc9c9\"];\n    ToT_T2_2a [label=\"思考 2c (来自 1b)\"];\n    ToT_Sol_A [label=\"解决方案 A\", fillcolor=\"#b2f2bb\"];\n    ToT_Sol_B [label=\"解决方案 B\", fillcolor=\"#b2f2bb\"];\n\n    ToT_Start -> ToT_T1_1;\n    ToT_Start -> ToT_T1_2;\n    ToT_T1_1 -> ToT_T2_1a -> ToT_Sol_A;\n    ToT_T1_1 -> ToT_T2_1b_Dead;\n    ToT_T1_2 -> ToT_T2_2a -> ToT_Sol_B;\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-9efpbg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>CoT 展示了思考的线性进展，而 ToT 则说明了分叉结构，其中审查了多条推理路径。</p>\n</blockquote>\n<h3>CoT 与 ToT 的选择</h3>\n<p>CoT 和 ToT 之间的选择取决于任务的复杂性以及期望的智能体自主程度：</p>\n<ul>\n<li>\n<p><strong>何时使用 CoT</strong>：</p>\n<ul>\n<li>任务涉及顺序推理 (inference)，且步骤定义明确。</li>\n<li>对于中等复杂度的任务，您需要提高智能体行动的可靠性和可解释性。</li>\n<li>问题可以分解为线性的思考序列。\n示例：解决数学应用题、根据特定标准总结文本、生成简单的代码片段。</li>\n</ul>\n</li>\n<li>\n<p><strong>何时考虑 ToT（或类似 ToT 的提示）</strong>：</p>\n<ul>\n<li>任务高度复杂，存在显著不确定性或许多可能的路径。</li>\n<li>智能体需要进行战略规划、查看备选方案或执行自我修正时。</li>\n<li>错误的代价很高，并且需要充分审查时。\n示例：复杂调试、具有特定约束的创意写作、动态环境中的多步骤规划。</li>\n</ul>\n</li>\n</ul>\n<h3>实际考量</h3>\n<p>尽管这些技术功能强大，但它们也伴随着一些考量：</p>\n<ul>\n<li><strong>增加延迟和成本</strong>：生成详细的思考，尤其是在 ToT 中生成多个分支，需要大型语言模型更多的令牌和处理时间。这会增加延迟和运营成本。</li>\n<li><strong>提示复杂性</strong>：精心设计有效的 CoT 提示，尤其是 ToT 提示，需要细致。少量示例需要精心设计，以展示所需的推理 (inference)风格。</li>\n<li><strong>解析开销</strong>：如果思考以结构化方式嵌入 (embedding)，您的智能体框架需要可靠地解析这些思考并将其与行动分离。</li>\n<li><strong>引导评估（针对 ToT）</strong>：在 ToT 场景中，引导智能体<em>如何</em>评估不同的思考分支非常重要。这可能涉及提示进行自我批评或使用特定的评估标准。</li>\n</ul>\n<p>通过整合 CoT 和 ToT 提示策略，您不仅仅是向智能体提供指令；您是在塑造其认知过程。这使得智能体可以执行的任务复杂性有了显著提升，使它们从简单的指令执行者转变为更强大的问题解决者。这些推理框架是您精确控制智能体的宝贵工具，帮助您构建不仅高效，而且更透明和适应性强的智能体。</p>",
+  "slug": "cot-tot-agent-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 18540,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "本文介绍了思维链（CoT）提示方法，通过生成中间步骤使大型语言模型能够进行复杂推理。",
+      "order": 1,
+      "created_at": "2025-09-06T12:28:29.028764Z",
+      "updated_at": "2025-09-11T05:06:28.601755Z"
+    },
+    {
+      "id": 18541,
+      "title": "Tree of Thoughts: Deliberate Problem Solving with Large Language Models",
+      "author": "Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, Karthik Narasimhan",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.10601",
+      "doi": "10.48550/arXiv.2305.10601",
+      "note": "本文提出了思维树（ToT）框架，通过允许模型探索多个推理路径和评估选择来扩展思维链。",
+      "order": 2,
+      "created_at": "2025-09-06T12:28:29.064137Z",
+      "updated_at": "2025-09-11T05:06:30.680771Z"
+    },
+    {
+      "id": 18542,
+      "title": "Large Language Models are Zero-Shot Reasoners",
+      "author": "Takeshi Kojima, Shixiang Shane Gu, Machel Reid, Yutaka Matsuo, Yusuke Iwasawa",
+      "year": "2022",
+      "publisher": "",
+      "journal": "NeurIPS 2022",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2205.11916",
+      "doi": "10.48550/arXiv.2205.11916",
+      "note": "本文证明了只需在提示中添加“我们一步一步思考”即可在没有特定示例的情况下引发大型语言模型中的思维链推理。",
+      "order": 3,
+      "created_at": "2025-09-06T12:28:29.067163Z",
+      "updated_at": "2025-09-11T05:06:33.035749Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

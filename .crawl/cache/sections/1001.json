@@ -1,0 +1,61 @@
+{
+  "id": 1001,
+  "title": "查看提交历史 (git log)",
+  "meta_title": "查看提交历史 | git log 命令",
+  "meta_description": "了解 `git log` 命令，查看仓库中提交的历史记录。",
+  "content": "<p>Git 项目通过将重要更改保存为提交来构建历史。为了有效管理和审查您的工作，了解如何查看此历史记录至关重要。<code>git log</code> 命令提供了一种强大的方式来回顾您保存的所有更改。可以将 <code>git log</code> 视为您项目的详细日志，记录着每个提交。</p>\n<p>在您的终端中，于仓库目录下运行 <code>git log</code> 命令，将显示一个按时间顺序排列的提交列表，最新提交在前。</p>\n<pre><code class=\"language-bash\">cd your-repo-directory\ngit log\n</code></pre>\n<p>每个提交的输出通常如下所示：</p>\n<pre><code>commit a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 (HEAD -> main)\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue May 21 10:30:00 2024 +0000\n\n    Initial commit: Add project structure\n\ncommit f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue May 21 09:45:15 2024 +0000\n\n    Add README file\n</code></pre>\n<p>我们来细看每个提交所显示的信息：</p>\n<ul>\n<li><strong>提交哈希值 (Commit Hash):</strong> 这串长长的字母和数字（例如 <code>a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0</code>）是提交的唯一标识符，从技术上讲是一个 SHA-1 哈希值。这个 ID 确保了提交的完整性，并允许 Git（和您）指向历史中的特定时间点。实际上，您通常只需要前 7-10 个字符就能唯一识别一个提交。<code>(HEAD -> main)</code> 部分表明 <code>HEAD</code>（您在项目历史中的当前位置）正指向 <code>main</code> 分支，并且这个提交是该分支上的最新提交。我们稍后会更详细地讨论分支和 <code>HEAD</code>。</li>\n<li><strong>作者 (Author):</strong> 这显示了最初编写这些更改的人的姓名和电子邮件地址。此信息来自您之前设置的 <code>user.name</code> 和 <code>user.email</code> 配置。</li>\n<li><strong>日期 (Date):</strong> 时间戳表示提交的创建时间。</li>\n<li><strong>提交信息 (Commit Message):</strong> 这是您运行 <code>git commit -m \"您的信息\"</code> 时提供的一些描述性文字。如您所见，清晰的信息（如“编写好的提交信息”中讨论的那样）会使日志更有助于理解。</li>\n</ul>\n<h3>自定义日志输出</h3>\n<p>默认的 <code>git log</code> 输出信息量大，但随着项目规模的增长，它可能变得过于冗长。Git 提供了许多选项来自定义输出，以准确显示您所需的信息。以下是一些常用且有帮助的选项：</p>\n<h4>使用 <code>--oneline</code> 获取简洁摘要</h4>\n<p>要获得一个非常紧凑的视图，请使用 <code>--oneline</code> 选项。它只显示每个提交哈希值的前几位和提交信息的主题行：</p>\n<pre><code class=\"language-bash\">git log --oneline\n</code></pre>\n<p>输出：</p>\n<pre><code>a1b2c3d (HEAD -> main) Initial commit: Add project structure\nf9e8d7c Add README file\n</code></pre>\n<p>这对于快速查看最近的更改很有帮助。</p>\n<h4>使用 <code>--stat</code> 查看更改</h4>\n<p>如果您想查看每个提交中哪些文件被更改，以及添加或删除了多少行的摘要，请使用 <code>--stat</code> 选项：</p>\n<pre><code class=\"language-bash\">git log --stat\n</code></pre>\n<p>输出：</p>\n<pre><code>commit a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 (HEAD -> main)\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue May 21 10:30:00 2024 +0000\n\n    Initial commit: Add project structure\n\n src/app.js | 1 +\n src/style.css | 1 +\n 2 files changed, 2 insertions(+)\n\ncommit f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue May 21 09:45:15 2024 +0000\n\n    Add README file\n\n README.md | 5 +++++\n 1 file changed, 5 insertions(+)\n</code></pre>\n<p>这显示了相对于项目根目录的文件路径，以及一个简单的视觉呈现（<code>+</code> 表示添加，<code>-</code> 表示删除）和一行汇总信息。</p>\n<h4>使用 <code>--patch</code> (<code>-p</code>) 查看实际更改</h4>\n<p>要查看每个提交引入的具体更改（即“diff”或“patch”），请使用 <code>-p</code> 或 <code>--patch</code> 选项：</p>\n<pre><code class=\"language-bash\">git log -p\n</code></pre>\n<p>输出（一个提交的摘录）：</p>\n<pre><code>commit a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 (HEAD -> main)\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue May 21 10:30:00 2024 +0000\n\n    Initial commit: Add project structure\n\ndiff --git a/src/app.js b/src/app.js\nnew file mode 100644\nindex 0000000..e69de29\ndiff --git a/src/style.css b/src/style.css\nnew file mode 100644\nindex 0000000..e69de29\n\n</code></pre>\n<p>此输出以类似于 <code>diff</code> 命令的格式显示差异。以 <code>+</code> 开头的行表示已添加，以 <code>-</code> 开头的行表示已删除（尽管在这个简单的添加新文件的示例中没有删除）。这个选项信息内容很全面，有助于理解具体的更改，但可能会产生大量输出。</p>\n<h4>限制提交数量</h4>\n<p>如果您只想查看最近的几个提交，可以使用 <code>-n</code> 选项，后跟您想查看的提交数量。例如，只查看最近的三个提交：</p>\n<pre><code class=\"language-bash\">git log -n 3\n</code></pre>\n<p>您可以组合这些选项。例如，要查看最近两个提交的简洁视图并附带统计信息：</p>\n<pre><code class=\"language-bash\">git log --oneline --stat -n 2\n</code></pre>\n<p>输出：</p>\n<pre><code>a1b2c3d (HEAD -> main) Initial commit: Add project structure\n src/app.js | 1 +\n src/style.css | 1 +\n 2 files changed, 2 insertions(+)\nf9e8d7c Add README file\n README.md | 5 +++++\n 1 file changed, 5 insertions(+)\n</code></pre>\n<p><code>git log</code> 命令是您查看使用 <code>git commit</code> 所建立历史的窗口。使用这些选项将帮助您有效地查阅和了解项目的演变。随着学习的进行，您会发现 <code>git log</code> 是一个不可或缺的辅助手段，用于查看更改、找出特定修改的引入时间以及了解协作伙伴的工作。</p>",
+  "slug": "git-log-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 303,
+      "title": "git-log",
+      "author": "Git Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-log",
+      "doi": "",
+      "note": "`git log` 命令的官方、最全面的参考资料，详细介绍了所有选项和高级用法。",
+      "order": 1,
+      "created_at": "2025-09-04T14:14:48.768286Z",
+      "updated_at": "2025-09-07T15:47:21.350735Z"
+    },
+    {
+      "id": 304,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "2",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History",
+      "doi": "",
+      "note": "一本关于 Git 的权威且免费的书籍，其中有一章专门解释了如何使用 `git log` 及其各种选项查看提交历史。",
+      "order": 2,
+      "created_at": "2025-09-04T14:14:48.771370Z",
+      "updated_at": "2025-09-07T15:47:29.762746Z"
+    },
+    {
+      "id": 305,
+      "title": "Git log",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "Atlassian",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/git-log",
+      "doi": "",
+      "note": "一个清晰实用的教程，解释了 `git log` 命令及其常用标志，适用于初学者和快速参考。",
+      "order": 3,
+      "created_at": "2025-09-04T14:14:48.773882Z",
+      "updated_at": "2025-09-07T15:47:21.838948Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

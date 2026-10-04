@@ -1,0 +1,45 @@
+{
+  "id": 2978,
+  "title": "监督微调（SFT）的数据格式化",
+  "meta_title": "监督微调的数据格式化",
+  "meta_description": "为有效对 LLM 进行监督微调，组织提示和回复。",
+  "content": "<p>监督微调 (fine-tuning)（SFT）是一种常用方法，用于使预训练 (pre-training)的大型语言模型（LLM）适应遵循指令或在特定应用方向上发挥作用。其核心思想简单明了：向模型提供期望的输入-输出行为示例，并使用标准监督学习 (supervised learning)训练它复制该行为。然而，SFT 的有效性在很大程度上取决于您如何组织和格式化训练数据。模型需要明确的信号来理解输入中哪一部分是提示（或指令），以及哪一部分是它应学习生成的预期回复。</p>\n<p>SFT 本质上要求数据以（提示，补全）对的形式呈现。模型被训练为在给定相应<code>提示</code>时生成<code>补全</code>。您如何定义这些提示和补全，以及如何将它们组合起来，非常重要。</p>\n<h3>SFT 的常见数据结构</h3>\n<p>虽然存在各种自定义格式，但大多数 SFT 数据集都采用几种常见结构，通常存储为 JSON Lines (JSONL) 等格式，其中每一行都是一个独立的 JSON 对象，代表一个训练示例。</p>\n<ol>\n<li>\n<p><strong>简单提示-补全对：</strong>\n这是最基础的格式，适用于输入是单段文本、输出是其延续或转换的任务。</p>\n<pre><code class=\"language-json\">{\"prompt\": \"翻译成法语: 'Hello, world!'\", \"completion\": \"Bonjour le monde!\"}\n{\"prompt\": \"总结以下文本: [长文本输入]...\", \"completion\": \"[简洁摘要]...\"}\n</code></pre>\n<p>训练期间，<code>prompt</code> 和 <code>completion</code> 通常会被连接起来，有时会带有一个分隔符标记 (token)，模型学习预测属于 <code>completion</code> 的标记。</p>\n</li>\n<li>\n<p><strong>指令遵循格式：</strong>\n为了明确训练模型遵循指令，数据集通常会进一步细分输入，将指令本身与它应操作的任何特定输入数据分开。这有助于模型更好地泛化到新指令。</p>\n<pre><code class=\"language-json\">{\"instruction\": \"识别主要情感。\", \"input\": \"这部电影太棒了！\", \"output\": \"积极\"}\n{\"instruction\": \"写一个关于勇敢骑士的短篇故事。\", \"input\": \"\", \"output\": \"吉迪恩爵士调整了头盔，山谷中回荡着巨龙的咆哮声……\"}\n{\"instruction\": \"提取电子邮件地址。\", \"input\": \"请通过 info@example.com 或 support@example.org 联系我们。\", \"output\": \"info@example.com, support@example.org\"}\n</code></pre>\n<p>为模型准备这些数据时，这些字段通常使用预定义模板组合成单个提示字符串。例如：</p>\n<pre><code>以下是描述任务的指令，以及提供更多背景信息的输入。请编写一个适当的回复来完成请求。\n\n### 指令：\n{instruction}\n\n### 输入：\n{input}\n\n### 回复：\n{output}\n</code></pre>\n<p>模型随后被训练生成<code>### 回复:</code>后面的文本。具体模板结构可以不同，但数据集内部的一致性很重要。</p>\n</li>\n<li>\n<p><strong>聊天和对话格式：</strong>\n用于训练聊天模型或助手时，数据需要表示多轮对话。这通常被结构为回合列表，每个回合都有指定角色（例如，<code>user</code>、<code>assistant</code>、<code>system</code>）。</p>\n<pre><code class=\"language-json\">{\"messages\": [\n  {\"role\": \"system\", \"content\": \"你是一个乐于助人的助手。\"},\n  {\"role\": \"user\", \"content\": \"法国的首都是哪里？\"},\n  {\"role\": \"assistant\", \"content\": \"法国的首都是巴黎。\"}\n]}\n{\"messages\": [\n  {\"role\": \"user\", \"content\": \"编写一个计算阶乘的 Python 函数。\"},\n  {\"role\": \"assistant\", \"content\": \"```python\\ndef factorial(n):\\n  if n == 0:\\n    return 1\\n  else:\\n    return n * factorial(n-1)\\n```\"}\n]}\n</code></pre>\n<p>为 SFT 处理这种格式需要将对话历史序列化为单个线性序列。这通常需要特殊标记来划分回合和角色。例如，模型可能期望格式化的输入，例如：<code>&#x3C;|im_start|>system\\nYou are...&#x3C;|im_end|>\\n&#x3C;|im_start|>user\\nWhat is...?&#x3C;|im_end|>\\n&#x3C;|im_start|>assistant\\nThe capital is...&#x3C;|im_end|></code>. 模型随后被训练只预测对应<code>assistant</code>消息的标记。</p>\n</li>\n</ol>\n<h3>特殊标记 (token)的作用</h3>\n<p>许多 LLM 依赖特殊标记在预训练 (pre-training)和微调 (fine-tuning)期间有效组织输入序列。这些标记作为分隔符，指示指令、用户输入、模型回复或对话回合之间的边界。示例包括：</p>\n<ul>\n<li><code>&#x3C;s></code> 和 <code>&#x3C;/s></code>：序列开始 (BOS) 和序列结束 (EOS) 标记。</li>\n<li><code>[INST]</code> 和 <code>[/INST]</code>：由 Llama 2-Chat 等模型使用，用于封装用户指令。</li>\n<li><code>&#x3C;|im_start|></code> 和 <code>&#x3C;|im_end|>:</code> 由 ChatML 等模型（OpenAI 模型常用并被其他地方采用）使用，标记消息的开始和结束，常与角色标识符（<code>system</code>、<code>user</code>、<code>assistant</code>）配对。</li>\n<li><code>&#x3C;|user|></code>, <code>&#x3C;|assistant|></code>, <code>&#x3C;|endoftext|></code>, <code>[SEP]</code>, <code>[CLS]</code>: 不同模型使用的各种其他标记。</li>\n</ul>\n<p><strong>使用基础模型期望的特定模板和特殊标记来格式化您的 SFT 数据非常重要。</strong> 使用错误格式或遗漏必要的特殊标记可能导致性能明显下降，因为模型无法正确解释其接收到的输入结构。务必查阅您正在微调的基础 LLM 的文档或模型卡。</p>\n<h3>损失计算的掩码处理</h3>\n<p>SFT 的一个基本方面是确保模型只学习预测目标补全或回复，而不是它被给予的提示或指令文本。如果模型被训练预测整个连接序列（提示 + 补全），损失计算将包含预测提示标记 (token)时产生的错误。这是不理想的；我们希望模型的梯度完全基于它生成<em>期望输出</em>的能力。</p>\n<p>这通过<strong>损失掩码</strong>实现。在训练过程中，计算交叉熵损失时，对应提示标记的损失值被忽略。PyTorch 等框架中的常见做法是为对应提示标记的标签（目标标记 ID）分配一个特殊的忽略索引（例如 -100）。损失函数 (loss function)随后会自动跳过这些位置。</p>\n<p>考虑一个简化示例：\n提示：<code>翻译：你好</code>\n补全：<code>Bonjour</code></p>\n<p><code>翻译：你好 Bonjour</code>\n标记化 ID（示例）：<code>[101, 8991, 102, 156 Hello, 205 Bonjour, 103]</code> （索引仅供说明）</p>\n<p>用于损失计算的目标标签（带掩码）：<code>[-100, -100, -100, -100, 205, 103]</code></p>\n<p>在这里，<code>-100</code> 表示不应为对应“翻译:”、“你好”以及任何初始分隔符/特殊标记的损失进行计算。损失仅基于模型对“Bonjour”标记和随后的结束标记的预测进行计算。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-vcfxn3\" \n              data-graph-definition='digraph SFT_Formatting_Masking {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Helvetica\", margin=0.2];\n  edge [fontname=\"Helvetica\"];\n\n  subgraph cluster_data {\n    label = \"原始数据示例\";\n    bgcolor=\"#e9ecef\";\n    rawData [label=\"指令：总结\\n输入：文本...\\n输出：摘要...\", shape=note, fillcolor=\"#ffffff\"];\n  }\n\n  subgraph cluster_format {\n    label = \"格式化字符串（带简化标记）\";\n    bgcolor=\"#e9ecef\";\n    formattedString [label=\"<INST> 总结 <INPUT> 文本... <RESP> 摘要...\", shape=plaintext, fillcolor=\"#ffffff\"];\n  }\n\n  subgraph cluster_tokenize {\n    label = \"标记化输入ID\";\n    bgcolor=\"#e9ecef\";\n    tokenizedIDs [label=\"[1, 500, 800, 2, 900, 3, 1000, 4]\", shape=plaintext, fillcolor=\"#ffffff\"];\ntokenizedIDs_desc [label=\"(ID对应：\\n <INST> 总结 <INPUT> 文本... <RESP> 摘要... <EOS>)\", shape=plaintext, fontsize=10, margin=0.1];\n }\n\n  subgraph cluster_mask {\n    label = \"用于损失计算的标签\";\n    bgcolor=\"#e9ecef\";\n    maskedLabels [label=\"[-100, -100, -100, -100, -100, -100, 1000, 4]\", shape=plaintext, fillcolor=\"#ffffff\", fontcolor=\"#f03e3e\"];\n    maskedLabels_desc [label=\"(掩码提示标记\\n只有 &#39;摘要... <EOS>&#39; 贡献损失)\", shape=plaintext, fontsize=10, margin=0.1];\n  }\n\n  rawData -> formattedString [label=\"模板应用\"];\n  formattedString -> tokenizedIDs [label=\"标记化\"];\n  tokenizedIDs -> maskedLabels [label=\"损失掩码已应用\"];\n\n  // Styling\n  rawData [fillcolor=\"#d0bfff\"]; // Violet light\n  formattedString [fillcolor=\"#a5d8ff\"]; // Blue light\n  tokenizedIDs [fillcolor=\"#96f2d7\"]; // Teal light\n  maskedLabels [fillcolor=\"#ffec99\"]; // Yellow light\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-vcfxn3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图说明原始指令/输入/输出数据如何被转换为格式化字符串，进行标记化，以及标签如何被掩码以确保模型在监督微调 (fine-tuning)期间只从目标回复标记中学习。</p>\n</blockquote>\n<h3>为训练管道准备数据</h3>\n<p>在典型的 SFT 管道中，使用 Hugging Face 的 <code>transformers</code> 和 <code>datasets</code> 等库：</p>\n<ol>\n<li><strong>加载数据：</strong> 将数据集（通常是 JSONL 或类似格式）加载到 <code>Dataset</code> 对象中。</li>\n<li><strong>格式化：</strong> 对每个示例应用函数，根据目标模型的要求，将其组织成最终的提示字符串，包含指令、输入、输出和必要的特殊标记 (token)。</li>\n<li><strong>标记化：</strong> 使用模型专用的标记器将格式化字符串转换为标记 ID。确保标记器在填充和截断方面配置正确。值得注意的是，如果格式化步骤中未手动包含，标记器通常会自动添加模型专用的 BOS/EOS 标记。请注意这一点以避免重复。</li>\n<li><strong>掩码：</strong> 实现逻辑，通过复制标记化的 <code>input_ids</code> 并将对应提示部分的 ID 替换为忽略索引（例如 -100）来创建 <code>labels</code> 数组。</li>\n<li><strong>批处理：</strong> 数据加载器将批量处理这些示例，通常会在每个批次内将它们填充到相同长度。</li>\n</ol>\n<p>仔细关注这些格式化步骤对于成功的 SFT 非常重要。格式的一致性、特殊标记的正确使用以及适当的损失掩码是有效使 LLM 适应特定任务和指令遵循行为的重要构成部分。</p>",
+  "slug": "formatting-sft-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 8815,
+      "title": "Finetuned Language Models Are Zero-Shot Learners",
+      "author": "Jason Wei, Maarten Bosma, Vincent Y. Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du, Andrew M. Dai, Quoc V. Le",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2109.01652",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2109.01652",
+      "doi": "10.48550/arXiv.2109.01652",
+      "note": "一篇基础论文，介绍了指令微调，展示了在指令格式数据集集合上进行微调如何提高零样本泛化能力，并影响监督微调的数据格式。",
+      "order": 3,
+      "created_at": "2025-09-05T02:10:40.092911Z",
+      "updated_at": "2025-09-09T02:45:55.005063Z"
+    },
+    {
+      "id": 8816,
+      "title": "Fine-tuning",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/fine-tuning/fine-tuning",
+      "doi": "",
+      "note": "官方指南，介绍如何准备用于微调OpenAI模型的数据，包括聊天格式输入的MESSAGES要求和示例数据结构。",
+      "order": 4,
+      "created_at": "2025-09-05T02:10:40.095586Z",
+      "updated_at": "2025-09-09T02:46:00.692227Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

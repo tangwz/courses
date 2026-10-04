@@ -1,0 +1,61 @@
+{
+  "id": 1903,
+  "title": "实战：流水线的构建与调优",
+  "meta_title": "实践：构建与调优 Scikit-learn 流水线",
+  "meta_description": "构建包含预处理和模型训练的完整流水线，并调优其超参数。",
+  "content": "<p>一个完整的机器学习 (machine learning)流程是使用 <code>Pipeline</code> 和 <code>ColumnTransformer</code> 构建的。特征预处理（缺失值填充、缩放、编码）和模型训练在一个流水线对象中处理。然后使用 <code>GridSearchCV</code> 为这个组合流程寻找最佳超参数 (parameter) (hyperparameter)。这种方法体现了如何创建更清晰、更可靠的机器学习系统。</p>\n<p>我们将使用一个对不同类型特征需要不同预处理步骤的数据集，这使其非常适合说明 <code>ColumnTransformer</code> 的用法。我们来使用流行泰坦尼克数据集的简化版本。</p>\n<h3>设置场景</h3>\n<p>设想我们想根据年龄、乘客等级、性别和登船地点等特征来预测泰坦尼克号乘客的生还情况。这个数据集包含数值特征（<code>Age</code>、<code>Fare</code>）、分类特征（<code>Pclass</code>、<code>Sex</code>、<code>Embarked</code>），并且通常包含缺失值，需要仔细预处理。</p>\n<p>首先，我们准备一个示例数据集并进行初步的训练-测试集划分。为求简单，我们将创建一个小的 Pandas DataFrame。在实际项目中，你会从文件或数据库加载这些数据。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\nfrom sklearn.model_selection import train_test_split\n\n# 示例数据（简化版泰坦尼克）\ndata = {\n    'Pclass': [3, 1, 3, 1, 2, 3, 1, 3, 2, 3],\n    'Sex': ['male', 'female', 'female', 'female', 'male', 'male', 'male', 'female', 'female', 'male'],\n    'Age': [22.0, 38.0, 26.0, 35.0, 35.0, np.nan, 54.0, 2.0, 27.0, 32.0],\n    'Fare': [7.25, 71.28, 7.92, 53.1, 8.05, 8.45, 51.86, 21.07, 13.00, 7.89],\n    'Embarked': ['S', 'C', 'S', 'S', 'S', 'Q', 'S', 'S', 'C', 'S'],\n    'Survived': [0, 1, 1, 1, 0, 0, 0, 0, 1, 0] # 目标变量\n}\ndf = pd.DataFrame(data)\n\n# 分离特征 (X) 和目标 (y)\nX = df.drop('Survived', axis=1)\ny = df['Survived']\n\n# 识别特征类型\nnumerical_features = ['Age', 'Fare']\ncategorical_features = ['Pclass', 'Sex', 'Embarked'] # Pclass 在此处被视为分类特征\n\n# 将数据拆分为训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n\nprint(\"训练特征形状:\", X_train.shape)\nprint(\"测试特征形状:\", X_test.shape)\n</code></pre>\n<h3>定义预处理步骤</h3>\n<p>我们需要对数值特征和分类特征进行不同的预处理：</p>\n<ol>\n<li><strong>数值特征（<code>Age</code>、<code>Fare</code>）：</strong>\n<ul>\n<li>填充缺失值（例如，使用中位数）。</li>\n<li>缩放特征（例如，使用 <code>StandardScaler</code>）。</li>\n</ul>\n</li>\n<li><strong>分类特征（<code>Pclass</code>、<code>Sex</code>、<code>Embarked</code>）：</strong>\n<ul>\n<li>填充缺失值（例如，使用最频繁的值）。</li>\n<li>应用独热编码将其转换为数值格式。</li>\n</ul>\n</li>\n</ol>\n<p>我们可以使用 <code>Pipeline</code> 为这些步骤中的每一个定义小的流水线。</p>\n<pre><code class=\"language-python\">from sklearn.pipeline import Pipeline\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.preprocessing import StandardScaler, OneHotEncoder\n\n# 数值特征的预处理流水线\nnumerical_transformer = Pipeline(steps=[\n    ('imputer', SimpleImputer(strategy='median')),\n    ('scaler', StandardScaler())\n])\n\n# 分类特征的预处理流水线\ncategorical_transformer = Pipeline(steps=[\n    ('imputer', SimpleImputer(strategy='most_frequent')),\n    ('onehot', OneHotEncoder(handle_unknown='ignore')) # 忽略测试集中训练集中未出现过的类别\n])\n</code></pre>\n<h3>使用 ColumnTransformer 组合预处理</h3>\n<p>现在，我们使用 <code>ColumnTransformer</code> 将正确的转换器流水线应用于相应的列。</p>\n<pre><code class=\"language-python\">from sklearn.compose import ColumnTransformer\n\n# 使用 ColumnTransformer 创建预处理器对象\npreprocessor = ColumnTransformer(\n    transformers=[\n        ('num', numerical_transformer, numerical_features),\n        ('cat', categorical_transformer, categorical_features)\n    ],\n    remainder='passthrough' # 保留其他列（如果有）——此处并非严格必要\n)\n</code></pre>\n<p><code>ColumnTransformer</code> 接受一个元组列表。每个元组包含：</p>\n<ol>\n<li>转换器步骤的名称（例如，<code>'num'</code>、<code>'cat'</code>）。</li>\n<li>转换器对象（我们的 <code>numerical_transformer</code> 和 <code>categorical_transformer</code> 流水线）。</li>\n<li>要应用转换器的列名或索引列表。</li>\n</ol>\n<h3>构建完整流水线</h3>\n<p>我们将 <code>preprocessor</code> 与一个分类器（例如 <code>LogisticRegression</code>）组合成一个最终的 <code>Pipeline</code>。</p>\n<pre><code class=\"language-python\">from sklearn.linear_model import LogisticRegression\n\n# 创建包含预处理和分类器的完整流水线\nmodel_pipeline = Pipeline(steps=[\n    ('preprocessor', preprocessor),\n    ('classifier', LogisticRegression(solver='liblinear', random_state=42)) # 为求简单使用 liblinear\n])\n\n# 显示流水线结构（可选）\nfrom sklearn import set_config\nset_config(display='diagram') # 如果可用，激活图表显示\nprint(model_pipeline)\n</code></pre>\n<p>这个 <code>model_pipeline</code> 对象现在包含我们整个工作流程：缺失值填充、缩放、编码和分类。</p>\n<h3>使用 GridSearchCV 调优超参数 (parameter) (hyperparameter)</h3>\n<p>真正的效果体现在对整个流水线进行超参数调优时。我们可以调优分类器的参数，<em>也</em>可以调优预处理步骤内部的参数。请注意我们如何使用步骤名称后跟双下划线（<code>__</code>）来指定参数。</p>\n<p>我们来定义一个用于搜索的参数网格：</p>\n<ul>\n<li>数值特征的填充策略（<code>preprocessor__num__imputer__strategy</code>）。</li>\n<li><code>LogisticRegression</code> 的 <code>C</code> 参数（正则化 (regularization)强度倒数）（<code>classifier__C</code>）。</li>\n</ul>\n<pre><code class=\"language-python\">from sklearn.model_selection import GridSearchCV\n\n# 定义要搜索的参数网格\n# 注意命名约定：步骤名称__参数名称\n# 对于嵌套流水线：外部步骤名称__内部步骤名称__参数名称\nparam_grid = {\n    'preprocessor__num__imputer__strategy': ['mean', 'median'],\n    'classifier__C': [0.1, 1.0, 10.0],\n    # 如果需要，我们也可以调优分类填充器策略或 OneHotEncoder 参数\n    # 'preprocessor__cat__imputer__strategy': ['most_frequent', 'constant'],\n    # 'preprocessor__cat__onehot__handle_unknown': ['ignore', 'error'] # 通常 'ignore' 更安全\n}\n\n# 创建 GridSearchCV 对象\ngrid_search = GridSearchCV(model_pipeline, param_grid, cv=3, scoring='accuracy') # 对于小型数据集使用 3 折交叉验证\n\n# 在训练数据上拟合 GridSearchCV\n# 这将在每个交叉验证折叠*内部*正确应用预处理\ngrid_search.fit(X_train, y_train)\n\nprint(\"\\n网格搜索结果:\")\nprint(f\"找到的最佳参数: {grid_search.best_params_}\")\nprint(f\"最佳交叉验证准确率分数: {grid_search.best_score_:.4f}\")\n</code></pre>\n<p>当 <code>grid_search.fit()</code> 运行时，它会执行交叉验证。对于交叉验证中的每个分割，它会在训练折叠上拟合<em>整个</em>流水线（包括该迭代指定的 <code>preprocessor</code> 参数），并在验证折叠上进行评估。这保证了预处理步骤（如缺失值填充和缩放）仅从每个折叠的训练部分学习，从而避免了数据泄露。</p>\n<h3>评估最佳流水线</h3>\n<p>最后，让我们在我们的保留测试集上评估由 <code>GridSearchCV</code> 找到的最佳流水线的表现。<code>GridSearchCV</code> 会自动在整个训练集上重新拟合找到的最佳模型，因此 <code>grid_search.best_estimator_</code> 已可直接使用。</p>\n<pre><code class=\"language-python\">from sklearn.metrics import accuracy_score, classification_report\n\n# 获取 GridSearchCV 找到的最佳流水线\nbest_pipeline = grid_search.best_estimator_\n\n# 在测试集上进行预测\ny_pred = best_pipeline.predict(X_test)\n\n# 评估最佳流水线\ntest_accuracy = accuracy_score(y_test, y_pred)\nprint(f\"\\n最佳流水线在测试集上的准确率: {test_accuracy:.4f}\")\n\nprint(\"\\n测试集上的分类报告:\")\nprint(classification_report(y_test, y_pred))\n</code></pre>\n<p>这个实操说明了如何使用 <code>Pipeline</code> 和 <code>ColumnTransformer</code> 构建一个全面的流水线，以及如何使用 <code>GridSearchCV</code> 有效地调优其超参数 (parameter) (hyperparameter)。这种方法使得代码更有条理，降低了预处理过程中数据泄露等常见错误的风险，并简化了机器学习 (machine learning)模型的部署。</p>",
+  "slug": "practice-pipeline-construction-tuning",
+  "updates": [],
+  "references": [
+    {
+      "id": 5442,
+      "title": "Pipelines and composite estimators",
+      "author": "Scikit-learn Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html",
+      "doi": "",
+      "note": "Scikit-learn 官方用户指南，介绍如何使用 Pipeline 和 ColumnTransformer 串联和组合估计器，构建完整的机器学习工作流。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:20.803653Z",
+      "updated_at": "2025-09-08T05:19:55.915185Z"
+    },
+    {
+      "id": 5443,
+      "title": "Tuning the hyper-parameters of an estimator",
+      "author": "Scikit-learn Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/grid_search.html",
+      "doi": "",
+      "note": "Scikit-learn 官方用户指南，涵盖 Scikit-learn 中的超参数优化技术，包括 GridSearchCV 及其与管道的集成。",
+      "order": 2,
+      "created_at": "2025-09-05T01:10:20.837080Z",
+      "updated_at": "2025-09-08T05:19:55.175377Z"
+    },
+    {
+      "id": 5444,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGRwiRg35GGS4IHI2VT4Cc6rKzyEJCforKoJ7eyLdpuHK3i1omhCdZo17pD6a5ZpKnBlna4ooQYINRLwK80H2JXisZrW2sdmCMh5337ijLNqo0qxiiqPvDVVfnFDlBvxFfKr-RLLucn8eSZYUE--iZSwCWywPl-9FTEpC67M7gUWHt0z-fMPDAhS-TP2ez_3BTiGdVSUDMl4r2aCQ",
+      "doi": "",
+      "note": "一本内容详尽的书籍，提供 Scikit-learn 机器学习工作流的实际示例，包括数据预处理、管道和超参数调整的详细讨论。",
+      "order": 3,
+      "created_at": "2025-09-05T01:10:20.844156Z",
+      "updated_at": "2025-09-08T05:20:05.590986Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

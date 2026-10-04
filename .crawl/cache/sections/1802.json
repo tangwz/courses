@@ -1,0 +1,61 @@
+{
+  "id": 1802,
+  "title": "识别缺失数据",
+  "meta_title": "查找 Pandas 中的缺失数据 (NaN)",
+  "meta_description": "使用 isnull() 和 notnull() 等方法识别 Series 和 DataFrames 中的缺失值 (NaN)。",
+  "content": "<p>数据集很少是完整的。它们常有空缺，以缺失值表示。在分析数据或训练模型之前，你需要了解这些空缺的位置及可能有多大范围。Pandas 提供了直接的工具来发现缺失数据，传统上用特殊浮点值 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>（非数字）来标记 (token)。Python 的 <code>None</code> 对象在 Pandas 对象中也视为缺失数据。</p>\n<h3>使用 <code>isnull()</code> 和 <code>notnull()</code> 识别缺失值</h3>\n<p>Pandas 提供了两种主要方法来识别缺失值：</p>\n<ol>\n<li><code>isnull()</code>: 返回一个与原对象（Series 或 DataFrame）大小相同的布尔对象，其中 <code>True</code> 表示缺失值（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 或 <code>None</code>），<code>False</code> 表示非缺失值。</li>\n<li><code>notnull()</code>: 与 <code>isnull()</code> 相反。它对非缺失值返回 <code>True</code>，对缺失值返回 <code>False</code>。</li>\n</ol>\n<p>我们来看看这些方法的实际运用。首先，我们需要导入 pandas 和 numpy。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n</code></pre>\n<p>现在，我们创建一个简单的 Pandas Series，其中包含一些由 <code>np.nan</code> 表示的缺失数据：</p>\n<pre><code class=\"language-python\"># 创建一个包含缺失值的 Series\ndata_series = pd.Series([1, np.nan, 3.5, np.nan, 7])\nprint(\"原始 Series:\")\nprint(data_series)\n</code></pre>\n<pre><code class=\"language-text\">原始 Series:\n0    1.0\n1    NaN\n2    3.5\n3    NaN\n4    7.0\ndtype: float64\n</code></pre>\n<p>现在，我们可以使用 <code>isnull()</code> 创建一个布尔掩码来识别 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 值的位置：</p>\n<pre><code class=\"language-python\"># 识别缺失值\nmissing_mask = data_series.isnull()\nprint(\"\\nisnull() 生成的布尔掩码:\")\nprint(missing_mask)\n</code></pre>\n<pre><code class=\"language-text\">isnull() 生成的布尔掩码:\n0    False\n1     True\n2    False\n3     True\n4    False\ndtype: bool\n</code></pre>\n<p>可以看到，生成的 Series 在索引 1 和 3 处包含 <code>True</code>，这与原始 <code>data_series</code> 中的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mi>a</mi><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">NaN</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 值相对应。</p>\n<p>反过来，<code>notnull()</code> 识别非缺失值：</p>\n<pre><code class=\"language-python\"># 识别非缺失值\nnot_missing_mask = data_series.notnull()\nprint(\"\\nnotnull() 生成的布尔掩码:\")\nprint(not_missing_mask)\n</code></pre>\n<pre><code class=\"language-text\">notnull() 生成的布尔掩码:\n0     True\n1    False\n2     True\n3    False\n4     True\ndtype: bool\n</code></pre>\n<p>这会在数据存在的地方返回 <code>True</code>，在数据缺失的地方返回 <code>False</code>。</p>\n<p><em>(注意：你可能还会遇到别名 <code>isna()</code>（对应 <code>isnull()</code>）和 <code>notna()</code>（对应 <code>notnull()</code>）。它们执行完全相同的功能。)</em></p>\n<h3>识别 DataFrames 中的缺失值</h3>\n<p>这些方法在 DataFrames 上的作用相似，但它们返回的是一个布尔 DataFrame 而非 Series。</p>\n<p>我们来创建一个包含缺失值的 DataFrame：</p>\n<pre><code class=\"language-python\"># 创建一个包含缺失值的 DataFrame\ndata = {'col_a': [1, 2, np.nan, 4, 5],\n        'col_b': [np.nan, 7, 8, np.nan, 10],\n        'col_c': [11, 12, 13, 14, 15],\n        'col_d': ['apple', 'banana', 'orange', np.nan, 'grape']}\ndf = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">原始 DataFrame:\n   col_a  col_b  col_c     col_d\n0    1.0    NaN     11     apple\n1    2.0    7.0     12    banana\n2    NaN    8.0     13    orange\n3    4.0    NaN     14       NaN\n4    5.0   10.0     15     grape\n</code></pre>\n<p>将 <code>isnull()</code> 应用于此 DataFrame 会得到：</p>\n<pre><code class=\"language-python\"># 识别 DataFrame 中的缺失值\nmissing_df_mask = df.isnull()\nprint(\"\\nisnull() 生成的布尔 DataFrame 掩码:\")\nprint(missing_df_mask)\n</code></pre>\n<pre><code class=\"language-text\">isnull() 生成的布尔 DataFrame 掩码:\n   col_a  col_b  col_c  col_d\n0  False   True  False  False\n1  False  False  False  False\n2   True  False  False  False\n3  False   True  False   True\n4  False  False  False  False\n</code></pre>\n<p>这个布尔 DataFrame 直接映射了原始 <code>df</code> 中缺失值的位置。</p>\n<h3>计数缺失值</h3>\n<p>虽然看到缺失值的确切位置有用，但你经常需要一个概况。总共有多少缺失值，或者每列有多少？通过对 <code>isnull()</code> 的结果求和，你可以轻松做到这一点，因为在数值上下文 (context)中，<code>True</code> 被视为 1，<code>False</code> 被视为 0。</p>\n<p>要计算每列中的缺失值数量：</p>\n<pre><code class=\"language-python\"># 计算每列的缺失值数量\nmissing_counts_per_column = df.isnull().sum()\nprint(\"\\n每列的缺失值数量:\")\nprint(missing_counts_per_column)\n</code></pre>\n<pre><code class=\"language-text\">每列的缺失值数量:\ncol_a    1\ncol_b    2\ncol_c    0\ncol_d    1\ndtype: int64\n</code></pre>\n<p>这是一个非常常见的操作。它快速告诉你 <code>col_a</code> 有一个缺失值，<code>col_b</code> 有两个，<code>col_c</code> 没有，<code>col_d</code> 有一个。</p>\n<p>要获取整个 DataFrame 中缺失值的总数，你可以对结果求和两次：</p>\n<pre><code class=\"language-python\"># 计算 DataFrame 中的总缺失值数量\ntotal_missing_count = df.isnull().sum().sum()\nprint(f\"\\nDataFrame 中缺失值的总数: {total_missing_count}\")\n</code></pre>\n<pre><code class=\"language-text\">DataFrame 中缺失值的总数: 4\n</code></pre>\n<p>识别数据缺失的位置和数量是数据清洗过程中首要的步骤。一旦你使用 <code>isnull()</code> 和 <code>sum()</code> 等方法识别了这些空缺，你就可以着手决定如何处理它们，这也是接下来几节的重点。</p>",
+  "slug": "detecting-missing-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 1706,
+      "title": "Working with missing data",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/missing_data.html",
+      "doi": "",
+      "note": "解释了Pandas识别和计算缺失值的基本函数，包括`isnull()`、`notnull()`、`isna()`、`notna()`及其与`sum()`结合使用。",
+      "order": 1,
+      "created_at": "2025-09-04T16:23:05.715840Z",
+      "updated_at": "2025-09-08T05:02:28.013189Z"
+    },
+    {
+      "id": 1707,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "全面介绍了Pandas中缺失数据的处理，详细阐述了检测、计数以及各种填充策略。",
+      "order": 2,
+      "created_at": "2025-09-04T16:23:05.720892Z",
+      "updated_at": "2025-09-08T05:02:27.701479Z"
+    },
+    {
+      "id": 1708,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=0gDCEAAAQBAJ",
+      "doi": "",
+      "note": "提供了数据预处理的实用见解，包括在模型训练前识别和处理缺失值的重要性。",
+      "order": 3,
+      "created_at": "2025-09-04T16:23:05.723814Z",
+      "updated_at": "2025-09-08T05:02:34.740374Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

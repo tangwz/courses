@@ -1,0 +1,61 @@
+{
+  "id": 6304,
+  "title": "识别大型语言模型API和接口中的攻击途径",
+  "meta_title": "大型语言模型API攻击途径 | 人工智能系统安全",
+  "meta_description": "学习识别大型语言模型系统开放的API和接口中潜在的攻击途径。",
+  "content": "<p>大型语言模型（LLM）具有独特的内部攻击面。但与此同时，模型通过应用程序接口（API）和其他界面对用户及其他系统开放时，也会产生传统且不容忽视的漏洞，这些漏洞同样值得我们关注。了解API层的安全是根本的，因为它常是通向模型功能的主要入口。在此语境下，API是一套规则和协议，它允许不同的软件组件进行通信，包括应用程序如何向大型语言模型发送用户查询并接收响应。</p>\n<p>许多大型语言模型，特别是商业模型或部署在组织内部的模型，无法被直接使用。它们通常被封装在可通过API访问的服务中，这些API常是基于HTTP/S的RESTful API、GraphQL或gRPC。这些接口，连同任何附带的网页门户或管理仪表板，都成为攻击者的直接目标。API或其底层基础设施中的漏洞，可以绕过许多模型特有的防御措施，或为攻击者提供最初的立足点。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10z9lz\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"filled\", color=\"#495057\", fillcolor=\"#e9ecef\", fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", color=\"#495057\", fontsize=9];\n\n  attacker [label=\"攻击者\", shape=oval, fillcolor=\"#ffc9c9\", fontsize=10];\n  user_interface [label=\"用户界面\\n(网页应用, 聊天机器人)\", fillcolor=\"#d0bfff\", fontsize=10];\n\n  subgraph cluster_system {\n    label = \"大型语言模型系统组件\";\n    style=\"dotted\";\n    color=\"#adb5bd\";\n\n    api_layer [label=\"API层\\n(例如, REST, GraphQL)\", shape=component, fillcolor=\"#74c0fc\", fontsize=10];\n    llm_model [label=\"核心大型语言模型引擎\", fillcolor=\"#96f2d7\", fontsize=10];\n    data_storage [label=\"数据存储\\n(训练数据, 日志, 用户数据)\", fillcolor=\"#ffec99\", fontsize=10];\n    supporting_services [label=\"支持服务\\n(监控, 内容过滤)\", fillcolor=\"#ffd8a8\", fontsize=10];\n  }\n\n  attacker -> user_interface [label=\"通过用户界面互动\\n(间接API使用)\"];\n  attacker -> api_layer [label=\"直接API交互\\n(本节重点)\", color=\"#f03e3e\", penwidth=1.5, fontcolor=\"#f03e3e\"];\n\n  user_interface -> api_layer [label=\"合法\\n客户端请求\"];\n  api_layer -> llm_model [label=\"已处理的\\n提示\"];\n  llm_model -> api_layer [label=\"已生成的\\n响应\"];\n  api_layer -> data_storage [label=\"访问/存储数据\", style=dashed];\n  api_layer -> supporting_services [label=\"使用服务\", style=dashed];\n  supporting_services -> llm_model [label=\"影响/监控\", style=dashed];\n\n  {rank=same; attacker; user_interface;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10z9lz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>API层是用户/应用程序与核心大型语言模型之间的重要中介，使其成为攻击者的主要目标。</p>\n</blockquote>\n<p>接下来，我们来检查一些大型语言模型API和接口中常见的攻击途径。</p>\n<h3>身份验证和授权缺陷</h3>\n<p>身份验证是验证用户或服务的身份，而授权是决定已验证的用户或服务被允许执行什么操作。这些方面的缺陷是典型的安全问题，但对大型语言模型有特定的影响。</p>\n<ul>\n<li><strong>认证薄弱或缺失：</strong> 如果大型语言模型API端点缺乏强效认证（例如，依赖易于猜测的API密钥，或某些意外暴露的“内部”端点完全没有认证），未经授权的用户就能访问模型。这可能导致未经授权的使用，产生由合法所有者承担的资源消耗费用，或访问潜在的敏感模型输出。</li>\n<li><strong>对象级别授权失效（BOLA）/不安全的直接对象引用（IDOR）：</strong> 假设一个API端点是<code>/api/v1/models/{model_id}/query</code>。如果攻击者可以修改<code>{model_id}</code>来访问他们未获授权的模型（例如，属于其他用户或组织的专有微调 (fine-tuning)模型），这就是一个授权缺陷。同样地，如果通过操纵API调用中的标识符，可以访问用户特定数据，如聊天记录或微调数据集，则构成严重的数据泄露。</li>\n<li><strong>功能级别授权失效：</strong> API通常暴露不同的功能（例如，查询、微调、模型管理、用户管理）。如果一个只拥有查询大型语言模型权限的用户，由于不当的检查，能够找到方法调用管理型API功能（例如，<code>/api/v1/admin/delete_model</code>或<code>/api/v1/users/{user_id}/update_permissions</code>），他们可能会造成重大损害或提升自己的权限。</li>\n</ul>\n<p>考虑一个使用API密钥进行认证的API。如果API密钥被硬编码在客户端代码中，通过代码库泄漏被发现，或者权限过于宽松，它就变成了一个入口点。</p>\n<h3>输入和参数 (parameter)验证不当（API层面）</h3>\n<p>提示注入（在另一节中介绍）处理的是大型语言模型输入的<em>内容</em>，而API本身必须验证所有传入数据的<em>结构和类型</em>，包括控制大型语言模型行为的参数。</p>\n<ul>\n<li><strong>无效的参数值：</strong> 大型语言模型API常接受<code>max_tokens</code>、<code>temperature</code>、<code>top_p</code>等参数，或特定模型的自定义参数。如果API未能严格验证这些参数（例如，未确保<code>max_tokens</code>是合理范围内的正整数），攻击者可能会：\n<ul>\n<li>提供意外的数据类型（例如，为<code>max_tokens</code>提供一个字符串）导致错误。</li>\n<li>请求极高数量的令牌，导致资源过度消耗，可能引发拒绝服务或高昂的运营成本。</li>\n<li>通过为<code>temperature</code>等采样参数提供超出范围的值，发现大型语言模型行为中的边界情况。</li>\n</ul>\n</li>\n<li><strong>意外的内容类型或结构：</strong> 如果API期望JSON但收到XML或格式错误的JSON，它应妥善处理并返回清晰的错误。处理不当可能导致崩溃，甚至更糟的是，解析库中出现安全漏洞。</li>\n<li><strong>长度和大小限制：</strong> API应限制总请求大小和单个输入字段的长度。攻击者可能尝试发送过大的负载以压垮API服务器或大型语言模型的输入处理能力，导致拒绝服务（DoS）。</li>\n</ul>\n<p>例如，如果API端点<code>POST /api/generate</code>期望JSON负载为<code>{\"prompt\": \"text\", \"length\": 100}</code>，但攻击者发送<code>{\"prompt\": \"text...\", \"length\": \"one hundred\"}</code>，API必须因<code>length</code>的数据类型不正确而拒绝。如果它在没有适当错误处理的情况下尝试将“one hundred”作为数字处理，可能导致不可预测的行为或应用程序错误。</p>\n<h3>限速和配额管理不足</h3>\n<p>API，特别是像大型语言模型这样计算密集型服务的API，必须具备限速和配额强制措施。</p>\n<ul>\n<li><strong>拒绝服务（DoS/DDoS）：</strong> 若无速度限制，攻击者（或甚至是一个有缺陷的脚本）可以向API发送大量请求，使大型语言模型服务不堪重负。这会导致服务对合法用户不可用，并且如果API使用是按量计费的，可能产生巨大的财务成本。</li>\n<li><strong>暴力破解攻击：</strong> 如果API涉及猜测（例如，弱API密钥、会话标识符），缺乏速度限制会使攻击者在短时间内进行多次尝试。</li>\n<li><strong>配额规避：</strong> 攻击者可能试图找到规避配额的方法，也许是通过操纵客户端标识符或借助多个免费套餐账户。</li>\n</ul>\n<p>有效的请求速度限制应针对每个用户、每个IP地址，并可能全局实施，以防滥用。这不仅是为了阻止恶意行为者，也是为了确保公平使用和服务的稳定。</p>\n<h3>通过API响应的信息泄露</h3>\n<p>API可能会在响应中，特别是在错误消息或元数据中，不经意地泄露敏感信息。</p>\n<ul>\n<li><strong>详细的错误消息：</strong> 包含堆栈跟踪、内部服务器路径、数据库查询细节或特定软件版本的错误消息，可以为攻击者提供有关系统架构和潜在漏洞的有价值情报。例如，一个错误信息显示“ psycopg2.OperationalError: FATAL: password authentication failed for user 'llm_service_user' ”，会告诉攻击者数据库类型（PostgreSQL）和用户名。</li>\n<li><strong>配置或模型细节的暴露：</strong> 如果设计不慎，API端点可能无意中显露大型语言模型的配置部分、内部模型名称，甚至训练数据的统计属性。例如，在生产环境中仍保持活跃的调试端点，可能成为此类信息泄露的源头。</li>\n<li><strong>API行为不一致：</strong> 有时，API对有效和无效输入的响应方式可能泄露信息。例如，查询一个不存在的<code>user_id</code>得到“user not found”错误，而查询一个存在的但你无权访问的<code>user_id</code>得到“access denied”错误，这确认了该用户ID的存在。</li>\n</ul>\n<p>安全最佳实践规定，面向公众的API的错误消息应通用化，详细日志应安全保存在服务器端以供诊断。</p>\n<h3>API层面的注入漏洞</h3>\n<p>这些与提示注入攻击不同，提示注入攻击针对的是大型语言模型对自然语言的解释。API层面的注入漏洞发生在用户提供给API端点的数据，在与大型语言模型交互<em>之前</em>或<em>之外</em>，被不安全地用于构建其他后端系统的命令、查询或文件路径时。</p>\n<ul>\n<li><strong>SQL注入（SQLi）：</strong> 如果API参数 (parameter)直接用于对后端数据库的SQL查询（例如，在查询大型语言模型之前获取用户偏好或模型配置），它可能容易受到SQL注入攻击。</li>\n<li><strong>命令注入：</strong> 如果API调用触发了一个服务器端脚本，该脚本使用输入参数来构建shell命令，攻击者可能能够注入恶意命令。</li>\n<li><strong>LDAP注入、NoSQL注入等：</strong> 根据API基础设施所使用的后端技术，可能存在其他类型的注入攻击。</li>\n</ul>\n<p>尽管大型语言模型本身可能不直接处理这些注入的命令，但围绕它的API基础设施却可能受到影响。例如，如果API端点<code>/api/v1/models/{model_name}/load</code>使用<code>model_name</code>参数来构建文件路径，如<code>/mnt/models/{model_name}.bin</code>，而没有进行适当的净化处理，攻击者就可以使用路径遍历（<code>../../..</code>）来尝试加载任意文件。</p>\n<h3>API设计中的业务逻辑缺陷</h3>\n<p>有时，API根据其规范按设计运行，但设计本身包含可被利用的缺陷。这些缺陷常需要对应用程序的目的和工作流程有更透彻的理解。</p>\n<ul>\n<li><strong>利用预设功能：</strong> API可能提供一个功能，当以非预期顺序或特定输入使用时，会导致安全问题。例如，一个密码重置API未能妥善作废旧的重置链接，或者一个微调 (fine-tuning)API如果范围界定不慎，允许覆盖基础模型。</li>\n<li><strong>竞态条件：</strong> 如果多个API调用可以同时与同一资源交互，可能发生竞态条件，潜在导致状态不一致或安全绕过。例如，两个请求同时尝试更新用户的配额。</li>\n</ul>\n<p>识别业务逻辑缺陷通常需要超出自动化扫描的范围；它需要像攻击者一样思考系统功能如何被滥用。</p>\n<h3>不安全的API基础设施和配置错误</h3>\n<p>API的安全也依赖于其底层的基础设施：</p>\n<ul>\n<li><strong>API网关漏洞：</strong> 许多系统使用API网关（如Amazon API Gateway、Apigee、Kong）来管理、保护和开放API。这些网关本身可能存在漏洞或配置错误（例如，缓存敏感数据、不当的路由规则）。</li>\n<li><strong>过时的软件组件：</strong> 如果API所使用的Web服务器、操作系统、库乃至编程语言运行时未能及时更新，都可能存在已知漏洞。</li>\n<li><strong>不必要的端点或方法：</strong> <code>OPTIONS</code>、<code>HEAD</code>或<code>TRACE</code>等HTTP方法可能在不需要它们的API端点上启用，这可能显露信息或带来自身安全隐患。同样，调试或测试端点可能在生产环境中无意中暴露。</li>\n</ul>\n<p>OWASP API安全十大项目是一个出色的资源，它列出了API最显著的安全风险，这些漏洞很多都直接适用于大型语言模型API。作为红队成员，您将经常使用标准的Web应用程序和API测试工具及方法（例如，使用Burp Suite或Postman等工具探测端点、模糊测试输入并分析响应）来发现这些类型的漏洞。</p>\n<p>认识这些API层面的攻击途径是根本的一步。在许多情况下，通过API漏洞进行攻击是攻击者获得所需访问或信息的初步手段，之后可对大型语言模型本身发起更具针对性的攻击，例如复杂的提示注入或尝试提取模型处理的敏感数据。您在本课程后期的实践练习将包括分析大型语言模型API文档，以发现其中一些潜在的弱点。</p>",
+  "slug": "identifying-attack-vectors-llm-apis",
+  "updates": [],
+  "references": [
+    {
+      "id": 17828,
+      "title": "OWASP API Security Top 10",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/API-Security/editions/2023/",
+      "doi": "",
+      "note": "列出API最严峻的安全风险，提供详细解释和缓解策略。",
+      "order": 1,
+      "created_at": "2025-09-06T12:09:10.495255Z",
+      "updated_at": "2026-02-04T11:29:31.966993Z"
+    },
+    {
+      "id": 17829,
+      "title": "OWASP Web Security Testing Guide (WSTG)",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/www-project-web-security-testing-guide/",
+      "doi": "",
+      "note": "针对Web应用程序和API安全测试的综合指南，包含识别所述漏洞的详细方法。",
+      "order": 2,
+      "created_at": "2025-09-06T12:09:10.502018Z",
+      "updated_at": "2026-02-04T11:29:32.020981Z"
+    },
+    {
+      "id": 17831,
+      "title": "API Security in Action",
+      "author": "Neil Madden",
+      "year": "2020",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/api-security-in-action",
+      "doi": "",
+      "note": "一本提供API安全技术和策略的实用指南，涵盖认证、授权、输入验证等，适用于LLM API。",
+      "order": 4,
+      "created_at": "2025-09-06T12:09:10.513863Z",
+      "updated_at": "2026-02-04T11:29:31.968426Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

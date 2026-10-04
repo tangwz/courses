@@ -1,0 +1,45 @@
+{
+  "id": 3232,
+  "title": "动手实践：应用归因分析模型输出",
+  "meta_title": "大型语言模型输出归因实践",
+  "meta_description": "实践使用可解释性库，应用特征归因来弄清大型语言模型的特定预测。",
+  "content": "<p>在已讲解了多种可解释性技术理论之后，本节将提供一个实践演练，介绍如何应用特征归因来弄清大型语言模型生成特定输出的<em>原因</em>。在分析可能存在问题、偏见或出乎意料的响应时，这尤其有用，它有助于判断模型是否依赖了输入中不当的模式或其内部表示。</p>\n<p>我们将使用一个具体示例，计算归因分数，这些分数显示输入词元 (token)对生成输出的重要性，并将这些分数可视化以便于理解。此过程有助于缩小抽象模型行为与具体安全评估之间的差距。</p>\n<h3>场景设置</h3>\n<p>假设我们有一个负责生成文本的语言模型。我们提供一个输入提示词 (prompt)，并收到一个引起了些许疑虑的输出，它可能暗示了某种刻板印象或意料之外的侧重。我们的目标是利用归因方法来确定输入中哪些部分对输出中引起疑虑的部分影响最大。</p>\n<p>在此练习中，我们假设模型生成了以下内容：</p>\n<ul>\n<li><strong>输入提示词：</strong> “这位软件工程师向团队展示了他们的工作。”</li>\n<li><strong>模型输出：</strong> “…… 他清晰地解释了复杂的算法。”</li>\n</ul>\n<p>生成'He'这一代词假定了工程师的性别。判断输入中的'软件工程师'是否强烈影响了模型对该代词的选择，有助于理解模型行为。</p>\n<p>我们将使用涉及 Hugging Face <code>transformers</code> 库和 <code>Captum</code> 或 <code>transformers-interpret</code> 等归因库的设置。具体实现细节可能有所不同，取决于确切的模型架构和库，但核心原理保持不变。</p>\n<h3>选择归因方法</h3>\n<p>存在多种归因方法，例如集成梯度（Integrated Gradients）、DeepLIFT、SHAP，或者仅使用注意力权重 (weight)。对于本次实践，我们使用集成梯度（IG）。IG 是一种受推崇的方法，它通过沿从基线输入（例如，所有填充词元 (token)）到实际输入的路径对梯度进行积分，将预测归因于输入特征。它有助于确定哪些输入词元对于特定的输出词元或整体预测分数影响最大。</p>\n<h3>计算归因</h3>\n<p>典型的工作流程包含以下步骤：</p>\n<ol>\n<li><strong>加载模型和分词 (tokenization)器 (tokenizer)：</strong> 获取你的预训练 (pre-training)模型和相应的分词器。</li>\n<li><strong>准备输入/输出：</strong> 对输入提示词 (prompt)进行分词，并确定要分析的目标输出词元 (token)（例如，“He”的词元ID）。</li>\n<li><strong>实例化解释器：</strong> 使用你的模型初始化归因算法（例如，来自<code>Captum</code>的<code>LayerIntegratedGradients</code>或类似工具）。</li>\n<li><strong>计算归因：</strong> 运行归因计算，提供输入词元、基线和目标输出索引。这会为每个输入词元计算一个分数，以体现其对目标输出的贡献。</li>\n<li><strong>聚合分数（可选）：</strong> 通常，子词 (subword)词元的分数需要聚合回单词级别，以便于理解。</li>\n</ol>\n<p>我们用一段类似典型库用法的伪代码进行说明：</p>\n<pre><code class=\"language-python\"># 假设模型和分词器已加载\n# 假设 attribution_library 提供了 IntegratedGradientsExplainer\n\nfrom transformers import AutoTokenizer, AutoModelForCausalLM\n# 占位符 - 替换为实际的模型加载\n# model = AutoModelForCausalLM.from_pretrained(...)\n# tokenizer = AutoTokenizer.from_pretrained(...)\n\n# 1. 输入与输出\ninput_text = \"The software engineer presented their work to the team.\"\noutput_text = \" He explained the complex algorithm clearly.\" # 关注 ' He'\n\n# 2. 分词（简化示例）\ninput_tokens = tokenizer.tokenize(input_text)\n# 假设生成开始后，输出在索引0处以词元 ' He' 开始\ntarget_output_index = 0 # 我们想要解释的词元 (' He') 的索引\n\n# 获取归因所需的模型内部输入/输出的简化表示\n# 此步骤很大程度上取决于具体的库和模型\n# model_inputs = tokenizer(input_text, return_tensors=\"pt\")\n# outputs = model(**model_inputs) # 获取模型输出\n\n# 3. 实例化解释器\n# explainer = attribution_library.IntegratedGradientsExplainer(model) # 需要实际的模型可调用对象\n\n# 4. 计算归因\n# 此步骤需要提供正确格式的输入、基线，\n# 并指定目标输出神经元或索引。\n# attribution_scores = explainer.attribute(\n#     inputs=model_inputs['input_ids'],\n#     baselines=baseline_input_ids, # 例如，填充ID的张量\n#     target=target_output_index, # 目标是特定的输出词元\n#     # 附加参数，取决于库和方法\n# )\n\n# 用于说明的占位符归因分数\n# 实际上，这些将由库计算\n# 维度：[批大小, 序列长度]\nattribution_scores = [[0.1, 0.8, 0.7, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1]]\ninput_tokens = ['The', 'software', 'engineer', 'presented', 'their', 'work', 'to', 'the', 'team', '.'] # 假设分词与分数长度匹配\n\n# 5. 聚合（如果需要）- 这里我们假设分数是每个词元的\nword_attributions = list(zip(input_tokens, attribution_scores[0]))\n\nprint(\"预测 ' He' 的单词归因：\")\nfor word, score in word_attributions:\n    print(f\"- {word}: {score:.2f}\")\n\n</code></pre>\n<p>这可能产生如下输出：</p>\n<pre><code class=\"language-text\">预测 ' He' 的单词归因：\n- The: 0.10\n- software: 0.80\n- engineer: 0.70\n- presented: 0.20\n- their: 0.10\n- work: 0.10\n- to: 0.10\n- the: 0.10\n- team: 0.10\n- .: 0.10\n</code></pre>\n<h3>结果可视化与解释</h3>\n<p>原始分数可能难以理解。可视化使模式更清晰。热力图在显示每个输入词元 (token)的重要性方面很有效。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-mgdtzp\" \n              data-plot-definition='{\"data\": [{\"z\": [[0.1, 0.8, 0.7, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1]], \"x\": [\"The\", \"software\", \"engineer\", \"presented\", \"their\", \"work\", \"to\", \"the\", \"team\", \".\"], \"y\": [\"对 &#39; He&#39; 的重要性\"], \"type\": \"heatmap\", \"colorscale\": [[0.0, \"#e9ecef\"], [0.5, \"#a5d8ff\"], [1.0, \"#1c7ed6\"]], \"showscale\": false}], \"layout\": {\"title\": \"输出 &#39; He&#39; 的输入词元归因\", \"xaxis\": {\"title\": \"输入词元\"}, \"yaxis\": {\"ticks\": \"\", \"showticklabels\": false}, \"margin\": {\"l\": 10, \"r\": 10, \"t\": 40, \"b\": 80}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-mgdtzp\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>归因分数以热力图形式呈现。蓝色越深表示输入词元（x轴）对生成目标输出词元（‘He’）的重要性越高。</p>\n</blockquote>\n<p><strong>解释：</strong></p>\n<p>根据分数和热力图，我们发现：</p>\n<ul>\n<li>与其它输入词元相比，词元“software”和“engineer”的归因分数显著更高（0.80和0.70）。</li>\n<li>这表明模型对“He”的预测主要受到输入中职位名称“software engineer”出现的影响。</li>\n<li>这为以下假设提供了依据：模型可能存在将该职业主要与男性关联的偏见。它没有强烈考虑到输入中也存在的代词“their”（中性代词）。</li>\n</ul>\n<p>这种见解对安全和公平性分析很有价值。它不仅仅是观察输出，更是理解模型为何那样运作，指出训练期间可能学到的偏见，这些偏见可能需要通过数据增强、去偏方法或本课程其他部分讨论的定向微调 (fine-tuning)等技术来减轻。</p>\n<h3>局限与考量</h3>\n<p>重要的是要记住，归因方法提供解释，但它们存在局限性：</p>\n<ul>\n<li><strong>近似值：</strong> 大多数方法都是对真实特征重要性的近似。</li>\n<li><strong>方法依赖性：</strong> 不同的归因方法可能会产生略有不同的结果或侧重于不同方面。</li>\n<li><strong>计算成本：</strong> 计算归因，特别是对于大型模型和长序列，可能计算密集。</li>\n<li><strong>解释：</strong> 尽管可视化有帮助，但解释复杂的交互或细微影响仍然可能具有挑战性。</li>\n</ul>\n<p>尽管存在这些点，归因分析是大型语言模型安全工具包中一个强大的工具。它允许开发人员和研究人员执行有针对性的模型行为调试，识别潜在的偏见来源或不安全的生成，并对模型的推理 (inference)过程建立信心，特别是在评估其在对安全性要求高的场景中的响应时。进行此类分析后的下一步可能涉及将结果与其他方法进行比较，测试反事实情况（例如，将“软件工程师”更改为“护士”并观察归因变化），或者将这些发现应用于模型编辑或再训练工作。</p>",
+  "slug": "hands-on-attribution-analysis",
+  "updates": [],
+  "references": [
+    {
+      "id": 9282,
+      "title": "Axiomatic Attribution for Deep Networks",
+      "author": "Mukund Sundararajan, Ankur Taly, Qiqi Yan",
+      "year": "2017",
+      "publisher": "PMLR",
+      "journal": "Proceedings of the 34th International Conference on Machine Learning",
+      "volume": "70",
+      "pages": "3319-3328",
+      "url": "https://proceedings.mlr.press/v70/sundararajan17a.html",
+      "doi": "10.5555/3305890.3306001",
+      "note": "这篇论文介绍了本节中使用的归因方法集成梯度，提供了其理论基础和属性。",
+      "order": 1,
+      "created_at": "2025-09-05T02:24:33.080724Z",
+      "updated_at": "2025-09-08T12:01:35.817882Z"
+    },
+    {
+      "id": 9283,
+      "title": "Captum Documentation",
+      "author": "Facebook AI",
+      "year": "2024",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://captum.ai/docs/introduction",
+      "doi": "",
+      "note": "Captum 的官方文档，Captum 是一个用于模型可解释性的基于 PyTorch 的库。本节中提到该库用于实际实现，并详细介绍了如何使用集成梯度。",
+      "order": 2,
+      "created_at": "2025-09-05T02:24:33.281273Z",
+      "updated_at": "2025-09-08T12:01:31.287282Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

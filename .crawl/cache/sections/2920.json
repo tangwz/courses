@@ -1,0 +1,45 @@
+{
+  "id": 2920,
+  "title": "TensorFlow Serving 简介",
+  "meta_title": "什么是 TensorFlow Serving？概述",
+  "meta_description": "了解 TensorFlow Serving，这是一个灵活、高性能的机器学习模型服务系统。",
+  "content": "<p>在您训练并导出模型（通常使用 SavedModel 格式）后，接下来重要的一步是使其可用于提供预测服务。虽然您可以构建一个自定义应用程序（例如使用 Flask 或 FastAPI）来加载 SavedModel 并公开 API 端点，但这种方法通常缺乏高要求的生产环境所需的稳定性、性能和生命周期管理功能。这正是 TensorFlow Serving 旨在解决的问题。</p>\n<p>TensorFlow Serving 是一个专用的高性能服务系统，专为生产环境中的机器学习 (machine learning)模型而设计。将其视为一个独立的服务器应用程序，而不仅仅是一个库，它针对推理 (inference)进行了优化。它接收您训练好的模型（以 SavedModels 形式打包），并通过定义清晰的 API（通常是 REST 或 gRPC）使其在网络上可供访问。</p>\n<h3>为何使用专用服务系统？</h3>\n<p>部署模型不仅仅是加载文件和运行 <code>model.predict()</code>。生产系统常常面临以下要求：</p>\n<ol>\n<li><strong>高吞吐量 (throughput)和低延迟：</strong> 同时快速地向许多用户提供预测。</li>\n<li><strong>模型版本管理：</strong> 在不停机的情况下部署更新的模型（金丝雀发布、回滚）。</li>\n<li><strong>多模型支持：</strong> 从同一基础设施提供不同模型或模型类型的服务。</li>\n<li><strong>资源管理：</strong> 高效利用硬件（CPU、GPU、TPU）。</li>\n<li><strong>生命周期管理：</strong> 动态加载、卸载和管理模型。</li>\n</ol>\n<p>TensorFlow Serving 旨在有效处理这些难题。它为模型生命周期管理提供了开箱即用的解决方案，使您能够部署新版本、在不同版本之间运行 A/B 测试，或同时服务多个不同模型，同时保持高性能。</p>\n<h3>TensorFlow Serving 的核心抽象概念</h3>\n<p>虽然后续章节将介绍实际用法，但了解基本架构会很有帮助。TensorFlow Serving 采用了一些抽象概念：</p>\n<ul>\n<li><strong>Servables（可服务项）：</strong> 这是 TensorFlow Serving 管理的基本对象。通常，一个 Servable 代表一个已训练模型的特定版本，可用于推理 (inference)。它也可以是查找表或计算所需的其他数据。</li>\n<li><strong>Sources（源）：</strong> 发现并提供 Servables 的插件。常见的源会监视文件系统路径以获取新的 SavedModel 目录（每个代表一个模型版本）。</li>\n<li><strong>Loaders（加载器）：</strong> 负责加载 Servable 的数据，包括分配必要资源（如 GPU 内存）。它们知道如何解释特定的模型格式（如 SavedModel）。</li>\n<li><strong>Managers（管理器）：</strong> 处理 Servables 的完整生命周期，包括根据源定义的策略进行加载（通过加载器）、服务和卸载。它们协调模型版本之间的切换。</li>\n<li><strong>Core（核心）：</strong> 管理生命周期并公开 API（gRPC、REST）以供客户端发送推理请求的中心组件。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-39au5j\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_client {\n    label = \"客户端应用程序\";\n    style=dashed;\n    client [label=\"客户端\"];\n  }\n\n  subgraph cluster_tf_serving {\n    label = \"TensorFlow Serving 服务器\";\n    bgcolor=\"#e9ecef\"; // gray[0]\n    style=filled;\n\n    api [label=\"gRPC / REST API\"];\n\n    subgraph cluster_manager {\n        label = \"管理器\";\n        style=rounded;\n        manager [label=\"Servable 管理器\"];\n        loader [label=\"加载器\"];\n        servable [label=\"Servable\\n(模型版本)\", shape=cylinder, margin=0.3];\n        manager -> loader [label=\"加载\"];\n        loader -> servable [label=\"创建\"];\n    }\n\n    subgraph cluster_source {\n        label = \"源\";\n        style=rounded;\n        source [label=\"源\\n(例如，文件系统监视器)\"];\n        model_repo [label=\"模型仓库\\n(SavedModels)\", shape=folder];\n        source -> model_repo [style=dashed, label=\"监视\"];\n        source -> manager [label=\"提供 Servable\\n版本\"];\n    }\n\n    api -> manager [label=\"转发请求\"];\n    manager -> servable [label=\"引导推理\"];\n  }\n\n  client -> api [label=\"推理请求\\n(gRPC/REST)\"];\n  servable -> api [label=\"预测响应\", dir=back];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-39au5j\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>TensorFlow Serving 的基本架构，展示了客户端请求如何流经 API 到管理器，管理器使用加载器和源从受管理模型版本（Servables）提供预测服务。</p>\n</blockquote>\n<h3>优势</h3>\n<p>使用 TensorFlow Serving 带来多种优势：</p>\n<ul>\n<li><strong>性能：</strong> 高度优化的 C++ 服务器，专为低延迟和高吞吐量 (throughput)设计。支持 GPU 等硬件加速器。自动实现请求批处理等优化。</li>\n<li><strong>灵活性：</strong> 轻松同时管理多个模型或同一模型的多个版本。支持金丝雀部署和回滚。</li>\n<li><strong>生产就绪性：</strong> 为生产环境中的稳定性和可靠性而构建。</li>\n<li><strong>可扩展性：</strong> 设计为可扩展，以支持新的模型类型、文件系统或部署场景。</li>\n<li><strong>标准化：</strong> 提供标准推理 (inference) API（REST 和 gRPC），简化客户端集成。依赖 SavedModel 格式，与 TensorFlow 生态系统良好集成。</li>\n</ul>\n<p>总的来说，TensorFlow Serving 在您训练好的 TensorFlow 模型与需要大规模使用其预测的应用程序之间，提供了基础设施连接。以下章节将演示如何准备模型并使用这个强大的系统进行部署。</p>",
+  "slug": "introduction-tensorflow-serving",
+  "updates": [],
+  "references": [
+    {
+      "id": 3771,
+      "title": "TensorFlow Serving",
+      "author": "TensorFlow Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/tfx/serving",
+      "doi": "",
+      "note": "官方文档提供了关于TensorFlow Serving的设置、配置和使用的全面信息，包括其架构、API以及部署的最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:35.858477Z",
+      "updated_at": "2025-09-08T11:55:54.064904Z"
+    },
+    {
+      "id": 3773,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本构建和部署机器学习系统的综合指南，其中包含关于模型服务挑战和解决方案的章节，包括使用TensorFlow Serving等专用系统。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:36.003299Z",
+      "updated_at": "2025-09-08T11:55:43.396568Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

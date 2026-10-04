@@ -1,0 +1,61 @@
+{
+  "id": 6077,
+  "title": "大型语言模型对齐的目标",
+  "meta_title": "为何对齐大型语言模型？有用性、诚实性、无害性",
+  "meta_description": "了解对齐大型语言模型超越预训练表现的目的。",
+  "content": "<p>虽然预训练 (pre-training)的大型语言模型 (LLM) 展现出色的能力，能够基于从大量数据集中学习到的模式来理解和生成人类语言，但它们并不会自动地以对特定应用始终有用、真实或安全的方式行事。它们的训练目标通常侧重于预测序列中的下一个标记 (token)，即 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><msub><mtext>标记</mtext><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow></msub><mi mathvariant=\"normal\">∣</mi><msub><mtext>标记</mtext><mn>1</mn></msub><mo separator=\"true\">,</mo><mi mathvariant=\"normal\">.</mi><mi mathvariant=\"normal\">.</mi><mi mathvariant=\"normal\">.</mi><mo separator=\"true\">,</mo><msub><mtext>标记</mtext><mi>i</mi></msub><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{标记}_{i+1} | \\text{标记}_1, ..., \\text{标记}_i)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">标记</span></span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\">i</span><span class=\"mbin mtight\">+</span><span class=\"mord mtight\">1</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2083em;\"><span></span></span></span></span></span></span><span class=\"mord\">∣</span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">标记</span></span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3011em;\"><span style=\"top:-2.55em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">1</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">...</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">标记</span></span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mclose\">)</span></span></span></span>，这最大化了预训练语料库上的似然度，但并不会直接优化以遵循用户指令或符合人类价值观。</p>\n<p>对齐 (alignment)是调整预训练大型语言模型以更好地匹配人类意图和偏好的过程。它旨在引导模型的强大生成能力朝着期望的行为。监督式微调 (fine-tuning) (SFT)，作为本章的侧重点，是此过程中的重要一步。对齐的主要目标，也是SFT开始处理的，常分为三个大类，有时被称为“HHH”标准：有用性、诚实性、无害性。</p>\n<h3>有用性</h3>\n<p>这或许是SFT处理的最直接的目标。一个有用的模型应该理解并准确遵循提示中呈现的用户指令。它应该有效地执行所请求的任务，无论是回答问题、总结文本、编写代码、翻译语言，还是以特定的对话风格交流。</p>\n<p>考虑一个被问及“解释梯度下降 (gradient descent)的原理”的预训练 (pre-training)模型。</p>\n<ul>\n<li><strong>无用（但预训练模型可能有的行为）：</strong> 模型可能会生成笼统地定义微积分中的梯度，或者列出提及梯度下降的论文，而没有清晰地解释算法本身。</li>\n<li><strong>有用（对齐 (alignment)后的行为）：</strong> 模型提供清晰、循序渐进的解释，针对可能的语境（例如，机器学习 (machine learning)）进行调整，可能包含类比或简单的例子。</li>\n</ul>\n<p>SFT 通过使模型接触大量由高质量、有用响应配对的提示示例来做到这一点。微调 (fine-tuning)过程调整模型的参数 (parameter)，以增加为类似提示生成此类有用响应的概率。这涉及最小化模型生成响应与SFT数据集中目标有用响应之间的损失（例如，交叉熵）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-bpk6es\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", fontsize=14];\n  edge [fontname=\"sans-serif\", color=\"#495057\", fontsize=14];\n\n  Pretraining [label=\"预训练大型语言模型\\n(预测下一个标记)\", fillcolor=\"#a5d8ff\"];\n  SFT [label=\"监督式微调 (SFT)\\n(从示例中学习)\", fillcolor=\"#96f2d7\"];\n  AlignedLLM [label=\"对齐的大型语言模型\\n(有用、诚实、无害)\", fillcolor=\"#b2f2bb\"];\n\n  Pretraining -> SFT [label=\" 通过\\n指令数据调整\"];\n  SFT -> AlignedLLM [label=\" 初步对齐至\\n期望行为\"];\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-bpk6es\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>对齐通过SFT等技术，将通用预训练模型转变为表现出期望行为的模型。</p>\n</blockquote>\n<h3>诚实性 (真实性)</h3>\n<p>一个对齐 (alignment)的模型应该力求准确，并避免生成虚假信息，通常被称为“幻觉 (hallucination)”。虽然预训练 (pre-training)使模型接触到事实知识，但其生成性质意味着它很容易构建听起来合理但不正确的陈述。诚实性意味着：</p>\n<ul>\n<li><strong>事实准确性：</strong> 在可能时提供正确的信息。</li>\n<li><strong>避免捏造：</strong> 不虚构事实、来源或细节。</li>\n<li><strong>表达不确定性：</strong> 当模型不知道答案或信息不明确时，应表明出来，而不是自信地猜测。</li>\n</ul>\n<p>SFT 有助于提高诚实性，通过包含模型正确回答事实问题或明确说明其局限性的示例。然而，确保深层的事实性和校准的不确定性通常需要更先进的技术，例如整合检索机制或使用强化学习 (reinforcement learning)（如RLHF，在第26章中讨论）以惩罚人类反馈识别出的不真实输出。</p>\n<h3>无害性</h3>\n<p>此目标侧重于阻止模型生成有害、不道德、带有偏见、有毒或促进非法活动的输出。预训练 (pre-training)数据不可避免地包含互联网和数字化文本中存在的偏见和有害内容。一个未对齐 (alignment)的模型可能会轻易地再现或放大这些问题。无害性要求模型：</p>\n<ul>\n<li><strong>拒绝不当请求：</strong> 拒绝生成属于有害类别的任何内容。</li>\n<li><strong>避免偏见：</strong> 减少生成刻板或偏见的内容。</li>\n<li><strong>保持安全：</strong> 不提供危险活动的指令。</li>\n</ul>\n<p>SFT 通过包含模型拒绝有害请求或提供安全、中性响应的示例，在此方面发挥作用。精心策划的SFT数据集过滤掉不理想的示例，并明确呈现安全拒绝。类似于诚实性，在多样化和对抗性输入下实现无害性具有挑战性，并且通常会从后续的RLHF中获得显著益处，在RLHF中，模型根据人类判断被训练以偏好安全输出。</p>\n<p>总而言之，对齐旨在使大型语言模型不仅有能力，而且在各种应用中成为有益且安全的伙伴。SFT 作为一个起点，主要增强了有用性和指令遵循能力，同时通过提供期望模型输出的具体示例，也开始了灌输诚实性和无害性的过程。这些目标指导SFT数据集的创建和对齐模型的评估，确保它们从仅仅预测文本转向生成真正有用和负责任的响应。</p>",
+  "slug": "goals-llm-alignment",
+  "updates": [],
+  "references": [
+    {
+      "id": 16114,
+      "title": "Training language models to follow instructions with human feedback",
+      "author": "Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv:2203.02155",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "doi": "10.48550/arXiv.2203.02155",
+      "note": "介绍了通过人类反馈监督微调（SFT）和强化学习（RLHF）将大型语言模型与人类意图对齐的方法，侧重于有用性和无害性。",
+      "order": 1,
+      "created_at": "2025-09-06T11:00:14.854476Z",
+      "updated_at": "2025-09-10T02:38:19.464210Z"
+    },
+    {
+      "id": 16115,
+      "title": "Constitutional AI: Harmlessness from AI Feedback",
+      "author": "Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell, Jackson Kernion, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, Cameron McKinnon, Carol Chen, Catherine Olsson, Christopher Olah, Danny Hernandez, Dawn Drain, Deep Ganguli, Dustin Li, Eli Tran-Johnson, Ethan Perez, Jamie Kerr, Jared Mueller, Jeffrey Ladish, Joshua Landau, Kamal Ndousse, Kamile Lukosuite, Liane Lovitt, Michael Sellitto, Nelson Elhage, Nicholas Schiefer, Noemi Mercado, Nova DasSarma, Robert Lasenby, Robin Larson, Sam Ringer, Scott Johnston, Shauna Kravec, Sheer El Showk, Stanislav Fort, Tamera Lanham, Timothy Telleen-Lawton, Tom Conerly, Tom Henighan, Tristan Hume, Samuel R. Bowman, Zac Hatfield-Dodds, Ben Mann, Dario Amodei, Nicholas Joseph, Sam McCandlish, Tom Brown, Jared Kaplan",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2212.08073",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2212.08073",
+      "doi": "10.48550/arXiv.2212.08073",
+      "note": "探讨了大型语言模型无害性对齐的方法，展示了除人类反馈之外但仍能定义和追求对齐目标的替代方法。",
+      "order": 2,
+      "created_at": "2025-09-06T11:00:14.861273Z",
+      "updated_at": "2025-09-10T02:38:20.087810Z"
+    },
+    {
+      "id": 16116,
+      "title": "Holistic Evaluation of Language Models",
+      "author": "Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Transactions on Machine Learning Research",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "doi": "10.48550/arXiv.2211.09110",
+      "note": "提出了一个全面的语言模型评估框架，包括真实性、安全性和公平性指标，这些指标与大型语言模型对齐的目标直接相关。",
+      "order": 3,
+      "created_at": "2025-09-06T11:00:14.864039Z",
+      "updated_at": "2025-09-10T02:38:22.317390Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

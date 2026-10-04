@@ -1,0 +1,45 @@
+{
+  "id": 1566,
+  "title": "列与数据类型",
+  "meta_title": "数据库中列与数据类型的定义",
+  "meta_description": "了解列如何界定所存储的数据以及分配合适数据类型（整型、文本、日期）的重要性。",
+  "content": "<p>关系数据库将数据组织成表，这些表看起来很像带有行和列的电子表格。列是表中垂直的结构。每列代表表中存储项的特定属性或特征。例如，在一个存储客户信息的表中，你可能会有 <code>CustomerID</code>、<code>FirstName</code>、<code>LastName</code> 和 <code>EmailAddress</code> 等列。</p>\n<p>数据库表中的每一列都必须指定一个特定的<strong>数据类型</strong>。这是一个基本规定，它准确地告诉数据库该列的每一行中允许存储何种数据。这为何如此重要？</p>\n<ol>\n<li><strong>数据完整性：</strong> 数据类型充当验证规则。如果你将一列定义为只存储数字，数据库会阻止你意外地将诸如“Hello”之类的文本插入其中。这有助于确保数据的准确性和一致性。</li>\n<li><strong>存储效率：</strong> 不同种类的数据需要不同的存储空间。整数通常比长段文本占用更少的空间。通过指定正确的数据类型，数据库可以更有效地管理存储。</li>\n<li><strong>性能：</strong> 当数据库知道列中的数据类型时，它可以更快地执行搜索、排序或计算等操作。在定义为 <code>DATE</code> 类型的数据列中搜索特定日期比在可能以各种格式存储日期的通用文本列中更高效。</li>\n</ol>\n<h3>常见数据类型</h3>\n<p>尽管不同数据库管理系统 (DBMS) 之间确切的名称和变体可能略有差异，但大多数关系数据库都支持一组标准数据类型。以下是一些你将遇到的最常用类型：</p>\n<h4>数值类型</h4>\n<p>这些用于存储数字。</p>\n<ul>\n<li><strong>整型：</strong> 用于存储整数（不带小数的数字）。例如，客户ID (<code>101</code>)、订单商品数量 (<code>5</code>) 或某人的年龄 (<code>30</code>)。常见整型包括：\n<ul>\n<li><code>INT</code> (或 <code>INTEGER</code>)：标准整数，适用于多种通用用途。</li>\n<li><code>SMALLINT</code>：比 <code>INT</code> 占用更少存储空间，但可能值的范围较小。适用于你知道不会非常大的数字。</li>\n<li><code>BIGINT</code>：占用更多存储空间，但可以容纳极大的整数。</li>\n</ul>\n</li>\n<li><strong>定点类型 (<code>DECIMAL</code> 或 <code>NUMERIC</code>)：</strong> 用于对精度要求较高的数字，特别是涉及金钱的计算。你通常需要指定总位数和小数点后的位数。例如：存储 <code>$19.99</code> 这样的价格。使用这些类型可以避免浮点类型可能出现的小数位舍入误差。</li>\n<li><strong>浮点类型 (<code>FLOAT</code> 或 <code>REAL</code>)：</strong> 用于近似数字数据值，常用于科学计算，在这些计算中可能不需要或无法达到小数点后绝对精确。它们可以表示非常大的数值范围，但可能会引入微小的舍入差异。</li>\n</ul>\n<h4>字符串（文本）类型</h4>\n<p>这些用于存储文本数据。</p>\n<ul>\n<li><strong><code>VARCHAR(n)</code>：</strong> 存储可变长度的字符串，<code>n</code> 表示允许的最大字符数。如果你存储的文本短于 <code>n</code>，它只会使用实际文本所需的空间，外加少量额外开销。这对于姓名、电子邮件地址或简短描述非常常见。例如，<code>VARCHAR(50)</code> 可以存储一个名字。</li>\n<li><strong><code>CHAR(n)</code>：</strong> 存储固定长度的字符串，<code>n</code> 是确切的字符数。如果你存储的文本短于 <code>n</code>，数据库通常会添加空格（填充）来将其补齐到长度 <code>n</code>。这对于长度始终相同的数据非常有用，例如两个字母的州代码（例如，<code>CHAR(2)</code> 用于 'CA'、'NY'、'TX'）。如果存储不是主要考虑，<code>VARCHAR</code> 通常更具灵活性。</li>\n<li><strong><code>TEXT</code>（或类似类型，如 <code>CLOB</code>）：</strong> 用于存储长篇文本块，如产品描述、文章或用户评论，通常超出 <code>VARCHAR</code> 的常见限制。</li>\n</ul>\n<h4>日期和时间类型</h4>\n<p>这些专门设计用于存储日历日期和/或时钟时间。</p>\n<ul>\n<li><strong><code>DATE</code>：</strong> 存储日期（年、月、日）。例如：<code>2024-07-15</code>。</li>\n<li><strong><code>TIME</code>：</strong> 存储时间（小时、分钟和秒）。例如：<code>14:30:00</code>。</li>\n<li><strong><code>TIMESTAMP</code> 或 <code>DATETIME</code>：</strong> 同时存储日期和时间信息。例如：<code>2024-07-15 14:30:00</code>。对于精确记录事件发生时间很有用。</li>\n</ul>\n<h4>布尔类型</h4>\n<p>用于存储真或假值。不同的数据库可能会将其称为 <code>BOOLEAN</code>、<code>BOOL</code>，或者有时使用 <code>BIT</code> 类型，甚至是一个微小的整型，如 <code>TINYINT(1)</code>，其中 0 代表假，1 代表真。例如：<code>IsActive</code>、<code>HasShipped</code>。</p>\n<h3>选择合适的数据类型</h3>\n<p>为每列选择最适合的数据类型是设计数据库表的重要组成部分。你应该选择最能匹配你打算存储的数据的类型。</p>\n<ul>\n<li>如果你打算对数字进行数学计算，不要使用文本类型来存储数字。</li>\n<li>如果需要精确计算，不要对货币使用浮点类型；请使用 <code>DECIMAL</code> 或 <code>NUMERIC</code>。</li>\n<li>如果你知道文本的最大长度会相当短，请选择 <code>VARCHAR</code> 而非 <code>TEXT</code>，因为它可能更高效。</li>\n<li>对日期和时间使用特定的 <code>DATE</code> 或 <code>TIMESTAMP</code> 类型；将它们存储为文本会使比较和计算变得困难。例如，使用 <code>DATE</code> 类型查找特定日期之前的所有订单很简单，但如果日期存储为“2024年7月15日”这样的字符串，则会很复杂。</li>\n<li>考虑某个值是<em>必需的</em>还是可以缺失的。</li>\n</ul>\n<h3>NULL：表示缺失信息</h3>\n<p>有时，特定行中某一列的值可能未知或不适用。数据库使用一个名为 <code>NULL</code> 的特殊标记 (token)来表示这种缺失信息。重要的是要明白，<code>NULL</code> 对于数字来说与零 (0) 不同，对于文本来说也与空字符串 ('' ) 不同。它明确表示“没有值存在”。在定义列时，你通常可以指定它是否允许包含 <code>NULL</code> 值，或者它是否必须始终具有一个值。</p>\n<h3>示例：一个简单的 <code>Products</code> 表结构</h3>\n<p>让我们通过一个存储产品信息的简单表结构来形象地说明这一点：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">列名</th>\n<th align=\"left\">数据类型</th>\n<th align=\"left\">描述</th>\n<th align=\"left\">允许NULL值？</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>ProductID</code></td>\n<td align=\"left\"><code>INT</code></td>\n<td align=\"left\">产品的唯一标识符（可能是主键）</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\"><code>ProductName</code></td>\n<td align=\"left\"><code>VARCHAR(100)</code></td>\n<td align=\"left\">产品名称</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\"><code>Description</code></td>\n<td align=\"left\"><code>TEXT</code></td>\n<td align=\"left\">产品的详细描述</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\"><code>Price</code></td>\n<td align=\"left\"><code>DECIMAL(10,2)</code></td>\n<td align=\"left\">销售价格（例如，最高99,999,999.99）</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\"><code>QuantityOnHand</code></td>\n<td align=\"left\"><code>INT</code></td>\n<td align=\"left\">当前库存单位数量</td>\n<td align=\"left\">否</td>\n</tr>\n<tr>\n<td align=\"left\"><code>DateAdded</code></td>\n<td align=\"left\"><code>DATE</code></td>\n<td align=\"left\">产品添加到目录的日期</td>\n<td align=\"left\">是</td>\n</tr>\n<tr>\n<td align=\"left\"><code>IsDiscontinued</code></td>\n<td align=\"left\"><code>BOOLEAN</code></td>\n<td align=\"left\">如果产品不再销售则为真</td>\n<td align=\"left\">否</td>\n</tr>\n</tbody>\n</table>\n<blockquote>\n<p>Products 表的示例定义，展示了列名、它们指定的数据类型、简要描述以及是否允许 NULL 值。</p>\n</blockquote>\n<p>在此示例中，每列都具有经过仔细选择的数据类型。<code>ProductID</code> 和 <code>QuantityOnHand</code> 是整数 (<code>INT</code>)。<code>ProductName</code> 使用 <code>VARCHAR(100)</code>，假设名称不会超过 100 个字符。<code>Price</code> 使用 <code>DECIMAL(10, 2)</code> 来准确存储货币。<code>Description</code> 使用 <code>TEXT</code> 来存储可能较长的描述。<code>DateAdded</code> 使用 <code>DATE</code>，<code>IsDiscontinued</code> 使用 <code>BOOLEAN</code>。另外请注意，一些列（例如 <code>ProductID</code>、<code>ProductName</code> 等）被定义为不允许 <code>NULL</code> 值，以确保每个产品记录中始终存在一些必要的信息。</p>\n<p>了解列和数据类型对于创建结构良好且可靠的关系数据库非常重要。它们强制执行一致性，并使数据库能够高效地存储和检索信息。随着你的学习，你将看到这些基本构成部分如何支持更复杂的数据库操作和设计。</p>",
+  "slug": "columns-data-types",
+  "updates": [],
+  "references": [
+    {
+      "id": 1979,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本基础教材，涵盖数据库系统的理论方面，包括关系模型、数据类型和完整性约束。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:51.906946Z",
+      "updated_at": "2025-09-07T19:06:44.217561Z"
+    },
+    {
+      "id": 1981,
+      "title": "Chapter 8. Data Types",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/datatype.html",
+      "doi": "",
+      "note": "PostgreSQL的官方文档，详细解释并举例说明各种数据类型、其存储特性和用法。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:51.915884Z",
+      "updated_at": "2025-09-07T19:06:46.440000Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7636,
+  "title": "GNN 的训练循环",
+  "meta_title": "GNN 训练循环",
+  "meta_description": "编写 GNN 模型标准训练循环的分步指南，包括前向传播、损失计算和反向传播。",
+  "content": "<p>为了让模型能够从数据中学习，一套特定的机制是必不可少的，尤其是在确定了模型架构和损失函数 (loss function)之后。这种机制被称为训练循环，它是一个迭代过程：数据被反复输入模型，计算误差，并调整模型参数 (parameter)以减小这些误差。对于在全批次（full-batch）设置下处理单个图的图神经网络 (neural network)（GNN），该循环在多个周期（或称为轮次，Epochs）中协调整个学习过程。</p>\n<p>训练循环中的每个周期都由几个不同的、按顺序进行的步骤组成，这些步骤共同作用来优化模型的权重 (weight)。让我们分解一下这个基础过程。</p>\n<h3>训练步骤剖析</h3>\n<p>对训练数据的一次完整处理通常被称为一个训练步（step）或一次迭代（iteration），它包含四个主要操作：前向传播、损失计算、反向传播 (backpropagation)和参数 (parameter)更新。</p>\n<h4>1. 前向传播</h4>\n<p>过程始于前向传播，我们将图数据输入到 GNN 中。模型接收节点特征 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span> 和由邻接信息（或边索引）表示的图结构作为输入。然后，模型通过其层级结构处理这些信息，在每一层执行邻域聚合和更新。最后一层的输出通常是每个节点的原始、未归一化 (normalization)的预测值，通常称为 <em>logits</em>。</p>\n<pre><code class=\"language-python\"># graph 包含节点特征 (x) 和边结构 (edge_index)\nlogits = model(graph.x, graph.edge_index)\n</code></pre>\n<p>这些 logits 代表了模型在应用 softmax 等归一化函数之前，对每个节点类别的当前判断。</p>\n<h4>2. 损失计算</h4>\n<p>接下来，我们需要量化 (quantization)模型预测的偏差。我们将前向传播输出的 logits 与真实的标签进行比较。这种比较由我们之前选择的损失函数 (loss function)处理，例如用于节点分类的 <code>CrossEntropyLoss</code>。</p>\n<p>GNN 训练中的一个细节是，我们通常只计算指定用于训练的节点上的损失。这通过布尔掩码（mask）来实现。掩码会过滤 logits 和标签，确保只有训练节点参与损失计算。这在半监督或转导学习（transductive）设置中非常有用，因为在这种情况下我们只拥有图中部分节点的标签。</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mi>L</mi><mo>=</mo><mtext>损失函数</mtext><mo stretchy=\"false\">(</mo><mtext>logits</mtext><mo stretchy=\"false\">[</mo><mtext>训练掩码</mtext><mo stretchy=\"false\">]</mo><mo separator=\"true\">,</mo><mtext>标签</mtext><mo stretchy=\"false\">[</mo><mtext>训练掩码</mtext><mo stretchy=\"false\">]</mo><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">L = \\text{损失函数}(\\text{logits}[\\text{训练掩码}], \\text{标签}[\\text{训练掩码}])</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">L</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">损失函数</span></span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord\">logits</span></span><span class=\"mopen\">[</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">训练掩码</span></span><span class=\"mclose\">]</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">标签</span></span><span class=\"mopen\">[</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">训练掩码</span></span><span class=\"mclose\">])</span></span></span></span></span>\n<p>结果是一个标量值，即损失（Loss），它代表了模型在当前训练数据批次上的误差。</p>\n<h4>3. 反向传播</h4>\n<p>计算出损失后，我们需要确定每个模型参数对该误差的贡献程度。这就是反向传播的任务。PyTorch 等深度学习 (deep learning)框架使这个自动化了。通过调用 <code>loss.backward()</code>，框架会计算损失相对于模型中每个可学习参数（权重 (weight)和偏置 (bias)）的梯度。</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mfrac><mrow><mi mathvariant=\"normal\">∂</mi><mi>L</mi></mrow><mrow><mi mathvariant=\"normal\">∂</mi><msup><mi>W</mi><mrow><mo stretchy=\"false\">(</mo><mi>l</mi><mo stretchy=\"false\">)</mo></mrow></msup></mrow></mfrac><mspace width=\"1em\"></mspace><mi mathvariant=\"normal\">∀</mi><mi>l</mi><mo>∈</mo><mo stretchy=\"false\">{</mo><mn>1</mn><mo separator=\"true\">,</mo><mo>…</mo><mo separator=\"true\">,</mo><mi>L</mi><mo stretchy=\"false\">}</mo></mrow><annotation encoding=\"application/x-tex\">\\frac{\\partial L}{\\partial W^{(l)}} \\quad \\forall l \\in \\{1, \\dots, L\\}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:2.0754em;vertical-align:-0.704em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3714em;\"><span style=\"top:-2.296em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\" style=\"margin-right:0.0556em;\">∂</span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.814em;\"><span style=\"top:-2.989em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mopen mtight\">(</span><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0197em;\">l</span><span class=\"mclose mtight\">)</span></span></span></span></span></span></span></span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\" style=\"margin-right:0.0556em;\">∂</span><span class=\"mord mathnormal\">L</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.704em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:1em;\"></span><span class=\"mord\">∀</span><span class=\"mord mathnormal\" style=\"margin-right:0.0197em;\">l</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">∈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">{</span><span class=\"mord\">1</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"minner\">…</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">L</span><span class=\"mclose\">}</span></span></span></span></span>\n<p>这些梯度指明了每个参数为了降低损失而需要调整的方向和幅度。权重的正梯度意味着增加该权重会增加损失，而负梯度则意味着相反的情况。</p>\n<h4>4. 参数更新</h4>\n<p>最后一步是使用这些梯度来更新模型的参数。这由优化器（如 Adam 或 SGD）处理。优化器的 <code>step()</code> 方法会根据学习率的大小，沿着减小损失的方向调整每个参数。</p>\n<p>在开始下一个训练步之前，必须重置梯度。这是因为深度学习框架默认会累加梯度。我们调用 <code>optimizer.zero_grad()</code> 来清除旧梯度，确保当前步骤的参数更新不受之前步骤梯度的影响。</p>\n<p>这整个四步序列构成了一个完整的训练迭代。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-5w8n6a\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#a5d8ff\"];\n    edge [fontname=\"Arial\"];\n\n    A [label=\"图数据\\n(特征 X, 邻接矩阵 A)\"];\n    B [label=\"GNN 模型\\n(权重 W)\"];\n    C [label=\"前向传播\\n计算 Logits\"];\n    D [label=\"损失计算\\n(与标签对比)\"];\n    E [label=\"反向传播\\n(计算梯度 ∂L/∂W)\"];\n    F [label=\"优化器\\n(更新权重)\"];\n\n    A -> B;\n    B -> C [label=\" \"];\n    C -> D [label=\" \"];\n    D -> E [label=\"损失 L\"];\n    E -> F [label=\"梯度\"];\n    F -> B [label=\"更新后的 W\", style=dashed, color=\"#495057\"];\n\n    subgraph cluster_model {\n        label = \"模型状态\";\n        style=filled;\n        color=\"#e9ecef\";\n        B; F;\n    }\n\n    subgraph cluster_computation {\n        label = \"计算步骤\";\n        style=filled;\n        color=\"#e9ecef\";\n        C; D; E;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-5w8n6a\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>单个训练步的迭代循环。数据流经模型产生预测，预测用于计算损失。源自该损失的梯度指导优化器更新模型权重，以进行下一次迭代。</p>\n</blockquote>\n<h3>轮次迭代</h3>\n<p>一个<strong>轮次</strong>（Epoch）被定义为对整个训练数据集的一次完整处理。在小型图常用的全批次训练中，上述单个训练步会一次性处理整个图。因此，一个训练步就等于一个轮次。</p>\n<p>训练循环会运行设定的轮次次数。随着每一轮的进行，优化器都会将模型的权重 (weight)向减小训练损失的方向微调 (fine-tuning)，从而让模型学会识别图结构和节点特征中的模式。</p>\n<p>以下是 GNN 典型训练循环的代码示例：</p>\n<pre><code class=\"language-python\"># model: 你的 GNN 模型\n# graph: 你的图数据对象\n# optimizer: Adam 等优化器\n# loss_fn: CrossEntropyLoss 等损失函数\n\ndef train(model, graph, optimizer, loss_fn):\n    model.train()  # 将模型设置为训练模式\n    optimizer.zero_grad()  # 清除之前的梯度\n\n    # 1. 前向传播\n    logits = model(graph.x, graph.edge_index)\n\n    # 2. 损失计算 (使用训练掩码)\n    loss = loss_fn(logits[graph.train_mask], graph.y[graph.train_mask])\n\n    # 3. 反向传播\n    loss.backward()\n\n    # 4. 参数更新\n    optimizer.step()\n\n    return loss.item()\n\n# 主训练循环\nfor epoch in range(200):\n    loss = train(model, graph, optimizer, loss_fn)\n    print(f\"轮次 {epoch+1:03d}, 损失: {loss:.4f}\")\n\n</code></pre>\n<p>随着循环的进行，我们期望看到训练损失下降。这表明模型正在成功学习拟合训练数据。然而，仅仅训练损失下降是不够的。我们还必须通过验证集监测模型在未见过的数据上的表现，以确保其具备良好的泛化能力，而不仅仅是记住了训练样本。</p>",
+  "slug": "training-loop-for-gnns",
+  "updates": [],
+  "references": [
+    {
+      "id": 21476,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础教科书，涵盖了深度学习的理论基础，包括通用训练循环、前向传播、损失函数、反向传播和各种优化算法。",
+      "order": 1,
+      "created_at": "2025-09-30T09:32:20.622566Z",
+      "updated_at": "2025-09-30T09:46:39.264764Z"
+    },
+    {
+      "id": 21477,
+      "title": "Graph Neural Networks: Foundations, Frontiers, and Applications",
+      "author": "Zonghan Wu, Shirui Pan, Fangzhao Wu, Lina Yao, Guodong Long, Chen Gong, Philip S. Yu",
+      "year": "2023",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-981-99-3174-8",
+      "doi": "10.1007/978-981-99-3174-8",
+      "note": "本书全面论述了图神经网络，详细介绍了其训练方法、图结构数据中的具体挑战以及为GNN调整的优化策略。",
+      "order": 2,
+      "created_at": "2025-09-30T09:32:20.625945Z",
+      "updated_at": "2025-09-30T09:46:54.410499Z"
+    },
+    {
+      "id": 21478,
+      "title": "Automatic differentiation package - torch.autograd and Optimizers - torch.optim",
+      "author": "PyTorch Core Team",
+      "year": "2016",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/autograd.html",
+      "doi": "",
+      "note": "PyTorch官方文档，解释了用于自动微分的`torch.autograd`模块（对反向传播至关重要）以及提供各种优化算法以更新参数的`torch.optim`包。",
+      "order": 3,
+      "created_at": "2025-09-30T09:32:20.628218Z",
+      "updated_at": "2025-09-30T09:46:49.402142Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

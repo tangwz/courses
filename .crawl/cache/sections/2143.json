@@ -1,0 +1,45 @@
+{
+  "id": 2143,
+  "title": "梯度累积",
+  "meta_title": "PyTorch 梯度累积技术",
+  "meta_description": "了解梯度如何默认累积以及如何使用 `optimizer.zero_grad()` 清零它们。",
+  "content": "<p>对标量张量（如损失值）调用 <code>.backward()</code> 会触发计算图中所有 <code>requires_grad=True</code> 的张量的梯度。需要了解的一个主要特性是，PyTorch 默认会<em>累积</em>梯度。</p>\n<h3>默认梯度累积行为</h3>\n<p>如果您在多次调用 <code>.backward()</code> 之间不清除梯度，PyTorch 会将新计算的梯度添加到叶张量（参数 (parameter)）的<code>.grad</code>属性中已有的值上。</p>\n<p>我们用一个简单例子来说明这一点：</p>\n<pre><code class=\"language-python\">import torch\n\n# 创建一个需要梯度的张量\nx = torch.tensor([2.0], requires_grad=True)\n\n# 执行一些操作\ny = x * x\nz = y * 3 # z = 3 * x^2\n\n# 第一次反向传播\n# dz/dx = 6*x = 6*2 = 12\nz.backward(retain_graph=True) # retain_graph=True 允许后续的反向传播调用\nprint(f\"After first backward pass, x.grad: {x.grad}\")\n\n# 执行另一个操作（可以相同也可以不同）\n# 为简单起见，我们再次使用相同的 z 进行演示\n# 注意：在实际应用中，您可能会基于新的输入或模型的不同部分计算新的损失。\nz.backward() # 第二次反向传播\n# 我们预期新梯度 (12) 会被加到已有的梯度 (12) 上\nprint(f\"After second backward pass, x.grad: {x.grad}\")\n\n# 手动清零梯度\nx.grad.zero_()\nprint(f\"After zeroing, x.grad: {x.grad}\")\n</code></pre>\n<p>运行此代码会产生类似于以下的输出：</p>\n<pre><code class=\"language-text\">After first backward pass, x.grad: tensor([12.])\nAfter second backward pass, x.grad: tensor([24.])\nAfter zeroing, x.grad: tensor([0.])\n</code></pre>\n<p>请注意，第二次调用 <code>z.backward()</code> 如何将新计算的梯度（12）加到之前存储的梯度（12）上，结果为 24。这种累积是刻意为之的，并且有重要的用途。</p>\n<h3>为何累积梯度？模拟更大批量</h3>\n<p>这种默认行为的主要原因是为了方便<strong>梯度累积</strong>。当训练大型模型需要大批量数据以实现稳定收敛，但现有 GPU 内存无法一次性容纳如此大的批量时，此方法就很有用。</p>\n<p>与其处理一个大批量，不如这样操作：</p>\n<ol>\n<li>将大批量分成若干个更小的迷你批量。</li>\n<li>每次处理一个迷你批量：执行前向传播并计算损失。</li>\n<li>对当前迷你批量的损失调用 <code>.backward()</code>。为此迷你批量计算的梯度将添加到模型参数 (parameter)的 <code>.grad</code> 属性中。</li>\n<li>对大批量内的所有迷你批量重复步骤 2-3。</li>\n<li><em>在</em>处理完所有迷你批量并累积其梯度后，使用 <code>optimizer.step()</code> 执行一次优化器更新步。此步骤使用所有迷你批量梯度的<em>总和</em>来更新模型权重 (weight)，从而有效地模拟了更大批量的一次更新步。</li>\n<li>非常重要的一点是，<em>在</em>开始处理<em>下一个</em>大批量（如果不是累积，则为下一个迷你批量）<em>之前</em>，使用 <code>optimizer.zero_grad()</code> <strong>清除梯度</strong>。</li>\n</ol>\n<p>这使您可以使用模型所需的有效批量大小进行训练，即使它不能一次性完全载入内存，从而牺牲计算时间来提高内存效率。</p>\n<h3>标准训练中 <code>optimizer.zero_grad()</code> 的必要性</h3>\n<p>在标准的训练循环中，您在每次迭代中处理一个批量、计算损失、计算梯度并更新权重 (weight)，您通常<em>不希望</em>来自前一个批量的梯度影响当前的更新步。每个批量的梯度计算应该是独立的。</p>\n<p>由于 PyTorch 默认累积梯度，如果在计算新批量的梯度之前未能清除它们，将导致不正确的更新。优化器将使用新旧梯度的混合，从而损害训练过程。</p>\n<p>这就是为什么在标准的 PyTorch 训练循环中，您几乎总能看到 <code>optimizer.zero_grad()</code> 被调用的原因。它将优化器管理的所有参数 (parameter)的 <code>.grad</code> 属性重置，以确保随后的 <code>.backward()</code> 调用完全基于当前批量的损失来计算梯度。</p>\n<p>典型的训练迭代结构如下所示：</p>\n<pre><code class=\"language-python\"># 假设 model, dataloader, loss_fn, 和 optimizer 已定义\n\n# 遍历 epoch...\n  # 遍历批量...\n    # 1. 获取数据批量\n    inputs, labels = data_batch\n    inputs, labels = inputs.to(device), labels.to(device) # 将数据移动到适当的设备\n\n    # 2. 清零梯度\n    # 重要：在处理新批量之前清除之前的梯度\n    optimizer.zero_grad()\n\n    # 3. 前向传播：计算模型预测\n    outputs = model(inputs)\n\n    # 4. 计算损失\n    loss = loss_fn(outputs, labels)\n\n    # 5. 反向传播：计算梯度\n    loss.backward()\n\n    # 6. 优化器更新步：更新模型权重\n    optimizer.step()\n\n    # ... (记录日志、评估等)\n</code></pre>\n<p><code>optimizer.zero_grad()</code> 的放置位置很重要。它应该在您计算当前迭代的损失并执行反向传播 (backpropagation)<em>之前</em>发生，确保当前批量的梯度计算有一个干净的开始。虽然它通常放在循环的开头，但技术上它只需要在 <code>loss.backward()</code> 之前发生。然而，将其放在开头是常见做法，并且能清楚地划分新批量处理的开始。</p>\n<p>总而言之，梯度累积是 PyTorch 的一个内置功能，对于模拟更大的批量数据很有用。然而，在标准训练循环中，您必须通过在每次迭代开始时调用 <code>optimizer.zero_grad()</code> 来明确阻止这种累积，以确保模型更新仅基于当前批量的数据是正确的。</p>",
+  "slug": "gradient-accumulation",
+  "updates": [],
+  "references": [
+    {
+      "id": 6192,
+      "title": "Automatic differentiation with torch.autograd",
+      "author": "PyTorch Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/autograd.html",
+      "doi": "",
+      "note": "解释了`torch.autograd`的机制，包括梯度计算、`.grad`属性以及默认的梯度累加行为。",
+      "order": 1,
+      "created_at": "2025-09-05T01:19:52.997987Z",
+      "updated_at": "2025-09-07T20:36:10.406623Z"
+    },
+    {
+      "id": 6194,
+      "title": "Dive into Deep Learning",
+      "author": "Aston Zhang, Zack C. Lipton, Mu Li, and Alex Smola",
+      "year": "2024",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://d2l.ai/",
+      "doi": "",
+      "note": "一本全面的开源教材，涵盖深度学习基础知识，包括自动微分、反向传播和训练循环机制，通常包含PyTorch示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:19:53.003610Z",
+      "updated_at": "2025-09-07T20:36:10.941309Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

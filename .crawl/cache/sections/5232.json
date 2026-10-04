@@ -1,0 +1,45 @@
+{
+  "id": 5232,
+  "title": "理解 API 和 HTTP 方法",
+  "meta_title": "API 和 HTTP 方法基本知识",
+  "meta_description": "回顾 Web API 的核心原理、REST 原则以及标准 HTTP 方法（GET、POST、PUT、DELETE）。",
+  "content": "<p>API 和 HTTP 方法是实现网络交互的基础机制。掌握这些基本概念对于开发包括 FastAPI 应用在内的网络应用程序很有帮助。</p>\n<p><strong>API</strong>，即应用程序编程接口，充当中间人，允许两个不同的软件应用相互通信。可以将其想象成餐厅的菜单。菜单（API）提供一份您可以点的菜品（操作）列表，以及每道菜的描述（数据格式）。您（客户端应用）根据菜单发出请求，厨房（服务器应用）准备好菜品并将其送回给您。您不需要知道确切的食谱或厨房如何运作；您只需知道如何从菜单点餐。</p>\n<p>在网络开发和模型部署中，我们通常使用 <strong>Web API</strong>。这些 API 使用超文本传输协议（HTTP）以便 <strong>客户端</strong>（如网页浏览器、移动应用或其他后端服务）与 <strong>服务器</strong>（我们的 FastAPI 应用和机器学习 (machine learning)模型所在之处）之间进行通信。客户端向服务器发送 HTTP 请求，服务器发送回 HTTP 响应。</p>\n<h3>客户端-服务器模型</h3>\n<p>这种交互遵循标准的客户端-服务器模型：</p>\n<ol>\n<li><strong>客户端请求：</strong> 客户端通过向特定的服务器地址（URL）发送请求来发起通信。此请求包含客户端希望服务器执行什么操作的详情以及可能的一些数据。</li>\n<li><strong>服务器处理：</strong> 服务器接收请求，进行处理（例如，获取数据、执行计算、进行模型推理 (inference)），并确定适当的结果。</li>\n<li><strong>服务器响应：</strong> 服务器将响应发送回客户端，其中包含请求的信息或操作结果，以及指示请求是否成功的状态码。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-psu2m7\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  Client [label=\"客户端\\n(浏览器, 应用, 服务)\"];\n  Server [label=\"服务器\\n(FastAPI 应用程序)\"];\n\n  Client -> Server [label=\"  HTTP 请求\\n  (方法, URL, 头部, 请求体?)\"];\n  Server -> Client [label=\"  HTTP 响应\\n  (状态码, 头部, 响应体?)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-psu2m7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 HTTP 进行客户端-服务器交互的简化视图。</p>\n</blockquote>\n<h3>REST：Web API 的一种风格</h3>\n<p>许多 Web API，包括使用 FastAPI 构建的，遵循 <strong>REST</strong>（表述性状态转移）的原则。REST 不是一个严格的协议，而是一种架构风格，它定义了一系列约束，用于构建可伸缩、无状态且易于维护的 Web 服务。主要思想包括：</p>\n<ul>\n<li><strong>资源：</strong> 信息以资源的形式表示（例如，特定用户、产品、预测结果）。每个资源通过唯一的 URL（统一资源定位符）识别，如 <code>/models/iris-classifier</code> 或 <code>/predict</code>。</li>\n<li><strong>表述：</strong> 客户端与这些资源的表述进行交互，通常采用 JSON（JavaScript 对象表示法）或 XML 等格式。当您请求一个资源时，服务器会返回其当前状态的表述。</li>\n<li><strong>无状态性：</strong> 客户端向服务器发出的每个请求都必须包含理解和完成该请求所需的所有信息。服务器在请求之间不存储任何客户端上下文 (context)。这提高了可靠性和可伸缩性。</li>\n<li><strong>标准方法：</strong> REST 使用标准的 HTTP 方法对资源执行操作。</li>\n</ul>\n<h3>常用 HTTP 方法</h3>\n<p>HTTP 定义了几种请求方法（常称为“动词”），它们表示希望对由 URL 标识的资源执行的动作。FastAPI 使用这些方法将传入的请求路由到您代码中正确的 Python 函数。您会遇到最常见的方法是：</p>\n<ul>\n<li><strong>GET：</strong> 用于获取资源的表述。这是一种只读操作，应是<em>安全的</em>（多次调用产生相同结果）和<em>幂等的</em>（调用一次与调用多次的效果相同）。\n<ul>\n<li><em>机器学习 (machine learning)示例：</em> 请求已部署模型的元数据（<code>GET /models/info/resnet50</code>）。获取过去的预测结果（<code>GET /predictions/123</code>）。</li>\n</ul>\n</li>\n<li><strong>POST：</strong> 用于向指定资源提交数据，通常会导致服务器上的状态更改或附带效应。它常用于创建新资源或触发处理任务。POST 请求既不安全，也未必幂等。\n<ul>\n<li><em>机器学习示例：</em> 将输入特征（例如，图像数据、文本）发送到预测端点（<code>POST /predict/image</code>）。提交数据来训练或微调 (fine-tuning)模型（尽管通常离线完成）。</li>\n</ul>\n</li>\n<li><strong>PUT：</strong> 用于用请求负载替换目标资源的当前表述。如果资源存在，则更新；如果不存在，则可能创建。PUT 被认为是幂等的。\n<ul>\n<li><em>机器学习示例：</em> 更新已部署模型的配置（<code>PUT /models/config/iris-classifier</code>）。完全替换模型文件（通过直接 API 较不常见，但可行）。</li>\n</ul>\n</li>\n<li><strong>DELETE：</strong> 用于删除指定资源。DELETE 是幂等的。\n<ul>\n<li><em>机器学习示例：</em> 删除特定的已部署模型版本（<code>DELETE /models/version/spam-filter-v1</code>）。删除存储的预测结果（<code>DELETE /predictions/456</code>）。</li>\n</ul>\n</li>\n</ul>\n<p>其他方法如 <code>PATCH</code>（用于部分更新）、<code>HEAD</code>（类似于 GET 但没有响应体）和 <code>OPTIONS</code>（获取资源的通信选项）也存在，但与 GET 和 POST 相比，它们在基本的机器学习部署 API 中使用频率较低。</p>\n<h3>请求和响应结构</h3>\n<p>一个 <strong>HTTP 请求</strong> 通常包含：</p>\n<ol>\n<li><strong>方法：</strong> HTTP 动词（GET、POST、PUT、DELETE 等）。</li>\n<li><strong>URL：</strong> 服务器上资源的地址。</li>\n<li><strong>头部：</strong> 关于请求的元数据（例如，<code>Content-Type: application/json</code> 表示请求体的格式，<code>Authorization</code> 用于凭证）。</li>\n<li><strong>请求体（可选）：</strong> 随请求发送的数据负载，常与 POST 和 PUT 方法一起使用（例如，机器学习 (machine learning)模型的输入特征，以 JSON 格式）。</li>\n</ol>\n<p>一个 <strong>HTTP 响应</strong> 通常包含：</p>\n<ol>\n<li><strong>状态码：</strong> 一个三位数字代码，指示结果（例如，<code>200 OK</code> 成功，<code>201 Created</code> 已创建，<code>400 Bad Request</code> 错误请求，<code>404 Not Found</code> 未找到，<code>500 Internal Server Error</code> 内部服务器错误）。</li>\n<li><strong>头部：</strong> 关于响应的元数据（例如，<code>Content-Type: application/json</code>，<code>Content-Length</code>）。</li>\n<li><strong>响应体（可选）：</strong> 发送回客户端的数据负载（例如，机器学习模型的预测结果）。</li>\n</ol>\n<p>FastAPI 提供便捷的方式来定义端点，这些端点与特定的 URL 路径和 HTTP 方法对应。它自动处理请求数据（如 JSON 请求体）的解析和响应数据的格式化，基于您定义的 Python 类型和 Pydantic 模型，这将在下一章中介绍。了解这些基本的 HTTP 原理对于为您的机器学习模型构建高效的 Web API 很有帮助。</p>",
+  "slug": "understanding-apis-http",
+  "updates": [],
+  "references": [
+    {
+      "id": 14132,
+      "title": "Architectural Styles and the Design of Network-based Software Architectures",
+      "author": "Roy Thomas Fielding",
+      "year": "2000",
+      "publisher": "University of California, Irvine",
+      "journal": "Doctoral Dissertation",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.ics.uci.edu/~fielding/pubs/dissertation/top.htm",
+      "doi": "",
+      "note": "引入并定义了表征状态传输（REST）架构风格的开创性博士论文。",
+      "order": 2,
+      "created_at": "2025-09-05T08:48:03.814734Z",
+      "updated_at": "2025-09-09T14:07:12.025837Z"
+    },
+    {
+      "id": 14134,
+      "title": "FastAPI Documentation",
+      "author": "Sebastián Ramírez and FastAPI Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "FastAPI的官方文档，提供了如何使用Python和Pydantic高效构建API的详细信息。",
+      "order": 4,
+      "created_at": "2025-09-05T08:48:03.821140Z",
+      "updated_at": "2025-09-09T14:07:12.353244Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

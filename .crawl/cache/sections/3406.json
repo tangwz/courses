@@ -1,0 +1,61 @@
+{
+  "id": 3406,
+  "title": "高可用性和灾难恢复模式",
+  "meta_title": "特征商店的HA/DR模式",
+  "meta_description": "为特征商店设计高可用性并实施灾难恢复策略。",
+  "content": "<p>确保您的特征商店不仅运行良好，而且始终可用并能抵御故障，这对生产机器学习 (machine learning)系统来说非常重要。特征商店的停机或数据丢失可能导致模型推理 (inference)停止、训练管道中断，并最终影响业务运作。将阐述针对特征商店特有组成部分实现高可用性 (HA) 和有效灾难恢复 (DR) 策略的方法。</p>\n<p>高可用性指系统在组件发生故障时仍能保持运行的能力，通常在单个数据中心或可用区 (AZ) 内，或跨区域内的多个可用区。灾难恢复则侧重于在重大事件导致整个数据中心或区域无法运作后恢复操作。</p>\n<h2>特征商店组件的高可用性</h2>\n<p>特征商店的不同部分具有不同的可用性要求和故障模式。</p>\n<h3>在线商店高可用性</h3>\n<p>在线商店通常具有最严格的高可用性要求，因为它直接为实时预测提供特征。延迟和可用性在此处非常重要。</p>\n<ul>\n<li><strong>复制：</strong> 大多数在线商店技术（NoSQL 数据库、内存缓存）都支持复制。\n<ul>\n<li><strong>主从复制：</strong> 写入操作发送到主节点，主节点将更改复制到从节点。读取通常可以由从节点提供。故障转移涉及将一个从节点提升为主节点。这是一种常见模式，在一致性和性能之间提供了很好的平衡。</li>\n<li><strong>多主复制：</strong> 多个节点接受写入，并相互复制。这可以提高写入可用性，但会引入冲突解决的复杂性。</li>\n<li><strong>法定人数：</strong> 写入和读取需要来自最少数量（一个法定人数）副本的确认，从而提供可调的一致性保证。</li>\n</ul>\n</li>\n<li><strong>托管服务：</strong> 云提供商数据库（例如 AWS DynamoDB 全局表、Google Cloud Spanner、Azure Cosmos DB）通常提供内置的多可用区复制和自动化故障转移，简化了高可用性管理。</li>\n<li><strong>负载均衡：</strong> 使用负载均衡器将读/写请求分发到在线商店的多个正常运行的实例或副本。健康检查对于自动将故障实例从轮换中移除非常重要。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-nkmbhg\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#adb5bd\"]; subgraph cluster_region { label=\"区域\"; color=\"#adb5bd\"; style=\"dashed\"; subgraph cluster_az1 { label=\"可用区 1\"; LB [label=\"负载均衡器\", shape=diamond, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Store1_L [label=\"在线商店\\n(主节点)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Store1_F [label=\"在线商店\\n(从节点)\", color=\"#a5d8ff\", fontcolor=\"#495057\"]; LB -> Store1_L; LB -> Store1_F [style=dashed, label=\" 读取\"]; Store1_L -> Store1_F [label=\"复制\"]; } subgraph cluster_az2 { label=\"可用区 2\"; Store2_F [label=\"在线商店\\n(从节点)\", color=\"#a5d8ff\", fontcolor=\"#495057\"]; LB -> Store2_F [style=dashed, label=\" 读取\"]; Store1_L -> Store2_F [label=\"复制\"]; } } App [label=\"应用程序 / \\n服务 API\"]; App -> LB; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-nkmbhg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在单个区域内，跨两个可用区使用主从复制，并由负载均衡器提供服务，这是在线商店的典型高可用性设置。</p>\n</blockquote>\n<h3>离线商店高可用性</h3>\n<p>离线商店（例如 S3、GCS、ADLS 等数据湖存储或数据仓库）对即时可用性的要求通常不如在线商店那么严格，但数据持久性以及训练/批处理作业的可访问性非常重要。</p>\n<ul>\n<li><strong>云存储持久性：</strong> 主要云存储服务通过在区域内的多个设备和设施之间自动复制数据来设计高持久性（例如，99.999999999% 或更高）。这通常涵盖了存储数据本身典型的高可用性要求。</li>\n<li><strong>计算冗余：</strong> 确保批处理特征计算作业（例如使用 Spark 或 Flink）在具有容错能力的集群上运行。YARN 或 Kubernetes 等集群管理器处理节点故障，并且可以将作业配置为重试失败的任务。在多个可用区之间运行计算增加了另一层弹性。</li>\n</ul>\n<h3>服务 API 和元数据商店高可用性</h3>\n<p>服务特征向量 (vector)的 API 以及管理特征定义的元数据商店也需要高可用性。</p>\n<ul>\n<li><strong>无状态 API 实例：</strong> 将服务 API 设计为无状态。这允许您在负载均衡器后面运行多个实例。如果一个实例发生故障，流量将重定向到健康的实例，而不会丢失会话信息。自动扩缩组可以根据负载和健康检查自动调整实例数量。</li>\n<li><strong>元数据商店复制：</strong> 元数据商店（通常是 PostgreSQL 或 MySQL 等关系型数据库）应使用标准数据库高可用性技术，例如跨可用区的主/备复制、自动化备份，以及在读取负载很大时使用只读副本。</li>\n</ul>\n<h2>灾难恢复模式</h2>\n<p>灾难恢复计划旨在应对重大故障，目标是在定义的恢复时间目标 (RTO - 服务必须多快恢复) 和恢复点目标 (RPO - 可接受的数据丢失量) 内恢复服务。</p>\n<ul>\n<li><strong>备份与恢复：</strong>\n<ul>\n<li><strong>想法：</strong> 定期将离线商店、在线商店和元数据商店备份到持久位置，最好在不同的地理区域。</li>\n<li><strong>过程：</strong> 在发生灾难时，在恢复区域配置新基础设施并从备份中恢复数据。</li>\n<li><strong>权衡：</strong> 通常提供最高的 RTO 和可能更高的 RPO（取决于备份频率），但这是最经济的选项。适用于不那么重要的系统，或可以容忍一定停机/数据丢失的情况。</li>\n</ul>\n</li>\n<li><strong>备用小火炬：</strong>\n<ul>\n<li><strong>想法：</strong> 在灾难恢复区域维护最小核心基础设施（例如数据库架构、基本计算配置）。数据（离线、在线、元数据）异步复制到灾难恢复区域。</li>\n<li><strong>过程：</strong> 在发生灾难时，扩缩灾难恢复区域的基础设施（计算实例、数据库大小），挂载复制的数据，并切换流量。</li>\n<li><strong>权衡：</strong> 比备份/恢复的 RTO 更快，比热备/温备成本更低。需要数据复制机制。</li>\n</ul>\n</li>\n<li><strong>温备：</strong>\n<ul>\n<li><strong>想法：</strong> 在灾难恢复区域维护一个缩减规模但功能齐全的特征商店版本。数据积极复制。</li>\n<li><strong>过程：</strong> 在发生灾难时，扩缩灾难恢复区域的资源以处理全部生产负载并重定向流量。</li>\n<li><strong>权衡：</strong> 比备用小火炬的 RTO 更快，但由于运行闲置资源而成本更高。数据复制一致性非常重要。</li>\n</ul>\n</li>\n<li><strong>热备（多区域主动/主动-主动/被动）：</strong>\n<ul>\n<li><strong>想法：</strong> 在多个区域运行全规模、独立的特征商店部署。\n<ul>\n<li><em>主动/被动：</em> 一个区域处理所有流量；另一个区域准备好立即故障转移。</li>\n<li><em>主动/主动：</em> 两个区域同时服务流量（通常按地理位置路由）。</li>\n</ul>\n</li>\n<li><strong>过程：</strong> 故障转移通常几乎即时，可能通过 DNS 或全球负载均衡器自动化实现。</li>\n<li><strong>权衡：</strong> RTO 和 RPO 最低，可用性最高。然而，实施和操作复杂且昂贵得多，尤其是在线和离线商店的跨区域数据一致性和同步方面。需要仔细的架构设计（请参阅第 1 章关于多区域考量的讨论）。</li>\n</ul>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10ngswy\" \n              data-graph-definition='digraph G {rankdir=LR;bgcolor=\"white\";node [shape=record,style=rounded,fontname=\"sans-serif\",color=\"#495057\",fontcolor=\"#495057\"];edge [color=\"#adb5bd\",arrowhead=vee,style=dashed];subgraph cluster_primary {label=\"主区域\";style=dashed;color=\"#adb5bd\";InfraP [label=\"{基础设施（全规模）|数据}\",shape=record,fillcolor=\"#e9ecef\",color=\"#1c7ed6\",fontcolor=\"#1c7ed6\"];} subgraph cluster_dr {label=\"灾难恢复区域\";style=dashed;color=\"#adb5bd\";BU [label=\"{备份/恢复|备份}\",shape=record,fillcolor=\"#e9ecef\",color=\"#adb5bd\"];PL [label=\"{备用小火炬|复制数据}\",shape=record,fillcolor=\"#e9ecef\",color=\"#74c0fc\"];WS [label=\"{温备|复制数据}\",shape=record,fillcolor=\"#e9ecef\",color=\"#339af0\"];HS [label=\"{热备|复制数据}\",shape=record,fillcolor=\"#e9ecef\",color=\"#1c7ed6\"];} InfraP -> BU [label=\"备份\",style=dotted];InfraP -> PL [label=\"复制\"];InfraP -> WS [label=\"复制\"];InfraP -> HS [label=\"复制\"];}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10ngswy\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>灾难恢复策略比较，显示了灾难恢复区域基础设施就绪程度和成本从备份/恢复到热备的递增情况。</p>\n</blockquote>\n<h3>跨区域数据复制</h3>\n<p>实施灾难恢复策略需要跨区域复制数据。</p>\n<ul>\n<li><strong>离线商店：</strong> 云存储通常提供跨区域复制功能（例如 S3 CRR）。这些通常是异步的。</li>\n<li><strong>在线商店：</strong> 许多数据库提供跨区域只读副本或完全托管的全局表（例如 DynamoDB 全局表、Cosmos DB 多区域写入）。请注意一致性保证（通常是最终一致性）和延迟影响。对于特定要求或不支持的数据库，可能需要自定义异步复制管道。</li>\n<li><strong>元数据商店：</strong> 数据库复制（异步或同步，取决于 RPO/RTO 需求）是标准方法。</li>\n</ul>\n<h2>测试与验证</h2>\n<p>灾难恢复计划只有在有效时才有意义。定期测试必不可少：</p>\n<ul>\n<li><strong>模拟故障：</strong> 进行模拟各种故障场景（可用区故障、区域故障、数据库损坏）的演练。</li>\n<li><strong>测试恢复流程：</strong> 验证启动灾难恢复环境和恢复服务所需的步骤。</li>\n<li><strong>衡量 RTO/RPO：</strong> 验证实际恢复时间和数据丢失是否符合定义的目标。</li>\n<li><strong>自动化：</strong> 尽可能自动化故障转移和回切流程，以减少手动错误并加快恢复速度。</li>\n</ul>\n<p>选择正确的高可用性/灾难恢复策略需要平衡可用性要求、可接受的停机时间 (RTO)、可接受的数据丢失 (RPO)、复杂性和成本。对于高度依赖最新特征的重要机器学习 (machine learning)应用，尽管温备或热备等模式复杂，但通常需要投入使用它们来确保业务连续性。</p>",
+  "slug": "high-availability-disaster-recovery",
+  "updates": [],
+  "references": [
+    {
+      "id": 9505,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dataintensive.net/",
+      "doi": "",
+      "note": "提供数据密集型系统的基础知识，涵盖复制、一致性及容错技术。",
+      "order": 1,
+      "created_at": "2025-09-05T06:08:19.264982Z",
+      "updated_at": "2025-09-09T09:40:09.639435Z"
+    },
+    {
+      "id": 9506,
+      "title": "AWS Well-Architected Framework - Reliability Pillar",
+      "author": "Amazon Web Services (AWS)",
+      "year": "2024",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/wellarchitected-framework-pillars-reliability.html",
+      "doi": "",
+      "note": "介绍了在AWS上构建可靠弹性系统的最佳实践，提供HA、DR和操作程序的指导。",
+      "order": 2,
+      "created_at": "2025-09-05T06:08:19.275651Z",
+      "updated_at": "2025-09-09T09:40:01.891883Z"
+    },
+    {
+      "id": 9508,
+      "title": "PostgreSQL High Availability, Load Balancing, and Replication",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "PostgreSQL Documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/high-availability.html",
+      "doi": "",
+      "note": "解释PostgreSQL的HA、复制和负载均衡配置的文档，与元数据存储相关。",
+      "order": 4,
+      "created_at": "2025-09-05T06:08:19.284713Z",
+      "updated_at": "2025-09-09T09:40:05.900556Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

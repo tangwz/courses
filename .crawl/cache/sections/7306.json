@@ -1,0 +1,61 @@
+{
+  "id": 7306,
+  "title": "使用 kubectl 进行 Pod 操作",
+  "meta_title": "用于 Pod 管理的 kubectl 命令",
+  "meta_description": "在集群中创建、检查、删除和排查 Pod 故障时常用的 kubectl 命令参考。",
+  "content": "<p>管理 Kubernetes Pod 包括在 YAML 配置清单中定义它们，然后将其提交给 Kubernetes API 服务器以控制它们的生命周期。用于此交互的主要工具是 <code>kubectl</code>，它是 Kubernetes 官方命令行界面。它允许你执行每项集群操作，从部署应用到检查它们的运行状态。以下是用于创建、检查、调试和删除 Pod 的常用 <code>kubectl</code> 命令。</p>\n<h3>通过配置清单创建 Pod</h3>\n<p>创建 Pod 最常见的方法是应用 YAML 配置清单文件。<code>kubectl apply</code> 命令指示 Kubernetes 创建或更新资源，使其与文件中定义的状态相匹配。这种声明式方法是 Kubernetes 管理的核心，因为它允许系统确定实现所需状态所需的行动。</p>\n<p>假设你有一个保存为 <code>simple-pod.yaml</code> 的 Pod 配置清单：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Pod\nmetadata:\n  name: web-server\n  labels:\n    app: nginx\nspec:\n  containers:\n  - name: nginx-container\n    image: nginx:1.23\n    ports:\n    - containerPort: 80\n</code></pre>\n<p>要创建此 Pod，请在文件所在的目录中从终端运行 <code>apply</code> 命令：</p>\n<pre><code class=\"language-bash\">kubectl apply -f simple-pod.yaml\n</code></pre>\n<p>如果成功，API 服务器将通过简单的确认信息来确认请求：</p>\n<pre><code>pod/web-server created\n</code></pre>\n<p>此时，Kubernetes 已接受该配置清单，并将开始调度和启动 Pod 的流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-oweazu\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", margin=0.2]; edge [fontname=\"Helvetica\"]; bgcolor=\"transparent\"; \"用户\" [fillcolor=\"#a5d8ff\"]; \"配置清单\" [fillcolor=\"#ffec99\", shape=note]; \"kubectl\" [fillcolor=\"#b2f2bb\"]; \"API服务器\" [fillcolor=\"#fcc2d7\"]; \"调度器\" [fillcolor=\"#eebefa\"]; \"Kubelet\" [fillcolor=\"#d0bfff\"]; \"Pod\" [fillcolor=\"#96f2d7\", shape=cylinder]; 用户 -> 配置清单 [style=dashed, label=\"编写\"]; 配置清单 -> kubectl [label=\"kubectl apply -f\"]; kubectl -> API服务器 [label=\"发送请求\"]; API服务器 -> 调度器 [label=\"分配节点\"]; 调度器 -> Kubelet [label=\"下达指令\"]; Kubelet -> Pod [label=\"启动容器\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-oweazu\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了创建 Pod 的高级工作流。用户在 YAML 配置清单中记录的意图通过 <code>kubectl</code> 传递给 API 服务器。随后，控制平面组件协作，在合适的宿主机节点上调度并运行 Pod。</p>\n</blockquote>\n<h3>检查 Pod 状态</h3>\n<p>Pod 创建后，你需要检查其状态，查找其 IP 地址并检查其配置。</p>\n<h4>列出 Pod</h4>\n<p><code>kubectl get pods</code> 命令提供当前命名空间中一个或多个 Pod 的状态摘要。</p>\n<pre><code class=\"language-bash\">kubectl get pods\n</code></pre>\n<p>输出是一个包含每个 Pod 基本信息的表格：</p>\n<pre><code>NAME         READY   STATUS    RESTARTS   AGE\nweb-server   1/1     Running   0          2m15s\n</code></pre>\n<ul>\n<li><strong>NAME:</strong> Pod 的名称，如其元数据中所定义。</li>\n<li><strong>READY:</strong> 显示 Pod 中处于“就绪”状态的容器数量占容器总数的比例。<code>1/1</code> 表示单个容器正在运行并通过了就绪探针（如果已配置）。</li>\n<li><strong>STATUS:</strong> Pod 在其生命周期中的当前阶段，例如 <code>Pending</code>（等待中）、<code>Running</code>（运行中）、<code>Succeeded</code>（成功）或 <code>Failed</code>（失败）。</li>\n<li><strong>RESTARTS:</strong> Pod 中容器重启的次数。此数值较高通常表示存在问题。</li>\n<li><strong>AGE:</strong> 自 Pod 创建以来经过的时间。</li>\n</ul>\n<p>要查看更多信息（例如 Pod 的 IP 地址及其被调度到的节点），请使用 <code>-o wide</code> 标志。</p>\n<pre><code class=\"language-bash\">kubectl get pods -o wide\n</code></pre>\n<pre><code>NAME         READY   STATUS    RESTARTS   AGE     IP          NODE       NOMINATED NODE   READINESS GATES\nweb-server   1/1     Running   0          3m30s   10.244.1.4   minikube   &#x3C;none>           &#x3C;none>\n</code></pre>\n<h4>查看 Pod 详情</h4>\n<p>要全面了解 Pod 的配置和运行时状态，请使用 <code>kubectl describe pod</code>。此命令提供详细的、人类可读的输出，对故障排除非常有用。</p>\n<pre><code class=\"language-bash\">kubectl describe pod web-server\n</code></pre>\n<p>输出内容详尽但结构清晰。主要部分包括：</p>\n<ul>\n<li><strong>标签（Labels）和注解（Annotations）：</strong> 附加到 Pod 的所有元数据。</li>\n<li><strong>状态（Status）：</strong> 当前生命周期阶段。</li>\n<li><strong>IP：</strong> 分配给 Pod 的 IP 地址。</li>\n<li><strong>容器（Containers）：</strong> 每个容器的详细信息，包括镜像 ID、端口和资源限制。</li>\n<li><strong>事件（Events）：</strong> 与 Pod 相关的事件按时间顺序排列的日志，例如被调度、拉取镜像和启动容器。当 Pod 运行不正常时，这通常是首先要查看的地方。</li>\n</ul>\n<p>以下是一个健康 Pod 的 <code>Events</code> 部分片段：</p>\n<pre><code>Events:\n  Type    Reason     Age    From               Message\n  ----    ------     ----   ----               -------\n  Normal  Scheduled  5m10s  default-scheduler  Successfully assigned default/web-server to minikube\n  Normal  Pulling    5m9s   kubelet            Pulling image \"nginx:1.23\"\n  Normal  Pulled     5m5s   kubelet            Successfully pulled image \"nginx:1.23\" in 4.1s\n  Normal  Created    5m5s   kubelet            Created container nginx-container\n  Normal  Started    5m5s   kubelet            Started container nginx-container\n</code></pre>\n<h3>获取 Pod 日志</h3>\n<p>为了排查应用行为故障，你需要访问其容器生成的日志。<code>kubectl logs</code> 命令会流式传输容器的标准输出和标准错误。</p>\n<p>查看 <code>web-server</code> Pod 的当前日志：</p>\n<pre><code class=\"language-bash\">kubectl logs web-server\n</code></pre>\n<p>如果 Pod 包含多个容器，你必须使用 <code>-c</code> 或 <code>--container</code> 标志指定要查看哪个容器的日志：</p>\n<pre><code class=\"language-bash\">kubectl logs my-multi-container-pod -c sidecar-container\n</code></pre>\n<p>要实时跟踪日志流（类似于 Linux 中的 <code>tail -f</code>），请使用 <code>-f</code> 标志：</p>\n<pre><code class=\"language-bash\">kubectl logs -f web-server\n</code></pre>\n<h3>在 Pod 内部执行命令</h3>\n<p>有时，仅查看日志是不够的。为了进行更细致的调试，你可能需要直接在运行中的容器内运行命令。<code>kubectl exec</code> 提供了这种能力。</p>\n<p>要在 <code>web-server</code> 容器内获取交互式 shell 会话，请使用 <code>-it</code> 标志（<code>-i</code> 代表标准输入，<code>-t</code> 代表终端）：</p>\n<pre><code class=\"language-bash\">kubectl exec -it web-server -- /bin/bash\n</code></pre>\n<p><code>--</code> 将 <code>kubectl</code> 命令及其参数 (parameter)与你想在容器内运行的命令分隔开。进入容器后，你可以检查网络连接、查看文件系统或检查运行中的进程。</p>\n<p>你也可以运行非交互式命令。例如，列出 Nginx 网页根目录中的文件：</p>\n<pre><code class=\"language-bash\">kubectl exec web-server -- ls -l /usr/share/nginx/html\n</code></pre>\n<h3>删除 Pod</h3>\n<p>最后，要从集群中移除 Pod，可以使用 <code>kubectl delete</code>。你可以通过名称删除 Pod，也可以通过重新应用创建它的文件来删除。</p>\n<p>按名称删除 <code>web-server</code> Pod：</p>\n<pre><code class=\"language-bash\">kubectl delete pod web-server\n</code></pre>\n<p>或者，使用配置清单文件也是一种常见做法：</p>\n<pre><code class=\"language-bash\">kubectl delete -f simple-pod.yaml\n</code></pre>\n<p>这两个命令都会终止 Pod。Kubernetes 将通知容器正常关闭，如果容器在特定的宽限期内没有响应，则会强制将其终止。</p>\n<p>这些命令构成了与 Pod 交互的基础。随着学习的深入，你会发现类似的命令结构也用于管理其他 Kubernetes 资源，如 Deployment 和 Service。</p>",
+  "slug": "kubectl-pod-operations",
+  "updates": [],
+  "references": [
+    {
+      "id": 19918,
+      "title": "`kubectl` Overview",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/reference/kubectl/",
+      "doi": "",
+      "note": "提供 `kubectl` 命令及其用法的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-06T13:16:53.331003Z",
+      "updated_at": "2025-09-10T05:21:24.979955Z"
+    },
+    {
+      "id": 19919,
+      "title": "Pods",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/workloads/pods/",
+      "doi": "",
+      "note": "描述 Kubernetes 中运行容器的基础资源。",
+      "order": 2,
+      "created_at": "2025-09-06T13:16:53.345227Z",
+      "updated_at": "2025-09-10T05:21:23.830972Z"
+    },
+    {
+      "id": 19920,
+      "title": "Kubernetes: Up & Running: Dive into the Future of Infrastructure",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower, and Lachlan Evenson",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "326",
+      "url": "https://books.google.com/books/about/Kubernetes_Up_and_Running.html?id=z17uEAAAQBAJ",
+      "doi": "",
+      "note": "一本涵盖 Kubernetes 基础知识的著作，包括使用 `kubectl` 进行资源管理。",
+      "order": 3,
+      "created_at": "2025-09-06T13:16:53.348005Z",
+      "updated_at": "2025-09-10T05:21:36.392136Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

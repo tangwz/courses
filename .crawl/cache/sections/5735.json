@@ -1,0 +1,61 @@
+{
+  "id": 5735,
+  "title": "实践操作：条件图像生成",
+  "meta_title": "实践操作：条件生成",
+  "meta_description": "根据类别标签实现条件GAN或扩散模型。",
+  "content": "<p>让我们将条件生成理论付诸实践。在前面讨论过的架构和训练策略的基础上，本节提供实践指导，关于如何实现一个根据特定条件（例如类别标签）生成图像的系统。这项功能对于需要可控合成的任务（例如生成特定类型的物体或以目标方式扩充数据集）来说是核心。</p>\n<p>实现一个类别条件生成对抗网络 (GAN)（cGAN），这是一种常见且有效的方法。主要思想简单而有效：将条件信息（类别标签）作为额外输入提供给生成器和判别器。这会迫使生成器生成与标签相关的图像，并训练判别器验证图像是否真实 <em>且</em> 与其给定标签匹配。</p>\n<h3>实现类别条件GAN (cGAN)</h3>\n<p>假设你有一个在无标签数据集上训练的标准GAN实现（例如使用PyTorch）。为了使其成为条件模型，我们需要修改数据管道、生成器和判别器。我们将使用像CIFAR-10这样的数据集，它包含图像和相应的类别标签。</p>\n<h4>1. 数据准备和标签嵌入 (embedding)</h4>\n<p>首先，确保你的数据加载器提供图像及其整数类别标签。由于神经网络 (neural network)最适合处理连续向量 (vector)，我们需要将这些整数标签转换为嵌入。嵌入层适用于此。</p>\n<pre><code class=\"language-python\"># 示例参数\nnum_classes = 10  # 对于CIFAR-10\nembedding_dim = 16 # 标签嵌入向量的大小\n\n# 嵌入层\nlabel_embedding = nn.Embedding(num_classes, embedding_dim)\n\n# 在训练循环中：\n# real_images, labels = next(data_loader_iter)\n# 将标签转换为嵌入\nlabel_input = label_embedding(labels) # 形状: (batch_size, embedding_dim)\n</code></pre>\n<p><code>embedding_dim</code> 是一个可以调整的超参数 (parameter) (hyperparameter)。</p>\n<h4>2. 生成器修改</h4>\n<p>生成器需要接收随机噪声向量 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 和条件（标签嵌入）。一种常见策略是将它们拼接起来。</p>\n<pre><code class=\"language-python\"># 示例生成器输入\nlatent_dim = 100\n# ... (如上定义 label_embedding)\n\n# 在训练循环中：\nnoise = torch.randn(batch_size, latent_dim, device=device)\n# 生成用于合成的标签（例如，随机标签或特定标签）\ngen_labels = torch.randint(0, num_classes, (batch_size,), device=device)\ngen_label_input = label_embedding(gen_labels)\n\n# 拼接噪声和标签嵌入\ngenerator_input = torch.cat((noise, gen_label_input), dim=1)\n\n# 通过生成器\nfake_images = generator(generator_input)\n</code></pre>\n<p>生成器的第一层现在必须接受 <code>latent_dim + embedding_dim</code> 的输入大小。另外，标签嵌入可以在中间层进行投影并添加或拼接，类似于StyleGAN或注意力机制 (attention mechanism)中使用的技术，从而实现更多控制。</p>\n<h4>3. 判别器修改</h4>\n<p>判别器也必须接收条件信息。它需要判断图像是否真实 <em>且</em> 属于其假定的类别。一种常见做法是将标签嵌入与图像数据一同输入。</p>\n<p>一种常见技术是嵌入标签，对其进行空间重塑，并将其作为额外通道拼接到图像张量。另一种做法是，先通过初始卷积层处理图像，然后将展平的图像特征与标签嵌入拼接，再将其输入到后面的全连接层。</p>\n<p>我们用后一种方法进行说明：</p>\n<pre><code class=\"language-python\"># 假设 'discriminator_features' 从图像中提取特征\n# 假设 'label_embedding' 生成标签嵌入\n\n# 在判别器的正向传播中：\nimage_features = self.feature_extractor(image) # 例如，卷积层的输出\nimage_features_flat = image_features.view(image.size(0), -1)\n\n# label_input 是传递给判别器的嵌入标签\ndiscriminator_input = torch.cat((image_features_flat, label_input), dim=1)\n\nvalidity = self.final_layers(discriminator_input) # 最终分类层\n</code></pre>\n<p>判别器在拼接点之后的层需要适应图像特征和标签嵌入的总大小。</p>\n<h4>4. 训练循环调整</h4>\n<p>训练循环需要小心处理真实和虚假样本的标签：</p>\n<ul>\n<li><strong>判别器训练（真实数据）</strong>：将真实图像及其 <em>正确</em> 的标签嵌入输入判别器。目标标签是“真实”。</li>\n<li><strong>判别器训练（虚假数据）</strong>：将虚假图像（使用特定标签生成）与用于生成的 <em>相同</em> 标签嵌入一同输入。目标标签是“虚假”。</li>\n<li><strong>生成器训练</strong>：将虚假图像与用于生成它们的标签一同输入判别器。目标标签是“真实”（以欺骗判别器）。</li>\n</ul>\n<p>这是一个简化的图表，说明了cGAN中的信息流：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sas8yc\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_G {\n    label = \"生成器\";\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#b2f2bb\"];\n\n    Noise [label=\"噪声 (z)\"];\n    Label_G [label=\"条件\\n(标签 y)\"];\n    Embedding_G [label=\"嵌入\"];\n    Concat_G [label=\"拼接 / 组合\", shape=ellipse, fillcolor=\"#ced4da\"];\n    Generator [label=\"生成器 (G)\"];\n    FakeImage [label=\"生成图像\\nG(z, y)\", shape=component, fillcolor=\"#ffec99\"];\n\n    Noise -> Concat_G;\n    Label_G -> Embedding_G -> Concat_G;\n    Concat_G -> Generator -> FakeImage;\n  }\n\n  subgraph cluster_D {\n    label = \"判别器\";\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#a5d8ff\"];\n\n    InputImage [label=\"输入图像\\n(真实 x 或 虚假 G(z,y))\", shape=component, fillcolor=\"#ffec99\"];\n    Label_D [label=\"条件\\n(标签 y)\"];\n    Embedding_D [label=\"嵌入\"];\n    Combine_D [label=\"组合\", shape=ellipse, fillcolor=\"#ced4da\"];\n    Discriminator [label=\"判别器 (D)\"];\n    Decision [label=\"真实/虚假 & 标签是否正确?\", shape=cds, fillcolor=\"#ffc9c9\"];\n\n    InputImage -> Combine_D;\n    Label_D -> Embedding_D -> Combine_D;\n    Combine_D -> Discriminator -> Decision;\n  }\n\n  Label_G -> Label_D [style=invis]; // Ensure labels are aligned visually if needed\n  FakeImage -> InputImage [label=\"输入虚假图像\", style=dashed, color=\"#fa5252\"];\n  RealImage [label=\"真实图像 (x)\", shape=component, fillcolor=\"#96f2d7\", style=\"filled,rounded\"]\n  RealImage -> InputImage [label=\"输入真实图像\", style=dashed, color=\"#40c057\"];\n  RealLabel [label=\"真实标签 (y)\", fillcolor=\"#96f2d7\", style=\"filled,rounded\"]\n  RealLabel -> Label_D [label=\"输入真实标签\", style=dashed, color=\"#40c057\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sas8yc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>类别条件GAN中的信息流。条件（标签 <code>y</code>）被嵌入并作为输入提供给生成器（连同噪声 <code>z</code>）和判别器（连同真实或生成的图像）。</p>\n</blockquote>\n<h3>预期结果和评估</h3>\n<p>成功训练后，你应该能够向生成器提供特定的类别标签（例如，用于数字生成的“3”，或用于CIFAR-10的“猫”）以及一个噪声向量 (vector)，并获得代表该类别的图像。目视检查是第一步：生成根据每个类别条件的图像批次，并检查它们是否合适。</p>\n<p>对于定量评估（第5章已讨论），你可以计算 FID 或 IS 等指标，<em>按类别</em> 评估每个类别内的质量和多样性。比较特定类别的生成样本分布与该同一类别的真实样本分布也很有益。</p>\n<h3>替代方案：条件扩散模型</h3>\n<p>尽管我们侧重于cGAN，但条件生成在扩散模型中也高效。分类器引导是指使用一个单独的预训练 (pre-training)分类器在每个去噪步骤中引导采样过程趋向所需类别。一种更现代且通常更受欢迎的技术是<strong>无分类器引导</strong>（第4章详细介绍）。这包括在条件和无条件输入上交替训练扩散模型。在采样期间，噪声预测基于条件和无条件得分进行外推，从而在不需要外部分类器的情况下实现强引导。实现无分类器引导需要稍微修改U-Net架构以接受条件嵌入 (embedding)（如类别标签或文本嵌入），并调整训练过程以在某些训练步骤中随机丢弃条件。</p>\n<p>这项实践练习说明了如何扩展生成模型以实现可控合成。通过加入条件信息，你对输出有了很大的控制，从而能够针对本章中讨论的各种高级应用进行定向数据生成，从特定对象合成到引导式数据扩充。</p>",
+  "slug": "practice-conditional-generation",
+  "updates": [],
+  "references": [
+    {
+      "id": 15457,
+      "title": "Conditional Generative Adversarial Nets",
+      "author": "Mehdi Mirza, Simon Osindero",
+      "year": "2014",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1411.1784",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1411.1784",
+      "doi": "10.48550/arXiv.1411.1784",
+      "note": "介绍了条件生成对抗网络，使其能够生成基于辅助信息（如类别标签）的样本。",
+      "order": 1,
+      "created_at": "2025-09-06T10:45:42.690935Z",
+      "updated_at": "2025-09-10T12:57:17.916442Z"
+    },
+    {
+      "id": 15459,
+      "title": "Classifier-Free Diffusion Guidance",
+      "author": "Jonathan Ho, Tim Salimans",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "35",
+      "pages": "37113-37123",
+      "url": "https://arxiv.org/abs/2207.12598",
+      "doi": "10.48550/arXiv.2207.12598",
+      "note": "详细介绍了无分类器引导，这是一种训练扩散模型在没有外部分类器的情况下生成高质量条件图像的方法。",
+      "order": 3,
+      "created_at": "2025-09-06T10:45:42.699837Z",
+      "updated_at": "2025-09-10T12:57:41.007317Z"
+    },
+    {
+      "id": 15460,
+      "title": "Augmenting Training Data with GANs: A Survey",
+      "author": "João Antunes, Jorge Rendeiro, Nuno Oliveira",
+      "year": "2020",
+      "publisher": "MDPI",
+      "journal": "Applied Sciences",
+      "volume": "10",
+      "pages": "8061",
+      "url": "https://www.mdpi.com/2076-3417/10/22/8061",
+      "doi": "10.3390/app10228061",
+      "note": "一篇关于将生成对抗网络应用于数据增强的综述，为有针对性的数据集扩展提供了背景。",
+      "order": 4,
+      "created_at": "2025-09-06T10:45:42.702780Z",
+      "updated_at": "2025-09-10T12:57:18.289715Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

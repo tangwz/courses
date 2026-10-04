@@ -1,0 +1,529 @@
+{
+  "id": 143,
+  "title": "检索增强生成 (RAG) 入门",
+  "meta_title": "检索增强生成 (RAG) 简介 | RAG 课程",
+  "meta_description": "学习构建 RAG 系统。理解 RAG 架构、检索器和生成器等组成部分、向量数据库，以及针对 LLM 的实现。",
+  "description": "学习检索增强生成 (RAG) 的基础，以提升大型语言模型 (LLM) 的表现。本课程讲解构建 RAG 系统所需的核心组成部分、架构及实现步骤。您将获得连接外部知识来源至生成模型的实践经验。",
+  "short_description": "构建基础 RAG 系统，将 LLM 与外部知识连接，提高准确性。",
+  "excerpt": "通过整合外部数据源，并使用检索增强生成技术，构建更准确且具备上下文感知能力的 LLM 应用。",
+  "prerequisites": "Python 基础与 LLM 基本原理。",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "RAG 基本原理",
+      "description": "理解 RAG 的设计缘由及其核心架构。"
+    },
+    {
+      "topic": "信息检索",
+      "description": "掌握检索器组件的作用以及查找相关信息的技巧。"
+    },
+    {
+      "topic": "向量嵌入与数据库",
+      "description": "学习文本如何向量化并存储以实现高效检索。"
+    },
+    {
+      "topic": "生成增强",
+      "description": "理解如何将检索到的上下文与 LLM 提示词结合。"
+    },
+    {
+      "topic": "基础 RAG 管道实现",
+      "description": "使用标准库和模型构建一个简单的 RAG 系统。"
+    },
+    {
+      "topic": "RAG 数据准备",
+      "description": "学习文档分块和准备以供检索的技巧。"
+    }
+  ],
+  "duration": 7,
+  "slug": "getting-started-rag",
+  "level": 2,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-07T03:11:47.685816Z",
+  "updated_at": "2026-10-02T06:58:13.259766Z",
+  "chapters": [
+    {
+      "id": 747,
+      "title": "检索增强生成技术简介",
+      "meta_title": "RAG简介 | 检索增强生成基本原理",
+      "meta_description": "了解RAG是什么，为何使用它，它的架构，以及它如何与其他大语言模型技术进行比较。开始学习RAG。",
+      "number": 1,
+      "slug": "introduction-to-rag",
+      "content": "大语言模型（LLM）在理解和生成类人文本方面表现出出色的能力。然而，它们的知识通常在训练时即已固定，这可能导致它们对快速变化的信息或训练数据中未包含的主题产生不准确的回应。它们有时还会生成听起来有说服力但与事实不符的回复，这通常被称为“幻觉”。\r\n\r\n检索增强生成技术（RAG）提供了一种解决这些局限性的方法。它的工作原理是：在生成步骤*之前*，加入一个信息检索步骤。大语言模型不再仅仅依靠其内部学习的参数，而是获得从外部知识源获取的相关上下文，以此来指导其回复。\r\n\r\r\n本章介绍RAG的基本原理。我们将讲解：\r\n\r\n*   标准大语言模型面临的RAG旨在解决的具体难题。\r\n*   检索增强生成技术的明确定义及其运行流程。\r\n*   核心架构组成部分：检索器和生成器。\r\n*   RAG与微调作为适应大语言模型的方法有何不同。\r\n*   在需要最新或专业知识的应用中使用RAG的核心优点。\r\n\r\n到本章结束时，您将明白RAG的目的及其基本结构，这将为后续详细说明其组成部分和实现方法的章节打下基础。",
+      "sections": [
+        {
+          "id": 3633,
+          "title": "标准大型语言模型的局限性",
+          "meta_title": "标准LLM局限性说明",
+          "meta_description": "概述LLM的常见问题，如知识截止和幻觉，为RAG解决方案做铺垫。",
+          "slug": "standard-llm-limitations",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3634,
+          "title": "什么是检索增强生成（RAG）？",
+          "meta_title": "什么是检索增强生成（RAG）？",
+          "meta_description": "定义RAG并阐述其结合检索与生成以改善大型语言模型性能的主要思想。",
+          "slug": "what-is-rag",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3635,
+          "title": "RAG系统的核心架构",
+          "meta_title": "RAG系统核心架构说明",
+          "meta_description": "概述典型RAG系统的主要部分：检索器、生成器和数据来源。",
+          "slug": "rag-core-architecture",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3636,
+          "title": "RAG 对比微调：理解其差异",
+          "meta_title": "RAG 对比微调大型语言模型：主要差异",
+          "meta_description": "比较并对照 RAG 与大型语言模型微调，指出它们各自的优势和应用。",
+          "slug": "rag-vs-finetuning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3637,
+          "title": "使用RAG的优势",
+          "meta_title": "RAG在LLM上的优势",
+          "meta_description": "讨论RAG的实现优势，例如提高准确性、获取最新信息和来源归属。",
+          "slug": "benefits-of-rag",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 748,
+      "title": "检索组件",
+      "meta_title": "RAG 检索组件 | RAG 信息检索",
+      "meta_description": "侧重于 RAG 中的检索器。了解向量嵌入、相似度搜索以及如何建立检索机制。",
+      "number": 2,
+      "slug": "rag-retrieval-component",
+      "content": "检索增强生成（RAG）系统能否提供准确和相关的回复，很大程度上取决于其第一阶段：检索到正确的信息。本章着重讲解这一检索机制。\r\n\r\n你将学习文本如何被转换为数字表示，即向量嵌入，它们体现了语义信息。我们将研究相似度搜索技术，它们通常使用余弦相似度（$cos(\\theta)$）等度量标准，来在一个大型集合中找出与用户查询最相关的嵌入。这自然就涉及到向量数据库——为存储和高效查询这些高维向量而构建的专用系统。我们还将介绍用于创建嵌入的常用模型，选择合适向量数据库时的考量，最后会有一个供你亲自生成文本嵌入的动手练习。",
+      "sections": [
+        {
+          "id": 3638,
+          "title": "检索器在 RAG 中的作用",
+          "meta_title": "检索器组件在 RAG 系统中的作用",
+          "meta_description": "说明检索器的主要功能：从知识源中查找相关文档或文本段落。",
+          "slug": "retriever-role",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3639,
+          "title": "向量嵌入简介",
+          "meta_title": "文本向量嵌入介绍",
+          "meta_description": "介绍将文本表示为数字向量（嵌入）的理念，以实现语义理解。",
+          "slug": "intro-vector-embeddings",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3640,
+          "title": "常用嵌入模型",
+          "meta_title": "常用文本嵌入模型概述",
+          "meta_description": "简要介绍用于生成文本嵌入的流行预训练模型（例如，Sentence-BERT 变体）。",
+          "slug": "common-embedding-models",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3641,
+          "title": "相似性搜索：查找相关向量",
+          "meta_title": "向量嵌入的相似性搜索入门",
+          "meta_description": "说明如何使用相似性指标（如余弦相似度）来查找与查询向量最接近的向量。",
+          "slug": "similarity-search-basics",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3642,
+          "title": "向量数据库简介",
+          "meta_title": "RAG 的向量数据库简介",
+          "meta_description": "定义向量数据库，并解释它们在存储和高效查询大量嵌入中的作用。",
+          "slug": "intro-vector-databases",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3643,
+          "title": "选择向量数据库：考量因素",
+          "meta_title": "如何为RAG选择向量数据库",
+          "meta_description": "讨论选择向量数据库时应考虑的因素（例如：伸缩性、性能、云端与本地）。",
+          "slug": "choosing-vector-database",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3644,
+          "title": "实践：生成文本嵌入",
+          "meta_title": "使用 Python 实践生成文本嵌入",
+          "meta_description": "动手实践使用库为示例文本数据生成向量嵌入。",
+          "slug": "practice-generating-embeddings",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 749,
+      "title": "准备检索所需数据",
+      "meta_title": "RAG数据准备 | 文档分块与加载",
+      "meta_description": "学习如何有效加载、处理和分块文档，以准备你的知识库供RAG系统使用。",
+      "number": 3,
+      "slug": "data-preparation-for-rag",
+      "content": "前面讨论过的检索组件需要获取结构良好的信息才能有效运作。原始文档，无论是PDF、文本文件还是网页，都需要进行专门的准备，才能被高效地索引和搜索。本章侧重于将你的知识来源转化为适合检索增强生成（RAG）系统的实际步骤。\r\n\r\n你将学习从不同来源摄取文档的方法，以及将大型文档拆分成更小、更易处理的片段（这一过程被称为分块）的原理。我们将介绍各种分块策略，从简单的固定大小拆分到更注重内容的技术。此外，你将了解如何将有意义的元数据与这些分块关联起来，以及将最终处理好的数据及其向量嵌入存储到向量数据库中，使其可供检索组件使用。实践练习将指导你使用常用库实现文档加载和分块。",
+      "sections": [
+        {
+          "id": 3645,
+          "title": "从不同来源加载文档",
+          "meta_title": "为RAG系统加载文档",
+          "meta_description": "涵盖从不同文件类型（PDF、TXT、HTML）和来源加载数据的方法。",
+          "slug": "loading-documents",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3646,
+          "title": "文档分块的必要性",
+          "meta_title": "RAG 为何需要文档分块",
+          "meta_description": "解释为何大型文档需要被拆分成更小的分块，以实现有效检索并符合 LLM 的上下文限制。",
+          "slug": "need-for-chunking",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3647,
+          "title": "固定大小分块策略",
+          "meta_title": "固定大小文档分块策略",
+          "meta_description": "讨论基于字符或token数量的简单分块方法，并考虑重叠。",
+          "slug": "fixed-size-chunking",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3648,
+          "title": "内容感知的分块方法",
+          "meta_title": "内容感知的文档分块方法",
+          "meta_description": "介绍基于文档结构（段落、章节）的更细致分块方法。",
+          "slug": "content-aware-chunking",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3649,
+          "title": "数据块的元数据关联",
+          "meta_title": "将元数据与文档数据块关联",
+          "meta_description": "说明为数据块附加元数据（如源文档、页码）对于提供上下文和归属信息的重要性。",
+          "slug": "chunk-metadata",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3650,
+          "title": "将处理后的数据存储到向量数据库中",
+          "meta_title": "将处理后的数据块存储到向量数据库中",
+          "meta_description": "描述为数据块生成嵌入并将其索引到向量数据库中的过程。",
+          "slug": "storing-chunks-vector-db",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3651,
+          "title": "动手实践：文档分块",
+          "meta_title": "动手实践：为 RAG 分块文档",
+          "meta_description": "使用 Python 库实现文档加载和不同的分块策略。",
+          "slug": "hands-on-chunking-documents",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 750,
+      "title": "生成模块与增强",
+      "meta_title": "RAG生成与增强 | LLM集成",
+      "meta_description": "学习检索到的信息如何用于增强提示词，并引导LLM在RAG系统中生成响应。",
+      "number": 4,
+      "slug": "rag-generation-augmentation",
+      "content": "在之前的章节中，我们已经讲解了如何检索相关信息，现在我们将重点放在这些信息如何被加以运用。本章将审视检索增强生成（RAG）过程中的“生成”部分，具体说明大型语言模型（LLM）如何使用检索到的上下文来形成最终答案。\r\n\r\n我们将介绍以下几个主要方面：\r\n\r\n*   LLM模块在RAG系统中的作用和功能。\r\n*   构建能有效整合原始查询和检索到的上下文的提示词方法。\r\n*   将找到的文本段落注入LLM输入中的方法。\r\n*   在添加检索到的信息时，管理LLM上下文窗口限制的策略。\r\n*   LLM通过合成增强后的提示词来产生连贯响应的过程。\r\n*   使用相关元数据将生成的输出追溯回源文档的方法。\r\n\r\n完成本章后，您将清楚地了解检索到的数据如何积极地塑造和改进RAG管道中LLM的最终输出。",
+      "sections": [
+        {
+          "id": 3652,
+          "title": "生成器（LLM）在RAG中的作用",
+          "meta_title": "生成器LLM在RAG系统中的作用",
+          "meta_description": "解释大型语言模型如何充当生成组件，生成最终响应。",
+          "slug": "generator-llm-role",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3653,
+          "title": "RAG提示词的结构化",
+          "meta_title": "RAG系统提示词的结构化",
+          "meta_description": "讨论如何构建有效的提示词，将检索到的上下文与原始查询一同包含在内。",
+          "slug": "structuring-rag-prompts",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3654,
+          "title": "上下文注入方法",
+          "meta_title": "向LLM提示词注入上下文的方法",
+          "meta_description": "展示将获取到的文本段落插入到LLM提示词中的不同方式。",
+          "slug": "context-injection-methods",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3655,
+          "title": "管理上下文长度限制",
+          "meta_title": "RAG中LLM上下文长度限制的管理",
+          "meta_description": "处理将检索到的上下文适配到LLM最大输入标记限制的难题。",
+          "slug": "managing-context-length",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3656,
+          "title": "生成最终回复",
+          "meta_title": "在RAG中生成最终回复",
+          "meta_description": "描述LLM如何将增强型提示中的信息合成为一个连贯答案的过程。",
+          "slug": "generating-final-response",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3657,
+          "title": "生成内容中的来源归属",
+          "meta_title": "RAG生成输出中的来源归属",
+          "meta_description": "讨论标示用于生成回应的来源文档的方法，并使用块元数据。",
+          "slug": "attributing-sources",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 751,
+      "title": "搭建一个基本RAG流程",
+      "meta_title": "搭建一个基本RAG流程 | RAG实现",
+      "meta_description": "带您一步步完成使用常见Python库和框架搭建一个简单的端到端RAG流程。",
+      "number": 5,
+      "slug": "building-basic-rag-pipeline",
+      "content": "在讲解了RAG的基本知识，包括其架构、检索方法、数据准备技术以及生成过程后，我们现在将重心放在实际使用上。本章将带领您完成一个基本、端到端的检索增强生成流程的搭建。\r\n\r\n您将学到完成整体搭建所需的必要步骤：\r\n\r\n*   搭建包含所需库的合适开发环境。\r\n*   实现检索器组件，连接向量库，并执行相似性搜索。\r\n*   集成大型语言模型（LLM）作为生成器。\r\n*   将检索器和生成器组合成一个连贯的序列或链条。\r\n*   简要回顾简化RAG开发的框架（如LangChain或LlamaIndex）。\r\n*   针对搭建好的流程执行查询，以观察其运行情况。\r\n\r\n在本章结束时，您将搭建并测试一个使用标准工具和方法的可用的RAG系统。",
+      "sections": [
+        {
+          "id": 3658,
+          "title": "RAG 框架概述 (例如 LangChain、LlamaIndex)",
+          "meta_title": "Python RAG 框架概述",
+          "meta_description": "简要介绍简化 RAG 应用程序构建的热门框架。",
+          "slug": "overview-rag-frameworks",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3659,
+          "title": "环境配置",
+          "meta_title": "RAG开发Python环境配置",
+          "meta_description": "关于构建RAG流水线所需库和依赖项安装的指南。",
+          "slug": "setting-up-environment",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3660,
+          "title": "实现检索器",
+          "meta_title": "在 Python 中实现检索器组件",
+          "meta_description": "建立向量存储连接和执行相似度搜索的代码示例。",
+          "slug": "implementing-retriever",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3661,
+          "title": "实现生成器集成",
+          "meta_title": "在Python中将LLM作为生成器进行集成",
+          "meta_description": "用于连接LLM API或加载本地模型的代码示例。",
+          "slug": "implementing-generator",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3662,
+          "title": "结合检索与生成",
+          "meta_title": "RAG链中检索与生成的结合",
+          "meta_description": "演示如何将检索器和生成器组件连接起来处理查询。",
+          "slug": "combining-retrieval-generation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3663,
+          "title": "在流程中执行查询",
+          "meta_title": "通过已实现的RAG流程执行查询",
+          "meta_description": "演示如何输入用户查询并从流程中获取增强回复。",
+          "slug": "running-queries",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3664,
+          "title": "动手实践：端到端RAG系统",
+          "meta_title": "动手实践：构建端到端RAG系统",
+          "meta_description": "构建并测试一个完整的基础RAG流程，使用示例数据、向量存储和大型语言模型。",
+          "slug": "hands-on-end-to-end-rag",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 752,
+      "title": "RAG系统的评估与改进",
+      "meta_title": "RAG系统的评估与改进 | RAG指标",
+      "meta_description": "了解评估RAG系统性能的常用指标、方法以及基本的改进策略。",
+      "number": 6,
+      "slug": "evaluating-improving-rag-systems",
+      "content": "构建检索增强生成（RAG）管道是重要一步，但确定其有效性并优化其性能是后续的必要行动。一个检索到不相关信息或生成不准确回复的RAG系统，其实用价值有限。\r\n\r\n本章侧重于评估RAG系统质量的方法。您将了解：\r\n\r\n*   评估RAG输出时遇到的常见难题。\r\n*   评估各个组成部分的方法：检索器查找相关上下文的能力，以及生成器基于该上下文生成忠实且相关答案的能力。\r\n*   用于评估检索（例如命中率或平均倒数排名，$MRR$）和生成质量的指标。\r\n*   识别RAG系统中的常见故障点。\r\n*   提高性能的基本技术，例如调整数据分块策略或优化提示词。\r\n\r\n本章结束时，您将对如何衡量RAG系统性能并应用初步的改进策略有基本认识。",
+      "sections": [
+        {
+          "id": 3665,
+          "title": "评估RAG的挑战",
+          "meta_title": "评估RAG系统表现的挑战",
+          "meta_description": "讨论客观衡量RAG输出质量的难题。",
+          "slug": "challenges-evaluating-rag",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3666,
+          "title": "组件层面的评估：检索",
+          "meta_title": "评估 RAG 中的检索组件",
+          "meta_description": "介绍用于评估检索器性能的指标，例如命中率和平均倒数排名 (MRR)。",
+          "slug": "evaluating-retrieval",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3667,
+          "title": "组件级别评估：生成",
+          "meta_title": "评估RAG中的生成组件",
+          "meta_description": "讨论与生成文本质量相关的指标，如忠实度（事实性）和相关性。",
+          "slug": "evaluating-generation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3668,
+          "title": "端到端RAG评估框架",
+          "meta_title": "端到端RAG评估框架简介",
+          "meta_description": "简要提及为评估RAG管道整体表现而设计的框架（例如RAGAs）。",
+          "slug": "end-to-end-evaluation-frameworks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3669,
+          "title": "常见故障模式",
+          "meta_title": "RAG系统中常见的故障模式",
+          "meta_description": "识别典型问题，如检索不佳、上下文填充问题和不相关的生成。",
+          "slug": "common-failure-modes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3670,
+          "title": "改进的基本策略",
+          "meta_title": "改进RAG性能的基本策略",
+          "meta_description": "提出简单的改进方法，如调整分块、尝试不同的嵌入模型或优化提示。",
+          "slug": "basic-improvement-strategies",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3671,
+          "title": "实践：分析RAG输出质量",
+          "meta_title": "实践：分析RAG输出质量",
+          "meta_description": "查看RAG输出示例，找出检索或生成质量的可能问题。",
+          "slug": "practice-analyzing-rag-output",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

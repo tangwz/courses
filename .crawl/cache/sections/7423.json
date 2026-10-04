@@ -1,0 +1,61 @@
+{
+  "id": 7423,
+  "title": "用于短期回顾的缓冲区记忆",
+  "meta_title": "在LangChain中使用ConversationBufferMemory",
+  "meta_description": "学习如何实现ConversationBufferMemory来维护对话历史的运行日志。",
+  "content": "<p>让应用程序拥有记忆最直接的方式是存储整个对话历史，并将其包含在每一个后续请求中。这种做法常被称为<strong>缓冲区记忆</strong>。它会逐字记录所有用户输入和模型输出，确保大型语言模型（LLM）在对话的下一轮拥有完整的上下文 (context)信息。</p>\n<p>这种方式简单且对需要回顾具体细节的短对话很有用。在现代LangChain应用中，这通过管理一个聊天历史存储并为每次新交互将完整的消息列表注入到提示模板中来实现。</p>\n<h3>缓冲区记忆的工作原理</h3>\n<p>其机制很直接。消息被收集并存储在一个历史对象中。当链执行时，这个过去消息列表会被取回并插入到发送给大型语言模型的提示中，通常是使用一个占位符变量。这为模型提供了完整的对话线索。</p>\n<p>下图说明了这一循环过程。每次用户发送消息时，系统都会更新消息历史，然后该历史用于构建下一次大型语言模型调用的提示。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-79qymx\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\", color=\"#868e96\"];\n    edge [color=\"#495057\", fontname=\"sans-serif\"];\n    \n    UserInput [label=\"用户输入\", fillcolor=\"#bac8ff\"];\n    Chain [label=\"可运行链\"];\n    Memory [label=\"消息历史存储\\n(维护日志)\", fillcolor=\"#b2f2bb\"];\n    Prompt [label=\"提示模板\\n(历史 + 新输入)\", fillcolor=\"#ffec99\"];\n    LLM [label=\"LLM\"];\n    AIOutput [label=\"AI 输出\", fillcolor=\"#bac8ff\"];\n\n    UserInput -> Chain;\n    Chain -> Memory [label=\"1. 更新存储\"];\n    Chain -> Prompt;\n    Memory -> Prompt [label=\"2. 注入消息\"];\n    Prompt -> LLM [label=\"3. 发送给模型\"];\n    LLM -> AIOutput;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-79qymx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>带有缓冲区记忆的对话链的流程。历史存储会用最新的交流更新，然后用于填充下一个提示的上下文 (context)。</p>\n</blockquote>\n<h3>实现缓冲区记忆</h3>\n<p>我们来实践一下。要实现这种模式，我们使用 <code>RunnableWithMessageHistory</code> 来包装我们的链。这个组件会自动处理从历史存储读取和写入的逻辑。</p>\n<p>首先，请确保您已设置好环境变量，例如您的 <code>OPENAI_API_KEY</code>。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder\nfrom langchain_core.chat_history import InMemoryChatMessageHistory\nfrom langchain_core.runnables.history import RunnableWithMessageHistory\nfrom langchain_core.output_parsers import StrOutputParser\n\n# 设置您的 API 密钥\n# os.environ[\"OPENAI_API_KEY\"] = \"YOUR_API_KEY\"\n\n# 1. 初始化 LLM\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0.7)\n\n# 2. 创建提示模板\n# 我们使用占位符来注入对话历史\nprompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"以下是人类与人工智能之间的一次友好对话。AI健谈，并会从其上下文中提供大量具体细节。如果AI不知道某个问题的答案，它会如实说自己不知道。\"),\n    (\"placeholder\", \"{history}\"),\n    (\"human\", \"{input}\"),\n])\n\n# 3. 创建链\nchain = prompt | llm | StrOutputParser()\n\n# 4. 设置记忆管理\n# 我们需要一个字典来存储不同会话的历史记录\nstore = {}\n\ndef get_session_history(session_id: str):\n    if session_id not in store:\n        store[session_id] = InMemoryChatMessageHistory()\n    return store[session_id]\n\n# 用消息历史功能包装链\nconversation = RunnableWithMessageHistory(\n    chain,\n    get_session_history,\n    input_messages_key=\"input\",\n    history_messages_key=\"history\",\n)\n\n# 开始对话\n# 我们必须提供一个 session_id 配置来跟踪独立的对话\nconfig = {\"configurable\": {\"session_id\": \"alex_session\"}}\n\nresponse1 = conversation.invoke(\n    {\"input\": \"Hi, my name is Alex. What's the biggest planet in our solar system?\"},\n    config=config\n)\nprint(response1)\n\n# 继续对话\nresponse2 = conversation.invoke(\n    {\"input\": \"Great, and what's its most famous feature?\"},\n    config=config\n)\nprint(response2)\n\n# 模型记住了上下文（“木星”）\nresponse3 = conversation.invoke(\n    {\"input\": \"What was the name I gave you earlier?\"},\n    config=config\n)\nprint(response3)\n</code></pre>\n<p>当您运行此代码时，<code>RunnableWithMessageHistory</code> 会查找会话历史（如果不存在则创建），并将存储的消息注入到 <code>{history}</code> 占位符中。对于第二轮，系统会构建一个类似于这样的提示：</p>\n<pre><code class=\"language-text\">以下是人类与人工智能之间的一次友好对话...\n\n[系统消息]\n[人类消息]: 你好，我叫Alex。我们太阳系中最大的行星是什么？\n[AI 消息]: 你好，Alex！我们太阳系中最大的行星是木星...\n\n[人类消息]: 太棒了，它最著名的特征是什么？\n</code></pre>\n<p>历史对象已追加了第一次人机交流，为模型理解新问题指的是木星提供了必要的上下文 (context)。</p>\n<h3>优点与局限</h3>\n<p>这种缓冲区记忆做法的主要优点是它的完美回顾能力。模型收到完整、未经更改的历史记录，这最大限度地减少了在中短对话中误解上下文 (context)的风险。</p>\n<p>然而，主要局限在于令牌消耗。随着对话的继续，存储的历史会线性增长。这会带来两个直接后果：</p>\n<ol>\n<li><strong>成本增加：</strong> 历史中的每个令牌都会随每一次新的 API 调用发送，这会大幅增加长时间对话的成本。</li>\n<li><strong>上下文窗口限制：</strong> 最终，对话历史加上新的输入将超出大型语言模型（LLM）的最大上下文窗口（例如，4,096 或 16,384 个令牌）。当这种情况发生时，API 调用将失败。</li>\n</ol>\n<p>由于这一局限，这种全缓冲区方法最适用于预期对话相对简短的应用程序，例如处理单个问题的客户支持聊天机器人或简单的任务型助手。对于需要长期记忆的应用程序，您将需要更进阶的做法，我们将在下文介绍。</p>",
+  "slug": "buffer-memory",
+  "updates": [],
+  "references": [
+    {
+      "id": 14698,
+      "title": "Memory",
+      "author": "LangChain",
+      "year": "2025",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF0N-SdGr6wszWv2YUyslL6LTgKdoT9Qd-mjLV7DvpgbiQYJ0ocstlgA0zFbeECg9sb86sYsqkYayTQZ7rpV4z8e2FY6jRy846h0TWuIF--z97EVy30GTMjPAw5zcE839LojiHNAOWgDKO6X49cAv7woCZHyz7J4c8XFSs=",
+      "doi": "",
+      "note": "LangChain 内存模块的官方文档，详细介绍了 `ConversationBufferMemory` 及其他内存类型的实现和使用方法。",
+      "order": 1,
+      "created_at": "2025-09-05T09:01:15.173710Z",
+      "updated_at": "2025-09-11T06:04:39.828998Z"
+    },
+    {
+      "id": 14699,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/llms/best-practices-for-prompt-engineering-with-the-openai-api",
+      "doi": "",
+      "note": "解释了 OpenAI 语言模型提示工程和上下文管理的基本原理，这与文中讨论的上下文窗口限制直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T09:01:15.180695Z",
+      "updated_at": "2025-09-11T06:04:19.132821Z"
+    },
+    {
+      "id": 14700,
+      "title": "Building LLM-Powered Applications: Learn to use Large Language Models for tasks like chatbots, summarization, and content creation",
+      "author": "Josh Starmer",
+      "year": "2023",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/building-llm-powered-applications/9781837637845",
+      "doi": "",
+      "note": "为 LLM 应用的架构和实现提供了实用见解，包括管理对话状态和上下文的策略，这些都是 `ConversationBufferMemory` 等内存概念的基础。",
+      "order": 3,
+      "created_at": "2025-09-05T09:01:15.183477Z",
+      "updated_at": "2025-09-11T06:04:33.303604Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

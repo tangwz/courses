@@ -1,0 +1,61 @@
+{
+  "id": 7632,
+  "title": "GCN、GraphSAGE 与 GAT 的比较",
+  "meta_title": "GCN、GraphSAGE 与 GAT 模型的比较",
+  "meta_description": "GCN、GraphSAGE 和 GAT 架构的差异、优缺点摘要。",
+  "content": "<p>直接对比 GCN、GraphSAGE 和 GAT 有助于理解它们各自的长处与短板。每种架构在消息传递框架中都做出了不同的设计选择，从而在性能、可扩展性和灵活性之间产生了取舍。选择合适的模型主要取决于具体问题、图的大小以及计算预算。</p>\n<h3>聚合机制</h3>\n<p>这些架构之间最根本的区别在于它们如何聚合来自节点邻域的消息。这一选择直接影响模型的表达能力和行为。</p>\n<ul>\n<li>\n<p><strong>GCN</strong> 使用一种简单且固定的聚合方案。它计算邻居特征向量 (vector)的归一化 (normalization)总和，这相当于加权平均值。权重 (weight)由图邻接矩阵中的节点度数决定，在训练过程中是不学习的。这使得 GCN 成为一种<em>各向同性 (isotropic)</em> 模型，意味着它对每个邻居都一视同仁。其更新规则计算效率高，但表达能力有限。</p>\n</li>\n<li>\n<p><strong>GraphSAGE</strong> 通过引入灵活、可学习的聚合函数，使这一过程变得通用。你可以使用最大池化、均值，甚至像 LSTM 这样更复杂的神经网络 (neural network)来组合邻居消息，而不是使用固定的均值聚合器。这使得模型能够学习邻域内更复杂的关系。</p>\n</li>\n<li>\n<p><strong>GAT</strong> 则采取了不同的方法，引入了注意力机制 (attention mechanism)。它为每个邻居计算注意力系数，有效地学习了对于给定任务，每个邻居对中心节点的影响力。随后，聚合过程变为加权求和，其中的权重就是这些学习到的注意力分数。这使得 GAT 成为一种<em>各向异性 (anisotropic)</em> 模型，因为它可以为同一邻域内的不同节点分配不同的权重，表现出极强的表达能力。</p>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-hrndrn\" \n              data-graph-definition='digraph G {\n    graph [fontname=\"Helvetica\", fontsize=10, bgcolor=\"transparent\"];\n    rankdir=TB;\n    splines=ortho;\n    node [shape=circle, style=\"filled\", fontname=\"Helvetica\", fontsize=10, fixedsize=true, width=0.5, height=0.5];\n    edge [arrowsize=0.7, fontname=\"Helvetica\"];\n\n    subgraph cluster_gcn {\n        label=\"GCN 聚合\";\n        fontname=\"Helvetica\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#748ffc\"];\n\n        c_gcn [label=\"v\"];\n        n1_gcn [label=\"u1\"];\n        n2_gcn [label=\"u2\"];\n        n3_gcn [label=\"u3\"];\n        agg_gcn [label=\"均值()\", shape=box, style=\"rounded,filled\", fillcolor=\"#ced4da\", width=0.6, height=0.3, fontsize=9];\n\n        n1_gcn -> agg_gcn;\n        n2_gcn -> agg_gcn;\n        n3_gcn -> agg_gcn;\n        agg_gcn -> c_gcn;\n    }\n\n    subgraph cluster_sage {\n        label=\"GraphSAGE 聚合\";\n        fontname=\"Helvetica\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#38d9a9\"];\n\n        c_sage [label=\"v\"];\n        n1_sage [label=\"u1\"];\n        n2_sage [label=\"u2\"];\n        n3_sage [label=\"u3\"];\n        agg_sage [label=\"聚合器()\", shape=box, style=\"rounded,filled\", fillcolor=\"#ced4da\", width=0.6, height=0.3, fontsize=9];\n\n        n1_sage -> agg_sage;\n        n2_sage -> agg_sage;\n        n3_sage -> agg_sage;\n        agg_sage -> c_sage;\n    }\n\n    subgraph cluster_gat {\n        label=\"GAT 聚合\";\n        fontname=\"Helvetica\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#f06595\"];\n\n        c_gat [label=\"v\"];\n        n1_gat [label=\"u1\"];\n        n2_gat [label=\"u2\"];\n        n3_gat [label=\"u3\"];\n        agg_gat [label=\"Σ\", shape=box, style=\"rounded,filled\", fillcolor=\"#ced4da\", width=0.4, height=0.3, fontsize=12];\n\n        n1_gat -> agg_gat [label=\" α(v,u1)\", fontsize=8];\n        n2_gat -> agg_gat [label=\" α(v,u2)\", fontsize=8];\n        n3_gat -> agg_gat [label=\" α(v,u3)\", fontsize=8];\n        agg_gat -> c_gat;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-hrndrn\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>中心节点 <code>v</code> 及其邻居 <code>u</code> 的聚合机制。GCN 使用固定的均值，GraphSAGE 使用通用的聚合器 <code>AGG</code>，而 GAT 使用基于学习到的注意力系数 <code>α</code> 的加权和。</p>\n</blockquote>\n<h3>归纳式学习 vs. 直推式学习</h3>\n<p>实际应用中的一个主要区别在于模型是否能够进行归纳式学习。</p>\n<ul>\n<li>\n<p><strong>直推式学习 (Transductive Learning)：</strong> 模型在训练期间能看到整个图结构，包括所有节点（训练、验证和测试）的特征。它学习的是该图中特定节点的嵌入 (embedding)。GCN 本质上是直推式的，因为它的公式依赖于完整的图拉普拉斯矩阵，而该矩阵源自整个图的邻接矩阵。它很难为训练期间不在图中的节点生成嵌入。</p>\n</li>\n<li>\n<p><strong>归纳式学习 (Inductive Learning)：</strong> 模型学习一个可以为任何节点生成嵌入的函数，包括从未见过的节点。它通过学习如何聚合节点局部邻域的特征来实现这一点，而无需考虑节点的身份。<strong>GraphSAGE 和 GAT 都是归纳式的。</strong> 它们学习的是聚合和特征转换函数的权重 (weight)，而不是特定节点的嵌入。这使得它们适用于新节点不断加入的动态图，或者将训练好的模型部署到完全不同的新图中。</p>\n</li>\n</ul>\n<h3>计算复杂度与可扩展性</h3>\n<p>每个模型的计算需求各不相同，影响了它们处理大规模图的适用性。</p>\n<ul>\n<li>\n<p><strong>GCN：</strong> 训练 GCN 涉及与完整的归一化 (normalization)邻接矩阵进行稀疏矩阵乘法。虽然每一轮训练（epoch）速度很快，但模型需要将整个图结构存储在内存中，对于拥有数百万或数十亿节点的图来说，这是不可行的。</p>\n</li>\n<li>\n<p><strong>GraphSAGE：</strong> 该架构专为可扩展性设计。通过在训练期间为每个节点采样固定大小的邻域，它避免了一次处理整个图。这使得每个批次（batch）的计算占用保持不变，不受图整体大小的影响。然而，采样过程会带来额外开销，在较小的图上，每轮训练的速度可能比 GCN 慢。</p>\n</li>\n<li>\n<p><strong>GAT：</strong> 注意力机制 (attention mechanism)增加了计算成本。对于每个节点，GAT 必须计算其与所有邻居的注意力分数。如果一个节点有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 个邻居，特征维度为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>F</mi></mrow><annotation encoding=\"application/x-tex\">F</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span></span></span></span>，则复杂度大致与 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mo>×</mo><mi>F</mi></mrow><annotation encoding=\"application/x-tex\">N \\times F</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span></span></span></span> 成正比。虽然这些计算是高度并行的，但比起 GCN 或 GraphSAGE 中的简单聚合，其开销更大，尤其是对于度数非常高的节点。</p>\n</li>\n</ul>\n<h3>差异摘要</h3>\n<p>下表简要概括了这三种基础 GNN 架构的主要区别。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特性</th>\n<th align=\"left\">图卷积网络 (GCN)</th>\n<th align=\"left\">GraphSAGE</th>\n<th align=\"left\">图注意力网络 (GAT)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>聚合类型</strong></td>\n<td align=\"left\">固定均值（各向同性）</td>\n<td align=\"left\">灵活聚合器（均值、最大值、池化）</td>\n<td align=\"left\">学习得到的加权平均（各向异性）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>学习设置</strong></td>\n<td align=\"left\">直推式</td>\n<td align=\"left\">归纳式</td>\n<td align=\"left\">归纳式</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>可扩展性</strong></td>\n<td align=\"left\">受限于全图内存</td>\n<td align=\"left\">高（通过邻域采样）</td>\n<td align=\"left\">中等（高度数节点计算成本高）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>表达能力</strong></td>\n<td align=\"left\">较低（平等对待所有邻居）</td>\n<td align=\"left\">中等（学习聚合函数）</td>\n<td align=\"left\">较高（学习每个邻居的重要性）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>主要优点</strong></td>\n<td align=\"left\">简单，对中等规模的静态图效率高。</td>\n<td align=\"left\">可扩展至大规模图，具备归纳能力。</td>\n<td align=\"left\">在邻居重要性差异大的任务中表现优异。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>主要局限</strong></td>\n<td align=\"left\">非归纳式；需要在内存中存储全图。</td>\n<td align=\"left\">采样增加了复杂性，每轮训练可能较慢。</td>\n<td align=\"left\">每一层的计算成本较高。</td>\n</tr>\n</tbody>\n</table>\n<h3>应该选择哪种模型？</h3>\n<p>在 GCN、GraphSAGE 和 GAT 之间做出选择通常取决于几个实际问题：</p>\n<ol>\n<li>\n<p><strong>你的图是静态的且小到可以存入内存吗？</strong> 如果是，<strong>GCN</strong> 是一个强力且简单的基准模型，通常很难被超越。它的高效率和直观的实现使其成为在 Cora 或 PubMed 等图上进行节点分类的绝佳起点。</p>\n</li>\n<li>\n<p><strong>你需要泛化到未知节点或处理海量图吗？</strong> 如果你的应用涉及动态图或内存无法承载的大规模图，<strong>GraphSAGE</strong> 是明确的首选。它的归纳特性和基于采样的训练正是为此类场景设计的。</p>\n</li>\n<li>\n<p><strong>邻居的重要性是否变化很大且对任务至关重要？</strong> 当你认为某些邻居比其他邻居重要得多时，<strong>GAT</strong> 是一个功能强大的选项。只要你有足够的计算资源进行有效训练，它的注意力机制 (attention mechanism)就能捕捉到这些关系，通常能达到顶尖的性能。例如蛋白质相互作用网络或关系不均一的知识图谱。</p>\n</li>\n</ol>",
+  "slug": "comparing-gcn-graphsage-gat",
+  "updates": [],
+  "references": [
+    {
+      "id": 21551,
+      "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+      "author": "Thomas N. Kipf and Max Welling",
+      "year": "2017",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1609.02907",
+      "doi": "10.48550/arXiv.1609.02907",
+      "note": "介绍图卷积网络（GCN）模型的原始论文，是理解同构消息传递的基础工作。",
+      "order": 1,
+      "created_at": "2025-09-30T09:38:05.861511Z",
+      "updated_at": "2025-09-30T10:01:44.879737Z"
+    },
+    {
+      "id": 21552,
+      "title": "Inductive Representation Learning on Large Graphs",
+      "author": "William L. Hamilton, Rex Ying, Jure Leskovec",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Neural Information Processing Systems (NIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.02216",
+      "doi": "10.48550/arXiv.1706.02216",
+      "note": "介绍了GraphSAGE，一个使用可学习聚合函数和邻域采样进行归纳图表示学习的框架。",
+      "order": 2,
+      "created_at": "2025-09-30T09:38:05.866761Z",
+      "updated_at": "2025-09-30T10:01:49.675157Z"
+    },
+    {
+      "id": 21553,
+      "title": "Graph Attention Networks",
+      "author": "Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro Liò, and Yoshua Bengio",
+      "year": "2018",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1710.10903",
+      "doi": "10.48550/arXiv.1710.10903",
+      "note": "介绍了图注意力网络（GAT），它采用自注意力机制学习邻居的不同重要性权重，实现异构聚合。",
+      "order": 3,
+      "created_at": "2025-09-30T09:38:05.871035Z",
+      "updated_at": "2025-09-30T10:01:51.258412Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

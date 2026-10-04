@@ -1,0 +1,61 @@
+{
+  "id": 3277,
+  "title": "数据切片与分段的性能监控",
+  "meta_title": "分段式机器学习性能监控",
+  "meta_description": "实施方法来监控模型在输入数据特定子集或分段上的性能。",
+  "content": "<p>聚合的性能指标虽然必要，但往往不能完整呈现模型在生产环境中的表现。模型可能整体准确率、精确度或召回率很高，但在特定数据子群组上表现显著不足。这些潜在问题可能带来严重后果，从损害特定人口群体对用户的信任，到导致被忽视的市场分段的巨大业务损失。因此，在数据切片和分段上监控性能是一种重要的诊断方法，用以了解生产模型的细致行为。</p>\n<p>通过根据特定特征值或属性划分生产数据，您可以独立计算每个子集的性能指标。这让您能够不只看平均水平，而是找出模型表现出色或不佳的方面。</p>\n<h3>为什么要监控分段性能？</h3>\n<p>评估特定数据切片上的性能具有以下益处：</p>\n<ol>\n<li><strong>识别潜在偏见：</strong> 模型可能无意中学习甚至放大训练数据中存在的社会偏见。通过监控敏感属性（如人口统计群体，若符合道德和法律规定）或代理特征上的性能，有助于识别模型对某些子群组表现不佳或不公平的公平性问题。这是构建更公平系统的重要前提，我们将在公平性监控部分做进一步讨论。</li>\n<li><strong>明确业务影响：</strong> 整体性能可能可以接受，但如果模型在负责大部分收入或用户互动的小分段上出现问题，其业务影响可能是不成比例的。分段分析会突出这些高风险方面。例如，一个电商推荐引擎可能整体表现良好，但对特定移动平台上的用户表现不佳，从而导致该群体销售额损失。</li>\n<li><strong>诊断漂移影响：</strong> 数据或概念漂移通常会比其他部分更明显地影响数据分布的特定部分。一个预测配送时间的模型，其性能可能仅在交通模式不同的新扩展地理区域的配送中出现下降。分段监控有助于将漂移的影响隔离到特定子群体。</li>\n<li><strong>了解边缘情况表现：</strong> 模型经常难以应对稀有或异常输入（边缘情况）。通过定义与这些边缘情况对应的分段（例如，购买频率非常高的用户，超出典型范围的传感器读数），您可以具体追踪模型处理这些情况的表现如何。</li>\n<li><strong>定向调试与改进：</strong> 当整体性能下降时，分段分析可作为一种强大的调试工具。如果您发现性能下降集中在特定分段（例如，通过新营销渠道获得的用户），这会将您的调查引向与该分段特性相关的数据质量问题、特征处理问题或模型局限性。这使得再训练数据选择或模型调整更具针对性。</li>\n</ol>\n<h3>定义相关分段</h3>\n<p>选择适当的分段取决于应用场景，并且通常需要领域专业知识。分段可以根据以下因素定义：</p>\n<ul>\n<li><strong>分类特征：</strong> 根据 <code>user_country</code>（用户国家）、<code>device_type</code>（设备类型）、<code>product_category</code>（产品类别）、<code>customer_tier</code>（客户等级）或 <code>service_plan</code>（服务计划）等属性对数据进行切片。这些通常是最直接定义和解释的分段。</li>\n<li><strong>数值特征：</strong> 将连续特征离散化为有意义的区间或范围。示例包括 <code>age_group</code>（年龄组，例如 18-25、26-35）、<code>transaction_amount_bracket</code>（交易金额区间，例如 &#x3C;<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mtext>、</mtext></mrow><annotation encoding=\"application/x-tex\">10、</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">10</span><span class=\"mord cjk_fallback\">、</span></span></span></span>10-<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>100</mn><mtext>、</mtext><mo>></mo></mrow><annotation encoding=\"application/x-tex\">100、></annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7224em;vertical-align:-0.0391em;\"></span><span class=\"mord\">100</span><span class=\"mord cjk_fallback\">、</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">></span></span></span></span>100）或 <code>sensor_reading_level</code>（传感器读数水平，低、中、高）。区间的选择很重要，应反映数据或业务场景中的有意义区分。</li>\n<li><strong>元数据：</strong> 使用与预测请求相关联但并非必需用作模型特征的信息，例如 <code>data_source</code>（数据源）、<code>time_of_day</code>（一天中的时间）、<code>day_of_week</code>（一周中的天）或 <code>API_version</code>（API 版本）。</li>\n<li><strong>模型输出：</strong> 根据模型自身的行为进行分段，例如置信度分数低的预测或属于特定类别的预测。监控低置信度预测的性能可以显现不确定性校准问题。</li>\n<li><strong>组合：</strong> 通过结合多个特征（例如，<code>user_country</code> 和 <code>device_type</code>）来创建更细致的分段。请注意，这可能导致分段数量很多，其中一些可能只有很少的数据点。</li>\n</ul>\n<p>首先从对应重要业务部门或已知数据变化来源的分段开始。持续监控这些分段，并根据发现改进您的分段策略。</p>\n<h3>监控系统中的实施</h3>\n<p>实施分段性能监控需要将分段逻辑集成到您的 MLOps 流水线中：</p>\n<ol>\n<li><strong>日志记录：</strong> 确保您的预测日志不仅捕获模型输入、输出和真实标签（如果可用），还捕获将每个预测分配到其相应分段所需的原始特征值或元数据。</li>\n<li><strong>处理：</strong> 您的监控系统需要处理这些日志，按分段对预测进行分组，并在特定时间窗口（例如每小时、每天）内为每个组计算相关性能指标（例如精确度、召回率、F1 分数、平均绝对误差、均方根误差）。</li>\n<li><strong>存储：</strong> 时序数据库非常适合存储分段指标。每个指标（例如 <code>precision</code>）都可以与指示分段的标签或标记 (token)（例如 <code>country=US</code>、<code>device=iOS</code>）一起存储。</li>\n<li><strong>可视化与告警：</strong> 使用仪表盘来可视化每个分段的性能趋势。设置告警，以便在特定、重要分段的性能下降到预定义阈值以下时触发通知，即使整体性能保持稳定。</li>\n</ol>\n<p>现代机器学习 (machine learning)监控平台通常提供内置功能，用于自动定义切片和追踪指标，从而简化此过程。</p>\n<h3>分段性能可视化</h3>\n<p>可视化对于理解分段性能必不可少。柱状图可以有效比较单一时间点或一段时间内不同分段的指标。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-10rima0\" \n              data-plot-definition='{\"layout\": {\"title\": \"欺诈模型 F1 分数（按交易国家）\", \"xaxis\": {\"title\": \"国家\"}, \"yaxis\": {\"title\": \"F1 分数\", \"range\": [0, 1]}, \"margin\": {\"l\": 40, \"r\": 20, \"t\": 50, \"b\": 40}, \"width\": 600, \"height\": 400}, \"data\": [{\"type\": \"bar\", \"x\": [\"USA\", \"Canada\", \"Mexico\", \"UK\", \"Germany\"], \"y\": [0.85, 0.82, 0.65, 0.88, 0.79], \"marker\": {\"color\": [\"#228be6\", \"#228be6\", \"#fa5252\", \"#228be6\", \"#1c7ed6\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-10rima0\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>欺诈检测模型的 F1 分数表现，按国家分段。墨西哥的分数显著更低，表明存在需要调查的潜在问题。</p>\n</blockquote>\n<p>显示不同分段指标如何演变的时序图也对于发现逐渐下降或随时间变化的影响很有参考价值。</p>\n<h3>解释与行动</h3>\n<p>识别表现不佳的分段是第一步。接下来是诊断和采取行动：</p>\n<ul>\n<li><strong>调查数据：</strong> 检查表现不佳分段特有的输入数据分布、质量和特征值。是否存在仅影响此切片的数据漂移或数据质量问题增加的情况？</li>\n<li><strong>分析错误：</strong> 查看分段内的特定预测错误。是否存在共同模式？模型可解释性技术（稍后会介绍）可以帮助理解模型为何在这些特定实例上出现问题。</li>\n<li><strong>审查模型训练：</strong> 该分段在训练数据中是否得到充分代表？模型架构在捕获该分段特有模式方面是否存在局限性？</li>\n<li><strong>采取纠正措施：</strong> 根据诊断，行动可能包括：\n<ul>\n<li>为表现不佳的分段收集更具代表性的数据。</li>\n<li>应用有针对性的数据清洗或预处理步骤。</li>\n<li>调整特征工程。</li>\n<li>再训练模型，可能结合上采样或整合分段特定特征等技术。</li>\n<li>如果性能差异大且持续存在，考虑为有问题分段定制单独的模型。</li>\n</ul>\n</li>\n</ul>\n<h3>重要注意事项</h3>\n<ul>\n<li><strong>统计显著性：</strong> 在数据点非常少的分段上计算的指标可能存在噪声且不可靠。在解释每个分段的性能时，务必考虑其样本量（支持度）。必要时应用统计检验或置信区间。</li>\n<li><strong>可扩展性：</strong> 监控大量分段，特别是组合分段，可能变得计算成本高昂。根据业务影响和潜在风险确定分段的优先级。在您的监控流水线中采用高效的聚合技术。</li>\n<li><strong>自动化：</strong> 手动定义和追踪分段既繁琐又容易出错。在您的 MLOps 工具中，尽可能自动化分段定义以及指标的计算和可视化。</li>\n</ul>\n<p>分段性能监控将您的监控从简单的健康检查转变为强大的诊断工具。它使您能够主动识别潜在问题，理解模型在不同数据子群体中的表现，并采取有针对性的行动，以提高在生产环境中的公平性、可靠性和整体效果。</p>",
+  "slug": "segmented-performance-monitoring",
+  "updates": [],
+  "references": [
+    {
+      "id": 3079,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "本书探讨了部署和维护机器学习模型的实践，包括生产监控和诊断的详细方面。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:12.219411Z",
+      "updated_at": "2025-09-09T09:21:25.274798Z"
+    },
+    {
+      "id": 3080,
+      "title": "Fairness and Machine Learning: Practical Techniques for Building Trustworthy Models",
+      "author": "Solon Barocas, Moritz Hardt, Arvind Narayanan",
+      "year": "2023",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.fairmlbook.org/",
+      "doi": "",
+      "note": "这本在线教材全面介绍了机器学习中的公平性，阐释了如何通过分段性能评估等方法识别和处理偏见。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:12.373311Z",
+      "updated_at": "2025-09-09T09:21:20.479174Z"
+    },
+    {
+      "id": 3082,
+      "title": "Model Cards for Model Reporting",
+      "author": "Margaret Mitchell, Simone Wu, Andrew Zaldivar, Parker Barnes, Lucy Vasserman, Ben Hutchinson, Elena Spitzer, Inioluwa Deborah Raji, Timnit Gebru",
+      "year": "2019",
+      "publisher": "Association for Computing Machinery",
+      "journal": "Proceedings of the Conference on Fairness, Accountability, and Transparency (FAT* '19)",
+      "volume": "",
+      "pages": "220-229",
+      "url": "https://doi.org/10.1145/3287560.3287596",
+      "doi": "10.1145/3287560.3287596",
+      "note": "本文介绍了模型卡片，这是一种结构化报告框架，包含在各种数据切片上评估模型性能，以确保透明度和问责制，尤其是在公平性方面。",
+      "order": 4,
+      "created_at": "2025-09-04T16:54:12.387591Z",
+      "updated_at": "2025-09-09T09:21:29.121803Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

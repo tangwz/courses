@@ -1,0 +1,61 @@
+{
+  "id": 5264,
+  "title": "构建复杂数据模型",
+  "meta_title": "构建复杂的 Pydantic 模型",
+  "meta_description": "构建嵌套的 Pydantic 模型以表示机器学习输入/输出的复杂 JSON 结构。",
+  "content": "<p>Pydantic 模型能够有效地管理各种数据结构，包括简单扁平的结构。然而，机器学习 (machine learning)的输入和输出通常具有更复杂、嵌套的结构。例如，您可能需要随输入特征一起发送配置参数 (parameter)，或者返回预测结果以及置信度分数和元数据。Pydantic 允许您通过在其他模型中嵌套模型来定义这些复杂结构。</p>\n<p>这种做法与 JSON 自然表示分层数据的方式完美契合，使得明确定义您的 API 期望接收和返回的数据变得简单。</p>\n<h3>定义嵌套模型</h3>\n<p>在 Pydantic 中创建嵌套模型非常直观。您只需将另一个 Pydantic 模型用作主模型中某个字段的类型标注。</p>\n<p>让我们考虑一个例子，我们的机器学习 (machine learning)模型不仅需要主要的输入数据，还需要一些配置设置。我们可以为配置和整体请求结构定义独立的模型。</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\nfrom typing import List, Optional\n\n# 定义配置设置的模型\nclass ModelConfig(BaseModel):\n    model_version: str = \"latest\"\n    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)\n    return_probabilities: bool = False\n\n# 定义主要输入数据模型\nclass InputFeatures(BaseModel):\n    sepal_length: float\n    sepal_width: float\n    petal_length: float\n    petal_width: float\n\n# 定义整体请求模型，嵌套 ModelConfig 和 InputFeatures\nclass PredictionRequest(BaseModel):\n    request_id: str\n    features: InputFeatures           # 嵌套 InputFeatures 模型\n    config: Optional[ModelConfig] = None # 嵌套 ModelConfig，使其成为可选\n</code></pre>\n<p>在此 <code>PredictionRequest</code> 模型中：</p>\n<ul>\n<li><code>features</code> 字段被明确类型化为 <code>InputFeatures</code>。Pydantic 期望此字段的数据符合 <code>InputFeatures</code> 模式。</li>\n<li><code>config</code> 字段类型为 <code>Optional[ModelConfig]</code>。这意味着它期望数据符合 <code>ModelConfig</code> 模式，但如果请求中未提供此字段（它将默认为 <code>None</code>），也是可以接受的。如果 <em>确实</em> 提供了，它必须是一个有效的 <code>ModelConfig</code> 结构。</li>\n</ul>\n<h3>在 FastAPI 中使用嵌套模型</h3>\n<p>FastAPI 集成了这些嵌套的 Pydantic 模型。当您在路径操作函数中将 <code>PredictionRequest</code> 用作请求体参数 (parameter)的类型提示时，FastAPI 在 Pydantic 的支持下，将自动执行以下操作：</p>\n<ol>\n<li><strong>解析：</strong> 读取传入的 JSON 请求体。</li>\n<li><strong>验证：</strong> 检查 JSON 结构是否与 <code>PredictionRequest</code> 匹配，包括（如果提供的）嵌套的 <code>InputFeatures</code> 和 <code>ModelConfig</code> 结构。它会验证数据类型（例如，宽度的 <code>float</code> 类型，<code>request_id</code> 的 <code>str</code> 类型）和约束条件（例如，<code>confidence_threshold</code> 在 0.0 到 1.0 之间）。</li>\n<li><strong>实例化：</strong> 创建一个 <code>PredictionRequest</code> 类的实例，并使用已验证的数据进行填充。</li>\n</ol>\n<p>以下是您在端点中使用 <code>PredictionRequest</code> 的方法：</p>\n<pre><code class=\"language-python\">from fastapi import FastAPI\n\n# 假设 PredictionRequest、InputFeatures、ModelConfig 已如上定义\n\napp = FastAPI()\n\n@app.post(\"/predict\")\nasync def create_prediction(request: PredictionRequest):\n    # 轻松访问嵌套数据\n    features_data = request.features\n    config_data = request.config if request.config else ModelConfig() # 如果未提供，则使用默认值\n\n    print(f\"Received request: {request.request_id}\")\n    print(f\"Features: {features_data.dict()}\")\n    print(f\"Config: Version={config_data.model_version}, Threshold={config_data.confidence_threshold}\")\n\n    # （模型推理逻辑在此处）\n    # ...\n\n    prediction = {\"class\": \"setosa\", \"probability\": 0.95} # 示例输出\n\n    return {\"request_id\": request.request_id, \"prediction\": prediction}\n</code></pre>\n<p>如果客户端发送了结构无效的请求，例如为 <code>sepal_length</code> 提供字符串或遗漏了像 <code>request_id</code> 这样的必填字段，FastAPI 将自动返回 <code>422 Unprocessable Entity</code> 错误响应，其中详细说明了验证问题，甚至无需运行您的端点代码。</p>\n<h3>用于响应数据的嵌套模型</h3>\n<p>正如您构建复杂的输入一样，您通常也需要构建复杂的输出。例如，返回的不仅是预测标签，还有关联的概率或边界框。您可以在路径操作装饰器中使用 <code>response_model</code> 参数 (parameter)来使用嵌套的 Pydantic 模型。</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel\nfrom typing import List, Dict\n\nclass PredictionResult(BaseModel):\n    predicted_class: str\n    probability: Optional[float] = None\n\nclass PredictionResponse(BaseModel):\n    request_id: str\n    results: List[PredictionResult] # 包含嵌套 PredictionResult 模型的列表\n    model_version_used: str\n\n# 假设 app 和 PredictionRequest 已如上定义\n\n@app.post(\"/predict_detailed\", response_model=PredictionResponse)\nasync def create_detailed_prediction(request: PredictionRequest):\n    # （模型推理逻辑）\n    # 假设模型预测多个结果或概率\n    model_output = [\n        {\"predicted_class\": \"setosa\", \"probability\": 0.98},\n        {\"predicted_class\": \"versicolor\", \"probability\": 0.02},\n    ]\n    config_data = request.config if request.config else ModelConfig()\n\n    # 构建符合 PredictionResponse 的响应\n    response_data = PredictionResponse(\n        request_id=request.request_id,\n        results=[PredictionResult(**item) for item in model_output],\n        model_version_used=config_data.model_version\n    )\n\n    return response_data\n</code></pre>\n<p>通过设置 <code>response_model=PredictionResponse</code>，FastAPI 确保：</p>\n<ol>\n<li><strong>验证：</strong> 您的函数返回的数据会根据 <code>PredictionResponse</code> 模式进行验证（包括嵌套的 <code>PredictionResult</code> 列表）。</li>\n<li><strong>序列化：</strong> 返回的 Pydantic 模型实例将自动序列化为 JSON。</li>\n<li><strong>过滤：</strong> 最终的 HTTP 响应中仅包含 <code>PredictionResponse</code> 中定义的字段，防止内部数据意外泄露。</li>\n<li><strong>文档：</strong> API 文档（例如 Swagger UI）会准确反映嵌套的响应结构。</li>\n</ol>\n<h3>图表：嵌套输入模型结构</h3>\n<p>以下图表说明了前面定义的 <code>PredictionRequest</code> 模型的构成。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1rerp3d\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  PredictionRequest [fillcolor=\"#a5d8ff\"];\n  InputFeatures [fillcolor=\"#b2f2bb\"];\n  ModelConfig [fillcolor=\"#ffd8a8\"];\n\n  PredictionRequest -> InputFeatures [label=\"  features\"];\n  PredictionRequest -> ModelConfig [label=\"  config (可选)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1rerp3d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>PredictionRequest</code> 模型包含一个 <code>InputFeatures</code> 实例，并可选地包含一个 <code>ModelConfig</code> 实例。</p>\n</blockquote>\n<p>使用嵌套来构建数据模型是一种有效方式，可以处理许多机器学习 (machine learning)任务中固有的复杂性，同时确保 API 定义的数据完整性和清晰度。这种使用 Pydantic 的声明式方法显著简化了 FastAPI 应用程序中的验证逻辑。</p>",
+  "slug": "structuring-complex-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 14520,
+      "title": "FastAPI Documentation",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "涵盖FastAPI与Pydantic的集成，用于自动数据验证、序列化和文档生成，特别是针对嵌套请求和响应模型。",
+      "order": 1,
+      "created_at": "2025-09-05T08:53:53.363140Z",
+      "updated_at": "2025-09-09T14:18:57.799542Z"
+    },
+    {
+      "id": 14521,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/",
+      "doi": "",
+      "note": "提供定义Pydantic模型的全面指导，包括嵌套、字段验证和数据结构化，这是FastAPI应用的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T08:53:53.371656Z",
+      "updated_at": "2025-09-09T14:19:06.183356Z"
+    },
+    {
+      "id": 14522,
+      "title": "Building Data Science Applications with FastAPI",
+      "author": "François Voron",
+      "year": "2021",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://portal.igpublish.com/iglibrary/search/PACKT0006042.html",
+      "doi": "",
+      "note": "提供使用FastAPI和Pydantic进行数据科学和机器学习应用的实践示例和最佳实践，包括复杂数据结构化。",
+      "order": 3,
+      "created_at": "2025-09-05T08:53:53.374506Z",
+      "updated_at": "2025-09-09T14:19:03.548865Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

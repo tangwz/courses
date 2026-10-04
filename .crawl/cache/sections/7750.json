@@ -1,0 +1,61 @@
+{
+  "id": 7750,
+  "title": "配置LLM提供方",
+  "meta_title": "配置LLM提供方",
+  "meta_description": "学习如何使用配置模块配置不同的LLM提供方，以实现统一的生成接口。",
+  "content": "<p>与不同的大型语言模型（LLM）提供方协作可能比较复杂。从OpenAI到Anthropic再到Google，每项服务都有自己的API结构、认证方式和模型命名规则。统一的配置系统通过创建一致的接口来解决此问题，它允许你在一个地方设置多个提供方和模型的参数 (parameter)。这让你的应用更灵活，也更容易维护，因为切换模型或增加新模型只需简单的配置更改，而非对代码进行大范围修改。</p>\n<p>该工具包的配置通过三个主要组件进行管理：<code>ConfigManager</code>、<code>ProviderConfig</code>和<code>ModelConfig</code>。</p>\n<ul>\n<li><strong>ProviderConfig</strong>：定义特定LLM提供方的设置，例如其API端点和认证方式。</li>\n<li><strong>ModelConfig</strong>：定义特定模型的设置，如<code>gpt-4o-mini</code>或<code>claude-3-5-haiku</code>，包括默认生成参数及其所属的提供方。</li>\n<li><strong>ConfigManager</strong>：作为中心注册处，存放所有提供方和模型配置。</li>\n</ul>\n<h3>设置提供方和模型</h3>\n<p>我们先创建一个配置管理器。建议启用<code>auto_load_env=True</code>，这样管理器就能自动从你的系统环境变量中找到API密钥。</p>\n<pre><code class=\"language-python\">from kerb.config import ConfigManager, ModelConfig, ProviderConfig\nfrom kerb.config.enums import ProviderType\n\n# 创建一个配置管理器\nconfig = ConfigManager(\n    app_name=\"my_llm_app\",\n    auto_load_env=True\n)\n</code></pre>\n<p>接下来，我们将为要使用的提供方定义配置。这里最主要的设置是<code>api_key_env_var</code>，它指定了包含API密钥的环境变量名称。这是一种安全推荐做法，避免你将敏感凭据直接写入源代码。</p>\n<pre><code class=\"language-python\"># 配置OpenAI提供方\nopenai_provider = ProviderConfig(\n    provider=ProviderType.OPENAI,\n    api_key_env_var=\"OPENAI_API_KEY\"\n)\n\n# 配置Anthropic提供方\nanthropic_provider = ProviderConfig(\n    provider=ProviderType.ANTHROPIC,\n    api_key_env_var=\"ANTHROPIC_API_KEY\"\n)\n\n# 将提供方加入管理器\nconfig.add_provider(openai_provider)\nconfig.add_provider(anthropic_provider)\n</code></pre>\n<p>定义好提供方后，你现在可以配置具体的模型了。每个<code>ModelConfig</code>都关联一个<code>ProviderConfig</code>，并且可以保存默认参数 (parameter)，例如<code>max_tokens</code>或<code>temperature</code>，这些参数将用于该模型的生成调用。</p>\n<pre><code class=\"language-python\"># 配置一个OpenAI模型\ngpt4o_mini_config = ModelConfig(\n    name=\"gpt-4o-mini\",\n    provider=ProviderType.OPENAI,\n    max_tokens=4096,\n    temperature=0.5\n)\n\n# 配置一个Anthropic模型\nclaude_haiku_config = ModelConfig(\n    name=\"claude-3-5-haiku-20241022\",\n    provider=ProviderType.ANTHROPIC,\n    max_tokens=1024,\n    temperature=0.7\n)\n\n# 将模型加入管理器\nconfig.add_model(gpt4o_mini_config)\nconfig.add_model(claude_haiku_config)\n</code></pre>\n<p>下图显示了这些组件如何配合工作。<code>ConfigManager</code>包含所有内容，而每个<code>ModelConfig</code>都指向一个处理实际API通信的<code>ProviderConfig</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1w95mw1\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_manager {\n        label=\"配置管理器\";\n        style=\"rounded,filled\";\n        fillcolor=\"#f8f9fa\";\n        config_manager [label=\"config = ConfigManager()\", shape=ellipse, fillcolor=\"#bac8ff\"];\n    }\n\n    subgraph cluster_providers {\n        label=\"提供方配置\";\n        style=\"rounded,filled\";\n        fillcolor=\"#f8f9fa\";\n        openai_provider [label=\"ProviderConfig(OpenAI)\\napi_key_env_var=&#39;OPENAI_API_KEY&#39;\", fillcolor=\"#a5d8ff\"];\n        anthropic_provider [label=\"ProviderConfig(Anthropic)\\napi_key_env_var=&#39;ANTHROPIC_API_KEY&#39;\", fillcolor=\"#d0bfff\"];\n    }\n\n    subgraph cluster_models {\n        label=\"模型配置\";\n        style=\"rounded,filled\";\n        fillcolor=\"#f8f9fa\";\n        gpt_model [label=\"ModelConfig(&#39;gpt-4o-mini&#39;)\\nprovider=OpenAI\\ntemperature=0.5\", fillcolor=\"#a5d8ff\"];\n        claude_model [label=\"ModelConfig(&#39;claude-3.5-haiku&#39;)\\nprovider=Anthropic\\nmax_tokens=1024\", fillcolor=\"#d0bfff\"];\n    }\n\n    config_manager -> openai_provider [label=\"添加提供方\"];\n    config_manager -> anthropic_provider [label=\"添加提供方\"];\n    config_manager -> gpt_model [label=\"添加模型\"];\n    config_manager -> claude_model [label=\"添加模型\"];\n\n    gpt_model -> openai_provider [style=dashed, label=\"使用\"];\n    claude_model -> anthropic_provider [style=dashed, label=\"使用\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1w95mw1\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>ConfigManager</code>作为<code>ProviderConfig</code>和<code>ModelConfig</code>对象的中心注册处，建立了一个结构化且易于管理的配置系统。</p>\n</blockquote>\n<h3>使用环境变量管理API密钥</h3>\n<p>直接在代码中存储API密钥会带来很大的安全风险。推荐的方法是使用环境变量，它使你的凭据与应用逻辑分离。该工具包旨在配合此模式使用。</p>\n<p>为使上述代码生效，你需要在运行应用前，在终端中设置相应的环境变量：</p>\n<pre><code class=\"language-bash\">export OPENAI_API_KEY=\"sk-...\"\nexport ANTHROPIC_API_KEY=\"sk-ant-...\"\n</code></pre>\n<p>当你进行API调用时，<code>ConfigManager</code>会自动找到正确的<code>ProviderConfig</code>，从指定的环境变量中读取API密钥，并认证请求。这种设置不仅提高安全性，还方便管理开发、测试和生产环境的不同密钥。</p>\n<h3>获取和使用配置</h3>\n<p>设置完成后，你可以轻松获取已定义的任何模型的配置。</p>\n<pre><code class=\"language-python\"># 获取特定模型的配置\nretrieved_model = config.get_model(\"gpt-4o-mini\")\n\nif retrieved_model:\n    print(f\"模型: {retrieved_model.name}\")\n    print(f\"提供方: {retrieved_model.provider.value}\")\n    print(f\"默认温度: {retrieved_model.temperature}\")\n</code></pre>\n<p>这个配置对象是工具包的<code>generate</code>函数在幕后使用的，它将你的请求以正确的设置导向正确的LLM提供方。你现在拥有了进行生成调用的灵活方案，我们将在下一节进行介绍。</p>",
+  "slug": "configuring-llm-providers",
+  "updates": [],
+  "references": [
+    {
+      "id": 21659,
+      "title": "OpenAI API Reference",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference",
+      "doi": "",
+      "note": "提供OpenAI模型的官方文档，详细说明API结构、认证方法和可用模型名称。",
+      "order": 1,
+      "created_at": "2025-10-20T07:17:34.523109Z",
+      "updated_at": "2025-10-20T07:41:06.346599Z"
+    },
+    {
+      "id": 21660,
+      "title": "Anthropic API Reference",
+      "author": "Anthropic",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.anthropic.com/en/api",
+      "doi": "",
+      "note": "提供Anthropic Claude模型的官方文档，包括API使用和模型参数。",
+      "order": 2,
+      "created_at": "2025-10-20T07:17:34.531002Z",
+      "updated_at": "2025-10-20T07:41:09.499113Z"
+    },
+    {
+      "id": 21661,
+      "title": "The Twelve-Factor App: III. Config",
+      "author": "Adam Wiggins",
+      "year": "2011",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://12factor.net/config",
+      "doi": "",
+      "note": "阐述将应用程序配置（如API凭据）存储在环境变量中的架构原则。",
+      "order": 3,
+      "created_at": "2025-10-20T07:17:34.534448Z",
+      "updated_at": "2025-10-20T07:41:18.367778Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

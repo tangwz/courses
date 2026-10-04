@@ -1,0 +1,61 @@
+{
+  "id": 7836,
+  "title": "实践：使用NumPy处理数据",
+  "meta_title": "使用NumPy实践机器学习数据处理",
+  "meta_description": "实践加载一个简单数据集并将其表示为NumPy矩阵以进行分析。",
+  "content": "<p>应用理论知识处理实际数据集是机器学习 (machine learning)的基础。准备用于算法的数据集涉及理解其如何加载和组织。这个动手练习涵盖了机器学习工作流中一个常见的初始步骤：将原始数据转换为NumPy矩阵。</p>\n<h3>一个简单数据集</h3>\n<p>假设我们有一个用于预测房价的小数据集。数据包含房屋面积、卧室数量和最终售价。在典型的Python应用中，这些数据可能最初是列表的列表形式。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 每个内部列表代表一栋房屋：[房屋面积, 卧室数量, 价格]\nraw_data = [\n    [1500, 3, 320000],\n    [2100, 4, 450000],\n    [1200, 2, 250000],\n    [1800, 3, 380000]\n]\n</code></pre>\n<p>尽管这种格式易于阅读，但它并未针对机器学习 (machine learning)模型所需的数学运算进行优化。为此，我们需要将其转换为NumPy数组，这是Python中数值数据的标准格式。</p>\n<h3>转换为NumPy矩阵</h3>\n<p>使用<code>np.array()</code>函数，从列表的列表创建NumPy矩阵（或更准确地说，是一个二维<code>ndarray</code>）非常直接。</p>\n<pre><code class=\"language-python\"># 将列表的列表转换为二维NumPy数组\nhouse_data_matrix = np.array(raw_data)\n\nprint(house_data_matrix)\n</code></pre>\n<p>这将产生以下输出：</p>\n<pre><code>[[  1500      3 320000]\n [  2100      4 450000]\n [  1200      2 250000]\n [  1800      3 380000]]\n</code></pre>\n<p>现在我们的数据已整理成结构化网格。每一行是一个观测值（一栋房屋），每一列代表一个特定属性。这就是几乎所有机器学习 (machine learning)算法都预期的那种数据矩阵格式。</p>\n<h3>分离特征与目标</h3>\n<p>在监督学习 (supervised learning)中，我们区分<em>特征</em>（用于做出预测的输入）和<em>目标</em>（我们希望预测的值）。</p>\n<ul>\n<li><strong>特征矩阵 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span>):</strong> 一个矩阵，其中行是观测值，列是特征。在我们的例子中，特征是“房屋面积”和“卧室数量”。</li>\n<li><strong>目标向量 (vector) (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi></mrow><annotation encoding=\"application/x-tex\">y</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span></span></span></span>):</strong> 一个向量，包含我们希望为每个观测值预测的值。这里，它是“价格”。</li>\n</ul>\n<p>我们可以使用NumPy强大的切片功能将<code>house_data_matrix</code>分离为<code>X</code>和<code>y</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-gluaul\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=plaintext, fontname=\"Helvetica\"]; subgraph cluster_0 { label = \"原始数据矩阵\"; style=filled; color=\"#e9ecef\"; raw_data [label=< <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD BGCOLOR=\"#ced4da\">房屋面积</TD><TD BGCOLOR=\"#ced4da\">卧室数量</TD><TD BGCOLOR=\"#ced4da\">价格</TD></TR> <TR><TD>1500</TD><TD>3</TD><TD>320000</TD></TR> <TR><TD>2100</TD><TD>4</TD><TD>450000</TD></TR> <TR><TD>1200</TD><TD>2</TD><TD>250000</TD></TR> <TR><TD>1800</TD><TD>3</TD><TD>380000</TD></TR> </TABLE> >]; } subgraph cluster_1 { label = \"特征矩阵 (X)\"; style=filled; color=\"#a5d8ff\"; X_matrix [label=< <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>1500</TD><TD>3</TD></TR> <TR><TD>2100</TD><TD>4</TD></TR> <TR><TD>1200</TD><TD>2</TD></TR> <TR><TD>1800</TD><TD>3</TD></TR> </TABLE> >]; } subgraph cluster_2 { label = \"目标向量 (y)\"; style=filled; color=\"#b2f2bb\"; y_vector [label=< <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\"> <TR><TD>320000</TD></TR> <TR><TD>450000</TD></TR> <TR><TD>250000</TD></TR> <TR><TD>380000</TD></TR> </TABLE> >]; } raw_data -> X_matrix [label=\"切片列 0-1\"]; raw_data -> y_vector [label=\"切片列 2\"];}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-gluaul\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>原始数据矩阵被分为特征矩阵<code>X</code>和目标向量<code>y</code>。</p>\n</blockquote>\n<p>以下是如何在代码中执行此划分：</p>\n<pre><code class=\"language-python\"># 为特征选择所有行 (:) 和直到索引 2（不包含）的列\nX = house_data_matrix[:, :2]\n\n# 为目标选择所有行 (:) 和仅最后一个列（索引 2）\ny = house_data_matrix[:, 2]\n\nprint(\"特征矩阵 X:\")\nprint(X)\nprint(\"\\n目标向量 y:\")\nprint(y)\n</code></pre>\n<p>输出确认了划分：</p>\n<pre><code>Feature Matrix X:\n[[1500    3]\n [2100    4]\n [1200    2]\n [1800    3]]\n\nTarget Vector y:\n[320000 450000 250000 380000]\n</code></pre>\n<h3>查看维度</h3>\n<p>一种常规做法是检查矩阵和向量 (vector)的<code>shape</code>。这有助于确认你的数据结构正确，并有助于预防后续步骤中的错误。</p>\n<pre><code class=\"language-python\"># 获取特征矩阵和目标向量的维度\nprint(\"X 的形状:\", X.shape)\nprint(\"y 的形状:\", y.shape)\n</code></pre>\n<p>输出将是：</p>\n<pre><code>Shape of X: (4, 2)\nShape of y: (4,)\n</code></pre>\n<p>这告诉我们：</p>\n<ul>\n<li><code>X</code> 有 4 行（观测值）和 2 列（特征）。</li>\n<li><code>y</code> 是一个长度为 4 的向量，对应于 4 个观测值。</li>\n</ul>\n<p>你现在已成功将原始数据转换为机器学习 (machine learning)所需的精确结构。特征矩阵<code>X</code>和目标向量<code>y</code>，分别对应于我们在线性回归中讨论的方程 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mi>x</mi><mo>=</mo><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">Ax = b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mord mathnormal\">x</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span> 中的矩阵<code>A</code>和向量<code>b</code>。你在前面章节中学到的所有矩阵和向量运算，现在可以直接应用于<code>X</code>和<code>y</code>来训练模型、识别模式或降低维度。</p>",
+  "slug": "practice-data-manipulation-numpy",
+  "updates": [],
+  "references": [
+    {
+      "id": 21855,
+      "title": "NumPy User Guide: Array creation routines",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.creation.html",
+      "doi": "",
+      "note": "官方文档，说明如何从各种数据结构创建 NumPy 数组，直接适用于将原始数据转换为矩阵。",
+      "order": 1,
+      "created_at": "2025-11-17T12:49:37.499286Z",
+      "updated_at": "2025-11-18T00:49:31.597239Z"
+    },
+    {
+      "id": 21856,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实用指南，介绍如何使用 Python 库为机器学习模型准备和组织数据（特征矩阵 X 和目标向量 y）。",
+      "order": 2,
+      "created_at": "2025-11-17T12:49:37.509347Z",
+      "updated_at": "2025-11-18T00:49:35.165974Z"
+    },
+    {
+      "id": 21857,
+      "title": "Mathematics for Machine Learning",
+      "author": "Marc Peter Deisenroth, A. Aldo Faisal, and Cheng Soon Ong",
+      "year": "2020",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mml-book.github.io/",
+      "doi": "10.1017/9781108679901",
+      "note": "提供机器学习的数学基础，包括线性代数概念如何应用于数据表示（矩阵和 X, y 向量）。",
+      "order": 3,
+      "created_at": "2025-11-17T12:49:37.513360Z",
+      "updated_at": "2025-11-18T00:49:35.592007Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2612,
+  "title": "文本数据预处理概述",
+  "meta_title": "文本数据预处理步骤",
+  "meta_description": "概述为自然语言处理任务清洗和准备文本数据的常见步骤。",
+  "content": "<p>循环神经网络 (neural network) (RNN)（与大多数机器学习 (machine learning)模型一样）需要数值输入。原始文本由字符、单词和标点符号组成，与这些网络所需的结构化张量相去甚远。因此，处理文本的一个重要部分是将其转换为合适的数值格式。此处概述了为LSTM和GRU等序列模型准备文本数据常用的流程。</p>\n<p>总目标是将符号序列（单词、字符）转换为数值序列，通常表示为多维数组或张量。可以将其视为将人类语言翻译成机器可读的格式，同时保持原始文本的序列特性。此过程通常包含几个阶段：</p>\n<p>\"1. <strong>清洗（可选但建议）：</strong> 文本常包含噪声，例如HTML标签、特殊字符或无关标点。初步的清洗步骤可以删除或标准化这些元素，简化后续处理。\"\n2. <strong>分词 (tokenization)：</strong> 这是将原始文本分解成称为“词元 (token)”的更小单元的过程。这些词元通常是单词，但它们也可以是子词 (subword)或单个字符，具体取决于任务和所需的粒度。例如，句子“RNNs process sequences.”可能会被分词为 <code>[\"RNNs\", \"process\", \"sequences\", \".\"]</code>。\n3. <strong>构建词表：</strong> 分词后，我们创建一个词表，它是训练数据中所有词元的唯一集合。每个唯一词元都被分配一个特定的整数索引。这会创建一个映射，例如 <code>{\"RNNs\": 1, \"process\": 2, \"sequences\": 3, \".\": 4, ...}</code>。通常会添加特殊词元，例如用于未知词的 <code>&#x3C;UNK></code> 或用于填充的 <code>&#x3C;PAD></code>。\n4. <strong>整数编码：</strong> 使用词表映射，每个词元序列都被转换为相应的整数序列。我们的示例句子变为 <code>[1, 2, 3, 4]</code>。这是从文本中获得的基本数值表示。\n5. <strong>处理变长序列（填充/截断）：</strong> 循环神经网络通常以批次形式训练以提高效率。然而，一个批次中的序列通常需要具有相同的长度。由于实际文本的长度各异，我们应用填充（添加特殊 <code>&#x3C;PAD></code> 词元，通常用0表示）或截断（删除词元）来标准化批次内所有整数序列的长度。掩码是一种与填充结合使用的技术，用于向模型指示序列的哪些部分是实际数据，哪些只是填充，从而确保填充不会不适当地影响模型的学习过程。</p>\n<p>这些步骤的输出通常是整数序列的批次，准备好进入下一阶段。虽然这些整数序列有时可以直接输入到循环神经网络中，但更常见的是，尤其是在自然语言处理（NLP）中，首先将它们通过<em>嵌入 (embedding)层</em>。该层通常作为主模型的一部分进行训练，将每个整数索引转换为一个密集的低维向量 (vector)（即一个嵌入）。这些向量能够捕捉词元之间的语义相似性（例如，'king' 和 'queen' 可能具有相似的向量），并提供比原始整数或稀疏独热编码更丰富、更有效的表示。本章后面我们将更详细地讨论嵌入层。</p>\n<p>下图展示了这种通用的文本预处理流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-9cwfs5\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  raw_text [label=\"原始文本\\n(例如, &#39;RNNs process sequences.&#39;)\", fillcolor=\"#ffc9c9\"];\n  tokenizer [label=\"分词\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  tokens [label=\"词元\\n([&#39;RNNs&#39;, &#39;process&#39;, &#39;sequences&#39;, &#39;.&#39;])\"];\n  vocab [label=\"词表构建\\n& 整数编码\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  int_seq [label=\"整数序列\\n([1, 2, 3, 4])\"];\n  padding [label=\"填充 / 截断\\n& 掩码\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  tensor [label=\"填充后的整数张量\\n(例如, [1, 2, 3, 4, 0, 0])\\n形状: (批次, 时间步)\", fillcolor=\"#b2f2bb\"];\n  embedding [label=\"嵌入层\\n(可选, 章内细述)\", shape=ellipse, fillcolor=\"#bac8ff\", style=\"filled,dashed\"];\n  model_input [label=\"模型输入张量\\n(密集向量)\\n形状: (批次, 时间步, 特征)\", fillcolor=\"#b2f2bb\", style=\"filled,dashed\"];\n\n  raw_text -> tokenizer;\n  tokenizer -> tokens;\n  tokens -> vocab;\n  vocab -> int_seq;\n  int_seq -> padding;\n  padding -> tensor;\n  tensor -> embedding [style=dashed];\n  embedding -> model_input [style=dashed];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-9cwfs5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个将原始文本转换为适合循环神经网络输入的数值张量的典型流程。图中虚线所示的嵌入层步骤，通常作为模型本身的一部分而非独立的预处理阶段。</p>\n</blockquote>\n<p>本章后续部分将详细阐述每个重要的步骤，提供使用常用库实现它们的实践指导和代码示例。掌握这些技术对于将循环神经网络有效地应用于任何基于文本的任务来说是不可或缺的。</p>",
+  "slug": "text-data-preprocessing-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 2535,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本综合性教科书，涵盖自然语言处理的基础概念，包括分词、文本规范化以及多种词表示形式。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:07.882564Z",
+      "updated_at": "2025-09-08T06:31:11.811004Z"
+    },
+    {
+      "id": 2541,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本关于深度学习的基础教科书，为神经网络、循环神经网络等序列模型以及这些模型所需数值数据表示的普遍必要性提供了背景。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:08.435947Z",
+      "updated_at": "2025-09-08T06:31:07.967437Z"
+    },
+    {
+      "id": 2549,
+      "title": "Natural Language Processing with Transformers: Building Innovative Applications with NLP",
+      "author": "Lewis Tunstall, Leandro von Werra, and Thomas Wolf",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/natural-language-processing/9781098103231/",
+      "doi": "",
+      "note": "一本关于使用深度学习进行现代自然语言处理的实用指南，详细介绍了当前的文本预处理技术、分词策略（包括子词）以及为序列模型创建模型输入张量。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:08.507566Z",
+      "updated_at": "2025-09-08T06:31:20.184237Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

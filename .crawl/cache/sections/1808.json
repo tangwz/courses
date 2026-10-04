@@ -1,0 +1,61 @@
+{
+  "id": 1808,
+  "title": "删除列和行",
+  "meta_title": "删除行/列 Pandas (.drop)",
+  "meta_description": "使用 .drop() 方法从 DataFrame 中移除特定行或列。",
+  "content": "<p>移除不必要或有问题的数据是数据准备中一个常见步骤。您可能需要从DataFrame中删除整行（观测值）或整列（特征）。例如：</p>\n<ul>\n<li>一列可能包含另一列中已有的冗余信息。</li>\n<li>一列可能包含过多的缺失值，无法可靠地填充。</li>\n<li>特定行可能代表您希望从分析中排除的异常值或错误。</li>\n<li>行或列可能与您尝试回答的具体问题不相关。</li>\n</ul>\n<p>Pandas提供了多功能的<code>drop()</code>方法来处理行和列的删除。</p>\n<h3>使用索引标签删除行</h3>\n<p>要删除一行或多行，您需要将要删除的行的索引标签提供给<code>drop()</code>方法。通常，您还会使用<code>index</code>参数 (parameter)指定要操作的是行。</p>\n<p>我们从一个示例DataFrame开始：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'StudentID': ['S101', 'S102', 'S103', 'S104', 'S105', 'S106'],\n        'Math': [85, 92, 78, 88, 95, np.nan],\n        'Science': [90, 88, 94, 85, 79, np.nan],\n        'History': [76, 81, 85, 70, 88, 60],\n        'Notes': ['Good', 'Excellent', np.nan, 'Needs Improvement', 'Good', 'Incomplete']}\ndf = pd.DataFrame(data)\ndf.set_index('StudentID', inplace=True) # 将 StudentID 设置为索引\n\nprint(\"原始 DataFrame：\")\nprint(df)\n</code></pre>\n<p>这会生成：</p>\n<pre><code>Original DataFrame:\n           Math  Science  History              Notes\nStudentID\nS101       85.0     90.0       76               Good\nS102       92.0     88.0       81          Excellent\nS103       78.0     94.0       85                NaN\nS104       88.0     85.0       70  Needs Improvement\nS105       95.0     79.0       88               Good\nS106        NaN      NaN       60         Incomplete\n</code></pre>\n<p>假设我们想删除学生<code>S106</code>，因为他们的数据不完整。我们可以使用<code>drop()</code>方法来完成此操作：</p>\n<pre><code class=\"language-python\"># 按索引标签删除单行\ndf_dropped_row = df.drop(index='S106')\n\nprint(\"\\n删除行 'S106' 后的 DataFrame：\")\nprint(df_dropped_row)\n</code></pre>\n<p>Output:</p>\n<pre><code>DataFrame after dropping row 'S106':\n           Math  Science  History              Notes\nStudentID\nS101       85.0     90.0       76               Good\nS102       92.0     88.0       81          Excellent\nS103       78.0     94.0       85                NaN\nS104       88.0     85.0       70  Needs Improvement\nS105       95.0     79.0       88               Good\n</code></pre>\n<p>请注意，<code>df.drop()</code>默认返回一个<em>新</em>的DataFrame，其中指定行已删除。原始DataFrame <code>df</code>保持不变。</p>\n<p>要删除多行，请传入一个索引标签列表：</p>\n<pre><code class=\"language-python\"># 按索引标签删除多行\ndf_dropped_rows = df.drop(index=['S103', 'S106'])\n\nprint(\"\\n删除行 'S103' 和 'S106' 后的 DataFrame：\")\nprint(df_dropped_rows)\n</code></pre>\n<p>Output:</p>\n<pre><code>DataFrame after dropping rows 'S103' and 'S106':\n           Math  Science  History              Notes\nStudentID\nS101       85.0     90.0       76               Good\nS102       92.0     88.0       81          Excellent\nS104       88.0     85.0       70  Needs Improvement\nS105       95.0     79.0       88               Good\n</code></pre>\n<h3>删除列</h3>\n<p>删除列非常相似，但您提供的是列名而不是索引标签。指定要操作列的优选方式是使用<code>columns</code>参数 (parameter)。</p>\n<p>假设我们的分析不需要<code>Notes</code>列。我们可以将其删除：</p>\n<pre><code class=\"language-python\"># 按名称删除单列\ndf_dropped_col = df.drop(columns='Notes')\n\nprint(\"\\n删除 'Notes' 列后的 DataFrame：\")\nprint(df_dropped_col)\n</code></pre>\n<p>Output:</p>\n<pre><code>DataFrame after dropping the 'Notes' column:\n           Math  Science  History\nStudentID\nS101       85.0     90.0       76\nS102       92.0     88.0       81\nS103       78.0     94.0       85\nS104       88.0     85.0       70\nS105       95.0     79.0       88\nS106        NaN      NaN       60\n</code></pre>\n<p>同样，此操作返回一个新的DataFrame。原始的<code>df</code>仍然包含<code>Notes</code>列。</p>\n<p>要删除多列，请传入一个列名列表：</p>\n<pre><code class=\"language-python\"># 按名称删除多列\ndf_dropped_cols = df.drop(columns=['Math', 'Notes'])\n\nprint(\"\\n删除 'Math' 和 'Notes' 列后的 DataFrame：\")\nprint(df_dropped_cols)\n</code></pre>\n<p>Output:</p>\n<pre><code>DataFrame after dropping 'Math' and 'Notes' columns:\n           Science  History\nStudentID\nS101          90.0       76\nS102          88.0       81\nS103          94.0       85\nS104          85.0       70\nS105          79.0       88\nS106           NaN       60\n</code></pre>\n<p>过去，您可能会看到使用<code>axis=1</code>来表示删除列的代码（例如，<code>df.drop('Notes', axis=1)</code>）。虽然这种方式可行，但使用<code>columns</code>参数（例如，<code>df.drop(columns='Notes')</code>）通常被认为更具可读性和明确性。同样，<code>axis=0</code>对应于删除行（默认），但使用<code>index</code>参数更清晰。</p>\n<h3>原地修改 DataFrame</h3>\n<p>如果您确定要直接修改原始DataFrame而不创建新DataFrame，可以使用<code>inplace=True</code>参数 (parameter)。</p>\n<pre><code class=\"language-python\"># 创建一个副本以进行原地修改\ndf_copy = df.copy()\nprint(\"\\n原始 df_copy (前 3 行)：\")\nprint(df_copy.head(3))\n\n# 原地删除 'History' 列\nreturn_value = df_copy.drop(columns='History', inplace=True)\n\nprint(\"\\n原地删除 'History' 后 df_copy (前 3 行)：\")\nprint(df_copy.head(3))\nprint(f\"\\n当 inplace=True 时返回值为：{return_value}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Original df_copy (first 3 rows):\n           Math  Science  History      Notes\nStudentID\nS101       85.0     90.0       76       Good\nS102       92.0     88.0       81  Excellent\nS103       78.0     94.0       85        NaN\n\ndf_copy after dropping 'History' inplace (first 3 rows):\n           Math  Science      Notes\nStudentID\nS101       85.0     90.0       Good\nS102       92.0     88.0  Excellent\nS103       78.0     94.0        NaN\n\nReturn value when inplace=True: None\n</code></pre>\n<p>请注意，当使用<code>inplace=True</code>时，<code>drop</code>方法会直接修改DataFrame并返回<code>None</code>。使用<code>inplace=True</code>时请务必小心，因为它会永久改变您的数据。通常情况下，尤其是在学习或操作数据时，使用默认行为（返回修改后的副本）会更安全，这让您能够保留原始数据。</p>\n<p>使用<code>drop()</code>删除行和列是优化数据集的基本步骤，使您能够专注于与您的分析最相关的数据。</p>",
+  "slug": "dropping-columns-rows",
+  "updates": [],
+  "references": [
+    {
+      "id": 3488,
+      "title": "pandas.DataFrame.drop",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop.html",
+      "doi": "",
+      "note": "pandas.DataFrame.drop 方法的官方文档，详细说明其所有参数和使用示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:00.940569Z",
+      "updated_at": "2025-09-08T05:12:20.872274Z"
+    },
+    {
+      "id": 3489,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于使用 Python 和 Pandas 进行数据分析的权威书籍，涵盖数据清洗和操作技术，包括删除数据。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:00.974591Z",
+      "updated_at": "2025-09-08T05:12:30.029176Z"
+    },
+    {
+      "id": 3490,
+      "title": "Data Cleaning with Pandas and Python",
+      "author": "Jonathan Ng",
+      "year": "2023",
+      "publisher": "Real Python",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://realpython.com/pandas-data-cleaning/",
+      "doi": "",
+      "note": "一个实用的在线教程，展示 Pandas 中各种数据清洗操作，包括根据不同标准删除行和列的方法。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:00.977904Z",
+      "updated_at": "2025-09-08T05:12:28.453380Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

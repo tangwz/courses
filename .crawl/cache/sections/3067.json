@@ -1,0 +1,61 @@
+{
+  "id": 3067,
+  "title": "结合检索到的内容与提示词",
+  "meta_title": "在RAG中结合检索到的内容与提示词",
+  "meta_description": "将检索到的信息整合到LLM提示词中以供生成。",
+  "content": "<p>将检索到的文档片段与用户查询结合，是检索增强生成（RAG）过程中向大型语言模型（LLM）有效呈现信息的主要一步。虽然检索可以识别语义相关的文档片段，但仅仅执行检索是不够的。LLM需要被明确指示如何使用这些获得的内容来生成其回答。</p>\n<h3>提示词 (prompt)工程在RAG中的作用</h3>\n<p>其核心在于，结合内容和查询涉及细致的提示词工程。我们需要构建一个提示词，引导LLM在组织其回答时优先使用所提供的内容。目标是让LLM的生成 <em>依赖于</em> 检索到的文档，而不是仅仅依赖其内部预训练 (pre-training)知识。</p>\n<h3>构建增强型提示词 (prompt)</h3>\n<p>一种常见方法是创建一个提示词模板，其中包含检索到的内容和原始用户查询的占位符。结构通常如下所示：</p>\n<ol>\n<li><strong>指示：</strong> 告诉LLM它的任务以及如何使用所提供的内容。</li>\n<li><strong>内容：</strong> 插入检索到的文档片段的内容。</li>\n<li><strong>查询：</strong> 说明用户的原始问题或请求。</li>\n</ol>\n<p>以下是一个使用Python f-string来说明此结构的示例：</p>\n<pre><code class=\"language-python\"># 假设 'retrieved_chunks' 是一个字符串列表（文档内容）\n# 假设 'user_query' 是原始问题字符串\n\n# 将文档片段组合成一个字符串，通常使用分隔符\nformatted_context = \"\\n\\n---\\n\\n\".join(retrieved_chunks)\n\n# 创建最终提示词\nprompt = f\"\"\"\n你是一个助手，旨在 *仅* 根据所提供的文档回答问题。\n不要使用下面所给内容之外的任何信息。\n如果在文档中找不到答案，请明确说明。\n\n内容文档:\n{formatted_context}\n\n用户查询:\n{user_query}\n\n回答:\n\"\"\"\n\n# 这个 'prompt' 字符串随后会发送给LLM API。\n</code></pre>\n<h3>格式化检索到的内容</h3>\n<p>你如何格式化 <code>formatted_context</code> 部分很重要。简单地拼接文本可能会让LLM感到困惑。常见策略包括：</p>\n<ul>\n<li><strong>分隔符：</strong> 在片段之间使用清晰的分隔符，如 <code>---</code>、<code>***</code>，或特定标记 (token)（<code>[DOCUMENT 1 START]...[DOCUMENT 1 END]</code>）。</li>\n<li><strong>编号：</strong> 为每个片段添加标识符作为前缀（例如，<code>文档 1: ...</code>，<code>文档 2: ...</code>）。</li>\n<li><strong>元数据：</strong> 如果可用且相关，有时包含来源信息（如文件名或页码）。</li>\n</ul>\n<p>选择取决于具体的LLM和实验。目标是使其明确，一段检索到的信息在哪里结束，另一段在哪里开始，并清晰区分内容部分与指示和用户查询。</p>\n<h3>编写有效的指示</h3>\n<p>提示词 (prompt)的初始指示部分影响力很大。它为LLM应如何表现奠定了基础。考虑这些变体：</p>\n<ul>\n<li><strong>严格遵循内容：</strong> “仅根据以下文档中提供的信息回答问题。不要引用任何外部知识。如果答案不在文档中，请说‘未找到信息’。”（适用于封闭领域问答）。</li>\n<li><strong>内容优先生成：</strong> “根据以下文档，回答用户的问题。你可以综合多份文档中的信息。”（允许基于内容进行更灵活的生成）。</li>\n<li><strong>摘要/提取：</strong> “从所提供的文档中总结与用户查询相关的重要点：...”</li>\n</ul>\n<p>这些指示的清晰度和具体性直接影响生成回答的质量和忠实度。你本质上是通过提示词来编程LLM针对此特定任务的行为。</p>\n<h3>可视化流程</h3>\n<p>获取查询、检索内容、并在发送给LLM之前格式化提示词 (prompt)的过程可以按如下方式可视化：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-wbtnuo\" \n              data-graph-definition='digraph RAG_Prompt_Augmentation { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2, fillcolor=\"#e9ecef\", style=\"filled,rounded\"]; edge [fontname=\"Arial\", fontsize=9]; UserQuery [label=\"用户查询\", fillcolor=\"#a5d8ff\"]; Retriever [label=\"检索器\\n(语义搜索)\", fillcolor=\"#96f2d7\"]; Context [label=\"检索到的内容\\n(文档片段)\", fillcolor=\"#ffec99\"]; PromptFormatter [label=\"提示词格式器\", fillcolor=\"#ffd8a8\"]; AugmentedPrompt [label=\"增强型提示词\", fillcolor=\"#ffc9c9\"]; LLM [label=\"大型语言\\n模型\", fillcolor=\"#eebefa\"]; Response [label=\"最终回答\", fillcolor=\"#bac8ff\"]; UserQuery -> Retriever; Retriever -> Context; Context -> PromptFormatter; UserQuery -> PromptFormatter; PromptFormatter -> AugmentedPrompt; AugmentedPrompt -> LLM; LLM -> Response; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-wbtnuo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图说明了用户查询和检索到的内容如何通过提示词格式器组合，以创建发送给LLM的增强型提示词。</p>\n</blockquote>\n<h3>实际考量</h3>\n<ul>\n<li><strong>内容窗口限制：</strong> LLM有最大输入令牌限制（即内容窗口）。如果你检索的片段过多，或者片段本身非常大，组合后的提示词 (prompt)可能会超出这个限制。你的实现需要处理这种情况，比如通过检索更少的片段、截断片段，或者使用具有更大内容窗口的模型。这在第三章中已讨论过，但在此处尤其适用。</li>\n<li><strong>指示遵循：</strong> 尽管我们指示LLM使用内容，但模型仍可能偶尔出现幻觉 (hallucination)或忽视指示。评估输出（稍后会介绍）是必要的，以确保RAG系统按预期运行。</li>\n<li><strong>内容相关性：</strong> 检索步骤的质量直接影响此阶段。如果检索到不相关的文档，它们会增加提示词的噪音，并可能降低最终回答的质量，即使有好的指示。</li>\n</ul>\n<p>通过细致地构建提示词，以包含清晰的指示和格式良好的内容以及原始查询，你有效地为LLM提供了它需要的特定信息，以生成相关、贴合内容的回答，克服其静态内部知识的局限性。这一增强步骤是RAG技术有效性的核心所在。</p>",
+  "slug": "combining-retrieved-context-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 9108,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "33",
+      "pages": "9459-9474",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍了基础的检索增强生成（RAG）框架，详细说明了如何将检索与生成结合应用于知识密集型任务。",
+      "order": 1,
+      "created_at": "2025-09-05T02:15:56.396412Z",
+      "updated_at": "2025-09-09T04:59:57.924477Z"
+    },
+    {
+      "id": 9109,
+      "title": "OpenAI's Prompt engineering guide",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "提供了设计大型语言模型有效提示的通用最佳实践和策略，包括指导模型使用外部上下文的技术。",
+      "order": 2,
+      "created_at": "2025-09-05T02:15:56.400636Z",
+      "updated_at": "2025-09-09T05:00:02.052621Z"
+    },
+    {
+      "id": 9111,
+      "title": "Building Systems with the ChatGPT API",
+      "author": "Andrew Ng, Isa Fulford",
+      "year": "2023",
+      "publisher": "DeepLearning.AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearning.ai/short-courses/chatgpt-api-primer/",
+      "doi": "",
+      "note": "为与大型语言模型交互提供了实用指导和示例，包括构建提示和整合检索到的上下文等外部信息的策略。",
+      "order": 4,
+      "created_at": "2025-09-05T02:15:56.406282Z",
+      "updated_at": "2025-09-09T05:00:00.628745Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

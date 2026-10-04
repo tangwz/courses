@@ -1,0 +1,61 @@
+{
+  "id": 1157,
+  "title": "数值变量可视化：直方图",
+  "meta_title": "使用Matplotlib/Seaborn创建直方图",
+  "meta_description": "了解并创建直方图以可视化数值变量的分布。",
+  "content": "<p>尽管均值、中位数和标准差等数值概括量能提供关于集中趋势和离散度的精确数值，但它们未能完全展现变量分布的<em>形态</em>。数据是集中在均值附近，还是分散开来？是对称的，还是偏向一侧？是否存在多个峰值？为了回答这些问题，我们转向可视化，而用于了解单一数值变量分布的主要工具就是直方图。</p>\n<p>直方图将数值分组到“箱体”或“区间”中，然后绘制落在每个箱体中的观测值的频率（计数）。水平轴表示变量的数值范围，被划分为这些箱体，而垂直轴表示每个箱体中观测值的频率或密度。这形成了一个条形图，提供了对潜在概率分布的直观近似表示。</p>\n<h3>理解箱体</h3>\n<p>箱体的选择很重要。箱体的数量（或等效地，每个箱体的宽度）能显著影响直方图的外观以及我们从中获得的认识。</p>\n<ul>\n<li><strong>箱体过少：</strong> 可能过于简化分布，隐藏多峰或间隙等重要细节。数据可能显示为一个大块。</li>\n<li><strong>箱体过多：</strong> 可能产生噪点较多的图表，波动会遮蔽整体形态。每个箱体可能只包含少量观测值，使分布看起来锯齿状且不规则。</li>\n</ul>\n<p>虽然均值、中位数和标准差等数值概括提供了关于集中趋势和离散程度的精确值，但它们无法完全捕捉变量分布的<em>形态</em>。数据是集中在均值附近，还是广泛分散？它是对称的，还是偏向一侧？是否存在多个峰值？为了回答这些问题，需要借助可视化方法，而用于理解单个数值变量分布的<strong>主要</strong>工具是直方图。</p>\n<h3>在Python中创建直方图</h3>\n<p>我们来看看如何使用流行的Python库生成直方图。我们假设你有一个名为<code>df</code>的Pandas DataFrame，并且对一个名为<code>'age'</code>的数值列感兴趣。</p>\n<p><strong>使用Pandas：</strong>\nPandas DataFrames有一个内置的<code>.hist()</code>方法，其底层使用Matplotlib。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n# 创建一个示例 DataFrame，其中包含 'student_heights'（学生身高）数据\ndata = {'student_heights': np.random.normal(175, 10, 1000)}  # 正态分布，均值为 175cm\ndf_students = pd.DataFrame(data)\n\n# 使用更具描述性的 DataFrame 和列名\ndf_students['student_heights'].hist(bins=15, grid=False, figsize=(8, 5))\nplt.title('学生身高分布')\nplt.xlabel('身高 (cm)')\nplt.ylabel('频率')\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1157_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T070814Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=f8851dd7cdf7adef277107922aacfd1e674a6f083a5be583ed24c41d477da450\" alt=\"Image 12\">\n<strong>使用Matplotlib：</strong>\n你可以直接使用Matplotlib以获得更多控制。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\n# 创建一个示例 DataFrame，其中包含 'exam_scores'（考试分数）数据\ndata = {'exam_scores': np.random.normal(75, 15, 500)} # 正态分布，均值为 75\ndf_class = pd.DataFrame(data)\n\n# 使用更具描述性的 DataFrame 和列名\nplt.figure(figsize=(8, 5))\nplt.hist(df_class['exam_scores'].dropna(), bins=20, color='#339af0', edgecolor='black')\nplt.title('考试分数分布')\nplt.xlabel('考试分数')\nplt.ylabel('频率')\nplt.grid(axis='y', alpha=0.75)\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1157_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T070814Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=d331f8fd6652d76f9b6fae96c833ffe5bb52c19590b4c6ee1ad33f716c632969\" alt=\"Image 13\">\n请注意使用<code>.dropna()</code>来处理绘图前可能存在的缺失值。</p>\n<p><strong>使用Seaborn：</strong>\nSeaborn通常能生成更美观的图表，并与Pandas DataFrame很好地集成。<code>histplot</code>函数功能多。</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\n# 创建一个示例 DataFrame，其中包含 'employee_ages'（员工年龄）数据\ndata = {'employee_ages': np.random.randint(20, 60, 200)} # 20到60岁之间的均匀分布\ndf_employees = pd.DataFrame(data)\n\n# 使用更具描述性的 DataFrame 和列名\nplt.figure(figsize=(8, 5))\nsns.histplot(data=df_employees, x='employee_ages', bins=25, kde=True, color='#20c997')\nplt.title('带密度曲线的员工年龄分布')\nplt.xlabel('年龄 (岁)')\nplt.ylabel('频率')\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1157_3.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T070814Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=63c673403a6c3eb46c2739b5514e7f2946b97f7f546e0b85514c9a74fae9c8c3\" alt=\"Image 14\">\n添加<code>kde=True</code>会叠加一个核密度估计，它提供了分布形态的平滑表示。</p>\n<p>这里是一个使用Plotly进行交互式网页可视化的例子：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1p3ezgm\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": \"样本数值数据的分布\",\n    \"xaxis\": { \"title\": \"数值\" },\n    \"yaxis\": { \"title\": \"频率\" },\n    \"bargap\": 0.1,\n    \"plot_bgcolor\": \"#e9ecef\"\n  },\n  \"data\": [\n    {\n      \"type\": \"histogram\",\n      \"x\": [22, 45, 30, 51, 28, 33, 40, 36, 25, 30, 48, 31, 39, 42, 29, 35, 37, 41, 26, 34, 55, 61, 38, 44, 32],\n      \"marker\": {\n        \"color\": \"#4dabf7\",\n        \"line\": { \"color\": \"#1c7ed6\", \"width\": 1 }\n      }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1p3ezgm\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示样本数值数据集频率分布的直方图。</p>\n</blockquote>\n<h3>解读直方图</h3>\n<p>查看直方图时，请注意以下特征：</p>\n<ol>\n<li>\n<p><strong>形态：</strong></p>\n<ul>\n<li><strong>对称：</strong> 分布在中心附近大致呈镜像对称（例如，钟形或正态分布）。均值、中位数和众数通常彼此接近。</li>\n<li><strong>右偏（正偏）：</strong> 右侧的尾部更长。大多数数据点集中在左侧。通常，均值 > 中位数 > 众数。</li>\n<li><strong>左偏（负偏）：</strong> 左侧的尾部更长。大多数数据点集中在右侧。通常，均值 &#x3C; 中位数 &#x3C; 众数。</li>\n<li><strong>均匀：</strong> 所有箱体频率大致相同。分布看起来是平坦的。</li>\n</ul>\n</li>\n<li>\n<p><strong>模态（峰值）：</strong></p>\n<ul>\n<li><strong>单峰：</strong> 一个明显的峰值。</li>\n<li><strong>双峰：</strong> 两个明显的峰值。这可能表示数据中存在两个不同的子组。</li>\n<li><strong>多峰：</strong> 超过两个明显的峰值。</li>\n</ul>\n</li>\n<li>\n<p><strong>离散度（分散）：</strong></p>\n<ul>\n<li>数据是涵盖了宽广的范围，还是紧密聚集？这在视觉上与之前计算的方差和标准差相关。更宽的直方图表明更大的离散度。</li>\n</ul>\n</li>\n<li>\n<p><strong>异常值和间隙：</strong></p>\n<ul>\n<li>寻找远离数据主体部分的箱体。这些可能代表潜在的异常值。</li>\n<li>箱体之间存在的显著间隙也提供信息，可能表明测量问题或不同的总体。</li>\n</ul>\n</li>\n</ol>\n<p>直方图提供了即时视觉概括，补充了数值统计量。它们帮助你快速掌握数值变量的性质，辨别偏度或异常值等潜在问题，并指导后续分析步骤。例如，强偏度可能暗示未来考虑数据转换。</p>",
+  "slug": "visualizing-histograms",
+  "updates": [],
+  "references": [
+    {
+      "id": 362,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "",
+      "note": "提供设计和解释有效数据可视化的全面指南，包含关于直方图和分箱等考虑因素的章节。",
+      "order": 2,
+      "created_at": "2025-09-04T14:25:45.811820Z",
+      "updated_at": "2025-09-07T16:13:25.323989Z"
+    },
+    {
+      "id": 363,
+      "title": "pandas.DataFrame.hist",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.hist.html",
+      "doi": "",
+      "note": "用于直接从pandas DataFrame创建直方图的官方文档，详细介绍了参数和用法。",
+      "order": 3,
+      "created_at": "2025-09-04T14:25:45.815960Z",
+      "updated_at": "2025-09-07T16:13:25.311740Z"
+    },
+    {
+      "id": 364,
+      "title": "seaborn.histplot",
+      "author": "Michael Waskom and the seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.histplot.html",
+      "doi": "",
+      "note": "Seaborn的histplot函数的官方文档，涵盖KDE和分箱策略等高级选项。",
+      "order": 4,
+      "created_at": "2025-09-04T14:25:45.818471Z",
+      "updated_at": "2025-09-07T16:13:27.859631Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

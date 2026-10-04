@@ -1,0 +1,61 @@
+{
+  "id": 6754,
+  "title": "提示词优化的记录与监控",
+  "meta_title": "监控智能体提示词以进行优化",
+  "meta_description": "实施记录和监控策略，收集数据以持续改进智能体提示词。",
+  "content": "<p>高效的提示词 (prompt)工程很少能一次就做到完美。正如软件开发依赖测试和调试一样，对智能体系统提示词的完善，会从系统的数据收集和分析中受益匪多。记录交互和监控性能，能提供改进提示词所需的经验证据。没有这些数据，你基本是在信息有限的情况下工作，期望你的改动确实有效。</p>\n<h3>需记录什么：重要数据点</h3>\n<p>为了有效诊断问题并衡量提示词 (prompt)改动的影响，你的记录策略应为每次智能体交互捕获全面数据。考虑以下类别：</p>\n<ul>\n<li>\n<p><strong>提示词详情：</strong></p>\n<ul>\n<li>提示词的确切文本，包括任何系统消息、角色定义或指令。</li>\n<li>提示词的版本标识符（例如，<code>prompt_v1.2_search_agent</code>）。这对于跟踪更改很重要。</li>\n<li>LLM 调用所用参数 (parameter)（例如，温度、<code>max_tokens</code>、停止序列）。</li>\n</ul>\n</li>\n<li>\n<p><strong>输入数据：</strong></p>\n<ul>\n<li>用户查询或智能体任务的初始触发条件。</li>\n<li>提供给智能体的相关背景信息，例如其记忆片段、对话历史或可用工具的说明。</li>\n</ul>\n</li>\n<li>\n<p><strong>智能体执行轨迹：</strong></p>\n<ul>\n<li><strong>中间步骤：</strong> 对于使用 ReAct（推理 (inference)和行动）等推理模式的智能体，记录每一步的思考过程、观察和行动。这能显示智能体如何得出结论或为何失败。</li>\n<li><strong>工具使用：</strong> 记录所选工具、提供给它们的输入、接收到的输出以及工具执行过程中遇到的任何错误。</li>\n<li><strong>状态变化：</strong> 如果你的智能体维护内部状态，记录该状态的重要变化。</li>\n</ul>\n</li>\n<li>\n<p><strong>输出与结果：</strong></p>\n<ul>\n<li>智能体采取的最终响应或行动。</li>\n<li>生成的任何产物（例如，摘要、代码、数据文件）。</li>\n<li>客观成功指标：任务是否成功完成？（例如，布尔值 true/false，或更细致的分数）。</li>\n<li>主观反馈（如果可用）：用户评分、更正或对输出的定性评论。</li>\n</ul>\n</li>\n<li>\n<p><strong>性能与环境：</strong></p>\n<ul>\n<li><strong>延迟：</strong> 智能体完成任务或生成响应所需的时间。</li>\n<li><strong>成本：</strong> LLM 调用（输入和输出令牌）的令牌使用量。这对于管理运营开支尤其重要。</li>\n<li><strong>时间戳：</strong> 交互发生的时间。</li>\n<li><strong>标识符：</strong> 交互的唯一 ID、会话 ID 和用户 ID（如果适用且已妥善匿名化）。</li>\n<li><strong>模型信息：</strong> 使用的特定 LLM 模型和版本（例如，<code>gpt-4-0125-preview</code>）。</li>\n</ul>\n</li>\n</ul>\n<p>代理系统中用于改进提示的交互和性能数据，通常以 JSON 等结构化格式存储，便于后续查询和分析。例如，一条记录条目可能如下所示（简化版）：</p>\n<pre><code class=\"language-json\">{\n  \"interaction_id\": \"txn_123abc\",\n  \"timestamp\": \"2023-10-27T10:30:00Z\",\n  \"user_query\": \"查找关于智能体规划的最新 AI 研究论文。\",\n  \"prompt_version\": \"planner_agent_v2.1\",\n  \"llm_model\": \"gpt-4-turbo\",\n  \"llm_params\": {\"temperature\": 0.5, \"max_tokens\": 1500},\n  \"agent_trace\": [\n    {\"step\": 1, \"thought\": \"我需要使用网络搜索工具。\", \"action\": \"search('AI research agent planning recent papers')\"},\n    {\"step\": 2, \"observation\": \"收到了 5 个搜索结果。\", \"thought\": \"我需要总结这些并呈现出来。\", \"action\": \"summarize_results(...)\"}\n  ],\n  \"final_response\": \"以下是 3 篇关于 AI 智能体规划的最新论文...\",\n  \"success_metric\": true,\n  \"latency_ms\": 7500,\n  \"token_cost\": {\"input\": 800, \"output\": 700}\n}\n</code></pre>\n<h3>监控智能体性能</h3>\n<p>一旦你开始记录数据，下一步就是监控它，以便了解趋势、发现问题并衡量你提示词 (prompt)工程工作的成效。</p>\n<ul>\n<li>\n<p><strong>仪表板：</strong> 可视化仪表板对于快速查看智能体健康状况非常有用。要跟踪的性能指标（KPI）包括：</p>\n<ul>\n<li><strong>成功率：</strong> 随时间推移成功完成任务的百分比。</li>\n<li><strong>错误率：</strong> 不同类型错误的发生频率（例如，工具故障、解析错误、偏题响应）。</li>\n<li><strong>平均延迟：</strong> 智能体响应的速度。</li>\n<li><strong>平均成本：</strong> 每次交互的令牌消耗量。</li>\n<li><strong>用户满意度分数：</strong> 如果你收集用户反馈。</li>\n</ul>\n<p>你可以按提示词版本、智能体类型或用户群组细分这些指标，以获得更细致的分析。例如，一个简单的图表可以跟踪提示词修订前后的成功率。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-13q0jbb\" \n              data-plot-definition='{\"data\":[{\"type\":\"bar\",\"x\":[\"提示词 v1.0\",\"提示词 v1.1 (修订版)\"],\"y\":[65,82],\"marker\":{\"color\":[\"#ff8787\",\"#69db7c\"]}}],\"layout\":{\"title\":{\"text\":\"提示词成功率提升\"},\"xaxis\":{\"title\":{\"text\":\"提示词版本\"}},\"yaxis\":{\"title\":{\"text\":\"成功率 (%)\"},\"range\":[0,100]}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-13q0jbb\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图表显示，将提示词从 1.0 版修订到 1.1 版后，任务成功率有所提高。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>警报：</strong> 为重要事件设置自动化警报。例如：</p>\n<ul>\n<li>总体成功率突然下降。</li>\n<li>特定错误类型急剧增加。</li>\n<li>延迟超出预设阈值。</li>\n<li>令牌成本意外增加。\n警报能让你迅速响应问题，可能在影响大量用户之前。</li>\n</ul>\n</li>\n<li>\n<p><strong>漂移检测：</strong> 模型和数据分布会随时间变化。</p>\n<ul>\n<li><strong>输入漂移：</strong> 用户提供给智能体的查询或任务类型是否正在变化？为某类输入优化的提示词可能在另一类上表现不佳。</li>\n<li><strong>输出漂移/陈旧：</strong> 即使提示词未更改，智能体响应的质量是否正在下降？这可能是由于工具使用的外部数据源发生变化，或底层 LLM 更新后行为出现细微改变。\n监控这些漂移能帮助你主动调整提示词。</li>\n</ul>\n</li>\n</ul>\n<h3>使用记录和监控进行迭代改进</h3>\n<p>记录和监控的真正价值在于你如何使用收集到的数据来改进你的提示词 (prompt)。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1as5rcf\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    Interaction [label=\"智能体交互\", fillcolor=\"#a5d8ff\"];\n    LogData [label=\"记录交互数据\", fillcolor=\"#bac8ff\"];\n    Analyze [label=\"分析记录和指标\", fillcolor=\"#91a7ff\"];\n    Identify [label=\"识别问题/\\n机遇\", fillcolor=\"#748ffc\"];\n    Refine [label=\"完善提示词\", fillcolor=\"#b2f2bb\"];\n    Deploy [label=\"部署新提示词版本\", fillcolor=\"#8ce99a\"];\n\n    Interaction -> LogData;\n    LogData -> Analyze;\n    Analyze -> Identify;\n    Identify -> Refine;\n    Refine -> Deploy;\n    Deploy -> Interaction [label=\"新一轮迭代\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1as5rcf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>由记录和监控驱动的提示词改进迭代周期。</p>\n</blockquote>\n<ul>\n<li>\n<p><strong>识别失败模式：</strong> 查看失败交互的记录。</p>\n<ul>\n<li>导致响应不佳的用户查询是否存在共性？</li>\n<li>某些工具调用是否经常失败？也许提示词没有给工具提供正确的输入格式，或者提示词中对工具的描述不明确。</li>\n<li>如果你记录了中间推理 (inference)步骤，能否看出智能体的逻辑在哪里出现偏差？这能直接指导如何重新措辞指令或提供更好的例子。</li>\n</ul>\n</li>\n<li>\n<p><strong>支持 A/B 测试：</strong> 正如“比较提示词变体以提升智能体效能”中讨论的，记录的指标对于定量比较两个或多个提示词版本非常重要。通过向部分用户部署不同提示词版本（或离线并行运行），并记录它们的性能，你可以根据数据决定哪个提示词更优秀。</p>\n</li>\n<li>\n<p><strong>创建反馈循环：</strong> 如果你收集了明确的用户反馈（例如，点赞/点踩、满意度分数）或有专人评估智能体输出，请将这些反馈与记录的交互数据关联起来。这有助于你了解特定提示词和输入背景下“好”和“坏”的输出表现，从而指导你的完善工作。</p>\n</li>\n<li>\n<p><strong>回归跟踪：</strong> 当你部署旨在修复某个问题或提高特定任务性能的新提示词版本时，重要的是要确保它不会无意中降低其他任务的性能（即“回归”）。你的监控仪表板和历史记录数据可以帮助你快速发现这些回归。</p>\n</li>\n<li>\n<p><strong>成本优化：</strong> 通过记录每次交互的令牌使用量（包括提示词令牌和完成令牌），你可以找出成本异常高的提示词或交互模式。这可能会促使你尝试更简洁的提示词措辞、不同的上下文 (context)摘要策略，或者为智能体内的特定子任务考虑使用更小、更精细调整的模型。</p>\n</li>\n</ul>\n<h3>工具与实践</h3>\n<p>虽然你可以从使用标准 Python 库进行简单的基于文件的记录开始，但专业工具可以简化这一过程，尤其是在你的智能体系统扩展时。</p>\n<ul>\n<li><strong>标准记录库：</strong> Python 的 <code>logging</code> 模块是捕获信息的一个良好起点。你可以配置它将结构化记录（例如 JSON）输出到文件，或发送到集中式记录系统。</li>\n<li><strong>可观测性平台：</strong> 越来越多的平台专门用于 LLM 应用监控和可观测性（有时称为 LLMOps 平台）。它们通常提供以下功能：\n<ul>\n<li>流行 LLM 框架的自动插装。</li>\n<li>用于可视化 LLM 特定指标的丰富仪表板。</li>\n<li>用于跟踪复杂智能体交互的工具。</li>\n<li>提示词 (prompt)版本管理和 A/B 测试机制。</li>\n</ul>\n</li>\n<li><strong>结构化记录：</strong> 无论使用何种工具，请为你的记录采用一致的结构化格式。JSON 因其可读性和易于解析而成为常用选择。包含唯一标识符（用于交互、会话、用户），以实现交叉引用和跟踪。</li>\n<li><strong>采样：</strong> 对于高流量系统，记录每次交互的每一个细节可能成本过高或产生太多数据。考虑智能采样策略，例如记录所有失败，但只记录一部分成功交互，或将详细记录集中在新提示词版本上。</li>\n</ul>\n<h3>重要考量</h3>\n<ul>\n<li><strong>记录量和成本：</strong> 智能体系统，特别是那些包含许多中间步骤的系统，会产生大量记录数据。规划存储和处理成本。适当地使用记录级别（DEBUG、INFO、ERROR）来控制详细程度。</li>\n<li><strong>数据隐私与安全：</strong> 注意敏感信息。如果你的智能体处理个人身份信息（PII）或其他机密数据，请确保你的记录实践符合隐私法规（例如 GDPR、CCPA）。在记录之前，尽可能地匿名化或编辑敏感数据。</li>\n<li><strong>定义成功指标：</strong> 对于复杂的智能体任务，量化 (quantization)“成功”可能具有挑战性。制定清晰、可衡量的指标，使其与智能体的目标保持一致。这可能涉及自动化检查和人工评估的结合。</li>\n<li><strong>信号与噪音：</strong> 记录数据过多时，很容易不知所措。专注于能提供可行分析的指标和模式，而不是试图分析每个数据点。</li>\n</ul>\n<p>通过建立记录和监控实践，你将提示词 (prompt)工程从试错活动转变为数据驱动的学科。这种系统化方法对于构建可靠、高性能的智能体工作流极为重要，这些工作流会随时间不断完善。获得的分析不仅能帮助你解决眼前问题，还能指导未来提示词和智能体的设计原则。</p>",
+  "slug": "logging-monitoring-prompt-improvement",
+  "updates": [],
+  "references": [
+    {
+      "id": 18580,
+      "title": "Machine Learning Engineering",
+      "author": "Andriy Burkov",
+      "year": "2020",
+      "publisher": "True Positive Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://leanpub.com/machine-learning-engineering",
+      "doi": "",
+      "note": "MLOps的实用指南，涵盖机器学习系统监控、评估和部署策略等关键方面，适用于基于LLM的代理。",
+      "order": 2,
+      "created_at": "2025-09-06T12:31:35.232786Z",
+      "updated_at": "2025-09-11T08:25:49.621165Z"
+    },
+    {
+      "id": 18582,
+      "title": "Distributed Systems Observability: A Guide to Production Readiness",
+      "author": "Cindy Sridharan",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/distributed-systems-observability/9781492033433/",
+      "doi": "",
+      "note": "提供了复杂软件系统可观察性的基础原则和实践，包括结构化日志、度量、追踪和警报，适用于监控代理工作流程。",
+      "order": 4,
+      "created_at": "2025-09-06T12:31:35.238257Z",
+      "updated_at": "2025-09-11T08:25:41.237125Z"
+    },
+    {
+      "id": 18583,
+      "title": "MLOps Challenges and Solutions for Large Language Models",
+      "author": "Alex Vasile",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/content/mlops-challenges-and-solutions-for-large-language-models/",
+      "doi": "",
+      "note": "讨论了大型语言模型独特的MLOps挑战，包括监控、评估和迭代，为代理系统提供了相关的实践见解。",
+      "order": 5,
+      "created_at": "2025-09-06T12:31:35.240835Z",
+      "updated_at": "2025-09-11T08:25:01.480139Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

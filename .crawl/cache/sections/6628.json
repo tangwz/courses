@@ -1,0 +1,29 @@
+{
+  "id": 6628,
+  "title": "大型语言模型作为智能体构建组件",
+  "meta_title": "大型语言模型用于智能体构建",
+  "meta_description": "分析大型语言模型如何在多智能体系统中充当智能体的核心组件。",
+  "content": "<p>大型语言模型不仅仅是复杂的文本生成器或多智能体系统中的对话伙伴。相反，它们充当了根本的认知引擎，为单个智能体赋予理解、推理 (inference)和交流的能力。这种从传统（通常基于规则）的智能体核心到由大型语言模型驱动的转变，使智能体行为具备更高的灵活性、适应性和复杂性。</p>\n<h3>大型语言模型为智能体提供的核心能力</h3>\n<p>其核心上，大型语言模型提供一系列强大的功能，可用于构建智能体：</p>\n<ul>\n<li>\n<p><strong>自然语言理解 (NLU):</strong> 大型语言模型擅长理解自然语言，无论是用户的指令、外部API的数据，还是来自另一个智能体的消息。它们能够解析复杂句子，辨别意图，提取实体，并理解上下文 (context)。这使得智能体能够以类人方式接收和处理信息，大幅降低了指令和交互的门槛。例如，可以指示智能体“总结最新的第一季度财务报告，并指出收入流中的任何异常”，而无需结构化查询。</p>\n</li>\n<li>\n<p><strong>文本生成和交流:</strong> 基于理解，大型语言模型能够生成连贯、符合语境的文本。这对于智能体传达其发现、提出澄清问题、解释其推理 (inference)，或与其他智能体交互是必不可少的。生成的输出范围可以从简单的状态更新到复杂的报告，甚至在大型语言模型有能力的情况下生成代码片段。</p>\n</li>\n<li>\n<p><strong>上下文推理与规划:</strong> 虽然不是完全成熟的符号AI规划器，大型语言模型表现出显著的上下文推理能力。通过思维链提示等技术，它们可以将复杂任务分解为更小、更易于管理的步骤，创建一系列行动，甚至可以根据其上下文窗口中提供的信息进行初步的逻辑推导。这使得智能体能够在采取行动之前进行策略制定，尽管通常是在较高层面上。例如，大型语言模型可以概述以下步骤：1. 获取用户资料。2. 检查购买历史。3. 识别偏好。4. 推荐新产品。</p>\n</li>\n<li>\n<p><strong>知识调用与综合:</strong> 大型语言模型在数据集上预训练 (pre-training)，赋予它们广泛的通用知识库。智能体可以调用这种内部知识来回答问题、提供解释或补充缺失信息。此外，它们可以综合来自提示中提供的多个来源的信息，以生成新的见解或摘要。</p>\n</li>\n<li>\n<p><strong>函数与工具调用:</strong> 一个显著的进展是能够提示大型语言模型，使其识别何时需要调用外部工具或函数来完成请求。大型语言模型可以根据当前任务和可用工具的描述，决定使用<em>哪个</em>工具以及传递<em>哪些参数 (parameter)</em>。例如，如果被问及当前天气，大型语言模型可以被引导输出一个JSON对象，指定调用<code>get_weather_forecast</code>函数，并将位置设置为“旧金山，加利福尼亚州”。这使得智能体的能力远超简单的文本处理，使其能够与数据库、API和其他软件交互。</p>\n</li>\n</ul>\n<p>这些核心能力使大型语言模型成为多功能的构建组件。智能体的“大脑”可以被视为一个大型语言模型，它通过特定指令（其角色或功能）、对内存的访问以及可调用的函数工具包得到增强。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1u1wd8y\" \n              data-graph-definition='digraph LLM_Agent_Core {\n    rankdir=TB;\n    graph [bgcolor=\"transparent\", fontname=\"Helvetica\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", margin=\"0.2,0.1\"];\n    edge [fontname=\"Helvetica\", color=\"#495057\"];\n\n    llm [label=\"大型语言模型\\n(认知引擎)\", fillcolor=\"#4dabf7\", fontcolor=\"white\", width=3, height=0.7, fontsize=11];\n\n    user_prompt [label=\"用户查询与\\n指令\", fillcolor=\"#96f2d7\", shape=ellipse, fontsize=9];\n    env_data [label=\"外部数据与\\nAPI响应\", fillcolor=\"#96f2d7\", shape=ellipse, fontsize=9];\n    agent_msg [label=\"智能体间\\n消息\", fillcolor=\"#96f2d7\", shape=ellipse, fontsize=9];\n\n    agent_action [label=\"制定\\n行动\", fillcolor=\"#ffd8a8\", shape=ellipse, fontsize=9];\n    tool_call [label=\"工具/函数\\n调用\", fillcolor=\"#ffd8a8\", shape=ellipse, fontsize=9];\n    response_msg [label=\"生成文本与\\n交流\", fillcolor=\"#ffd8a8\", shape=ellipse, fontsize=9];\n\n    user_prompt -> llm [label=\" 输入\", fontsize=8, fontcolor=\"#495057\"];\n    env_data -> llm [label=\" 上下文\", fontsize=8, fontcolor=\"#495057\"];\n    agent_msg -> llm [label=\" 交流\", fontsize=8, fontcolor=\"#495057\"];\n\n    llm -> agent_action [label=\" 决策\", fontsize=8, fontcolor=\"#495057\"];\n    llm -> tool_call [label=\" 能力\", fontsize=8, fontcolor=\"#495057\"];\n    llm -> response_msg [label=\" 输出\", fontsize=8, fontcolor=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1u1wd8y\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>大型语言模型构成智能体的认知引擎，处理多种输入，如用户查询、外部数据和智能体间消息，以生成诸如制定行动、工具调用或文本交流等输出。</p>\n</blockquote>\n<h3>对智能体设计的影响</h3>\n<p>将大型语言模型用作智能体的核心，从根本上改变了开发流程。开发人员不再需要为每个可设想的场景精心编写明确的决策树或状态机，而是专注于：</p>\n<ol>\n<li><strong>提示工程 (prompt engineering):</strong> 设计有效的提示，用于定义智能体的角色、目标、约束和可用工具。提示成为引导大型语言模型行为的主要机制。</li>\n<li><strong>工具定义与集成:</strong> 设计并提供一套大型语言模型可以使用的工具（函数、API）。工具描述的清晰性对于大型语言模型正确选择和使用它们很重要。</li>\n<li><strong>内存管理:</strong> 决定智能体如何记住过去的交互或信息，因为大型语言模型自身的上下文 (context)窗口有限。这可能涉及外部向量 (vector)存储或摘要技术。</li>\n<li><strong>编排逻辑:</strong> 虽然单个智能体的行为由大型语言模型驱动，但多个智能体之间的整体工作流程和协调通常需要一个更高级别的编排层。</li>\n</ol>\n<p>这种方法使得智能体更能适应意外输入，并能表现出比其前身更细致的行为。大型语言模型从其训练数据中泛化的能力意味着它通常能够处理语言变化或新的任务组合，而无需针对每个情况进行明确编程。</p>\n<p>然而，认识到大型语言模型并非万无一失是很重要的。它们可能“幻觉 (hallucination)”信息，误解模糊指令，或生成不理想的输出。它们的行为是概率性的，这引入了非确定性成分。因此，构建可靠的智能体不仅需要运用大型语言模型的能力，还需要实施安全措施、验证机制，并且通常是人工干预流程，特别是对于重要任务。这些考量是我们将在本课程中查看的架构框架和设计模式的组成部分。通过将大型语言模型理解为一个强大但有缺陷的认知组件，我们可以更好地设计系统，有效使用其优点，同时减轻其缺点。</p>",
+  "slug": "llms-as-agent-blocks",
+  "updates": [],
+  "references": [
+    {
+      "id": 18041,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "35",
+      "pages": "24824-24837",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "提出了思维链（CoT）提示方法，引导大型语言模型在给出最终答案前生成中间推理步骤，从而提升其在复杂推理任务上的表现。",
+      "order": 2,
+      "created_at": "2025-09-06T12:16:03.824631Z",
+      "updated_at": "2026-02-04T11:35:04.263179Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 7460,
+  "title": "生成基于内容的推荐",
+  "meta_title": "如何生成基于内容的推荐",
+  "meta_description": "通过匹配用户画像与物品画像来生成排序推荐列表的过程。",
+  "content": "<p>生成个性化推荐需要使用向量 (vector)化的物品画像和聚合后的用户画像。其目标是将用户画像向量中包含的推断偏好与整个物品库向量进行匹配。这一过程可以有效地识别并排列出与用户历史口味最契合的物品。</p>\n<h3>推荐生成流程</h3>\n<p>其核心目标是计算用户画像向量 (vector)与每个物品画像向量之间的相似度得分。该得分衡量了每个物品与用户已习得偏好的匹配程度。随后，我们可以根据该得分对物品进行排序，从而生成个性化列表。</p>\n<p>该过程可以分为四个主要步骤：</p>\n<ol>\n<li><strong>计算相似度：</strong> 计算目标用户画像向量与数据集中每个物品向量之间的余弦相似度。</li>\n<li><strong>过滤已看物品：</strong> 移除用户已经互动过的任何物品。向用户推荐他们已经看过或评价过的东西几乎没有价值。</li>\n<li><strong>按得分排序：</strong> 根据相似度得分对剩余物品进行降序排列。列表顶部的物品是推荐的最佳候选对象。</li>\n<li><strong>选择 Top-N：</strong> 从排序列表中返回前 N 个物品，作为最终的推荐集合。</li>\n</ol>\n<p>下图展示了从用户和物品画像到最终排序推荐列表的数据流向。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ag54a4\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_0 {\n        label = \"输入\";\n        bgcolor=\"#f8f9fa\";\n        style=\"rounded\";\n        user_profile [label=\"用户画像向量\", fillcolor=\"#bac8ff\"];\n        item_matrix [label=\"物品画像矩阵\", fillcolor=\"#a5d8ff\"];\n    }\n\n    compute_sim [label=\"1. 计算用户-物品相似度\\n(余弦相似度)\", shape=ellipse, fillcolor=\"#96f2d7\"];\n    filter_items [label=\"2. 过滤此前评分过的物品\", shape=ellipse, fillcolor=\"#ffec99\"];\n    rank_items [label=\"3. 按相似度得分排序物品\", shape=ellipse, fillcolor=\"#ffd8a8\"];\n    top_n [label=\"4. 选择 Top-N 推荐\", shape=diamond, style=\"rounded,filled\", fillcolor=\"#b2f2bb\"];\n\n    user_profile -> compute_sim;\n    item_matrix -> compute_sim;\n    compute_sim -> filter_items;\n    filter_items -> rank_items;\n    rank_items -> top_n;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ag54a4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该工作流将用户的偏好向量和完整的物品矩阵作为输入，最终为该用户生成一份简短的、按顺序排列的新物品列表。</p>\n</blockquote>\n<h3>计算用户与物品的相似度</h3>\n<p>由于用户画像和物品画像都存在于同一个向量 (vector)空间中，我们可以再次使用余弦相似度来衡量它们的匹配程度。用户画像与物品画像之间较高的余弦相似度得分表明，该物品的特征与用户之前喜欢的物品特征高度吻合。</p>\n<p>假设你有一个用户画像向量 <code>user_profile</code>，以及所有物品的 TF-IDF 矩阵 <code>tfidf_matrix</code>。我们可以使用 scikit-learn 的 <code>cosine_similarity</code> 函数来高效地完成这项计算。该函数需要两个类似数组的输入，因此我们将用户画像向量重塑为只有一行的二维数组。</p>\n<pre><code class=\"language-python\">from sklearn.metrics.pairwise import cosine_similarity\n\n# 假设 user_profile 是一个代表用户口味的一维 NumPy 数组\n# 假设 tfidf_matrix 是来自 TF-IDF 的 (物品数 x 特征数) 矩阵\n# 将 user_profile 重塑为 (1, n_features) 以确保兼容性\nuser_profile_reshaped = user_profile.reshape(1, -1)\n\n# 计算用户与所有物品之间的余弦相似度\nuser_item_scores = cosine_similarity(user_profile_reshaped, tfidf_matrix)\n\n# 结果是一个二维数组，我们将其展平为一维得分数组\nsimilarity_scores = user_item_scores.flatten()\n\nprint(similarity_scores.shape)\n# (n_items,)\n</code></pre>\n<p>得到的 <code>similarity_scores</code> 是一个数组，其中索引 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span> 处的每个元素对应于用户与原始数据集中索引 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span> 处物品之间的相似度得分。</p>\n<h3>从得分到推荐</h3>\n<p>计算完得分后，下一步是将这个原始数组转换为可用的排序列表。我们将使用 pandas 来完成这一步，因为它简化了将得分与物品标题关联、过滤和排序的过程。</p>\n<p>首先，让我们创建一个包含物品标题及其对应相似度得分的 DataFrame。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 假设 'movies_df' 是包含电影标题的原始 DataFrame\nrecommendation_df = pd.DataFrame({\n    'title': movies_df['title'],\n    'score': similarity_scores\n})\n</code></pre>\n<p>接下来，我们必须过滤掉用户已经看过的物品。假设我们有一个名为 <code>items_seen_by_user</code> 的标题列表。我们可以使用 pandas 的 <code>isin</code> 方法来排除它们。</p>\n<pre><code class=\"language-python\"># 用户已经给出正面评价的电影标题列表\nitems_seen_by_user = [\"The Dark Knight\", \"Inception\", \"The Prestige\"]\n\n# 过滤掉已看物品\nunseen_recommendations = recommendation_df[\n    ~recommendation_df['title'].isin(items_seen_by_user)\n]\n</code></pre>\n<p><code>~</code> 运算符会反转布尔掩码，从而选择标题 <em>不在</em> <code>items_seen_by_user</code> 列表中的所有行。</p>\n<p>最后，我们按照 <code>score</code> 列对过滤后的 DataFrame 进行降序排序，并选择前 N 个物品。</p>\n<pre><code class=\"language-python\"># 按得分排序并获取前 10 个推荐物品\ntop_10_recommendations = unseen_recommendations.sort_values(\n    by='score', ascending=False\n).head(10)\n\nprint(top_10_recommendations)\n</code></pre>\n<p>输出结果如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"right\"></th>\n<th align=\"left\">title</th>\n<th align=\"right\">score</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"right\">50</td>\n<td align=\"left\">The Dark Knight Rises</td>\n<td align=\"right\">0.954</td>\n</tr>\n<tr>\n<td align=\"right\">27</td>\n<td align=\"left\">Batman Begins</td>\n<td align=\"right\">0.921</td>\n</tr>\n<tr>\n<td align=\"right\">119</td>\n<td align=\"left\">Memento</td>\n<td align=\"right\">0.887</td>\n</tr>\n<tr>\n<td align=\"right\">95</td>\n<td align=\"left\">Interstellar</td>\n<td align=\"right\">0.852</td>\n</tr>\n<tr>\n<td align=\"right\">...</td>\n<td align=\"left\">...</td>\n<td align=\"right\">...</td>\n</tr>\n</tbody>\n</table>\n<p>这个最终的排序列表就是我们基于内容的推荐系统的输出。它根据与用户过去偏好的相似度量化 (quantization)指标，向用户展示最相关的物品。从特征提取到生成排序列表的整个过程，构成了一个完整基于内容过滤系统的架构。在接下来的实操环节中，你将从头到尾实现这一流程。</p>",
+  "slug": "producing-content-based-recommendations",
+  "updates": [],
+  "references": [
+    {
+      "id": 21124,
+      "title": "Mining of Massive Datasets",
+      "author": "Jure Leskovec, Anand Rajaraman, and Jeffrey D. Ullman",
+      "year": "2020",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "565",
+      "url": "https://www.cambridge.org/core/books/mining-of-massive-datasets/9781108476348",
+      "doi": "",
+      "note": "涵盖了大规模数据分析的理论基础，包括向量空间模型、最近邻搜索和降维等概念，这些都是基于内容的推荐系统的基础。",
+      "order": 2,
+      "created_at": "2025-09-13T07:14:13.113021Z",
+      "updated_at": "2025-09-13T07:45:57.781492Z"
+    },
+    {
+      "id": 21126,
+      "title": "`sklearn.metrics.pairwise.cosine_similarity`",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html",
+      "doi": "",
+      "note": "scikit-learn中用于计算余弦相似度的函数官方文档，提供使用示例和技术细节。",
+      "order": 4,
+      "created_at": "2025-09-13T07:14:13.118298Z",
+      "updated_at": "2025-09-13T07:46:04.768729Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2356,
+  "title": "导入特定名称：`from ... import`",
+  "meta_title": "Python `from ... import` | 导入特定名称",
+  "meta_description": "了解如何将特定函数、类或变量直接从模块导入到当前命名空间。",
+  "content": "<p>标准的 <code>import module_name</code> 语句会将整个模块的功能引入到你的程序中，但你总是需要在使用时，在各项前面加上模块名作为前缀（例如 <code>math.pi</code> 或 <code>random.randint()</code>）。这通常是一个好习惯，因为它能保持名称来源清晰，并避免意外的命名冲突。</p>\n<p>不过，有时你可能只需要模块中的一两个特定函数或变量，并且计划频繁使用它们。反复输入模块名可能会感到繁琐。Python 为此提供了一种替代语法，即 <code>from ... import</code>。它允许你将特定名称直接导入到脚本的当前命名空间，让你无需模块前缀即可使用它们。</p>\n<h3><code>from ... import</code> 语法</h3>\n<p>基本结构如下：</p>\n<pre><code class=\"language-python\">from module_name import name1, name2, ...\n</code></pre>\n<p>让我们再次查看我们的 <code>math</code> 模块示例。假设我们只需要 <code>sqrt</code> 函数（用于计算平方根）和常量 <code>pi</code>。</p>\n<p>之前，我们会这样做：</p>\n<pre><code class=\"language-python\">import math\n\nradius = 5\narea = math.pi * (radius ** 2)\nhypotenuse = math.sqrt(3**2 + 4**2)\n\nprint(f\"Area: {area}\")\nprint(f\"Hypotenuse: {hypotenuse}\")\n</code></pre>\n<p>使用 <code>from ... import</code>，我们可以这样写：</p>\n<pre><code class=\"language-python\">from math import pi, sqrt\n\nradius = 5\n# 现在不再需要 'math.' 前缀\narea = pi * (radius ** 2)\nhypotenuse = sqrt(3**2 + 4**2)\n\nprint(f\"Area: {area}\")\nprint(f\"Hypotenuse: {hypotenuse}\")\n# 输出：\n# Area: 78.53981633974483\n# Hypotenuse: 5.0\n</code></pre>\n<p>如你所见，<code>pi</code> 和 <code>sqrt</code> 现在可以直接使用，使得代码略微简洁。</p>\n<h3>权衡：命名空间与清晰度</h3>\n<p><code>from ... import</code> 的便利性带来了一个潜在代价：<strong>命名空间污染</strong>和清晰度降低。</p>\n<p><strong>命名空间</strong>类似于一个字典，Python 在其中存储当前已定义且可访问的名称（变量、函数、类）。当你使用 <code>import math</code> 时，Python 会为 <code>math</code> 创建一个条目，并且其所有内容都通过该 <code>math</code> 条目访问（例如 <code>math.pi</code>）。<code>math</code> 模块内部的名称不会直接与你脚本中定义的名称混淆。</p>\n<p>然而，当你使用 <code>from math import pi</code> 时，<code>pi</code> 名称本身会被直接添加到脚本的主命名空间。如果你脚本中已经有一个名为 <code>pi</code> 的变量，它将被从 <code>math</code> 导入的名称覆盖，可能导致意外行为或错误。</p>\n<p>考虑这个例子：</p>\n<pre><code class=\"language-python\"># 定义我们自己的 'sqrt' 函数（可能不太好）\ndef sqrt(number):\n  print(f\"Maybe finding the square root of {number}?\")\n  return number / 2 # 计算错误！\n\n# 首先计算一些不相关的东西\nresult1 = sqrt(100)\nprint(f\"Our initial sqrt(100) result: {result1}\")\n\n# 现在，从 math 模块导入真正的 sqrt\nfrom math import sqrt\n\n# 再次尝试使用 sqrt - 哪个会运行？\nresult2 = sqrt(100)\nprint(f\"Result after importing math.sqrt: {result2}\")\n\n# 输出：\n# Maybe finding the square root of 100?\n# Our initial sqrt(100) result: 50.0\n# Result after importing math.sqrt: 10.0\n</code></pre>\n<p><code>from math import sqrt</code> 语句用 <code>math</code> 模块中的 <code>sqrt</code> 函数覆盖了我们自定义的 <code>sqrt</code> 函数。虽然这个例子是人为编造的，但在包含许多变量和函数的大型项目中，如果你直接导入许多名称，意外覆盖名称成为真实可能。</p>\n<h3>导入所有内容：<code>from module import *</code>（谨慎使用！）</h3>\n<p>Python 提供了一种变体：<code>from module_name import *</code>。星号 (<code>*</code>) 是一个通配符，表示“导入所有内容”。</p>\n<pre><code class=\"language-python\"># 注意：通常不推荐！\nfrom math import *\n\n# 现在 math 中的所有名称都直接可用\nprint(pi)\nprint(sqrt(16))\nprint(cos(0))\n# 输出：\n# 3.141592653589793\n# 4.0\n# 1.0\n</code></pre>\n<p>这会将指定模块中的所有公共名称直接导入到你当前的命名空间。虽然它对于交互式使用或非常小的脚本可能显得方便，但<strong>在大型程序中强烈不推荐</strong>。为什么？</p>\n<ol>\n<li><strong>命名空间冲突的高风险：</strong> 它可能会将数十或数百个名称倾倒到你的命名空间中，使意外的名称冲突几乎不可避免。</li>\n<li><strong>可读性降低：</strong> 很难分辨特定函数或变量的来源。看到 <code>sqrt(100)</code> 并不能立即告诉你它是内置函数、在当前文件中定义，还是从 <code>math</code>（或使用 <code>*</code> 导入的其他模块）导入的。标准的 <code>import math</code> 后跟 <code>math.sqrt(100)</code> 则没有歧义。</li>\n</ol>\n<p>尽量少用 <code>from module import *</code>，甚至不用。标准实践倾向于 <code>import module_name</code> 的明确性或 <code>from module_name import specific_name</code> 的选择性。</p>\n<h3>使用别名导入：<code>from ... import ... as ...</code></h3>\n<p>如果你想导入一个特定名称，但它与脚本中的现有名称冲突，或者你只是喜欢使用不同的名称，该怎么办？你可以使用 <code>as</code> 来创建别名，就像在使用标准 <code>import</code> 语句时一样。</p>\n<pre><code class=\"language-python\">from math import pi as mathematical_pi\n\n# 使用我们自己的名为 'pi' 的变量\npi = 3.14 # 一个精度较低的版本，可能用于特定需求\n\nradius = 5\n# 使用别名导入来获取精确值\narea = mathematical_pi * (radius ** 2)\n\nprint(f\"Our pi: {pi}\")\nprint(f\"Imported pi: {mathematical_pi}\")\nprint(f\"Calculated area: {area}\")\n\n# 输出：\n# Our pi: 3.14\n# Imported pi: 3.141592653589793\n# Calculated area: 78.53981633974483\n</code></pre>\n<p>这让你在无需前缀的情况下直接访问，同时也能解决潜在的名称冲突或允许更具描述性的命名。</p>\n<h3>何时使用哪种导入方式</h3>\n<ul>\n<li><strong><code>import module_name</code></strong>：这是最常见且通常推荐的方法。\n<ul>\n<li>保持命名空间独立和整洁。</li>\n<li>使代码明确且更易于阅读（你总是知道 <code>module_name.function()</code> 的来源）。</li>\n<li>当你需要模块中的多个项或希望获得最大清晰度时最佳。</li>\n</ul>\n</li>\n<li><strong><code>from module_name import name1, name2</code></strong>：在以下情况使用：\n<ul>\n<li>你只从模块中需要少数特定项。</li>\n<li>你将频繁使用这些项，并且 <code>module_name.</code> 的冗余变得分散注意力。</li>\n<li>你确信没有命名冲突，或者你使用 <code>as</code> 处理了它们。</li>\n</ul>\n</li>\n<li><strong><code>from module_name import name as alias</code></strong>：在使用 <code>from ... import</code> 时，这对于防止命名冲突或缩短长名称很有用。</li>\n<li><strong><code>from module_name import *</code></strong>：由于命名空间污染和可读性问题，在生产代码或任何较大规模的脚本中避免使用此方法。对于交互式 Python 会话中的快速测试，它可能是可以接受的。</li>\n</ul>\n<p>了解这些不同的代码导入方式，对于有效使用模块和构建结构良好的 Python 程序来说非常重要。当你开始使用 Python 的标准库和第三方包时，你将不断做出选择，以最佳方式导入所需功能。</p>",
+  "slug": "python-from-import",
+  "updates": [],
+  "references": [
+    {
+      "id": 5343,
+      "title": "The Python Tutorial, Section 6: Modules",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/modules.html",
+      "doi": "",
+      "note": "解释模块结构、不同导入语句及其对命名空间影响的官方 Python 文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:50.825173Z",
+      "updated_at": "2025-09-07T21:11:19.462454Z"
+    },
+    {
+      "id": 5345,
+      "title": "Learning Python",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-python-5th/9781449355739/",
+      "doi": "",
+      "note": "详细介绍 Python 模块、导入机制以及各种导入形式对程序结构和命名空间影响的全面指南。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:50.829615Z",
+      "updated_at": "2025-09-07T21:11:36.867590Z"
+    },
+    {
+      "id": 5346,
+      "title": "Google's Python Class - Modules",
+      "author": "Google Developers",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developers.google.com/edu/python",
+      "doi": "",
+      "note": "提供 Python 模块导入的实例和解释，包括命名空间管理和避免常见问题的实践。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:50.836211Z",
+      "updated_at": "2025-09-07T21:11:34.198879Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

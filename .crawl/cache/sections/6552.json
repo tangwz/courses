@@ -1,0 +1,61 @@
+{
+  "id": 6552,
+  "title": "实作：编写你的第一个工具定义",
+  "meta_title": "实践：定义一个LLM工具",
+  "meta_description": "一个关于定义简单工具的实践环节，涵盖其描述、输入参数和预期输出格式。",
+  "content": "<p>编写工具定义有助于扩展LLM代理的能力，并要求清晰的规范。下面将指导完成第一个工具定义的编写过程。一个定义完善的工具是LLM有效交互的基础，它确保代理明白该工具的作用、所需信息以及预期的结果。</p>\n<p>在此，我们将侧重于<em>定义</em>本身。实现工具逻辑的Python代码将在后续章节介绍。目前，我们的目标是创建一个LLM可以使用的清晰约定。</p>\n<h3>工具定义的构成</h3>\n<p>在开始之前，我们先简要回顾一下工具定义的主要构成部分。这些部分共同作用，为LLM代理提供对工具的全面理解。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-15zrx2f\" \n              data-graph-definition='digraph ToolDefinition {\n    rankdir=LR;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    ToolDef [label=\"完整的工具定义\", fillcolor=\"#4dabf7\", shape=hexagon];\n\n    Name [label=\"工具名称\\n(唯一标识符，如 &#39;get_current_weather&#39;)\", fillcolor=\"#a5d8ff\"];\n    Description [label=\"用途描述\\n(对LLM的清晰说明：作用，何时使用)\", fillcolor=\"#96f2d7\"];\n    InputSchema [label=\"输入规范 (参数)\\n(定义所需参数、数据类型及各参数描述)\", fillcolor=\"#b2f2bb\"];\n    OutputSchema [label=\"输出规范 (返回值)\\n(描述预期结果的结构和数据类型)\", fillcolor=\"#ffec99\"];\n\n    ToolDef -> Name [label=\" 包含\"];\n    ToolDef -> Description [label=\" 包含\"];\n    ToolDef -> InputSchema [label=\" 定义\"];\n    ToolDef -> OutputSchema [label=\" 定义\"];\n\n    InputSchema -> InputParam1 [label=\"例如，city (字符串，必填)\\n&#39;城市名称。&#39;\"];\n    InputSchema -> InputParam2 [label=\"例如，unit (字符串，可选)\\n&#39;温度单位：摄氏度或华氏度。&#39;\"];\n    InputParam1 [shape=note, fillcolor=\"#ffffff\", fontcolor=\"#343a40\"];\n    InputParam2 [shape=note, fillcolor=\"#ffffff\", fontcolor=\"#343a40\"];\n\n    OutputSchema -> OutputField1 [label=\"例如，temperature (数字)\\n&#39;当前温度值。&#39;\"];\n    OutputSchema -> OutputField2 [label=\"例如，condition (字符串)\\n&#39;天气文字描述。&#39;\"];\n    OutputField1 [shape=note, fillcolor=\"#ffffff\", fontcolor=\"#343a40\"];\n    OutputField2 [shape=note, fillcolor=\"#ffffff\", fontcolor=\"#343a40\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-15zrx2f\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LLM代理工具定义中常见的构成部分。</p>\n</blockquote>\n<h3>场景：一个简单的天气信息工具</h3>\n<p>我们来设计一个能获取指定地点当前天气的工具。这是一个常见且实用的例子。LLM代理可以使用此类工具来回答用户的问题，例如“伦敦天气怎么样？”或“我明天在巴黎需要带伞吗？”（尽管我们的第一个版本只提供当前天气）。</p>\n<p>我们的工具需要：</p>\n<ol>\n<li>一个清晰的名称。</li>\n<li>一个LLM能理解的描述，以便判断何时使用此工具。</li>\n<li>输入参数 (parameter)的定义（例如，城市）。</li>\n<li>输出样式的定义（例如，温度、天气情况）。</li>\n</ol>\n<h3>步骤1：为你的工具命名</h3>\n<p>名称应具有描述性且简洁。它常被程序化使用，因此蛇形命名法（snake_case）或驼峰命名法（camelCase）很常见。我们将工具命名为：<code>get_current_weather</code>。</p>\n<h3>步骤2：编写描述</h3>\n<p>描述主要面向LLM。它应清晰说明：</p>\n<ul>\n<li>工具的作用。</li>\n<li>何时应使用它。</li>\n<li>关于其能力或限制的任何细节。</li>\n</ul>\n<p>我们的<code>get_current_weather</code>工具的一个良好描述可能是：\n“获取指定城市的当前天气情况，包括温度、简要描述和湿度。当用户询问特定地点的天气时，请使用此工具。它可选择性地接收州或国家代码，以帮助区分同名城市。”</p>\n<p>请注意，此描述如何指导LLM了解其用途（“当用户询问天气时”）并暗示其参数 (parameter)。</p>\n<h3>步骤3：定义输入参数 (parameter)（输入规范）</h3>\n<p>工具需要输入才能运行。我们需要定义<code>get_current_weather</code>工具预期的每个参数。对于每个参数，我们应指定：</p>\n<ul>\n<li><strong>名称</strong>：参数的识别方式（例如，<code>city</code>）。</li>\n<li><strong>类型</strong>：数据类型（例如，<code>string</code>、<code>number</code>、<code>boolean</code>）。</li>\n<li><strong>描述</strong>：该参数用途的人类可读和LLM可读的解释。这对于LLM正确填充参数非常重要。</li>\n<li><strong>必填/可选</strong>：LLM是否<em>必须</em>提供此参数。</li>\n</ul>\n<p>许多LLM框架使用类似JSON Schema的结构来定义参数。我们来定义天气工具的输入：</p>\n<ul>\n<li><strong><code>city</code></strong>：\n<ul>\n<li>类型：<code>string</code></li>\n<li>描述：“要获取天气的城市名称，例如‘San Francisco’、‘Tokyo’。”</li>\n<li>必填：是</li>\n</ul>\n</li>\n<li><strong><code>state_or_country_code</code></strong>：\n<ul>\n<li>类型：<code>string</code></li>\n<li>描述：“可选。州缩写（例如，加利福尼亚州的‘CA’）或两字母ISO国家代码（例如，大不列颠的‘GB’），必要时用于区分城市名称。”</li>\n<li>必填：否</li>\n</ul>\n</li>\n</ul>\n<p>这告诉LLM它绝对需要一个<code>city</code>，但<code>state_or_country_code</code>是可选的，应在可用或需要时用于提供更具体的地点信息。</p>\n<h3>步骤4：定义输出结构（输出规范）</h3>\n<p>定义工具将返回的数据结构与定义输入同样重要。这有助于LLM（以及你，开发者）明白工具执行后预期的结果。</p>\n<p>对于我们的<code>get_current_weather</code>工具，成功执行可能会返回：</p>\n<ul>\n<li><strong><code>location_found</code></strong>：\n<ul>\n<li>类型：<code>string</code></li>\n<li>描述：“已解析出天气信息的完整地点，例如‘London, GB’。”</li>\n</ul>\n</li>\n<li><strong><code>temperature</code></strong>：\n<ul>\n<li>类型：<code>number</code>（可以是整数或浮点数）</li>\n<li>描述：“当前温度。”</li>\n</ul>\n</li>\n<li><strong><code>unit</code></strong>：\n<ul>\n<li>类型：<code>string</code></li>\n<li>描述：“提供的温度单位（例如，‘Celsius’、‘Fahrenheit’）。”</li>\n</ul>\n</li>\n<li><strong><code>condition</code></strong>：\n<ul>\n<li>类型：<code>string</code></li>\n<li>描述：“天气情况的简要文字描述（例如，‘Sunny’、‘Cloudy with showers’）。”</li>\n</ul>\n</li>\n<li><strong><code>humidity_percent</code></strong>：\n<ul>\n<li>类型：<code>integer</code></li>\n<li>描述：“当前湿度百分比（例如，65 表示 65%）。”</li>\n</ul>\n</li>\n<li><strong><code>error</code></strong>：\n<ul>\n<li>类型：<code>string</code>（或 <code>null</code>）</li>\n<li>描述：“如果无法获取天气数据，则显示错误消息（例如，‘City not found’）。如果请求成功，此字段将不存在或为null。”</li>\n</ul>\n</li>\n</ul>\n<p>定义输出，特别是包含潜在的错误字段，使工具更可预测，并更方便LLM代理处理各种结果。</p>\n<h3>步骤5：组装完整的工具定义</h3>\n<p>现在，让我们将所有这些部分整合为一个单一的、结构化的定义。具体格式可能因你使用的LLM框架（如LangChain、LlamaIndex，或直接使用OpenAI的GPT等模型）而异。一种常见做法是使用JSON对象。</p>\n<p>这里是我们<code>get_current_weather</code>工具定义的可能样式：</p>\n<pre><code class=\"language-json\">{\n  \"name\": \"get_current_weather\",\n  \"description\": \"获取指定城市的当前天气情况，包括温度、简要描述和湿度。当用户询问特定地点的天气时，请使用此工具。它可选择性地接收州或国家代码，以帮助区分同名城市。\",\n  \"input_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"city\": {\n        \"type\": \"string\",\n        \"description\": \"要获取天气的城市名称，例如‘San Francisco’、‘Tokyo’。\"\n      },\n      \"state_or_country_code\": {\n        \"type\": \"string\",\n        \"description\": \"可选。州缩写（例如，加利福尼亚州的‘CA’）或两字母ISO国家代码（例如，大不列颠的‘GB’），必要时用于区分城市名称。\"\n      }\n    },\n    \"required\": [\"city\"]\n  },\n  \"output_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"location_found\": {\n        \"type\": \"string\",\n        \"description\": \"已解析出天气信息的完整地点，例如‘London, GB’。\"\n      },\n      \"temperature\": {\n        \"type\": \"number\",\n        \"description\": \"当前温度。\"\n      },\n      \"unit\": {\n        \"type\": \"string\",\n        \"description\": \"提供的温度单位（例如，‘Celsius’、‘Fahrenheit’）。\"\n      },\n      \"condition\": {\n        \"type\": \"string\",\n        \"description\": \"天气情况的简要文字描述（例如，‘Sunny’、‘Cloudy with showers’）。\"\n      },\n      \"humidity_percent\": {\n        \"type\": \"integer\",\n        \"description\": \"当前湿度百分比（例如，65 表示 65%）。\"\n      },\n      \"error\": {\n        \"type\": \"string\",\n        \"description\": \"如果无法获取天气数据，则显示错误消息（例如，‘City not found’）。如果请求成功，此字段将不存在或为null。\"\n      }\n    },\n    \"required\": [\"location_found\", \"temperature\", \"unit\", \"condition\", \"humidity_percent\"]\n  }\n}\n</code></pre>\n<blockquote>\n<p>注意：某些框架可能使用“parameters”而非“input_schema”。这是输入和输出的结构化定义。<code>output_schema</code>中的<code>required</code>列表表示成功时预期出现的字段；<code>error</code>字段通常只在出现问题时出现。</p>\n</blockquote>\n<h3>该定义为何有效</h3>\n<p>这种结构化定义有几个重要作用：</p>\n<ul>\n<li><strong>LLM理解</strong>：<code>name</code>和<code>description</code>帮助LLM识别针对给定用户查询或任务的正确工具。</li>\n<li><strong>参数 (parameter)构成</strong>：<code>input_schema</code>，特别是<code>properties</code>及其各自的<code>description</code>字段，让LLM明白需要哪些参数、它们的类型以及如何格式化。例如，如果用户说“巴黎天气”，LLM就知道从<code>city</code>参数中提取“Paris”。</li>\n<li><strong>输出解释</strong>：尽管并非所有框架都要求LLM直接使用严格的<code>output_schema</code>（与<code>input_schema</code>方式相同），但定义它是一个良好实践。它为实现工具的开发者明确了约定，并有助于设计LLM如何处理工具结果。它对于测试和验证也很有价值。</li>\n</ul>\n<h3>本次练习的考量点</h3>\n<p>当你编写自己的工具定义时，请记住我们例子中得出的这些要点：</p>\n<ul>\n<li><strong>清晰性极为重要</strong>：工具本身及其参数 (parameter)的描述对LLM来说必须明确无歧义。从LLM的角度思考：“如果我读到这个，我能准确知道要提供什么以及这个工具的作用吗？”</li>\n<li><strong>类型要具体</strong>：使用正确的数据类型（<code>string</code>、<code>number</code>、<code>boolean</code>、<code>object</code>、<code>array</code>）有助于验证并确保工具接收到预期格式的数据。</li>\n<li><strong>区分必填与可选</strong>：这有助于LLM形成有效的调用并允许更灵活的工具。</li>\n<li><strong>规划输出</strong>：了解你的工具将返回什么，包括潜在的错误状态，与定义其输入同样重要。</li>\n</ul>\n<p>本次定义工具的实作练习为下一步做好了准备：实现其背后的实际逻辑。通过扎实的定义，你为LLM代理提供了必要信息，使其能够有效使用你的自定义功能。在后续章节中，我们将探讨如何用Python代码实现这些定义。</p>",
+  "slug": "practice-first-tool-definition",
+  "updates": [],
+  "references": [
+    {
+      "id": 18489,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "这份官方指南提供了定义OpenAI模型可使用的工具（函数）的实用示例和最佳实践，直接反映了本节讨论的类似JSON Schema的结构。",
+      "order": 1,
+      "created_at": "2025-09-06T12:26:16.773599Z",
+      "updated_at": "2026-02-04T11:32:01.289347Z"
+    },
+    {
+      "id": 18490,
+      "title": "JSON Schema",
+      "author": "Austin Wright, Henry Andrews, Ben Hutton, Greg Dennis",
+      "year": "2020",
+      "publisher": "IETF Trust",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://json-schema.org/",
+      "doi": "",
+      "note": "JSON Schema的官方网站和规范，它是定义JSON数据结构和验证的基础标准，被LLM框架广泛用于指定工具的输入和输出。",
+      "order": 2,
+      "created_at": "2025-09-06T12:26:16.777499Z",
+      "updated_at": "2026-02-04T11:32:01.763019Z"
+    },
+    {
+      "id": 18492,
+      "title": "LangChain Documentation: Tools",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/agents/tools/",
+      "doi": "",
+      "note": "为LangChain框架中定义和集成工具提供了实用指导和示例，LangChain是构建由LLM驱动的应用程序和代理的广泛使用的库。",
+      "order": 4,
+      "created_at": "2025-09-06T12:26:16.782270Z",
+      "updated_at": "2026-02-04T11:32:01.501988Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

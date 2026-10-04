@@ -1,0 +1,61 @@
+{
+  "id": 2395,
+  "title": "编写代码：一步一步",
+  "meta_title": "编写项目代码循序渐进 | Python 示例",
+  "meta_description": "逐步完成命令行工具示例项目的实现过程。",
+  "content": "<p>编写一个简单的命令行应用程序的 Python 代码。应用程序将逐步构建，并应用编程知识。例如，将创建一个非常基础的“待办事项列表”应用程序。</p>\n<p>记住我们概述的计划吗？我们需要添加任务、查看任务、将任务标记 (token)为已完成以及退出等功能。我们还决定了数据的存储结构。</p>\n<h3>1. 设置文件和初始数据结构</h3>\n<p>首先，创建一个新的 Python 文件。让我们将其命名为 <code>todo_app.py</code>。</p>\n<p>在这个文件中，我们需要一种方式来存储任务。列表是个不错的选择，其中列表中的每个项代表一个任务。我们应该如何表示一个任务呢？字典看起来很合适，它可以让我们存储任务描述及其状态（例如，“待处理”或“已完成”）。</p>\n<pre><code class=\"language-python\"># todo_app.py\n\n# 从一个空列表开始，用于存放任务。\n# 每个任务都将是一个字典，例如：{'description': '做作业', 'status': '待处理'}\ntasks = []\n</code></pre>\n<p>这奠定了基础。<code>tasks</code> 目前是一个空列表，准备好存放我们的任务字典。</p>\n<h3>2. 构建核心函数</h3>\n<p>现在，让我们为应用程序需要执行的每个操作创建函数。这种方法使我们的代码模块化且更易于理解，体现了第 5 章（函数）中的原则。</p>\n<h4>添加任务</h4>\n<p>我们需要一个函数，它会要求用户输入任务描述，并将其以“待处理”状态添加到我们的 <code>tasks</code> 列表中。</p>\n<pre><code class=\"language-python\">def add_task(task_list):\n    \"\"\"要求用户输入任务描述并将其添加到列表中。\"\"\"\n    description = input(\"输入任务描述：\")\n    new_task = {'description': description, 'status': 'pending'}\n    task_list.append(new_task)\n    print(f\"任务 '{description}' 已添加。\")\n\n# 使用示例（我们稍后会将其集成到主循环中）\n# add_task(tasks)\n# print(tasks)\n</code></pre>\n<p>此函数将主 <code>task_list</code> 作为参数 (parameter)，获取用户输入，创建字典，并使用 <code>append</code> 方法（来自第 4 章“列表”）将其添加。</p>\n<h4>查看任务</h4>\n<p>我们需要一种方式来显示所有任务，或许可以加上编号，以便用户可以方便地引用它们。我们还应该处理尚未有任务的情况。</p>\n<pre><code class=\"language-python\">def view_tasks(task_list):\n    \"\"\"显示所有任务及其索引和状态。\"\"\"\n    print(\"\\n--- 您的任务 ---\")\n    if not task_list:\n        print(\"暂无任务！\")\n        return\n\n    # enumerate 提供索引和项，在此处很有用。\n    for index, task in enumerate(task_list):\n        # 为方便用户，索引从 1 开始显示\n        print(f\"{index + 1}. {task['description']} [{task['status']}]\")\n    print(\"------------------\")\n\n# 使用示例：\n# view_tasks(tasks) # 最初将显示“暂无任务！”\n# add_task(tasks)\n# view_tasks(tasks)\n</code></pre>\n<p>此函数遍历 <code>task_list</code>。它使用 <code>enumerate</code> 来同时获取索引（从 0 开始）和任务字典。我们为显示目的将索引加 1，使其对用户来说更自然（1、2、3……）。在尝试循环之前，它会检查列表是否为空。</p>\n<h4>将任务标记 (token)为已完成</h4>\n<p>此函数需要显示任务，询问用户要将哪个任务标记为已完成，验证输入，并更新所选任务字典中的状态。这涉及到使用第 3 章（控制流）和可能第 9 章（错误处理）中的知识。</p>\n<pre><code class=\"language-python\">def mark_complete(task_list):\n    \"\"\"将特定任务标记为已完成。\"\"\"\n    view_tasks(task_list) # 先显示任务，以便用户选择\n\n    if not task_list: # 如果列表为空，则无法标记为已完成\n        return\n\n    while True: # 循环直到接收到有效输入\n        try:\n            task_number_str = input(\"输入要标记为已完成的任务编号：\")\n            # 将输入字符串转换为整数（第 2 章）\n            task_index = int(task_number_str) - 1 # 调整为基于 0 的索引\n\n            # 检查索引是否有效（第 3 章，条件语句）\n            if 0 &#x3C;= task_index &#x3C; len(task_list):\n                # 直接修改列表中的字典（第 4 章）\n                task_list[task_index]['status'] = 'complete'\n                print(f\"任务 {task_index + 1} 已标记为已完成。\")\n                break # 退出输入循环\n            else:\n                print(\"任务编号无效。请重试。\")\n        except ValueError:\n            # 处理输入不是数字的情况（第 9 章）\n            print(\"输入无效。请输入一个数字。\")\n\n# 使用示例：\n# add_task(tasks) # 先添加一个任务\n# mark_complete(tasks)\n# view_tasks(tasks)\n</code></pre>\n<p>在这里，我们首先显示任务。然后，我们要求用户输入编号。我们使用 <code>while True</code> 循环结合 <code>try-except</code>（第 9 章）来处理用户输入非数字时可能出现的 <code>ValueError</code>。我们还会检查该数字是否对应列表中的有效索引。如果输入有效，我们通过其索引 (<code>task_list[task_index]</code>) 访问特定的任务字典，并更改与 <code>'status'</code> 键关联的值。然后我们 <code>break</code>（跳出）输入循环。</p>\n<h3>3. 创建主应用程序循环</h3>\n<p>现在我们需要应用程序的主体部分，它会持续运行，向用户显示选项菜单，获取他们的选择，并调用相应的函数。这使用了 <code>while</code> 循环和 <code>if/elif/else</code> 语句（第 3 章）。</p>\n<pre><code class=\"language-python\">def display_menu():\n    \"\"\"打印菜单选项。\"\"\"\n    print(\"\\n--- 待办事项列表菜单 ---\")\n    print(\"1. 添加任务\")\n    print(\"2. 查看任务\")\n    print(\"3. 将任务标记为已完成\")\n    print(\"4. 退出\")\n    print(\"-----------------------\")\n\n# --- 主应用程序执行 ---\nif __name__ == \"__main__\": # 标准做法，稍后简要解释\n    print(\"欢迎使用简单待办事项列表！\")\n\n    while True: # 主应用程序循环\n        display_menu()\n        choice = input(\"输入您的选择 (1-4)：\")\n\n        if choice == '1':\n            add_task(tasks)\n        elif choice == '2':\n            view_tasks(tasks)\n        elif choice == '3':\n            mark_complete(tasks)\n        elif choice == '4':\n            print(\"正在退出待办事项列表应用程序。再见！\")\n            break # 退出 while 循环\n        else:\n            print(\"无效选择。请输入 1 到 4 之间的一个数字。\")\n\n    # 可选：在此处添加退出前将任务保存到文件的功能\n    # print(\"任务已保存。\") # 占位符\n</code></pre>\n<p><code>display_menu</code> 函数只是打印出选项。主体部分在一个 <code>while True</code> 循环中运行。它显示菜单，获取用户的 <code>choice</code>（选择），并使用 <code>if/elif/else</code> 来决定调用哪个函数。如果选择是“4”，它会打印一条告别消息并使用 <code>break</code> 来终止循环，从而结束程序。一个 <code>else</code> 子句处理无效输入。</p>\n<p><code>if __name__ == \"__main__\":</code> 这一行是 Python 中常见的结构。这意味着此代码块中的代码仅在脚本直接执行时运行（而不是作为模块导入到另一个脚本时运行，这一点我们在第 7 章中讨论过）。对于我们这个简单的应用程序，它标志着执行的起始点。</p>\n<h3>4. 整合所有代码（完整代码）</h3>\n<p>让我们将所有部分组合到最终的 <code>todo_app.py</code> 文件中：</p>\n<pre><code class=\"language-python\"># todo_app.py\n\n# 从一个空列表开始，用于存放任务。\ntasks = []\n\ndef add_task(task_list):\n    \"\"\"要求用户输入任务描述并将其添加到列表中。\"\"\"\n    description = input(\"输入任务描述：\")\n    # 基本验证：确保描述不为空\n    if description.strip(): # strip() 移除开头/结尾的空白字符\n        new_task = {'description': description, 'status': 'pending'}\n        task_list.append(new_task)\n        print(f\"任务 '{description}' 已添加。\")\n    else:\n        print(\"任务描述不能为空。\")\n\ndef view_tasks(task_list):\n    \"\"\"显示所有任务及其索引和状态。\"\"\"\n    print(\"\\n--- 您的任务 ---\")\n    if not task_list:\n        print(\"暂无任务！\")\n        return\n\n    for index, task in enumerate(task_list):\n        print(f\"{index + 1}. {task['description']} [{task['status']}]\")\n    print(\"------------------\")\n\ndef mark_complete(task_list):\n    \"\"\"将特定任务标记为已完成。\"\"\"\n    view_tasks(task_list)\n\n    if not task_list:\n        return\n\n    while True:\n        try:\n            task_number_str = input(\"输入要标记为已完成的任务编号（输入 0 取消）：\")\n            task_number = int(task_number_str)\n\n            if task_number == 0: # 允许用户取消\n                break\n\n            task_index = task_number - 1\n\n            if 0 &#x3C;= task_index &#x3C; len(task_list):\n                # 检查是否已完成以避免不必要的更新\n                if task_list[task_index]['status'] == 'complete':\n                    print(f\"任务 {task_number} 已经标记为已完成。\")\n                else:\n                    task_list[task_index]['status'] = 'complete'\n                    print(f\"任务 {task_number} 已标记为已完成。\")\n                break\n            else:\n                print(\"任务编号无效。请重试。\")\n        except ValueError:\n            print(\"输入无效。请输入一个数字。\")\n\ndef display_menu():\n    \"\"\"打印菜单选项。\"\"\"\n    print(\"\\n--- 待办事项列表菜单 ---\")\n    print(\"1. 添加任务\")\n    print(\"2. 查看任务\")\n    print(\"3. 将任务标记为已完成\")\n    print(\"4. 退出\")\n    print(\"-----------------------\")\n\n# --- 主应用程序执行 ---\nif __name__ == \"__main__\":\n    print(\"欢迎使用简单待办事项列表！\")\n    # 未来增强：在此处从文件加载任务\n\n    while True:\n        display_menu()\n        choice = input(\"输入您的选择 (1-4)：\")\n\n        if choice == '1':\n            add_task(tasks)\n        elif choice == '2':\n            view_tasks(tasks)\n        elif choice == '3':\n            mark_complete(tasks)\n        elif choice == '4':\n            # 未来增强：在此处将任务保存到文件\n            print(\"正在退出待办事项列表应用程序。再见！\")\n            break\n        else:\n            print(\"无效选择。请输入 1 到 4 之间的一个数字。\")\n\n</code></pre>\n<h3>运行代码</h3>\n<p>将此代码保存为 <code>todo_app.py</code>。打开您的终端或命令提示符，导航到您保存文件的目录，然后使用以下命令运行它：</p>\n<pre><code class=\"language-bash\">python todo_app.py\n</code></pre>\n<p>您应该会看到消息和菜单。尝试添加任务、查看任务和将任务标记 (token)为已完成。</p>\n<p>这个循序渐进的过程展示了如何通过以下方式构建一个简单的应用程序：</p>\n<ol>\n<li>定义数据结构（字典列表）。</li>\n<li>将功能分解为单独的函数（<code>add_task</code>、<code>view_tasks</code>、<code>mark_complete</code>）。</li>\n<li>使用控制流（<code>while</code>、<code>if/elif/else</code>）来管理应用程序的执行和用户交互。</li>\n<li>实施基本的错误处理（<code>try-except</code>）以提高代码的健壮性。</li>\n</ol>\n<p>尽管基础，但这种结构构成了许多命令行工具的基础，并整合了本课程中涵盖的许多知识点。下一节将讨论测试这个应用程序。</p>",
+  "slug": "writing-project-code",
+  "updates": [],
+  "references": [
+    {
+      "id": 6113,
+      "title": "The Python Tutorial",
+      "author": "Guido van Rossum and the Python development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/",
+      "doi": "",
+      "note": "提供了Python核心语言功能的介绍，包括数据结构（列表、字典）、控制流、函数和错误处理，对于理解应用程序的构建模块至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T01:19:00.102019Z",
+      "updated_at": "2025-09-07T21:21:37.434915Z"
+    },
+    {
+      "id": 6114,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "一本针对初学者的实践指南，展示了如何应用Python基础概念构建实际项目，与本节中循序渐进的应用程序开发方法一致。",
+      "order": 2,
+      "created_at": "2025-09-05T01:19:00.193879Z",
+      "updated_at": "2025-09-07T21:21:33.656386Z"
+    },
+    {
+      "id": 6115,
+      "title": "Google's Python Class",
+      "author": "Nick Parlante",
+      "year": "2010",
+      "publisher": "Google Developers",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developers.google.com/edu/python/",
+      "doi": "",
+      "note": "提供免费且全面的Python基础课程，内容涵盖基本语法、数据类型、控制结构和函数定义，这些都在示例应用程序中得到了应用。",
+      "order": 3,
+      "created_at": "2025-09-05T01:19:00.199051Z",
+      "updated_at": "2025-09-07T21:21:37.107306Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

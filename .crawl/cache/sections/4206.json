@@ -1,0 +1,61 @@
+{
+  "id": 4206,
+  "title": "随机存取存储器 (RAM)",
+  "meta_title": "RAM在AI中的作用",
+  "meta_description": "了解系统内存（RAM）及其对加载数据和模型的重要性。",
+  "content": "<p>可以将您电脑的内存想象成一个工作区域。中央处理器（CPU）是进行计算的工作者，它需要一个地方来临时存放正在处理的指令和数据。这个主要的工作区域被称为<strong>随机存取存储器（RAM）</strong>，通常简称为系统内存。</p>\n<p>RAM是一种电子存储，比固态硬盘（SSD）或机械硬盘（HDD）等长期存储设备要快得多。当您启动程序或打开文件时，所需数据会从较慢的存储驱动器加载到速度快得多的RAM中，以便CPU能迅速读取。这种速度对于流畅的计算体验不可或缺。</p>\n<h3>RAM在系统中的作用</h3>\n<p>RAM有以下几项重要功能：</p>\n<ol>\n<li><strong>操作系统：</strong> 它存放部分操作系统（如Windows、macOS或Linux），这些部分需要随时可用。</li>\n<li><strong>应用程序：</strong> 当您运行软件时，例如网页浏览器、代码编辑器或与AI模型交互的应用程序，这些软件代码会被加载到RAM中。</li>\n<li><strong>活跃数据：</strong> 应用程序当前正在使用的数据，例如您正在编辑文档中的文本或计算的中间结果，都存放在RAM中。</li>\n</ol>\n<p>RAM的特点是它是<strong>易失性</strong>的。这意味着它只在电脑通电时保存数据。当您关闭电脑时，RAM中存储的所有内容都会消失。因此，您需要将工作保存到固态硬盘或机械硬盘等持久性存储设备上。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ebtsz9\" \n              data-graph-definition='digraph MemoryHierarchy {\n  rankdir=TB;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\", fontsize=10];\n\n  CPU [label=\"CPU\\n(处理)\", fillcolor=\"#a5d8ff\"];\n  RAM [label=\"系统内存\\n(快速、易失性工作区域)\", fillcolor=\"#bac8ff\"];\n  GPU [label=\"GPU\\n(并行处理)\", fillcolor=\"#96f2d7\"];\n  VRAM [label=\"VRAM (GPU显存)\\n(非常快、专用)\", fillcolor=\"#b2f2bb\"];\n  Storage [label=\"存储设备\\n(SSD/HDD)\\n(较慢、持久)\", fillcolor=\"#ffec99\"];\n\n  CPU -> RAM [label=\" 读取/写入\\n 活跃数据\"];\n  RAM -> CPU [label=\" 指令\"];\n  Storage -> RAM [label=\" 加载程序\\n 及数据\"];\n  RAM -> Storage [label=\" 保存数据\"];\n\n  GPU -> VRAM [label=\" 读取/写入\\n 模型数据\"];\n  VRAM -> GPU [label=\" 参数及\\n 激活值\"];\n  RAM -> VRAM [label=\" 加载模型\\n (通过CPU/系统总线)\"];\n\n  {rank=same; CPU; GPU;}\n  {rank=same; RAM; VRAM;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ebtsz9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>CPU、RAM、GPU、VRAM和存储设备之间的基本关系。数据从持久存储移动到RAM进行通用处理，并通常进入VRAM进行像运行LLM这样需要大量GPU的任务。</p>\n</blockquote>\n<h3>RAM容量与AI模型</h3>\n<p>RAM的计量单位是千兆字节（GB）。现代电脑中常见的容量包括8GB到16GB用于日常操作，32GB用于要求较高的用途，以及64GB或更多用于高性能工作站。</p>\n<p>处理大型语言模型需要多少RAM？虽然LLM的<em>参数 (parameter)</em>本身通常加载到GPU的专用VRAM中（我们稍后会介绍），但系统RAM仍然扮演着辅助角色。</p>\n<ul>\n<li><strong>系统开销：</strong> 您需要足够的RAM来运行操作系统和任何后台进程。</li>\n<li><strong>应用软件：</strong> 用于运行或与LLM交互的应用程序（如Python环境、框架或用户界面）需要RAM。</li>\n<li><strong>数据处理：</strong> 准备发送给模型或从模型接收的数据，可能会临时使用系统RAM。</li>\n<li><strong>模型溢出（不太理想）：</strong> 在没有专用GPU或VRAM不足的系统上，LLM的部分内容有时可能会加载到系统RAM中。这比使用VRAM慢得多，并显著影响性能，但这表明在某些限制下，系统RAM<em>可以</em>是模型加载的一个因素。</li>\n</ul>\n<p>对于典型的LLM<em>推理 (inference)</em>（使用模型，而非训练模型），系统RAM的容量通常不如VRAM的容量那么有局限性。然而，RAM不足（例如，尝试在只有4GB或8GB内存的系统上运行要求较高的软件）仍然会导致运行缓慢或阻止应用程序正常运行，无论是否涉及AI任务。</p>\n<h3>RAM速度与延迟</h3>\n<p>除了容量（能容纳多少数据）之外，RAM还有速度（数据传输的快慢）和延迟（传输开始前的延时）。这些参数 (parameter)以兆赫（MHz）或每秒兆次传输（MT/s）以及时序（如CL）来衡量。虽然更快的RAM可以提高整体系统响应速度，但对于运行预训练 (pre-training)的LLM而言，RAM，特别是VRAM的<em>容量</em>通常比RAM速度上的差异影响更大。</p>\n<p>总而言之，系统RAM是电脑的主要工作区域，对于运行操作系统、应用程序以及处理活跃数据来说不可或缺。虽然它通常不是容纳LLM参数本身的主要瓶颈（那通常是VRAM），但足够的RAM对于整体系统稳定性和高效处理AI模型所需的性能而言是必需的。接下来，我们将介绍在LLM所需的并行计算方面表现出色的专用硬件：GPU及其专用内存VRAM。</p>",
+  "slug": "ram-role",
+  "updates": [],
+  "references": [
+    {
+      "id": 7804,
+      "title": "Computer Organization and Design RISC-V Edition: The Hardware/Software Interface",
+      "author": "David A. Patterson, John L. Hennessy",
+      "year": "2020",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "736",
+      "url": "https://www.elsevier.com/books/computer-organization-and-design-risc-v-edition/patterson/978-0-12-820331-6",
+      "doi": "",
+      "note": "一本广泛认可的教材，详细介绍了计算机体系结构，包括内存层次结构、RAM的功能以及其与CPU和其他组件的交互。",
+      "order": 1,
+      "created_at": "2025-09-05T01:47:38.084494Z",
+      "updated_at": "2025-09-09T13:05:19.971387Z"
+    },
+    {
+      "id": 7805,
+      "title": "Operating System Concepts",
+      "author": "Abraham Silberschatz, Peter Baer Galvin, Greg Gagne",
+      "year": "2023",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Operating+System+Concepts,+10th+Edition-p-9781119320913",
+      "doi": "",
+      "note": "这本权威教材阐明了操作系统如何管理和使用RAM，包括进程内存、虚拟内存和系统资源分配等方面。",
+      "order": 2,
+      "created_at": "2025-09-05T01:47:38.097779Z",
+      "updated_at": "2025-09-09T13:05:28.291413Z"
+    },
+    {
+      "id": 7806,
+      "title": "Lecture 10: Memory Hierarchy",
+      "author": "MIT OpenCourseWare",
+      "year": "2017",
+      "publisher": "MIT",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-004-computation-structures-spring-2017/resources/lecture-10-memory-hierarchy/",
+      "doi": "",
+      "note": "作为计算结构基础课程的一部分，本讲座清晰地解释了计算机内存层次结构，侧重于RAM的特性和系统位置。",
+      "order": 3,
+      "created_at": "2025-09-05T01:47:38.100738Z",
+      "updated_at": "2025-09-09T13:05:39.446945Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

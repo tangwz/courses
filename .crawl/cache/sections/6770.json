@@ -1,0 +1,45 @@
+{
+  "id": 6770,
+  "title": "理解布尔逻辑",
+  "meta_title": "Julia中的布尔类型：真与假",
+  "meta_description": "了解布尔数据类型（真/假）及其在逻辑表达式和控制流中的使用。",
+  "content": "<p>除了数字和文本数据之外，编程还经常需要处理表示真假的信息。用户是否已登录？文件是否已打开？是否发生了错误？这些“是”或“否”的问题对于程序做出决策和控制其行为非常重要。Julia 和其他编程语言一样，有一种专门用于处理这类逻辑值的数据类型：布尔类型。</p>\n<h3><code>Bool</code> 类型：<code>true</code> 和 <code>false</code></h3>\n<p>在Julia中，布尔值由 <code>Bool</code> 类型表示。<code>Bool</code> 类型的变量只能存储两个可能值中的一个：<code>true</code> 或 <code>false</code>。它们是Julia中的保留关键字，表示真理的两种基本状态。</p>\n<p>你可以像处理数字或字符串一样，将这些值分配给变量：</p>\n<pre><code class=\"language-julia\">julia> is_julia_fun = true\ntrue\n\njulia> is_data_missing = false\nfalse\n</code></pre>\n<p>这里，<code>is_julia_fun</code> 是一个存储 <code>true</code> 值的布尔变量，而 <code>is_data_missing</code> 存储 <code>false</code>。这些变量现在包含了一段可用于进行逻辑推断的信息。</p>\n<p>你可以使用 <code>typeof</code> 函数检查这些值的类型：</p>\n<pre><code class=\"language-julia\">julia> typeof(true)\nBool\n\njulia> typeof(is_data_missing)\nBool\n</code></pre>\n<h3>逻辑运算符：处理布尔值</h3>\n<p>如果不能对布尔值进行操作，它们就不会非常有用。Julia 提供了多种逻辑运算符来组合或修改布尔值。三种主要的逻辑运算符是 NOT (<code>!</code>)、AND (<code>&#x26;&#x26;</code>) 和 OR (<code>||</code>)。</p>\n<h4>逻辑非 (<code>!</code>)</h4>\n<p>NOT 运算符，由感叹号 (<code>!</code>) 表示，它会反转布尔值。如果一个值是 <code>true</code>，<code>!true</code> 就会变成 <code>false</code>。如果一个值是 <code>false</code>，<code>!false</code> 就会变成 <code>true</code>。</p>\n<pre><code class=\"language-julia\">julia> is_raining = true\ntrue\n\njulia> is_sunny = !is_raining\nfalse\n\njulia> println(is_sunny)\nfalse\n\njulia> println(!false)\ntrue\n</code></pre>\n<p>下面是 NOT 运算符的简单真值表：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">输入 A</th>\n<th align=\"left\"><code>!A</code></th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>true</code></td>\n<td align=\"left\"><code>false</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>false</code></td>\n<td align=\"left\"><code>true</code></td>\n</tr>\n</tbody>\n</table>\n<h4>逻辑与 (<code>&#x26;&#x26;</code>)</h4>\n<p>AND 运算符，由 <code>&#x26;&#x26;</code> 表示，它组合两个布尔值。<code>A &#x26;&#x26; B</code> 的结果只有当 <code>A</code> 和 <code>B</code> 都为 <code>true</code> 时才为 <code>true</code>。如果 <code>A</code> 或 <code>B</code>（或两者）为 <code>false</code>，结果就是 <code>false</code>。</p>\n<pre><code class=\"language-julia\">julia> has_ticket = true\ntrue\n\njulia> is_on_time = true\ntrue\n\njulia> can_board_flight = has_ticket &#x26;&#x26; is_on_time\ntrue\n\njulia> has_passport = true\ntrue\n\njulia> has_visa = false\nfalse\n\njulia> can_enter_country = has_passport &#x26;&#x26; has_visa\nfalse\n</code></pre>\n<p>AND 的真值表是：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">输入 A</th>\n<th align=\"left\">输入 B</th>\n<th align=\"left\"><code>A &#x26;&#x26; B</code></th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><code>true</code></td>\n<td align=\"left\"><code>true</code></td>\n<td align=\"left\"><code>true</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>true</code></td>\n<td align=\"left\"><code>false</code></td>\n<td align=\"left\"><code>false</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>false</code></td>\n<td align=\"left\"><code>true</code></td>\n<td align=\"left\"><code>false</code></td>\n</tr>\n<tr>\n<td align=\"left\"><code>false</code></td>\n<td align=\"left\"><code>false</code></td>\n<td align=\"left\"><code>false</code></td>\n</tr>\n</tbody>\n</table>\n<blockquote>\n<p><strong><code>&#x26;&#x26;</code> 的短路求值</strong>\nJulia 中的 <code>&#x26;&#x26;</code> 运算符使用“短路”求值。这表示如果第一个操作数（<code>&#x26;&#x26;</code> 左侧的）求值为 <code>false</code>，则第二个操作数将根本不会被求值，因为无论如何总结果都必须是 <code>false</code>。这对于提高性能和避免错误很有用，例如当第一个条件不满足时，第二个表达式可能会导致问题（如除以零）。</p>\n</blockquote>\n<h4>逻辑或 (<code>||</code>)</h4>\n<p>OR 运算符，由 <code>||</code> 表示，也组合两个布尔值。如果 <code>A</code> 或 <code>B</code> 中至少有一个为 <code>true</code>，则 <code>A || B</code> 的结果为 <code>true</code>。结果仅当 <code>A</code> 和 <code>B</code> 都为 <code>false</code> 时才为 <code>false</code>。</p>\n<pre><code class=\"language-julia\">julia> has_coffee = true\ntrue\n\njulia> has_tea = false\nfalse\n\njulia> can_have_hot_drink = has_coffee || has_tea\ntrue\n\njulia> is_weekend = false\nfalse\n\njulia> is_holiday = false\nfalse\n\njulia> can_skip_work = is_weekend || is_holiday\nfalse\n</code></pre>\n<p>OR 的真值表是：</p>\n<p>| 输入 A | 输入 B | <code>A || B</code> |\n| :------ | :------ | :------- |\n| <code>true</code>  | <code>true</code>  | <code>true</code>   |\n| <code>true</code>  | <code>false</code> | <code>true</code>   |\n| <code>false</code> | <code>true</code>  | <code>true</code>   |\n| <code>false</code> | <code>false</code> | <code>false</code>  |</p>\n<blockquote>\n<p><strong><code>||</code> 的短路求值</strong>\n与 <code>&#x26;&#x26;</code> 类似，<code>||</code> 运算符也使用短路求值。如果第一个操作数（<code>||</code> 左侧的）求值为 <code>true</code>，则第二个操作数不会被求值，因为总结果必须是 <code>true</code>。</p>\n</blockquote>\n<h3>比较产生的布尔值</h3>\n<p>通常，布尔值不是直接赋值的，而是比较操作的结果。你已经见过数字；你可以比较它们来产生布尔结果。像 <code>==</code>（等于）、<code>!=</code>（不等于）、<code>></code>（大于）、<code>&#x3C;</code>（小于）、<code>>=</code>（大于或等于）和 <code>&#x3C;=</code>（小于或等于）这样的运算符都会产生布尔结果。</p>\n<pre><code class=\"language-julia\">julia> age = 20\n20\n\njulia> is_adult = age >= 18\ntrue\n\njulia> temperature = 25.5\n25.5\n\njulia> is_comfortable = temperature > 20.0 &#x26;&#x26; temperature &#x3C; 30.0\ntrue\n\njulia> a = 5\n5\n\njulia> b = 10\n10\n\njulia> a_equals_b = (a == b)\nfalse\n\njulia> a_not_equals_b = (a != b)\ntrue\n</code></pre>\n<p>在 <code>is_comfortable</code> 示例中，我们使用 <code>&#x26;&#x26;</code> 运算符组合了两个比较结果（<code>temperature > 20.0</code> 和 <code>temperature &#x3C; 30.0</code>）。变量 <code>is_comfortable</code> 仅在两个条件都满足时才变为 <code>true</code>。</p>\n<h3>布尔逻辑在程序中的作用</h3>\n<p>理解布尔逻辑非常重要，因为它构成了程序中决策的基础。求值为 <code>true</code> 或 <code>false</code> 的表达式用于控制程序的执行流程。例如，你可能只想在某个条件为 <code>true</code> 时运行一段代码，或者在一个条件保持 <code>true</code> 时重复一项任务。</p>\n<p>我们将在下一章详细介绍这些控制流结构，例如 <code>if</code> 语句和 <code>while</code> 循环。现在，请记住布尔值（<code>true</code> 和 <code>false</code>）和逻辑运算符（<code>!</code>, <code>&#x26;&#x26;</code>, <code>||</code>）是 Julia 提供的用于表示和操作逻辑条件的工具，它们是程序智能行为的依据。熟练掌握它们是你编程道路上的重要一步。</p>",
+  "slug": "understanding-boolean-logic",
+  "updates": [],
+  "references": [
+    {
+      "id": 20635,
+      "title": "The Julia Language Manual: Control Flow (Boolean Operators)",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/control-flow/#Boolean-Operators",
+      "doi": "",
+      "note": "提供Julia `Bool` 类型、逻辑运算符（`!`、`&&`、`||`）的官方文档，并解释了短路求值。",
+      "order": 1,
+      "created_at": "2025-09-06T14:06:02.033419Z",
+      "updated_at": "2025-09-10T02:46:24.420360Z"
+    },
+    {
+      "id": 20636,
+      "title": "Discrete Mathematics and Its Applications",
+      "author": "Kenneth H. Rosen",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=i9yQDwAAQBAJ",
+      "doi": "",
+      "note": "提供命题逻辑和布尔代数基础，解释计算中逻辑运算的理论依据。",
+      "order": 2,
+      "created_at": "2025-09-06T14:06:02.077468Z",
+      "updated_at": "2025-09-10T02:46:29.334474Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

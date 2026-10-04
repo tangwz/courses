@@ -1,0 +1,61 @@
+{
+  "id": 1681,
+  "title": "验证您的安装",
+  "meta_title": "验证TensorFlow安装",
+  "meta_description": "确认您的TensorFlow安装正常工作的步骤，包括GPU检测。",
+  "content": "<p>确认TensorFlow已正确安装并在您的Python环境中可用非常重要。此验证步骤有助于确保代码示例按预期运行，并能让您检查特定的硬件加速功能，例如GPU支持。</p>\n<h3>TensorFlow基本导入与版本检查</h3>\n<p>验证您安装的最简单方法是尝试在Python解释器或脚本中导入TensorFlow库并打印其版本。</p>\n<p>打开您的Python解释器（或创建一个新的Python脚本文件，例如 <code>verify_tf.py</code>）：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n\nprint(f\"TensorFlow Version: {tf.__version__}\")\n</code></pre>\n<p>执行此代码。如果TensorFlow已正确安装，您应该会看到类似以下内容的输出（具体版本号将取决于您的安装情况）：</p>\n<pre><code class=\"language-text\">TensorFlow Version: 2.1x.x\n</code></pre>\n<p>如果您遇到 <code>ImportError</code> 或 <code>ModuleNotFoundError</code>，这表明TensorFlow要么未在当前Python环境中安装，要么环境未正确激活。请仔细检查您的安装步骤，并确保您从安装TensorFlow的同一环境中（例如conda环境、virtualenv）运行Python。</p>\n<h3>执行一个简单操作</h3>\n<p>我们来执行一个基本的TensorFlow操作，以进一步确认功能是否正常。将以下行添加到您的脚本中，或输入到您的解释器中：</p>\n<pre><code class=\"language-python\"># 创建一个常量张量\nhello = tf.constant(\"Hello, TensorFlow!\")\nprint(hello.numpy())\n\n# 执行一个简单的数学运算\na = tf.constant(2.0)\nb = tf.constant(3.0)\nc = a + b\nprint(f\"Result of addition: {c.numpy()}\")\n</code></pre>\n<p>运行此代码应生成以下输出：</p>\n<pre><code class=\"language-text\">b'Hello, TensorFlow!'\nResult of addition: 5.0\n</code></pre>\n<p><code>tf.constant()</code> 函数创建一个张量，它是TensorFlow中主要的数据结构。我们在这里使用 <code>.numpy()</code> 将张量的值转换为NumPy兼容的格式，以便于打印。看到正确的字符串和加法结果（5.0），这证实了TensorFlow的核心操作正在正常运行。</p>\n<h3>检查GPU可用性</h3>\n<p>如果您特意安装了支持GPU的TensorFlow版本，并且拥有兼容的NVIDIA GPU以及所需的驱动程序和CUDA工具包，您应该验证TensorFlow是否能检测和使用GPU。TensorFlow在合适的GPU上执行计算密集型操作时，速度明显快于CPU。</p>\n<p>使用以下代码列出TensorFlow可以检测到的物理设备，特别是筛选出GPU：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n\ngpus = tf.config.list_physical_devices('GPU')\n\nif gpus:\n  try:\n    # 当前，内存增长需要在所有GPU上保持一致\n    for gpu in gpus:\n      tf.config.experimental.set_memory_growth(gpu, True)\n    logical_gpus = tf.config.list_logical_devices('GPU')\n    print(f\"Detected {len(gpus)} Physical GPUs, Configured {len(logical_gpus)} Logical GPUs\")\n    print(\"GPU详细信息：\")\n    for i, gpu in enumerate(gpus):\n        print(f\"  GPU {i}: Name={gpu.name}, Type={gpu.device_type}\")\n  except RuntimeError as e:\n    # 内存增长必须在GPU初始化之前设置\n    print(f\"Error during GPU configuration: {e}\")\nelse:\n  print(\"TensorFlow未检测到GPU。正在CPU上运行。\")\n\n# 验证操作的设备放置（可选）\nwith tf.device('/CPU:0'):\n    cpu_tensor = tf.random.normal([10, 10])\n    print(\"在CPU上创建了张量\")\n\nif gpus:\n    try:\n        with tf.device('/GPU:0'):\n            gpu_tensor = tf.random.normal([10, 10])\n            print(\"在GPU:0上创建了张量\")\n    except RuntimeError as e:\n        print(f\"Could not create tensor on GPU: {e}\")\n</code></pre>\n<p><strong>预期输出（有GPU时）：</strong></p>\n<p>如果找到兼容的GPU并正确配置，输出将类似这样：</p>\n<pre><code class=\"language-text\">检测到 1 个物理GPU，配置了 1 个逻辑GPU\nGPU详细信息：\n  GPU 0: Name=/physical_device:GPU:0, Type=GPU\n在CPU上创建了张量\n在GPU:0上创建了张量\n</code></pre>\n<p>GPU的数量及其名称可能因您的系统配置而异。<code>tf.config.experimental.set_memory_growth(gpu, True)</code> 这一行通常很重要，可以防止TensorFlow一次性分配所有GPU内存，从而允许其他进程（甚至多个TensorFlow进程）使用GPU。看到“在GPU上创建了张量”的消息，证实了GPU操作放置成功。</p>\n<p><strong>预期输出（无GPU或配置问题时）：</strong></p>\n<p>如果您安装了仅限CPU的版本、没有兼容的NVIDIA GPU，或者驱动程序/CUDA配置错误，您可能会看到：</p>\n<pre><code class=\"language-text\">TensorFlow未检测到GPU。正在CPU上运行。\n在CPU上创建了张量\n</code></pre>\n<p>如果您期望有GPU支持但看到此消息，请重新查看“CPU与GPU考量”部分，并确保您的NVIDIA驱动程序、CUDA工具包和cuDNN库版本与您安装的TensorFlow版本兼容。强烈建议查阅TensorFlow官方安装指南，以获取具体的版本兼容性表格。</p>\n<p>成功运行这些验证步骤表明您的TensorFlow环境已准备就绪。您现在可以继续查看TensorFlow的核心思想，例如张量和自动微分，在下一章中。</p>",
+  "slug": "verifying-installation",
+  "updates": [],
+  "references": [
+    {
+      "id": 3204,
+      "title": "Install TensorFlow",
+      "author": "TensorFlow Authors",
+      "year": "2025",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/install",
+      "doi": "",
+      "note": "TensorFlow的官方安装指南，包含CPU/GPU设置细节、环境配置和常见问题排查。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:28.891900Z",
+      "updated_at": "2025-09-08T02:53:52.957996Z"
+    },
+    {
+      "id": 3206,
+      "title": "Get started with TensorFlow",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/basics",
+      "doi": "",
+      "note": "介绍TensorFlow的核心数据结构（张量）和基础操作，对验证基本功能至关重要。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:28.959689Z",
+      "updated_at": "2025-09-08T02:53:50.123332Z"
+    },
+    {
+      "id": 3207,
+      "title": "TensorFlow: A System for Large-Scale Machine Learning",
+      "author": "Martín Abadi, Ashish Agarwal, Paul Barham, Eugene Brevdo, Zhifeng Chen, Craig Citro, Greg S. Corrado, Andy Davis, Jeffrey Dean, Matthieu Devin, Sanjay Ghemawat, Ian Goodfellow, Andrew Harp, Geoffrey Irving, Michael Isard, Yangqing Jia, Rafal Jozefowicz, Lukasz Kaiser, Manjunath Kudlur, Josh Levenberg, Dan Mane, Rajat Monga, Sherry Moore, Derek Murray, Chris Olah, Mike Schuster, Jonathon Shlens, Benoit Steiner, Ilya Sutskever, Kunal Talwar, Paul Tucker, Vincent Vanhoucke, Vijay Vasudevan, Fernanda Viegas, Oriol Vinyals, Pete Warden, Martin Wattenberg, Martin Wicke, Yuan Yu, Xiaoqiang Zheng",
+      "year": "2016",
+      "publisher": "",
+      "journal": "OSDI '16: 12th USENIX Symposium on Operating Systems Design and Implementation",
+      "volume": "",
+      "pages": "265-283",
+      "url": "https://arxiv.org/abs/1603.04467",
+      "doi": "10.48550/arXiv.1603.04467",
+      "note": "描述TensorFlow系统架构及其设计原则的基础性学术论文。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:28.979603Z",
+      "updated_at": "2025-09-08T02:53:59.221629Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

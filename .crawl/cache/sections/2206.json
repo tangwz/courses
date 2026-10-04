@@ -1,0 +1,61 @@
+{
+  "id": 2206,
+  "title": "Scikit-learn 管道介绍",
+  "meta_title": "Scikit-learn 管道介绍",
+  "meta_description": "了解如何有效利用 Scikit-learn 管道串联多个数据处理步骤。",
+  "content": "<p>如你所见，为机器学习 (machine learning)准备数据通常包含多个连续步骤：处理缺失值、编码分类特征、缩放数值特征，甚至可能生成新特征。逐一应用这些步骤可能会变得繁琐且易出错，特别是当你需要确保将完全相同的转换序列一致地应用于训练数据和任何新数据（例如测试集或生产中遇到的数据）时。</p>\n<p>想象一下，在将数据集分割为训练集和测试集之前，你对整个数据集拟合一个 <code>StandardScaler</code>。缩放器会从所有数据（包括测试集）中学习均值和标准差。当你训练模型时，它会通过缩放参数 (parameter)隐式地获得关于测试集的信息。这种现象，称为数据泄露，可能在开发过程中导致过于乐观的性能评估，因为你的模型在预处理阶段无意中“看到了”测试数据。将仅从训练数据中学习到的转换应用于测试数据对于可靠的模型评估非常重要。</p>\n<p>这就是 Scikit-learn 的 <code>Pipeline</code> 对象变得非常有用的地方。<code>Pipeline</code> 允许你将多个处理步骤（转换器）以及一个可选的最终估计器（如分类器或回归器）串联成一个单一对象。此对象的行为类似于标准的 Scikit-learn 估计器，具有 <code>fit</code>、<code>transform</code> 和 <code>predict</code> 方法（取决于最后一步）。</p>\n<h3>为何使用管道？</h3>\n<p>使用 <code>Pipeline</code> 具有几个重要优势：</p>\n<ol>\n<li><strong>便捷性和封装性：</strong> 它将多个处理步骤捆绑成一个单元，简化了你的代码。你无需多次调用 <code>fit_transform</code> 或 <code>fit</code> 和 <code>transform</code>，只需与单一的管道对象交互。</li>\n<li><strong>联合参数 (parameter)选择：</strong> 在进行超参数 (hyperparameter)调整时（例如，使用 <code>GridSearchCV</code> 或 <code>RandomizedSearchCV</code>），你可以同时调整管道中所有步骤的参数，包括预处理步骤和最终估计器。</li>\n<li><strong>防止数据泄露：</strong> 这是一个主要优点。当你在一个管道上调用 <code>fit</code> 时，它会正确地仅在提供给 <code>fit</code> 方法的训练数据上拟合转换器。中间步骤调用 <code>fit_transform</code>，将转换后的数据传递给下一步。当你对新数据（如测试集）调用 <code>transform</code> 或 <code>predict</code> 时，管道会确保只调用已拟合转换器的 <code>transform</code> 方法，一致地应用所学转换，而无需在新数据上重新拟合。</li>\n</ol>\n<h3>管道的结构</h3>\n<p>构建 <code>Pipeline</code> 需要提供一个步骤列表。每个步骤都是一个元组，包含一个独特的名称（你选择的字符串）和一个转换器或估计器的实例。</p>\n<pre><code class=\"language-python\"># 示例结构\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.linear_model import LogisticRegression\n\n# 定义步骤：（名称，转换器/估计器实例）\nsteps = [\n    ('imputer', SimpleImputer(strategy='mean')), # 步骤 1: 填充缺失值\n    ('scaler', StandardScaler()),               # 步骤 2: 缩放特征\n    ('classifier', LogisticRegression())        # 步骤 3: 最终估计器\n]\n\n# 创建管道\npipe = Pipeline(steps=steps)\n\n# 现在 'pipe' 可以像普通估计器一样使用：\n# pipe.fit(X_train, y_train)\n# predictions = pipe.predict(X_test)\n# score = pipe.score(X_test, y_test)\n</code></pre>\n<p>管道中的所有中间步骤<em>必须</em>是转换器，这意味着它们必须同时实现 <code>fit</code> 和 <code>transform</code> 方法。最后一步可以是任何估计器：转换器、分类器或回归器。</p>\n<p>当调用 <code>pipe.fit(X_train, y_train)</code> 时：</p>\n<ol>\n<li><code>imputer</code> 在 <code>X_train</code> 上拟合，然后 <code>X_train</code> 被 <code>imputer</code> 转换。</li>\n<li>转换后的数据被传递给 <code>scaler</code>，<code>scaler</code> 进行拟合然后转换数据。</li>\n<li>缩放后的数据连同 <code>y_train</code> 一起传递给 <code>classifier</code>，然后 <code>classifier</code> 进行拟合。</li>\n</ol>\n<p>当调用 <code>pipe.predict(X_test)</code> 时：</p>\n<ol>\n<li><code>X_test</code> 由<em>已拟合的</em> <code>imputer</code> 转换。</li>\n<li>结果数据由<em>已拟合的</em> <code>scaler</code> 转换。</li>\n<li>缩放后的数据传递给<em>已拟合的</em> <code>classifier</code> 的 <code>predict</code> 方法。</li>\n</ol>\n<p>这种顺序应用确保处理逻辑被正确一致地应用，防止在评估阶段发生数据泄露。</p>\n<p>这是一个简单的管道结构可视化：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-hueq08\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Helvetica\"];\n  edge [fontname=\"Helvetica\"];\n  splines=ortho;\n\n  subgraph cluster_pipeline {\n    label = \"管道\";\n    bgcolor = \"#e9ecef\";\n    RawData [label=\"原始数据\\n(例如, X_train)\", shape=ellipse, fillcolor=\"#ced4da\"];\n    Step1 [label=\"转换器 1\\n(例如, 填充器)\\nfit_transform()\", fillcolor=\"#74c0fc\"];\n    Step2 [label=\"转换器 2\\n(例如, 缩放器)\\nfit_transform()\", fillcolor=\"#74c0fc\"];\n    Step3 [label=\"估计器\\n(例如, 分类器)\\nfit()\", fillcolor=\"#4dabf7\"];\n    ProcessedData [label=\"转换后的数据\\n(用于步骤 2)\", shape=ellipse, style=dashed, fillcolor=\"#dee2e6\"];\n    FinalProcessedData [label=\"转换后的数据\\n(用于估计器)\", shape=ellipse, style=dashed, fillcolor=\"#dee2e6\"];\n\n    RawData -> Step1;\n    Step1 -> ProcessedData [style=dashed, arrowhead=none];\n    ProcessedData -> Step2;\n    Step2 -> FinalProcessedData [style=dashed, arrowhead=none];\n    FinalProcessedData -> Step3;\n  }\n\n  subgraph cluster_predict {\n     label = \"预测阶段 (使用已拟合的管道)\";\n     bgcolor = \"#fff9db\";\n     NewData [label=\"新数据\\n(例如, X_test)\", shape=ellipse, fillcolor=\"#ffec99\"];\n     PStep1 [label=\"转换器 1\\ntransform()\", fillcolor=\"#ffe066\"];\n     PStep2 [label=\"转换器 2\\ntransform()\", fillcolor=\"#ffe066\"];\n     PStep3 [label=\"估计器\\npredict()\", fillcolor=\"#ffd43b\"];\n     PredTransformed1 [label=\"转换后的数据\", shape=ellipse, style=dashed, fillcolor=\"#fff3bf\"];\n     PredTransformed2 [label=\"转换后的数据\", shape=ellipse, style=dashed, fillcolor=\"#fff3bf\"];\n     Predictions [label=\"预测结果\", shape=ellipse, fillcolor=\"#fcc419\"];\n\n     NewData -> PStep1;\n     PStep1 -> PredTransformed1 [style=dashed, arrowhead=none];\n     PredTransformed1 -> PStep2;\n     PStep2 -> PredTransformed2 [style=dashed, arrowhead=none];\n     PredTransformed2 -> PStep3;\n     PStep3 -> Predictions;\n  }\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-hueq08\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示 Scikit-learn 管道在拟合阶段（上方）和预测阶段（下方）的数据流图。请注意，在拟合阶段，转换器使用 <code>fit_transform</code>，而在预测阶段仅使用 <code>transform</code>。</p>\n</blockquote>\n<p>当需要对不同列应用不同的转换时（例如，缩放数值列和对分类列进行独热编码），管道通常会变得更复杂。Scikit-learn 的 <code>ColumnTransformer</code> 正是为了处理这种情况而设计的，并且在 <code>Pipeline</code> 内运行良好，使你能够构建高效的预处理工作流。我们将在后续章节和练习中查看构建这些管道的实际例子。</p>",
+  "slug": "sklearn-pipelines-intro",
+  "updates": [],
+  "references": [
+    {
+      "id": 5905,
+      "title": "Chaining and composing estimators",
+      "author": "Scikit-learn Developers",
+      "year": "2023",
+      "publisher": "Scikit-learn",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html",
+      "doi": "",
+      "note": "官方文档，解释了用于顺序处理的Scikit-learn Pipeline对象，以及用于对不同数据子集应用不同转换的ColumnTransformer。",
+      "order": 1,
+      "created_at": "2025-09-05T01:17:12.452715Z",
+      "updated_at": "2025-09-07T20:09:24.124444Z"
+    },
+    {
+      "id": 5906,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWgXamnGNVAyiqGbTAmBm2Nt3du6x05UdR-j7cweO_ZD8rvbEv1daN5i2NaEY8IS01vw52audJ-Dl5Sz5rVup_5_MabidzOEfzsBg8z9--NvYU3t9m2eI9eRq_uXWtv94PJGMXLDqXPtnl-SqSJ9YoCswsQsVQumcvcsuC6XuJQYMRl5Zp6xJj5rCg55g3W63GRQ==",
+      "doi": "",
+      "note": "一本包含机器学习系统构建实例的实践指南，涵盖数据预处理、模型训练，以及使用Scikit-learn Pipeline构建高效且一致的工作流。",
+      "order": 2,
+      "created_at": "2025-09-05T01:17:12.534332Z",
+      "updated_at": "2025-09-07T20:09:34.732023Z"
+    },
+    {
+      "id": 5907,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "",
+      "note": "一本涵盖统计学习理论和实践的教科书，包括模型评估、选择以及数据泄露问题。",
+      "order": 3,
+      "created_at": "2025-09-05T01:17:12.538073Z",
+      "updated_at": "2025-09-07T20:09:15.822472Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

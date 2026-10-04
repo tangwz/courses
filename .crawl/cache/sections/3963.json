@@ -1,0 +1,45 @@
+{
+  "id": 3963,
+  "title": "使用 Joblib 保存模型",
+  "meta_title": "使用 Joblib 保存模型",
+  "meta_description": "了解 Joblib 库，它常用于保存 scikit-learn 模型和大型 NumPy 数组。",
+  "content": "<p>Python 内置的 <code>pickle</code> 模块提供了一种通用方法来序列化 Python 对象，而科学计算的 Python 社区通常依赖于另一个名为 <code>Joblib</code> 的库。Joblib 是 SciPy 生态系统的一部分，包含用于高效序列化的工具，特别针对包含大型 NumPy 数组的对象进行了优化。</p>\n<h3>为何使用 Joblib？</h3>\n<p><code>Joblib</code> 的序列化函数（<code>joblib.dump</code> 和 <code>joblib.load</code>）可以直接替代 <code>pickle.dump</code> 和 <code>pickle.load</code>，但在处理机器学习 (machine learning)模型，特别是来自 scikit-learn 等库的模型时，具有一个重要优势。这些模型常存储大量的数值数据数组（例如模型权重 (weight)或参数 (parameter)）。Joblib 专门设计用于比标准 <code>pickle</code> 模块更有效地处理这些 NumPy 数组，从而带来：</p>\n<ol>\n<li><strong>更小的文件大小：</strong> Joblib 在保存包含大型 NumPy 数组的对象时，通常可以生成更小的文件，尤其是在启用压缩时。</li>\n<li><strong>更快的加载/保存速度：</strong> 对数值数据的优化可以带来更快的序列化和反序列化时间。</li>\n</ol>\n<p>由于这些优点，<code>joblib</code> 已成为保存和加载 scikit-learn 模型及管道的推荐方式。</p>\n<h3>安装 Joblib</h3>\n<p>如果你安装了 scikit-learn，Joblib 很可能已作为依赖项安装。但是，如果你需要单独安装它，可以使用 pip：</p>\n<pre><code class=\"language-bash\">pip install joblib\n</code></pre>\n<h3>使用 <code>joblib.dump</code> 保存模型</h3>\n<p>使用 Joblib 保存模型与使用 <code>pickle</code> 非常相似。你需要使用 <code>joblib.dump</code> 函数，传入要保存的对象和文件名。</p>\n<p>假设你有一个名为 <code>model</code> 的已训练 scikit-learn 模型对象。以下是保存它的方法：</p>\n<pre><code class=\"language-python\">import joblib\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.datasets import make_classification\n\n# 示例：训练一个简单模型\nX, y = make_classification(n_samples=100, n_features=10, random_state=42)\nmodel = LogisticRegression()\nmodel.fit(X, y)\n\n# --- 保存模型 ---\n# 常见的文件扩展名是 '.joblib' 或 '.pkl'，如果压缩则为 '.gz'\nfilename = 'my_trained_model.joblib'\njoblib.dump(model, filename)\n\nprint(f\"模型已保存到 {filename}\")\n</code></pre>\n<p>在这段代码中：</p>\n<ul>\n<li>我们导入了 <code>joblib</code> 库。</li>\n<li>我们训练了一个占位符 <code>LogisticRegression</code> 模型（请将其替换为你的实际训练模型）。</li>\n<li><code>joblib.dump(model, filename)</code> 将我们训练好的 <code>model</code> 对象保存到 <code>filename</code> 指定的文件中。</li>\n</ul>\n<p>Joblib 会自动检测对象是否包含大型 NumPy 数组并进行优化。你也可以使用 <code>joblib.dump</code> 中的 <code>compress</code> 参数 (parameter)显式控制压缩级别（例如，<code>joblib.dump(model, 'model_compressed.joblib.gz', compress=3)</code>），这可以在保存/加载时间略长一些的代价下，额外缩小文件大小。</p>\n<h3>使用 <code>joblib.load</code> 加载模型</h3>\n<p>要将模型加载回 Python 环境以进行预测，你需要使用 <code>joblib.load</code> 函数，并提供保存文件的路径。</p>\n<pre><code class=\"language-python\">import joblib\n\n# --- 加载模型 ---\nfilename = 'my_trained_model.joblib'\nloaded_model = joblib.load(filename)\n\nprint(f\"模型已从 {filename} 加载\")\n\n# 现在你可以使用加载的模型，例如进行预测\n# 假设 'new_data' 是模型兼容的输入\n# predictions = loaded_model.predict(new_data)\n# print(predictions)\n</code></pre>\n<p><code>loaded_model</code> 对象现在是你保存的原始 <code>model</code> 对象的完整重构，可以使用它进行推断。</p>\n<h3>Joblib 与 Pickle 总结</h3>\n<ul>\n<li><strong>使用 <code>pickle</code>：</strong> 用于通用 Python 对象序列化。它是内置的，适用于大多数标准 Python 数据类型和对象。</li>\n<li><strong>使用 <code>joblib</code>：</strong> 主要用于处理包含大型 NumPy 数组的对象，这在科学计算中很常见，尤其是在 scikit-learn 库中。对于这些特定情况，它能提供性能更佳和可能更小的文件大小。</li>\n</ul>\n<p>可以将 Joblib 的持久化函数看作是 Pickle 的一个特别版本，它针对机器学习 (machine learning)工作流中常见的数据结构进行了优化。</p>\n<blockquote>\n<p><strong>安全提示：</strong> 与 pickle 文件类似，Joblib 文件也可能包含恶意代码。请仅从你完全信任的来源加载 Joblib 文件。</p>\n</blockquote>\n<p>使用 Joblib 可以确保你的 scikit-learn 模型被高效保存，使其更易于管理和传输。然而，仅仅保存模型对象并非全部。你还需要考虑正确使用它所需的运行环境和预处理步骤，我们将在接下来讨论这些。</p>",
+  "slug": "using-joblib-persistence",
+  "updates": [],
+  "references": [
+    {
+      "id": 10735,
+      "title": "Joblib: persistence documentation",
+      "author": "Joblib Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://joblib.readthedocs.io/en/latest/persistence.html",
+      "doi": "",
+      "note": "Joblib持久化模块的官方文档，提供有关保存和加载Python对象（特别是包含大型NumPy数组的对象）的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:02.097959Z",
+      "updated_at": "2025-09-08T13:19:42.483394Z"
+    },
+    {
+      "id": 10737,
+      "title": "20.1. pickle - Python object serialization",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/pickle.html",
+      "doi": "",
+      "note": "Python `pickle`模块的官方文档，提供对通用Python对象序列化和反序列化的全面理解。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:03.538862Z",
+      "updated_at": "2025-09-08T13:19:38.765846Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

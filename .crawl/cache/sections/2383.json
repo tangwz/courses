@@ -1,0 +1,45 @@
+{
+  "id": 2383,
+  "title": "处理异常：try 和 except 块",
+  "meta_title": "Python try 和 except 块 | 异常处理基础",
+  "meta_description": "了解基本的 `try...except` 结构，用于捕获潜在错误并执行备用代码。",
+  "content": "<p>Python 程序在执行时可能会遇到错误，这些错误被称为异常。当异常发生且未被处理时，程序通常会停止运行并显示错误信息（一个追溯信息）。这种突然中止对用户或需要保持稳定的应用程序来说并不理想。</p>\n<p>为了管理这些情况，Python 提供了 <code>try</code> 和 <code>except</code> 语句。这个结构允许您隔离可能引发异常的代码，并定义在异常发生时要采取的具体操作。</p>\n<h3>基本结构：try...except</h3>\n<p>其基本语法涉及两个代码块：</p>\n<ol>\n<li><strong><code>try</code> 块：</strong> 您将可能引发异常的代码放在此块中。Python 会尝试正常执行这段代码。</li>\n<li><strong><code>except</code> 块：</strong> 此块紧随 <code>try</code> 块之后。<code>except</code> 块中的代码<em>只有在</em>前面的 <code>try</code> 块中发生异常时才会执行。如果 <code>try</code> 块在没有发生任何异常的情况下完成，那么 <code>except</code> 块将完全跳过。</li>\n</ol>\n<p>以下是代码示例：</p>\n<pre><code class=\"language-python\">try:\n    # 可能引发异常的代码\n    # 例如，获取用户输入并进行转换\n    age_str = input(\"请输入您的年龄：\")\n    age = int(age_str)\n    print(f\"明年您将是 {age + 1}。\")\n\nexcept:\n    # 如果 try 块中发生*任何*异常，则执行此处的代码\n    print(\"出错了。请输入一个有效的年龄数字。\")\n\nprint(\"程序在 try-except 块之后继续执行。\")\n</code></pre>\n<h3>工作原理</h3>\n<p>我们来追踪上面示例的执行流程：</p>\n<ol>\n<li><strong>开始：</strong> Python 进入 <code>try</code> 块。</li>\n<li><strong>执行 <code>try</code> 代码：</strong> 它执行 <code>age_str = input(...)</code>。假设用户输入“30”。</li>\n<li><strong>执行 <code>try</code> 代码：</strong> 它执行 <code>age = int(age_str)</code>。这运行良好，将“30”转换为整数 <code>30</code>。</li>\n<li><strong>执行 <code>try</code> 代码：</strong> 它执行 <code>print(...)</code>。这也运行良好，打印“明年您将是 31。”。</li>\n<li><strong>无异常：</strong> 由于 <code>try</code> 块内没有发生异常，整个 <code>except</code> 块被跳过。</li>\n<li><strong>继续：</strong> 程序执行到 <code>try...except</code> 结构之后的 <code>print(\"程序继续执行...\")</code> 行。</li>\n</ol>\n<p>现在，考虑如果用户输入“thirty”而不是“30”会发生什么情况：</p>\n<ol>\n<li><strong>开始：</strong> Python 进入 <code>try</code> 块。</li>\n<li><strong>执行 <code>try</code> 代码：</strong> 它执行 <code>age_str = input(...)</code>。变量 <code>age_str</code> 现在的值是“thirty”。</li>\n<li><strong>执行 <code>try</code> 代码：</strong> 它尝试执行 <code>age = int(age_str)</code>。这会失败，因为“thirty”无法直接转换为整数。此时会引发 <code>ValueError</code> 异常。</li>\n<li><strong>异常发生：</strong> 由于发生了异常，Python 会立即停止执行 <code>try</code> 块内的任何后续代码（<code>print(f\"明年...\")</code> 行永远不会被执行到）。</li>\n<li><strong>查找 <code>except</code>：</strong> Python 会寻找 <code>try</code> 块后的 <code>except</code> 块。它找到了一个。</li>\n<li><strong>执行 <code>except</code> 代码：</strong> <code>except</code> 块内的代码被执行：<code>print(\"出错了...\")</code>。</li>\n<li><strong>继续：</strong> <code>except</code> 块完成执行后，程序执行到 <code>try...except</code> 结构之后的 <code>print(\"程序继续执行...\")</code> 行。</li>\n</ol>\n<p>请注意其显著差异：程序没有因为 <code>ValueError</code> 追溯信息而崩溃，而是打印了一条有用的消息并继续运行。这就是异常处理的主要目的：捕获潜在错误并优雅地响应它们。</p>\n<h3>捕获所有异常的 <code>except</code></h3>\n<p>上面的示例使用了裸 <code>except:</code> 子句。这充当了一个“全捕获”机制——它将处理 <code>try</code> 块中发生的<em>任何</em>类型的异常，无论是 <code>ValueError</code>、<code>ZeroDivisionError</code>、<code>TypeError</code> 还是完全不同的其他异常。</p>\n<pre><code class=\"language-python\">numerator = 10\ndenominator = 0\n\ntry:\n    result = numerator / denominator # 这将导致 ZeroDivisionError\n    print(\"结果是：\", result)\nexcept:\n    print(\"除法运算中发生错误。\")\n\nprint(\"程序结束。\")\n</code></pre>\n<p>尽管简单，但在大型程序中通常不推荐使用裸 <code>except:</code>。为什么呢？因为它可能捕获您未预料到的错误，潜在地隐藏 bug 或使其难以准确了解<em>具体</em>哪里出了问题。如果您的 <code>try</code> 块可能引发几种不同类型的错误，一个通用的 <code>except:</code> 可能会以相同的方式处理它们，这可能不合适。通常最好处理特定类型的异常，我们将在接下来进行讨论。</p>",
+  "slug": "python-try-except",
+  "updates": [],
+  "references": [
+    {
+      "id": 4555,
+      "title": "Errors and Exceptions",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/errors.html",
+      "doi": "",
+      "note": "Python 错误和异常处理机制的官方指南，包含 `try...except` 语句，提供了基础性理解。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:12.545806Z",
+      "updated_at": "2025-09-07T21:11:46.879393Z"
+    },
+    {
+      "id": 4556,
+      "title": "Python Crash Course, 2nd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2019",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH28VcemecjNifd1LiZ8b51naobRQLGdgH5t-WzDMiqw5zX4JVieQ5SgxwF723trYeIwMx6ihBgZZC7JEaq4EOb-0bbbTcZE1qiPdyjYD3W0Id7tgr1FmvRhDo_X91OwXo4UwK3lPu5kmNIqegapUmbuVdzw3BiBHzKsbtQIW_nTjMexuK0458iX4UUkdpQK976Nw==",
+      "doi": "",
+      "note": "一本面向初学者的 Python 实用入门书，其中包含专门介绍使用 `try...except` 块处理异常的部分。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:12.549102Z",
+      "updated_at": "2025-09-07T21:11:58.751306Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

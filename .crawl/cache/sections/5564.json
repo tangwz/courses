@@ -1,0 +1,61 @@
+{
+  "id": 5564,
+  "title": "对象存储基础知识",
+  "meta_title": "对象存储基础知识（例如S3）",
+  "meta_description": "了解Amazon S3等对象存储服务的原理和使用。",
+  "content": "<p>关系数据库有效处理表和行中的结构化数据，而NoSQL数据库为不同的数据模型提供了灵活性。HDFS等文件系统以分层结构管理文件。对象存储是现代数据架构中一种重要的存储方法。这种方法特别适合处理海量的非结构化或半结构化数据，使其成为常用选择。</p>\n<p>想象一下存储照片、视频、日志文件、备份或应用程序生成的大型数据集。这些数据并非总能整齐地放入数据库表或传统文件文件夹中。对象存储提供了一种高度可伸缩且持久的管理此类数据的方法。</p>\n<h3>对象存储的工作原理</h3>\n<p>与文件系统以文件夹和文件的层次结构组织数据不同，也不同于块存储将数据分解为固定大小的块，对象存储将数据作为独立的单元进行管理，这些单元称为<strong>对象</strong>。每个对象包含三个组成部分：</p>\n<ol>\n<li><strong>数据本身：</strong> 这可以是任何东西，从小型文本文件到大型视频文件、图像或应用程序日志。系统将数据视为一个独立单元，无论其大小或类型如何。</li>\n<li><strong>元数据：</strong> 这是“关于数据的数据”。对象存储允许将丰富且通常可定制的元数据与数据一起存储。标准元数据可能包括内容类型（例如，<code>image/jpeg</code>）、创建日期和大小。您通常可以添加与应用程序相关的自定义元数据标签，例如<code>project-id=alpha</code>或<code>data-source=sensor-123</code>。这种元数据对于组织、搜索和管理对象非常有用，无需检查数据内容本身。</li>\n<li><strong>唯一标识符（ID）：</strong> 每个对象都被分配一个唯一ID，通常是一长串字符。此ID就像一个地址，允许应用程序和用户直接从一个庞大的存储池中检索对象，而无需知道其物理位置或导航文件夹结构。想象它就像您外套的取物凭证；您将凭证（ID）交给服务员，他们就会取回您的特定外套（对象）。</li>\n</ol>\n<p>对象通常存储在一种扁平的地址空间中，这些容器通常称为<strong>存储桶</strong>。您不需要在文件夹内再创建文件夹。相反，您将对象直接放入存储桶中，唯一ID使您能够找到它们。尽管您可以使用对象名称中的前缀来模拟文件夹结构（例如，<code>logs/2023/11/server-a.log</code>），但底层存储仍然是扁平的。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xq05sw\" \n              data-graph-definition='digraph ObjectStorage {\n    rankdir=LR;\n    node [shape=record, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n    subgraph cluster_bucket {\n        label = \"存储桶（扁平命名空间）\";\n        labeljust=\"l\";\n        bgcolor=\"#f8f9fa\";\n        O1 [label=\"{对象 1 | {数据 | 元数据 | 唯一ID}}\", fillcolor=\"#ced4da\"];\n        O2 [label=\"{对象 2 | {数据 | 元数据 | 唯一ID}}\", fillcolor=\"#ced4da\"];\n        O3 [label=\"{对象 3 | {数据 | 元数据 | 唯一ID}}\", fillcolor=\"#ced4da\"];\n        O4 [label=\"{...}\", fillcolor=\"#ced4da\"];\n    }\n    App [label=\"应用程序 / 用户\", shape=box, style=filled, fillcolor=\"#a5d8ff\"];\n    App -> O1 [label=\" 使用ID请求对象1\", color=\"#495057\"];\n    App -> O2 [label=\" 使用ID请求对象2\", color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xq05sw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>包含数据、元数据和唯一ID的对象以扁平结构存储在存储桶中。应用程序使用其ID直接访问对象。</p>\n</blockquote>\n<h3>对象存储的优点</h3>\n<p>对象存储系统受欢迎的原因有几个：</p>\n<ul>\n<li><strong>大规模可伸缩性：</strong> 它们被设计为横向伸缩，意味着您可以轻松添加更多存储节点。这使得它们能够处理可能达到艾字节（数十亿千兆字节）的数据，而不会出现性能下降或与传统文件系统相关的复杂管理开销。您通常不需要以同样的方式担心分配特定卷或空间不足的问题。</li>\n<li><strong>持久性和可用性：</strong> 数据通常会自动复制到多个物理设备上，有时甚至跨不同的数据中心或地理区域。这种冗余可防止硬件故障并确保数据保持可访问性。</li>\n<li><strong>丰富的元数据：</strong> 能够为每个对象存储大量且可定制的元数据，有助于更好地进行数据管理、索引和搜索，尤其是在大型、多样的数据集中。</li>\n<li><strong>成本效益：</strong> 对于大量数据，特别是那些不经常访问的数据，对象存储比其他存储类型更具成本效益。许多提供商提供不同的存储层级（例如，标准访问、不频繁访问、归档），其成本根据访问频率和检索时间而异。</li>\n<li><strong>API驱动的访问：</strong> 与对象存储的交互通常通过基于Web的应用程序编程接口（API）进行，通常是使用标准HTTP方法（GET, PUT, POST, DELETE）的RESTful API。这使得应用程序，特别是Web应用程序和云服务，能够轻松地与存储系统集成。</li>\n</ul>\n<h3>数据工程中的常见用途</h3>\n<p>数据工程师经常在以下场景中遇到对象存储：</p>\n<ul>\n<li><strong>数据湖：</strong> 对象存储通常构成数据湖的存储基础，在将来自各种来源的原始数据以其原生格式进行处理或加载到数据仓库等更结构化的系统之前，将其保存起来。</li>\n<li><strong>备份和归档：</strong> 其持久性和成本效益使其成为备份数据库、应用程序数据和日志文件以及长期归档的理想选择。</li>\n<li><strong>存储非结构化数据：</strong> 它是存储大型媒体文件（图像、视频）、日志文件、传感器数据、文档以及其他非结构化或半结构化信息的首选方案。</li>\n<li><strong>中间存储：</strong> 数据处理管道可能会使用对象存储来保存步骤之间的中间结果。例如，一个批处理作业可能会从一个存储桶读取数据，对其进行转换，然后将结果写入另一个存储桶。</li>\n</ul>\n<h3>常见对象存储服务</h3>\n<p>大多数主要云提供商都提供托管对象存储服务。一些知名示例包括：</p>\n<ul>\n<li><strong>Amazon 简单存储服务 (S3)：</strong> 最早且应用最广泛的对象存储服务之一。</li>\n<li><strong>Google Cloud Storage (GCS)：</strong> 谷歌云提供的可伸缩且持久的对象存储服务。</li>\n<li><strong>Azure Blob Storage：</strong> 微软Azure针对非结构化数据提供的对象存储方案。</li>\n</ul>\n<p>这些服务负责底层基础设施管理，提供一个可通过API访问的可靠且可伸缩的存储层。</p>\n<p>了解对象存储很重要，因为它补充了数据库和文件系统，提供了一种不同的方法，针对规模、持久性以及处理不同类型数据进行了优化，尤其是当今数据应用程序中常见的海量非结构化数据。在下一节中，我们将介绍在这些系统中存储数据的一些常见格式。</p>",
+  "slug": "object-storage-basics",
+  "updates": [],
+  "references": [
+    {
+      "id": 15381,
+      "title": "Amazon Simple Storage Service (Amazon S3) User Guide",
+      "author": "Amazon Web Services",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html",
+      "doi": "",
+      "note": "通过AWS S3的视角阐释了对象存储的基本原则，涵盖了存储桶、对象、键和访问管理等概念。",
+      "order": 1,
+      "created_at": "2025-09-06T10:44:27.471678Z",
+      "updated_at": "2025-09-11T02:44:19.318715Z"
+    },
+    {
+      "id": 15382,
+      "title": "Cloud Storage documentation",
+      "author": "Google Cloud",
+      "year": "2025",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/storage/docs",
+      "doi": "",
+      "note": "提供了Google Cloud生态系统中对象存储架构和功能的详细理解，包括对象生命周期管理和安全性。",
+      "order": 2,
+      "created_at": "2025-09-06T10:44:27.499008Z",
+      "updated_at": "2025-09-11T02:44:22.230267Z"
+    },
+    {
+      "id": 15383,
+      "title": "Fundamentals of Data Engineering",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/",
+      "doi": "",
+      "note": "概述了数据存储范式，将对象存储置于现代数据架构和数据湖概念中。",
+      "order": 3,
+      "created_at": "2025-09-06T10:44:27.502414Z",
+      "updated_at": "2025-09-11T02:44:23.176363Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

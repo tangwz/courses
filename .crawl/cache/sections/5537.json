@@ -1,0 +1,61 @@
+{
+  "id": 5537,
+  "title": "数据格式化与标准化",
+  "meta_title": "数据格式化与标准化技术",
+  "meta_description": "标准化数据格式（例如，日期、地址）的方法。",
+  "content": "<p>在处理原始数据时，经常会发现它有些杂乱且不一致，就像从不同商店购买食材，却发现它们的标签或计量单位各不相同。数据转换阶段有助于整理这些数据，而整理的一个主要部分就是格式化和标准化。此过程确保无论数据来自何处，相似的数据点都以一致的方式呈现。如果没有标准化，比较、汇总或分析数据将变得困难重重，甚至无法实现。设想一下，如果一些温度读数是摄氏度，另一些是华氏度，你将很难计算平均温度；或者当客户的国家信息在不同记录中显示为“USA”、“U.S.A.”和“United States”时，你将很难按国家统计客户数量。</p>\n<p>格式化和标准化旨在为你的数据字段带来一致性。这使得数据在目标系统中（无论是数据库、数据仓库还是分析工具）变得可靠且更易于使用。</p>\n<h3>常见格式化与标准化任务</h3>\n<p>让我们看看在转换阶段应用格式化和标准化的一些典型方面：</p>\n<h4>1. 日期和时间格式化</h4>\n<p>日期和时间以不一致性著称。你可能会遇到像 <code>MM/DD/YYYY</code>、<code>DD-Mon-YY</code>、<code>YYYY-MM-DD HH:MM:SS</code> 这样的格式，时间戳整数，甚至像“January 5th, 2023”这样的纯文本。</p>\n<ul>\n<li><strong>目标：</strong> 将所有日期和时间值转换为单一、明确的格式。</li>\n<li><strong>通用标准：</strong> ISO 8601（日期为 <code>YYYY-MM-DD</code>，带时区的时间戳为 <code>YYYY-MM-DDTHH:MM:SSZ</code>）被广泛采用，因为它得到国际公认，并且可以按字母顺序正确排序。</li>\n<li><strong>示例：</strong>\n<ul>\n<li>输入：<code>\"03/15/2024\"</code>、<code>\"15-Mar-24\"</code>、<code>\"2024-03-15 10:30:00\"</code></li>\n<li>标准化输出：<code>\"2024-03-15\"</code>、<code>\"2024-03-15\"</code>、<code>\"2024-03-15T10:30:00Z\"</code>（假定为UTC或转换为UTC）</li>\n</ul>\n</li>\n</ul>\n<h4>2. 数值格式化和单位转换</h4>\n<p>数字也可能存在差异。问题包括不同的小数分隔符（<code>.</code> vs. <code>,</code>）、内嵌的货币符号（<code>$1,200.50</code> vs. <code>€1.200,50</code>），或不同的计量单位（千克 vs. 磅，米 vs. 英尺）。</p>\n<ul>\n<li><strong>目标：</strong> 一致地表示数字，并确保测量值采用标准单位。</li>\n<li><strong>方法：</strong>\n<ul>\n<li>移除非数字字符（例如，如果目标系统需要纯数字，则移除货币符号或用作千位分隔符的逗号）。</li>\n<li>标准化小数分隔符（通常为 <code>.</code>）。</li>\n<li>将测量值转换为选定的标准单位。例如，将所有重量转换为千克（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>千克</mtext><mo>=</mo><mtext>磅</mtext><mo>×</mo><mn>0.453592</mn></mrow><annotation encoding=\"application/x-tex\">千克 = 磅 \\times 0.453592</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">千克</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord cjk_fallback\">磅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.453592</span></span></span></span>），或将所有温度转换为摄氏度（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>摄氏度</mtext><mo>=</mo><mo stretchy=\"false\">(</mo><mtext>华氏度</mtext><mo>−</mo><mn>32</mn><mo stretchy=\"false\">)</mo><mo>×</mo><mn>5</mn><mi mathvariant=\"normal\">/</mi><mn>9</mn></mrow><annotation encoding=\"application/x-tex\">摄氏度 = (华氏度 - 32) \\times 5/9</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">摄氏度</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord cjk_fallback\">华氏度</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">32</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">5/9</span></span></span></span>）。</li>\n</ul>\n</li>\n<li><strong>示例（单位）：</strong>\n<ul>\n<li>输入记录：<code>{ \"item\": \"A\", \"weight\": 10, \"unit\": \"kg\" }</code>、<code>{ \"item\": \"B\", \"weight\": 22, \"unit\": \"lbs\" }</code></li>\n<li>标准化输出（转换为千克）：<code>{ \"item\": \"A\", \"weight_kg\": 10 }</code>、<code>{ \"item\": \"B\", \"weight_kg\": 9.98 }</code>（因为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>22</mn><mo>×</mo><mn>0.453592</mn><mo>≈</mo><mn>9.98</mn></mrow><annotation encoding=\"application/x-tex\">22 \\times 0.453592 \\approx 9.98</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">22</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.453592</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">9.98</span></span></span></span>）</li>\n</ul>\n</li>\n</ul>\n<h4>3. 文本标准化</h4>\n<p>文本字段通常在大小写、空格、缩写或分类标签方面存在不一致。</p>\n<ul>\n<li><strong>目标：</strong> 确保相同的实体或类别由相同的字符串表示。</li>\n<li><strong>方法：</strong>\n<ul>\n<li><strong>大小写转换：</strong> 将文本转换为全小写或全大写（例如，<code>\"apple\"</code>、<code>\"Apple\"</code>、<code>\"APPLE\"</code> 都变为 <code>\"apple\"</code>）。小写很常见，因为它避免了专有名词有时为大写的问题。</li>\n<li><strong>去除空格：</strong> 移除可能导致不匹配的前导或尾随空格（例如，<code>\" New York \"</code> 变为 <code>\"New York\"</code>）。</li>\n<li><strong>分类值标准化：</strong> 将各种变体映射到一个单一的标准术语（例如，<code>\"USA\"</code>、<code>\"U.S.\"</code>、<code>\"United States\"</code> 都映射到 <code>\"United States\"</code>）。这通常涉及使用查找表或映射字典。</li>\n<li><strong>地址标准化：</strong> 标准化地址组成部分（例如，将<code>\"Street\"</code>转换为<code>\"St.\"</code>，<code>\"Avenue\"</code>转换为<code>\"Ave.\"</code>，<code>\"California\"</code>转换为<code>\"CA\"</code>）。存在专门的工具和服务用于地址标准化，但简单的字符串替换可以处理基本情况。</li>\n</ul>\n</li>\n</ul>\n<p>这是说明分类值标准化的图表：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1de76tl\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\"];\n\n  subgraph cluster_input {\n    label = \"输入值\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n    node [fillcolor=\"#ffec99\", style=\"filled,rounded\"];\n    i1 [label=\"USA\"];\n    i2 [label=\"U.S.\"];\n    i3 [label=\"United States\"];\n    i4 [label=\"United State\"]; // 拼写错误示例\n  }\n\n  subgraph cluster_output {\n    label = \"标准化值\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n    node [fillcolor=\"#b2f2bb\", style=\"filled,rounded\"];\n    o1 [label=\"United States\"];\n  }\n\n  Mapping [label=\"标准化\\n规则 / 映射\", shape=ellipse, style=dashed, color=\"#adb5bd\"];\n\n  i1 -> Mapping;\n  i2 -> Mapping;\n  i3 -> Mapping;\n  i4 -> Mapping [label=\"修正拼写错误\\n并标准化\"];\n  Mapping -> o1;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1de76tl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表显示了国家名称的不同输入变体如何通过标准化规则或映射过程，映射到单一的标准化输出（“United States”）。</p>\n</blockquote>\n<h4>4. 字符编码</h4>\n<p>从不同系统提取的数据可能使用不同的字符编码（如 <code>ASCII</code>、<code>ISO-8859-1</code>、<code>UTF-8</code>）。使用错误的编码可能导致乱码文本（例如，<code>�</code> 而不是 <code>é</code>）。</p>\n<ul>\n<li><strong>目标：</strong> 确保所有文本数据都使用支持所需字符的一致编码。</li>\n<li><strong>通用标准：</strong> <code>UTF-8</code> 是网络的既定标准，并支持全球语言的广泛字符范围。除非你有特定限制，否则它通常是最佳选择。</li>\n<li><strong>行动：</strong> 在转换过程中，识别源编码（如果可能），并将数据转换为目标标准编码（通常是 <code>UTF-8</code>）。</li>\n</ul>\n<h3>重要性</h3>\n<p>一致的格式化和标准化是数据转换的基本步骤。它们直接影响数据质量和可用性：</p>\n<ul>\n<li><strong>改进分析：</strong> 确保计算、比较和汇总准确无误。</li>\n<li><strong>简化加载：</strong> 使数据更容易映射到目标系统的模式，减少加载错误。</li>\n<li><strong>增强可靠性：</strong> 通过确保一致性，建立对数据的信任。</li>\n<li><strong>更易于维护：</strong> 标准化数据随着时间的推移更易于理解和管理。</li>\n</ul>\n<p>通过仔细应用格式化和标准化规则，你可以将原始的、可能杂乱的数据转换为清洁、结构化且可靠的资产，从而准备好加载和后续使用。这为有意义的分析和有效的数据驱动决策奠定了基础。</p>",
+  "slug": "data-formatting-standardization",
+  "updates": [],
+  "references": [
+    {
+      "id": 15151,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball, Margy Ross",
+      "year": "2013",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFGFZFTqmDFKz3tiCZTKobQRFYtIgBEUljz9ZS0sqBo1fOaAw2XpJh4W4H4u1ZNviCcrvle3FjzTExknzxOmRF_LJqfNUPakeaYwpjtl37z2VfLNseuExoTa6OWZt9MgoujRfTWPfpp2fERVSYTdvErsxf3lAT66AOHstPKRaRhcnKvWwt0N9rnuNWFc9uHB3FGDAD7yu8_",
+      "doi": "",
+      "note": "这本书提供了关于数据仓库和ETL的基础指导。它详细说明了转换过程，包括数据质量和标准化，以准备用于分析的数据。",
+      "order": 1,
+      "created_at": "2025-09-05T14:36:35.736949Z",
+      "updated_at": "2025-09-10T05:36:00.505850Z"
+    },
+    {
+      "id": 15152,
+      "title": "Mastering Data Quality: An Introduction to Data Quality and Data Governance",
+      "author": "Martin E. Tenenbaum, Evan Levy, Ken Segall",
+      "year": "2014",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.sciencedirect.com/book/9780128003781/mastering-data-quality",
+      "doi": "10.1016/C2012-0-06282-3",
+      "note": "本资源介绍了数据质量的原则、挑战和解决方案，解释了为什么一致的数据格式和标准化对于数据可靠性至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T14:36:35.749710Z",
+      "updated_at": "2025-09-10T05:35:36.325842Z"
+    },
+    {
+      "id": 15154,
+      "title": "Unicode® FAQ",
+      "author": "The Unicode Consortium",
+      "year": "2024",
+      "publisher": "The Unicode Consortium",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.unicode.org/faq/",
+      "doi": "",
+      "note": "Unicode FAQ的这一部分回答了关于字符编码（包括UTF-8）的常见问题，以及它对于文本数据标准化的意义。",
+      "order": 4,
+      "created_at": "2025-09-05T14:36:35.756098Z",
+      "updated_at": "2025-09-10T05:35:30.147345Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

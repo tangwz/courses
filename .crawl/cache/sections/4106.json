@@ -1,0 +1,61 @@
+{
+  "id": 4106,
+  "title": "结合 DVC 流水线与 MLflow 追踪",
+  "meta_title": "结合 DVC 流水线与 MLflow 追踪",
+  "meta_description": "在 DVC 流水线阶段中加入 MLflow 日志记录，以便进行全面的记录和追踪。",
+  "content": "<p>在 DVC 流水线阶段中直接嵌入 (embedding) MLflow 追踪功能，提供了一种有效的方法，可以在 DVC 流水线每次执行时自动收集详细的实验元数据。DVC 流水线（使用 <code>dvc.yaml</code> 或 <code>dvc run</code> 定义）用于创建自动化工作流程。这种结合将流水线的结构可复现性与 MLflow 丰富的追踪能力关联起来。</p>\n<p>核心思路很简单：在 DVC 流水线阶段中执行的脚本或命令将包含用于日志记录的标准 MLflow API 调用。DVC 负责编排，确保阶段以正确的顺序运行，并使用正确的依赖项，而脚本本身则将其参数 (parameter)、指标和工件报告给您配置的 MLflow 追踪服务器。</p>\n<h3>在流水线阶段中嵌入 (embedding) MLflow 日志记录</h3>\n<p>考虑一个由 DVC 管理的典型机器学习 (machine learning)流水线，它可能在 <code>dvc.yaml</code> 文件中定义。你可能包含数据处理、训练和评估阶段。我们来关注训练阶段。</p>\n<p>之前，你已学会如何使用 <code>dvc run</code> 或直接在 <code>dvc.yaml</code> 中定义一个阶段。这个阶段通常会执行一个脚本，例如 <code>train.py</code>。为了结合 MLflow，你需要修改这个脚本（<code>train.py</code>），使其包含 MLflow 日志记录调用。</p>\n<p>以下是一个 <code>train.py</code> 脚本的简化示例，它旨在作为 DVC 流水线的一部分运行：</p>\n<pre><code class=\"language-python\"># train.py\nimport mlflow\nimport pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.metrics import accuracy_score\nimport joblib\nimport argparse\n\n# 设置参数解析，用于接收来自 dvc.yaml 的参数\nparser = argparse.ArgumentParser()\nparser.add_argument('--n_estimators', type=int, default=100)\nparser.add_argument('--max_depth', type=int, default=10)\nparser.add_argument('--input_data', type=str, required=True)\nparser.add_argument('--output_model', type=str, required=True)\nargs = parser.parse_args()\n\n# 加载数据（由 DVC 管理依赖）\ndata = pd.read_csv(args.input_data)\nX = data.drop('target', axis=1)\ny = data['target']\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\n# 启动一个 MLflow 运行\n# 如果在 Git 仓库中运行，MLflow 会自动检测 Git 提交\nwith mlflow.start_run():\n    # 记录从 DVC 阶段定义接收的参数\n    mlflow.log_param(\"n_estimators\", args.n_estimators)\n    mlflow.log_param(\"max_depth\", args.max_depth)\n    # 记录有关输入数据的信息（由 DVC 追踪）\n    mlflow.log_param(\"input_data_path\", args.input_data)\n\n    # 训练模型\n    model = RandomForestClassifier(n_estimators=args.n_estimators,\n                                   max_depth=args.max_depth,\n                                   random_state=42)\n    model.fit(X_train, y_train)\n\n    # 评估模型\n    y_pred = model.predict(X_test)\n    accuracy = accuracy_score(y_test, y_pred)\n\n    # 记录指标\n    mlflow.log_metric(\"accuracy\", accuracy)\n    print(f\"准确率: {accuracy:.4f}\")\n\n    # 保存模型（输出由 DVC 管理）\n    joblib.dump(model, args.output_model)\n    print(f\"模型已保存到 {args.output_model}\")\n\n    # 同时将模型工件记录到 MLflow\n    # 这通过 MLflow UI/注册表提供了更丰富的模型管理\n    mlflow.sklearn.log_model(model, \"random-forest-model\")\n\n    # 如果需要，记录其他相关工件\n    # 例如，特征重要性图、混淆矩阵\n    # mlflow.log_artifact(\"feature_importance.png\")\n\nprint(\"训练脚本执行完毕。\")\n</code></pre>\n<p>接下来，我们来看看这个脚本如何被整合到 <code>dvc.yaml</code> 中的 DVC 流水线阶段：</p>\n<pre><code class=\"language-yaml\"># dvc.yaml\nstages:\n  prepare:\n    # ... 数据准备阶段定义 ...\n    cmd: python src/prepare.py --input data/raw/data.csv --output data/prepared/features.csv\n    deps:\n      - data/raw/data.csv\n      - src/prepare.py\n    outs:\n      - data/prepared/features.csv\n\n  train:\n    # 这个阶段运行我们的脚本并包含 MLflow 日志记录\n    cmd: python src/train.py\n           --input_data data/prepared/features.csv\n           --output_model models/rf_model.joblib\n           --n_estimators 150\n           --max_depth 15\n    deps:\n      - data/prepared/features.csv\n      - src/train.py\n    params: # DVC 追踪这些参数\n      - n_estimators\n      - max_depth\n    outs: # DVC 追踪这个输出文件\n      - models/rf_model.joblib\n    metrics: # DVC 也可以追踪主要指标\n      - metrics.json: # 假设 train.py 也在此处输出指标（可选）\n          cache: false\n</code></pre>\n<p>在此配置中：</p>\n<ol>\n<li><code>dvc.yaml</code> 文件定义了 <code>train</code> 阶段。</li>\n<li><code>cmd</code> 指定了如何执行 <code>train.py</code> 脚本，将 <code>n_estimators</code> 和 <code>max_depth</code> 等参数 (parameter)作为命令行参数传递。这些参数也可以在 <code>params.yaml</code> 文件中定义并在此处引用。</li>\n<li><code>deps</code> 列出了依赖项：准备好的数据文件和训练脚本本身。如果其中任何一个发生变化，<code>dvc repro</code> 就会知道需要重新运行此阶段。</li>\n<li><code>params</code> 明确告诉 DVC 追踪特定参数（例如，可能在 <code>params.yaml</code> 中定义的 <code>n_estimators</code>、<code>max_depth</code>）。这些参数的变化也会触发重新运行。</li>\n<li><code>outs</code> 列出了主要输出文件（<code>models/rf_model.joblib</code>），DVC 将追踪其哈希值。</li>\n<li>当你运行 <code>dvc repro train</code>（或仅 <code>dvc repro</code>）时，DVC 会执行 <code>train</code> 阶段的 <code>cmd</code> 命令。</li>\n<li><code>train.py</code> 脚本运行并执行 <code>mlflow.start_run()</code>、<code>mlflow.log_param()</code>、<code>mlflow.log_metric()</code> 和 <code>mlflow.sklearn.log_model()</code> 调用。</li>\n<li>MLflow 将所有记录的信息（参数、指标、模型工件、Git 提交等）记录为一个新的运行，并存储到其后端（本地 <code>mlruns</code> 或远程服务器）。</li>\n<li>DVC 完成阶段执行，并用输出文件 <code>models/rf_model.joblib</code> 的哈希值更新 <code>dvc.lock</code> 文件。</li>\n</ol>\n<h3>将流水线执行与实验关联起来</h3>\n<p>这种结合为您提供了强有力的关联：</p>\n<ul>\n<li><strong>DVC 确保流水线完整性</strong>：它保证运行 <code>dvc repro</code> 时使用您的 Git 提交和 DVC 追踪定义的代码（<code>src/train.py</code>）和数据（<code>data/prepared/features.csv</code>）的正确版本。它管理执行流程并缓存输出。</li>\n<li><strong>MLflow 记录执行详情</strong>：对于 <code>dvc repro</code> 触发的每次执行，MLflow 会记录使用的特定参数 (parameter)（即使是通过 <code>cmd</code> 传递的参数）、结果指标以及训练好的模型等相关工件。</li>\n</ul>\n<p>当您在 MLflow UI 中查看实验历史时，您会看到与 DVC 流水线阶段每次执行相对应的运行。因为 MLflow 通常会自动记录与运行相关的 Git 提交哈希值，您可以将 MLflow 运行直接关联到生成它的 DVC 管理仓库（代码、<code>dvc.yaml</code>、<code>dvc.lock</code>、<code>params.yaml</code>）的特定状态。</p>\n<h3>整合方法的益处</h3>\n<ul>\n<li><strong>自动化追踪</strong>：每次流水线通过 <code>dvc repro</code> 运行时，实验详情都会自动记录，无需手动干预。</li>\n<li><strong>完整的来源信息</strong>：您将 DVC 流水线的结构定义和依赖项与 MLflow 中详细的运行元数据关联起来。您确切地知道是哪个数据版本、代码版本和参数 (parameter)产生了特定的结果。</li>\n<li><strong>增强的比较</strong>：使用 MLflow UI 比较由参数（<code>params.yaml</code>）、代码（<code>src/train.py</code>）或数据依赖项变化而触发的不同流水线运行。</li>\n<li><strong>简化工作流程</strong>：开发人员主要使用 Git 和 DVC 命令（<code>git commit</code>、<code>dvc repro</code>），实验追踪作为流水线执行的自然副产品而发生。</li>\n</ul>\n<p>通过在 DVC 流水线阶段执行的脚本中嵌入 (embedding) MLflow 调用，您创建了一个系统，其中 DVC 管理的可复现性得到了 MLflow 详细追踪和比较能力的增强，从而使机器学习 (machine learning)项目更易于管理和理解。</p>",
+  "slug": "dvc-pipelines-mlflow-tracking",
+  "updates": [],
+  "references": [
+    {
+      "id": 8172,
+      "title": "DVC Documentation",
+      "author": "Iterative.ai",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "数据版本控制（DVC）的官方文档，提供了关于DVC管道、数据管理和可复现性的指南。",
+      "order": 1,
+      "created_at": "2025-09-05T01:52:15.891427Z",
+      "updated_at": "2025-09-08T14:17:47.577871Z"
+    },
+    {
+      "id": 8173,
+      "title": "MLflow Tracking",
+      "author": "MLflow Project",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow跟踪组件的官方指南，详细介绍了如何记录参数、指标、工件和模型，这是本节内容的核心。",
+      "order": 2,
+      "created_at": "2025-09-05T01:52:15.923770Z",
+      "updated_at": "2025-09-08T14:17:38.621138Z"
+    },
+    {
+      "id": 8174,
+      "title": "MLflow Experiment Tracking with DVC",
+      "author": "Iterative.ai",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc/use-cases/mlflow-experiment-tracking",
+      "doi": "",
+      "note": "此官方指南提供了将MLflow跟踪与DVC管道集成的说明和示例，直接涉及本节的核心主题。",
+      "order": 3,
+      "created_at": "2025-09-05T01:52:15.927629Z",
+      "updated_at": "2025-09-08T14:17:42.110237Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

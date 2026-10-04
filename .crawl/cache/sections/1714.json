@@ -1,0 +1,45 @@
+{
+  "id": 1714,
+  "title": "二维数组切片",
+  "meta_title": "对 NumPy 二维数组进行切片",
+  "meta_description": "从二维数组中选择特定行、列或矩形子区域。",
+  "content": "<p>切片是一种强大的操作，适用于一维和多维数组。一维数组用于提取元素序列，而多维数组则允许选择特定的行、列或矩形数据块。这项功能对于处理NumPy中表示的矩阵式数据（如图像或表格）来说非常基本。</p>\n<p>对于二维数组（矩阵），切片通过使用逗号分隔每个维度的切片规范，从而扩展了熟悉的 <code>start:stop:step</code> 符号。一般语法是：</p>\n<p><code>array[row_slice, column_slice]</code></p>\n<p>在这里，<code>row_slice</code> 指定要选择的行范围，<code>column_slice</code> 指定要选择的列范围。每个切片遵循与一维切片相同的规则：<code>start</code> 索引是包含的，<code>stop</code> 索引是不包含的，<code>step</code> 定义了步长。如果切片的任何部分（<code>start</code>、<code>stop</code> 或 <code>step</code>）被省略，NumPy 会使用默认值（维度开头、维度结尾、步长为1）。</p>\n<p>我们使用一个示例二维数组来看看实际效果。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个 4x5 数组（4 行，5 列）\narr2d = np.array([[ 1,  2,  3,  4,  5],\n                  [ 6,  7,  8,  9, 10],\n                  [11, 12, 13, 14, 15],\n                  [16, 17, 18, 19, 20]])\n\nprint(\"原始二维数组:\\n\", arr2d)\n</code></pre>\n<h3>选择行</h3>\n<p>要选择行范围同时保留所有列，你需要为行指定切片，并对列使用 <code>:</code>。</p>\n<pre><code class=\"language-python\"># 选择前两行（索引 0 和 1）\nfirst_two_rows = arr2d[0:2, :]\nprint(\"\\n前两行:\\n\", first_two_rows)\n\n# 选择从索引 1 开始（包含）到索引 3 结束（不包含）的行\nrows_1_and_2 = arr2d[1:3, :]\nprint(\"\\n索引 1 和 2 的行:\\n\", rows_1_and_2)\n</code></pre>\n<p>冒号 <code>:</code> 充当列维度的通配符，表明所选行应包含所有列。如果你选择整行，也可以省略逗号后的冒号：<code>arr2d[0:2]</code> 等同于 <code>arr2d[0:2, :]</code>。</p>\n<h3>选择列</h3>\n<p>类似地，要选择特定列同时保留所有行，你需要对行切片使用 <code>:</code> 并指定所需的列范围。</p>\n<pre><code class=\"language-python\"># 选择前三列（索引 0, 1, 2）\nfirst_three_cols = arr2d[:, 0:3]\nprint(\"\\n前三列:\\n\", first_three_cols)\n\n# 选择从索引 2 开始（包含）到索引 4 结束（不包含）的列\ncols_2_and_3 = arr2d[:, 2:4]\nprint(\"\\n索引 2 和 3 的列:\\n\", cols_2_and_3)\n</code></pre>\n<h3>选择子数组（矩形区域）</h3>\n<p>真正的优势在于你结合行和列切片来选择数组的特定矩形子区域。</p>\n<pre><code class=\"language-python\"># 选择从行 0, 1 和列 1, 2 组成的子数组\nsub_array_1 = arr2d[0:2, 1:3]\nprint(\"\\n子数组 (行 0-1, 列 1-2):\\n\", sub_array_1)\n# 结果: [[2, 3], [7, 8]]\n\n# 选择从行 1, 2 和列 2, 3, 4 组成的子数组\nsub_array_2 = arr2d[1:3, 2:5] # or arr2d[1:3, 2:]\nprint(\"\\n子数组 (行 1-2, 列 2-4):\\n\", sub_array_2)\n# 结果: [[8, 9, 10], [13, 14, 15]]\n</code></pre>\n<p>以下图表展示了对 <code>arr2d[1:3, 2:4]</code> 定义的区域进行切片操作，该操作对应于索引为 1 和 2 的行，以及索引为 2 和 3 的列。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1y1k37w\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=plaintext]; splines=false; edge [style=invis]; subgraph cluster_array { label=\"arr2d\"; bgcolor=\"#e9ecef\"; node [shape=box, style=filled, fillcolor=white, fixedsize=true, width=0.6, height=0.4]; 1 -> 2 -> 3 -> 4 -> 5; 6 -> 7 -> 8 -> 9 -> 10; 11 -> 12 -> 13 -> 14 -> 15; 16 -> 17 -> 18 -> 19 -> 20; {rank=same; 1; 6; 11; 16;} {rank=same; 2; 7; 12; 17;} {rank=same; 3; 8; 13; 18;} {rank=same; 4; 9; 14; 19;} {rank=same; 5; 10; 15; 20;} } subgraph cluster_slice { label=\"切片 [1:3, 2:4]\"; bgcolor=\"#a5d8ff\"; node [shape=box, style=filled, fillcolor=\"#74c0fc\", fixedsize=true, width=0.6, height=0.4]; s8 -> s9; s13 -> s14; {rank=same; s8; s13;} {rank=same; s9; s14;} 8 -> s8 [style=solid, arrowhead=none, color=\"#1c7ed6\", penwidth=2]; 9 -> s9 [style=solid, arrowhead=none, color=\"#1c7ed6\", penwidth=2]; 13 -> s13 [style=solid, arrowhead=none, color=\"#1c7ed6\", penwidth=2]; 14 -> s14 [style=solid, arrowhead=none, color=\"#1c7ed6\", penwidth=2]; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1y1k37w\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>对 <code>arr2d[1:3, 2:4]</code> 进行切片的视觉表示。蓝色高亮显示的元素构成了结果 2x2 子数组，其中包含 <code>[[8, 9], [13, 14]]</code>。</p>\n</blockquote>\n<h3>切片是视图</h3>\n<p>需要记住的一个重要方面是，与一维数组切片一致，二维数组切片是原始数组数据的<em>视图</em>，而不是副本。这意味着如果你修改切片中的元素，这些更改将反映在原始数组中。</p>\n<pre><code class=\"language-python\"># 获取一个切片（视图）\nslice_view = arr2d[0:2, 0:2]\nprint(\"\\n原始切片视图:\\n\", slice_view)\n\n# 修改切片中的一个元素\nslice_view[0, 0] = 99\nprint(\"\\n修改后的切片视图:\\n\", slice_view)\n\n# 检查原始数组\nprint(\"\\n修改切片后的原始数组:\\n\", arr2d)\n# 注意左上角元素（索引 0,0）现在是 99\n</code></pre>\n<p>如果你需要切片的独立副本，并且它独立于原始数组，你必须明确使用 <code>.copy()</code> 方法。</p>\n<pre><code class=\"language-python\"># 创建切片的副本\nslice_copy = arr2d[2:, 2:].copy()\nprint(\"\\n切片副本:\\n\", slice_copy)\n\n# 修改副本\nslice_copy[0, 0] = -1\nprint(\"\\n修改后的切片副本:\\n\", slice_copy)\n\n# 再次检查原始数组 - 该区域保持不变\nprint(\"\\n修改副本后的原始数组:\\n\", arr2d)\n</code></pre>\n<p>熟练掌握二维切片对于在 NumPy 中高效处理表格数据、图像块或任何网格状结构非常重要。它允许你隔离并处理数据的特定部分，而无需手动迭代元素。</p>",
+  "slug": "slicing-2d-arrays",
+  "updates": [],
+  "references": [
+    {
+      "id": 1982,
+      "title": "Indexing",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "NumPy官方文档，介绍其索引和切片机制，包括多维数组以及视图与副本的区别。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:53.320346Z",
+      "updated_at": "2025-09-08T05:08:06.184593Z"
+    },
+    {
+      "id": 1984,
+      "title": "The N-dimensional array (ndarray)",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/arrays.ndarray.html",
+      "doi": "",
+      "note": "NumPy ndarray对象的参考文档，为数组数据结构和切片如何创建视图提供背景信息。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:53.325937Z",
+      "updated_at": "2025-09-08T05:07:55.685230Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

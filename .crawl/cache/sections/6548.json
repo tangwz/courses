@@ -1,0 +1,61 @@
+{
+  "id": 6548,
+  "title": "工具执行中的错误处理方案",
+  "meta_title": "LLM代理工具的错误处理",
+  "meta_description": "在您的工具中实施有效的错误处理机制，以应对故障并向LLM提供有用的反馈。",
+  "content": "<p>当您的LLM代理依赖于某个工具，而该工具出现问题时，代理完成任务的能力会大大受阻。一个工具仅仅在多数时候工作正常是不够的；当出现问题时，它的行为也应可预测并提供足够信息。您的工具中的有效错误处理，是构建可靠且智能代理系统的基础。这涉及预见潜在的故障，妥善地捕获它们，以及最重要的是以LLM能够理解并可能采取行动的方式，将错误的性质反馈给LLM。</p>\n<h3>工具为何会出问题：常见的错误原因</h3>\n<p>在设计错误处理方案之前，了解工具可能遇到问题的常见情况会很有帮助。这些大致可分为：</p>\n<ol>\n<li><strong>输入问题：</strong> 工具接收到无效、格式错误或意料之外的输入。这可能是由于LLM误解了所需的输入格式，或提供了不符合工具限制的数据（例如，在需要数字的计算工具中提供了一个文本字符串）。</li>\n<li><strong>外部服务故障：</strong> 工具通常与外部API或数据库交互。这些服务可能暂时无法使用，自身出现内部错误，施加速率限制，或者需要可能失败的认证。</li>\n<li><strong>网络问题：</strong> 连接问题、超时或DNS解析失败都可能阻止工具访问外部服务或资源。</li>\n<li><strong>工具内部逻辑错误：</strong> 工具自身代码中的错误或未处理的边缘情况可能导致异常或不正确的行为。</li>\n<li><strong>资源不可用：</strong> 工具可能尝试访问不存在的文件、已被删除的数据库表，或耗尽必要的系统资源。</li>\n</ol>\n<p>了解这些分类有助于设计更全面的错误处理机制。</p>\n<h3>管理工具错误的核心方案</h3>\n<p>LLM代理工具中错误处理的目的是双重的：防止工具无法控制地崩溃，以及向LLM提供足够信息，使其能够理解故障并决定后续的行动方案。</p>\n<h4>1. 向LLM报告清晰且结构化的错误</h4>\n<p>当工具失败时，它应返回专门为LLM使用而设计的错误消息。模糊或过于技术性的错误消息是没有帮助的。一个好的LLM错误消息通常应包含：</p>\n<ul>\n<li><strong>错误类型：</strong> 对错误的简单分类（例如，<code>InputValidationError</code>、<code>APIFailure</code>、<code>NetworkError</code>、<code>ToolInternalError</code>）。</li>\n<li><strong>描述性消息：</strong> 对哪里出了问题的人类可读解释。例如，不只是“错误404”，一个更好的消息会是“在URL 'X'处请求的文档未找到。”</li>\n<li><strong>上下文 (context)（可选但有益）：</strong> 关于导致错误的特定输入或操作的信息。</li>\n<li><strong>建议（可选）：</strong> 在某些情况下，工具可以建议LLM如何恢复，例如“请检查城市名称的拼写”，或“您可以几分钟后再试一次”。</li>\n</ul>\n<p>这种结构化错误信息应作为您工具定义输出模式的一部分，如“工具输入和输出模式的最佳实践”中所述。</p>\n<p>考虑以下用于获取用户数据的类似Python的伪代码：</p>\n<pre><code class=\"language-python\">def get_user_profile(user_id: int):\n    if not isinstance(user_id, int) or user_id &#x3C;= 0:\n        return {\n            \"success\": False,\n            \"error\": {\n                \"type\": \"InputValidationError\",\n                \"message\": f\"Invalid user_id: '{user_id}'. ID must be a positive integer.\"\n            }\n        }\n    try:\n        # 尝试从外部API获取数据\n        profile_data = external_api.fetch_user(user_id)\n        if profile_data is None:\n             return {\n                \"success\": False,\n                \"error\": {\n                    \"type\": \"DataNotFoundError\",\n                    \"message\": f\"No profile found for user_id: {user_id}.\"\n                }\n            }\n        return {\"success\": True, \"data\": profile_data}\n\n    except NetworkTimeout:\n        return {\n            \"success\": False,\n            \"error\": {\n                \"type\": \"NetworkError\",\n                \"message\": \"The request to the user profile service timed out. Please try again later.\"\n            }\n        }\n    except APIAuthenticationError:\n        return {\n            \"success\": False,\n            \"error\": {\n                \"type\": \"AuthenticationError\",\n                \"message\": \"Failed to authenticate with the user profile service. Check API credentials.\"\n            }\n        }\n    except Exception as e:\n        # 为开发者记录完整的异常e\n        print(f\"Unexpected error in get_user_profile: {e}\") # 面向开发者的日志\n        return {\n            \"success\": False,\n            \"error\": {\n                \"type\": \"ToolInternalError\",\n                \"message\": \"An unexpected error occurred while fetching the user profile.\"\n            }\n        }\n\n</code></pre>\n<p>在此示例中，不同的故障模式返回不同且结构化的错误消息。LLM可以解析此结构以理解故障的性质。</p>\n<h4>2. 主动进行输入校验</h4>\n<p>在进行任何重要的处理或外部调用之前，通过严格校验输入，可以避免许多错误。如果工具预期是一个数字ID却收到文本，最好立即捕获此问题并告知LLM输入格式不正确，而不是继续操作并在之后遇到更隐晦的错误。</p>\n<p>您的工具的输入校验逻辑应生成与上述结构化格式一致的错误消息，清晰指出哪个输入参数 (parameter)有问题以及原因。</p>\n<h4>3. 处理外部服务问题</h4>\n<p>当工具依赖于外部API或服务时，它们易受其直接控制之外的问题影响。</p>\n<ul>\n<li><strong>带有指数退避的重试：</strong> 对于临时网络故障或服务暂时过载等瞬时问题，实施重试机制会很有效。工具不会立即放弃，而是等待短时间后再次尝试。指数退避是一种常用方案，其中每次失败尝试后重试之间的延迟会增加（例如，等待1秒，然后2秒，然后4秒）。这可以避免使负荷过重的服务雪上加霜。但是，请限制重试次数以防止无限循环。</li>\n<li><strong>超时：</strong> 外部调用应始终设置超时。如果服务无响应，您的工具不应无限期挂起，从而阻塞代理。当发生超时时，清晰地报告给LLM。</li>\n<li><strong>特定的API错误代码：</strong> 外部API通常在其响应中返回HTTP状态码（如401未经授权、403禁止、404未找到、500内部服务器错误、503服务不可用）或自定义错误代码。您的工具应解释这些代码并将其转换为对LLM有意义的消息。例如，API返回的401错误可能转换为LLM错误消息，例如：“访问[服务名称]API被拒绝。提供的API密钥可能无效或已过期。”</li>\n</ul>\n<h4>4. 优雅降级</h4>\n<p>有时，工具可能因错误而无法执行其全部功能，但仍能提供部分或替代信息。例如，如果一个综合天气工具未能获取详细预报数据，但其操作的某部分成功，它仍可能返回当前温度。这被称为优雅降级。尽管并非总是可行，但这可以使工具更具弹性。</p>\n<h4>5. 为开发者记录日志</h4>\n<p>虽然LLM接收用户友好的结构化错误消息，但为开发者记录详细的技术错误信息也很重要。这包括堆栈跟踪、精确时间戳以及相关上下文（例如导致问题的输入参数）。这些日志对于调试、监控工具运行状况以及识别故障模式是不可或缺的。“第六章：工具的测试、监控与维护”将更详细地介绍日志记录。</p>\n<h3>错误处理流程图示</h3>\n<p>当错误在工具内部发生时，通常会采取一系列步骤来处理并报告它。此图显示了为LLM代理设计的工具处理错误的通用流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ig2yaf\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    tool_exec [label=\"工具执行逻辑启动\", fillcolor=\"#a5d8ff\"];\n    error_point [label=\"执行期间可能发生错误\", shape=diamond, fillcolor=\"#ffd8a8\"];\n    no_error [label=\"执行成功完成\", fillcolor=\"#b2f2bb\"];\n    log_error [label=\"记录详细技术错误\\n（供开发者分析）\", fillcolor=\"#ced4da\"];\n    categorize_error [label=\"对错误类型进行分类\\n（例如，输入、网络、API、内部）\", fillcolor=\"#eebefa\"];\n    format_llm_error [label=\"格式化LLM友好的错误消息\\n（结构化、清晰、可操作）\", fillcolor=\"#fcc2d7\"];\n    return_error_to_llm [label=\"向LLM代理返回结构化错误对象\", fillcolor=\"#ffc9c9\"];\n    return_success_to_llm [label=\"向LLM代理返回成功结果对象\", fillcolor=\"#69db7c\"];\n\n    tool_exec -> error_point;\n    error_point -> no_error [label=\"无错误\", fontcolor=\"#0ca678\"];\n    error_point -> log_error [label=\"检测到错误\", fontcolor=\"#f03e3e\"];\n    log_error -> categorize_error;\n    categorize_error -> format_llm_error;\n    format_llm_error -> return_error_to_llm;\n    no_error -> return_success_to_llm;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ig2yaf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了工具遇到问题时的决策过程：从检测错误、为开发者记录日志、对其分类、为LLM格式化适当的消息，到最后向代理返回成功结果或结构化错误。</p>\n</blockquote>\n<p>通过实施这些错误处理方案，您创建的工具不仅功能强大，而且具有弹性。它们可以从常见问题中恢复，当无法恢复时，则向LLM代理提供必要信息以理解问题，从而可能找到其他方法来实现其目标。这大大提高了您的LLM代理系统的整体效用和可靠性。随着本课程的推进，特别是在关注Python工具开发和API集成的章节中，您会看到这些原则在更具体的示例中得到应用。</p>",
+  "slug": "tool-error-handling",
+  "updates": [],
+  "references": [
+    {
+      "id": 18294,
+      "title": "Release It! Design and Deploy Production-Ready Software",
+      "author": "Michael T. Nygard",
+      "year": "2018",
+      "publisher": "Pragmatic Bookshelf",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHwz4Dbf16J4N36qXMyUHu5HO0D_4Ypmc3DEj20Il_-2JmDNRWrP3zSo8Hgbg-LVU4y9lopDVSHSPmmPVMSTG5rEBYX2po8s_tWyWP0DIbRp3F6nU7kJrnsQn4_KFqkh81nCmpqSsheRo5xQme3ft0l15EE9VVNFKmGme6CbQ==",
+      "doi": "",
+      "note": "这本基础书籍是构建弹性、健壮软件系统（尤其是分布式系统）的经典指南。它提供了处理故障的基本模式，包括带有指数退避的重试策略、超时和优雅降级，这些对于与外部服务交互的工具至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T12:21:48.723546Z",
+      "updated_at": "2026-02-04T11:31:25.987927Z"
+    },
+    {
+      "id": 18295,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHpcmnJeooic-hhoVevPSvAjkJc2mYFTcVSqg8aZXAzQXohjeiYmQl7bTi4Ihlbbse4WC1DAjdaJDGUaQNxHn20KWOrU-WvJmmF1YYWJrDg5JhhxHn3PG59mYJlmT_MbVUkr2tACUhVq3STV30eeBUYLAU97TR-8-anSWkUtG5gYcQo3iuvvV0=",
+      "doi": "",
+      "note": "这份官方文档描述了大型语言模型如何通过定义函数调用与外部工具交互。它指导了如何以LLM能够有效解析和处理的格式来构建工具的输出和响应，包括错误信息，直接支持了“向LLM清晰且结构化地报告错误”一节。",
+      "order": 2,
+      "created_at": "2025-09-06T12:21:48.731919Z",
+      "updated_at": "2026-02-04T11:31:25.512771Z"
+    },
+    {
+      "id": 18297,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.03629",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "这篇研究论文介绍了ReAct提示框架，使LLM能够结合推理（思考）和与外部工具的行动（行动）。它强调了有效工具交互的重要性，包括LLM如何解释和响应来自工具的观察结果，这间接涵盖了代理如何处理工具故障。",
+      "order": 4,
+      "created_at": "2025-09-06T12:21:48.737807Z",
+      "updated_at": "2026-02-04T11:31:25.989594Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

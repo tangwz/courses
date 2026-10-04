@@ -1,0 +1,61 @@
+{
+  "id": 5221,
+  "title": "选择部署策略",
+  "meta_title": "LLM部署策略的选择 | 部署",
+  "meta_description": "不同部署选项概述：无服务器、虚拟机、平台即服务。",
+  "content": "<p>部署LLM应用需要决定它将<em>在哪里</em>以及<em>如何</em>运行，这一步骤通常在应用打包（通常在容器中）之后进行。选择正确的部署策略对于确保您的应用可用、可伸缩、可靠且具有成本效益十分重要。没有一个唯一的“最佳”方式；最合适的选择很大程度上取决于您的应用需求、团队能力以及运维要求。</p>\n<p>我们来看一下您在Python LLM应用中可能考虑的常见部署模式。</p>\n<h3>虚拟机 (VMs)</h3>\n<p>虚拟机提供一个完整的操作系统环境，运行在共享或专用的物理硬件上。例如Amazon EC2、Google Compute Engine或Azure Virtual Machines等服务。</p>\n<ul>\n<li><strong>优点：</strong>\n<ul>\n<li><strong>完全控制权：</strong> 您拥有根权限，可以完全控制操作系统、依赖项和配置。</li>\n<li><strong>灵活性：</strong> 适用于几乎所有工作负载，包括有状态应用、长时间运行的进程（如模型微调 (fine-tuning)或批处理），以及需要特定硬件（如高性能GPU）的应用。</li>\n<li><strong>成熟技术：</strong> 被广泛理解，拥有丰富的文档和工具。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>手动管理：</strong> 您需要负责操作系统补丁、安全更新、软件安装和配置。</li>\n<li><strong>伸缩性：</strong> 伸缩通常需要手动干预或配置自动伸缩组，这增加了复杂性。</li>\n<li><strong>资源利用率：</strong> 只要VM在运行，即使您的应用没有主动处理请求，您也需要付费，这对于偶发性工作负载来说效率不高。</li>\n</ul>\n</li>\n</ul>\n<p>VMs通常是一个不错的起点，特别是对于开发、测试，或具有可预测负载或需要其他平台不易满足的特定硬件的应用。</p>\n<h3>容器编排平台</h3>\n<p>如果您已使用Docker（如前所述）将应用容器化，那么Kubernetes (K8s) 或Docker Swarm等平台可以大规模管理这些容器。它们负责处理跨机器集群（节点）的容器化应用的部署、伸缩、负载均衡和健康监测。</p>\n<ul>\n<li><strong>优点：</strong>\n<ul>\n<li><strong>伸缩性与弹性：</strong> 具有出色的能力，可根据负载进行自动伸缩和自我修复（替换失败的容器）。</li>\n<li><strong>可移植性：</strong> Kubernetes可在所有主要云提供商上使用，并可本地部署，在不同环境间提供一致性。</li>\n<li><strong>资源使用效率：</strong> 与每个VM运行一个应用相比，能更好地将资源封装到节点上。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>复杂性：</strong> 尤其是Kubernetes，学习曲线陡峭，运维开销较大。管理集群需要专业知识。</li>\n<li><strong>资源开销：</strong> 控制平面和代理程序会占用集群节点上的资源。</li>\n</ul>\n</li>\n</ul>\n<p>容器编排非常适合需要高可用性和动态伸缩的生产应用，特别是如果您的团队拥有相关专业知识，或使用托管的Kubernetes服务（如EKS、GKE、AKS）来抽象部分底层复杂性。</p>\n<h3>平台即服务 (PaaS)</h3>\n<p>PaaS提供商提供一个环境，您只需部署代码，平台就负责处理底层基础设施、操作系统、补丁以及通常的伸缩。例子包括Heroku、Google App Engine、Azure App Service和AWS Elastic Beanstalk。</p>\n<ul>\n<li><strong>优点：</strong>\n<ul>\n<li><strong>简化部署：</strong> 通常只需推送代码仓库；平台负责构建和部署应用。</li>\n<li><strong>托管基础设施：</strong> 显著减少运维负担。</li>\n<li><strong>集成服务：</strong> 易于与其他平台服务（如数据库和缓存）集成。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>控制较少：</strong> 您对底层操作系统拥有有限或没有访问权限。</li>\n<li><strong>潜在锁定：</strong> 从特定PaaS提供商迁移可能更具挑战性。</li>\n<li><strong>平台限制：</strong> 可能对后台进程、硬件选择（有限的GPU选项）或特定语言/框架版本有限制。</li>\n</ul>\n</li>\n</ul>\n<p>PaaS是Web应用和API（包括许多LLM驱动的后端）的不错选择，尤其是在开发速度和减少运维开销是优先事项时。请检查特定PaaS提供商关于可能长时间运行的LLM推理 (inference)的执行时间和资源可用性方面的限制。</p>\n<h3>无服务器函数 (函数即服务 - FaaS)</h3>\n<p>无服务器平台允许您以函数形式部署代码，这些函数响应事件（如HTTP请求）而执行。您无需管理任何服务器。例子包括AWS Lambda、Google Cloud Functions和Azure Functions。</p>\n<ul>\n<li><strong>优点：</strong>\n<ul>\n<li><strong>按使用付费：</strong> 您只需为函数运行时消耗的执行时间和资源付费。对于流量可变或较低的应用来说，成本效益很高。</li>\n<li><strong>自动伸缩：</strong> 平台根据传入请求自动处理伸缩。</li>\n<li><strong>事件驱动：</strong> 天生适合事件驱动的架构。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>无状态：</strong> 函数通常是无状态的，意味着它们在调用之间不保留信息。状态必须在外部管理（例如，在数据库或缓存中）。</li>\n<li><strong>执行限制：</strong> 平台对执行持续时间、内存和部署包大小施加限制。这对于大型模型或非常长的推理 (inference)时间可能是一个挑战。</li>\n<li><strong>冷启动：</strong> 当函数最近未被调用时（即“冷启动”），可能会增加延迟。这对于对延迟敏感的LLM应用来说可能无法接受。</li>\n<li><strong>GPU访问：</strong> GPU支持通常有限或不可用。</li>\n</ul>\n</li>\n</ul>\n<p>FaaS非常适合LLM工作流中的特定任务：执行快速推理的简单API端点、处理由事件触发的异步任务（例如，处理上传文档以供RAG），或充当不同服务之间的连接器。复杂、有状态的RAG管道或需要大型模型的应用可能难以应对FaaS的限制。</p>\n<h3>托管模型服务平台</h3>\n<p>云提供商和专业公司提供专门用于部署和提供机器学习 (machine learning)模型（包括LLM）的平台。例子包括AWS SageMaker Endpoints、Google Vertex AI Endpoints、Azure Machine Learning Endpoints，以及Hugging Face Inference Endpoints或Anyscale Endpoints等第三方服务。</p>\n<ul>\n<li><strong>优点：</strong>\n<ul>\n<li><strong>为推理 (inference)优化：</strong> 旨在处理模型加载、高效推理以及ML工作负载的伸缩。通常支持GPU。</li>\n<li><strong>简化部署：</strong> 提供专为部署ML模型量身定制的工具和SDK。</li>\n<li><strong>托管伸缩与监测：</strong> 包含自动伸缩和模型性能监测功能。</li>\n</ul>\n</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>成本：</strong> 可能比通用计算更昂贵，特别是如果利用率不高。</li>\n<li><strong>平台特定：</strong> 通常与特定的云提供商或供应商生态系统绑定。</li>\n<li><strong>抽象程度：</strong> 可能会抽象掉复杂、定制化且涉及多个步骤的LLM工作流所需的细节。</li>\n</ul>\n</li>\n</ul>\n<p>当主要目标是通过API端点提供LLM进行推理时，这些平台是很好的选择，特别是如果您需要优化性能、GPU加速和托管伸缩，而无需自行构建基础设施。</p>\n<h3>影响选择的因素</h3>\n<p>在这些选项之间做出选择涉及平衡多个因素：</p>\n<ol>\n<li><strong>伸缩需求：</strong>\n<ul>\n<li><em>低/可变流量：</em> FaaS成本效益很高。PaaS也可能运行良好。</li>\n<li><em>高/持续流量：</em> Kubernetes、托管端点或配置良好的VMs/PaaS更适合。</li>\n</ul>\n</li>\n<li><strong>性能要求：</strong>\n<ul>\n<li><em>低延迟：</em> VMs、Kubernetes或托管端点通常提供最可预测的性能，避免FaaS冷启动。</li>\n<li><em>GPU加速：</em> 通常需要VMs、Kubernetes（带GPU节点）或专业的托管端点。仔细检查PaaS/FaaS的GPU可用性。</li>\n</ul>\n</li>\n<li><strong>工作流复杂性：</strong>\n<ul>\n<li><em>简单推理 (inference)API：</em> FaaS、PaaS或托管端点可能就足够了。</li>\n<li><em>复杂链/代理/RAG：</em> VMs或Kubernetes为多步骤流程、自定义依赖项和状态管理（例如，与应用一起运行向量 (vector)数据库）提供更大的灵活性。</li>\n</ul>\n</li>\n<li><strong>成本预算：</strong>\n<ul>\n<li><em>最大程度降低闲置成本：</em> FaaS是理想选择。</li>\n<li><em>可预测成本：</em> 预留VMs或PaaS/Kubernetes/托管端点上的承诺使用可以提供可预测的定价。密切监测使用情况。</li>\n</ul>\n</li>\n<li><strong>团队专业知识与运维承受能力：</strong>\n<ul>\n<li><em>高专业知识/承受能力：</em> VMs或自管理Kubernetes提供最大的控制权。</li>\n<li><em>较低专业知识/承受能力：</em> PaaS、FaaS或托管服务（Kubernetes、端点）显著降低运维负担。</li>\n</ul>\n</li>\n<li><strong>状态管理：</strong>\n<ul>\n<li><em>无状态：</em> FaaS天然契合。</li>\n<li><em>有状态：</em> VMs、Kubernetes Pods（带持久卷）或PaaS实例通常更容易在其中管理状态。</li>\n</ul>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-dy9bk\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", margin=0.2, color=\"#4263eb\", fillcolor=\"#a5d8ff\"];\n  edge [fontname=\"Helvetica\", fontsize=10];\n\n  start [label=\"开始：应用需求\", shape=ellipse, color=\"#f76707\", fillcolor=\"#ffd8a8\"];\n\n  q_gpu [label=\"需要GPU吗？\"];\n  q_complexity [label=\"工作流复杂吗\\n（如：有状态RAG）？\"];\n  q_traffic [label=\"流量模式？\"];\n  q_ops [label=\"团队运维承受力？\"];\n\n  res_vm_k8s_managed [label=\"VMs / Kubernetes / 托管端点\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n  res_paas_faas [label=\"PaaS / FaaS\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n  res_vm_k8s [label=\"VMs / Kubernetes\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n  res_faas [label=\"FaaS（成本效益高）\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n  res_paas_managed_k8s [label=\"PaaS / 托管K8s / 托管端点\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n  res_all [label=\"VMs / K8s / PaaS / 托管\", shape=box, style=\"filled\", color=\"#0ca678\", fillcolor=\"#96f2d7\"];\n\n  start -> q_gpu;\n\n  q_gpu -> q_complexity [label=\" 否\"];\n  q_gpu -> q_complexity [label=\" 是\"];\n\n  q_complexity -> res_vm_k8s_managed [label=\" 是（需要GPU）\"];\n  q_complexity -> res_vm_k8s [label=\" 是（不需要GPU）\"];\n  q_complexity -> q_traffic [label=\" 否\"];\n\n  q_traffic -> q_ops [label=\" 高/稳定\"];\n  q_traffic -> res_faas [label=\" 低/可变\"];\n\n  q_ops -> res_vm_k8s [label=\" 高\"];\n  q_ops -> res_paas_managed_k8s [label=\" 低\"];\n\n  // Adjust edge routing for clarity if possible\n  q_gpu -> res_vm_k8s_managed [headport=w, tailport=e, constraint=false, label=\" 是（需要GPU）\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-dy9bk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个基于应用需求选择部署策略的决策指南。根据您对问题的回答跟随箭头。</p>\n</blockquote>\n<p>最终，选择往往涉及权衡。在开发和早期阶段，您可以从PaaS或VMs等更简单的方法开始，随着应用伸缩和成熟，可能会迁移到Kubernetes或托管端点。仔细评估这些因素与您的应用特点和团队情况，以做出明智的决定。</p>",
+  "slug": "choosing-llm-deployment-strategy",
+  "updates": [],
+  "references": [
+    {
+      "id": 13339,
+      "title": "Kubernetes Documentation",
+      "author": "The Kubernetes Project",
+      "year": "2024",
+      "publisher": "Cloud Native Computing Foundation (CNCF)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/",
+      "doi": "",
+      "note": "关于理解和实施容器编排的权威资源，涵盖部署、扩展和管理。",
+      "order": 2,
+      "created_at": "2025-09-05T08:31:24.719593Z",
+      "updated_at": "2025-09-10T12:00:26.957583Z"
+    },
+    {
+      "id": 13340,
+      "title": "Serverless Architectures on AWS: With Lambda, Step Functions, Aurora, and More",
+      "author": "Peter Sbarski, Yan Cui, Ajay Nair",
+      "year": "2022",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/serverless-architectures-on-aws-second-edition",
+      "doi": "",
+      "note": "介绍了构建无服务器应用程序的方法，详细说明了函数即服务和事件驱动模式。",
+      "order": 3,
+      "created_at": "2025-09-05T08:31:24.722428Z",
+      "updated_at": "2025-09-10T12:00:29.651013Z"
+    },
+    {
+      "id": 13341,
+      "title": "Machine Learning Engineering",
+      "author": "Andriy Burkov",
+      "year": "2020",
+      "publisher": "True Positive Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "310",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQED-LM61a3Ieu75RIgCnXO6qrgYcIAd1Jn2_H4EEqTSbBkaafYVVq1mOmzz-Mn1h_s-n3aYjkHeNU1IoXO6gsFXtCREcEO56q8pbecTJQ==",
+      "doi": "",
+      "note": "涵盖了构建和部署机器学习系统的实践方面，从模型开发到生产环境中的模型服务。",
+      "order": 4,
+      "created_at": "2025-09-05T08:31:24.725157Z",
+      "updated_at": "2025-09-10T12:00:40.105018Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

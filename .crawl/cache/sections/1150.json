@@ -1,0 +1,61 @@
+{
+  "id": 1150,
+  "title": "创建基础绘图脚本",
+  "meta_title": "Matplotlib 基础绘图脚本结构",
+  "meta_description": "了解使用 Matplotlib 创建图表的 Python 脚本的典型结构。",
+  "content": "<p>Figure 和 Axes 是在实际 Python 脚本中用于数据可视化的组件。虽然可以交互式地创建图表（特别是在 Jupyter Notebook 等环境中），但了解典型绘图脚本的结构，对于制作可复用且更复杂的图表非常重要。</p>\n<p>大多数 Matplotlib 绘图脚本遵循以下标准步骤顺序：</p>\n<ol>\n<li><strong>导入所需库：</strong> 主要是 Matplotlib 的 <code>pyplot</code> 模块。</li>\n<li><strong>准备数据：</strong> 这可能涉及创建 Python 列表、使用 NumPy 数组，或通过 Pandas 加载数据（我们将在后面介绍）。</li>\n<li><strong>创建 Figure 和 Axes：</strong> 这会设置画布以及实际绘制图表的区域。最常见的方法是使用 <code>plt.subplots()</code>。</li>\n<li><strong>绘制数据：</strong> 在 <code>Axes</code> 对象上调用绘图方法（例如 <code>plot()</code>、<code>scatter()</code>、<code>bar()</code> 等）。</li>\n<li><strong>自定义图表：</strong> 添加标题、标签、图例、更改颜色、设置范围等，同样使用与 <code>Axes</code> 对象相关的方法。</li>\n<li><strong>显示图表：</strong> 使用 <code>plt.show()</code> 显示 Figure。</li>\n</ol>\n<p>我们来看一个最简脚本，它将这些步骤结合起来，创建一个简单的折线图。</p>\n<pre><code class=\"language-python\"># 1. 导入所需库\nimport matplotlib.pyplot as plt\n\n# 2. 准备数据\nx_values = [0, 1, 2, 3, 4, 5]\ny_values = [0, 1, 4, 9, 16, 25] # 简单的 y = x^2 数据\n\n# 3. 创建 Figure 和 Axes\nfig, ax = plt.subplots() # 创建一个 Figure 和一个 Axes 对象\n\n# 4. 在 Axes 上绘制数据\nax.plot(x_values, y_values)\n\n# 5. 自定义图表（可选但推荐）\nax.set_title(\"Simple Plot: y = x^2\")\nax.set_xlabel(\"X Values\")\nax.set_ylabel(\"Y Values (Squared)\")\n\n# 6. 显示图表\nplt.show()\n</code></pre>\n<p>我们来分解一下主要部分：</p>\n<ul>\n<li><code>import matplotlib.pyplot as plt</code>：这会导入 <code>pyplot</code> 模块，它为 Matplotlib 库提供了一个便捷的接口。我们使用标准的别名 <code>plt</code>。\n\"*   <code>x_values = ...</code>、<code>y_values = ...</code>：在这里，我们只是定义包含数据点的简单 Python 列表。在实际场景中，这些数据可能来自文件、数据库或计算。\"</li>\n<li><code>fig, ax = plt.subplots()</code>：这是一种非常常见且重要的模式。<code>plt.subplots()</code> 函数会为我们创建两个对象：\n<ul>\n<li><code>fig</code>：代表整个 Figure 或窗口。您以后可能会用它来执行保存图表或调整 Figure 整体属性等任务。</li>\n<li><code>ax</code>：代表 Axes，即实际进行绘图的子图。您将使用的大多数绘图命令（<code>plot()</code>、<code>scatter()</code>、<code>set_title()</code>、<code>set_xlabel()</code> 等）都是此 <code>Axes</code> 对象的方法。使用 <code>ax</code> 可以使您的代码明确您正在 <em>哪个位置</em> 绘图。</li>\n</ul>\n</li>\n<li><code>ax.plot(x_values, y_values)</code>：这是实际绘制折线图的命令。我们在创建的 <code>ax</code> 对象上调用 <code>plot()</code> 方法，并传入 x 和 y 数据。</li>\n<li><code>ax.set_title(...)</code>、<code>ax.set_xlabel(...)</code>、<code>ax.set_ylabel(...)</code>：这些方法同样在 <code>ax</code> 对象上调用，它们为我们的图表添加描述性元素，使其更易于理解。</li>\n<li><code>plt.show()</code>：此函数告知 Matplotlib 渲染并显示您创建的 Figure。在某些交互式环境（如 Jupyter）中，图表可能会自动显示，但显式调用 <code>plt.show()</code> 可以确保您的脚本在运行时（例如从标准 Python 文件运行时）显示图表。这是一个好习惯，建议包含它。</li>\n</ul>\n<p>执行此脚本将打开一个显示折线图的窗口：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1jdueas\" \n              data-plot-definition='{\"data\":[{\"type\":\"scatter\",\"mode\":\"lines\",\"x\":[0,1,2,3,4,5],\"y\":[0,1,4,9,16,25],\"line\":{\"color\":\"#228be6\"}}],\"layout\":{\"title\":{\"text\":\"简单图表：y = x^2\"},\"xaxis\":{\"title\":{\"text\":\"X 值\"}},\"yaxis\":{\"title\":{\"text\":\"Y 值（平方）\"}},\"template\":\"plotly_white\",\"width\":600,\"height\":400}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-1jdueas\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个由基础脚本生成的简单折线图，显示 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span> 从 0 到 5 时的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi><mo>=</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">y=x^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>。</p>\n</blockquote>\n<p>这种基本结构为使用 Matplotlib 创建几乎所有图表提供了基础框架。虽然还有其他方式来生成图表（有时您可能会看到直接使用 <code>plt.plot()</code> 的代码），但通常建议使用 <code>fig, ax = plt.subplots()</code> 的方法并在 <code>ax</code> 对象上调用方法（即面向对象风格）。它提供了更好的控制，特别是当您开始在同一 Figure 上处理多个子图时，并且使您的代码更清晰地表示您正在修改可视化的哪个部分。</p>\n<p>在接下来的部分中，我们将学习 <code>ax.plot()</code> 和 <code>ax.scatter()</code> 等特定的绘图函数，并检查通过 <code>Axes</code> 对象方法提供的各种自定义选项。</p>",
+  "slug": "basic-matplotlib-script",
+  "updates": [],
+  "references": [
+    {
+      "id": 825,
+      "title": "Matplotlib Usage Guide",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/contents.html",
+      "doi": "",
+      "note": "提供了Matplotlib核心概念（包括创建图和轴的面向对象方法）的基础知识，这对于编写脚本至关重要。",
+      "order": 1,
+      "created_at": "2025-09-04T15:02:33.833756Z",
+      "updated_at": "2025-09-07T16:20:32.576169Z"
+    },
+    {
+      "id": 826,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本广受认可的书籍，提供了Pandas数据处理和使用Matplotlib进行数据可视化的全面介绍，详细说明了面向对象的绘图API。",
+      "order": 2,
+      "created_at": "2025-09-04T15:02:33.839902Z",
+      "updated_at": "2025-09-07T16:20:19.641553Z"
+    },
+    {
+      "id": 827,
+      "title": "Figure and Axes Objects",
+      "author": "Matplotlib Development Team",
+      "year": "2023",
+      "publisher": "Matplotlib",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/3.7.5/api/index.html",
+      "doi": "",
+      "note": "具体解释了图（Figure）和轴（Axes）对象的关联性和功能，它们是构建Matplotlib图的主要组成部分。",
+      "order": 3,
+      "created_at": "2025-09-04T15:02:33.842948Z",
+      "updated_at": "2025-09-07T16:20:34.095106Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

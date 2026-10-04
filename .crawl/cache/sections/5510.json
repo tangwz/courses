@@ -1,0 +1,61 @@
+{
+  "id": 5510,
+  "title": "半结构化数据（例如JSON、XML）简介",
+  "meta_title": "提取半结构化数据：JSON与XML",
+  "meta_description": "了解如何从JSON和XML等半结构化格式中提取数据。",
+  "content": "<p>尽管结构化数据（例如数据库或CSV文件中的整齐行和列）很常见，但当今生成的大部分数据无法整齐地放入表中。这介绍了半结构化数据，它是一种介于结构化数据严格格式和非结构化数据（如纯文本文档或图像）完全无组织形式之间的数据类别。</p>\n<p>半结构化数据不遵循关系数据库表那样的固定正式模式，但它确实包含标签或其他标记 (token)来分隔语义元素，并强制记录和字段的层次结构。可以将其视为有组织线索，但没有严格蓝图。这种灵活性使其在结构可能演变或变化的系统中非常有用。</p>\n<p>提取半结构化数据时，您会经常遇到两种普遍使用的格式是JSON和XML。</p>\n<h3>JSON：JavaScript对象表示法</h3>\n<p>JSON是一种轻量级的基于文本的格式，便于人类读写，也便于机器解析和生成。随着Web API（应用程序编程接口）的兴起，它变得非常流行，因为它与许多编程语言中的数据结构非常自然地对应。</p>\n<p>JSON数据建立在两种主要结构之上：</p>\n<ol>\n<li><strong>对象：</strong> 键值对的集合，用花括号<code>{}</code>括起来。键是字符串，值可以是字符串、数字、布尔值（<code>true</code>/<code>false</code>）、数组，甚至是其他嵌套对象。</li>\n<li><strong>数组：</strong> 值的有序列表，用方括号<code>[]</code>括起来。数组中的值可以是任何有效的JSON类型。</li>\n</ol>\n<p>这是一个表示个人信息的简单例子：</p>\n<pre><code class=\"language-json\">{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Doe\",\n  \"age\": 30,\n  \"isStudent\": false,\n  \"address\": {\n    \"streetAddress\": \"123 Main St\",\n    \"city\": \"Anytown\",\n    \"postalCode\": \"12345\"\n  },\n  \"phoneNumbers\": [\n    {\n      \"type\": \"home\",\n      \"number\": \"555-1234\"\n    },\n    {\n      \"type\": \"work\",\n      \"number\": \"555-5678\"\n    }\n  ]\n}\n</code></pre>\n<p>注意<code>address</code>是一个嵌套对象，而<code>phoneNumbers</code>是一个包含多个电话号码对象的数组，每个对象都有自己的<code>type</code>和<code>number</code>。</p>\n<h3>XML：可扩展标记 (token)语言</h3>\n<p>XML是另一种基于文本的格式，用于存储和传输数据。它使用标签来定义元素，并使用属性来提供有关这些元素的额外信息。XML是分层的，这意味着元素可以嵌套在其他元素中，形成树状结构。</p>\n<p>尽管与JSON相比，XML现在在新Web API中的使用可能较少，但它仍然广泛应用于配置文件、文档格式（如Microsoft Office XML格式）以及企业系统中的数据交换。</p>\n<p>这是用XML表示的相同个人信息：</p>\n<pre><code class=\"language-xml\">&#x3C;person>\n  &#x3C;firstName>Jane&#x3C;/firstName>\n  &#x3C;lastName>Doe&#x3C;/lastName>\n  &#x3C;age>30&#x3C;/age>\n  &#x3C;isStudent>false&#x3C;/isStudent>\n  &#x3C;address>\n    &#x3C;streetAddress>123 Main St&#x3C;/streetAddress>\n    &#x3C;city>Anytown&#x3C;/city>\n    &#x3C;postalCode>12345&#x3C;/postalCode>\n  &#x3C;/address>\n  &#x3C;phoneNumbers>\n    &#x3C;phone type=\"home\">\n      &#x3C;number>555-1234&#x3C;/number>\n    &#x3C;/phone>\n    &#x3C;phone type=\"work\">\n      &#x3C;number>555-5678&#x3C;/number>\n    &#x3C;/phone>\n  &#x3C;/phoneNumbers>\n&#x3C;/person>\n</code></pre>\n<p>在这个XML例子中，<code>&#x3C;person></code>、<code>&#x3C;firstName></code>、<code>&#x3C;address></code>等是定义元素的标签。注意<code>&#x3C;phone></code>标签内的<code>type=\"home\"</code>；这是一个属性，提供了关于电话元素的额外细节。</p>\n<h3>提取半结构化数据</h3>\n<p>与从关系数据库表中提取数据相比，从JSON或XML源提取数据面临不同的挑战。</p>\n<ol>\n<li><strong>解析：</strong> 原始JSON或XML只是文本。提取的第一步通常是将这些文本解析成ETL工具或脚本能够理解和操作的内部数据结构。大多数编程语言和ETL工具都内置了专门用于解析JSON和XML的库或组件。</li>\n<li><strong>遍历层次结构：</strong> 因为这些格式是分层的，您通常需要遍历嵌套对象或元素以找到所需的特定数据片段。例如，要从JSON示例中获取Jane Doe的工作电话号码，您需要访问<code>phoneNumbers</code>数组，找到<code>type</code>为“work”的对象，然后获取与<code>number</code>键关联的值。</li>\n<li><strong>模式多变性：</strong> 尽管存在<em>一些</em>结构，但它可能并非在所有记录或文件中都完全一致。一些记录可能包含其他记录没有的可选字段。您的提取逻辑需要足够灵活，以处理这种潜在的多变性而不会失败。</li>\n</ol>\n<p>例如，设想从前面所示的JSON结构中提取街道地址。这个过程包括访问顶层对象，然后是<code>address</code>键，最后是嵌套地址对象中的<code>streetAddress</code>键。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1srmgx3\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=rect, style=rounded, fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\"]; edge [arrowsize=0.7]; splines=ortho; bgcolor=\"transparent\"; \"root\" [label=\"人物对象\"]; \"address\" [label=\"地址（对象）\", style=\"rounded,filled\", fillcolor=\"#a5d8ff\"]; \"phoneNumbers\" [label=\"电话号码（数组）\", style=\"rounded,filled\", fillcolor=\"#96f2d7\"]; \"streetAddress\" [label=\"街道地址: &#39;123 Main St&#39;\", style=\"rounded,filled\", fillcolor=\"#74c0fc\"]; \"city\" [label=\"城市: &#39;Anytown&#39;\", style=\"rounded,filled\", fillcolor=\"#74c0fc\"]; \"postalCode\" [label=\"邮政编码: &#39;12345&#39;\", style=\"rounded,filled\", fillcolor=\"#74c0fc\"]; \"phone1\" [label=\"电话 1（对象）\", style=\"rounded,filled\", fillcolor=\"#63e6be\"]; \"phone2\" [label=\"电话 2（对象）\", style=\"rounded,filled\", fillcolor=\"#63e6be\"]; \"root\" -> \"firstName\" [label=\"名: &#39;Jane&#39;\"]; \"root\" -> \"lastName\" [label=\"姓: &#39;Doe&#39;\"]; \"root\" -> \"age\" [label=\"年龄: 30\"]; \"root\" -> \"isStudent\" [label=\"是否学生: false\"]; \"root\" -> \"address\" [penwidth=1.5]; \"root\" -> \"phoneNumbers\" [penwidth=1.5]; \"address\" -> \"streetAddress\"; \"address\" -> \"city\"; \"address\" -> \"postalCode\"; \"phoneNumbers\" -> \"phone1\" [label=\"索引 0\"]; \"phoneNumbers\" -> \"phone2\" [label=\"索引 1\"]; \"phone1\" -> \"type1\" [label=\"类型: &#39;家庭&#39;\"]; \"phone1\" -> \"num1\" [label=\"号码: &#39;555-1234&#39;\"]; \"phone2\" -> \"type2\" [label=\"类型: &#39;工作&#39;\"]; \"phone2\" -> \"num2\" [label=\"号码: &#39;555-5678&#39;\"]; {rank=same; \"firstName\"; \"lastName\"; \"age\"; \"isStudent\"} {rank=same; \"address\"; \"phoneNumbers\"} {rank=same; \"streetAddress\"; \"city\"; \"postalCode\"} {rank=same; \"phone1\"; \"phone2\"} }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1srmgx3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了JSON和XML数据中常见的嵌套结构，显示对象包含其他对象或数组。</p>\n</blockquote>\n<p>理解如何处理这些半结构化格式在现代ETL中非常重要，因为它们是Web服务、物联网设备和各种应用程序日志的常见输出。提取阶段需要具备解析这些格式并提取相关信息的能力，然后才能开始转换阶段。</p>",
+  "slug": "extracting-semi-structured-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 15075,
+      "title": "The JSON Data Interchange Format",
+      "author": "T. Bray, Ed.",
+      "year": "2017",
+      "publisher": "Internet Engineering Task Force (IETF)",
+      "journal": "RFC 8259",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.rfc-editor.org/rfc/rfc8259.html",
+      "doi": "",
+      "note": "这是定义JSON、其语法和数据类型的官方IETF标准。它是该格式的权威规范。",
+      "order": 1,
+      "created_at": "2025-09-05T14:35:12.778878Z",
+      "updated_at": "2025-09-11T02:27:50.568049Z"
+    },
+    {
+      "id": 15077,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "611",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449373320/",
+      "doi": "",
+      "note": "本书提供了数据处理概念的全面概述，涵盖了JSON和XML等数据模型和格式，以及它们对系统设计的影响。第四章讨论了这些格式。",
+      "order": 3,
+      "created_at": "2025-09-05T14:35:12.784697Z",
+      "updated_at": "2025-09-11T02:28:05.827998Z"
+    },
+    {
+      "id": 15078,
+      "title": "Fundamentals of Data Engineering",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/",
+      "doi": "",
+      "note": "这本新书指导数据工程实践，涵盖了现代数据管道中的数据摄取和各种数据格式，包括半结构化数据。与提取阶段相关。",
+      "order": 4,
+      "created_at": "2025-09-05T14:35:12.786882Z",
+      "updated_at": "2025-09-11T02:28:07.501513Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 7752,
+  "title": "处理流式响应",
+  "meta_title": "处理流式响应",
+  "meta_description": "掌握LLM流式响应的处理方式，用于构建即时互动程序，例如聊天机器人。",
+  "content": "<p>文本生成的一种常用做法是进行一次API调用，例如使用 <code>generate</code> 函数。这种做法虽然直接，但对于互动程序来说有一个明显缺点：用户必须等到整个响应生成完毕才能看到任何输出。对于短响应，这或许可以接受，但对于较长的响应，体验可能会显得缓慢且无响应。更好的用户体验是逐个令牌地显示正在生成的响应。这便称为流式传输。</p>\n<p>流式传输极大地降低了应用程序的 <em>感知延迟</em>。用户无需等待几秒钟以获取整个段落，而是几乎即时地看到首批词语出现，并能在其余响应生成时开始阅读。这使得应用程序感觉更快、更具活力，对于聊天机器人、代码助手及其他即时工具来说尤其如此。</p>\n<p>标准调用和流式调用之间的区别可以通过它们的时间线来显示。标准调用会等待所有处理完成后才返回数据，而流式调用则在整个处理期间分块返回数据。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-5wpyhs\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    subgraph cluster_standard {\n        label = \"标准（阻塞）调用\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n        edge [color=\"#495057\"];\n\n        std_req [label=\"请求发送\"];\n        std_proc [label=\"模型处理（例如3秒）\", fillcolor=\"#b2f2bb\"];\n        std_resp [label=\"收到完整响应\", fillcolor=\"#96f2d7\"];\n        std_display [label=\"向用户显示\", fillcolor=\"#96f2d7\"];\n\n        std_req -> std_proc [label=\"t=0秒\"];\n        std_proc -> std_resp [label=\"t=3秒\"];\n        std_resp -> std_display [label=\" \"];\n    }\n\n    subgraph cluster_streaming {\n        label = \"流式调用\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n        edge [color=\"#495057\"];\n\n        st_req [label=\"请求发送\"];\n        st_proc_start [label=\"模型处理开始\", fillcolor=\"#b2f2bb\"];\n        st_chunk1 [label=\"块1收到\\n并显示\", fillcolor=\"#96f2d7\"];\n        st_chunk2 [label=\"块2收到\\n并显示\", fillcolor=\"#96f2d7\"];\n        st_chunk3 [label=\"块N收到\\n并显示\", fillcolor=\"#96f2d7\"];\n        st_proc_end [label=\"处理结束\", fillcolor=\"#b2f2bb\"];\n\n        st_req -> st_proc_start [label=\"t=0秒\"];\n        st_proc_start -> st_chunk1 [label=\"t=0.3秒 (首个令牌)\"];\n        st_chunk1 -> st_chunk2 [label=\"t=0.4秒\"];\n        st_chunk2 -> st_chunk3 [label=\"...\"];\n        st_chunk3 -> st_proc_end [label=\"t=3秒 (完整响应)\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-5wpyhs\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>标准API调用与流式调用之间的时间线比较。流式传输能更早地提供首个内容片段，提升响应速度。</p>\n</blockquote>\n<h3>使用 <code>generate_stream</code> 实现即时响应</h3>\n<p>为应对流式传输，工具包提供了 <code>generate_stream</code> 函数。<code>generate_stream</code>不会在完整生成完成后返回单个 <code>GenerationResponse</code> 对象，而是返回一个Python生成器。你可以遍历这个生成器，以接收在可用时传回的响应片段。</p>\n<p>以下是其基本用法示例：</p>\n<pre><code class=\"language-python\">from kerb.generation import generate_stream, ModelName\n\nprompt = \"用两句话解释Python中async/await的原理。\"\n\nprint(\"流式响应:\")\nfull_content = \"\"\nfor chunk in generate_stream(prompt, model=ModelName.GPT_4O_MINI):\n    # 立即将每个内容片段打印到控制台\n    print(chunk.content, end=\"\", flush=True)\n    full_content += chunk.content\n\nprint(\"\\n\\n--- 生成完成 ---\")\nprint(f\"最终整合内容: {full_content}\")\n</code></pre>\n<p>在这段代码中，<code>for</code>循环会处理从API收到的每个<code>StreamChunk</code>对象。我们立即打印每个块的<code>content</code>，使用<code>end=\"\"</code>避免换行，并使用<code>flush=True</code>确保输出即时显示。同时，我们将内容拼接至<code>full_content</code>变量中，以便在最后获得完整的响应。</p>\n<h3>基于对话上下文 (context)构建</h3>\n<p><code>generate_stream</code>函数同样适用于处理对话历史。你可以传入<code>Message</code>对象列表，模型的响应将以流式传输回来。这种模式非常适合构建互动且吸引人的聊天机器人。</p>\n<pre><code class=\"language-python\">from kerb.generation import generate_stream, ModelName\nfrom kerb.core import Message\nfrom kerb.core.types import MessageRole\n\nmessages = [\n    Message(role=MessageRole.SYSTEM, content=\"你是一位简洁的Python导师。\"),\n    Message(role=MessageRole.USER, content=\"什么是装饰器？\"),\n]\n\nprint(\"助手: \", end=\"\", flush=True)\n\n# 响应逐个令牌地流式传输\nfor chunk in generate_stream(messages, model=ModelName.GPT_4O_MINI):\n    print(chunk.content, end=\"\", flush=True)\n\nprint() # 最终换行\n</code></pre>\n<p>这种方法为用户提供了即时的视觉反馈循环，因为助手的响应看起来像是即时“打出”的。</p>\n<h3>使用回调函数进行高级块处理</h3>\n<p>有时，你可能想做的不仅仅是打印每个块的内容。例如，你可能希望记录每个块进行分析，检查传入的特定关键词，或更新用户界面。<code>generate_stream</code>函数为这些情况接受一个可选的<code>callback</code>参数 (parameter)。</p>\n<p>回调函数是对从流中收到的每个块执行的函数。</p>\n<pre><code class=\"language-python\">import time\nfrom kerb.generation import generate_stream, ModelName\n\nchunks_received = []\n\ndef process_chunk(chunk):\n    \"\"\"处理每个块的回调函数。\"\"\"\n    chunks_received.append({\n        \"content\": chunk.content,\n        \"timestamp\": time.time(),\n        \"finish_reason\": chunk.finish_reason\n    })\n    # 你也可以写入日志文件、更新用户界面等。\n\nprompt = \"列出5种Python设计模式。\"\n\nprint(\"使用回调函数进行流式传输...\")\nfull_response = \"\"\nfor chunk in generate_stream(\n    prompt,\n    model=ModelName.GPT_4O_MINI,\n    callback=process_chunk\n):\n    print(chunk.content, end=\"\", flush=True)\n    full_response += chunk.content\n\nprint(\"\\n\\n--- 回调函数分析 ---\")\nprint(f\"收到总块数: {len(chunks_received)}\")\n\nif len(chunks_received) > 1:\n    time_span = chunks_received[-1][\"timestamp\"] - chunks_received[0][\"timestamp\"]\n    print(f\"总流式传输时长: {time_span:.3f}秒\")\n    print(f\"块之间平均时间: {time_span / len(chunks_received):.4f}秒\")\n</code></pre>\n<p>使用回调函数是将会处理每个块的逻辑与应用程序主流程分开的整洁方法。它有助于保持代码结构清晰，特别是当你对每个块执行的操作变得更复杂时。</p>\n<h3>何时使用流式传输</h3>\n<p>对于涉及直接用户交互的任何程序，强烈推荐使用流式传输。其在感知性能上的改善非常显著。</p>\n<p>常见用例包括：</p>\n<ul>\n<li><strong>聊天机器人：</strong> 提供即时反馈和更自然的对话流程。</li>\n<li><strong>代码生成：</strong> 实时显示正在生成的代码，让开发者能及早发现问题。</li>\n<li><strong>长篇写作：</strong> 让用户在LLM生成内容时同步查看和编辑。</li>\n<li><strong>即时数据分析：</strong> 在处理传入数据流时显示其摘要或洞察。</li>\n</ul>\n<p>掌握流式传输，你可以构建出不仅功能强大，而且用户体验快速、响应灵敏、直观的LLM应用程序。</p>",
+  "slug": "handling-streaming-responses",
+  "updates": [],
+  "references": [
+    {
+      "id": 21748,
+      "title": "Chat completions",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "解释了如何向OpenAI聊天补全API发送流式请求，展示了大型语言模型中逐token生成的常见模式。",
+      "order": 1,
+      "created_at": "2025-10-20T07:27:57.156463Z",
+      "updated_at": "2025-10-20T07:51:56.806750Z"
+    },
+    {
+      "id": 21749,
+      "title": "`yield` expressions",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/expressions.html#yield-expressions",
+      "doi": "",
+      "note": "提供了Python `yield` 关键字和生成器函数的官方解释，这对于实现和理解可迭代的流式响应至关重要。",
+      "order": 2,
+      "created_at": "2025-10-20T07:27:57.162490Z",
+      "updated_at": "2025-10-20T07:51:58.204989Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

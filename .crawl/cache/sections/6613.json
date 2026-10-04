@@ -1,0 +1,29 @@
+{
+  "id": 6613,
+  "title": "不同记忆系统概览",
+  "meta_title": "代理记忆类型：LLM概览",
+  "meta_description": "概述了可以集成到LLM代理中的不同类型记忆系统。",
+  "content": "<p>就像人类有多种记忆方式，从刚才某人说的话到多年前学到的事实，LLM代理也能配备多种记忆系统。并非所有任务都需要同一种记忆，了解这些区别有助于设计出更有效的代理。代理需要记住当前对话中用户提到的名字，这与需要记住用户在数周内多次交互中偏好的代理，所需的记忆机制是不同的。</p>\n<p>接下来，我们介绍一下LLM代理中常见的记忆系统类型。</p>\n<h3>短期记忆 (工作记忆)</h3>\n<p>可以把短期记忆看作代理即时感知或其“草稿本”。它存储与当前正在进行的交互相关的信息。这是在较简单代理中实现的最常见记忆类型，特别是用于维持对话上下文 (context)。</p>\n<ul>\n<li><strong>目的</strong>: 记录单个会话中近期的交流、观察或中间想法。这使得代理能够明白后续问题，引用当前对话较早的部分，并保持连贯的交流。例如，如果你问“伦敦天气如何？”，然后接着问“那巴黎呢？”，代理就需要短期记忆来明白“巴黎”也是指天气信息请求。</li>\n<li><strong>特点</strong>:\n<ul>\n<li><strong>容量有限</strong>: 它通常不存储大量数据；仅够满足即时任务需求。</li>\n<li><strong>访问快速</strong>: 信息需要迅速检索和更新。</li>\n<li><strong>易失性</strong>: 这种记忆通常是暂时的。它可能在会话结束时或代理重置时清除。可以把它想象成电脑中的RAM；程序运行时它是活跃的。</li>\n</ul>\n</li>\n<li><strong>实现方式</strong>: 通常，这就像维护一个对话历史（用户输入和代理响应）的列表一样简单，并将其包含在发送给LLM的下一个回合提示中。</li>\n</ul>\n<h3>长期记忆</h3>\n<p>长期记忆允许代理在较长时间内（超过单个会话）保留和回忆信息。代理可以在这里存储事实、学到的信息、用户偏好或详细的知识库。</p>\n<ul>\n<li><strong>目的</strong>: 为代理提供持久的知识存储。这使得个性化（记住用户的名字或过去的选项）、从经验中学习（尽管真正的学习很复杂）或获取无法容纳在短期缓冲区中的大量信息成为可能。帮助你规划项目的代理可能会在每次你与它交互时，使用长期记忆来记住你正在进行的项目细节。</li>\n<li><strong>特点</strong>:\n<ul>\n<li><strong>容量大</strong>: 设计用于存储比短期记忆多得多的信息。</li>\n<li><strong>持久性</strong>: 信息在会话之间以及可能在很长时间内持续存在。</li>\n<li><strong>访问较慢 (可能)</strong>: 从大型长期存储中检索信息可能比访问近期对话回合更慢且更繁杂。它通常涉及搜索或查询机制。</li>\n</ul>\n</li>\n<li><strong>实现方式</strong>: 这可以从简单的文件存储（例如将摘要或重要事实保存到文本文件中）到更精密的系统，如向量 (vector)数据库。向量数据库特别有效，因为它们可以以支持语义搜索的方式存储信息，这意味着即使查询没有使用完全相同的关键词，代理也能找到相关信息。对于一级课程，我们不会详细介绍如何构建这些，但知道它们的存在对于更高级的代理功能有所帮助。</li>\n</ul>\n<h3>工具专用记忆</h3>\n<p>有时，代理使用的工具可能拥有其自身的内部记忆或状态。虽然这不严格属于代理“大脑”本身的记忆，但它是代理系统使用的一种记忆形式。</p>\n<ul>\n<li><strong>目的</strong>: 让工具正常运作或提供更多上下文 (context)。例如，计算器工具可能会记住上一个结果，以便你可以在下一次计算中加以使用（例如，“将5加到上一个答案上”）。网页浏览工具可能会记录当前页面或会话cookie。</li>\n<li><strong>特点</strong>:\n<ul>\n<li><strong>局部性</strong>: 特定于工具本身。</li>\n<li><strong>可变性</strong>: 容量、持久性和访问方法完全取决于工具的设计方式。</li>\n</ul>\n</li>\n<li><strong>交互方式</strong>: 代理通常不直接管理这种记忆，但在使用工具时，它会受益于工具的状态行为。</li>\n</ul>\n<h3>记忆类型比较</h3>\n<p>下图提供了这些常见记忆类型及其典型属性的简化概览。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-28szei\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", fontsize=12, bgcolor=\"transparent\"];\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", margin=0.2];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    MemorySystems [label=\"常见的代理记忆类型\", shape=none, fontsize=16, fontcolor=\"#343a40\", pos=\"3,3!\", pin=true];\n\n    STM [label=\"短期记忆\\n(工作记忆)\\n\\n侧重：当前交互\\n容量：低-中\\n持久性：基于会话 (易失性)\\n访问：快速\", fillcolor=\"#b2f2bb\", width=3, height=1.8, group=g1];\n    LTM [label=\"长期记忆\\n\\n侧重：持久知识、历史\\n容量：高\\n持久性：持续\\n访问：较慢，基于搜索\", fillcolor=\"#ffec99\", width=3, height=1.8, group=g2];\n    ToolMemory [label=\"工具专用记忆\\n\\n侧重：工具内部状态\\n容量：可变\\n持久性：可变 (取决于工具)\\n访问：通过工具使用\", fillcolor=\"#ffd8a8\", width=3, height=1.8, group=g3];\n\n    // 隐藏的边，用于布局引导，如果需要，但单独的节点和组应该足够。\n    // 如果需要不同的布局，可以考虑使用rank=same进行水平对齐。\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-28szei\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了LLM代理中常见的短期、长期和工具专用记忆系统的主要特征。</p>\n</blockquote>\n<p>了解这些不同类型的记忆有助于决定代理在特定任务中所需的功能。对于许多代理应用来说，短期记忆是第一个也是最重要的一步。它是让代理从单一、不连贯的响应转变为真正具有对话性和上下文 (context)感知的交互的要素。随着本章的进展，我们将主要关注了解并实现短期记忆的基本形式，因为它对于构建即使是简单的、有用的代理也必不可少。更高级的记忆系统，例如全面的长期记忆，通常是在这些基本原理之上构建的。</p>",
+  "slug": "a-look-at-different-memory-systems",
+  "updates": [],
+  "references": [
+    {
+      "id": 18066,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2304.03442",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2304.03442",
+      "doi": "10.48550/arXiv.2304.03442",
+      "note": "介绍了一种基于LLM的智能体架构，具有记忆流，包含即时和总结的长期记忆，以实现可信行为。",
+      "order": 1,
+      "created_at": "2025-09-06T12:16:33.146794Z",
+      "updated_at": "2026-02-04T11:32:38.194329Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

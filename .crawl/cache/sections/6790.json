@@ -1,0 +1,61 @@
+{
+  "id": 6790,
+  "title": "集合：唯一元素的集合",
+  "meta_title": "Julia 集合：管理唯一元素",
+  "meta_description": "学习 Julia 中的集合，用于存储无序的唯一元素集合并执行集合操作。",
+  "content": "<p>有时，您需要一种集合，它只跟踪一组项目，其中每个项目都是唯一的且顺序无关紧要。尽管像数组这样的数据结构管理有序序列，而字典处理键值映射，但它们不提供这种特定功能。这就是集合发挥作用的地方。Julia 中的集合，就像其在数学上的对应物一样，是无序的互不相同元素的汇集。</p>\n<p>集合在以下情况中特别有用：</p>\n<ul>\n<li>快速判断一个项目是否属于某个集合。</li>\n<li>确保集合只包含唯一项目（例如，从列表中移除重复项）。</li>\n<li>执行标准的集合操作，如集合并集、交集和差集。</li>\n</ul>\n<h3>创建集合</h3>\n<p>您可以使用 <code>Set</code> 构造函数在 Julia 中创建集合。如果要创建空集合，通常需要指定它将容纳的元素类型。如果使用初始元素创建集合，Julia 通常可以推断出其类型。</p>\n<p>创建一个用于存放整数的空集合：</p>\n<pre><code class=\"language-julia\">julia> empty_int_set = Set{Int}()\nSet{Int64}()\n\njulia> typeof(empty_int_set)\nSet{Int64}\n</code></pre>\n<p>这里，<code>Set{Int}()</code> 创建了一个专门用于存储整数的空集合（<code>Int64</code> 是大多数系统上的默认整数类型）。</p>\n<p>要创建一个包含初始元素的集合，您可以将一个可迭代的集合（例如数组）传递给 <code>Set</code> 构造函数：</p>\n<pre><code class=\"language-julia\">julia> fruit_set = Set([\"apple\", \"banana\", \"orange\"])\nSet{String} with 3 elements:\n  \"orange\"\n  \"banana\"\n  \"apple\"\n\njulia> number_set = Set([1, 2, 2, 3, 1, 4])\nSet{Int64} with 4 elements:\n  4\n  2\n  3\n  1\n</code></pre>\n<p>在 <code>number_set</code> 示例中请注意两点：</p>\n<ol>\n<li><strong>唯一性</strong>：尽管输入数组 <code>[1, 2, 2, 3, 1, 4]</code> 包含重复值（1 和 2 出现了两次），但生成的集合 <code>Set{Int64}{4, 2, 3, 1}</code> 只包含每个互不相同的元素一次。</li>\n<li><strong>无序性</strong>：集合的打印表示 (<code>4, 2, 3, 1</code>) 中的元素不一定与它们提供时的顺序相同，也不是按数字顺序排列。集合不保证其元素的任何特定顺序。</li>\n</ol>\n<h3>基本集合操作</h3>\n<p>一旦有了集合，就可以执行一些基本操作。</p>\n<h4>添加元素</h4>\n<p>要向集合中添加元素，请使用 <code>push!</code> 函数。如果元素已存在于集合中，集合将保持不变，因为元素必须是唯一的。</p>\n<pre><code class=\"language-julia\">julia> colors = Set([\"red\", \"green\"])\nSet{String} with 2 elements:\n  \"green\"\n  \"red\"\n\njulia> push!(colors, \"blue\")\nSet{String} with 3 elements:\n  \"green\"\n  \"blue\"\n  \"red\"\n\njulia> push!(colors, \"red\") # 再次添加 \"red\"\nSet{String} with 3 elements:\n  \"green\"\n  \"blue\"\n  \"red\"\n# 集合仍然包含 3 个元素，\"red\" 没有再次被添加。\n</code></pre>\n<h4>检查成员关系</h4>\n<p>集合的一个常见用途是检查元素是否存在。这可以通过使用 <code>in</code> 关键字或其函数形式 <code>in(element, set)</code> 来完成。对于集合，成员关系测试通常非常高效。</p>\n<pre><code class=\"language-julia\">julia> names = Set([\"Alice\", \"Bob\", \"Charlie\"])\nSet{String} with 3 elements:\n  \"Alice\"\n  \"Charlie\"\n  \"Bob\"\n\njulia> \"Bob\" in names\ntrue\n\njulia> in(\"David\", names)\nfalse\n</code></pre>\n<h4>移除元素</h4>\n<p>要从集合中移除元素，可以使用 <code>pop!</code> 或 <code>delete!</code>。<code>pop!(set, element)</code> 移除指定元素并返回它。如果未找到该元素，则会抛出错误。<code>delete!(set, element)</code> 移除元素并返回修改后的集合；如果未找到该元素，则不会报错。</p>\n<pre><code class=\"language-julia\">julia> items = Set([10, 20, 30, 40])\nSet{Int64} with 4 elements:\n  40\n  20\n  30\n  10\n\njulia> pop!(items, 30) # 移除 30\n30\n\njulia> items\nSet{Int64} with 3 elements:\n  40\n  20\n  10\n\njulia> delete!(items, 20) # 移除 20\nSet{Int64} with 2 elements:\n  40\n  10\n\njulia> pop!(items, 50) # 元素 50 不在集合中\nERROR: KeyError: key 50 not found\nStacktrace:\n [1] pop!(s::Set{Int64}, key::Int64)\n   @ Base ./set.jl:106\n [2] top-level scope\n   @ REPL[8]:1\n\njulia> delete!(items, 50) # 元素 50 不在集合中，没有报错\nSet{Int64} with 2 elements:\n  40\n  10\n</code></pre>\n<p>您也可以使用不指定元素的 <code>pop!(set)</code> 来移除并返回集合中的任意元素。当您希望逐个处理元素而不关心具体是哪个元素时，这很有用。</p>\n<h4>获取大小</h4>\n<p>要查看集合中有多少元素，请使用 <code>length</code> 函数：</p>\n<pre><code class=\"language-julia\">julia> simple_set = Set(['a', 'b', 'c'])\nSet{Char} with 3 elements:\n  'c'\n  'a'\n  'b'\n\njulia> length(simple_set)\n3\n</code></pre>\n<h3>集合论操作</h3>\n<p>Julia 的集合支持标准的数学集合操作，这对于比较和组合集合非常强大。</p>\n<h4>并集</h4>\n<p>两个集合的并集，表示为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mo>∪</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">A \\cup B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">∪</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>，创建一个新集合，其中包含集合 A 中、集合 B 中或同时在两者中的所有元素。Julia 提供了 <code>union</code> 函数或 <code>∪</code> 运算符（您可以在 Julia REPL 或许多编辑器中键入 <code>\\cup</code> 然后按 TAB 键）。</p>\n<pre><code class=\"language-julia\">julia> set1 = Set([1, 2, 3])\nSet{Int64} with 3 elements:\n  2\n  3\n  1\n\njulia> set2 = Set([3, 4, 5])\nSet{Int64} with 3 elements:\n  4\n  3\n  5\n\njulia> union(set1, set2)\nSet{Int64} with 5 elements:\n  4\n  2\n  3\n  5\n  1\n\njulia> set1 ∪ set2 # 使用 ∪ 运算符\nSet{Int64} with 5 elements:\n  4\n  2\n  3\n  5\n  1\n</code></pre>\n<h4>交集</h4>\n<p>两个集合的交集，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mo>∩</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">A \\cap B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">∩</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>，创建一个新集合，其中只包含集合 A 和集合 B 都共同拥有的元素。使用 <code>intersect</code> 函数或 <code>∩</code> 运算符（键入 <code>\\cap</code> 然后按 TAB 键）。</p>\n<pre><code class=\"language-julia\">julia> set1 = Set([1, 2, 3, 4])\nSet{Int64} with 4 elements:\n  4\n  2\n  3\n  1\n\njulia> set2 = Set([3, 4, 5, 6])\nSet{Int64} with 4 elements:\n  4\n  3\n  5\n  6\n\njulia> intersect(set1, set2)\nSet{Int64} with 2 elements:\n  4\n  3\n\njulia> set1 ∩ set2 # 使用 ∩ 运算符\nSet{Int64} with 2 elements:\n  4\n  3\n</code></pre>\n<h4>差集</h4>\n<p>两个集合的差集，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mo>∖</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">A \\setminus B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">∖</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>（或 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mo>−</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">A - B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>），创建一个新集合，其中包含存在于集合 A 中但不存在于集合 B 中的元素。Julia 使用 <code>setdiff</code> 函数。</p>\n<pre><code class=\"language-julia\">julia> set_a = Set([\"apple\", \"banana\", \"cherry\"])\nSet{String} with 3 elements:\n  \"cherry\"\n  \"banana\"\n  \"apple\"\n\njulia> set_b = Set([\"banana\", \"date\"])\nSet{String} with 2 elements:\n  \"date\"\n  \"banana\"\n\njulia> setdiff(set_a, set_b) # 存在于 set_a 但不存在于 set_b 的元素\nSet{String} with 2 elements:\n  \"cherry\"\n  \"apple\"\n\njulia> setdiff(set_b, set_a) # 存在于 set_b 但不存在于 set_a 的元素\nSet{String} with 1 element:\n  \"date\"\n</code></pre>\n<h4>对称差集</h4>\n<p>两个集合的对称差集，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi><mi mathvariant=\"normal\">Δ</mi><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">A \\Delta B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mord\">Δ</span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>，创建一个新集合，其中包含存在于集合 A 或集合 B 中，但不同时存在于两者的元素。Julia 使用 <code>symdiff</code> 函数。</p>\n<pre><code class=\"language-julia\">julia> set_x = Set([10, 20, 30])\nSet{Int64} with 3 elements:\n  20\n  30\n  10\n\njulia> set_y = Set([20, 40, 50])\nSet{Int64} with 3 elements:\n  40\n  20\n  50\n\njulia> symdiff(set_x, set_y) # 存在于其中一个集合但不同时存在于两者的元素\nSet{Int64} with 4 elements:\n  40\n  10\n  30\n  50\n# 结果是 {10, 30, 40, 50}，因为 20 同时存在于两者。\n</code></pre>\n<h3>遍历集合</h3>\n<p>您可以使用 <code>for</code> 循环遍历集合中的元素，就像处理数组一样。但是，请记住集合是无序的，因此元素将按任意顺序处理，不一定按插入顺序或任何排序顺序。</p>\n<pre><code class=\"language-julia\">julia> my_set = Set([\"cat\", \"dog\", \"bird\"])\nSet{String} with 3 elements:\n  \"cat\"\n  \"bird\"\n  \"dog\"\n\njulia> for animal in my_set\n           println(\"发现了一个 \", animal)\n       end\nFound a cat\nFound a bird\nFound a dog\n# 输出顺序可能不同。\n</code></pre>\n<h3>何时使用集合</h3>\n<p>集合是您 Julia 编程工具箱中的一个有价值的工具。在以下情况中考虑使用集合：</p>\n<ul>\n<li>您需要存储不允许重复的项的集合。例如，跟踪网站的唯一访客。</li>\n<li>您需要非常快速地检查集合中是否存在某个项目（成员关系测试）。这通常比遍历数组更快，特别是对于大型集合。</li>\n<li>您需要执行逻辑操作，例如查找两个列表之间的共同项目（交集）或合并两个列表同时只保留唯一项目（并集）。例如，查找两个用户之间的共同好友。</li>\n<li>您希望轻松地从现有数组中移除重复项：<code>unique_items = Set(my_array)</code>。</li>\n</ul>\n<p>了解集合，以及数组、元组和字典，为您在 Julia 程序中组织和管理数据提供了灵活的选择范围。每种集合类型都有其优势，选择正确的类型可以使您的代码更整洁、更高效且更易于理解。</p>",
+  "slug": "sets-collections-unique-items",
+  "updates": [],
+  "references": [
+    {
+      "id": 20898,
+      "title": "Julia Documentation: Collections and Data Structures - Sets",
+      "author": "The Julia Language Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/stable/manual/collections/#Sets",
+      "doi": "",
+      "note": "Julia编程语言的官方文档，详细介绍了`Set`数据类型、其构造函数以及`push!`、`pop!`、`union`和`intersect`等所有基本操作。",
+      "order": 1,
+      "created_at": "2025-09-06T14:11:37.588807Z",
+      "updated_at": "2025-09-10T02:51:59.074531Z"
+    },
+    {
+      "id": 20899,
+      "title": "Introduction to Algorithms",
+      "author": "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein",
+      "year": "2022",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter on Hash Tables",
+      "url": "https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition",
+      "doi": "",
+      "note": "计算机科学基础教材，涵盖数据结构的理论基础，包括常用于实现集合以高效存储唯一元素和进行成员资格测试的哈希表。",
+      "order": 2,
+      "created_at": "2025-09-06T14:11:37.592739Z",
+      "updated_at": "2025-09-10T02:51:34.440244Z"
+    },
+    {
+      "id": 20900,
+      "title": "Discrete Mathematics and Its Applications",
+      "author": "Kenneth H. Rosen",
+      "year": "2025",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter on Set Theory",
+      "url": "https://www.mheducation.com/highered/product/discrete-mathematics-and-its-applications-rosen/M9781259676512.html",
+      "doi": "",
+      "note": "离散数学综合教材，提供了集合的严格数学定义、其性质以及并集、交集和差集等基本操作，这些是编程语言实现的基础。",
+      "order": 3,
+      "created_at": "2025-09-06T14:11:37.597664Z",
+      "updated_at": "2025-09-10T02:51:51.250348Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

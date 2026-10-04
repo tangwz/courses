@@ -1,0 +1,61 @@
+{
+  "id": 1801,
+  "title": "函数式代码中的状态挑战",
+  "meta_title": "函数式代码中的状态挑战",
+  "meta_description": "为什么在函数式背景下管理变化的状态需要特定的模式。",
+  "content": "<p>JAX 基于纯函数的理念构建，纯函数的输出<em>仅</em>取决于其明确的输入，不会引起外部变化或副作用，例如修改全局变量或改变输入对象的状态。这种纯粹性是 <code>jax.jit</code> 和 <code>jax.grad</code> 等变换运作的根本。它们使用符号输入对函数的执行进行一次追踪，以便了解操作序列，然后可以高效地编译、求导或并行化这些操作。</p>\n<p>现在，考虑标准 Python 中常见的编程模式。我们通常通过直接修改对象来管理变化的信息（即状态）。比如使用列表的 <code>.append()</code> 方法原地更新列表，修改字典中的值，或修改类实例的属性。</p>\n<pre><code class=\"language-python\"># 标准 Python 状态修改（不适合 JAX）\nmy_data = {'values': [10, 20]}\n\ndef update_data(data_dict, new_value):\n  # 修改传入的字典——这是一个副作用\n  data_dict['values'].append(new_value)\n  data_dict['last_added'] = new_value\n\nupdate_data(my_data, 30)\nprint(my_data)\n# 输出: {'values': [10, 20, 30], 'last_added': 30}\n</code></pre>\n<p>这种命令式风格，以原地修改和隐藏状态变化为特点，虽然在许多场合很自然，但在 JAX 的函数式框架内带来了明显的挑战。为什么会这样？</p>\n<ol>\n<li>\n<p><strong>破坏 <code>jax.jit</code></strong>: 当 <code>jax.jit</code> 追踪函数以进行编译时，它基本假定函数行为是纯粹的。如果函数修改了某个外部状态（例如全局变量，或未明确传入和返回的对象属性），追踪将捕获<em>追踪时的</em>状态。编译后的版本旨在提高速度，很可能会重用这个初始追踪。它不会自动追踪在函数外部或函数调用之间对该外部状态进行的后续更改。这可能导致结果轻微错误或完全出乎意料，因为编译代码的行为取决于陈旧、隐藏的历史，而非仅仅当前的输入。</p>\n</li>\n<li>\n<p><strong>使 <code>jax.grad</code> 困惑</strong>: 自动微分是 <code>jax.grad</code> 背后的引擎，它需要追踪数据在计算中的精确流动以正确计算梯度。原地修改会模糊这种数据流动。如果数组或对象中的值在函数执行中途被改变，<code>grad</code> 如何能准确确定最终输出与原始输入之间的数学关系？这实际上破坏了反向模式微分所需的运算链。尝试对具有此类副作用的函数进行微分通常会导致错误，或者更糟的是，导致数学上不正确的梯度，从而悄悄地破坏模型训练等优化过程。</p>\n</li>\n<li>\n<p><strong>阻碍 <code>jax.vmap</code> 和 <code>jax.pmap</code></strong>: 向量 (vector)化 (<code>jax.vmap</code>) 和多设备并行化 (<code>jax.pmap</code>) 依赖于一个假设，即函数可以有多个实例独立运行，可能对不同数据切片进行操作，或在不同硬件加速器上同时执行。如果这些操作都试图读写<em>同一个</em>可变状态对象，就会引入冲突和潜在的竞争条件。这从根本上破坏了安全和正确并行执行所需的独立性假设。每个向量化 (quantization)或并行实例实际上需要自己的隔离状态，而直接修改使其难以可靠地管理。</p>\n</li>\n</ol>\n<p>考虑一个简化场景，尝试 <code>jit</code> 一个修改传入对象属性的函数：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\nclass StateHolder:\n    def __init__(self, value):\n        self.value = jnp.array(value)\n\ndef update_state_impurely(state_obj, increment):\n  # 不纯：原地修改对象的属性\n  state_obj.value = state_obj.value + increment\n  return state_obj.value # 返回新值，但修改已经发生\n\nmy_state = StateHolder(10.0)\n\n# 不使用 JIT 时，这通过修改按预期工作\nprint(\"Without JIT:\")\nprint(update_state_impurely(my_state, 5.0)) # 输出: 15.0\nprint(my_state.value)                     # 输出: 15.0\nprint(update_state_impurely(my_state, 3.0)) # 输出: 18.0\nprint(my_state.value)                     # 输出: 18.0\n\n# 重置状态并尝试使用 JIT\nmy_state_jit = StateHolder(10.0)\njitted_update = jax.jit(update_state_impurely)\n\nprint(\"\\nWith JIT (potential issues):\")\ntry:\n    # 第一次调用触发追踪和编译\n    print(jitted_update(my_state_jit, 5.0))\n    # 编译后的函数可能作用于*追踪到的*值 (10.0)\n    # 修改可能发生在编译函数的作用范围之外，\n    # 或者 JAX 可能会就副作用引发错误/警告。\n    print(my_state_jit.value) # 状态可能未按预期更新\n    print(jitted_update(my_state_jit, 3.0)) # 可能重用陈旧的追踪\n    print(my_state_jit.value)\nexcept Exception as e:\n    print(f\"JIT 尝试遇到问题: {e}\")\n\n</code></pre>\n<p>JIT 编译过程可能会使用初始值 (<code>10.0</code>) 来追踪函数。编译后的函数可能会根据该追踪固定下来。原地更新 <code>state_obj.value = ...</code> 代表了一种 JAX 变换难以处理的副作用。根据具体情况和 JAX 版本，这可能导致编译时出错、关于不纯回调的警告，或在后续调用中编译函数无法反映预期状态更新的静默不正确行为。</p>\n<p>因此，JAX 中任何涉及信息随时间或跨计算步骤变化的任务，例如训练期间更新模型参数 (parameter)、管理优化器中的动量值或在循环神经网络 (neural network) (RNN)中传递隐藏状态，都需要不同的编程模式。如果我们希望代码与 JAX 强大的变换 (<code>jit</code>, <code>grad</code>, <code>vmap</code>, <code>pmap</code>) 可靠兼容，就不能依赖于原地修改对象或变量。</p>\n<p>我们需要能清晰处理状态的模式，使其流转在函数式方法中透明且可控。这意味着需要更新状态的函数通常应将当前状态作为输入，并返回新的、已更新的状态作为输出，而保持原始状态不变。后续章节将介绍 JAX 中状态管理的这些核心函数式模式。</p>",
+  "slug": "challenge-of-state-functional",
+  "updates": [],
+  "references": [
+    {
+      "id": 2381,
+      "title": "JAX - The JAX core library documentation",
+      "author": "The JAX Developers",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "JAX官方文档，提供JAX函数式编程模型、纯函数以及副作用对其转换影响的基础信息。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:26.993951Z",
+      "updated_at": "2025-09-08T03:07:39.003264Z"
+    },
+    {
+      "id": 2382,
+      "title": "Structure and Interpretation of Computer Programs",
+      "author": "Harold Abelson, Gerald Jay Sussman, Julie Sussman",
+      "year": "1996",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "688",
+      "url": "https://mitp.mit.edu/sites/default/files/sicp/full-text/book/book.html",
+      "doi": "",
+      "note": "计算机科学的经典著作，详细阐述了函数式编程原则，包括纯函数和状态管理的挑战。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:27.160618Z",
+      "updated_at": "2025-09-08T03:07:46.195735Z"
+    },
+    {
+      "id": 2383,
+      "title": "Automatic Differentiation in Machine Learning: a Survey",
+      "author": "Atilim Gunes Baydin, Barak A. Pearlmutter, Alexey Andreyevich Radul, Jeffrey Mark Siskind",
+      "year": "2018",
+      "publisher": "Journal of Machine Learning Research",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "18",
+      "pages": "1-43",
+      "url": "http://jmlr.org/papers/v18/17-468.html",
+      "doi": "",
+      "note": "自动微分的全面调查，解释了其基本原理以及定义良好的计算图对于正确梯度计算的重要性。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:27.221045Z",
+      "updated_at": "2025-09-08T03:07:34.520554Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

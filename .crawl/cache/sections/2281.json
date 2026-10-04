@@ -1,0 +1,45 @@
+{
+  "id": 2281,
+  "title": "类型转换说明",
+  "meta_title": "Python 类型转换 | 数据类型强制转换",
+  "meta_description": "了解如何在 Python 中将变量从一种数据类型转换为另一种（例如，字符串转换为整数）。",
+  "content": "<p>Python 变量可以存储各种数据类型，但在执行操作时，特定的数据类型至关重要。例如，直接对数字和数字的字符串表示进行数学加法（例如 <code>42 + \"10\"</code>）将无法正常工作。Python 会将 <code>\"10\"</code> 解释为文本，而非数字值十。为了使此类操作可行，你需要明确告诉 Python 将 <code>\"10\"</code> 视为一个数字。这种改变值数据类型的过程被称为 <strong>类型转换</strong> 或 <strong>类型强制转换</strong>。</p>\n<p>Python 提供了内置函数来处理常见的类型转换。可以将它们看作是工具，用于将数据重塑为特定任务所需的格式。我们已讨论的基本类型之间转换的主要函数有：</p>\n<ul>\n<li><code>int()</code>: 将值转换为整数（整数）。</li>\n<li><code>float()</code>: 将值转换为浮点数（带小数的数字）。</li>\n<li><code>str()</code>: 将值转换为字符串（文本）。</li>\n<li><code>bool()</code>: 将值转换为布尔值（<code>True</code> 或 <code>False</code>）。</li>\n</ul>\n<p>让我们看看每个函数如何工作。</p>\n<h3>转换为整数：<code>int()</code></h3>\n<p><code>int()</code> 函数尝试从其输入创建一个整数。</p>\n<ul>\n<li>\n<p><strong>从浮点数转换：</strong> 当将浮点数转换为整数时，Python 会<strong>截断</strong>小数部分，即将其舍弃。它<em>不会</em>四舍五入到最接近的整数。</p>\n<pre><code class=\"language-python\">count_float = 9.8\ncount_int = int(count_float)\nprint(count_int)  # 输出: 9\n\nprice_float = 15.2\nprice_int = int(price_float)\nprint(price_int) # 输出: 15\n</code></pre>\n</li>\n<li>\n<p><strong>从字符串转换：</strong> 你可以将仅包含数字的字符串转换为整数。</p>\n<pre><code class=\"language-python\">num_string = \"101\"\nnum_int = int(num_string)\nprint(num_int * 2) # 输出: 202\n</code></pre>\n</li>\n<li>\n<p><strong>可能出现的问题：</strong> 如果你尝试转换一个无法被解释为整数的字符串（如文本或带小数点的数字），Python 将会引发 <code>ValueError</code>。</p>\n<pre><code class=\"language-python\"># 这会引发错误：\n# value_error_int = int(\"hello\")\n# ValueError: invalid literal for int() with base 10: 'hello'\n\n# 这也会引发错误：\n# value_error_float_string = int(\"3.14\")\n# ValueError: invalid literal for int() with base 10: '3.14'\n</code></pre>\n<p>处理此类问题我们将在课程后续部分讲解。目前，请注意转换并非总是可行。</p>\n</li>\n</ul>\n<h3>转换为浮点数：<code>float()</code></h3>\n<p><code>float()</code> 函数将值转换为浮点数。</p>\n<ul>\n<li>\n<p><strong>从整数转换：</strong> 将整数转换为浮点数只是添加一个小数部分（<code>.0</code>）。</p>\n<pre><code class=\"language-python\">whole_number = 50\nfloat_number = float(whole_number)\nprint(float_number) # 输出: 50.0\n</code></pre>\n</li>\n<li>\n<p><strong>从字符串转换：</strong> 你可以转换表示整数或带小数数字的字符串。</p>\n<pre><code class=\"language-python\">pi_string = \"3.14159\"\npi_float = float(pi_string)\nprint(pi_float) # 输出: 3.14159\n\ncount_string = \"100\"\ncount_float_from_string = float(count_string)\nprint(count_float_from_string) # 输出: 100.0\n</code></pre>\n</li>\n<li>\n<p><strong>可能出现的问题：</strong> 与 <code>int()</code> 类似，尝试转换一个不表示有效数字的字符串将导致 <code>ValueError</code>。</p>\n<pre><code class=\"language-python\"># 这会引发错误：\n# value_error_float = float(\"not a number\")\n# ValueError: could not convert string to float: 'not a number'\n</code></pre>\n</li>\n</ul>\n<h3>转换为字符串：<code>str()</code></h3>\n<p><code>str()</code> 函数将其参数 (parameter)转换为字符串表示形式。这对于创建结合文本和变量值的输出消息非常有用。</p>\n<ul>\n<li>\n<p><strong>从数字转换：</strong> 整数和浮点数可以轻松转换为字符串。</p>\n<pre><code class=\"language-python\">item_count = 5\nmessage = \"You have \" + str(item_count) + \" items in your cart.\"\nprint(message) # 输出: You have 5 items in your cart.\n\ntemperature = 22.5\nweather_report = \"The temperature is \" + str(temperature) + \" degrees Celsius.\"\nprint(weather_report) # 输出: The temperature is 22.5 degrees Celsius.\n</code></pre>\n<p>如果没有 <code>str()</code>，直接连接字符串和数字（例如，<code>\"Value: \" + 5</code>）将会导致 <code>TypeError</code>。</p>\n</li>\n<li>\n<p><strong>从布尔值转换：</strong> 布尔值被转换为字符串 <code>\"True\"</code> 或 <code>\"False\"</code>。</p>\n<pre><code class=\"language-python\">is_active = True\nstatus_message = \"User active status: \" + str(is_active)\nprint(status_message) # 输出: User active status: True\n</code></pre>\n<p>几乎任何 Python 对象都可以使用 <code>str()</code> 转换为某种字符串表示形式，使其成为一个非常多功能的函数。</p>\n</li>\n</ul>\n<h3>转换为布尔值：<code>bool()</code></h3>\n<p><code>bool()</code> 函数将值转换为其布尔等效值（<code>True</code> 或 <code>False</code>）。Python 有“真值”的说法，即某些值在布尔上下文 (context)中被视为固有的假，而大多数其他值被视为真。</p>\n<ul>\n<li>\n<p><strong>被视为 <code>False</code> 的值：</strong></p>\n<ul>\n<li>整数 <code>0</code></li>\n<li>浮点数 <code>0.0</code></li>\n<li>特殊值 <code>None</code>（表示没有值）</li>\n<li>任何空序列（如空字符串 <code>\"\"</code>、空列表 <code>[]</code>、空元组 <code>()</code>）</li>\n<li>任何空映射（如空字典 <code>{}</code>）</li>\n</ul>\n</li>\n<li>\n<p><strong>被视为 <code>True</code> 的值：</strong></p>\n<ul>\n<li>任何非零数字（例如，<code>1</code>、<code>-10</code>、<code>0.5</code>）</li>\n<li>任何非空字符串（例如，<code>\"hello\"</code>、<code>\" \"</code>、<code>\"False\"</code>）</li>\n<li>任何非空序列或映射（例如，<code>[1]</code>、<code>(None,)</code>、<code>{'a': 1}</code>）</li>\n</ul>\n</li>\n</ul>\n<p>以下是一些示例：</p>\n<pre><code class=\"language-python\">print(bool(100))        # 输出: True\nprint(bool(-5.5))       # 输出: True\nprint(bool(\"Python\"))     # 输出: True\nprint(bool([1, 2, 3]))  # 输出: True\n\nprint(bool(0))          # 输出: False\nprint(bool(0.0))        # 输出: False\nprint(bool(\"\"))          # 输出: False\nprint(bool([]))         # 输出: False\nprint(bool({}))         # 输出: False\nprint(bool(None))       # 输出: False\n</code></pre>\n<p>了解真值在我们将开始使用条件语句（<code>if</code>/<code>else</code>）根据条件真假控制程序流程时很重要。</p>\n<h3>为什么这现在很重要？</h3>\n<p>类型转换目前直接相关，因为 Python 处理用户输入的方式。当你使用 <code>input()</code> 函数（我们接下来会讲到）从键盘获取数据时，它<em>总是</em>将数据作为<strong>字符串</strong>返回，无论用户输入了什么。</p>\n<p>如果你询问用户年龄，他们输入 <code>30</code>，<code>input()</code> 函数将给你字符串 <code>\"30\"</code>，而不是整数 <code>30</code>。如果你随后想进行计算，比如计算他们五年后的年龄，你需要在使用 <code>int()</code> 将该字符串 <code>\"30\"</code> 转换为整数 <code>30</code> 之后才能对其加 <code>5</code>。</p>\n<p>能够使用 <code>int()</code>、<code>float()</code>、<code>str()</code> 和 <code>bool()</code> 在类型之间进行显式转换是一项基本能力，它允许你正确处理数据并避免程序中与类型相关的问题。</p>",
+  "slug": "python-type-conversion",
+  "updates": [],
+  "references": [
+    {
+      "id": 6491,
+      "title": "Python 3 Documentation: Built-in Functions",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/functions.html",
+      "doi": "",
+      "note": "这提供了Python内置类型转换函数（int()、float()、str()、bool()）及其行为的官方权威解释。",
+      "order": 1,
+      "created_at": "2025-09-05T01:24:11.968639Z",
+      "updated_at": "2025-09-07T21:32:04.809106Z"
+    },
+    {
+      "id": 6493,
+      "title": "Python for Everybody: Exploring Data in Python 3",
+      "author": "Charles Severance",
+      "year": "2023",
+      "publisher": "Charles Severance",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.py4e.com/book.php",
+      "doi": "",
+      "note": "这本广泛使用的教材及配套课程提供了Python编程的基础知识，其中包含关于数据类型和如何执行类型转换的专门章节。",
+      "order": 3,
+      "created_at": "2025-09-05T01:24:11.976292Z",
+      "updated_at": "2025-09-07T21:32:07.661262Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

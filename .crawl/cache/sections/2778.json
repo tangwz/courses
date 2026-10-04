@@ -1,0 +1,61 @@
+{
+  "id": 2778,
+  "title": "构建定制C++扩展",
+  "meta_title": "为PyTorch构建定制C++扩展",
+  "meta_description": "使用C++实现定制运算符，用于性能关键的代码或PyTorch中没有的操作。",
+  "content": "<p>虽然PyTorch的Python应用编程接口提供了极大的灵活性和易用性，但在某些情况下，使用C++能够带来显著优势。您可能会遇到Python开销成为限制因素的性能瓶颈，需要结合现有的高性能C++库，或者实现标准PyTorch运算符难以或无法高效表达的定制操作。提供了直接在C++中构建定制的PyTorch运算符的实践指导。</p>\n<p>核心机制是，用C++编写您的运算符逻辑，如果需要自动微分，可能需要同时定义前向和后向传播，然后创建绑定，使Python可以调用此C++代码。PyTorch在内部使用功能强大的Pybind11库来处理这些Python-C++之间的调用。</p>\n<h3>为何使用C++扩展？</h3>\n<ul>\n<li><strong>性能：</strong> 对于计算密集型操作，即使使用PyTorch优化过的张量操作，C++的执行速度也能够显著优于Python。消除紧密循环或复杂算法的Python解释器开销可以带来显著的速度提升。</li>\n<li><strong>集成：</strong> 如果您有现有的C++代码库或库执行与您的模型相关的特定计算，编写C++扩展提供了一种直接的方法将它们结合到您的PyTorch工作流程中，而无需用Python重新编写。</li>\n<li><strong>定制内核：</strong> 某些低级硬件优化或专门算法可能只能通过C++或CUDA（稍后介绍）有效实现。C++为此类任务提供必要的控制。</li>\n</ul>\n<h3>C++张量：<code>torch::Tensor</code></h3>\n<p>在您的C++扩展代码中，您将主要使用<code>torch::Tensor</code>类，该类定义在ATen库（PyTorch的C++张量库）中。它是Python <code>torch.Tensor</code>的C++对应物。您可以使用通常与Python API相似的C++应用编程接口来访问其数据，查询其属性（如形状、数据类型、设备），并对其执行操作。</p>\n<pre><code class=\"language-cpp\">#include &#x3C;torch/extension.h>\n#include &#x3C;vector>\n\n// 接受并返回张量的C++函数签名示例\ntorch::Tensor custom_cpp_op(torch::Tensor input1, torch::Tensor input2) {\n    // 检查张量属性（示例）\n    TORCH_CHECK(input1.sizes() == input2.sizes(), \"Input tensors must have the same shape\");\n    TORCH_CHECK(input1.scalar_type() == torch::kFloat32, \"Input tensors must be float32\");\n\n    // 执行操作\n    torch::Tensor output = input1 + input2 * 2.0;\n    return output;\n}\n</code></pre>\n<h3>设置构建流程</h3>\n<p>为了使您的C++代码在Python中可用，您需要将其编译成Python可以导入的共享库。PyTorch在<code>torch.utils.cpp_extension</code>中提供工具来简化此流程，并与Python的标准<code>setuptools</code>良好集成。</p>\n<p>您通常会创建一个<code>setup.py</code>文件：</p>\n<pre><code class=\"language-python\"># setup.py\nfrom setuptools import setup\nfrom torch.utils.cpp_extension import BuildExtension, CppExtension\n\nsetup(\n    name='my_custom_ops', # 您的Python包的名称\n    ext_modules=[\n        CppExtension(\n            'my_custom_ops._cpp', # 在Python中导入的模块名称\n            ['custom_ops.cpp']   # 您的C++源文件列表\n        ),\n    ],\n    cmdclass={\n        'build_ext': BuildExtension\n    }\n)\n</code></pre>\n<ul>\n<li><code>name</code>：将要安装的包的名称。</li>\n<li><code>ext_modules</code>：要构建的扩展列表。<code>CppExtension</code>用于纯C++扩展。\n<ul>\n<li>第一个参数 (parameter)（<code>'my_custom_ops._cpp'</code>）定义了包含C++绑定的Python模块的完整名称。通常，C++部分会使用一个前导下划线。</li>\n<li>第二个参数是C++源文件（<code>.cpp</code>）的列表。</li>\n</ul>\n</li>\n<li><code>cmdclass</code>：指定使用PyTorch的定制<code>BuildExtension</code>类，该类负责查找PyTorch头文件/库并设置适当的编译器标志。</li>\n</ul>\n<h3>编写C++源文件</h3>\n<p>您的C++源文件（例如，<code>custom_ops.cpp</code>）需要包含必要的PyTorch头文件，并定义您希望公开的函数，以及Pybind11绑定。</p>\n<pre><code class=\"language-cpp\">// custom_ops.cpp\n#include &#x3C;torch/extension.h>\n#include &#x3C;vector>\n\n// 定义您的定制操作逻辑\ntorch::Tensor custom_linear(torch::Tensor x, torch::Tensor weight, torch::Tensor bias) {\n    // 示例：基本类型和形状检查（根据需要添加更多检查）\n    TORCH_CHECK(x.dim() == 2, \"Input x must be 2D\");\n    TORCH_CHECK(weight.dim() == 2, \"Input weight must be 2D\");\n    TORCH_CHECK(bias.dim() == 1, \"Input bias must be 1D\");\n    TORCH_CHECK(x.size(1) == weight.size(1), \"Input dimension mismatch: x.size(1) != weight.size(1)\");\n    TORCH_CHECK(weight.size(0) == bias.size(0), \"Output dimension mismatch: weight.size(0) != bias.size(0)\");\n\n    // 执行线性操作：Y = X * W^T + b\n    // 注意：PyTorch的C++ API通常与Python相似，例如，matmul, add_\n    return torch::addmm(bias, x, weight.t());\n}\n\n// PYBIND11_MODULE是一个宏，用于创建Python模块的入口点。\n// 第一个参数（TORCH_EXTENSION_NAME）是一个占位符，在编译时会被替换为\n// setup.py中定义的模块名称（'my_custom_ops._cpp'）。\n// 第二个参数（m）是模块对象。\nPYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {\n    m.def(\n        \"linear\",                      // Python函数名称\n        &#x26;custom_linear,                // 指向C++函数的指针\n        \"Custom Linear operation (C++)\" // 可选的文档字符串\n    );\n    // 如果需要，可以在此处使用 m.def() 添加更多函数\n}\n\n</code></pre>\n<ul>\n<li><strong>头文件：</strong> <code>&#x3C;torch/extension.h></code> 是主要的头文件，包含了PyTorch (ATen) 和 Pybind11的必要部分。</li>\n<li><strong>函数定义：</strong> 编写操作<code>torch::Tensor</code>对象的标准C++函数。使用PyTorch的C++应用编程接口进行张量操作（例如，<code>torch::addmm</code>，<code>torch::mul</code>，元素级运算符）。使用<code>TORCH_CHECK</code>宏进行输入验证。</li>\n<li><strong>绑定：</strong> <code>PYBIND11_MODULE</code>块很重要。它定义了将在Python模块中可用的函数。\n<ul>\n<li><code>TORCH_EXTENSION_NAME</code>是一个特殊宏，由PyTorch构建过程自动定义，以匹配<code>setup.py</code>中指定的模块名称。</li>\n<li><code>m.def(\"python_name\", &#x26;cpp_function_pointer, \"docstring\")</code>将C++函数（<code>cpp_function_pointer</code>）映射到Python函数名（<code>python_name</code>）。</li>\n</ul>\n</li>\n</ul>\n<h3>编译和使用扩展</h3>\n<p>要编译此扩展，请在您的终端中，进入包含<code>setup.py</code>和<code>custom_ops.cpp</code>的目录并运行：</p>\n<pre><code class=\"language-bash\">python setup.py install\n</code></pre>\n<p>或者，为了方便开发，您可以使用<code>python setup.py develop</code>，它以可编辑模式安装包，允许您修改C++代码并重新编译，而无需重新安装。</p>\n<p>成功编译后，您可以在Python中导入和使用您的定制函数，就像使用任何其他PyTorch函数一样：</p>\n<pre><code class=\"language-python\">import torch\nimport my_custom_ops._cpp as custom_ops # 导入编译后的C++模块\n\n# 创建一些示例张量\nx = torch.randn(128, 768, requires_grad=True)\nweight = torch.randn(512, 768, requires_grad=True)\nbias = torch.randn(512, requires_grad=True)\n\n# 使用定制C++函数\noutput = custom_ops.linear(x, weight, bias)\n\nprint(\"输出形状:\", output.shape)\n# 示例：计算梯度（需要定义反向传播 - 见下文）\n# output.sum().backward()\n# print(\"梯度形状（权重）:\", weight.grad.shape)\n</code></pre>\n<h3>与Autograd集成</h3>\n<p>上述简单示例只实现了前向传播。如果您需要PyTorch通过您的定制C++操作自动计算梯度，您必须定义相应的后向传播。这需要您在C++中创建一个定制的<code>torch::autograd::Function</code>子类，其思路与在Python中定义定制自动微分函数（在第1章中介绍）相似，但使用C++语法。您将在此C++类中实现静态的<code>forward</code>和<code>backward</code>方法。这是更高级的步骤，通常在您的C++操作是需要训练的大型网络的一部分时才需要。我们将在讨论定制CUDA扩展时提及这方面的内容，因为其原理类似。</p>\n<p>构建C++扩展是优化代码关键部分或结合外部库的有力方法，能够提升PyTorch模型的性能上限。尽管这需要使用更底层的C++应用编程接口和构建系统，但<code>torch.utils.cpp_extension</code>工具显著简化了此流程。</p>",
+  "slug": "custom-cpp-extensions",
+  "updates": [],
+  "references": [
+    {
+      "id": 2943,
+      "title": "PyTorch C++ Extensions",
+      "author": "PyTorch Contributors",
+      "year": "2025",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/cpp_extension.html",
+      "doi": "",
+      "note": "PyTorch官方指南，介绍如何构建自定义C++操作符，涵盖构建过程、Pybind11集成和自动求导钩子。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:55.975983Z",
+      "updated_at": "2025-09-08T06:54:42.590793Z"
+    },
+    {
+      "id": 2944,
+      "title": "Pybind11 Documentation",
+      "author": "Wenzel Jakob and contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pybind11.readthedocs.io/en/stable/",
+      "doi": "",
+      "note": "Pybind11的文档，该库用于为C++代码创建Python绑定，有助于理解PyTorch的扩展机制。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:55.990021Z",
+      "updated_at": "2025-09-08T06:54:34.862659Z"
+    },
+    {
+      "id": 2945,
+      "title": "PyTorch C++ Frontend",
+      "author": "PyTorch Contributors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/cppdocs/",
+      "doi": "",
+      "note": "PyTorch C++前端的官方文档，详细介绍了如何在C++环境中操作`torch::Tensor`和ATen库。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:55.992467Z",
+      "updated_at": "2025-09-08T06:54:33.585263Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

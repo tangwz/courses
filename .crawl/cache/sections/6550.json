@@ -1,0 +1,45 @@
+{
+  "id": 6550,
+  "title": "LLM Agent 工具的安全准则",
+  "meta_title": "LLM Agent 工具安全",
+  "meta_description": "理解开发和部署LLM智能体工具时的基本安全考量，以防止滥用。",
+  "content": "<p>当您为LLM智能体配备工具时，您大幅增强了它们的能力，使其能够以新的方式进行交互。然而，这种能力提升也带来了新的安全考量。每一个能够访问数据、执行代码或与外部系统交互的工具，如果设计时没有考虑安全，都可能成为潜在的滥用或攻击途径。因此，从工具开发伊始就理解并运用基本的安全准则，是构建安全可靠的智能体系统的必要条件。</p>\n<p>本节概述了核心安全准则，以指导您设计和实现LLM智能体的工具。这些准则并非详尽无遗，但它们为降低常见风险提供了扎实的依据。</p>\n<h2>最低权限准则</h2>\n<p>最重要的安全准则之一是<strong>最低权限准则</strong>。这意味着您创建的任何工具都只应被授予执行其特定、预期功能所需的绝对必需的最小权限，不多不少。如果一个工具只需要读取数据，它就不应拥有写入或删除权限。如果它只需要访问一个特定的API端点，它就不应拥有访问所有端点的权限。</p>\n<p>考虑一个旨在获取给定城市当前天气预报的工具。</p>\n<ul>\n<li>**宽松设计（避免）：**该工具使用一个API密钥，该密钥可访问天气服务的历史天气数据、用户账户管理和账单信息。</li>\n<li>**最低权限设计（推荐）：**该工具使用一个单独的、受限的API密钥，该密钥<em>只</em>允许访问当前天气预报端点。它无法访问任何其他数据或功能。</li>\n</ul>\n<p>遵循此准则可限制潜在损害，无论工具是由于自身缺陷、LLM误解其用途，还是恶意行为者影响LLM而受到侵害或滥用。在设计工具时，请始终问自己：“这个工具正常运行所需的绝对最小权限集合是什么？”</p>\n<h2>输入验证和清理</h2>\n<p>LLM智能体将根据对任务和工具描述的理解，向您的工具提供输入。这些输入有时可能是格式错误、出乎意料，甚至带有恶意（例如，如果LLM本身通过提示注入被操纵）。您的工具绝不能盲目信任来自LLM的输入。</p>\n<p><strong>输入验证</strong>是检查输入数据是否符合预期格式、类型、范围和约束的过程。例如，如果工具期望一个数字ID，它应验证输入确实是数字，并且可能在有效范围内。如果它期望一个日期，它应验证日期格式。</p>\n<p><strong>输入清理</strong>涉及在工具处理输入数据或将其传递给其他系统（如数据库或shell命令）之前，清除或修改输入数据以去除或中和潜在有害字符或序列。这对于防止注入攻击尤其重要，在注入攻击中，攻击者可能试图在输入数据中嵌入 (embedding)恶意代码（例如，SQL命令、shell脚本）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1qjcfbh\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\"];\n    node [shape=box, style=\"filled\", color=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    LLM [label=\"LLM智能体\", fillcolor=\"#a5d8ff\"];\n    ToolInput [label=\"工具输入\\n(例如，城市名称)\", fillcolor=\"#ffd8a8\"];\n    Validation [label=\"输入验证\\n与清理\", shape=diamond, fillcolor=\"#ffc9c9\"];\n    Processing [label=\"核心工具逻辑\\n(例如，API调用)\", fillcolor=\"#b2f2bb\"];\n    ExternalSystem [label=\"天气API\", fillcolor=\"#bac8ff\"];\n    Output [label=\"工具输出\\n(天气数据)\", fillcolor=\"#d8f5a2\"];\n    ErrorFeedback [label=\"错误反馈给LLM\", fillcolor=\"#ffc9c9\", shape=note];\n\n    LLM -> ToolInput [label=\"提供输入\"];\n    ToolInput -> Validation;\n    Validation -> Processing [label=\"有效且已清理的输入\", color=\"#37b24d\", fontsize=10];\n    Validation -> ErrorFeedback [label=\"无效输入\", color=\"#f03e3e\", style=dashed, fontsize=10];\n    ErrorFeedback -> LLM [label=\"报告错误\", style=dashed, fontsize=10];\n    Processing -> ExternalSystem [label=\"安全请求\"];\n    ExternalSystem -> Processing [label=\"API响应\"];\n    Processing -> Output;\n    Output -> LLM [label=\"返回结果\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1qjcfbh\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此流程展示了工具执行路径中的一个输入验证检查点。</p>\n</blockquote>\n<p>始终严格验证和清理输入。优先使用允许列表（精确定义允许的内容），而非拒绝列表（尝试列出所有禁止的内容），因为允许列表通常更安全。</p>\n<h2>输出的安全处理和沙箱</h2>\n<p>正如输入必须小心处理一样，您的工具生成的输出也需要关注。如果工具处理敏感信息或执行代码，需要特别预防措施。</p>\n<p>对于执行代码的工具（例如，Python解释器工具），<strong>沙箱</strong>是必不可少的。沙箱涉及在受限、隔离的环境中运行代码，并严格限制其可以访问或执行的操作。这可以防止执行的代码：</p>\n<ul>\n<li>访问未经授权的文件或网络资源。</li>\n<li>消耗过多的系统资源（CPU、内存）。</li>\n<li>对系统进行持久性更改。\n容器（如Docker）或专门的执行环境是实现沙箱的常见方式。</li>\n</ul>\n<p>当工具处理敏感数据时，请确保返回给LLM的输出经过适当筛选或修订。LLM可能不会固有地理解所有数据点的敏感性，因此工具必须强制执行数据保护策略。例如，查询客户数据库的工具不应返回信用卡号或完整地址，除非绝对必要且获得许可，即使如此，也要考虑LLM是否确实需要这些原始数据。</p>\n<h2>外部服务的身份验证和授权</h2>\n<p>许多工具将充当外部API或服务的封装器。当您的工具需要与此类服务通信时，它通常需要身份验证（证明其身份）和授权（获得执行操作的许可）。</p>\n<ul>\n<li>**凭证安全管理：**API密钥、令牌、密码和其他凭证必须安全地管理。绝不要将凭证直接硬编码到工具的源代码中。使用环境变量、专门的秘密管理系统（如HashiCorp Vault、AWS Secrets Manager、Google Secret Manager）或经过适当保护并从版本控制中排除的配置文件。</li>\n<li>**限定权限：**当为您的工具生成用于外部服务的凭证时，请确保这些凭证也遵循最低权限准则。如果工具只需要从API读取数据，其API密钥就应该是只读的。</li>\n</ul>\n<h2>资源管理和速率限制</h2>\n<p>LLM智能体可以频繁调用工具，有时甚至是快速连续调用，特别是在自动化循环或处理大型任务时。这可能无意中导致：</p>\n<ul>\n<li>过载您的工具交互的系统（例如，外部API、数据库）。</li>\n<li>超出API速率限制，导致服务中断。</li>\n<li>如果外部服务是按使用付费的，则会产生意外成本。</li>\n</ul>\n<p>在您的工具内部或托管它们的infra中实施<strong>速率限制</strong>，以控制它们的调用频率。监控您的工具的资源消耗（CPU、内存、网络带宽），以识别并解决潜在的性能瓶颈或滥用模式。</p>\n<h2>日志记录和审计</h2>\n<p>全面的日志记录是工具安全运行的基本方面。您的工具应记录足够的信息，以便进行审计、调试和安全事件分析。考虑记录以下内容：</p>\n<ul>\n<li>**工具调用：**工具何时被调用？</li>\n<li>**输入：**从LLM接收到的确切输入是什么？（注意不要在此处记录过于敏感的数据，或确保日志是安全的）。</li>\n<li>**执行操作：**工具执行了哪些重要操作？（例如，“调用了API端点X”，“读取了文件Y”）。</li>\n<li>**输出：**返回给LLM的结果是什么？</li>\n<li>**错误：**执行过程中遇到的任何错误。</li>\n</ul>\n<p>保护您的日志，以防止未经授权的访问或篡改，因为它们包含有价值的信息，可用于理解智能体行为和发现潜在安全问题。</p>\n<h2>设计具有清晰和有限范围的工具</h2>\n<p>虽然LLM指导工具使用，但工具本身的设计会影响其使用或滥用方式。避免创建过于宽泛的“超级工具”，它们可能执行许多不相关且敏感的操作。优先选择更小、更专注的工具，每个工具都有明确定义的目的和有限的功能集。这使得以下工作变得更容易：</p>\n<ul>\n<li>有效应用最低权限准则。</li>\n<li>为LLM编写准确且明确的描述。</li>\n<li>测试和维护工具。</li>\n<li>推断授予LLM访问工具所带来的安全影响。</li>\n</ul>\n<p>从一开始就将这些安全准则融入您的开发流程，为您的LLM智能体奠定更扎实的根基。安全不是一个可以后期添加的功能；它是设计和构建可靠工具的组成部分。随着本课程的推进，我们将看到这些准则如何应用于特定类型的工具和更复杂的场景。</p>",
+  "slug": "security-principles-agent-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 18419,
+      "title": "Security Engineering: A Guide to Building Dependable Distributed Systems",
+      "author": "Ross Anderson",
+      "year": "2020",
+      "publisher": "John Wiley & Sons, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Security+Engineering%3A+A+Guide+to+Building+Dependable+Distributed+Systems%2C+3rd+Edition-p-9781119642635",
+      "doi": "",
+      "note": "一本关于基础安全原则的教科书，涵盖最小特权、安全设计、认证和沙盒等，对构建强大的LLM代理工具至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T12:24:56.591108Z",
+      "updated_at": "2026-02-04T11:31:46.127874Z"
+    },
+    {
+      "id": 18421,
+      "title": "OWASP Top 10 - 2021",
+      "author": "The OWASP Foundation",
+      "year": "2021",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/www-project-top-10/",
+      "doi": "",
+      "note": "一份常见Web应用安全风险的指南，为注入漏洞、不完善的访问控制和安全配置等问题提供实用指导，适用于LLM代理工具。",
+      "order": 3,
+      "created_at": "2025-09-06T12:24:56.600094Z",
+      "updated_at": "2026-02-04T11:31:45.916821Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

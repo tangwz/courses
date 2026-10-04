@@ -1,0 +1,61 @@
+{
+  "id": 8000,
+  "title": "Apache Parquet 内部机制",
+  "meta_title": "Apache Parquet 结构与编码",
+  "meta_description": "了解 Parquet 文件结构、游程编码和字典压缩，以实现高效存储。",
+  "content": "<p>Apache Parquet 已成为数据湖存储的事实标准，因为它解决了基于文本格式的根本性低效问题。虽然 CSV 和 JSON 对人来说易于阅读，但对机器来说，处理它们的计算开销很大。每当查询引擎读取一个 CSV 文件时，它必须解析每个字节，处理分隔符，并推断数据类型。Parquet 颠倒了这种优先次序。它是一种为机器优化的二进制、自描述格式，专门设计用于在分析查询期间减少输入/输出 (I/O) 操作和 CPU 使用。</p>\n<h3>Parquet 的层次结构</h3>\n<p>为了了解 Parquet 如何实现高性能，我们必须查看其内部组织。它不是将数据写入为连续的值流，而是将数据划分为明确的层次结构：文件、行组、列块和页面。</p>\n<ol>\n<li><strong>行组 (Row Group)：</strong> 文件被水平分区为行组。一个行组逻辑上包含一组行（例如，10,000 行或 128MB 数据）。这种水平切分使查询引擎能够并行执行操作。一个工作节点可以处理第一个行组，而另一个处理第二个。</li>\n<li><strong>列块 (Column Chunk)：</strong> 在一个行组内部，数据被垂直切分。数据集中的每个列都有一个对应的列块。这是数据发生物理分离的地方。如果您只选择 <code>user_id</code> 列，引擎将只读取与 <code>user_id</code> 相关联的列块，而忽略 <code>timestamp</code>、<code>event_type</code> 或 <code>payload</code> 的块。</li>\n<li><strong>页面 (Page)：</strong> 列块被进一步细分为页面。页面是存储的原子单元。压缩和编码应用于页面级别。当数据库引擎读取数据时，它每次取一个页面。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-fqbafl\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=filled, fontname=\"Helvetica\", fontsize=10, color=white];\n    edge [color=\"#adb5bd\"];\n\n    subgraph cluster_file {\n        label = \"Parquet 文件\";\n        style=filled;\n        color=\"#e9ecef\";\n        fontname=\"Helvetica\";\n        \n        Metadata [label=\"文件元数据 (页脚)\", fillcolor=\"#fa5252\", fontcolor=white];\n        \n        subgraph cluster_rg1 {\n            label = \"行组 1\";\n            style=filled;\n            color=\"#dee2e6\";\n            \n            CC1 [label=\"列块 A\\n(整数)\", fillcolor=\"#228be6\", fontcolor=white];\n            CC2 [label=\"列块 B\\n(字符串)\", fillcolor=\"#12b886\", fontcolor=white];\n        }\n        \n        subgraph cluster_rg2 {\n            label = \"行组 2\";\n            style=filled;\n            color=\"#dee2e6\";\n            \n            CC3 [label=\"列块 A\\n(整数)\", fillcolor=\"#228be6\", fontcolor=white];\n            CC4 [label=\"列块 B\\n(字符串)\", fillcolor=\"#12b886\", fontcolor=white];\n        }\n    }\n    \n    CC1 -> Page1 [label=\"包含\"];\n    CC1 -> Page2 [label=\"包含\"];\n    \n    Page1 [label=\"页面 1\\n(页头 + 数据)\", fillcolor=\"#7950f2\", fontcolor=white];\n    Page2 [label=\"页面 2\\n(页头 + 数据)\", fillcolor=\"#7950f2\", fontcolor=white];\n\n    CC1 -> Metadata [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-fqbafl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Parquet 文件的物理布局，展示了数据如何先被分割成行组和列块，然后再被分成页面。</p>\n</blockquote>\n<h3>文件元数据和统计信息</h3>\n<p>Parquet 的性能提升很大程度上依赖于元数据。与许多将文件头放在开头的格式不同，Parquet 将文件元数据写入页脚。这种设计选择允许数据写入器在内存中缓冲数据，并将其顺序写入磁盘。一旦所有数据写入完成，写入器会聚合所有行组的位置和统计信息，并将其附加到文件末尾。</p>\n<p>元数据包含模式、版本信息以及每个列块的偏移量。更重要的是，它存储了每个列块和页面的统计信息，例如：</p>\n<ul>\n<li>最小值</li>\n<li>最大值</li>\n<li>空值计数</li>\n</ul>\n<p>当您执行 <code>SELECT * FROM orders WHERE order_amount > 500</code> 这样的查询时，查询引擎会首先读取页脚。它会检查 <code>order_amount</code> 列块的元数据。如果某个行组的 <code>min: 0</code> 和 <code>max: 100</code>，引擎就能确切知道该组中没有行符合筛选条件。它会跳过整个行组，避免了读取或解压该数据的必要。这种技术比扫描每个值明显更快。</p>\n<h3>编码方案</h3>\n<p>Parquet 通过高效编码减少存储成本。编码不同于压缩（如 Snappy 或 Gzip）。压缩是一种应用于字节流的通用算法，而编码则运用数据类型和分布的知识来更紧凑地表示值。</p>\n<h4>字典编码</h4>\n<p>这是许多数据类型的默认编码。它对于低基数列（即唯一值的数量相对于总行数较少，例如国家名称、产品类别或状态标志）非常高效。</p>\n<p>Parquet 不是将字符串“United States”存储数千次，而是在列块的开头创建一个字典。</p>\n<ol>\n<li>“美国” <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>→</mo></mrow><annotation encoding=\"application/x-tex\">\\rightarrow</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.3669em;\"></span><span class=\"mrel\">→</span></span></span></span> 0</li>\n<li>“法国” <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>→</mo></mrow><annotation encoding=\"application/x-tex\">\\rightarrow</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.3669em;\"></span><span class=\"mrel\">→</span></span></span></span> 1</li>\n<li>“日本” <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>→</mo></mrow><annotation encoding=\"application/x-tex\">\\rightarrow</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.3669em;\"></span><span class=\"mrel\">→</span></span></span></span> 2</li>\n</ol>\n<p>实际数据随后存储为小整数流（索引）。如果列数据是 <code>[\"United States\", \"United States\", \"France\"]</code>，Parquet 存储 <code>[0, 0, 1]</code>。这会将长字符串所需的空间减少到每行几个比特。</p>\n<h4>游程编码 (RLE)</h4>\n<p>游程编码 (RLE) 和位封装通常与字典编码结合使用或用于布尔值。RLE 压缩重复数据序列。如果列包含有序或重复数据，RLE 效率极高。</p>\n<p>设想一个状态列，其中值“Active”重复 500 次，随后是“Inactive”200 次。</p>\n<ul>\n<li><strong>原始存储：</strong> 存储“Active”500 次。</li>\n<li><strong>RLE 存储：</strong> 存储对 <code>(500, “Active”), (200, “Inactive”)</code>。</li>\n</ul>\n<p>这将 700 个数据点变成了两个元组。当与位封装结合时，整数被压缩到所需的最少位数。例如，如果页面中的最大值是 7，Parquet 每个整数只需 3 个比特 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mn>2</mn><mn>3</mn></msup><mo>=</mo><mn>8</mn></mrow><annotation encoding=\"application/x-tex\">2^3 = 8</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord\">2</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">3</span></span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">8</span></span></span></span>)，而不是标准的 32 比特。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-33cutj\" \n              data-plot-definition='{\"layout\": {\"title\": \"按编码类型划分的存储效率 (模拟)\", \"xaxis\": {\"title\": \"编码方法\"}, \"yaxis\": {\"title\": \"存储大小 (KB)\"}, \"template\": \"simple_white\", \"width\": 600, \"height\": 400}, \"data\": [{\"type\": \"bar\", \"x\": [\"原始文本 (CSV)\", \"字典编码\", \"RLE + 位封装\"], \"y\": [1500, 450, 120], \"marker\": {\"color\": [\"#adb5bd\", \"#4dabf7\", \"#37b24d\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-33cutj\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较在高度重复的数据集上应用字典编码和 RLE 时存储占用减少的情况。</p>\n</blockquote>\n<h3>数据类型：物理类型与逻辑类型</h3>\n<p>Parquet 区分数据如何存储（物理类型）和如何被解释（逻辑类型）。这种解耦使格式保持简洁，同时支持复杂数据结构。</p>\n<p>只有少数几种基本物理类型：</p>\n<ul>\n<li><code>BOOLEAN</code></li>\n<li><code>INT32</code></li>\n<li><code>INT64</code></li>\n<li><code>INT96</code> (历史类型，主要用于时间戳)</li>\n<li><code>FLOAT</code></li>\n<li><code>DOUBLE</code></li>\n<li><code>BYTE_ARRAY</code></li>\n<li><code>FIXED_LEN_BYTE_ARRAY</code></li>\n</ul>\n<p>逻辑类型映射到这些基本类型。例如，一个 <code>UTF8</code> 字符串物理上存储为 <code>BYTE_ARRAY</code>，并带有一个逻辑注解，告诉读取器将这些字节解释为 UTF-8 字符串。一个 <code>DECIMAL</code> 值可能根据所需的精度存储为 <code>FIXED_LEN_BYTE_ARRAY</code> 或 <code>INT64</code>。这种抽象使得 Parquet 能够发展并支持新类型（如 UUID 或时间间隔），而无需更改底层的二进制读取器。</p>\n<p>理解这些内部机制有助于设计模式。例如，了解到 <code>INT32</code> 是日期的底层存储，表明在将数据写入 Parquet 之前按日期排序数据将最大限度地提高游程编码的效率，从而得到更小的文件和更快的查询。</p>",
+  "slug": "apache-parquet-internals",
+  "updates": [],
+  "references": [
+    {
+      "id": 22085,
+      "title": "Apache Parquet Format Specification",
+      "author": "Apache Parquet Project",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/apache/parquet-format/blob/master/spec.md",
+      "doi": "",
+      "note": "提供了Apache Parquet文件格式的权威技术规范，详细说明了其内部结构、元数据、编码和数据类型。",
+      "order": 1,
+      "created_at": "2025-11-27T05:54:21.879327Z",
+      "updated_at": "2025-11-27T06:13:35.226331Z"
+    },
+    {
+      "id": 22086,
+      "title": "C-Store: A Column-Oriented DBMS",
+      "author": "Michael Stonebraker, Daniel J. Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Amerson Lin, Samuel R. Madden, Elizabeth J. O'Neil, Patrick E. O'Neil, Alexander Rasin, Nga Tran, Stan B. Zdonik",
+      "year": "2005",
+      "publisher": "VLDB Endowment",
+      "journal": "Proceedings of the 31st International Conference on Very Large Data Bases (VLDB)",
+      "volume": "",
+      "pages": "553-564",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGO1LoYITvTzr9iStX9DoxxgFD5BzlTbqpyQwvFykAXMwrJfA1apfBzjbH1UcdU-ZozwHGYS9HOWxYY6PPtEjJfs_a0YyAQdzzIEPfX8-ljmN6qllfbrhSn7YVTsoQs25ULy2ndyJVZe4kMpNbNWorqz_g0gnvG7wc7pTn1ksiCs3oZ7ltjortX1Cth",
+      "doi": "10.1007/11566322_38",
+      "note": "描述了列式数据库系统的基本概念，解释了其在分析工作负载中实现效率的原理，这些原理直接应用于Parquet等格式。",
+      "order": 2,
+      "created_at": "2025-11-27T05:54:21.890683Z",
+      "updated_at": "2025-11-27T06:13:55.711260Z"
+    },
+    {
+      "id": 22087,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "614",
+      "url": "https://dataintensive.net/",
+      "doi": "",
+      "note": "第三章“存储与检索”包含关于列式存储和编码的部分，提供了一个概念框架，有助于理解Parquet在分析工作负载方面的设计选择。",
+      "order": 3,
+      "created_at": "2025-11-27T05:54:21.893797Z",
+      "updated_at": "2025-11-27T06:13:36.230769Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

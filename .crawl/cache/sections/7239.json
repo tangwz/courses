@@ -1,0 +1,61 @@
+{
+  "id": 7239,
+  "title": "构建基础机器学习流水线",
+  "meta_title": "如何构建基础机器学习流水线",
+  "meta_description": "本文概述了构建简单自动化机器学习流水线所涉及的组件和步骤。",
+  "content": "<p>机器学习 (machine learning)流水线将持续集成 (CI)、持续交付 (CD) 和持续训练 (CT) 等自动化原则整合到一个统一且自动化的工作流中。这一工作流是可靠 MLOps 系统的核心，将一系列手动且易错的任务转变为可重复、可审计的过程。</p>\n<p>你可以将机器学习流水线看作是模型的自动化生产线。它的一端接收数据和代码等原材料，另一端产出经过验证、可随时部署的模型。流水线中的每个步骤都是一个独立的自动化任务，并将其输出（称为 <em>产物</em>，artifact）传递给下一步。</p>\n<h3>基础流水线的各个阶段</h3>\n<p>典型的机器学习 (machine learning)流水线实现了机器学习生命周期中核心阶段的自动化。虽然流水线可能变得非常复杂，但一个基础流水线通常包含以下自动化阶段：</p>\n<ol>\n<li>\n<p><strong>数据摄取：</strong> 这是入口点。流水线会自动拉取所需的数据。数据可能来自数据仓库、云存储桶或特征商店。该步骤通常由新数据的出现来触发。</p>\n</li>\n<li>\n<p><strong>数据验证：</strong> 数据摄取后必须进行验证。流水线会自动检查数据质量。数据是否符合预期模式？是否存在缺失值或异常值？这一步可以防止低质量数据破坏整个训练过程。如果验证失败，流水线可以停止并发送警报。</p>\n</li>\n<li>\n<p><strong>数据准备：</strong> 这一阶段也称为特征工程，它会自动将验证后的原始数据转换为适合模型的格式。这包括数值特征缩放、类别变量编码以及从现有特征创建新特征等任务。输出是可用于训练的处理后数据集。</p>\n</li>\n<li>\n<p><strong>模型训练：</strong> 流水线使用准备好的数据运行训练脚本。该脚本训练模型并输出模型文件，这是一种二进制产物。同样地，流水线还会记录训练运行中使用的所有参数 (parameter)和环境详情，以确保可复现性。</p>\n</li>\n<li>\n<p><strong>模型评估：</strong> 训练完成后，必须对模型进行评估。流水线会自动在预留的测试集上测试新模型的性能。它会计算预定义的指标，如准确率、精确率或均方误差。结果会与基准进行比较，基准可以是当前部署的模型或设定的性能阈值（例如：<code>准确率 > 0.85</code>）。</p>\n</li>\n<li>\n<p><strong>模型注册：</strong> 如果模型通过了评估阶段，它就会被注册。这一步涉及对模型产物进行版本控制，并将其存储在称为<strong>模型注册表</strong>（Model Registry）的中心位置。注册表还会存储元数据，例如训练指标、所用数据集的 ID 以及指向生成该模型的代码版本的链接。注册的模型即为待部署的候选模型。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3vqpm5\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"filled\", fontname=\"sans-serif\", margin=\"0.2,0.1\"]; edge [fontname=\"sans-serif\"]; bgcolor=\"transparent\"; \"触发器\" [fillcolor=\"#adb5bd\"]; \"数据摄取\" [fillcolor=\"#74c0fc\"]; \"数据验证\" [fillcolor=\"#74c0fc\"]; \"数据准备\" [fillcolor=\"#74c0fc\"]; \"模型训练\" [fillcolor=\"#9775fa\"]; \"模型评估\" [fillcolor=\"#63e6be\"]; \"模型注册\" [fillcolor=\"#69db7c\"]; \"触发器\" -> \"数据摄取\"; \"数据摄取\" -> \"数据验证\"; \"数据验证\" -> \"数据准备\"; \"数据准备\" -> \"模型训练\"; \"模型训练\" -> \"模型评估\"; \"模型评估\" -> \"模型注册\" [label=\"  如果性能达标\"]; \"模型评估\" -> \"触发器\" [style=dashed, color=\"#868e96\", label=\"  反馈循环\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3vqpm5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基础自动化机器学习流水线图示，展示了从数据摄取到模型注册的过程。</p>\n</blockquote>\n<h3>流水线如何触发</h3>\n<p>自动化流水线并非手动运行。它由特定事件激活，确保系统能够对变化做出动态响应。常见的触发方式包括：</p>\n<ul>\n<li>\n<p><strong>基于代码的触发 (CI)：</strong> 当数据科学家或工程师将新代码推送到 Git 仓库时，CI 系统（如 GitHub Actions）可以自动触发流水线运行。该流水线通常运行一系列快速测试来验证代码完整性，并可能执行一次简短的训练运行以确保没有功能损坏。</p>\n</li>\n<li>\n<p><strong>基于数据的触发 (CT)：</strong> 在许多应用中，随着新数据的出现，模型需要重新训练。流水线可以配置为当存储中收集到一定量的新数据时自动启动。这就是持续训练 (CT) 的核心。</p>\n</li>\n<li>\n<p><strong>定时触发：</strong> 有时，无论是否有新数据，你都需要定期重新训练模型，这可能是为了应对缓慢变化的趋势或模型陈旧问题。流水线可以设置为按固定间隔运行，例如每天、每周或每月。</p>\n</li>\n</ul>\n<p>通过结合这些组件和触发器，你创建的系统将不再是一个静态的一次性脚本。相反，它变成了一个动态的、由事件驱动的过程，能够可靠且重复地生产高质量模型。这种流水线是推动 MLOps 的引擎，弥合了模型开发与运营卓越性之间的鸿沟。该流水线的输出——即注册表中经过版本化和验证的模型——将成为下一阶段“持续交付”的输入。</p>",
+  "slug": "building-basic-ml-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 20033,
+      "title": "Introducing MLOps",
+      "author": "Mark Treveil, Nicolas Omont, Clément Stenac, Kenji Lefevre, Du Phan, Joachim Zentici, Adrien Lavoillotte, Makoto Miyazaki, Lynn Heidmann",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "183",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781492083291/",
+      "doi": "",
+      "note": "一本介绍 MLOps 原理的书，涵盖机器学习管道、持续集成、持续交付和持续训练。",
+      "order": 1,
+      "created_at": "2025-09-06T13:18:33.177973Z",
+      "updated_at": "2025-09-10T05:02:22.403078Z"
+    },
+    {
+      "id": 20034,
+      "title": "Vertex AI Pipelines overview",
+      "author": "Google Cloud Documentation",
+      "year": "2024",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/vertex-ai/docs/pipelines/introduction",
+      "doi": "",
+      "note": "Google Cloud Vertex AI Pipelines 的官方文档，展示了生产级 ML 管道平台如何实现所讨论的阶段和概念。",
+      "order": 2,
+      "created_at": "2025-09-06T13:18:33.184813Z",
+      "updated_at": "2025-09-10T05:01:37.401128Z"
+    },
+    {
+      "id": 20035,
+      "title": "Hidden Technical Debt in Machine Learning Systems",
+      "author": "D. Sculley, Gary Holt, Daniel Golovin, Eugene Davydov, Todd Phillips, Dietmar Ebner, Vinay Chaudhary, Michael Young, Jean-François Crespo, Dan Dennison",
+      "year": "2015",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems 28",
+      "volume": "",
+      "pages": "2503-2511",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2015/hash/86df7dcfd896fcaf2674ff75714a075f-Paper.pdf",
+      "doi": "",
+      "note": "一篇开创性论文，指出了部署和维护机器学习系统中的挑战和成本，为自动化管道等 MLOps 实践提供了基本原理。",
+      "order": 3,
+      "created_at": "2025-09-06T13:18:33.188681Z",
+      "updated_at": "2025-09-10T05:01:43.780454Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

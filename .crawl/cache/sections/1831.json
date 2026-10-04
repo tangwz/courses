@@ -1,0 +1,61 @@
+{
+  "id": 1831,
+  "title": "Scikit-learn 中的数据表示",
+  "meta_title": "Scikit-learn 中的数据表示",
+  "meta_description": "了解 Scikit-learn 期望数据如何格式化，通常使用 NumPy 数组或 Pandas DataFrames。",
+  "content": "<p>机器学习 (machine learning)算法从数据中学习模式。为了有效地使用 Scikit-learn，理解该库期望数据如何格式化是很重要的。Scikit-learn 具有统一的 API 设计，主要处理存储在特定结构中的数值数据。</p>\n<h3>特征矩阵 (X)</h3>\n<p>输入数据，通常称为特征、样本或实例，通常表示为二维数组结构。按照惯例，这个特征矩阵被称为 <code>X</code>。</p>\n<ul>\n<li><strong>形状：</strong> <code>X</code> 的期望形状是 <code>(n_samples, n_features)</code>。\n<ul>\n<li><code>n_samples</code>：数据集中独立观测值或数据点的数量（行）。</li>\n<li><code>n_features</code>：为每个样本测量的特征或属性的数量（列）。</li>\n</ul>\n</li>\n<li><strong>数据类型：</strong> Scikit-learn 最适合处理数值数据，通常是64位浮点数 (<code>numpy.float64</code>)。尽管有些算法可以处理整数，但将数据转换为浮点数通常是一个稳妥的默认做法。处理分类（非数值）特征需要特定的预处理步骤，我们将在第四章中介绍。</li>\n<li><strong>支持的格式：</strong>\n<ul>\n<li><strong>NumPy 数组：</strong> 最基本的格式。对数值运算很高效。</li>\n<li><strong>Pandas DataFrames：</strong> 非常方便，特别是在最初处理带有标签列和混合数据类型时。Scikit-learn 估计器通常直接接受 DataFrames，通常在内部将它们转换为 NumPy 数组。列名通常被算法本身忽略，但对分析和预处理很有用。</li>\n<li><strong>SciPy 稀疏矩阵：</strong> 用于大多数值为零的数据集。对于高维稀疏数据（例如文本分析），这种格式内存效率高。</li>\n</ul>\n</li>\n</ul>\n<p>让我们看一个简单的例子。想象一个包含3个样本和2个特征（例如身高和体重）的数据集。</p>\n<p>使用 NumPy：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 3个样本，2个特征\nX_np = np.array([\n    [170.0, 75.0], # 样本 1：身高=170，体重=75\n    [165.5, 68.2], # 样本 2：身高=165.5，体重=68.2\n    [181.2, 88.9]  # 样本 3：身高=181.2，体重=88.9\n])\n\nprint(f\"NumPy 数组的形状: {X_np.shape}\")\n# 输出：NumPy 数组的形状：(3, 2)\nprint(f\"数据类型: {X_np.dtype}\")\n# 输出：数据类型：float64\n</code></pre>\n<p>使用 Pandas：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 3个样本，2个特征\nX_pd = pd.DataFrame({\n    'Height (cm)': [170.0, 165.5, 181.2],\n    'Weight (kg)': [75.0, 68.2, 88.9]\n})\n\nprint(\"Pandas DataFrame：\")\nprint(X_pd)\nprint(f\"\\nDataFrame 的形状: {X_pd.shape}\")\n# 输出：\n# Pandas DataFrame：\n#    身高 (cm)  体重 (kg)\n# 0        170.0         75.0\n# 1        165.5         68.2\n# 2        181.2         88.9\n#\n# DataFrame 的形状：(3, 2)\n\n# Scikit-learn 通常使用底层 NumPy 表示\nprint(f\"\\n底层 NumPy 数组的形状: {X_pd.values.shape}\")\n# 输出：底层 NumPy 数组的形状：(3, 2)\nprint(f\"底层 NumPy 数组的数据类型: {X_pd.values.dtype}\")\n# 输出：底层 NumPy 数组的数据类型：float64\n</code></pre>\n<h3>目标变量 (y)</h3>\n<p>在监督学习 (supervised learning)中（第二章和第三章），除了特征 <code>X</code> 之外，我们还需要目标变量，它代表我们想要预测的值。按照惯例，目标变量称为 <code>y</code>。</p>\n<ul>\n<li><strong>形状：</strong> 目标变量通常表示为一维数组（向量 (vector)）。其期望的形状是 <code>(n_samples,)</code>。<code>y</code> 中样本的数量必须与 <code>X</code> 中样本的数量精确匹配，这一点很重要。</li>\n<li><strong>数据类型：</strong>\n<ul>\n<li><strong>回归：</strong> 对于回归任务（预测连续值），<code>y</code> 应该是一个数值数组（通常是浮点数）。</li>\n<li><strong>分类：</strong> 对于分类任务（预测离散类别），<code>y</code> 可以是数值（表示类别的整数，例如 0、1、2），也可以包含表示类别标签的字符串/对象（例如 '垃圾邮件'、'非垃圾邮件'）。Scikit-learn 通常在内部将非数值标签转换为整数。</li>\n</ul>\n</li>\n<li><strong>支持的格式：</strong>\n<ul>\n<li><strong>NumPy 数组：</strong> 非常常见。</li>\n<li><strong>Pandas Series：</strong> Pandas Series（DataFrame 的单列）也容易被接受。</li>\n</ul>\n</li>\n</ul>\n<p>延续我们的例子，让我们添加一个目标变量，也许表示每个人是否打篮球（1表示是，0表示否）——这是一个分类任务。</p>\n<p>使用 NumPy：</p>\n<pre><code class=\"language-python\"># 3个样本的目标\ny_np = np.array([1, 0, 1]) # 样本 1：是，样本 2：否，样本 3：是\n\nprint(f\"目标数组的形状: {y_np.shape}\")\n# 输出：目标数组的形状：(3,)\nprint(f\"数据类型: {y_np.dtype}\")\n# 输出：数据类型：int64\n</code></pre>\n<p>使用 Pandas：</p>\n<pre><code class=\"language-python\"># 3个样本的目标\ny_pd = pd.Series([1, 0, 1], name='Plays Basketball')\n\nprint(\"Pandas Series：\")\nprint(y_pd)\nprint(f\"\\nSeries 的形状: {y_pd.shape}\")\n# 输出：\n# Pandas Series：\n# 0    1\n# 1    0\n# 2    1\n# 名称: 是否打篮球, dtype: int64\n#\n# Series 的形状：(3,)\n</code></pre>\n<h3>数据表示总结</h3>\n<table>\n<thead>\n<tr>\n<th align=\"left\">组件</th>\n<th align=\"left\">惯例</th>\n<th align=\"left\">典型结构</th>\n<th align=\"left\">形状</th>\n<th align=\"left\">数据类型（常见）</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">特征</td>\n<td align=\"left\"><code>X</code></td>\n<td align=\"left\">二维数组/DataFrame</td>\n<td align=\"left\"><code>(n_samples, n_features)</code></td>\n<td align=\"left\"><code>float64</code></td>\n</tr>\n<tr>\n<td align=\"left\">目标变量</td>\n<td align=\"left\"><code>y</code></td>\n<td align=\"left\">一维数组/Series</td>\n<td align=\"left\"><code>(n_samples,)</code></td>\n<td align=\"left\"><code>float64</code> (回归) <br> <code>int</code> 或 <code>object</code> (分类)</td>\n</tr>\n</tbody>\n</table>\n<p>主要结论是，Scikit-learn 主要期望你的数据是具有特定形状的数值数组：<code>X</code> 是一个二维数组，其中行是样本，列是特征；而 <code>y</code>（用于监督学习 (supervised learning)）是一个一维数组，存储每个样本的目标值。尽管 Pandas DataFrame 增加了便利性，但理解底层的 <code>(n_samples, n_features)</code> 结构很重要。遵循这些惯例可确保与库中广泛的工具兼容。在下一节中，我们将了解如何加载一些已经遵循这些惯例的预打包数据集。</p>",
+  "slug": "data-representation",
+  "updates": [],
+  "references": [
+    {
+      "id": 3485,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本广受认可的书籍，为机器学习算法的数据准备提供了实用指导，包括Scikit-learn所需的数据格式。第3版。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:00.873615Z",
+      "updated_at": "2025-09-08T03:03:57.483441Z"
+    },
+    {
+      "id": 3486,
+      "title": "Sparse matrices",
+      "author": "SciPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.scipy.org/doc/scipy/reference/sparse.html",
+      "doi": "",
+      "note": "详细说明SciPy中稀疏矩阵的各种格式和功能，这对于高效处理高维稀疏数据集至关重要。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:00.877235Z",
+      "updated_at": "2025-09-08T03:03:49.098980Z"
+    },
+    {
+      "id": 3487,
+      "title": "NumPy User Guide",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/index.html",
+      "doi": "",
+      "note": "提供NumPy数组对象、数组创建和数据类型的基础信息，这些是Scikit-learn中使用的数据结构的基础。",
+      "order": 4,
+      "created_at": "2025-09-04T16:55:00.880633Z",
+      "updated_at": "2025-09-08T03:03:54.148552Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

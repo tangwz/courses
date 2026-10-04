@@ -1,0 +1,61 @@
+{
+  "id": 2295,
+  "title": "重复动作：while 循环",
+  "meta_title": "Python while 循环 | 基于条件的重复",
+  "meta_description": "学习如何使用 while 循环，只要特定条件保持为真，就重复执行代码块。",
+  "content": "<p>有时，您需要一段代码只要某个条件保持为真就重复运行。Python 的 <code>while</code> 循环恰好提供了此功能。当您不提前知道需要重复操作多少次时，此功能特别有用。</p>\n<p>可以这样理解：您告诉 Python：“只要此条件成立，就一直这样做。”</p>\n<h3><code>while</code> 循环的结构</h3>\n<p><code>while</code> 循环的基本语法如下所示：</p>\n<pre><code class=\"language-python\">while condition:\n    # 将重复执行的代码块\n    # 此代码块必须缩进\n    statement1\n    statement2\n    # ... 可能会更新影响条件的变量 ...\n</code></pre>\n<p>我们来分析一下：</p>\n<ol>\n<li><strong><code>while</code> 关键词</strong>：这表示循环的开始。</li>\n<li><strong><code>condition</code></strong>：这是一个布尔表达式（计算结果为 <code>True</code> 或 <code>False</code> 的表达式），就像您在 <code>if</code> 语句中使用的条件一样。例如：<code>count &#x3C; 5</code>、<code>user_input != 'quit'</code>、<code>is_valid == False</code>。</li>\n<li><strong>冒号 <code>:</code></strong>：表示 <code>while</code> 语句头部的结束。</li>\n<li><strong>缩进代码块</strong>：这是循环体。所有在 <code>while</code> 行下方缩进的语句都属于此循环。此代码块会重复执行。非常重要的一点是，此代码块中必须有内容最终使 <code>condition</code> 变为 <code>False</code>，否则循环将无限运行！</li>\n</ol>\n<h3>Python 如何执行 <code>while</code> 循环</h3>\n<p><code>while</code> 循环的执行流程很简单：</p>\n<ol>\n<li><strong>检查条件</strong>：Python 首先判断 <code>condition</code>。</li>\n<li><strong>执行或跳过</strong>：\n<ul>\n<li>如果 <code>condition</code> 为 <code>True</code>，Python 会执行整个缩进的代码块。</li>\n<li>如果 <code>condition</code> 为 <code>False</code>，Python 会完全跳过缩进的代码块，并从循环 <em>之后</em> 的第一条语句继续执行。</li>\n</ul>\n</li>\n<li><strong>重复</strong>：如果代码块被执行（因为条件为 <code>True</code>），Python 会回到第 1 步并重新判断 <code>condition</code>。</li>\n</ol>\n<p>这种检查-执行-重复的循环会一直持续，直到 <code>condition</code> 的判断结果为 <code>False</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1los98a\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\"];\n  edge [fontname=\"Arial\", fontsize=10];\n\n  Start [label=\"开始循环执行\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  Condition [label=\"判断条件\", shape=diamond, style=filled, fillcolor=\"#a5d8ff\"];\n  Block [label=\"执行循环体\\n(缩进代码)\", shape=box, style=filled, fillcolor=\"#b2f2bb\"];\n  End [label=\"在循环后继续\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n\n  Start -> Condition;\n  Condition -> Block [label=\" 真\"];\n  Condition -> End [label=\" 假\"];\n  Block -> Condition [label=\" 代码块执行后\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1los98a\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图说明了 <code>while</code> 循环的执行逻辑。</p>\n</blockquote>\n<h3>示例：一个简单的计数器</h3>\n<p>我们创建一个循环，打印从 1 开始到（但不包括）5 的数字。</p>\n<pre><code class=\"language-python\"># 在循环前初始化一个计数器变量\ncount = 1\n\n# 只要 'count' 小于 5，循环就会继续\nwhile count &#x3C; 5:\n    print(f\"Current count is: {count}\")\n    # 重要：在循环内更新计数器！\n    count = count + 1 # 或者使用简写：count += 1\n\nprint(\"循环结束！\")\n</code></pre>\n<p>输出：</p>\n<pre><code class=\"language-text\">Current count is: 1\nCurrent count is: 2\nCurrent count is: 3\nCurrent count is: 4\nLoop finished!\n</code></pre>\n<p>注意控制此循环的三个重要部分：</p>\n<ul>\n<li><strong>初始化</strong>：<code>count = 1</code> 在循环开始前设置了起始状态。</li>\n<li><strong>条件</strong>：<code>count &#x3C; 5</code> 在每次可能的迭代前都会被检查。</li>\n<li><strong>更新</strong>：<code>count = count + 1</code> 修改循环 <em>内部</em> 用于条件判断的变量。如果没有此更新，<code>count</code> 将始终为 1，<code>count &#x3C; 5</code> 将始终为 <code>True</code>，循环将永远不会结束。</li>\n</ul>\n<h3>危险：无限循环</h3>\n<p>如果 <code>while</code> 循环中的条件 <em>永不</em> 变为 <code>False</code>，循环将永远运行。这被称为<strong>无限循环</strong>。这是常见的初学者错误，通常是由于忘记在循环内部包含最终将条件变为 <code>False</code> 的逻辑。</p>\n<p>请看这个例子（除非您知道如何停止它，否则不要运行！）：</p>\n<pre><code class=\"language-python\"># 警告：这将创建一个无限循环！\ncounter = 0\nwhile counter >= 0:\n    print(f\"Counter is {counter}. Still positive!\")\n    # 糟糕！我们忘记了以某种方式更改 'counter'\n    # 以使条件 (counter >= 0) 变为假。\n    # 也许我们是想递减它？或者检查不同的条件？\n    # 如果不进行更改，它将永远运行。\n    counter = counter + 1 # 这实际上使其 *更* 有可能保持 >= 0！\n</code></pre>\n<p>如果您不小心在终端或交互式解释器中运行了带有无限循环的代码，通常可以通过按 <strong>Ctrl+C</strong> 来停止它。</p>\n<p>请务必仔细检查 <code>while</code> 循环内部的逻辑是否最终会导致条件变为 <code>False</code>。</p>\n<h3>示例：等待特定的用户输入</h3>\n<p><code>while</code> 循环非常适用您需要重复某些操作直到特定事件发生时，例如从用户那里获得有效输入。</p>\n<pre><code class=\"language-python\"># 初始化响应变量，确保循环至少运行一次\nresponse = \"\"\n\n# 一直询问，直到用户输入 'quit'\nwhile response.lower() != 'quit':\n    response = input(\"Enter some text (or type 'quit' to exit): \")\n    print(f\"您输入了：{response}\")\n\nprint(\"好的，现在退出。再见！\")\n</code></pre>\n<p>在这种情况下，我们不知道用户在输入 'quit' 之前会输入多少次文本。<code>while</code> 循环完美处理了这种不确定性，在每次输入后检查 <code>response</code>。</p>\n<p>掌握 <code>while</code> 循环使您能够编写根据动态条件重复执行任务的程序，使您的代码更具灵活性和功能性。您经常会用它来处理数据直到满足某个条件、运行模拟或处理用户交互。</p>",
+  "slug": "python-while-loop",
+  "updates": [],
+  "references": [
+    {
+      "id": 4789,
+      "title": "The while statement",
+      "author": "Python Documentation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-while-statement",
+      "doi": "",
+      "note": "官方文档，描述了Python中`while`循环的语法和执行方式。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:40.952540Z",
+      "updated_at": "2025-09-07T21:10:15.046944Z"
+    },
+    {
+      "id": 4791,
+      "title": "Python Crash Course: A Hands-On, Project-Based Introduction to Programming, 3rd Edition",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "一本广受初学者欢迎的书，通过清晰的解释和实际示例介绍了`while`循环。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:41.026909Z",
+      "updated_at": "2025-09-07T21:10:17.433407Z"
+    },
+    {
+      "id": 4796,
+      "title": "6.0001 Introduction to Computer Science and Programming in Python",
+      "author": "Ana Bell, Eric Grimson, John Guttag",
+      "year": "2016",
+      "publisher": "Massachusetts Institute of Technology",
+      "journal": "MIT OpenCourseWare",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+      "doi": "",
+      "note": "麻省理工学院的入门课程，使用Python教授基本编程概念，包括使用`while`语句的控制流。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:41.045545Z",
+      "updated_at": "2025-09-07T21:10:14.658548Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

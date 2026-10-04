@@ -1,0 +1,61 @@
+{
+  "id": 3957,
+  "title": "什么是缺失值？",
+  "meta_title": "理解缺失数据 (NaN, Null)",
+  "meta_description": "定义缺失值并了解它们在数据集中如何表示（例如，NaN，NULL）。",
+  "content": "<p>想象一下，你正在为食谱准备食材，却发现厨房里少了些东西。同样，在处理数据时，你经常会遇到一些数据集，其中有些信息就是不完整的。这些空白点被称为<strong>缺失值</strong>。</p>\n<p>缺失值表示本应存在于特定观测（一行）和变量（一列）中的信息，但它却缺失了。你可以把它想象成电子表格或数据库表中一个空单元格，你原本期望在那里找到一条数据。</p>\n<h3>缺失值如何呈现</h3>\n<p>缺失数据在数据分析中，特别是在使用Python以及pandas和NumPy等库时，通常不会以字面上的空白呈现。相反，你通常会遇到一些特定的占位符：</p>\n<ol>\n<li>\n<p><strong><code>NaN</code> (非数字):</strong> 这是你在pandas数据框和NumPy数组中数值数据里最常看到的表示形式。<code>NaN</code>是一个特殊的浮点值，用于表示未定义或无法表示的结果，它非常适合用来指示缺失的数值数据。</p>\n</li>\n<li>\n<p><strong><code>None</code>:</strong> Python的内置对象，表示值的缺失。你可能会在包含混合数据类型或主要是字符串的列中发现<code>None</code>，尽管pandas通常会在数值列中将<code>None</code>转换为<code>NaN</code>以保持一致性。</p>\n</li>\n<li>\n<p><strong><code>NULL</code>:</strong> 这是数据库（如SQL数据库）表示缺失信息的标准方式。当你从数据库导入数据时，这些<code>NULL</code>值通常会被你的数据加载工具转换为<code>NaN</code>或<code>None</code>。</p>\n</li>\n<li>\n<p><strong>占位符:</strong> 有时，数据收集系统会使用特定的代码（如<code>-1</code>、<code>999</code>、<code>\"missing\"</code>或<code>\"\"</code>（空字符串））来表示缺失信息。虽然这些<em>看起来</em>像常规数据，但它们<em>表示</em>缺失。识别和处理这些数据需要额外的小心，因为工具不会自动将它们识别为缺失值，除非你明确地告知它们。</p>\n</li>\n</ol>\n<p>这里有一个小例子，说明缺失值在表中可能是什么样子：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">姓名</th>\n<th align=\"right\">年龄</th>\n<th align=\"right\">分数</th>\n<th align=\"left\">城市</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Alice</td>\n<td align=\"right\">25</td>\n<td align=\"right\">88</td>\n<td align=\"left\">New York</td>\n</tr>\n<tr>\n<td align=\"left\">Bob</td>\n<td align=\"right\">NaN</td>\n<td align=\"right\">76</td>\n<td align=\"left\">London</td>\n</tr>\n<tr>\n<td align=\"left\">Charlie</td>\n<td align=\"right\">30</td>\n<td align=\"right\">NaN</td>\n<td align=\"left\">NaN</td>\n</tr>\n<tr>\n<td align=\"left\">David</td>\n<td align=\"right\">22</td>\n<td align=\"right\">95</td>\n<td align=\"left\">San Francisco</td>\n</tr>\n</tbody>\n</table>\n<p>在此表中，Bob的年龄缺失（<code>NaN</code>），Charlie的分数缺失（<code>NaN</code>），Charlie的城市也缺失（<code>NaN</code>）。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-cyf0d2\" \n              data-plot-definition='{\"layout\": {\"title\": \"列中缺失与存在数据的例子\", \"xaxis\": {\"title\": \"类别\"}, \"yaxis\": {\"title\": \"计数\"}, \"barmode\": \"stack\"}, \"data\": [{\"type\": \"bar\", \"name\": \"存在\", \"x\": [\"年龄\", \"分数\", \"城市\"], \"y\": [3, 3, 3], \"marker\": {\"color\": \"#339af0\"}}, {\"type\": \"bar\", \"name\": \"缺失\", \"x\": [\"年龄\", \"分数\", \"城市\"], \"y\": [1, 1, 1], \"marker\": {\"color\": \"#ff8787\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-cyf0d2\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>上述示例表中“年龄”、“分数”和“城市”列的存在值和缺失值计数。</p>\n</blockquote>\n<h3>它们为何构成问题</h3>\n<p>正如本章引言中所述，这些缺失值不仅仅是表面问题。它们带来很大的挑战：</p>\n<ul>\n<li><strong>计算错误:</strong> 对包含<code>NaN</code>的列执行数学运算（如求和或平均值）通常会导致<code>NaN</code>，从而使计算结果毫无用处。</li>\n<li><strong>分析偏差:</strong> 如果缺失值不是随机的，它们的存在（或你如何处理它们）可能会使你的分析结果出现偏差，并导致不正确的结论。</li>\n<li><strong>算法不兼容:</strong> 许多统计方法和机器学习 (machine learning)算法不能直接处理缺失值，它们要么会产生错误，要么会默默地失败。</li>\n</ul>\n<p>理解缺失值是什么以及它们如何在数据中呈现，是你有效处理它们之前必不可少的第一步，这正是我们将在后续部分介绍的内容。</p>",
+  "slug": "what-are-missing-values",
+  "updates": [],
+  "references": [
+    {
+      "id": 10637,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "使用pandas和NumPy进行数据操作的实用指南，涵盖了这些库中缺失数据的表示和处理方式。",
+      "order": 1,
+      "created_at": "2025-09-05T06:51:34.509509Z",
+      "updated_at": "2025-09-08T12:55:00.786123Z"
+    },
+    {
+      "id": 10638,
+      "title": "Working with missing data",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "The pandas project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/missing_data.html",
+      "doi": "",
+      "note": "官方文档，解释了pandas库中缺失数据的表示（NaN、None）和处理方法。",
+      "order": 2,
+      "created_at": "2025-09-05T06:51:34.516186Z",
+      "updated_at": "2025-09-08T12:55:08.801842Z"
+    },
+    {
+      "id": 10639,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "关于数据库系统的标准学术教科书，提供了数据库基础知识，包括SQL中NULL值的定义和影响。",
+      "order": 3,
+      "created_at": "2025-09-05T06:51:34.518570Z",
+      "updated_at": "2025-09-08T12:55:03.184470Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

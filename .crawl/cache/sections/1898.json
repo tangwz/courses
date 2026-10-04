@@ -1,0 +1,61 @@
+{
+  "id": 1898,
+  "title": "创建简单管道",
+  "meta_title": "创建简单的 Scikit-learn 管道",
+  "meta_description": "使用 `Pipeline` 对象将缩放器和估计器连接起来。",
+  "content": "<p>单独管理预处理步骤和模型训练可能导致代码重复和潜在错误，尤其是在评估时可能出现的数据泄露问题。Scikit-learn 提供了一种巧妙的解决方案：位于 <code>sklearn.pipeline</code> 模块中的 <code>Pipeline</code> 对象。</p>\n<p><code>Pipeline</code> 允许您将多个数据转换步骤 (例如缩放或编码) 和一个最终的预测步骤 (例如分类器或回归器等估计器) 顺序地组合成一个 Scikit-learn 对象。这个复合对象表现得像一个标准的 Scikit-learn 估计器，具有 <code>fit</code>、<code>predict</code> 和可能具有 <code>transform</code> 方法。</p>\n<h3>构建管道</h3>\n<p>您通过提供一个步骤列表来创建 <code>Pipeline</code>。每个步骤都定义为一个元组，包括：</p>\n<ol>\n<li>步骤的唯一字符串名称 (您自行选择，例如 <code>'scaler'</code>、<code>'classifier'</code>)。</li>\n<li>Scikit-learn 转换器或估计器的实例 (例如 <code>StandardScaler()</code>、<code>LogisticRegression()</code>)。</li>\n</ol>\n<p>除最后一个步骤外，所有步骤 <em>都必须</em> 是转换器 (即它们必须具有 <code>transform</code> 方法)。最后一个步骤可以是任何估计器 (转换器、分类器、回归器等)。</p>\n<p>让我们用一个常见的工作流程来说明：对数值特征进行缩放，然后训练一个逻辑回归模型。</p>\n<pre><code class=\"language-python\">import numpy as np\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.datasets import make_classification\n\n# 1. 生成样本数据\nX, y = make_classification(n_samples=100, n_features=5, random_state=42)\nX_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)\n\n# 2. 为管道定义步骤\nsteps = [\n    ('scaler', StandardScaler()),        # 步骤 1: 缩放数据\n    ('classifier', LogisticRegression()) # 步骤 2: 分类\n]\n\n# 3. 创建 Pipeline 对象\npipe = Pipeline(steps=steps)\n\n# 4. 管道对象现在表现得像一个单独的估计器\nprint(pipe)\n\n# 在训练数据上拟合整个管道\n# StandardScaler 进行 fit_transform，LogisticRegression 进行 fit\npipe.fit(X_train, y_train)\n\n# 在测试数据上进行预测\n# StandardScaler 进行 transform，LogisticRegression 进行 predict\ny_pred = pipe.predict(X_test)\n\n# 评估 (为简单起见，此处使用准确率)\naccuracy = pipe.score(X_test, y_test)\nprint(f\"\\n管道准确率: {accuracy:.4f}\")\n\n</code></pre>\n<pre><code>Pipeline(steps=[('scaler', StandardScaler()),\n                ('classifier', LogisticRegression())])\n\n管道准确率: 0.9200\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li>我们定义了两个步骤：使用 <code>StandardScaler</code> 的 <code>'scaler'</code> 和使用 <code>LogisticRegression</code> 的 <code>'classifier'</code>。</li>\n<li>我们将此元组列表传递给 <code>Pipeline</code> 构造函数。</li>\n<li>调用 <code>pipe.fit(X_train, y_train)</code> 会首先使用 <code>X_train</code> 和 <code>y_train</code> 对 <code>StandardScaler</code> 调用 <code>fit_transform</code>。然后，转换后的 <code>X_train</code> 会与 <code>y_train</code> 一起传递给 <code>LogisticRegression</code> 模型的 <code>fit</code> 方法。</li>\n<li>调用 <code>pipe.predict(X_test)</code> 会首先使用 <code>X_test</code> 对 <em>已经拟合的</em> <code>StandardScaler</code> 调用 <code>transform</code>。然后，转换后的 <code>X_test</code> 会传递给已拟合的 <code>LogisticRegression</code> 模型的 <code>predict</code> 方法。</li>\n</ul>\n<p>这可以确保 <code>StandardScaler</code> <em>只</em>在训练数据上拟合，并且训练数据和测试数据都使用 <em>相同</em> 的已拟合缩放器进行转换，从而避免数据泄漏。</p>\n<h3>使用 <code>make_pipeline</code> 简化创建</h3>\n<p>Scikit-learn 还提供了一个辅助函数 <code>make_pipeline</code>，它通过自动为步骤生成名称来简化创建过程。</p>\n<p>名称来源于每个组件的类名的小写形式。</p>\n<pre><code class=\"language-python\">from sklearn.pipeline import make_pipeline\n\n# 使用 make_pipeline 创建相同的管道\n# 名称将是 'standardscaler' 和 'logisticregression'\nsimple_pipe = make_pipeline(StandardScaler(), LogisticRegression())\n\nprint(simple_pipe)\n\n# 您可以像使用之前的管道一样使用它\nsimple_pipe.fit(X_train, y_train)\naccuracy_simple = simple_pipe.score(X_test, y_test)\nprint(f\"\\nmake_pipeline 准确率: {accuracy_simple:.4f}\")\n</code></pre>\n<pre><code>Pipeline(steps=[('standardscaler', StandardScaler()),\n                ('logisticregression', LogisticRegression())])\n\nmake_pipeline 准确率: 0.9200\n</code></pre>\n<p>尽管 <code>make_pipeline</code> 对于简单、线性的管道很方便，但当您需要更精细的控制时，通常更倾向于使用 <code>Pipeline</code> 构造函数明确命名步骤，尤其是在稍后访问特定步骤或执行超参数 (parameter) (hyperparameter)调整时，我们很快就会看到。</p>\n<h3>可视化流程</h3>\n<p>数据按顺序流经管道步骤：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-7ixyn5\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  bgcolor=\"transparent\";\n  node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  RawData [label=\"输入数据 (X)\"];\n  Scaler [label=\"步骤 1: 缩放器\\n(fit_transform / transform)\", fillcolor=\"#a5d8ff\"];\n  Estimator [label=\"步骤 2: 估计器\\n(fit / predict)\", fillcolor=\"#b2f2bb\"];\n  Output [label=\"预测结果 (y_pred)\\n或转换后的数据\", shape=ellipse, fillcolor=\"#ffec99\"];\n\n  RawData -> Scaler;\n  Scaler -> Estimator;\n  Estimator -> Output;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-7ixyn5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据流入第一个步骤 (缩放器)。在拟合过程中，它调用 <code>fit_transform</code>。在预测/转换过程中，它调用 <code>transform</code>。其输出会传入下一个步骤 (估计器)，估计器相应地调用 <code>fit</code> 或 <code>predict</code>，产生最终输出。</p>\n</blockquote>\n<p>创建这些简单的管道将您的预处理和建模逻辑封装到一个对象中。这简化了您的代码，使您的工作流程更具可复现性，并且，它为正确应用交叉验证和超参数 (parameter) (hyperparameter)调整等技术创造了条件，从而避免了意外的数据泄漏，我们将在接下来讨论。</p>",
+  "slug": "creating-simple-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 1955,
+      "title": "Pipeline and composite estimators",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html#pipeline",
+      "doi": "",
+      "note": "涵盖`Pipeline`和`make_pipeline`对象、其用法以及链接估计器底层机制的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:43.823798Z",
+      "updated_at": "2025-09-08T02:59:45.332089Z"
+    },
+    {
+      "id": 1956,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "一本实践指南，详细阐述Scikit-learn管道、数据预处理以及在模型训练和评估期间避免数据泄露的策略。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:43.830488Z",
+      "updated_at": "2025-09-08T03:00:10.097802Z"
+    },
+    {
+      "id": 1957,
+      "title": "Introduction to Machine Learning with Python: A Guide for Data Scientists",
+      "author": "Andreas C. Müller and Sarah Guido",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introduction-to-machine/9781449369880/",
+      "doi": "",
+      "note": "提供Scikit-learn的基础知识，包括对组合转换器和估计器的管道的详细解释。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:43.832968Z",
+      "updated_at": "2025-09-08T02:59:53.323809Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5178,
+  "title": "查询您的已索引数据",
+  "meta_title": "查询已索引数据 | LlamaIndex基础",
+  "meta_description": "从您的LlamaIndex索引中获取相关信息，用于大型语言模型（LLM）。",
+  "content": "<p>要有效利用组织成LlamaIndex索引的外部数据，主要目标是从中检索信息。仅仅对数据进行索引本身并没有多大用处；目的是提出问题并获得基于特定数据的相关回答。这就是LlamaIndex查询功能变得不可或缺的原因。</p>\n<h3>查询引擎接口</h3>\n<p>在LlamaIndex中，与您的已索引数据交互的主要方式是通过<code>QueryEngine</code>。可以将查询引擎看作是一个组件，它负责接收您的自然语言问题，在索引中查找最相关的信息片段（节点），然后（通常使用大型语言模型LLM）综合生成一个连贯的回答。</p>\n<p>从现有索引创建基本查询引擎很简单。如果您有一个<code>index</code>对象（如前述索引章节所示创建），您可以像这样实例化一个查询引擎：</p>\n<pre><code class=\"language-python\"># 假设 'index' 是您之前创建的 LlamaIndex 索引对象\nquery_engine = index.as_query_engine()\n</code></pre>\n<p>这个简单的调用会设置一个默认查询引擎，其配置合理，适用于许多常见情况。</p>\n<h3>执行查询</h3>\n<p>一旦您有了<code>query_engine</code>对象，提问就像调用其<code>query</code>方法一样简单：</p>\n<pre><code class=\"language-python\"># 针对已索引数据提问\nresponse = query_engine.query(\"What were the main findings of the research paper?\")\n\n# 打印由LLM综合生成的文本回答\nprint(response.response)\n</code></pre>\n<p><code>query</code>方法接收您的提问作为字符串参数 (parameter)。在内部，LlamaIndex执行以下几个步骤：</p>\n<ol>\n<li><strong>检索：</strong> 它搜索索引（通常使用向量 (vector)嵌入 (embedding)和相似度搜索）以找到包含与您查询最相关信息的节点。</li>\n<li><strong>综合生成：</strong> 它获取检索到的节点（即上下文 (context)）和您的原始查询，将它们输入给大型语言模型（LLM），以生成自然语言回答。</li>\n</ol>\n<p>这种先检索后综合的模式是检索增强生成（RAG）的根本，我们将在下一章更详细地介绍这种技术。</p>\n<h3>理解回答</h3>\n<p><code>query</code>方法返回的对象不仅仅包含最终的文本回答。它通常会提供关于查询过程的重要元数据。</p>\n<pre><code class=\"language-python\"># 获取回答文本\nprint(f\"回答文本:\\n{response.response}\\n\")\n\n# 获取用于生成回答的源节点\nprint(\"源节点:\")\nfor node in response.source_nodes:\n    print(f\"  节点ID: {node.node_id}\")\n    print(f\"  相似度得分: {node.score:.4f}\")\n    # 显示源文本片段\n    print(f\"  文本片段: {node.text[:150]}...\")\n    print(\"-\" * 20)\n\n</code></pre>\n<p>两个最重要的属性通常是：</p>\n<ul>\n<li><code>response.response</code> (或某些版本中的<code>response.response_txt</code>)：此属性包含由大型语言模型（LLM）基于检索到的上下文 (context)生成的最终综合回答字符串。</li>\n<li><code>response.source_nodes</code>：这是一个<code>NodeWithScore</code>对象列表。每个对象代表从您的索引中检索到的一个数据块，该数据块被用作生成回答的上下文。检查这些节点对于以下方面非常有用：\n<ul>\n<li><strong>透明度：</strong> 了解LLM给出特定回答的<em>原因</em>。</li>\n<li><strong>调试：</strong> 辨别检索步骤是否获取了不相关的信息或遗漏了重要上下文。</li>\n<li><strong>验证：</strong> 让用户或开发人员能够将回答追溯到原始源文档。</li>\n</ul>\n</li>\n</ul>\n<p><code>source_nodes</code>中的每个<code>NodeWithScore</code>对象通常包含：</p>\n<ul>\n<li><code>node</code>：实际的<code>TextNode</code>（或其他节点类型）对象，包括其文本内容（<code>node.text</code>）和元数据。</li>\n<li><code>score</code>：一个数值分数（通常是来自向量 (vector)搜索的相似度分数），表示在检索阶段该节点被认为与查询的相关程度。分数越高通常表示相关性越大。</li>\n</ul>\n<p>以下是一个图表，它展示了基本的查询流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-beeql4\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  user_query [label=\"用户问题\"];\n  query_engine [label=\"查询引擎\"];\n  index [label=\"LlamaIndex\\n索引\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n  retrieved_nodes [label=\"检索到的节点\\n(上下文)\", style=filled, fillcolor=\"#a5d8ff\"];\n  llm [label=\"大型语言模型 (LLM)\", shape=cds, style=filled, fillcolor=\"#ffec99\"];\n  final_response [label=\"综合回答\"];\n\n  user_query -> query_engine [label=\"query()\"];\n  query_engine -> index [label=\"搜索\"];\n  index -> retrieved_nodes [label=\"查找相关数据\"];\n  retrieved_nodes -> llm [label=\"提供上下文\"];\n  user_query -> llm [label=\"提供查询\"];\n  llm -> final_response [label=\"生成回答\"];\n  final_response -> query_engine;\n  query_engine -> final_response [label=\"返回回答对象\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-beeql4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>查询过程涉及查询引擎搜索索引、检索相关节点，并使用LLM根据查询和检索到的上下文来综合生成回答。</p>\n</blockquote>\n<h3>配置与定制</h3>\n<p>尽管<code>index.as_query_engine()</code>提供了一个方便的起点，LlamaIndex为查询引擎提供了丰富的定制选项。您可以配置以下方面：</p>\n<ul>\n<li>要检索的节点数量（<code>similarity_top_k</code>）。</li>\n<li>用于综合生成的具体大型语言模型（LLM）。</li>\n<li>回答模式（大型语言模型LLM如何使用检索到的上下文 (context)）。</li>\n<li>基于节点元数据的筛选。</li>\n</ul>\n<p>这些高级配置使您能够微调 (fine-tuning)检索和综合生成过程，以在特定任务上获得更好的性能和相关性，我们将在讨论RAG系统时提及这些。</p>\n<p>目前，创建默认查询引擎并检查综合回答及源节点的能力，提供了一种在大型语言模型（LLM）应用中使用您的已索引外部数据的有效机制。下一步是将此功能集成到更复杂的工作流程中，并构建完善的RAG管道。</p>",
+  "slug": "llamaindex-querying-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 13601,
+      "title": "LlamaIndex Documentation: Querying",
+      "author": "LlamaIndex Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.llamaindex.ai/en/stable/module_guides/querying/index.html",
+      "doi": "",
+      "note": "提供 LlamaIndex 查询引擎的官方信息和使用示例，包括自定义配置。",
+      "order": 1,
+      "created_at": "2025-09-05T08:36:21.740024Z",
+      "updated_at": "2025-09-10T12:17:36.213942Z"
+    },
+    {
+      "id": 13602,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "9459-9471",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍检索增强生成 (RAG) 的核心概念，该概念是查询机制的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T08:36:21.757104Z",
+      "updated_at": "2025-09-10T12:17:37.219724Z"
+    },
+    {
+      "id": 13603,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.10997",
+      "doi": "10.48550/arXiv.2312.10997",
+      "note": "提供 RAG 系统的全面综述，讨论进展、组成部分和评估方法。",
+      "order": 3,
+      "created_at": "2025-09-05T08:36:21.761140Z",
+      "updated_at": "2025-09-10T12:17:33.551387Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 6025,
+  "title": "混合并行策略 (DP+TP, DP+PP等)",
+  "meta_title": "组合并行策略",
+  "meta_description": "讨论如何有效地组合不同的并行技术。",
+  "content": "<p>数据并行（DP）、张量并行（TP）和流水线并行（PP）等方法各自在分布式训练中具备独特的优点。为了提升模型规模上限，通常需要结合使用这些技术。没有单一策略是普遍最佳的；适合的方法取决于具体的模型架构、硬件限制（GPU内存、互联带宽/延迟）和期望的吞吐量 (throughput)。混合方法让工程师能够更好地安排更精细的工作分配，平衡内存节省、计算效率和通信开销。</p>\n<h3>组合并行策略</h3>\n<p>混合方法的主要思路是同时运用多种并行方式的优点。一种常见做法是使用TP或PP来让模型能够 <em>容纳</em> 在一组设备上（处理内存限制），然后使用DP在这些集合的副本之间扩展训练吞吐量 (throughput)。</p>\n<h4>数据并行 + 张量并行 (DP+TP)</h4>\n<p>这是一种常用的组合，尤其适合具有非常宽层级的模型，TP在这种情况下能大幅节省内存。</p>\n<ul>\n<li><strong>工作原理：</strong> 模型在某些层中的参数 (parameter)（例如注意力或MLP块中的大型权重 (weight)矩阵）通过TP分割到一组设备上（例如2向、4向或8向TP）。整个TP组，共同拥有模型的一个分片实例，表现为一个逻辑设备。然后数据并行应用于此TP组的多个副本。每个副本处理全局数据批次中的不同分片。</li>\n<li><strong>通讯：</strong> 这涉及两类通讯：\n<ol>\n<li><strong>组内（TP）：</strong> 在每个TP组内进行频繁、低延迟通讯（AllReduce、Scatter、Gather），以处理前向和后向传播期间的分片张量操作。这通常需要在节点内部使用NVLink等高带宽、低延迟互联。</li>\n<li><strong>组间（DP）：</strong> 频率较低的AllReduce通讯在DP副本间进行（具体是指不同TP组中对应设备间的通讯），以在反向传播 (backpropagation)后同步梯度。这通常可以接受节点之间（如InfiniBand或以太网）更高延迟的互联。</li>\n</ol>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-136qhbl\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n\n  // 增加全局字体大小\n  fontsize=18;\n\n  // 对所有节点应用更大的字体大小\n  node [shape=box, style=filled, color=\"#333333\", fillcolor=\"#e9ecef\", fontsize=38, fontname=\"sans-serif\", width=2.5, height=1.2, margin=0.3];\n\n  // 对所有边应用更大的字体大小\n  edge [fontsize=38, fontname=\"sans-serif\", penwidth=2];\n\n  subgraph cluster_dp0 {\n    label = \"DP 0级 (TP组)\";\n    fontsize=38;  // 集群标签的明确字体大小\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#a5d8ff\"];\n    gpu0_0 [label=\"GPU 0 | TP 0级\"];\n    gpu0_1 [label=\"GPU 1 | TP 1级\"];\n    gpu0_0 -> gpu0_1 [label=\"TP通讯\", style=dashed, color=\"#0066cc\", dir=both];\n  }\n\n  subgraph cluster_dp1 {\n    label = \"DP 1级 (TP组)\";\n    fontsize=38;  // 集群标签的明确字体大小\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#a5d8ff\"];\n    gpu1_0 [label=\"GPU 2 | TP 0级\"];\n    gpu1_1 [label=\"GPU 3 | TP 1级\"];\n    gpu1_0 -> gpu1_1 [label=\"TP通讯\", style=dashed, color=\"#0066cc\", dir=both];\n  }\n\n  // 在集群之间增加更多空间\n  graph [nodesep=1.5, ranksep=2.0];\n\n  // 保持连接文字较大\n  gpu0_0 -> gpu1_0 [label=\"DP通讯 (AllReduce)\", color=\"#cc0000\", dir=both];\n  gpu0_1 -> gpu1_1 [label=\"DP通讯 (AllReduce)\", color=\"#cc0000\", dir=both];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-136qhbl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个2向TP x 2向DP配置。GPU 0和1构成一个TP组（DP 0级），GPU 2和3构成另一个（DP 1级）。TP通讯发生在组内（蓝色虚线），DP梯度同步发生在对应的TP等级间（红色实线）。</p>\n</blockquote>\n<p>像NVIDIA的Megatron-LM这样的框架尤其适合用于实现TP，并提供将其与用于DP部分的标准PyTorch DistributedDataParallel (DDP) 集成的方法。</p>\n<h4>数据并行 + 流水线并行 (DP+PP)</h4>\n<p>这种组合对深度模型很有效，其中PP用于降低激活所需的峰值内存，而DP则提升吞吐量。</p>\n<ul>\n<li><strong>工作原理：</strong> 模型被划分为多个阶段，每个阶段分配给单个或一组设备（PP）。该完整流水线的多个实例被创建，构成DP副本。每个流水线副本处理全局数据批次中的不同组微批次。</li>\n<li><strong>通讯：</strong>\n<ol>\n<li><strong>流水线内（PP）：</strong> 相邻流水线阶段之间的点对点通讯，用于前向传递激活，后向传递梯度。这通常涉及激活张量的发送/接收。</li>\n<li><strong>流水线间（DP）：</strong> 跨DP副本的AllReduce通讯（具体是指不同副本中持有相同流水线阶段的设备之间），以同步每个阶段内各层的梯度。</li>\n</ol>\n</li>\n<li><strong>气泡消除：</strong> DP有助于减少PP固有的流水线气泡（空闲时间）。当一个流水线副本可能部分空闲等待依赖时，其他副本可以积极计算各自的微批次，从而提升整体硬件利用率。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-t8hz58\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  splines=ortho;\n\n  // 设置全局字体大小\n  fontsize=30;\n\n  // 节点设置，包含正确的颜色格式和明确的字体大小\n  node [shape=record, style=filled, color=\"#333333\", fillcolor=\"#e9ecef\", fontsize=30, fontname=\"sans-serif\", margin=0.3];\n\n  // 边的设置，包含明确的字体大小\n  edge [fontsize=30, fontname=\"sans-serif\", penwidth=2];\n\n  // 在节点之间增加更多空间\n  graph [nodesep=1.0, ranksep=1.5];\n\n  subgraph cluster_dp0 {\n    label = \"DP 0级 (流水线)\";\n    fontsize=30;  // 集群标签的明确字体大小\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#b2f2bb\"];\n    gpu0_s0 [label=\"GPU 0 | 阶段 0\"];\n    gpu0_s1 [label=\"GPU 1 | 阶段 1\"];\n    gpu0_s0 -> gpu0_s1 [label=\"PP通讯 (激活)\", color=\"#2b8a3e\", dir=both];\n  }\n\n  subgraph cluster_dp1 {\n    label = \"DP 1级 (流水线)\";\n    fontsize=30;  // 集群标签的明确字体大小\n    style=filled;\n    color=\"#dee2e6\";\n    node [fillcolor=\"#b2f2bb\"];\n    gpu1_s0 [label=\"GPU 2 | 阶段 0\"];\n    gpu1_s1 [label=\"GPU 3 | 阶段 1\"];\n    gpu1_s0 -> gpu1_s1 [label=\"PP通讯 (激活)\", color=\"#2b8a3e\", dir=both];\n  }\n\n  gpu0_s0 -> gpu1_s0 [label=\"DP通讯 (AllReduce)\", color=\"#c92a2a\", dir=both, style=dashed];\n  gpu0_s1 -> gpu1_s1 [label=\"DP通讯 (AllReduce)\", color=\"#c92a2a\", dir=both, style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-t8hz58\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个2阶段PP x 2向DP配置。GPU 0和1构成一个流水线（DP 0级），GPU 2和3构成另一个（DP 1级）。PP通讯发生在阶段之间（绿线）。DP梯度同步发生在对应的阶段之间（红色虚线）。</p>\n</blockquote>\n<p>DeepSpeed之类的库提供复杂的流水线并行实现，可以轻松地与其基于ZeRO的数据并行结合使用。</p>\n<h4>张量并行 + 流水线并行 (TP+PP) 和 “3D” 并行 (DP+TP+PP)</h4>\n<p>对于最大的模型，参数量超过数千亿或万亿时，可能需要将所有三种主要策略结合起来。这通常称之为“3D”并行。</p>\n<ul>\n<li><strong>工作原理：</strong>\n<ul>\n<li><strong>TP+PP：</strong> 流水线中的每个阶段可能对单个设备来说过大，因此使用TP在多个设备上并行化该阶段 <em>内部</em> 的层。这构成一个“阶段组”。通讯通过TP在阶段组 <em>内部</em> 进行，并通过PP在阶段组 <em>之间</em> 进行。</li>\n<li><strong>DP+TP+PP：</strong> 在此之上添加数据并行。创建TP+PP配置的多个副本，每个副本处理不同的数据分片。</li>\n</ul>\n</li>\n<li><strong>复杂程度：</strong> 这种配置在管理设备映射、通讯调度和潜在的负载均衡问题时带来显著复杂性。通讯模式变得复杂，涉及阶段组内的TP集合操作、阶段组间的PP点对点通讯，以及跨副本的DP AllReduce。</li>\n<li><strong>应用场景：</strong> 适用于同时满足以下条件下的模型：单个层很大（需要TP）、模型深度很深（需要PP），并且需要高吞吐量（需要DP）。</li>\n</ul>\n<h4>ZeRO (Zero Redundancy Optimizer) 优化</h4>\n<p>ZeRO，特别是ZeRO Stage 3，并非与DP、TP和PP相同的并行维度，而是一种优化数据并行内存使用的技术。它将优化器状态、梯度以及（可选地）参数本身分布到数据并行等级上。ZeRO几乎总是与其他策略 <em>配合使用</em>：</p>\n<ul>\n<li><strong>ZeRO-DP + TP：</strong> ZeRO降低DP的内存负担，使TP能够专注于在必要时分割模型参数和激活。这种组合使得每个节点能够容纳更大的模型，并扩展更宽的模型。</li>\n<li><strong>ZeRO-DP + PP：</strong> ZeRO降低由DP组管理的每个流水线阶段内权重和优化器状态的内存占用，补充了PP带来的激活内存节省。这对深度模型有效。</li>\n</ul>\n<p>DeepSpeed是用于实现ZeRO的具有代表性的框架，并提供集成功能，能有效结合TP和PP（通常借助Megatron-LM的TP实现）。</p>\n<h3>实现考量</h3>\n<p>选择并应用合适的混合策略需要仔细分析：</p>\n<ul>\n<li><strong>模型结构：</strong> 宽模型更适合TP；深度模型更适合PP。</li>\n<li><strong>硬件：</strong> TP需要低延迟的节点内连接（NVLink）。PP性能很大程度上取决于节点间带宽和流水线调度隐藏通讯延迟的能力。DP的扩展性取决于AllReduce集合操作的性能。</li>\n<li><strong>内存、计算与通讯：</strong> 每种策略都会改变瓶颈。TP节省内存但增加层内通讯。PP节省激活内存但引入气泡和层间通讯。DP提高计算吞吐量 (throughput)但需要副本的内存（由ZeRO减轻），并增加梯度通讯。</li>\n<li><strong>框架支持：</strong> 从零开始实现这些复杂策略非常困难。依赖DeepSpeed和Megatron-LM等框架几乎总是必须的。这些框架提供抽象和优化的通讯集合操作。</li>\n</ul>\n<p>一个PyTorch代码片段，展示如何组合这些（使用类似于DeepSpeed或Megatron-LM中的高级API），可能如下所示：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.distributed as dist\nfrom some_framework import (\n    initialize_parallelism,\n    get_data_parallel_group,\n    get_tensor_parallel_group,\n    get_pipeline_parallel_group,\n    PipelineModule,\n    TensorParallelLinear, # 示例TP层\n    ZeROOptimizer # 示例ZeRO集成\n)\n\n# 假设环境变量或配置文件已设置等级/组\n# 示例：2向DP，4向TP，2阶段PP（总计2*4*2 = 16个GPU）\ninitialize_parallelism(\n    data_parallel_size=2,\n    tensor_parallel_size=4,\n    pipeline_parallel_size=2\n)\n\n# 根据需要使用TP层定义模型部分\nclass Stage0(torch.nn.Module):\n    def __init__(self):\n        super().__init__()\n        # 输入嵌入层可能使用张量并行\n        self.embedding = TPInputEmbedding(...)\n        # 一些Transformer层，其中可能使用TP\n        self.layer1 = TPLayer(...)\n        self.layer2 = TPLayer(...)\n\n    def forward(self, x):\n        # ... 阶段0的前向传播 ...\n        return self.layer2(self.layer1(self.embedding(x)))\n\nclass Stage1(torch.nn.Module):\n    def __init__(self):\n        super().__init__()\n        # 更多层\n        self.layer3 = TPLayer(...)\n        # 输出层可能使用TP\n        self.output = TPOutputLayer(...)\n\n    def forward(self, x):\n        # ... 阶段1的前向传播 ...\n        return self.output(self.layer3(x))\n\n# 创建流水线模型\nmodel = PipelineModule(\n    stages=[Stage0(), Stage1()],\n    num_microbatches=8 # 示例微批次配置\n)\n\n# 使用ZeRO包装优化器（ZeRO理解DP组）\noptimizer = ZeROOptimizer(\n    model.parameters(),\n    lr=1e-4,\n    # ZeRO配置选项...\n)\n\n# 训练循环（简化版）\nfor data in dataloader:\n    optimizer.zero_grad()\n    # PipelineModule处理跨阶段的前向/后向传播\n    # 并在内部处理微批次\n    loss = model(data)\n    optimizer.step() # ZeRO处理DP组的梯度平均\n</code></pre>\n<blockquote>\n<p>PyTorch代码，呈现如何使用张量并行层（<code>TPLayer</code>、<code>TPInputEmbedding</code>）定义模块并组合成一个<code>PipelineModule</code>。<code>ZeROOptimizer</code>隐式处理数据并行维度上的梯度同步。</p>\n</blockquote>\n<p>成功训练大型模型通常需要对不同的混合配置（例如，改变TP大小、PP阶段、微批次大小）进行迭代实验，以找到最大化硬件利用率和最小化给定模型和集群架构训练时间的最佳平衡点。因此，理解这些策略之间的关联对于任何从事大规模模型训练的工程师都非常重要。</p>",
+  "slug": "interplay-hybrid-approaches",
+  "updates": [],
+  "references": [
+    {
+      "id": 16712,
+      "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models",
+      "author": "Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, Yuxiong He",
+      "year": "2020",
+      "publisher": "",
+      "journal": "SC20: International Conference for High Performance Computing, Networking, Storage and Analysis",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1910.02054",
+      "doi": "10.48550/arXiv.1910.02054",
+      "note": "引入了ZeRO优化器，一种面向大规模模型的内存高效数据并行方法。",
+      "order": 2,
+      "created_at": "2025-09-06T11:37:19.643933Z",
+      "updated_at": "2025-09-10T14:42:03.171081Z"
+    },
+    {
+      "id": 16713,
+      "title": "DeepSpeed Features: Model Parallelism",
+      "author": "Microsoft DeepSpeed Team",
+      "year": "2023",
+      "publisher": "Microsoft DeepSpeed Team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deepspeed.ai/",
+      "doi": "",
+      "note": "提供了ZeRO、流水线并行以及DeepSpeed-Megatron-LM集成实现混合并行策略的概述。",
+      "order": 3,
+      "created_at": "2025-09-06T11:37:19.646575Z",
+      "updated_at": "2025-09-10T14:42:16.985152Z"
+    },
+    {
+      "id": 16714,
+      "title": "Efficient Large-Scale Language Model Training: A Case Study with Megatron-LM",
+      "author": "NVIDIA Developer",
+      "year": "2021",
+      "publisher": "NVIDIA",
+      "journal": "NVIDIA Developer Blog",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.nvidia.com/blog/efficient-large-scale-language-model-training-a-case-study-with-megatron-lm/",
+      "doi": "",
+      "note": "NVIDIA提供的一份实用指南，演示了如何使用Megatron-LM的并行策略训练大型模型。",
+      "order": 4,
+      "created_at": "2025-09-06T11:37:19.650244Z",
+      "updated_at": "2025-09-10T14:41:48.841143Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

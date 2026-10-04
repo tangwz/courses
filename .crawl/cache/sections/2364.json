@@ -1,0 +1,61 @@
+{
+  "id": 2364,
+  "title": "将代码组织成包（基本结构）",
+  "meta_title": "构建Python包 | 基本结构",
+  "meta_description": "了解用于为大型项目构建Python包的基本目录组织方式和`__init__.py`文件。",
+  "content": "<p>当你的项目增长，不再是少数几个函数或类时，将所有内容塞进一两个<code>.py</code>文件（模块）会开始让人觉得混乱。你可能会发现自己很难记住某个特定函数在哪里定义，或者更糟的是，不小心在不同的文件中对不同的东西使用了相同的名称。Python模块在单个文件中组织代码，而<em>包</em>则将这种组织扩展到模块本身。</p>\n<p>可以把包看作是一个包含相关模块的目录或文件夹。这种分层结构使得大型项目更容易管理。如果一个目录包含一个名为<code>__init__.py</code>的特殊文件，Python就会将其识别为一个包。</p>\n<h3>基本包结构</h3>\n<p>最简单的Python包是一个包含Python模块和<code>__init__.py</code>文件的目录。假设你正在构建一个实用工具库，其中包含用于字符串处理和数学计算的函数。你可以将其组织成一个名为<code>myutils</code>的包：</p>\n<pre><code>myproject/\n├── main.py\n└── myutils/\n    ├── __init__.py\n    ├── string_ops.py\n    └── math_ops.py\n</code></pre>\n<p>在这个结构中：</p>\n<ul>\n<li><code>myproject/</code> 是你项目的根目录。</li>\n<li><code>main.py</code> 是你可能会用到你的实用工具包的脚本。</li>\n<li><code>myutils/</code> 是代表这个包的目录。</li>\n<li><code>__init__.py</code> 是一个重要文件，它告诉Python：“将<code>myutils</code>目录视作一个包。”</li>\n<li><code>string_ops.py</code> 和 <code>math_ops.py</code> 是<code>myutils</code>包<em>内部</em>的模块。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1dm8192\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=folder, style=filled, fillcolor=\"#a5d8ff\"]; edge [arrowhead=none]; root [label=\"myproject/\"]; package_dir [label=\"myutils/\"]; module1 [label=\"string_ops.py\", shape=note, style=filled, fillcolor=\"#e9ecef\"]; module2 [label=\"math_ops.py\", shape=note, style=filled, fillcolor=\"#e9ecef\"]; init_file [label=\"__init__.py\", shape=note, style=filled, fillcolor=\"#fab005\"]; main_script [label=\"main.py\", shape=note, style=filled, fillcolor=\"#e9ecef\"]; root -> main_script; root -> package_dir; package_dir -> init_file; package_dir -> module1; package_dir -> module2; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1dm8192\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的Python项目结构，展示了一个名为<code>myutils</code>的包，其中包含两个模块和一个<code>__init__.py</code>文件。</p>\n</blockquote>\n<h3><code>__init__.py</code>的作用</h3>\n<p><code>__init__.py</code>文件非常重要。它在目录中的存在，告诉Python解释器该目录应被视作一个包。这使得你可以使用点符号（例如，<code>package.module</code>）从该目录导入模块。</p>\n<p>对于简单的包，<code>__init__.py</code>通常可以完全是空的。它的存在本身就足够了。</p>\n<p>在更复杂的场景中，你可以在<code>__init__.py</code>中编写代码。这段代码会在包或其某个模块首次被导入时自动运行。这对于设置包级别的变量、自动导入子模块或定义看起来直接来自包本身的符号可能有用。然而，对于初学者来说，保持其为空是完全可以的。</p>\n<h3>从包中导入</h3>\n<p>一旦你有了这种组织，你就可以从其他文件（比如<code>main.py</code>）中使用包内的代码。导入语法使用点来指示包的层级关系：</p>\n<pre><code class=\"language-python\"># 在 main.py 文件中\n\n# 方式 1: 导入特定模块\nimport myutils.string_ops\nimport myutils.math_ops\n\n# 使用完整路径调用函数\nresult_str = myutils.string_ops.reverse_string(\"hello\")\nresult_math = myutils.math_ops.add(5, 3)\n\nprint(result_str)\nprint(result_math)\n\n# 方式 2: 从模块中导入特定函数/类\nfrom myutils.string_ops import reverse_string\nfrom myutils.math_ops import add\n\n# 直接调用函数\nresult_str_2 = reverse_string(\"world\")\nresult_math_2 = add(10, 2)\n\nprint(result_str_2)\nprint(result_math_2)\n\n# 方式 3: 导入模块并使用别名（对于你自己的简单包不常用）\nimport myutils.string_ops as str_ops\n\nresult_str_3 = str_ops.reverse_string(\"python\")\nprint(result_str_3)\n</code></pre>\n<p>请注意，导入时包名（<code>myutils</code>）会成为路径的一部分。这有助于避免命名冲突；<code>myutils.math_ops</code>内部名为<code>add</code>的函数不会与在其他地方定义的、可能不同的<code>add</code>函数发生冲突。</p>\n<h3>子包</h3>\n<p>正如你可以将模块放在包目录中一样，你也可以将<em>其他</em>目录（每个目录都有自己的<code>__init__.py</code>文件）放在一个包目录中。这些被称为子包。这样可以实现更深层次的组织。例如：</p>\n<pre><code>myproject/\n└── complex_app/\n    ├── __init__.py\n    ├── core/\n    │   ├── __init__.py\n    │   └── processing.py\n    └── utils/\n        ├── __init__.py\n        ├── string_helpers.py\n        └── math_helpers.py\n</code></pre>\n<p>在这里，<code>complex_app</code>是主包，而<code>core</code>和<code>utils</code>是子包。你将使用<code>complex_app.core.processing</code>或<code>complex_app.utils.string_helpers</code>这样的路径来导入内容。</p>\n<h3>为何使用包？</h3>\n<p>将代码组织成包有几个好处，尤其是在项目变大时：</p>\n<ol>\n<li><strong>命名空间管理：</strong> 包能避免模块间的命名冲突。<code>myutils.math_ops.add</code>与<code>another_package.add</code>是不同的。</li>\n<li><strong>逻辑分组：</strong> 相关模块集中存放，使项目结构更易于理解和查看。</li>\n<li><strong>易于维护：</strong> 代码经过逻辑组织后，查找、更新和调试都更方便。</li>\n<li><strong>可复用性：</strong> 定义良好的包有可能在不同项目中重复使用。</li>\n</ol>\n<p>掌握这种基本的包组织形式对编写可维护的Python代码很重要，并且对于理解大型库和框架（你将不可避免地使用它们）的组织方式也很必要。它提供了一种清晰的方法来管理应用程序的复杂度。</p>",
+  "slug": "python-creating-packages",
+  "updates": [],
+  "references": [
+    {
+      "id": 6436,
+      "title": "The Python Tutorial: 6. Modules",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/modules.html",
+      "doi": "",
+      "note": "Python官方文档，介绍了Python模块、包以及`__init__.py`文件的基本知识。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:57.112130Z",
+      "updated_at": "2025-09-07T21:28:26.539435Z"
+    },
+    {
+      "id": 6437,
+      "title": "Learning Python, 5th Edition",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "695-776 (Chapters 22 & 23)",
+      "url": "http://oreilly.com/catalog/errata.csp?isbn=9781449355739",
+      "doi": "",
+      "note": "一本基础性教材，全面介绍了Python模块和包，详细阐述了它们的结构和导入机制。",
+      "order": 2,
+      "created_at": "2025-09-05T01:22:57.153182Z",
+      "updated_at": "2025-09-07T21:28:57.209820Z"
+    },
+    {
+      "id": 6438,
+      "title": "Python Packaging User Guide: Creating and Installing Packages",
+      "author": "Python Packaging Authority",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/en/latest/tutorials/packaging-projects/",
+      "doi": "",
+      "note": "提供了创建和组织Python包的实用指南，涵盖了目录设置和包管理实践。",
+      "order": 3,
+      "created_at": "2025-09-05T01:22:57.159067Z",
+      "updated_at": "2025-09-07T21:28:29.865385Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

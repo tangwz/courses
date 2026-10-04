@@ -1,0 +1,61 @@
+{
+  "id": 2292,
+  "title": "处理不同情况：elif 和 else",
+  "meta_title": "Python elif 和 else | 多重条件",
+  "meta_description": "扩展条件逻辑，使用 elif (else if) 和 else 处理多种备选执行路径。",
+  "content": "<p>Python 程序中的 <code>if</code> 语句允许代码块仅在特定条件评估为 <code>True</code> 时执行。然而，当存在多个需要检查的条件，或者当初始条件不满足时需要一个默认操作时，就需要更灵活的控制。<code>elif</code> 和 <code>else</code> 子句扩展了 <code>if</code> 语句，以处理这些更复杂的决策情况。</p>\n<h3>检查多重条件：<code>elif</code></h3>\n<p>假设你想检查不止一个条件。例如，判断一个数字是正数、负数还是零，需要检查多种可能性。<code>elif</code> 语句是 \"else if\" 的缩写，它允许你仅在前面的 <code>if</code>（或 <code>elif</code>）条件为 <code>False</code> 时测试其他条件。</p>\n<p>你可以在初始 <code>if</code> 语句后连接多个 <code>elif</code> 语句。Python 会从上到下逐一评估这些条件。一旦找到一个为 <code>True</code> 的条件，它就会执行与该条件关联的代码块，然后 <em>跳过</em> 整个 <code>if-elif-else</code> 结构中其余的部分。</p>\n<p>下面是通用结构：</p>\n<pre><code class=\"language-python\">if condition_1:\n    # 块 1: 如果 condition_1 为 True 则执行\n    statement(s)\nelif condition_2:\n    # 块 2: 如果 condition_1 为 False 且 condition_2 为 True 则执行\n    statement(s)\nelif condition_3:\n    # 块 3: 如果 condition_1 和 condition_2 都为 False，\n    # 并且 condition_3 为 True 则执行\n    statement(s)\n# ... 你可以有更多的 elif 块\n</code></pre>\n<p>让我们修改数字示例：</p>\n<pre><code class=\"language-python\">number = -10\n\nif number > 0:\n    print(\"The number is positive.\")\nelif number &#x3C; 0:\n    print(\"The number is negative.\")\n\n# 如果 number 是 0，则上面两个条件都不为 True，因此目前什么也不会发生。\n</code></pre>\n<p>在这种情况下，如果 <code>number</code> 是 -10：</p>\n<ol>\n<li><code>number > 0</code> 为 <code>False</code>，因此跳过第一个块。</li>\n<li><code>number &#x3C; 0</code> 为 <code>True</code>，因此打印消息“The number is negative.”。程序随后跳过此结构中所有后续的 <code>elif</code> 或 <code>else</code> 子句。</li>\n</ol>\n<p>如果数字是 0 呢？<code>number > 0</code> 和 <code>number &#x3C; 0</code> 都不为真。在上面的代码中，将不会打印任何内容。为了处理 <em>所有</em> <code>if</code> 或 <code>elif</code> 条件都不满足的情况，我们使用 <code>else</code> 子句。</p>\n<h3>默认情况：<code>else</code></h3>\n<p><code>else</code> 子句提供了一个默认的代码块，仅当结构中所有前面的 <code>if</code> 和 <code>elif</code> 条件都评估为 <code>False</code> 时才执行。它起到一个包罗万象的作用。如果使用 <code>else</code> 子句，它必须始终放在最后，在所有 <code>if</code> 和 <code>elif</code> 子句之后，并且它没有关联的条件。</p>\n<p>完整的结构如下所示：</p>\n<pre><code class=\"language-python\">if condition_1:\n    # 块 1: 如果 condition_1 为 True 则执行\n    statement(s)\nelif condition_2:\n    # 块 2: 如果 condition_1 为 False 且 condition_2 为 True 则执行\n    statement(s)\n# ... 更多 elif 块（可选）...\nelse:\n    # 块 N: 如果所有前面的条件 (condition_1, condition_2, ...) 都为 False 则执行\n    statement(s)\n</code></pre>\n<p>让我们使用 <code>else</code> 完成数字符号的示例：</p>\n<pre><code class=\"language-python\">number = 0\n\nprint(f\"检查数字: {number}\")\n\nif number > 0:\n    print(\"该数字是正数。\")\nelif number &#x3C; 0:\n    print(\"该数字是负数。\")\nelse:\n    # 只有当 number 不大于 0 且不小于 0 时，此块才运行\n    print(\"该数字是零。\")\n\nprint(\"检查完毕。\")\n</code></pre>\n<p>如果你用 <code>number = 0</code> 运行这段代码：</p>\n<ol>\n<li><code>number > 0</code> 为 <code>False</code>。</li>\n<li><code>number &#x3C; 0</code> 为 <code>False</code>。</li>\n<li>由于所有前面的条件都为假，<code>else</code> 块执行，打印“The number is zero.”</li>\n</ol>\n<p>下面的图表展示了此示例的控制流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-18luxs8\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, margin=0.15];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  start [label=\"开始\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  check_positive [label=\"number > 0 吗?\", shape=diamond, style=filled, fillcolor=\"#a5d8ff\"];\n  check_negative [label=\"number < 0 吗?\", shape=diamond, style=filled, fillcolor=\"#ffd8a8\"];\n  is_positive [label=\"print(&#39;正数&#39;)\", shape=box, style=filled, fillcolor=\"#b2f2bb\"];\n  is_negative [label=\"print(&#39;负数&#39;)\", shape=box, style=filled, fillcolor=\"#ffc9c9\"];\n  is_zero [label=\"print(&#39;零&#39;)\", shape=box, style=filled, fillcolor=\"#eebefa\"];\n  end [label=\"结束\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n\n  start -> check_positive;\n  check_positive -> is_positive [label=\" 真\"];\n  check_positive -> check_negative [label=\" 假\"];\n  check_negative -> is_negative [label=\" 真\"];\n  check_negative -> is_zero [label=\" 假\"];\n\n  is_positive -> end;\n  is_negative -> end;\n  is_zero -> end;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-18luxs8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>流程图展示了使用 if-elif-else 判断数字是正数、负数还是零的决策过程。</p>\n</blockquote>\n<h3>顺序和排他性</h3>\n<p>关于 <code>if-elif-else</code> 结构，有两点需要记住：</p>\n<ol>\n<li>\n<p><strong>顺序很重要：</strong> 条件会按照它们出现的顺序进行检查。如果多个条件可能为真，只有与 <em>第一个</em> 遇到的真条件关联的代码块才会执行。考虑一个评分示例：</p>\n<pre><code class=\"language-python\">score = 85\n\nif score >= 70: # 这是第一个为 True 的\n    grade = 'C'\nelif score >= 80: # 这也为 True，但会在后面检查\n    grade = 'B'\nelse:\n    grade = 'Not C or B'\n\nprint(grade) # 输出: C\n</code></pre>\n<p>因为 <code>score >= 70</code> 首先被检查，并且对于 85 来说为真，所以等级被设置为 'C'，<code>elif score >= 80</code> 的检查永远不会到达。为了获得正确的等级，你应该按照从最具体（最高分数）到最不具体（最低分数）的顺序来排列检查。</p>\n<pre><code class=\"language-python\">score = 85\n\nif score >= 90:\n    grade = 'A'\nelif score >= 80: # 第二个检查，对于 85 为 True\n    grade = 'B'\nelif score >= 70: # 第三个检查\n    grade = 'C'\n# ... 其他等级\nelse:\n    grade = 'F'\n\nprint(grade) # 输出: B\n</code></pre>\n</li>\n<li>\n<p><strong>只执行一个代码块：</strong> 在单个 <code>if-elif-...-else</code> 链中，最多只执行一个代码块。即使后面的 <code>elif</code> 条件可能也为真，一旦前面的 <code>if</code> 或 <code>elif</code> 条件评估为 <code>True</code>，它们就会被跳过。<code>else</code> 块仅在其上方 <em>所有</em> 条件都不为真时才会执行。</p>\n</li>\n</ol>\n<p>通过结合使用 <code>if</code>、<code>elif</code> 和 <code>else</code>，你可以构建清晰有效的逻辑来处理程序中的各种情况，使它们对不同的输入和情形做出适当的响应。</p>",
+  "slug": "python-elif-else",
+  "updates": [],
+  "references": [
+    {
+      "id": 3316,
+      "title": "The `if` statement",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-if-statement",
+      "doi": "",
+      "note": "提供 Python 中 `if`、`elif` 和 `else` 语句的权威规范和详细信息。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:39.392259Z",
+      "updated_at": "2025-09-07T21:05:51.059393Z"
+    },
+    {
+      "id": 3317,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2023",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH51N2QpVje2kTG4I-KogZw_iGzGDUrfBuj1e8FtMJU4FKiipxN-zGo4Bt7z7qtXCqePtFsfbS9kLvyd05zlQw4fqSq12nRSJBQ8wYvB1uznXadI2QNOtt3tkwcAdLiP6Y1SQQo5YyJw5z3dl3RhD8ffsSLTdBwLivtX1IieS9xJCHKNXw_gKEvQGXi_BbQzMOuqpU=",
+      "doi": "",
+      "note": "一本广受好评的入门书籍，通过实用示例为初学者清晰地解释了条件语句和控制流。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:39.403455Z",
+      "updated_at": "2025-09-07T21:05:44.644487Z"
+    },
+    {
+      "id": 3319,
+      "title": "Lecture Notes: Branching and Iteration (Lecture 3)",
+      "author": "Ana Bell, Eric Grimson, and John Guttag",
+      "year": "2016",
+      "publisher": "Massachusetts Institute of Technology",
+      "journal": "MIT OpenCourseWare",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/resources/mit6_0001f16_lec3/",
+      "doi": "",
+      "note": "这些来自知名大学课程的讲义为理解条件语句和控制流提供了学术基础。",
+      "order": 4,
+      "created_at": "2025-09-04T16:54:39.409498Z",
+      "updated_at": "2025-09-07T21:05:39.688458Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

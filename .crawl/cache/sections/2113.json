@@ -1,0 +1,61 @@
+{
+  "id": 2113,
+  "title": "数组创建方法",
+  "meta_title": "NumPy 数组创建方法",
+  "meta_description": "学习从列表、使用内置函数或从数据文件中创建 NumPy 数组的多种方法。",
+  "content": "<p>NumPy 的核心是 <code>ndarray</code>，它是 Python 列表中用于数值数据的快速且内存高效的替代品。NumPy 提供了一系列功能丰富的函数，用于以各种方式生成这些数组，以满足数据分析和机器学习 (machine learning)中的不同需求。</p>\n<h3>从现有 Python 数据创建数组</h3>\n<p>创建 NumPy 数组最直接的方法是使用 <code>np.array()</code> 函数，转换现有的 Python 序列型对象，例如列表或元组。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 从 Python 列表创建一维数组\nlist_data = [1, 2, 3, 4, 5]\narr1d = np.array(list_data)\nprint(arr1d)\n# Output: [1 2 3 4 5]\nprint(arr1d.dtype) # 检查数据类型\n# Output: int64 (or int32 depending on your system)\n\n# 从列表的列表创建二维数组\nnested_list = [[1, 2, 3], [4, 5, 6]]\narr2d = np.array(nested_list)\nprint(arr2d)\n# Output:\n# [[1 2 3]\n#  [4 5 6]]\nprint(arr2d.shape) # 检查维度（行，列）\n# Output: (2, 3)\n</code></pre>\n<p>NumPy 在创建数组时，会尝试推断最合适的数据类型 (<code>dtype</code>)。但是，您可以使用 <code>dtype</code> 参数 (parameter)明确指定数据类型。这对于控制内存使用和数值精度很重要。</p>\n<pre><code class=\"language-python\"># 指定浮点数据类型\narr_float = np.array([1, 2, 3], dtype=np.float64)\nprint(arr_float)\n# Output: [1. 2. 3.]\nprint(arr_float.dtype)\n# Output: float64\n\n# 指定布尔数据类型\narr_bool = np.array([0, 1, 2, 0, 3], dtype=bool)\nprint(arr_bool)\n# Output: [False  True  True False  True]\nprint(arr_bool.dtype)\n# Output: bool\n</code></pre>\n<p>请记住，NumPy 数组是同质的；所有元素必须是相同的数据类型。如果您提供混合类型的数据（例如，整数和浮点数），NumPy 会将它们向上转换（upcast）为可以容纳所有元素的最通用类型（通常是浮点型或对象型）。</p>\n<h3>创建带占位符的数组</h3>\n<p>通常，您需要创建特定大小和形状的数组，但尚未确定最终值，也许是作为稍后填充的占位符。NumPy 为此提供了几个函数：</p>\n<ul>\n<li><code>np.zeros()</code>: 创建一个完全由零填充的数组。</li>\n<li><code>np.ones()</code>: 创建一个完全由一填充的数组。</li>\n<li><code>np.full()</code>: 创建一个填充有指定常数值的数组。</li>\n<li><code>np.empty()</code>: 创建一个初始内容是随机的数组，其值取决于内存状态。它比 <code>zeros</code> 或 <code>ones</code> 稍快，因为它避免了填充数组，但您在使用它之前必须明确地为每个元素赋值。</li>\n</ul>\n<p>所有这些函数都接受一个 <code>shape</code> 参数 (parameter)，通常是一个指定数组维度的元组（例如，2D 数组的 <code>(行, 列)</code>），以及一个可选的 <code>dtype</code> 参数。</p>\n<pre><code class=\"language-python\"># 创建一个 3x4 的零数组（默认为 float64）\nzeros_arr = np.zeros((3, 4))\nprint(zeros_arr)\n# Output:\n# [[0. 0. 0. 0.]\n#  [0. 0. 0. 0.]\n#  [0. 0. 0. 0.]]\n\n# 创建一个包含 5 个整数类型的一维数组\nones_arr = np.ones(5, dtype=np.int32)\nprint(ones_arr)\n# Output: [1 1 1 1 1]\n\n# 创建一个填充值为 99 的 2x2 数组\nfull_arr = np.full((2, 2), 99)\nprint(full_arr)\n# Output:\n# [[99 99]\n#  [99 99]]\n\n# 创建一个未初始化的 2x3 数组\nempty_arr = np.empty((2, 3))\nprint(empty_arr) # 值将是任意的\n# Output（示例，会因系统而异）：\n# [[6.95190771e-310 6.95190771e-310 6.95190771e-310]\n#  [6.95190771e-310 0.00000000e+000 0.00000000e+000]]\n</code></pre>\n<p>这些函数在机器学习 (machine learning)中经常使用，例如，在训练模型之前初始化权重 (weight)矩阵或创建结果数组。</p>\n<h3>创建序列数组</h3>\n<p>NumPy 提供了类似于 Python 内置 <code>range</code> 函数的函数，但设计用于直接生成 NumPy 数组：</p>\n<ul>\n<li><code>np.arange()</code>: 返回给定区间内均匀分布的值。它接受 <code>start</code>、<code>stop</code> 和 <code>step</code> 参数 (parameter)，类似于 <code>range</code>。请注意，<code>stop</code> 值是<em>不包含</em>在内的。</li>\n<li><code>np.linspace()</code>: 在指定区间内返回均匀分布的数字。它接受 <code>start</code>、<code>stop</code> 和 <code>num</code>（要生成的样本数）参数。重要的是，<code>stop</code> 值默认是<em>包含</em>在内的。</li>\n</ul>\n<pre><code class=\"language-python\"># 一个从 0 到 10（不包括 10）的数组\narr_range = np.arange(10)\nprint(arr_range)\n# Output: [0 1 2 3 4 5 6 7 8 9]\n\n# 一个从 2 到 10（不包括 10），步长为 2 的数组\narr_range_step = np.arange(2, 10, 2)\nprint(arr_range_step)\n# Output: [2 4 6 8]\n\n# 0 到 1 之间（包括 1）的 5 个均匀分布的值\narr_linspace = np.linspace(0, 1, 5)\nprint(arr_linspace)\n# Output: [0.   0.25 0.5  0.75 1.  ]\n\n# 0 到 5 之间（包括 5）的 10 个均匀分布的值\narr_linspace_2 = np.linspace(0, 5, 10)\nprint(arr_linspace_2)\n# Output: [0.         0.55555556 1.11111111 1.66666667 2.22222222 2.77777778\n#  3.33333333 3.88888889 4.44444444 5.        ]\n</code></pre>\n<p><code>linspace</code> 在您需要特定数量的点均匀分布在一个区间内时特别有用，例如，在为绘图函数生成坐标时。</p>\n<h3>创建随机值数组</h3>\n<p>在机器学习 (machine learning)中，生成包含随机数的数组对于各种任务来说是不可或缺的，例如初始化模型参数 (parameter)、生成合成数据或打乱数据集。NumPy 的 <code>random</code> 子模块为此提供了许多函数：</p>\n<ul>\n<li><code>np.random.rand()</code>: 创建一个指定形状的数组，并用 [0, 1) 区间上<em>均匀分布</em>的随机样本填充它。</li>\n<li><code>np.random.randn()</code>: 创建一个指定形状的数组，并用<em>标准正态分布</em>（均值 0，方差 1）的随机样本填充它。</li>\n<li><code>np.random.randint()</code>: 返回指定 <code>low</code>（包含）到 <code>high</code>（不包含）边界之间的随机整数。您还可以指定输出数组的 <code>size</code>（形状）。</li>\n<li><code>np.random.seed()</code>: 用于设置随机种子，这使得随机数生成可预测。这对于实验的可复现性很重要。</li>\n</ul>\n<pre><code class=\"language-python\"># 设置种子以保证可复现性\nnp.random.seed(42)\n\n# 创建一个 2x3 数组，其随机值来自均匀分布 [0, 1)\nrand_arr = np.random.rand(2, 3)\nprint(rand_arr)\n# Output:\n# [[0.37454012 0.95071431 0.73199394]\n#  [0.59865848 0.15601864 0.15599452]]\n\n# 创建一个 3x2 数组，其随机值来自标准正态分布\nrandn_arr = np.random.randn(3, 2)\nprint(randn_arr)\n# Output:\n# [[ 0.05808361 -0.75634998]\n#  [-0.34791215  0.1579198 ]\n#  [ 0.45615031  0.99712472]]\n\n# 生成 5 个介于 1（包含）和 10（不包含）之间的随机整数\nrandint_arr = np.random.randint(1, 10, size=5)\nprint(randint_arr)\n# Output: [8 4 6 8 8]\n\n# 生成一个 2x4 数组，其随机整数介于 0（包含）和 5（不包含）之间\nrandint_arr_2d = np.random.randint(0, 5, size=(2, 4))\nprint(randint_arr_2d)\n# Output:\n# [[3 0 2 3]\n#  [1 1 4 2]]\n</code></pre>\n<h3>其他创建方法</h3>\n<p>NumPy 还包含用于创建特定类型数组的函数：</p>\n<ul>\n<li><code>np.eye()</code>: 创建一个二维单位矩阵（对角线上为 1，其他位置为 0）。</li>\n<li><code>np.diag()</code>: 可以提取现有二维数组的对角线，或创建一个在对角线上具有指定值的二维数组。</li>\n</ul>\n<pre><code class=\"language-python\"># 创建一个 3x3 单位矩阵\nidentity_matrix = np.eye(3)\nprint(identity_matrix)\n# Output:\n# [[1. 0. 0.]\n#  [0. 1. 0.]\n#  [0. 0. 1.]]\n\n# 创建一个对角线上为 [1, 2, 3] 的二维数组\ndiag_matrix = np.diag([1, 2, 3])\nprint(diag_matrix)\n# Output:\n# [[1 0 0]\n#  [0 2 0]\n#  [0 0 3]]\n</code></pre>\n<p>掌握这些数组创建方法是有效使用 NumPy 的第一步。选择正确的方法取决于您是在转换现有数据、需要占位符、需要特定序列，还是需要为模拟或初始化生成随机数据。借助这些工具，您可以高效地构建 <code>ndarray</code> 对象，它们构成了 Python 中机器学习 (machine learning)数值运算的基础。</p>",
+  "slug": "numpy-array-creation",
+  "updates": [],
+  "references": [
+    {
+      "id": 3460,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data-analysis/9781098104030/",
+      "doi": "",
+      "note": "涵盖从Python序列创建NumPy ndarray、dtype指定和占位符数组函数，对数据处理至关重要。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:57.281525Z",
+      "updated_at": "2025-09-08T06:02:42.721134Z"
+    },
+    {
+      "id": 3464,
+      "title": "Introduction to Machine Learning with Python: A Guide for Data Scientists",
+      "author": "Andreas C. Müller and Sarah Guido",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introduction-to-machine/9781449369880/",
+      "doi": "",
+      "note": "为在机器学习中使用NumPy数组提供背景，涵盖数组创建和操作作为数据预处理的先决条件。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:57.380467Z",
+      "updated_at": "2025-09-08T06:02:26.135464Z"
+    },
+    {
+      "id": 3465,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125963/",
+      "doi": "",
+      "note": "在机器学习工作流程和示例中，通过实例说明NumPy数组的实际应用，包括它们的创建和操作。",
+      "order": 4,
+      "created_at": "2025-09-04T16:54:57.445135Z",
+      "updated_at": "2025-09-08T06:02:40.217555Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

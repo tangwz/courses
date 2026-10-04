@@ -1,0 +1,61 @@
+{
+  "id": 7154,
+  "title": "解码算法：贪心搜索与集束搜索对比",
+  "meta_title": "贪心搜索与集束搜索解码对比",
+  "meta_description": "比较简单的贪心搜索解码算法与更高效的集束搜索方法。",
+  "content": "<p>当声学模型处理完音频信号后，它会生成一个概率矩阵。对于每个时间步，它会为词汇表 (vocabulary)中每个可能的字符（含CTC的特殊<code>blank</code>标记 (token)）分配一个概率。现在的任务是在这些概率中找到最有可能的词语序列。由于路径数量随序列长度呈指数增长，尝试每条可能的路径进行穷举搜索在计算上是不可行的。</p>\n<p>这就是解码算法发挥作用的地方。它们是智能搜索策略，旨在不评估所有可能性的情况下，找到高质量的转录结果。我们将讨论两种主要方法：一种是简单快速的贪心搜索，另一种是更高效但计算量大的集束搜索。</p>\n<h3>贪心搜索：最简单的选择方式</h3>\n<p>贪心搜索，也称为最佳路径解码，是最直接的解码策略。在声学模型输出的每个时间步，它只选择概率最高的单个字符。它之所以“贪心”，是因为它在每一步都做出局部最优的选择，期望能得到全局最优的结果。</p>\n<p>让我们用一个例子来说明。假设模型处理了一个短音频片段，并为前几个时间步生成了以下概率矩阵。为简洁起见，我们只显示前几个字符的概率。</p>\n<pre><code>时间 ->       1       2       3       4       5\n-------------------------------------------------\n'c'          0.1     0.8     0.1     0.1     0.1\n'a'          0.2     0.1     0.7     0.1     0.2\n't'          0.6     0.1     0.1     0.2     0.8\n'_' (空白)  0.1     0.0     0.1     0.6     0.1\n</code></pre>\n<p>一个贪心解码器将执行以下步骤：</p>\n<ol>\n<li><strong>时间 1：</strong> 字符 't' 的最高概率为 0.6。路径：<code>t</code>。</li>\n<li><strong>时间 2：</strong> 'c' 的最高概率为 0.8。路径：<code>tc</code>。</li>\n<li><strong>时间 3：</strong> 'a' 的最高概率为 0.7。路径：<code>tca</code>。</li>\n<li><strong>时间 4：</strong> <code>blank</code> 标记 (token)的最高概率为 0.6。路径：<code>tca_</code>。</li>\n<li><strong>时间 5：</strong> 't' 的最高概率为 0.8。路径：<code>tca_t</code>。</li>\n</ol>\n<p>原始输出路径是 <code>tca_t</code>。为了得到最终转录结果，我们应用两条CTC后处理规则：</p>\n<ol>\n<li>合并连续相同字符：此处无需更改。</li>\n<li>移除所有<code>blank</code>标记：<code>tca_t</code> 变为 <code>tcat</code>。</li>\n</ol>\n<p>这看起来合理，但贪心方法有一个明显的不足：它目光短浅。在一个时间步看起来最好的选择，之后可能会导致死胡同。例如，模型在“recognize”开头可能对字符“w”比“r”稍微更有信心。贪心解码器会固定选择“w”，并可能被迫生成“weck a nice beach”，因为从最初的错误中恢复是不可能的。它没有回溯机制，也无法考虑可能性稍低但最终更有前景的路径。</p>\n<h3>集束搜索：保持多种可能性</h3>\n<p>集束搜索提供了一种更好的解决方案，通过同时考虑多个潜在路径，即<em>可能性</em>。它不是在每一步都确定选择单个最佳字符，而是维护一个包含 <code>k</code> 个最有可能的路径的列表。这个列表被称为“集束”（beam），而 <code>k</code> 则是“集束宽度”。</p>\n<p>该过程如下：</p>\n<ol>\n<li><strong>初始化（时间 1）：</strong> 从第一个时间步的概率分布中选择前 <code>k</code> 个字符。这 <code>k</code> 个字符构成了我们最初的假设集束。</li>\n<li><strong>扩展（时间 t）：</strong> 对于当前集束中的每个 <code>k</code> 个假设，通过附加词汇表 (vocabulary)中每个可能的字符来扩展它。如果集束宽度为 <code>k</code> 且词汇量大小为 <code>N</code>，这将创建 <code>k * N</code> 个新的候选假设。</li>\n<li><strong>评分和修剪（时间 t）：</strong> 计算 <code>k * N</code> 个新候选的每个概率。然后，按分数对所有候选进行排序，并只保留前 <code>k</code> 个假设。这组新的 <code>k</code> 个假设成为下一个时间步的集束。</li>\n<li><strong>迭代：</strong> 重复扩展和修剪步骤，直到处理完所有时间步。</li>\n<li><strong>最终选择：</strong> 在最后一个时间步之后，选择总体得分最高的假设作为最终转录结果。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1qcf8cm\" \n              data-graph-definition='digraph BeamSearch {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=record, style=\"rounded,filled\", fontname=\"helvetica\", margin=\"0.1,0.05\"];\n    edge [fontname=\"helvetica\", fontsize=10];\n    \n    subgraph cluster_0 {\n        label = \"时间 0\";\n        style=dashed;\n        start [label=\"<开始>\", shape=circle, style=filled, fillcolor=\"#ced4da\"];\n    }\n    \n    subgraph cluster_1 {\n        label = \"时间 1\";\n        style=dashed;\n        h1 [label=\"{h|-0.9}\", fillcolor=\"#a5d8ff\"];\n        e1 [label=\"{e|-1.2}\", fillcolor=\"#a5d8ff\"];\n        c1 [label=\"{c|-2.3}\", fillcolor=\"#e9ecef\"];\n    }\n    \n    subgraph cluster_2 {\n        label = \"时间 2\";\n        style=dashed;\n        he2 [label=\"{he|-1.5}\", fillcolor=\"#a5d8ff\"];\n        h₂ [label=\"{h_|-1.8}\", fillcolor=\"#a5d8ff\"];\n        eh2 [label=\"{eh|-2.5}\", fillcolor=\"#e9ecef\"];\n        ee2 [label=\"{e|-2.9}\", fillcolor=\"#e9ecef\"];\n    }\n\n    subgraph cluster_3 {\n        label = \"时间 3\";\n        style=dashed;\n        hel3 [label=\"{hel|-2.0}\", fillcolor=\"#a5d8ff\"];\n        he_3 [label=\"{he_|-2.2}\", fillcolor=\"#a5d8ff\"];\n        h_l3 [label=\"{hₗ|-2.6}\", fillcolor=\"#e9ecef\"];\n        h_e3 [label=\"{hₑ|-3.1}\", fillcolor=\"#e9ecef\"];\n    }\n    \n    start -> h1;\n    start -> e1;\n    start -> c1 [style=dashed, color=\"#868e96\"];\n    \n    h1 -> he2;\n    h1 -> h₂;\n    e1 -> eh2 [style=dashed, color=\"#868e96\"];\n    e1 -> ee2 [style=dashed, color=\"#868e96\"];\n\n    he2 -> hel3;\n    he2 -> he_3;\n    h₂ -> h_l3 [style=dashed, color=\"#868e96\"];\n    h₂ -> h_e3 [style=dashed, color=\"#868e96\"];\n\n    {rank=same; start;}\n    {rank=same; h1; e1; c1;}\n    {rank=same; he2; h₂; eh2; ee2;}\n    {rank=same; hel3; he_3; h_l3; h_e3;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1qcf8cm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>集束宽度为2的集束搜索解码的可视化。在每个时间步，假设都会被扩展，但只有前两个（蓝色）会被保留到下一步。可能性较低的路径（灰色）被修剪掉。数字代表对数概率分数。</p>\n</blockquote>\n<h4>整合语言模型</h4>\n<p>当我们整合语言模型时，集束搜索的真正优势就体现出来了。我们可以不再仅根据声学模型的输出来评估假设，而是使用本章开头介绍的组合得分公式：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>得分</mtext><mo stretchy=\"false\">(</mo><mtext>假设</mtext><mo stretchy=\"false\">)</mo><mo>=</mo><mtext>声学得分</mtext><mo>+</mo><mi>α</mi><mo>⋅</mo><mtext>语言模型得分</mtext></mrow><annotation encoding=\"application/x-tex\">\\text{得分}(\\text{假设}) = \\text{声学得分} + \\alpha \\cdot \\text{语言模型得分}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">得分</span></span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">假设</span></span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">声学得分</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.4445em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0037em;\">α</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">语言模型得分</span></span></span></span></span></span>\n<p>在集束搜索过程中，特别是在评分和修剪步骤中，我们调整每个候选假设的得分。<code>声学得分</code> 是声学模型的累积概率。<code>语言模型得分</code> 是语言模型对当前假设所形成的词语序列分配的概率。权重 (weight) <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>α</mi></mrow><annotation encoding=\"application/x-tex\">\\alpha</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0037em;\">α</span></span></span></span> 是一个超参数 (parameter) (hyperparameter)，可以调整它来控制语言模型对最终结果的影响程度。较高的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>α</mi></mrow><annotation encoding=\"application/x-tex\">\\alpha</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0037em;\">α</span></span></span></span> 会使解码器偏向于语法正确或常见的短语，而较低的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>α</mi></mrow><annotation encoding=\"application/x-tex\">\\alpha</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0037em;\">α</span></span></span></span> 则使其更信任声学模型。</p>\n<p>例如，如果解码器正在考虑两个假设：“recognize speech”和“wreck a nice beach”，它们的声学得分可能非常接近。然而，一个训练有素的语言模型会为“recognize speech”分配更高的概率，从而提升其总得分，确保它留在集束中。</p>\n<p>更大的集束宽度 <code>k</code> 允许解码器考虑更多可能性，从而增加了找到正确转录结果的机会。然而，这会增加计算和内存的开销，因为每一步要评估的假设数量随 <code>k</code> 线性增长。实际应用中，选择5到10之间的集束宽度通常能在准确性和性能之间取得良好平衡。</p>\n<p>通过保持多个假设活跃并融入语言学知识，集束搜索明显优于贪心搜索，并且是当今大多数高性能语音识别系统中使用的标准解码算法。</p>",
+  "slug": "decoding-algorithms-greedy-beam-search",
+  "updates": [],
+  "references": [
+    {
+      "id": 19421,
+      "title": "Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks",
+      "author": "Alex Graves, Santiago Fernández, Faustino Gomez, Jürgen Schmidhuber",
+      "year": "2006",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 23rd International Conference on Machine Learning",
+      "volume": "",
+      "pages": "369-376",
+      "url": "http://dx.doi.org/10.1145/1143844.1143891",
+      "doi": "10.1145/1143844.1143891",
+      "note": "介绍了连接时序分类（CTC）损失函数，这是文中讨论的“空白”标记和后处理的基础，并详细阐述了相关的解码算法，包括贪婪搜索和集束搜索。",
+      "order": 1,
+      "created_at": "2025-09-06T13:07:10.448697Z",
+      "updated_at": "2025-09-10T04:12:11.330386Z"
+    },
+    {
+      "id": 19422,
+      "title": "Speech and Language Processing",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "这是一本全面的教科书，详细解释了语音识别，包括贪婪搜索和集束搜索等解码算法，以及语言模型在ASR中的作用。第10章“语音识别”和第12章“语音合成、统计模型和ASR深度学习”尤为相关。",
+      "order": 2,
+      "created_at": "2025-09-06T13:07:10.469395Z",
+      "updated_at": "2025-09-10T04:12:04.967391Z"
+    },
+    {
+      "id": 19423,
+      "title": "Practical End-to-End Speech Recognition with Beam Search",
+      "author": "Veronica Tozzo, Federico Tomasi, Margherita Squillario, Annalisa Barla",
+      "year": "2018",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1811.09673",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1811.09673",
+      "doi": "10.48550/arXiv.1811.09673",
+      "note": "本文提供了端到端语音识别的实践概述，特别关注了基于CTC的集束搜索解码以及语言模型的集成，直接涵盖了本节的核心主题。",
+      "order": 3,
+      "created_at": "2025-09-06T13:07:10.472877Z",
+      "updated_at": "2025-09-10T04:12:05.061491Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

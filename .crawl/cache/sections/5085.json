@@ -1,0 +1,61 @@
+{
+  "id": 5085,
+  "title": "监督微调的局限性",
+  "meta_title": "监督微调 (SFT) 的局限性",
+  "meta_description": "分析仅靠 SFT 实现细致对齐的不足之处。",
+  "content": "<p>监督微调 (fine-tuning) (SFT) 通常是使预训练 (pre-training)的大型语言模型 (LLM) 达到预期行为的第一步。通过在高质量的提示-响应对（示范）数据集上训练模型，SFT 教会模型遵循指令、采用特定风格或执行示例中所示的任务。它对于传授基础能力以及使模型与可以清晰展示“正确”输出的明确、定义清晰的任务保持一致非常有效。</p>\n<p>然而，仅依靠 SFT 来实现与人类意图和价值观的全面匹配会遇到显著的局限。这些不足是采用人类反馈强化学习 (reinforcement learning) (RLHF) 的主要原因。</p>\n<h3>示范的可扩展性和覆盖范围</h3>\n<p>创建一个涵盖人类期望的广泛范围和细致程度的高质量 SFT 数据集，是一项巨大的挑战。考虑潜在用户提示的庞大空间以及回复中所需的细微差别：</p>\n<ul>\n<li><strong>成本和精力：</strong> 为每个可想象的场景，包括极端情况和复杂的推理 (inference)任务，生成理想的人工编写的响应，成本过高且耗时。</li>\n<li><strong>庞大的输入空间：</strong> LLM 可以通过无数种方式得到提示。一个 SFT 数据集，无论多大，都只能代表这个空间的一小部分。模型可能在其训练数据相似的输入上表现良好，但在分布外提示或熟悉提示的微小变体上可能会出现意想不到的失败。</li>\n<li><strong>隐含知识：</strong> 期望行为的许多方面（例如，常识，避免不易察觉的社会偏见）很难仅通过明确的示范完全捕捉。SFT 可能教会模型在特定情况下<em>说什么</em>，但不能教会其根本的<em>为什么</em>。</li>\n</ul>\n<p>将 SFT 视为通过示例教授语法和词汇规则。虽然必不可少，但它不会自动教会一个人如何在新的情境中撰写有见地的分析、引人入胜的叙述或符合道德的论证。这需要一种不同类型的学习信号。</p>\n<h3>客观定义“好坏”的难度</h3>\n<p>对于许多对齐 (alignment)目标而言，为 SFT 指定一个单一、完美的“黄金标准”响应，即使不是不可能，也很困难：</p>\n<ul>\n<li><strong>主观性：</strong> 什么构成“最佳”响应通常取决于语境、个人用户偏好或文化规范。简洁的回答比详细的更好吗？谨慎的语气比自信的语气更可取吗？SFT 强制进行选择，可能导致模型满足一部分用户，但不满足另一部分用户。</li>\n<li><strong>多重目标：</strong> 期望的 LLM 行为通常涉及平衡多个有时相互冲突的目标：有用、无害、诚实、引人入胜、简洁等。制作一个能够完美优化所有这些因素的单一 SFT 示范是困难的。</li>\n<li><strong>比较的简易性：</strong> 人类通常发现比较两个输出并表明偏好（例如，“响应 A 比响应 B 更有用”）比从零开始编写响应 A 要容易得多。SFT 无法直接使用这种比较偏好信号，而这种信号对于复杂任务来说通常更丰富且更容易获取。</li>\n</ul>\n<p>例如，要求 LLM“向一个 5 岁的孩子解释深度学习 (deep learning)”可能会产生几个合理、有创意但不同的响应。SFT 通常会将模型训练为一个特定示例，而基于偏好的方法则可以学习使<em>任何</em>此类解释变得好的<em>特质</em>（简洁性、类比使用、准确性）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1dvure2\" \n              data-graph-definition='digraph G {\n    rankdir=TB; \n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\", height=0.5, color=\"#495057\", fontcolor=\"#495057\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n    subgraph cluster_SFT {\n        label = \"监督微调 (SFT) 数据\";\n        bgcolor=\"#e9ecef\"; style=filled; color=\"#ced4da\";\n        sft_prompt [label=\"输入提示\"];\n        sft_demo [label=\"单一“理想”示范\\n(人工编写)\"];\n        sft_model [label=\"LLM 训练\"];\n        sft_output [label=\"学习模仿此特定输出\", shape=plaintext, fontcolor=\"#1c7ed6\"]; \n\n        sft_prompt -> sft_demo [label=\"需要定义“最佳”响应\"];\n        sft_demo -> sft_model [label=\"用作训练目标\"];\n        sft_model -> sft_output [style=dashed];\n    }\n\n    subgraph cluster_RLHF_Preview {\n        label = \"偏好数据 (用于 RLHF)\";\n        bgcolor=\"#e9ecef\"; style=filled; color=\"#ced4da\";\n        rlhf_prompt [label=\"输入提示\"];\n        rlhf_resp_a [label=\"生成输出 A\"];\n        rlhf_resp_b [label=\"生成输出 B\"];\n        rlhf_human [label=\"人类评估者\"];\n        rlhf_pref [label=\"偏好数据\\n(例如，A > B)\"];\n        rlhf_output [label=\"学习偏好输出的底层特质\", shape=plaintext, fontcolor=\"#12b886\"];\n\n        rlhf_prompt -> {rlhf_resp_a, rlhf_resp_b} [label=\"模型生成选项\"];\n        {rlhf_resp_a, rlhf_resp_b} -> rlhf_human [label=\"人类比较\"];\n        rlhf_human -> rlhf_pref [label=\"提供判断\"];\n        rlhf_pref -> rlhf_output [style=dashed] ;\n\n    }\n    \n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1dvure2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>SFT 中使用的数据信号与 RLHF 中心的偏好数据比较。SFT 依赖于绝对示例，而 RLHF 从相对比较中学习。</p>\n</blockquote>\n<h3>指定复杂或隐含的目标</h3>\n<p>“行为无害”、“诚实”或“避免生成错误信息”等对齐 (alignment)目标，众所周知仅通过 SFT 示范难以全面指定。</p>\n<ul>\n<li><strong>抽象原则：</strong> 无害性不仅是避免明确的有害内容；它还涉及不易察觉的方面，如避免有害的刻板印象、优雅地拒绝危险指令，以及不提供可能造成间接伤害的误导信息。通过输入-输出对展示所有这些抽象原则的各个方面是不切实际的。</li>\n<li><strong>负面限制：</strong> 定义模型<em>不应该</em>做什么通常更容易。虽然 SFT 可以包含拒绝的示例，但它难以将拒绝的根本<em>原因</em>泛化到新的有害提示上。</li>\n<li><strong>表面模仿：</strong> 模型可能从 SFT 数据中学习表面模式，而没有内化预期原则。例如，它可能会学习使用模糊语言（“似乎……”），因为此类短语出现在“诚实”的示例中，但却不恰当地应用，无法在需要时真正诚实或承认不确定性。</li>\n</ul>\n<h3>过拟合 (overfitting)和泛化能力丧失</h3>\n<p>在特定数据集上进行密集 SFT 可能会导致模型对这些示范中包含的风格、语气和特定知识产生过拟合。</p>\n<ul>\n<li><strong>模式崩溃：</strong> 模型可能会失去部分原始生成能力或创造力，倾向于生成与 SFT 示例非常相似的输出，即使在需要变体时也是如此。</li>\n<li><strong>脆弱性：</strong> 虽然在 SFT 期间看到的任务上表现良好，但当模型面临略有不同的任务或措辞时，其效果可能会下降或表现不佳。</li>\n</ul>\n<p>这些局限性表明，虽然 SFT 是基础适应的宝贵工具，但它不足以实现高级 LLM 与人类开放式交互所需的深刻、可靠和可泛化的对齐 (alignment)。引入更广泛、更具可扩展性的人类偏好信号的需求，促使转向 RLHF 等方法，这些方法借助比较反馈来指导模型趋向更理想的行为。接下来的章节将详细介绍如何在一个强化学习 (reinforcement learning)框架内收集、建模和使用这种偏好信号。</p>",
+  "slug": "sft-limitations",
+  "updates": [],
+  "references": [
+    {
+      "id": 13129,
+      "title": "Training language models to follow instructions with human feedback",
+      "author": "Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2203.02155",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "doi": "10.48550/arXiv.2203.02155",
+      "note": "介绍了通过RLHF对齐的InstructGPT模型，并详细说明了SFT为何不足以实现通用指令遵循和对齐。",
+      "order": 1,
+      "created_at": "2025-09-05T08:28:31.356917Z",
+      "updated_at": "2025-09-10T11:41:28.253242Z"
+    },
+    {
+      "id": 13130,
+      "title": "Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback",
+      "author": "Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort, Deep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion, Tom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatfield-Dodds, Danny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt, Neel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark, Sam McCandlish, Chris Olah, Ben Mann, Jared Kaplan",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2204.05862",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2204.05862",
+      "doi": "10.48550/arXiv.2204.05862",
+      "note": "展示了RLHF在使LLM与人类对有用性和无害性的偏好对齐方面的有效性，说明了SFT单独无法满足复杂目标的原因。",
+      "order": 2,
+      "created_at": "2025-09-05T08:28:31.360866Z",
+      "updated_at": "2025-09-10T11:41:25.341503Z"
+    },
+    {
+      "id": 13131,
+      "title": "Learning to summarize with human feedback",
+      "author": "Nisan Stiennon, Long Ouyang, Jeff Wu, Daniel M. Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul Christiano",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "33",
+      "pages": "7773-7784",
+      "url": "https://arxiv.org/abs/2009.01325",
+      "doi": "10.48550/arXiv.2009.01325",
+      "note": "RLHF在文本生成方面的初步应用之一，展示了其学习主观奖励函数的能力，而SFT因缺乏单一的“正确”输出而面临挑战。",
+      "order": 3,
+      "created_at": "2025-09-05T08:28:31.364303Z",
+      "updated_at": "2025-09-10T11:41:33.772322Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

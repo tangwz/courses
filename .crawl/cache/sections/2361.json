@@ -1,0 +1,61 @@
+{
+  "id": 2361,
+  "title": "动手实践：数据预处理并行化",
+  "meta_title": "实践：Python 数据并行预处理",
+  "meta_description": "使用多进程或 concurrent.futures 并行化数据预处理流程，以加快执行速度。",
+  "content": "<p>数据预处理通常是机器学习 (machine learning)流程中计算密集型的部分，尤其是在处理大规模数据集或复杂特征工程步骤时。许多预处理任务，例如逐行或逐列应用转换，本身就可以并行处理。应用前面讨论的并发技术可以大幅缩短此阶段耗时。</p>\n<p>选取一个典型的数据预处理任务，并使用 Python 的 <code>concurrent.futures</code> 模块来加速，特别是运用 <code>ProcessPoolExecutor</code> 处理 CPU 密集型操作。</p>\n<h3>场景：复杂特征工程</h3>\n<p>假设我们有一个表示为 Pandas DataFrame 的数据集，我们需要对其一列应用一个计算密集型函数，以生成一个新特征。我们的函数将模拟一些复杂计算。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\nimport time\nimport math\nfrom concurrent.futures import ProcessPoolExecutor\n\n# 生成一些样本数据\ndata_size = 1_000_000\ndf = pd.DataFrame({\n    'id': range(data_size),\n    'value_to_process': np.random.rand(data_size) * 100\n})\n\n# 定义一个模拟的复杂处理函数\ndef complex_feature_engineering(value):\n    \"\"\"模拟一个CPU密集型计算。\"\"\"\n    result = 0\n    for i in range(100): # 模拟计算工作\n        result += math.sqrt(abs(math.sin(value) * math.cos(value / (i + 1)))) * math.log(value + 1)\n    # 添加短暂休眠以模拟潜在的I/O或外部调用\n    # time.sleep(0.0001)\n    return result\n\nprint(\"样本 DataFrame 前几行：\")\nprint(df.head())\nprint(f\"\\nDataFrame 大小：{len(df)} 行\")\n</code></pre>\n<h3>基准：顺序执行</h3>\n<p>首先，我们使用 Pandas 的 <code>apply</code> 方法来实现标准的顺序方法。我们将计时以查看此过程需要多长时间。</p>\n<pre><code class=\"language-python\"># 使用pandas apply进行顺序执行\nprint(\"\\n开始顺序处理...\")\nstart_time_seq = time.time()\n\ndf['new_feature_seq'] = df['value_to_process'].apply(complex_feature_engineering)\n\nend_time_seq = time.time()\nsequential_duration = end_time_seq - start_time_seq\n\nprint(f\"顺序处理完成。\")\nprint(f\"耗时：{sequential_duration:.2f} 秒\")\nprint(\"\\n包含顺序结果的 DataFrame 前几行：\")\nprint(df[['id', 'value_to_process', 'new_feature_seq']].head())\n</code></pre>\n<p>在典型的多核机器上，对一百万行数据运行此函数将耗费相当长的时间，因为它在单个 CPU 核心上逐个处理每个值。</p>\n<h3>使用 ProcessPoolExecutor 进行并行执行</h3>\n<p>现在，让我们使用 <code>ProcessPoolExecutor</code> 来并行化此任务。该执行器将工作分配到多个进程，使 Python 能够绕过全局解释器锁 (GIL)，处理像 <code>complex_feature_engineering</code> 函数这样的 CPU 密集型任务。</p>\n<p>我们可以使用 <code>executor.map</code> 方法，它的工作方式类似于内置的 <code>map</code> 函数，但会并发执行调用。它将给定函数应用于可迭代对象（我们的 DataFrame 列）中的每个项，并返回一个迭代器，按输入顺序生成结果。</p>\n<p>以块（分块）方式处理数据通常比将单独的行发送到工作进程更有效，因为这可以减少进程间通信 (IPC) 的开销。我们可以将 DataFrame 列分成块，并提交每个块进行处理。然而，为了 <code>executor.map</code> 的简单性，我们将直接在 Series 上映射。Pandas Series（和 NumPy 数组）通常是可序列化的，这使得它们可以被发送到工作进程。</p>\n<pre><code class=\"language-python\"># 使用 ProcessPoolExecutor 进行并行执行\n# 确定最优工作进程数（通常与CPU核心数有关）\n# 使用 None 通常默认为机器的处理器数量\nnum_workers = None # 或者设置为特定数字，例如 4\n\nprint(f\"\\n开始并行处理，使用 {num_workers or '默认'} 个工作进程...\")\nstart_time_par = time.time()\n\n# 将列转换为列表或NumPy数组，以获得可能更好的分块/序列化效果\n# 这取决于执行器的实现细节。对于map，Series通常可以直接使用。\nvalues_to_process = df['value_to_process'].values\n\nresults_par = []\n# 使用 ProcessPoolExecutor 并行应用函数\n# chunksize 可以根据任务持续时间与开销进行性能调整\n# 较大的 chunksize 会减少开销，但可能导致负载不平衡。\n# 让我们估算一个 chunksize。如果每个任务都很短，则更大的块更好。\n# 如果 data_size 是 1M 且我们有 8 个工作进程，每个块可能是 1000-10000 个项。\nestimated_chunksize = max(1, min(len(values_to_process) // (num_workers or os.cpu_count() or 1) // 4, 10000))\n\nwith ProcessPoolExecutor(max_workers=num_workers) as executor:\n    # map 并发地将函数应用于可迭代对象中的每个项\n    # 结果按输入可迭代对象的顺序返回\n    results_par = list(executor.map(complex_feature_engineering, values_to_process, chunksize=estimated_chunksize))\n\n# 将结果重新赋值给 DataFrame\ndf['new_feature_par'] = results_par\n\nend_time_par = time.time()\nparallel_duration = end_time_par - start_time_par\n\nprint(f\"并行处理完成。\")\nprint(f\"耗时：{parallel_duration:.2f} 秒\")\nprint(\"\\n包含并行结果的 DataFrame 前几行：\")\n# 验证结果是否一致（如果存在浮点精度差异则允许）\nprint(df[['id', 'new_feature_seq', 'new_feature_par']].head())\n# 检查结果是否接近匹配\nif 'new_feature_seq' in df.columns:\n    print(\"\\n验证结果是否匹配（近似）：\")\n    print(np.allclose(df['new_feature_seq'], df['new_feature_par']))\n\n# 计算加速比\nspeedup = sequential_duration / parallel_duration\nprint(f\"\\n加速因子：{speedup:.2f}x\")\n\n# 如果需要，清除顺序列\n# del df['new_feature_seq']\n</code></pre>\n<h3>性能比较</h3>\n<p>让我们可视化这两种方法的耗时。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1a5bsr0\" \n              data-plot-definition='{\"data\": [{\"x\": [\"顺序\", \"并行\"], \"y\": [12.5, 3.2], \"type\": \"bar\", \"marker\": {\"color\": [\"#ff6b6b\", \"#4dabf7\"]}}], \"layout\": {\"title\": \"数据预处理执行时间\", \"yaxis\": {\"title\": \"时间（秒）\"}, \"xaxis\": {\"title\": \"执行方法\"}, \"template\": \"plotly_white\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1a5bsr0\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>顺序数据预处理与并行数据预处理的执行时间比较。</p>\n</blockquote>\n<h3>讨论</h3>\n<p>您应该会发现并行方法能大幅减少执行时间，特别是在具有多个 CPU 核心的机器上。具体的加速效果取决于：</p>\n<ol>\n<li><strong>CPU 核心数：</strong> <code>ProcessPoolExecutor</code> 利用多个核心。可用的核心越多（在一定程度上），潜在的加速效果越好。</li>\n<li><strong>任务粒度：</strong> <code>complex_feature_engineering</code> 函数需要足够计算密集，才能使并行化开销（IPC、进程创建）变得值得。如果函数执行速度极快，则开销可能会抵消收益。</li>\n<li><strong>开销：</strong> 创建进程并在它们之间传输数据（通过 pickling 进行序列化/反序列化）会产生开销。对于非常大的数据集或复杂对象，这可能成为瓶颈。使用共享内存或以更大块处理数据（<code>executor.map</code> 中的 <code>chunksize</code>）等技术可以帮助缓解此问题。</li>\n<li><strong>GIL 限制：</strong> 由于我们的任务是 CPU 密集型的，<code>ProcessPoolExecutor</code> 非常有效，因为每个进程都有自己的 Python 解释器和内存空间，从而绕开了 GIL。对于 I/O 密集型任务，<code>ThreadPoolExecutor</code> 或 <code>asyncio</code> 可能更适合，正如本章前面讨论的。</li>\n</ol>\n<h3>管道的考量</h3>\n<ul>\n<li><strong>分块：</strong> 对于无法舒适地适应内存的超大数据集，或者函数应用开销较低时，显式地将数据分成更大的块（例如，分割 DataFrame 并对每个块使用 <code>executor.submit</code>）比映射单个元素更有效率。</li>\n<li><strong>内存使用：</strong> 请注意，创建多个进程比线程消耗更多内存，因为每个进程都有自己的内存空间。确保您的机器有足够的内存。</li>\n<li><strong>库支持：</strong> 许多现代数据科学库（如 Scikit-learn、Dask、Ray、Polars）都内置了并行执行支持（Scikit-learn 中的 <code>n_jobs</code> 参数 (parameter)，Dask/Ray 中的分布式计算，Polars 中的多线程）。在实现自定义解决方案之前，请调查您的工具是否已提供优化的并行处理能力。</li>\n<li><strong>错误处理：</strong> 在生产代码中，在并行执行逻辑周围添加错误处理，以管理工作进程中潜在的故障。</li>\n</ul>\n<p>本实践演示了如何应用 <code>ProcessPoolExecutor</code> 来加速常见的 CPU 密集型数据预处理任务。通过了解您的工作负载性质（CPU 密集型 vs. I/O 密集型）和可用的工具，您可以有效地运用并发来加速您的机器学习 (machine learning)流程。</p>",
+  "slug": "practice-parallelizing-preprocessing",
+  "updates": [],
+  "references": [
+    {
+      "id": 6247,
+      "title": "`concurrent.futures` - Launching parallel tasks",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/concurrent.futures.html",
+      "doi": "",
+      "note": "`concurrent.futures`模块的官方文档，详细介绍了`ProcessPoolExecutor`和高级异步执行。",
+      "order": 1,
+      "created_at": "2025-09-05T01:20:22.216511Z",
+      "updated_at": "2025-09-07T21:00:02.137310Z"
+    },
+    {
+      "id": 6248,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于使用Python库（包括Pandas）进行数据操作和分析的指南，由其创建者撰写。",
+      "order": 2,
+      "created_at": "2025-09-05T01:20:22.219765Z",
+      "updated_at": "2025-09-07T21:00:02.871724Z"
+    },
+    {
+      "id": 6249,
+      "title": "High Performance Python: Practical Performant Programming for Speed, Scale, and Efficiency",
+      "author": "Micha Gorelick and Ian Ozsvald",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/high-performance-python/9781492055013/",
+      "doi": "",
+      "note": "涵盖优化Python代码的策略和技术，包含关于科学计算并行和并发的部分。",
+      "order": 3,
+      "created_at": "2025-09-05T01:20:22.222444Z",
+      "updated_at": "2025-09-07T21:00:00.255609Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

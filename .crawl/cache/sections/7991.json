@@ -1,0 +1,61 @@
+{
+  "id": 7991,
+  "title": "聚类与排序键",
+  "meta_title": "聚类键优化",
+  "meta_description": "使用聚类键减少数据扫描。",
+  "content": "<p>分区是一种数据组织策略，它将数据分成粗略的段，从而缩小查询范围。然而，当查询基于与分区键不同的高基数列进行筛选时，分区通常显得不足。例如，如果一个表按 <code>transaction_date</code> 分区，查找特定 <code>customer_id</code> 的查询仍需扫描该日期分区内的所有文件。为了在这种情况下提升效率，现代列式数据库使用聚类和排序键在微分区或数据块级别组织数据存储。</p>\n<h3>块修剪的工作原理</h3>\n<p>分析型数据库通常不使用事务系统中常见的B树索引。它们依赖于存储在每个数据文件或微分区头部的元数据。这些元数据记录了该数据块中各列的最小值和最大值。当查询执行时，引擎会将 <code>WHERE</code> 子句的谓词与这些最小/最大范围进行比较。</p>\n<p>如果谓词值超出了特定数据块的范围，引擎会完全跳过该数据块。此过程称为块修剪或数据跳过。然而，这种技术的有效性完全由数据在磁盘上的物理排序方式决定。</p>\n<p>考虑一个订单ID数据集，它分布在三个存储块中。</p>\n<p><strong>未排序数据（低效修剪）：</strong></p>\n<ul>\n<li><strong>数据块 A：</strong> ID [105, 902, 340] → 最小值: 105, 最大值: 902</li>\n<li><strong>数据块 B：</strong> ID [101, 880, 205] → 最小值: 101, 最大值: 880</li>\n<li><strong>数据块 C：</strong> ID [500, 102, 999] → 最小值: 102, 最大值: 999</li>\n</ul>\n<p>如果你查询 <code>ID = 205</code>，引擎必须扫描所有三个数据块，因为 205 落入每个数据块的最小/最大范围内。这些范围重叠严重，使得元数据在筛选时失去作用。</p>\n<p><strong>已排序/聚类数据（高效修剪）：</strong></p>\n<ul>\n<li><strong>数据块 A：</strong> ID [101, 102, 105] → 最小值: 101, 最大值: 105</li>\n<li><strong>数据块 B：</strong> ID [205, 340, 500] → 最小值: 205, 最大值: 500</li>\n<li><strong>数据块 C：</strong> ID [880, 902, 999] → 最小值: 880, 最大值: 999</li>\n</ul>\n<p>现在，查询 <code>ID = 205</code> 会让引擎立即忽略数据块 A 和数据块 C。它只扫描数据块 B。I/O 的这种大幅减少是定义聚类键的主要目的。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1v8ke7d\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=rect, style=filled, fontname=\"Helvetica\", fontsize=10];\n    edge [fontname=\"Helvetica\", fontsize=10, color=\"#adb5bd\"];\n\n    subgraph cluster_unsorted {\n        label=\"未排序布局：高度重叠\";\n        style=dashed;\n        color=\"#adb5bd\";\n        fontcolor=\"#495057\";\n\n        node [fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n        Block1 [label=\"数据块 1\\n范围: 100 - 900\\n包含: 105, 800\"];\n        Block2 [label=\"数据块 2\\n范围: 100 - 900\\n包含: 120, 850\"];\n\n        Query [label=\"查询: WHERE ID = 120\", shape=plaintext, fillcolor=none];\n\n        Query -> Block1 [label=\"已扫描 (可能匹配)\", color=\"#fa5252\"];\n        Query -> Block2 [label=\"已扫描 (已找到匹配)\", color=\"#fa5252\"];\n    }\n\n    subgraph cluster_sorted {\n        label=\"聚类布局：范围分离\";\n        style=dashed;\n        color=\"#adb5bd\";\n        fontcolor=\"#495057\";\n\n        node [fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n        Block3 [label=\"数据块 3\\n范围: 100 - 200\\n包含: 105, 120\"];\n        Block4 [label=\"数据块 4\\n范围: 800 - 900\\n包含: 800, 850\"];\n\n        Query2 [label=\"查询: WHERE ID = 120\", shape=plaintext, fillcolor=none];\n\n        Query2 -> Block3 [label=\"已扫描 (已找到匹配)\", color=\"#40c057\"];\n        Query2 -> Block4 [label=\"已跳过 (范围不匹配)\", style=dotted, color=\"#adb5bd\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1v8ke7d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据布局的比较，说明了紧密的最小/最大范围如何让查询引擎跳过不相关的数据块。</p>\n</blockquote>\n<h3>线性排序与交错排序</h3>\n<p>选择单个列作为排序键会建立线性顺序。如果该特定列是查询的主要筛选条件，这种方式非常有效。然而，分析型工作负载通常需要同时在多个维度上进行筛选，例如按 <code>Region</code> 和 <code>ProductCategory</code> 查询。</p>\n<p>在线性排序中（例如，<code>ORDER BY Region, ProductCategory</code>），数据首先完全按 Region 排序。<code>ProductCategory</code> 仅在具有相同 Region 的行中进行本地排序。如果你仅按 <code>ProductCategory</code> 查询，数据库将无法有效修剪数据块，因为每个 Region 很可能都包含所有 Product Category。</p>\n<p>为此，现代数据仓库实现了多维聚类或 Z 排序（Z 阶曲线）。这种技术将多维数据映射到一维，同时保持所有聚类列的局部性。它交错值在二进制上的表示，确保对于任一列具有相似值的数据点最终在磁盘上存储在一起。</p>\n<p>权衡是，Z 排序对于第一列的效率略低于纯线性排序，但对于列表中的第二、第三或第四列则效率高得多。</p>\n<h3>选择聚类列</h3>\n<p>选择正确的聚类列需要分析你的查询模式。你不能按所有列进行聚类，因为这样做会稀释排序效果（按十列排序对于最后几列来说实际上是随机顺序）。</p>\n<p>有效的聚类键通常具有以下特点：</p>\n<ol>\n<li><strong>高基数：</strong> 具有许多不同值的列（如 <code>user_id</code> 或 <code>order_id</code>）最能从聚类中获益。低基数列（如 <code>boolean</code> 标志或具有 3 个值的 <code>status</code>）会生成具有相同范围的大块，使得修剪效果不佳。</li>\n<li><strong>频繁筛选：</strong> 优先考虑那些频繁出现在 <code>WHERE</code> 子句或 <code>JOIN</code> 条件中的列。</li>\n<li><strong>大表数据量：</strong> 聚类会带来后台维护成本（重写文件）。它通常适用于多TB范围的表，因为在这种情况下，全表扫描的成本过高。</li>\n</ol>\n<p>我们可以通过计算列的聚类深度或聚类因子来估算其聚类的有效性。如果一个表有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 个数据块，并且特定值 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span> 存在于其中的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>M</mi></mrow><annotation encoding=\"application/x-tex\">M</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span></span></span></span> 个数据块中，那么理想的聚类深度是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>（即该值仅存在于 1 个数据块中）。如果 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>M</mi><mo>≈</mo><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">M \\approx N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">M</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>，数据是随机分布的，对 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span> 的查询将导致全表扫描。</p>\n<h3>维护与自动聚类</h3>\n<p>随着新行的插入，数据自然会变得无序。如果你每天追加数据，新行自然会按时间（摄取日期）排序，但它们在 <code>customer_id</code> 或 <code>product_id</code> 方面很可能是无序的。</p>\n<p>随着时间的推移，聚类因子会下降。为了保持性能，数据库必须执行维护操作，通常称为“清理”或“重新聚类”。这个过程会读取无序的微分区，在内存中对数据进行排序，并写入新的、有序的微分区。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-91a17w\" \n              data-plot-definition='{\"layout\": {\"title\": \"查询性能与聚类深度的关系\", \"xaxis\": {\"title\": \"聚类深度 (重叠因子)\"}, \"yaxis\": {\"title\": \"查询持续时间 (秒)\"}, \"template\": \"simple_white\", \"width\": 600, \"height\": 400}, \"data\": [{\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], \"y\": [1.2, 1.5, 2.1, 3.5, 5.8, 8.2, 11.5, 15.1, 19.5, 24.0], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"line\": {\"color\": \"#228be6\", \"width\": 3}, \"marker\": {\"size\": 8, \"color\": \"#1c7ed6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-91a17w\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>性能下降与聚类深度相关联。随着相同的值分散到更多文件（深度越高），查询引擎必须读取更多数据才能满足相同的谓词。</p>\n</blockquote>\n<p>设计模式时，你必须平衡这些计算密集型维护操作的成本与查询检索所节省的资源。对于很少查询的表，完美的聚类是资源的浪费。对于支持面向用户的仪表板的核心事实表，持续聚类的投入是满足 SLA 要求的必要条件。</p>",
+  "slug": "clustering-and-sorting-keys",
+  "updates": [],
+  "references": [
+    {
+      "id": 22013,
+      "title": "The Vertica Analytical Database: C-Store 2.0",
+      "author": "Michael Stonebraker, Daniel Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Alex Lerner, Stan Letovsky, Pat O'Neil, Spencer Rowland, David S. Smith, Nesime Tatbul, Ron Avnur, Samuel Madden",
+      "year": "2012",
+      "publisher": "VLDB Endowment",
+      "journal": "Proceedings of the VLDB Endowment",
+      "volume": "5",
+      "pages": "1790-1801",
+      "url": "http://www.vldb.org/pvldb/vol5/p1790_michaelstonebraker_vldb.pdf",
+      "doi": "10.14778/2367502.2367540",
+      "note": "这篇基础论文描述了Vertica（一个开创性的商用列式数据库）的设计原则，详细介绍了数据如何存储和针对分析查询进行优化，包括最小/最大区域映射和物理排序以实现块剪枝。",
+      "order": 1,
+      "created_at": "2025-11-27T04:46:33.085831Z",
+      "updated_at": "2025-11-27T06:03:22.493911Z"
+    },
+    {
+      "id": 22014,
+      "title": "Data Skipping with Z-ordering for Delta Lake",
+      "author": "Databricks documentation",
+      "year": "2025",
+      "publisher": "Databricks",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.databricks.com/en/delta/data-skipping.html#data-skipping-with-z-ordering",
+      "doi": "",
+      "note": "官方文档，解释了Delta Lake中Z-ordering作为多维聚类技术，展示了其在跨多列复杂分析查询中块剪枝的有效性。",
+      "order": 2,
+      "created_at": "2025-11-27T04:46:33.169556Z",
+      "updated_at": "2025-11-27T06:03:12.772280Z"
+    },
+    {
+      "id": 22016,
+      "title": "Database Internals: A Look Inside Today's Storage and Analytical Databases",
+      "author": "Alex Petrov",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/database-internals/9781492040441/",
+      "doi": "",
+      "note": "本书全面概述了现代数据库系统（包括分析型数据库）如何处理数据存储、索引和查询优化，与讨论的物理设计概念相关。",
+      "order": 4,
+      "created_at": "2025-11-27T04:46:33.177576Z",
+      "updated_at": "2025-11-27T06:03:13.257505Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

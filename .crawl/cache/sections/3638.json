@@ -1,0 +1,61 @@
+{
+  "id": 3638,
+  "title": "检索器在 RAG 中的作用",
+  "meta_title": "检索器组件在 RAG 系统中的作用",
+  "meta_description": "说明检索器的主要功能：从知识源中查找相关文档或文本段落。",
+  "content": "<p>检索器是 RAG 系统的专门信息查找器。可以把标准的大型语言模型（LLM）想象成一个知识渊博的人，但其知识更新停留在某个时间点，并且可能偶尔会记错细节或缺乏特定领域的专业知识。检索器的任务是为这个知识组件（LLM）提供特定、及时且相关的文件或文本段落，以便在需要时准确回答查询。</p>\n<p>其主要职能很简单：给定用户查询后，检索器会在预定义的知识源中搜索，例如文档、文章、网站数据或数据库条目集合。然后它会识别并提取最有可能有助于形成准确且基于上下文 (context)的回答的信息片段。</p>\n<p>请看工作流程：</p>\n<ol>\n<li><strong>输入：</strong> 检索器接收用户的输入查询。通常，此查询会被转换为数值表示（一种嵌入 (embedding)，我们稍后会介绍），以捕获其语义含义而非仅是关键词。</li>\n<li><strong>搜索：</strong> 它对已索引的知识库执行搜索操作。这通常涉及复杂的技术，如向量 (vector)相似度搜索，旨在找到与查询意图语义相关的内容，而不仅仅是匹配单词。</li>\n<li><strong>输出：</strong> 检索器返回一个相关文本“块”或文档片段的排序列表。这些片段是被认为与根据知识源内容回答原始查询最相关的信息。</li>\n</ol>\n<p>这种检索到的上下文是检索增强生成 (RAG)（Retrieve-Augmented Generation）的“增强”部分。它被传递到下一个阶段，即生成器（LLM），构成输入提示的一个重要部分，指导最终的答案生成。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ujy5xp\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\"];\n\n  query [label=\"用户查询\"];\n  retriever [label=\"检索器\\n组件\", shape=cylinder, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n  knowledge [label=\"知识\\n源 / 索引\", shape=folder, color=\"#40c057\", fontcolor=\"#40c057\"];\n  context [label=\"检索到的上下文\\n(相关块)\"];\n  generator [label=\"生成器\\n(LLM)\", peripheries=2, color=\"#ae3ec9\", fontcolor=\"#ae3ec9\"];\n  response [label=\"最终回答\"];\n\n  query -> retriever;\n  retriever -> knowledge [dir=both, label=\" 搜索 \"];\n  retriever -> context;\n  {query, context} -> generator [label=\" 形成增强提示 \"];\n  generator -> response;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ujy5xp\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>检索器根据用户的输入查询已索引的知识源，并为生成器（LLM）提供相关上下文，然后由生成器生成最终回答。</p>\n</blockquote>\n<p>检索器输出的质量直接影响 RAG 系统的整体效率。如果检索器未能找到必要信息或提取不相关的段落，生成器无论能力多强，都会遇到困难。如果提供的上下文缺失、误导或不正确，它就无法合成准确、有充分依据的答案。“垃圾进，垃圾出”的原则在这里非常适用；检索器的表现决定了 RAG 系统最终输出质量的上限。</p>\n<p>因此，了解检索器如何工作以及如何有效地配置它，对于构建可靠的 RAG 应用来说很重要。接下来的部分将讨论实现这一检索的核心技术：用于表示文本含义的向量嵌入、用于查找相关内容的相似度搜索算法，以及用于大规模高效管理和查询这些表示的向量数据库。</p>",
+  "slug": "retriever-role",
+  "updates": [],
+  "references": [
+    {
+      "id": 9853,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍检索增强生成（RAG）框架的开创性论文，展示了其架构以及结合检索器和生成器的有效性。",
+      "order": 1,
+      "created_at": "2025-09-05T06:32:21.274791Z",
+      "updated_at": "2025-09-09T11:59:29.918952Z"
+    },
+    {
+      "id": 9854,
+      "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+      "author": "Vladimir Karpukhin, Barlas Oğuz, Sewon Min, Patrick Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, and Wen-tau Yih",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)",
+      "volume": "",
+      "pages": "8644-8657",
+      "url": "https://arxiv.org/abs/2004.04906",
+      "doi": "10.48550/arXiv.2004.04906",
+      "note": "关于使用密集向量嵌入进行高效准确的段落检索的开创性工作，这对于RAG检索器的“搜索”阶段至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T06:32:21.280012Z",
+      "updated_at": "2025-09-09T11:59:37.945976Z"
+    },
+    {
+      "id": 9855,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang",
+      "year": "2024",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.10997",
+      "doi": "10.48550/arXiv.2312.10997",
+      "note": "检索增强生成（RAG）的综合综述，涵盖了多种检索器设计、优化方法及其对RAG系统整体性能的影响。",
+      "order": 3,
+      "created_at": "2025-09-05T06:32:21.283391Z",
+      "updated_at": "2025-09-09T11:59:35.143906Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

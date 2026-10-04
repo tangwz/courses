@@ -1,0 +1,61 @@
+{
+  "id": 8512,
+  "title": "理解全量微调的局限性",
+  "meta_title": "全量微调的局限性",
+  "meta_description": "分析更新所有模型权重所带来的计算成本和内存瓶颈。",
+  "content": "<p>使用标准监督学习 (supervised learning)方法训练神经网络 (neural network)时，需要计算梯度并更新模型架构中的每一个参数 (parameter)。虽然这种方法在小型网络上效果良好，但将其应用于现代语言模型时，会带来严峻的硬件限制。即便是在 10 亿至 70 亿参数之间的小型语言模型，也需要大量的计算资源，这很快就会超过消费级硬件的承受能力。</p>\n<p>要理解全量微调 (fine-tuning)为何如此昂贵，必须查看训练期间 GPU 显存 (VRAM)分配的数学事实。显存不仅用于存储模型权重 (weight)，其占用空间主要分为四个部分：模型参数、梯度、优化器状态和前向激活值。</p>\n<p>当以 16 位精度加载模型时，每个参数占用 2 字节内存。对于一个 70 亿参数的模型，仅权重就消耗大约 14 GB 的显存。在反向传播 (backpropagation)过程中，网络会为每个参数计算梯度，以确定权重更新的方向和幅度。以 16 位精度存储这些梯度又需要 14 GB。</p>\n<p>最大的内存瓶颈来自优化器。训练语言模型时使用的标准优化器是 AdamW。它为每个参数维护两个独立的状态：梯度的指数移动平均值和梯度平方的指数移动平均值。为了保持数值稳定性，这些状态通常以 32 位浮点精度存储，每个状态需要 4 字节。这意味着优化器状态为每个参数消耗 8 字节。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-8sn8t7\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled,rounded\", fontname=\"Helvetica\", fontsize=12, margin=0.2]; Total [label=\"总显存需求\\n(每个参数 12+ 字节)\", fillcolor=\"#dee2e6\"]; Weights [label=\"模型权重\\n16位 (2 字节)\", fillcolor=\"#a5d8ff\"]; Gradients [label=\"梯度\\n16位 (2 字节)\", fillcolor=\"#ffc9c9\"]; Optimizer [label=\"AdamW 优化器状态\\n32位 (8 字节)\", fillcolor=\"#eebefa\"]; Activations [label=\"前向激活值\\n大小可变\", fillcolor=\"#ffec99\"]; Total -> Weights; Total -> Gradients; Total -> Optimizer; Total -> Activations; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-8sn8t7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 AdamW 优化器进行标准全量微调时，每个参数的显存分配分解图。</p>\n</blockquote>\n<p>你可以将全量微调的基础内存需求（以字节为单位）表示为一个简单的公式，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi></mrow><annotation encoding=\"application/x-tex\">P</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span></span></span></span> 代表模型参数的总数：</p>\n<p><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>内存</mtext><mo>=</mo><mn>2</mn><mi>P</mi><mo>+</mo><mn>2</mn><mi>P</mi><mo>+</mo><mn>8</mn><mi>P</mi><mo>=</mo><mn>12</mn><mi>P</mi></mrow><annotation encoding=\"application/x-tex\">内存 = 2P + 2P + 8P = 12P</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">内存</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord\">2</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord\">2</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">8</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">12</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span></span></span></span></p>\n<p>对于一个 70 亿参数的模型，计算 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>12</mn><mo>×</mo><mn>7</mn><mo separator=\"true\">,</mo><mn>000</mn><mo separator=\"true\">,</mo><mn>000</mn><mo separator=\"true\">,</mo><mn>000</mn></mrow><annotation encoding=\"application/x-tex\">12 \\times 7,000,000,000</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">12</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8389em;vertical-align:-0.1944em;\"></span><span class=\"mord\">7</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span></span></span></span> 可以发现，仅仅为了在内存中保留权重、梯度和优化器状态，最低内存需求就达到了 84 GB。这个计算甚至还没包括前向激活值，而激活值的大小会随着训练数据的序列长度和批次大小增加。因此，训练这种规模的模型需要专门的硬件配置，例如通过高速通信链路连接的多块 A100 GPU。</p>\n<p>除了直接的硬件限制外，全量微调还会带来显着的存储和部署问题。当你更新网络中的每个权重时，产生的模型与基础模型完全不同。如果你正在开发多个专门的应用，比如一个用于摘要医学文档的模型，另一个用于生成 Python 代码的模型，全量微调要求你为每个任务保存并托管完全独立的模型副本。对于 70 亿参数的模型，这意味着每个任务都要分配 14 GB 的磁盘空间和部署内存。</p>\n<p>模型副本的这种线性增长导致了低效的部署架构。在本地环境或小型云服务器上同时将多个大文件加载到内存中是不切实际的。此外，在小型专业数据集上微调所有参数往往会导致灾难性遗忘。模型可能会完美适应新任务，但却丧失了在最初预训练 (pre-training)阶段获得的基础语言推理 (inference)能力。</p>\n<p>这些硬件、内存和存储方面的多重限制，使得全量微调在大多数本地开发场景下难以实现且效率低下。通过明确显存是如何分配的（特别是分配给优化器状态和梯度的部分），你可以明白为什么冻结基础模型参数的技术是必要的。保持大部分权重不变可以消除它们对应的梯度和优化器状态，从而大幅减少训练所需的内存占用。</p>",
+  "slug": "understanding-full-fine-tuning-limitations",
+  "updates": [],
+  "references": [
+    {
+      "id": 22778,
+      "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models",
+      "author": "Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, Yuxiong He",
+      "year": "2020",
+      "publisher": "IEEE",
+      "journal": "SC20: International Conference for High Performance Computing, Networking, Storage and Analysis",
+      "volume": "",
+      "pages": "1-16",
+      "url": "https://arxiv.org/abs/1910.02054",
+      "doi": "10.1109/SC41405.2020.00024",
+      "note": "该论文提供了显存消耗的技术分析，特别是 Adam 优化器状态下每个参数所需的 8 字节空间。",
+      "order": 1,
+      "created_at": "2026-03-18T03:04:37.538358Z",
+      "updated_at": "2026-03-18T04:00:17.429461Z"
+    },
+    {
+      "id": 22779,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2106.09685",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "",
+      "note": "讨论了全参数微调面临的挑战，包括为不同任务维护独立模型副本所带来的存储开销和部署困难。",
+      "order": 2,
+      "created_at": "2026-03-18T03:04:37.542884Z",
+      "updated_at": "2026-03-18T04:00:16.952732Z"
+    },
+    {
+      "id": 22780,
+      "title": "Model Training Anatomy",
+      "author": "Hugging Face",
+      "year": "2023",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/perf_train_gpu_one",
+      "doi": "",
+      "note": "官方指南解释了 Transformer 训练期间显存在权重、梯度和优化器状态之间的分配情况。",
+      "order": 3,
+      "created_at": "2026-03-18T03:04:37.545456Z",
+      "updated_at": "2026-03-18T04:00:16.055906Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

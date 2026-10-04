@@ -1,0 +1,61 @@
+{
+  "id": 5308,
+  "title": "动手实践：容器化并运行训练脚本",
+  "meta_title": "实践：容器化并运行机器学习训练脚本",
+  "meta_description": "将一个机器学习训练脚本示例打包成Docker镜像，并以容器形式运行，同时管理数据和输出。",
+  "content": "<p>将一个简单的机器学习 (machine learning)训练脚本容器化，为其构建一个Docker镜像，并在容器内执行训练过程。数据输入和模型输出使用绑定挂载进行管理。这种方法有助于巩固创建可复现训练环境的过程。</p>\n<h3>前提条件</h3>\n<ul>\n<li>Docker已安装并在您的系统上运行。</li>\n<li>本地已安装Python 3（用于准备示例）。</li>\n<li>一个文本编辑器或IDE。</li>\n</ul>\n<h3>训练脚本（示例：train.py）</h3>\n<p>首先，我们来创建一个基本的Python脚本，用于在Iris数据集上训练一个Scikit-learn逻辑回归模型。我们会将其设计为通过命令行参数 (parameter)接收输入/输出目录路径和一个超参数 (hyperparameter)（正则化 (regularization)强度<code>C</code>）。</p>\n<p>将以下代码保存为<code>src/train.py</code>:</p>\n<pre><code class=\"language-python\"># src/train.py\nimport argparse\nimport pandas as pd\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score\nimport joblib\nimport os\n\ndef train_model(input_dir, output_dir, C):\n    \"\"\"加载数据，训练模型，并保存模型。\"\"\"\n    print(f\"Loading data from: {input_dir}\")\n    # 假设 iris.csv 位于输入目录中\n    data_path = os.path.join(input_dir, 'iris.csv')\n    try:\n        iris_df = pd.read_csv(data_path)\n    except FileNotFoundError:\n        print(f\"Error: Could not find {data_path}. Make sure iris.csv is mounted correctly.\")\n        return\n\n    print(\"数据加载成功。\")\n    X = iris_df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']]\n    y = iris_df['species']\n\n    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\n    print(f\"正在使用 C={C} 训练逻辑回归模型...\")\n    model = LogisticRegression(C=C, max_iter=200, random_state=42)\n    model.fit(X_train, y_train)\n\n    # 评估\n    y_pred = model.predict(X_test)\n    acc = accuracy_score(y_test, y_pred)\n    print(f\"模型在测试集上的准确率: {acc:.4f}\")\n\n    # 保存模型\n    os.makedirs(output_dir, exist_ok=True) # 确保输出目录存在\n    model_path = os.path.join(output_dir, 'iris_model.joblib')\n    joblib.dump(model, model_path)\n    print(f\"模型已保存到: {model_path}\")\n\nif __name__ == \"__main__\":\n    parser = argparse.ArgumentParser(description=\"在Iris数据上训练一个逻辑回归模型。\")\n    parser.add_argument('--input-dir', type=str, required=True, help='包含iris.csv的目录')\n    parser.add_argument('--output-dir', type=str, required=True, help='用于保存训练后模型的目录')\n    parser.add_argument('--C', type=float, default=1.0, help='正则化强度的倒数')\n\n    args = parser.parse_args()\n\n    train_model(args.input_dir, args.output_dir, args.C)\n</code></pre>\n<p>此脚本使用<code>argparse</code>处理命令行参数，使用pandas加载数据，使用Scikit-learn训练模型，并使用<code>joblib</code>保存训练后的模型。它明确要求提供输入数据和输出模型的路径。</p>\n<h3>项目结构</h3>\n<p>您的项目文件应按以下方式组织：</p>\n<pre><code>ml-training-project/\n├── Dockerfile\n├── requirements.txt\n├── src/\n│   └── train.py\n├── data/\n│   └── iris.csv  # 您需要下载/创建此文件\n└── output/       # 此目录将被创建或用于模型输出\n</code></pre>\n<p>您可以在线轻松找到Iris数据集（例如，从Kaggle或UCI机器学习 (machine learning)库），或者创建一个示例<code>iris.csv</code>文件并将其放入<code>data/</code>目录。请确保它包含<code>sepal_length</code>、<code>sepal_width</code>、<code>petal_length</code>、<code>petal_width</code>和<code>species</code>等列。</p>\n<h3>依赖项（<code>requirements.txt</code>）</h3>\n<p>创建一个<code>requirements.txt</code>文件，列出所需的Python库：</p>\n<pre><code>pandas\nscikit-learn==1.2.2  # 固定版本以确保可复现性\njoblib\n</code></pre>\n<p><em>注意：固定版本（例如<code>scikit-learn==1.2.2</code>）是确保可复现性的一种良好做法。</em></p>\n<h3>创建Dockerfile</h3>\n<p>现在，在项目根目录（<code>ml-training-project/</code>）中创建<code>Dockerfile</code>：</p>\n<pre><code class=\"language-dockerfile\"># 使用官方Python运行时作为基础镜像\nFROM python:3.9-slim\n\n# 设置容器内的工作目录\nWORKDIR /app\n\n# 先复制requirements文件以利用Docker缓存\nCOPY requirements.txt .\n\n# 安装requirements.txt中指定的任何所需软件包\n# 使用 --no-cache-dir 减少镜像大小\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 将源代码复制到容器中\nCOPY src/ ./src/\n\n# 定义容器的入口点\n# 这使得容器像一个可执行文件一样运行\nENTRYPOINT [\"python\", \"src/train.py\"]\n\n# 默认命令（可以在运行时覆盖）\n# 这里，如果没有提供参数，我们设置默认的help标志\nCMD [\"--help\"]\n</code></pre>\n<p>让我们分析此Dockerfile：</p>\n<ul>\n<li><code>FROM python:3.9-slim</code>: 使用轻量级的Python 3.9镜像作为起点。</li>\n<li><code>WORKDIR /app</code>: 将容器内的默认目录设置为<code>/app</code>。随后的命令（<code>COPY</code>、<code>RUN</code>、<code>CMD</code>、<code>ENTRYPOINT</code>）将相对于此目录运行。</li>\n<li><code>COPY requirements.txt .</code>: 仅复制requirements文件。</li>\n<li><code>RUN pip install ...</code>: 安装依赖项。如果<code>requirements.txt</code>没有变化，此层通常会被缓存，从而加快后续构建的速度。</li>\n<li><code>COPY src/ ./src/</code>: 将我们的训练脚本目录复制到镜像中的<code>/app/src/</code>下。</li>\n<li><code>ENTRYPOINT [\"python\", \"src/train.py\"]</code>: 指定使用此镜像运行的容器默认会执行<code>python src/train.py</code>。在镜像名称之后提供给<code>docker run</code>的任何参数 (parameter)都将附加到此命令。</li>\n<li><code>CMD [\"--help\"]</code>: 为<code>ENTRYPOINT</code>提供一个默认参数。如果您在不带参数的情况下运行容器，它将执行<code>python src/train.py --help</code>。</li>\n</ul>\n<h3>构建Docker镜像</h3>\n<p>在您的终端中导航到项目根目录（<code>ml-training-project/</code>）并运行构建命令：</p>\n<pre><code class=\"language-bash\">docker build -t ml-training-app:latest .\n</code></pre>\n<ul>\n<li><code>-t ml-training-app:latest</code>: 为镜像添加名为<code>ml-training-app</code>和标签<code>latest</code>的标记 (token)。</li>\n<li><code>.</code>: 指定构建上下文 (context)（Docker查找<code>Dockerfile</code>和要复制文件的位置）是当前目录。</li>\n</ul>\n<p>Docker将执行您<code>Dockerfile</code>中的步骤，下载基础镜像，安装依赖项，并复制您的代码。</p>\n<h3>运行容器化训练</h3>\n<p>现在，我们将在容器内部运行训练脚本。我们需要做到：</p>\n<ol>\n<li>将本地<code>data</code>目录挂载到容器的<code>/app/data</code>路径，以便脚本可以读取<code>iris.csv</code>。</li>\n<li>将本地<code>output</code>目录挂载到容器的<code>/app/output</code>路径，以便脚本可以将<code>iris_model.joblib</code>文件保存回我们的宿主机。</li>\n<li>将所需的命令行参数 (parameter)（<code>--input-dir</code>、<code>--output-dir</code>以及可选的<code>--C</code>）传递给容器，这些参数将附加到<code>ENTRYPOINT</code>。</li>\n</ol>\n<p>从项目根目录执行以下<code>docker run</code>命令：</p>\n<pre><code class=\"language-bash\">docker run --rm \\\n  -v \"$(pwd)/data:/app/data\" \\\n  -v \"$(pwd)/output:/app/output\" \\\n  ml-training-app:latest \\\n  --input-dir /app/data \\\n  --output-dir /app/output \\\n  --C 0.5\n</code></pre>\n<p>让我们分析此命令：</p>\n<ul>\n<li><code>docker run</code>: 用于创建并启动新容器的命令。</li>\n<li><code>--rm</code>: 容器退出时自动删除容器。这对于训练等一次性任务很有用。</li>\n<li><code>-v \"$(pwd)/data:/app/data\"</code>: 将宿主机的当前目录（<code>$(pwd)</code>）加上<code>/data</code>挂载到容器内的<code>/app/data</code>目录。在Windows PowerShell上使用<code>${PWD}</code>或在需要时将<code>$(pwd)</code>替换为完整路径。这使得<code>iris.csv</code>可供脚本使用。</li>\n<li><code>-v \"$(pwd)/output:/app/output\"</code>: 将宿主机的<code>output</code>目录（如果不存在，Docker将创建它）挂载到容器内的<code>/app/output</code>。这是脚本保存模型的位置。</li>\n<li><code>ml-training-app:latest</code>: 容器要使用的镜像。</li>\n<li><code>--input-dir /app/data --output-dir /app/output --C 0.5</code>: 这些是传递给<code>ENTRYPOINT</code>（<code>python src/train.py</code>）的参数。请注意，这里我们使用的是<em>容器路径</em>（<code>/app/data</code>、<code>/app/output</code>），而不是宿主机路径。我们还指定了一个超参数 (hyperparameter)<code>C=0.5</code>。</li>\n</ul>\n<p>您应该在终端中看到类似以下的输出：</p>\n<pre><code>从: /app/data 加载数据\n数据加载成功。\n正在使用 C=0.5 训练逻辑回归模型...\n模型在测试集上的准确率: 1.0000\n模型已保存到: /app/output/iris_model.joblib\n</code></pre>\n<h3>验证输出</h3>\n<p>容器运行结束后，检查您的本地<code>output</code>目录。您应该会发现<code>iris_model.joblib</code>文件，它是从容器内部成功保存的。</p>\n<pre><code class=\"language-bash\">ls output/\n</code></pre>\n<pre><code>iris_model.joblib\n</code></pre>\n<h3>总结</h3>\n<p>在本次实践练习中，您成功地：</p>\n<ol>\n<li>创建了一个Python训练脚本，通过接受输入/输出路径，使其设计为在容器化环境中工作。</li>\n<li>编写了一个<code>Dockerfile</code>来定义环境、安装依赖项并复制训练代码。</li>\n<li>构建了一个包含训练脚本及其环境的Docker镜像。</li>\n<li>使用<code>docker run</code>在隔离的容器中执行了训练过程。</li>\n<li>使用绑定挂载（<code>-v</code>）管理了数据输入和模型输出，将宿主机目录与容器目录关联起来。</li>\n<li>通过命令行参数 (parameter)向脚本传递了配置（超参数 (hyperparameter)）。</li>\n</ol>\n<p>此过程演示了机器学习 (machine learning)训练容器化的核心工作流程。通过将代码和依赖项打包在一起，您可以确保训练环境的一致性和可复现性，无论Docker镜像在哪里运行。使用卷允许与宿主机文件系统进行数据和结果的交互，弥合了隔离容器与外部环境之间的差异。</p>",
+  "slug": "practice-containerize-run-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 14523,
+      "title": "Docker Documentation: Get Started, Overview, and Dockerfile Reference",
+      "author": "Docker Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/",
+      "doi": "",
+      "note": "官方文档提供了理解Docker概念、Dockerfile语法、镜像构建和带卷容器运行时的基础知识。",
+      "order": 1,
+      "created_at": "2025-09-05T08:53:57.517780Z",
+      "updated_at": "2025-09-09T13:58:53.912096Z"
+    },
+    {
+      "id": 14524,
+      "title": "Scikit-learn: Machine Learning in Python",
+      "author": "Scikit-learn Developers",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/",
+      "doi": "",
+      "note": "Scikit-learn库的官方用户指南和API参考，该库用于训练脚本中的机器学习模型。",
+      "order": 2,
+      "created_at": "2025-09-05T08:53:57.633230Z",
+      "updated_at": "2025-09-09T13:59:06.317515Z"
+    },
+    {
+      "id": 14525,
+      "title": "Practical MLOps: How to Get Your Machine Learning Models into Production",
+      "author": "Noah Gift, Alfred DeSimone",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-mlops/9781098110300/",
+      "doi": "",
+      "note": "一本实践指南，其中包含如何使用Docker进行容器化，以创建可复现的机器学习训练和部署工作流。",
+      "order": 3,
+      "created_at": "2025-09-05T08:53:57.684054Z",
+      "updated_at": "2025-09-09T13:59:06.639121Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

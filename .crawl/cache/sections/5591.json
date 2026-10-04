@@ -1,0 +1,61 @@
+{
+  "id": 5591,
+  "title": "SQL数据操作入门",
+  "meta_title": "SQL数据操作入门",
+  "meta_description": "学习SQL如何用于在数据库中查询和操作数据。",
+  "content": "<p>结构化查询语言，通常称为SQL（常发音为“sequel”或“S-Q-L”），是与关系型数据库交互的标准语言。作为数据工程师，你会发现数据库是管理数据的核心存储位置，而SQL是你与它们沟通的主要工具。可以把它看作是访问和操作表中数据通用遥控器。</p>\n<p>你已经在第4章了解了不同的存储系统，包括关系型数据库（如PostgreSQL、MySQL、SQL Server）。这些数据库将数据组织成表，表的结构类似于电子表格，行代表记录，列代表这些记录的属性或特性。SQL提供了一种结构化的方式来向这些数据库提问（查询）并指示它们如何更改所持有的数据（操作）。</p>\n<h3>为何SQL用于数据操作？</h3>\n<p>数据很少是静态的。作为数据工程师，你将持续需要：</p>\n<ul>\n<li><strong>获取数据：</strong> 用于检查数据质量、提供数据进行分析或将数据输入其他系统。</li>\n<li><strong>添加新数据：</strong> 当新信息从不同来源抵达时。</li>\n<li><strong>修改现有数据：</strong> 用于纠正错误、更新信息或丰富记录。</li>\n<li><strong>删除数据：</strong> 用于删除重复项、处理过期记录或遵守法规。</li>\n</ul>\n<p>SQL提供了专门为这些任务设计的命令。虽然第4章涉及了数据库结构定义（数据定义语言，即DDL，如<code>CREATE TABLE</code>），但本节侧重于用于操作这些表<em>内部</em>数据的命令（数据操作语言，即DML）。</p>\n<h3>SQL数据操作基本命令</h3>\n<p>SQL中操作数据的主要操作常被称为CRUD（创建、读取、更新、删除）缩写，尽管在SQL术语中，它们主要对应于<code>INSERT</code>、<code>SELECT</code>、<code>UPDATE</code>和<code>DELETE</code>。我们逐一来看。</p>\n<h4>读取数据：<code>SELECT</code>语句</h4>\n<p><code>SELECT</code>语句用于从一个或多个表中获取数据。这可能是你最常使用的SQL命令。</p>\n<ul>\n<li>\n<p><strong>选择特定列：</strong> 你可以指定要查看的列。</p>\n<pre><code class=\"language-sql\">SELECT user_id, email, registration_date\nFROM users;\n</code></pre>\n<p>此查询仅从名为<code>users</code>的表中获取<code>user_id</code>、<code>email</code>和<code>registration_date</code>列。</p>\n</li>\n<li>\n<p><strong>选择所有列：</strong> 星号（<code>*</code>）是选择所有列的通配符。</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM users;\n</code></pre>\n<p>这会获取<code>users</code>表中所有行的所有列。</p>\n</li>\n<li>\n<p><strong>使用<code>WHERE</code>筛选数据：</strong> 通常，你只想要符合特定条件的行。<code>WHERE</code>子句允许你筛选结果。</p>\n<pre><code class=\"language-sql\">SELECT user_id, email\nFROM users\nWHERE city = 'New York';\n</code></pre>\n<p>此查询仅获取<code>city</code>列值为'New York'的用户的<code>user_id</code>和<code>email</code>。</p>\n<p>你可以在<code>WHERE</code>子句中使用各种运算符，例如<code>=</code>、<code>></code>、<code>&#x3C;</code>、<code>>=</code>、<code>&#x3C;=</code>、<code>!=</code>（不等于）、<code>LIKE</code>（模式匹配），并使用<code>AND</code>和<code>OR</code>组合条件。</p>\n</li>\n</ul>\n<h4>添加数据：<code>INSERT INTO</code>语句</h4>\n<p>当需要向表中添加新数据时，使用<code>INSERT INTO</code>语句。</p>\n<ul>\n<li>\n<p><strong>语法：</strong> 你指定表、要提供数据的列以及相应的值。</p>\n<pre><code class=\"language-sql\">INSERT INTO users (user_id, email, city, registration_date)\nVALUES (101, 'new.user@example.com', 'London', '2023-10-26');\n</code></pre>\n<p>这会向<code>users</code>表中添加一行新数据，包含<code>user_id</code>、<code>email</code>、<code>city</code>和<code>registration_date</code>的指定值。值的顺序必须与指定列的顺序匹配。</p>\n</li>\n</ul>\n<h4>修改数据：<code>UPDATE</code>语句</h4>\n<p>要更改表中的现有数据，使用<code>UPDATE</code>语句。</p>\n<ul>\n<li>\n<p><strong>语法：</strong> 你指定表、要更改的列（<code>SET</code>），以及重要的，要更改哪些行（<code>WHERE</code>）。</p>\n<pre><code class=\"language-sql\">UPDATE users\nSET email = 'updated.email@example.com'\nWHERE user_id = 101;\n</code></pre>\n<p>此命令会找到<code>user_id</code>为101的行，并更改该特定行中<code>email</code>列的值。</p>\n<p><strong>重要：</strong> <code>UPDATE</code>语句务必使用<code>WHERE</code>子句。如果省略它，你将意外地更新表中<strong>每一行</strong>的指定列，这通常不是你的意图，并可能导致严重的数据损坏。</p>\n</li>\n</ul>\n<h4>删除数据：<code>DELETE FROM</code>语句</h4>\n<p>要从表中删除整行，使用<code>DELETE FROM</code>语句。</p>\n<ul>\n<li>\n<p><strong>语法：</strong> 你指定表以及使用<code>WHERE</code>子句要删除的行。</p>\n<pre><code class=\"language-sql\">DELETE FROM users\nWHERE user_id = 101;\n</code></pre>\n<p>此命令会删除<code>user_id</code>为101的行（或多行）。</p>\n<p><strong>重要：</strong> 与<code>UPDATE</code>类似，使用<code>DELETE</code>时务必谨慎并使用<code>WHERE</code>子句。省略<code>WHERE</code>子句将删除表中的<strong>所有行</strong>。在执行<code>DELETE</code>语句之前，请仔细检查你的<code>WHERE</code>条件。</p>\n</li>\n</ul>\n<h3>SQL在数据工程工作流中的应用</h3>\n<p>这些基本的SQL数据操作命令是数据工程师的常用工具：</p>\n<ul>\n<li><strong>数据验证：</strong> 将数据加载到暂存表后，你将使用带有<code>WHERE</code>子句的<code>SELECT</code>查询来检查空值、不正确的格式或异常值。</li>\n<li><strong>简单转换：</strong> 有时，可以直接在数据库中使用<code>UPDATE</code>进行快速修正或标准化。</li>\n<li><strong>填充表：</strong> 你可以使用<code>INSERT</code>语句来填充小型维度表或查找表。</li>\n<li><strong>数据清洗：</strong> <code>DELETE</code>可用于删除重复记录或在验证后被识别为错误的行。</li>\n<li><strong>ETL/ELT逻辑：</strong> 这些SQL命令通常构成大型数据管道脚本的核心部分，用于提取数据（<code>SELECT</code>）、可能在数据库内转换数据（<code>UPDATE</code>）、将数据加载到其他位置，或删除已处理的暂存数据（<code>DELETE</code>）。</li>\n</ul>\n<p>虽然本入门内容涵盖了基础知识，但SQL提供了更多功能，包括合并来自多个表的数据（<code>JOIN</code>）、汇总数据（使用<code>COUNT</code>、<code>SUM</code>、<code>AVG</code>等聚合函数结合<code>GROUP BY</code>），以及进行复杂筛选。然而，掌握<code>SELECT</code>、<code>INSERT</code>、<code>UPDATE</code>和<code>DELETE</code>为与关系型数据库中存储的海量数据交互打下了坚实基础，使SQL成为你数据工程工具包中不可或缺的工具。</p>",
+  "slug": "introduction-sql-data-manipulation",
+  "updates": [],
+  "references": [
+    {
+      "id": 14914,
+      "title": "PostgreSQL 16.1 Documentation: SQL Commands",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-commands.html",
+      "doi": "",
+      "note": "提供PostgreSQL生态系统中所有SQL命令的官方规范和详细用法，包括DML操作。",
+      "order": 1,
+      "created_at": "2025-09-05T14:32:37.351624Z",
+      "updated_at": "2025-09-10T05:45:13.425994Z"
+    },
+    {
+      "id": 14915,
+      "title": "Learning SQL, 3rd Edition",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492057604/",
+      "doi": "",
+      "note": "一本广受推荐的SQL初学者书籍，以实用的方式涵盖了SQL数据操作和查询的基础知识。",
+      "order": 2,
+      "created_at": "2025-09-05T14:32:37.357171Z",
+      "updated_at": "2025-09-10T05:45:06.472738Z"
+    },
+    {
+      "id": 14916,
+      "title": "Database System Concepts, 7th Edition",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.db-book.com/",
+      "doi": "",
+      "note": "一本经典的学术教材，提供了数据库系统、关系模型以及SQL理论基础的理解。",
+      "order": 3,
+      "created_at": "2025-09-05T14:32:37.360248Z",
+      "updated_at": "2025-09-10T05:44:58.285901Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

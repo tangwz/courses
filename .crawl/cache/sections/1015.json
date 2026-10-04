@@ -1,0 +1,61 @@
+{
+  "id": 1015,
+  "title": "在分支间切换 (git checkout 或 git switch)",
+  "meta_title": "Git 分支切换 | git checkout & git switch",
+  "meta_description": "了解如何使用 `git checkout` 或更新的 `git switch` 命令将你的工作目录切换到不同分支。",
+  "content": "<p>切换分支是 Git 中的一项基本操作，它允许开发者将工作环境移动到特定的开发线上。例如，使用 <code>git branch &#x3C;branch-name></code> 创建新分支只是建立一个新指针，它不会自动将你的开发环境移动到新的工作线上。你的工作目录始终反映你当前所在分支的状态，例如在切换之前通常默认为 <code>main</code> 分支。</p>\n<p>要将当前工作环境更改到另一个分支，你需要“切换”到该分支。这个操作告诉 Git：“我现在想在<em>这个</em>分支上工作。”当你切换分支时，Git 会执行两项主要工作：</p>\n<ol>\n<li>它会更新一个名为 <code>HEAD</code> 的特殊指针，使其指向你所切换到的分支的最新提交。<code>HEAD</code> 通常指向你当前所在分支的<em>名称</em>。</li>\n<li>它会修改你的工作目录中的文件，使其与目标分支最新提交中存储的快照匹配。</li>\n</ol>\n<p>可以这样想：就像把多个项目草稿放在不同的桌子上。创建分支就像设置一张新桌子 (<code>git branch new-feature</code>)。切换分支就像实际地移动过去在新桌子上工作 (<code>git checkout new-feature</code> 或 <code>git switch new-feature</code>)，而桌子上的文件（纸张）也会随之改变，以反映<em>那个</em>草稿的状态。</p>\n<h3>使用 <code>git checkout</code></h3>\n<p>过去，切换分支的主要命令一直是 <code>git checkout</code>。它的用法很简单：</p>\n<pre><code class=\"language-sh\">git checkout &#x3C;branch-name>\n</code></pre>\n<p>例如，如果你之前使用 <code>git branch fix-login-bug</code> 创建了一个名为 <code>fix-login-bug</code> 的分支，你会这样切换到它：</p>\n<pre><code class=\"language-sh\"># 假设你当前在 'main' 分支上\ngit checkout fix-login-bug\n</code></pre>\n<p>运行此命令后，Git 会提示：</p>\n<pre><code>切换到分支 'fix-login-bug'\n</code></pre>\n<p>现在，你进行的任何新提交都将添加到 <code>fix-login-bug</code> 分支，独立于 <code>main</code> 分支或任何其他分支推进其历史。你的工作目录文件将反映它们在 <code>fix-login-bug</code> 最新提交时的状态（如果你是刚创建它，那么将与你从中分支出来的提交相同）。</p>\n<h3>介绍 <code>git switch</code> (现代方式)</h3>\n<p><code>git checkout</code> 命令功能很全面。除了切换分支，它还可以用来从不同提交或暂存区（索引）恢复工作目录中的文件。这种功能重叠有时会让初学者感到困惑。</p>\n<p>为解决此问题，Git 的新版本（从 2.23 开始）引入了两个更明确的命令：<code>git switch</code> 用于更改分支，<code>git restore</code> 用于更改文件。<code>git switch</code> 命令专门用于分支操作，使其目的更明确。</p>\n<p>要使用 <code>git switch</code> 切换到我们的 <code>fix-login-bug</code> 分支，你会运行：</p>\n<pre><code class=\"language-sh\"># 假设你当前在 'main' 分支上\ngit switch fix-login-bug\n</code></pre>\n<p>结果与使用 <code>git checkout fix-login-bug</code> 完全相同：</p>\n<pre><code>切换到分支 'fix-login-bug'\n</code></pre>\n<p>你的 <code>HEAD</code> 现在指向 <code>fix-login-bug</code>，并且你的工作目录也相应地更新了。</p>\n<h3>切换的可视化</h3>\n<p>设想一下，你的仓库历史最初是这样的，<code>HEAD</code> 指向 <code>main</code> 分支：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-4gduw3\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, fixedsize=true, width=0.5, style=filled, fillcolor=\"#e9ecef\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_0 {\n    label = \"仓库历史\";\n    bgcolor=\"#f8f9fa\";\n\n    c1 [label=\"C1\"];\n    c2 [label=\"C2\"];\n    c3 [label=\"C3\"];\n\n    c1 -> c2;\n    c2 -> c3;\n\n    main [shape=plaintext, label=\"main\"];\n    main -> c3 [style=dashed];\n\n    HEAD [shape=plaintext, label=\"HEAD\"];\n    HEAD -> main [style=dashed, constraint=false, color=\"#fa5252\"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-4gduw3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>HEAD</code>指向<code>main</code>，<code>main</code>指向提交C3。</p>\n</blockquote>\n<p>现在，你从 <code>main</code> 创建一个新分支 <code>feature-x</code>，使用 <code>git branch feature-x</code>。<code>HEAD</code> 指针尚未移动。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1u06395\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, fixedsize=true, width=0.5, style=filled, fillcolor=\"#e9ecef\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_0 {\n    label = \"仓库历史\";\n    bgcolor=\"#f8f9fa\";\n\n    c1 [label=\"C1\"];\n    c2 [label=\"C2\"];\n    c3 [label=\"C3\"];\n\n    c1 -> c2;\n    c2 -> c3;\n\n    main [shape=plaintext, label=\"main\"];\n    main -> c3 [style=dashed];\n\n    feature_x [shape=plaintext, label=\"feature-x\"];\n    feature_x -> c3 [style=dashed]; // 新分支也指向 C3\n\n    HEAD [shape=plaintext, label=\"HEAD\"];\n    HEAD -> main [style=dashed, constraint=false, color=\"#fa5252\"]; // 仍然指向 main\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1u06395\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>feature-x</code>已创建，两个分支都指向C3，<code>HEAD</code>仍停留在<code>main</code>。</p>\n</blockquote>\n<p>当你运行 <code>git switch feature-x</code> (或 <code>git checkout feature-x</code>) 时，Git 会更新 <code>HEAD</code>：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1wk5nk4\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, fixedsize=true, width=0.5, style=filled, fillcolor=\"#e9ecef\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_0 {\n    label = \"仓库历史\";\n    bgcolor=\"#f8f9fa\";\n\n    c1 [label=\"C1\"];\n    c2 [label=\"C2\"];\n    c3 [label=\"C3\"];\n\n    c1 -> c2;\n    c2 -> c3;\n\n    main [shape=plaintext, label=\"main\"];\n    main -> c3 [style=dashed];\n\n    feature_x [shape=plaintext, label=\"feature-x\"];\n    feature_x -> c3 [style=dashed];\n\n    HEAD [shape=plaintext, label=\"HEAD\"];\n    HEAD -> feature_x [style=dashed, constraint=false, color=\"#15aabf\"]; // 现在指向 feature-x\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1wk5nk4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>HEAD</code>现在指向<code>feature-x</code>。你的工作目录反映了提交C3的状态（最初）。后续提交将推进<code>feature-x</code>。</p>\n</blockquote>\n<h3>重要事项</h3>\n<ul>\n<li><strong>未提交的更改：</strong> Git 会尽力保护你的工作。如果你的工作目录或暂存区中有修改与你尝试切换到的分支冲突（意味着切换会覆盖你的更改），Git 通常会阻止切换并警告你。你通常需要提交你的更改、暂存它们（稍后介绍的内容），或者丢弃它们，然后才能切换分支。</li>\n<li><strong>创建并切换：</strong> <code>git checkout</code> 和 <code>git switch</code> 都提供选项，可以在一步之内创建新分支并立即切换到它。\n<ul>\n<li><code>git checkout -b &#x3C;new-branch-name></code></li>\n<li><code>git switch -c &#x3C;new-branch-name></code>\n这是一个常用快捷方式，它结合了 <code>git branch &#x3C;name></code> 和 <code>git switch &#x3C;name></code>。</li>\n</ul>\n</li>\n</ul>\n<h3>建议</h3>\n<p>尽管 <code>git checkout</code> 在切换分支方面运作良好，并且在较旧的教程和项目中广泛使用，但如果你的 Git 版本支持 <code>git switch</code>，通常建议使用它以提高清晰度。它使你的命令意图明确：你正在将你的工作环境切换到另一个分支。</p>\n<p>能够快速切换于不同的开发线之间，对于发挥 Git 的分支能力很基本。你现在可以在一个分支上开始一个新功能，切换到另一个分支修复紧急错误，然后再切换回你的功能分支，保持工作隔离，直到你准备好合并它。</p>",
+  "slug": "git-switch-checkout-branches",
+  "updates": [],
+  "references": [
+    {
+      "id": 245,
+      "title": "git-switch(1) Manual Page",
+      "author": "Git Project",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-switch",
+      "doi": "",
+      "note": "描述了用于切换分支的专用命令，该命令在Git 2.23中引入，详细说明了其目的和分支管理选项。",
+      "order": 1,
+      "created_at": "2025-09-04T14:00:46.061745Z",
+      "updated_at": "2025-09-07T15:41:42.194646Z"
+    },
+    {
+      "id": 246,
+      "title": "git-checkout(1) Manual Page",
+      "author": "Git Project",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-checkout",
+      "doi": "",
+      "note": "详细介绍了多功能的 `checkout` 命令，解释了其在切换分支、创建新分支和恢复文件方面的功能，突出了其多种用途。",
+      "order": 2,
+      "created_at": "2025-09-04T14:00:46.064971Z",
+      "updated_at": "2025-09-07T15:41:39.778628Z"
+    },
+    {
+      "id": 247,
+      "title": "3.2 Git Branching - Basic Branching and Merging",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+      "doi": "",
+      "note": "提供了Git分支模型、`HEAD`指针、`checkout`操作以及分支如何在仓库中演变的基本解释。",
+      "order": 3,
+      "created_at": "2025-09-04T14:00:46.067340Z",
+      "updated_at": "2025-09-07T15:41:46.568337Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,377 @@
+{
+  "id": 250,
+  "title": "数据湖架构入门",
+  "meta_title": "数据湖架构：设计与实现",
+  "meta_description": "掌握数据湖架构。学习Medallion模式、Parquet、Iceberg及分布式查询，以支持可扩展的人工智能和分析工程。",
+  "description": "<p>数据湖是现代人工智能和数据分析系统中原始与处理数据的核心存储地。本课程讲解构建可扩展、高性能数据湖所需的技术架构。我们将界定其结构层，从原始数据摄取到适用于机器学习 (machine learning)和报告的精处理表格。课程内容介绍Apache Parquet和Avro等存储格式，Apache Iceberg和Delta Lake等开放表格式，以及计算与存储的分离。您将配置元数据目录，实现数据摄取管道，并运行分布式查询。内容着重于架构模式，特别是Medallion架构，并提供关于分区策略和模式管理的技术指导。</p>",
+  "short_description": "采用现代设计模式、优化存储格式和数据摄取管道，构建高性能数据湖。",
+  "excerpt": "学习设计与实现可扩展的数据湖架构，采用现代文件格式、表规范和分布式查询引擎。",
+  "prerequisites": "SQL与编程要点",
+  "cover_color": "cyan",
+  "learning_outcomes": [
+    {
+      "topic": "架构模式",
+      "description": "采用Medallion模式（青铜、白银、黄金层）设计多层数据架构。"
+    },
+    {
+      "topic": "存储格式",
+      "description": "采用Apache Parquet实现列式存储，并借助Iceberg等开放表格式管理事务。"
+    },
+    {
+      "topic": "数据摄取",
+      "description": "构建批处理和流式管道，将数据可靠地从源系统移入数据湖。"
+    },
+    {
+      "topic": "查询优化",
+      "description": "采用分区、文件裁剪和分布式查询引擎，优化数据检索速度。"
+    }
+  ],
+  "duration": 14,
+  "slug": "intro-data-lake-architectures",
+  "level": 2,
+  "category": "Data Engineering",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-24T13:52:46.254342Z",
+  "updated_at": "2026-10-02T07:24:23.133794Z",
+  "chapters": [
+    {
+      "id": 1394,
+      "title": "架构基础",
+      "meta_title": "数据湖架构基础与模式",
+      "meta_description": "理解数据湖的核心架构模式，包括存储分离和Medallion结构。",
+      "number": 1,
+      "slug": "architectural-foundations",
+      "content": "构建可扩展的数据湖需要一套特定的结构设计选择，这与传统关系型数据库管理系统有显著区别。数据库通常将存储和处理能力捆绑在一起，而数据湖架构则通过分离这些组件来优先考虑灵活性和成本效益。本章为这些系统如何运行奠定技术基础，从文件的物理布局到表的逻辑组织。\n\n我们首先分析计算与存储的分离。这种设计使得你可以独立于处理能力来扩展数据保留，从而优化成本，$Cost_{total} = Cost_{storage} + Cost_{compute}$。你将审视这种分离的机制，以及它为何成为云端分析的标准。\n\n在了解组件结构之后，我们将介绍Amazon S3、Azure Blob Storage和Google Cloud Storage等对象存储系统的特定行为。这些系统不像本地磁盘上的POSIX文件系统那样运行。我们将讨论最终一致性和对象不变性的影响，解释为何在云环境进行目录重命名等操作会消耗大量资源。\n\n接下来，讨论转向逻辑数据组织。我们将介绍Medallion架构，这是一种分层方法，将数据质量分为三个不同阶段：\n*   **Bronze：**用于原始、摄入数据的着陆区，它保留了源数据的精确副本。\n*   **Silver：**经过精炼的层，数据在此去重、清洗和结构化。\n*   **Gold：**聚合层，用于提供业务级指标和报告。\n\n最后，我们将比较Lambda和Kappa处理架构。你将评估在维护单独的批处理层和速度层与实现单一流处理路径之间的权衡取舍。学完本章，你将能够为特定的数据工程需求选择合适的结构模式。",
+      "sections": [
+        {
+          "id": 7995,
+          "title": "计算与存储分离",
+          "meta_title": "数据湖中计算与存储的分离",
+          "meta_description": "了解现代数据架构为何将处理能力与存储层分离，以实现可伸缩性和成本效益。",
+          "slug": "decoupling-compute-and-storage",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7996,
+          "title": "对象存储语义",
+          "meta_title": "数据湖中对象存储与文件系统的区别",
+          "meta_description": "对对象存储中的最终一致性、可变性和层次结构与传统文件系统进行技术比较。",
+          "slug": "object-storage-semantics",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7997,
+          "title": "奖章架构",
+          "meta_title": "奖章架构：青铜、白银、黄金层",
+          "meta_description": "将数据湖结构化为青铜（原始）、白银（清洗）和黄金（整理）层，以提高数据质量。",
+          "slug": "medallion-architecture",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7998,
+          "title": "Lambda 和 Kappa 架构",
+          "meta_title": "数据工程中的 Lambda 与 Kappa 架构对比",
+          "meta_description": "数据湖设计中批处理加速度层（Lambda）与流优先处理（Kappa）的对比。",
+          "slug": "lambda-and-kappa-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1395,
+      "title": "文件格式与优化",
+      "meta_title": "数据湖文件格式：Parquet、Avro、Iceberg",
+      "meta_description": "针对高性能数据湖，对列式格式、压缩和开放表格式进行技术分析。",
+      "number": 2,
+      "slug": "file-formats-and-optimization",
+      "content": "数据湖建立在对象存储之上，数据以不可变文件而非可变数据库行的形式存在。尽管计算与存储的架构分离提供了可扩展性，但这些文件的物理布局决定了查询延迟和成本。如果查询引擎必须解析数TB的文本日志才能计算一个简单的平均值，系统就会变得低效。本章主要介绍优化这些读取模式的存储层技术细节。\n\n我们首先区分行式格式（例如CSV和Avro）与列式格式（如Apache Parquet和ORC）。你将了解到为什么分析工作负载（通常对大量数据集中的特定指标进行聚合）在数据按列而非按行存储时表现更佳。本课程介绍Apache Parquet的内部结构，详细说明了Run-Length Encoding (RLE)和字典压缩等编码方案如何减少存储占用。\n\n接下来介绍开放表格式。标准文件集合缺少传统数据库中的事务保证。我们将学习Apache Iceberg、Delta Lake和Apache Hudi等规范如何引入元数据层来支持ACID事务和快照隔离。你还将学习如何选择合适的压缩算法，平衡解压的CPU成本与文件较小带来的网络节约。\n\n最后，我们讨论分区策略。一种高效的分区方案允许查询引擎仅处理相关数据子集，这一过程被称为分区修剪。例如，如果目录结构反映了这些键，一个过滤条件为$region = 'US'$和$date > '2023-01-01'$的查询可以跳过扫描湖中大部分数据。学完本章，你将能够配置文件布局，以最大限度地减少I/O并提高吞吐量。",
+      "sections": [
+        {
+          "id": 7999,
+          "title": "行式存储与列式存储",
+          "meta_title": "行式与列式存储的性能对比",
+          "meta_description": "分析读写模式，选择行式（CSV/Avro）或列式（Parquet/ORC）格式。",
+          "slug": "row-oriented-vs-columnar-storage",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8000,
+          "title": "Apache Parquet 内部机制",
+          "meta_title": "Apache Parquet 结构与编码",
+          "meta_description": "了解 Parquet 文件结构、游程编码和字典压缩，以实现高效存储。",
+          "slug": "apache-parquet-internals",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8001,
+          "title": "开放表格式",
+          "meta_title": "Apache Iceberg、Delta Lake和Hudi",
+          "meta_description": "介绍为数据湖带来ACID事务和时间旅行的表格式。",
+          "slug": "open-table-formats",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8002,
+          "title": "压缩算法",
+          "meta_title": "Snappy、Gzip 和 Zstd 压缩",
+          "meta_description": "根据CPU成本与存储节省情况选择正确的压缩编解码器。",
+          "slug": "compression-algorithms",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8003,
+          "title": "分区策略",
+          "meta_title": "数据分区技术以提高性能",
+          "meta_description": "设计分区方案以减少数据扫描并避免倾斜。",
+          "slug": "partitioning-strategies",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8004,
+          "title": "实践操作：文件布局优化",
+          "meta_title": "动手操作：数据转换与区分存储",
+          "meta_description": "实践环节，将原始JSON转换为区分存储的Parquet，并将其登记为Iceberg表。",
+          "slug": "practice-optimizing-file-layouts",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1396,
+      "title": "摄入管道",
+      "meta_title": "数据湖摄入：批处理与流处理",
+      "meta_description": "构建健壮的数据摄入管道。包含 CDC、模式演变与小文件应对。",
+      "number": 3,
+      "slug": "ingestion-pipelines",
+      "content": "存储层的架构设计与合适文件格式的选取，构成了数据湖的基本结构。下一步的技术要求是确定将数据从业务系统传输至此存储的机制。此过程不仅仅是简单地复制文件；它需要具备恢复能力的系统，以应对网络中断、不同的数据传输速度以及保持数据状态一致的需求。\n\n本章主要说明将数据从来源移动到数据湖所用的工程模式。我们会考察处理大批量历史数据的批处理摄入工作流，并将其与变更数据捕获 (CDC) 方法进行比较。CDC 通过读取事务日志来实现数据库状态的同步，从而在无需进行全表扫描的情况下，实现近乎实时的数据更新。\n\n除了传输机制，我们还会说明分布式存储中固有的操作难题。您将学习应对上游数据结构变化时，处理模式演变的方法。本材料也包含“小文件问题”——这是对象存储中常见的性能问题，以及像数据压缩这样的缓解策略。最后，我们会从数据工程的角度说明幂等性，以确保管道在故障恢复期间可以安全地重新执行，而不会产生重复记录。",
+      "sections": [
+        {
+          "id": 8005,
+          "title": "批处理摄取工作流",
+          "meta_title": "设计批处理数据摄取作业",
+          "meta_description": "编排从数据库和 API 到 Bronze 层的定期批量加载。",
+          "slug": "batch-ingestion-workflows",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8006,
+          "title": "变更数据捕获 (CDC)",
+          "meta_title": "数据湖的 CDC 实现",
+          "meta_description": "通过日志捕获数据库变更，以在数据湖中保持同步状态。",
+          "slug": "change-data-capture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8007,
+          "title": "处理模式演变",
+          "meta_title": "数据管道中的模式演变",
+          "meta_description": "管理添加、删除或重命名列而不破坏下游使用者的策略。",
+          "slug": "handling-schema-evolution",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8008,
+          "title": "小文件问题",
+          "meta_title": "解决Hadoop/S3中的小文件问题",
+          "meta_description": "通过文件合并缓解因过多小文件导致的性能下降。",
+          "slug": "small-file-problem",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8009,
+          "title": "数据管道中的幂等性",
+          "meta_title": "幂等数据工程管道",
+          "meta_description": "确保可重运行的管道在故障或回填期间不重复数据。",
+          "slug": "idempotency-in-pipelines",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8010,
+          "title": "实践操作：构建CDC管道",
+          "meta_title": "实践：实现变更数据捕获",
+          "meta_description": "实践环节，模拟数据库变化并将其传播到Delta Lake表。",
+          "slug": "practice-building-cdc-pipeline",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1397,
+      "title": "元数据与编目",
+      "meta_title": "数据湖元数据与 Hive Metastore",
+      "meta_description": "管理数据湖元数据。了解 Hive Metastore、AWS Glue 和分区发现。",
+      "number": 4,
+      "slug": "metadata-and-cataloging",
+      "content": "到架构的这个阶段，你已经配置了对象存储并建立了数据摄取管道。你的数据位于存储桶中，很可能以 Parquet 或 Avro 格式存在。然而，分布式查询引擎无法在没有特定指令的情况下，对这些原始文件执行 SQL 查询。它需要一个模式定义和一个文件位置目录，才能将分散的对象视为结构化表。\n\n本章说明了元数据与编目层，它充当物理存储和计算引擎之间的连接。你将学习 Hive Metastore 和 AWS Glue Data Catalog 如何维护数据湖的状态。我们将演示这些系统如何将逻辑表（例如 `sales_data`）映射到 `s3://bucket/silver/sales/` 等物理位置。\n\n本课程包含以下技术组成部分：\n\n*   **Metastore 抽象：** 逻辑模式如何与物理文件路径解耦。\n*   **分区管理：** 用于分区发现的机制，以确保新数据目录一经到位即可立即查询。\n*   **治理与安全：** 在编目层面而非文件层面实施基于角色的访问控制 (RBAC)。\n*   **血缘追踪：** 审计数据从原始来源流向精选聚合数据的方法。\n\n你将通过设置数据编目并配置爬虫从现有数据集生成表定义，在实践练习中运用这些原理。",
+      "sections": [
+        {
+          "id": 8011,
+          "title": "元数据存储库的作用",
+          "meta_title": "Hive元数据存储库与目录的作用",
+          "meta_description": "元数据存储库如何为查询引擎将物理文件映射到逻辑表。",
+          "slug": "role-of-the-metastore",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8012,
+          "title": "分区识别",
+          "meta_title": "自动化分区识别机制",
+          "meta_description": "当新的分区目录添加到存储时，更新目录的方法。",
+          "slug": "partition-discovery",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8013,
+          "title": "技术治理",
+          "meta_title": "数据湖中的访问控制与治理",
+          "meta_description": "在对象存储和目录层实施基于角色的访问控制（RBAC）。",
+          "slug": "technical-governance",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8014,
+          "title": "数据血缘实现",
+          "meta_title": "数据血缘与溯源记录",
+          "meta_description": "记录数据从源到黄金层表的数据流转技术方法。",
+          "slug": "data-lineage-implementation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8015,
+          "title": "实操：配置数据目录",
+          "meta_title": "实践：设置Glue或Hive数据目录",
+          "meta_description": "动手实践环节，包含定义数据结构和扫描存储桶以填充数据目录。",
+          "slug": "practice-configuring-catalog",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1398,
+      "title": "查询与性能",
+      "meta_title": "优化数据湖查询",
+      "meta_description": "数据湖上Trino和Spark等分布式SQL引擎的性能调优。",
+      "number": 5,
+      "slug": "querying-and-performance",
+      "content": "确定存储布局和数据摄入管道后，架构需要支持高效的数据检索。将数据存储为Parquet或Avro等优化格式为架构提供了根本支撑，但分析工作负载的性能很大程度上受查询引擎与对象存储层交互方式的影响。与引擎控制物理磁盘的紧耦合数据库不同，数据湖要求查询规划器处理网络延迟和分布式文件系统。\n\n本节考察了Trino和Apache Spark等分布式SQL引擎在解耦存储上执行高性能查询所使用的机制。我们分析了大规模并行处理（MPP）架构如何将SQL语句分解为任务，并分发到工作节点集群。\n\n您将学习最小化I/O操作的技术策略，I/O操作是云分析中的主要成本驱动因素。我们讨论分区修剪和文件跳过，其中引擎利用元数据统计信息、最小值、最大值和空值计数，以完全忽略不相关文件。例如，如果没有修剪，查询操作的时间复杂度与总数据量成正比，即$O(n)$。通过应用元数据过滤器，引擎将扫描限制在相关分区，大幅减小了输入数据量。\n\n本课程还包括：\n\n*   **向量化执行：** 以列式批处理方式处理数据，以高效利用现代CPU指令集。\n*   **缓存分层：** 实现SSD或内存缓存，以加速重复访问模式。\n*   **查询计划分析：** 读取`EXPLAIN`输出，以诊断瓶颈并验证分区方案是否按预期运行。",
+      "sections": [
+        {
+          "id": 8016,
+          "title": "分布式查询引擎",
+          "meta_title": "Trino、Presto 和 Spark SQL 架构",
+          "meta_description": "MPP 引擎架构概述，用于在不移动数据的情况下查询数据湖。",
+          "slug": "distributed-query-engines",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8017,
+          "title": "文件修剪与跳过",
+          "meta_title": "数据跳过与分区修剪",
+          "meta_description": "查询引擎如何运用元数据和统计信息在执行时忽略不相关的文件。",
+          "slug": "file-pruning-and-skipping",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8018,
+          "title": "向量化查询执行",
+          "meta_title": "数据湖中的向量化处理",
+          "meta_description": "通过按批次而非逐行处理数据，提高CPU效率。",
+          "slug": "vectorized-query-execution",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8019,
+          "title": "缓存策略",
+          "meta_title": "数据湖性能的缓存层",
+          "meta_description": "实施SSD缓存和结果集缓存，以加快常用查询。",
+          "slug": "caching-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8020,
+          "title": "动手实践：查询分析",
+          "meta_title": "实践：分析查询计划",
+          "meta_description": "动手实践，运行查询，检查执行计划，并优化分区以提高速度。",
+          "slug": "practice-query-analysis",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

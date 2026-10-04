@@ -1,0 +1,61 @@
+{
+  "id": 5257,
+  "title": "平衡树的重要性",
+  "meta_title": "平衡树（AVL，红黑树）概述",
+  "meta_description": "理解平衡树为何对于动态数据维持性能是必要的。",
+  "content": "<p>二叉搜索树（BST）对搜索、插入和删除等基本操作提供了 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(\\log n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mop\">lo<span style=\"margin-right:0.0139em;\">g</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span> 的平均时间复杂度。这种效率源于它们在每一步将搜索空间减半的能力，但这个优势依赖于一个重要假设：树保持相对平衡。</p>\n<p>当这个假设不成立时会发生什么？考虑按严格升序（例如1、2、3、4、5、6、7）将元素插入到二叉搜索树中。生成的树结构不会是茂密且平衡的；相反，它会退化成一个类似链表的结构。每个新节点都成为前一个节点的右子节点。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ib60xc\" \n              data-graph-definition='digraph UnbalancedBST {\n    rankdir=TB;\n    node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Helvetica\", fontsize=10];\n    edge [arrowhead=vee, penwidth=1.5];\n\n    1 -> 2 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n    2 -> 3 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n    3 -> 4 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n    4 -> 5 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n    5 -> 6 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n    6 -> 7 [label=\" R\", fontsize=8, fontcolor=\"#495057\"];\n\n    {rank=same; 1}\n    {rank=same; 2}\n    {rank=same; 3}\n    {rank=same; 4}\n    {rank=same; 5}\n    {rank=same; 6}\n    {rank=same; 7}\n\n    1 [fillcolor=\"#4dabf7\"]; // 根节点\n    7 [fillcolor=\"#74c0fc\"]; // 叶节点\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ib60xc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>通过按顺序插入键 [1, 2, 3, 4, 5, 6, 7] 形成的退化二叉搜索树。</p>\n</blockquote>\n<p>在这种最坏情况下，搜索元素7需要访问树中的每一个节点。树的高度变为节点数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>n</mi></mrow><annotation encoding=\"application/x-tex\">n</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">n</span></span></span></span>，搜索、插入和删除的时间复杂度会退化到 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span>。这不比在一个未排序的列表中搜索更好！</p>\n<p>这表明树的高度与其操作效率之间有直接关联。平衡树旨在使其高度尽可能接近 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(\\log n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mop\">lo<span style=\"margin-right:0.0139em;\">g</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span>，无论插入顺序如何。</p>\n<h3>保持平衡：自平衡树</h3>\n<p>为了解决标准BST中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span> 最坏情况性能的可能性，发展出了各种<strong>自平衡二叉搜索树</strong>。这些结构在插入和删除过程中会自动调整其形状，以确保树保持相对平衡。</p>\n<p>它们通过特定的结构限制以及称为<strong>旋转</strong>的重构操作来实现这一点。当插入或删除违反了平衡标准（不同树类型之间略有差异）时，会局部执行旋转以重新排列节点并恢复平衡特性。</p>\n<p>常见的自平衡树类型包括：</p>\n<ul>\n<li><strong>AVL 树：</strong> 以其发明者（Adelson-Velsky 和 Landis）的名字命名，AVL 树通过确保任何节点的左右子树高度差至多为1来保持平衡。这种严格的条件确保了 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(\\log n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mop\">lo<span style=\"margin-right:0.0139em;\">g</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span> 的高度。</li>\n<li><strong>红黑树：</strong> 这些树使用节点着色（红色或黑色）以及一组管理这些颜色的规则，以确保从根节点到任何叶节点的最长路径不超过最短路径的两倍。这也保证了 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(\\log n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mop\">lo<span style=\"margin-right:0.0139em;\">g</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span> 的高度，尽管它们在实际中可能比AVL树的平衡程度略低，但通常因为所需的旋转次数较少而导致更快的插入和删除操作。Python的内置字典（3.6版本之前）以及C++和Java中许多标准库的有序映射实现通常使用红黑树。</li>\n</ul>\n<p>下图展示了同一组键 [1, 2, 3, 4, 5, 6, 7] 如何在平衡树（例如AVL树或红黑树，尽管没有展示具体的平衡逻辑）中构建。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6hjav2\" \n              data-graph-definition='digraph BalancedBST {\n    rankdir=TB;\n    node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Helvetica\", fontsize=10];\n    edge [arrowhead=vee, penwidth=1.5];\n\n    4 -> 2;\n    4 -> 6;\n    2 -> 1;\n    2 -> 3;\n    6 -> 5;\n    6 -> 7;\n\n    4 [fillcolor=\"#4dabf7\"]; // 根节点\n    1 [fillcolor=\"#74c0fc\"];\n    3 [fillcolor=\"#74c0fc\"];\n    5 [fillcolor=\"#74c0fc\"];\n    7 [fillcolor=\"#74c0fc\"]; // 叶节点\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6hjav2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>包含键 [1, 2, 3, 4, 5, 6, 7] 的平衡二叉搜索树。其高度远小于退化树。</p>\n</blockquote>\n<p>尽管AVL树和红黑树的内部机制涉及更复杂的实现细节（旋转、颜色翻转），但重要的是它们提供的保障：<strong>搜索、插入和删除等操作在最坏情况下仍保持 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi><mo stretchy=\"false\">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">O(\\log n)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mopen\">(</span><span class=\"mop\">lo<span style=\"margin-right:0.0139em;\">g</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">n</span><span class=\"mclose\">)</span></span></span></span> 的时间复杂度</strong>。</p>\n<p>这种有保障的性能使得平衡树在需要对动态数据集进行可靠、高效的搜索和更新操作时不可或缺，避免了简单BST在遇到非随机插入模式时的性能问题。尽管决策树等机器学习 (machine learning)模型不直接依赖BST的平衡特性（它们的结构是由特征分割而非键顺序决定的），但了解树平衡的重要性对于理解用于索引、搜索或作为算法和库内部组成部分的数据结构的效率是必要的。</p>",
+  "slug": "balanced-trees-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 14157,
+      "title": "Introduction to Algorithms",
+      "author": "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein",
+      "year": "2022",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition",
+      "doi": "",
+      "note": "这本经典教材全面涵盖了二叉搜索树、其不平衡时的性能问题，以及像红黑树这类自平衡结构的详细算法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:48:25.302999Z",
+      "updated_at": "2025-09-11T01:55:26.842489Z"
+    },
+    {
+      "id": 14158,
+      "title": "An algorithm for the organization of information",
+      "author": "G. M. Adelson-Velsky and E. M. Landis",
+      "year": "1962",
+      "publisher": "Soviet Mathematics - Doklady",
+      "journal": "Soviet Mathematics - Doklady",
+      "volume": "3",
+      "pages": "1259-1263",
+      "url": "https://www.scribd.com/document/267986068/AVL-Tree-Soviet-Math-Doklady",
+      "doi": "",
+      "note": "首次介绍AVL树的原始学术论文，AVL树是第一个自平衡二叉搜索树，概述了其基本结构和平衡机制。",
+      "order": 2,
+      "created_at": "2025-09-05T08:48:25.312167Z",
+      "updated_at": "2025-09-11T01:55:40.729705Z"
+    },
+    {
+      "id": 14159,
+      "title": "Data Structures and Algorithms in Python",
+      "author": "Michael T. Goodrich, Roberto Tamassia, and Michael H. Goldwasser",
+      "year": "2013",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Data+Structures+and+Algorithms+in+Python-p-9781118290279",
+      "doi": "",
+      "note": "清晰易懂地解释了二叉搜索树和各种自平衡树结构，包括AVL树和红黑树，并提供了实用实现见解。",
+      "order": 3,
+      "created_at": "2025-09-05T08:48:25.315006Z",
+      "updated_at": "2025-09-11T01:55:30.672539Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

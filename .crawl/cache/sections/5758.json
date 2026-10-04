@@ -1,0 +1,61 @@
+{
+  "id": 5758,
+  "title": "训练模式：TensorFlow 的 fit 方法与 PyTorch 训练循环",
+  "meta_title": "Keras `fit()` 与 PyTorch 自定义训练循环的比较",
+  "meta_description": "了解 TensorFlow Keras 的高级 `fit()` 方法与 PyTorch 中手动训练循环之间的差异。",
+  "content": "<p>如果您的背景是 TensorFlow Keras，您对高效的训练流程会很熟悉。您定义模型，然后使用 <code>model.compile()</code> 来指定优化器、损失函数 (loss function)和任何评估指标。之后，只需一次 <code>model.fit()</code> 调用，提供您的训练数据、训练轮数（epochs）和批量大小（batch size），即可启动整个训练流程。Keras 会高效地管理数据迭代、梯度计算和模型权重 (weight)更新，所有这些都隐藏在此便捷的 API 之后。</p>\n<p>PyTorch 处理模型训练的方式不同。与 <code>fit()</code> 这种高级的、包罗万象的函数不同，PyTorch 要求您自己构建训练循环。这最初可能看起来工作量更大，但它提供了一个重要的好处：对训练过程的每一步都拥有完全的透明度和控制权。这种理念与 PyTorch 整体的“定义即运行”特性相符，即操作在声明时即执行，从而提供灵活性并简化调试。</p>\n<h3>Keras 的 <code>fit()</code> 方法：回顾</h3>\n<p>在 Keras 中，训练过程在很大程度上被抽象化了。典型的工作流程包括：</p>\n<ol>\n<li><strong>编译（<code>model.compile()</code>）：</strong> 您指定优化器（例如，<code>'adam'</code>、<code>tf.keras.optimizers.SGD</code>）、损失函数 (loss function)（例如，<code>'categorical_crossentropy'</code>、<code>tf.keras.losses.MeanSquaredError</code>）以及可选的评估指标（例如，<code>['accuracy']</code>）。</li>\n<li><strong>训练（<code>model.fit()</code>）：</strong> 您传入训练数据（特征和标签）、训练轮数、批量大小，以及可选的验证数据和回调函数。Keras 随后处理：\n<ul>\n<li>迭代指定的训练轮数。</li>\n<li>将数据分成批次。</li>\n<li>对于每个批次：\n<ul>\n<li>执行前向传播以获取预测结果。</li>\n<li>计算损失。</li>\n<li>执行反向传播 (backpropagation)以计算梯度。</li>\n<li>使用所选优化器更新模型权重 (weight)。</li>\n</ul>\n</li>\n<li>评估评估指标。</li>\n<li>在不同时间点（例如，训练轮结束时、批次结束时）执行回调函数。</li>\n</ul>\n</li>\n</ol>\n<p>这种方式因其简洁性以及快速启动并运行标准模型的能力而显得十分强大。</p>\n<pre><code class=\"language-python\"># TensorFlow Keras 示例\n# model.compile(optimizer='adam',\n#               loss='sparse_categorical_crossentropy',\n#               metrics=['accuracy'])\n\n# history = model.fit(train_images, train_labels,\n#                     epochs=10,\n#                     validation_data=(test_images, test_labels))\n</code></pre>\n<p>这个简洁的 Keras 代码片段在内部封装了一系列复杂的运算。</p>\n<h3>PyTorch 训练循环：显式构建</h3>\n<p>在 PyTorch 中，您是训练循环的设计者。您编写标准 Python 代码来迭代训练轮数和数据批次，并显式调用训练每一步所需的函数。一个典型的 PyTorch 训练循环包括以下核心组成部分：</p>\n<ol>\n<li><strong>外层循环（训练轮数）：</strong> 迭代所需的训练轮数。</li>\n<li><strong>内层循环（批次）：</strong> 迭代您的 <code>DataLoader</code>，它提供数据批次。</li>\n<li><strong>梯度清零：</strong> 在计算当前批次的梯度之前，您必须显式清除之前批次累积的所有梯度。这通过 <code>optimizer.zero_grad()</code> 完成。</li>\n<li><strong>前向传播：</strong> 将输入数据通过模型以获取预测结果：<code>outputs = model(inputs)</code>。</li>\n<li><strong>计算损失：</strong> 使用所选损失函数 (loss function)计算模型预测与真实目标之间的损失：<code>loss = loss_fn(outputs, targets)</code>。</li>\n<li><strong>反向传播 (backpropagation)：</strong> 计算损失相对于所有 <code>requires_grad=True</code> 的模型参数 (parameter)的梯度。这由 <code>loss.backward()</code> 启动。</li>\n<li><strong>更新权重 (weight)（优化器步进）：</strong> 使用优化器的 <code>step()</code> 方法，根据计算出的梯度更新模型参数：<code>optimizer.step()</code>。</li>\n<li><strong>日志记录与评估指标（可选但推荐）：</strong> 跟踪损失值、计算准确率或其他相关评估指标，并记录它们以监控训练进展。</li>\n</ol>\n<p>以下是 PyTorch 训练循环的骨架表示：</p>\n<pre><code class=\"language-python\"># PyTorch 训练循环片段\n# optimizer = torch.optim.Adam(model.parameters(), lr=0.001)\n# loss_fn = torch.nn.CrossEntropyLoss()\n\n# for epoch in range(num_epochs):\n#     model.train() # 将模型设置为训练模式\n#     running_loss = 0.0\n#     for inputs, labels in train_loader:\n#         # 将数据移动到相应的设备（例如，GPU）\n#         inputs, labels = inputs.to(device), labels.to(device)\n\n#         # 1. 梯度清零\n#         optimizer.zero_grad()\n\n#         # 2. 前向传播\n#         outputs = model(inputs)\n\n#         # 3. 计算损失\n#         loss = loss_fn(outputs, labels)\n\n#         # 4. 反向传播\n#         loss.backward()\n\n#         # 5. 更新权重\n#         optimizer.step()\n\n#         running_loss += loss.item()\n#     # 打印训练轮统计数据，进行验证等。\n</code></pre>\n<h3>模式对比</h3>\n<p>根本区别在于抽象程度与显式控制之间的对比。</p>\n<ul>\n<li>\n<p><strong>抽象（Keras <code>fit()</code>）：</strong></p>\n<ul>\n<li><strong>优点：</strong> 级别高，样板代码少，适合标准任务的快速实现。隐藏了训练循环的复杂性。</li>\n<li><strong>缺点：</strong> 定制非标准训练行为或调试训练过程中深层问题可能更具挑战性，因为循环逻辑是内部的。</li>\n</ul>\n</li>\n<li>\n<p><strong>显式控制（PyTorch 循环）：</strong></p>\n<ul>\n<li><strong>优点：</strong> 对每一步都有完全控制。易于插入自定义逻辑、检查中间张量、修改梯度或实现复杂的训练流程（例如，GAN、强化学习 (reinforcement learning)算法）。对训练机制提供更高的透明度。调试通常更直接，因为您可以在 Python 代码的任何位置使用 <code>print()</code> 或调试器。</li>\n<li><strong>缺点：</strong> 需要编写更多代码。正确实现循环的责任在于开发者。</li>\n</ul>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-jj114d\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", margin=0.2];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_keras {\n        label=\"TensorFlow Keras：model.fit()\";\n        style=\"filled\";\n        color=\"#dee2e6\"; // Lighter gray for border\n        bgcolor=\"#f8f9fa\"; // Lightest gray for Keras background\n\n        k_compile [label=\"model.compile()\\n(优化器、损失、评估指标)\", fillcolor=\"#a5d8ff\"]; // Blue\n        k_fit [label=\"model.fit()\\n(数据、训练轮数、批量大小)\", fillcolor=\"#74c0fc\"]; // Darker Blue\n        k_internal_loop [label=\"内部训练循环\\n(前向、损失、反向、优化)\", fillcolor=\"#4dabf7\", shape=ellipse, style=\"dashed,filled\"]; // Even Darker Blue, dashed for internal\n\n        k_compile -> k_fit;\n        k_fit -> k_internal_loop [style=dashed, label=\"管理\"];\n    }\n\n    subgraph cluster_pytorch {\n        label=\"PyTorch：自定义训练循环\";\n        style=\"filled\";\n        color=\"#dee2e6\"; // Lighter gray for border\n        bgcolor=\"#f8f9fa\"; // Lightest gray for PyTorch background\n\n        pt_setup [label=\"定义模型、损失函数、优化器\", fillcolor=\"#b2f2bb\"]; // Green\n        pt_epoch_loop [label=\"对于每个训练轮：\", fillcolor=\"#8ce99a\", shape=parallelogram]; // Lighter Green\n        pt_batch_loop [label=\"对于每个批次：\", fillcolor=\"#69db7c\", shape=parallelogram]; // Green\n        pt_zero_grad [label=\"optimizer.zero_grad()\", fillcolor=\"#51cf66\"]; // Darker Green\n        pt_forward [label=\"outputs = model(inputs)\", fillcolor=\"#51cf66\"];\n        pt_loss [label=\"loss = loss_fn(outputs, targets)\", fillcolor=\"#51cf66\"];\n        pt_backward [label=\"loss.backward()\", fillcolor=\"#51cf66\"];\n        pt_step [label=\"optimizer.step()\", fillcolor=\"#51cf66\"];\n\n        pt_setup -> pt_epoch_loop;\n        pt_epoch_loop -> pt_batch_loop [label=\"迭代\"];\n        pt_batch_loop -> pt_zero_grad [label=\"迭代\"];\n        pt_zero_grad -> pt_forward;\n        pt_forward -> pt_loss;\n        pt_loss -> pt_backward;\n        pt_backward -> pt_step;\n        pt_step -> pt_batch_loop [label=\"下一批次 / 训练轮结束\"];\n    }\n    label=\"训练循环管理的宏观比较\";\n    fontsize=14;\n    fontcolor=\"#495057\";\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-jj114d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这个图表显示了 Keras 的 <code>model.fit()</code> 封装的特性与 PyTorch 训练循环的显式、分步构建之间的对比。</p>\n</blockquote>\n<h3>对开发的影响</h3>\n<p><strong>灵活性和定制性：</strong> 如果您需要实现新颖的训练算法，在优化器步进之前以特定方式修改梯度，或者集成 Keras 回调函数不易支持的复杂日志记录，那么 PyTorch 方法本身就更具灵活性。您只是在编写 Python 代码，因此任何可以用 Python 表示的逻辑都可以成为您训练循环的一部分。</p>\n<p><strong>调试：</strong> 调试 PyTorch 训练循环感觉更直接。由于您编写了该循环，因此可以在任何时候插入 <code>print()</code> 语句或使用 Python 的 <code>pdb</code> 调试器来查看张量形状、值和梯度。例如，检查激活或梯度中的 <code>NaN</code> 值是简单的。</p>\n<p><strong>了解机制：</strong> 亲自编写训练循环会促使您更透彻地了解模型训练期间发生的情况。这对于故障排除以及培养对不同组件（优化器、损失函数 (loss function)、学习率调度器）如何共同发挥作用的直觉都有好处。</p>\n<p>虽然 PyTorch 的方法意味着训练过程的初始设置会多一点，但它提供的控制和透明度备受重视，尤其是在研究环境或解决不完全符合预定义训练抽象的复杂问题时。随着您在本章中的学习，您将了解到如何实现该循环的每个组成部分，从选择损失函数和优化器到计算评估指标和管理训练流程。</p>",
+  "slug": "keras-fit-vs-pytorch-training-loop",
+  "updates": [],
+  "references": [
+    {
+      "id": 15588,
+      "title": "Training and evaluation with the built-in methods",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras/train_and_evaluate",
+      "doi": "",
+      "note": "提供 Keras 高级训练 API 的官方指南，包括 `model.compile()` 和 `model.fit()`，解释其简化的方法。",
+      "order": 1,
+      "created_at": "2025-09-06T10:52:01.674619Z",
+      "updated_at": "2025-09-10T13:20:46.455785Z"
+    },
+    {
+      "id": 15589,
+      "title": "Training a Classifier",
+      "author": "PyTorch Documentation Authors",
+      "year": "2017",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html",
+      "doi": "",
+      "note": "说明如何从头构建一个完整的 PyTorch 训练循环，展示对每个训练步骤的明确控制。",
+      "order": 2,
+      "created_at": "2025-09-06T10:52:01.728474Z",
+      "updated_at": "2025-09-10T13:20:23.200125Z"
+    },
+    {
+      "id": 15590,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "Keras 创建者撰写的书籍，对 Keras 及其训练抽象的设计理念进行了全面说明。",
+      "order": 3,
+      "created_at": "2025-09-06T10:52:01.734201Z",
+      "updated_at": "2025-09-10T13:20:20.507416Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

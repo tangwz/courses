@@ -1,0 +1,61 @@
+{
+  "id": 4354,
+  "title": "参数高效微调 (PEFT) 概述",
+  "meta_title": "参数高效微调 (PEFT) 概述",
+  "meta_description": "PEFT方法作为一种替代调整策略的介绍。",
+  "content": "<p>将完全微调 (fine-tuning)甚至复杂的元学习策略直接应用于拥有数十亿参数 (parameter)的基础模型，虽然强大，但带来了显著的计算难题。训练需要大量的GPU内存和时间，并且为每个专门任务存储整个模型的独特副本变得不切实际。参数高效微调 (PEFT) 提供了一个很有吸引力的选择，提供了一系列专门为高效调整这些大型模型而设计的方法。</p>\n<p>PEFT方法基于一个基本原则：它们不修改预训练 (pre-training)模型的所有参数，而是专注于调整一小部分参数，或者引入少量新的、可训练的参数。原始基础模型的绝大部分权重 (weight)在调整过程中保持不变。</p>\n<p>目标是获得与完全微调相当的调整性能，特别是在少样本情况下，但计算开销大大降低。这种高效性体现在几个主要优点上：</p>\n<ul>\n<li><strong>计算需求降低：</strong> 与更新整个模型相比，训练PEFT方法所需的GPU内存和计算时间大幅减少。这使得在性能较低的硬件上进行调整成为可能，或允许更快的迭代周期。</li>\n<li><strong>存储成本更低：</strong> 由于每个任务只需要存储少量修改或新增的参数，存储占用空间大幅减少。不必为每个任务保存多GB的模型检查点，通常只需保存几MB的PEFT参数。这有助于从单一基础模型部署和管理大量针对特定任务的模型。</li>\n<li><strong>潜在缓解灾难性遗忘：</strong> 通过保持预训练模型的核心参数不变，PEFT有时能比完全微调更好地保留预训练期间学到的通用能力，而完全微调有覆盖这些知识的风险。</li>\n<li><strong>具有竞争力的性能：</strong> 对于许多下游任务和基准测试，PEFT方法已表现出接近甚至有时胜过完全微调的性能，特别是在目标任务的标注数据稀缺时。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1nnq8p2\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  subgraph cluster_fft {\n    label = \"完全微调\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [fillcolor=\"#ffc9c9\"];\n    fft_model [label=\"基础模型\\n(所有参数都微调)\"];\n  }\n\n  subgraph cluster_meta {\n    label = \"元学习 (例如 MAML)\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [fillcolor=\"#bac8ff\"];\n    meta_model [label=\"基础模型\\n(优化过的初始化)\"];\n    meta_adapt [label=\"任务调整\\n(内循环更新)\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    meta_model -> meta_adapt [label=\" 少量步骤\"];\n  }\n\n  subgraph cluster_peft {\n    label = \"PEFT\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [fillcolor=\"#ced4da\"];\n    peft_base [label=\"基础模型\\n(冻结)\"];\n    peft_tuned [label=\"少量可调\\n参数 (远少于基础)\", fillcolor=\"#96f2d7\"];\n    peft_base -> peft_tuned [style=invis]; // 用于布局定位\npeft_tuned -> peft_base [label=\" 修改行为\", dir=back, constraint=false]; // 箭头指向基础模型\n  }\n\n  fft_model -> meta_model [style=invis, weight=10]; // 间距\n  meta_model -> peft_base [style=invis, weight=10]; // 间距\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1nnq8p2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>调整方法的比较。完全微调修改所有参数。元学习通常侧重于为快速调整寻找一个好的初始化。PEFT冻结基础模型，只微调少量参数。</p>\n</blockquote>\n<p>PEFT包含多种策略，这些策略可以根据它们如何实现参数高效性进行大致分类。有些方法，例如Adapter，在预训练模型的层中插入小的、新的神经网络 (neural network)模块。其他方法，例如低秩适配 (LoRA)，对某些权重矩阵进行重新参数化，以学习低秩更新。像Prompt Tuning这样的技术通过学习连续输入嵌入 (embedding)来修改模型的行为，而不是直接改变权重。</p>\n<p>将PEFT视为一种补充工具集会很有帮助，它并非元学习的直接竞争者，不会使其失效，而是专注于非常大型模型调整步骤的<em>计算效率</em>。元学习解决的是从少量例子中<em>快速学习调整</em>的问题，通常是找到最优初始点或更新规则。PEFT确保<em>调整过程本身</em>是可行的。正如我们稍后将讨论的，这些方法并非互斥，有时可以结合使用。</p>\n<p>通常，PEFT过程包括获取一个带有参数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>θ</mi><mrow><mi>p</mi><mi>r</mi><mi>e</mi></mrow></msub></mrow><annotation encoding=\"application/x-tex\">\\theta_{pre}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9805em;vertical-align:-0.2861em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\">p</span><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0278em;\">r</span><span class=\"mord mathnormal mtight\">e</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span></span></span></span> 的预训练基础模型，并将其冻结，然后引入一组小得多的可训练参数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>ϕ</mi></mrow><annotation encoding=\"application/x-tex\">\\phi</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">ϕ</span></span></span></span>，参数数量 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi mathvariant=\"normal\">∣</mi><mi>ϕ</mi><mi mathvariant=\"normal\">∣</mi></mrow><annotation encoding=\"application/x-tex\">|\\phi|</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">∣</span><span class=\"mord mathnormal\">ϕ</span><span class=\"mord\">∣</span></span></span></span> 比 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi mathvariant=\"normal\">∣</mi><msub><mi>θ</mi><mrow><mi>p</mi><mi>r</mi><mi>e</mi></mrow></msub><mi mathvariant=\"normal\">∣</mi></mrow><annotation encoding=\"application/x-tex\">|\\theta_{pre}|</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1.0361em;vertical-align:-0.2861em;\"></span><span class=\"mord\">∣</span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\">p</span><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0278em;\">r</span><span class=\"mord mathnormal mtight\">e</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2861em;\"><span></span></span></span></span></span></span><span class=\"mord\">∣</span></span></span></span> 小几个数量级。只有这些参数 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>ϕ</mi></mrow><annotation encoding=\"application/x-tex\">\\phi</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">ϕ</span></span></span></span> 使用来自特定下游任务的数据进行优化。</p>\n<p>接下来的章节将详细审视特定且广泛使用的PEFT技术，包括Adapter模块、LoRA和Prompt/Prefix Tuning，并分析它们的机制和权衡。我们还将直接比较它们的特点与之前讨论的元学习策略。</p>",
+  "slug": "peft-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 11579,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍了低秩适应（LoRA），这是一种广泛采用的用于高效微调大型语言模型的技术。",
+      "order": 2,
+      "created_at": "2025-09-05T07:31:36.513082Z",
+      "updated_at": "2025-09-09T13:30:48.253395Z"
+    },
+    {
+      "id": 11580,
+      "title": "Parameter-Efficient Transfer Learning for NLP",
+      "author": "Neil Houlsby, Andrei Giurgiu, Stanislaw Jastrzebski, Bruna Morrone, Quentin de Laroussilhe, Andrea Gesmundo, Mona Attariyan, Sylvain Gelly",
+      "year": "2019",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1902.00751",
+      "doi": "10.48550/arXiv.1902.00751",
+      "note": "介绍了适配器模块，这是一种通过注入小型可训练层实现参数高效微调的早期且有影响力的技术。",
+      "order": 3,
+      "created_at": "2025-09-05T07:31:36.516367Z",
+      "updated_at": "2025-09-09T13:30:47.244520Z"
+    },
+    {
+      "id": 11581,
+      "title": "PEFT: Parameter-Efficient Fine-tuning",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/peft/index",
+      "doi": "",
+      "note": "Hugging Face PEFT 库的官方文档，提供了各种 PEFT 方法的实践指导和实现细节。",
+      "order": 4,
+      "created_at": "2025-09-05T07:31:36.519411Z",
+      "updated_at": "2025-09-09T13:30:47.435502Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

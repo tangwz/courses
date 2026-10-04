@@ -1,0 +1,61 @@
+{
+  "id": 1135,
+  "title": "从多种来源加载数据（CSV、Excel、JSON）",
+  "meta_title": "在Pandas中加载数据（CSV、Excel、JSON）",
+  "meta_description": "将数据从CSV、Excel和JSON等常见文件格式加载到Pandas DataFrame中的方法。",
+  "content": "<p>在分析数据之前，你需要将其导入到你的分析环境中。正如前一章所述，Python，特别是Pandas库，为此提供了工具。本节着重于从你将遇到的一些最常见文件格式中加载数据的实际操作步骤：逗号分隔值（CSV）、Microsoft Excel电子表格以及JavaScript对象表示（JSON）。掌握这些初始步骤对于任何数据分析项目都非常重要。</p>\n<p>我们假设你已按照第1章的说明，设置好Python环境并安装了Pandas。</p>\n<h3>加载CSV文件</h3>\n<p>CSV文件或许是存储表格数据最常见的格式。它们是纯文本文件，值通常用逗号分隔。Pandas提供了<code>read_csv()</code>函数，这是一个将这些文件读取到DataFrame中的多功能工具。</p>\n<p>最基本的用法只需提供文件路径：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 假设 'data.csv' 与你的脚本或Jupyter Notebook在同一目录下\ntry:\n    df_csv = pd.read_csv('data.csv')\n    print(\"CSV文件加载成功。\")\n    # 继续检查 df_csv（将在下一节介绍）\nexcept FileNotFoundError:\n    print(\"错误：未找到 data.csv。请检查文件路径。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n\n</code></pre>\n<p>尽管这适用于标准、逗号分隔的文件，但<code>read_csv()</code>提供了许多参数 (parameter)来处理各种情况：</p>\n<ul>\n<li><code>filepath_or_buffer</code>：这是主要参数，接受文件路径（字符串）、URL或任何具有<code>read()</code>方法的对象。</li>\n<li><code>sep</code>（或 <code>delimiter</code>）：指定用于分隔值的字符。如果你的文件使用制表符（<code>\\t</code>）、分号（<code>;</code>）或其他分隔符，你必须相应地设置此参数。例如：<code>pd.read_csv('data.tsv', sep='\\t')</code>。Pandas通常会推断分隔符，但明确定义更安全。</li>\n<li><code>header</code>：指示哪一行包含列名。默认情况下，它是<code>header=0</code>（第一行）。如果你的文件没有标题行，请使用<code>header=None</code>。Pandas将自动分配默认的整数列名（0, 1, 2...）。如果标题行不在第一行，你也可以指定不同的行索引。</li>\n<li><code>index_col</code>：你可以指定CSV文件中的一个或多个列作为DataFrame加载时的索引。例如，<code>index_col='ID'</code>将使用名为“ID”的列作为索引。</li>\n<li><code>usecols</code>：如果你只需要部分列，请向此参数提供列名或索引列表，例如<code>usecols=['Name', 'Age', 'City']</code>。这可以节省宽数据集的内存和加载时间。</li>\n<li><code>dtype</code>：允许你在加载时使用字典指定特定列或所有列的数据类型，例如<code>dtype={'CustomerID': str, 'Amount': float}</code>。这可以防止不正确的类型推断（例如将数字ID读取为整数，而它们应该是字符串）。</li>\n<li><code>nrows</code>：对于非常大的文件很有用。设置<code>nrows=1000</code>可以只读取前1000行（不包括标题行）。这有助于在加载整个数据集之前进行快速查看。</li>\n<li><code>encoding</code>：如果文件编码不是默认的（通常是UTF-8），则指定其编码。常见的替代方案包括<code>'latin1'</code>、<code>'iso-8859-1'</code>或<code>'cp1252'</code>，特别是在处理旧文件或来自不同操作系统的文件时。如果你遇到<code>UnicodeDecodeError</code>，请尝试指定编码。</li>\n</ul>\n<pre><code class=\"language-python\"># 示例：加载一个没有标题、使用特定列的分号分隔文件\ntry:\n    columns_to_load = ['Timestamp', 'SensorValue']\n    df_sensor = pd.read_csv(\n        'sensor_data.log',\n        sep=';',\n        header=None,\n        names=columns_to_load, # 如果 header=None，则提供名称\n        usecols=[0, 2],        # 只加载第1列和第3列\n        encoding='latin1'\n    )\n    print(\"传感器日志加载成功。\")\nexcept FileNotFoundError:\n    print(\"错误：未找到 sensor_data.log。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n</code></pre>\n<h3>加载Excel文件</h3>\n<p>Excel文件（<code>.xls</code>或<code>.xlsx</code>）也经常用于存储数据，通常包含多个工作表。Pandas使用<code>read_excel()</code>函数来处理此任务。请注意，<code>read_excel()</code>需要额外的库：对于<code>.xlsx</code>文件需要<code>openpyxl</code>，对于较旧的<code>.xls</code>文件需要<code>xlrd</code>。如果你尚未安装它们，可以通过pip安装：</p>\n<pre><code class=\"language-bash\">pip install openpyxl xlrd\n</code></pre>\n<p>基本用法与<code>read_csv()</code>类似：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\ntry:\n    # 默认加载第一个工作表\n    df_excel = pd.read_excel('spreadsheet.xlsx')\n    print(\"Excel文件加载成功（第一个工作表）。\")\nexcept FileNotFoundError:\n    print(\"错误：未找到 spreadsheet.xlsx。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n\n</code></pre>\n<p><code>read_excel()</code>的重要参数 (parameter)包括：</p>\n<ul>\n<li><code>io</code>：文件路径、URL或类似文件的对象。</li>\n<li><code>sheet_name</code>：这对Excel文件很重要。你可以指定：\n<ul>\n<li>工作表名称的字符串（例如，<code>sheet_name='Sales Data'</code>）。</li>\n<li>工作表索引的整数（从0开始，例如，<code>sheet_name=0</code>表示第一个工作表）。</li>\n<li>字符串/整数列表，用于将特定的多个工作表加载到DataFrames字典中（例如，<code>sheet_name=['Orders', 'Customers']</code>）。</li>\n<li><code>None</code>表示将所有工作表加载到DataFrames字典中。</li>\n</ul>\n</li>\n<li><code>header</code>、<code>index_col</code>、<code>usecols</code>、<code>dtype</code>、<code>nrows</code>：这些参数的功能与<code>read_csv()</code>中对应的参数类似。</li>\n</ul>\n<pre><code class=\"language-python\"># 示例：加载特定工作表（'Inventory'）并指定标题行\ntry:\n    df_inventory = pd.read_excel(\n        'company_data.xlsx',\n        sheet_name='Inventory',\n        header=2 # 标题行在第3行（索引为2）\n    )\n    print(\"库存工作表加载成功。\")\n\n    # 示例：加载所有工作表\n    all_sheets = pd.read_excel('company_data.xlsx', sheet_name=None)\n    print(f\"已加载工作表：{list(all_sheets.keys())}\")\n    # all_sheets 现在是一个字典，其键是工作表名称\n    # 值是对应的DataFrame。\n    # df_orders = all_sheets['Orders']\n\nexcept FileNotFoundError:\n    print(\"错误：未找到 company_data.xlsx。\")\nexcept ImportError:\n    print(\"错误：请安装 'openpyxl' 或 'xlrd' 来读取Excel文件。\")\n    print(\"运行：pip install openpyxl xlrd\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n\n</code></pre>\n<h3>加载JSON文件</h3>\n<p>JSON（JavaScript对象表示法）是一种轻量级数据交换格式，在Web API和配置文件中很常见。其结构可能比扁平的CSV或Excel文件更复杂，常包含嵌套对象和数组。Pandas提供了<code>read_json()</code>来处理这种格式。</p>\n<p><code>read_json()</code>的有效性很大程度上取决于JSON文件的结构。一个常见的问题是JSON不强制单一的表格结构。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 示例假设一个简单的JSON结构（记录列表）\n# [{'col1': 'a', 'col2': 1}, {'col1': 'b', 'col2': 2}]\ntry:\n    df_json = pd.read_json('data.json')\n    print(\"JSON文件加载成功。\")\nexcept FileNotFoundError:\n    print(\"错误：未找到 data.json。\")\nexcept ValueError as ve:\n    # 如果JSON结构不是直接的表格形式，通常会发生这种情况\n    print(f\"加载JSON时发生ValueError：{ve}\")\n    print(\"检查JSON结构并考虑 'orient' 参数。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n</code></pre>\n<p><code>read_json()</code>最重要的参数 (parameter)是<code>orient</code>，它告诉Pandas如何解读JSON结构：</p>\n<ul>\n<li><code>'records'</code>：（如果<code>lines=False</code>则为默认值）JSON字符串是一个JSON对象数组。示例：<code>[{'col A': 1, 'col B': 0.5}, {'col A': 2, 'col B': 0.7}]</code>。每个对象成为一行。</li>\n<li><code>'columns'</code>：JSON字符串是一个字典，其中键是列名，值是将索引标签映射到单元格值的字典。示例：<code>{'col A': {'row1': 1, 'row2': 2}, 'col B': {'row1': 0.5, 'row2': 0.7}}</code>。</li>\n<li><code>'index'</code>：与<code>'columns'</code>类似，但内部字典将列名映射到单元格值。示例：<code>{'row1': {'col A': 1, 'col B': 0.5}, 'row2': {'col A': 2, 'col B': 0.7}}</code>。</li>\n<li><code>'split'</code>：JSON字符串是一个字典，包含键<code>'index'</code>、<code>'columns'</code>和<code>'data'</code>。示例：<code>{'columns': ['col A', 'col B'], 'index': ['row1', 'row2'], 'data': [[1, 0.5], [2, 0.7]]}</code>。</li>\n<li><code>'values'</code>：JSON字符串只是一个包含数据值的数组的数组。示例：<code>[[1, 0.5], [2, 0.7]]</code>。列名将是数字（0, 1, ...）。</li>\n</ul>\n<p>你通常需要先检查JSON文件的结构，以确定正确的<code>orient</code>值。</p>\n<pre><code class=\"language-python\"># 示例：以 'columns' 方向加载JSON\n# {\"col1\": {\"0\": \"a\", \"1\": \"b\"}, \"col2\": {\"0\": 1, \"1\": 2}}\ntry:\n    df_json_cols = pd.read_json('data_columns.json', orient='columns')\n    print(\"JSON（'columns' 方向）加载成功。\")\nexcept FileNotFoundError:\n    print(\"错误：未找到 data_columns.json。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n\n# 示例：加载行分隔的JSON（每行是一个有效的JSON对象）\n# {\"col1\": \"a\", \"col2\": 1}\n# {\"col1\": \"b\", \"col2\": 2}\ntry:\n    # 对于行分隔的JSON，使用 lines=True（orient 默认为 'records'）\n    df_json_lines = pd.read_json('data_lines.jsonl', lines=True)\n    print(\"行分隔JSON加载成功。\")\nexcept FileNotFoundError:\n    print(\"错误：未找到 data_lines.jsonl。\")\nexcept Exception as e:\n    print(f\"发生错误：{e}\")\n</code></pre>\n<p>对于深度嵌套的JSON数据，<code>read_json()</code>可能会生成包含字典或列表的列。虽然Pandas可以处理这些，但你可能需要更高级的技术，例如<code>pandas.json_normalize()</code>或自定义解析逻辑，以将结构展平为适合分析的标准表格格式。这些是值得了解的有用工具。</p>\n<h3>常见加载注意事项</h3>\n<ul>\n<li><strong>文件路径：</strong> 确保你的文件路径正确。相对路径（如<code>'data.csv'</code>）是相对于你的脚本或Jupyter Notebook的当前工作目录。绝对路径（如<code>'/Users/you/Documents/data.csv'</code>或<code>'C:\\\\Users\\\\you\\\\Documents\\\\data.csv'</code>）也有效。使用<code>os</code>或<code>pathlib</code>等库可以帮助在不同操作系统中可靠地管理路径。</li>\n<li><strong>错误处理：</strong> 始终将文件加载操作包装在<code>try...except</code>块中，以妥善处理<code>FileNotFoundError</code>或其他问题，例如格式不正确或权限问题。</li>\n</ul>\n<p>成功加载数据是重要的第一步。一旦数据进入Pandas DataFrame，你就可以进入下一个阶段：检查其基本属性、结构和类型，这是即将到来的章节的主要内容。</p>",
+  "slug": "loading-data-sources",
+  "updates": [],
+  "references": [
+    {
+      "id": 329,
+      "title": "User Guide: Input/Output tools (Text, CSV, HDF5, ...) - pandas 2.2.0 documentation",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html",
+      "doi": "",
+      "note": "Pandas官方用户指南，全面介绍如何从CSV、Excel、JSON等多种格式加载数据。",
+      "order": 1,
+      "created_at": "2025-09-04T14:23:04.951133Z",
+      "updated_at": "2025-09-07T16:11:28.078761Z"
+    },
+    {
+      "id": 330,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas创建者撰写的权威书籍，详细讲解使用Pandas加载和处理数据的实用示例和说明。",
+      "order": 2,
+      "created_at": "2025-09-04T14:23:04.955420Z",
+      "updated_at": "2025-09-07T16:11:18.735612Z"
+    },
+    {
+      "id": 331,
+      "title": "pandas.read_json - pandas 2.2.0 documentation",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_json.html",
+      "doi": "",
+      "note": "`pandas.read_json`的官方API文档，详细说明其参数和行为，对于理解JSON结构解释特别有用。",
+      "order": 3,
+      "created_at": "2025-09-04T14:23:04.958152Z",
+      "updated_at": "2025-09-07T16:11:20.291043Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

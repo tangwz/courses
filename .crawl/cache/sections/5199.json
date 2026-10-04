@@ -1,0 +1,61 @@
+{
+  "id": 5199,
+  "title": "为复杂任务构建提示词",
+  "meta_title": "为复杂任务构建提示词 | 提示词工程",
+  "meta_description": "为多步骤推理或特定输出格式设计提示词结构。",
+  "content": "<p>尽管基本提示词 (prompt)适用于简单的请求，但要指导大型语言模型（LLM）完成更复杂的任务，通常需要更具结构的方法。复杂任务可能涉及多步骤推理 (inference)、从大量文本中提取特定信息、整合多源数据或生成特定格式的输出。仅仅说明最终目标可能不够；你需要指导模型的工作流程。</p>\n<p>有效地构建提示词涉及分解复杂性，并提供明确的限制或指令。这有助于LLM集中其能力，并减少生成不相关、不正确或格式不佳回复的可能性。接下来，我们看几种你可以直接在Python代码中实现的方法。</p>\n<h3>使用分步指令分解任务</h3>\n<p>处理复杂性最直接的方法之一，是在提示词 (prompt)内部将任务分解为更小、按顺序的步骤。并非直接要求最终结果，你会指导模型达成该结果的<em>过程</em>。</p>\n<p>考虑一个任务，例如总结一篇技术文章并提取其中提到的主要技术。一个简单的提示词可能含糊不清。结构化的提示词会将其分解：</p>\n<pre><code class=\"language-python\">article_text = \"\"\"\nGenerative Adversarial Networks (GANs) are a class of machine learning frameworks designed by Ian Goodfellow and his colleagues in 2014. Two neural networks, the generator and the discriminator, contest with each other in a game. Given a training set, this technique learns to generate new data with the same statistics as the training set. For example, a GAN trained on photographs can generate new photographs that look at least superficially authentic to human observers, having many realistic characteristics. Though originally proposed as a form of generative model for unsupervised learning, GANs have also proven useful for semi-supervised learning, fully supervised learning, and reinforcement learning. Important advancements include DCGANs for stable image generation and CycleGAN for unpaired image-to-image translation.\n\"\"\"\n\nprompt_template = f\"\"\"\n请严格按照以下步骤使用提供的文章文本：\n1.  仔细阅读整篇文章。\n2.  撰写文章的简洁摘要（2-3句话）。\n3.  找出文章中提到的所有具体的机器学习技术或模型架构。\n4.  将这些技术逐行列出。\n\n文章文本：\n'''\n{article_text}\n'''\n\n指令：\n1. 提供摘要。\n2. 提供技术列表。\n\"\"\"\n\n# response = call_llm_api(prompt_template) # 假设此函数存在\n# print(response)\n</code></pre>\n<p>这种结构化方法明确地指导模型，使其更有可能正确执行摘要和提取任务。</p>\n<h3>思维链 (CoT) 提示</h3>\n<p>思维链提示是一种特定的分解方法，它鼓励模型在提供最终答案之前“大声思考”或概述其推理 (inference)步骤。这对于涉及算术、逻辑谜题或多步骤推断的任务特别有用，这些任务中过程与结果同等重要。你通常通过添加诸如“让我们一步一步来思考”的短语，或提供少量示例来展示这种推理过程来实现这一点。</p>\n<p>提示词 (prompt)结构示例：</p>\n<pre><code class=\"language-python\">question = \"A bookstore had 50 notebooks. They sold 15 on Monday and received a new shipment of 20 on Tuesday. How many notebooks do they have now?\"\n\nprompt = f\"\"\"\n问题: {question}\n\n让我们一步一步来解决这个问题：\n1. 初始笔记本数量：50\n2. 周一售出：15\n3. 周一后剩余：50 - 15 = 35\n4. 周二收到：20\n5. 现在笔记本总数：35 + 20 = 55\n\n最终答案：最终答案是 55\n\"\"\"\n\n# 在实际场景中，你可能只提供问题和“让我们一步一步来思考：”\n# 然后让LLM生成推理过程和最终答案。\n# prompt_for_llm = f\"Question: {question}\\n\\nLet's think step by step:\"\n</code></pre>\n<p>即使不自己提供完整的推理过程，添加“让我们一步一步来思考”通常会促使模型采用更系统（且通常更准确）的内部工作流程。</p>\n<h3>分配角色</h3>\n<p>赋予LLM一个特定角色或身份可以有效限制其行为，并根据复杂情况调整其回复。这使模型专注于适合该任务的相关知识和风格。</p>\n<pre><code class=\"language-python\">user_query = \"Explain the difference between TCP and UDP for someone building a real-time game.\"\n\nprompt = f\"\"\"\n你是一名资深网络工程师，为游戏开发者提供建议。\n请解释TCP和UDP的主要区别，重点关注与实时多人游戏相关的方面（延迟、可靠性、顺序）。解释要清晰简洁。\n\n用户查询: {user_query}\n\"\"\"\n\n# response = call_llm_api(prompt)\n# print(response)\n</code></pre>\n<p>通过分配“资深网络工程师”角色，提示词 (prompt)鼓励生成使用适当术语并侧重于对目标受众（游戏开发者）实际影响的回复。</p>\n<h3>定义输入和输出结构</h3>\n<p>对于需要与数据交互或生成特定输出格式的任务，在提示词 (prompt)中明确地结构化输入和预期输出非常重要。</p>\n<h4>使用分隔符</h4>\n<p>清晰的分隔符帮助模型区分指令、上下文 (context)数据、示例以及其回复区域。常见分隔符包括三引号 (<code>'''</code>)、三反引号 (```)、类似XML的标签 (<code>&#x3C;instruction></code>, <code>&#x3C;data></code>)，或简单的标记 (token)，例如 <code>###</code>。</p>\n<pre><code class=\"language-python\">context = \"Patient Notes: John Doe, 45yo male, presents with persistent cough for 2 weeks. Mild fever reported yesterday. History of asthma. Current meds: Albuterol inhaler PRN.\"\ninstruction = \"Extract patient age, symptoms, and relevant medical history.\"\noutput_format_hint = \"Provide output as a JSON object with keys 'age', 'symptoms', 'history'.\"\n\nprompt = f\"\"\"\n### 指令 ###\n{instruction}\n\n### 上下文数据 ###\n{context}\n\n### 期望输出格式 ###\n{output_format_hint}\n\n### 输出 ###\n{{\n  \"age\": 45,\n  \"symptoms\": [\"persistent cough\", \"mild fever\"],\n  \"history\": [\"asthma\"]\n}}\n\"\"\"\n# 注意：上面的最终输出示例可能作为单次示例包含在内，\n# 或者你可以在### Output ###部分之前停止提示词，让LLM完成。\n\n# LLM生成示例：\nprompt_for_llm = f\"\"\"\n### 指令 ###\n{instruction}\n\n### 上下文数据 ###\n{context}\n\n### 期望输出格式 ###\n{output_format_hint}\n\n### 输出 ###\n\"\"\"\n\n# response = call_llm_api(prompt_for_llm) # 期望JSON输出\n# print(response)\n</code></pre>\n<h4>指定输出格式</h4>\n<p>你可以直接要求模型生成采用JSON、XML、Markdown表格或列表等格式的输出。这对于将LLM输出集成到下游应用程序逻辑中非常重要。</p>\n<pre><code class=\"language-python\">report_text = \"Sales increased by 15% in Q2, reaching $1.2M. Main drivers were the new product line and expansion into the European market. Q1 sales were $1.04M.\"\n\nprompt = f\"\"\"\n分析提供的销售报告文本。\n提取以下信息：\n- 第二季度销售额\n- 第二季度增长百分比\n- 第一季度销售额\n- 提到的主要驱动因素\n\n请以JSON对象形式提供结果。\n\n报告文本：\n'''\n{report_text}\n'''\n\nJSON 输出：\n\"\"\"\n\n# response = call_llm_api(prompt)\n# print(response)\n# 期望的输出结构：\n# {\n#   \"q2_sales\": 1200000,\n#   \"q2_increase_percentage\": 15,\n#   \"q1_sales\": 1040000,\n#   \"key_drivers\": [\"new product line\", \"拓展欧洲市场\"]\n# }\n</code></pre>\n<p>这条明确指令大大增加了从LLM获得机器可读结构化数据的可能性。</p>\n<h3>结合方法</h3>\n<p>通常，用于复杂任务最有效的提示词 (prompt)会结合其中几种结构化方法。你可以分配一个角色、提供分步指令、使用分隔符以提高清晰度，并指定精确的输出格式，所有这些都在一个提示词中完成。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-yin448\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"]; edge [color=\"#495057\"]; splines=ortho; \"复杂任务\" -> \"结构化提示词\"; \"结构化提示词\" -> \"角色分配\" [label=\"侧重\"]; \"结构化提示词\" -> \"分解\\n(步骤 / CoT)\" [label=\"指导流程\"]; \"结构化提示词\" -> \"输入/输出\\n格式化\" [label=\"定义结构\"]; \"角色分配\" -> \"LLM\"; \"分解\\n(步骤 / CoT)\" -> \"LLM\"; \"输入/输出\\n格式化\" -> \"LLM\"; \"LLM\" -> \"结构化输出\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-yin448\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图表说明了不同的结构化方法如何有助于引导LLM在复杂任务中生成期望的输出。</p>\n</blockquote>\n<h3>Python中动态结构化的实现</h3>\n<p>Python的字符串操作能力，尤其是f-string，非常适合动态构建这些结构化提示词 (prompt)。你可以轻松将包含用户输入、上下文 (context)数据或配置参数 (parameter)的变量插入到你的提示词模板中。</p>\n<pre><code class=\"language-python\">def create_analysis_prompt(report_text, requested_format=\"JSON\"):\n    instruction = \"Analyze the provided financial report text. Extract important financial figures and performance indicators.\"\n    format_instruction = f\"Provide the result as a {requested_format} object.\"\n\n    prompt = f\"\"\"\n### 角色 ###\n你是一名金融分析师AI助手。\n\n### 指令 ###\n{instruction}\n{format_instruction}\n\n### 报告数据 ###\n'''\n{report_text}\n'''\n\n### 输出 ({requested_format}) ###\n\"\"\"\n    return prompt\n\nfinancial_report = \"Company X reported revenue of $5M in Q3, a 10% increase YoY. Net profit was $500k.\"\nprompt_string = create_analysis_prompt(financial_report, requested_format=\"JSON\")\nprint(prompt_string)\n\n# 现在你可以将 prompt_string 传递给你的LLM API调用\n</code></pre>\n<p>这种方法让你能够在Python应用程序中创建可复用且适应性强的提示词函数。</p>\n<h3>注意事项</h3>\n<p>结构化提示词 (prompt)增加了清晰度，但同时也增加了提示词的长度。请注意你正在使用的LLM的上下文 (context)窗口限制。过长的提示词可能会被截断或变得计算成本高昂。此外，找到最佳结构通常需要进行实验。这里讨论的方法提供了一个很好的起点，但你可能需要根据LLM的回复进行迭代和改进你的提示词，这引出了迭代提示词改进的话题。</p>",
+  "slug": "structuring-prompts-complex-tasks",
+  "updates": [],
+  "references": [
+    {
+      "id": 13353,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "介绍了思维链（CoT）提示，这是一种通过引导大型语言模型生成中间推理步骤来完成多步推理任务的重要技术。",
+      "order": 1,
+      "created_at": "2025-09-05T08:31:44.746352Z",
+      "updated_at": "2025-09-09T03:28:18.475010Z"
+    },
+    {
+      "id": 13354,
+      "title": "Prompt Engineering Guide",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "OpenAI 官方指南，提供了有效的提示工程最佳实践和技术，包括清晰的指令、使用分隔符以及为与大型语言模型进行结构化交互分配角色。",
+      "order": 2,
+      "created_at": "2025-09-05T08:31:44.755383Z",
+      "updated_at": "2025-09-09T03:28:28.079563Z"
+    },
+    {
+      "id": 13355,
+      "title": "Training language models to follow instructions with human feedback",
+      "author": "Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2203.02155",
+      "doi": "10.48550/arXiv.2203.02155",
+      "note": "描述了 InstructGPT，这是一项基础性工作，显著提升了大型语言模型遵循指令和生成所需输出格式的能力，从而实现了本文讨论的结构化提示技术。",
+      "order": 3,
+      "created_at": "2025-09-05T08:31:44.758115Z",
+      "updated_at": "2025-09-09T03:28:17.445537Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

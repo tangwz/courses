@@ -1,0 +1,45 @@
+{
+  "id": 6579,
+  "title": "工具链故障恢复",
+  "meta_title": "多工具操作中的错误恢复",
+  "meta_description": "制定代理在执行一系列工具期间从故障中恢复的策略。",
+  "content": "<p>当LLM代理协调一系列工具以达成一项复杂目的时，整个操作的可靠性取决于链中每个工具的顺利执行。然而，如同任何分布式系统或操作序列一样，故障可能且确实会发生。工具可能暂时不可用，外部API可能返回意料之外的错误，或者工具之间传递的数据可能格式不正确。如果没有处理这些问题的有效方法，代理的实用性可能受到严重影响。详细介绍了在工具链中构建恢复能力的方法，使代理能够从故障中平稳恢复并在可能时继续其任务。</p>\n<h3>识别工具链中的故障点</h3>\n<p>在设计恢复机制之前，了解故障可能在何处及如何出现在多工具执行流程中是很重要的。常见故障点包括：</p>\n<ul>\n<li><strong>单个工具执行错误</strong>：特定工具可能因内部缺陷、无法处理特定输入或与其自身依赖项（例如，<code>database_query_tool</code>的数据库连接错误）交互问题而失败。</li>\n<li><strong>API 不可用或错误</strong>：封装外部API的工具容易受到网络问题、API速率限制、认证失败或来自API提供商的服务器端错误（例如，HTTP 5xx响应）的影响。</li>\n<li><strong>工具间数据不匹配</strong>：一个工具的输出可能不符合序列中下一个工具的预期输入模式。这可能是由于意料之外的数据格式、缺少必要字段或语义不兼容。</li>\n<li><strong>超时</strong>：工具执行时间可能超过预设阈值，尤其是在涉及长时间运行的操作或网络延迟时。</li>\n<li><strong>资源耗尽</strong>：如果工具用尽所需资源，例如内存或磁盘空间，尤其对于数据密集型操作，可能会失败。</li>\n</ul>\n<p>识别这些潜在问题是构建更可靠代理行为的第一步。</p>\n<h3>故障恢复策略</h3>\n<p>一旦检测到工具链内发生故障，代理需要一个方案。简单地中止整个操作通常不是最佳用户体验。以下是您可以实施的几种策略：</p>\n<h4>1. 重试机制</h4>\n<p>对于瞬时问题，如暂时性网络故障或瞬时服务不可用，重试失败的操作通常是有效的。</p>\n<ul>\n<li><strong>简单重试</strong>：最基本的方法是固定次数地重试失败的工具。例如，如果网络请求失败，最多重试三次。</li>\n<li><strong>带指数退避的重试</strong>：为避免使一个运行不畅的服务过载或加剧网络拥堵，最好增加重试之间的延迟。指数退避涉及每次失败尝试后将等待时间加倍（例如，等待1秒，然后2秒，然后4秒）。添加抖动（在退避时间中加入少量随机时间）也有助于防止许多客户端同时重试导致的羊群效应问题。</li>\n<li><strong>条件重试</strong>：并非所有错误都可重试。例如，“无效API密钥”错误重试无法解决。您的逻辑应区分瞬时错误（例如，HTTP 503 Service Unavailable）和永久错误（例如，HTTP 401 Unauthorized）。只对标记 (token)为可能暂时性的错误进行重试。</li>\n</ul>\n<h4>2. 备选工具路径</h4>\n<p>如果特定工具持续失败或已知不适合特定子任务的变体，代理可能会尝试使用备选工具。</p>\n<ul>\n<li><strong>预设备选方案</strong>：您可以为代理配置备选工具信息，这些工具用途类似。例如，如果<code>get_weather_forecast_api_A</code>失败，代理可以自动尝试使用<code>get_weather_forecast_api_B</code>。</li>\n<li><strong>LLM驱动的备选选择</strong>：对于更复杂的代理，LLM本身在收到错误报告后，可能能够对其他可用工具进行推断，以达成相同的中间目的。这需要良好的工具描述以及LLM根据故障情况重新理解任务的能力。</li>\n</ul>\n<h4>3. 优雅降级</h4>\n<p>有时，由于链中某个部分的不可恢复故障，无法达成完美结果。在这种情况下，代理仍能提供部分或略次优的结果。</p>\n<ul>\n<li><strong>可选步骤</strong>：如果失败的工具是执行可选的增强功能（例如，丰富对核心任务而言并非绝对必要的数据），代理可以跳过此步骤并继续主要工作流程。理想情况下，代理应告知用户可能缺少或信息不完整。</li>\n<li><strong>默认或缓存值</strong>：如果获取实时数据失败，代理可能会回退到使用过时（但可能仍有用）的缓存数据或一个合理的默认值，并向用户提供适当的提醒。</li>\n</ul>\n<h4>4. 状态管理与补偿</h4>\n<p>对于会修改状态的工具链（例如，预订航班然后预订酒店），链条中途故障可能使系统处于不一致状态。</p>\n<ul>\n<li><strong>补偿动作</strong>：如果一个工具执行了一个动作（例如，<code>book_flight</code>）并且随后的必要工具（例如，<code>make_payment</code>）失败，您可能需要一个补偿动作（例如，<code>cancel_flight_booking</code>）来将系统恢复到一致状态。在多个（可能是第三方）工具间实现事务性行为较为繁琐，但有时对于关键操作是必要的。</li>\n<li><strong>幂等性</strong>：设计工具为幂等的（即用相同输入多次调用它们与调用一次效果相同）可以简化恢复。如果工具调用超时，且不确定它是否完成，您可以安全地重试一个幂等工具而不会造成意外的副作用。</li>\n</ul>\n<h4>5. 用户参与升级</h4>\n<p>当自动化恢复策略已用尽或被认为不足以应对该类故障时，让用户参与是一种实用的方法。</p>\n<ul>\n<li><strong>清晰的错误报告</strong>：代理应清晰地向用户报告故障，说明出了什么问题以及尝试了哪些恢复步骤。</li>\n<li><strong>请求输入或修正</strong>：代理可能会请求用户帮助，例如提供修正后的输入、选择一个备选方案或手动完成一个步骤。例如，如果API密钥无效，代理可以提示用户提供一个有效的密钥。</li>\n<li><strong>暂停与恢复</strong>：对于长时间运行的链条，在故障时暂停操作、允许人工干预然后恢复链条的能力非常有价值。</li>\n</ul>\n<h4>6. 诊断日志与监控</h4>\n<p>虽然不是直接的恢复策略，但对工具执行、故障和恢复尝试进行全面的日志记录是诊断问题并随着时间提升代理恢复能力的基本条件。这些数据有助于您理解常见故障模式并改进恢复逻辑。这一方面将在第6章中更详细地介绍。</p>\n<h3>实现故障处理逻辑</h3>\n<p>代理的核心协调逻辑需要设计为能预见和管理故障。这通常包括：</p>\n<ul>\n<li><strong>错误传播</strong>：工具必须以结构化方式向协调器报告错误，包括错误类型、消息以及任何相关上下文 (context)。Python的异常处理（<code>try...except</code>块）是实现此目的的常见机制。</li>\n<li><strong>决策点</strong>：协调器或引导它的LLM需要逻辑来决定应用哪种恢复策略，这基于错误的性质、工具链的当前状态以及配置的恢复策略。</li>\n</ul>\n<p>以下图表描绘了处理工具链内故障的一般流程，其中包含重试和备选工具策略：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1f6firo\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=record, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; start [label=\"执行工具 A\", shape=ellipse, fillcolor=\"#a5d8ff\"]; tool_a_success [label=\"工具 A 成功\", fillcolor=\"#b2f2bb\"]; tool_a_failed [label=\"工具 A 失败\", fillcolor=\"#ffc9c9\"]; retry_logic [label=\"{重试尝试？ | 未达到最大重试次数？\\n错误可重试？}\", shape=diamond, fillcolor=\"#ffe066\"]; attempt_retry [label=\"尝试重试工具 A\", fillcolor=\"#ffd8a8\"]; alternative_logic [label=\"{尝试备选工具 B？ | 有备选方案？\\n错误表明工具 A 不可用？}\", shape=diamond, fillcolor=\"#ffe066\"]; execute_tool_b [label=\"执行工具 B\", fillcolor=\"#bac8ff\"]; tool_b_success [label=\"工具 B 成功\", fillcolor=\"#b2f2bb\"]; tool_b_failed [label=\"工具 B 失败\", fillcolor=\"#ffc9c9\"]; escalate_failure [label=\"链条失败\\n升级或记录\\n优雅降级（如果可能）\", shape=box, fillcolor=\"#ff8787\", width=3]; continue_chain [label=\"继续链条的下一步\", shape=ellipse, fillcolor=\"#a5d8ff\"]; start -> tool_a_success [label=\"成功\"]; start -> tool_a_failed [label=\"失败\"]; tool_a_failed -> retry_logic; retry_logic -> attempt_retry [label=\"是\"]; attempt_retry -> start [label=\"重试\", style=dashed]; retry_logic -> alternative_logic [label=\"否（达到最大重试次数或不可重试）\"]; alternative_logic -> execute_tool_b [label=\"是\"]; execute_tool_b -> tool_b_success [label=\"成功\"]; execute_tool_b -> tool_b_failed [label=\"失败\"]; tool_a_success -> continue_chain; tool_b_success -> continue_chain; alternative_logic -> escalate_failure [label=\"否（无备选方案或逻辑要求）\"]; tool_b_failed -> escalate_failure; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1f6firo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>协调序列中工具故障的恢复决策流程。如果工具 A 失败，系统首先考虑重试。如果重试耗尽或不适用，它会评估使用备选工具 B。如果工具 B 也失败或没有合适的备选方案，则故障会被上报。</p>\n</blockquote>\n<h3>示例：航班预订故障恢复</h3>\n<p>考虑一个任务是预订航班然后预订酒店的代理。</p>\n<ol>\n<li><strong>任务</strong>：查找并预订航班，然后查找并预订酒店。</li>\n<li><strong>工具链</strong>：<code>search_flights_tool</code> -> <code>book_flight_tool</code> -> <code>search_hotels_tool</code> -> <code>book_hotel_tool</code>。</li>\n<li><strong>故障场景</strong>：<code>book_flight_tool</code>在多次重试后，由于航空公司API返回“支付处理错误”而失败。</li>\n</ol>\n<p><strong>恢复步骤</strong>：</p>\n<ul>\n<li><strong>记录故障</strong>：代理记录<code>book_flight_tool</code>返回的特定错误。</li>\n<li><strong>无简单备选方案</strong>：假设没有针对同一航空公司和航班的即时备选航班预订工具。</li>\n<li><strong>补偿（如果需要）</strong>：如果<code>book_flight_tool</code>在未确认付款的情况下进行了预订，则可能会尝试执行取消该预订的补偿动作，如果存在这样的工具（例如，<code>cancel_flight_reservation_tool</code>）。</li>\n<li><strong>通知用户</strong>：代理告知用户：“由于航空公司 X 的支付处理错误，我未能完成航班预订。初始航班预订（如果已进行）已被取消。您希望我尝试搜索不同航空公司的航班，还是稍后再试这家航空公司？”</li>\n<li><strong>调整方案</strong>：根据用户输入，代理可能：\n<ul>\n<li>使用不同参数 (parameter)（例如，不同航空公司）重新运行<code>search_flights_tool</code>。</li>\n<li>推迟航班预订并稍后尝试。</li>\n<li>放弃航班预订，如果酒店预订有依赖关系，则一并放弃酒店预订。</li>\n</ul>\n</li>\n</ul>\n<p>通过整合这些故障恢复策略，您可以使您的LLM代理更加可靠且用户友好。当一个代理能够智能地应对挫折、重试瞬时错误或寻求澄清时，它会从一个脆弱的脚本转变为一个更具韧性且更有用的助手。您的恢复逻辑具体如何将取决于任务的重要性、所涉及工具的特性以及期望的用户体验。</p>",
+  "slug": "failure-recovery-tool-chains",
+  "updates": [],
+  "references": [
+    {
+      "id": 18304,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media, Incorporated",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dataintensive.net/",
+      "doi": "",
+      "note": "关于构建可靠、可伸缩和可维护的数据密集型系统的基础文本，对于理解分布式工具链中容错和一致性的基本原理至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T12:22:09.666371Z",
+      "updated_at": "2026-02-04T11:31:22.677840Z"
+    },
+    {
+      "id": 18305,
+      "title": "Release It!: Design and Deploy Production-Ready Software",
+      "author": "Michael T. Nygard",
+      "year": "2018",
+      "publisher": "Pragmatic Bookshelf",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGYzUrBOEAYSPXjPmGut-KRIcz7RjujmnKqh6NUG9fkYypemxnm0ETHmRaa1S5ne-WnO5xCbqXLHC8p41lukeExZsBExvox4E2-URAv3GBQufi_8UV6D3asAmP9gbUX-g8IWAtzTB8t7mRDZ5zhOolCaTJeTxHUjoBPXjpJmno=",
+      "doi": "",
+      "note": "提供构建弹性系统的实用软件架构模式和策略，涵盖重试、超时、断路器和优雅降级等主题，直接适用于工具链中的故障恢复。",
+      "order": 2,
+      "created_at": "2025-09-06T12:22:09.692828Z",
+      "updated_at": "2026-02-04T11:31:23.045531Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

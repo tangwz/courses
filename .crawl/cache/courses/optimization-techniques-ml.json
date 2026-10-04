@@ -1,0 +1,667 @@
+{
+  "id": 93,
+  "title": "机器学习高级优化技术",
+  "meta_title": "高级机器学习优化技术 | 算法与实践",
+  "meta_description": "学习机器学习高级优化：二阶方法、自适应算法（Adam, RMSprop）、L-BFGS、分布式优化等。",
+  "description": "本课程提供关于现代机器学习中使用的先进优化算法的系统性指导。内容涵盖针对训练机器学习模型时遇到的复杂、大规模和非凸优化问题的精巧方法的理论原理和实践细节。",
+  "short_description": "实施并调整高级优化算法，以应对复杂的机器学习任务。",
+  "excerpt": "熟练运用二阶方法、自适应学习率和分布式技术等高级优化算法，高效训练复杂的机器学习模型。",
+  "prerequisites": "机器学习要点、微积分、Python。",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "二阶方法",
+      "description": "理解并实现牛顿法、拟牛顿法（BFGS、L-BFGS）和信赖域方法。"
+    },
+    {
+      "topic": "自适应学习率",
+      "description": "分析并应用AdaGrad、RMSprop、Adam及其变体等算法，实现高效收敛。"
+    },
+    {
+      "topic": "大规模优化",
+      "description": "实现方差削减技术（SAG、SVRG）和处理海量数据集的方法。"
+    },
+    {
+      "topic": "分布式优化",
+      "description": "理解参数服务器架构、同步/异步更新以及通信高效算法。"
+    },
+    {
+      "topic": "非凸优化",
+      "description": "分析深度学习优化中的难点，并应用方法来应对复杂的损失函数图。"
+    },
+    {
+      "topic": "收敛性分析",
+      "description": "评估不同优化算法的理论收敛性质和实际运行表现。"
+    },
+    {
+      "topic": "实现",
+      "description": "获得使用常用机器学习框架实现和调整高级优化算法的实践经验。"
+    }
+  ],
+  "duration": 30,
+  "slug": "optimization-techniques-ml",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-03T15:09:56.970289Z",
+  "updated_at": "2026-10-02T07:57:54.138031Z",
+  "chapters": [
+    {
+      "id": 432,
+      "title": "机器学习优化的根本原则",
+      "meta_title": "回顾机器学习优化基本原理",
+      "meta_description": "回顾梯度下降变体、凸性、损失曲面、收敛性分析以及非凸优化中的挑战。",
+      "number": 1,
+      "slug": "ml-optimization-foundations-review",
+      "content": "优化算法是机器学习模型训练的主要计算部分。在介绍复杂方法之前，本章将回顾构建这些方法所依赖的必要原理。我们将首先回顾标准的一阶优化算法，例如随机梯度下降（SGD）、动量法（Momentum）和涅斯捷罗夫加速梯度法（NAG），以此设定一个用于比较的基准。\r\n\r\n理解目标函数的数学性质非常重要。我们将审视凸性这一思想。对于函数 $f$ 及其定义域内的任意 $x, y$ 和 $\\lambda \\in [0, 1]$，若条件 $$f(\\lambda x + (1-\\lambda)y) \\le \\lambda f(x) + (1-\\lambda)f(y)$$ 成立，我们将讨论为何此性质能简化优化过程。我们也将了解在机器学习中遇到的损失曲面的典型几何形态，特别是在高维空间中。\r\n\r\n衡量评估优化器的指标将通过收敛分析的基本情况来介绍，并查看不同的收敛速度。我们将指出出现的常见困难，特别是在深度学习中常见的非凸优化问题中，例如局部最小值和鞍点。最后，将讨论关于数值稳定性以及浮点运算的潜在影响的实际考虑因素。本章最后附有侧重于分析这些根本性算法行为的练习。",
+      "sections": [
+        {
+          "id": 1225,
+          "title": "重温梯度下降变体",
+          "meta_title": "梯度下降变体概述",
+          "meta_description": "回顾SGD、动量和Nesterov加速梯度，作为高级方法的起点。",
+          "slug": "gradient-descent-variants-revisited",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1228,
+          "title": "凸性的作用",
+          "meta_title": "机器学习优化中的凸性",
+          "meta_description": "理解凸集、凸函数及其对优化保证的影响。",
+          "slug": "convexity-in-optimization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1230,
+          "title": "理解损失曲面",
+          "meta_title": "分析机器学习损失曲面",
+          "meta_description": "可视化并解析高维空间中损失函数的几何形态。",
+          "slug": "loss-surface-analysis",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1233,
+          "title": "收敛性分析基本原理",
+          "meta_title": "优化收敛性分析基本原理",
+          "meta_description": "介绍收敛速度（线性、次线性、二次）和收敛条件。",
+          "slug": "convergence-analysis-basics",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1235,
+          "title": "非凸优化中的挑战",
+          "meta_title": "机器学习中的非凸优化问题",
+          "meta_description": "识别非凸环境中的局部最小值、鞍点和平坦区等问题。",
+          "slug": "non-convex-optimization-challenges",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1237,
+          "title": "数值稳定性考量",
+          "meta_title": "优化算法中的数值稳定性",
+          "meta_description": "讨论浮点误差和病态问题等潜在的数值问题。",
+          "slug": "numerical-stability-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1239,
+          "title": "实践：分析收敛行为",
+          "meta_title": "实践分析优化器收敛性",
+          "meta_description": "动手练习，分析基础优化算法的收敛图。",
+          "slug": "practice-convergence-analysis",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 434,
+      "title": "二阶优化方法",
+      "meta_title": "用于机器学习的二阶优化算法",
+      "meta_description": "了解牛顿法、拟牛顿法（如BFGS和L-BFGS）以及信赖域方法。",
+      "number": 2,
+      "slug": "second-order-optimization-methods",
+      "content": "在一阶梯度方法的基础上，本章介绍使用二阶导数信息的优化技术。这些方法考虑损失函数的曲率，通常比梯度下降收敛更快，尤其是在接近最小值时。\r\n\r\n我们将从牛顿法开始，了解其理论原理，即使用二次模型在局部近似目标函数：\r\n$$\r\nf(x_k + p) \\approx f(x_k) + \\nabla f(x_k)^T p + \\frac{1}{2} p^T \\nabla^2 f(x_k) p\r\n$$\r\n这里的重要组成是海森矩阵 $\\nabla^2 f(x_k)$。我们将讨论其性质，以及计算和求逆所面临的计算难点，尤其是在高维机器学习问题中。\r\n\r\n为了解决这些难点，我们将主要介绍拟牛顿法，这些方法近似海森矩阵或其逆。你将学习流行的BFGS算法及其节省内存的变体L-BFGS，它们在实际中广泛使用。此外，我们还将介绍信赖域方法，它提供了一种使用曲率信息管理步长的替代策略。本章包含一个关于L-BFGS实现的实践部分。",
+      "sections": [
+        {
+          "id": 1242,
+          "title": "牛顿法：理论与推导",
+          "meta_title": "牛顿优化法理论",
+          "meta_description": "牛顿法寻找最优值的数学推导与理论性质",
+          "slug": "newtons-method-theory",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1245,
+          "title": "海森矩阵：计算与性质",
+          "meta_title": "机器学习优化中的海森矩阵",
+          "meta_description": "了解海森矩阵，它在二阶方法中的作用，以及计算或近似方法。",
+          "slug": "hessian-matrix-computation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1246,
+          "title": "牛顿法的难点",
+          "meta_title": "牛顿法在机器学习中的局限性",
+          "meta_description": "讨论计算成本（海森矩阵求逆）以及非正定海森矩阵的问题。",
+          "slug": "newtons-method-challenges",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1248,
+          "title": "拟牛顿法：近似Hessian矩阵",
+          "meta_title": "拟牛顿优化方法简介",
+          "meta_description": "近似Hessian矩阵或其逆矩阵的动机与一般原理。",
+          "slug": "quasi-newton-methods-introduction",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1250,
+          "title": "BFGS算法详解",
+          "meta_title": "用于优化的BFGS算法",
+          "meta_description": "Broyden–Fletcher–Goldfarb–Shanno (BFGS) 更新公式与算法的详细说明。",
+          "slug": "bfgs-algorithm-details",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1252,
+          "title": "有限内存BFGS (L-BFGS)",
+          "meta_title": "L-BFGS算法：有限内存BFGS",
+          "meta_description": "了解L-BFGS算法在大规模问题中的应用，这些问题中存储完整的海森近似是不可行的。",
+          "slug": "l-bfgs-algorithm",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1255,
+          "title": "信赖域方法",
+          "meta_title": "信赖域优化方法",
+          "meta_description": "介绍信赖域方法，作为二阶优化中线搜索的替代方案。",
+          "slug": "trust-region-methods",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1257,
+          "title": "动手实践：L-BFGS 的实现",
+          "meta_title": "L-BFGS 实现操作实践",
+          "meta_description": "关于在机器学习任务中实现或应用 L-BFGS 的实际操作环节。",
+          "slug": "hands-on-lbfgs-implementation",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 436,
+      "title": "自适应学习率算法",
+      "meta_title": "自适应学习率优化器 | Adam, RMSprop",
+      "meta_description": "学习AdaGrad、RMSprop、Adam等自适应学习率方法及其变体，实现更快的训练。",
+      "number": 3,
+      "slug": "adaptive-learning-rate-algorithms",
+      "content": "标准梯度下降法常使用固定的学习率，$\\eta$。找到一个好的$\\eta$需要仔细调整；过小的学习率会减慢收敛，而过大的学习率则可能阻碍收敛。本章介绍的算法通过在训练期间自动调整学习率来解决这个问题。\r\n\r\n我们将考察几种常用的自适应学习率方法。您将学习AdaGrad的原理，它根据历史梯度调整学习率，以及RMSprop，它改进了AdaGrad的方法以避免过度衰减。接着，我们将学习Adam（自适应矩估计），一个结合了自适应学习率和动量估计的优化器。我们还将分析Adamax、Nadam和AMSGrad等变体，了解它们的具体改进之处。本章还会介绍如何将自适应方法与学习率调度结合使用。\r\n\r\n学完本章，您将理解这些自适应技术的理论和实际应用，从而能够选择并运用它们来更高效地训练模型。",
+      "sections": [
+        {
+          "id": 1259,
+          "title": "固定学习率的局限性",
+          "meta_title": "机器学习中固定学习率的挑战",
+          "meta_description": "了解为什么固定学习率可能并非最优，以及对自适应方法的需求。",
+          "slug": "fixed-learning-rate-limitations",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1261,
+          "title": "AdaGrad：根据过往梯度调整学习率",
+          "meta_title": "AdaGrad 优化算法",
+          "meta_description": "对 AdaGrad 算法及其逐参数学习率调整机制的解释。",
+          "slug": "adagrad-algorithm",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1263,
+          "title": "RMSprop：处理AdaGrad学习率递减的问题",
+          "meta_title": "RMSprop优化算法",
+          "meta_description": "RMSprop如何通过使用平方梯度的移动平均值来修改AdaGrad，以避免学习率过快衰减。",
+          "slug": "rmsprop-algorithm",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1265,
+          "title": "Adam：结合动量与RMSprop",
+          "meta_title": "Adam优化算法解释",
+          "meta_description": "详细了解自适应矩估计（Adam）优化器，其中包含一阶和二阶矩估计。",
+          "slug": "adam-optimizer",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1268,
+          "title": "Adamax 和 Nadam 变体",
+          "meta_title": "Adam 优化器变体：Adamax 和 Nadam",
+          "meta_description": "介绍 Adam 的变体，例如 Adamax（使用无穷范数）和 Nadam（引入 Nesterov 动量）。",
+          "slug": "adam-variants-adamax-nadam",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1270,
+          "title": "AMSGrad：提升 Adam 的收敛性",
+          "meta_title": "用于提升收敛的 AMSGrad 优化器",
+          "meta_description": "了解 AMSGrad 如何改进以处理 Adam 中潜在的收敛问题。",
+          "slug": "amsgrad-optimizer",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1272,
+          "title": "了解学习率调整策略",
+          "meta_title": "进阶学习率调整策略",
+          "meta_description": "结合自适应方法与学习率调整策略（例如，衰减、周期性学习率）。",
+          "slug": "learning-rate-schedules-advanced",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1275,
+          "title": "实践操作：比较自适应优化器",
+          "meta_title": "实践比较自适应学习率优化器",
+          "meta_description": "在实际机器学习问题上实现并比较 AdaGrad、RMSprop 和 Adam 的性能。",
+          "slug": "hands-on-adaptive-optimizers-comparison",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 438,
+      "title": "大规模数据集的优化",
+      "meta_title": "大规模机器学习优化方法",
+      "meta_description": "学习包含方差降低（SAG, SVRG）的随机优化方法以及针对海量数据集的策略。",
+      "number": 4,
+      "slug": "large-scale-ml-optimization",
+      "content": "训练机器学习模型通常会涉及大到无法在单个批次中处理的数据集。需要计算整个数据集梯度的标准梯度下降，在计算上变得不可行。虽然随机梯度下降（SGD）通过使用来自小数据样本（小批量）的梯度提供了一种可扩展的替代方案，但这会给优化过程带来显著的方差，可能减慢收敛速度。\r\n\r\n本章解决使用海量数据集优化模型的具体难题。你将学习以下内容：\r\n\r\n*   **方差降低方法：** 比如随机平均梯度（SAG）和随机方差缩减梯度（SVRG）等方法，旨在通过降低随机梯度中固有的噪声来加速收敛。\r\n*   **小批量梯度下降分析：** 理解选择不同小批量大小时的实际权衡。\r\n*   **并行与分布式策略：** 例如异步SGD和数据并行等思路，将计算负载分配到多个处理器或机器上。\r\n\r\n我们将审视这些方法如何实现在否则难以处理的数据集上进行高效训练。实际实现以及它们收敛行为的分析将是重要组成部分。",
+      "sections": [
+        {
+          "id": 1277,
+          "title": "随机梯度下降再讨论：方差减小",
+          "meta_title": "SGD的方差减小技术",
+          "meta_description": "分析SGD中固有的方差以及方差减小方法的原因。",
+          "slug": "sgd-variance-reduction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1280,
+          "title": "随机平均梯度 (SAG)",
+          "meta_title": "随机平均梯度 (SAG) 算法",
+          "meta_description": "SAG 算法的解释，该算法维护过去梯度的平均值。",
+          "slug": "sag-algorithm",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1283,
+          "title": "随机方差缩减梯度 (SVRG)",
+          "meta_title": "随机方差缩减梯度 (SVRG)",
+          "meta_description": "详细介绍SVRG算法及其实现更快收敛的机制。",
+          "slug": "svrg-algorithm",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1285,
+          "title": "小批量梯度下降的权衡",
+          "meta_title": "小批量梯度下降分析",
+          "meta_description": "分析不同小批量大小下计算与方差减少之间的平衡。",
+          "slug": "minibatch-gd-tradeoffs",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1287,
+          "title": "异步随机梯度下降",
+          "meta_title": "异步SGD用于并行训练",
+          "meta_description": "理解异步SGD及其在并行环境中的影响（如陈旧梯度）。",
+          "slug": "asynchronous-sgd",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1288,
+          "title": "数据并行策略",
+          "meta_title": "大规模优化的数据并行",
+          "meta_description": "概述数据并行作为在多个设备上大型数据集训练的策略。",
+          "slug": "data-parallelism-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1289,
+          "title": "SVRG 的动手实现",
+          "meta_title": "实践 SVRG 算法的实现",
+          "meta_description": "侧重于 SVRG 算法实现的实践环节。",
+          "slug": "hands-on-svrg-implementation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 440,
+      "title": "分布式优化策略",
+      "meta_title": "机器学习的分布式优化",
+      "meta_description": "了解分布式训练架构、同步方法和通信效率。",
+      "number": 5,
+      "slug": "distributed-ml-optimization",
+      "content": "随着机器学习模型及其训练数据集的规模和复杂度不断增加，仅依靠单机进行计算会变得低效甚至不可能。训练通常需要将工作负载分散到多个处理器或机器上。本章将介绍专门为这些分布式环境设计的优化算法和策略。\r\n\r\n你将了解到与分布式训练相关的动机和挑战。我们将考察常见的架构模式，例如参数服务器模型，它用于协调工作节点间的计算。理解同步和异步更新方案的区别与权衡是本章的侧重点。我们还将探讨通信开销这一重要问题，讨论其中的瓶颈以及梯度压缩和All-Reduce等高效同步模式。最后，我们将提及联邦学习设定下的独特优化考量。我们的目标是让你掌握实现和分析适用于大规模分布式机器学习任务的优化方法的知识。",
+      "sections": [
+        {
+          "id": 1290,
+          "title": "分布式训练的动机",
+          "meta_title": "机器学习中为什么要使用分布式训练？",
+          "meta_description": "了解大型模型和数据集对分布式优化的需求。",
+          "slug": "distributed-training-motivation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1291,
+          "title": "参数服务器架构",
+          "meta_title": "分布式机器学习的参数服务器架构",
+          "meta_description": "协调分布式训练的参数服务器模型说明。",
+          "slug": "parameter-server-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1292,
+          "title": "同步更新与异步更新",
+          "meta_title": "同步与异步分布式训练",
+          "meta_description": "比较分布式设置中同步和异步更新策略的权衡利弊。",
+          "slug": "synchronous-vs-asynchronous-updates",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1293,
+          "title": "通信瓶颈与应对策略",
+          "meta_title": "分布式训练中的通信瓶颈",
+          "meta_description": "识别通信开销以及梯度压缩和量化等技术。",
+          "slug": "distributed-communication-bottlenecks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1294,
+          "title": "All-Reduce 算法",
+          "meta_title": "用于分布式同步的 All-Reduce 算法",
+          "meta_description": "理解集合通信模式，如 All-Reduce（例如，环形 All-Reduce），以实现高效同步。",
+          "slug": "all-reduce-algorithms",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1295,
+          "title": "联邦学习优化原理",
+          "meta_title": "联邦学习中的优化原理",
+          "meta_description": "介绍联邦学习特有的优化难题和算法（例如，联邦平均算法）。",
+          "slug": "federated-learning-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1296,
+          "title": "实践操作：模拟分布式SGD",
+          "meta_title": "实践模拟分布式SGD",
+          "meta_description": "一次实践演练，模拟同步或异步分布式SGD的某些方面。",
+          "slug": "hands-on-distributed-sgd-simulation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 441,
+      "title": "深度学习中的优化难题",
+      "meta_title": "深度学习优化的难题与对策",
+      "meta_description": "应对深度学习中的特定优化问题：损失函数曲面、归一化、梯度和初始化。",
+      "number": 6,
+      "slug": "deep-learning-optimization-challenges",
+      "content": "将优化算法应用于深度神经网络，与更简单的模型相比，会遇到一些独特的问题。损失函数的高度非凸性，加之现代网络庞大的规模和高维度，使得优化过程需要特别留意。\r\n\r\n在本章中，您将学到：\r\n\r\n*   深度学习中遇到的损失函数的具体特性，包括鞍点和平台区等现象。\r\n*   网络架构选择（例如深度和宽度）如何与优化过程相互影响。\r\n*   批量归一化和层归一化等技术在稳定和加速训练中的作用。\r\n*   解决梯度相关问题的方法，特别是梯度消失和梯度爆炸问题，如使用梯度裁剪等技术。\r\n*   权重初始化策略（例如Xavier、He初始化）对优化成功的帮助。\r\n*   常见的正则化方法如何隐式影响优化目标。\r\n\r\n理解这些问题有助于有效训练复杂的深度学习模型。我们将考察用于应对这些困难的实用策略和启发式方法。",
+      "sections": [
+        {
+          "id": 1300,
+          "title": "深度学习损失曲面的特点",
+          "meta_title": "深度学习损失曲面特点",
+          "meta_description": "分析深度网络中的高维度、鞍点、高原区域和尖锐最小值等特性。",
+          "slug": "deep-learning-loss-landscapes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1303,
+          "title": "网络架构对优化的影响",
+          "meta_title": "网络架构如何影响优化",
+          "meta_description": "讨论深度、宽度和连接方式等选择如何影响优化过程。",
+          "slug": "architecture-impact-on-optimization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1306,
+          "title": "规范化方法与优化",
+          "meta_title": "规范化方法（批规范化）与优化",
+          "meta_description": "批规范化和层规范化等方法如何影响并辅助优化。",
+          "slug": "normalization-optimization-impact",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1308,
+          "title": "梯度裁剪与梯度爆炸/消失",
+          "meta_title": "梯度裁剪与处理梯度爆炸/消失问题",
+          "meta_description": "用于缓解训练过程中梯度爆炸和梯度消失问题的技术。",
+          "slug": "gradient-clipping-explosion-vanishing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1310,
+          "title": "初始化方法及其影响",
+          "meta_title": "权重初始化方法以改善优化",
+          "meta_description": "细致权重初始化（如Xavier、He）在优化中的作用。",
+          "slug": "weight-initialization-optimization",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1312,
+          "title": "正则化方法：优化过程的隐性作用",
+          "meta_title": "正则化方法与优化",
+          "meta_description": "从优化目标角度看正则化方法（L1、L2、Dropout）。",
+          "slug": "regularization-implicit-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1315,
+          "title": "实践：深度网络优化器调优",
+          "meta_title": "深度学习模型优化器调优实践",
+          "meta_description": "涉及深度神经网络训练中优化器选择与调整的实践练习。",
+          "slug": "practice-tuning-dn-optimizers",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 444,
+      "title": "高级与专项优化专题",
+      "meta_title": "高级优化专题 | 有约束, 贝叶斯",
+      "meta_description": "涵盖有约束优化、无导数方法、贝叶斯优化以及强化学习中的优化。",
+      "number": 7,
+      "slug": "advanced-specialized-optimization",
+      "content": "前几章主要讲解了机器学习模型训练中常见的无约束优化问题。本章将讨论需要不同处理方法的情形。您将学习有约束优化，此类问题中参数必须满足特定条件，内容涵盖其理论（拉格朗日对偶性，KKT条件）以及诸如投影梯度法等实用算法。我们还将介绍无导数优化技术，在梯度信息不可用或不可靠时，这些技术非常有用。最后，我们将介绍贝叶斯优化，将其作为一种超参数调整方法，并提及与强化学习相关的优化策略。",
+      "sections": [
+        {
+          "id": 1317,
+          "title": "受限优化基本原理",
+          "meta_title": "机器学习中受限优化的基本原理",
+          "meta_description": "介绍对参数或输出有明确约束的优化问题。",
+          "slug": "constrained-optimization-fundamentals",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1319,
+          "title": "拉格朗日对偶性与KKT条件",
+          "meta_title": "拉格朗日对偶性与KKT条件",
+          "meta_description": "运用拉格朗日乘数和KKT条件求解受约束优化问题的理论依据。",
+          "slug": "lagrangian-duality-kkt",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1321,
+          "title": "投影梯度方法",
+          "meta_title": "用于约束的投影梯度方法",
+          "meta_description": "通过将迭代点投影回可行集来处理简单约束（例如盒约束）的算法。",
+          "slug": "projected-gradient-methods",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1323,
+          "title": "无导数优化概述",
+          "meta_title": "无导数优化简介",
+          "meta_description": "梯度不可用或不可靠时使用的优化方法简要概述。",
+          "slug": "derivative-free-optimization",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1326,
+          "title": "贝叶斯优化用于超参数调优",
+          "meta_title": "贝叶斯优化用于超参数调优",
+          "meta_description": "使用贝叶斯优化作为一种高效方法，用于调整机器学习模型和优化器的超参数。",
+          "slug": "bayesian-optimization-hyperparameters",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1328,
+          "title": "强化学习策略的优化",
+          "meta_title": "强化学习中的优化方法",
+          "meta_description": "策略梯度和 Q 学习方法中使用的特定优化难题及算法。",
+          "slug": "optimization-reinforcement-learning",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 1331,
+          "title": "实践：实现投影梯度下降",
+          "meta_title": "实践实现投影梯度下降",
+          "meta_description": "动手实践环节，实现针对受限问题的投影梯度下降。",
+          "slug": "practice-projected-gradient-descent",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

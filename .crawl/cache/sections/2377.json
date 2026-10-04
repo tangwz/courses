@@ -1,0 +1,61 @@
+{
+  "id": 2377,
+  "title": "将自定义组件整合到管道中",
+  "meta_title": "在管道中整合自定义组件",
+  "meta_description": "将自定义转换器和估计器与标准Scikit-learn组件一同用于管道。",
+  "content": "<p>将按照Scikit-learn API开发的自定义转换器和估计器整合到一致的机器学习 (machine learning)工作流程中，是一项重要的实践。Scikit-learn的<code>Pipeline</code>对象是连接多个处理步骤和最终估计器的标准机制。遵循Scikit-learn接口的优点在于，您的自定义组件可以像内置组件一样自然地融入这些管道。</p>\n<p>使用<code>Pipeline</code>提供了几个重要优点：</p>\n<ul>\n<li><strong>便利性：</strong> 将多个步骤封装成一个单一对象，其行为类似于标准的Scikit-learn估计器。</li>\n<li><strong>联合参数 (parameter)选择：</strong> 允许同时对管道内所有步骤的参数进行网格搜索。</li>\n<li><strong>信息泄露预防：</strong> 确保交叉验证折叠中的缩放或特征选择等步骤仅使用该特定折叠的训练数据信息。</li>\n</ul>\n<p>下面我们来看看如何纳入您的自定义成果。</p>\n<h2>整合自定义转换器</h2>\n<p>假设您已经创建了一个自定义转换器，例如一个根据数据类型选择特定列或执行专门转换的转换器。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.base import BaseEstimator, TransformerMixin\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nimport numpy as np\n\n# 假设这是之前定义的自定义转换器\n# 选择特定数据类型的列\nclass DtypeSelector(BaseEstimator, TransformerMixin):\n    def __init__(self, dtype):\n        self.dtype = dtype\n\n    def fit(self, X, y=None):\n        # 该转换器无需拟合\n        return self\n\n    def transform(self, X):\n        if not isinstance(X, pd.DataFrame):\n            raise TypeError(\"输入必须是pandas DataFrame\")\n        return X.select_dtypes(include=[self.dtype])\n\n# 示例数据\ndata = {'numeric_feat1': [1, 2, 3, 4, 5],\n        'numeric_feat2': [10.1, 12.3, 9.8, 15.6, 11.2],\n        'categorical_feat': ['A', 'B', 'A', 'C', 'B'],\n        'target': [0, 1, 0, 1, 0]}\nX_train = pd.DataFrame(data).drop('target', axis=1)\ny_train = pd.DataFrame(data)['target']\n\n# 创建包含自定义转换器的管道\nnumeric_pipeline = Pipeline([\n    ('select_numeric', DtypeSelector(dtype=np.number)), # 自定义步骤\n    ('scale', StandardScaler())                          # 标准步骤\n])\n\n# 拟合并转换数据\nX_train_processed = numeric_pipeline.fit_transform(X_train)\n\nprint(\"原始形状:\", X_train.shape)\nprint(\"处理后的形状:\", X_train_processed.shape)\nprint(\"\\n处理后的数据（前2行）:\\n\", X_train_processed[:2])\n</code></pre>\n<p>在此示例中，<code>DtypeSelector</code>在<code>Pipeline</code>内被视为与任何其他转换器一样。当<code>numeric_pipeline.fit_transform(X_train)</code>被调用时：</p>\n<ol>\n<li><code>select_numeric</code>的<code>fit</code>方法被调用，随后是<code>transform</code>。</li>\n<li><code>select_numeric.transform</code>的输出（只包含数值列）被传递给<code>scale</code>步骤。</li>\n<li><code>scale</code>的<code>fit</code>方法使用这些中间数据被调用，随后是<code>transform</code>。</li>\n<li>最终转换后的数据被返回。</li>\n</ol>\n<p>您可以组合多个自定义转换器、标准转换器，或者使用像<code>ColumnTransformer</code>和<code>FeatureUnion</code>这样的结构，它们本身也可以包含自定义组件。</p>\n<h2>整合自定义估计器</h2>\n<p>类似地，遵循Scikit-learn接口的自定义估计器可以作为<code>Pipeline</code>的最后一步。</p>\n<p>假设您已经开发了一个<code>CustomLogisticRegression</code>估计器（例如带有独特的正则化 (regularization)或优化功能）。</p>\n<pre><code class=\"language-python\"># 假设这是之前定义的自定义估计器\n# 它必须实现fit(X, y)和predict(X)方法\nclass CustomLogisticRegression(BaseEstimator): # 简化示例\n    def __init__(self, learning_rate=0.01, iterations=100):\n        self.learning_rate = learning_rate\n        self.iterations = iterations\n        self.weights = None\n\n    def _sigmoid(self, z):\n       return 1 / (1 + np.exp(-np.clip(z, -250, 250))) # 增加了clip以提高稳定性\n\n    def fit(self, X, y):\n        X = np.insert(X, 0, 1, axis=1) # 添加截距项\n        n_samples, n_features = X.shape\n        self.weights = np.zeros(n_features)\n\n        for _ in range(self.iterations):\n            z = X @ self.weights\n            h = self._sigmoid(z)\n            gradient = (X.T @ (h - y)) / n_samples\n            self.weights -= self.learning_rate * gradient\n        return self\n\n    def predict_proba(self, X):\n       X = np.insert(X, 0, 1, axis=1) # 添加截距项\n       proba_class_1 = self._sigmoid(X @ self.weights)\n       proba_class_0 = 1 - proba_class_1\n       return np.vstack((proba_class_0, proba_class_1)).T\n\n    def predict(self, X):\n        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)\n\n# 构建完整管道\nfull_pipeline = Pipeline([\n    ('preprocess', numeric_pipeline), # 使用先前的数值管道\n    ('classify', CustomLogisticRegression(learning_rate=0.05)) # 自定义估计器\n])\n\n# 拟合管道\nfull_pipeline.fit(X_train, y_train)\n\n# 进行预测\npredictions = full_pipeline.predict(X_train)\nprint(\"\\n预测结果:\", predictions)\n</code></pre>\n<p>这里，<code>full_pipeline</code>结合了在<code>numeric_pipeline</code>中定义的预处理步骤和自定义估计器<code>CustomLogisticRegression</code>。当<code>full_pipeline.fit(X_train, y_train)</code>被执行时：</p>\n<ol>\n<li><code>X_train</code>如前所述通过<code>numeric_pipeline.fit_transform</code>。</li>\n<li>完全处理过的数据<code>X_train_processed</code>随后与<code>y_train</code>一起传递给<code>classify</code>步骤的<code>fit</code>方法（即<code>CustomLogisticRegression.fit(X_train_processed, y_train)</code>）。</li>\n</ol>\n<p>当<code>full_pipeline.predict(X_train)</code>被调用时，<code>X_train</code>会通过<code>numeric_pipeline.transform</code>（请注意：只有<code>transform</code>，而非<code>fit_transform</code>），然后结果被传递给<code>classify.predict</code>。</p>\n<h2>参数 (parameter)访问与超参数 (hyperparameter)调优</h2>\n<p>使用<code>Pipeline</code>的一个主要优点是它提供了统一的参数访问和设置接口，这同样适用于您的自定义组件。管道内步骤的参数使用双下划线<code>__</code>分隔符进行访问：<code>step_name__parameter_name</code>。</p>\n<pre><code class=\"language-python\"># 访问参数\nprint(\"\\n管道默认参数:\")\nprint(full_pipeline.get_params()['classify__learning_rate'])\n\n# 设置参数\nfull_pipeline.set_params(classify__learning_rate=0.1, classify__iterations=200)\nprint(\"\\n管道更新后的参数:\")\nprint(full_pipeline.get_params()['classify__learning_rate'])\nprint(full_pipeline.get_params()['classify__iterations'])\n</code></pre>\n<p>这种语法对于<code>GridSearchCV</code>或<code>RandomizedSearchCV</code>等超参数优化工具来说非常重要。您可以定义一个搜索空间，包含标准Scikit-learn组件和自定义组件的参数。</p>\n<pre><code class=\"language-python\">from sklearn.model_selection import GridSearchCV\n\n# 定义参数网格，包括自定义估计器参数\nparam_grid = {\n    'preprocess__scale__with_mean': [True, False], # StandardScaler的参数\n    'classify__learning_rate': [0.01, 0.05, 0.1],    # CustomLogisticRegression的参数\n    'classify__iterations': [100, 200]            # CustomLogisticRegression的参数\n}\n\n# 设置GridSearchCV\n# 注意：为演示目的，此处使用少量样本数据和少量交叉验证折叠\ngrid_search = GridSearchCV(full_pipeline, param_grid, cv=2, n_jobs=-1)\n\n# 运行搜索（为简化起见，此处使用已处理数据，\n# 但通常会传递原始的X_train）\n# 对于此演示，我们直接在已处理数据上拟合网格搜索\n# 因为我们的自定义估计器尚未与分类特征交互。\n# 在实际场景中，您需要ColumnTransformer来处理不同类型。\n# X_train_processed = numeric_pipeline.fit_transform(X_train)\n# grid_search.fit(X_train_processed, y_train) # 仅在网格搜索中拟合估计器部分\n\n# 更完整的网格搜索拟合会是这样：\n# grid_search.fit(X_train, y_train)\n\n# 在本解释中，为简洁起见，我们将跳过实际的拟合过程。\n# print(\"\\n找到的最佳参数:\")\n# print(grid_search.best_params_)\n</code></pre>\n<p>这说明了自定义组件如何整合到标准Scikit-learn模型选择和评估工作流程中，前提是它们正确实现了所需的方法和参数处理（<code>get_params</code>、<code>set_params</code>）。</p>\n<h2>可视化包含自定义组件的管道</h2>\n<p>理解复杂管道的结构，特别是涉及自定义步骤的管道，可以通过可视化来辅助。Scikit-learn提供HTML表示，您也可以创建图表。</p>\n<p>让我们可视化<code>full_pipeline</code>的结构。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1577fgw\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#a5d8ff\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_pipeline {\n    label = \"管道: full_pipeline\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n\n    subgraph cluster_preprocess {\n        label = \"管道: preprocess\\n(numeric_pipeline)\";\n        bgcolor=\"#dee2e6\";\n        style=filled;\n        node [fillcolor=\"#bac8ff\"];\n        select_numeric [label=\"DtypeSelector\\n(select_numeric)\"];\n        scale [label=\"StandardScaler\\n(scale)\"];\n        select_numeric -> scale;\n    }\n\n    classify [label=\"CustomLogisticRegression\\n(classify)\", fillcolor=\"#96f2d7\"];\n\n    cluster_preprocess -> classify;\n  }\n\n  Input [shape=ellipse, style=rounded, fillcolor=\"#ffec99\", label=\"输入\"];\n  Output [shape=ellipse, style=rounded, fillcolor=\"#ffec99\", label=\"输出\"];\n\n  Input -> select_numeric [label=\"X\"];\n  classify -> Output [label=\"预测结果\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1577fgw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>full_pipeline</code>的结构，它包含嵌套在管道内的自定义<code>DtypeSelector</code>和自定义<code>CustomLogisticRegression</code>估计器。</p>\n</blockquote>\n<p>这种可视化阐明了操作顺序以及数据如何流经标准和自定义组件。</p>\n<p>通过将您的自定义转换器和估计器整合到Scikit-learn管道中，您获得了一种有效方式来构建复杂的机器学习 (machine learning)工作流程，使它们更具模块化、可复现性，且更容易调优。请记住，这种顺畅结合的要点在于在构建自定义类时严格遵循Scikit-learn API约定。</p>",
+  "slug": "integrating-custom-components-pipelines",
+  "updates": [],
+  "references": [
+    {
+      "id": 5892,
+      "title": "Pipelines and composite estimators",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html",
+      "doi": "",
+      "note": "描述了Scikit-learn的Pipeline对象、其优势以及如何实现处理步骤和估计器的链式连接。",
+      "order": 1,
+      "created_at": "2025-09-05T01:17:05.946792Z",
+      "updated_at": "2025-09-07T20:54:52.713868Z"
+    },
+    {
+      "id": 5893,
+      "title": "Rolling your own estimator",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/developers/develop.html#rolling-your-own-estimator",
+      "doi": "",
+      "note": "提供了关于如何通过遵循API约定来创建Scikit-learn兼容的自定义估计器和转换器的指南。",
+      "order": 2,
+      "created_at": "2025-09-05T01:17:06.007132Z",
+      "updated_at": "2025-09-07T20:54:57.749272Z"
+    },
+    {
+      "id": 5894,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "850",
+      "url": "https://books.google.com/books?id=y90TEAAAQBAJ",
+      "doi": "",
+      "note": "一本实践指南，详细介绍了Scikit-learn管道、自定义转换器和超参数调优，并附有示例。第3版。",
+      "order": 3,
+      "created_at": "2025-09-05T01:17:06.011862Z",
+      "updated_at": "2025-09-07T20:55:29.049674Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

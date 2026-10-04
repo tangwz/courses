@@ -1,0 +1,61 @@
+{
+  "id": 6897,
+  "title": "处理数据集：使用 MLUtils.jl 的迭代器和加载器",
+  "meta_title": "MLUtils.jl 数据加载器 | Julia 数据集",
+  "meta_description": "使用 MLUtils.jl 在深度学习训练流程中实现高效的数据加载、批处理和迭代。",
+  "content": "<p>有效管理并将数据送入神经网络 (neural network)，对模型训练的成功来说必不可少，尤其是在处理大型数据集时。在构建卷积神经网络（CNN）和循环神经网络（RNN）等更复杂的架构时，数据迭代、批处理和转换的机制会变得越发重要。Julia 的 <code>MLUtils.jl</code> 包提供了一系列工具，旨在提升数据处理效率，让深度学习 (deep learning)工作流程更高效、更易于管理。</p>\n<p>本节将指导你如何使用 <code>MLUtils.jl</code> 来准备用于训练的数据集。我们将介绍如何迭代观察值、创建小批量、打乱数据以获得更好的泛化能力、分割数据集，以及应用即时转换。这些实用工具旨在与 Flux.jl 以及你的 GPU 加速训练流程良好地结合。</p>\n<h3>MLUtils.jl 在数据处理流程中的作用</h3>\n<p>训练深度学习 (deep learning)模型通常涉及分块处理数据，这些分块称为小批量，而不是一次处理一个样本或整个数据集。这种方法在计算效率和优化过程中梯度更新的稳定性之间取得了平衡。<code>MLUtils.jl</code> 简化了这些小批量的创建和管理，以及其他常见的数据准备步骤。</p>\n<p><code>MLUtils.jl</code> 提供的主要功能，对深度学习特别有帮助的包括：</p>\n<ul>\n<li><strong>观察值迭代</strong>：一种访问数据集中单个样本的稳定方式。</li>\n<li><strong>批处理</strong>：将观察值分组为小批量。</li>\n<li><strong>打乱</strong>：随机化数据顺序，以防止模型学习到与数据顺序相关的虚假模式。</li>\n<li><strong>数据分割</strong>：将数据集划分为训练集、验证集和测试集。</li>\n<li><strong>数据转换</strong>：对观察值应用函数，通常用于数据增强或预处理。</li>\n</ul>\n<p>我们来看看这些功能是如何实现的。</p>\n<h3>使用 <code>eachobs</code> 迭代观察值</h3>\n<p><code>MLUtils.jl</code> 的核心思想是“观察值”。一个观察值通常是一个单一数据点，通常包含特征和对应的标签。<code>eachobs</code> 函数提供了一种遍历数据集中观察值的通用方法。</p>\n<p>如果你的数据以数组元组的形式存储（例如，<code>(features, labels)</code>），<code>eachobs</code> 将生成元组，其中每个元素都是原始数组中对应单个观察值的一个切片或视图。</p>\n<pre><code class=\"language-julia\">using MLUtils\n\n# 示例数据：10 个特征，5 个样本\nX = rand(Float32, 10, 5)\n# 对应 5 个样本的标签\nY = [1, 0, 1, 1, 0]\n\n# 迭代每个观察值\nfor (x_obs, y_obs) in eachobs((X, Y))\n    # x_obs 将是包含 10 个特征的向量，代表一个样本\n    # y_obs 将是一个单一标签\n    println(\"Features: \", size(x_obs), \", Label: \", y_obs)\nend\n</code></pre>\n<p>这种简单的迭代是构建批处理等更复杂操作的基础。<code>MLUtils.jl</code> 还定义了 <code>nobs</code> 来获取观察值数量，以及 <code>getobs</code> 来按索引检索特定观察值。</p>\n<h3>使用 <code>DataLoader</code> 和 <code>eachbatch</code> 进行数据批处理</h3>\n<p>训练神经网络 (neural network)时，你几乎总是希望以小批量方式处理数据。<code>MLUtils.jl</code> 提供了两种主要方法来实现这一点：<code>DataLoader</code> 类型和 <code>eachbatch</code> 函数。</p>\n<p><strong><code>DataLoader</code></strong>：它构建一个迭代器，用于生成数据批次。它很灵活，允许你指定批次大小、是否打乱数据，以及如何处理大小小于指定值的最后一个批次。</p>\n<pre><code class=\"language-julia\">using MLUtils\n\n# 示例数据：2 个特征，100 个样本\nfeatures = rand(Float32, 2, 100)\nlabels = rand(Int, 100) # 100 个整数标签\ndataset = (features, labels)\n\n# 创建 DataLoader\n# batchsize: 每个批次的样本数量\n# shuffle: 如果为 true，则在每个 epoch（遍历整个数据集）开始时打乱数据\n# partial: 如果为 false（默认），则丢弃大小小于 batchsize 的最后一个批次。如果为 true，则包含它。\nloader = DataLoader(dataset, batchsize=32, shuffle=true, partial=false)\n\n# 迭代批次\nfor epoch in 1:3 # 示例：3 个 epoch\n    println(\"Epoch: \", epoch)\n    for (x_batch, y_batch) in loader\n        # x_batch 将是一个 2x32 矩阵（32 个样本的特征）\n        # y_batch 将是一个包含 32 个标签的向量\n        # 在此示例中，有 100 个样本和 batchsize 为 32，\n        # 且 partial=false，我们将得到 3 个大小为 32 的批次。100 = 3*32 + 4。最后的 4 个样本被丢弃。\n        println(\"Batch sizes: \", size(x_batch), \", \", size(y_batch))\n        # 在这里，你通常会执行一个训练步骤：\n        # 1. 将批次移至 GPU（如果适用）\n        # 2. 前向传播：model(x_batch)\n        # 3. 计算损失：loss_function(predictions, y_batch)\n        # 4. 反向传播（计算梯度）\n        # 5. 更新模型参数\n    end\nend\n</code></pre>\n<p><strong><code>eachbatch</code></strong>：这是一个更直接的函数，对于更简单的用例，它通常与 <code>DataLoader</code> 实现相同的目的。它也接受数据、<code>batchsize</code> 和像 <code>shuffle</code> 这样的选项。</p>\n<pre><code class=\"language-julia\">using MLUtils\n\nfeatures = rand(Float32, 2, 100)\nlabels = rand(Int, 100)\ndataset = (features, labels)\n\n# 使用 eachbatch\nfor (x_batch, y_batch) in eachbatch(dataset, batchsize=16, shuffle=true)\n    # x_batch 将是一个 2x16 矩阵\n    # y_batch 将是一个包含 16 个标签的向量\n    # 处理批次...\n    # println(\"使用 eachbatch 的批次大小：\", size(x_batch), \", \", size(y_batch))\nend\n</code></pre>\n<p>对于训练数据，通常建议使用 <code>shuffle=true</code>。这有助于防止模型学习到基于数据呈现顺序的模式，并能带来更好的泛化能力。对于验证或测试数据，通常会关闭打乱功能 (<code>shuffle=false</code>)，以确保评估的一致性。</p>\n<h3>使用 <code>splitobs</code> 分割数据集</h3>\n<p>一个常见需求是将数据集划分为训练集、验证集，有时还包括测试集。<code>MLUtils.jl</code> 为此提供了 <code>splitobs</code> 函数。</p>\n<pre><code class=\"language-julia\">using MLUtils\n\n# 1000 个样本，每个样本 20 个特征\nX_all = rand(Float32, 20, 1000)\nY_all = rand(Float32, 1, 1000) # 回归任务，1 个输出\nfull_dataset = (X_all, Y_all)\n\n# 分割成训练集 (80%) 和验证集 (20%)\n# 在分割前 shuffle=true 是一个好习惯\ntrain_data, val_data = splitobs(full_dataset, at=0.8, shuffle=true)\n\n# train_data 和 val_data 本身就是元组：(X_train, Y_train) 和 (X_val, Y_val)\nX_train, Y_train = train_data\nX_val, Y_val = val_data\n\nprintln(\"训练样本数：\", nobs(train_data)) # nobs(X_train) 或 nobs(Y_train)\nprintln(\"验证样本数：\", nobs(val_data))\n\n# 现在你可以为每个集合创建 DataLoader\ntrain_loader = DataLoader(train_data, batchsize=64, shuffle=true)\nval_loader = DataLoader(val_data, batchsize=64, shuffle=false) # 验证集不打乱\n</code></pre>\n<p><code>at</code> 参数 (parameter)指定了分割第一部分的比例。你也可以向 <code>at</code> 传递一个比例元组以进行多次分割，例如，<code>at=(0.7, 0.15)</code> 将得到 70% 的训练集、15% 的验证集以及剩余 15% 的测试集。</p>\n<h3>使用 <code>mapobs</code> 进行即时数据转换</h3>\n<p>通常，在数据被批处理并送入模型之前，你需要对其应用转换。这可以是归一化 (normalization)、数据增强（如翻转或旋转图像），或转换数据类型。<code>MLUtils.jl</code> 的 <code>mapobs</code> 函数允许你惰性地对每个观察值应用函数。</p>\n<pre><code class=\"language-julia\">using MLUtils\n\n# 假设 raw_images 是一个包含 100 张小灰度图像（例如，28x28）的数组\nraw_images = [rand(Float32, 28, 28) for _ in 1:100]\nlabels = rand(0:9, 100) # 数字 0-9 的标签\n\n# 一个简单的数据增强：水平翻转图像\nfunction augment_image(image::Matrix{Float32})\n    # 添加通道维度 (Flux.jl CNN 期望 WHC 或 WHCN 格式)\n    img_with_channel = reshape(image, size(image)..., 1)\n    if rand() > 0.5\n        return reverse(img_with_channel, dims=2) # 水平翻转\n    else\n        return img_with_channel\n    end\nend\n\n# 将数据增强应用于 raw_images 中的每张图像\n# mapobs 将创建一个新的数据源，其中每个观察值都是 augment_image 的结果\naugmented_dataset = mapobs(augment_image, raw_images)\n\n# 然后我们可以为 (augmented_images, labels) 创建一个 DataLoader\n# 注意：要将增强特征与标签配对，你通常会向 mapobs 传递一个元组\n# 或者只将 mapobs 应用于 (features, labels) 元组的 features 部分。\n\n# 如果标签也需要处理或应该直接传递：\nfull_dataset_to_transform = (raw_images, labels) # 假设 raw_images 是一个矩阵向量\n\n# 用于 (图像, 标签) 对的转换函数\n# 这里，只转换图像，标签直接传递\nfunction transform_observation(obs_tuple)\n    image, label = obs_tuple\n    augmented_img = augment_image(image) # 你之前定义的数据增强\n    # Flux 期望特征为 WHCN 格式（宽度、高度、通道、批次）\n    # DataLoader 将整理 N（批次）维度。\n    return (augmented_img, label)\nend\n\n# 正确地将 mapobs 应用于数据集元组\nprocessed_dataset = mapobs(transform_observation, full_dataset_to_transform)\n\n# DataLoader 现在将获取增强后的图像\nloader = DataLoader(processed_dataset, batchsize=10, shuffle=true)\n\nfor (img_batch, label_batch) in loader\n    # img_batch 将是 (28, 28, 1, 10)\n    # label_batch 将是一个包含 10 个标签的向量\n    # println(\"增强图像批次大小：\", size(img_batch))\n    # println(\"标签批次大小：\", size(label_batch))\nend\n</code></pre>\n<p><code>mapobs</code> 功能强大，因为转换是在数据被请求时应用的，这可以节省内存，特别是对于复杂的增强操作。</p>\n<p>以下图表展示了这些 <code>MLUtils.jl</code> 组件如何融入典型的深度学习 (deep learning)数据处理流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1r8y3iy\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"]; edge [fontname=\"sans-serif\"]; rawData [label=\"原始数据集\\n(特征 X, 标签 Y)\", fillcolor=\"#a5d8ff\"]; mlutils_logic [label=\"MLUtils.jl 逻辑\", shape=ellipse, style=\"filled,dashed\", fillcolor=\"#fab005\", fontsize=10]; subgraph cluster_mlutils_ops { label=\"MLUtils.jl 操作\"; style=\"filled\"; color=\"#dee2e6\"; bgcolor=\"#f8f9fa\"; node [fontsize=10]; edge [fontsize=9]; splitObs [label=\"splitobs\\n(训练/验证/测试集)\", fillcolor=\"#ffd8a8\"]; shuffleData [label=\"打乱数据\\n(例如，在 DataLoader 或 shuffleobs 内)\", fillcolor=\"#ffec99\"]; mapObs_node [label=\"mapobs\\n(应用增强/预处理)\", fillcolor=\"#d8f5a2\"]; dataLoader_node [label=\"DataLoader / eachbatch\\n(小批量处理)\", fillcolor=\"#b2f2bb\"]; } gpuBatch [label=\"小批量\\n(特征, 标签)\\n(可选：移至 GPU)\", fillcolor=\"#bac8ff\", fontsize=10]; model [label=\"神经网络模型\\n(例如，Flux.jl CNN)\", fillcolor=\"#d0bfff\", fontsize=10]; rawData -> splitObs [label=\"1. 分割\"]; splitObs -> mapObs_node [label=\"2. 转换 (按观察值)\"]; mapObs_node -> dataLoader_node [label=\"3. 批处理与打乱\"]; dataLoader_node -> gpuBatch [label=\"4. 准备批次\"]; gpuBatch -> model [label=\"送入模型\"];}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1r8y3iy\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 <code>MLUtils.jl</code> 的数据处理流程。原始数据通常会进行分割，然后可以使用 <code>mapobs</code> 对每个观察值应用转换。接着 <code>DataLoader</code> 或 <code>eachbatch</code> 会创建打乱过的小批量，这些小批量最后被准备好（例如，移至 GPU）并送入神经网络 (neural network)模型。打乱操作可以在 <code>splitobs</code> 阶段进行初始分割时发生，也可以在每个 epoch 的 <code>DataLoader</code> 内部发生。</p>\n</blockquote>\n<h3>与 GPU 工作流集成</h3>\n<p>训练深度学习 (deep learning)模型时，特别是大型模型，使用 GPU 来加速计算很常见。<code>MLUtils.jl</code> 本身不处理 GPU 内存传输。它的作用是提供数据批次。然后，你通常会在训练循环中使用 <code>Flux.jl</code> 的函数（如 <code>Flux.gpu</code> 或 <code>|> gpu</code>）或 <code>CUDA.jl</code> 的函数（如 <code>CUDA.cu</code>）将这些批次移至 GPU。</p>\n<pre><code class=\"language-julia\">using Flux # 用于 gpu 函数和模型定义\nusing CUDA # 如果需要，用于 cu 函数，并检查 GPU 是否可用\n# 假设：\n# model = Chain(...) |> gpu # 你的 Flux 模型已移至 GPU\n# loader = DataLoader(train_data, batchsize=64, shuffle=true)\n\nif CUDA.functional() # 检查 GPU 是否可用且功能正常\n    model = model |> gpu\n    println(\"正在 GPU 上训练。\")\n    for (x_batch, y_batch) in loader\n        x_batch_gpu = x_batch |> gpu\n        y_batch_gpu = y_batch |> gpu\n\n        # 使用 GPU 数据的训练步骤\n        # grads = gradient(params(model)) do\n        #     loss(model(x_batch_gpu), y_batch_gpu)\n        # end\n        # update!(opt, params(model), grads)\n    end\nelse\n    println(\"CUDA GPU 不可用或功能不正常。正在 CPU 上训练。\")\n    for (x_batch, y_batch) in loader\n        # 使用 CPU 数据的训练步骤\n        # ...\n    end\nend\n</code></pre>\n<p>这种模式确保只有当前批次的数据驻留在 GPU 上，这对于管理有限的 GPU 内存很重要。</p>\n<p>通过提供这些用于数据迭代、批处理、打乱、分割和转换的多功能工具，<code>MLUtils.jl</code> 大大简化了你在 Julia 中深度学习项目的数据准备方面。数据得到高效管理后，你就可以更专注于设计和训练神经网络 (neural network)架构本身，我们也将继续了解这些内容。</p>",
+  "slug": "handling-datasets-mlutils-jl",
+  "updates": [],
+  "references": [
+    {
+      "id": 20349,
+      "title": "MLUtils.jl Documentation",
+      "author": "The MLUtils.jl Contributors",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/JuliaML/MLUtils.jl",
+      "doi": "",
+      "note": "该Julia库为机器学习提供数据工具的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-06T14:01:03.242217Z",
+      "updated_at": "2025-09-11T10:38:07.912217Z"
+    },
+    {
+      "id": 20350,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础教科书，解释了小批量处理、数据分割和增强等数据处理技术的理论基础。",
+      "order": 2,
+      "created_at": "2025-09-06T14:01:03.245420Z",
+      "updated_at": "2025-09-11T10:37:46.360763Z"
+    },
+    {
+      "id": 20351,
+      "title": "Flux.jl Documentation",
+      "author": "The Flux.jl Contributors",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fluxml.ai/Flux.jl/stable/",
+      "doi": "",
+      "note": "Flux.jl 深度学习框架的官方文档，MLUtils.jl 与其集成用于模型训练和GPU工作流程。",
+      "order": 3,
+      "created_at": "2025-09-06T14:01:03.248661Z",
+      "updated_at": "2025-09-11T10:37:48.996977Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

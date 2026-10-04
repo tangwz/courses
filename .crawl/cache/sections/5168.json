@@ -1,0 +1,61 @@
+{
+  "id": 5168,
+  "title": "实践：实现多步链",
+  "meta_title": "实践：多步链实现 | LangChain",
+  "meta_description": "动手练习，构建一个涉及多个处理步骤的链。",
+  "content": "<p>LangChain 链允许以设定的顺序连接多个对 LLM 或其他组件的调用。这项能力对于构建需要不止一次语言模型交互的应用是十分重要的。</p>\n<p>在此动手练习中，我们将构建一个 <code>SequentialChain</code>。这种类型的链会按顺序执行其组成链，并将一个链的输出作为下一个链的输入。我们的目标是创建一个两步工作流程：</p>\n<ol>\n<li><strong>第一步：</strong> 给定一个话题（例如，一项特定技术），为其博客文章生成一个简短、吸引人的标题。</li>\n<li><strong>第二步：</strong> 给出生成的标题，撰写一条简短的推文（280字符以内）来公告该博客文章。</li>\n</ol>\n<p>这需要两次独立的 LLM 交互，其中第二次交互直接依赖于第一次的输出。</p>\n<h3>前置条件</h3>\n<p>在开始前，请确保您已按第2章所述设置好 Python 环境，包括：</p>\n<ul>\n<li>LangChain 已安装（<code>pip install langchain langchain-openai</code>）。</li>\n<li>一个 LLM 提供商库已安装（我们将使用 OpenAI 的，但其他也可以替代）。</li>\n<li>您的 API 密钥已安全配置（例如，使用环境变量）。</li>\n</ul>\n<pre><code class=\"language-python\"># 基本导入和环境设置\nimport os\nfrom langchain_openai import ChatOpenAI\nfrom langchain.prompts import PromptTemplate\nfrom langchain.chains import LLMChain, SequentialChain\n\n# 确保您的 OPENAI_API_KEY 环境变量已设置\n# 例如：os.environ[\"OPENAI_API_KEY\"] = \"您的API密钥\"\n# 或者使用 python-dotenv 从 .env 文件加载\n\n# 初始化 LLM\n# 我们将使用 ChatOpenAI 模型\nllm = ChatOpenAI(temperature=0.7, model_name=\"gpt-3.5-turbo\")\n</code></pre>\n<p><em>注意：如果您之前没有加载环境变量，请记住将 <code>\"your_api_key_here\"</code> 替换为您的实际密钥。如果需要，请调整 <code>model_name</code>。</em></p>\n<h3>步骤 1：定义标题生成链</h3>\n<p>首先，我们需要一个链，它接收一个技术话题并生成一个合适的博客文章标题。这需要定义一个提示模板和一个 <code>LLMChain</code>。</p>\n<pre><code class=\"language-python\"># --- 链 1：生成博客文章标题 ---\n\n# 用于标题生成的提示模板\ntitle_template_string = \"\"\"\nYou are an expert technical writer. Given the following topic, create a catchy and informative blog post title.\n\nTopic: {topic}\nBlog Post Title:\n\"\"\"\ntitle_prompt_template = PromptTemplate(\n    input_variables=[\"topic\"],\n    template=title_template_string\n)\n\n# 创建第一个 LLMChain\n# 我们明确将输出键命名为 'blog_title'\ntitle_chain = LLMChain(\n    llm=llm,\n    prompt=title_prompt_template,\n    output_key=\"blog_title\" # 此键保存此链的输出\n)\n\n# 独立测试此链（可选）\n# result_title = title_chain.invoke({\"topic\": \"Vector Databases\"})\n# print(f\"生成的标题：{result_title['blog_title']}\")\n</code></pre>\n<p>这里，我们创建一个 <code>PromptTemplate</code>，它期望一个 <code>topic</code> 变量。然后我们使用我们的 LLM 和此提示实例化 <code>LLMChain</code>。重要地，我们指定了 <code>output_key=\"blog_title\"</code>。这给此链的输出分配了一个名称，对于将其正确传递给序列中的下一个链非常重要。</p>\n<h3>步骤 2：定义推文生成链</h3>\n<p>接下来，我们创建一个链，它接收博客文章标题（由第一个链生成）并撰写一条简短的推文来公告它。</p>\n<pre><code class=\"language-python\"># --- 链 2：生成推文 ---\n\n# 用于推文生成的提示模板\ntweet_template_string = \"\"\"\nYou are a social media expert specializing in tech promotion.\nGiven the blog post title below, write a concise and engaging tweet (under 280 characters) announcing it.\nInclude relevant hashtags.\n\nBlog Post Title: {blog_title}\nTweet:\n\"\"\"\ntweet_prompt_template = PromptTemplate(\n    input_variables=[\"blog_title\"], # 输入来自前一个链的输出\n    template=tweet_template_string\n)\n\n# 创建第二个 LLMChain\n# 这里的输出键将是序列的最终输出\ntweet_chain = LLMChain(\n    llm=llm,\n    prompt=tweet_prompt_template,\n    output_key=\"tweet\" # 此键保存最终输出\n)\n\n# 独立测试此链（可选）\n# 示例标题：“解锁语义搜索：向量数据库的应用”\n# result_tweet = tweet_chain.invoke({\"blog_title\": \"Unlocking Semantic Search: An Exploration of Vector Databases\"})\n# print(f\"生成的推文：{result_tweet['tweet']}\")\n</code></pre>\n<p>此链的 <code>PromptTemplate</code> 期望一个名为 <code>blog_title</code> 的输入变量，这完美匹配我们为 <code>title_chain</code> 定义的 <code>output_key</code>。它自己的输出被命名为 <code>tweet</code>。</p>\n<h3>步骤 3：使用 SequentialChain 组合链</h3>\n<p>现在，我们使用 <code>SequentialChain</code> 将这两个链组合成一个工作流程。这个类处理执行顺序以及组成链之间的输出到输入的传递。</p>\n<pre><code class=\"language-python\"># --- 将链组合成一个 SequentialChain ---\n\n# 创建 SequentialChain\n# 它接受按顺序运行的链列表\n# 输入变量是 *第一个* 链所需的变量\n# 输出变量是 *最后一个* 链（或如果需要，中间链）产生的变量\noverall_chain = SequentialChain(\n    chains=[title_chain, tweet_chain],\n    input_variables=[\"topic\"],      # 第一个链（title_chain）所需的输入\n    output_variables=[\"blog_title\", \"tweet\"], # 序列产生的输出\n    verbose=True                    # 设置为 True 以查看执行步骤\n)\n</code></pre>\n<p>我们以期望的执行顺序提供了链列表（<code>[title_chain, tweet_chain]</code>）。</p>\n<ul>\n<li><code>input_variables=[\"topic\"]</code>：指定整个顺序链期望的输入。这必须匹配序列中 <em>第一个</em> 链（<code>title_chain</code>）的输入变量。</li>\n<li><code>output_variables=[\"blog_title\", \"tweet\"]</code>：列出我们希望 <code>SequentialChain</code> 返回的输出键。这包括最终输出（<code>tweet</code>），也可以选择性地包含中间输出（<code>blog_title</code>）。</li>\n<li><code>verbose=True</code>：这对于调试很有帮助，因为它会打印关于每个执行步骤的信息。</li>\n</ul>\n<h3>步骤 4：执行多步链</h3>\n<p>最后，我们可以通过提供初始输入话题来运行我们的 <code>overall_chain</code>。</p>\n<pre><code class=\"language-python\"># --- 执行顺序链 ---\n\n# 定义输入话题\ninput_topic = \"The role of Embeddings in RAG systems\"\n\n# 运行链\n# 使用 .invoke() 进行执行\nresult = overall_chain.invoke({\"topic\": input_topic})\n\n# 打印结果\nprint(\"\\n--- 结果 ---\")\nprint(f\"输入话题：{input_topic}\")\nprint(f\"生成的博客标题：{result['blog_title']}\")\nprint(f\"生成的推文：{result['tweet']}\")\n</code></pre>\n<p>运行此代码将触发以下顺序：</p>\n<ol>\n<li><code>input_topic</code> 被传递给 <code>title_chain</code>。</li>\n<li><code>title_chain</code> 使用其提示模板与 LLM 交互并生成一个标题。此标题内部存储并关联到键 <code>blog_title</code>。</li>\n<li><code>SequentialChain</code> 自动将与 <code>blog_title</code> 关联的值作为输入传递给 <code>tweet_chain</code>。</li>\n<li><code>tweet_chain</code> 使用其提示模板和提供的标题与 LLM 交互，生成一条推文。此推文内部存储并关联到键 <code>tweet</code>。</li>\n<li><code>SequentialChain</code> 返回一个包含指定 <code>output_variables</code> 的字典：<code>blog_title</code> 和 <code>tweet</code>。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1iotbzj\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#dee2e6\", style=\"filled,rounded\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  input [label=\"输入\\n(话题)\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  chain1 [label=\"链 1：标题生成\\n(LLMChain)\", fillcolor=\"#bac8ff\"];\n  chain2 [label=\"链 2：推文生成\\n(LLMChain)\", fillcolor=\"#bac8ff\"];\n  output [label=\"输出\\n(blog_title, tweet)\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n\n  input -> chain1 [label=\"topic\"];\n  chain1 -> chain2 [label=\"blog_title\"];\n  chain2 -> output [label=\"tweet\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1iotbzj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>两步顺序链实现的流程图。</p>\n</blockquote>\n<h3>总结</h3>\n<p>在此练习环节中，您成功使用 LangChain 的 <code>SequentialChain</code> 实现了一个多步工作流程。您定义了单独的 <code>LLMChain</code> 组件，每个负责特定任务，并将它们连接起来，使一个步骤的输出作为下一个步骤的输入。您还了解了正确命名输入和输出变量（<code>input_variables</code>、<code>output_key</code>）对于确保链之间数据流畅通的重要性。</p>\n<p>这种模式对于自动化涉及顺序推理 (inference)或生成步骤的流程非常有用，构成构建更复杂 LLM 应用的核心组成部分。您可以通过添加更多链、纳入不同类型的链（如用于数据操作的 <code>TransformChain</code>），或使用更灵活的 <code>SequentialChain</code> 来扩展此功能，后者在需要时可以处理更复杂的输入/输出。</p>",
+  "slug": "practice-multi-step-chain",
+  "updates": [],
+  "references": [
+    {
+      "id": 13799,
+      "title": "Chains",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/v0.2/docs/concepts/#chains",
+      "doi": "",
+      "note": "LangChain链模块的官方指南，涵盖LLMChain和SequentialChain，用于构建多步骤LLM工作流。",
+      "order": 1,
+      "created_at": "2025-09-05T08:40:29.577742Z",
+      "updated_at": "2025-09-10T12:26:34.161342Z"
+    },
+    {
+      "id": 13800,
+      "title": "Prompt Templates",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.langchain.com/docs/",
+      "doi": "",
+      "note": "官方文档，说明如何在LangChain中使用PromptTemplate为LLM创建和管理提示。",
+      "order": 2,
+      "created_at": "2025-09-05T08:40:29.583500Z",
+      "updated_at": "2025-09-10T12:26:37.540305Z"
+    },
+    {
+      "id": 13801,
+      "title": "Chat Completions API Reference",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "OpenAI聊天模型交互的官方API文档，是LangChain中ChatOpenAI的基础。",
+      "order": 3,
+      "created_at": "2025-09-05T08:40:29.588329Z",
+      "updated_at": "2025-09-10T12:26:39.527787Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

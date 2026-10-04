@@ -1,0 +1,45 @@
+{
+  "id": 1608,
+  "title": "使用 MIN/MAX 函数查找最小值和最大值",
+  "meta_title": "SQL 中 MIN 和 MAX 函数的使用",
+  "meta_description": "查找列中的最小（MIN）和最大（MAX）值。",
+  "content": "<p>了解数据中的值范围通常很有用。你可能需要找到最低价格、最高销售额、最早日期或最新活动。为此，SQL 提供了两个简单但有效的聚合函数：<code>MIN()</code> 和 <code>MAX()</code>。这些函数有助于确定列中的边界值，无论是针对整个表还是在特定分组内。</p>\n<h3>使用 MIN() 查找最小值</h3>\n<p><code>MIN()</code> 函数扫描指定列并返回其最小值。这对于确定起始点、最低成本、最早时间或最小数量很有用。</p>\n<p>其基本语法很简单：</p>\n<pre><code class=\"language-sql\">SELECT MIN(column_name)\nFROM table_name;\n</code></pre>\n<p>假设你有一个 <code>Products</code> 表，包含有关售出商品的信息，包括它们的价格。要查找可用商品中最便宜的价格，你可以在 <code>price</code> 列上使用 <code>MIN()</code> 函数：</p>\n<pre><code class=\"language-sql\">SELECT MIN(price) AS lowest_price\nFROM Products;\n</code></pre>\n<p>此查询查看 <code>price</code> 列中的所有值，并只返回找到的单个最小值。我们使用 <code>AS lowest_price</code> 来为结果列提供一个描述性名称。</p>\n<p><code>MIN()</code> 函数也有效作用于 <code>GROUP BY</code> 子句。如果你想查找 <em>每个</em> 类别的商品中的最低价格，你可以按商品的 <code>category</code> 分组，然后应用 <code>MIN()</code> 函数：</p>\n<pre><code class=\"language-sql\">SELECT\n  category,\n  MIN(price) AS lowest_price_in_category\nFROM Products\nGROUP BY category;\n</code></pre>\n<p>此查询首先依据 <code>category</code> 列对行进行分组。然后，对于每个分组（每个不同的类别），它找到 <code>price</code> 列中的最小值，并返回类别名称及其对应的最低价格。</p>\n<h3>使用 MAX() 查找最大值</h3>\n<p>与 <code>MIN()</code> 相辅相成，<code>MAX()</code> 函数找到指定列中的最大值。这有助于确定峰值、最高成本、最晚时间或最大数量。</p>\n<p>语法与 <code>MIN()</code> 函数的相似：</p>\n<pre><code class=\"language-sql\">SELECT MAX(column_name)\nFROM table_name;\n</code></pre>\n<p>再次使用 <code>Products</code> 表，如果你想查找最贵的商品，你可以在 <code>price</code> 列上使用 <code>MAX()</code> 函数：</p>\n<pre><code class=\"language-sql\">SELECT MAX(price) AS highest_price\nFROM Products;\n</code></pre>\n<p>此查询返回 <code>price</code> 列在所有商品中的单个最大值。</p>\n<p>和 <code>MIN()</code> 类似，<code>MAX()</code> 函数也常与 <code>GROUP BY</code> 一起使用。要查找每个商品类别中的最高价格：</p>\n<pre><code class=\"language-sql\">SELECT\n  category,\n  MAX(price) AS highest_price_in_category\nFROM Products\nGROUP BY category;\n</code></pre>\n<p>在这里，查询按 <code>category</code> 对商品进行分组，然后确定每个唯一类别的最大 <code>price</code> 值。</p>\n<h3>同时使用 MIN() 和 MAX() 函数</h3>\n<p>你可以在同一个查询中使用 <code>MIN()</code> 和 <code>MAX()</code>，以快速了解特定属性的值范围。例如，要查找 <code>Orders</code> 表中最早和最晚的订单日期：</p>\n<pre><code class=\"language-sql\">SELECT\n  MIN(order_date) AS earliest_order_date,\n  MAX(order_date) AS latest_order_date\nFROM Orders;\n</code></pre>\n<p>这提供了订单数据所涵盖时间跨度的简洁概要。</p>\n<p>结合 <code>GROUP BY</code> 子句，你可以查找每个客户的最低和最高订单总额：</p>\n<pre><code class=\"language-sql\">SELECT\n  customer_id,\n  MIN(order_total) AS min_order_total,\n  MAX(order_total) AS max_order_total\nFROM Orders\nGROUP BY customer_id;\n</code></pre>\n<p>此查询让你了解每个单独客户的消费范围。</p>\n<h3>数据类型和 NULL 处理</h3>\n<p><code>MIN()</code> 和 <code>MAX()</code> 函数如预期工作，适用于数值类型（如 <code>INTEGER</code>、<code>DECIMAL</code>、<code>FLOAT</code>）以及日期/时间类型（如 <code>DATE</code>、<code>TIMESTAMP</code>）。它们也可以作用于字符串（如 <code>VARCHAR</code>、<code>TEXT</code>），在这种情况下，它们通常依据字母顺序排序返回“第一个”或“最后一个”值（例如，<code>MIN()</code> 返回 'Apple'，<code>MAX()</code> 返回 'Zebra'）。</p>\n<p>了解一点很重要，<code>MIN()</code> 和 <code>MAX()</code> 函数，和大多数聚合函数一样，在执行计算时会忽略 <code>NULL</code> 值。如果一列只包含 <code>NULL</code> 值，那么 <code>MIN()</code> 和 <code>MAX()</code> 都将返回 <code>NULL</code>。</p>\n<p>通过使用 <code>MIN()</code> 和 <code>MAX()</code> 函数，你获得了有价值的工具，以快速评估数据集中的边界和范围，这是数据分析中的一个基本步骤。</p>",
+  "slug": "finding-min-max",
+  "updates": [],
+  "references": [
+    {
+      "id": 3560,
+      "title": "PostgreSQL 16.2 Documentation: 9.21. Aggregate Functions",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/functions-aggregate.html",
+      "doi": "",
+      "note": "PostgreSQL聚合函数的官方文档，包含MIN和MAX函数、它们的语法以及与GROUP BY和NULL值相关的行为。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:08.775552Z",
+      "updated_at": "2025-09-07T18:57:15.548962Z"
+    },
+    {
+      "id": 3561,
+      "title": "Learning SQL: Master SQL Fundamentals",
+      "author": "Alan Beaulieu",
+      "year": "2009",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=i9iV9jYt4-oC",
+      "doi": "",
+      "note": "一本关于SQL基础知识的教科书，提供了聚合函数（包括MIN和MAX）的基础解释。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:08.809424Z",
+      "updated_at": "2025-09-07T18:57:33.477151Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2161,
+  "title": "简单模型的顺序容器",
+  "meta_title": "PyTorch nn.Sequential 容器",
+  "meta_description": "使用`nn.Sequential`快速定义线性堆叠层的模型。",
+  "content": "<p>虽然通过子类化<code>torch.nn.Module</code>定义自定义网络架构提供了最大程度的灵活性，但许多常见模型都涉及层的一个直观序列，其中一层的输出直接作为下一层的输入。对于这些线性堆叠，PyTorch提供了一个方便的容器：<code>torch.nn.Sequential</code>。</p>\n<p><code>nn.Sequential</code>作为一个包装器，接收一个有序的模块序列（如层和激活函数 (activation function)），并在输入数据通过时，以该特定顺序执行它们。可以将其视为为您的数据转换构建一个流程。当您不需要复杂的数据流逻辑、跳跃连接或多输入/多输出路径时，这种方法简化了模型定义。</p>\n<h3>使用<code>nn.Sequential</code>定义模型</h3>\n<p>您可以通过将您想要包含的模块作为参数 (parameter)传递给其构造函数来创建<code>Sequential</code>模型。顺序很重要，因为它决定了数据流。</p>\n<p>让我们构建一个简单的两层前馈网络，它接收一个784维的输入（例如扁平化的MNIST图像），通过一个包含128个单元和ReLU激活的隐藏层，最后生成一个10维输出（用于10个类别）。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nfrom collections import OrderedDict\n\n# 定义输入、隐藏层和输出维度\ninput_size = 784\nhidden_size = 128\noutput_size = 10\n\n# 方法1：直接将模块作为参数传递\nmodel_v1 = nn.Sequential(\n    nn.Linear(input_size, hidden_size), # 第1层：线性变换\n    nn.ReLU(),                         # 激活函数1：非线性\n    nn.Linear(hidden_size, output_size) # 第2层：线性变换\n)\n\n# 打印模型结构\nprint(\"Model V1 (Unnamed Layers):\")\nprint(model_v1)\n\n# 示例用法：创建一个虚拟输入张量\n# 假设批量大小为64\ndummy_input = torch.randn(64, input_size)\noutput = model_v1(dummy_input)\nprint(\"\\nOutput shape:\", output.shape) # 预期：torch.Size([64, 10])\n</code></pre>\n<p>这创建了一个模型，其中输入数据首先经过<code>nn.Linear(784, 128)</code>，然后应用<code>nn.ReLU()</code>激活，最后结果通过<code>nn.Linear(128, 10)</code>。请注意，定义是多么紧凑。<code>Sequential</code>容器自动处理将一个模块的输出作为下一个模块的输入传递。</p>\n<h3>在<code>nn.Sequential</code>中命名层</h3>\n<p>尽管前一种方法可行，但层只被分配了默认的数字索引（<code>0</code>、<code>1</code>、<code>2</code>等）。这可能会使得后续调试或访问特定层变得更难。为了清晰度和可访问性，更好的做法是使用Python <code>collections</code>模块中的<code>OrderedDict</code>来为您的层提供名称。</p>\n<pre><code class=\"language-python\"># 方法2：使用OrderedDict进行命名层\nmodel_v2 = nn.Sequential(OrderedDict([\n    ('fc1', nn.Linear(input_size, hidden_size)), # 全连接层1\n    ('relu1', nn.ReLU()),                      # ReLU激活\n    ('fc2', nn.Linear(hidden_size, output_size)) # 全连接层2\n]))\n\n# 打印模型结构\nprint(\"\\nModel V2 (Named Layers):\")\nprint(model_v2)\n\n# 现在可以通过名称访问特定层\nprint(\"\\nAccessing fc1 weights shape:\", model_v2.fc1.weight.shape)\n# 如果需要，也可以使用整数索引访问\nprint(\"Accessing layer at index 0:\", model_v2[0])\n# 或者如果使用OrderedDict，直接通过字符串名称访问\nprint(\"Accessing layer by name 'relu1':\", model_v2.relu1)\n</code></pre>\n<p>使用<code>OrderedDict</code>保留了插入顺序（这对<code>nn.Sequential</code>非常重要），同时允许您引用诸如<code>model_v2.fc1</code>或<code>model_v2.relu1</code>之类的层。这显著提高了代码的可读性和可维护性，特别是对于稍长的序列，使得检查模型的特定部分变得更容易。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-djuioq\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled, color=\"#a5d8ff\", fontname=\"sans-serif\"]; edge [color=\"#495057\", fontname=\"sans-serif\"]; graph [fontname=\"sans-serif\"]; Input [label=\"输入\\n(批量, 784)\", shape=ellipse, color=\"#ced4da\"]; Layer1 [label=\"fc1: nn.Linear(784, 128)\"]; Activation1 [label=\"relu1: nn.ReLU()\"]; Layer2 [label=\"fc2: nn.Linear(128, 10)\"]; Output [label=\"输出\\n(批量, 10)\", shape=ellipse, color=\"#ced4da\"]; Input -> Layer1; Layer1 -> Activation1; Activation1 -> Layer2; Layer2 -> Output; subgraph cluster_sequential { label = \"nn.Sequential 容器\"; style=dashed; color=\"#adb5bd\"; Layer1; Activation1; Layer2; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-djuioq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据流经使用命名层通过<code>nn.Sequential</code>定义的<code>model_v2</code>。输入按线性顺序通过<code>fc1</code>、<code>relu1</code>和<code>fc2</code>。</p>\n</blockquote>\n<h3>何时使用<code>nn.Sequential</code></h3>\n<p><code>nn.Sequential</code>特别适合于：</p>\n<ol>\n<li><strong>简单的全连接网络：</strong> 模型中的层线性堆叠，没有分支或跳过，例如基本的多层感知机（MLP）或某些CNN的初始特征提取阶段。</li>\n<li><strong>定义可复用模块：</strong> 创建自包含的层模块（例如，一个包含<code>Conv2d</code>、<code>BatchNorm2d</code>和<code>ReLU</code>的卷积模块），然后可以将其作为单个模块整合到更大的自定义<code>nn.Module</code>结构中。</li>\n<li><strong>快速原型开发：</strong> 快速组装标准架构以测试想法或建立基线。</li>\n</ol>\n<h3>局限性</h3>\n<p><code>nn.Sequential</code>的主要局限在于其严格的线性性质。它假定一个单一输入和一个单一输出，数据顺序流经所有包含的模块。您不能直接使用它来定义具有更复杂拓扑的模型，例如：</p>\n<ul>\n<li><strong>跳跃连接：</strong> 像ResNet这样的架构，其中较早层的输出被添加到较晚层的输出中，这需要在自定义的<code>forward</code>方法中显式实现。</li>\n<li><strong>多输入或多输出：</strong> 处理几个不同输入流或生成多个输出张量的模型不能仅凭<code>nn.Sequential</code>来表示。</li>\n<li><strong>共享层：</strong> 架构中完全相同的层实例在网络拓扑的不同点被应用。</li>\n<li><strong>条件逻辑：</strong> 任何数据流依赖于运行时条件或需要对从一层的输出到下一层输入的数据进行操作的场景。</li>\n</ul>\n<p>对于任何表现出这些特点的架构，您必须通过子类化<code>torch.nn.Module</code>并自行实现<code>forward</code>方法来定义一个自定义模型，这将给予您对数据流的完全控制，如前所述在“定义自定义网络架构”一节中讨论的。</p>\n<p>总之，<code>nn.Sequential</code>提供了一种清晰高效的方法来定义线性堆叠神经网络 (neural network)层的常见模式。它是一个有价值且方便的工具，适用于更简单的架构和组件模块，补充了自定义<code>nn.Module</code>类这种更灵活的方法。现在您可以使用<code>nn.Module</code>或<code>nn.Sequential</code>定义模型结构了，下一步是定义模型将优化的目标函数，这将引出损失函数 (loss function)。</p>",
+  "slug": "sequential-containers",
+  "updates": [],
+  "references": [
+    {
+      "id": 5810,
+      "title": "torch.nn.Sequential",
+      "author": "PyTorch Authors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html",
+      "doi": "",
+      "note": "`torch.nn.Sequential` 容器的官方文档，详细介绍了其功能和构建线性神经网络的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T01:16:31.660281Z",
+      "updated_at": "2025-09-07T20:31:09.005317Z"
+    },
+    {
+      "id": 5811,
+      "title": "torch.nn.Module",
+      "author": "PyTorch Authors",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.Module.html",
+      "doi": "",
+      "note": "`torch.nn.Module` 基类的官方文档，解释了如何在 PyTorch 中构建自定义神经网络层和模型，是 `nn.Sequential` 的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T01:16:31.671877Z",
+      "updated_at": "2025-09-07T20:31:06.904749Z"
+    },
+    {
+      "id": 5813,
+      "title": "Learn the Basics: Build the Neural Network",
+      "author": "PyTorch Authors",
+      "year": "2021",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/basics/build_model_tutorial.html",
+      "doi": "",
+      "note": "PyTorch 官方入门教程，演示了如何使用 `nn.Module` 和 `nn.Sequential` 构建神经网络，展示了它们的实际应用。",
+      "order": 4,
+      "created_at": "2025-09-05T01:16:31.684936Z",
+      "updated_at": "2025-09-07T20:31:18.545247Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

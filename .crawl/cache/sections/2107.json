@@ -1,0 +1,61 @@
+{
+  "id": 2107,
+  "title": "实践：应用高级Python技术",
+  "meta_title": "数据科学高级Python实践",
+  "meta_description": "通过与数据科学相关的实际编码问题应用高级Python概念。",
+  "content": "<p>这些练习旨在帮助你巩固对列表推导、生成器、高级函数参数 (parameter)、装饰器、上下文 (context)管理器、基本面向对象编程以及与数据准备和分析相关的错误处理的掌握。完成这些示例将帮助你将这些技术融入到自己的数据科学工作流程中。</p>\n<h2>练习 1：使用推导式进行数据筛选</h2>\n<p>你有一个字典列表，每个字典代表一个传感器读数。每个读数包含'sensor_id'、'timestamp'和'value'。你的目标是创建一个新列表，其中只包含'sensor_id'为<code>S1</code>且'value'大于50的读数。为此，请使用列表推导式。</p>\n<p><strong>数据：</strong></p>\n<pre><code class=\"language-python\">sensor_data = [\n    {'sensor_id': 'S1', 'timestamp': 1678886400, 'value': 45.6},\n    {'sensor_id': 'S2', 'timestamp': 1678886401, 'value': 60.1},\n    {'sensor_id': 'S1', 'timestamp': 1678886402, 'value': 55.9},\n    {'sensor_id': 'S3', 'timestamp': 1678886403, 'value': 32.0},\n    {'sensor_id': 'S1', 'timestamp': 1678886404, 'value': 62.3},\n    {'sensor_id': 'S2', 'timestamp': 1678886405, 'value': 58.7},\n    {'sensor_id': 'S1', 'timestamp': 1678886406, 'value': 49.8},\n]\n</code></pre>\n<p><strong>解决方案：</strong></p>\n<pre><code class=\"language-python\"># 使用列表推导式筛选数据\nfiltered_readings = [\n    reading for reading in sensor_data\n    if reading['sensor_id'] == 'S1' and reading['value'] > 50\n]\n\n# 打印结果进行验证\nprint(filtered_readings)\n# 预期输出：\n# [{'sensor_id': 'S1', 'timestamp': 1678886402, 'value': 55.9},\n#  {'sensor_id': 'S1', 'timestamp': 1678886404, 'value': 62.3}]\n</code></pre>\n<p>这个解决方案以简洁易读的一行代码对列表进行了筛选。与带有<code>if</code>条件和<code>append</code>的传统<code>for</code>循环相比，列表推导式对于此类任务通常效率更高且更符合Python风格。</p>\n<h2>练习 2：使用生成器处理大型文件</h2>\n<p>假设你有一个非常大的日志文件，其中每一行代表一个事件。一次性处理整个文件可能会占用太多内存。编写一个生成器函数<code>get_error_lines(filepath)</code>，它接受文件路径，逐行读取文件，并仅返回包含“ERROR”一词的行。</p>\n<p><strong>提示：</strong> 在遍历文件行的循环中使用<code>yield</code>语句。</p>\n<p><strong>解决方案：</strong></p>\n<pre><code class=\"language-python\">import os # 用于创建虚拟文件\n\n# 创建一个用于演示的虚拟日志文件\nlog_content = \"\"\"\nINFO: Process started\nDEBUG: Connection established\nERROR: Failed to read record 102\nINFO: Processing record 103\nWARN: Disk space low\nERROR: Timeout connecting to service X\nINFO: Process finished\n\"\"\"\ndummy_filepath = 'sample.log'\nwith open(dummy_filepath, 'w') as f:\n    f.write(log_content)\n\n# 生成器函数\ndef get_error_lines(filepath):\n    \"\"\"\n    逐行读取文件，并返回包含“ERROR”的行。\n    \"\"\"\n    try:\n        with open(filepath, 'r') as f:\n            for line in f:\n                if \"ERROR\" in line:\n                    yield line.strip() # strip() 移除行首/行尾的空白字符\n    except FileNotFoundError:\n        print(f\"错误：未在 {filepath} 找到文件\")\n        # 可选：不返回任何内容或抛出异常\n\n# 使用生成器\nerror_lines_generator = get_error_lines(dummy_filepath)\n\nprint(\"找到的错误行：\")\nfor error_line in error_lines_generator:\n    print(error_line)\n\n# 清理虚拟文件\nos.remove(dummy_filepath)\n\n# 预期输出：\n# Error lines found:\n# ERROR: Failed to read record 102\n# ERROR: Timeout connecting to service X\n</code></pre>\n<p>生成器在这里非常适合，因为它们以惰性方式处理文件。在迭代过程中，内存中一次只保留一行，这使得这种方法适用于大型文件。<code>try-except</code>块也展示了文件不存在情况下的基本错误处理。</p>\n<h2>练习 3：灵活的数据聚合函数</h2>\n<p>编写一个函数<code>aggregate_data(agg_func, *args)</code>，它接受一个聚合函数（<code>agg_func</code>，例如<code>sum</code>、<code>max</code>、<code>min</code>）和可变数量的数值参数 (parameter)（<code>*args</code>）。该函数应将聚合函数应用于这些参数并返回结果。处理未提供数值参数的情况。</p>\n<p><strong>解决方案：</strong></p>\n<pre><code class=\"language-python\">def aggregate_data(agg_func, *args):\n    \"\"\"\n    将聚合函数应用于可变数量的参数。\n\n    参数：\n        agg_func: 要应用的函数（例如，sum, max, min）。\n        *args: 可变数量的数值参数。\n\n    返回：\n        聚合结果，如果未提供参数则返回 None。\n    \"\"\"\n    if not args:\n        print(\"警告：未提供用于聚合的数据。\")\n        return None\n    # 检查所有参数是否为数值（整数或浮点数）\n    if not all(isinstance(arg, (int, float)) for arg in args):\n        print(\"错误：所有参数都必须是数值。\")\n        return None\n    try:\n        return agg_func(args)\n    except Exception as e:\n        print(f\"聚合过程中出错：{e}\")\n        return None\n\n# 示例用法\nnumbers = [10, 5, 25, 15, 8]\n\ntotal = aggregate_data(sum, *numbers)\nmaximum = aggregate_data(max, *numbers)\nminimum = aggregate_data(min, 1, 2, 3, 0.5) # 直接传递参数\nno_data = aggregate_data(sum)\nmixed_data = aggregate_data(sum, 10, 'a', 30)\n\nprint(f\"Sum: {total}\")\nprint(f\"Max: {maximum}\")\nprint(f\"Min: {minimum}\")\nprint(f\"No Data Result: {no_data}\")\nprint(f\"Mixed Data Result: {mixed_data}\")\n\n# 预期输出：\n# Sum: 63\n# Max: 25\n# Min: 0.5\n# Warning: No data provided for aggregation.\n# No Data Result: None\n# Error: All arguments must be numerical.\n# Mixed Data Result: None\n</code></pre>\n<p>此函数使用<code>*args</code>接受任意数量的位置参数，使其具有灵活性。它包含对空输入和非数值类型的检查，体现了基本的验证和错误反馈。</p>\n<h2>练习 4：使用装饰器计时数据操作</h2>\n<p>编写一个装饰器<code>time_it</code>，用于测量其所包装的任何函数的执行时间并打印时长。将此装饰器应用于一个模拟数据处理任务（例如，创建一个大型列表）的函数。</p>\n<p><strong>解决方案：</strong></p>\n<pre><code class=\"language-python\">import time\n\ndef time_it(func):\n    \"\"\"\n    一个打印被包装函数执行时间的装饰器。\n    \"\"\"\n    def wrapper(*args, **kwargs):\n        start_time = time.perf_counter() # 比 time.time() 更精确\n        result = func(*args, **kwargs)\n        end_time = time.perf_counter()\n        duration = end_time - start_time\n        print(f\"函数 '{func.__name__}' 在 {duration:.4f} 秒内执行完毕\")\n        return result\n    return wrapper\n\n@time_it\ndef simulate_data_processing(n_records):\n    \"\"\"\n    通过创建平方列表来模拟数据处理。\n    \"\"\"\n    print(f\"正在处理 {n_records} 条记录...\")\n    processed_data = [i*i for i in range(n_records)]\n    # 模拟更多工作\n    time.sleep(0.1)\n    print(\"处理完成。\")\n    return len(processed_data) # 返回已处理项的数量\n\n# 示例用法\nnum_records = 1_000_000\ncount = simulate_data_processing(num_records)\nprint(f\"已处理 {count} 项。\")\n\n# 示例输出（具体时间会有所不同）：\n# Processing 1000000 records...\n# Processing complete.\n# Function 'simulate_data_processing' executed in 0.1578 seconds\n# Processed 1000000 items.\n</code></pre>\n<p>装饰器提供了一种简洁的方式，可以在不修改函数核心逻辑的情况下，为函数添加日志记录、计时或访问控制等横切关注点。<code>time_it</code>装饰器截取函数调用，记录调用前后的时间，打印时间差，然后返回原始函数的结果。</p>\n<h2>练习 5：使用上下文 (context)管理器进行资源管理</h2>\n<p>创建一个简单的上下文管理器类<code>TempFileHandler</code>，它在进入<code>with</code>块时创建一个临时文件，并在退出时自动删除该文件，即使块内发生错误也不例外。</p>\n<p><strong>提示：</strong> 实现<code>__enter__</code>和<code>__exit__</code>特殊方法。<code>__enter__</code>应创建并返回文件对象（或路径），而<code>__exit__</code>应处理清理工作。</p>\n<p><strong>解决方案：</strong></p>\n<pre><code class=\"language-python\">import os\nimport tempfile\n\nclass TempFileHandler:\n    \"\"\"\n    一个用于创建和自动删除临时文件的上下文管理器。\n    \"\"\"\n    def __init__(self, mode='w+t', suffix='.tmp', prefix='my_temp_'):\n        self.mode = mode\n        self.suffix = suffix\n        self.prefix = prefix\n        self.temp_file = None\n        self.temp_filepath = \"\"\n\n    def __enter__(self):\n        # 创建一个命名的临时文件\n        self.temp_file = tempfile.NamedTemporaryFile(\n            mode=self.mode,\n            suffix=self.suffix,\n            prefix=self.prefix,\n            delete=False # 我们在 __exit__ 中处理删除\n        )\n        self.temp_filepath = self.temp_file.name\n        print(f\"进入上下文：已创建临时文件 '{self.temp_filepath}'\")\n        return self.temp_file # 返回将在 'with' 块中使用的文件对象\n\n    def __exit__(self, exc_type, exc_val, exc_tb):\n        # 此方法在退出 'with' 块时调用\n        print(f\"正在退出 '{self.temp_filepath}' 的上下文...\")\n        if self.temp_file:\n            self.temp_file.close()\n            try:\n                os.remove(self.temp_filepath)\n                print(f\"成功删除临时文件 '{self.temp_filepath}'\")\n            except OSError as e:\n                print(f\"删除临时文件 '{self.temp_filepath}' 时出错：{e}\")\n\n        # 如果在 'with' 块内发生异常，exc_type、exc_val、\n        # 和 exc_tb 将包含有关信息。\n        if exc_type:\n            print(f\"发生了 {exc_type.__name__} 类型的异常：{exc_val}\")\n            # 返回 False（或不返回任何内容）以传播异常，\n            # 返回 True 以抑制它。我们将让它传播。\n            return False\n        return True # 未发生异常或我们已处理\n\n# 示例用法 1：成功操作\nprint(\"--- 示例 1：成功的文件操作 ---\")\ntry:\n    with TempFileHandler(suffix='.csv') as tmp_f:\n        print(f\"'with' 块内的文件对象：{tmp_f}\")\n        tmp_f.write(\"header1,header2\\n\")\n        tmp_f.write(\"value1,value2\\n\")\n        # 文件仍在此处打开并存在\n        print(f\"'with' 块期间文件存在：{os.path.exists(tmp_f.name)}\")\n    # 在 'with' 块之外：\n    print(\"在 'with' 块之后。\")\n    # 检查文件是否存在（不应存在）\n    print(f\"'with' 块后文件存在：{os.path.exists(tmp_f.name)}\") # 访问 tmp_f.name 是可以的\nexcept Exception as e:\n    print(f\"捕获到意外错误：{e}\")\n\nprint(\"\\n--- 示例 2：带有错误的操作 ---\")\ntry:\n    with TempFileHandler(suffix='.log') as tmp_f:\n        filepath = tmp_f.name # 在可能发生错误之前存储文件路径\n        print(f\"'with' 块内的文件对象：{tmp_f}\")\n        tmp_f.write(\"Log entry 1\\n\")\n        # 模拟错误\n        result = 10 / 0\n        tmp_f.write(\"这将不会被写入\\n\")\nexcept ZeroDivisionError:\n    print(\"捕获到预期的 ZeroDivisionError。\")\n    # 检查文件是否存在（它应该已经被 __exit__ 删除）\n    print(f\"'with' 块中发生错误后文件是否存在：{os.path.exists(filepath)}\")\nexcept Exception as e:\n    print(f\"捕获到意外错误：{e}\")\n\n# 预期输出：\n# --- Example 1: Successful file operation ---\n# Entering context: Created temporary file '.../my_temp_....csv'\n# File object inside 'with': &#x3C;_io.TextIOWrapper name='.../my_temp_....csv' mode='w+t' encoding='...'>\n# File exists during 'with' block: True\n# Exiting context for '.../my_temp_....csv'...\n# Successfully deleted temporary file '.../my_temp_....csv'\n# After 'with' block.\n# File exists after 'with' block: False\n#\n# --- Example 2: Operation with an error ---\n# Entering context: Created temporary file '.../my_temp_....log'\n# File object inside 'with': &#x3C;_io.TextIOWrapper name='.../my_temp_....log' mode='w+t' encoding='...'>\n# Exiting context for '.../my_temp_....log'...\n# An exception of type ZeroDivisionError occurred: division by zero\n# Successfully deleted temporary file '.../my_temp_....log'\n# Caught expected ZeroDivisionError.\n# File exists after error in 'with' block: False\n</code></pre>\n<p>上下文管理器确保清理代码（如关闭文件、释放锁或删除临时资源）可靠运行。<code>__exit__</code>方法接收有关任何发生异常的详细信息，从而可以进行条件性清理或错误日志记录。</p>\n<p>这些练习提供了实际场景，其中本章讨论的高级Python结构是有益的。当你遇到数据加载、清理和转换任务时，请思考这些技术如何使你的代码更高效、可读且易于维护。</p>",
+  "slug": "practice-advanced-python",
+  "updates": [],
+  "references": [
+    {
+      "id": 6398,
+      "title": "The Python Language Reference",
+      "author": "Guido van Rossum and the Python development team",
+      "year": "2025",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/index.html",
+      "doi": "",
+      "note": "Python语言的官方权威文档，提供所有核心功能的详细规范，包括列表推导式、生成器、函数参数、装饰器和上下文管理器。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:17.096439Z",
+      "updated_at": "2025-09-07T20:19:05.413636Z"
+    },
+    {
+      "id": 6399,
+      "title": "Fluent Python: Clear, Concise, and Effective Programming, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056345/",
+      "doi": "",
+      "note": "一本强烈推荐给中高级Python开发者的书籍，深入探讨了Python的对象模型、数据结构、迭代器、生成器、装饰器和上下文管理器，并强调了Pythonic编程风格。",
+      "order": 2,
+      "created_at": "2025-09-05T01:22:17.112065Z",
+      "updated_at": "2025-09-07T20:19:17.860458Z"
+    },
+    {
+      "id": 6400,
+      "title": "Learning Python, 5th Edition",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-python-5th/9781449355739/",
+      "doi": "",
+      "note": "一本涵盖Python语言从基础到高级功能的综合指南，包括对函数、模块、类、异常和装饰器的详细讨论，适合进行扎实的学习。",
+      "order": 3,
+      "created_at": "2025-09-05T01:22:17.115731Z",
+      "updated_at": "2025-09-07T20:19:23.892314Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

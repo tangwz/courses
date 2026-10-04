@@ -1,0 +1,535 @@
+{
+  "id": 167,
+  "title": "量化大型语言模型的高效部署与推理",
+  "meta_title": "量化大型语言模型高效部署 | 高阶",
+  "meta_description": "关于部署量化大型语言模型的高阶课程。涵盖量化技术（GPTQ、AWQ、低比特）、性能调整以及部署框架。",
+  "description": "<p>学习量化 (quantization)大型语言模型（LLM）的高阶技术，并将其部署以实现优化的推理 (inference)表现。本课程讲解尖端量化方案、部署框架、性能分析，以及专为不同硬件平台上的大型语言模型设计的优化策略。</p>",
+  "short_description": "通过掌握高阶技术与工具集，在各类硬件上高效部署量化大型语言模型。",
+  "excerpt": "掌握大型语言模型高阶量化与部署技术，以在多样化硬件上实现最佳推理速度并降低资源消耗。",
+  "prerequisites": "Python、机器学习、大型语言模型入门知识。",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "高阶量化技术",
+      "description": "实施并比较各类大型语言模型量化方法，包括低比特（低于4比特）、混合精度、以及GPTQ和AWQ等训练后量化算法。"
+    },
+    {
+      "topic": "量化校准",
+      "description": "应用高阶校准技术，以最大限度减少大型语言模型量化过程中的精度损失。"
+    },
+    {
+      "topic": "性能分析",
+      "description": "评估量化大型语言模型的性能（延迟、吞吐量、内存占用）与精度之间的权衡。"
+    },
+    {
+      "topic": "硬件专项优化",
+      "description": "优化量化大型语言模型的推理，使其适用于不同硬件目标，包括CPU和GPU。"
+    },
+    {
+      "topic": "部署框架",
+      "description": "运用专业框架与库（例如TensorRT-LLM、vLLM、TGI、ONNX Runtime），高效部署量化大型语言模型。"
+    },
+    {
+      "topic": "部署策略",
+      "description": "实施服务量化大型语言模型的部署策略，并考量扩展性与资源管理。"
+    }
+  ],
+  "duration": 22,
+  "slug": "quantized-llm-deployment",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-13T04:16:08.982580Z",
+  "updated_at": "2026-10-02T02:46:05.588449Z",
+  "chapters": [
+    {
+      "id": 887,
+      "title": "高级LLM量化基本原理",
+      "meta_title": "高级LLM量化理论与技术",
+      "meta_description": "理解LLM量化中的高级思想，包括低位方法、数据类型、校准和量化感知训练的具体事项。",
+      "number": 1,
+      "slug": "advanced-llm-quantization-fundamentals",
+      "content": "本章为理解专门应用于大型语言模型（LLMs）的高级量化方法打下基础。我们首先回顾核心量化原理，并将对称量化与非对称量化（$q = \\text{round}(x/s)$ vs $q = \\text{round}(x/s) + z$）以及逐张量与逐通道缩放等思想，调整以适应LLM的独特特点。\n\n你将学习低于8位精度的工作方法，例如INT4以及NF4和FP4等专用格式，考察它们的数学属性以及对模型准确性和性能的影响。我们将研究为LLM开发的重要训练后量化（PTQ）算法，包括GPTQ和AWQ，了解它们如何在最少重新训练的情况下保持模型保真度。在大型模型方面的量化感知训练（QAT）的考量也将进行讨论。\n\n本章还介绍混合精度量化的策略，为PTQ方法选择合适的校准数据，并以一个将GPTQ应用于示例LLM的实践练习作结。学完本章后，你将牢固掌握现代LLM量化中使用的理论依据和常用算法。",
+      "sections": [
+        {
+          "id": 4595,
+          "title": "重温大型模型量化基本原理",
+          "meta_title": "大型语言模型量化原理",
+          "meta_description": "回顾大型模型架构中核心量化思想（对称与非对称、逐张量与逐通道）",
+          "slug": "revisiting-quantization-principles",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4597,
+          "title": "低比特量化技术（低于INT8）",
+          "meta_title": "低比特LLM量化（INT4, NF4, FP4）",
+          "meta_description": "详细阐述了INT4、NF4、FP4等低于8比特的量化方法及其对LLM的影响。",
+          "slug": "low-bit-quantization-techniques",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4600,
+          "title": "理解量化数据类型和格式",
+          "meta_title": "LLM量化中的数据类型",
+          "meta_description": "审视量化中使用的不同数值格式（例如：INT4、NF4、E4M3）及其特点。",
+          "slug": "quantization-data-types-formats",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4601,
+          "title": "大型语言模型的训练后量化 (PTQ) 算法",
+          "meta_title": "训练后量化算法：GPTQ、AWQ",
+          "meta_description": "详细介绍GPTQ和AWQ等先进PTQ算法，专为LLM精度保持而设计。",
+          "slug": "ptq-algorithms-llms",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4603,
+          "title": "量化感知训练 (QAT) 的考量",
+          "meta_title": "大型语言模型的量化感知训练",
+          "meta_description": "将量化感知训练应用于大型语言模型的高级策略与难点。",
+          "slug": "qat-considerations-llms",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4605,
+          "title": "混合精度量化方法",
+          "meta_title": "大型语言模型的混合精度量化",
+          "meta_description": "将不同精度应用于大型语言模型各部分以实现最佳平衡的技术。",
+          "slug": "mixed-precision-quantization-strategies",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4607,
+          "title": "校准数据的选择与准备",
+          "meta_title": "大型语言模型量化中的校准数据",
+          "meta_description": "用于 PTQ 方法的有效校准数据集选择与准备的最佳实践。",
+          "slug": "calibration-data-selection",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4609,
+          "title": "动手实践：将GPTQ应用于LLM",
+          "meta_title": "动手实践：GPTQ实现",
+          "meta_description": "关于应用GPTQ算法量化预训练语言模型的实践环节。",
+          "slug": "practice-applying-gptq",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 889,
+      "title": "使用工具包实现大型语言模型量化",
+      "meta_title": "LLM量化工具包与库",
+      "meta_description": "学习使用bitsandbytes、AutoGPTQ、AutoAWQ等流行库和工具包进行大型语言模型量化。",
+      "number": 2,
+      "slug": "implementing-llm-quantization-toolkits",
+      "content": "在上一章学习了高级量化技术的理论后，本节将侧重于使用常用软件库进行这些方法的实际操作。目标是让您从理解低比特量化（例如$INT4$）等原理以及GPTQ和AWQ等算法，转向在大型语言模型上实际执行这些操作。\n\n您将使用专为LLM量化设计的广泛使用的工具包：\n\n*   学习`bitsandbytes`如何支持高效的低比特操作。\n*   了解如何使用`Transformers`和`Accelerate`直接在Hugging Face生态系统内集成量化。\n*   分别使用`AutoGPTQ`和`AutoAWQ`库来应用GPTQ和AWQ。\n\n在本章中，我们将介绍使用这些工具量化模型的必要步骤，考察如何比较不同库获得的结果和性能特点，并处理模型和工具包之间可能出现的兼容性挑战。学习结束时，您将拥有使用这些库准备大型语言模型以进行高效部署的实践经验。",
+      "sections": [
+        {
+          "id": 4612,
+          "title": "LLM量化库概览",
+          "meta_title": "LLM量化库综述",
+          "meta_description": "介绍LLM量化常用库（bitsandbytes, Transformers, AutoGPTQ, AutoAWQ）。",
+          "slug": "overview-quantization-libraries",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4614,
+          "title": "使用 bitsandbytes 进行低位操作",
+          "meta_title": "使用 bitsandbytes 实现 LLM 量化",
+          "meta_description": "使用 bitsandbytes 库进行高效低位量化和矩阵乘法的指南。",
+          "slug": "using-bitsandbytes",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4616,
+          "title": "使用 Hugging Face Transformers 和 Accelerate 实现量化",
+          "meta_title": "Hugging Face Transformers 的 LLM 量化",
+          "meta_description": "运用 Hugging Face 库，轻松整合 bitsandbytes 等量化方法。",
+          "slug": "quantization-hf-transformers-accelerate",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4618,
+          "title": "使用 AutoGPTQ 应用 GPTQ",
+          "meta_title": "使用 AutoGPTQ 库",
+          "meta_description": "使用 AutoGPTQ 库实现 GPTQ 量化的实际操作。",
+          "slug": "applying-autogptq",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4621,
+          "title": "使用 AutoAWQ 应用 AWQ",
+          "meta_title": "使用 AutoAWQ 库",
+          "meta_description": "使用 AutoAWQ 库实现 AWQ 量化的实际操作。",
+          "slug": "applying-autoawq",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4623,
+          "title": "比较工具包的输出和性能",
+          "meta_title": "LLM量化工具包结果比较",
+          "meta_description": "分析使用不同量化工具包时，输出和性能的差异。",
+          "slug": "comparing-toolkit-outputs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4625,
+          "title": "处理模型兼容性问题",
+          "meta_title": "LLM 量化中的模型兼容性",
+          "meta_description": "解决 LLM 架构与量化工具包之间的常见兼容性问题。",
+          "slug": "handling-model-compatibility",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4627,
+          "title": "实践：使用多种工具包量化模型",
+          "meta_title": "动手实践：比较量化工具包",
+          "meta_description": "实践环节，使用不同库量化同一LLM并比较结果。",
+          "slug": "practice-quantizing-multiple-toolkits",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 891,
+      "title": "量化大语言模型的性能评估",
+      "meta_title": "评估量化大语言模型的性能与准确性",
+      "meta_description": "评估量化大语言模型的性能、准确性和资源使用的方法。",
+      "number": 3,
+      "slug": "performance-evaluation-quantized-llms",
+      "content": "量化大语言模型旨在提升推理效率，减少计算和内存需求。然而，这个过程会引入近似处理，可能会影响模型的预测表现。本章将着重介绍评估这些影响的必要步骤。\n\n你将学习如何量化量化大语言模型的性能特点。我们将介绍评估的通用指标，包括推理延迟、吞吐量以及内存占用减少（包括磁盘占用和运行时使用）。你还将研究评估模型准确性受到的影响的方法，例如使用困惑度以及在特定下游任务上的表现等指标。将会介绍跨不同硬件平台（CPU、GPU）进行基准测试的技术以及使用相关工具的方法，从而让你分析效率提升和潜在准确性损失之间的实际权衡。",
+      "sections": [
+        {
+          "id": 4630,
+          "title": "量化模型评估指标",
+          "meta_title": "量化LLM的评估指标",
+          "meta_description": "界定合适的指标：困惑度、任务专用准确率、延迟、吞吐量、内存占用。",
+          "slug": "metrics-quantized-model-evaluation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4632,
+          "title": "衡量推理延迟和吞吐量",
+          "meta_title": "量化LLM推理速度测试",
+          "meta_description": "准确测量量化LLM推理速度（延迟和吞吐量）的方法。",
+          "slug": "measuring-inference-latency-throughput",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4634,
+          "title": "评估内存占用（磁盘和运行时）",
+          "meta_title": "衡量量化LLM的内存占用",
+          "meta_description": "测量模型在磁盘上大小缩减和峰值运行时内存占用的方法。",
+          "slug": "assessing-memory-consumption",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4636,
+          "title": "评估精度下降",
+          "meta_title": "评估量化LLM中的精度损失",
+          "meta_description": "评估量化对模型精度影响的策略，运用困惑度及下游任务。",
+          "slug": "evaluating-accuracy-degradation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4638,
+          "title": "基准测试框架与工具",
+          "meta_title": "量化大型语言模型基准测试工具",
+          "meta_description": "对旨在进行量化模型性能基准测试的工具和框架进行概述。",
+          "slug": "benchmarking-frameworks-tools",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4640,
+          "title": "目标硬件上的性能分析",
+          "meta_title": "硬件特定性能分析",
+          "meta_description": "了解量化性能在不同硬件平台（CPU、GPU）上如何变化。",
+          "slug": "analyzing-performance-target-hardware",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4642,
+          "title": "可视化性能权衡",
+          "meta_title": "量化性能权衡的可视化",
+          "meta_description": "用于可视化量化级别、性能和准确性之间关系的方法。",
+          "slug": "visualizing-performance-tradeoffs",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4644,
+          "title": "动手实践：量化大型语言模型的基准测试",
+          "meta_title": "动手实践：量化LLM性能基准测试",
+          "meta_description": "关于设置和运行基准测试以评估量化大型语言模型性能和准确度的实践会话。",
+          "slug": "practice-benchmarking-quantized-llm",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 893,
+      "title": "优化和部署量化大语言模型",
+      "meta_title": "优化和部署量化大语言模型",
+      "meta_description": "学习使用推理服务器部署量化 LLM，并结合 TensorRT-LLM 针对 GPU 等特定硬件进行优化。",
+      "number": 4,
+      "slug": "optimizing-deploying-quantized-llms",
+      "content": "在应用量化技术并评估其影响后，下一步是让这些模型投入实际使用。本章讨论有效部署量化大语言模型 (LLM) 的实际方面。\n\n您将了解与量化技术相辅相成的优化方法，例如专用内核的使用和高效的注意力机制。我们将指导您选择和使用为量化模型定制的合适部署框架，包括 Text Generation Inference (TGI)、vLLM、NVIDIA TensorRT-LLM 和 ONNX Runtime。本章还涉及硬件特定调优，尤其是针对 GPU，以及在生产环境中对这些优化模型进行容器化、扩展和监控的重要策略。结束时，您将能够选择正确的工具并为您的量化 LLM 建立有效的部署流程。",
+      "sections": [
+        {
+          "id": 4647,
+          "title": "量化后的推理优化技术",
+          "meta_title": "量化后推理优化",
+          "meta_description": "除了量化本身，还有其他技术可用于优化推理速度，例如核函数融合和高效注意力机制。",
+          "slug": "inference-optimization-post-quantization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4649,
+          "title": "选择合适的部署框架",
+          "meta_title": "选择LLM部署框架",
+          "meta_description": "适用于量化LLM的部署框架对比：TGI、vLLM、TensorRT-LLM、ONNX Runtime。",
+          "slug": "choosing-deployment-framework",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4651,
+          "title": "使用文本生成推理 (TGI) 进行部署",
+          "meta_title": "使用 TGI 部署量化大型语言模型",
+          "meta_description": "使用 Hugging Face 的文本生成推理服务器部署量化模型。",
+          "slug": "deploying-with-tgi",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4653,
+          "title": "借助 vLLM 实现高吞吐量推理",
+          "meta_title": "使用 vLLM 部署量化 LLM",
+          "meta_description": "运用 vLLM 库实现量化 LLM 的高吞吐量服务。",
+          "slug": "leveraging-vllm",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4655,
+          "title": "使用 NVIDIA TensorRT-LLM 进行 GPU 优化",
+          "meta_title": "NVIDIA TensorRT-LLM 用于量化模型",
+          "meta_description": "使用 TensorRT-LLM 优化和部署 NVIDIA GPU 上的量化 LLM，以获取最佳性能。",
+          "slug": "gpu-optimization-tensorrt-llm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4658,
+          "title": "使用ONNX Runtime进行部署",
+          "meta_title": "使用ONNX Runtime部署量化LLM",
+          "meta_description": "使用ONNX Runtime转换和部署量化模型，实现跨平台推理。",
+          "slug": "deployment-onnx-runtime",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4660,
+          "title": "容器化与扩展策略",
+          "meta_title": "量化大型语言模型的容器化与扩展",
+          "meta_description": "使用容器（Docker）打包量化大型语言模型部署和扩展策略的良好实践。",
+          "slug": "containerization-scaling-strategies",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4662,
+          "title": "监控已部署的量化模型",
+          "meta_title": "监控已部署的量化大型语言模型服务",
+          "meta_description": "监控已部署量化模型的性能、资源使用和运行状况的方法。",
+          "slug": "monitoring-deployed-quantized-models",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4664,
+          "title": "动手实操：通过推理服务器部署",
+          "meta_title": "动手实操：部署量化大语言模型服务",
+          "meta_description": "实践环节，配置推理服务器（例如TGI或vLLM），以服务量化大语言模型。",
+          "slug": "practice-deploying-inference-server",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 895,
+      "title": "应对进阶难点",
+      "meta_title": "量化LLM部署中的进阶难点",
+      "meta_description": "讨论和缓解量化LLM部署中的问题，内容包括精度恢复、离群值处理及硬件限制。",
+      "number": 5,
+      "slug": "addressing-advanced-challenges",
+      "content": "前几章已说明如何对大型语言模型（LLM）进行量化，并使用标准工具包和框架进行部署。然而，要获得理想效果，通常需要处理在实际操作中出现的一些具体且不简单的问题。本章侧重讨论这些进阶难点。\n\n您将学习解决精度下降问题的实用方法，尤其是在采用激进的低比特量化方案（例如低于$INT4$）时。我们将讲解识别和管理权重及激活值中问题离群值的方法，这些离群值会明显影响量化准确性。此外，本章将分析硬件性能和核函数可用性对性能的影响，比较静态与动态量化方法以满足不同部署需求，并介绍在量化过程中遇到问题时的系统调试方法。最后，我们将讨论如何将这些优化后的模型有效地应用到生产环境中。",
+      "sections": [
+        {
+          "id": 4666,
+          "title": "缓解低比特量化中的精度损失",
+          "meta_title": "低比特量化LLM的精度恢复",
+          "meta_description": "恢复激进（低于4比特）量化期间损失精度的先进方法。",
+          "slug": "mitigating-accuracy-loss-low-bit",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4668,
+          "title": "处理激活和权重的离群值",
+          "meta_title": "LLM量化中的离群值管理",
+          "meta_description": "识别和管理影响量化的权重与激活离群值的策略。",
+          "slug": "handling-activation-weight-outliers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4670,
+          "title": "量化特定LLM组成部分（注意力机制、归一化）",
+          "meta_title": "量化注意力与归一化层",
+          "meta_description": "应对LLM中量化注意力机制和归一化层的特定挑战。",
+          "slug": "quantizing-specific-llm-components",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4672,
+          "title": "硬件限制与内核支持",
+          "meta_title": "量化内核的硬件限制",
+          "meta_description": "了解硬件对低位算术运算和专用内核的支持与限制。",
+          "slug": "hardware-constraints-kernel-availability",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4674,
+          "title": "动态量化与静态量化的权衡",
+          "meta_title": "动态量化与静态量化在LLM中的比较",
+          "meta_description": "比较用于LLM部署情况的动态和静态量化方法。",
+          "slug": "dynamic-vs-static-quantization-tradeoffs",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4675,
+          "title": "量化问题调试",
+          "meta_title": "调试LLM量化问题",
+          "meta_description": "诊断量化引起的数值不稳定或精度问题的技术与工具。",
+          "slug": "debugging-quantization-issues",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4678,
+          "title": "将量化模型整合到生产管线中",
+          "meta_title": "量化LLM的生产环境整合",
+          "meta_description": "关于将量化模型推理整合到大型应用工作流程和MLOps管线的考量。",
+          "slug": "integrating-quantized-models-production",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4679,
+          "title": "实践：微调量化参数",
+          "meta_title": "动手实践：调整量化设置",
+          "meta_description": "实践环节，内容为调整量化参数（例如，校准数据集大小、量化方案），以平衡准确性和性能。",
+          "slug": "practice-finetuning-quantization-parameters",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

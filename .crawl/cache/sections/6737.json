@@ -1,0 +1,61 @@
+{
+  "id": 6737,
+  "title": "迭代规划与提示调整下的重新规划",
+  "meta_title": "智能体动态重新规划的提示方法",
+  "meta_description": "为智能体制定提示策略，使其在面对新的信息或遇到的问题时，能够迭代优化计划并进行重新规划。",
+  "content": "<p>在智能体运行的动态环境中，最初的计划，无论制定得多么精心，通常都需要修改。意想不到的阻碍、新的信息或工具执行中的失败都可能导致计划的部分内容过时或不够理想。这时，迭代规划和重新规划就显得十分必要。您制定提示来引导智能体进行这些调整的能力，对于构建有韧性且高效的智能体系统具有基础作用。本节主要介绍提示工程 (prompt engineering)技术，这些技术使智能体能够根据不断变化的情况调整其计划。</p>\n<h3>自适应规划的必要性</h3>\n<p>在复杂数字环境中执行任务的智能体，很少有完美可预测的路径。某个网络服务可能不可用，某个数据源可能返回意外结果，或者用户可能在任务进行中引入新的限制。如果无法重新规划，智能体要么失败，要么产生不相关的结果。迭代规划使智能体能够：</p>\n<ul>\n<li><strong>应对失败：</strong> 如果某个规划步骤失败（例如，工具错误），智能体需要找到替代方案。</li>\n<li><strong>采纳新的信息：</strong> 新的数据可能会显现更高效的路径或使当前假设失效。</li>\n<li><strong>动态优化：</strong> 随着任务的进展，可能会出现改进的机会或捷径。</li>\n</ul>\n<p>提示是您（开发者）指示智能体如何处理这些情况的主要机制。</p>\n<h3>使用提示触发并引导重新规划</h3>\n<p>当智能体遇到需要偏离其当前计划的情况时，会使用一种特定类型的提示，通常称为重新规划提示。此提示的目的是为智能体提供必要的上下文 (context)和指示，以生成修订后的计划。</p>\n<p>一个有效的重新规划提示的主要组成部分包括：</p>\n<ol>\n<li><strong>原始目标：</strong> 强调总体目标，以确保重新规划工作保持一致。</li>\n<li><strong>当前计划状态：</strong> 详细说明原始计划、已完成的步骤以及哪个步骤遇到了问题。</li>\n<li><strong>问题描述：</strong> 清楚说明触发重新规划的错误、新信息或阻碍。这可能是来自工具的错误信息、来自传感器的反馈或来自用户的新输入。</li>\n<li><strong>相关上下文历史：</strong> 包括任何近期观察或短期记忆项，这些可能影响重新规划决策。</li>\n<li><strong>重新规划的具体指示：</strong> 引导大语言模型 (LLM)如何进行重新规划任务。这可能包括要求它：\n<ul>\n<li>分析失败的原因。</li>\n<li>提出替代行动或子目标。</li>\n<li>考虑修订计划的具体限制或偏好。</li>\n<li>如果存在多个解决方案，评估取舍。</li>\n</ul>\n</li>\n</ol>\n<p>以下是重新规划提示模板的示例结构。</p>\n<pre><code># 重新规划提示模板示例\n# 这将在运行时填充实际数据。\n\noriginal_goal = \"预订下周一从纽约到伦敦的经济舱航班，预算500美元。\"\nprevious_plan_steps = [\n    \"1. 在航空公司X上搜索航班（已完成）\",\n    \"2. 确定500美元以下的合适航班（已完成）\",\n    \"3. 尝试预订航班AX123（失败）\"\n]\ncurrent_step_action = \"尝试预订航班AX123\"\nerror_message = \"航空公司X API 返回: '所选价格的座位不可用'。\"\nnew_information = \"用户表示如果直飞航班，愿意考虑高达550美元的航班。\"\n\nre_planning_prompt = f\"\"\"\n系统: 智能体重新规划模块\n\n原始目标: {original_goal}\n\n先前计划执行:\n{chr(10).join(previous_plan_steps)}\n\n尝试的当前步骤: {current_step_action}\n结果/错误: {error_message}\n新的相关信息: {new_information}\n\n任务:\n当前预订航班AX123的计划因所需价格下无可用座位而失败。\n1. 分析情况。\n2. 提出一个修订后的计划，以实现预订航班的原始目标。\n3. 您的修订计划应考虑关于直飞航班预算灵活性的新信息。\n4. 如果出现多个选项，如果直飞航班符合调整后的预算，则优先选择直飞航班。否则，在原始500美元预算内找到最便宜的选项，可能是在不同的航空公司或包含中转的航班。\n5. 清晰列出您修订计划的步骤。\n\n修订计划:\n\"\"\"\n</code></pre>\n<p>此提示不仅仅是提出问题；它还积极引导智能体的思考过程以生成解决方案。这里的“提示调整”是指实时构建这些定制的提示，用具体、当前的信息调整基本模板，以应对即时的重新规划需求。</p>\n<h3>迭代规划提示的策略</h3>\n<p>有几种策略可以使您的重新规划提示更有效：</p>\n<ul>\n<li>\n<p><strong>范围化重新规划：</strong> 您可以指示智能体只专注于修改计划中必要的部分，而不是要求智能体从头开始重新规划所有内容。这可以节省计算资源，并保持计划中仍然有效的部分的稳定。</p>\n<ul>\n<li>示例：“只修订接下来的1-2个步骤以克服此阻碍。如果可能，计划的后续部分应保持不变。”</li>\n</ul>\n</li>\n<li>\n<p><strong>明确要求提供理由：</strong> 要求智能体解释其修订计划的推理 (inference)有助于调试，并鼓励生成更具逻辑性的计划。</p>\n<ul>\n<li>示例：“对于修订计划中的每个步骤，请简要说明选择它的原因以及它如何处理问题。”</li>\n</ul>\n</li>\n<li>\n<p><strong>提供备选方案或提示：</strong> 如果某些失败是常见或有已知解决方案的，您可以直接在提示中嵌入 (embedding)建议或首选备选策略。</p>\n<ul>\n<li>示例：“如果查询数据库A失败，请尝试数据库B作为替代方案，然后再报告未能找到信息。”</li>\n</ul>\n</li>\n<li>\n<p><strong>管理重新规划的深度：</strong> 对于复杂问题，智能体可能陷入深度重新规划循环。如果重新规划在一定次数尝试后失败，您可以引入限制或标准来升级问题。</p>\n<ul>\n<li>示例：“如果这是针对此特定子任务的第三次重新规划尝试，并且没有找到可行的解决方案，请报告僵局并列出未解决的限制。”</li>\n</ul>\n</li>\n</ul>\n<p>以下图表说明了智能体的执行周期流程，突出显示了迭代规划和重新规划如何融入其中。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1pflg57\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled\", fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\"]; edge [fontname=\"Arial\", fontsize=9]; bgcolor=\"transparent\"; Start [label=\"智能体接收目标\", shape=ellipse, fillcolor=\"#d0bfff\"]; InitialPlan [label=\"1. 制定初始计划\\n(提示引导)\", fillcolor=\"#a5d8ff\"]; ExecuteStep [label=\"2. 执行当前计划步骤\", fillcolor=\"#96f2d7\"]; MonitorOutcome [label=\"3. 监控结果与环境\", fillcolor=\"#ffec99\"]; Evaluate [label=\"4. 评估结果\", shape=diamond, fillcolor=\"#eebefa\", width=2.5, height=1.2]; RePlanPrompt [label=\"5a. 构建重新规划提示\\n(上下文: 问题, 当前计划, 目标)\", fillcolor=\"#ffd8a8\", shape=note]; AdjustPlan [label=\"5b. 调整/生成新的计划片段\\n(大语言模型处理重新规划提示)\", fillcolor=\"#ffc9c9\"]; End [label=\"任务完成 / 目标达成\", shape=ellipse, fillcolor=\"#b2f2bb\"]; Start -> InitialPlan; InitialPlan -> ExecuteStep [label=\" 新计划 \"]; ExecuteStep -> MonitorOutcome; MonitorOutcome -> Evaluate; Evaluate -> ExecuteStep [label=\"  结果正常,\\n  下一步  \", color=\"#37b24d\"]; Evaluate -> RePlanPrompt [label=\" 检测到问题  \", color=\"#f03e3e\"]; RePlanPrompt -> AdjustPlan; AdjustPlan -> ExecuteStep [label=\" 修订计划 \", color=\"#f03e3e\"]; Evaluate -> End [label=\"  计划完成,\\n  目标达成  \", color=\"#37b24d\"]; {rank=same; InitialPlan; AdjustPlan;} {rank=same; ExecuteStep; RePlanPrompt;} }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1pflg57\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>智能体的执行周期。如果某个步骤的结果（4）不如预期，则构建重新规划提示（5a）。此提示包含目标、当前计划和问题，引导大语言模型 (LLM)调整计划（5b），然后反馈到执行循环中。</p>\n</blockquote>\n<h3>自适应规划的考量</h3>\n<p>在设计迭代规划和重新规划的提示时，请牢记以下几点：</p>\n<ul>\n<li><strong>失败/变化的清晰度：</strong> 智能体需要关于哪里出错了或发生了什么变化的明确信息。您提示中模糊的错误报告将导致模糊或不正确的重新规划。</li>\n<li><strong>平衡自主性与引导：</strong> 提示应提供足够的引导，以确保重新规划富有成效，但也要允许智能体一定的灵活性以找到有创意的解决方案。过度规定性的提示会抑制大语言模型 (LLM)的解决问题能力。</li>\n<li><strong>资源消耗：</strong> 重新规划，特别是如果涉及对大语言模型的多次调用，会消耗令牌和时间。可以设计提示来鼓励高效的重新规划，例如，通过要求最少必要的更改。</li>\n<li><strong>状态管理：</strong> 确保智能体的内部状态（它知道什么，它尝试了什么）在重新规划过程中得到准确反映或可供访问。这对于避免重复失败或循环很重要。</li>\n</ul>\n<p>通过掌握迭代规划和重新规划的提示，您可以使您的AI智能体能够更有效地应对任务的复杂性和不确定性。这种适应性是更高级智能体系统的一个标志，使其能够从挫折中恢复并动态调整其策略以实现其目标。后续章节将基于这些规划能力，研究智能体如何评估其计划的质量以及管理整体任务执行。</p>",
+  "slug": "iterative-planning-re-planning-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 18544,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "ICLR",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.48550/arXiv.2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了大型语言模型结合推理和行动的范式，使其能够通过迭代生成推理轨迹和特定任务行动来解决复杂任务。它为自适应智能体行为奠定了基础。",
+      "order": 1,
+      "created_at": "2025-09-06T12:28:50.769584Z",
+      "updated_at": "2025-09-11T08:24:36.817440Z"
+    },
+    {
+      "id": 18546,
+      "title": "Artificial Intelligence: A Modern Approach",
+      "author": "Stuart Russell and Peter Norvig",
+      "year": "2020",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aima.cs.berkeley.edu/",
+      "doi": "",
+      "note": "一本基础教材，涵盖了智能体、规划（包括执行监控和重新规划）以及问题解决，为智能体系统提供了必要的背景。（第四版）",
+      "order": 3,
+      "created_at": "2025-09-06T12:28:50.790744Z",
+      "updated_at": "2025-09-11T08:24:31.769375Z"
+    },
+    {
+      "id": 18547,
+      "title": "Voyager: An Open-Ended Embodied Agent with Large Language Models",
+      "author": "Guanzhi Wang, Yuqi Xie, Yunfan Jiang, Ajay Mandlekar, Chaowei Xiao, Yuke Zhu, Linxi Fan, Anima Anandkumar",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2305.16291",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.16291",
+      "doi": "10.48550/arXiv.2305.16291",
+      "note": "展示了一个由大型语言模型驱动的具身智能体，能够通过迭代提示、反思和自动化课程在复杂、开放式环境中持续学习和技能习得，展示了自适应规划。",
+      "order": 4,
+      "created_at": "2025-09-06T12:28:50.795145Z",
+      "updated_at": "2025-09-11T08:24:30.763126Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

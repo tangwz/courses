@@ -1,0 +1,45 @@
+{
+  "id": 5154,
+  "title": "构建自定义链",
+  "meta_title": "构建自定义链 | LangChain进阶",
+  "meta_description": "根据特定工作流需求开发自己的自定义链逻辑。",
+  "content": "<p>尽管LangChain提供了诸如<code>LLMChain</code>和<code>SequentialChain</code>等几种有用的预设链，但你经常会遇到应用程序需要更符合需求的系列操作或连接组件的特定逻辑的情况。此时，构建自定义链就变得必要。你可能需要：</p>\n<ul>\n<li>在LLM调用之间整合自定义数据转换步骤。</li>\n<li>根据中间结果实现条件逻辑。</li>\n<li>以特定方式组合来自多个组件的输出。</li>\n<li>创建带有非线性数据流的链。</li>\n</ul>\n<p>在现代LangChain中，构建自定义链最灵活和推荐的方式是使用<strong>LangChain表达式语言（LCEL）</strong>。LCEL提供了一种声明式方法，通过反映数据流的语法将不同组件组合起来。</p>\n<h3>使用LangChain表达式语言（LCEL）进行组合</h3>\n<p>LCEL围绕<code>Runnable</code>协议构建。大多数LangChain组件，例如LLM封装器、提示模板和输出解析器，都实现了此协议。LCEL中的基本操作是通过管道（<code>|</code>）将组件连接起来。当你将组件A通过管道输入到组件B（<code>A | B</code>）时，A的输出会自动作为B的输入传递。</p>\n<p>让我们用一个建立在第四章原理之上的简单例子来说明。假设我们想要一个链，它接收一个主题，生成一个关于该主题的技术问题，然后使用另一次LLM调用对生成的那个问题提供简洁的回答。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate\nfrom langchain_core.output_parsers import StrOutputParser\nfrom langchain_core.runnables import RunnablePassthrough\n\n# 假设OPENAI_API_KEY已在环境变量中设置\n# 初始化模型\nmodel = ChatOpenAI(model=\"gpt-3.5-turbo\")\nqa_model = ChatOpenAI(model=\"gpt-4\") # 使用可能更强大的模型进行问答\n\n# 1. 生成问题的提示\nprompt_generate_question = ChatPromptTemplate.from_template(\n    \"生成一个关于主题的简洁技术问题：{topic}\"\n)\n\n# 2. 回答生成问题的提示\nprompt_answer_question = ChatPromptTemplate.from_template(\n    \"请对以下问题提供简明清晰的回答：\\n\"\n    \"问题：{generated_question}\\n\"\n    \"回答：\"\n)\n\n# 3. 使用LCEL定义自定义链\n#    第二个提示需要原始主题和生成的问题。\n#    RunnablePassthrough会将输入{'topic': '...'}传递下去。\n#    RunnableParallel会执行分支并将结果收集到字典中。\n\nchain = (\n    {\"generated_question\": prompt_generate_question | model | StrOutputParser(),\n     \"topic\": RunnablePassthrough()} # 传递原始主题\n    | prompt_answer_question\n    | qa_model\n    | StrOutputParser()\n)\n\n# 链的输入\ntopic_input = {\"topic\": \"vector databases\"}\n\n# 调用链\nresult = chain.invoke(topic_input)\n\nprint(f\"Topic: {topic_input['topic']}\")\n# 示例输出（会有所不同）：\n# 生成的问题（中间结果，非链直接输出）：向量数据库用于相似性搜索的主要机制是什么？\nprint(f\"Generated Answer:\\n{result}\")\n# 示例输出（会有所不同）：\n# 生成的回答：\n# 向量数据库用于相似性搜索的主要机制是近似最近邻（ANN）算法。这些算法能高效地在高维空间中找到与给定查询向量最接近（最相似）的向量，而无需将查询与数据库中的每个向量进行比较。\n</code></pre>\n<p>在这个例子中：</p>\n<ol>\n<li>我们定义了两个独立的提示模板和LLM实例。</li>\n<li>我们使用<code>RunnableParallel</code>（由字典结构<code>{...}</code>表示）来运行两个分支：\n<ul>\n<li>第一个分支（<code>prompt_generate_question | model | StrOutputParser()</code>）基于输入<code>topic</code>生成问题。</li>\n<li>第二个分支（<code>RunnablePassthrough()</code>）简单地将原始输入字典（包含<code>topic</code>）传递下去。</li>\n</ul>\n</li>\n<li>这些并行分支的结果被收集到一个字典中：<code>{'generated_question': '...', 'topic': '...'}</code>。</li>\n<li>这个字典随后通过管道（<code>|</code>）传入<code>prompt_answer_question</code>，它使用这两个键。</li>\n<li>格式化的提示传递给<code>qa_model</code>，其输出由<code>StrOutputParser</code>解析。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1voe521\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#adb5bd\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n  input [label=\"输入\\n{&#39;topic&#39;: ...}\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  pass [label=\"RunnablePassthrough\", color=\"#1c7ed6\"];\n  prompt1 [label=\"prompt_generate_question\", color=\"#1c7ed6\"];\n  model1 [label=\"模型\\n(gpt-3.5-turbo)\", color=\"#748ffc\"];\n  parser1 [label=\"StrOutputParser\", color=\"#91a7ff\"];\n  \n  parallel [label=\"RunnableParallel\\n(字典)\", shape= Mdiamond, color=\"#f76707\"];\n  \n  prompt2 [label=\"prompt_answer_question\", color=\"#1c7ed6\"];\n  model2 [label=\"问答模型\\n(gpt-4)\", color=\"#748ffc\"];\n  parser2 [label=\"StrOutputParser\", color=\"#91a7ff\"];\n  output [label=\"最终回答\\n(字符串)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n\n  input -> parallel [label=\"{&#39;topic&#39;: ...}\"];\n  parallel -> prompt1 [label=\"主题\"];\n  parallel -> pass [label=\"{&#39;topic&#39;: ...}\"];\n  \n  prompt1 -> model1;\n  model1 -> parser1;\n  \n  parser1 -> prompt2 [label=\"生成的问题\"];\n  pass -> prompt2 [label=\"主题\"];\n  \n  prompt2 -> model2;\n  model2 -> parser2;\n  parser2 -> output;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1voe521\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用LCEL结合问题生成和回答的自定义链的数据流。</p>\n</blockquote>\n<h3>整合自定义Python函数</h3>\n<p>LCEL链不限于LangChain组件。你可以整合你自己的Python函数。LangChain会自动将LCEL序列中传递的标准Python函数封装成<code>RunnableLambda</code>。</p>\n<p>让我们对之前的例子稍作修改。假设在生成问题后，我们想在将其传递给回答提示之前，使用一个Python函数添加一个自定义前缀。</p>\n<pre><code class=\"language-python\"># ... （导入和模型定义保持不变） ...\n\n# 自定义Python函数\ndef add_question_prefix(question_text):\n  print(f\"--- Applying custom prefix ---\") # 仅作演示\n  return f\"Technical Query: {question_text}\"\n\n# 使用自定义函数定义链\nchain_with_custom_func = (\n    {\"intermediate_question\": prompt_generate_question | model | StrOutputParser(),\n     \"topic\": RunnablePassthrough()}\n    | RunnableParallel(\n        generated_question=lambda x: add_question_prefix(x[\"intermediate_question\"]), # 应用函数\n        topic=lambda x: x[\"topic\"] # 传递主题\n      )\n    | prompt_answer_question # 期望输入'generated_question'和'topic'\n    | qa_model\n    | StrOutputParser()\n)\n\n# 调用修改后的链\nresult_custom = chain_with_custom_func.invoke(topic_input)\n\nprint(f\"Topic: {topic_input['topic']}\")\n# 示例输出（会有所不同）：\n# --- Applying custom prefix ---\nprint(f\"Generated Answer (with custom func):\\n{result_custom}\")\n# 示例输出（会有所不同）：\n# 生成的回答（带自定义函数）：\n# 向量数据库用于相似性搜索的主要机制是近似最近邻（ANN）算法。这些算法能高效地在高维空间中找到与给定查询向量最接近（最相似）的向量，通常使用哈希或基于图的索引等技术，而无需穷尽地与每个条目进行比较。\n</code></pre>\n<p>在这里，我们在<code>RunnableParallel</code>中使用了一个<code>lambda</code>函数来调用<code>add_question_prefix</code>函数。LangChain在后台处理将其封装成<code>RunnableLambda</code>，使得整合过程很流畅。</p>\n<h3>旧方法：继承<code>Chain</code></h3>\n<p>在LCEL成为标准之前，创建自定义链的主要方式是继承<code>langchain.chains.base.Chain</code>。这包括：</p>\n<ol>\n<li>定义<code>input_keys</code>（一个预期输入变量名的列表）。</li>\n<li>定义<code>output_keys</code>（一个链将输出的变量名列表）。</li>\n<li>实现<code>_call</code>方法，它包含链的核心逻辑，接收输入并返回一个输出字典。</li>\n</ol>\n<p>尽管仍然可用，但对于大多数常见的工作流模式而言，继承通常比使用LCEL更冗长且组合性更差。对于需要复杂内部状态管理或其逻辑不易被LCEL轻松建模为顺序或并行流的链，它可能仍然可以考虑。然而，对于构建大多数自定义工作流，LCEL提供了一种更优雅且易于维护的解决方案。</p>\n<p>构建自定义链，特别是使用LCEL，使你能够对LLM工作流进行细致控制，从而构建精确满足需求的复杂应用程序。这种可组合性是突破简单提示-响应交互时的一个显著优势。</p>",
+  "slug": "building-custom-langchain-chains",
+  "updates": [],
+  "references": [
+    {
+      "id": 13126,
+      "title": "LangChain Expression Language (LCEL)",
+      "author": "LangChain Contributors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/expression_language/",
+      "doi": "",
+      "note": "LangChain 表达式语言的官方文档，详细介绍了其核心概念、`Runnable` 协议以及组合自定义 LLM 链的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:28:30.933383Z",
+      "updated_at": "2025-09-09T03:25:27.052950Z"
+    },
+    {
+      "id": 13127,
+      "title": "Hands-On Large Language Models with LangChain: Build real-world LLM applications with LangChain, OpenAI, and Hugging Face",
+      "author": "Subhash Patankar",
+      "year": "2023",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/hands-on-large-language-models-with-langchain/9781832402120",
+      "doi": "",
+      "note": "一本使用 LangChain 构建真实世界 LLM 应用的实用指南，涵盖了构建复杂工作流和自定义链的高级技术。",
+      "order": 2,
+      "created_at": "2025-09-05T08:28:30.940963Z",
+      "updated_at": "2025-09-09T03:25:27.356263Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5686,
+  "title": "简单场景的渲染入门",
+  "meta_title": "简单三维场景的渲染",
+  "meta_description": "简要介绍使用三维模型和渲染创建合成图像的思路（基础层面）。",
+  "content": "<p>尽管直接放置形状或应用噪点来创建图像可能有用，但有时我们需要生成能表示更有结构、即使是简单环境的图像。设想一下您需要桌上积木在不同光照条件下的图像，或者带有简单汽车模型的普通街道场景。这时就需要用到渲染了。</p>\n<p>渲染是计算机根据三维场景描述生成二维图像的过程。可以把它想成搭建一个带有物体、光源和摄像机的微缩模型，然后拍照。渲染软件兼具搭建者和摄影师的双重身份。</p>\n<h3>简单渲染场景的构成要素</h3>\n<p>即使要创建基本的渲染图像，软件也需要一些必要的输入：</p>\n<ol>\n<li><strong>三维模型：</strong> 这些是场景中物体的数字表现。对于简单场景，它们可能是基本的几何形状，如立方体、球体、圆柱体，或者稍微复杂一些的预定义模型（如基本的汽车形状）。这些模型定义物体的几何形态，即实际的形状和大小。</li>\n<li><strong>摄像机：</strong> 就像真实摄像机一样，虚拟摄像机决定了您从<em>哪里</em>看和看到<em>什么</em>。它确定了视角、方向、视野（广角与变焦）以及最终图像的透视效果。通过改变摄像机的位置和设置，您可以从不同角度生成同一场景的图像。</li>\n<li><strong>光源：</strong> 没有光，您的场景将完全黑暗。光源照亮物体。简单场景可能使用：\n<ul>\n<li><em>环境光：</em> 一般的、无方向的光，使所有物体稍微亮一些。</li>\n<li><em>平行光：</em> 模拟遥远的光源，如太阳，投射平行光线并形成清晰的阴影。</li>\n<li><em>点光源：</em> 从一个点向所有方向发出光，像一个裸露的灯泡。\n光源的类型、位置、强度和颜色显著影响最终图像的外观，包括亮度、对比度和阴影。</li>\n</ul>\n</li>\n<li><strong>材质（基础）：</strong> 物体需要表面属性。至少包括颜色。更高级的材质可以定义光泽度、粗糙度，甚至可以将二维图像（纹理）应用到三维模型的表面以增加细节（如木纹或砖块图案）。对于简单场景，我们通常从基本的纯色开始。</li>\n</ol>\n<h3>渲染如何运作（总体情况）</h3>\n<p>渲染软件接收所有这些组成部分——模型、摄像机设置、光源和材质属性，并执行计算以确定最终二维图像中每个像素的颜色。它计算出从摄像机角度看，每个像素处哪个物体表面可见，以及根据照射到其上的光线和其材质属性，该表面应呈现何种外观。</p>\n<p>常见方法包括以下技术：</p>\n<ul>\n<li><strong>光栅化：</strong> 常用于实时图形（如游戏）。它将三维模型投影到二维屏幕上，并确定像素颜色。</li>\n<li><strong>光线追踪：</strong> 模拟从摄像机返回场景的光线路径以确定颜色。它可以产生更逼真的光照效果，如精确的阴影和反射，但计算量通常更大。</li>\n</ul>\n<p>对于入门学习，您无需了解这些方法的深奥数学原理。关键在于明白渲染是一个将三维场景描述转换为二维图像的计算过程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-a4mh32\" \n              data-graph-definition='digraph G {\n    bgcolor=\"transparent\";\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\", margin=0.2];\n    edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n    Models [label=\"三维模型\n（例如：立方体、球体）\", fillcolor=\"#a5d8ff\"];\n    Camera [label=\"虚拟摄像机\n（位置、角度）\", fillcolor=\"#bac8ff\"];\n    Lights [label=\"光源\n（位置、类型）\", fillcolor=\"#ffec99\"];\n    Materials [label=\"表面属性\n（颜色、纹理）\", fillcolor=\"#b2f2bb\"];\n\n    Renderer [label=\"渲染引擎\n（软件）\", shape=cylinder, fillcolor=\"#ced4da\"];\n\n    Image [label=\"二维合成图像\", shape=note, fillcolor=\"#ffc9c9\"];\n    Labels [label=\"自动标注\n（例如：边界框、\n语义分割掩码）\", shape=note, fillcolor=\"#d8f5a2\"];\n\n    Models -> Renderer;\n    Camera -> Renderer;\n    Lights -> Renderer;\n    Materials -> Renderer;\n\n    Renderer -> Image;\n    Renderer -> Labels;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-a4mh32\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图表展示了渲染引擎处理的输入（三维模型、摄像机、光源、材质），以生成合成二维图像及相应的标注。</p>\n</blockquote>\n<h3>为何使用渲染生成合成数据？</h3>\n<p>渲染在生成合成图像数据方面有重要优势，尤其是与更简单的方法相比：</p>\n<ul>\n<li><strong>高控制度：</strong> 您对场景的每一个方面都有精确控制。您可以将物体精确放置到您想要的位置，设置特定的光照条件，选择精确的摄像机角度，并通过编程方式改变物体属性。</li>\n<li><strong>自动真实标签：</strong> 这是一个主要优点。因为是您<em>创建</em>的场景，渲染系统精确知晓图像中有什么、它们在哪里、属于哪个类别等。这意味着您可以自动生成完美的像素级标注，例如：\n<ul>\n<li>用于物体检测的边界框。</li>\n<li>分割掩码（哪些像素属于哪个物体）。</li>\n<li>深度图（每个像素与摄像机的距离）。</li>\n<li>物体姿态（三维位置和方向）。\n\"    为图像生成如此精确的标注通常耗时且昂贵。\"</li>\n</ul>\n</li>\n<li><strong>可扩展性和多样性：</strong> 一旦设置好基本场景，通过编程方式改变参数 (parameter)，如物体位置、纹理、光照强度或方向以及摄像机视角，相对容易生成数千甚至数百万种变体。这有助于为机器学习 (machine learning)模型创建所需的多样化数据集。</li>\n<li><strong>复杂情境：</strong> 渲染允许您创建在现实中难以获取、危险或成本高昂的场景图像，例如自动驾驶系统中特定类型的事故或罕见的医疗状况。</li>\n</ul>\n<h3>从简单开始</h3>\n<p>尽管渲染可以创建高度复杂和逼真的图像（想想现代视频游戏或电影中的特效），但从<em>简单</em>场景入手是相当可行的。您可以从渲染具有统一颜色的基本形状（如立方体和球体）开始，并在简单光照下进行。这对于训练模型识别形状或估计其位置等任务已经有用，尤其因为您可以免费获得完美的标注。</p>\n<p>常见的渲染工具包括Blender的Python API（允许您通过脚本控制流行的开源三维建模软件）等库，以及Unity和虚幻引擎等游戏引擎，它们提供复杂的环境，用于创建交互式三维场景并从中渲染图像或视频。我们将在课程后面介绍一些工具。</p>\n<p>请记住，创建与真实照片<em>难以区分</em>的合成图像是一个重大挑战，通常需要建模、纹理、光照和渲染方面的高级技术。然而，对于许多机器学习 (machine learning)任务，即使是简单渲染的图像也能提供很大价值，特别是由于可以轻松生成大量完美标注的数据。我们将在下一节讨论实现高真实度的难点。</p>",
+  "slug": "intro-rendering-simple-scenes",
+  "updates": [],
+  "references": [
+    {
+      "id": 16052,
+      "title": "Fundamentals of Computer Graphics",
+      "author": "Steve Marschner, Peter Shirley",
+      "year": "2015",
+      "publisher": "CRC Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Fundamentals_of_Computer_Graphics_4th_Ed.html?id=o12ODAAAQBAJ",
+      "doi": "",
+      "note": "涵盖了3D渲染的基础概念，包括模型、相机、光照、材质、光栅化和光线追踪。",
+      "order": 1,
+      "created_at": "2025-09-06T10:59:12.027968Z",
+      "updated_at": "2025-09-10T13:13:15.007141Z"
+    },
+    {
+      "id": 16053,
+      "title": "A Survey on Synthetic Data Generation, from Algorithms to Applications",
+      "author": "Yaoyao Liu, Jinliang Deng, Fan Luo, Yunpeng Li, Yang Li, Peng Ding, and Haifeng Li",
+      "year": "2023",
+      "publisher": "Springer",
+      "journal": "Artificial Intelligence Review",
+      "volume": "56",
+      "pages": "11149-11179",
+      "url": "https://link.springer.com/article/10.1007/s10462-023-10499-5",
+      "doi": "10.1007/s10462-023-10499-5",
+      "note": "提供了合成数据生成方法的全面概览，包括基于渲染的方法，并讨论了它们在机器学习中的应用。",
+      "order": 2,
+      "created_at": "2025-09-06T10:59:12.062281Z",
+      "updated_at": "2025-09-10T13:13:09.756903Z"
+    },
+    {
+      "id": 16054,
+      "title": "Foundations of 3D Computer Graphics",
+      "author": "Steven J. Gortler",
+      "year": "2012",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "xvi, 273 pages",
+      "url": "https://www.3dgraphicsfoundations.com/",
+      "doi": "10.5860/choice.50-4481",
+      "note": "提供了3D计算机图形核心原则的易懂介绍，涵盖场景设置、模型、相机、光照和渲染。",
+      "order": 3,
+      "created_at": "2025-09-06T10:59:12.065235Z",
+      "updated_at": "2025-09-10T13:12:57.564577Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

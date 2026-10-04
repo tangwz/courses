@@ -1,0 +1,61 @@
+{
+  "id": 1159,
+  "title": "分析分类变量：频数统计",
+  "meta_title": "分类数据的频数统计",
+  "meta_description": "使用Pandas计算分类变量的频数分布和计数。",
+  "content": "<p>虽然数值变量适合通过均值、中位数和标准差等统计量进行分析，但分类变量则需要不同的方法。由于计算“平均”类别没有意义，我们转而关注变量中不同类别之间观测值的分布。汇总这种分布的主要方式是计算频数。</p>\n<p>频数告诉我们数据集中每个唯一类别出现的次数。这种简单的计数对于理解分类数据非常重要。它有助于发现：</p>\n<ul>\n<li>最常见和最不常见的类别。</li>\n<li>数据在各类别的整体分布情况。</li>\n<li>潜在的数据录入错误或意外的类别值。</li>\n<li>某些类别是否在数据集中占主导地位。</li>\n</ul>\n<h3>使用Pandas计算频数</h3>\n<p>总结分类变量分布的主要方法是计算频数。Pandas提供了一个专门用于此目的的便捷方法：<code>value_counts()</code>。当应用于Pandas Series（例如DataFrame的单列）时，它会返回一个新的Series，该Series的索引是原始Series中的唯一值，对应的值是这些唯一值的频数（计数）。默认情况下，结果按频数降序排列，便于我们先看到最常见的类别。</p>\n<p>假设我们有一个名为<code>df</code>的DataFrame，其中包含一个名为<code>customer_segment</code>的列，该列存储分类数据。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 示例DataFrame\ndata = {'customer_segment': ['Standard', 'Premium', 'Standard', 'VIP', 'Premium', 'Standard', 'Standard', np.nan, 'Premium']}\ndf = pd.DataFrame(data)\n\nprint(\"示例DataFrame:\")\nprint(df)\n\n# 计算'customer_segment'的频数\nsegment_counts = df['customer_segment'].value_counts()\n\nprint(\"\\ncustomer_segment的频数统计:\")\nprint(segment_counts)\n</code></pre>\n<p>运行这段代码将产生类似于以下的输出：</p>\n<pre><code>Sample DataFrame:\n  customer_segment\n0         Standard\n1          Premium\n2         Standard\n3              VIP\n4          Premium\n5         Standard\n6         Standard\n7              NaN\n8          Premium\n\nFrequency Counts for customer_segment:\nStandard    4\nPremium     3\nVIP         1\nName: customer_segment, dtype: int64\n</code></pre>\n<p>注意<code>value_counts()</code>如何自动处理不同类别（'Standard'、'Premium'、'VIP'），统计它们的出现次数，并进行排序。它也默认排除缺失值（<code>NaN</code>）。</p>\n<h3>相对频数（比例）</h3>\n<p>尽管绝对计数很有用，但有时了解每个类别相对于非缺失观测值总数的比例或百分比会提供更多信息。这被称为相对频数。它有助于比较不同大小数据集间的分布情况。</p>\n<p>要使用<code>value_counts()</code>获取相对频数，可以使用<code>normalize=True</code>参数 (parameter)。</p>\n<pre><code class=\"language-python\"># 计算相对频数（比例）\nsegment_proportions = df['customer_segment'].value_counts(normalize=True)\n\nprint(\"\\ncustomer_segment的相对频数（比例）:\")\nprint(segment_proportions)\n\n# 以百分比形式显示\nsegment_percentages = df['customer_segment'].value_counts(normalize=True) * 100\nprint(\"\\ncustomer_segment的相对频数（百分比）:\")\nprint(segment_percentages.round(2).astype(str) + '%') # 更好的格式化\n</code></pre>\n<p>输出会是这样：</p>\n<pre><code>Relative Frequencies (Proportions) for customer_segment:\nStandard    0.500\nPremium     0.375\nVIP         0.125\nName: customer_segment, dtype: float64\n\nRelative Frequencies (Percentages) for customer_segment:\nStandard    50.0%\nPremium     37.5%\nVIP         12.5%\nName: customer_segment, dtype: object\n</code></pre>\n<p>这表示在非缺失条目中，50%是'Standard'，37.5%是'Premium'，12.5%是'VIP'。</p>\n<h3>在计数中包含缺失值</h3>\n<p>如前所述，<code>value_counts()</code>默认忽略缺失值（<code>NaN</code>）。在EDA中，了解分类变量存在多少缺失值通常很重要。您可以通过将<code>dropna</code>参数 (parameter)设置为<code>False</code>，将<code>NaN</code>值包含在计数中。</p>\n<pre><code class=\"language-python\"># 计算包含NaN值的频数\nsegment_counts_incl_na = df['customer_segment'].value_counts(dropna=False)\n\nprint(\"\\ncustomer_segment的频数统计（包含NaN）:\")\nprint(segment_counts_incl_na)\n\n# 计算包含NaN值的比例\nsegment_proportions_incl_na = df['customer_segment'].value_counts(normalize=True, dropna=False)\n\nprint(\"\\ncustomer_segment的相对频数（包含NaN）:\")\nprint(segment_proportions_incl_na)\n</code></pre>\n<p>输出现在包含缺失值的计数和比例：</p>\n<pre><code>Frequency Counts (including NaN) for customer_segment:\nStandard    4\nPremium     3\nVIP         1\nNaN         1\nName: customer_segment, dtype: int64\n\nRelative Frequencies (including NaN) for customer_segment:\nStandard    0.444444\nPremium     0.333333\nVIP         0.111111\nNaN         0.111111\nName: customer_segment, dtype: float64\n</code></pre>\n<p>分析频数和比例提供了对每个分类变量分布的坚实定量认识。这些数值汇总构成了下一个合理步骤的依据：使用条形图等工具可视化这些分布，我们将在稍后介绍。</p>",
+  "slug": "categorical-frequency-counts",
+  "updates": [],
+  "references": [
+    {
+      "id": 397,
+      "title": "pandas.Series.value_counts",
+      "author": "Wes McKinney and the pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.Series.value_counts.html",
+      "doi": "",
+      "note": "Pandas `value_counts()` 方法的官方文档，解释了其在 Series 频率分析中的用法和参数。",
+      "order": 1,
+      "created_at": "2025-09-04T14:28:04.341398Z",
+      "updated_at": "2025-09-07T16:14:34.109900Z"
+    },
+    {
+      "id": 398,
+      "title": "An Introduction to Statistical Learning: With Applications in Python",
+      "author": "Gareth James, John H. Harland Dean, Daniela Witten, Trevor Hastie, Rob Tibshirani, Jonathan Taylor",
+      "year": "2023",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "",
+      "note": "从统计学角度深入阐述描述性分析，包括汇总和理解分类变量的方法。",
+      "order": 3,
+      "created_at": "2025-09-04T14:28:04.346939Z",
+      "updated_at": "2025-09-07T16:14:33.896148Z"
+    },
+    {
+      "id": 399,
+      "title": "OpenIntro Statistics",
+      "author": "David Diez, Mine Çetinkaya-Bartoni, Christopher Barr",
+      "year": "2022",
+      "publisher": "OpenIntro",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.openintro.org/book/os/",
+      "doi": "",
+      "note": "一本易于理解的开源教科书，涵盖了基本的统计概念，包括通过频率计数对分类数据进行汇总。",
+      "order": 4,
+      "created_at": "2025-09-04T14:28:04.349365Z",
+      "updated_at": "2025-09-07T16:14:36.350681Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

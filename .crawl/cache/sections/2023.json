@@ -1,0 +1,61 @@
+{
+  "id": 2023,
+  "title": "动手实践：实现 CatBoost",
+  "meta_title": "动手实践：实现 CatBoost",
+  "meta_description": "构建、训练和调优 CatBoost 模型，侧重于分类特征的处理。",
+  "content": "<p>CatBoost 通过有序目标统计和有序提升等方法独特地处理分类特征，旨在提高准确性并简化预处理。使用其 Python 库构建、训练和评估 CatBoost 模型，并特别关注其分类特征处理能力。</p>\n<h3>环境配置</h3>\n<p>首先，请确保已安装所需的库。您主要需要 <code>catboost</code>、<code>pandas</code> 和 <code>scikit-learn</code>。如果您尚未安装 CatBoost，可以使用 pip 进行安装：</p>\n<pre><code class=\"language-bash\">pip install catboost pandas scikit-learn plotly\n</code></pre>\n<h3>数据准备</h3>\n<p>我们将使用一个包含数值和分类特征混合的数据集。一个常见的例子是“Adult”人口普查收入数据集，其中的任务是预测个人的年收入是否超过 5 万美元。</p>\n<p>让我们使用 pandas 加载数据并进行最少的预处理。CatBoost 可以在内部处理缺失值和分类特征，但我们需要识别哪些列是分类的。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score, roc_auc_score\nfrom catboost import CatBoostClassifier, Pool\nimport numpy as np\nimport plotly.graph_objects as go\n\n# 加载数据集（假设 adult.csv 可用）\n# 您可能需要下载它或调整路径/URL\ntry:\n    # 如果未找到本地文件，尝试从常见的在线源加载\n    url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data'\n    column_names = [\n        'age', 'workclass', 'fnlwgt', 'education', 'education-num',\n        'marital-status', 'occupation', 'relationship', 'race', 'sex',\n        'capital-gain', 'capital-loss', 'hours-per-week', 'native-country',\n        'income'\n    ]\n    data = pd.read_csv(url, header=None, names=column_names, sep=',\\s*', engine='python', na_values='?')\nexcept FileNotFoundError:\n    print(\"Error: adult.data not found. Please download it or adjust the path.\")\n    # 您可能需要退出或适当地处理此错误\n    exit()\nexcept Exception as e:\n    print(f\"An error occurred while loading data: {e}\")\n    exit()\n\n# 在此示例中，为简单起见，删除包含缺失值的行\n# 注意：CatBoost 可以直接处理 NaN，但我们在此处进行简化。\ndata.dropna(inplace=True)\n\n# 定义目标变量和特征\nX = data.drop('income', axis=1)\ny = data['income'].apply(lambda x: 1 if x == '>50K' else 0) # 将目标转换为二元\n\n# 通过列名或索引识别分类特征\ncategorical_features_indices = np.where(X.dtypes != np.number)[0]\n# 或者，提供列名：\n# categorical_features_names = X.select_dtypes(include=['object']).columns.tolist()\n\nprint(f\"Categorical feature indices: {categorical_features_indices}\")\n# print(f\"Categorical feature names: {categorical_features_names}\")\n\n# 将数据拆分为训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)\n\nprint(f\"Training set shape: {X_train.shape}\")\nprint(f\"Test set shape: {X_test.shape}\")\n</code></pre>\n<p>请注意，我们没有对 <code>workclass</code>、<code>education</code>、<code>marital-status</code> 等分类特征进行独热编码或标签编码。我们只是识别了它们的列索引。这是 CatBoost 的优势所在。</p>\n<h3>训练一个基础 CatBoost 分类器</h3>\n<p>现在，让我们实例化并训练一个 <code>CatBoostClassifier</code>。重要步骤是使用 <code>cat_features</code> 参数 (parameter)告知模型哪些特征是分类的。</p>\n<pre><code class=\"language-python\"># 实例化 CatBoostClassifier\nmodel = CatBoostClassifier(\n    iterations=500,          # 要构建的树的数量\n    learning_rate=0.05,      # 步长收缩\n    depth=6,                 # 树的深度（无偏差树）\n    l2_leaf_reg=3,           # L2 正则化系数\n    loss_function='Logloss', # 目标函数\n    eval_metric='AUC',       # 训练期间的评估指标\n    random_seed=42,          # 用于重现性\n    verbose=100              # 每 100 次迭代打印进度\n)\n\n# 训练模型\n# 将分类特征索引直接传递给 fit 方法\nmodel.fit(\n    X_train, y_train,\n    cat_features=categorical_features_indices,\n    eval_set=(X_test, y_test), # 提供评估集用于早停和指标计算\n    early_stopping_rounds=50   # 如果 eval_metric 在 50 轮内没有改善则停止\n)\n\n# 对测试集进行预测\ny_pred_proba = model.predict_proba(X_test)[:, 1] # 获取正类的概率\ny_pred_class = model.predict(X_test)\n\n# 评估模型\naccuracy = accuracy_score(y_test, y_pred_class)\nauc = roc_auc_score(y_test, y_pred_proba)\n\nprint(f\"\\n模型评估：\")\nprint(f\"测试集准确率: {accuracy:.4f}\")\nprint(f\"测试集 AUC: {auc:.4f}\")\n</code></pre>\n<p>在 <code>fit</code> 方法中，我们提供了 <code>X_train</code>、<code>y_train</code>，以及重要的 <code>cat_features</code> 参数，该参数指向我们的分类列。我们还包含了一个由测试数据组成的 <code>eval_set</code>。这使得 CatBoost 能够在训练期间监控未见过的数据上的性能（使用指定的 <code>eval_metric</code>，在此例中为 AUC），并应用 <code>early_stopping_rounds</code> 来防止过拟合 (overfitting)并自动找到一个可能更好的迭代次数。<code>verbose</code> 参数控制训练进度的打印频率。</p>\n<h3>使用 Pool 类</h3>\n<p>CatBoost 提供了一个 <code>Pool</code> 类，它是一种优化的数据结构，用于保存数据集，包括特征、标签以及分类特征索引和权重 (weight)等元数据。使用 <code>Pool</code> 有时可以带来性能优势，特别是对于大型数据集或重复实验。</p>\n<pre><code class=\"language-python\"># 为训练和评估数据创建 Pool 对象\ntrain_pool = Pool(\n    data=X_train,\n    label=y_train,\n    cat_features=categorical_features_indices\n)\n\neval_pool = Pool(\n    data=X_test,\n    label=y_test,\n    cat_features=categorical_features_indices\n)\n\n# 实例化一个新模型（可选，或重新训练现有模型）\nmodel_pooled = CatBoostClassifier(\n    iterations=500,\n    learning_rate=0.05,\n    depth=6,\n    l2_leaf_reg=3,\n    loss_function='Logloss',\n    eval_metric='AUC',\n    random_seed=42,\n    verbose=100\n)\n\n# 使用 Pool 对象进行训练\nmodel_pooled.fit(\n    train_pool,\n    eval_set=eval_pool,\n    early_stopping_rounds=50\n)\n\n# 预测和评估是类似的\ny_pred_proba_pooled = model_pooled.predict_proba(eval_pool)[:, 1]\nauc_pooled = roc_auc_score(y_test, y_pred_proba_pooled)\nprint(f\"\\n使用 Pool 的 AUC: {auc_pooled:.4f}\")\n\n</code></pre>\n<p>结果应与之前的运行相同或非常相似，但使用 <code>Pool</code> 可以很好地封装数据。</p>\n<h3>理解特征重要性</h3>\n<p>CatBoost 提供了直接获取特征重要性分数的方法，这些分数评估了每个特征对模型预测的贡献。</p>\n<pre><code class=\"language-python\"># 获取特征重要性分数\nfeature_importances = model.get_feature_importance(train_pool) # 或直接传递数据\nfeature_names = X_train.columns\n\n# 创建 Pandas Series 以便处理\nimportance_df = pd.DataFrame({'feature': feature_names, 'importance': feature_importances})\nimportance_df = importance_df.sort_values(by='importance', ascending=False)\n\nprint(\"\\n特征重要性：\")\nprint(importance_df)\n\n# 使用 Plotly 可视化特征重要性\nfig = go.Figure(go.Bar(\n    x=importance_df['importance'],\n    y=importance_df['feature'],\n    orientation='h',\n    marker_color='#228be6' # 调色板中的蓝色\n))\n\nfig.update_layout(\n    title='CatBoost 特征重要性',\n    yaxis_title='特征',\n    xaxis_title='重要性分数',\n    yaxis={'categoryorder':'total ascending'}, # 将最重要的显示在顶部\n    height=500,\n    margin=dict(l=150, r=20, t=50, b=50) # 调整边距以适应特征名称\n)\n# fig.show() # 在交互式环境中使用\n\n# 要在静态文档中显示，生成 JSON：\n# print(fig.to_json())\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1sxcz2z\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"CatBoost 特征重要性\"}, \"xaxis\": {\"title\": {\"text\": \"重要性分数\"}}, \"yaxis\": {\"title\": {\"text\": \"特征\"}, \"categoryorder\": \"total ascending\"}, \"height\": 500, \"margin\": {\"l\": 150, \"r\": 20, \"t\": 50, \"b\": 50}}, \"data\": [{\"type\": \"bar\", \"x\": [20.1, 15.5, 12.8, 10.5, 8.2, 7.1, 5.5, 4.8, 3.9, 3.1, 2.5, 2.1, 1.8, 1.1], \"y\": [\"fnlwgt\", \"capital-gain\", \"age\", \"relationship\", \"hours-per-week\", \"marital-status\", \"occupation\", \"education-num\", \"capital-loss\", \"workclass\", \"education\", \"sex\", \"race\", \"native-country\"], \"orientation\": \"h\", \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 500px;\"\n            >\n              <div id=\"plot-1sxcz2z\" style=\"width: 100%; min-height: 500px;\"></div>\n            </div>\n          \n<blockquote>\n<p>CatBoost 计算的特征重要性分数。'relationship'、'marital-status' 和 'occupation' 等分类特征与数值特征一起显示，表明 CatBoost 的集成处理能力。注意：值仅供参考。</p>\n</blockquote>\n<p>该图有助于直观显示 CatBoost 认为哪些特征最具预测性。请注意，数值特征（<code>capital-gain</code>、<code>age</code>）和分类特征（<code>relationship</code>、<code>marital-status</code>）都做出了重要贡献，而后者无需手动转换。</p>\n<h3>调优和后续步骤</h3>\n<p>本示例表明了 CatBoost 的基本实现，强调了其在处理分类数据方面的核心优势。本次实践课程的重要收获包括：</p>\n<ol>\n<li><strong>分类特征的极简预处理</strong>：只需通过索引或名称识别分类特征，并在训练或创建 <code>Pool</code> 时将其传递给 <code>cat_features</code> 参数 (parameter)。CatBoost 使用有序目标统计等方法在内部处理编码。</li>\n<li><strong>标准 API</strong>：CatBoost Python API 遵循与 Scikit-learn 和其他提升库相似的约定，使其相对容易集成到现有工作流程中。</li>\n<li><strong>性能监控</strong>：使用 <code>eval_set</code> 和 <code>early_stopping_rounds</code> 对于防止过拟合 (overfitting)和优化提升迭代次数非常重要。</li>\n<li><strong>特征重要性</strong>：轻松提取和可视化特征重要性，以理解模型驱动因素。</li>\n</ol>\n<p>实现最佳性能通常需要仔细的超参数 (hyperparameter)调优，尝试 <code>learning_rate</code>、<code>depth</code>、<code>l2_leaf_reg</code> 等参数，以及与分类处理相关的 CatBoost 特有参数（例如 <code>one_hot_max_size</code>）。我们将在第 8 章介绍系统的超参数优化技术。</p>\n<p>现在，您已具备能力将 CatBoost 应用于您自己的数据集，特别是那些富含分类信息的数据集，它将受益于其专用算法和易用性。</p>",
+  "slug": "practice-implementing-catboost",
+  "updates": [],
+  "references": [
+    {
+      "id": 6536,
+      "title": "CatBoost: Unbiased Gradient Boosting with Categorical Features",
+      "author": "Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Dorogush, and Andrey Gulin",
+      "year": "2017",
+      "publisher": "Neural Information Processing Systems Foundation",
+      "journal": "Advances in Neural Information Processing Systems 31",
+      "volume": "31",
+      "pages": "3678-3688",
+      "url": "https://proceedings.neurips.cc/paper/2017/hash/6f4922f45568161a8cdf4ad2299f6d23-Abstract.html",
+      "doi": "10.5591/978-1-57735-779-9/NIPS2017/6548",
+      "note": "介绍CatBoost算法的奠基性论文，详细阐述了用于分类特征的有序目标统计和有序提升技术。",
+      "order": 1,
+      "created_at": "2025-09-05T01:25:39.302822Z",
+      "updated_at": "2025-09-08T03:20:16.135915Z"
+    },
+    {
+      "id": 6537,
+      "title": "CatBoost Documentation",
+      "author": "Yandex",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://catboost.ai/docs/",
+      "doi": "",
+      "note": "CatBoost库的官方文档，对实际实现、API参考和功能解释非常重要。",
+      "order": 2,
+      "created_at": "2025-09-05T01:25:39.307581Z",
+      "updated_at": "2025-09-08T03:20:02.748208Z"
+    },
+    {
+      "id": 6538,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-0-387-84858-7",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "统计学习的经典参考文献，提供了梯度提升机和决策树的理论背景，它们构成了CatBoost的基础。",
+      "order": 3,
+      "created_at": "2025-09-05T01:25:39.309882Z",
+      "updated_at": "2025-09-08T03:20:02.318902Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

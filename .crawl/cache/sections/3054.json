@@ -1,0 +1,61 @@
+{
+  "id": 3054,
+  "title": "动手实践：开发一个智能体应用",
+  "meta_title": "实践开发智能体应用",
+  "meta_description": "动手实践，使用LLM框架构建一个运用工具的简单智能体。",
+  "content": "<p>LLM框架的核心组成部分包括模型、提示模板、解析器、链、记忆，以及能够使用工具的智能体。智能体可以利用LLM进行推理 (inference)并与外部工具交互。此处构建一个使用LangChain的简单智能体，该智能体运用LLM进行推理并与外部工具（本例中是网络搜索引擎）进行交互。</p>\n<p>本练习说明了智能体如何获取外部信息源来回答问题。</p>\n<h3>前提条件与设置</h3>\n<p>在开始之前，请确保您已安装所需的库。您还需要一个您所选LLM提供商的API密钥（本例中我们将使用OpenAI）。</p>\n<ol>\n<li>\n<p><strong>安装库：</strong></p>\n<pre><code class=\"language-bash\">pip install langchain langchain_openai duckduckgo-search\n</code></pre>\n<ul>\n<li><code>langchain</code>: LangChain核心库。</li>\n<li><code>langchain_openai</code>: 提供OpenAI模型的集成。</li>\n<li><code>duckduckgo-search</code>: 用于执行DuckDuckGo搜索的库，LangChain可以将其作为一个工具使用。</li>\n</ul>\n</li>\n<li>\n<p><strong>设置API密钥：</strong> 确保您的OpenAI API密钥作为环境变量可用。您可以在终端会话中设置，或使用<code>.env</code>文件（这需要安装<code>python-dotenv</code>：<code>pip install python-dotenv</code>）。</p>\n<pre><code class=\"language-bash\">export OPENAI_API_KEY='your-api-key-here'\n</code></pre>\n<p>或者，在您的项目目录中创建<code>.env</code>文件：</p>\n<pre><code>OPENAI_API_KEY='your-api-key-here'\n</code></pre>\n<p>并在您的Python脚本中使用以下代码加载：</p>\n<pre><code class=\"language-python\"># import os\n# from dotenv import load_dotenv\n# load_dotenv()\n# openai_api_key = os.getenv(\"OPENAI_API_KEY\")\n</code></pre>\n<p><em>注意：</em> 务必安全地处理API密钥。避免将它们直接硬编码到您的源代码中，特别是如果您打算共享或进行版本控制。使用环境变量是一种标准做法。</p>\n</li>\n</ol>\n<h3>构建搜索智能体</h3>\n<p>让我们创建一个Python脚本来构建和运行我们的智能体。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\nfrom langchain import hub # Hub用于预制提示\nfrom langchain.agents import AgentExecutor, create_openai_tools_agent, load_tools\n\n# 确保您的OPENAI_API_KEY环境变量已设置\n\n# 1. 初始化LLM\n# 我们使用ChatOpenAI，因为它能够使用OpenAI的“工具”功能（函数调用）\nllm = ChatOpenAI(model=\"gpt-3.5-turbo-1106\", temperature=0)\n\n# 2. 加载工具\n# LangChain为常用工具提供便捷的加载器。\n# “ddg-search”使用DuckDuckGo搜索引擎。\ntools = load_tools([\"ddg-search\"])\n# print(f\"Loaded tools: {[tool.name for tool in tools]}\")\n# 预期输出：已加载工具：['duckduckgo_search']\n\n# 3. 获取智能体提示模板\n# 我们从LangChain Hub拉取一个为OpenAI工具智能体优化的预构建提示。\n# 此提示包含输入、工具和中间步骤（agent_scratchpad）的占位符。\nprompt = hub.pull(\"hwchase17/openai-tools-agent\")\n# 您可以像这样检查提示模板：\n# print(prompt.pretty_repr())\n\n# 4. 创建智能体\n# create_openai_tools_agent函数将LLM、工具和提示绑定在一起。\n# 它使用OpenAI的函数调用能力来确定使用哪个工具。\nagent = create_openai_tools_agent(llm, tools, prompt)\n\n# 5. 创建智能体执行器\n# AgentExecutor会循环运行智能体。\n# 它调用智能体，确定动作（使用哪个工具以及提供什么输入），\n# 执行工具，获取结果（观察），然后将其传回给智能体，\n# 直到智能体决定它有了最终答案。\n# 'verbose=True'会显示智能体的思考过程。\nagent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)\n\n# 6. 运行智能体\n# 让我们问一个需要最新外部信息的问题。\nprint(\"\\n运行智能体查询1:\")\nresponse1 = agent_executor.invoke({\n    \"input\": \"巴西现在的首都和之前的首都是什么？\"\n})\nprint(\"\\n最终答案 (查询1):\")\nprint(response1['output'])\n\n# 示例2：一个需要计算或最新信息的问题\nprint(\"\\n运行智能体查询2:\")\nresponse2 = agent_executor.invoke({\n    \"input\": \"2023年温布尔登网球公开赛男子单打决赛的冠军是谁？\"\n})\nprint(\"\\n最终答案 (查询2):\")\nprint(response2['output'])\n\n</code></pre>\n<h3>理解执行流程</h3>\n<p>当您运行此脚本时，在<code>AgentExecutor</code>中设置<code>verbose=True</code>会提供丰富的信息。您将看到类似于以下的输出（细节可能有所不同）：</p>\n<pre><code class=\"language-text\">> 进入新的AgentExecutor链...\n\n调用: `duckduckgo_search` 使用 `{'query': '巴西当前首都和之前首都'}`\n工具输出\n巴西利亚是巴西的联邦首都和联邦区政府所在地。这座城市位于巴西高原的巴西中西部地区。它由朱塞利诺·库比契克总统于1960年4月21日建立，作为新的国家首都。里约热内卢从1763年到1960年，近两个世纪以来一直是巴西的首都，直到政府机构迁至新建的巴西利亚。萨尔瓦多是巴西的第一个首都，从1549年到1763年。巴西曾有三个首都：萨尔瓦多、里约热内卢和巴西利亚。\n巴西现在的首都是巴西利亚。\n巴西之前的首都是里约热内卢（1763年至1960年）。在里约热内卢之前，第一个首都是萨尔瓦多（1549年至1763年）。\n\n> 链执行完毕。\n\n最终答案 (查询1):\n巴西现在的首都是巴西利亚。之前的首都是里约热内卢。\n\n运行智能体查询2:\n\n> 进入新的AgentExecutor链...\n\n调用: `duckduckgo_search` 使用 `{'query': \"2023年温布尔登男子单打冠军\"}`\n工具输出\n西班牙选手卡洛斯·阿尔卡拉斯在2023年温布尔登网球锦标赛男子单打决赛中击败塞尔维亚选手诺瓦克·德约科维奇后，手捧冠军奖杯。比赛于2023年7月16日在伦敦西南部的温布尔登全英草地网球俱乐部举行，是锦标赛的第十四天。卡洛斯·阿尔卡拉斯在决赛中以1-6, 7-6(8-6), 6-1, 3-6, 6-4击败诺瓦克·德约科维奇，赢得了2023年温布尔登网球锦标赛的男子单打冠军。这是他继2022年美网之后的第二个大满贯冠军。阿尔卡拉斯成为继曼努埃尔·桑塔纳和拉斐尔·纳达尔之后，第三位赢得温布尔登冠军的西班牙男子选手。2023年温布尔登男子决赛结果：卡洛斯·阿尔卡拉斯在五盘激战中击败诺瓦克·德约科维奇。更新于2023年7月16日星期日21:10。卡洛斯·阿尔卡拉斯结束了诺瓦克·德约科维奇在温布尔登的统治……卡洛斯·阿尔卡拉斯赢得了2023年温布尔登男子单打冠军。\n\n> 链执行完毕。\n\n最终答案 (查询2):\n卡洛斯·阿尔卡拉斯在2023年温布尔登网球公开赛男子单打决赛中击败诺瓦克·德约科维奇，获得冠军。\n</code></pre>\n<p>让我们分解一下所发生的过程：</p>\n<ol>\n<li><strong>接收输入：</strong> <code>AgentExecutor</code>收到了包含用户问题的输入字典。</li>\n<li><strong>智能体被调用：</strong> 执行器将输入、工具描述和一个空的“暂存区”（用于中间步骤）传递给智能体（LLM + 提示）。</li>\n<li><strong>推理 (inference)与工具选择：</strong> LLM在<code>hwchase17/openai-tools-agent</code>提示及其函数调用训练的引导下，确定了：\n<ul>\n<li>它无法直接知道答案。</li>\n<li><code>duckduckgo_search</code>工具可以找到所需信息。</li>\n<li>它为搜索工具（例如，“巴西当前首都和之前首都”）生成了合适的查询。</li>\n</ul>\n</li>\n<li><strong>工具执行：</strong> <code>AgentExecutor</code>识别了选定的工具（<code>duckduckgo_search</code>）以及LLM生成的输入。它执行了搜索。</li>\n<li><strong>接收观察结果：</strong> DuckDuckGo的搜索结果作为“观察结果”返回给了<code>AgentExecutor</code>。</li>\n<li><strong>合成答案：</strong> 执行器将观察结果传回给智能体。LLM现在拥有了上下文 (context)（原始问题）和新信息（搜索结果）。它综合这些信息来生成最终的、面向用户的答案。</li>\n<li><strong>最终输出：</strong> <code>AgentExecutor</code>识别到LLM提供了最终答案（而非另一次工具调用），并返回了结果。</li>\n</ol>\n<h3>进一步尝试</h3>\n<p>既然您已经有了一个运行中的基本智能体，可以尝试以下修改：</p>\n<ul>\n<li><strong>不同问题：</strong> 提出需要通过搜索获取不同类型信息的问题。尝试多跳问题（例如，“电影《奥本海默》的导演是谁？他还导演过哪些电影？”）。</li>\n<li><strong>添加更多工具：</strong> 使用<code>load_tools([\"ddg-search\", \"llm-math\"], llm=llm)</code>加载<code>llm-math</code>工具，并提出涉及计算的问题（例如，“东京近似人口的平方根是多少？”）。观察智能体如何在搜索和计算器之间进行选择。</li>\n<li><strong>查看提示：</strong> 打印<code>prompt</code>对象（<code>print(prompt.pretty_repr())</code>）以查看智能体使用的结构和指令。理解<code>input</code>、<code>tools</code>、<code>tool_names</code>和<code>agent_scratchpad</code>的作用。</li>\n<li><strong>更换LLM：</strong> 尝试更换为其他模型，例如<code>gpt-4</code>（如果可用），通过更改<code>ChatOpenAI(model=\"...\")</code>实现。观察推理 (inference)或工具使用是否发生变化。请注意潜在的成本差异。</li>\n</ul>\n<p>此次动手实践提供了一个关于智能体如何在LangChain等框架中运行的理解。通过结合LLM推理和外部工具，您可以构建能够执行需要访问和处理最新或专业信息的复杂应用程序。</p>",
+  "slug": "practice-develop-agentic-application",
+  "updates": [],
+  "references": [
+    {
+      "id": 9055,
+      "title": "LangChain: Agents",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/concepts/#agents",
+      "doi": "",
+      "note": "LangChain中智能体的通用介绍，解释了它们的架构、类型以及如何将大型语言模型与工具结合。",
+      "order": 1,
+      "created_at": "2025-09-05T02:14:34.610724Z",
+      "updated_at": "2025-09-09T05:01:09.272201Z"
+    },
+    {
+      "id": 9056,
+      "title": "OpenAI API: Tools",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "官方文档，详细说明了如何将自定义工具和函数与OpenAI模型集成，这是智能体与工具交互的核心机制。",
+      "order": 2,
+      "created_at": "2025-09-05T02:14:34.614002Z",
+      "updated_at": "2025-09-09T05:01:23.490506Z"
+    },
+    {
+      "id": 9058,
+      "title": "LangChain Hub",
+      "author": "LangChain",
+      "year": "2023",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/langchain_api/langchain_hub/",
+      "doi": "",
+      "note": "LangChain Hub的文档，这是一个社区贡献的提示、链和智能体的仓库，演示了如何使用预构建的组件。",
+      "order": 4,
+      "created_at": "2025-09-05T02:14:34.622799Z",
+      "updated_at": "2025-09-09T05:01:26.030908Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

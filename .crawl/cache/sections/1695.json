@@ -1,0 +1,45 @@
+{
+  "id": 1695,
+  "title": "从 Python 列表创建数组",
+  "meta_title": "从 Python 列表创建 NumPy 数组",
+  "meta_description": "了解如何将 Python 列表和嵌套列表转换为 NumPy 数组。",
+  "content": "<p>虽然 NumPy 提供了创建数组的专门函数（我们很快会看到），但一个非常常见的开始方法是将现有的 Python 数据结构，特别是列表，转换为 NumPy 数组。当你已经使用标准 Python 代码加载或生成了数据时，这通常是第一步。</p>\n<p>用于此转换的主要函数是 <code>np.array()</code>。我们来看看它是如何工作的。</p>\n<h3>从列表创建一维数组</h3>\n<p>假设你有一个简单的 Python 数字列表：</p>\n<pre><code class=\"language-python\">import numpy as np\r\n\r\n# 一个标准的 Python 列表\r\npython_list = [5, 10, 15, 20, 25]\r\nprint(f\"原始 Python 列表: {python_list}\")\r\nprint(f\"类型: {type(python_list)}\")\r\n\r\n# 将列表转换为 NumPy 数组\r\nnumpy_array = np.array(python_list)\r\n\r\nprint(f\"转换后的 NumPy 数组: {numpy_array}\")\r\nprint(f\"类型: {type(numpy_array)}\")\r\nprint(f\"数组的数据类型 (dtype): {numpy_array.dtype}\")\n</code></pre>\n<p>当你运行这段代码时，你会注意到以下几点：</p>\n<ol>\n<li><code>np.array()</code> 函数将 Python 列表作为输入。</li>\n<li>输出的 <code>numpy_array</code> 不再是标准的 Python 列表，而是 <code>numpy.ndarray</code> 类型的一个对象。这就是我们提到的 N 维数组。</li>\n<li>NumPy 自动推断了元素的数据类型。由于所有元素都是整数，因此生成的数组的 <code>dtype</code> 为 <code>int64</code>（具体的整数类型，如 <code>int32</code> 或 <code>int64</code>，可能会因你的系统而略有不同）。</li>\n</ol>\n<p>这种自动类型检测很方便。如果你的列表包含浮点数，NumPy 将创建一个浮点数组：</p>\n<pre><code class=\"language-python\">float_list = [1.0, 2.5, 3.7, 4.2]\r\nfloat_array = np.array(float_list)\r\nprint(f\"浮点数组: {float_array}\")\r\nprint(f\"浮点数组 dtype: {float_array.dtype}\") # 可能是 float64\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-cvervk\" \n              data-graph-definition='digraph ListToArray { rankdir=LR; node [shape=record, style=filled, fillcolor=\"#e9ecef\"]; list [label=\"Python 列表 | [5, 10, 15, 20, 25]\"]; array [label=\"NumPy 数组 | <f0> 5 | <f1> 10 | <f2> 15 | <f3> 20 | <f4> 25 | (dtype=int64)\"]; list -> array [label=\"np.array()\", fontcolor=\"#1c7ed6\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-cvervk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 <code>np.array()</code> 将一维 Python 列表转换为 NumPy ndarray。</p>\n</blockquote>\n<h3>从嵌套列表创建多维数组</h3>\n<p>NumPy 数组可以具有多个维度。你可以通过将嵌套的 Python 列表（包含其他列表的列表）传递给 <code>np.array()</code> 来创建多维数组。</p>\n<pre><code class=\"language-python\"># 一个嵌套的 Python 列表（列表的列表）\r\nnested_list = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\r\nprint(f\"原始嵌套列表:\\n{nested_list}\")\r\n\r\n# 转换为一个二维 NumPy 数组\r\nnumpy_2d_array = np.array(nested_list)\r\n\r\nprint(f\"转换后的二维 NumPy 数组:\\n{numpy_2d_array}\")\r\nprint(f\"数组形状: {numpy_2d_array.shape}\") # 输出: (3, 3) -> 3 行, 3 列\r\nprint(f\"数组维度: {numpy_2d_array.ndim}\") # 输出: 2\r\nprint(f\"数组 dtype: {numpy_2d_array.dtype}\") # 输出: int64（通常）\n</code></pre>\n<p>这里，包含三个整数的三个列表组成的列表被转换为一个 3 行 3 列的二维数组（一个矩阵）。NumPy 会相应地排列数据。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6a2pgy\" \n              data-graph-definition='digraph NestedListToArray {\r\n  rankdir=LR;\r\n  node [shape=record, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\", fontsize=11];\r\n  list [label=\"Python 列表 | [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\"];\r\n  array [label=\"{NumPy 二维数组 | {{1 | 2 | 3} | {4 | 5 | 6} | {7 | 8 | 9}} | shape=(3,3), dtype=int64}\"];\r\n  list -> array [label=\"np.array()\", fontcolor=\"#1c7ed6\"];\r\n}\r\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6a2pgy\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将嵌套的 Python 列表转换为二维 NumPy ndarray。</p>\n</blockquote>\n<p>为了让 NumPy 高效地创建标准的二维数组，内部列表必须具有相同的长度。如果它们不一致，NumPy 可能会创建一个 <code>dtype=object</code> 的数组，每个元素都是一个 Python 对象（如列表），这通常会丧失 NumPy 数组的性能优势。</p>\n<pre><code class=\"language-python\"># 不规则列表的例子（谨慎使用）\r\nuneven_list = [[1, 2], [3, 4, 5]]\r\n\r\n# NumPy 可能会创建一个对象数组\r\n# 注意：不同 NumPy 版本行为可能略有不同。\r\n# 如有需要，显式设置 dtype=object 可确保此行为。\r\nobject_array = np.array(uneven_list, dtype=object)\r\n\r\nprint(f\"不规则列表生成的数组:\\n{object_array}\")\r\nprint(f\"数组 dtype: {object_array.dtype}\") # 输出: object\n</code></pre>\n<h3>指定数据类型 (<code>dtype</code>)</h3>\n<p>虽然 NumPy 的自动类型推断很有用，但有时你需要明确控制数组的数据类型。你可以使用 <code>np.array()</code> 函数中的 <code>dtype</code> 参数 (parameter)来指定所需的类型。这有助于：</p>\n<ul>\n<li><strong>内存管理：</strong> 较小的数据类型（如 <code>float32</code> 而不是 <code>float64</code>，或 <code>int8</code> 而不是 <code>int64</code>）使用的内存更少。</li>\n<li><strong>精度：</strong> 确保计算以足够的浮点精度执行。</li>\n<li><strong>兼容性：</strong> 匹配其他库或函数所需的数据类型。</li>\n</ul>\n<p>下面是如何从整数列表创建一个浮点数数组：</p>\n<pre><code class=\"language-python\">integer_list = [1, 2, 3, 4]\r\n\r\n# 从整数创建浮点数组\r\nfloat_array = np.array(integer_list, dtype=float) # 或 np.float64, np.float32 等\r\n\r\nprint(f\"原始整数列表: {integer_list}\")\r\nprint(f\"转换后的浮点数组: {float_array}\")\r\nprint(f\"数组 dtype: {float_array.dtype}\") # 输出: float64（或指定的浮点类型）\r\n\r\n# 创建一个较小整数类型的整数数组\r\nint8_array = np.array(integer_list, dtype=np.int8)\r\nprint(f\"转换后的 int8 数组: {int8_array}\")\r\nprint(f\"数组 dtype: {int8_array.dtype}\") # 输出: int8\n</code></pre>\n<p>常见的 NumPy 数据类型包括 <code>np.int8</code>、<code>np.int16</code>、<code>np.int32</code>、<code>np.int64</code>、<code>np.uint8</code>（无符号整数）、<code>np.float32</code>、<code>np.float64</code>、<code>np.complex64</code>、<code>np.complex128</code>、<code>np.bool_</code> 和 <code>np.object_</code>。选择正确的 <code>dtype</code> 是一个重要考量，尤其是在处理大型数据集时。</p>\n<p>转换 Python 列表是开始使用 NumPy 数组的一种基本方法，它提供了一条从标准 Python 数据结构到 NumPy 强大数值计算能力的途径。在下一节中，我们将查看 NumPy 提供的直接创建数组的函数，无需预先存在 Python 列表。</p>",
+  "slug": "creating-arrays-from-lists",
+  "updates": [],
+  "references": [
+    {
+      "id": 1742,
+      "title": "numpy.array",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/generated/numpy.array.html",
+      "doi": "",
+      "note": "`numpy.array` 函数的官方文档，详细说明其参数、用法以及创建数组的各种方法，包括从 Python 列表和嵌套列表创建。这是理解该函数行为的主要来源。",
+      "order": 1,
+      "created_at": "2025-09-04T16:33:53.786378Z",
+      "updated_at": "2025-09-08T05:04:51.827958Z"
+    },
+    {
+      "id": 1743,
+      "title": "Array creation routines",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.creation.html",
+      "doi": "",
+      "note": "NumPy 官方用户指南的一部分，本节概述了如何创建数组，将 `np.array()` 置于其他数组创建函数的背景中。它还讨论了数据类型推断和显式 `dtype` 规范。",
+      "order": 2,
+      "created_at": "2025-09-04T16:33:53.806901Z",
+      "updated_at": "2025-09-08T05:04:46.086300Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

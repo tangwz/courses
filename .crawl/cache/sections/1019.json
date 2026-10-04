@@ -1,0 +1,61 @@
+{
+  "id": 1019,
+  "title": "理解快进合并",
+  "meta_title": "Git 中的快进合并是什么？",
+  "meta_description": "了解最简单的合并类型——快进合并，它发生在没有分歧提交的情况下。",
+  "content": "<p>将已添加提交的特性分支上的改动整合回主开发线（例如 <code>main</code> 分支），是Git中的一项常见任务。<code>git merge</code> 命令用于执行此整合。“快进”合并是各种合并类型中最简单的一种。</p>\n<p>快进合并发生在特定条件下：你正在合并<em>到</em>的分支（比如 <code>main</code>）自从你正在合并的分支（我们称之为 <code>feature</code>）创建以来，没有新的提交。换句话说，<code>main</code> 分支的最新提交是 <code>feature</code> 分支最新提交的直接祖先。从 <code>main</code> 所指的提交到 <code>feature</code> 所指的提交，存在一条线性路径。</p>\n<p>考虑以下历史记录：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xzzpaw\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=circle, style=filled, fillcolor=\"#ced4da\", color=\"#adb5bd\", fontname=\"Arial\"]; edge [color=\"#868e96\", fontname=\"Arial\"]; C1 [label=\"C1\"]; C2 [label=\"C2\"]; C3 [label=\"C3\"]; C1 -> C2 [label=\"\"]; C2 -> C3 [label=\"\"]; main [shape=plaintext, label=\"main\", fontcolor=\"#1c7ed6\", fontsize=11]; feature [shape=plaintext, label=\"feature\", fontcolor=\"#37b24d\", fontsize=11]; main -> C2 [style=dashed, color=\"#1c7ed6\"]; feature -> C3 [style=dashed, color=\"#37b24d\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xzzpaw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>合并前的提交历史。<code>feature</code> 分支在提交 C2 处从 <code>main</code> 分出，并有一个额外的提交 C3。<code>main</code> 自 <code>feature</code> 创建以来没有移动。</p>\n</blockquote>\n<p>在此情形下，<code>main</code> 指向提交 <code>C2</code>，<code>feature</code> 指向提交 <code>C3</code>。重要地，<code>C2</code> 是 <code>C3</code> 的直接祖先。在 <code>feature</code> 上进行工作时，<code>main</code> 没有新增提交。</p>\n<p>当你在 <code>main</code> 分支并运行 <code>git merge feature</code> 时，Git 会看到这条线性路径。它明白合并 <code>feature</code> 分支不涉及复杂的整合工作。从 <code>feature</code> 可达的所有提交都已包含 <code>main</code> 的所有历史。</p>\n<p>因此，Git 不会创建新的“合并提交”来连接历史记录，而是执行快进。它只是将 <code>main</code> 分支指针向前移动，使其指向 <code>feature</code> 所指的相同提交（<code>C3</code>）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-w8o7ui\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=circle, style=filled, fillcolor=\"#ced4da\", color=\"#adb5bd\", fontname=\"Arial\"]; edge [color=\"#868e96\", fontname=\"Arial\"]; C1 [label=\"C1\"]; C2 [label=\"C2\"]; C3 [label=\"C3\"]; C1 -> C2 [label=\"\"]; C2 -> C3 [label=\"\"]; main [shape=plaintext, label=\"main\", fontcolor=\"#1c7ed6\", fontsize=11]; feature [shape=plaintext, label=\"feature\", fontcolor=\"#37b24d\", fontsize=11]; main -> C3 [style=dashed, color=\"#1c7ed6\"]; feature -> C3 [style=dashed, color=\"#37b24d\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-w8o7ui\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>快进合并后的提交历史。<code>main</code> 分支指针向前移动，直接指向 C3，与 <code>feature</code> 所指的提交相同。</p>\n</blockquote>\n<p>结果就好像 <code>feature</code> 分支上的所有工作都是直接在 <code>main</code> 分支上完成的。历史记录保持完全线性。之所以称为“快进”，是因为 Git 只是将分支指针向前移动，而不会创建任何新的提交。</p>\n<p>快进合并在可行时是默认行为，因为它们使项目历史记录保持简单和线性。但是，如果 <code>feature</code> 分支分出后，<code>main</code> 上<em>已</em>有提交，快进将无法进行，Git 将执行不同类型的合并，通常会创建一个合并提交（我们将在后面单独说明）。</p>",
+  "slug": "fast-forward-merges",
+  "updates": [],
+  "references": [
+    {
+      "id": 306,
+      "title": "Pro Git Book, Chapter 3: Git Branching - Basic Branching and Merging",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+      "doi": "",
+      "note": "介绍快进合并作为 Git 分支的基础概念。",
+      "order": 1,
+      "created_at": "2025-09-04T14:14:56.530951Z",
+      "updated_at": "2025-09-07T15:47:02.527236Z"
+    },
+    {
+      "id": 307,
+      "title": "git-merge(1) Manual Page",
+      "author": "The Git Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-merge",
+      "doi": "",
+      "note": "官方 `git merge` 命令文档，描述其行为，包括快进合并。",
+      "order": 2,
+      "created_at": "2025-09-04T14:14:56.534037Z",
+      "updated_at": "2025-09-07T15:46:55.921472Z"
+    },
+    {
+      "id": 308,
+      "title": "Merging Branches - Atlassian Git Tutorial",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/using-branches/git-merge",
+      "doi": "",
+      "note": "解释不同的 Git 合并策略，其中包含快进合并的清晰说明。",
+      "order": 3,
+      "created_at": "2025-09-04T14:14:56.537329Z",
+      "updated_at": "2025-09-07T15:47:10.427593Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

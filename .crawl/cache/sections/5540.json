@@ -1,0 +1,61 @@
+{
+  "id": 5540,
+  "title": "数据丰富：增加信息",
+  "meta_title": "数据丰富：转换阶段增加数据价值",
+  "meta_description": "了解如何添加计算字段或查找值来丰富数据。",
+  "content": "<p>让我们改进数据。经过清洗和标准化处理后，转换阶段通常会让数据比原始状态包含更多信息。这个过程被称为<strong>数据丰富</strong>。可以把它看作是在数据进入后续处理流程之前，直接向数据集中添加上下文 (context)或计算出新的有用信息。清洗侧重于纠正错误，而丰富则侧重于补充缺失或可能有用的内容。</p>\n<h3>什么是数据丰富？</h3>\n<p>数据丰富是指通过从其他来源添加相关信息或从现有数据中推导出新的数据点来改进、优化或提升原始数据的过程。其目的是让数据对分析或目标应用来说更有用、更有价值。数据丰富有助于形成更全面的视图，而不是仅仅拥有孤立的信息片段。</p>\n<h3>常用丰富方法</h3>\n<p>让我们来看看在转换阶段丰富数据的几种常用方法。</p>\n<h4>1. 计算字段</h4>\n<p>最直接的丰富方法之一是根据同一记录中现有数据的计算结果创建新字段。</p>\n<ul>\n<li><strong>例子：</strong> 假设您已提取出包含 <code>quantity</code>（数量）和 <code>unit_price</code>（单价）列的销售订单数据。这些数据很有用，但您可能经常需要每行订单的 <code>total_price</code>（总价）。与其在以后每次查询数据时都进行计算，不如在转换时就将其添加。</li>\n</ul>\n<p>数据丰富化是一种使数据比原始状态更具信息量的过程。在数据管道的转换阶段，此过程将上下文 (context)或新的信息直接添加到数据集中。初步的数据准备通常侧重于解决数据质量问题；相比之下，丰富化则侧重于添加有价值或缺失的信息。</p>\n<pre><code>因此，如果一条记录的 `quantity = 5` 且 `unit_price = 10.00`，丰富过程会添加一个新字段 `total_price`，其值为 `50.00`。\n\n其他例子包括：\n*   根据出生日期计算年龄。\n*   将 `first_name`（名）和 `last_name`（姓）组合成 `full_name`（全名）字段。\n*   计算利润率（$利润 = 销售额 - 成本$）。\n*   从电子邮件地址中提取域名。\n</code></pre>\n<h4>2. 查找和数据合并</h4>\n<p>通常，您提取的数据缺少其他地方存在的关联信息。数据丰富可能涉及从外部或内部参考数据集（如数据库表、电子表格甚至简单文件）查找相关信息，并将其合并到您的主数据流中。</p>\n<ul>\n<li>\n<p><strong>例子：</strong> 您提取的销售数据可能包含 <code>product_id</code>（产品ID），但没有 <code>product_name</code>（产品名称）或 <code>category</code>（类别）。您可能有一个单独的“产品”表或文件，用于映射 ID 到名称和类别。数据丰富过程可以利用销售数据中的 <code>product_id</code> 进行查找，以在产品数据中找到对应的 <code>product_name</code> 和 <code>category</code>，并将它们作为新列添加到销售记录中。</p>\n<ul>\n<li><strong>输入销售数据：</strong> <code>order_id=101</code>（订单ID）, <code>product_id=P45</code>（产品ID）, <code>quantity=2</code>（数量）</li>\n<li><strong>产品参考数据：</strong> <code>id=P45</code>（ID）, <code>name='Standard Widget'</code>（名称）, <code>category='Widgets'</code>（类别）</li>\n<li><strong>丰富后的销售数据：</strong> <code>order_id=101</code>（订单ID）, <code>product_id=P45</code>（产品ID）, <code>product_name='Standard Widget'</code>（产品名称）, <code>category='Widgets'</code>（类别）, <code>quantity=2</code>（数量）</li>\n</ul>\n<p>另一种常见的查找是使用地理编码（如邮政编码或城市名称）来添加区域、州或国家信息。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ghxdu9\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n    edge [fontname=\"Helvetica\", fontsize=9, color=\"#495057\"];\n\n    rawData [label=\"提取的数据\\n(例如：订单ID、产品ID、\\n数量)\"];\n    enrichment [label=\"数据丰富过程\\n- 查找产品信息\", shape=cylinder, fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"];\n    refData [label=\"参考数据\\n(产品信息：ID、名称、类别)\", shape=database, fillcolor=\"#b2f2bb\", color=\"#37b24d\"];\n    enrichedData [label=\"丰富后的数据\\n(订单ID、产品ID、\\n产品名称、类别、\\n数量)\"];\n\n    rawData -> enrichment;\n    refData -> enrichment [style=dashed, arrowhead=open, label=\"查找\"];\n    enrichment -> enrichedData;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ghxdu9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图描绘了提取的数据如何进入数据丰富过程，该过程利用参考数据（如产品信息）生成包含附加字段的增强输出数据。</p>\n</blockquote>\n</li>\n</ul>\n<h4>3. 派生属性或标志</h4>\n<p>有时，您可以根据应用于现有数据的条件推导出新的分类属性或布尔标志。这有助于对数据进行分段或快速识别相关的记录。</p>\n<ul>\n<li>\n<p><strong>例子：</strong> 根据之前计算的 <code>total_price</code>（总价），您可能希望对销售额进行分类：</p>\n<ul>\n<li>如果 <code>total_price > 1000</code>，添加一个新字段 <code>order_value_segment</code>（订单价值分段），值为 'High'（高）。</li>\n<li>如果 <code>total_price</code> 在 100 到 1000 之间，将 <code>order_value_segment</code> 设置为 'Medium'（中）。</li>\n<li>否则，设置为 'Low'（低）。</li>\n</ul>\n<p>另一个例子是添加一个布尔标志 <code>is_international</code>（是否国际订单），判断依据是客户的国家字段（可能是通过查找添加的）是否与公司所在国不同。</p>\n</li>\n</ul>\n<h3>为什么丰富数据？</h3>\n<p>在转换阶段丰富数据有几个优点：</p>\n<ul>\n<li><strong>改进分析：</strong> 丰富后的数据为商业智能和数据分析提供了更多维度和背景信息，从而带来更好的理解。</li>\n<li><strong>强化报告：</strong> 报告可以包含更多描述性信息（如产品名称而非仅仅ID）和派生指标（如总价或客户分段）。</li>\n<li><strong>提高效率：</strong> 在ETL过程中一次性计算字段或添加上下文 (context)通常比在下游应用或查询中反复进行更有效率。</li>\n<li><strong>满足目标要求：</strong> 目标系统（如数据仓库）可能需要源数据中不存在的特定字段，这使得数据丰富成为必需。</li>\n</ul>\n<p>通过添加计算字段、查找相关信息和派生新属性，数据丰富显著提高了数据的价值和实用性，有效地为其最终加载阶段做好准备。它不仅仅是简单地清洗数据，而是积极提升数据生成有用信息的能力。</p>",
+  "slug": "data-enrichment",
+  "updates": [],
+  "references": [
+    {
+      "id": 15280,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball, Margy Ross",
+      "year": "2013",
+      "publisher": "John Wiley & Sons, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/the-data-warehouse/9781118530801/",
+      "doi": "10.1002/9781118530702",
+      "note": "数据仓库指南，涵盖ETL过程，包括数据转换、数据质量和集成技术。它直接支持数据丰富概念。",
+      "order": 1,
+      "created_at": "2025-09-06T10:42:56.164563Z",
+      "updated_at": "2025-09-10T05:36:59.877423Z"
+    },
+    {
+      "id": 15281,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "对数据系统提供了广阔的视角，涵盖数据集成、转换和不同数据模型，为现代数据管道中的数据丰富提供了背景。",
+      "order": 2,
+      "created_at": "2025-09-06T10:42:56.203635Z",
+      "updated_at": "2025-09-10T05:36:52.977140Z"
+    },
+    {
+      "id": 15282,
+      "title": "Database Management Systems",
+      "author": "Raghu Ramakrishnan, Johannes Gehrke",
+      "year": "2002",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pages.cs.wisc.edu/~dbbook/",
+      "doi": "",
+      "note": "一本关于数据库系统基础概念的教科书，包括数据集成、模式映射和与ETL转换阶段相关的数据质量问题。",
+      "order": 3,
+      "created_at": "2025-09-06T10:42:56.210617Z",
+      "updated_at": "2025-09-10T05:36:59.299284Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

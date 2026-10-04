@@ -1,0 +1,61 @@
+{
+  "id": 3088,
+  "title": "大语言模型应用代码组织",
+  "meta_title": "大语言模型应用代码组织",
+  "meta_description": "组织基于大语言模型项目的代码的最佳实践。",
+  "content": "<p>随着您的大语言模型 (LLM)应用从简单的脚本演变为更复杂的系统，代码的组织方式变得越来越重要。就像在传统软件开发中一样，结构良好的代码库更易于理解、维护、测试和扩展。对于大语言模型应用而言尤其如此，它们通常涉及提示模板、与外部API的交互逻辑以及模型输入输出的特定数据处理等特有组件。及早采纳良好的结构实践将大大节省后期精力，尤其是在与他人协作或准备部署时。</p>\n<h3>关注点分离原则</h3>\n<p>软件设计中的一个基本原则是<em>关注点分离</em>。这意味着应用程序的不同部分应负责独立的功能。将此应用于大语言模型 (LLM)应用有助于管理复杂性。请考虑分离以下常见关注点：</p>\n<ul>\n<li><strong>大语言模型交互：</strong> 专门用于向大语言模型API（例如OpenAI、Anthropic）发起请求、处理响应、管理温度或最大令牌数等参数 (parameter)，以及处理API特有错误或速率限制的代码。</li>\n<li><strong>提示管理：</strong> 加载、格式化和可能版本化您的提示的逻辑。提示是应用程序行为的核心，应被视为重要资产，而不仅仅是散布在代码中的硬编码字符串。</li>\n<li><strong>业务逻辑：</strong> 应用程序使用大语言模型的核心功能。这可能涉及协调多次大语言模型调用、处理中间结果或根据模型输出做决策。</li>\n<li><strong>数据处理：</strong> 负责为大语言模型准备输入数据、解析大语言模型可能非结构化的输出、根据预期格式验证结果（如第7章所述），以及与数据源交互（例如，第6章讨论的RAG系统）的代码。</li>\n<li><strong>配置：</strong> 管理API密钥、模型标识符、文件路径和行为参数等设置。这应从主代码库中外部化。</li>\n<li><strong>表现层/API层：</strong> 如果您的应用程序具有用户界面或作为API公开（例如使用Flask或FastAPI），此层处理传入请求和传出响应，并与业务逻辑层交互。</li>\n</ul>\n<h3>项目组织：目录结构</h3>\n<p>合理的目录结构使项目浏览和理解变得容易得多。理想的结构取决于应用程序的复杂程度，但这里有几种常见模式：</p>\n<p><strong>简单应用结构：</strong></p>\n<p>对于小型项目，扁平结构可能足够，将关注点清晰分离到不同的Python模块中：</p>\n<pre><code class=\"language-python\">my_llm_app/\n├── app.py           # 主应用逻辑或Web服务器（例如Flask）\n├── config.py        # 加载配置（通过环境变量获取API密钥，模型名称）\n├── llm_client.py    # 用于LLM API交互的函数/类\n├── prompt_utils.py  # 用于加载/格式化提示的辅助函数\n├── prompts/         # 存储提示模板文件的目录\n│   ├── summarize.txt\n│   └── qa_cot.txt\n├── utils.py         # 通用工具函数（例如，输出解析）\n├── .env             # 环境变量（添加到.gitignore！）\n└── requirements.txt # 项目依赖\n</code></pre>\n<p><strong>更复杂的应用结构：</strong></p>\n<p>随着应用程序的增长，特别是在包含LangChain等框架或涉及多个独立功能（如问答、摘要、RAG）时，更分层或基于功能的结构更有益：</p>\n<pre><code class=\"language-python\">advanced_llm_app/\n├── main.py               # 主入口点（例如，启动Web服务器或CLI）\n├── core/                 # 核心共享组件\n│   ├── __init__.py\n│   ├── config.py         # 配置加载（环境变量，文件）\n│   ├── llm_interface.py  # 抽象的大语言模型交互逻辑\n│   ├── prompt_manager.py # 集中式提示加载/模板处理\n│   └── output_parser.py  # 共享输出解析工具\n├── modules/              # 应用功能/模块\n│   ├── __init__.py\n│   ├── qa/               # 问答模块\n│   │   ├── __init__.py\n│   │   ├── chain.py      # 问答特有逻辑（例如，LangChain链）\n│   │   └── prompts/      # 问答特有提示\n│   │       └── retrieval_qa.yaml\n│   ├── summarization/    # 摘要模块\n│   │   ├── __init__.py\n│   │   ├── service.py    # 摘要特有逻辑\n│   │   └── prompts/      # 摘要特有提示\n│   │       └── condense_document.txt\n│   └── rag/              # RAG组件（如果使用）\n│       ├── __init__.py\n│       ├── retriever.py\n│       └── vector_store.py\n├── shared/               # 不属于LLM交互核心的共享工具\n│   └── data_models.py    # 用于验证的Pydantic模型\n├── tests/                # 单元测试和集成测试\n│   ├── core/\n│   └── modules/\n├── .env                  # 环境变量\n└── requirements.txt\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hy58l9\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#adb5bd\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\"];\n\n  subgraph cluster_main {\n    label = \"入口点\";\n    style=filled;\n    color=\"#e9ecef\";\n    main [label=\"main.py / API层\", color=\"#748ffc\", style=filled, fontcolor=\"#ffffff\"];\n  }\n\n  subgraph cluster_modules {\n    label = \"功能模块\";\n    style=filled;\n    color=\"#e9ecef\";\n    qa_module [label=\"问答模块\", color=\"#3bc9db\"];\n    summary_module [label=\"摘要模块\", color=\"#38d9a9\"];\n    rag_module [label=\"RAG模块\", color=\"#94d82d\"];\n  }\n\n  subgraph cluster_core {\n    label = \"核心服务\";\n    style=filled;\n    color=\"#e9ecef\";\n    config [label=\"配置\", color=\"#ffec99\"];\n    llm_interface [label=\"LLM接口\", color=\"#ffa8a8\"];\n    prompt_manager [label=\"提示管理器\", color=\"#fcc2d7\"];\n    output_parser [label=\"输出解析器\", color=\"#d0bfff\"];\n  }\n\n  subgraph cluster_shared {\n      label = \"共享工具\";\n      style=filled;\n      color=\"#e9ecef\";\n      data_models [label=\"数据模型\", color=\"#ffd8a8\"];\n  }\n\n  # 连接\n  main -> qa_module;\n  main -> summary_module;\n\n  qa_module -> llm_interface;\n  qa_module -> prompt_manager;\n  qa_module -> output_parser;\n  qa_module -> config;\n  qa_module -> rag_module; # 问答可能使用RAG\n  qa_module -> data_models;\n\n\n  summary_module -> llm_interface;\n  summary_module -> prompt_manager;\n  summary_module -> output_parser;\n  summary_module -> config;\n  summary_module -> data_models;\n\n  rag_module -> llm_interface; # 通常需要通过接口获取嵌入模型\n  rag_module -> config;\n\n  llm_interface -> config;\n  prompt_manager -> config;\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hy58l9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>结构化大语言模型 (LLM)应用的依赖关系流。功能模块使用核心服务，这些服务处理配置和直接的大语言模型交互。</p>\n</blockquote>\n<h3>设计模块化组件</h3>\n<p>思考如何设计可复用的代码组件（函数、类或模块）。</p>\n<ul>\n<li><strong>大语言模型 (LLM)客户端抽象：</strong> 不要分散API调用，而是创建一个专用类或模块（例如<code>llm_client.py</code>或<code>core/llm_interface.py</code>）。此组件可以封装以下细节：\n<ul>\n<li>选择正确的API端点。</li>\n<li>添加认证头。</li>\n<li>为临时网络错误或速率限制实现重试逻辑。</li>\n<li>规范模型、温度和最大令牌数等参数 (parameter)的传递方式。</li>\n<li>请求和响应的基本日志记录。</li>\n</ul>\n</li>\n<li><strong>提示管理：</strong> 实现一个<code>PromptManager</code>类或实用函数，其可以：\n<ul>\n<li>从文件加载提示模板（例如，<code>.txt</code>、<code>.json</code>、<code>.yaml</code>）。</li>\n<li>使用模板引擎（如Jinja2或f-strings）处理占位符替换。</li>\n<li>可能缓存已加载的提示。</li>\n</ul>\n</li>\n<li><strong>框架组件：</strong> 如果使用LangChain等框架，使用其内置抽象。LangChain的<code>LLM</code>包装器、<code>PromptTemplate</code>、<code>OutputParser</code>、<code>Chain</code>、<code>Agent</code>和<code>Retriever</code>类本身就鼓励模块化设计。围绕这些组件组织您的代码。</li>\n</ul>\n<h3>有效管理配置</h3>\n<p>将API密钥、模型名称或文件路径直接硬编码到应用程序代码中是脆弱且不安全的。请使用以下方式外部化配置：</p>\n<ol>\n<li><strong>环境变量：</strong> 这是API密钥等敏感信息的标准做法。在本地开发期间，使用<code>python-dotenv</code>等库从<code>.env</code>文件加载变量（确保将<code>.env</code>添加到您的<code>.gitignore</code>中）。在部署环境中，这些变量通常通过托管平台设置。\n<pre><code class=\"language-python\"># config.py\nimport os\nfrom dotenv import load_dotenv\n\nload_dotenv() # 从.env文件加载变量\n\nAPI_KEY = os.getenv(\"OPENAI_API_KEY\")\nMODEL_NAME = os.getenv(\"DEFAULT_MODEL\", \"gpt-3.5-turbo\")\n</code></pre>\n</li>\n<li><strong>配置文件：</strong> 对于模型参数 (parameter)、提示路径或应用程序行为标志等非敏感设置，配置文件（例如<code>config.yaml</code>、<code>settings.toml</code>）通常更清晰。<code>PyYAML</code>、<code>tomli</code>或<code>hydra-core</code>等库可以帮助加载和管理这些文件。\n<pre><code class=\"language-yaml\"># config.yaml\nllm:\n  default_model: \"claude-3-sonnet-20240229\"\n  temperature: 0.7\n  max_tokens: 500\npaths:\n  prompts_dir: \"./prompts\"\nfeatures:\n  enable_rag: true\n</code></pre>\n<pre><code class=\"language-python\"># config.py（使用PyYAML）\nimport yaml\nimport os\n\ndef load_config(path=\"config.yaml\"):\n    with open(path, 'r') as f:\n        config = yaml.safe_load(f)\n    # 如果需要，允许使用环境变量覆盖\n    config[\"llm\"][\"api_key\"] = os.getenv(\"ANTHROPIC_API_KEY\")\n    return config\n\nCONFIG = load_config()\nMODEL_NAME = CONFIG.get(\"llm\", {}).get(\"default_model\", \"unknown-model\")\n</code></pre>\n</li>\n</ol>\n<p>结合这些方法（例如，从文件加载默认值并使用环境变量覆盖）可提供灵活性。</p>\n<h3>隔离和管理提示</h3>\n<p>提示定义您大语言模型 (LLM)的行为。在您的项目结构中，将它们视为首要元素：</p>\n<ul>\n<li><strong>外部存储：</strong> 将提示从Python代码中分离出来。将它们存储在单独的文件中（例如，在专用<code>/prompts</code>目录中）。使用清晰的命名约定。</li>\n<li><strong>使用模板：</strong> 对需要动态输入的提示采用模板引擎。这使结构清晰，并将静态指令部分与可变数据分离。Python的f-strings、Jinja2或框架特有模板类（如LangChain的<code>PromptTemplate</code>）都是不错的选择。\n<pre><code class=\"language-python\"># prompts/summarize_template.j2\nSummarize the following text in {{ target_sentences }} sentences:\n\n{{ text_to_summarize }}\n\nSummary:\n</code></pre>\n<pre><code class=\"language-python\"># prompt_utils.py\nfrom jinja2 import Environment, FileSystemLoader\nimport os\n\nPROMPTS_DIR = os.path.join(os.path.dirname(__file__), 'prompts')\nenv = Environment(loader=FileSystemLoader(PROMPTS_DIR))\n\ndef get_prompt(template_name, **kwargs):\n    template = env.get_template(template_name)\n    return template.render(**kwargs)\n\n# 在其他地方使用\n# from prompt_utils import get_prompt\n# my_prompt = get_prompt(\"summarize_template.j2\", target_sentences=3, text_to_summarize=user_input)\n</code></pre>\n</li>\n<li><strong>考虑版本控制：</strong> 像代码一样，提示也会演进。使用单独的文件可以更容易地使用Git等版本控制系统追踪更改（如第3章所述）。</li>\n</ul>\n<h3>集成日志和错误处理</h3>\n<p>结构良好的应用程序更容易添加日志和错误处理：</p>\n<ul>\n<li><strong>集中式日志记录：</strong> 及早配置Python的内置<code>logging</code>模块。记录重要事件、决策、输入/输出（可能已净化）和错误。结构化日志记录（例如JSON格式）对后续分析有益。</li>\n<li><strong>特定异常处理：</strong> 策略性地使用<code>try...except</code>块，特别是在外部调用（LLM API、数据库查找）和数据解析/验证周围。如果需要，定义自定义异常类以区分应用程序特有错误。</li>\n<li><strong>隔离故障点：</strong> 模块化设计有助于限制错误的影响。大语言模型 (LLM)交互模块中的错误，如果处理得当，不应必然导致整个应用程序崩溃。</li>\n</ul>\n<p>从一开始就周全地组织您的大语言模型应用代码，可以奠定坚实基础。它提高了清晰度，并使本章后续考量点（例如保护API密钥、监控成本、有效测试和最终部署）的实施成为一个更易于管理的过程。</p>",
+  "slug": "structuring-llm-application-code",
+  "updates": [],
+  "references": [
+    {
+      "id": 2334,
+      "title": "LangChain Python Documentation",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/",
+      "doi": "",
+      "note": "LangChain的官方文档，该框架为构建LLM应用程序提供抽象和工具，展示了链、提示和代理的模块化设计。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:23.098308Z",
+      "updated_at": "2025-09-09T01:54:12.878069Z"
+    },
+    {
+      "id": 2335,
+      "title": "Architecting LLM-powered applications",
+      "author": "Google Cloud",
+      "year": "2023",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/solutions/llm/architecting-llm-powered-applications",
+      "doi": "",
+      "note": "一份实用指南，提供了使用大型语言模型构建可扩展和可维护应用程序的架构模式和最佳实践，涵盖系统设计的多个方面。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:23.102906Z",
+      "updated_at": "2025-09-09T01:54:14.261736Z"
+    },
+    {
+      "id": 2336,
+      "title": "The Hitchhiker's Guide to Python! - Structuring Your Project",
+      "author": "The Hitchhiker's Guide to Python! Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python-guide.org/writing/structure/",
+      "doi": "",
+      "note": "该部分为组织Python项目提供了标准建议，包括目录结构、配置管理和依赖处理，直接支持项目中给出的项目组织示例。",
+      "order": 4,
+      "created_at": "2025-09-04T16:46:23.105556Z",
+      "updated_at": "2025-09-09T01:54:27.604349Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

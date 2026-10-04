@@ -1,0 +1,61 @@
+{
+  "id": 2995,
+  "title": "位置信息的必要性",
+  "meta_title": "位置信息的必要性",
+  "meta_description": "讨论Transformer模型为何需要显式位置信息，因为它缺乏循环性。",
+  "content": "<p>比较循环神经网络 (neural network)（RNN）等序列模型与Transformer架构，会发现它们在处理序列数据的方式上存在一个基本区别。RNN模型就其本质而言，一个接一个地处理输入标记 (token)。这种序列处理自然地包含了标记的顺序。步骤<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi></mrow><annotation encoding=\"application/x-tex\">t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6151em;\"></span><span class=\"mord mathnormal\">t</span></span></span></span>的隐藏状态是步骤<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi></mrow><annotation encoding=\"application/x-tex\">t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6151em;\"></span><span class=\"mord mathnormal\">t</span></span></span></span>的输入和步骤<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">t-1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6984em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">t</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>的隐藏状态的函数。这种依赖链自然地表示了序列中每个元素的位置。</p>\n<p>然而，Transformer模型采取了一种不同的方式。正如前一章所说，自注意力 (self-attention)机制 (attention mechanism)允许模型在计算任何给定标记的表示时，同时衡量输入序列中所有标记的重要性。输入嵌入 (embedding)大多并行地流经自注意力层。虽然这种并行性对于计算速度和获取长距离依赖来说是一个很大的优势，但它也带来一个代价：核心自注意力机制本身不自然地考虑输入标记的顺序。</p>\n<p>考虑标准缩放点积注意力计算：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>注意力</mtext><mo stretchy=\"false\">(</mo><mi>Q</mi><mo separator=\"true\">,</mo><mi>K</mi><mo separator=\"true\">,</mo><mi>V</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mtext>softmax</mtext><mrow><mo fence=\"true\">(</mo><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><msub><mi>d</mi><mi>k</mi></msub></msqrt></mfrac><mo fence=\"true\">)</mo></mrow><mi>V</mi></mrow><annotation encoding=\"application/x-tex\">\\text{注意力}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">注意力</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">Q</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">K</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.4684em;vertical-align:-0.95em;\"></span><span class=\"mord text\"><span class=\"mord\">softmax</span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"minner\"><span class=\"mopen delimcenter\" style=\"top:0em;\"><span class=\"delimsizing size3\">(</span></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.5183em;\"><span style=\"top:-2.2528em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord sqrt\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8572em;\"><span class=\"svg-align\" style=\"top:-3em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\" style=\"padding-left:0.833em;\"><span class=\"mord\"><span class=\"mord mathnormal\">d</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3361em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0315em;\">k</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span><span style=\"top:-2.8172em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"hide-tail\" style=\"min-width:0.853em;height:1.08em;\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400em\" height=\"1.08em\" viewBox=\"0 0 400000 1080\" preserveAspectRatio=\"xMinYMin slice\"><path d=\"M95,702\nc-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14\nc0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54\nc44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10\ns173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429\nc69,-144,104.5,-217.7,106.5,-221\nl0 -0\nc5.3,-9.3,12,-14,20,-14\nH400000v40H845.2724\ns-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7\nc-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z\nM834 80h400000v40h-400000z\"></path></svg></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1828em;\"><span></span></span></span></span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">Q</span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">K</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8413em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.1389em;\">T</span></span></span></span></span></span></span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.93em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mclose delimcenter\" style=\"top:0em;\"><span class=\"delimsizing size3\">)</span></span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span></span></span></span></span>\n<p>这里，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Q</mi></mrow><annotation encoding=\"application/x-tex\">Q</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8778em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">Q</span></span></span></span>（查询）、<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>K</mi></mrow><annotation encoding=\"application/x-tex\">K</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">K</span></span></span></span>（键）和<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>V</mi></mrow><annotation encoding=\"application/x-tex\">V</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span></span></span></span>（值）矩阵源自输入嵌入。如果我们打乱输入标记（及其对应嵌入）的顺序，计算出的标记对之间的注意力分数集合将保持不变，尽管它们会与不同的输出位置相关联。该机制计算每个标记应该如何关注其他标记，这是基于它们的嵌入内容，而不是它们的位置。</p>\n<p>让我们用一个简单例子来说明。想象一下句子：</p>\n<ol>\n<li>“狗咬人”</li>\n<li>“人咬狗”</li>\n</ol>\n<p>这些句子有很不同的含义，完全通过词语的顺序传递。如果我们只是将“狗”、“咬”和“人”的词嵌入输入到没有位置背景的基本自注意力层中，模型将难以区分这两种情况。它会看到相同集合的输入向量 (vector)，只是可能在内部矩阵中以不同方式排列。注意力计算对于输入集合具有排列不变性，因此缺乏RNN模型内置的序列感知能力。</p>\n<p>如果没有关于标记位置的显式信息，Transformer模型基本上会将输入看作一个无序集合或“词袋”。这种序列顺序的丢失对大多数自然语言处理任务有害，因为在这些任务中，词语顺序对意义、语法和句法都非常重要。</p>\n<p>因此，为了使Transformer模型理解序列顺序，我们必须为其提供显式的位置信息。我们需要一种方式，将信号注入到输入表示中，这些信号告诉模型每个标记在序列中<em>哪里</em>出现（例如，“这是第一个词”、“这是第二个词”等）。这些注入的信息必须在它们被主编码器或解码器堆栈处理<em>之前</em>与标记嵌入结合。下一节，“位置编码 (positional encoding)解释”，详细说明了通常如何使用数学函数实现这一点。</p>",
+  "slug": "positional-information-need",
+  "updates": [],
+  "references": [
+    {
+      "id": 3566,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "arXiv",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍Transformer架构、自注意力机制以及位置编码必要性和机制的开创性论文。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:09.144878Z",
+      "updated_at": "2025-09-09T02:37:11.767094Z"
+    },
+    {
+      "id": 3567,
+      "title": "Speech and Language Processing (3rd ed. draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 9",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本涵盖RNN和Transformer等序列模型的综合教材，为NLP中位置信息的重要性提供了背景。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:09.178653Z",
+      "updated_at": "2025-09-09T02:37:11.364992Z"
+    },
+    {
+      "id": 3568,
+      "title": "Transformers and Self-Attention (CS224N Winter 2023 Lecture Notes)",
+      "author": "Tatsunori Hashimoto",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/class/cs224n/slides/cs224n-2023-lecture08-transformers.pdf",
+      "doi": "",
+      "note": "来自顶尖大学的课程材料，清晰解释了Transformer架构和位置编码的原理。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:09.182087Z",
+      "updated_at": "2025-09-09T02:37:39.528979Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

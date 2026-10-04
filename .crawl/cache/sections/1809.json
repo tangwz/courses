@@ -1,0 +1,61 @@
+{
+  "id": 1809,
+  "title": "示例：有状态计数器",
+  "meta_title": "JAX 有状态计数器示例",
+  "meta_description": "一个简单示例，展示计数器函数的状态管理。",
+  "content": "<p>显式状态传递模式可以用一个简单的有状态操作来演示：递增计数器。在标准 Python 中，可能会使用一个带有方法来修改内部属性的类。</p>\n<pre><code class=\"language-python\"># 标准 Python（可变状态）- 不兼容 JAX\nclass Counter:\n    def __init__(self):\n        self.count = 0\n\n    def increment(self):\n        self.count += 1\n        return self.count\n\ncounter = Counter()\nprint(counter.increment()) # 输出: 1\nprint(counter.increment()) # 输出: 2\n</code></pre>\n<p>这种方法依赖于<em>副作用</em>（修改 <code>self.count</code>）。如前所述，JAX 变换（如 <code>jit</code>）与纯函数配合最佳。如果我们尝试直接对 <code>increment</code> 方法应用 <code>jit</code>，JAX 将无法在编译环境中追踪 <code>self.count</code> 在多次调用中的变化，因为这种变化是<em>原地发生</em>的。</p>\n<h3>函数式实现</h3>\n<p>为了使其与 JAX 的函数式方法兼容，我们将该操作重新定义为纯函数。这个函数将<em>当前状态</em>（计数）作为参数 (parameter)，并返回<em>新状态</em>（递增后的计数）。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 状态只是一个整数（或 JAX 标量）\ninitial_state = 0\n\n# 纯函数：接收状态，返回新状态\ndef update_counter(current_state):\n  \"\"\"将输入状态递增 1。\"\"\"\n  print(f\"Tracing update_counter with state: {current_state}\") # 为追踪演示添加\n  new_state = current_state + 1\n  return new_state\n\n# 通过函数显式传递状态\nstate_after_1_update = update_counter(initial_state)\nstate_after_2_updates = update_counter(state_after_1_update)\nstate_after_3_updates = update_counter(state_after_2_updates)\n\nprint(f\"\\n初始状态: {initial_state}\")\nprint(f\"1 次更新后的状态: {state_after_1_update}\")\nprint(f\"2 次更新后的状态: {state_after_2_updates}\")\nprint(f\"3 次更新后的状态: {state_after_3_updates}\")\n</code></pre>\n<p>注意状态是如何显式地通过函数调用传递的。<code>update_counter</code> 函数本身不<em>改变</em>任何东西；它只是根据其输入计算一个新值。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-168hair\" \n              data-graph-definition='digraph StateFlow { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"]; edge [color=\"#868e96\"]; s0 [label=\"状态=0\"]; s1 [label=\"状态=1\"]; s2 [label=\"状态=2\"]; fn [label=\"update_counter\", shape=ellipse, color=\"#1c7ed6\", fillcolor=\"#a5d8ff\"]; s0 -> fn [label=\"输入\"]; fn -> s1 [label=\"输出\"]; s1 -> fn [label=\"输入\", style=dashed]; fn -> s2 [label=\"输出\", style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-168hair\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>状态通过纯函数 <code>update_counter</code> 的流动。一个调用的输出状态成为下一个调用的输入。</p>\n</blockquote>\n<h3>与 JIT 的兼容性</h3>\n<p>因为 <code>update_counter</code> 是一个纯函数，我们可以安全地对其应用 <code>jax.jit</code> 等 JAX 变换。</p>\n<pre><code class=\"language-python\"># JIT 编译纯函数\njitted_update_counter = jax.jit(update_counter)\n\n# 首次调用：JAX 追踪并编译函数\nprint(\"\\n应用 JIT：\")\njitted_state_1 = jitted_update_counter(initial_state)\nprint(f\"1 次 JIT 优化更新后的状态: {jitted_state_1}\")\n\n# 第二次调用：使用缓存的编译版本（内部无打印输出）\njitted_state_2 = jitted_update_counter(jitted_state_1)\nprint(f\"2 次 JIT 优化更新后的状态: {jitted_state_2}\")\n\n# 第三次调用：也使用编译版本\njitted_state_3 = jitted_update_counter(jitted_state_2)\nprint(f\"3 次 JIT 优化更新后的状态: {jitted_state_3}\")\n</code></pre>\n<p>你会注意到“Tracing update_counter...”消息只出现<em>一次</em>（或者如果输入类型略有变化，例如从 Python int 变为 JAX 追踪器，可能会出现几次）。后续调用使用 XLA 生成的优化编译代码，这表明 <code>jit</code> 成功处理了我们的有状态计算，因为状态是以函数方式管理的。</p>\n<h3>使用 <code>lax.scan</code> 进行高效迭代</h3>\n<p>手动链式调用函数是可行的，但对于多步操作来说，它冗长且效率不高。在 JAX 中处理有状态更新序列，更符合 JAX 习惯且性能更好的方法是使用 <code>jax.lax.scan</code>。这个函数本质上是一个为编译而优化的函数式循环结构。</p>\n<p><code>jax.lax.scan</code> 反复将一个函数（“主体函数”）应用于一个累积状态。主体函数接收当前的 <code>carry</code> 状态和一个可选的输入切片 <code>x</code>（来自输入序列 <code>xs</code>），并返回 <code>new_carry</code> 状态和该步骤的可选输出 <code>y</code>。</p>\n<pre><code class=\"language-python\"># 为 scan 定义主体函数\n# 接收 (累积状态, 可选输入切片)\n# 返回 (新累积状态, 可选的每步输出)\ndef scan_body(carry_state, _): # 这里没有每步输入，所以使用 _\n  \"\"\"在扫描的每一步应用的函数。\"\"\"\n  next_state = update_counter(carry_state)\n  # 我们不需要每步输出，只需要最终状态\n  per_step_output = None\n  return next_state, per_step_output\n\nnum_steps = 10\ninitial_scan_state = 0\n\nprint(f\"\\n使用 lax.scan 进行 {num_steps} 步操作：\")\n# 运行扫描\n# scan(f, 初始累积, xs, 长度)\n# 这里 xs 为 None，所以我们通过 length 指定步数\nfinal_state, accumulated_outputs = jax.lax.scan(\n    scan_body,\n    initial_scan_state,\n    xs=None,        # 简单计数器不需要输入序列\n    length=num_steps\n)\n\nprint(f\"扫描的初始状态: {initial_scan_state}\")\nprint(f\"扫描后的最终状态: {final_state}\")\n# accumulated_outputs 将为 None，因为我们每步返回了 None\n\n# 我们也可以对整个扫描操作进行 JIT 优化以获得最高效率\n@jax.jit\ndef run_scan_jitted(init_state, steps):\n  final_st, _ = jax.lax.scan(scan_body, init_state, xs=None, length=steps)\n  return final_st\n\nprint(\"\\n使用 JIT 优化后的 lax.scan：\")\nfinal_state_jitted = run_scan_jitted(initial_scan_state, num_steps)\n# 注意：来自 update_counter 的“追踪...”消息可能会在\n# 对 run_scan_jitted 进行 jax.jit 追踪时出现，但在执行时不会出现。\nprint(f\"JIT 优化扫描后的最终状态: {final_state_jitted}\")\n</code></pre>\n<p>结合 <code>jit</code> 使用 <code>lax.scan</code>，JAX 能够将整个循环编译成一个单一的优化内核，这比执行一个由 JIT 优化函数组成的 Python 循环快得多。</p>\n<h3>扩展到复杂状态</h3>\n<p>尽管这个计数器使用了简单的整数状态，但完全相同的模式适用于更复杂的状态，例如用于模型参数 (parameter)或优化器统计数据的嵌套字典或 JAX 数组列表。只要你的更新函数将整个状态结构（作为 PyTree）作为输入并返回整个更新后的状态结构，JAX 变换就会正确处理它。接下来当我们查看优化器状态管理时，我们将看到它如何发挥作用。</p>\n<p>这个有状态计数器示例展示了 JAX 中状态管理的核心函数模式：将状态视为一个不可变的值，显式地传入和传出纯函数。这种方法确保了与 <code>jit</code> 等 JAX 变换的兼容性，并使得 <code>lax.scan</code> 等高效执行模式成为可能。</p>",
+  "slug": "example-stateful-counter",
+  "updates": [],
+  "references": [
+    {
+      "id": 4897,
+      "title": "JAX Documentation: The JAX Way - Pure Functions",
+      "author": "JAX Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/the_sharp_bits.html#pure-functions",
+      "doi": "",
+      "note": "解释了JAX对纯函数和不可变数据结构的依赖，这是显式状态管理和启用JAX转换的基础。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:55.409539Z",
+      "updated_at": "2025-09-08T04:50:32.730320Z"
+    },
+    {
+      "id": 4900,
+      "title": "JAX Documentation: jax.lax.scan",
+      "author": "JAX Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html",
+      "doi": "",
+      "note": "提供了`jax.lax.scan`的详细文档和示例，这是编写高效、JAX兼容的迭代和状态操作循环的重要函数。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:55.525769Z",
+      "updated_at": "2025-09-08T04:50:17.763596Z"
+    },
+    {
+      "id": 4904,
+      "title": "Functional Python Programming",
+      "author": "Steven F. Lott",
+      "year": "2022",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 1: Understanding Functional Programming",
+      "url": "https://www.packtpub.com/product/functional-python-programming-third-edition/9781803232577",
+      "doi": "",
+      "note": "为Python中的函数式编程概念提供了实用介绍，强调了纯函数和不可变状态对于可维护和可测试代码的益处。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:55.673352Z",
+      "updated_at": "2025-09-08T04:50:47.704480Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3202,
+  "title": "针对LLM稳定性的对抗训练",
+  "meta_title": "LLM对抗训练",
+  "meta_description": "实施对抗训练技术以提升LLM稳定性。",
+  "content": "<p>对抗训练是大型语言模型（LLM）的一种主动防御策略，旨在应对越狱和提示注入等对抗性弱点。对抗训练不是在部署后才对攻击做出反应，而是旨在通过在训练或微调 (fine-tuning)过程中让LLM接触对抗性样本，从而在其自身内部建立固有的抵御能力。这一核心思路借鉴了其在计算机视觉方面的成功应用，简单明了：如果一个模型被期望能够抵御特定类型的攻击，就应该明确地教它如何处理这些攻击。</p>\n<h3>机制：从攻击中学习</h3>\n<p>标准的LLM训练是基于预测下一个token或遵循干净、规范数据上的指令来优化损失函数 (loss function)。对抗训练通过加入旨在欺骗或操纵模型的例子来修改这一过程。训练目标通常会变为干净样本上的标准损失与对抗性样本相关联的损失部分的结合。</p>\n<p>一般步骤涉及一个迭代循环：</p>\n<ol>\n<li><strong>生成对抗性样本：</strong> 对于给定的一批训练数据（或为安全测试设计的特定提示），生成相应的对抗性版本。这些输入旨在引起不希望的行为（例如，绕过安全过滤器，生成有害内容），同时通常看起来与良性输入相似。</li>\n<li><strong>计算模型输出：</strong> 将原始样本和对抗性样本都通过LLM的当前状态。</li>\n<li><strong>计算损失：</strong> 计算原始样本的标准损失。对于对抗性样本，损失计算取决于目标。它可能涉及惩罚模型产生不希望的（例如，有害的）输出，或者奖励它产生特定的期望输出（例如，拒绝消息）。</li>\n<li><strong>更新模型：</strong> 结合损失（通常是加权和），并使用反向传播 (backpropagation)更新模型的参数 (parameter)，使模型在干净数据和对抗性数据上都能表现良好。</li>\n</ol>\n<p>这个过程实际上迫使模型学习特征和决策边界，这些特征和边界不仅适用于标准数据分布，也适用于对抗性生成方法引入的特定类型的扰动。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-597cy0\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, margin=0.2];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  subgraph cluster_0 {\n    label = \"对抗训练循环\";\n    bgcolor = \"#e9ecef\";\n    style=filled;\n\n    Data [label=\"训练批次 (干净数据)\"];\n    AdvGen [label=\"生成对抗性样本\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    Model [label=\"LLM\", shape=cylinder, style=filled, fillcolor=\"#ffec99\"];\n    Loss [label=\"计算组合损失\\n(干净 + 对抗性)\", shape=ellipse, style=filled, fillcolor=\"#ffc9c9\"];\n    Update [label=\"更新模型参数\", shape=ellipse, style=filled, fillcolor=\"#b2f2bb\"];\n\n    Data -> AdvGen;\n    Data -> Model [label=\" 原始输入\"];\n    AdvGen -> Model [label=\" 对抗性输入\"];\n    Model -> Loss [label=\" 输出\"];\n    Loss -> Update;\n    Update -> Model [style=dashed, label=\" 更新后的权重\"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-597cy0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>对抗训练循环的简化视图，其中攻击生成被纳入模型更新周期。</p>\n</blockquote>\n<h3>文本对抗性样本的生成</h3>\n<p>与图像中的连续像素值不同，文本是离散的。直接应用像快速梯度符号法（FGSM）或投影梯度下降 (gradient descent)（PGD）这样的基于梯度的攻击方法是困难的。然而，存在一些调整方法：</p>\n<ul>\n<li><strong>梯度引导搜索：</strong> 根据token嵌入 (embedding)计算的梯度可以表明哪些token在导致特定输出方面最有影响力。这些信息可以引导搜索算法找到有效的扰动，例如替换、插入或删除特定的词或字符。HotFlip等技术使部分搜索过程自动化。</li>\n<li><strong>嵌入空间扰动：</strong> 可以通过对输入token的连续嵌入向量 (vector)进行微小改动，然后投射回最近的实际token嵌入来生成攻击。这种方法不那么直接，但使用了梯度信息。</li>\n<li><strong>意译和语义修改：</strong> 使用另一个模型（可能是另一个LLM）以可能触发弱点的方式意译输入，同时保留语义。</li>\n<li><strong>基于规则或启发式方法：</strong> 应用已知在某些越狱情境中有效（例如，角色扮演提示、编码）的预定义转换。</li>\n<li><strong>基于优化的方法：</strong> 将攻击生成看作一个优化问题，目标是找到导致期望错误行为的最小文本扰动，通常使用遗传算法或束搜索等搜索算法解决。</li>\n</ul>\n<p>攻击生成方法的选择很重要。它决定了模型学习抵御的弱点类型，并严重影响计算开销。</p>\n<h3>实施考量</h3>\n<ul>\n<li><strong>计算成本：</strong> 对抗训练的计算成本明显高于标准训练。为每个批次动态生成对抗性样本会增加大量额外负担。预先生成静态对抗性样本数据集效果较差，因为模型很快就会学会抵御那些特定实例；循环内的动态生成对于有效学习通常是必要的。</li>\n<li><strong>微调 (fine-tuning)重点：</strong> 由于成本和复杂性，对抗训练通常在微调阶段应用，而不是预训练 (pre-training)阶段。这使得防御能够针对与微调目标相关的特定行为（例如，安全对齐 (alignment)，指令遵循），通常使用更小、更精选的数据集。</li>\n<li><strong>定义扰动：</strong> 文本中“扰动”的性质很复杂。微小的拼写错误、语义等效的意译或添加看似无害的短语都可以作为对抗性攻击。训练设置必须仔细考虑什么构成真实且相关的扰动空间。</li>\n<li><strong>有目标与无目标：</strong> 对抗训练可以是<em>无目标的</em>（旨在使模型产生<em>任何</em>不正确或不安全的输出），也可以是<em>有目标的</em>（旨在使模型产生<em>特定的</em>有害输出，或者相反，产生特定的安全输出，例如拒绝消息）。针对已知故障模式（例如，为特定提示生成有害内容）进行有目标训练在安全应用中很常见。</li>\n</ul>\n<h3>优点与局限</h3>\n<p><strong>优点：</strong></p>\n<ul>\n<li><strong>提升稳定性：</strong> 主要优点是增强了对训练期间遇到的特定类型对抗性样本的抵御能力。</li>\n<li><strong>潜在泛化能力：</strong> 有时，针对一组攻击学习到的稳定性可以泛化到相关、未见过的攻击。</li>\n</ul>\n<p><strong>局限：</strong></p>\n<ul>\n<li><strong>稳定性-效用权衡：</strong> 对抗训练有时可能对模型在干净、非对抗性输入上的表现产生负面影响。模型在其主要功能上可能变得过于保守或能力下降。找到合适的平衡通常是依靠经验。</li>\n<li><strong>并非万能药：</strong> 稳定性通常仅限于训练期间使用的攻击。新颖或自适应的对手通常可以找到规避防御的新方法。这是一场持续的“军备竞赛”。</li>\n<li><strong>扩展性挑战：</strong> 计算需求使得全面应用变得困难，特别是对于最大的基础模型或在预训练 (pre-training)期间。\n\"*   <strong>定义实际攻击：</strong> 针对不实际或过于简化的对抗性样本进行训练可能无法带来实际的稳定性。\"</li>\n</ul>\n<p>对抗训练是一种有效的技术，可增强LLM抵御已知攻击途径的能力。虽然它本身不是一个完整的解决方案，但它在分层安全方法中扮演着重要角色。当与输入清理、输出过滤和评估规程（本课程其他部分会讨论）等方法结合时，它对构建更可靠、更安全的LLM系统有很大帮助。了解其机制、成本和局限对于在实践中有效应用它非常重要。</p>",
+  "slug": "adversarial-training-llm-robustness",
+  "updates": [],
+  "references": [
+    {
+      "id": 9198,
+      "title": "Towards Deep Learning Models Resistant to Adversarial Attacks",
+      "author": "Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, Adrian Vladu",
+      "year": "2018",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.06083",
+      "doi": "10.48550/arXiv.1706.06083",
+      "note": "定义了对抗训练的鲁棒优化框架，是该领域的奠基性工作。",
+      "order": 1,
+      "created_at": "2025-09-05T02:19:13.585275Z",
+      "updated_at": "2025-09-08T11:57:31.824089Z"
+    },
+    {
+      "id": 9199,
+      "title": "Adversarial Training Methods for Semi-Supervised Text Classification",
+      "author": "Takeru Miyato, Andrew M. Dai, Ian Goodfellow",
+      "year": "2017",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1605.07725",
+      "doi": "10.48550/arXiv.1605.07725",
+      "note": "通过扰动词嵌入向量，开创了对抗训练在文本领域的应用，解决了文本离散性的问题。",
+      "order": 2,
+      "created_at": "2025-09-05T02:19:13.588999Z",
+      "updated_at": "2025-09-08T11:57:32.746631Z"
+    },
+    {
+      "id": 9200,
+      "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models",
+      "author": "Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, Matt Fredrikson",
+      "year": "2023",
+      "publisher": "arXiv",
+      "journal": "arXiv preprint arXiv:2307.15043",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2307.15043",
+      "doi": "10.48550/arXiv.2307.15043",
+      "note": "介绍了当前针对已对齐LLM的对抗性攻击，展示了对抗训练旨在抵御的漏洞。",
+      "order": 3,
+      "created_at": "2025-09-05T02:19:13.592908Z",
+      "updated_at": "2025-09-08T11:57:32.725137Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

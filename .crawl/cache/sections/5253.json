@@ -1,0 +1,61 @@
+{
+  "id": 5253,
+  "title": "请求体数据校验",
+  "meta_title": "FastAPI 请求体数据校验",
+  "meta_description": "使用 Pydantic 模型来处理 FastAPI 中接收到的请求体数据的校验。",
+  "content": "<p>校验接收到的数据在构建可靠的 API 时是基本要求，特别是那些为机器学习 (machine learning)模型提供服务的 API。您需要确保数据结构和类型与您的模型预期一致，然后才能尝试任何处理或预测。FastAPI 通过与 Pydantic 模型集成，使这项工作变得简单。</p>\n<p>当您定义一个路径操作（例如 POST 或 PUT 请求处理器），它需要在请求体中接收数据时，您可以声明一个函数参数 (parameter)，其类型提示指向您的 Pydantic 模型。FastAPI 依据此类型提示来自行处理请求体数据校验。</p>\n<p>考虑一个场景：您的 API 端点需要接收特定特征以完成预测任务。您可以定义一个 Pydantic 模型来表示预期的结构：</p>\n<pre><code class=\"language-python\"># main.py\nfrom fastapi import FastAPI\nfrom pydantic import BaseModel, Field\nfrom typing import Optional # 对于可选字段，使用 Optional 或 | None\n\napp = FastAPI()\n\nclass ModelInput(BaseModel):\n    feature_alpha: float\n    feature_beta: int = Field(gt=0, description=\"Beta feature must be positive\")\n    category: str\n    optional_param: Optional[float] = None # Or use: float | None = None\n\n@app.post(\"/process_data/\")\nasync def process_data_endpoint(input_data: ModelInput):\n    \"\"\"\n    根据 ModelInput 模式接收并处理数据。\n    \"\"\"\n    # 如果代码执行到这里，input_data 肯定是一个有效的\n    # ModelInput 实例。FastAPI 已经处理了数据校验。\n    print(f\"Received valid data: {input_data.dict()}\")\n\n    # 直接访问校验过的数据字段：\n    result = input_data.feature_alpha * input_data.feature_beta\n\n    # 您可以继续使用这些校验过的数据，例如用于机器学习推断\n    return {\"status\": \"success\", \"processed_result\": result, \"received_data\": input_data}\n\n</code></pre>\n<p>在这个例子中，<code>process_data_endpoint</code> 函数预期一个名为 <code>input_data</code> 的参数，其类型提示是 <code>ModelInput</code>。当一个请求以 POST 方法访问 <code>/process_data/</code> 端点时，FastAPI 会自行执行以下操作：</p>\n<ol>\n<li><strong>读取请求体：</strong> FastAPI 读取请求体的原始字节。</li>\n<li><strong>解析 JSON：</strong> 它假定请求体包含 JSON 数据，并将其解析为 Python 字典。</li>\n<li><strong>用 Pydantic 校验：</strong> 它接收解析后的字典，并尝试使用这些数据创建一个 <code>ModelInput</code> Pydantic 模型实例。此步骤会执行模型中定义的所有校验检查：\n<ul>\n<li>检查所需字段（<code>feature_alpha</code>、<code>feature_beta</code>、<code>category</code>）是否存在。</li>\n<li>检查数据类型是否与标注（<code>float</code>、<code>int</code>、<code>str</code>）匹配。</li>\n<li>应用任何其他约束（例如 <code>feature_beta</code> 的 <code>gt=0</code>）。</li>\n</ul>\n</li>\n<li><strong>注入校验过的数据：</strong> 如果校验成功，FastAPI 会创建一个用请求数据填充的 <code>ModelInput</code> 实例，并将其作为 <code>input_data</code> 参数传递给您的路径操作函数。您的函数代码随后可以安心使用此对象，因为它符合已定义的模式。</li>\n<li><strong>处理校验错误：</strong> 如果解析失败，或者数据不符合 <code>ModelInput</code> 模式（例如，缺少必要字段、类型不正确，或者违反了 <code>feature_beta > 0</code> 等约束），FastAPI 会立即停止处理请求。它会生成并返回一个带有 HTTP 状态码 <code>422 Unprocessable Entity</code> 的 JSON 响应。此响应包含有关校验错误的详细信息，准确指出哪些字段有问题以及原因。</li>\n</ol>\n<h3>示例：有效请求</h3>\n<p>如果您向 <code>/process_data/</code> 发送一个 POST 请求，请求体 JSON 如下：</p>\n<pre><code class=\"language-json\">{\n  \"feature_alpha\": 10.5,\n  \"feature_beta\": 5,\n  \"category\": \"A\",\n  \"optional_param\": 99.9\n}\n</code></pre>\n<p>FastAPI 将针对 <code>ModelInput</code> 模型成功校验此请求。您的 <code>process_data_endpoint</code> 函数将执行，接收一个 <code>ModelInput</code> 实例，并且客户端将收到一个类似于 <code>200 OK</code> 的响应：</p>\n<pre><code class=\"language-json\">{\n  \"status\": \"success\",\n  \"processed_result\": 52.5,\n  \"received_data\": {\n    \"feature_alpha\": 10.5,\n    \"feature_beta\": 5,\n    \"category\": \"A\",\n    \"optional_param\": 99.9\n  }\n}\n</code></pre>\n<h3>示例：无效请求</h3>\n<p>现在，考虑发送一个带有无效请求体的 POST 请求：</p>\n<pre><code class=\"language-json\">{\n  \"feature_alpha\": \"not-a-float\",\n  \"category\": \"B\"\n}\n</code></pre>\n<p>这个载荷无效，原因有二：<code>feature_alpha</code> 是字符串而不是浮点数，以及所需的 <code>feature_beta</code> 字段缺失。FastAPI 会捕获这些错误，并返回一个 <code>422 Unprocessable Entity</code> 响应，如下所示：</p>\n<pre><code class=\"language-json\">{\n  \"detail\": [\n    {\n      \"loc\": [\n        \"body\",\n        \"feature_alpha\"\n      ],\n      \"msg\": \"值不是有效的浮点数\",\n      \"type\": \"type_error.float\"\n    },\\n    {\n      \"loc\": [\n        \"body\",\n        \"feature_beta\"\n      ],\n      \"msg\": \"字段必填\",\n      \"type\": \"value_error.missing\"\n    }\n  ]\n}\n</code></pre>\n<p>请注意，错误响应清楚地指明了请求体中每次校验失败的位置（<code>loc</code>）和原因（<code>msg</code>、<code>type</code>）。这种即时且详细的反馈对于 API 客户端在开发和调试过程中非常有帮助。</p>\n<p>通过简单地使用 Pydantic 模型作为请求体参数 (parameter)的类型提示，您可以获得便捷的、声明式的数据校验，并附带清晰的错误报告，这大大减少了样板代码，并提高了 API 端点的可靠性。这确保了到达您的应用逻辑（以及可能到达您的机器学习 (machine learning)模型）的数据结构和类型是正确的。此外，FastAPI 会使用这些 Pydantic 模型来直接生成 API 文档（如 Swagger UI）的模式，使您的 API 在预期请求格式方面能够自我说明。</p>",
+  "slug": "request-body-validation",
+  "updates": [],
+  "references": [
+    {
+      "id": 14164,
+      "title": "FastAPI Documentation - Request Body",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/tutorial/body/",
+      "doi": "",
+      "note": "FastAPI 官方指南，介绍如何使用 Pydantic 模型定义和验证请求体，涵盖本节演示的概念。",
+      "order": 1,
+      "created_at": "2025-09-05T08:48:33.658141Z",
+      "updated_at": "2025-09-09T14:07:39.307012Z"
+    },
+    {
+      "id": 14165,
+      "title": "Pydantic Documentation - Models",
+      "author": "Samuel Colvin and Pydantic Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/usage/models/",
+      "doi": "",
+      "note": "Pydantic 模型的官方文档，解释其数据定义、验证和序列化功能，FastAPI 集成这些功能用于请求体验证。",
+      "order": 2,
+      "created_at": "2025-09-05T08:48:33.666782Z",
+      "updated_at": "2025-09-09T14:07:55.947752Z"
+    },
+    {
+      "id": 14166,
+      "title": "Practical FastAPI: A developer's guide to building production-ready API services with Python",
+      "author": "J. D. Durr",
+      "year": "2023",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/practical-fastapi-a-developers-guide-to-building-production-ready-api-services-with-python/9781803248383",
+      "doi": "",
+      "note": "使用 FastAPI 开发 API 的实用指南，其中包含关于使用 Pydantic 进行数据验证和处理请求体的具体讨论和示例。",
+      "order": 3,
+      "created_at": "2025-09-05T08:48:33.676594Z",
+      "updated_at": "2025-09-09T14:07:45.831565Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

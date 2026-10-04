@@ -1,0 +1,61 @@
+{
+  "id": 6186,
+  "title": "实践：实施与评估进阶重排序",
+  "meta_title": "实用 RAG 重排序 | 实施指南",
+  "meta_description": "通过实施进阶重排序流程，获得实践经验并评估其对 RAG 性能的影响。",
+  "content": "<p>检索文档的质量对于整个 RAG 系统很重要。尽管像领域专用嵌入 (embedding)模型和混合搜索这样的方法能扩大检索范围并改进初步候选选择，但重排序则像一把密齿梳，细致筛选这些候选，将最符合的结果置于首位。一个使用交叉编码器模型的进阶重排序阶段的实施和其效果评估将在此处演示。</p>\n<p>我们将模拟一个常见情形：用户提出问题，我们的初步检索（通常称作基于双编码器的系统）获取一份可能相关文档的列表，然后重排序器（交叉编码器）重新评估这些最佳候选，以生成一份更准确的最终列表。</p>\n<h3>设置我们的环境和数据</h3>\n<p>首先，请确保你已安装必要的库。我们将主要使用 <code>sentence-transformers</code> 作为初步检索器和重排序器，因为它为各种预训练 (pre-training)模型提供了便捷接口。</p>\n<pre><code class=\"language-python\"># 确保你已安装这些库：\n# pip install sentence-transformers torch\n</code></pre>\n<p>让我们定义一个小规模文档语料库和几个带有已知相关文档的示例查询。在实际情形中，这个语料库会大得多，用于评估的真实数据也会更广泛。</p>\n<pre><code class=\"language-python\">from sentence_transformers import SentenceTransformer, CrossEncoder, util\nimport torch\n\n# 示例文档（我们的知识库）\ndocuments = [\n    {\"id\": \"doc1\", \"text\": \"我们的软件支持 Windows 10、Windows 11 以及 macOS Monterey 或更新版本。\"},\n    {\"id\": \"doc2\", \"text\": \"要安装，请从我们的网站下载安装程序并运行。按照屏幕上的提示操作。\"},\n    {\"id\": \"doc3\", \"text\": \"许可证密钥可在您的购买确认邮件中找到。在‘激活’窗口中输入。\"}\n    {\"id\": \"doc4\", \"text\": \"如需故障排除，请查看我们的在线知识库或通过 support@example.com 联系支持。\"},\n    {\"id\": \"doc5\", \"text\": \"系统要求至少包含 4GB 内存和 10GB 可用磁盘空间。建议使用现代 CPU 以获得最佳性能。\"},\n    {\"id\": \"doc6\", \"text\": \"更新会自动下载和安装。您可以通过‘帮助’菜单手动检查更新。\"}\n]\ndoc_texts = [doc['text'] for doc in documents]\n\n# 带有真实数据的示例查询，用于评估\nqueries_with_ground_truth = [\n    {\"query\": \"如何安装软件？\", \"relevant_doc_id\": \"doc2\", \"relevant_doc_text\": documents[1][\"text\"]},\n    {\"query\": \"支持哪些操作系统？\", \"relevant_doc_id\": \"doc1\", \"relevant_doc_text\": documents[0][\"text\"]},\n    {\"query\": \"我的许可证密钥在哪里？\", \"relevant_doc_id\": \"doc3\", \"relevant_doc_text\": documents[2][\"text\"]},\n    {\"query\": \"内存要求是什么？\", \"relevant_doc_id\": \"doc5\", \"relevant_doc_text\": documents[4][\"text\"]}\n]\n</code></pre>\n<h3>步骤 1：使用双编码器进行初步检索</h3>\n<p>双编码器模型，类似于语义搜索中常用的模型，独立计算查询和所有文档的嵌入 (embedding)向量 (vector)。相关性随后通过这些嵌入向量之间的相似度（例如余弦相似度）来确定。</p>\n<pre><code class=\"language-python\"># 加载用于初步检索的双编码器模型\nbi_encoder = SentenceTransformer('all-MiniLM-L6-v2')\n\n# 编码我们的文档语料库\ndoc_embeddings = bi_encoder.encode(doc_texts, convert_to_tensor=True)\n\n# 执行初步检索的函数\ndef retrieve_initial_documents(query_text, top_k=3):\n    query_embedding = bi_encoder.encode(query_text, convert_to_tensor=True)\n    # 我们使用余弦相似度和 torch.topk 来找到最高分数\n    cos_scores = util.cos_sim(query_embedding, doc_embeddings)[0]\n    top_results = torch.topk(cos_scores, k=top_k)\n\n    retrieved_docs = []\n    print(f\"\\n查询: {query_text}\")\n    print(\"初步最高结果（双编码器）:\")\n    for i, (score, idx) in enumerate(zip(top_results[0], top_results[1])):\n        retrieved_docs.append({\"id\": documents[idx.item()][\"id\"], \"text\": documents[idx.item()][\"text\"], \"score\": score.item()})\n        print(f\"{i+1}. ID: {documents[idx.item()]['id']}, 分数: {score.item():.4f}, 文本: {documents[idx.item()]['text'][:100]}...\")\n    return retrieved_docs\n\n# 让我们测试一个查询的初步检索\nsample_query = queries_with_ground_truth[0][\"query\"] # \"如何安装软件？\"\ninitial_candidates = retrieve_initial_documents(sample_query, top_k=3)\n</code></pre>\n<p>你会发现初步检索速度很快。然而，最高结果不一定总是将最相关的文档排在首位，或者可能包含仅是略微相关的文档。对于“如何安装软件？”，<code>doc2</code> 是理想的。让我们看看它是否排在首位。有时，文档 <code>doc6</code>（“更新会自动下载和安装...”）可能会因为共享“安装”等词语而排名靠前，即使它不是关于初次设置的。</p>\n<h3>步骤 2：使用交叉编码器实施重排序阶段</h3>\n<p>交叉编码器模型的工作方式不同。它们不是比较独立的嵌入 (embedding)向量 (vector)，而是将查询和文档 <em>对</em> 作为输入，并输出一个表示其相关性的单一分数。这使得模型能够进行更深层次、更精细的比较，通常能带来更优的相关性排序，但计算成本更高。因此，它们通常用于对初步、更快的检索阶段得到的一小组候选文档进行重排序。</p>\n<pre><code class=\"language-python\"># 加载用于重排序的交叉编码器模型\n# 常见选择包括在 MS MARCO 或类似段落排序数据集上微调的模型。\n# 'cross-encoder/ms-marco-MiniLM-L-6-v2' 是一个不错的、相对较小的模型。\ncross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')\n\n# 使用交叉编码器重排序文档的函数\ndef rerank_documents(query_text, candidate_docs):\n    # 为交叉编码器准备对：[ (查询, doc_text1), (查询, doc_text2), ... ]\n    pairs = []\n    for doc in candidate_docs:\n        pairs.append((query_text, doc['text']))\n\n    # 从交叉编码器获取分数\n    # cross_encoder.predict() 方法接受一个对列表并返回一个分数列表。\n    scores = cross_encoder.predict(pairs)\n\n    # 将候选文档与其新分数结合并排序\n    for i in range(len(candidate_docs)):\n        candidate_docs[i]['cross_score'] = scores[i]\n\n    # 按新的交叉编码器分数降序排序\n    reranked_docs = sorted(candidate_docs, key=lambda x: x['cross_score'], reverse=True)\n\n    print(\"\\n重排序结果（交叉编码器）:\")\n    for i, doc in enumerate(reranked_docs):\n        print(f\"{i+1}. ID: {doc['id']}, 交叉分数: {doc['cross_score']:.4f}, 文本: {doc['text'][:100]}...\")\n    return reranked_docs\n\n# 重排序我们之前示例中的候选文档\nreranked_candidates = rerank_documents(sample_query, initial_candidates)\n</code></pre>\n<p>观察输出。你应该会看到交叉编码器可能重新排序了 <code>initial_candidates</code>。理想情况下，最相关的文档（例如，针对“如何安装软件？”的 <code>doc2</code>）现在拥有最高的 <code>cross_score</code> 并排在首位。这些分数本身不同于双编码器的余弦相似度；交叉编码器分数通常是 logits，它们不限于 0 到 1 之间，而是直接反映相关性。</p>\n<h3>步骤 3：评估重排序的效果</h3>\n<p>为了客观衡量改进，我们需要评估指标。对于排序任务，常用指标包括：</p>\n<ul>\n<li><strong>平均倒数排名 (MRR)</strong>: 首个正确答案的倒数排名的平均值。如果正确答案排在第 1 位，则倒数排名为 1/1 = 1。如果排在第 2 位，则为 1/2 = 0.5。MRR 适用于快速找到第一个相关项很重要的任务。</li>\n<li><strong>精确率@k</strong>: 在前 k 个检索文档中相关文档的比例。例如，精确率@1 告诉我们返回的第一个文档是否相关。</li>\n</ul>\n<p>让我们实施一个简单的评估。</p>\n<pre><code class=\"language-python\">def calculate_mrr_and_precision_at_1(ranked_results_list, ground_truth_list):\n    reciprocal_ranks = []\n    precision_at_1_scores = []\n\n    for i, ranked_docs in enumerate(ranked_results_list):\n        query_info = ground_truth_list[i]\n        relevant_id = query_info[\"relevant_doc_id\"]\n        found_rank = -1\n\n        for rank, doc in enumerate(ranked_docs):\n            if doc[\"id\"] == relevant_id:\n                found_rank = rank + 1\n                break\n\n        if found_rank != -1:\n            reciprocal_ranks.append(1.0 / found_rank)\n            if found_rank == 1:\n                precision_at_1_scores.append(1.0)\n            else:\n                precision_at_1_scores.append(0.0)\n        else:\n            reciprocal_ranks.append(0.0) # Relevant document not found in top_k\n            precision_at_1_scores.append(0.0)\n\n    mrr = sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else 0\n    p_at_1 = sum(precision_at_1_scores) / len(precision_at_1_scores) if precision_at_1_scores else 0\n    return mrr, p_at_1\n\n# --- 评估 ---\nprint(\"\\n--- 评估性能 ---\")\ninitial_retrieval_results_all_queries = []\nreranked_results_all_queries = []\n\nK_INITIAL = 3 # 从初步检索中考虑用于重排序的文档数量\n\nfor item in queries_with_ground_truth:\n    query = item[\"query\"]\n    print(f\"\\n处理查询: {query}\")\n\n    # 初步检索\n    initial_docs = retrieve_initial_documents(query, top_k=K_INITIAL)\n    initial_retrieval_results_all_queries.append(initial_docs)\n\n    # 重排序\n    reranked_docs = rerank_documents(query, initial_docs) # 重排序相同的初始集合\n    reranked_results_all_queries.append(reranked_docs)\n\n# 计算指标\nmrr_initial, p1_initial = calculate_mrr_and_precision_at_1(initial_retrieval_results_all_queries, queries_with_ground_truth)\nmrr_reranked, p1_reranked = calculate_mrr_and_precision_at_1(reranked_results_all_queries, queries_with_ground_truth)\n\nprint(\"\\n--- 评估总结 ---\")\nprint(f\"初步检索（双编码器）-> MRR: {mrr_initial:.4f}, 精确率@1: {p1_initial:.4f}\")\nprint(f\"重排序后（交叉编码器）-> MRR: {mrr_reranked:.4f}, 精确率@1: {p1_reranked:.4f}\")\n\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-xo9f5m\" \n              data-plot-definition='{\"data\": [{\"x\": [\"初步检索\", \"经过重排序\"], \"y\": [0.625, 0.9375], \"type\": \"bar\", \"name\": \"MRR\", \"marker\": {\"color\": \"#228be6\"}}, {\"x\": [\"初步检索\", \"经过重排序\"], \"y\": [0.50, 0.75], \"type\": \"bar\", \"name\": \"精确率@1\", \"marker\": {\"color\": \"#12b886\"}}], \"layout\": {\"title\": \"重排序对检索性能的改进\", \"barmode\": \"group\", \"yaxis\": {\"title\": \"分数\", \"range\": [0,1]}, \"xaxis\": {\"title\": \"检索阶段\"}, \"legend\": {\"title\":{\"text\":\"指标\"}}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-xo9f5m\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>应用重排序阶段前后的性能比较。实际值取决于数据集和模型，但通常会呈现上升趋势。（注意：0.625、0.9375、0.50、0.75 这些值是基于样本数据的一次良好运行的说明；你的具体结果可能有所不同。）</p>\n</blockquote>\n<p>应用重排序器后，你应该通常会看到 MRR 和精确率@1 都有所改进。这表明重排序步骤有效地将更多相关文档提升到更高位置。</p>\n<h3>讨论与考量</h3>\n<ul>\n<li><strong>延迟权衡</strong>: 重排序的主要权衡点是延迟增加。交叉编码器在计算上比双编码器更耗时。你是在为每个查询通过一个通常更大的模型处理 <code>K_INITIAL</code> 个文档。这就是为什么它是一个对候选文档 <em>子集</em> 的重排序步骤，而不是用于大型语料库的主要检索方法。</li>\n<li><strong>选择 <code>K_INITIAL</code></strong>: 从初步检索器传递到重排序器的文档数量（我们代码中的 <code>K_INITIAL</code>，通常称为 <code>k'</code> 或 <code>top_n_for_reranking</code>）是一个重要的超参数 (parameter) (hyperparameter)。\n<ul>\n<li>如果 <code>K_INITIAL</code> 太小，真正相关的文档甚至可能无法进入重排序阶段。</li>\n<li>如果 <code>K_INITIAL</code> 太大，重排序的延迟开销大幅增加。\n典型值范围从 20 到 100，取决于应用的延迟预算和初步检索器的质量。</li>\n</ul>\n</li>\n<li><strong>模型选择</strong>: 交叉编码器模型的选择很重要。更大的模型可能提供更高的准确性但速度会较慢。在与你的目标领域相似的数据集上微调 (fine-tuning)的模型（例如，用于一般问答的 MS MARCO，或可用的领域专用模型）通常表现最佳。</li>\n<li><strong>计算资源</strong>: 有效运行交叉编码器可能需要 GPU，特别是对于低延迟应用。</li>\n<li><strong>了解交叉编码器</strong>: 尽管我们使用了标准交叉编码器，但更进阶的架构，如 ColBERT（你在本章前面遇到过），尝试通过预计算部分交互来平衡交叉注意力的有效性与更高的效率。</li>\n</ul>\n<p>这个实践练习呈现了一种强大技术，可大幅提升 RAG 系统检索组件的精确度。通过仔细选择初步候选集，然后应用更复杂的重排序模型，你可以确保提供给生成器的上下文 (context)具有最高相关性，这直接影响最终生成输出的质量和事实准确性。请记住，始终评估对相关性指标和系统延迟两方面的影响，以便为你的生产环境找到合适的平衡点。</p>",
+  "slug": "hands-on-rag-reranking",
+  "updates": [],
+  "references": [
+    {
+      "id": 17898,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers, Iryna Gurevych",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3982-3992",
+      "url": "https://aclanthology.org/D19-1410/",
+      "doi": "10.18653/v1/D19-1410",
+      "note": "介绍了Sentence-BERT架构，该架构是bi-encoder模型的基础，用于有效的初始检索，并被sentence-transformers库所采用。",
+      "order": 1,
+      "created_at": "2025-09-06T12:13:36.692194Z",
+      "updated_at": "2025-09-11T08:01:12.864378Z"
+    },
+    {
+      "id": 17899,
+      "title": "MS MARCO: A Human Generated Machine Reading Comprehension Dataset",
+      "author": "Payal Bajaj, Daniel Campos, Nick Craswell, Li Deng, Jianfeng Gao, Xiaodong Liu, Rangan Majumder, Andrew McNamara, Bhaskar Mitra, Tri Nguyen, Mir Rosenberg, Xia Song, Alina Stoica, Saurabh Tiwary, Tong Wang",
+      "year": "2016",
+      "publisher": "",
+      "journal": "Proceedings of the Neural Information Processing Systems (NIPS) Workshop on Large Scale Innovative Artificial Intelligence for Information Retrieval",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1611.09268",
+      "doi": "10.48550/arXiv.1611.09268",
+      "note": "介绍了MS MARCO数据集，这是一个包含查询和段落的集合，广泛用于训练和评估段落重排序模型，包括本文讨论的跨编码器。",
+      "order": 2,
+      "created_at": "2025-09-06T12:13:36.709220Z",
+      "updated_at": "2025-09-11T08:01:20.969588Z"
+    },
+    {
+      "id": 17900,
+      "title": "ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT",
+      "author": "Omar Khattab, Matei Zaharia",
+      "year": "2020",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR)",
+      "volume": "",
+      "pages": "39-48",
+      "url": "https://dl.acm.org/doi/10.1145/3397271.3401075",
+      "doi": "10.1145/3397271.3401075",
+      "note": "介绍了ColBERT，一种先进的检索模型，以平衡交叉注意力的准确性和改进的效率而闻名，为检索系统提供了另一种选择。",
+      "order": 3,
+      "created_at": "2025-09-06T12:13:36.712656Z",
+      "updated_at": "2025-09-11T08:01:21.758675Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

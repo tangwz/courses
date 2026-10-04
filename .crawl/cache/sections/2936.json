@@ -1,0 +1,61 @@
+{
+  "id": 2936,
+  "title": "将 pmap 与训练框架结合使用",
+  "meta_title": "pmap 与 Flax/Haiku 的使用",
+  "meta_description": "在 Flax 或 Haiku 典型训练结构中集成 `pmap` 以实现数据并行。",
+  "content": "<p>虽然 JAX 提供了功能强大的 <code>pmap</code> 变换，用于在多个设备上分发计算，但构建复杂的模型及其训练循环需要良好的组织性。Flax 或 Haiku 等高级神经网络 (neural network)库提供了抽象功能，用于定义模型、管理参数 (parameter)和处理状态，这大大简化了开发工作。将 <code>pmap</code> 与这些框架集成，可以使我们同时获得结构化模型构建和高效数据并行化的优点。</p>\n<p>核心思想仍然是 <code>pmap</code> 实现的单程序多数据 (SPMD) 方法。我们编写函数（通常是训练步骤），就像它在单个设备上运行一样，但 <code>pmap</code> 会将其转换为在多个设备上并发运行，每个设备都在输入数据的不同切片上操作。这些框架有助于管理模型参数和优化器状态，这些在分布式设置中需要得到正确处理。</p>\n<h3>复制模型状态</h3>\n<p>当使用 <code>pmap</code> 进行数据并行时，模型本身通常会在所有参与设备上进行复制。每个设备都持有模型参数 (parameter)的完整副本。同样，优化器的状态（例如 Adam 中的动量缓冲区）也需要复制，以便每个设备可以根据其本地数据分片计算潜在的参数更新。</p>\n<p>Flax 等框架通常在结构化容器（例如 Python 字典或专门的 dataclass，通常称为“训练状态”）中管理参数和状态。在 <code>pmap</code> 处理的训练循环开始之前，我们在主机 (CPU) 上初始化模型参数和优化器状态，然后明确地将此状态复制到所有可用设备上。JAX 提供了有助于实现这种复制的实用工具。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport flax.linen as nn\nfrom flax.training import train_state\nimport optax # Common optimizer library used with Flax\n\n# 假设 'model' 是一个 Flax nn.Module 实例\n# 假设 'optimizer' 是一个 Optax 优化器实例\n\n# 初始化示例（在主机 CPU 上）\nkey = jax.random.PRNGKey(0)\ndummy_input = jnp.ones([1, 28, 28, 1]) # 输入形状示例\nparams = model.init(key, dummy_input)['params']\ntx = optax.adam(learning_rate=1e-3)\noptimizer_state = tx.init(params)\n\n# 创建一个 TrainState 对象（Flax 的常见模式）\n# 它将参数、优化器状态和 apply_fn 捆绑在一起\nclass TrainState(train_state.TrainState):\n  pass # 如果需要，可以添加自定义字段\n\nstate = TrainState.create(apply_fn=model.apply, params=params, tx=tx)\n\n# 在设备间复制状态\nnum_devices = jax.local_device_count()\nreplicated_state = jax.device_put_replicate(state, jax.local_devices())\n\nprint(f\"状态已在 {num_devices} 个设备上复制。\")\n# 检查示例：单个设备上参数的形状\nprint(jax.tree_util.tree_map(lambda x: x.shape, replicated_state.params)['Dense_0']['kernel'])\n# 检查示例：跨设备参数的形状（注意前导维度）\nprint(jax.tree_util.tree_map(lambda x: x.shape, state.params)['Dense_0']['kernel'])\n</code></pre>\n<p>请注意 <code>jax.device_put_replicate</code> 如何创建一个状态版本，其中每个叶节点（参数数组、优化器状态数组）都有一个等于设备数量的前导维度。</p>\n<h3>数据分片</h3>\n<p>对于数据并行，全局训练数据批次需要均匀分割到设备上。如果您的设备数量为 <code>N</code>，全局批次大小为 <code>B</code>，则每个设备将处理一个大小为 <code>B // N</code> 的本地批次。这种分片需要在数据传递给 <code>pmap</code> 处理的函数之前进行。</p>\n<pre><code class=\"language-python\">global_batch_size = 64\nlocal_batch_size = global_batch_size // num_devices\n\n# 假设 'global_images' 和 'global_labels' 是 NumPy 数组\n# 形状为 [global_batch_size, ...]\n\ndef shard_batch(batch):\n  \"\"\"重塑数据并在设备间分片。\"\"\"\n  return jax.tree_util.tree_map(\n      lambda x: x.reshape((num_devices, local_batch_size) + x.shape[1:]),\n      batch\n  )\n\n# 数据示例（替换为实际数据加载）\nglobal_images = jnp.ones([global_batch_size, 28, 28, 1])\nglobal_labels = jnp.ones([global_batch_size], dtype=jnp.int32)\nbatch = {'image': global_images, 'label': global_labels}\n\nsharded_batch = shard_batch(batch)\n\n# 验证形状\nprint(\"全局图像形状:\", global_images.shape)\nprint(\"分片图像形状:\", sharded_batch['image'].shape)\n# 输出应显示：分片图像形状: (num_devices, local_batch_size, 28, 28, 1)\n</code></pre>\n<p><code>shard_batch</code> 实用工具使用 <code>jax.tree_util.tree_map</code> 来处理任意批次结构（如字典），并重塑每个数据数组，使其具有与设备数量匹配的前导维度。</p>\n<h3>定义和映射训练步骤</h3>\n<p>分布式训练循环的核心是执行单个优化步骤的函数。此函数通常计算损失、梯度，并确定单个设备本地批次的参数 (parameter)更新。使用框架时，这通常涉及调用模型的 <code>apply</code> 方法和使用标准的 JAX 自动微分 (<code>jax.value_and_grad</code>)。</p>\n<p>一个重要方面是处理梯度聚合。由于每个设备仅根据其本地数据分片计算梯度，因此在更新复制的模型参数之前，这些梯度需要在所有设备上平均。这确保了参数更新反映了整个全局批次的损失梯度。<code>jax.lax.pmean</code> 集合操作在 <code>pmap</code> 处理的函数内部用于此目的。</p>\n<pre><code class=\"language-python\">def compute_loss(params, batch, apply_fn):\n  \"\"\"计算批次的交叉熵损失。\"\"\"\n  logits = apply_fn({'params': params}, batch['image'])\n  one_hot_labels = jax.nn.one_hot(batch['label'], num_classes=10)\n  loss = -jnp.sum(one_hot_labels * jax.nn.log_softmax(logits), axis=-1)\n  return jnp.mean(loss)\n\ndef train_step(state, batch):\n  \"\"\"在单个设备的数据分片上执行一次训练步骤。\"\"\"\n  # 计算本地批次的损失和梯度\n  grad_fn = jax.value_and_grad(compute_loss)\n  loss, grads = grad_fn(state.params, batch, state.apply_fn)\n\n  # **** 重要：在设备间平均梯度 ****\n  # 'batch_axis' 是我们为 pmap 维度指定的名称\n  averaged_grads = jax.lax.pmean(grads, axis_name='batch_axis')\n\n  # 使用平均后的梯度更新状态\n  new_state = state.apply_gradients(grads=averaged_grads)\n\n  # 也可以在此处计算和聚合指标（例如，准确率）\n  # metrics = {'loss': loss, 'accuracy': compute_accuracy(logits, batch['label'])}\n  # averaged_metrics = jax.lax.pmean(metrics, axis_name='batch_axis')\n\n  return new_state, loss # 返回更新后的状态和本地损失\n\n# 现在，对 train_step 函数进行 pmap 处理\n# 指定 pmean 中使用的 axis_name\np_train_step = jax.pmap(train_step, axis_name='batch_axis')\n\n# --- 在训练循环中 ---\n# 假设 'sharded_batch' 已按前面所示准备好\n# replicated_state 包含在设备间复制的状态\n\n# 执行并行训练步骤\nreplicated_state, local_losses = p_train_step(replicated_state, sharded_batch)\n\n# local_losses 的形状将是 (num_devices,)\n# 用于日志记录的设备间平均损失（可选，在主机上完成）\navg_loss = jnp.mean(local_losses)\nprint(f\"设备间平均损失: {avg_loss:.4f}\")\n\n# replicated_state 现在包含更新后的参数和\n# 优化器状态，在所有设备上保持一致。\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li><code>compute_loss</code> 定义了如何使用存储在 <code>state</code> 中的模型的 <code>apply_fn</code> 来计算给定参数集和批次的损失。</li>\n<li><code>train_step</code> 使用 <code>jax.value_and_grad</code> 计算损失和梯度。</li>\n<li><code>jax.lax.pmean(grads, axis_name='batch_axis')</code> 对由名称 <code>'batch_axis'</code> 标识的 <code>pmap</code> 操作中所有参与设备的梯度树 (<code>grads</code>) 进行平均。</li>\n<li><code>state.apply_gradients</code> 是 <code>flax.training.train_state.TrainState</code> 提供的方法，它使用优化器 (<code>state.tx</code>) 通过提供的梯度更新参数 (<code>state.params</code>)。</li>\n<li><code>jax.pmap(train_step, axis_name='batch_axis')</code> 创建 <code>train_step</code> 的并行版本。<code>axis_name</code> 参数很重要；它将 <code>pmap</code> 操作与函数内部使用的集合操作（如 <code>pmean</code>）连接起来。</li>\n<li>当使用 <code>replicated_state</code> 和 <code>sharded_batch</code> 调用 <code>p_train_step</code> 时，JAX 在每个设备上执行 <code>train_step</code>，使用其对应的状态和数据切片。<code>pmean</code> 操作同步设备以平均梯度。</li>\n<li>该函数返回更新后的 <code>replicated_state</code>（在所有设备上保持一致）和在每个设备的本地分片上计算的损失。</li>\n</ol>\n<h3>处理 RNG 密钥</h3>\n<p>像 dropout 这样的随机操作在分布式设置中需要仔细处理随机数生成器 (RNG) 密钥。简单地复制相同的密钥会导致所有设备上生成相同的 dropout 掩码，从而抵消随机性带来的益处。</p>\n<p>常见策略是在主机上拆分主 PRNG 密钥，并为每个设备提供<em>不同</em>的子密钥。Flax 等框架通常提供机制来自动处理此问题，在初始化或应用模型时，通常要求您传递特定的 RNG 流（例如，一个用于“params”初始化，一个用于“dropout”）。使用 <code>pmap</code> 时，您需要确保这些按设备划分的密钥正确地传递到 <code>pmap</code> 处理的函数中。通常，这涉及在 <code>pmap</code> 处理的函数<em>外部</em>拆分密钥，并将生成的分片密钥作为输入参数 (parameter)的一部分包含在内。</p>\n<pre><code class=\"language-python\"># --- 训练循环外部 ---\nmain_key = jax.random.PRNGKey(42)\n\n# --- 训练循环内部 ---\n# 为当前步骤拆分\nstep_key, main_key = jax.random.split(main_key)\n\n# 为模型内的 dropout 等操作在设备间拆分\ndropout_keys = jax.random.split(step_key, num_devices)\n\n# 修改 train_step 以接受和使用 dropout 密钥\ndef train_step_with_rng(state, batch, dropout_rng):\n   # ... 在 compute_loss 或 apply_fn 内部 ...\n   # logits = apply_fn({'params': params}, batch['image'],\n   #                   rngs={'dropout': dropout_rng})\n   # ... 函数的其余部分 ...\n   # 记住用于梯度等的 pmean\n   pass # 修改后函数体的占位符\n\np_train_step_with_rng = jax.pmap(train_step_with_rng, axis_name='batch_axis')\n\n# 用分片的 dropout 密钥调用\n# replicated_state, local_losses = p_train_step_with_rng(replicated_state, sharded_batch, dropout_keys)\n</code></pre>\n<p>将 <code>pmap</code> 与 Flax 或 Haiku 等框架结合使用，提供了一种可扩展且有组织的方式来实现数据并行训练。该框架处理模型定义和状态管理，而 <code>pmap</code> 编排在多个设备上的分发和执行，包括使用集合操作进行必要的梯度同步。这种模式对于在现代加速器硬件上高效训练大型模型十分重要。</p>",
+  "slug": "combining-pmap-training-frameworks",
+  "updates": [],
+  "references": [
+    {
+      "id": 6985,
+      "title": "Distributed JAX",
+      "author": "The JAX authors",
+      "year": "2024",
+      "publisher": "JAX documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/advanced_tutorials.html",
+      "doi": "",
+      "note": "JAX 分布式计算的官方指南，涵盖 `pmap`、`pmean` 等集体操作以及单程序多数据 (SPMD) 范式。",
+      "order": 1,
+      "created_at": "2025-09-05T01:30:12.704570Z",
+      "updated_at": "2025-09-08T07:20:26.897435Z"
+    },
+    {
+      "id": 6987,
+      "title": "Distributed Training with Flax and JAX",
+      "author": "Flax team",
+      "year": "2024",
+      "publisher": "Flax Documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://flax.readthedocs.io/en/latest/guides/nnx_overview/scaling_up_to_multiple_devices.html",
+      "doi": "",
+      "note": "Flax 官方指南，展示如何将 Flax 模型和 `TrainState` 与 JAX 的 `pmap` 集成，以进行数据并行训练，包括状态复制、数据分片和梯度聚合。",
+      "order": 2,
+      "created_at": "2025-09-05T01:30:12.993448Z",
+      "updated_at": "2025-09-08T07:20:08.073981Z"
+    },
+    {
+      "id": 6988,
+      "title": "JAX: Composable transformations of Python+NumPy programs",
+      "author": "James Bradbury, Roy Frostig, Peter Hawkins, Matthew James Johnson, Chris Leary, Skye Wanderman-Milne, and Adam Paszke",
+      "year": "2023",
+      "publisher": "Microtome Publishing",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "24",
+      "pages": "1-31",
+      "url": "https://www.jmlr.org/papers/v24/22-0534/22-0534.pdf",
+      "doi": "10.5555/3579549.3579555",
+      "note": "介绍 JAX 的基础论文，阐述了其设计原则、自动微分以及通过 XLA 进行编译的机制，这些构成了其并行化能力的基础。",
+      "order": 3,
+      "created_at": "2025-09-05T01:30:13.169824Z",
+      "updated_at": "2025-09-08T07:20:23.503610Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

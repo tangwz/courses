@@ -1,0 +1,45 @@
+{
+  "id": 3440,
+  "title": "比较开源特征存储（如Feast）",
+  "meta_title": "比较像Feast这样的开源特征存储",
+  "meta_description": "详细比较流行的开源特征存储框架、它们的功能与局限性。",
+  "content": "<p>在评估特征存储方案时，开源软件（OSS）提供了一个不错的折中方案，它介于从头开始构建系统和采用完全托管的云服务之间。开源选项提供了很大的灵活性和掌控权，使组织能够根据其特定的基础设施和工作流程定制系统，同时受益于社区贡献和透明度。Feast 作为领先且许多组织使用的开源特征存储之一，成为了解此类产品特点的一个很好的示例。</p>\n<h3>了解 Feast 的架构和理念</h3>\n<p>Feast 采用解耦架构，这使其与一些单体或紧密集成的系统有所不同。它的主要目的是提供一个中心注册表，用于定义、查找和访问特征，同时常常利用现有的数据基础设施进行存储和计算。</p>\n<p>主要组件通常包括：</p>\n<ol>\n<li><strong>特征注册表：</strong> 一个中心目录，通常由 Git 仓库或数据库支持，用于存储特征定义（模式、元数据、数据源）。它充当现有特征的数据源头。</li>\n<li><strong>离线存储连接器：</strong> 连接到大型批处理存储系统，如数据仓库（Snowflake, BigQuery, Redshift）或数据湖（S3, GCS, ADLS），历史特征数据存放于此。这些数据主要用于生成训练数据集。</li>\n<li><strong>在线存储连接器：</strong> 连接到低延迟键值存储（Redis, DynamoDB, Datastore），用于在推理 (inference)时迅速提供特征。数据通常从离线存储加载或通过流式管道摄入。</li>\n<li><strong>Python SDK/客户端：</strong> 为数据科学家和工程师提供主要方式，用于定义特征、生成训练数据、获取在线特征以及管理特征存储配置。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-nr8yps\" \n              data-graph-definition='digraph FeastArchitecture {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled, rounded\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  subgraph cluster_clients {\n    label = \"用户与系统\";\n    bgcolor=\"#f8f9fa\";\n    style=\"filled, rounded\";\n    ML_Training [label=\"机器学习训练管道\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n    ML_Serving [label=\"机器学习推理服务\", shape=component, fillcolor=\"#a5d8ff\"];\n    DS_User [label=\"数据科学家\\n(Python SDK)\", shape= Mrecord, fillcolor=\"#bac8ff\"];\n  }\n\n  subgraph cluster_feast {\n    label = \"Feast 核心\";\n    bgcolor=\"#f8f9fa\";\n    style=\"filled, rounded\";\n    Registry [label=\"特征注册表\\n(定义、元数据)\", fillcolor=\"#ffec99\"];\n    Python_SDK [label=\"Feast Python SDK/CLI\", fillcolor=\"#bac8ff\"];\n    Online_API [label=\"在线服务 API\", fillcolor=\"#d0bfff\"];\n  }\n\n  subgraph cluster_storage {\n     label = \"数据基础设施（可插拔）\";\n     bgcolor=\"#f8f9fa\";\n     style=\"filled, rounded\";\n     Offline_Store [label=\"离线存储\\n(数据仓库/数据湖)\\n 例如，BigQuery, Snowflake, S3\", shape=database, fillcolor=\"#b2f2bb\"];\n     Online_Store [label=\"在线存储\\n(键值数据库)\\n 例如，Redis, DynamoDB\", shape=database, fillcolor=\"#fcc2d7\"];\n  }\n\n  Compute [label=\"外部计算\\n(Spark, Pandas, Flink, 等)\", shape=box3d, fillcolor=\"#ffd8a8\", style=\"filled, rounded\"];\n\n  DS_User -> Python_SDK [label=\"定义特征,\\n管理存储\"];\n  Python_SDK -> Registry [label=\"更新\"];\n  Registry -> Python_SDK [label=\"读取定义\"];\n\n  ML_Training -> Python_SDK [label=\"请求训练数据\"];\n  Python_SDK -> Offline_Store [label=\"生成时间点查询\"];\n\n  ML_Serving -> Online_API [label=\"请求特征\\n(实体键)\"];\n  Online_API -> Online_Store [label=\"获取特征向量\"];\n  Online_API -> Registry [label=\"获取元数据\"];\n\n\n  Compute -> Offline_Store [label=\"写入特征数据（批处理）\"];\n  Compute -> Online_Store [label=\"写入特征数据（批处理/流式）\"];\n\n  Python_SDK -> Compute [label=\"触发计算（可选）\", style=dashed];\n\n\n  {rank=same; DS_User; ML_Training; ML_Serving;}\n  {rank=same; Python_SDK; Online_API; Registry;}\n  {rank=same; Offline_Store; Online_Store; Compute;}\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-nr8yps\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图展示了 Feast 的主要组件及其相互作用。Feast 作为一个编排和定义层，与现有的数据存储和计算系统结合。</p>\n</blockquote>\n<p>Feast 的理念侧重于有效使用您现有数据栈。它通常不自行执行复杂的特征转换；相反，它期望特征在上游进行计算（例如，使用 Spark, dbt, Flink 或 Pandas），然后注册并加载到它管理的存储中。这使其非常适应拥有成熟数据平台的组织，但需要单独管理特征计算管道。</p>\n<h3>开源特征存储（如 Feast）的优势</h3>\n<ol>\n<li><strong>灵活性和定制性：</strong> 开源解决方案在选择底层存储技术（在线/离线存储）以及与现有计算框架配合方面提供了很大的自由度。您不会被锁定在特定供应商的生态系统中。例如，Feast 支持多种流行数据库和数据仓库的连接器。</li>\n<li><strong>基础设施掌控：</strong> 您完全掌控部署环境，无论是在本地还是在您偏好的云 VPC 中。这对于有严格数据驻留、安全或网络要求的组织有帮助。</li>\n<li><strong>成本管理：</strong> 尽管存在运营成本，但您避免了通常与托管服务一同出现的直接软件许可费用。成本主要来自于您直接管理的基础设施（计算、存储、网络）。</li>\n<li><strong>透明度和社区：</strong> 代码库是开放的，可以进行检查、修改和贡献。活跃的社区（如 Feast 的 Slack 频道和 GitHub 仓库）提供支持，交流好的做法，并推动项目向前发展。如果需要，您可以直接影响路线图或分叉项目。</li>\n<li><strong>配合潜力：</strong> 开源工具通常与其他的开源 MLOps 和数据工具（如 Kubeflow, Airflow, dbt）很好地配合，如果您的组织大量使用开源，这有助于形成更统一的工具链。</li>\n</ol>\n<h3>挑战与注意事项</h3>\n<ol>\n<li><strong>运营开销：</strong> 部署、配置、扩缩、监控和升级开源特征存储需要专门的工程师工作。这包括管理底层数据库、计算任务、API 服务器，以及保证高可用和灾备——这些任务通常由托管服务负责。</li>\n<li><strong>基础设施管理：</strong> 您负责提供和管理所需的基础设施（在线/离线存储的数据库，摄取/服务的计算资源）。优化这些组件以实现性能和成本优势需要专业知识。</li>\n<li><strong>特征计算责任：</strong> 正如在 Feast 中提到的，计算逻辑通常位于核心特征存储框架之外。您需要数据管道将原始数据转换为特征，并将其一致地加载到离线和在线存储中。保证一致性（例如，减少在线/离线偏差）需要周密的管道设计和验证。</li>\n<li><strong>学习曲线和专业知识：</strong> 设置并良好地运行开源特征存储，尤其是在复杂的生产环境中，对分布式系统、数据工程和 MLOps 的技术水平要求很高。最初的设置和集成工作量可能很大。</li>\n<li><strong>支持模式：</strong> 尽管社区支持有价值，但它可能无法达到商业供应商提供的服务级别协议或专属支持渠道，这对于重要的生产系统可能是一个需要考虑的因素。</li>\n</ol>\n<h3>评估适用性</h3>\n<p>像 Feast 这样的开源特征存储通常是好的选择，当：</p>\n<ul>\n<li>您的组织拥有强大的数据工程和平台团队，可以管理运营方面。</li>\n<li>您在现有数据基础设施（数据仓库、数据湖、计算框架）中已投入较多资源，并且希望有效使用它们。</li>\n<li>由于特定的技术或合规需求，您需要高度定制或掌控特征存储环境。</li>\n<li>您倾向于避免云特定托管服务带来的供应商锁定。</li>\n<li>通过直接管理基础设施来优化成本，优先于托管服务带来的便利。</li>\n</ul>\n<p>另一方面，如果您的团队规模较小，缺乏深厚的基础设施知识，或者优先考虑减少运营负担并加快初始部署速度，那么托管式特征存储服务（接下来将讨论）可能是一个更适合的起点，尽管它在灵活性方面可能存在局限性或有更高的直接成本。</p>\n<p>选择开源特征存储需要仔细权衡掌控和定制的好处与运营管理和自身技术能力的所需投入。Feast 提供了一个强大、灵活的基础，但成功取决于能否将其有效配合到管理良好的数据和 MLOps 生态系统中。</p>",
+  "slug": "comparing-open-source",
+  "updates": [],
+  "references": [
+    {
+      "id": 2096,
+      "title": "Feast Documentation",
+      "author": "The Feast Project Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.feast.dev/",
+      "doi": "",
+      "note": "官方和全面的文档，详细介绍了Feast的架构、组件、设置和使用方法，这对于理解开源特征商店至关重要。",
+      "order": 1,
+      "created_at": "2025-09-04T16:45:51.252613Z",
+      "updated_at": "2025-09-08T12:31:32.638963Z"
+    },
+    {
+      "id": 2107,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready ML Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "从宏观角度介绍了构建机器学习系统的方法，包括特征商店的角色、数据管道和MLOps实践，有助于将Feast置于更大的生态系统中进行理解。",
+      "order": 2,
+      "created_at": "2025-09-04T16:45:56.331639Z",
+      "updated_at": "2025-09-08T12:31:35.305573Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,565 @@
+{
+  "id": 153,
+  "title": "模型评估与衡量指标要点",
+  "meta_title": "模型评估与指标入门 | 机器学习",
+  "meta_description": "机器学习模型评价初学者指南。学习准确率、精确率、召回率、MSE、R平方和数据划分方法。",
+  "description": "<p>学习评价机器学习 (machine learning)模型的重要理念。本课程讲解分类和回归任务的主要衡量指标，说明如何分析结果并掌握模型表现。助您为人工智能模型的评判工作奠定良好根基。</p>",
+  "short_description": "自信地选择、计算并分析重要指标，以评价分类与回归模型的表现。",
+  "excerpt": "了解如何使用分类和回归的常用评价指标来衡量机器学习模型的表现。",
+  "prerequisites": "机器学习基础知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "模型评价的目的",
+      "description": "掌握为何评价机器学习模型对开发工作十分必要。"
+    },
+    {
+      "topic": "分类衡量指标",
+      "description": "辨识并计算准确率、精确率、召回率和F1分数等主要衡量指标。"
+    },
+    {
+      "topic": "回归衡量指标",
+      "description": "辨识并计算MAE、MSE、RMSE和R平方等主要衡量指标。"
+    },
+    {
+      "topic": "混淆矩阵",
+      "description": "分析混淆矩阵以掌握分类表现。"
+    },
+    {
+      "topic": "数据划分",
+      "description": "学习训练/测试集划分对可靠模型评价的重要性。"
+    },
+    {
+      "topic": "简单评价流程",
+      "description": "应用一个简单流程，使用恰当的衡量指标评价模型。"
+    }
+  ],
+  "duration": 4,
+  "slug": "basics-model-evaluation-metrics",
+  "level": 1,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-09T07:18:41.063704Z",
+  "updated_at": "2026-10-02T07:26:02.197524Z",
+  "chapters": [
+    {
+      "id": 794,
+      "title": "模型评估简介",
+      "meta_title": "机器学习模型评估入门",
+      "meta_description": "了解评估机器学习模型为何重要，以及评估过程背后的基本思想。",
+      "number": 1,
+      "slug": "introduction-model-evaluation",
+      "content": "本章介绍评估机器学习模型的重要做法。构建模型只是过程的一部分；在模型能可靠使用之前，确定其有效性同样重要。我们将探讨为何评估模型表现是机器学习工作流程中的一个基本步骤。\n\n您将了解评估指标，即用于衡量模型进行预测或估计有效程度的量化工具。我们将区分本课程中讨论的两种主要监督学习问题：分类（即将数据点分配到预定义类别）和回归（即预测连续数值）。本章通过明确这些定义并概述标准评估过程来奠定基础。\n\n在本章结束时，您将能够：\n\n*   在评估背景下定义什么是机器学习模型。\n*   说明评估模型表现的原因。\n*   理解使用评估指标的目的。\n*   区分分类和回归任务并举例说明。\n*   概述模型评估过程中涉及的主要步骤。",
+      "sections": [
+        {
+          "id": 3942,
+          "title": "什么是机器学习模型？",
+          "meta_title": "机器学习模型的说明",
+          "meta_description": "简单说明在评估背景下机器学习模型的含义。",
+          "slug": "what-is-a-ml-model",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3945,
+          "title": "为何模型评估很重要",
+          "meta_title": "模型评估的重要性",
+          "meta_description": "理解在部署或使用前评估模型性能的原因。",
+          "slug": "why-evaluate-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3948,
+          "title": "评估指标的目标",
+          "meta_title": "评估指标的目的",
+          "meta_description": "了解评估指标旨在达到什么目的以及它们如何量化性能。",
+          "slug": "goal-of-evaluation-metrics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3951,
+          "title": "学习问题的类型：分类",
+          "meta_title": "分类问题介绍",
+          "meta_description": "定义机器学习中的分类任务，并提供简单示例。",
+          "slug": "types-learning-classification",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3954,
+          "title": "学习问题类型：回归",
+          "meta_title": "回归问题概述",
+          "meta_description": "定义机器学习中的回归任务，并提供简单示例。",
+          "slug": "types-learning-regression",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3956,
+          "title": "模型评估过程概述",
+          "meta_title": "模型评估基本步骤",
+          "meta_description": "机器学习模型评估步骤概览。",
+          "slug": "overview-evaluation-process",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 797,
+      "title": "分类模型指标",
+      "meta_title": "分类模型评估指标",
+      "meta_description": "学习分类的基本指标：准确率、混淆矩阵、精确率、召回率和F1分数。",
+      "number": 2,
+      "slug": "metrics-for-classification",
+      "content": "在评估的基本思路上，本章着重介绍评估分类模型的方法。你将学习如何使用标准指标来量化模型性能。\n\n我们将从准确率开始，涵盖其计算方法和潜在不足，特别是在不平衡数据集等情况下。本章接着阐述混淆矩阵，作为进行更透彻分析的工具，并定义其核心组成部分：真阳性 ($TP$)、假阳性 ($FP$)、真阴性 ($TN$) 和假阴性 ($FN$)。\n\n基于这些要素，我们将分析精确率（衡量准确程度）、召回率（衡量完整程度）以及结合两者的F1分数。我们还将讨论精确率和召回率之间常见的权衡取舍。目标是让你通过清晰的解释和实例，获得计算和解释这些重要分类指标的实际能力。",
+      "sections": [
+        {
+          "id": 3959,
+          "title": "理解分类预测",
+          "meta_title": "分类模型如何进行预测",
+          "meta_description": "回顾分类模型的输出以及预测是如何产生的。",
+          "slug": "understanding-classification-predictions",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3962,
+          "title": "准确率：一个简单的起始指标",
+          "meta_title": "计算模型准确率",
+          "meta_description": "定义并学习如何计算分类模型的准确率。",
+          "slug": "accuracy-metric",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3965,
+          "title": "准确率何时会产生误导",
+          "meta_title": "准确率指标的局限性",
+          "meta_description": "理解准确率不是衡量好指标的场景，例如不平衡数据集。",
+          "slug": "accuracy-limitations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3967,
+          "title": "真正例、假正例、真反例、假反例",
+          "meta_title": "TP、FP、TN、FN 的定义",
+          "meta_description": "阐述分类评估中使用的基本组成部分：TP、FP、TN、FN。",
+          "slug": "tp-fp-tn-fn",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3971,
+          "title": "混淆矩阵解析",
+          "meta_title": "理解混淆矩阵",
+          "meta_description": "了解如何构建和解读分类结果的混淆矩阵。",
+          "slug": "confusion-matrix-explained",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3974,
+          "title": "精确率：衡量预测的准确程度",
+          "meta_title": "计算精确率",
+          "meta_description": "定义精确率，理解其衡量内容，并学习如何计算。",
+          "slug": "precision-metric",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3975,
+          "title": "召回率（敏感度）：衡量完整性",
+          "meta_title": "计算召回率（敏感度）",
+          "meta_description": "定义召回率（敏感度），理解它衡量什么，以及如何计算它。",
+          "slug": "recall-metric",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3978,
+          "title": "精确率与召回率的权衡",
+          "meta_title": "精确率与召回率的权衡",
+          "meta_description": "理解分类中精确率与召回率固有的权衡关系。",
+          "slug": "precision-recall-tradeoff",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3981,
+          "title": "F1分数：结合精确率和召回率",
+          "meta_title": "计算F1分数",
+          "meta_description": "定义F1分数为精确率和召回率的调和平均值，并学习其计算方法。",
+          "slug": "f1-score-metric",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3985,
+          "title": "实践：计算分类指标",
+          "meta_title": "实践计算分类指标",
+          "meta_description": "通过例子计算准确率、精确率、召回率和F1分数。",
+          "slug": "practice-classification-metrics",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 800,
+      "title": "回归模型的评估指标",
+      "meta_title": "回归模型评估指标",
+      "meta_description": "学习回归模型的基本评估指标：平均绝对误差 (MAE)、均方误差 (MSE)、均方根误差 (RMSE) 和决定系数 (R-squared)。",
+      "number": 3,
+      "slug": "metrics-for-regression",
+      "content": "在介绍完分类任务的评估指标后，本章着重介绍专为回归问题设计的模型评估方法。回归模型用于预测连续数值结果，例如预测产品价格或销售额。\n\n在本章中，您将了解到常用的回归模型性能衡量指标。我们将介绍：\n\n*   **平均绝对误差 (MAE)：** 衡量一组预测中误差的平均大小，不考虑误差的方向性。\n*   **均方误差 (MSE)：** 衡量误差平方的平均值。它对较大的误差赋予更高的权重。\n*   **均方根误差 (RMSE)：** 均方误差的平方根，提供的误差指标与目标变量的单位相同。\n*   **决定系数 ($R^2$)：** 表示因变量中可由自变量预测的方差比例。\n\n掌握这些指标有助于评估回归模型的预测值与实际值之间的接近程度。我们将介绍每个指标的计算方法和解释，以帮助您衡量回归任务中的模型效果。",
+      "sections": [
+        {
+          "id": 3988,
+          "title": "理解回归预测",
+          "meta_title": "回归模型如何进行预测",
+          "meta_description": "回顾回归模型的输出（连续数值）以及误差的含义。",
+          "slug": "understanding-regression-predictions",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3991,
+          "title": "计算预测误差",
+          "meta_title": "计算单个预测误差",
+          "meta_description": "了解如何计算预测值与实际值之间的差异。",
+          "slug": "calculating-prediction-errors",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3996,
+          "title": "平均绝对误差 (MAE)",
+          "meta_title": "计算平均绝对误差 (MAE)",
+          "meta_description": "定义平均绝对误差 (MAE)，如何计算以及如何理解它。",
+          "slug": "mae-metric",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3999,
+          "title": "均方误差 (MSE)",
+          "meta_title": "计算均方误差 (MSE)",
+          "meta_description": "定义均方误差 (MSE)，它如何惩罚大误差，以及其计算方法。",
+          "slug": "mse-metric",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4002,
+          "title": "均方根误差 (RMSE)",
+          "meta_title": "计算均方根误差 (RMSE)",
+          "meta_description": "定义均方根误差 (RMSE)，它与均方误差 (MSE) 的关系，以及其在原始单位中的意义。",
+          "slug": "rmse-metric",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4004,
+          "title": "比较平均绝对误差 (MAE)、均方误差 (MSE) 和均方根误差 (RMSE)",
+          "meta_title": "比较平均绝对误差 (MAE)、均方误差 (MSE) 和均方根误差 (RMSE)",
+          "meta_description": "讨论平均绝对误差 (MAE)、均方误差 (MSE) 和均方根误差 (RMSE) 之间的区别以及何时偏好某个指标。",
+          "slug": "comparing-regression-error-metrics",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4008,
+          "title": "决定系数 (R平方)",
+          "meta_title": "决定系数 (R平方)",
+          "meta_description": "定义R平方（R²）作为衡量预测值与实际值拟合程度的指标。",
+          "slug": "r-squared-metric",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4011,
+          "title": "解释R平方值",
+          "meta_title": "解释R平方值",
+          "meta_description": "理解R平方值从0到1的不同含义。",
+          "slug": "interpreting-r-squared",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4014,
+          "title": "R平方的局限性",
+          "meta_title": "R平方的局限性",
+          "meta_description": "简要讨论R平方的潜在问题和误解。",
+          "slug": "r-squared-limitations",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4018,
+          "title": "练习：计算回归指标",
+          "meta_title": "练习计算回归指标",
+          "meta_description": "通过实例计算MAE、MSE、RMSE和R方。",
+          "slug": "practice-regression-metrics",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 803,
+      "title": "为评估准备数据",
+      "meta_title": "模型评估中的数据划分",
+      "meta_description": "了解将数据划分为训练集和测试集的重要性，以进行无偏的模型评估。",
+      "number": 4,
+      "slug": "preparing-data-evaluation",
+      "content": "你已经学习了如何计算分类和回归模型的各种指标。但要正确应用这些指标，需要一种特定的数据处理方法。在模型训练所用的*相同*数据上进行评估，会得到对其在新数据（未见过的数据）上实际表现的不可靠且往往过于乐观的估计。\n\n本章介绍数据划分的基本做法。我们将介绍：\n\n*   为什么在未见过的数据上进行评估对于衡量泛化能力很重要。\n*   训练集和测试集的理念与作用。\n*   执行训练集-测试集划分的标准步骤。\n*   常见的比例以及随机性在划分中的作用。\n*   单次划分的局限性以及对交叉验证理念的简要介绍。\n\n在本章结束时，你将懂得如何正确准备数据，以获得对机器学习模型更可靠的评估结果。",
+      "sections": [
+        {
+          "id": 4021,
+          "title": "为何在新数据上评估模型？",
+          "meta_title": "评估为何需要未见过的数据",
+          "meta_description": "解释为何在模型训练所用的相同数据上测试模型会产生误导性结果。",
+          "slug": "evaluate-on-unseen-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4023,
+          "title": "训练集：学习模式",
+          "meta_title": "什么是训练集？",
+          "meta_description": "定义训练数据集的目的和特征。",
+          "slug": "training-set-definition",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4025,
+          "title": "测试集：评估性能",
+          "meta_title": "什么是测试集？",
+          "meta_description": "说明测试数据集的用途和特点。",
+          "slug": "test-set-definition",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4027,
+          "title": "训练-测试集划分步骤",
+          "meta_title": "如何进行训练-测试集划分",
+          "meta_description": "描述将数据集划分为训练和测试部分的常见步骤。",
+          "slug": "train-test-split-procedure",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4029,
+          "title": "常用划分比例",
+          "meta_title": "常用训练-测试划分比例",
+          "meta_description": "讨论用于划分数据的常用比例（例如，80/20，70/30）。",
+          "slug": "common-split-ratios",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4031,
+          "title": "数据分割中的随机性",
+          "meta_title": "数据划分中随机性的重要性",
+          "meta_description": "解释为何在数据划分前进行混洗通常是必要的。",
+          "slug": "randomness-in-splitting",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4033,
+          "title": "单一划分可能存在的问题",
+          "meta_title": "单一训练-测试划分的局限性",
+          "meta_description": "讨论单一划分如何可能导致评估结果的偏差。",
+          "slug": "issues-single-split",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4035,
+          "title": "交叉验证方法简介",
+          "meta_title": "交叉验证的原理",
+          "meta_description": "介绍交叉验证，一种更可靠的评估技术（概述其原理）。",
+          "slug": "intro-cross-validation",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4037,
+          "title": "动手实践：数据分割",
+          "meta_title": "数据分割的动手实践",
+          "meta_description": "使用常用工具对样本数据集执行简单的训练-测试分割。",
+          "slug": "practical-data-splitting",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 805,
+      "title": "简单评估流程",
+      "meta_title": "简单模型评估流程",
+      "meta_description": "将数据划分和度量指标计算结合成一个简单的模型评估流程。",
+      "number": 5,
+      "slug": "basic-evaluation-workflow",
+      "content": "在了解了分类和回归的特定度量指标以及数据划分的理由后，我们现在将这些知识应用到实用的工作流程中。本章将详细说明评估机器学习模型的常规步骤。\n\n你将学习如何构建评估流程，从为你的特定问题类型选择合适的度量指标开始，正确地将数据划分为训练和测试子集，使用你的模型对未见过/未观测过的测试数据生成预测，最后计算并理解所得的性能指标。这提供了一个结构化的方法来判断模型在新数据上的表现如何。我们还将说明在此过程中常遇到的错误。",
+      "sections": [
+        {
+          "id": 4038,
+          "title": "标准评估的步骤",
+          "meta_title": "模型评估步骤回顾",
+          "meta_description": "总结典型模型评估过程中涉及的主要步骤。",
+          "slug": "standard-evaluation-steps",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4039,
+          "title": "为你的问题选择评估指标",
+          "meta_title": "选择合适的评估指标",
+          "meta_description": "根据问题类型（分类/回归）选择合适指标的指导。",
+          "slug": "choosing-appropriate-metrics",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4040,
+          "title": "执行训练-测试集划分",
+          "meta_title": "在流程中实现训练-测试集划分",
+          "meta_description": "强调在训练前划分数据的实际步骤。",
+          "slug": "performing-split-workflow",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4041,
+          "title": "训练一个简单模型",
+          "meta_title": "模型训练步骤",
+          "meta_description": "对评估流程中模型训练阶段的概述。",
+          "slug": "training-simple-model-conceptual",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4042,
+          "title": "在测试集上生成预测",
+          "meta_title": "在测试数据上进行预测",
+          "meta_description": "解释使用训练好的模型对未见过的测试数据进行预测的过程。",
+          "slug": "generating-test-predictions",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4043,
+          "title": "计算性能指标",
+          "meta_title": "计算测试预测的指标",
+          "meta_description": "将选定的评估指标应用于测试集上的预测。",
+          "slug": "calculating-performance-metrics",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4044,
+          "title": "结果的解读",
+          "meta_title": "解读模型评估结果",
+          "meta_description": "讨论如何在具体的背景下理解计算出的指标值。",
+          "slug": "interpreting-evaluation-results",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4045,
+          "title": "简单的评估流程示例",
+          "meta_title": "基础评估流程示例",
+          "meta_description": "通过一个简化的端到端示例，了解模型评估过程。",
+          "slug": "simple-workflow-example",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 4046,
+          "title": "基础评估中的常见错误",
+          "meta_title": "模型评估中的常见错误",
+          "meta_description": "指出初学者在模型评估过程中常犯的错误。",
+          "slug": "common-evaluation-mistakes",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

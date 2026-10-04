@@ -1,0 +1,61 @@
+{
+  "id": 2331,
+  "title": "从函数返回值",
+  "meta_title": "Python 函数返回值 | return 语句",
+  "meta_description": "学习如何使用 `return` 语句将函数的结果返回到调用它的程序部分。",
+  "content": "<p>函数有助于组织执行特定操作的代码块。然而，许多函数旨在计算一个值或产生一个结果，供调用该函数的程序部分使用。仅仅在函数内部打印结果通常不够；通常，你需要将计算出的值传回。这通过使用 <code>return</code> 语句实现。</p>\n<h3>返回结果：<code>return</code> 语句</h3>\n<p><code>return</code> 语句有两个主要作用：</p>\n<ol>\n<li>它立即退出当前函数执行。</li>\n<li>它将指定的值（如果没有指定值，则为 <code>None</code>）发送回调用者。</li>\n</ol>\n<p>基本语法很简单：</p>\n<pre><code class=\"language-python\">def function_name(parameters):\n    # 执行计算或操作的代码\n    result = some_value_or_calculation\n    return result\n</code></pre>\n<p>一旦遇到 <code>return</code> 语句，函数会立即停止执行其内部的任何后续代码，控制流返回到函数被调用的地方。<code>return</code> 后指定的值成为函数调用表达式的结果。</p>\n<h3>一个简单的计算例子</h3>\n<p>我们来定义一个函数，它将两个数字相加并返回它们的和：</p>\n<pre><code class=\"language-python\">def add_numbers(num1, num2):\n    \"\"\"计算两个数字的和。\"\"\"\n    total = num1 + num2\n    return total\n\n# 调用函数并存储返回值\nsum_result = add_numbers(5, 3)\nprint(f\"The sum is: {sum_result}\")\n\n# 你也可以直接在其他表达式中使用返回值\nanother_result = add_numbers(10, 2) * 2\nprint(f\"Another calculated result: {another_result}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>The sum is: 8\nAnother calculated result: 24\n</code></pre>\n<p>在这个例子中，<code>add_numbers(5, 3)</code> 被执行，值 <code>8</code> 被计算并赋值给 <code>total</code>，然后 <code>return total</code> 将值 <code>8</code> 返回。值 <code>8</code> 替换了 <code>add_numbers(5, 3)</code> 表达式，所以就好像我们写了 <code>sum_result = 8</code>。</p>\n<h3>返回不同数据类型</h3>\n<p>函数不仅限于返回数字。它们可以返回Python中任何类型的数据：字符串、布尔值、列表、字典、元组，甚至是自定义对象（我们稍后会看到）。</p>\n<pre><code class=\"language-python\">def create_greeting(name):\n    \"\"\"创建一个个性化的问候字符串。\"\"\"\n    return f\"Hello, {name}! Greet.\"\n\ndef is_even(number):\n    \"\"\"检查一个数字是否为偶数。\"\"\"\n    if number % 2 == 0:\n        return True\n    else:\n        return False # 也可以直接写 'return number % 2 == 0'\n\ndef get_first_three_evens():\n    \"\"\"返回前三个偶数的列表。\"\"\"\n    return [2, 4, 6]\n\n# 使用这些函数\ngreeting = create_greeting(\"Alice\")\nprint(greeting)\n\ncheck_num = 10\nif is_even(check_num):\n    print(f\"{check_num} is even.\")\nelse:\n    print(f\"{check_num} is odd.\")\n\neven_list = get_first_three_evens()\nprint(f\"First three evens: {even_list}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Hello, Alice!\n10 is even.\nFirst three evens: [2, 4, 6]\n</code></pre>\n<h3>如果没有 <code>return</code> 语句会怎样？</h3>\n<p>如果函数执行完毕但没有遇到显式的 <code>return</code> 语句，它会自动返回一个特殊值，称为 <code>None</code>。<code>None</code> 是 Python 表示没有值的方式。</p>\n<pre><code class=\"language-python\">def print_message(message):\n    \"\"\"打印一条消息，但不显式返回任何内容。\"\"\"\n    print(message)\n\nresult = print_message(\"This function prints.\")\nprint(f\"The return value is: {result}\")\nprint(f\"Is the result None? {result is None}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>This function prints.\nThe return value is: None\nIs the result None? True\n</code></pre>\n<p>这里，<code>print_message</code> 执行了一个操作（打印）但没有 <code>return</code> 语句。当它完成时，它会隐式返回 <code>None</code>，然后该值被赋给 <code>result</code> 变量。</p>\n<h3>多个 <code>return</code> 语句</h3>\n<p>一个函数可以包含多个 <code>return</code> 语句，通常在条件块（如 <code>if</code>/<code>elif</code>/<code>else</code>）中。但是请记住，一旦执行了<em>任何一个</em> <code>return</code> 语句，函数就会立即终止。单次调用中只会执行一个 <code>return</code> 路径。</p>\n<pre><code class=\"language-python\">def get_number_sign(num):\n    \"\"\"确定一个数字的符号。\"\"\"\n    if num > 0:\n        return \"Positive\"  # 如果 num > 0，则在此处退出\n    elif num &#x3C; 0:\n        return \"Negative\"  # 如果 num &#x3C; 0，则在此处退出\n    else:\n        return \"Zero\"      # 如果 num == 0，则在此处退出\n\nsign1 = get_number_sign(15)\nsign2 = get_number_sign(-3)\nsign3 = get_number_sign(0)\n\nprint(f\"Sign of 15: {sign1}\")\nprint(f\"Sign of -3: {sign2}\")\nprint(f\"Sign of 0: {sign3}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Sign of 15: Positive\nSign of -3: Negative\nSign of 0: Zero\n</code></pre>\n<h3>返回多个值</h3>\n<p>有时，一个函数需要返回多个信息片段。Python 使这变得容易。你可以在 <code>return</code> 关键字后面列出多个值，用逗号分隔。Python 会自动将这些值打包成一个元组并返回该元组。</p>\n<pre><code class=\"language-python\">def get_coordinates():\n    \"\"\"返回一对坐标。\"\"\"\n    x = 10\n    y = 25\n    return x, y # 返回元组 (10, 25)\n\ncoords = get_coordinates()\nprint(f\"Coordinates tuple: {coords}\")\nprint(f\"X coordinate: {coords[0]}\")\nprint(f\"Y coordinate: {coords[1]}\")\n\n# 你也可以直接将元组解包到变量中\nx_val, y_val = get_coordinates()\nprint(f\"Unpacked X: {x_val}\")\nprint(f\"Unpacked Y: {y_val}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Coordinates tuple: (10, 25)\nX coordinate: 10\nY coordinate: 25\nUnpacked X: 10\nUnpacked Y: 25\n</code></pre>\n<p>这种将多个值作为元组返回然后解包的机制是 Python 编程中一种常见且便捷的模式。</p>\n<p>有效使用 <code>return</code> 语句可以让你的函数产生结果，这些结果可以存储在变量中、传递给其他函数或在表达式中使用，使你的代码更具灵活性和强大功能。它是构建需要不同部分进行通信和共享计算信息的程序的基本点。</p>",
+  "slug": "python-function-return-values",
+  "updates": [],
+  "references": [
+    {
+      "id": 4986,
+      "title": "Python Crash Course, 2nd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2019",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "143-149",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE7caTR0d3oUNoKZaUe2ajCIraldH3jvhoL8sHrsvNmOH8OIitXjyjm5VLMX8ETyqzXrbWhg9VfHqAaINFQaNmQpoNhoNqGeRBCKDffMbKp_l-LHLD6av_invXSjtw67DRI9PxIA5Ilgr4nE6qqW55nD_0FqJRB1TNC8QdVecaCM2kHcG4eKUaZ8IO-l4lMpTsMdR0=",
+      "doi": "",
+      "note": "一本受欢迎的Python入门书籍，以适合初学者的方式介绍了函数和`return`语句，包括返回单个和多个值。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:07.307313Z",
+      "updated_at": "2025-09-07T21:13:26.317602Z"
+    },
+    {
+      "id": 4987,
+      "title": "Learning Python, 5th Edition",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "450-456",
+      "url": "https://www.oreilly.com/library/view/learning-python-5th/9781449355573/",
+      "doi": "",
+      "note": "一本全面且经典的Python编程书籍，深入涵盖了函数，包括`return`语句的机制和各种用法。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:07.313069Z",
+      "updated_at": "2025-09-07T21:13:31.737420Z"
+    },
+    {
+      "id": 4988,
+      "title": "MIT 6.0001 Introduction to Computer Science and Programming in Python, Lecture 4: Functions",
+      "author": "Ana Bell, Eric Grimson, John Guttag",
+      "year": "2016",
+      "publisher": "Massachusetts Institute of Technology",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/resources/mit6_0001f16_lec4/",
+      "doi": "",
+      "note": "麻省理工学院Python编程基础课程的讲义，提供了函数定义、参数以及`return`语句用于输出的学术视角。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:07.316060Z",
+      "updated_at": "2025-09-07T21:13:23.370703Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

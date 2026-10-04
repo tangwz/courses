@@ -1,0 +1,61 @@
+{
+  "id": 6777,
+  "title": "算术与赋值运算",
+  "meta_title": "Julia 算术与赋值运算符",
+  "meta_description": "了解用于计算的算术运算符以及用于更新变量值的赋值运算符。",
+  "content": "<p>变量作为数据的容器。Julia程序经常需要使用这些值进行计算，并将结果存回变量中。算术和赋值运算是完成此操作的主要方式，它们是几乎所有Julia程序的基础。</p>\n<h3>算术运算：计算的基本组成部分</h3>\n<p>算术运算是在Julia中进行数学计算的方式。你可能在日常数学中遇到过这些运算。Julia对大多数这些运算使用标准符号。</p>\n<ul>\n<li><strong>加法 (<code>+</code>)</strong>: 将两个数字相加。\n<pre><code class=\"language-julia\">julia> 5 + 3\n8\n</code></pre>\n</li>\n<li><strong>减法 (<code>-</code>)</strong>: 从第一个数字中减去第二个数字。\n<pre><code class=\"language-julia\">julia> 10 - 4\n6\n</code></pre>\n</li>\n<li><strong>乘法 (<code>*</code>)</strong>: 将两个数字相乘。\n<pre><code class=\"language-julia\">julia> 7 * 6\n42\n</code></pre>\n</li>\n<li><strong>除法 (<code>/</code>)</strong>: 将第一个数字除以第二个数字。除法总是得到一个浮点数，即使是精确除法也是如此。\n<pre><code class=\"language-julia\">julia> 10 / 2\n5.0\n\njulia> 7 / 2\n3.5\n</code></pre>\n</li>\n</ul>\n<p>Julia提供了一些更有用的特殊算术运算符：</p>\n<ul>\n<li>\n<p><strong>整除 (<code>÷</code> 或 <code>div()</code>)</strong>: 执行除法并返回商的整数部分，舍弃任何余数。你可以在Julia REPL或许多支持Julia的编辑器中通过输入 <code>\\div</code> 然后按Tab键来输入 <code>÷</code> 符号。</p>\n<pre><code class=\"language-julia\">julia> 10 ÷ 3  # \\div&#x3C;TAB>\n3\n\njulia> div(10, 3)\n3\n</code></pre>\n</li>\n<li>\n<p><strong>取余 (<code>%</code> 或 <code>rem()</code>)</strong>: 返回整除后的余数。这通常被称为模运算符。</p>\n<pre><code class=\"language-julia\">julia> 10 % 3\n1\n\njulia> rem(10, 3)\n1\n</code></pre>\n<p>取余运算符对于检查数字是偶数还是奇数（例如，<code>number % 2 == 0</code> 表示偶数）等任务很有用。</p>\n</li>\n<li>\n<p><strong>幂运算 (<code>^</code>)</strong>: 将第一个数字提高到第二个数字的幂。</p>\n<pre><code class=\"language-julia\">julia> 2^3  # 2 to the power of 3\n8\n\njulia> 5^2\n25\n</code></pre>\n</li>\n<li>\n<p><strong>一元减号和加号 (<code>-</code>, <code>+</code>)</strong>: 减号也可以用来对数字取反。加号可以用来表示正数，尽管它通常被省略。</p>\n<pre><code class=\"language-julia\">julia> x = 5\n5\njulia> -x\n-5\njulia> +x\n5\n</code></pre>\n</li>\n</ul>\n<h4>运算符优先级</h4>\n<p>当一个表达式包含多个运算符时，Julia遵循标准的运算顺序，这通常可以通过像PEMDAS/BODMAS（括号/方括号、指数/阶、乘法和除法、加法和减法）这样的缩写词来记住。这意味着 <code>*</code> 和 <code>/</code> 在 <code>+</code> 和 <code>-</code> 之前执行。</p>\n<p>例如：</p>\n<pre><code class=\"language-julia\">julia> 2 + 3 * 4\n14\n</code></pre>\n<p>这里，<code>3 * 4</code>（即12）首先被计算，然后将2加到结果上，得到14。如果你想改变顺序，可以使用括号 <code>()</code>:</p>\n<pre><code class=\"language-julia\">julia> (2 + 3) * 4\n20\n</code></pre>\n<p>在这种情况下，由于括号的存在，<code>2 + 3</code>（即5）首先被计算，然后结果乘以4，得到20。</p>\n<p>如果你不确定运算顺序，或者想让表达式更清晰易读，使用括号是一个好习惯。</p>\n<p>下面是常见算术运算符及其典型优先级（优先级越高表示越早执行）的总结：</p>\n<table>\n<thead>\n<tr>\n<th>运算符</th>\n<th>描述</th>\n<th>示例</th>\n<th>结果</th>\n<th>优先级</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>^</code></td>\n<td>幂运算</td>\n<td><code>2 ^ 3</code></td>\n<td><code>8</code></td>\n<td>最高</td>\n</tr>\n<tr>\n<td><code>-</code> (一元)</td>\n<td>取反</td>\n<td><code>-5</code></td>\n<td><code>-5</code></td>\n<td>高</td>\n</tr>\n<tr>\n<td><code>*</code>, <code>/</code>, <code>÷</code>, <code>%</code></td>\n<td>乘法、除法、整除、取余</td>\n<td><code>6 * 2</code>, <code>6 / 2</code>, <code>7 ÷ 2</code>, <code>7 % 2</code></td>\n<td><code>12</code>, <code>3.0</code>, <code>3</code>, <code>1</code></td>\n<td>中</td>\n</tr>\n<tr>\n<td><code>+</code>, <code>-</code> (二元)</td>\n<td>加法、减法</td>\n<td><code>5 + 2</code>, <code>5 - 2</code></td>\n<td><code>7</code>, <code>3</code></td>\n<td>低</td>\n</tr>\n</tbody>\n</table>\n<blockquote>\n<p>下图演示了表达式 <code>value = 10 + 4 * 2</code> 的计算顺序。乘法在加法之前执行，然后是赋值。</p>\n</blockquote>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-131g513\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=filled, fillcolor=\"#e9ecef\"]; edge [color=\"#495057\"]; \"表达式\" [label=\"value = 10 + 4 * 2\", shape=ellipse, fillcolor=\"#96f2d7\"]; \"乘法\" [label=\"4 * 2\", fillcolor=\"#a5d8ff\"]; \"乘法结果\" [label=\"8\", fillcolor=\"#74c0fc\"]; \"加法\" [label=\"10 + 8\", fillcolor=\"#a5d8ff\"]; \"加法结果\" [label=\"18\", fillcolor=\"#74c0fc\"]; \"赋值\" [label=\"value = 18\", fillcolor=\"#a5d8ff\"]; \"最终值\" [label=\"value 是 18\", shape=ellipse, fillcolor=\"#96f2d7\"]; 表达式 -> 乘法 [label=\"1. 优先级更高\"]; 乘法 -> 乘法结果; 乘法结果 -> 加法 [style=dashed, dir=back, label=\"使用结果\"]; 加法 -> 加法结果; 加法结果 -> 赋值 [style=dashed, dir=back, label=\"使用结果\"]; 赋值 -> 最终值; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-131g513\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<h3>赋值运算：存储和更新值</h3>\n<p>在第2章中，你学习了变量以及如何使用等号 <code>=</code> 为它们赋值。这是最基本的赋值运算。</p>\n<pre><code class=\"language-julia\">julia> width = 10    # Assigns the value 10 to the variable width\n10\n\njulia> height = 5     # Assigns the value 5 to the variable height\n5\n\njulia> area = width * height  # Calculates width * height (50) and assigns it to area\n50\n</code></pre>\n<p><code>=</code> 右侧的表达式首先被求值，然后其结果存储在左侧的变量中。</p>\n<h4>复合赋值运算符</h4>\n<p>通常，你会希望根据变量的当前值来修改其值。例如，你可能想将一个数字加到现有变量上。你可以这样写：</p>\n<pre><code class=\"language-julia\">julia> score = 100\n100\n\njulia> score = score + 10\n110\n</code></pre>\n<p>这是完全有效的。然而，Julia与许多其他编程语言一样，提供了一种使用<strong>复合赋值运算符</strong>（也称为增广赋值运算符）来编写此类操作的更简洁方式。</p>\n<p>这些运算符将算术运算与赋值结合起来。以下是常用的：</p>\n<ul>\n<li>\n<p><strong><code>+=</code> (加法并赋值)</strong>: <code>x += y</code> 是 <code>x = x + y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> count = 5\n5\njulia> count += 3  # Same as count = count + 3\n8\n</code></pre>\n</li>\n<li>\n<p><strong><code>-=</code> (减法并赋值)</strong>: <code>x -= y</code> 是 <code>x = x - y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> balance = 50.0\n50.0\njulia> balance -= 10.5 # Same as balance = balance - 10.5\n39.5\n</code></pre>\n</li>\n<li>\n<p><strong><code>*=</code> (乘法并赋值)</strong>: <code>x *= y</code> 是 <code>x = x * y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> quantity = 3\n3\njulia> quantity *= 4   # Same as quantity = quantity * 4\n12\n</code></pre>\n</li>\n<li>\n<p><strong><code>/=</code> (除法并赋值)</strong>: <code>x /= y</code> 是 <code>x = x / y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> total_value = 100.0\n100.0\njulia> total_value /= 4 # Same as total_value = total_value / 4\n25.0\n</code></pre>\n</li>\n<li>\n<p><strong><code>%=</code> (取余并赋值)</strong>: <code>x %= y</code> 是 <code>x = x % y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> items = 27\n27\njulia> items_per_box = 5\n5\njulia> items %= items_per_box # Same as items = items % items_per_box (remainder)\n2\n</code></pre>\n</li>\n<li>\n<p><strong><code>^=</code> (幂运算并赋值)</strong>: <code>x ^= y</code> 是 <code>x = x ^ y</code> 的简写。</p>\n<pre><code class=\"language-julia\">julia> num = 2\n2\njulia> num ^= 3 # Same as num = num ^ 3\n8\n</code></pre>\n</li>\n</ul>\n<p>使用这些复合运算符可以使你的代码更短，有时也更易读，特别是在变量名较长时。</p>\n<p>下面是这些赋值运算符的汇总表：</p>\n<table>\n<thead>\n<tr>\n<th>运算符</th>\n<th>示例</th>\n<th>等同于</th>\n<th>描述</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><code>=</code></td>\n<td><code>x = 5</code></td>\n<td><code>x = 5</code></td>\n<td>基本赋值</td>\n</tr>\n<tr>\n<td><code>+=</code></td>\n<td><code>x += 2</code></td>\n<td><code>x = x + 2</code></td>\n<td>加法并赋值</td>\n</tr>\n<tr>\n<td><code>-=</code></td>\n<td><code>x -= 2</code></td>\n<td><code>x = x - 2</code></td>\n<td>减法并赋值</td>\n</tr>\n<tr>\n<td><code>*=</code></td>\n<td><code>x *= 2</code></td>\n<td><code>x = x * 2</code></td>\n<td>乘法并赋值</td>\n</tr>\n<tr>\n<td><code>/=</code></td>\n<td><code>x /= 2</code></td>\n<td><code>x = x / 2</code></td>\n<td>除法并赋值</td>\n</tr>\n<tr>\n<td><code>%=</code></td>\n<td><code>x %= 2</code></td>\n<td><code>x = x % 2</code></td>\n<td>取余（模）并赋值</td>\n</tr>\n<tr>\n<td><code>÷=</code></td>\n<td><code>x ÷= 2</code></td>\n<td><code>x = x ÷ 2</code></td>\n<td>整除并赋值</td>\n</tr>\n<tr>\n<td><code>^=</code></td>\n<td><code>x ^= 2</code></td>\n<td><code>x = x ^ 2</code></td>\n<td>幂运算并赋值</td>\n</tr>\n</tbody>\n</table>\n<h3>关于运算中类型的一个说明</h3>\n<p>当你对不同类型的数字（例如整数和浮点数）执行算术运算时，Julia通常会自动将结果“提升”为可以准确表示这两个值的类型。例如，将 <code>Int</code> 类型与 <code>Float64</code> 类型相加通常会得到一个 <code>Float64</code> 类型：</p>\n<pre><code class=\"language-julia\">julia> 10 + 5.5\n15.5\n\njulia> typeof(10)\nInt64\n\njulia> typeof(5.5)\nFloat64\n\njulia> typeof(10 + 5.5)\nFloat64\n</code></pre>\n<p>这通常是你想要的结果，因为它防止了精度损失。我们在第2章中讨论了数据类型，并且当你编写更复杂的程序时，了解它们在运算过程中如何交互是很重要的。目前，请注意Julia会尝试合理地处理以保留你的数据。</p>\n<p>算术和赋值运算是Julia中计算的主力。通过结合它们，你可以在程序中执行各种计算并有效地管理数据。当我们转向控制流时，你将看到这些运算如何融入到做出决策和重复任务的更大结构中。</p>",
+  "slug": "arithmetic-assignment-operations",
+  "updates": [],
+  "references": [
+    {
+      "id": 20381,
+      "title": "Mathematical Operations",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/mathematical-operations/",
+      "doi": "",
+      "note": "官方文档，涵盖标准和专用算术运算符，包括整数除法、求余、幂运算和一元运算。",
+      "order": 1,
+      "created_at": "2025-09-06T14:01:45.451961Z",
+      "updated_at": "2025-09-10T02:43:31.450838Z"
+    },
+    {
+      "id": 20382,
+      "title": "Operators",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "The Julia Language",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/",
+      "doi": "",
+      "note": "官方文档，详细说明运算符优先级和各种赋值运算符，包括复合赋值。",
+      "order": 2,
+      "created_at": "2025-09-06T14:01:45.455597Z",
+      "updated_at": "2025-09-10T02:43:50.751741Z"
+    },
+    {
+      "id": 20383,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens, Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://benlauwens.github.io/ThinkJulia.jl/latest/book.html",
+      "doi": "",
+      "note": "一本入门教材，以教学方式解释 Julia 中的基本编程概念，包括算术和赋值操作。",
+      "order": 3,
+      "created_at": "2025-09-06T14:01:45.458198Z",
+      "updated_at": "2025-09-10T02:43:35.389001Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

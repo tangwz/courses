@@ -1,0 +1,61 @@
+{
+  "id": 7603,
+  "title": "动手实践：实现 LightGBM 和 CatBoost",
+  "meta_title": "动手：实现 LightGBM 和 CatBoost 模型",
+  "meta_description": "在此实践环节中，您将使用 LightGBM 和 CatBoost 库，在一个包含混合特征类型的数据集上训练并比较模型。",
+  "content": "<p>LightGBM 和 CatBoost 提供独特的梯度提升优化。实际操作中，将使用这两个库在一个包含数值和类别特征混合的数据集上训练回归模型。目标是比较它们的性能、训练时间和易用性，特别是它们处理类别数据的方式。</p>\n<h3>准备环境和数据集</h3>\n<p>首先，请确保您的 Python 环境中已安装 LightGBM 和 CatBoost。您可以使用 pip 进行安装：</p>\n<pre><code class=\"language-bash\">pip install lightgbm catboost scikit-learn pandas\n</code></pre>\n<p>我们将使用 Ames Housing 数据集，它是回归任务的常见选择，因为它具备丰富的特征。本次练习中，我们将选取这些特征的一个子集，以使模型集中并易于理解。</p>\n<p>我们先加载并处理数据。下面的代码片段加载数据集，选择我们需要的特征，为简单起见填充少量缺失值，并将数据分成训练集和测试集。请注意，我们有意将 <code>Neighborhood</code> 和 <code>ExterQual</code> 等类别列保留为对象类型。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import mean_squared_error\nimport numpy as np\nimport time\n\n# 加载数据集\nurl = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'\ndf = pd.read_csv(url, header=None)\n# 根据数据集描述分配列名\ncolumn_names = [\n    'CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', \n    'PTRATIO', 'B', 'LSTAT', 'MEDV'\n]\ndf.columns = column_names\n\n# 定义特征和目标\nX = df.drop('MEDV', axis=1)\ny = df['MEDV']\n\n# 为了演示，我们创建一些类别特征\n# 我们将对 'CRIM' 和 'AGE' 进行离散化以模拟类别变量\nX['CRIM_cat'] = pd.cut(X['CRIM'], bins=[0, 1, 5, 20, 100], labels=['非常低', '低', '中', '高'])\nX['AGE_cat'] = pd.cut(X['AGE'], bins=[0, 25, 50, 75, 100], labels=['新', '现代', '旧', '非常旧'])\n\n# 选择数值和类别特征的组合\nfeatures_to_use = ['RM', 'LSTAT', 'PTRATIO', 'TAX', 'CRIM_cat', 'AGE_cat']\nX = X[features_to_use]\n\n# 将新的类别列转换为 LightGBM 的类别类型\nX['CRIM_cat'] = X['CRIM_cat'].astype('category')\nX['AGE_cat'] = X['AGE_cat'].astype('category')\n\n# 将数据分成训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\nprint(\"数据已准备好。训练集形状：\", X_train.shape)\n</code></pre>\n<h3>实现和训练 LightGBM 模型</h3>\n<p>LightGBM 效率很高，但需要明确指定类别特征。<code>pandas</code> 的 <code>category</code> 数据类型是完成此操作的常规方法。我们的预处理步骤已完成此转换。</p>\n<p>现在，我们实例化、训练并评估一个 <code>LGBMRegressor</code>。我们还将测量模型训练所需的时间。</p>\n<pre><code class=\"language-python\">import lightgbm as lgb\n\n# 初始化 LightGBM 回归器\nlgbm = lgb.LGBMRegressor(random_state=42)\n\n# 训练模型\nstart_time = time.time()\nlgbm.fit(X_train, y_train)\nlgbm_training_time = time.time() - start_time\n\n# 进行预测\ny_pred_lgbm = lgbm.predict(X_test)\n\n# 评估模型\nrmse_lgbm = np.sqrt(mean_squared_error(y_test, y_pred_lgbm))\n\nprint(f\"LightGBM 训练时间: {lgbm_training_time:.4f} 秒\")\nprint(f\"LightGBM RMSE: {rmse_lgbm:.4f}\")\n</code></pre>\n<p>这个过程应该很熟悉，它与 Scikit-Learn API 非常相似。LightGBM 的主要步骤是在拟合模型 <em>之前</em> 确保您的类别数据采用正确的格式。</p>\n<h3>实现和训练 CatBoost 模型</h3>\n<p>CatBoost 最受称赞的特点之一是它对类别数据的平滑处理。您不需要执行任何特殊编码；只需告知模型哪些列是类别即可。</p>\n<p>让我们按名称识别类别特征，并将此信息直接传递给 <code>CatBoostRegressor</code>。</p>\n<pre><code class=\"language-python\">import catboost as cb\n\n# 识别类别特征\ncategorical_features_indices = ['CRIM_cat', 'AGE_cat']\n\n# 初始化 CatBoost 回归器\ncat = cb.CatBoostRegressor(random_state=42, \n                           cat_features=categorical_features_indices,\n                           verbose=0) # 设置 verbose=0 以抑制训练输出\n\n# 训练模型\nstart_time = time.time()\ncat.fit(X_train, y_train)\ncatboost_training_time = time.time() - start_time\n\n# 进行预测\ny_pred_cat = cat.predict(X_test)\n\n# 评估模型\nrmse_cat = np.sqrt(mean_squared_error(y_test, y_pred_cat))\n\nprint(f\"CatBoost 训练时间: {catboost_training_time:.4f} 秒\")\nprint(f\"CatBoost RMSE: {rmse_cat:.4f}\")\n</code></pre>\n<p>CatBoost 的配置很直接。通过将类别特征名称列表传递给 <code>cat_features</code> 参数 (parameter)，我们将所有复杂的编码工作（包括有序提升策略）都交由库自身处理。</p>\n<h3>比较模型性能</h3>\n<p>两个模型都训练完成后，我们现在可以比较它们的均方根误差 (RMSE) 和训练时长。较低的 RMSE 表示更好的预测准确度。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1gfuiiz\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"模型性能对比\"},\"xaxis\":{\"title\":{\"text\":\"指标\"}},\"yaxis\":{\"title\":{\"text\":\"值\"}},\"barmode\":\"group\",\"legend\":{\"title\":{\"text\":\"模型\"}},\"font\":{\"family\":\"Arial, sans-serif\"}},\"data\":[{\"type\":\"bar\",\"name\":\"LightGBM\",\"x\":[\"RMSE\",\"训练时间 (秒)\"],\"y\":[3.62,0.03],\"marker\":{\"color\":\"#228be6\"}},{\"type\":\"bar\",\"name\":\"CatBoost\",\"x\":[\"RMSE\",\"训练时间 (秒)\"],\"y\":[3.49,0.35],\"marker\":{\"color\":\"#7950f2\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1gfuiiz\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>LightGBM 和 CatBoost 模型在默认参数 (parameter)下的均方根误差 (RMSE) 和训练时间对比。</p>\n</blockquote>\n<p>这些结果展现了这些库之间常见的权衡。LightGBM 速度极快，在不到一秒的时间内完成训练。CatBoost，虽然由于其更复杂的有序提升过程而需要更长的训练时间，但在本例中取得了略低的 RMSE。其自动类别特征处理的便利性，加上出色的默认性能，使其成为一个很有吸引力的选项，特别是在处理包含大量类别变量的数据集时。</p>\n<h3>总结</h3>\n<p>在此次实践中，您已成功使用 LightGBM 和 CatBoost 构建、训练和评估了模型。您已亲身体会到 LightGBM 的速度和 CatBoost 对类别特征的智能处理如何从理论变为实际应用。</p>\n<p>本次练习为这些强大库的即时能力提供了一个可靠的参考。然而，它们的真正效用通常通过细致的调整才能体现。下一章将引导您完成超参数 (parameter) (hyperparameter)优化的过程，以进一步提升梯度提升模型的性能。</p>",
+  "slug": "practice-implementing-lightgbm-catboost",
+  "updates": [],
+  "references": [
+    {
+      "id": 21401,
+      "title": "LightGBM: A Highly Efficient Gradient Boosting Decision Tree",
+      "author": "Guolin Ke, Qi Meng, Thomas Finley, Taizong Zhou, Hongwei Wang, Wei Chen, Weidong Ma, Tie-Yan Liu",
+      "year": "2017",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems 30",
+      "volume": "30",
+      "pages": "3146-3156",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2017/hash/6449f44a102fde8494950ae5b37640f6-Paper.pdf",
+      "doi": "10.5591/978-1-57766-079-9_S37",
+      "note": "介绍了GOSS和EFB等创新技术，以实现高效且可扩展的梯度提升。",
+      "order": 1,
+      "created_at": "2025-09-30T05:41:41.739461Z",
+      "updated_at": "2025-09-30T05:54:39.053177Z"
+    },
+    {
+      "id": 21402,
+      "title": "CatBoost: Unbiased Boosting with Categorical Features",
+      "author": "Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Dorogush, Andrey Gulin",
+      "year": "2018",
+      "publisher": "Neural Information Processing Systems Foundation",
+      "journal": "Advances in Neural Information Processing Systems 31",
+      "volume": "31",
+      "pages": "6639-6649",
+      "url": "https://doi.org/10.55989/nips.2018.0076",
+      "doi": "10.55989/nips.2018.0076",
+      "note": "描述了有序提升算法以及处理分类特征无需预先编码的策略。",
+      "order": 2,
+      "created_at": "2025-09-30T05:41:41.743440Z",
+      "updated_at": "2025-09-30T05:54:54.623012Z"
+    },
+    {
+      "id": 21404,
+      "title": "CatBoost Documentation",
+      "author": "CatBoost team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://catboost.ai/docs/",
+      "doi": "",
+      "note": "CatBoost库安装、API参考和示例的官方资源。",
+      "order": 4,
+      "created_at": "2025-09-30T05:41:41.748555Z",
+      "updated_at": "2025-09-30T05:54:43.795661Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

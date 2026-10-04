@@ -1,0 +1,61 @@
+{
+  "id": 5216,
+  "title": "使用框架进行评估",
+  "meta_title": "使用框架评估LLM | LLM测试",
+  "meta_description": "介绍用于LLM应用评估的工具（例如LangSmith、TruLens）。",
+  "content": "<p>评估LLM应用程序面临独特的挑战。对于LLM应用程序来说，准确度等传统指标通常不足，而人工审查其输出无法扩展。需要结构化、可重复的方式来评估相关性、事实依据、毒性和对特定指令的遵循情况。专门的LLM评估框架应对了这些挑战。这些工具提供基础设施和预定义的方法，以使LLM系统的评估变得更简单。</p>\n<p>它们通常提供以下功能：</p>\n<ul>\n<li><strong>实验追踪：</strong> 记录每次运行的提示、LLM配置、生成响应和相关元数据。</li>\n<li><strong>评估指标：</strong> 为常见任务（例如，摘要质量、问答正确性、RAG上下文 (context)相关性）提供内置评估器，并允许自定义指标定义。</li>\n<li><strong>数据集管理：</strong> 存储和管理评估数据集（输入提示和预期/理想输出或标准）。</li>\n<li><strong>可视化：</strong> 提供仪表板和工具，用于比较不同运行、提示或模型版本的结果。</li>\n<li><strong>反馈集成：</strong> 能够将人工反馈与自动化指标结合起来。</li>\n</ul>\n<p>让我们看看Python生态系统中几个突出的例子。</p>\n<h3>LangSmith</h3>\n<p>LangSmith由LangChain公司开发，旨在调试、测试、评估和监控使用或包含LangChain组件构建的应用程序。它对链和代理的执行提供高度可见性。</p>\n<p>评估的重要功能包括：</p>\n<ul>\n<li><strong>追踪：</strong> 自动捕获LangChain运行的详细追踪，包括输入、输出、中间步骤和时间。</li>\n<li><strong>数据集与测试：</strong> 允许您创建示例数据集（输入和可选的参考输出）。然后，您可以在这些数据集上运行您的LLM应用程序并应用评估器。</li>\n<li><strong>评估器：</strong> 提供标准评估器（例如，字符串距离、JSON有效性、嵌入 (embedding)距离、使用LLM的基于标准的评估）。您也可以在Python中定义自定义评估器。</li>\n<li><strong>监控：</strong> 追踪性能、成本和延迟随时间的变化，有助于发现生产中的回归或问题。</li>\n</ul>\n<p>集成LangSmith通常涉及设置环境变量，并可能向您的LangChain应用程序添加几行代码以启用日志记录。</p>\n<pre><code class=\"language-python\"># 示例：为LangSmith设置环境变量\n# (确保您已安装langchain-langsmith)\nimport os\nfrom langsmith import Client\n\n# 通常在您的环境文件（.env文件等）中设置这些\n# os.environ[\"LANGCHAIN_TRACING_V2\"] = \"true\"\n# os.environ[\"LANGCHAIN_ENDPOINT\"] = \"https://api.smith.langchain.com\"\n# os.environ[\"LANGCHAIN_API_KEY\"] = \"YOUR_LANGSMITH_API_KEY\"\n# os.environ[\"LANGCHAIN_PROJECT\"] = \"My LLM App Evaluation\" # 可选：组织运行\n\n# 您可以通过编程方式检查设置\n# client = Client() # 默认使用环境变量\n\n# 现在，LangChain运行将自动记录到LangSmith\n# ... (您的LangChain代码，例如 chain.invoke({...})) ...\n</code></pre>\n<p>LangSmith提供了一个网页界面，您可以在此查看追踪、管理数据集、配置测试和分析结果。</p>\n<h3>TruLens</h3>\n<p>TruLens专注于LLM应用程序的评估和追踪，特别强调可解释性，尤其是对于检索增强生成（RAG）系统。它通过追踪中间结果并对其进行评估，帮助您理解应用程序产生特定输出的<em>原因</em>。</p>\n<p>重要功能包括：</p>\n<ul>\n<li><strong>仪表化：</strong> 封装您的LLM应用程序（兼容LangChain、LlamaIndex甚至自定义Python代码），以记录输入、输出和内部调用。</li>\n<li><strong>反馈函数：</strong> 提供预定义的Python函数，用于评估特定质量，如答案相关性、上下文 (context)相关性（针对RAG）、事实依据（检查响应是否由提供的上下文支持）以及安全/毒性指标。也支持自定义反馈函数。</li>\n<li><strong>RAG三元组：</strong> 明确追踪并协助评估RAG应用程序中查询、检索到的上下文和最终响应之间的关系。</li>\n<li><strong>仪表板：</strong> 提供一个网页用户界面，用于查看已记录的数据、可视化评估结果以及比较应用程序的不同版本。</li>\n</ul>\n<pre><code class=\"language-python\"># 示例：基本的TruLens仪表化\n# (确保您已安装trulens-eval)\nfrom trulens_eval import TruChain, Feedback, Huggingface\nfrom trulens_eval.tru_custom_app import TruCustomApp\nimport numpy as np\n\n# 假设 'my_llm_chain' 是您的LangChain链或类似的可调用应用程序\n# 对于非LangChain应用程序，您可以使用TruCustomApp\n\n# 定义反馈函数（使用Huggingface提供者的示例）\nhugs = Huggingface()\nf_groundedness = Feedback(hugs.groundedness_measure_with_cot_reasons).on_input_output()\nf_answer_relevance = Feedback(hugs.relevance).on_input_output()\n\n# 仪表化链/应用程序\ntru_recorder = TruChain(my_llm_chain, # 您的应用程序\n                        app_id='My RAG App v1',\n                        feedbacks=[f_groundedness, f_answer_relevance])\n\n# 使用已仪表化的应用程序 - 记录和评估会自动进行\nwith tru_recorder as recording:\n    response = my_llm_chain.invoke({\"question\": \"What is the capital of Malaysia?\"})\n\n# 通过仪表板或编程方式查看结果\n# tru.get_records_and_feedback(app_ids=[])\n# tru.run_dashboard() # 启动网页用户界面\n</code></pre>\n<p>TruLens擅长指出RAG等复杂工作流中的故障，帮助您判断问题是否源于检索不佳、推理 (inference)错误或其他因素。</p>\n<h3>其他框架和考量</h3>\n<p>除了LangSmith和TruLens之外，还有其他工具可以满足特定的评估需求：</p>\n<ul>\n<li><strong>Ragas：</strong> 专门用于评估RAG管道，提供如忠实度、答案相关性、上下文 (context)准确性和上下文召回率等指标。</li>\n<li><strong>DeepEval：</strong> 评估LLM的方式类似于单元测试，允许您定义带有特定输入和评估指标（包括自定义指标）的测试用例，并在您的CI/CD管道中运行。</li>\n</ul>\n<p>选择框架通常取决于您现有的技术栈（LangChain用户可能倾向于LangSmith）和您的主要评估侧重（RAG开发者可能会觉得TruLens或Ragas特别有用）。</p>\n<p><strong>整合人工反馈：</strong> 自动化指标对于大规模应用很重要，但它们不能捕捉所有信息。细节、主观质量以及与用户期望的一致性通常需要人工判断。许多框架认识到这一点并提供方法来：</p>\n<ol>\n<li><strong>记录人工评分：</strong> 允许用户通过框架的用户界面或API对已记录的交互进行评分或标注。</li>\n<li><strong>比较人工与自动化：</strong> 分析自动化指标和人工评分之间的相关性（或缺乏相关性），以改进自动化评估器。</li>\n<li><strong>主动学习：</strong> 使用人工反馈来整理更好的评估数据集或微调 (fine-tuning)模型。</li>\n</ol>\n<p>有效地测试和评估LLM应用程序需要的不仅仅是简单的检查。像LangSmith和TruLens这样的框架提供了必要的结构，以便系统地评估质量、追踪长期性能，并将自动化指标和人工见解整合到您的开发流程中。它们有助于将评估从临时任务转变为持续的、数据驱动的实践。</p>",
+  "slug": "llm-evaluation-frameworks",
+  "updates": [],
+  "references": [
+    {
+      "id": 13626,
+      "title": "LangSmith Documentation",
+      "author": "LangChain Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.smith.langchain.com/",
+      "doi": "",
+      "note": "LangSmith的官方指南，涵盖其用于调试、测试和评估LLM应用的功能，特别是基于LangChain构建的应用。",
+      "order": 1,
+      "created_at": "2025-09-05T08:36:49.080364Z",
+      "updated_at": "2025-09-10T12:11:58.459984Z"
+    },
+    {
+      "id": 13627,
+      "title": "TruLens Documentation",
+      "author": "TruEra",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.trulens.org/",
+      "doi": "",
+      "note": "提供TruLens的详细信息，侧重于其在LLM评估、可解释性和对检索增强生成（RAG）系统的特别支持方面的能力。",
+      "order": 2,
+      "created_at": "2025-09-05T08:36:49.085997Z",
+      "updated_at": "2025-09-10T12:12:08.568126Z"
+    },
+    {
+      "id": 13628,
+      "title": "Ragas Documentation",
+      "author": "Exploding Gradients",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.ragas.io/",
+      "doi": "",
+      "note": "Ragas的官方文档，这是一个专门用于通过一套专用指标评估检索增强生成（RAG）管道的框架。",
+      "order": 3,
+      "created_at": "2025-09-05T08:36:49.088255Z",
+      "updated_at": "2025-09-10T12:12:07.646266Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

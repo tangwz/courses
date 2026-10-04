@@ -1,0 +1,61 @@
+{
+  "id": 4562,
+  "title": "追踪与脚本方法",
+  "meta_title": "JIT追踪与脚本方法（如TorchScript）",
+  "meta_description": "比较基于追踪和基于脚本的JIT，以捕获模型代码。",
+  "content": "<p>在采用即时编译（JIT）时，首要步骤是从高级Python代码中获取模型的计算图。这个获取到的图作为JIT编译器进行优化和代码生成的输入。在计算图获取阶段，主要有两种策略：<strong>追踪</strong>和<strong>脚本</strong>。每种方法都有其独特的优点和局限，影响着它们能很好地处理的模型类型以及随后可进行的优化。</p>\n<h3>追踪：记录执行路径</h3>\n<p>追踪的运作方式是使用示例输入执行模型函数，并记录在该次特定执行过程中对张量对象进行的操作序列。可以将其想象成一个专门记录机器学习 (machine learning)操作及其数据依赖的分析器。</p>\n<p><strong>工作方式：</strong></p>\n<ol>\n<li>您向JIT系统提供模型函数（例如，<code>torch.nn.Module</code>的<code>forward</code>方法，或用<code>@tf.function</code>装饰的TensorFlow函数）。</li>\n<li>您使用示例张量输入调用该函数（例如，<code>model(example_input)</code>）。</li>\n<li>JIT机制会拦截涉及张量的框架操作调用（如卷积、矩阵乘法、激活函数 (activation function)）。</li>\n<li>它会构建一个图表示（通常是中间表示，如TorchScript IR、TensorFlow GraphDef或HLO），该表示精确反映了这些特定输入所执行的操作序列。</li>\n</ol>\n<p><strong>示例：</strong></p>\n<p>考虑一个简单的Python函数：</p>\n<pre><code class=\"language-python\">def simple_op(a, b):\n  c = a + b\n  d = c * 2\n  return d\n</code></pre>\n<p>如果使用<code>a = tensor([1])</code>和<code>b = tensor([2])</code>进行追踪，追踪器会记录：</p>\n<ul>\n<li>操作：<code>add</code>（输入：<code>a</code>，<code>b</code>；输出：<code>c</code>）</li>\n<li>操作：<code>mul</code>（输入：<code>c</code>，常数<code>2</code>；输出：<code>d</code>）</li>\n<li>返回：<code>d</code></li>\n</ul>\n<p>生成的图捕获了这种线性序列。</p>\n<p><strong>优点：</strong></p>\n<ul>\n<li><strong>简便性：</strong> 对现有Python代码应用追踪通常很直接，无需大量修改。如果代码以即时执行模式运行，则很可能可以进行追踪。</li>\n<li><strong>Python兼容性：</strong> 追踪自然地处理框架操作<em>之间</em>执行的任意Python代码，只要这些代码不影响图结构本身（例如，使用标准Python数据结构，打印值）。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li>\n<p><strong>静态控制流：</strong> 追踪在处理依赖于数据的控制流时存在根本性困难。如果模型包含Python的<code>if</code>、<code>for</code>或<code>while</code>语句，且条件或循环边界取决于张量值，则追踪只捕获追踪时使用的<em>特定</em>示例输入所经过的路径。生成的图将不包含其他分支，也无法通用地表示循环结构。</p>\n<pre><code class=\"language-python\">def conditional_op(x, threshold):\n  if x.sum() > threshold: # Data-dependent condition\n    return x * 2\n  else:\n    return x + 1\n</code></pre>\n<p>使用满足条件的<code>x</code>追踪<code>conditional_op</code>会生成一个只包含<code>x * 2</code>路径的图。<code>x + 1</code>路径将完全缺失。</p>\n</li>\n<li>\n<p><strong>输入依赖性：</strong> 被追踪的图与追踪期间使用的输入的属性（如形状、数据类型）内在相关。虽然一些JIT系统随后可以处理有限的动态性，但初始追踪可能过于专门化。</p>\n</li>\n<li>\n<p><strong>副作用：</strong> 追踪可能无法正确捕获Python的副作用，或者可能以意想不到的方式将其固化到图中。</p>\n</li>\n</ul>\n<h3>脚本：解析源代码</h3>\n<p>脚本采用一种不同的方法。它不执行代码，而是直接解析模型函数（或其子集）的Python源代码，并将其转换为图表示，其中包含控制流结构。</p>\n<p><strong>工作方式：</strong></p>\n<ol>\n<li>通常，您需要明确标记 (token)要进行脚本化的函数（例如，在PyTorch中使用<code>@torch.jit.script</code>），或者使用脚本编译器可以理解的受限Python子集来编写函数。</li>\n<li>脚本编译器解析函数的源代码，构建抽象语法树（AST）。</li>\n<li>它分析AST，将Python构造（赋值、运算符、控制流）转换为其中间表示（IR）中相应的图节点和结构。</li>\n</ol>\n<p><strong>示例：</strong></p>\n<p>使用相同的<code>conditional_op</code>函数：</p>\n<pre><code class=\"language-python\">@torch.jit.script # 示例装饰器\ndef conditional_op(x, threshold):\n  # 脚本编译器解析此结构\n  if x.sum() > threshold:\n    result = x * 2\n  else:\n    result = x + 1\n  return result\n</code></pre>\n<p>脚本编译器分析<code>if/else</code>结构，并生成一个图，其中包含表示条件（<code>x.sum() > threshold</code>）的节点，以及<code>true</code>分支（<code>x * 2</code>）和<code>false</code>分支（<code>x + 1</code>），以及在运行时选择适当路径的控制流机制。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-4eixnc\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    X [label=\"输入 x\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    Threshold [label=\"输入 阈值\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    Sum [label=\"x.sum()\"];\n    Compare [label=\"> threshold\"];\n    If [label=\"如果\", shape=diamond, fillcolor=\"#ffe066\"];\n    Mul [label=\"x * 2\"];\n    Add [label=\"x + 1\"];\n    Result [label=\"结果\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n\n    X -> Sum;\n    Threshold -> Compare;\n    Sum -> Compare;\n    Compare -> If;\n    If -> Mul [label=\"真\"];\n    If -> Add [label=\"假\"];\n    X -> Mul;\n    X -> Add;\n    Mul -> Result;\n    Add -> Result;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-4eixnc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>脚本化<code>conditional_op</code>函数生成的图表示，清晰地展示了条件分支。</p>\n</blockquote>\n<p><strong>优点：</strong></p>\n<ul>\n<li><strong>控制流处理：</strong> 脚本化擅长捕获依赖于张量值的Python控制流（<code>if</code>、<code>for</code>、<code>while</code>），并将其直接在图中表示出来。</li>\n<li><strong>输入独立性：</strong> 生成的图表示函数的实际逻辑，独立于“编译”步骤中使用的任何特定输入值。</li>\n<li><strong>清晰的图：</strong> 提供对预期计算更完整的表示，可能允许在控制流路径上进行更高级的图级优化。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li><strong>语言子集：</strong> 脚本编译器通常只支持完整Python语言的一个子集。您可能需要重构复杂的Python逻辑、列表推导或对不支持库的调用，以符合可脚本化的子集。</li>\n<li><strong>代码修改：</strong> 通常需要明确的注解（装饰器）或遵守特定的编码模式。它通常无法透明地处理任意的、未经修改的Python代码。</li>\n<li><strong>更高的学习曲线：</strong> 开发者需要理解脚本语言子集的限制和要求。调试脚本错误有时不如调试标准Python直观。</li>\n</ul>\n<h3>追踪与脚本的选择</h3>\n<p>追踪与脚本之间的选择通常取决于模型性质和开发流程：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特点</th>\n<th align=\"left\">追踪</th>\n<th align=\"left\">脚本</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>易用性</strong></td>\n<td align=\"left\">通常对现有Python代码更简单</td>\n<td align=\"left\">需要代码调整/注解</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>控制流</strong></td>\n<td align=\"left\">较差（只捕获一条路径）</td>\n<td align=\"left\">良好（明确捕获分支/循环）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>Python功能</strong></td>\n<td align=\"left\">处理大多数操作之间的Python代码</td>\n<td align=\"left\">限于语言子集</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>输入依赖性</strong></td>\n<td align=\"left\">高（图与追踪输入相关联）</td>\n<td align=\"left\">低（图表示代码逻辑）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>稳定性</strong></td>\n<td align=\"left\">如果控制流改变，可能脆弱</td>\n<td align=\"left\">表示更可靠</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>适用场景</strong></td>\n<td align=\"left\">简单模型、快速原型、静态图</td>\n<td align=\"left\">具有数据依赖控制流的模型、部署</td>\n</tr>\n</tbody>\n</table>\n<p>现代JIT系统通常同时提供这两种选项。例如，PyTorch的TorchScript允许用户选择<code>@torch.jit.trace</code>或<code>@torch.jit.script</code>，甚至可以组合追踪和脚本化模块。TensorFlow的<code>@tf.function</code>主要采用追踪机制（“autograph”会隐式转换<em>一些</em>Python控制流，略微模糊了界限，但其核心捕获方式是基于追踪的）。</p>\n<p>了解观察执行路径（追踪）与解析代码逻辑（脚本）之间的主要区别，对于有效使用JIT编译器十分重要。追踪提供了便利，但限制了表达能力，尤其是在动态控制流方面。脚本化要求开发者投入更多精力来适应其限制，但能生成更完整的表示，可以处理复杂的程序结构，这有助于在JIT编译器中进行更全面的优化。</p>",
+  "slug": "jit-tracing-vs-scripting",
+  "updates": [],
+  "references": [
+    {
+      "id": 12160,
+      "title": "Introduction to TorchScript",
+      "author": "PyTorch Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/jit.html",
+      "doi": "",
+      "note": "PyTorch官方文档，解释了PyTorch中跟踪（`torch.jit.trace`）和脚本（`torch.jit.script`）两种方法，包括示例和用例。",
+      "order": 1,
+      "created_at": "2025-09-05T07:58:31.073238Z",
+      "updated_at": "2025-09-10T08:45:05.085973Z"
+    },
+    {
+      "id": 12161,
+      "title": "Better performance with tf.function",
+      "author": "TensorFlow Documentation",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/function",
+      "doi": "",
+      "note": "官方指南，详细介绍了TensorFlow基于跟踪的图捕获机制（`tf.function`）及其通过AutoGraph对Python控制流的隐式处理。",
+      "order": 2,
+      "created_at": "2025-09-05T07:58:31.131101Z",
+      "updated_at": "2025-09-10T08:45:04.512131Z"
+    },
+    {
+      "id": 12162,
+      "title": "TVM: An Automatic End-to-End Optimizing Compiler for Deep Learning",
+      "author": "Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy",
+      "year": "2018",
+      "publisher": "USENIX Association",
+      "journal": "13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18)",
+      "volume": "",
+      "pages": "578-594",
+      "url": "https://www.usenix.org/conference/osdi18/presentation/chen",
+      "doi": "10.5555/3342354.3342416",
+      "note": "为深度学习编译器和图中间表示（IR）的必要性提供了背景信息，这些是跟踪/脚本方法的输出，并讨论了优化中的挑战。",
+      "order": 3,
+      "created_at": "2025-09-05T07:58:31.135551Z",
+      "updated_at": "2025-09-10T08:45:07.486848Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

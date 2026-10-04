@@ -1,0 +1,61 @@
+{
+  "id": 8020,
+  "title": "动手实践：查询分析",
+  "meta_title": "实践：分析查询计划",
+  "meta_description": "动手实践，运行查询，检查执行计划，并优化分区以提高速度。",
+  "content": "<p>为数据湖编写高效SQL查询，需要转变传统数据库优化的思维方式。关系型数据库通过其存储引擎透明地处理索引和物理数据获取。对于解耦的数据湖架构，查询必须明确设计，以与底层文件组织保持一致，从而减少网络I/O和解码开销。</p>\n<p>本实践部分着重于使用执行计划诊断查询性能问题。我们将考察一个常见情况：一个在大型数据集上运行的缓慢聚合查询。你将学习如何生成执行计划，识别全表扫描，并重写查询以应用分区剪枝。</p>\n<h3>场景</h3>\n<p>设想一个网络服务器访问日志数据集，存储在对象存储（S3或Azure Blob Storage）中。数据以Apache Parquet格式存储，并遵循基于事件日期的标准分区方案。</p>\n<ul>\n<li><strong>表名：</strong> <code>access_logs</code></li>\n<li><strong>格式：</strong> Parquet</li>\n<li><strong>分区策略：</strong> <code>year</code> / <code>month</code> / <code>day</code></li>\n<li><strong>总大小：</strong> 500 TB</li>\n<li><strong>文件数量：</strong> 200,000个对象</li>\n</ul>\n<p>一名数据分析师提交以下查询，以计算2023年10月某个特定URL的总点击次数：</p>\n<pre><code class=\"language-sql\">SELECT \n    url, \n    COUNT(*) as hit_count\nFROM access_logs\nWHERE event_timestamp >= TIMESTAMP '2023-10-01 00:00:00'\n  AND event_timestamp &#x3C; TIMESTAMP '2023-11-01 00:00:00'\nGROUP BY url;\n</code></pre>\n<p>尽管只筛选了一个月的数据，这个查询的执行时间超过45分钟。为了弄清原因，我们需要查看查询引擎如何将此SQL转化为实际操作。</p>\n<h3>生成与读取执行计划</h3>\n<p>大多数分布式查询引擎，包括Trino（前身为PrestoSQL）和Apache Spark SQL，都提供<code>EXPLAIN</code>命令。此命令返回引擎计划执行的逻辑或物理计划。它不实际运行查询，而是概述所涉及的步骤。</p>\n<p>要查看计划，请在语句前加上关键词：</p>\n<pre><code class=\"language-sql\">EXPLAIN SELECT url, COUNT(*) FROM access_logs ...\n</code></pre>\n<p>输出通常是树状结构，表示数据从底部（存储）到顶部（结果）的流动。以下是上述慢查询计划的简化表示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-vvbqs8\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=filled, fontname=\"Arial\", fontsize=10]; edge [fontname=\"Arial\", fontsize=10]; Output [label=\"输出: 结果集\", fillcolor=\"#b2f2bb\"]; Exchange [label=\"数据交换: 收集结果\", fillcolor=\"#a5d8ff\"]; Aggregation [label=\"聚合: 按(url)分组\", fillcolor=\"#a5d8ff\"]; Filter [label=\"过滤: event_timestamp >= ...\", fillcolor=\"#ffc9c9\"]; Scan [label=\"表扫描: access_logs\\n(扫描所有分区)\", fillcolor=\"#ffc9c9\"]; Output -> Exchange; Exchange -> Aggregation; Aggregation -> Filter; Filter -> Scan; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-vvbqs8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>执行流从下往上。红色节点表示开销大的操作，即引擎在过滤数据之前会扫描所有数据。</p>\n</blockquote>\n<p>在上图中，底部最核心的部分是<strong>TableScan</strong>。</p>\n<ol>\n<li><strong>表扫描：</strong> 引擎列出<code>access_logs</code>表中的所有文件。</li>\n<li><strong>过滤：</strong> 引擎打开每个Parquet文件，读取<code>event_timestamp</code>列，并检查值是否在10月份范围内。</li>\n<li><strong>聚合：</strong> 匹配项被传递上去进行计数。</li>\n</ol>\n<p>性能问题存在于模式与查询之间的关联。该表按<code>year</code>、<code>month</code>和<code>day</code>分区，但查询在<code>event_timestamp</code>上进行过滤。尽管这些列在语义上相关，查询引擎不会自动知道<code>event_timestamp</code>与目录结构完全对应。因此，它默认执行<strong>全表扫描</strong>，读取500 TB的元数据和文件尾部信息以查找相关行。</p>\n<h3>实现分区剪枝</h3>\n<p>为了优化这一点，我们必须明确触发<strong>分区剪枝</strong>。这发生在查询引擎使用目录结构（例如<code>year=2023/month=10</code>）时，完全跳过文件，而不是在读取行后再进行过滤。</p>\n<p>我们重写查询以包含对分区列的过滤：</p>\n<pre><code class=\"language-sql\">SELECT \n    url, \n    COUNT(*) as hit_count\nFROM access_logs\nWHERE year = '2023'\n  AND month = '10'\n  AND event_timestamp >= TIMESTAMP '2023-10-01 00:00:00'\nGROUP BY url;\n</code></pre>\n<p>当我们对这个修改后的查询运行<code>EXPLAIN</code>时，<strong>TableScan</strong>节点会发生显著变化。引擎会查看元数据目录，识别出只有满足<code>year=2023</code>和<code>month=10</code>的目录是必需的，并忽略其余部分。</p>\n<p>如果数据集跨越10年，筛选到一个月份可以将输入数据量减少大约120倍。</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>优化后的输入大小</mtext><mo>≈</mo><mfrac><mtext>总大小</mtext><mn>120</mn></mfrac></mrow><annotation encoding=\"application/x-tex\">\\text{优化后的输入大小} \\approx \\frac{\\text{总大小}}{120}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">优化后的输入大小</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0463em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">120</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">总大小</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></span>\n<h3>量化 (quantization)影响</h3>\n<p>扫描过滤和剪枝过滤之间的差异，通常是查询失败和一分钟内响应之间的区别。以下图表比较了这两种方法的扫描数据量和执行时间。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1wrj7xs\" \n              data-plot-definition='{\"layout\": {\"title\": \"分区剪枝对查询性能的影响\", \"xaxis\": {\"title\": \"指标\"}, \"yaxis\": {\"title\": \"值 (对数刻度)\", \"type\": \"log\"}, \"barmode\": \"group\", \"plot_bgcolor\": \"#f8f9fa\", \"paper_bgcolor\": \"#f8f9fa\", \"font\": {\"family\": \"Arial, sans-serif\"}}, \"data\": [{\"x\": [\"扫描数据量 (GB)\", \"执行时间 (秒)\"], \"y\": [512000, 2700], \"name\": \"全扫描 (未剪枝)\", \"type\": \"bar\", \"marker\": {\"color\": \"#ff8787\"}}, {\"x\": [\"扫描数据量 (GB)\", \"执行时间 (秒)\"], \"y\": [4200, 45], \"name\": \"已分区剪枝\", \"type\": \"bar\", \"marker\": {\"color\": \"#37b24d\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1wrj7xs\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较全扫描与剪枝扫描的资源消耗。请注意Y轴上的对数刻度；减少是指数级的。</p>\n</blockquote>\n<h3>分析物理执行计划统计信息</h3>\n<p>现代引擎通常提供<code>EXPLAIN ANALYZE</code>（Trino）或提供显示实际运行时统计信息的UI（Spark History Server）。在检查这些详细计划时，关注三个特定指标：</p>\n<ol>\n<li>\n<p><strong>输入行数与输出行数：</strong>\n查看<code>Filter</code>操作符。如果输入是10亿行而输出是1000行，则你的过滤器选择性很高。然而，如果此过滤发生在扫描<em>之后</em>，你已经为10亿行数据支付了I/O开销。目标是通过分区将这种减少下推到<code>Scan</code>层面。</p>\n</li>\n<li>\n<p><strong>分片或任务：</strong>\n一个“分片”代表一个工作单元，通常是分配给工作节点的一个文件或一个文件块。</p>\n<ul>\n<li><strong>高分片数量，低数据量：</strong> 表明存在<strong>小文件问题</strong>。由于打开连接和读取头部的开销，读取10,000个每个1MB的文件比读取10个每个1GB的文件要慢。</li>\n<li><strong>低分片数量，慢执行：</strong> 表明存在<strong>数据倾斜</strong>。某个特定文件或分区可能比其他文件或分区大得多，导致一个工作节点处理困难，而其他节点闲置。</li>\n</ul>\n</li>\n<li>\n<p><strong>洗牌（数据交换）开销：</strong>\n在<code>GROUP BY</code>阶段，数据在节点之间移动（洗牌），以便所有具有相同<code>url</code>的记录都到达同一个工作节点。如果执行计划显示大量数据通过<code>Exchange</code>节点移动，请考虑在聚合步骤之前更积极地过滤数据或增加集群的并行度。</p>\n</li>\n</ol>\n<h3>向量 (vector)化与文件格式</h3>\n<p>一旦分区剪枝限制了查询范围，文件格式就决定了扫描速度。由于我们使用Parquet，引擎会运用<strong>向量化 (quantization)读取</strong>。引擎不是一次反序列化一个对象（面向行），而是将一列整数或字符串加载到内存块中。</p>\n<p>在你的执行计划中验证向量化是否已启用。在Spark中，在Scan步骤中查找<code>Batched: true</code>。在Trino中，这是Parquet和ORC的默认行为。</p>\n<p>如果你的查询只选择特定列（例如<code>SELECT url</code>），列式格式允许引擎<em>只</em>从存储中获取<code>url</code>数据块。<code>event_timestamp</code>和其他未使用的列永远不会从磁盘读取。这就是所谓的<strong>列投影</strong>。</p>\n<p>分区剪枝（根据目录跳过行）和列投影（根据文件结构跳过列）的结合，确保查询处理回答问题所需的绝对最少量数据。</p>",
+  "slug": "practice-query-analysis",
+  "updates": [],
+  "references": [
+    {
+      "id": 22162,
+      "title": "Apache Parquet",
+      "author": "The Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://parquet.apache.org/",
+      "doi": "",
+      "note": "阐释列式存储格式及其优点，以及通过列投影和向量化等功能实现分析查询的高效读取。",
+      "order": 1,
+      "created_at": "2025-11-27T05:54:53.844132Z",
+      "updated_at": "2025-11-27T06:18:46.110082Z"
+    },
+    {
+      "id": 22163,
+      "title": "Spark SQL Performance Tuning",
+      "author": "The Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://spark.apache.org/docs/latest/sql-performance-tuning.html",
+      "doi": "",
+      "note": "官方Apache Spark SQL查询优化指南，涵盖执行计划的生成与解读、利用分区提升性能及管理混洗操作。",
+      "order": 2,
+      "created_at": "2025-11-27T05:54:53.848109Z",
+      "updated_at": "2025-11-27T06:18:44.948506Z"
+    },
+    {
+      "id": 22165,
+      "title": "Building a Data Lakehouse with Delta Lake",
+      "author": "Vini J. Varghese, Andy Feng, Deniz Ilkbasaran",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/building-a-data/9781098114389/",
+      "doi": "",
+      "note": "探讨现代数据湖架构和大规模数据优化策略，包括有效的分区和文件管理技术，以提高查询性能。",
+      "order": 4,
+      "created_at": "2025-11-27T05:54:53.854752Z",
+      "updated_at": "2025-11-27T06:18:53.598442Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

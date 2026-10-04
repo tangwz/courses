@@ -1,0 +1,61 @@
+{
+  "id": 1013,
+  "title": "Git中的分支是什么？",
+  "meta_title": "Git分支是什么？ | 分支说明",
+  "meta_description": "了解Git中分支的想法，它们是指向提交的轻量级指针，使得并行工作流程成为可能。",
+  "content": "<p>Git将项目历史记录为一系列快照或提交。通常，这些记录形成一条线性序列，每个提交都基于前一个提交。但是，软件开发很少会严格按照这种线性方式进行。你经常需要同时处理不同的事务。设想你正在开发一个重要的新功能，但突然发现一个紧急错误需要修正已发布给用户的代码。你需要一种方法来暂停功能开发，在稳定的代码库上修正错误，然后返回到功能开发，而不会让这两部分工作互相干扰。</p>\n<p>这时，Git分支就发挥作用了。把分支看作不是项目文件的完整副本，而是一个<strong>轻量级可移动指针</strong>，指向某个特定的提交。当你开始工作时，Git会自动创建一个默认分支，通常命名为<code>main</code>（在旧项目中可能叫<code>master</code>）。这个<code>main</code>分支代表主要的开发线，通常跟踪稳定或可用于生产的代码。</p>\n<p>每次你进行提交时，这个分支指针都会自动向前移动，指向你刚刚创建的最新提交。所以，一个简单的历史可能看起来像这样：<code>main</code>分支指针指向最新提交，而该提交本身又指向上一个父提交，以此类推，构成项目历史。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-apnj97\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, color=\"#adb5bd\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n  \n  C1 -> C2 -> C3;\n  \n  subgraph cluster_0 {\n    style=dotted;\n    label = \"main\";\n    labeljust=\"l\";\n    C3;\n  }\n  \n  C1 [label=\"C1\"];\n  C2 [label=\"C2\"];\n  C3 [label=\"C3\"];\n\n  HEAD [shape=plaintext, label=\"HEAD\"];\n  HEAD -> C3 [label=\"main\", style=dashed]; // 显示HEAD指向分支，分支再指向提交\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-apnj97\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的Git历史图。提交（C1, C2, C3）形成一个序列。<code>main</code>分支指向最新提交（C3），<code>HEAD</code>表明<code>main</code>是当前活跃的分支。</p>\n</blockquote>\n<p>创建一个新分支意味着创建一个<strong>新指针</strong>，该指针从当前分支所指向的同一提交开始。比如，当你在<code>main</code>分支上，且该分支指向提交<code>C3</code>时，你创建了一个名为<code>new-feature</code>的新分支。最初，<code>main</code>和<code>new-feature</code>都将指向<code>C3</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-vmvb2o\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, color=\"#adb5bd\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n  \n  C1 -> C2 -> C3;\n  \n  subgraph cluster_0 {\n    style=dotted;\n    label = \"main\";\n    labeljust=\"l\";\n    C3;\n  }\n    subgraph cluster_1 {\n    style=dotted;\n    label = \"new-feature\";\n    labeljust=\"l\";\n    C3; // 两者最初都指向这里\n  }\n\n  \n  C1 [label=\"C1\"];\n  C2 [label=\"C2\"];\n  C3 [label=\"C3\"];\n\n  HEAD [shape=plaintext, label=\"HEAD\"];\n  HEAD -> C3 [label=\"main\", style=dashed]; // HEAD仍在main分支上\n  // 将指针在C3附近可视化分组\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-vmvb2o\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>创建<code>new-feature</code>分支之后。<code>main</code>和<code>new-feature</code>这两个指针都引用相同的提交<code>C3</code>。<code>HEAD</code>仍指向<code>main</code>。</p>\n</blockquote>\n<p>现在，如果你切换到<code>new-feature</code>分支（我们很快会讲到如何操作）并进行一次新提交，比如<code>C4</code>，会发生一些有趣的事情。<code>new-feature</code>指针向前移动指向<code>C4</code>，但<code>main</code>分支指针仍停留在原地，继续指向<code>C3</code>。你的<code>HEAD</code>指针现在表明你正在<code>new-feature</code>分支上处理事务。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1936f5b\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n  \n  C1 -> C2 -> C3 -> C4 [color=\"#748ffc\"]; // new-feature分支的提交\n\n  // 提交样式\n  C1 [color=\"#adb5bd\"];\n  C2 [color=\"#adb5bd\"];\n  C3 [color=\"#adb5bd\"];\n  C4 [color=\"#748ffc\"]; // 新提交的颜色\n  \n  // 明确地放置分支标签\n  main_label [label=\"main\", shape=none, fontcolor=\"#495057\"];\n  main_label -> C3 [style=dashed];\n\n  feature_label [label=\"new-feature\", shape=none, fontcolor=\"#4263eb\"];\n  feature_label -> C4 [style=dashed];\n  \n  C1 [label=\"C1\"];\n  C2 [label=\"C2\"];\n  C3 [label=\"C3\"];\n  C4 [label=\"C4\"];\n\n  HEAD [shape=plaintext, label=\"HEAD\"];\n  HEAD -> C4 [label=\"new-feature\", style=dashed, color=\"#4263eb\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1936f5b\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>切换到<code>new-feature</code>并进行提交<code>C4</code>后。<code>new-feature</code>分支指针推进到<code>C4</code>，而<code>main</code>停留在<code>C3</code>。<code>HEAD</code>现在指向<code>new-feature</code>。</p>\n</blockquote>\n<p>这产生了从提交<code>C3</code>分叉的两条独立的开发线。你可以在<code>new-feature</code>分支上继续处理你的功能，而不影响<code>main</code>分支。如果需要，你可以切换回<code>main</code>，创建另一个分支（例如<code>bug-fix</code>），在那里进行提交，它不会影响<code>main</code>或<code>new-feature</code>，直到你明确决定合并它们（这称为合并，稍后会讲到）。</p>\n<p>主要结论是，Git分支极其轻量。创建新分支不涉及复制文件或目录；它只是创建一个小文件，其中包含它所指向提交的40个字符的SHA-1哈希值。这种效率使得分支成为Git工作流程中一个常见且重要的部分，不像某些旧版本控制系统，在那些系统中，分支操作成本更高。</p>\n<p>使用分支提供了几个重要优点：</p>\n<ol>\n<li><strong>隔离：</strong> 处理新功能或错误修正，而不干扰稳定代码库（<code>main</code>）。</li>\n<li><strong>尝试：</strong> 在单独分支上尝试新想法或重构代码。如果不成功，你可以直接丢弃该分支，而不影响主项目。</li>\n<li><strong>并行开发：</strong> 多个开发者（甚至一个开发者处理多个任务）可以同时处理不同的功能或修正。</li>\n<li><strong>清晰历史：</strong> 保持<code>main</code>分支整洁，只包含稳定、经过测试的代码，而开发发生在其他分支上。</li>\n</ol>\n<p>理解这种指针想法是有效使用Git分支能力的重要基础，我们将在后续章节中进一步研究这一点。</p>",
+  "slug": "what-are-git-branches",
+  "updates": [],
+  "references": [
+    {
+      "id": 210,
+      "title": "Pro Git",
+      "author": "Scott Chacon, Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3: Git Branching - What a Branch Really Is",
+      "url": "https://git-scm.com/book/en/v2/",
+      "doi": "",
+      "note": "Git 的官方综合指南。本章解释了分支作为指向提交的轻量级指针的核心内容。",
+      "order": 1,
+      "created_at": "2025-09-04T13:58:04.843390Z",
+      "updated_at": "2025-09-07T15:37:23.031572Z"
+    },
+    {
+      "id": 211,
+      "title": "Git Branching",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/using-branches",
+      "doi": "",
+      "note": "广受认可的教程，清晰解释了 Git 分支概念，包括指针类比和常见工作流程。",
+      "order": 2,
+      "created_at": "2025-09-04T13:58:04.850397Z",
+      "updated_at": "2025-09-07T15:37:06.280422Z"
+    },
+    {
+      "id": 212,
+      "title": "Lecture 5: Version Control (Git)",
+      "author": "Anish Athalye, Jon Gjengset, and Jose Javier Gonzalez Ortiz",
+      "year": "2020",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://missing.csail.mit.edu/2020/version-control/",
+      "doi": "",
+      "note": "作为麻省理工学院备受推崇的课程的一部分，本讲座对 Git 及其分支模型提供了基本解释。",
+      "order": 3,
+      "created_at": "2025-09-04T13:58:04.853187Z",
+      "updated_at": "2025-09-07T15:37:14.267368Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

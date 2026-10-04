@@ -1,0 +1,61 @@
+{
+  "id": 1020,
+  "title": "处理合并冲突",
+  "meta_title": "如何在 Git 中处理合并冲突",
+  "meta_description": "了解什么是合并冲突、为什么会发生，以及手动解决它们的步骤。",
+  "content": "<p>Git 通常会自动合并不同的工作内容，但有时会遇到它无法确定合并修改的正确方式的情况。这发生在对两个待合并分支的<em>同一个文件</em>的<em>相同部分</em>进行修改时。Git 很智能，但它无法知道你的想法，无法判断哪个更改是正确的，也无法知道如何合并它们。这种情况称为<strong>合并冲突</strong>。</p>\n<p>不用担心，合并冲突是使用版本控制的常见部分，尤其是在协作环境中。当发生冲突时，Git 会给出清晰的提示，并提供帮助你解决的工具。</p>\n<h3>Git 如何指示冲突</h3>\n<p>当你尝试合并（<code>git merge &#x3C;branch-name></code>）并且 Git 遇到冲突修改时，它会执行以下操作：</p>\n<ol>\n<li><strong>停止合并过程：</strong> 合并会在中间暂停。你的工作目录会处于一种特殊的“正在合并”状态。</li>\n<li><strong>报告冲突：</strong> Git 会在你的终端输出一条消息，指示哪些文件存在冲突。例如：\n<pre><code class=\"language-bash\">Auto-merging index.html\nCONFLICT (content): Merge conflict in index.html\nAutomatic merge failed; fix conflicts and then commit the result.\n</code></pre>\n</li>\n<li><strong>标记 (token)冲突文件：</strong> Git 会修改冲突文件的内容，精确显示重叠更改发生的位置。它使用特殊标记：<code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;</code>、<code>=======</code> 和 <code>>>>>>>></code>。</li>\n</ol>\n<p>你始终可以通过运行 <code>git status</code> 来查看哪些文件当前存在冲突：</p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<p>输出会清晰列出“未合并路径”部分下的冲突文件：</p>\n<pre><code>On branch main\nYou have unmerged paths.\n  (fix conflicts and run \"git commit\")\n  (use \"git merge --abort\" to abort the merge)\n\nUnmerged paths:\n  (use \"git add &#x3C;file>...\" to mark resolution)\n        both modified:   index.html\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n</code></pre>\n<h3>理解冲突标记 (token)</h3>\n<p>让我们查看一个冲突文件，比如 <code>index.html</code>。你会看到像这样的标记部分：</p>\n<pre><code class=\"language-html\">&#x3C;!DOCTYPE html>\n&#x3C;html>\n&#x3C;head>\n  &#x3C;title>My Project&#x3C;/title>\n&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C; HEAD\n  &#x3C;link rel=\"stylesheet\" href=\"style.css\">\n=======\n  &#x3C;link rel=\"stylesheet\" href=\"styles/main.css\">\n>>>>>>> feature-styling\n&#x3C;/head>\n&#x3C;body>\n  &#x3C;h1>Hi!&#x3C;/h1>\n  &#x3C;p>This is the project landing page.&#x3C;/p>\n&#x3C;/body>\n&#x3C;/html>\n</code></pre>\n<p>下面是如何解释这些标记：</p>\n<ul>\n<li><code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C; HEAD</code>：这标记了来自你的<em>当前</em>分支（你运行 <code>git merge</code> 时所在的分支，通常是 <code>main</code>）的冲突行的开始。<code>HEAD</code> 是 Git 指向当前分支最新提交的指针。</li>\n<li><code>=======</code>：这个分隔符分隔了冲突更改。在 <code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C; HEAD</code> 和 <code>=======</code> 之间的所有内容是你的当前分支的版本。</li>\n<li><code>>>>>>>> feature-styling</code>：这标记了冲突行的结束。在 <code>=======</code> 和 <code>>>>>>>> feature-styling</code> 之间的所有内容是来自正在合并的<em>另一个</em>分支的版本（在此示例中是 <code>feature-styling</code>）。</li>\n</ul>\n<p>你的任务是编辑此部分，生成最终的正确版本并移除冲突标记。</p>\n<h3>解决冲突：按步骤操作</h3>\n<p>解决合并冲突包含以下步骤：</p>\n<ol>\n<li><strong>找出冲突文件：</strong> 使用 <code>git status</code> 查看哪些文件需要处理。</li>\n<li><strong>打开冲突文件：</strong> 在你的文本编辑器中打开该文件。</li>\n<li><strong>找到冲突标记 (token)：</strong> 搜索 <code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;</code>。</li>\n<li><strong>编辑文件：</strong> 决定保留哪个版本的代码，或者在必要时合并它们。手动编辑 <code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;</code> 和 <code>>>>>>>></code> 标记之间的内容，直到它完全符合你想要的最终版本。</li>\n<li><strong>移除冲突标记：</strong> 删除包含 <code>&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C;&#x3C; HEAD</code>、<code>=======</code> 和 <code>>>>>>>> feature-styling</code> 的行。确保只留下你想要的代码。\n<em>继续我们的例子，如果我们决定正确的路径是 <code>styles/main.css</code>，解决后的部分将如下所示：</em>\n<pre><code class=\"language-html\">&#x3C;!DOCTYPE html>\n&#x3C;html>\n&#x3C;head>\n  &#x3C;title>My Project&#x3C;/title>\n  &#x3C;link rel=\"stylesheet\" href=\"styles/main.css\">\n&#x3C;/head>\n&#x3C;body>\n  &#x3C;h1>Hi!&#x3C;/h1>\n  &#x3C;p>This is the project landing page.&#x3C;/p>\n&#x3C;/body>\n&#x3C;/html>\n</code></pre>\n</li>\n<li><strong>暂存已解决的文件：</strong> 一旦你修复了文件并移除了标记，通过使用 <code>git add</code> 暂存文件来告诉 Git 冲突已解决：\n<pre><code class=\"language-bash\">git add index.html\n</code></pre>\n对 <code>git status</code> 列出的所有冲突文件重复步骤 2-6。</li>\n<li><strong>完成合并：</strong> 暂存所有已解决的文件后，<code>git status</code> 会显示所有冲突已解决，并且你已准备好提交。通过运行 <code>git commit</code> 完成合并。\n<pre><code class=\"language-bash\">git commit\n</code></pre>\nGit 通常会预填充用于合并提交的提交消息（例如，“Merge branch 'feature-styling'”）。除非你需要添加关于冲突解决的特定细节，否则通常可以直接接受此默认消息。</li>\n</ol>\n<h3>取消合并</h3>\n<p>如果你进入合并操作，但决定你还没有准备好解决冲突，或者事情看起来太复杂，你可以安全地取消合并，并将你的项目恢复到你开始合并之前的状态。使用以下命令：</p>\n<pre><code class=\"language-bash\">git merge --abort\n</code></pre>\n<p>此命令会清理合并状态并重置你的文件，有效地取消了合并尝试。</p>\n<p>处理合并冲突起初可能看起来令人生畏，但它是一项基本技能。通过了解这个过程和冲突标记 (token)的含义，你可以自信地整合项目中的不同工作内容。许多文本编辑器和专业的合并工具提供图形界面来帮助解决冲突，这在你获得更多经验后会很有帮助。</p>",
+  "slug": "handling-merge-conflicts",
+  "updates": [],
+  "references": [
+    {
+      "id": 312,
+      "title": "Git Branching - Basic Branching and Merging",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging#_basic_merge_conflicts",
+      "doi": "",
+      "note": "官方文档，涵盖 Git 合并冲突的基本原理、表现形式和标准解决方法。",
+      "order": 1,
+      "created_at": "2025-09-04T14:15:31.164625Z",
+      "updated_at": "2025-09-07T15:48:53.505472Z"
+    },
+    {
+      "id": 313,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+      "doi": "",
+      "note": "一本关于 Git 的综合指南，其中一章详细介绍了分支策略和合并冲突的解决。",
+      "order": 2,
+      "created_at": "2025-09-04T14:15:31.167889Z",
+      "updated_at": "2025-09-07T15:48:58.708990Z"
+    },
+    {
+      "id": 314,
+      "title": "Resolving a merge conflict",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/using-branches/merge-conflicts",
+      "doi": "",
+      "note": "一个实用的教程，通过清晰的示例解释合并冲突、其原因和逐步解决过程。",
+      "order": 3,
+      "created_at": "2025-09-04T14:15:31.170311Z",
+      "updated_at": "2025-09-07T15:48:56.623385Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

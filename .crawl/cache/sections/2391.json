@@ -1,0 +1,61 @@
+{
+  "id": 2391,
+  "title": "示例项目：一个基本的命令行工具",
+  "meta_title": "Python 示例项目 | 简单命令行工具",
+  "meta_description": "构建一个简单但功能实用的命令行应用程序（例如，一个基础计算器或任务管理器），整合所学知识。",
+  "content": "<p>让我们将您学到的知识转化为一个实际应用。构建一个简单的命令行工具是了解变量、控制流、函数和错误处理如何协同工作的绝佳方式。我们将制作一个基于用户输入执行加、减、乘、除运算的基础计算器。</p>\n<p>本项目将直接使用到：</p>\n<ul>\n<li><strong><code>input()</code>:</strong> 从用户那里获取数字和所需的操作。</li>\n<li><strong>变量:</strong> 存储用户的输入和计算结果。</li>\n<li><strong>类型转换:</strong> 将输入字符串转换为适合计算的数字 (<code>float</code>)。</li>\n<li><strong>运算符:</strong> 算术运算符 (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>) 来执行计算。</li>\n<li><strong>条件语句 (<code>if</code>/<code>elif</code>/<code>else</code>):</strong> 根据用户的选择确定执行哪种操作。</li>\n<li><strong>循环 (<code>while</code>):</strong> 允许用户执行多次计算而无需重新启动脚本。</li>\n<li><strong>函数:</strong> 将代码组织成逻辑块（例如，获取输入、执行计算）。</li>\n<li><strong>错误处理 (<code>try</code>/<code>except</code>):</strong> 处理潜在问题，如非数字输入或除以零，防止程序崩溃。</li>\n</ul>\n<h3>定义计算器的行为</h3>\n<p>我们的命令行计算器应该：</p>\n<ol>\n<li>显示一条欢迎信息。</li>\n<li>进入一个循环，直到用户决定退出。</li>\n<li>在循环内部：\n<ul>\n<li>提示用户输入第一个数字。</li>\n<li>提示用户输入第二个数字。</li>\n<li>提示用户选择一个操作符（+、-、*、/）。</li>\n<li>校验输入。确保输入的确实是数字，并且操作有效。妥善处理错误。</li>\n<li>如果输入有效，执行计算。处理特定计算错误，例如除以零。</li>\n<li>显示结果。</li>\n<li>询问用户是否要执行另一次计算。如果不想，退出循环。</li>\n</ul>\n</li>\n<li>退出时显示一条再见信息。</li>\n</ol>\n<h3>使用函数组织代码</h3>\n<p>为了保持代码的组织性和可读性，我们可以将其分解为函数：</p>\n<ul>\n<li><code>get_number(prompt)</code>: 一个函数，接收一个提示消息，向用户请求输入，并持续请求直到输入一个有效数字 (<code>float</code>)。如果输入不是数字，它会处理 <code>ValueError</code>。</li>\n<li><code>get_operation()</code>: 一个函数，提示用户输入一个操作符（+、-、*、/），并持续请求直到输入一个有效的操作符。</li>\n<li><code>calculate(num1, num2, operation)</code>: 一个函数，接收两个数字和操作符字符串，执行计算并返回结果。它处理 <code>ZeroDivisionError</code>。</li>\n<li><code>main()</code>: 主函数，负责协调应用程序的流程，调用其他函数并管理主循环。</li>\n</ul>\n<h3>实现要点</h3>\n<p>让我们看看说明一些重要部分的片段。</p>\n<h4>获取有效数字输入</h4>\n<p>确保用户输入有效的数字是必要的。<code>while</code> 循环与 <code>try-except</code> 结合是一种处理潜在错误的有效方法。</p>\n<pre><code class=\"language-python\">def get_number(prompt):\n    \"\"\"提示用户输入数字并处理无效输入。\"\"\"\n    while True:\n        try:\n            user_input = input(prompt)\n            number = float(user_input) # 尝试转换为浮点数\n            return number\n        except ValueError:\n            print(\"输入无效。请输入一个数字。\")\n\n# 在主循环中的使用示例：\n# first_number = get_number(\"请输入第一个数字：\")\n# second_number = get_number(\"请输入第二个数字：\")\n</code></pre>\n<p>这个 <code>get_number</code> 函数封装了重复请求输入直到输入有效浮点数的逻辑。它捕获了当 <code>float()</code> 转换失败时抛出的 <code>ValueError</code>。</p>\n<h4>执行带错误处理的计算</h4>\n<p>计算逻辑使用 <code>if/elif/else</code> 来选择操作。非常重要的一点是，除法需要检查 <code>ZeroDivisionError</code>。</p>\n<pre><code class=\"language-python\">def calculate(num1, num2, operation):\n    \"\"\"根据操作执行计算。\"\"\"\n    if operation == '+':\n        return num1 + num2\n    elif operation == '-':\n        return num1 - num2\n    elif operation == '*':\n        return num1 * num2\n    elif operation == '/':\n        if num2 == 0:\n            print(\"错误：不能除以零。\")\n            return None # 表示失败\n        else:\n            return num1 / num2\n    else:\n        # 这种情况理想情况下应该由 get_operation() 避免\n        print(\"错误：无效的操作。\")\n        return None\n\n# 在主循环中的使用示例：\n# result = calculate(first_number, second_number, chosen_operation)\n# if result is not None:\n#     print(f\"结果是：{result}\")\n</code></pre>\n<p>在这里，我们明确检查操作是否为除法 (<code>/</code>)，以及在尝试除法之前被除数 (<code>num2</code>) 是否为零。如果是，我们打印错误并返回 <code>None</code>。调用代码在打印结果之前应该检查 <code>result</code> 是否为 <code>None</code>。</p>\n<h4>主应用程序循环</h4>\n<p>脚本的主要部分将使用一个 <code>while True</code> 循环，该循环会一直持续，直到用户明确要求退出。</p>\n<pre><code class=\"language-python\">def main():\n    print(\"启动简单命令行计算器！\")\n\n    while True:\n        # --- 使用 get_number() 和 get_operation() 等函数获取输入 ---\n        num1 = get_number(\"请输入第一个数字：\")\n        num2 = get_number(\"请输入第二个数字：\")\n        op = get_operation() # 假设 get_operation 处理验证\n\n        # --- 执行计算 ---\n        result = calculate(num1, num2, op)\n\n        # --- 显示结果 ---\n        if result is not None:\n            print(f\"结果：{num1} {op} {num2} = {result}\")\n\n        # --- 询问是否继续 ---\n        again = input(\"执行另一次计算吗？ (yes/no): \").lower()\n        if again != 'yes':\n            break # 退出 while 循环\n\n    print(\"感谢您使用计算器。再见！\")\n\n# --- 调用主函数启动应用程序 ---\n# if __name__ == \"__main__\": # 良好实践，稍后解释\n#     main()\n# 目前，对于简单脚本直接调用 main() 即可：\n# main()\n</code></pre>\n<p>这个结构将所有部分连接起来。它调用输入和计算函数，打印输出，并根据用户选择继续或退出控制流程。</p>\n<h3>运行计算器</h3>\n<p>将完整的代码保存为 Python 文件（例如，<code>calculator.py</code>）。打开您的终端或命令提示符，导航到保存文件的目录，然后使用以下命令运行它：</p>\n<pre><code class=\"language-bash\">python calculator.py\n</code></pre>\n<p>您应该会看到欢迎信息和输入数字及操作的提示。</p>\n<h3>交互示例</h3>\n<p>一个会话可能如下所示：</p>\n<pre><code>欢迎使用简单命令行计算器！\n请输入第一个数字：10\n请输入第二个数字：5\n请输入操作符（+、-、*、/）：+\n结果：10.0 + 5.0 = 15.0\n执行另一次计算吗？ (yes/no): yes\n请输入第一个数字：20\n请输入第二个数字：0\n请输入操作符（+、-、*、/）：/\n错误：不能除以零。\n执行另一次计算吗？ (yes/no): yes\n请输入第一个数字：apple\n输入无效。请输入一个数字。\n请输入第一个数字：7\n请输入第二个数字：3\n请输入操作符（+、-、*、/）：*\n结果：7.0 * 3.0 = 21.0\n执行另一次计算吗？ (yes/no): no\n感谢您使用计算器。再见！\n</code></pre>\n<p>这个简单的计算器项目演示了您学到的不同 Python 特性如何结合起来创建一个功能程序。它有效地使用函数进行组织，循环用于重复，条件语句用于决策，以及错误处理以提升程序的稳定性。您可以通过添加更多操作（例如求幂）、改进界面，甚至添加计算历史记录等功能来扩充这个项目。</p>",
+  "slug": "python-example-project-cli",
+  "updates": [],
+  "references": [
+    {
+      "id": 4663,
+      "title": "The Python Tutorial",
+      "author": "Guido van Rossum and the Python development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/",
+      "doi": "",
+      "note": "提供了Python的基础介绍，包括控制流、函数和错误处理，是语言的官方来源。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:25.935560Z",
+      "updated_at": "2025-09-07T21:12:14.349318Z"
+    },
+    {
+      "id": 4665,
+      "title": "Python Basics",
+      "author": "Dan Bader",
+      "year": "2024",
+      "publisher": "Real Python",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://realpython.com/python-basics/",
+      "doi": "",
+      "note": "一个全面的在线教程，涵盖了Python的核心语法、控制流、函数和错误处理，解释清晰，示例丰富，适合初学者。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:25.954195Z",
+      "updated_at": "2025-09-07T21:12:30.943578Z"
+    },
+    {
+      "id": 4666,
+      "title": "Introduction to Computer Science and Programming in Python",
+      "author": "Ana Bell, Eric Grimson, and John Guttag",
+      "year": "2016",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+      "doi": "",
+      "note": "一门学术课程，使用Python介绍编程概念和问题解决，包括函数、循环、条件语句和基本错误处理等基础元素。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:25.957100Z",
+      "updated_at": "2025-09-07T21:12:13.156452Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

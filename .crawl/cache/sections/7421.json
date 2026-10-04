@@ -1,0 +1,61 @@
+{
+  "id": 7421,
+  "title": "实践操作：一个内容生成流程",
+  "meta_title": "实践：构建内容生成流程",
+  "meta_description": "一个动手实践，用于构建一个多步骤链，该链能生成博客文章大纲，然后根据该大纲编写一个章节。",
+  "content": "<p>一个内容生成流程是一个实用的、多步骤的应用，使用 LangChain 表达式语言 (LCEL) 构建。此流程按顺序执行两项不同任务：首先，它根据给定主题生成博客文章大纲；其次，它使用生成的大纲为该博客文章撰写引言。</p>\n<p>这个过程类似于许多工作流，其中一个复杂的任务被分解为更小、可管理的子任务，并且一个步骤的输出作为下一个步骤的输入。</p>\n<h3>配置组件</h3>\n<p>在构建最终流程之前，我们需要定义构成流程的每个独立操作。我们的流程需要两个步骤：一个用于创建大纲，另一个用于撰写引言。</p>\n<p>首先，我们来设置语言模型和必要的导入。在此示例中，我们将使用 <code>ChatOpenAI</code>。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\nfrom langchain_core.output_parsers import StrOutputParser\nfrom langchain_core.runnables import RunnablePassthrough\n\n# 初始化聊天模型。请确保您的 OpenAI API 密钥已配置。\nllm = ChatOpenAI(temperature=0.7, model_name=\"gpt-3.5-turbo\")\n</code></pre>\n<h3>链 1：大纲生成器</h3>\n<p>我们流程的第一步是为博客文章生成结构化大纲。此链将接收一个输入 <code>topic</code>，并生成一个输出字符串。</p>\n<p>我们定义一个 <code>PromptTemplate</code>，它指示模型创建一个项目符号列表。然后，我们使用管道 <code>|</code> 运算符创建一个序列，连接提示词 (prompt)、模型和 <code>StrOutputParser</code>，以确保输出是干净的字符串。</p>\n<pre><code class=\"language-python\"># 用于生成博客文章大纲的提示词和链\nprompt_outline = PromptTemplate(\n    input_variables=[\"topic\"],\n    template=\"为关于 {topic} 的博客文章创建一份简洁的项目符号大纲。\"\n)\n\noutline_chain = prompt_outline | llm | StrOutputParser()\n</code></pre>\n<h3>链 2：引言撰写器</h3>\n<p>第二个链的任务是撰写引言。此链更复杂，因为它需要两个输入：原始 <code>topic</code> 和第一个链生成的大纲 <code>outline</code>。它的 <code>PromptTemplate</code> 反映了这一点，指示模型使用提供的大纲作为参考。</p>\n<pre><code class=\"language-python\"># 用于撰写引言的提示词和链\nprompt_intro = PromptTemplate(\n    input_variables=[\"topic\", \"outline\"],\n    template=\"为关于 {topic} 的博客文章撰写一篇引人入胜的引言，请使用以下大纲作为参考：\\n\\n{outline}\"\n)\n\nintro_chain = prompt_intro | llm | StrOutputParser()\n</code></pre>\n<h3>组装流程</h3>\n<p>定义了两个链之后，我们可以使用 LCEL 原语将它们组装成一个工作流。我们使用 <code>RunnablePassthrough.assign</code> 来管理数据流。这个函数使我们能够计算新值（如大纲或引言），并将它们添加到流经流程的输入字典中。</p>\n<p>下图说明了数据流。初始 <code>topic</code> 被两个链使用，而第一个链输出的 <code>outline</code> 成为第二个链的输入。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14zu3ht\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\"]; edge [color=\"#495057\"]; \"User Input (topic)\" [fillcolor=\"#ffec99\", label=\"用户输入 (主题)\"]; \"Final Output (introduction)\" [fillcolor=\"#b2f2bb\", label=\"最终输出 (引言)\"]; \"User Input (topic)\" -> \"Outline Chain\" [label=\" 主题\"]; \"Outline Chain\" [label=\"大纲链\"]; \"Introduction Chain\" [label=\"引言链\"]; \"Outline Chain\" -> \"Introduction Chain\" [label=\" 大纲\"]; \"User Input (topic)\" -> \"Introduction Chain\" [style=dashed, label=\" 主题\"]; \"Introduction Chain\" -> \"Final Output (introduction)\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14zu3ht\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个内容生成流程图。<code>topic</code> 被两个链使用，而第一个链生成的大纲 <code>outline</code> 被传递给第二个链。</p>\n</blockquote>\n<p>在构建流程时，我们将赋值操作串联起来。首先，我们将 <code>outline_chain</code> 的输出赋值给键 <code>outline</code>。接下来，我们将 <code>intro_chain</code> 的输出赋值给键 <code>introduction</code>。这种结构确保第二个链能够访问初始 <code>topic</code> 和生成的大纲 <code>outline</code>。</p>\n<pre><code class=\"language-python\"># 使用 RunnablePassthrough.assign 创建流程\n# 这使我们能够在进程进行时向字典添加新键\ncontent_pipeline = (\n    RunnablePassthrough.assign(outline=outline_chain)\n    | RunnablePassthrough.assign(introduction=intro_chain)\n)\n</code></pre>\n<h3>运行流程</h3>\n<p>现在，我们可以通过一次调用执行整个流程。我们提供一个包含初始输入变量 <code>\"topic\"</code> 的字典。</p>\n<pre><code class=\"language-python\"># 提供一个主题并运行流程\ntopic = \"the benefits of serverless computing\"\nresult = content_pipeline.invoke({\"topic\": topic})\n</code></pre>\n<p>最终的 <code>result</code> 是一个字典，包含过程中累积的所有键，包括我们的输入和输出。让我们检查结果。</p>\n<pre><code class=\"language-python\"># 打印结果\nprint(\"\\n------ 生成的大纲 ------\")\nprint(result[\"outline\"])\n\nprint(\"\\n------ 生成的引言 ------\")\nprint(result[\"introduction\"])\n</code></pre>\n<p><strong>示例输出：</strong></p>\n<pre><code class=\"language-text\">------ 生成的大纲 ------\n- 无服务器计算引言\n- 成本效益\n- 可伸缩性和灵活性\n- 提高开发者生产力\n- 降低运营开销\n- 无服务器计算的应用场景\n- 结论\n\n------ 生成的引言 ------\n在不断发展的云计算行业，无服务器架构已成为应用程序构建和部署方式的一个重大转变。通过抽象底层基础设施，无服务器计算使开发者能够专注于编写代码，从而提高生产力和创新能力。本文讨论了采用无服务器方法的优势，从节省成本、自动伸缩性到降低运营负担。我们将审视该模型如何提升开发者生产力，并研究无服务器表现出色的实际应用场景，从而清晰地说明为什么它正在成为现代应用程序开发的优选。\n</code></pre>\n<p>如您所见，流程成功执行了这两个步骤。<code>intro_chain</code> 有效地使用了 <code>outline_chain</code> 提供的情境，生成了相关且结构良好的引言。这个简单的两步过程说明了 LCEL 在创建精细、自动化工作流方面的能力。您可以通过添加更多链来进一步扩展此流程，根据大纲撰写博客文章的每个部分，从而从单个主题输入创建完整的草稿内容。</p>",
+  "slug": "practice-content-generation-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 14752,
+      "title": "Chains",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/how_to/chains/",
+      "doi": "",
+      "note": "提供 LangChain 框架中各种链类型的信息，包括 SequentialChain，以及如何构建它们以进行多步操作。",
+      "order": 1,
+      "created_at": "2025-09-05T09:05:19.556279Z",
+      "updated_at": "2025-09-11T10:47:23.904833Z"
+    },
+    {
+      "id": 14753,
+      "title": "Building LLM-Powered Applications: How to put large language models to work",
+      "author": "Valentina Alto",
+      "year": "2024",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFHp-NSiiGSjWaE09Xp1gyr4EZfzb1f6ip4GXQcFRt2XsNRtGm-3WIhayhLW3ESRSs3nmv5yMTZ1oJLoKpzp2W31mZz5msXINBVCd9L06uOJ0byv8xOcPqyzMOeRpQrCE9bVB-LnZm_h_xUAwwhoUBX4s3BLrL9PtVWJejIbDWrjCCZAw==",
+      "doi": "",
+      "note": "一本关于使用大型语言模型开发应用程序的实用指南，涵盖架构模式、框架使用（如 LangChain）以及链式调用 LLM 的策略。",
+      "order": 2,
+      "created_at": "2025-09-05T09:05:19.577520Z",
+      "updated_at": "2025-09-11T10:47:00.729339Z"
+    },
+    {
+      "id": 14754,
+      "title": "Prompt engineering guide",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "提供设计有效提示词的最佳实践和技术，以指导大型语言模型生成所需输出，这对于构建链至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T09:05:19.580503Z",
+      "updated_at": "2025-09-11T10:47:02.050186Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

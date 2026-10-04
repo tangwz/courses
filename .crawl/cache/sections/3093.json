@@ -1,0 +1,45 @@
+{
+  "id": 3093,
+  "title": "基本缓存策略",
+  "meta_title": "LLM应用程序的基本缓存策略",
+  "meta_description": "实施简单缓存以降低延迟和成本。",
+  "content": "<p>将一个可用的LLM应用原型转变为可部署的系统，需要解决实际的工程难题。一个主要的优化方面是管理重复调用LLM API所产生的成本和延迟。基本的缓存策略提供了一种有效的方法来提升性能和成本效益。</p>\n<p>LLM API调用可能相对较慢，涉及网络通信和提供方大量的计算时间。此外，大多数商业API根据处理的输入和输出token数量收费。如果你的应用程序频繁向LLM发送相同或相似的提示，你将承担不必要的成本和延迟。缓存提供了一种解决方案，通过存储昂贵操作（如API调用）的结果，并在再次出现相同输入时重用这些结果。</p>\n<h3>为什么缓存LLM响应？</h3>\n<p>即使为LLM交互实施简单的缓存，也能带来多项益处：</p>\n<ol>\n<li><strong>降低成本：</strong> 这通常是最主要的原因。通过存储给定提示及其参数 (parameter)的响应，你可以避免在稍后发出完全相同的请求时进行新的API调用。由于API使用通常按token计量，消除冗余调用直接意味着更低运营开销。</li>\n<li><strong>改善延迟：</strong> 从本地缓存（如服务器内存或快速缓存服务）获取响应比往返外部LLM API快得多。这使得重复请求的用户体验更加迅速。</li>\n<li><strong>速率限制管理：</strong> LLM提供商对API使用施加速率限制（例如，每分钟请求数）。缓存减少了API调用的总数，使得你的应用程序不太可能触及这些限制，从而提升可靠性。</li>\n</ol>\n<h3>简单的缓存策略</h3>\n<p>对于许多应用程序而言，基本的缓存方法足以实现很大的收益。</p>\n<h4>内存缓存</h4>\n<p>最简单的缓存形式是使用应用程序内存中的标准数据结构。在Python中，字典是存储请求到响应映射的常见选择。</p>\n<pre><code class=\"language-python\"># 内存缓存示例\nllm_cache = {}\n\ndef get_llm_response_with_cache(prompt, params):\n    cache_key = generate_cache_key(prompt, params) # 生成唯一键的函数\n\n    if cache_key in llm_cache:\n        print(\"缓存命中！\")\n        return llm_cache[cache_key] # 返回缓存响应\n    else:\n        print(\"缓存未命中。正在调用API...\")\n        response = call_llm_api(prompt, params) # 实际API调用\n        llm_cache[cache_key] = response # 将响应存储到缓存中\n        # 可选：在此处实现缓存大小限制逻辑（例如，LRU）\n        return response\n\n# 示例辅助函数（简化版）\ndef generate_cache_key(prompt, params):\n    # 在实际应用中，使用提示 + 排序参数的哈希值\n    return hash((prompt, tuple(sorted(params.items()))))\n\n# 实际API调用函数的占位符\ndef call_llm_api(prompt, params):\n    # ... 与LLM API交互的逻辑 ...\n    return f\"Response for: {prompt} with params {params}\"\n\n# 用法\nparams1 = {'temperature': 0.7, 'max_tokens': 100}\nresponse1 = get_llm_response_with_cache(\"Summarize this text: ...\", params1)\nprint(response1)\n\nresponse2 = get_llm_response_with_cache(\"Summarize this text: ...\", params1) # 相同请求\nprint(response2)\n</code></pre>\n<ul>\n<li><strong>优点：</strong> 访问速度极快（内存速度），对于基本用例实现简单。</li>\n<li><strong>缺点：</strong>\n<ul>\n<li><strong>非持久性：</strong> 如果应用程序重启，缓存会丢失。</li>\n<li><strong>扩展性限制：</strong> 你的应用程序的每个实例都维护自己独立的缓存。如果你在负载均衡器后运行多个实例，这效率不高，因为相同的请求可能会命中不同的实例，导致缓存未命中。</li>\n<li><strong>内存占用：</strong> 存储大型LLM响应会占用大量内存。你需要限制缓存大小的策略（例如，最近最少使用淘汰）。</li>\n</ul>\n</li>\n</ul>\n<h4>外部缓存系统（简要概述）</h4>\n<p>对于需要持久性或跨多个应用程序实例共享缓存的更复杂情况，通常使用专门的缓存系统，如Redis或Memcached。它们作为独立服务运行，你的应用程序与之通信。</p>\n<ul>\n<li><strong>优点：</strong> 持久性（可配置），多个应用程序实例可访问的共享缓存，高级功能（如存活时间、淘汰策略）。</li>\n<li><strong>缺点：</strong> 增加了基础设施复杂性（安装、管理缓存服务器），引入了访问缓存的少量网络延迟（尽管通常非常低）。</li>\n</ul>\n<p>尽管功能强大，但设置和管理外部系统超出了“基本”缓存的范畴。对于许多初始应用程序或小型部署，内存缓存提供了一个不错的起点。</p>\n<h3>定义缓存键</h3>\n<p>缓存的一个重要方面是确定<em>什么</em>构成唯一请求。不仅仅是提示文本本身。LLM生成通常受以下参数 (parameter)影响：</p>\n<ul>\n<li><code>model</code>：正在使用的具体LLM（例如，<code>gpt-4</code>，<code>claude-3-opus</code>）。</li>\n<li><code>temperature</code>：控制随机性。</li>\n<li><code>max_tokens</code>：限制响应长度。</li>\n<li><code>top_p</code>：核心采样参数。</li>\n<li>任何其他影响输出的参数（<code>stop_sequences</code>等）。</li>\n</ul>\n<p>因此，你的缓存键应唯一表示<strong>提示</strong>和所有<strong>相关生成参数</strong>的组合。一个常见的方法是创建提示和排序参数的字符串表示，然后使用哈希函数（如SHA-256）生成一个一致的、固定大小的键。</p>\n<h3>缓存失效：保持数据新鲜</h3>\n<p>一个项目应该在缓存中停留多久？这是缓存失效的问题。对于LLM响应，如果提示和参数 (parameter)相同，确定性模型的<em>理想</em>响应可能也是相同的。然而，模型更新或非确定性生成中的微小变化（<code>temperature</code> > 0）等因素使情况变得复杂。</p>\n<p>一种简单且常用的策略是<strong>存活时间（TTL）</strong>：</p>\n<ul>\n<li>为每个缓存项目分配一个过期时间（例如，1小时，1天）。</li>\n<li>TTL过期后，该项目将被移除或视为过期，强制在下一次请求时进行新的API调用。</li>\n<li>适当的TTL取决于你预期给定提示的“正确”答案变化的速度，或者仅仅作为控制缓存大小和定期刷新可能次优的缓存结果的机制（尤其是在使用较高温度时）。</li>\n</ul>\n<h3>实施考量</h3>\n<ul>\n<li><strong>缓存键生成：</strong> 确保你的键生成是确定性的并处理潜在冲突（尽管使用好的哈希函数时可能性较小）。对提示和参数 (parameter)的规范表示（例如，已排序的键值对元组）的组合进行哈希处理。</li>\n<li><strong>缓存大小管理：</strong> 对于内存缓存，实施大小限制（例如，最大条目数或总内存使用量）和淘汰策略（如最近最少使用——LRU）以防止内存无限增长。有许多库可以帮助实现这一点（例如，Python的<code>functools.lru_cache</code>装饰器或专用缓存库）。</li>\n<li><strong>序列化：</strong> 存储复杂响应对象（不仅仅是字符串）时，确保它们可以正确地序列化（转换为可存储的格式，如JSON或字节）和反序列化。</li>\n</ul>\n<h3>缓存逻辑示意图</h3>\n<p>下图描绘了包含缓存检查时的基本流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1jgl6ca\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n\n  Start [label=\"接收请求\\n(提示 + 参数)\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n  GenerateKey [label=\"生成缓存键\"];\n  CheckCache [label=\"在缓存中吗？\", shape=diamond, style=filled, fillcolor=\"#ffec99\"];\n  CacheHit [label=\"从缓存中获取\"];\n  CacheMiss [label=\"调用LLM API\"];\n  StoreCache [label=\"将响应\\n存入缓存\"];\n  ReturnResponse [label=\"返回响应\", shape=ellipse, style=filled, fillcolor=\"#b2f2bb\"];\n\n  Start -> GenerateKey;\n  GenerateKey -> CheckCache;\n  CheckCache -> CacheHit [label=\" 是 \"];\n  CheckCache -> CacheMiss [label=\" 否 \"];\n  CacheHit -> ReturnResponse;\n  CacheMiss -> StoreCache;\n  StoreCache -> ReturnResponse;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1jgl6ca\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>包含缓存检查的请求处理流程。如果生成的键存在于缓存中，则直接返回存储的响应；否则，调用LLM API，并将结果存储后再返回。</p>\n</blockquote>\n<p>通过实施这些基本缓存策略，你可以大幅降低LLM应用程序的运营成本并提高其响应速度，使其更具实用性和可扩展性。即使是一个具有合理淘汰策略的简单内存缓存也能以相对较少的实施工作带来很大的益处。</p>",
+  "slug": "basic-caching-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 8761,
+      "title": "functools.lru_cache decorator",
+      "author": "Python Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/functools.html#functools.lru_cache",
+      "doi": "",
+      "note": "Python 内置装饰器的官方参考，用于使用最近最少使用（LRU）策略记忆函数调用。",
+      "order": 2,
+      "created_at": "2025-09-05T02:09:54.586464Z",
+      "updated_at": "2025-09-09T04:53:21.438970Z"
+    },
+    {
+      "id": 8762,
+      "title": "Redis Documentation",
+      "author": "Redis Labs",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://redis.io/docs/",
+      "doi": "",
+      "note": "关于 Redis 的全面信息，Redis 是一种常用的内存数据存储，常用于外部缓存，包括持久化和高级功能。",
+      "order": 3,
+      "created_at": "2025-09-05T02:09:54.589095Z",
+      "updated_at": "2025-09-09T04:53:22.690555Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

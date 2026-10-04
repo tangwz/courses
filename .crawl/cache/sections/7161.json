@@ -1,0 +1,61 @@
+{
+  "id": 7161,
+  "title": "使用 Gradio 构建语音转文本应用",
+  "meta_title": "使用 Gradio 构建语音转文本应用",
+  "meta_description": "一个关于使用 Gradio 库将 ASR 模型封装到简单网页界面中的分步教程。",
+  "content": "<p>当机器学习 (machine learning)模型被开发和评估之后，最后一步是使其可用。尽管 Hugging Face 的 <code>pipeline</code> 提供了一个简单的编程接口，但分享模型通常需要一种更易用、交互性更强的格式。Gradio 这样的工具在此非常实用，它让您能够直接从 Python 代码构建简单的网页应用。</p>\n<h3>使用 Gradio 从模型到应用</h3>\n<p>Gradio 是一个 Python 库，旨在快速构建和分享机器学习 (machine learning)模型的网页应用。它的主要优点是简洁性。您只需几行代码即可创建一个功能性的用户界面，让同事或用户可以通过网页浏览器与您的模型交互，而无需自己运行任何代码。</p>\n<p>一个 Gradio 应用围绕三个主要组成部分构建：</p>\n<ol>\n<li><strong>处理函数：</strong> 这是一个普通的 Python 函数，它接收一些输入（如音频文件路径）并返回一个输出（如转录文本）。</li>\n<li><strong>输入组件：</strong> 用于用户提供数据的用户界面元素，例如麦克风录音机或文件上传器。</li>\n<li><strong>输出组件：</strong> 用于显示结果的用户界面元素，例如文本框。</li>\n</ol>\n<p>这三个部分被封装在一个 <code>gradio.Interface</code> 对象中，该对象自动生成并启动网页应用。</p>\n<h3>环境设置</h3>\n<p>为了开始，您需要安装 Gradio，如果您正在跟着上一节的 Hugging Face pipeline 例子操作，还需要安装 <code>transformers</code> 和 <code>torch</code> 库。</p>\n<pre><code class=\"language-bash\">pip install gradio transformers torch\n</code></pre>\n<h3>构建 ASR 网页应用</h3>\n<p>让我们为 ASR 模型构建一个基于网页的界面。我们将使用 Hugging Face 上的预训练 (pre-training) Whisper 模型进行此次演示，因为它提供了一个高质量、即用型的转录引擎。</p>\n<h4>第一步：定义转录逻辑</h4>\n<p>首先，我们需要加载 ASR pipeline 并创建一个 Python 函数来执行转录。这个函数将作为我们 Gradio 应用的核心逻辑。它必须接受输入组件提供的参数 (parameter)，并返回输出组件可以显示的值。</p>\n<pre><code class=\"language-python\">import gradio as gr\nfrom transformers import pipeline\n\n# 加载 ASR pipeline\n# 使用更小的模型如 whisper-tiny.en 以获得更快的推理速度\nasr_pipeline = pipeline(\"automatic-speech-recognition\", model=\"openai/whisper-tiny.en\")\n\ndef transcribe_audio(audio):\n    \"\"\"\n    一个使用 Hugging Face ASR pipeline 转录音频的函数。\n    Gradio 会将音频输入作为 NumPy 数组和采样率提供。\n    \"\"\"\n    if audio is None:\n        return \"未提供音频文件。请上传或录制音频。\"\n\n    # pipeline 返回一个字典，我们从中提取转录文本\n    result = asr_pipeline(audio)\n    return result[\"text\"]\n</code></pre>\n<p>在 <code>transcribe_audio</code> 函数中，<code>audio</code> 参数将由 Gradio 的音频输入组件提供。然后函数将此音频传递给我们的 <code>asr_pipeline</code>，并返回生成的文本转录。</p>\n<h4>第二步：创建和配置 Gradio 界面</h4>\n<p>接下来，我们使用 <code>gradio.Interface</code> 定义用户界面。我们将 <code>transcribe_audio</code> 函数连接到用户友好的输入和输出组件。</p>\n<p>对于我们的输入，<code>gradio.Audio</code> 是一个非常适合的选择。我们可以配置它来接受上传的文件和直接的麦克风录音。对于输出，一个简单的 <code>gradio.Textbox</code> 就足以显示转录的文本。</p>\n<pre><code class=\"language-python\"># 定义 Gradio 界面\ndemo = gr.Interface(\n    fn=transcribe_audio,\n    inputs=gr.Audio(sources=[\"upload\", \"microphone\"], type=\"filepath\"),\n    outputs=gr.Textbox(label=\"转录\"),\n    title=\"简单 ASR 系统\",\n    description=\"上传音频文件或使用麦克风录制音频，将语音转录成文本。该模型基于 OpenAI 的 Whisper-tiny。\"\n)\n</code></pre>\n<p>注意 <code>inputs</code> 参数。我们指定了 <code>gr.Audio</code> 并配置了 <code>sources</code>，以允许文件上传和麦克风输入，为用户提供了灵活性。<code>type=\"filepath\"</code> 参数告诉 Gradio 将输入音频保存到临时文件，并将路径传递给我们的函数，这是一种处理音频数据的常见且可靠的方法。</p>\n<p>数据从用户流向模型再返回的流程在下图所示。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-uu4jf6\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=0.2]; edge [fontname=\"Arial\", fontsize=10]; User [label=\"用户\", shape=oval, fillcolor=\"#ffc9c9\"]; GradioUI [label=\"Gradio 网页界面\\n(gr.Audio 输入)\", fillcolor=\"#a5d8ff\"]; PythonFunc [label=\"Python 函数\\n(transcribe_audio)\", fillcolor=\"#b2f2bb\"]; HFPipeline [label=\"Hugging Face Pipeline\\n(Whisper 模型)\", fillcolor=\"#ffd8a8\"]; OutputUI [label=\"Gradio 网页界面\\n(gr.Textbox 输出)\", fillcolor=\"#a5d8ff\"]; Result [label=\"转录文本\", shape=document, fillcolor=\"#e9ecef\"]; User -> GradioUI [label=\"上传或录制音频\"]; GradioUI -> PythonFunc [label=\"传递音频文件路径\"]; PythonFunc -> HFPipeline [label=\"调用 Pipeline\"]; HFPipeline -> PythonFunc [label=\"返回文本\"]; PythonFunc -> OutputUI [label=\"返回文本\"]; OutputUI -> Result; Result -> User [label=\"显示文本\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-uu4jf6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>用户与 Gradio 音频组件交互。Gradio 将音频数据传递给我们的 Python 函数，该函数使用 Hugging Face pipeline 执行转录。生成的文本被返回到 Gradio 界面并显示给用户。</p>\n</blockquote>\n<h4>第三步：启动应用</h4>\n<p>最后一步是启动网页服务器。这是通过在 <code>Interface</code> 对象上调用 <code>launch()</code> 方法完成的。</p>\n<pre><code class=\"language-python\"># 启动应用\nif __name__ == \"__main__\":\n    demo.launch()\n</code></pre>\n<p>当您运行这个 Python 脚本时，Gradio 会输出一个本地 URL（通常是 <code>http://127.0.0.1:7860</code>）。在您的网页浏览器中打开这个 URL，将显示您功能完善的语音转文本应用。</p>\n<h3>分享您的演示</h3>\n<p>Gradio 最有用的功能之一是它能够为您的应用创建一个临时的、可分享的公共链接。这非常适合演示或从不在您本地网络上的合作者那里获取反馈。</p>\n<p>要启用此功能，只需在 <code>launch()</code> 方法中将 <code>share</code> 参数 (parameter)设置为 <code>True</code>：</p>\n<pre><code class=\"language-python\"># 使用公共链接启动应用\ndemo.launch(share=True)\n</code></pre>\n<p>Gradio 会生成一个公共 URL（例如 <code>https://xxxx.gradio.app</code>），该 URL 将保持活跃 72 小时。请注意，这会使您的应用公开可访问，因此，请勿将其用于处理敏感数据的应用。</p>\n<p>您现在已经看到如何以最少的工作量将复杂的 ASR 模型封装到交互式网页应用中。Gradio 是一个出色的工具，用于创建演示、交互式测试模型和分享结果。然而，对于需要低延迟和连续处理的应用，例如实时字幕，则需要不同的架构。下一节将介绍构建此类实时流媒体系统所面临的挑战和方法。</p>",
+  "slug": "building-stt-app-gradio",
+  "updates": [],
+  "references": [
+    {
+      "id": 19405,
+      "title": "Gradio Documentation",
+      "author": "Gradio Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.gradio.app/docs/",
+      "doi": "",
+      "note": "提供关于构建和分享机器学习应用的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-06T13:06:51.351455Z",
+      "updated_at": "2025-09-10T04:11:37.498096Z"
+    },
+    {
+      "id": 19406,
+      "title": "Hugging Face Transformers Documentation",
+      "author": "Hugging Face Team",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/",
+      "doi": "",
+      "note": "Transformers库的官方文档，包含模型使用、流水线等内容。",
+      "order": 2,
+      "created_at": "2025-09-06T13:06:51.356893Z",
+      "updated_at": "2025-09-10T04:11:29.130701Z"
+    },
+    {
+      "id": 19407,
+      "title": "Robust Speech Recognition via Large-Scale Weak Supervision",
+      "author": "Alec Radford, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, and Ilya Sutskever",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2212.04356",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2212.04356",
+      "doi": "10.48550/arXiv.2212.04356",
+      "note": "介绍 Whisper 自动语音识别模型的原始研究论文。",
+      "order": 3,
+      "created_at": "2025-09-06T13:06:51.364099Z",
+      "updated_at": "2025-09-10T04:11:31.049349Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

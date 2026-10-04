@@ -1,0 +1,61 @@
+{
+  "id": 1148,
+  "title": "Matplotlib 图的结构：Figure 与 Axes",
+  "meta_title": "Matplotlib 图结构：Figure与Axes",
+  "meta_description": "了解Matplotlib图表的主要组成部分，包括Figure和Axes对象。",
+  "content": "<p>要使用 Matplotlib 创建有效的图表，了解绘图的基本构成非常重要。可以把它想象成建造事物：你需要一个根基，然后在上面搭建主要结构。这种结构在 Matplotlib 中主要包含两个核心部分：<code>Figure</code>（图形对象）和 <code>Axes</code>（坐标系对象）。</p>\n<h3><code>Figure</code> 对象</h3>\n<p>想象你是一位艺术家。在你开始绘画之前，你需要一块画布。在 Matplotlib 中，<code>Figure</code> 对象就是这块画布。它是与你的图表相关的所有内容的顶层容器。这包括所有的绘图区域、标题、可能应用于整个图形的图例，以及在画布上绘制的任何其他元素。</p>\n<p>你可以把 <code>Figure</code> 看作是你的图表将出现的整体窗口或页面。它不包含实际绘制的数据本身，但它保留了绘图发生的空间。通常，你会首先创建一个 <code>Figure</code>。虽然 Matplotlib 经常可以隐式地为你创建一个，但了解它的存在对于后续获得更多控制权很有帮助，尤其是在同时制作多个图表时。</p>\n<p><code>Figure</code> 的重要特点：</p>\n<ul>\n<li>它是所有图表元素的最外层容器。</li>\n<li>它追踪一个或多个 <code>Axes</code> 对象。</li>\n<li>整体图形大小、背景颜色和保存选项等属性通常与 <code>Figure</code> 相关联。</li>\n</ul>\n<h3><code>Axes</code> 对象</h3>\n<p>现在，思考你想要在画布上绘制的实际图像。这就是 <code>Axes</code> 对象发挥作用的地方。尽管名称听起来是复数，但一个单独的 <code>Axes</code> 对象表示 <code>Figure</code> <em>内</em>的一个特定绘图区域。这是你的数据被绘制的区域——你会看到线条、点、柱状图等。</p>\n<p><code>Axes</code> 对象包含你通常与图表相关联的大多数元素：</p>\n<ul>\n<li>X轴和Y轴（以及3D图的潜在Z轴）。</li>\n<li>坐标轴上的刻度和刻度标签。</li>\n<li>坐标轴标签（例如，'时间', '温度'）。</li>\n<li>此绘图区域的特定图表标题。</li>\n<li>你的数据的视觉呈现（线条、散点、直方图）。</li>\n<li>解释此图表中数据的任何图例。</li>\n</ul>\n<p><strong>重要提示：</strong> 不要混淆 <code>Axes</code>（以 'es' 结尾）和 <code>Axis</code>（以 'is' 结尾）。一个 <code>Axes</code> 对象包含两个（或3D图的三个）<code>Axis</code> 对象（X轴、Y轴、Z轴）。大多数时候，你会与 <code>Axes</code> 对象交互，使用 <code>plot()</code>、<code>scatter()</code>、<code>hist()</code> 等函数来创建你的图表。</p>\n<h3><code>Figure</code> 与 <code>Axes</code> 的关系</h3>\n<p>这种关系是直接的：一个 <code>Figure</code> 包含一个或多个 <code>Axes</code> 对象。</p>\n<ul>\n<li><strong>简单情况：</strong> 最基本的图表通常涉及一个 <code>Figure</code> 包含一个单独的 <code>Axes</code>。你最初最常使用的就是这种情况。</li>\n<li><strong>多个图表（子图）：</strong> 一个单独的 <code>Figure</code> 可以容纳多个 <code>Axes</code> 对象，它们以网格形式排列。这就是你创建子图的方式，允许你在同一个画布上同时显示多个相关的图表。</li>\n</ul>\n<p>了解这种层级结构——<code>Figure</code> 作为容器，<code>Axes</code> 作为实际绘图区域——非常重要。它为有效组织和自定义你的图表提供了框架。当你调用绘图函数时，你通常是调用属于 <code>Axes</code> 对象的方法，告诉 Matplotlib <em>在哪里</em>绘制数据，在整体 <code>Figure</code> 画布内。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hr34c3\" \n              data-graph-definition='digraph G {\n  bgcolor=\"transparent\";\n  node [shape=box, style=\"filled\", fontname=\"Helvetica\", margin=0.2];\n  edge [arrowhead=vee, color=\"#495057\"];\n\n  Figure [label=\"Figure (画布)\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n  Axes [label=\"Axes (绘图区域)\\n包含：\\n- 数据 (线条, 点等)\\n- X轴, Y轴\\n- 刻度与标签\\n- 标题\\n- 图例\", fillcolor=\"#a5d8ff\", color=\"#4dabf7\"];\n\n  Figure -> Axes [label=\" 包含 \", color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hr34c3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图表展示了层级关系。<code>Figure</code> 作为整体容器，容纳一个或多个 <code>Axes</code> 对象，实际数据图表在此发生。</p>\n</blockquote>\n<p>理解整体 <code>Figure</code> 画布与特定 <code>Axes</code> 绘图区域的区别是掌握 Matplotlib 的第一步。随着学习的推进，你会看到直接操作这些对象可以让你对图表的各个方面进行精细控制。</p>",
+  "slug": "matplotlib-plot-anatomy",
+  "updates": [],
+  "references": [
+    {
+      "id": 793,
+      "title": "Anatomy of a Matplotlib plot",
+      "author": "The Matplotlib development team",
+      "year": "2025",
+      "publisher": "The Matplotlib development team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/3.10.6/gallery/showcase/anatomy.html",
+      "doi": "",
+      "note": "官方教程，阐释了 Matplotlib 图形的基本组成部分，包括 Figure 和 Axes。",
+      "order": 1,
+      "created_at": "2025-09-04T15:00:15.737316Z",
+      "updated_at": "2025-09-07T16:18:35.266083Z"
+    },
+    {
+      "id": 794,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data - Chapter 4.00 - Introduction to Matplotlib",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.00-introduction-to-matplotlib.html",
+      "doi": "",
+      "note": "一本广受好评的书籍，清晰全面地介绍了 Matplotlib 的面向对象接口和绘图结构。",
+      "order": 2,
+      "created_at": "2025-09-04T15:00:15.744071Z",
+      "updated_at": "2025-09-07T16:18:22.267643Z"
+    },
+    {
+      "id": 795,
+      "title": "Usage Guide",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "Matplotlib Development Team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/introductory/usage.html",
+      "doi": "",
+      "note": "官方指南，详细介绍了如何与 Matplotlib 的面向对象接口交互，演示了 Figure 和 Axes 对象的程序化创建和使用。",
+      "order": 3,
+      "created_at": "2025-09-04T15:00:15.748867Z",
+      "updated_at": "2025-09-07T16:18:23.702933Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

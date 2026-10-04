@@ -1,0 +1,61 @@
+{
+  "id": 4098,
+  "title": "在 MLflow 中记录 DVC 元数据",
+  "meta_title": "在 MLflow 运行中记录 DVC 元数据",
+  "meta_description": "自动将 DVC 数据版本或流水线输出记录为 MLflow 运行中的参数或标签的方法。",
+  "content": "<p>实现机器学习 (machine learning)项目的完整追溯能力，需要将数据版本控制和实验追踪紧密结合，而不仅仅是分别管理。DVC 负责数据版本控制，MLflow 负责实验追踪。为了获得完整的记录，必须将具体的数据版本与每个实验运行关联起来。MLflow 提供了灵活的机制，可以直接记录与 DVC 相关的信息，并将其与标准的实验参数 (parameter)和指标一同保存。</p>\n<h3>为何关联数据版本与实验？</h3>\n<p>设想您训练了两个模型，它们产生了不同的结果。这种差异是由于超参数 (parameter) (hyperparameter)、代码还是基础数据的变化造成的？如果未明确关联每个 MLflow 运行中使用的数据版本，回答这个问题就会变得困难，并且需要依赖手动记录或猜测。将 DVC 元数据直接记录到 MLflow 中，可以建立清晰、自动化的关联，确保您始终可以将实验结果追溯到产生它们的准确数据快照。这提高了可复现性，并简化了调试和比较。</p>\n<h3>应记录哪些 DVC 信息？</h3>\n<p>有几项 DVC 元数据在 MLflow 运行中记录会很有帮助：</p>\n<ul>\n<li><strong>数据路径：</strong> 运行中使用的特定数据集文件或目录的路径（例如，<code>data/processed_features</code>）。这确认了预期使用的数据集文件。</li>\n<li><strong>数据版本哈希：</strong> 代表数据特定版本的唯一标识符（哈希）。DVC 将此哈希存储在相应的 <code>.dvc</code> 文件中，或者为目录计算此哈希。这可以说是确保数据可复现性的最重要信息，因为它唯一标识了数据文件的状态。</li>\n<li><strong>远程存储 URL（可选）：</strong> 了解特定数据版本存储在哪里（例如，S3 桶路径）有时对理解情况有帮助，特别是在分布式团队或复杂的存储设置中。</li>\n</ul>\n<h3>记录 DVC 元数据的方法</h3>\n<p>您可以使用几种方法将这些信息整合到您的 MLflow 运行中。请选择最符合您的工作流复杂性和自动化需求的方法。</p>\n<h4>使用 MLflow API 手动记录</h4>\n<p>最直接的方法是在您的训练脚本中添加对 <code>mlflow.log_param()</code> 或 <code>mlflow.set_tag()</code> 的调用。您将相关的 DVC 信息明确地作为参数 (parameter)或标签传递。标签通常更适合路径或哈希等标识符，而参数通常保留给可能影响模型行为的数值（如超参数 (hyperparameter)）。</p>\n<p>例如，如果您的脚本从 DVC 追踪的目录 <code>data/prepared</code> 访问数据，您可以将其路径记录为标签：</p>\n<pre><code class=\"language-python\">import mlflow\nimport os\n\n# 假设 'data_path' 指向您的 DVC 追踪的数据\ndata_path = \"data/prepared\" \n\nwith mlflow.start_run():\n    # 将路径作为标签记录，用于信息目的\n    mlflow.set_tag(\"data_path\", data_path)\n\n    # 记录其他参数\n    mlflow.log_param(\"learning_rate\", 0.01)\n\n    # ... 训练代码的其余部分，使用来自 data_path 的数据 ...\n\n    print(f\"MLflow 运行 ID: {mlflow.active_run().info.run_id}\")\n    print(f\"已记录的 data_path 标签: {data_path}\")\n</code></pre>\n<p>尽管简单，手动记录哈希要求您事先知道哈希，或者通过检查 <code>.dvc</code> 文件手动提取它，这对于数据版本可能频繁更改的自动化工作流来说并不理想。</p>\n<h4>使用 DVC Python API</h4>\n<p>一种更自动化的方法是使用 <code>dvc.api</code> 模块。这使得您的 Python 脚本能够以编程方式查询 DVC 获取有关追踪文件或目录的信息，而无需通过命令行操作。</p>\n<p>首先，请确保您已安装必要的 DVC 组件。基础的 <code>dvc</code> 包可能就足够了，或者根据您与远程交互的方式或是否需要特定 API 功能，您可能需要额外组件：</p>\n<pre><code class=\"language-bash\"># 如果尚未安装，则安装基础 DVC\npip install dvc\n\n# 可选：如果需要，安装 API 额外组件或特定远程组件\n# pip install dvc[api] \n# pip install dvc[s3] # S3 远程交互示例\n</code></pre>\n<p>尽管 <code>dvc.api</code> 提供了 <code>get_url</code>（用于获取缓存路径或远程 URL）或 <code>read</code>（用于读取文件内容）等函数，但以编程方式获取 <code>.dvc</code> 文件中记录的特定<em>版本哈希</em>则需要更多工作。一种常见的实用方法是直接读取和解析 <code>.dvc</code> 文件，因为它们通常是小型文本文件（通常为 YAML 或 JSON）。</p>\n<p>让我们通过从 <code>data/features.csv.dvc</code> 读取哈希来演示，假设它是一个由 DVC 追踪的单输出文件：</p>\n<pre><code class=\"language-python\">import mlflow\nimport os\nimport yaml # 用于解析 .dvc 文件（假设为 YAML 格式）\nimport json # 如果您的 .dvc 文件是 JSON 格式，则使用 JSON\n\n# 指向代表您的数据集版本的 .dvc 文件路径\ndvc_file_path = \"data/features.csv.dvc\" \n# 脚本实际使用的数据路径\ndata_path = \"data/features.csv\" \n\ndata_version_hash = None\n\n# 检查 .dvc 文件是否存在\nif os.path.exists(dvc_file_path):\n    try:\n        with open(dvc_file_path, 'r') as f:\n            # 尝试作为 YAML 加载，如果需要，回退到 JSON 或处理纯文本\n            try:\n                dvc_content = yaml.safe_load(f)\n            except yaml.YAMLError:\n                f.seek(0) # 重置文件指针\n                try:\n                    dvc_content = json.load(f)\n                except json.JSONDecodeError:\n                    print(f\"警告: 无法将 {dvc_file_path} 解析为 YAML 或 JSON。\")\n                    dvc_content = {} # 赋空字典以避免下方出错\n\n            # 提取哈希：结构取决于 DVC 版本和配置\n            # 常见位置：'outs' 列表 -> 第一个项目 -> 'hash' (DVC >= 3.0) 或 'md5'\n            if 'outs' in dvc_content and isinstance(dvc_content['outs'], list) and len(dvc_content['outs']) > 0:\n                 output_info = dvc_content['outs'][0]\n                 if isinstance(output_info, dict):\n                     if 'hash' in output_info: # DVC >= 3.0 使用 'hash'\n                         data_version_hash = output_info.get('hash')\n                     elif 'md5' in output_info: # 较旧的 DVC 版本使用 'md5'\n                         data_version_hash = output_info.get('md5')\n\n            if not data_version_hash:\n                 print(f\"警告: 未在 {dvc_file_path} 中找到哈希（'hash' 或 'md5'）。\")\n\n    except Exception as e:\n        print(f\"警告: 读取 DVC 文件 {dvc_file_path} 时出错: {e}\")\n\n# 启动 MLflow 运行并记录信息\nwith mlflow.start_run():\n    mlflow.set_tag(\"data_path\", data_path) # 记录使用的数据路径\n\n    if data_version_hash:\n        # 将哈希作为标签记录 - 它是一个标识符\n        mlflow.set_tag(\"dvc_data_version_hash\", data_version_hash) \n    else:\n        mlflow.set_tag(\"dvc_data_version_status\", \"Hash unavailable or not found\")\n\n    # 照常记录其他参数\n    mlflow.log_param(\"learning_rate\", 0.01)\n\n    # ... 训练代码的其余部分，使用 data_path ...\n\n    run_id = mlflow.active_run().info.run_id\n    print(f\"MLflow 运行 ID: {run_id}\")\n    if data_version_hash:\n      print(f\"已记录 DVC 数据版本哈希: {data_version_hash}\")\n    else:\n      print(\"DVC 数据版本哈希未被记录。\")\n</code></pre>\n<blockquote>\n<p><strong>注意：</strong> <code>.dvc</code> 文件的结构会演变。上述解析逻辑涵盖了常见的 YAML/JSON 格式，但可能需要根据不同的 DVC 版本或配置（例如，多输出文件、不同的哈希类型如 <code>etag</code>）进行调整。务必检查您的 <code>.dvc</code> 文件以确认其结构。对于哈希和路径等标识符，通常更推荐使用标签（<code>mlflow.set_tag</code>）。</p>\n</blockquote>\n<h4>通过配置或环境变量记录</h4>\n<p>另一种策略是，通过配置文件（例如，<code>config.yaml</code>）或环境变量，将数据路径甚至描述性版本标识符（例如，与所需数据版本关联的 Git 标签）传递给您的脚本。您的脚本随后简单地读取此配置值并记录它，使用 <code>mlflow.log_param</code> 或 <code>mlflow.set_tag</code>。这种方法将特定版本信息与核心训练逻辑分离，使脚本更具可重用性。</p>\n<pre><code class=\"language-python\"># 示例：从环境变量读取数据路径和版本标签\nimport mlflow\nimport os\n\n# 从环境变量读取配置，提供默认值\ndata_path = os.getenv(\"INPUT_DATA_PATH\", \"data/features.csv\") \ndata_version_tag = os.getenv(\"DATA_VERSION_TAG\", \"unknown\") # 例如，“v1.2-processed”\n\nwith mlflow.start_run():\n    # 记录本次运行使用的配置\n    mlflow.set_tag(\"configured_data_path\", data_path)\n    mlflow.set_tag(\"configured_data_version_tag\", data_version_tag)\n\n    # 记录其他参数\n    mlflow.log_param(\"batch_size\", 64)\n\n    # ... 训练代码从 data_path 加载数据 ...\n    print(f\"使用数据源: {data_path}\")\n    print(f\"假定的数据版本标签: {data_version_tag}\")\n\n    # ... 训练的其余部分 ...\n</code></pre>\n<p>然后，您将在执行脚本之前设置这些环境变量：</p>\n<pre><code class=\"language-bash\"># 为本次运行设置环境变量\nexport INPUT_DATA_PATH=\"data/processed_features_v2\"\nexport DATA_VERSION_TAG=\"release-2024-q1\"\n\n# 运行训练脚本\npython train.py \n</code></pre>\n<p>此方法依赖于<em>运行</em>脚本的进程（例如，CI/CD 流水线、DVC 阶段或手动执行）来提供与检出数据版本对应的正确环境变量。</p>\n<h3>将记录集成到您的工作流中</h3>\n<p>添加此 DVC 元数据记录的理想位置是在您的训练或处理脚本的早期，通常在初始化 MLflow 运行（<code>mlflow.start_run()</code>）后立即进行，并且通常作为您的数据加载或参数 (parameter)设置阶段的一部分。这确保了在主要计算工作开始之前，捕获实验运行与数据版本之间重要的关联。</p>\n<p>通过在 MLflow 运行中持续记录您的 DVC 追踪数据的路径，更重要的是，其版本哈希或一个有意义的标签，您可以在实验与所使用的准确数据文件之间创建明确且可验证的关联。这大大增强了可复现性，让您和您的团队能够自信地回顾过去的实验，理解所有输入（代码、参数<em>和</em>数据），并可靠地复现结果或调试差异。这种做法将您的 MLflow 实验追踪从单纯关注模型性能指标，转变为为您的整个 ML 工作流提供全面的来源记录。</p>",
+  "slug": "logging-dvc-metadata-mlflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 7898,
+      "title": "MLflow Documentation",
+      "author": "MLflow Project",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/index.html",
+      "doi": "",
+      "note": "提供 MLflow 实验追踪、日志 API 和模型管理的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-05T01:48:48.227093Z",
+      "updated_at": "2025-09-08T14:10:43.851470Z"
+    },
+    {
+      "id": 7899,
+      "title": "DVC Documentation",
+      "author": "Iterative, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dvc.org/doc",
+      "doi": "",
+      "note": "解释 DVC 在数据版本控制、管道管理和远程存储集成方面的功能。",
+      "order": 2,
+      "created_at": "2025-09-05T01:48:48.230975Z",
+      "updated_at": "2025-09-08T14:10:50.633480Z"
+    },
+    {
+      "id": 7900,
+      "title": "Machine Learning Engineering",
+      "author": "Andriy Burkov",
+      "year": "2020",
+      "publisher": "True Positive Incorporated",
+      "journal": "",
+      "volume": "",
+      "pages": "310",
+      "url": "https://books.google.com/books/about/Machine_Learning_Engineering.html?id=z1bPDwAAQBAJ",
+      "doi": "",
+      "note": "一本权威指南，涵盖 MLOps 原则，包括实验追踪和数据处理的重要性。",
+      "order": 3,
+      "created_at": "2025-09-05T01:48:48.234154Z",
+      "updated_at": "2025-09-08T14:10:55.591768Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

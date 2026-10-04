@@ -1,0 +1,481 @@
+{
+  "id": 237,
+  "title": "图神经网络入门",
+  "meta_title": "图神经网络 (GNN) 入门课程",
+  "meta_description": "学习图神经网络 (GNN) 的基本知识。本课程包括图数据处理、GCN 和 GAT 等模型架构，以及 PyTorch Geometric 的实战应用。",
+  "description": "<p>本课程介绍图神经网络 (neural network)（GNN）。这类模型专门用于处理图结构数据。你将学习 GNN 的运作原理，包括消息传递机制以及图卷积网络（GCN）和图注意力网络（GAT）等具体架构。本课讲解构建 GNN 模型的完整流程：图数据表示、网络架构定义、模型训练以及在通用任务中的性能评估。实战部分侧重于通过 PyTorch Geometric 库进行开发。</p>",
+  "short_description": "使用 PyTorch Geometric 库构建并训练图神经网络模型，完成节点分类等任务。",
+  "excerpt": "学习图神经网络（GNN）的原理及其在结构化数据中的应用。本课程详解消息传递机制、GCN 和 GAT 等架构，并提供使用 PyTorch Geometric 处理节点分类任务的实操指南。",
+  "prerequisites": "具备 Python 与机器学习入门知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "图数据表示",
+      "description": "使用邻接矩阵和特征矩阵为机器学习应用表示图结构数据。"
+    },
+    {
+      "topic": "GNN 运作机制",
+      "description": "讲解作为多数 GNN 架构底层的消息传递机制。"
+    },
+    {
+      "topic": "GNN 架构",
+      "description": "区分并实现 GCN、GraphSAGE 和 GAT 等常用模型。"
+    },
+    {
+      "topic": "模型训练",
+      "description": "针对节点分类等任务，搭建完整的 GNN 训练与评估流程。"
+    },
+    {
+      "topic": "实战开发",
+      "description": "通过 PyTorch Geometric 库高效构建并训练 GNN。"
+    }
+  ],
+  "duration": 13,
+  "slug": "introduction-to-graph-neural-networks",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-09-30T08:41:25.900652Z",
+  "updated_at": "2026-10-02T08:18:22.484049Z",
+  "chapters": [
+    {
+      "id": 1316,
+      "title": "图学习基本原理",
+      "meta_title": "图机器学习基本原理",
+      "meta_description": "学习图数据结构、常见的图机器学习任务，以及如何使用邻接矩阵和特征矩阵表示图以进行计算。",
+      "number": 1,
+      "slug": "foundations-graph-based-learning",
+      "content": "在构建图神经网络之前，我们需要先了解其处理的数据对象：图。本章讲解在机器学习环境下处理图结构数据的基本要点。\n\n我们先从定义图的构成开始，并分析为什么 CNN 和 RNN 等传统神经网络不适合处理这类数据。接着，我们将介绍图上的主要机器学习任务，例如节点分类、链路预测和图分类。\n\n本章的大部分篇幅用于说明如何为了计算而表示图。你将学习如何使用邻接矩阵 ($A$) 和节点特征矩阵 ($X$) 等标准格式来编码图的结构和属性。最后，我们将通过 NetworkX 库的简要介绍将这些想法付诸实践，使用该库加载并查看图数据集。",
+      "sections": [
+        {
+          "id": 7612,
+          "title": "什么是图数据？",
+          "meta_title": "理解图数据结构",
+          "meta_description": "讲解图数据及其组成部分（节点、边、特征），以及它在多个领域广泛存在的原因。",
+          "slug": "what-is-graph-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7613,
+          "title": "标准神经网络在图数据上的局限性",
+          "meta_title": "为什么标准神经网络在处理图数据时会失效",
+          "meta_description": "了解 CNN 和 RNN 等常规神经网络不适合处理图结构数据的技术原因。",
+          "slug": "limitations-standard-neural-networks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7614,
+          "title": "常见图机器学习任务",
+          "meta_title": "图机器学习任务详解",
+          "meta_description": "标准图学习任务概述：节点分类、链路预测和图分类。",
+          "slug": "common-graph-ml-tasks",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7615,
+          "title": "图的表示：邻接矩阵与特征矩阵",
+          "meta_title": "如何为计算表示图",
+          "meta_description": "学习表示图拓扑和属性的标准数值方法，包括邻接矩阵和节点特征矩阵。",
+          "slug": "representing-graphs-matrices",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7616,
+          "title": "图的属性与度量",
+          "meta_title": "图的属性与度量",
+          "meta_description": "复习基础图论属性，如节点度、密度和中心性，这些属性在数据分析中非常有用。",
+          "slug": "graph-properties-measurements",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7617,
+          "title": "NetworkX 库简介",
+          "meta_title": "NetworkX Python 库入门",
+          "meta_description": "简要介绍 NetworkX，这是一个用于创建、操作和研究复杂网络的 Python 库。",
+          "slug": "introduction-to-networkx",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7618,
+          "title": "动手实践：加载并检查图数据集",
+          "meta_title": "实操：使用 NetworkX 加载并检查图数据",
+          "meta_description": "这是一份逐步操作指南，介绍如何使用 NetworkX 加载标准图数据集并检查其基本属性。",
+          "slug": "hands-on-loading-graph-data",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1317,
+      "title": "消息传递机制",
+      "meta_title": "图神经网络消息传递机制详解",
+      "meta_description": "关于 GNN 核心机制（消息传递）的详细章节。包含了聚合、更新函数以及图层叠加的方式。",
+      "number": 2,
+      "slug": "the-message-passing-mechanism",
+      "content": "在上一章中，我们确定了如何用数值表示图数据。接下来的步骤是理解神经网络如何在这种结构上运行。与图像等具有固定网格拓扑的数据不同，图需要专门的处理方式。本章介绍大多数图神经网络的运行机制：这一过程被称为消息传递。\n\n我们将该机制拆解为各个组成部分。你将学习节点如何从直接邻居处收集信息（聚合），然后使用这些信息来更改自身的表达（更新）。我们将通过通用的数学公式使这一过程规范化，并分析这两个步骤中常用的函数。我们还将通过讨论置换不变性，说明为什么这种设计天生适合图数据。最后，你将看到叠加多个消息传递层如何使 GNN 能够获取一跳之外的节点信息，从而扩大其在图上的感受野。\n\n在本章中，我们将使用数学符号来定义这些运算。例如，单个 GNN 层通常可以表示为：\n$$\n\\mathbf{h}_v^{(l+1)} = \\text{UPDATE}^{(l)} \\left( \\mathbf{h}_v^{(l)}, \\text{AGGREGATE}^{(l)} \\left( \\{ \\mathbf{h}_u^{(l)} : u \\in \\mathcal{N}(v) \\} \\right) \\right)\n$$\n其中 $\\mathbf{h}_v^{(l)}$ 是节点 $v$ 在第 $l$ 层的特征向量，而 $\\mathcal{N}(v)$ 表示节点 $v$ 的邻居集合。为了巩固这些内容，本章最后提供了一个实践练习，你将使用 NumPy 从零开始实现一个基础的消息传递层。",
+      "sections": [
+        {
+          "id": 7619,
+          "title": "邻域聚合思想",
+          "meta_title": "GNN 邻域聚合的核心思想",
+          "meta_description": "了解 GNN 的核心原理：节点如何聚合来自其局部邻居的信息以更新自身的表示。",
+          "slug": "neighborhood-aggregation-idea",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7620,
+          "title": "通用 GNN 层：聚合与更新",
+          "meta_title": "通用 GNN 层公式",
+          "meta_description": "详细解析通用 GNN 层中的两个步骤：邻域消息的聚合与节点状态的更新。",
+          "slug": "general-gnn-layer-aggregate-update",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7621,
+          "title": "常用的聚合函数",
+          "meta_title": "GNN 聚合函数：求和、均值和最大值",
+          "meta_description": "介绍用于聚合节点邻域消息的常用函数，包括求和、均值和最大池化。",
+          "slug": "common-aggregation-functions",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7622,
+          "title": "更新函数与非线性",
+          "meta_title": "GNN 中的更新步骤与非线性",
+          "meta_description": "了解聚合消息如何与节点的当前表示合并，并通过 ReLU 等激活函数进行处理。",
+          "slug": "update-functions-non-linearities",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7623,
+          "title": "置换不变性与置换等变性",
+          "meta_title": "图神经网络中的置换不变性",
+          "meta_description": "关于 GNN 为何必须对节点邻居的顺序保持不变性以及如何实现该属性的技术说明。",
+          "slug": "permutation-invariance-equivariance",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7624,
+          "title": "堆叠层以构建深度图神经网络 (GNN)",
+          "meta_title": "如何通过堆叠层构建深度 GNN",
+          "meta_description": "了解堆叠多个 GNN 层如何扩大节点的感受野，使其能够收集到来自更远距离的信息。",
+          "slug": "stacking-gnn-layers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7625,
+          "title": "实践：使用 NumPy 实现简单的 GNN 层",
+          "meta_title": "实践：使用 NumPy 实现 GNN 层",
+          "meta_description": "仅使用 Python 和 NumPy 从头构建一个基础的消息传递层，以巩固你对其运作机制的理解。",
+          "slug": "practice-gnn-layer-numpy",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1318,
+      "title": "GNN 基本架构",
+      "meta_title": "GCN、GraphSAGE 和 GAT 图神经网络架构",
+      "meta_description": "学习三种基本图神经网络架构的技术细节：图卷积网络 (GCN)、GraphSAGE 和图注意力网络 (GAT)。",
+      "number": 3,
+      "slug": "foundational-gnn-architectures",
+      "content": "前一章确立了通用消息传递框架，为图神经网络的运行方式提供了蓝图。本章将从抽象的公式转向具体的知名架构，将这些原理付诸实践。我们将分析聚合函数和更新函数的不同选择如何产生具有不同行为和性能特征的模型。\n\n你将学习三种基本模型背后的机制：\n\n*   **图卷积网络 (GCN)：** 一种流行且高效的架构，通过简化的谱方法将卷积逻辑适配到图结构中。\n*   **GraphSAGE：** 一种归纳式模型，通过学习通用的聚合函数并采用邻居采样，使其能够为训练期间未见过的节点生成嵌入。\n*   **图注意力网络 (GAT)：** 一种引入掩码自注意力机制的架构，用于为邻域内的不同节点分配不同的权重。\n\n针对每种模型，我们将讲解其数学公式，并讨论其主要优缺点。本章最后包含一个动手练习，通过从零开始构建 GCN，将理论公式直接转化为可运行的代码。",
+      "sections": [
+        {
+          "id": 7626,
+          "title": "图卷积网络 (GCN)",
+          "meta_title": "图卷积网络 (GCN) 详解",
+          "meta_description": "详细说明 GCN 架构、其公式定义以及它如何简化谱图卷积。",
+          "slug": "graph-convolutional-networks-gcn",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7627,
+          "title": "图卷积的空间物理解读",
+          "meta_title": "图卷积的空间物理解读",
+          "meta_description": "从空间视角观察图卷积，此时操作是直接在图结构上进行的。",
+          "slug": "spatial-interpretation-graph-convolutions",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7628,
+          "title": "GraphSAGE：邻域采样与聚合",
+          "meta_title": "GraphSAGE 模型详解",
+          "meta_description": "介绍 GraphSAGE 架构，该架构通过使用通用聚合函数和邻域采样对 GCN 进行了改进。",
+          "slug": "graphsage-model",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7629,
+          "title": "GraphSAGE 的归纳学习",
+          "meta_title": "GraphSAGE 的归纳学习能力",
+          "meta_description": "了解 GraphSAGE 的设计如何使其能够执行归纳学习，并对训练期间未见过的节点进行预测。",
+          "slug": "inductive-learning-graphsage",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7630,
+          "title": "图注意力网络 (GAT)",
+          "meta_title": "图注意力网络 (GAT) 详解",
+          "meta_description": "详细了解 GAT 架构，它利用自注意力机制为不同的邻居分配不同的权重。",
+          "slug": "graph-attention-networks-gat",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7631,
+          "title": "GAT 中的注意力机制",
+          "meta_title": "GAT 中的自注意力机制原理",
+          "meta_description": "对图注意力网络中用于衡量邻居重要性的掩码自注意力机制的技术详解。",
+          "slug": "attention-mechanism-in-gat",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7632,
+          "title": "GCN、GraphSAGE 与 GAT 的比较",
+          "meta_title": "GCN、GraphSAGE 与 GAT 模型的比较",
+          "meta_description": "GCN、GraphSAGE 和 GAT 架构的差异、优缺点摘要。",
+          "slug": "comparing-gcn-graphsage-gat",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7633,
+          "title": "动手实践：从零开始实现 GCN",
+          "meta_title": "实践：从零开始实现 GCN 模型",
+          "meta_description": "一个实用的编码环节，你将使用深度学习框架构建一个用于节点分类的双层图卷积网络。",
+          "slug": "hands-on-implementing-gcn",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1319,
+      "title": "GNN 模型训练",
+      "meta_title": "如何训练图神经网络模型",
+      "meta_description": "学习训练 GNN 的全过程，包括设置损失函数、图数据划分以及模型评估。",
+      "number": 4,
+      "slug": "training-gnn-models",
+      "content": "在了解 GNN 架构后，接下来的重点是学习如何训练这些模型。本章将介绍从确定 GNN 架构到完成特定图数据任务的全过程。\n\n你将学习如何为节点分类等应用配置模型，包括将最终生成的节点嵌入传入分类层。接着，我们会说明如何选择合适的目标函数（如交叉熵损失）来衡量模型误差。本章的主要内容是构建标准的训练循环：包括执行前向传播、计算损失以及通过反向传播更新模型权重。\n\n我们还会讲解图学习特有的操作。这包括数据划分时“转导式”（transductive）和“归纳式”（inductive）的区别，以及它们对模型评估的影响。你将学习使用准确率等标准指标来评估模型效果。最后，我们会介绍 dropout 等正则化方法，以提升模型的泛化能力。本章最后附带动手练习，让你应用上述步骤来训练之前构建的 GCN 模型。",
+      "sections": [
+        {
+          "id": 7634,
+          "title": "为节点分类任务搭建 GNN",
+          "meta_title": "为节点分类任务搭建 GNN",
+          "meta_description": "学习如何构建 GNN 模型，从而为半监督节点分类任务输出预测结果。",
+          "slug": "setup-gnn-node-classification",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7635,
+          "title": "图任务的损失函数",
+          "meta_title": "GNN 的损失函数",
+          "meta_description": "简述适用于不同图学习任务的损失函数，重点介绍用于节点分类的交叉熵损失。",
+          "slug": "loss-functions-graph-tasks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7636,
+          "title": "GNN 的训练循环",
+          "meta_title": "GNN 训练循环",
+          "meta_description": "编写 GNN 模型标准训练循环的分步指南，包括前向传播、损失计算和反向传播。",
+          "slug": "training-loop-for-gnns",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7637,
+          "title": "图数据的切分：直推式与归纳式",
+          "meta_title": "图数据的直推式与归纳式切分",
+          "meta_description": "了解在为训练和测试切分图数据时，直推式和归纳式设置之间的重要区别。",
+          "slug": "graph-data-splitting-transductive-inductive",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7638,
+          "title": "节点分类的评估指标",
+          "meta_title": "GNN 节点分类的评估指标",
+          "meta_description": "了解用于评估 GNN 分类任务表现的标准指标，如准确率和 F1 分数。",
+          "slug": "evaluation-metrics-node-classification",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7639,
+          "title": "GNN 中的过拟合与正则化",
+          "meta_title": "GNN 的过拟合与正则化技术",
+          "meta_description": "关于 GNN 中常见的过拟合问题以及如何使用 Dropout 等技术来缓解这些问题的讨论。",
+          "slug": "overfitting-regularization-gnns",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7640,
+          "title": "实践：训练与评估你的 GCN",
+          "meta_title": "实践：训练并评估 GCN 模型",
+          "meta_description": "应用本章学习的知识，编写一个完整的脚本来训练和评估之前构建的 GCN 模型。",
+          "slug": "practice-training-evaluating-gcn",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1320,
+      "title": "使用 PyTorch Geometric 实现 GNN",
+      "meta_title": "使用 PyTorch Geometric (PyG) 实现 GNN",
+      "meta_description": "学习使用流行的 PyTorch Geometric (PyG) 库，高效地构建、训练和扩展图神经网络。",
+      "number": 5,
+      "slug": "gnn-implementation-pytorch-geometric",
+      "content": "前面的章节说明了 GNN 的运行原理，包括从头开始实现消息传递层。虽然这很有启发性，但手动方法在构建和测试不同架构时并不实用。本章将转而使用 PyTorch Geometric (PyG)，这是一个简化图模型开发的专用库。PyG 提供了常用 GNN 层和数据处理程序的优化版本，使你能够把精力放在模型设计上，而非底层的实现细节。\n\n在本章中，你将学会使用 PyTorch Geometric 的主要部分。我们将从 `Data` 对象开始，这是 PyG 表示整个图的方式。接着，你将看到如何加载标准图数据集，并使用 PyG 预置的层（例如 `GCNConv` 和 `GATConv`）来组建 GNN 模型。我们还会说明该库如何通过图的批量化处理来提升训练效率。\n\n学完本章后，你将有能力为节点分类任务编写完整的训练和评估脚本。最后的动手操作环节将运用这些技能，在 Cora 引用网络这一标准基准数据集上构建 GNN。",
+      "sections": [
+        {
+          "id": 7641,
+          "title": "PyTorch Geometric (PyG) 简介",
+          "meta_title": "PyTorch Geometric (PyG) 库简介",
+          "meta_description": "PyTorch Geometric (PyG) 概述，这是一个基于 PyTorch 构建的库，用于轻松编写和训练适用于各种应用的 GNN。",
+          "slug": "introduction-pytorch-geometric",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7642,
+          "title": "PyG Data 对象",
+          "meta_title": "PyTorch Geometric Data 对象详解",
+          "meta_description": "了解 PyG 中基础的 Data 对象，它将图的所有组成部分封装在一个单一结构中。",
+          "slug": "pyg-data-object",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7643,
+          "title": "使用 PyG 数据集",
+          "meta_title": "如何在 PyTorch Geometric 中使用数据集",
+          "meta_description": "了解如何使用 PyG 中的内置数据集，以及如何创建自定义图数据集进行训练。",
+          "slug": "working-with-pyg-datasets",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7644,
+          "title": "使用 PyG GNN 层构建模型",
+          "meta_title": "使用 PyTorch Geometric 层构建 GNN",
+          "meta_description": "学习如何使用 PyG 的模块化 GNN 层（如 GCNConv 和 GATConv）快速构建模型。",
+          "slug": "building-models-pyg-layers",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7645,
+          "title": "针对大规模图数据的分批处理",
+          "meta_title": "PyG 中的大规模图分批处理",
+          "meta_description": "了解 PyTorch Geometric 如何处理多个图的分批操作，以便在大数据集上进行高效训练。",
+          "slug": "mini-batching-large-graphs",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7646,
+          "title": "PyG 中的完整训练脚本",
+          "meta_title": "PyG 中完整的 GNN 训练脚本",
+          "meta_description": "查看使用 PyTorch Geometric 提供的实用工具编写的完整、简洁且高效的训练与评估脚本。",
+          "slug": "complete-training-script-pyg",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7647,
+          "title": "动手实践：使用 PyG 在 Cora 数据集上进行节点分类",
+          "meta_title": "实战：使用 PyG 在 Cora 上进行节点分类",
+          "meta_description": "一个最后的动手项目，使用 PyG 在流行的 Cora 引用网络数据集上构建、训练和评估一个用于节点分类的 GNN。",
+          "slug": "hands-on-cora-dataset-pyg",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

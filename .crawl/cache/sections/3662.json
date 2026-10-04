@@ -1,0 +1,45 @@
+{
+  "id": 3662,
+  "title": "结合检索与生成",
+  "meta_title": "RAG链中检索与生成的结合",
+  "meta_description": "演示如何将检索器和生成器组件连接起来处理查询。",
+  "content": "<p>将用于获取相关信息的检索器组件与用于生成文本的生成器（LLM）连接起来，构成了RAG流程的主要逻辑。根据查询检索到的信息会直接影响LLM生成的最终输出。</p>\n<p>基本流程包括接收用户的输入查询，使用它来检索上下文 (context)，然后将原始查询和检索到的上下文一起以精心设计的提示词 (prompt)形式呈现给LLM。</p>\n<h3>RAG流程顺序</h3>\n<p>我们来图示化信息在结合检索与生成时的典型流动方式：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1b6kmun\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  Query [label=\"用户查询\", fillcolor=\"#a5d8ff\"];\n  Retriever [label=\"检索器\\n(相似性搜索)\", fillcolor=\"#bac8ff\"];\n  Context [label=\"检索到的上下文\\n(相关文本块)\", fillcolor=\"#eebefa\"];\n  Prompt [label=\"增强型提示词\\n(查询 + 上下文)\", fillcolor=\"#d0bfff\"];\n  Generator [label=\"生成器 (LLM)\", fillcolor=\"#ffec99\"];\n  Response [label=\"最终回复\", fillcolor=\"#b2f2bb\"];\n\n  Query -> Retriever;\n  Retriever -> Context [label=\" 找到\"];\n  Query -> Prompt;\n  Context -> Prompt [label=\" 注入到\"];\n  Prompt -> Generator [label=\" 输入给\"];\n  Generator -> Response [label=\" 生成\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1b6kmun\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>RAG系统中的标准数据流。用户查询启动检索，检索到的上下文 (context)被添加到查询中，形成一个增强型提示词 (prompt)，然后由生成器LLM处理。</p>\n</blockquote>\n<h3>实现连接</h3>\n<p>其核心是，结合检索与生成涉及一系列函数调用。您通常会创建一个函数或方法来协调这个流程。假设您拥有：</p>\n<ol>\n<li>一个<code>retriever</code>对象，其中包含一个方法，例如<code>search(query: str) -> list[str]</code>，返回相关文本块列表的。</li>\n<li>一个<code>generator</code>对象（代表LLM接口），其中包含一个方法，例如<code>generate(prompt: str) -> str</code>，接受提示词 (prompt)并返回生成文本的。</li>\n</ol>\n<p>这种组合逻辑在Python中大致如下所示：</p>\n<pre><code class=\"language-python\"># 假设 'retriever' 和 'generator' 对象已按先前章节所述初始化。\n\ndef create_augmented_prompt(query: str, context_chunks: list[str]) -> str:\n    \"\"\"\n    格式化提示词字符串，使其包含查询和检索到的上下文。\n    \"\"\"\n    # 简单的拼接策略\n    context = \"\\n\\n\".join(context_chunks)\n\n    # 示例提示词模板\n    prompt = f\"\"\"请根据以下上下文回答查询。如果上下文不包含答案，请说明。\n\n上下文：\n{context}\n\n查询：{query}\n\n答案：\"\"\"\n    return prompt\n\ndef execute_rag_pipeline(query: str) -> str:\n    \"\"\"\n    运行查询，经过检索和生成步骤。\n    \"\"\"\n    # 1. 检索相关上下文\n    try:\n        retrieved_chunks = retriever.search(query)\n        if not retrieved_chunks:\n            # 处理未找到相关文本块的情况\n            # 选项1：返回特定消息\n            # return \"我未能找到相关信息来回答您的查询。\"\n            # 选项2：在没有上下文的情况下继续（回退到标准LLM行为）\n            retrieved_chunks = []\n            print(\"警告：未找到相关上下文。\") # 或者使用日志记录\n\n    except Exception as e:\n        print(f\"检索时出错：{e}\")\n        # 适当处理检索错误\n        return \"信息检索过程中发生错误。\"\n\n    # 2. 构建增强型提示词\n    augmented_prompt = create_augmented_prompt(query, retrieved_chunks)\n\n    # 可选：检查提示词长度是否超过模型限制\n    # （实现取决于具体的LLM和分词器）\n    # if len(tokenizer.encode(augmented_prompt)) > MAX_CONTEXT_LENGTH:\n    #     # 处理上下文溢出（例如，截断上下文，使用不同的策略）\n    #     print(\"警告：提示词超出最大长度。可能发生截断。\")\n    #     # 如有必要，在此添加缩短提示词的逻辑\n\n    # 3. 使用LLM生成回复\n    try:\n        final_response = generator.generate(augmented_prompt)\n    except Exception as e:\n        print(f\"生成时出错：{e}\")\n        # 处理生成错误\n        return \"生成回复时发生错误。\"\n\n    return final_response\n\n# 示例用法：\nuser_query = \"与微调相比，使用RAG的主要好处是什么？\"\nresponse = execute_rag_pipeline(user_query)\nprint(f\"查询：{user_query}\")\nprint(f\"回复：{response}\")\n\n</code></pre>\n<h3>组合步骤中的考量</h3>\n<ul>\n<li><strong>提示词 (prompt)格式：</strong> 正如第4章（“生成组件与增强”）中讨论的，您构建提示词的方式（示例中的<code>create_augmented_prompt</code>函数）非常重要。它指导LLM如何使用所提供的上下文 (context)。示例使用了简单的模板，但更复杂的模板可能会指示LLM引用来源或处理冲突信息。</li>\n<li><strong>上下文处理：</strong> 当检索器返回多个文本块时，您需要一个策略来组合它们。简单的拼接很常见，但请注意LLM的上下文窗口限制。如果组合后的上下文过长，您可能需要截断它，仅选择前k个最相关的文本块，或者使用更高级的摘要或过滤技术。</li>\n<li><strong>错误处理：</strong> 对检索和生成步骤实施强大的错误处理。网络问题、API错误或数据处理问题都可能发生。决定在这种情况下流程应如何运作（例如，返回错误消息，回退到非增强型生成）。</li>\n<li><strong>框架抽象：</strong> 虽然本节说明了手动组合逻辑，请记住，像LangChain或LlamaIndex这样的框架（在<code>overview-rag-frameworks</code>章节中提到）通常提供更高层次的抽象，例如“链”（Chains）或“查询引擎”（Query Engines）。这些抽象封装了检索-增强-生成序列，通过自动处理提示词格式、组件连接以及有时上下文管理，大大简化了实现。然而，理解这里展示的底层序列对于调试和定制很重要。</li>\n</ul>\n<p>通过连接检索器和生成器，您为外部知识告知LLM的输出创造了途径，从独立的组件转变为一个功能性的RAG系统。下一节将着重讨论如何通过这个组装好的流程运行查询。</p>",
+  "slug": "combining-retrieval-generation",
+  "updates": [],
+  "references": [
+    {
+      "id": 10212,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api",
+      "doi": "",
+      "note": "提供构建大型语言模型有效提示的指南，包括如何提供外部信息以提升生成质量的策略。",
+      "order": 2,
+      "created_at": "2025-09-05T06:39:17.844864Z",
+      "updated_at": "2025-09-09T12:11:38.370660Z"
+    },
+    {
+      "id": 10213,
+      "title": "Retrieval Augmented Generation (RAG)",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH7U8-F2s36plp0PqtPBEjxZJfJqDN8U-aiuexPld9dEY4J_jVnw1H6f89tSW2LKM3QPQbXLvo0p1ttlaXO79JiopqCr7JpNQzwBoTUVWuZMC8CuinDcNvtYsaFm5ETBmG032OfZbjay5Ws",
+      "doi": "",
+      "note": "官方文档，说明如何使用 LangChain 框架实现 RAG 流水线，包括检索器和生成器的集成。",
+      "order": 3,
+      "created_at": "2025-09-05T06:39:17.847818Z",
+      "updated_at": "2025-09-09T12:11:37.800981Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

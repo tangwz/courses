@@ -1,0 +1,61 @@
+{
+  "id": 2341,
+  "title": "理解文件路径",
+  "meta_title": "Python 文件路径 | 绝对路径与相对路径",
+  "meta_description": "了解文件路径在不同操作系统上的作用以及绝对路径和相对路径的区别。",
+  "content": "<p>当你的 Python 脚本需要从文件读取数据或将结果写回时，它首先需要知道文件在计算机存储（例如硬盘或固态硬盘）上的<em>位置</em>。就像你需要一个地址来找到特定的房屋一样，你的程序需要一个<strong>文件路径</strong>来找到特定的文件。这个路径本质上是文件在系统文件夹（也称为目录）层级结构中的地址。</p>\n<p>可以将计算机的文件系统想象成一个大型文件柜。主文件柜是根目录，抽屉是主文件夹或驱动器，抽屉内的文件夹是子文件夹，而最终抽屉内的文档就是文件。文件路径会精确地告诉 Python 要访问哪个抽屉、该抽屉内的哪个文件夹以及哪个文档（文件）。</p>\n<h3>路径组成部分</h3>\n<p>常见的文件路径包含：</p>\n<ol>\n<li><strong>目录/文件夹名称：</strong> 你需要通过这些文件夹来找到文件。</li>\n<li><strong>分隔符：</strong> 用于分隔目录名称和最终文件名的特殊字符。</li>\n<li><strong>文件名：</strong> 文件的实际名称，通常包含扩展名（如 <code>.txt</code>、<code>.csv</code>、<code>.py</code>）。</li>\n</ol>\n<p>具体格式，特别是分隔符，取决于你的操作系统。</p>\n<h3>操作系统差异</h3>\n<p>文件路径的表示方式因你使用的 Windows、macOS 或 Linux 系统而略有不同。</p>\n<ul>\n<li>\n<p><strong>Windows：</strong> 路径通常以驱动器盘符（如 <code>C:</code> 或 <code>D:</code>）开头，后跟冒号。目录使用反斜杠 (<code>\\</code>) 分隔。</p>\n<ul>\n<li>示例：<code>C:\\Users\\YourUsername\\Documents\\report.txt</code></li>\n<li>注意：Python 在 Windows 上相当灵活，通常也能识别路径中的正斜杠 (<code>/</code>)，这使得编写跨平台代码更简单。</li>\n</ul>\n</li>\n<li>\n<p><strong>macOS 和 Linux（类 Unix 系统）：</strong> 这些系统使用单一根目录，由正斜杠 (<code>/</code>) 表示。目录总是使用正斜杠 (<code>/</code>) 分隔。没有像 Windows 那样的驱动器盘符。</p>\n<ul>\n<li>示例 (macOS)：<code>/Users/yourusername/Documents/report.txt</code></li>\n<li>示例 (Linux)：<code>/home/yourusername/documents/report.txt</code></li>\n</ul>\n</li>\n</ul>\n<p>理解这些差异很重要，特别是如果你打算与可能使用不同操作系统的人分享你的脚本。</p>\n<h3>绝对路径</h3>\n<p><strong>绝对路径</strong>提供文件或目录从文件系统最顶层开始的完整位置。</p>\n<ul>\n<li>在 Windows 上，它以驱动器盘符开头（例如，<code>C:\\...</code>）。</li>\n<li>在 macOS/Linux 上，它以根斜杠 (<code>/...</code>) 开头。</li>\n</ul>\n<p>示例：</p>\n<ul>\n<li>Windows: <code>C:\\Program Files\\Python310\\python.exe</code></li>\n<li>macOS: <code>/Applications/Calculator.app</code></li>\n<li>Linux: <code>/usr/bin/python3</code></li>\n</ul>\n<p>绝对路径是明确的；无论你的脚本当前在哪里运行，它们都指向一个特定位置。然而，将绝对路径硬编码到你的脚本中会降低其可移植性。如果你将项目移动到不同的位置或与他人分享，该绝对路径可能就不再正确了。</p>\n<h3>相对路径</h3>\n<p><strong>相对路径</strong>指定文件或目录相对于当前工作目录（CWD）的位置。CWD 是你的 Python 脚本执行时所在的目录。</p>\n<p>可以把它想象成从你当前所在位置给出方向：“进入 <code>data</code> 文件夹并找到 <code>results.csv</code>”或“向上一个级别，然后进入 <code>config</code> 文件夹”。</p>\n<p>相对路径中使用了特殊符号：</p>\n<ul>\n<li><code>.</code>（一个点）：表示当前目录。</li>\n<li><code>..</code>（两个点）：表示父目录（向上一个级别）。</li>\n</ul>\n<p>示例（假设你的脚本在 macOS/Linux 上从 <code>/Users/alice/project/</code> 运行，或在 Windows 上从 <code>C:\\Users\\Alice\\project\\</code> 运行）：</p>\n<ul>\n<li><code>data.txt</code>：在 CWD（<code>project</code> 文件夹）中寻找 <code>data.txt</code>。</li>\n<li><code>input/config.json</code>：在 CWD 中寻找一个名为 <code>input</code> 的文件夹，然后在该 <code>input</code> 文件夹中寻找 <code>config.json</code>。完整路径将是 <code>/Users/alice/project/input/config.json</code>。</li>\n<li><code>../scripts/utility.py</code>：寻找 CWD 的父目录（即 <code>/Users/alice/</code> 或 <code>C:\\Users\\Alice\\</code>），然后在该父目录中寻找一个 <code>scripts</code> 文件夹，最后在 <code>scripts</code> 中寻找 <code>utility.py</code>。完整路径将是 <code>/Users/alice/scripts/utility.py</code>。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1htpkc9\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=folder, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_root {\n    label = \"C:\\\\ (Windows) 或 / (macOS/Linux)\";\n    style=dashed;\n    bgcolor=\"#f8f9fa\";\n    users [label=\"Users\"];\n  }\n\n  subgraph cluster_users {\n    label = \"\";\n    bgcolor=\"transparent\";\n    users -> alice;\n    alice [label=\"Alice\"];\n  }\n\n  subgraph cluster_alice {\n    label = \"\";\n    bgcolor=\"transparent\";\n    alice -> project;\n    alice -> documents;\n    project [label=\"project\", fillcolor=\"#a5d8ff\"]; // 当前工作目录 (CWD)\n    documents [label=\"Documents\"];\n  }\n\n  subgraph cluster_project {\n    label = \"\";\n    bgcolor=\"transparent\";\n    project -> script_py [label=\"  script.py\", shape=note, fillcolor=\"#fff\"];\n    project -> data_dir;\n    data_dir [label=\"data\"];\n  }\n\n  subgraph cluster_data {\n     label = \"\";\n     bgcolor=\"transparent\";\n     data_dir -> data_txt [label=\"  data.txt\", shape=note, fillcolor=\"#fff\"];\n  }\n\n  // 路径表示\n  node [shape=plaintext, fontname=\"Courier New\", fontsize=10];\n  path_info [pos=\"1,2!\", label=\"\n    当前工作目录 (CWD): &#39;project&#39;\n\n    从 script.py 到 data.txt 的相对路径:\n      &#39;data/data.txt&#39; 或 &#39;./data/data.txt&#39;\n\n    data.txt 的绝对路径:\n      Windows: C:\\\\Users\\\\Alice\\\\project\\\\data\\\\data.txt\n      macOS/Linux: /Users/Alice/project/data/data.txt\n  \"];\n\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1htpkc9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此示例文件结构说明了从 <code>project</code> 目录（即当前工作目录 CWD）出发的相对路径和绝对路径。</p>\n</blockquote>\n<p>相对路径使你的项目更加独立和可移植。如果你在项目目录中组织你的数据文件，你可以使用相对路径，即使整个项目文件夹被移动到其他位置，脚本仍然能正常运行。</p>\n<p>You可以使用 Python 内置的 <code>os</code> 模块获取正在运行脚本的 CWD：</p>\n<pre><code class=\"language-python\">import os\ncurrent_directory = os.getcwd()\nprint(f\"当前工作目录是: {current_directory}\")\n</code></pre>\n<p>运行这段代码会显示你的终端或 IDE 视为执行脚本起始点的目录的绝对路径。</p>\n<h3>绝对路径与相对路径的选择</h3>\n<p>对于初学者和大多数项目工作，<strong>通常建议使用相对路径</strong>。使用子目录组织你的项目，用于存放数据、脚本等，并使用 <code>data/my_file.txt</code> 或 <code>../config/settings.ini</code> 等相对路径。这使你的代码更易于分享并在不同计算机上运行。</p>\n<p>主要在你需要访问项目结构之外的固定、已知位置的文件时使用绝对路径，例如系统配置文件或跨项目共享的资源。请注意，这可能会使你的脚本与特定的机器设置绑定。</p>\n<p>Python 的文件处理函数（如接下来会看到的 <code>open()</code>）和 <code>os.path</code> 以及更新的 <code>pathlib</code> 等标准库模块提供了处理两种类型路径的工具，并帮助管理操作系统之间的差异。目前，重要的一点是理解你的计算机以及 Python 如何定位你想要处理的文件的原理。</p>",
+  "slug": "python-file-paths",
+  "updates": [],
+  "references": [
+    {
+      "id": 3169,
+      "title": "`os` - Miscellaneous operating system interfaces",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/os.html",
+      "doi": "",
+      "note": "对于理解Python中基本的操作系统交互和路径操作功能至关重要。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:22.349134Z",
+      "updated_at": "2025-09-07T21:04:08.150962Z"
+    },
+    {
+      "id": 3170,
+      "title": "`pathlib` - Object-oriented filesystem paths",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/pathlib.html",
+      "doi": "",
+      "note": "介绍了一种现代、面向对象的文件系统路径处理方法，提供了更好的可读性和鲁棒性。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:22.388500Z",
+      "updated_at": "2025-09-07T21:04:11.723600Z"
+    },
+    {
+      "id": 3171,
+      "title": "Reading and Writing Files",
+      "author": "Al Sweigart",
+      "year": "2019",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 10",
+      "url": "https://automatetheboringstuff.com/chapter10/",
+      "doi": "",
+      "note": "通过清晰的示例，为Python中的文件I/O操作和路径处理提供了实用且适合初学者的介绍。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:22.393921Z",
+      "updated_at": "2025-09-07T21:04:13.704761Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

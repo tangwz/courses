@@ -1,0 +1,61 @@
+{
+  "id": 1578,
+  "title": "比较运算符 (=, <>, <, >, <=, >=)",
+  "meta_title": "在 WHERE 子句中使用比较运算符",
+  "meta_description": "使用等于、不等于、小于、大于等标准比较运算符筛选数据。",
+  "content": "<p>比较运算符是定义 <code>WHERE</code> 子句中特定条件的主要工具。<code>WHERE</code> 子句用于根据特定条件筛选行。这些运算符允许你将列中的值与特定值或另一列进行比较，形成精确数据筛选的依据。</p>\n<p>可以把这些运算符看作你向数据提出的问题。这个值是否 <em>等于</em> 那个值？这个数字是否 <em>大于</em> 那个数字？SQL 使用标准符号进行这些比较。</p>\n<h3>等于运算符 (=)</h3>\n<p>等于号（<code>=</code>）检查列中的值是否与你指定的值完全相等。这可能是最常用的比较方式。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name = value</code></p>\n<p><strong>示例：</strong>\n假设我们有一个 <code>customers</code> 表，想找到所有居住在“波士顿”市的客户。</p>\n<pre><code class=\"language-sql\">SELECT\n    customer_id,\n    first_name,\n    last_name,\n    city\nFROM\n    customers\nWHERE\n    city = 'Boston';\n</code></pre>\n<p>此查询扫描 <code>customers</code> 表中的 <code>city</code> 列，并只返回 <code>city</code> 值为“波士顿”的行。请注意，文本值（如“Boston”）通常用单引号括起来。</p>\n<h3>不等于运算符 (&#x3C;> 或 !=)</h3>\n<p>要查找列值与特定值 <em>不</em> 相等的行，请使用不等于运算符。标准 SQL 使用 <code>&#x3C;></code>（小于号后跟大于号），但许多数据库系统也接受 <code>!=</code>（感叹号后跟等于号）来实现相同目的。两者都得到相同的结果：筛选掉与指定值匹配的行。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name &#x3C;> value</code>\nor\n<code>WHERE column_name != value</code></p>\n<p><strong>示例：</strong>\n让我们查找所有 <em>不住在</em> “波士顿”的客户。</p>\n<pre><code class=\"language-sql\">SELECT\n    customer_id,\n    first_name,\n    last_name,\n    city\nFROM\n    customers\nWHERE\n    city &#x3C;> 'Boston'; -- 或者使用 city != 'Boston'\n</code></pre>\n<p>此查询返回 <code>customers</code> 表中除 <code>city</code> 为“波士顿”之外的所有行。</p>\n<h3>大于运算符 (>)</h3>\n<p>大于运算符（<code>></code>）选择列中值在数值上或字母顺序上大于指定值的行。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name > value</code></p>\n<p><strong>示例：</strong>\n设想一个具有 <code>price</code> 列的 <code>products</code> 表。要查找所有价格超过 50.00 美元的产品：</p>\n<pre><code class=\"language-sql\">SELECT\n    product_name,\n    price\nFROM\n    products\nWHERE\n    price > 50.00;\n</code></pre>\n<p>这会获取价格严格大于 50.00 的产品。它不包含价格恰好为 50.00 美元的产品。</p>\n<h3>小于运算符 (&#x3C;)</h3>\n<p>反之，小于运算符（<code>&#x3C;</code>）查找列值小于指定值的行。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name &#x3C; value</code></p>\n<p><strong>示例：</strong>\n要从具有 <code>stock_quantity</code> 列的 <code>products</code> 表中查找库存少于 10 件的产品：</p>\n<pre><code class=\"language-sql\">SELECT\n    product_name,\n    stock_quantity\nFROM\n    products\nWHERE\n    stock_quantity &#x3C; 10;\n</code></pre>\n<p>这会返回库存量为 9、8、7 等的产品，但不包括库存量为 10 的产品。</p>\n<h3>大于或等于运算符 (>=)</h3>\n<p>有时你需要在比较中包含边界值。大于或等于运算符（<code>>=</code>）选择列中值大于 <em>或</em> 恰好等于指定值的行。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name >= value</code></p>\n<p><strong>示例：</strong>\n查找价格为 50.00 美元或更高的产品：</p>\n<pre><code class=\"language-sql\">SELECT\n    product_name,\n    price\nFROM\n    products\nWHERE\n    price >= 50.00;\n</code></pre>\n<p>此查询包含价格恰好为 50.00 美元的产品，以及价格更高的产品。</p>\n<h3>小于或等于运算符 (&#x3C;=)</h3>\n<p>类似地，小于或等于运算符（<code>&#x3C;=</code>）选择列中值小于 <em>或</em> 恰好等于指定值的行。</p>\n<p><strong>语法：</strong>\n<code>WHERE column_name &#x3C;= value</code></p>\n<p><strong>示例：</strong>\n在 <code>customers</code> 表中使用 <code>signup_date</code> 列，查找在 2023 年 1 月 1 日或之前注册的客户：</p>\n<pre><code class=\"language-sql\">SELECT\n    customer_id,\n    first_name,\n    signup_date\nFROM\n    customers\nWHERE\n    signup_date &#x3C;= '2023-01-01';\n</code></pre>\n<p>此查询获取注册日期为 2023 年 1 月 1 日或之前的客户。日期值通常也用单引号括起来，常采用“YYYY-MM-DD”格式。</p>\n<h3>不同数据类型的比较</h3>\n<p>这些比较运算符能自然地用于不同类型的数据：</p>\n<ul>\n<li><strong>数字：</strong> 根据其数值进行比较（例如，100 > 50）。</li>\n<li><strong>字符串（文本）：</strong> 根据数据库使用的字符集按字母顺序进行比较（例如，“Apple”&#x3C;“Banana”）。比较通常从左到右逐个字符进行。请记住，字符串比较可能是区分大小写或不区分大小写的，具体取决于特定的数据库系统及其配置（“boston”可能不等于“Boston”）。</li>\n<li><strong>日期/时间：</strong> 按时间顺序进行比较（例如，'2023-01-15' > '2023-01-10'）。</li>\n</ul>\n<p>这六个比较运算符构成了 SQL 中筛选数据的依据。通过将它们与 <code>WHERE</code> 子句结合使用，你可以精确地定位分析所需的特定行。在接下来的部分中，我们将了解如何组合多个条件并处理更复杂的筛选情况。</p>",
+  "slug": "comparison-operators",
+  "updates": [],
+  "references": [
+    {
+      "id": 1938,
+      "title": "PostgreSQL 16 Documentation: 4.2.3. Comparison Operators",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "The PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/16/functions-comparison.html",
+      "doi": "",
+      "note": "PostgreSQL 的官方文档，提供 SQL 查询中比较运算符的详细语法和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:34.589389Z",
+      "updated_at": "2025-09-07T18:46:49.904221Z"
+    },
+    {
+      "id": 1939,
+      "title": "MySQL 8.0 Reference Manual: 12.4.2 Comparison Functions and Operators",
+      "author": "Oracle and/or its affiliates",
+      "year": "2023",
+      "publisher": "Oracle",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZBGZ3X6xihseCE4H-LCjGeaLWH50Ei6MCSWK0OIJkzjMlmRd7_pltlL7gGDDP793dXQksbRxx699jFSzNIZlzBeOaOfZtiPdfbGaEnGnTBIc5UygWw7NWB4lKNzFAaB5yVqvTgqlT5HoGyM2fHpeW-ukd_8x16j69Glu0e9eZrV0XyzAJ",
+      "doi": "",
+      "note": "MySQL 的官方文档，涵盖 SQL 中比较运算符及其应用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:34.592932Z",
+      "updated_at": "2025-09-07T18:47:05.526755Z"
+    },
+    {
+      "id": 1940,
+      "title": "Learning SQL: Master the Art of Querying, Updating, and Administering Databases",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/learning-sql-3rd/9781492062549/",
+      "doi": "",
+      "note": "一本全面的 SQL 基础指南，包含 WHERE 子句和比较运算符的详细解释。（第3版）",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:34.595875Z",
+      "updated_at": "2025-09-07T18:47:08.714863Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

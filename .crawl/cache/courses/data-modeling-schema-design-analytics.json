@@ -1,0 +1,377 @@
+{
+  "id": 249,
+  "title": "数据建模与分析模式设计",
+  "meta_title": "数据建模课程：分析模式设计",
+  "meta_description": "学习维度建模、星型模式和SCD。掌握模式设计以实现高性能数据仓库与分析。",
+  "description": "<p>有效的数据建模是可靠分析系统的蓝图。本课程侧重于设计优化查询性能、数据聚合及报告效率的模式。我们考察操作型数据库与分析型数据仓库之间的结构差异，并从规范化转向维度建模。</p>\n<p>您将学习构建星型与雪花型模式，通过缓慢变化维度（SCD）处理历史数据变化，并实现高级事实表模式。本课程内容也涉及现代云数据仓库的物理设计考量，包括分区、集群及嵌套数据类型的使用。这些内容为构建可扩展数据平台提供了必要的技术支柱。</p>",
+  "short_description": "构建用于可扩展分析型数据仓库的高性能维度模型与模式。",
+  "excerpt": "掌握维度建模、星型模式及高级设计模式，以构建高性能分析型数据库与数据仓库。",
+  "prerequisites": "中级SQL知识",
+  "cover_color": "cyan",
+  "learning_outcomes": [
+    {
+      "topic": "维度建模",
+      "description": "设计高效的星型与雪花型模式，优化以支持分析查询。"
+    },
+    {
+      "topic": "事实表与维度模式",
+      "description": "实现多种事实表类型，并处理随时间变化的维度数据。"
+    },
+    {
+      "topic": "存储优化",
+      "description": "应用分区、集群及反规范化策略以提升性能。"
+    },
+    {
+      "topic": "模式架构",
+      "description": "将原始操作数据转换为适用于商业智能与报告的结构化分析模型。"
+    }
+  ],
+  "duration": 11,
+  "slug": "data-modeling-schema-design-analytics",
+  "level": 2,
+  "category": "Data Engineering",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-24T13:13:06.692322Z",
+  "updated_at": "2026-10-01T22:53:37.348061Z",
+  "chapters": [
+    {
+      "id": 1389,
+      "title": "分析架构原理",
+      "meta_title": "分析架构：OLAP 与 OLTP 对比",
+      "meta_description": "了解 OLTP 和 OLAP 系统之间的核心差异，以及列式存储在分析中的运行机制。",
+      "number": 1,
+      "slug": "foundations-analytical-architecture",
+      "content": "大多数应用数据库都旨在高效处理单个事务。当用户创建订单或更新个人资料时，系统会优先考虑数据完整性和写入速度。这些被称为在线事务处理（OLTP）环境的系统，当目标转变为大规模数据聚合和报告时，通常会遇到问题。\n\n分析架构通过优化数据组织以提高检索速度而非事务吞吐量，来解决这一局限。在本章中，我们将阐明操作型工作负载与分析型工作负载（OLAP）之间的结构差异。一个主要研究点是物理存储层。我们将对比适用于事务系统的行式存储，与支持大规模数据集更快聚合的列式存储。\n\n例如，对数据集 $D$ 执行一个标准求和操作：\n\n$$S = \\sum_{x \\in D} x$$\n\n在行式系统中，计算 $S$ 通常需要读取整个行才能获取变量 $x$。在列式系统中，数据库引擎只读取包含 $x$ 的特定列，这大大减少了输入/输出（I/O）开销。\n\n我们还将考察反范式化的作用。尽管范式化消除了操作型数据库中的冗余，但分析模型常有意引入冗余，以减少查询执行中的复杂连接。到本章结束时，你将能够区分这些架构模式，并解读查询执行计划以验证性能差异。",
+      "sections": [
+        {
+          "id": 7969,
+          "title": "操作型与分析型工作负载",
+          "meta_title": "OLTP 与 OLAP：工作负载差异",
+          "meta_description": "比较操作型和分析型数据库工作负载。",
+          "slug": "operational-vs-analytical-workloads",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7970,
+          "title": "行式存储与列式存储",
+          "meta_title": "列式存储在分析中的作用",
+          "meta_description": "列式存储为何在分析方面优于行式存储。",
+          "slug": "row-oriented-vs-columnar-storage",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7971,
+          "title": "非规范化的作用",
+          "meta_title": "数据仓库中的非规范化",
+          "meta_description": "分析模式中非规范化的策略。",
+          "slug": "role-of-denormalization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7972,
+          "title": "动手实践：剖析查询计划",
+          "meta_title": "实践：查询计划分析",
+          "meta_description": "关于查询性能对比的实操练习。",
+          "slug": "hands-on-practical-analyzing-query-plans",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1390,
+      "title": "维度建模核心",
+      "meta_title": "维度建模：星型和雪花型模型",
+      "meta_description": "掌握维度建模的基础知识，包括事实、维度和星型模型设计。",
+      "number": 2,
+      "slug": "dimensional-modeling-core",
+      "content": "原始数据存储机制与有效分析所需的逻辑结构大不相同。尽管前一章涉及了存储层，但本节将侧重于数据的逻辑组织。维度建模提供了一种专门的数据构建方法，以支持高性能查询和直观的报告。\n\n首要目的是将度量数据与描述性背景分离。您将学会区分存储量化指标的事实表，以及提供“谁、什么、何地、何时”等信息的维度表。此过程的一个核心部分是定义数据的“粒度”。明确定义的粒度确保收入或数量等指标在聚合时行为可预测。例如，在严格可加的事实表中，任何维度上的总和都可简单计算为 $Total = \\sum x_i$。\n\n我们将考察星型模型的特定属性，其中维度直接连接到中心事实表；并将其与雪花型模型进行对比，雪花型模型通过规范化维度表来减少冗余。通过这些课程，您将获得将业务需求转化为一种兼顾查询速度和维护要求的模式设计的能力。",
+      "sections": [
+        {
+          "id": 7973,
+          "title": "数据粒度",
+          "meta_title": "定义数据粒度",
+          "meta_description": "理解并定义数据建模中的粒度。",
+          "slug": "grain-of-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7974,
+          "title": "事实表基础",
+          "meta_title": "事实表：可加性与半可加性",
+          "meta_description": "可加性与半可加性事实表的基本原理。",
+          "slug": "fact-tables-fundamentals",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7975,
+          "title": "维度表结构",
+          "meta_title": "维度表设计",
+          "meta_description": "维度表的结构和属性",
+          "slug": "dimension-tables-structure",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7976,
+          "title": "星型模式架构",
+          "meta_title": "星型模式设计指南",
+          "meta_description": "实施星型模式以实现高效查询。",
+          "slug": "star-schema-architecture",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7977,
+          "title": "雪花模式的变体",
+          "meta_title": "雪花模式说明",
+          "meta_description": "何时使用雪花模式而非星形模式。",
+          "slug": "snowflake-schema-variations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7978,
+          "title": "动手实践：设计星型模型",
+          "meta_title": "实践：星型模型设计",
+          "meta_description": "从原始交易数据构建星型模型。",
+          "slug": "hands-on-practical-designing-star-schema",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1391,
+      "title": "高级维度处理",
+      "meta_title": "高级维度：SCDs 和层次结构",
+      "meta_description": "学习使用 SCDs 处理变化的数据，管理日期维度，并使用代理键。",
+      "number": 3,
+      "slug": "advanced-dimension-handling",
+      "content": "上一章中，我们定义了星型和雪花型架构的结构组成部分。尽管这些模型对静态数据表现良好，但在生产环境中，属性会随时间变化。客户地址会变动，产品类别会重新组织，销售区域也会调整。假设数据不变的严格架构，最终会导致历史报告不准确。\n\n本章侧重于管理变化的维度数据和特殊架构需求所需的机制。我们首先将源自操作系统的自然键与代理键分开。实施一个表示为整数 $k$ 的系统生成代理键，可以使您的分析模型摆脱源系统依赖，并提升连接性能。\n\n接下来我们考察缓慢变化维度 (SCD)。您将学会区分需要 Type 1 更新（即数据被直接覆盖）和 Type 2 更新（即通过插入新行来保留历史）的场景。这种区分可以确保关于时间 $t$ 时的收入查询，准确反映维度属性在当时的状态，而非它们当前的状态。\n\n本节以特殊维度模式作为结尾。我们将构建一个日期维度以支持非标准日历逻辑，例如会计季度，并实施角色扮演维度。这使得单个物理表可以在查询中服务于多种逻辑目的，例如使用一个日期表同时按 `order_date` 和 `ship_date` 过滤事实。",
+      "sections": [
+        {
+          "id": 7979,
+          "title": "代理键与自然键",
+          "meta_title": "数据仓库中的代理键",
+          "meta_description": "使用代理键相对于自然键的优点。",
+          "slug": "surrogate-keys-vs-natural-keys",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7980,
+          "title": "缓慢变化维度类型1",
+          "meta_title": "SCD 类型1：覆盖历史数据",
+          "meta_description": "实施 SCD 类型1进行数据更正。",
+          "slug": "slowly-changing-dimensions-type-1",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7981,
+          "title": "慢变维度 类型 2",
+          "meta_title": "SCD 类型 2：历史跟踪",
+          "meta_description": "使用 SCD 类型 2 跟踪历史变化。",
+          "slug": "slowly-changing-dimensions-type-2",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7982,
+          "title": "日期和时间维度",
+          "meta_title": "建立日期维度",
+          "meta_description": "创建完善的日期和时间维度表。",
+          "slug": "date-and-time-dimensions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7983,
+          "title": "角色扮演维度",
+          "meta_title": "角色扮演维度模式",
+          "meta_description": "为多种情境使用单一维度。",
+          "slug": "role-playing-dimensions",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7984,
+          "title": "动手实践: 实现SCD 类型 2",
+          "meta_title": "实践: SCD 类型 2 实现",
+          "meta_description": "编写SQL以实现SCD 类型 2 逻辑。",
+          "slug": "hands-on-practical-implementing-scd-type-2",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1392,
+      "title": "进阶事实表模式",
+      "meta_title": "事实表模式：快照与事务",
+      "meta_description": "了解进阶事实表设计，包括周期快照、累积快照和无事实事实。",
+      "number": 4,
+      "slug": "complex-fact-table-patterns",
+      "content": "在前几章中，我们使用标准事件数据确立了星型模型的构成要素。然而，分析需求往往不仅仅是单笔交易的记录。我们通常需要分析系统在特定时间点的状态，或追踪工作流程在不同阶段推进时的持续时间。\n\n本章阐述了用于应对这些不同粒度数据的具体模式。我们首先区分三种主要事实表类型。事务型事实表记录最精细的离散事件。周期快照事实表的功能有所不同，它们在设定的时间间隔内聚合数据以捕获状态，例如库存水平或账户余额。\n\n接下来，我们将审视累积快照事实表。它们专为具有明确生命周期的流程（如订单履行）而设计，其中单行记录会随着业务流程接近完成而被更新。此外，我们还会讨论无事实事实表。这些结构对于覆盖率分析是必需的，可以回答维度交叉点是主要数据点而非数值的问题。\n\n理解这些模式有助于您有效处理半可加度量。例如，尽管您可以对销售额进行跨时间求和 ($Total = \\sum sales$)，但您不能简单地对一个月的账户余额进行求和。您必须应用一些逻辑，例如求平均值或选取最后的值。在本节结束时，您将能够选择正确的表架构，以匹配您正在建模的业务流程粒度。",
+      "sections": [
+        {
+          "id": 7985,
+          "title": "事务事实表",
+          "meta_title": "事务事实表设计",
+          "meta_description": "在事务事实表中建模离散事件。",
+          "slug": "transactional-fact-tables",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7986,
+          "title": "定期快照事实表",
+          "meta_title": "定期快照事实",
+          "meta_description": "通过快照定时记录状态。",
+          "slug": "periodic-snapshot-fact-tables",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7987,
+          "title": "累加快照事实表",
+          "meta_title": "累加快照事实",
+          "meta_description": "使用累加快照建模业务流程。",
+          "slug": "accumulating-snapshot-fact-tables",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7988,
+          "title": "无事实的事实表",
+          "meta_title": "无事实的事实表应用",
+          "meta_description": "使用无事实表跟踪事件和覆盖范围。",
+          "slug": "factless-fact-tables",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7989,
+          "title": "动手实践：构建累积快照",
+          "meta_title": "实践：累积快照",
+          "meta_description": "为工作流构建累积快照",
+          "slug": "hands-on-practical-building-accumulating-snapshot",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1393,
+      "title": "物理设计与优化",
+      "meta_title": "模式优化：分区与嵌套数据",
+      "meta_description": "使用分区、聚类、嵌套数据类型和一张大表（OBT）策略来优化模式性能。",
+      "number": 5,
+      "slug": "physical-design-optimization",
+      "content": "逻辑数据模型为数据分析提供抽象结构，但物理实现决定了实际的查询延迟和成本。一个设计良好的模式必须考虑数据库引擎如何从磁盘存储和检索数据块。本节讲述了在列式数据仓库中优化存储布局所需的特定配置。\n\n我们首先考察分区策略。通过将大型表基于特定列（通常是日期）分割成更小的段，您可以使查询引擎在检索时跳过数据集的大部分。如果一个表有 $T$ 总字节，并且您查询代表一小部分数据的单日数据，分区剪枝会大幅降低扫描成本。对于一个完美剪枝的查询，我们可以将理想的扫描量 $V$ 表示为：\n\n$$V_{scanned} \\approx \\frac{V_{total}}{N_{partitions}}$$\n\n接下来，我们查看排序和聚类。尽管分区粗略地分割数据，但聚类将这些段中的行组织起来，以提高过滤谓词的效率。您将学习如何选择合适的列进行聚类，以最小化I/O操作。\n\n本课程也涉及半结构化数据的处理。现代数据仓库允许使用嵌套字段，例如数组和结构体，这可以简化数据摄取并降低连接逻辑的复杂程度。最后，我们评估一张大表（OBT）设计。这种方法通过完全消除连接，将维度和事实展平到一个宽表中，从而以牺牲存储效率换取读取性能。您将评估这种高度非规范化方法与传统星型模式之间的权衡。",
+      "sections": [
+        {
+          "id": 7990,
+          "title": "分区策略",
+          "meta_title": "数据库分区策略",
+          "meta_description": "通过表分区提升查询性能。",
+          "slug": "partitioning-strategies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7991,
+          "title": "聚类与排序键",
+          "meta_title": "聚类键优化",
+          "meta_description": "使用聚类键减少数据扫描。",
+          "slug": "clustering-and-sorting-keys",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7992,
+          "title": "嵌套数据结构",
+          "meta_title": "处理嵌套数据数组",
+          "meta_description": "在现代数据仓库中使用数组和结构体进行建模。",
+          "slug": "nested-data-structures",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7993,
+          "title": "单一巨表 (OBT) 方法",
+          "meta_title": "单一巨表 (OBT) 与星型模式对比",
+          "meta_description": "OBT设计模式的优劣分析",
+          "slug": "one-big-table-obt-methodology",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7994,
+          "title": "实践操作：优化调优",
+          "meta_title": "实践：模式优化",
+          "meta_description": "应用分区和聚类以提升速度。",
+          "slug": "hands-on-practical-optimization-tuning",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

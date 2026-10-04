@@ -1,0 +1,61 @@
+{
+  "id": 3850,
+  "title": "高级输出解析策略",
+  "meta_title": "高级输出解析策略",
+  "meta_description": "实施处理复杂、结构化或易出错的LLM输出的方法。",
+  "content": "<p>尽管LangChain的基本输出解析器能处理简单的字符串格式或基本JSON，但生产应用经常遇到更复杂、较难预测或偶尔格式错误的大语言模型（LLM）输出。有效提取结构化信息、处理变化和从错误中恢复，需要更高级的解析策略。本文介绍处理LLM响应的方法，确保为后续任务可靠地提取数据。</p>\n<p>尽管进行了提示工程 (prompt engineering)，LLM并不总是完美遵循请求的输出格式。它们可能会添加解释性文本、遗漏必填字段，或生成语法不正确的结构（例如格式错误的JSON）。仅仅依赖基本字符串分割或标准JSON解析可能导致脆弱的应用，从而意外失败。</p>\n<h3>运用Pydantic进行结构化验证</h3>\n<p>一种有效方法是使用Pydantic模型定义期望的输出结构。Pydantic使用Python类型注解提供数据验证和设置管理。LangChain通过 <code>PydanticOutputParser</code> 与Pydantic集成。</p>\n<p>你定义一个Pydantic模型，代表你期望LLM返回的模式。解析器随后自动生成包含在提示中的格式说明，指导LLM形成正确的结构。更重要的是，它使用Pydantic模型解析LLM的字符串输出，验证数据类型，检查必填字段，并将原始文本转换为结构化Python对象。</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\r\nfrom typing import List, Optional\r\nfrom langchain_core.output_parsers import PydanticOutputParser\r\nfrom langchain_core.prompts import PromptTemplate\r\nfrom langchain_openai import ChatOpenAI # 或任何其他兼容的LLM\r\n\r\n# 定义你期望的数据结构\r\nclass ProductReview(BaseModel):\r\n    product_name: str = Field(description=\"被评论产品的名称。\")\r\n    rating: int = Field(description=\"1到5的评分。\", ge=1, le=5)\r\n    summary: str = Field(description=\"评论的简短总结。\")\r\n    pros: Optional[List[str]] = Field(description=\"可选的优点列表。\")\r\n    cons: Optional[List[str]] = Field(description=\"可选的缺点列表。\")\r\n\r\n# 设置解析器\r\nparser = PydanticOutputParser(pydantic_object=ProductReview)\r\n\r\n# 定义包含格式说明的提示模板\r\nprompt_template = \"\"\"\r\n分析以下产品评论并提取重要信息。\r\n{format_instructions}\r\n\r\n评论文本：\r\n{review_text}\r\n\"\"\"\r\n\r\nprompt = PromptTemplate(\r\n    template=prompt_template,\r\n    input_variables=[\"review_text\"],\r\n    partial_variables={\"format_instructions\": parser.get_format_instructions()}\r\n)\r\n\r\n# 示例用法\r\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0)\r\nchain = prompt | llm | parser\r\nreview = \"This laptop is amazing! Super fast (5/5), great screen. Only downside is the battery life could be better.\"\r\nstructured_output = chain.invoke({\"review_text\": review})\r\nprint(structured_output)\r\nprint(f\"Rating: {structured_output.rating}\")\n</code></pre>\n<p>使用 <code>PydanticOutputParser</code> 不仅提供解析，还提供基于你的模型定义的自动验证（例如，确保 <code>rating</code> 在1到5之间）。如果输出不符合规范，Pydantic会引发验证错误，这通常比一般的解析失败提供更多信息。</p>\n<h3>实现解析失败的重试逻辑</h3>\n<p>有时，LLM生成的输出几乎正确，但首次解析失败（例如，JSON中缺少逗号，或多余的注释）。而不是立即失败，你可以实现重试逻辑。LangChain提供 <code>RetryOutputParser</code> 和更精巧的 <code>RetryWithErrorOutputParser</code>。</p>\n<p>这些解析器封装一个主解析器（例如 <code>PydanticOutputParser</code> 或 <code>SimpleJsonOutputParser</code>）。如果主解析器失败，重试解析器会捕获异常。它随后格式化一个新的提示，包含原始提示、错误输出和错误信息。这个新提示指示LLM根据错误修正其先前的输出。这个重试循环可以显著提高从不太可靠的LLM响应中提取结构化数据的成功率。</p>\n<pre><code class=\"language-python\">from langchain_core.output_parsers import PydanticOutputParser, RetryWithErrorOutputParser\r\nfrom langchain_core.prompts import PromptTemplate\r\nfrom langchain_core.prompt_values import StringPromptValue\r\nfrom langchain_openai import ChatOpenAI # 或任何其他兼容的LLM\r\n# 假设使用前面示例中的ProductReview Pydantic模型\r\n\r\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0)\r\nmain_parser = PydanticOutputParser(pydantic_object=ProductReview)\r\n\r\n# 用重试机制封装主解析器\r\nretry_parser = RetryWithErrorOutputParser.from_llm(\r\n    parser=main_parser,\r\n    llm=llm, # 用于尝试修正的LLM\r\n    max_retries=2 # 重试次数\r\n)\r\n\r\n# 提示模板最初保持不变\r\nprompt_template = \"\"\"\r\n分析以下产品评论并提取重要信息。\r\n{format_instructions}\r\n\r\n评论文本：\r\n{review_text}\r\n\"\"\"\r\nprompt = PromptTemplate(\r\n    template=prompt_template,\r\n    input_variables=[\"review_text\"],\r\n    partial_variables={\"format_instructions\": main_parser.get_format_instructions()} # 仍使用主解析器的说明\r\n)\r\n\r\nreview = \"Decent phone (4 stars). Good camera. Wish it had more storage.\"\r\nprompt_value = prompt.format_prompt(review_text=review)\r\nllm_output = llm.invoke(prompt_value)\r\ntry:\r\n   structured_output = retry_parser.parse_with_prompt(\r\n       llm_output.content,\r\n       prompt_value\r\n   )\r\n   print(\"成功解析：\")\r\n   print(structured_output)\r\nexcept Exception as e:\r\n   print(f\"重试后解析失败：{e}\")\n</code></pre>\n<p><code>RetryWithErrorOutputParser</code> 智能地使用失败解析尝试中的错误信息来指导LLM修正，使其比简单地要求LLM“再试一次”更有效。</p>\n<h3>运用结构化输出能力（工具调用）</h3>\n<p>现代LLM（例如OpenAI的GPT系列、Anthropic的Claude 3、Google的Gemini）通过工具调用功能原生支持结构化数据生成。无需对字符串输出进行提示工程 (prompt engineering)，你只需提供一个模式，模型便会生成与该模式匹配的参数 (parameter)。</p>\n<p>LangChain通过 <code>.with_structured_output()</code> 方法简化了这一点。此方法接受Pydantic模型或JSON Schema，并自动管理与模型工具调用API的交互。它直接返回一个经过验证的对象，消除了单独解析步骤或手动参数提取的需要。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\r\nfrom pydantic import BaseModel, Field\r\n\r\n# 定义 Pydantic 模型\r\nclass WeatherInfo(BaseModel):\r\n    \"\"\"特定位置的天气信息。\"\"\"\r\n    location: str = Field(description=\"城市和州，例如：旧金山，加利福尼亚州\")\r\n    temperature: int = Field(description=\"当前华氏温度\")\r\n    forecast: str = Field(description=\"简短的天气预报（例如：晴朗、多云）\")\r\n\r\n# 初始化 LLM\r\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0)\r\n\r\n# 配置 LLM 直接返回结构化对象\r\nstructured_llm = llm.with_structured_output(WeatherInfo)\r\n\r\n# 示例调用\r\n# response = structured_llm.invoke(\"What's the weather like in Boston today?\")\r\n# print(response)\r\n# 输出将是 WeatherInfo 的一个实例：\r\n# WeatherInfo(location='Boston, MA', temperature=72, forecast='Partly Cloudy')\n</code></pre>\n<p>可用时，使用LLM的原生结构化输出能力通常是最可靠的方法。它减少了解析仅仅“尝试”遵循格式说明的自由格式文本时存在的歧义。</p>\n<h3>组合解析器和自定义逻辑</h3>\n<p>对于非常复杂的情况，你可能需要链接多个解析器，甚至通过继承LangChain的 <code>BaseOutputParser</code> 来实现自定义解析逻辑。例如，LLM可能会生成一个包含文本摘要和JSON块的响应。你可以使用自定义解析器首先使用正则表达式或字符串操作提取JSON块，然后将该块输入到 <code>PydanticOutputParser</code> 或 <code>JsonOutputParser</code> 中。</p>\n<p>开发一个自定义解析器涉及实现 <code>parse</code> 方法（以及可能的 <code>get_format_instructions</code> 方法）。这提供了最大灵活性，但需要仔细设计和测试。</p>\n<pre><code class=\"language-python\">from langchain_core.output_parsers import BaseOutputParser\r\nfrom typing import Any\r\nimport re\r\nimport json\r\n\r\nclass CustomJsonExtractorParser(BaseOutputParser):\r\n    \"\"\"\r\n    一个自定义解析器，用于提取并解析封装在 ```json ... ``` 中的JSON块。\r\n    \"\"\"\r\n    def parse(self, text: str) -> Any:\r\n        match = re.search(r\"```json\\s*(.*?)\\s*```\", text, re.DOTALL)\r\n        if not match:\r\n            raise ValueError(f\"Could not find JSON block in text: {text}\")\r\n        json_str = match.group(1)\r\n        try:\r\n            return json.loads(json_str)\r\n        except json.JSONDecodeError as e:\r\n            raise ValueError(f\"Failed to parse JSON: {e}\\nJSON string: {json_str}\")\r\n\r\n    def get_format_instructions(self) -> str:\r\n        return \"请将JSON输出封装在 ```json\\n ... \\n``` 标签内。\"\r\n\r\n# 示例用法\r\ncustom_parser = CustomJsonExtractorParser()\r\nllm_output = \"这是分析结果：\\n```json\\n{\\n  \\\"key\\\": \\\"value\\\",\\n  \\\"number\\\": 123\\n}\\n```\\n如果需要更多详情，请告诉我。\"\r\nparsed_data = custom_parser.parse(llm_output)\r\nprint(parsed_data)\n</code></pre>\n<h3>处理不可恢复的错误</h3>\n<p>即使有重试机制和可靠的解析器，有些LLM输出仍可能无法解析或验证失败。生产系统必须优雅地处理这些情况。策略包括：</p>\n<ol>\n<li><strong>日志记录：</strong> 记录错误输出和解析错误，以供后续分析，并可能进行微调 (fine-tuning)或提示调整。</li>\n<li><strong>默认值/回退：</strong> 返回默认对象或 <code>None</code>，以允许应用流程继续，并可能将结果标记 (token)为不确定。</li>\n<li><strong>错误传播：</strong> 将错误沿着调用堆栈向上级传播，由更高级别的应用逻辑处理。</li>\n<li><strong>人工干预：</strong> 对于关键应用，将失败的解析尝试路由到人工审查队列。</li>\n</ol>\n<p>选择正确的策略取决于应用对错误的容忍度以及提取数据的重要性。</p>\n<p>通过采用这些高级解析策略，运用Pydantic进行结构和验证，实现重试逻辑，运用原生结构化输出功能，并为不可恢复的错误做好准备，你可以构建更具韧性和可靠的LangChain应用，能够处理生产环境中LLM输出固有的可变性。这些方法是本课程中讨论的复杂链和代理的基本构成要素。</p>",
+  "slug": "advanced-output-parsing",
+  "updates": [],
+  "references": [
+    {
+      "id": 11011,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and contributors",
+      "year": "Current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/",
+      "doi": "",
+      "note": "Pydantic 的官方全面指南，这是一个数据验证和设置管理库，对于在 Python 中定义和验证结构化 LLM 输出至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T06:57:24.265674Z",
+      "updated_at": "2025-09-10T01:35:47.893675Z"
+    },
+    {
+      "id": 11012,
+      "title": "LangChain Output Parsers",
+      "author": "LangChain Team",
+      "year": "2025",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/how_to/output_parsers/",
+      "doi": "",
+      "note": "LangChain 输出解析器模块的官方文档，详细介绍了各种解析器，包括 PydanticOutputParser、重试机制和自定义解析器的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T06:57:24.274672Z",
+      "updated_at": "2025-09-10T01:36:16.134826Z"
+    },
+    {
+      "id": 11013,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "官方指南，解释了如何提示 OpenAI 模型输出符合预定义模式的结构化 JSON 数据，这是一种提取结构化信息的高度可靠方法。",
+      "order": 3,
+      "created_at": "2025-09-05T06:57:24.279902Z",
+      "updated_at": "2025-09-10T01:35:56.371882Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

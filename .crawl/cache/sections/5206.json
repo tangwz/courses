@@ -1,0 +1,61 @@
+{
+  "id": 5206,
+  "title": "迭代式提示词优化",
+  "meta_title": "迭代式提示词优化 | 提示词工程",
+  "meta_description": "根据大型语言模型输出，测试、分析和改进提示词的过程。",
+  "content": "<p>设计理想的提示词 (prompt)往往更像是一门艺术而非科学，但如同许多艺术创作一样，它从结构化、迭代式的过程中获益良多。正如我们所见，理解有效提示词的原则，使用少量示例，并精心组织提示词是重要的起步。然而，初次尝试很少能在所有可能的输入上都产生最佳结果。这就是迭代式提示词优化变得非常必要的地方。它是一个系统化的过程，用于根据大型语言模型的实际响应来测试、分析和改进你的提示词。</p>\n<p>可以将你的初始提示词看作是关于如何最好地向大型语言模型传达请求的一种假设。迭代式优化是用来测试和完善该假设的实验过程。</p>\n<h3>为什么初始提示词 (prompt)需要优化</h3>\n<p>有几个因素促使提示词需要优化：</p>\n<ol>\n<li><strong>语言的含糊性：</strong> 自然语言本身就具有含糊性。对你来说清晰的表达，大型语言模型可能会有不同的理解，特别是在处理复杂的指令或要求时。</li>\n<li><strong>模型特有性：</strong> 不同的LLM（甚至是同一模型的不同版本）由于训练数据和架构的差异，可能对相同的提示词做出不同的响应。</li>\n<li><strong>任务复杂性：</strong> 简单任务可能用基本提示词就能很好完成，但更复杂的任务通常需要仔细的指令、示例和限制，这些在初次尝试时很难做到恰到好处。</li>\n<li><strong>边界情况：</strong> 你的初始提示词可能对典型输入有效，但在不常见或意料之外的变体（边界情况）上可能会失效。</li>\n<li><strong>非确定性：</strong> 尽管你可以通过将温度等参数 (parameter)设置为0来减少可变性，但LLM的输出中仍可能存在固有的随机性，这要求提示词足够强，能够始终如一地引导模型。</li>\n</ol>\n<h3>优化循环</h3>\n<p>迭代式提示词 (prompt)优化遵循一个循环，该循环会重复进行，直到提示词在你的应用需求下表现令人满意。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-16ddr1t\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n    edge [color=\"#495057\"];\n\n    Prompt [label=\"1. 设计初始提示词\"];\n    Test [label=\"2. 输入测试\"];\n    Analyze [label=\"3. 分析输出\"];\n    Refine [label=\"4. 优化提示词\"];\n\n    Prompt -> Test;\n    Test -> Analyze;\n    Analyze -> Refine [label=\"识别问题\"];\n    Refine -> Test [label=\"应用更改\"];\n    Analyze -> Stop [label=\"性能达标\", color=\"#12b886\", fontcolor=\"#12b886\"];\n    Stop [shape=ellipse, label=\"停止\", color=\"#12b886\", fillcolor=\"#d8f5a2\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-16ddr1t\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>提示词优化的迭代循环包括设计、测试、分析和优化提示词，直到达到预期的表现。</p>\n</blockquote>\n<p>我们来详细说明每个步骤：</p>\n<ol>\n<li>\n<p><strong>设计初始提示词：</strong> 根据前面介绍的原则（清晰度、上下文 (context)、结构，如果适用，还包括少量示例），创建你的第一个提示词版本。将此提示词存储在你的Python代码中，可以是一个格式化字符串或使用模板系统。</p>\n</li>\n<li>\n<p><strong>输入测试：</strong> 执行你的Python代码，将提示词和各种输入发送到LLM API。重要的是不仅要测试“顺利路径”（预期输入），还要测试边界情况、复杂示例，以及与你的应用相关的潜在对抗性输入。</p>\n</li>\n<li>\n<p><strong>分析输出：</strong> 这是非常重要的一步。检查LLM对每个输入的响应。着重查看：</p>\n<ul>\n<li><strong>准确性：</strong> 信息是否准确？</li>\n<li><strong>完整性：</strong> 输出是否包含所有必要信息？</li>\n<li><strong>格式：</strong> 输出是否符合期望的结构（例如，JSON，特定文本格式）？</li>\n<li><strong>简洁性/冗长性：</strong> 输出是否过于简短或过于冗长？</li>\n<li><strong>语调：</strong> 输出是否符合期望的角色或风格？</li>\n<li><strong>幻觉 (hallucination)：</strong> 模型是否生成了看似合理但事实不正确的信息？</li>\n<li><strong>偏见：</strong> 输出是否显现出不必要的偏见？</li>\n<li><strong>一致性：</strong> 提示词在不同但可比较的输入下是否产生相似质量的结果？</li>\n</ul>\n</li>\n<li>\n<p><strong>优化提示词：</strong> 根据分析中发现的问题，修改提示词。常见的优化方法包括：</p>\n<ul>\n<li><strong>增加清晰度：</strong> 重新措辞指令，使其更具体或更少含糊。</li>\n<li><strong>调整示例：</strong> 添加、删除或修改少量示例，以更好地引导模型。确保示例包含导致问题的输入类型。</li>\n<li><strong>修改结构：</strong> 更改指令的顺序，添加标题，或使用分隔符（如XML标签或Markdown）来更清晰地组织提示词。</li>\n<li><strong>明确限制：</strong> 添加关于<em>做什么</em>的直接指令（例如，“仅以JSON格式响应”）或<em>不做什么</em>的指令（例如，“不包含任何解释”）。</li>\n<li><strong>格式具体化：</strong> 对输出格式非常精确，甚至可以在提示词中提供一个模板。</li>\n<li><strong>参数 (parameter)调整：</strong> 虽然这并非严格意义上的提示词<em>文本</em>优化，但调整API参数，如<code>temperature</code>（用于创意性与确定性）或<code>max_tokens</code>，可以影响输出，并可能与提示词文本一同调整。</li>\n</ul>\n</li>\n<li>\n<p><strong>重复：</strong> 使用优化后的提示词回到第2步（测试），并重复这个循环。</p>\n</li>\n</ol>\n<h3>Python中的分析方法</h3>\n<p>虽然手动检查通常是必要的，特别是对于语调等主观特性，但Python可以协助分析过程。</p>\n<ul>\n<li>\n<p><strong>日志记录：</strong> 系统地记录你的提示词 (prompt)、输入、LLM输出以及任何相关参数 (parameter)（如温度）。这会创建一个用于比较和调试的记录。一个简单的方法是使用Python内置的<code>logging</code>模块，或者最初只使用结构化的<code>print</code>语句。</p>\n<pre><code class=\"language-python\">import logging\nimport datetime\nimport json\nfrom your_llm_client import call_llm # 假设你有一个调用LLM的函数\n\nlogging.basicConfig(filename='prompt_testing.log', level=logging.INFO,\n                    format='%(asctime)s - %(levelname)s - %(message)s')\n\ndef test_prompt(prompt_version, prompt_template, input_data):\n    prompt = prompt_template.format(input=input_data)\n    try:\n        response = call_llm(prompt) # 你与LLM API交互的函数\n        log_entry = {\n            \"timestamp\": datetime.datetime.now().isoformat(),\n            \"prompt_version\": prompt_version,\n            \"input\": input_data,\n            \"prompt_sent\": prompt,\n            \"response\": response\n        }\n        logging.info(json.dumps(log_entry))\n        return response\n    except Exception as e:\n        logging.error(f\"Error testing prompt {prompt_version} with input '{input_data}': {e}\")\n        return None\n\n# 示例用法：\n# text_input = \"一些输入文本...\"\n# prompt_v1 = \"总结这段文本：{input}\"\n# test_prompt(\"v1.0\", prompt_v1, text_input)\n</code></pre>\n</li>\n<li>\n<p><strong>程序化检查：</strong> 对于具有预期结构（如JSON或特定格式）的输出，编写Python代码来验证响应。你可以检查是否存在必要的键、正确的数据类型或是否符合正则表达式模式。</p>\n<pre><code class=\"language-python\">import json\n\ndef validate_json_output(response_text):\n    try:\n        data = json.loads(response_text)\n        if \"name\" in data and \"email\" in data:\n            return True, \"格式有效\"\n        else:\n            return False, \"缺少必要的键 ('name', 'email')\"\n    except json.JSONDecodeError:\n        return False, \"JSON无效\"\n    except Exception as e:\n        return False, f\"意外错误: {e}\"\n\n# llm_response = '{\"name\": \"Alice\", \"email\": \"alice@example.com\"}'\n# is_valid, message = validate_json_output(llm_response)\n# print(f\"验证结果: {is_valid}, 消息: {message}\")\n</code></pre>\n</li>\n<li>\n<p><strong>基本指标：</strong> 对于分类或提取等特定任务，你可以根据预定义的一组正确答案（测试集）计算简单的指标，如准确率、精确率、召回率或F1分数。第9章更详细地讨论了评估。</p>\n</li>\n</ul>\n<h3>示例：优化一个提取提示词 (prompt)</h3>\n<p>我们来优化一个旨在从非正式文本中提取会议日期和主要主题的提示词。</p>\n<p><strong>目标：</strong> 提取日期（YYYY-MM-DD）和主题。</p>\n<p><strong>输入文本：</strong> <code>text_input = \"嘿团队，下周四我们同步一下，大概下午3点？我们需要讨论第三季度路线图演示。\"</code> （假设今天是2024-07-15，星期一）。</p>\n<p><strong>初始提示词 (v1)：</strong></p>\n<pre><code class=\"language-python\">prompt_template_v1 = \"\"\"\n从以下文本中提取日期和主要主题。\n将日期格式化为 YYYY-MM-DD。\n\n文本：\n{input}\n\n输出：\n日期：\n主题：\n\"\"\"\nprompt_v1 = prompt_template_v1.format(input=text_input)\n# 假设 call_llm(prompt_v1) 返回：\n# \"日期: 2024-07-25\\n主题: 第三季度路线图演示\"\n</code></pre>\n<p><strong>分析 (v1)：</strong> 对这个简单情况有效。我们来尝试一个更复杂（或更有挑战性）的输入。</p>\n<p><strong>新输入：</strong> <code>text_input_tricky = \"提醒：Alpha项目启动会是明天上午。另外，下周某个时候提醒我一下预算评审。\"</code> （假设今天是2024-07-15）。</p>\n<p><strong>用复杂输入测试 (v1)：</strong></p>\n<pre><code class=\"language-python\">prompt_v1_tricky = prompt_template_v1.format(input=text_input_tricky)\n# 假设 call_llm(prompt_v1_tricky) 可能返回：\n# \"日期: 2024-07-16\\n主题: Alpha项目启动和预算评审\"\n# 或者可能：\n# \"日期: \\n主题: Alpha项目启动\"\n</code></pre>\n<p><strong>分析 (v1) - 问题：</strong></p>\n<ul>\n<li>模型可能会合并主题。</li>\n<li>它可能无法为第二个主题提取日期。</li>\n<li>指令对于存在多个事件时应优先处理<em>哪个</em>事件不够具体。</li>\n</ul>\n<p><strong>优化提示词 (v2)：</strong> 让我们优先处理第一个提到的事件，并要求JSON输出。</p>\n<pre><code class=\"language-python\">prompt_template_v2 = \"\"\"\n分析以下文本，找出其中提到的主要事件的日期和主要主题。\n- 根据当前日期 2024-07-15 确定日期。将日期格式化为 YYYY-MM-DD。\n- 找出与该日期相关联的主要主题。\n- 如果提到了多个事件，请侧重于第一个带有特定日期或相对日期（如“明天”）的事件。\n- 只需以包含键 \"date\" 和 \"topic\" 的JSON对象形式响应。\n\n文本：\n{input}\n\nJSON 输出：\n\"\"\"\nprompt_v2_tricky = prompt_template_v2.format(input=text_input_tricky)\n# 假设 call_llm(prompt_v2_tricky) 现在返回：\n# '{\\n  \"date\": \"2024-07-16\",\\n  \"topic\": \"project Alpha kickoff\"\\n}'\n</code></pre>\n<p><strong>分析 (v2)：</strong> 输出现在结构化（JSON）并且正确地侧重于第一个事件（“明天”）。明确的指令和日期上下文 (context)帮助很大。还需要使用更多输入进行进一步测试，如果发现新的问题，可能会导致v3版本。</p>\n<h3>何时停止</h3>\n<p>提示词 (prompt)优化可能是一个没有终点的过程。了解何时停止非常重要：</p>\n<ul>\n<li><strong>足够好：</strong> 提示词对你的应用中最常见和重要的输入是否表现可靠？完美通常是无法达到的。</li>\n<li><strong>收益递减：</strong> 你的更改是否只带来了非常小的改进，或者只修复了一些不明显的边界情况，却以提示词复杂性大幅增加为代价？</li>\n<li><strong>应用限制：</strong> 考虑权衡。更长、更复杂的提示词可能会带来略微更好的结果，但会增加API成本和延迟。这种改进是否值得这种权衡？</li>\n<li><strong>评估指标：</strong> 定义目标指标（第9章有讨论），当提示词持续符合这些指标时即可停止。</li>\n</ul>\n<p>迭代式优化是实际LLM应用开发中的一项基本能力。通过在你的Python代码中系统地测试、分析失败并对提示词进行有针对性的改进，你可以大幅提升LLM支持功能的可靠性和准确性。</p>",
+  "slug": "iterative-prompt-refinement",
+  "updates": [],
+  "references": [
+    {
+      "id": 13754,
+      "title": "OpenAI Prompt Engineering Guide",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "这份来自OpenAI的官方指南提供了与大型语言模型交互的实用建议和最佳实践，强调了迭代式优化提示以获得预期输出的过程。",
+      "order": 1,
+      "created_at": "2025-09-05T08:39:18.067726Z",
+      "updated_at": "2025-09-10T12:22:55.708180Z"
+    },
+    {
+      "id": 13755,
+      "title": "Introduction to Prompt Design",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF05fOlM8yN1kSoNdJj94hcbJYUpHfbPpfFGDLoxs_1X61AQHhaD0wPORVdoNFW_1_QSQK-yMROWEpz42ZOBGKrFyRLiY5WpZu4FpLnq7YNngqMTnI6qoCiTaRxU00itdyIcAi9iSAXZmy0fd9sPCKaw3E0NlDNve5WFedW-iAtAgmUkqzo6vUgZaAj_WfdodgDdykU3lTuhR8=",
+      "doi": "",
+      "note": "Google的这份指南为有效的提示构建提供了清晰的指导和实用示例，包括一种系统化的提示设计和优化方法，以获得更好的模型响应。",
+      "order": 2,
+      "created_at": "2025-09-05T08:39:18.075371Z",
+      "updated_at": "2025-09-10T12:23:15.748550Z"
+    },
+    {
+      "id": 13757,
+      "title": "Practical Prompt Engineering: A Comprehensive Guide to Crafting Effective Prompts for Large Language Models",
+      "author": "Ben P. Wilson",
+      "year": "2023",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-1-4842-9743-6",
+      "doi": "10.1007/978-1-4842-9743-6",
+      "note": "这本实用书籍提供了设计、测试和迭代改进提示的实际方法，为真实世界的大型语言模型应用提供了结构化的方法。",
+      "order": 4,
+      "created_at": "2025-09-05T08:39:18.083606Z",
+      "updated_at": "2025-09-10T12:22:57.262199Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

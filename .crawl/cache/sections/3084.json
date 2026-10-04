@@ -1,0 +1,45 @@
+{
+  "id": 3084,
+  "title": "内容审核与内容过滤API",
+  "meta_title": "使用内容审核与内容过滤API",
+  "meta_description": "集成外部服务以检查LLM输入和输出是否存在有害内容。",
+  "content": "<p>虽然提示技巧和输出解析器有助于构建LLM的响应，但它们本身并不能保证生成内容的<em>安全性</em>或<em>适当性</em>。LLM在海量互联网文本上训练，有时会生成有害、不道德、带有偏见或存在其他问题的内容。仅依靠LLM进行自我审查不足以构建负责任和值得信赖的应用。集成专门的内容审核和内容过滤服务可提供必要的安全保障。</p>\n<h3>外部内容审核的必要性</h3>\n<p>LLM可能会生成包含以下内容的文本：</p>\n<ul>\n<li>仇恨言论或骚扰</li>\n<li>色情内容</li>\n<li>煽动暴力或非法行为</li>\n<li>宣扬自残</li>\n<li>错误信息或虚假信息（尽管审核API更侧重于安全类别）</li>\n</ul>\n<p>此外，恶意用户可能会尝试提示注入攻击，旨在绕过LLM的安全训练并引出有害响应。仅依靠提示设计或期望LLM完美地自我监管通常是不够的。对于生产系统而言，进行单独的专业检查是标准做法。</p>\n<h3>引入审核API</h3>\n<p>一些平台提供专门设计用于根据预定义安全类别对文本进行分类的API。这些服务通常使用其专门优化的微调 (fine-tuning)模型来检测有问题的内容。常见的例子包括：</p>\n<ul>\n<li><strong>OpenAI 审核端点：</strong> OpenAI提供的专用API端点，用于根据其安全政策对文本进行分类。</li>\n<li><strong>Google Cloud 自然语言API（内容分类）：</strong> Google Cloud AI服务的一部分，能够识别敏感主题。</li>\n<li><strong>Google Perspective API：</strong> 专门设计用于对文本的毒性、威胁、侮辱以及其他常与在线评论相关的属性进行评分。</li>\n<li><strong>Amazon Comprehend（毒性检测）：</strong> AWS服务，用于检测文本中的有害内容。</li>\n<li><strong>第三方服务：</strong> 各种专业公司提供内容审核API。</li>\n</ul>\n<h3>审核API的工作原理</h3>\n<p>典型的工作流程是将一段文本（无论是用户输入还是LLM输出）发送到审核API端点。API处理文本并返回响应，通常指示：</p>\n<ol>\n<li><strong>标记 (token)状态：</strong> 布尔值（true/false），指示内容是否违反任何政策。</li>\n<li><strong>类别分数：</strong> 针对各种有害内容类别（例如，<code>hate</code>、<code>sexual</code>、<code>violence</code>、<code>self-harm</code>）的置信分数。分数通常在0到1之间。</li>\n<li><strong>标记类别：</strong> 哪些特定类别超过了某个内部阈值而被触发。</li>\n</ol>\n<p>以下是使用Python的<code>requests</code>库与审核端点交互的示例：</p>\n<pre><code class=\"language-python\">import requests\nimport os\nimport json\n\n# 假设API密钥已安全存储，例如环境变量\nMODERATION_API_KEY = os.environ.get(\"MODERATION_API_KEY\")\nMODERATION_ENDPOINT_URL = \"https://api.example-moderation.com/v1/check\" # 替换为实际URL\n\ndef check_content_safety(text_to_check: str) -> dict:\n    \"\"\"\n    将文本发送到审核API并返回分类结果。\n    \"\"\"\n    if not MODERATION_API_KEY:\n        print(\"警告：未找到审核API密钥。跳过安全检查。\")\n        # 根据策略返回一个默认的安全响应或引发错误\n        return {\"flagged\": False, \"categories\": {}, \"scores\": {}}\n\n    headers = {\n        \"Authorization\": f\"Bearer {MODERATION_API_KEY}\",\n        \"Content-Type\": \"application/json\"\n    }\n    payload = json.dumps({\"text\": text_to_check})\n\n    try:\n        response = requests.post(MODERATION_ENDPOINT_URL, headers=headers, data=payload, timeout=10)\n        response.raise_for_status() # 对不良响应（4xx或5xx）引发HTTPError\n        return response.json()\n    except requests.exceptions.RequestException as e:\n        print(f\"调用审核API时出错：{e}\")\n        # 决定如何处理API错误：安全失败（假设不安全？）、记录日志、重试？\n        # 返回潜在不安全的内容可能存在风险。\n        return {\"flagged\": True, \"error\": str(e), \"categories\": {}, \"scores\": {}} # 示例：安全失败\n\n# 示例用法：\nuser_input = \"一些可能存在问题的用户文本\"\nllm_output = \"LLM生成的输出\"\n\n# 在将用户输入发送给LLM之前进行检查\nuser_input_safety = check_content_safety(user_input)\nif user_input_safety.get(\"flagged\"):\n    print(f\"用户输入被标记：{user_input_safety.get('categories')}\")\n    # 处理被标记的输入（例如，拒绝、要求用户重新措辞）\nelse:\n    # 继续生成LLM响应...\n    # llm_output = generate_llm_response(user_input) # 占位符\n\n    # 在向用户显示LLM输出之前进行检查\n    output_safety = check_content_safety(llm_output)\n    if output_safety.get(\"flagged\"):\n        print(f\"LLM输出被标记：{output_safety.get('categories')}\")\n        # 处理被标记的输出（例如，显示通用消息、记录日志、不显示）\n    else:\n        # 显示安全的LLM输出\n        print(\"LLM输出（安全）：\", llm_output)\n\n</code></pre>\n<h3>将审核集成到应用流程中</h3>\n<p>您可以在两个主要环节集成审核检查：</p>\n<ol>\n<li><strong>输入审核：</strong> 在用户提供的输入发送到LLM<em>之前</em>对其进行检查。这可以防止用户故意尝试引出有害内容或探测LLM的安全边界。</li>\n<li><strong>输出审核：</strong> 在LLM生成的响应显示给用户或被下游应用组件使用<em>之前</em>对其进行检查。这可以捕获LLM本身生成的潜在有害内容。</li>\n</ol>\n<p>在这两个环节都进行审核可以提供更全面的保护。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1dbct9i\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  UserInput [label=\"用户输入\"];\n  ModCheck1 [label=\"审核API\\n(输入检查)\", shape=diamond, color=\"#f03e3e\", fillcolor=\"#ffc9c9\"];\n  LLM [label=\"大型语言模型\"];\n  ModCheck2 [label=\"审核API\\n(输出检查)\", shape=diamond, color=\"#f03e3e\", fillcolor=\"#ffc9c9\"];\n  ShowOutput [label=\"显示输出 / \\n在应用中使用\"];\n  HandleInputFlag [label=\"处理被标记输入\\n(拒绝 / 重新措辞)\", color=\"#f03e3e\", fillcolor=\"#ffc9c9\"];\n  HandleOutputFlag [label=\"处理被标记输出\\n(通用响应 / 记录日志)\", color=\"#f03e3e\", fillcolor=\"#ffc9c9\"];\n\n  UserInput -> ModCheck1;\n  ModCheck1 -> LLM [label=\" 如果安全 \"];\n  ModCheck1 -> HandleInputFlag [label=\" 如果被标记 \", color=\"#f03e3e\"];\n  LLM -> ModCheck2;\n  ModCheck2 -> ShowOutput [label=\" 如果安全 \"];\n  ModCheck2 -> HandleOutputFlag [label=\" 如果被标记 \", color=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1dbct9i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的应用流程，包含了可选的输入和输出审核检查。</p>\n</blockquote>\n<h3>处理被标记 (token)内容和阈值</h3>\n<p>当内容被标记时，您的应用需要一个响应策略。简单地阻止内容在某些情况下可能合适，但其他选项包括：</p>\n<ul>\n<li><strong>记录日志：</strong> 记录被标记的内容和审核结果以供审查。</li>\n<li><strong>返回通用消息：</strong> 告知用户输入/输出不适当，但不显示有害内容。</li>\n<li><strong>要求重新措辞：</strong> 要求用户修改其输入。</li>\n<li><strong>管理员通知：</strong> 提醒管理员注意潜在的恶意使用或问题输出模式。</li>\n</ul>\n<p>大多数审核API提供每个类别的分数。您需要为这些分数决定合适的<strong>阈值</strong>。设置一个非常低的阈值可能会标记无害内容（误报），而一个非常高的阈值可能会遗漏真正有害的内容（漏报）。恰当的平衡取决于您的应用风险承受能力和具体情况。通常需要通过实验和监控来微调 (fine-tuning)这些阈值。</p>\n<p>使用审核API是构建更安全、更可靠LLM应用的重要一步。它作为独立的保障措施，补充了仔细的提示设计和输出验证，有助于保护您的用户和应用声誉。</p>",
+  "slug": "moderation-content-filtering-apis",
+  "updates": [],
+  "references": [
+    {
+      "id": 9119,
+      "title": "Moderation",
+      "author": "OpenAI",
+      "year": "2022",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/moderation",
+      "doi": "",
+      "note": "OpenAI Moderation API的官方文档，说明了其在LLM应用中进行内容安全检查的功能。",
+      "order": 1,
+      "created_at": "2025-09-05T02:16:16.698031Z",
+      "updated_at": "2025-09-09T05:02:01.144580Z"
+    },
+    {
+      "id": 9120,
+      "title": "Perspective API",
+      "author": "Jigsaw and Google",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.perspectiveapi.com/",
+      "doi": "",
+      "note": "Google Perspective API的官方网站和文档，专门用于检测文本中的毒性和其他有害属性。",
+      "order": 2,
+      "created_at": "2025-09-05T02:16:16.706000Z",
+      "updated_at": "2025-09-09T05:01:52.410101Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

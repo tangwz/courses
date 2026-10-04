@@ -1,0 +1,61 @@
+{
+  "id": 7096,
+  "title": "窗口函数详解",
+  "meta_title": "音频窗口函数详解",
+  "meta_description": "了解为什么像汉明窗这样的窗口函数会应用于音频帧，以减少频谱泄漏。",
+  "content": "<p>将音频信号分帧后，我们会得到一系列短音频片段。然而，这种分帧处理会带来一个问题。每个帧都存在突然、尖锐的起始和结束，这是原始连续声波中不存在的人为不连续性。</p>\n<p>如果我们直接分析这些帧中的频率，这些尖锐的边缘会引入大量原始语音中没有的高频噪声。这种现象称为<strong>频谱泄漏</strong>，即来自特定频率的能量“泄漏”到其他频率中，扭曲了信号的真实频率成分。为了获得准确的表示，我们必须先平滑这些边缘。</p>\n<h3>窗口函数的作用</h3>\n<p>窗口函数是一种数学函数，我们将其应用于每个帧，以解决频谱泄漏问题。其目的是减小信号在帧的起始和结束处的振幅，使其平滑地趋近于零。你可以将其理解为让每个帧在开始时轻柔地淡入，在结束时轻柔地淡出。</p>\n<p>通过将帧的音频数据与窗口函数相乘，我们最大程度地减小边界处的尖锐不连续性。这会得到一个更适合频率分析的信号，这是特征提取中重要的一步。</p>\n<h3>汉明窗</h3>\n<p>尽管存在多种类型的窗口函数，例如汉宁窗和布莱克曼窗，但对于语音识别而言，<strong>汉明窗</strong>是一种非常常用且有效的选择。汉明窗的形状是中间值接近一，并在边缘处平滑地趋向于小的非零值。</p>\n<p>过程很简单：音频帧中的每个采样点都乘以窗口函数中对应的采样点。</p>\n<p>让我们把这个过程可视化。首先，想象我们有一个具有尖锐边缘的音频帧。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1jipbl4\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"采样点编号\",\"showgrid\":false},\"yaxis\":{\"title\":\"振幅\"},\"margin\":{\"l\":50,\"r\":20,\"t\":20,\"b\":40}},\"data\":[{\"x\":[0,10,20,30,40,50,60,70,80,90,100],\"y\":[0,0.84,0.91,-0.14,-0.99,-0.76,0.28,1,0.65,-0.42,-1],\"type\":\"scatter\",\"mode\":\"lines\",\"name\":\"原始帧\",\"line\":{\"color\":\"#228be6\",\"width\":2.5}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1jipbl4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>从信号中分出的一个音频帧。注意其非零的突然起始和结束值。</p>\n</blockquote>\n<p>接下来，我们有与帧长度相同的汉明窗。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-2bckc3\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"采样点编号\",\"showgrid\":false},\"yaxis\":{\"title\":\"权重\"},\"margin\":{\"l\":50,\"r\":20,\"t\":20,\"b\":40}},\"data\":[{\"x\":[0,10,20,30,40,50,60,70,80,90,100],\"y\":[0.08,0.11,0.21,0.39,0.61,0.82,0.96,1,0.96,0.82,0.61,0.39,0.21,0.11,0.08],\"type\":\"scatter\",\"mode\":\"lines\",\"name\":\"汉明窗\",\"line\":{\"color\":\"#12b886\",\"width\":2.5}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-2bckc3\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个汉明窗。其值在中间最高，并趋向于边缘。</p>\n</blockquote>\n<p>最后，我们对帧和窗进行逐点相乘。得到的“加窗”帧现在在接近零处开始和结束，形成了一个更平滑的片段。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-yhcuzy\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"采样点编号\",\"showgrid\":false},\"yaxis\":{\"title\":\"振幅\"},\"margin\":{\"l\":50,\"r\":20,\"t\":20,\"b\":40}},\"data\":[{\"x\":[0,10,20,30,40,50,60,70,80,90,100],\"y\":[0,0.09,0.19,-0.05,-0.6,-0.62,0.27,1,0.62,-0.34,-0.61],\"type\":\"scatter\",\"mode\":\"lines\",\"name\":\"加窗帧\",\"line\":{\"color\":\"#be4bdb\",\"width\":2.5}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-yhcuzy\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>应用汉明窗后的音频帧。信号现在在两端平滑地趋于零。</p>\n</blockquote>\n<h3>与重叠帧的关联</h3>\n<p>加窗处理有助于说明我们为什么要使用<strong>重叠帧</strong>，这是上一节的一个内容。由于窗口函数会减小每个帧边缘处信号的振幅，我们有丢失这些部分所含信息的风险。</p>\n<p>通过重叠帧，我们确保在一个帧末尾被弱化的信息在下一个帧的中间部分得到充分的体现。这个过程保证音频信号的任何部分在分析过程中都不会被忽略。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1vqnf7a\" \n              data-graph-definition='graph G {\r\n  rankdir=TB;\r\n  splines=true;\r\n  overlap=false;\r\n  node [shape=none, fontname=\"sans-serif\", fontsize=10];\r\n  edge [style=invis];\r\n  subgraph cluster_0 {\r\n    label=\"重叠窗加权后的信号\";\r\n    style=\"rounded\";\r\n    bgcolor=\"#e9ecef\";\r\n    fontname=\"sans-serif\";\r\n    fontsize=12;\r\n\r\n    a1 [label=\"帧 1\\n(加权)\"];\r\n    b1 [label=\"帧 2\\n(加权)\"];\r\n    c1 [label=\"帧 3\\n(加权)\"];\r\n\r\n    a1 -- b1 -- c1;\r\n\r\n    {rank=same; a1; b1; c1;}\r\n    \r\n    a2 [pos=\"1,0!\", shape=point, style=invis];\r\n    b2 [pos=\"2,0!\", shape=point, style=invis];\r\n    c2 [pos=\"3,0!\", shape=point, style=invis];\r\n    d2 [pos=\"4,0!\", shape=point, style=invis];\r\n\r\n    edge [style=solid, color=\"#845ef7\", penwidth=2];\r\n    a2 -- b2 [label=\"\", headport=n, tailport=n, constraint=false, pos=\"c,1.5,1 c,1,1\"];\r\n    b2 -- c2 [label=\"\", headport=n, tailport=n, constraint=false, pos=\"c,2.5,1 c,2,1\"];\r\n    c2 -- d2 [label=\"\", headport=n, tailport=n, constraint=false, pos=\"c,3.5,1 c,3,1\"];\r\n  }\r\n\r\n  subgraph cluster_1 {\r\n    labeljust=\"l\";\r\n    label=\"来自原始信号的信息\";\r\n    style=\"rounded,dashed\";\r\n    bgcolor=\"#f8f9fa\";\r\n    fontname=\"sans-serif\";\r\n    fontsize=10;\r\n\r\n    x [label=\"帧 1 末尾丢失的信息...\"];\r\n    y [label=\"...在帧 2 中间被捕获。\"];\r\n    x -- y [style=solid, constraint=false, color=\"#495057\", penwidth=1, arrowhead=vee, headport=n, tailport=s, pos=\"e,2.15,0.7 b,1.85,1.2\"];\r\n  }\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1vqnf7a\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>帧之间的重叠确保了一个加窗帧末尾被减弱的信息在后续帧中得到适当分析。</p>\n</blockquote>\n<p>我们的音频现在已经分帧并加窗，信号已妥善准备好进行预处理的下一个也是最重要阶段：提取机器学习 (machine learning)模型可以用来区分不同声音的特征。</p>",
+  "slug": "windowing-functions-explained",
+  "updates": [],
+  "references": [
+    {
+      "id": 19402,
+      "title": "Discrete-Time Signal Processing",
+      "author": "Alan V. Oppenheim, Ronald W. Schafer",
+      "year": "2010",
+      "publisher": "Prentice Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.pearson.com/us/higher-education/program/Oppenheim-Discrete-Time-Signal-Processing-3rd-Edition/PGM216091.html",
+      "doi": "",
+      "note": "提供数字信号处理基础的全面论述，包括窗函数、其特性以及频谱泄漏现象的详细解释。",
+      "order": 1,
+      "created_at": "2025-09-06T13:06:46.113826Z",
+      "updated_at": "2025-09-10T03:50:11.183883Z"
+    },
+    {
+      "id": 19403,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2009",
+      "publisher": "Prentice Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Speech_and_Language_Processing.html?id=lI9Tf3vXj0oC",
+      "doi": "",
+      "note": "一本标准的语音识别教科书，为音频信号预处理（包括分帧、加窗以及使用汉明窗为特征提取做准备）提供了背景知识。",
+      "order": 2,
+      "created_at": "2025-09-06T13:06:46.117388Z",
+      "updated_at": "2025-09-10T03:50:11.371910Z"
+    },
+    {
+      "id": 19404,
+      "title": "Digital Signal Processing",
+      "author": "Prof. Alan V. Oppenheim",
+      "year": "2011",
+      "publisher": "Massachusetts Institute of Technology",
+      "journal": "MIT OpenCourseWare, Course RES.6-008",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/res-6-008-digital-signal-processing-spring-2011/",
+      "doi": "",
+      "note": "包含讲义和习题，涵盖离散时间傅里叶分析，包括有限持续时间信号的影响以及窗函数在减轻频谱泄漏方面的必要性。",
+      "order": 3,
+      "created_at": "2025-09-06T13:06:46.120789Z",
+      "updated_at": "2025-09-10T03:50:02.530689Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

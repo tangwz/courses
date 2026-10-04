@@ -1,0 +1,45 @@
+{
+  "id": 1284,
+  "title": "模板匹配的运作方式",
+  "meta_title": "模板匹配的运作方式",
+  "meta_description": "对模板匹配中滑动窗口方法的逐步解释。",
+  "content": "<p>让我们详细解释模板匹配如何在一张较大图像（<em>源图像</em>）中查找一张较小图像（<em>模板</em>）。这项核心技术依赖于一种系统搜索过程，通常称为“滑动窗口”方法。</p>\n<p>想象一下，你有一张小的模板图像，也许是你想查找的某个特定图标的图片。你还有一张较大的源图像，你认为这个图标可能出现在其中。</p>\n<ol>\n<li><strong>滑动窗口：</strong> 模板匹配开始时，将模板放置到源图像的左上角。然后，它将模板直接与当前重叠的源图像图像块进行比较。</li>\n<li><strong>逐像素比较：</strong> 在此位置，算法计算一个<em>分数</em>，用以量化 (quantization)模板与底层图像块的匹配程度。有几种方法可以计算此分数，每种方法都有各自的优点。常用方法包括：\n<ul>\n<li><strong>平方差之和 (SSD)：</strong> 此方法计算模板中每个像素的强度值与源图像块中对应像素之间的差值。它将这些差值平方（使它们都变为正数），然后将它们全部相加。完美的匹配将导致 SSD 分数为 0，因为任何对应像素之间都没有差异。SSD 分数越小，该位置的匹配越好。</li>\n<li><strong>归一化 (normalization)互相关 (NCC)：</strong> 这是一种常用方式，尤其当模板与源图像之间的整体亮度可能存在差异时。它计算模板与图像块之间的统计相关性，结果分数通常在 -1.0 和 1.0 之间（有时归一化到 0.0 到 1.0）。分数为 1.0 表示完美正相关（极佳匹配），0 表示没有相关性，-1.0 表示完美负相关（就像匹配照片底片）。对于 NCC，分数越高表示匹配越好。</li>\n</ul>\n</li>\n<li><strong>系统滑动：</strong> 计算完初始左上角位置的分数后，算法将模板向右“滑动”一个像素，并重复比较，为这个新位置计算一个新分数。它会继续这个过程，使模板滑动到源图像的整个宽度。</li>\n<li><strong>向下移动：</strong> 一旦到达右边缘，它会将模板移回左边缘，但会向下移动一个像素。然后它会在此新行上滑动，为每个位置计算分数。</li>\n<li><strong>覆盖所有位置：</strong> 这种滑动（从左到右，从上到下）一直持续，直到模板与源图像中所有可能完全适合的图像块进行比较。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-wq54u8\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Arial\", fontsize=10];\n  edge [arrowhead=none, color=\"#495057\"]; // 灰色\n\n  subgraph cluster_source {\n    label = \"源图像 (I)\";\n    bgcolor=\"#e9ecef\"; // 浅灰色\n    node [shape=plaintext, fontsize=12];\n    I [label=\"\"];\n    I [fixedsize=true, width=2.5, height=1.5, style=\"solid,filled\", fillcolor=\"#dee2e6\", color=\"#adb5bd\"]; // 灰色方框\n  }\n\n  subgraph cluster_template {\n    label = \"模板 (T)\";\n    bgcolor=\"#e9ecef\"; // 浅灰色\n    node [shape=plaintext, fontsize=12];\n    T [label=\"\"];\n    T [fixedsize=true, width=0.8, height=0.5, style=\"solid,filled\", fillcolor=\"#a5d8ff\", color=\"#339af0\"]; // 浅蓝色方框\n  }\n\n  subgraph cluster_process {\n    label = \"滑动与比较\";\n    bgcolor=\"#ffffff\";\n    node [shape=plaintext, fontsize=10, fontcolor=\"#495057\"];\n    P1 [label=\"1. 将 T 放置在 (u, v)\"];\n    P2 [label=\"2. 计算分数(u, v)\\n   (例如, SSD 或 NCC)\"];\n    P3 [label=\"3. 存储分数\"];\n    P4 [label=\"4. 滑动 T\\n   (例如, 向右或向下)\"];\n    P1 -> P2 [color=\"#7048e8\"]; // 紫罗兰色\n    P2 -> P3 [color=\"#7048e8\"]; // 紫罗兰色\n    P3 -> P4 [color=\"#7048e8\"]; // 紫罗兰色\n    P4 -> P1 [style=dashed, color=\"#adb5bd\"]; // 灰色虚线\n  }\n\n  T -> I [style=invis];\n  I -> P1 [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-wq54u8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>模板 (T) 被系统地放置在源图像 (I) 的不同位置 (u, v) 上。在每个位置，都会计算一个相似度分数，然后模板滑动到下一个位置。</p>\n</blockquote>\n<ol start=\"6\">\n<li><strong>结果图：</strong> 随着模板的滑动，在每个位置 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mi>u</mi><mo separator=\"true\">,</mo><mi>v</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">(u, v)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">u</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span><span class=\"mclose\">)</span></span></span></span> 计算的分数有效地创建了一个新的二维图，通常称为<em>相关图</em>或<em>相似度图</em>。此图的尺寸与源图像和模板图像之间的大小差异有关。此结果图中的每个像素表示模板在源图像中可能的左上角起始位置，其值包含该位置的匹配分数。</li>\n<li><strong>查找最佳匹配：</strong> 最后一步是简单地查找相似度图中具有“最佳”分数的位置。如果使用 SSD，则查找最小值（最小差异）。如果使用 NCC，则查找最大值（最高相关性）。相似度图中此最佳分数的坐标会告诉你原始源图像中模板匹配最接近的左上角 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">,</mo><mi>y</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">(x, y)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mclose\">)</span></span></span></span>。</li>\n</ol>\n<p>这种滑动窗口比较是基本模板匹配背后的根本机制。像 OpenCV 这样的库提供了优化函数（如 <code>cv2.matchTemplate</code>），它们能非常高效地执行这些计算，让你能够轻松地在代码中应用此技术，这将在即将到来的练习部分中看到。</p>",
+  "slug": "how-template-matching-works",
+  "updates": [],
+  "references": [
+    {
+      "id": 515,
+      "title": "Computer Vision: Algorithms and Applications",
+      "author": "Richard Szeliski",
+      "year": "2010",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3",
+      "url": "http://szeliski.org/Book/",
+      "doi": "",
+      "note": "涵盖图像相关性、平方差和（SSD）、归一化互相关（NCC）以及滑动窗口方法，这些是图像处理中的核心概念。",
+      "order": 1,
+      "created_at": "2025-09-04T14:38:00.534739Z",
+      "updated_at": "2025-09-07T16:32:39.538047Z"
+    },
+    {
+      "id": 517,
+      "title": "Template Matching",
+      "author": "OpenCV team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html",
+      "doi": "",
+      "note": "`cv2.matchTemplate`函数的官方文档，详细说明了其用法、参数以及支持的匹配方法，例如`TM_SQDIFF`和`TM_CCORR_NORMED`。",
+      "order": 3,
+      "created_at": "2025-09-04T14:38:00.540994Z",
+      "updated_at": "2025-09-07T16:32:42.779099Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

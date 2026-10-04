@@ -1,0 +1,61 @@
+{
+  "id": 3990,
+  "title": "识别完全重复行",
+  "meta_title": "如何查找完全重复行",
+  "meta_description": "使用编程方法检测所有列都相同的行。",
+  "content": "<p>有时，数据集里会多次出现完全相同的记录。这可能是因为数据录入错误、数据收集时的系统故障，或者合并不同来源数据时出现问题。这些相同的条目被称为<strong>完全重复行</strong>。它们是指<em>每一列</em>中的值都与另一行中的值完全匹配的行。</p>\n<p>可以把它想象成你的收藏中有同一个人两张一模一样的名片。它们提供的信息完全相同。在数据集中，这些完全重复的记录不会增加新信息，反而可能使计数虚高，扭曲统计汇总（如平均值或总和），并可能使基于这些数据训练的算法产生偏差。</p>\n<p>识别这些行通常是处理重复数据的第一步，因为这是最直接的情况。我们寻找的是整个记录的完全匹配。</p>\n<h3>使用工具查找精确匹配</h3>\n<p>数据集中可能会出现完全相同的记录。这些重复的条目被称为<strong>完全重复行</strong>，它们的每个列中的值都与另一行中的值完全匹配。大多数数据分析工具都提供函数来检测这些完全重复的行。Python的pandas库常用于数据操作，我们可以在此使用它来演示。例如，以下是一个简单的客户反馈分数数据集：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">会话ID</th>\n<th align=\"left\">反馈日期</th>\n<th align=\"left\">分数</th>\n<th align=\"left\">产品</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">C101</td>\n<td align=\"left\">S201</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">8</td>\n<td align=\"left\">WidgetA</td>\n</tr>\n<tr>\n<td align=\"left\">C102</td>\n<td align=\"left\">S202</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">9</td>\n<td align=\"left\">WidgetB</td>\n</tr>\n<tr>\n<td align=\"left\">C101</td>\n<td align=\"left\">S203</td>\n<td align=\"left\">2023-10-27</td>\n<td align=\"left\">7</td>\n<td align=\"left\">WidgetA</td>\n</tr>\n<tr>\n<td align=\"left\">C102</td>\n<td align=\"left\">S202</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">9</td>\n<td align=\"left\">WidgetB</td>\n</tr>\n<tr>\n<td align=\"left\">C103</td>\n<td align=\"left\">S204</td>\n<td align=\"left\">2023-10-27</td>\n<td align=\"left\">10</td>\n<td align=\"left\">WidgetC</td>\n</tr>\n<tr>\n<td align=\"left\">C101</td>\n<td align=\"left\">S201</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">8</td>\n<td align=\"left\">WidgetA</td>\n</tr>\n</tbody>\n</table>\n<p>仔细观察，你会发现第二行（索引1：C102, S202, ...）与第四行（索引3）相同。此外，第一行（索引0：C101, S201, ...）与最后一行（索引5）也相同。这些都是完全重复的记录。</p>\n<p>如果这些数据加载到一个名为<code>feedback_df</code>的pandas DataFrame中，我们可以使用<code>.duplicated()</code>方法来识别它们：</p>\n<pre><code class=\"language-python\"># 如果尚未导入pandas，请先导入\nimport pandas as pd\n\n# 示例DataFrame（请替换为你的实际数据加载）\ndata = {\n    'CustomerID': ['C101', 'C102', 'C101', 'C102', 'C103', 'C101'],\n    'SessionID': ['S201', 'S202', 'S203', 'S202', 'S204', 'S201'],\n    'FeedbackDate': ['2023-10-26', '2023-10-26', '2023-10-27', '2023-10-26', '2023-10-27', '2023-10-26'],\n    'Score': [8, 9, 7, 9, 10, 8],\n    'Product': ['WidgetA', 'WidgetB', 'WidgetA', 'WidgetB', 'WidgetC', 'WidgetA']\n}\nfeedback_df = pd.DataFrame(data)\n\n# 检查完全重复行\n# 默认情况下，它将后续出现的重复项标记为True\nis_duplicate = feedback_df.duplicated()\n\n# 显示每行的布尔结果\nprint(is_duplicate)\n</code></pre>\n<h3>理解输出结果</h3>\n<p><code>duplicated()</code>方法返回一个包含布尔值（<code>True</code>或<code>False</code>）的pandas Series。这个Series的长度与原始DataFrame中的行数匹配。</p>\n<p>我们示例的输出结果如下：</p>\n<pre><code>0    False\n1    False\n2    False\n3     True\n4    False\n5     True\ndtype: bool\n</code></pre>\n<p>解读如下：</p>\n<ul>\n<li><strong><code>False</code></strong>: 表示该行在目前检查过的数据集中是唯一的，或者是<em>一组重复行</em>中的第一次出现。默认情况下，pandas会将它遇到的第一个实例视为“原始”数据，而不是重复数据。</li>\n<li><strong><code>True</code></strong>: 表示该行是DataFrame中<em>较早出现</em>的行的精确副本。在我们的例子中，第3行被识别为<code>True</code>，因为它与第1行相同。第5行被标记 (token)为<code>True</code>，因为它与第0行相同。</li>\n</ul>\n<p>这个布尔Series作为一个标记，指出基于所有列匹配的冗余副本行。在进行下一步之前，这种识别是必不可少的，下一步通常涉及决定是否移除这些标记的重复项以清理数据集。我们将在“移除重复行”一节中介绍移除过程。</p>",
+  "slug": "identifying-complete-duplicates",
+  "updates": [],
+  "references": [
+    {
+      "id": 10754,
+      "title": "pandas.DataFrame.duplicated",
+      "author": "pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.duplicated.html",
+      "doi": "",
+      "note": "关于如何使用`duplicated()`方法在pandas DataFrame中识别完全重复行的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:16.573353Z",
+      "updated_at": "2025-09-08T12:59:22.442030Z"
+    },
+    {
+      "id": 10755,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/python-for-data/9781491957653/",
+      "doi": "",
+      "note": "一本关于使用pandas进行数据操作和清洗的实用指南，包含重复数据检测。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:16.682939Z",
+      "updated_at": "2025-09-08T12:59:32.884198Z"
+    },
+    {
+      "id": 10756,
+      "title": "Data Mining: Concepts and Techniques",
+      "author": "Jiawei Han, Micheline Kamber, and Jian Pei",
+      "year": "2011",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1",
+      "doi": "",
+      "note": "提供了数据预处理的背景信息，包括处理冗余数据的方法。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:16.686984Z",
+      "updated_at": "2025-09-08T12:59:38.224554Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

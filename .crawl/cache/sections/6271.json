@@ -1,0 +1,61 @@
+{
+  "id": 6271,
+  "title": "LLM 红队测试生命周期",
+  "meta_title": "LLM 红队测试生命周期 | AI 安全流程",
+  "meta_description": "了解 LLM 红队测试工作的各个阶段，从规划到报告。",
+  "content": "<p>如同软件开发或传统网络安全评估遵循结构化方法一样，有效的 LLM 红队测试并非一系列随意尝试来攻破模型。相反，它是一个系统性流程，常被称为 LLM 红队测试生命周期。掌握这些阶段将帮助您组织工作，确保全面覆盖，并提供有价值的发现。尽管具体做法在不同组织或任务间可能略有差异，但核心阶段通常保持一致。</p>\n<p>让我们逐一讲解这些阶段：</p>\n<h3>1. 规划与范围确定</h3>\n<p>这个初始阶段是整个任务的基础。在开始任何测试之前，明确界定您要达成的目标以及活动范围至关重要。</p>\n<ul>\n<li><strong>确定目标：</strong> 主要目标是什么？您是在测试提示注入、偏见或数据泄露等特定脆弱点吗？还是对 LLM 的安全状态进行更一般的评估？</li>\n<li><strong>确定范围：</strong> 哪些 LLM、API、应用程序或系统组件在测试范围内？哪些不在范围内？例如，您是仅测试模型的响应，还是也测试周边基础设施？</li>\n<li><strong>制定交战规则 (RoE)：</strong> 这包括允许的攻击类型、需避免影响的关键系统、沟通协议以及联系人。这确保红队安全且合乎道德地行动。</li>\n<li><strong>资源分配：</strong> 有哪些时间、工具和人员可用于本次任务？</li>\n<li><strong>团队组建：</strong> 组建一个技能组合适当的团队，我们曾在“LLM 红队中的角色与职责”中提及，这也是本阶段的一部分。</li>\n</ul>\n<p>后续章节“为 LLM 红队测试设定目标与范围”将更详细地审视这个重要第一步。</p>\n<h3>2. 情报收集（侦察）</h3>\n<p>规划完成后，下一步是在界定范围内尽可能多地了解目标 LLM 系统。您拥有的信息越多，就越能有效地发现潜在弱点。</p>\n<ul>\n<li><strong>模型理解：</strong> 它是哪种类型的 LLM（例如，基础模型、指令微调 (fine-tuning)模型、微调模型）？它的已知能力和局限性是什么？</li>\n<li><strong>系统架构：</strong> LLM 是如何部署的？哪些 API 被公开？它如何与其他系统或数据源交互？</li>\n<li><strong>文档审阅：</strong> 研读所有可用文档、研究论文或关于该模型或类似模型的公开信息。</li>\n<li><strong>识别预期使用场景：</strong> 了解 LLM 预期如何使用可以显示潜在滥用情境。</li>\n</ul>\n<h3>3. 威胁建模与脆弱点假设</h3>\n<p>凭借收集到的情报，您可以开始像攻击者一样思考。此阶段涉及识别潜在威胁，并假设脆弱点可能存在的位置。我们之前在“LLM 脆弱点：简介”中介绍了一些常见的 LLM 脆弱点，而此阶段正是您思考这些脆弱点以及其他脆弱点如何应用于目标系统的时候。</p>\n<ul>\n<li><strong>识别攻击面：</strong> 确定攻击者可以与 LLM 交互或影响 LLM 的所有方式（例如，用户提示、API 输入，如果已知，还包括训练数据源）。第 2 章“理解 LLM 攻击面”将详细讨论此事。</li>\n<li><strong>考虑威胁行为者：</strong> 谁可能攻击这个 LLM？他们的动机和能力是什么？</li>\n<li><strong>形成假设：</strong> 根据模型类型、其部署方式以及已知的 LLM 弱点，提出关于潜在脆弱点的具体假设。例如，“LLM 可能受到通过检索到的文档进行的间接提示注入的影响”或“如果正确提示，模型可能暴露敏感占位符信息。”</li>\n</ul>\n<h3>4. 攻击执行（对抗性测试）</h3>\n<p>本阶段是实际测试发生的地方。红队积极探测 LLM 系统，使用多种技术来确认或驳斥假设的脆弱点。</p>\n<ul>\n<li><strong>制作输入：</strong> 开发旨在触发不良行为、诱导敏感信息或绕过安全控制的特定提示、查询或输入。</li>\n<li><strong>运用技术：</strong> 这可以从手动提示制作到使用自动化工具进行模糊测试或生成对抗性示例。我们将在第 3 章“LLM 红队测试核心技术”和第 4 章“高级规避与数据窃取方法”中涵盖其中许多技术。</li>\n<li><strong>观察与记录：</strong> 仔细观察 LLM 的响应和系统行为。记录所有尝试，无论成功与否，以及所用的输入和收到的输出。</li>\n</ul>\n<h3>5. 分析与影响评估</h3>\n<p>执行阶段结束后，收集到的数据需要仔细分析。</p>\n<ul>\n<li><strong>验证发现：</strong> 确认观察到的行为确实是脆弱点，而非误解或预期局限。</li>\n<li><strong>确定根本原因：</strong> 如果可能，了解为何某个攻击成功。</li>\n<li><strong>评估影响：</strong> 评估每个已确认脆弱点的潜在业务或安全影响。例如，一次成功的提示注入是否会导致数据窃取、声誉损害或法律问题？</li>\n</ul>\n<h3>6. 报告与补救建议</h3>\n<p>红队努力的成果是一份全面报告，详细说明发现并提供可操作的建议。</p>\n<ul>\n<li><strong>报告结构：</strong> 清晰地呈现发现，包括执行摘要、详细的脆弱点描述、重现步骤、证据（例如日志、截图）以及评估影响。</li>\n<li><strong>有效沟通：</strong> 根据不同受众（例如技术团队、管理层）调整沟通方式。</li>\n<li><strong>提供可操作建议：</strong> 提出具体的缓解策略，例如输入净化、输出过滤、模型微调 (fine-tuning)或改进监控。我们将在第 5 章讨论防御措施，并在第 6 章讨论报告。</li>\n</ul>\n<h3>7. 复测与验证（通常迭代进行）</h3>\n<p>在开发团队或模型所有者实施缓解措施后，复测已识别的脆弱点是良好实践。</p>\n<ul>\n<li><strong>验证修复：</strong> 确认应用的补丁或更改有效地解决了脆弱点，而未引入新问题。</li>\n<li><strong>持续改进：</strong> 红队测试生命周期并非总是严格线性。一个阶段的发现可能导致您重新审视更早的阶段。例如，一次失败的攻击可能导致新的情报收集或细化威胁模型。同样，补救工作可能导致一个新的测试周期。</li>\n</ul>\n<p>下图展示了这些相互关联的阶段，突出了在全面的红队测试任务中常见的循环性质。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3koifz\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"filled,rounded\", fillcolor=\"#e9ecef\", fontname=\"Helvetica\", margin=\"0.1,0.1\"]; edge [fontname=\"Helvetica\", fontsize=10];\nPlanning [label=\"1. 规划与\\n范围确定\", fillcolor=\"#a5d8ff\"];\nRecon [label=\"2. 情报\\n收集\", fillcolor=\"#bac8ff\"];\nThreatModel [label=\"3. 威胁建模与\\n脆弱点假设\", fillcolor=\"#d0bfff\"];\nExecution [label=\"4. 攻击\\n执行\", fillcolor=\"#eebefa\"];\nAnalysis [label=\"5. 分析与\\n影响评估\", fillcolor=\"#fcc2d7\"];\nReporting [label=\"6. 报告与\\n建议\", fillcolor=\"#ffc9c9\"];\nRetesting [label=\"7. 复测\", fillcolor=\"#ffd8a8\"];\n\nPlanning -> Recon [penwidth=1.5];\nRecon -> ThreatModel [penwidth=1.5];\nThreatModel -> Execution [penwidth=1.5];\nExecution -> Analysis [penwidth=1.5];\nAnalysis -> Reporting [penwidth=1.5];\nReporting -> Retesting [style=dashed, penwidth=1.5];\nRetesting -> Planning [style=dashed, label=\"  调整范围/\\n新任务  \", penwidth=1.5];\nReporting -> Planning [style=dotted, constraint=false, label=\"持续改进\", penwidth=1.5, dir=back, color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3koifz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个典型的 LLM 红队测试生命周期，显示了从规划到报告的进展，并包含一个可选的复测阶段，该阶段可能导致进一步调整或新的任务。</p>\n</blockquote>\n<p>遵循这样的结构化生命周期，将红队测试从一门艺术转变为一个更具科学性和可重复性的流程。它确保您的工作专注、全面，并最终在增强大型语言模型安全方面更有价值。在本课程中，我们将回顾这些阶段，并查看与每个阶段相关的工具和技术。</p>",
+  "slug": "llm-red-teaming-lifecycle",
+  "updates": [],
+  "references": [
+    {
+      "id": 17597,
+      "title": "OWASP Top 10 for Large Language Model Applications",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://llm.owasp.org/",
+      "doi": "",
+      "note": "一份实用的指南，详细说明了LLM应用程序最关键的安全风险，对红队行动中的目标定义、范围界定和威胁建模有参考价值。",
+      "order": 1,
+      "created_at": "2025-09-06T12:02:07.621335Z",
+      "updated_at": "2026-02-04T11:28:20.568058Z"
+    },
+    {
+      "id": 17598,
+      "title": "Red Teaming Large Language Models: A Systematic Survey",
+      "author": "Jiacheng Liu, Zhiyuan Wang, Ruijia Cheng, Jiashu Xu, Zhiwei Zhang, Xushun Tong, Yunzhi Yao, Zhengliang Liu, Xi Jiang, Chenwei Wu, Han Liu, Dajiang Zhu, Carl Yang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2308.10654",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2308.10654",
+      "doi": "",
+      "note": "对LLM红队行动的系统性调查，讨论了方法论、攻击类型和评估指标，从研究角度呈现了红队生命周期。",
+      "order": 2,
+      "created_at": "2025-09-06T12:02:07.625194Z",
+      "updated_at": "2026-02-04T11:28:20.618757Z"
+    },
+    {
+      "id": 17599,
+      "title": "Artificial Intelligence Risk Management Framework (AI RMF 1.0)",
+      "author": "Elham Tabassi",
+      "year": "2023",
+      "publisher": "National Institute of Standards and Technology",
+      "journal": "NIST Trustworthy and Responsible AI",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.6028/NIST.AI.100-1",
+      "doi": "10.6028/NIST.AI.100-1",
+      "note": "管理AI相关风险的权威框架，包含了治理、风险评估和影响分析的指南，支持结构化的红队方法。",
+      "order": 3,
+      "created_at": "2025-09-06T12:02:07.628163Z",
+      "updated_at": "2026-02-04T11:28:20.832079Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

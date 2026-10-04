@@ -1,0 +1,61 @@
+{
+  "id": 3989,
+  "title": "定义预测端点",
+  "meta_title": "在 Flask 中创建预测 API 端点",
+  "meta_description": "在 Flask 中设置特定的 URL 路由来处理传入的预测请求。",
+  "content": "<p>一个基本的 Flask 应用正在运行，其内存中已使用 <code>pickle</code> 或 <code>joblib</code> 等方法加载了训练好的机器学习 (machine learning)模型。那么，如何才能 <em>真正使用</em> 这个模型呢？另一个程序又该怎样向该应用发送数据并获得预测结果呢？</p>\n<p>这就是“<strong>端点</strong>”的作用所在。可以把你的 Flask 应用看作一个小型网络服务器。端点就像服务器上的一个特定地址或 URL 路径，专门用来处理某一类请求。当外部客户端（例如网页浏览器、移动应用或另一个后端服务）向该特定 URL 路径发送请求时，Flask 就会知道你的 Python 代码中哪一部分应该处理它。</p>\n<h3>使用 <code>@app.route()</code> 将 URL 映射到函数</h3>\n<p>Flask 通过一项名为“<strong>装饰器</strong>”的功能，使定义这些端点变得非常直接简单。具体来说，我们使用 <code>@app.route()</code> 装饰器。Python 中的装饰器是一种特殊的函数，用于修改或增强另一个函数。在 Flask 中，<code>@app.route()</code> 直接放在标准 Python 函数定义的上方。它的作用是告诉 Flask：“每当针对括号内指定的 URL 路径的 Web 请求到来时，就执行紧随其后定义的函数。”</p>\n<p>让我们来看具体例子。我们想创建一个专门处理预测请求的端点。为此，一个常用且具有描述性的 URL 路径是 <code>/predict</code>。这是你开始在 Flask 应用文件（通常命名为 <code>app.py</code> 或类似名称）中定义它的方式：</p>\n<pre><code class=\"language-python\"># 假设 'app' 是你的 Flask 应用实例，已像这样创建：\n# from flask import Flask\n# app = Flask(__name__)\n\n# 同时假设 'model' 是你已加载的机器学习模型\n\n# 定义预测端点\n@app.route('/predict')\ndef handle_prediction():\n    # 此函数最终将包含预测逻辑\n    # 目前，它只返回一个简单的文本消息\n    return \"Prediction requests will be handled here.\"\n\n# （你的 app.run() 调用会放在其他地方，通常在文件末尾）\n</code></pre>\n<p>在这段代码中：</p>\n<ol>\n<li><code>@app.route('/predict')</code>：这是装饰器。它向 Flask 注册 URL 路径 <code>/predict</code>。</li>\n<li><code>def handle_prediction():</code>：这是当请求到达 <code>/predict</code> 时 Flask 将执行的普通 Python 函数。我们给了它一个描述性的名称，<code>handle_prediction</code>。</li>\n<li><code>return \"Prediction requests will be handled here.\"</code>：目前，此函数只返回一个基本字符串。稍后，我们将修改它来执行实际的预测。</li>\n</ol>\n<h3>选择正确的 HTTP 方法：GET 与 POST</h3>\n<p>Web 通信依赖于 <strong>HTTP 方法</strong>（也称为动词）来指示请求的预期操作。你最初会遇到的两种最常见方法是 <code>GET</code> 和 <code>POST</code>。</p>\n<ul>\n<li><code>GET</code>：主要用于获取数据。当你在浏览器的地址栏中输入 URL 时，通常就是在发出 <code>GET</code> 请求。数据通常直接在 URL 本身中传递（作为查询参数 (parameter)，例如 <code>?name=value</code>）。</li>\n<li><code>POST</code>：主要用于向服务器发送数据以创建或更新资源，或触发需要输入数据的过程。数据在请求的 <em>正文</em> 中发送，通常在 URL 中不可见。</li>\n</ul>\n<p>对于使用机器学习 (machine learning)模型进行预测，我们几乎总是需要发送输入数据（模型期望的特征）。这些输入数据有时可能很复杂或很大（例如图像数据或长文本 (long context)）。在 URL 中发送这些数据（就像 <code>GET</code> 可能做的那样）是不切实际的，而且通常有长度限制。因此，预测端点的标准做法是使用 <code>POST</code> 方法。客户端将在请求正文中发送输入特征，通常以 JSON 格式（我们将在下一节中介绍）。</p>\n<p>我们如何告诉 Flask 我们的 <code>/predict</code> 端点只响应 <code>POST</code> 请求呢？我们通过添加 <code>methods</code> 参数来修改 <code>@app.route()</code> 装饰器：</p>\n<pre><code class=\"language-python\">from flask import Flask # 确保 Flask 已导入\n\n# 假设 app = Flask(__name__) 且模型已加载\n\n@app.route('/predict', methods=['POST']) # 指定此路由接受 POST 请求\ndef predict(): # 函数名可以是任何东西，'predict' 是常用名称\n    # --- 占位逻辑 ---\n    # 1. 稍后我们将在此处添加代码以从 POST 请求中获取输入数据。\n    # 2. 稍后我们将在此处添加代码以使用 'model' 进行预测。\n    # 3. 稍后我们将在此处添加代码以格式化并返回预测结果。\n    # --- 占位逻辑结束 ---\n\n    # 目前，只需确认端点通过 POST 请求到达\n    return \"Received a POST request on /predict\"\n\n# （如果这是你的主脚本，请记住包含 app.run()）\n# if __name__ == '__main__':\n#     # 如果模型尚未全局加载，请先在此处加载你的模型\n#     # e.g., model = joblib.load('your_model.pkl')\n#     app.run(debug=True) # debug=True 在开发过程中很有用\n</code></pre>\n<p>现在，我们的 Flask 应用知道函数 <code>predict()</code> 只应在 <code>POST</code> 请求到达 <code>/predict</code> URL 路径时执行。如果有人尝试使用 <code>GET</code> 请求访问 <code>/predict</code>（例如，直接在浏览器中输入），Flask 通常会返回一个错误，指示该方法不被允许。</p>\n<p>你已经成功定义了预测请求进入应用所通过的特定“大门”（即使用 <code>POST</code> 方法的 <code>/predict</code>）。接下来的步骤是在 <code>predict()</code> 函数内部编写代码，以实际处理传入数据、使用模型并返回有意义的响应。</p>",
+  "slug": "defining-prediction-endpoint",
+  "updates": [],
+  "references": [
+    {
+      "id": 10866,
+      "title": "Flask Documentation: Quickstart - Routing",
+      "author": "Pallets",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://flask.palletsprojects.com/en/latest/quickstart/#routing",
+      "doi": "",
+      "note": "Flask官方指南，介绍如何使用@app.route()装饰器定义URL路由并将其与Python函数关联。",
+      "order": 1,
+      "created_at": "2025-09-05T06:55:08.998051Z",
+      "updated_at": "2025-09-08T13:22:12.759358Z"
+    },
+    {
+      "id": 10867,
+      "title": "Building Machine Learning Powered Applications: Going from Idea to Product",
+      "author": "Emmanuel Ameisen",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/building-machine-learning/9781492045113/",
+      "doi": "",
+      "note": "为部署机器学习模型提供实用指导，包括创建用于预测服务的API端点。",
+      "order": 2,
+      "created_at": "2025-09-05T06:55:09.003919Z",
+      "updated_at": "2025-09-08T13:22:45.624085Z"
+    },
+    {
+      "id": 10869,
+      "title": "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (RFC 7231)",
+      "author": "R. Fielding, Ed., J. Reschke, Ed.",
+      "year": "2014",
+      "publisher": "IETF Trust",
+      "journal": "Internet Engineering Task Force (IETF)",
+      "volume": "",
+      "pages": "",
+      "url": "https://datatracker.ietf.org/doc/html/rfc7231",
+      "doi": "",
+      "note": "HTTP方法（如GET和POST）的权威规范，解释其语义和适用于Web通信的场景。",
+      "order": 4,
+      "created_at": "2025-09-05T06:55:09.008895Z",
+      "updated_at": "2025-09-08T13:22:03.139235Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 998,
+  "title": "将文件添加到暂存区 (git add)",
+  "meta_title": "在 Git 中暂存更改 | git add 命令",
+  "meta_description": "了解如何使用 `git add` 暂存文件中的更改，为下次提交做准备。",
+  "content": "<p>将工作目录中的文件修改或创建新文件后，Git 需要知道你想在下一次快照（或提交）中包含哪些特定更改。这时就需要使用<strong>暂存区</strong>（有时也称为索引）。可以把暂存区看作一个准备空间，你可以在其中收集所有计划在下一次提交中一同保存的更改。</p>\n<p>用于将更改添加到此暂存区的命令是 <code>git add</code>。它告诉 Git：“将此文件（或这些文件）的当前状态准备好，以供下次提交。” 这一步很重要，因为它允许你选择性地决定哪些修改将成为项目历史的一部分。你可能做了多次修改，但只想将相关的更改组合成一个单独的、有逻辑的提交。</p>\n<h3>暂存单个文件</h3>\n<p>使用 <code>git add</code> 最常见的方式是指定要暂存的确切文件。如果你修改了名为 <code>README.md</code> 的文件并创建了一个新文件 <code>main.py</code>，可以这样暂存 <code>README.md</code> 中的更改：</p>\n<pre><code class=\"language-bash\">git add README.md\n</code></pre>\n<p>如果现在运行 <code>git status</code>，你会看到 <code>README.md</code> 已经从“未暂存的更改”部分（如果它是新文件且刚刚添加，则为“未跟踪的文件”）移动到“待提交的更改”部分。文件 <code>main.py</code> 仍将列为未暂存或未跟踪。</p>\n<h3>暂存多个文件</h3>\n<p>你可以在 <code>git add</code> 命令后面列出多个具体文件来暂存它们：</p>\n<pre><code class=\"language-bash\">git add README.md main.py styles.css\n</code></pre>\n<p>此命令会暂存所有这三个列出文件的当前状态。</p>\n<h3>暂存所有更改</h3>\n<p>通常，你会希望暂存当前工作目录及其子目录中的所有修改和新文件。你可以使用句点 (<code>.</code>) 来实现这一点，它代表当前目录：</p>\n<pre><code class=\"language-bash\">git add .\n</code></pre>\n<p>此命令会查看从当前目录向下（包括其子目录）的所有文件。它会暂存：</p>\n<ul>\n<li>对已跟踪文件的修改。</li>\n<li>新创建的文件。</li>\n</ul>\n<p>使用 <code>git add .</code> 时要小心。它会添加当前路径中的<em>所有内容</em>，因此请确保你没有意外地暂存临时文件、构建输出或本应列在 <code>.gitignore</code> 文件（我们之前讨论过）中的敏感信息。</p>\n<p>另一个常用选项是 <code>git add -A</code>（或 <code>git add --all</code>）：</p>\n<pre><code class=\"language-bash\">git add -A\n</code></pre>\n<p>此命令会暂存整个仓库中的<em>所有</em>更改，无论你当前在哪个目录。这包括修改、新文件和<em>已删除</em>的文件。虽然功能强大，但使用时要像使用 <code>git add .</code> 一样小心，以避免暂存不想要的更改。</p>\n<h3>流程图示</h3>\n<p><code>git add</code> 命令是工作目录和暂存区之间的桥梁，它为将更改保存到仓库历史（通过 <code>git commit</code> 完成）的最后一步做准备。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-u9toqf\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [fontname=\"Helvetica\", fontsize=10];\n\n  WD [label=\"工作目录\\n(你编辑的文件)\", color=\"#495057\", fontcolor=\"#495057\"];\n  SA [label=\"暂存区 (索引)\\n(准备好提交的更改)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n  Repo [label=\"仓库 (.git)\\n(已提交的历史记录)\", color=\"#37b24d\", fontcolor=\"#37b24d\"];\n\n  WD -> SA [label=\" git add <文件> \", color=\"#1c7ed6\"];\n  SA -> Repo [label=\" git commit \", color=\"#37b24d\"];\n  Repo -> WD [label=\" git checkout / git switch \", color=\"#ae3ec9\"];\n  WD -> WD [label=\" 编辑文件 \", pos=\"n,n\", color=\"#f76707\"];\n\n  subgraph cluster_workflow {\n    label = \"基本 Git 流程\";\n    style = \"filled\";\n    color = \"#e9ecef\";\n    fontname=\"Helvetica\";\n    fontsize=12;\n    node [style=filled,color=white];\n    WD; SA; Repo;\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-u9toqf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>git add</code> 命令将更改从工作目录移动到暂存区。随后的 <code>git commit</code> 操作会将暂存区的内容保存到仓库。</p>\n</blockquote>\n<p>请记住，<code>git add</code> 不会将更改永久保存到历史记录中；它只是做准备。你仍然需要使用 <code>git commit</code>（接下来会讲到）来将暂存的快照记录到仓库的时间线中。在一次提交前多次运行 <code>git add</code> 是完全正常的；每次执行都会将指定文件的<em>当前</em>状态添加到暂存区，覆盖该文件之前暂存的任何版本。</p>",
+  "slug": "git-add-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 257,
+      "title": "git-add(1) Manual Page",
+      "author": "Git Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-add",
+      "doi": "",
+      "note": "`git add` 命令的官方文档，详细说明了其用法和选项。",
+      "order": 1,
+      "created_at": "2025-09-04T14:01:36.881184Z",
+      "updated_at": "2025-09-07T15:42:49.148001Z"
+    },
+    {
+      "id": 258,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+      "doi": "",
+      "note": "一本权威的 Git 基础书籍，涵盖了暂存区和 `git add` 命令。",
+      "order": 2,
+      "created_at": "2025-09-04T14:01:36.885113Z",
+      "updated_at": "2025-09-07T15:42:45.693814Z"
+    },
+    {
+      "id": 259,
+      "title": "Git Glossary",
+      "author": "Git Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/gitglossary",
+      "doi": "",
+      "note": "官方 Git 术语表，提供了“索引”和“暂存区”等核心 Git 概念的定义。",
+      "order": 3,
+      "created_at": "2025-09-04T14:01:36.887378Z",
+      "updated_at": "2025-09-07T15:42:44.817599Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

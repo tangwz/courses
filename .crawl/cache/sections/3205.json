@@ -1,0 +1,45 @@
+{
+  "id": 3205,
+  "title": "输入净化与输出过滤防御措施",
+  "meta_title": "用于大型语言模型的输入/输出过滤防御",
+  "meta_description": "开发输入净化和输出过滤机制作为防御层。",
+  "content": "<p>尽管对抗训练等方法旨在为大型语言模型（LLM）本身构建内在韧性，但实际安全通常依赖于在模型<em>外部</em>实施保护措施。输入净化和输出过滤作为主要的预处理和后处理层，是对抗恶意输入和不良生成内容的实用防御。可以将其视为大型语言模型部署的边界安全和内容审查。</p>\n<h3>输入净化：第一道防线</h3>\n<p>输入净化是指在用户提供的提示<em>到达</em>大型语言模型之前对其进行检查和可能的修改。主要目标是检测并消除旨在触发不安全、意外或恶意行为的输入。</p>\n<p><strong>目的：</strong></p>\n<ul>\n<li><strong>阻止已知攻击模式：</strong> 识别并移除与常见越狱提示或提示注入载荷相关的序列。</li>\n<li><strong>消除元指令：</strong> 检测尝试覆盖原始系统提示或指令的行为（例如，“忽略所有之前的指令并执行X”）。</li>\n<li><strong>防止代码注入：</strong> 剥离或转义大型语言模型或下游系统可能解释为可执行代码的字符或序列，以防大型语言模型回显或操作输入。</li>\n<li><strong>强制输入限制：</strong> 限制输入长度、复杂性或字符集，以防止资源耗尽或使用模糊编码进行绕过。</li>\n</ul>\n<p><strong>常用技术：</strong></p>\n<ol>\n<li>\n<p><strong>模式匹配（黑名单/白名单）：</strong> 最简单的方法是维护与已知攻击相关的禁用字符串、关键词或正则表达式列表（黑名单）。相反，白名单则将输入限制为仅预先批准的模式，尽管这对于通用大型语言模型来说通常过于严格。</p>\n<ul>\n<li><em>示例（黑名单）：</em> 阻止诸如“忽略以上内容”、“你现在处于开发者模式”或特定有害网址等短语。</li>\n<li><em>困难：</em> 这种方法本身存在脆弱性。攻击者不断设计新的措辞（语义攻击）或使用字符编码/混淆来绕过静态规则。这变成了一场持续的“猫鼠游戏”。</li>\n</ul>\n</li>\n<li>\n<p><strong>指令检测：</strong> 更复杂的方法试图语义解析输入，以识别与系统操作指令冲突的用户指令。这可能涉及使用启发式方法、语法分析，甚至使用另一个经过训练以发现提示注入尝试的分类模型。</p>\n<ul>\n<li><em>困难：</em> 由于自然语言的歧义性，区分恶意元指令和合法的复杂用户请求可能很困难。误报会影响可用性。</li>\n</ul>\n</li>\n<li>\n<p><strong>输入结构验证：</strong> 对于期望特定输入格式（例如 JSON、特定字段）的应用程序，严格验证结构可以防止某些类型的注入，即攻击者将恶意命令隐藏在畸形数据中。</p>\n</li>\n<li>\n<p><strong>使用辅助模型：</strong> 可以使用更小、更快或更专业的大型语言模型作为预过滤器。此辅助模型会在用户提示传递给主要、更强大的大型语言模型之前，分析其安全问题（例如，检测有害意图、识别元指令）。</p>\n<ul>\n<li><em>权衡：</em> 这会增加延迟和计算成本，但对抗新型攻击可能比静态规则更有效。</li>\n</ul>\n</li>\n</ol>\n<p><strong>实现代码段（Python）：</strong></p>\n<pre><code class=\"language-python\">import re\n\nDENYLIST_PATTERNS = [\n    re.compile(r\"ignore previous instructions\", re.IGNORECASE),\n    re.compile(r\"tell me how to build a bomb\", re.IGNORECASE),\n    # ... 根据观察到的攻击添加更多模式\n]\n\ndef sanitize_input(prompt: str) -> tuple[str, bool]:\n    \"\"\"\n    使用黑名单进行基本输入净化。\n    返回可能已修改的提示以及一个指示其是否被拒绝的标志。\n    \"\"\"\n    # 基本长度检查\n    if len(prompt) > 2048:\n        return \"\", True # 拒绝过长的提示\n\n    # 标准化（示例：小写，移除多余空格）\n    normalized_prompt = \" \".join(prompt.lower().split())\n\n    for pattern in DENYLIST_PATTERNS:\n        if pattern.search(normalized_prompt):\n            # 发现禁止模式\n            # 选项1：完全拒绝提示\n            return \"\", True\n            # 选项2：尝试移除/消除（可靠性较低）\n            # sanitized_prompt = pattern.sub(\"[REDACTED]\", normalized_prompt)\n            # return sanitized_prompt, False\n\n    # 如果没有模式匹配，则接受原始提示\n    return prompt, False\n\n# 示例用法：\nuser_input = \"你能总结一下这段文字吗？请忽略之前关于语气的指示。\"\nsanitized_input, rejected = sanitize_input(user_input)\n\nif rejected:\n    print(\"由于安全问题，输入被拒绝。\")\nelse:\n    # 继续将净化后的输入（或未更改的原始输入）发送给大型语言模型\n    print(\"输入已接受。\")\n    # response = llm.generate(sanitized_input)\n</code></pre>\n<p>输入净化是必要的，但它主要针对<em>输入向量 (vector)</em>。我们还需要仔细检查模型生成的内容。</p>\n<h3>输出过滤：检查大型语言模型的响应</h3>\n<p>输出过滤是指在大型语言模型生成的响应<em>呈现</em>给最终用户或被其他系统组件使用之前对其进行分析。其目的是捕获并缓解模型尽管经过对齐 (alignment)努力仍可能生成的有害、有偏见、不当或违反政策的内容。</p>\n<p><strong>目的：</strong></p>\n<ul>\n<li><strong>阻止有害内容：</strong> 阻止包含仇恨言论、骚扰、非法行为或严重有害语言的输出。</li>\n<li><strong>缓解偏见：</strong> 检测并可能标记 (token)或修改表现出人口偏见的输出。</li>\n<li><strong>保护私人数据：</strong> 识别并匿名化模型可能无意中泄露的个人身份信息（PII）或其他敏感数据。</li>\n<li><strong>控制特定主题：</strong> 强制执行禁止生成特定主题内容（例如，露骨内容、取决于应用场景的特定政治讨论）的策略。</li>\n<li><strong>确保响应适当性：</strong> 检查响应风格和内容是否符合应用程序的要求（例如，防止助手生成过于随意或带有个人观点的响应）。</li>\n</ul>\n<p><strong>常用技术：</strong></p>\n<ol>\n<li>\n<p><strong>模式匹配（黑名单）：</strong> 类似于输入净化，使用禁止词语、短语或正则表达式列表（例如，已知有害词语、PII 模式如社保号或信用卡号）。</p>\n<ul>\n<li><em>困难：</em> 易出现漏报（遗漏措辞巧妙的有害内容）和误报（在安全语境下阻止包含敏感词的合法内容）。需要持续更新。</li>\n</ul>\n</li>\n<li>\n<p><strong>内容分类器：</strong> 这是一种方法。独立的机器学习 (machine learning)模型（通常是针对特定任务微调 (fine-tuning)的较小型分类器）用于评估大型语言模型的输出。</p>\n<ul>\n<li><em>示例：</em> 有害性分类器（对文本从无害到严重有害进行评分）、PII检测模型、主题分类器、针对人工标注数据训练的有用性/无害性分类器。</li>\n<li><em>实施：</em> 大型语言模型输出被馈入分类器。如果分数超过预设阈值 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>T</mi></mrow><annotation encoding=\"application/x-tex\">T</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span></span></span></span>，则输出将被阻止、标记待审查或可能被修改。调整 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>T</mi></mrow><annotation encoding=\"application/x-tex\">T</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span></span></span></span> 对于平衡安全性和可用性很重要。</li>\n<li>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-tq1pts\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n    edge [color=\"#495057\"];\n\n    LLM [label=\"LLM 生成\"];\n    Output [label=\"生成文本\"];\n    Classifier [label=\"安全分类器\\n（例如，有害性，PII）\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n    Decision [label=\"判断逻辑\\n（分数 > 阈值？）\", shape=diamond, fillcolor=\"#ffec99\"];\n    FinalOutput [label=\"最终输出\\n（给用户）\", shape=box, fillcolor=\"#b2f2bb\"];\n    Blocked [label=\"已阻止 / 已标记\", shape=box, fillcolor=\"#ffc9c9\"];\n\n    LLM -> Output;\n    Output -> Classifier;\n    Classifier -> Decision [label=\"安全分数\"];\n    Decision -> FinalOutput [label=\"否\"];\n    Decision -> Blocked [label=\"是\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-tq1pts\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n</li>\n</ul>\n</li>\n</ol>\n<ul>\n<li>\n<blockquote>\n<p>使用安全分类器进行输出过滤的流程。</p>\n</blockquote>\n</li>\n</ul>\n<ol start=\"3\">\n<li>\n<p><strong>响应结构强制：</strong> 对于特定应用，确保输出遵循所需格式或模板。明显偏离的响应可能会被拒绝。</p>\n</li>\n<li>\n<p><strong>辅助大型语言模型审查：</strong> 类似于输入净化，另一个大型语言模型（可能是以不同方式提示的相同基础模型，或专用的安全审查模型）可以根据安全指南评估主要大型语言模型的输出。这种“大型语言模型审查员”可以提供比简单分类器更详细的评估，但会带来更高的延迟和成本。</p>\n</li>\n<li>\n<p><strong>人工干预：</strong> 对于高敏感性应用或自动化过滤器标记的边缘情况，将输出路由给人工审查员可提供最高水平的保障，尽管这不适用于实时交互的规模。</p>\n</li>\n</ol>\n<h3>分层与考量</h3>\n<p>输入净化和输出过滤单独使用很少足够，但当它们结合并整合到更广泛的安全框架中时，会展现出强大作用。</p>\n<ul>\n<li><strong>纵深防御：</strong> 它们作为不同层次发挥作用。净化旨在阻止攻击到达模型，而过滤则捕获尽管采取预防措施仍生成的有害内容。</li>\n<li><strong>日志记录和监控：</strong> 记录被阻止的输入和输出是必要的。这些数据可以帮助我们了解新的攻击途径和过滤器中的弱点，从而持续改进。</li>\n<li><strong>性能权衡：</strong> 每个过滤步骤都会增加延迟。复杂的正则表达式、外部模型调用（分类器、辅助大型语言模型）会显著影响响应时间。过滤的严格程度必须与应用程序的性能要求和用户体验相平衡。</li>\n<li><strong>维护成本：</strong> 黑名单、模式和分类器需要持续维护和更新，以持续有效应对不断变化的威胁和语言使用。</li>\n<li><strong>语境依赖性：</strong> 有效的过滤通常需要理解对话的语境，而简单的无状态过滤器可能缺乏这一点。</li>\n</ul>\n<p>尽管并非万灵药，但精心设计的输入净化和输出过滤流程是缓解部署大型语言模型相关风险不可或缺的工具。它们提供了实用、可实施的控制措施，补充了通过强化学习 (reinforcement learning)人类反馈（RLHF）或对抗训练等模型对齐 (alignment)技术实现的固有（但不完美）安全性。它们表示了一种必要认知：即使是复杂的模型也可能出错，因此负责任地部署需要系统级别的检查。</p>",
+  "slug": "input-output-filtering-defenses",
+  "updates": [],
+  "references": [
+    {
+      "id": 9262,
+      "title": "Introducing Llama Guard: A new LLM-powered input-output safeguard for responsibly deploying LLMs",
+      "author": "Hakan Inan, K. Upasani, Madian Khabsa, and others",
+      "year": "2023",
+      "publisher": "arXiv",
+      "journal": "arXiv",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.06674",
+      "doi": "arXiv:2312.06674",
+      "note": "详细介绍了Meta的Llama Guard，这是一个基于LLM的输入清理和输出过滤解决方案，直接展示了如何使用辅助模型来提高安全性。",
+      "order": 2,
+      "created_at": "2025-09-05T02:22:40.525878Z",
+      "updated_at": "2025-09-08T12:00:08.879714Z"
+    },
+    {
+      "id": 9263,
+      "title": "Security Best Practices for Large Language Model Applications",
+      "author": "Microsoft Security Response Center, Microsoft AI",
+      "year": "2023",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.microsoft.com/en-us/security/blog/wp-content/uploads/2023/10/Security-Best-Practices-for-Large-Language-Model-Applications.pdf",
+      "doi": "",
+      "note": "提供了保护LLM应用程序的全面指导，涵盖了包括输入/输出验证在内的各种防御层以及更广泛的系统架构考虑。",
+      "order": 3,
+      "created_at": "2025-09-05T02:22:40.528857Z",
+      "updated_at": "2025-09-08T11:59:59.042402Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

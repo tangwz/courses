@@ -1,0 +1,61 @@
+{
+  "id": 7756,
+  "title": "实施少样本提示",
+  "meta_title": "实施少样本提示",
+  "meta_description": "通过少样本提示功能提供的情境示例，提高模型准确率。",
+  "content": "<p>提示模板管理大型语言模型输入的结构。少样本提示则能控制其行为。与其仅仅告诉模型做什么，不如直接展示给它。这种方法，又称作情境学习，通过在提示中直接提供所需输入-输出模式的示例，能大幅提升模型在特定任务上的表现。</p>\n<p>少样本提示在引导模型的输出格式、语气和推理 (inference)过程方面尤为有效，且无需进行成本高昂的微调 (fine-tuning)。</p>\n<h3>少样本示例的构成</h3>\n<p>其本质是一个少样本示例由一对输入及其对应的预期输出组成。这些示例在模型处理新的、未见过的输入时作为参考。在工具包中，您可以使用 <code>create_example</code> 函数来构建这些配对。</p>\n<p>我们以情感分类任务为例。一个示例会包含一段示例文本和其正确的情感标签。</p>\n<pre><code class=\"language-python\">from kerb.prompt import create_example\n\n# 为情感分类任务创建示例\nex_positive = create_example(\n    input_text=\"The product exceeded my expectations!\",\n    output_text=\"positive\",\n)\n\nex_negative = create_example(\n    input_text=\"Terrible customer service, very disappointed.\",\n    output_text=\"negative\",\n)\n</code></pre>\n<p>每个由 <code>create_example</code> 创建的对象都封装了一个完整的模型演示。</p>\n<h3>组织示例库</h3>\n<p>对于任何特定任务，您很可能会有几十甚至几百个高质量示例。鉴于单个提示只能容纳少量示例，您需要一种方法来组织它们，并为特定查询挑选出最相关的。<code>ExampleSelector</code> 正是为此设计的。它充当您所有潜在少样本示例的存储库，或者说“库”。</p>\n<p>您可以使用已创建的示例来填充 <code>ExampleSelector</code>。</p>\n<pre><code class=\"language-python\">from kerb.prompt import ExampleSelector, create_example\n\n# 创建一个选择器来组织我们的示例\nsentiment_selector = ExampleSelector()\n\n# 向选择器添加示例\nexamples_data = [\n    (\"The movie was fantastic!\", \"positive\"),\n    (\"Worst purchase ever made.\", \"negative\"),\n    (\"Average quality, decent price.\", \"neutral\"),\n    (\"Absolutely love this product!\", \"positive\"),\n    (\"Not worth the money.\", \"negative\"),\n]\n\nfor inp, out in examples_data:\n    sentiment_selector.add(create_example(input_text=inp, output_text=out))\n</code></pre>\n<p>示例整理好后，您现在可以采用不同的策略来为您的提示选择最有效的子集。</p>\n<h3>示例选择策略</h3>\n<p>并非所有示例都对每个查询同样有用。<code>ExampleSelector</code> 上的 <code>select</code> 方法允许您选择最适合您需求的选择策略。</p>\n<h4>随机选择</h4>\n<p>随机选择示例是一个好的默认策略，可以避免模型对示例库中特定顺序或模式的过拟合 (overfitting)。它引入了多样性，并帮助模型更好地泛化。</p>\n<pre><code class=\"language-python\"># 从示例库中选择 3 个随机示例\nselected_examples = sentiment_selector.select(k=3, strategy=\"random\")\n\nfor ex in selected_examples:\n    print(f\"'{ex.input}' -> '{ex.output}'\")\n</code></pre>\n<h4>多样化选择</h4>\n<p>有时，您希望确保选出的示例涵盖多种模式。<code>diverse</code> 策略选择彼此有别的示例，以此使呈现给模型的信息种类达到最大。这对于向模型展示如何处理不同类型的输入很有助益。</p>\n<pre><code class=\"language-python\"># 选择 4 个尽可能各不相同的示例\ndiverse_examples = sentiment_selector.select(k=4, strategy=\"diverse\")\n</code></pre>\n<blockquote>\n<p><strong>多样性如何计算</strong></p>\n<p>基于多样性的选择使用一种简单的基于嵌入 (embedding)的算法，以寻找在向量 (vector)空间中彼此相距较远的示例。这确保所选示例在语义上各不相同，为大型语言模型提供了更宽泛的背景信息。</p>\n</blockquote>\n<h4>语义选择</h4>\n<p>最精细的策略是<code>语义</code>选择。它选择与<em>当前用户查询</em>意义最相似的示例。这是一种极其有效的方法，用于创建动态、情境感知的提示。例如，如果用户询问关于 Python 列表的问题，选择器将找到并纳入同样处理列表操作的少样本示例。</p>\n<p>这种策略需要一个嵌入模型来计算语义相似度。如果所需模块不可用，它会妥善地回退到像 <code>random</code> 这样的不同策略。</p>\n<pre><code class=\"language-python\"># 语义选择的使用示例\nquery = \"How do I iterate over a list?\"\n\n# 选择器会找到与循环或列表相关的示例\n# try:\n#     semantic_examples = code_selector.select(\n#         k=2, strategy=\"semantic\", query=query\n#     )\n# except Exception:\n#     # 如果嵌入模型不可用，则回退\n#     semantic_examples = code_selector.select(k=2, strategy=\"random\")\n</code></pre>\n<h3>为提示格式化示例</h3>\n<p>一旦您选择了示例，就需要将它们格式化为一个字符串，以便插入到您的提示模板中。<code>format_examples</code> 函数处理此项工作。</p>\n<p>您可以通过 <code>template</code> 参数 (parameter)控制每个示例的显示形式，并通过 <code>separator</code> 参数控制它们之间的间距。</p>\n<pre><code class=\"language-python\">from kerb.prompt import format_examples\n\n# 我们将使用之前随机选择的示例\nselected_examples = sentiment_selector.select(k=3, strategy=\"random\")\n\n# 将示例格式化为字符串\nformatted_text = format_examples(\n    selected_examples,\n    template=\"Input: {input}\\nOutput: {output}\",\n    separator=\"\\n\\n\"\n)\n\nprint(formatted_text)\n</code></pre>\n<p>这将生成一个干净、组织良好的文本块，可供大型语言模型使用，如下所示：</p>\n<pre><code class=\"language-text\">输入: The movie was fantastic!\n输出: positive\n\n输入: Not worth the money.\n输出: negative\n\n输入: Average quality, decent price.\n输出: neutral\n</code></pre>\n<h3>组装最终提示</h3>\n<p>最后一步是将您的系统指令、格式化后的少样本示例和用户的新查询组合成一个完整提示。</p>\n<p>以下是姓名提取任务的完整流程：</p>\n<pre><code class=\"language-python\">from kerb.prompt import (\n    ExampleSelector,\n    create_example,\n    format_examples,\n    render_template\n)\n\n# 1. 创建示例库\nname_extractor_bank = ExampleSelector()\ntraining_data = [\n    (\"Extract the name: John Smith lives in NYC\", \"John Smith\"),\n    (\"The CEO, Michael Brown, announced the merger.\", \"Michael Brown\"),\n    (\"Dr. Sarah Johnson is a leading scientist.\", \"Dr. Sarah Johnson\"),\n    (\"We spoke with Professor David Lee.\", \"Professor David Lee\"),\n]\nfor inp, out in training_data:\n    name_extractor_bank.add(create_example(input_text=inp, output_text=out))\n\n# 2. 定义主提示模板\nprompt_template = \"\"\"你是一个姓名提取系统。\n以下是一些提取姓名的示例：\n\n{examples}\n\n现在，对以下文本执行提取操作。\n输入: {user_query}\n输出:\"\"\"\n\n# 3. 处理新的用户查询\nnew_query = \"Jennifer Martinez is the new director of the project.\"\n\n# 4. 选择并格式化少样本示例\nselected = name_extractor_bank.select(k=2, strategy=\"random\")\nexamples_text = format_examples(\n    selected,\n    template=\"Input: {input}\\nOutput: {output}\",\n    separator=\"\\n\\n\"\n)\n\n# 5. 渲染最终提示\nfinal_prompt = render_template(\n    prompt_template,\n    {\n        \"examples\": examples_text,\n        \"user_query\": new_query\n    }\n)\n\nprint(final_prompt)\n</code></pre>\n<p>这种有组织的方法不仅提高了模型准确性，也使您的提示逻辑更具模块化和可维护性。通过将示例与提示模板分开，您可以独立于核心提示逻辑来更新、维护和测试您的少样本数据。</p>",
+  "slug": "implementing-few-shot-prompting",
+  "updates": [],
+  "references": [
+    {
+      "id": 21707,
+      "title": "Language Models are Few-Shot Learners",
+      "author": "Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "1877-1901",
+      "url": "https://arxiv.org/abs/2005.14165",
+      "doi": "10.48550/arXiv.2005.14165",
+      "note": "这篇基础论文介绍了大型语言模型中的上下文学习（通常称为少样本提示），并展示了其有效性。",
+      "order": 1,
+      "created_at": "2025-10-20T07:23:23.148616Z",
+      "updated_at": "2025-10-20T07:47:57.783382Z"
+    },
+    {
+      "id": 21709,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3982-3992",
+      "url": "https://aclanthology.org/D19-1410/",
+      "doi": "10.18653/v1/D19-1410",
+      "note": "详细阐述了如何创建有效捕捉语义相似度的句子嵌入，这是实现语义和多样化示例选择策略的关键底层技术。",
+      "order": 3,
+      "created_at": "2025-10-20T07:23:23.156723Z",
+      "updated_at": "2025-10-20T07:47:45.694353Z"
+    },
+    {
+      "id": 21710,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "OpenAI 官方指南，提供了设计有效提示的实用建议和最佳实践，包括少样本示例的使用。",
+      "order": 4,
+      "created_at": "2025-10-20T07:23:23.160127Z",
+      "updated_at": "2025-10-20T07:47:59.099582Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

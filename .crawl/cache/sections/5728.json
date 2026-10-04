@@ -1,0 +1,45 @@
+{
+  "id": 5728,
+  "title": "实践：生成质量报告片段",
+  "meta_title": "实践：生成合成数据质量报告",
+  "meta_description": "使用评估库（例如 SDMetrics）为样本数据集生成结构化质量报告。",
+  "content": "<p>在对统计保真度、机器学习 (machine learning)实用性和隐私进行了各项单独评估后，下一步是将这些结果汇总成结构化且易于理解的格式。手动为每个合成数据集编译分数、图表和解释可能繁琐且容易出错。幸运的是，存在专门的库来简化此过程，让您能够以编程方式生成标准化质量报告。</p>\n<p><code>SDMetrics</code> 库可用于生成简洁的质量报告片段。该库提供了一种计算不同质量维度上多个指标的便捷方式，并以结构化方式呈现它们。一份完整报告通常包括根据您的具体目标定制的指标选择、详细的可视化和全面的解释。</p>\n<p>我们假设您已将真实数据集 (<code>real_data</code>) 和合成数据集 (<code>synthetic_data</code>) 加载为 Pandas DataFrame。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sdmetrics import گزارش 품질 보고서\nfrom sdmetrics.reports.utils import display_metadata\nfrom sdmetrics.demos import load_single_table_demo\n\n# 加载演示数据以确保可复现性\nreal_data, synthetic_data, metadata = load_single_table_demo()\n\n# 显示元数据结构（可选，用于理解）\n# display_metadata(metadata)\n</code></pre>\n<p><code>metadata</code> 字典很重要。它告知 <code>SDMetrics</code> 数据类型（数值、分类、日期时间等）以及任何主键或约束。准确的元数据能带来更有意义的指标计算。对于演示数据，这已预加载。对于您自己的数据，您通常会手动定义此字典或使用检测工具。</p>\n<p>现在，让我们创建一个质量报告对象。<code>SDMetrics</code> 提供不同的报告类。<code>QualityReport</code> 类提供涵盖多个方面的全面概览。</p>\n<pre><code class=\"language-python\"># 初始化质量报告对象\nreport = QualityReport()\n\n# 计算指标并生成报告\n# 此步骤根据提供的数据和元数据执行计算\nreport.generate(real_data, synthetic_data, metadata)\n\n# 报告对象现在包含计算出的分数和属性。\n</code></pre>\n<p><code>generate</code> 方法运行与单表数据相关的默认指标集。这些通常包括逐列分布相似性度量、相关性相似度，以及可能的一些基本合成检测检查。</p>\n<p>您可以检查整体质量分数，该分数汇总了各个指标分数：</p>\n<pre><code class=\"language-python\"># 获取整体质量分数（0到1，越高越好）\noverall_score = report.get_score()\nprint(f\"整体质量分数: {overall_score:.3f}\")\n</code></pre>\n<p>要理解该分数的构成因素，您可以查看各个属性（如列形状、列对趋势）的分数：</p>\n<pre><code class=\"language-python\"># 获取不同属性的分数\nproperties = report.get_properties()\nprint(\"\\n属性明细:\")\nprint(properties)\n</code></pre>\n<p>这可能会产生如下输出：</p>\n<pre><code class=\"language-text\">属性明细:\n                    Property      Score\n0                Column Shapes  0.851\n1  Column Pair Trends  0.789\n</code></pre>\n<p>这些属性汇总了来自多个底层指标的结果。例如，“列形状”通常涉及使用科尔莫戈罗夫-斯米尔诺夫 (KS) 检验（针对数值数据）或卡方检验（针对分类数据）比较边际分布。“列对趋势”通常涉及比较相关矩阵或成对互信息。</p>\n<p>要查看更多详情，您可以访问每个计算出的单独指标的结果：</p>\n<pre><code class=\"language-python\"># 获取每个计算指标的详细结果\ndetails = report.get_details(property_name='Column Shapes')\nprint(\"\\n“列形状”的详细信息:\")\nprint(details)\n</code></pre>\n<p>这提供了精细视图，显示了哪些列在分布相似性方面表现良好或不佳。</p>\n<pre><code class=\"language-text\">“列形状”的详细信息:\n        Column          Metric          Score Error\n0  student_id  KSComplement  0.920   NaN\n1   start_date  KSComplement  0.885   NaN\n2     end_date  KSComplement  0.877   NaN\n3    tuition  KSComplement  0.721   NaN\n4        grade   TVComplement  0.850   NaN\n...\n</code></pre>\n<p>这里，<code>KSComplement</code>（1 - KS 统计量）衡量数值分布相似性，而 <code>TVComplement</code>（1 - 总变异距离）衡量分类分布相似性。分数越高（越接近1）表示该特定列的分布保真度越好。</p>\n<p>虽然 <code>SDMetrics</code> 在其报告结构内提供了一些基本绘图功能（尤其是在 Jupyter 等环境中），您也可以提取分数并使用 Plotly 等标准绘图库进行定制可视化，如“有效可视化评估结果”部分所讨论的。例如，让我们使用 Plotly 可视化属性分数。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1mwcg30\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"Column Shapes\", \"Column Pair Trends\"], \"y\": [0.851, 0.789], \"marker\": {\"color\": [\"#228be6\", \"#15aabf\"]}, \"name\": \"属性分数\"}], \"layout\": {\"title\": \"合成数据质量属性分数\", \"xaxis\": {\"title\": \"属性\"}, \"yaxis\": {\"title\": \"分数 (0-1)\", \"range\": [0, 1]}, \"template\": \"plotly_white\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1mwcg30\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>条形图显示汇总的“列形状”和“列对趋势”分数，提供报告主要发现的快速视觉摘要。</p>\n</blockquote>\n<p>以编程方式生成此类报告片段对于以下方面非常有用：</p>\n<ol>\n<li><strong>一致性：</strong> 确保每次都计算相同的指标集。</li>\n<li><strong>效率：</strong> 自动化计算和汇总过程。</li>\n<li><strong>基准测试：</strong> 提供比较不同合成数据集或生成模型的标准结构，如“对不同合成数据集进行基准测试”部分所讨论的。</li>\n</ol>\n<p>请记住，<code>SDMetrics</code> 等库提供默认设置，但也可定制。您可以选择特定指标、添加新指标，甚至创建完全自定义的报告结构以适应您的评估流程。本示例为将自动化报告集成到您的合成数据质量评估工作流程中提供了一个起点，将原始指标输出转化为易于理解的洞察。</p>",
+  "slug": "practice-generating-report-snippet",
+  "updates": [],
+  "references": [
+    {
+      "id": 15569,
+      "title": "SDMetrics Documentation",
+      "author": "DataCebo",
+      "year": "2024",
+      "publisher": "DataCebo",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.sdv.dev/sdmetrics/",
+      "doi": "",
+      "note": "SDMetrics库的官方文档，详细介绍了其用于评估合成数据质量的功能、指标和报告生成能力。",
+      "order": 1,
+      "created_at": "2025-09-06T10:51:35.555397Z",
+      "updated_at": "2025-09-08T03:42:03.644821Z"
+    },
+    {
+      "id": 15571,
+      "title": "Benchmarking Synthetic Data Generation Models for Real-World Tabular Data",
+      "author": "Dorian Grinsztajn, Edouard Oyallon, Gaël Varoquaux",
+      "year": "2022",
+      "publisher": "Journal of Machine Learning Research editorial board",
+      "journal": "Transactions on Machine Learning Research",
+      "volume": "8",
+      "pages": "1-33",
+      "url": "https://jmlr.org/tmlr/papers/v8/22-108.html",
+      "doi": "10.1162/tmlr_a_00049",
+      "note": "这篇研究论文严格评估了合成数据生成模型，强调了合成数据在各种机器学习任务中的效用评估，并讨论了相关方法。",
+      "order": 3,
+      "created_at": "2025-09-06T10:51:35.567986Z",
+      "updated_at": "2025-09-08T03:42:09.178634Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

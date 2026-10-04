@@ -1,0 +1,45 @@
+{
+  "id": 6043,
+  "title": "长时间训练中检查点的必要性",
+  "meta_title": "检查点为何必不可少",
+  "meta_description": "指出多日/周训练期间硬件或软件故障的可能性。",
+  "content": "<p>训练大型语言模型（LLM）并非一个快速过程。与可能在数小时内完成训练的小型模型不同，预训练 (pre-training)一个先进的LLM通常需要连续运行大型加速器（GPU或TPU）集群数天、数周乃至数月。设想一个训练任务，使用1024块高端GPU持续30天。这表示超过730,000加速器小时。这种长时间、大规模的运行显著增加了遇到潜在中断的可能。</p>\n<p>大规模分布式系统的现实是故障时有发生。在长时间运行中，遇到问题的可能性接近必然。这些中断可能源于多种情况：</p>\n<ul>\n<li><strong>硬件故障：</strong> 单个GPU或TPU可能出现故障。整个计算节点可能因硬件故障（内存错误、电源问题）而崩溃。节点之间的网络连接，对分布式训练通信很要紧，可能变得不可靠或完全失效。</li>\n<li><strong>软件异常：</strong> 训练脚本、深度学习 (deep learning)框架（如PyTorch）、底层库（CUDA、NCCL）乃至操作系统中都可能出现程序错误。组件间意外的交互可能导致崩溃或死锁。如果资源使用意外激增，可能发生内存不足（OOM）错误。</li>\n<li><strong>基础设施问题：</strong> 托管计算集群的数据中心可能出现电源波动或停电。集群的计划内维护可能需要停止作业。如果使用基于云的抢占式实例或竞价实例来管理成本，这些实例可能在几乎没有通知的情况下被云服务商收回。</li>\n</ul>\n<p>如果没有定期保存进度的机制，任何此类中断都会强制整个训练过程从头开始。这会带来严重后果：</p>\n<ul>\n<li><strong>计算资源浪费：</strong> 在故障点之前进行的所有计算都将丢失。在我们1024块GPU的例子中，即使训练进行到一半发生故障，也将白白损失超过365,000 GPU小时，这代表了巨大的财务成本和能源消耗。</li>\n<li><strong>时间损失：</strong> 训练运行通常处于研究项目或产品开发周期的关键路径上。从头开始会引入明显延误，可能以天或周计算，影响项目进度，并可能阻碍竞争优势。</li>\n<li><strong>挫败感增加：</strong> 调试大型分布式作业中的故障本就复杂。不得不反复重新开始会给相关工程师增加巨大的额外负担和挫败感。</li>\n</ul>\n<p>这就是<strong>检查点</strong>变得必不可少的地方。检查点是将训练作业的完整状态定期保存到持久存储（如分布式文件系统或云存储）的做法。这种状态不仅包括模型的参数 (parameter)（权重 (weight)），还包括精确地从上次停止的地方恢复训练所需的一切，例如优化器的状态、学习率调度器的状态、当前的训练迭代或周期数，以及数据加载器的状态。</p>\n<p>设想一个简化的训练循环：</p>\n<pre><code class=\"language-python\"># 未使用检查点的例子\nimport torch\nimport torch.optim as optim\n\nmodel = MyLargeModel()\noptimizer = optim.AdamW(model.parameters(), lr=1e-4)\n# 假设 data_loader 提供数据批次\n\nfor step in range(TOTAL_TRAINING_STEPS):\n    # --- 潜在故障点 ---\n    if some_failure_condition():\n        print(\"发生故障！从第 0 步重新开始。\")\n        # 到 'step' 之前的所有进度都已丢失。\n        # 需要重新初始化模型、优化器，并从第 0 步开始。\n        raise SystemExit(\"训练失败\")\n\n    batch = next(iter(data_loader))\n    outputs = model(batch['input_ids'])\n    loss = calculate_loss(outputs, batch['labels'])\n\n    optimizer.zero_grad()\n    loss.backward()\n    optimizer.step()\n\n    if step % LOG_INTERVAL == 0:\n        print(f\"步数: {step}, 损失: {loss.item()}\")\n\nprint(\"训练成功完成！\") # 仅在没有故障发生时才能到达\n</code></pre>\n<p>如果在一个百万步的训练运行中，第500,000步发生故障，为这500,000步所做的工作都白费了。检查点机制引入了保存点：</p>\n<pre><code class=\"language-python\"># 使用检查点的例子\nimport torch\nimport torch.optim as optim\nimport os\n\nCHECKPOINT_DIR = \"/path/to/persistent/storage/checkpoints\"\nCHECKPOINT_FREQ = 1000 # 每 1000 步保存一次\n\ndef save_checkpoint(model, optimizer, step, filename=\"checkpoint.pt\"):\n    checkpoint_path = os.path.join(CHECKPOINT_DIR, f\"step_{step}_{filename}\")\n    state = {\n        'step': step,\n        'model_state_dict': model.state_dict(),\n        'optimizer_state_dict': optimizer.state_dict(),\n        # 添加调度器状态、随机状态等。\n    }\n    torch.save(state, checkpoint_path)\n    print(f\"在第 {step} 步保存检查点至 {checkpoint_path}\")\n\ndef load_checkpoint(model, optimizer):\n    # 寻找最新检查点的逻辑\n    latest_checkpoint_path = find_latest_checkpoint(CHECKPOINT_DIR)\n    if latest_checkpoint_path:\n        checkpoint = torch.load(latest_checkpoint_path)\n        model.load_state_dict(checkpoint['model_state_dict'])\n        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])\n        start_step = checkpoint['step'] + 1\n        print(f\"从第 {start_step} 步的检查点恢复\")\n        return start_step\n    else:\n        print(\"未找到检查点，从头开始。\")\n        return 0\n\nmodel = MyLargeModel()\noptimizer = optim.AdamW(model.parameters(), lr=1e-4)\nstart_step = load_checkpoint(model, optimizer) # 尝试恢复\n\nfor step in range(start_step, TOTAL_TRAINING_STEPS):\n    # --- 潜在故障点 ---\n    try:\n        batch = next(iter(data_loader))\n        outputs = model(batch['input_ids'])\n        loss = calculate_loss(outputs, batch['labels'])\n\n        optimizer.zero_grad()\n        loss.backward()\n        optimizer.step()\n\n        if step % LOG_INTERVAL == 0:\n            print(f\"步数: {step}, 损失: {loss.item()}\")\n\n        # --- 定期保存进度 ---\n        if step % CHECKPOINT_FREQ == 0 and step > 0:\n            save_checkpoint(model, optimizer, step)\n\n    except Exception as e:\n        print(f\"在第 {step} 步发生故障: {e}\")\n        print(\"退出。重新运行脚本以从最新检查点恢复。\")\n        raise SystemExit(\"训练中断\")\n\n\nprint(\"训练成功完成！\")\n</code></pre>\n<p>在这个修改后的循环中，如果发生故障，<code>load_checkpoint</code>函数（其实现细节我们稍后会讨论）可以从最近保存的检查点恢复状态，允许训练从例如第500,001步而不是第0步恢复。这大幅减少了计算资源的浪费。</p>\n<p>尽管检查点机制的主要原因是应对意外故障的容错能力，但它也提供了操作灵活性。检查点允许计划性停机，例如为了集群的计划维护或重新配置训练作业。它们也能使训练在不同硬件上恢复，或通过从中间状态分叉来寻找不同训练路径。</p>\n<p>考虑到LLM训练所需的巨大时间和资源投入，检查点不仅仅是便利；它是成功完成这些要求高的项目的基本要求。接下来的章节将详细说明需要保存的组件、在分布式环境中管理检查点的策略以及实现的最佳实践。</p>",
+  "slug": "need-for-checkpointing",
+  "updates": [],
+  "references": [
+    {
+      "id": 15814,
+      "title": "Saving and Loading Models",
+      "author": "PyTorch Core Team",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/serialization.html",
+      "doi": "",
+      "note": "PyTorch 官方文档，介绍了保存和加载模型及优化器状态的方法，对实现检查点逻辑至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T10:55:36.938389Z",
+      "updated_at": "2025-09-10T02:30:26.741155Z"
+    },
+    {
+      "id": 15817,
+      "title": "MLOps Engineering at Scale: A Guide from a Netflix Senior ML Engineer",
+      "author": "Carl Osipov",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHmwJxSq_jI58Bsp8hb31riIjnwEevpU5MQVKbpum3IPH18b8UFlX8ioMdZoqMhinVfxEuOK9onzg_pszCcClE7hlff8gDqGIcTudTb2IeU8SDKN3OCc0zypB9p_QOwIJ93GSSNURi-WxiEKixFMdzl7RNyEnpKPaFvPCu8aj-l0ez6",
+      "doi": "",
+      "note": "讨论了大规模部署和管理机器学习系统的实践方面，包括分布式训练、可靠性以及管理长时间运行实验的考量。",
+      "order": 4,
+      "created_at": "2025-09-06T10:55:36.950181Z",
+      "updated_at": "2025-09-10T13:28:04.858358Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

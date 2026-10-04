@@ -1,0 +1,45 @@
+{
+  "id": 6776,
+  "title": "使用运算符构建表达式",
+  "meta_title": "Julia 表达式与运算符指南",
+  "meta_description": "学习如何在 Julia 中使用不同类型的运算符来构建表达式，用于计算和逻辑处理。",
+  "content": "<p>Julia 中的表达式是程序的基本构成要素。你可以把表达式看作任何一段代码，当 Julia 处理它时，会产生一个值。这个值可以是一个数字、一段文本（字符串）、一个真/假结果（布尔值），甚至更复杂的数据结构。表达式是程序执行操作和做出判断的必要组成部分，它们是这些操作的核心所在。</p>\n<p>最简单地说，值本身就是一个表达式。例如：</p>\n<pre><code class=\"language-julia\">5       # 此表达式计算结果为整数 5\n\"hello\" # 此表达式计算结果为字符串 \"hello\"\ntrue    # 此表达式计算结果为布尔值 true\n</code></pre>\n<p>变量，你在上一章中了解过，也是表达式，因为它们计算结果为它们存储的值：</p>\n<pre><code class=\"language-julia\">x = 10  # 将 10 赋值给 x\ny = x   # 表达式 'x' 的计算结果为 10，因此 y 也变为 10\n</code></pre>\n<p>更常见的是，表达式涉及<strong>运算符</strong>，它们是特殊符号或关键字，对一个或多个值执行操作。这些值被称为<strong>操作数</strong>。例如，在表达式 <code>3 + 4</code> 中，数字 <code>3</code> 和 <code>4</code> 是操作数，<code>+</code> 符号是执行加法的运算符。</p>\n<p>Julia 提供多种运算符来构建表达式：</p>\n<ul>\n<li><strong>算术运算符</strong>：用于执行数学计算（例如，<code>+</code> 用于加法，<code>*</code> 用于乘法）。</li>\n<li><strong>比较运算符</strong>：用于比较值（例如，<code>></code> 用于大于，<code>==</code> 用于等于）。</li>\n<li><strong>逻辑运算符</strong>：用于组合真/假值（例如，<code>&#x26;&#x26;</code> 用于逻辑与，<code>||</code> 用于逻辑或）。</li>\n</ul>\n<p>我们将在本章的后续小节中更详细地查看这些类别的运算符。目前，重点在于理解它们如何与值和变量结合以形成表达式。</p>\n<p>你遇到的大多数运算符是<strong>二元运算符</strong>，这意味着它们对两个操作数进行操作，如 <code>a + b</code> 或 <code>x > y</code>。有些是<strong>一元运算符</strong>，作用于单个操作数，例如 <code>-5</code>（取负）或 <code>!true</code>（逻辑非）。</p>\n<h3>Julia 如何计算表达式</h3>\n<p>当 Julia 遇到一个表达式时，它会执行指定的操作，将其简化为一个单一的结果值。例如，考虑表达式 <code>(5 + 3) * 2</code>。Julia 分步计算它：</p>\n<ol>\n<li>括号内的部分 <code>5 + 3</code> 首先被计算，结果为 <code>8</code>。</li>\n<li>表达式随后变为 <code>8 * 2</code>。</li>\n<li>这被计算为 <code>16</code>。\n因此，表达式 <code>(5 + 3) * 2</code> 的计算结果为值 <code>16</code>。</li>\n</ol>\n<h3>操作顺序：运算符优先级</h3>\n<p>在包含多个运算符的表达式中，例如 <code>2 + 3 * 4</code>，Julia 需要一套规则来决定操作的执行顺序。这被称为<strong>运算符优先级</strong>。你可能从数学中记得这些规则，通常通过 PEMDAS/BODMAS 等首字母缩略词来记忆。Julia 遵循类似的规范：</p>\n<ul>\n<li>幂运算（<code>^</code>）等操作通常首先执行。</li>\n<li>然后执行乘法（<code>*</code>）和除法（<code>/</code>，<code>\\</code>）。</li>\n<li>最后执行加法（<code>+</code>）和减法（<code>-</code>）。</li>\n</ul>\n<p>因此，在 <code>2 + 3 * 4</code> 中：</p>\n<ol>\n<li>乘法 <code>3 * 4</code> 首先发生，得到 <code>12</code>。</li>\n<li>然后，加法 <code>2 + 12</code> 发生，结果为 <code>14</code>。</li>\n</ol>\n<p>如果运算符具有相同的优先级（例如，<code>*</code> 和 <code>/</code>，或 <code>+</code> 和 <code>-</code>），Julia 通常从左到右计算它们。这称为<strong>结合性</strong>。例如，<code>10 - 3 + 2</code> 被计算为 <code>(10 - 3) + 2</code>，即 <code>7 + 2</code>，结果为 <code>9</code>。</p>\n<p>精确的优先级规则可能相当详细，但你不需要一次性记住所有。最常见的规则与标准数学约定一致。</p>\n<h3>使用括号提高清晰度和控制</h3>\n<p>为了使你的表达式更清晰，或为了强制一个不同于优先级规则所决定的计算顺序，你可以使用括号 <code>()</code>。括号内的操作总是首先被计算，从最内层的一对开始。</p>\n<p>例如：</p>\n<ul>\n<li><code>2 + 3 * 4</code> 的计算结果为 <code>14</code>（先乘法）。</li>\n<li><code>(2 + 3) * 4</code> 的计算结果为 <code>20</code>（先加法，因为有括号）。</li>\n</ul>\n<p>使用括号，即使在并非严格必要时，也能极大提高代码的可读性，让你和他人更容易理解其意图。</p>\n<pre><code class=\"language-julia\"># 没有括号，依赖优先级\nresult1 = 10 + 20 / 5   # 20 / 5 是 4，然后 10 + 4 是 14\nprintln(result1)        # 输出: 14.0\n\n# 有括号，为清晰或改变顺序\nresult2 = (10 + 20) / 5 # 10 + 20 是 30，然后 30 / 5 是 6\nprintln(result2)        # 输出: 6.0\n</code></pre>\n<p>下图说明了一个使用括号的表达式的逐步计算过程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-12k81me\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", fontsize=12, bgcolor=\"#ffffff\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    expr_str [label=\"表达式: (10 + 20) / 5\", shape=plaintext, fontsize=14, fontcolor=\"#343a40\"];\n\n    subgraph cluster_step1 {\n        label = \"步骤 1: 最内层括号 (加法)\";\n        bgcolor=\"#f8f9fa\";\n        node [fillcolor=\"#d0bfff\"]; \n        edge [color=\"#7048e8\"];     \n\n        val_10_s1 [label=\"10\"];\n        val_20_s1 [label=\"20\"];\n        op_add [label=\"+\", shape=circle, style=\"filled\", fillcolor=\"#7950f2\", fontcolor=\"white\", width=0.3, height=0.3, fixedsize=true];\n        res_add [label=\"30\", style=\"filled\", fillcolor=\"#b197fc\", fontcolor=\"#212529\"];\n\n        val_10_s1 -> op_add;\n        val_20_s1 -> op_add;\n        op_add -> res_add [label=\"  计算结果为  \"];\n    }\n\n    subgraph cluster_step2 {\n        label = \"步骤 2: 除法\";\n        bgcolor=\"#f8f9fa\";\n        node [fillcolor=\"#a5d8ff\"]; \n        edge [color=\"#1c7ed6\"];     \n\n        res_add_s2 [label=\"30 (来自步骤 1)\", style=\"filled\", fillcolor=\"#b197fc\", fontcolor=\"#212529\"]; \n        val_5_s2 [label=\"5\"];\n        op_div [label=\"/\", shape=circle, style=\"filled\", fillcolor=\"#228be6\", fontcolor=\"white\", width=0.3, height=0.3, fixedsize=true];\n        final_res [label=\"6.0\", shape=ellipse, style=\"filled\", fillcolor=\"#40c057\", fontcolor=\"white\", penwidth=1, color=\"#37b24d\"];\n\n        res_add_s2 -> op_div;\n        val_5_s2 -> op_div;\n        op_div -> final_res [label=\"  计算结果为  \"];\n    }\n\n    expr_str -> cluster_step1 [style=invis]; \n    cluster_step1 -> cluster_step2 [style=invis]; \n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-12k81me\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>表达式 <code>(10 + 20) / 5</code> 的计算过程。括号确保加法在除法之前执行。</p>\n</blockquote>\n<h3>表达式及其结果类型</h3>\n<p>表达式产生的值也有一个数据类型。这个类型取决于操作数的类型和运算符的性质。</p>\n<ul>\n<li><code>2 + 3</code> 涉及两个整数，<code>+</code>（加法）产生一个整数：<code>5</code>（一个 <code>Int</code> 类型）。</li>\n<li><code>2.0 + 3</code> 涉及一个浮点数和一个整数。Julia 会将整数提升为浮点数，加法操作会产生一个浮点数：<code>5.0</code>（一个 <code>Float64</code> 类型）。</li>\n<li><code>5 > 2</code> 涉及两个整数，<code>></code>（比较）产生一个布尔值：<code>true</code>（一个 <code>Bool</code> 类型）。</li>\n<li><code>\"Julia\" * \" is fun\"</code> 默认情况下不是标准的字符串连接语法。你通常会使用 <code>string(\"Julia\", \" is fun\")</code> 或字符串插值，例如 <code>str1 = \"Julia\"; str2 = \" is fun\"; \"$str1$str2\"</code>。两者都会产生一个 <code>String</code> 类型。</li>\n</ul>\n<p>理解表达式意义重大，因为它们构成了 Julia 中大多数语句的核心。语句是完整的执行单元，通常语句是围绕着计算值、进行比较或调用函数的表达式构建的。随着我们继续学习，你将看到表达式无处不在，特别是在控制程序流程方面。</p>",
+  "slug": "building-expressions-with-operators",
+  "updates": [],
+  "references": [
+    {
+      "id": 20277,
+      "title": "Operator Precedence and Associativity",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/mathematical-operations/#Operator-Precedence-and-Associativity",
+      "doi": "",
+      "note": "官方文档，涵盖 Julia 运算符优先级和结合性的规则，有助于理解表达式求值。",
+      "order": 1,
+      "created_at": "2025-09-06T13:59:41.542652Z",
+      "updated_at": "2025-09-10T02:42:52.543523Z"
+    },
+    {
+      "id": 20278,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens and Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3: Expressions and Operators",
+      "url": "https://benlauwens.github.io/ThinkJulia.jl/",
+      "doi": "",
+      "note": "一本入门教材章节，解释了 Julia 编程中的表达式、运算符及其求值。",
+      "order": 2,
+      "created_at": "2025-09-06T13:59:41.551403Z",
+      "updated_at": "2025-09-10T02:42:56.477333Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

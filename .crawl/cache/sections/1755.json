@@ -1,0 +1,61 @@
+{
+  "id": 1755,
+  "title": "创建 DataFrame",
+  "meta_title": "创建 Pandas DataFrame",
+  "meta_description": "从字典、列表的列表/字典以及 NumPy 数组创建 DataFrame 的方法。",
+  "content": "<p>Pandas <code>Series</code> 代表单列数据，而 <code>DataFrame</code> 则是您在多数表格数据分析中会使用的主要结构。可以把它看作是 Python 环境中的电子表格或 SQL 表。它是一个二维、大小可变、可能包含不同类型数据的表格结构，带有标签轴（行和列）。</p>\n<p>我们来看看构建 <code>DataFrame</code> 的常见方法。通常，您可以从现有数据结构（如 Python 字典或 NumPy 数组）创建它们，或者通过读取文件中的数据来创建（这将在下一章中介绍）。</p>\n<h3>从列表或 NumPy 数组的字典创建</h3>\n<p>最常用的方法之一是使用 Python 字典，其中键代表所需的列名，值是包含每列数据的列表（或 NumPy 数组）。重要的是，用作值的所有列表或数组必须具有相同的长度，因为每个列表对应一列，并且列表在相同位置的元素构成一行。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 以列表字典形式的数据\ndata = {\n    'StudentID': ['S001', 'S002', 'S003', 'S004'],\n    'Name': ['Alice', 'Bob', 'Charlie', 'David'],\n    'Score': [85, 92, 78, 88]\n}\n\n# 创建 DataFrame\ndf_from_dict_list = pd.DataFrame(data)\n\nprint(df_from_dict_list)\n</code></pre>\n<p>此代码会生成以下 <code>DataFrame</code>：</p>\n<pre><code>  StudentID     Name  Score\n0      S001    Alice     85\n1      S002      Bob     92\n2      S003  Charlie     78\n3      S004    David     88\n</code></pre>\n<p>请注意 Pandas 如何自动为行分配了默认的整数索引（0, 1, 2, 3）。字典的键 (<code>StudentID</code>、<code>Name</code>、<code>Score</code>) 成为了列标签。</p>\n<p>您可以使用 NumPy 数组作为字典的值来达到同样的效果：</p>\n<pre><code class=\"language-python\"># 以 NumPy 数组字典形式的数据\ndata_np = {\n    'StudentID': np.array(['S001', 'S002', 'S003', 'S004']),\n    'Name': np.array(['Alice', 'Bob', 'Charlie', 'David']),\n    'Score': np.array([85, 92, 78, 88])\n}\n\n# 创建 DataFrame\ndf_from_dict_np = pd.DataFrame(data_np)\n\nprint(df_from_dict_np)\n</code></pre>\n<h3>从字典列表创建</h3>\n<p>另一种常见模式是使用一个列表，其中每个元素都是一个字典。在这种情况下，每个字典代表结果 <code>DataFrame</code> 中的一<em>行</em>。字典中的键成为列标签。Pandas 足够灵活，可以处理某些字典可能缺少键的情况；它会用 <code>NaN</code>（非数字）填充这些位置，<code>NaN</code> 是 Pandas 表示缺失数据的默认标记 (token)。</p>\n<pre><code class=\"language-python\"># 以字典列表形式的数据\nlist_of_dicts = [\n    {'StudentID': 'S001', 'Name': 'Alice', 'Score': 85},\n    {'StudentID': 'S002', 'Name': 'Bob', 'Age': 21}, # 注意：缺少 'Score'，多出 'Age'\n    {'StudentID': 'S003', 'Name': 'Charlie', 'Score': 78, 'Age': 22},\n    {'StudentID': 'S004', 'Name': 'David', 'Score': 88}\n]\n\n# 创建 DataFrame\ndf_from_list_dict = pd.DataFrame(list_of_dicts)\n\nprint(df_from_list_dict)\n</code></pre>\n<p>输出显示了 Pandas 如何处理不一致的键：</p>\n<pre><code>  StudentID     Name  Score   Age\n0      S001    Alice   85.0   NaN\n1      S002      Bob    NaN  21.0\n2      S003  Charlie   78.0  22.0\n3      S004    David   88.0   NaN\n</code></pre>\n<p>Pandas 从字典中存在的键推断出所有可能的列名 (<code>StudentID</code>、<code>Name</code>、<code>Score</code>、<code>Age</code>)。当特定行（字典）缺少某个键时，会插入 <code>NaN</code>。此外，请注意 <code>Score</code> 和 <code>Age</code> 列被自动分配了浮点数据类型 (<code>float64</code>)，因为 <code>NaN</code> 在技术上是一个浮点值。</p>\n<h3>从 NumPy 数组创建</h3>\n<p>如果您的数据已存在为二维 NumPy 数组，您可以直接将其转换为 <code>DataFrame</code>。默认情况下，Pandas 会为列和行（索引）都分配整数标签。但是，您可以使用 <code>columns</code> 和 <code>index</code> 参数 (parameter)明确提供标签。</p>\n<pre><code class=\"language-python\"># 一个二维 NumPy 数组\nnp_array = np.array([\n    [1, 2, 3],\n    [4, 5, 6],\n    [7, 8, 9]\n])\n\n# 创建带有默认标签的 DataFrame\ndf_from_np_default = pd.DataFrame(np_array)\nprint(\"带有默认标签的 DataFrame:\")\nprint(df_from_np_default)\n\n# 创建带有自定义标签的 DataFrame\ndf_from_np_custom = pd.DataFrame(\n    np_array,\n    columns=['Col_A', 'Col_B', 'Col_C'],\n    index=['Row_X', 'Row_Y', 'Row_Z']\n)\nprint(\"\\n带有自定义标签的 DataFrame:\")\nprint(df_from_np_custom)\n</code></pre>\n<p>输出:</p>\n<pre><code>DataFrame with default labels:\n   0  1  2\n0  1  2  3\n1  4  5  6\n2  7  8  9\n\nDataFrame with custom labels:\n       Col_A  Col_B  Col_C\nRow_X      1      2      3\nRow_Y      4      5      6\nRow_Z      7      8      9\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1i3urxq\" \n              data-graph-definition='digraph DataFrame_Structure {\n    rankdir=LR;\n    node [shape=plaintext, fontsize=10];\n    subgraph cluster_dict {\n        label = \"字典键\";\n        bgcolor=\"#e9ecef\";\n        k1 [label=\"列A\"];\n        k2 [label=\"列B\"];\n    }\n    subgraph cluster_lists {\n        label = \"列表/数组\";\n        bgcolor=\"#e9ecef\";\n        l1 [label=\"[1, 4, 7]\"];\n        l2 [label=\"[2, 5, 8]\"];\n    }\n    subgraph cluster_df {\n        label = \"DataFrame\";\n        bgcolor=\"#d0bfff\";\n        df [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n              <TR><TD BGCOLOR=\"#a5d8ff\"> </TD><TD BGCOLOR=\"#a5d8ff\"><B>列A</B></TD><TD BGCOLOR=\"#a5d8ff\"><B>列B</B></TD></TR>\n              <TR><TD BGCOLOR=\"#a5d8ff\"><B>0</B></TD><TD>1</TD><TD>2</TD></TR>\n              <TR><TD BGCOLOR=\"#a5d8ff\"><B>1</B></TD><TD>4</TD><TD>5</TD></TR>\n              <TR><TD BGCOLOR=\"#a5d8ff\"><B>2</B></TD><TD>7</TD><TD>8</TD></TR>\n            </TABLE>\n        >];\n    }\n    k1 -> l1 [style=invis];\n    k2 -> l2 [style=invis];\n    {k1, l1} -> df [lhead=cluster_df, label=\" 映射到 \\n 列\"];\n    {k2, l2} -> df [lhead=cluster_df];\n    edge [style=invis]; {rank=same; k1 k2}; {rank=same; l1 l2};\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1i3urxq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示展示了字典键和列表如何映射到 Pandas DataFrame 中的列和数据。如果未指定，行索引通常会自动生成。</p>\n</blockquote>\n<h3>从 Series 字典创建</h3>\n<p>您也可以从一个字典构建 <code>DataFrame</code>，其中值是 Pandas <code>Series</code> 对象。这类似于使用列表字典，数据根据 Series 的索引标签进行对齐 (alignment)。</p>\n<pre><code class=\"language-python\"># 创建两个 Series\ns1 = pd.Series([10, 20, 30], index=['a', 'b', 'c'])\ns2 = pd.Series([15, 25, 35, 45], index=['a', 'b', 'c', 'd']) # 注意索引不同\n\n# 从 Series 字典创建 DataFrame\ndf_from_series = pd.DataFrame({'Col1': s1, 'Col2': s2})\n\nprint(df_from_series)\n</code></pre>\n<p>输出:</p>\n<pre><code>   Col1  Col2\na  10.0    15\nb  20.0    25\nc  30.0    35\nd   NaN    45\n</code></pre>\n<p>Pandas 会根据索引标签（'a'、'b'、'c'、'd'）自动对齐数据。由于 <code>s1</code> 没有索引 'd'，因此在 <code>Col1</code> 中为该行引入了 <code>NaN</code>。</p>\n<p>这些方法提供了灵活的途径来程序化地创建 DataFrame。一旦您有了 DataFrame，下一步通常是检查其属性和内容，这我们将在后续内容中介绍。请记住，直接从 CSV 或 Excel 等文件加载数据也是将数据导入 DataFrame 的一种非常常见的方式，这将在第 6 章中讨论。</p>",
+  "slug": "creating-dataframes",
+  "updates": [],
+  "references": [
+    {
+      "id": 4106,
+      "title": "pandas.DataFrame",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html",
+      "doi": "",
+      "note": "Pandas DataFrame构造函数的官方API参考，详细介绍了从不同数据类型创建DataFrame的各种方法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:16.541388Z",
+      "updated_at": "2025-09-08T05:15:12.267042Z"
+    },
+    {
+      "id": 4107,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas创建者所著的奠基性书籍，全面涵盖了DataFrame的创建和核心概念，适合深入理解。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:16.545147Z",
+      "updated_at": "2025-09-08T05:15:15.243552Z"
+    },
+    {
+      "id": 4108,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/03.01-introducing-pandas-objects.html",
+      "doi": "",
+      "note": "一本易于理解的指南，提供关于Pandas DataFrame的清晰解释和实用示例，包括各种构造方法，对初学者有益。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:16.548063Z",
+      "updated_at": "2025-09-08T05:15:16.731797Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

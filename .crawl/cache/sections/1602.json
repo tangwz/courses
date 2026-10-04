@@ -1,0 +1,61 @@
+{
+  "id": 1602,
+  "title": "练习编写基础 SQL 查询",
+  "meta_title": "SQL 动手实践：SELECT, INSERT, UPDATE, DELETE",
+  "meta_description": "通过针对示例数据库架构编写基础 SQL 查询来应用您的知识。",
+  "content": "<p>练习编写基本的 SQL 查询，使用与数据交互的基本语句，例如 <code>SELECT</code>、<code>INSERT</code>、<code>UPDATE</code>、<code>DELETE</code>，以及 <code>WHERE</code> 和 <code>ORDER BY</code>。通过示例练习是巩固理解并建立编写自己查询信心的最佳方式。</p>\n<h3>设置练习环境</h3>\n<p>对于这些练习，假设我们有一个小型图书馆或书店的简单数据库。它包含两个表：<code>Authors</code> 和 <code>Books</code>。</p>\n<p><strong>Authors 表：</strong></p>\n<p>此表存储作者信息。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">author_id</th>\n<th align=\"left\">first_name</th>\n<th align=\"left\">last_name</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Jane</td>\n<td align=\"left\">Austen</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">George</td>\n<td align=\"left\">Orwell</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Mary</td>\n<td align=\"left\">Shelley</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Charles</td>\n<td align=\"left\">Dickens</td>\n</tr>\n</tbody>\n</table>\n<ul>\n<li><code>author_id</code>：唯一标识每位作者的数字（主键）。</li>\n<li><code>first_name</code>：作者的名。</li>\n<li><code>last_name</code>：作者的姓。</li>\n</ul>\n<p><strong>Books 表：</strong></p>\n<p>此表存储书籍信息，通过 <code>author_id</code> 将每本书与作者关联起来。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">book_id</th>\n<th align=\"left\">title</th>\n<th align=\"left\">publication_year</th>\n<th align=\"left\">author_id</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Pride and Prejudice</td>\n<td align=\"left\">1813</td>\n<td align=\"left\">1</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">Emma</td>\n<td align=\"left\">1815</td>\n<td align=\"left\">1</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">1984</td>\n<td align=\"left\">1949</td>\n<td align=\"left\">2</td>\n</tr>\n<tr>\n<td align=\"left\">104</td>\n<td align=\"left\">Animal Farm</td>\n<td align=\"left\">1945</td>\n<td align=\"left\">2</td>\n</tr>\n<tr>\n<td align=\"left\">105</td>\n<td align=\"left\">Frankenstein</td>\n<td align=\"left\">1818</td>\n<td align=\"left\">3</td>\n</tr>\n<tr>\n<td align=\"left\">106</td>\n<td align=\"left\">Oliver Twist</td>\n<td align=\"left\">1838</td>\n<td align=\"left\">4</td>\n</tr>\n<tr>\n<td align=\"left\">107</td>\n<td align=\"left\">Great Expectations</td>\n<td align=\"left\">1861</td>\n<td align=\"left\">4</td>\n</tr>\n</tbody>\n</table>\n<ul>\n<li><code>book_id</code>：唯一标识每本书的数字（主键）。</li>\n<li><code>title</code>：书名。</li>\n<li><code>publication_year</code>：图书出版年份。</li>\n<li><code>author_id</code>：一个关联到 <code>Authors</code> 表中 <code>author_id</code> 的数字（外键）。</li>\n</ul>\n<p>您目前无需自行创建这些表。只需使用此结构和数据作为编写下方查询的依据。如果您可以使用数据库工具（例如 DB Browser for SQLite、DBeaver 或像 SQL Fiddle 这样的在线 SQL 环境），您可以创建这些表并插入数据来运行查询。</p>\n<h3>练习</h3>\n<p>让我们完成一些使用 SQL 的常见任务。在查看提供的解决方案之前，请尝试自己编写查询。</p>\n<p><strong>练习 1：检索所有作者</strong></p>\n<p>任务：编写查询以从 <code>Authors</code> 表中检索所有作者的所有信息。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM Authors;\n</code></pre>\n<p>这是最基础的 <code>SELECT</code> 查询，使用 <code>*</code> 表示“所有列”。</p>\n<p><strong>练习 2：检索特定书籍信息</strong></p>\n<p>任务：编写查询以仅检索 <code>Books</code> 表中所有书籍的 <code>title</code> 和 <code>publication_year</code>。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">SELECT title, publication_year\nFROM Books;\n</code></pre>\n<p>在这里，我们指定了我们想要的确切列，而不是使用 <code>*</code>。</p>\n<p><strong>练习 3：按作者筛选书籍</strong></p>\n<p>任务：编写查询以查找 <code>author_id</code> 为 2（乔治·奥威尔）的作者所写的所有书籍。检索这些书籍的所有列。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM Books\nWHERE author_id = 2;\n</code></pre>\n<p><code>WHERE</code> 子句筛选行，仅返回 <code>author_id</code> 列与值 2 匹配的行。</p>\n<p><strong>练习 4：按出版年份筛选书籍</strong></p>\n<p>任务：编写查询以查找 1900 年 <em>之后</em> 出版的所有书籍。检索它们的 <code>title</code> 和 <code>publication_year</code>。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">SELECT title, publication_year\nFROM Books\nWHERE publication_year > 1900;\n</code></pre>\n<p><code>WHERE</code> 子句使用大于运算符（<code>></code>）进行数值比较。</p>\n<p><strong>练习 5：按书名排序书籍</strong></p>\n<p>任务：编写查询以检索所有书籍的 <code>title</code> 和 <code>author_id</code>，并按 <code>title</code> 字母顺序排序。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">SELECT title, author_id\nFROM Books\nORDER BY title ASC;\n</code></pre>\n<p><code>ORDER BY title</code> 根据 <code>title</code> 列对结果进行排序。<code>ASC</code> 指定升序（A-Z），这通常是默认值，但明确指出是个好习惯。要按降序（Z-A）排序，您可以使用 <code>DESC</code>。</p>\n<p><strong>练习 6：添加新作者</strong></p>\n<p>任务：编写查询以向 <code>Authors</code> 表添加一位新作者“列夫·托尔斯泰”。分配其 <code>author_id</code> 为 5。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">INSERT INTO Authors (author_id, first_name, last_name)\nVALUES (5, 'Leo', 'Tolstoy');\n</code></pre>\n<p><code>INSERT INTO</code> 语句添加新行。我们指定表、要填充的列以及使用 <code>VALUES</code> 子句对应的数值。</p>\n<p><strong>练习 7：添加新书籍</strong></p>\n<p>任务：编写查询以将列夫·托尔斯泰的图书《战争与和平》（1869 年出版）添加到 <code>Books</code> 表。假设其 <code>book_id</code> 为 108，列夫·托尔斯泰的 <code>author_id</code> 为 5。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">INSERT INTO Books (book_id, title, publication_year, author_id)\nVALUES (108, 'War and Peace', 1869, 5);\n</code></pre>\n<p>类似于添加作者，我们向 <code>Books</code> 表中插入一个新行。</p>\n<p><strong>练习 8：更新书名</strong></p>\n<p>任务：原来 <code>book_id</code> 为 105 的书名应该是“弗兰肯斯坦；或现代普罗米修斯”。编写查询以更新此书的书名。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">UPDATE Books\nSET title = 'Frankenstein; or, The Modern Prometheus'\nWHERE book_id = 105;\n</code></pre>\n<p><code>UPDATE</code> 语句修改现有数据。<code>SET</code> 指定列及其新值。<code>WHERE</code> 子句在这里很重要；如果没有它，<em>所有</em> 书名都将被更改。除非您打算修改所有行，否则在使用 <code>UPDATE</code> 时务必使用 <code>WHERE</code>。</p>\n<p><strong>练习 9：删除书籍</strong></p>\n<p>任务：假设书籍《爱玛》（<code>book_id</code> = 102）从馆藏中移除。编写查询以从 <code>Books</code> 表中删除此书。</p>\n<p>解决方案：</p>\n<pre><code class=\"language-sql\">DELETE FROM Books\nWHERE book_id = 102;\n</code></pre>\n<p><code>DELETE FROM</code> 语句删除行。同样，<code>WHERE</code> 子句对于指定要删除 <em>哪些</em> 行很重要。省略 <code>WHERE</code> 将删除表中的 <em>所有</em> 行。使用 <code>DELETE</code> 时务必非常小心。</p>\n<h3>继续练习</h3>\n<p>这些练习涵盖了使用 SQL 的基础创建、读取、更新、删除（CRUD）操作。熟练掌握 SQL 的最佳方式是继续练习。</p>\n<ul>\n<li>尝试使用不同条件修改 <code>WHERE</code> 子句（例如，查找特定年份 <em>之前</em> 出版的书籍，查找特定姓氏的作者）。</li>\n<li>尝试对不同列使用 <code>ORDER BY</code>，并使用 <code>DESC</code> 进行降序排序。</li>\n<li>如果您建立了练习数据库，请尝试添加更多作者和书籍，更新不同字段，并选择性地删除记录。</li>\n</ul>\n<p>理解这些基本命令将为您处理关系型数据库打下坚实功底。随着您的进步，您将学习更高级的 SQL 功能，以进行更复杂的数据检索和操作。</p>",
+  "slug": "practice-basic-sql-queries",
+  "updates": [],
+  "references": [
+    {
+      "id": 5253,
+      "title": "Database System Concepts",
+      "author": "Abraham Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2020",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本基础教材，全面涵盖数据库原理，包括SQL的详细解释和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:39.864043Z",
+      "updated_at": "2025-09-07T19:14:57.779974Z"
+    },
+    {
+      "id": 5254,
+      "title": "PostgreSQL 16 Documentation: Chapter 4. SQL Syntax",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-syntax.html",
+      "doi": "",
+      "note": "官方文档，提供了SQL语法和命令的权威参考，有助于理解标准SQL。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:39.869378Z",
+      "updated_at": "2025-09-07T19:14:57.515499Z"
+    },
+    {
+      "id": 5255,
+      "title": "SQLZoo SQL Tutorial",
+      "author": "SQLZoo",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://sqlzoo.net/",
+      "doi": "",
+      "note": "一个互动式在线平台，提供从基础到高级的SQL查询实践练习。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:39.874420Z",
+      "updated_at": "2025-09-07T19:14:56.502709Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

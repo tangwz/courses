@@ -1,0 +1,45 @@
+{
+  "id": 2914,
+  "title": "实现抽象求值规则",
+  "meta_title": "JAX原语抽象求值",
+  "meta_description": "定义自定义原语在JAX追踪中如何根据形状和dtype来行为。",
+  "content": "<p>JAX原语是JAX系统所知的基础构造块。在定义您自己的自定义操作时，主要的一步是让JAX知晓其<em>形状和类型特征</em>。这通过实现<strong>抽象求值规则</strong>来完成。</p>\n<p>抽象求值是JAX追踪机制的一个重要组成部分。在JAX能够对包含您自定义原语的函数进行JIT编译、自动微分或向量 (vector)化之前，它需要确定该原语产生的输出的属性（如形状和数据类型，即<code>dtype</code>），<em>而无需实际在真实数据上运行计算</em>。它通过操作抽象值来执行此分析，主要是<code>jax.core.ShapedArray</code>实例，这些实例封装了形状和<code>dtype</code>信息，但不持有实际的数值。</p>\n<h3>抽象求值的目的</h3>\n<p>可以将抽象求值理解为在类型和形状层面定义您的原语的函数签名。当JAX在追踪期间遇到您的原语时（例如，当<code>jax.jit</code>应用于使用它的函数时），它会调用该原语的抽象求值规则。此规则接收与原语输入对应的抽象值以及任何必要的元数据（原语行为的特定参数 (parameter)），并计算原语输出的抽象值（形状和<code>dtype</code>）。</p>\n<p>此信息之所以重要，有以下几个原因：</p>\n<ol>\n<li><strong>静态分析：</strong> 这使得JAX能够在追踪阶段，在尝试编译或执行之前，及早检查形状不匹配或类型错误。</li>\n<li><strong>变换兼容性：</strong> <code>vmap</code>等变换需要知晓形状如何变化才能正确实现批处理规则。<code>grad</code>需要知晓形状和类型才能正确设置反向传播 (backpropagation)。</li>\n<li><strong>编译：</strong> XLA编译器需要计算图中所有操作的精确形状和类型信息，以便为目标硬件（CPU、GPU、TPU）生成高效、专门的代码。</li>\n</ol>\n<h3>实现<code>abstract_eval</code>方法</h3>\n<p>为了定义自定义原语的抽象求值规则，您通常需要继承<code>jax.core.Primitive</code>并实现其<code>abstract_eval</code>方法。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax.core import Primitive, ShapedArray\nfrom jax.interpreters import xla\n\n# 示例：一个将输入加1.0的原语\ncustom_add_one_p = Primitive('custom_add_one')\n\n@custom_add_one_p.def_abstract_eval\ndef custom_add_one_abstract_eval(*avals, **params):\n  # avals 包含输入的抽象值（例如 ShapedArray）\n  # params 包含在原语绑定期间传递的任何参数\n\n  # 基本验证（可选但推荐）\n  if len(avals) != 1:\n    raise ValueError(\"custom_add_one 需要恰好一个输入操作数。\")\n\n  input_aval = avals[0]\n\n  # 检查输入是否为 ShapedArray（最常见的情况）\n  if not isinstance(input_aval, ShapedArray):\n      raise TypeError(f\"输入必须是 ShapedArray，得到 {type(input_aval)}\")\n\n  # 确保此特定操作的 dtype 是浮点类型\n  if not jnp.issubdtype(input_aval.dtype, jnp.floating):\n      # 或者您可能定义特定的类型提升规则\n      raise TypeError(f\"输入 dtype 必须是浮点类型，得到 {input_aval.dtype}\")\n\n  # 核心逻辑：确定输出形状和 dtype\n  # 对于 'custom_add_one'，形状和 dtype 与输入相同。\n  output_shape = input_aval.shape\n  output_dtype = input_aval.dtype\n\n  # 返回输出的抽象值\n  return ShapedArray(output_shape, output_dtype)\n\n# 示例用法（说明性，如果没有实现规则则无法运行）\n# def my_func(x):\n#   # 将原语与输入 x 绑定\n#   return custom_add_one_p.bind(x) \n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们定义了一个原语<code>custom_add_one_p</code>。</li>\n<li>我们使用<code>@custom_add_one_p.def_abstract_eval</code>装饰器修饰函数<code>custom_add_one_abstract_eval</code>。这将该函数注册为我们原语的抽象求值规则。</li>\n<li>该函数接收传递给原语<code>bind</code>方法的每个位置参数 (parameter)的抽象值（<code>avals</code>），以及传递给<code>bind</code>的任何关键字参数（<code>params</code>）。</li>\n<li>我们对输入数量和类型执行基本验证。对于数组操作，检查<code>isinstance(aval, ShapedArray)</code>很常见。我们还检查了<code>dtype</code>。</li>\n<li>主要任务是计算<code>output_shape</code>和<code>output_dtype</code>。对于我们简单的<code>custom_add_one</code>，它们与输入的形状和<code>dtype</code>保持一致。更复杂的原语在此处会有逻辑，以体现它们如何变换形状（例如矩阵乘法、卷积）。</li>\n<li>最后，它返回一个<code>ShapedArray</code>，表示原语输出的抽象属性。如果一个原语返回多个输出，该函数将返回一个<code>ShapedArray</code>实例的元组。</li>\n</ol>\n<h3>处理参数 (parameter)（<code>params</code>）</h3>\n<p>有时，原语的行为以及其输出形状或类型，取决于并非输入数组本身的参数。例如，卷积原语需要步长和填充信息，或者归约原语需要归约的轴。这些参数通常作为关键字参数传递给原语的<code>bind</code>方法，并在<code>abstract_eval</code>函数内部的<code>params</code>字典中接收。</p>\n<pre><code class=\"language-python\"># 归约原语\n# custom_reduce_sum_p = Primitive('custom_reduce_sum')\n\n# @custom_reduce_sum_p.def_abstract_eval\n# def custom_reduce_sum_abstract_eval(aval, *, axis): # axis 作为关键字参数传递给 bind\n#   if not isinstance(aval, ShapedArray):\n#      raise TypeError(\"输入必须是数组\")\n#\n#   # 根据输入形状和轴参数计算输出形状\n#   output_shape = tuple(d for i, d in enumerate(aval.shape) if i not in axis)\n#   output_dtype = aval.dtype # 假设 dtype 不变\n#\n#   return ShapedArray(output_shape, output_dtype)\n\n# 用法：\n# result = custom_reduce_sum_p.bind(my_array, axis=(0,))\n</code></pre>\n<p>在这里，<code>axis</code>参数影响<code>output_shape</code>的计算。<code>abstract_eval</code>规则直接从<code>params</code>字典（或者如上所示的关键字参数，JAX对此处理得很好）中使用此参数来确定正确的输出形状。</p>\n<h3>在原语定义工作流中的位置</h3>\n<p>抽象求值是您需要为新原语定义的第一个规则。它为JAX理解原语的签名奠定了基础。只有在定义了<code>abstract_eval</code>之后，您才能继续实现实际的计算逻辑（针对CPU/GPU/TPU等特定后端的“降级”规则）及其微分规则（JVP/VJP），这些都依赖于抽象求值提供的形状和类型信息。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-w8qdxa\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    JaxFunction [label=\"使用原语的函数\", fillcolor=\"#a5d8ff\"];\n    Tracing [label=\"JAX 追踪（例如 jit, vmap）\", fillcolor=\"#bac8ff\"];\n    AbstractEval [label=\"原语.abstract_eval\\n(输入: 抽象值, 参数\\n输出: 抽象输出值)\", fillcolor=\"#96f2d7\"];\n    Jaxpr [label=\"jaxpr\\n(已知形状/dtype的图)\", fillcolor=\"#ffec99\"];\n    Compiler [label=\"XLA 编译\", fillcolor=\"#ffd8a8\"];\n    BackendExecution [label=\"后端执行 (CPU/GPU/TPU)\\n(需要降级规则)\", fillcolor=\"#ffc9c9\"];\n    Differentiation [label=\"自动微分 (grad)\\n(需要微分规则)\", fillcolor=\"#fcc2d7\"];\n\n    JaxFunction -> Tracing;\n    Tracing -> AbstractEval [label=\" 遇到\\n 自定义原语 \"];\n    AbstractEval -> Jaxpr [label=\" 提供输出\\n 形状/dtype \"];\n    Jaxpr -> Compiler;\n    Compiler -> BackendExecution;\n\n    Jaxpr -> Differentiation [style=dashed, label=\" 告知结构 \"];\n\n    subgraph cluster_primitive {\n        label = \"自定义原语定义\";\n        style=\"dashed\";\n        color=\"#adb5bd\";\n        AbstractEval;\n        BackendExecution;\n        Differentiation;\n    }\n\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-w8qdxa\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>抽象求值规则（<code>abstract_eval</code>）在JAX追踪期间被调用，以确定原语输出的形状和类型，从而能够创建<code>jaxpr</code>（JAX的中间表示），<code>jaxpr</code>随后用于编译、通过降级规则执行以及定义微分行为。</p>\n</blockquote>\n<p>通过仔细实现<code>abstract_eval</code>方法，您可以确保您的自定义原语与JAX的追踪和变换机制结合，在JIT编译、向量 (vector)化和自动微分等不同环境中，在形状和数据类型方面表现出可预测性。这一步对于在JAX中创建自定义操作来说是基础。</p>",
+  "slug": "implementing-abstract-evaluation",
+  "updates": [],
+  "references": [
+    {
+      "id": 7605,
+      "title": "How JAX primitives work",
+      "author": "JAX core developers",
+      "year": "2024",
+      "publisher": "Google LLC",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/How_JAX_primitives_work.html",
+      "doi": "",
+      "note": "这份官方指南解释了JAX原语的核心概念，包括抽象求值、ShapedArray以及定义自定义操作的过程。",
+      "order": 1,
+      "created_at": "2025-09-05T01:41:03.304859Z",
+      "updated_at": "2025-09-09T01:25:22.991102Z"
+    },
+    {
+      "id": 7607,
+      "title": "Accelerated Linear Algebra (XLA) Overview",
+      "author": "Google Developers",
+      "year": "2024",
+      "publisher": "Google Developers",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla",
+      "doi": "",
+      "note": "提供了XLA（JAX使用的线性代数编译器）的概述，解释了其在优化计算中的作用以及静态形状和类型信息的重要性。",
+      "order": 3,
+      "created_at": "2025-09-05T01:41:03.485364Z",
+      "updated_at": "2025-09-09T01:25:18.351462Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

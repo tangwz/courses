@@ -1,0 +1,200 @@
+# RAG 系统中 LLM 表现的监控
+
+来源：[原文](https://apxml.com/zh/courses/optimizing-rag-for-production/chapter-6-advanced-rag-evaluation-monitoring/monitoring-llm-performance-rag)
+
+[返回章节目录](README.md) · [返回课程目录](../README.md)
+
+RAG 系统中，强大的检索组件不可或缺，但作为生成器的大型语言模型 (LLM) 才是最终答案产出的地方。它的表现并非一成不变；可能因多种因素而退化，即使检索器持续提供相关上下文 (context)，也可能导致用户体验下降。持续监控 LLM 在 RAG 系统中行为的策略和技术有助于主动发现和处理这些表现问题。
+
+RAG 场景中有效的 LLM 监控不止于通用的 LLM 基准测试。它需要评估生成器整合所提供上下文信息、准确回答查询以及保持期望品质（如风格和安全性）的能力，同时持续跟踪这些方面。
+
+### RAG 中 LLM 表现的主要衡量指标
+
+为了有效监控您的 LLM，您需要追踪一组具体反映其在 RAG 流水线中表现的指标。这些指标通常需要结合自动化分析（可能使用另一个 LLM 作为评判者）和定期人工审查。
+
+1. **忠实度（可靠性）：**
+   这可以说是 RAG 系统中 LLM 最重要的衡量指标。它衡量生成输出准确反映检索到的上下文 (context)中所含信息的程度。一个忠实的回答不会引入未经上下文支持的信息，也不会与其矛盾。
+
+   - **监控方法：** 抽取生产中的（查询、检索到的上下文、生成响应）三元组样本。使用一个独立的、通常更强大的 LLM（一个“评估 LLM”），通过提示语评估生成的响应是否完全得到所提供上下文的支持。这可以得出数值分数（例如 1-5）或二元判断（忠实/不忠实）。另一种方法是使用自然语言推理 (inference) (NLI) 模型来检查生成响应与上下文中每个句子之间的蕴含或矛盾关系。
+   - **追踪：** 随时间监控平均忠实度分数或忠实响应的百分比。突然下降可能表明存在问题。
+2. **回答相关性（对查询而言，给定上下文）：**
+   忠实度确保 LLM 使用上下文，而相关性则确保生成的回答恰当地回应原始用户查询。如果上下文本身选择不当，或者 LLM 尽管有上下文但误解了查询意图，那么回答可能忠实于上下文却与查询不相关。
+
+   - **监控方法：** 类似于忠实度，使用评估 LLM。提示它评估生成的响应在考虑所提供上下文的情况下，回答用户查询的程度。查询与生成回答之间的语义相似度分数，可能根据上下文相关性进行加权，也可以使用，尽管这些方法通常细节较少。
+   - **追踪：** 追踪平均相关性分数。低相关性可能表明引导 LLM 的提示语存在问题，或者 LLM 在处理查询时遇到困难。
+3. **流畅性和连贯性：**
+   这些是标准的语言质量指标。生成的输出应语法正确、易于理解且内部一致。
+
+   - **监控方法：** 自动化语法检查器和可读性分数计算器（例如 Flesch-Kincaid）可以提供代理指标。如果您有参考模型或根据验证集监控微调 (fine-tuning)的 LLM，也可以追踪困惑度。评估 LLM 也可以被提示对流畅性和连贯性评分。
+   - **追踪：** 监控平均分数。这里的退化可能表明基础模型存在问题（如果基于 API 并由提供商更新）或微调存在问题。
+4. **有害性和安全性：**
+   LLM 不应生成有害、偏见或不当内容。
+
+   - **监控方法：** 使用内容安全分类器（许多 LLM 提供商提供此类工具，或您可以使用开源模型）。追踪因各种安全问题被标记 (token)的输出百分比。
+   - **追踪：** 监控被标记内容的比率。任何增加都应立即触发调查。
+5. **简洁度/冗余度：**
+   根据应用不同，您可能希望响应简洁或更详细。LLM 对期望输出长度的遵循是其表现的一个特征。
+
+   - **监控方法：** 追踪生成响应的平均 token 计数或字符长度。将其与期望范围进行比较。
+   - **追踪：** 监控平均输出长度及其分布。显著偏差可能表明 LLM 变得过于冗长或过于简短，这可能是由于提示语漂移或 LLM 行为变化所致。
+6. **生成延迟：**
+   LLM 生成响应所需的时间是一个重要的操作指标。
+
+   - **监控方法：** 记录每次 LLM 调用的推理时间。
+   - **追踪：** 监控平均、P95 和 P99 延迟。峰值或逐渐增加可能表明基础设施问题、模型效率变化（例如提供商更新后）或过于复杂的生成请求。
+7. **幻觉 (hallucination)率（上下文）：**
+   这与忠实度关联紧密，但专门针对 LLM 编造在任何所提供上下文中不存在的事实或细节的情形。
+
+   - **监控方法：** 这难以完全自动化。评估 LLM 可以被提示识别响应中看似合理但未直接得到上下文支持的陈述。通常需要对被标记的响应进行人工审查以确认。
+   - **追踪：** 追踪怀疑包含无根据幻觉的响应比例。
+
+### 建立基线并实施监控
+
+在有效监控之前，您需要建立基线。当您的 RAG 系统首次部署或重大更新后，请使用上述指标评估一组有代表性的查询-上下文 (context)-响应 元组。这个“黄金数据集”及其初始分数将作为您的基准。
+
+**实践中的监控策略：**
+
+- **持续抽样：** 定期抽取一定比例的生产流量（例如 1-5% 的查询）及其相应的检索上下文和生成的 LLM 输出。存储这些样本以供分析。
+- **自动化评估运行：** 定期（例如每日或每周），在抽样数据上运行您的自动化评估套件（使用评估 LLM、NLI 模型、安全分类器等）。
+
+  > RAG 系统中 LLM 表现监控的数据流向。
+- **人工干预（HITL）审查：** 安排对抽样响应子集的定期人工审查，特别是那些被自动化系统标记 (token)或自动化指标显示模糊的响应。这有助于校准自动化系统并发现它们可能遗漏的问题。
+- **趋势分析和告警：** 随时间绘制您的 LLM 表现指标图。实施告警机制，当某个指标超过预定义阈值或显示显著负面趋势时通知您的团队。例如，如果平均忠实度周环比下降 10%，则应触发告警。
+
+  
+  
+  [交互图表：LLM 忠实度随时间变化的监控](https://apxml.com/zh/courses/optimizing-rag-for-production/chapter-6-advanced-rag-evaluation-monitoring/monitoring-llm-performance-rag#plot-1h9s52d)
+  
+  <details>
+  <summary>图表数据（JSON）</summary>
+  
+  ```json
+  {
+    "data": [
+      {
+        "x": [
+          "Week 1",
+          "Week 2",
+          "Week 3",
+          "Week 4",
+          "Week 5",
+          "Week 6",
+          "Week 7",
+          "Week 8"
+        ],
+        "y": [
+          0.92,
+          0.91,
+          0.93,
+          0.89,
+          0.88,
+          0.82,
+          0.79,
+          0.75
+        ],
+        "type": "scatter",
+        "mode": "lines+markers",
+        "name": "平均忠实度",
+        "line": {
+          "color": "#228be6"
+        }
+      },
+      {
+        "x": [
+          "Week 1",
+          "Week 2",
+          "Week 3",
+          "Week 4",
+          "Week 5",
+          "Week 6",
+          "Week 7",
+          "Week 8"
+        ],
+        "y": [
+          0.85,
+          0.85,
+          0.85,
+          0.85,
+          0.85,
+          0.85,
+          0.85,
+          0.85
+        ],
+        "type": "scatter",
+        "mode": "lines",
+        "name": "最小可接受阈值",
+        "line": {
+          "color": "#fa5252",
+          "dash": "dash"
+        }
+      }
+    ],
+    "layout": {
+      "title": "LLM 忠实度随时间变化的监控",
+      "xaxis": {
+        "title": "时间"
+      },
+      "yaxis": {
+        "title": "平均忠实度分数",
+        "range": [
+          0.7,
+          1.0
+        ]
+      },
+      "legend": {
+        "orientation": "h",
+        "yanchor": "bottom",
+        "y": 1.02,
+        "xanchor": "right",
+        "x": 1
+      },
+      "margin": {
+        "t": 60,
+        "b": 40,
+        "l": 60,
+        "r": 20
+      }
+    }
+  }
+  ```
+  
+  </details>
+  
+  
+
+  > RAG 系统中 LLM 的平均忠实度分数每周监控图，带有预定义的最小可接受阈值。低于此阈值的下降（如第 6-7 周所示）将触发调查。
+
+### 识别 LLM 表现退化的根本原因
+
+当监控显示 LLM 表现下降时，有必要采用系统方法进行根本原因分析：
+
+1. **输入查询模式的变化：** 用户是否正在提出新型问题或以不同方式措辞？如果变化很大，这可能需要调整提示语，甚至微调 (fine-tuning) LLM。
+2. **检索器表现问题：** 如果检索到的上下文 (context)质量或相关性下降（请参阅上一节“监控检索组件的漂移”），LLM 将难以生成好的响应。问题可能出在检索器上，而非 LLM 本身。
+3. **LLM 提供商更新：** 如果您通过 API 使用第三方 LLM（例如 OpenAI、Anthropic），提供商可能会更新底层模型。这些更新通常是改进，但有时也可能轻微改变您特定使用场景的行为或表现特征。请监控提供商的发布说明。
+4. **提示语脆性或衰减：** 随着数据分布的变化或用户期望的演变，用于引导 LLM 的精心设计的提示语可能会随时间推移效果下降。提示语可能需要定期审查和重新优化。
+5. **微调问题（如适用）：** 如果您使用微调的 LLM，新训练数据中的问题、微调过程本身或训练数据与生产数据之间的不匹配都可能导致新部署版本的表现退化。
+6. **资源限制：** 对于自托管 LLM，计算资源（CPU、GPU、内存）不足可能导致延迟增加甚至生成错误。
+
+### 工具与集成
+
+LLM 表现监控并非独立进行。它与您更广泛的 MLOps 和可观察性堆栈集成：
+
+- **专门的 RAG 评估框架：** RAGAS、ARES 或 TruLens 等工具提供评估 RAG 流水线不同方面的工具，包括 LLM 特有指标。它们中的许多可以自动化。
+- **日志平台：** 全面记录查询、检索到的上下文 (context)、生成响应、延迟以及任何计算出的指标都非常重要。Elasticsearch、Splunk 或 Datadog 等平台是常用的。
+- **实验追踪平台：** MLflow 或 Weights & Biases 等工具可用于记录随时间变化的评估指标、比较不同 LLM 版本或提示语，并对评估数据集进行版本控制。
+- **可视化和仪表板工具：** Grafana、Kibana、Tableau 或定制解决方案用于创建章节引言中提到的健康仪表板，提供 LLM 表现以及其他系统指标的统一视图。
+
+监控 RAG 系统的 LLM 组件需要专门的投入，结合自动化技术和审慎的人工监督。通过追踪正确的指标，并建立发现和诊断退化的明确流程，您可以确保您的 RAG 系统的生成器持续提供高质量、可靠的答案，以满足生产环境中的用户期望。这种警觉是一个持续过程，对您应用的长期成功非常重要。
+
+## 参考资料
+
+- [FActScore: Fine-grained Atomic Fact Verification for Hallucination Detection in Large Language Models](https://arxiv.org/abs/2305.14251) — Sewon Min, Kalpesh Krishna, Xinxi Lyu, Mike Lewis, Wen-tau Yih, Pang Wei Koh, Mohit Iyyer, Luke Zettlemoyer, Hannaneh Hajishirzi (2023)
+  Journal: EMNLP 2023; DOI: [10.48550/arXiv.2305.14251](https://doi.org/10.48550/arXiv.2305.14251)
+  提出了一种详细的幻觉检测和事实验证方法，这对于RAG系统中LLM输出的可靠性和幻觉监测非常相关。
+- [Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew F. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  提供了一个评估LLM性能各个方面的综合框架，包括安全性、偏见和质量，为生产LLM的监测指标设计提供了参考。
+
+---
+
+[上一节](04-%E7%9B%91%E6%8E%A7%E6%A3%80%E7%B4%A2%E7%BB%84%E4%BB%B6%E4%B8%AD%E7%9A%84%E6%BC%82%E7%A7%BB.md) · [下一节](06-%E5%B0%86%E7%94%A8%E6%88%B7%E5%8F%8D%E9%A6%88%E7%BA%B3%E5%85%A5RAG%E7%B3%BB%E7%BB%9F%E4%BC%98%E5%8C%96.md)

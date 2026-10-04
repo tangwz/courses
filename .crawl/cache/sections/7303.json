@@ -1,0 +1,61 @@
+{
+  "id": 7303,
+  "title": "在 YAML 中编写 Pod 清单",
+  "meta_title": "如何编写 Kubernetes Pod 清单",
+  "meta_description": "关于 Pod 清单文件结构和语法的指南，在 YAML 中定义其规格、容器和元数据。",
+  "content": "<p>要在 Kubernetes 中创建 Pod，你需要在名为“清单”（manifest）的 YAML 文件中定义其期望状态。该文件充当蓝图，告诉 Kubernetes 控制平面你具体想要运行什么。虽然你可以使用命令行参数 (parameter)以命令式方式创建 Pod，但在生产环境中，使用清单的声明式方法是标准做法，因为它支持版本控制、可重复性，并且更易于管理配置。</p>\n<p>Pod 清单由几个必需的顶级字段组成。让我们看看定义任何 Pod 时都会用到的核心组件。</p>\n<h3>Pod 清单的结构</h3>\n<p>每个 Kubernetes 对象清单（包括 Pod）都包含四个主要字段：<code>apiVersion</code>、<code>kind</code>、<code>metadata</code> 和 <code>spec</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-162axr9\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  graph [bgcolor=\"transparent\", fontname=\"Arial\"];\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", color=\"#495057\", fillcolor=\"#e9ecef\"];\n  edge [color=\"#868e96\"];\n\n  Manifest [label=\"Pod 清单\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n  \n  subgraph cluster_meta {\n    label = \"元数据 (metadata)\";\n    bgcolor=\"#f8f9fa\";\n    color=\"#ced4da\";\n    MetadataName [label=\"名称: my-app-pod\"];\n    MetadataLabels [label=\"标签:\\n  app: my-app\"];\n  }\n\n  subgraph cluster_spec {\n    label = \"规格 (spec)\";\n    bgcolor=\"#f8f9fa\";\n    color=\"#ced4da\";\n    Containers [label=\"容器列表\", fillcolor=\"#a5d8ff\"];\n    \n    subgraph cluster_container {\n      label = \"容器\";\n      bgcolor=\"#f8f9fa\";\n      color=\"#ced4da\";\n      ContainerName [label=\"名称: web-server\"];\n      ContainerImage [label=\"镜像: nginx:1.21.6\"];\n      ContainerPorts [label=\"端口:\\n  - containerPort: 80\"];\n    }\n  }\n\n  APIVersion [label=\"API 版本: v1\"];\n  Kind [label=\"类型: Pod\"];\n  \n  Manifest -> APIVersion;\n  Manifest -> Kind;\n  Manifest -> cluster_meta [label=\"对象元数据\"];\n  Manifest -> cluster_spec [label=\"期望状态\"];\n  cluster_spec -> Containers;\n  Containers -> cluster_container;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-162axr9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Kubernetes Pod 清单的层级结构，显示了定义容器所需的字段和嵌套配置。</p>\n</blockquote>\n<ol>\n<li>\n<p><strong>apiVersion</strong>: 此字段指定你用于创建此对象的 Kubernetes API 版本。对于 Pod、Service 和 ConfigMap 等核心对象，版本为 <code>v1</code>。对于 Deployment 或 ReplicaSet 等其他对象，你将使用不同的 API 版本，例如 <code>apps/v1</code>。API 版本决定了该对象合法的结构和字段。</p>\n</li>\n<li>\n<p><strong>kind</strong>: 此字段指定你要创建的 Kubernetes 对象类型。要创建 Pod，请将此值设置为 <code>Pod</code>。这会告诉 Kubernetes 该清单描述的是哪种资源。</p>\n</li>\n<li>\n<p><strong>metadata</strong>: 这是一个包含有助于唯一标识资源的字段的对象。<code>metadata</code> 中最常用的两个字段是：</p>\n<ul>\n<li><code>name</code>: Pod 在其命名空间内的唯一名称。例如 <code>webapp-pod-xyz</code>。</li>\n<li><code>labels</code>: 附加到对象的键值对映射。标签用于组织管理，并允许其他资源（如 Service）选择并操作一组 Pod。例如，你可以为所有 Web 服务器 Pod 打上 <code>app: frontend</code> 标签。</li>\n</ul>\n</li>\n<li>\n<p><strong>spec</strong> (规格): 你在此字段中定义对象的<em>期望状态</em>。不同类型的 Kubernetes 对象，<code>spec</code> 的内容差异很大。对于 Pod，<code>spec</code> 主要描述应在其中运行的容器。<code>spec</code> 中最核心的字段是 <code>containers</code>。</p>\n</li>\n</ol>\n<h3>定义容器</h3>\n<p><code>spec.containers</code> 字段是一个列表，这意味着一个 Pod 可以包含一个或多个容器。列表中的每一项都是一个具有自己属性集的容器对象。你至少必须提供：</p>\n<ul>\n<li><strong>name</strong>: Pod 内容器的名称。这对于查看日志和识别容器非常有用，尤其是在多容器 Pod 中。</li>\n<li><strong>image</strong>: 要运行的容器镜像，指定格式与 Docker 相同，例如 <code>nginx:1.21.6</code> 或 <code>your-repo/your-app:v2</code>。Kubernetes 将从容器镜像仓库中拉取此镜像。</li>\n<li><strong>ports</strong>: 要从容器暴露的网络端口列表。<code>containerPort</code> 指定容器内应用程序正在监听的端口号。请注意，这不会将端口暴露到 Pod 外部；它仅供其他 Kubernetes 组件参考。将应用程序暴露给网络需要使用 Service，我们将在后续章节中介绍。</li>\n</ul>\n<h3>示例：单容器 Pod 清单</h3>\n<p>让我们将这些部分组合成一个完整的清单文件。本示例定义了一个名为 <code>nginx-pod</code> 的简单 Pod，它运行一个使用官方 Nginx 镜像的容器。</p>\n<p>创建一个名为 <code>nginx-pod.yaml</code> 的文件并添加以下内容：</p>\n<pre><code class=\"language-yaml\"># nginx-pod.yaml\n\n# 指定 API 版本。'v1' 是核心 API 组。\napiVersion: v1\n\n# 指定对象类型。在本例中是 Pod。\nkind: Pod\n\n# 包含 Pod 的元数据，如名称和标签。\nmetadata:\n  # 此 Pod 在命名空间内的唯一名称。\n  name: nginx-pod\n  # 标签是用于组织和选择的键值对。\n  labels:\n    app: webserver\n\n# 定义 Pod 的期望状态。\nspec:\n  # Pod 内部运行的容器列表。\n  containers:\n    # 列表中的每一项都是一个容器定义。\n  - name: nginx-container\n    # 用于此容器的 Docker 镜像。\n    image: nginx:1.21.6\n    # 从容器暴露的端口列表。\n    ports:\n    - containerPort: 80\n</code></pre>\n<p>此清单是一条声明式指令。它并不说明<em>如何</em>创建 Pod，而是说明 Pod 的最终状态应该是<em>什么</em>。当你将此清单应用于集群时，Kubernetes 控制平面会读取它，并努力使集群的实际状态与此期望状态相匹配。如果名为 <code>nginx-pod</code> 的 Pod 不存在，它将被创建。</p>\n<p>要应用此清单，你可以使用 <code>kubectl</code> 命令行工具，我们将在本章稍后部分详细介绍：</p>\n<pre><code class=\"language-bash\">kubectl apply -f nginx-pod.yaml\n</code></pre>\n<p>此命令将清单发送到 Kubernetes API 服务器，然后由其调度 Pod 在工作节点上运行。有了对清单结构的这些基础了解，你现在已经准备好定义简单或复杂的 Pod 配置了。</p>",
+  "slug": "writing-pod-manifest-yaml",
+  "updates": [],
+  "references": [
+    {
+      "id": 19712,
+      "title": "Pods",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/workloads/pods/",
+      "doi": "",
+      "note": "提供关于Kubernetes Pod的官方和最新信息，包括其生命周期、结构以及通过manifest进行声明式定义。",
+      "order": 1,
+      "created_at": "2025-09-06T13:13:49.536652Z",
+      "updated_at": "2025-09-10T05:14:58.519539Z"
+    },
+    {
+      "id": 19713,
+      "title": "Kubernetes API Concepts",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/overview/kubernetes-api/",
+      "doi": "",
+      "note": "解释所有Kubernetes API对象的基本结构，详细阐述apiVersion、kind、metadata和spec字段的用途。",
+      "order": 2,
+      "created_at": "2025-09-06T13:13:49.539859Z",
+      "updated_at": "2025-09-10T05:14:58.912767Z"
+    },
+    {
+      "id": 19714,
+      "title": "Kubernetes in Action",
+      "author": "Marko Lukša",
+      "year": "2017",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action",
+      "doi": "",
+      "note": "全面介绍了Kubernetes，其中包含专门章节解释Pod、YAML manifest以及资源管理的声明式方法。",
+      "order": 3,
+      "created_at": "2025-09-06T13:13:49.542420Z",
+      "updated_at": "2025-09-10T05:15:02.439331Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3238,
+  "title": "实施安全护栏",
+  "meta_title": "实施LLM安全护栏",
+  "meta_description": "开发并实施用于LLM交互的有效输入和输出护栏。",
+  "content": "<p>护栏是LLM应用架构中重要的控制机制，在模型的输入和输出边界上运行，以强制执行安全策略和行为限制。与修改模型内部参数 (parameter)（例如RLHF或DPO）的对齐 (alignment)技术不同，护栏充当外部包装或过滤器，在已部署的系统中提供实际的防御和控制层。它们是系统级安全设计的重要组成部分。</p>\n<p>可以将护栏看作检查点。在用户提示到达LLM之前，输入护栏可以检查它。在LLM生成响应之后，但在发送给用户之前，输出护栏可以审查它。这种预处理和后处理允许基于预定义的规则或分类进行干预，且独立于LLM的内部状态。</p>\n<h3>护栏的类型</h3>\n<p>护栏通常分为两类：输入和输出。</p>\n<h4>输入护栏</h4>\n<p>这些护栏在LLM处理用户提示<em>之前</em>对其进行分析。它们的主要目的是防止有害、恶意或违反策略的输入触发不良模型行为。常见功能包括：</p>\n<ol>\n<li><strong>提示验证：</strong> 对长度、格式或禁用字符进行基本检查。</li>\n<li><strong>敏感数据检测：</strong> 识别并经常编辑个人身份信息（PII），例如姓名、地址、电话号码或信用卡详细信息。这通常通过使用正则表达式（regex）或命名实体识别（NER）模型来实现。</li>\n<li><strong>有害内容过滤：</strong> 检测包含仇恨言论、骚扰、露骨内容或宣扬非法行为的提示。这通常涉及关键词列表、正则表达式模式或专门的文本分类器，这些分类器经过训练可以识别有毒或不安全的语言。</li>\n<li><strong>提示攻击检测：</strong> 识别尝试操纵LLM的行为，例如越狱提示或提示注入攻击。这可能涉及查找已知的对抗模式、异常格式，或使用针对此类攻击示例训练的分类器。</li>\n</ol>\n<h4>输出护栏</h4>\n<p>这些护栏在向用户展示LLM生成的响应<em>之前</em>对其进行分析。它们的目的是确保输出是安全的、合规的和有用的。常见功能包括：</p>\n<ol>\n<li><strong>内容过滤：</strong> 类似于输入过滤，检查LLM的输出中是否存在有害、有毒或不适当的内容，即使模型已进行对齐 (alignment)，也可能生成这些内容。</li>\n<li><strong>事实和基础检查：</strong> 尽管有难度，但一些护栏会尝试检测潜在的幻觉 (hallucination)，尤其是容易验证的幻觉，例如无效的URL或无意义的声明，有时通过与知识库交叉引用或执行网络搜索（尽管这会增加延迟）。</li>\n<li><strong>格式和合规性强制：</strong> 确保输出符合所需格式（例如JSON，特定的对话结构）、长度限制，或避免生成特定的不允许信息（例如重复先前编辑的PII）。</li>\n<li><strong>主题限制：</strong> 防止模型偏离禁止的主题或生成超出其指定范围或功能的响应。</li>\n<li><strong>重复控制：</strong> 检测并可能阻止过于重复或表明模型陷入循环的响应。</li>\n</ol>\n<h3>实施策略</h3>\n<p>实施护栏需要根据具体要求、对延迟的容忍度和所需的精细程度选择合适的工具和技术。</p>\n<ol>\n<li>\n<p><strong>基于规则的系统：</strong></p>\n<ul>\n<li><strong>机制：</strong> 使用正则表达式、关键词列表、字典和预定义的逻辑规则。</li>\n<li><strong>优点：</strong> 实施简单，计算成本低，透明（易于理解为何被标记 (token)）。对明确的违规行为有效（例如，特定的禁用词、PII模式）。</li>\n<li><strong>缺点：</strong> 脆弱，容易被同义词或创造性措辞绕过，难以处理上下文 (context)（例如，编程中的“执行”与暴力行为），列表和规则需要手动更新。</li>\n</ul>\n</li>\n<li>\n<p><strong>基于模型的系统：</strong></p>\n<ul>\n<li><strong>机制：</strong> 采用机器学习 (machine learning)模型（通常是更小、专用的分类器），这些模型经过训练用于检测特定类别，例如毒性、情感、PII、主题相关性或提示注入模式。这些模型处理输入或输出文本并产生分类或分数。</li>\n<li><strong>优点：</strong> 比简单规则更能处理上下文，对措辞的变化更具适应性，可以通过使用新数据重新训练来更新。</li>\n<li><strong>缺点：</strong> 引入延迟，需要机器学习专业知识进行训练和维护，透明度较低（“黑箱”问题），容易受到针对护栏模型本身的对抗性攻击。</li>\n</ul>\n</li>\n<li>\n<p><strong>混合方法：</strong></p>\n<ul>\n<li><strong>机制：</strong> 将基于规则的检查用于简单情况下的速度和确定性，与基于模型的检查结合用于更复杂的检测。例如，对PII使用正则表达式，对有害语言使用毒性分类器。</li>\n<li><strong>优点：</strong> 在性能、覆盖范围和复杂性之间提供平衡。</li>\n<li><strong>缺点：</strong> 需要仔细集成并管理不同组件的配合。</li>\n</ul>\n</li>\n<li>\n<p><strong>外部API：</strong></p>\n<ul>\n<li><strong>机制：</strong> 使用专门从事内容审查、PII检测或其他安全相关任务的第三方服务。</li>\n<li><strong>优点：</strong> 使用外部专业知识，可能减少内部开发工作。</li>\n<li><strong>缺点：</strong> 引入外部依赖，潜在的数据隐私问题，增加网络延迟，产生费用。</li>\n</ul>\n</li>\n</ol>\n<p>涉及护栏的典型流程可能如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1mpoqsm\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled]; edge [color=\"#495057\"]; \"用户输入\" -> \"输入护栏\" [label=\" 检查\"]; \"输入护栏\" -> \"LLM\" [label=\" 允许\"]; \"输入护栏\" -> \"阻止/修改\" [color=\"#f03e3e\", label=\" 拒绝\"]; \"LLM\" -> \"输出护栏\" [label=\" 生成\\n响应\"]; \"输出护栏\" -> \"最终输出\" [label=\" 允许\"]; \"输出护栏\" -> \"阻止/修改 \" [color=\"#f03e3e\", label=\" 拒绝\"]; \"最终输出\" -> \"用户\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1mpoqsm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>请求流程图，显示输入和输出护栏在LLM处理前后充当检查点。被拒绝的请求可能被完全阻止或被修改（例如，PII编辑）。</p>\n</blockquote>\n<h3>护栏实施中的难点</h3>\n<ul>\n<li><strong>准确性权衡：</strong> 调整护栏需要平衡误报（阻止安全内容）和漏报（允许不安全内容）。过于严格的护栏会降低用户体验；过于宽松的护栏会损害安全性。</li>\n<li><strong>延迟：</strong> 每次检查都会增加处理时间。复杂的模型或外部API调用会显著增加应用程序的整体响应时间。选择高效的实施方案很重要。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-141sfvs\" \n              data-plot-definition='{\"layout\": {\"title\": \"护栏延迟开销\", \"xaxis\": {\"title\": \"护栏类型\"}, \"yaxis\": {\"title\": \"平均增加延迟 (毫秒)\"}, \"margin\": {\"l\": 40, \"r\": 20, \"t\": 40, \"b\": 60}}, \"data\": [{\"type\": \"bar\", \"x\": [\"关键词过滤\", \"PII扫描（正则表达式）\", \"毒性分类器（小型模型）\", \"外部内容API\"], \"y\": [5, 15, 50, 150], \"marker\": {\"color\": [\"#3bc9db\", \"#748ffc\", \"#fd7e14\", \"#f06595\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-141sfvs\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>不同护栏类型引入的延迟示例。简单方法速度更快，而基于模型或外部检查会增加更多开销。</p>\n</blockquote>\n<ul>\n<li><strong>适应性和维护：</strong> 对手不断设计新方法来规避固定规则或已知的模型弱点。护栏需要持续监测、评估（使用第四章的方法），并使用新规则、模式或重新训练的模型进行更新。</li>\n<li><strong>上下文 (context)盲点：</strong> 尤其是对于基于规则的系统，理解语言的真实上下文仍然困难。一个在某种上下文中被认为有害的词，在另一种上下文中可能是无害的。</li>\n<li><strong>组合：</strong> 确保多个护栏（例如PII过滤器和毒性过滤器）在没有意外干扰的情况下正确配合可能很复杂。</li>\n</ul>\n<h3>最佳实践</h3>\n<ul>\n<li><strong>分层防御：</strong> 在输入和输出阶段实施多个、多样化的护栏。将快速、简单的检查与更精细的检查结合起来。</li>\n<li><strong>可配置性：</strong> 设计具有可调阈值或参数 (parameter)的护栏，以便根据应用程序的风险承受能力和观察到的性能进行调整。</li>\n<li><strong>监测和日志记录：</strong> 精心记录护栏活动。跟踪护栏何时触发、对什么内容触发，并尽可能收集用户反馈。这些数据对于发现弱点和提高准确性非常有价值。</li>\n<li><strong>故障安全设计：</strong> 决定当护栏失效或超时时系统应如何行为。应该阻止请求（失效关闭）还是允许请求（失效开放）？选择取决于具体风险。</li>\n<li><strong>定期更新：</strong> 将护栏定义（规则、列表、模型）视为需要根据新威胁、评估结果和红队发现进行定期审查和更新的动态组件。</li>\n<li><strong>透明度（谨慎使用）：</strong> 考虑是否以及如何告知用户护栏何时修改或阻止内容。虽然透明度可以建立信任，但它也可能向对手暴露漏洞。平衡透明度与安全需求。</li>\n</ul>\n<p>实施有效的护栏是一个持续的工程、评估和适应过程。它们不是一个完美的解决方案，但提供了必要的控制层，用于构建更安全、更可靠的LLM应用。当它们被集成到包括评估、仔细的模型对齐 (alignment)和良好系统设计原则在内的全面安全策略中时，效果最佳。</p>",
+  "slug": "implementing-safety-guardrails",
+  "updates": [],
+  "references": [
+    {
+      "id": 3991,
+      "title": "NVIDIA NeMo Guardrails Documentation",
+      "author": "NVIDIA",
+      "year": "2023",
+      "publisher": "NVIDIA",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.nvidia.com/nemo-guardrails",
+      "doi": "",
+      "note": "提供一个开源框架，用于为LLM应用程序构建可配置的安全防护栏。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:02.818964Z",
+      "updated_at": "2025-09-09T09:06:21.828115Z"
+    },
+    {
+      "id": 3992,
+      "title": "A Survey of Large Language Models",
+      "author": "Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.18223",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2303.18223",
+      "doi": "10.48550/arXiv.2303.18223",
+      "note": "包含关于LLM安全和对齐技术的全面章节，将外部防护栏置于更广泛的安全框架中。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:02.825243Z",
+      "updated_at": "2025-09-09T09:06:17.247060Z"
+    },
+    {
+      "id": 3994,
+      "title": "Microsoft Responsible AI Standard v2",
+      "author": "Microsoft",
+      "year": "2022",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.microsoft.com/en-us/ai/responsible-ai-resources",
+      "doi": "",
+      "note": "概述负责任AI开发的原则和实践，为已部署系统中防护栏等安全机制的重要性提供背景。",
+      "order": 4,
+      "created_at": "2025-09-04T16:56:02.833888Z",
+      "updated_at": "2025-09-09T09:06:26.896616Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

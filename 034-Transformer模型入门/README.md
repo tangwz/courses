@@ -1,0 +1,70 @@
+# Transformer模型入门
+
+来源：[Transformer模型入门](https://apxml.com/zh/courses/introduction-to-transformer-models)
+
+理解Transformer模型的根本构架与运作方式。本课程涵盖注意力机制、编码器-解码器结构，以及其在自然语言处理方面取得顶尖成果的核心要素。
+
+预计学时：10 小时
+
+先修要求：机器学习与Python要点
+
+## 课程目录
+
+### 1. [序列建模与注意力机制基础](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/README.md)
+
+- 1. [序列到序列任务的挑战](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/01-%E5%BA%8F%E5%88%97%E5%88%B0%E5%BA%8F%E5%88%97%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%8C%91%E6%88%98.md)
+- 2. [回顾：循环神经网络 (RNN)](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/02-%E5%9B%9E%E9%A1%BE%EF%BC%9A%E5%BE%AA%E7%8E%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%20%28RNN%29.md)
+- 3. [传统循环神经网络方法的局限性](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/03-%E4%BC%A0%E7%BB%9F%E5%BE%AA%E7%8E%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E6%96%B9%E6%B3%95%E7%9A%84%E5%B1%80%E9%99%90%E6%80%A7.md)
+- 4. [注意力机制原理介绍](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/04-%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%8E%9F%E7%90%86%E4%BB%8B%E7%BB%8D.md)
+- 5. [注意力分数计算：一个宏观视角](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/05-%E6%B3%A8%E6%84%8F%E5%8A%9B%E5%88%86%E6%95%B0%E8%AE%A1%E7%AE%97%EF%BC%9A%E4%B8%80%E4%B8%AA%E5%AE%8F%E8%A7%82%E8%A7%86%E8%A7%92.md)
+- 6. [来自注意力权重的上下文向量](01-%E5%BA%8F%E5%88%97%E5%BB%BA%E6%A8%A1%E4%B8%8E%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%9F%BA%E7%A1%80/06-%E6%9D%A5%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9D%83%E9%87%8D%E7%9A%84%E4%B8%8A%E4%B8%8B%E6%96%87%E5%90%91%E9%87%8F.md)
+- [章节测验](https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-1-sequence-modeling-attention-fundamentals/quiz)
+
+### 2. [自注意力与多头注意力](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/README.md)
+
+- 1. [自注意力的原理](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/01-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E7%9A%84%E5%8E%9F%E7%90%86.md)
+- 2. [自注意力机制中的查询、键和值向量](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E4%B8%AD%E7%9A%84%E6%9F%A5%E8%AF%A2%E3%80%81%E9%94%AE%E5%92%8C%E5%80%BC%E5%90%91%E9%87%8F.md)
+- 3. [缩放点积注意力机制](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/03-%E7%BC%A9%E6%94%BE%E7%82%B9%E7%A7%AF%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6.md)
+- 4. [自注意力得分可视化](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/04-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E5%BE%97%E5%88%86%E5%8F%AF%E8%A7%86%E5%8C%96.md)
+- 5. [多头注意力简介](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/05-%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B%E7%AE%80%E4%BB%8B.md)
+- 6. [多头注意力机制如何运作](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/06-%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E5%A6%82%E4%BD%95%E8%BF%90%E4%BD%9C.md)
+- 7. [多头注意力机制的优势](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/07-%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6%E7%9A%84%E4%BC%98%E5%8A%BF.md)
+- 8. [动手实践：实现缩放点积注意力](02-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B%E4%B8%8E%E5%A4%9A%E5%A4%B4%E6%B3%A8%E6%84%8F%E5%8A%9B/08-%E5%8A%A8%E6%89%8B%E5%AE%9E%E8%B7%B5%EF%BC%9A%E5%AE%9E%E7%8E%B0%E7%BC%A9%E6%94%BE%E7%82%B9%E7%A7%AF%E6%B3%A8%E6%84%8F%E5%8A%9B.md)
+- [章节测验](https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-2-self-attention-multi-head-attention/quiz)
+
+### 3. [Transformer 编码器-解码器架构](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/README.md)
+
+- 1. [整体架构概览](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/01-%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%E6%A6%82%E8%A7%88.md)
+- 2. [输入嵌入层](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/02-%E8%BE%93%E5%85%A5%E5%B5%8C%E5%85%A5%E5%B1%82.md)
+- 3. [位置信息的必要性](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/03-%E4%BD%8D%E7%BD%AE%E4%BF%A1%E6%81%AF%E7%9A%84%E5%BF%85%E8%A6%81%E6%80%A7.md)
+- 4. [位置编码说明](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/04-%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%E8%AF%B4%E6%98%8E.md)
+- 5. [编码器层堆叠](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/05-%E7%BC%96%E7%A0%81%E5%99%A8%E5%B1%82%E5%A0%86%E5%8F%A0.md)
+- 6. [加法与归一化层 (残差连接)](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/06-%E5%8A%A0%E6%B3%95%E4%B8%8E%E5%BD%92%E4%B8%80%E5%8C%96%E5%B1%82%20%28%E6%AE%8B%E5%B7%AE%E8%BF%9E%E6%8E%A5%29.md)
+- 7. [逐位置前馈网络](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/07-%E9%80%90%E4%BD%8D%E7%BD%AE%E5%89%8D%E9%A6%88%E7%BD%91%E7%BB%9C.md)
+- 8. [解码器堆栈](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/08-%E8%A7%A3%E7%A0%81%E5%99%A8%E5%A0%86%E6%A0%88.md)
+- 9. [带掩码的多头自注意力](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/09-%E5%B8%A6%E6%8E%A9%E7%A0%81%E7%9A%84%E5%A4%9A%E5%A4%B4%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B.md)
+- 10. [编码器-解码器注意力机制](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/10-%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%B3%A8%E6%84%8F%E5%8A%9B%E6%9C%BA%E5%88%B6.md)
+- 11. [最终线性层和Softmax](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/11-%E6%9C%80%E7%BB%88%E7%BA%BF%E6%80%A7%E5%B1%82%E5%92%8CSoftmax.md)
+- 12. [动手实践：构建编码器层](03-Transformer%20%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8%E6%9E%B6%E6%9E%84/12-%E5%8A%A8%E6%89%8B%E5%AE%9E%E8%B7%B5%EF%BC%9A%E6%9E%84%E5%BB%BA%E7%BC%96%E7%A0%81%E5%99%A8%E5%B1%82.md)
+- [章节测验](https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-3-transformer-encoder-decoder-architecture/quiz)
+
+### 4. [Transformer模型的训练与实现](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/README.md)
+
+- 1. [数据准备：分词](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/01-%E6%95%B0%E6%8D%AE%E5%87%86%E5%A4%87%EF%BC%9A%E5%88%86%E8%AF%8D.md)
+- 2. [构建输入批次](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/02-%E6%9E%84%E5%BB%BA%E8%BE%93%E5%85%A5%E6%89%B9%E6%AC%A1.md)
+- 3. [序列任务的损失函数](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/03-%E5%BA%8F%E5%88%97%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0.md)
+- 4. [优化策略](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/04-%E4%BC%98%E5%8C%96%E7%AD%96%E7%95%A5.md)
+- 5. [正则化方法](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/05-%E6%AD%A3%E5%88%99%E5%8C%96%E6%96%B9%E6%B3%95.md)
+- 6. [基本实现概述](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/06-%E5%9F%BA%E6%9C%AC%E5%AE%9E%E7%8E%B0%E6%A6%82%E8%BF%B0.md)
+- 7. [使用预训练模型库（简述）](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/07-%E4%BD%BF%E7%94%A8%E9%A2%84%E8%AE%AD%E7%BB%83%E6%A8%A1%E5%9E%8B%E5%BA%93%EF%BC%88%E7%AE%80%E8%BF%B0%EF%BC%89.md)
+- 8. [实践：组装一个基本Transformer](04-Transformer%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%AE%AD%E7%BB%83%E4%B8%8E%E5%AE%9E%E7%8E%B0/08-%E5%AE%9E%E8%B7%B5%EF%BC%9A%E7%BB%84%E8%A3%85%E4%B8%80%E4%B8%AA%E5%9F%BA%E6%9C%ACTransformer.md)
+- [章节测验](https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-4-training-implementing-transformers/quiz)
+
+## 学习目标
+
+- **注意力机制**：阐述注意力的含义，并区分不同的注意力机制。
+- **自注意力**：说明自注意力如何让模型评估序列中不同词语的重要性。
+- **Transformer构架**：概述Transformer模型的组成部分，包括编码器和解码器堆叠。
+- **多头注意力**：理解多头注意力的原理及实现方法。
+- **位置编码**：阐明引入序列顺序信息的必要性及具体做法。
+- **初步实现**：使用深度学习框架实现Transformer构架的核心构成。

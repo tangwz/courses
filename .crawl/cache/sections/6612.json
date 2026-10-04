@@ -1,0 +1,61 @@
+{
+  "id": 6612,
+  "title": "动手实践：一个简单的文件操作工具",
+  "meta_title": "实践：创建文件操作工具",
+  "meta_description": "一个实际的练习环节，用于构建一个能为代理执行文件读写等操作的基础工具。",
+  "content": "<p>构建一个简单的文件操作工具，能够让大型语言模型（LLM）代理与环境进行交互。这个练习将展示LLM代理如何读写文本文件，这是许多任务所需的主要功能。我们将重点创建两个Python函数：一个用于读取文件内容，另一个用于写入内容到文件。尽管这些工具很基础，但它们构成了更复杂文件管理操作的组成部分。</p>\n<p>我们的目标是创建两个不同的函数：</p>\n<ul>\n<li><code>read_file(filepath: str)</code>: 这个函数将接受文件路径作为输入，并以字符串形式返回文件内容。</li>\n<li><code>write_file(filepath: str, content: str)</code>: 这个函数将接受文件路径和字符串内容作为输入，将内容写入指定文件，并确认操作成功。</li>\n</ul>\n<p>对于这两个函数，错误处理很重要，因为文件操作可能因多种原因失败（例如，文件未找到、权限问题）。在出现错误时，提供给大型语言模型的反馈应该清晰且提供足够信息。</p>\n<h3>实现 <code>read_file</code> 工具</h3>\n<p>让我们开始实现 <code>read_file</code> 函数。这个函数需要以读取模式打开文件，获取其内容，并处理文件不存在等潜在错误。</p>\n<pre><code class=\"language-python\">import os\n\ndef read_file(filepath: str) -> str:\n    \"\"\"\n    读取指定文本文件的内容。\n\n    参数：\n        filepath: 要读取文件的路径。\n\n    返回：\n        文件内容（字符串形式），如果发生问题则返回错误信息。\n    \"\"\"\n    try:\n        # 基本安全措施：在此简单示例中阻止目录遍历\n        # 在实际系统中，应使用目录白名单或更严格的路径验证。\n        if \"..\" in filepath:\n            return \"Error: Relative paths with '..' are not allowed.\"\n\n        # 为简化起见，我们假设文件位于特定的 'agent_files' 子目录中。\n        # 在生产环境中，此路径应可配置并有安全防护。\n        base_directory = \"agent_files\" \n        safe_filepath = os.path.join(base_directory, os.path.basename(filepath))\n\n        # 如果此示例的基目录不存在，则创建它\n        if not os.path.exists(base_directory):\n            os.makedirs(base_directory)\n\n        with open(safe_filepath, 'r', encoding='utf-8') as f:\n            content = f.read()\n        return content\n    except FileNotFoundError:\n        return f\"Error: File not found at '{filepath}' (resolved to '{safe_filepath}').\"\n    except Exception as e:\n        return f\"Error reading file '{filepath}': {str(e)}\"\n\n</code></pre>\n<p>在这个函数中：</p>\n<ol>\n<li>我们包含了一个非常基础的检查，通过在 <code>filepath</code> 中使用 <code>\"..\"</code> 来阻止简单的目录遍历攻击。生产系统将需要更复杂的路径验证和沙箱机制。</li>\n<li>我们定义了一个 <code>base_directory</code>（例如 <code>agent_files</code>），代理被允许从该目录读取文件。这有助于限制文件操作。使用 <code>os.path.basename(filepath)</code> 是为了确保只考虑文件名部分，从而防止代理指定意图目录之外的路径。</li>\n<li>我们使用 <code>try-except</code> 块来专门捕获 <code>FileNotFoundError</code>，并提供定制化的消息。</li>\n<li>一个通用的 <code>except Exception</code> 捕获其他潜在的 I/O 错误，返回包含原始异常的通用错误消息。</li>\n<li>文件以 <code>utf-8</code> 编码打开，这是文本文件的常见标准。</li>\n</ol>\n<p>当大型语言模型调用此工具时，如果文件 <code>agent_files/example.txt</code> 存在且包含“Hello World”，则调用 <code>read_file(\"example.txt\")</code> 将返回 <code>\"Hello World\"</code>。如果文件不存在，它将返回 <code>\"Error: File not found at 'example.txt' (resolved to 'agent_files/example.txt').\"</code></p>\n<h3>实现 <code>write_file</code> 工具</h3>\n<p>接下来，我们来实现 <code>write_file</code> 函数。这个工具将允许代理将文本保存到文件中。写入文件比读取文件带来更大的风险，因此在实际应用中，对权限和目标位置的仔细考量更为重要。</p>\n<pre><code class=\"language-python\">import os\n\ndef write_file(filepath: str, content: str) -> str:\n    \"\"\"\n    将给定内容写入指定的文本文件。\n    如果文件存在，将被覆盖。\n\n    参数：\n        filepath: 要写入文件的路径。\n        content: 要写入文件的文本内容。\n\n    返回：\n        成功消息，如果发生问题则返回错误信息。\n    \"\"\"\n    try:\n        # 基本安全措施：阻止目录遍历\n        if \"..\" in filepath:\n            return \"Error: Relative paths with '..' are not allowed for writing.\"\n\n        # 将写入操作限制在特定子目录中\n        base_directory = \"agent_files\"\n        safe_filepath = os.path.join(base_directory, os.path.basename(filepath))\n\n        # 如果基目录不存在，则创建它\n        if not os.path.exists(base_directory):\n            os.makedirs(base_directory)\n\n        with open(safe_filepath, 'w', encoding='utf-8') as f:\n            f.write(content)\n        return f\"Successfully wrote content to '{filepath}' (resolved to '{safe_filepath}').\"\n    except Exception as e:\n        return f\"Error writing file '{filepath}': {str(e)}\"\n\n</code></pre>\n<p><code>write_file</code> 的要点：</p>\n<ol>\n<li>类似于 <code>read_file</code>，它通过使用 <code>os.path.basename</code> 和 <code>base_directory</code> 包含了基本的路径安全性。</li>\n<li>文件以写入模式（<code>'w'</code>）打开，这意味着如果文件已存在，它将被覆盖。对于一个更高级的工具，你可能需要考虑添加一个 <code>append</code> 模式或一个参数 (parameter)来控制覆盖行为。</li>\n<li>一个 <code>try-except</code> 块处理写入操作期间可能出现的 <code>IOError</code> 或其他异常。</li>\n<li>成功消息中包含已解析的路径，以避免歧义。</li>\n</ol>\n<p>如果一个代理决定使用此工具，其中 <code>filepath=\"report.txt\"</code> 且 <code>content=\"This is the agent's report.\"</code>, 该工具将尝试使用给定内容创建或覆盖 <code>agent_files/report.txt</code>。</p>\n<h3>大型语言模型的工具说明</h3>\n<p>大型语言模型代理要使用这些Python函数，需要清楚的说明每个工具的功能、预期的参数 (parameter)以及返回的内容。以下是你可能为一个代理框架定义这些信息的方式：</p>\n<p><strong>工具 1: 读取文件</strong></p>\n<ul>\n<li><strong>名称:</strong> <code>read_file</code></li>\n<li><strong>描述:</strong> \"读取位于 'agent_files' 目录中指定文本文件的全部内容。使用此功能来获取文件中存储的信息。\"</li>\n<li><strong>输入参数：</strong>\n<ul>\n<li><code>filepath</code> (字符串，必需): \"要读取的文件名（例如，'notes.txt'）。不要包含 '../' 或 '/' 等目录路径；所有文件都相对于预配置的 'agent_files' 目录。\"</li>\n</ul>\n</li>\n<li><strong>输出：</strong>\n<ul>\n<li>(字符串): \"文件内容，如果文件无法读取则为错误消息。\"</li>\n</ul>\n</li>\n</ul>\n<p><strong>工具 2: 写入文件</strong></p>\n<ul>\n<li><strong>名称:</strong> <code>write_file</code></li>\n<li><strong>描述:</strong> \"在 'agent_files' 目录中用提供的内容写入或覆盖文本文件。使用此功能来保存信息或创建新的文本文件。\"</li>\n<li><strong>输入参数：</strong>\n<ul>\n<li><code>filepath</code> (字符串，必需): \"要写入的文件名（例如，'summary.txt'）。不要包含 '../' 或 '/' 等目录路径；所有文件都相对于预配置的 'agent_files' 目录。如果文件存在，它将被覆盖。\"</li>\n<li><code>content</code> (字符串，必需): \"要写入文件的文本内容。\"</li>\n</ul>\n</li>\n<li><strong>输出：</strong>\n<ul>\n<li>(字符串): \"写入成功时的确认消息，或文件无法写入时的错误消息。\"</li>\n</ul>\n</li>\n</ul>\n<p>这些说明旨在指导大型语言模型正确使用这些工具，其中包括有关文件系统结构（<code>agent_files</code> 目录）和潜在结果（如覆盖文件）的提示。</p>\n<h3>测试你的文件操作工具</h3>\n<p>要测试这些工具：</p>\n<ol>\n<li>\n<p><strong>直接Python测试：</strong> 直接从Python脚本调用这些函数。</p>\n<ul>\n<li>在 <code>agent_files</code> 子目录中创建一个示例文件（例如 <code>agent_files/my_test_file.txt</code>），并包含一些内容。</li>\n<li>调用 <code>read_file(\"my_test_file.txt\")</code> 并验证输出。</li>\n<li>使用不存在的文件名测试 <code>read_file</code> 以检查错误处理。</li>\n<li>调用 <code>write_file(\"new_test_file.txt\", \"Hello from the agent!\")</code>。检查 <code>agent_files/new_test_file.txt</code> 是否以正确内容创建。</li>\n<li>通过尝试写入受限路径（如果你要实现更复杂的路径验证）或在可能的情况下模拟权限错误来测试 <code>write_file</code>（尽管在不修改实际文件权限的情况下，这更难进行单元测试）。</li>\n</ul>\n</li>\n<li>\n<p><strong>代理集成测试：</strong> 尽管完整的代理集成将在后面介绍，但你可以设想代理如何使用这些工具。</p>\n<ul>\n<li>如果要求代理“总结文档 'project_update.txt' 并将摘要保存到 'summary_v1.txt'”，它应该首先调用 <code>read_file(\"project_update.txt\")</code>，然后处理内容，最后调用 <code>write_file(\"summary_v1.txt\", \"...\")</code>。</li>\n<li>思考代理将如何响应来自 <code>read_file</code> 的错误消息（例如，如果 <code>project_update.txt</code> 不存在）。</li>\n</ul>\n</li>\n</ol>\n<h3>重要的安全考量</h3>\n<p>我们构建的文件工具仅作示例。对于任何应用，特别是当大型语言模型可以确定文件名或内容时，安全是头等大事：</p>\n<ul>\n<li><strong>路径验证和白名单：</strong> 使用 <code>os.path.basename</code> 和 <code>base_directory</code> 的方法只是一个非常基础的第一步。生产系统必须对可读/可写目录以及可能的文件名或文件扩展名使用严格的白名单。绝不允许在未经过净化和验证的情况下，从大型语言模型输出构建任意路径。</li>\n<li><strong>权限：</strong> 运行Python代码（以及代理工具）的进程应具有最低必要的文件系统权限。它不应以特权用户身份运行。</li>\n<li><strong>沙箱：</strong> 为了最大程度的安全性，特别是当执行大型语言模型生成的文件名或处理可能不受信任的内容时，文件操作应在沙箱环境中进行（例如，带有受限卷挂载的Docker容器，或使用操作系统级别的沙箱功能）。</li>\n<li><strong>资源限制：</strong> 实施检查以防止代理读取或写入过大的文件，这可能导致拒绝服务。</li>\n<li><strong>输入净化：</strong> 如果大型语言模型生成要写入的内容，请确保对其进行净化，以防该内容稍后可能被其他系统解释（例如，写入代码或脚本）。</li>\n</ul>\n<p>这些简单的文件操作工具，如果得到适当的安全保护和说明，将显著增强代理与持久存储交互和管理信息的能力。在构建更复杂的代理时，你可能会扩展这些工具以处理目录、列出文件、检查文件是否存在或向文件追加内容，同时始终将安全性放在设计的首位。</p>",
+  "slug": "practice-file-manipulation-tool",
+  "updates": [],
+  "references": [
+    {
+      "id": 18502,
+      "title": "Built-in Functions: open()",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/functions.html#open",
+      "doi": "",
+      "note": "Python 内置 `open()` 函数的官方文档，它是读写文件的基础。",
+      "order": 1,
+      "created_at": "2025-09-06T12:26:29.524857Z",
+      "updated_at": "2026-02-04T11:31:56.017003Z"
+    },
+    {
+      "id": 18503,
+      "title": "os - Miscellaneous operating system interfaces",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/os.html",
+      "doi": "",
+      "note": "Python `os` 模块的官方文档，解释了用于路径构建和目录处理的函数，如 `os.path.join`、`os.path.basename` 和 `os.makedirs`。",
+      "order": 2,
+      "created_at": "2025-09-06T12:26:29.528287Z",
+      "updated_at": "2026-02-04T11:31:55.911096Z"
+    },
+    {
+      "id": 18504,
+      "title": "OWASP Top 10:2021",
+      "author": "OWASP Foundation",
+      "year": "2021",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/www-project-top-ten/",
+      "doi": "",
+      "note": "一份标准的安全意识文档，概述了 Web 应用程序面临的常见安全风险，为安全编码实践提供了广阔背景，包括文件系统交互和输入验证。",
+      "order": 3,
+      "created_at": "2025-09-06T12:26:29.530751Z",
+      "updated_at": "2026-02-04T11:31:56.067779Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

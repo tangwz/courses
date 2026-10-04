@@ -1,0 +1,61 @@
+{
+  "id": 3924,
+  "title": "为部署构建 LangChain 项目结构",
+  "meta_title": "为部署构建 LangChain 项目结构",
+  "meta_description": "组织代码、配置和依赖项的最佳实践，以便投入生产就绪状态。",
+  "content": "<h3>推荐的项目布局</h3>\n<p>尽管理想结构可能因应用复杂程度和团队偏好而异，但对于包含 LangGraph 和 LangServe 等现代工具的生产级 LangChain 应用，一种常见且高效的布局通常如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-v1cxf0\" \n              data-graph-definition='digraph G {\n  bgcolor=\"transparent\";\n  node [shape=folder, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [arrowhead=none, color=\"#adb5bd\"];\n\n  root [label=\"my_langchain_app/\", shape=folder, fillcolor=\"#ced4da\"];\n\n  src [label=\"src/\"];\n  config [label=\"config/\"];\n  tests [label=\"tests/\"];\n  scripts [label=\"scripts/\"];\n  notebooks [label=\"notebooks/\"];\n  deploy [label=\"deploy/\"];\n  venv [label=\".venv/ (或类似)\"];\n  dockerfile [label=\"Dockerfile\", shape=note, fillcolor=\"#dee2e6\"];\n  env_example [label=\".env.example\", shape=note, fillcolor=\"#ffec99\"];\n  env [label=\".env (被忽略)\", shape=note, fillcolor=\"#ffec99\"];\n  reqs [label=\"requirements.txt\", shape=note, fillcolor=\"#a5d8ff\"];\n  pyproject [label=\"pyproject.toml\", shape=note, fillcolor=\"#a5d8ff\"];\n  readme [label=\"README.md\", shape=note, fillcolor=\"#dee2e6\"];\n  gitignore [label=\".gitignore\", shape=note, fillcolor=\"#dee2e6\"];\n\n  root -> src;\n  root -> config;\n  root -> tests;\n  root -> scripts;\n  root -> notebooks;\n  root -> deploy;\n  root -> venv;\n  root -> dockerfile;\n  root -> env_example;\n  root -> env;\n  root -> reqs;\n  root -> pyproject;\n  root -> readme;\n  root -> gitignore;\n\n  sub_src [label=\"app_module/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_graphs [label=\"graphs/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_chains [label=\"chains/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_tools [label=\"tools/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_prompts [label=\"prompts/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_utils [label=\"utils/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  init_py [label=\"__init__.py\", shape=note, fillcolor=\"#f8f9fa\"];\n  server_py [label=\"server.py\", shape=note, fillcolor=\"#f8f9fa\"];\n\n  src -> sub_src;\n  sub_src -> init_py;\n  sub_src -> server_py;\n  sub_src -> sub_graphs;\n  sub_src -> sub_chains;\n  sub_src -> sub_tools;\n  sub_src -> sub_prompts;\n  sub_src -> sub_utils;\n\n  sub_config_default [label=\"default.yaml\", shape=note, fillcolor=\"#f8f9fa\"];\n  sub_config_prod [label=\"production.yaml\", shape=note, fillcolor=\"#f8f9fa\"];\n  config -> sub_config_default;\n  config -> sub_config_prod;\n\n  sub_tests_unit [label=\"unit/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  sub_tests_int [label=\"integration/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  tests -> sub_tests_unit;\n  tests -> sub_tests_int;\n\n  sub_deploy_k8s [label=\"kubernetes/\", shape=folder, fillcolor=\"#f8f9fa\"];\n  deploy -> sub_deploy_k8s;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-v1cxf0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是一个可部署 LangChain 应用的典型目录结构，强调职责分离和现代组件。</p>\n</blockquote>\n<p>我们来审视每个主要目录的用途：</p>\n<ul>\n<li><strong><code>src/</code> (或 <code>app/</code>)</strong>: 这是你应用的核心。它包含定义 LangChain 逻辑的 Python 模块和包。\n<ul>\n<li><strong>模块化</strong>: 在 <code>src/</code> 内部，根据功能将代码组织到子目录中。常见文件夹包含 <code>graphs/</code> (用于 LangGraph 有状态工作流)、<code>chains/</code> (用于 LCEL 可运行组件)、<code>tools/</code>、<code>prompts/</code> 和 <code>utils/</code>。这种结构有助于隔离逻辑，便于重用和测试。</li>\n<li><strong>API 入口</strong>: 对于生产部署，你通常需要一个 API 服务器。像 <code>server.py</code> 这样的文件通常放置在此处，用于定义 FastAPI 应用和 LangServe 路由。</li>\n<li>在 <code>src/</code> 及其子目录中使用 <code>__init__.py</code> 文件，将它们标记 (token)为 Python 包。</li>\n</ul>\n</li>\n<li><strong><code>config/</code></strong>: 在这里存放配置文件，按环境分离（例如，<code>default.yaml</code>, <code>production.yaml</code>）。这对于模型参数 (parameter)或提示模板等复杂的非敏感设置很有用。然而，现代应用越来越倾向于依赖代码中定义的 Pydantic Settings 类，这些类直接从环境变量读取，从而减少了对外部 YAML 文件的依赖。</li>\n<li><strong><code>tests/</code></strong>: 包含所有自动化测试。\n<ul>\n<li><strong><code>unit/</code></strong>: 针对独立函数、工具或图节点的测试。</li>\n<li><strong><code>integration/</code></strong>: 验证组件之间交互的测试，例如完整的链式执行或代理循环。</li>\n</ul>\n</li>\n<li><strong><code>scripts/</code></strong>: 存放用于非主应用流程任务的实用脚本，例如数据摄取、向量 (vector)存储索引或评估运行。</li>\n<li><strong><code>notebooks/</code></strong>: 用于试验和原型设计的 Jupyter Notebook。将它们分开能确保实验性代码不与生产逻辑混淆。</li>\n<li><strong><code>deploy/</code> (或 <code>infra/</code>)</strong>: 包含与部署基础设施相关的文件，例如 Kubernetes 清单 (<code>kubernetes/</code>)、Terraform 配置 (<code>terraform/</code>) 或 Helm 图表。</li>\n<li><strong><code>Dockerfile</code></strong>: 定义如何为你的应用构建容器镜像。它通常位于根目录中，以便构建上下文 (context)可以包含所有项目文件。</li>\n<li><strong>依赖管理文件</strong>:\n<ul>\n<li><code>requirements.txt</code> 或 <code>pyproject.toml</code>: 定义运行时依赖项。对于 Poetry 或 PDM 等现代工具，使用 <code>pyproject.toml</code> 是标准做法，允许严格的版本锁定以及更便捷的开发依赖管理。</li>\n</ul>\n</li>\n<li><strong>环境变量</strong>:\n<ul>\n<li><code>.env</code>: <em>应在 <code>.gitignore</code> 中列出</em>。包含秘密信息（API 密钥）和本地设置。</li>\n<li><code>.env.example</code>: 一个模板文件，展示所需变量但没有具体值。</li>\n</ul>\n</li>\n<li><strong><code>.gitignore</code></strong>: 指定 Git 应该忽略的文件（例如，<code>.env</code>, <code>__pycache__/</code>, 本地数据）。</li>\n<li><strong><code>README.md</code></strong>: 提供关于设置、测试和部署流程的基本文档。</li>\n</ul>",
+  "slug": "structuring-projects-deployment",
+  "updates": [],
+  "references": [
+    {
+      "id": 10596,
+      "title": "Packaging Python Projects",
+      "author": "Python Packaging Authority",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/en/latest/tutorials/packaging-projects/",
+      "doi": "",
+      "note": "Python 应用程序和库结构化、打包和分发的官方指南，涵盖布局和依赖文件。",
+      "order": 1,
+      "created_at": "2025-09-05T06:50:56.260295Z",
+      "updated_at": "2025-09-08T12:38:48.557668Z"
+    },
+    {
+      "id": 10597,
+      "title": "The Twelve-Factor App",
+      "author": "Adam Wiggins",
+      "year": "2011",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://12factor.net/",
+      "doi": "",
+      "note": "构建健壮且可扩展的软件即服务应用程序的奠基性方法论，涵盖配置管理和部署原则。",
+      "order": 2,
+      "created_at": "2025-09-05T06:50:56.263658Z",
+      "updated_at": "2025-09-08T12:38:53.611592Z"
+    },
+    {
+      "id": 10598,
+      "title": "Poetry Documentation",
+      "author": "Sébastien Eustace and Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python-poetry.org/docs/",
+      "doi": "",
+      "note": "Poetry 的官方文档，这是一种 Python 依赖管理和打包工具，通过清晰的依赖定义帮助确保可重现的构建。",
+      "order": 3,
+      "created_at": "2025-09-05T06:50:56.265907Z",
+      "updated_at": "2025-09-08T12:38:44.018238Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 6713,
+  "title": "代理指令与普通指令的对比",
+  "meta_title": "代理指令与普通LLM指令的对比",
+  "meta_description": "区分指导AI代理与普通LLM交互的独特要求和复杂性。",
+  "content": "<p>您可能熟悉为大型语言模型（LLM）编写指令以生成文本、总结文章或回答特定问题，但指导AI代理则带来了新的复杂性和目标。普通指令通常启动单轮交互，目标是直接响应。代理指令则旨在引导一个可能长时间运行、多步骤的流程，其中AI必须规划、执行和调整。理解这些差异是构建高效代理系统的基本要求。</p>\n<p>让我们分析主要差异：</p>\n<h3>范围与目标</h3>\n<p>普通LLM指令通常侧重于单个、明确界定的任务。您提供指令，LLM生成响应。例如：</p>\n<ul>\n<li>“将‘hello world’翻译成法语。”</li>\n<li>“总结以下关于可再生能源的文章：[文章内容]”</li>\n<li>“编写一个计算数字阶乘的Python函数。”</li>\n</ul>\n<p>范围限于即时请求，目标是生成特定信息或内容。</p>\n<p>代理指令则定义了更宽泛的目标，这通常需要一系列行动、推理 (inference)以及与环境的互动。目标不只是生成文本，而是达成一个结果。请看这些代理目标：</p>\n<ul>\n<li>“为两个人规划下个月旧金山的三日旅行，侧重科技博物馆和当地美食，预算1000美元（不含机票）。提供行程和预订链接。”</li>\n<li>“监控我项目在GitHub仓库中标记 (token)为‘bug’的新问题，每天早上自动生成一份总结报告，并发布到Slack的#dev-alerts频道。”</li>\n</ul>\n<p>在这里，指令启动的是一个工作流程，而不仅仅是单个响应。代理需要分解目标、做出决策，并可能与多个工具或数据源互动。</p>\n<h3>结构与内容复杂性</h3>\n<p>普通指令可以很简单。尽管少样本提示或提供详细上下文 (context)等技术可以提高结果，但核心指令通常是直接的。</p>\n<p>代理指令通常更具结构性且更详细。它们通常需要包含：</p>\n<ul>\n<li><strong>总目标或任务：</strong> 明确定义代理应实现什么。</li>\n<li><strong>可用工具或功能：</strong> 指定代理可以执行哪些操作（例如，网络搜索、代码执行、API调用）以及如何调用它们。这可能包括提供函数签名或API文档片段。</li>\n<li><strong>约束与规则：</strong> 定义代理行为的界限，例如预算限制、道德准则或偏好方法。</li>\n<li><strong>记忆指令：</strong> 关于如何使用其短期（暂存区）和长期记忆的指令，包括记住什么以及如何获取信息。</li>\n<li><strong>思考和行动的格式指令：</strong> 指导代理以结构化方式（例如，JSON）输出其推理 (inference)过程或预期行动，以便控制系统可以解析和执行。</li>\n<li><strong>角色或身份（可选但常见）：</strong> 定义代理应如何“表现”或应采用何种视角（例如，“您是一个有用的旅行助手”）。</li>\n</ul>\n<p>本质上，代理指令不像一个问题，更像是一份任务简报或特定任务的操作手册。</p>\n<h3>交互模型：单次与迭代循环</h3>\n<p>大多数普通LLM交互是“单次”的，或涉及由人工手动引导的几轮对话。您发送指令，获得响应。如果不正确，您调整指令并再次尝试。</p>\n<p>代理系统则在一个迭代循环中运行。一种常见模式，受ReAct（推理 (inference)+行动）等架构启发，如下所示：</p>\n<ol>\n<li><strong>推理：</strong> 代理在其指令和当前状态的引导下，思考目标并决定下一个最佳行动。</li>\n<li><strong>行动：</strong> 代理执行选定的行动，这可能涉及使用工具、查询数据库或生成子任务。</li>\n<li><strong>观察：</strong> 代理接收其行动的反馈或结果（例如，API响应、错误消息、新信息）。</li>\n<li><strong>重复：</strong> 代理整合这些观察结果，更新其记忆或计划，然后循环（推理、行动、观察）继续，通常在每一步动态调整指令，直到目标实现或满足停止条件。</li>\n</ol>\n<p>代理系统中的指令不是静态的；它是这个动态循环的一部分，通常在每次迭代中通过观察和记忆中的新信息得到增强。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1iojfuk\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=0.2];\n    edge [fontname=\"sans-serif\", fontsize=10];\n\n    subgraph cluster_standard {\n        label=\"普通LLM交互\";\n        style=\"rounded\";\n        bgcolor=\"#e9ecef\";\n        s_prompt [label=\"用户指令\", fillcolor=\"#b2f2bb\"];\n        s_llm [label=\"LLM\", fillcolor=\"#a5d8ff\"];\n        s_response [label=\"直接响应\", fillcolor=\"#d8f5a2\"];\n        s_prompt -> s_llm [label=\"输入\"];\n        s_llm -> s_response [label=\"输出\"];\n    }\n\n    subgraph cluster_agentic {\n        label=\"代理工作流程\";\n        style=\"rounded\";\n        bgcolor=\"#e9ecef\";\n        a_goal [label=\"初始目标/\\n系统指令\", fillcolor=\"#b2f2bb\"];\n        a_agent_core [label=\"代理核心\\n(指令组合器,\\n记忆, 工具定义)\", fillcolor=\"#bac8ff\"];\n        a_llm [label=\"LLM\\n(思考/行动生成)\", fillcolor=\"#a5d8ff\"];\n        a_action [label=\"行动执行\\n(工具使用 / API调用)\", fillcolor=\"#ffd8a8\"];\n        a_observation [label=\"观察/\\n反馈\", fillcolor=\"#ffec99\"];\n        \n        a_goal -> a_agent_core;\n        a_agent_core -> a_llm [label=\"构建指令\"];\n        a_llm -> a_action [label=\"选定行动/\\n工具调用\"];\n        a_action -> a_observation [label=\"结果/数据\"];\n        a_observation -> a_agent_core [label=\"更新记忆/\\n调整计划\"];\n        a_agent_core -> a_llm [style=dashed, label=\"下一次迭代指令\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1iojfuk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>普通LLM交互流程与典型代理工作流程循环的比较。代理系统涉及持续的指令调整以及与外部元素的互动。</p>\n</blockquote>\n<h3>工具集成</h3>\n<p>普通指令通常不期望LLM<em>直接</em>使用外部工具。尽管LLM可能生成可以调用API的代码，但LLM本身并未进行调用。</p>\n<p>代理指令则经常专门设计来支持工具使用。代理的指令工程的一个重要部分包括：</p>\n<ul>\n<li>明确描述可用工具、它们的用途以及它们的输入/输出架构。</li>\n<li>指导代理决定<em>何时</em>需要工具、使用<em>哪个</em>工具以及提供<em>什么参数 (parameter)</em>。</li>\n<li>指示代理如何解释工具输出，包括处理错误或意外结果。</li>\n</ul>\n<p>这使得LLM成为一个活跃的参与者，该系统可以与外部环境互动、获取实时数据或执行超出文本生成的行动。</p>\n<h3>状态与记忆管理</h3>\n<p>在普通LLM使用中，“记忆”主要限于当前交互的上下文 (context)窗口。来自之前独立对话的信息通常会丢失，除非手动重新引入。</p>\n<p>代理系统需要更复杂的记忆管理来保持上下文、跟踪进度并在较长时间内从过往互动中学习。代理指令通过以下方式在此方面发挥作用：</p>\n<ul>\n<li>指示代理使用“暂存区”或短期记忆进行即时推理 (inference)过程。</li>\n<li>指导代理何时以及如何从长期记忆（例如，向量 (vector)数据库或传统数据库）存储或获取信息。</li>\n<li>总结过往行动和观察结果，以便将相关上下文重新纳入新指令中，尤其是在处理有限上下文窗口时。</li>\n</ul>\n<p>指令有效地成为代理与其记忆系统互动的接口。</p>\n<h3>错误处理与自我修正</h3>\n<p>当普通指令产生不满意或不正确的LLM响应时，识别错误、修改指令并再次尝试的责任通常在于人类用户。</p>\n<p>代理的指令可以设计为鼓励一定程度的自我修正。通过指示代理：</p>\n<ul>\n<li>评估其行动的结果。</li>\n<li>识别不一致或错误（例如，工具返回错误代码）。</li>\n<li>如果初始方法失败，尝试重新规划或尝试替代行动。</li>\n</ul>\n<p>这使得代理更具弹性和自主性，能够在没有即时人工干预的情况下处理小障碍。例如，指令可能包含这样的指示：“如果搜索查询没有结果，尝试用更宽泛的词语重新措辞查询。”</p>\n<p>总而言之，尽管普通指令和代理指令都指导LLM行为，但代理指令要详细得多。它们是复杂、目标导向和交互式流程的主要控制机制。在本课程的学习中，您将学习设计这些高级指令的技术，使代理能够规划、使用工具、管理记忆并执行高效的工作流程。</p>",
+  "slug": "contrasting-agent-standard-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 18523,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Iulia Turc, Karthik R. Narasimhan",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/pdf/2210.03629.pdf",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct框架，该框架结合了语言模型的推理和行动能力，为迭代代理工作流提供了基础架构。",
+      "order": 1,
+      "created_at": "2025-09-06T12:27:08.140703Z",
+      "updated_at": "2025-09-11T05:01:36.423840Z"
+    },
+    {
+      "id": 18525,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 36th Annual ACM Symposium on User Interface Software and Technology (UIST '23)",
+      "volume": "",
+      "pages": "1-22",
+      "url": "https://doi.org/10.1145/3586183.3606763",
+      "doi": "10.1145/3586183.3606763",
+      "note": "描述了一种模拟代理中类人行为的架构，说明了记忆和规划对于长时间运行的复杂代理系统很重要。",
+      "order": 3,
+      "created_at": "2025-09-06T12:27:08.195957Z",
+      "updated_at": "2025-09-11T05:02:12.930127Z"
+    },
+    {
+      "id": 18526,
+      "title": "A Survey on Large Language Model based Agents",
+      "author": "Lei Wang, Chen Ma, Xueyang Feng, Zhiyuan Liu, Maosong Sun, Lei Hou",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/pdf/2309.07864.pdf",
+      "doi": "10.48550/arXiv.2309.07864",
+      "note": "提供了对基于大型语言模型的代理研究的全面概述，涵盖了它们的架构、能力、记忆和工具使用。",
+      "order": 4,
+      "created_at": "2025-09-06T12:27:08.199385Z",
+      "updated_at": "2025-09-11T05:01:26.390882Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

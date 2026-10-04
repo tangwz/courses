@@ -1,0 +1,45 @@
+{
+  "id": 2335,
+  "title": "默认参数值",
+  "meta_title": "Python 默认参数值 | 可选参数",
+  "meta_description": "学习如何为函数参数提供默认值，使其在函数调用时变为可选。",
+  "content": "<p>在定义函数时，您学习了如何指定在函数调用时接受参数 (parameter)的形参。然而，有时您希望函数形参在调用方未提供值时，能有一个“标准”或“默认”值。这使得函数更为灵活，因为调用方只需为那些与默认值不同的形参提供实参即可。</p>\n<p>Python 允许您直接在函数定义中为形参设定默认值。</p>\n<h3>定义默认参数 (parameter)值</h3>\n<p>要为一个形参赋予默认值，您可以在 <code>def</code> 语句中使用赋值运算符（<code>=</code>）为其赋值。</p>\n<pre><code class=\"language-python\">def greet(name, greeting=\"Hello\"):\n  \"\"\"打印问候语。\n\n  Args:\n    name: 要问候的人的名字。\n    greeting: 要使用的问候语（默认为“Hello”）。\n  \"\"\"\n  print(f\"{greeting}, {name}!\")\n\n# 调用函数\ngreet(\"Alice\")             # 使用默认问候语\ngreet(\"Bob\", \"Good morning\") # 覆盖默认问候语\n</code></pre>\n<p><strong>输出:</strong></p>\n<pre><code>Hello, Alice!\nGood morning, Bob!\n</code></pre>\n<p>在此示例中，<code>greeting</code> 形参的默认值为 <code>\"Hello\"</code>。</p>\n<ul>\n<li>当我们调用 <code>greet(\"Alice\")</code> 时，我们只提供了 <code>name</code> 实参。Python 检测到 <code>greeting</code> 实参缺失，并自动使用其默认值 <code>\"Hello\"</code>。</li>\n<li>当我们调用 <code>greet(\"Bob\", \"Good morning\")</code> 时，我们提供了两个实参。值 <code>\"Good morning\"</code> 会覆盖 <code>greeting</code> 的默认值。</li>\n</ul>\n<h3>形参排序规则</h3>\n<p>定义带有默认实参的函数时，一个重要规则是：<strong>所有带有默认值的形参必须位于所有不带默认值的形参<em>之后</em></strong>。</p>\n<p>为什么？当您使用位置实参（不指定形参名称，按顺序传递的实参）调用函数时，Python 从左到右将值与形参匹配。如果一个非默认形参位于默认形参之后，Python 将无法判断所提供的实参是针对非默认形参的，还是旨在覆盖前面形参的默认值。</p>\n<p><strong>正确示例:</strong></p>\n<pre><code class=\"language-python\">def create_user(username, is_active=True, permissions=\"read\"):\n  print(f\"创建用户: {username}\")\n  print(f\"活跃状态: {is_active}\")\n  print(f\"权限: {permissions}\")\n</code></pre>\n<p><strong>错误示例:</strong> 这将导致 <code>SyntaxError</code>。</p>\n<pre><code class=\"language-python\"># SyntaxError: 非默认参数位于默认参数之后\n# def create_user_incorrect(is_active=True, username, permissions=\"read\"):\n#   pass\n</code></pre>\n<h3>调用带默认值的函数</h3>\n<p>您可以以多种方式调用带有默认实参的函数：</p>\n<ol>\n<li>\n<p><strong>只提供必需实参：</strong> Python 会为其余实参使用默认值。</p>\n<pre><code class=\"language-python\">create_user(\"charlie\")\n# 输出:\n# 创建用户: charlie\n# 活跃状态: True\n# 权限: read\n</code></pre>\n</li>\n<li>\n<p><strong>按位置提供实参：</strong> 值会按顺序覆盖默认值。</p>\n<pre><code class=\"language-python\">create_user(\"david\", False) # 覆盖 is_active，使用默认权限\n# 输出:\n# 创建用户: david\n# 活跃状态: False\n# 权限: read\n\ncreate_user(\"eve\", False, \"admin\") # 覆盖两个默认值\n# 输出:\n# 创建用户: eve\n# 活跃状态: False\n# 权限: admin\n</code></pre>\n</li>\n<li>\n<p><strong>使用关键字提供实参：</strong> 这允许您覆盖特定的默认值，而不考虑它们的位置（只要满足必需实参）。这种方式通常更清晰。</p>\n<pre><code class=\"language-python\">create_user(\"frank\", permissions=\"write\") # 只覆盖权限\n# 输出:\n# 创建用户: frank\n# 活跃状态: True\n# 权限: write\n\ncreate_user(username=\"grace\", is_active=False) # 使用关键字实参\n# 输出:\n# 创建用户: grace\n# 活跃状态: False\n# 权限: read\n</code></pre>\n</li>\n</ol>\n<h3>常见用途</h3>\n<p>默认实参常用于：</p>\n<ul>\n<li><strong>标志或选项：</strong> 控制可选行为的形参，例如 <code>verbose=False</code> 标志用于启用额外输出。</li>\n<li><strong>配置：</strong> 设定可能偶尔需要更改的常用值，例如网络操作的 <code>timeout=30</code> 秒。</li>\n<li><strong>提供合理默认值：</strong> 提供适用于大多数情况的标准值，例如数值比较中的 <code>tolerance=0.001</code>。</li>\n</ul>\n<h3>一点注意事项：可变默认实参</h3>\n<p>有一个不明显但重要的细节需要注意：默认实参值<strong>只在函数定义时评估一次</strong>，而不是每次函数调用时都评估。对于数字、字符串或元组等不可变类型，这没有问题。然而，如果您使用列表或字典等可变类型作为默认值，那么所有依赖默认值的调用都将使用<strong>同一个对象</strong>。这可能导致意料之外的结果。</p>\n<p>考虑这个示例：</p>\n<pre><code class=\"language-python\">def add_item(item, my_list=[]):\n  \"\"\"向列表中添加一个项。（演示可变默认值问题）\"\"\"\n  my_list.append(item)\n  print(f\"列表当前为: {my_list}\")\n\nprint(\"第一次调用:\")\nadd_item(\"apple\")\n\nprint(\"\\n第二次调用:\")\nadd_item(\"banana\") # 意外地添加到第一次调用时的列表！\n\nprint(\"\\n第三次调用，提供一个列表:\")\nadd_item(\"cherry\", [\"start\"]) # 当提供一个列表时，按预期工作\n</code></pre>\n<p><strong>输出:</strong></p>\n<pre><code>第一次调用:\n列表当前为: ['apple']\n\n第二次调用:\n列表当前为: ['apple', 'banana']\n\n第三次调用，提供一个列表:\n列表当前为: ['start', 'cherry']\n</code></pre>\n<p>请注意第二次调用 <code>add_item(\"banana\")</code> 并没有从一个空列表开始。它使用了在第一次调用中被修改的<em>同一个列表</em>。这很少是预期的行为。</p>\n<p><strong>标准解决方案:</strong></p>\n<p>处理可变默认值的常规方法是使用 <code>None</code> 作为默认值，然后如果形参为 <code>None</code>，则在函数内部创建一个<em>新的</em>可变对象。</p>\n<pre><code class=\"language-python\">def add_item_safe(item, my_list=None):\n  \"\"\"安全地向列表中添加一个项。\"\"\"\n  if my_list is None:\n    my_list = [] # 如果未提供列表，则创建一个新列表\n  my_list.append(item)\n  print(f\"列表当前为: {my_list}\")\n\nprint(\"第一次调用（安全）:\")\nadd_item_safe(\"apple\")\n\nprint(\"\\n第二次调用（安全）:\")\nadd_item_safe(\"banana\") # 从一个新的空列表开始\n\nprint(\"\\n第三次调用，提供一个列表（安全）:\")\nadd_item_safe(\"cherry\", [\"start\"])\n</code></pre>\n<p><strong>输出:</strong></p>\n<pre><code>第一次调用（安全）:\n列表当前为: ['apple']\n\n第二次调用（安全）:\n列表当前为: ['banana']\n\n第三次调用，提供一个列表（安全）:\n列表当前为: ['start', 'cherry']\n</code></pre>\n<p>使用 <code>None</code> 作为占位符默认值，并在函数内部创建可变对象，能确保每次依赖默认值的调用都获得一个全新的实例，从而避免调用之间产生意外的副作用。</p>\n<p>默认实参值是一项让您的函数更方便、更具适应性的功能，但请记住可变默认值和不可变默认值之间的区分，以避免常见问题。</p>",
+  "slug": "python-default-arguments",
+  "updates": [],
+  "references": [
+    {
+      "id": 6075,
+      "title": "Fluent Python: Clear, Concise, and Effective Programming",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/",
+      "doi": "",
+      "note": "深入讲解Python惯用法，包括对默认参数值的详细讨论、其正确使用方法以及与可变默认参数相关的关键问题，并提供实用的解决方案。第二版。",
+      "order": 2,
+      "created_at": "2025-09-05T01:18:35.157902Z",
+      "updated_at": "2025-09-07T21:18:57.917572Z"
+    },
+    {
+      "id": 6076,
+      "title": "Python Cookbook",
+      "author": "David Beazley, Brian K. Jones",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357368/",
+      "doi": "",
+      "note": "为常见的Python编程任务提供实用技巧和解决方案，包括定义和使用带默认参数的函数的有效策略，以及避免可变默认值常见问题的指导。第三版。",
+      "order": 3,
+      "created_at": "2025-09-05T01:18:35.166959Z",
+      "updated_at": "2025-09-07T21:19:00.142437Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

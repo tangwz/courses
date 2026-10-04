@@ -1,0 +1,61 @@
+{
+  "id": 5249,
+  "title": "Pydantic 简介",
+  "meta_title": "Pydantic 数据验证简介",
+  "meta_description": "Pydantic 概览及其在 Python 中数据验证和设置管理中的作用。",
+  "content": "<p>您的机器学习 (machine learning) API 的可靠性很大程度上取决于其接收数据的质量和结构。向您的机器学习模型发送格式错误或类型不正确的数据可能导致意料之外的错误、不准确的预测，甚至服务中断。手动编写代码来检查传入请求的每个字段、类型和约束既繁琐又容易出错，还会使您的核心应用逻辑变得杂乱。</p>\n<p>Pydantic 在此发挥作用。Pydantic 是一个 Python 库，专门用于使用标准 Python 类型注释进行数据验证和设置管理。您无需编写命令式验证代码（例如，<code>if not isinstance(data['age'], int): raise ValueError(...)</code>），而是声明性地定义数据应有的<em>形态</em>。</p>\n<p>Pydantic 利用这些类型提示来解析和验证数据。您可以通过创建继承自 Pydantic 的 <code>BaseModel</code> 的类来定义数据结构。此类的属性使用标准 Python 类型（如 <code>int</code>、<code>float</code>、<code>str</code>、<code>list</code>、<code>dict</code>）以及类型提示来定义。</p>\n<pre><code class=\"language-python\"># 一个说明此思想的简单例子\nfrom pydantic import BaseModel\nfrom typing import List\n\nclass InputFeatures(BaseModel):\n    sepal_length: float\n    sepal_width: float\n    petal_length: float\n    petal_width: float\n    tags: List[str] = [] # 可选的字符串列表，带默认值\n</code></pre>\n<p>在 FastAPI 的环境中，Pydantic 提供了几个主要优点：</p>\n<ul>\n<li><strong>自动数据验证：</strong> 当您在 FastAPI 路径操作函数中将 Pydantic 模型声明为请求体参数 (parameter)的类型提示时，FastAPI 会自动读取请求体（例如，JSON），解析它，并根据您的模型定义对其进行验证。如果传入数据不符合模型的结构和类型，FastAPI 会自动返回一个标准的 HTTP 422（不可处理实体）错误响应，详细说明验证问题，从而防止无效数据到达您的应用逻辑。</li>\n<li><strong>数据序列化：</strong> Pydantic 模型可以像解析数据一样简单地序列化数据（将 Python 对象转换为 JSON 等格式）。当您定义 <code>response_model</code> 时，FastAPI 会使用此功能，从而确保传出数据也符合特定结构。</li>\n<li><strong>改进的开发体验：</strong> 使用类型提示使您的代码更具可读性和可维护性。现代 IDE 利用这些提示来提供更好的自动补全、静态分析和重构支持，在运行时之前捕获潜在的类型错误。</li>\n<li><strong>自动 API 文档：</strong> FastAPI 会自省您的 Pydantic 模型以生成 JSON Schema 定义，这些定义随后用于自动创建交互式 API 文档（通过 Swagger UI 或 ReDoc 等界面）。此文档清晰地向 API 使用者展示预期的请求和响应格式。</li>\n</ul>\n<p>以下图表说明了 Pydantic 在 FastAPI 内的请求验证过程中的作用：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1mnxm73\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"Helvetica\", fontsize=9, color=\"#495057\", fontcolor=\"#495057\"];\n\n  Client [label=\"API 客户端\", shape=cylinder, style=filled, fillcolor=\"#dee2e6\"];\n  FastAPI [label=\"FastAPI\\n应用\", style=filled, fillcolor=\"#a5d8ff\"];\n  Pydantic [label=\"Pydantic 模型\\n验证\", style=filled, fillcolor=\"#96f2d7\"];\n  Logic [label=\"您的 API 逻辑\\n（例如，机器学习推理）\", style=filled, fillcolor=\"#bac8ff\"];\n  ValidData [label=\"已验证数据\\n（Python 对象）\", shape=note, style=filled, fillcolor=\"#b2f2bb\"];\n  InvalidData [label=\"HTTP 422 错误\\n响应\", shape=note, style=filled, fillcolor=\"#ffc9c9\"];\n\n  Client -> FastAPI [label=\"HTTP 请求\\n（例如，JSON 体）\"];\n  FastAPI -> Pydantic [label=\"传递数据\\n进行验证\"];\n  Pydantic -> ValidData [label=\"验证成功\"];\n  Pydantic -> InvalidData [label=\"验证失败\"];\n  ValidData -> Logic [label=\"使用有效数据\"];\n  Logic -> FastAPI [label=\"处理并生成\\n响应数据\"];\n  FastAPI -> Client [label=\"HTTP 响应\"];\n  InvalidData -> FastAPI [label=\"错误详情\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1mnxm73\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据从客户端流向 FastAPI。Pydantic 拦截传入数据，根据定义模型对其进行验证。如果有效，则将 Python 对象传递给应用逻辑；否则，生成错误响应。</p>\n</blockquote>\n<p>虽然基本类型验证功能强大，但 Pydantic 提供了更多功能。您可以定义复杂的嵌套结构，添加约束（如值范围或字符串长度），定义默认值，创建自定义验证逻辑，并管理应用设置。这些能力使其成为构建定义良好且可靠的 API 的重要支持，特别是那些处理机器学习模型结构化数据的 API。</p>\n<p>在接下来的章节中，我们将详细阐述如何定义这些 Pydantic 模型，从基本结构开始，逐步转向验证机器学习应用中更常见、更复杂的数据。</p>",
+  "slug": "introduction-pydantic",
+  "updates": [],
+  "references": [
+    {
+      "id": 13884,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and Pydantic contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/",
+      "doi": "",
+      "note": "Pydantic的官方文档，提供了关于其使用Python类型提示进行数据验证、设置管理和数据序列化等核心功能的全面信息。",
+      "order": 1,
+      "created_at": "2025-09-05T08:44:36.088603Z",
+      "updated_at": "2025-09-09T14:00:18.855762Z"
+    },
+    {
+      "id": 13885,
+      "title": "FastAPI Documentation",
+      "author": "Sebastián Ramírez and FastAPI contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "FastAPI的官方文档，解释了其如何与Pydantic集成，实现请求体自动验证、响应模型序列化和生成OpenAPI文档。",
+      "order": 2,
+      "created_at": "2025-09-05T08:44:36.098452Z",
+      "updated_at": "2025-09-09T14:00:20.405750Z"
+    },
+    {
+      "id": 13886,
+      "title": "FastAPI: From Zero to Production",
+      "author": "Marcelo Trylesinski",
+      "year": "2022",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-1-4842-8703-9",
+      "doi": "10.1007/978-1-4842-8703-9",
+      "note": "一本使用FastAPI构建API的实践指南，广泛介绍了在API开发中Pydantic模型用于定义数据结构、验证和序列化的应用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:44:36.101888Z",
+      "updated_at": "2025-09-09T14:00:38.394612Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

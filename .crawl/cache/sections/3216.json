@@ -1,0 +1,61 @@
+{
+  "id": 3216,
+  "title": "语音模型量化",
+  "meta_title": "ASR/TTS的模型量化技术",
+  "meta_description": "应用训练后量化和量化感知训练等方法。",
+  "content": "<p>ASR和TTS的大型深度学习 (deep learning)模型通常需要大量计算资源和内存。虽然在开发过程中功能强大，但其尺寸和处理需求可能在资源受限的设备（如手机、嵌入 (embedding)式系统）上部署时，或在服务器上实现低延迟和高吞吐量 (throughput)时，令人却步。模型量化 (quantization)是应对这些问题的主要方法。它指的是降低表示模型参数 (parameter)（权重 (weight)）以及可能在计算过程中表示其激活值的数值精度。</p>\n<p>基本理念是从高精度浮点表示（通常是32位浮点数，即<code>float32</code>）转换为低精度格式，最常见的是8位整数（<code>int8</code>）。这种转换带来以下几项好处：</p>\n<ol>\n<li><strong>模型尺寸减小：</strong> 使用<code>int8</code>代替<code>float32</code>立即使存储模型权重所需的内存减少约4倍。这对于存储有限的设备端部署非常重要。</li>\n<li><strong>推理 (inference)速度加快：</strong> 许多现代CPU、GPU和专用加速器（如NPU或TPU）都针对整数运算有高度优化的指令。与<code>float32</code>操作相比，在<code>int8</code>中执行计算可显著提升速度。</li>\n<li><strong>功耗降低：</strong> 整数运算通常消耗的电量少于浮点运算，这对于电池供电设备很重要。</li>\n</ol>\n<p>当然，这种精度降低并非没有代价。用更少的位数表示值本身会限制数值范围和精细度，可能引入近似误差，影响模型准确性。量化技术的目的是在最大限度提高效率的同时，尽量减少这种准确性下降。</p>\n<h3>量化 (quantization)策略</h3>\n<p>应用量化有两种主要策略：</p>\n<ol>\n<li>\n<p><strong>训练后量化（PTQ）：</strong> 这通常是最简单的做法。您从一个预训练 (pre-training)的<code>float32</code>模型开始，然后将其权重 (weight)转换为低精度格式，如<code>int8</code>。激活值可以通过两种方式处理：</p>\n<ul>\n<li><strong>动态量化：</strong> 权重离线量化，但在推理 (inference)过程中激活值动态（实时）量化。这需要观察每次计算的激活值范围。应用相对简单，但由于动态范围计算和量化，可能在推理过程中引入计算开销。</li>\n<li><strong>静态量化：</strong> 权重和激活值均离线量化。这需要一个校准步骤，即您在小型、有代表性的数据集（校准数据集）上运行<code>float32</code>模型，以收集每层激活值典型范围的统计信息。然后，这些范围用于确定推理过程中将<code>float32</code>激活值映射到<code>int8</code>所需的固定缩放因子。静态量化通常比动态量化带来更快的推理速度，因为缩放因子是预先计算的。</li>\n</ul>\n<p>PTQ具有吸引力，因为它无需重新训练模型，也无需访问原始训练流程和数据集（静态PTQ需要一个小型校准集）。然而，它有时可能导致准确性显著下降，特别是对于对精度变化敏感的模型。</p>\n</li>\n<li>\n<p><strong>量化感知训练（QAT）：</strong> 此方法将量化过程整合到模型训练循环中。在训练的前向传播过程中，模型图中会插入“伪”量化操作。这些操作模拟<code>int8</code>精度（舍入、截断）对权重和激活值的影响，同时确保在反向传播 (backpropagation)过程中梯度仍能流动（通常使用直通估计器，即STE等方法）。</p>\n<p>通过在训练期间模拟量化，模型学习调整其权重，以更好地适应精度降低。与PTQ相比，QAT通常能使量化模型获得更高的准确性，通常能与原始<code>float32</code>模型的性能非常接近。主要缺点是训练复杂度增加、需要修改训练代码以及需要访问原始训练数据。</p>\n</li>\n</ol>\n<h3>量化 (quantization)方案和参数 (parameter)</h3>\n<p>进行量化时，有几个选项定义了如何将浮点值映射到整数：</p>\n<ul>\n<li><strong>精度：</strong> 尽管<code>int8</code>最常见，但研究人员也在关注<code>int4</code>甚至二元/三元表示以实现进一步压缩，尽管通常会带来更大的准确性挑战。半精度浮点格式如<code>float16</code>或<code>bfloat16</code>提供了一种折衷方案，将尺寸减小2倍，同时对准确性的影响通常小于<code>int8</code>，但可能无法像<code>int8</code>那样有效利用整数专用的硬件加速。</li>\n<li><strong>映射：</strong> 量化的核心是将浮点范围映射到整数范围。常见的仿射映射为：\n<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>真实值</mtext><mo>≈</mo><mo stretchy=\"false\">(</mo><mtext>整数值</mtext><mo>−</mo><mtext>零点</mtext><mo stretchy=\"false\">)</mo><mo>×</mo><mtext>缩放因子</mtext></mrow><annotation encoding=\"application/x-tex\">真实值 \\approx (整数值 - 零点) \\times 缩放因子</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">真实值</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord cjk_fallback\">整数值</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord cjk_fallback\">零点</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">缩放因子</span></span></span></span>\n其中<code>scale</code>是决定步长的正浮点数，<code>zero_point</code>是一个将浮点零点与整数值对齐 (alignment)的整数。</li>\n<li><strong>对称性：</strong>\n<ul>\n<li><strong>非对称量化：</strong> 将观察到的浮点范围<code>[min_val, max_val]</code>映射到完整的整数范围（例如，<code>uint8</code>的<code>[0, 255]</code>或<code>int8</code>的<code>[-128, 127]</code>）。这需要<code>scale</code>和<code>zero_point</code>两者。它通常适用于ReLU之后的激活值，它们是非负的。</li>\n<li><strong>对称量化：</strong> 将中心化的范围<code>[-abs_max, +abs_max]</code>映射到整数范围（例如，<code>int8</code>的<code>[-127, 127]</code>，会留下一个值未使用或特殊处理<code>-128</code>）。<code>zero_point</code>对于有符号整数通常固定为0。这常用于权重 (weight)，因为它们往往集中在零附近。</li>\n</ul>\n</li>\n<li><strong>粒度：</strong>\n<ul>\n<li><strong>逐张量：</strong> 对整个权重张量或激活张量使用单个<code>scale</code>和<code>zero_point</code>。实现最简单。</li>\n<li><strong>逐通道（或逐轴）：</strong> 对张量的不同切片使用不同的<code>scale</code>和<code>zero_point</code>值，通常是沿着卷积层或线性层权重的输出通道维度。这提供更精细的控制，并且通常比逐张量量化获得显著更高的准确性，特别适用于通道间权重分布不同的层。</li>\n</ul>\n</li>\n</ul>\n<h3>量化 (quantization)在实践中的应用</h3>\n<p>对于大型语音模型（如Transformer或深度RNN），量化通常应用于计算密集型层：卷积层、线性/全连接层和循环单元。需要谨慎，因为某些操作或层可能比其他层对量化更敏感。例如，归一化 (normalization)层或注意力分数计算有时可能保持更高的精度（例如，<code>float16</code>或<code>float32</code>）以保持准确性，从而形成混合精度模型。</p>\n<p>PyTorch（<code>torch.quantization</code>）、TensorFlow（通过TensorFlow Lite）和ONNX Runtime等框架提供工具和API来促进PTQ和QAT。这些工具通常自动化了部分过程，例如插入量化/反量化节点或执行校准。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-vozrp8\" \n              data-plot-definition='{\n  \"data\": [\n    {\n      \"type\": \"scatter\",\n      \"mode\": \"markers+text\",\n      \"x\": [32, 16, 8, 4],\n      \"y\": [100, 99.5, 97, 85],\n      \"marker\": {\"color\": [\"#1c7ed6\", \"#22b8cf\", \"#f59f00\", \"#fa5252\"], \"size\": [10, 12, 15, 18]},\n      \"text\": [\"FP32\", \"FP/BF16\", \"INT8\", \"INT4\"],\n      \"textposition\": \"top center\",\n      \"name\": \"准确性\"\n    },\n    {\n      \"type\": \"bar\",\n      \"x\": [32, 16, 8, 4],\n      \"y\": [100, 50, 25, 12.5],\n      \"marker\": {\"color\": [\"#ced4da\", \"#adb5bd\", \"#868e96\", \"#495057\"]},\n      \"name\": \"相对尺寸\",\n      \"yaxis\": \"y2\"\n    },\n    {\n      \"type\": \"bar\",\n      \"x\": [32, 16, 8, 4],\n      \"y\": [1, 1.5, 3, 3.5],\n      \"marker\": {\"color\": [\"#d0bfff\", \"#9775fa\", \"#7048e8\", \"#ae3ec9\"]},\n      \"name\": \"相对加速\",\n      \"yaxis\": \"y3\"\n    }\n  ],\n  \"layout\": {\n    \"title\": \"典型量化权衡（示意性）\",\n    \"xaxis\": {\"title\": \"位精度\", \"type\": \"category\", \"categoryorder\": \"array\", \"categoryarray\": [32, 16, 8, 4]},\n    \"yaxis\": {\"title\": \"准确性 (%)\", \"range\": [80, 101], \"titlefont\": {\"color\": \"#1f77b4\"}, \"tickfont\": {\"color\": \"#1f77b4\"}},\n    \"yaxis2\": {\"title\": \"模型尺寸 (%)\", \"range\": [0, 105], \"overlaying\": \"y\", \"side\": \"right\", \"showgrid\": false, \"titlefont\": {\"color\": \"#868e96\"}, \"tickfont\": {\"color\": \"#868e96\"}},\n    \"yaxis3\": {\"title\": \"推理加速（相对）\", \"range\": [0, 4], \"overlaying\": \"y\", \"side\": \"right\", \"position\": 0.85, \"showgrid\": false, \"titlefont\": {\"color\": \"#7048e8\"}, \"tickfont\": {\"color\": \"#7048e8\"}},\n    \"legend\": {\"x\": 0.1, \"y\": -0.2, \"orientation\": \"h\"},\n    \"margin\": {\"l\": 50, \"r\": 150, \"t\": 50, \"b\": 100}\n  }\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-vozrp8\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>从32位浮点数（FP32）到更低精度时的示意性权衡。准确性通常在INT8时略有下降，但在INT4时下降可能更明显。模型尺寸与位宽成比例减小。推理 (inference)速度的提升在很大程度上依赖于硬件对低精度运算的支持。</p>\n</blockquote>\n<p>在部署量化模型之前，严格的评估是必要的。不仅要衡量诸如ASR的词错率（WER）或TTS的平均意见得分（MOS）等标准指标，还要评估模型在测试数据中具有挑战性的子集上的性能（例如，嘈杂音频、特定口音、复杂句子），以确保鲁棒性没有受到过度影响。目的是为您的特定应用找到计算效率和可接受性能之间的最佳平衡点。</p>",
+  "slug": "quantization-speech-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 2969,
+      "title": "Quantizing Deep Convolutional Networks for Accelerated Inference",
+      "author": "Raghuraman Krishnamoorthi",
+      "year": "2018",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1806.08342",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.48550/arXiv.1806.08342",
+      "doi": "10.48550/arXiv.1806.08342",
+      "note": "一份来自Google的实践指南，涵盖了训练后量化（PTQ）和量化感知训练（QAT）等技术，有助于部署高效的深度学习模型。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:58.077125Z",
+      "updated_at": "2025-09-09T05:05:01.041327Z"
+    },
+    {
+      "id": 2970,
+      "title": "Introduction to Quantization on PyTorch",
+      "author": "PyTorch Contributors",
+      "year": "2019",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/quantization.html",
+      "doi": "",
+      "note": "PyTorch官方文档，提供了在PyTorch中应用量化技术（PTQ、QAT）的实践示例和API。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:58.089897Z",
+      "updated_at": "2025-09-09T05:04:58.778212Z"
+    },
+    {
+      "id": 2971,
+      "title": "Quantization with TensorFlow Lite",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "Google AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/lite/performance/quantization_spec",
+      "doi": "",
+      "note": "TensorFlow Lite的官方指南，详细介绍了针对设备和边缘部署的量化策略和实现。",
+      "order": 4,
+      "created_at": "2025-09-04T16:53:58.097591Z",
+      "updated_at": "2025-09-09T05:05:02.989107Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7820,
+  "title": "动手实践：NumPy 矩阵运算",
+  "meta_title": "NumPy 矩阵运算指南",
+  "meta_description": "练习使用 NumPy 进行矩阵乘法、转置以及创建特殊矩阵。",
+  "content": "<p>理论给出规则，而计算才是实际操作的环节。在 Python 代码中使用 NumPy 库执行矩阵运算，能够实际应用其底层原理。NumPy 是 Python 科学计算的根本，因为它提供高度优化的数组处理工具，这些工具非常适合表示向量 (vector)和矩阵。</p>\n<p>在本节中，你将学会如何进行我们讨论过的所有核心矩阵运算。掌握这些 NumPy 函数是必要的步骤，无论是从头开始实现机器学习 (machine learning)模型，还是为 Scikit-learn 和 TensorFlow 等常用库妥善准备数据。</p>\n<h3>配置环境</h3>\n<p>首先，我们需要导入 NumPy 库。标准做法（你也应该一直遵循）是将其导入并使用别名 <code>np</code>。</p>\n<pre><code class=\"language-python\">import numpy as np\n</code></pre>\n<h3>创建 NumPy 矩阵</h3>\n<p>我们通过调用 <code>np.array()</code> 并传入一个嵌套列表来创建矩阵，其中每个内部列表代表一行。让我们定义一些矩阵和一个向量 (vector)，以用于我们的例子。</p>\n<pre><code class=\"language-python\"># 一个 2x3 矩阵\nA = np.array([[1, 2, 3], \n              [4, 5, 6]])\n\n# 一个 3x2 矩阵\nB = np.array([[7, 8], \n              [9, 10], \n              [11, 12]])\n\n# 用于逐元素运算的 2x3 矩阵\nC = np.array([[2, 4, 6], \n              [8, 10, 12]])\n\n# 一个大小为 2 的向量（一维数组）\nv = np.array([100, 200])\n\nprint(\"矩阵 A (2x3):\\n\", A)\nprint(\"\\n矩阵 B (3x2):\\n\", B)\nprint(\"\\n矩阵 C (2x3):\\n\", C)\nprint(\"\\n向量 v:\\n\", v)\n</code></pre>\n<h3>逐元素运算</h3>\n<p>逐元素运算是对矩阵间对应元素执行的。为了使这些运算生效，涉及的矩阵必须具有完全相同的维度。</p>\n<h4>矩阵加法和减法</h4>\n<p>你可以使用标准运算符 <code>+</code> 和 <code>-</code> 对同形状的矩阵进行加减。NumPy 会自动处理逐元素计算。</p>\n<pre><code class=\"language-python\"># 矩阵加法 (A 和 C 都是 2x3)\nadd_result = A + C\nprint(\"A + C:\\n\", add_result)\n\n# 输出:\n# A + C:\n#  [[ 3  6  9]\n#  [12 15 18]]\n</code></pre>\n<pre><code class=\"language-python\"># 矩阵减法\nsubtract_result = C - A\nprint(\"C - A:\\n\", subtract_result)\n\n# 输出:\n# C - A:\n#  [[1 2 3]\n#  [4 5 6]]\n</code></pre>\n<p>尝试将 <code>A</code>（一个 2x3 矩阵）和 <code>B</code>（一个 3x2 矩阵）相加会导致 <code>ValueError</code>，因为它们的形状不兼容。</p>\n<h4>矩阵-标量乘法</h4>\n<p>要将矩阵的每个元素乘以一个数（标量），请使用 <code>*</code> 运算符。</p>\n<pre><code class=\"language-python\"># 将矩阵 A 乘以标量 10\nscalar_mult_result = A * 10\nprint(\"A * 10:\\n\", scalar_mult_result)\n\n# 输出:\n# A * 10:\n#  [[10 20 30]\n#  [40 50 60]]\n</code></pre>\n<h3>矩阵乘法</h3>\n<p>矩阵乘法是线性代数中一项非常重要的运算。它不是逐元素运算，并且对矩阵维度有特别的规定。在 NumPy 中，你应该使用 <code>@</code> 运算符进行矩阵乘法。</p>\n<h4>矩阵-向量 (vector)乘法</h4>\n<p>矩阵乘以向量会改变向量。让我们使用矩阵 <code>A</code> 来转换向量 <code>v</code>。这是行不通的，因为内维度不匹配：<code>A</code> 的形状是 (2, 3)，<code>v</code> 的形状是 (2,)。我们需要 <code>A</code> 的列数等于 <code>v</code> 的元素数量。</p>\n<p>让我们使用一个兼容的 2x2 矩阵 <code>D</code> 来乘以 <code>v</code>。</p>\n<pre><code class=\"language-python\"># 一个 2x2 矩阵\nD = np.array([[1, 2],\n              [3, 4]])\n\n# 将 D (2x2) 乘以 v (2,)\n# 结果形状将是 (2,)\nmv_result = D @ v\nprint(\"矩阵 D:\\n\", D)\nprint(\"\\n向量 v:\\n\", v)\nprint(\"\\nD @ v:\\n\", mv_result)\n\n# 输出:\n# 矩阵 D:\n#  [[1 2]\n#  [3 4]]\n#\n# 向量 v:\n#  [100 200]\n#\n# D @ v:\n#  [ 500 1100]\n</code></pre>\n<p>进行的计算是第一个元素为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mn>1</mn><mo>⋅</mo><mn>100</mn><mo>+</mo><mn>2</mn><mo>⋅</mo><mn>200</mn><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">(1 \\cdot 100 + 2 \\cdot 200)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">1</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">100</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">2</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">200</span><span class=\"mclose\">)</span></span></span></span>，第二个元素为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mn>3</mn><mo>⋅</mo><mn>100</mn><mo>+</mo><mn>4</mn><mo>⋅</mo><mn>200</mn><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">(3 \\cdot 100 + 4 \\cdot 200)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">100</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">200</span><span class=\"mclose\">)</span></span></span></span>。</p>\n<h4>矩阵-矩阵乘法</h4>\n<p>要将两个矩阵相乘，第一个矩阵的列数必须等于第二个矩阵的行数。例如，我们可以将 <code>A</code> (2x3) 乘以 <code>B</code> (3x2)。结果矩阵的形状将是 (2x2)。</p>\n<pre><code class=\"language-python\"># 将 A (2x3) 乘以 B (3x2)\n# 结果形状将是 (2x2)\nmm_result = A @ B\nprint(\"A @ B:\\n\", mm_result)\n\n# 输出:\n# A @ B:\n#  [[ 58  64]\n#  [139 154]]\n</code></pre>\n<blockquote>\n<p>注意：初学者常犯的一个错误是使用 <code>*</code> 运算符进行矩阵乘法。在 NumPy 中，<code>*</code> 执行逐元素乘法。要使两个矩阵进行逐元素乘法，它们必须具有相同的形状。<code>@</code> 运算符是在 Python 3.5 中专门为矩阵乘法引入的，是推荐的方法。</p>\n</blockquote>\n<h3>矩阵转置</h3>\n<p>转置矩阵是将其沿主对角线翻转，将行变成列，反之亦然。在 NumPy 中，你可以使用 <code>.T</code> 属性获取矩阵的转置。</p>\n<pre><code class=\"language-python\"># A (2x3) 的转置将是一个 3x2 矩阵\nA_transpose = A.T\nprint(\"原始矩阵 A (2x3):\\n\", A)\nprint(\"\\nA 的转置 (3x2):\\n\", A_transpose)\n\n# 输出:\n# 原始矩阵 A (2x3):\n#  [[1 2 3]\n#  [4 5 6]]\n#\n# A 的转置 (3x2):\n#  [[1 4]\n#  [2 5]\n#  [3 6]]\n</code></pre>\n<h3>创建特殊类型的矩阵</h3>\n<p>NumPy 提供了便捷的函数来创建线性代数中常用的矩阵。</p>\n<h4>单位矩阵</h4>\n<p>单位矩阵是一个对角线上全是 1，其余元素都是 0 的方阵。你可以使用 <code>np.identity()</code> 创建一个。</p>\n<pre><code class=\"language-python\"># 创建一个 3x3 单位矩阵\nI = np.identity(3)\nprint(\"3x3 单位矩阵:\\n\", I)\n\n# 输出:\n# 3x3 单位矩阵:\n#  [[1. 0. 0.]\n#  [0. 1. 0.]\n#  [0. 0. 1.]]\n</code></pre>\n<p>将任何矩阵乘以一个兼容的单位矩阵，原矩阵保持不变。</p>\n<pre><code class=\"language-python\"># A 是 2x3，I 必须是 3x3 才能让 A @ I 生效\nI_3x3 = np.identity(3)\nresult = A @ I_3x3\n\nprint(\"A @ I:\\n\", result)\nprint(\"\\n结果与 A 相同吗?\", np.array_equal(result, A))\n\n# 输出:\n# A @ I:\n#  [[1. 2. 3.]\n#  [4. 5. 6.]]\n#\n# 结果与 A 相同吗? True\n</code></pre>\n<h4>对角矩阵</h4>\n<p>对角矩阵只有主对角线上有非零值。你可以使用 <code>np.diag()</code> 从列表或一维值数组中创建一个对角矩阵。</p>\n<pre><code class=\"language-python\"># 从值列表中创建一个对角矩阵\ndiag_matrix = np.diag([2, 5, 8])\nprint(\"对角矩阵:\\n\", diag_matrix)\n\n# 输出:\n# 对角矩阵:\n#  [[2 0 0]\n#  [0 5 0]\n#  [0 0 8]]\n</code></pre>\n<p>你现在已经练习了 NumPy 中所有基本的矩阵运算。这些函数构成了你将反复用于数据处理和构建机器学习 (machine learning)算法的工具集。在下一章中，我们将看到如何使用这些运算来解线性方程组。</p>",
+  "slug": "numpy-matrix-operations-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 21892,
+      "title": "NumPy documentation: Array creation and operations",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.html",
+      "doi": "",
+      "note": "理解NumPy数组对象、创建及基本操作（如逐元素运算、矩阵乘法和转置）的重要资源。",
+      "order": 1,
+      "created_at": "2025-11-17T13:15:30.943668Z",
+      "updated_at": "2025-11-18T00:51:18.678966Z"
+    },
+    {
+      "id": 21894,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "579",
+      "url": "https://www.porchlightbooks.com/product/python-for-data-analysis-data-wrangling-with-pandas-numpy-and-jupyter--wes-mckinney",
+      "doi": "",
+      "note": "在Python数据处理和科学计算的背景下，提供了NumPy数组创建和矩阵运算的实用示例及详细解释。",
+      "order": 3,
+      "created_at": "2025-11-17T13:15:30.984841Z",
+      "updated_at": "2025-11-18T00:51:18.644070Z"
+    },
+    {
+      "id": 21895,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 2",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "第2章简明地概述了与机器学习直接相关的线性代数基础知识，强化了矩阵运算的理论基础。",
+      "order": 4,
+      "created_at": "2025-11-17T13:15:30.990249Z",
+      "updated_at": "2025-11-18T00:51:10.095025Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

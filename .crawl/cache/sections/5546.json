@@ -1,0 +1,45 @@
+{
+  "id": 5546,
+  "title": "数据聚合简介",
+  "meta_title": "ETL中数据聚合简介",
+  "meta_description": "了解通过聚合（例如，求和、计数）汇总数据的原理。",
+  "content": "<p>数据清洗和结构化之后，通常需要对其进行汇总。你可能不想查看每一笔交易或事件，而是希望获得更宏观的视图，例如每日总销售额或每个城市的注册用户数。这种汇总数据的过程称为<strong>聚合</strong>。</p>\n<p>聚合是指将具有相同属性值的行进行分组，然后对这些组进行计算，为每个组生成一个单一的汇总值。可以把它看作是将大量的详细信息浓缩成更容易理解的概要。</p>\n<h3>为何要聚合数据？</h3>\n<p>聚合是重要的转换步骤，原因如下：</p>\n<ol>\n<li><strong>减少数据量：</strong> 汇总数据能显著减少需要存储和处理的行数，这有助于目标系统（如数据仓库）的性能提升和存储成本降低。</li>\n<li><strong>提供宏观视图：</strong> 聚合数据使得发现趋势、模式和异常值变得更容易。例如，对于业务报告来说，了解月度<em>总</em>销售额通常比列出数千张单独的销售收据更有直接用途。</li>\n<li><strong>为分析和报告准备数据：</strong> 仪表盘、商业智能工具和分析模型通常对汇总数据进行操作。聚合将原始数据转化为这些下游应用所需的格式。</li>\n</ol>\n<h3>常用聚合函数</h3>\n<p>虽然可以使用多种计算，但有些聚合函数在ETL过程中特别常用：</p>\n<ul>\n<li><strong>COUNT()：</strong> 计算每个组内的行数。适用于查找频率，例如每个客户的订单数量。</li>\n<li><strong>SUM()：</strong> 计算每个组中数值列的总和。常用于计算总收入、销售数量或成本。</li>\n<li><strong>AVG() (平均值)：</strong> 确定每个组中数值列的平均值。示例：每个区域的平均订单价值。</li>\n<li><strong>MIN()：</strong> 找出每个组中列的最小值。适用于识别最低价格、最早日期等。</li>\n<li><strong>MAX()：</strong> 找出每个组中列的最大值。有助于识别最高价格、最新日期、峰值使用量等。</li>\n</ul>\n<h3>示例：汇总销售数据</h3>\n<p>假设你提取的原始销售交易数据如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">交易ID</th>\n<th align=\"left\">产品</th>\n<th align=\"left\">区域</th>\n<th align=\"left\">销售金额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Widget A</td>\n<td align=\"left\">North</td>\n<td align=\"left\">100</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Widget B</td>\n<td align=\"left\">South</td>\n<td align=\"left\">150</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Widget A</td>\n<td align=\"left\">North</td>\n<td align=\"left\">120</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Widget C</td>\n<td align=\"left\">East</td>\n<td align=\"left\">80</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">Widget B</td>\n<td align=\"left\">North</td>\n<td align=\"left\">90</td>\n</tr>\n<tr>\n<td align=\"left\">6</td>\n<td align=\"left\">Widget A</td>\n<td align=\"left\">South</td>\n<td align=\"left\">110</td>\n</tr>\n</tbody>\n</table>\n<p>这些详细数据很有用，但目标分析系统可能只需要知道每个区域的总销售额。你可以通过聚合来实现这一点。</p>\n<p>你需要根据<code>Region</code>列对数据进行分组，并对每个组的<code>SalesAmount</code>列应用<code>SUM()</code>函数。这个转换过程将生成以下汇总表：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">区域</th>\n<th align=\"left\">总销售额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">North</td>\n<td align=\"left\">310</td>\n</tr>\n<tr>\n<td align=\"left\">South</td>\n<td align=\"left\">260</td>\n</tr>\n<tr>\n<td align=\"left\">East</td>\n<td align=\"left\">80</td>\n</tr>\n</tbody>\n</table>\n<p>这个聚合表小得多，并且直接回答了“每个区域的总销售额是多少？”这个问题。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1of8ymb\" \n              data-plot-definition='{\"data\": [{\"x\": [\"North\", \"South\", \"East\"], \"y\": [310, 260, 80], \"type\": \"bar\", \"marker\": {\"color\": [\"#339af0\", \"#20c997\", \"#ff922b\"]}}], \"layout\": {\"title\": \"按区域划分的总销售额\", \"xaxis\": {\"title\": \"区域\"}, \"yaxis\": {\"title\": \"总销售额 ($)\"}, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 40, \"b\": 40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1of8ymb\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>每个区域的总销售额已聚合。</p>\n</blockquote>\n<p>数据聚合是一种高效的转换方法，用于将大型数据集提炼成有意义的摘要，为ETL过程中的有效分析和报告做准备。它是初步清洗和结构化之后进行的一项标准操作，旨在为数据最终去向进行塑形。</p>",
+  "slug": "introduction-data-aggregation",
+  "updates": [],
+  "references": [
+    {
+      "id": 15431,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball, Margy Ross",
+      "year": "2013",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801",
+      "doi": "",
+      "note": "这本数据仓库和ETL的基础书籍解释了数据聚合如何对设计汇总事实表以及优化分析报告系统的性能至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T10:45:15.043299Z",
+      "updated_at": "2025-09-10T05:43:07.507470Z"
+    },
+    {
+      "id": 15433,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "本书讨论了现代数据系统的架构，其中聚合是一种常见的数据处理和转换模式，用于提高性能并为各种应用提供洞察。",
+      "order": 3,
+      "created_at": "2025-09-06T10:45:15.053004Z",
+      "updated_at": "2025-09-10T05:43:20.818628Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

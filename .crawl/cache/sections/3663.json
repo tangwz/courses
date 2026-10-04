@@ -1,0 +1,61 @@
+{
+  "id": 3663,
+  "title": "在流程中执行查询",
+  "meta_title": "通过已实现的RAG流程执行查询",
+  "meta_description": "演示如何输入用户查询并从流程中获取增强回复。",
+  "content": "<p>检索器和生成器组件在组装和连接后（可能使用LangChain或LlamaIndex等框架），一个基本的检索增强生成 (RAG)流程便可投入使用。该流程的目的是首先在特定的文档集中查找相关信息，然后利用这些信息生成连贯且基于上下文 (context)的回复来回答查询。</p>\n<h3>查询的处理流程</h3>\n<p>当您向RAG流程提交查询时，它会启动一系列操作，旨在借助您的外部知识库：</p>\n<ol>\n<li><strong>查询输入：</strong> 您将一个问题或提示以字符串形式提供给流程。</li>\n<li><strong>检索步骤：</strong> 流程首先将您的查询传递给检索器组件。检索器在包含已索引文档片段的向量 (vector)数据库中查找嵌入 (embedding)与查询嵌入最相似的片段。它返回一组这些相关文档片段。</li>\n<li><strong>上下文 (context)增强：</strong> 检索到的片段（即上下文）与您的原始查询结合。这通常涉及将它们格式化为较大的提示模板中的特定结构，该模板指导语言模型（LLM）如何使用上下文。</li>\n<li><strong>生成步骤：</strong> 这个增强提示（包含原始查询和检索到的上下文）被发送到LLM（即生成器组件）。</li>\n<li><strong>最终回复：</strong> LLM处理增强提示并生成回复。理想情况下，此回复直接回答您的查询，主要从提供的上下文中获取信息，而非仅仅依赖其内部预训练 (pre-training)知识。</li>\n</ol>\n<p>这个流程确保生成的答案基于您在数据准备阶段提供的具体文档。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14rmymv\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#a5d8ff\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  Query [label=\"用户查询\", fillcolor=\"#ffec99\"];\n  Retriever [label=\"检索器\\n(相似性搜索)\", fillcolor=\"#bac8ff\"];\n  VectorDB [label=\"向量数据库\\n(文档片段)\", shape=cylinder, fillcolor=\"#dee2e6\"];\n  Context [label=\"检索到的上下文\", shape=note, fillcolor=\"#b2f2bb\"];\n  PromptFormatter [label=\"提示格式化器\", fillcolor=\"#ffd8a8\"];\n  Generator [label=\"生成器 (LLM)\", fillcolor=\"#fcc2d7\"];\n  Response [label=\"最终回复\", fillcolor=\"#96f2d7\"];\n\n  Query -> Retriever;\n  Retriever -> VectorDB [label=\"搜索片段\"];\n  VectorDB -> Context [label=\"相关片段\"];\n  Query -> PromptFormatter;\n  Context -> PromptFormatter;\n  PromptFormatter -> Generator [label=\"增强提示\"];\n  Generator -> Response;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14rmymv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示：查询通过RAG流程的路径，从初始输入到最终生成的回复。</p>\n</blockquote>\n<h3>实际执行查询</h3>\n<p>假设您已将您的RAG流程组合实例化为一个对象（为保持一致，我们称之为<code>rag_chain</code>，尽管实际名称取决于前面步骤中使用的框架或代码），执行查询通常很简单。</p>\n<p>您将查询字符串传递给<code>rag_chain</code>对象的相应方法。LangChain等框架常为此目的使用<code>invoke()</code>或<code>stream()</code>等方法。</p>\n<pre><code class=\"language-python\"># 假设 'rag_chain' 是您之前配置的 RAG 流程对象\n# （例如，使用 LangChain 或 LlamaIndex 创建）\n\n# 定义您的查询\nuser_query = \"What are the main challenges mentioned in the latest project status report?\"\n\n# 通过流程执行查询\ntry:\n    response = rag_chain.invoke(user_query)\n    print(\"流程回复:\")\n    print(response)\n\nexcept Exception as e:\n    print(f\"发生错误: {e}\")\n\n# 带有潜在流式输出的示例（如果链/LLM支持）\n# try:\n#     print(\"流式流程回复:\")\n#     for chunk in rag_chain.stream(user_query):\n#         # 处理每个到达的片段（例如，打印它）\n#         print(chunk, end=\"\", flush=True)\n#     print(\"\\n--- 流结束 ---\")\n# except Exception as e:\n#     print(f\"\\n流式处理过程中发生错误: {e}\")\n\n</code></pre>\n<h3>理解输出</h3>\n<p>上面代码中的<code>response</code>变量将包含LLM生成的最终答案。设想一个场景，我们的索引文档包含“阿尔法项目”的状态报告。</p>\n<p><strong>查询：</strong> <code>\"最新的阿尔法项目状态报告中提到了哪些主要挑战？\"</code></p>\n<p><strong>可能的检索上下文 (context)（简化）：</strong></p>\n<ul>\n<li>片段1：“...阿尔法项目状态 - 10月26日...与传统支付系统的集成依然复杂...”</li>\n<li>片段2：“...第四季度资源分配比预期更紧张，可能影响测试时间表...”</li>\n<li>片段3：“...对贝塔团队API交付进度的依赖引入了风险...”</li>\n</ul>\n<p><strong>可能的<code>rag_chain</code>回复：</strong>\n<code>\"根据最新的阿尔法项目状态报告，提到的主要挑战是与传统支付系统集成时的复杂性，第四季度资源分配比预期更紧张可能影响时间表，以及与贝塔团队API交付进度相关的依赖风险。\"</code></p>\n<p>请注意，此回复如何直接回应查询，并综合了从检索到的片段中找到的信息。它具体且基于文档内容。如果没有RAG，标准的LLM可能会提供关于项目挑战的通用答案，或者声明它无法访问具体的实时项目报告。</p>\n<h3>尝试与后续步骤</h3>\n<p>运行一次查询可以确认流程有效，但真正的理解来自于尝试。尝试不同类型的查询：</p>\n<ul>\n<li><strong>特定事实检索：</strong> 询问您知道文档中包含的精确细节。</li>\n<li><strong>总结：</strong> 请求总结特定文档部分或多个文档中涵盖的主题。</li>\n<li><strong>比较：</strong> 询问文档中讨论的两个理念有何不同。</li>\n<li><strong>无直接答案的查询：</strong> 输入一个答案不太可能在索引文档中的查询。观察流程如何回复。它是否指出信息在上下文 (context)中不可用，还是试图仅基于LLM的通用知识回答？期望的行为通常取决于创建流程时所用的提示工程 (prompt engineering)。</li>\n</ul>\n<p>执行查询是RAG系统验证效果的时刻。它表明了将有针对性的信息检索与LLM的生成能力相结合的实际价值，从而根据您的具体数据来源产生相关且具备上下文感知的答案。在下一章中，我们将研究评估您的流程运行情况的方法，以及提高其效率的策略。</p>",
+  "slug": "running-queries",
+  "updates": [],
+  "references": [
+    {
+      "id": 10303,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS) 33",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "介绍了原始的检索增强生成（RAG）架构，描述了其组件以及它们如何协同工作以提供事实性和上下文知情的回复。",
+      "order": 1,
+      "created_at": "2025-09-05T06:40:50.847860Z",
+      "updated_at": "2025-09-09T12:13:36.182159Z"
+    },
+    {
+      "id": 10304,
+      "title": "Question Answering with RAG",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/use_cases/question_answering/",
+      "doi": "",
+      "note": "LangChain 框架构建 RAG 应用的官方文档，包含设置管道和运行查询的示例。",
+      "order": 2,
+      "created_at": "2025-09-05T06:40:50.853473Z",
+      "updated_at": "2025-09-09T12:13:29.566506Z"
+    },
+    {
+      "id": 10305,
+      "title": "Building a RAG Application",
+      "author": "LlamaIndex Team",
+      "year": "2024",
+      "publisher": "LlamaIndex",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.llamaindex.ai/en/stable/getting_started/concepts/rag.html",
+      "doi": "",
+      "note": "LlamaIndex 框架的官方文档，提供了构建检索增强生成管道的指南和代码示例。",
+      "order": 3,
+      "created_at": "2025-09-05T06:40:50.856037Z",
+      "updated_at": "2025-09-09T12:14:30.683029Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

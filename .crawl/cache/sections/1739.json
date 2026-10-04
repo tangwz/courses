@@ -1,0 +1,61 @@
+{
+  "id": 1739,
+  "title": "数组上的逻辑运算",
+  "meta_title": "NumPy 逻辑运算",
+  "meta_description": "在数组上执行逐元素比较和逻辑运算（与、或、非）。",
+  "content": "<p>NumPy 数组支持逻辑比较，从而能够在数据分析工作流程中实现高效的数据筛选、条件检查和决策制定。这些逻辑运算通常按元素应用，与 NumPy 中的算术运算非常相似，并生成布尔值（<code>True</code> 或 <code>False</code>）的数组。</p>\n<h3>逐元素比较</h3>\n<p>您可以使用标准 Python 比较运算符将整个数组与标量值进行比较，或者逐元素比较两个数组。NumPy 重载了这些运算符，使其可以在数组上高效工作。</p>\n<p>可用的比较运算符有：</p>\n<ul>\n<li><code>==</code> (等于)</li>\n<li><code>!=</code> (不等于)</li>\n<li><code>&#x3C;</code> (小于)</li>\n<li><code>></code> (大于)</li>\n<li><code>&#x3C;=</code> (小于或等于)</li>\n<li><code>>=</code> (大于或等于)</li>\n</ul>\n<p>我们来看看它们是如何工作的。</p>\n<p><strong>数组与标量比较</strong></p>\n<p>当您将 NumPy 数组与单个数字（一个标量）进行比较时，NumPy 会在标量与数组的<em>每个</em>元素之间执行比较，并返回一个相同形状的新布尔数组。</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个示例数组\nages = np.array([25, 18, 65, 40, 12])\n\n# 检查哪些年龄大于 21\nis_adult = ages > 21\nprint(is_adult)\n# 预期输出: [ True False  True  True False]\n\n# 检查哪些年龄正好是 18\nis_eighteen = ages == 18\nprint(is_eighteen)\n# 预期输出: [False  True False False False]\n</code></pre>\n<p>结果 <code>is_adult</code> 是一个布尔数组，在满足条件 <code>age > 21</code> 的地方为 <code>True</code>，否则为 <code>False</code>。</p>\n<p><strong>比较两个数组</strong></p>\n<p>您也可以比较两个数组，前提是它们具有兼容的形状（要么形状相同，要么根据广播规则兼容的形状，我们稍后会讨论）。比较是逐元素执行的。</p>\n<pre><code class=\"language-python\"># 创建两个分数数组\nscores1 = np.array([85, 92, 78, 88])\nscores2 = np.array([85, 90, 80, 88])\n\n# 检查分数相同的地方\nequal_scores = scores1 == scores2\nprint(equal_scores)\n# 预期输出: [ True False False  True]\n\n# 检查 scores1 小于 scores2 的地方\nlower_scores = scores1 &#x3C; scores2\nprint(lower_scores)\n# 预期输出: [False False  True False]\n</code></pre>\n<p>结果布尔数组中的每个元素都对应于原始数组中相同位置元素的比较结果。</p>\n<h3>组合逻辑条件</h3>\n<p>通常，您需要同时检查多个条件。例如，您可能希望找到大于下限<em>且</em>小于上限的元素。NumPy 为此使用了逐元素的逻辑运算符：</p>\n<ul>\n<li><code>&#x26;</code> (逻辑与)</li>\n<li><code>|</code> (逻辑或)</li>\n<li><code>~</code> (逻辑非)</li>\n</ul>\n<blockquote>\n<p><strong>重要提示：</strong> 在 NumPy 数组上进行逐元素逻辑运算时，请使用位运算符 <code>&#x26;</code>、<code>|</code> 和 <code>~</code>，而<em>不是</em> Python 关键字 <code>and</code>、<code>or</code> 和 <code>not</code>。关键字 <code>and</code> 和 <code>or</code> 评估整个对象的真值，而 <code>&#x26;</code> 和 <code>|</code> 则对数组内的布尔值执行逐元素比较。另外，请记住由于运算符优先级，要在单个比较周围使用括号 <code>()</code>。</p>\n</blockquote>\n<p>我们来结合之前 <code>ages</code> 数组的条件：</p>\n<pre><code class=\"language-python\"># 找到 20 到 50 岁之间（不包括 20，包括 50）\nworking_age = (ages > 20) &#x26; (ages &#x3C;= 50)\nprint(working_age)\n# 原始年龄: [25, 18, 65, 40, 12]\n# 预期输出: [ True False False  True False]\n\n# 找到小于 18 岁或大于 60 岁的人\nyoung_or_senior = (ages &#x3C; 18) | (ages > 60)\nprint(young_or_senior)\n# 原始年龄: [25, 18, 65, 40, 12]\n# 预期输出: [False False  True False  True]\n\n# 找到不等于 18 岁的人\nnot_eighteen = ~(ages == 18)\n# 这等同于: not_eighteen = ages != 18\nprint(not_eighteen)\n# 原始年龄: [25, 18, 65, 40, 12]\n# 预期输出: [ True False  True  True  True]\n</code></pre>\n<p>这些组合的布尔数组对于选择满足多个条件的数据非常有用，这是一种通常被称为布尔索引的技巧（您在第三章中遇到过）。</p>\n<h3>检查数组中的条件：<code>any()</code> 和 <code>all()</code></h3>\n<p>有时，您不需要逐元素的结果，而是需要一个概要：<em>任何</em>元素是否满足条件，或者<em>所有</em>元素都满足条件？NumPy 为此提供了数组的 <code>any()</code> 和 <code>all()</code> 方法（以及独立函数 <code>np.any()</code>、<code>np.all()</code>）。</p>\n<ul>\n<li><code>any()</code>: 如果布尔数组中至少有一个元素为 <code>True</code>，则返回 <code>True</code>。</li>\n<li><code>all()</code>: 仅当布尔数组中<em>所有</em>元素都为 <code>True</code> 时，才返回 <code>True</code>。</li>\n</ul>\n<pre><code class=\"language-python\"># 创建一个布尔数组\nresults = np.array([True, False, True, True])\n\n# 检查是否有任何结果为 True\nprint(results.any())\n# 预期输出: True\n\n# 检查是否所有结果都为 True\nprint(results.all())\n# 预期输出: False\n\n# 再次使用我们的 ages 数组\nages = np.array([25, 18, 65, 40, 12])\n\n# 有青少年（年龄 &#x3C; 20）吗？\nprint((ages &#x3C; 20).any())\n# 预期输出: True (因为 18 和 12 小于 20)\n\n# 所有年龄都大于等于 18 吗？\nprint((ages >= 18).all())\n# 预期输出: False (因为 12 小于 18)\n</code></pre>\n<p>这些函数有助于快速检查和断言您的数据。您也可以在多维数组中沿着特定轴应用 <code>any()</code> 和 <code>all()</code>，类似于 <code>sum()</code> 或 <code>mean()</code> 等统计函数。</p>\n<p>逻辑运算是数据选择和操作的核心部分。它们生成的布尔数组充当强大的掩码，用于根据复杂条件筛选和修改您的数据集。当您处理更大的数据集时，使用 NumPy 的向量 (vector)化逻辑运算将比编写显式 Python 循环效率显著提高。</p>",
+  "slug": "logical-operations-arrays",
+  "updates": [],
+  "references": [
+    {
+      "id": 2633,
+      "title": "Array indexing and data selection",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "这份官方指南解释了如何使用各种方法（包括依赖逻辑运算的布尔索引）从数组中选择数据。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:19.323520Z",
+      "updated_at": "2025-09-08T05:13:14.755343Z"
+    },
+    {
+      "id": 2634,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于Python数据科学的基础书籍，提供了NumPy数组操作（包括逻辑比较和布尔过滤）的实用见解。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:19.374233Z",
+      "updated_at": "2025-09-08T05:13:13.799521Z"
+    },
+    {
+      "id": 2635,
+      "title": "Guide to NumPy",
+      "author": "Travis E. Oliphant",
+      "year": "2006",
+      "publisher": "Trelgol Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://archive.org/details/GuideToNumpy",
+      "doi": "",
+      "note": "这本由NumPy创建者撰写的基础指南，深入理解NumPy数组和元素级操作，包括逻辑比较。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:19.378032Z",
+      "updated_at": "2025-09-08T05:13:24.924739Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

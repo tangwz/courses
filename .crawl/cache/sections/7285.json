@@ -1,0 +1,45 @@
+{
+  "id": 7285,
+  "title": "其他PEFT方法：概述",
+  "meta_title": "其他PEFT方法概述",
+  "meta_description": "简要介绍替代PEFT方法，包括基于适配器的方法和前缀调整。",
+  "content": "<p>参数 (parameter)高效微调 (fine-tuning)（PEFT）提供了多种创新的方法，用于高效的模型调整。低秩适配（LoRA）是一种高效且广受欢迎的PEFT技术，但还有其他几种方法。这些技术在修改策略上有所不同：有些（如LoRA）改变现有权重 (weight)矩阵，而另一些则向模型添加新组件或直接操作输入。理解这些替代方案能扩展您用于使大型语言模型（LLMs）适应特定限制和任务的工具范围。</p>\n<p>本节简要介绍了两种主要的替代PEFT系列：基于适配器的方法以及学习连续提示的方法，例如Prefix-Tuning和Prompt-Tuning。</p>\n<h3>适配器调整：注入新层</h3>\n<p>最早且最直接的PEFT方法之一是<strong>适配器调整</strong>。其核心思路很简单：将所有预训练 (pre-training)的模型权重 (weight)完全冻结，并在每个transformer块内部注入新的、小的、可训练的神经网络 (neural network)模块。这些模块被称为“适配器”。</p>\n<p>一个适配器通常包含一个瓶颈结构：</p>\n<ol>\n<li>一个前馈下投影层，它将transformer子层（如注意力或前馈网络）的高维输出降低到小得多的维度。</li>\n<li>一个非线性激活函数 (activation function)，例如GELU或ReLU。</li>\n<li>一个前馈上投影层，它将特征恢复到其原始维度。</li>\n<li>一个残差连接，将适配器的输出添加回transformer子层的原始、未修改的输出中。</li>\n</ol>\n<p>在微调 (fine-tuning)期间，只有这些新添加的适配器模块的参数 (parameter)会被更新。由于瓶颈维度（例如32或64）与模型的隐藏维度（例如4096）相比非常小，因此可训练参数的数量只占总数的一小部分。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hv0s8x\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"]; edge [fontname=\"Arial\"]; bgcolor=\"transparent\";\nsub_attention [label=\"多头注意力\", fillcolor=\"#a5d8ff\"];\nsub_ffn [label=\"前馈网络\", fillcolor=\"#a5d8ff\"];\nsub_adapter [label=\"适配器模块\\n(可训练)\", fillcolor=\"#ffd8a8\", shape=box];\nnorm1 [label=\"层归一化\", fillcolor=\"#e9ecef\"];\nnorm2 [label=\"层归一化\", fillcolor=\"#e9ecef\"];\ninput [label=\"层输入\", shape=ellipse, fillcolor=\"#ced4da\"];\noutput [label=\"层输出\", shape=ellipse, fillcolor=\"#ced4da\"];\n{rank=same; sub_attention; sub_ffn;}\n{rank=same; norm1; norm2;}\ninput -> norm1 [label=\" \"];\nnorm1 -> sub_attention -> norm2 [label=\" \"];\nnorm2 -> sub_ffn -> sub_adapter [label=\" \"];\nsub_adapter -> output [label=\" \"];\nsub_ffn -> output [style=dashed, arrowhead=none, label=\"残差\\n连接\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hv0s8x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个适配器模块，插入在transformer块的前馈网络之后。原始模型权重（蓝色）是冻结的，而只有适配器（橙色）被训练。</p>\n</blockquote>\n<p>适配器的主要优点是它们的模块化。您可以为不同的任务训练独立的适配器，并在推理 (inference)时简单地“插入”相应的适配器，而无需修改底层模型。这对于提供多个定制模型来说非常高效。然而，这种方法可能会引入少量的推理延迟，因为它增加了必须遍历的额外网络层。</p>\n<h3>提示和前缀调整：修改输入</h3>\n<p>与其修改模型的架构，另一类方法则侧重于操作模型的输入。<strong>提示调整</strong>（Prompt-Tuning）和<strong>前缀调整</strong>（Prefix-Tuning）是两个主要例子，它们通过学习一种“软提示”来引导模型的行为。</p>\n<p>与您在使用ChatGPT等模型时使用的离散文本提示不同，软提示是连续数值向量 (vector)的序列。这些向量被前置到输入嵌入 (embedding)中，并通过反向传播 (backpropagation)进行训练，以优化模型针对特定任务的输出。整个语言模型保持冻结。</p>\n<ul>\n<li>\n<p><strong>提示调整</strong>是最简单的形式。它仅向输入嵌入层添加一系列可训练向量。这些向量被视为虚拟的token，提供特定任务的上下文 (context)。它的参数 (parameter)效率极高，有时即使对于数十亿参数的模型也只需几千个可训练参数。</p>\n</li>\n<li>\n<p><strong>前缀调整</strong>是更具表现力的变体。它不仅仅是在输入嵌入中添加一个可训练前缀，而是在transformer的<em>每个</em>注意力层中，在key和value向量的开头插入一个独特的、可训练的前缀。这使得模型能够更直接地、逐层控制其内部表示和生成过程。</p>\n</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-153a0qf\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; bgcolor=\"transparent\";\n{ rank=same; a1; b1; c1; }\n{ rank=same; a2; b2; c2; }\n{ rank=same; a3; b3; c3; }\na1 [label=\"标准输入\"];\na2 [label=\"输入Token\", fillcolor=\"#dee2e6\"];\na3 [label=\"冻结的LLM\", fillcolor=\"#a5d8ff\"];\na2 -> a3;\nb1 [label=\"提示调整\"];\nb2 [label=\"<table><tr><td bgcolor=&#39;#ffd8a8&#39;>软提示</td><td bgcolor=&#39;#dee2e6&#39;>输入Token</td></tr></table>\", shape=plaintext];\nb3 [label=\"冻结的LLM\", fillcolor=\"#a5d8ff\"];\nb2 -> b3;\nc1 [label=\"前缀调整\"];\nc2 [label=\"输入Token\", fillcolor=\"#dee2e6\"];\nc3 [label=\"每个注意力块中带有前缀的LLM\", fillcolor=\"#a5d8ff\"];\nc2 -> c3;\nprefix [label=\"可训练的\\n前缀\", fillcolor=\"#ffd8a8\"];\nprefix -> c3 [style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-153a0qf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>输入修改方法的比较。提示调整向输入嵌入添加一个可训练的软提示，而前缀调整则将可训练向量插入到每个注意力块中。</p>\n</blockquote>\n<p>这些方法非常轻量。由于您只为每个任务训练和存储小的软提示向量，因此您可以为数百个不同任务定制一个单一的冻结底层模型，存储开销极小。主要的挑战在于，它们的性能有时会落后于LoRA或完全微调 (fine-tuning)等更具侵入性的方法，因为它们对模型的内部计算影响较小。</p>\n<h3>选择合适的PEFT方法</h3>\n<p>最适合的PEFT方法取决于您的具体目标，需要平衡性能要求与计算和存储限制。LoRA通常能在性能和效率之间提供良好平衡，这也促成了它的普及。然而，适配器为多任务部署提供了更强的模块化特性，而基于提示的方法在参数 (parameter)效率方面是无与伦比的。</p>\n<p>以下是讨论过的技术比较汇总：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">方法</th>\n<th align=\"left\">核心思想</th>\n<th align=\"left\">可训练参数</th>\n<th align=\"left\">推理 (inference)延迟</th>\n<th align=\"left\">主要优点</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>LoRA</strong></td>\n<td align=\"left\">将权重 (weight)更新矩阵分解为低秩因子。</td>\n<td align=\"left\">非常低</td>\n<td align=\"left\">无（可合并）</td>\n<td align=\"left\">性能卓越，参数效率高。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>适配器调整</strong></td>\n<td align=\"left\">在冻结层之间注入小的可训练模块。</td>\n<td align=\"left\">非常低</td>\n<td align=\"left\">少量增加</td>\n<td align=\"left\">模块化程度高；易于为不同任务切换适配器。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>提示调整</strong></td>\n<td align=\"left\">学习一个前置到输入的连续“软提示”。</td>\n<td align=\"left\">极低</td>\n<td align=\"left\">可忽略</td>\n<td align=\"left\">存储需求极小；非常适合将一个模型用于多种任务。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>前缀调整</strong></td>\n<td align=\"left\">为每个注意力块中的key/value学习连续前缀。</td>\n<td align=\"left\">极低</td>\n<td align=\"left\">可忽略</td>\n<td align=\"left\">比提示调整更具表现力，同时保持高效率。</td>\n</tr>\n</tbody>\n</table>",
+  "slug": "other-peft-methods-survey",
+  "updates": [],
+  "references": [
+    {
+      "id": 20078,
+      "title": "Parameter-Efficient Transfer Learning for NLP",
+      "author": "Neil Houlsby, Andrei Giurgiu, Stanislaw Jastrzebski, Bruna Morrone, Quentin de Laroussilhe, Andrea Gesmundo, Mona Attariyan, Sylvain Gelly",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 36th International Conference on Machine Learning (ICML)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1902.00751",
+      "doi": "10.48550/arXiv.1902.00751",
+      "note": "介绍了用于高效迁移学习的适配器模块，通过冻结预训练权重并插入小型可训练层来展示其有效性。",
+      "order": 1,
+      "created_at": "2025-09-06T13:19:06.993886Z",
+      "updated_at": "2025-09-10T05:08:11.895342Z"
+    },
+    {
+      "id": 20079,
+      "title": "Prefix-Tuning: Optimizing Continuous Prompts for Generation",
+      "author": "Li, Xiang Lisa and Liang, Percy",
+      "year": "2021",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers)",
+      "volume": "",
+      "pages": "4582-4597",
+      "url": "https://aclanthology.org/2021.acl-long.353/",
+      "doi": "10.18653/v1/2021.acl-long.353",
+      "note": "提出了一种参数高效的微调方法--Prefix-Tuning，该方法在每个Transformer层注意力机制的输入前添加可训练的连续前缀。",
+      "order": 2,
+      "created_at": "2025-09-06T13:19:06.999356Z",
+      "updated_at": "2025-09-10T05:08:05.717631Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

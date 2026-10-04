@@ -1,0 +1,45 @@
+{
+  "id": 6607,
+  "title": "处理基本执行失败",
+  "meta_title": "LLM代理执行中的简单错误处理",
+  "meta_description": "LLM代理在任务执行期间处理错误或意料之外结果的基本策略。",
+  "content": "<p>即使有周密的规划和明确的目标，LLM代理在尝试执行任务时也可能遇到问题。工具可能失效，信息可能无法获得，或者LLM本身可能误解了某个中间步骤。提供了代理可以用来应对这些简单执行失败的基本策略，以提升其可靠性和用户友好度。</p>\n<h3>执行中为何会发生失败</h3>\n<p>执行障碍是代理运行的正常部分，尤其是在与外部系统交互或依赖LLM对每一步的理解时。造成这些中断的一些常见原因包括：</p>\n<ul>\n<li><strong>LLM误解</strong>: 在计划的任何阶段，LLM都可能误解特定步骤的指令，或者生成的动作与当前情境不太匹配。</li>\n<li><strong>工具问题</strong>: 外部工具，例如搜索API、数据库连接或计算器功能，可能暂时不可用。它也可能返回意料之外的错误，这可能是由于代理提供的输入格式不正确，或者工具端出现了问题。例如，如果天气工具被提供了拼写错误的城市名称，或者其自身服务出现故障，它可能会失效。</li>\n<li><strong>环境变化</strong>: 代理与之交互的环境并非总是静态的。它预期要读取的文件可能已被移动或删除，或者它需要访问的网站可能暂时离线或改变了结构。</li>\n<li><strong>模糊的中间目标</strong>: 如果多步骤计划中的某个步骤没有定义得足够清晰，代理可能难以正确执行它，从而导致错误或无益的结果。</li>\n</ul>\n<p>理解这些潜在的失败点是构建更具弹性的代理的第一步。</p>\n<h3>应对失败的简单策略</h3>\n<p>当代理出现问题时，有几种基本的恢复或报告策略可以带来很大的不同。</p>\n<h4>识别和记录问题</h4>\n<p>在代理能够处理失败之前，它必须首先识别到有失败发生。正如我们之前讨论如何追踪任务执行时所提及的，彻底的日志记录是很必要的。当代理尝试执行一个动作，尤其是涉及外部工具的动作时，它应该记录：</p>\n<ul>\n<li>预期的动作或导致该动作的<code>thought</code>。</li>\n<li>被调用的特定<code>tool</code>及其获得的<code>input</code>。</li>\n<li>收到的原始<code>observation</code>，即工具的输出或错误信息。</li>\n</ul>\n<p>这些记录的信息不仅仅是为了供您（开发者）稍后调试问题。它可以作为LLM下一个推理 (inference)周期的一部分反馈给LLM，使其能够理解哪里出了问题，并可能自我修正。</p>\n<h4>简单的重试</h4>\n<p>有时，最简单的解决方案就是再次尝试相同的动作。这种策略对于临时性的、短暂的问题特别有效，例如代理尝试调用API时短暂的网络故障。</p>\n<ul>\n<li><strong>运作方式</strong>: 如果工具调用因可能是临时性的错误（例如超时）而失败，代理可以被编程为等待一小段时间（例如几秒钟），然后再次尝试完全相同的调用。</li>\n<li><strong>何时使用</strong>: 这最适合那些在第二次尝试时无需任何更改就有合理机会成功的错误。</li>\n<li><strong>重要考量</strong>: 限制重试次数很重要。如果问题持续存在，代理不应无限期尝试。常见做法是允许2或3次重试，如果动作仍然失败，代理则应认为失败更严重，并尝试不同的策略或报告问题。</li>\n</ul>\n<p>下图描述了一个包含重试机制的动作尝试基本流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1i68qm5\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, margin=\"0.25,0.1\", fillcolor=\"#e9ecef\", color=\"#495057\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n    Start [label=\"请求代理动作\", fillcolor=\"#a5d8ff\"];\n    AttemptAction [label=\"尝试动作\\n(例如，调用工具)\", fillcolor=\"#bac8ff\"];\n    CheckSuccess [label=\"动作成功？\", shape=diamond, fillcolor=\"#ffec99\"];\n    Success [label=\"继续下一步\", fillcolor=\"#b2f2bb\"];\n    Failure [label=\"动作失败\", fillcolor=\"#ffc9c9\"];\n    LogFailure [label=\"记录失败详情\"];\n    RetryDecision [label=\"重试次数 < 最大重试次数？\", shape=diamond, fillcolor=\"#ffec99\"];\n    IncrementRetry [label=\"增加重试计数\\n短暂等待\"];\n    ReportError [label=\"报告错误 / 停止任务\", fillcolor=\"#f03e3e\", fontcolor=\"#ffffff\"];\n\n    Start -> AttemptAction;\n    AttemptAction -> CheckSuccess;\n    CheckSuccess -> Success [label=\"是\"];\n    CheckSuccess -> Failure [label=\"否\"];\n    Failure -> LogFailure;\n    LogFailure -> RetryDecision;\n    RetryDecision -> IncrementRetry [label=\"是\"];\n    IncrementRetry -> AttemptAction;\n    RetryDecision -> ReportError [label=\"否\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1i68qm5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个动作尝试流程，在初始失败时包含重试循环。</p>\n</blockquote>\n<h4>使用工具的错误消息</h4>\n<p>当工具以非短暂的方式失败时，它通常会提供错误消息。这个消息非常有价值。代理不应该直接放弃，而是可以将其作为<code>observation</code>的一部分传回给LLM。</p>\n<ul>\n<li><strong>运作方式</strong>: LLM作为其下一个推理步骤（其“思考”过程）的一部分，接收错误消息。例如，如果代理使用<code>search_product(product_name)</code>工具，它返回“错误：产品类别未指定”，LLM可以分析这一点。</li>\n<li><strong>LLM的作用</strong>: 根据错误，LLM可能：\n<ul>\n<li>如果它理解原因，尝试修正输入。对于上面的例子，如果它能推断出类别，它可能会尝试<code>search_product(product_name=\"laptop\", category=\"electronics\")</code>。</li>\n<li>如果当前工具看起来不合适，或者错误表明缺少某种功能，决定使用不同的工具。</li>\n<li>如果它自己无法解决错误，它可以报告特定错误，这比通用的失败消息有用得多。</li>\n</ul>\n</li>\n</ul>\n<p>考虑一个被赋予执行计算任务的代理：5除以0。</p>\n<ol>\n<li><strong>目标</strong>: 计算 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>5</mn><mi mathvariant=\"normal\">/</mi><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">5 / 0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">5/0</span></span></span></span>。</li>\n<li><strong>计划</strong>: 使用<code>calculator</code>工具，操作为<code>divide</code>，数字为<code>5</code>和<code>0</code>。</li>\n<li><strong>动作</strong>: 代理尝试<code>calculator.divide(numerator=5, denominator=0)</code>。</li>\n<li><strong>工具输出 (Observation)</strong>: “错误：除以零未定义。”</li>\n<li><strong>代理的下一步（反馈给LLM）</strong>: LLM收到：“Observation: 计算器工具失败，并显示消息：'错误：除以零未定义。'”</li>\n<li><strong>LLM思考</strong>: “计算 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>5</mn><mi mathvariant=\"normal\">/</mi><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">5 / 0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">5/0</span></span></span></span> 无法执行，因为除以零是数学错误。我无法直接满足此请求。我应该将此问题告知用户。”</li>\n<li><strong>代理输出</strong>: “我无法计算5除以0，因为除以零不是有效的数学运算。”</li>\n</ol>\n<p>这是一个比代理简单停止或反复尝试不可能的计算要智能和有帮助得多的响应。</p>\n<h4>定义回退或替代方法</h4>\n<p>对于某些任务，可能存在多种达到目标的方式，有些比其他更可靠或更精确。如果代理的主要方法因简单重试或输入修正无法解决的原因而失败，它可以尝试预定义的替代方案。</p>\n<ul>\n<li><strong>例子</strong>: 代理需要查找特定商品的当前价格。其主要方法可能是使用专门的<code>PriceCheckAPI</code>工具。如果此API不可用或返回“未找到商品”之类的错误，代理可以有一个回退策略：使用通用<code>WebSearchTool</code>在购物网站上搜索商品价格。这种回退方法结构性可能较差，但仍能获得所需信息。</li>\n<li><strong>实现</strong>: 这要求您（代理设计者）做到：\n<ol>\n<li>为代理提供多种可以达到类似结果的工具。</li>\n<li>在代理的指令（其主要提示词 (prompt)）或其编码控制流中包含逻辑，以便按优先顺序或根据遇到的失败类型尝试这些工具。</li>\n</ol>\n</li>\n</ul>\n<h4>优雅停止并清晰报告</h4>\n<p>并非所有失败都能由基本代理自主解决。很重要的是，代理不会陷入无限尝试和失败的循环，从而消耗资源或让用户感到沮丧。</p>\n<ul>\n<li><strong>最大尝试次数</strong>: 对于给定的子任务，始终对重试或替代方法设定限制。</li>\n<li><strong>清晰报告</strong>: 如果代理耗尽其定义的策略，或遇到它无法处理的错误，它应该停止处理该特定任务或子任务，并清晰地报告情况。一份好的报告应包含：\n<ul>\n<li>它试图实现什么。</li>\n<li>它尝试的最后一个动作。</li>\n<li>它遇到的特定错误消息（如果有的话）。</li>\n<li>一个表明它无法在该特定动作线上进一步进行的声明。</li>\n</ul>\n</li>\n</ul>\n<p>这种信息丰富的失败比代理默默停止或返回模糊的错误要有用得多。</p>\n<h3>提升弹性的提示</h3>\n<p>您可以通过在其主要系统提示词 (prompt)中包含具体指令，来很大程度上影响代理如何处理失败。这些指令会指导LLM在遇到指示错误的<code>observation</code>时的推理 (inference)过程。</p>\n<p>例如，您可以在代理的提示词中添加：\n“你是一个乐于助人的助手。当你使用工具时，如果它返回错误，请在你的思考过程中仔细分析错误消息。</p>\n<ol>\n<li>如果错误似乎是您输入中的小问题（例如，格式错误、您可以识别的拼写错误或缺少常见参数 (parameter)），请尝试纠正它，并使用修改后的输入再次尝试该动作，但对于该特定修正只尝试一次。</li>\n<li>如果工具似乎已停止运行，错误很复杂，或者您的修正尝试也失败了，请在此步骤中不要再次尝试该工具。清晰地报告错误，解释您正在尝试做什么，并表明您无法使用该工具完成该特定子任务。”</li>\n</ol>\n<p>这为LLM提供了基本的错误处理协议，鼓励一定程度的自我修正，同时确保它不会陷入困境。</p>\n<h3>这些基本策略的局限性</h3>\n<p>这里讨论的技术，包括重试、使用错误消息、简单的回退和清晰报告，旨在处理相对常见和直接的执行失败。它们相比完全没有错误处理的代理，能显著提高其可靠性。</p>\n<p>然而，这些是基本方法。它们无法解决所有问题，特别是：</p>\n<ul>\n<li>需要详尽诊断推理 (inference)的复杂错误。</li>\n<li>失败原因无法从错误消息中明确的模糊情况。</li>\n<li>需要复杂多步恢复计划或动态重新规划的失败。</li>\n</ul>\n<p>更高级的代理设计包含更复杂的错误诊断、从过去失败中学习的机制以及更灵活的重新规划能力。这些是更高级学习的主题。目前，实施这些基本的故障处理方法将使您的第一个LLM代理在操作中更具实用性。</p>",
+  "slug": "managing-basic-execution-failures",
+  "updates": [],
+  "references": [
+    {
+      "id": 18699,
+      "title": "LangChain Agents Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://langchain.com",
+      "doi": "",
+      "note": "为实现LLM代理提供了实践示例和指南，包括如何在一个流行的框架中集成工具并处理它们的输出和潜在故障。",
+      "order": 3,
+      "created_at": "2025-09-06T12:35:20.094528Z",
+      "updated_at": "2026-02-04T11:34:11.523924Z"
+    },
+    {
+      "id": 18700,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFqRg_yU0x-4ECrNUoTazodl9eVTHtdf6JkDYNDow62Xf5_RpJ3vI968D9mdQ6yibPkp22SkApFBnXdo7MMk__s9VQj1eaYNuuUAD3O_y_qwiVAzHSsMe9NfYi7MVKPhHzK01bUolDkx_SGJlcw98cAsYYZsVDwPWTHx04pWdu11BM6jPqSnH9gD2oZu3VjapWP60dgI_ejVU8=",
+      "doi": "",
+      "note": "讨论了构建可靠系统的基本原则，包括处理故障、重试和确保容错性的策略，这些都适用于代理中的外部工具交互。",
+      "order": 4,
+      "created_at": "2025-09-06T12:35:20.097224Z",
+      "updated_at": "2026-02-04T11:34:12.232878Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

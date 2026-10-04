@@ -1,0 +1,61 @@
+{
+  "id": 1708,
+  "title": "Sequential 模型 API",
+  "meta_title": "Keras Sequential 模型 API 指南",
+  "meta_description": "使用 Keras Sequential 模型构建简单、线性的层堆叠。",
+  "content": "<p>Keras 提供了几种方式来定义模型架构。最简单的方式是 <code>Sequential</code> API，它专门为线性堆叠的层构建的模型设计。您可以将其想象成使用乐高®积木进行搭建，其中每个层都直接连接到前一个层，并且一个层的输出按顺序成为下一个层的输入。这种方式非常直观，足以应对许多常见的网络类型，特别是标准多层感知器（MLP）或许多卷积神经网络 (neural network)（CNN）等前馈网络。</p>\n<p>如果您的模型遵循从输入到输出的直接路径，没有分支、合并或多个输入/输出，那么 <code>Sequential</code> 模型通常是定义它的最简洁方式。</p>\n<h3>创建 Sequential 模型</h3>\n<p>您可以通过将层实例列表传递给其构造函数来创建 <code>Sequential</code> 模型。TensorFlow 需要知道模型应预期输入数据的形状。您只需为模型的<em>第一个</em>层指定此项；后续层可以根据前一个层的输出形状自动推断其输入形状。</p>\n<p>让我们构建一个简单例子：一个包含两个全连接（<code>Dense</code>）层的模型。假设我们正在构建一个分类器，用于处理包含784个特征向量 (vector)的输入数据（可能是展平的28x28像素图像）。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nfrom tensorflow import keras\nfrom tensorflow.keras import layers\n\n# 定义模型\nmodel = keras.Sequential(\n    [\n        keras.Input(shape=(784,), name=\"input_layer\"), # 明确定义输入形状\n        layers.Dense(64, activation=\"relu\", name=\"dense_layer_1\"),\n        layers.Dense(10, activation=\"softmax\", name=\"output_layer\") # 10个类别的输出层\n    ],\n    name=\"my_simple_mlp\"\n)\n\n# 显示模型的架构\nmodel.summary()\n</code></pre>\n<p>在此例子中：</p>\n<ol>\n<li>我们导入所需的模块。</li>\n<li>我们创建了一个 <code>keras.Sequential</code> 实例。</li>\n<li>我们传递了一个层列表：\n<ul>\n<li><code>keras.Input(shape=(784,))</code>: 这在技术上不是一个层，但它定义了预期的输入形状。提供 <code>Input</code> 对象是为 Sequential 模型指定输入形状的推荐方式。它使模型的结构从一开始就明确。形状 <code>(784,)</code> 表示每个输入样本是一个包含784个元素的扁平向量。</li>\n<li><code>layers.Dense(64, activation=\"relu\")</code>: 第一个隐藏层是一个具有64个单元的全连接层，并使用修正线性单元（ReLU）激活函数 (activation function)。Keras 从前一个 <code>Input</code> 对象推断出其输入形状（784个单元）。</li>\n<li><code>layers.Dense(10, activation=\"softmax\")</code>: 输出层有10个单元（分类问题中每个潜在类别一个），并使用 <code>softmax</code> 激活函数为每个类别生成类似概率的输出。Keras 从前一个 <code>Dense</code> 层推断出其输入形状（64个单元）。</li>\n</ul>\n</li>\n<li><code>model.summary()</code> 打印出模型的有用概况，显示了层、它们的输出形状以及可训练参数 (parameter)的数量。</li>\n</ol>\n<p>你会注意到 <code>model.summary()</code> 的输出详细列出了每个层，包括其类型、输出形状和参数数量。这是验证架构的绝佳工具。</p>\n<pre><code class=\"language-text\">模型: \"my_simple_mlp\"\n_________________________________________________________________\n 层 (类型)                输出形状              参数数量\n=================================================================\n dense_layer_1 (Dense)       (None, 64)                50240\n\n output_layer (Dense)        (None, 10)                650\n\n=================================================================\n总参数量: 50,890\n可训练参数量: 50,890\n不可训练参数量: 0\n_________________________________________________________________\n</code></pre>\n<p><code>None</code> 在输出形状中代表批次大小，它通常是灵活的，在定义模型架构时不确定。</p>\n<h3>使用 <code>add()</code> 逐步构建</h3>\n<p>此外，您可以初始化一个空的 <code>Sequential</code> 模型，并使用 <code>.add()</code> 方法逐步添加层。如果您有逻辑来决定添加哪些层，这种方式有时会更易读。</p>\n<p>这里是使用 <code>.add()</code> 构建的相同模型：</p>\n<pre><code class=\"language-python\"># 另一种方式：初始化并添加层\nmodel_added = keras.Sequential(name=\"my_simple_mlp_added\")\nmodel_added.add(keras.Input(shape=(784,), name=\"input_layer\")) # 定义输入形状\nmodel_added.add(layers.Dense(64, activation=\"relu\", name=\"dense_layer_1\"))\nmodel_added.add(layers.Dense(10, activation=\"softmax\", name=\"output_layer\"))\n\n# 显示模型的架构\nmodel_added.summary()\n</code></pre>\n<p>这会产生与前一种方法相同的模型结构。</p>\n<h3>何时不使用 Sequential</h3>\n<p><code>Sequential</code> API 的优点是其简单性，但这也伴随着局限性。它不适用于以下模型：</p>\n<ul>\n<li>层具有多个输入或产生多个输出。</li>\n<li>需要层共享（在模型中多次使用同一层实例）。</li>\n<li>需要非线性连接图（例如，残差连接）。</li>\n</ul>\n<p>对于这些更复杂的架构，TensorFlow 提供了函数式 API，我们将在后面章节中介绍。然而，对于许多标准任务，<code>Sequential</code> 模型提供了一种清晰高效的方式来定义您的网络。</p>\n<p>在接下来的章节中，我们将更详细地了解可以在这类模型中堆叠的常见层类型和激活函数 (activation function)。</p>",
+  "slug": "sequential-model-api",
+  "updates": [],
+  "references": [
+    {
+      "id": 2046,
+      "title": "A guide to the Keras Sequential model",
+      "author": "François Chollet",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras/sequential_model",
+      "doi": "",
+      "note": "提供使用 Keras Sequential API 定义模型的详细说明和示例，涵盖其创建、使用和局限性。",
+      "order": 1,
+      "created_at": "2025-09-04T16:38:19.602306Z",
+      "updated_at": "2025-09-08T02:49:10.698443Z"
+    },
+    {
+      "id": 2047,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础教材，涵盖深度学习架构的理论基础，包括前馈网络、多层感知机和卷积神经网络。",
+      "order": 2,
+      "created_at": "2025-09-04T16:38:19.606936Z",
+      "updated_at": "2025-09-08T02:49:04.377809Z"
+    },
+    {
+      "id": 2048,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实用指南，提供使用 TensorFlow 和 Keras 构建与训练机器学习模型的实现示例，包含 Sequential API 的具体示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:38:19.609855Z",
+      "updated_at": "2025-09-08T02:49:10.332037Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

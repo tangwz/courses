@@ -1,0 +1,45 @@
+{
+  "id": 6604,
+  "title": "跟踪任务执行",
+  "meta_title": "监控LLM智能体的任务进展",
+  "meta_description": "关于LLM智能体按计划执行任务时如何监测其进展的方法。",
+  "content": "<p>一旦你的智能体有了计划并开始行动，仅仅等待最终结果是不够的，特别是在学习或构建新事物时。你会希望看到它是<em>如何</em>一步步完成任务的。这时，跟踪任务执行就派上用场了。这就像是站在你的智能体身后，观察它的行为和思考过程。</p>\n<h3>为什么要关注你的智能体？</h3>\n<p>监测智能体的执行过程很重要，原因如下：</p>\n<ul>\n<li><strong>了解行为：</strong> 这让你能看到智能体一步步的推理 (inference)过程。如果你的智能体使用ReAct（推理和行动）等方法，你可以观察导致“行动”的“思考”以及随后的“观察”过程。这种认识对于理解智能体如何解释指令和做出决定很有帮助。</li>\n<li><strong>调试：</strong> 当智能体行为不如预期或未能完成任务时，它的执行记录是你的首要查看的地方。你可以回溯其步骤，找出问题出在哪里。它是否误解了指令？某个工具是否失效了？它的推理是否有缺陷？</li>\n<li><strong>验证：</strong> 你可以确认智能体是否确实遵循了你设计的计划或它自己决定的策略。它是否正确地分解任务？它是否按预期使用工具？</li>\n<li><strong>改进：</strong> 通过观察智能体如何执行，你可以找出需要改进的地方。也许提示语需要更清楚，某个工具需要调整，或者规划逻辑需要调整。</li>\n</ul>\n<h3>需要关注什么：重要信息点</h3>\n<p>当你的智能体执行任务时，以下几类信息特别有用：</p>\n<ul>\n<li><strong>当前目标/子目标：</strong> 智能体此刻正在努力完成整体目标的哪个具体部分？</li>\n<li><strong>“思考”过程：</strong> 如果你的智能体设计包含明确的推理 (inference)步骤（如思维链或ReAct框架），记录这些思考过程很重要。这可能是由LLM生成的文本，用于解释其下一个打算采取的行动或对当前情况的理解。</li>\n<li><strong>选定的行动：</strong> 智能体决定采取什么具体行动？这包括它计划使用的工具名称（例如，<code>web_search</code>、<code>calculator_tool</code>）以及它将提供给该工具的输入（参数 (parameter)）（例如，<code>query=\"current temperature in Berlin\"</code>、<code>expression=\"2+2\"</code>）。</li>\n<li><strong>行动结果（观察）：</strong> 智能体执行行动后，结果是什么？这是它收到的信息，例如搜索结果、计算输出或来自工具的确认消息。</li>\n<li><strong>状态变化：</strong> 如果你的智能体维护任何内部状态或记忆（例如已完成子任务列表或最近的对话历史），跟踪这些状态变化也很有用。</li>\n</ul>\n<p>观察这些元素可以让你清楚地了解智能体的操作循环：它评估情况，思考如何行动，执行操作，然后观察结果，重复此循环直到目标达成。</p>\n<h3>跟踪方法：关注你的智能体</h3>\n<p>对于初级智能体，你不需要复杂的监控系统。简单、直接的方法通常是理解发生情况最有效的方法。</p>\n<h4>日志：智能体的日记</h4>\n<p>跟踪智能体执行的最直接方法是通过<strong>日志记录</strong>。你可以把日志记录看作是你的智能体在记录其活动的日记。在其操作的各个点，你指示智能体（或运行它的框架）记录下它正在做什么、思考什么或看到什么。</p>\n<p>对于你在学习时可能构建的非常简单的智能体，追踪任务执行可以像在重要节点插入 <code>print()</code> 语句一样基本。例如，你可以打印：</p>\n<ul>\n<li>赋予智能体的初始目标。</li>\n<li>LLM在决定行动前生成的“思考”。</li>\n<li>它即将采取的具体行动（例如，“使用搜索工具，查询：‘Python tutorials’”）。</li>\n<li>行动后它接收到的观察（例如，“搜索工具返回3个链接。”）。</li>\n</ul>\n<p>虽然 <code>print()</code> 语句容易使用，但追求稍微更<strong>结构化的日志记录</strong>是有益的，即使在早期阶段也是如此。这并不意味着马上使用复杂的日志库，而是要一致地格式化你的打印语句。例如，用类型（如<code>INFO</code>、<code>DEBUG</code>、<code>ACTION</code>、<code>OBSERVATION</code>）和时间戳作为消息前缀，可以使输出在以后更容易阅读和分析。</p>\n<p>以下是一个智能体执行搜索时，结构化日志片段可能的样子：</p>\n<pre><code class=\"language-text\">[2023-10-27 10:00:05 INFO] 智能体任务：查找法国首都。\n[2023-10-27 10:00:06 THINK] 我需要查找法国首都。我应该使用web_search工具。\n[2023-10-27 10:00:06 ACTION] 使用工具：web_search，输入：{\"query\": \"capital of France\"}\n[2023-10-27 10:00:08 OBSERVATION] 网络搜索结果：“法国的首都是巴黎。”\n[2023-10-27 10:00:08 THINK] 我已找到首都。任务完成。\n[2023-10-27 10:00:08 ACTION] 使用工具：finish_task，输入：{\"answer\": \"Paris\"}\n</code></pre>\n<p>这种输出清楚地表明了智能体的内部推理 (inference)（思考）、它的行动（操作）以及它所学到的（观察）。</p>\n<h4>视觉呈现：理解流程</h4>\n<p>有时，智能体执行流程的视觉呈现可以帮助你加深理解，特别是对于涉及多个步骤或决策点的任务。下图说明了常见的智能体操作循环，并标示了通常在哪里进行日志记录以获取重要信息。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1vxqacw\" \n              data-graph-definition='digraph G { rankdir=TB; fontname=\"sans-serif\"; node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\", margin=0.05]; edge [fontname=\"sans-serif\", fontsize=10]; Start [label=\"智能体接收目标\", fillcolor=\"#74c0fc\", shape=ellipse]; Plan [label=\"1. 制定/细化计划\", fillcolor=\"#91a7ff\"]; Thought [label=\"2. LLM生成思考\\n(例如，&#39;我需要搜索X&#39;)\", fillcolor=\"#b197fc\"]; ActionSelection [label=\"3. 智能体选择行动\\n(例如，use_tool(&#39;搜索&#39;, &#39;X&#39;))\", fillcolor=\"#da77f2\"]; ActionExecution [label=\"4. 执行行动\\n(工具运行，API调用)\", fillcolor=\"#f783ac\"]; Observation [label=\"5. 智能体接收观察\\n(例如，&#39;搜索结果：Y&#39;)\", fillcolor=\"#ff8787\"]; UpdateState [label=\"6. 更新状态/记忆\\n(如果适用)\", fillcolor=\"#ffe066\"]; Decision [label=\"目标达成？\", shape=diamond, fillcolor=\"#8ce99a\", width=1.5, height=1.0]; End [label=\"任务完成\", fillcolor=\"#74c0fc\", shape=ellipse]; Start -> Plan [label=\" 日志：目标\", color=\"#495057\"]; Plan -> Thought [label=\" 日志：当前计划/步骤\", color=\"#495057\"]; Thought -> ActionSelection [label=\" 日志：思考\", color=\"#495057\"]; ActionSelection -> ActionExecution [label=\" 日志：选定行动及输入\", color=\"#495057\"]; ActionExecution -> Observation [label=\" 日志：行动结果/观察\", color=\"#495057\"]; Observation -> UpdateState; UpdateState -> Decision [label=\" 日志：状态变化（如果有）\", color=\"#495057\"]; Decision -> Thought [label=\" 否，细化/下一步\", color=\"#495057\"]; Decision -> End [label=\" 是\", color=\"#495057\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1vxqacw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图展示了智能体操作的一般循环。每个带有“日志：”注释的箭头都表示一个可以记录智能体状态或决策信息以供跟踪的点。</p>\n</blockquote>\n<p>这类图表可以帮助你清楚地看到日志如何融入智能体的整体流程。</p>\n<h3>解读轨迹：理解日志</h3>\n<p>拥有智能体执行日志是一回事；理解其含义是下一步。当你审查跟踪到的信息时，你实质上是在尝试重构智能体针对给定任务的“故事”。</p>\n<p>问问自己这样的问题：</p>\n<ul>\n<li><strong>思考和行动的顺序与目标在逻辑上连贯吗？</strong> 如果智能体应该查找信息然后进行总结，日志是否表明它按顺序执行了这些步骤？</li>\n<li><strong>观察结果是你预期的那样吗？</strong> 如果一个工具返回错误或意外数据，智能体随后的“思考”过程对此作何反应？</li>\n<li><strong>智能体是否陷入循环或重复犯错？</strong> 日志可以很快显示智能体是否多次尝试相同的失败行动。</li>\n<li><strong>智能体何时偏离了理想路径（如果有的话）？</strong> 通过将日志记录的执行与你的预期计划进行比较，你可以找出智能体逻辑或工具中的误解或不足之处。</li>\n</ul>\n<p>例如，如果你的日志显示：\n<code>[THINK] 我需要查找“纽约”的天气。</code>\n<code>[ACTION] search_tool(\"weather New York\")</code>\n<code>[OBSERVATION] 错误：城市不够具体。你是说纽约市，纽约州还是纽约，英国？</code>\n<code>[THINK] 城市不具体。我应该尝试“纽约市，纽约州”。</code>\n<code>[ACTION] search_tool(\"weather New York City, NY\")</code></p>\n<p>这个片段告诉你，智能体最初做了一个合理的尝试，遇到了一个错误，然后其推理 (inference)根据观察结果进行调整，尝试进行更具体的查询。这是适应性行为的一个好迹象。反之，如果它反复尝试“纽约天气”，日志就会显示出其错误处理或规划中的问题。</p>\n<h3>基础日志记录</h3>\n<p>当你构建更复杂的智能体或在团队环境中工作时，你可能会遇到更高级的跟踪和可观察性工具。这些系统可以提供集中式日志记录、性能指标、智能体运行轨迹的可视化以及更易用的调试界面（例如，LangSmith、Arize等平台或自定义仪表板）。</p>\n<p>然而，基本原理保持不变。理解哪些信息需要跟踪以及如何使用基础日志记录技术来解释这些信息，能够打下一个坚实的基础。这些基本技能将对你很有帮助，即使当你转向更复杂的智能体开发时也是如此。目前，专注于清晰、信息丰富的日志记录是监测和理解你的第一个LLM智能体的好方法。</p>",
+  "slug": "tracking-task-execution",
+  "updates": [],
+  "references": [
+    {
+      "id": 18644,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "描述了思维链提示，这是一种从大型语言模型中获取中间推理步骤（思考）的方法，对跟踪智能体执行很有用。",
+      "order": 2,
+      "created_at": "2025-09-06T12:33:28.522991Z",
+      "updated_at": "2026-02-04T11:33:53.921331Z"
+    },
+    {
+      "id": 18645,
+      "title": "LangSmith: Tracing, Debugging, & Testing",
+      "author": "LangChain",
+      "year": "Ongoing",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGi0yZLU_FYmfZYbsss7PjW-gOUG0CJWspyiQM39vo3OSLyQ5B5N8rQLiHiw3izbG6R2xF9BxS1fP__wFRvFauqRA1fi0z0RGQ8uxJPioBrBGrVKQRNc81Qxkh8_ZBB30cqU24=",
+      "doi": "",
+      "note": "提供了关于如何监控、调试和追踪LLM智能体的实用指导，特别是使用LangChain框架构建的智能体，包括LangSmith的使用。",
+      "order": 3,
+      "created_at": "2025-09-06T12:33:28.527555Z",
+      "updated_at": "2026-02-04T11:33:54.295713Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

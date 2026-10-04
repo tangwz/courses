@@ -1,0 +1,61 @@
+{
+  "id": 8509,
+  "title": "使用 Hugging Face Datasets 管理数据集",
+  "meta_title": "使用 Hugging Face Datasets",
+  "meta_description": "利用 datasets 库高效地加载、缓存和处理训练数据。",
+  "content": "<p>管理训练数据是准备微调 (fine-tuning)流水线的主要组成部分。模型的表现完全依赖于其学习数据的质量和结构。如何高效地将海量文本输入神经网络 (neural network)是机器学习 (machine learning)中的一个主要挑战。Hugging Face 的 datasets 库专门用于处理大规模数据集，能够快速处理这些数据并将其格式化以用于模型训练，且不会耗尽系统内存。</p>\n<h3>Arrow 后端与内存映射</h3>\n<p>在处理小型语言模型时，你经常需要处理包含成千上万条指令对的数据集。将所有这些文本加载到标准的 Python 字典或 pandas DataFrame 中会迅速消耗可用内存 (RAM)。datasets 库通过使用 Apache Arrow 作为其后端解决了这个问题。</p>\n<p>Apache Arrow 提供了一种零拷贝、内存映射的格式。数据不会被全部加载到内存中，而是安全地保留在存储盘上。该库利用内存映射技术，仅在需要时读取特定的数据部分。这使你能够在远超物理内存限制的数据集上训练模型。</p>\n<h3>加载数据</h3>\n<p>加载数据集只需调用一个函数。你可以直接从 Hugging Face Hub 加载标准化数据集，也可以读取本地的 JSON 和 CSV 格式文件。对于监督式微调 (fine-tuning)，你通常会处理包含自定义指令的本地 JSON Lines 文件。</p>\n<pre><code class=\"language-python\">from datasets import load_dataset\n\n# 加载本地 JSON 数据集\ndataset = load_dataset(\"json\", data_files=\"custom_instructions.jsonl\")\n</code></pre>\n<p>生成的对象行为类似于标准的 Python 字典，但包含 <code>train</code>（训练）和 <code>test</code>（测试）等数据集切片。你可以使用标准索引访问单行数据，该操作会透明地从磁盘获取所需的字节。</p>\n<h3>使用 Map 进行批处理</h3>\n<p>原始文本不能直接输入神经网络 (neural network)。你必须使用从 Transformers 库初始化的分词 (tokenization)器 (tokenizer) 将文本转换为数值形式的标记 (token)。逐一针对数千个样本应用这种转换在计算上非常缓慢。</p>\n<p>datasets 库提供了一个 <code>map</code> 函数，用于在整个数据集上应用转换。通过设置 <code>batched=True</code> 参数 (parameter)，该函数可以同时处理多行数据。这种方法允许分词器优化其内部循环，从而大幅加快文本处理速度。</p>\n<pre><code class=\"language-python\">def tokenize_function(examples):\n    # 对输入文本进行分词，并应用填充和截断\n    return tokenizer(\n        examples[\"text\"],\n        padding=\"max_length\",\n        truncation=True,\n        max_length=512\n    )\n\n# 在数据集上分批应用分词处理\ntokenized_datasets = dataset.map(tokenize_function, batched=True)\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-s1kuk8\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=filled, fontname=\"Helvetica\", color=\"#adb5bd\"]; RawData [label=\"原始数据集 (JSON/CSV)\", fillcolor=\"#e9ecef\"]; Arrow [label=\"Apache Arrow (内存映射)\", fillcolor=\"#a5d8ff\"]; MapFunc [label=\"批处理 (.map)\", fillcolor=\"#b2f2bb\"]; Tensors [label=\"PyTorch 张量 (.set_format)\", fillcolor=\"#ffc9c9\"]; DataLoader [label=\"PyTorch 数据加载器\", fillcolor=\"#d0bfff\"]; RawData -> Arrow [label=\" load_dataset()\", fontname=\"Helvetica\", fontsize=10]; Arrow -> MapFunc [label=\" 分词\", fontname=\"Helvetica\", fontsize=10]; MapFunc -> Tensors [label=\" 格式转换\", fontname=\"Helvetica\", fontsize=10]; Tensors -> DataLoader [label=\" 训练循环\", fontname=\"Helvetica\", fontsize=10]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-s1kuk8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 datasets 库准备训练文本的数据处理流水线。</p>\n</blockquote>\n<h3>智能缓存</h3>\n<p>机器学习 (machine learning)需要不断的迭代。你会经常调整分词 (tokenization)策略、更改最大序列长度或过滤掉有问题的样本。处理大型数据集可能需要几分钟时间。</p>\n<p>为了节省时间，<code>map</code> 函数会自动将结果缓存到磁盘。当你再次运行完全相同的 <code>map</code> 操作时，该库会根据处理函数和数据集状态的哈希值检测现有缓存，并立即加载缓存版本，而不是重复计算。如果你修改了 <code>tokenize_function</code> 中的任何一个参数 (parameter)，该库会计算一个新的哈希值并重新计算数据集。</p>\n<h3>为 PyTorch 格式化</h3>\n<p>管理数据的最后一步是为 PyTorch 做准备。默认情况下，datasets 库返回标准的 Python 列表。而 PyTorch 在名为张量 (tensor) 的多维矩阵上运行。</p>\n<p>你必须明确指示数据集为模型所需的特定列返回 PyTorch 张量。这些列通常包括 <code>input_ids</code>、<code>attention_mask</code> 和 <code>labels</code>。</p>\n<pre><code class=\"language-python\"># 定义模型训练所需的列\ncolumns_to_keep = [\"input_ids\", \"attention_mask\", \"labels\"]\n\n# 将数据集格式设置为 PyTorch 张量\ntokenized_datasets.set_format(type=\"torch\", columns=columns_to_keep)\n</code></pre>\n<p>格式设置完成后，从数据集中获取批次数据将返回可直接使用的张量。这个格式化后的数据集现在可以直接传递给 PyTorch 的 <code>DataLoader</code> 或 Hugging Face 的 <code>Trainer</code> API。数据将直接从硬盘出发，通过内存映射的 Arrow 后端，进入 GPU 内存进行损失计算。</p>",
+  "slug": "managing-datasets-hugging-face",
+  "updates": [],
+  "references": [
+    {
+      "id": 22810,
+      "title": "Hugging Face Datasets Documentation",
+      "author": "Hugging Face Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/datasets/index",
+      "doi": "",
+      "note": "官方技术文档，涵盖了数据集加载、批处理映射以及与 PyTorch 的集成。",
+      "order": 2,
+      "created_at": "2026-03-18T03:04:43.605158Z",
+      "updated_at": "2026-03-18T04:01:04.917577Z"
+    },
+    {
+      "id": 22811,
+      "title": "Natural Language Processing with Transformers: Building Language Applications with Hugging Face",
+      "author": "Lewis Tunstall, Leandro von Werra, Thomas Wolf",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "51-78",
+      "url": "https://www.oreilly.com/library/view/natural-language-processing-with-transformers/9781098136789/",
+      "doi": "",
+      "note": "关于在 NLP 流水线中使用 datasets 库进行数据准备和分词的指南，修订版。",
+      "order": 3,
+      "created_at": "2026-03-18T03:04:43.607649Z",
+      "updated_at": "2026-03-18T04:01:05.271093Z"
+    },
+    {
+      "id": 22812,
+      "title": "Apache Arrow Documentation",
+      "author": "Apache Software Foundation",
+      "year": "2024",
+      "publisher": "Apache Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://arrow.apache.org/docs/index.html",
+      "doi": "",
+      "note": "Apache Arrow 官方文档，详细介绍了 Hugging Face Datasets 用于处理大规模数据的底层内存映射技术。",
+      "order": 4,
+      "created_at": "2026-03-18T03:04:43.609595Z",
+      "updated_at": "2026-03-18T04:01:04.558154Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

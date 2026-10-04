@@ -1,0 +1,45 @@
+{
+  "id": 1005,
+  "title": "查看提交之间的更改",
+  "meta_title": "使用 Git Diff 查看提交之间的更改",
+  "meta_description": "使用 `git diff` 和特定的提交标识符来比较项目历史中的不同快照。",
+  "content": "<p><code>git diff</code> 命令是检查 Git 仓库中更改的强大工具。它在比较项目历史中的不同时间点时特别有效。通过提供特定的提交标识符，您可以准确查看任意两个快照之间发生了哪些变化。这种能力对于了解某个功能是如何演进的、查找何时引入了某个错误，或审查协作者所做的更改都非常有帮助。</p>\n<h3>识别提交</h3>\n<p>在比较提交之前，您需要一种引用它们的方式。Git 中的每个提交都有一个名为 SHA-1 散列（或简称“散列”）的唯一标识符。它是一个长串十六进制字符（例如 <code>f7b1d2a4e9c3...</code>）。您通常在使用 <code>git log</code> 命令时会看到这些散列。</p>\n<pre><code class=\"language-bash\">$ git log --oneline\na8e3c4d (HEAD -> main) Add usage instructions to README\nf7b1d2a Fix typo in introduction\n9c3a1b0 Initial project setup\n</code></pre>\n<p>您通常不需要完整的散列。只要您提供足够的字符使其唯一，Git 就足以确定您指的是哪个提交，通常只需前 7 个字符就足够了（例如 <code>f7b1d2a</code>）。</p>\n<p>Git 还提供了方便的方式来引用相对于当前状态的提交（<code>HEAD</code> 代表当前检出的提交）：</p>\n<ul>\n<li><code>HEAD</code>：当前分支上最新的提交。</li>\n<li><code>HEAD~1</code> 或 <code>HEAD~</code>：<code>HEAD</code> <strong>之前</strong>的提交（它的父提交）。</li>\n<li><code>HEAD~2</code>：<code>HEAD</code> 之前两个步骤的提交（它的祖父提交），依此类推。</li>\n<li>分支名称：您可以使用分支名称（例如 <code>main</code> 或 <code>feature-branch</code>）来引用该分支上最新的提交。</li>\n</ul>\n<h3>比较两个特定提交</h3>\n<p>查看历史中两个时间点之间差异最直接的方式是向 <code>git diff</code> 提供两个提交标识符：</p>\n<pre><code class=\"language-bash\">git diff &#x3C;提交1> &#x3C;提交2>\n</code></pre>\n<p>此命令显示将项目在 <code>&#x3C;提交1></code> 时的状态转换为 <code>&#x3C;提交2></code> 时的状态所需的更改。</p>\n<p>让我们使用我们的示例历史：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1jbij97\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; bgcolor=\"transparent\"; \"9c3a1b0\" -> \"f7b1d2a\"; \"f7b1d2a\" -> \"a8e3c4d\" [label=\" main (HEAD)\"]; {rank=same; \"9c3a1b0\"; \"f7b1d2a\"; \"a8e3c4d\"} }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1jbij97\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个包含三个提交的简单线性历史。</p>\n</blockquote>\n<p>要查看从初始设置 (<code>9c3a1b0</code>) 到最终提交 (<code>a8e3c4d</code>) 之间引入的所有更改，您可以运行：</p>\n<pre><code class=\"language-bash\">git diff 9c3a1b0 a8e3c4d\n</code></pre>\n<p>或者，使用短散列：</p>\n<pre><code class=\"language-bash\">git diff 9c3a1b0..a8e3c4d # 这里的 .. 语法是等效的\n</code></pre>\n<p>输出将显示一个组合差异，表示相对于起点 <code>9c3a1b0</code>，在提交 <code>f7b1d2a</code> 和 <code>a8e3c4d</code> 中进行的所有修改、添加和删除。</p>\n<h3>比较提交与当前状态</h3>\n<p>有时您希望将较旧的提交与当前工作目录（包括任何未暂存的更改）进行比较。您可以通过只提供一个提交标识符来做到这一点：</p>\n<pre><code class=\"language-bash\">git diff &#x3C;提交>\n</code></pre>\n<p>例如，要查看当前文件与修复拼写错误的提交 (<code>f7b1d2a</code>) 有何不同：</p>\n<pre><code class=\"language-bash\">git diff f7b1d2a\n</code></pre>\n<p>这有助于查看您当前的工作与特定历史点已偏离了多远。</p>\n<h3>比较与上一个提交</h3>\n<p>一个非常常见的任务是查看<strong>上一个</strong>提交中更改了什么。您可以使用相对引用来实现这一点：</p>\n<pre><code class=\"language-bash\">git diff HEAD~1 HEAD\n</code></pre>\n<p>此命令专门比较当前提交的父提交 (<code>HEAD~1</code>) 与当前提交 (<code>HEAD</code>)，只显示最近一次提交引入的更改。</p>\n<h3>理解输出格式</h3>\n<p>请记住，<code>git diff</code> 的输出使用特定格式：</p>\n<ul>\n<li>以 <code>-</code> 开头的行表示从第一个文件/提交中删除的内容。</li>\n<li>以 <code>+</code> 开头的行表示在第二个文件/提交中添加的内容。</li>\n<li>没有前缀的行是上下文 (context)行，用于帮助定位更改。</li>\n<li>诸如 <code>diff --git a/file.txt b/file.txt</code> 之类的标题行表示正在比较哪些文件。</li>\n<li><code>--- a/file.txt</code> 和 <code>+++ b/file.txt</code> 指定了比较中的“之前”和“之后”的文件。</li>\n</ul>\n<p>能够比较不同提交是理解项目历史的根本。它让您能够准确找出更改、审查特定的开发步骤，并获得关于代码库如何随时间演进的见解。请使用 <code>git diff</code> 和 <code>git log</code> 配合不同的提交标识符进行尝试，以便自如地查看项目的历史。</p>",
+  "slug": "git-diff-between-commits",
+  "updates": [],
+  "references": [
+    {
+      "id": 226,
+      "title": "git-diff",
+      "author": "Git Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-diff",
+      "doi": "",
+      "note": "Git 变更比较的全面指南，详细说明了语法、选项和输出格式。",
+      "order": 1,
+      "created_at": "2025-09-04T13:59:26.801705Z",
+      "updated_at": "2025-09-07T15:40:00.683104Z"
+    },
+    {
+      "id": 227,
+      "title": "git-log",
+      "author": "Git Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-log",
+      "doi": "",
+      "note": "查看提交历史和使用各种引用标识提交的官方文档。",
+      "order": 2,
+      "created_at": "2025-09-04T13:59:26.804868Z",
+      "updated_at": "2025-09-07T15:39:59.837698Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

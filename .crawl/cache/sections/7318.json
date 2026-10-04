@@ -1,0 +1,61 @@
+{
+  "id": 7318,
+  "title": "Service 类型：ClusterIP、NodePort 与 LoadBalancer",
+  "meta_title": "Kubernetes Service 类型详解",
+  "meta_description": "对比不同的 Service 类型——ClusterIP、NodePort 和 LoadBalancer，并了解每种类型的适用场景。",
+  "content": "<p>Kubernetes Service 为一组 Pod 提供稳定的端点。然而，并非所有服务都需要以相同的方式暴露。后端 API 使用的数据库与面向公众的 Web 服务器在网络需求上大不相同。Kubernetes 通过提供不同类型的 Service 来满足这些多样化的需求，这些类型由 Service 清单中的 <code>spec.type</code> 字段控制。每种类型都提供了一种独特的访问模式。本节分析涵盖了三种主要类型：<code>ClusterIP</code>、<code>NodePort</code> 和 <code>LoadBalancer</code>。</p>\n<h3>ClusterIP：仅限集群内部通信</h3>\n<p><code>ClusterIP</code> 是 Kubernetes 默认的 Service 类型。当你在创建 Service 时没有明确指定 <code>type</code> 时，就会得到一个 <code>ClusterIP</code>。这种类型将 Service 暴露在一个仅在集群内部可达的内部 IP 地址上。</p>\n<p>这是最常用的 Service 类型，非常适合用于集群内部不同微服务之间的通信。例如，Web 应用程序的前端可能需要与后端的内置用户身份验证服务通信。由于身份验证服务不应直接暴露给外部互联网，因此 <code>ClusterIP</code> Service 是理想的选择。它提供了一个可靠的内部端点供其他 Pod 访问，同时与外部流量完全隔离。</p>\n<p>以下是一个针对带有 <code>app: my-api</code> 标签的 Pod 的 <code>ClusterIP</code> Service 最小化配置清单：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Service\nmetadata:\n  name: my-api-service\nspec:\n  # type: ClusterIP 是默认值，所以这一行是可选的\n  type: ClusterIP\n  selector:\n    app: my-api\n  ports:\n    - protocol: TCP\n      port: 80\n      targetPort: 8080\n</code></pre>\n<p>在此配置中，集群内部的其他应用程序可以通过向 <code>my-api-service:80</code> 发送请求来访问 API Pod，Kubernetes 将处理匹配 Pod 之间的负载均衡。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-16nrycg\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#a5d8ff\"]; edge [fontname=\"sans-serif\", color=\"#495057\"]; bgcolor=\"transparent\"; compound=true; newrank=true; \"外部客户端\" [style=filled, fillcolor=\"#ced4da\", shape=circle]; subgraph cluster_k8s { label=\"Kubernetes 集群\"; style=\"dashed\"; color=\"#868e96\"; fontcolor=\"#495057\"; FrontendService [label=\"前端 Service\\n(类型: LoadBalancer)\"]; BackendService [label=\"后端 Service\\n(类型: ClusterIP)\"]; PodA [label=\"前端 Pod\", fillcolor=\"#d0bfff\"]; PodB [label=\"后端 Pod\", fillcolor=\"#b2f2bb\"]; FrontendService -> PodA [lhead=cluster_frontend]; BackendService -> PodB [lhead=cluster_backend]; subgraph cluster_frontend { label=\"\"; style=invis; PodA; } subgraph cluster_backend { label=\"\"; style=invis; PodB; } PodA -> BackendService [label=\"内部 API 调用\", style=dashed]; } \"外部客户端\" -> FrontendService [label=\"外部流量\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-16nrycg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>ClusterIP</code> 服务提供了一个私有的虚拟 IP，使其只能被运行在同一个 Kubernetes 集群中的其他工作负载访问。</p>\n</blockquote>\n<h3>NodePort：在每个节点上暴露服务</h3>\n<p><code>NodePort</code> Service 类型是将应用程序暴露给外部流量的一种直接方式。当你将类型设置为 <code>NodePort</code> 时，Kubernetes 会在集群中的每个工作节点上，从预配置的范围（通常是 30000–32767）中分配一个静态端口。随后，通过访问任何节点的 IP 地址及该分配端口：<code>&#x3C;NodeIP>:&#x3C;NodePort></code>，即可从集群外部访问该 Service。</p>\n<p>当你创建一个 <code>NodePort</code> Service 时，Kubernetes 也会自动创建一个 <code>ClusterIP</code> Service。这意味着该 Service 仍然可以通过其 <code>clusterIP</code> 进行内部通信，同时也能通过节点端口暴露给外部。</p>\n<p>这种类型通常用于开发和测试环境，或者用于不需要专用云负载均衡器的应用场景。然而，对于生产环境的 Web 服务来说，它并不常用，因为你需要管理连接到哪个节点 IP，而且如果客户端配置不当，节点宕机可能会导致访问中断。</p>\n<p>以下是一个 <code>NodePort</code> Service 的清单示例：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Service\nmetadata:\n  name: my-webapp-service\nspec:\n  type: NodePort\n  selector:\n    app: my-webapp\n  ports:\n    - protocol: TCP\n      port: 80\n      targetPort: 8080\n      # nodePort: 30080 # 这是可选的。如果省略，Kubernetes 会分配一个随机端口。\n</code></pre>\n<p>通过此配置，你可以通过浏览器访问 <code>http://&#x3C;任何节点IP>:30080</code> 来访问集群外部的 <code>my-webapp</code> 应用程序。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-17sjy3n\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\"]; edge [fontname=\"sans-serif\", color=\"#495057\"]; bgcolor=\"transparent\"; compound=true; \"外部客户端\" [style=filled, fillcolor=\"#ced4da\", shape=circle]; subgraph cluster_k8s { label=\"Kubernetes 集群\"; style=\"dashed\"; color=\"#868e96\"; fontcolor=\"#495057\"; Node1 [label=\"节点 1\\nIP: 10.0.1.10\", shape=box3d, fillcolor=\"#e9ecef\"]; Node2 [label=\"节点 2\\nIP: 10.0.1.11\", shape=box3d, fillcolor=\"#e9ecef\"]; MyService [label=\"Service\\n(类型: NodePort)\", fillcolor=\"#a5d8ff\"]; Pod1 [label=\"Pod\", fillcolor=\"#d0bfff\"]; Pod2 [label=\"Pod\", fillcolor=\"#d0bfff\"]; MyService -> Pod1; MyService -> Pod2; } \"外部客户端\" -> Node1 [label=\"10.0.1.10:30080\"]; \"外部客户端\" -> Node2 [label=\"10.0.1.11:30080\", style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-17sjy3n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>指向任何工作节点上 <code>NodePort</code> 的流量都会由 kube-proxy 转发到该 Service 的内部 <code>ClusterIP</code>，然后再路由到其中一个目标 Pod。</p>\n</blockquote>\n<h3>LoadBalancer：与云服务商集成</h3>\n<p><code>LoadBalancer</code> Service 类型是将应用程序暴露给互联网的标准且最可靠的方式。此类型旨在与 AWS、Google Cloud 和 Azure 等云服务商的基础设施集成。</p>\n<p>当你创建一个类型为 <code>LoadBalancer</code> 的 Service 时，你是在请求底层云平台配置一个外部网络负载均衡器。该负载均衡器会被分配一个稳定的公网 IP 地址，并自动配置为将外部流量路由到工作节点上该 Service 的 <code>NodePort</code>。</p>\n<p><code>LoadBalancer</code> Service 建立在其他两种类型之上。创建它时，Kubernetes 会自动创建 <code>NodePort</code> 和 <code>ClusterIP</code> Service 以处理内部路由。云负载均衡器仅提供稳定的公共入口点。</p>\n<p>这是在受支持的云环境中运行面向生产的应用程序的首选方法。它处理健康检查并确保流量仅发送到健康的节点，提供了比单独使用 <code>NodePort</code> 更具弹性的设置。请注意，此类型依赖于服务商，除非你安装了可以模拟负载均衡器的特定控制器（如 MetalLB），否则它在本地环境或 Kind 等本地开发环境中将无法工作。</p>\n<p>清单非常简单：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Service\nmetadata:\n  name: my-production-app-service\nspec:\n  type: LoadBalancer\n  selector:\n    app: my-production-app\n  ports:\n    - protocol: TCP\n      port: 80\n      targetPort: 80\n</code></pre>\n<p>在云环境中应用此清单后，Service 的状态最终会更新，包含一个外部 IP 地址，这就是应用程序的公共入口点。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1612w17\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded\", fontname=\"sans-serif\"]; edge [fontname=\"sans-serif\", color=\"#495057\"]; bgcolor=\"transparent\"; compound=true; \"外部客户端\" [style=\"filled\", fillcolor=\"#ced4da\", shape=circle]; CloudLB [label=\"云负载均衡器\\n(公网 IP)\", shape=cylinder, style=filled, fillcolor=\"#ffd8a8\"]; subgraph cluster_k8s { label=\"Kubernetes 集群\"; style=\"dashed\"; color=\"#868e96\"; fontcolor=\"#495057\"; Node1 [label=\"节点 1\", shape=box3d, style=filled, fillcolor=\"#e9ecef\"]; Node2 [label=\"节点 2\", shape=box3d, style=filled, fillcolor=\"#e9ecef\"]; MyService [label=\"Service\\n(类型: LoadBalancer)\", style=filled, fillcolor=\"#a5d8ff\"]; Pod1 [label=\"Pod\", style=filled, fillcolor=\"#d0bfff\"]; Pod2 [label=\"Pod\", style=filled, fillcolor=\"#d0bfff\"]; MyService -> Pod1; MyService -> Pod2; } CloudLB -> Node1 [label=\"NodePort\"]; CloudLB -> Node2 [label=\"NodePort\"]; \"外部客户端\" -> CloudLB [label=\"外部流量\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1612w17\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>云服务商的负载均衡器将流量引导至集群节点上的 <code>NodePort</code>，为外部客户端提供单一且稳定的公网 IP 地址。</p>\n</blockquote>\n<h3>Service 类型总结</h3>\n<p>选择合适的 Service 类型取决于你对应用程序访问需求的理解。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">类型</th>\n<th align=\"left\">访问范围</th>\n<th align=\"left\">机制</th>\n<th align=\"left\">常见用例</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong><code>ClusterIP</code></strong></td>\n<td align=\"left\">仅限内部</td>\n<td align=\"left\">集群内部的一个虚拟 IP。</td>\n<td align=\"left\">后端服务、数据库、内部 API。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong><code>NodePort</code></strong></td>\n<td align=\"left\">通过节点 IP 外部访问</td>\n<td align=\"left\">在每个节点上开启一个静态端口。</td>\n<td align=\"left\">开发、测试、演示或简单的服务。</td>\n</tr>\n<tr>\n<td align=\"left\"><strong><code>LoadBalancer</code></strong></td>\n<td align=\"left\">通过公网 IP 外部访问</td>\n<td align=\"left\">配置一个外部负载均衡器（云端）。</td>\n<td align=\"left\">需要公网访问的生产 Web 应用。</td>\n</tr>\n</tbody>\n</table>\n<p>掌握了这些 Service 类型，你就可以有效地控制集群内部和来自外部的网络流量。下一步是学习应用程序如何使用这些稳定的端点进行服务发现。</p>",
+  "slug": "service-types-clusterip-nodeport-loadbalancer",
+  "updates": [],
+  "references": [
+    {
+      "id": 19747,
+      "title": "Services, Load Balancing, and Networking",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/service/",
+      "doi": "",
+      "note": "Kubernetes 服务官方文档，概述了 `ClusterIP`、`NodePort` 和 `LoadBalancer` 等服务类型、其配置以及底层网络机制。",
+      "order": 1,
+      "created_at": "2025-09-06T13:14:29.394699Z",
+      "updated_at": "2025-09-10T05:15:42.510899Z"
+    },
+    {
+      "id": 19748,
+      "title": "Kubernetes Up & Running: Dive into the Future of Infrastructure",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower, and Lachlan Evenson",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/kubernetes-up-running/9781098110208/",
+      "doi": "",
+      "note": "一本指南，涵盖了Kubernetes概念，包括对服务类型及其在集群内外暴露应用中的作用的详细解释。",
+      "order": 2,
+      "created_at": "2025-09-06T13:14:29.398480Z",
+      "updated_at": "2025-09-10T05:15:58.306441Z"
+    },
+    {
+      "id": 19749,
+      "title": "Kubernetes in Action",
+      "author": "Marko Lukša",
+      "year": "2017",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action",
+      "doi": "",
+      "note": "一本深入的图书，通过实践例子解释Kubernetes概念，包括对服务类型及其网络影响的全面介绍。",
+      "order": 3,
+      "created_at": "2025-09-06T13:14:29.401557Z",
+      "updated_at": "2025-09-10T05:15:50.329346Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

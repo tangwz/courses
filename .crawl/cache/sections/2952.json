@@ -1,0 +1,61 @@
+{
+  "id": 2952,
+  "title": "实践：实现Transformer编码器层",
+  "meta_title": "实践：使用TensorFlow构建Transformer编码器层",
+  "meta_description": "实现一个完整的Transformer编码器层，包括多头自注意力机制和前馈网络。",
+  "content": "<p>一个Transformer编码器层结合了Transformer架构的核心组件：多头自注意力 (self-attention)机制 (attention mechanism)和位置前馈网络。我们将使用TensorFlow的Keras API实现这个层。该层代表一个基本构建块，可以多次堆叠以形成Transformer模型的完整编码器部分。</p>\n<p>请记住，单个编码器层执行两个主要操作：</p>\n<ol>\n<li>计算输入序列的自注意力。</li>\n<li>独立地对每个位置应用一个全连接前馈网络。</li>\n</ol>\n<p>每个操作之后是残差连接和层归一化 (normalization)。层内还应用了Dropout用于正则化 (regularization)。</p>\n<h3>定义编码器层类</h3>\n<p>我们将通过继承<code>tf.keras.layers.Layer</code>来创建一个自定义Keras层。这使我们能够灵活地精确定义内部结构和前向传播计算。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n\n# 假设 MultiHeadAttention 和 PositionWiseFeedForwardNetwork\n# 类已在前几节中定义。\n# 为了完整性，这里是简化的占位符定义：\n\nclass MultiHeadAttention(tf.keras.layers.Layer):\n  def __init__(self, d_model, num_heads, **kwargs):\n    super().__init__(**kwargs)\n    self.d_model = d_model\n    self.num_heads = num_heads\n    # 简化：实际中包含用于 Q、K、V 和输出的 Dense 层\n    print(f\"占位符 MHA: d_model={d_model}, num_heads={num_heads}\")\n\n  def call(self, v, k, q, mask=None):\n    # 简化：将输入查询作为注意力输出的占位符返回\n    # 实际实现会计算缩放点积注意力\n    print(\"占位符 MHA 调用\")\n    # 输出形状：(batch_size, seq_len_q, d_model)\n    return q # Placeholder\n\nclass PositionWiseFeedForwardNetwork(tf.keras.layers.Layer):\n  def __init__(self, d_model, dff, **kwargs):\n    super().__init__(**kwargs)\n    self.d_model = d_model\n    self.dff = dff\n    # 简化：实际中包含两个 Dense 层\n    print(f\"占位符 FFN: d_model={d_model}, dff={dff}\")\n\n  def call(self, x):\n     # 简化：将输入作为占位符返回\n     print(\"占位符 FFN 调用\")\n     # 输出形状：(batch_size, seq_len, d_model)\n     return x # Placeholder\n\n# --- 实际编码器层实现 ---\n\nclass TransformerEncoderLayer(tf.keras.layers.Layer):\n  \"\"\"\n  实现一个具有多头注意力、前馈网络、层归一化和Dropout的单个Transformer编码器层。\n  \"\"\"\n  def __init__(self, d_model, num_heads, dff, dropout_rate=0.1, **kwargs):\n    \"\"\"\n    初始化Transformer编码器层。\n\n    参数:\n      d_model: 输入和输出的维度（嵌入维度）。\n      num_heads: 注意力头的数量。\n      dff: 前馈网络中内层的维度。\n      dropout_rate: 介于0和1之间的浮点数。要丢弃的单元的比例。\n    \"\"\"\n    super().__init__(**kwargs)\n\n    self.d_model = d_model\n    self.num_heads = num_heads\n    self.dff = dff\n    self.dropout_rate = dropout_rate\n\n    # 多头注意力子层\n    self.mha = MultiHeadAttention(d_model, num_heads)\n\n    # 位置前馈网络子层\n    self.ffn = PositionWiseFeedForwardNetwork(d_model, dff)\n\n    # 层归一化层\n    # 为数值稳定性添加的epsilon\n    self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)\n    self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)\n\n    # Dropout层\n    self.dropout1 = tf.keras.layers.Dropout(dropout_rate)\n    self.dropout2 = tf.keras.layers.Dropout(dropout_rate)\n\n  def call(self, x, training, mask=None):\n    \"\"\"\n    Transformer编码器层的前向传播。\n\n    参数:\n      x: 输入张量。形状：(batch_size, input_seq_len, d_model)\n      training: 布尔值，指示层是应在训练模式下运行\n                （应用dropout）还是推理模式下运行。\n      mask: 注意力机制的可选掩码。\n\n    返回:\n      输出张量。形状：(batch_size, input_seq_len, d_model)\n    \"\"\"\n    # 1. 多头注意力（带残差连接和归一化）\n    # 自注意力：查询、键和值都是相同的输入 'x'\n    attn_output = self.mha(x, x, x, mask)  # 形状：(batch_size, input_seq_len, d_model)\n\n    # 对注意力输出应用dropout\n    # Dropout仅在训练期间应用\n    attn_output = self.dropout1(attn_output, training=training)\n\n    # 添加残差连接并应用层归一化\n    # out1 = x + attn_output\n    out1 = self.layernorm1(x + attn_output) # 形状：(batch_size, input_seq_len, d_model)\n\n    # 2. 前馈网络（带残差连接和归一化）\n    ffn_output = self.ffn(out1) # 形状：(batch_size, input_seq_len, d_model)\n\n    # 对FFN输出应用dropout\n    ffn_output = self.dropout2(ffn_output, training=training)\n\n    # 添加残差连接并应用层归一化\n    # out2 = out1 + ffn_output\n    out2 = self.layernorm2(out1 + ffn_output) # 形状：(batch_size, input_seq_len, d_model)\n\n    return out2\n\n  def get_config(self):\n    \"\"\"序列化层配置。\"\"\"\n    config = super().get_config()\n    config.update({\n        'd_model': self.d_model,\n        'num_heads': self.num_heads,\n        'dff': self.dff,\n        'dropout_rate': self.dropout_rate\n    })\n    return config\n\n</code></pre>\n<p>在<code>__init__</code>方法中，我们实例化了必要的子层：<code>MultiHeadAttention</code>、<code>PositionWiseFeedForwardNetwork</code>、两个<code>LayerNormalization</code>层和两个<code>Dropout</code>层。超参数 (parameter) (hyperparameter)<code>d_model</code>、<code>num_heads</code>、<code>dff</code>和<code>dropout_rate</code>控制着层的行为和能力。</p>\n<p><code>call</code>方法定义了计算流程。</p>\n<ol>\n<li>输入<code>x</code>通过<code>MultiHeadAttention</code>层。由于这是编码器内的自注意力 (self-attention)，注意力机制 (attention mechanism)的查询、键和值输入都是相同的张量<code>x</code>。任何必要的填充掩码都会传递过去。</li>\n<li>Dropout应用于注意力输出。请注意<code>training</code>参数的使用，它确保dropout仅在模型训练期间激活。</li>\n<li>添加一个残差连接（<code>x + attn_output</code>），之后是层归一化 (normalization)（<code>self.layernorm1</code>）。</li>\n<li>结果（<code>out1</code>）通过<code>PositionWiseFeedForwardNetwork</code>。</li>\n<li>再次应用Dropout（<code>self.dropout2</code>）。</li>\n<li>添加另一个残差连接（<code>out1 + ffn_output</code>），之后是第二个层归一化（<code>self.layernorm2</code>）。</li>\n<li>最终输出<code>out2</code>与输入<code>x</code>的形状相同。</li>\n</ol>\n<p>我们还包含一个<code>get_config</code>方法，这是自定义Keras层的一个好习惯，使得层可以轻松地保存和加载。</p>\n<h3>编码器层结构的可视化</h3>\n<p>以下图表说明了<code>TransformerEncoderLayer</code>内的数据流。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1juv0u4\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", fontname=\"helvetica\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_0 {\n    label = \"Transformer 编码器层\";\n    bgcolor=\"#e9ecef\";\n    style=\"rounded\";\n    fontname=\"helvetica\";\n\n    input [label=\"输入 (x)\\n(批次大小, 序列长度, d_model)\", fillcolor=\"#ffec99\"];\n    mha [label=\"多头注意力\"];\n    dropout1 [label=\"Dropout\", fillcolor=\"#ffc9c9\"];\n    add1 [label=\"+\", shape=circle, fillcolor=\"#b2f2bb\", width=0.3, height=0.3, fixedsize=true];\n    norm1 [label=\"层归一化\"];\n    ffn [label=\"前馈网络\"];\n    dropout2 [label=\"Dropout\", fillcolor=\"#ffc9c9\"];\n    add2 [label=\"+\", shape=circle, fillcolor=\"#b2f2bb\", width=0.3, height=0.3, fixedsize=true];\n    norm2 [label=\"层归一化\"];\n    output [label=\"输出\\n(批次大小, 序列长度, d_model)\", fillcolor=\"#ffec99\"];\n\n    input -> mha [label=\" Q, K, V\"];\n    mha -> dropout1;\n    dropout1 -> add1 [label=\"attn_output\"];\n    input -> add1 [style=dashed];\n    add1 -> norm1;\n    norm1 -> ffn [label=\"out1\"];\n    ffn -> dropout2;\n    dropout2 -> add2 [label=\"ffn_output\"];\n    norm1 -> add2 [style=dashed];\n    add2 -> norm2;\n    norm2 -> output [label=\"out2\"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1juv0u4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>单个Transformer编码器层内的数据流，展示了多头注意力 (multi-head attention)和前馈子层，每个都跟着Dropout、残差连接（加）和层归一化 (normalization)。</p>\n</blockquote>\n<h3>实例化并测试层</h3>\n<p>让我们创建<code>TransformerEncoderLayer</code>的一个实例，并通过它传递一些示例数据，以验证其操作和输出形状。</p>\n<pre><code class=\"language-python\"># 定义超参数\nbatch_size = 64\ninput_seq_len = 50\nd_model = 512  # 嵌入维度\nnum_heads = 8  # 注意力头的数量\ndff = 2048     # FFN中的隐藏层大小\ndropout_rate = 0.1\n\n# 创建一个示例输入张量（例如，序列嵌入）\n# 在实际场景中替换为真实数据\nsample_input = tf.random.uniform((batch_size, input_seq_len, d_model))\n\n# 实例化编码器层\n# 注意：需要使用实际的 MHA 和 FFN 实现才能获得真实结果\n# 上面使用的占位符版本只会打印消息并传递数据。\n# 假设您有可用的功能性 MHA 和 FFN 类：\n# encoder_layer = TransformerEncoderLayer(d_model, num_heads, dff, dropout_rate)\n\n# 用于占位符演示：\nprint(\"使用占位符实例化编码器层:\")\nencoder_layer = TransformerEncoderLayer(d_model, num_heads, dff, dropout_rate, name=\"my_encoder_layer\")\nprint(\"-\" * 20)\n\n# 通过层传递示例输入\n# 设置 training=False 为推理模式（无dropout）\nprint(\"运行编码器层调用 (training=False):\")\noutput_tensor = encoder_layer(sample_input, training=False)\nprint(\"-\" * 20)\n\n# 在训练模式下通过层传递示例输入\nprint(\"运行编码器层调用 (training=True):\")\noutput_tensor_train = encoder_layer(sample_input, training=True)\nprint(\"-\" * 20)\n\n# 检查输出形状\nprint(f\"输入形状: {sample_input.shape}\")\nprint(f\"输出形状 (推理): {output_tensor.shape}\")\nprint(f\"输出形状 (训练): {output_tensor_train.shape}\")\n\n# 验证输出形状是否与输入形状匹配（可能不包括批次大小）\nassert sample_input.shape == output_tensor.shape\nassert sample_input.shape == output_tensor_train.shape\n\nprint(\"\\n编码器层创建并测试成功。\")\n# 您还可以检查层的配置\nprint(\"\\n层配置:\")\nprint(encoder_layer.get_config())\n</code></pre>\n<p>运行此代码（假设有功能性的<code>MultiHeadAttention</code>和<code>PositionWiseFeedForwardNetwork</code>类）将实例化编码器层并处理示例输入。输出形状应与输入形状<code>(batch_size, input_seq_len, d_model)</code>匹配，确认该层在处理序列的同时，保持了堆叠多层所需的维度。如果使用前面显示的简化版本，您还会看到占位符消息。</p>\n<p>这个实践实现提供了对不同组件如何在Transformer编码器层内集成的具体理解。通常，一个完整的Transformer编码器由该层的多个实例按顺序堆叠而成，一个层的输出会作为下一个层的输入。</p>",
+  "slug": "practice-transformer-encoder",
+  "updates": [],
+  "references": [
+    {
+      "id": 7283,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "30",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍Transformer架构的奠基性论文，详细阐述了多头注意力、前馈网络、残差连接和层归一化等架构组件，这些是编码器层实现的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T01:33:02.797219Z",
+      "updated_at": "2025-09-09T02:33:51.427066Z"
+    },
+    {
+      "id": 7284,
+      "title": "Writing custom layers and models",
+      "author": "TensorFlow Developers",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras/custom_layers_and_models",
+      "doi": "",
+      "note": "TensorFlow Keras关于如何通过继承`tf.keras.layers.Layer`创建自定义层的官方指南，这对于实现TransformerEncoderLayer是至关重要的。",
+      "order": 2,
+      "created_at": "2025-09-05T01:33:02.985888Z",
+      "updated_at": "2025-09-09T02:33:52.358231Z"
+    },
+    {
+      "id": 7308,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/deep-learning-with/9781617296864/",
+      "doi": "",
+      "note": "一本关于使用 Keras 和 TensorFlow 进行深度学习的实用教程，其中阐述了 Transformer 模型及其实现细节，并为文中代码提供了更全面的背景。",
+      "order": 3,
+      "created_at": "2025-09-05T01:33:21.084090Z",
+      "updated_at": "2025-09-09T02:33:52.092407Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

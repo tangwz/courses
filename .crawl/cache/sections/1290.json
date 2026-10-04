@@ -1,0 +1,45 @@
+{
+  "id": 1290,
+  "title": "分布式训练的动机",
+  "meta_title": "机器学习中为什么要使用分布式训练？",
+  "meta_description": "了解大型模型和数据集对分布式优化的需求。",
+  "content": "<p>训练机器学习 (machine learning)模型的基本前提是根据数据迭代调整参数 (parameter)。对于较简单的模型和较小的数据集，这个过程可以很好地适应单台机器的计算资源，通常是一台配备一个或多个GPU的强大服务器。然而，机器学习的快速发展，尤其是在深度学习 (deep learning)、自然语言处理和计算机视觉等方面，已使模型复杂度和数据量远超单个系统的处理能力。这产生了重大瓶颈，使得分布式训练不仅有利，而且常常是必需的。</p>\n<p>让我们考察促使转向分布式优化策略的主要推动因素：</p>\n<h3>庞大的模型规模</h3>\n<p>现代机器学习 (machine learning)模型，特别是深度神经网络 (neural network)，可以包含数十亿甚至数万亿参数 (parameter)。例如，大型语言模型（LLM）或用于高分辨率图像生成的复杂架构。</p>\n<ul>\n<li><strong>内存限制：</strong> 存储模型参数本身，以及前向和反向传播 (backpropagation)（梯度计算）所需的中间激活值，可以轻易超出单个CPU的可用RAM，或者更严重的是，超出单个GPU的专用内存（显存 (VRAM)）。即使是市面上可用的最大型GPU，其内存限制（例如48GB、80GB）与最先进模型数百GB或TB级的需求相比也相形见绌。尝试将此类模型加载到单个设备上是根本不可能的。</li>\n<li><strong>梯度累积：</strong> 梯度累积等技术可以通过在执行权重 (weight)更新前顺序处理较小的批次来部分缓解内存问题。然而，这会增加训练时间，并且如果仅模型参数就超出设备内存，它并不能解决根本问题。</li>\n</ul>\n<h3>庞大的数据集</h3>\n<p>许多机器学习 (machine learning)模型，特别是深度学习 (deep learning)模型的有效性，与它们训练所用的数据量成正比。实际使用的数据集现在通常达到TB甚至PB级别。</p>\n<ul>\n<li><strong>存储和I/O瓶颈：</strong> 在单台机器上加载和预处理如此庞大的数据量会变得慢得令人无法接受。磁盘I/O速度和数据传输速率成为主要限制因素，导致计算单元（CPU/GPU）缺乏数据，从而造成资源利用效率低下。即使使用NVMe SSD等高速存储，巨大的数据量也可能使单个节点的“数据管道”不堪重负。</li>\n<li><strong>周期时间：</strong> 如果在单台机器上顺序处理，完成遍历整个数据集一次（一个周期）所需的时间可以从数小时延 (latency)长到数天或数周。这使得实验、超参数 (parameter) (hyperparameter)调整和实现收敛的速度慢得不切实际。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1pgcrw2\" \n              data-graph-definition='digraph G { bgcolor=\"white\"; rankdir=LR; node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"]; splines=ortho; A [label=\"模型规模\\n(数十亿参数)\", fillcolor=\"#a5d8ff\"]; B [label=\"数据集规模\\n(TB/PB级)\", fillcolor=\"#b2f2bb\"]; C [label=\"训练\\n复杂度\\n(计算操作数)\", fillcolor=\"#ffec99\"]; D [label=\"单台机器\\n(CPU/GPU内存,\\n磁盘I/O, 计算能力)\", shape=cylinder, fillcolor=\"#ffc9c9\"]; A -> D [label=\"内存不足\", color=\"#1c7ed6\", fontname=\"sans-serif\", penwidth=1.5]; B -> D [label=\"存储/I/O容量不足\", color=\"#37b24d\", fontname=\"sans-serif\", penwidth=1.5]; C -> D [label=\"计算吞吐量不足\", color=\"#f59f00\", fontname=\"sans-serif\", penwidth=1.5]; }\r\n\r\n\r\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1pgcrw2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>单台机器的资源（内存、I/O、计算能力）常常无法满足大型模型和数据集的需求，造成重要瓶颈。</p>\n</blockquote>\n<h3>无法接受的训练时间</h3>\n<p>大型模型和大型数据集的结合直接导致庞大的计算工作量。训练涉及对可能数万亿数据点进行重复的前向传播（推理 (inference)）、损失计算和反向传播 (backpropagation)（梯度计算）。</p>\n<ul>\n<li><strong>计算成本：</strong> 每个训练步骤都需要大量的浮点运算（FLOPs）。即使使用GPU或TPU等强大加速器，在单台机器上对大型模型和数据集顺序执行这些计算，也会导致实际训练时间过长，不适用于实际开发周期。研究和部署需要更快的迭代。</li>\n<li><strong>并行性作为解决方案：</strong> 分布式训练使我们能够并行化计算。通过在多个工作器（CPU或GPU，可能跨多台机器）之间划分数据、模型或两者，我们可以显著减少处理数据和计算更新所需的时间，从而大幅缩短整体训练时间。</li>\n</ul>\n<p>本质上，推动分布式优化的动力源于克服单个计算节点的物理限制。任何一台机器的内存容量、数据处理能力和原始处理能力都是有限的。分配工作负载是扩展机器学习 (machine learning)训练以满足现代应用和研究前沿需求的主要机制。本章的后续章节将考察为有效管理这种分布而开发的架构和算法。</p>",
+  "slug": "distributed-training-motivation",
+  "updates": [],
+  "references": [
+    {
+      "id": 622,
+      "title": "Dive into Deep Learning",
+      "author": "Aston Zhang, Zack C. Lipton, Mu Li, and Alex Smola",
+      "year": "2024",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://d2l.ai/",
+      "doi": "",
+      "note": "这本开源书籍提供了深度学习的实践指导，间接涵盖了现代大型模型和数据集对分布式训练的计算需求。",
+      "order": 3,
+      "created_at": "2025-09-04T14:47:03.143070Z",
+      "updated_at": "2025-09-07T16:39:08.816443Z"
+    },
+    {
+      "id": 623,
+      "title": "Distributed communication package - torch.distributed",
+      "author": "PyTorch Documentation",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/distributed.html",
+      "doi": "",
+      "note": "这份官方文档介绍了PyTorch中分布式训练的核心概念，反映了业界对模型和数据规模扩展挑战的应对。",
+      "order": 4,
+      "created_at": "2025-09-04T14:47:03.146359Z",
+      "updated_at": "2025-09-07T16:39:14.766892Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

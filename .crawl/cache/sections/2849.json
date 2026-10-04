@@ -1,0 +1,61 @@
+{
+  "id": 2849,
+  "title": "集合通信原语 (psum, pmean 等)",
+  "meta_title": "JAX 集合通信 (psum, pmean)",
+  "meta_description": "在 `pmap` 中使用集合操作，以跨设备聚合结果（例如梯度）。",
+  "content": "<p><code>jax.pmap</code> 用于 JAX 中的分布式计算，它允许每个设备在其本地数据切片上执行相同的程序，遵循单程序多数据 (SPMD) 模型。分布式算法通常需要设备间进行通信和同步。比如，在数据并行训练中，每个设备会根据其本地数据批次计算梯度，但这些梯度需要在更新模型参数 (parameter)之前，在所有设备上进行汇总（通常是求平均）。此时，集合通信操作就变得非常必要了。</p>\n<p>JAX 中的集合操作 (<code>jax.lax</code> 集合) 使得分散在多个设备上的数组（沿 <code>pmap</code> 定义的映射轴）能够参与到联合计算中。集合操作的结果通常会复制回所有参与的设备。这些操作必须在被 <code>pmap</code> 转换的函数 <em>内部</em> 调用。</p>\n<h3>使用 <code>axis_name</code> 指定通信轴</h3>\n<p>在 <code>pmap</code> 中使用集合操作的一个基本点是，要指定通信应沿着 <em>哪个</em> 轴进行。由于 <code>pmap</code> 本身会创建一个表示设备的新映射轴，你需要告诉集合操作使用这个特定的轴。这通过 <code>axis_name</code> 参数 (parameter)完成，该参数必须与外部 <code>pmap</code> 函数提供的 <code>axis_name</code> 匹配。这种明确的命名方式避免了歧义，尤其是在处理嵌套的 <code>pmap</code> 调用或其他复杂的转换时。</p>\n<h3>核心归约集合操作：<code>psum</code>、<code>pmean</code>、<code>pmax</code>、<code>pmin</code></h3>\n<p>最常见的集合操作执行跨设备的归约运算。</p>\n<h4><code>jax.lax.psum</code> (并行求和)</h4>\n<p><code>jax.lax.psum</code> 计算参与映射轴的所有设备上数组的元素级总和。每个设备贡献其本地版本的数组，并且每个设备都接收到包含总和的相同结果数组。</p>\n<p>假设有四个设备，每个设备持有一个标量值：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-hi8kbm\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, color=\"#ced4da\"];\n    subgraph cluster_0 {\n        label = \"设备 0\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        d0 [label=\"值: 2\"];\n    }\n    subgraph cluster_1 {\n        label = \"设备 1\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        d1 [label=\"值: 3\"];\n    }\n    subgraph cluster_2 {\n        label = \"设备 2\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        d2 [label=\"值: 1\"];\n    }\n    subgraph cluster_3 {\n        label = \"设备 3\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        d3 [label=\"值: 4\"];\n    }\n\n    node [shape=ellipse, style=filled, color=\"#74c0fc\", fontcolor=\"white\"];\n    psum [label=\"psum(value, &#39;devices&#39;)\"];\n\n    node [shape=box, style=filled, color=\"#a5d8ff\"];\n    subgraph cluster_r0 {\n        label = \"设备 0\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        r0 [label=\"结果: 10\"];\n    }\n    subgraph cluster_r1 {\n        label = \"设备 1\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        r1 [label=\"结果: 10\"];\n    }\n    subgraph cluster_r2 {\n        label = \"设备 2\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        r2 [label=\"结果: 10\"];\n    }\n     subgraph cluster_r3 {\n        label = \"设备 3\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\";\n        r3 [label=\"结果: 10\"];\n    }\n\n    {d0, d1, d2, d3} -> psum [style=dashed, color=\"#868e96\"];\n    psum -> {r0, r1, r2, r3} [color=\"#4dabf7\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-hi8kbm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在命名轴 'devices' 上，使用 <code>psum</code> 对四个设备进行汇总。每个设备都从一个本地值开始，在执行 <code>psum</code> 后，每个设备都持有总和 (2 + 3 + 1 + 4 = 10)。</p>\n</blockquote>\n<p>以下是使用 <code>psum</code> 定义一个与 <code>pmap</code> 配合使用的函数的例子：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 旨在通过 pmap 运行的函数\ndef sum_across_devices(local_value):\n  # 'batch_axis' 必须与 pmap 调用中的 axis_name 匹配\n  total_sum = jax.lax.psum(local_value, axis_name='batch_axis')\n  # 现在每个设备都拥有总和。\n  # 比如，我们可以用它来缩放本地计算\n  return total_sum\n\n# 用法 (假设有 4 个设备):\n# values = jnp.arange(4.) # [0., 1., 2., 3.] -> 每个设备一个值\n# pmapped_sum = jax.pmap(sum_across_devices, axis_name='batch_axis')\n# result = pmapped_sum(values)\n# # 结果将是 DeviceArray([6., 6., 6., 6.], dtype=float32)\n# # 每个设备都得到 0+1+2+3 = 6\n</code></pre>\n<p>一个常见的应用是在优化器步骤之前，在数据并行训练中对梯度求和。</p>\n<h4><code>jax.lax.pmean</code> (并行平均)</h4>\n<p><code>jax.lax.pmean</code> 的工作方式与 <code>psum</code> 类似，但它不是返回总和，而是返回沿着命名轴在所有设备上数组的元素级 <em>平均值</em>。它等同于执行 <code>psum</code>，然后除以参与该轴的设备数量（JAX 会自动跟踪）。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 旨在通过 pmap 运行的函数\ndef average_across_devices(local_value):\n  # 'batch_axis' 必须与 pmap 调用中的 axis_name 匹配\n  average_value = jax.lax.pmean(local_value, axis_name='batch_axis')\n  return average_value\n\n# 用法 (假设有 4 个设备):\n# values = jnp.arange(4.) # [0., 1., 2., 3.]\n# pmapped_mean = jax.pmap(average_across_devices, axis_name='batch_axis')\n# result = pmapped_mean(values)\n# # 结果将是 DeviceArray([1.5, 1.5, 1.5, 1.5], dtype=float32)\n# # 每个设备都得到 (0+1+2+3)/4 = 1.5\n</code></pre>\n<p><code>pmean</code> 是数据并行中平均梯度的标准操作。直接使用 <code>pmean</code> 通常比先 <code>psum</code> 再手动除法更受推荐，因为后端有时可以更高效地实现它。</p>\n<h4><code>jax.lax.pmax</code> 和 <code>jax.lax.pmin</code> (并行最大/最小)</h4>\n<p>这些集合操作计算沿着命名轴跨设备数组的元素级最大值 (<code>pmax</code>) 或最小值 (<code>pmin</code>)。每个设备都接收到包含所有参与者中找到的最大或最小值的相同结果数组。</p>\n<p>用途包括同步标志（例如，<em>是否有</em> 设备遇到错误？）、寻找批次中观察到的最大损失，或进行其他形式的分布式协作。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 旨在通过 pmap 运行的函数\ndef get_max_value(local_value):\n  max_val = jax.lax.pmax(local_value, axis_name='data_split')\n  return max_val\n\n# 用法 (假设有 4 个设备):\n# values = jnp.array([2., 5., 1., 4.]) # 每个设备一个值\n# pmapped_max = jax.pmap(get_max_value, axis_name='data_split')\n# result = pmapped_max(values)\n# # 结果将是 DeviceArray([5., 5., 5., 5.], dtype=float32)\n</code></pre>\n<h3>其他集合操作</h3>\n<p>归约集合操作非常常见，JAX 也提供了其他用于不同通信模式的操作。</p>\n<ul>\n<li>\n<p><strong><code>jax.lax.all_gather</code></strong>: 此操作从所有设备收集输入数组，并沿映射轴将它们连接起来。每个设备都接收到 <em>完整</em> 的、连接后的数组。如果每个设备都需要访问所有其他设备的数据，此操作很有用，但请注意，输出数组的大小会随设备数量线性增长，可能占用大量内存。</p>\n</li>\n<li>\n<p><strong><code>jax.lax.ppermute</code></strong>: 这是一种更通用的集合操作，允许设备根据 <code>permute</code> 参数 (parameter)指定的置换规则交换数据。它描述了数据交换的源/目标设备索引对。<code>ppermute</code> 对于实现更复杂的并行方案（如环形 all-reduce 或模型并行通信模式）是基本操作，尽管直接使用它需要仔细的索引管理。</p>\n</li>\n<li>\n<p><strong><code>jax.lax.axis_index</code></strong>: 尽管不严格来说是通信原语，<code>jax.lax.axis_index(axis_name)</code> 常常与集合操作结合使用。它返回当前设备在指定映射轴内的整数索引（ID）。这使得设备可以根据其在组内的位置表现出不同的行为，这对于特定的通信模式或工作负载均衡很有帮助。</p>\n</li>\n</ul>\n<h3>集合操作在分布式工作流中的意义</h3>\n<p>集合通信原语是 <code>pmap</code> 内部协调工作的构成要素。它们支持数据并行中的梯度聚合、同步点以及用于更复杂分布式算法的数据交换等基本模式。理解 <code>psum</code>、<code>pmean</code> 以及 <code>axis_name</code> 的作用，对于在多个加速器上高效扩展 JAX 计算来说是基础。尽管这些操作会引入通信开销，但 JAX 和 XLA 会努力优化它们在 GPU 和 TPU 等底层硬件上的执行，通常会使用 NVLink 或芯片间互联 (ICI) 等高速互联。</p>",
+  "slug": "collective-communication-primitives",
+  "updates": [],
+  "references": [
+    {
+      "id": 7236,
+      "title": "JAX Documentation: Parallelization (pmap) and Collective Operations (`jax.lax` collectives)",
+      "author": "JAX core contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/jax.html#jax.pmap",
+      "doi": "",
+      "note": "官方指南，解释JAX的SPMD编程模型、`pmap`、`axis_name`以及集体通信原语的API。",
+      "order": 1,
+      "created_at": "2025-09-05T01:32:33.812853Z",
+      "updated_at": "2025-09-08T07:21:52.544953Z"
+    },
+    {
+      "id": 7237,
+      "title": "XLA: Accelerated Linear Algebra - Operation Semantics (Collectives)",
+      "author": "Google Brain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla/operation_semantics#collectives",
+      "doi": "",
+      "note": "提供对JAX使用的底层XLA编译器如何实现和优化集体通信操作的见解。",
+      "order": 2,
+      "created_at": "2025-09-05T01:32:33.824118Z",
+      "updated_at": "2025-09-08T07:21:56.874627Z"
+    },
+    {
+      "id": 7238,
+      "title": "Distributed Deep Learning: A Brief Taxonomy",
+      "author": "Anees Kazi, Shayan shekarforoush, S.Arvind krishna, Hendrik Burwinkel, Gerome Vivar, Karsten Kortuem, Seyed-Ahmad Ahmadi, Shadi Albarqouni, Nassir Navab",
+      "year": "2019",
+      "publisher": "",
+      "journal": "arXiv",
+      "volume": "1",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1903.04233",
+      "doi": "10.48550/arXiv.1903.04233",
+      "note": "综述论文，回顾不同的分布式深度学习策略，包括数据并行以及集体操作在梯度同步中的作用。",
+      "order": 3,
+      "created_at": "2025-09-05T01:32:33.828363Z",
+      "updated_at": "2025-09-08T07:21:58.073831Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

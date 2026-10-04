@@ -1,0 +1,45 @@
+{
+  "id": 2443,
+  "title": "什么是概率分布？",
+  "meta_title": "什么是概率分布？",
+  "meta_description": "了解概率分布的含义及其分类（离散型与连续型）。",
+  "content": "<p>上一章我们计算了特定事件的概率。现在，我们将学习如何描述随机过程中<em>所有</em>可能结果的概率。这种有条理的描述就是我们所说的概率分布。它是理解变异性的一个重要内容，在机器学习 (machine learning)中用于数据建模和不确定性处理。</p>\n<p>在分析分布前，我们先明确它们所描述的对象：<strong>随机变量</strong>。随机变量本质上是一种变量，其取值是由偶然性决定的数值结果。可以将其理解为将随机实验（如抛硬币或测量某人身高）的结果映射到数字的一种方式。</p>\n<ul>\n<li>如果您抛掷一枚硬币，可以定义一个随机变量<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi></mrow><annotation encoding=\"application/x-tex\">X</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span></span></span></span>，当出现正面时<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">X=1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>，当出现反面时<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>X</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">X=0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span>。</li>\n<li>如果您掷一个标准的六面骰子，随机变量<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Y</mi></mrow><annotation encoding=\"application/x-tex\">Y</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">Y</span></span></span></span>可以是朝上那一面的数字（可能取值：1, 2, 3, 4, 5, 6）。</li>\n<li>如果您测量随机选择的成年人身高，随机变量<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>H</mi></mrow><annotation encoding=\"application/x-tex\">H</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0813em;\">H</span></span></span></span>可以是他们身高的厘米数。</li>\n</ul>\n<p>那么，<strong>概率分布</strong>就是为随机变量的每一个可能取值指定概率。它是一个数学函数，给出实验中不同可能结果出现的概率。想象您有总共为1（或100%）的概率要分配给所有可能的结果；概率分布会告诉您这些概率是如何分配的。</p>\n<p>概率分布通常根据其描述的随机变量类型分为两大类：</p>\n<h3>1. 离散概率分布</h3>\n<p>这类分布描述的是只能取有限个特定、分离值的随机变量，通常是整数。您可以数出所有可能的结果。</p>\n<ul>\n<li><strong>例子：</strong>\n<ul>\n<li>抛掷5次硬币中出现正面的次数（可以是0, 1, 2, 3, 4或5）。</li>\n<li>您在一小时内收到的电子邮件数量（可以是0, 1, 2,...）。</li>\n<li>掷一次骰子的结果（可以是1, 2, 3, 4, 5或6）。</li>\n</ul>\n</li>\n</ul>\n<p>对于离散分布，我们可以列出随机变量的每个可能取值，并为每个值分配一个概率。所有这些概率的总和必须等于1。我们通常使用**概率质量函数（PMF）**来定义这种关系，这将在下一节讨论。</p>\n<p>考虑一个公平六面骰子投掷的简单例子。随机变量<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>Y</mi></mrow><annotation encoding=\"application/x-tex\">Y</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">Y</span></span></span></span>是投掷结果。有六个可能的、等概率的结果。概率分布可以按以下方式显示：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-yjaubd\" \n              data-plot-definition='{\"layout\": {\"title\": \"公平骰子投掷的概率分布\", \"xaxis\": {\"title\": \"结果 (Y)\"}, \"yaxis\": {\"title\": \"概率 P(Y=y)\", \"range\": [0, 0.2]}, \"bargap\": 0.2}, \"data\": [{\"type\": \"bar\", \"x\": [1, 2, 3, 4, 5, 6], \"y\": [0.16666666666666666, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666], \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-yjaubd\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>每个可能的掷骰子结果（1到6）都有相同的概率，即<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn><mi mathvariant=\"normal\">/</mi><mn>6</mn><mo>≈</mo><mn>0.167</mn></mrow><annotation encoding=\"application/x-tex\">1/6 \\approx 0.167</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">1/6</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.167</span></span></span></span>。这是一个离散均匀分布的例子。</p>\n</blockquote>\n<h3>2. 连续概率分布</h3>\n<p>这类分布描述的是可以在给定范围或区间内取任意值的随机变量。您无法简单地列出所有可能值，因为它们是无限的。</p>\n<ul>\n<li><strong>例子：</strong>\n<ul>\n<li>一个人的身高（例如，可以是175.2厘米，175.21厘米，175.213厘米...）。</li>\n<li>房间的精确温度。</li>\n<li>完成一个过程所需的时间。</li>\n</ul>\n</li>\n</ul>\n<p>对于连续分布，随机变量取任何单一、特定值的概率实际上为零（想想某人身高<em>恰好</em>是175.0000...厘米的几率）。我们讨论的是变量落入特定<em>区间</em>的概率。例如，某人身高在170厘米到180厘米<em>之间</em>的概率是多少？这些分布使用**概率密度函数（PDF）**来描述，我们将在本章后面介绍。PDF有助于确定变量落入某一值范围内的可能性；PDF曲线在某个区间下的面积就代表变量在该区间内的概率。</p>\n<p>想象一下成年人身高的分布。它通常呈钟形，平均身高附近的值更可能出现，而非常矮或非常高的身高则不太可能。我们无法为<em>恰好</em>175厘米的身高分配一个概率，但可以通过查看该范围内曲线下的面积来找到身高在174厘米到176厘米之间的概率。</p>\n<h3>为什么学习概率分布？</h3>\n<p>理解概率分布在数据分析和机器学习 (machine learning)中有很多用处：</p>\n<p>\"*   <strong>数据建模：</strong> 它们给出涉及不确定性现象的数学描述。我们常假定数据遵循特定分布（如正态分布）来构建模型。\"</p>\n<ul>\n<li><strong>数据概括：</strong> 它们能简明地概括可能数据值的范围和可能性。\n\"*   <strong>模拟：</strong> 我们可以使用分布来创建模拟数据，以模仿过程，这对于测试算法或分析情况很有用。\"</li>\n<li><strong>推断：</strong> 分布是统计推断的重要依据，帮助我们根据样本对总体得出结论。</li>\n</ul>\n<p>在接下来的章节中，我们将更细致地查看用于定义离散（PMF）和连续（PDF）分布的函数，并考察实践中遇到的一些常用分布。</p>",
+  "slug": "what-are-probability-distributions",
+  "updates": [],
+  "references": [
+    {
+      "id": 2083,
+      "title": "Probabilistic Machine Learning: An Introduction",
+      "author": "Kevin P. Murphy",
+      "year": "2022",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://probml.github.io/book1",
+      "doi": "",
+      "note": "关于概率机器学习的综合性著作，其中包含专门的章节，用于在机器学习背景下定义和解释概率分布。",
+      "order": 2,
+      "created_at": "2025-09-04T16:45:49.381416Z",
+      "updated_at": "2025-09-07T21:37:29.389376Z"
+    },
+    {
+      "id": 2086,
+      "title": "Introduction to Probability and Statistics (MIT OpenCourseWare 18.05)",
+      "author": "Jeremy Orloff, Jonathan Bloom",
+      "year": "2014",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2014/",
+      "doi": "",
+      "note": "免费在线课程材料，提供结构化、易于理解的概率和统计入门，包含对概率分布的详细说明。",
+      "order": 3,
+      "created_at": "2025-09-04T16:45:50.862458Z",
+      "updated_at": "2025-09-07T21:37:26.436699Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

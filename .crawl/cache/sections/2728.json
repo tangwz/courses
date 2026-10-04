@@ -1,0 +1,61 @@
+{
+  "id": 2728,
+  "title": "动手实战：实现混合精度训练",
+  "meta_title": "实践：在 PyTorch 中实现混合精度训练",
+  "meta_description": "将标准训练循环转换为使用自动混合精度 (AMP)，并观察性能变化。",
+  "content": "<p>提供一个动手操作指南，介绍如何使用 <code>torch.cuda.amp</code> 实现自动混合精度 (AMP) 训练。自动混合精度 (AMP) 允许在特定操作中使用低精度浮点格式（如 <code>float16</code>）。这种能力可以大幅提升速度并减少 GPU 内存占用，通常对模型精度影响极小。该指南将讲解如何将标准的 PyTorch 训练循环转换为使用 AMP，并说明必要的变更。</p>\n<p>本实践练习假设您可以使用支持 CUDA 的 NVIDIA GPU，其计算能力为 7.0 或更高（这是高效进行 <code>float16</code> 张量核心操作的必要条件），并且 PyTorch 安装版本相对较新（1.6 或更高）。</p>\n<h3>基准：标准训练循环</h3>\n<p>我们从一个使用全精度（<code>float32</code>）的简化标准训练循环开始。我们将使用一个基本的卷积网络和随机数据进行演示。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.optim as optim\nimport time\nimport contextlib # 用于计时上下文管理器\n\n# 1. 定义一个简单模型\nclass SimpleCNN(nn.Module):\n    def __init__(self, num_classes=10):\n        super().__init__()\n        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)\n        self.relu = nn.ReLU()\n        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)\n        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)\n        # 为全连接层展平特征\n        self.fc = nn.Linear(64 * 16 * 16, num_classes) # 假设输入图像为 32x32\n\n    def forward(self, x):\n        x = self.pool(self.relu(self.conv1(x)))\n        x = self.pool(self.relu(self.conv2(x)))\n        x = torch.flatten(x, 1) # 展平除批次维度外的所有维度\n        x = self.fc(x)\n        return x\n\n# 2. 设置：设备、模型、数据、损失函数、优化器\ndevice = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")\nprint(f\"使用设备: {device}\")\n\nmodel = SimpleCNN().to(device)\ncriterion = nn.CrossEntropyLoss()\noptimizer = optim.Adam(model.parameters(), lr=1e-3)\n\n# 模拟数据参数\nbatch_size = 64\nimg_size = 32\nnum_batches = 100\n\n# 简单计时器上下文管理器\n@contextlib.contextmanager\ndef measure_time():\n    start_time = time.time()\n    yield\n    end_time = time.time()\n    print(f\"耗时: {end_time - start_time:.4f} 秒\")\n\n# 简单内存使用报告器\ndef report_memory(stage=\"\"):\n    if torch.cuda.is_available():\n        print(f\"{stage} - 峰值内存分配: {torch.cuda.max_memory_allocated(device) / 1e6:.2f} MB\")\n        torch.cuda.reset_peak_memory_stats(device) # 为下次测量重置峰值计数器\n\n# 3. 标准训练循环 (FP32)\nprint(\"\\n--- 标准 FP32 训练 ---\")\nreport_memory(\"训练前\")\nmodel.train()\nwith measure_time():\n    for i in range(num_batches):\n        # 实时生成模拟数据\n        inputs = torch.randn(batch_size, 3, img_size, img_size, device=device)\n        labels = torch.randint(0, 10, (batch_size,), device=device)\n\n        optimizer.zero_grad()\n\n        # 前向传播\n        outputs = model(inputs)\n        loss = criterion(outputs, labels)\n\n        # 反向传播和优化\n        loss.backward()\n        optimizer.step()\n\n        if (i + 1) % 20 == 0:\n             print(f\"批次 [{i+1}/{num_batches}]，损失: {loss.item():.4f}\")\n\nreport_memory(\"训练后\")\nprint(\"--- 标准 FP32 训练完成 ---\")\n\n</code></pre>\n<p>运行此代码（如果您有合适的 GPU）。请记录报告的耗时和峰值内存使用。这作为我们的基准。</p>\n<h3>使用 <code>torch.cuda.amp</code> 实现混合精度</h3>\n<p>现在，我们来修改循环以集成 AMP。这需要 <code>torch.cuda.amp</code> 中的两个主要组件：</p>\n<ol>\n<li><strong><code>autocast</code></strong>：这是一个上下文 (context)管理器，它可以在有益且安全的情况下，将张量操作自动转换为低精度类型（在兼容 GPU 上默认为 <code>float16</code>）。卷积和全连接层等操作通常会大幅加速，而其他操作（如归约）可能会保留在 <code>float32</code> 中以保持数值稳定性。</li>\n<li><strong><code>GradScaler</code></strong>：由于 <code>float16</code> 的数值范围比 <code>float32</code> 小得多，反向传播 (backpropagation)期间计算的梯度可能变得非常小（下溢）并被置零，从而妨碍训练。<code>GradScaler</code> 通过在反向传播前将损失值 <em>向上</em> 缩放来帮助防止这种情况。这有效地将生成的梯度缩放到 <code>float16</code> 的可表示范围内。在优化器更新权重 (weight)之前，<code>GradScaler</code> 会将梯度 <em>反向缩放</em> 回其原始值。如果在反向缩放期间检测到任何非有限梯度（NaN 或 Inf）（这有时会发生在训练不稳定或损失缩放因子较高时），则会跳过该批次的优化器步骤。<code>GradScaler</code> 还会随时间动态调整缩放因子。</li>\n</ol>\n<p>以下是我们修改训练循环的方式：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.optim as optim\nimport time\nimport contextlib # 用于计时上下文管理器\nfrom torch.cuda.amp import GradScaler, autocast\n\n# --- 重新初始化模型和优化器以进行公平比较 ---\nmodel = SimpleCNN().to(device)\noptimizer = optim.Adam(model.parameters(), lr=1e-3)\n# --- 保持损失函数和模拟数据参数不变 ---\ncriterion = nn.CrossEntropyLoss()\nbatch_size = 64\nimg_size = 32\nnum_batches = 100\n\n# --- 使用相同的计时器和内存报告器 ---\n@contextlib.contextmanager\ndef measure_time():\n    start_time = time.time()\n    yield\n    end_time = time.time()\n    print(f\"耗时: {end_time - start_time:.4f} 秒\")\n\ndef report_memory(stage=\"\"):\n    if torch.cuda.is_available():\n        print(f\"{stage} - 峰值内存分配: {torch.cuda.max_memory_allocated(device) / 1e6:.2f} MB\")\n        torch.cuda.reset_peak_memory_stats(device)\n\nprint(\"\\n--- 混合精度 (AMP) 训练 ---\")\n# 1. 初始化 GradScaler\nscaler = GradScaler()\n\nreport_memory(\"训练前\")\nmodel.train()\nwith measure_time():\n    for i in range(num_batches):\n        inputs = torch.randn(batch_size, 3, img_size, img_size, device=device)\n        labels = torch.randint(0, 10, (batch_size,), device=device)\n\n        optimizer.zero_grad()\n\n        # 2. 使用 autocast 包装前向传播\n        # 此上下文中的操作在支持的情况下以低精度 (FP16) 运行\n        with autocast():\n            outputs = model(inputs)\n            loss = criterion(outputs, labels)\n\n        # 3. 在 backward() 之前缩放损失\n        # scaler.scale 将损失乘以当前缩放因子\n        scaler.scale(loss).backward()\n\n        # 4. scaler.step() 反向缩放梯度并调用 optimizer.step()\n        # 反向缩放位于 optimizer.param_groups[...].grad 中的梯度\n        # 如果梯度不是有限的 (NaN/Inf)，则跳过 optimizer.step()\n        scaler.step(optimizer)\n\n        # 5. 为下一次迭代更新缩放因子\n        # 如果发现 NaNs/Infs，则减小缩放因子，否则可能增大\n        scaler.update()\n\n        if (i + 1) % 20 == 0:\n            # 注意：loss.item() 仍是未缩放的损失值\n            print(f\"批次 [{i+1}/{num_batches}]，损失: {loss.item():.4f}\")\n\nreport_memory(\"训练后\")\nprint(\"--- 混合精度 (AMP) 训练完成 ---\")\n\n</code></pre>\n<h3>分析与观察</h3>\n<p>如果您在兼容的 GPU 上（特别是带有张量核心的 GPU，如 V100、T4、A100、H100 或 RTX 20xx 系列及更高版本）运行这两个版本，您会注意到：</p>\n<ol>\n<li><strong>训练时间缩短</strong>：AMP 版本通常比标准 FP32 版本明显更快完成。加速 1.5 倍到 3 倍或更多是常见现象，具体取决于模型架构、GPU 和批次大小。</li>\n<li><strong>峰值内存使用降低</strong>：使用 <code>float16</code> 张量的操作所需的内存带宽和存储量是 <code>float32</code> 的一半。为反向传播 (backpropagation)存储的激活值也消耗更少内存，从而可以使用更大的批次或模型。</li>\n<li><strong>代码改动极少</strong>：集成 AMP 只需少量额外操作：初始化 <code>GradScaler</code>，使用 <code>autocast</code> 包装前向传播，以及修改 <code>backward()</code> 和 <code>optimizer.step()</code> 调用以使用 <code>scaler</code>。</li>\n<li><strong>数值稳定性</strong>：得益于 <code>GradScaler</code>，训练过程通常保持数值稳定，收敛情况与 FP32 基准相似。由于精度变化，您可能会看到批次间的损失值略有不同，但整体训练动态通常得以保持。</li>\n</ol>\n<p>这里是 FP32 和 AMP 训练典型结果的示意图：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1bxc71g\" \n              data-plot-definition='{\"data\": [{\"x\": [\"FP32\", \"AMP\"], \"y\": [15.8, 7.5], \"type\": \"bar\", \"name\": \"训练时间 (秒)\", \"marker\": {\"color\": \"#339af0\"}}, {\"x\": [\"FP32\", \"AMP\"], \"y\": [2150, 1350], \"type\": \"bar\", \"name\": \"峰值内存 (MB)\", \"yaxis\": \"y2\", \"marker\": {\"color\": \"#51cf66\"}}], \"layout\": {\"title\": \"FP32 与 AMP 性能对比 (示意图)\", \"yaxis\": {\"title\": \"训练时间 (秒)\"}, \"yaxis2\": {\"title\": \"峰值 GPU 内存 (MB)\", \"overlaying\": \"y\", \"side\": \"right\"}, \"barmode\": \"group\", \"legend\": {\"x\": 0.1, \"y\": -0.2, \"orientation\": \"h\"}, \"margin\": {\"l\": 50, \"r\": 50, \"t\": 50, \"b\": 80}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1bxc71g\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示意性对比，显示了使用 AMP 与标准 FP32 训练相比，典型的加速和内存减少情况。实际结果会因硬件和模型而异。</p>\n</blockquote>\n<h3>更多考量</h3>\n<ul>\n<li><strong><code>bfloat16</code></strong>：在较新的硬件（例如，A100 等 Ampere 架构 GPU，或较新的 TPU）上，您可能更喜欢使用 <code>torch.bfloat16</code>。它具有与 <code>float32</code> 相同的指数范围，但尾数精度较低。这通常使其对下溢/上溢问题更具抵御能力，并有可能无需 <code>GradScaler</code>。您可以通过 <code>autocast(dtype=torch.bfloat16)</code> 启用它。请查阅您的硬件文档以获取最佳设置。</li>\n<li><strong>性能分析</strong>：尽管 AMP 通常提供开箱即用的优势，但建议使用 PyTorch 性能分析器（在第 4 章中介绍）来确认预期加速得以实现，并找出特定于您的模型或操作、可能无法从低精度中获益的任何潜在瓶颈。</li>\n<li><strong>梯度裁剪</strong>：AMP 有时会与梯度裁剪配合使用。通常建议在裁剪梯度 <em>之前</em> 对其进行反向缩放。<code>scaler.unscale_(optimizer)</code> 可以在调用 <code>torch.nn.utils.clip_grad_norm_</code> 或 <code>torch.nn.utils.clip_grad_value_</code> 之前调用。</li>\n</ul>\n<p>本实践练习展现了将自动混合精度集成到您的 PyTorch 训练循环中是多么容易。借助 <code>torch.cuda.amp</code>，您可以大幅加速训练并减少内存消耗，从而可以在现有硬件上训练更大的模型或使用更大的批次。</p>",
+  "slug": "practice-mixed-precision",
+  "updates": [],
+  "references": [
+    {
+      "id": 7228,
+      "title": "Automatic Mixed Precision examples",
+      "author": "PyTorch Foundation",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/amp_examples.html",
+      "doi": "",
+      "note": "提供关于使用 `torch.cuda.amp` 的详细指导，包括 `autocast` 和 `GradScaler`，用于在 PyTorch 中实现混合精度训练。",
+      "order": 1,
+      "created_at": "2025-09-05T01:32:29.806024Z",
+      "updated_at": "2025-09-08T07:08:59.618425Z"
+    },
+    {
+      "id": 7230,
+      "title": "BFloat16: A New Standard for Mixed-Precision Training",
+      "author": "Andrew R. Thwaites, Cliff Young, and the Google Brain Team",
+      "year": "2019",
+      "publisher": "Google",
+      "journal": "Google AI Blog",
+      "volume": "",
+      "pages": "",
+      "url": "https://ai.googleblog.com/2019/03/bfloat16-new-standard-for-mixed.html",
+      "doi": "",
+      "note": "解释了 `bfloat16` 浮点格式及其在深度学习混合精度训练中的优点，尤其是在数值稳定性方面。",
+      "order": 3,
+      "created_at": "2025-09-05T01:32:29.896928Z",
+      "updated_at": "2025-09-08T07:09:06.644198Z"
+    },
+    {
+      "id": 7231,
+      "title": "NVIDIA Ampere Architecture In-depth",
+      "author": "NVIDIA Corporation",
+      "year": "2020",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/nvidia-ampere-architecture-whitepaper.pdf",
+      "doi": "",
+      "note": "详细介绍了 NVIDIA Ampere 架构，包括为 `float16` 等混合精度操作提供硬件加速的 Tensor Core 技术。",
+      "order": 4,
+      "created_at": "2025-09-05T01:32:29.900147Z",
+      "updated_at": "2025-09-08T07:08:58.982593Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 4485,
+  "title": "任务分解策略",
+  "meta_title": "LLM智能体任务分解策略",
+  "meta_description": "实现将复杂目标分解为可管理子任务的方法。",
+  "content": "<p>分配给LLM智能体的复杂目标，例如“计划一个为期一周的AI智能体技术大会，包括寻找演讲者、安排后勤和创建预算”，通常过于多方面，无法通过单一LLM调用或简单的预设序列直接执行。固有的不确定性、众多步骤和潜在关联需要将主要目标拆分成更小、更易处理的单元。这个过程，称为任务分解，是智能体系统进行复杂规划和执行的根本所在。</p>\n<p>有效的分解将一个难以处理的问题转化为一系列可管理子问题，每个子问题都可能通过专门的LLM调用、工具调用或两者结合来解决。分解的输出通常作为智能体计划的依据。</p>\n<h2>为什么要分解任务？</h2>\n<p>整体式方法通常由于以下几个原因在复杂任务中失败：</p>\n<ol>\n<li><strong>上下文 (context)窗口限制：</strong> 非常复杂的指令或背景信息可能超出LLM的上下文窗口。</li>\n<li><strong>推理 (inference)复杂性：</strong> LLM在处理较小、定义明确的问题时表现更好，而不是同时处理错综复杂、多步骤的情形。</li>\n<li><strong>工具专用性：</strong> 工具通常是为特定功能设计的（例如，搜索、计算、代码执行）。分解允许将特定子任务映射到合适的工具。</li>\n<li><strong>错误恢复：</strong> 如果复杂任务的一部分失败，分解使得更容易隔离故障，重新规划，并仅重试受影响的子任务，而不是重新开始整个过程。</li>\n<li><strong>模块化与可重用性：</strong> 分解后的子任务可能代表可重用的技能或流程。</li>\n</ol>\n<h2>任务分解策略</h2>\n<p>可以采用多种方法来分解复杂目标。选择通常取决于任务的性质、智能体的架构以及所需的控制水平与灵活性。</p>\n<h3>LLM驱动的分解</h3>\n<p>最直接的方法是使用LLM本身来执行分解。这通常涉及向LLM提供高级目标，并要求它生成一系列步骤或子任务。</p>\n<p><strong>1. 零样本提示：</strong>\n直接提供高级目标，并要求给出计划或步骤列表。</p>\n<pre><code class=\"language-text\">提示：\n给定目标：“计划一个为期一周的AI智能体技术大会，包括寻找演讲者、安排后勤和创建预算。”\n将其分解为AI智能体可以执行的一系列可操作子任务。以编号列表形式输出子任务。\n\n预期LLM输出（简化）：\n1. 定义会议主题和范围。\n2. 确定潜在演讲者和主题。\n3. 起草邀请函并联系潜在演讲者。\n4. 研究并选择合适的场地选项。\n5. 制定初步预算，涵盖场地、餐饮、演讲者和材料费用。\n6. 制定会议日程。\n7. 建立注册流程。\n8. 计划市场推广和宣传。\n</code></pre>\n<p><strong>2. 少样本提示：</strong>\n提供一个或多个复杂目标及其对应分解的例子，以引导LLM的输出格式和粒度。</p>\n<p><strong>优点：</strong></p>\n<ul>\n<li>高度灵活，适应新任务。</li>\n<li>对分解逻辑本身所需的特定编程量很小。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li><strong>一致性：</strong> LLM在不同运行时可能为类似目标生成结构不同或不完整的计划。</li>\n<li><strong>可执行性：</strong> 生成的步骤可能过于抽象，或无法直接映射到可用工具或智能体能力。需要仔细的提示工程 (prompt engineering)。</li>\n<li><strong>逻辑流程：</strong> 确保生成的步骤具有正确的逻辑顺序并涵盖所有必要方面可能具有挑战性。</li>\n</ul>\n<h3>程序化分解</h3>\n<p>对于定义明确、重复出现的复杂任务，分解逻辑可以明确地编码。这涉及编写函数或脚本，分析输入目标（通常基于关键词或结构），并输出预定的子任务序列或图。</p>\n<p>例如，“研究和报告生成”任务可能总是被程序化分解为：</p>\n<ol>\n<li>从请求中识别关键词。</li>\n<li>使用关键词执行网络搜索（工具：<code>web_search</code>）。</li>\n<li>总结搜索结果（LLM调用）。</li>\n<li>识别主要实体/论点（LLM调用）。</li>\n<li>使用另一次专门搜索或知识库查询验证论点（工具：<code>fact_check_search</code>）。</li>\n<li>将发现结果综合成报告（LLM调用）。</li>\n</ol>\n<p><strong>优点：</strong></p>\n<ul>\n<li>对于已知任务类型，可靠性和一致性高。</li>\n<li>如果子任务映射到现有工具/函数，则保证可执行性。</li>\n<li>结构可预测。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li>缺乏灵活性；无法处理超出其预定义结构的任务。</li>\n<li>对于每种复杂任务类型，前期需要大量的开发工作。</li>\n<li>对用户请求中的细微差别或变体适应性较差。</li>\n</ul>\n<h3>层次化方法</h3>\n<p>受经典规划中层次任务网络（HTN）的启发，这涉及定义任务的层次结构，从高层抽象目标到原始的、可直接执行的动作（如调用特定工具或LLM提示）。</p>\n<ul>\n<li><strong>复合任务：</strong> 需要进一步分解的抽象目标（例如，“安排后勤”）。</li>\n<li><strong>原始任务：</strong> 智能体可以直接执行的动作（例如，<code>call_venue_api(location='CityX')</code>，<code>send_email(to='speaker@example.com', subject='Invitation')</code>）。</li>\n</ul>\n<p>分解方法将复合任务细化为一系列较低级别的复合或原始任务，直到只剩下原始任务。这可以由LLM驱动（提示LLM细化复合任务）或由与每种复合任务类型关联的预定义方法驱动。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-111nmbh\" \n              data-graph-definition='digraph HTN_Example {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n  edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n  目标 [label=\"会议规划\", color=\"#7048e8\", fillcolor=\"#d0bfff\"];\n  定义范围 [label=\"定义范围\\n(复合任务)\"];\n  寻找演讲者 [label=\"寻找演讲者\\n(复合任务)\"];\n  安排后勤 [label=\"安排后勤\\n(复合任务)\"];\n  创建预算 [label=\"创建预算\\n(复合任务)\"];\n\n  识别主题 [label=\"识别主题\\n(原始任务: LLM)\"];\n  搜索演讲者 [label=\"搜索演讲者\\n(原始任务: 工具)\"];\n  联系演讲者 [label=\"联系演讲者\\n(原始任务: 工具)\"];\n\n  选择场地 [label=\"选择场地\\n(复合任务)\"];\n  规划餐饮 [label=\"规划餐饮\\n(复合任务)\"];\n\n  估算场地费用 [label=\"估算场地费用\\n(原始任务: 工具/LLM)\"];\n  估算餐饮费用 [label=\"估算餐饮费用\\n(原始任务: LLM)\"];\n  估算演讲者费用 [label=\"估算演讲者费用\\n(原始任务: LLM)\"];\n  汇总费用 [label=\"汇总费用\\n(原始任务: 工具)\"];\n\n  目标 -> 定义范围;\n  目标 -> 寻找演讲者;\n  目标 -> 安排后勤;\n  目标 -> 创建预算;\n\n  寻找演讲者 -> 识别主题 [label=\"细化\"];\n  寻找演讲者 -> 搜索演讲者 [label=\"细化\"];\n  寻找演讲者 -> 联系演讲者 [label=\"细化\"];\n\n  安排后勤 -> 选择场地 [label=\"细化\"];\n  安排后勤 -> 规划餐饮 [label=\"细化\"];\n\n  创建预算 -> 估算场地费用 [label=\"细化\"];\n  创建预算 -> 估算餐饮费用 [label=\"细化\"];\n  创建预算 -> 估算演讲者费用 [label=\"细化\"];\n  创建预算 -> 汇总费用 [label=\"细化\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-111nmbh\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>会议规划中层次任务分解的简化视图。复合任务被细化为较低级别的任务，直到达到原始的、可执行的动作。</p>\n</blockquote>\n<p><strong>优点：</strong></p>\n<ul>\n<li>提供结构并鼓励模块化设计。</li>\n<li>能有效处理复杂依赖和条件逻辑。</li>\n<li>有助于复合任务分解逻辑的重用。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li>需要定义层次结构，这可能很复杂。</li>\n<li>如果与LLM的灵活性结合不佳，可能过于僵化，无法进行细化步骤。</li>\n</ul>\n<h2>分解任务的表示</h2>\n<p>任务分解后，生成的子任务需要以智能体规划模块可用的方式表示。常见的表示方式包括：</p>\n<ul>\n<li><strong>线性序列：</strong> 一个简单的按顺序执行的子任务列表。适用于直接的流程。</li>\n<li><strong>有向无环图（DAG）：</strong> 将子任务表示为节点，将依赖关系表示为有向边。允许独立子任务的并行执行，并处理明确的先决条件（例如，“任务C依赖于任务A和任务B的输出”）。这对于顺序重要但并非严格线性的更高级别工作流程非常有用。</li>\n</ul>\n<h2>有效分解的考量</h2>\n<ul>\n<li><strong>粒度：</strong> 找到合适的细节级别很重要。子任务应足够具体，以便LLM或工具可执行，但又不能过于细致，以免计划过长并引入过多开销。</li>\n<li><strong>可执行性：</strong> 确保分解后的步骤与智能体拥有的能力相对应，无论是通过LLM推理 (inference)、特定工具还是其他功能。将分解与可用工具（稍后介绍）关联起来非常重要。</li>\n<li><strong>错误传播：</strong> 考虑一个子任务的失败可能如何影响后续步骤。分解策略理想情况下应生成允许优雅地处理故障和重新规划的步骤。</li>\n<li><strong>完整性：</strong> 分解是否涵盖了原始目标的所有必要方面？基于LLM的方法有时可能会遗漏步骤，需要验证或细化循环。</li>\n</ul>\n<p>任务分解不是一个孤立的步骤，而是智能体规划和执行周期的入口。分解的质量显著影响智能体成功制定和执行复杂计划的能力，特别是那些涉及与外部工具和动态环境交互的计划。</p>",
+  "slug": "task-decomposition-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 7765,
+      "title": "Artificial Intelligence: A Modern Approach (Chapter 11: Planning)",
+      "author": "Stuart Russell, Peter Norvig",
+      "year": "2020",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "363-424",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHzShJnROHZ2v9jDJsxRy9joxm2hsin4d-nj4XdEMC-GaWazcU12Bp3GSm8eim3pYFPn8Wor-ebpQTgBVgUJhkRX6ctjDHAaXNnnYjse9qz70PbJ0a2hZzaWWrFoXVcVF25oMyaGix73PtHjajLc7eH9AqotylV9TG2qoVY1d4w==",
+      "doi": "",
+      "note": "一本关于经典人工智能规划的综合性教材，详细讨论了分层任务网络（HTN）和其他规划范式。",
+      "order": 1,
+      "created_at": "2025-09-05T01:47:09.962016Z",
+      "updated_at": "2025-09-10T07:53:05.430685Z"
+    },
+    {
+      "id": 7766,
+      "title": "Tree of Thoughts: Deliberate Problem Solving with Large Language Models",
+      "author": "Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, Karthik Narasimhan",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.10601",
+      "doi": "10.48550/arXiv.2305.10601",
+      "note": "提出了一种让大型语言模型探索多个推理路径并将问题明确分解为中间步骤的方法，从而增强了审慎的问题解决能力。",
+      "order": 2,
+      "created_at": "2025-09-05T01:47:09.968083Z",
+      "updated_at": "2025-09-10T07:52:51.636728Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

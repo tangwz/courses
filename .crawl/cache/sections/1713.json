@@ -1,0 +1,61 @@
+{
+  "id": 1713,
+  "title": "动手实践：应用 `jit`",
+  "meta_title": "jax.jit 动手实践",
+  "meta_description": "练习将 `jax.jit` 应用于简单函数并测量性能提升。",
+  "content": "<p>将 <code>jax.jit</code> 应用到函数中以观察其对执行速度的影响。还将呈现准确测量性能的方法，同时说明初始编译的开销。</p>\n<h3>设置</h3>\n<p>首先，请确保您已安装 JAX 并导入所需的库。我们将主要使用 <code>jax</code>、<code>jax.numpy</code>（通常作为 <code>jnp</code> 导入）以及 Python 的 <code>timeit</code> 模块进行基础计时。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport timeit\nimport numpy as np # 我们将使用标准 NumPy 进行比较设置\n\n# 检查可用设备（可选，但推荐）\nprint(f\"JAX devices: {jax.devices()}\")\n\n# 用于更精确计时的辅助函数\ndef time_func(func, *args, num_runs=10, warmup_runs=2):\n    \"\"\"对函数执行进行计时，同时处理预热和 JAX 异步操作。\"\"\"\n    # 预热运行\n    for _ in range(warmup_runs):\n        result = func(*args)\n        if isinstance(result, jax.Array):\n            result.block_until_ready() # 确保 JAX 计算完成\n\n    # 计时运行\n    times = []\n    for _ in range(num_runs):\n        start_time = timeit.default_timer()\n        result = func(*args)\n        if isinstance(result, jax.Array):\n            result.block_until_ready() # 重要：等待 JAX 操作完成\n        end_time = timeit.default_timer()\n        times.append(end_time - start_time)\n\n    return np.mean(times), np.std(times)\n\n# 在默认设备上创建一些示例数据\nkey = jax.random.PRNGKey(0)\nsize = 1000\nx_jnp = jax.random.normal(key, (size, size))\ny_jnp = jax.random.normal(key, (size, size))\n\n# 确保数据在计时前位于设备上\nx_jnp.block_until_ready()\ny_jnp.block_until_ready()\n</code></pre>\n<p>请注意 <code>result.block_until_ready()</code> 的使用。JAX 操作是异步分发的。这意味着当您调用 JAX 函数时，Python 可能会在 GPU/TPU（甚至 CPU）上的实际计算完成<em>之前</em>将控制权返回给您的脚本。为了准确计时，我们需要明确等待结果计算完成。</p>\n<h3>示例 1：加速数值函数</h3>\n<p>让我们定义一个执行多个 <code>jax.numpy</code> 操作的函数：</p>\n<pre><code class=\"language-python\">def compute_heavy(a, b):\n  \"\"\"一个包含多个 JAX 操作的示例函数。\"\"\"\n  c = jnp.dot(a, b)\n  d = jnp.sin(c)\n  e = jnp.log(jnp.abs(d) + 1e-6) # 添加 epsilon 以提高数值稳定性\n  f = jnp.sum(e)\n  return f\n\n# 对原始函数计时\nmean_time_orig, std_time_orig = time_func(compute_heavy, x_jnp, y_jnp)\nprint(f\"Original function time: {mean_time_orig:.6f} +/- {std_time_orig:.6f} seconds\")\n\n# 现在，让我们对函数进行 JIT 编译\ncompute_heavy_jit = jax.jit(compute_heavy)\n\n# 对 JIT 编译的函数计时\n# 注意：*首次*运行将包含编译时间！\nprint(\"Timing JIT version (first run will include compilation)...\")\nmean_time_jit, std_time_jit = time_func(compute_heavy_jit, x_jnp, y_jnp)\nprint(f\"JIT function time:    {mean_time_jit:.6f} +/- {std_time_jit:.6f} seconds\")\n\n# 计算加速比\nspeedup = mean_time_orig / mean_time_jit\nprint(f\"\\nApproximate speedup: {speedup:.2f}x\")\n</code></pre>\n<p>运行此代码时，在初始编译开销之后，您应该看到原始版本和 JIT 编译版本之间的执行时间有显著差异。JIT 编译器将一系列 <code>jnp</code> 操作融合到一个经过优化的单一内核中，该内核在目标加速器上运行速度快很多。</p>\n<p>确切的加速比取决于您的硬件（CPU 与 GPU/TPU）、数组的大小以及函数的复杂程度。对于这种纯数值代码，<code>jit</code> 带来的好处通常很可观。</p>\n<h3>示例 2：JIT 与 Python 控制流</h3>\n<p>如前所述，<code>jit</code> 通过使用抽象值追踪函数来工作。如果控制流取决于被追踪的特定<em>值</em>，这有时可能导致意外行为或错误。</p>\n<p>考虑此函数：</p>\n<pre><code class=\"language-python\">def conditional_computation(x, threshold):\n  \"\"\"根据条件执行不同的计算。\"\"\"\n  if jnp.sum(x) > threshold:\n    return jnp.dot(x, x.T) * 2\n  else:\n    return jnp.dot(x, x.T) / 2\n\n# 尝试对其进行 JIT 编译\nconditional_computation_jit = jax.jit(conditional_computation)\n\n# 创建一些小型数据\nx_small = jnp.array([1.0, 2.0, 3.0])\n\n# 使用满足条件的值运行\nprint(\"Running JIT with condition TRUE:\")\nresult_true = conditional_computation_jit(x_small, 5.0)\nresult_true.block_until_ready()\nprint(f\"Result (True): {result_true}\")\n\n# 使用不满足条件的值运行\n# 这很可能会触发重新编译，也可能正常工作，具体取决于 JAX 版本/细节\nprint(\"\\nRunning JIT with condition FALSE:\")\ntry:\n    result_false = conditional_computation_jit(x_small, 10.0)\n    result_false.block_until_ready()\n    print(f\"Result (False): {result_false}\")\nexcept Exception as e:\n    print(f\"Caught an error (as expected sometimes): {e}\")\n\n# 使用 jax.lax 进行分阶段控制流的例子\nimport jax.lax\n\n@jax.jit\ndef conditional_computation_lax(x, threshold):\n  \"\"\"使用 lax.cond 实现 JIT 兼容的条件逻辑。\"\"\"\n  return jax.lax.cond(\n      jnp.sum(x) > threshold,    # 条件\n      lambda op: op * 2,         # True 分支函数\n      lambda op: op / 2,         # False 分支函数\n      jnp.dot(x, x.T)            # 传递给所选分支的操作数\n  )\n\nprint(\"\\nRunning JIT with lax.cond:\")\nresult_true_lax = conditional_computation_lax(x_small, 5.0)\nresult_true_lax.block_until_ready()\nprint(f\"Result lax (True): {result_true_lax}\")\n\nresult_false_lax = conditional_computation_lax(x_small, 10.0)\nresult_false_lax.block_until_ready()\nprint(f\"Result lax (False): {result_false_lax}\")\n</code></pre>\n<p>当 JAX 追踪 <code>conditional_computation</code> 时，它会遇到 Python 的 <code>if</code> 语句。由于条件 <code>jnp.sum(x) > threshold</code> 取决于 <code>x</code> 的<em>值</em>（在追踪期间是抽象的），JAX 可能难以创建适用于 <code>if</code> 所有可能结果的单一编译产物。根据具体情况，它可能：</p>\n<ol>\n<li>仅编译首次追踪时采取的分支。随后调用采取<em>其他</em>分支时，可能会触发重新编译或导致错误。</li>\n<li>尝试展开条件（如果可能），但对于依赖于值的条件，这通常会失败。</li>\n</ol>\n<p>处理此问题的标准 JAX 方法是使用 <code>jax.lax.cond</code>（用于条件）或 <code>jax.lax.scan</code>、<code>jax.lax.fori_loop</code>（用于循环）等结构化控制流原语。这些函数被设计为可由 <code>jit</code> 追踪。<code>conditional_computation_lax</code> 示例展示了 <code>lax.cond</code>，它将条件逻辑分阶段编译到 XLA 图中，避免了运行时 Python 级别的 <code>if</code> 语句问题。</p>\n<h3>示例 3：静态参数 (parameter)与追踪参数</h3>\n<p>有时，您函数的一个参数会确定计算的<em>结构</em>，而不仅仅是作为数据参与。例如，考虑一个重复执行矩阵乘法的函数：</p>\n<pre><code class=\"language-python\">def apply_n_times(x, n):\n  \"\"\"将矩阵乘法应用 n 次。\"\"\"\n  y = x\n  for _ in range(n): # Python 循环！\n    y = jnp.dot(y, x)\n  return y\n\n# 尝试在不指定静态参数的情况下进行 JIT 编译\napply_n_times_jit = jax.jit(apply_n_times)\n\nx_matrix = jax.random.normal(key, (50, 50))\nx_matrix.block_until_ready()\n\nprint(\"Timing apply_n_times_jit (n=2):\")\ntime_func(apply_n_times_jit, x_matrix, 2) # 首次运行，为 n=2 编译\n\nprint(\"\\nTiming apply_n_times_jit (n=3):\")\n# 这很可能会触发重新编译，因为 'n' 改变了！\ntime_func(apply_n_times_jit, x_matrix, 3)\n\n# 现在，使用 static_argnums 告诉 JIT，'n' 影响计算结构\napply_n_times_jit_static = jax.jit(apply_n_times, static_argnums=(1,)) # 索引 1 对应于 'n'\n\nprint(\"\\nTiming apply_n_times_jit_static (n=2):\")\ntime_func(apply_n_times_jit_static, x_matrix, 2) # 首次运行，编译 n=2 版本\n\nprint(\"\\nTiming apply_n_times_jit_static (n=3):\")\ntime_func(apply_n_times_jit_static, x_matrix, 3) # *使用 n=3* 首次运行，为 n=3 编译一个单独的版本\n\nprint(\"\\nTiming apply_n_times_jit_static (n=2) AGAIN:\")\n# 现在应该很快，因为使用了 n=2 的缓存编译\ntime_func(apply_n_times_jit_static, x_matrix, 2)\n</code></pre>\n<p>在第一次尝试（<code>apply_n_times_jit</code>）中，Python <code>for</code> 循环的迭代次数直接取决于 <code>n</code> 的<em>值</em>。当 <code>jit</code> 追踪此代码时，循环会根据追踪期间遇到的特定 <code>n</code> 值（例如 <code>n=2</code>）进行展开。当您再次使用 <code>n=3</code> 调用函数时，追踪是不同的（循环需要展开 3 次），从而强制进行重新编译。</p>\n<p>通过使用 <code>jax.jit(..., static_argnums=(1,))</code>，我们告诉 JAX，索引 1 处的参数 (<code>n</code>) 是<em>静态的</em>。这意味着 JAX 不会尝试追踪其值。相反，它在<em>给定编译</em>中会将 <code>n</code> 视为一个常量。如果您使用<em>不同</em>的静态值（例如将 <code>n</code> 从 2 更改为 3）调用该函数，JAX 将识别此情况并为该特定 <code>n</code> 值编译一个<em>新的、专门版本</em>的函数。随后使用相同静态值（再次 <code>n=2</code>）的调用将重用缓存的、已编译的版本。这避免了运行时重新编译的开销，同时仍然允许编译后的代码针对由静态参数控制的特定结构变体进行优化。</p>\n<h3>可视化加速效果</h3>\n<p>让我们可视化示例 1 中的计时差异。</p>\n<pre><code class=\"language-python\"># 用于绘图的数据（使用示例 1 的结果）\nlabels = ['Original Function', 'JIT Compiled']\nmean_times = [mean_time_orig, mean_time_jit]\nstd_devs = [std_time_orig, std_time_jit]\n\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1uo8ki3\" \n              data-plot-definition='{\"data\":[{\"type\":\"bar\",\"x\":[\"原始函数\",\"JIT 编译\"],\"y\":[0.005,0.0001],\"marker\":{\"color\":[\"#4263eb\",\"#f76707\"]},\"error_y\":{\"type\":\"data\",\"array\":[0.0001,0.00001],\"visible\":true,\"color\":\"#495057\"}}],\"layout\":{\"title\":\"函数执行时间比较\",\"yaxis\":{\"title\":\"平均执行时间（秒）\",\"type\":\"log\",\"tickformat\":\".2s\",\"nticks\":5},\"xaxis\":{\"title\":\"函数版本\"},\"bargap\":0.3,\"template\":\"plotly_white\",\"width\":600,\"height\":400}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-1uo8ki3\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>原始 Python 函数及其 JIT 编译版本的平均执行时间（对数刻度）比较。误差棒表示多次运行的标准差。越低越好。请注意 JIT 编译后时间的显著减少。</p>\n</blockquote>\n<p>本次动手实践展示了 <code>jax.jit</code> 的实际应用。您已看到它如何显著加速数值代码，Python 控制流如何与追踪交互，以及如何使用 <code>static_argnums</code> 来管理那些结构依赖于特定参数 (parameter)的函数的编译。请记住，在对 JAX 代码计时时始终使用 <code>.block_until_ready()</code>，并注意初始编译开销。随着您构建更复杂的 JAX 程序，<code>jit</code> 将是您性能优化工具箱中不可或缺的工具。</p>",
+  "slug": "hands-on-applying-jit",
+  "updates": [],
+  "references": [
+    {
+      "id": 5472,
+      "title": "JIT Compilation",
+      "author": "JAX documentation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/thinking_in_jax.html#jit-compilation",
+      "doi": "",
+      "note": "此官方文档说明了 `jax.jit` 的作用和性能优势，涵盖了异步执行和初始编译成本。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:42.929164Z",
+      "updated_at": "2025-09-08T04:56:57.872318Z"
+    },
+    {
+      "id": 5474,
+      "title": "Common Gotchas in JAX: Control Flow",
+      "author": "JAX documentation team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html#control-flow-with-lax-cond",
+      "doi": "",
+      "note": "针对在使用 `jax.jit` 时与 Python 控制流相关的常见问题，提供了关于使用 JAX 结构化控制流原语（如 `jax.lax.cond`）的指导。",
+      "order": 3,
+      "created_at": "2025-09-05T01:10:42.936063Z",
+      "updated_at": "2025-09-08T04:56:58.400364Z"
+    },
+    {
+      "id": 5475,
+      "title": "XLA: Optimizing Compilers for Machine Learning",
+      "author": "Google",
+      "year": "2023",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla",
+      "doi": "",
+      "note": "介绍了 XLA，这是 `jax.jit` 使用的领域特定编译器，用于编译机器学习模型，以在各种加速器上实现高性能执行。",
+      "order": 4,
+      "created_at": "2025-09-05T01:10:42.938110Z",
+      "updated_at": "2025-09-08T04:57:02.462830Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

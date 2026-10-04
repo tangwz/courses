@@ -1,0 +1,61 @@
+{
+  "id": 5166,
+  "title": "调试链和代理",
+  "meta_title": "调试链和代理 | LangChain高级应用",
+  "meta_description": "解决复杂LangChain工作流的技巧和工具。",
+  "content": "<p>构建LangChain的链和代理的复杂应用程序时，常常会遇到运行不如预期的情况。调试这些系统面临特有的难题，这主要归因于底层大型语言模型（LLM）的非确定性特点以及多个组件之间的协作。代理可能会选择意外的工具，链可能会产生混乱的输出，或者整个过程可能会意外停止。因此，系统化的调试非常重要。</p>\n<h3>理解流程：详细输出</h3>\n<p>了解链或代理内部运行情况最直接的方法之一是启用详细输出。大多数LangChain链和代理对象在初始化时都接受 <code>verbose=True</code> 参数 (parameter)。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain.agents import initialize_agent, AgentType, load_tools\n\n# 假设 llm 和 tools 已定义\n# llm = ChatOpenAI(temperature=0)\n# tools = load_tools([\"serpapi\", \"llm-math\"], llm=llm)\n\nagent_executor = initialize_agent(\n    tools,\n    llm,\n    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,\n    verbose=True # 启用详细输出\n)\n\n# 执行示例\n# response = agent_executor.invoke({\"input\": \"Who is the current CEO of OpenAI and what is his age raised to the power of 0.3?\"})\n# print(response)\n</code></pre>\n<p>当 <code>verbose=True</code> 时，链或代理会向控制台打印关于其执行步骤的详细信息。</p>\n<p><strong>对于链：</strong> 您通常会看到链的输入、各个组件（LLM调用、工具使用、提示格式化）的输入和输出，以及最终输出。这有助于查明数据可能在何处转换不正确，或者意外值从何处出现。</p>\n<p><strong>对于代理：</strong> 详细输出特别有启发性。它通常一步一步地显示代理的“思考过程”：</p>\n<ul>\n<li><strong>思考 (Thought)：</strong> 代理根据输入和之前的步骤推理 (inference)下一步要采取的行动。</li>\n<li><strong>行动 (Action)：</strong> 代理决定使用的具体工具。</li>\n<li><strong>行动输入 (Action Input)：</strong> 提供给所选工具的输入。</li>\n<li><strong>观察 (Observation)：</strong> 从工具接收到的输出。</li>\n<li><em>(此循环重复，直到代理确定已有最终答案)</em></li>\n<li><strong>最终答案 (Final Answer)：</strong> 代理的最终回复。</li>\n</ul>\n<p>查看这份详细日志可以帮助您追踪代理的决策，并精准定位可能出错的地方。是它误解了目标？选择了错误的工具？为工具格式化输入不正确？还是从工具接收到意外信息？</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1mnqjbq\" \n              data-graph-definition='digraph AgentLoop {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n    edge [fontname=\"sans-serif\", color=\"#868e96\", fontcolor=\"#495057\"];\n\n    Start [label=\"接收输入\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    Thought [label=\"LLM推理 (思考)\", style=filled, fillcolor=\"#bac8ff\"];\n    Action [label=\"选择工具 (行动)\"];\n    ActionInput [label=\"准备工具输入\"];\n    Tool [label=\"执行工具\", shape=cylinder, style=filled, fillcolor=\"#96f2d7\"];\n    Observation [label=\"获取工具输出 (观察)\"];\n    CheckDone [label=\"任务完成了吗?\", shape=diamond, style=filled, fillcolor=\"#ffec99\"];\n    FinalAnswer [label=\"形成最终答案\", style=filled, fillcolor=\"#b2f2bb\"];\n    Output [label=\"输出响应\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n\n    Start -> Thought;\n    Thought -> Action;\n    Action -> ActionInput;\n    ActionInput -> Tool;\n    Tool -> Observation;\n    Observation -> Thought [label=\"优化/继续\"];\n    Thought -> CheckDone;\n    CheckDone -> Thought [label=\"否\"];\n    CheckDone -> FinalAnswer [label=\"是\"];\n    FinalAnswer -> Output;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1mnqjbq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了ReAct风格代理的典型执行循环。详细输出有助于追踪此循环中的步骤。</p>\n</blockquote>\n<h3>隔离组件</h3>\n<p>如果详细输出未能立即显示问题，或者链非常长，请尝试将其分解。</p>\n<ul>\n<li><strong>单独运行组件：</strong> 隔离测试链的每个部分（提示模板、LLM调用、输出解析器、工具）。手动提供示例输入，并检查输出是否符合预期。例如，使用模板生成的精确提示来测试LLM调用。LLM是否适当回应？输出解析器是否正确处理了LLM的原始输出？</li>\n<li><strong>检查中间输出：</strong> 临时修改代码，打印或记录步骤之间的输出。例如，在 <code>SequentialChain</code> 中，打印每个子链执行后保存状态的字典。这有助于验证数据是否正确传递。</li>\n</ul>\n<h3>调试代理中的工具使用</h3>\n<p>工具集成是代理中常见的问题源。</p>\n<ul>\n<li><strong>工具输入/输出：</strong> 仔细检查详细日志中的 <code>Observation</code>。工具是否成功运行？它是否返回了代理所需的信息？有时工具会静默失败或返回代理可能误解的错误消息。确保工具期望的输入格式与代理提供的 (<code>Action Input</code>) 相符。</li>\n<li><strong>工具描述：</strong> 代理高度依赖工具描述来决定使用哪个工具。确保您的描述清晰、准确，并提供足够的信息，以便LLM理解工具的用途和使用方法。如果代理总是选择错误的工具，完善工具描述通常是解决方法。</li>\n<li><strong>错误处理：</strong> 如果需要，在自定义工具代码中或代理执行器逻辑中，将工具执行调用封装在 <code>try...except</code> 块内。这可以防止单个工具故障导致整个进程崩溃，并允许代理（或您的外围代码）更优雅地处理错误。</li>\n</ul>\n<h3>处理LLM行为</h3>\n<p>有时，问题出在链或代理推理 (inference)过程中LLM的响应。</p>\n<ul>\n<li><strong>提示工程 (prompt engineering)：</strong> 重新检查所使用的提示。指令是否清晰？代理是否被赋予了相互冲突的目标？少样本示例（如果使用）是否有帮助且相关？措辞上的微小改变可以显著影响LLM的行为。这通常是一个迭代的完善过程。</li>\n<li><strong>模型选择：</strong> 不同的LLM有不同的优势和劣势。如果代理在推理或遵循指令方面遇到困难，尝试不同的模型（即使只是为了调试，也可能是更强大的模型）可能会产生更好的结果或指出问题所在。</li>\n<li><strong>温度：</strong> 如果LLM使用了非零的 <code>temperature</code>，请记住输出的确定性较低。为了调试复杂逻辑，暂时将 <code>temperature</code> 设置为 <code>0</code> 可以使LLM的行为更可预测，从而帮助您隔离其他问题。</li>\n</ul>\n<h3>高级追踪工具</h3>\n<p>对于更复杂的情况，尤其是在生产环境或团队协作场景中，请考虑使用LangSmith等专用追踪平台。这些工具提供基于网络的界面，可以详细可视化链和代理的运行情况。您可以查看每一步的精确输入/输出、延迟信息、令牌数量和错误消息，通常比原始的 <code>verbose=True</code> 日志呈现得更清晰。它们允许您检查失败的运行、比较不同版本的提示或链，以及协作调试工作。虽然评估框架的详细内容将放在第九章，但这些工具在开发和调试阶段非常有价值。</p>\n<p>调试链和代理需要耐心和系统化的方法。通过使用详细输出、隔离组件、仔细检查工具交互，以及通过其提示和响应分析LLM的行为，您可以有效诊断并解决高级LangChain应用程序中的问题。</p>",
+  "slug": "debugging-langchain-chains-agents",
+  "updates": [],
+  "references": [
+    {
+      "id": 13766,
+      "title": "LangChain Agents Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGEB4bn5zUG_Zs0-FzP-gOBztXYy9SBlWxWsdS4n5VH696EpvM2ZaQv1ggNZYsYTh19pwihzlDPv_53mIsEgQbswSUkMkswmjsFyr2khX33MwhHQXefpxiWrdi0ttSfiA71OgCgD7ojHEnUTYaPAbou",
+      "doi": "",
+      "note": "LangChain代理的官方文档，涵盖其结构、用法以及详细输出等调试功能。",
+      "order": 1,
+      "created_at": "2025-09-05T08:39:34.855500Z",
+      "updated_at": "2025-09-10T12:21:31.432886Z"
+    },
+    {
+      "id": 13767,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.03629",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct框架，该框架提供了高级LLM代理中常用的基础推理和行动循环，与图示和详细输出的解释直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T08:39:34.891539Z",
+      "updated_at": "2025-09-10T12:21:22.169940Z"
+    },
+    {
+      "id": 13768,
+      "title": "LangSmith Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.smith.langchain.com/",
+      "doi": "",
+      "note": "LangSmith的官方文档，这是一个用于观察、评估和调试使用LangChain构建的LLM应用的平台。",
+      "order": 3,
+      "created_at": "2025-09-05T08:39:34.895440Z",
+      "updated_at": "2025-09-10T12:21:20.102157Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1018,
+  "title": "合并分支（git merge）",
+  "meta_title": "在 Git 中合并分支 | git merge 命令",
+  "meta_description": "了解如何使用 `git merge` 命令将一个分支的更改整合到另一个分支中。",
+  "content": "<p>将独立开发的代码线，通常位于不同分支上，合并回主分支（例如 <code>main</code> 或 <code>master</code>），是协作项目中一个常见的目标。这种组合不同分支的历史和更改的过程称为<strong>合并</strong>。Git 提供了 <code>git merge</code> 命令，专门用于此目的。</p>\n<p>合并会将源分支（例如您的功能分支）的更改与目标分支（例如 <code>main</code> 分支）的历史结合起来。Git 在自动组合这些更改方面表现出色。</p>\n<h3><code>git merge</code> 命令</h3>\n<p>要执行合并，您首先需要切换到您想要将其他分支合并<em>进来</em>的分支。这通常是您的主要开发线，例如 <code>main</code> 分支。一旦您位于目标分支上，就可以使用 <code>git merge</code> 命令，并指定您想要从中合并<em>出来</em>的分支的名称。</p>\n<p>例如，如果您已经完成了 <code>new-feature</code> 分支上的工作，并希望将这些更改整合到您的 <code>main</code> 分支中，您可以运行以下命令：</p>\n<ol>\n<li>\n<p>切换到目标分支（<code>main</code>）：</p>\n<pre><code class=\"language-bash\">git switch main\n</code></pre>\n<p>或者，使用旧命令：</p>\n<pre><code class=\"language-bash\">git checkout main\n</code></pre>\n</li>\n<li>\n<p>将源分支（<code>new-feature</code>）合并到当前分支（<code>main</code>）：</p>\n<pre><code class=\"language-bash\">git merge new-feature\n</code></pre>\n</li>\n</ol>\n<h3>合并的工作方式</h3>\n<p>当您执行 <code>git merge</code> 时，Git 在后台执行几个步骤：</p>\n<ol>\n<li><strong>确定基础：</strong> Git 会回溯两个分支（当前分支和要合并的分支）的历史，以找到最佳共同祖先提交。这是两个分支最初分歧的点。</li>\n<li><strong>计算更改：</strong> Git 会确定自该共同祖先以来每个分支上所做的更改。</li>\n<li><strong>组合更改：</strong> 它会尝试组合这些更改集。</li>\n</ol>\n<p>如果更改发生在文件的不同部分或完全不同的文件中，Git 通常可以自动组合它们而没有任何问题。</p>\n<h3>合并提交</h3>\n<p>通常，当自两个分支分歧以来，<em>两个</em>分支都发生了更改时，Git 会创建一个新的特殊提交，称为<strong>合并提交</strong>。此提交充当项目历史中的一个统一衔接点。它的标志性特征是它有<em>多个父提交</em>：一个指向您所在分支（例如 <code>main</code>）的最新提交，另一个指向您合并进来的分支（例如 <code>new-feature</code>）的最新提交。</p>\n<p>此合并提交本身不引入新的文件更改（除非需要解决冲突），而是作为一个记录，表明两个分支的历史在此处合并。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-noj2mv\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fillcolor=\"#dee2e6\", fontname=\"Arial\", fixedsize=true, width=0.5, height=0.5];\n  edge [arrowhead=vee, color=\"#495057\"];\n\n  // 提交\n  A [label=\"A\"];\n  B [label=\"B\", fillcolor=\"#96f2d7\"]; // main 分支上的提交\n  C [label=\"C\", fillcolor=\"#a5d8ff\"]; // feature 分支上的提交\n  D [label=\"D\", fillcolor=\"#a5d8ff\"]; // feature 分支上的提交\n  M [label=\"M\", fillcolor=\"#ffec99\", shape=doublecircle]; // 合并提交\n\n  // 结构\n  A -> B [label=\" main\", fontcolor=\"#0ca678\"];\n  A -> C [label=\" new-feature\", fontcolor=\"#1c7ed6\"];\n  C -> D;\n  B -> M [xlabel=\" \", headlabel=\"main\"]; // 合并提交的父提交 1\n  D -> M; // 合并提交的父提交 2\n\n  // 大致对齐分支末端\n  { rank = same; B; D; M } \n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-noj2mv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>合并提交 (M) 组合了来自两个父提交（<code>main</code> 分支上的 B，<code>new-feature</code> 分支上的 D）的工作，整合了分叉的历史。<code>main</code> 标签现在指向 M。</p>\n</blockquote>\n<p>在 <code>main</code> 分支上运行 <code>git merge new-feature</code> 后，Git 可能会输出消息，表示哪些文件已更改并确认合并提交的创建（如果有必要）。您的 <code>main</code> 分支现在包含了 <code>new-feature</code> 分支上完成的所有工作。</p>\n<p>合并是 Git 中整合工作的一项基本操作。虽然它通常运行顺畅，但有时 Git 会遇到合并分支上的更改相互冲突的情况。我们将在后续章节中讨论 Git 如何处理更简单的合并场景（快进合并）以及如何解决冲突。</p>",
+  "slug": "git-merge-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 288,
+      "title": "git-merge Documentation",
+      "author": "Git Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-merge",
+      "doi": "",
+      "note": "Git `merge` 命令的官方手册页，描述其用法、选项和行为。",
+      "order": 1,
+      "created_at": "2025-09-04T14:04:00.706610Z",
+      "updated_at": "2025-09-07T15:45:33.963245Z"
+    },
+    {
+      "id": 289,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3.2: Basic Branching and Merging",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging",
+      "doi": "",
+      "note": "一本关于 Git 的全面书籍，其中有一个专门章节解释了基本分支和合并过程。",
+      "order": 2,
+      "created_at": "2025-09-04T14:04:00.710162Z",
+      "updated_at": "2025-09-07T15:45:36.541491Z"
+    },
+    {
+      "id": 290,
+      "title": "Git Merge Tutorial",
+      "author": "Atlassian",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/using-branches/git-merge",
+      "doi": "",
+      "note": "一个清晰实用的教程，通过图示和命令示例解释了 `git merge` 的工作原理。",
+      "order": 3,
+      "created_at": "2025-09-04T14:04:00.712712Z",
+      "updated_at": "2025-09-07T15:45:37.825146Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1817,
+  "title": "实践练习：清理和修改数据框",
+  "meta_title": "Pandas 数据清理实践",
+  "meta_description": "应用处理缺失数据、添加/移除列、重命名和排序的技巧。",
+  "content": "<p>让我们将本章讨论的技术付诸实践。我们将依照一个常见的流程来操作：找出原始数据集中的问题，清理这些问题，并调整其结构，使其更适合分析。</p>\n<h3>建立示例数据框</h3>\n<p>我们将建立一个小数据框来表示产品信息，故意包含一些常见问题，例如缺失值和不一致的命名。请确保已导入 Pandas（通常使用 <code>import pandas as pd</code>）和 NumPy（通常使用 <code>import numpy as np</code>）。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 建立初始数据框\ndata = {'ProductID': ['P101', 'P102', 'P103', 'P104', 'P105', 'P106'],\n        'Category': ['A', 'B', 'A', 'C', 'B', np.nan],\n        'Sales': [150, 200, np.nan, 300, 250, 180],\n        'Inventory Count': [25, 0, 10, 5, np.nan, 15],\n        'Region': ['North', 'South', 'North', 'West', 'South', 'East']}\ndf_store = pd.DataFrame(data)\n\nprint(\"原始数据框:\")\nprint(df_store)\n</code></pre>\n<p>此数据框包含产品信息，包括它们的类别、销售数字、库存数量和区域。请留意 <code>np.nan</code> 值，它们表示缺失数据。</p>\n<h3>找出缺失数据</h3>\n<p>在处理缺失数据之前，我们需要找出它们。<code>isnull()</code> 方法会返回一个布尔型数据框，其中 <code>True</code> 表示数据缺失。将它与 <code>sum()</code> 结合使用，可以得出每列缺失值的数量。</p>\n<pre><code class=\"language-python\"># 检查缺失值\nprint(\"\\n每列的缺失值数量:\")\nprint(df_store.isnull().sum())\n</code></pre>\n<p>输出:</p>\n<pre><code>Missing values per column:\nProductID          0\nCategory           1\nSales              1\nInventory Count    1\nRegion             0\ndtype: int64\n</code></pre>\n<p>这说明在 <code>Category</code>、<code>Sales</code> 和 <code>Inventory Count</code> 列中各有一个缺失值。</p>\n<h3>处理缺失数据</h3>\n<p>我们有几种处理 <code>NaN</code> 值的方法。</p>\n<h4>选项1：删除含有缺失值的行</h4>\n<p>如果我们认为任何含有缺失值的行都无法使用，我们可以使用 <code>dropna()</code> 删除这些行。</p>\n<pre><code class=\"language-python\"># 删除含有任何 NaN 值的行\ndf_dropped_rows = df_store.dropna()\n\nprint(\"\\n删除含 NaN 值的行后的数据框:\")\nprint(df_dropped_rows)\n</code></pre>\n<p>请注意，索引为 2、4 和 5 的行（分别对应 <code>Sales</code>、<code>Inventory Count</code> 和 <code>Category</code> 缺失的情况）已被移除。采用这种方法时要小心，因为如果缺失值很普遍，删除行可能导致大量数据丢失。</p>\n<h4>选项2：填充缺失数据（填充处理）</h4>\n<p>通常，填充（或估算）缺失值是更好的做法。我们可以用固定值或计算值来填充。</p>\n<p>让我们再次使用原始的 <code>df_store</code>。我们可能会决定用 'Unknown' 这样的占位符来填充缺失的 <code>Category</code>，并用各自列的平均值来填充缺失的 <code>Sales</code> 和 <code>Inventory Count</code>。</p>\n<pre><code class=\"language-python\"># 建立一个副本，避免在此步骤直接修改原始 df_store\ndf_filled = df_store.copy()\n\n# 用 'Unknown' 填充缺失的 Category\ndf_filled['Category'].fillna('Unknown', inplace=True)\n\n# 计算平均销售额（排除 NaN）并填充缺失的 Sales\nmean_sales = df_filled['Sales'].mean()\ndf_filled['Sales'].fillna(mean_sales, inplace=True)\n\n# 计算平均库存（排除 NaN）并填充缺失的 Inventory Count\nmean_inventory = df_filled['Inventory Count'].mean()\ndf_filled['Inventory Count'].fillna(mean_inventory, inplace=True)\n\nprint(\"\\n填充 NaN 值后的数据框:\")\nprint(df_filled)\nprint(\"\\n填充后的缺失值:\")\nprint(df_filled.isnull().sum())\n</code></pre>\n<p><code>inplace=True</code> 参数 (parameter)会直接修改数据框。现在，所有缺失值都已替换。用平均值填充是一种常见方法，但最佳策略取决于具体的数据和情境。有时，用中位数或众数填充可能更合适，特别是当数据存在异常值或为分类数据时。</p>\n<h3>删除列或行</h3>\n<p>有时，整个列或特定的行是不相关或存在问题的。假设在 <code>df_filled</code> 数据框中，我们不需要 <code>Region</code> 列进行分析。</p>\n<pre><code class=\"language-python\"># 删除 'Region' 列\ndf_no_region = df_filled.drop(columns=['Region'])\n\nprint(\"\\n删除 'Region' 列后的数据框:\")\nprint(df_no_region)\n</code></pre>\n<p>我们也可以根据索引标签删除行。假设产品 'P104'（索引 3）已停产，需要移除。</p>\n<pre><code class=\"language-python\"># 删除索引为 3 的行\ndf_dropped_row_3 = df_no_region.drop(index=3)\n\nprint(\"\\n删除索引为 3 的行后的数据框:\")\nprint(df_dropped_row_3)\n</code></pre>\n<h3>添加和修改列</h3>\n<p>我们通常需要根据现有数据建立新列或修改现有列。</p>\n<h4>添加新列</h4>\n<p>让我们添加一个 'SalesPerInventory' 列，通过 'Sales' 除以 'Inventory Count' 来计算。如果库存为 0，我们需要处理潜在的除以零问题。</p>\n<pre><code class=\"language-python\"># 在此示例中，使用删除行 3 之前的数据框\ndf_to_modify = df_no_region.copy()\n\n# 添加新列 'SalesPerInventory'\n# 用一个小数（或 NaN）替换库存 0，以避免除以零错误\ndf_to_modify['SalesPerInventory'] = df_to_modify['Sales'] / df_to_modify['Inventory Count'].replace(0, np.nan)\n# 将所有产生的 NaN（来自除以 NaN 或零）填充为 0，假设这些情况下比率为 0\ndf_to_modify['SalesPerInventory'].fillna(0, inplace=True)\n\nprint(\"\\n添加 'SalesPerInventory' 列后的数据框:\")\nprint(df_to_modify)\n</code></pre>\n<h4>修改现有列</h4>\n<p>假设我们想将 'ProductID' 列转换为大写以保持一致性。</p>\n<pre><code class=\"language-python\"># 将 'ProductID' 转换为大写\ndf_to_modify['ProductID'] = df_to_modify['ProductID'].str.upper()\n\nprint(\"\\n'ProductID' 转换为大写后的数据框:\")\nprint(df_to_modify)\n</code></pre>\n<p>这里，我们使用了 <code>.str</code> 访问器，将字符串方法 <code>upper()</code> 应用到 'ProductID' 列。</p>\n<h3>重命名列</h3>\n<p>列名可能不清楚，或者包含不便于编写代码的字符（例如空格）。让我们将 'Inventory Count' 重命名为更简单的名称，例如 'Stock'。</p>\n<pre><code class=\"language-python\"># 重命名 'Inventory Count' 列\ndf_renamed = df_to_modify.rename(columns={'Inventory Count': 'Stock'})\n\nprint(\"\\n列已重命名的数据框:\")\nprint(df_renamed)\n</code></pre>\n<h3>数据排序</h3>\n<p>通过排序组织数据可以使其更容易理解。</p>\n<h4>按值排序</h4>\n<p>让我们将数据框按 'Sales' 降序排序。</p>\n<pre><code class=\"language-python\"># 按 'Sales' 降序排序\ndf_sorted_sales = df_renamed.sort_values(by='Sales', ascending=False)\n\nprint(\"\\n按 Sales 降序排序的数据框:\")\nprint(df_sorted_sales)\n</code></pre>\n<p>我们也可以按多列排序。让我们按 'Category'（升序）排序，然后在每个类别中按 'Stock'（降序）排序。</p>\n<pre><code class=\"language-python\"># 先按 'Category' 升序排序，再按 'Stock' 降序排序\ndf_sorted_multi = df_renamed.sort_values(by=['Category', 'Stock'], ascending=[True, False])\n\nprint(\"\\n按 Category（升序）和 Stock（降序）排序的数据框:\")\nprint(df_sorted_multi)\n</code></pre>\n<h4>按索引排序</h4>\n<p>如果需要，您也可以使用 <code>sort_index()</code> 按数据框的索引排序。</p>\n<pre><code class=\"language-python\"># 按索引排序\ndf_sorted_index = df_sorted_multi.sort_index()\n\nprint(\"\\n按索引恢复排序的数据框:\")\nprint(df_sorted_index)\n</code></pre>\n<p>本次实践课详细介绍了本章中涵盖的核心数据清理和修改技术的使用：找出并处理缺失数据、添加、移除和重命名列，以及数据排序。这些是为进行有意义的分析而准备几乎任何数据集的基本步骤。随着您处理更复杂的数据，您将结合使用这些技术并查看更高级的 Pandas 功能，但这些基本知识是必要的。</p>",
+  "slug": "cleaning-modifying-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5593,
+      "title": "Working with missing data",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "The pandas development team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html",
+      "doi": "",
+      "note": "关于在Pandas DataFrame中识别、删除和填充缺失值的官方指南。",
+      "order": 1,
+      "created_at": "2025-09-05T01:12:34.181482Z",
+      "updated_at": "2025-09-08T02:40:19.289274Z"
+    },
+    {
+      "id": 5594,
+      "title": "Essential basic functionality",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html",
+      "doi": "",
+      "note": "涵盖核心DataFrame操作的官方指南，例如列的添加、修改、删除、重命名和排序。",
+      "order": 2,
+      "created_at": "2025-09-05T01:12:34.186345Z",
+      "updated_at": "2025-09-08T02:40:18.347090Z"
+    },
+    {
+      "id": 5595,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas创始人撰写的综合指南，涵盖了基本的数据清洗、转换和操作技术。",
+      "order": 3,
+      "created_at": "2025-09-05T01:12:34.189033Z",
+      "updated_at": "2025-09-08T02:40:22.243737Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7439,
+  "title": "代理类型和执行器介绍",
+  "meta_title": "LangChain 代理类型 (ReAct, Self-Ask)",
+  "meta_description": "考察ReAct和Self-Ask with Search等不同的代理算法，并理解Agent Executor如何运行推理循环。",
+  "content": "<p>虽然代理的核心是其大型语言模型（LLM），但其用于推理 (inference)和解决问题的策略可能差异很大。LangChain提供了多种代理类型，每种都体现了不同的推理方法。这些不同的方法并非仅仅是理论上的；它们对代理的性能、可靠性以及特定任务的适用性都有实际影响。驱动这些推理策略的组件是<code>AgentExecutor</code>，它充当代理的运行时，管理LLM、工具和用户输入之间的交互。</p>\n<h3>AgentExecutor：代理的引擎</h3>\n<p>在查看不同的代理类型之前，理解<code>AgentExecutor</code>很重要。它是促成代理运作的机制。它接收一个代理和一组工具作为输入，并运行一个循环，直到满足停止条件。这个循环通常被称为“推理 (inference)循环”。</p>\n<p>这个循环的典型流程如下：</p>\n<ol>\n<li><code>AgentExecutor</code> 将用户输入和任何之前的步骤传递给代理。</li>\n<li>代理的LLM生成一个响应，其中包括一个 <code>Thought</code>（思考）和一个提议的 <code>Action</code>（行动）。</li>\n<li><code>AgentExecutor</code> 解析此响应。如果指定了 <code>Action</code>，它会识别要使用的工具及该工具的输入。</li>\n<li>执行器使用给定输入运行指定的工具。</li>\n<li>工具的输出，现在是一个 <code>Observation</code>（观察），被发送回代理。</li>\n<li>这个 <code>Thought -> Action -> Observation</code> 循环重复，直到代理认为它有了最终答案并提供。</li>\n</ol>\n<p>这个迭代过程允许代理建立语境，从错误中恢复，并将复杂问题分解为更小、更易管理的步骤。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-lnkd7m\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n    Start [label=\"用户输入\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n    Agent [label=\"代理 (LLM)\"];\n    Thought [label=\"思考 (Thought):\\nLLM生成一个推理步骤。\"];\n    Action [label=\"行动 (Action):\\nLLM选择一个工具和输入。\"];\n    Executor [label=\"AgentExecutor\"];\n    Tool [label=\"工具执行\", shape=cds, fillcolor=\"#ffd8a8\"];\n    Observation [label=\"观察 (Observation):\\n工具返回的结果。\"];\n    Final [label=\"最终答案\", shape=ellipse, fillcolor=\"#b2f2bb\"];\n\n    Start -> Agent;\n    Agent -> Thought [label=\"1. 处理\"];\n    Thought -> Action [label=\"2. 规划\"];\n    Action -> Executor [style=dashed];\n    Executor -> Tool [label=\"3. 执行\"];\n    Tool -> Executor [label=\"4. 返回结果\"];\n    Executor -> Observation [style=dashed];\n    Observation -> Agent [label=\"5. 反馈循环\"];\n    Agent -> Final [label=\"6. 完成\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-lnkd7m\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>AgentExecutor 管理着LLM推理（思考）、选择工具（行动）并接收新信息（观察）以继续其推理过程的循环。</p>\n</blockquote>\n<h3>代理类型：ReAct</h3>\n<p><strong>ReAct</strong> 框架代表“Reason and Act”（推理 (inference)与行动），是代理最常见且有效的通用策略之一。其主要思想是，LLM在决定 <code>Action</code> 之前明确地将其推理过程（<code>Thought</code>）口述出来。这种思维链过程使代理的行为更易于理解，并常导致更可靠的工具使用。</p>\n<p>ReAct 代理的提示模板指导LLM生成特定格式的文本：</p>\n<pre><code class=\"language-text\">Question: The user's query goes here.\n问题：用户的查询在此。\nThought: The model's reasoning about what it needs to do next.\n思考：模型关于下一步需要做什么的推理。\nAction: The tool to use and the input for that tool.\n行动：要使用的工具及该工具的输入。\nObservation: The result from executing the tool.\n观察：执行工具得到的结果。\n... (this Thought/Action/Observation cycle repeats)\n...（这个思考/行动/观察循环重复）\nThought: I now have enough information to answer the user's question.\n思考：我现在有足够的信息来回答用户的问题。\nFinal Answer: The final response to the user.\n最终答案：对用户的最终响应。\n</code></pre>\n<p>这种结构迫使LLM规划其步骤，执行它们，然后在继续之前反思结果。对于需要多次工具调用或从多个来源收集信息以形成答案的任务，它是一种强大模式。</p>\n<p>你可以使用 <code>create_react_agent</code> 构造函数初始化一个基于ReAct的代理，该函数会组装所需的提示和逻辑。</p>\n<pre><code class=\"language-python\">from langchain.agents import create_react_agent, AgentExecutor\nfrom langchain_openai import ChatOpenAI\nfrom langchain import hub\n\n# 加载ReAct提示模板\nprompt = hub.pull(\"hwchase17/react\")\n\n# 初始化LLM\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0)\n\n# 创建代理\n# 工具在此处定义并传入\n# tools = [...] \nagent = create_react_agent(llm, tools, prompt)\n\n# 创建AgentExecutor\nagent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)\n</code></pre>\n<h3>代理类型：Self-Ask with Search</h3>\n<p><strong>Self-Ask with Search</strong> 代理类型专为问答任务设计，其中一个复杂问题需要分解为更简单、基于事实的子问题。它迭代地“自问”这些更简单的问题，并使用 <code>Search</code> 工具查找答案。一旦所有中间答案被收集，它将它们合成一个最终响应。</p>\n<p>此代理的提示鼓励一种不同的推理 (inference)模式：</p>\n<pre><code class=\"language-text\">Question: Who was the maternal grandfather of the 14th Dalai Lama?\n问题：第14世达赖喇嘛的外祖父是谁？\nAre follow up questions needed here: Yes.\n这里需要后续问题吗：是的。\nFollow up: Who was the 14th Dalai Lama's mother?\n后续：第14世达赖喇嘛的母亲是谁？\nIntermediate answer: The 14th Dalai Lama's mother was Diki Tsering.\n中间答案：第14世达赖喇嘛的母亲是迪吉·才仁。\nFollow up: Who was Diki Tsering's father?\n后续：迪吉·才仁的父亲是谁？\nIntermediate answer: Diki Tsering's father was Choekyong Tsering.\n中间答案：迪吉·才仁的父亲是秋吉·才仁。\nSo the final answer is: Choekyong Tsering.\n所以最终答案是：秋吉·才仁。\n</code></pre>\n<p>这种方法对于涉及多跳信息检索的问题特别有效。通过明确声明中间问题和答案，代理的推理路径透明，更易于验证。顾名思义，这种代理类型与搜索工具紧密关联。</p>\n<h3>代理类型：对话式代理</h3>\n<p>标准代理通常是无状态的；它们独立处理每个查询。<strong>对话式代理</strong> 旨在通过纳入记忆来克服这一限制。这使它们能够记住对话中的先前交互，并使用该语境来指导其响应。</p>\n<p>这些代理通常使用ReAct风格的逻辑，但其构建的提示专门设计用于处理聊天历史。提示模板包含一个对话历史的占位符，该占位符由内存对象管理，如第四章所述。</p>\n<p>设置对话式代理涉及创建内存对象并将其传递给 <code>AgentExecutor</code>。</p>\n<pre><code class=\"language-python\">from langchain.memory import ConversationBufferWindowMemory\nfrom langchain.agents import create_react_agent, AgentExecutor\nfrom langchain import hub\n\n# 定义一个内存对象\nmemory = ConversationBufferWindowMemory(\n    k=2, # 记住最近的2次交互\n    memory_key=\"chat_history\",\n    return_messages=True\n)\n\n# 加载支持聊天历史的提示\nprompt = hub.pull(\"hwchase17/react-chat\")\n\n# 创建一个对话式代理\nagent = create_react_agent(llm, tools, prompt)\n\n# AgentExecutor现在包含内存对象\nagent_executor = AgentExecutor(\n    agent=agent,\n    tools=tools,\n    memory=memory,\n    verbose=True,\n    handle_parsing_errors=True\n)\n\nagent_executor.invoke({\"input\": \"Hi, my name is Bob.\"})\nagent_executor.invoke({\"input\": \"What's my name?\"})\n</code></pre>\n<p>代理现在可以通过访问存储在内存中的对话历史来正确回答第二个问题。</p>\n<h3>选择合适的代理和执行器配置</h3>\n<p>代理类型的选择依据你的应用需求：</p>\n<ul>\n<li><strong>ReAct：</strong> 适用于需要灵活工具使用和清晰推理 (inference)路径的通用、复杂任务。它是一个强大的默认选择。</li>\n<li><strong>Self-Ask with Search：</strong> 适用于基于事实、多跳的问答，其中推理过程的透明度有助理解。</li>\n<li><strong>对话式：</strong> 构建聊天机器人、助手或任何需要在对话的多个轮次中保持语境的应用所必需。</li>\n</ul>\n<p>配置 <code>AgentExecutor</code> 时，你可以使用多个参数 (parameter)来帮助控制其行为并使其更可靠。两个值得注意的参数是：</p>\n<ul>\n<li><code>max_iterations</code>：通过设置 <code>Thought -> Action -> Observation</code> 循环次数的硬性限制，防止代理陷入长循环或无限循环。</li>\n<li><code>handle_parsing_errors</code>：LLM有时会生成代理无法解析成有效 <code>Action</code> 的输出。将此参数设置为 <code>True</code> 或提供自定义函数，允许执行器优雅地处理此类错误，例如，通过将错误消息发送回LLM进行自我纠正。</li>\n</ul>\n<p>通过了解这些不同的推理策略以及驱动它们的 <code>AgentExecutor</code>，你可以构建更精密和专业的代理，根据你应用的独特挑战量身定制。</p>",
+  "slug": "exploring-agent-types-executors",
+  "updates": [],
+  "references": [
+    {
+      "id": 14748,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "解释了ReAct框架，该框架结合推理（Thought）和行动（Action）以增强LLM能力，与讨论的核心代理循环直接相关。",
+      "order": 1,
+      "created_at": "2025-09-05T09:04:58.744928Z",
+      "updated_at": "2025-09-10T07:04:24.707122Z"
+    },
+    {
+      "id": 14750,
+      "title": "Agents",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF3VxwpPO3veW6gE5yru9M2QT4IaxvydZgIq1yMfcmDCvDNQPsx2QCZCEcTK1ffLyX42HFi6m61TzAc2i13xpIKFkneoOKM1HTp6Xv2rHbYdwUoX5QvG81jzsEZ41rCVYkUq8Haj3nC5UCK5x8UA0BNaw==",
+      "doi": "",
+      "note": "LangChain代理模块的官方文档，提供了AgentExecutor、代理类型和配置的实践细节，内容中直接引用。",
+      "order": 3,
+      "created_at": "2025-09-05T09:04:58.762101Z",
+      "updated_at": "2025-09-11T10:45:17.720236Z"
+    },
+    {
+      "id": 14751,
+      "title": "Agent Executors",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://api.python.langchain.com/en/latest/agents/langchain.agents.agent.AgentExecutor.html",
+      "doi": "",
+      "note": "LangChain官方文档，详细介绍了AgentExecutor组件、其功能以及如`max_iterations`和`handle_parsing_errors`等配置参数。",
+      "order": 4,
+      "created_at": "2025-09-05T09:04:58.764318Z",
+      "updated_at": "2025-09-10T07:05:06.296695Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

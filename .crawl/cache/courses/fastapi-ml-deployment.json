@@ -1,0 +1,623 @@
+{
+  "id": 183,
+  "title": "使用FastAPI部署机器学习模型",
+  "meta_title": "FastAPI用于机器学习模型部署 | 构建ML API",
+  "meta_description": "学习使用FastAPI将机器学习模型部署为生产级API。内容包括数据验证、模型集成、异步请求及Docker。",
+  "description": "采用高性能的FastAPI框架，构建可用于生产环境的机器学习模型API。本课程会带您学习创建高效的API端点，使用Pydantic实现可靠的数据验证，集成多种机器学习模型，处理异步操作，并运用Docker等容器化技术为应用部署做好准备。",
+  "short_description": "使用FastAPI和Docker构建并部署生产级机器学习模型API。",
+  "excerpt": "构建快速、可靠的API，为您的机器学习模型提供服务。掌握FastAPI以高效部署机器学习模型，涵盖从基本端点到容器化应用。",
+  "prerequisites": "Python编程基础与机器学习知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "API开发",
+      "description": "使用FastAPI开发专门用于服务机器学习模型的RESTful API。"
+    },
+    {
+      "topic": "数据验证",
+      "description": "使用Pydantic模型实现针对API请求和响应的数据验证。"
+    },
+    {
+      "topic": "模型集成",
+      "description": "将序列化的机器学习模型（如scikit-learn、TensorFlow、PyTorch）集成到FastAPI应用中。"
+    },
+    {
+      "topic": "异步编程",
+      "description": "在FastAPI中运用异步操作，处理I/O密集型任务并提升性能。"
+    },
+    {
+      "topic": "应用结构",
+      "description": "使用路由器和模块，有效组织FastAPI项目，以实现可扩展性和可维护性。"
+    },
+    {
+      "topic": "测试",
+      "description": "使用TestClient等工具，编写针对您的FastAPI机器学习应用的单元测试和集成测试。"
+    },
+    {
+      "topic": "容器化",
+      "description": "使用Docker打包FastAPI应用及其依赖项，以获得一致的部署环境。"
+    }
+  ],
+  "duration": 18,
+  "slug": "fastapi-ml-deployment",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-21T08:27:24.059471Z",
+  "updated_at": "2026-10-02T05:57:54.084666Z",
+  "chapters": [
+    {
+      "id": 970,
+      "title": "FastAPI 和 API 基础知识简介",
+      "meta_title": "FastAPI 简介与机器学习 API 基础",
+      "meta_description": "学习 FastAPI 基础，它在机器学习中的优势，API 原理，异步 Python，以及如何搭建你的第一个用于模型服务的 FastAPI 应用。",
+      "number": 1,
+      "slug": "intro-fastapi-api-fundamentals",
+      "content": "本章介绍 FastAPI，一个专为构建 API 而设计的现代 Python Web 框架。我们将了解其核心功能，并解释为什么它是部署机器学习模型的优秀选择。\n\n你将学习 Web API 的基础知识，包括 REST 原则和 GET、POST 等常见的 HTTP 方法。我们还将涉及 Python 中异步编程的基础，使用 `async` 和 `await`，这些是 FastAPI 用于提升性能的机制。\n\n本章将引导你设置开发环境，包括安装 FastAPI 和 Uvicorn 等必要工具。然后你将构建并运行你的第一个简单的 FastAPI 应用，以理解基本的请求和响应流程。最后，通过实际练习，你将能够创建基本的 API 接口。",
+      "sections": [
+        {
+          "id": 5227,
+          "title": "什么是FastAPI？",
+          "meta_title": "什么是FastAPI？",
+          "meta_description": "了解FastAPI Web框架的特点和用途。",
+          "slug": "what-is-fastapi",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5229,
+          "title": "机器学习部署的优势",
+          "meta_title": "FastAPI在机器学习部署方面的优势",
+          "meta_description": "了解FastAPI为何非常适合创建机器学习API，侧重于性能和使用简便性。",
+          "slug": "advantages-ml-deployment",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5232,
+          "title": "理解 API 和 HTTP 方法",
+          "meta_title": "API 和 HTTP 方法基本知识",
+          "meta_description": "回顾 Web API 的核心原理、REST 原则以及标准 HTTP 方法（GET、POST、PUT、DELETE）。",
+          "slug": "understanding-apis-http",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5235,
+          "title": "Python中的异步编程思路",
+          "meta_title": "Python异步编程要点",
+          "meta_description": "介绍Python中async/await语法和事件循环思路，用于非阻塞操作。",
+          "slug": "async-programming-python",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5238,
+          "title": "设置开发环境",
+          "meta_title": "设置 FastAPI 开发环境",
+          "meta_description": "安装 Python、FastAPI、Uvicorn 及设置开发虚拟环境的指南。",
+          "slug": "setup-development-environment",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5240,
+          "title": "你的第一个FastAPI应用",
+          "meta_title": "你的第一个FastAPI应用",
+          "meta_description": "创建并运行一个最小的FastAPI应用以验证你的设置。",
+          "slug": "first-fastapi-application",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5243,
+          "title": "FastAPI 请求/响应周期的构成",
+          "meta_title": "FastAPI 请求/响应周期",
+          "meta_description": "理解 FastAPI 应用程序中请求如何处理和响应如何生成。",
+          "slug": "request-response-cycle",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5246,
+          "title": "实践：构建简单端点",
+          "meta_title": "实践：构建FastAPI端点",
+          "meta_description": "动手练习使用FastAPI构建基础GET和POST端点。",
+          "slug": "practice-simple-endpoints",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 973,
+      "title": "Pydantic 数据处理与校验",
+      "meta_title": "FastAPI Pydantic 数据校验",
+      "meta_description": "学习如何在 FastAPI 中使用 Pydantic 定义数据模式、校验请求/响应数据以及处理参数。",
+      "number": 2,
+      "slug": "data-validation-pydantic",
+      "content": "构建 API 时，特别是针对机器学习模型，确保接收到的数据正确且结构化十分重要。“输入垃圾，输出垃圾”的原则直接适用；无效的输入数据可能导致预测错误或应用崩溃。FastAPI 使用 Pydantic 高效且声明式地处理数据校验。\n\n本章主要讲解如何在 FastAPI 中使用 Pydantic 模型。您将学习如何：\n*   使用 Pydantic 的类型注解定义数据模式。\n*   自动校验传入的请求数据（例如 JSON 请求体）。\n*   指定并校验传出的响应数据的格式。\n*   处理和校验路径参数和查询参数。\n*   应用约束并构建适合典型机器学习输入和输出的复杂数据模型。\n\n学完本章后，您将能够创建能够可靠地处理数据的 API 端点，确保传递给机器学习模型的信息符合预期的格式和类型。",
+      "sections": [
+        {
+          "id": 5249,
+          "title": "Pydantic 简介",
+          "meta_title": "Pydantic 数据验证简介",
+          "meta_description": "Pydantic 概览及其在 Python 中数据验证和设置管理中的作用。",
+          "slug": "introduction-pydantic",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5250,
+          "title": "定义数据模型",
+          "meta_title": "定义 Pydantic 数据模型",
+          "meta_description": "学习如何创建 Pydantic 模型来定义数据的结构和类型。",
+          "slug": "defining-data-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5253,
+          "title": "请求体数据校验",
+          "meta_title": "FastAPI 请求体数据校验",
+          "meta_description": "使用 Pydantic 模型来处理 FastAPI 中接收到的请求体数据的校验。",
+          "slug": "request-body-validation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5256,
+          "title": "响应模型定义",
+          "meta_title": "FastAPI 响应模型定义",
+          "meta_description": "定义响应模型，以控制和记录 API 响应的结构。",
+          "slug": "response-model-definition",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5259,
+          "title": "处理路径参数和查询参数",
+          "meta_title": "处理路径参数和查询参数",
+          "meta_description": "了解如何在FastAPI端点中定义和验证路径参数和查询参数。",
+          "slug": "handling-path-query-parameters",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5261,
+          "title": "数据转换与约束",
+          "meta_title": "Pydantic 数据转换与约束",
+          "meta_description": "使用 Pydantic 应用数据类型转换和验证约束（例如，最小值/最大值、字符串长度）。",
+          "slug": "data-conversion-constraints",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5264,
+          "title": "构建复杂数据模型",
+          "meta_title": "构建复杂的 Pydantic 模型",
+          "meta_description": "构建嵌套的 Pydantic 模型以表示机器学习输入/输出的复杂 JSON 结构。",
+          "slug": "structuring-complex-models",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5268,
+          "title": "动手实践：验证机器学习输入数据",
+          "meta_title": "实践：验证机器学习输入数据",
+          "meta_description": "动手实践创建 Pydantic 模型，以验证示例机器学习模型的输入数据。",
+          "slug": "practice-validating-ml-input",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 975,
+      "title": "整合机器学习模型",
+      "meta_title": "使用 FastAPI 整合机器学习模型",
+      "meta_description": "学习通过 FastAPI 预测端点序列化、加载并提供机器学习模型服务的方法。",
+      "number": 3,
+      "slug": "integrating-ml-models",
+      "content": "在明确了如何使用 Pydantic 定义和验证数据结构后，下一步就是将机器学习模型本身集成到你的 FastAPI 应用程序中。本章将介绍如何连接已训练模型与实时 API 端点的具体实践。\n\n你将学习以下方法：\n*   将训练好的模型序列化以便存储，并反序列化以便使用。\n*   在 FastAPI 应用程序生命周期内高效加载模型文件。\n*   创建专门用于接收输入数据并返回模型预测结果的 API 端点。\n*   管理与你的应用程序相关的模型文件（artifacts）。\n*   使用 FastAPI 的依赖注入机制为预测逻辑提供模型。\n\n在本章结束时，你将能够构建可用的 API 端点，从你训练的机器学习模型提供预测服务。",
+      "sections": [
+        {
+          "id": 5271,
+          "title": "机器学习模型的序列化与反序列化",
+          "meta_title": "机器学习模型的序列化与反序列化",
+          "meta_description": "保存训练好的机器学习模型的方法（例如，使用pickle、joblib、特定库格式）及其加载方式。",
+          "slug": "serializing-ml-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5274,
+          "title": "将模型载入FastAPI应用",
+          "meta_title": "将模型载入FastAPI应用",
+          "meta_description": "关于在应用启动时或按需高效载入机器学习模型的策略。",
+          "slug": "loading-models-fastapi",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5275,
+          "title": "创建预测端点",
+          "meta_title": "创建机器学习预测端点",
+          "meta_description": "实现API端点，这些端点接收输入数据，使用已加载的模型进行预测并返回结果。",
+          "slug": "creating-prediction-endpoints",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5280,
+          "title": "处理不同输入格式",
+          "meta_title": "处理不同机器学习输入格式",
+          "meta_description": "调整端点以处理各种输入数据类型，例如 JSON 负载或表单数据。",
+          "slug": "handling-input-formats",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5282,
+          "title": "返回预测结果和概率",
+          "meta_title": "返回机器学习预测结果与概率",
+          "meta_description": "构造 API 响应以返回模型预测结果、概率或其他相关信息。",
+          "slug": "returning-predictions-probabilities",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5285,
+          "title": "模型工件管理",
+          "meta_title": "机器学习模型工件管理",
+          "meta_description": "在您的应用结构中存储和访问模型文件的考量。",
+          "slug": "managing-model-artifacts",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5288,
+          "title": "模型加载的依赖注入",
+          "meta_title": "模型加载的依赖注入",
+          "meta_description": "使用FastAPI的依赖注入系统管理请求处理器中的模型加载和访问。",
+          "slug": "dependency-injection-models",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5290,
+          "title": "实践：构建模型预测服务",
+          "meta_title": "实践：构建机器学习预测服务",
+          "meta_description": "动手实践，将预训练模型集成到 FastAPI 服务中以提供预测。",
+          "slug": "practice-model-prediction-service",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 979,
+      "title": "组织和测试 FastAPI 应用",
+      "meta_title": "组织与测试 FastAPI 机器学习应用",
+      "meta_description": "使用路由器组织 FastAPI 项目，管理依赖，并为机器学习 API 实施测试策略。",
+      "number": 4,
+      "slug": "structuring-testing-fastapi",
+      "content": "在学习了如何创建端点、使用 Pydantic 处理数据以及集成机器学习模型之后，我们现在将注意力转向构建更易于维护和可靠的应用程序。随着您的机器学习 API 变得越来越复杂，适当的组织和测试对于项目的持续性变得重要。\n\n本章提供关于如何有效地组织 FastAPI 项目和实施测试策略的指导。你将学习如何使用 `APIRouter` 来模块化代码，应用关注点分离的原则，管理项目依赖，以及使用 FastAPI 的 `TestClient` 编写单元测试和集成测试。我们还将介绍日志记录实践以及处理应用程序配置和秘密的方法。目标是让你掌握开发可扩展和可靠的机器学习部署服务所需的技术。",
+      "sections": [
+        {
+          "id": 5294,
+          "title": "使用路由组织项目",
+          "meta_title": "使用路由组织 FastAPI 项目",
+          "meta_description": "使用 APIRouter 将您的应用划分为逻辑模块，便于维护。",
+          "slug": "organizing-project-routers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5296,
+          "title": "关注点分离",
+          "meta_title": "在 FastAPI 应用程序中分离关注点",
+          "meta_description": "关于分离 API 逻辑、业务逻辑（模型推理）和数据模型的最佳实践。",
+          "slug": "separating-concerns",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5298,
+          "title": "管理依赖项",
+          "meta_title": "管理Python依赖项",
+          "meta_description": "使用需求文件（`requirements.txt`）或Poetry等工具管理项目依赖项。",
+          "slug": "managing-dependencies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5301,
+          "title": "API 测试简介",
+          "meta_title": "API 测试简介",
+          "meta_description": "了解测试 API 端点的重要性，包括验证和预测逻辑。",
+          "slug": "introduction-api-testing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5304,
+          "title": "使用 TestClient 进行单元测试",
+          "meta_title": "使用 FastAPI TestClient 进行单元测试",
+          "meta_description": "使用内置的 TestClient 为您的 FastAPI 应用程序编写单元测试。",
+          "slug": "using-testclient-unit-tests",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5307,
+          "title": "预测端点测试",
+          "meta_title": "ML预测端点测试",
+          "meta_description": "用于测试执行模型推理的端点的方法，包括模拟依赖。",
+          "slug": "testing-prediction-endpoints",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5310,
+          "title": "FastAPI 应用中的日志记录",
+          "meta_title": "FastAPI 应用中的日志记录",
+          "meta_description": "实现有效的日志记录，以监控请求、错误和应用行为。",
+          "slug": "logging-fastapi-applications",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5313,
+          "title": "管理配置和敏感信息",
+          "meta_title": "管理配置和敏感信息",
+          "meta_description": "安全管理应用程序设置和敏感信息的方法。",
+          "slug": "handling-configuration-secrets",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5316,
+          "title": "动手实践：重构与测试预测服务",
+          "meta_title": "实践：重构与测试机器学习服务",
+          "meta_description": "动手实践，使用路由组织预测服务并为其接口编写测试。",
+          "slug": "practice-refactoring-testing",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 983,
+      "title": "异步操作与性能",
+      "meta_title": "FastAPI 异步操作与性能",
+      "meta_description": "学习如何使用 async/await、后台任务，并理解在FastAPI中用于机器学习推理API的性能影响。",
+      "number": 5,
+      "slug": "async-operations-performance",
+      "content": "FastAPI 基于异步原理构建，使其能够同时高效地处理大量连接。本章侧重于将这些原理应用到您的机器学习API。您将学习如何使用 `async` 和 `await` 定义异步路由处理程序，并了解它们在何处提供最大的优势，通常在I/O密集型预处理或后处理步骤中。\n\n我们将解决一个常见问题：如何将CPU密集型任务（如模型推理）整合到异步应用程序中，并介绍避免阻塞服务器事件循环的方案，例如使用 `run_in_threadpool` 等方法。此外，您还将学习实现后台任务，用于在响应发送后可以执行的操作，例如记录详细的预测结果或发送通知。本章最后将审视专门针对通过API提供机器学习模型服务时的性能要点，确保您的应用程序在负载下保持响应性。",
+      "sections": [
+        {
+          "id": 5318,
+          "title": "理解 FastAPI 路由中的 async 和 await",
+          "meta_title": "FastAPI 路由中的 async 和 await",
+          "meta_description": "详细阐述如何在 FastAPI 中定义和使用异步路由处理程序。",
+          "slug": "async-await-fastapi-routes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5321,
+          "title": "机器学习推理何时适用异步",
+          "meta_title": "机器学习推理何时适用异步",
+          "meta_description": "理解异步为机器学习模型服务（I/O密集型预处理/后处理）带来优势的适用情况。",
+          "slug": "when-use-async-ml",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5324,
+          "title": "运行阻塞型机器学习操作",
+          "meta_title": "异步运行阻塞型机器学习操作",
+          "meta_description": "介绍诸如`run_in_threadpool`等技术，以防止在CPU密集型模型推理期间阻塞事件循环。",
+          "slug": "running-blocking-ml-operations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5327,
+          "title": "使用后台任务",
+          "meta_title": "使用FastAPI后台任务",
+          "meta_description": "在返回响应后执行任务，适用于日志记录、通知或非关键的后处理。",
+          "slug": "using-background-tasks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5330,
+          "title": "ML I/O 异步请求的优势",
+          "meta_title": "ML I/O 异步请求的优势",
+          "meta_description": "异步如何在处理与 ML 任务相关的 I/O 操作（例如，获取数据、保存结果）时提高性能。",
+          "slug": "benefits-async-ml-io",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5332,
+          "title": "API 端点性能考量",
+          "meta_title": "API 性能考量",
+          "meta_description": "影响 API 性能的因素，包括模型加载时间、推理速度和网络延迟。",
+          "slug": "performance-considerations-api",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5336,
+          "title": "实践：实现异步操作",
+          "meta_title": "实践：实现异步操作",
+          "meta_description": "动手练习，将同步端点转换为异步，并使用后台任务。",
+          "slug": "practice-implementing-async",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 985,
+      "title": "容器化和部署准备",
+      "meta_title": "容器化和部署 FastAPI 机器学习应用",
+      "meta_description": "使用 Docker 打包您的 FastAPI 机器学习应用，并为其部署做好准备，使用 Gunicorn 等生产服务器。",
+      "number": 6,
+      "slug": "containerization-deployment-prep",
+      "content": "您已经构建了一个功能完备的FastAPI应用，它能够提供机器学习模型预测服务，并通过测试验证了其行为。现在将把重心放在准备该应用，以便在您的本地开发环境之外进行部署。确保在不同环境中运行一致是一个普遍的难题，而容器化能有效应对此问题。\n\n本章着重讲解如何使用Docker打包您的应用。您将学习创建针对FastAPI服务定制的`Dockerfile`，包含应用代码、Python依赖项以及所需的机器学习模型构件。我们将按照步骤构建Docker镜像，并将其作为容器运行。此外，您将学习在容器内部使用环境变量管理应用配置的方法，并理解如何设置生产级别的ASGI服务器（例如Uvicorn，通常由Gunicorn管理）来高效地提供您的应用服务。在本章结束时，您将拥有一个容器化的机器学习API版本，可用于部署流程。",
+      "sections": [
+        {
+          "id": 5339,
+          "title": "Docker 应用打包介绍",
+          "meta_title": "Docker 打包介绍",
+          "meta_description": "了解 Docker 容器化的基础知识及其部署优势。",
+          "slug": "intro-docker-packaging",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5341,
+          "title": "编写 FastAPI 应用的 Dockerfile",
+          "meta_title": "编写 FastAPI Dockerfile",
+          "meta_description": "创建 Dockerfile 以定义 FastAPI 应用的环境、依赖项和执行命令。",
+          "slug": "writing-dockerfile-fastapi",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5344,
+          "title": "在 Docker 镜像中打包机器学习模型",
+          "meta_title": "在 Docker 镜像中打包机器学习模型",
+          "meta_description": "将机器学习模型文件打包到 Docker 镜像中的方法。",
+          "slug": "including-ml-models-docker",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5347,
+          "title": "构建和运行 Docker 容器",
+          "meta_title": "构建与运行 Docker 容器",
+          "meta_description": "用于构建 Docker 镜像和从这些镜像运行容器的命令。",
+          "slug": "building-running-docker-containers",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5350,
+          "title": "在 Docker 中管理 Python 依赖",
+          "meta_title": "在 Docker 中管理 Python 依赖",
+          "meta_description": "处理 Dockerfile 中 Python 包安装的最佳实践。",
+          "slug": "managing-dependencies-docker",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5352,
+          "title": "使用环境变量配置应用程序",
+          "meta_title": "使用环境变量配置应用",
+          "meta_description": "在 Docker 容器中，使用环境变量来配置应用程序设置。",
+          "slug": "configuring-environment-variables",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5355,
+          "title": "生产部署准备 (Gunicorn/Uvicorn)",
+          "meta_title": "使用 Gunicorn/Uvicorn 进行生产部署",
+          "meta_description": "搭建使用 Gunicorn 进程管理器的生产级 ASGI 服务器，例如 Uvicorn。",
+          "slug": "production-deployment-gunicorn-uvicorn",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5356,
+          "title": "动手实践：机器学习API的容器化",
+          "meta_title": "实践：机器学习API的容器化",
+          "meta_description": "动手实践编写Dockerfile、构建镜像并运行容器化的FastAPI机器学习应用。",
+          "slug": "practice-containerizing-ml-api",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

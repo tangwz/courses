@@ -1,0 +1,61 @@
+{
+  "id": 6752,
+  "title": "分析智能体行动序列的方法",
+  "meta_title": "分析AI智能体决策过程",
+  "meta_description": "学习检查和解读智能体所采取行动序列的技巧，以找出提示相关问题。",
+  "content": "<p>为了有效调试和优化您的智能体提示，您需要超越最终输出，仔细检查智能体达到该输出的过程。这意味着要检查构成智能体操作记录的行动、思考和观察序列。分析这些行动序列，就像审查试飞后的飞行记录器一样；它能提供宝贵的线索，帮助您了解智能体的决策过程，显示您的提示哪些地方起了作用，更重要的是，哪些地方可能导致智能体出现偏差。</p>\n<h3>了解智能体行动序列</h3>\n<p>智能体的工作流程很少是单一步骤。相反，它是一系列内部“思考”（通常是LLM推理 (inference)）、所选“行动”（例如使用工具或形成回复）和“观察”（这些行动的结果）。这个“思考<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>→</mo></mrow><annotation encoding=\"application/x-tex\">\\rightarrow</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.3669em;\"></span><span class=\"mrel\">→</span></span></span></span>行动<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo>→</mo></mrow><annotation encoding=\"application/x-tex\">\\rightarrow</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.3669em;\"></span><span class=\"mrel\">→</span></span></span></span>观察”的链条，重复出现，构成了智能体的行动序列。</p>\n<p>例如，一个负责查找信息的智能体可能拥有如下序列：</p>\n<ol>\n<li><strong>思考：</strong> “用户想了解话题Y。我应该先搜索网页。”（受初始提示中定义的角色和用户查询影响）。</li>\n<li><strong>行动：</strong> <code>call_web_search(\"Topic Y\")</code>。</li>\n<li><strong>观察：</strong> （收到搜索结果列表）。</li>\n<li><strong>思考：</strong> “这些结果看起来不错。我需要总结前三个链接。”（受提示中关于信息整合的部分影响）。</li>\n<li><strong>行动：</strong> <code>read_and_summarize_url(link1)</code>、<code>read_and_summarize_url(link2)</code>、<code>read_and_summarize_url(link3)</code>。</li>\n<li><strong>观察：</strong> （收到每个链接的摘要）。</li>\n<li><strong>思考：</strong> “现在我将把这些内容整合成一个连贯的答案。”</li>\n<li><strong>行动：</strong> <code>present_answer(compiled_summary)</code>。</li>\n</ol>\n<p>每一步都可能是成功或失败的环节，直接或间接由您的提示引导。如果智能体卡住、产生无关输出或遗漏重要信息，行动序列就包含着原因的线索。</p>\n<h3>分析行动序列的方法</h3>\n<p>分析这些序列不仅仅是阅读日志；它还需要运用系统的方法来提取信息并找出提示可以改进的地方。</p>\n<h4>1. 全面日志记录与追踪</h4>\n<p>任何良好分析的根本是详细的日志记录。您的智能体框架应该捕获以下内容：</p>\n<ul>\n<li><strong>提示：</strong> 在每一步提供给LLM的确切提示（或提示组件）。</li>\n<li><strong>LLM响应（思考）：</strong> LLM的原始输出，包括其推理 (inference)、预期的下一步行动或中间结论。</li>\n<li><strong>工具调用：</strong> 选择了哪些工具，以及具体的输入是什么。</li>\n<li><strong>工具输出（观察）：</strong> 所用工具返回的数据。</li>\n<li><strong>智能体状态：</strong> 智能体内存或上下文 (context)中相关部分在不同时间点的快照。</li>\n</ul>\n<p><strong>结构化日志记录：</strong> 目标是结构化日志（例如，JSONL格式，每行均是一个代表事件的JSON对象）。这使得解析、过滤和程序化分析变得更加容易。</p>\n<p>一个日志条目可能看起来像：</p>\n<pre><code class=\"language-json\">{\n  \"timestamp\": \"2023-10-27T10:30:05Z\",\n  \"step\": 3,\n  \"type\": \"thought\",\n  \"agent_id\": \"research_agent_v2\",\n  \"session_id\": \"xyz123\",\n  \"prompt_used_hash\": \"abc_persona_prompt_xyz_task_prompt\",\n  \"llm_input\": \"用户查询：‘什么是ReAct？’上下文：之前的搜索结果...\",\n  \"llm_output\": \"ReAct框架结合了推理和行动。我应该使用‘explain_concept’工具，输入为‘ReAct’。\",\n  \"cost\": 0.0015,\n  \"tokens_used\": 150\n}\n</code></pre>\n<p><strong>追踪可视化：</strong> 对于复杂的序列，将追踪过程可视化会非常有帮助。一些智能体开发框架提供内置的追踪视图。您也可以生成简单的图表来显示思考、行动和观察的流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14jnt3x\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", fontsize=10, nodesep=0.3, ranksep=0.4];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=9, margin=\"0.1,0.05\"];\n    edge [fontname=\"Arial\", fontsize=8];\n\n    UserQuery [label=\"用户查询：\\n‘查找2023年顶级AI研究论文’\", fillcolor=\"#a5d8ff\"];\n    Prompt1 [label=\"初始系统提示：\\n‘您是研究助理...’\", fillcolor=\"#74c0fc\"];\n\n    Thought1 [label=\"思考1：\\n‘我需要搜索论文。\\n有哪些好的关键词？’\", fillcolor=\"#ffec99\"];\n    Action1 [label=\"行动1：\\ncall_search_engine(query=&#39;AI research papers 2023 review&#39;)\", fillcolor=\"#ced4da\"];\n    Observation1 [label=\"观察1：\\n[搜索结果列表]\", fillcolor=\"#b2f2bb\"];\n\n    Thought2 [label=\"思考2：\\n‘结果太宽泛。\\n需要细化搜索或过滤。’\\n（提示问题：没有处理过多结果的明确策略）\", fillcolor=\"#fcc419\"];\n    Action2 [label=\"行动2：\\nask_user_for_clarification(‘结果太多。具体领域？’)\", fillcolor=\"#adb5bd\"];\n    Observation2 [label=\"观察2：\\n用户：‘专注于LLM。’\", fillcolor=\"#8ce99a\"];\n\n    Thought3 [label=\"思考3：\\n‘好的，新的搜索重点。’\", fillcolor=\"#ffec99\"];\n\n    UserQuery -> Prompt1 [style=invis];\n    Prompt1 -> Thought1 [label=\" 影响\"];\n    Thought1 -> Action1 [label=\" 导致\"];\n    Action1 -> Observation1 [label=\" 产生\"];\n    Observation1 -> Thought2 [label=\" 提供信息\"];\n    Thought2 -> Action2 [label=\" 导致\"];\n    Action2 -> Observation2 [label=\" 产生\"];\n    Observation2 -> Thought3 [label=\" 提供信息\"];\n\n    AnalysisNote [label=\"分析：\\n思考2显示提示可能存在空缺。\\n智能体默认向用户提问，\\n或许提示可以先引导它自行细化查询。\", shape=note, fillcolor=\"#ffc9c9\"];\n    Thought2 -> AnalysisNote [style=dotted, dir=none, color=\"#f03e3e\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14jnt3x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张说明智能体行动序列的图表。分析这样的序列可以显示提示调整可能改进智能体行为的地方，例如添加处理宽泛搜索结果的说明。</p>\n</blockquote>\n<h4>2. 手动演练与重放</h4>\n<p>有时，了解智能体行为的最好方法是手动“逐步执行”其过程。如果您的日志记录足够详细，您可以重构智能体在每个时间点的状态：</p>\n<ul>\n<li>它处理的确切提示是什么？</li>\n<li>它的内部推理（LLM的“思考”）是什么？</li>\n<li>为什么它选择特定的行动或工具？</li>\n<li>该行动的观察结果如何影响了它的下一个思考？</li>\n</ul>\n<p>这种详细检查特别有助于找出您的提示中细小的误解或不同提示组件之间意料之外的影响。例如，您可能会发现智能体正确识别了一个子任务，但随后使用了错误的工具，因为描述工具能力的提示不够明确。</p>\n<h4>3. 对比分析</h4>\n<p>通常，您会拥有不同版本的提示，甚至不同的智能体配置。在相同任务上比较它们的行动序列，可以显示哪些更改是有益的：</p>\n<ul>\n<li><strong>A/B测试追踪：</strong> 使用提示A和提示B运行相同的任务。并排比较它们的行动序列。提示B是否能带来更高效的路径、更少的错误或更好的工具使用？</li>\n<li><strong>成功与失败案例：</strong> 对于单个提示，分析成功运行与失败运行的序列。区分它们的主要决策点或行动模式是什么？这可以帮助您找出提示中那些只在特定条件下起作用的脆弱部分。</li>\n</ul>\n<p>例如，如果提示A导致智能体循环三次后才成功，而提示B（带有更明确的指令）直接导致成功，那么行动序列分析就会使这种改进显而易见。</p>\n<h4>4. 模式识别</h4>\n<p>随着您分析更多序列，您将开始识别模式：</p>\n<ul>\n<li><strong>重复出现的失败模式：</strong> 智能体是否始终误解某个指令？当某个工具返回错误时，它是否总是失败？这些情况指向您的提示中需要加强或更明确的错误处理指令的具体地方。</li>\n<li><strong>低效路径：</strong> 智能体是否采取了不必要的步骤来达成目标？或许您的任务分解提示不够强，或者智能体没有被引导使用最直接的工具。</li>\n<li><strong>成功的启发式方法：</strong> 相反，找出成功序列中的模式。哪些“思考”或行动选择持续导致良好结果？您或许可以将这些成功策略更明确地写入您的提示中。</li>\n</ul>\n<p>例如，如果您注意到智能体在执行高风险行动前经常请求确认，并且这能带来更好的结果，您或许可以在其核心提示中明确添加一条“删除文件前始终确认”的指令。</p>\n<h4>5. 自动化分析（高级）</h4>\n<p>虽然手动分析通常是必要的，但您也可以尝试自动化方法，特别是对于大量日志而言：</p>\n<ul>\n<li><strong>基于指标的分析：</strong> 根据行动序列定义指标。例如：\n<ul>\n<li>完成所需的步骤数。</li>\n<li>特定工具的使用频率。</li>\n<li>每一步或每个工具的错误率。</li>\n<li>自我纠正尝试的次数。\n追踪不同提示版本的这些指标可以提供改进的量化 (quantization)证据。</li>\n</ul>\n</li>\n<li><strong>使用LLM评估序列：</strong> 您甚至可以使用另一个LLM来分析或总结智能体行动序列。例如，向一个强大的LLM提供智能体的追踪记录并询问：“评估这个智能体的推理。它是否遗漏了明显的步骤？它的工具选择是否最优？”这种元分析可以帮助您发现可能遗漏的信息。</li>\n</ul>\n<h3>将分析结果与提示优化联系起来</h3>\n<p>分析行动序列的最终目的是收集可操作的反馈，以改进您的提示。以下是这种联系通常如何运作的：</p>\n<ul>\n<li><strong>发现误解：</strong> 如果智能体的“思考”过程显示它误解了指令（例如，“它认为我指的是X，但我指的是Y”），您需要重新措辞提示的该部分以使其更清晰。如有必要，添加示例。</li>\n<li><strong>工具选择不当：</strong> 如果智能体选择了不合适的工具或错误地使用了工具，请检查提示中描述工具可用性、其目的以及如何格式化其输入的部分。</li>\n<li><strong>规划效率低下：</strong> 如果智能体的规划过于复杂或遗漏了步骤，请加强引导规划和任务分解的提示。为解决问题提供更多结构或启发式方法。</li>\n<li><strong>处理意外观察：</strong> 如果智能体在收到意外的工具输出或用户响应后卡住或犯错，您的提示可能需要更好的错误处理、重试或请求澄清的指令。</li>\n<li><strong>迷失或偏离：</strong> 如果智能体偏离主要目标，请加强提示中定义其主要目标以及如何权衡相互竞争的优先事项的部分。</li>\n</ul>\n<p>通过系统地逐步剖析智能体如何根据您的提示行动，您将把调试从猜测转变为数据驱动的过程。这种详细程度的分析对于构建可靠且有效的智能体系统非常重要。随着您的迭代，您会发现通过提示工程 (prompt engineering)预测和引导智能体行为的能力得到很大提升。</p>",
+  "slug": "methods-analyzing-agent-action-sequences",
+  "updates": [],
+  "references": [
+    {
+      "id": 18510,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.03629",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct框架，这是本节中讨论的涉及“思想-行动-观察”循环的智能体动作序列的基础。",
+      "order": 1,
+      "created_at": "2025-09-06T12:26:47.648304Z",
+      "updated_at": "2025-09-11T05:02:51.941896Z"
+    },
+    {
+      "id": 18512,
+      "title": "LangSmith Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.smith.langchain.com/",
+      "doi": "",
+      "note": "提供了一个领先平台的官方文档，该平台专门用于记录、跟踪和调试实际LLM应用中的智能体动作序列。",
+      "order": 3,
+      "created_at": "2025-09-06T12:26:47.663362Z",
+      "updated_at": "2025-09-11T05:02:52.983946Z"
+    },
+    {
+      "id": 18513,
+      "title": "Large Language Models (CS324) - Lecture 10: Agents",
+      "author": "Percy Liang, Tatsunori Hashimoto, Christopher Ré",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs324.stanford.edu/",
+      "doi": "",
+      "note": "一份大学讲义，提供了LLM智能体的全面学术概述，包括其设计、能力和挑战，为理解智能体工作流程和调试提供了更广阔的背景。",
+      "order": 4,
+      "created_at": "2025-09-06T12:26:47.665502Z",
+      "updated_at": "2025-09-11T05:03:02.861058Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

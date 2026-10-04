@@ -1,0 +1,45 @@
+{
+  "id": 4015,
+  "title": "编写一个简单的Dockerfile",
+  "meta_title": "创建简单的Dockerfile",
+  "meta_description": "了解Dockerfile中的基本结构和常用指令，以定义镜像。",
+  "content": "<p>使用Docker进行容器化的目的是将应用及其环境打包在一起。要实现这一点，我们如何告诉Docker要打包<em>什么</em>呢？这时就需要<code>Dockerfile</code>了。</p>\n<p>可以将<code>Dockerfile</code>看作是一份食谱或一系列指令。它是一个简单的文本文件，通常命名为<code>Dockerfile</code>（首字母大写'D'，无文件扩展名），其中包含一系列命令，Docker会使用这些命令来构建一个特定的镜像。文件中的每条指令都会在镜像中创建一个新层，在前一层的基础上构建。</p>\n<p>让我们来看一些你经常会用到的基本指令，尤其是在打包像我们Flask预测服务这样的Python Web应用时。</p>\n<h3>常见Dockerfile指令</h3>\n<ul>\n<li>\n<p><strong><code>FROM</code></strong>: 每个<code>Dockerfile</code>都必须以<code>FROM</code>指令开头。它指定了你正在构建所依据的<strong>基础镜像</strong>。基础镜像提供了一个起始的操作系统和环境。对于Python应用，你通常会从官方Python基础镜像开始，其中已包含一个Linux发行版和特定版本的Python。</p>\n<ul>\n<li>示例：<code>FROM python:3.9-slim</code> 指定使用官方镜像的轻量级（“slim”）版本，该镜像包含Python 3.9。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>WORKDIR</code></strong>: 这条指令设置了<code>Dockerfile</code>中任何后续<code>RUN</code>、<code>CMD</code>、<code>ENTRYPOINT</code>、<code>COPY</code>和<code>ADD</code>指令的工作目录。如果目录不存在，Docker会创建它。这有助于整理容器文件系统中的文件。</p>\n<ul>\n<li>示例：<code>WORKDIR /app</code> 将容器内的当前目录设置为<code>/app</code>。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>COPY</code></strong>: 这条指令将文件或目录从你的本地机器（构建上下文 (context)）复制到容器镜像的文件系统中。你需要用它将应用代码、模型文件和依赖列表放入镜像中。</p>\n<ul>\n<li>示例：<code>COPY requirements.txt .</code> 将<code>requirements.txt</code>文件从项目目录复制到镜像内的当前工作目录（如果通过<code>WORKDIR</code>设置为<code>/app</code>）。<code>.</code>表示当前的<code>WORKDIR</code>。</li>\n<li>示例：<code>COPY . .</code> 将项目目录（构建上下文）中的<em>所有内容</em>复制到镜像内的当前工作目录。请注意你复制了什么；通常，最好复制特定文件或使用<code>.dockerignore</code>文件（类似于<code>.gitignore</code>）来排除不必要的文件，例如虚拟环境或本地配置。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>RUN</code></strong>: 这条指令在镜像<strong>构建</strong>过程中执行命令。它常用于安装软件包，包括Python库。每条<code>RUN</code>指令都会创建一个新的镜像层。</p>\n<ul>\n<li>示例：<code>RUN pip install --no-cache-dir -r requirements.txt</code> 使用<code>pip</code>（由于我们从Python镜像开始，所以可用）来安装<code>requirements.txt</code>中列出的包。<code>--no-cache-dir</code>标志在Dockerfile中常被建议使用，因为它能阻止pip存储下载缓存，从而减小镜像大小。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>EXPOSE</code></strong>: 这条指令告知Docker容器在运行时将监听指定的网络端口。它主要用作构建镜像者和运行容器者之间的文档。它并<em>没有</em>实际发布端口或使其可从宿主机访问；这需要你在运行容器时使用<code>docker run</code>命令的<code>-p</code>或<code>-P</code>标志来完成。</p>\n<ul>\n<li>示例：<code>EXPOSE 5000</code> 表示容器内的应用预期将在端口5000上监听（Flask开发服务器的默认端口）。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>CMD</code></strong>: 这条指令指定了从镜像<strong>启动</strong>容器时要执行的默认命令。一个<code>Dockerfile</code>中只能有一条<code>CMD</code>指令。如果你列出多条<code>CMD</code>，只有最后一条会生效。通过<code>CMD</code>指定的命令可以在启动容器时被覆盖。</p>\n<ul>\n<li>示例：<code>CMD [\"python\", \"app.py\"]</code> 将默认命令设置为使用Python解释器运行Flask应用脚本<code>app.py</code>。这是<code>CMD</code>首选的“exec”形式。</li>\n</ul>\n</li>\n</ul>\n<h3>准备依赖项：<code>requirements.txt</code></h3>\n<p>在编写<code>Dockerfile</code>之前，列出应用所有依赖的Python库是必要的。标准做法是在项目根目录创建一个名为<code>requirements.txt</code>的文件。对于我们的Flask预测服务，这个文件可能看起来像这样：</p>\n<pre><code class=\"language-text\"># requirements.txt\nflask\nscikit-learn\njoblib\nnumpy\n# 添加模型或预处理可能需要的其他库\n</code></pre>\n<p>这个文件使得<code>Dockerfile</code>中的<code>RUN pip install -r requirements.txt</code>命令能够在容器镜像内安装所需的准确依赖项，确保一致性。</p>\n<h3>Flask服务的<code>Dockerfile</code>示例</h3>\n<p>让我们把这些指令组合成一个简单的<code>Dockerfile</code>，它适用于我们在上一章开发的Flask预测服务。假设你的项目目录包含你的Flask应用脚本（例如<code>app.py</code>）、保存的模型文件（例如<code>model.joblib</code>）、任何已保存的预处理器以及<code>requirements.txt</code>文件。</p>\n<pre><code class=\"language-dockerfile\"># Dockerfile\n\n# 从一个轻量级Python基础镜像开始\nFROM python:3.9-slim\n\n# 设置容器内的工作目录\nWORKDIR /app\n\n# 先复制requirements文件，以便利用Docker缓存\nCOPY requirements.txt .\n\n# 安装Python依赖项\n# 使用--no-cache-dir可以减小镜像大小\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 将其余的应用代码复制到工作目录\nCOPY . .\n\n# 告知Docker容器在端口5000上监听\nEXPOSE 5000\n\n# 定义容器启动时运行应用的命令\nCMD [\"python\", \"app.py\"]\n</code></pre>\n<p><strong>解释：</strong></p>\n<ol>\n<li><code>FROM python:3.9-slim</code>: 我们从Python 3.9环境开始。</li>\n<li><code>WORKDIR /app</code>: 我们将容器内的默认目录设置为<code>/app</code>。</li>\n<li><code>COPY requirements.txt .</code>: 我们首先<em>只</em>复制<code>requirements.txt</code>文件。Docker分层构建镜像并缓存它们。如果<code>requirements.txt</code>没有变化，Docker可以重用由下一条<code>RUN</code>指令创建的层，从而在仅应用代码变化时加快后续构建的速度。</li>\n<li><code>RUN pip install ...</code>: 我们安装<code>requirements.txt</code>中列出的依赖项。</li>\n<li><code>COPY . .</code>: 现在，我们将项目其余文件（例如<code>app.py</code>和<code>model.joblib</code>）复制到镜像内的<code>/app</code>目录中。</li>\n<li><code>EXPOSE 5000</code>: 我们记录了我们的Flask应用将在端口5000上运行。</li>\n<li><code>CMD [\"python\", \"app.py\"]</code>: 我们指定，当容器从该镜像启动时，运行<code>python app.py</code>应为默认操作。</li>\n</ol>\n<p>这个简单的文本文件为Docker提供了所有必要步骤，以创建一个包含我们Python环境、依赖项和应用代码的自包含镜像。下一步是使用这个<code>Dockerfile</code>来实际构建Docker镜像。</p>",
+  "slug": "writing-simple-dockerfile",
+  "updates": [],
+  "references": [
+    {
+      "id": 10782,
+      "title": "Dockerfile reference",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/engine/reference/builder/",
+      "doi": "",
+      "note": "详细解释所有 Dockerfile 指令，包括 FROM、WORKDIR、COPY、RUN、EXPOSE 和 CMD。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:43.922914Z",
+      "updated_at": "2025-09-08T13:21:22.917926Z"
+    },
+    {
+      "id": 10783,
+      "title": "Best practices for writing Dockerfiles",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/",
+      "doi": "",
+      "note": "提供创建高效且可维护 Dockerfile 的指南，涵盖镜像分层和缓存策略等。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:43.926781Z",
+      "updated_at": "2025-09-08T13:21:24.862681Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

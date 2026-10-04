@@ -1,0 +1,45 @@
+{
+  "id": 5207,
+  "title": "红队测试与安全测试",
+  "meta_title": "RLHF模型的红队测试与安全测试",
+  "meta_description": "对抗性测试以寻找失败模式和安全弱点。",
+  "content": "<p>量化 (quantization)指标和人工评估能够提供模型性能和对齐 (alignment)度的有用信息，但它们通常评估的是模型在典型条件下的行为。为了细致验证RLHF调整过的模型的稳定性与安全性，尤其是在潜在的对抗性或意外场景下，可以运用红队测试和结构化安全测试。这些做法对于发现弱点并确保模型在部署时表现稳定且安全是必要的。</p>\n<h3>理解大语言模型 (LLM)的红队测试</h3>\n<p>红队测试，在大语言模型的背景下，是指有意地探查模型，以找到导致其表现出不良行为的输入或交互模式。与衡量预期任务性能的标准评估不同，红队测试积极寻找失败情况、盲区以及绕过模型对齐 (alignment)训练的方法。其目的不仅仅是测量失败率，更是弄清模型失败的<em>方式</em>和<em>原因</em>。</p>\n<p>红队测试期间针对的不良行为可以包括：</p>\n<ul>\n<li>生成有害、有毒、有偏见或不当的内容。</li>\n<li>泄露训练期间使用的敏感信息。</li>\n<li>协助进行有害活动。</li>\n<li>在压力下产生事实不正确或荒谬的言论（幻觉 (hallucination)）。</li>\n<li>表现出脆弱行为，即微小的提示变化导致截然不同（且更差）的结果。</li>\n<li>未能遵守明确的负面限制（例如，“不要提及X”）。</li>\n</ul>\n<h3>红队测试方法</h3>\n<p>红队测试可以从非结构化探查到高度系统化的行动。常见方法包括：</p>\n<ol>\n<li>\n<p><strong>手动对抗性提示：</strong> 人类专家，通常具有不同背景（例如，安全研究员、社会科学家、领域专家），专门设计提示以引出失败情况。这通常涉及：</p>\n<ul>\n<li><strong>越狱：</strong> 试图诱导模型忽略其安全指南（例如，通过角色扮演场景、情境或复杂指令）。</li>\n<li><strong>提示注入：</strong> 在看似无害的提示中嵌入 (embedding)恶意指令。</li>\n<li><strong>测试边缘情况：</strong> 使用不寻常的语言、复杂的推理 (inference)任务或突破模型知识或能力边界的请求。</li>\n<li><strong>利用已知偏见：</strong> 设计可能触发模型已学到的已知社会偏见的提示。</li>\n</ul>\n</li>\n<li>\n<p><strong>自动化和工具辅助方法：</strong></p>\n<ul>\n<li><strong>使用其他大语言模型 (LLM)：</strong> 借助另一个语言模型自动生成潜在的对抗性提示。</li>\n<li><strong>模糊测试：</strong> 调整软件测试技术，生成大量略微变异的提示，以发现意外崩溃或行为。</li>\n<li><strong>基于梯度的攻击：</strong> （对于黑盒 (black box)模型不太常见，但如果可进行白盒访问则适用）使用梯度信息构建对抗性输入，类似于计算机视觉中使用的技术。</li>\n</ul>\n</li>\n</ol>\n<h3>结构化安全测试</h3>\n<p>虽然红队测试通常是探索性的，但安全测试通常更具结构性。它涉及根据预定义的危害类别和旨在衡量模型对已知安全风险的抵抗力的特定测试用例来评估模型。类别通常包括：</p>\n<ul>\n<li><strong>毒性和仇恨言论：</strong> 测试是否生成辱骂性或歧视性语言。</li>\n<li><strong>偏见：</strong> 使用有针对性的提示评估不同人群（性别、种族、宗教等）之间的公平性。</li>\n<li><strong>错误信息/虚假信息：</strong> 检查模型生成或认可虚假或误导性信息的倾向，尤其是在健康或政治等敏感方面。</li>\n<li><strong>安全弱点：</strong> 探查潜在的滥用，例如生成恶意代码、钓鱼邮件或解释漏洞利用（通常与特定的“有害能力”评估相关联）。</li>\n<li><strong>隐私：</strong> 测试模型是否无意中泄露个人身份信息（PII）或机密数据。</li>\n</ul>\n<p>安全测试通常使用经过精心筛选的挑战性提示数据集（例如，ToxiGen、RealToxicityPrompts）或根据安全政策或道德准则衍生的清单来测试模型。</p>\n<h3>将发现整合到RLHF循环中</h3>\n<p>红队测试和安全测试不仅仅是评估步骤；它们是迭代模型改进周期中不可分割的部分。当发现不良行为时：</p>\n<ol>\n<li><strong>数据生成：</strong> 有问题的提示和模型的不良输出可以用于创建新的训练数据。</li>\n<li><strong>偏好对：</strong> 提示、不良输出（标记 (token)为拒绝）以及可能手动编写的良好输出（标记为选择）可以形成新的偏好对，用于重新训练奖励模型。</li>\n<li><strong>SFT 数据：</strong> 如果失败代表着明显的指令遵循失误或可以通过直接示例纠正的安全违规，则可以将提示和所需的安全响应添加到SFT数据集，用于下一轮微调 (fine-tuning)。</li>\n</ol>\n<p>这个反馈循环使模型能够从对抗性测试中发现的错误中学习。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-oexu0i\" \n              data-graph-definition='digraph RLHF_RedTeam_Loop {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  Model [label=\"RLHF调整过的\\n模型\", style=\"rounded,filled\", fillcolor=\"#a5d8ff\"];\n  RedTeam [label=\"红队测试与\\n安全测试\", style=\"rounded,filled\", fillcolor=\"#ffc9c9\"];\n  Identify [label=\"识别\\n失败模式\", style=\"rounded,filled\", fillcolor=\"#ffd8a8\"];\n  Generate [label=\"生成\\n新数据\\n(SFT / 偏好对)\", style=\"rounded,filled\", fillcolor=\"#b2f2bb\"];\n  Refine [label=\"改进模型\\n(SFT / 奖励模型 / 强化学习)\", style=\"rounded,filled\", fillcolor=\"#d0bfff\"];\n\n  Model -> RedTeam [label=\"测试\"];\n  RedTeam -> Identify [label=\"发现问题\"];\n  Identify -> Generate [label=\"创建示例\"];\n  Generate -> Refine [label=\"训练输入\"];\n  Refine -> Model [label=\"改进版本\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-oexu0i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示说明红队测试结果如何反馈到RLHF训练过程，以迭代改进模型安全性和对齐 (alignment)度。</p>\n</blockquote>\n<h3>迭代特性与挑战</h3>\n<p>红队测试不是一次性勾选完成的任务。随着模型的更新和再训练，新的弱点可能出现。此外，对抗性技术不断演变。有效的红队测试需要：</p>\n<ul>\n<li><strong>创造力和专业知识：</strong> 人类红队成员需要像对手一样思考。</li>\n<li><strong>视角多样性：</strong> 具有不同背景的团队更擅长发现不同的失败模式。</li>\n<li><strong>资源：</strong> 彻底的红队测试，特别是手动工作，可能耗时且昂贵。</li>\n<li><strong>避免过拟合 (overfitting)：</strong> 模型可能学会对抗红队测试中使用的特定<em>技术</em>，而不是解决底层的安全问题。改变方法很重要。</li>\n</ul>\n<p>通过纳入严格的红队测试和安全测试，您可以超越标准的性能指标，主动发现和处理潜在危害，构建更值得信任且对齐 (alignment)度更稳定的语言模型。这是在考虑在应用中部署之前的重要一步。</p>",
+  "slug": "red-teaming-safety-testing",
+  "updates": [],
+  "references": [
+    {
+      "id": 13518,
+      "title": "GPT-4 System Card",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cdn.openai.com/papers/gpt-4-system-card.pdf",
+      "doi": "",
+      "note": "介绍GPT-4红队行动的实践和发现，详细说明识别和减轻模型危害的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:34:46.294605Z",
+      "updated_at": "2025-09-10T11:51:24.567746Z"
+    },
+    {
+      "id": 13520,
+      "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models",
+      "author": "Andy Zou, Zifan Wang, Nicholas Carlini, Milad Nasr, J. Zico Kolter, Matt Fredrikson",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2307.15043",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2307.15043",
+      "doi": "10.48550/arXiv.2307.15043",
+      "note": "介绍自动生成对抗性提示以绕过语言模型安全控制的方法。",
+      "order": 3,
+      "created_at": "2025-09-05T08:34:46.305332Z",
+      "updated_at": "2025-09-10T11:51:23.665464Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7328,
+  "title": "实践：注入配置并挂载卷",
+  "meta_title": "实践：Kubernetes 配置与存储",
+  "meta_description": "通过动手实践课程创建 ConfigMap 和 Secret 并将其注入 Pod，同时为有状态数据附加持久卷。",
+  "content": "<p>本动手练习将引导你为应用程序设置创建 <code>ConfigMap</code>，为凭据创建 <code>Secret</code>，并为持久存储创建 <code>PersistentVolumeClaim</code>。接着，你将部署一个同时使用这三者的 Pod，以此演示如何管理一个完整的、有状态的应用程序组件。</p>\n<p>进行此实践需要一个运行中的 Kubernetes 集群（例如通过 Minikube 或 Kind 运行的集群），并配置好 <code>kubectl</code> 以与其交互。</p>\n<h3>第 1 步：创建 ConfigMap 和 Secret</h3>\n<p>首先，我们将创建要注入到应用程序 Pod 中的配置对象。我们将从用于非敏感数据的 <code>ConfigMap</code> 开始，然后是用于模拟 API 密钥的 <code>Secret</code>。</p>\n<ol>\n<li>\n<p><strong>创建 ConfigMap：</strong>\n使用 <code>kubectl create configmap</code> 命令，从直接量生成一个名为 <code>app-config</code> 的 <code>ConfigMap</code>。该 <code>ConfigMap</code> 将保存一个简单的属性文件格式。</p>\n<pre><code class=\"language-sh\">kubectl create configmap app-config \\\n  --from-literal=app.properties='\ngreeting=Hello\nlog.level=INFO\n'\n</code></pre>\n</li>\n<li>\n<p><strong>创建 Secret：</strong>\n接下来，创建一个名为 <code>api-credentials</code> 的 <code>Secret</code>。我们将再次使用 <code>--from-literal</code> 标志来提供一个模拟的 API 密钥。请记住，虽然 Kubernetes 将 Secret 存储为 base64 编码的字符串，但它们在 etcd 中默认并未加密，应被视为敏感信息。</p>\n<pre><code class=\"language-sh\">kubectl create secret generic api-credentials \\\n  --from-literal=API_KEY='abc-123-def-456'\n</code></pre>\n</li>\n<li>\n<p><strong>验证创建情况：</strong>\n你可以使用 <code>kubectl get</code> 和 <code>kubectl describe</code> 查看刚刚创建的对象。例如，要查看 <code>ConfigMap</code>：</p>\n<pre><code class=\"language-sh\">kubectl get configmap app-config -o yaml\n</code></pre>\n<p>你将看到提供的数据存储在 <code>data</code> 字段下。</p>\n</li>\n</ol>\n<h3>第 2 步：申请持久存储</h3>\n<p>配置就绪后，下一步是申请存储。我们通过创建 <code>PersistentVolumeClaim</code> (PVC) 来实现这一点。在大多数本地开发集群和云服务商中，都会配置一个默认的 <code>StorageClass</code>，用于动态地分配满足申请要求的 <code>PersistentVolume</code> (PV)。</p>\n<ol>\n<li>\n<p><strong>定义 PersistentVolumeClaim：</strong>\n创建一个名为 <code>pvc.yaml</code> 的文件，内容如下。此清单申请一个 1Gi 的小型卷，访问模式为 <code>ReadWriteOnce</code>，这意味着它可以被单个节点以读写方式挂载。</p>\n<pre><code class=\"language-yaml\"># pvc.yaml\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: my-data-claim\nspec:\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 1Gi\n</code></pre>\n</li>\n<li>\n<p><strong>应用并验证 PVC：</strong>\n将清单应用到你的集群。</p>\n<pre><code class=\"language-sh\">kubectl apply -f pvc.yaml\n</code></pre>\n<p>现在，检查 PVC 的状态。它应该很快从 <code>Pending</code> 转换为 <code>Bound</code>，这表明 <code>PersistentVolume</code> 已成功分配并与其绑定。</p>\n<pre><code class=\"language-sh\">kubectl get pvc my-data-claim\n</code></pre>\n<p>你应该会看到类似这样的输出：</p>\n<pre><code>NAME            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE\nmy-data-claim   Bound    pvc-a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6   1Gi        RWO            standard       15s\n</code></pre>\n</li>\n</ol>\n<h3>第 3 步：部署挂载了卷和配置的 Pod</h3>\n<p>现在我们将所有内容整合在一起。下图显示了我们要创建的 Pod 与其依赖的配置和存储资源之间的关系。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sgw5r6\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\"]; edge [fontname=\"sans-serif\"]; pod [label=\"Pod\\n(stateful-app)\", fillcolor=\"#a5d8ff\"]; cm [label=\"ConfigMap\\n(app-config)\", fillcolor=\"#b2f2bb\"]; secret [label=\"Secret\\n(api-credentials)\", fillcolor=\"#ffc9c9\"]; pvc [label=\"PersistentVolumeClaim\\n(my-data-claim)\", fillcolor=\"#ffd8a8\"]; pv [label=\"PersistentVolume\", fillcolor=\"#e9ecef\", style=\"rounded,filled,dashed\"]; pod -> cm [label=\" 作为文件挂载\"]; pod -> secret [label=\" 作为环境变量注入\"]; pod -> pvc [label=\" 作为卷挂载\"]; pvc -> pv [style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sgw5r6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>stateful-app</code> Pod 将 <code>Secret</code> 用作环境变量，将 <code>ConfigMap</code> 挂载为文件，并挂载 <code>PersistentVolumeClaim</code> 以提供持久的文件系统。</p>\n</blockquote>\n<ol>\n<li>\n<p><strong>定义 Pod：</strong>\n创建一个名为 <code>stateful-pod.yaml</code> 的文件。此清单定义了一个 Pod，它：</p>\n<ul>\n<li>将 <code>api-credentials</code> Secret 中的所有键值对作为环境变量注入。</li>\n<li>定义了两个卷：一个用于 <code>ConfigMap</code>，另一个用于 <code>PersistentVolumeClaim</code>。</li>\n<li>将 <code>ConfigMap</code> 卷挂载在 <code>/etc/config</code>，使 <code>app.properties</code> 键可以作为文件使用。</li>\n<li>将 PVC 卷挂载在 <code>/data</code> 以进行持久存储。</li>\n</ul>\n<pre><code class=\"language-yaml\"># stateful-pod.yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: stateful-app\nspec:\n  containers:\n  - name: app-container\n    image: alpine\n    # 保持容器运行\n    command: [\"/bin/sh\", \"-c\", \"sleep 3600\"]\n    envFrom:\n    - secretRef:\n        name: api-credentials\n    volumeMounts:\n    - name: config-volume\n      mountPath: /etc/config\n    - name: data-volume\n      mountPath: /data\n  volumes:\n  - name: config-volume\n    configMap:\n      name: app-config\n  - name: data-volume\n    persistentVolumeClaim:\n      claimName: my-data-claim\n</code></pre>\n<p>我们使用简单的 <code>alpine</code> 镜像和 <code>sleep</code> 命令来保持容器运行，以便我们可以检查它。</p>\n</li>\n<li>\n<p><strong>部署 Pod：</strong>\n将 Pod 清单应用到你的集群。</p>\n<pre><code class=\"language-sh\">kubectl apply -f stateful-pod.yaml\n</code></pre>\n</li>\n</ol>\n<h3>第 4 步：验证配置和数据持久性</h3>\n<p>让我们确认配置和存储是否已正确附加到运行中的 Pod。我们将使用 <code>kubectl exec</code> 在容器内运行命令。</p>\n<ol>\n<li>\n<p><strong>验证来自 Secret 的环境变量：</strong>\n在 Pod 内部执行命令以打印其环境变量，并过滤我们的 API 密钥。</p>\n<pre><code class=\"language-sh\">kubectl exec stateful-app -- env | grep API_KEY\n</code></pre>\n<p>输出应为 <code>API_KEY=abc-123-def-456</code>，确认 Secret 已成功注入。</p>\n</li>\n<li>\n<p><strong>验证来自 ConfigMap 的挂载文件：</strong>\n检查从 <code>ConfigMap</code> 挂载的文件内容。</p>\n<pre><code class=\"language-sh\">kubectl exec stateful-app -- cat /etc/config/app.properties\n</code></pre>\n<p>这将显示我们之前定义的内容：<code>greeting=Hello</code> 和 <code>log.level=INFO</code>。</p>\n</li>\n<li>\n<p><strong>测试数据持久性：</strong>\n现在，向挂载在 <code>/data</code> 的持久存储卷写入一个文件。</p>\n<pre><code class=\"language-sh\">kubectl exec stateful-app -- sh -c \"echo '有状态数据在重启后依然存在' > /data/message.txt\"\n</code></pre>\n<p>为了证明数据是持久的，删除该 Pod 并重新创建它。<code>PersistentVolumeClaim</code> 和底层的 <code>PersistentVolume</code> 不会受到影响。</p>\n<pre><code class=\"language-sh\">kubectl delete pod stateful-app\nkubectl apply -f stateful-pod.yaml\n</code></pre>\n<p>等待新的 Pod 进入 <code>Running</code> 状态。你可以使用 <code>kubectl get pod stateful-app</code> 检查其状态。一旦它运行起来，尝试读取你之前创建的文件。</p>\n<pre><code class=\"language-sh\">kubectl exec stateful-app -- cat /data/message.txt\n</code></pre>\n<p>该命令将输出 <code>有状态数据在重启后依然存在</code>。这证实了即使 Pod 被完全销毁并替换，写入卷的数据仍然存在。</p>\n</li>\n</ol>\n<h3>清理</h3>\n<p>为了保持集群整洁，请删除本次实践中创建的资源。</p>\n<pre><code class=\"language-sh\">kubectl delete pod stateful-app\nkubectl delete pvc my-data-claim\nkubectl delete secret api-credentials\nkubectl delete configmap app-config\n</code></pre>\n<p>你现在已经成功管理了应用程序的配置和有状态数据，这是在 Kubernetes 上运行生产级负载的两项基本技能。</p>",
+  "slug": "practice-injecting-config-mounting-volume",
+  "updates": [],
+  "references": [
+    {
+      "id": 20029,
+      "title": "Configure a Pod to Use a ConfigMap",
+      "author": "Kubernetes Authors",
+      "year": "2025",
+      "publisher": "The Linux Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-a-pod-configmap/",
+      "doi": "",
+      "note": "关于如何创建和使用 ConfigMap 将配置数据注入 Pod 的官方指南。",
+      "order": 1,
+      "created_at": "2025-09-06T13:18:24.825884Z",
+      "updated_at": "2025-09-10T05:23:08.451178Z"
+    },
+    {
+      "id": 20030,
+      "title": "Configure a Pod to Use a Secret",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables",
+      "doi": "",
+      "note": "关于如何创建和使用 Secret 来处理敏感数据（包括作为环境变量注入）的官方指南。",
+      "order": 2,
+      "created_at": "2025-09-06T13:18:24.830478Z",
+      "updated_at": "2025-09-10T05:23:05.044994Z"
+    },
+    {
+      "id": 20031,
+      "title": "Persistent Volumes",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/",
+      "doi": "",
+      "note": "关于持久卷和持久卷声明的官方概念及实践指南，对有状态应用至关重要。",
+      "order": 3,
+      "created_at": "2025-09-06T13:18:24.833783Z",
+      "updated_at": "2025-09-10T05:23:06.323682Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

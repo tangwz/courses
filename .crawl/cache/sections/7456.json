@@ -1,0 +1,45 @@
+{
+  "id": 7456,
+  "title": "从元数据创建物品画像",
+  "meta_title": "从元数据创建物品画像",
+  "meta_description": "学习如何从物品元数据中提取并构建特征，以创建全面的物品画像。",
+  "content": "<p>基于内容的过滤，其核心在于理解并量化 (quantization)一个物品的本质。在推荐与《阿凡达》（<em>Avatar</em>）相似的电影之前，我们首先需要一种结构化的方式来描述《阿凡达》的特征。这就是物品画像的作用：将物品的属性（或元数据）转化为机器学习 (machine learning)模型可以处理的一致格式。物品画像是物品的数字指纹，捕获了其最主要的特征。</p>\n<h3>从元数据到机器可读的特征</h3>\n<p>大多数数据集都包含丰富的元数据，可用于构建这些画像。对于电影数据集，这些信息可能包括类型、导演、演员和剧情摘要等列。对于电子商务产品，可能是品牌、类别、颜色和技术规格。我们的首要任务是选择最相关的元数据片段，并将它们合并为每个物品的统一表示。</p>\n<p>考虑一个简化的电影数据集：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">电影 ID</th>\n<th align=\"left\">标题</th>\n<th align=\"left\">类型</th>\n<th align=\"left\">导演</th>\n<th align=\"left\">关键词</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">阿凡达</td>\n<td align=\"left\">动作, 冒险, 科幻</td>\n<td align=\"left\">詹姆斯·卡梅隆</td>\n<td align=\"left\">外星人, 行星, 陆战队</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">泰坦尼克号</td>\n<td align=\"left\">剧情, 爱情</td>\n<td align=\"left\">詹姆斯·卡梅隆</td>\n<td align=\"left\">轮船, 冰山, 艺术家</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">黑暗骑士</td>\n<td align=\"left\">动作, 剧情, 惊悚</td>\n<td align=\"left\">克里斯托弗·诺兰</td>\n<td align=\"left\">哥谭, 小丑, 蝙蝠侠</td>\n</tr>\n</tbody>\n</table>\n<p><code>Genres</code>（类型）、<code>Director</code>（导演）和 <code>Keywords</code>（关键词）等列中的原始元数据是我们的起点。然而，就目前的形式而言，它们并不适合直接比较。例如，我们如何防止系统将导演 “James Cameron” 与另一位名为 “James Gunn” 的导演混淆？一个常见的预处理步骤是将多词姓名合并为单个标记 (token)（例如，“James Cameron” 变为 “JamesCameron”）。同样，我们应该将所有文本转换为一致的大小写（通常是小写），以确保 “Action” 和 “action” 被视为同一个特征。</p>\n<h3>创建统一的特征字符串</h3>\n<p>构建物品画像的一种简单有效的方法是将所有处理后的文本和类别特征合并为一个字符串，有时被称为“元数据汤”（metadata soup）。这个字符串作为对该物品的全面描述。</p>\n<p>让我们将此应用于电影数据。我们将提取 <code>Genres</code>、<code>Director</code> 和 <code>Keywords</code> 列中的值，对其进行清理（小写、删除空格），然后将它们拼接起来。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 示例电影数据\ndata = {\n    'movie_id': [1, 2, 3],\n    'title': ['Avatar', 'Titanic', 'The Dark Knight'],\n    'genres': ['Action, Adventure, Sci-Fi', 'Drama, Romance', 'Action, Drama, Thriller'],\n    'director': ['James Cameron', 'James Cameron', 'Christopher Nolan'],\n    'keywords': ['alien, planet, marine', 'ship, iceberg, artist', 'gotham, joker, batman']\n}\nmovies_df = pd.DataFrame(data)\n\n# 清理并合并特征的函数\ndef create_feature_soup(row):\n    # 将所有需要的特征合并为一个字符串\n    # 我们通过转换为小写并删除空格来清理数据\n    genres = ' '.join(row['genres'].replace(', ', ' ').lower().split())\n    director = row['director'].replace(' ', '').lower()\n    keywords = ' '.join(row['keywords'].replace(', ', ' ').lower().split())\n    \n    return f\"{genres} {director} {keywords}\"\n\n# 应用该函数创建一个包含合并特征的新列\nmovies_df['profile_features'] = movies_df.apply(create_feature_soup, axis=1)\n\nprint(movies_df[['title', 'profile_features']])\n</code></pre>\n<p>得到的 DataFrame 如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">title</th>\n<th align=\"left\">profile_features</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Avatar</td>\n<td align=\"left\">action adventure sci-fi jamescameron alien planet marine</td>\n</tr>\n<tr>\n<td align=\"left\">Titanic</td>\n<td align=\"left\">drama romance jamescameron ship iceberg artist</td>\n</tr>\n<tr>\n<td align=\"left\">The Dark Knight</td>\n<td align=\"left\">action drama thriller christophernolan gotham joker batman</td>\n</tr>\n</tbody>\n</table>\n<p>现在，<code>profile_features</code> 列中的每个条目都是一个标准化且具有描述性的电影画像。下图展示了这一过程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ygsv7o\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", fontsize=12, bgcolor=\"transparent\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fontsize=11, fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n    edge [fontname=\"sans-serif\", fontsize=10, color=\"#868e96\"];\n\n    subgraph cluster_0 {\n        label = \"原始元数据\";\n        bgcolor=\"#f8f9fa\";\n        color=\"#dee2e6\";\n        style=\"rounded\";\n        \n        genres [label=\"类型\\n(例如：&#39;Action, Sci-Fi&#39;)\", fillcolor=\"#a5d8ff\"];\n        director [label=\"导演\\n(例如：&#39;James Cameron&#39;)\", fillcolor=\"#bac8ff\"];\n        keywords [label=\"关键词\\n(例如：&#39;alien, planet&#39;)\", fillcolor=\"#b2f2bb\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"处理步骤\";\n        bgcolor=\"#f8f9fa\";\n        color=\"#dee2e6\";\n        style=\"rounded\";\n        \n        process_node [label=\"1. 选择特征\\n2. 清理文本 (小写, 无空格)\\n3. 合并为单个字符串\", shape=ellipse, fillcolor=\"#ffd8a8\"];\n    }\n\n    subgraph cluster_2 {\n        label = \"结构化物品画像\";\n        bgcolor=\"#f8f9fa\";\n        color=\"#dee2e6\";\n        style=\"rounded\";\n\n        profile [label=\"特征字符串\\n&#39;action scifi jamescameron alien planet&#39;\", fillcolor=\"#96f2d7\", shape=note];\n    }\n\n    genres -> process_node;\n    director -> process_node;\n    keywords -> process_node;\n    \n    process_node -> profile [label=\"生成\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ygsv7o\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将原始的、分散的元数据转化为每个物品统一、整洁的特征字符串的过程。</p>\n</blockquote>\n<p>通过创建这些统一的画像，我们已经成功地以一致的文本格式表示了每个物品的特征。我们为比较奠定了坚实的基础。然而，一串单词仍然无法直接用于余弦相似度等数学公式中。接下来的步骤是将这些文本画像转换为数值向量 (vector)，这项任务非常适合 TF-IDF 技术，我们将在下一节中讲解。</p>",
+  "slug": "creating-item-profiles",
+  "updates": [],
+  "references": [
+    {
+      "id": 21040,
+      "title": "Recommender Systems: An Introduction",
+      "author": "Francesco Ricci, Lior Rokach, Bracha Shapira",
+      "year": "2022",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.1007/978-3-030-97500-1",
+      "doi": "10.1007/978-3-030-97500-1",
+      "note": "这本书全面概述了推荐系统，包括基于内容的过滤、物品表示和从元数据中提取特征的技术。",
+      "order": 1,
+      "created_at": "2025-09-13T07:06:29.343005Z",
+      "updated_at": "2025-09-13T07:36:27.126071Z"
+    },
+    {
+      "id": 21041,
+      "title": "Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists",
+      "author": "Alice Zheng, Amanda Casari",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/",
+      "doi": "",
+      "note": "这本书提供了将原始数据（包括类别和文本数据）转换为适用于机器学习模型的特征的实用指导，这直接应用于创建有效的物品画像。",
+      "order": 2,
+      "created_at": "2025-09-13T07:06:29.346192Z",
+      "updated_at": "2025-09-13T07:36:21.933119Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

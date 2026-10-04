@@ -1,0 +1,61 @@
+{
+  "id": 2200,
+  "title": "实现评估循环",
+  "meta_title": "PyTorch 评估循环 | 模型测试",
+  "meta_description": "创建一个独立的循环，用于评估模型在验证或测试数据上的表现，且不跟踪梯度。",
+  "content": "<p>为了客观评估模型在训练阶段后的表现，一种可靠的方法必不可少。仅凭训练损失可能产生误导，因为模型可能在训练数据上表现出色，但无法泛化到新的、未见过的数据。评估循环可以解决这一挑战。它的作用是衡量模型在独立数据集（如验证集或测试集）上的表现，这些数据未在权重 (weight)更新过程中使用。</p>\n<h3>为何需要独立的评估循环？</h3>\n<p>训练涉及根据训练数据调整模型参数 (parameter)。然而，评估纯粹是为了评测。我们想回答：“给定此输入，模型的预测与实际目标有多接近？”同时不改变模型本身。执行评估需要一个独特的流程，原因有以下几点：</p>\n<ol>\n<li><strong>泛化能力评估：</strong> 它衡量模型处理训练中未曾见过数据的能力，这是大多数机器学习 (machine learning)任务的最终目标。</li>\n<li><strong>防止数据泄露：</strong> 使用独立数据集可确保评估数据中的信息不会无意中影响训练过程（例如，被用于梯度更新）。</li>\n<li><strong>模型选择与调优：</strong> 验证集上的表现常用于选择最佳模型架构、决定何时停止训练（早期停止）或调整超参数 (hyperparameter)。</li>\n<li><strong>检测过拟合 (overfitting)：</strong> 比较训练集与验证集上的表现有助于识别过拟合。当模型对训练数据（包括其噪声）学习得过于透彻，从而失去泛化能力时，就会发生过拟合。此时训练数据上的表现可能持续提升，而验证数据上的表现却停滞不前或下降。</li>\n</ol>\n<h3>与训练循环的区别</h3>\n<p>评估循环与训练循环有相似之处（例如，遍历数据，执行前向传播），但存在重要区别：</p>\n<ol>\n<li><strong>不计算梯度：</strong> 由于我们只进行评估而不更新权重 (weight)，因此无需计算或存储梯度。这节省了内存和计算资源。</li>\n<li><strong>不反向传播 (backpropagation)：</strong> 因此，<em>不</em>调用<code>$loss.backward()</code>。</li>\n<li><strong>不执行优化器步骤：</strong> 模型的权重保持不变，因此<em>不</em>调用<code>$optimizer.step()</code>和<code>$optimizer.zero_grad()</code>。</li>\n<li><strong>模型模式：</strong> 模型应切换到评估模式。</li>\n</ol>\n<h3>将模型设置为评估模式：<code>model.eval()</code></h3>\n<p>PyTorch 模型（<code>nn.Module</code>）有不同的训练和评估模式。你可以使用<code>model.train()</code>和<code>model.eval()</code>在它们之间切换。在开始评估循环之前调用<code>model.eval()</code>非常重要。此调用会通知Dropout和Batch Normalization等层，模型正处于评估阶段。</p>\n<ul>\n<li><strong>Dropout 层：</strong> 在评估期间被停用。我们希望模型展现其完整的预测能力，而不是随机丢弃神经元。</li>\n<li><strong>Batch Normalization 层：</strong> 使用训练期间计算的运行统计数据（均值和方差），而不是当前批次的统计数据。这确保了输出的一致性，不受评估批次统计数据的影响。</li>\n</ul>\n<p>评估结束后，如果你计划恢复训练（例如，在每个周期后进行评估），请记得使用<code>model.train()</code>将模型切换回训练模式。</p>\n<h3>禁用梯度计算：<code>torch.no_grad()</code></h3>\n<p>为防止PyTorch在评估期间跟踪操作并构建用于梯度计算的计算图，你应该将评估循环代码封装在<code>torch.no_grad()</code>上下文 (context)管理器中。</p>\n<pre><code class=\"language-python\">with torch.no_grad():\n    # 这里是评估代码...\n    # 此块中的操作将不会跟踪梯度。\n</code></pre>\n<p>使用<code>torch.no_grad()</code>主要有两个优点：</p>\n<ol>\n<li><strong>效率：</strong> 它减少了内存消耗，因为反向传播 (backpropagation)所需的中间激活不会被存储。操作也可能运行得更快。</li>\n<li><strong>正确性：</strong> 它确保你不会在不需要时意外地计算梯度或尝试执行反向传播。</li>\n</ol>\n<h3>评估循环的结构</h3>\n<p>以下是评估函数的一个典型结构：</p>\n<pre><code class=\"language-python\">import torch\n\ndef evaluate_model(model, dataloader, criterion, device):\n    \"\"\"在提供的datasets上评估模型。\"\"\"\n    model.eval()  # 将模型设置为评估模式\n    total_loss = 0.0\n    correct_predictions = 0\n    total_samples = 0\n\n    with torch.no_grad():  # 禁用梯度计算\n        for inputs, targets in dataloader:\n            # 将数据移动到与模型相同的设备上\n            inputs = inputs.to(device)\n            targets = targets.to(device)\n\n            # 前向传播\n            outputs = model(inputs)\n\n            # 计算损失（可选，但对监控有用）\n            loss = criterion(outputs, targets)\n            total_loss += loss.item() * inputs.size(0) # 累加批次损失\n\n            # 计算准确率（分类示例）\n            _, predicted_labels = torch.max(outputs, dim=1)\n            correct_predictions += (predicted_labels == targets).sum().item()\n            total_samples += targets.size(0)\n\n    # 计算整个数据集的平均损失和准确率\n    average_loss = total_loss / total_samples\n    accuracy = correct_predictions / total_samples\n\n    model.train() # 如果之后需要，切换回训练模式\n    return average_loss, accuracy\n\n# --- 用法示例 ---\n# 假设你已经有：\n# model: 你的 nn.Module 模型\n# validation_loader: 你的验证集 DataLoader\n# criterion: 你的损失函数（例如，nn.CrossEntropyLoss）\n# device: torch.device('cuda' if torch.cuda_is_available() else 'cpu')\n\n# val_loss, val_accuracy = evaluate_model(model, validation_loader, criterion, device)\n# print(f'Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}')\n</code></pre>\n<p><strong>分步解析：</strong></p>\n<ol>\n<li><strong><code>model.eval()</code>：</strong> 将模型切换到评估模式。</li>\n<li><strong>初始化指标：</strong> 设置变量以累加总损失和正确预测的数量（或其他相关指标）。同时，跟踪评估的总样本数。</li>\n<li><strong><code>with torch.no_grad():</code>：</strong> 进入不计算梯度的上下文 (context)。</li>\n<li><strong>遍历DataLoader：</strong> 循环遍历评估<code>DataLoader</code>提供的批次。</li>\n<li><strong>设备放置：</strong> 确保输入数据和目标与模型位于同一设备上。</li>\n<li><strong>前向传播：</strong> 将输入数据通过模型（<code>outputs = model(inputs)</code>）。</li>\n<li><strong>计算损失：</strong> 使用准则计算损失。使用<code>loss.item()</code>获取当前批次损失的Python标量值，并在累加前乘以批次大小（<code>inputs.size(0)</code>），以处理最后一个批次大小可能存在的差异。</li>\n<li><strong>计算指标：</strong> 从模型输出中确定预测（例如，对于分类任务，使用<code>torch.max</code>获取最高概率的索引）。将预测与真实目标进行比较，并累加正确预测的数量和总样本数。</li>\n<li><strong>汇总结果：</strong> 遍历所有批次后，将累加的总量除以处理的总样本数，计算平均损失和总体准确率（或其他指标）。</li>\n<li><strong><code>model.train()</code>（可选）：</strong> 如果此评估发生在训练周期之间，将模型切换回训练模式。</li>\n</ol>\n<p>此评估循环为模型的泛化表现提供了必要的反馈，指导训练过程并帮助你构建更高效的深度学习 (deep learning)模型。同时监控这些评估指标和训练指标对理解模型行为非常重要。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-zszwyt\" \n              data-plot-definition='{\"data\":[{\"type\":\"scatter\",\"mode\":\"lines\",\"name\":\"训练损失\",\"x\":[1,2,3,4,5,6,7,8,9,10],\"y\":[1.8,1.2,0.9,0.7,0.55,0.45,0.38,0.32,0.28,0.25],\"line\":{\"color\":\"#339af0\"}},{\"type\":\"scatter\",\"mode\":\"lines\",\"name\":\"验证损失\",\"x\":[1,2,3,4,5,6,7,8,9,10],\"y\":[1.9,1.4,1.1,0.95,0.85,0.8,0.78,0.79,0.81,0.84],\"line\":{\"color\":\"#ff922b\"}}],\"layout\":{\"title\":\"训练损失与验证损失随周期变化\",\"xaxis\":{\"title\":\"周期\"},\"yaxis\":{\"title\":\"损失\"},\"hovermode\":\"x unified\",\"template\":\"plotly_white\",\"legend\":{\"yanchor\":\"top\",\"y\":0.99,\"xanchor\":\"right\",\"x\":0.99}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-zszwyt\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了一个常见情况：在若干个周期后，验证损失开始增加，这表明过拟合 (overfitting)已经出现，即使训练损失持续下降。评估循环对于检测这种情况非常重要。</p>\n</blockquote>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-g7upgg\" \n              data-graph-definition='digraph TrainingCycle { rankdir=TB; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#adb5bd\"]; edge [color=\"#495057\"]; TrainEpoch [label=\"运行训练周期\\n(前向传播, 损失, 反向传播, 优化)\", color=\"#339af0\", style=\"rounded,filled\", fontcolor=\"#ffffff\"]; EvaluateModel [label=\"运行评估循环\\n(model.eval(), no_grad, 前向传播, 指标)\", color=\"#ff922b\", style=\"rounded,filled\", fontcolor=\"#495057\"]; CheckStop [label=\"检查停止条件\\n(例如：最大周期数, 早期停止)\", shape=diamond, color=\"#12b886\"]; LogMetrics [label=\"记录训练和验证指标\", color=\"#7950f2\"]; TrainEpoch -> EvaluateModel [label=\" 周期结束 \"]; EvaluateModel -> LogMetrics; LogMetrics -> CheckStop; CheckStop -> TrainEpoch [label=\" 继续训练 \"]; CheckStop -> Stop [label=\" 停止训练 \", color=\"#f03e3e\"]; Stop [label=\"训练完成\", shape=ellipse, color=\"#f03e3e\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-g7upgg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>典型的深度学习训练流程，在每个训练周期后加入评估，以监控表现并决定是否继续或停止训练。</p>\n</blockquote>",
+  "slug": "implementing-evaluation-loop",
+  "updates": [],
+  "references": [
+    {
+      "id": 6392,
+      "title": "Notes on Autograd - Evaluation mode and `torch.no_grad()`",
+      "author": "PyTorch Documentation",
+      "year": "2017",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/autograd.html#evaluation-mode-and-torch-no-grad",
+      "doi": "",
+      "note": "官方 PyTorch 文档，解释了在评估期间使用 `torch.no_grad()` 进行内存和计算效率优化的目的和用法，以及 `model.eval()` 将模型层设置为推理模式。",
+      "order": 1,
+      "created_at": "2025-09-05T01:22:13.659756Z",
+      "updated_at": "2025-09-07T20:39:45.474345Z"
+    },
+    {
+      "id": 6393,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本深度学习的权威教科书，涵盖了机器学习的基本概念，如泛化、过拟合、欠拟合以及验证集和测试集在模型评估中的作用。",
+      "order": 2,
+      "created_at": "2025-09-05T01:22:13.667746Z",
+      "updated_at": "2025-09-07T20:39:38.163693Z"
+    },
+    {
+      "id": 6394,
+      "title": "Dive into Deep Learning",
+      "author": "Aston Zhang, Zachary C. Lipton, Mu Li, and Alex Smola",
+      "year": "2023",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://d2l.ai/",
+      "doi": "",
+      "note": "一本交互式开源书籍，为深度学习模型实现提供了实用指导。书中包含训练和评估循环、数据集划分以及解决过拟合问题的详细解释和 PyTorch 代码示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:22:13.671084Z",
+      "updated_at": "2025-09-07T20:39:37.397110Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7039,
+  "title": "降低云算力成本的策略",
+  "meta_title": "如何降低 AI 云算力成本",
+  "meta_description": "实施诸如使用竞价实例进行容错训练和使用自动扩缩组进行推理等策略，以最大限度地降低算力开销。",
+  "content": "<p>在您掌握了不同的云定价模型后，下一步就是运用这些知识。简单地选择一个定价模型是被动行为；主动管理您的资源才能实现显著的成本节约。本节详细介绍了几种实用的策略，用于降低您的云算力 (compute)开销，同时不影响您的模型开发和部署目标。</p>\n<h3>善用竞价实例进行容错训练</h3>\n<p>云服务提供商通常拥有大量未使用的算力 (compute)容量。为了将其变现，他们会以大幅折扣提供这些容量，有时甚至比按需价格低90%。这些被称为 <strong>竞价实例</strong> (AWS)、<strong>竞价虚拟机</strong> (GCP) 或 <strong>竞价虚拟机</strong> (Azure)。</p>\n<p>然而，有一个条件：云服务提供商可以随时回收这些容量，通常只提前两分钟通知。这使得竞价实例不适合生产推理 (inference)端点或其他无法容忍中断的重要任务。</p>\n<p>然而，许多机器学习 (machine learning)训练任务却非常适合。深度学习 (deep learning)模型通常训练数小时甚至数天，而且这个过程是迭代的。如果训练运行中断，通常可以从上次保存的状态恢复。这使得训练成为一种容错型工作负载。</p>\n<p>为了在模型训练中有效使用竞价实例，您必须在训练过程中融入弹性：</p>\n<ol>\n<li><strong>实现检查点：</strong> 您的训练脚本必须定期保存其状态。这不仅包括模型权重 (weight)，还包括优化器状态、当前轮次（epoch）数以及数据加载器位置。PyTorch 和 TensorFlow 等大多数现代框架都提供工具来便地实现此功能。</li>\n<li><strong>创建从检查点恢复的逻辑：</strong> 您的脚本需要一种机制来在启动时检测是否存在检查点。如果存在，它应该加载状态并从该点恢复训练，而不是从头开始。</li>\n<li><strong>使用托管式竞价服务：</strong> 不要只请求单个竞价实例，而是使用托管服务，例如 AWS Spot Fleet 或配置为使用竞价实例的自动扩缩组。如果您当前的竞价实例被回收，这些服务可以自动从不同的容量池请求新的竞价实例，从而提高您工作负载的稳定性。</li>\n</ol>\n<blockquote>\n<p><strong>检查点保存频率：</strong> 选择保存检查点的频率涉及权衡。保存过于频繁会增加 I/O 开销并可能减慢训练速度。保存过于不频繁则意味着当实例被抢占时，您将损失更多工作量。一种常见策略是在每个轮次（epoch）结束时保存检查点。对于非常长的轮次，您可以考虑每 N 个批次保存一次。</p>\n</blockquote>\n<p>通过将训练作业设计为可恢复，您可以充分利用竞价实例的巨大成本节约，大幅降低模型实验和开发的费用。</p>\n<h3>为推理 (inference)端点实施自动扩缩</h3>\n<p>对于模型推理，您的算力 (compute)需求通常直接与用户流量挂钩，而用户流量可能显著波动。您可能在营业时间经历高需求，而夜间流量则很少。全天候预置足够的实例来处理峰值负载是一个常见且昂贵的错误。</p>\n<p>解决方案是使用<strong>自动扩缩</strong>。自动扩缩组会根据实时需求自动调整一个池中算力实例的数量。您定义规则，云平台处理执行。</p>\n<p>以下是它在机器学习 (machine learning)推理场景中的工作原理：</p>\n<ol>\n<li>\n<p><strong>定义扩缩指标：</strong> 您选择一个准确反映推理服务器负载的指标。常见选择包括：</p>\n<ul>\n<li><strong>CPU 使用率：</strong> 一个很好的通用指标。</li>\n<li><strong>GPU 使用率：</strong> 对于 GPU 加速的模型更具体有效。</li>\n<li><strong>每个目标请求数：</strong> 基于每个实例处理的请求数量。</li>\n<li><strong>队列长度：</strong> 如果您使用队列（如 SQS）来缓冲传入请求，队列中的消息数量是一个很好的扩缩触发器。</li>\n</ul>\n</li>\n<li>\n<p><strong>设置阈值：</strong> 您为所选指标定义一个目标值。例如，您可以将组配置为“保持平均 GPU 使用率在 60%”。如果平均使用率高于此目标，组会添加新实例（扩容）。如果低于目标，则会移除实例（缩容）。</p>\n</li>\n<li>\n<p><strong>建立冷却期：</strong> 冷却期可防止自动扩缩组在之前的扩缩活动生效之前启动或终止额外实例。这可以避免被称为“抖动”的快速、浪费的波动。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-batmln\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\"]; edge [color=\"#495057\"]; bgcolor=\"transparent\"; \"用户流量\" [shape=cloud, fillcolor=\"#ced4da\"]; \"负载均衡器\" [fillcolor=\"#91a7ff\"]; subgraph cluster_asg { label=\"自动扩缩组\"; color=\"#adb5bd\"; style=\"dashed\"; bgcolor=\"#e9ecef\"; \"推理实例 1\"; \"推理实例 2\"; \"推理实例 3\" [style=\"rounded,filled,dotted\", label=\"实例 3 (新增)\", fontcolor=\"#868e96\", color=\"#adb5bd\"]; } \"云监控服务\" [fillcolor=\"#96f2d7\"]; \"用户流量\" -> \"负载均衡器\"; \"负载均衡器\" -> \"推理实例 1\"; \"负载均衡器\" -> \"推理实例 2\"; \"负载均衡器\" -> \"推理实例 3\"; { \"推理实例 1\", \"推理实例 2\", \"推理实例 3\" } -> \"云监控服务\" [style=dashed, arrowhead=none]; \"云监控服务\" -> \"负载均衡器\" [label=\" 扩容信号 (高负载)\", color=\"#f03e3e\", fontcolor=\"#d6336c\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-batmln\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>自动扩缩组通过向池中添加新实例来服务流量，以此响应由监控服务检测到的高负载。</p>\n</blockquote>\n<p>通过使用自动扩缩，您可以确保在任何特定时刻只支付您实际需要的算力容量，使您的开销直接与应用程序的需求匹配。</p>\n<h3>安排并关闭空闲资源</h3>\n<p>最直接但有效的成本节约措施之一，就是在资源不使用时简单地将其关闭。开发、预发布和实验环境很少需要全天候运行。一个在周末持续运行的 GPU 实例可能会不必要地花费数百美元。</p>\n<p>实施调度策略以自动化此过程：</p>\n<ul>\n<li><strong>标签管理：</strong> 首先，为您的资源建立一致的标签策略。例如，像 <code>environment: dev</code> 或 <code>owner: data-scientist-x</code> 这样的标签可以识别适合关闭的非生产资源。</li>\n<li><strong>自动化工具：</strong> 使用云原生服务，如 <strong>AWS 实例调度器</strong>、<strong>Azure 自动化 Runbooks</strong>，或控制机上的简单 cron 作业，根据时间表自动停止实例（例如，工作日晚上 7 点停止，周末全天停止）。这些工具也可以配置为在工作日开始前再次启动它们。</li>\n</ul>\n<p>此策略确保您只在有效工作时间为开发资源付费，从而消除常见的预算浪费来源。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-bpagzp\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":{\"text\":\"一天中的小时\"},\"tickmode\":\"array\",\"tickvals\":[0,4,8,12,16,20,23]},\"yaxis\":{\"title\":{\"text\":\"每小时算力成本 ($)\"},\"range\":[0,5.5]},\"bargap\":0,\"title\":{\"text\":\"实例调度对成本的影响\"}},\"data\":[{\"x\":[8,9,10,11,12,13,14,15,16,17,18],\"y\":[4.8,4.8,4.8,4.8,4.8,4.8,4.8,4.8,4.8,4.8,4.8],\"type\":\"bar\",\"name\":\"活跃 (开启)\",\"marker\":{\"color\":\"#ff8787\"}},{\"x\":[0,1,2,3,4,5,6,7,19,20,21,22,23],\"y\":[0,0,0,0,0,0,0,0,0,0,0,0,0],\"type\":\"bar\",\"name\":\"空闲 (关闭)\",\"marker\":{\"color\":\"#ced4da\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-bpagzp\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表显示了开发实例的每小时成本。通过在核心工作时间（上午 8 点至晚上 7 点）之外自动停止它，一天中很大一部分时间的成本将降至零。</p>\n</blockquote>\n<p>这些策略并非相互排斥。全面的成本优化计划通常涉及使用竞价实例进行训练、使用自动扩缩组进行生产推理 (inference)，以及对所有非生产环境进行积极的调度。这使得成本管理从被动行为转变为您 MLOps 实践中主动、自动化的组成部分。</p>",
+  "slug": "strategies-reducing-cloud-compute-costs",
+  "updates": [],
+  "references": [
+    {
+      "id": 20512,
+      "title": "Amazon EC2 Spot Instances",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aws.amazon.com/ec2/spot/",
+      "doi": "",
+      "note": "解释了 AWS Spot 实例的概念、优势和使用方法，包括用于机器学习训练等容错工作负载的最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-06T14:03:54.999640Z",
+      "updated_at": "2025-09-11T03:38:42.151931Z"
+    },
+    {
+      "id": 20513,
+      "title": "Amazon EC2 Auto Scaling",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aws.amazon.com/ec2/autoscaling/",
+      "doi": "",
+      "note": "描述了如何自动调整 EC2 实例容量以保持性能并降低可变工作负载（如 AI 推理端点）的成本。",
+      "order": 2,
+      "created_at": "2025-09-06T14:03:55.004823Z",
+      "updated_at": "2025-09-11T03:38:39.801730Z"
+    },
+    {
+      "id": 20514,
+      "title": "AWS Well-Architected Framework - Cost Optimization Pillar",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/cost-optimization-pillar.html",
+      "doi": "",
+      "note": "提供了在云中实现成本效益的架构指导和最佳实践，适用于包括人工智能基础设施在内的各种工作负载。",
+      "order": 3,
+      "created_at": "2025-09-06T14:03:55.008545Z",
+      "updated_at": "2025-09-11T03:38:52.394180Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

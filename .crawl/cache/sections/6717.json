@@ -1,0 +1,61 @@
+{
+  "id": 6717,
+  "title": "组织提示词以进行顺序操作",
+  "meta_title": "多步骤智能体任务的提示词",
+  "meta_description": "学习如何组织提示词，以引导智能体完成复杂的操作序列和决策。",
+  "content": "<p>许多AI智能体处理的复杂任务并非单一、整体性的行动，而是一系列相互关联的步骤。为有效引导智能体完成此类任务，您的提示词 (prompt)必须明确界定这些操作的顺序。这不只是简单列出任务；它要求对提示词进行组织，使智能体明白顺序、依赖关系以及如何从一个步骤过渡到下一个。</p>\n<p>其核心在于，组织顺序操作的提示词，首先要将整体目标分解为一系列更小、可管理的子任务。每个子任务随后成为智能体工作流程中的一个步骤，您将在提示词中进行描述。</p>\n<h3>界定独立步骤</h3>\n<p>描绘序列的最直接方法是在您的提示词 (prompt)中使用编号或清晰标记 (token)的步骤。这为智能体提供了明确的指引。</p>\n<p>对于每个步骤，请确保您的指令具备以下特点：</p>\n<ul>\n<li><strong>面向行动：</strong> 以明确的动词开头，说明要执行的动作（例如，“提取”、“总结”、“格式化”、“调用工具 X”）。</li>\n<li><strong>具体：</strong> 清楚界定该步骤的预期输入（如有）以及该步骤成功输出或完成的判断标准。</li>\n<li><strong>有序：</strong> 按照需要执行的逻辑顺序呈现步骤。</li>\n</ul>\n<p>假设一个智能体被要求在线研究某个主题并准备一份简报。一个简化的提示词结构可能如下所示：</p>\n<pre><code>Your task is to research the benefits of remote work and provide a summary.\n\nFollow these steps:\n1.  **识别搜索词：** 根据主题“远程工作的益处”，生成3-5个有效搜索词。\n    输出：搜索词列表。\n2.  **执行网页搜索：** 使用网页搜索工具并结合识别出的搜索词。检索最相关的3篇文章。\n    输入：来自步骤1的搜索词列表。\n    输出：最相关的3篇文章的URL和标题。\n3.  **总结文章：** 对于每篇文章，提取其中提及的远程工作主要益处。\n    输入：来自步骤2的URL和标题。\n    输出：从每篇文章中提取出的益处列表。\n4.  **整合与格式化：** 将所有独特益处合并成一个项目符号列表。确保没有重复项。\n    输入：来自步骤3的益处列表。\n    输出：最终整合后的项目符号益处列表。\n</code></pre>\n<p>在此示例中，每个步骤都有清晰的指令，一个隐式或显式输入（通常是前一步骤的输出），以及一个已界定的输出。</p>\n<h3>管理步骤间的信息流</h3>\n<p>顺序操作的一个重要方面是确保在一个步骤中产生的信息在后续步骤中可用并被正确使用。智能体需要一种方法来“记住”步骤1的输出，以便在执行步骤2时使用。</p>\n<p>您可以通过以下方式促成这一点：</p>\n<ul>\n<li><strong>明确引用先前输出：</strong> 指示智能体将“步骤X的输出”用作“步骤Y”的输入。</li>\n<li><strong>建议设置“草稿”或“工作笔记”区：</strong> 您可以设计提示词 (prompt)，使智能体在逐步执行任务时，能持续记录其发现或中间结果。如果智能体需要回顾前几个步骤的信息，这会特别有用。</li>\n</ul>\n<p>例如，在上述提示词中，“输入：来自步骤1的搜索词列表”明确告诉智能体从何处获取步骤2所需的信息。</p>\n<h3>使用结构化格式提高清晰度</h3>\n<p>对于更复杂的序列或以编程方式与智能体交互时，在您的提示词 (prompt)中使用XML式标签或JSON等结构化格式可以显著提高可靠性。这些格式有助于大型语言模型更准确地解析指令，并能使您的外部系统更容易理解智能体的多步骤输出。</p>\n<p>想象一个需要处理订单的智能体：</p>\n<pre><code>&#x3C;agent_task>\n  &#x3C;goal>处理新客户订单并发送确认。&#x3C;/goal>\n  &#x3C;steps>\n    &#x3C;step id=\"1\" description=\"验证商品库存\">\n      &#x3C;instruction>对于商品ID {item_id} 和数量 {quantity}，使用 inventory_check_tool 检查当前库存水平。&#x3C;/instruction>\n      &#x3C;output_format>{\"item_id\": \"...\", \"quantity_ordered\": ..., \"stock_available\": ..., \"is_in_stock\": true/false}&#x3C;/output_format>\n      &#x3C;next_step_if_true>2&#x3C;/next_step_if_true>\n      &#x3C;next_step_if_false>5&#x3C;/next_step_if_false> &#x3C;!-- 步骤5可能是通知客户库存问题 -->\n    &#x3C;/step>\n    &#x3C;step id=\"2\" description=\"处理支付\">\n      &#x3C;instruction>使用支付详情 {payment_token} 和金额 {order_total}，通过 payment_gateway_tool 处理支付。&#x3C;/instruction>\n      &#x3C;input>需要 {item_id}、{quantity}、{order_total}、{payment_token}。假设库存已在步骤1中确认。&#x3C;/input>\n      &#x3C;output_format>{\"payment_id\": \"...\", \"status\": \"success/failure\"}&#x3C;/output_format>\n    &#x3C;/step>\n    &#x3C;step id=\"3\" description=\"更新订单数据库\">\n      &#x3C;instruction>使用 order_database_tool 记录订单详情：{customer_id}、{item_id}、{quantity}、{order_total}、{payment_id}。&#x3C;/instruction>\n      &#x3C;output_format>{\"order_id\": \"...\", \"db_update_status\": \"success/failure\"}&#x3C;/output_format>\n    &#x3C;/step>\n    &#x3C;step id=\"4\" description=\"发送确认邮件\">\n      &#x3C;instruction>使用 email_tool 撰写并发送确认邮件给 {customer_email}，邮件中包含 {order_id} 和 {item_id}。&#x3C;/instruction>\n    &#x3C;/step>\n    &#x3C;step id=\"5\" description=\"通知库存问题\">\n      &#x3C;instruction>使用 email_tool 撰写并发送邮件给 {customer_email}，告知商品 {item_id} 缺货。&#x3C;/instruction>\n    &#x3C;/step>\n  &#x3C;/steps>\n&#x3C;/agent_task>\n</code></pre>\n<p>这种结构化方法清晰地划分了每个步骤、其目的、必要的输入（可能引用前一步骤的输出或外部变量，如<code>{item_id}</code>）、预期的输出格式，甚至简单的条件跳转（例如，<code>next_step_if_true</code>）。</p>\n<h3>可视化顺序流程</h3>\n<p>可视化操作流程有助于理解其顺序。简单的图表可以描绘智能体的预期路径。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1do3gzp\" \n              data-graph-definition='digraph G { rankdir=TB; bgcolor=\"transparent\"; node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\", fontname=\"sans-serif\"]; edge [color=\"#495057\", fontname=\"sans-serif\"]; s1 [label=\"步骤1：界定任务与输入\"]; s2 [label=\"步骤2：执行首个动作\"]; s3 [label=\"步骤3：处理中间结果\"]; s4 [label=\"步骤4：执行后续动作\"]; s5 [label=\"步骤5：生成最终输出\"]; s1 -> s2 -> s3 -> s4 -> s5; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1do3gzp\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>智能体可能遵循的典型线性操作序列，从初始输入处理到最终输出生成。</p>\n</blockquote>\n<h3>提示步骤完成与过渡</h3>\n<p>智能体不仅要执行每个步骤，还要理解何时一个步骤被视为完成以及如何进行到下一个。您可以通过以下方式引导：</p>\n<ul>\n<li><strong>要求明确的完成信号：</strong> 要求智能体输出一个特定短语，例如“步骤X已完成。”或者以一种固有的方式组织每个步骤的输出，以表明完成（例如，通过在该步骤的JSON对象中提供所有请求的字段）。</li>\n<li><strong>自然语言过渡：</strong> 使用类似“完成步骤1后，通过...进行到步骤2”的措辞。</li>\n<li><strong>迭代提示：</strong> 在某些智能体架构中，控制程序可能会一次只发出一个步骤的提示，等待智能体的响应（和完成信号），然后才发出下一个步骤的提示，同时纳入前一个步骤的结果。</li>\n</ul>\n<h3>引入简单条件逻辑</h3>\n<p>更高级的规划将在后续内容中介绍，但基本的条件逻辑可以融入顺序提示词 (prompt)中。这使得智能体能根据中间发现调整其路径。</p>\n<p>例如：\n“步骤3：分析客户评论的情感倾向。\n步骤4：如果情感倾向为积极或中性，则进行到步骤5。如果情感倾向为消极，则进行到步骤6。”</p>\n<p>这是一种简单的分支形式。您随后需要定义步骤5和步骤6具体包含什么。</p>\n<h3>顺序提示词 (prompt)的考量</h3>\n<p>在组织顺序操作的提示词时，请记住以下几点：</p>\n<ul>\n<li><strong>明确性：</strong> 尽可能清晰和明确地说明操作顺序、每个步骤的输入/输出以及从一个步骤过渡到下一个的判断标准。避免假设智能体“应该知道”什么。</li>\n<li><strong>模块化：</strong> 尝试定义相对独立的步骤。这可以使调试更简单，并可能允许在其他智能体任务中重复使用某些步骤定义。</li>\n<li><strong>错误处理（预想）：</strong> 尽管详细的错误处理本身是一个专题，但请考虑如果某个步骤失败会发生什么。对于简单的序列，您可以指示智能体报告失败并停止，或尝试预设的替代方案。</li>\n<li><strong>迭代优化：</strong> 设计有效的顺序提示词通常涉及测试和观察。使用提示词运行您的智能体，查看它在哪里出现偏差或混淆，然后优化指令以提高清晰度和准确性。</li>\n</ul>\n<p>通过仔细组织提示词来界定操作序列，您为AI智能体提供了必要的支架，以受控且可预测的方式执行更复杂、多步骤的任务。这构成了一项构建复杂智能体工作流程的基本能力。</p>",
+  "slug": "structuring-prompts-sequential-operations",
+  "updates": [],
+  "references": [
+    {
+      "id": 17960,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了一种使语言模型通过交错自然语言推理和特定任务动作来执行多步推理和行动的范式，与顺序操作高度相关。",
+      "order": 1,
+      "created_at": "2025-09-06T12:14:54.273272Z",
+      "updated_at": "2025-09-11T10:33:44.529435Z"
+    },
+    {
+      "id": 17961,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "论证了指导语言模型输出中间推理步骤可显著提高其在复杂推理任务上的表现，为顺序输出和信息流提供了基础。",
+      "order": 2,
+      "created_at": "2025-09-06T12:14:54.385928Z",
+      "updated_at": "2025-09-11T10:33:43.783269Z"
+    },
+    {
+      "id": 17963,
+      "title": "Prompt Engineering",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "官方指南，提供设计有效提示的实用建议，包括思维链和工具使用等策略，这些策略是代理工作流程和顺序任务执行的核心。",
+      "order": 4,
+      "created_at": "2025-09-06T12:14:54.398230Z",
+      "updated_at": "2025-09-11T10:33:48.606693Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

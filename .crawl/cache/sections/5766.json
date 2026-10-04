@@ -1,0 +1,61 @@
+{
+  "id": 5766,
+  "title": "模型保存：TensorFlow 格式与 PyTorch `state_dict`",
+  "meta_title": "PyTorch `state_dict` 对比 TensorFlow SavedModel/HDF5",
+  "meta_description": "了解 PyTorch 用于保存和加载模型的 `state_dict`，并将其与 TensorFlow 的 SavedModel 和 HDF5 格式进行比较。",
+  "content": "<p>在投入大量精力训练机器学习 (machine learning)模型后，保存你的工作成果以便后续使用、评估或部署是一个基本步骤。如果你来自 TensorFlow，你可能熟悉诸如 SavedModel 或 HDF5 之类的格式，它们通常会将模型的架构、权重 (weight)，有时甚至包括训练配置捆绑到一个单一的包中。PyTorch 以略有不同的理念处理模型保存，主要围绕一个名为 <code>state_dict</code> 的对象。</p>\n<p>理解 PyTorch 如何管理模型保存，尤其是它的 <code>state_dict</code>，对于有效保存和加载你的工作来说很重要。这种方法提供了灵活性，但与 TensorFlow 更为全面的保存格式相比，它需要一种不同的思维方式。</p>\n<h3>TensorFlow 的模型保存：快速回顾</h3>\n<p>在 TensorFlow 生态系统中，你通常会遇到两种主要保存模型的方式：</p>\n<ol>\n<li>\n<p><strong>SavedModel 格式</strong>：这是 TensorFlow 的标准序列化格式。一个 SavedModel 目录包含完整的 TensorFlow 程序，包括计算图、权重 (weight)（变量）、资产以及定义模型如何使用的签名（例如，用于 TensorFlow Serving 进行服务）。它被设计为一种语言无关、密封且可恢复的 TensorFlow 模型表示。</p>\n</li>\n<li>\n<p><strong>HDF5 格式 (<code>.h5</code> 或 <code>.keras</code>)</strong>：Keras 用户经常使用这种格式。HDF5 文件通常存储模型的架构、权重值以及训练配置（损失、优化器、评估指标）。这是一种方便保存和共享 Keras 模型的方式。</p>\n</li>\n</ol>\n<p>这两种 TensorFlow 格式都旨在提供一个相当完整的模型快照，让你能够加载和使用它，通常无需手头有原始模型创建代码（尽管最好还是保留它）。</p>\n<h3>PyTorch 的方法：<code>state_dict</code></h3>\n<p>PyTorch 保存模型信息的主要机制围绕着 <code>state_dict</code>。PyTorch 中的 <code>state_dict</code> 本质上是一个 Python 字典对象，它将模型中的每一层映射到其可学习参数 (parameter)（张量），例如权重 (weight)和偏置 (bias)。对于优化器（<code>torch.optim.Optimizer</code>），<code>state_dict</code> 包含优化器状态以及使用的超参数 (hyperparameter)信息。</p>\n<p>我们来考虑一个简单模型：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\n\nclass SimpleNet(nn.Module):\n    def __init__(self):\n        super(SimpleNet, self).__init__()\n        self.conv1 = nn.Conv2d(1, 10, kernel_size=5)\n        self.relu1 = nn.ReLU()\n        self.pool1 = nn.MaxPool2d(2)\n        self.fc1 = nn.Linear(1440, 50) # 假设在卷积/池化后，输入尺寸会产生 1440 个特征\n\n    def forward(self, x):\n        x = self.pool1(self.relu1(self.conv1(x)))\n        x = x.view(-1, 1440) # 展平\n        x = self.fc1(x)\n        return x\n\nmodel = SimpleNet()\nprint(model.state_dict().keys())\n</code></pre>\n<p>运行这段代码会输出类似以下内容：\n<code>odict_keys(['conv1.weight', 'conv1.bias', 'fc1.weight', 'fc1.bias'])</code></p>\n<p><code>state_dict</code> 中的每个键都对应着模型中的一个参数张量。例如，<code>conv1.weight</code> 是 <code>conv1</code> 层的权重张量的键。</p>\n<p>最重要的一点是，<code>state_dict</code> <strong>只包含模型的参数</strong>。它<em>不</em>存储模型的架构（例如上面 <code>SimpleNet</code> 这样的 Python 类定义）。这是 PyTorch 中有意为之的设计选择。它使保存的状态保持最小化，并依赖你的代码来定义模型结构。这种以 Python 为核心的方法提供了很大的灵活性，因为模型的架构就是 Python 代码，易于修改和检查。</p>\n<h4>保存和加载 <code>state_dict</code></h4>\n<p>使用 <code>torch.save()</code> 保存模型的 <code>state_dict</code> 非常直接：</p>\n<pre><code class=\"language-python\"># 假设 'model' 是你 nn.Module 子类的一个实例\nPATH = \"my_model_state_dict.pt\"\ntorch.save(model.state_dict(), PATH)\n</code></pre>\n<p>PyTorch 保存对象的常见文件扩展名是 <code>.pt</code>（PyTorch）或 <code>.pth</code>（PyTorch 历史上的）。在内部，<code>torch.save()</code> 使用 Python 的 <code>pickle</code> 模块来序列化 <code>state_dict</code> 对象。</p>\n<p>要将参数加载回模型中，你首先需要模型类的一个实例。这是因为 <code>state_dict</code> 只包含参数，不包含结构信息。</p>\n<pre><code class=\"language-python\"># 首先，实例化你的模型结构\nloaded_model = SimpleNet() # 你必须有 SimpleNet 类定义可用\n\n# 然后，加载 state_dict\nloaded_model.load_state_dict(torch.load(PATH))\n\n# 如果你将模型用于推理，请务必调用 model.eval()\n# 这会将 dropout 和 batch normalization 等层设置为评估模式\nloaded_model.eval()\n</code></pre>\n<p>如果你正在恢复训练，你通常会省略 <code>loaded_model.eval()</code>，并确保模型处于训练模式（<code>loaded_model.train()</code>），这是默认状态。</p>\n<h4><code>state_dict</code> 与 TensorFlow 格式的比较</h4>\n<p>保存内容的这种区别对于从 TensorFlow 转向 PyTorch 的开发者来说是核心要点：</p>\n<table>\n<thead>\n<tr>\n<th>特点</th>\n<th>TensorFlow (SavedModel, HDF5)</th>\n<th>PyTorch (<code>state_dict</code>)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><strong>保存内容</strong></td>\n<td>架构、权重、优化器状态（通常）、服务签名（SavedModel）</td>\n<td>主要为可学习参数（权重、偏置）。优化器状态单独保存。</td>\n</tr>\n<tr>\n<td><strong>模型定义</strong></td>\n<td>通常自包含在保存的文件中。</td>\n<td>需要模型的 Python 类定义单独可用。</td>\n</tr>\n<tr>\n<td><strong>序列化</strong></td>\n<td>Protocol Buffers (SavedModel)、HDF5。</td>\n<td>Python 的 <code>pickle</code> 用于 <code>state_dict</code> 对象。</td>\n</tr>\n<tr>\n<td><strong>重建</strong></td>\n<td>直接加载到可用的模型对象中。</td>\n<td>实例化模型类，然后将 <code>state_dict</code> 加载进去。</td>\n</tr>\n<tr>\n<td><strong>灵活性</strong></td>\n<td>结构化，适用于部署端点。</td>\n<td>灵活性高，依赖 Python 代码定义结构。</td>\n</tr>\n</tbody>\n</table>\n<p>这意味着当你通过 <code>state_dict</code> 共享或归档 PyTorch 模型时，你还必须提供定义模型架构的 Python 代码。仅仅 <code>state_dict</code> 不足以重建模型。</p>\n<p>尽管 PyTorch <em>确实</em>允许你保存整个模型对象（<code>torch.save(model, PATH)</code>），但保存 <code>state_dict</code> 通常是模型保存和共享的推荐做法。这是因为它将学习到的参数与保存时的特定 Python 代码和类结构解耦。如果你重构模型的 Python 文件，但对应 <code>state_dict</code> 的层名称和结构保持不变，你仍然可以加载参数。保存整个模型会序列化整个类，如果文件结构或类定义发生变化，这种方式可能会更脆弱。</p>\n<p>这种以 <code>state_dict</code> 为核心的方法让你承担更多管理模型定义代码的责任，但提供了模型逻辑（其架构）与其学习状态（其参数）之间的清晰分离。在后续内容中，我们将探讨保存整个模型与仅保存 <code>state_dict</code> 之间的细微差异，并研究在训练过程中有用的检查点策略。</p>",
+  "slug": "model-saving-pytorch-tf",
+  "updates": [],
+  "references": [
+    {
+      "id": 15573,
+      "title": "Saving and Loading Models",
+      "author": "Matthew Inkawhich",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/saving_loading_models.html",
+      "doi": "",
+      "note": "PyTorch模型持久化的官方教程，包含`state_dict`概念以及保存和加载方法。",
+      "order": 1,
+      "created_at": "2025-09-06T10:51:49.103422Z",
+      "updated_at": "2025-09-10T13:19:49.581216Z"
+    },
+    {
+      "id": 15574,
+      "title": "Save and load Keras models",
+      "author": "Neel Kovelamudi, Francois Chollet",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras/save_and_serialize",
+      "doi": "",
+      "note": "关于使用TensorFlow的HDF5和SavedModel等格式保存和序列化Keras模型的官方指南。",
+      "order": 2,
+      "created_at": "2025-09-06T10:51:49.114099Z",
+      "updated_at": "2025-09-10T13:20:06.634226Z"
+    },
+    {
+      "id": 15575,
+      "title": "SavedModel Guide",
+      "author": "TensorFlow team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/saved_model",
+      "doi": "",
+      "note": "TensorFlow标准SavedModel格式的深度指南，涵盖其结构和模型部署应用。",
+      "order": 3,
+      "created_at": "2025-09-06T10:51:49.117008Z",
+      "updated_at": "2025-09-10T13:19:57.143619Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

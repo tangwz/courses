@@ -1,0 +1,61 @@
+{
+  "id": 2798,
+  "title": "使用 lax.while_loop 进行循环",
+  "meta_title": "在 JAX 中使用 lax.while_loop",
+  "meta_description": "使用 lax.while_loop 及其相关限制在编译的 JAX 代码中处理动态循环。",
+  "content": "<p>尽管 <code>lax.scan</code> 擅长执行固定数量的顺序步骤，但许多算法需要循环，直到满足特定条件才停止。标准Python <code>while</code> 循环给JAX的编译过程带来了难题。因为JAX在执行<em>之前</em>会跟踪函数以生成计算图，所以它需要事先了解计算的结构。如果Python <code>while</code> 循环的终止条件依赖于循环内部计算的中间值，则无法直接有效地进行跟踪和JIT编译。</p>\n<p>为了在编译代码中处理此类动态循环结构，JAX提供了 <code>jax.lax.while_loop</code>。此函数允许你表达迭代次数根据运行时值动态确定的循环，同时仍能进行JIT编译并在加速器上执行。</p>\n<h3><code>lax.while_loop</code> 的结构</h3>\n<p><code>lax.while_loop</code> 函数接受三个主要参数 (parameter)：</p>\n<ol>\n<li><code>cond_fun</code>: 一个Python可调用对象，接收当前循环状态（“carry”），并返回一个布尔型标量JAX值。只要 <code>cond_fun</code> 返回 <code>True</code>，循环就继续。</li>\n<li><code>body_fun</code>: 一个Python可调用对象，定义单次迭代中执行的操作。它接收当前循环状态（carry）作为输入，并且必须返回一个具有相同结构（形状和数据类型）的更新循环状态。</li>\n<li><code>init_val</code>: 提供给循环第一次迭代的初始状态或“carry”值。</li>\n</ol>\n<p>基本形式如下所示：</p>\n<pre><code class=\"language-python\">final_val = jax.lax.while_loop(cond_fun, body_fun, init_val)\n</code></pre>\n<p>循环按以下方式进行：</p>\n<ul>\n<li><code>cond_fun</code> 传入 <code>init_val</code> 调用。</li>\n<li>如果为 <code>True</code>，则 <code>body_fun</code> 传入 <code>init_val</code> 调用。它返回 <code>next_val</code>。</li>\n<li><code>cond_fun</code> 传入 <code>next_val</code> 调用。</li>\n<li>如果为 <code>True</code>，则 <code>body_fun</code> 传入 <code>next_val</code> 调用。它返回 <code>another_val</code>。</li>\n<li>这会持续直到 <code>cond_fun</code> 返回 <code>False</code>。</li>\n<li><code>body_fun</code> 返回的最后一个值（即传入 <code>cond_fun</code> 并使其返回 <code>False</code> 的那个值）是 <code>lax.while_loop</code> 返回的最终结果。</li>\n</ul>\n<h3>函数式状态管理</h3>\n<p>重要的是，像其他JAX变换和控制流原语一样，<code>lax.while_loop</code> 以函数式方式运行。循环状态不会原地修改；相反，<code>body_fun</code> 必须显式返回下一个迭代的<em>新</em>状态。此状态（<code>init_val</code> 和 <code>body_fun</code> 的后续输出）可以是任何JAX兼容类型，包括标量、数组或数组的pytree（嵌套元组、列表、字典）。状态的结构和类型/形状必须在迭代之间保持一致。</p>\n<h3>示例：寻找最小的2的幂</h3>\n<p>让我们用一个简单的例子来说明：寻找大于或等于给定数字 <code>n</code> 的最小2的幂。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\ndef find_power_of_two(n):\n  # 条件函数：当 current_power &#x3C; n 时继续\n  def cond_fun(loop_state):\n    current_power = loop_state\n    return current_power &#x3C; n\n\n  # 循环体函数：将当前幂翻倍\n  def body_fun(loop_state):\n    current_power = loop_state\n    return current_power * 2\n\n  # 初始状态：从幂为1开始\n  init_val = 1\n  \n  # 运行 while 循环\n  final_power = jax.lax.while_loop(cond_fun, body_fun, init_val)\n  return final_power\n\n# 示例用法\ntarget_number = 100\nresult = find_power_of_two(target_number)\nprint(f\"最小的2的幂 >= {target_number}: {result}\") \n# 输出: 最小的2的幂 >= 100: 128\n\n# 我们可以JIT编译此函数\njit_find_power_of_two = jax.jit(find_power_of_two)\nresult_jit = jit_find_power_of_two(target_number)\nprint(f\"JIT 结果: {result_jit}\")\n# 输出: JIT 结果: 128 \n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li><code>init_val</code> 是 <code>1</code>。</li>\n<li><code>cond_fun</code> 检查当前幂（<code>loop_state</code>）是否小于 <code>n</code> (100)。</li>\n<li><code>body_fun</code> 接收当前幂并返回翻倍的值作为新状态。</li>\n<li>循环运行如下：\n<ul>\n<li><code>cond_fun(1)</code> -> True。<code>body_fun(1)</code> -> 2。</li>\n<li><code>cond_fun(2)</code> -> True。<code>body_fun(2)</code> -> 4。</li>\n<li>...</li>\n<li><code>cond_fun(64)</code> -> True。<code>body_fun(64)</code> -> 128。</li>\n<li><code>cond_fun(128)</code> -> False。循环终止。</li>\n</ul>\n</li>\n<li><code>lax.while_loop</code> 返回导致 <code>cond_fun</code> 返回 <code>False</code> 的最后一个传入状态，即 <code>128</code>。</li>\n</ul>\n<h3>跟踪和编译</h3>\n<p>当JAX在一个正在JIT编译的函数内部遇到 <code>lax.while_loop</code> 时，它会一次性跟踪 <code>cond_fun</code> 和 <code>body_fun</code>，以了解它们执行的操作。循环状态（<code>init_val</code> 和 <code>body_fun</code> 的返回值）的形状和数据类型必须是静态的，并且在跟踪期间可确定。<em>值</em>可以动态变化，但<em>结构</em>不能。</p>\n<p>整个循环随后被编译成一个单一的优化操作（通常是底层XLA表示中的 <code>while</code> 操作）。这与Python <code>while</code> 循环有本质区别，Python <code>while</code> 循环通常会导致JAX在迭代次数固定且在跟踪期间已知时展开循环，或者在条件依赖于跟踪值时编译失败。<code>lax.while_loop</code> 明确告诉JAX，这是一个旨在编译的动态循环结构。</p>\n<h3>与 <code>lax.scan</code> 的比较</h3>\n<p>对比 <code>lax.while_loop</code> 和 <code>lax.scan</code> 会有所帮助：</p>\n<ul>\n<li><strong>迭代次数：</strong> <code>lax.scan</code> 执行<em>固定</em>数量的迭代，由输入序列的长度决定。<code>lax.while_loop</code> 执行<em>可变</em>数量的迭代，直到 <code>cond_fun</code> 返回 <code>False</code>。</li>\n<li><strong>输出：</strong> <code>lax.scan</code> 通常累积每一步的输出。<code>lax.while_loop</code> 只返回循环carry的<em>最终</em>状态。</li>\n<li><strong>用例：</strong> <code>lax.scan</code> 非常适合处理序列（如RNN中）或为已知次数重复应用操作。<code>lax.while_loop</code> 适合带有收敛准则的迭代算法或运行直到满足条件的模拟。</li>\n</ul>\n<h3>注意事项</h3>\n<ul>\n<li><strong>终止：</strong> 确保你的 <code>cond_fun</code> 最终会变为 <code>False</code>。<code>lax.while_loop</code> 中的无限循环将导致编译后的程序挂起。JAX无法静态验证所有可能循环的终止。</li>\n<li><strong>性能：</strong> 尽管 <code>lax.while_loop</code> 实现了动态迭代计数，但与静态大小的操作或在编译时已知总工作量的 <code>lax.scan</code> 相比，迭代次数非常大或高度可变的循环可能会影响性能。循环开销确实存在，但XLA对其优化得很好。</li>\n<li><strong>求导：</strong> <code>lax.while_loop</code> 支持自动求导（<code>jax.grad</code>）。对 <code>while_loop</code> 进行求导通常涉及在反向传播 (backpropagation)过程中展开循环迭代，这可能会根据执行的迭代次数产生内存影响。这种关联将在第4章中进一步讨论。</li>\n</ul>\n<p><code>lax.while_loop</code> 为在JAX中表达复杂的计算增加了一个重要的工具，让你能够处理其流程动态依赖于计算值的算法，同时保持JAX编译和硬件加速的优势。</p>",
+  "slug": "looping-lax-while-loop",
+  "updates": [],
+  "references": [
+    {
+      "id": 7058,
+      "title": "jax.lax.while_loop",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html",
+      "doi": "",
+      "note": "JAX官方文档，提供`jax.lax.while_loop`的API详情和使用示例。",
+      "order": 1,
+      "created_at": "2025-09-05T01:30:54.707376Z",
+      "updated_at": "2025-09-08T07:20:41.089149Z"
+    },
+    {
+      "id": 7060,
+      "title": "Control Flow in JAX",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.jax.dev/en/latest/control-flow.html",
+      "doi": "",
+      "note": "JAX控制流指南，解释了`while_loop`等`lax`原语在JIT编译代码中的动机和用法。",
+      "order": 3,
+      "created_at": "2025-09-05T01:30:54.715081Z",
+      "updated_at": "2025-09-08T07:20:48.757433Z"
+    },
+    {
+      "id": 7061,
+      "title": "XLA Overview",
+      "author": "Google Brain Team",
+      "year": "2024",
+      "publisher": "OpenXLA Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://openxla.org/xla/architecture",
+      "doi": "",
+      "note": "XLA的文档，JAX使用的线性代数编译器，为JAX高性能执行控制流原语提供了背景信息。",
+      "order": 4,
+      "created_at": "2025-09-05T01:30:54.717505Z",
+      "updated_at": "2025-09-08T07:20:57.148550Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

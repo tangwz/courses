@@ -1,0 +1,61 @@
+{
+  "id": 2862,
+  "title": "实践：分布式数据并行训练",
+  "meta_title": "JAX 分布式训练实践",
+  "meta_description": "使用 `pmap` 和集合操作实现一个简单的数据并行训练循环。",
+  "content": "<p>构建一个基本的数据并行训练循环，需要模拟多设备（如GPU或TPU核心）环境，并使用 <code>pmap</code> 在这些设备上分派一个简单的机器学习 (machine learning)任务。目标是训练一个模型，其中每个设备处理一部分数据批次，局部计算梯度，随后共同完成平均梯度的计算，以进行同步参数 (parameter)更新。</p>\n<p>此练习展现了单程序多数据 (SPMD) 执行与 <code>pmap</code> 的核心工作流程：为单个设备编写代码，然后 <code>pmap</code> 负责复制执行并协调必要的通信。</p>\n<h3>设置与依赖</h3>\n<p>首先，我们导入JAX、NumPy，并检查可用设备的数量。在此示例中，即使您在CPU上运行，我们也会模拟多个设备，但此代码适用于多GPU或TPU配置。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nimport numpy as np\nfrom jax import pmap, grad, value_and_grad, jit\nfrom jax.lax import pmean\n\n# 检查可用设备\nnum_devices = jax.local_device_count()\nprint(f\"Number of available devices: {num_devices}\")\n\n# 如果在CPU上运行，JAX可以模拟多个设备进行pmap测试\n# 取消注释下一行，例如在CPU上模拟4个设备\n# jax.config.update('jax_platforms', 'cpu') # 如有需要，强制使用CPU\n# jax.config.update(\"jax_cpu_device_count\", 4)\n# num_devices = jax.local_device_count() # 如果进行模拟，更新设备数量\n# print(f\"Number of simulated devices: {num_devices}\")\n\n# 确保我们至少有2个设备以获得有意义的示例\nif num_devices &#x3C; 2:\n    print(\"Warning: This example is best run with multiple devices (real or simulated).\")\n    # 您仍然可以运行它，但pmap将无法提供并行优势。\n\n# 生成一个PRNG密钥\nkey = jax.random.PRNGKey(0)\n</code></pre>\n<h3>定义一个简单模型和损失函数 (loss function)</h3>\n<p>为了简单起见，我们将使用一个基本的线性回归模型。任务是找到权重 (weight) <code>w</code> 和偏置 (bias) <code>b</code>，使得 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi><mo>≈</mo><mi>X</mi><mi>w</mi><mo>+</mo><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">y \\approx Xw + b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6776em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">X</span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span>。</p>\n<pre><code class=\"language-python\">def linear_model(params, x):\n  \"\"\"一个简单的线性模型预测函数。\"\"\"\n  w, b = params\n  return jnp.dot(x, w) + b\n\ndef mean_squared_error(params, x_batched, y_batched):\n  \"\"\"计算均方误差损失。\"\"\"\n  predictions = linear_model(params, x_batched)\n  error = predictions - y_batched\n  loss = jnp.mean(error**2)\n  return loss\n</code></pre>\n<h3>准备样本数据并分片</h3>\n<p>我们需要能跨设备拆分的数据。使用 <code>pmap</code> 进行数据并行处理的常规做法是，确保输入数组的<em>第一个</em>维度与设备数量匹配。沿此维度 (<code>data[i]</code>) 的每个切片都会发送到第 <code>i</code> 个设备。</p>\n<pre><code class=\"language-python\"># 生成合成数据\nfeature_dim = 5\nnum_samples = 100 * num_devices # 确保总样本数可被设备数量整除\n\nkey, w_key, b_key, x_key, noise_key = jax.random.split(key, 5)\n\n# 真实参数（我们希望模型学习这些）\ntrue_w = jax.random.normal(w_key, (feature_dim,))\ntrue_b = jax.random.normal(b_key, ())\n\n# 生成特征X和目标y\nX = jax.random.normal(x_key, (num_samples, feature_dim))\nnoise = jax.random.normal(noise_key, (num_samples,)) * 0.1\ny = jnp.dot(X, true_w) + true_b + noise\n\n# 为pmap重塑数据：为设备添加一个前导维度\n# 每个设备将获得 batch_size_per_device = num_samples // num_devices 个样本\nbatch_size_per_device = num_samples // num_devices\nsharded_X = X.reshape((num_devices, batch_size_per_device, feature_dim))\nsharded_y = y.reshape((num_devices, batch_size_per_device))\n\nprint(f\"Total samples: {num_samples}\")\nprint(f\"Samples per device: {batch_size_per_device}\")\nprint(f\"Shape of sharded X: {sharded_X.shape}\") # 应该是 (num_devices, batch_size_per_device, feature_dim)\nprint(f\"Shape of sharded y: {sharded_y.shape}\") # 应该是 (num_devices, batch_size_per_device)\n</code></pre>\n<h3>定义分布式训练步骤</h3>\n<p>这是本示例的主要部分。我们将创建一个函数，它被设计用于在<em>单个</em>设备上运行，计算其本地数据分片的损失和梯度。随后，我们将使用 <code>pmap</code> 在所有设备上并行运行此函数。重要的是，在 <code>pmap</code> 化函数内部，我们将在执行参数 (parameter)更新之前，使用 <code>jax.lax.pmean</code> 平均每个设备独立计算的梯度。</p>\n<pre><code class=\"language-python\"># 定义在单个设备上计算损失和梯度的函数\ncompute_loss_and_grads = value_and_grad(mean_squared_error)\n\n# 定义将被pmap化的训练步骤函数\n# 它接收当前参数和单个设备的数据分片\ndef distributed_train_step(params, x_shard, y_shard, learning_rate):\n  \"\"\"在设备分片数据上执行一个训练步骤。\"\"\"\n  # 1. 在每个设备上局部计算损失和梯度\n  loss, grads = compute_loss_and_grads(params, x_shard, y_shard)\n\n  # 2. 使用pmean在所有设备上平均梯度\n  # 'batch' 是我们将在pmap中定义的轴名称\n  # pmean 计算映射在 'batch' 轴上的设备的平均值\n  avg_grads = pmean(grads, axis_name='batch')\n\n  # 3. 更新参数（所有设备上保持一致）\n  # 简单的梯度下降更新\n  new_params = jax.tree_map(lambda p, g: p - learning_rate * g, params, avg_grads)\n\n  # 我们也对损失进行平均，以便报告（可选，但有用）\n  avg_loss = pmean(loss, axis_name='batch')\n\n  return new_params, avg_loss\n\n# 使用pmap创建训练步骤的并行版本\n# - `axis_name='batch'` 为被映射的维度提供一个名称。\n#   此名称由函数内的pmean等集合操作使用。\n# - `in_axes=(0, 0, 0, None)` 指定输入如何映射：\n#   - params: 复制（None表示在所有设备上使用相同的参数）\n#   - x_shard: 沿轴0分片（使用第一个维度作为设备维度）\n#   - y_shard: 沿轴0分片\n#   - learning_rate: 复制（None表示在所有设备上使用相同的值）\n# - `out_axes=0` 指定输出（new_params, avg_loss）应被\n#   沿轴0堆叠。然而，由于参数更新在所有设备上都是一致的，\n#   `new_params` 沿轴0的所有元素都将相同。\n#   在pmean之后，avg_loss在所有设备上也将相同。\n# 我们在pmap内部使用jit=True以提高性能（通常是默认值，但此处明确指定）。\np_train_step = pmap(\n    distributed_train_step,\n    axis_name='batch',\n    in_axes=(0, 0, 0, None),\n    out_axes=0, # 输出参数和损失将被分片，但在设备间一致\n    static_broadcasted_argnums=(3,) # learning_rate 在每次调用中不变\n)\n</code></pre>\n<blockquote>\n<p>注意：<code>static_broadcasted_argnums</code> 参数告知 <code>pmap</code>（和 <code>jit</code>），该索引处的参数（学习率）在具有相同值的多次调用中保持不变。如果只有其他参数改变，这有助于避免重新编译。<code>in_axes</code> 规范非常重要：<code>0</code> 表示沿其第一个轴拆分相应的参数，将结果切片分发到设备。<code>None</code> 表示复制该参数；每个设备获得相同的副本。</p>\n</blockquote>\n<h3>初始化参数 (parameter)并复制</h3>\n<p>在开始训练循环之前，我们需要初始化模型参数（<code>w</code> 和 <code>b</code>），然后将它们复制到所有设备上。<code>pmap</code> 期望的输入要么是分片的，要么是复制的。由于参数在开始时应在所有设备上一致（并保持同步），我们选择复制它们。</p>\n<pre><code class=\"language-python\"># 随机初始化参数\nkey, w_init_key, b_init_key = jax.random.split(key, 3)\ninitial_w = jax.random.normal(w_init_key, (feature_dim,))\ninitial_b = jax.random.normal(b_init_key, ())\nparams = (initial_w, initial_b)\n\n# 将初始参数复制到所有设备\n# 方法1：使用jax.tree_map和jnp.array堆叠\n# replicated_params = jax.tree_map(lambda x: jnp.array([x] * num_devices), params)\n\n# 方法2：使用pmap广播行为的常见模式\n# 定义一个只返回其输入的辅助函数\ndef broadcast(x):\n  return x\n# 将此函数pmap化，in_axes=None意味着输入x被广播\np_broadcast = pmap(broadcast, in_axes=None, out_axes=0)\nreplicated_params = p_broadcast(params)\n\nprint(\"Shape of initial w:\", initial_w.shape)\nprint(\"Shape of replicated w:\", replicated_params[0].shape) # 应该是 (num_devices, feature_dim)\nprint(\"Shape of initial b:\", initial_b.shape)\nprint(\"Shape of replicated b:\", replicated_params[1].shape) # 应该是 (num_devices,)\n</code></pre>\n<h3>训练循环</h3>\n<p>现在我们可以运行训练循环了。在每一步中，我们用当前复制的参数 (parameter)和分片数据调用 <code>p_train_step</code> 函数。该函数负责并行执行、通过 <code>pmean</code> 进行梯度平均以及同步更新。</p>\n<pre><code class=\"language-python\">learning_rate = 0.05\nnum_epochs = 50 # 此处每个epoch使用一次分片的完整数据集\n\nprint(\"\\n开始分布式训练...\")\ncurrent_params = replicated_params\n\nfor epoch in range(num_epochs):\n  # 执行并行训练步骤\n  # 传入复制的参数和本“epoch”的分片数据\n  current_params, loss = p_train_step(current_params, sharded_X, sharded_y, learning_rate)\n\n  # p_train_step返回的损失是复制的（在所有设备上相同，\n  # 因为我们使用了pmean）。我们只需要一个设备的值。\n  # jax.device_get 将数据从设备传输到主机（如果频繁执行可能会很慢）。\n  # 访问第一个元素[0]也有效，并且在循环中通常更受青睐。\n  epoch_loss = loss[0] # 从第一个设备获取损失\n\n  if (epoch + 1) % 10 == 0:\n        print(f\"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}\")\n\n# 训练结束后，current_params中的参数仍然是复制的。\n# 从一个设备获取最终参数。\nfinal_params = jax.tree_map(lambda x: x[0], current_params)\n\nprint(\"\\n训练完成。\")\nprint(\"Learned w:\", final_params[0])\nprint(\"True w:   \", true_w)\nprint(\"Learned b:\", final_params[1])\nprint(\"True b:   \", true_b)\n</code></pre>\n<h3>验证</h3>\n<p>在每次调用 <code>p_train_step</code> 后，<code>current_params</code> 变量会持有更新后的参数 (parameter)，这些参数在设备间是复制的。由于梯度平均（<code>pmean</code>）确保所有设备计算出相同的平均梯度，并且更新规则是确定的，因此所有设备上的参数在整个训练过程中应保持一致。例如，您可以通过检查设备0和设备1之间权重 (weight) <code>w</code> 的 <code>jnp.allclose(current_params[0][0], current_params[0][1])</code> 来验证这一点。</p>\n<h3>总结</h3>\n<p>在本实践部分，我们成功地使用 <code>pmap</code> 实现了一个数据并行训练循环：</p>\n<ol>\n<li><strong>数据分片：</strong> 我们重塑了输入数据 <code>X</code> 和 <code>y</code>，使它们的第一个维度与设备数量匹配。</li>\n<li><strong>SPMD 函数：</strong> 我们定义了 <code>distributed_train_step</code>，它封装了单个设备的逻辑：在其数据分片上计算损失和梯度。</li>\n<li><strong>集合通信：</strong> 在此函数内部，我们使用了带有 <code>axis_name</code> ('batch') 的 <code>jax.lax.pmean</code> 来平均所有参与 <code>pmap</code> 的设备所计算的梯度。</li>\n<li><strong>同步更新：</strong> 使用平均梯度，每个设备执行了完全相同的参数 (parameter)更新，确保参数保持同步。</li>\n<li><strong><code>pmap</code> 转换：</strong> 我们将 <code>pmap</code> 应用于 <code>distributed_train_step</code>，指定 <code>axis_name</code> 并使用 <code>in_axes</code> 来控制参数的分布方式（<code>0</code> 用于分片数据，<code>None</code> 用于复制的参数和学习率）。</li>\n<li><strong>复制：</strong> 在启动循环之前，我们明确复制了初始参数。</li>\n</ol>\n<p>此模式是扩展许多JAX计算（特别是深度学习 (deep learning)训练）以支持多加速器的基本方法。您可以通过替换线性模型和损失函数 (loss function)为更复杂的神经网络 (neural network)，并加入Adam等优化器来调整此模板，而数据并行的核心 <code>pmap</code> 结构在很大程度上保持不变。</p>",
+  "slug": "practice-distributed-data-parallel-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 7648,
+      "title": "Multi-device programming with `pmap`",
+      "author": "JAX documentation contributors",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "JAX Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/gpu_autodiff_pmap.html",
+      "doi": "",
+      "note": "JAX官方关于`pmap`并行执行和`pmean`等集合操作的指南，对于理解本实践示例至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T01:44:28.973155Z",
+      "updated_at": "2025-09-09T01:29:51.481864Z"
+    },
+    {
+      "id": 7649,
+      "title": "Accurate, Large Minibatch SGD: A White Paper",
+      "author": "Priya Goyal, Piotr Dollár, Ross Girshick, Pieter Noordhuis, Lukasz Wesolowski, Aapo Kyrola, Andrew Tulloch, Yangqing Jia, Kaiming He",
+      "year": "2017",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1706.02677",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.02677",
+      "doi": "10.48550/arXiv.1706.02677",
+      "note": "一篇基础性论文，描述了大规模同步随机梯度下降的原理和考虑因素，该方法通过梯度平均的数据并行训练得以实现。",
+      "order": 2,
+      "created_at": "2025-09-05T01:44:28.982354Z",
+      "updated_at": "2025-09-09T01:29:41.591681Z"
+    },
+    {
+      "id": 7651,
+      "title": "Cloud TPU System Architecture",
+      "author": "Google Cloud",
+      "year": "2024",
+      "publisher": "",
+      "journal": "Google Cloud Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/tpu/docs/system-architecture",
+      "doi": "",
+      "note": "解释了Cloud TPU如何为SPMD（单程序多数据）执行而设计，为JAX中使用的`pmap`编程模型提供了背景。",
+      "order": 4,
+      "created_at": "2025-09-05T01:44:28.988368Z",
+      "updated_at": "2025-09-09T01:29:39.856174Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

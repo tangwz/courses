@@ -1,0 +1,61 @@
+{
+  "id": 1205,
+  "title": "趋势点图 (pointplot)",
+  "meta_title": "使用 Seaborn 创建点图",
+  "meta_description": "使用 Seaborn 的点图显示点估计和置信区间，突出显示跨类别的趋势。",
+  "content": "<p>虽然条形图能很好地表示每个类别的中心趋势（如平均值），但有时您更关注这些中心趋势在不同类别或组之间如何<em>变化</em>。Seaborn 的 <code>pointplot</code> 函数就是为此设计的。它侧重于比较分类轴上不同点之间的点估计及其置信区间。</p>\n<p>与使用条形高度表示值的条形图不同，点图用一个点表示估计值（默认为平均值），并用一条垂直线表示不确定性（默认为 95% 置信区间）。点图对于识别趋势特别有用之处在于，它们通常用线条连接属于同一组的点（通过 <code>hue</code> 参数 (parameter)指定）。这种视觉连接使判断分类变量之间如何互相影响变得更容易。</p>\n<p>让我们看看如何创建一个点图。我们将使用 Seaborn，并假设数据已载入 Pandas DataFrame。设想一个包含餐厅小费信息的数据集，包括总账单、星期几以及顾客是否吸烟。我们可能想了解平均小费金额如何随日期变化，或许可以区分吸烟者和非吸烟者。</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\n# 示例 DataFrame（请替换为您的实际数据加载）\n# 示例：tips = sns.load_dataset('tips')\ndata = {\n    'day': ['Thur', 'Thur', 'Fri', 'Fri', 'Sat', 'Sat', 'Sun', 'Sun', 'Thur', 'Fri', 'Sat', 'Sun'],\n    'tip': [2.5, 3.0, 4.0, 3.5, 5.0, 4.5, 6.0, 5.5, 2.0, 3.8, 4.8, 5.8],\n    'smoker': ['No', 'Yes', 'No', 'Yes', 'No', 'Yes', 'No', 'Yes', 'No', 'No', 'Yes', 'Yes']\n}\ntips = pd.DataFrame(data)\n\n# 创建点图\nplt.figure(figsize=(8, 5)) # 调整图表大小以提高清晰度\nsns.pointplot(x='day', y='tip', hue='smoker', data=tips, \n              order=['Thur', 'Fri', 'Sat', 'Sun'], # 定义日期的顺序\n              palette={'Yes': '#f03e3e', 'No': '#1c7ed6'}, # 使用特定颜色\n              markers=['o', 'x'], # 为不同 hue 级别使用不同标记\n              linestyles=['-', '--']) # 为不同 hue 级别使用不同线条样式\n\n# 添加标题和标签（可选自定义）\nplt.title('Average Tip Amount by Day and Smoker Status')\nplt.xlabel('Day of the Week')\nplt.ylabel('Average Tip ($)')\n\n# 显示图表\nplt.show()\n</code></pre>\n<h3>理解图表</h3>\n<p>在生成的图表中：</p>\n<ol>\n<li><strong>X轴</strong>：显示您指定的类别（例如，“day”）。</li>\n<li><strong>Y轴</strong>：显示数值变量（例如，“tip”）。</li>\n<li><strong>点（标记 (token)）</strong>：表示 <code>x</code> 轴上每个类别 <code>y</code> 变量的计算估计值（默认为平均值）。如果使用 <code>hue</code>，则在每个 <code>x</code> 类别内，每个 <code>hue</code> 级别都会有单独的点。不同 <code>hue</code> 级别可能会使用不同的标记形状。</li>\n<li><strong>垂直线</strong>：表示估计值周围的置信区间（通常为 95%）。这能让您了解估计值的不确定性或变异性。线越宽表示不确定性越大。</li>\n<li><strong>连接线</strong>：如果使用了 <code>hue</code>，则线条连接不同 <code>x</code> 类别中<em>相同</em> <code>hue</code> 级别的估计值。这是帮助可视化趋势或互相影响的主要特点。不同 <code>hue</code> 级别可能会使用不同的线条样式。</li>\n</ol>\n<h3><code>pointplot</code> 的参数 (parameter)</h3>\n<ul>\n<li><code>x</code>、<code>y</code>：水平和垂直轴的变量。一个应为分类变量，另一个为数值变量。</li>\n<li><code>data</code>：包含数据的 Pandas DataFrame。</li>\n<li><code>hue</code>：第二个分类变量，用于进一步对数据进行分组。属于相同 <code>hue</code> 级别的点会由线条连接。</li>\n<li><code>estimator</code>：用于计算每个类别点估计的统计函数。默认为 <code>numpy.mean</code>。您可以使用 <code>numpy.median</code>、<code>numpy.std</code> 或任何聚合数据的函数。例如，<code>estimator=np.median</code>。</li>\n<li><code>ci</code>：围绕估计值绘制的置信区间的大小。默认为 95（表示 95% 置信区间）。设置为 <code>None</code> 可禁用置信区间。它也可以接受 'sd' 来表示标准差。</li>\n<li><code>order</code>、<code>hue_order</code>：字符串列表，用于指定 <code>x</code> 轴或 <code>hue</code> 变量上分类级别的出现顺序。</li>\n<li><code>markers</code>：一个字符串或字符串列表，指定用于点的标记 (token)样式。</li>\n<li><code>linestyles</code>：一个字符串或字符串列表，指定用于连接线的线条样式。</li>\n<li><code>palette</code>：指定用于 <code>hue</code> 变量不同级别的颜色。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1xq7yrp\" \n              data-plot-definition='{\n  \"layout\": {\n    \"xaxis\": {\n      \"title\": \"星期几\",\n      \"categoryorder\": \"array\",\n      \"categoryarray\": [\n        \"Thur\",\n        \"Fri\",\n        \"Sat\",\n        \"Sun\"\n      ]\n    },\n    \"yaxis\": {\n      \"title\": \"平均小费 ($)\"\n    },\n    \"title\": \"每日平均小费金额（点图示例）\",\n    \"autosize\": true,\n    \"height\": 350\n  },\n  \"data\": [\n    {\n      \"type\": \"scatter\",\n      \"x\": [\n        \"Thur\",\n        \"Fri\",\n        \"Sat\",\n        \"Sun\"\n      ],\n      \"y\": [\n        2.75,\n        3.77,\n        4.75,\n        5.75\n      ],\n      \"mode\": \"lines+markers\",\n      \"name\": \"示例趋势\",\n      \"marker\": {\n        \"color\": \"#228be6\",\n        \"size\": 8\n      },\n      \"line\": {\n        \"color\": \"#228be6\"\n      },\n      \"error_y\": {\n        \"type\": \"data\",\n        \"array\": [\n          0.3,\n          0.2,\n          0.2,\n          0.15\n        ],\n        \"arrayminus\": [\n          0.3,\n          0.2,\n          0.2,\n          0.15\n        ],\n        \"visible\": true,\n        \"color\": \"#228be6\",\n        \"thickness\": 1.5,\n        \"width\": 3\n      }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-1xq7yrp\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简化示例，显示每日平均小费的点估计（点），通过线条连接以强调趋势，带有垂直误差条表示置信区间。</p>\n</blockquote>\n<h3>何时使用点图</h3>\n<p>点图在以下情况中特别有效：</p>\n<ol>\n<li><strong>比较多个类别之间的估计值</strong>：轻松查看一个类别的平均值（或中位数等）是否高于或低于其他类别。</li>\n<li><strong>识别互相影响</strong>：当使用 <code>hue</code> 时，连接线的斜率可以显示变量之间如何互相影响。如果不同 <code>hue</code> 组的线条平行，则表明变量之间没有互相影响。如果它们交叉或斜率差异很大，则表示 <code>x</code> 变量的影响取决于 <code>hue</code> 变量。</li>\n<li><strong>强调变化或趋势</strong>：连接线比 <code>barplot</code> 中的单独条形更能明确地显示相邻类别之间的差异或趋势。</li>\n</ol>\n<p>尽管 <code>stripplot</code> 和 <code>swarmplot</code> 显示每个数据点，但 <code>pointplot</code>（像 <code>barplot</code> 和 <code>boxplot</code> 一样）通过估计值和置信区间总结每个类别内的分布。<code>pointplot</code> 的独特优势在于它使用连接线来直接比较跨类别的这些汇总统计数据，尤其是在涉及 <code>hue</code> 变量时。</p>",
+  "slug": "seaborn-pointplot",
+  "updates": [],
+  "references": [
+    {
+      "id": 945,
+      "title": "seaborn.pointplot",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.pointplot.html",
+      "doi": "",
+      "note": "Seaborn pointplot函数的官方文档，详细介绍了其参数、用法和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T15:11:01.848333Z",
+      "updated_at": "2025-09-07T16:27:46.093212Z"
+    },
+    {
+      "id": 946,
+      "title": "Visualizing statistical relationships - categorical data",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/tutorial/categorical.html",
+      "doi": "",
+      "note": "Seaborn教程，概述了各种分类图，包括点图，并指导其恰当应用。",
+      "order": 2,
+      "created_at": "2025-09-04T15:11:01.858502Z",
+      "updated_at": "2025-09-07T16:27:55.138436Z"
+    },
+    {
+      "id": 947,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/",
+      "doi": "",
+      "note": "一本关于Python数据科学工具的参考书，包含Matplotlib和Seaborn数据可视化工具的详细章节。",
+      "order": 3,
+      "created_at": "2025-09-04T15:11:01.862655Z",
+      "updated_at": "2025-09-07T16:27:57.666432Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

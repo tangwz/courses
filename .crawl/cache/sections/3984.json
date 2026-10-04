@@ -1,0 +1,61 @@
+{
+  "id": 3984,
+  "title": "如何定义重复数据？",
+  "meta_title": "定义重复记录",
+  "meta_description": "了解不同类型的重复项：完整行重复与基于特定列的重复。",
+  "content": "<p>当我们谈论重复数据时，我们指的是数据集中多次表示同一实体或事件的记录或条目。然而，究竟是什么让一条记录成为另一条记录的“重复”，这并非总是一个简单的“是”或“否”的问题。定义在很大程度上取决于数据结构以及您认为的独特信息是什么。我们来分析一下常见情况。</p>\n<h3>完整行重复</h3>\n<p>最直接的重复类型是<strong>完整行重复</strong>。当数据集中一行与另一行在<em>所有</em>列中都完全相同时，就会出现这种情况。一行中的每个值都与另一行中的对应值匹配。</p>\n<p>想象一个简单的客户注册数据集：</p>\n<p>重复数据指的是数据集中代表同一实体或事件多次的记录或条目。然而，究竟是什么使一条记录成为另一条记录的“重复”，这并非总是一个简单的“是”或“否”问题。其定义在很大程度上取决于数据结构以及您认为的唯一信息。</p>\n<p>在此表中，第三行和第四行是完整的重复项。每条信息（<code>用户ID</code>、<code>姓名</code>、<code>电子邮件</code>、<code>注册日期</code>）都完全相同。这些通常是由于数据收集期间的技术故障、表单意外重复提交或合并不同数据文件时的错误引起的。识别这些通常很直接。</p>\n<h3>基于特定列的重复</h3>\n<p>通常，重复的情况更不明显。即使其他列不同，也可以根据特定列集中的值将记录视为重复项。这些列通常作为独特实体或事件的<strong>标识符</strong>。我们可以称之为<strong>部分重复</strong>或<strong>基于列子集的重复</strong>。</p>\n<p>考虑一个更新的客户活动视图，例如跟踪登录情况：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">日志ID</th>\n<th align=\"left\">用户ID</th>\n<th align=\"left\">电子邮件</th>\n<th align=\"left\">登录时间</th>\n<th align=\"left\">操作</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">5001</td>\n<td align=\"left\">101</td>\n<td align=\"left\"><a href=\"mailto:alice@example.com\">alice@example.com</a></td>\n<td align=\"left\">2023-02-01 09:00:15</td>\n<td align=\"left\">查看页面</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>5002</strong></td>\n<td align=\"left\"><strong>102</strong></td>\n<td align=\"left\"><strong><a href=\"mailto:bob@example.com\">bob@example.com</a></strong></td>\n<td align=\"left\"><strong>2023-02-01 09:05:22</strong></td>\n<td align=\"left\"><strong>登录</strong></td>\n</tr>\n<tr>\n<td align=\"left\"><strong>5003</strong></td>\n<td align=\"left\"><strong>102</strong></td>\n<td align=\"left\"><strong><a href=\"mailto:bob@example.com\">bob@example.com</a></strong></td>\n<td align=\"left\"><strong>2023-02-01 10:15:00</strong></td>\n<td align=\"left\"><strong>更新资料</strong></td>\n</tr>\n<tr>\n<td align=\"left\">5004</td>\n<td align=\"left\">101</td>\n<td align=\"left\"><a href=\"mailto:alice@example.com\">alice@example.com</a></td>\n<td align=\"left\">2023-02-01 11:00:05</td>\n<td align=\"left\">注销</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>5005</strong></td>\n<td align=\"left\"><strong>102</strong></td>\n<td align=\"left\"><strong><a href=\"mailto:bob@example.com\">bob@example.com</a></strong></td>\n<td align=\"left\"><strong>2023-02-01 09:05:22</strong></td>\n<td align=\"left\"><strong>登录</strong></td>\n</tr>\n</tbody>\n</table>\n<p>这里，<code>日志ID</code>为5002和5005的行看起来非常相似。</p>\n<ul>\n<li>如果我们将重复条目简单地定义为<em>所有</em>列中的值都相同，那么5002和5005就<em>不是</em>完整重复项，因为它们的<code>日志ID</code>值不同（5002与5005）。</li>\n<li>然而，如果我们的目标是根据<code>用户ID</code>、<code>电子邮件</code>和<code>登录时间</code>的组合来查找独特的<em>登录事件</em>，那么行5002和5005表示的是<em>同一事件</em>。它们在这三列中的值完全相同。<code>日志ID</code>可能只是一个内部数据库行计数器，并且<code>操作</code>也相同（'登录'）。在这种情况下，其中一行可以被视为重复的登录记录。</li>\n<li>如果我们只对独特的<em>用户</em>感兴趣，我们只会查看<code>用户ID</code>（或者可能是<code>电子邮件</code>）列。在这种情况下，行5002、5003和5005都指的是同一用户（Bob，用户ID 102），但它们表示不同的操作，或者可能是同一操作的重复日志。</li>\n</ul>\n<h3>语境与标识符的重要性</h3>\n<p>决定什么构成重复项，需要理解数据以及分析的目的。</p>\n<ul>\n<li>您对独特的客户感兴趣吗？那么重复项可能由<code>客户ID</code>或<code>电子邮件</code>定义。</li>\n<li>您对独特的交易感兴趣吗？那么重复项可能由<code>交易ID</code>定义，或者可能是<code>客户ID</code> + <code>时间戳</code> + <code>产品</code>的组合。</li>\n<li>您在寻找数据录入错误吗？那么完整行重复是主要目标。</li>\n</ul>\n<p>确定应唯一标识记录的正确列集是基础步骤。这些列通常被称为<strong>唯一标识符</strong>或<strong>主键</strong>（尽管主键一词在数据库中有特定含义，但这里的思想类似）。有时单列（如<code>用户ID</code>）就足够了；其他时候，需要列的组合。这通常需要一定的<strong>专业知识</strong>，即熟悉数据所代表的主题，才能做出正确的选择。</p>\n<p>理解这些不同类型的重复是您能有效识别和处理数据集中重复项的第一步。接下来的部分将说明为什么通常需要删除重复项以及用于查找和删除它们的技术。</p>",
+  "slug": "what-is-duplicate-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 10557,
+      "title": "Data Cleaning: Problems and Current Approaches",
+      "author": "Erhard Rahm, Hong Hai Do",
+      "year": "2000",
+      "publisher": "IEEE Computer Society",
+      "journal": "IEEE Bulletin of the Technical Committee on Data Engineering",
+      "volume": "23",
+      "pages": "3-13",
+      "url": "https://www.researchgate.net/publication/2372795_Data_Cleaning_Problems_and_Current_Approaches",
+      "doi": "",
+      "note": "阐述了数据清洗问题及其处理方法，包括如何识别和解决重复记录，建立了概念框架。",
+      "order": 1,
+      "created_at": "2025-09-05T06:50:19.390966Z",
+      "updated_at": "2025-09-08T12:54:21.545396Z"
+    },
+    {
+      "id": 10558,
+      "title": "Data Science for Business: What You Need to Know about Data Mining and Data-Analytic Thinking",
+      "author": "Foster Provost, Tom Fawcett",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "408 pages",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGFXxmCpA9YBZZxX5hs5-vzWe5MUG44LRTHSfXKQ_Qratwrgvz3qlVbTWiq0my0LU5pfdsOVGDvwVyqIHM928YL82EfzhYt36fQmUW9tVkjSdO0UTjO14A0cG67gVx8hl_OIRHhgATLoXqLNSLhy_qdYvrn3NZxpSvN9i3uX5E=",
+      "doi": "",
+      "note": "涵盖了数据分析中的数据准备和数据质量理解，对于正确定义和管理数据重复至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T06:50:19.396956Z",
+      "updated_at": "2025-09-08T12:54:26.618835Z"
+    },
+    {
+      "id": 10560,
+      "title": "Data Quality and Entity Resolution",
+      "author": "Larisa Gheorghe and Erhard Rahm",
+      "year": "2019",
+      "publisher": "Springer, Cham",
+      "journal": "Encyclopedia of Big Data Technologies",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/referenceworkentry/10.1007/978-3-319-76840-5_37-1",
+      "doi": "10.1007/978-3-319-76840-5_37-1",
+      "note": "提供了关于数据质量和实体解析的最新学术观点，侧重于在大数据集中检测重复项的方法。",
+      "order": 4,
+      "created_at": "2025-09-05T06:50:19.403026Z",
+      "updated_at": "2025-09-08T12:54:13.389774Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

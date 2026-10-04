@@ -1,0 +1,61 @@
+{
+  "id": 6621,
+  "title": "工具的版本控制与更新策略",
+  "meta_title": "大型语言模型智能体工具的版本控制",
+  "meta_description": "学习工具版本控制和管理更新的策略，以不破坏智能体功能。",
+  "content": "<p>随着大型语言模型智能体及其相关工具的发展，管理变更成为它们长期可用性的重要部分。正如软件应用需要更新和版本控制一样，您的智能体所依赖的工具也需要一套系统化的演进方法。如果缺乏周全的管理，更新可能会无意中破坏智能体功能，导致不可预测的行为，或让大型语言模型对工具的能力感到困惑。本节将介绍工具的版本控制和更新实施策略，以确保您的大型语言模型智能体的稳定性和清晰度。</p>\n<h2>为何大型语言模型工具需要版本控制</h2>\n<p>想象一个智能体，它已经学会使用您的<code>image_analyzer</code>工具，该工具目前接受一个URL并返回描述。如果您在没有任何警告或版本变更的情况下，突然将工具更改为要求图片字节而不是URL，那么该智能体将开始失效。版本控制带来以下多项好处：</p>\n<ul>\n<li><strong>可预测性：</strong> 大型语言模型及其运行的智能体框架可以依赖于特定版本的工具，使其行为保持一致。这对于可靠的智能体性能来说是根本。</li>\n<li><strong>可控的演进：</strong> 它允许您在工具中引入新功能或修复缺陷，而不干扰依赖旧版本的现有智能体工作流程。</li>\n<li><strong>回滚能力：</strong> 如果工具更新引入了问题，版本控制系统可以更容易地回滚到之前稳定版本，最大限度地减少停机时间或错误的智能体行为。</li>\n<li><strong>大型语言模型的清晰度：</strong> 当工具描述包含版本信息时，大型语言模型可以更好地理解它们正在与哪个版本交互，特别是在存在多个版本或需要请求特定版本时。</li>\n<li><strong>调试：</strong> 当出现问题时，了解使用了哪个版本的工具可以显著简化调试过程。</li>\n</ul>\n<h2>选择有效的版本控制方案</h2>\n<p>虽然您可以发明任何版本控制系统，但采用广泛认可的标准通常更好。对于包括大型语言模型工具在内的软件，最常用和推荐的方法是<strong>语义化版本控制（SemVer）</strong>。</p>\n<p>语义化版本控制规定了<code>MAJOR.MINOR.PATCH</code>的版本号格式：</p>\n<ul>\n<li><strong><code>MAJOR</code>（例如，1.0.0 -> 2.0.0）：</strong> 当您进行不兼容的API变更时增加。这意味着工具的输入、输出或基本行为发生了变化，这会破坏现有集成。对于大型语言模型而言，这可能是必需参数 (parameter)的变化、输出结构的显著改变或功能的移除。</li>\n<li><strong><code>MINOR</code>（例如，1.0.0 -> 1.1.0）：</strong> 当您以向后兼容的方式添加功能时增加。例如，向工具添加新的可选参数，或在保持旧结构不变的情况下扩展输出，加入新信息。使用旧契约的智能体应仍能正常运行。</li>\n<li><strong><code>PATCH</code>（例如，1.1.0 -> 1.1.1）：</strong> 当您进行向后兼容的缺陷修复时增加。这解决不正确的行为，而不改变工具接口或添加新功能。</li>\n</ul>\n<p>例如，考虑一个名为<code>stock_price_fetcher</code>的工具：</p>\n<ul>\n<li><code>stock_price_fetcher_v1.0.0</code>：初始版本，接受股票代码，返回当前价格。</li>\n<li><code>stock_price_fetcher_v1.0.1</code>：修复了特定交易所价格不正确的缺陷。（PATCH）</li>\n<li><code>stock_price_fetcher_v1.1.0</code>：添加可选的<code>currency</code>参数，以指定货币返回价格；如果未提供，则默认为美元。（MINOR）</li>\n<li><code>stock_price_fetcher_v2.0.0</code>：将输出从单一价格更改为包含<code>price</code>、<code>high</code>、<code>low</code>和<code>volume</code>的JSON对象。这是一个破坏性变更。（MAJOR）</li>\n</ul>\n<p>使用语义化版本控制可以向开发者以及大型语言模型（如果经过训练或提示以理解它）提供关于工具变更性质的明确信号。</p>\n<h2>工具更新的实施方法</h2>\n<p>更新工具需要仔细考虑其对大型语言模型智能体的影响。</p>\n<h3>优先考虑向后兼容性</h3>\n<p>尽可能争取使更新向后兼容（导致次要版本或补丁版本变更）。这意味着：</p>\n<ul>\n<li><strong>添加新的可选参数 (parameter)：</strong> 不带新参数的现有调用仍应正常工作。</li>\n<li><strong>扩展输出结构：</strong> 向JSON输出添加新字段，而不是更改或移除现有字段。</li>\n<li><strong>维护现有端点/函数签名：</strong> 除非绝对必要，否则避免重命名函数或更改必需参数名称。</li>\n</ul>\n<p>如果一个大型语言模型成功使用<code>get_weather(location=\"Paris\")</code>，一个向后兼容的变更可能允许<code>get_weather(location=\"Paris\", units=\"celsius\")</code>，但<code>get_weather(location=\"Paris\")</code>仍应像以前一样运行，可能默认使用华氏度。</p>\n<h3>处理破坏性变更（主版本更新）</h3>\n<p>当破坏性变更不可避免时，您可以采用以下几种策略：</p>\n<ol>\n<li>\n<p><strong>引入具有独特名称的新工具版本：</strong>\n这通常是大型语言模型最清晰的方法。您不是以破坏性的方式修改<code>my_tool</code>，而是引入<code>my_tool_v2</code>。</p>\n<ul>\n<li>例如：<code>search_web_v1</code>和<code>search_web_v2</code>。</li>\n<li>大型语言模型的工具选择过程，在更新的描述引导下，可以选择合适的版本。</li>\n<li>旧版本（<code>my_tool_v1</code>）可以维护一段时间，以允许平稳过渡。</li>\n</ul>\n</li>\n<li>\n<p><strong>在工具规范内进行版本控制（如果支持）：</strong>\n一些智能体框架可能允许您在通用名称下注册同一工具的多个版本，由大型语言模型或框架根据标准或明确请求选择版本。这对于直接的大型语言模型工具使用来说不太常见，并增加了复杂性。</p>\n</li>\n<li>\n<p><strong>仔细更新工具描述：</strong>\n无论采用何种方法，提供给大型语言模型的工具描述<em>必须</em>更新以反映新版本中的变更。这个描述是大型语言模型“理解”如何使用该工具的方式。请清晰说明：</p>\n<ul>\n<li>新的版本号。</li>\n<li>哪些内容发生了变化（参数 (parameter)、输出、行为）。</li>\n<li>如果它与之前的版本相比是破坏性变更。</li>\n</ul>\n</li>\n</ol>\n<h3>旧工具的弃用生命周期</h3>\n<p>当您引入一个取代旧版本的新版本时（特别是在主版本更新后），您需要一个淘汰旧版本的计划：</p>\n<ol>\n<li><strong>宣布弃用：</strong> 更新旧工具版本的描述，指明它已被弃用，提及新版本，并提供一个“终止”日期，此日期之后它将被移除。\n示例：“此工具<code>calculate_shipping_v1</code>已弃用，将于2024年12月31日之后移除。请使用<code>calculate_shipping_v2</code>，它提供更准确的费率。”</li>\n<li><strong>监控使用情况：</strong> 记录弃用工具的调用。这有助于查明您的智能体系统（或哪些用户）的哪些部分仍依赖它。</li>\n<li><strong>提供迁移支持：</strong> 如果变更重大，提供指导，甚至自动化协助，以迁移智能体提示或配置来使用新工具版本。</li>\n<li><strong>移除工具：</strong> 在终止日期之后，并确保影响最小的情况下，移除旧工具版本。</li>\n</ol>\n<p>以下图表说明了一个典型的版本控制路径：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6cyeu5\" \n              data-graph-definition='digraph ToolVersioning {\n    rankdir=TB;\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", fillcolor=\"#e9ecef\", color=\"#495057\"];\n    edge [fontname=\"Arial\", color=\"#495057\"];\n\n    v1_0_0 [label=\"工具 v1.0.0\\n(初始版本)\", fillcolor=\"#a5d8ff\"];\n    v1_0_1 [label=\"工具 v1.0.1\\n(补丁：缺陷修复)\", fillcolor=\"#b2f2bb\"];\n    v1_1_0 [label=\"工具 v1.1.0\\n(次要：新功能，非破坏性)\", fillcolor=\"#96f2d7\"];\n    v2_0_0 [label=\"工具 v2.0.0\\n(主版本：破坏性变更)\", fillcolor=\"#ffc9c9\"];\n    v1_x_dep [label=\"工具 v1.x\\n(已弃用)\", fillcolor=\"#ced4da\"];\n\n    v1_0_0 -> v1_0_1 [label=\"修复\"];\n    v1_0_0 -> v1_1_0 [label=\"添加\"];\n    v1_1_0 -> v2_0_0 [label=\"修订（破坏性）\"];\n    v2_0_0 -> v1_x_dep [label=\"取代\", style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6cyeu5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>典型的工具版本控制演进过程，突出显示了补丁、次要和主版本更新，并引向旧版本的弃用。</p>\n</blockquote>\n<h2>确保大型语言模型了解工具版本</h2>\n<p>大型语言模型了解工具版本和变更的主要机制是通过您提供的<strong>工具描述</strong>。</p>\n<ul>\n<li><strong>在描述中包含版本：</strong> 将版本号作为工具名称或描述的突出部分（例如，“weather_reporter_v1.1.0：获取当前天气。可选地接受‘单位’（摄氏度/华氏度）。”）。</li>\n<li><strong>突出变更：</strong> 当工具更新时，其描述应清晰阐明新增了什么、改变了什么或修复了什么。如果添加了参数 (parameter)或更改了输出格式，则必须指定。</li>\n<li><strong>智能体框架支持：</strong> 一些先进的智能体框架可能允许智能体查询可用工具版本或明确请求特定版本的工具（例如，<code>use_tool(\"calculator\", version=\"2.1.0\")</code>）。如果您的框架支持此功能，请确保您的版本控制策略与其功能保持一致。</li>\n</ul>\n<p>如果一个大型语言模型经过微调 (fine-tuning)，并且它所依赖的工具发生重大（破坏性）变更，您可能需要考虑更新您的微调数据集，并可能重新微调模型，以保持与新工具版本的最佳性能。</p>\n<h2>规划回滚</h2>\n<p>即使经过仔细测试，更新后的工具仍可能引入意想不到的问题。您的更新策略的一个重要部分是能够<strong>回滚</strong>到工具的先前稳定版本。</p>\n<ul>\n<li><strong>基础设施：</strong> 您的部署系统应支持轻松重新部署旧工具版本。这可能涉及容器注册表、带版本的无服务器功能或类似机制。</li>\n<li><strong>配置管理：</strong> 记录哪些工具版本被认为是稳定的，哪些是活跃的。</li>\n<li><strong>监控：</strong> 正如前面章节所讨论的，更新后监控工具性能和错误率是必不可少的。如果检测到异常，快速回滚可以防止大规模问题。</li>\n</ul>\n<p>通过实施周全的版本控制和更新策略，您可以确保大型语言模型智能体能够继续有效地依赖其工具，即使这些工具随着时间的推移而演进和改进。这为您的智能体系统整体稳定性和可维护性做出了重大贡献。</p>",
+  "slug": "versioning-updating-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 18270,
+      "title": "Semantic Versioning 2.0.0",
+      "author": "Tom Preston-Werner",
+      "year": "2013",
+      "publisher": "",
+      "journal": "Semantic Versioning",
+      "volume": "",
+      "pages": "",
+      "url": "https://semver.org/",
+      "doi": "",
+      "note": "定义了广泛采用的软件版本控制标准（MAJOR.MINOR.PATCH），本节明确推荐将其用于LLM工具。",
+      "order": 1,
+      "created_at": "2025-09-06T12:20:45.419025Z",
+      "updated_at": "2026-02-04T11:30:59.015591Z"
+    },
+    {
+      "id": 18272,
+      "title": "Software Engineering: A Practitioner's Approach",
+      "author": "Roger S. Pressman, Bruce R. Maxim",
+      "year": "2019",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mheducation.com/highered/product/software-engineering-practitioner-s-approach-pressman-maxim/M9781260204785.html",
+      "doi": "",
+      "note": "一本基础教材，提供了软件演进、维护和配置管理的原则，这些原则是任何复杂软件系统（包括LLM工具）版本控制、更新和确保稳定性的策略基础。",
+      "order": 3,
+      "created_at": "2025-09-06T12:20:45.495790Z",
+      "updated_at": "2026-02-04T11:30:59.014035Z"
+    },
+    {
+      "id": 18273,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "这份官方文档详细说明了LLM如何了解和与工具交互，强调了清晰的工具描述对于向LLM传达版本信息和变更的重要性。",
+      "order": 4,
+      "created_at": "2025-09-06T12:20:45.498532Z",
+      "updated_at": "2026-02-04T11:30:58.908365Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7450,
+  "title": "理解用户-物品交互数据",
+  "meta_title": "用户-物品交互数据详解",
+  "meta_description": "了解用于构建推荐系统的用户-物品交互数据的结构和意义。",
+  "content": "<p>推荐系统的核心是记录用户与物品之间历史关系的数据。这些数据是算法学习偏好并做出预测的原始素材。如果对其结构和属性缺乏清晰的认知，就无法构建有效的推荐器。整个流程始于将这些关系整理成机器可以分析的格式。</p>\n<h3>用户、物品与交互三元组</h3>\n<p>所有的推荐问题都可以分解为三个基本组成部分：</p>\n<ul>\n<li><strong>用户 (Users)：</strong> 我们为其提供推荐的个体。用户可以是电子商务网站上的顾客、流媒体服务上的观众，或者是新闻平台上的读者。每个用户都由一个唯一的 ID 来识别。</li>\n<li><strong>物品 (Items)：</strong> 被推荐的对象。这些可以是产品、电影、歌曲、文章，甚至是社交网络中的其他用户。与用户一样，每个物品也有一个唯一的 ID。</li>\n<li><strong>交互 (Interactions)：</strong> 连接用户与物品的事件。这是用户偏好或兴趣的信号。一次交互可以是一次评分、一次购买、一次点击、在页面上停留的时间，或者是一个“点赞”。</li>\n</ul>\n<p>这三个元素构成了一个相互关联的系统。用户与物品产生交互，而这些交互的集合构成了我们用来训练模型的数据集。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-sbxchb\" \n              data-graph-definition='digraph G { rankdir=TB; splines=true; overlap=false; node [style=\"filled\", shape=\"box\", fontname=\"sans-serif\"]; graph [fontname=\"sans-serif\"]; edge [penwidth=1.5]; \"u1\" [label=\"用户 1\", shape=\"ellipse\", fillcolor=\"#91a7ff\"]; \"u2\" [label=\"用户 2\", shape=\"ellipse\", fillcolor=\"#91a7ff\"]; \"u3\" [label=\"用户 3\", shape=\"ellipse\", fillcolor=\"#91a7ff\"]; \"i1\" [label=\"物品 A\", fillcolor=\"#8ce99a\"]; \"i2\" [label=\"物品 B\", fillcolor=\"#8ce99a\"]; \"i3\" [label=\"物品 C\", fillcolor=\"#8ce99a\"]; \"i4\" [label=\"物品 D\", fillcolor=\"#8ce99a\"]; u1 -> i1 [label=\" 评分 5\"]; u1 -> i3 [label=\" 浏览\"]; u2 -> i2 [label=\" 评分 4\"]; u2 -> i4 [label=\" 购买\"]; u3 -> i1 [label=\" 评分 4\"]; u3 -> i2 [label=\" 浏览\"]; u3 -> i4 [label=\" 浏览\"];}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-sbxchb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>用户-物品交互图。用户通过各种动作与物品连接，这些动作充当了偏好的信号。</p>\n</blockquote>\n<h3>用户-物品交互矩阵</h3>\n<p>表示此类数据最常用的结构是用户-物品交互矩阵，有时也称为效用矩阵。在这个矩阵中，每一行通常对应一个用户，每一列对应一个物品。用户行和物品列交叉处的单元格包含他们的交互值。例如，如果用户 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>u</mi></mrow><annotation encoding=\"application/x-tex\">u</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">u</span></span></span></span> 给物品 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span> 打了 4 星评分，那么矩阵中该位置的值 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>R</mi><mrow><mi>u</mi><mi>i</mi></mrow></msub></mrow><annotation encoding=\"application/x-tex\">R_{ui}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8333em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-left:-0.0077em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mathnormal mtight\">u</span><span class=\"mord mathnormal mtight\">i</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span> 就是 4。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">用户 ID</th>\n<th align=\"center\">电影 A</th>\n<th align=\"center\">电影 B</th>\n<th align=\"center\">电影 C</th>\n<th align=\"center\">电影 D</th>\n<th align=\"center\">电影 E</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>用户 1</strong></td>\n<td align=\"center\">5</td>\n<td align=\"center\">?</td>\n<td align=\"center\">3</td>\n<td align=\"center\">?</td>\n<td align=\"center\">4</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>用户 2</strong></td>\n<td align=\"center\">?</td>\n<td align=\"center\">4</td>\n<td align=\"center\">?</td>\n<td align=\"center\">5</td>\n<td align=\"center\">?</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>用户 3</strong></td>\n<td align=\"center\">4</td>\n<td align=\"center\">?</td>\n<td align=\"center\">?</td>\n<td align=\"center\">?</td>\n<td align=\"center\">5</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>用户 4</strong></td>\n<td align=\"center\">?</td>\n<td align=\"center\">2</td>\n<td align=\"center\">1</td>\n<td align=\"center\">4</td>\n<td align=\"center\">?</td>\n</tr>\n</tbody>\n</table>\n<p>问号 (<code>?</code>) 代表缺失值。它们表示用户尚未与特定物品进行交互或评分。这引出了推荐数据的一个显著特征：<strong>稀疏性</strong>。</p>\n<p>在任何实际场景中，用户只会在所有可用物品中与极小比例的部分产生交互。一家电商网站可能有数百万种产品，但单个顾客可能只购买或评价过几十个或几百个。因此，用户-物品矩阵大部分是空的。这种稀疏性不仅是数据的一个属性，也是需要推荐系统的原因所在。大多数推荐器的主要目标是用有意义的预测值填补这些缺失值，找出用户最可能喜欢的物品。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1icsq16\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"物品\"},\"yaxis\":{\"title\":\"用户\"},\"title\":\"稀疏用户-物品交互矩阵可视化\"},\"data\":[{\"x\":[1,1,2,3,4,4,5,6,7,7,8,9,10,10],\"y\":[2,8,5,1,1,7,3,9,2,6,4,8,3,5],\"mode\":\"markers\",\"marker\":{\"color\":[5,4,2,3,4,1,5,2,4,5,3,4,5,1],\"colorscale\":\"Viridis\",\"showscale\":true,\"colorbar\":{\"title\":\"评分\"}}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1icsq16\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>在这个稀疏矩阵的可视化中，每个点代表用户和物品之间记录的一次交互。空白区域表示没有交互，突出了数据稀疏性的挑战。</p>\n</blockquote>\n<h3>实际操作中的交互数据存储</h3>\n<p>虽然矩阵是思考数据的一种有用方式，但在内存中存储一个庞大的、大部分为空的矩阵效率极低。在实践中，交互数据几乎总是以“长”格式或“坐标”格式存储。这种格式将每次交互记录为单独的一行，包含用户 ID、物品 ID 和交互值。</p>\n<p>pandas DataFrame 非常适合这项任务。下面是一个电影评分数据表示形式的小例子：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 评分数据示例\nratings_data = {\n    'user_id': [1, 1, 1, 2, 2, 3, 3, 4, 4, 4],\n    'movie_id': [101, 103, 105, 102, 104, 101, 105, 102, 103, 104],\n    'rating': [5, 3, 4, 4, 5, 4, 5, 2, 1, 4]\n}\n\nratings_df = pd.DataFrame(ratings_data)\nprint(ratings_df)\n</code></pre>\n<pre><code>   user_id  movie_id  rating\n0        1       101       5\n1        1       103       3\n2        1       105       4\n3        2       102       4\n4        2       104       5\n5        3       101       4\n6        3       105       5\n7        4       102       2\n8        4       103       1\n9        4       104       4\n</code></pre>\n<p>这种长格式节省内存，因为它只存储实际发生的交互。大多数推荐算法库（包括我们将要使用的库）都针对这种数据结构进行了优化。当算法需要矩阵表示时，可以从这种格式即时构建，通常使用专门的稀疏矩阵对象来避免存储空值。</p>\n<p>理解这种数据表示方式是构建任何推荐系统的第一步。随着学习的深入，我们将看到不同的算法如何使用这些用户-物品交互数据来学习模式并生成个性化建议。</p>",
+  "slug": "user-item-interaction-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 21063,
+      "title": "Recommender Systems: An Introduction",
+      "author": "Charu C. Aggarwal",
+      "year": "2016",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-3-319-29659-3",
+      "doi": "10.1007/978-3-319-29659-3",
+      "note": "本书对推荐系统进行了全面介绍，其开篇章节涵盖了用户-物品交互数据、矩阵表示和稀疏性。",
+      "order": 1,
+      "created_at": "2025-09-13T07:08:32.158142Z",
+      "updated_at": "2025-09-13T07:38:57.652241Z"
+    },
+    {
+      "id": 21064,
+      "title": "Recommender Systems Handbook",
+      "author": "Francesco Ricci, Lior Rokach, Bracha Shapira",
+      "year": "2015",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-1-4899-7637-6",
+      "doi": "10.1007/978-1-4899-7637-6",
+      "note": "一本全面手册，深入涵盖推荐系统，包括对数据类型、交互模型和数据稀疏性等挑战的讨论。",
+      "order": 2,
+      "created_at": "2025-09-13T07:08:32.161320Z",
+      "updated_at": "2025-09-13T07:38:58.584228Z"
+    },
+    {
+      "id": 21065,
+      "title": "Mining of Massive Datasets",
+      "author": "Jure Leskovec, Anand Rajaraman and Jeffrey D. Ullman",
+      "year": "2020",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mmds.org/",
+      "doi": "https://doi.org/10.1017/CBO9781139924801",
+      "note": "这本教科书的第9章对推荐系统进行了介绍，包括基础数据结构和稀疏性问题。",
+      "order": 3,
+      "created_at": "2025-09-13T07:08:32.163772Z",
+      "updated_at": "2025-09-13T07:39:08.848779Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

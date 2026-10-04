@@ -1,0 +1,61 @@
+{
+  "id": 3893,
+  "title": "高级索引策略",
+  "meta_title": "RAG的高级索引策略",
+  "meta_description": "了解多向量索引、父文档检索和元数据筛选等技术。",
+  "content": "<p>标准检索增强生成（RAG）通常涉及将文档分块并直接将这些块嵌入 (embedding)到向量 (vector)存储中。尽管对于较简单的情况有效，但具有庞大、多样化数据集和高性能需求的生产环境需要更复杂的索引方法。仅依靠基本的块嵌入可能导致检索关联性不佳、上下文 (context)碎片化或搜索效率低下。高级索引策略旨在以提升检索质量和速度的方式存储和组织信息，这会直接影响您的RAG系统的性能和准确性。</p>\n<p>这些策略通常需要在索引复杂程度、存储成本、查询延迟和检索准确性之间进行权衡。理解这些技术使您能够根据数据和应用需求的具体特点，调整RAG管道的索引层。</p>\n<h3>多向量 (vector)索引</h3>\n<p>多向量索引不为每个文档块只生成一个向量，而是为同一内容使用多个向量。这样可以捕获并搜索信息不同的“视图”或摘要。</p>\n<p><strong>常见方法：</strong></p>\n<ol>\n<li><strong>摘要 + 完整块：</strong> 为块的简洁摘要生成一个向量，并与完整块文本的向量一同索引。匹配高级别摘要的查询可以检索到详细的块。</li>\n<li><strong>更小的子块 + 父块：</strong> 将一个较大的“父”块分解成更小、更具体的“子”块。为子块生成向量并索引，但可能为了获取更大上下文 (context)而检索父块（与接下来会说的父文档检索有关）。</li>\n<li><strong>多个嵌入 (embedding)模型：</strong> 使用针对不同方面优化的不同嵌入模型（例如，一个用于语义相似性，另一个用于关键词匹配），并存储相应的向量。查询路由逻辑随后可以决定目标向量是哪一个或哪几个。</li>\n<li><strong>问题：</strong> 生成块可能回答的潜在问题，嵌入这些问题，并将它们与块的向量关联起来。这有助于匹配以问题形式表达的用户查询。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10edjdc\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_chunk {\n    label = \"文档块\";\n    bgcolor=\"#e9ecef\";\n    chunk [label=\"原始文本\\n(例如，关于\\n某个特定功能的段落)\"];\n  }\n\n  subgraph cluster_vectors {\n    label = \"关联向量\";\n    bgcolor=\"#a5d8ff\";\n    vec_full [label=\"向量(完整文本)\", shape=cylinder, style=filled, fillcolor=\"#74c0fc\"];\n    vec_summary [label=\"向量(摘要)\", shape=cylinder, style=filled, fillcolor=\"#74c0fc\"];\n    vec_hypo_q [label=\"向量(问题)\", shape=cylinder, style=filled, fillcolor=\"#74c0fc\"];\n  }\n\n  chunk -> vec_full [label=\"嵌入完整文本\"];\n  chunk -> vec_summary [label=\"摘要并嵌入\"];\n  chunk -> vec_hypo_q [label=\"生成问题并嵌入\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10edjdc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>单个文档块可以与其内容、摘要或相关问题衍生的多个向量关联。</p>\n</blockquote>\n<p><strong>优点：</strong> 满足不同查询类型（通用型与特定型），可能提升关联性。\n<strong>考量：</strong> 存储需求增加，索引流程更复杂，可能需要更精密的查询逻辑。</p>\n<h3>父文档检索</h3>\n<p>分块过程本身常会带来一个难题。小块可以生成适合相似性匹配的精确嵌入 (embedding)，但通常缺乏LLM综合生成全面答案所需的足够上下文 (context)。反之，大块虽然提供上下文，但可能稀释具体信息，从而使嵌入精度降低。</p>\n<p>父文档检索（有时称为“小到大”检索）通过索引更小、粒度更细的块，并将它们与其更大的父文档（或更大的上下文窗口）关联来解决这个问题。</p>\n<p><strong>流程：</strong></p>\n<ol>\n<li><strong>分块：</strong> 文档被分成更小的子块（为嵌入优化）和更大的父块（提供上下文）。通常，父块就是原始文档或包含多个子块的更大段落。</li>\n<li><strong>索引：</strong> 仅为<em>小</em>子块创建并索引嵌入。每个子块的索引条目都包含对其父文档的引用（例如，ID、元数据）。</li>\n<li><strong>检索：</strong>\n<ul>\n<li>使用查询对<em>子块</em>嵌入执行相似性搜索。</li>\n<li>识别最匹配的子块。</li>\n<li>不直接返回小尺寸子块，而是检索它们关联的<em>父文档</em>（或更大的上下文窗口）。</li>\n<li>将这些更大、上下文更丰富的文件传递给LLM。</li>\n</ul>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-m1s8ic\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_doc {\n    label = \"原始文档\";\n    bgcolor=\"#e9ecef\";\n    doc [label=\"大尺寸文档部分\"];\n  }\n\n  subgraph cluster_children {\n    label = \"子块（已索引）\";\n    bgcolor=\"#b2f2bb\";\n    c1 [label=\"块 1 (嵌入)\", shape=note, style=filled, fillcolor=\"#8ce99a\"];\n    c2 [label=\"块 2 (嵌入)\", shape=note, style=filled, fillcolor=\"#8ce99a\"];\n    c3 [label=\"块 3 (嵌入)\", shape=note, style=filled, fillcolor=\"#8ce99a\"];\n  }\n\n  query [label=\"用户查询\", shape=ellipse, style=filled, fillcolor=\"#ffec99\"];\n  vector_store [label=\"向量存储\\n(子块嵌入)\", shape=cylinder, style=filled, fillcolor=\"#a5d8ff\"];\n  llm [label=\"LLM\", shape=component, style=filled, fillcolor=\"#bac8ff\"];\n\n  doc -> c1 [style=dashed, arrowhead=none];\n  doc -> c2 [style=dashed, arrowhead=none];\n  doc -> c3 [style=dashed, arrowhead=none];\n\n  query -> vector_store [label=\"相似性搜索\"];\n  vector_store -> c2 [label=\"发现匹配项\"];\n  c2 -> doc [label=\"检索父文档\"];\n  doc -> llm [label=\"提供上下文\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-m1s8ic\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>父文档检索是针对小块嵌入进行搜索，但返回与最佳匹配关联的较大父文档。</p>\n</blockquote>\n<p><strong>优点：</strong> 将小块嵌入的精确性与LLM所需的丰富上下文结合起来。\n<strong>考量：</strong> 在索引期间需要仔细建立子块和父块之间的映射。如果父块过大，可能检索到尺寸过大的文档。LangChain提供了像 <code>ParentDocumentRetriever</code> 这样的实现来简化此过程。</p>\n<h3>元数据筛选</h3>\n<p>向量 (vector)相似性搜索寻找嵌入 (embedding)空间中语义接近的文档，但关联性通常也依赖于与文档关联的结构化属性或元数据（例如，创建日期、来源、作者、类别、用户权限）。</p>\n<p>使用元数据可以实现更有针对性、更高效的检索：</p>\n<ol>\n<li><strong>预筛选：</strong> 在执行向量搜索<em>之前</em>应用元数据过滤器。这会显著缩小候选池，使向量搜索更快且可能更具关联性，尤其是在海量数据集中。例如，在运行语义搜索<em>之前</em>，筛选出过去一年内创建的文档。</li>\n<li><strong>后筛选：</strong> 首先执行向量搜索以获取语义相似的候选者，<em>然后</em>应用元数据过滤器来优化结果。这确保了语义关联 (semantic relationship)性优先，同时仍允许根据特定属性进行筛选。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xowdzw\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  query [label=\"用户查询\\n+ 元数据过滤器\\n(例如，category=&#39;API&#39;)\", shape=ellipse, style=filled, fillcolor=\"#ffec99\"];\n  all_docs [label=\"完整文档集\\n(向量 + 元数据)\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n  filtered_docs [label=\"筛选后的子集\\n(category=&#39;API&#39;)\", shape=cylinder, style=filled, fillcolor=\"#a5d8ff\"];\n  vector_search [label=\"向量相似性\\n搜索\", shape=cds];\n  results [label=\"最终结果\", shape=ellipse, style=filled, fillcolor=\"#b2f2bb\"];\n\n  subgraph cluster_pre {\n      label = \"预筛选\";\n      bgcolor=\"#e9ecef\";\n      query -> all_docs [label=\"应用元数据过滤器\"];\n      all_docs -> filtered_docs;\n      filtered_docs -> vector_search [label=\"搜索子集\"];\n      vector_search -> results;\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xowdzw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>预筛选使用元数据在向量相似性计算前缩小搜索范围。</p>\n</blockquote>\n<p><strong>优点：</strong> 提升搜索效率，允许基于结构化数据执行访问控制或关联性，通过及早移除不相关候选者来提高准确性。\n<strong>考量：</strong> 需要定义良好且持续填充的元数据字段。预筛选的有效性取决于过滤器的选择性以及向量存储对高效元数据筛选与向量搜索结合的支持。许多现代向量数据库提供了优化的元数据筛选能力。</p>\n<p>将元数据筛选与稠密向量搜索以及可能的稀疏关键词搜索（如BM25）结合，构成了<strong>混合搜索</strong>的基础，这是一种将在下一节介绍的有效技术。这些高级索引策略为构建高度关联、上下文 (context)感知且高效的RAG系统提供了基本支持，使其能够应对生产需求。选择和组合这些策略主要依据您的具体数据、查询模式和性能目标。</p>",
+  "slug": "advanced-indexing-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 10881,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.10997",
+      "doi": "10.48550/arXiv.2312.10997",
+      "note": "这篇综述回顾了各种RAG技术，包括先进的检索策略和索引方法，对提升RAG性能和准确性至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T06:55:21.720490Z",
+      "updated_at": "2025-09-08T12:45:37.038909Z"
+    },
+    {
+      "id": 10882,
+      "title": "ParentDocumentRetriever",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/data_connection/retrievers/parent_document_retriever",
+      "doi": "",
+      "note": "LangChain官方文档，提供了Parent Document Retrieval的实际使用指南，是所讨论的高级索引策略之一。",
+      "order": 2,
+      "created_at": "2025-09-05T06:55:21.723975Z",
+      "updated_at": "2025-09-08T12:45:37.120179Z"
+    },
+    {
+      "id": 10883,
+      "title": "Hybrid Search: Combining Keyword and Vector Search",
+      "author": "Gibbs Cullen",
+      "year": "2022",
+      "publisher": "Pinecone",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.pinecone.io/learn/hybrid-search/",
+      "doi": "",
+      "note": "这份概念指南解释了如何结合语义（向量）和关键词搜索，通常利用元数据过滤来提高检索相关性和效率。",
+      "order": 3,
+      "created_at": "2025-09-05T06:55:21.726637Z",
+      "updated_at": "2025-09-08T12:45:30.768899Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 6983,
+  "title": "高速存储配置",
+  "meta_title": "高速存储：AI 的 NVMe 与 RAID",
+  "meta_description": "使用 NVMe 硬盘和 RAID 阵列配置高速存储系统，以防止数据 I/O 瓶颈。",
+  "content": "<p>高性能计算集群的效率取决于其数据访问能力。如果最先进的 GPU 持续等待存储系统提供下一批数据，它们就会一直处于闲置状态。这种被称为 I/O 瓶颈的情况，会抵消原本强大服务器的性能优势，延长训练时间并浪费昂贵的资源。因此，配置一个与计算组件吞吐量 (throughput)匹配的存储系统，是设计有效本地 AI 基础设施的一个主要组成部分。</p>\n<h3>NVMe 固态硬盘的普及</h3>\n<p>多年来，串行 ATA (SATA) 固态硬盘 (SSD) 相较于传统机械硬盘 (HDD) 是一个显著的提升。然而，对于现代 AI 工作负载，即使是 SATA SSD 也可能成为瓶颈。SATA 接口最初是为机械硬盘设计的，其理论最大带宽限制在大约 600 MB/s。</p>\n<p>在这里，NVMe (非易失性内存高速) 成为高性能系统的标准。与 SATA 硬盘不同，NVMe 固态硬盘直接连接到主板的 PCIe (Peripheral Component Interconnect Express) 总线，这是 GPU 使用的相同高速接口。这种直接路径大幅降低了延迟，并开辟了一条更宽的数据通道。单个 PCIe 4.0 NVMe 硬盘可以提供超过 7,000 MB/s 的顺序读取速度，是 SATA 固态硬盘的十倍以上。当在大数据集上训练模型时，这种数据访问速度的差异是显著的。</p>\n<h3>了解存储性能指标</h3>\n<p>在选择硬盘时，有两个指标尤其重要：带宽和 IOPS。</p>\n<ul>\n<li><strong>带宽（或吞吐量 (throughput)）：</strong> 以兆字节或千兆字节每秒 (MB/s, GB/s) 为单位衡量，带宽表明大块连续数据读写速度的快慢。高带宽对于加载大型模型检查点或传输大型视频或医学影像文件等任务很重要。</li>\n<li><strong>IOPS（每秒输入/输出操作数）：</strong> 它衡量硬盘每秒能处理多少次独立的读写操作，而不考虑数据大小。在处理由数百万个小文件组成的数据集（例如单个图像集合）时，高 IOPS 是必不可少的。存储系统必须能够快速定位和检索这些文件。</li>\n</ul>\n<p>下表展现了不同存储技术之间的显著差异。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">存储指标</th>\n<th align=\"left\">HDD (7200 转/分)</th>\n<th align=\"left\">SATA 固态硬盘</th>\n<th align=\"left\">NVMe 固态硬盘 (第四代)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>顺序读取</strong></td>\n<td align=\"left\">~150 MB/s</td>\n<td align=\"left\">~550 MB/s</td>\n<td align=\"left\"><strong>~7,000 MB/s</strong></td>\n</tr>\n<tr>\n<td align=\"left\"><strong>顺序写入</strong></td>\n<td align=\"left\">~120 MB/s</td>\n<td align=\"left\">~520 MB/s</td>\n<td align=\"left\"><strong>~5,000 MB/s</strong></td>\n</tr>\n<tr>\n<td align=\"left\"><strong>随机读取 IOPS</strong></td>\n<td align=\"left\">~100</td>\n<td align=\"left\">~95,000</td>\n<td align=\"left\"><strong>~1,000,000</strong></td>\n</tr>\n<tr>\n<td align=\"left\"><strong>延迟</strong></td>\n<td align=\"left\">5-10 ms</td>\n<td align=\"left\">70-100 µs</td>\n<td align=\"left\"><strong>&#x3C; 20 µs</strong></td>\n</tr>\n</tbody>\n</table>\n<p>如您所见，NVMe 硬盘在每个性能类别中都提供数量级的提升，使它们成为任何专业 AI 服务器的主要存储设备的默认选择。</p>\n<h3>用于性能和冗余的 RAID 配置</h3>\n<p>使用单个硬盘，即使是高速硬盘，也很少是最佳选择。通过将多个硬盘组合成 RAID (独立磁盘冗余阵列) 阵列，可以提升性能、增加数据保护，或者两者兼顾。对于 AI 工作负载，您的“热”数据层最常见有两种配置。</p>\n<h4>RAID 0 (条带化) 用于极限性能</h4>\n<p>在 RAID 0 配置中，数据被“条带化”到多个硬盘上。当写入文件时，它被分成块，每个块同时写入不同的硬盘。这会将有效读写速度乘以阵列中的硬盘数量（带有一些开销）。例如，一个包含四个每个能达到 7,000 MB/s 速度的 NVMe 硬盘的 RAID 0 阵列，理论上可以接近 28,000 MB/s 的读取速度。</p>\n<p>主要的权衡是缺乏冗余。如果 RAID 0 阵列中的任何一个硬盘发生故障，整个阵列上的所有数据都会丢失。因此，RAID 0 最适合用作“临时”空间，您可以在其中存储临时数据，例如在其他地方有备份的训练数据集，或可以重新生成的中间模型成果。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-jp455f\" \n              data-graph-definition='digraph RAID0 {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", bgcolor=\"transparent\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", color=\"#495057\"];\n    edge [color=\"#868e96\", fontname=\"sans-serif\", fontsize=10];\n\n    data [label=\"数据块\", shape=record, style=rounded, fillcolor=\"#e9ecef\", label=\"A | B | C | D\"];\n    controller [label=\"RAID 控制器\", shape=ellipse, fillcolor=\"#ffec99\"];\n    drive1 [label=\"NVMe 硬盘 1\\n[A, C]\", fillcolor=\"#a5d8ff\", shape=cylinder, height=1.2];\n    drive2 [label=\"NVMe 硬盘 2\\n[B, D]\", fillcolor=\"#a5d8ff\", shape=cylinder, height=1.2];\n\n    data -> controller;\n    controller -> drive1;\n    controller -> drive2;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-jp455f\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在 RAID 0 中，数据块被分割并写入阵列中的所有硬盘，从而最大化吞吐量 (throughput)。</p>\n</blockquote>\n<h4>RAID 10 (镜像条带) 用于性能和冗余</h4>\n<p>RAID 10 提供了性能与保护的平衡。它至少需要四个硬盘，工作方式是创建镜像对 (RAID 1)，然后将数据条带化到这些镜像对上 (RAID 0)。结果是系统具有 RAID 0 阵列的读取性能，并提供完整的数据冗余。如果镜像对中的一个硬盘发生故障，系统可以在不丢失数据的情况下继续运行。</p>\n<p>缺点是成本和容量利用率。您只能使用总原始存储容量的 50%。例如，四个 2TB 硬盘在 RAID 10 配置下，可用容量为 4TB。然而，对于存储珍贵模型或独特数据集，在性能和安全性都很重要的情况下，RAID 10 是一个极好的选择。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1etgdxb\" \n              data-graph-definition='digraph RAID10 {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", bgcolor=\"transparent\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", color=\"#495057\"];\n    edge [color=\"#868e96\", fontname=\"sans-serif\"];\n\n    data [label=\"数据 (A, B, C, D)\", shape=plaintext, fontcolor=\"#343a40\"];\n    controller [label=\"RAID 控制器\", shape=ellipse, fillcolor=\"#ffec99\"];\n\n    data -> controller;\n\n    subgraph cluster_mirror1 {\n        label = \"镜像集 1\";\n        bgcolor=\"#f1f3f5\";\n        color=\"#ced4da\";\n        node [fillcolor=\"#96f2d7\"];\n        drive1 [label=\"硬盘 1\\n[A, C]\"];\n        drive2 [label=\"硬盘 2\\n[A, C]\"];\n        drive1 -> drive2 [dir=both, style=dashed, color=\"#fa5252\", arrowhead=none, arrowtail=none, label=\" 镜像\"];\n    }\n\n    subgraph cluster_mirror2 {\n        label = \"镜像集 2\";\n        bgcolor=\"#f1f3f5\";\n        color=\"#ced4da\";\n        node [fillcolor=\"#96f2d7\"];\n        drive3 [label=\"硬盘 3\\n[B, D]\"];\n        drive4 [label=\"硬盘 4\\n[B, D]\"];\n        drive3 -> drive4 [dir=both, style=dashed, color=\"#fa5252\", arrowhead=none, arrowtail=none, label=\" 镜像\"];\n    }\n\n    controller -> drive1;\n    controller -> drive3;\n    {rank=same; cluster_mirror1; cluster_mirror2;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1etgdxb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>RAID 10 将 RAID 0 的条带化与 RAID 1 的冗余相结合，兼具速度和数据保护。</p>\n</blockquote>\n<h3>本地存储的分层策略</h3>\n<p>一种实用的本地 AI 存储方法是根据性能需求和成本创建分层。</p>\n<ol>\n<li><strong>操作系统和系统硬盘：</strong> 单个小型 NVMe 固态硬盘或一对镜像（RAID 1）SATA 固态硬盘足以满足操作系统和核心软件的需求。这里的优先级是可靠性而非纯粹的速度。</li>\n<li><strong>高性能“热”层：</strong> 这一层用于您的活跃数据集和训练临时空间。由四个或更多高耐用性 NVMe 固态硬盘组成的 RAID 0 阵列是最大化 I/O 性能以持续为 GPU 提供数据的理想选择。这里的数据应被视为临时性或已在其他地方备份。</li>\n<li><strong>温/冷归档层：</strong> 并非所有数据都需要存储在最快的存储设备上。一个独立的、大容量网络附加存储 (NAS) 系统，可能使用 RAID 5 或 RAID 6 配置的 HDD，可以用作非活跃项目、原始数据和备份的归档。数据可以根据训练需要从该归档移动到热层。</li>\n</ol>\n<p>通过设计存储配置以消除 I/O 瓶颈，您可以确保计算资源得到有效利用，直接支持减少总训练时间和最大化硬件投资回报的目标。</p>",
+  "slug": "high-speed-storage-configurations",
+  "updates": [],
+  "references": [
+    {
+      "id": 20588,
+      "title": "NVM Express Base Specification 2.0",
+      "author": "NVM Express, Inc.",
+      "year": "2021",
+      "publisher": "NVM Express, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nvmexpress.org/wp-content/uploads/NVM-Express-Base-Specification-2.0b-2021.12.18-Ratified.pdf",
+      "doi": "",
+      "note": "定义了NVMe接口和协议的技术标准，解释了其架构以及通过PCIe通信的方式，这对高速固态硬盘至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T14:05:18.738557Z",
+      "updated_at": "2025-09-10T03:04:30.409810Z"
+    },
+    {
+      "id": 20589,
+      "title": "Storage Systems: Organization, Performance, Dependability, and Data Protection",
+      "author": "Serge A. Brandt, Ethan L. Miller, Scott A. Gibson, and Darrell D. E. Long",
+      "year": "2014",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Storage+Systems%3A+Organization%2C+Performance%2C+Dependability%2C+and+Data+Protection-p-9781118625900",
+      "doi": "",
+      "note": "全面讨论了存储系统架构，包括RAID级别、驱动器类型和性能评估，对于设计可靠的数据基础设施非常重要。",
+      "order": 2,
+      "created_at": "2025-09-06T14:05:18.742102Z",
+      "updated_at": "2025-09-10T03:04:24.508038Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

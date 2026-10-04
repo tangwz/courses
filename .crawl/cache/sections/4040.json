@@ -1,0 +1,61 @@
+{
+  "id": 4040,
+  "title": "执行训练-测试集划分",
+  "meta_title": "在流程中实现训练-测试集划分",
+  "meta_description": "强调在训练前划分数据的实际步骤。",
+  "content": "<p>如同我们上一章所谈到的，在模型学习过的数据上评估它，就像在考试前给学生提供考题和答案。他们可能获得满分，但这几乎不能说明他们是否真正理解了材料或能处理新问题。为了可靠地评估模型在新数据（未见过的数据）上的表现，我们必须在训练前预留一部分数据集。这项步骤，即训练-测试集划分，是评估流程的一个基本构成部分。</p>\n<p>将您的整个数据集视为所有可用信息的集合。我们需要将这个集合分成两个不同的部分：</p>\n<ol>\n<li><strong>训练集：</strong> 这是较大的一部分，通常占总数据的70-80%。模型将完全从这些数据中学习模式、关系和规则。它是模型的“学习资料”。</li>\n<li><strong>测试集：</strong> 这是剩余的较小部分（20-30%）。这些数据在训练阶段会完全独立存放。它充当模型的“期末考试”。我们只在模型训练完成后才使用它，以观察模型对从未见过的新实例的泛化能力如何。</li>\n</ol>\n<h3>划分过程</h3>\n<p>过程本身很简单：</p>\n<ol>\n<li><strong>打乱顺序：</strong> 在划分之前，通常好的做法是随机打乱整个数据集的顺序。想象一下您的数据有某种固有顺序（例如按日期排序）。如果您只是简单地将前80%作为训练数据，后20%作为测试数据，您的测试集可能代表与训练集非常不同的时间段或条件，从而可能导致有偏差的结果。打乱顺序可确保训练集和测试集都包含各类数据点的代表性组合。</li>\n<li><strong>划分：</strong> 打乱顺序后，您按照选择的比例（例如80/20）划分数据。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-suh5kr\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", color=\"#ced4da\", fillcolor=\"#e9ecef\"];\n  edge [fontname=\"sans-serif\"];\n\n  FullData [label=\"完整数据集\\n(100%)\"];\n  TrainData [label=\"训练集\\n(例如，80%)\", color=\"#74c0fc\", fillcolor=\"#a5d8ff\"];\n  TestData [label=\"测试集\\n(例如，20%)\", color=\"#ffc078\", fillcolor=\"#ffd8a8\"];\n\n  FullData -> TrainData [label=\" 划分 \"];\n  FullData -> TestData [label=\" 划分 \"];\n\n  subgraph cluster_process {\n    label = \"训练-测试集划分\";\n    style=filled;\n    color=\"#f8f9fa\";\n    node [style=filled,color=white];\n    FullData;\n    TrainData;\n    TestData;\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-suh5kr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>完整数据集被划分为独立的训练集和测试集的示意图。</p>\n</blockquote>\n<h3>为何在此流程位置进行？</h3>\n<p>在模型训练前进行划分是非常重要的。如果您在完整数据集上训练模型，然后才尝试选择测试集，模型就已经“见过”测试数据了，即使是间接的。这就失去了拥有独立评估集的意义。测试集必须保持原始和未触碰状态，直到最终评估阶段。</p>\n<h3>实现说明</h3>\n<p>大多数机器学习 (machine learning)库都提供函数来轻松处理这一点。例如，在Python的scikit-learn库中，<code>train_test_split</code>函数被普遍使用。它根据指定的测试集大小比例处理数据的打乱和划分。通常，您会看到像<code>random_state</code>这样的选项。将其设置为特定数字可确保每次运行代码时都发生<em>相同</em>的随机打乱和划分。这使您的结果可重复，这对于调试和分享工作很重要。虽然我们在此不会查看具体的代码，但请记住，其主要思想是在流程中进一步操作之前，将您的数据随机划分为这两个不同的集合。</p>\n<p>通过仔细分离数据，我们为在一部分数据上训练模型，然后在预留的测试部分上对其性能进行公正无偏的评估奠定了基础。可靠模型评估正是建立在这种划分之上。</p>",
+  "slug": "performing-split-workflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 10732,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实践指南，介绍如何使用流行Python库（如scikit-learn）实现训练-测试拆分并理解其目的。",
+      "order": 1,
+      "created_at": "2025-09-05T06:52:59.281562Z",
+      "updated_at": "2025-09-08T13:36:37.609325Z"
+    },
+    {
+      "id": 10733,
+      "title": "An Introduction to Statistical Learning: With Applications in R",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani",
+      "year": "2013",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "",
+      "note": "一本基础教材，解释了模型评估背后的统计原理，包括拆分数据以稳健评估泛化误差的方法论。",
+      "order": 2,
+      "created_at": "2025-09-05T06:52:59.977191Z",
+      "updated_at": "2025-09-08T13:36:29.162109Z"
+    },
+    {
+      "id": 10734,
+      "title": "sklearn.model_selection.train_test_split",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "scikit-learn",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html",
+      "doi": "",
+      "note": "scikit-learn中`train_test_split`函数的官方文档，详细说明其参数、用法以及数据分区在实践中的应用。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:01.025995Z",
+      "updated_at": "2025-09-08T13:36:31.061762Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

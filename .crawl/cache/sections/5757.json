@@ -1,0 +1,61 @@
+{
+  "id": 5757,
+  "title": "动手实践：创建自定义数据集和数据加载器",
+  "meta_title": "PyTorch Dataset 和 DataLoader 实践（面向 TF 用户）",
+  "meta_description": "针对特定的数据问题实现自定义 PyTorch 数据集和数据加载器。",
+  "content": "<p>逐步完成为合成表格数据创建自定义 <code>Dataset</code> 的过程，然后使用 <code>DataLoader</code> 为模型训练准备数据。这项实践操作展示了 PyTorch 如何处理数据管道，并与使用 <code>tf.data</code> 达到类似效果的方式进行对比。</p>\n<p>假设我们有一个简单的二元分类任务。我们的数据包含数值特征和对应的二元标签（0 或 1）。为简单起见，我们将人工生成这些数据。</p>\n<h3>实现自定义数据集</h3>\n<p>第一步是定义一个继承自 <code>torch.utils.data.Dataset</code> 的类。这个类必须实现三个特殊方法：</p>\n<ol>\n<li><code>__init__(self, ...)</code>: 构造函数。你通常在此处加载数据（例如，从文件、数据库或动态生成）。你也可以在此处执行任何一次性预处理。</li>\n<li><code>__len__(self)</code>: 此方法应返回数据集中样本的总数。<code>DataLoader</code> 使用此方法来了解数据集的大小。</li>\n<li><code>__getitem__(self, idx)</code>: 此方法负责从数据集中获取给定索引 <code>idx</code> 处的单个样本（特征和对应的标签）。你通常也在此处应用针对单个样本的转换，例如将数据转换为 PyTorch 张量。</li>\n</ol>\n<p>让我们创建 <code>SyntheticTabularDataset</code>：</p>\n<pre><code class=\"language-python\">import torch\nfrom torch.utils.data import Dataset\nimport numpy as np\n\nclass SyntheticTabularDataset(Dataset):\n    def __init__(self, num_samples=1000, num_features=10):\n        \"\"\"\n        Constructor for the SyntheticTabularDataset.\n        Args:\n            num_samples (int): The total number of samples to generate.\n            num_features (int): The number of features for each sample.\n        \"\"\"\n        super().__init__() # 良好实践：调用父类构造函数\n        self.num_samples = num_samples\n        self.num_features = num_features\n\n        # 生成合成特征（来自正态分布的随机数）\n        # 在实际场景中，你会从文件或其他来源加载特征。\n        self.features = np.random.randn(num_samples, num_features).astype(np.float32)\n\n        # 生成合成标签（随机二元标签：0 或 1）\n        self.labels = np.random.randint(0, 2, num_samples).astype(np.int64)\n\n        # 对于 TensorFlow 用户：在此阶段，你的数据可能以 NumPy 数组的形式存在。\n        # 你可能会使用 tf.data.Dataset.from_tensor_slices((self.features, self.labels))\n        # 来创建一个 TensorFlow Dataset。在这里，我们正在定义一个 PyTorch Dataset 类。\n\n    def __len__(self):\n        \"\"\"\n        Returns the total number of samples in the dataset.\n        \"\"\"\n        return self.num_samples\n\n    def __getitem__(self, idx):\n        \"\"\"\n        Retrieves the sample (features and label) at the given index.\n        Args:\n            idx (int): The index of the sample to retrieve.\n        Returns:\n            tuple: (features, label) where features is a PyTorch tensor\n                   and label is a PyTorch tensor.\n        \"\"\"\n        # 获取指定样本\n        sample_features = self.features[idx]\n        sample_label = self.labels[idx]\n\n        # 将 NumPy 数组转换为 PyTorch 张量\n        # 这是在 __getitem__ 中常见的操作\n        # 在 TensorFlow 中，tf.data 在数据传递给 from_tensor_slices 或通过 map 转换时，会隐式处理张量转换。\n        return torch.from_numpy(sample_features), torch.tensor(sample_label)\n\n</code></pre>\n<p>在 <code>__init__</code> 方法中，我们使用 NumPy 生成特征和标签，并将它们存储为实例属性。<code>np.float32</code> 是特征的常见数据类型，而 <code>np.int64</code> 则是分类标签的典型类型（尤其在使用 <code>CrossEntropyLoss</code> 等损失函数 (loss function)时）。</p>\n<p><code>__len__</code> 方法很简单；它只返回 <code>self.num_samples</code>。</p>\n<p><code>__getitem__</code> 方法接受一个索引 <code>idx</code>，从 NumPy 数组中获取对应的特征和标签，然后将它们转换为 PyTorch 张量。<code>torch.from_numpy</code> 用于数组到张量的转换，<code>torch.tensor</code> 适用于标量标签。这种转换为张量的操作很重要，因为 PyTorch 模型期望张量输入。</p>\n<h3>实例化和使用自定义数据集</h3>\n<p>既然我们已经定义了 <code>SyntheticTabularDataset</code>，现在让我们创建一个它的实例，看看如何访问单个样本：</p>\n<pre><code class=\"language-python\"># 创建自定义数据集的实例\ndataset = SyntheticTabularDataset(num_samples=50, num_features=3)\n\n# 检查数据集的长度\nprint(f\"数据集长度: {len(dataset)}\")\n\n# 获取单个样本（例如，索引为 0 的第一个样本）\nfeatures_sample, label_sample = dataset[0]\nprint(f\"\\n第一个样本:\")\nprint(f\"  特征: {features_sample}\")\nprint(f\"  标签: {label_sample}\")\nprint(f\"  特征形状: {features_sample.shape}, 数据类型: {features_sample.dtype}\")\nprint(f\"  标签形状: {label_sample.shape}, 数据类型: {label_sample.dtype}\")\n\n# 获取另一个样本\nfeatures_sample_2, label_sample_2 = dataset[10]\nprint(f\"\\n索引 10 处的样本:\")\nprint(f\"  特征: {features_sample_2}\")\nprint(f\"  标签: {label_sample_2}\")\n</code></pre>\n<p>运行这段代码将显示样本总数以及从数据集中获取的单个样本的结构，它们已方便地转换为 PyTorch 张量。</p>\n<h3>使用 DataLoader 准备数据</h3>\n<p>虽然访问单个样本对检查有用，但对于模型训练，我们需要以批次处理数据、打乱数据，并可能并行加载数据。这就是 <code>torch.utils.data.DataLoader</code> 发挥作用的地方。</p>\n<p><code>DataLoader</code> 接受一个 <code>Dataset</code> 对象作为输入，并提供一个可迭代对象。主要参数 (parameter)包括：</p>\n<ul>\n<li><code>dataset</code>: 用于加载数据的 <code>Dataset</code> 对象。</li>\n<li><code>batch_size</code>: 每个批次的样本数量。</li>\n<li><code>shuffle</code>: 如果为 <code>True</code>，数据会在每个 epoch 重新打乱。这通常建议用于训练数据，以防止模型学习样本的顺序。</li>\n<li><code>num_workers</code>: 用于数据加载的子进程数量。设置 <code>num_workers > 0</code> 可启用多进程数据加载，这可以显著加快数据获取速度，尤其是在 <code>__getitem__</code> 涉及 I/O 操作或大量计算时。对于像我们合成示例这样简单的内存中数据集，<code>num_workers=0</code>（默认值，在主进程中加载）通常没有问题。</li>\n</ul>\n<p>让我们为 <code>SyntheticTabularDataset</code> 创建一个 <code>DataLoader</code>：</p>\n<pre><code class=\"language-python\">from torch.utils.data import DataLoader\n\n# 重新实例化数据集，也许增加更多样本以适应典型的训练场景\ntrain_dataset = SyntheticTabularDataset(num_samples=1000, num_features=5)\n\n# 创建一个 DataLoader\nbatch_size = 32\n# 对于 TensorFlow 用户：DataLoader 结合了以下功能：\n# tf.data.Dataset.shuffle() 和 tf.data.Dataset.batch()。\ntrain_dataloader = DataLoader(dataset=train_dataset, \n                              batch_size=batch_size, \n                              shuffle=True, \n                              num_workers=0) # 为简单起见，这里使用 0；实际任务中尝试 >0\n\n# 遍历 DataLoader 以获取批次\nprint(f\"\\n遍历 DataLoader（以头两个批次为例）:\")\nfor i, (batch_features, batch_labels) in enumerate(train_dataloader):\n    if i &#x3C; 2: # 如果是前两个批次则打印信息\n        print(f\"  批次 {i+1}:\")\n        print(f\"    特征批次形状: {batch_features.shape}\") # [batch_size, num_features]\n        print(f\"    标签批次形状: {batch_labels.shape}\")   # [batch_size]\n        print(f\"    特征批次数据类型: {batch_features.dtype}\")\n        print(f\"    标签批次数据类型: {batch_labels.dtype}\")\n    else:\n        break # 为简洁起见，显示两个批次后停止\n\n# 你也可以在典型的训练循环中遍历它：\n# num_epochs = 3\n# for epoch in range(num_epochs):\n#     print(f\"\\n周期 {epoch+1}/{num_epochs}\")\n#     for batch_idx, (features, labels) in enumerate(train_dataloader):\n#         # 在实际训练循环中：\n#         # 1. 将数据移至设备（例如，GPU）\n#         # features, labels = features.to(device), labels.to(device)\n#         # 2. 前向传播：model_output = model(features)\n#         # 3. 计算损失：loss = criterion(model_output, labels)\n#         # 4. 反向传播：loss.backward()\n#         # 5. 优化器步进：optimizer.step()\n#         # 6. 梯度清零：optimizer.zero_grad()\n#         if batch_idx % 10 == 0: # 每 10 个批次打印一次进度\n#             print(f\"  已处理批次 {batch_idx+1}/{len(train_dataloader)}\")\n#     print(\"-\" * 30)\n\n</code></pre>\n<p>运行此代码时，你会看到 <code>batch_features</code> 是一个形状为 <code>(batch_size, num_features)</code> 的张量，而 <code>batch_labels</code> 是一个形状为 <code>(batch_size,)</code> 的张量。<code>DataLoader</code> 已有效地将 <code>Dataset</code> 中的单个样本分组到这些批次中。如果 <code>shuffle=True</code>，每次你遍历 <code>train_dataloader</code> 时（例如，在每个训练周期开始时），这些批次内的样本顺序（以及批次本身的顺序）都会不同。</p>\n<h3>关于转换的说明</h3>\n<p>在我们的 <code>SyntheticTabularDataset</code> 中，我们直接在 <code>__getitem__</code> 方法中将 NumPy 数组转换为 PyTorch 张量。对于更复杂的预处理或数据增强（在图像数据中尤其常见），PyTorch <code>Dataset</code> 类通常在其 <code>__init__</code> 方法中接受一个 <code>transform</code> 参数 (parameter)。这个 <code>transform</code> 通常是一个可调用对象（例如一个函数或一个带有 <code>__call__</code> 方法的对象），它会在样本返回<em>之前</em>在 <code>__getitem__</code> 中应用于样本。</p>\n<p>例如，如果你处理图像，你可能会将 <code>torchvision.transforms</code> 中的一系列转换（如调整大小、裁剪、归一化 (normalization)和转换为张量）传递给你的自定义图像数据集。</p>\n<pre><code class=\"language-python\"># 转换如何使用的示例\n# class MyImageDataset(Dataset):\n#     def __init__(self, image_paths, labels, transform=None):\n#         self.image_paths = image_paths\n#         self.labels = labels\n#         self.transform = transform\n#\n#     def __len__(self):\n#         return len(self.image_paths)\n#\n#     def __getitem__(self, idx):\n#         image = Image.open(self.image_paths[idx]) # 加载图像\n#         label = self.labels[idx]\n#         if self.transform:\n#             image = self.transform(image) # 应用转换\n#         return image, label\n\n# from torchvision import transforms\n# image_transform = transforms.Compose([\n#     transforms.Resize((256, 256)),\n#     transforms.RandomCrop(224),\n#     transforms.ToTensor(),\n#     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])\n# ])\n# image_dataset = MyImageDataset(paths, labels, transform=image_transform)\n</code></pre>\n<p>这种方法使数据加载逻辑清晰，并允许灵活组合预处理步骤。对于我们的表格数据，<code>__getitem__</code> 中的直接张量转换已足够，但了解这种常见模式对于更高级的用例会很有帮助。</p>\n<p>这项实践练习展示了 PyTorch 数据处理的基本模式：使用 <code>Dataset</code> 定义如何获取单个处理后的项，然后使用 <code>DataLoader</code> 高效地批处理、打乱和迭代这些项。这种关注点分离提供了很大的灵活性，类似于你在 TensorFlow 的 <code>tf.data</code> API 中定义数据源然后应用 <code>.batch()</code> 和 <code>.shuffle()</code> 等转换的方式，但 <code>Dataset</code> 本身具有更明确的基于 Python 类的结构。你现在拥有了构建块，可以在 PyTorch 中为各种数据类型创建高效的数据管道。</p>",
+  "slug": "practical-pytorch-datasets-dataloaders",
+  "updates": [],
+  "references": [
+    {
+      "id": 16130,
+      "title": "`torch.utils.data` - PyTorch Documentation",
+      "author": "PyTorch Core Team",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/data.html",
+      "doi": "",
+      "note": "PyTorch数据实用工具类（包括Dataset和DataLoader）的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-06T11:00:32.144465Z",
+      "updated_at": "2025-09-10T02:27:09.176926Z"
+    },
+    {
+      "id": 16131,
+      "title": "Writing Custom Datasets, DataLoaders and Transforms",
+      "author": "Sasank Chilamkurthy",
+      "year": "2017",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/data_loading_tutorial.html",
+      "doi": "",
+      "note": "PyTorch官方教程，演示如何实现自定义Dataset和DataLoader类。",
+      "order": 2,
+      "created_at": "2025-09-06T11:00:32.149163Z",
+      "updated_at": "2025-09-10T02:27:12.950468Z"
+    },
+    {
+      "id": 16132,
+      "title": "Deep Learning with PyTorch",
+      "author": "Eli Stevens, Luca Antiga, and Thomas Viehmann",
+      "year": "2020",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-pytorch",
+      "doi": "",
+      "note": "全面介绍PyTorch的书籍，包含数据加载和准备的章节。",
+      "order": 3,
+      "created_at": "2025-09-06T11:00:32.151888Z",
+      "updated_at": "2025-09-10T02:27:05.473388Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

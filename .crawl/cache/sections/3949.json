@@ -1,0 +1,61 @@
+{
+  "id": 3949,
+  "title": "部署策略的类型 (简介)",
+  "meta_title": "机器学习部署策略概览",
+  "meta_description": "简要介绍模型可以部署的不同方式，例如批量预测和在线推理。",
+  "content": "<p>你已经训练好了模型，并且它在测试数据集上表现良好。但你如何才能在开发环境之外，真正<em>应用</em>它来对新数据进行预测呢？这就是部署策略发挥作用的地方。部署模型不止一种方式；最好的方法很大程度上取决于你需要预测的方式和时间。让我们看看模型投入使用的最常见方法。</p>\n<h3>批量预测 (离线推理 (inference))</h3>\n<p>设想你有一大量数据需要预测，但你不需要即时获得这些预测结果。也许你想每周为所有客户预测客户流失，或者为所有门店生成每日销售预测。这种情形非常适合<strong>批量预测</strong>，也称为离线推理。</p>\n<p>在批量预测中，模型根据预设的时间表（例如，每小时、每天、每周）处理大量数据或“批次”数据。</p>\n<p>以下是其工作原理的简化视图：</p>\n<ol>\n<li><strong>数据收集：</strong> 在一段时间内收集输入数据（例如，过去24小时的所有交易）。</li>\n<li><strong>计划运行：</strong> 在设定时间，一个程序启动。</li>\n<li><strong>加载模型与数据：</strong> 加载保存的模型和批量输入数据。</li>\n<li><strong>预测：</strong> 模型为整个批次数据生成预测。</li>\n<li><strong>存储结果：</strong> 预测结果被存储，通常在数据库或文件系统中，供其他应用程序后续使用或进行分析。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1t7t0rm\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_batch {\n    label = \"批量预测流程 (计划运行)\";\n    bgcolor=\"#e9ecef\";\n    Data [label=\"输入数据\\n(例如，每日交易)\", shape=cylinder, style=filled, fillcolor=\"#a5d8ff\"];\n    Process [label=\"计划作业\\n(例如，每晚运行)\", shape=cds, style=filled, fillcolor=\"#ffd8a8\"];\n    Model [label=\"加载已保存模型\\n& 预处理器\", style=filled, fillcolor=\"#b2f2bb\"];\n    Predict [label=\"生成预测\\n(针对所有数据)\", shape=parallelogram, style=filled, fillcolor=\"#ffc9c9\"];\n    Results [label=\"存储的预测结果\\n(例如，数据库)\", shape=cylinder, style=filled, fillcolor=\"#bac8ff\"];\n    Data -> Process -> Model -> Predict -> Results;\n  }\n\n  App [label=\"业务应用程序\\n(后续使用结果)\", shape=component, style=filled, fillcolor=\"#dee2e6\"];\n  Results -> App [label=\"访问已存储的\\n预测结果\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1t7t0rm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>批量预测的典型工作流，其中数据定期处理。</p>\n</blockquote>\n<p><strong>何时适用批量预测？</strong></p>\n<ul>\n<li>当不需要实时预测时。</li>\n<li>当你需要高效处理大量数据时。</li>\n<li>当预测用于报告、规划或定期运行的下游程序时。</li>\n</ul>\n<p>可以将其想象为处理工资。你不是持续计算工资；而是在每个发薪期批量处理。</p>\n<h3>在线预测 (实时推理 (inference))</h3>\n<p>现在，考虑你需要<em>即时</em>获得预测的情形。例如：</p>\n<ul>\n<li>在信用卡交易批准<em>之前</em>检测其是否为欺诈。</li>\n<li>当用户浏览你的网站<em>时</em>为其推荐产品。</li>\n<li>在收到电子邮件<em>后立即</em>将其识别为垃圾邮件或非垃圾邮件。</li>\n</ul>\n<p>这些使用情况需要<strong>在线预测</strong>，也称为实时推理。在这种情况下，模型通常作为一项服务持续运行，等待接收预测请求。当带有新输入数据的请求到达时（通常只是单个数据点或少量数据点），服务会迅速加载模型（如果尚未加载），生成预测，并立即将其返回。</p>\n<p>这通常涉及搭建一个预测服务，常用Flask或FastAPI等Web框架（我们将在本课程后面部分介绍）。应用程序通过应用程序编程接口（API）与此服务交互。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-17zkdc6\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_online {\n    label = \"在线预测流程 (按需)\";\n    bgcolor=\"#e9ecef\";\n    API [label=\"预测服务 (API)\\n(持续运行)\", shape=component, style=filled, fillcolor=\"#b2f2bb\"];\n    Model [label=\"模型已加载\\n至服务\", style=filled, fillcolor=\"#96f2d7\"];\n    API -> Model [style=dotted, arrowhead=none, label=\" 使用 \"]; // 表示模型是服务的一部分\n  }\n\n  ClientApp [label=\"客户端应用程序\\n(例如，Web 应用，移动应用)\", shape=component, style=filled, fillcolor=\"#a5d8ff\"];\n  Request [label=\"输入数据\\n(单个请求)\", shape=note, style=filled, fillcolor=\"#ffec99\"];\n  Response [label=\"预测\\n(即时响应)\", shape=note, style=filled, fillcolor=\"#ffc9c9\"];\n\n  ClientApp -> Request [dir=none];\n  Request -> API [label=\" 发送请求 (HTTP) \"];\n  API -> Response [label=\" 返回预测结果 \"];\n  Response -> ClientApp [dir=none];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-17zkdc6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在线预测的典型工作流，其中预测结果通过API按需提供。</p>\n</blockquote>\n<p><strong>何时适用在线预测？</strong></p>\n<ul>\n<li>当需要即时预测时（低延迟要求）。</li>\n<li>适用于需要根据用户操作或传入事件即时反馈的交互式应用程序。</li>\n<li>当输入数据单独且不可预测地到达时。</li>\n</ul>\n<p>可以将其想象为一次网页搜索。你输入一个查询，并期望几乎立即得到结果。</p>\n<h3>嵌入 (embedding)式部署</h3>\n<p>第三种不那么常见但很重要的方法是将模型直接嵌入到应用程序或设备中。模型不再是调用单独的服务，而是在用户设备（如智能手机或物联网传感器）上本地运行，或作为大型软件应用程序的一部分。</p>\n<p>例子有：</p>\n<ul>\n<li>人脸识别直接在智能手机摄像头应用中运行。</li>\n<li>智能音箱上的关键词识别（“嘿，Google”、“Alexa”）。</li>\n<li>工业设备上运行的预测性维护模型。</li>\n</ul>\n<p>当网络连接不可靠、需要极低延迟或数据隐私是一个主要问题（数据无需离开设备）时，这种方法很有用。然而，这通常要求模型经过专门优化以减小尺寸和提高计算效率，从而在资源受限的设备上运行。</p>\n<h3>选择合适的策略</h3>\n<p>批量、在线或嵌入 (embedding)式部署的选择完全取决于你的应用程序需求：</p>\n<ul>\n<li><strong>需要即时预测？</strong> 倾向于在线预测。</li>\n<li><strong>定期处理大量数据集？</strong> 批量预测通常更高效。</li>\n<li><strong>需要在没有网络访问的设备上运行？</strong> 嵌入式部署可能是必需的。</li>\n</ul>\n<p>通常，问题本身的性质决定了策略。在本课程中，我们将主要侧重于<strong>在线预测</strong>所需的技术，因为构建预测服务是MLOps中一项常见且基本的能力。我们将学习如何保存模型，使用Flask将其封装成Web服务，并打包该服务以供部署。了解这些不同的策略有助于理解我们为何构建这些服务，以及它们如何适应机器学习 (machine learning)实用化的整体考量。</p>",
+  "slug": "deployment-strategies-intro",
+  "updates": [],
+  "references": [
+    {
+      "id": 10768,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready ML Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "本书为构建和部署机器学习系统提供了指南，其中包含模型服务策略的专门章节，如批量、在线和流式推理。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:32.249953Z",
+      "updated_at": "2025-09-08T13:17:43.174917Z"
+    },
+    {
+      "id": 10769,
+      "title": "Machine Learning Engineering",
+      "author": "Andriy Burkov",
+      "year": "2020",
+      "publisher": "True Positive Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "310",
+      "url": "https://leanpub.com/machine-learning-engineering",
+      "doi": "",
+      "note": "这是一本实用书籍，讨论了将机器学习模型投入生产的工程方面，涵盖了模型服务和不同部署环境等主题。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:32.266086Z",
+      "updated_at": "2025-09-08T13:17:57.935009Z"
+    },
+    {
+      "id": 10770,
+      "title": "Batch prediction vs. online prediction",
+      "author": "Google Cloud",
+      "year": "2024",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEsx3RQUGUE7kWfleq6iNuPZzzj2-hc_9Y678ytifnQ1pFYvnVtPptnUp07L32R7VqPGa7fZJ0n73geDDGx_Xy3NGCUdStKsmubk78xTwQF1Wt32LIgU4jEi5Ere7s_oXQnb6QMjbNljv1u4nent2q2LHlghQlGRh9hZ1dlJ16ueLCw7FeKrAw-ag4qoheK_F3rxQ==",
+      "doi": "",
+      "note": "官方文档解释了批量和在线预测服务的区别、用例和典型工作流程，为这些部署策略提供了清晰的行业视角。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:32.270016Z",
+      "updated_at": "2025-09-08T13:17:49.175147Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

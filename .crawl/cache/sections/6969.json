@@ -1,0 +1,61 @@
+{
+  "id": 6969,
+  "title": "TPU及其他ASIC简介",
+  "meta_title": "TPU和ASIC简介",
+  "meta_description": "专用集成电路（ASIC）（例如谷歌张量处理器TPU）在专用AI任务中的概述。",
+  "content": "<p>尽管CPU提供强大的灵活性，GPU为多种任务提供大规模并行处理能力，但还有一类处理器，专为单一任务实现最高效率而打造：即专用集成电路（ASIC）。对于某些大型AI计算需求，这些专用芯片能够提供通用硬件无法比拟的性能和能效。</p>\n<h3>什么是ASIC？</h3>\n<p>专用集成电路（ASIC）是为特定目的而设计制造的芯片。不同于CPU被设计来运行完整的操作系统和无数种软件，ASIC的逻辑门是物理上布局好的，用于执行非常有限的操作集。可以将其理解为可编程的厨房电器（能混合、切碎、搅拌）与一台简单高效的咖啡研磨机之间的区别。研磨机只做一件事，但比通用电器更快、能耗更低。</p>\n<p>在机器学习 (machine learning)的背景下，ASIC旨在加速神经网络 (neural network)的数学基本运算，主要是矩阵乘法和卷积。通过去除所有不必要的组件，例如CPU复杂的条件分支预测或GPU的图形渲染管线，AI ASIC可以将其所有的芯片资源和功耗预算用于这些核心计算。</p>\n<h3>谷歌张量处理器：一个典型范例</h3>\n<p>AI ASIC中最知名的例子是谷歌的张量处理器（TPU）。最初在内部开发，用于加速谷歌搜索和照片等服务的推理 (inference)。现在，TPU通过谷歌云平台向公众提供。它们从零开始设计，以极高的速度和效率执行TensorFlow和JAX等机器学习 (machine learning)框架中定义的操作。</p>\n<p>TPU架构的核心创新是<strong>脉动阵列</strong>。</p>\n<h3>脉动阵列架构</h3>\n<p>脉动阵列是由简单、相同的处理单元（PE）组成的网格，这些单元连接到最近的邻居。数据以有节奏的波浪状模式流经此网格，类似于血液通过循环系统泵送的方式，这也是“脉动”一词的由来。</p>\n<p>矩阵乘法<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi><mo>=</mo><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><annotation encoding=\"application/x-tex\">C = A \\cdot B</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span>的工作方式如下：</p>\n<ol>\n<li><strong>载入权重 (weight)：</strong> 一个矩阵的值（例如模型权重）被预先载入到处理单元阵列中。</li>\n<li><strong>数据流传输：</strong> 另一个矩阵的值（例如输入激活值）从一侧流式传输到阵列中。</li>\n<li><strong>计算与传递：</strong> 当输入数据流过时，每个PE执行乘累加（MAC）操作。它将传入的激活值与其存储的权重相乘，并将结果加到从其邻居传递过来的值上。然后它将自己的输入数据和累加结果传递给序列中的下一个PE。</li>\n</ol>\n<p>这种设计非常高效，因为数据不断移动并被计算。权重矩阵的值被多次重复使用，无需反复从内存中获取，这显著减少了内存带宽瓶颈和功耗。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xbqk30\" \n              data-graph-definition='digraph G {rankdir=TB; splines=line; node [shape=record, style=\"filled\", fillcolor=\"#4dabf7\", fontname=\"Helvetica\", margin=0.2]; edge [fontname=\"Helvetica\", color=\"#495057\", arrowhead=vee, arrowsize=0.7]; bgcolor=\"transparent\"; subgraph cluster_0 {style=invis; rank=same; b_in_1 [shape=plaintext, label=\"权重输入 →\"]; p11 [label=\"PE\"]; p12 [label=\"PE\"]; p13 [label=\"PE\"]; rank=same; b_in_2 [shape=plaintext, label=\"\"]; p21 [label=\"PE\"]; p22 [label=\"PE\"]; p23 [label=\"PE\"]; rank=same; b_in_3 [shape=plaintext, label=\"\"]; p31 [label=\"PE\"]; p32 [label=\"PE\"]; p33 [label=\"PE\"];} a_in_1 [shape=plaintext, label=\"激活值输入\\n↓\"]; a_in_2 [shape=plaintext, label=\"\"]; a_in_3 [shape=plaintext, label=\"\"]; a_in_1 -> p11; a_in_2 -> p12; a_in_3 -> p13; b_in_1 -> p11; b_in_2 -> p21; b_in_3 -> p31; p11 -> p21; p12 -> p22; p13 -> p23; p21 -> p31; p22 -> p32; p23 -> p33; p11 -> p12; p12 -> p13; p21 -> p22; p22 -> p23; p31 -> p32; p32 -> p33;}\r\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xbqk30\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>脉动阵列示意图。激活值从顶部流入，而权重从侧面载入。每个处理单元（PE）执行计算并将数据传递给其邻居，从而实现高度并行和高效的计算流程。</p>\n</blockquote>\n<h3>权衡：性能与灵活性</h3>\n<p>ASIC的专用性带来了明确的权衡。对于其设计目的的任务，它们的性能和能效可以比高端GPU好一个数量级。这通常以每秒万亿次操作（TOPS）衡量，更重要的是，以每瓦特TOPS衡量。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-a302ud\" \n              data-plot-definition='{\"data\":[{\"x\":[\"CPU\",\"GPU\",\"TPU\"],\"y\":[1,4.5,10],\"type\":\"bar\",\"name\":\"每瓦性能\",\"marker\":{\"color\":[\"#4dabf7\",\"#20c997\",\"#94d82d\"]}}],\"layout\":{\"title\":{\"text\":\"AI任务的相对每瓦性能\"},\"xaxis\":{\"title\":{\"text\":\"处理器类型\"}},\"yaxis\":{\"title\":{\"text\":\"每瓦性能（归一化）\"},\"range\":[0,12]},\"barmode\":\"group\",\"font\":{\"family\":\"Helvetica\"}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-a302ud\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>针对典型矩阵密集型AI计算需求，不同处理器类型的归一化 (normalization)每瓦性能。TPU的专用特性使其能够以明显更低的功耗执行目标操作。</p>\n</blockquote>\n<p>然而，这种性能是以牺牲灵活性为代价的。TPU不是通用处理器。它不能运行任意Python代码或渲染用户界面。它针对特定的操作集和数据类型（如<code>bfloat16</code>或<code>INT8</code>）进行了优化。如果您的模型使用新的、不受支持的操作，则必须修改模型或等待硬件和软件支持加入后才能在TPU上运行。</p>\n<p>这形成了硬件选择的多样性：</p>\n<ul>\n<li><strong>CPU：</strong> 灵活性最高，并行性能最低。</li>\n<li><strong>GPU：</strong> 灵活性与高并行性能之间有良好平衡。</li>\n<li><strong>ASIC：</strong> 灵活性最低，针对特定任务的并行性能最高。</li>\n</ul>\n<h3>除了TPU：一个不断发展的生态体系</h3>\n<p>尽管谷歌的TPU是知名度最高的AI ASIC，但它绝非唯一。对高效AI计算的需求促使了其他专用芯片的出现：</p>\n<ul>\n<li><strong>AWS Trainium和Inferentia：</strong> 亚马逊的定制ASIC，专门为AWS生态体系内的经济高效模型训练（Trainium）和推理 (inference)（Inferentia）而设计。</li>\n<li><strong>专业初创公司：</strong> Cerebras Systems、SambaNova Systems和Groq等公司已开发出新颖的架构，以应对大规模AI计算，通常在内存和数据流方面采用独特的方法。</li>\n</ul>\n<p>这些多样化解决方案的存在表明，对于达到一定规模的组织，设计或使用定制芯片是优化性能和成本的可行策略。对于大多数工程师和数据科学家而言，眼前的选择将是在通过云服务提供商使用这些ASIC，或者坚持使用更传统的基于GPU的基础设施之间。您的决定将取决于您计算需求的规模、预算，以及您的模型与ASIC专用能力的契合程度。</p>",
+  "slug": "introduction-to-tpus-asics",
+  "updates": [],
+  "references": [
+    {
+      "id": 20754,
+      "title": "In-Datacenter Performance Analysis of a Tensor Processing Unit",
+      "author": "Norman P. Jouppi, Cliff Young, Nishant Patil, David A. Patterson, et al.",
+      "year": "2017",
+      "publisher": "IEEE and ACM",
+      "journal": "Proceedings of the 44th ACM/IEEE Annual International Symposium on Computer Architecture (ISCA '17)",
+      "volume": "",
+      "pages": "1-12",
+      "url": "https://doi.org/10.1145/3079856.3080246",
+      "doi": "10.1145/3079856.3080246",
+      "note": "这篇开创性论文介绍了谷歌张量处理单元（TPU），详细阐述了其架构、脉动阵列以及其在机器学习推理工作负载中的性能特点。",
+      "order": 1,
+      "created_at": "2025-09-06T14:08:01.006369Z",
+      "updated_at": "2025-09-10T03:06:37.584927Z"
+    },
+    {
+      "id": 20756,
+      "title": "Tensor Processing Units (TPUs) | Google Cloud",
+      "author": "Google Cloud",
+      "year": "2023",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/tpu/",
+      "doi": "",
+      "note": "官方文档，提供了谷歌TPU的最新详细信息、功能以及如何在谷歌云生态系统中使用它们。",
+      "order": 3,
+      "created_at": "2025-09-06T14:08:01.015013Z",
+      "updated_at": "2025-09-10T03:06:21.208868Z"
+    },
+    {
+      "id": 20757,
+      "title": "The Deep Learning Hardware Landscape",
+      "author": "Albert Reuther, Jeremy Kepner, Andrew P. Sage, Jeremy R. Holland, Robert T. Bond, Jeffrey K. Oddson, Roger Pearce, Charles M. Leiserson, William M. McMahon, and Peter A. Michaleas",
+      "year": "2021",
+      "publisher": "MIT Lincoln Laboratory",
+      "journal": "MIT Lincoln Laboratory Journal",
+      "volume": "22",
+      "pages": "52-61",
+      "url": "https://www.ll.mit.edu/r-d/doc/2021-06/llj-22-1-04-reuther.pdf",
+      "doi": "",
+      "note": "这篇调查文章概述了深度学习的硬件选项，讨论了CPU、GPU和专用ASIC的优缺点，并阐明了它们各自的权衡。",
+      "order": 4,
+      "created_at": "2025-09-06T14:08:01.017915Z",
+      "updated_at": "2025-09-10T03:06:28.429922Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

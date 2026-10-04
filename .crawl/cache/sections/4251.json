@@ -1,0 +1,61 @@
+{
+  "id": 4251,
+  "title": "选择你的第一个模型",
+  "meta_title": "选择你的第一个本地大型语言模型的建议",
+  "meta_description": "根据你的硬件和目标选择合适入门模型的指引。",
+  "content": "<p>你已经学习了模型在哪里可以找到、大小和格式如何影响性能、量化 (quantization)的作用以及许可证的重要性。现在，让我们将这些知识付诸实践，为本地试用选择你的第一个大型语言模型。这里的目的不是找到绝对“最佳”的模型，而是找到一个在你的硬件上能运行得相当好，并让你开始与本地大型语言模型互动的合适起点。</p>\n<h3>将模型与你的机器匹配</h3>\n<p>影响你首次模型选择最重要的因素是你的电脑硬件，具体来说是内存（系统内存）以及（如果可用）显存 (VRAM)（图形处理器内存）。正如之前讨论的，参数 (parameter)更多、尺寸更大的模型需要更多内存。量化 (quantization)有助于减少内存需求，但硬件限制仍然是主要的筛选条件。</p>\n<ul>\n<li><strong>内存不足 / 无独立图形处理器（例如，小于8GB内存）：</strong> 你可能需要选择可用的最小模型，参数范围可能在<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">10亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">10</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>到<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>30</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">30亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">30</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>之间，并且大幅量化（如Q2或Q3 GGUF格式）。性能可能较慢，但这只是个开始。</li>\n<li><strong>内存适中 / 基础图形处理器（例如，8-16GB内存，小于6GB显存）：</strong> 参数在<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>范围内的模型，尤其是量化版本（如Q4或Q5 GGUF），通常可以管理。你可能主要在中央处理器上运行这些模型，如果显存允许，部分层可能会卸载到图形处理器。</li>\n<li><strong>内存充足 / 性能强的图形处理器（例如，16GB+内存，8GB+显存）：</strong> 你可以流畅运行<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数的模型，试用<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>130</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">130亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">130</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数的模型（量化版本），甚至可能根据你的具体显存大小运行更大的模型。显存越多，模型就越能在更快的图形处理器上运行。</li>\n</ul>\n<p>下表大致展示了使用常用量化级别时，不同模型尺寸的内存占用。请记住这些是估计值；实际使用情况取决于具体的模型、量化方法以及你使用的软件。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-romhg5\" \n              data-plot-definition='{\"layout\": {\"title\": \"按模型大小估算的内存/显存需求 (Q4 量化)\", \"xaxis\": {\"title\": \"模型参数大小\"}, \"yaxis\": {\"title\": \"约占用内存/显存 (GB)\"}, \"bargap\": 0.3}, \"data\": [{\"type\": \"bar\", \"x\": [\"~30亿\", \"~70亿\", \"~130亿\", \"~300亿\"], \"y\": [4, 7, 12, 25], \"marker\": {\"color\": [\"#a5d8ff\", \"#74c0fc\", \"#4dabf7\", \"#339af0\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-romhg5\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>运行量化GGUF模型（例如Q4_K_M）的估算内存需求。实际使用情况可能因具体模型和软件而异。</p>\n</blockquote>\n<h3>从小尺寸和量化 (quantization)模型开始</h3>\n<p>首次尝试本地大型语言模型时，强烈建议<strong>从较小的模型开始，通常在<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数 (parameter)范围内，并选择量化的GGUF版本。</strong></p>\n<p>为什么？</p>\n<ol>\n<li><strong>易于管理：</strong> 较小、量化的模型下载更快，占用更少磁盘空间。</li>\n<li><strong>性能：</strong> 与更大、未量化的模型相比，它们在普通消费级硬件上加载更快，生成文本也更快。</li>\n<li><strong>易用性：</strong> 一个<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数的量化模型通常在能力和资源需求之间取得了很好的平衡，即使没有强大的图形处理器也能运行良好。</li>\n<li><strong>学习：</strong> 它提供了一个好的平台来学习下载、加载和互动等基本操作，无需漫长等待或复杂设置。</li>\n</ol>\n<p>寻找量化级别为<code>Q4_K_M</code>或<code>Q5_K_M</code>的GGUF文件。这些通常能在减小尺寸/资源占用和保持模型质量之间提供一个很好的平衡。你可以在Hugging Face等模型库中找到这些文件，它们通常由专门创建这些优化格式的社区成员提供（在基础模型名称旁边搜索“GGUF”等词汇是有效的）。</p>\n<h3>检查模型的用途和许可证</h3>\n<p>浏览模型时（例如在Hugging Face上），请注意模型卡：</p>\n<ul>\n<li><strong>预期用途：</strong> 寻找被描述为“聊天”或“指令”模型的模型。这些模型经过微调 (fine-tuning)以遵循指令并进行对话，使它们非常适合入门。避免选择设计用于高度特定任务（例如仅用于代码生成，或医疗文本分析）的模型，除非那是你的具体目标。</li>\n<li><strong>许可证：</strong> 仔细检查模型的许可证。对于初步试用和个人使用，许多流行模型都有宽松的许可证（如Apache 2.0、MIT或特定的Llama/Mistral许可证）。确保许可证允许你的预期用途，尤其如果你打算构建的不仅仅是简单的测试。</li>\n</ul>\n<h3>起始模型（模型系列）示例</h3>\n<p>虽然具体模型推荐变化很快，但以下是经常是很好的起点的模型类型，通常为<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数 (parameter)的量化 (quantization)GGUF格式：</p>\n<ul>\n<li><strong>基于Mistral的模型：</strong> 源自Mistral AI发布模型（如Mistral 7B）以其相对尺寸的强大性能而闻名。寻找指令微调 (fine-tuning)的GGUF版本。</li>\n<li><strong>基于Llama的模型：</strong> Meta的Llama模型（Llama 2、Llama 3）衍生出许多微调变体。同样，寻找<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数的指令或聊天GGUF版本。</li>\n<li><strong>基于Phi的模型：</strong> 微软的Phi模型在较小尺寸（约<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>30</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">30亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">30</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数）下提供良好能力。如果有，查看聊天微调的GGUF格式。</li>\n</ul>\n<p>始终优先寻找这些基础模型的<strong>GGUF量化版本</strong>，通常可在Hugging Face上通过社区贡献者获得。</p>\n<h3>预期需要迭代</h3>\n<p>选择你的第一个模型，就只是一个开始。不要担心立即做到完美。根据上述标准下载一个候选模型。在下一章中，你将学习如何运行它。</p>\n<ul>\n<li>如果运行流畅，太好了！开始试用吧。</li>\n<li>如果太慢或占用太多内存，尝试参数 (parameter)更少的模型或更激进的量化 (quantization)级别（例如，Q3而不是Q4）。</li>\n<li>如果似乎不太理解指令，也许尝试来自同一系列或完全不同系列的另一个指令微调 (fine-tuning)模型。</li>\n</ul>\n<p>试用是使用这些模型的正常部分。</p>\n<h3>决策清单</h3>\n<p>总结一下，在选择你的第一个模型时：</p>\n<ol>\n<li><strong>评估硬件：</strong> 记下你可用的内存和显存 (VRAM)。</li>\n<li><strong>目标尺寸：</strong> 最初瞄准一个较小的模型（例如，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>70</mn><mtext>亿</mtext></mrow><annotation encoding=\"application/x-tex\">70亿</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">70</span><span class=\"mord cjk_fallback\">亿</span></span></span></span>参数 (parameter)范围）。</li>\n<li><strong>格式：</strong> 寻找GGUF格式。</li>\n<li><strong>量化 (quantization)：</strong> 选择一个平衡的量化级别（例如，<code>Q4_K_M</code>）。</li>\n<li><strong>用途：</strong> 根据其模型卡选择一个为“聊天”或“指令”微调 (fine-tuning)的模型。</li>\n<li><strong>许可证：</strong> 验证许可证是否允许你的预期用途。</li>\n<li><strong>下载：</strong> 获取模型文件（通常来自Hugging Face）。</li>\n</ol>\n<p>通过这些步骤，你将做好准备，选择一个模型，以便在下一章中成功运行你的第一个本地大型语言模型。</p>",
+  "slug": "choosing-first-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 11439,
+      "title": "llama.cpp",
+      "author": "Georgi Gerganov and the llama.cpp Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/ggerganov/llama.cpp",
+      "doi": "",
+      "note": "GGUF格式的源项目，详细介绍了用于高效LLM推理的量化技术。",
+      "order": 1,
+      "created_at": "2025-09-05T07:17:56.285935Z",
+      "updated_at": "2025-09-09T13:26:04.508096Z"
+    },
+    {
+      "id": 11440,
+      "title": "Mistral 7B",
+      "author": "Albert Q. Jiang, Alexandre Sablayrolles, Arthur Mensch, Chris Bamford, Devendra Singh Chaplot, Diego de las Casas, Florian Bressand, Gianna Lengyel, Guillaume Lample, Lucile Saulnier, Lélio Renard Lavaud, Marie-Anne Lachaux, Pierre Stock, Teven Le Scao, Thibaut Lavril, Thomas Wang, Timothée Lacroix, William El Sayed",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2310.06825",
+      "doi": "10.48550/arXiv.2310.06825",
+      "note": "介绍了Mistral 7B模型，该模型以其小尺寸下的强大性能而闻名，适合本地使用。",
+      "order": 3,
+      "created_at": "2025-09-05T07:17:56.292643Z",
+      "updated_at": "2025-09-09T13:26:04.219644Z"
+    },
+    {
+      "id": 11441,
+      "title": "Textbooks Are All You Need II: phi-1.5 Technical Report",
+      "author": "Yuanzhi Li, Sébastien Bubeck, Ronen Eldan, Allie Del Giorno, Suriya Gunasekar, Yin Tat Lee",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2309.05463",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2309.05463",
+      "doi": "10.48550/arXiv.2309.05463",
+      "note": "解释了Phi等小型高效语言模型的数据中心训练方法，强调了效率。",
+      "order": 4,
+      "created_at": "2025-09-05T07:17:56.295015Z",
+      "updated_at": "2025-09-09T13:26:03.161745Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4079,
+  "title": "MLflow 追踪功能介绍",
+  "meta_title": "MLflow 追踪入门",
+  "meta_description": "MLflow 追踪的运行、参数、指标、产物及追踪服务器主要构成概览。",
+  "content": "<p>如前所述，机器学习 (machine learning)开发是一个迭代过程。您可能会尝试数十甚至数百种不同的变体，涉及不同的算法、特征集、数据预处理步骤和超参数 (parameter) (hyperparameter)值。记录哪些有效、哪些无效以及某个特定结果是如何产生的，很快就会变得困难。依赖手动笔记、电子表格或复杂的 文件命名约定通常容易出错，并且难以扩展。</p>\n<p>MLflow 追踪是开源 MLflow 平台的一个组成部分，旨在应对管理机器学习生命周期中的挑战，特别是实验的记录和组织。通过在代码中加入工具，您不再需要手动记录细节，而是可以自动捕获每次训练执行的重要信息。</p>\n<h3>MLflow 追踪的主要要素</h3>\n<p>MLflow 追踪围绕几个主要思想来组织您的工作。掌握这些思想是正确使用该工具的基础：</p>\n<ol>\n<li>\n<p><strong>运行 (Run)：</strong> 您的模型训练代码（或任何您希望追踪的数据科学代码）的单次执行。每次运行训练脚本时，您通常都会启动一个新的 MLflow 运行。MLflow 会为每次运行分配一个唯一的 ID。</p>\n</li>\n<li>\n<p><strong>参数 (parameter) (Parameters)：</strong> 这是一次运行的输入设置。可以把它们看作您想要记录的配置或超参数 (hyperparameter)。示例包括优化器的学习率、神经网络 (neural network)的层数、正则化 (regularization)参数的值（例如 SVM 中的 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>C</mi></mrow><annotation encoding=\"application/x-tex\">C</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span></span></span></span>），或者输入数据集版本的路径（可能由 DVC 管理）。记录参数使您能够清楚地了解是哪种配置产生了特定的结果。</p>\n</li>\n<li>\n<p><strong>指标 (Metrics)：</strong> 这是您希望在不同运行之间测量和比较的量化 (quantization)输出或结果。指标通常是评估模型性能的数值，例如准确率、精确率、召回率、F1 分数、均方误差 (MSE) 或曲线下面积 (AUC)。MLflow 允许您在运行结束时记录指标，甚至在运行过程中多次记录（例如，在每个 epoch 后记录训练损失）。这对于观察模型收敛情况特别有用。指标会与时间戳一同存储。</p>\n</li>\n<li>\n<p><strong>产物 (Artifacts)：</strong> 这是与运行相关的输出文件。产物可以是任何内容：序列化模型文件（例如序列化的 scikit-learn 模型或保存的 TensorFlow/PyTorch 模型）、图片（例如性能图或数据可视化）、数据文件（例如处理后的特征或模型预测），甚至是包含日志或笔记的文本文件。MLflow 会存储这些文件，让您能够获取特定运行产生的确切输出。</p>\n</li>\n<li>\n<p><strong>源代码版本 (Source Code Version)：</strong> 为了确保完全可复现性，MLflow 可以自动记录用于运行的代码版本。如果您的项目使用 Git 管理，MLflow 通常会记录 Git 提交哈希值。这会将特定的代码状态与运行的参数、指标和产物关联起来。</p>\n</li>\n<li>\n<p><strong>实验 (Experiment)：</strong> 实验是将相关运行进行分组的方式。可以将其看作特定任务或项目的操作空间，例如“预测客户流失”或“优化 ResNet50 超参数”。所有运行都在实验的背景下被记录。如果您没有指定实验，MLflow 会使用一个默认实验。</p>\n</li>\n</ol>\n<p>下图说明了这些组成部分之间的关系：一个实验包含多个运行。每次运行都执行一些代码（由其版本标识），使用特定的参数，产生指标，并生成产物。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-tdwt8i\" \n              data-graph-definition='digraph MLflowConcepts {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10, margin=\"0.1,0.05\"];\n    edge [fontname=\"Helvetica\", fontsize=9];\n\n    subgraph cluster_exp {\n        label = \"实验\\n(例如, &#39;欺诈检测模型&#39;)\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        node [style=filled];\n\n        subgraph cluster_run1 {\n            label = \"运行 1\";\n            bgcolor=\"#a5d8ff\";\n            Param1 [label=\"参数\\n(学习率=0.01, C=1.0)\", shape=note, fillcolor=\"#ffec99\"];\n            Metric1 [label=\"指标\\n(AUC=0.85, F1=0.78)\", shape=note, fillcolor=\"#b2f2bb\"];\n            Artifact1 [label=\"产物\\n(model.pkl, roc_curve.png)\", shape=folder, fillcolor=\"#ffd8a8\"];\n            Code1 [label=\"代码版本\\n(Git 提交: abc123d)\", shape=note, fillcolor=\"#ced4da\"];\n            Run1 [label=\"执行\\n(train.py)\", shape=ellipse, fillcolor=\"#74c0fc\"];\n            Run1 -> Param1 [label=\"记录\"];\n            Run1 -> Metric1 [label=\"记录\"];\n            Run1 -> Artifact1 [label=\"记录\"];\n            Run1 -> Code1 [label=\"记录\"];\n        }\n\n        subgraph cluster_run2 {\n            label = \"运行 2\";\n            bgcolor=\"#a5d8ff\";\n            Param2 [label=\"参数\\n(学习率=0.001, C=10.0)\", shape=note, fillcolor=\"#ffec99\"];\n            Metric2 [label=\"指标\\n(AUC=0.88, F1=0.81)\", shape=note, fillcolor=\"#b2f2bb\"];\n            Artifact2 [label=\"产物\\n(model.pkl, confusion_matrix.png)\", shape=folder, fillcolor=\"#ffd8a8\"];\n            Code2 [label=\"代码版本\\n(Git 提交: def456e)\", shape=note, fillcolor=\"#ced4da\"];\n            Run2 [label=\"执行\\n(train.py)\", shape=ellipse, fillcolor=\"#74c0fc\"];\n            Run2 -> Param2 [label=\"记录\"];\n            Run2 -> Metric2 [label=\"记录\"];\n            Run2 -> Artifact2 [label=\"记录\"];\n            Run2 -> Code2 [label=\"记录\"];\n         }\n\n        Run1; Run2;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-tdwt8i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>MLflow 追踪组成部分之间的关系：实验对运行进行分组，每个运行都会记录参数、指标、产物，并链接到代码版本。</p>\n</blockquote>\n<h3>MLflow 追踪架构概述</h3>\n<p>MLflow 追踪主要包含两个部分：</p>\n<ol>\n<li>\n<p><strong>MLflow 客户端 (API/SDK)：</strong> 这是您在代码中与 MLflow 交互的方式。MLflow 提供了适用于 Python、R、Java 的库以及一个 REST API。您可以在脚本中使用诸如 <code>mlflow.log_param()</code>、<code>mlflow.log_metric()</code> 和 <code>mlflow.log_artifact()</code> 等函数，将关于运行的信息发送到追踪后端。</p>\n</li>\n<li>\n<p><strong>追踪服务器与后端存储：</strong> 这里是客户端记录的信息的存储和管理位置。MLflow 支持多种后端配置：</p>\n<ul>\n<li><strong>本地文件系统：</strong> 默认情况下，MLflow 将数据记录到本地 <code>mlruns</code> 目录中的文件。这对于初次使用来说很简单，但不太适合协作或远程执行。</li>\n<li><strong>数据库：</strong> 您可以配置 MLflow 将元数据（参数 (parameter)、指标、运行信息）存储在数据库中（例如 PostgreSQL、MySQL、SQLite）。产物通常仍单独存储（例如，在文件系统或云存储上）。</li>\n<li><strong>远程追踪服务器：</strong> MLflow 可以作为集中式服务器运行，供多用户或多机器记录。该服务器管理元数据（通常通过数据库）和产物存储（本地或云端）。这种设置非常适合团队和生产环境。</li>\n</ul>\n</li>\n</ol>\n<p>追踪服务器还提供一个基于网络的<strong>用户界面 (UI)</strong>，让您能够可视化地浏览、搜索和比较实验和运行。</p>\n<p>采用 MLflow 追踪，您会获得一种系统性的方式来记录机器学习 (machine learning)实验。这带来了许多好处：</p>\n<ul>\n<li><strong>组织性：</strong> 将相关运行分组到实验中。</li>\n<li><strong>可复现性：</strong> 轻松找到产生特定结果的确切参数、代码版本，甚至数据版本（我们稍后会了解到）。</li>\n<li><strong>比较：</strong> 使用记录的指标和参数，分析和比较不同运行的性能。</li>\n<li><strong>协作：</strong> 使用集中式追踪服务器与团队成员共享实验结果。</li>\n</ul>\n<p>在以下章节中，我们将了解设置 MLflow 并使用其 API 来为您的训练代码添加工具的实际操作。</p>",
+  "slug": "introducing-mlflow-tracking",
+  "updates": [],
+  "references": [
+    {
+      "id": 7798,
+      "title": "MLflow Tracking",
+      "author": "MLflow Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "这是理解 MLflow Tracking 的权威且最新来源，涵盖其核心概念、API、架构和用法。",
+      "order": 1,
+      "created_at": "2025-09-05T01:47:34.915775Z",
+      "updated_at": "2025-09-08T14:07:36.226466Z"
+    },
+    {
+      "id": 7799,
+      "title": "MLflow in Action",
+      "author": "Nader Jafari",
+      "year": "2023",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/mlflow-in-action",
+      "doi": "",
+      "note": "一份实用指南，详细介绍了如何使用 MLflow 及其 Tracking 组件来有效管理机器学习生命周期。",
+      "order": 2,
+      "created_at": "2025-09-05T01:47:34.927078Z",
+      "updated_at": "2025-09-08T14:07:36.666338Z"
+    },
+    {
+      "id": 7800,
+      "title": "Introducing MLOps: How to Go from Model to Production",
+      "author": "Hannes Hapke, Catherine Nelson, Maximo Bragagnolo",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781492083282/",
+      "doi": "",
+      "note": "本书提供了 MLOps 原理的基础知识，解释了实验跟踪和可复现性的必要性，MLflow 正是为解决这些问题而设计。",
+      "order": 3,
+      "created_at": "2025-09-05T01:47:34.930360Z",
+      "updated_at": "2025-09-08T14:08:02.390758Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

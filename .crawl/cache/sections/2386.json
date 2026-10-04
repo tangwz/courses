@@ -1,0 +1,61 @@
+{
+  "id": 2386,
+  "title": "`finally` 块：清理操作",
+  "meta_title": "Python `finally` 块 | 保证执行的清理代码",
+  "meta_description": "理解 `finally` 块，它包含的代码无论是否发生异常都将始终执行，对于清理任务非常有用。",
+  "content": "<p>有时，无论是否发生错误，您都绝对需要执行某些操作。比如关闭已打开的文件、释放网络连接或清理临时资源。这些清理操作对于防止资源泄漏或数据损坏很重要。Python 提供了 <code>finally</code> 块，正是为此：它保证了代码的执行。</p>\n<p><code>finally</code> 子句被添加到 <code>try...except</code> 结构中。无论 <code>try</code> 和 <code>except</code> 块中发生什么，<code>finally</code> 块中的代码都将始终运行。</p>\n<ul>\n<li>如果 <code>try</code> 块在没有发生任何异常的情况下完成，<code>finally</code> 块将在 <code>try</code> 块（如果存在 <code>else</code> 块，则在 <code>else</code> 块之后）之后运行。</li>\n<li>如果 <code>try</code> 块中发生异常并被 <code>except</code> 块捕获，<code>finally</code> 块将在 <code>except</code> 块完成之后运行。</li>\n<li>如果 <code>try</code> 块中发生异常但 <em>未</em> 被任何 <code>except</code> 块捕获，<code>finally</code> 块仍会在 Python 将异常沿调用栈传播之前运行（这通常会导致程序停止并显示错误消息）。</li>\n<li>即使 <code>try</code> 或 <code>except</code> 块执行 <code>return</code>、<code>break</code> 或 <code>continue</code> 语句，<code>finally</code> 块也将在控制权实际移交出去之前执行。</li>\n</ul>\n<h3>语法</h3>\n<p>您可以将 <code>finally</code> 单独与 <code>try</code> 使用，或者与 <code>except</code> 和可选的 <code>else</code> 块一起使用：</p>\n<pre><code class=\"language-python\"># 示例 1: try...finally\ntry:\n   # 可能需要清理的代码\n   print(\"尝试执行某些操作...\")\n   # result = 10 / 0 # 取消注释以模拟错误\nfinally:\n   print(\"这个 finally 块总是执行清理操作。\")\n\n# 示例 2: try...except...finally\ntry:\n   print(\"\\n尝试文件操作...\")\n   file = open(\"my_temporary_file.txt\", \"w\")\n   file.write(\"写入一些数据。\\n\")\n   # 在处理过程中模拟错误\n   # int(\"not a number\")\n   print(\"文件写入成功（可能）。\")\nexcept ValueError:\n   print(\"捕获到 ValueError！\")\nfinally:\n   print(\"正在执行 finally 块。\")\n   # 确保文件已关闭，即使发生了错误\n   if 'file' in locals() and not file.closed:\n      file.close()\n      print(\"文件已关闭。\")\n   else:\n       print(\"文件对象不存在或已关闭。\")\n</code></pre>\n<h3>为何使用 <code>finally</code>？</h3>\n<p>主要的用例是资源管理。当你获取资源（比如打开文件）时，通常需要在之后释放它。如果在获取资源之后但在释放之前发生错误，你的程序可能会导致资源泄漏。将释放代码放在 <code>finally</code> 块中可以保证它运行。</p>\n<p>考虑上面的文件示例。我们打开 <code>my_temporary_file.txt</code> 进行写入。</p>\n<ol>\n<li><strong>无错误：</strong> <code>try</code> 块成功完成。<code>finally</code> 块运行，关闭文件。</li>\n<li><strong>捕获的错误：</strong> 如果我们取消注释 <code>int(\"not a number\")</code>，将会发生 <code>ValueError</code>。<code>except ValueError</code> 块会运行。之后，<code>finally</code> 块 <em>仍然</em> 会运行，关闭文件。</li>\n<li><strong>未捕获的错误：</strong> 如果我们取消注释 <code>result = 10 / 0</code>，将会发生 <code>ZeroDivisionError</code>。因为没有 <code>except ZeroDivisionError</code> 块，所以异常未被捕获。然而，<code>finally</code> 块 <em>仍然</em> 会执行（关闭文件），然后程序才会因未处理的 <code>ZeroDivisionError</code> 而终止。</li>\n</ol>\n<h3><code>finally</code> 与 <code>with</code> 语句对比</h3>\n<p>您可能会注意到，文件关闭的示例似乎与使用 <code>with</code> 语句类似，我们在文件处理章节中已经看过：</p>\n<pre><code class=\"language-python\">try:\n   with open(\"another_temp_file.txt\", \"w\") as file:\n      print(\"\\n尝试使用 'with' 执行文件操作...\")\n      file.write(\"使用 with 语句写入数据。\\n\")\n      # 模拟错误\n      # result = 1 / 0\n      print(\"文件写入成功（使用 'with'）。\")\n   print(\"已退出 'with' 块。\")\nexcept ZeroDivisionError:\n    print(\"在 'with' 外部捕获到 ZeroDivisionError。\")\n\nprint(\"代码在 'with' 块或异常处理后继续执行。\")\n</code></pre>\n<p><code>with</code> 语句实质上是常见 <code>try...finally</code> 清理模式的语法糖，特别是对于那些具有特定设置 (<code>__enter__</code>) 和清理 (<code>__exit__</code>) 方法的对象，例如文件对象。当你使用 <code>with open(...)</code> 时，Python 会自动确保在块退出时调用文件的 <code>close()</code> 方法，无论是正常退出还是因为异常。对于文件处理以及上下文 (context)管理器支持的类似资源管理情况，通常优先使用 <code>with</code> 语句，因为它比手动编写 <code>try...finally</code> 块更简洁，且不易出错。</p>\n<p>然而，<code>finally</code> 块仍然是保证执行的基本构造，在 <code>with</code> 语句不适用或需要比简单资源释放更复杂的清理逻辑的情况下。它是提供错误处理和资源管理所需执行保证的底层机制。</p>",
+  "slug": "python-try-finally",
+  "updates": [],
+  "references": [
+    {
+      "id": 6265,
+      "title": "The `try` statement",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-try-statement",
+      "doi": "",
+      "note": "Python 官方语言参考，详细说明了 `try` 语句的语法和行为，包括 `except`、`else` 和 `finally` 子句。",
+      "order": 1,
+      "created_at": "2025-09-05T01:20:34.618385Z",
+      "updated_at": "2025-09-07T21:22:42.607911Z"
+    },
+    {
+      "id": 6266,
+      "title": "Fluent Python, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056322/",
+      "doi": "",
+      "note": "讲解了 Python 的异常处理机制和资源管理模式，包括对上下文管理器（`with` 语句）的讨论，作为 `try...finally` 在特定场景下的惯用替代方案。",
+      "order": 2,
+      "created_at": "2025-09-05T01:20:34.622155Z",
+      "updated_at": "2025-09-07T21:22:55.253516Z"
+    },
+    {
+      "id": 6267,
+      "title": "Python Cookbook, 3rd Edition",
+      "author": "David Beazley, Brian K. Jones",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357993/",
+      "doi": "",
+      "note": "提供了使用 `try...finally` 和上下文管理器在 Python 中进行健壮错误处理和有效资源管理的实用技巧和示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:20:34.625040Z",
+      "updated_at": "2025-09-07T21:22:57.027019Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1759,
+  "title": "从张量、NumPy 和生成器创建数据集",
+  "meta_title": "从多种来源创建 tf.data 数据集",
+  "meta_description": "学习如何从内存数据（张量、NumPy 数组）和 Python 生成器创建 tf.data.Dataset 对象。",
+  "content": "<p>创建 <code>tf.data.Dataset</code> 对象是使用 <code>tf.data</code> API 的基本第一步。该 API 提供了便捷方法，可以从您可能已在使用的常见结构中读取数据，例如内存中的张量、NumPy 数组，甚至标准 Python 生成器。这种灵活性让您可以快速构建数据管道，无论数据初始格式如何。</p>\n<h3>从张量和 NumPy 数组创建数据集</h3>\n<p>创建数据集最直接的方式是当您的数据已作为 TensorFlow 张量或 NumPy 数组存在于内存中时。这对于能轻松放入机器内存中的较小数据集，或者使用其他库刚生成或加载的数据来说很常见。</p>\n<p>为此，主要函数是 <code>tf.data.Dataset.from_tensor_slices()</code>。此函数接收张量作为输入，并创建一个数据集，其中每个元素对应于输入张量第一维度的<em>切片</em>。</p>\n<p>我们来看一个使用 NumPy 数组的简单示例：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport numpy as np\n\n# NumPy 数组示例\nnumpy_data = np.arange(10)\nprint(f\"Original NumPy array: {numpy_data}\")\n\n# 从 NumPy 数组创建数据集\ndataset_from_numpy = tf.data.Dataset.from_tensor_slices(numpy_data)\n\nprint(\"\\nDataset elements:\")\n# 迭代数据集以查看切片\nfor element in dataset_from_numpy:\n  # 每个元素都是一个 tf.Tensor\n  print(element.numpy())\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Original NumPy array: [0 1 2 3 4 5 6 7 8 9]\n\nDataset elements:\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n</code></pre>\n<p>如您所见，<code>from_tensor_slices</code> 将一维 NumPy 数组 <code>[0, 1, ..., 9]</code> 视为 10 个独立元素的集合，创建了一个逐个生成每个数字的数据集。</p>\n<p>同样适用于 TensorFlow 张量：</p>\n<pre><code class=\"language-python\"># TensorFlow 张量示例\ntensor_data = tf.range(5, 10)\nprint(f\"Original TensorFlow tensor: {tensor_data.numpy()}\")\n\n# 从张量创建数据集\ndataset_from_tensor = tf.data.Dataset.from_tensor_slices(tensor_data)\n\nprint(\"\\nDataset elements:\")\nfor element in dataset_from_tensor:\n    print(element.numpy())\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Original TensorFlow tensor: [5 6 7 8 9]\n\nDataset elements:\n5\n6\n7\n8\n9\n</code></pre>\n<p><code>from_tensor_slices</code> 的一个重要用途是处理成对数据，例如特征和对应标签。您可以传入张量或 NumPy 数组的元组（或字典），<code>tf.data</code> 将它们一起切片，确保对齐 (alignment)。</p>\n<pre><code class=\"language-python\"># 示例特征（例如，测量值）和标签（例如，类别）\nfeatures = np.array([[1, 2], [3, 4], [5, 6]])\nlabels = np.array([0, 1, 0])\n\nprint(f\"Features:\\n{features}\")\nprint(f\"Labels: {labels}\")\n\n# 从 NumPy 数组元组创建数据集\ndataset_features_labels = tf.data.Dataset.from_tensor_slices((features, labels))\n\nprint(\"\\nDataset elements (feature, label pairs):\")\nfor feature_element, label_element in dataset_features_labels:\n  print(f\"Feature: {feature_element.numpy()}, Label: {label_element.numpy()}\")\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Features:\n[[1 2]\n [3 4]\n [5 6]]\nLabels: [0 1 0]\n\nDataset elements (feature, label pairs):\nFeature: [1 2], Label: 0\nFeature: [3 4], Label: 1\nFeature: [5 6], Label: 0\n</code></pre>\n<p>请注意，数据集生成的每个元素现在都是一个元组，其中包含来自 <code>features</code> 数组的一个切片和来自 <code>labels</code> 数组的对应切片。这种结构正是监督学习 (supervised learning)任务中经常需要的。</p>\n<p>区分 <code>from_tensor_slices</code> 和 <code>tf.data.Dataset.from_tensors()</code> 很重要。后者创建一个只包含一个<em>单个</em>元素的数据集，该元素就是输入张量本身，而不是对其进行切片。</p>\n<pre><code class=\"language-python\"># 使用 from_tensors\nsingle_element_dataset = tf.data.Dataset.from_tensors(features)\n\nprint(\"\\nDataset created with from_tensors:\")\nfor element in single_element_dataset:\n    print(\"Element shape:\", element.shape)\n    print(element.numpy())\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Dataset created with from_tensors:\nElement shape: (3, 2)\n[[1 2]\n [3 4]\n [5 6]]\n</code></pre>\n<p>当您希望将整个张量结构视为数据集中的一个项时，例如用于后续的批处理或处理，请使用 <code>from_tensors</code>。当您希望迭代数据的各个行（或沿着第一维度的切片）时，请使用 <code>from_tensor_slices</code>。</p>\n<h3>从 Python 生成器创建数据集</h3>\n<p>有时您的数据并非随时可用作张量或 NumPy 数组。它可能是在运行时动态生成，从 TensorFlow 不直接支持的源（如自定义文件格式或数据库）读取，或者需要复杂的 Python 逻辑进行创建或预处理，这些逻辑难以纯粹用 TensorFlow 操作来表达。在这种情况下，您可以使用 Python 生成器函数。</p>\n<p><code>tf.data.Dataset.from_generator()</code> 方法连接了 Python 代码执行和 TensorFlow 图之间的桥梁。它允许您包装一个 Python 生成器函数，并将其生成的项转换为 <code>tf.data.Dataset</code>。</p>\n<p>以下是基本结构：</p>\n<ol>\n<li><strong>定义 Python 生成器：</strong> 创建一个标准的 Python 生成器函数（使用 <code>yield</code>），逐个生成您的数据项。</li>\n<li><strong>指定输出签名：</strong> 告知 TensorFlow 您的生成器生成的项的结构和数据类型。这必不可少，因为 TensorFlow 需要在运行 Python 代码<em>之前</em>构建图，并且必须知道预期的输出签名（类型和形状）才能做到这一点。这通过 <code>output_signature</code> 参数 (parameter)完成，通常使用 <code>tf.TensorSpec</code> 定义。</li>\n<li><strong>创建数据集：</strong> 调用 <code>tf.data.Dataset.from_generator()</code>，传入您的生成器函数和 <code>output_signature</code>。</li>\n</ol>\n<p>我们来看一个生成器生成递增数字序列的示例：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport itertools # For generating sequences\n\n# 1. 定义 Python 生成器\ndef count_generator(stop):\n  \"\"\"生成序列 [0], [0, 1], [0, 1, 2], ... 直到 stop\"\"\"\n  for i in range(1, stop + 1):\n    # 生成序列作为列表或 NumPy 数组\n    sequence = np.arange(i)\n    yield sequence # 生成器生成 NumPy 数组\n\n# 2. 定义输出签名\n# 由于序列长度可变，形状维度使用 None\noutput_signature = tf.TensorSpec(shape=(None,), dtype=tf.int64)\n\n# 3. 创建数据集\n# 使用 lambda 表达式将 'stop' 参数传递给生成器\nstop_value = 5\ndataset_from_generator = tf.data.Dataset.from_generator(\n    lambda: count_generator(stop_value), # 使用 lambda 传递参数\n    output_signature=output_signature\n)\n\nprint(\"\\nDataset elements from generator:\")\nfor element in dataset_from_generator:\n  print(element.numpy())\n\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Dataset elements from generator:\n[0]\n[0 1]\n[0 1 2]\n[0 1 2 3]\n[0 1 2 3 4]\n</code></pre>\n<p><strong>关于 <code>from_generator</code> 的要点：</strong></p>\n<ul>\n<li><strong>灵活性：</strong> 它允许将任意 Python 逻辑融入您的数据管道。</li>\n<li><strong><code>output_signature</code>：</strong> 这是强制且重要的。<code>tf.TensorSpec(shape=..., dtype=...)</code> 准确描述了每个生成的元素。对于大小可变的维度，使用 <code>None</code>。如果您的生成器生成多个项（如特征和标签），请提供一个 <code>tf.TensorSpec</code> 对象的元组或字典。</li>\n<li><strong>性能：</strong> 由于 <code>from_generator</code> 涉及运行 Python 代码（这可能比原生 TensorFlow 操作慢，并受限于 Python 的全局解释器锁），它的性能可能不如 <code>from_tensor_slices</code> 或从 TFRecord 文件读取，尤其是对于简单的转换。然而，对于复杂的数据生成或从不支持的源读取数据，它是一个非常有用的工具。TensorFlow 内部在 <code>tf.py_function</code> 中运行生成器代码。</li>\n</ul>\n<p>对内存中的数据使用 <code>from_tensor_slices</code>，对基于 Python 的自定义数据源使用 <code>from_generator</code>，这两种方式能让您创建 <code>tf.data.Dataset</code> 对象，并为我们接下来将研究的转换和优化做好了准备。</p>",
+  "slug": "creating-datasets-sources",
+  "updates": [],
+  "references": [
+    {
+      "id": 1985,
+      "title": "tf.data.Dataset",
+      "author": "TensorFlow Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/data/Dataset",
+      "doi": "",
+      "note": "tf.data.Dataset的官方API参考，详细介绍了从张量、NumPy数组和Python生成器创建数据集的方法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:55.285222Z",
+      "updated_at": "2025-09-08T02:49:58.034293Z"
+    },
+    {
+      "id": 1986,
+      "title": "Better performance with the tf.data API",
+      "author": "TensorFlow Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/data_performance",
+      "doi": "",
+      "note": "官方指南，解释了tf.data API的架构和性能考量，为高效数据输入管道提供了背景信息。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:55.288374Z",
+      "updated_at": "2025-09-08T02:49:52.385306Z"
+    },
+    {
+      "id": 1987,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning-with/9781098125974/",
+      "doi": "",
+      "note": "一本关于使用TensorFlow进行机器学习的全面实践指南，包括对tf.data API构建数据输入管道的详细介绍。第四版。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:55.290619Z",
+      "updated_at": "2025-09-08T02:50:12.980125Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5330,
+  "title": "ML I/O 异步请求的优势",
+  "meta_title": "ML I/O 异步请求的优势",
+  "meta_description": "异步如何在处理与 ML 任务相关的 I/O 操作（例如，获取数据、保存结果）时提高性能。",
+  "content": "<p>\"虽然核心机器学习 (machine learning)推理 (inference)步骤通常受限于 CPU，但许多 ML API 工作流涉及大量的输入/输出 (I/O) 操作。这些操作可能包括从远程数据库获取特征数据、从另一个微服务检索用户配置文件、加载配置文件，或将预测日志保存到存储设备。当同步执行时，这些 I/O 任务会成为主要的性能瓶颈。\"</p>\n<p>考虑一个典型的 API 请求，它在运行预测前需要获取数据：</p>\n<ol>\n<li>接收请求。</li>\n<li>查询数据库以获取所需特征（网络 I/O 等待）。</li>\n<li>预处理获取的数据（CPU 工作）。</li>\n<li>运行模型推理（CPU 工作，可能计算密集）。</li>\n<li>后处理结果（CPU 工作）。</li>\n<li>将结果或日志保存到存储设备（磁盘/网络 I/O 等待）。</li>\n<li>发送响应。</li>\n</ol>\n<p>在传统的同步框架中，如果步骤 2 涉及等待数据库 100 毫秒，处理该请求的工作进程将完全阻塞。在该等待期间，它无法处理任何其他传入请求。同样，在步骤 6 中，工作进程再次阻塞，等待存储操作完成。如果您的 API 收到许多并发请求，大多数工作进程可能只是在等待 I/O，导致高延迟和低吞吐量 (throughput)。</p>\n<p>这就是异步编程的优势所在。通过使用 <code>async def</code> 定义您的路由处理程序，并在调用 I/O 密集型函数时使用 <code>await</code>（由兼容异步的库提供，例如用于 HTTP 请求的 <code>httpx</code>、用于数据库访问的 <code>asyncpg</code> 或 <code>databases</code>、用于文件系统操作的 <code>aiofiles</code>），您就可以让 FastAPI 的事件循环有效管理这些等待时间。</p>\n<p>当 I/O 操作遇到 <code>await</code> 时（例如 <code>await database.fetch_one(...)</code> 或 <code>await http_client.get(...)</code>），函数会暂停在该点的执行。然而，重要的是，工作进程<em>不会</em>阻塞。事件循环可以切换上下文 (context)，并使用工作进程处理其他就绪任务，例如处理不同的传入请求，或继续执行已完成 I/O 等待的其他异步函数。一旦原始 I/O 操作完成（例如，数据库返回数据），事件循环就会从暂停的地方恢复已暂停的函数。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-rii0zd\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_sync {\n    label = \"同步工作进程\";\n    bgcolor=\"#ffe066\"; // Yellow background\n    style=filled;\n    s_req1 [label=\"请求 1\\n(需要数据库)\", shape=Mrecord, style=filled, fillcolor=\"#a5d8ff\"];\n    s_req2 [label=\"请求 2\\n(需要 API)\", shape=Mrecord, style=filled, fillcolor=\"#a5d8ff\"];\n    s_wait1 [label=\"等待数据库...\", style=filled, fillcolor=\"#ffc9c9\"]; // Red for waiting\n    s_process1 [label=\"处理请求 1\", style=filled, fillcolor=\"#b2f2bb\"]; // Green for processing\n    s_wait2 [label=\"等待 API...\", style=filled, fillcolor=\"#ffc9c9\"];\n    s_process2 [label=\"处理请求 2\", style=filled, fillcolor=\"#b2f2bb\"];\n    s_req1 -> s_wait1 [label=\"I/O 开始\"];\n    s_wait1 -> s_process1 [label=\"I/O 结束\"];\n    s_process1 -> s_req2 [label=\"工作进程空闲\"];\n    s_req2 -> s_wait2 [label=\"I/O 开始\"];\n    s_wait2 -> s_process2 [label=\"I/O 结束\"];\n  }\n\n  subgraph cluster_async {\n    label = \"异步工作进程\";\n    bgcolor=\"#96f2d7\"; // Teal background\n    style=filled;\n    a_req1 [label=\"请求 1\\n(需要数据库)\", shape=Mrecord, style=filled, fillcolor=\"#a5d8ff\"];\n    a_req2 [label=\"请求 2\\n(需要 API)\", shape=Mrecord, style=filled, fillcolor=\"#a5d8ff\"];\n    a_await1 [label=\"等待数据库\", style=filled, fillcolor=\"#ffec99\"]; // Yellow for await\n    a_await2 [label=\"等待 API\", style=filled, fillcolor=\"#ffec99\"];\n    a_process1 [label=\"处理请求 1\", style=filled, fillcolor=\"#b2f2bb\"];\n    a_process2 [label=\"处理请求 2\", style=filled, fillcolor=\"#b2f2bb\"];\n\n    a_req1 -> a_await1 [label=\"I/O 开始\"];\n    a_req2 -> a_await2 [label=\"I/O 开始 (并发)\"];\n    a_await1 -> a_process1 [label=\"请求 1 I/O 结束\"];\n    a_await2 -> a_process2 [label=\"请求 2 I/O 结束\"];\n  }\n\n  timeline [shape=none, label=\"时间 →\", fontsize=12];\n  s_process2 -> timeline [style=invis];\n  a_process1 -> timeline [style=invis];\n  a_process2 -> timeline [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-rii0zd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>同步和异步 I/O 处理的对比。同步工作进程按顺序处理请求，并在每次 I/O 等待时阻塞。异步工作进程可以启动多个 I/O 操作，并在 I/O 完成时在处理任务之间切换，从而提高整体吞吐量。</p>\n</blockquote>\n<p>在您的 ML API 中将异步操作用于 I/O 密集型任务的主要优点包括：</p>\n<ol>\n<li><strong>并发能力增强：</strong> 应用程序可以处理更多并发请求，因为工作进程不会因等待缓慢的 I/O 而停滞。它们可以被释放去开始或继续处理其他请求。</li>\n<li><strong>吞吐量提高：</strong> 通过高效使用工作进程，而不是让它们在 I/O 等待期间空闲，API 可以在单位时间内处理更多请求。</li>\n<li><strong>（负载下的）更低延迟：</strong> 虽然单个请求的延迟可能不会明显降低（它仍然需要等待其 I/O），但在负载下，用户感受到的<em>平均</em>延迟通常会更低，因为请求不会在因 I/O 而阻塞的其他请求后面排队。</li>\n<li><strong>资源利用率更佳：</strong> CPU 资源可以更有效地用于计算，而不是在等待外部系统时处于空闲状态。</li>\n</ol>\n<p>需要记住的是，<code>async</code>/<code>await</code> 主要对 I/O 密集型操作有益。对于像实际模型推理这样的 CPU 密集型任务，单独使用异步定义并不能阻止事件循环的阻塞。正如之前讨论的，<code>run_in_threadpool</code> 等技术对于卸载这些密集计算是必要的，通常需要结合用于周边 I/O 操作的异步封装器。通过将异步 I/O 处理与针对 CPU 密集型工作的适当策略结合起来，您可以为您的机器学习模型构建高度响应且可扩展的 FastAPI 应用程序。</p>",
+  "slug": "benefits-async-ml-io",
+  "updates": [],
+  "references": [
+    {
+      "id": 14325,
+      "title": "asyncio - Asynchronous I/O, event loop, coroutines and tasks",
+      "author": "Python Core Developers",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/asyncio.html",
+      "doi": "",
+      "note": "介绍Python异步编程的基本机制，包括事件循环、协程以及 `async`/`await` 如何管理I/O等待。",
+      "order": 1,
+      "created_at": "2025-09-05T08:51:09.713798Z",
+      "updated_at": "2025-09-09T14:13:50.386498Z"
+    },
+    {
+      "id": 14326,
+      "title": "Concurrency and async/await",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/async/",
+      "doi": "",
+      "note": "详细说明FastAPI如何利用Python的异步特性，高效处理I/O密集型操作并提升应用性能，同时讨论CPU密集型任务的处理。",
+      "order": 2,
+      "created_at": "2025-09-05T08:51:09.731907Z",
+      "updated_at": "2025-09-09T14:13:55.726834Z"
+    },
+    {
+      "id": 14327,
+      "title": "Python Concurrency with asyncio",
+      "author": "Matthew Fowler",
+      "year": "2022",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/python-concurrency-with-asyncio",
+      "doi": "",
+      "note": "提供使用Python `asyncio` 库构建并发应用的全面指南，清晰解释事件循环、协程和I/O管理。",
+      "order": 3,
+      "created_at": "2025-09-05T08:51:09.734804Z",
+      "updated_at": "2025-09-09T14:13:47.535864Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

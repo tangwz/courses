@@ -1,0 +1,45 @@
+{
+  "id": 6016,
+  "title": "参数高效微调的需求",
+  "meta_title": "参数高效微调的需求",
+  "meta_description": "促使开发避免完整模型微调的方法。",
+  "content": "<p>大型语言模型（LLMs），特别是基于Transformer架构的模型，在预训练 (pre-training)阶段需要大量的计算资源和时间投入。一旦在海量文本数据上完成预训练，这些模型便蕴含了通用语言知识和推理 (inference)能力。一种常见且有效的方式，可以将这些预训练知识运用到特定应用中，便是通过<em>微调 (fine-tuning)</em>。</p>\n<p>标准微调是指将预训练模型进一步在一个较小、面向特定任务的数据集（例如情感分析、问答、摘要）上进行训练。在此过程中，模型的<em>所有</em>参数 (parameter)或大部分参数通过梯度下降 (gradient descent)进行更新，以优化其在目标任务上的性能。尽管这种方法有效，但随着模型规模的持续增大，它也带来了一些重大挑战：</p>\n<h3>完全微调 (fine-tuning)的负担</h3>\n<ol>\n<li>\n<p><strong>计算成本：</strong> 微调通常比预训练 (pre-training)需要更少的数据和迭代次数，但它仍然涉及通过整个网络进行梯度反向传播 (backpropagation)，而这个网络通常包含数十亿乃至数万亿参数 (parameter)。对于GPT-3（1750亿参数）或PaLM（5400亿参数）这样的模型，更新所有权重 (weight)需要大量的GPU资源（例如，多张高端GPU，如A100或H100）和相当长的训练时间，每个任务通常需要数小时甚至数天。如果一个组织需要针对数十甚至数百个不同任务调整基础LLM，那么累计计算开销将变得非常庞大。</p>\n</li>\n<li>\n<p><strong>存储和内存开销：</strong> 每个经过完全微调的模型本质上都是原始大型模型的一个独立副本，只是权重略有调整。为每个下游任务存储一个单独的数十亿参数模型会导致庞大的存储需求。例如，一个以FP16精度存储的1750亿参数模型大约需要350GB的磁盘空间。并发部署多个此类模型以服务不同的应用程序会使问题更加严重，需要海量昂贵的高带宽GPU内存（HBM）。</p>\n<p>考虑一个场景，你需要专门的模型用于客户支持工单分类、内部文档摘要和代码生成辅助，而这些模型都源自相同的基础LLM。完全微调将产生三个独立的、大型模型检查点。</p>\n</li>\n<li>\n<p><strong>部署复杂性：</strong> 管理众多大型独立模型的部署生命周期（更新、监控、服务）在操作上很复杂。为每个特定任务的模型推出更新或扩展推理 (inference)端点需要大量的_基础设施管理，并可能导致资源碎片化。</p>\n</li>\n<li>\n<p><strong>灾难性遗忘：</strong> 当在特定任务上进行微调时更新所有参数，模型有丢失部分预训练阶段获得的通用知识的风险。这种现象被称为灾难性遗忘，它会降低模型在刚被微调的任务之外的其他任务上的性能。虽然正则化 (regularization)或仔细选择学习率等技术可以在一定程度上减轻这种影响，但这仍然是一个问题，尤其是在多个任务上进行序列微调时。</p>\n</li>\n</ol>\n<h3>参数 (parameter)高效的理由</h3>\n<p>这些挑战共同促使人们寻找更高效的适应方法。理想情况下，我们希望技术能够使预训练 (pre-training)的LLM针对下游任务专业化，同时只修改其一小部分参数。这种方法通常被称为<em>参数高效微调 (fine-tuning)（PEFT）</em>。</p>\n<p>PEFT的核心思想是冻结预训练模型的大部分权重 (weight)，并引入少量新的、可训练参数，或只修改现有参数的极小部分。如果成功，这将带来显著优势：</p>\n<ul>\n<li><strong>计算量减少：</strong> 训练涉及更新的参数少得多，大幅减少了适应所需的计算需求（GPU时间、能耗）。</li>\n<li><strong>存储需求极小：</strong> 无需为每个任务存储完整的模型副本，只需保存一小组修改或新增的参数。这通常将每个任务的存储开销从数百千兆字节减少到兆字节。</li>\n<li><strong>部署简化：</strong> 只需加载单个大型基础模型副本，不同的微小“任务向量 (vector)”（训练好的PEFT参数）可以被替换或并发使用来服务多个任务，极大地简化了服务基础设施。</li>\n<li><strong>减轻遗忘：</strong> 由于原始模型的大部分保持不变，PEFT方法在预训练期间学到的通用能力方面通常表现出更少的灾难性遗忘。</li>\n</ul>\n<p>设想一个使用PEFT方法的场景。与其更新基础模型 <code>M</code> 的所有 <code>N</code> 个参数，我们引入一小组 <code>k</code> 个新参数，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi><mo>≪</mo><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">k \\ll N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7335em;vertical-align:-0.0391em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≪</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span>。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nfrom transformers import AutoModelForCausalLM # 示例基础模型\n\n# 加载一个大型预训练模型\nbase_model = AutoModelForCausalLM.from_pretrained(\n    \"gpt2-xl\" # 示例：15亿参数\n)\nN = sum(p.numel() for p in base_model.parameters())\nprint(f\"基础模型参数量：{N:,}\")\n\n# --- 标准微调 ---\n# 在标准微调中，所有参数都需要梯度\n# for p in base_model.parameters():\n#     p.requires_grad = True\n# optimizer = torch.optim.AdamW(base_model.parameters(), lr=1e-5)\n# ... 训练循环更新所有 N 个参数 ...\n# 所需存储：约 N * 2 字节（对于FP16）\n\n# --- 参数高效微调 ---\n# 冻结基础模型\nfor p in base_model.parameters():\n    p.requires_grad = False\n\n# 定义一小组*新的*可训练参数（例如，适配器层）\n# 假设这些新参数总共有'k'个元素，k &#x3C;&#x3C; N\nclass SimpleAdapter(nn.Module):\n    def __init__(self, input_dim, bottleneck_dim):\n        super().__init__()\n        self.down_proj = nn.Linear(input_dim, bottleneck_dim)\n        self.up_proj = nn.Linear(bottleneck_dim, input_dim)\n        self.activation = nn.ReLU()\n\n    def forward(self, x):\n        # 假设残差连接在外部处理\n        return self.up_proj(self.activation(self.down_proj(x)))\n\n# 假设适配器被适当地添加到\n# 基础模型结构中\n# (实际实现取决于具体的PEFT方法，如LoRA、\n# 适配器等)\n# 示例：实例化适配器参数\nadapter_params = [] # 用于保存可训练适配器参数的列表\n# ... 创建和收集适配器参数的代码 ...\n# k = sum(p.numel() for p in adapter_params)\n# print(f\"PEFT参数量 (k)：{k:,} (其中 k &#x3C;&#x3C; N)\")\n\n# 只优化一小组适配器参数\n# optimizer_peft = torch.optim.AdamW(adapter_params, lr=1e-4)\n# ... 训练循环只更新 k 个参数 ...\n# 所需存储：约 N * 2 字节（基础模型）+ k * 2 字节（任务向量）\n# 每个任务的存储开销：k * 2 字节\n</code></pre>\n<blockquote>\n<p>标准微调与参数高效微调（PEFT）之间的参数量和存储影响比较。PEFT旨在使 <code>k</code> 远小于 <code>N</code>。</p>\n</blockquote>\n<p>“后续章节将考察特定的PEFT技术，例如适配器模块和与专家混合（Mixture-of-Experts）相关的方法，详细说明它们如何实现这种效率，同时保持在下游任务上的强大性能。这些技术对于使大型模型在工程实践中更具实用性和适应性正变得日益重要。”</p>",
+  "slug": "parameter-efficient-fine-tuning-needs",
+  "updates": [],
+  "references": [
+    {
+      "id": 15664,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "arXiv",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍了Transformer架构，该架构是现代大型语言模型的基础，解释了使这些模型功能强大但参数量庞大的底层机制。",
+      "order": 1,
+      "created_at": "2025-09-06T10:53:09.720878Z",
+      "updated_at": "2025-09-10T02:29:10.681670Z"
+    },
+    {
+      "id": 15666,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍了低秩适应 (LoRA)，一种高效且广泛采用的参数高效微调技术，显著减少了可训练参数的数量。",
+      "order": 3,
+      "created_at": "2025-09-06T10:53:09.815803Z",
+      "updated_at": "2025-09-10T02:29:09.349214Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2799,
+  "title": "非线性特征提取的需求",
+  "meta_title": "非线性特征提取的需求",
+  "meta_description": "理解为何复杂数据表示需要非线性方法。",
+  "content": "<p>尽管主成分分析（PCA）等线性方法在数据主要呈现线性相关性时，对于捕捉方差和降低维度很有效，但它们在处理许多数据集固有的复杂性时常常力不从心。这些方法的一个主要局限在于它们从根本上假定数据位于或接近高维空间 (high-dimensional space)中的线性子空间。这一假定经常失效。</p>\n<h3>流形假说与数据</h3>\n<p>许多高维数据，例如图像、音频信号或文本嵌入 (embedding)，用<strong>流形假说</strong>来描述更为恰当。这一假说认为，尽管数据点存在于一个极高维的环境空间（如图像所有可能像素值的空间）中，但它们实际上靠近内嵌于该空间中的一个低维非线性流形。</p>\n<p>设想一张卷起来的纸（一个“瑞士卷”）在三维空间中。纸张表面的固有维度是二维的，但它存在于三维环境中。像PCA这样的线性方法，旨在找到最大方差的方向，可能会简单地将纸卷投影到二维平面上，从而有效地将其压扁并失去其内在结构。在纸卷表面上相距较远的点，在PCA投影中可能显得彼此靠近。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-uwm3p6\" \n              data-plot-definition='{\"layout\": {\"title\": \"非线性流形实例（“瑞士卷”）\", \"scene\": {\"xaxis\": {\"title\": \"X轴\"}, \"yaxis\": {\"title\": \"Y轴\"}, \"zaxis\": {\"title\": \"Z轴\"}}, \"width\": 600, \"height\": 400, \"margin\": {\"l\": 0, \"r\": 0, \"b\": 0, \"t\": 40}}, \"data\": [{\"type\": \"scatter3d\", \"mode\": \"markers\", \"x\": [6.7, 6.9, 7.1, 7.3, 7.5, 7.7, 7.9, 8.1, 8.3, 8.5, 9.6, 9.8, 10.0, 10.2, 10.4, 10.6, 10.8, 11.0, 11.2, 11.4, 12.5, 12.7, 12.9, 13.1, 13.3, 13.5, 13.7, 13.9, 14.1, 14.3], \"y\": [14.0, 13.1, 12.2, 11.3, 10.4, 9.5, 8.6, 7.7, 6.8, 5.9, 16.5, 15.6, 14.7, 13.8, 12.9, 12.0, 11.1, 10.2, 9.3, 8.4, 19.0, 18.1, 17.2, 16.3, 15.4, 14.5, 13.6, 12.7, 11.8, 10.9], \"z\": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], \"marker\": {\"color\": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], \"colorscale\": \"Viridis\", \"size\": 5, \"showscale\": false}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-uwm3p6\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据点在非线性流形上的简化三维表示，类似于“瑞士卷”。线性方法难以捕捉其内在结构。</p>\n</blockquote>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-vzzpwy\" \n              data-plot-definition='{\"layout\": {\"title\": \"“瑞士卷”的PCA投影\", \"xaxis\": {\"title\": \"主成分 1\"}, \"yaxis\": {\"title\": \"主成分 2\"}, \"width\": 500, \"height\": 400, \"margin\": {\"l\": 50, \"r\": 20, \"b\": 50, \"t\": 40}}, \"data\": [{\"type\": \"scatter\", \"mode\": \"markers\", \"x\": [-6.8, -6.0, -5.2, -4.4, -3.6, -2.8, -2.0, -1.2, -0.4, 0.4, -5.0, -4.2, -3.4, -2.6, -1.8, -1.0, -0.2, 0.6, 1.4, 2.2, -3.1, -2.3, -1.5, -0.7, 0.1, 0.9, 1.7, 2.5, 3.3, 4.1], \"y\": [-0.1, -0.8, -1.3, -1.7, -1.9, -2.0, -1.9, -1.7, -1.3, -0.8, 1.8, 1.3, 0.8, 0.2, -0.3, -0.8, -1.2, -1.5, -1.7, -1.8, 3.8, 3.5, 3.0, 2.5, 1.9, 1.3, 0.7, 0.1, -0.5, -1.0], \"marker\": {\"color\": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], \"colorscale\": \"Viridis\", \"size\": 8, \"showscale\": false}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-vzzpwy\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>对“瑞士卷”数据应用PCA会将点投影到二维平面上。请注意，其固有结构是如何丢失的，以及在卷上相距较远的点在投影中可能变得靠近。</p>\n</blockquote>\n<h3>非线性对特征提取为何重要</h3>\n<p>表示学习的目的不仅是降维；它还关于找出能有效捕捉数据内在结构和变化的<em>特征</em>或<em>要素</em>。再次考虑图像数据。一个物体（例如，“猫”）的识别在光照、姿态、比例或平移等各种变换下保持不变。这些变换在像素空间中通常是高度非线性的。</p>\n<ul>\n<li><strong>组合性：</strong> 特征通常以复杂、非线性的方式组合。识别一张脸涉及识别眼睛、鼻子和嘴巴（低级特征），并理解它们特定的空间关系（一种更高级的非线性组合）。线性方法难以模拟这种层级和组合结构。</li>\n<li><strong>复杂作用：</strong> 高维数据中的变量很少纯粹线性相互作用。例如，在基因表达数据中，一个基因的作用可能会根据另一个基因的活动水平而被放大或抑制，这是一种非线性作用。</li>\n<li><strong>生成要素：</strong> 我们常认为数据是由一组较小的潜在要素（例如，物体身份、位置、光照方向）生成的。从这些要素到观测数据的映射通常是复杂且非线性的。为了恢复或表示这些要素，我们需要能够反转或近似这种非线性映射。</li>\n</ul>\n<h3>神经网络 (neural network)的作用</h3>\n<p>这就是神经网络，即自编码器的构成元素，发挥作用的地方。深度学习 (deep learning)模型的强大之处主要源于它们学习复杂非线性函数的能力。这种能力来自两个主要部分：</p>\n<ol>\n<li><strong>分层结构：</strong> 深度网络学习层次化表示，其中较早的层可能检测简单模式（边缘、纹理），而较后的层将这些模式组合起来表示更复杂的事物（物体部分、物体）。</li>\n<li><strong>非线性激活函数 (activation function)：</strong> 像ReLU（修正线性单元）、sigmoid或tanh这样的函数在每一层的线性变换（矩阵乘法）之后逐元素应用。如果没有这些非线性，一个深层线性堆叠在数学上将退化为单个线性变换，在函数近似方面不比PCA等更简单的线性模型有任何优势。正是激活函数允许网络弯曲和扭曲特征空间，使其能够近似数据通常所处的复杂非线性流形。在数学上，神经网络<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">;</mo><mi>θ</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">f(x; \\theta)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">;</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">θ</span><span class=\"mclose\">)</span></span></span></span>从输入空间<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi mathvariant=\"script\">X</mi></mrow><annotation encoding=\"application/x-tex\">\\mathcal{X}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathcal\" style=\"margin-right:0.1464em;\">X</span></span></span></span>学习到特征空间<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi mathvariant=\"script\">Z</mi></mrow><annotation encoding=\"application/x-tex\">\\mathcal{Z}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathcal\" style=\"margin-right:0.0794em;\">Z</span></span></span></span>的一个映射<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi><mo>:</mo><mi mathvariant=\"script\">X</mi><mo>→</mo><mi mathvariant=\"script\">Z</mi></mrow><annotation encoding=\"application/x-tex\">f: \\mathcal{X} \\rightarrow \\mathcal{Z}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">:</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathcal\" style=\"margin-right:0.1464em;\">X</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">→</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathcal\" style=\"margin-right:0.0794em;\">Z</span></span></span></span>，其中这个映射是线性变换和非线性激活的组合。</li>\n</ol>\n<p>像t-SNE和UMAP这些之前介绍过的技术，通过创建保留局部关系的低维嵌入 (embedding)，非常适合<em>可视化</em>这些非线性结构。然而，它们通常不提供将新数据点映射到嵌入空间的显式<em>编码器</em>函数，也不学习适合重建或生成任务的特征。</p>\n<p>因此，为了学习能够捕捉复杂数据结构以用于超越可视化（如压缩、去噪、生成或迁移学习 (transfer learning)）任务的表示，我们需要能够学习强大的非线性特征提取器的方法。自编码器提供了一个灵活有效的框架，以无监督或自监督的方式直接从数据中学习此类非线性映射，构成了后续章节的主要内容。</p>",
+  "slug": "non-linear-feature-extraction-need",
+  "updates": [],
+  "references": [
+    {
+      "id": 5083,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "对深度学习进行了介绍，涵盖了表征学习、非线性特征提取和自编码器等概念。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:18.806672Z",
+      "updated_at": "2025-09-09T02:03:02.282617Z"
+    },
+    {
+      "id": 5084,
+      "title": "Reducing the Dimensionality of Data with Neural Networks",
+      "author": "Geoffrey E. Hinton, Ruslan R. Salakhutdinov",
+      "year": "2006",
+      "publisher": "American Association for the Advancement of Science",
+      "journal": "Science",
+      "volume": "313",
+      "pages": "504-507",
+      "url": "https://doi.org/10.1126/science.1127647",
+      "doi": "10.1126/science.1127647",
+      "note": "提出深度自编码器以学习有效的低维非线性表示，解决了线性方法的局限性。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:18.962222Z",
+      "updated_at": "2025-09-09T02:03:09.947172Z"
+    },
+    {
+      "id": 5086,
+      "title": "A Global Geometric Framework for Nonlinear Dimensionality Reduction",
+      "author": "Joshua B. Tenenbaum, Vin de Silva, John C. Langford",
+      "year": "2000",
+      "publisher": "",
+      "journal": "Science",
+      "volume": "290",
+      "pages": "2319-2323",
+      "url": "https://doi.org/10.1126/science.290.5500.2319",
+      "doi": "10.1126/science.290.5500.2319",
+      "note": "介绍了Isomap，一种降维算法，展示了流形假设以及线性方法遇到的挑战。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:18.970732Z",
+      "updated_at": "2025-09-09T02:03:10.306075Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

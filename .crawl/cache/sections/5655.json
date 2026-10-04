@@ -1,0 +1,45 @@
+{
+  "id": 5655,
+  "title": "动手实践：创建基本合成数据",
+  "meta_title": "练习生成简单数据",
+  "meta_description": "分步实践环节：使用基本方法生成简单数值和分类数据。",
+  "content": "<p>使用Python（一种常用的机器学习 (machine learning)任务语言）生成简单合成数据。我们将使用<code>NumPy</code>库，它在Python中是进行数值运算的主要库。如果您之前没有使用过它，请不用担心。内容将保持简单明了。</p>\n<h3>搭建环境</h3>\n<p>在我们开始生成数据之前，您需要一个安装了<code>NumPy</code>库的Python环境。如果您已经安装了Python（可能通过Anaconda发行版或直接安装），您通常可以使用pip（Python的包安装工具）来安装NumPy。打开您的终端或命令提示符，然后输入：</p>\n<pre><code class=\"language-bash\">pip install numpy\n</code></pre>\n<p>为了更好地组织和显示我们的数据，尤其是在组合不同类型数据时，<code>Pandas</code>库非常有用。我们也来安装它：</p>\n<pre><code class=\"language-bash\">pip install pandas\n</code></pre>\n<p>现在，让我们在Python脚本或交互式会话（例如Jupyter notebook）中导入这些库：</p>\n<pre><code class=\"language-python\">import numpy as np\nimport pandas as pd\n\n# 设置随机种子以保证结果可重现（可选，但推荐做法）\n# 这使得随机数在演示时变得可预测。\nnp.random.seed(42)\n</code></pre>\n<p>设置<code>seed</code>可确保每次运行代码时，都会获得完全相同的“随机”数序列。这对于调试和分享示例很有用。</p>\n<h3>从统计分布生成数值数据</h3>\n<p>我们了解到，从统计分布中采样是生成数值数据的一种常见方式。让我们尝试生成两种类型：均匀分布数据和正态分布数据。</p>\n<h4>均匀分布</h4>\n<p>假设我们想模拟产品价格，这些价格在20美元到100美元之间任何值出现的可能性都相同。我们可以使用NumPy的<code>random.uniform</code>函数。</p>\n<pre><code class=\"language-python\"># 生成10个介于20到100之间的合成产品价格\nnum_samples = 10\nmin_price = 20.0\nmax_price = 100.0\n\nuniform_prices = np.random.uniform(low=min_price, high=max_price, size=num_samples)\n\n# 为了更真实，我们将它们四舍五入到小数点后两位\nuniform_prices = np.round(uniform_prices, 2)\n\nprint(\"生成的均匀分布价格：\")\nprint(uniform_prices)\n</code></pre>\n<p>这将输出一个包含10个价格的数组，例如 <code>[ 34.9 , 89.01, 80.49, 65.34, 26.38, 43.61, 80.13, 73.8 , 84.47, 73.6 ]</code>。每个数字在20美元到100美元范围内出现的几率都相等。</p>\n<h4>正态分布</h4>\n<p>现在，让我们模拟一些围绕平均值聚类的数据，例如客户年龄。假设平均年龄（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>）是35岁，标准差（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>）是8岁。这表示大多数年龄将接近35岁，但也有一些会更年轻或更年长。我们使用<code>random.normal</code>。</p>\n<pre><code class=\"language-python\"># 生成10个合成客户年龄（均值=35，标准差=8）\nnum_samples = 10\nmean_age = 35.0\nstd_dev_age = 8.0\n\nnormal_ages = np.random.normal(loc=mean_age, scale=std_dev_age, size=num_samples)\n\n# 年龄通常是整数，所以我们进行四舍五入并确保它们是非负数\nnormal_ages = np.round(normal_ages).astype(int)\nnormal_ages = np.maximum(normal_ages, 0) # 确保没有负数年龄\n\nprint(\"\\n生成的正态分布年龄：\")\nprint(normal_ages)\n</code></pre>\n<p>这可能会输出像 <code>[39 32 41 49 32 31 44 37 34 32]</code> 这样的年龄。请留意，大多数值都相对接近35。</p>\n<p>让我们使用直方图来直观显示这些年龄的更大样本的分布情况。</p>\n<pre><code class=\"language-python\"># 生成1000个年龄以更好地查看分布\nlots_of_ages = np.random.normal(loc=mean_age, scale=std_dev_age, size=1000)\nlots_of_ages = np.round(lots_of_ages).astype(int)\nlots_of_ages = np.maximum(lots_of_ages, 0)\n\n# 我们将为Plotly图表准备数据\nhist_ages, bin_edges = np.histogram(lots_of_ages, bins=15)\nbin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-13vaoe9\" \n              data-plot-definition='{\"layout\": {\"title\": \"1000个合成年龄的分布\", \"xaxis\": {\"title\": \"年龄\"}, \"yaxis\": {\"title\": \"频率\"}, \"bargap\": 0.1, \"template\": \"plotly_white\"}, \"data\": [{\"type\": \"bar\", \"x\": [2, 8, 14, 20, 26, 32, 38, 44, 50, 56, 62], \"y\": [1, 14, 78, 193, 276, 243, 137, 44, 10, 3, 1], \"marker\": {\"color\": \"#339af0\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-13vaoe9\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>直方图显示了使用正态分布（均值=35，标准差=8）生成的合成年龄的频率。留意其钟形，这是正态分布的特点，中心在35左右。</p>\n</blockquote>\n<h3>生成分类数据</h3>\n<p>现在我们来生成一些分类数据。</p>\n<h4>带有概率的简单类别</h4>\n<p>假设我们想分配产品类别：'电子产品'、'服装'或'家居用品'。也许'电子产品'最常见（50%几率），'服装'较少见（30%），而'家居用品'最少见（20%）。我们可以使用<code>random.choice</code>。</p>\n<pre><code class=\"language-python\"># 定义类别及其概率\ncategories = ['Electronics', 'Clothing', 'Home Goods']\nprobabilities = [0.5, 0.3, 0.2] # 必须和为1.0\n\n# 根据概率生成10个合成类别\nnum_samples = 10\nrandom_categories = np.random.choice(categories, size=num_samples, p=probabilities)\n\nprint(\"\\n生成的随机类别：\")\nprint(random_categories)\n</code></pre>\n<p>这可能会输出：<code>['Clothing' 'Home Goods' 'Electronics' 'Electronics' 'Electronics' 'Clothing' 'Electronics' 'Electronics' 'Electronics' 'Clothing']</code>。您会预计“电子产品”大约出现5次，“服装”出现3次，“家居用品”出现2次，不过由于只有10个样本，会有随机差异。</p>\n<h4>基于规则的分类数据</h4>\n<p>有时，一个数据项会依赖于另一个。让我们基于之前生成的<code>uniform_prices</code>创建一个“高价值”标志（真/假）。假设任何价格超过75美元的产品都被认为是高价值。</p>\n<pre><code class=\"language-python\"># 根据生成的价格应用规则\nhigh_value_flags = uniform_prices > 75.0\n\nprint(\"\\n生成的高价值标志（基于价格 > 75美元）：\")\nprint(high_value_flags)\n</code></pre>\n<p>这将输出一个与<code>uniform_prices</code>中每个价格对应的<code>True</code>或<code>False</code>值数组，例如 <code>[False True True False False False True False True False]</code>。</p>\n<h3>组合生成的数据</h3>\n<p>通常，我们希望将不同的生成特征组合成一个结构化数据集，就像一张表格。Pandas库在这方面表现出色。让我们将价格、年龄、类别和高价值标志组合到一个DataFrame中。</p>\n<pre><code class=\"language-python\"># 确保所有数组长度相同（本例中为10个样本）\nassert len(uniform_prices) == num_samples\nassert len(normal_ages) == num_samples\nassert len(random_categories) == num_samples\nassert len(high_value_flags) == num_samples\n\n# 创建一个字典来存放我们的合成数据\nsynthetic_data = {\n    'Price': uniform_prices,\n    'CustomerAge': normal_ages,\n    'Category': random_categories,\n    'HighValue': high_value_flags\n}\n\n# 创建一个Pandas DataFrame\nsynthetic_df = pd.DataFrame(synthetic_data)\n\nprint(\"\\n组合合成数据集（前5行）：\")\nprint(synthetic_df.head())\n</code></pre>\n<p>这将显示一个整洁的表格：</p>\n<pre><code>   Price  CustomerAge     Category  HighValue\n0  34.90           39     Clothing      False\n1  89.01           32   Home Goods       True\n2  80.49           41  Electronics       True\n3  65.34           49  Electronics      False\n4  26.38           32  Electronics      False\n</code></pre>\n<p>您现在已经创建了您的第一个基本合成数据集！您使用统计分布生成了数值数据，并使用带概率的随机选择和简单规则生成了分类数据。您还将这些数据组合成结构化格式。</p>\n<p>这些技术为生成更复杂的合成数据提供了根基。随着您不断前进，您会遇到能够更好呈现变量间关联并生成更真实数据的方法，但定义生成过程、采样和应用规则的主要思想依然重要。</p>",
+  "slug": "practice-create-basic-synthetic-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 16158,
+      "title": "NumPy User Guide",
+      "author": "The NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/index.html",
+      "doi": "",
+      "note": "Python 数值计算的综合指南，包括数组创建、操作以及来自各种分布的伪随机数生成。",
+      "order": 1,
+      "created_at": "2025-09-06T11:00:58.678310Z",
+      "updated_at": "2025-09-10T13:16:18.893133Z"
+    },
+    {
+      "id": 16159,
+      "title": "Pandas User Guide",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/index.html",
+      "doi": "",
+      "note": "Pandas 库的官方文档，详细介绍了用于数据分析和操作的 DataFrame 和 Series 等数据结构。",
+      "order": 2,
+      "created_at": "2025-09-06T11:00:58.682900Z",
+      "updated_at": "2025-09-10T13:16:18.261660Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

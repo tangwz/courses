@@ -1,0 +1,61 @@
+{
+  "id": 1215,
+  "title": "实践：优化你的图表",
+  "meta_title": "实践自定义Python图表",
+  "meta_description": "动手实践应用各种自定义技术，以提高图表的清晰度和美观性。",
+  "content": "<p>让我们将本章的知识付诸实践。你已经学会了如何添加标注、管理图例、调整布局、应用主题以及保存你的作品。现在，你将应用这些技术来改进一些基本图表，使它们更清晰、更具信息量，并可用于分享。</p>\n<p>我们将逐步改进几种常见图表类型。请记住确保已导入绘图库：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport seaborn as sns\nimport numpy as np\nimport pandas as pd\n\n# 用于练习的示例数据\nx_line = np.linspace(0, 10, 50)\ny1_line = np.sin(x_line)\ny2_line = np.cos(x_line)\n\ncategories = ['Group A', 'Group B', 'Group C', 'Group D']\nvalues = [15, 24, 19, 29]\n\nx_scatter = np.random.rand(50) * 10\ny_scatter = x_scatter + np.random.randn(50) * 2\nhighlight_x = x_scatter[10] # 选取一个点进行突出显示\nhighlight_y = y_scatter[10]\n\n# 设置默认的Seaborn风格以获得更好的美观效果\nsns.set_style(\"whitegrid\")\n</code></pre>\n<h3>实践1：改进折线图</h3>\n<p>让我们从一个显示两条线的简单折线图开始。默认图表缺少上下文 (context)。</p>\n<p><strong>初始图表：</strong></p>\n<pre><code class=\"language-python\">plt.figure(figsize=(8, 4)) # 从设定图表大小开始\nplt.plot(x_line, y1_line)\nplt.plot(x_line, y2_line)\nplt.show()\n</code></pre>\n<p><strong>任务：</strong></p>\n<ol>\n<li><strong>添加标题和标签：</strong> 为图表添加描述性标题，并标注x轴和y轴。</li>\n<li><strong>自定义线条：</strong> 改变线条的颜色和样式，以便清晰区分它们。可以使用颜色名称（例如，'red'，'blue'）或十六进制代码（例如，'#1f77b4'）。对于样式，可以尝试'--'（虚线）、':'（点线）或'-.'（点划线）。</li>\n<li><strong>添加图例：</strong> 添加图例以识别哪条线表示sin(x)和哪条表示cos(x)。尝试使用<code>loc</code>值（'upper right'，'lower left'等）来寻找一个好的位置。</li>\n<li><strong>设置轴限制：</strong> 调整y轴范围至-1.5到1.5，以获得更好的视觉间距。</li>\n</ol>\n<p><strong>改进后的图表代码：</strong></p>\n<pre><code class=\"language-python\"># 1. 创建图表和轴\nplt.figure(figsize=(8, 5)) # 略微调整了大小\n\n# 2. 绘制数据并进行自定义\nplt.plot(x_line, y1_line, color='#1f77b4', linestyle='-', label='sin(x)') # 蓝色实线\nplt.plot(x_line, y2_line, color='#ff7f0e', linestyle='--', label='cos(x)') # 橙色虚线\n\n# 3. 添加标题和标签\nplt.title('正弦和余弦函数')\nplt.xlabel('X值')\nplt.ylabel('Y值')\n\n# 4. 设置轴限制\nplt.ylim(-1.5, 1.5)\n\n# 5. 添加图例\nplt.legend(loc='lower left') # 将图例放置在左下角\n\n# 6. 显示图表\nplt.show()\n</code></pre>\n<p>将改进后的图表与初始图表进行比较。添加的元素使其更容易理解该可视化所代表的内容。</p>\n<h3>实践2：为散点图添加上下文 (context)</h3>\n<p>现在我们来处理散点图。我们将添加一个标注来指出特定的数据点。</p>\n<p><strong>初始图表：</strong></p>\n<pre><code class=\"language-python\">plt.figure(figsize=(7, 5))\nplt.scatter(x_scatter, y_scatter, alpha=0.7) # 使用alpha设置透明度\nplt.title('基本散点图')\nplt.xlabel('X变量')\nplt.ylabel('Y变量')\nplt.show()\n</code></pre>\n<p><strong>任务：</strong></p>\n<ol>\n<li><strong>应用Seaborn主题：</strong> 虽然我们之前设置了样式，但尝试在创建图表前使用其他样式，例如<code>sns.set_style(\"darkgrid\")</code>或<code>sns.set_theme(style=\"ticks\")</code>，看看效果有何不同。</li>\n<li><strong>标注一个点：</strong> 使用<code>plt.annotate()</code>添加文本，指向我们之前定义的特定<code>highlight_x</code>、<code>highlight_y</code>点。使标注信息丰富。</li>\n<li><strong>调整布局：</strong> 有时标题或标注等元素可能会重叠。在最后（<code>plt.show()</code>之前）使用<code>plt.tight_layout()</code>来自动调整间距。</li>\n</ol>\n<p><strong>改进后的图表代码：</strong></p>\n<pre><code class=\"language-python\"># 1. 应用不同样式（可选 - 尝试取消注释）\n# sns.set_theme(style=\"ticks\")\n\nplt.figure(figsize=(7, 5))\nplt.scatter(x_scatter, y_scatter, alpha=0.7, color='#20c997') # 青色点\n\n# 2. 添加标题和标签\nplt.title('带标注的散点图')\nplt.xlabel('X变量')\nplt.ylabel('Y变量')\n\n# 3. 标注特定点\nplt.annotate('有趣的点', # 要显示的文本\n             xy=(highlight_x, highlight_y), # 要标注的点（箭头尖端）\n             xytext=(highlight_x + 1, highlight_y + 3), # 文本位置\n             arrowprops=dict(facecolor='#495057', shrink=0.05, width=1, headwidth=8)) # 箭头样式\n\n# 4. 调整布局\nplt.tight_layout() # 通常用于防止重叠\n\n# 5. 显示图表\nplt.show()\n\n# 可选：如果你改变了样式，请重置\nsns.set_style(\"whitegrid\") # 为下一个练习设置回默认样式\n</code></pre>\n<p>标注有助于引导观看者关注数据中的重要特征。<code>plt.tight_layout()</code>是进行基本布局调整的便捷函数。</p>\n<h3>实践3：优化条形图</h3>\n<p>条形图通常受益于清晰的标签和合适的颜色。</p>\n<p><strong>初始图表（使用Matplotlib）：</strong></p>\n<pre><code class=\"language-python\">plt.figure(figsize=(7, 4))\nplt.bar(categories, values)\nplt.title('类别值')\nplt.ylabel('计数')\nplt.show()\n</code></pre>\n<p><strong>任务：</strong></p>\n<ol>\n<li><strong>使用Seaborn调色板：</strong> 不要使用默认的单一颜色，为条形图使用Seaborn调色板。你可以直接将调色板名称（例如，'viridis'，'Blues_d'）传递给Seaborn的<code>barplot</code>，或者在Matplotlib中手动分配颜色。为了简化，我们这里尝试使用Seaborn的<code>barplot</code>。</li>\n<li><strong>添加值标签：</strong> 在每个条形图上方添加文本，显示其精确值。这通常比仅依靠y轴使图表更容易阅读。</li>\n<li><strong>旋转X轴标签（如果需要）：</strong> 如果类别名称较长，它们可能会重叠。虽然这里不是严格必需，但练习使用<code>plt.xticks(rotation=45)</code>旋转它们。</li>\n</ol>\n<p><strong>改进后的图表代码（使用Seaborn）：</strong></p>\n<pre><code class=\"language-python\">plt.figure(figsize=(8, 5))\n\n# 1. 使用调色板创建条形图\n# Seaborn的barplot使用类别作为x轴，值作为y轴\nsns.barplot(x=categories, y=values, palette='viridis')\n\n# 2. 添加标题和标签（Seaborn会自动设置一些，但我们可以自定义）\nplt.title('各类别值')\nplt.xlabel('类别组')\nplt.ylabel('测量值')\n\n# 3. 添加值标签（需要遍历Seaborn创建的条形）\n# 获取当前的Axes对象\nax = plt.gca()\n# 遍历Axes中的补丁（条形）\nfor bar in ax.patches:\n    ax.text(bar.get_x() + bar.get_width() / 2., # X位置（条形中心）\n            bar.get_height(), # Y位置（条形顶部）\n            f'{bar.get_height():.0f}', # 文本（值，已格式化）\n            ha='center', # 水平对齐\n            va='bottom') # 垂直对齐\n\n# 4. 旋转x轴标签（可选，取消注释以查看效果）\n# plt.xticks(rotation=45, ha='right')\n\n# 5. 调整布局\nplt.tight_layout()\n\n# 6. 显示图表\nplt.show()\n</code></pre>\n<p>添加值标签和使用不同颜色可以明显提高条形图的可读性和专业外观。</p>\n<h3>实践4：保存已优化图表</h3>\n<p>最后，让我们保存一个你改进过的图表。保存可以让你在报告、演示文稿或网页中使用你的可视化内容。</p>\n<p><strong>任务：</strong></p>\n<p>将改进后的正弦和余弦折线图（来自练习1）保存为三种不同的格式：PNG、PDF和SVG。注意文件名扩展名。</p>\n<p><strong>保存代码：</strong></p>\n<pre><code class=\"language-python\"># 首先重新生成正弦/余弦图（复制练习1中的改进代码）\nplt.figure(figsize=(8, 5))\nplt.plot(x_line, y1_line, color='#1f77b4', linestyle='-', label='sin(x)')\nplt.plot(x_line, y2_line, color='#ff7f0e', linestyle='--', label='cos(x)')\nplt.title('正弦和余弦函数')\nplt.xlabel('X值')\nplt.ylabel('Y值')\nplt.ylim(-1.5, 1.5)\nplt.legend(loc='lower left')\n\n# 将图表保存为不同格式\n# Matplotlib从扩展名推断格式\nplt.savefig('sine_cosine_plot.png', dpi=300) # PNG：栅格格式，适用于网页，dpi控制分辨率\nplt.savefig('sine_cosine_plot.pdf') # PDF：矢量格式，适用于文档，完美缩放\nplt.savefig('sine_cosine_plot.svg') # SVG：矢量格式，适用于网页（可缩放），可编辑\n\n# 如果你不需要显示图表，在保存后关闭图表是一个好习惯\nplt.close()\n\nprint(\"图表已保存为sine_cosine_plot.png、sine_cosine_plot.pdf和sine_cosine_plot.svg\")\n</code></pre>\n<p>运行此代码后，检查你的工作目录以查找保存的文件。注意区别：</p>\n<ul>\n<li><strong>PNG：</strong> 一种基于像素的图像。如果放大太多，它会显得像素化。<code>dpi</code>（每英寸点数）参数 (parameter)控制分辨率。</li>\n<li><strong>PDF/SVG：</strong> 矢量格式。它们使用形状和线条来描述图表。你可以无限放大而不会损失质量。SVG非常适合网页使用，而PDF常用于文档。</li>\n</ul>\n<p>这些练习涵盖了优化和保存图表的核心技术。请随时尝试不同的样式、颜色、标注和布局调整。有效的可视化通常需要迭代和改进，以更好地传达你的数据故事。</p>",
+  "slug": "practice-polishing-plots",
+  "updates": [],
+  "references": [
+    {
+      "id": 981,
+      "title": "Matplotlib Documentation",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/index.html",
+      "doi": "",
+      "note": "Matplotlib官方指南，涵盖图表创建、自定义、布局管理、标注、图例以及以各种格式保存图表。",
+      "order": 1,
+      "created_at": "2025-09-04T15:13:25.845843Z",
+      "updated_at": "2025-09-07T16:30:28.743992Z"
+    },
+    {
+      "id": 982,
+      "title": "Seaborn: Statistical Data Visualization",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/",
+      "doi": "",
+      "note": "Seaborn官方参考资料，详细介绍了统计绘图功能、美学样式、调色板以及与Matplotlib的集成，以创建引人入胜的可视化。",
+      "order": 2,
+      "created_at": "2025-09-04T15:13:25.848951Z",
+      "updated_at": "2025-09-07T16:30:38.538038Z"
+    },
+    {
+      "id": 983,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.00-introduction-to-matplotlib.html",
+      "doi": "",
+      "note": "一本实用手册，其中有专门介绍Matplotlib和Seaborn的章节，提供了数据可视化、图表优化和有效传达数据见解的全面示例。",
+      "order": 3,
+      "created_at": "2025-09-04T15:13:25.851748Z",
+      "updated_at": "2025-09-07T16:30:36.360902Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

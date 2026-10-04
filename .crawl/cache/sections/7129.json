@@ -1,0 +1,45 @@
+{
+  "id": 7129,
+  "title": "搜索算法概览",
+  "meta_title": "ASR 中的搜索算法概览",
+  "meta_description": "对语音识别中搜索问题的整体介绍，并说明为何需要高效算法。",
+  "content": "<p>解码器的任务是找到与输入音频 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>O</mi></mrow><annotation encoding=\"application/x-tex\">O</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span></span></span></span>) 最匹配的单个词序列 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>W</mi></mrow><annotation encoding=\"application/x-tex\">W</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span></span></span></span>)。它通过结合声学模型得分 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mi>O</mi><mi mathvariant=\"normal\">∣</mi><mi>W</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(O|W)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mord\">∣</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"mclose\">)</span></span></span></span> 和语言模型得分 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mi>W</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(W)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"mclose\">)</span></span></span></span> 来完成此任务。难题在于可能的词序列数量庞大到难以想象。一段十秒长的音频片段可能对应数百万甚至数十亿个潜在句子。</p>\n<p>检查每一种可能性（这种方法被称为“暴力搜索”）在计算上是不可行的。如果你的词汇量是 20,000 个词，那么可能的五词句子的数量将是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>20</mn><mo separator=\"true\">,</mo><msup><mn>000</mn><mn>5</mn></msup></mrow><annotation encoding=\"application/x-tex\">20,000^5</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1.0085em;vertical-align:-0.1944em;\"></span><span class=\"mord\">20</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">00</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">5</span></span></span></span></span></span></span></span></span></span></span>，这个数字非常大，以至于最快的计算机也无法在合理的时间内检查所有这些组合。解码器需要一种效率高得多的策略。</p>\n<h3>将搜索问题视为寻路任务</h3>\n<p>处理这个问题的更好方法是将其重新定义为寻路问题。设想一个大型图，其中每个点代表一个可能跟在前一个词后面的词。解码器的任务是找到通过这个图从起点到终点“成本最低”或“最有可能”的路径。</p>\n<p>图中的每条路径都代表一个独特的句子，或者一个“假设”。路径上的每一步都有相关的成本，这个成本根据声学和语言模型概率计算得出。声学模型得分低（意味着声音匹配不佳）或语言模型得分低（意味着词序列不太可能）的路径将很快变得非常“昂贵”。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1cq94vj\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"sans-serif\", color=\"#4263eb\"];\n    edge [fontname=\"sans-serif\", color=\"#868e96\"];\n    splines=true;\n\n    START [label=\"开始\", shape=doublecircle, fillcolor=\"#b2f2bb\"];\n    END [label=\"结束\", shape=doublecircle, fillcolor=\"#b2f2bb\"];\n\n    subgraph cluster_0 {\n        style=invis;\n        START -> R [label=\" “rec”音 \"];\n        R [label=\"rec...\"];\n    }\n\n    subgraph cluster_1 {\n        style=invis;\n        R -> OGN;\n        R -> K;\n        OGN [label=\"...ognize\"];\n        K [label=\"...k\"];\n    }\n\n    subgraph cluster_2 {\n        style=invis;\n        OGN -> SPEECH;\n        K -> A;\n        SPEECH [label=\"speech\"];\n        A [label=\"a\"];\n    }\n\n    subgraph cluster_3 {\n        style=invis;\n        A -> NICE;\n        NICE [label=\"nice\"];\n    }\n\n    subgraph cluster_4 {\n        style=invis;\n        NICE -> BEACH;\n        BEACH [label=\"beach\"];\n    }\n\n    subgraph cluster_5 {\n        style=invis;\n        SPEECH -> END;\n        BEACH -> END;\n    }\n\n    // 突出显示“获胜”路径\n    R -> OGN [color=\"#f03e3e\", penwidth=2.0];\n    OGN -> SPEECH [color=\"#f03e3e\", penwidth=2.0];\n    SPEECH -> END [color=\"#f03e3e\", penwidth=2.0];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1cq94vj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简化的搜索图。解码器检查不同的路径（假设），例如“recognize speech”和“wreck a nice beach”。红色路径表示声学模型和语言模型组合得分最高的路径。</p>\n</blockquote>\n<h3>剪除不太可能的假设</h3>\n<p>搜索算法不盲目地考察所有路径，而是使用一种智能技术，称为<strong>剪枝</strong>。当解码器逐词构建句子假设时，它会记录这些假设的得分。如果某条路径的可能程度显著低于目前已知的最佳路径，算法就会放弃它。</p>\n<p>这是一种“束搜索”的形式，解码器在每一步只保留少数（或“束”）最有希望的假设，并丢弃其余的。通过及早剪除大部分不佳路径，解码器可以将计算资源集中在那些实际有可能正确的假设上。</p>\n<p>这个过程使得现代语音识别成为可能。如果没有高效的搜索算法来处理庞大的可能性空间，即使是最好的声学和语言模型也将毫无用处。在下一节中，你将学习维特比算法，这是一种经典且有效的算法，是许多解码器的主要方法。</p>",
+  "slug": "introduction-to-search-algorithms",
+  "updates": [],
+  "references": [
+    {
+      "id": 19210,
+      "title": "Speech and Language Processing",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "涵盖语音识别基础知识的经典教材，包括声学模型、语言模型、解码问题、维特比算法和束搜索。",
+      "order": 1,
+      "created_at": "2025-09-06T13:03:43.516668Z",
+      "updated_at": "2025-09-10T03:45:44.513075Z"
+    },
+    {
+      "id": 19211,
+      "title": "A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition",
+      "author": "Lawrence R. Rabiner",
+      "year": "1989",
+      "publisher": "IEEE",
+      "journal": "Proceedings of the IEEE",
+      "volume": "77",
+      "pages": "257-286",
+      "url": "https://ieeexplore.ieee.org/document/18626",
+      "doi": "10.1109/5.18626",
+      "note": "一篇经典教程，解释了隐马尔可夫模型和维特比算法，对语音识别中的概率序列建模和解码至关重要。",
+      "order": 2,
+      "created_at": "2025-09-06T13:03:43.800823Z",
+      "updated_at": "2025-09-10T03:45:41.574692Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

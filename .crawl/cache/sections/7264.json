@@ -1,0 +1,45 @@
+{
+  "id": 7264,
+  "title": "何时进行微调：一个分析体系",
+  "meta_title": "何时微调大型语言模型",
+  "meta_description": "一个分析体系，用于判断相比于提示或检索增强生成（RAG），微调是否为合适的方法。",
+  "content": "<p>决定对大型语言模型进行微调 (fine-tuning)，是一项重大的技术和资源投入。虽然它能生成功能强大、专业化的模型，但并非总能提供最省力或最管用的办法。您的决定应基于对具体问题的清晰判断，将微调与另外两种常见的定制方法进行比较：提示工程 (prompt engineering)和检索增强生成（RAG）。每种方法都有其独特的优点、成本和运行要求。</p>\n<h3>模型定制的多样性</h3>\n<p>可以把模型定制看作是工作量和专一性的一个范围。一端是提示工程 (prompt engineering)，它速度快，不需要模型训练。中间是RAG，它在不改变模型本身的情况下，增加了外部知识来源。另一端是微调 (fine-tuning)，它会修改模型的内部权重 (weight)以改变其核心行为。</p>\n<p>您的目标是选择能可靠解决问题的最简单方法。若直接选择微调，过度设计方案会浪费大量时间和计算资源；而若对需要专业知识的任务坚持使用简单提示，则会导致效果不佳。</p>\n<h3>何时使用提示工程 (prompt engineering)</h3>\n<p>提示工程涉及编写详细指令，以引导预训练 (pre-training)模型的输出。通过在提示中提供清晰的语境、示例（少样本提示）和限制，您通常可以引导模型执行特定任务，而无需任何训练。</p>\n<p><strong>选择提示工程，当：</strong></p>\n<ul>\n<li><strong>任务在模型现有知识范围内。</strong> 例如，总结通用文本、常见语言间的翻译或信息格式化。</li>\n<li><strong>您需要快速、低成本的办法。</strong> 提示不需要GPU训练时间，可以在几秒内反复尝试。</li>\n<li><strong>您的效果要求并非特别严格。</strong> 提示有时会产生不一致或略微“偏离目标”的结果，这在某些应用中可能是可接受的。</li>\n</ul>\n<p>提示工程的主要局限在于它依赖于模型已有的能力。您可以引导模型，但不能教它新的信息或根本性的新推理 (inference)模式。此外，随着任务难度增加，提示可能会变得冗长且脆弱，使其难以维护。</p>\n<h3>何时使用检索增强生成（RAG）</h3>\n<p>RAG通过在推理 (inference)时为模型提供相关的外部信息来提升其输出。此过程通常包含两个步骤：首先，检索器在一个私有知识库（如公司文档集合或技术维基）中搜索与用户查询相关的信息。其次，这些检索到的信息作为提示的一部分传递给大型语言模型（LLM），指导模型利用这些语境来组织其回答。</p>\n<p><strong>选择RAG，当：</strong></p>\n<ul>\n<li><strong>任务需要访问外部、专有或非常新的信息。</strong> 这是RAG的典型应用场景。它让模型基于可信来源的事实生成内容，减少幻觉 (hallucination)。</li>\n<li><strong>事实准确性是高度优先事项。</strong> 通过提供源文本，模型可以生成直接有证据支持的回答。</li>\n<li><strong>您的知识库频繁变动。</strong> 更新RAG系统的向量 (vector)数据库比每次文档更新时都重新训练模型要便宜、快捷得多。</li>\n</ul>\n<p>RAG不改变模型的风格或推理能力。它只是提供更好的信息。如果模型难以综合提供的语境，或未能遵循使用指示，那么仅靠RAG可能不足。其效果也很大程度上取决于检索步骤的质量。如果检索器未能找到正确的文档，大型语言模型（LLM）将无法获得所需信息。</p>\n<h3>何时进行微调 (fine-tuning)</h3>\n<p>微调是利用精心整理的训练示例数据集来更新模型权重 (weight)的方法。这是实现专业化的最强有力手段，适用于您需要改变模型基本行为的情况。</p>\n<p><strong>选择微调，当：</strong></p>\n<ul>\n<li><strong>您需要教模型一种新的风格、格式或语调。</strong> 如果您需要模型持续生成高度特定格式的输出（例如，在专有框架中生成代码、编写具有精确结构的医疗报告，或采用独特的品牌语调），微调是实现这一目标的最佳方式。</li>\n<li><strong>任务涉及学习新的推理 (inference)模式或能力。</strong> 对于将文本分类到自定义类别、遵循多步骤指令或执行原始训练数据中不充分表示的功能等任务，微调可以教会模型这项新技能。</li>\n<li><strong>您需要提升在特定、明确任务上的可靠性。</strong> 对于可重复的功能，在数千个高质量示例上进行微调，可以使模型的表现比提示更加稳定。</li>\n<li><strong>提示和RAG不足以应对。</strong> 如果您尝试了高级提示但发现其过于脆弱，或者实施了RAG但发现模型难以正确使用检索到的语境，这表明模型的核心行为需要通过微调进行修改。</li>\n<li><strong>您想优化推理延迟和成本。</strong> 针对特定任务微调的较小型模型，其性能常能与大型通用模型媲美或更胜一筹，从而实现更快、更省钱的推理。</li>\n</ul>\n<p>微调的主要前提是：拥有数百到数千个高质量训练示例的数据集，以及用于训练的充足计算资源（通常是GPU）。</p>\n<h3>一个决策体系</h3>\n<p>为帮助您在这些选项中做出判断，您可以遵循一个决策流程。目标是从最简单的办法开始，仅在必要时才增加复杂程度。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-a4ylwk\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=0.2];\n  edge [fontname=\"sans-serif\", fontsize=10];\n  \n  start [label=\"开始：明确您的任务\", shape=ellipse, fillcolor=\"#a5d8ff\"];\n  prompt_check [label=\"任务能否通过简单提示\\n和示例解决？\", fillcolor=\"#ffec99\"];\n  rag_check [label=\"任务是否需要\\n外部或最新知识？\", fillcolor=\"#ffec99\"];\n  behavior_check [label=\"模型是否需要新的\\n风格、格式或推理能力？\", fillcolor=\"#ffec99\"];\n  data_check [label=\"您是否有高质量数据集\\n（数百到数千示例）？\", fillcolor=\"#ffec99\"];\n  \n  use_prompt [label=\"使用提示工程\", shape=parallelogram, fillcolor=\"#b2f2bb\", style=\"filled\"];\n  use_rag [label=\"实施RAG\", shape=parallelogram, fillcolor=\"#b2f2bb\", style=\"filled\"];\n  use_finetune [label=\"进行微调\", shape=parallelogram, fillcolor=\"#b2f2bb\", style=\"filled\"];\n  re_evaluate [label=\"重新评估或\\n收集数据\", shape=parallelogram, fillcolor=\"#ffc9c9\", style=\"filled\"];\n\n  start -> prompt_check;\n  prompt_check -> use_prompt [label=\"  是\"];\n  prompt_check -> rag_check [label=\"否\"];\n  rag_check -> use_rag [label=\"  是\"];\n  rag_check -> behavior_check [label=\"否\"];\n  behavior_check -> data_check [label=\"  是\"];\n  behavior_check -> re_evaluate [label=\"否\"];\n  data_check -> use_finetune [label=\"  是\"];\n  data_check -> re_evaluate [label=\"否\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-a4ylwk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个选择模型定制方法的决策流程图。从最简单的方式开始，仅当任务要求严苛时才升级。</p>\n</blockquote>\n<h3>概况对比</h3>\n<p>下表并排对比了这三种方法在不同属性上的表现。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">属性</th>\n<th align=\"left\">提示工程 (prompt engineering)</th>\n<th align=\"left\">检索增强生成（RAG）</th>\n<th align=\"left\">微调 (fine-tuning)</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>主要目的</strong></td>\n<td align=\"left\">引导现有行为</td>\n<td align=\"left\">注入外部知识</td>\n<td align=\"left\">修改核心行为</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>数据需求</strong></td>\n<td align=\"left\">少量提示示例</td>\n<td align=\"left\">文档语料库</td>\n<td align=\"left\">标注训练数据集</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>设置成本</strong></td>\n<td align=\"left\">很低</td>\n<td align=\"left\">中等（需要检索器）</td>\n<td align=\"left\">高（需要训练基础设施）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>模型变动</strong></td>\n<td align=\"left\">无</td>\n<td align=\"left\">无</td>\n<td align=\"left\">模型权重 (weight)更新</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>最佳用途</strong></td>\n<td align=\"left\">简单任务、格式化、快速原型</td>\n<td align=\"left\">事实核查、专有数据</td>\n<td align=\"left\">风格调整、新技能</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>维护</strong></td>\n<td align=\"left\">更新提示</td>\n<td align=\"left\">更新文档语料库</td>\n<td align=\"left\">用新数据重新训练模型</td>\n</tr>\n</tbody>\n</table>\n<p>最终，这些方法并非互斥。一个精巧的应用可能使用经过微调的模型，同时连接到RAG系统，以同时获得专业化行为和及时信息的优势。您的分析体系应作为一个起点，用于迭代构建、测试和完善您的方法，从而为您的特定应用获得最佳效果。</p>",
+  "slug": "when-to-fine-tune",
+  "updates": [],
+  "references": [
+    {
+      "id": 19905,
+      "title": "A Survey of Large Language Models",
+      "author": "Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.18223",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2303.18223",
+      "doi": "10.48550/arXiv.2303.18223",
+      "note": "一项关于大型语言模型的全面调查，内容包括各种训练和模型适应技术，如微调。",
+      "order": 3,
+      "created_at": "2025-09-06T13:16:44.091474Z",
+      "updated_at": "2025-09-08T03:54:16.242032Z"
+    },
+    {
+      "id": 19906,
+      "title": "Fine-tuning Guide",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/fine-tuning",
+      "doi": "",
+      "note": "官方指南，详细介绍了微调OpenAI模型的流程和实际考量，包括与其他方法相比微调最有益的情境。",
+      "order": 4,
+      "created_at": "2025-09-06T13:16:44.094217Z",
+      "updated_at": "2025-09-08T03:54:18.832991Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7404,
+  "title": "LangChain 的核心架构",
+  "meta_title": "LangChain 核心架构解析",
+  "meta_description": "LangChain 主要组成部分的概览：模型、提示、链、检索、记忆和代理。",
+  "content": "<p>LangChain 围绕一组模块化、可组合的组件进行构建。它不是一个单一、固定的系统，而是一系列可以组合起来构建复杂应用的构建单元。这种架构通过为常见任务提供标准接口和实现，简化了开发工作。您将用到的六个主要组件类别是：模型、提示、链、检索、记忆和代理。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1lgyvf7\" \n              data-graph-definition='digraph G { rankdir=TB; splines=true; nodesep=0.6; ranksep=0.8; bgcolor=\"transparent\"; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fontsize=10, margin=\"0.15,0.15\"]; edge [fontname=\"sans-serif\", fontsize=9]; Chain [label=\"链\", fillcolor=\"#9775fa\", fontcolor=\"white\"]; Agent [label=\"代理\", fillcolor=\"#cc5de8\", fontcolor=\"white\"]; Model [label=\"模型\", fillcolor=\"#74c0fc\"]; Prompt [label=\"提示\", fillcolor=\"#ffe066\"]; Memory [label=\"记忆\", fillcolor=\"#f783ac\"]; Retrieval [label=\"检索\", fillcolor=\"#63e6be\"]; Tools [label=\"工具\", fillcolor=\"#ffa94d\"]; Prompt -> Model [label=\"提供指令\"]; Model -> Chain; Chain -> Model; Chain -> Memory [dir=both, style=dashed, label=\"读写状态\"]; Retrieval -> Chain [label=\"获取上下文\"]; Agent -> Tools [label=\"执行动作\"]; Agent -> Model [style=dashed, label=\"推理循环\"]; Model -> Agent [style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1lgyvf7\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LangChain 各主要组件间的关联。链和代理作为应用逻辑，协调对模型的调用，这些模型由提示引导。记忆提供状态，而检索连接外部数据，工具则为代理提供外部能力。</p>\n</blockquote>\n<h3>模型</h3>\n<p>任何 LLM 应用的核心都是模型本身。LangChain 提供了一个标准化接口，用于与来自 OpenAI、Cohere 和 Hugging Face 等提供商的众多不同语言模型进行交互。这种抽象使得在模型之间切换变得简单，只需最少的代码改动。该框架区分两种模型类型：</p>\n<ul>\n<li><strong>大型语言模型（LLMs）：</strong> 这是对那些接收单个字符串作为输入并返回单个字符串作为输出的模型的封装。它适合简单的文本补全任务。</li>\n<li><strong>聊天模型：</strong> 这个接口结构更规整，接收聊天消息列表作为输入，并返回由 AI 生成的聊天消息。这种格式是为对话交互而设，通常比更简单的 LLM 接口能处理更多样化的任务。</li>\n</ul>\n<h3>提示</h3>\n<p>模型需要指令才能生成所需输出。提示是给模型的指令集。虽然您可以硬编码这些指令，但应用通常需要根据用户输入或其他变量动态生成提示。</p>\n<p>LangChain 的 <code>PromptTemplate</code> 类促成此事。它让您定义一个带有变量占位符的模板字符串。然后，您可以使用输入值格式化该模板，为模型生成一个完整的提示。此组件是创建可复用、灵活和易于维护提示的必要部分。</p>\n<h3>链</h3>\n<p>链用于将多个组件组合成一个单一、连贯的应用。它们让您可以按序调用模型、工具或数据处理步骤。构建这些序列的标准方式是使用 LangChain 表达式语言 (LCEL)。这种声明式方法让您可以将 <code>PromptTemplate</code> 连接到 <code>Model</code>，再连接到输出解析器。</p>\n<p>对于更复杂的工作流程，链可以根据逻辑将数据路由到不同步骤，或并行运行操作。这取代了传统的基于类的链，代之以更透明、更可定制的管道语法，实现构建可靠的多步骤工作流程。</p>\n<h3>检索</h3>\n<p>语言模型通常在固定数据集上训练，因此不了解您的私有数据。检索组件构造您的文档，以便模型能够有效处理它们。这是检索增强生成 (RAG) 的根基，应用首先从外部源获取相关数据，然后将其与用户查询一同传递给模型。</p>\n<p>检索的工作流程包含四个主要步骤：</p>\n<ol>\n<li><strong>文档加载器</strong> 从源头获取数据，例如文本文件、PDF 或网站。</li>\n<li><strong>文本分块器</strong> 将大型文档切分为更小、有语义意义的片段。</li>\n<li><strong>嵌入 (embedding)模型</strong> 将这些片段转换为数值向量 (vector)。</li>\n<li><strong>向量存储</strong> 存储这些向量，并提供高效方法来查找与用户查询相似的向量。</li>\n</ol>\n<h3>记忆</h3>\n<p>默认情况下，链和代理是无状态的，这意味着它们独立处理每个传入请求。对于许多应用，例如聊天机器人，记住以前的交互不可或缺。记忆是使应用能够在不同调用之间保持状态的想法。</p>\n<p>LangChain 提供管理此历史的实用程序。例如，您可以使用可运行的历史类来保持对话的运行日志，确保聊天机器人可以引用交流的早期部分。此上下文 (context)随后被注入到下一次交互的提示中，使模型能回溯以前的交流。</p>\n<h3>代理</h3>\n<p>链执行预定步骤序列，而代理则使用模型作为推理 (inference)引擎，决定采取哪些行动以及按什么顺序。代理可访问一套工具，并根据用户输入决定使用哪些工具。</p>\n<p>代理架构包含几个部分：</p>\n<ul>\n<li><strong>工具：</strong> 这些是代理可以调用的函数，例如 Google 搜索工具、数据库查询或 Python 解释器。</li>\n<li><strong>代理：</strong> 这是使用模型决定下一步行动的核心逻辑。它在循环中运行：接收输入，考虑下一步，选择一个工具，并观察工具的输出，重复直到任务完成。</li>\n<li><strong>代理运行时：</strong> 这是执行代理选定行动并管理循环的环境。虽然 <code>AgentExecutor</code> 是最初的运行时，但较新的方法通常使用基于图的执行，以对代理的状态转换有更大的控制权。</li>\n</ul>\n<p>这六个组件构成一套全面的工具包，用于构建超越简单文本生成的应用。通过了解它们的作用，您可以组合它们来创建数据感知、有状态和自主的系统。</p>",
+  "slug": "langchain-core-architecture",
+  "updates": [],
+  "references": [
+    {
+      "id": 14687,
+      "title": "LangChain Documentation",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.langchain.com/docs/",
+      "doi": "",
+      "note": "这是了解 LangChain 模块化架构、模型、提示、链、索引、内存和代理等组件及其实际应用的最官方和最全面的资源。",
+      "order": 1,
+      "created_at": "2025-09-05T09:00:35.076409Z",
+      "updated_at": "2025-09-11T04:16:44.192018Z"
+    },
+    {
+      "id": 14688,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Narsimha Chatti, Mike Lewis, Kyunghyun Cho, and Douwe van der Plas",
+      "year": "2020",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "9459-9474",
+      "url": "https://papers.neurips.cc/paper/2020/file/6b4932302831206badd6f296d115456e-Paper.pdf",
+      "doi": "10.55919/neurips.2020.01017",
+      "note": "介绍了检索增强生成 (RAG) 范式，它是 LangChain “索引”组件的概念基础，使模型能够与外部数据交互。",
+      "order": 2,
+      "created_at": "2025-09-05T09:00:35.086698Z",
+      "updated_at": "2025-09-11T04:18:06.495570Z"
+    },
+    {
+      "id": 14689,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.03629",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "描述了 ReAct 框架，该框架为 LLM 代理提供了一种通用的推理、规划和与工具交互的方法，与 LangChain 的“代理”组件直接相关。",
+      "order": 3,
+      "created_at": "2025-09-05T09:00:35.089270Z",
+      "updated_at": "2025-09-11T04:16:39.210086Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

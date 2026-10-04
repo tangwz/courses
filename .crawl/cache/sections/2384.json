@@ -1,0 +1,61 @@
+{
+  "id": 2384,
+  "title": "处理特定异常类型",
+  "meta_title": "处理特定 Python 异常 | 捕获错误",
+  "meta_description": "了解如何捕获特定类型的异常（例如，ValueError、TypeError、FileNotFoundError），以实现更有针对性的错误处理。",
+  "content": "<p>为管理运行时问题，开发人员通常使用 <code>try...except</code> 块。虽然 <code>try...except</code> 块能够捕获其关联代码中发生的任何错误，但这种普遍的处理方式有时会适得其反。想象一下，用一张大到足以捕捞湖中所有东西（包括碎屑和您不想要的物品）的网去捕鱼。同样，捕获<em>所有</em>可能的异常可能会掩盖您<em>应该</em>注意到的意外错误或问题。例如，当您只期望 <code>ValueError</code> 时，可能会抑制 <code>TypeError</code>，这会使您的程序以后调试起来更困难。</p>\n<p>Python 允许您通过在 <code>except</code> 子句中指定要处理的异常<em>类型</em>来做到更精确。这使得您的代码更可预测且易于理解。</p>\n<h3>捕获单个特定异常</h3>\n<p>改进错误处理的最常用方法是捕获特定的异常类。让我们重新查看将用户输入转换为整数的示例：</p>\n<pre><code class=\"language-python\">user_input = input(\"请输入您的年龄：\")\ntry:\n    age = int(user_input)\n    print(f\"明年您将是 {age + 1} 岁。\")\n# 只捕获 ValueError 异常\nexcept ValueError:\n    print(f\"输入无效：'{user_input}' 不是一个有效的整数。\")\n\nprint(\"程序继续运行...\")\n</code></pre>\n<p>在这段修改后的代码中，<code>except ValueError:</code> 块<em>只有</em>在 <code>int()</code> 函数引发 <code>ValueError</code> 时才会执行。这通常发生在用户输入无法被解释为整数的文本时（例如“twenty”或“abc”）。如果 <code>try</code> 块内发生不同类型的错误（例如，如果 <code>user_input</code> 某种方式是 <code>None</code> 而引发 <code>TypeError</code>，尽管在这里不太可能），这个 <code>except</code> 块将<em>不会</em>捕获它。错误将向上 E 传递，可能停止程序，这正是您希望针对意想不到的问题而发生的情况。</p>\n<h3>处理多个特定异常</h3>\n<p>如果一段代码可能引发几种不同类型的错误，并且您想以不同方式处理它们怎么办？您可以包含多个 <code>except</code> 子句，一个接一个，每个子句指定一个不同的异常类型。Python 将按顺序检查它们，并执行<em>第一个</em>匹配引发异常的子句。</p>\n<p>考虑一个根据用户输入执行除法的场景：</p>\n<pre><code class=\"language-python\">try:\n    numerator_str = input(\"请输入分子：\")\n    denominator_str = input(\"请输入分母：\")\n\n    numerator = int(numerator_str)\n    denominator = int(denominator_str)\n\n    result = numerator / denominator\n    print(f\"结果是：{result}\")\n\nexcept ValueError:\n    print(\"输入无效。请只输入整数。\")\nexcept ZeroDivisionError:\n    print(\"错误：不能除以零。\")\n\nprint(\"计算尝试结束。\")\n</code></pre>\n<p>这里：</p>\n<ol>\n<li>如果用户输入非数字文本（例如，“ten”），<code>int()</code> 会引发 <code>ValueError</code>。第一个 <code>except ValueError:</code> 块会捕获它。</li>\n<li>如果用户输入数字文本但分母提供 '0'，除法操作（<code>/</code>）会引发 <code>ZeroDivisionError</code>。第二个 <code>except ZeroDivisionError:</code> 块会捕获它。</li>\n<li>如果发生任何其他意想不到的错误（例如，在资源非常受限的系统上发生 <code>MemoryError</code>），这些块都不会处理它，程序可能会停止，提醒您一个未预见的问题。</li>\n</ol>\n<h3>分组处理多个异常</h3>\n<p>有时，您可能想对几种不同的异常类型执行<em>相同</em>的操作。与其编写重复的 <code>except</code> 块，不如将异常类型分组到一个元组中，放在一个 <code>except</code> 子句内：</p>\n<pre><code class=\"language-python\">data = {'a': 1, 'b': 2}\nkey_to_access = 'c'\nindex_to_access = 5\nmy_list = [10, 20, 30]\n\ntry:\n    # 如果 key_to_access 不在 data 中，可能发生 KeyError\n    value = data[key_to_access]\n    print(f\"字典中的值：{value}\")\n\n    # 如果 index_to_access 超出范围，可能发生 IndexError\n    item = my_list[index_to_access]\n    print(f\"列表中的项：{item}\")\n\n# 使用相同的消息处理 KeyError 和 IndexError\nexcept (KeyError, IndexError):\n    print(\"错误：无法访问请求的元素（无效的键或索引）。\")\n\nprint(\"数据访问尝试结束。\")\n</code></pre>\n<p>在这种情况下，如果访问 <code>data[key_to_access]</code> 引发 <code>KeyError</code> 或访问 <code>my_list[index_to_access]</code> 引发 <code>IndexError</code>，单个 <code>except (KeyError, IndexError):</code> 块将捕获该错误并打印统一的消息。</p>\n<h3>访问异常对象</h3>\n<p>有时，您可能需要有关所发生错误的更多信息。您可以使用 <code>except</code> 子句中的 <code>as</code> 关键字来访问异常对象本身。此对象通常包含有用的详细信息，例如错误消息。</p>\n<pre><code class=\"language-python\">file_path = \"non_existent_file.txt\"\n\ntry:\n    with open(file_path, 'r') as f:\n        content = f.read()\n        print(\"文件读取成功。\")\n# 捕获 FileNotFoundError 并将异常对象存储在 'e' 中\nexcept FileNotFoundError as e:\n    print(f\"访问文件时出错：{e}\") # 打印具体的错误消息\nexcept Exception as e: # 捕获所有其他意想不到的错误\n    print(f\"发生了一个意想不到的错误：{e}\")\n\nprint(\"文件操作结束。\")\n</code></pre>\n<p>如果 <code>non_existent_file.txt</code> 不存在，就会引发 <code>FileNotFoundError</code>。<code>except FileNotFoundError as e:</code> 块会捕获它。变量 <code>e</code> 现在持有 <code>FileNotFoundError</code> 对象。打印 <code>e</code> 通常会显示与该异常关联的标准错误消息（例如，“[Errno 2] No such file or directory: 'non_existent_file.txt'”）。这对于记录错误或向用户提供更具体的反馈非常有用。</p>\n<h3>常见内置异常</h3>\n<p>当您编写更多 Python 代码时，您会遇到各种内置异常类型。以下是一些与目前涵盖的要点相关的常见类型：</p>\n<ul>\n<li><code>ValueError</code>：操作接收到正确类型但值不合适的参数 (parameter)（例如，<code>int('abc')</code>）。</li>\n<li><code>TypeError</code>：操作或函数应用于不合适类型的对象（例如，<code>'hello' + 5</code>）。</li>\n<li><code>IndexError</code>：序列下标超出范围（例如，当列表只有 3 个项时访问 <code>my_list[10]</code>）。</li>\n<li><code>KeyError</code>：字典键未找到（例如，访问 <code>my_dict['missing_key']</code>）。</li>\n<li><code>FileNotFoundError</code>：尝试打开不存在的文件（使用 <code>open()</code>）。</li>\n<li><code>ZeroDivisionError</code>：将任何数除以零。</li>\n<li><code>AttributeError</code>：尝试访问对象上不存在的属性或方法。</li>\n</ul>\n<p>通过处理特定异常，您可以创建更易于维护的程序。您明确说明您预期哪些错误以及如何从中恢复，同时让意想不到的错误指示可能需要调查的更深层问题。这种有针对性的方法是编写可靠 Python 代码的根本。</p>",
+  "slug": "python-handling-specific-exceptions",
+  "updates": [],
+  "references": [
+    {
+      "id": 5954,
+      "title": "The `try` statement",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/reference/compound_stmts.html#the-try-statement",
+      "doi": "",
+      "note": "提供了Python `try` 语句的完整描述，包括捕获特定异常的语法、处理多个 `except` 块以及访问异常对象。",
+      "order": 1,
+      "created_at": "2025-09-05T01:17:36.810897Z",
+      "updated_at": "2025-09-07T21:16:47.091426Z"
+    },
+    {
+      "id": 5955,
+      "title": "Built-in Exceptions",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/exceptions.html",
+      "doi": "",
+      "note": "列出了并描述了Python中所有标准的内置异常，提供了 `ValueError`、`TypeError`、`IndexError` 和 `ZeroDivisionError` 等常见类型的定义。",
+      "order": 2,
+      "created_at": "2025-09-05T01:17:36.820917Z",
+      "updated_at": "2025-09-07T21:16:50.409258Z"
+    },
+    {
+      "id": 5956,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "一本广泛推荐的Python学习书籍，此版本提供了处理异常的实际示例和解释，适合基础编程概念。",
+      "order": 3,
+      "created_at": "2025-09-05T01:17:36.823860Z",
+      "updated_at": "2025-09-07T21:16:47.130500Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

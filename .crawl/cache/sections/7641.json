@@ -1,0 +1,61 @@
+{
+  "id": 7641,
+  "title": "PyTorch Geometric (PyG) 简介",
+  "meta_title": "PyTorch Geometric (PyG) 库简介",
+  "meta_description": "PyTorch Geometric (PyG) 概述，这是一个基于 PyTorch 构建的库，用于轻松编写和训练适用于各种应用的 GNN。",
+  "content": "<p>在实际的模型开发中，虽然从零开始构建消息传递层有助于理解底层机制，但这通常不是一种可扩展的方法。手动管理稀疏邻接矩阵并实现高效的聚合操作既复杂又容易出错。为了高效实现 GNN，我们需要一套专门的工具。PyTorch Geometric（通常简称为 PyG）为这些挑战提供了全面的解决方案。</p>\n<p>PyTorch Geometric 是一个基于 PyTorch 构建的库，专为图和其他不规则数据结构的深度学习 (deep learning)而设计。由 Matthias Fey 开发的 PyG 在 PyTorch 熟悉的 API 基础上，增加了一系列针对图机器学习 (machine learning)优化的工具，使其成为开发 GNN 最流行的框架之一。</p>\n<h3>为什么要使用 PyTorch Geometric？</h3>\n<p>PyG 提供了一系列经过充分测试且高度优化的构建模块，无需为每个新的 GNN 架构重复造轮子。与手动实现相比，采用 PyG 这样的库具有几个显著优势。</p>\n<h4>优化的性能</h4>\n<p>图操作，特别是大规模图上的消息传递，计算开销可能非常大。用 Python 进行的简单实现对于严肃的应用来说速度太慢。PyG 的核心例程使用了专门的 C++ 和 CUDA 内核，确保邻域聚合等操作在 CPU 和 GPU 上都能高效执行。这种性能优化使你能够在合理的时间内，在拥有数百万个节点和边的图上训练模型。</p>\n<h4>模块化与易用性</h4>\n<p>PyG 直接集成到 PyTorch 生态系统中。其 <code>torch_geometric.nn</code> 模块中的 GNN 层被设计为标准的 PyTorch <code>nn.Module</code> 对象。这意味着你可以像构建 CNN 或 MLP 一样轻松地构建 GNN。例如，图卷积网络层可以用 <code>GCNConv</code> 表示，图注意力网络层可以用 <code>GATConv</code> 表示。你可以堆叠这些层，将它们与 <code>nn.Linear</code> 或 <code>nn.ReLU</code> 等标准 PyTorch 层组合，并以极少的样板代码构建复杂的架构。</p>\n<h4>专门的数据处理</h4>\n<p>正如我们在第一章中所见，用稠密邻接矩阵表示图对于稀疏网络来说非常消耗内存且效率低下。PyG 通过专门的数据对象高效处理图结构，主要通过对边使用稀疏坐标 (COO) 格式。这种方法（我们将在下一节讨论）大幅减少了内存占用和计算开销。</p>\n<h3>是扩展而非替代</h3>\n<p>理解 PyG 不是一个独立的框架这一点非常重要。它是为 PyTorch 增加图处理能力的扩展。在大多数深度学习 (deep learning)工作流中，你仍然会使用 PyTorch 的核心组件：</p>\n<ul>\n<li><strong>张量 (Tensors)：</strong> 所有节点特征、边索引和模型参数 (parameter)都是标准的 <code>torch.Tensor</code> 对象。</li>\n<li><strong>自动求导 (Autograd)：</strong> PyTorch 的自动微分引擎会跟踪这些张量上的所有操作，从而实现 GNN 层的直接反向传播 (backpropagation)。</li>\n<li><strong>优化器 (Optimizers)：</strong> 你将使用熟悉的优化器（如 <code>torch.optim.Adam</code>）来训练模型。</li>\n<li><strong>损失函数 (loss function) (Loss Functions)：</strong> 标准损失函数（如 <code>torch.nn.CrossEntropyLoss</code>）可以直接与 GNN 模型的输出配合使用。</li>\n</ul>\n<p>下图展示了 PyG 如何在 PyTorch 核心基础上构建，并增加了用于图数据、神经网络 (neural network)层和数据加载的专门模块。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-11odh7z\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, margin=\"0.2,0.1\"];\n    edge [arrowhead=vee, penwidth=1.5];\n    subgraph cluster_pytorch {\n        label=\"PyTorch 核心\";\n        bgcolor=\"#a5d8ff\";\n        style=filled;\n        color=\"#74c0fc\";\n        torch_nn [label=\"torch.nn\\n(线性层, ReLU, ...)\", fillcolor=\"#e9ecef\"];\n        torch_optim [label=\"torch.optim\\n(Adam, SGD, ...)\", fillcolor=\"#e9ecef\"];\n        torch_tensor [label=\"torch.Tensor\\n自动求导引擎\", fillcolor=\"#e9ecef\"];\n        torch_tensor -> torch_nn;\n        torch_tensor -> torch_optim;\n    }\n    subgraph cluster_pyg {\n        label=\"PyTorch Geometric (PyG) 扩展\";\n        bgcolor=\"#b2f2bb\";\n        style=filled;\n        color=\"#8ce99a\";\n        pyg_nn [label=\"torch_geometric.nn\\n(GCNConv, GATConv, ...)\", fillcolor=\"#e9ecef\"];\n        pyg_data [label=\"torch_geometric.data\\n(数据对象, 数据集)\", fillcolor=\"#e9ecef\"];\n        pyg_loader [label=\"torch_geometric.loader\\n(数据加载器)\", fillcolor=\"#e9ecef\"];\n    }\n    torch_nn -> pyg_nn [label=\" 扩展\", style=dashed, fontcolor=\"#495057\"];\n    torch_tensor -> pyg_data [label=\" 使用\", style=dashed, fontcolor=\"#495057\"];\n    pyg_data -> pyg_loader [label=\" 被其使用\", style=dashed, fontcolor=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-11odh7z\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>PyTorch Geometric 在 PyTorch 核心之上增加了专门的图模块。它利用 PyTorch 的张量和自动求导功能，同时提供用于图表示和 GNN 层的专用组件。</p>\n</blockquote>\n<p>在本章中，我们将重点介绍 PyG 提供的主要组件。我们将从表示单个图的 <code>Data</code> 对象开始，然后学习使用 PyG 预构建的数据集和层来构建完整且高效的 GNN 模型。</p>",
+  "slug": "introduction-pytorch-geometric",
+  "updates": [],
+  "references": [
+    {
+      "id": 21454,
+      "title": "PyTorch Geometric: A Library for Deep Learning on Graphs",
+      "author": "Matthias Fey, Jan Eric Lenssen",
+      "year": "2019",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1903.02428",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1903.02428",
+      "doi": "10.48550/arXiv.1903.02428",
+      "note": "介绍PyTorch Geometric，概述其设计、主要特性和针对图深度学习的性能优化。",
+      "order": 1,
+      "created_at": "2025-09-30T09:30:29.701325Z",
+      "updated_at": "2025-09-30T09:43:53.927188Z"
+    },
+    {
+      "id": 21455,
+      "title": "PyTorch Geometric Documentation",
+      "author": "PyTorch Geometric Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch-geometric.readthedocs.io/",
+      "doi": "",
+      "note": "PyTorch Geometric的官方资源，提供API、教程和示例，保持最新。",
+      "order": 2,
+      "created_at": "2025-09-30T09:30:29.708508Z",
+      "updated_at": "2025-09-30T09:43:56.228759Z"
+    },
+    {
+      "id": 21456,
+      "title": "A Comprehensive Survey on Graph Neural Networks",
+      "author": "Zonghan Wu, Shirui Pan, Fangzhao Wu, Xindong Wu, and Chengqi Zhang",
+      "year": "2021",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Neural Networks and Learning Systems",
+      "volume": "32",
+      "pages": "4-24",
+      "url": "https://ieeexplore.ieee.org/document/9046288",
+      "doi": "10.1109/TNNLS.2020.2987520",
+      "note": "广泛回顾图神经网络，阐述PyG所实现的各种架构及其理论基础。",
+      "order": 3,
+      "created_at": "2025-09-30T09:30:29.711236Z",
+      "updated_at": "2025-09-30T09:43:54.719612Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

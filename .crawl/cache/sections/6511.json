@@ -1,0 +1,61 @@
+{
+  "id": 6511,
+  "title": "不同数据类型的基本预处理",
+  "meta_title": "多模态AI数据预处理：概述",
+  "meta_description": "学习AI中文本、图像和音频模态所需的基本数据预处理步骤。",
+  "content": "<p>在AI模型开始从不同类型数据中学习之前，原始数据本身需要清洗和结构化。可以把原始数据想象成刚从花园采摘的食材；它们需要经过清洗和切碎才能用于烹饪食谱。这个准备阶段被称为预处理。它的目的是将数据转换为一致且可用的格式，使AI算法能够更轻松地进行处理和有效学习。具体步骤可能因数据类型和要解决的问题而异，但一些基本方法被广泛应用。</p>\n<p>我们来看看常见的预处理步骤，针对文本、图像和音频数据。</p>\n<h3>文本预处理</h3>\n<p>文本数据，比如文章、评论或消息，是非结构化的，需要大量的整理工作。以下是一些常用步骤:</p>\n<ol>\n<li>\n<p><strong>转换为小写:</strong>\n将所有文本转换为单一大小写，通常是小写。这确保了像“Apple”（公司）和“apple”（水果，或句子开头的公司名）这样的词被视为同一个词，如果它们的大小写对于当前任务在语义上不重要的话。例如，“The Cat sat.”变为“the cat sat.”。</p>\n</li>\n<li>\n<p><strong>标点符号去除:</strong>\n去除句号、逗号、感叹号和问号等标点符号（例如 <code>.</code>、<code>,</code>、<code>!</code>、<code>?</code>）。尽管标点符号为人类提供了语法结构，但对于简单的AI模型来说，它有时可能被视为噪音。因此，“the cat sat.”可能会变成“the cat sat”。</p>\n</li>\n<li>\n<p><strong>分词 (tokenization):</strong>\n将文本分解成称为“词元 (token)”（token）的独立单元。最常见的是，词元是单词，但它们也可以是字符或子词 (subword)单元。例如，“the cat sat”被分词为 <code>[\"the\", \"cat\", \"sat\"]</code>。</p>\n</li>\n<li>\n<p><strong>停用词移除:</strong>\n移除那些频繁出现但在许多任务中通常不携带太多特定意义的常用词。示例包括“the”、“a”、“an”、“is”、“in”、“on”。从 <code>[\"the\", \"cat\", \"sat\", \"on\", \"the\", \"mat\"]</code> 中移除停用词后，你可能会得到 <code>[\"cat\", \"sat\", \"mat\"]</code>。停用词的具体列表可以自定义。</p>\n</li>\n<li>\n<p><strong>词干提取和词形还原:</strong>\n将单词简化为其基础或词根形式。</p>\n<ul>\n<li><strong>词干提取:</strong> 一种更简单的处理，通常涉及截断单词的末尾。例如，“running”、“runner”和“ran”都可能被提取词干为“run”。它速度快，但有时会产生非词典词。</li>\n<li><strong>词形还原:</strong> 一种更精细的处理，它会考虑单词的含义，并使用词汇表 (vocabulary)（词形字典）将单词还原为其词典形式，称为“引理”。例如，“ran”会被还原为“run”，“better”可能会被还原为“good”。词形还原通常比词干提取更准确，但计算量更大。</li>\n</ul>\n</li>\n</ol>\n<p>这些文本预处理步骤有助于标准化文本数据，减少词汇量，并使AI模型更容易发现规律。下图展示了文本预处理的典型操作流程:</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-908uue\" \n              data-graph-definition='digraph G { rankdir=TB; bgcolor=\"transparent\"; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"]; edge [color=\"#495057\", fontname=\"sans-serif\"]; \"原始文本\" -> \"转换为小写\" [label=\" 例如，&#39;Hello!&#39; → &#39;hello!&#39;\"]; \"转换为小写\" -> \"标点符号去除\" [label=\" 例如，&#39;hello!&#39; → &#39;hello&#39;\"]; \"标点符号去除\" -> \"分词\" [label=\" 例如，&#39;hello world&#39; → [&#39;hello&#39;, &#39;world&#39;]\"]; \"分词\" -> \"停用词移除\" [label=\" 例如，[&#39;the&#39;, &#39;cat&#39;] → [&#39;cat&#39;]\"]; \"停用词移除\" -> \"词干提取 / 词形还原\" [label=\" 例如，[&#39;cats&#39;, &#39;running&#39;] → [&#39;cat&#39;, &#39;run&#39;]\"]; \"词干提取 / 词形还原\" -> \"预处理后的词元\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-908uue\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>常见的文本预处理步骤序列，将原始文本转换为更结构化的词元格式。</p>\n</blockquote>\n<h3>图像预处理</h3>\n<p>图像数据，如你所知，是以像素值网格形式表示的，同样需要准备工作:</p>\n<ol>\n<li>\n<p><strong>调整大小或缩放:</strong>\n图像具有各种尺寸。大多数AI模型，特别是神经网络 (neural network)，期望固定大小的输入。因此，图像通常被调整为标准的高度和宽度（例如，224x224像素或256x256像素）。这可能涉及放大或缩小图像，有时还包括裁剪。</p>\n</li>\n<li>\n<p><strong>归一化 (normalization):</strong>\n像素值通常在0到255的范围内。归一化将这些值缩放到一个更小、更标准的范围，例如0到1或-1到1。将像素值归一化到[0, 1]范围的常见方法是将每个像素值 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>I</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">,</mo><mi>y</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">I(x,y)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">I</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mclose\">)</span></span></span></span> 除以255:</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><msub><mi>I</mi><mtext>归一化</mtext></msub><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">,</mo><mi>y</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mfrac><mrow><mi>I</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo separator=\"true\">,</mo><mi>y</mi><mo stretchy=\"false\">)</mo></mrow><mn>255</mn></mfrac></mrow><annotation encoding=\"application/x-tex\">I_{\\text{归一化}}(x,y) = \\frac{I(x,y)}{255}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">I</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3283em;\"><span style=\"top:-2.55em;margin-left:-0.0785em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord text mtight\"><span class=\"mord cjk_fallback mtight\">归一化</span></span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.113em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.427em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">255</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0785em;\">I</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mclose\">)</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></span>\n<p>归一化有助于稳定并加速许多AI模型的训练过程。</p>\n</li>\n<li>\n<p><strong>灰度化:</strong>\n对于某些任务，颜色信息可能不是必需的，甚至可能造成干扰。在这种情况下，彩色图像可以转换为灰度图像。这减少了每张图像的数据量（从通常的红、绿、蓝三个颜色通道减少到一个亮度通道），简化了模型的输入。</p>\n</li>\n<li>\n<p><strong>数据增强（概览）:</strong>\n尽管有时被视为一个单独的步骤，但数据增强技术常在预处理期间应用。这些技术通过应用随机变换，如旋转、翻转、缩放或亮度调整，来创建现有图像的修改版本。这人为地增加了训练数据集的大小和多样性，有助于模型更好地泛化到新的、未见过的图像。我们在此不会详细讨论，但它是一种非常普遍的做法。</p>\n</li>\n</ol>\n<h3>音频预处理</h3>\n<p>音频信号，以波形或派生特征表示，同样从预处理中受益:</p>\n<ol>\n<li>\n<p><strong>重采样:</strong>\n音频可以以不同的采样率（每秒采集的音频样本数量，以赫兹或千赫兹为单位）录制。为了保持一致性，数据集中的所有音频文件通常都会被重采样到统一的采样率，例如16 kHz（常用于语音）或44.1 kHz（CD质量）。</p>\n</li>\n<li>\n<p><strong>归一化 (normalization)（幅度缩放）:</strong>\n音频信号可能具有不同的响度级别。归一化将音频波形的幅度调整到标准范围，例如-1到1之间。这可以避免幅度过高或过低的片段对模型产生不成比例的影响。</p>\n</li>\n<li>\n<p><strong>降噪:</strong>\n录音通常包含背景噪音。可以应用各种技术，从简单的滤波器到更复杂的算法，来减少或消除这种噪音，使基础信号（如语音或音乐）更清晰。</p>\n</li>\n<li>\n<p><strong>分帧与加窗:</strong>\n音频信号通常是非平稳的，这意味着它们的统计特性随时间变化。为了处理这种情况，长音频信号通常被分割成短的、经常重叠的帧（例如，20-30毫秒长）。对每一帧应用一个加窗函数（如汉明窗）以平滑边缘并在分析频率时减少频谱泄漏。</p>\n</li>\n</ol>\n<h3>视频预处理</h3>\n<p>如你所知，视频数据结合了图像序列（帧）和音频轨道。视频数据预处理通常涉及将上述图像预处理技术应用于每一帧（例如，调整大小、归一化 (normalization)），并将音频预处理技术应用于伴随的音频流。</p>\n<p>这些针对视频的预处理可能包括:</p>\n<ul>\n<li><strong>帧率转换:</strong> 确保所有视频具有一致的每秒帧数（FPS）。</li>\n<li><strong>时间分割:</strong> 将视频分割成更小的片段或部分，类似于音频的分帧方式。</li>\n</ul>\n<p>针对任何模态的具体预处理步骤是根据AI模型的要求和任务性质来选择的。这些初步准备对于确保输入到AI系统的数据是干净、一致且有利于学习的格式非常重要。一旦对单个数据模态进行了适当的预处理，我们就可以开始思考如何在多模态 (multimodal)系统中有效结合它们。</p>",
+  "slug": "basic-preprocessing-data-types",
+  "updates": [],
+  "references": [
+    {
+      "id": 18240,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "本书是深度学习的通用参考文献，涵盖了数据表示、归一化以及为神经网络准备数据的一般原则等基础概念，适用于多种模态。",
+      "order": 1,
+      "created_at": "2025-09-06T12:19:46.348796Z",
+      "updated_at": "2025-09-10T06:55:54.766237Z"
+    },
+    {
+      "id": 18241,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "自然语言处理和语音识别领域的标准教材，提供了对文本预处理技术（如分词、词干提取、词形还原和停用词移除）的解释，同时介绍了语音处理的基础知识。",
+      "order": 2,
+      "created_at": "2025-09-06T12:19:46.352002Z",
+      "updated_at": "2025-09-10T06:55:59.062601Z"
+    },
+    {
+      "id": 18242,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "在计算机视觉深度学习背景下，对图像数据预处理（包括调整大小、归一化和增强）提供了实用和概念性解释。",
+      "order": 3,
+      "created_at": "2025-09-06T12:19:46.354190Z",
+      "updated_at": "2025-09-10T06:55:53.844688Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

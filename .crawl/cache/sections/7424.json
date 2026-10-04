@@ -1,0 +1,45 @@
+{
+  "id": 7424,
+  "title": "长对话的摘要记忆",
+  "meta_title": "使用 ConversationSummaryMemory",
+  "meta_description": "通过使用 ConversationSummaryMemory 凝练对话历史并节省 token，高效管理长对话。",
+  "content": "<p>虽然 <code>ConversationBufferMemory</code> 通过存储每条消息提供完美的记忆，但随着对话增长，其效果会减弱。完整的历史记录会迅速超出 LLM 的上下文 (context)窗口限制，导致错误，并增加每次 API 调用的 token 成本。这种方式对于为长时间交互设计的应用来说是不可持续的。</p>\n<p>为解决此扩展问题，LangChain 提供了 <code>ConversationSummaryMemory</code>。它不保留逐字记录，而是使用语言模型创建交互的运行摘要。随着对话进行，摘要会持续更新，纳入新的交流，保持上下文简明且易于管理。</p>\n<h3>摘要记忆如何运作</h3>\n<p>核心机制包含一个额外的 LLM 调用，专门用于压缩对话历史。在每次用户-AI 交流后，记忆组件会获取现有摘要，附加最新消息。并请求 LLM 生成一个新的、更新后的摘要。这个新摘要随后会替换记忆缓冲区中的旧摘要。当链下次被调用时，传递给主 LLM 的将是这个精炼过的摘要，而非完整的聊天记录，同时伴随着新的用户输入。</p>\n<p>这一过程有效地用完美的记忆换取了可扩展性。它使得应用能够在非常长的对话中保持上下文 (context)感知，而不会触及 token 限制。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1yjjzf4\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_0 {\n    label=\"交互流程\";\n    bgcolor=\"#e9ecef\";\n    \n    user_input [label=\"1. 用户输入\\n(例如, &#39;第一个话题是什么？&#39;)\", fillcolor=\"#a5d8ff\"];\n    chain [label=\"2. 对话链\", fillcolor=\"#ced4da\"];\n    memory [label=\"3. 从记忆中获取摘要\", fillcolor=\"#ffec99\"];\n    prompt [label=\"4. 构建提示\", fillcolor=\"#bac8ff\"];\n    llm [label=\"5. 主LLM调用\", fillcolor=\"#b2f2bb\"];\n    response [label=\"6. AI回应\", fillcolor=\"#ced4da\"];\n    user_output [label=\"7. 发送给用户\", fillcolor=\"#a5d8ff\"];\n    \n    user_input -> chain;\n    chain -> memory;\n    memory -> prompt [label=\"当前摘要\"];\n    user_input -> prompt [label=\"新输入\"];\n    prompt -> llm;\n    llm -> response;\n    response -> user_output;\n  }\n\n  subgraph cluster_1 {\n    label=\"记忆更新周期\";\n    bgcolor=\"#e9ecef\";\n    \n    update_trigger [label=\"8. 交流后\", fillcolor=\"#ced4da\"];\n    prepare_summary [label=\"9. 为摘要器准备数据\", fillcolor=\"#ffec99\"];\n    summarizer_llm [label=\"10. 摘要器LLM调用\", fillcolor=\"#fcc2d7\"];\n    new_summary [label=\"11. 存储新摘要\", fillcolor=\"#ffd8a8\"];\n\n    response -> update_trigger [style=dashed];\n    update_trigger -> prepare_summary [label=\"旧摘要 + 新消息\"];\n    prepare_summary -> summarizer_llm;\n    summarizer_llm -> new_summary;\n  }\n\n  user_output -> update_trigger [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1yjjzf4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用摘要记忆的应用流程。主交互之后会进行一次单独的 LLM 调用，以更新对话摘要。</p>\n</blockquote>\n<h3>实现 ConversationSummaryMemory</h3>\n<p>将此应用于实践与其他记忆类型的使用类似，但有一个主要的区别：你必须向记忆对象本身提供一个 LLM，因为它需要一个 LLM 来执行摘要。</p>\n<p>让我们设置一个使用 <code>ConversationSummaryMemory</code> 的 <code>ConversationChain</code>。我们将在每次交互后打印记忆缓冲区的内容，以观察摘要如何变化。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\nfrom langchain.chains import ConversationChain\nfrom langchain.memory import ConversationSummaryMemory\n\n# 设置你的OpenAI API密钥\n# os.environ[\"OPENAI_API_KEY\"] = \"YOUR_API_KEY\"\n\n# 初始化链和记忆摘要器所需的LLM\n# 使用如 gpt-4o 或 gpt-3.5-turbo 这样的聊天模型\nllm = ChatOpenAI(model=\"gpt-4o\", temperature=0)\n\n# 初始化 ConversationSummaryMemory\n# 需要 LLM 来生成摘要\nsummary_memory = ConversationSummaryMemory(llm=llm)\n\n# 创建 ConversationChain\nconversation_with_summary = ConversationChain(\n    llm=llm,\n    memory=summary_memory,\n    verbose=True # 设置为 True 可以查看发送给 LLM 的提示\n)\n\n# 第一次交互\nconversation_with_summary.predict(input=\"你好，我叫 Alex，我对机器学习感兴趣。\")\nprint(f\"记忆缓冲区：\\n{summary_memory.buffer}\\n\")\n\n# 第二次交互\nconversation_with_summary.predict(input=\"我对强化学习特别感兴趣。你能推荐一个好的起点吗？\")\nprint(f\"记忆缓冲区：\\n{summary_memory.buffer}\\n\")\n\n# 第三次交互\nconversation_with_summary.predict(input=\"听起来不错。我叫什么名字？\")\nprint(f\"记忆缓冲区：\\n{summary_memory.buffer}\\n\")\n</code></pre>\n<p>运行此代码时，请密切关注链的 <code>verbose</code> 输出以及打印出的记忆缓冲区。</p>\n<p><strong>第一次交互输出：</strong>\n初始提示很简单。交流之后，记忆缓冲区包含了一个新的摘要。</p>\n<pre><code>Memory Buffer:\n\nThe human introduces themselves as Alex and expresses an interest in machine learning. The AI responds by offering to provide information on the topic.\n</code></pre>\n<p><strong>第二次交互输出：</strong>\n请注意，发送给 LLM 的提示现在包含了第一次交互的摘要，而非原始文本。第二次交流后，摘要再次更新。</p>\n<pre><code>Memory Buffer:\n\nThe human, Alex, is interested in machine learning, specifically reinforcement learning. The AI suggests starting with the book \"Reinforcement Learning: An Introduction\" by Sutton and Barto.\n</code></pre>\n<p><strong>第三次交互输出：</strong>\nLLM 正确地记起了用户的名字，因为这个名字保存在运行中的摘要里。</p>\n<pre><code>> 进入新的 ConversationChain 链...\n格式化后的提示：\n以下是人类与 AI 之间的友好对话。AI 健谈，并提供来自其上下文的许多具体细节。如果 AI 不知道问题的答案，它会如实说明。\n\n当前对话：\nThe human, Alex, is interested in machine learning, specifically reinforcement learning. The AI suggests starting with the book \"Reinforcement Learning: An Introduction\" by Sutton and Barto.\n人类: 听起来不错。我叫什么名字？\nAI:\n\n> 链结束。\n你的名字是 Alex。\n\nMemory Buffer:\n\nThe human, Alex, is interested in machine learning, specifically reinforcement learning. The AI suggests starting with the book \"Reinforcement Learning: An Introduction\" by Sutton and Barto. Alex then asks the AI to recall his name, which the AI correctly identifies as Alex.\n</code></pre>\n<h3>权衡</h3>\n<p><code>ConversationSummaryMemory</code> 虽然有效，但引入了两个主要的权衡：</p>\n<ol>\n<li><strong>增加延迟：</strong> 由于每次对话轮次都需要额外的 LLM 调用来更新摘要，因此与使用简单缓冲区相比，用户的总体响应时间可能会略长。</li>\n<li><strong>潜在信息丢失：</strong> 摘要过程本质上是有损的。LLM 可能无法捕获对话早期部分中一个不明显但有意义的细节。摘要的质量取决于用于摘要任务的 LLM 的能力。对于大多数使用场景，这是可以接受的，但对于需要高度还原特定细节的应用来说，这是一个需要考虑的因素。</li>\n</ol>\n<p>这种记忆类型非常适合客服机器人、长篇研究助手等应用，或者任何保持长对话总体上下文 (context)比记住每个单词更具优先性的场景。它为构建能够优雅处理长时间交互的有状态应用提供了一个实用方案。</p>",
+  "slug": "summarization-memory",
+  "updates": [],
+  "references": [
+    {
+      "id": 14708,
+      "title": "Conversation Summary Memory",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFt4pruKHSGdRiZDtB_q6kuk-Z9444vs9UFvDyrpZQ6F5BL1dyUwxFt4W7hStfeKUnUI2QRjM69j3_ZPTsLwLYFwv21Ll6XjPQ3S2MSfiWi15HAjBqm472-0xnW_vR1fpBk3fSP7C80ZgILNZnZTNzB8VKJeROkMSArxylw1VHgp1o9_eESgOm2wfS_sJhtDlxOcT3IS1tVdAzzXK4aSc-8FhdPAOiKMSWAVEh5n0=",
+      "doi": "",
+      "note": "LangChain `ConversationSummaryMemory` 的官方文档，详细说明了其功能和实现。",
+      "order": 1,
+      "created_at": "2025-09-05T09:02:06.718303Z",
+      "updated_at": "2025-09-11T06:08:47.113955Z"
+    },
+    {
+      "id": 14710,
+      "title": "BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension",
+      "author": "Mike Lewis, Yinhan Liu, Naman Goyal, Marjan Ghazvininejad, Abdelrahman Mohamed, Omer Levy, Ves Stoyanov, and Luke Zettlemoyer",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1910.13461",
+      "doi": "10.48550/arXiv.1910.13461",
+      "note": "介绍了BART，这是一种广泛用于抽象摘要的预训练模型，是摘要记忆中用于精简对话历史的核心机制。",
+      "order": 3,
+      "created_at": "2025-09-05T09:02:06.757348Z",
+      "updated_at": "2025-09-11T06:08:44.311631Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

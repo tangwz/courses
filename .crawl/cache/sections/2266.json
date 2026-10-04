@@ -1,0 +1,61 @@
+{
+  "id": 2266,
+  "title": "基础数据类型：文本（字符串）",
+  "meta_title": "Python 字符串数据类型 | 处理文本",
+  "meta_description": "学习如何使用 Python 的字符串类型来创建、操作和处理文本数据。",
+  "content": "<p>处理文本是编程的一个基本方面。在 Python 中，文本数据用<strong>字符串</strong>表示。字符串是一个有序的字符序列。任何用引号括起来的内容——字母、数字、符号、空格——都会变成字符串。</p>\n<h3>创建字符串</h3>\n<p>Python 在定义字符串方面非常灵活。你可以使用单引号 (<code>'</code>) 或双引号 (<code>\"</code>)。如果你的字符串本身包含引号，这种灵活性会很有用。</p>\n<pre><code class=\"language-python\"># 使用单引号\nmessage_single = 'Hello, Python learner!'\nprint(message_single)\n\n# 使用双引号\nmessage_double = \"This also works just fine.\"\nprint(message_double)\n\n# 如果你的字符串包含单引号怎么办？使用双引号来括住它。\nquote = \"He said, 'Python is fun!'\"\nprint(quote)\n\n# 如果你的字符串包含双引号怎么办？使用单引号。\nreply = 'She responded, \"Indeed it is.\"'\nprint(reply)\n</code></pre>\n<p>如果你需要一个跨越多行或同时包含单引号和双引号且没有麻烦的字符串怎么办？Python 提供三引号，可以是 <code>'''</code> 或 <code>\"\"\"</code>。</p>\n<pre><code class=\"language-python\"># 用于多行字符串的三重双引号\nmulti_line_doc = \"\"\"This is the first line.\nThis is the second line.\nAnd \"quotes\" or 'apostrophes' can be used freely inside.\"\"\"\nprint(multi_line_doc)\n\n# 三重单引号工作方式相同\nmulti_line_alt = '''Another way to write\nmulti-line text,\nvery convenient.'''\nprint(multi_line_alt)\n</code></pre>\n<h3>基本字符串操作</h3>\n<p>你可以使用 <code>+</code> 运算符组合字符串，这个操作称为<strong>连接</strong>。你还可以使用 <code>*</code> 运算符重复字符串。</p>\n<pre><code class=\"language-python\">first_name = \"Ada\"\nlast_name = \"Lovelace\"\nspace = \" \"\n\n# 连接\nfull_name = first_name + space + last_name\nprint(full_name) # 输出: Ada Lovelace\n\n# 重复\nseparator = \"-\" * 10 # 重复连字符10次\nprint(separator)   # 输出: ----------\nprint(first_name * 3) # 输出: AdaAdaAda\n</code></pre>\n<p>请注意，你只能将字符串与其他字符串连接。直接尝试将字符串与数字相加会导致错误。你需要先使用 <code>str()</code> 将数字转换为字符串，我们很快会在类型转换部分讨论这个。</p>\n<h3>访问字符：索引</h3>\n<p>由于字符串是序列，你可以通过字符的位置或<strong>索引</strong>来访问单个字符。Python 使用零起始索引，意味着第一个字符在索引 0 处，第二个在索引 1 处，依此类推。</p>\n<pre><code class=\"language-python\">language = \"Python\"\n\n# 通过正向索引访问字符\nprint(language[0]) # 输出: P (第一个字符)\nprint(language[1]) # 输出: y (第二个字符)\nprint(language[5]) # 输出: n (第六个字符)\n\n# 使用负向索引访问字符（从末尾开始）\nprint(language[-1]) # 输出: n (最后一个字符)\nprint(language[-2]) # 输出: o (倒数第二个字符)\n</code></pre>\n<p>尝试访问不存在的索引（例如，上面示例中的 <code>language[6]</code>）将导致 <code>IndexError</code>。</p>\n<h3>提取子字符串：切片</h3>\n<p>如果你需要不止一个字符，你可以提取字符串的一部分，称为<strong>子字符串</strong>或<strong>切片</strong>。切片使用 <code>[start:stop:step]</code> 语法。</p>\n<ul>\n<li><code>start</code>: 切片开始的索引（包含）。如果省略，默认为 0。</li>\n<li><code>stop</code>: 切片结束的索引（不包含）。如果省略，默认为字符串的末尾。</li>\n<li><code>step</code>: 步进量。如果省略，默认为 1。</li>\n</ul>\n<pre><code class=\"language-python\">language = \"Python\"\n\n# 获取从索引 1 开始（不包括）到索引 4 的字符\nprint(language[1:4]) # 输出: yth\n\n# 获取从开头到索引 3（不包括）的字符\nprint(language[:3])  # 输出: Pyt\n\n# 获取从索引 2 到结尾的字符\nprint(language[2:])  # 输出: thon\n\n# 获取整个字符串（不常用，但显示了默认值）\nprint(language[:])   # 输出: Python\n\n# 获取每隔一个字符\nprint(language[::2]) # 输出: Pto\n\n# 反转字符串\nprint(language[::-1]) # 输出: nohtyP\n</code></pre>\n<p>切片总是生成一个新字符串，并且如果索引超出范围，它绝不会导致 <code>IndexError</code>；它只会返回请求范围内字符串中可用的部分。</p>\n<h3>字符串不可变性</h3>\n<p>Python 字符串的一个重要特点是它们是<strong>不可变的</strong>。这意味着一旦字符串被创建，它就不能被原地修改。看起来会修改字符串的操作，比如连接或我们接下来将看到的方法，实际上是创建并返回<em>新</em>字符串。</p>\n<pre><code class=\"language-python\">greeting = \"hello\"\n# greeting[0] = \"H\" # 这将导致 TypeError：'str' 对象不支持项赋值\n\n# 要“改变”问候语，请创建一个新字符串\nnew_greeting = \"H\" + greeting[1:]\nprint(new_greeting) # 输出: Hello\nprint(greeting)     # 输出: hello (原始字符串未改变)\n</code></pre>\n<p>这种不可变性可能看起来有局限性，但它使字符串变得可预测，并且在不同情境下使用起来安全，例如字典的键（你稍后会学到）。</p>\n<h3>常用字符串方法</h3>\n<p>字符串带有很多内置的<strong>方法</strong>，用于执行常见操作。方法类似于函数，但它们是使用点符号 (<code>.</code>) 在对象（本例中是字符串）<em>上</em>调用的。这里有一些有用的方法：</p>\n<ul>\n<li><code>len(string)</code>: 尽管技术上来说它是一个内置函数，而非方法，但 <code>len()</code> 对于获取字符串中的字符数量非常重要。</li>\n<li><code>.lower()</code> / <code>.upper()</code>: 返回一个新字符串，其中所有字符分别转换为小写或大写。</li>\n<li><code>.strip()</code> / <code>.lstrip()</code> / <code>.rstrip()</code>: 返回一个新字符串，其中删除了开头和/或结尾的空白字符。</li>\n<li><code>.find(substring)</code>: 返回 <code>substring</code> 第一次出现的起始索引。如果未找到，则返回 -1。</li>\n<li><code>.replace(old, new)</code>: 返回一个新字符串，其中所有 <code>old</code> 的出现都被 <code>new</code> 替换。</li>\n<li><code>.startswith(prefix)</code> / <code>.endswith(suffix)</code>: 根据字符串是否以给定子字符串开头或结尾，返回 <code>True</code> 或 <code>False</code>。</li>\n<li><code>.split(separator)</code>: 返回一个子字符串列表，在 <code>separator</code> 出现的地方进行分割。如果没有给出分隔符，则按空白字符分割。</li>\n<li><code>separator.join(iterable)</code>: 将可迭代对象（如列表）的元素连接成一个字符串，<code>separator</code> 放在元素之间。</li>\n</ul>\n<pre><code class=\"language-python\">text = \"  Learning Python is Fun!  \"\n\n# 长度\nprint(len(text)) # 输出: 27\n\n# 大小写转换\nprint(text.lower()) # 输出:   learning python is fun!\nprint(text.upper()) # 输出:   LEARNING PYTHON IS FUN!\n\n# 移除空白字符\nprint(text.strip())  # 输出: Learning Python is Fun!\nprint(text.lstrip()) # 输出: Learning Python is Fun!\nprint(text.rstrip()) # 输出:   Learning Python is Fun!\n\n# 查找子字符串\nprint(text.find(\"Python\")) # 输出: 11 ('Python' 开始的索引)\nprint(text.find(\"Java\"))   # 输出: -1 (未找到)\n\n# 替换子字符串\nprint(text.replace(\"Fun\", \"Awesome\")) # 输出:   Learning Python is Awesome!\n\n# 检查开头/结尾（此处先使用 strip 以确保准确性）\nclean_text = text.strip()\nprint(clean_text.startswith(\"Learning\")) # 输出: True\nprint(clean_text.endswith(\"!\"))        # 输出: True\n\n# 将字符串分割成列表\nwords = clean_text.split(\" \")\nprint(words) # 输出: ['Learning', 'Python', 'is', 'Fun!']\n\n# 将列表连接成字符串\njoined_string = \"---\".join(words)\nprint(joined_string) # 输出: Learning---Python---is---Fun!\n\n# 原始字符串因不可变性而保持不变\nprint(text) # 输出:   Learning Python is Fun!\n</code></pre>\n<h3>格式化字符串</h3>\n<p>通常，你需要创建嵌入 (embedding)变量值的字符串。尽管你可以使用连接 (<code>+</code>)，但这很快就会变得繁琐且容易出错，尤其是在处理非字符串类型时。Python 提供了更好的方式来格式化字符串。</p>\n<p>最现代且普遍推荐的方法是使用<strong>f-字符串</strong>（格式化字符串字面量），它在 Python 3.6 中被引入。你通过在字符串字面量前加上字母 <code>f</code> 或 <code>F</code> 来创建 f-字符串。在字符串内部，你可以直接将变量或表达式放在花括号 <code>{}</code> 中。</p>\n<pre><code class=\"language-python\">name = \"Alice\"\nage = 30\ncity = \"New York\"\n\n# 使用 f-字符串进行清晰格式化\nintro_fstring = f\"My name is {name}, I am {age} years old, and I live in {city}.\"\nprint(intro_fstring)\n# 输出: My name is Alice, I am 30 years old, and I live in New York.\n\n# 你也可以在花括号中包含表达式\nradius = 5\narea = 3.14159 * radius**2\nprint(f\"A circle with radius {radius} has an area of {area:.2f}.\")\n# 输出: A circle with radius 5 has an area of 31.42.\n# 注意: :.2f 将浮点数格式化为两位小数。\n</code></pre>\n<p>f-字符串可读性强、简洁，并且通常比旧的格式化方法（如 <code>.format()</code> 或 C 风格的 <code>%</code> 运算符）更快，你可能会在旧代码中遇到它们。</p>\n<h3>转义序列</h3>\n<p>有时你需要在字符串中包含难以或无法直接输入的字符，或者具有特殊含义的字符。例如，你如何在用相同引号类型作为边界的字符串中包含换行符、制表符或字面引号字符？这可以通过使用<strong>转义序列</strong>来完成，转义序列以反斜杠 (<code>\\</code>) 开头。</p>\n<p>常用转义序列包括：</p>\n<ul>\n<li><code>\\n</code>: 换行</li>\n<li><code>\\t</code>: 制表符</li>\n<li><code>\\\\</code>: 字面反斜杠</li>\n<li><code>\\'</code>: 字面单引号</li>\n<li><code>\\\"</code>: 字面双引号</li>\n</ul>\n<pre><code class=\"language-python\"># 换行\nprint(\"First line.\\nSecond line.\")\n# 输出:\n# First line.\n# Second line.\n\n# 制表符\nprint(\"Column1\\tColumn2\")\n# 输出: Column1    Column2\n\n# 字面反斜杠\nprint(\"This is a path: C:\\\\Users\\\\Name\")\n# 输出: This is a path: C:\\Users\\Name\n\n# 在由相同引号定义的字符串中使用字面引号\nprint('He said, \\'Hello!\\'') # 输出: He said, 'Hello!'\nprint(\"She replied, \\\"Hi!\\\"\") # 输出: She replied, \"Hi!\"\n</code></pre>\n<p>字符串是处理任何文本数据的基础，从用户输入、文件内容到程序中的消息和标签。掌握它们的创建、操作和格式化是学习 Python 的重要一步。</p>",
+  "slug": "python-string-type",
+  "updates": [],
+  "references": [
+    {
+      "id": 5660,
+      "title": "Built-in Types (Text Sequence Type - str)",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str",
+      "doi": "",
+      "note": "提供关于 Python 字符串类型、其方法和行为的全面细节，是权威的技术参考。",
+      "order": 1,
+      "created_at": "2025-09-05T01:15:37.786352Z",
+      "updated_at": "2025-09-07T21:13:00.815545Z"
+    },
+    {
+      "id": 5661,
+      "title": "An Informal Introduction to Python (3.1.3. Strings)",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/introduction.html#strings",
+      "doi": "",
+      "note": "在官方 Python 教程中提供了对字符串的易懂介绍，涵盖了基本创建、操作和索引，并附有实用示例。",
+      "order": 2,
+      "created_at": "2025-09-05T01:15:37.822712Z",
+      "updated_at": "2025-09-07T21:12:54.690973Z"
+    },
+    {
+      "id": 5663,
+      "title": "Fluent Python, 2nd Edition: Clear, Concise, and Effective Programming",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.vitalsource.com/products/fluent-python-luciano-ramalho-v9781492056300",
+      "doi": "",
+      "note": "对 Python 字符串进行了全面而深入的分析，包括基础用法之外的高级主题和最佳实践，适合寻求深入理解的读者。",
+      "order": 4,
+      "created_at": "2025-09-05T01:15:37.828840Z",
+      "updated_at": "2025-09-07T21:13:05.954549Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

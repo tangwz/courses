@@ -1,0 +1,61 @@
+{
+  "id": 7774,
+  "title": "构建一个简易的检索流程",
+  "meta_title": "构建一个简易的检索流程",
+  "meta_description": "使用前面章节介绍的模块，构建您的第一个端到端RAG流程。",
+  "content": "<p>构建一个可用的检索流程，涉及组合数据处理和嵌入 (embedding)。这个过程构成了检索增强生成（RAG）的“检索”部分。其目标是接收用户的查询，搜索您准备好的文档，并返回最相关的信息，以此作为大型语言模型的上下文 (context)。</p>\n<p>检索流程包含几个按顺序运行的不同阶段：搜索、排序和格式化。对于我们的首次实现，我们将构建一个直接的流程，它执行搜索并将结果为LLM格式化。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hm8huw\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; \"用户查询\" [fillcolor=\"#a5d8ff\"]; \"最终提示词\" [fillcolor=\"#96f2d7\"]; \"用户查询\" -> \"嵌入查询\"; \"嵌入查询\" -> \"混合搜索\"; \"文档嵌入\" [shape=cylinder, fillcolor=\"#ffec99\"]; \"文档嵌入\" -> \"混合搜索\"; \"混合搜索\" -> \"排序结果\"; \"排序结果\" -> \"格式化上下文\"; \"格式化上下文\" -> \"最终提示词\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hm8huw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>检索流程接收用户查询，使用混合搜索机制找到相关文档，并将结果格式化成可注入LLM提示词 (prompt)的上下文字符串。</p>\n</blockquote>\n<h3>组装流程组件</h3>\n<p>构建检索流程涉及组合用于文档表示、嵌入 (embedding)和搜索的模块。在此示例中，我们将使用内存中的文档集合及其预先计算的嵌入。在生产系统中，这些通常会存储和管理在专门的向量 (vector)数据库中。</p>\n<p>首先，我们来定义知识库并为搜索做准备。这包括创建 <code>Document</code> 对象并批量生成它们对应的嵌入。</p>\n<pre><code class=\"language-python\">from kerb.retrieval import Document\nfrom kerb.embedding import embed, embed_batch\n\n# 1. 定义知识库\ndocuments = [\n    Document(\n        id=\"doc1\",\n        content=\"Python is a high-level programming language known for its simplicity and readability.\"\n    ),\n    Document(\n        id=\"doc2\",\n        content=\"Asynchronous programming in Python allows concurrent execution using async/await syntax.\"\n    ),\n    Document(\n        id=\"doc3\",\n        content=\"Machine learning models learn patterns from data to make predictions.\"\n    ),\n    Document(\n        id=\"doc4\",\n        content=\"REST APIs provide a standardized way for applications to communicate over HTTP.\"\n    ),\n]\n\n# 2. 为文档生成嵌入\nprint(\"正在生成文档嵌入...\")\ndoc_texts = [doc.content for doc in documents]\ndoc_embeddings = embed_batch(doc_texts)\nprint(f\"已生成 {len(doc_embeddings)} 个嵌入。\")\n</code></pre>\n<p>文档和嵌入准备就绪后，下一步是执行搜索。虽然您可以使用简单的 <code>keyword_search</code> 或 <code>semantic_search</code>，但 <code>hybrid_search</code> 是一种更有效的方法。此函数结合了关键词匹配（针对特定术语）和语义相似性（针对含义）的优点，为不同类型的查询提供更可靠的结果。</p>\n<p>要使用 <code>hybrid_search</code>，您需要用户的查询文本、其嵌入、文档列表以及它们对应的嵌入。</p>\n<pre><code class=\"language-python\">from kerb.retrieval import hybrid_search\n\n# 3. 定义用户查询并生成其嵌入\nquery = \"building scalable python applications\"\nquery_embedding = embed(query)\n\n# 4. 执行搜索\nsearch_results = hybrid_search(\n    query=query,\n    query_embedding=query_embedding,\n    documents=documents,\n    document_embeddings=doc_embeddings,\n    top_k=2,\n    keyword_weight=0.4,\n    semantic_weight=0.6\n)\n\nprint(f\"\\n为查询 '{query}' 找到了 {len(search_results)} 个相关文档\")\nfor result in search_results:\n    print(f\"  - ID: {result.document.id}, 评分: {result.score:.3f}\")\n    print(f\"    内容: {result.document.content[:80]}...\")\n</code></pre>\n<p><code>hybrid_search</code> 的输出是一个 <code>SearchResult</code> 对象列表，每个对象包含一个 <code>Document</code> 和一个相关性评分。虽然这对于检查很有用，但它不是传递给LLM的正确格式。模型期望一个单独的文本字符串作为其上下文 (context)。</p>\n<p><code>results_to_context</code> 函数为您处理此转换。它接收 <code>SearchResult</code> 对象列表，并将其内容格式化为一个整洁、结构良好的字符串，在每个文档之间添加分隔符。</p>\n<pre><code class=\"language-python\">from kerb.retrieval import results_to_context\n\n# 5. 将搜索结果格式化为上下文字符串\ncontext_string = results_to_context(search_results)\n\nprint(\"\\n为LLM格式化的上下文:\")\nprint(\"---------------------------\")\nprint(context_string)\nprint(\"---------------------------\")\n</code></pre>\n<p>这个格式化的 <code>context_string</code> 是我们简易检索流程的最终输出。它包含您的知识库中最相关的信息，准备好与用户查询组合，形成完整的提示词 (prompt)。LLM将使用此上下文生成一个有依据、准确且信息丰富的回答。</p>\n<h3>整合所有内容</h3>\n<p>让我们将这些步骤整合到一个单一、连贯的示例中，模拟从查询到最终提示词 (prompt)构建的完整RAG流程。这展现了不同模块如何一起工作，以检索和准备生成信息。</p>\n<pre><code class=\"language-python\">from kerb.retrieval import Document, hybrid_search, results_to_context\nfrom kerb.embedding import embed, embed_batch\n\n# --- 1. 设置阶段 ---\n# 在实际应用中，此操作只需执行一次，以构建您的索引。\ndocuments = [\n    Document(id=\"py-async\", content=\"Asynchronous programming in Python uses async/await syntax for I/O-bound tasks.\"),\n    Document(id=\"py-web\", content=\"FastAPI and Flask are popular Python frameworks for building web APIs.\"),\n    Document(id=\"ml-intro\", content=\"Machine learning enables systems to learn from data without explicit programming.\"),\n]\n\n# 为知识库生成并存储嵌入\ndoc_embeddings = embed_batch([doc.content for doc in documents])\n\n# --- 2. 检索阶段 ---\n# 此操作针对每个用户查询执行。\nuser_query = \"How do I build fast web services in Python?\"\n\n# 嵌入用户查询\nquery_embedding = embed(user_query)\n\n# 执行混合搜索以找到相关文档\nretrieved_results = hybrid_search(\n    query=user_query,\n    query_embedding=query_embedding,\n    documents=documents,\n    document_embeddings=doc_embeddings,\n    top_k=2,\n    keyword_weight=0.5,\n    semantic_weight=0.5\n)\n\n# 将结果格式化为单个上下文字符串\ncontext = results_to_context(retrieved_results)\n\n# --- 3. 生成阶段 ---\n# 为LLM构建最终提示词。\nfinal_prompt = f\"\"\"Answer the following question based on the provided context.\n\nContext:\n{context}\n\nQuestion: {user_query}\n\nAnswer:\"\"\"\n\nprint(\"\\n--- LLM的最终提示词 ---\")\nprint(final_prompt)\n</code></pre>\n<p>这个简易流程是任何RAG系统的基本构成。通过组装这些组件，您已成功构建了一个能将LLM回答基于您自身数据的系统。接下来的章节将介绍如何通过更先进的技术来改进此流程，例如重新排序以提高相关性，以及上下文 (context)管理以优化令牌限制。</p>",
+  "slug": "simple-retrieval-pipeline",
+  "updates": [],
+  "references": [
+    {
+      "id": 21651,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "一篇开创性论文，介绍了检索增强生成（RAG）范式，将检索集成到生成过程中，以外部知识为大型语言模型提供基础。",
+      "order": 1,
+      "created_at": "2025-10-20T07:16:50.460757Z",
+      "updated_at": "2025-10-20T07:40:14.362490Z"
+    },
+    {
+      "id": 21652,
+      "title": "Introduction to Information Retrieval",
+      "author": "Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze",
+      "year": "2008",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nlp.stanford.edu/IR-book/html/htmledition/irbook.html",
+      "doi": "",
+      "note": "一本信息检索原理的奠基性教科书，涵盖了基于关键词的搜索和向量空间模型，这些对于构建混合检索系统中传统和语义搜索组件很重要。",
+      "order": 2,
+      "created_at": "2025-10-20T07:16:50.465334Z",
+      "updated_at": "2025-10-20T07:40:12.912130Z"
+    },
+    {
+      "id": 21653,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3972-3982",
+      "url": "https://arxiv.org/abs/1908.10084",
+      "doi": "10.48550/arXiv.1908.10084",
+      "note": "介绍了一种用于生成具有语义意义的句子嵌入的方法，该方法对于语义搜索和信息检索等任务非常有效，是RAG管道的核心组件。",
+      "order": 3,
+      "created_at": "2025-10-20T07:16:50.470170Z",
+      "updated_at": "2025-10-20T07:40:23.987976Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

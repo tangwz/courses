@@ -1,0 +1,61 @@
+{
+  "id": 4897,
+  "title": "函数式API",
+  "meta_title": "Keras函数式API指南",
+  "meta_description": "Keras函数式API概述，用于构建具有非线性网络结构的复杂模型。",
+  "content": "<p><code>Sequential</code> API 提供了一种直接方式来将神经网络 (neural network)模型定义为线性层序列。然而，许多应用需要更复杂的网络结构。模型可能需要多个输入（例如图像及其元数据），产生多个输出（例如对对象进行分类<em>并</em>估计其边界框），或者包含在网络不同部分共享信息的层（例如暹罗网络或带有残差连接的模型）。对于这些情况，Keras 提供了<strong>函数式API</strong>。</p>\n<p>函数式API将层视为可以在张量上调用的函数。它允许你将模型构建为层的有向无环图（DAG）。与<code>Sequential</code>模型的线性堆叠相比，这种基于图的方法提供了很大的灵活性。</p>\n<h3>核心思想：层即函数</h3>\n<p>可以将函数式API想象成连接乐高积木，其中每块积木是一个层，而连接是它们之间流动的张量。你从一个输入张量开始，将其通过一个层（就像调用一个函数），得到一个输出张量，然后将其传递给另一个层，依此类推，直到你定义最终的输出张量。</p>\n<h3>定义输入</h3>\n<p>与<code>Sequential</code>模型不同，<code>Sequential</code>模型的输入形状通常在第一个层中推断或指定，而函数式API要求你使用<code>keras.Input</code>明确定义图的起点。这会创建一个符号张量对象，其中包含模型期望的输入的形状和数据类型信息。</p>\n<pre><code class=\"language-python\">import keras\nfrom keras import layers\n\n# 定义一个输入，期望28x28的灰度图像（展平后）\n# 形状是一个元组，None通常表示批次大小可以变化。\n# 对于像MNIST（784像素）这样的扁平向量，形状是(784,)。\ninput_tensor = keras.Input(shape=(784,), name='image_input')\n</code></pre>\n<p>在这里，<code>input_tensor</code>还不是实际数据。它是一个规范，说明模型将接收的数据类型。为输入提供有意义的名称（例如<code>image_input</code>）是一个良好的做法，特别是对于复杂模型。</p>\n<h3>连接层</h3>\n<p>一旦你有了输入张量，就可以通过在张量上调用层实例来连接层。该层会返回一个新的张量，你可以将其传递给下一个层。</p>\n<p>让我们构建一个简单的多层感知器（MLP），类似于你使用<code>Sequential</code>构建的模型，但这次使用函数式API：</p>\n<pre><code class=\"language-python\"># 从输入张量开始\ninputs = keras.Input(shape=(784,), name='img_input')\n\n# 第一个全连接层：在输入张量上调用该层\nx = layers.Dense(64, activation='relu', name='dense_layer_1')(inputs)\n\n# 第二个全连接层：在上一层（'x'）的输出上调用该层\nx = layers.Dense(64, activation='relu', name='dense_layer_2')(x)\n\n# 输出层：在第二个全连接层的输出上调用该层\noutputs = layers.Dense(10, activation='softmax', name='predictions')(x)\n</code></pre>\n<p>注意这个模式：<code>output_tensor = Layer(...)(input_tensor)</code>。变量<code>x</code>在这里被重用，表示流经网络并被每个层转换的张量。</p>\n<h3>创建模型</h3>\n<p>定义了从输入到输出的层图后，你可以实例化一个<code>keras.Model</code>对象。你需要告诉<code>Model</code>构造函数哪些张量表示网络图的输入，哪些表示输出。</p>\n<pre><code class=\"language-python\"># 通过指定输入和输出张量来创建模型\nmodel = keras.Model(inputs=inputs, outputs=outputs, name='simple_mlp_functional')\n\n# 现在你可以查看模型架构\nmodel.summary()\n</code></pre>\n<p>运行<code>model.summary()</code>会产生类似于<code>Sequential</code>模型的输出，显示层、输出形状和参数 (parameter)数量。然而，在幕后，Keras已经构建了一个图表示。</p>\n<h3>函数式API的优点</h3>\n<p>当需要比简单线性序列更复杂的架构时，函数式API的真正优势便会显现出来：</p>\n<ol>\n<li>\n<p><strong>多输入模型：</strong> 你可以定义多个<code>keras.Input</code>张量，并将它们送入网络的不同分支，最终将它们合并。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3hmtf\" \n              data-graph-definition='' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3hmtf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n</li>\n</ol>\n<p>digraph G {\nrankdir=LR;\ngraph [fontname=\"helvetica\", fontsize=10];\nnode [shape=box, style=\"filled, rounded\", fillcolor=\"#a5d8ff\", fontname=\"helvetica\", fontsize=10];\nedge [color=\"#495057\", fontname=\"helvetica\", fontsize=10];</p>\n<p>subgraph cluster_input {\nlabel = \"输入\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nInput1 [label=\"输入A\\n(形状A)\", shape=cds, fillcolor=\"#bac8ff\"];\nInput2 [label=\"输入B\\n(形状B)\", shape=cds, fillcolor=\"#bac8ff\"];\n}</p>\n<p>subgraph cluster_processing {\nlabel = \"处理分支\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nProcA [label=\"分支A层\"];\nProcB [label=\"分支B层\"];\n}</p>\n<p>subgraph cluster_merge {\nlabel = \"合并\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nMerge [label=\"连接或相加等\", shape=oval, fillcolor=\"#96f2d7\"];\n}</p>\n<p>subgraph cluster_output {\nlabel = \"输出\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nOutputDense [label=\"最终层\"];\nOutput [label=\"预测\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n}</p>\n<p>Input1 -> ProcA;\nInput2 -> ProcB;\nProcA -> Merge;\nProcB -> Merge;\nMerge -> OutputDense;\nOutputDense -> Output;\n}\n```</p>\n<blockquote>\n<p>该图示意了一个模型，其具有两个不同的输入，通过独立分支处理后合并以进行最终预测。</p>\n</blockquote>\n<ol start=\"2\">\n<li>\n<p><strong>多输出模型：</strong> 模型可以通过在创建<code>keras.Model</code>时指定输出张量的列表或字典来产生多个输出。这对于多标签分类或联合回归和分类等任务非常有用。</p>\n</li>\n<li>\n<p><strong>共享层：</strong> 单个层实例可以在不同张量上多次调用。该层实例维护一组权重 (weight)，这些权重会根据其所有使用位置进行更新。这对于暹罗网络等模型来说很基础，它们使用相同的处理分支比较两个输入。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3hmuc\" \n              data-graph-definition='' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3hmuc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n</li>\n</ol>\n<p>digraph G {\nrankdir=LR;\ngraph [fontname=\"helvetica\", fontsize=10];\nnode [shape=box, style=\"filled, rounded\", fillcolor=\"#a5d8ff\", fontname=\"helvetica\", fontsize=10];\nedge [color=\"#495057\", fontname=\"helvetica\", fontsize=10];</p>\n<p>subgraph cluster_input {\nlabel = \"输入\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nInput1 [label=\"输入A\", shape=cds, fillcolor=\"#bac8ff\"];\nInput2 [label=\"输入B\", shape=cds, fillcolor=\"#bac8ff\"];\n}</p>\n<p>subgraph cluster_shared {\nlabel = \"共享处理\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nSharedLayer [label=\"共享层\\n(例如，嵌入 (embedding))\", fillcolor=\"#ffe066\"];\n}</p>\n<p>subgraph cluster_output {\nlabel = \"输出\";\nstyle=\"filled, rounded\";\ncolor=\"#e9ecef\";\nbgcolor=\"#f8f9fa\";\nOutputA [label=\"处理后的A\"];\nOutputB [label=\"处理后的B\"];\nFinalOutput [label=\"组合输出\\n(可选)\", shape=ellipse, fillcolor=\"#ffc9c9\"];\n}</p>\n<p>Input1 -> SharedLayer [label=\"应用于A\"];\nInput2 -> SharedLayer [label=\"应用于B\"];</p>\n<p>SharedLayer -> OutputA [tailport=e, headport=w];\nSharedLayer -> OutputB [tailport=e, headport=w];</p>\n<h1>可选的组合步骤</h1>\n<p>OutputA -> FinalOutput;\nOutputB -> FinalOutput;\n}\n```</p>\n<blockquote>\n<p>该图示意了如何将单个层实例（共享层）应用于多个输入，产生独立的输出，这些输出可以独立使用或稍后组合。</p>\n</blockquote>\n<ol start=\"4\">\n<li><strong>非线性结构：</strong> 你可以创建复杂的图，例如带有残差连接（层的输出被加回到其输入）或带有并行卷积分支的Inception风格模块的网络。</li>\n</ol>\n<p>虽然<code>Sequential</code> API 便于构建简单的线性模型，但函数式API是定义当今大多数复杂深度学习 (deep learning)架构的首选工具。掌握它可以实现更广的网络设计范围。在接下来的小节和章节中，你将看到函数式API被广泛使用，特别是在构建具有特定结构要求的卷积神经网络 (neural network)（CNN）和循环神经网络（RNN）等更复杂模型时。</p>",
+  "slug": "functional-api",
+  "updates": [],
+  "references": [
+    {
+      "id": 12338,
+      "title": "Guide to the Keras Functional API",
+      "author": "Keras Team",
+      "year": "2024",
+      "publisher": "Keras Documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://keras.io/guides/functional_api_for_beyond_sequential_models/",
+      "doi": "",
+      "note": "Keras 函数式 API 的官方文档，涵盖高级用法模式和最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-05T08:01:34.572810Z",
+      "updated_at": "2025-09-08T15:22:53.069749Z"
+    },
+    {
+      "id": 12339,
+      "title": "Deep Learning with Python",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "Keras 创建者撰写的综合指南，提供了函数式 API 的详细解释和实用示例。",
+      "order": 2,
+      "created_at": "2025-09-05T08:01:34.582687Z",
+      "updated_at": "2025-09-08T15:22:37.101366Z"
+    },
+    {
+      "id": 12340,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "深度学习原理的奠基性教科书，为函数式 API 支持的各种网络架构提供了理论背景。",
+      "order": 3,
+      "created_at": "2025-09-05T08:01:34.586612Z",
+      "updated_at": "2025-09-08T15:22:39.913540Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

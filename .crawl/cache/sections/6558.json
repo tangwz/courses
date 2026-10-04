@@ -1,0 +1,29 @@
+{
+  "id": 6558,
+  "title": "记住近期事件",
+  "meta_title": "代理短期记忆：简介",
+  "meta_description": "介绍大型语言模型（LLM）代理中用于维持上下文的短期记忆功能。",
+  "content": "<p>想象一下，你正试图与一个瞬间就忘记你所说一切的人交谈。每句话都将是一个全新的开始，使得任何有意义的交流都无法进行。大型语言模型（LLM）代理，如果没有办法记住近期互动，也将面临类似的挑战。我们所说的“记住近期事件”的能力，在LLM代理的背景下，就是<strong>短期记忆</strong>。它是一个基本组成部分，允许代理在持续的操作或对话中保持上下文 (context)。</p>\n<h3>为什么代理需要记录</h3>\n<p>与LLM静态的预训练 (pre-training)知识不同，短期记忆是动态的。它涉及当前正在处理的特定任务或当前的交互会话。可以将其视为代理的草稿本，它在上面记下刚刚发生的事情。这并非永久学习新事实，比如LLM已经知道的法国首都。相反，它是关于记住你刚刚在这段对话中询问了飞往巴黎的航班，这样当你接着问“那里的酒店呢？”时，代理就能明白“那里”指的是巴黎。</p>\n<p>如果没有这种记忆，与代理的每次交互都将是孤立的。代理将无法做到：</p>\n<ul>\n<li>理解后续问题。</li>\n<li>引用对话中较早提供的信息。</li>\n<li>执行需要多步骤且前一步骤的上下文 (context)很必要的任务。</li>\n<li>在整个交互过程中保持连贯的“个性”或状态。</li>\n</ul>\n<p>本质上，短期记忆赋予了代理一种连续感。它允许代理在先前的交流基础上进行，使交互更顺畅、更有效。</p>\n<h3>短期记忆的工作方式（一个简单视角）</h3>\n<p>在基本层面，LLM代理的短期记忆通常涉及保留近期交互的日志或历史记录。此历史记录通常包含：</p>\n<ul>\n<li>用户的输入。</li>\n<li>代理自身的响应或行动。</li>\n</ul>\n<p>当代理需要处理用户的新输入时，它不仅仅是孤立地查看那一条信息。相反，它（或控制它的系统）不仅向LLM提供新输入，还提供部分或全部近期历史记录。这种组合信息形成了一个更丰富的提示，为LLM提供生成相关且充分响应所需的上下文 (context)。</p>\n<p>例如，如果你正在与一个代理交互：</p>\n<ol>\n<li><strong>你：</strong>“将‘买牛奶’添加到我的待办事项列表。”</li>\n<li>**代理（记录在记忆中）：**用户说“将‘买牛奶’添加到我的待办事项列表”。代理回应“好的，‘买牛奶’已添加。”</li>\n<li><strong>你：</strong>“也添加‘打电话给约翰’。”</li>\n<li>**代理（处理“也添加‘打电话给约翰’”时）：**LLM收到“也添加‘打电话给约翰’”<em>以及</em>关于牛奶的先前交互记忆。这有助于它理解“也添加”指的是待办事项列表。</li>\n</ol>\n<p>以下图描绘了短期记忆如何融入代理的运行流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-10qrgrd\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\"];\n    node [shape=box, style=\"filled,rounded\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    UserInput [label=\"用户输入\", fillcolor=\"#a5d8ff\"];\n    AgentCore [label=\"代理核心\\n(结合输入 + 记忆)\", fillcolor=\"#ffd8a8\"];\n    LLM [label=\"大型语言模型\", fillcolor=\"#b2f2bb\"];\n    AgentResponse [label=\"代理对用户的响应\", fillcolor=\"#a5d8ff\"];\n    Memory [label=\"短期记忆\\n(例如：对话历史)\", fillcolor=\"#ffc9c9\", shape=cylinder];\n\n    UserInput -> AgentCore [label=\"新信息\"];\n    Memory -> AgentCore [arrowhead=vee, label=\"提供上下文\"];\n    AgentCore -> LLM [arrowhead=vee, label=\"形成的提示\\n(输入 + 上下文)\"];\n    LLM -> AgentCore [arrowhead=vee, label=\"LLM输出\"];\n    AgentCore -> AgentResponse [arrowhead=vee, label=\"交付给用户\"];\n    AgentCore -> Memory [arrowhead=vee, label=\"用新一轮更新\\n(输入 + 输出)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-10qrgrd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图描绘了用户输入与现有短期记忆如何结合，为LLM形成完整提示的循环。LLM的输出随后被用于回应用户，并同时更新短期记忆以备后续交互。</p>\n</blockquote>\n<h3>保持“短期”</h3>\n<p>“短期”这个词有其含义。LLM在一次处理的文本量上存在限制（常称为“上下文 (context)窗口”）。如果对话历史变得太长，可能会超出这个限制。因此，短期记忆的实际实现方式通常涉及以下策略：</p>\n<ul>\n<li>只保留对话的最后几轮。</li>\n<li>总结对话中较旧的部分。</li>\n<li>使用更精细的技术来获取过去的相关信息（我们将在后续章节中会涉及）。</li>\n</ul>\n<p>目前，需要理解的是，代理需要<em>某种</em>机制来记住近期事件，以便智能地运作。这种能力，即使是最简单的形式，也能将LLM从无状态的文本生成器转变为一个更有用、更具交互性的助手。当我们构建第一个代理时，我们会看到即使是基本的记忆也能产生很大的作用。在第六章“LLM代理记忆：信息回顾”中，我们将更详尽地研究这些机制。</p>",
+  "slug": "remembering-recent-events",
+  "updates": [],
+  "references": [
+    {
+      "id": 18392,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky, James H. Martin",
+      "year": "2023",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本标准教材，其中专门的章节讨论了对话系统，为理解对话上下文、对话状态和记忆提供了基础。",
+      "order": 4,
+      "created_at": "2025-09-06T12:24:22.723426Z",
+      "updated_at": "2026-02-04T11:33:09.595807Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

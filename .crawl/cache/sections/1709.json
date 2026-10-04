@@ -1,0 +1,45 @@
+{
+  "id": 1709,
+  "title": "访问单个元素",
+  "meta_title": "访问 NumPy 数组元素",
+  "meta_description": "使用索引表示法，从一维和多维数组中取出单个值。",
+  "content": "<p>就像你在表格中按行和列号查找信息，或在街道上按门牌号找到特定房屋一样，你需要一种方法来定位并取出NumPy数组中存储的单个值。这个操作用到<em>索引</em>。</p>\n<h3>一维数组的索引</h3>\n<p>最简单的情况是一维数组，它就像一个值列表或序列。在Python中，因此也在NumPy中，索引从0开始。这表示第一个元素在索引0处，第二个在索引1处，依此类推。这通常被称为<strong>零基索引</strong>。</p>\n<p>让我们创建一维数组：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个简单的一维数组\narr1d = np.array([10, 11, 12, 13, 14])\nprint(arr1d)\n</code></pre>\n<pre><code class=\"language-text\">[10 11 12 13 14]\n</code></pre>\n<p>要访问一个元素，在数组名后使用方括号 <code>[]</code>，并将索引放在方括号内：</p>\n<pre><code class=\"language-python\"># 访问第一个元素 (索引 0)\nfirst_element = arr1d[0]\nprint(f\"第一个元素 (索引 0): {first_element}\")\n\n# 访问第三个元素 (索引 2)\nthird_element = arr1d[2]\nprint(f\"第三个元素 (索引 2): {third_element}\")\n</code></pre>\n<pre><code class=\"language-text\">第一个元素 (索引 0): 10\n第三个元素 (索引 2): 12\n</code></pre>\n<p>NumPy也支持负数索引，这对于从数组末尾访问元素很方便。索引 <code>-1</code> 表示最后一个元素，<code>-2</code> 表示倒数第二个，依此类推。</p>\n<pre><code class=\"language-python\"># 访问最后一个元素 (索引 -1)\nlast_element = arr1d[-1]\nprint(f\"最后一个元素 (索引 -1): {last_element}\")\n\n# 访问倒数第二个元素 (索引 -2)\nsecond_last = arr1d[-2]\nprint(f\"倒数第二个元素 (索引 -2): {second_last}\")\n</code></pre>\n<pre><code class=\"language-text\">最后一个元素 (索引 -1): 14\n倒数第二个元素 (索引 -2): 13\n</code></pre>\n<p>尝试访问有效范围之外的索引（0到length-1，或-1到-length）将导致 <code>IndexError</code>。确保索引在数组的大小范围内是很重要的。</p>\n<h3>二维数组（矩阵）的索引</h3>\n<p>二维数组，或称矩阵，有行和列。要访问二维数组中的单个元素，你需要同时指定行索引和列索引。同样，行索引和列索引都是零基的。</p>\n<p>标准语法是 <code>array[行索引, 列索引]</code>。注意方括号内行索引和列索引之间有逗号分隔。</p>\n<p>让我们创建一个二维数组：</p>\n<pre><code class=\"language-python\"># 创建一个2x3数组 (2行, 3列)\narr2d = np.array([[1, 2, 3],\n                  [4, 5, 6]])\nprint(\"原始二维数组:\\n\", arr2d)\n</code></pre>\n<pre><code class=\"language-text\">原始二维数组:\n [[1 2 3]\n  [4 5 6]]\n</code></pre>\n<p>现在，让我们访问一些元素：</p>\n<pre><code class=\"language-python\"># 访问第0行第0列的元素 (左上角)\nelement_00 = arr2d[0, 0]\nprint(f\"[0, 0]处的元素: {element_00}\")\n\n# 访问第1行第2列的元素 (右下角)\nelement_12 = arr2d[1, 2]\nprint(f\"[1, 2]处的元素: {element_12}\")\n\n# 访问第0行第1列的元素\nelement_01 = arr2d[0, 1]\nprint(f\"[0, 1]处的元素: {element_01}\")\n</code></pre>\n<pre><code class=\"language-text\">[0, 0]处的元素: 1\n[1, 2]处的元素: 6\n[0, 1]处的元素: 2\n</code></pre>\n<p>可以把第一个索引看作选择行，第二个索引看作选择该行内的列。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xw6w1n\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=plaintext];\n  struct [label=<\n    <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n      <TR><TD BGCOLOR=\"#e9ecef\">行\\列</TD><TD BGCOLOR=\"#dee2e6\">0</TD><TD BGCOLOR=\"#dee2e6\">1</TD><TD BGCOLOR=\"#dee2e6\">2</TD></TR>\n      <TR><TD BGCOLOR=\"#dee2e6\">0</TD><TD>arr2d[0, 0]<BR/>(值: 1)</TD><TD>arr2d[0, 1]<BR/>(值: 2)</TD><TD>arr2d[0, 2]<BR/>(值: 3)</TD></TR>\n      <TR><TD BGCOLOR=\"#dee2e6\">1</TD><TD>arr2d[1, 0]<BR/>(值: 4)</TD><TD BGCOLOR=\"#a5d8ff\">arr2d[1, 1]<BR/>(值: 5)</TD><TD>arr2d[1, 2]<BR/>(值: 6)</TD></TR>\n    </TABLE>\n  >];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xw6w1n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>二维数组索引的可视化表示。行索引在前，列索引在后。突出显示的单元格 <code>arr2d[1, 1]</code> 对应于行索引1和列索引1处的元素。</p>\n</blockquote>\n<h3>高维数组的索引</h3>\n<p>这个方法很自然地适用于更高维度的数组。对于N维数组，你在方括号内提供N个由逗号分隔的索引： <code>array[index_dim0, index_dim1, ..., index_dimN-1]</code>。</p>\n<p>考虑一个三维数组（你可以把它看作是二维数组的层或页）：</p>\n<pre><code class=\"language-python\"># 创建一个2x2x3数组 (2层, 2行, 3列)\narr3d = np.array([[[ 0,  1,  2],\n                   [ 3,  4,  5]],  # 第一层 (索引 0)\n\n                  [[ 6,  7,  8],\n                   [ 9, 10, 11]]]) # 第二层 (索引 1)\n\nprint(\"原始三维数组形状:\", arr3d.shape)\n</code></pre>\n<pre><code class=\"language-text\">原始三维数组形状: (2, 2, 3)\n</code></pre>\n<p>要访问一个元素，我们需要三个索引：层、行和列。</p>\n<pre><code class=\"language-python\"># 访问第1层、第0行、第2列的元素\nelement_102 = arr3d[1, 0, 2]\nprint(f\"[1, 0, 2]处的元素: {element_102}\")\n\n# 访问第0层、第1行、第1列的元素\nelement_011 = arr3d[0, 1, 1]\nprint(f\"[0, 1, 1]处的元素: {element_011}\")\n</code></pre>\n<pre><code class=\"language-text\">[1, 0, 2]处的元素: 8\n[0, 1, 1]处的元素: 4\n</code></pre>\n<p>使用 <code>arr[i]</code> 或 <code>arr[i, j]</code> 等索引来访问单个元素，能得到该位置存储的特定值。这是处理NumPy数组中各个数据点最基本的方法。接下来，我们将在此基础上，学习如何使用切片和其他高级索引技术一次选取多个元素。</p>",
+  "slug": "accessing-single-elements",
+  "updates": [],
+  "references": [
+    {
+      "id": 1713,
+      "title": "Indexing",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "NumPy 数组索引和操作的官方且最全面的指南，涵盖一维、二维和更高维度的数组。",
+      "order": 1,
+      "created_at": "2025-09-04T16:23:31.918161Z",
+      "updated_at": "2025-09-08T05:03:36.417137Z"
+    },
+    {
+      "id": 1714,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本被广泛认可的书籍，涵盖了 NumPy 的基础知识，包括数组创建、索引和操作，这对数据科学应用至关重要。（第三版）",
+      "order": 2,
+      "created_at": "2025-09-04T16:23:31.921414Z",
+      "updated_at": "2025-09-08T05:03:35.962971Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

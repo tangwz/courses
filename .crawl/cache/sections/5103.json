@@ -1,0 +1,61 @@
+{
+  "id": 5103,
+  "title": "使用pip和requirements.txt管理依赖",
+  "meta_title": "使用pip管理依赖 | 环境设置",
+  "meta_description": "了解安装和跟踪Python包依赖的最佳做法。",
+  "content": "<p>虚拟环境为项目依赖提供了一个独立的、隔离的空间。在此环境中，安装必要的Python包是一项基本任务。这个过程主要依赖于Python的标准包安装器<code>pip</code>。有效管理这些依赖对于创建可重现和可维护的LLM应用很重要。</p>\n<h3>使用pip安装包</h3>\n<p><code>pip</code>是一个命令行工具，它从Python包索引（PyPI）获取包，并将其安装到你当前的环境中。最基本的用法很简单。例如，要安装常用的<code>requests</code>库，你可以运行：</p>\n<pre><code class=\"language-bash\">pip install requests\n</code></pre>\n<p>此命令会下载<code>requests</code>包及其依赖的最新可用版本并进行安装。</p>\n<p>在LLM开发中，你通常会使用快速变化的库，或者这些库对LLM提供商API或其他工具（如LangChain或LlamaIndex）有特定的兼容性要求。为了确保不同开发设置和部署之间的一致性，通常需要安装特定版本的包。你可以使用<code>==</code>运算符来完成此操作：</p>\n<pre><code class=\"language-bash\"># 安装特定版本的OpenAI库\npip install openai==1.3.5\n\n# 安装最低版本（对库有用，对应用则不那么常用）\npip install langchain>=0.0.350\n</code></pre>\n<p>使用<code>==</code>将依赖固定到确切的版本，从而最大限度地提高可重现性。这通常是应用开发（包括LLM工作流）的推荐做法，因为它能避免上游库更新导致的不预期行为。</p>\n<p>要查看当前环境中安装了哪些包及其版本，你可以使用：</p>\n<pre><code class=\"language-bash\">pip list\n</code></pre>\n<p>或者，对于专门为requirements文件设计的格式：</p>\n<pre><code class=\"language-bash\">pip freeze\n</code></pre>\n<h3>使用requirements.txt声明依赖</h3>\n<p>手动使用<code>pip install</code>安装每个包适用于小型实验，但对于实际项目来说，很快就会变得繁琐且容易出错。你如何与协作者共享你的项目？如何确保你的部署环境具有完全相同的依赖？标准解决方案是<code>requirements.txt</code>文件。</p>\n<p>这是一个简单的文本文件，通常放在项目的根目录中，它列出了所有所需的包，通常每行一个，并且经常带有特定的版本号。</p>\n<p>一个LLM项目的<code>requirements.txt</code>示例可能如下所示：</p>\n<pre><code class=\"language-text\"># requirements.txt\n\nlangchain==0.1.0\nopenai==1.6.1\npython-dotenv==1.0.0\nrequests==2.31.0\nfastapi==0.108.0\nuvicorn==0.25.0\nchromadb==0.4.22 # 向量存储客户端示例\n</code></pre>\n<p>请注意使用<code>==</code>来固定版本。这可以确保任何使用此文件设置项目的人都将获得你在开发期间使用的确切版本，从而避免“在我机器上能跑”的问题。可以使用<code>#</code>符号添加注释。</p>\n<h3>生成和使用requirements.txt</h3>\n<p>虽然你可以手动创建<code>requirements.txt</code>，但从你的工作环境生成它是一种常见做法。安装所有必需的包后，你可以使用<code>pip freeze</code>捕获当前状态：</p>\n<pre><code class=\"language-bash\">pip freeze > requirements.txt\n</code></pre>\n<p>此命令将<code>pip freeze</code>的输出（列出所有已安装的包及其确切版本）重定向到<code>requirements.txt</code>文件中。</p>\n<p><strong>注意：</strong> <code>pip freeze</code>会捕获环境中<em>所有</em>已安装的包，也包含你的直接依赖的依赖。这有时可能导致<code>requirements.txt</code>文件过长。对于大多数应用，这是可接受的，甚至对于最大程度的可重现性来说是更好的。但是，请注意它也会锁定子依赖。</p>\n<p>一旦你有了<code>requirements.txt</code>文件（无论是生成的还是手动创建的），在其他地方设置项目环境就变成了一个简单的命令。在另一台机器上或在部署脚本中创建并激活新的虚拟环境后，只需运行：</p>\n<pre><code class=\"language-bash\">pip install -r requirements.txt\n</code></pre>\n<p><code>pip</code>将读取该文件并安装所有列出的包及其指定版本。这是复制Python项目环境的标准方法。</p>\n<h3>依赖管理的好做法</h3>\n<ol>\n<li><strong>激活环境：</strong> 务必确保你的项目虚拟环境在安装包或生成<code>requirements.txt</code><em>之前</em>处于激活状态。</li>\n<li><strong>版本固定：</strong> 在应用的<code>requirements.txt</code>中使用<code>==</code>来指定特定版本，以确保可重现性。</li>\n<li><strong>版本控制：</strong> 将你的<code>requirements.txt</code>文件提交到版本控制系统（如Git）。这会将你的依赖历史与代码一起跟踪。</li>\n<li><strong>定期更新：</strong> 定期检查并更新你的依赖（<code>pip install --upgrade package_name</code>，然后进行全面测试）并重新生成<code>requirements.txt</code>。这有助于整合安全补丁和新功能，但需要测试以确保兼容性。</li>\n<li><strong>纯净环境：</strong> 如果可能，从一个只包含项目所需依赖的纯净环境生成<code>requirements.txt</code>，以避免包含无关的包。</li>\n</ol>\n<p>通过系统地使用<code>pip</code>和<code>requirements.txt</code>，你为管理LLM应用所依赖的库建立了一个可靠的体系，使协作和部署显著更顺畅。</p>",
+  "slug": "managing-dependencies-pip",
+  "updates": [],
+  "references": [
+    {
+      "id": 13213,
+      "title": "pip documentation",
+      "author": "The pip developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pip.pypa.io/en/stable/",
+      "doi": "",
+      "note": "Python包安装程序的官方文档，涵盖所有命令和使用细节。",
+      "order": 1,
+      "created_at": "2025-09-05T08:29:41.627557Z",
+      "updated_at": "2025-09-10T11:59:50.056907Z"
+    },
+    {
+      "id": 13214,
+      "title": "Installing packages",
+      "author": "Python Packaging Authority",
+      "year": "2025",
+      "publisher": "Python Packaging Authority",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/en/latest/guides/installing-packages/",
+      "doi": "",
+      "note": "来自Python打包用户指南的权威资料，关于使用pip安装包。",
+      "order": 2,
+      "created_at": "2025-09-05T08:29:41.635129Z",
+      "updated_at": "2025-09-10T11:59:47.680264Z"
+    },
+    {
+      "id": 13215,
+      "title": "Managing application dependencies",
+      "author": "Python Packaging Authority",
+      "year": "2024",
+      "publisher": "Python Packaging Authority",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://packaging.python.org/tutorials/managing-dependencies/",
+      "doi": "",
+      "note": "一份关于Python项目依赖管理的指南，侧重于使用`requirements.txt`实现可重复性。",
+      "order": 3,
+      "created_at": "2025-09-05T08:29:41.637565Z",
+      "updated_at": "2025-09-10T11:59:54.100849Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 4170,
+  "title": "梯度遮蔽与模糊问题",
+  "meta_title": "梯度遮蔽与模糊问题",
+  "meta_description": "讨论模糊梯度的问题以及为何某些防御提供虚假的安全感。",
+  "content": "<p>尽管对抗训练和认证防御等方法旨在从根本上提升模型的抵御能力，但一些提出的防御技术却无意中依赖于一种称为<strong>梯度遮蔽</strong>或<strong>梯度模糊</strong>的现象。理解这个问题对于正确评估模型安全性、避免产生虚假的安全感具有重要意义。</p>\n<p>梯度遮蔽是指防御机制使得基于梯度的攻击（如PGD）难以找到有效的对抗性扰动，尽管底层的脆弱性可能仍然存在。这种防御并非真正让模型变得难以被攻破，而是实质上“隐藏”或“模糊”了这些攻击所依赖的梯度。</p>\n<h3>梯度遮蔽如何表现</h3>\n<p>防御可以通过以下几种方式造成梯度遮蔽：</p>\n<ol>\n<li><strong>破碎梯度：</strong> 一些防御方法引入的操作会导致梯度在几乎所有地方都数值不稳定或为零。例如，极高频率函数或严重依赖饱和激活函数 (activation function)的网络可能会出现这种情况。攻击者在计算梯度时会得到零、<code>NaN</code>（非数值）或<code>Inf</code>（无穷大），从而使标准梯度下降 (gradient descent)无效。</li>\n<li><strong>随机梯度：</strong> 引入随机性的防御，无论是在模型结构中（例如测试时的dropout）还是通过随机输入变换，都可能产生有噪声的梯度估计。多次运行取平均梯度可能有所帮助，但噪声仍然会显著阻碍寻找对抗样本的优化过程，特别是对于依赖一致梯度方向的迭代攻击，如PGD。随机平滑虽然是随机的，但其目的是获得认证强韧性，这与仅仅使用随机性来破坏梯度计算的机制不同。</li>\n<li><strong>不可微操作：</strong> 包含不可微步骤的技术，例如某些形式的输入量化 (quantization)、阈值处理或复杂预处理，会明确地中断梯度流。尽管模型可能仍然脆弱，但基于梯度的攻击无法通过这些不可微层直接优化扰动。</li>\n</ol>\n<h3>模糊梯度为何会产生问题</h3>\n<p>梯度遮蔽的主要危险在于它提供了<strong>虚假的安全感</strong>。使用严重依赖梯度模糊的技术防御的模型，在初步评估中可能对标准基于梯度的攻击（如FGSM或PGD）显示出高准确率。这似乎表明防御是有效的。</p>\n<p>然而，这种强韧性往往是表面的。模型尚未学会在决策边界附近正确分类输入；它只是使<em>特定</em>的攻击算法更难利用梯度来攻击弱点。更复杂或不同类型的攻击通常可以绕过这些防御：</p>\n<ul>\n<li><strong>不同优化技术：</strong> Carlini &#x26; Wagner (C&#x26;W) 等基于优化的攻击对小的梯度不准确性敏感度可能较低。</li>\n<li><strong>迁移攻击：</strong> 针对未防御（或防御方式不同）的替代模型制作的对抗样本，仍然可能成功迁移到具有模糊梯度的模型。</li>\n<li><strong>基于分数和基于决策的攻击：</strong> 不依赖梯度的攻击，例如边界攻击或仅使用模型输出分数的技巧，在基于梯度的方法失败时，这些攻击可能成功。</li>\n<li><strong>自适应攻击：</strong> 了解防御机制的攻击者可以特别设计攻击来规避梯度模糊。例如，如果防御使用不可微组件，攻击者可以使用反向传播 (backpropagation)可微近似（BPDA）等技术来估计梯度，或者简单地攻击不可微步骤之前的更早层。</li>\n</ul>\n<p>以下图表示意了梯度遮蔽可能如何影响攻击者试图降低的损失。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1xavv0x\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n    edge [fontname=\"Helvetica\", fontsize=10];\n\n    subgraph cluster_0 {\n        label = \"标准模型\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n        SmoothLoss [label=\"平滑损失\"];\n        AttackPath1 [label=\"基于梯度的攻击找到路径\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n        SmoothLoss -> AttackPath1 [style=invis]; // Align text\n    }\n\n    subgraph cluster_1 {\n        label = \"具有梯度遮蔽的模型\";\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#ffc9c9\"];\n        MaskedLoss [label=\"模糊/噪声损失\"];\n        AttackPath2 [label=\"基于梯度的攻击迷失方向\", shape=plaintext, fontcolor=\"#f03e3e\"];\n        MaskedLoss -> AttackPath2 [style=invis]; // Align text\n    }\n\n    SmoothLoss -> MaskedLoss [label=\" 应用防御 \", style=dashed, color=\"#868e96\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1xavv0x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是一种对比视角，一方面是梯度能有效引导攻击的平滑损失区域，另一方面是梯度不可靠的模糊区域，后者可能误导仅基于梯度攻击的评估。</p>\n</blockquote>\n<h3>检测与克服梯度遮蔽</h3>\n<p>检测梯度遮蔽需要严格的评估，这超出了标准PGD测试。正如下一章关于评估的详细内容所示：</p>\n<ol>\n<li><strong>使用多种攻击进行测试：</strong> 在您的评估套件中加入基于优化（C&#x26;W）、基于分数和基于决策的攻击。</li>\n<li><strong>分析可迁移性：</strong> 检查在其他模型上生成的攻击是否容易迁移。高可迁移性可能表明防御并非根本上强韧。</li>\n<li><strong>实施自适应攻击：</strong> 特别设计考虑到防御机制的攻击。如果防御涉及随机化，则平均梯度或使用变换期望攻击。如果涉及不可微部分，请尝试近似梯度或攻击前置层。</li>\n<li><strong>检查白盒与黑盒 (black box)表现：</strong> 如果防御对白盒梯度攻击表现异常出色，但对黑盒攻击（特别是迁移或基于查询的攻击）表现不佳，这是模糊梯度的有力迹象。</li>\n</ol>\n<p>总而言之，虽然梯度遮蔽可能看似增强了模型抵御简单攻击的能力，但它通常代表一种失败模式，而非成功的防御策略。真正的对抗强韧性要求模型从根本上抵抗扰动，而非仅仅使特定攻击者难以利用梯度进行优化。使用多种强大、自适应攻击进行适当评估，对于区分真正的强韧性与单纯的梯度模糊是必不可少的。</p>",
+  "slug": "gradient-masking-obfuscation",
+  "updates": [],
+  "references": [
+    {
+      "id": 11468,
+      "title": "Obfuscated Gradients Give a False Sense of Security: Circumventing Defenses to Adversarial Examples",
+      "author": "Anish Athalye, Nicholas Carlini, David Wagner",
+      "year": "2018",
+      "publisher": "PMLR",
+      "journal": "Proceedings of the 35th International Conference on Machine Learning (ICML)",
+      "volume": "80",
+      "pages": "274-283",
+      "url": "https://proceedings.mlr.press/v80/athalye18a.html",
+      "doi": "10.5555/3305381.3305469",
+      "note": "一篇核心论文，系统地识别并将梯度混淆归类为许多对抗性防御中的常见失败模式。它描述了绕过这些防御的自适应攻击，对对抗性鲁棒性研究产生了影响。",
+      "order": 1,
+      "created_at": "2025-09-05T07:19:03.460789Z",
+      "updated_at": "2025-09-08T03:35:18.196094Z"
+    },
+    {
+      "id": 11469,
+      "title": "Towards Evaluating the Robustness of Neural Networks",
+      "author": "Nicholas Carlini, David A. Wagner",
+      "year": "2017",
+      "publisher": "IEEE Computer Society",
+      "journal": "2017 IEEE Symposium on Security and Privacy (SP)",
+      "volume": "",
+      "pages": "39-57",
+      "url": "https://doi.org/10.1109/SP.2017.49",
+      "doi": "10.1109/SP.2017.49",
+      "note": "介绍了一组强大的、基于优化的对抗性攻击（C&W攻击），旨在克服梯度混淆和其他防御策略。这项工作强调了严格的自适应评估的重要性。",
+      "order": 2,
+      "created_at": "2025-09-05T07:19:03.503442Z",
+      "updated_at": "2025-09-08T03:35:22.791403Z"
+    },
+    {
+      "id": 11470,
+      "title": "Gradient Estimation for Black-Box Adversarial Attacks",
+      "author": "Andrew Ilyas, Logan Engstrom, Anish Athalye, Jessy Lin",
+      "year": "2018",
+      "publisher": "",
+      "journal": "Proceedings of the International Conference on Machine Learning (ICML)",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.48550/arXiv.1804.08598",
+      "doi": "10.48550/arXiv.1804.08598",
+      "note": "讨论了在黑盒场景中估计梯度的技术，包括反向传播可微近似（BPDA），这是一种针对依赖不可微或梯度混淆操作的防御创建自适应攻击的方法。",
+      "order": 3,
+      "created_at": "2025-09-05T07:19:03.507943Z",
+      "updated_at": "2025-09-08T03:35:22.053114Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

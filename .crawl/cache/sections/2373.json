@@ -1,0 +1,45 @@
+{
+  "id": 2373,
+  "title": "方法：定义对象的行为",
+  "meta_title": "Python 对象方法 | 类中的函数",
+  "meta_description": "学习如何在类中定义方法（函数），以明确对象可以执行的行为或操作。",
+  "content": "<p>类作为蓝图，属性存储根据该蓝图创建的每个对象的特定数据或状态。例如，一个 <code>Dog</code> 类可以规定狗有 <code>name</code>（名字）和 <code>breed</code>（品种），每个单独的 <code>Dog</code> 对象都会在其属性中保存其具体的名称和品种。</p>\n<p>但对象不仅仅是数据的被动容器。它们经常需要执行操作或被执行操作。例如，狗可以叫，汽车可以行驶，银行账户可以存入资金。在面向对象编程中，这些操作或行为是使用<strong>方法</strong>定义的。</p>\n<p>可以将方法看作是“属于”某个类的函数。它们与属性一样，定义在类块内部，但使用我们创建独立函数时学过的熟悉的 <code>def</code> 关键字。</p>\n<h2>定义方法</h2>\n<p>让我们为 <code>Dog</code> 类添加一个行为。我们希望任何 <code>Dog</code> 对象都能够“说话”。</p>\n<pre><code class=\"language-python\">class Dog:\n    # __init__ 方法初始化对象的属性\n    def __init__(self, name, breed):\n        self.name = name\n        self.breed = breed\n        print(f\"Dog initialized: {self.name}\")\n\n    # 这是一个方法：定义在类内部的函数\n    def bark(self):\n        print(f\"{self.name} says Woof!\")\n\n# 创建 Dog 类的一个实例（对象）\nmy_dog = Dog(\"Buddy\", \"Golden Retriever\")\n\n# 在 my_dog 对象上调用 bark 方法\nmy_dog.bark()\n</code></pre>\n<p>如果你运行这段代码，你会看到：</p>\n<pre><code class=\"language-text\">Dog initialized: Buddy\nBuddy says Woof!\n</code></pre>\n<p>注意到 <code>bark</code> 函数定义在 <code>Dog</code> 类内部。这是一个方法。</p>\n<h2><code>self</code> 参数 (parameter)：指代对象本身</h2>\n<p>你可能已经注意到 <code>__init__</code> 和 <code>bark</code> 中都出现了 <code>self</code> 参数。那是什么呢？</p>\n<p>当你在类中定义一个方法时，该方法的<strong>第一个参数</strong>总是接收到调用该方法的<em>实例</em>（即特定对象）的引用。按照惯例，这个参数几乎总是命名为 <code>self</code>。</p>\n<p>再次查看 <code>bark</code> 方法：</p>\n<pre><code class=\"language-python\">    def bark(self):\n        print(f\"{self.name} says Woof!\")\n</code></pre>\n<p>在 <code>bark</code> 内部，我们使用 <code>self.name</code>。这告诉 Python：“访问调用此 <code>bark</code> 方法的<em>特定对象</em>的 <code>name</code> 属性。”</p>\n<p>当我们写 <code>my_dog.bark()</code> 时，Python 会自动将 <code>my_dog</code> 对象作为第一个参数传递给 <code>bark</code> 方法。因此，在方法调用内部，<code>self</code> <em>就是</em> <code>my_dog</code>。这就是该方法知道要打印哪只狗的名字的原因。</p>\n<p>当你<em>调用</em>方法时（<code>my_dog.bark()</code>，而不是 <code>my_dog.bark(my_dog)</code>），你不需要显式传递 <code>self</code>。Python 会自动为你处理。但是，当你在类中<em>定义</em>方法时，你<em>必须</em>将 <code>self</code> 作为第一个参数包含在内。</p>\n<h2>方法可以访问和修改属性</h2>\n<p>方法是与对象数据（其属性）交互的主要方式。它们可以读取属性值，就像在 <code>bark</code> 方法中看到的那样，它们也可以改变属性值。</p>\n<p>让我们添加一个方法来改变狗的名字：</p>\n<pre><code class=\"language-python\">class Dog:\n    def __init__(self, name, breed):\n        self.name = name\n        self.breed = breed\n        print(f\"Dog initialized: {self.name}\")\n\n    def bark(self):\n        print(f\"{self.name} says Woof!\")\n\n    # 改变狗的名字属性的方法\n    def set_name(self, new_name):\n        if isinstance(new_name, str) and new_name: # 基本检查\n            self.name = new_name\n            print(f\"My name has been changed to {self.name}\")\n        else:\n            print(\"Please provide a valid name.\")\n\n# 创建实例\ndog1 = Dog(\"Buddy\", \"Golden Retriever\")\ndog2 = Dog(\"Lucy\", \"Beagle\")\n\n# 使用方法\ndog1.bark() # 输出：Buddy says Woof!\ndog2.bark() # 输出：Lucy says Woof!\n\nprint(f\"Dog 1's name is currently: {dog1.name}\") # 输出：狗1当前的名字是：Buddy\n\n# 在 dog1 上调用 set_name 方法\ndog1.set_name(\"Max\") # 输出：我的名字已改为 Max\n\nprint(f\"Dog 1's name is now: {dog1.name}\") # 输出：狗1现在的名字是：Max\ndog1.bark() # 输出：Max says Woof!\n</code></pre>\n<p>在 <code>set_name</code> 方法中：</p>\n<ol>\n<li>它接受 <code>self</code>（特定的 <code>Dog</code> 对象）和 <code>new_name</code>（期望的新名字）。</li>\n<li>它执行一个简单的检查，看 <code>new_name</code> 是否为非空字符串。</li>\n<li>如果有效，它会使用 <code>self.name = new_name</code> 更新对象的 <code>name</code> 属性。</li>\n<li>注意 <code>dog1.set_name(\"Max\")</code> 的调用只改变了 <code>dog1</code> 的名字。<code>dog2</code> 对象不受影响，因为在该特定的方法调用中，<code>self</code> 指的是 <code>dog1</code>。</li>\n</ol>\n<h2>方法与函数</h2>\n<p>把方法看作是与对象相关的函数会很有帮助。主要区别在于方法在对象的语境下运行（通过 <code>self</code>），并且可以直接访问和操作该对象的属性。独立函数不具备这种与对象状态的内在关联。</p>\n<p>通过将数据（属性）和行为（方法）捆绑在类中，面向对象编程有助于你创建更规整、可重用且易于理解的代码，尤其当你的程序规模变大时。你正在将问题的组成部分建模为：既“了解”事物（属性），又“能做”事情（方法）的对象。</p>",
+  "slug": "python-object-methods",
+  "updates": [],
+  "references": [
+    {
+      "id": 6181,
+      "title": "The Python Tutorial - Classes",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/classes.html",
+      "doi": "",
+      "note": "提供了关于Python中类、对象、属性和方法的官方基础介绍，包括`self`参数的重要性。",
+      "order": 1,
+      "created_at": "2025-09-05T01:19:44.727669Z",
+      "updated_at": "2025-09-07T21:18:16.495957Z"
+    },
+    {
+      "id": 6183,
+      "title": "Learning Python, 5th Edition",
+      "author": "Mark Lutz",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-python-5th/9781449355739/",
+      "doi": "",
+      "note": "一本关于Python语言的综合参考书，详细解释了面向对象编程，包括方法的定义和`self`机制。",
+      "order": 3,
+      "created_at": "2025-09-05T01:19:44.733214Z",
+      "updated_at": "2025-09-07T21:18:33.220637Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

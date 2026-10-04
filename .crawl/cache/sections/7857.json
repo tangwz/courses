@@ -1,0 +1,61 @@
+{
+  "id": 7857,
+  "title": "Claude Desktop 的配置",
+  "meta_title": "为 MCP 配置 Claude Desktop",
+  "meta_description": "修改配置文件，以便在 Claude Desktop 中登记本地服务器。",
+  "content": "<p>使用 MCP 检查器确认服务器逻辑后，接下来就是将其与生产级客户端结合。对于本地开发和日常使用，Claude Desktop 作为主要主机应用。它管理 MCP 服务器的生命周期，将其作为子进程启动，并通过标准输入输出 (stdio) 进行通信。</p>\n<p>要登记服务器，您必须修改位于您主机上的一个特定配置文件。这个 JSON 文件作为登记簿，告知客户端运行哪个可执行文件、传递哪些参数 (parameter)，以及向服务器环境注入哪些环境变量。</p>\n<h3>查找配置文件</h3>\n<p>该配置文件名为 <code>claude_desktop_config.json</code>。其位置取决于您的操作系统。如果文件和目录结构尚不存在，您可能需要创建它们。</p>\n<ul>\n<li><strong>macOS:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></li>\n<li><strong>Windows:</strong> <code>%APPDATA%\\Claude\\claude_desktop_config.json</code></li>\n</ul>\n<p>您可以通过 Claude Desktop 界面快速访问此文件，方法是选择设置菜单（通常由首字母或通用图标表示），然后选择 <strong>设置</strong> > <strong>开发者</strong> > <strong>编辑配置</strong>。此操作会在您的默认文本编辑器或文件管理器中打开该文件。</p>\n<h3>mcpServers 定义</h3>\n<p>配置的核心是 <code>mcpServers</code> 对象。此对象中的每个属性代表一个不同的服务器连接。您选择的属性名称作为该服务器在 Claude 界面中的标识符。</p>\n<p>与每个服务器关联的值是一个包含 <code>command</code>、一个 <code>args</code> 数组和一个可选的 <code>env</code> 字典的对象。</p>\n<p>以下是一个基本 Python 服务器配置的结构：</p>\n<pre><code class=\"language-json\">{\n  \"mcpServers\": {\n    \"my-local-data\": {\n      \"command\": \"python3\",\n      \"args\": [\n        \"/Users/username/projects/mcp-server/main.py\"\n      ]\n    }\n  }\n}\n</code></pre>\n<p>Claude Desktop 初始化时，会解析此文件并尝试执行 <code>python3 /Users/username/projects/mcp-server/main.py</code>。客户端随后会监听该进程的 <code>stdout</code>，以获取 JSON-RPC 消息。</p>\n<blockquote>\n<p>Claude Desktop 中的配置文件解析和进程启动流程。</p>\n</blockquote>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-fflgtd\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [fontname=\"Helvetica\", shape=box, style=filled, color=\"white\"];\n  edge [fontname=\"Helvetica\", fontsize=10];\n  bgcolor=\"transparent\";\n\n  config [label=\"claude_desktop_config.json\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n  claude [label=\"Claude Desktop\\n(客户端主机)\", fillcolor=\"#4dabf7\", fontcolor=\"white\", color=\"#339af0\"];\n  \n  subgraph cluster_processes {\n    label = \"子进程\";\n    style = dashed;\n    color = \"#adb5bd\";\n    fontcolor = \"#495057\";\n    \n    server1 [label=\"MCP 服务器 1\\n(Python)\", fillcolor=\"#69db7c\", color=\"#40c057\"];\n    server2 [label=\"MCP 服务器 2\\n(Node.js)\", fillcolor=\"#ffd8a8\", color=\"#f76707\"];\n  }\n\n  config -> claude [label=\"启动时读取\", color=\"#868e96\"];\n  claude -> server1 [label=\"通过 Stdio 启动\", color=\"#4dabf7\"];\n  claude -> server2 [label=\"通过 Stdio 启动\", color=\"#4dabf7\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-fflgtd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<h3>绝对路径和虚拟环境</h3>\n<p>配置中一个常见的失败之处是使用相对路径。启动进程的工作目录通常是应用包位置，而不是您的项目文件夹。因此，您必须始终为可执行文件和脚本使用绝对路径。</p>\n<p>如果您使用 Python 进行开发，最佳做法是使用位于您的虚拟环境中的 python 可执行文件。这确保服务器能访问已安装的依赖项，如 <code>mcp</code> 或 <code>pydantic</code>。</p>\n<p>对于使用 <code>uv</code> 或 <code>venv</code> 且位于 <code>.venv</code> 中的项目，配置应直接指向二进制文件：</p>\n<pre><code class=\"language-json\">{\n  \"mcpServers\": {\n    \"sqlite-explorer\": {\n      \"command\": \"/Users/username/projects/sqlite-tool/.venv/bin/python\",\n      \"args\": [\n        \"/Users/username/projects/sqlite-tool/server.py\",\n        \"--db-path\",\n        \"/Users/username/data/Chinook.db\"\n      ]\n    }\n  }\n}\n</code></pre>\n<p>对于通过 <code>npm</code> 发布或使用 <code>npx</code> 运行的 TypeScript 服务器，命令需要 node 可执行文件的完整路径，或一个可以解析该命令的 shell 包装器。然而，通常通过使用 <code>node</code> 的绝对路径和构建输出可以实现更简单的执行：</p>\n<pre><code class=\"language-json\">{\n  \"mcpServers\": {\n    \"filesystem-tool\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/Users/username/projects/fs-mcp/dist/index.js\",\n        \"/Users/username/allowed-directory\"\n      ]\n    }\n  }\n}\n</code></pre>\n<h3>注入环境变量</h3>\n<p>服务器通常需要身份验证凭据，例如用于外部服务（例如 GitHub、Brave Search 或云数据库）的 API 密钥。虽然您可以将这些硬编码到源代码中，但这样做存在安全风险。MCP 配置允许您通过 <code>env</code> 对象安全地传递这些信息。</p>\n<p>此处定义的变量在运行时注入到进程环境中。它们在 Python 中可通过 <code>os.environ</code> 访问，在 Node.js 中可通过 <code>process.env</code> 访问。</p>\n<pre><code class=\"language-json\">{\n  \"mcpServers\": {\n    \"github-integration\": {\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-github\"\n      ],\n      \"env\": {\n        \"GITHUB_PERSONAL_ACCESS_TOKEN\": \"ghp_xxxxxxxxxxxx\",\n        \"LOG_LEVEL\": \"DEBUG\"\n      }\n    }\n  }\n}\n</code></pre>\n<p>在此示例中，我们使用 <code>uvx</code>（<code>uv</code> 包管理器的一部分）立即下载并运行远程服务器包，提供必要的令牌来授权请求。</p>\n<h3>应用更改和问题处理</h3>\n<p>Claude Desktop 只在启动时读取配置文件。对 JSON 文件所做的任何更改都要求您完全退出并重新启动应用。关闭窗口通常不够；您必须终止应用进程。</p>\n<p>重新启动后，请在输入界面中查找连接指示器，通常是一个类似插头或服务器机架的图标。点击此图标会显示您已连接服务器的状态。</p>\n<h4>常见配置错误</h4>\n<ol>\n<li><strong>JSON 语法错误：</strong> 尾随逗号或缺少括号将阻止文件解析。如果 Claude Desktop 无法加载服务器，请使用 Linter 或在线验证器验证您的 JSON。</li>\n<li><strong>无声故障：</strong> 如果服务器脚本立即崩溃（例如，由于 Python 中缺少导入或语法错误），Claude 可能不会显示明显的错误。它只是无法连接。</li>\n<li><strong>Stdio 污染：</strong> 如架构部分所述，该协议依赖于标准输出的干净使用。如果您的代码使用 <code>print()</code> 进行调试，这些消息会干扰 JSON-RPC 消息结构。请确保所有调试信息都写入标准错误 (<code>stderr</code>)。</li>\n</ol>\n<p>要诊断无法连接的服务器，您可以在您自己的终端中，完全按照配置文件中的定义手动运行 <code>command</code> 和 <code>args</code>。</p>\n<pre><code class=\"language-bash\"># 手动测试命令，看是否崩溃\n/Users/username/projects/sqlite-tool/.venv/bin/python /Users/username/projects/sqlite-tool/server.py\n</code></pre>\n<p>如果命令运行并挂起（等待输入）而未抛出异常，则环境设置很可能正确。您随后可以终止它，并相信 Claude Desktop 将能成功启动它。</p>",
+  "slug": "configuration-claude-desktop",
+  "updates": [],
+  "references": [
+    {
+      "id": 21978,
+      "title": "JSON-RPC 2.0 Specification",
+      "author": "JSON-RPC Working Group",
+      "year": "2010",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.jsonrpc.org/specification",
+      "doi": "",
+      "note": "定义了通过包括标准I/O在内的各种传输层进行远程过程调用的消息格式和协议标准，与MCP服务器通信密切相关。",
+      "order": 1,
+      "created_at": "2025-11-19T12:08:52.451606Z",
+      "updated_at": "2025-11-19T12:39:08.595966Z"
+    },
+    {
+      "id": 21979,
+      "title": "`subprocess` - Subprocess management",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "Python Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/subprocess.html",
+      "doi": "",
+      "note": "Python官方库文档，详细说明了如何与操作系统进程交互，包括执行、标准I/O管理以及为生成的子进程配置环境变量。",
+      "order": 2,
+      "created_at": "2025-11-19T12:08:52.479616Z",
+      "updated_at": "2025-11-19T12:38:56.917820Z"
+    },
+    {
+      "id": 21981,
+      "title": "`venv` - Creation of virtual environments",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "Python Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "Python官方文档，提供了创建和使用虚拟环境以隔离项目依赖的说明，有助于保持服务器配置的整洁和可重复性。",
+      "order": 4,
+      "created_at": "2025-11-19T12:08:52.489669Z",
+      "updated_at": "2025-11-19T12:38:58.539081Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

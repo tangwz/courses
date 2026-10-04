@@ -1,0 +1,45 @@
+{
+  "id": 5363,
+  "title": "延迟与吞吐量的考虑",
+  "meta_title": "扩散模型中的延迟与吞吐量",
+  "meta_description": "考察生成速度（延迟）与请求量（吞吐量）之间的权衡。",
+  "content": "<p>有效部署扩散模型，取决于对两个基本性能指标的管理：延迟和吞吐量 (throughput)。如前所述，扩散过程的迭代特性带来了大量的计算要求。了解这些要求如何转化为响应速度和处理能力，对于设计可扩展系统非常重要。</p>\n<p>在图像生成方面，延迟指的是用户提交请求（例如，文本提示）到接收最终生成图像之间所花费的时间。吞吐量衡量的是系统的处理能力，通常量化 (quantization)为单位时间内处理的请求数量或生成的图像数量（例如，每秒图像数或每分钟请求数）。这两个指标常常存在冲突；优化其中一个可能会对另一个产生负面影响。</p>\n<h3>延迟的来源</h3>\n<p>扩散模型通过一系列去噪步骤生成图像。每一步都涉及数据经过一个大型神经网络 (neural network)，通常是U-Net架构。这种迭代过程是推理 (inference)延迟的主要因素。有几个因素会影响具体的时间长短：</p>\n<ol>\n<li><strong>推理步骤数量：</strong> 扩散模型通常需要多个步骤（通常20-100步，有时更多）才能将噪声细化为清晰图像。更多步骤通常会带来更高质量，但会直接增加延迟。 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>延迟</mtext><mo>∝</mo><mtext>步骤数量</mtext></mrow><annotation encoding=\"application/x-tex\">延迟 \\propto 步骤数量</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">延迟</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">∝</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord cjk_fallback\">步骤数量</span></span></span></span>。</li>\n<li><strong>模型大小和复杂性：</strong> 参数 (parameter)更多的大型模型每一步需要更多计算，并占用更多显存（VRAM），从而增加每步时间。</li>\n<li><strong>图像分辨率：</strong> 生成更高分辨率的图像需要在每一步处理更多数据，这会明显影响计算时间和内存使用。</li>\n<li><strong>硬件：</strong> 硬件基础的速度，特别是GPU，是一个重要因素。GPU的计算能力、内存带宽和VRAM容量直接影响每个去噪步骤的执行速度。</li>\n<li><strong>采样器选择：</strong> 存在不同的采样算法（例如DDIM、PNDM、Euler），其中一些可以在比其他算法更少的步骤中达到良好结果，从而影响总延迟。</li>\n</ol>\n<p>对于一个常见配置（例如512x512分辨率、50步，在现代GPU上），每张图像的延迟可能从几秒到几十秒不等。更高的分辨率或老旧的硬件可能会使其达到数分钟。这种固有的延迟通常远高于用户对一般网络服务的预期。</p>\n<h3>了解吞吐量 (throughput)的限制</h3>\n<p>吞吐量代表系统的处理速率。对于扩散模型，它常常受限于硬件可以支持的并发推理 (inference)过程数量。影响吞吐量的主要因素包括：</p>\n<ol>\n<li><strong>GPU可用性：</strong> 由于单个图像生成任务可以占用GPU数秒，可用GPU的数量通常是吞吐量的主要瓶颈。</li>\n<li><strong>GPU内存（VRAM）：</strong> 每个运行中的模型实例都会占用大量VRAM（通常10GB或更多）。总可用VRAM限制了单个GPU或多个GPU上可以并发加载的模型数量。</li>\n<li><strong>模型加载时间：</strong> 扩散模型很大。将模型从存储加载到GPU内存可能需要几秒钟，可能会增加额外负担，尤其是在按需加载模型的环境中（例如，无服务器冷启动）。</li>\n<li><strong>请求处理：</strong> 周边基础设施（API服务器、请求队列、负载均衡器）的效率也有一定作用，尽管GPU计算通常是主要的限制。</li>\n</ol>\n<p>如果单个GPU生成一张图像需要10秒，其最大理论吞吐量为每分钟6张图像。为了获得更高的吞吐量，通常需要将工作负载并行化到多个GPU上。</p>\n<h3>延迟与吞吐量 (throughput)的权衡</h3>\n<p>优化扩散模型部署常常涉及在最小化单个请求延迟和最大化系统整体吞吐量之间进行权衡。</p>\n<p>考虑<strong>请求批处理</strong>。将多个传入请求分组并作为单个批次处理，可以显著提高GPU利用率。GPU不是一次处理一张图像，而是在模型的前向传播中并行处理多个图像。这会增加吞吐量，因为启动计算的开销分摊到更多样本上。然而，批处理通常会增加单个请求的<em>感知</em>延迟。请求可能需要等待批次满员或整个批次完成，即使其特定计算已经提前完成。动态批处理策略试图通过在达到一定数量的请求或超时后立即处理批次来平衡这一点。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1p71k4e\" \n              data-plot-definition='{\"layout\": {\"title\": \"延迟与吞吐量的示例场景\", \"xaxis\": {\"title\": \"每张图像平均延迟（秒）\", \"range\": [0, 25]}, \"yaxis\": {\"title\": \"吞吐量（张/分钟）\", \"range\": [0, 60]}, \"legend\": {\"title\": \"配置\"}, \"margin\": {\"l\": 60, \"r\": 30, \"t\": 40, \"b\": 50}, \"plot_bgcolor\": \"#e9ecef\", \"paper_bgcolor\": \"#ffffff\"}, \"data\": [{\"x\": [15], \"y\": [4], \"mode\": \"markers\", \"type\": \"scatter\", \"name\": \"单GPU，基线\", \"marker\": {\"color\": \"#f03e3e\", \"size\": 12}}, {\"x\": [8], \"y\": [7], \"mode\": \"markers\", \"type\": \"scatter\", \"name\": \"更快GPU / 更少步骤\", \"marker\": {\"color\": \"#4263eb\", \"size\": 12}}, {\"x\": [18], \"y\": [10], \"mode\": \"markers\", \"type\": \"scatter\", \"name\": \"单GPU + 批处理\", \"marker\": {\"color\": \"#f76707\", \"size\": 12}}, {\"x\": [5], \"y\": [50], \"mode\": \"markers\", \"type\": \"scatter\", \"name\": \"优化模型，多GPU\", \"marker\": {\"color\": \"#37b24d\", \"size\": 12}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1p71k4e\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了不同配置如何影响延迟和吞吐量。增加硬件或优化模型通常都能改善两者，而批处理等技术主要提升吞吐量，但可能以增加平均延迟为代价。</p>\n</blockquote>\n<p>减少推理 (inference)步骤数量是另一种策略。这会直接降低延迟，但可能会影响图像质量。反之，增加步骤会提高质量但会增加延迟。</p>\n<p>硬件扩展给这种权衡带来了另一个方面。</p>\n<ul>\n<li><strong>垂直扩展（使用更强大的GPU）：</strong> 主要减少每个请求的延迟。它还可以通过使每个请求更快完成，从而释放资源，略微增加吞吐量。</li>\n<li><strong>水平扩展（添加更多GPU）：</strong> 主要通过允许更多请求并行处理来增加吞吐量。它通常不会减少单个请求的延迟（除非负载导致排队延迟）。</li>\n</ul>\n<p>模型优化技术，例如量化 (quantization)或知识蒸馏 (knowledge distillation)（我们将在第2章中讨论），提供了一种在不明显降低质量的情况下使模型更小更快，从而潜在改善<em>延迟和吞吐量</em>的方法。</p>\n<h3>对系统设计和用户体验的影响</h3>\n<p>可接受的延迟和所需的吞吐量 (throughput)很大程度上取决于应用的使用场景。</p>\n<ul>\n<li><strong>交互式应用：</strong> 用于实时图像编辑或快速原型制作的工具要求低延迟（理想情况下几秒钟）。高延迟会导致糟糕的用户体验。</li>\n<li><strong>批处理：</strong> 生成大量合成图像数据集或处理后台任务可能容忍更高的延迟（每张图像数分钟），只要总吞吐量足以满足截止时间。</li>\n</ul>\n<p>高延迟通常需要<strong>异步API设计</strong>。API可能不会让用户等待图像生成（同步），而是立即返回一个作业ID。用户可以稍后查询结果，或者在生成完成后通过Webhook收到通知。这改善了长时间运行任务的用户体验，但增加了系统架构的复杂性。我们将在本章稍后讨论同步与异步模式。</p>\n<p>吞吐量要求直接影响基础设施成本。支持高吞吐量（每分钟数百或数千张图像）需要大量投入GPU资源和有效的调度。</p>\n<h3>测量是必要项</h3>\n<p>考虑到这些复杂性，在实际条件下准确测量延迟和吞吐量 (throughput)非常重要。</p>\n<ul>\n<li><strong>延迟：</strong> 平均、中位数（p50）、90百分位数（p90）和99百分位数（p99）的延迟展现了典型和最差情况下的性能表现。</li>\n<li><strong>吞吐量：</strong> 每秒请求数（RPS）、每分钟请求数（RPM），或每分钟/小时生成的图像数。</li>\n</ul>\n<p>基准测试应模拟预期的请求模式，包括提示复杂度或请求图像尺寸的变化，以获得系统性能的真实感受。</p>\n<p>最终，为扩散模型设计一个生产系统，需要仔细考虑应用和用户期望驱动的具体的延迟和吞吐量目标。在模型优化、硬件配置、批处理策略和系统架构方面所做的选择，都围绕着如何有效地管理这一基本权衡。后续章节将提供应对这些挑战的技术和模式。</p>",
+  "slug": "latency-throughput-considerations",
+  "updates": [],
+  "references": [
+    {
+      "id": 14962,
+      "title": "Denoising Diffusion Probabilistic Models",
+      "author": "Jonathan Ho, Ajay Jain, and Pieter Abbeel",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS) 33",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2006.11239",
+      "doi": "10.48550/arXiv.2006.11239",
+      "note": "介绍扩散概率模型的现代公式及其迭代生成过程的奠基性论文。",
+      "order": 1,
+      "created_at": "2025-09-05T14:33:25.412685Z",
+      "updated_at": "2025-09-10T02:26:23.912433Z"
+    },
+    {
+      "id": 14965,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本构建和部署机器学习系统的实用指南，涵盖系统设计、性能和操作考量。",
+      "order": 4,
+      "created_at": "2025-09-05T14:33:25.430360Z",
+      "updated_at": "2025-09-10T02:26:14.153217Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

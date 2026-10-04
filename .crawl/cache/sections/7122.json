@@ -1,0 +1,61 @@
+{
+  "id": 7122,
+  "title": "语言模型如何提高准确性",
+  "meta_title": "语言模型如何提高ASR准确性",
+  "meta_description": "了解声学模型和语言模型得分的结合如何带来更准确、更连贯的转录。",
+  "content": "<p>声学模型为转录提供原始材料，但它在运行时不具备语法或语义感知。它努力将声音映射到音素，但这可能导致如果两个短语听起来相似，一个无意义的短语会被认为与一个有意义的短语具有相同的可能性。这时，语言模型就变得不可或缺。它扮演着语言判断者的角色，评估哪个词语序列最合理。</p>\n<h3>结合两种证据</h3>\n<p>为生成准确的转录，语音识别系统必须平衡两种不同的证据：</p>\n<ol>\n<li><strong>声学证据：</strong> 潜在的词语序列与输入音频信号的匹配程度如何？该分数来自<strong>声学模型（AM）</strong>。</li>\n<li><strong>语言学证据：</strong> 该词语序列在给定语言中出现的可能性有多大？此概率来自<strong>语言模型（LM）</strong>。</li>\n</ol>\n<p>在语音识别中，解码器在生成文本转录时，并不仅仅选择声学匹配度最佳的选项。相反，它结合了声学模型和语言模型的信息，寻找具有最高组合得分的词语序列。这可以表示为寻找词语序列 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>W</mi></mrow><annotation encoding=\"application/x-tex\">W</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span></span></span></span>，它能在给定音频 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>A</mi></mrow><annotation encoding=\"application/x-tex\">A</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\">A</span></span></span></span> 的情况下使该序列的概率最大。这种关系通常简化为寻找声学模型和语言模型概率乘积的最大值：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>最终得分</mtext><mo>∝</mo><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>音频</mtext><mi mathvariant=\"normal\">∣</mi><mtext>词语</mtext><mo stretchy=\"false\">)</mo><mo>×</mo><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>词语</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">\\text{最终得分} \\propto P(\\text{音频} | \\text{词语}) \\times P(\\text{词语})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">最终得分</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">∝</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">音频</span></span><span class=\"mord\">∣</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">词语</span></span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">词语</span></span><span class=\"mclose\">)</span></span></span></span></span>\n<p>在此，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>音频</mtext><mi mathvariant=\"normal\">∣</mi><mtext>词语</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{音频} | \\text{词语})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">音频</span></span><span class=\"mord\">∣</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">词语</span></span><span class=\"mclose\">)</span></span></span></span> 代表声学模型的得分，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>词语</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{词语})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">词语</span></span><span class=\"mclose\">)</span></span></span></span> 是语言模型的概率。系统选择能使此组合得分尽可能高的词语序列。</p>\n<h3>实际例子</h3>\n<p>让我们回到熟悉的例子：音频听起来可能是“recognize speech”（识别语音）或“wreck a nice beach”（破坏一片漂亮海滩）。</p>\n<ol>\n<li>\n<p><strong>声学模型的评估：</strong> 声学模型处理音频后，发现这两个短语在声学上都非常接近。如果说话者的发音碰巧与第二个短语更吻合，它甚至可能给第二个短语更高的分数。</p>\n<ul>\n<li>“recognize speech”的声学得分：0.85</li>\n<li>“wreck a nice beach”的声学得分：0.88</li>\n</ul>\n<p>仅根据声学，“wreck a nice beach”是领先者。</p>\n</li>\n<li>\n<p><strong>语言模型的输入：</strong> 现在，语言模型评估这些短语的可能性。由于它经过海量文本训练，它知道“recognize speech”是一个常见且合乎逻辑的短语，尤其是在技术背景下。相比之下，“wreck a nice beach”在语法上是有效的，但其出现的可能性极低。</p>\n<ul>\n<li>“recognize speech”的语言模型概率：高（例如，0.7）</li>\n<li>“wreck a nice beach”的语言模型概率：极低（例如，0.001）</li>\n</ul>\n</li>\n<li>\n<p><strong>计算最终得分：</strong> 解码器组合这些分数以找出赢家。</p>\n<ul>\n<li><strong>“recognize speech”的最终得分</strong>： <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.85</mn><mo>×</mo><mn>0.7</mn><mo>=</mo><mn>0.595</mn></mrow><annotation encoding=\"application/x-tex\">0.85 \\times 0.7 = 0.595</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">0.85</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.7</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.595</span></span></span></span></li>\n<li><strong>“wreck a nice beach”的最终得分</strong>： <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.88</mn><mo>×</mo><mn>0.001</mn><mo>=</mo><mn>0.00088</mn></mrow><annotation encoding=\"application/x-tex\">0.88 \\times 0.001 = 0.00088</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">0.88</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.001</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.00088</span></span></span></span></li>\n</ul>\n</li>\n</ol>\n<p>结果很清楚。语言模型的高概率极大地提高了“recognize speech”的得分，使其轻松获胜，尽管其声学得分略低。语言模型通过提供重要的语言学语境，有效地推翻了声学上模棱两可的结果。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-d97bx1\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10]; edge [fontname=\"Arial\", fontsize=9]; subgraph cluster_input { label=\"输入\"; style=invis; Audio [label=\"输入音频\", fillcolor=\"#e9ecef\"]; } subgraph cluster_am { label=\"声学模型 (AM)\"; bgcolor=\"#a5d8ff\"; node [fillcolor=\"#d0bfff\"]; AM [label=\"声学上\\n相似的\\n假设\", shape=Mdiamond]; Hyp1 [label=\"\\\"recognize speech\\\"\\n得分: 0.85\"]; Hyp2 [label=\"\\\"wreck a nice beach\\\"\\n得分: 0.88\"]; } subgraph cluster_lm { label=\"语言模型 (LM)\"; bgcolor=\"#b2f2bb\"; node [fillcolor=\"#d8f5a2\"]; LM [label=\"语言学\\n可能性\", shape=Mdiamond]; Prob1 [label=\"P(\\\"recognize speech\\\")\\n高 (例如, 0.7)\"]; Prob2 [label=\"P(\\\"wreck a nice beach\\\")\\n低 (例如, 0.001)\"]; } subgraph cluster_decoder { label=\"解码器\"; bgcolor=\"#ffd8a8\"; node [fillcolor=\"#ffec99\"]; Decoder [label=\"组合分数 &\\n选择最佳假设\", shape=octagon]; } subgraph cluster_output { label=\"输出\"; style=invis; Output [label=\"最终转录\\n\\\"recognize speech\\\"\", fillcolor=\"#37b24d\", fontcolor=\"white\", style=\"filled\"]; } Audio -> AM [label=\"分析声音\"]; AM -> Hyp1; AM -> Hyp2; Hyp1 -> Decoder [label=\"声学模型得分\"]; Hyp2 -> Decoder [label=\"声学模型得分\"]; Prob1 -> Decoder [label=\"语言模型得分\"]; Prob2 -> Decoder [label=\"语言模型得分\"]; {rank=same; Hyp1; Prob1;} {rank=same; Hyp2; Prob2;} Decoder -> Output [label=\"最高组合得分\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-d97bx1\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>解码器权衡来自声学模型和语言模型的证据，以选择最有可能的转录。</p>\n</blockquote>\n<p>通过增加这一层语言学验证，语言模型显著减少了错误。它引导ASR系统生成不仅声学上合理，而且语法正确、语义合理的转录。声学模型与语言模型之间的这种合作对几乎所有现代语音识别系统的准确性都非常重要。</p>",
+  "slug": "how-language-models-improve-accuracy",
+  "updates": [],
+  "references": [
+    {
+      "id": 19518,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "这本书是语音识别的全面参考资料，涵盖了声学模型、语言模型及其在自动语音识别系统中的整合等基本概念。",
+      "order": 1,
+      "created_at": "2025-09-06T13:09:36.986874Z",
+      "updated_at": "2025-09-10T03:54:05.108012Z"
+    },
+    {
+      "id": 19519,
+      "title": "Statistical Methods for Speech Recognition",
+      "author": "Fred Jelinek",
+      "year": "1998",
+      "publisher": "The MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/statistical-methods-speech-recognition",
+      "doi": "",
+      "note": "这本书介绍了语音识别的基础统计方法，详细解释了声学模型、语言模型及其组合以实现最佳转录。",
+      "order": 2,
+      "created_at": "2025-09-06T13:09:36.990384Z",
+      "updated_at": "2025-09-10T03:54:07.370022Z"
+    },
+    {
+      "id": 19520,
+      "title": "Deep Learning for Speech Recognition: An Overview",
+      "author": "Li Deng and Dong Yu",
+      "year": "2014",
+      "publisher": "IEEE",
+      "journal": "IEEE Signal Processing Magazine",
+      "volume": "31",
+      "pages": "82-96",
+      "url": "https://www.researchgate.net/publication/262557438_Deep_Learning_for_Speech_Recognition_An_Overview",
+      "doi": "10.1109/MSP.2013.2290903",
+      "note": "这篇概述文章讨论了深度学习方法在语音识别中的应用，展示了神经网络如何增强声学和语言模型组件以提高准确性。",
+      "order": 3,
+      "created_at": "2025-09-06T13:09:36.992594Z",
+      "updated_at": "2025-09-10T03:54:12.259019Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

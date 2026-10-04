@@ -1,0 +1,61 @@
+{
+  "id": 7419,
+  "title": "创建顺序链",
+  "meta_title": "如何创建顺序链",
+  "meta_description": "通过将多个链条连接起来构建多步工作流，其中一个链条的输出成为下一个链条的输入。",
+  "content": "<p>尽管单个链条对独立任务有效，但大多数应用都涉及一系列操作。例如，要生成一篇技术博客文章，你可能需要先创建一个大纲，然后根据大纲撰写引言，最后生成社交媒体帖子来宣传。每一步都依赖于前一步的输出。LangChain允许你使用LangChain表达式语言 (LCEL) 将这些操作按顺序组合成管道。</p>\n<h3>线性工作流</h3>\n<p>连接操作最直接的方式是将其组合成一个线性序列，其中每一步都将其输出传递给下一步。</p>\n<p>考虑一个两步过程：</p>\n<ol>\n<li><strong>生成标题：</strong> 给定一个主题，一个LLM为一部戏剧创建一个吸引人的标题。</li>\n<li><strong>撰写剧情梗概：</strong> 给定戏剧标题，另一个LLM撰写一个简短的剧情梗概。</li>\n</ol>\n<p>数据流向为直线：<code>主题</code> -> <code>标题</code> -> <code>剧情梗概</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-103xdux\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", splines=ortho];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#a5d8ff\", color=\"#4263eb\"];\n    edge [fontname=\"Arial\"];\n\n    input [label=\"输入\\n(主题: &#39;大萧条&#39;)\", fillcolor=\"#e9ecef\", color=\"#868e96\"];\n    chain1 [label=\"链条1: 标题生成\", shape=component, fillcolor=\"#bac8ff\"];\n    intermediate [label=\"中间输出\\n(标题)\", shape=ellipse, style=dashed, color=\"#adb5bd\"];\n    chain2 [label=\"链条2: 剧情梗概生成\", shape=component, fillcolor=\"#bac8ff\"];\n    output [label=\"最终输出\\n(剧情梗概)\", fillcolor=\"#e9ecef\", color=\"#868e96\"];\n\n    input -> chain1;\n    chain1 -> intermediate [label=\"标题\"];\n    intermediate -> chain2;\n    chain2 -> output;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-103xdux\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据以线性序列流动。每个组件都将其输出提供给下一个。</p>\n</blockquote>\n<p>让我们来实现这一点。我们将使用提示词 (prompt)和一个聊天模型来设置两个链条。我们使用 <code>StrOutputParser</code> 来确保模型的输出是一个干净的字符串，以便进行下一步。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate\nfrom langchain_core.output_parsers import StrOutputParser\nfrom langchain_core.runnables import RunnablePassthrough\n\n# 假设 OPENAI_API_KEY 已在你的环境中设置\nllm = ChatOpenAI(temperature=0.7, model_name=\"gpt-3.5-turbo\")\n\n# 链条1: 为一部戏剧生成标题\nprompt_title = ChatPromptTemplate.from_template(\n    \"你是一位剧作家。给定主题'{topic}'，为一部戏剧撰写一个吸引人的标题。\"\n)\nchain_title = prompt_title | llm | StrOutputParser()\n\n# 链条2: 为这部戏剧生成剧情梗概\nprompt_synopsis = ChatPromptTemplate.from_template(\n    \"你是一位剧评人。给定戏剧标题'{title}'，撰写一个简短的、一段的剧情梗概。\"\n)\nchain_synopsis = prompt_synopsis | llm | StrOutputParser()\n</code></pre>\n<p>为了连接这些，我们需要确保 <code>chain_title</code> 的输出与 <code>chain_synopsis</code> 的预期输入匹配。由于 <code>chain_synopsis</code> 预期一个带有 <code>title</code> 键的字典，而 <code>chain_title</code> 返回一个字符串，我们使用 <code>RunnablePassthrough</code> 通过一个字典明确地映射输出。</p>\n<pre><code class=\"language-python\"># 使用管道操作符创建序列\noverall_chain = (\n    chain_title \n    | {\"title\": RunnablePassthrough()} \n    | chain_synopsis\n)\n\n# 使用初始主题运行链条\ntopic = \"一个20世纪20年代爵士乐音乐家的兴衰\"\nfinal_synopsis = overall_chain.invoke({\"topic\": topic})\n\nprint(final_synopsis)\n</code></pre>\n<p>当你运行这个链条时，LangChain会执行 <code>chain_title</code>，获取结果字符串，将其映射到 <code>title</code> 键，并将其传递给 <code>chain_synopsis</code>。</p>\n<p>严格线性流的主要限制是，中间数据通常会丢失或无法供后续步骤使用，除非明确地传递。</p>\n<h3>使用 RunnablePassthrough 管理状态</h3>\n<p>对于更复杂的工作流，你通常需要在多个步骤中保持状态。这在以下情况中是必要的：</p>\n<ul>\n<li>早期链条产生多个后续链条所需的输出。</li>\n<li>后续链条需要访问中间输出 <em>和</em> 原始输入。</li>\n</ul>\n<p><code>RunnablePassthrough.assign()</code> 方法通过向流经链条的字典添加新值来管理此过程，而不覆盖现有数据。它将工作流视为一个累积状态。</p>\n<p>让我们修改之前的例子。假设剧情梗概链条需要同时知道生成的 <code>标题</code> 和原始 <code>主题</code>，以添加更多上下文 (context)。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-kdpayt\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"Arial\", splines=ortho];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#d0bfff\", color=\"#7048e8\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_state {\n        label=\"链条状态\";\n        style=\"dashed\";\n        bgcolor=\"#f8f9fa\";\n        state_topic [label=\"主题\", shape=note, fillcolor=\"#ffec99\", color=\"#f59f00\"];\n        state_title [label=\"标题\", shape=note, fillcolor=\"#ffec99\", color=\"#f59f00\"];\n    }\n\n    chain1 [label=\"链条1: 标题生成\", shape=component];\n    chain2 [label=\"链条2: 剧情梗概生成\", shape=component];\n\n    chain1 -> state_title [label=\"添加\"];\n    state_topic -> chain1 [label=\"读取\"];\n    state_topic -> chain2 [label=\"读取\"];\n    state_title -> chain2 [label=\"读取\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-kdpayt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>带有状态管理的数据流。<code>assign</code> 将输出添加到状态中，使其可用于后续步骤。</p>\n</blockquote>\n<p>为此，我们串联 <code>assign</code> 调用。每一步都会计算一个值并将其附加到状态。</p>\n<pre><code class=\"language-python\"># 设置LLM和提示词\nllm = ChatOpenAI(temperature=0.7, model_name=\"gpt-3.5-turbo\")\n\n# 链条1定义: 仅获取标题的逻辑\nprompt_title = ChatPromptTemplate.from_template(\n    \"你是一位剧作家。给定主题'{topic}'，为一部戏剧撰写一个吸引人的标题。\"\n)\nchain_title = prompt_title | llm | StrOutputParser()\n\n# 链条2定义: 预期输入'title'和'topic'\nprompt_synopsis = ChatPromptTemplate.from_template(\n    \"为一部名为'{title}'、关于'{topic}'的戏剧撰写一个简短的一段式剧情梗概。\"\n)\nchain_synopsis = prompt_synopsis | llm | StrOutputParser()\n</code></pre>\n<p>现在我们构建管道。我们使用 <code>assign</code> 捕获每个阶段的输出。</p>\n<pre><code class=\"language-python\"># 创建带有状态管理的链条\noverall_chain = (\n    # 步骤1: 计算标题并将其添加到数据流中。 \n    # 数据流现在包含 {'topic': ..., 'title': ...}\n    RunnablePassthrough.assign(title=chain_title)\n    | \n    # 步骤2: 计算剧情梗概。 \n    # 它可以访问数据流中的'topic'和'title'。\n    RunnablePassthrough.assign(synopsis=chain_synopsis)\n)\n\n# 运行链条\ninput_data = {\"topic\": \"一个20世纪20年代爵士乐音乐家的兴衰\"}\nresult = overall_chain.invoke(input_data)\n\nprint(result)\n</code></pre>\n<p>此调用的输出是一个包含原始输入和所有已赋值变量的字典。</p>\n<pre><code class=\"language-json\">{\n  \"topic\": \"一个20世纪20年代爵士乐音乐家的兴衰\",\n  \"title\": \"蓝调尾声\",\n  \"synopsis\": \"以20世纪20年代充满活力、混乱的“咆哮的二十年代”为背景，《蓝调尾声》记录了萨克斯手利奥“国王”克里奥尔的迅速崛起和令人心碎的衰落……\"\n}\n</code></pre>\n<p>通过使用 <code>RunnablePassthrough.assign</code>，你能够对数据管道进行精细控制。这种结构允许你保存和重用序列中任何位置的信息，这对于精密的多步骤推理 (inference)过程来说必不可少。</p>",
+  "slug": "creating-sequential-chains",
+  "updates": [],
+  "references": [
+    {
+      "id": 14712,
+      "title": "How to: Sequential Chains",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/how_to/sequential_chains/",
+      "doi": "",
+      "note": "LangChain 官方文档，介绍了如何使用 SimpleSequentialChain 和 SequentialChain 构建多步骤应用程序。",
+      "order": 1,
+      "created_at": "2025-09-05T09:02:27.527569Z",
+      "updated_at": "2025-09-11T06:09:02.538204Z"
+    },
+    {
+      "id": 14713,
+      "title": "Generative AI with Python and TensorFlow",
+      "author": "Leonie Watson, Tom Nick",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/generative-ai-with/9781098145229/",
+      "doi": "",
+      "note": "一本构建生成式人工智能应用程序的实用指南，涵盖将大型语言模型功能组合成工作流的架构模式。",
+      "order": 2,
+      "created_at": "2025-09-05T09:02:27.532057Z",
+      "updated_at": "2025-09-11T06:09:21.993693Z"
+    },
+    {
+      "id": 14714,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2201.11903",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "介绍了思维链提示技术，该技术通过将复杂问题分解为中间推理步骤，使大型语言模型能够解决复杂问题，这与顺序操作在概念上相似。",
+      "order": 3,
+      "created_at": "2025-09-05T09:02:27.534841Z",
+      "updated_at": "2025-09-11T06:09:03.592946Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

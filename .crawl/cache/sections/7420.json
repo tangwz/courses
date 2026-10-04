@@ -1,0 +1,61 @@
+{
+  "id": 7420,
+  "title": "使用路由器链实现条件逻辑",
+  "meta_title": "使用路由器链实现条件逻辑",
+  "meta_description": "了解如何使用路由器链，根据输入或大型语言模型 (LLM) 的决策动态选择工作流程中的下一步。",
+  "content": "<p>应用程序通常需要动态行为，而不是执行预定义、线性的步骤序列。举例来说，设想一个旨在回答学术问题的系统。关于量子力学的问题，与关于罗马帝国的问题，需要不同的上下文 (context)和语气。如果都通过相同的通用提示和模型处理，将产生次优结果。因此，需要一种机制来智能地将输入路由到最适合的处理路径。</p>\n<p>这正是路由工作流程旨在解决的问题。它为您的工作流程引入条件逻辑，允许应用程序根据输入选择多条可能路径中的一条。路由器不再是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>g</mi><mo stretchy=\"false\">(</mo><mi>f</mi><mo stretchy=\"false\">(</mo><mtext>Input</mtext><mo stretchy=\"false\">)</mo><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">g(f(\\text{Input}))</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">g</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord\">Input</span></span><span class=\"mclose\">))</span></span></span></span> 这样的固定序列，而是实现了一种条件结构，类似于编程中的 if-else 语句。大型语言模型 (LLM) 被用作决策引擎来引导执行流程。</p>\n<h3>路由器链的架构</h3>\n<p>路由工作流程由两个主要组成部分构成：</p>\n<ol>\n<li><strong>路由链</strong>：这是一条负责分析初始输入并决定将其发送到哪个目标的链。此链的提示会指示大型语言模型 (LLM) 对输入进行分类，并返回相应目标类别的名称。</li>\n<li><strong>目标链</strong>：这是一组链，每条链都为特定任务设计。对于我们的学术助手示例，我们可能有 <code>physics_chain</code>、<code>history_chain</code> 和 <code>math_chain</code>。路由器根据其分析选择其中一条来执行。</li>\n</ol>\n<p>整个过程如下进行：用户的输入首先传递给路由链。路由链的大型语言模型 (LLM) 输出一个目标名称。系统随后使用此名称从其集合中查找对应的目标链，并使用原始输入执行它。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1oynhpy\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"]; edge [fontname=\"Arial\"]; bgcolor=\"transparent\"; \"Input\" [label=\"输入\", fillcolor=\"#a5d8ff\"]; \"RouterLLM\" [label=\"路由LLM\\n(选择目标)\", fillcolor=\"#ffd8a8\"]; \"PhysicsChain\" [label=\"物理链\", fillcolor=\"#d0bfff\"]; \"MathChain\" [label=\"数学链\", fillcolor=\"#b2f2bb\"]; \"HistoryChain\" [label=\"历史链\", fillcolor=\"#ffc9c9\"]; \"Output\" [label=\"输出\", fillcolor=\"#e9ecef\"]; Input -> RouterLLM; RouterLLM -> PhysicsChain [label=\" &#39;physics&#39; \"]; RouterLLM -> MathChain [label=\" &#39;math&#39; \"]; RouterLLM -> HistoryChain [label=\" &#39;history&#39; \"]; PhysicsChain -> Output; MathChain -> Output; HistoryChain -> Output; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1oynhpy\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>输入首先由路由大型语言模型 (LLM) 进行评估，该模型选择几条专用目标链中的一条来生成最终输出。</p>\n</blockquote>\n<h3>构建多提示路由器</h3>\n<p>我们来构建一个路由工作流程的实用示例，该流程将问题发送给不同的专家：物理学家、数学家和历史学家。</p>\n<p>首先，我们为目标链定义提示。每个提示都引导大型语言模型 (LLM) 采用特定的角色。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\nfrom langchain_core.output_parsers import StrOutputParser\n\n# 假设您的环境中已设置 OPENAI_API_KEY\n# os.environ[\"OPENAI_API_KEY\"] = \"your-api-key\"\n\nllm = ChatOpenAI(temperature=0, model=\"gpt-4o\")\n\nphysics_template = \"\"\"你是一位非常聪明的物理学教授。\n你擅长以简洁易懂的方式回答物理问题。\n当你不知道一个问题的答案时，你会承认不知道。\n\n这是一个问题：\n{input}\"\"\"\n\nmath_template = \"\"\"你是一位非常出色的数学家。你擅长回答数学问题。\n你之所以如此出色，是因为你能够将难题分解成其组成部分，\n回答这些组成部分，然后将它们组合起来回答更广泛的问题。\n\n这是一个问题：\n{input}\"\"\"\n\nhistory_template = \"\"\"你是一位非常出色的历史学家。你对历史有着丰富的知识和卓越的记忆力。\n你尤其擅长通过讲故事的方式回答问题。\n\n这是一个问题：\n{input}\"\"\"\n\nprompt_infos = [\n    {\n        \"name\": \"physics\",\n        \"description\": \"适合回答物理问题\",\n        \"prompt_template\": physics_template,\n    },\n    {\n        \"name\": \"math\",\n        \"description\": \"适合回答数学问题\",\n        \"prompt_template\": math_template,\n    },\n    {\n        \"name\": \"history\",\n        \"description\": \"适合回答历史问题\",\n        \"prompt_template\": history_template,\n    },\n]\n</code></pre>\n<p>接下来，我们使用管道 <code>|</code> 语法创建目标链。每条链由一个提示、大型语言模型 (LLM) 和一个输出解析器组成。</p>\n<pre><code class=\"language-python\">destination_chains = {}\nfor p_info in prompt_infos:\n    name = p_info[\"name\"]\n    prompt_template = p_info[\"prompt_template\"]\n    prompt = PromptTemplate.from_template(template=prompt_template)\n    chain = prompt | llm | StrOutputParser()\n    destination_chains[name] = chain\n</code></pre>\n<p>现在是核心路由逻辑。我们定义一个提示，指示大型语言模型 (LLM) 充当分类器。它应该只输出最符合输入的类别名称。</p>\n<pre><code class=\"language-python\">destinations = [f\"{p['name']}: {p['description']}\" for p in prompt_infos]\ndestinations_str = \"\\n\".join(destinations)\n\nrouter_template = \"\"\"根据以下用户输入，将其分类为关于 {options} 中的一项。\n\n选择描述：\n{destinations}\n\n返回所选项的名称，仅此而已。\n\n输入：\n{input}\n\"\"\"\n\nrouter_prompt = PromptTemplate.from_template(router_template)\nrouter_prompt = router_prompt.partial(destinations=destinations_str, options=\", \".join([p['name'] for p in prompt_infos]))\n\nrouter_chain = router_prompt | llm | StrOutputParser()\n</code></pre>\n<p>最后，我们使用 <code>RunnableLambda</code> 组装所有部分。我们定义一个 <code>route</code> 函数，它接收路由器链的输出（类别名称），并返回相应的目标链。</p>\n<pre><code class=\"language-python\">from langchain_core.runnables import RunnableLambda, RunnablePassthrough\n\ndef route(info):\n    # 路由链的输出通过 info[\"destination\"] 传递到此处\n    destination = info[\"destination\"].strip().lower()\n    \n    # 从字典中选择链\n    if destination in destination_chains:\n        return destination_chains[destination]\n    else:\n        # 如果目前不明确，则回退到物理链\n        return destination_chains[\"physics\"]\n\n# 我们构建完整的链：\n# 1. 运行路由器并传递输入\n# 2. 使用 route 函数选择下一条链\nchain = {\n    \"destination\": router_chain,\n    \"input\": RunnablePassthrough()\n} | RunnableLambda(route)\n</code></pre>\n<p>我们用几个不同的输入来测试一下。</p>\n<pre><code class=\"language-python\"># 用物理问题进行测试\nresponse_physics = chain.invoke(\"What is the formula for gravitational potential energy?\")\nprint(f\"物理响应: {response_physics}\")\n\n# 用历史问题进行测试\nresponse_history = chain.invoke(\"When was the Battle of Hastings?\")\nprint(f\"历史响应: {response_history}\")\n</code></pre>\n<p>当你运行物理问题时，路由器正确识别出 <code>physics</code> 类别，并由专门的物理提示生成输出：</p>\n<pre><code class=\"language-text\">物理响应: 行星表面附近引力势能 (U) 的公式是：\nU = mgh\n其中：\n- m 是物体的质量。\n- g 是重力加速度。\n- h 是物体相对于参考点的高度。\n</code></pre>\n<p>同样，历史问题也被正确地路由到历史链。这种动态路由使得应用程序能够使用专用提示，显著提升其响应的质量和相关性。</p>\n<h3>处理默认情况</h3>\n<p>一个设计良好的系统必须妥善处理歧义。如果用户提出的问题不完全符合任何预定义类别，例如“数学史是什么？”路由器可能难以做出明确选择。</p>\n<p>为了解决这个问题，我们可以定义一条默认链，并更新我们的路由逻辑，使其在路由器的输出与已知目标不匹配时回退到该链。</p>\n<p>以下是如何在我们的示例中添加默认链：</p>\n<pre><code class=\"language-python\"># 创建一个通用链作为回退\ndefault_prompt = PromptTemplate.from_template(\"{input}\")\ndefault_chain = default_prompt | llm | StrOutputParser()\n\ndef route(info):\n    destination = info[\"destination\"].strip().lower()\n    # 使用 .get() 方法提供默认回退\n    return destination_chains.get(destination, default_chain)\n\n# 使用更新后的路由逻辑重新初始化完整链\nchain = {\n    \"destination\": router_chain,\n    \"input\": RunnablePassthrough()\n} | RunnableLambda(route)\n</code></pre>\n<p>加入此功能后，路由器无法确定分类（或输出未知类别）的任何输入都将由 <code>default_chain</code> 处理，从而使应用程序更加一致。这种模式提供了一种有效的方法，通过超越简单的线性序列并整合条件式、逻辑驱动的工作流程，来构建更精巧、更智能的应用程序。</p>",
+  "slug": "implementing-router-chains",
+  "updates": [],
+  "references": [
+    {
+      "id": 14728,
+      "title": "Router Chains",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/chains/router/",
+      "doi": "",
+      "note": "提供LangChain路由器链功能的官方解释和实现细节。",
+      "order": 1,
+      "created_at": "2025-09-05T09:03:29.319880Z",
+      "updated_at": "2025-09-11T06:09:55.194482Z"
+    },
+    {
+      "id": 14729,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了一种通用的范式，用于大型语言模型生成推理轨迹和任务特定动作，这与路由器LLM决定特定动作（执行目标链）的概念类似。",
+      "order": 2,
+      "created_at": "2025-09-05T09:03:29.330756Z",
+      "updated_at": "2025-09-11T06:09:43.459850Z"
+    },
+    {
+      "id": 14731,
+      "title": "Toolformer: Language Models That Can Use Tools",
+      "author": "Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2302.04761",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2302.04761",
+      "doi": "10.48550/arXiv.2302.04761",
+      "note": "探讨语言模型如何被训练以使用外部工具，这是一个更广泛的概念，它包含路由器链选择和调用专门处理路径的功能。",
+      "order": 4,
+      "created_at": "2025-09-05T09:03:29.336482Z",
+      "updated_at": "2025-09-11T06:09:54.878959Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

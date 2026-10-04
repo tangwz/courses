@@ -1,0 +1,61 @@
+{
+  "id": 2148,
+  "title": "处理缺失数据",
+  "meta_title": "Pandas中缺失数据的处理 (dropna, fillna)",
+  "meta_description": "学习在DataFrame中检测、移除或填充缺失值（NaN）的策略。",
+  "content": "<p>数据集通常不完整。数据可能因未收集、处理过程中丢失或对某些观测值不适用而缺失。Pandas通常使用特殊的浮点值<code>NaN</code>（非数字）来表示这些缺失值。忽视缺失数据可能导致计算错误、分析偏差以及机器学习 (machine learning)模型性能不佳。因此，识别并妥善处理缺失值是数据准备中的一个基本步骤。</p>\n<h3>识别缺失数据</h3>\n<p>Pandas提供了直接的方法来检查缺失值。<code>isnull()</code>方法（及其别名<code>isna()</code>）返回一个与原始DataFrame或Series形状相同的布尔类型，<code>True</code>表示数据缺失（<code>NaN</code>），<code>False</code>表示其他情况。相反，<code>notnull()</code>对于非缺失值返回<code>True</code>。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 包含缺失值的示例DataFrame\ndata = {'col1': [1, 2, np.nan, 4, 5],\n        'col2': [np.nan, 7, 8, 9, 10],\n        'col3': [11, 12, 13, np.nan, np.nan],\n        'col4': ['A', 'B', 'C', 'D', np.nan]}\ndf = pd.DataFrame(data)\n\nprint(\"原始DataFrame:\")\nprint(df)\n\nprint(\"\\n检查缺失值 (isnull()):\")\nprint(df.isnull())\n\nprint(\"\\n检查非缺失值 (notnull()):\")\nprint(df.notnull())\n</code></pre>\n<p>虽然查看布尔掩码对于小型数据集很有用，但通常更实用的是获取每列的缺失值数量。通过在<code>isnull()</code>之后链式调用<code>sum()</code>方法可以实现这一点，因为在求和时，<code>True</code>值被视为1，<code>False</code>被视为0。</p>\n<pre><code class=\"language-python\"># 计算每列的缺失值数量\nprint(\"\\n每列缺失值数量:\")\nprint(df.isnull().sum())\n\n# DataFrame中缺失值的总数量\nprint(\"\\nDataFrame中缺失值总数量:\")\nprint(df.isnull().sum().sum())\n</code></pre>\n<p>这个摘要能快速地告诉你哪些列有缺失数据以及缺失的数量。</p>\n<h3>处理缺失数据的策略</h3>\n<p>处理<code>NaN</code>值有两种主要策略：移除它们或替换它们（填充）。选择哪种方法取决于具体情况、缺失数据的数量以及对您的分析或模型可能产生的影响。</p>\n<h4>1. 丢弃缺失值</h4>\n<p>最简单的方法是使用<code>dropna()</code>方法移除包含<code>NaN</code>值的行或列。</p>\n<ul>\n<li>\n<p><strong>丢弃行：</strong> 默认情况下，<code>dropna()</code>会移除任何包含至少一个<code>NaN</code>值的行。如果只有一小部分行存在缺失数据，并且移除它们不会引入显著偏差，这种方法通常是合适的。</p>\n<pre><code class=\"language-python\"># 丢弃包含任何NaN值的行（默认行为）\ndf_dropped_rows = df.dropna()\nprint(\"\\n丢弃任何NaN值行后的DataFrame:\")\nprint(df_dropped_rows)\n</code></pre>\n</li>\n<li>\n<p><strong>丢弃列：</strong> 如果列包含缺失值，可以通过将<code>axis</code>参数 (parameter)设置为1（或'columns'）来丢弃整列。如果一列有非常高比例的缺失值或被认为对分析不重要，这可能会很有用。</p>\n<pre><code class=\"language-python\"># 丢弃包含任何NaN值的列\ndf_dropped_cols = df.dropna(axis=1)\nprint(\"\\n丢弃任何NaN值列后的DataFrame:\")\nprint(df_dropped_cols)\n</code></pre>\n</li>\n<li>\n<p><strong>控制丢弃行为：</strong> <code>how</code>参数修改此行为：</p>\n<ul>\n<li><code>how='any'</code>: 如果存在<em>任何</em> <code>NaN</code>值，则丢弃该行/列（默认）。</li>\n<li><code>how='all'</code>: 仅当<em>所有</em>值都为<code>NaN</code>时，才丢弃该行/列。</li>\n</ul>\n<p><code>thresh</code>参数提供了更精确的控制：它指定了行/列需要保留的<em>非缺失</em>值的最小数量。</p>\n<pre><code class=\"language-python\"># 保留至少有3个非NaN值的行\ndf_thresh = df.dropna(thresh=3)\nprint(\"\\n保留至少有3个非NaN值行后的DataFrame:\")\nprint(df_thresh)\n\n# 丢弃所有值都为NaN的行（有用，但此处不适用）\ndf_all_nan = df.dropna(how='all')\n# print(df_all_nan) # 在此情况下输出将与原始df相同\n</code></pre>\n</li>\n</ul>\n<p><strong>注意：</strong> 丢弃数据，特别是行，会导致信息丢失。如果缺失值的分布并非随机，丢弃它们可能会使剩余的数据集产生偏差。在移除数据之前，务必考虑其影响。</p>\n<h4>2. 填充缺失值（插补）</h4>\n<p>除了移除数据，您还可以用替代值替换<code>NaN</code>。这被称为插补。<code>fillna()</code>方法用于此目的。</p>\n<ul>\n<li>\n<p><strong>用常数值填充：</strong> 您可以用特定值替换所有<code>NaN</code>，例如0、\"Unknown\"或在特征上下文 (context)中合理的某个值。</p>\n<pre><code class=\"language-python\"># 将所有NaN填充为0\ndf_filled_zero = df.fillna(0)\nprint(\"\\n将NaN填充为0后的DataFrame:\")\nprint(df_filled_zero)\n\n# 以不同方式填充特定列中的NaN\nfill_values = {'col1': df['col1'].mean(), 'col2': 0, 'col3': -1, 'col4': 'Unknown'}\ndf_filled_specific = df.fillna(value=fill_values)\nprint(\"\\n按列用特定值填充NaN后的DataFrame:\")\nprint(df_filled_specific)\n\n</code></pre>\n</li>\n<li>\n<p><strong>向前填充和向后填充：</strong> 对于时间序列等有序数据，将最后一个已知有效观测值向前传播（<code>method='ffill'</code>）或将下一个已知有效观测值向后传播（<code>method='bfill'</code>）可能是合适的。</p>\n<pre><code class=\"language-python\"># 向前填充\ndf_ffill = df.fillna(method='ffill')\nprint(\"\\n向前填充后的DataFrame:\")\nprint(df_ffill)\n\n# 向后填充\ndf_bfill = df.fillna(method='bfill')\nprint(\"\\n向后填充后的DataFrame:\")\nprint(df_bfill)\n</code></pre>\n</li>\n<li>\n<p><strong>用统计量填充：</strong> 对于数值数据，一种常用的方法是用列的均值、中位数或众数填充<code>NaN</code>。当数据存在异常值时，中位数通常优于均值，因为它对极端值不那么敏感。众数可用于分类特征。</p>\n<pre><code class=\"language-python\"># 用col1的均值填充col1中的NaN\nmean_col1 = df['col1'].mean()\ndf_filled_mean = df.copy() # 创建一个副本以避免隐式修改原始df\ndf_filled_mean['col1'].fillna(mean_col1, inplace=True)\nprint(\"\\n用col1均值填充col1中NaN后的DataFrame:\")\nprint(df_filled_mean)\n\n# 用col3的中位数填充col3中的NaN\nmedian_col3 = df['col3'].median()\ndf_filled_median = df.copy()\ndf_filled_median['col3'].fillna(median_col3, inplace=True)\nprint(\"\\n用col3中位数填充col3中NaN后的DataFrame:\")\nprint(df_filled_median)\n</code></pre>\n<p><strong>重要提示：</strong> 在为机器学习 (machine learning)准备数据时，您应仅在<em>训练</em>数据集上计算统计量（如均值或中位数），然后使用这些值来填充训练和测试数据集中的缺失数据。这可以防止测试集的信息泄露到训练过程中。我们将在第五章中讨论数据划分。</p>\n</li>\n<li>\n<p><strong>分组特定填充：</strong> 有时，全局均值或中位数不具有代表性。例如，如果填充缺失的薪资，平均薪资可能因职位角色而显著不同。您可以结合使用<code>groupby()</code>和<code>transform()</code>来根据组级统计量填充缺失值。</p>\n<pre><code class=\"language-python\"># 示例：基于组均值填充NaN\ndata_groups = {'Group': ['A', 'A', 'B', 'B', 'A', 'B'],\n               'Value': [10, np.nan, 20, 22, 12, np.nan]}\ndf_groups = pd.DataFrame(data_groups)\n\n# 计算组均值并在每组内填充NaN\ndf_groups['Value_filled'] = df_groups.groupby('Group')['Value'] \\\n                                   .transform(lambda x: x.fillna(x.mean()))\n\nprint(\"\\n进行分组特定均值填充后的DataFrame:\")\nprint(df_groups)\n</code></pre>\n<p><code>transform()</code>将一个函数（此处为用组均值填充NaN）应用于每个组，并返回一个与原始DataFrame索引对齐 (alignment)的Series。</p>\n</li>\n</ul>\n<h3>选择合适的策略</h3>\n<p>处理缺失数据的最佳方法取决于：</p>\n<ol>\n<li><strong>缺失数据的数量：</strong> 如果只有极小部分数据缺失（&#x3C;1-5%），丢弃可能是可接受的。如果大部分缺失，通常更推荐填充，或者该特征可能需要完全丢弃。</li>\n<li><strong>数据性质：</strong> 数据是数值型、类别型还是时间序列？这会影响是否适合使用均值/中位数、众数或向前/向后填充。</li>\n<li><strong>缺失机制：</strong> 数据<em>为什么</em>会缺失？是随机的，还是存在某种模式？如果处理不当（例如，简单地丢弃行），非随机缺失可能会导致结果偏差。可视化缺失数据模式有时有助于理解这一点。</li>\n<li><strong>分析目标：</strong> 一些机器学习 (machine learning)模型本身可以处理缺失数据，而另一些则需要完整的数据集。您的分析或模型对填充方法的敏感度也起着作用。</li>\n</ol>\n<p>处理缺失数据通常是一个迭代过程。您可以尝试不同的策略，并评估它们对后续分析或模型性能的影响。Pandas提供了所需的灵活工具，能够有效实施这些不同方法。</p>",
+  "slug": "pandas-missing-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 4610,
+      "title": "Working with missing data",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/missing_data.html",
+      "doi": "",
+      "note": "Pandas DataFrame和Series中检测、删除和填充缺失值的官方指南，详细介绍了`isnull`、`dropna`和`fillna`方法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:19.329105Z",
+      "updated_at": "2025-09-07T20:04:23.729566Z"
+    },
+    {
+      "id": 4611,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=bE87DwAAQBAJ",
+      "doi": "",
+      "note": "关于使用Pandas进行数据操作的基础著作，全面涵盖数据清洗和缺失数据处理策略。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:19.333672Z",
+      "updated_at": "2025-09-07T20:04:32.649231Z"
+    },
+    {
+      "id": 4612,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://learning.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "提供了关于机器学习数据预处理的实用见解，包括处理缺失值以提高模型性能。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:19.336303Z",
+      "updated_at": "2025-09-07T20:04:40.571063Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

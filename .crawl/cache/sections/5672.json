@@ -1,0 +1,61 @@
+{
+  "id": 5672,
+  "title": "动手实践：生成一个合成表格",
+  "meta_title": "实践生成表格数据",
+  "meta_description": "创建简单表格格式（例如 CSV）合成数据集的实践环节。",
+  "content": "<p>生成一个包含多列的简单合成数据集，模拟一个基本的客户交易表。本练习重点在于独立生成每列值的方法，这些值从统计分布或预定义规则中获取。Python 以及常用的 <code>pandas</code> 和 <code>numpy</code> 库是数据处理的常用工具。</p>\n<h3>设置您的环境</h3>\n<p>首先，请确保您已安装 Python。您还需要 <code>pandas</code> 和 <code>numpy</code> 库。如果尚未安装，通常可以使用 pip 进行安装：</p>\n<pre><code class=\"language-bash\">pip install pandas numpy\n</code></pre>\n<p>安装完成后，让我们将它们导入到我们的 Python 脚本或笔记本中：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\nprint(\"库导入成功！\")\n</code></pre>\n<h3>定义合成表格的结构</h3>\n<p>假设我们需要一个代表客户交易的数据集。我们将创建一个包含以下列的表格：</p>\n<ul>\n<li><code>CustomerID</code>：每个客户的唯一标识符（整数）。</li>\n<li><code>Age</code>：客户的年龄（整数）。</li>\n<li><code>ProductCategory</code>：所购产品的类别（文本/分类）。</li>\n<li><code>PurchaseAmount</code>：交易中花费的金额（浮点数/数值）。</li>\n</ul>\n<p>我们将为这个结构生成 100 行合成数据。</p>\n<h3>生成每列数据</h3>\n<p>我们将根据简单的规则或分布独立生成每列的数据。</p>\n<h4>1. 生成客户 ID</h4>\n<p>对于 <code>CustomerID</code>，我们可以简单地创建一个从 1 到我们所需行数（本例中为 100）的唯一整数序列。</p>\n<pre><code class=\"language-python\">num_rows = 100\ncustomer_ids = np.arange(1, num_rows + 1)\n\n# 显示前 5 个生成的 ID\nprint(customer_ids[:5])\n</code></pre>\n<h4>2. 生成客户年龄</h4>\n<p>假设客户年龄通常服从某种正态分布。我们可以使用 <code>numpy</code> 从正态分布中抽取年龄。我们将年龄集中在 35 岁左右，标准差为 10。由于年龄必须为正数且通常为整数，我们将取绝对值并转换为整数。</p>\n<pre><code class=\"language-python\"># 从正态分布（均值=35，标准差=10）中抽取年龄\nnp.random.seed(42) # 用于可重现的结果\nages_float = np.random.normal(loc=35, scale=10, size=num_rows)\n\n# 确保年龄为正数并转换为整数\nages = np.abs(ages_float).astype(int)\n\n# 确保最小年龄，例如 18 岁\nages = np.maximum(ages, 18)\n\n# 显示前 5 个生成的年龄\nprint(ages[:5])\n</code></pre>\n<p><em>自我修正</em>：最初，我只使用了 <code>np.abs().astype(int)</code>。增加了 <code>np.maximum(ages, 18)</code> 使合成数据更可信，假设交易来自成年人。设置 <code>np.random.seed(42)</code> 使示例可重现。</p>\n<h4>3. 生成产品类别</h4>\n<p>对于 <code>ProductCategory</code>，我们将定义一个可能的类别列表，并为每行从该列表中随机选择。我们还可以分配概率，使某些类别比其他类别更常见。</p>\n<pre><code class=\"language-python\">categories = ['Electronics', 'Clothing', 'Groceries', 'Home Goods']\n# 分配概率：电子产品 (30%)、服装 (25%)、杂货 (25%)、家居用品 (20%)\ncategory_probabilities = [0.30, 0.25, 0.25, 0.20]\n\n# 根据概率生成类别\nproduct_categories = np.random.choice(categories, size=num_rows, p=category_probabilities)\n\n# 显示前 5 个生成的类别\nprint(product_categories[:5])\n</code></pre>\n<h4>4. 生成购买金额</h4>\n<p>我们来生成 <code>PurchaseAmount</code>。为简单起见，我们可以使用均匀分布，假设购买金额范围从 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>5</mn><mtext>到</mtext></mrow><annotation encoding=\"application/x-tex\">5 到 </annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">5</span><span class=\"mord cjk_fallback\">到</span></span></span></span>500。</p>\n<pre><code class=\"language-python\"># 从 5 到 500 的均匀分布中生成购买金额\npurchase_amounts = np.random.uniform(low=5.0, high=500.0, size=num_rows)\n\n# 四舍五入到小数点后两位以表示货币\npurchase_amounts = np.round(purchase_amounts, 2)\n\n# 显示前 5 个生成的金额\nprint(purchase_amounts[:5])\n</code></pre>\n<h3>组装合成表格</h3>\n<p>现在我们已经为每列生成了数据，我们可以将它们组合到一个 <code>pandas</code> DataFrame 中。DataFrame 本质上是一个表格，非常适合我们的结构化数据。</p>\n<pre><code class=\"language-python\"># 创建一个字典来保存我们的数据\nsynthetic_data = {\n    'CustomerID': customer_ids,\n    'Age': ages,\n    'ProductCategory': product_categories,\n    'PurchaseAmount': purchase_amounts\n}\n\n# 创建 DataFrame\nsynthetic_df = pd.DataFrame(synthetic_data)\n\n# 显示合成表格的前几行\nprint(\"合成表格的前 5 行：\")\nprint(synthetic_df.head())\n</code></pre>\n<h3>检查生成的表格</h3>\n<p>让我们快速检查一下使用一些基本的 <code>pandas</code> 函数创建的表格。</p>\n<pre><code class=\"language-python\"># 获取列和数据类型的信息\nprint(\"\\n表格信息：\")\nsynthetic_df.info()\n\n# 获取数值列的基本统计信息\nprint(\"\\n基本统计信息：\")\nprint(synthetic_df.describe())\n\n# 获取分类列的值计数\nprint(\"\\n产品类别计数：\")\nprint(synthetic_df['ProductCategory'].value_counts())\n</code></pre>\n<p>您应该会看到输出，确认了数据类型（ID 和 Age 为整数，Category 为对象/字符串，Amount 为浮点数）以及数值列的均值、最小值、最大值等汇总统计信息，以及每个产品类别的计数。请注意，类别计数与我们指定的概率大致相符。</p>\n<h3>可视化合成数据</h3>\n<p>可视化可以帮助我们快速理解合成数据中的分布。我们来为 <code>Age</code> 列创建一个直方图。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-wz5qd7\" \n              data-plot-definition='{\"layout\": {\"title\": \"合成客户年龄分布\", \"xaxis\": {\"title\": \"年龄\"}, \"yaxis\": {\"title\": \"数量\"}, \"bargap\": 0.1, \"template\": \"plotly_white\"}, \"data\": [{\"type\": \"histogram\", \"x\": [27, 34, 40, 49, 32, 46, 34, 24, 32, 29, 44, 38, 35, 37, 38, 28, 40, 40, 38, 36, 32, 33, 35, 28, 42, 35, 45, 42, 31, 25, 33, 29, 24, 30, 40, 33, 30, 35, 40, 47, 29, 31, 26, 45, 26, 31, 33, 42, 27, 41, 26, 35, 33, 38, 28, 34, 28, 41, 31, 39, 36, 30, 43, 40, 44, 30, 38, 32, 41, 29, 47, 39, 31, 38, 28, 43, 46, 35, 37, 24, 48, 31, 38, 30, 18, 34, 40, 40, 41, 34, 25, 30, 35, 40, 40, 29, 34, 39, 36, 31], \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-wz5qd7\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>直方图显示了合成数据集中不同年龄组的频率。分布峰值在 30 岁中期左右，符合我们的生成方法预期。</p>\n</blockquote>\n<p>让我们也可视化 <code>PurchaseAmount</code> 的分布。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ksqoy4\" \n              data-plot-definition='{\"layout\": {\"title\": \"合成购买金额分布\", \"xaxis\": {\"title\": \"购买金额 ($)\"}, \"yaxis\": {\"title\": \"数量\"}, \"bargap\": 0.1, \"template\": \"plotly_white\"}, \"data\": [{\"type\": \"histogram\", \"x\": [257.73, 367.44, 258.59, 441.9, 128.65, 409.1, 145.51, 402.58, 77.1, 239.79, 447.87, 168.01, 464.32, 127.74, 399.81, 311.89, 193.43, 491.13, 216.55, 299.16, 33.58, 157.44, 181.77, 462.54, 335.8, 115.86, 128.27, 296.54, 416.88, 452.51, 164.01, 216.08, 435.81, 244.25, 283.14, 454.68, 436.86, 477.51, 40.77, 469.2, 424.61, 424.88, 333.58, 140.33, 234.7, 416.05, 306.08, 494.59, 18.26, 462.24, 389.7, 19.9, 378.68, 133.66, 184.74, 250.9, 303.91, 488.72, 471.4, 475.99, 482.8, 388.7, 20.91, 42.1, 475.32, 287.94, 138.02, 496.12, 110.75, 217.26, 67.65, 370.43, 29.94, 444.4, 131.1, 145.78, 384.2, 159.89, 101.68, 393.21, 271.8, 11.19, 103.89, 404.2, 41.3, 497.57, 268.18, 116.5, 249.46, 239.03, 241.81, 319.69, 13.57, 491.52, 37.18, 234.2, 390.88, 178.92, 397.66], \"marker\": {\"color\": \"#12b886\"}, \"nbinsx\": 10}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ksqoy4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>直方图显示了不同购买金额范围的频率。分布看起来相对均匀，因为我们是从均匀分布中抽样的。</p>\n</blockquote>\n<h3>总结与后续步骤</h3>\n<p>恭喜！您已成功使用 Python 生成了一个简单的合成表格数据集。我们定义了一个结构，使用 <code>numpy</code> 独立为每列生成了数据（数值数据从分布中抽取，分类数据从带有概率的列表中抽取），并将其组装成一个 <code>pandas</code> DataFrame。</p>\n<p>这种方法简单明了，但有局限性。最重要的是，独立生成列意味着我们没有明确地模拟列 <em>之间</em> 的任何关联（例如，年龄较大的客户可能更倾向于购买某些类别，或者不同类别的购买金额可能不同）。在真实数据中，这种关联常常存在。“保留基本列关联”一节介绍了这一挑战，更高级的方法旨在捕捉这些依赖关系。</p>\n<p>这个实践练习提供了一个基础。您可以通过改变分布、概率或添加更多列来进行尝试。这个简单的合成表格现在可以用于数据加载流程的基本测试或简单的模型训练场景，同时要记住它的局限性。接下来的章节将涉及生成其他类型的数据，例如图像，并讨论如何评估我们创建的合成数据的质量。</p>",
+  "slug": "practice-generate-synthetic-table",
+  "updates": [],
+  "references": [
+    {
+      "id": 16228,
+      "title": "Random sampling (`numpy.random`)",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "NumPy Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/random/index.html",
+      "doi": "",
+      "note": "NumPy随机数生成模块的官方文档，用于从统计分布中抽样。",
+      "order": 1,
+      "created_at": "2025-09-06T11:01:59.784308Z",
+      "updated_at": "2025-09-10T13:17:46.938539Z"
+    },
+    {
+      "id": 16229,
+      "title": "pandas.DataFrame",
+      "author": "Wes McKinney and the pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html",
+      "doi": "",
+      "note": "pandas DataFrame的官方文档，详细介绍了其结构和数据操作方法。",
+      "order": 2,
+      "created_at": "2025-09-06T11:01:59.796336Z",
+      "updated_at": "2025-09-10T13:17:58.231278Z"
+    },
+    {
+      "id": 16230,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "使用Python进行数据操作和分析的指南，重点介绍pandas和NumPy。",
+      "order": 3,
+      "created_at": "2025-09-06T11:01:59.800177Z",
+      "updated_at": "2025-09-10T13:17:51.260710Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

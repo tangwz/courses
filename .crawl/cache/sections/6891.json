@@ -1,0 +1,45 @@
+{
+  "id": 6891,
+  "title": "保存和加载训练好的模型和管道",
+  "meta_title": "保存与加载模型 Julia | MLJ.jl 持久化",
+  "meta_description": "用于在Julia中序列化和反序列化训练好的机器学习模型及管道，以便后续使用或部署的技术。",
+  "content": "<p>训练好的机器学习 (machine learning)管道的用途远不止一次会话。持久化这些训练好的模型和管道非常重要，以便无需昂贵的重新训练即可重用，将其部署到应用程序中，与协作者共享，或确保后续工作能够可靠重现。这个过程在MLJ.jl生态系统中很简单。</p>\n<h3>保存训练好的机器</h3>\n<p>MLJ.jl提供<code>MLJ.save</code>函数，用于将训练好的机器序列化到文件。MLJ中的“机器”是一个对象，它将模型（可以是单个学习器或复杂管道）绑定到数据，并在训练后存储学习到的参数 (parameter)（即<code>fitresult</code>）。<code>MLJ.save</code>函数通常在底层使用JLD2.jl包，将机器保存为<code>.jlso</code>（Julia序列化对象）文件。这种格式对于存储Julia对象很高效。</p>\n<p>假设您已经训练了一个机器<code>mach</code>，它可以包含从简单的决策树到多步骤预处理和建模管道的任何内容。保存它就像这样简单：</p>\n<pre><code class=\"language-julia\">using MLJ\nimport JLD2 # MLJ.save 内部使用 JLD2.jl\n\n# 假设 'mach' 是一个训练好的机器\n# 例如：\n# ModelType = @load DecisionTreeClassifier pkg=DecisionTree\n# model = ModelType()\n# X, y = @load_iris\n# mach = machine(model, X, y)\n# fit!(mach)\n\n# 保存训练好的机器\nMLJ.save(\"my_trained_model.jlso\", mach)\n</code></pre>\n<p>此命令保存<code>mach</code>的整个状态，包括模型的超参数 (hyperparameter)及其学习到的参数，到文件“my_trained_model.jlso”中。</p>\n<h3>加载训练好的机器</h3>\n<p>要将您保存的机器重新带回Julia会话，您可以使用<code>machine</code>构造函数本身，但不是提供模型和数据，而是提供<code>.jlso</code>文件的路径：</p>\n<pre><code class=\"language-julia\"># 在新会话中，或在 'mach' 不再内存中时：\nloaded_mach = machine(\"my_trained_model.jlso\")\n</code></pre>\n<p><code>loaded_mach</code>现在是您保存的机器的精确复制品。它已准备好进行预测或检查，无需重新训练。您可以通过使用它进行预测来验证这一点：</p>\n<pre><code class=\"language-julia\"># 假设 X_new 是与模型兼容的新数据\n# y_pred = predict(loaded_mach, X_new)\n# @info \"使用加载模型进行的预测：\", y_pred[1:5]\n</code></pre>\n<p>这种流畅的保存和加载能力对于管道特别有用。如果<code>mach</code>是管道机器，<code>MLJ.save</code>会存储整个管道结构以及每个组件的拟合状态。</p>\n<h3>究竟保存了什么？</h3>\n<p>当您使用<code>MLJ.save(filename, mach)</code>时，您正在序列化MLJ <code>Machine</code>对象。这个对象包含：</p>\n<ol>\n<li><strong>模型：</strong> 您的学习器或管道的蓝图（例如，<code>DecisionTreeClassifier(max_depth=3)</code>或<code>@pipeline</code>对象）。</li>\n<li><strong>拟合结果 (Fitresult)：</strong> 在<code>fit!</code>操作期间学习到的参数 (parameter)。这是您训练好的模型的“智能”。对于线性模型，这会是系数；对于树模型，这是树结构。</li>\n<li><strong>报告 (Report)：</strong> 训练期间生成的任何诊断信息或副产品。</li>\n<li><strong>数据绑定（部分）：</strong> 有关机器训练所用数据的信息，例如特征名称，通常会保留，但原始训练数据本身通常不存储在机器内部，以保持文件大小可管理。机器主要存储进行新预测所需的内容。</li>\n</ol>\n<p>底层的<code>JLD2.jl</code>序列化器设计用于处理各种Julia类型，使其非常适合构成MLJ机器的复杂对象。</p>\n<h3>实际例子：保存和加载管道</h3>\n<p>让我们看一个涉及管道的更完整的例子。我们将定义一个简单管道，训练它，保存它，加载它，然后用它进行预测。</p>\n<pre><code class=\"language-julia\">using MLJ\nimport RDatasets: dataset\nimport JLD2 # 用于 MLJ.save\n\n# 加载必要的模型类型\nStandardizer = @load Standardizer pkg=MLJModels\nOneHotEncoder = @load OneHotEncoder pkg=MLJModels\nDecisionTreeClassifier = @load DecisionTreeClassifier pkg=DecisionTree verbosity=0\n\n# 准备一些数据（为简洁起见使用子集）\ndata = dataset(\"datasets\", \"iris\")\nX = data[:, [:SepalLength, :SepalWidth, :PetalLength, :PetalWidth]]\ny = data[:, :Species]\ntrain_rows, test_rows = partition(eachindex(y), 0.7, shuffle=true, rng=123)\n\nX_train = X[train_rows, :]\ny_train = y[train_rows]\nX_test = X[test_rows, :]\n\n# 定义一个管道\n@pipeline MyPipeline(\n    std = Standardizer(),\n    ohe = OneHotEncoder(),\n    tree = DecisionTreeClassifier(max_depth=3)\n) is_probabilistic=true prediction_type=:probabilistic\n\n# 实例化并训练管道机器\npipe_model = MyPipeline()\npipe_mach = machine(pipe_model, X_train, y_train)\nfit!(pipe_mach, rows=train_rows) # 再次使用 train_rows，相对于提供给机器的 X_train, y_train\n\n# 保存训练好的管道机器\nMLJ.save(\"my_pipeline_machine.jlso\", pipe_mach)\n@info \"管道机器已保存。\"\n\n# 模拟在新环境中加载\nloaded_pipe_mach = machine(\"my_pipeline_machine.jlso\")\n@info \"管道机器已加载。\"\n\n# 使用加载的管道进行预测\ny_pred_loaded = predict(loaded_pipe_mach, X_test)\n@info \"从加载管道获得的前5个预测：\" first(y_pred_loaded, 5)\n\n# 您还可以检查拟合参数或报告\n# 例如，查看决策树组件的报告：\n# report(loaded_pipe_mach).tree \n# 或者标准化器的拟合参数：\n# fitted_params(loaded_pipe_mach).std\n</code></pre>\n<p>这个例子展示了整个工作流程，从预处理（标准化、独热编码）到建模（决策树），是如何被封装、训练、保存并作为一个单元重新加载的。</p>\n<p>MLJ中保存和加载模型和管道的一般工作流程如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1jqn1z6\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", fontname=\"sans-serif\"];\n    edge [color=\"#495057\", fontname=\"sans-serif\"];\n\n    define_model [label=\"1. 定义模型/管道\"];\n    create_machine [label=\"2. 创建机器\\nmach = machine(model, X, y)\"];\n    train_machine [label=\"3. 训练机器\\nfit!(mach)\"];\n    save_machine [label=\"4. 保存机器\\nMLJ.save(\\\"file.jlso\\\", mach)\"];\n\n    subgraph cluster_later {\n        label = \"稍后 / 不同会话\";\n        style=\"dashed\";\n        color=\"#adb5bd\";\n        graph[fontname=\"sans-serif\"];\n        load_machine [label=\"5. 加载机器\\nloaded_mach = machine(\\\"file.jlso\\\")\", fillcolor=\"#b2f2bb\"];\n        predict_new [label=\"6. 进行预测\\npredict(loaded_mach, X_new)\", fillcolor=\"#b2f2bb\"];\n    }\n\n    define_model -> create_machine;\n    create_machine -> train_machine;\n    train_machine -> save_machine;\n    save_machine -> load_machine [style=dashed, lhead=cluster_later, arrowhead=empty, color=\"#868e96\"];\n    load_machine -> predict_new;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1jqn1z6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这个图表概述了典型步骤：定义和训练一个MLJ机器，保存它，然后后续加载并使用持久化的机器进行新预测。</p>\n</blockquote>\n<h3>重要注意事项</h3>\n<p>保存和加载模型时，请记住以下几点：</p>\n<ul>\n<li><strong>文件扩展名：</strong> 尽管<code>.jlso</code>是<code>MLJ.save</code>使用的JLD2序列化文件的约定，但请确保一致使用它。</li>\n<li><strong>版本兼容性：</strong> 序列化的Julia对象有时在尝试使用显着不同版本的Julia、MLJ.jl或特定模型包（例如DecisionTree.jl）加载时，可能会遇到兼容性问题。\n<ul>\n<li><strong>最佳做法：</strong> 为了长期重现性，请将项目的<code>Project.toml</code>和<code>Manifest.toml</code>文件与您的序列化模型一同保存。这些文件会锁定所用所有包的精确版本，以便您在需要时重新创建环境。</li>\n</ul>\n</li>\n<li><strong>环境：</strong> 您加载模型的环境必须能访问保存的机器中使用的任何自定义类型或模型类型的定义。通常，这意味着加载相同的包（例如<code>using MLJDecisionTreeInterface</code>）。如果包在您的环境中，MLJ通常会处理加载必要的模型代码。</li>\n<li><strong>可移植性：</strong> JLD2文件通常可以在不同操作系统之间移植，前提是Julia版本和相关包版本兼容。</li>\n<li><strong>文件大小：</strong> 具有大量拟合结果的复杂模型或管道可能导致大型<code>.jlso</code>文件。请注意存储空间，特别是当您版本化许多模型时。</li>\n<li><strong>安全性：</strong> 与任何反序列化过程（如Python的<code>pickle</code>）一样，只从受信任的来源加载<code>.jlso</code>文件。恶意制作的文件在加载时可能会执行任意代码。对于您自己训练和保存的模型，这通常不是一个大问题。</li>\n</ul>\n<p>通过使用<code>MLJ.save</code>和<code>machine</code>进行加载，您可以有效地管理Julia中训练好的机器学习 (machine learning)资产的生命周期，使您的工作流程可重现并准备好部署。这种做法是机器学习系统从实验迈向生产就绪阶段的根本。</p>",
+  "slug": "julia-save-load-models-pipelines",
+  "updates": [],
+  "references": [
+    {
+      "id": 20431,
+      "title": "JLD2.jl: Julia Hierarchical Data Format",
+      "author": "JuliaIO/JLD2.jl Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/JuliaIO/JLD2.jl",
+      "doi": "",
+      "note": "JLD2.jl的仓库和文档，它是MLJ.jl用于将对象序列化到磁盘的Julia包。",
+      "order": 2,
+      "created_at": "2025-09-06T14:02:31.352403Z",
+      "updated_at": "2025-09-11T08:52:12.770372Z"
+    },
+    {
+      "id": 20432,
+      "title": "Pkg.jl Manual: Environments",
+      "author": "The Julia Language Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/stdlib/Pkg/index.html#Environments-1",
+      "doi": "",
+      "note": "Julia Pkg.jl官方手册中解释包环境、Project.toml和Manifest.toml的部分，用于实现可重现的环境。",
+      "order": 3,
+      "created_at": "2025-09-06T14:02:31.355568Z",
+      "updated_at": "2025-09-11T08:52:11.659906Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

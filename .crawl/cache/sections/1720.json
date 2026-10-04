@@ -1,0 +1,61 @@
+{
+  "id": 1720,
+  "title": "花式索引",
+  "meta_title": "NumPy 花式索引",
+  "meta_description": "使用索引数组选择元素，访问非连续元素。",
+  "content": "<p>花式索引提供了一种精确的方法，用于根据索引位置选择数组中的特定元素，尤其当这些位置不连续时。与选择连续元素块的切片不同，也与根据条件筛选的布尔索引不同，花式索引提供了一种灵活的方式来检索单独指定的项目。这种技术使用包含整数索引的NumPy数组（或Python列表）来从另一个数组中挑选元素。</p>\n<h3>使用索引数组选择元素</h3>\n<p>核心思路很简单：你将一个索引数组或列表传递给要从中选择的数组。</p>\n<h4>一维数组中的花式索引</h4>\n<p>我们从一个简单的一维数组开始：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个一维数组\narr = np.arange(10) * 5\nprint(f\"Original array:\\n{arr}\")\n# Output:\n# Original array:\n# [ 0  5 10 15 20 25 30 35 40 45]\n\n# 定义我们要选择的索引\nindices = np.array([1, 5, 8, 2])\nprint(f\"Indices to select: {indices}\")\n# Output:\n# Indices to select: [1 5 8 2]\n\n# 使用花式索引\nselected_elements = arr[indices]\nprint(f\"Selected elements:\\n{selected_elements}\")\n# Output:\n# Selected elements:\n# [ 5 25 40 10]\n</code></pre>\n<p>请注意以下几点：</p>\n<ol>\n<li>我们在方括号 <code>[]</code> 中使用了 <code>indices</code>，它是一个包含 <code>[1, 5, 8, 2]</code> 的NumPy数组。</li>\n<li>NumPy 从 <code>arr</code> 中获取了这些特定索引位置的元素。</li>\n<li>结果数组 <code>selected_elements</code> 包含元素 <code>arr[1]</code>、<code>arr[5]</code>、<code>arr[8]</code> 和 <code>arr[2]</code>。</li>\n<li>结果数组的形状与<em>索引数组</em> (<code>indices</code>) 的形状匹配，而不是原始数组 (<code>arr</code>) 的形状。结果中元素的顺序也与索引数组中的顺序一致。</li>\n</ol>\n<p>如果需要，你可以多次使用同一个索引：</p>\n<pre><code class=\"language-python\">indices_repeated = np.array([3, 3, 1, 8, 1])\nprint(f\"Indices with repetition: {indices_repeated}\")\n# Output:\n# Indices with repetition: [3 3 1 8 1]\n\nrepeated_selection = arr[indices_repeated]\nprint(f\"Selection with repeated indices:\\n{repeated_selection}\")\n# Output:\n# Selection with repeated indices:\n# [15 15  5 40  5]\n</code></pre>\n<h4>多维数组中的花式索引</h4>\n<p>花式索引在多维数组中更为通用。你可以传递多个索引数组，根据不同轴上的坐标来选择元素。</p>\n<p>考虑一个二维数组：</p>\n<pre><code class=\"language-python\">arr2d = np.array([[ 0,  1,  2,  3],\n                  [ 4,  5,  6,  7],\n                  [ 8,  9, 10, 11],\n                  [12, 13, 14, 15]])\n\nprint(f\"Original 2D array:\\n{arr2d}\")\n</code></pre>\n<p><strong>选择特定行：</strong>\n如果你提供一个索引数组，它会选择与这些索引对应的整行：</p>\n<pre><code class=\"language-python\"># 选择第0行和第2行\nrow_indices = np.array([0, 2])\nselected_rows = arr2d[row_indices]\n\nprint(f\"Selected rows (0 and 2):\\n{selected_rows}\")\n# Output:\n# Selected rows (0 and 2):\n# [[ 0  1  2  3]\n#  [ 8  9 10 11]]\n</code></pre>\n<p><strong>选择特定元素（坐标）：</strong>\n要使用坐标选择单个元素，你需要为<em>每个</em>维度提供一个索引数组。这些数组通常应具有相同的长度。NumPy 将索引逐个配对：选择的第一个元素在 <code>(row_indices[0], col_indices[0])</code>，第二个在 <code>(row_indices[1], col_indices[1])</code>，依此类推。</p>\n<pre><code class=\"language-python\"># 行的索引\nrow_indices = np.array([0, 3, 1, 2])\n# 列的索引\ncol_indices = np.array([1, 2, 0, 3])\n\n# 选择坐标 (0,1), (3,2), (1,0), (2,3) 处的元素\nselected_coords = arr2d[row_indices, col_indices]\n\nprint(f\"Selected elements by coordinates:\\n{selected_coords}\")\n# Output:\n# Selected elements by coordinates:\n# [ 1 14  4 11]\n</code></pre>\n<p>这里，选定的元素是 <code>arr2d[0, 1]</code>（即1），<code>arr2d[3, 2]</code>（即14），<code>arr2d[1, 0]</code>（即4）和 <code>arr2d[2, 3]</code>（即11）。结果是一个一维数组，因为我们提供了特定的坐标。</p>\n<p><strong>花式索引与切片或基本索引的组合：</strong>\n你也可以将花式索引与切片或基本索引混合使用。例如，要选择特定行和特定列，你可以将它们组合起来：</p>\n<pre><code class=\"language-python\"># 选择第0行和第2行，以及第1列和第3列\nrow_indices = np.array([0, 2])\ncol_indices = np.array([1, 3])\n\n# 方法一：先选择行，然后从结果中选择列\nselected_block_1 = arr2d[row_indices][:, col_indices]\nprint(f\"Selected block (Method 1):\\n{selected_block_1}\")\n# Output:\n# Selected block (Method 1):\n# [[ 1  3]\n#  [ 9 11]]\n\n# 方法二：使用 np.ix_ 进行索引广播（更高级）\n# 这个辅助函数创建索引器，用于选择一个矩形区域\nselected_block_2 = arr2d[np.ix_(row_indices, col_indices)]\nprint(f\"Selected block (Method 2 with np.ix_):\\n{selected_block_2}\")\n# Output:\n# Selected block (Method 2 with np.ix_):\n# [[ 1  3]\n#  [ 9 11]]\n</code></pre>\n<p>两种方法都生成了一个子数组，其中包含行 0 和 2 与列 1 和 3 交汇处的元素。对于初学者来说，第一种方法通常更直观，它首先选择行，然后从中间结果中选择列。</p>\n<p>你也可以选择特定行和<em>所有</em>列，或者从<em>所有</em>行中选择特定列：</p>\n<pre><code class=\"language-python\"># 选择第1行和第3行，所有列\nprint(f\"Rows 1 and 3, all columns:\\n{arr2d[[1, 3]]}\")\n# Output:\n# Rows 1 and 3, all columns:\n# [[ 4  5  6  7]\n#  [12 13 14 15]]\n\n# 所有行，第0列和第2列\nprint(f\"All rows, columns 0 and 2:\\n{arr2d[:, [0, 2]]}\")\n# Output:\n# All rows, columns 0 and 2:\n# [[ 0  2]\n#  [ 4  6]\n#  [ 8 10]\n#  [12 14]]\n</code></pre>\n<h3>使用花式索引修改数组</h3>\n<p>就像基本索引和切片一样，花式索引也可用于修改数组元素。你将花式索引表达式放在赋值语句的左侧：</p>\n<pre><code class=\"language-python\">arr = np.arange(10) * 5\nprint(f\"Original array: {arr}\")\n\nindices = np.array([1, 5, 8, 2])\narr[indices] = 99 # 将单个值赋给所有选定的元素\nprint(f\"Array after modifying elements at {indices}: {arr}\")\n# Output:\n# Original array: [ 0  5 10 15 20 25 30 35 40 45]\n# Array after modifying elements at [1 5 8 2]: [ 0 99 99 15 20 99 30 35 99 45]\n\n# 你也可以赋值一个值数组，其形状与索引数组匹配\narr[indices] = np.array([-1, -2, -3, -4])\nprint(f\"Array after assigning multiple values: {arr}\")\n# Output:\n# Array after assigning multiple values: [ 0 -1 -4 15 20 -2 30 35 -3 45]\n</code></pre>\n<p>这同样适用于多维数组：</p>\n<pre><code class=\"language-python\">print(f\"Original 2D array:\\n{arr2d}\")\n\n# 修改 (0,1), (3,2), (1,0), (2,3) 处的元素\nrow_indices = np.array([0, 3, 1, 2])\ncol_indices = np.array([1, 2, 0, 3])\narr2d[row_indices, col_indices] = 0\n\nprint(f\"2D array after setting specific elements to 0:\\n{arr2d}\")\n# Output:\n# Original 2D array:\n# [[ 0  1  2  3]\n#  [ 4  5  6  7]\n#  [ 8  9 10 11]\n#  [12 13 14 15]]\n# 2D array after setting specific elements to 0:\n# [[ 0  0  2  3]\n#  [ 0  5  6  7]\n#  [ 8  9 10  0]\n#  [12 13  0 15]]\n</code></pre>\n<h3>重要提示：副本与视图</h3>\n<p>切片和花式索引之间一个显著的区别是，<strong>花式索引几乎总是返回数据的<em>副本</em>，而不是视图</strong>。这意味着对花式索引返回的数组所做的更改<em>不会</em>影响原始数组。</p>\n<pre><code class=\"language-python\">arr = np.arange(10)\nprint(f\"Original array: {arr}\")\n\n# 切片（创建视图）\nslice_view = arr[2:5]\nprint(f\"Slice view: {slice_view}\")\nslice_view[0] = 99 # 修改视图\nprint(f\"Original array after modifying slice view: {arr}\") # 原始数组已改变\n\n# 花式索引（创建副本）\nindices = np.array([6, 8])\nfancy_copy = arr[indices]\nprint(f\"Fancy copy: {fancy_copy}\")\nfancy_copy[0] = -1 # 修改副本\nprint(f\"Original array after modifying fancy copy: {arr}\") # 原始数组未改变\n\n# Output:\n# Original array: [0 1 2 3 4 5 6 7 8 9]\n# Slice view: [2 3 4]\n# Original array after modifying slice view: [ 0  1 99  3  4  5  6  7  8  9]\n# Fancy copy: [6 8]\n# Original array after modifying fancy copy: [ 0  1 99  3  4  5  6  7  8  9]\n</code></pre>\n<p>记住这种副本行为很重要，特别是在你打算修改原始数组数据时。如果你需要使用索引数组修改原始数组，请像前面所示，将花式索引表达式直接放在赋值语句的左侧。</p>\n<p>花式索引提供了一种强大且灵活的方法，可以根据元素的位置访问和操作数组元素，补充了基本切片和布尔索引的功能。</p>",
+  "slug": "fancy-indexing",
+  "updates": [],
+  "references": [
+    {
+      "id": 4700,
+      "title": "Indexing",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "doi": "",
+      "note": "这个官方文档章节详细解释了NumPy的索引功能,包括花式索引,并阐明了视图和副本之间的区别。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:30.647550Z",
+      "updated_at": "2025-09-08T05:15:39.884739Z"
+    },
+    {
+      "id": 4701,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本广泛使用的Python数据科学教材,对NumPy数组索引(包括花式索引)及其数据副本行为提供了清晰的解释。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:30.699776Z",
+      "updated_at": "2025-09-08T05:15:30.497140Z"
+    },
+    {
+      "id": 4702,
+      "title": "The NumPy array object (from SciPy Lecture Notes)",
+      "author": "The SciPy Lecture Notes Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scipy-lectures.org/intro/numpy/array_object.html",
+      "doi": "",
+      "note": "一个广泛使用的开源教育资源,提供NumPy的实用教程,包括花式索引的清晰示例和解释。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:30.704736Z",
+      "updated_at": "2025-09-08T05:15:28.812117Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

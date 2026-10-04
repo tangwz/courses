@@ -1,0 +1,61 @@
+{
+  "id": 5072,
+  "title": "卷积神经网络 (CNNs): 动因",
+  "meta_title": "卷积网络 (CNNs) 的动因",
+  "meta_description": "解释为什么CNNs非常适合网格状数据，尤其是图像。",
+  "content": "<p>前馈网络，或多层感知机 (MLPs)，是功能强大的工具。然而，当处理图像等数据时，它们的标准结构会显现出明显的局限性。试想一下，当你将图像输入到MLP时会发生什么：通常，你会将图像矩阵展平（例如，一个28x28像素的图像变成一个784个元素的向量 (vector)）。</p>\n<p>这种展平过程会立即丢弃重要的空间信息。在2D网格中相邻的像素，可能形成线条或纹理，在展平后被视为独立的输入。网络失去了数据的固有结构；它不能固有地理解像素<code>(0,0)</code>和<code>(0,1)</code>比像素<code>(0,0)</code>和<code>(27,27)</code>更接近且更可能相关。MLP必须从零开始学习这些空间关系，这效率很低。</p>\n<p>此外，高分辨率图像会导致庞大的输入向量。一个适中的224x224彩色图像有<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>224</mn><mo>×</mo><mn>224</mn><mo>×</mo><mn>3</mn><mo>=</mo><mn>150</mn><mo separator=\"true\">,</mo><mn>528</mn></mrow><annotation encoding=\"application/x-tex\">224 \\times 224 \\times 3 = 150,528</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">224</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">224</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8389em;vertical-align:-0.1944em;\"></span><span class=\"mord\">150</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">528</span></span></span></span>个输入值。将这个输入层连接到MLP中哪怕是一个中等大小的首个隐藏层，都会导致参数 (parameter)（权重 (weight)和偏置 (bias)）数量暴增。训练这样的网络会计算成本高昂，并且需要大量数据以避免过拟合 (overfitting)，因为相对于其试图学习的底层结构而言，模型容量过大。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-rbw5a\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", width=0.3, height=0.3, label=\"\"];\n    edge [arrowhead=none];\n\n    subgraph cluster_0 {\n        label = \"输入像素 (展平)\";\n        bgcolor=\"#e9ecef\";\n        style=rounded;\n        i1, i2, i3, i4, i5, i6, i7, i8, i9 [shape=point]; // 代表许多像素\n        i_dots [label=\"...\", shape=plaintext];\n        i1 -> i2 -> i3 -> i4 -> i5 -> i_dots -> i6 -> i7 -> i8 -> i9 [style=invis]; // 布局\n    }\n\n    subgraph cluster_1 {\n        label = \"MLP首个隐藏层\";\n        bgcolor=\"#e9ecef\";\n        style=rounded;\n        h1, h2, h3 [fillcolor=\"#ffe066\"];\n        h_dots [label=\"...\", shape=plaintext];\n        h1 -> h2 -> h_dots -> h3 [style=invis]; // 布局\n    }\n\n    // 全连接边 (示意)\n    edge [color=\"#adb5bd\"];\n    {i1, i2, i3, i4, i5, i6, i7, i8, i9} -> {h1, h2, h3};\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-rbw5a\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>MLP通常将每个输入特征（展平后的像素）连接到第一个隐藏层中的每个神经元，忽略空间关系并导致大量参数。</p>\n</blockquote>\n<p>卷积神经网络 (neural network) (CNN) (CNNs) 专门为了解决这些不足而发展起来。它们被设计用来处理以多维数组形式存在的数据，例如由3D数组（高、宽、颜色通道）组成的彩色图像。CNN背后的核心动因源于三个主要思想，这些思想使其在涉及网格状数据的任务中非常有效：</p>\n<ol>\n<li>\n<p><strong>局部感受野：</strong> CNN不将每个输入神经元连接到每个隐藏神经元，而是采用只响应输入层中有限区域的神经元。这个区域被称为<em>局部感受野</em>。想象一个小的窗口（例如，3x3或5x5像素）在输入图像上滑动。下一层的神经元一次只处理该窗口内的信息。这直接运用了图像中存在的空间局部性；附近的像素可能相互关联，并有助于形成基本的视觉特征，如边缘或角点。</p>\n</li>\n<li>\n<p><strong>参数共享：</strong> 这是一个强大的思想。在CNN中，同一组权重（通常称为<em>滤波器</em>或<em>卷积核</em>）应用于输入图像中的不同位置。如果一个滤波器被设计用于检测水平边缘，它会在整个图像上滑动，无论该边缘出现在何处，都能将其检测出来。与MLP相比，这大幅减少了参数的数量。CNN不是为在每个可能位置检测特征而学习单独的权重，而是为该特征检测器学习一组单一的权重。这使得网络效率高得多，并且更不容易过拟合。</p>\n</li>\n<li>\n<p><strong>平移不变性（或等变性）：</strong> 参数共享的一个直接结果是CNN具有一定程度的平移不变性（更准确地说，是等变性）。如果网络使用特定滤波器学习在图像的某一部分检测到一个模式（例如，猫的眼睛），那么如果该模式出现在不同的位置，它可以使用<em>相同的</em>滤波器检测到该模式。这对于物体识别和其他图像分析任务来说非常理想，因为物体的身份不会因其在画面中的位置而改变。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-urjn5n\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=square, style=filled, width=0.2, height=0.2, label=\"\"];\n    edge [arrowhead=none];\n\n    subgraph cluster_0 {\n        label = \"输入图像块\";\n        bgcolor=\"#e9ecef\";\n        style=rounded;\n        node [fillcolor=\"#a5d8ff\"];\n        p11, p12, p13;\n        p21, p22, p23;\n        p31, p32, p33;\n        {rank=same; p11->p12->p13};\n        {rank=same; p21->p22->p23};\n        {rank=same; p31->p32->p33};\n        p11->p21->p31;\n        p12->p22->p32;\n        p13->p23->p33;\n    }\n\n    subgraph cluster_1 {\n        label = \"CNN特征图神经元\";\n        bgcolor=\"#e9ecef\";\n        style=rounded;\n        h1 [shape=circle, fillcolor=\"#ffe066\", width=0.4, height=0.4];\n    }\n\n    // 局部连接边\n    edge [color=\"#1c7ed6\"];\n    {p11, p12, p13, p21, p22, p23, p31, p32, p33} -> h1;\n\n    label=\"CNN连接方式 (单个滤波器位置)\";\n    fontsize=10;\n    labelloc=b;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-urjn5n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>特征图中的CNN神经元仅连接到输入的局部图像块（感受野）。定义此连接的权重（即滤波器）在不同空间位置共享。</p>\n</blockquote>\n<p>本质上，CNN是出于构建遵循图像数据空间层次结构的模型的需求而形成的。它们局部学习特征，高效共享参数，并从简单的部分构建复杂的表示，使其成为许多计算机视觉任务的标准方法。接下来的部分将详细说明实现这些特性的具体操作，如卷积和池化。</p>",
+  "slug": "cnn-motivation",
+  "updates": [],
+  "references": [
+    {
+      "id": 12969,
+      "title": "Gradient-based learning applied to document recognition",
+      "author": "Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner",
+      "year": "1998",
+      "publisher": "IEEE",
+      "journal": "Proceedings of the IEEE",
+      "volume": "86",
+      "pages": "2278-2324",
+      "url": "https://ieeexplore.ieee.org/document/726791",
+      "doi": "10.1109/5.726791",
+      "note": "这篇论文介绍了LeNet-5，一种开创性的CNN架构，并阐述了局部感受野和权重共享的原则，这些原则是现代CNN的核心。",
+      "order": 1,
+      "created_at": "2025-09-05T08:26:03.852494Z",
+      "updated_at": "2025-09-08T15:59:33.962361Z"
+    },
+    {
+      "id": 12970,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "《卷积网络》一章对CNN进行了广泛的介绍，涵盖了其设计、组件以及相对于MLP在图像任务中的优势。",
+      "order": 2,
+      "created_at": "2025-09-05T08:26:03.860337Z",
+      "updated_at": "2025-09-08T15:59:24.924990Z"
+    },
+    {
+      "id": 12971,
+      "title": "Convolutional Neural Networks (CNNs)",
+      "author": "Stanford University CS231n",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs231n.github.io/convolutional-networks/",
+      "doi": "",
+      "note": "这一有影响力的在线资源清晰地解释了CNN背后的概念，包括使用MLP处理图像数据的挑战以及CNN提供的解决方案。",
+      "order": 3,
+      "created_at": "2025-09-05T08:26:03.864970Z",
+      "updated_at": "2025-09-08T15:59:33.866330Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

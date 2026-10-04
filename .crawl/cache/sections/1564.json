@@ -1,0 +1,61 @@
+{
+  "id": 1564,
+  "title": "选择所有列",
+  "meta_title": "使用 `SELECT *` 选择所有列",
+  "meta_description": "学习如何使用星号 (*) 通配符从表中选择所有列。",
+  "content": "<p>使用 <code>SELECT</code> 语句可以从表中精确指定要获取哪些列。这种精确性通常正是进行数据分析所需要的。然而，有些时候，特别是在首次接触新的数据集或表时，您可能希望查看表中的所有内容。SQL 提供了一个方便的简写方式，这样就不必查找并输入每个列名了。</p>\n<p>要从表中选择所有列，您可以使用星号 (<code>*</code>) 字符（通常称为通配符）来代替列名列表。</p>\n<p>语法直接明了：</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM table_name;\n</code></pre>\n<p>让我们再次以 <code>Products</code> 表为例，它可能包含 <code>product_id</code>、<code>product_name</code>、<code>category</code>、<code>price</code> 和 <code>stock_quantity</code> 等列。</p>\n<p>如果您想查看当前列出的所有产品的完整信息，您会这样写：</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM Products;\n</code></pre>\n<p>执行此查询会指示数据库管理系统 (DBMS) 返回 <code>Products</code> 表中的所有行，并且对每一行，都包含该表结构中定义的<em>所有</em>列的数据。结果会类似这样（显示几行示例数据）：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">product_id</th>\n<th align=\"left\">product_name</th>\n<th align=\"left\">category</th>\n<th align=\"left\">price</th>\n<th align=\"left\">stock_quantity</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">量子小部件</td>\n<td align=\"left\">电子产品</td>\n<td align=\"left\">49.99</td>\n<td align=\"left\">150</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">磁通电容器</td>\n<td align=\"left\">小工具</td>\n<td align=\"left\">19.95</td>\n<td align=\"left\">88</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">超级扳手</td>\n<td align=\"left\">工具</td>\n<td align=\"left\">24.50</td>\n<td align=\"left\">210</td>\n</tr>\n<tr>\n<td align=\"left\">201</td>\n<td align=\"left\">涡轮增压器</td>\n<td align=\"left\">电子产品</td>\n<td align=\"left\">99.99</td>\n<td align=\"left\">45</td>\n</tr>\n<tr>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n<td align=\"left\">...</td>\n</tr>\n</tbody>\n</table>\n<p>列的显示顺序与其在表创建时定义的顺序一致（不过，在严格的SQL标准中，这种顺序并不总是得到保证或依赖）。</p>\n<h3><code>SELECT *</code> 的使用场景</h3>\n<p>在以下几种情况下，使用 <code>SELECT *</code> 特别有用：</p>\n<ol>\n<li><strong>数据查看：</strong> 当您不熟悉一个表时，<code>SELECT *</code> 结合 <code>LIMIT</code> 子句（您之前学过）是快速查看表结构和其所含数据类型的好方法。例如，<code>SELECT * FROM Products LIMIT 5;</code> 会显示前 5 行的所有列。</li>\n<li><strong>小型表：</strong> 如果一个表只有少量列，使用 <code>*</code> 会比输入每个列名更快。</li>\n<li><strong>查看完整记录：</strong> 当您需要查看特定行的完整记录时（常与 <code>WHERE</code> 子句一起使用，我们将在下一章介绍）。</li>\n</ol>\n<h3>重要考量和最佳实践</h3>\n<p>尽管 <code>SELECT *</code> 很方便，但通常<strong>不</strong>建议在生产代码、自动化脚本或复杂分析中使用。原因如下：</p>\n<ul>\n<li><strong>性能：</strong> 获取不需要的数据会消耗不必要的资源。当您只需要两列却要求所有列时，会显著增加查询时间、网络流量和服务器负载，特别是对于包含许多列或行的表。</li>\n<li><strong>可读性和维护性：</strong> 明确列出您需要的列会使查询意图更清晰。<code>SELECT product_name, price FROM Products;</code> 立即告知读取者正在使用哪些数据。此外，如果底层表结构发生变化（例如，添加了新列或列重新排序），<code>SELECT *</code> 可能会返回意料之外的结果，甚至可能破坏预期特定数量或顺序列的应用程序代码。明确命名列会使您的查询更能适应此类变化。</li>\n<li><strong>连接时的歧义：</strong> 当您开始组合来自多个表的数据时（在第 5 章介绍），如果表共享列名，使用 <code>SELECT *</code> 可能导致歧义。明确选择 <code>table_alias.column_name</code> 可以避免混淆。</li>\n</ul>\n<p><strong>推荐：</strong> 主要将 <code>SELECT *</code> 用于交互式查询和初步查看。对于在应用程序、报告或后续分析步骤中使用的查询，请养成明确列出所需列的习惯。这会使SQL代码更高效、更具可读性和更易于维护。</p>",
+  "slug": "selecting-all-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 2636,
+      "title": "PostgreSQL Documentation: SELECT",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html",
+      "doi": "",
+      "note": "提供SQL SELECT语句的详细语法和用法，包括`*`通配符及其含义。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:20.327525Z",
+      "updated_at": "2025-09-08T00:22:59.960099Z"
+    },
+    {
+      "id": 2639,
+      "title": "Sams Teach Yourself SQL in 10 Minutes",
+      "author": "Ben Forta",
+      "year": "2019",
+      "publisher": "Pearson Education, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "256",
+      "url": "https://www.informit.com/store/sams-teach-yourself-sql-in-10-minutes-9780135182796",
+      "doi": "",
+      "note": "一本介绍SQL基础知识的实用指南，涵盖了使用显式列选择和`*`通配符的SELECT语句用法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:20.446028Z",
+      "updated_at": "2025-09-08T00:23:14.828166Z"
+    },
+    {
+      "id": 2644,
+      "title": "SELECT (Transact-SQL)",
+      "author": "Microsoft",
+      "year": "2024",
+      "publisher": "Microsoft",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learn.microsoft.com/en-us/sql/t-sql/queries/select-transact-sql?view=sql-server-ver16",
+      "doi": "",
+      "note": "微软关于Transact-SQL中`SELECT`语句的官方文档，通常包含性能考量和使用指南。",
+      "order": 4,
+      "created_at": "2025-09-04T16:53:20.466769Z",
+      "updated_at": "2025-09-08T00:22:51.484932Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

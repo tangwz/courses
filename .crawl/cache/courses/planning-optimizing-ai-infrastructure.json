@@ -1,0 +1,595 @@
+{
+  "id": 217,
+  "title": "AI 平台规划与优化",
+  "meta_title": "AI 平台：规划与优化指南",
+  "meta_description": "学习规划、构建并优化用于机器学习的 AI 平台。内容涵盖硬件选择（GPU/CPU）、云端与本地部署对比以及成本管理。",
+  "description": "<p>本课程提供机器学习 (machine learning)应用软硬件体系的设计、构建与管理技术指南。您将学习评估计算需求，比较本地部署与云端方案，并实施性能与成本优化策略。内容涵盖硬件选择（包括 CPU 和 GPU）、机器学习的 Docker 和 Kubernetes 容器化技术，以及高效模型训练与部署方法。本课程是一门为负责 AI 系统运维的工程师设计的实用课程。</p>",
+  "short_description": "设计、构建并优化 AI 应用的完整软硬件体系。",
+  "excerpt": "适用于工程师的 AI 平台设计、构建与优化实用指南。学习管理机器学习工作负载的硬件、云服务和相关成本。",
+  "prerequisites": "机器学习系统知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "硬件选择",
+      "description": "评估并选择适合的计算硬件，包括 CPU、GPU 和专用加速器，以适应不同的 AI 工作负载。"
+    },
+    {
+      "topic": "AI 平台设计",
+      "description": "依据性能和预算需求，设计适用于本地和云端环境的 AI 平台方案。"
+    },
+    {
+      "topic": "容器化与编排",
+      "description": "使用 Docker 和 Kubernetes 创建可复现的机器学习环境，并编排分布式训练和推理工作负载。"
+    },
+    {
+      "topic": "性能优化",
+      "description": "应用诸如分布式训练、混合精度和模型量化等技术，以提升 AI 系统的效率。"
+    },
+    {
+      "topic": "成本管理",
+      "description": "分析并管理 AI 平台的相关成本，实施策略以优化在云端和本地部署环境中的开支。"
+    }
+  ],
+  "duration": 18,
+  "slug": "planning-optimizing-ai-infrastructure",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-07-07T10:08:28.445103Z",
+  "updated_at": "2026-10-02T06:48:58.018204Z",
+  "chapters": [
+    {
+      "id": 1220,
+      "title": "AI 计算基础设施入门",
+      "meta_title": "AI 计算基础设施要点",
+      "meta_description": "了解 AI 基础设施的核心组件，包括 CPU、GPU、内存和存储，用于机器学习工作负载，如训练和推理。",
+      "number": 1,
+      "slug": "foundations-ai-compute-infrastructure",
+      "content": "AI 模型的性能与其运行的硬件直接相关。要构建高效系统，您必须首先了解机器学习工作负载的计算需求以及满足这些需求的硬件组件。本章提供初步分析。\n\n您将学会区分训练和推理工作负载及其不同的硬件要求。我们将分析 CPU 在顺序任务中的作用以及 GPU 在深度学习中常见的并行计算中的作用。我们将比较它们的架构，并了解为何 GPU 擅长同时执行数千次操作，例如神经网络核心的矩阵乘法 ($C = A \\cdot B$)。本讨论还将涉及 TPU 等专用加速器，以及内存、存储和网络的辅助作用。\n\n本章最后是一个实践练习，您将在 CPU 和 GPU 上对一项任务进行基准测试，以便亲身观察这些性能差异。",
+      "sections": [
+        {
+          "id": 6961,
+          "title": "人工智能工作负载概览",
+          "meta_title": "人工智能工作负载：训练与推理的对比",
+          "meta_description": "了解人工智能训练与推理工作负载之间的区别及其各自的计算需求。",
+          "slug": "introduction-to-ai-workloads",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6963,
+          "title": "CPU在AI系统中的作用",
+          "meta_title": "AI系统中的CPU",
+          "meta_description": "分析中央处理器（CPU）在人工智能流程中，如数据预处理和顺序操作等任务中的作用。",
+          "slug": "role-of-cpus-in-ai",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6965,
+          "title": "GPU 在加速人工智能中的作用",
+          "meta_title": "GPU 用于人工智能加速",
+          "meta_description": "了解图形处理器 (GPU) 如何加速深度学习和模型训练中的并行计算。",
+          "slug": "role-of-gpus-in-ai",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6966,
+          "title": "CPU与GPU架构在机器学习中的对比",
+          "meta_title": "CPU与GPU在机器学习中的对比",
+          "meta_description": "一项对CPU和GPU架构的技术比较，指出它们在各种机器学习任务中的优缺点。",
+          "slug": "comparing-cpu-gpu-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6969,
+          "title": "TPU及其他ASIC简介",
+          "meta_title": "TPU和ASIC简介",
+          "meta_description": "专用集成电路（ASIC）（例如谷歌张量处理器TPU）在专用AI任务中的概述。",
+          "slug": "introduction-to-tpus-asics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6970,
+          "title": "内存及其对大型模型的重要性",
+          "meta_title": "大型AI模型的内存和显存",
+          "meta_description": "分析训练和部署大规模人工智能和深度学习模型所需的内存（RAM）需求。",
+          "slug": "memory-for-large-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6973,
+          "title": "AI数据集存储方案",
+          "meta_title": "AI数据集存储方案",
+          "meta_description": "比较各种存储方案，从本地SSD到分布式文件系统，以管理大型AI数据集。",
+          "slug": "storage-solutions-for-ai-datasets",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6974,
+          "title": "分布式系统的网络考量",
+          "meta_title": "分布式AI系统的网络",
+          "meta_description": "理解构建高效分布式AI系统所需的网络需求，包括带宽和延迟。",
+          "slug": "networking-for-distributed-systems",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6976,
+          "title": "动手实践：CPU 与 GPU 性能对比",
+          "meta_title": "实践：对比 CPU 与 GPU 性能",
+          "meta_description": "一个动手实验，用于对比简单机器学习任务在 CPU 和 GPU 上的性能。",
+          "slug": "practical-benchmarking-cpu-gpu",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1223,
+      "title": "设计本地AI基础设施",
+      "meta_title": "本地AI基础设施设计指南",
+      "meta_description": "学习设计本地AI基础设施，涵盖从选择服务器硬件和GPU到配置存储和网络，以实现最佳性能。",
+      "number": 2,
+      "slug": "designing-on-premise-ai-infrastructure",
+      "content": "下章将讨论云平台，而本章将侧重于构建和管理您自己的硬件的过程。本地部署提供对性能、安全性及配置的直接控制，但它也需要清楚了解物理组件如何整合为一个协调运作的系统。这种方法需要在初始资本支出（CapEx）与长期运营效率之间取得平衡。\n\n在本章中，您将学习如何将机器学习工作负载需求转化为具体的硬件规格。我们将涵盖服务器机箱、主板和图形处理器（GPU）的选择，并密切关注NVLink等互连技术及其对多GPU性能的影响。互连方式的选择直接影响分布式任务中的通信开销，这是总训练时间公式 $T_{total} = T_{compute} + T_{communication}$ 中的一个重要因素。我们还将讨论重要的支持系统，包括使用NVMe硬盘的高速存储配置、用于快速数据访问的网络，以及对电力和散热的大量需求。\n\n本章结束时，您将能够评估您的需求，选择合适的组件，并规划专用AI服务器的物理部署。您将通过为特定工作负载场景创建详细的硬件规格表来实践这些知识。",
+      "sections": [
+        {
+          "id": 6978,
+          "title": "评估工作负载需求",
+          "meta_title": "评估本地AI工作负载需求",
+          "meta_description": "学习如何分析您的机器学习工作负载，以确定本地部署所需的具体硬件配置。",
+          "slug": "assessing-workload-requirements",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6980,
+          "title": "AI服务器硬件的选择",
+          "meta_title": "如何选择AI服务器硬件",
+          "meta_description": "一份关于如何选择合适的服务器机箱、主板和电源来构建专用AI设备的指南。",
+          "slug": "selecting-server-hardware-for-ai",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6981,
+          "title": "GPU 互联技术",
+          "meta_title": "GPU 互联：NVLink 与 PCIe 对比",
+          "meta_description": "比较 NVLink 和 PCIe 等 GPU 互联技术及其对多 GPU 训练性能的影响。",
+          "slug": "gpu-interconnect-technologies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6983,
+          "title": "高速存储配置",
+          "meta_title": "高速存储：AI 的 NVMe 与 RAID",
+          "meta_description": "使用 NVMe 硬盘和 RAID 阵列配置高速存储系统，以防止数据 I/O 瓶颈。",
+          "slug": "high-speed-storage-configurations",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6985,
+          "title": "数据与模型传输的网络配置",
+          "meta_title": "本地AI网络配置",
+          "meta_description": "规划您的本地网络基础设施，以支持快速数据访问和分布式训练操作。",
+          "slug": "networking-for-data-transfer",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6987,
+          "title": "功耗与散热要求",
+          "meta_title": "AI服务器的功耗与散热",
+          "meta_description": "计算并规划高密度GPU服务器的大量功耗和散热需求。",
+          "slug": "power-and-cooling-requirements",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6989,
+          "title": "构建裸机AI服务器",
+          "meta_title": "搭建裸机AI服务器指南",
+          "meta_description": "用于机器学习任务的裸机服务器组装和配置逐步考量。",
+          "slug": "building-bare-metal-ai-server",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6991,
+          "title": "实践：创建硬件规格表",
+          "meta_title": "实践：AI硬件规格表",
+          "meta_description": "一份实用的工作表，用于根据给定情景为定制的本地AI服务器创建详细的硬件规格清单。",
+          "slug": "practice-hardware-specification-sheet",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1225,
+      "title": "借助云平台实现人工智能",
+      "meta_title": "人工智能云平台运用（AWS、GCP、Azure）",
+      "meta_description": "学习如何在AWS、GCP和Azure等主流云服务提供商上开展人工智能工作。比较IaaS与托管服务，并配置用于训练的实例。",
+      "number": 3,
+      "slug": "leveraging-cloud-platforms-for-ai",
+      "content": "虽然自建基础设施能提供最佳掌控，但云平台提供了一种以灵活性和按需扩展能力为特点的替代途径。本章将我们的侧重点从拥有硬件设备转移到使用主流云服务提供商提供的丰富计算资源。主要的权衡在于放弃直接的硬件管理，以换取对专用加速器、托管服务以及按需付费定价模式的使用权。\n\n在此，您将学习如何选用AWS、GCP和Azure等提供商的服务产品。我们将比较基本虚拟机（即基础设施即服务，IaaS）与SageMaker或Vertex AI等更高级别的托管式AI平台之间的异同。您将掌握选择适合训练和推理工作负载的GPU和CPU实例、配置用于大型数据集的对象存储，以及使用虚拟私有云（VPC）搭建安全网络环境的技能。本章最后是一个动手实践环节，您将在此处预置并连接到启用了GPU的云实例，并将这些原理付诸实践。",
+      "sections": [
+        {
+          "id": 6993,
+          "title": "主要云提供商的人工智能服务概览",
+          "meta_title": "用于人工智能的云提供商：AWS、GCP、Azure",
+          "meta_description": "对亚马逊网络服务 (AWS)、谷歌云平台 (GCP) 和微软 Azure 所提供的人工智能和机器学习服务的概览。",
+          "slug": "overview-of-cloud-providers-ai",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6995,
+          "title": "托管AI服务与IaaS的比较",
+          "meta_title": "托管AI服务对比IaaS",
+          "meta_description": "评估使用高级托管AI平台（如SageMaker、Vertex AI）与基于原始基础设施即服务（IaaS）构建之间的权衡。",
+          "slug": "comparing-managed-ai-services-iaas",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6997,
+          "title": "为训练选择虚拟机实例",
+          "meta_title": "选择用于机器学习训练的云虚拟机实例",
+          "meta_description": "了解如何根据性能和成本，挑选适合模型训练的基于GPU和CPU的虚拟机实例。",
+          "slug": "selecting-vm-instances-for-training",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6999,
+          "title": "选择用于推理和服务的实例",
+          "meta_title": "选择用于模型推理的云实例",
+          "meta_description": "识别用于部署模型推理的经济实惠实例类型，包括CPU、GPU和专用硬件。",
+          "slug": "choosing-instances-for-inference",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7000,
+          "title": "用于数据集的对象存储服务",
+          "meta_title": "云对象存储：S3、GCS、Blob",
+          "meta_description": "运用亚马逊 S3、谷歌云存储和 Azure Blob 存储等云对象存储服务，实现可扩展和持久的数据集管理。",
+          "slug": "object-storage-services-for-datasets",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7002,
+          "title": "理解云网络和虚拟私有云（VPC）",
+          "meta_title": "AI云网络与VPC",
+          "meta_description": "配置虚拟私有云（VPC）和网络规则，以保障AI组件间安全高效的通信。",
+          "slug": "understanding-cloud-networking-vpcs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7004,
+          "title": "云中的安全考量",
+          "meta_title": "AI基础设施的云安全",
+          "meta_description": "审阅云上AI的安全最佳实践，包括身份与访问管理(IAM)、数据加密和网络安全。",
+          "slug": "security-considerations-in-cloud",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7006,
+          "title": "动手实践：启动GPU云实例",
+          "meta_title": "实践：启动GPU云实例",
+          "meta_description": "一个动手实验，用于在主要云平台上配置、设置并连接一台支持GPU的虚拟机。",
+          "slug": "practical-launching-gpu-cloud-instance",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1227,
+      "title": "机器学习的容器化与编排",
+      "meta_title": "机器学习的Docker与Kubernetes",
+      "meta_description": "使用Docker创建可重现的机器学习环境，并使用Kubernetes通过Kubeflow编排可扩展的训练和部署管道。",
+      "number": 4,
+      "slug": "containerization-orchestration-for-ml",
+      "content": "当您从本地开发转向生产系统时，确保您的机器学习代码在不同环境中一致运行成为一个重要难题。操作系统、库版本或硬件驱动程序的差异可能导致难以调试的错误。本章通过介绍用于创建可移植且可扩展的机器学习工作流的工具来解决此问题。\n\n您将从容器化行业标准Docker开始。我们将介绍如何将应用程序及其依赖项和配置打包成一个称为容器的独立单元。您将学习如何专门为机器学习应用程序编写 `Dockerfile`，包括必要的CUDA和Python库。接下来，我们将转向使用Kubernetes进行编排。您将了解Kubernetes如何自动化容器化应用程序的部署、扩展和管理，使其成为处理复杂机器学习工作负载的有效平台。各部分将详细介绍如何在Kubernetes集群中管理GPU资源，并引入Kubeflow以构建结构化的机器学习管道。本章最后将通过一个实践练习，您将在其中容器化并部署一个模型服务应用程序。",
+      "sections": [
+        {
+          "id": 7008,
+          "title": "Docker 在可复现环境中的使用介绍",
+          "meta_title": "Docker 在机器学习中的使用介绍",
+          "meta_description": "理解如何使用 Docker 容器打包机器学习代码及其依赖项，以便在不同系统上一致运行。",
+          "slug": "docker-for-reproducible-environments",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7010,
+          "title": "构建包含机器学习库的Docker镜像",
+          "meta_title": "如何为机器学习构建Docker镜像",
+          "meta_description": "编写Dockerfile以构建包含Python、CUDA以及TensorFlow或PyTorch等机器学习库的自定义镜像。",
+          "slug": "building-docker-image-ml-libraries",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7012,
+          "title": "Kubernetes 管理机器学习工作负载简介",
+          "meta_title": "Kubernetes 与机器学习工作负载",
+          "meta_description": "介绍 Kubernetes 的基本知识及其在调度和扩展机器学习任务方面的适用性。",
+          "slug": "kubernetes-for-ml-workloads",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7013,
+          "title": "Kubernetes 组件：Pod、Service、Deployment",
+          "meta_title": "Kubernetes 组件：Pod、Service",
+          "meta_description": "了解 Pod、Service 和 Deployment 等 Kubernetes 核心对象，以及它们在机器学习场景中的应用。",
+          "slug": "kubernetes-components-overview",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7015,
+          "title": "在Kubernetes集群中管理GPU资源",
+          "meta_title": "在Kubernetes中管理GPU",
+          "meta_description": "配置Kubernetes集群以识别和调度在配备NVIDIA GPU的节点上的工作负载。",
+          "slug": "managing-gpu-resources-kubernetes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7017,
+          "title": "使用 Kubeflow 构建机器学习管道",
+          "meta_title": "Kubeflow 机器学习管道",
+          "meta_description": "Kubeflow 简介：一个用于在 Kubernetes 上构建、部署和管理可移植、可扩展机器学习工作流的工具。",
+          "slug": "using-kubeflow-for-ml-pipelines",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7019,
+          "title": "动手实践：在 Kubernetes 上部署模型",
+          "meta_title": "实践：在 Kubernetes 上部署机器学习模型",
+          "meta_description": "一个动手实验，将一个简单的模型服务 Flask 应用容器化并部署到像 Minikube 这样的本地 Kubernetes 集群。",
+          "slug": "practical-deploying-model-on-kubernetes",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1229,
+      "title": "性能优化策略",
+      "meta_title": "AI性能优化技术",
+      "meta_description": "学习通过分布式训练、混合精度、模型量化和高效数据管道来优化AI工作负载性能。",
+      "number": 5,
+      "slug": "strategies-for-performance-optimization",
+      "content": "基础设施部署完毕，应用程序也已容器化，接下来就是要确保您的机器学习工作负载高效运行。即使拥有像GPU这样强大的硬件，也无法保证达到最佳性能。低效的代码或结构不佳的数据管道可能导致大量资源闲置，进而增加训练时间和运营成本。目标是最大化吞吐量，缩短训练时长，并降低推理延迟。\n\n本章将介绍一系列实用技术，以提升您的AI系统性能。我们首先会使用性能分析工具，找出性能瓶颈所在，无论是发生在CPU处理、GPU计算还是数据I/O方面。之后，您将学习到具体的优化策略。我们将讲解分布式训练方法，以便将训练任务扩展到多块GPU上。您还将学习实现混合精度训练，该方法使用$FP16$等格式来加速计算并减少内存占用。对于部署，我们将介绍模型量化技术，以创建更小、更快的模型用于推理。最后，我们将讲解如何构建高效的数据管道，使您的计算资源得到充分使用。",
+      "sections": [
+        {
+          "id": 7022,
+          "title": "识别性能瓶颈",
+          "meta_title": "识别AI性能瓶颈",
+          "meta_description": "学习使用性能分析工具识别AI工作流中的瓶颈，无论是CPU、GPU、I/O还是网络方面。",
+          "slug": "identifying-performance-bottlenecks",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7024,
+          "title": "分布式训练技术",
+          "meta_title": "分布式训练：数据并行与模型并行",
+          "meta_description": "理解并比较分布式训练策略，包括数据并行和模型并行，以加速在多个GPU上的训练。",
+          "slug": "techniques-for-distributed-training",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7025,
+          "title": "混合精度训练的应用",
+          "meta_title": "AI 混合精度训练",
+          "meta_description": "采用 FP16 等低精度格式实现混合精度训练，以加速现代 GPU 上的训练并减少内存使用。",
+          "slug": "using-mixed-precision-training",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7028,
+          "title": "模型量化以实现高效推理",
+          "meta_title": "模型量化用于推理",
+          "meta_description": "应用模型量化技术，以减小模型尺寸并加快推理速度，同时最大程度保持准确性。",
+          "slug": "model-quantization-efficient-inference",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7030,
+          "title": "优化数据加载和预处理管道",
+          "meta_title": "优化机器学习数据加载管道",
+          "meta_description": "构建高效的数据加载和预处理管道，以确保GPU永不等待数据。",
+          "slug": "optimizing-data-loading-pipelines",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7032,
+          "title": "剖析GPU和CPU使用情况",
+          "meta_title": "如何剖析GPU和CPU使用情况",
+          "meta_description": "使用NVIDIA的`nvsmi`以及PyTorch/TensorFlow剖析器等工具，以获取资源利用的详细信息。",
+          "slug": "profiling-gpu-cpu-usage",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7034,
+          "title": "实操练习：应用混合精度训练",
+          "meta_title": "实操：PyTorch中的混合精度训练",
+          "meta_description": "一个动手实验，修改标准的PyTorch训练脚本以使用自动混合精度（AMP），并衡量性能提升。",
+          "slug": "practical-applying-mixed-precision-training",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1231,
+      "title": "成本管理与优化",
+      "meta_title": "AI基础设施成本管理",
+      "meta_description": "了解如何管理和优化AI基础设施成本，涵盖本地部署总拥有成本 (TCO) 和云定价模型（竞价实例、预留实例）。",
+      "number": 6,
+      "slug": "cost-management-and-optimization",
+      "content": "在设计和部署AI基础设施之后，随之而来的运营挑战是如何管理其成本。计算资源，特别是GPU，是一笔相当可观的持续开销。如果没有清晰的策略，这些成本可能会急剧增加，并使项目在财务上不可持续。\n\n本章提供一套系统的方法，用于AI系统的财务管理。您将学习如何量化、监控和优化开支，无论是在本地部署环境还是云环境。我们将介绍以下主题：\n\n*   **本地部署总拥有成本 (TCO)：** 我们将从分析运行自有硬件的全部成本开始。这种计算不只包括初始购买价格，还涵盖持续的运营开支，如电力、冷却和维护。简化的TCO可以表示为：\n    $$\n    TCO = \\text{Capital Expenses} + \\text{Operational Expenses}\n    $$\n*   **云定价模型：** 我们将查看主要云提供商的不同定价模型。您将了解按需、预留和竞价实例之间的权衡，以确定哪种模式对于不同的AI工作负载最有效。\n*   **成本降低策略：** 您将学习减少开支的实用技术。这包括调整实例大小以避免为未使用的容量付费、为可变负载实施自动扩缩容，以及管理数据存储和网络传输费用。\n*   **监控与警报：** 我们将介绍如何使用云原生工具来设置预算和警报。这可确保您对开支保持可见性，并能快速响应以防止预算超支。\n\n在本章结束时，您将能够做出明智的、数据驱动的决策，在系统性能和预算限制之间取得平衡。",
+      "sections": [
+        {
+          "id": 7036,
+          "title": "分析本地部署总拥有成本",
+          "meta_title": "本地部署AI总拥有成本 (TCO)",
+          "meta_description": "了解如何计算本地部署AI基础设施的总拥有成本（TCO），包括硬件、电力、冷却和维护。",
+          "slug": "analyzing-on-premise-tco",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7038,
+          "title": "了解云定价模式",
+          "meta_title": "云定价：按需、Spot、预留",
+          "meta_description": "比较按需、Spot实例和预留实例等不同的云定价模式，以选择最具成本效益的选项。",
+          "slug": "understanding-cloud-pricing-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7039,
+          "title": "降低云算力成本的策略",
+          "meta_title": "如何降低 AI 云算力成本",
+          "meta_description": "实施诸如使用竞价实例进行容错训练和使用自动扩缩组进行推理等策略，以最大限度地降低算力开销。",
+          "slug": "strategies-reducing-cloud-compute-costs",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7040,
+          "title": "管理数据存储与传输成本",
+          "meta_title": "管理云端数据存储与传输费用",
+          "meta_description": "了解云存储分层和数据出站的相关费用，并学习有效管理这些费用的方法。",
+          "slug": "managing-data-storage-transfer-costs",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7041,
+          "title": "实施成本监控与预警",
+          "meta_title": "云成本监控与预警",
+          "meta_description": "使用云原生工具设置仪表盘、预算和预警，以监控支出并避免意外费用。",
+          "slug": "implementing-cost-monitoring-alerting",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7042,
+          "title": "工作负载的适度基础设施配置",
+          "meta_title": "AI基础设施的适度配置",
+          "meta_description": "学习分析性能指标的过程，以选择最适合大小（和价格）的基础设施，用于您特定的AI工作负载。",
+          "slug": "right-sizing-infrastructure-for-workloads",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7043,
+          "title": "实践：计算和比较任务成本",
+          "meta_title": "实践：计算AI训练任务成本",
+          "meta_description": "一份实用工作表，用于计算机器学习训练任务在不同云实例类型和计费模型下的预计成本。",
+          "slug": "practice-calculating-comparing-job-costs",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

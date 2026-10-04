@@ -1,0 +1,61 @@
+{
+  "id": 6972,
+  "title": "实践环节：环境与工具设置",
+  "meta_title": "实践：环境与工具设置",
+  "meta_description": "为课程配置您的本地和云环境，包括云命令行接口、kubectl 和 Docker 等必要工具。",
+  "content": "<p>架构模式确定后，接下来我们将准备您的工作站和云环境，以进行后续的实践操作。本节提供了在整个课程中将使用的命令行工具和库的必要设置说明。正确配置的环境是成功执行后续章节中分布式训练、资源编排和模型部署任务的先决条件。</p>\n<p>我们假设您拥有本地机器的管理员权限，并拥有至少一个主要云提供商（AWS、GCP 或 Azure）的活动账户，且该账户具有创建和管理计算及存储资源的权限。</p>\n<h3>核心命令行工具</h3>\n<p>您的本地机器将作为编排云资源的控制平面。以下工具是与容器和集群管理系统交互所必需的。</p>\n<h4>Docker</h4>\n<p>容器化是现代 MLOps 的根本。我们将使用 Docker 为我们的训练和推理 (inference)应用构建和管理镜像。如果您尚未安装，请下载并安装适用于您操作系统的 Docker Desktop。</p>\n<p>安装后，验证 Docker 守护进程是否正在运行：</p>\n<pre><code class=\"language-bash\">docker ps\n</code></pre>\n<p>此命令应无错误执行，并返回一个空的运行容器表。</p>\n<h4>Kubernetes CLI (kubectl)</h4>\n<p><code>kubectl</code> 是与任何 Kubernetes 集群交互的主要命令行接口。您将使用它来部署应用程序、查看集群资源和管理网络配置。</p>\n<p>请按照 Kubernetes 官方文档的说明为您操作系统安装 <code>kubectl</code>。通过以下命令验证客户端安装：</p>\n<pre><code class=\"language-bash\">kubectl version --client\n</code></pre>\n<p>这将输出客户端版本，确认可执行文件位于系统路径中。我们将在稍后配置其与基于云的集群的连接。</p>\n<h4>Helm</h4>\n<p>Helm 通过“charts”（预打包的资源定义集合）来管理 Kubernetes 应用程序。我们将使用 Helm 部署更复杂的系统，例如 NVIDIA Triton 推理服务器和 KubeFlow。</p>\n<p>请按照 Helm 官方网站上的说明进行安装。通过运行以下命令验证安装：</p>\n<pre><code class=\"language-bash\">helm version\n</code></pre>\n<h3>云提供商配置</h3>\n<p>您必须安装并配置您所选云提供商的命令行接口。这可以实现对配置基础设施的编程访问，例如 Kubernetes 集群和 GPU 实例。</p>\n<h4>AWS CLI</h4>\n<p>对于 Amazon Web Services，请安装 AWS CLI。安装后，使用您的凭证进行配置：</p>\n<pre><code class=\"language-bash\">aws configure\n</code></pre>\n<p>系统将提示您输入 AWS Access Key ID、Secret Access Key、默认区域（例如 <code>us-east-1</code>）和默认输出格式（例如 <code>json</code>）。要确认设置是否生效，请运行以下命令检查您的身份：</p>\n<pre><code class=\"language-bash\">aws sts get-caller-identity\n</code></pre>\n<h4>Google Cloud SDK (gcloud)</h4>\n<p>对于 Google Cloud Platform，请安装 Google Cloud SDK，其中包括 <code>gcloud</code> 命令行工具。安装后，初始化 SDK：</p>\n<pre><code class=\"language-bash\">gcloud init\n</code></pre>\n<p>此命令将指导您完成账户身份验证、选择项目以及配置默认区域（例如 <code>us-central1</code>）和可用区。通过列出您的活动项目来验证身份验证：</p>\n<pre><code class=\"language-bash\">gcloud projects list\n</code></pre>\n<h4>Azure CLI</h4>\n<p>对于 Microsoft Azure，请安装 Azure CLI。通过运行以下命令进行身份验证：</p>\n<pre><code class=\"language-bash\">az login\n</code></pre>\n<p>此命令将打开一个浏览器窗口供您登录。身份验证后，如果您有多个订阅，请设置默认订阅：</p>\n<pre><code class=\"language-bash\">az account set --subscription \"Your-Subscription-Name-or-ID\"\n</code></pre>\n<p>通过列出您账户中可用的资源组来验证设置：</p>\n<pre><code class=\"language-bash\">az group list --output table\n</code></pre>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-4j05p0\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, fillcolor=\"#e9ecef\"]; edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"]; subgraph cluster_local { label=\"您的本地工作站\"; style=\"rounded,dashed\"; fillcolor=\"#f8f9fa\"; color=\"#adb5bd\"; workstation [label=\"开发环境\n(Python, IDE)\", shape=cylinder, fillcolor=\"#dee2e6\"]; docker [label=\"Docker Desktop\", fillcolor=\"#a5d8ff\"]; kubectl [label=\"kubectl\", fillcolor=\"#bac8ff\"]; helm [label=\"Helm\", fillcolor=\"#bac8ff\"]; cloud_cli [label=\"云命令行接口\n(aws, gcloud, az)\", fillcolor=\"#b2f2bb\"]; workstation -> docker [style=invis]; workstation -> kubectl [style=invis]; workstation -> helm [style=invis]; workstation -> cloud_cli [style=invis]; } subgraph cluster_cloud { label=\"云提供商 (AWS, GCP, Azure)\"; style=\"rounded,dashed\"; fillcolor=\"#f8f9fa\"; color=\"#adb5bd\"; k8s [label=\"Kubernetes 集群\n(托管或自建)\", fillcolor=\"#d0bfff\"]; gpu_nodes [label=\"GPU 节点池\", fillcolor=\"#ffc9c9\"]; storage [label=\"对象存储\n(S3, GCS, Blob)\", fillcolor=\"#ffd8a8\"]; k8s -> gpu_nodes [style=invis]; } cloud_cli -> k8s [label=\" API 调用\"]; cloud_cli -> storage [label=\" API 调用\"]; kubectl -> k8s [label=\" 编排\"]; helm -> k8s [label=\" 部署\"]; label=\"工具交互图\"; fontsize=12; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-4j05p0\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>开发人员的本地工作站使用命令行工具来编排和部署应用程序到云提供商环境中的托管服务。</p>\n</blockquote>\n<h3>Python 环境和核心库</h3>\n<p>实践练习使用 Python 3.10 或更高版本。我们强烈建议使用专门的虚拟环境来管理依赖项并避免与系统级包发生冲突。</p>\n<p>使用 <code>venv</code> 创建并激活虚拟环境：</p>\n<pre><code class=\"language-bash\">python3 -m venv aii-env\nsource aii-env/bin/activate\n</code></pre>\n<p>接下来，创建一个名为 <code>requirements.txt</code> 的文件，并填充核心库列表。此列表包括用于深度学习 (deep learning)、分布式训练、数据管理和云提供商交互的框架。</p>\n<p><strong>requirements.txt:</strong></p>\n<pre><code># 深度学习与分布式训练\ntorch>=2.0.0\ntorchvision\ntorchaudio\ndeepspeed\ntransformers\naccelerate\n\n# 数据与 MLOps\ndvc[s3] # 或 [gcs], [azure]\nfeast\npachyderm-sdk\npyarrow\npandas\n\n# Kubernetes 与云 SDK\nkubernetes\nboto3        # 适用于 AWS\ngoogle-cloud-aiplatform # 适用于 GCP\nazure-ai-ml  # 适用于 Azure\n\n# 实用工具\nnumpy\nscikit-learn\ntqdm\n</code></pre>\n<p>使用 <code>pip</code> 安装这些包：</p>\n<pre><code class=\"language-bash\">pip install -r requirements.txt\n</code></pre>\n<blockquote>\n<p>**注意：**根据您选择的云提供商，您可能只需要 <code>boto3</code>、<code>google-cloud-aiplatform</code> 或 <code>azure-ai-ml</code> 中的一个。<code>dvc</code> 的额外依赖项（<code>[s3]</code>、<code>[gcs]</code>、<code>[azure]</code>）也应与您的提供商对应，以便进行远程存储访问。</p>\n</blockquote>\n<p>您的环境完全配置好后，现在已准备好构建和管理本课程主要的高性能系统。在下一章中，我们将使用这些工具来实现我们的第一个分布式模型训练任务。</p>",
+  "slug": "practical-environment-tooling-setup",
+  "updates": [],
+  "references": [
+    {
+      "id": 18903,
+      "title": "Docker Documentation",
+      "author": "Docker Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/",
+      "doi": "",
+      "note": "安装、配置和使用 Docker 的官方资源，这对容器化 AI 应用程序和开发环境至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T12:58:10.373309Z",
+      "updated_at": "2025-09-10T03:35:36.046908Z"
+    },
+    {
+      "id": 18904,
+      "title": "Kubernetes Documentation",
+      "author": "The Kubernetes Authors",
+      "year": "2024",
+      "publisher": "Cloud Native Computing Foundation (CNCF)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/",
+      "doi": "",
+      "note": "Kubernetes 官方指南，提供 `kubectl` 安装和集群管理说明，这对分布式 AI 工作负载很重要。",
+      "order": 2,
+      "created_at": "2025-09-06T12:58:10.378800Z",
+      "updated_at": "2025-09-10T03:35:45.088388Z"
+    },
+    {
+      "id": 18906,
+      "title": "Designing Machine Learning Systems: An Introduction to MLOps",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "提供 MLOps 的基本理解和构建可扩展 AI 平台的考虑因素，为环境和工具设置提供背景。",
+      "order": 4,
+      "created_at": "2025-09-06T12:58:10.386824Z",
+      "updated_at": "2025-09-10T03:35:31.107962Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

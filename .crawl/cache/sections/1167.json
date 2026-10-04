@@ -1,0 +1,61 @@
+{
+  "id": 1167,
+  "title": "创建垂直和水平条形图",
+  "meta_title": "Matplotlib 垂直与水平条形图",
+  "meta_description": "学习如何在 Matplotlib 中创建垂直 (`bar`) 和水平 (`barh`) 条形图。",
+  "content": "<p>条形图是比较不同项目或类别数量或大小的优秀工具。假设您想比较不同产品的月销售额、多个城市的人口或不同候选人获得的票数。在这种情况下，条形图能够清晰直观地显示这些比较。Matplotlib 提供了直接的函数来生成垂直和水平条形图。</p>\n<h3>使用 <code>plt.bar()</code> 生成垂直条形图</h3>\n<p>最常见的类型是垂直条形图，其中每个条形的高度代表特定类别的数值大小。我们为此使用 <code>plt.bar()</code> 函数。</p>\n<p><code>plt.bar()</code> 函数主要需要两个参数 (parameter)：</p>\n<ol>\n<li>X轴上条形的位置或标签（代表类别）。</li>\n<li>Y轴上条形的高度（代表数值）。</li>\n</ol>\n<p>我们来生成一个简单的垂直条形图，显示某供应商一天内售出的不同水果数量。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 数据：类别及其对应值\nfruits = ['Apples', 'Oranges', 'Bananas', 'Grapes']\nquantity_sold = [45, 30, 60, 25]\n\n# 创建图和轴对象\nfig, ax = plt.subplots()\n\n# 生成垂直条形图\nax.bar(fruits, quantity_sold, color='#339af0') # 使用蓝色\n\n# 添加标签和标题以便清晰显示\nax.set_xlabel('Fruit Type')\nax.set_ylabel('Quantity Sold')\nax.set_title('Daily Fruit Sales')\n\n# 显示图表\nplt.show()\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1tusvb4\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"每日水果销量\"}, \"xaxis\": {\"title\": {\"text\": \"水果种类\"}}, \"yaxis\": {\"title\": {\"text\": \"销售数量\"}}, \"margin\": {\"l\": 50, \"r\": 50, \"t\": 50, \"b\": 50}, \"autosize\": true}, \"data\": [{\"type\": \"bar\", \"x\": [\"Apples\", \"Oranges\", \"Bananas\", \"Grapes\"], \"y\": [45, 30, 60, 25], \"marker\": {\"color\": \"#339af0\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1tusvb4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>不同水果的销售数量，由蓝色条形的高度表示。</p>\n</blockquote>\n<p>在这个例子中，<code>fruits</code> 列表提供了X轴的类别标签，<code>quantity_sold</code> 提供了Y轴上条形的数值高度。我们使用从 <code>plt.subplots()</code> 获得的 <code>ax</code> 对象上的方法添加了标签和标题，这与前面讨论的结构相符。<code>color</code> 参数使我们能够指定条形的颜色；这里我们选择了蓝色的一种色调。</p>\n<h3>使用 <code>plt.barh()</code> 生成水平条形图</h3>\n<p>有时，特别是当您有许多类别或类别标签很长时，水平条形图会更易读。Matplotlib 为此提供了 <code>plt.barh()</code> 函数（bar horizontal 的缩写）。</p>\n<p><code>plt.barh()</code> 函数的工作方式与 <code>plt.bar()</code> 类似，但轴的角色互换了：</p>\n<ol>\n<li>Y轴上条形的位置或标签（类别）。</li>\n<li>X轴上条形的宽度（数值）。</li>\n</ol>\n<p>我们来重新生成水果销售图表，这次是水平方向的。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 数据：类别及其对应值\nfruits = ['Apples', 'Oranges', 'Bananas', 'Grapes']\nquantity_sold = [45, 30, 60, 25]\n\n# 创建图和轴对象\nfig, ax = plt.subplots()\n\n# 生成水平条形图\nax.barh(fruits, quantity_sold, color='#51cf66') # 使用绿色\n\n# 添加标签和标题\n# 注意：与垂直图相比，轴标签已互换\nax.set_xlabel('Quantity Sold')\nax.set_ylabel('Fruit Type')\nax.set_title('Daily Fruit Sales (Horizontal)')\n\n# 显示图表\nplt.show()\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1d2ikaj\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"每日水果销量（水平）\"}, \"yaxis\": {\"title\": {\"text\": \"水果种类\"}, \"categoryorder\": \"total ascending\"}, \"xaxis\": {\"title\": {\"text\": \"销售数量\"}}, \"margin\": {\"l\": 80, \"r\": 50, \"t\": 50, \"b\": 50}, \"autosize\": true}, \"data\": [{\"type\": \"bar\", \"y\": [\"Apples\", \"Oranges\", \"Bananas\", \"Grapes\"], \"x\": [45, 30, 60, 25], \"orientation\": \"h\", \"marker\": {\"color\": \"#51cf66\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1d2ikaj\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>不同水果的销售数量，由沿水平轴的绿色条形长度表示。类别垂直排列。</p>\n</blockquote>\n<p>请注意，<code>barh</code> 的输入是相同的列表（<code>fruits</code>、<code>quantity_sold</code>），但它们的解释方式有所不同。<code>fruits</code> 现在定义了Y轴上的位置，而 <code>quantity_sold</code> 定义了沿X轴延伸的条形长度。因此，轴标签（<code>set_xlabel</code>、<code>set_ylabel</code>）也与垂直版本互换了。水平条形图在类别名称较长时通常很有用，避免了垂直图X轴上可能出现的重叠问题。</p>\n<p><code>plt.bar()</code> 和 <code>plt.barh()</code> 都是比较不同数量的基础工具。您可以进一步自定义它们的显示效果，例如更改颜色、添加误差线（代表不确定性）或调整条形宽度，这些方面我们稍后会提到。现在，请着重理解何时使用每种类型以及如何提供基本的类别和数值数据来生成它们。</p>",
+  "slug": "matplotlib-vertical-horizontal-bars",
+  "updates": [],
+  "references": [
+    {
+      "id": 841,
+      "title": "Bar chart",
+      "author": "Matplotlib Development Team",
+      "year": "2012-2025",
+      "publisher": "Matplotlib",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/gallery/lines_bars_and_markers/bar_chart_with_labels.html",
+      "doi": "",
+      "note": "官方示例，展示如何使用 `plt.bar()` 和 `plt.barh()` 创建垂直和水平条形图，并提供自定义选项。",
+      "order": 1,
+      "created_at": "2025-09-04T15:03:40.061558Z",
+      "updated_at": "2025-09-07T16:22:25.990960Z"
+    },
+    {
+      "id": 842,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.00-introduction-to-matplotlib.html",
+      "doi": "",
+      "note": "涵盖 Matplotlib 基础知识，包括条形图，为数据可视化提供扎实基础。",
+      "order": 2,
+      "created_at": "2025-09-04T15:03:40.066929Z",
+      "updated_at": "2025-09-07T16:22:26.369607Z"
+    },
+    {
+      "id": 843,
+      "title": "The Visual Display of Quantitative Information",
+      "author": "Edward R. Tufte",
+      "year": "2001",
+      "publisher": "Graphics Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.edwardtufte.com/tufte/books_vdqi",
+      "doi": "",
+      "note": "视觉传播的经典著作，讨论有效数据显示的原则，包括条形图在比较中的适当使用。",
+      "order": 3,
+      "created_at": "2025-09-04T15:03:40.075549Z",
+      "updated_at": "2025-09-07T16:22:18.028927Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

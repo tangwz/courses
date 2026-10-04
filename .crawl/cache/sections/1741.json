@@ -1,0 +1,61 @@
+{
+  "id": 1741,
+  "title": "广播功能简介",
+  "meta_title": "NumPy 广播功能说明",
+  "meta_description": "了解 NumPy 如何处理不同但兼容形状数组间的操作。",
+  "content": "<p>NumPy 可以直接在<em>相同</em>大小和形状的数组之间执行操作，例如将两个 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>3</mn><mo>×</mo><mn>3</mn></mrow><annotation encoding=\"application/x-tex\">3 \\times 3</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">3</span></span></span></span> 矩阵相加。但是，当需要对<em>不同</em>形状的数组执行操作（例如加法）时，情况会怎样呢？例如，将一个单独的数字（一个标量）加到数组的每个元素上，或者将一个一维数组（一个向量 (vector)）加到二维数组（一个矩阵）的每一行上。</p>\n<p>手动操作时，你可能会想到编写循环来执行这些操作。然而，NumPy 提供了一种更高效、更简洁的机制，称为<strong>广播（broadcasting）</strong>。广播描述了 NumPy 用来处理不同形状数组之间算术运算的一套规则，它有效地“拉伸”或复制较小的数组，使其形状与较大的数组匹配，而无需实际使用额外的内存。这使得向量化 (quantization)操作成为可能，它们比显式的 Python 循环快得多。</p>\n<h3>广播的规则</h3>\n<p>如果数组满足特定的兼容性条件，广播机制就使得在不同形状数组之间进行操作成为可能。NumPy 从末尾（最右边）的维度开始，逐元素比较数组的形状。两个维度兼容的条件是：</p>\n<ol>\n<li>它们相等，或者</li>\n<li>任一维度为 1。</li>\n</ol>\n<p>如果这些条件对于任何维度对都不满足，就会引发 <code>ValueError: operands could not be broadcast together</code> 错误。</p>\n<p>让我们分解一下 NumPy 如何应用这些规则：</p>\n<ol>\n<li><strong>对齐 (alignment)维度：</strong> 如果两个数组的维度数量不同，NumPy 会在较小数组的形状前添加 1，直到它们具有相同数量的维度。例如，将形状为 (3, 4) 的二维数组与形状为 (4,) 的一维数组进行比较时，一维数组的形状会被视为 (1, 4)。</li>\n<li><strong>检查兼容性并拉伸：</strong> 然后，NumPy 会从最右边的维度开始，比较每个维度的大小。\n<ul>\n<li>如果维度大小匹配，则继续检查下一个维度。</li>\n</ul>\n</li>\n</ol>\n<ul>\n<li>如果有一个维度大小是 1，NumPy 会“拉伸”或“广播”该维度，以匹配另一个数组中对应维度的大小。其效果就好像大小为 1 的维度上的数据被复制以匹配更大的大小。\n<ul>\n<li>如果维度大小不匹配，并且两个维度都不是 1，则无法进行广播，NumPy 会引发错误。</li>\n</ul>\n</li>\n</ul>\n<p>一旦形状兼容并完成了广播，NumPy 就会执行逐元素操作。</p>\n<h3>广播示例</h3>\n<p>我们来看一下广播的实际作用。</p>\n<h4>示例 1：标量与数组</h4>\n<p>最简单的例子是数组与标量值之间的操作。标量被视为零维数组。</p>\n<pre><code class=\"language-python\">import numpy as np\n\narr = np.array([1, 2, 3])\nscalar = 5\n\nresult = arr + scalar\nprint(f\"数组：\\n{arr}\")\nprint(f\"形状：{arr.shape}\\n\")\nprint(f\"标量：{scalar}\\n\")\nprint(f\"结果 (arr + scalar)：\\n{result}\")\nprint(f\"形状：{result.shape}\")\n\n# 输出：\n# 数组：\n# [1 2 3]\n# 形状：(3,)\n#\n# 标量：5\n#\n# 结果 (arr + scalar)：\n# [6 7 8]\n# 形状：(3,)\n</code></pre>\n<p>在这里，标量 <code>5</code> 被有效地广播到数组 <code>arr</code> 的所有元素上。遵循规则：</p>\n<ol>\n<li><code>arr</code> 的形状是 (3,)，<code>scalar</code> 实际的形状是 ()。NumPy 为标量添加维度以匹配 <code>arr</code> 的维度数量：形状变为 (1,)。等等，标量是 0 维的。数组是 1 维的（形状 (3,)）。标量的形状被视为通过重复其值来匹配任何数组的形状。该操作将标量视为一个与 <code>arr</code> 形状相同的数组 <code>[5, 5, 5]</code>。</li>\n</ol>\n<h4>示例 2：一维数组与二维数组</h4>\n<p>我们考虑将一个一维数组加到二维数组的每一行上。</p>\n<pre><code class=\"language-python\">matrix = np.arange(6).reshape((2, 3)) # 形状 (2, 3)\nrow_vector = np.array([10, 20, 30])    # 形状 (3,)\n\nresult = matrix + row_vector\nprint(f\"矩阵 (形状 {matrix.shape})：\\n{matrix}\\n\")\nprint(f\"行向量 (形状 {row_vector.shape})：\\n{row_vector}\\n\")\nprint(f\"结果 (matrix + row_vector) (形状 {result.shape})：\\n{result}\")\n\n# 输出：\n# 矩阵 (形状 (2, 3))：\n# [[0 1 2]\n#  [3 4 5]]\n#\n# 行向量 (形状 (3,))：\n# [10 20 30]\n#\n# 结果 (matrix + row_vector) (形状 (2, 3))：\n# [[10 21 32]\n#  [13 24 35]]\n</code></pre>\n<p>我们来追踪一下广播规则：</p>\n<ol>\n<li><code>matrix</code> 形状：(2, 3)。<code>row_vector</code> 形状：(3,)。</li>\n<li>对齐 (alignment)维度：NumPy 会在 <code>row_vector</code> 的形状前添加 1。它变为 (1, 3)。</li>\n<li>从右到左比较维度：\n<ul>\n<li>末尾维度：3（来自矩阵）和 3（来自向量 (vector)）。它们匹配。</li>\n<li>下一个维度：2（来自矩阵）和 1（来自向量）。有一个是 1，因此兼容。</li>\n</ul>\n</li>\n<li>拉伸：NumPy 将向量的第一个维度从 1 拉伸到 2。<code>row_vector</code> 实际上变为 <code>[[10, 20, 30], [10, 20, 30]]</code>。</li>\n<li>执行逐元素加法。</li>\n</ol>\n<p>以下图表说明了此过程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-pplb59\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=plaintext];\n\n    subgraph cluster_matrix {\n        label = \"矩阵 (2, 3)\";\n        m [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n              <TR><TD>0</TD><TD>1</TD><TD>2</TD></TR>\n              <TR><TD>3</TD><TD>4</TD><TD>5</TD></TR>\n            </TABLE>\n        >];\n    }\n\n    subgraph cluster_vector {\n        label = \"向量 (3,) → (1, 3)\";\n        v [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n              <TR><TD>10</TD><TD>20</TD><TD>30</TD></TR>\n            </TABLE>\n        >];\n    }\n\n    subgraph cluster_broadcasted_vector {\n        label = \"广播后的向量 (2, 3)\";\n        bv [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#e9ecef\">\n              <TR><TD>10</TD><TD>20</TD><TD>30</TD></TR>\n              <TR><TD BGCOLOR=\"#adb5bd\">10</TD><TD BGCOLOR=\"#adb5bd\">20</TD><TD BGCOLOR=\"#adb5bd\">30</TD></TR>\n            </TABLE>\n        >];\n        caption [label=\"沿轴 0 拉伸\"];\n    }\n\n    subgraph cluster_result {\n        label = \"结果 (2, 3)\";\n        r [label=<\n            <TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n              <TR><TD>10</TD><TD>21</TD><TD>32</TD></TR>\n              <TR><TD>13</TD><TD>24</TD><TD>35</TD></TR>\n            </TABLE>\n        >];\n    }\n\n    m -> r [label=\"+\"];\n    v -> bv [style=dashed, label=\"广播\"];\n    bv -> r [label=\"+\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-pplb59\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一维数组 <code>[10, 20, 30]</code>（形状 (3,)）首先被视为形状 (1, 3)，然后沿第一个轴广播（拉伸），以匹配矩阵的形状 (2, 3) 进行逐元素加法。灰色行表示数据的复制。</p>\n</blockquote>\n<h4>示例 3：列向量与行向量</h4>\n<p>广播还可以组合数组以生成更高维度的结果。我们来将一个列向量加到一个行向量上。</p>\n<pre><code class=\"language-python\">col_vector = np.array([[0], [10], [20]]) # 形状 (3, 1)\nrow_vector = np.array([1, 2, 3])        # 形状 (3,)\n\nresult = col_vector + row_vector\nprint(f\"列向量 (形状 {col_vector.shape})：\\n{col_vector}\\n\")\nprint(f\"行向量 (形状 {row_vector.shape})：\\n{row_vector}\\n\")\nprint(f\"结果 (col + row) (形状 {result.shape})：\\n{result}\")\n\n# 输出：\n# 列向量 (形状 (3, 1))：\n# [[ 0]\n#  [10]\n#  [20]]\n#\n# 行向量 (形状 (3,))：\n# [1 2 3]\n#\n# 结果 (col + row) (形状 (3, 3))：\n# [[ 1  2  3]\n#  [11 12 13]\n#  [21 22 23]]\n</code></pre>\n<p>我们来追踪一下这个过程：</p>\n<ol>\n<li><code>col_vector</code> 形状：(3, 1)。<code>row_vector</code> 形状：(3,)。</li>\n<li>对齐维度：NumPy 将 <code>row_vector</code> 视为形状 (1, 3)。</li>\n<li>从右到左比较维度 (3, 1) 与 (1, 3)：\n<ul>\n<li>末尾维度：1（来自列）和 3（来自行）。有一个是 1，兼容。</li>\n<li>下一个维度：3（来自列）和 1（来自行）。有一个是 1，兼容。</li>\n</ul>\n</li>\n<li>拉伸：</li>\n</ol>\n<ul>\n<li><code>col_vector</code> 大小为 1 的维度被拉伸到 3。它变为形状 (3, 3)。</li>\n<li><code>row_vector</code> 大小为 1 的维度被拉伸到 3。它也变为形状 (3, 3)。</li>\n</ul>\n<ol start=\"5\">\n<li>对广播后的 (3, 3) 版本执行逐元素加法。</li>\n</ol>\n<h3>广播失败的情况</h3>\n<p>广播只有在形状根据规则兼容的情况下才有效。如果在任何时候维度大小不同且都不是 1，NumPy 将无法解决这种不明确性，并会引发错误。</p>\n<pre><code class=\"language-python\">arr1 = np.arange(6).reshape((2, 3)) # 形状 (2, 3)\narr2 = np.array([1, 2])             # 形状 (2,)\n\ntry:\n    result = arr1 + arr2\nexcept ValueError as e:\n    print(f\"错误：{e}\")\n\n# 输出：\n# 错误：操作数无法一起广播，形状为 (2,3) (2,)\n</code></pre>\n<p>这里，<code>arr1</code> 是 (2, 3)，<code>arr2</code> 是 (2,)。NumPy 将 <code>arr2</code> 视为 (1, 2)。比较 (2, 3) 与 (1, 2)：</p>\n<ul>\n<li>末尾维度：3 与 2。它们不同，且都不是 1。广播失败。</li>\n</ul>\n<p>为了使其正常工作，<code>arr2</code> 需要具有形状 (3,) 或 (2, 1) 或 (1, 3)，具体取决于预期的操作。</p>\n<p>广播是 NumPy 中一个基本机制，它通过避免显式的 Python 循环，让你能编写更清晰、更简洁、明显更快的代码，用于对兼容但不同形状的数组执行操作。了解其规则对于使用 NumPy 进行高效的数值编程非常重要。</p>",
+  "slug": "intro-broadcasting",
+  "updates": [],
+  "references": [
+    {
+      "id": 4333,
+      "title": "Broadcasting",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.broadcasting.html",
+      "doi": "",
+      "note": "NumPy广播规则和机制的官方权威指南，提供全面的细节和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:45.170494Z",
+      "updated_at": "2025-09-08T05:14:14.857023Z"
+    },
+    {
+      "id": 4335,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本广受推崇的书籍，提供NumPy的实践应用和解释，包括广播如何简化和加速数组操作。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:45.214136Z",
+      "updated_at": "2025-09-08T05:14:25.135004Z"
+    },
+    {
+      "id": 4337,
+      "title": "The NumPy array object",
+      "author": "SciPy community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scipy-lectures.org/intro/numpy/array_object.html#broadcasting",
+      "doi": "",
+      "note": "一个优秀的开放教育资源，以教学方式介绍NumPy基础知识，其中有专门一节清晰地阐述了广播的规则和效率。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:45.217573Z",
+      "updated_at": "2025-09-08T05:14:17.400809Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

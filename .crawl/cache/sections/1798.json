@@ -1,0 +1,61 @@
+{
+  "id": 1798,
+  "title": "函数纯粹性与副作用",
+  "meta_title": "JAX 中的函数纯粹性与副作用",
+  "meta_description": "理解纯函数对 JAX 转换的意义。",
+  "content": "<p>JAX 主要通过函数转换（如 <code>jit</code>（即时编译）、<code>grad</code>（自动求导）、<code>vmap</code>（向量 (vector)化）和 <code>pmap</code>（并行化））来获得其性能和能力。这些转换会分析并重写您的 Python 代码，使其在加速器上高效运行。为了使这种分析和转换过程稳定且可预测地工作，JAX 最适合处理遵循函数式编程原则的函数，特别是<strong>函数纯粹性</strong>的理念。</p>\n<h3>什么是纯函数？</h3>\n<p>纯函数具有两个主要特点：</p>\n<ol>\n<li><strong>确定性：</strong> 对于相同的输入参数 (parameter)，函数<em>总是</em>产生相同的输出。其结果仅取决于其输入。</li>\n<li><strong>无副作用：</strong> 函数不修改其局部范围之外的任何状态。它不会原地改变输入参数、修改全局变量、执行 I/O 操作（例如打印到控制台或写入文件），也不会以任何隐藏方式与外部系统互动。</li>\n</ol>\n<p>我们来看几个简单的 Python 例子：</p>\n<pre><code class=\"language-python\"># 纯函数：对于相同的输入总是返回相同的输出，没有副作用。\ndef pure_add(a, b):\n  return a + b\n\n# 不纯函数：有副作用（打印到控制台）。\ndef impure_add_and_print(a, b):\n  result = a + b\n  print(f\"Calculated {a} + {b} = {result}\") # 副作用！\n  return result\n\n# 不纯函数：修改外部状态（一个全局变量）。\ncall_count = 0\ndef impure_increment_counter(x):\n  global call_count\n  call_count += 1 # 副作用！修改全局状态。\n  return x + 1\n\n# 不纯函数：原地修改输入参数。\ndef impure_append_to_list(data_list, value):\n  data_list.append(value) # 副作用！修改输入列表。\n  return data_list\n</code></pre>\n<p>在上面的例子中，<code>pure_add</code> 是纯函数。调用 <code>pure_add(2, 3)</code> 总是会返回 <code>5</code>。相反，<code>impure_add_and_print</code> 执行打印操作，<code>impure_increment_counter</code> 改变全局 <code>call_count</code>，而 <code>impure_append_to_list</code> 修改了传递给它的列表。这些行为都是副作用。</p>\n<h3>为什么函数纯粹性对 JAX 很重要</h3>\n<p>JAX 的函数转换很大程度上依赖于它们处理的函数是纯粹的这一假设。原因如下：</p>\n<ol>\n<li>\n<p><strong>追踪机制：</strong> 像 <code>jax.jit</code> 这样的转换通过<em>追踪</em>您的 Python 函数来工作。JAX 使用抽象的占位值（tracer）执行函数一次，这些值记录了所执行的操作序列。这个被记录的序列（通常表示为称为 Jaxpr 的中间语言）随后被编译（例如，编译成 XLA 以在 GPU/TPU 上执行）。如果函数有副作用，这些副作用可能在初始追踪期间发生，但<em>不会</em>在编译代码的后续运行中发生，这会引起意料之外的行为。例如，<code>jit</code> 编译函数中的 <code>print</code> 语句通常只在追踪期间执行一次，而不是每次调用编译函数时都执行。</p>\n</li>\n<li>\n<p><strong>缓存与优化：</strong> JAX 会缓存函数的编译版本。当您使用相同形状和类型的参数 (parameter)调用一个 <code>jit</code> 编译的函数时，JAX 会重用已编译的代码。这种缓存机制假设函数的输出<em>只</em>取决于其输入（确定性）。如果函数的行为依赖于外部状态（如全局变量），那么当外部状态改变时，缓存版本可能会过时或产生错误的结果。纯粹性保证缓存的有效性。</p>\n</li>\n<li>\n<p><strong>自动求导：</strong> <code>jax.grad</code> 通过分析函数中的数学操作来计算梯度。它需要从输入到输出的清晰数据流路径。副作用引入的操作通常是不可微分的（如何计算 <code>print</code> 语句的梯度？）或者模糊了输入和输出之间的联系，使自动求导不稳定或无法进行。原地修改值会破坏自动求导所依赖的链式法则的应用。</p>\n</li>\n<li>\n<p><strong>向量 (vector)化与并行化：</strong> 像 <code>jax.vmap</code> 和 <code>jax.pmap</code> 这样的转换会在数据维度或硬件设备上复制函数执行。如果被映射的函数有副作用，特别是修改共享状态，可能导致竞态条件和不确定的结果。哪个并行执行会首先修改共享状态？纯函数确保每次执行都是独立的，并产生一致的结果，使并行化变得安全且可预期。</p>\n</li>\n</ol>\n<h3>状态管理难题</h3>\n<p>许多标准编程模式，特别是在面向对象编程中，或在处理像训练机器学习 (machine learning)模型这样的迭代算法时，本身就涉及状态随时间变化。考虑在优化过程中更新模型权重 (weight)，管理优化器的状态（如动量值），甚至是简单的计数器。这些通常涉及原地修改对象属性或数据结构，这些模式直接与函数纯粹性的要求相悖。</p>\n<pre><code class=\"language-python\"># 典型有状态模式（不纯）\nclass Counter:\n    def __init__(self):\n        self.n = 0\n\n    def count(self):\n        self.n += 1 # 原地修改（副作用）\n        return self.n\n\n    def reset(self):\n        self.n = 0 # 原地修改（副作用）\n\n# 使用不纯计数器\nmy_counter = Counter()\nprint(my_counter.count()) # 输出: 1\nprint(my_counter.count()) # 输出: 2\n# 对像 count() 这样的方法应用 JAX 转换可能引起问题。\n</code></pre>\n<p>因为 JAX 转换最适合纯函数，我们需要替代模式来处理避免副作用的状态更新。我们接下来将说明的主要思路是使状态处理显式化：将当前状态作为参数 (parameter)<em>传入</em>函数，并让函数将<em>新的、更新后的</em>状态作为其输出的一部分返回。这种方法在保持函数纯粹性的同时，仍能让我们模拟有状态的计算。</p>",
+  "slug": "functional-purity-side-effects",
+  "updates": [],
+  "references": [
+    {
+      "id": 1802,
+      "title": "JAX: Autodiff and XLA, Accelerated NumPy",
+      "author": "JAX core contributors",
+      "year": "2024",
+      "publisher": "Google LLC",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "JAX官方文档，详细介绍了其架构、`jit`等转换以及其运行所基于的函数式编程原则。",
+      "order": 1,
+      "created_at": "2025-09-04T16:36:40.423583Z",
+      "updated_at": "2025-09-08T03:04:09.806202Z"
+    },
+    {
+      "id": 1803,
+      "title": "Structure and Interpretation of Computer Programs",
+      "author": "Harold Abelson, Gerald Jay Sussman, and Julie Sussman",
+      "year": "1996",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html",
+      "doi": "",
+      "note": "计算机科学经典教材，介绍了函数式编程的基本概念，包括纯函数和副作用的定义及重要性。",
+      "order": 2,
+      "created_at": "2025-09-04T16:36:40.463448Z",
+      "updated_at": "2025-09-08T03:04:18.839412Z"
+    },
+    {
+      "id": 1805,
+      "title": "Functional Programming in Python",
+      "author": "David Mertz",
+      "year": "2015",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/functional-programming-in/9781491928561/",
+      "doi": "",
+      "note": "一本将纯函数和不变性等函数式编程概念应用于Python开发的书籍。",
+      "order": 4,
+      "created_at": "2025-09-04T16:36:40.474653Z",
+      "updated_at": "2025-09-08T03:04:33.954562Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

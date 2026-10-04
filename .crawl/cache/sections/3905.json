@@ -1,0 +1,61 @@
+{
+  "id": 3905,
+  "title": "定义自定义评估指标",
+  "meta_title": "定义自定义 LangChain 评估指标",
+  "meta_description": "制定超越标准准确性或相关性衡量方式的针对特定应用的指标。",
+  "content": "<p>虽然准确率、精确率和召回率等标准机器学习 (machine learning)指标提供了一个基准，但它们在评估使用大型语言模型（LLM）构建的应用的多方面表现时往往不足。LLM 的输出具有连贯性、相关性、有用性、安全性以及对特定格式或语气的遵守等特性，这些特性难以通过简单的量化 (quantization)衡量方式来捕捉。有效评估生产环境中的 LangChain 应用，需要定义根据其特定功能和预期行为量身定制的自定义指标。</p>\n<p>超出简单的正确性检查，您能够衡量对应用成功真正有意义的方面。例如，您的 RAG 系统是否检索到相关上下文 (context)并忠实地基于其给出答案？您的客服代理是否保持了有用且安全的语气？您的摘要工具是否准确把握了核心内容而没有歪曲？回答这些问题需要定制的评估策略。</p>\n<h3>为什么标准指标常常不足</h3>\n<p>传统指标通常依赖于精确匹配或预定义的分类。然而，LLM 的输出通常是生成式的：</p>\n<ol>\n<li><strong>主观性：</strong> “有用性”、“创造性”或“语气”等特质本身就是主观的，并且依赖于具体情况。</li>\n<li><strong>语义等价性：</strong> LLM 可能会生成一个完全有效的答案，但其措辞与“真实情况”参考不同，导致尽管正确却未能通过精确匹配测试。</li>\n<li><strong>安全性和偏见：</strong> 标准指标很少考虑有害内容生成、偏见或伦理一致性。</li>\n<li><strong>格式依从性：</strong> 应用可能需要特定格式的输出（例如，JSON、特定的 XML 结构），这不能仅通过语义正确性来衡量。</li>\n<li><strong>上下文 (context)相关性（RAG）：</strong> 评估检索增强生成 (RAG)包括评估检索到的文档的相关性以及最终答案对该上下文的忠实性。</li>\n</ol>\n<p>因此，开发自定义评估指标成为构建可靠 LLM 应用的重要一步。</p>\n<h3>自定义评估指标的分类</h3>\n<p>自定义指标可以根据它们评估输出的方式进行大致分类：</p>\n<ol>\n<li>\n<p><strong>程序化与基于规则的指标：</strong> 这些指标涉及编写代码来检查具体的客观标准。</p>\n<ul>\n<li><strong>格式验证：</strong> 输出是否符合所需的 JSON 模式、XML 结构或列表格式？在您的评估函数中使用标准解析库（例如，<code>json</code>、<code>xml.etree.ElementTree</code>）。</li>\n<li><strong>长度限制：</strong> 摘要是否在指定的单词/token 计数范围内？</li>\n<li><strong>关键词存在/缺失：</strong> 输出是否包含必需的关键词或避免禁用词（例如，检查 PII 标记 (token)，确保包含特定品牌术语）？</li>\n<li><strong>API 调用验证（代理）：</strong> 代理是否使用有效参数 (parameter)调用了正确的工具 API？检查代理的执行路径以获取工具名称和输入参数。</li>\n</ul>\n</li>\n<li>\n<p><strong>语义相似度指标：</strong> 这些指标使用嵌入 (embedding)来衡量生成输出与参考答案或输入查询/上下文 (context)之间的语义接近程度。</p>\n<ul>\n<li><strong>嵌入距离：</strong> 为生成输出和参考答案生成嵌入（使用 Sentence-BERT 或 OpenAI 嵌入等模型）。计算余弦相似度或欧氏距离。高相似度表明语义等价性。\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>余弦相似度</mtext><mo stretchy=\"false\">(</mo><mi>A</mi><mo separator=\"true\">,</mo><mi>B</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mfrac><mrow><mi>A</mi><mo>⋅</mo><mi>B</mi></mrow><mrow><mi mathvariant=\"normal\">∥</mi><mi>A</mi><mi mathvariant=\"normal\">∥</mi><mi mathvariant=\"normal\">∥</mi><mi>B</mi><mi mathvariant=\"normal\">∥</mi></mrow></mfrac></mrow><annotation encoding=\"application/x-tex\">\\text{余弦相似度}(A, B) = \\frac{A \\cdot B}{\\|A\\| \\|B\\|}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">余弦相似度</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">A</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.2963em;vertical-align:-0.936em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">∥</span><span class=\"mord mathnormal\">A</span><span class=\"mord\">∥∥</span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mord\">∥</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">A</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.936em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></span>\n</li>\n<li><strong>上下文相关性（RAG）：</strong> 计算输入查询与检索到的文档片段之间的语义相似度。</li>\n<li><strong>忠实性（RAG）：</strong> 衡量生成答案与它所依据的检索上下文之间的语义相似度。低相似度可能表示幻觉 (hallucination)。</li>\n</ul>\n</li>\n<li>\n<p><strong>基于模型的评估（LLM 作为评判者）：</strong> 这种技术使用另一个 LLM（通常是像 GPT-4 这样能力强的模型）根据提示中定义的具体标准来评估输出。</p>\n<ul>\n<li><strong>提示打分：</strong> 设计一个提示，指导评判 LLM 根据有用性、连贯性、安全性或事实准确性等标准，以数字等级（例如，1-5 分）评估输出。在评判者的提示中包含输入、输出以及可能的参考答案/上下文。</li>\n<li><strong>提示解释：</strong> 不仅要求评判 LLM 打分，还要它提供对其推理 (inference)的文本解释。这提供了定性反馈。</li>\n<li><strong>特定方面评估：</strong> 使用独立的评判提示来独立评估不同方面（例如，一个用于语气，一个用于事实准确性）。</li>\n</ul>\n<pre><code class=\"language-python\"># LLM 作为评判者提示结构的简化示例\nEVALUATION_PROMPT = \"\"\"\n您是一位公正的评估者。请根据提供的“上下文”和“查询”，评估提交的“回复”的质量。\n\n查询：{query}\n上下文：{context}\n回复：{response}\n\n请根据以下标准，以 1 到 5 的等级（1=差，5=优秀）评估回复：\n1. 忠实性：回复是否准确反映了上下文中的信息，而没有添加未经证实的说法？\n2. 相关性：回复是否与查询直接相关？\n\n请以 JSON 格式提供您的分数：{\"忠实性\": score, \"相关性\": score}\n\"\"\"\n</code></pre>\n</li>\n<li>\n<p><strong>人工参与（HITL）：</strong> 直接从人类收集反馈仍然是衡量主观品质的黄金标准。</p>\n<ul>\n<li><strong>直接反馈：</strong> 在您的应用中集成机制（例如，点赞/点踩按钮、评分量表、评论框），以便用户提供反馈。</li>\n<li><strong>标注平台：</strong> 使用平台（包括 LangSmith 的标注队列），让专业人工评审员根据详细的评分标准对输出进行评分，尤其是在开发和测试期间。</li>\n</ul>\n</li>\n</ol>\n<h3>实现自定义评估器</h3>\n<p>LangChain 提供了抽象功能，通常与 LangSmith 集成，以简化自定义评估器的实现。通常，您会定义一个评估函数或类，它接收运行信息（输入、输出等）并返回一个 <code>EvaluationResult</code>。</p>\n<pre><code class=\"language-python\">from langsmith.evaluation import EvaluationResult, run_evaluator\n\n# 示例：程序化指标，检查输出是否包含特定的警告短语\n@run_evaluator\ndef must_contain_warning(run, example) -> EvaluationResult:\n    \"\"\"检查输出是否包含 'Warning:'。\"\"\"\n    # 安全获取输出，如果缺失则默认为空字符串\n    output = run.outputs.get(\"output\") if run.outputs else \"\"\n    \n    if isinstance(output, str) and \"Warning:\" in output:\n        score = 1 # 包含警告\n    else:\n        score = 0 # 不包含警告\n        \n    return EvaluationResult(key=\"contains_warning\", score=score)\n\n# 示例：简化的语义相似度检查\n# 假设 `get_embedding` 和 `cosine_similarity` 在其他地方定义\n@run_evaluator\ndef check_semantic_similarity(run, example) -> EvaluationResult:\n    \"\"\"比较输出嵌入与参考答案嵌入。\"\"\"\n    output = run.outputs.get(\"output\") if run.outputs else \"\"\n    reference = example.outputs.get(\"reference_answer\") if example.outputs else \"\"\n\n    if not output or not reference:\n        return EvaluationResult(key=\"semantic_similarity\", score=0, comment=\"Missing output or reference\")\n\n    output_embedding = get_embedding(output)\n    reference_embedding = get_embedding(reference)\n    similarity = cosine_similarity(output_embedding, reference_embedding) # 返回 -1 到 1 之间的值\n\n    # 如果需要，将分数归一化到 0-1 以保持一致性\n    normalized_score = (similarity + 1) / 2\n    return EvaluationResult(key=\"semantic_similarity\", score=normalized_score)\n</code></pre>\n<p>这些评估器函数可以应用于 LangSmith 中的数据集，或用于自定义评估脚本。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-j92kjm\" \n              data-graph-definition='digraph Custom_Evaluation_Flow {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled, rounded\"];\n    edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n    Input [label=\"应用输入\\n(查询, 数据)\"];\n    LangChainApp [label=\"LangChain 应用\\n(链/代理)\"];\n    Output [label=\"生成输出\"];\n\n    subgraph cluster_evaluators {\n        label = \"自定义评估器\";\n        bgcolor=\"#dee2e6\";\n        node [fillcolor=\"#f8f9fa\"];\n\n        ProgEval [label=\"程序化检查\\n(格式, 关键词)\"];\n        SemEval [label=\"语义相似度\\n(嵌入)\"];\n        LLMEval [label=\"LLM 作为评判者\\n(评分, 解释)\"];\n        HumanEval [label=\"人工反馈\\n(标注)\"];\n    }\n\n    Scores [label=\"评估分数\\n与 反馈\"];\n\n    Input -> LangChainApp;\n    LangChainApp -> Output;\n\n    Output -> ProgEval [arrowhead=none, style=dashed];\n    Output -> SemEval [arrowhead=none, style=dashed];\n    Output -> LLMEval [arrowhead=none, style=dashed];\n    Output -> HumanEval [arrowhead=none, style=dashed];\n\n    ProgEval -> Scores;\n    SemEval -> Scores;\n    LLMEval -> Scores;\n    HumanEval -> Scores;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-j92kjm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>不同的评估方法评估生成输出，产生分数和定性反馈。</p>\n</blockquote>\n<h3>定义指标时</h3>\n<ul>\n<li><strong>与目标一致：</strong> 指标必须直接反映应用的目标。创意写作助手所需的指标与事实问答系统不同。</li>\n<li><strong>成本与收益：</strong> LLM 作为评判者和人工评估可能成本高昂或耗时。平衡评估需求与可用资源。程序化检查成本较低但不够全面。</li>\n<li><strong>一致性和可靠性：</strong> LLM 作为评判者的评估可能因评判模型和提示而异。确保提示清晰并测试一致性。人工评估需要明确的评分标准和可能的多名评审员。</li>\n<li><strong>定义“真实情况”：</strong> 对于生成式任务，可能不存在单一的“正确”答案。使用参考答案、黄金数据集或评分标准中定义的原则作为比较依据。</li>\n<li><strong>迭代：</strong> 您对“良好”表现的理解会不断发展。随着收集到更多数据和用户反馈，重新审视并改进您的指标。</li>\n</ul>\n<p>通过深思熟虑地定义自定义指标，您能更好地了解您的 LangChain 应用的表现，从而实现有针对性的改进，并确保其满足生产环境的特定要求。这些指标为本章后续讨论的自动化评估流程和监控策略奠定了基础。</p>",
+  "slug": "custom-evaluation-metrics",
+  "updates": [],
+  "references": [
+    {
+      "id": 10745,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers, Iryna Gurevych",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3982–3992",
+      "url": "https://aclanthology.org/D19-1410/",
+      "doi": "10.18653/v1/D19-1410",
+      "note": "介绍了一种推导具有语义意义的句子嵌入的方法，这是语义相似性度量的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:11.602230Z",
+      "updated_at": "2025-09-08T12:42:17.332955Z"
+    },
+    {
+      "id": 10746,
+      "title": "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena",
+      "author": "Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang, Joseph E. Gonzalez, Ion Stoica",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023 Datasets and Benchmarks Track",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2306.05685",
+      "doi": "10.48550/arXiv.2306.05685",
+      "note": "研究了将大型语言模型用作评估器（LLM-as-a-judge）的可靠性和能力。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:11.626973Z",
+      "updated_at": "2025-09-08T12:42:16.538578Z"
+    },
+    {
+      "id": 10747,
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "author": "Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2312.10997",
+      "doi": "10.48550/arXiv.2312.10997",
+      "note": "概述了检索增强生成，包括RAG系统相关的评估指标。",
+      "order": 4,
+      "created_at": "2025-09-05T06:53:11.630144Z",
+      "updated_at": "2025-09-08T12:42:14.978745Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 6791,
+  "title": "使用推导式高效创建集合",
+  "meta_title": "Julia 推导式：简洁的集合创建",
+  "meta_description": "学习如何在 Julia 中使用推导式，以简洁的方式创建数组、字典和其他集合。",
+  "content": "<p>你已经了解了如何逐个构建数组和字典等集合，或者使用函数来生成它们。现在，我们来看一种强大且简洁的集合创建方法：推导式。推导式提供了一种紧凑的语法，可以从现有可迭代对象（如范围或其他集合）生成集合，这通常使你的代码更具可读性和表现力，尤其是在创建新集合的逻辑直接明了时。</p>\n<p>可以把推导式看作是一种常见模式的简写：对一些值进行迭代，对每个值执行操作，然后将结果收集到一个新集合中。</p>\n<h3>数组推导式：即时构建数组</h3>\n<p>数组推导式可能是你最常遇到的类型。它们允许你在一行可读的代码中，根据一个表达式和一个输入序列来定义数组的内容。</p>\n<p>数组推导式的基本语法是：\n<code>[expression for variable in iterable]</code></p>\n<p>让我们分解一下：</p>\n<ul>\n<li><code>expression</code>：这是新数组中每个元素将计算的值。它通常会用到 <code>variable</code>。</li>\n<li><code>variable</code>：这是一个占位符，它会逐一取用 <code>iterable</code> 中每个项的值。</li>\n<li><code>iterable</code>：这是任何可以被循环的对象，例如一个范围（<code>1:5</code>）、一个现有数组或一个字符串。</li>\n<li>包裹语法的方括号 <code>[]</code> 表示正在创建一个 <code>Array</code>。</li>\n</ul>\n<p>例如，如果我们想创建一个包含前五个正整数平方的数组，与其编写循环并使用 <code>push!</code> 将元素添加到数组中，不如使用推导式：</p>\n<pre><code class=\"language-julia\">julia> squares = [i*i for i in 1:5]\n5-element Vector{Int64}:\n  1\n  4\n  9\n 16\n 25\n</code></pre>\n<p>在这里，<code>i</code> 取值从 <code>1</code> 到 <code>5</code>，<code>i*i</code> 被计算，结果成为 <code>squares</code> 数组中的一个元素。</p>\n<h4>使用 <code>if</code> 进行筛选</h4>\n<p>推导式还可以包含 <code>if</code> 子句，以便在应用表达式之前从可迭代对象中筛选项。语法变为：\n<code>[expression for variable in iterable if condition]</code></p>\n<p>只有 <code>condition</code> 评估为 <code>true</code> 的项才会被 <code>expression</code> 处理并包含在结果数组中。</p>\n<p>假设我们想要一个平方数组，但只包含 1 到 10 之间的偶数：</p>\n<pre><code class=\"language-julia\">julia> even_squares = [x^2 for x in 1:10 if x % 2 == 0]\n5-element Vector{Int64}:\n   4\n  16\n  36\n  64\n 100\n</code></pre>\n<p>在这个例子中，<code>x</code> 从 1 迭代到 10。<code>if x % 2 == 0</code> 条件检查 <code>x</code> 是否为偶数。如果是，则计算 <code>x^2</code> 并将其添加到 <code>even_squares</code> 数组中。</p>\n<p>如果 Julia 的自动类型推断不是你所需要的，你也可以指定结果数组的元素类型：</p>\n<pre><code class=\"language-julia\">julia> float_halves = Float64[i/2 for i in 1:5]\n5-element Vector{Float64}:\n 0.5\n 1.0\n 1.5\n 2.0\n 2.5\n</code></pre>\n<p>这确保了 <code>float_halves</code> 是一个 <code>Float64</code> 值的数组。</p>\n<h3>字典推导式：轻松构建字典</h3>\n<p>与数组推导式类似，字典推导式提供了一种简洁的创建字典的方法。语法包括为可迭代对象中的每个项指定一个键值对。</p>\n<p>一般形式是：\n<code>Dict(key_expression => value_expression for variable in iterable)</code></p>\n<p>或者带条件时：\n<code>Dict(key_expression => value_expression for variable in iterable if condition)</code></p>\n<p>让我们创建一个字典，它的键是 1 到 5 的数字，值是它们的立方：</p>\n<pre><code class=\"language-julia\">julia> number_to_cube = Dict(i => i^3 for i in 1:5)\nDict{Int64, Int64} with 5 entries:\n  5 => 125\n  4 => 64\n  2 => 8\n  3 => 27\n  1 => 1\n</code></pre>\n<p>在这里，对于从 <code>1</code> 到 <code>5</code> 的每个 <code>i</code>，都会创建一个 <code>i => i^3</code> 对并添加到字典中。</p>\n<p>你也可以通过使用 <code>zip</code> 同时迭代多个集合来创建字典，<code>zip</code> 会将两个或更多可迭代对象中对应的元素配对。</p>\n<pre><code class=\"language-julia\">julia> names = [\"Alice\", \"Bob\", \"Charlie\"];\njulia> ages = [30, 24, 35];\njulia> name_to_age = Dict(name => age for (name, age) in zip(names, ages))\nDict{String, Int64} with 3 entries:\n  \"Bob\"     => 24\n  \"Alice\"   => 30\n  \"Charlie\" => 35\n</code></pre>\n<p>在这种情况下，<code>(name, age)</code> 是一个元组，它从 <code>zip(names, ages)</code> 生成的每对中解包出来。</p>\n<h3>生成器表达式：推导式背后的机制</h3>\n<p>如果你不想立即创建一个完整的数组或字典，而是想要一个可以按需生成值的对象，该怎么办？这就是生成器表达式的作用。它们看起来与数组推导式非常相似，但没有外部的方括号。</p>\n<p>语法是：\n<code>(expression for variable in iterable if condition)</code></p>\n<p>这会创建一个 <em>生成器</em>。生成器是可迭代对象。它不会一次性计算所有值并存储在内存中。相反，它会按需逐个计算值。对于大型序列，这可以非常节省内存。</p>\n<pre><code class=\"language-julia\">julia> gen = (i * 10 for i in 1:5)\nBase.Generator{UnitRange{Int64}, var\"#5#6\"}(var\"#5#6\"(), 1:5)\n\njulia> for val in gen\n           println(val)\n       end\n10\n20\n30\n40\n50\n</code></pre>\n<p>注意，打印 <code>gen</code> 本身并不会显示值，而是显示一个代表生成器的对象。值是在你迭代它时生成的。</p>\n<h3>使用生成器构建其他集合</h3>\n<p>这些生成器表达式特别有用，因为它们可以传递给集合构造函数来构建元组 (Tuples)、集合 (Sets)，甚至数组和字典（如果你喜欢这种两步法，尽管直接推导式对于数组和字典通常更符合习惯）。</p>\n<h4>创建元组</h4>\n<p>要使用类似推导式的语法创建元组，你可以在 <code>Tuple</code> 构造函数中使用生成器表达式：</p>\n<pre><code class=\"language-julia\">julia> odd_numbers_tuple = Tuple(x for x in 1:10 if x % 2 != 0)\n(1, 3, 5, 7, 9)\n</code></pre>\n<h4>创建集合</h4>\n<p>同样，对于存储唯一项的集合：</p>\n<pre><code class=\"language-julia\">julia> unique_chars = Set(c for c in \"hello world!\" if isletter(c))\nSet{Char} with 10 entries:\n  'r'\n  'e'\n  'h'\n  'w'\n  'l'\n  'o'\n  'd'\n</code></pre>\n<p>即使 'l' 和 'o' 在 \"hello world!\" 中多次出现，它们在集合中也只出现一次，并且由于 <code>if isletter(c)</code> 条件，只有字母被包含在内。</p>\n<p>推导式和生成器表达式是 Julia 中富有表现力的代码的标志。它们让你能清楚地表达 <em>要构建什么</em>（你想构建的集合），而不是 <em>如何构建</em>（显式的循环和追加机制），从而在你熟悉它们的结构后，编写出更简洁、通常也更易读的代码。它们在 Julia 程序中很常见，所以理解它们对于编写自己的代码和阅读他人的代码都非常重要。</p>",
+  "slug": "creating-collections-with-comprehensions",
+  "updates": [],
+  "references": [
+    {
+      "id": 20946,
+      "title": "Comprehensions",
+      "author": "The Julia Language",
+      "year": "2025",
+      "publisher": "The Julia Language",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1.11/manual/comprehensions/",
+      "doi": "",
+      "note": "官方文档，详细介绍了Julia中数组、字典和生成器推导式的语法和用法。",
+      "order": 1,
+      "created_at": "2025-09-06T14:13:21.668495Z",
+      "updated_at": "2025-09-10T02:54:36.216131Z"
+    },
+    {
+      "id": 20947,
+      "title": "Iteration",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration",
+      "doi": "",
+      "note": "解释了迭代器和可迭代接口，它们是Julia中推导式按需生成值工作原理的基础。",
+      "order": 2,
+      "created_at": "2025-09-06T14:13:21.677149Z",
+      "updated_at": "2025-09-10T02:54:23.461496Z"
+    },
+    {
+      "id": 20948,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens and Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "295",
+      "url": "https://benlauwens.github.io/ThinkJulia.jl/latest/book.html",
+      "doi": "",
+      "note": "一本使用Julia教授编程概念的入门教材，其中包含对集合和推导式的清晰解释。",
+      "order": 3,
+      "created_at": "2025-09-06T14:13:21.680070Z",
+      "updated_at": "2025-09-10T02:54:37.413308Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

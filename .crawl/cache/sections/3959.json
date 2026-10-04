@@ -1,0 +1,61 @@
+{
+  "id": 3959,
+  "title": "理解分类预测",
+  "meta_title": "分类模型如何进行预测",
+  "meta_description": "回顾分类模型的输出以及预测是如何产生的。",
+  "content": "<p>在我们探讨准确率或精确率等具体指标之前，我们先弄清楚分类模型会给出什么样的输出，以及我们如何得到最终的预测结果。回顾第一章，分类任务是将输入数据分到预设的类别中。例如，识别一封邮件是“垃圾邮件”还是“非垃圾邮件”，或者将图片归类为“猫”、“狗”或“鸟”。</p>\n<h3>从概率到预测</h3>\n<p>大多数分类算法不会直接给出硬性的类别标签。相反，它们通常会为每个可能的类别生成一个分数或概率。这个概率表示模型对输入属于该特定类别的置信程度。</p>\n<p>以垃圾邮件检测这样一个简单的二分类问题为例。对于一封给定的邮件，模型可能会输出如下结果：</p>\n<ul>\n<li>“垃圾邮件”的概率：0.85</li>\n<li>“非垃圾邮件”的概率：0.15</li>\n</ul>\n<p>请注意，这些概率的总和为 1.0 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.85</mn><mo>+</mo><mn>0.15</mn><mo>=</mo><mn>1.0</mn></mrow><annotation encoding=\"application/x-tex\">0.85 + 0.15 = 1.0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">0.85</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.15</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1.0</span></span></span></span>)。这是许多分类模型的常见表现。对于一个多类别问题（例如，手写数字0到9的分类），模型会输出十个概率，每个数字对应一个，这些概率的总和也为1.0。</p>\n<h3>判别阈值</h3>\n<p>我们如何从这些概率（例如“垃圾邮件”的0.85）得到明确的预测（该邮件<em>是</em>垃圾邮件）？我们需要使用一个<strong>判别阈值</strong>。</p>\n<p>最常用的默认阈值是0.5。规则很简单：</p>\n<ul>\n<li>如果正类别（例如“垃圾邮件”）的概率大于该阈值（0.5），则预测为该类别。</li>\n<li>否则，预测为负类别（例如“非垃圾邮件”）。</li>\n</ul>\n<p>分类预测通常通过将概率分数与预设阈值进行比较来确定。例如，如果垃圾邮件的概率是0.85，阈值是0.5，那么因为0.85大于0.5，最终预测是“垃圾邮件”。</p>\n<p>如果模型输出P(垃圾邮件) = 0.30（因此P(非垃圾邮件) = 0.70），那么预测将是“非垃圾邮件”，因为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.30</mn><mo>≤</mo><mn>0.5</mn></mrow><annotation encoding=\"application/x-tex\">0.30 \\le 0.5</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7804em;vertical-align:-0.136em;\"></span><span class=\"mord\">0.30</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≤</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.5</span></span></span></span>。</p>\n<p>尽管0.5是一个标准的起始点，但这个阈值并非一成不变。根据具体目标以及不同类型错误带来的影响（我们很快就会在精确率和召回率部分进行讨论），你可能选择调整这个阈值。例如，如果将一封非垃圾邮件错误地判为垃圾邮件会带来很大问题，你可能需要提高阈值（例如到0.9），以便在判定为“垃圾邮件”前获得更高确信度。</p>\n<h3>真实标签与预测</h3>\n<p>评估的核心思想是将模型的最终预测与实际的、已知的标签进行比较，这些标签通常称作<strong>真实标签</strong>。</p>\n<ul>\n<li><strong>真实标签：</strong> 输入数据的正确标签（例如，我们<em>知道</em>一封特定的邮件确实是“垃圾邮件”）。这来自于用于评估的已标注数据集。</li>\n<li><strong>预测：</strong> 模型在应用判别阈值后分配的标签（例如，模型<em>预测</em>该邮件是“垃圾邮件”）。</li>\n</ul>\n<p>接下来我们要探讨的指标，从准确率开始，都是通过在测试集中的许多数据点上系统地比较这些预测结果与真实标签来计算的。理解分类包含通过阈值将概率转换为离散标签这一步骤，对于正确解读这些指标是必不可少的。现在，我们来看衡量性能的最简单方法：准确率。</p>",
+  "slug": "understanding-classification-predictions",
+  "updates": [],
+  "references": [
+    {
+      "id": 10590,
+      "title": "An Introduction to Statistical Learning: With Applications in R",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani",
+      "year": "2021",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "",
+      "note": "这本广泛使用的教材以易懂的方式介绍了分类，解释了模型如何输出概率以及如何应用决策阈值进行预测。",
+      "order": 1,
+      "created_at": "2025-09-05T06:50:48.346611Z",
+      "updated_at": "2025-09-08T13:26:40.144858Z"
+    },
+    {
+      "id": 10591,
+      "title": "Pattern Recognition and Machine Learning",
+      "author": "Christopher M. Bishop",
+      "year": "2006",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "738",
+      "url": "https://link.springer.com/book/9780387310732",
+      "doi": "",
+      "note": "这本经典而全面的教材严谨地阐述了概率分类模型以及将分数转换为离散类别标签的原理。",
+      "order": 2,
+      "created_at": "2025-09-05T06:50:48.349817Z",
+      "updated_at": "2025-09-08T13:26:47.989873Z"
+    },
+    {
+      "id": 10592,
+      "title": "CS229 Machine Learning Course Notes",
+      "author": "Andrew Ng",
+      "year": "2022",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://cs229.stanford.edu/notes2022fall/main_notes.pdf",
+      "doi": "",
+      "note": "这些广泛引用的机器学习课程讲义清晰地解释了分类概念、模型置信度（概率）以及决策边界在最终预测中的作用。",
+      "order": 3,
+      "created_at": "2025-09-05T06:50:48.352499Z",
+      "updated_at": "2025-09-08T13:26:48.099535Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 1572,
+  "title": "主键：用于唯一标识",
+  "meta_title": "主键：确保记录唯一性",
+  "meta_description": "了解主键的作用及其在表中唯一标识每行数据的作用。",
+  "content": "<p>在对表、行和列的理解之上，我们知道表存储数据，其中每行代表一个单独的条目或记录（例如特定的客户、产品或订单），每列代表该条目的一个属性或特性（例如姓名、价格或订单日期）。</p>\n<p>现在，想象一个包含数千甚至数百万行数据的表。如果您需要查找、更新或删除某<em>特定</em>行，如何确保操作的是正确的行？如果多个客户同名，或者几种产品价格相同，怎么办？我们需要一种可靠的方法来精确找到<em>唯一</em>的一行。</p>\n<p>这时，<strong>主键</strong>就发挥作用了。主键是用于唯一标识表中每一行的列，有时也可以是多列的组合。可以把它看作是每条记录的唯一标识号。正如没有两个公民会拥有相同的社会安全号码一样，表中也没有两行可以拥有相同的主键值。</p>\n<h3>主键的主要特性</h3>\n<p>主键具有由数据库管理系统（DBMS）强制执行的两个基本属性：</p>\n<ol>\n<li><strong>唯一性：</strong> 主键列（或列组合）中的每个值<em>必须</em>是唯一的。如果插入新行或更新现有行会导致主键值重复，DBMS会阻止此操作。这确保了每行都有一个不同的标识符。</li>\n<li><strong>非空：</strong> 主键列不能包含<code>NULL</code>值。<code>NULL</code>代表未知或缺失的值。由于主键的目的是唯一标识一行，它必须对每一行都有一个确定的值。您不能用一个“未知”的标识符来识别事物。</li>\n</ol>\n<h3>主键为何重要？</h3>\n<p>使用主键有以下多项显著优点：</p>\n<ul>\n<li><strong>唯一标识：</strong> 这是它们的主要用途。它们提供一种确保引用到特定行的方法，消除歧义。这对于准确检索、修改或删除数据很必要。例如，如果您想更新客户'John Smith'的电子邮件地址，如果有多个同名客户，您需要确保更新的是正确的'John Smith'。使用唯一的<code>CustomerID</code>主键可确保准确性。</li>\n<li><strong>建立关联：</strong> 主键是将不同表中的相关数据关联起来的重要方式。我们将在下一节看到，一个表的主键如何用于另一个表（作为外键）来建立连接，从而构成<em>关系型</em>数据库的结构。</li>\n<li><strong>数据完整性：</strong> 通过强制唯一性，主键可以防止意外插入重复记录，有助于数据的整体准确性和可靠性。</li>\n<li><strong>性能：</strong> DBMS通常会使用主键自动创建索引。索引就像书后的索引；它帮助数据库更快地找到特定行，而无需扫描整个表。</li>\n</ul>\n<h3>选择合适的主键</h3>\n<p>设计表时，您需要确定哪些列将作为主键。通常有两种方法：</p>\n<ol>\n<li>\n<p><strong>自然键：</strong> 这些列本身就是数据的一部分，并天然具备唯一性和非空的属性（或预期具备）。例如：</p>\n<ul>\n<li><code>Books</code>表中的<code>ISBN</code>（国际标准书号）。</li>\n<li><code>Users</code>表中的<code>UserEmail</code>（假设电子邮件地址必须唯一）。</li>\n<li><code>Products</code>表中的<code>ProductSKU</code>（库存单位）。</li>\n</ul>\n<p>虽然自然键可以很直观，但它们有时也有缺点。如果组织更改了SKU格式怎么办？如果用户需要更改电子邮件地址怎么办？更改主键值可能很复杂，因为它可能用于关联其他表。此外，一些自然标识符可能包含敏感信息（如政府身份证号码），或者不能保证永远唯一。</p>\n</li>\n<li>\n<p><strong>代理键（或人工键）：</strong> 这些列是<em>专门</em>添加到表中用作主键的，除了标识行之外没有固有含义。最常见的类型是<strong>自动递增的整数</strong>。当添加新行时，数据库会自动为该列分配下一个递增的整数值（例如1、2、3等）。例如<code>CustomerID</code>、<code>ProductID</code>、<code>OrderID</code>。</p>\n<p>代理键通常更受青睐，原因如下：</p>\n<ul>\n<li>它们保证唯一且非空。</li>\n<li>它们是稳定的；即使行中的其他数据发生变化，也无需更改。</li>\n<li>它们通常是简单的数据类型（如整数），便于数据库处理和索引，效率高。</li>\n<li>它们不带有任何业务含义，减少业务规则变化带来的影响。</li>\n</ul>\n</li>\n</ol>\n<p>我们通过一个简单的<code>Products</code>表示例来直观了解：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-e4hp1w\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=plaintext];\n  products [label=<\n    <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n      <TR><TD COLSPAN=\"4\" BGCOLOR=\"#a5d8ff\">产品</TD></TR>\n      <TR>\n        <TD BGCOLOR=\"#e9ecef\"><B>产品ID (主键)</B></TD>\n        <TD>产品名称</TD>\n        <TD>类别</TD>\n        <TD>价格</TD>\n      </TR>\n      <TR><TD>101</TD><TD>无线鼠标</TD><TD>电子产品</TD><TD>25.99</TD></TR>\n      <TR><TD>102</TD><TD>USB键盘</TD><TD>电子产品</TD><TD>45.50</TD></TR>\n      <TR><TD>103</TD><TD>咖啡杯</TD><TD>家居用品</TD><TD>12.00</TD></TR>\n      <TR><TD>104</TD><TD>笔记本</TD><TD>文具</TD><TD>3.75</TD></TR>\n      <TR><TD>105</TD><TD>无线鼠标</TD><TD>配件</TD><TD>29.99</TD></TR>\n    </TABLE>\n  >];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-e4hp1w\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的<code>Products</code>表，使用<code>ProductID</code>作为代理主键（PK）。请注意，尽管“无线鼠标”出现两次，但每行都可以通过其<code>ProductID</code>唯一标识。</p>\n</blockquote>\n<p>在此示例中，<code>ProductID</code>是一个代理键。它唯一标识每条产品行。即使我们有两个同名为“无线鼠标”的不同产品，它们的<code>ProductID</code>值（101和105）也不同，使我们能够区分它们。尝试插入另一个<code>ProductID</code>为101的产品将导致DBMS报错。</p>\n<h3>复合主键</h3>\n<p>有时，单列不足以唯一标识一行。在这种情况下，您可以定义<strong>复合主键</strong>，它由两个或多个列组合而成。这些列中值的<em>组合</em>对于每行必须是唯一的。</p>\n<p>例如，考虑一个存储客户订单中条目的表，例如名为<code>OrderItems</code>的表。单个<code>OrderID</code>不会是唯一的（一个订单可以有多个条目），单个<code>ProductID</code>也不会是唯一的（一个产品可以出现在多个订单中）。然而，<code>OrderID</code>和<code>ProductID</code>的组合<em>很可能</em>是唯一的 —— 通常您不会在同一个订单项中两次列出完全相同的产品。因此，<code>(OrderID, ProductID)</code>可以作为<code>OrderItems</code>表的复合主键。</p>\n<p>在本入门课程中，我们主要关注单列主键，但了解复合主键在更复杂情况下存在是有益的。</p>\n<p>总而言之，主键是关系型数据库中的一个基本概念。它强制每行的唯一性，提供一种可靠的方法来标识特定记录，并在关联不同表中的相关数据方面发挥重要作用，我们将在接下来讨论外键时进一步说明。</p>",
+  "slug": "primary-keys-unique-identification",
+  "updates": [],
+  "references": [
+    {
+      "id": 3014,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本广泛使用的数据库系统教材，对关系模型中的主键和完整性约束进行了详细的奠基性解释。（第七版）",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:03.946443Z",
+      "updated_at": "2025-09-07T19:12:18.195186Z"
+    },
+    {
+      "id": 3017,
+      "title": "PostgreSQL Documentation: Chapter 5. Data Definition, 5.3. Constraints",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-PRIMARY-KEY",
+      "doi": "",
+      "note": "官方文档，解释了主键作为常用关系型数据库管理系统中基本数据库约束的实现和作用。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:04.183641Z",
+      "updated_at": "2025-09-07T19:12:23.692296Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

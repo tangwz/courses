@@ -1,0 +1,61 @@
+{
+  "id": 1329,
+  "title": "有序特征的序数编码",
+  "meta_title": "序数编码技术",
+  "meta_description": "当类别具有有意义的顺序时，应用序数编码。",
+  "content": "<p>独热编码（One-Hot Encoding）对名义类别（顺序不重要）有效，但将其应用于<em>序数</em>数据（即具有有意义序列的类别）时，可能会丢失有价值的排序信息。考虑像客户满意度（'Low'低, 'Medium'中, 'High'高）或服装尺码（'S'小, 'M'中, 'L'大, 'XL'特大）这样的特征。这里的顺序是固有的，并且可能与您尝试预测的目标变量相关。序数编码旨在通过将每个类别映射到不同的整数来保留此序列。</p>\n<h3>此方法：分配排序</h3>\n<p>序数编码通过根据预定义顺序中的位置，为每个独特类别分配一个数值排序，通常从0或1开始。例如，如果我们有教育水平：'High School'（高中）, 'Bachelor's'（学士）, 'Master's'（硕士）, 'PhD'（博士），我们可以这样映射它们：</p>\n<ul>\n<li>'High School'（高中）：0</li>\n<li>'Bachelor's'（学士）：1</li>\n<li>'Master's'（硕士）：2</li>\n<li>'PhD'（博士）：3</li>\n</ul>\n<p>这种数值表示直接反映了类别中固有的进展。</p>\n<h3>实施序数编码</h3>\n<p>您可以使用Pandas手动实施序数编码，或借助Scikit-learn的专用转换器。</p>\n<h4>使用Pandas手动映射</h4>\n<p>如果您知道类别的具体顺序，定义自定义映射字典并使用Pandas的<code>map</code>函数会很简单。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 带有序数特征的示例数据\ndata = {'ID': [1, 2, 3, 4, 5],\n        'Satisfaction': ['Medium', 'Low', 'High', 'Medium', 'Low']}\ndf = pd.DataFrame(data)\n\n# 定义所需的顺序和映射\nsatisfaction_mapping = {'Low': 0, 'Medium': 1, 'High': 2}\n\n# 将映射应用于“Satisfaction”列\ndf['Satisfaction_Encoded'] = df['Satisfaction'].map(satisfaction_mapping)\n\nprint(df)\n</code></pre>\n<p>此代码生成：</p>\n<pre><code>   ID Satisfaction  Satisfaction_Encoded\n0   1       Medium                     1\n1   2          Low                     0\n2   3         High                     2\n3   4       Medium                     1\n4   5          Low                     0\n</code></pre>\n<p>这种方法让您完全控制赋值，但每个序数特征都需要手动定义。</p>\n<h4>使用Scikit-learn的<code>OrdinalEncoder</code></h4>\n<p>Scikit-learn在其<code>preprocessing</code>模块中提供了<code>OrdinalEncoder</code>类。它可以自动确定类别或接受预定义的顺序。<strong>重要的是，对于序数数据，您应始终通过<code>categories</code>参数 (parameter)指定顺序</strong>，以确保编码反映真实序列，而不是基于数据中类别出现的顺序或字母顺序的任意序列。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.preprocessing import OrdinalEncoder\n\n# 示例数据\ndata = {'ID': [1, 2, 3, 4, 5],\n        'Satisfaction': ['Medium', 'Low', 'High', 'Medium', 'Low'],\n        'Size': ['M', 'S', 'XL', 'L', 'M']}\ndf = pd.DataFrame(data)\n\n# 定义每个序数列的具体顺序\nsatisfaction_order = ['Low', 'Medium', 'High']\nsize_order = ['S', 'M', 'L', 'XL']\n\n# 使用定义的顺序初始化编码器\n# 注意：categories是一个列表的列表，每个特征一个内层列表\nencoder = OrdinalEncoder(categories=[satisfaction_order, size_order])\n\n# 应用编码器\n# 选择与'categories'匹配的正确顺序的列进行编码\nencoded_features = encoder.fit_transform(df[['Satisfaction', 'Size']])\n\n# 在DataFrame中为编码后的特征创建新列\ndf['Satisfaction_Encoded'] = encoded_features[:, 0]\ndf['Size_Encoded'] = encoded_features[:, 1]\n\nprint(df)\n</code></pre>\n<p>输出显示了编码后的特征：</p>\n<pre><code>   ID Satisfaction Size  Satisfaction_Encoded  Size_Encoded\n0   1       Medium    M                   1.0           1.0\n1   2          Low    S                   0.0           0.0\n2   3         High   XL                   2.0           3.0\n3   4       Medium    L                   1.0           2.0\n4   5          Low    M                   0.0           1.0\n</code></pre>\n<p>如果您省略<code>categories</code>参数，<code>OrdinalEncoder</code>可能会按字母顺序或按出现顺序分配整数，这将破坏序数关系（例如，按字母顺序将'High'赋值为0，'Low'赋值为1，'Medium'赋值为2）。对于有意义的序数编码，请始终明确定义顺序。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-bbu165\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"Low\", \"Medium\", \"High\"], \"y\": [0, 1, 2], \"marker\": {\"color\": [\"#ffc9c9\", \"#ffd8a8\", \"#b2f2bb\"]}, \"name\": \"满意度编码\"}], \"layout\": {\"title\": \"序数编码映射示例\", \"xaxis\": {\"title\": \"原始类别\"}, \"yaxis\": {\"title\": \"编码整数值\", \"tickmode\": \"array\", \"tickvals\": [0, 1, 2]}, \"bargap\": 0.2}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-bbu165\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>条形图直观地表示了为“Satisfaction”特征定义的映射，清楚地显示了基于指定顺序的数值分配。</p>\n</blockquote>\n<h3>优点与缺点</h3>\n<p><strong>优点：</strong></p>\n<ul>\n<li><strong>保留顺序：</strong> 直接编码类别的序列性质。</li>\n<li><strong>简单易行：</strong> 易于理解和实施。</li>\n<li><strong>维度：</strong> 将特征保留为单列，避免了独热编码中出现的维度增加。</li>\n</ul>\n<p><strong>缺点：</strong></p>\n<ul>\n<li><strong>任意数值差：</strong> 类别之间的数值差是恒定的（例如0、1、2、3）。这意味着“低”和“中”之间的差异与“中”和“高”之间的差异相同。此假设可能不成立，并且可能误导对特征数值大小和距离敏感的算法（如线性模型、SVM、KNN）。</li>\n<li><strong>模型解释：</strong> 线性模型可能将编码值解释为具有一致的线性效应，这可能无法反映真实的潜在关系。</li>\n<li><strong>需要已知顺序：</strong> 您必须正确定义序列；不正确的顺序会使编码变得无意义或具有误导性。</li>\n</ul>\n<h3>何时使用序数编码</h3>\n<p>序数编码在以下情况下最为适用：</p>\n<ol>\n<li>类别特征具有清晰、固有的顺序。</li>\n<li>您使用的模型可以自然处理序数关系，而不会对任意数值差假设过于敏感（例如，基于树的模型，如决策树、随机森林、梯度提升）。这些模型主要关注分割点，而不是值之间的精确数值距离。</li>\n<li>保持较低维度很重要。</li>\n</ol>\n<p>尽管当数值映射与目标变量的关系良好对齐 (alignment)时，它可能对线性模型有用，但请谨慎对待等间距假设。除非数值映射真正反映了类别之间有意义的距离，否则它通常不太适合基于距离的算法。在决定序数编码是否是正确选择时，请始终考虑您数据的性质以及所选机器学习 (machine learning)算法的要求。</p>",
+  "slug": "ordinal-encoding",
+  "updates": [],
+  "references": [
+    {
+      "id": 1168,
+      "title": "sklearn.preprocessing.OrdinalEncoder",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OrdinalEncoder.html",
+      "doi": "",
+      "note": "此官方文档解释了 OrdinalEncoder 转换器、其参数及其将分类特征映射到序数整数的用法。",
+      "order": 1,
+      "created_at": "2025-09-04T15:27:46.632637Z",
+      "updated_at": "2025-09-07T17:06:37.983416Z"
+    },
+    {
+      "id": 1169,
+      "title": "pandas.Series.map",
+      "author": "pandas developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.map.html",
+      "doi": "",
+      "note": "此官方文档详细说明了 Pandas Series 的 map 方法，它对于应用自定义映射函数或字典很有用。",
+      "order": 2,
+      "created_at": "2025-09-04T15:27:46.635997Z",
+      "updated_at": "2025-09-07T17:06:40.116315Z"
+    },
+    {
+      "id": 1170,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本关于机器学习的综合性书籍，涵盖了数据预处理，包括分类编码策略及其对各种模型类型的影响。",
+      "order": 3,
+      "created_at": "2025-09-04T15:27:46.638815Z",
+      "updated_at": "2025-09-07T17:06:50.285180Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

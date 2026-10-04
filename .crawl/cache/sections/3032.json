@@ -1,0 +1,61 @@
+{
+  "id": 3032,
+  "title": "处理API响应",
+  "meta_title": "处理LLM API响应",
+  "meta_description": "解析并获取 LLM API 响应中的有用信息。",
+  "content": "<p>处理LLM API返回的响应是与这些模型交互的基本组成部分。LLM API通常返回JSON格式的数据，这种格式机器可读，并且在包括Python在内的大多数编程语言中都相对容易处理。理解这些响应的结构和内容，对将LLM输出整合到你的应用中非常重要。</p>\n<p>补全或聊天API的典型响应包含几部分信息。我们来查看一个你可能遇到的常见结构（细节在OpenAI、Anthropic、Google等提供商之间略有差异，但核心思想是相似的）：</p>\n<pre><code class=\"language-json\">{\n  \"id\": \"resp-a1b2c3d4e5\",\n  \"object\": \"text_completion\",\n  \"created\": 1680000000,\n  \"model\": \"model-name-v1.0\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"text\": \"The capital of France is Paris.\",\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 10,\n    \"completion_tokens\": 7,\n    \"total_tokens\": 17\n  }\n}\n</code></pre>\n<p>或者对于基于聊天的API：</p>\n<pre><code class=\"language-json\">{\n  \"id\": \"chatresp-f6g7h8i9j0\",\n  \"object\": \"chat.completion\",\n  \"created\": 1680000100,\n  \"model\": \"chat-model-v2.1\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"\\n\\nThe capital of France is Paris.\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 15,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 24\n  }\n}\n</code></pre>\n<p>我们来分析一下这些重要字段：</p>\n<ol>\n<li><strong><code>id</code></strong>: API响应的唯一标识符。便于日志记录和跟踪。</li>\n<li><strong><code>object</code></strong>: 返回对象的类型（例如，<code>text_completion</code>，<code>chat.completion</code>）。</li>\n<li><strong><code>created</code></strong>: 一个Unix时间戳，指示响应生成的时间。</li>\n<li><strong><code>model</code></strong>: 生成响应时使用的具体LLM版本。这对于复现性和理解模型版本之间可能存在的行为差异非常重要。</li>\n<li><strong><code>choices</code></strong>: 这通常是最核心的部分。它是一个数组，包含模型生成的一个或多个可能的补全或消息。\n<ul>\n<li><strong><code>index</code></strong>: 此选项在数组中的位置（通常从0开始）。</li>\n<li><strong><code>text</code></strong> 或 <strong><code>message.content</code></strong>: LLM生成的实际文本。这是你通常会在应用中使用的核心输出。请注意补全和聊天API之间结构上的细微差异。聊天API通常返回一个包含<code>role</code>（<code>assistant</code>）和<code>content</code>的<code>message</code>对象。</li>\n<li><strong><code>finish_reason</code></strong>: 解释模型停止生成文本的原因。常见的值包括：\n<ul>\n<li><code>stop</code>：模型自然完成了响应或遇到了预定义的停止序列。</li>\n<li><code>length</code>：生成达到了请求中指定的tokens最大数量（<code>max_tokens</code>）。输出可能被截断。</li>\n<li><code>content_filter</code>：生成内容被提供商的安全过滤器标记 (token)。</li>\n<li><code>tool_calls</code>：（在较新的API中）模型决定调用你提供的一个函数或工具。这需要特定的处理，稍后会讨论。</li>\n<li><code>null</code>：生成仍在进行中（与流式传输相关）。</li>\n</ul>\n</li>\n<li><strong><code>logprobs</code></strong>: （可选）提供生成tokens的对数概率，有助于高级分析，但默认通常为<code>null</code>。</li>\n</ul>\n</li>\n<li><strong><code>usage</code></strong>: 提供有关请求中token消耗的信息。\n<ul>\n<li><strong><code>prompt_tokens</code></strong>: 你输入prompt中的token数量。</li>\n<li><strong><code>completion_tokens</code></strong>: 响应中生成的token数量。</li>\n<li><strong><code>total_tokens</code></strong>: prompt和completion tokens的总和。这与API调用的费用直接相关。</li>\n</ul>\n</li>\n</ol>\n<h3>在Python中获取响应数据</h3>\n<p>假设你已使用<code>requests</code>等库接收到响应，你首先需要解析JSON主体。大多数LLM客户端库或SDK会自动处理此过程，返回一个Python字典或对象。如果直接使用<code>requests</code>：</p>\n<pre><code class=\"language-python\">import requests\nimport json\nimport os\n\n# 假设API_ENDPOINT、HEADERS和PAYLOAD已正确定义\n# API_ENDPOINT = \"YOUR_LLM_API_ENDPOINT\"\n# HEADERS = {\"Authorization\": f\"Bearer {os.getenv('LLM_API_KEY')}\", \"Content-Type\": \"application/json\"}\n# PAYLOAD = { \"model\": \"your-model-name\", \"prompt\": \"What is the capital of France?\", \"max_tokens\": 50 }\n\n# 用于演示的模拟响应 - 请替换为实际的API调用\nsimulated_response_json = \"\"\"\n{\n  \"id\": \"chatresp-simulated\",\n  \"object\": \"chat.completion\",\n  \"created\": 1680000100,\n  \"model\": \"chat-model-v2.1\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"\\\\n\\\\nThe capital of France is Paris.\"\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 15,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 24\n  }\n}\n\"\"\"\ntry:\n    # 在实际应用中：\n    # response = requests.post(API_ENDPOINT, headers=HEADERS, json=PAYLOAD)\n    # response.raise_for_status() # 检查HTTP错误（4xx, 5xx）\n    # response_data = response.json()\n\n    # 使用模拟数据：\n    response_data = json.loads(simulated_response_json)\n\n    # 基本验证：检查'choices'是否存在且不为空\n    if 'choices' in response_data and len(response_data['choices']) > 0:\n        # 根据预期结构（例如，聊天补全）获取内容\n        if 'message' in response_data['choices'][0] and 'content' in response_data['choices'][0]['message']:\n            generated_content = response_data['choices'][0]['message']['content'].strip()\n            finish_reason = response_data['choices'][0].get('finish_reason', 'unknown') # 为安全起见使用.get\n\n            print(f\"生成内容: {generated_content}\")\n            print(f\"结束原因: {finish_reason}\")\n\n            # 如果可用，获取用量信息\n            if 'usage' in response_data:\n                usage = response_data['usage']\n                print(f\"Tokens用量 - Prompt: {usage.get('prompt_tokens', 'N/A')}, Completion: {usage.get('completion_tokens', 'N/A')}, 总计: {usage.get('total_tokens', 'N/A')}\")\n            else:\n                print(\"响应中未找到用量数据。\")\n\n        # 如果需要用于不同API类型，添加对'text'等其他结构的检查\n        elif 'text' in response_data['choices'][0]:\n             generated_content = response_data['choices'][0]['text'].strip()\n             finish_reason = response_data['choices'][0].get('finish_reason', 'unknown')\n             print(f\"生成内容: {generated_content}\")\n             print(f\"结束原因: {finish_reason}\")\n             # 获取用量信息...（与上面类似）\n        else:\n             print(\"在第一个选项中未找到'message'/'content'或'text'。\")\n\n    else:\n        print(\"错误：响应中未找到'choices'数组或其为空。\")\n        # 如果需要，记录完整的response_data用于调试\n        # print(f\"完整响应: {response_data}\")\n\nexcept json.JSONDecodeError:\n    print(\"错误：未能解码API的JSON响应。\")\n# except requests.exceptions.RequestException as e:\n#     print(f\"API请求出错: {e}\") # 处理请求错误\nexcept (KeyError, IndexError, TypeError) as e:\n    print(f\"解析API响应的预期结构时出错: {e}\")\n    # 同样可以在此处记录response_data，以便调试意外结构\n\n</code></pre>\n<h3>处理多个选项和结束原因</h3>\n<p>虽然大多数请求要求单个补全（<code>n=1</code>），但你可以请求多个选项。如果<code>len(response_data['choices']) > 1</code>，你需要遍历数组或根据一些标准（例如，索引0通常是默认或概率最高的）选择一个选项。</p>\n<p><code>finish_reason</code>对应用逻辑很重要。</p>\n<ul>\n<li>如果它是<code>length</code>，响应可能不完整。你可能需要通知用户、妥善截断，或者可能进行另一次API调用以继续生成（尽管这需要仔细的状态管理）。</li>\n<li>如果它是<code>content_filter</code>，你应妥善处理，例如显示一个通用消息而非被过滤的内容。</li>\n<li>如果它是<code>tool_calls</code>，你的应用需要解析请求的工具调用，执行相应的函数，并可能在后续的API调用中将结果发送回模型。</li>\n</ul>\n<p>处理API响应不仅仅是获取文本。它需要解析结构化数据，理解元数据（如结束原因和token用量），并谨慎处理潜在的差异或缺失字段。这种仔细的处理确保你的应用可以可靠地使用LLM生成的输出。</p>",
+  "slug": "processing-api-responses",
+  "updates": [],
+  "references": [
+    {
+      "id": 8831,
+      "title": "Gemini API reference: Text generation (REST)",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ai.google.dev/docs/reference/rest",
+      "doi": "",
+      "note": "展示Google生成式模型的响应结构，使读者能够比较不同LLM提供商的API响应格式。",
+      "order": 2,
+      "created_at": "2025-09-05T02:10:54.990523Z",
+      "updated_at": "2025-09-09T04:53:49.698491Z"
+    },
+    {
+      "id": 8832,
+      "title": "`json` - JSON encoder and decoder",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/json.html",
+      "doi": "",
+      "note": "Python中解析和序列化JSON数据的官方文档，对处理以JSON格式接收的LLM API响应至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T02:10:54.992826Z",
+      "updated_at": "2025-09-09T04:53:36.921762Z"
+    },
+    {
+      "id": 8833,
+      "title": "Completions API Reference",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHlw9NGQKkESsDAg979qvyHYIjFNiZCsXvG3ePIZYLrG94rp2smZ6jWbgGdUPrV2fty4R3dMaq9k0GU7CfpHb60agpyj1GIaPVvEP64ymqclLg3q4K8E4ckawegHYmdd917_sTVz_wSkhscpjaZKY-XN85lgCM=",
+      "doi": "",
+      "note": "描述OpenAI传统文本补全模型的响应结构，有助于理解本节中提供的初始JSON示例。",
+      "order": 4,
+      "created_at": "2025-09-05T02:10:54.994854Z",
+      "updated_at": "2025-09-09T04:53:43.543483Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 1733,
+  "title": "求导与控制流",
+  "meta_title": "JAX `grad` 和控制流",
+  "meta_description": "了解 `grad` 如何处理带有 Python 控制流的函数。",
+  "content": "<p><code>jax.grad</code> 通过追踪您的 Python 函数来构建一个计算图，然后对该图进行求导。当您的函数包含 Python 原生的控制流语句（如 <code>if</code>、<code>for</code> 和 <code>while</code>）时，这种追踪机制会带来重要的影响。</p>\n<p>核心原则如下：JAX 针对给定的一组输入形状和类型，只追踪函数一次。在此初始追踪过程中，通过控制流语句所采取的特定路径，是唯一被编译（如果使用 <code>jit</code>）并求导的路径。</p>\n<h3>条件语句 (<code>if</code>/<code>else</code>)</h3>\n<p>考虑一个带有简单 <code>if</code> 语句的函数：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\ndef conditional_func(x):\n  if x > 0:\n    return x * x\n  else:\n    return -x\n</code></pre>\n<p>让我们尝试获取它的梯度：</p>\n<pre><code class=\"language-python\">grad_conditional_func = jax.grad(conditional_func)\n\n# 当 x > 0 时会怎样？\nprint(grad_conditional_func(2.0))\n# 输出：4.0 (x*x 的正确导数是 2x，所以 2*2=4)\n\n# 当 x &#x3C;= 0 时会怎样？\ntry:\n    print(grad_conditional_func(-2.0))\nexcept Exception as e:\n    print(f\"Error: {e}\")\n# 输出：错误：遇到抽象追踪器值...\n# ...抽象追踪器值的真值不明确。\n</code></pre>\n<p>为什么会出现这个错误？当 JAX 使用 <code>2.0</code> 这样的正值追踪 <code>conditional_func</code> 时，条件 <code>x > 0</code> 评估为 <code>True</code>。JAX 追踪 <code>return x * x</code> 分支。生成的追踪计算只包含平方操作。当您随后使用 <code>-2.0</code> 调用 <em>梯度</em> 函数时，它尝试使用新输入执行这个追踪到的图（该图只知道平方操作），但原始条件 <code>x > 0</code> 现在涉及到抽象的 <em>追踪器</em> 值。Python 的 <code>if</code> 不知道如何处理这些抽象值，从而导致错误。追踪没有捕获到 <code>else</code> 分支。</p>\n<p><strong>解决方案：<code>jax.lax.cond</code></strong></p>\n<p>当条件语句依赖于 JAX 正在追踪的值（例如您想对其求导的函数参数 (parameter)）时，您需要使用 JAX 特定的控制流原语。对于 <code>if/else</code>，这就是 <code>jax.lax.cond</code>。</p>\n<p><code>jax.lax.cond</code> 接受四个参数：</p>\n<ol>\n<li><code>pred</code>：布尔条件（可以从追踪值中导出）。</li>\n<li><code>true_fun</code>：当 <code>pred</code> 为真时要执行的函数。</li>\n<li><code>false_fun</code>：当 <code>pred</code> 为假时要执行的函数。</li>\n<li><code>operand</code>：传递给 <code>true_fun</code> 或 <code>false_fun</code> 的输入操作数。</li>\n</ol>\n<p>让我们重写函数：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax import lax\n\ndef conditional_func_lax(x):\n  return lax.cond(\n      x > 0,                # 条件\n      lambda operand: operand * operand,  # 真分支函数\n      lambda operand: -operand,         # 假分支函数\n      x                     # 操作数\n  )\n\ngrad_conditional_func_lax = jax.grad(conditional_func_lax)\n\n# 现在它在两种情况下都有效：\nprint(f\"Gradient at x=2.0: {grad_conditional_func_lax(2.0)}\")\n# 输出：x=2.0 时的梯度：4.0\nprint(f\"Gradient at x=-2.0: {grad_conditional_func_lax(-2.0)}\")\n# 输出：x=-2.0 时的梯度：-1.0 ( -x 的正确导数是 -1)\n</code></pre>\n<p>通过使用 <code>lax.cond</code>，JAX 能够理解计算图包含了 <em>所有</em> 潜在的分支。然后，它就能无论输入值如何，都能正确地对函数求导，并根据执行时实际采取的分支，恰当地应用链式法则。</p>\n<h3>循环 (<code>for</code>/<code>while</code>)</h3>\n<p>当循环条件或迭代次数依赖于追踪值时，也会出现类似的问题。</p>\n<p><strong>静态循环：</strong> 如果 Python <code>for</code> 循环迭代固定次数，且在追踪期间已知，JAX 通常会 <em>展开</em> 该循环。</p>\n<pre><code class=\"language-python\">def fixed_loop(x, n=3): # n 是固定的\n  y = x\n  for _ in range(n):\n    y = y * 2\n  return y\n\ngrad_fixed_loop = jax.grad(fixed_loop)\nprint(f\"Gradient of fixed_loop at x=1.0: {grad_fixed_loop(1.0)}\")\n# 输出：fixed_loop 在 x=1.0 时的梯度：8.0\n# (函数为 y = x * 2^3 = 8x，导数为 8)\n</code></pre>\n<p>这之所以有效，是因为 <code>n=3</code> 是静态的。JAX 有效地追踪了 <code>y = x * 2; y = y * 2; y = y * 2</code>。然而，对于大量迭代的循环，展开会非常低效，导致计算图变得很大。</p>\n<p><strong>动态循环：</strong> 如果迭代次数或 <code>while</code> 循环的条件依赖于追踪值，标准的 Python 循环会像 <code>if</code> 语句示例那样失败。</p>\n<ul>\n<li>对于迭代次数动态（由追踪值确定）的 <code>for</code> 循环，使用 <code>jax.lax.fori_loop</code>。</li>\n<li>对于条件依赖于追踪值的 <code>while</code> 循环，使用 <code>jax.lax.while_loop</code>。</li>\n</ul>\n<p>这些函数要求您以特定的函数式方式组织循环逻辑，通常涉及一个在每次迭代中更新的循环 <code>carry</code> 状态。</p>\n<p><strong>使用 <code>jax.lax.fori_loop</code> 的示例</strong>：</p>\n<p>让我们实现 <code>y = x * 2**n</code>，其中 <code>n</code> 现在是动态输入。<code>fori_loop</code> 接受 <code>lower</code>、<code>upper</code>、<code>body_fun</code>、<code>init_val</code>。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax import lax\n\ndef dynamic_loop_lax(x, n):\n  # body_fun 接受 (迭代次数, 当前 carry)\n  # 这里我们只需要 carry (y)。\n  def loop_body(_, current_y):\n    return current_y * 2\n\n  # 从 0 到 n-1 循环，y 从 x 开始\n  final_y = lax.fori_loop(0, n, loop_body, x)\n  return final_y\n\ngrad_dynamic_loop_lax = jax.grad(dynamic_loop_lax, argnums=0) # 对 x 求导\n\n# 计算 x=1.0, n=3 次迭代时的梯度\nprint(f\"Gradient at x=1.0, n=3: {grad_dynamic_loop_lax(1.0, 3)}\")\n# 输出：x=1.0, n=3 时的梯度：8.0\n</code></pre>\n<p><code>jax.lax.while_loop</code> 具有类似的结构，接受 <code>cond_fun</code>、<code>body_fun</code> 和 <code>init_val</code>。</p>\n<h3>对梯度的影响</h3>\n<p>使用 JAX 的控制流原语（<code>lax.cond</code>、<code>lax.fori_loop</code>、<code>lax.while_loop</code>）可确保 JAX 能够追踪包含条件逻辑或循环行为本身的计算表示。这使得 <code>jax.grad</code> 能够通过对前向传播过程中给定输入所采取的实际路径进行求导来计算正确的梯度。</p>\n<p>如果您在控制流依赖于追踪值时不使用这些原语，将会出现以下情况：</p>\n<ol>\n<li>您在追踪或梯度计算期间很可能会遇到错误。</li>\n<li>即使它似乎对一个输入有效（因为追踪了特定的路径），梯度函数也可能对会采取不同路径的其他输入产生不正确的结果（例如零或 <code>NaN</code>），因为这些路径从未被追踪过。</li>\n</ol>\n<p>请记住，<code>jax.grad</code> 对其 <em>追踪到的</em> 函数进行求导。如果在追踪过程中，您的部分代码由于基于 <em>初始</em> 追踪输入的 Python 级别控制流而被跳过，那么梯度将无法通过这些被跳过的部分。使用 <code>jax.lax</code> 控制流构造是使这种动态行为对 JAX 的追踪和求导机制明确的方式。</p>",
+  "slug": "grad-control-flow",
+  "updates": [],
+  "references": [
+    {
+      "id": 5448,
+      "title": "JAX Control Flow Primitives",
+      "author": "The JAX Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/jax.lax.html#control-flow-primitives",
+      "doi": "",
+      "note": "官方文档，解释如何在 JAX 函数中有效使用 `jax.lax.cond`、`fori_loop` 和 `while_loop` 处理控制流。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:24.375490Z",
+      "updated_at": "2025-09-08T04:55:33.858583Z"
+    },
+    {
+      "id": 5449,
+      "title": "JAX Autodiff Cookbook",
+      "author": "The JAX Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/autodiff_cookbook.html",
+      "doi": "",
+      "note": "JAX 官方资源，详细介绍了自动微分，包括 `jax.grad` 的工作原理及其应用注意事项。",
+      "order": 2,
+      "created_at": "2025-09-05T01:10:24.433363Z",
+      "updated_at": "2025-09-08T04:55:29.384695Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

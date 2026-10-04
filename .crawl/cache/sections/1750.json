@@ -1,0 +1,45 @@
+{
+  "id": 1750,
+  "title": "Pandas 数据结构：Series",
+  "meta_title": "Pandas Series 解析",
+  "meta_description": "了解 Pandas 中一维带标签的数组结构：Series。",
+  "content": "<p>虽然像 NumPy 的 <code>ndarray</code> 这样强大的数组结构常用于数值计算，但许多数据不仅仅是原始数字；它们带有标签和结构。例如，随时间变化的股票价格、来自不同位置的传感器读数，或者调查受访者的人口统计信息。这就是 Pandas 发挥作用的地方，它用于一维数据的基本数据结构是 <code>Series</code>。</p>\n<p>可以将 <code>Series</code> 想象成电子表格中的单个列，或者 Python 列表或 NumPy 数组的更高级版本。它本质上是一个一维的类数组对象，包含一系列值和一组相关的数据标签数组，称为其 <strong>索引</strong>。</p>\n<h3>Series 的结构</h3>\n<p>Pandas <code>Series</code> 有两个主要组成部分：</p>\n<ol>\n<li><strong>值：</strong> 这是一系列数据点。在底层，这些值通常存储在 NumPy <code>ndarray</code> 中，这使得对其进行操作既快速又高效。Series 中的值通常具有相同的数据类型（如整数、浮点数、字符串或 Python 对象）。</li>\n<li><strong>索引：</strong> 这是一组与值对应的标签数组。与主要使用基于整数的索引（0, 1, 2, ...）的 NumPy 数组不同，Pandas Series 有一个<em>显式</em> 索引。此索引可以由整数组成，但也可以由字符串、日期或其他 Python 对象构成。如果您在创建 Series 时未指定索引，Pandas 会自动创建一个默认的整数索引，范围从 0 到 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">N-1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 是值的数量。</li>\n</ol>\n<p>这里是一个简单的可视化表示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ca4oej\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=record, style=filled, fillcolor=\"#e9ecef\"];\n    edge [arrowhead=none];\n\n    series [label=\"{ <idx> 索引 | <val> 值 }\"];\n\n    idx_labels [label=\"{ &#39;Mon&#39; | &#39;Tue&#39; | &#39;Wed&#39; | &#39;Thu&#39; | &#39;Fri&#39; }\", fillcolor=\"#a5d8ff\"];\n    val_data [label=\"{ 22.5 | 23.1 | 21.9 | 22.8 | 23.5 }\", fillcolor=\"#b2f2bb\"];\n\n    series:idx -> idx_labels [label=\"标签\"];\n    series:val -> val_data [label=\"数据\"];\n\n    subgraph cluster_index {\n        label = \"索引对象\";\n        style=dashed;\n        color=\"#adb5bd\";\n        idx_labels;\n    }\n\n    subgraph cluster_values {\n        label = \"NumPy 数组（通常）\";\n         style=dashed;\n        color=\"#adb5bd\";\n       val_data;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ca4oej\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Pandas Series 将值数组（通常是 NumPy 数组）与一个用于标记 (token)的显式索引对象结合起来。</p>\n</blockquote>\n<h3>带标签数据的重要性</h3>\n<p>显式索引是 Pandas Series 的一个重要特性。相比仅使用普通的 NumPy 数组，它提供了几个优势：</p>\n<ul>\n<li><strong>直观访问：</strong> 您可以使用有意义的标签（如日期或类别名称）访问数据点，而不是仅仅通过整数位置。例如，获取“周三”的温度通常比记住它在索引位置 2 更直观。</li>\n<li><strong>数据对齐 (alignment)：</strong> 在多个 Series 之间执行操作时，Pandas 会根据索引标签自动对齐数据。这可以防止在使用无序或不同顺序的数据时出现的许多常见错误。</li>\n<li><strong>灵活性：</strong> 相比简单的整数索引，索引允许更复杂的选择和处理逻辑。</li>\n</ul>\n<p>可以将 Series 看作是通过增加这一层有意义的标签来增强 NumPy 数组。它保留了 NumPy 对底层值的计算效率，同时提供了一种更灵活、内容更丰富的结构，适合数据分析。在下一节中，我们将介绍在 Python 中创建这些 <code>Series</code> 对象的实用方法。</p>",
+  "slug": "pandas-series",
+  "updates": [],
+  "references": [
+    {
+      "id": 1725,
+      "title": "Pandas Series (Data structures)",
+      "author": "The Pandas Development Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html#series",
+      "doi": "",
+      "note": "作为 Pandas `Series` 对象的官方且最新的技术参考，涵盖其组成部分和基本概念。",
+      "order": 1,
+      "created_at": "2025-09-04T16:24:27.274546Z",
+      "updated_at": "2025-09-08T05:05:58.488572Z"
+    },
+    {
+      "id": 1726,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and Jupyter",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "第3版。对 Pandas `Series` 数据结构及其实际应用提供了全面的说明，由 Pandas 的创建者撰写。",
+      "order": 2,
+      "created_at": "2025-09-04T16:24:27.277815Z",
+      "updated_at": "2025-09-08T05:06:04.429590Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

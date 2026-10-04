@@ -1,0 +1,45 @@
+{
+  "id": 6718,
+  "title": "优化复杂智能体操作的指令",
+  "meta_title": "智能体的精确指令设计",
+  "meta_description": "形成编写精细智能体操作的清晰无歧义指令的技术。",
+  "content": "<p>上一个部分详细说明了如何为一系列操作构建提示，但每个步骤的效用，特别是对于精细的智能体操作，取决于所给指令的准确性。智能体可能被分配多方面的操作，需要条件执行，或要求输出高度具体的格式。如果没有精心设计的指令，智能体的行为可能变得不可预测，导致错误或次优结果。因此，优化这类复杂智能体操作的指令是提示工程 (prompt engineering)的一个重要组成部分。</p>\n<h3>指令中何为“复杂智能体操作”？</h3>\n<p>当我们从指令的角度谈及“复杂智能体操作”时，指的是任何简单、高阶指令不足以可靠执行的操作。这可以包括：</p>\n<ul>\n<li><strong>多部分操作</strong>：隐式要求完成多个子步骤的操作。例如，“分析这份财务报告并标记 (token)异常”涉及阅读、理解、在上下文 (context)中定义“异常”、扫描，然后报告。</li>\n<li><strong>条件逻辑</strong>：智能体必须根据输入数据或其当前状态中的特定条件采取不同行动的操作。</li>\n<li><strong>精确格式输出</strong>：要求智能体以严格定义的格式生成响应或数据的任务，例如 JSON、XML 或特定的文本结构。</li>\n<li><strong>歧义消解</strong>：智能体需要解释可能模糊的请求或数据，并仍执行明确定义的行动的情况。</li>\n</ul>\n<p>对于这类操作，模糊的指令注定失败。由大型语言模型驱动的智能体将尝试解释模糊之处，但其解释可能与预期目标不符。</p>\n<h3>优化指令的策略</h3>\n<p>为了有效引导智能体完成复杂操作，您的指令必须清晰、详细且无歧义。以下是一些策略：</p>\n<h4>1. 最大化清晰度和具体性</h4>\n<p>一般性指令会导致一般且常不正确的结果。请明确说明智能体需要做什么。</p>\n<ul>\n<li><strong>避免模糊动词</strong>：不要使用“处理用户查询”，而应使用“将用户查询归类为以下之一：‘技术支持’、‘账单咨询’、‘功能请求’。”</li>\n<li><strong>定义术语</strong>：如果一个操作涉及可能被误解的领域特定术语或想法，请在提示中提供简短定义或上下文 (context)。例如，如果要求智能体“识别高优先级任务”，请定义在该特定流程中何为“高优先级”（例如，“高优先级任务是指那些标记 (token)为‘紧急’或在24小时内到期的任务”）。</li>\n<li><strong>尽可能量化 (quantization)</strong>：不要使用“简要概括文章”，而应使用“用3-5个要点概括文章，每个要点都是一个完整的句子。”</li>\n</ul>\n<h4>2. 明确分解操作</h4>\n<p>对于智能体需要在一个回合中执行的单一复杂操作，请在提示内部将指令分解为更小、更明确的子步骤。这有助于引导大型语言模型的推理 (inference)过程。</p>\n<p>考虑一个负责处理客户反馈的智能体：</p>\n<p><strong>优化程度较低的指令：</strong></p>\n<pre><code>Process the attached customer feedback email, identify the main issues, and suggest a solution.\n</code></pre>\n<p><strong>优化程度更高的指令（包含操作分解）：</strong></p>\n<pre><code>Your task is to analyze the provided customer feedback email. Follow these steps:\n1.  **Read and Understand**: Carefully read the entire email content.\n2.  **Identify Core Issues**: Extract up to three distinct problems or complaints mentioned by the customer. List them clearly.\n3.  **Sentiment Assessment**: For each identified issue, determine the customer's sentiment (e.g., frustrated, satisfied, confused).\n4.  **Propose Solutions**: For each issue, suggest one actionable step or solution.\n5.  **Output Format**: Present your findings as a JSON object with keys: \"identified_issues\" (an array of objects, each with \"issue_summary\", \"sentiment\", and \"proposed_solution\") and \"overall_email_sentiment\".\n</code></pre>\n<p>这种分解从工作流的角度看，对于智能体仍是一个单一的“操作”，但它引导智能体进行更结构化的思考过程。</p>\n<h4>3. 定义范围、限制和负面指令</h4>\n<p>明确概述智能体<em>应该</em>做什么与指定其<em>不应该</em>做什么同等重要。</p>\n<ul>\n<li><strong>正向限制</strong>：“仅使用所提供文档中的信息。”“摘要不得超过200字。”</li>\n<li><strong>负向限制（排除项）</strong>：“不要访问外部网站。”“从报告中排除任何个人身份信息（PII）。”“不要提出成本超过100美元的解决方案。”</li>\n<li><strong>预期格式</strong>：“输出必须是有效的 JSON 对象数组。”“日期应格式化为 YYYY-MM-DD。”</li>\n</ul>\n<p>提供这些边界有助于防止智能体偏离、虚构信息或生成无法使用的格式的输出。</p>\n<h4>4. 指定输入/输出结构</h4>\n<p>对于复杂操作，特别是那些与工具或其他智能体步骤交互的操作，请明确定义智能体应如何预期与此操作相关的输入数据，以及它必须如何构建其输出。</p>\n<p><strong>示例：</strong></p>\n<pre><code>Action: Perform_Trade\nInput: A JSON object with fields: \"ticker_symbol\" (string), \"quantity\" (integer), \"trade_type\" (enum: \"BUY\" or \"SELL\").\nOutput: A JSON object with fields: \"transaction_id\" (string), \"status\" (string: \"SUCCESS\" or \"FAILED\"), \"message\" (string, optional error details).\n\nInstruction for the LLM:\nYou need to execute a trade. I will provide the trade details as:\n{ \"ticker_symbol\": \"EXAMPLE\", \"quantity\": 10, \"trade_type\": \"BUY\" }\nYour response, after attempting the trade (e.g., by calling the relevant tool), should be formatted as:\n{ \"transaction_id\": \"...\", \"status\": \"...\", \"message\": \"...\" }\nIf the ticker_symbol is missing, set status to \"FAILED\" and message to \"Ticker symbol missing.\"\n</code></pre>\n<p>当智能体的输出成为另一个系统的输入时，这种详细程度是基本要求。</p>\n<h4>5. 采用面向行动的语言</h4>\n<p>您的指令应以清晰、明确的动作动词开头。这有助于大型语言模型专注于当前任务。\n示例：</p>\n<ul>\n<li><strong>提取</strong>提及的所有人名...</li>\n<li><strong>计算</strong>总和...</li>\n<li><strong>格式化</strong>响应为 markdown 表格...</li>\n<li><strong>比较</strong>产品 A 和产品 B 的规格...</li>\n<li><strong>生成</strong>一个 Python 脚本...</li>\n</ul>\n<p>优化指令的影响可以看作是从高度模糊、可能导致多样化且不理想的结果的状态，转变为清晰、从而实现特定期望结果的状态。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-we7l4r\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=0.2]; edge [fontname=\"Arial\"]; subgraph cluster_vague { label = \"模糊指令\"; style=filled; color=\"#e9ecef\"; bgcolor=\"#f8f9fa\"; v_instr [label=\"指令：\\n&#39;概括文档\\n并列出行动项。&#39;\", fillcolor=\"#ffc9c9\"]; v_agent [label=\"智能体\", fillcolor=\"#a5d8ff\"]; v_out1 [label=\"结果 1：\\n摘要过长，\\n遗漏行动项\", fillcolor=\"#ffa8a8\"]; v_out2 [label=\"结果 2：\\n摘要简短，\\n行动项不正确\", fillcolor=\"#ffa8a8\"]; v_out3 [label=\"结果 3：\\n仅关注行动项，摘要差\", fillcolor=\"#ffa8a8\"]; v_instr -> v_agent; v_agent -> v_out1 [label=\"解释 A\"]; v_agent -> v_out2 [label=\"解释 B\"]; v_agent -> v_out3 [label=\"解释 C\"]; } subgraph cluster_refined { label = \"优化指令\"; style=filled; color=\"#e9ecef\"; bgcolor=\"#f8f9fa\"; r_instr [label=\"指令：\\n&#39;1. 概括文档（最多 150 字）。\\n2. 将行动项提取为项目符号列表。\\n3. 对于每个行动，如果提及负责人，则指定负责人。&#39;\", fillcolor=\"#b2f2bb\"]; r_agent [label=\"智能体\", fillcolor=\"#a5d8ff\"]; r_out [label=\"期望结果：\\n简洁摘要（140 字），\\n准确的项目符号行动项\\n包含负责人。\", fillcolor=\"#8ce99a\"]; r_instr -> r_agent; r_agent -> r_out [label=\"清晰执行\"]; }}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-we7l4r\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>上图显示了模糊指令如何导致智能体产生多个可能不正确的结果，而优化指令则引导智能体实现单一的期望结果。</p>\n</blockquote>\n<p>通过投入精力优化复杂智能体操作的指令，您可以显著提高智能体工作流的可靠性和可预测性。这些精确指令减少了错误的发生可能性，最大程度减少了常见误解所需的大量错误处理逻辑，并使智能体的行为更易于调试和理解。这种清晰、可操作指令的构成也对智能体需要选择和使用工具，或在更大的计划中执行步骤时很重要，这些是我们将在后续章节中讨论的主题。</p>",
+  "slug": "refining-instructions-complex-actions",
+  "updates": [],
+  "references": [
+    {
+      "id": 18148,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 35 (NeurIPS 2022)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2201.11903",
+      "doi": "10.48550/arXiv.2201.11903",
+      "note": "这篇基础论文展示了提示大型语言模型（LLM）生成中间推理步骤（思维链）如何显著增强其执行复杂任务的能力，支持了显式行动分解的策略。",
+      "order": 3,
+      "created_at": "2025-09-06T12:17:47.550766Z",
+      "updated_at": "2025-09-11T08:21:09.284081Z"
+    },
+    {
+      "id": 18149,
+      "title": "A Survey on Large Language Model based Autonomous Agents",
+      "author": "Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2308.11432",
+      "doi": "10.48550/arXiv.2308.11432",
+      "note": "对基于LLM的自主智能体进行了广泛回顾，强调了明确指令在智能体的规划、记忆、工具集成和复杂任务执行中的关键作用。",
+      "order": 4,
+      "created_at": "2025-09-06T12:17:47.554398Z",
+      "updated_at": "2025-09-11T08:21:19.148610Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

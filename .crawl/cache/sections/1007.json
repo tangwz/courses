@@ -1,0 +1,61 @@
+{
+  "id": 1007,
+  "title": "取消暂存文件 (git reset HEAD <file>)",
+  "meta_title": "在 Git 中取消暂存文件 | git reset HEAD",
+  "meta_description": "学习如何使用 `git reset HEAD <file...>` 从暂存区移除文件。",
+  "content": "<p>Git 工作流程通常涉及在工作目录修改文件，然后使用 <code>git add</code> 将特定更改放入暂存区，为下一次提交做准备。但是，有时您可能将文件添加到暂存区后又改变主意。或许您不小心添加了它，或者这些更改还没完全准备好永久记录到项目历史中。</p>\n<p>Git 提供了一种“取消暂存”文件的方法，它可以有效地将文件从暂存区移除，同时不丢弃您在工作目录中对实际文件所做的更改。为此的命令是 <code>git reset HEAD &#x3C;file></code>。</p>\n<h3>理解 <code>git reset HEAD &#x3C;file></code></h3>\n<p>我们来分析这个命令：</p>\n<ul>\n<li><code>git reset</code>：这是一个多功能命令，用于撤销更改。它有不同的模式，但当与 <code>HEAD</code> 和文件路径一起使用时，它会专门影响暂存区。</li>\n<li><code>HEAD</code>：在 Git 中，<code>HEAD</code> 通常指向当前分支上最新的提交。可以把它看作代表着项目在仓库中最后一次保存的状态。</li>\n<li><code>&#x3C;file></code>：这是您想从暂存区移除的文件（或多个文件）的名称。</li>\n</ul>\n<p>当您运行 <code>git reset HEAD &#x3C;file></code> 时，您是在告诉 Git：“对于这个特定的文件，将其在<em>暂存区</em>的状态重置为与 <code>HEAD</code> 提交中存储的版本一致。”</p>\n<p>这里重要的一点是，此命令<strong>只更改暂存区（也称索引）</strong>。它<strong>不会</strong>更改工作目录中文件的内容。如果您在暂存 <code>&#x3C;file></code> 时对其进行了修改，取消暂存后这些修改仍然会保留；Git 只是将其从计划用于下次提交的更改列表中移除。</p>\n<h3>如何使用</h3>\n<p>基本语法是：</p>\n<pre><code class=\"language-bash\">git reset HEAD &#x3C;path/to/your/file>\n</code></pre>\n<p>您可以指定多个文件：</p>\n<pre><code class=\"language-bash\">git reset HEAD file1.txt path/to/another/file2.js\n</code></pre>\n<p>如果您想取消暂存所有当前已暂存的文件，可以省略文件路径：</p>\n<pre><code class=\"language-bash\">git reset HEAD\n</code></pre>\n<p>如果您使用 <code>git add .</code> 暂存了多个文件，然后意识到只想用其中一部分更改来创建更集中的提交，这会很有用。</p>\n<h3>示例情况</h3>\n<p>假设您正在处理一个项目。您修改了两个文件：<code>index.html</code> 和 <code>style.css</code>。</p>\n<ol>\n<li>\n<p>您决定将两者都暂存以待提交：</p>\n<pre><code class=\"language-bash\"># 检查状态 - 两者都已修改但未暂存\ngit status\n\n# 暂存这两个文件\ngit add index.html style.css\n\n# 再次检查状态 - 两者都已暂存\ngit status\n</code></pre>\n<p>您的 <code>git status</code> 输出现在会在“待提交的更改”下显示 <code>index.html</code> 和 <code>style.css</code>。</p>\n</li>\n<li>\n<p>您检查这些更改，并发现 <code>style.css</code> 中的修改是实验性的，不应包含在此次提交中。您想取消暂存它，但保留对文件所做的更改。</p>\n</li>\n<li>\n<p>对特定文件使用 <code>git reset HEAD</code>：</p>\n<pre><code class=\"language-bash\">git reset HEAD style.css\n</code></pre>\n</li>\n<li>\n<p>再次检查状态：</p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<p>现在，<code>git status</code> 将显示：</p>\n<ul>\n<li><code>index.html</code> 在“待提交的更改”下（它仍然已暂存）。</li>\n<li><code>style.css</code> 在“未暂存的更改”下（它已取消暂存，但 Git 识别出它仍与上次提交的版本不同）。</li>\n</ul>\n</li>\n</ol>\n<p>您的工作目录中的 <code>style.css</code> 文件保持在您上次编辑时的样子。您只是将其从暂存区移除了。您现在可以只提交 <code>index.html</code>，或者继续处理 <code>style.css</code> 并在它准备好后再次暂存。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-16q1au\" \n              data-graph-definition='digraph GitWorkflow {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  WD [label=\"工作目录\\n(index.html 已修改,\\nstyle.css 已修改)\"];\n  SA [label=\"暂存区 (索引)\"];\n  REPO [label=\"仓库\\n(HEAD 提交)\"];\n\n  subgraph cluster_add {\n    label = \"暂存文件\";\n    style=dashed;\n    color=\"#adb5bd\";\n    WD -> SA [label=\"  git add index.html style.css  \", color=\"#228be6\"];\n  }\n\n  subgraph cluster_reset {\n     label = \"取消暂存 style.css\";\n     style=dashed;\n     color=\"#adb5bd\";\n     node [shape=none, label=\"\"];\n     placeholder_reset; // Invisible node for edge positioning\n     SA -> placeholder_reset [label=\"  git reset HEAD style.css  \", color=\"#f76707\", dir=back];\n  }\n\n  // Result state description nodes\n  ResultSA [label=\"暂存区\\n(index.html 已暂存)\", shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fontsize=10, fillcolor=\"#e9ecef\"];\n  ResultWD [label=\"工作目录\\n(index.html 已修改,\\nstyle.css 已修改)\", shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fontsize=10, fillcolor=\"#e9ecef\"];\n\n// Position results after the action\n  { rank = same; SA; ResultSA; }\n  { rank = same; WD; placeholder_reset; ResultWD; }\n  placeholder_reset -> ResultWD [style=invis]; // Link reset action result to WD state\n  SA -> ResultSA [style=invis]; // Link reset action result to SA state\n\n  // Path to commit the staged file\n  ResultSA -> REPO [label=\"  git commit -m &#39;更新 index&#39;  \", color=\"#12b886\"];\n\n  // Ensure base repo node doesn&#39;t interfere with staging layout\n  ResultSA -> REPO [minlen=2];\n  REPO -> SA [style=invis]; // Prevent backward edge rendering\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-16q1au\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图示说明了此过程：更改从工作目录添加到暂存区。<code>git reset HEAD style.css</code> 将 <code>style.css</code> 从暂存区移出，使其在工作目录中保持已修改状态，而 <code>index.html</code> 仍保持暂存。随后的提交将只包含 <code>index.html</code>。</p>\n</blockquote>\n<p>在完善您的提交时，使用 <code>git reset HEAD &#x3C;file></code> 是一种常见操作。它让您可以精确控制项目历史中下一次快照包含的内容，使您能够撤销暂存步骤而不会丢失您的工作。</p>",
+  "slug": "git-reset-head",
+  "updates": [],
+  "references": [
+    {
+      "id": 263,
+      "title": "git-reset Documentation",
+      "author": "Git contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-reset",
+      "doi": "",
+      "note": "为 `git reset` 命令提供权威且全面的参考，详细介绍了其各种模式和选项，包括如何取消暂存文件。",
+      "order": 1,
+      "created_at": "2025-09-04T14:01:57.749922Z",
+      "updated_at": "2025-09-07T15:43:05.423327Z"
+    },
+    {
+      "id": 264,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified",
+      "doi": "",
+      "note": "这本免费在线书籍是学习 Git 概念（从基础到高级）的必备资源。该特定章节清楚地解释了 `git reset` 及其不同用途，包括从索引中取消暂存更改。",
+      "order": 2,
+      "created_at": "2025-09-04T14:01:57.766394Z",
+      "updated_at": "2025-09-07T15:43:06.887230Z"
+    },
+    {
+      "id": 265,
+      "title": "Git reset",
+      "author": "Atlassian",
+      "year": "2023",
+      "publisher": "Atlassian",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/undoing-changes/git-reset",
+      "doi": "",
+      "note": "一篇实用的教程，通过清晰的示例和图表解释了 `git reset` 命令，适合初学者学习管理暂存区。",
+      "order": 3,
+      "created_at": "2025-09-04T14:01:57.769861Z",
+      "updated_at": "2025-09-07T15:42:59.880361Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

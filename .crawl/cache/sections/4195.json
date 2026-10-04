@@ -1,0 +1,61 @@
+{
+  "id": 4195,
+  "title": "了解模型参数",
+  "meta_title": "了解大型语言模型参数",
+  "meta_description": "学习参数在神经网络和大型语言模型中的含义。",
+  "content": "<p>我们来思考一下大型语言模型处理和生成语言的原理。它们究竟是如何真正地<em>学会</em>这些的呢？答案在于一个被称为<strong>参数 (parameter)</strong>的东西。</p>\n<p>可以把大型语言模型想象成一个非常复杂的网络，它的连接方式大致受到了大脑的启发。这个网络由相互连接的“节点”或“神经元”层组成。当你训练一个大型语言模型时，你会向它输入海量的文本数据。训练过程会调整这些神经元之间连接的“强度”或“权重 (weight)”。这些可调整的连接强度就是<strong>参数</strong>。</p>\n<h3>什么是参数 (parameter)？</h3>\n<p>在机器学习 (machine learning)，特别是大型语言模型的背景下，参数是模型内部的变量，其数值在训练过程中从数据中习得。它们主要决定了模型在特定任务上的能力，例如理解语法、事实、推理 (inference)能力以及不同文本风格等。</p>\n<p>你可以将参数想象成模型内部数百万（甚至数十亿！）个微小的刻度盘。每个刻度盘的设置都会在训练过程中根据模型看到的例子进行调整。所有这些刻度盘的最终设置代表了模型所获得的“知识”。</p>\n<p>神经网络 (neural network)中常见的参数类型包括：</p>\n<ul>\n<li><strong>权重 (weight)：</strong> 它们代表两个神经元之间连接的强度。权重越大，一个神经元发出的信号对下一个神经元的影响就越强。</li>\n<li><strong>偏差：</strong> 这些是应用于神经元的额外数值，可以改变它们的输出，帮助模型更好地适应数据。可以将其视为对神经元活动的一种基线调整。</li>\n</ul>\n<p>对于大型语言模型而言，这些参数共同捕捉了其训练所用语言的模式、结构和细微差别。</p>\n<h3>为什么参数 (parameter)决定模型大小</h3>\n<p>这些可学习参数（权重 (weight)和偏差的总和）的总数量，是我们衡量大型语言模型“大小”的标准方式。为什么呢？</p>\n<ol>\n<li><strong>与复杂性直接关联：</strong> 通常来说，参数越多的模型，学习复杂模式和从训练数据中存储更多信息的能力就越强。它有更多的“刻度盘”可以调整，从而能更细致地表示语言。</li>\n<li><strong>对资源的影响：</strong> 参数数量直接影响所需的计算资源。每个参数都需要存储在内存中（我们稍后会讨论显存 (VRAM)），并在训练和使用（推理 (inference)）过程中进行计算。参数越多意味着需要更多的内存和更多的计算量。</li>\n</ol>\n<p>当你听说一个模型拥有“70亿参数”（通常写作7B）时，这意味着该模型拥有7,000,000,000个在训练期间习得的可调整权重和偏差。这个数字为我们提供了模型潜在能力的大致但有用的估计，并且也表明了其硬件需求。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1q492uk\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontcolor=\"#1c7ed6\", penwidth=0];\n    edge [color=\"#495057\"];\n\n    subgraph cluster_0 {\n        label = \"输入层\";\n        style=filled;\n        color=\"#e9ecef\";\n        rank=same;\n        I1 [label=\"输入 1\"];\n        I2 [label=\"输入 2\"];\n    }\n\n    subgraph cluster_1 {\n        label = \"隐藏层\";\n        style=filled;\n        color=\"#e9ecef\";\n        rank=same;\n        H1 [label=\"神经元\"];\n        H2 [label=\"神经元\"];\n    }\n\n    subgraph cluster_2 {\n        label = \"输出层\";\n        style=filled;\n        color=\"#e9ecef\";\n        rank=same;\n        O1 [label=\"输出\"];\n    }\n\n    I1 -> H1 [label=\" w11\", fontcolor=\"#f76707\"];\n    I1 -> H2 [label=\" w12\", fontcolor=\"#f76707\"];\n    I2 -> H1 [label=\" w21\", fontcolor=\"#f76707\"];\n    I2 -> H2 [label=\" w22\", fontcolor=\"#f76707\"];\n\n    H1 -> O1 [label=\" w31\", fontcolor=\"#f76707\"];\n    H2 -> O1 [label=\" w32\", fontcolor=\"#f76707\"];\n\n// 添加偏差节点（为简化起见未直接连接）\n    Bias1 [label=\"偏差 (b1)\", shape=plaintext, fontcolor=\"#7048e8\"];\n    Bias2 [label=\"偏差 (b2)\", shape=plaintext, fontcolor=\"#7048e8\"];\n    Bias3 [label=\"偏差 (b3)\", shape=plaintext, fontcolor=\"#7048e8\"];\n\n    // 用于定位偏差标签的隐形边（可选）\n    {rank=same; H1; Bias1}\n    {rank=same; H2; Bias2}\n    {rank=same; O1; Bias3}\n\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1q492uk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这是不同层中神经元（节点）之间连接（边）的一个高度简化视图。标签“w”表示权重（参数），表明每个连接的强度。偏差（也是参数）与隐藏层和输出层中的神经元相关联。所有“w”值和偏差的总和即为参数数量。</p>\n</blockquote>\n<p>理解参数很重要，因为这个数量是决定大型语言模型需要多少内存和计算能力的主要因素，我们将在接下来的章节中进一步查看。</p>",
+  "slug": "model-parameters",
+  "updates": [],
+  "references": [
+    {
+      "id": 7781,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本介绍深度学习概念的综合教材，涵盖神经网络的数学基础、参数、权重和偏置。",
+      "order": 1,
+      "created_at": "2025-09-05T01:47:23.393517Z",
+      "updated_at": "2025-09-09T13:04:16.442713Z"
+    },
+    {
+      "id": 7782,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 30 (NIPS 2017)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "这篇开创性论文介绍了Transformer架构，它是大多数现代大型语言模型的基础，并定义了它们的参数结构。",
+      "order": 2,
+      "created_at": "2025-09-05T01:47:23.399011Z",
+      "updated_at": "2025-09-09T13:04:30.339392Z"
+    },
+    {
+      "id": 7783,
+      "title": "Scaling Laws for Neural Language Models",
+      "author": "Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei",
+      "year": "2020",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2001.08361",
+      "volume": "",
+      "pages": "1-19",
+      "url": "https://arxiv.org/abs/2001.08361",
+      "doi": "10.48550/arXiv.2001.08361",
+      "note": "一篇研究模型性能如何随参数数量、数据集大小和计算资源扩展的论文，提供了LLM规模影响的见解。",
+      "order": 3,
+      "created_at": "2025-09-05T01:47:23.402158Z",
+      "updated_at": "2025-09-09T13:04:11.291799Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

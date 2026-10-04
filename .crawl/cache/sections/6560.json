@@ -1,0 +1,45 @@
+{
+  "id": 6560,
+  "title": "行动前思考",
+  "meta_title": "智能体规划：LLM智能体的基本思路",
+  "meta_description": "了解LLM智能体如何制定计划以达成目标的基本方法。",
+  "content": "<p>为了让LLM智能体能实现超出单一、直接回复的功能，它需要一种方法来弄清楚一系列行动。这种方法便是“先思后行”，也就是基础规划。智能体若具备规划能力，将不再仅仅对即时输入做出反应，而是能够制定一系列步骤以达成一个更复杂的目标。</p>\n<h3>LLM 作为“思考者”</h3>\n<p>这个规划过程的核心通常就是大型语言模型本身。你已经了解到LLM是智能体的认知引擎；在这里，它扮演着一个基本的规划者角色。给定一个目标（来自你的指令）和一套可用的工具，LLM可以判断：</p>\n<ol>\n<li>首先需要做什么？</li>\n<li>下一步需要哪些信息？</li>\n<li>如果适用，哪个工具适合某个特定步骤？</li>\n<li>这些步骤应该以什么顺序执行？</li>\n</ol>\n<p>这种“思考”在基本智能体中不一定涉及一个复杂的、独立的规划算法。通常，这是仔细提示的结果，这些提示促使LLM概述步骤或决定下一步行动。例如，你可能会指示LLM在选择行动之前“逐步思考”或“制定计划”。</p>\n<h3>从目标到可执行步骤</h3>\n<p>许多任务过于复杂，无法通过单一行动解决。想象一下，要求一个智能体“计划一次到附近城市的周末旅行”。一个简单的、一次性回复不会有太大帮助。相反，智能体需要将其分解。这个过程通常被称为<strong>任务分解</strong>。</p>\n<p>在LLM的指导下，智能体可能会将“计划一次周末旅行”的目标分解为更小、更易管理的子任务：</p>\n<ul>\n<li>找到附近有趣的城市。</li>\n<li>在指定日期检查这些城市的活动或景点。</li>\n<li>寻找住宿选择。</li>\n<li>建议交通方式。</li>\n<li>整理一份潜在的行程。</li>\n</ul>\n<p>每个子任务都可能涉及使用工具（如搜索引擎或地图服务）或LLM的进一步判断。形成这样一种序列的能力是智能体能力的一个基本方面。它将LLM从文本生成器转变为行动的协调者。</p>\n<p>以下图表展示智能体如何将一个高层目标分解为一系列更小、更易管理的任务。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-beo9bt\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", fontsize=10, bgcolor=\"transparent\"];\n    node [shape=box, style=\"filled\", fontname=\"sans-serif\", fontsize=10, color=\"#495057\"];\n    edge [fontname=\"sans-serif\", fontsize=9, color=\"#495057\"];\n\n    Goal [label=\"用户的总体目标:\\n&#39;计划我团队下周五的线上午餐会。\\n从“披萨店”或“寿司店”订餐。\\n预算：每人20美元，共5人。&#39;\", fillcolor=\"#a5d8ff\"];\n    PlanGeneration [label=\"智能体的初步思考 (规划):\\nLLM 将目标分解成步骤\", fillcolor=\"#ffec99\"];\n    Task1 [label=\"子任务 1:\\n检查“披萨店”的菜单和价格。\\n(使用网络搜索或API工具)\", fillcolor=\"#b2f2bb\"];\n    Task2 [label=\"子任务 2:\\n检查“寿司店”的菜单和价格。\\n(使用网络搜索或API工具)\", fillcolor=\"#b2f2bb\"];\n    Task3 [label=\"子任务 3:\\n计算每家店适合5人选择的总费用。\", fillcolor=\"#ffe066\"];\n    Task4 [label=\"子任务 4:\\n将选项与预算（总计100美元）进行比较。\\n选择可行选项。\", fillcolor=\"#ffe066\"];\n    Task5 [label=\"子任务 5:\\n向用户呈现可行的午餐选项\\n(例如，“选项 A：披萨店的2个大披萨，90美元。\\n选项 B：寿司店的什锦寿司，95美元”）。\", fillcolor=\"#ffd8a8\"];\n    Task6 [label=\"子任务 6:\\n等待用户选择并确认订单细节。\", fillcolor=\"#ffc9c9\"];\n\n    Goal -> PlanGeneration;\n    PlanGeneration -> Task1 [label=\"步骤 A\"];\n    PlanGeneration -> Task2 [label=\"步骤 B\"];\n    Task1 -> Task3 [label=\"信息用于\"];\n    Task2 -> Task3 [label=\"信息用于\"];\n    Task3 -> Task4;\n    Task4 -> Task5;\n    Task5 -> Task6;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-beo9bt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LLM判断用户的请求并概述一系列子任务，可能涉及不同的工具或检查，以达成总体目标。</p>\n</blockquote>\n<h3>简单规划：一个起点</h3>\n<p>我们这里讨论的规划通常相当直接。它可能涉及LLM生成它打算采取的带编号的行动列表，或根据当前情况在两三个可能的下一步之间做出决定。这与传统人工智能中复杂的、长期规划算法有所不同，但相较于非智能体LLM交互是一个很大的提升。</p>\n<p>例如，如果一个智能体被问到：“巨人队上一场比赛的比分是多少？他们下一场预定的比赛是什么时候？”LLM可能会内部决定：</p>\n<ol>\n<li>使用体育API工具查找最近一场巨人队比赛的比分。</li>\n<li>使用相同的工具（或另一个）查找他们下一场预定的比赛。</li>\n<li>将这些信息整合成一个连贯的答案。</li>\n</ol>\n<p>这种内部的“决策树”或序列是基本规划的一种形式。它确保智能体收集所有必要信息并按逻辑顺序执行行动。随着你对LLM智能体理解的增进，你会遇到更复杂的规划技术（例如第5章中讨论的思维链或ReAct）。目前，重要的一点是，智能体能够并且通常必须“思考”其行动的序列，以有效地完成任务。这种规划能力是更自主、更有用智能体行为的组成部分。</p>",
+  "slug": "thinking-before-acting",
+  "updates": [],
+  "references": [
+    {
+      "id": 18486,
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "author": "Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Ed Huai hsin Chi, F. Xia, Quoc Le, Denny Zhou",
+      "year": "2022",
+      "publisher": "",
+      "journal": "ArXiv",
+      "volume": "abs/2201.11903",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFBx4jq4VLYoY21QJl6O2g-29ONGo62ZtYamj9sUOXjEfdPcbNjV8_M7CdQaKanjV6ZF6UGsnnYF9pJbCMhi89pOLOFYQ6Rg_iDt_HKLEJ3fNcbWplEI4vGJ7s=",
+      "doi": "",
+      "note": "介绍思维链提示方法，鼓励大型语言模型生成中间推理步骤，提高其解决复杂任务的能力。",
+      "order": 1,
+      "created_at": "2025-09-06T12:26:06.632212Z",
+      "updated_at": "2026-02-04T11:33:28.451604Z"
+    },
+    {
+      "id": 18487,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "",
+      "note": "提出ReAct框架，使大型语言模型能够交错进行推理和行动，从而实现动态规划并与外部环境和工具交互。",
+      "order": 2,
+      "created_at": "2025-09-06T12:26:06.635859Z",
+      "updated_at": "2026-02-04T11:33:25.593092Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

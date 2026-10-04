@@ -1,0 +1,61 @@
+{
+  "id": 4381,
+  "title": "PEFT 的缘由",
+  "meta_title": "PEFT 的缘由",
+  "meta_description": "理解 PEFT 的必要性：降低微调成本、存储开销和减轻灾难性遗忘。",
+  "content": "<p>对大型语言模型（LLM）进行专业化处理的传统方法是完全微调 (fine-tuning)（FFT），即使用任务特定数据更新所有模型参数 (parameter)。尽管此方法有效，但它带来了巨大的运行难题，尤其是在模型规模持续增长至数千亿甚至数万亿参数时。这些难题构成了研究参数高效微调（PEFT）技术的主要原因。</p>\n<h3>完全微调 (fine-tuning)的负担</h3>\n<p>完全微调在多个方面带来了显著负担：</p>\n<ol>\n<li>\n<p><strong>计算开销：</strong> 更新大型 LLM 中的每个参数 (parameter)需要大量的计算资源。训练时需要计算所有权重 (weight)的梯度，这在反向传播 (backpropagation)过程中涉及大量的矩阵乘法。为数十亿参数存储和更新优化器状态（如 Adam 的动量）会进一步增加计算负荷。这直接导致高 GPU/TPU 使用率、漫长的训练时间和巨大的能耗。例如，微调像 GPT-3（1750 亿参数）这样的模型需要庞大的分布式训练基础设施。</p>\n</li>\n<li>\n<p><strong>内存需求：</strong> FFT 期间的内存占用通常是难以承受的。不仅是模型权重需要适应加速器内存（VRAM）；前向传播期间计算的激活值（梯度计算所需）、梯度本身以及优化器状态也都需要。对于大型模型，即使采用混合精度训练（例如 FP16 或 BF16），这些需求也容易超出商用 GPU 的容量，从而需要复杂的模型并行策略，这会进一步增加工程的复杂性。训练期间内存消耗的简化视图可能如下所示：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>内存</mtext><mo>≈</mo><mtext>模型参数</mtext><mo>+</mo><mtext>优化器状态</mtext><mo>+</mo><mtext>梯度</mtext><mo>+</mo><mtext>激活</mtext></mrow><annotation encoding=\"application/x-tex\">\\text{内存} \\approx \\text{模型参数} + \\text{优化器状态} + \\text{梯度} + \\text{激活}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">内存</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≈</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">模型参数</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">优化器状态</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">梯度</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">激活</span></span></span></span></span></span>\n<p>对于 AdamW 等优化器，仅优化器状态通常就需要模型参数两倍的内存（用于存储一阶和二阶动量）。</p>\n</li>\n<li>\n<p><strong>存储成本：</strong> 最直接的问题可能出现在为多个下游任务调整单个预训练 (pre-training) LLM 时。使用 FFT，每个任务特定模型都是原始 LLM 的完整副本，尽管权重略有修改。如果您需要为 10 个不同任务部署微调版本，则必须存储 10 个独立的数十亿参数模型实例。一个以 BF16 精度存储的 700 亿参数模型大约需要 140GB。管理 10 个这样的模型将需要 1.4TB 的存储空间，这是一个巨大的运行开销。</p>\n</li>\n</ol>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-bwewq5\" \n              data-plot-definition='{\"layout\":{\"title\":\"存储对比：完全微调 vs. PEFT (10 个任务)\",\"xaxis\":{\"title\":\"微调方法\"},\"yaxis\":{\"title\":\"估计存储空间 (GB)\",\"type\":\"log\"},\"barmode\":\"group\",\"legend\":{\"traceorder\":\"reversed\"},\"height\":400,\"width\":600,\"margin\":{\"t\":50,\"b\":80,\"l\":80,\"r\":30}},\"data\":[{\"type\":\"bar\",\"name\":\"任务特定参数\",\"x\":[\"完全微调\",\"PEFT\"],\"y\":[1400,1],\"marker\":{\"color\":\"#ff922b\"}},{\"type\":\"bar\",\"name\":\"基础模型\",\"x\":[\"完全微调\",\"PEFT\"],\"y\":[0,140],\"marker\":{\"color\":\"#339af0\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-bwewq5\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>估计 10 个任务特定版本的 700 亿参数模型（BF16 精度下约 140GB）所需的存储空间，对比完全微调与 PEFT（假设 PEFT 模块约占总参数的 0.1%，每个约 100MB）。注意 Y 轴的对数刻度突出显示了巨大的差异。完全微调需要存储 10 个完整模型（1400 GB），而 PEFT 需要存储一个基础模型加上 10 个小型模块（140 GB + 10 * 0.1 GB ≈ 141 GB）。</p>\n</blockquote>\n<ol start=\"4\">\n<li><strong>灾难性遗忘：</strong> 当预训练模型的所有参数在一个狭窄的任务特定数据集上更新时，模型可能会失去其在大量预训练阶段获得的部分通用知识和能力。这种现象被称为灾难性遗忘，它会降低模型在特定微调分布之外的任务上的性能。虽然在 FFT 期间存在减轻这种现象的方法，但这仍然是一个重要的顾虑。</li>\n</ol>\n<h3>PEFT 作为一种高效替代方案</h3>\n<p>参数 (parameter)高效微调 (fine-tuning)方法通过从根本上改变适应方式，直接解决了这些局限。PEFT 技术通常不修改所有参数，而是包括：</p>\n<ul>\n<li><strong>冻结预训练 (pre-training)权重 (weight)：</strong> 原始 LLM 绝大多数参数被冻结，在微调期间不进行更新。</li>\n<li><strong>定向更新：</strong> 只有少量参数被训练。这些参数可以是：\n<ul>\n<li>原始参数的一个小部分。</li>\n<li>添加到模型架构中的一小组<em>新</em>参数（例如，适配器层、提示嵌入 (embedding)）。</li>\n</ul>\n</li>\n</ul>\n<p>这种定向方法带来了几个令人信服的优点：</p>\n<ul>\n<li><strong>降低计算和内存开销：</strong> 由于梯度和优化器状态仅需要总参数的极小一部分（通常小于 1%），微调的计算成本和内存占用都大幅降低。这使得在要求较低的硬件（例如，单个 GPU）上微调大型模型成为可能，并显著缩短了训练时间。</li>\n<li><strong>最小存储开销：</strong> 核心预训练模型保持不变。对于每个新任务，只需要存储少量更新的或新增的参数。这使得存储问题从管理多个 TB 级别模型转变为管理一个基础模型加上众多 MB 级别的“增量”或适配器权重，如上图所示。</li>\n<li><strong>减轻灾难性遗忘：</strong> 通过冻结模型的大部分，PEFT 自然保留了预训练期间学习到的通用知识。调整侧重于通过可训练参数学习任务特定偏差，降低了覆盖基础能力的风险。</li>\n<li><strong>简化部署：</strong> 通过将单个基础模型加载到内存中，并根据传入请求动态加载或替换小的 PEFT 模块，可以实现为多个任务提供服务。与托管大量独立的超大模型相比，这极大地简化了模型管理和部署基础设施。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-b03zst\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fontname=\"sans-serif\"];\n\n    subgraph cluster_fft {\n        label = \"完全微调 (FFT)\";\n        bgcolor=\"#fff0f0\"; // 浅红色背景\n        node [fillcolor=\"#ffc9c9\"]; // 红色节点\n        FFT_Base [label=\"预训练 LLM\\n(所有参数可训练)\"];\n        FFT_Task1 [label=\"任务 1 模型\\n(完整副本)\"];\n        FFT_Task2 [label=\"任务 2 模型\\n(完整副本)\"];\n        FFT_TaskN [label=\"任务 N 模型\\n(完整副本)\"];\n        FFT_Base -> {FFT_Task1, FFT_Task2, FFT_TaskN} [label=\" 微调所有参数\", color=\"#f03e3e\"];\n        {rank=same; FFT_Task1; FFT_Task2; FFT_TaskN;}\n    }\n\n    subgraph cluster_peft {\n        label = \"参数高效微调 (PEFT)\";\n        bgcolor=\"#e7f5ff\"; // 浅蓝色背景\n        node [fillcolor=\"#a5d8ff\"]; // 蓝色节点\n        PEFT_Base [label=\"预训练 LLM\\n(大部分参数冻结)\", fillcolor=\"#74c0fc\"];\n        PEFT_Mod1 [label=\"任务 1\\nPEFT 模块\\n(小型，可训练)\"];\n        PEFT_Mod2 [label=\"任务 2\\nPEFT 模块\\n(小型，可训练)\"];\n        PEFT_ModN [label=\"任务 N\\nPEFT 模块\\n(小型，可训练)\"];\n        PEFT_Base -> {PEFT_Mod1, PEFT_Mod2, PEFT_ModN} [label=\" 微调小型模块\", color=\"#1c7ed6\"];\n        {rank=same; PEFT_Mod1; PEFT_Mod2; PEFT_ModN;}\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-b03zst\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>适应策略的对比。完全微调为每个任务创建完整、独立的模型副本。PEFT 则维护一个基础模型，并添加小的任务特定模块，从而显著减少存储和潜在的计算需求。</p>\n</blockquote>\n<p>PEFT 本质上提供了一种实用且高效的途径，用于为各种应用定制基础模型，同时避免了与完全微调相关的过高成本。接下来的部分将审视 Adapters、基于提示的方法、LoRA 和 QLoRA 等流行 PEFT 方法的具体机制，详细说明它们如何在保持下游任务高性能的同时实现这些效率。</p>",
+  "slug": "motivation-peft",
+  "updates": [],
+  "references": [
+    {
+      "id": 7675,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "本文介绍了低秩适配（LoRA），这是一种著名的PEFT技术。它详细阐述了添加小的、可训练的低秩矩阵如何显著减少微调参数的数量，从而解决了本节所述的计算、内存和存储挑战。",
+      "order": 1,
+      "created_at": "2025-09-05T01:45:48.648700Z",
+      "updated_at": "2025-09-10T07:37:13.805791Z"
+    },
+    {
+      "id": 7676,
+      "title": "Parameter-Efficient Transfer Learning for NLP",
+      "author": "Neil Houlsby, Andrei Giurgiu, Stanislaw Jastrzebski, Bruna Morrone, Quentin de Laroussilhe, Andrea Gesmundo, Mona Attariyan, Sylvain Gelly",
+      "year": "2019",
+      "publisher": "",
+      "journal": "International Conference on Machine Learning (ICML)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1902.00751",
+      "doi": "10.48550/arXiv.1902.00751",
+      "note": "这篇基础论文介绍了适配器模块，展示了在预训练模型中添加少量新参数，如何在大幅减少可训练参数的同时，达到与全量微调相当的性能。",
+      "order": 2,
+      "created_at": "2025-09-05T01:45:48.654702Z",
+      "updated_at": "2025-09-10T07:37:05.350345Z"
+    },
+    {
+      "id": 7678,
+      "title": "PEFT: Parameter-Efficient Fine-tuning of Foundation Models",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/peft/en/index",
+      "doi": "",
+      "note": "Hugging Face PEFT库的官方文档，提供了各种PEFT方法的实践见解和实现。这是理解所讨论的实际应用和优势的资源。",
+      "order": 4,
+      "created_at": "2025-09-05T01:45:48.663970Z",
+      "updated_at": "2025-09-10T07:37:05.650840Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,495 @@
+{
+  "id": 270,
+  "title": "微调小语言模型",
+  "meta_title": "小语言模型微调课程 | AI 培训",
+  "meta_description": "学习使用自定义数据和参数高效技术微调小语言模型，构建特定任务的 AI 应用。",
+  "description": "<p>小语言模型 (SLM) 是大型模型的高效替代方案，能够在本地或有限的硬件资源上运行，同时在特定任务中保持优异性能。本课程教授如何使用自定义数据微调 (fine-tuning)小语言模型。你将学习参数 (parameter)高效微调的机制、数据格式化处理以及模型评估方法。课程结束时，你将获得一个能够直接部署、针对特定任务定制的语言模型。</p>",
+  "short_description": "学习使用参数高效技术，通过自定义数据对小语言模型进行微调。",
+  "excerpt": "学习如何使用参数高效微调技术，针对特定任务训练并适配小语言模型。",
+  "prerequisites": "具备 Python 和 PyTorch 基础",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "参数高效微调",
+      "description": "应用 LoRA 和 QLoRA 技术，在严格的显存限制下训练模型。"
+    },
+    {
+      "topic": "数据集准备",
+      "description": "为指令微调对数据集进行格式化和分词处理。"
+    },
+    {
+      "topic": "模型评估",
+      "description": "衡量文本生成质量，并监测训练过程中的过拟合现象。"
+    },
+    {
+      "topic": "本地部署",
+      "description": "合并权重并使用 vLLM 运行定制化模型。"
+    }
+  ],
+  "duration": 12,
+  "slug": "fine-tuning-small-language-model",
+  "level": 2,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2026-03-17T13:34:16.187039Z",
+  "updated_at": "2026-10-01T22:17:13.736382Z",
+  "chapters": [
+    {
+      "id": 1501,
+      "title": "小语言模型原理",
+      "meta_title": "SLM 原理与微调设置",
+      "meta_description": "了解小语言模型的架构以及监督微调背后的运作机制。",
+      "number": 1,
+      "slug": "principles-of-small-language-models",
+      "content": "小语言模型 (SLM) 为拥有数千亿参数的庞大网络提供了另一种方案。它们可以在本地运行，并在严格的硬件限制下操作。在编写微调模型的代码之前，需要建立对这些架构运作方式以及监督学习如何更新其内部权重的基本认识。\n\n本章将讲解小语言模型的具体运行机制。我们首先会明确 SLM 的定义，并将微调与检索增强生成 (RAG) 等其他方式进行对比。\n\n你将分析监督学习的数学逻辑。以梯度下降中基本的权重更新规则为例，其表示为：\n\n$$w_{t+1} = w_t - \\alpha \\nabla L(w_t)$$\n\n这里，$w_t$ 代表模型在特定步骤的权重，$\\alpha$ 是学习率，$\\nabla L(w_t)$ 是损失函数的梯度。理解这些机制能让你弄清楚将自定义数据输入预训练网络时的实际变化。\n\n我们还将计算具体的硬件配置需求。你将学会如何预估加载和训练这些模型所需的显存 (VRAM)，以防出现显存不足的错误。最后，你将编写一个 Python 脚本，将预训练的 SLM 加载至内存并进行基础的文本生成。",
+      "sections": [
+        {
+          "id": 8497,
+          "title": "什么是小语言模型",
+          "meta_title": "什么是小语言模型",
+          "meta_description": "定义小语言模型，并了解它们与大型模型的区别。",
+          "slug": "what-is-a-small-language-model",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8498,
+          "title": "微调与检索增强生成",
+          "meta_title": "微调与 RAG 方法对比",
+          "meta_description": "对比直接微调模型与使用检索增强生成获取专门知识的差异。",
+          "slug": "fine-tuning-vs-rag",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8499,
+          "title": "有监督微调机制",
+          "meta_title": "有监督微调的机制",
+          "meta_description": "分析通过有监督学习更新权重的数学和结构机制。",
+          "slug": "supervised-fine-tuning-mechanics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8500,
+          "title": "硬件要求与显存限制",
+          "meta_title": "小语言模型训练的硬件约束",
+          "meta_description": "计算显存需求并了解训练小语言模型时的硬件限制。",
+          "slug": "hardware-requirements-memory-constraints",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8501,
+          "title": "动手实践：初始化预训练小语言模型 (SLM)",
+          "meta_title": "实践：初始化小语言模型",
+          "meta_description": "将预训练的小语言模型加载到内存中并执行基础推理。",
+          "slug": "hands-on-practical-initializing-slm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1502,
+      "title": "数据准备与格式化",
+      "meta_title": "为 SLM 微调格式化数据集",
+      "meta_description": "学习如何组织指令数据集、应用分词技术以及管理训练中的注意力掩码。",
+      "number": 2,
+      "slug": "data-preparation-and-formatting",
+      "content": "在上一章中，我们确定了小语言模型和有监督微调的技术机制。现在，我们将重点转向数据。机器学习模型的效果与其在训练过程中处理的信息息息相关。对于微调而言，这意味着要将原始文本转换为模型架构要求的结构化格式。\n\n原始文本无法直接输入神经网络，必须将其分解为数值表示。以标准训练数据集为例，模型需要通过分词（tokenization）将文本转换为整数数组。在进行批处理时，长度不一的序列必须进行标准化处理。我们对较短的序列进行填充（padding），使其与批次中最长的序列对齐，从而保持矩阵维度一致。如果最大序列长度为 $L$，给定输入长度为 $N$，则在数组中添加 $L - N$ 个填充标记。\n\n本章将讲解如何为有监督微调准备自定义数据。我们将说明指令数据集的格式规则，将文本整理成结构化的指令与回答对。你将使用分词器、实施填充策略并生成注意力掩码（attention masks），以便模型在计算损失时能够自动忽略填充标记。最后，你将构建一个完整的数据流水线，用于读取自定义数据集并输出特定模型架构所需的精确张量形状。",
+      "sections": [
+        {
+          "id": 8502,
+          "title": "构建指令数据集",
+          "meta_title": "构建指令数据集",
+          "meta_description": "将原始文本组织成适合模型使用的标准指令-回答对。",
+          "slug": "structuring-instruction-datasets",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8503,
+          "title": "分词与填充策略",
+          "meta_title": "SLM 分词与填充",
+          "meta_description": "将分词器应用于文本数据，并实施填充策略以实现统一的批次大小。",
+          "slug": "tokenization-and-padding-strategies",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8504,
+          "title": "处理注意力掩码",
+          "meta_title": "配置注意力掩码",
+          "meta_description": "生成并应用注意力掩码，使模型在损失计算期间忽略填充标记。",
+          "slug": "handling-attention-masks",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8505,
+          "title": "针对特定架构格式化提示词",
+          "meta_title": "小语言模型的提示词格式化",
+          "meta_description": "调整数据集格式，以匹配不同模型架构所需的特定提示词模板。",
+          "slug": "formatting-prompts-specific-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8506,
+          "title": "实践：构建自定义数据流水线",
+          "meta_title": "实践：构建数据流水线",
+          "meta_description": "创建一个功能齐全的数据流水线，用于读取、格式化和分词自定义数据集。",
+          "slug": "practice-building-custom-dataset-pipeline",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1503,
+      "title": "环境与库配置",
+      "meta_title": "搭建小语言模型训练环境",
+      "meta_description": "配置 PyTorch、CUDA 和 Hugging Face 相关工具，为本地模型训练做好准备。",
+      "number": 3,
+      "slug": "environment-and-library-setup",
+      "content": "在训练小语言模型之前，需要建立稳定的软件环境。训练算法高度依赖特定的库来管理硬件资源、处理文本并有效更新神经网络权重。即便小语言模型比超大规模模型占用的显存更少，但配置不当仍会迅速导致内存不足报错或运行速度极慢。\n\n本章将指导你配置本地模型训练所需的工具。首先，我们要安装支持 CUDA 的 PyTorch，从而开启 GPU 硬件加速。这些框架屏蔽了神经网络底层繁杂的数学运算。你无需手动编写像 $Y = WX + b$ 这样的矩阵乘法，也不必为损失计算编写如下自定义函数：\n\n$$L = -\\sum y_i \\log(\\hat{y}_i)$$\n\n而是直接调用成熟的库，由它们在后台原生处理这些计算。\n\n随后，我们将了解 Hugging Face 体系。你将通过 Transformers 库加载基座模型，使用 Datasets 库处理训练数据。我们还会引入 Accelerate 库，以便高效管理内存并分配计算任务。最后，你将编写一个核心 Python 脚本，整合上述组件，并为正式的微调流程做好系统准备。",
+      "sections": [
+        {
+          "id": 8507,
+          "title": "配置 PyTorch 和 CUDA",
+          "meta_title": "配置 PyTorch 和 CUDA",
+          "meta_description": "安装并验证支持 CUDA 的 PyTorch，以实现训练过程中的 GPU 加速。",
+          "slug": "configuring-pytorch-and-cuda",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8508,
+          "title": "Hugging Face Transformers 库简介",
+          "meta_title": "Hugging Face Transformers 库",
+          "meta_description": "回顾用于加载和训练模型的 Hugging Face Transformers 库的核心组件。",
+          "slug": "intro-hugging-face-transformers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8509,
+          "title": "使用 Hugging Face Datasets 管理数据集",
+          "meta_title": "使用 Hugging Face Datasets",
+          "meta_description": "利用 datasets 库高效地加载、缓存和处理训练数据。",
+          "slug": "managing-datasets-hugging-face",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8510,
+          "title": "使用 Accelerate 优化显存",
+          "meta_title": "使用 Accelerate 进行显存优化",
+          "meta_description": "通过 Accelerate 库实现工作负载分配并高效管理显存使用。",
+          "slug": "optimizing-memory-with-accelerate",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8511,
+          "title": "动手实践：配置训练脚本",
+          "meta_title": "实践：配置训练脚本",
+          "meta_description": "编写一个集成 PyTorch、Transformers 和 Accelerate 的基础 Python 脚本。",
+          "slug": "hands-on-practical-configuring-training-script",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1504,
+      "title": "参数高效微调 (PEFT)",
+      "meta_title": "实现 PEFT 和 LoRA",
+      "meta_description": "应用 LoRA 和 QLoRA 等参数高效微调技术，在有限的显存下训练模型。",
+      "number": 4,
+      "slug": "parameter-efficient-fine-tuning-peft",
+      "content": "在训练过程中更新神经网络的所有权重需要消耗大量计算资源。以运行标准监督式微调的典型硬件配置为例。优化器状态、梯度和模型参数会迅速耗尽可用的 GPU 显存。即使是小型语言模型，这一过程也经常超过单张消费级显卡的显存限制。\n\n参数高效微调 (PEFT) 解决了这些硬件限制。PEFT 不再修改每个参数，而是冻结基础模型，并在特定层中注入少量可训练权重。这减少了显存占用，同时保留了让模型学习新指令的能力。\n\n实现这一目标的一种常用方法是低秩自适应 (LoRA)。通过使用矩阵分解，LoRA 使用两个较小的矩阵来近似权重更新。如果原始权重矩阵是 $W$，则更新表示为矩阵 $A$ 和 $B$ 的乘积。更新后的权重使用以下等式计算：\n\n$$W_{new} = W + AB$$\n\n这种数学方法大幅减少了训练期间需要更新的参数总数。\n\n在本章中，你将学习如何实施这些技术，在严格的内存限制下训练模型。你将了解 LoRA 的数学原理以及它是如何减少可训练参数的。你还将使用量化 LoRA (QLoRA) 以 4 位精度加载基础模型，在不降低性能的情况下进一步减少显存使用。\n\n完成本模块后，你将学会如何配置目标模块、调整秩参数，并编写将完整的 PEFT 配置应用于基础语言模型所需的 Python 代码。",
+      "sections": [
+        {
+          "id": 8512,
+          "title": "理解全量微调的局限性",
+          "meta_title": "全量微调的局限性",
+          "meta_description": "分析更新所有模型权重所带来的计算成本和内存瓶颈。",
+          "slug": "understanding-full-fine-tuning-limitations",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8513,
+          "title": "低秩自适应 (LoRA) 原理",
+          "meta_title": "LoRA 的原理",
+          "meta_description": "学习低秩自适应的数学原理以及它如何减少可训练参数的数量。",
+          "slug": "low-rank-adaptation-lora-principles",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8514,
+          "title": "量化 LoRA (QLoRA) 与 4 位训练",
+          "meta_title": "QLoRA 与 4 位训练",
+          "meta_description": "使用量化技术以 4 位精度加载基础模型，同时训练 LoRA 适配器。",
+          "slug": "quantized-lora-qlora-4-bit-training",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8515,
+          "title": "配置目标模块与秩",
+          "meta_title": "配置 LoRA 参数",
+          "meta_description": "选择特定的 Transformer 块进行适配，并调节秩参数以获得最佳性能。",
+          "slug": "configuring-target-modules-and-rank",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8516,
+          "title": "动手实践：实现 LoRA 配置",
+          "meta_title": "实践：实现 LoRA",
+          "meta_description": "将 PEFT 配置应用于基础 SLM，为参数高效训练做好准备。",
+          "slug": "hands-on-practical-implementing-lora",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1505,
+      "title": "训练过程",
+      "meta_title": "执行 SLM 训练循环",
+      "meta_description": "设置训练超参数、管理状态并执行语言模型的微调循环。",
+      "number": 5,
+      "slug": "the-training-process",
+      "content": "数据格式已校对，环境已配置，参数高效适配器也已初始化，微调的各项准备工作已经就绪。接下来要运行训练循环，让模型从指令数据集中学习。这一过程需要在硬件算力限制与确保模型高效收敛之间取得平衡。\n\n在这一部分，你将定义决定优化运行方式的训练参数。你将配置批次大小和累积步数，以控制内存使用。接着，你将设置学习率和调度器。设置合适的学习率调度方案可以确保权重更新随训练推进而逐渐减小。一种标准方法是应用衰减公式来使学习过程随时间趋于稳定：\n\n$$ \\alpha_{t} = \\alpha_{initial} \\cdot \\beta^{t} $$\n\n其中，$\\alpha_{t}$ 是特定步数的学习率，$t$ 代表当前训练步数，$\\beta$ 是衰减因子。\n\n你还将实现检查点机制，用以保存中间模型状态。定期保存进度可以防止因硬件故障或进程中断导致的数据丢失。除了状态管理，你还将追踪验证指标和训练损失。通过监控这些数值，你可以察觉模型何时停止学习，或者何时开始死记硬背训练数据而失去了泛化能力。最后，你将整合这些模块，在部分数据上执行完整的训练循环，生成一套可供评估的微调权重。",
+      "sections": [
+        {
+          "id": 8517,
+          "title": "定义训练参数与超参数",
+          "meta_title": "定义训练超参数",
+          "meta_description": "设置批次大小、累积步数和轮次以控制训练循环。",
+          "slug": "defining-training-arguments-hyperparameters",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8518,
+          "title": "学习率与调度器",
+          "meta_title": "学习率与调度器",
+          "meta_description": "配置学习率策略和衰减调度，以确保模型稳定收敛。",
+          "slug": "learning-rates-and-schedulers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8519,
+          "title": "检查点与状态管理",
+          "meta_title": "检查点模型状态",
+          "meta_description": "定期保存模型检查点，以防止数据丢失并支持恢复训练。",
+          "slug": "checkpointing-and-state-management",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8520,
+          "title": "监控损失与训练指标",
+          "meta_title": "监控训练指标",
+          "meta_description": "使用日志工具跟踪训练损失和验证指标，实时评估模型学习情况。",
+          "slug": "monitoring-loss-and-training-metrics",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8521,
+          "title": "实践：执行训练循环",
+          "meta_title": "实践：执行训练循环",
+          "meta_description": "在数据集子集上运行完整的微调过程并监控训练日志。",
+          "slug": "practice-executing-the-training-loop",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1506,
+      "title": "模型评估与基准测试",
+      "meta_title": "微调语言模型评估",
+      "meta_description": "评测生成文本的质量，应用定量指标，并检测过拟合现象。",
+      "number": 6,
+      "slug": "model-evaluation-and-benchmarking",
+      "content": "你已经顺利完成了训练循环并生成了更新后的模型权重。接下来的任务是确定你的轻量级语言模型是否能正确执行预定任务。训练过程中损失值的下降表明模型正在拟合数据，但这并不保证生成的文本在实际应用中是准确、连贯或有用的。\n\n在本章中，你将通过定性观察和定量测量来评估微调后的模型。首先，你将检查文本生成质量，观察模型对标准指令提示词的响应情况。随后，你将计算标准的自然语言处理指标，为模型表现进行评分。例如，你将计算困惑度（Perplexity）。如果 $N$ 代表序列中的标记数量，困惑度将通过以下公式衡量模型预测该样本的能力：\n\n$$PP(W) = \\exp \\left( -\\frac{1}{N} \\sum_{i=1}^{N} \\log P(w_i | w_{<i}) \\right)$$\n\n你还将追踪 ROUGE 等指标得分，将生成的输出与参考文本进行对比。我们将测试提示词的泛化能力，确保模型在面对不熟悉的表述时不会失效。通过直接对比微调输出与基础模型，你将学习如何识别过拟合和灾难性遗忘的迹象。最后，你将编写一个自动化评估脚本来处理预留数据集。这为你提供了一套可重复的方法，在进入最终部署阶段前为模型建立性能基准。",
+      "sections": [
+        {
+          "id": 8522,
+          "title": "评估文本生成质量",
+          "meta_title": "评估生成质量",
+          "meta_description": "对模型输出进行定性检查，以确定其对预期任务的执行情况。",
+          "slug": "evaluating-text-generation-quality",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8523,
+          "title": "NLP 任务的定量指标",
+          "meta_title": "定量 NLP 指标",
+          "meta_description": "计算困惑度和 ROUGE 等自动化指标，以此对模型性能进行基准测试。",
+          "slug": "quantitative-metrics-for-nlp-tasks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8524,
+          "title": "测试提示词泛化能力",
+          "meta_title": "测试提示词泛化能力",
+          "meta_description": "评估微调后的模型如何处理训练期间未见过的表述和指令。",
+          "slug": "testing-prompt-generalization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8525,
+          "title": "识别生成过程中的过拟合",
+          "meta_title": "识别过拟合",
+          "meta_description": "通过将输出与基础模型进行对比，检测灾难性遗忘或过拟合的迹象。",
+          "slug": "identifying-overfitting-in-generation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8526,
+          "title": "动手实践：运行评估脚本",
+          "meta_title": "实践：运行评估脚本",
+          "meta_description": "构建自动化评估脚本，针对预留数据集测试模型。",
+          "slug": "hands-on-practical-running-evaluation-scripts",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1507,
+      "title": "模型合并与部署",
+      "meta_title": "合并与部署微调后的小型语言模型",
+      "meta_description": "将 LoRA 权重与基础模型合并，并使用现代推理框架部署最终模型。",
+      "number": 7,
+      "slug": "model-merging-and-deployment",
+      "content": "到目前为止，您已经完成对参数高效适配器的训练与评估。微调过程产出了一组 LoRA 权重，这些权重充当原始模型的修改项。为了在生产环境中高效运行模型，需要将这些更新后的权重与基础架构结合起来。\n\n本章介绍将模型从训练产物转变为部署应用所需的具体步骤。首先，您将把训练好的 LoRA 适配器融合到基础模型层中。对于基础权重矩阵 $W$ 和低秩适配器矩阵 $A$ 与 $B$，合并后的权重矩阵计算如下：\n\n$$W' = W + AB$$\n\n此操作使模型能够独立运行，无需在推理时动态应用适配器层，从而消除了额外的计算开销。\n\n合并权重后，您会将最终模型导出为 Safetensors 格式。这种格式提供了一种安全且快速的机制，可将张量直接加载到内存中。随后，您将配置 vLLM 来运行模型，以实现高吞吐量的本地推理。最后，您将编写一个 RESTful API 来封装该模型服务，以便外部应用程序可以通过编程方式发送文本生成请求。在本节结束时，您将拥有一套部署在本地服务器上、能够处理即时查询且功能完备的特定任务语言模型。",
+      "sections": [
+        {
+          "id": 8527,
+          "title": "将 LoRA 适配器与基础模型合并",
+          "meta_title": "合并 LoRA 适配器",
+          "meta_description": "将训练好的 LoRA 权重合并回基础模型层，以便独立运行。",
+          "slug": "merging-lora-adapters-with-base-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8528,
+          "title": "将模型导出为 Safetensors 格式",
+          "meta_title": "导出为 Safetensors 格式",
+          "meta_description": "将合并后的模型权重保存为安全且高效的 Safetensors 格式。",
+          "slug": "exporting-models-to-safetensors",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8529,
+          "title": "使用 vLLM 部署 SLM",
+          "meta_title": "使用 vLLM 部署模型",
+          "meta_description": "配置 vLLM 以托管微调后的模型，实现高吞吐量的本地推理。",
+          "slug": "serving-slms-with-vllm",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8530,
+          "title": "API 集成策略",
+          "meta_title": "API 集成策略",
+          "meta_description": "将服务模型封装在 RESTful API 中，以便与外部应用程序通信。",
+          "slug": "api-integration-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8531,
+          "title": "实践：在本地部署自定义模型",
+          "meta_title": "实践：本地模型部署",
+          "meta_description": "将最终微调后的模型部署到本地服务器，并通过 API 提交推理请求。",
+          "slug": "practice-deploying-custom-model-locally",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

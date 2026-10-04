@@ -1,0 +1,541 @@
+{
+  "id": 204,
+  "title": "自动编码器与特征学习入门",
+  "meta_title": "自动编码器与特征学习简介",
+  "meta_description": "了解自动编码器、用于无监督学习的神经网络以及特征学习。理解数据压缩和重构。",
+  "description": "<p>本课程介绍自动编码器，这是一种用于无监督学习 (supervised learning) (unsupervised learning)的人工神经网络 (neural network)，及其在特征学习中的应用。您将学习自动编码器的基本结构，它们如何压缩和重构数据，以及它们在降维和数据表示中的作用。本课程结合实际案例讲解核心知识点，助您从零开始建立理解。</p>",
+  "short_description": "理解自动编码器如何学习数据表示，以实现降维和特征获取等任务。",
+  "excerpt": "学习自动编码器基础知识，以及它们如何从数据中自动学习特征。理解编码、解码和降维。",
+  "prerequisites": "Python基础知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "自动编码器基本原理",
+      "description": "理解自动编码器的基本结构和用途。"
+    },
+    {
+      "topic": "编码与解码",
+      "description": "解释自动编码器中数据压缩（编码）和重构（解码）的步骤。"
+    },
+    {
+      "topic": "特征学习",
+      "description": "描述自动编码器如何用于从数据中学习有意义的表示（特征）。"
+    },
+    {
+      "topic": "降维",
+      "description": "掌握自动编码器如何执行降维。"
+    },
+    {
+      "topic": "基本实现",
+      "description": "使用常用机器学习库实现一个简单的自动编码器。"
+    }
+  ],
+  "duration": 14,
+  "slug": "introduction-autoencoders-feature-learning",
+  "level": 1,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-06-05T17:10:16.127729Z",
+  "updated_at": "2026-10-02T09:07:05.254868Z",
+  "chapters": [
+    {
+      "id": 1146,
+      "title": "理解自动编码器",
+      "meta_title": "什么是自动编码器？基本知识讲解",
+      "meta_description": "学习自动编码器的基本原理、其组成部分（编码器、解码器、瓶颈）以及它们在无监督学习中的作用。",
+      "number": 1,
+      "slug": "understanding-autoencoders",
+      "content": "自动编码器是一类主要用于无监督学习的人工神经网络。它们的主要作用是学习输入数据的压缩表示，通常称为“编码”，然后尽可能准确地从这些编码重建原始输入。此过程使其能找到数据中潜在的结构。\r\n\r\n本章为理解自动编码器奠定基本认识。我们首先会将自动编码器置于无监督学习的背景下，并简要提及神经网络的基础知识，后者是它们的构成部分。您将学习自动编码器背后的核心思想：学习重建数据。接着我们会将其架构分解为编码器、瓶颈（或称潜在空间）和解码器。我们还将讨论学习有意义的数据表示为何重要，用一个简单的类比说明其核心机制，并指明自动编码器最初解决的问题类型。本章结束时，您将清楚地掌握什么是自动编码器以及它们为何是机器学习中一个有用的工具。",
+      "sections": [
+        {
+          "id": 6390,
+          "title": "无监督学习简介",
+          "meta_title": "无监督学习基础",
+          "meta_description": "了解无监督学习，其中模型在未标注数据中找出模式。适合AI初学者的核心内容。",
+          "slug": "intro-unsupervised-learning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6392,
+          "title": "神经网络简介",
+          "meta_title": "神经网络：速览",
+          "meta_description": "自编码器的基础：简要介绍神经网络。了解其层和连接。",
+          "slug": "neural-networks-overview",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6394,
+          "title": "核心思想：学习数据重建",
+          "meta_title": "自编码器：学习重建",
+          "meta_description": "理解自编码器的主要目标：学习如何在压缩后准确地重建输入数据。",
+          "slug": "autoencoder-reconstruction-idea",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6396,
+          "title": "编码器、瓶颈和解码器：主要组成部分",
+          "meta_title": "自编码器组成：编码器、解码器",
+          "meta_description": "了解自编码器的主要组成部分：编码器、瓶颈（或潜在空间）和解码器。",
+          "slug": "autoencoder-main-parts",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6398,
+          "title": "学习数据表示的用途",
+          "meta_title": "为什么学习数据表示？",
+          "meta_description": "了解学习有效数据表示对于特征学习和降维等任务的重要性。",
+          "slug": "purpose-data-representations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6400,
+          "title": "自动编码器类比",
+          "meta_title": "自动编码器类比解析",
+          "meta_description": "一个简单的类比，帮助理解自动编码器如何通过压缩和解压缩信息来工作。",
+          "slug": "autoencoder-analogy",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6402,
+          "title": "自编码器处理的初步问题",
+          "meta_title": "自编码器处理的问题",
+          "meta_description": "了解自编码器能够发挥作用的问题类型概览，例如数据去噪和异常检测。",
+          "slug": "autoencoder-problem-types",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1148,
+      "title": "自动编码器的构成：编码器与解码器",
+      "meta_title": "自动编码器结构：编码器与解码器",
+      "meta_description": "详细阐述自动编码器中的编码器和解码器、它们如何压缩/重建数据以及典型的激活函数。",
+      "number": 2,
+      "slug": "autoencoder-anatomy-encoder-decoder",
+      "content": "在介绍了自动编码器及其目标之后，本章将侧重于它们的结构构成。我们将把这种架构拆解成两个主要部分：编码器和解码器。您将看到编码器如何处理输入数据以生成压缩的低维概括表示，以及解码器如何使用此概括表示尝试重建原始输入。\r\n\r\n具体来说，我们将介绍：\r\n*   编码器的作用：降低数据维度，以及涉及的典型层。\r\n*   瓶颈层（或潜在空间）：它作为存储压缩数据表示的层的功能，通常表示为 $z$。\r\n*   解码器的作用：从 $z$ 重建数据，以及它与编码器通常对称的结构。\r\n*   激活函数，例如用于隐藏层的 $ReLU$ 和用于输出层的 $Sigmoid$，以及它们的具体职能。\r\n*   数据的完整路径，从输入 $X$ 经过编码器到 $z$，再经过解码器到重建输出 $X'$。\r\n\r\n通过理解这些核心架构组成，您将能更好地明白自动编码器如何学习有用的数据表示并完成诸如降维等任务。",
+      "sections": [
+        {
+          "id": 6403,
+          "title": "编码器：数据压缩",
+          "meta_title": "自编码器编码器：数据压缩",
+          "meta_description": "了解自编码器中的编码器部分如何将输入数据压缩成低维表示。",
+          "slug": "encoder-compressing-data",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6404,
+          "title": "输入层的结构",
+          "meta_title": "自编码器输入层结构",
+          "meta_description": "了解自编码器中输入层的作用和结构，它接收初始数据。",
+          "slug": "input-layer-structure",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6405,
+          "title": "编码器隐藏层与数据压缩",
+          "meta_title": "编码器隐藏层与压缩",
+          "meta_description": "了解编码器内部的隐藏层如何逐步降低数据的维度。",
+          "slug": "encoder-hidden-layers-compression",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6406,
+          "title": "瓶颈：紧凑表示",
+          "meta_title": "自编码器瓶颈层",
+          "meta_description": "了解瓶颈层（潜在空间），它是数据最压缩表示的所在。",
+          "slug": "bottleneck-compact-representation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6407,
+          "title": "编码器中常用的激活函数",
+          "meta_title": "编码器激活函数 (ReLU)",
+          "meta_description": "了解编码器层中常用的激活函数（如ReLU）及其作用。",
+          "slug": "encoder-activation-functions",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6408,
+          "title": "解码器：数据重建",
+          "meta_title": "自动编码器解码器：数据重建",
+          "meta_description": "了解自动编码器中的解码器如何将原始数据从其压缩形式重建。",
+          "slug": "decoder-reconstructing-data",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6409,
+          "title": "解码器隐藏层与数据解压",
+          "meta_title": "解码器隐藏层与解压",
+          "meta_description": "了解解码器中的隐藏层如何逐步扩展数据，使其恢复到原始维度。",
+          "slug": "decoder-hidden-layers-decompression",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6410,
+          "title": "输出层的结构",
+          "meta_title": "自动编码器输出层结构",
+          "meta_description": "了解输出层的作用和结构，它负责生成重建数据。",
+          "slug": "output-layer-structure",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6411,
+          "title": "解码器中常用的激活函数",
+          "meta_title": "解码器激活函数 (Sigmoid)",
+          "meta_description": "了解解码器输出层中常用的激活函数，如 Sigmoid，特别是针对归一化数据。",
+          "slug": "decoder-activation-functions",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6412,
+          "title": "输入与输出的匹配",
+          "meta_title": "自编码器：输入与输出",
+          "meta_description": "了解自编码器中输入数据与重建输出之间的关系。",
+          "slug": "matching-input-output",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1149,
+      "title": "自动编码器如何学习",
+      "meta_title": "自动编码器训练：损失与优化",
+      "meta_description": "了解自动编码器如何训练，内容包括损失函数、优化、前向与反向传播要点。",
+      "number": 3,
+      "slug": "how-autoencoders-learn",
+      "content": "前面章节介绍了自动编码器及其主要组成部分。现在，我们审视这些网络如何从数据中学习。主要目标是最小化重建误差，即原始输入与自动编码器输出之间的差异。\r\n\r\n本章将说明：\r\n*   **训练目的**: 自动编码器如何致力于精确重建输入。\r\n*   **损失函数**: 用于衡量重建误差的指标，例如均方误差 ($MSE$) 和二元交叉熵 ($BCE$)。\r\n*   **优化**: 像梯度下降这样的基本过程，用于调整自动编码器内部设置以提高性能。\r\n*   **数据流**: 理解前向传播（从输入到输出）和反向传播（误差调整）的概览。\r\n*   **训练周期**: 诸如周期（epochs）和批次（batches）等组织学习过程的要点。\r\n\r\n我们还将简要介绍过拟合和欠拟合。到本章结束时，您将了解准备自动编码器进行训练所涉及的步骤。",
+      "sections": [
+        {
+          "id": 6413,
+          "title": "训练目标：减少重建误差",
+          "meta_title": "自编码器训练：减少误差",
+          "meta_description": "了解训练自编码器的主要目标：最小化输入与重建输出之间的差异。",
+          "slug": "training-objective-reconstruction-error",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6414,
+          "title": "自编码器的损失函数 (MSE, BCE)",
+          "meta_title": "自编码器损失函数：MSE，BCE",
+          "meta_description": "了解自编码器中常用的损失函数，如均方误差 (MSE) 和二元交叉熵 (BCE)。",
+          "slug": "autoencoder-loss-functions",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6415,
+          "title": "学习过程：优化基础",
+          "meta_title": "自动编码器优化基础",
+          "meta_description": "获得对帮助自动编码器学习的优化算法（例如，梯度下降）的基本理解。",
+          "slug": "learning-process-optimization-basics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6416,
+          "title": "数据流：前向传播说明",
+          "meta_title": "自编码器中的前向传播",
+          "meta_description": "了解数据在前向传播步骤中如何通过自编码器从输入流向输出。",
+          "slug": "forward-propagation-explained",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6417,
+          "title": "从错误中学习：反向传播（宏观视角）",
+          "meta_title": "自编码器中的反向传播",
+          "meta_description": "对反向传播的宏观解释，该过程是自编码器根据误差调整权重所用的。",
+          "slug": "backpropagation-high-level",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6418,
+          "title": "训练周期：迭代次数与批次",
+          "meta_title": "自编码器训练：迭代次数与批次",
+          "meta_description": "理解迭代次数和批次，这些是在自编码器训练过程中遍历数据的核心方法。",
+          "slug": "training-epochs-batches",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6419,
+          "title": "过拟合与欠拟合初识",
+          "meta_title": "过拟合与欠拟合简介",
+          "meta_description": "简要介绍训练自编码器时过拟合与欠拟合的原理。",
+          "slug": "overfitting-underfitting-intro",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6420,
+          "title": "构建自编码器的准备工作",
+          "meta_title": "自编码器构建准备",
+          "meta_description": "在您开始构建第一个自编码器模型前的步骤与注意事项。",
+          "slug": "preparing-build-autoencoder",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1150,
+      "title": "自编码器与特征学习",
+      "meta_title": "自编码器的特征学习",
+      "meta_description": "了解自编码器如何进行特征学习和降维，从数据中提取有意义的表示形式。",
+      "number": 4,
+      "slug": "autoencoders-learning-features",
+      "content": "在确定了自编码器的架构及其训练方法后，我们现在将重点放在一项主要应用上：它们如何从数据中学习。将输入数据压缩到瓶颈层形成一个更小、更密集的表示，然后对其进行重建，这个过程迫使网络识别并保存输入数据中最显著的特征。\r\n\r\n本章将考察这种能力。我们将考察自编码器如何作为特征学习工具，自动从原始数据中识别并提取有用属性，而无需针对这些特定特征进行显式编程。你将理解瓶颈层中的数据如何被视为一组学习到的特征。我们还将介绍这如何直接实现降维，这是一种通过减少变量数量来简化数据集的方法，同时力求保留主要信息。讨论内容将包括对这些自动学习到的特征与传统手动特征工程所得特征的比较，以及观察或显示自编码器所学特征的方式。",
+      "sections": [
+        {
+          "id": 6421,
+          "title": "数据集中特征的界定",
+          "meta_title": "数据特征是什么？",
+          "meta_description": "了解数据集中特征的含义以及它们在机器学习中的重要性。",
+          "slug": "defining-features-datasets",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6422,
+          "title": "比较人工与学习的特征方法",
+          "meta_title": "人工特征与学习特征的对比",
+          "meta_description": "比较传统的人工特征工程与自编码器的自动化特征学习方法。",
+          "slug": "manual-vs-learned-features",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6423,
+          "title": "自编码器如何识别数据内在特征",
+          "meta_title": "自编码器如何学习特征",
+          "meta_description": "了解自编码器如何自动识别并学习数据中的有用特征。",
+          "slug": "autoencoders-identify-features",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6424,
+          "title": "瓶颈层作为特征提取器",
+          "meta_title": "瓶颈作为特征提取器",
+          "meta_description": "了解瓶颈层中的压缩表示如何充当学习到的特征向量。",
+          "slug": "bottleneck-feature-extractor",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6425,
+          "title": "使用自编码器降维",
+          "meta_title": "自编码器进行降维",
+          "meta_description": "了解自编码器如何高效用于降维，简化数据并保持关键信息。",
+          "slug": "dimensionality-reduction-autoencoders",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6426,
+          "title": "学习到的表示的简单可视化",
+          "meta_title": "可视化学习到的特征",
+          "meta_description": "了解可视化自编码器瓶颈层学习到的特征或表示的简单方法。",
+          "slug": "visualizing-learned-representations",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6427,
+          "title": "有效数据表示的作用",
+          "meta_title": "有效表示为何重要",
+          "meta_description": "理解学习良好数据表示对后续机器学习任务的益处。",
+          "slug": "importance-effective-representations",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1151,
+      "title": "构建一个基础自动编码器",
+      "meta_title": "构建您的第一个自动编码器（Keras）",
+      "meta_description": "一份实用指南，介绍如何使用Python、TensorFlow和Keras构建和训练一个简单的自动编码器以实现数据重建。",
+      "number": 5,
+      "slug": "building-basic-autoencoder",
+      "content": "之前的章节详细介绍了自动编码器的核心原理，涵盖了其架构和学习机制。本章将从这些原理转向实际应用。在此，我们将提供一份分步指南，指导您构建您的第一个基础自动编码器。\r\n\r\n您将学会：\r\n*   搭建适合深度学习任务的Python环境。\r\n*   使用PyTorch和Keras来定义和构建神经网络模型。\r\n*   加载、理解和预处理一个常见数据集（例如MNIST），用于训练自动编码器。\r\n*   构建简单自动编码器的编码器和解码器层。\r\n*   配置训练过程，包括选择优化器和损失函数，例如均方误差（MSE）。MSE衡量原始输入$x$和重建输出$\\hat{x}$之间的平均平方差，通常表示为 $$L(x, \\hat{x}) = \\frac{1}{N} \\sum_{i=1}^{N} (x_i - \\hat{x}_i)^2$$\r\n*   训练自动编码器，然后评估其重建数据的能力。\r\n*   可视化原始输入及其重建版本以评估性能。\r\n\r\n通过学习本章，您将获得实现自动编码器和观察其数据重建能力的直接经验。这项实际练习将巩固您对这些网络如何运作的理解。",
+      "sections": [
+        {
+          "id": 6428,
+          "title": "深度学习的 Python 环境配置",
+          "meta_title": "深度学习的 Python 配置",
+          "meta_description": "为带有自编码器的深度学习项目配置 Python 环境（Anaconda、Jupyter）的指南。",
+          "slug": "python-env-setup-deep-learning",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6429,
+          "title": "PyTorch和Keras入门",
+          "meta_title": "PyTorch与Keras简介",
+          "meta_description": "介绍如何使用TensorFlow及其Keras API来构建神经网络模型，如自编码器。",
+          "slug": "getting-started-pytorch-keras",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6430,
+          "title": "加载并理解一个基础数据集",
+          "meta_title": "加载并理解数据集 (MNIST)",
+          "meta_description": "学习如何加载和查看适合您第一个自编码器的简单数据集（例如MNIST）。",
+          "slug": "loading-basic-dataset",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6431,
+          "title": "自动编码器的数据预处理",
+          "meta_title": "自动编码器的数据预处理",
+          "meta_description": "用于有效训练自动编码器的重要数据预处理步骤，例如标准化和重塑。",
+          "slug": "data-preprocessing-autoencoders",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6432,
+          "title": "构建一个简单的自编码器模型",
+          "meta_title": "构建简单自编码器（Keras）",
+          "meta_description": "关于如何使用Keras定义基本自编码器模型架构的分步说明。",
+          "slug": "constructing-simple-autoencoder",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6433,
+          "title": "配置模型以进行训练",
+          "meta_title": "配置自编码器训练（Keras）",
+          "meta_description": "了解如何通过选择优化器和损失函数来编译 Keras 自编码器模型。",
+          "slug": "configuring-model-training",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6434,
+          "title": "执行训练过程",
+          "meta_title": "训练你的自编码器 (Keras fit)",
+          "meta_description": "如何使用Keras的'fit'方法训练你的自编码器模型并监控其进展。",
+          "slug": "executing-training-process",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6435,
+          "title": "评估重建质量",
+          "meta_title": "评估自动编码器重建",
+          "meta_description": "评估训练好的自动编码器重建输入数据效果的方法，检查质量。",
+          "slug": "assessing-reconstruction-quality",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6436,
+          "title": "可视化重建输出：动手实践",
+          "meta_title": "可视化自编码器重建",
+          "meta_description": "动手实践：可视化原始输入及其自编码器重建结果。",
+          "slug": "visualizing-reconstructed-outputs-practical",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6437,
+          "title": "检查编码数据：实践",
+          "meta_title": "检查编码表示",
+          "meta_description": "实践检查自编码器瓶颈层生成的压缩数据（编码表示）。",
+          "slug": "examining-encoded-data-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

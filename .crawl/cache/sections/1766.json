@@ -1,0 +1,61 @@
+{
+  "id": 1766,
+  "title": "应用转换：map()",
+  "meta_title": "使用 tf.data.Dataset.map() 进行数据预处理",
+  "meta_description": "使用 map 转换对数据集中的每个元素应用预处理函数。",
+  "content": "<p><code>tf.data.Dataset</code> 对象是 TensorFlow 中数据输入管道的基础，可以从张量、NumPy 数组或 TFRecord 等文件等多种来源创建。获得此类数据集后，通常下一步是对数据进行预处理。这可能包括对数值特征进行归一化 (normalization)、调整图像大小、解码字节字符串，或者应用其他自定义逻辑来准备数据以供模型使用。为了实现这些预处理任务，<code>tf.data</code> API 提供了 <code>map()</code> 转换。</p>\n<p><code>map(map_func, num_parallel_calls=None)</code> 方法将给定函数 <code>map_func</code> 应用于数据集的每个元素，返回一个包含转换后元素的新数据集。这类似于标准 Python 中的 <code>map</code> 函数或 Pandas 等库中的操作，但其设计目的是在 TensorFlow 体系中高效运行。</p>\n<h3>基本使用</h3>\n<p>我们从一个简单示例开始。假设我们有一个数值数据集，并且我们希望通过对每个元素求平方来对其进行归一化 (normalization)。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport numpy as np\n\n# 从 NumPy 数组创建数据集\nnumeric_dataset = tf.data.Dataset.from_tensor_slices(np.arange(1, 6, dtype=np.float32))\n\n# 定义一个简单的映射函数（可以是 lambda 或常规函数）\ndef square_element(x):\n  return x * x\n\n# 应用 map 转换\nsquared_dataset = numeric_dataset.map(square_element)\n\n# 遍历转换后的数据集以查看结果\nprint(\"Original Dataset:\")\nfor element in numeric_dataset:\n  print(element.numpy())\n\nprint(\"\\nSquared Dataset:\")\nfor element in squared_dataset:\n  print(element.numpy())\n</code></pre>\n<p>Output:</p>\n<pre><code>Original Dataset:\n1.0\n2.0\n3.0\n4.0\n5.0\n\nSquared Dataset:\n1.0\n4.0\n9.0\n16.0\n25.0\n</code></pre>\n<p>传递给 <code>map()</code> 的函数接收一个参数 (parameter)，该参数表示数据集中的一个元素（它可能是一个张量，或一个张量元组/字典，具体取决于数据集的构建方式）。它应该返回转换后的元素。TensorFlow 会自动追踪此函数以构建图，从而实现高效执行。</p>\n<h3>应用 TensorFlow 操作</h3>\n<p>为了性能，应尽可能在映射函数内部使用 TensorFlow 操作 (<code>tf.*</code>)。这使得 TensorFlow 能够将预处理步骤直接集成到计算图中，可能会在 GPU 或 TPU 等加速器上运行它们，并避免 Python 和 TensorFlow 运行时之间代价高昂的数据传输。</p>\n<p>考虑解码和调整存储为字节字符串的图像大小（这在从 TFRecord 文件读取时是一个常见情况）：</p>\n<pre><code class=\"language-python\"># 假设我们有一个数据集，其中每个元素都是一个包含 JPEG 编码图像数据的标量字符串张量\n# （这里我们进行模拟）\n# 在实际情况中，这可能来自 tf.data.TFRecordDataset\njpeg_strings = [\n    tf.random.uniform(shape=(), minval=0, maxval=255, dtype=tf.int32), # 模拟一些字节\n    tf.random.uniform(shape=(), minval=0, maxval=255, dtype=tf.int32)\n]\n# 真实的图像字符串会更长且有结构。\n# 我们使用虚拟字符串进行演示。\ndummy_image_dataset = tf.data.Dataset.from_tensor_slices([\"dummy_jpeg1\", \"dummy_jpeg2\"])\n\ndef parse_and_resize_image(jpeg_string):\n  # 假设 tf.io.decode_jpeg 适用于这些虚拟数据。\n  # 实际上，您会有真实的 JPEG 字节。\n  # image = tf.io.decode_jpeg(jpeg_string, channels=3)\n\n  # 模拟解码到随机张量形状\n  image = tf.random.uniform(shape=(200, 200, 3), maxval=256, dtype=tf.int32)\n  image = tf.cast(image, tf.float32) # 转换为 float 类型以便处理\n\n  # 调整图像大小\n  image = tf.image.resize(image, [128, 128])\n\n  # 归一化像素值（示例）\n  image = image / 255.0\n  return image\n\n# 使用 map 应用预处理函数\nprocessed_image_dataset = dummy_image_dataset.map(parse_and_resize_image)\n\n# 检查第一个元素的形状\nfor img in processed_image_dataset.take(1):\n    print(\"Processed image shape:\", img.shape)\n    # print(\"Sample pixel value:\", img.numpy()[0,0,0]) # 值将在 0 到 1 之间\n</code></pre>\n<p>Output (shape will be consistent, value will vary):</p>\n<pre><code>处理后的图像形状: (128, 128, 3)\n</code></pre>\n<p>在这里，<code>tf.image.decode_jpeg</code>、<code>tf.image.resize</code> 和标准算术运算都是 TensorFlow 操作，确保高效的基于图的执行。</p>\n<h3>并行化转换</h3>\n<p>预处理有时计算量很大，特别是对于复杂操作或高分辨率图像等大数据元素。如果不同元素的预处理步骤是独立的，您可以并行化 <code>map</code> 转换以加快速度。</p>\n<p><code>num_parallel_calls</code> 参数 (parameter)控制同时处理的元素数量。将其设置为 <code>tf.data.AUTOTUNE</code> 允许 TensorFlow 在运行时根据可用的 CPU 资源动态调整并行级别，这通常是推荐的方法。</p>\n<pre><code class=\"language-python\"># 使用并行调用应用图像处理函数\nprocessed_image_dataset_parallel = dummy_image_dataset.map(\n    parse_and_resize_image,\n    num_parallel_calls=tf.data.AUTOTUNE\n)\n\n# 迭代会产生相同的结果，但可能更快\n# for img in processed_image_dataset_parallel.take(1):\n#     print(\"Processed image shape (parallel):\", img.shape)\n</code></pre>\n<p>使用 <code>tf.data.AUTOTUNE</code> 让 <code>tf.data</code> 运行时找到合适的并行级别，平衡吞吐量 (throughput)与资源使用，而无需手动调整。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ag83dz\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    subgraph cluster_0 {\n        label = \"map(func, num_parallel_calls=AUTOTUNE)\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        node [shape=box, style=filled, fillcolor=\"#ced4da\", fontname=\"Helvetica\"];\n        edge [fontname=\"Helvetica\"];\n\n        Input [label=\"元素 1\"];\n        P1 [label=\"func(元素 1)\", shape=ellipse, fillcolor=\"#74c0fc\"];\n        Output1 [label=\"转换后 1\"];\n        Input -> P1; P1 -> Output1;\n\n        Input2 [label=\"元素 2\"];\n        P2 [label=\"func(元素 2)\", shape=ellipse, fillcolor=\"#74c0fc\"];\n        Output2 [label=\"转换后 2\"];\n        Input2 -> P2; P2 -> Output2;\n\n        InputN [label=\"元素 N\"];\n        PN [label=\"func(元素 N)\", shape=ellipse, fillcolor=\"#74c0fc\"];\n        OutputN [label=\"转换后 N\"];\n        InputN -> PN; PN -> OutputN;\n\n         {rank=same; P1 P2 PN} # 对齐处理节点\n         {rank=same; Input Input2 InputN} # 对齐输入节点\n         {rank=same; Output1 Output2 OutputN} # 对齐输出节点\n\n         label=\"并行处理\";\n         fontsize=10;\n         fontcolor=\"#495057\";\n\n    }\n    RawDataset [label=\"原始\\n数据集\", shape=cylinder, fillcolor=\"#f8f9fa\"];\n    TransformedDataset [label=\"转换后\\n数据集\", shape=cylinder, fillcolor=\"#f8f9fa\"];\n\n    RawDataset -> Input [style=invis]; # 用于布局帮助的不可见边\n    RawDataset -> Input2 [style=invis];\n    RawDataset -> InputN [style=invis];\n\n    Output1 -> TransformedDataset [style=invis];\n    Output2 -> TransformedDataset [style=invis];\n    OutputN -> TransformedDataset [style=invis];\n\n    RawDataset -> cluster_0 [lhead=cluster_0, minlen=2, style=dashed, color=\"#868e96\"];\n    cluster_0 -> TransformedDataset [ltail=cluster_0, minlen=2, style=dashed, color=\"#868e96\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ag83dz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图显示了 <code>map</code> 如何通过 <code>num_parallel_calls</code> 参数使用提供的函数并行处理多个数据集元素。</p>\n</blockquote>\n<h3>使用 <code>tf.py_function</code> 处理 Python 逻辑</h3>\n<p>尽管 TensorFlow 操作是首选，但有时您需要在映射函数中使用任意 Python 代码，例如，调用没有 TensorFlow 等效项的库（比如某些音频处理或复杂字符串操作库）。在这种情况下，您可以使用 <code>tf.py_function</code> 包装您的 Python 函数。</p>\n<p><code>tf.py_function</code> 允许您将非 TensorFlow Python 代码嵌入 (embedding)到 TensorFlow 图中。但是，请注意以下影响：</p>\n<ol>\n<li><strong>性能：</strong> 由于在 TensorFlow 运行时和 Python 解释器之间切换，它会引入额外开销。它会破坏图的序列化（您无法轻松保存一个严重依赖 <code>py_function</code> 的模型图）。并行性可能会受到 Python 全局解释器锁 (GIL) 的限制。</li>\n<li><strong>序列化：</strong> 使用 <code>tf.py_function</code> 的模型可能无法轻松导出到没有 Python 解释器的环境中（例如某些配置下的 TensorFlow Lite 或 TensorFlow Serving）。</li>\n</ol>\n<p>仅在必要时谨慎使用 <code>tf.py_function</code>。</p>\n<pre><code class=\"language-python\">import cv2 # 示例：使用 OpenCV，一个非 TF 库\n\ndef python_based_processing(tensor_path):\n  # 将张量路径（字节）转换为字符串\n  path_str = tensor_path.numpy().decode('utf-8')\n  # 使用 OpenCV（或任何 Python 库）\n  # img = cv2.imread(path_str)\n  # processed_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n\n  # 模拟一些处理，返回一个 numpy 数组\n  processed_data = np.array([len(path_str)], dtype=np.int32) # 示例：路径长度\n  return processed_data\n\n# 假设数据集包含表示文件路径的字符串张量\npaths_dataset = tf.data.Dataset.from_tensor_slices([\"/path/to/file1.txt\", \"/path/to/file2.txt\"])\n\ndef tf_wrapper_func(tensor_path):\n  # 为 TensorFlow 定义输出类型和形状\n  result = tf.py_function(\n      func=python_based_processing,\n      inp=[tensor_path],       # 输入张量\n      Tout=tf.int32            # 输出 TensorFlow 数据类型\n  )\n  # 如果已知，显式设置形状，因为 py_function 会丢失形状信息\n  result.set_shape([1]) # 示例输出形状\n  return result\n\n# 使用包装函数进行映射\nprocessed_py_dataset = paths_dataset.map(tf_wrapper_func)\n\nfor item in processed_py_dataset:\n    print(item.numpy())\n</code></pre>\n<p>Output:</p>\n<pre><code>[18]\n[18]\n</code></pre>\n<p><code>map</code> 转换是 <code>tf.data</code> 管道中准备数据的重要工具。通过高效地（可能并行地）应用 TensorFlow 操作，您可以创建整洁、高性能的预处理阶段，与模型训练顺畅结合。请记住，尽可能使用 TensorFlow 操作，并且仅在外部 Python 库必不可少时才使用 <code>tf.py_function</code>。</p>",
+  "slug": "applying-transformations-map",
+  "updates": [],
+  "references": [
+    {
+      "id": 3727,
+      "title": "Build TensorFlow input pipelines with tf.data",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/data",
+      "doi": "",
+      "note": "一份官方指南，解释了如何使用`tf.data`构建高效的数据输入管道，包含`map()`等转换的实际示例和通用用法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:31.975505Z",
+      "updated_at": "2025-09-08T02:54:10.021703Z"
+    },
+    {
+      "id": 3728,
+      "title": "tf.data.Dataset",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/data/Dataset",
+      "doi": "",
+      "note": "`tf.data.Dataset`的官方API文档，提供了其方法（包括`map()`）及其参数的详细信息。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:32.033584Z",
+      "updated_at": "2025-09-08T02:54:14.692436Z"
+    },
+    {
+      "id": 3729,
+      "title": "Better performance with the tf.data API",
+      "author": "TensorFlow Authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/data_performance",
+      "doi": "",
+      "note": "本指南侧重于优化`tf.data`管道的性能，包括使用并行调用`map()`（`tf.data.AUTOTUNE`）的最佳实践以及`tf.py_function`的影响。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:32.040397Z",
+      "updated_at": "2025-09-08T02:54:12.839012Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

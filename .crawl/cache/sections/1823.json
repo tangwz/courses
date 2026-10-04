@@ -1,0 +1,61 @@
+{
+  "id": 1823,
+  "title": "遍历分组",
+  "meta_title": "遍历 Pandas 分组",
+  "meta_description": "访问 GroupBy 对象中的单个分组及其对应数据。",
+  "content": "<p>Pandas 中的强大 <code>groupby()</code> 方法可以根据列值将 DataFrame 分割成多个部分。它允许使用“分割-应用-合并”策略应用 <code>mean()</code>、<code>sum()</code> 或 <code>count()</code> 等聚合函数。这对于汇总数据极其有用。</p>\n<p>然而，有时仅进行简单的聚合是不够的。你可能需要对每个分组单独执行更复杂的操作，查看每个分组内的数据，或者应用一个不完全符合标准聚合框架的函数。对于这些情况，Pandas 允许你直接遍历由 <code>groupby()</code> 创建的分组。</p>\n<p>当你对 DataFrame 调用 <code>.groupby()</code> 时，它不会立即计算出任何可见的结果，例如聚合。相反，它会返回一个特殊的 <code>GroupBy</code> 对象。此对象包含管理不同分组所需的所有信息。你可以将其看作是多个较小 DataFrame 的集合，其中每个 DataFrame 对应你分组所依据的列中一个唯一值（或值组合）。</p>\n<p>这个 <code>GroupBy</code> 对象是可迭代的，意味着你可以遍历它，就像你在 Python 中遍历列表一样。当你迭代 <code>GroupBy</code> 对象时，每次迭代都会生成一个包含两个元素的元组：</p>\n<ol>\n<li><strong>分组名称（或名称）：</strong> 这是定义当前分组的列中的唯一值。如果你按单个列分组，这将是一个单个值（例如字符串或数字）。如果你按多个列分组，这将是一个包含该分组值组合的元组。</li>\n<li><strong>分组数据：</strong> 这是一个 DataFrame，只包含原始 DataFrame 中属于当前分组的行。</li>\n</ol>\n<p>标准的遍历方式是使用 <code>for</code> 循环：</p>\n<pre><code class=\"language-python\"># 假设 'df' 是你的 DataFrame，'grouped' 是 GroupBy 对象\n# grouped = df.groupby('要分组的列')\n\nfor name, group_df in grouped:\n    # 'name' 存储定义当前分组的值\n    # 'group_df' 是一个只包含该分组行的 DataFrame\n    print(f\"正在处理分组: {name}\")\n    # 你现在可以像处理标准 DataFrame 一样处理 group_df\n    print(group_df.head(2)) # 示例：打印该分组的前2行\n    # 在此处执行自定义计算、筛选或可视化操作\n    print(\"-\" * 20) # 用于分隔，更清晰\n</code></pre>\n<p>让我们通过一个例子来说明。假设我们有一个小型 DataFrame，它记录了不同地区不同产品的销售数据：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\ndata = {'Region': ['North', 'South', 'North', 'South', 'West', 'North', 'West'],\n        'Product': ['A', 'A', 'B', 'B', 'A', 'B', 'B'],\n        'Sales': [100, 150, 200, 250, 50, 210, 70]}\nsales_df = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(sales_df)\nprint(\"\\n\")\n\n# 按地区分组\ngrouped_by_region = sales_df.groupby('Region')\n\nprint(\"按地区遍历分组:\")\nfor region_name, region_group in grouped_by_region:\n    print(f\"地区: {region_name}\")\n    print(\"该地区的数据:\")\n    print(region_group)\n    print(\"-\" * 30)\n\n</code></pre>\n<p>运行此代码将输出：</p>\n<pre><code>原始 DataFrame:\n  Region Product  Sales\n0  North       A    100\n1  South       A    150\n2  North       B    200\n3  South       B    250\n4   West       A     50\n5  North       B    210\n6   West       B     70\n\n按地区遍历分组:\n地区: North\n该地区的数据:\n  Region Product  Sales\n0  North       A    100\n2  North       B    200\n5  North       B    210\n------------------------------\n地区: South\n该地区的数据:\n  Region Product  Sales\n1  South       A    150\n3  South       B    250\n------------------------------\n地区: West\n该地区的数据:\n  Region Product  Sales\n4   West       A     50\n6   West       B     70\n------------------------------\n</code></pre>\n<p>请注意，每次迭代都提供了 <code>region_name</code>（例如 'North'、'South'、'West'）以及一个 <code>region_group</code> DataFrame，其中只包含匹配该地区的行。</p>\n<h3>遍历多个分组列</h3>\n<p>如果你按多个列分组，循环中的 <code>name</code> 变量将成为一个元组，其中包含定义该分组的值组合。</p>\n<pre><code class=\"language-python\"># 同时按地区和产品分组\ngrouped_multi = sales_df.groupby(['Region', 'Product'])\n\nprint(\"\\n按地区和产品遍历分组:\")\nfor (region_name, product_name), group_data in grouped_multi:\n    print(f\"分组键: 地区={region_name}, 产品={product_name}\")\n    print(\"该分组的数据:\")\n    print(group_data)\n    print(\"-\" * 30)\n</code></pre>\n<p>输出将显示由地区和产品的唯一配对定义的分组：</p>\n<pre><code>按地区和产品遍历分组:\n分组键: 地区=North, 产品=A\n该分组的数据:\n  Region Product  Sales\n0  North       A    100\n------------------------------\n分组键: 地区=North, 产品=B\n该分组的数据:\n  Region Product  Sales\n2  North       B    200\n5  North       B    210\n------------------------------\n分组键: 地区=South, 产品=A\n该分组的数据:\n  Region Product  Sales\n1  South       A    150\n------------------------------\n分组键: 地区=South, 产品=B\n该分组的数据:\n  Region Product  Sales\n3  South       B    250\n------------------------------\n分组键: 地区=West, 产品=A\n该分组的数据:\n  Region Product  Sales\n4   West       A     50\n------------------------------\n分组键: 地区=West, 产品=B\n该分组的数据:\n  Region Product  Sales\n6   West       B     70\n------------------------------\n</code></pre>\n<h3>何时使用遍历有益？</h3>\n<p>虽然标准聚合函数（<code>.sum()</code>、<code>.mean()</code>、<code>.agg()</code>）高效且适用于多种用例，但遍历分组在以下情况时有益：</p>\n<ol>\n<li><strong>应用复杂函数：</strong> 你需要对每个分组应用一个函数，但该函数无法通过内置聚合方法或 <code>agg()</code> 中的 lambda 函数轻松表达。</li>\n<li><strong>分组特定逻辑：</strong> 处理逻辑在不同分组之间差异很大，需要基于分组名称或其数据的条件语句。</li>\n<li><strong>生成可视化：</strong> 你希望为每个分组创建单独的图表或可视化。遍历允许你顺序访问每个图表的数据。</li>\n<li><strong>调试：</strong> 你需要检查每个分组的具体内容，以了解为什么聚合可能产生意料之外的结果。</li>\n<li><strong>详细报告：</strong> 你需要生成一份报告，其中包含数据的每个部分的详细信息或特定计算。</li>\n</ol>\n<p>请记住，遍历分组的计算效率可能低于使用 Pandas 内置的聚合函数，特别是对于非常大的数据集。Pandas 用于标准聚合的向量 (vector)化操作是高度优化的。因此，在可能的情况下，优先使用内置方法；当遍历提供的灵活性对你的特定任务是必需时，才使用它。</p>",
+  "slug": "iterating-through-groups",
+  "updates": [],
+  "references": [
+    {
+      "id": 4989,
+      "title": "GroupBy: split-apply-combine",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html",
+      "doi": "",
+      "note": "Pandas `groupby`操作的官方指南，说明了其理念、对象迭代以及多种组级函数。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:08.316310Z",
+      "updated_at": "2025-09-08T02:36:39.210717Z"
+    },
+    {
+      "id": 4990,
+      "title": "pandas.DataFrame.groupby",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.groupby.html",
+      "doi": "",
+      "note": "`groupby`方法的官方API文档，概述了其参数、返回值（`GroupBy`对象）和基本用法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:08.352001Z",
+      "updated_at": "2025-09-08T02:36:30.282220Z"
+    },
+    {
+      "id": 4991,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本基础著作，全面介绍了Pandas，包含对分组操作和组迭代的详细说明。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:08.355670Z",
+      "updated_at": "2025-09-08T02:36:29.678241Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

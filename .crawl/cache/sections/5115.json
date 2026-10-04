@@ -1,0 +1,29 @@
+{
+  "id": 5115,
+  "title": "使用requests库发送API请求",
+  "meta_title": "使用`requests`进行API请求 | Python LLM交互",
+  "meta_description": "使用Python `requests` 库向LLM API发送提示。",
+  "content": "<p>从Python与LLM API交互时，一个主要任务是发送包含提示的请求并接收LLM的响应。这种通信通常依赖于发出HTTP请求。实现这一目标的直接且常见方法之一是使用标准的Python <code>requests</code> 库。该库提供了一个简单的接口用于发出HTTP请求，这对于与大多数基于网络的LLM API通信必不可少。</p>\n<p>尽管许多LLM提供商提供了专用的Python客户端库（我们稍后会介绍），但直接使用 <code>requests</code> 有其价值，原因如下：</p>\n<ul>\n<li>这有助于你理解底层的通信协议（HTTP）。</li>\n<li>它能普遍适用于任何基于HTTP的API，即使没有专用库或库未及时更新。</li>\n<li>它通常足以应对简单的交互或快速测试。</li>\n</ul>\n<h3><code>requests</code> API请求的构成</h3>\n<p>要进行API调用，我们通常需要四个主要信息：</p>\n<ol>\n<li><strong>URL：</strong> 我们想要交互的API服务的具体网址（端点）。这由LLM供应商提供。</li>\n<li><strong>HTTP方法：</strong> 请求的类型。对于发送数据以生成文本，这几乎总是 <code>POST</code>。</li>\n<li><strong>请求头：</strong> 随请求发送的附加信息。这通常包括：\n<ul>\n<li><code>Content-Type</code>：指定发送数据的格式（例如，<code>application/json</code>）。</li>\n<li><code>Authorization</code>：包含用于验证请求的凭据，通常是API密钥（例如，<code>Bearer YOUR_API_KEY</code>）。请记住，要像第2章讨论的那样，安全地处理API密钥。</li>\n</ul>\n</li>\n<li><strong>请求体（Body）：</strong> 发送给API的实际数据。对于LLM，这包含提示、模型选择和其他生成参数 (parameter)，通常格式为JSON。</li>\n</ol>\n<h3>发送POST请求</h3>\n<p><code>requests</code> 库使用 <code>requests.post()</code> 函数使发送 <code>POST</code> 请求变得简单。让我们通过一个例子来说明。假设我们有一个API端点 <code>https://api.example-llm-provider.com/v1/completions</code> 和我们的API密钥。</p>\n<pre><code class=\"language-python\">import requests\nimport os\nimport json\n\n# 最佳实践：从环境变量或安全配置中加载API密钥\n# 假设你的环境中已设置API_KEY（参见第2章）\napi_key = os.getenv(\"EXAMPLE_LLM_API_KEY\")\nif not api_key:\n    raise ValueError(\"API key not found. Please set the EXAMPLE_LLM_API_KEY environment variable.\")\n\n# 1. 定义API端点URL\napi_url = \"https://api.example-llm-provider.com/v1/completions\" # 替换为实际的端点\n\n# 2. 设置请求头\nheaders = {\n    \"Authorization\": f\"Bearer {api_key}\",\n    \"Content-Type\": \"application/json\"\n}\n\n# 3. 准备请求的载荷（数据）\n# 参数名称（例如，'model'、'prompt'、'max_tokens'）因提供商而异\npayload = {\n    \"model\": \"model-name-123\", # 指定所需的LLM模型\n    \"prompt\": \"Translate the following English text to French: 'Hello, world!'\",\n    \"max_tokens\": 50,         # 限制响应长度\n    \"temperature\": 0.7        # 控制创造性（0.0=确定性，>1.0=更具创造性）\n}\n\n# 4. 发送POST请求\ntry:\n    response = requests.post(api_url, headers=headers, json=payload) # 使用 json= 参数可自动序列化载荷，并设置Content-Type（如果尚未设置）\n\n    # 5. 检查响应状态并处理结果\n    response.raise_for_status() # 对于错误的响应（4xx或5xx），会引发HTTPError\n\n    # 假设API返回JSON格式数据\n    result = response.json()\n    print(\"API Response:\")\n    print(json.dumps(result, indent=2)) # 漂亮打印JSON响应\n\n    # 提取生成的文本（结构取决于具体的API）\n    # 这是一种结构；请查看你的提供商文档\n    if \"choices\" in result and len(result[\"choices\"]) > 0:\n        generated_text = result[\"choices\"][0].get(\"text\", \"No text found\")\n        print(\"\\nGenerated Text:\")\n        print(generated_text.strip())\n    else:\n        print(\"\\nCould not find generated text in the expected format.\")\n\nexcept requests.exceptions.RequestException as e:\n    print(f\"An error occurred during the API request: {e}\")\nexcept Exception as e:\n    print(f\"An unexpected error occurred: {e}\")\n\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li>我们导入了必要的库（<code>requests</code>、<code>os</code>、<code>json</code>）。</li>\n<li>我们从环境变量中安全地获取API密钥。</li>\n<li>我们定义了 <code>api_url</code>、<code>headers</code> 和 <code>payload</code> 字典。请注意，这里使用f-string将API密钥插入到 <code>Authorization</code> 请求头中。</li>\n<li>核心操作是 <code>requests.post(api_url, headers=headers, json=payload)</code>。直接使用 <code>json</code> 参数 (parameter)会告诉 <code>requests</code> 自动将 <code>payload</code> 字典转换为JSON字符串，并将 <code>Content-Type</code> 请求头设置为 <code>application/json</code>（尽管为了清晰起见，我们也明确设置了它）。</li>\n<li><code>response.raise_for_status()</code> 是一个重要步骤。它检查HTTP状态码是否表示成功（例如200 OK）。如果API返回错误代码（例如401 Unauthorized、429 Rate Limit Exceeded、500 Internal Server Error），此方法将引发 <code>requests.exceptions.HTTPError</code>。</li>\n<li>如果请求成功，<code>response.json()</code> 会将响应体中的JSON内容解析为Python字典。</li>\n<li>然后，我们尝试提取响应的相关部分，这通常涉及处理嵌套结构（例如 <code>result[\"choices\"][0][\"text\"]</code>）。确切的结构因API而异，因此请务必查阅提供商的文档。</li>\n<li>使用 <code>try...except</code> 进行的基本错误处理会捕获潜在的网络问题（<code>requests.exceptions.RequestException</code>）或其他问题。</li>\n</ul>\n<h3>常见的请求体参数 (parameter)</h3>\n<p><code>payload</code> 字典是你控制LLM行为的地方。虽然具体名称可能不同，但常见参数包括：</p>\n<ul>\n<li><code>model</code>：（字符串）你想要使用的特定语言模型的标识符（例如，<code>gpt-3.5-turbo</code>、<code>claude-2.1</code>）。</li>\n<li><code>prompt</code> 或 <code>messages</code>：（字符串或列表）输入文本。一些API使用 <code>prompt</code> 进行简单的文本续写，而另一些则使用 <code>messages</code> 列表进行类似聊天的交互，通常包含角色（<code>user</code>、<code>assistant</code>、<code>system</code>）。</li>\n<li><code>max_tokens</code>：（整数）模型在响应中应生成的最大标记 (token)数（大致相当于单词或单词的一部分）。有助于控制成本和响应长度。</li>\n<li><code>temperature</code>：（浮点数，通常为0.0到2.0）控制输出的随机性。较低的值（例如0.2）使输出更集中和确定，而较高的值（例如0.8）使其更具创造性和多样性。</li>\n<li><code>top_p</code>：（浮点数，0.0到1.0）是温度参数的替代方案，用于控制随机性（核采样）。模型只考虑累积概率质量超过 <code>top_p</code> 的标记。</li>\n<li><code>stop</code>：（字符串或字符串列表）API应停止生成后续标记的字符序列。</li>\n</ul>\n<p>始终参考你正在使用的特定LLM提供商的文档，以了解可用的参数、它们的名称、期望值和默认行为。</p>\n<p>使用 <code>requests</code> 库提供了一种与LLM API交互的基本方法。它让你直接控制HTTP通信，并且即使在使用更专业的库时也是一项有价值的技能，因为这些库通常基于这些基本原理构建。在接下来的部分中，我们将更详细地研究如何处理不同类型的API响应和错误，然后考察主要LLM提供商提供的官方客户端库。</p>",
+  "slug": "api-requests-with-requests",
+  "updates": [],
+  "references": [
+    {
+      "id": 13203,
+      "title": "OpenAI Chat Completions API Reference",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "OpenAI 聊天补全端点的官方 API 参考，展示了请求和响应结构、常见负载参数（如 `model`、`messages`、`max_tokens`、`temperature`）以及用于 LLM 交互的身份验证方法。",
+      "order": 3,
+      "created_at": "2025-09-05T08:29:32.910389Z",
+      "updated_at": "2025-09-09T03:24:48.133538Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1131,
+  "title": "数据初步分析流程",
+  "meta_title": "数据初步分析的系统步骤",
+  "meta_description": "学习进行数据初步分析的结构化方法和典型步骤。",
+  "content": "<p>尽管数据初步分析并非一套必须严格按顺序执行的固定步骤方法，但拥有一个通用框架有助于组织你的数据查看工作。将其视为一个迭代循环而非线性路径，其中一个步骤中的发现常常促使你重新审视之前的步骤。如前所述，目的是全面理解你的数据，找出潜在问题，并为后续分析或建模提出假设。</p>\n<p>以下是一个你可以根据你的具体数据集和分析目标进行调整的常用流程：</p>\n<h3>1. 数据获取与载入</h3>\n<p>第一个实际步骤总是将数据导入分析环境。这通常是将数据从文件（如CSV、Excel、JSON）、数据库或API载入到适合分析的数据结构中，最常见的是Pandas DataFrame。我们将在下一章具体介绍不同文件类型的载入方法。</p>\n<h3>2. 数据初步检查与清洗</h3>\n<p>载入后，对数据进行初步认识。这包括检查：</p>\n<ul>\n<li><strong>维度：</strong> 数据集有多少行和列？（<code>shape</code>）</li>\n<li><strong>结构：</strong> 前几行和后几行的数据形态？（<code>head()</code>，<code>tail()</code>）</li>\n<li><strong>数据类型：</strong> 每列被分配了哪些数据类型（数值型、类别型、对象型、日期时间型）？（<code>info()</code>，<code>dtypes</code>）它们合适吗？有时数字会被读取为字符串，或者日期未被识别。</li>\n<li><strong>基本概要：</strong> 获取数值列的快速描述性统计信息（计数、均值、标准差、最小值、最大值、四分位数）。（<code>describe()</code>）</li>\n<li><strong>缺失值：</strong> 是否存在缺失数据点（通常表示为<code>NaN</code>）？它们位于何处，以及有多普遍？（<code>isnull().sum()</code>）</li>\n<li><strong>重复项：</strong> 是否存在重复行？（<code>duplicated().sum()</code>）</li>\n</ul>\n<p>这种初步检查通常会发现立即需要清洗的地方，例如修正数据类型、处理明显错误、处理缺失值（通过填充或删除）以及删除重复记录。清洗工作在整个数据初步分析过程中常常会被重新审视，因为更细致的分析会显现出更细微的问题。</p>\n<h3>3. 单变量分析</h3>\n<p>着重于一次处理一个变量（列），从而对其进行理解。</p>\n<ul>\n<li><strong>数值变量：</strong> 分析它们的分布、集中趋势和离散程度。计算概括统计量（均值、中位数、众数、标准差、方差、范围、四分位距）。使用直方图、密度图或箱线图对分布进行可视化。找出潜在的异常值。</li>\n<li><strong>类别变量：</strong> 检查每个类别的频率。使用频率表（<code>value_counts()</code>）并通过条形图可视化计数。</li>\n</ul>\n<p>此步骤有助于你在查看它们之间的相互关联之前，独立地刻画每个特征。</p>\n<h3>4. 双变量分析</h3>\n<p>调查变量对之间的关系。方法取决于所涉及的变量类型：</p>\n<ul>\n<li><strong>数值变量与数值变量：</strong> 使用散点图可视化这种关系。计算相关系数（如皮尔逊r用于线性关系，或斯皮尔曼rho用于单调关系）以量化 (quantization)关联的强度和方向。热力图对于可视化多个数值变量的相关矩阵很有效。</li>\n<li><strong>数值变量与类别变量：</strong> 比较数值变量在类别变量不同类别中的分布情况。分组箱线图、小提琴图或多个直方图都是有用的可视化方法。统计检验（如t检验或ANOVA，尽管通常保留用于更正式的假设检验）可以评估均值差异。</li>\n<li><strong>类别变量与类别变量：</strong> 使用交叉表（列联表）分析不同类别组合的频率分布。使用分组或堆叠条形图可视化这些关系。</li>\n</ul>\n<p>在此阶段，你开始找出潜在的预测因子或有趣的相互关联。</p>\n<h3>5. 多变量分析</h3>\n<p>同时检查涉及三个或更多变量的关系。这会很快变得复杂，但方法包括：</p>\n<ul>\n<li><strong>对图：</strong> 为多个数值变量之间的成对关系创建散点图矩阵，通常在对角线上辅以直方图或密度图（例如，使用Seaborn的<code>pairplot</code>）。</li>\n<li><strong>条件可视化：</strong> 在图表（如散点图或条形图）中使用颜色、大小或分面来包含附加变量。例如，两个数值变量的散点图可以使用颜色来表示第三个类别变量。</li>\n<li><strong>降维：</strong> 虽然详细的技术超出了基本数据初步分析的范围，但识别模式可能表明某些变量是冗余的或可以组合，暗示着后续需要进行降维。</li>\n</ul>\n<h3>6. 迭代与优化</h3>\n<p>数据初步分析很少是直线型的。双变量或多变量分析的发现可能会显现出之前遗漏的异常值或不一致之处，促使你回到清洗步骤。你可能会发现需要转换变量（例如，对偏斜数据进行对数转换）或构建新特征（例如，组合两个变量，提取日期的部分）以更好地捕捉关系。这种分析、提问、清洗和转换的迭代过程是有效数据初步分析的核心。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1csi7ts\" \n              data-graph-definition='digraph EDA_Workflow {\n    rankdir=LR;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    Acquire [label=\"1. 获取数据\"];\n    InspectClean [label=\"2. 检查与清洗\"];\n    Univariate [label=\"3. 单变量分析\"];\n    Bivariate [label=\"4. 双变量分析\"];\n    Multivariate [label=\"5. 多变量分析\"];\n    Iterate [label=\"6. 优化与迭代\", shape=ellipse, fillcolor=\"#ffec99\"];\n    Document [label=\"7. 记录发现\", shape=note, fillcolor=\"#a5d8ff\"];\n\n    Acquire -> InspectClean;\n    InspectClean -> Univariate;\n    Univariate -> Bivariate;\n    Bivariate -> Multivariate;\n    Multivariate -> Iterate;\n    Iterate -> InspectClean [label=\"重新清洗\", style=dashed];\n    Iterate -> Univariate [label=\"重新分析\", style=dashed];\n    Iterate -> Bivariate [label=\"进一步查看\", style=dashed];\n    Iterate -> Document;\n    Multivariate -> Document [style=dashed]; // 可能直接记录\n    Bivariate -> Iterate [style=dashed]; // 发现会触发迭代\n    Univariate -> Iterate [style=dashed]; // 发现会触发迭代\n\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1csi7ts\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据初步分析流程迭代特性的示意图。发现常常会引导回到早期阶段进行优化。</p>\n</blockquote>\n<h3>7. 记录并总结发现</h3>\n<p>在整个过程中，记录你的观察结果、见解、可视化内容以及进行的任何数据修改。这份文档对于沟通你的发现、证明后续建模选择的合理性以及确保可复现性都非常重要。最终总结应突出数据的基本特点、发现的有趣模式或关系、遇到的数据质量问题，以及后续分析或建模的潜在方向。</p>\n<p>这个流程提供了一个坚实的基础。随着经验的积累，你将调整这些步骤并形成自己有效查看不同类型数据集的方法。后续章节将介绍使用Python库进行每个阶段的实用工具和技术。</p>",
+  "slug": "eda-workflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 359,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "这是一本使用 Python 进行数据处理和分析的实用指南，广泛涵盖 Pandas DataFrame 和相关的 EDA 技术。",
+      "order": 2,
+      "created_at": "2025-09-04T14:25:33.125169Z",
+      "updated_at": "2025-09-07T16:13:15.716072Z"
+    },
+    {
+      "id": 360,
+      "title": "Pandas User Guide",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html",
+      "doi": "",
+      "note": "Pandas 的官方用户指南，提供数据加载、检查、清理和操作技术的全面细节，这些对于 EDA 至关重要。",
+      "order": 3,
+      "created_at": "2025-09-04T14:25:33.128708Z",
+      "updated_at": "2025-09-07T16:13:20.747905Z"
+    },
+    {
+      "id": 361,
+      "title": "Seaborn User Guide and Tutorial",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/tutorial.html",
+      "doi": "",
+      "note": "Seaborn 的官方文档，详细介绍了统计数据可视化技术，包括用于单变量、双变量和多变量分析（如配对图）的技术。",
+      "order": 4,
+      "created_at": "2025-09-04T14:25:33.132341Z",
+      "updated_at": "2025-09-07T16:13:15.009678Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3045,
+  "title": "核心构成部分：模型、提示、解析器",
+  "meta_title": "LLM框架主要构成部分：模型、提示、解析器",
+  "meta_description": "运用模型接口、提示模板和输出解析器等基本构建模块。",
+  "content": "<p>直接与LLM API交互能够提供精细的控制，但通常需要编写重复的代码来格式化提示、处理API调用和解析响应。随着应用规模的扩大，手动管理会话历史、整合外部工具或将多个LLM调用串联起来会变得繁琐。</p>\n<p>像LangChain这样的LLM开发框架，通过提供标准化的构建模块和连接它们的方式来解决这些问题。无需为每次交互编写样板代码，你可以使用更高级别的抽象。我们来考察这些构建模块中最基础的部分：模型、提示（特别是提示模板）和输出解析器。可以把这些看作是在框架内构建LLM驱动逻辑的必要组成部分。</p>\n<h3>模型：引擎接口</h3>\n<p>任何LLM应用的核心都是模型本身。框架将与各种LLM供应商（如OpenAI、Anthropic、Cohere，甚至本地部署的模型）交互的具体细节抽象化，统一到一致的<code>Model</code>接口背后。这通常有两种主要类型：</p>\n<ol>\n<li><strong>LLMs：</strong> 这些封装了接收字符串作为输入并返回字符串的模型。它们更简单，适用于直接的文本补全任务。</li>\n<li><strong>ChatModels：</strong> 这些封装了为对话交互优化的模型。它们接收一个聊天消息列表（通常包含“系统”、“人类”、“AI”等角色）作为输入，并返回一个聊天消息。这种结构更适合构建聊天机器人和代理。</li>\n</ol>\n<p>使用框架的模型抽象简化了在不同底层LLM或API供应商之间切换的操作，只需极少的代码改动。你初始化一个模型对象，可能指定模型名称（例如<code>gpt-3.5-turbo</code>）和<code>temperature</code>等参数 (parameter)，然后通过<code>invoke()</code>或<code>predict()</code>等标准化方法与它进行交互。</p>\n<pre><code class=\"language-python\"># LangChain类语法的示例\n# 假设已完成必要的导入和API密钥设置\nfrom langchain_openai import ChatOpenAI # 或其他供应商，例如langchain_anthropic\n\n# 初始化模型（供应商细节已抽象化）\nchat_model = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0.7)\n\n# 使用标准化方法进行交互\nprompt = \"解释LLM框架的理念。\"\n# 框架负责构建API请求和解析基本响应\nresponse = chat_model.invoke(prompt)\n\n# 响应对象通常具有结构，例如'content'属性\nprint(response.content)\n# 预期输出（示例）：LLM框架提供可重用组件和结构，以简化构建由大型语言模型驱动的应用。\n</code></pre>\n<p>这种统一接口处理了你之前在第四章直接使用<code>requests</code>等库时手动管理的底层API调用、认证、请求格式化和基本响应处理。</p>\n<h3>提示模板：构建你的输入</h3>\n<p>虽然你可以将原始字符串作为提示传递给模型接口，但实际应用通常需要从用户输入或其他数据源构建动态提示。在简单情况下，使用f-string或基本字符串拼接手动构建这些字符串是可行的，但对于复杂的、多部分的提示，它很快就会导致代码可读性差且容易出错。</p>\n<p>框架引入了<code>提示模板</code>来解决这个问题。提示模板本质上是一种预定义结构，用于生成提示。它包含：</p>\n<ul>\n<li><strong>指令：</strong> 描述LLM任务的固定文本。</li>\n<li><strong>输入变量：</strong> 用于动态值的占位符（通常表示为<code>{variable_name}</code>），这些值在使用模板时将被插入。</li>\n<li><strong>格式化指令（可选）：</strong> 关于最终输出应如何呈现的明确指导。虽然有用，但专门的输出解析器通常能更可靠地处理复杂的格式化要求。</li>\n</ul>\n<p>你只需定义一次模板，然后重复使用它，每次为输入变量提供不同的值。这提升了代码的清晰度、可维护性和可重用性。</p>\n<pre><code class=\"language-python\"># LangChain类语法的示例\nfrom langchain_core.prompts import PromptTemplate, ChatPromptTemplate\n\n# 示例1：LLM的基本字符串模板\ntemplate_string = \"\"\"将以下英文文本翻译成法文：\n\n文本：{english_text}\n翻译：\"\"\"\n# 创建模板对象\nprompt_template = PromptTemplate.from_template(template_string)\n\n# 使用特定输入格式化模板\nformatted_prompt = prompt_template.format(english_text=\"Hello!\")\nprint(\"格式化的字符串提示：\")\nprint(formatted_prompt)\n# 预期输出：\n# 格式化的字符串提示：\n# 将以下英文文本翻译成法文：\n#\n# 文本：Hello!\n# 翻译：\n\n# 示例2：聊天模板（为聊天模型设计，结构更完善）\nchat_template = ChatPromptTemplate.from_messages([\n    (\"system\", \"你是一个有用的助手，能将{input_language}翻译成{output_language}。\"),\n    (\"human\", \"{text}\") # 用户的输入在此\n])\n\n# 使用角色的特定输入和文本格式化模板\nformatted_messages = chat_template.format_messages(\n    input_language=\"English\",\n    output_language=\"Spanish\",\n    text=\"How are you?\"\n)\nprint(\"\\n格式化的聊天消息：\")\nprint(formatted_messages)\n# 预期输出：\n# 格式化的聊天消息：\n# [SystemMessage(content='你是一个有用的助手，能将英语翻译成西班牙语。'), HumanMessage(content='How are you?')]\n\n# 接着你可以将'formatted_prompt'（字符串）传递给LLM的invoke方法，\n# 或将'formatted_messages'（消息列表）传递给ChatModel的invoke方法。\n</code></pre>\n<p>使用模板将提示的固定结构与可变数据分离，使得管理和修改提示变得非常容易，且无需更改核心应用逻辑。聊天提示模板特别有效，因为它们直接符合大多数现代聊天模型期望的对话消息列表结构。</p>\n<h3>输出解析器：塑造LLM的响应</h3>\n<p>LLM本质上生成文本序列。正如在第二章中探讨并在第七章中回顾的那样，尽管指令遵循和少样本提示等技术可以<em>鼓励</em>LLM以特定格式（如JSON或编号列表）生成输出，但不能绝对保证模型每次都能完美遵循。仅仅依靠提示工程 (prompt engineering)来获得严格的输出结构可能会使你的应用脆弱，并在LLM响应略微偏离时容易出错。</p>\n<p>这就是<code>输出解析器</code>变得不可或缺的地方。它们是专门设计的组件，旨在接收LLM生成的原始字符串输出，并将其转换为应用代码中更易于使用的结构化格式，例如Python字典、列表或自定义数据对象（如Pydantic模型）。</p>\n<p>输出解析器的主要功能通常包括：</p>\n<ol>\n<li><strong>指令生成：</strong> 有些解析器会自动生成并将格式化指令附加到发送给LLM的提示中。这些指令明确告知模型如何格式化其响应，以便解析器能够理解。</li>\n<li><strong>解析逻辑：</strong> 它们包含根据预期格式解析LLM原始字符串输出所需的代码。这可能涉及查找和验证JSON、按分隔符拆分字符串，或使用正则表达式。</li>\n<li><strong>错误处理：</strong> 优秀的解析器提供机制来处理LLM输出不符合预期格式的情况。这可能涉及引发特定错误、尝试修正输出或触发重试机制（稍后介绍）。</li>\n</ol>\n<p>框架通常提供多种预构建的解析器，以满足常见使用场景：</p>\n<ul>\n<li><strong>结构化输出解析器 / Pydantic解析器：</strong> 对于将输出直接解析为由模式定义的Python对象（如Pydantic模型，将在第七章进一步讨论）非常有用。</li>\n<li><strong>JSON解析器：</strong> 专门设计用于从LLM可能混乱的字符串输出中查找和提取有效的JSON对象。</li>\n<li><strong>列表解析器：</strong> 对于LLM应返回项目列表（例如，逗号分隔、项目符号）的任务非常有用。</li>\n<li><strong>日期时间解析器：</strong> 提取日期和时间信息。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-m63qvo\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  bgcolor=\"transparent\";\n  node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\", margin=0.1];\n  edge [fontname=\"Arial\", fontsize=10];\n\n  Input [label=\"输入变量\\n（例如，“english_text”）\", fillcolor=\"#a5d8ff\"];\n  Template [label=\"提示模板\", fillcolor=\"#96f2d7\"];\n  FormattedPrompt [label=\"格式化提示\", fillcolor=\"#ffec99\"];\n  Model [label=\"LLM / 聊天模型\", fillcolor=\"#fcc2d7\"];\n  RawOutput [label=\"原始LLM输出\\n（字符串）\", fillcolor=\"#ffec99\"];\n  Parser [label=\"输出解析器\", fillcolor=\"#96f2d7\"];\n  StructuredOutput [label=\"结构化输出\\n（例如：字典、列表、对象）\", fillcolor=\"#b2f2bb\"];\n\n  Input -> Template [label=\" 填充\"];\n  Template -> FormattedPrompt [label=\" 格式化 \"];\n  FormattedPrompt -> Model [label=\" 调用 \"];\n  Model -> RawOutput [label=\" 生成 \"];\n  RawOutput -> Parser [label=\" 解析 \"];\n  Parser -> StructuredOutput [label=\" 返回 \"];\n  Parser -> Template [label=\" 注入指令 \\n (可选)\", style=dashed, constraint=false, color=\"#adb5bd\", arrowhead=open, dir=back];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-m63qvo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>输入变量填充提示模板，生成格式化提示。模型处理此提示，生成原始输出文本。输出解析器解析此文本，可能使用其注入到原始提示中的指令，从而生成可供应用使用的结构化输出。</p>\n</blockquote>\n<p>通过将输出解析器整合到你的工作流程中，你可以显著提升LLM应用的可靠性和可预测性。与其自己编写复杂且可能脆弱的字符串操作或正则表达式逻辑，不如借助专门的、经过测试的组件来处理LLM输出的特定任务，这使得你的应用能够有效处理来自模型生成结果的结构化数据。</p>\n<p>这些核心构成部分——模型、提示模板和输出解析器——构成了在框架内构建更复杂LLM应用逻辑的必要基础。它们抽象了低级细节，并提供可重用部分来构建复杂的流程。在下一节中，我们将介绍“链”（Chains），这是框架中用于将这些组件（及其他）连接起来执行一系列操作的机制。</p>",
+  "slug": "framework-core-components-models-prompts-parsers",
+  "updates": [],
+  "references": [
+    {
+      "id": 4551,
+      "title": "LangChain Core Building Blocks: LLMs, ChatModels, Prompts, OutputParsers",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/v0.2/docs/concepts/#model-io",
+      "doi": "",
+      "note": "LangChain核心组件（包括模型、提示模板和输出解析器）的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:12.496962Z",
+      "updated_at": "2025-09-09T01:56:29.282966Z"
+    },
+    {
+      "id": 4553,
+      "title": "LLM Systems: A Practical Guide to Building Applications with Large Language Models",
+      "author": "Scott P. McDonald, Andrew C. P. Sledd, and Jeremy A. Howard",
+      "year": "2024",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/llm-systems/9781098150498/",
+      "doi": "",
+      "note": "一本涵盖LLM驱动应用程序架构和实现的实用指南，包括模型和提示设计等核心组件。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:12.504801Z",
+      "updated_at": "2025-09-09T01:56:51.006782Z"
+    },
+    {
+      "id": 4554,
+      "title": "Function calling and other API updates",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "OpenAI Blog",
+      "volume": "",
+      "pages": "",
+      "url": "https://openai.com/blog/function-calling-and-other-api-updates",
+      "doi": "",
+      "note": "讨论模型如何生成结构化的JSON输出以供工具使用，这是框架为可靠的结构化响应而抽象的一种方法，补充了显式输出解析器。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:12.507328Z",
+      "updated_at": "2025-09-09T01:56:29.235718Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

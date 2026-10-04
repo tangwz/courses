@@ -1,0 +1,61 @@
+{
+  "id": 4019,
+  "title": "转换为分类或字符串类型",
+  "meta_title": "将列转换为分类/字符串类型",
+  "meta_description": "确保作为文本或类别的数据得到适当存储。",
+  "content": "<p>虽然将列转换为数值或日期时间格式可以处理定量和时间数据，但许多数据集包含最适合表示为文本或不同类别的信息。确保这些列具有适当的类型对于准确的分析和建模同样重要。有时，看起来是数字的数据，如邮政编码或产品ID，其作用更像是一个标签，不应用于数学计算。其他时候，文本数据代表不同的组或类。</p>\n<h3>字符串：通用文本类型</h3>\n<p>文本数据最一般的类型通常称为 <code>string</code>（在像 pandas 这样的库中有时也叫 <code>object</code>）。这种类型适用于任何字符序列：姓名、地址、自由格式描述、唯一标识符等。如果某一列包含文本，并且你需要执行文本特有的操作，如搜索子字符串、拆分文本，或者只是按原样存储，那么将其转换为字符串类型通常是第一步。</p>\n<p>许多数据加载工具可能会正确识别文本列，但有时数值ID或代码可能会被错误地读取为数字。如果你有一列，比如 <code>ProductID</code>，包含 <code>1001</code>、<code>1002</code>、<code>2001</code> 等值，而这些只是标识符，那么对它们进行求平均等数学运算就没有意义。你应该确保这一列被视为文本。</p>\n<p>在 Python 的 pandas 库中，你可以使用 <code>.astype()</code> 方法将列转换为字符串类型：</p>\n<pre><code class=\"language-python\"># 假设 'df' 是你的 DataFrame，'ProductID' 是列名\ndf['ProductID'] = df['ProductID'].astype(str)\n\n# 验证更改\nprint(df['ProductID'].dtype)\n# 输出可能是：object 或 string[pyarrow]，具体取决于 pandas 版本/设置\n</code></pre>\n<p>这种转换确保了像 <code>1001</code> 这样的值被视为文本序列 '1001'，而不是整数 1001。</p>\n<h3>分类数据：表示群组</h3>\n<p>通常，字符串列只包含少量唯一值，这些值代表不同的组或类别。例子包括像 <code>Status</code>（'Pending'、'Completed'、'Failed'）、<code>SurveyResponse</code>（'Agree'、'Neutral'、'Disagree'）或 <code>ProductCategory</code>（'Electronics'、'Clothing'、'Groceries'）这样的列。</p>\n<p>虽然你可以将其存储为字符串，但将其转换为特定的 <code>categorical</code> 数据类型可以带来一些好处，尤其是在像 pandas 这样的工具中：</p>\n<ol>\n<li><strong>内存效率：</strong> 如果你有很多行但只有少量唯一的字符串值（例如，大型全球数据集中的“国家”列），将其存储为类别可以显著减少内存使用。在内部，数据以整数形式存储，这些整数映射到唯一的字符串值。</li>\n<li><strong>性能：</strong> 对分类数据进行的操作有时会比对字符串数据进行的操作更快。</li>\n<li><strong>分析支持：</strong> 一些统计模型和可视化库会识别分类数据并进行适当处理（例如，确保在图表中正确排序，如“低”、“中”、“高”）。</li>\n</ol>\n<p>你可以将列转换为分类类型，同样使用 <code>.astype()</code>：</p>\n<pre><code class=\"language-python\"># 假设 'df' 是你的 DataFrame，'Status' 是列名\ndf['Status'] = df['Status'].astype('category')\n\n# 验证更改\nprint(df['Status'].dtype)\n# 输出：category\n\n# 你可以查看唯一的类别\nprint(df['Status'].cat.categories)\n# 输出可能是：Index(['Completed', 'Failed', 'Pending'], dtype='object')\n</code></pre>\n<h3>何时选择字符串类型与分类类型</h3>\n<ul>\n<li><strong>在以下情况使用 <code>string</code>：</strong>\n<ul>\n<li>列包含高度唯一的文本值（例如，用户评论、街道地址）。</li>\n<li>你需要经常执行复杂的字符串操作（正则表达式、拆分等）。</li>\n<li>唯一值的数量相对于行数非常大。</li>\n</ul>\n</li>\n<li><strong>在以下情况使用 <code>categorical</code>：</strong>\n<ul>\n<li>列具有有限的、固定的唯一值集合，这些值经常重复出现（例如，状态码、评分、组标签）。</li>\n<li>内存使用是一个重要考量。</li>\n<li>你希望明确定义可能的值或它们的顺序。</li>\n</ul>\n</li>\n</ul>\n<p>将作为文本或类别使用的列转换为正确的类型（<code>string</code> 或 <code>categorical</code>）可以防止不正确的数学操作，并能优化内存使用和性能。它确保你的数据准确反映其所表示信息的本质，为可靠的分析做好准备。</p>",
+  "slug": "converting-to-categorical-string",
+  "updates": [],
+  "references": [
+    {
+      "id": 11088,
+      "title": "Categorical data",
+      "author": "pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html",
+      "doi": "",
+      "note": "pandas分类数据类型的官方文档，解释其用法、优势和内存优化。",
+      "order": 1,
+      "created_at": "2025-09-05T06:59:04.470560Z",
+      "updated_at": "2025-09-08T13:08:52.915097Z"
+    },
+    {
+      "id": 11090,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本关于使用pandas的基础书籍，其中有关于数据类型、字符串操作和分类数据的专门章节。",
+      "order": 3,
+      "created_at": "2025-09-05T06:59:04.478960Z",
+      "updated_at": "2025-09-08T13:08:54.340462Z"
+    },
+    {
+      "id": 11091,
+      "title": "Data Mining: Concepts and Techniques",
+      "author": "Jiawei Han, Jian Pei, and Hanghang Tong",
+      "year": "2022",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://hanj.cs.illinois.edu/bk4/",
+      "doi": "",
+      "note": "一本关于数据挖掘的综合性教科书，其中包含数据预处理章节，讨论数据类型、其特征以及它们对数据质量和分析的影响。",
+      "order": 4,
+      "created_at": "2025-09-05T06:59:04.484080Z",
+      "updated_at": "2025-09-08T13:08:56.402820Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

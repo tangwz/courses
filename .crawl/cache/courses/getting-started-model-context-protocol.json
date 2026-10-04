@@ -1,0 +1,343 @@
+{
+  "id": 244,
+  "title": "模型上下文协议 (MCP) 入门",
+  "meta_title": "MCP课程：搭建模型上下文协议服务器",
+  "meta_description": "掌握模型上下文协议 (MCP)。搭建服务器，定义资源，创建工具，并使用Python和TypeScript连接LLMs至数据系统。",
+  "description": "<p>模型上下文 (context)协议 (MCP) 定义了连接AI助手与数据系统的标准接口。本课程介绍该协议的架构定义，使开发者能够构建对外提供本地和远程资源供大型语言模型 (LLMs) 使用的服务器。我们将了解 MCP 的主要构成要素：资源、提示和工具，并使用官方SDK实现它们。您将掌握传输配置、处理JSON-RPC消息流程，并将自定义服务器与符合MCP的客户端（如Claude Desktop）进行对接。内容侧重于创建可靠上下文提供程序所需的技术规范和实现细节。</p>",
+  "short_description": "使用模型上下文协议，搭建自定义服务器，将大型语言模型与任意数据源相连。",
+  "excerpt": "学习搭建与对接模型上下文协议服务器，连接LLMs与本地数据、数据库及外部工具。",
+  "prerequisites": "具备Python中级知识。",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "MCP架构",
+      "description": "理解客户端-主机-服务器关系及支撑协议运作的JSON-RPC消息流。"
+    },
+    {
+      "topic": "服务器实现",
+      "description": "创建功能完备的MCP服务器，通过资源提供静态和动态数据。"
+    },
+    {
+      "topic": "工具创建",
+      "description": "开发可执行工具，让LLMs能够执行操作并从外部API获取数据。"
+    },
+    {
+      "topic": "客户端对接",
+      "description": "配置并调试自定义MCP服务器与标准客户端（如Claude Desktop）之间的连接。"
+    }
+  ],
+  "duration": 8,
+  "slug": "getting-started-model-context-protocol",
+  "level": 2,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-19T05:29:10.791998Z",
+  "updated_at": "2026-10-02T08:18:19.989105Z",
+  "chapters": [
+    {
+      "id": 1363,
+      "title": "架构与基本原理",
+      "meta_title": "MCP架构：客户端、宿主与服务器",
+      "meta_description": "理解模型上下文协议的核心架构，包括客户端-宿主-服务器模型和JSON-RPC传输机制。",
+      "number": 1,
+      "slug": "architecture-and-fundamentals",
+      "content": "为大型语言模型构建集成通常需要为每个不同的数据源创建定制连接器。模型上下文协议 (MCP) 通过提供一个标准化的开放协议来解决这种碎片化问题。它将数据提供方与客户端应用程序分离，从而允许单个服务器向任何符合MCP标准的客户端提供资源。\n\n本章明确了构建这些集成所需的技术基准。我们侧重于架构定义，而非即时的代码实现。您将考察客户端-宿主-服务器拓扑，以了解责任如何在系统中分配。我们还会分析通信层，它依赖于JSON-RPC 2.0消息来处理请求、响应和通知。\n\n该协议支持特定的传输机制，具体取决于连接是本地还是远程。我们将比较用于本地进程通信的标准输入/输出 (stdio) 与用于基于HTTP连接的服务器发送事件 (SSE)。理解这些传输层对于后续调试连接问题是有必要的。\n\n在本章结束时，您将能够：\n\n*   定义MCP客户端、宿主和服务器的角色与职责。\n*   分析协议中使用的JSON-RPC消息的结构。\n*   针对您的具体应用场景选择适合的传输机制。\n*   阐述初始化握手期间的能力协商过程。\n*   配置带有必要SDK的本地开发环境。",
+      "sections": [
+        {
+          "id": 7837,
+          "title": "MCP规范概览",
+          "meta_title": "模型上下文协议（MCP）规范概述",
+          "meta_description": "对定义模型上下文协议的技术规范进行介绍。",
+          "slug": "mcp-specification-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7838,
+          "title": "客户端-宿主-服务器拓扑",
+          "meta_title": "MCP拓扑：客户端、宿主和服务器的角色",
+          "meta_description": "定义MCP生态系统中客户端、宿主和服务器的不同角色。",
+          "slug": "client-host-server-topology",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7839,
+          "title": "JSON-RPC 消息结构",
+          "meta_title": "了解 MCP 中的 JSON-RPC",
+          "meta_description": "解析 JSON-RPC 2.0 消息格式，包括请求、响应和通知。",
+          "slug": "json-rpc-message-structure",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7840,
+          "title": "传输机制：标准输入输出（Stdio）和服务器发送事件（SSE）",
+          "meta_title": "MCP传输方式：Stdio与服务器发送事件的比较",
+          "meta_description": "比较用于数据传输的标准输入输出（Stdio）和服务器发送事件（SSE）。",
+          "slug": "transport-mechanisms-stdio-sse",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7841,
+          "title": "能力协商",
+          "meta_title": "MCP中的握手与能力协商",
+          "meta_description": "客户端和服务器如何在初始化阶段交换能力。",
+          "slug": "capabilities-negotiation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7842,
+          "title": "动手实践：环境配置",
+          "meta_title": "实践：设置MCP开发环境",
+          "meta_description": "安装MCP SDK并配置开发环境的实用步骤。",
+          "slug": "hands-on-practice-environment-setup",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1364,
+      "title": "定义资源和提示词",
+      "meta_title": "MCP资源和提示词：向LLM展现数据",
+      "meta_description": "学习定义用于数据访问的MCP资源和用于LLM交互模板的提示词。",
+      "number": 2,
+      "slug": "defining-resources-and-prompts",
+      "content": "模型上下文协议的核心架构规定了组件间的通信方式，但这种通信的价值体现在所交换的数据上。随着传输层和连接拓扑的搭建完成，关注点将转向那些作为大型语言模型（LLM）上下文的内容载荷。本章说明用于展现数据和交互模式的两种主要基本元素：**资源**和**提示词**。\n\n**资源**充当从服务器读取数据的标准接口。它们允许您将文件、数据库记录或API响应展现为可寻址的内容。您将定义统一资源标识符（URI）来定位这些项，并实现取回它们所需的逻辑。实现细节包含同步读取（数据立即获取）和订阅模型（当底层数据源改变时，服务器能够推送通知）。\n\n**提示词**提供了一种标准化用户交互的方法。您可以不依赖于临时指令，而是定义结构化模板来指导LLM的行为。本节说明如何构建提示词架构，这些架构规定了所需参数并自动嵌入必要的上下文。\n\n到本章结束时，您将从理论定义转向实际可用的代码。您将构建一个文件读取服务器，它实现了这些基本元素，使MCP客户端能够访问和读取您的本地目录结构中的内容。",
+      "sections": [
+        {
+          "id": 7843,
+          "title": "MCP中的资源理念",
+          "meta_title": "界定模型上下文协议中的资源",
+          "meta_description": "领会资源作为向客户端公开数据上下文的主要方式。",
+          "slug": "concept-resources-mcp",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7844,
+          "title": "URI 方案和模式",
+          "meta_title": "资源 URI 方案与模式匹配",
+          "meta_description": "构建统一资源标识符 (URI) 以唯一标识和路由数据。",
+          "slug": "uri-schemes-patterns",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7845,
+          "title": "实现同步资源读取",
+          "meta_title": "读取数据：同步资源实现",
+          "meta_description": "实现同步返回数据的处理器的代码示例。",
+          "slug": "implementing-synchronous-resource-reads",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7846,
+          "title": "资源订阅与通知",
+          "meta_title": "动态数据：订阅与通知",
+          "meta_description": "在底层资源数据发生变化时向客户端推送更新。",
+          "slug": "resource-subscriptions-notifications",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7847,
+          "title": "构建提示",
+          "meta_title": "在MCP中创建提示",
+          "meta_description": "定义可复用的提示模板以引导LLM交互。",
+          "slug": "structuring-prompts",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7848,
+          "title": "动手实践：构建文件读取服务器",
+          "meta_title": "实践：构建MCP文件读取服务器",
+          "meta_description": "分步指南，指导您构建一个读取并提供本地文件服务的MCP服务器。",
+          "slug": "hands-on-practice-file-reader-server",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1365,
+      "title": "实现工具和逻辑",
+      "meta_title": "MCP 工具：供AI使用的可执行功能",
+      "meta_description": "开发 MCP 工具，让AI模型能够执行操作、运行逻辑并与API交互。",
+      "number": 3,
+      "slug": "implementing-tools-and-logic",
+      "content": "资源为大型语言模型 (LLM) 了解某个业务范围提供所需信息，但它们按设计是只读的。为了让模型能够修改系统或根据动态参数获取特定数据，例如查询数据库或调用外部API，您必须实现工具。工具与资源的区别在于，它们是服务器提供的可执行功能，当模型判断需要执行某个操作时，客户端可以调用它们。\n\n本章侧重于这些可执行基础组件的服务器端实现。您将使用 JSON Schema 定义工具的接口，确保模型准确理解需要哪些参数以及该工具完成什么任务。我们将使用 Pydantic 应用输入验证，以确保类型安全并在执行任何逻辑之前处理边界情况。\n\n此外，我们将研究几种模式，用于将外部API调用封装到 MCP 工具中，以及管理通过 JSON-RPC 层进行错误传递的方式。一个常见的架构考量是在计算资源和工具之间进行选择；我们将分析做出这种区分的依据。到本章结束时，您将通过构建一个功能服务器来应用所学内容，该服务器能够对本地 SQLite 数据库执行 SQL 查询。",
+      "sections": [
+        {
+          "id": 7849,
+          "title": "工具定义规范",
+          "meta_title": "在MCP中定义工具规范",
+          "meta_description": "使用JSON Schema构建工具定义，以向LLM描述功能。",
+          "slug": "tool-definition-schema",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7850,
+          "title": "使用 Pydantic 进行输入校验",
+          "meta_title": "使用 Pydantic 校验工具输入",
+          "meta_description": "使用 Pydantic 模型确保工具参数的类型安全和数据完整性。",
+          "slug": "input-validation-pydantic",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7851,
+          "title": "执行外部API调用",
+          "meta_title": "经由MCP工具整合外部API",
+          "meta_description": "在MCP工具处理程序中封装REST API请求的模式。",
+          "slug": "executing-external-api-calls",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7852,
+          "title": "错误处理与报告",
+          "meta_title": "MCP 工具中的错误处理",
+          "meta_description": "捕获异常并向客户端返回有助益错误的规范方法。",
+          "slug": "error-handling-reporting",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7853,
+          "title": "设计计算资源",
+          "meta_title": "计算资源与工具",
+          "meta_description": "区分动态计算资源和可执行工具。",
+          "slug": "designing-computed-resources",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7854,
+          "title": "实践操作：创建数据库工具",
+          "meta_title": "实践：创建SQL数据库工具",
+          "meta_description": "构建一个允许LLM安全查询本地SQLite数据库的工具。",
+          "slug": "hands-on-practice-creating-database-tool",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1366,
+      "title": "调试与客户端集成",
+      "meta_title": "MCP集成：调试与配置",
+      "meta_description": "掌握MCP Inspector，配置客户端连接，并调试协议交互。",
+      "number": 4,
+      "slug": "debugging-and-client-integration",
+      "content": "至此，我们主要关注构建MCP服务器的内部逻辑，定义它如何读取数据以及能执行哪些操作。然而，一个能正常工作的服务器需要运行环境和驱动交互的客户端。您编写的代码现在必须通过标准输入/输出 (stdio) 或 SSE 进行通信，处理来自AI应用的实时请求。\n\n本章讨论MCP开发的集成与维护阶段。我们从MCP Inspector开始，这是一个用于在主客户端之外测试服务器功能的工具。您将学会追踪JSON-RPC消息流，检查请求和响应以确认它们符合协议规范。这种隔离测试有助于在它们影响应用行为之前发现架构不匹配或逻辑错误。\n\n调试之后，我们转向客户端配置。我们查看将您的服务器注册到Claude Desktop所需的设置，包括修改配置文件和注入用于认证的环境变量。本文还涉及连接生命周期，解释客户端如何管理服务器进程以及在初始化和终止期间发生什么。您将应用这些知识来建立本地工具与LLM接口之间稳定持久的连接。",
+      "sections": [
+        {
+          "id": 7855,
+          "title": "使用 MCP 检查器",
+          "meta_title": "使用 MCP 检查器进行调试",
+          "meta_description": "使用基于网络的检查器来可视化和测试服务器端点。",
+          "slug": "using-mcp-inspector",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7856,
+          "title": "分析日志输出",
+          "meta_title": "MCP 中的日志记录与诊断",
+          "meta_description": "在开发周期中解读服务器日志和错误追踪。",
+          "slug": "analyzing-log-output",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7857,
+          "title": "Claude Desktop 的配置",
+          "meta_title": "为 MCP 配置 Claude Desktop",
+          "meta_description": "修改配置文件，以便在 Claude Desktop 中登记本地服务器。",
+          "slug": "configuration-claude-desktop",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7858,
+          "title": "管理环境变量",
+          "meta_title": "MCP 中的环境变量管理",
+          "meta_description": "安全地将 API 密钥和配置设置传递给 MCP 服务器。",
+          "slug": "managing-environment-variables",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7859,
+          "title": "处理连接生命周期",
+          "meta_title": "MCP连接生命周期",
+          "meta_description": "管理服务器启动、关闭和重连逻辑。",
+          "slug": "handling-connection-lifecycles",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7860,
+          "title": "动手实践：端到端集成",
+          "meta_title": "实践：全栈MCP集成",
+          "meta_description": "最终实践，将定制服务器连接到客户端并执行复杂任务。",
+          "slug": "hands-on-practice-end-to-end-integration",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

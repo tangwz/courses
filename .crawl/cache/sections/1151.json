@@ -1,0 +1,61 @@
+{
+  "id": 1151,
+  "title": "折线图：绘制趋势",
+  "meta_title": "使用 Matplotlib 创建折线图",
+  "meta_description": "学习如何使用 Matplotlib 的 `plot` 函数创建折线图，以显示随时间变化或按顺序排列的趋势。",
+  "content": "<p>折线图是最基本且应用广泛的可视化图表类型之一。它们特别适合显示趋势，或显示变量之间顺序有重要意义的关系，例如随时间收集的数据点或序列中的步骤。折线图通过直线段连接各个数据点，从而方便地观察模式、增长、下降或波动。</p>\n<p>Matplotlib 中创建折线图的主要函数是 <code>plot()</code>。此函数可以直接通过 <code>pyplot</code> 接口（通常作为 <code>plt</code> 导入）使用，也可以作为 <code>Axes</code> 对象上的方法使用。通常情况下，为求简单，<code>pyplot</code> 接口被广泛用于创建折线图，但其背后的命令始终影响着 <code>Figure</code> 和 <code>Axes</code> 对象。</p>\n<h3>创建基本折线图</h3>\n<p>要创建折线图，通常需要为 <code>plot()</code> 函数提供两个序列（如列表或 NumPy 数组）：一个用于 x 坐标，另一个用于 y 坐标。Matplotlib 会在每个 <code>(x, y)</code> 对处绘制点，然后用线连接这些点。</p>\n<p>我们来显示一个简单的二次关系，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>y</mi><mo>=</mo><msup><mi>x</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">y = x^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">y</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 准备数据\nx_values = np.array([0, 1, 2, 3, 4, 5])\ny_values = x_values**2 # 计算 y = x^2\n\n# 创建图表\nplt.figure() # 可选：创建新图\nplt.plot(x_values, y_values)\n\n# 添加标签以使图表更清晰（这部分将在后续章节详细说明）\nplt.xlabel(\"X 值\")\nplt.ylabel(\"Y 值 (X 的平方)\")\nplt.title(\"一个简单的折线图\")\n\n# 显示图表\nplt.show()\n</code></pre>\n<p>执行此代码将生成一个显示图表的窗口。您将看到 x 轴范围从 0 到 5，y 轴相应地缩放以显示平方值。点 <code>(0, 0)</code>、<code>(1, 1)</code>、<code>(2, 4)</code>、<code>(3, 9)</code>、<code>(4, 16)</code> 和 <code>(5, 25)</code> 被计算并由蓝线顺序连接（Matplotlib 为第一条线设置的默认颜色）。</p>\n<h3>仅绘制 Y 值</h3>\n<p>如果您只向 <code>plot()</code> 提供一个列表或数组，会发生什么？</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 仅用于 y 轴的数据\ndata_points = np.array([3, 5, 2, 8, 6])\n\n# 创建图表\nplt.figure()\nplt.plot(data_points) # 仅提供 y 值\n\n# 添加标签\nplt.xlabel(\"索引\")\nplt.ylabel(\"数据值\")\nplt.title(\"隐式 X 轴的绘制\")\n\n# 显示图表\nplt.show()\n</code></pre>\n<p>在这种情况下，Matplotlib 假定您想绘制 <code>data_points</code> 数据点与其索引的关系。x 值被隐式地视为 <code>[0, 1, 2, 3, 4]</code>，对应于输入数组中每个值的位置。这对于快速显示一个序列很有用，其中 x 轴代表离散的步骤或仅仅是元素的顺序。</p>\n<h3>绘制多条线</h3>\n<p>在调用 <code>plt.show()</code> 之前，您可以通过多次调用 <code>plot()</code> 函数，轻松地在同一个 <code>Axes</code> 上绘制多条线。Matplotlib 会自动循环使用默认颜色来绘制每条新线，使它们易于区分。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 准备两条线的数据\nx = np.linspace(0, 10, 100) # 从 0 到 10 的 100 个点\ny1 = np.sin(x)\ny2 = np.cos(x)\n\n# 创建图表\nplt.figure()\nplt.plot(x, y1) # 第一条线（例如，正弦波）\nplt.plot(x, y2) # 第二条线（例如，余弦波）\n\n# 添加标签和标题\nplt.xlabel(\"X 值\")\nplt.ylabel(\"函数值\")\nplt.title(\"绘制多条线（正弦和余弦）\")\n\n# 显示图表\nplt.show()\n</code></pre>\n<p>此代码生成一个图表，显示正弦和余弦函数在 0 到 10 的范围内的情况。第一次调用 <code>plt.plot(x, y1)</code> 会绘制正弦波（可能为蓝色），第二次调用 <code>plt.plot(x, y2)</code> 则会将余弦波（可能为橙色）添加到<em>同一个</em> <code>Axes</code> 中。请注意两个图表如何共享相同的 x 轴和 y 轴。我们将在后续章节介绍如何添加图例，以便清楚地区分哪条线对应哪个数据集。</p>\n<p>折线图是多种可视化图表类型的核心。它们非常适合显示随时间的变化（时间序列），呈现数学函数，或比较不同组或实验之间的趋势。随着学习的推进，您将学习如何大幅自定义其外观，包括更改颜色、线型和标记 (token)。</p>",
+  "slug": "matplotlib-line-plots",
+  "updates": [],
+  "references": [
+    {
+      "id": 853,
+      "title": "matplotlib.pyplot.plot",
+      "author": "Matplotlib Developers",
+      "year": "latest documentation",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html",
+      "doi": "",
+      "note": "Matplotlib 中用于创建线图的主要函数的官方文档，详细说明其参数和用法。",
+      "order": 1,
+      "created_at": "2025-09-04T15:04:32.280275Z",
+      "updated_at": "2025-09-07T16:22:37.918906Z"
+    },
+    {
+      "id": 854,
+      "title": "Pyplot tutorial",
+      "author": "Matplotlib Developers",
+      "year": "latest documentation",
+      "publisher": "The Matplotlib Development Team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/introductory/pyplot.html",
+      "doi": "",
+      "note": "来自 Matplotlib 官方文档的入门教程，展示了基本的绘图概念，包括使用 `pyplot` 创建简单线图。",
+      "order": 2,
+      "created_at": "2025-09-04T15:04:32.286213Z",
+      "updated_at": "2025-09-07T16:22:38.617893Z"
+    },
+    {
+      "id": 855,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本关于 Python 数据处理和分析的综合指南，其中包含专门的 Matplotlib 部分，用于创建各种类型的可视化，包括线图。",
+      "order": 3,
+      "created_at": "2025-09-04T15:04:32.289794Z",
+      "updated_at": "2025-09-07T16:22:37.055908Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1014,
+  "title": "创建新分支 (git branch)",
+  "meta_title": "在Git中创建新分支 | git branch 命令",
+  "meta_description": "学习如何使用 `git branch <branch-name>` 命令创建新分支。",
+  "content": "<p>同时处理不同任务，比如开发一个新功能的同时修复一个独立的错误，需要一种方法来隔离这些工作流程。Git通过分支提供了这种隔离。可以将分支看作项目历史中可移动的书签或指针。当你想开始一条新的开发线时，就创建一个新分支。</p>\n<p>创建新分支的命令是 <code>git branch</code> 后面跟着你想给分支起的名称。</p>\n<pre><code class=\"language-bash\">git branch &#x3C;branch-name>\n</code></pre>\n<p>例如，如果你要开始为一个新网站的头部内容工作，你可能会创建一个名为 <code>update-header</code> 的分支：</p>\n<pre><code class=\"language-bash\">git branch update-header\n</code></pre>\n<p>运行这个命令会发生什么？Git会创建一个新的指针（本例中名为 <code>update-header</code>），它指向你当前所在的<em>完全相同的提交</em>（即 <code>HEAD</code> 指针所在的位置）。理解这一点很重要：<strong>这个命令只创建分支；它不会切换到该分支</strong>。你的工作目录文件保持不变，并且你仍然在你运行命令之前的那个分支上。</p>\n<p>设想你的项目历史看起来像这样，其中 <code>main</code> 是你的主要分支，<code>HEAD</code> 表示你当前的位置：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-bdcay8\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Arial\", fontsize=10];\n  edge [arrowhead=vee, color=\"#495057\"];\n\n  c1 [label=\"C1\"];\n  c2 [label=\"C2\"];\n  c3 [label=\"C3\"];\n\n  c1 -> c2 -> c3;\n\n  main [shape=plaintext, fontsize=10, fontname=\"Arial\"];\n  HEAD [shape=plaintext, fontsize=10, fontname=\"Arial\"];\n\n  main -> c3 [color=\"#1c7ed6\"];\n  HEAD -> main [style=dashed, arrowhead=none, color=\"#495057\"];\n\n  {rank=same; c3; main;}\n  {rank=same; main; HEAD;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-bdcay8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>创建新分支前的仓库状态。<code>HEAD</code> 指向 <code>main</code>，而 <code>main</code> 指向最新的提交 <code>C3</code>。</p>\n</blockquote>\n<p>现在，如果你运行 <code>git branch update-header</code>，状态会变成：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-fxg0ih\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Arial\", fontsize=10];\n  edge [arrowhead=vee, color=\"#495057\"];\n\n  c1 [label=\"C1\"];\n  c2 [label=\"C2\"];\n  c3 [label=\"C3\"];\n\n  c1 -> c2 -> c3;\n\n  main [shape=plaintext, fontsize=10, fontname=\"Arial\"];\n  update_header [label=\"update-header\", shape=plaintext, fontsize=10, fontname=\"Arial\"];\n  HEAD [shape=plaintext, fontsize=10, fontname=\"Arial\"];\n\n  main -> c3 [color=\"#1c7ed6\"];\n  update_header -> c3 [color=\"#1098ad\"];\n  HEAD -> main [style=dashed, arrowhead=none, color=\"#495057\"];\n\n  {rank=same; c3; main; update_header;}\n  {rank=same; main; HEAD;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-fxg0ih\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>运行 <code>git branch update-header</code> 后。一个新的指针 <code>update-header</code> 被创建，它指向与 <code>main</code> 相同的提交 <code>C3</code>。<code>HEAD</code> 仍指向 <code>main</code>。</p>\n</blockquote>\n<p>请注意，现在存在一个新指针 <code>update-header</code>，并指向提交 <code>C3</code>。然而，<code>HEAD</code> 仍指向 <code>main</code>，这表明 <code>main</code> 仍然是你当前活跃的分支。</p>\n<h3>分支命名规范</h3>\n<p>虽然Git允许分支使用几乎任何名称（除了包含空格或某些特殊字符的名称），但使用有意义的名称是个好习惯。常见的规范包括：</p>\n<ul>\n<li>使用连字符分隔单词（例如：<code>fix-login-bug</code>）。</li>\n<li>使用 <code>feature/</code>、<code>bugfix/</code> 或 <code>hotfix/</code> 等前缀来对分支进行分类（例如：<code>feature/user-profiles</code>，<code>bugfix/issue-451</code>）。</li>\n</ul>\n<p>这些规范让你和你的合作者仅通过查看分支名称就能更容易地理解它们的用途。</p>\n<p>创建分支为独立开发创造了条件。下一步，我们将在下一节中介绍，是实际切换到你的新分支并开始在其上工作。</p>",
+  "slug": "git-branch-create",
+  "updates": [],
+  "references": [
+    {
+      "id": 231,
+      "title": "Git Reference Manual - git-branch",
+      "author": "Git Development Community",
+      "year": "Current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-branch",
+      "doi": "",
+      "note": "`git branch` 命令的官方参考资料，详述其用法和各种选项。",
+      "order": 1,
+      "created_at": "2025-09-04T13:59:49.691391Z",
+      "updated_at": "2025-09-07T15:38:33.429322Z"
+    },
+    {
+      "id": 232,
+      "title": "Pro Git, Chapter 3: Git Branching - Branches in a Nutshell",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell",
+      "doi": "",
+      "note": "一个基础章节，解释Git分支作为指针以及它们的创建方式，配有实用的图表。",
+      "order": 2,
+      "created_at": "2025-09-04T13:59:49.694437Z",
+      "updated_at": "2025-09-07T15:38:36.624404Z"
+    },
+    {
+      "id": 233,
+      "title": "Git Branching",
+      "author": "Atlassian",
+      "year": "Current",
+      "publisher": "Atlassian",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.atlassian.com/git/tutorials/git-branch",
+      "doi": "",
+      "note": "一份关于理解和创建Git分支的实用指南，提供清晰的解释，适合新用户。",
+      "order": 3,
+      "created_at": "2025-09-04T13:59:49.696972Z",
+      "updated_at": "2025-09-07T15:38:37.799491Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

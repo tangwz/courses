@@ -1,0 +1,45 @@
+{
+  "id": 5700,
+  "title": "比较数据分布",
+  "meta_title": "比较数据分布",
+  "meta_description": "介绍如何使用直方图或密度图比较真实数据与合成数据中特征的分布。",
+  "content": "<p>虽然比较均值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>) 和标准差 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>) 等基本统计量能提供快速检查，但这并不能完全展现合成数据的全貌。两个数据集对于某个特征可能具有相同的均值和标准差，但在数值分布方式上可能看起来完全不同。这就是为什么比较特征的<em>分布</em>变得有意义的原因。我们希望了解合成数据集中数据点的整体形状和分散情况是否与真实数据集中的数据点一致。</p>\n<h3>使用直方图可视化分布</h3>\n<p>可视化比较分布最直接的方法之一是使用直方图。直方图将数值数据分组到不同的区间（bins）中，并显示落入每个区间的数据点的频率（计数）。通过绘制真实数据集和合成数据集中相同特征的直方图，我们可以直接比较它们的形状。</p>\n<p>假设我们有一个包含客户年龄的真实数据集，并且我们生成了一个合成版本。我们可以绘制这两个数据集中“年龄”特征的直方图。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-c9s2iq\" \n              data-plot-definition='{\"layout\": {\"title\": \"年龄分布：真实数据对比合成数据\", \"xaxis\": {\"title\": \"年龄区间\"}, \"yaxis\": {\"title\": \"频率\"}, \"barmode\": \"overlay\"}, \"data\": [{\"type\": \"histogram\", \"x\": [22, 25, 31, 45, 50, 28, 33, 39, 41, 55, 60, 29, 35, 48, 52, 24, 30, 38, 42, 58], \"name\": \"真实数据\", \"opacity\": 0.75, \"marker\": {\"color\": \"#228be6\"}}, {\"type\": \"histogram\", \"x\": [19, 29, 33, 40, 58, 25, 36, 49, 44, 51, 65, 22, 39, 46, 56, 27, 31, 43, 47, 61], \"name\": \"合成数据\", \"opacity\": 0.6, \"marker\": {\"color\": \"#ff922b\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-c9s2iq\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用直方图比较年龄分布。蓝色条形表示真实数据，橙色条形表示合成数据。</p>\n</blockquote>\n<p>查看这些直方图时，请思考：</p>\n<ul>\n<li>形状大体一致吗？它们都是偏斜的、钟形的还是均匀的？</li>\n<li>峰值（最常出现的区间）大致在相同位置吗？</li>\n<li>数据的范围或分散情况相似吗？</li>\n</ul>\n<p>预计会有细微的差异，但大的差异（例如，合成数据在真实数据为谷值的地方显示峰值）表明生成过程未能很好地捕获此特征的分布。</p>\n<h3>使用密度图进行更平滑的比较</h3>\n<p>直方图效果很好，但箱体大小的选择有时会影响分布的显示方式。可视化分布的一种更平滑的方法，特别是对于连续数据，是使用核密度估计 (KDE)，通常显示为密度图。密度图试图估计数据点所来自的潜在概率分布，从而产生一条平滑曲线。</p>\n<p>比较密度图可以更容易地看出形状和峰值的细微差别。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-17zjxb\" \n              data-plot-definition='{\"layout\": {\"title\": \"年龄密度：真实数据对比合成数据\", \"xaxis\": {\"title\": \"年龄\"}, \"yaxis\": {\"title\": \"密度\"}, \"legend\": {\"title\": {\"text\": \"数据集\"}}}, \"data\": [{\"type\": \"violin\", \"x\": [22, 25, 31, 45, 50, 28, 33, 39, 41, 55, 60, 29, 35, 48, 52, 24, 30, 38, 42, 58], \"name\": \"真实数据\", \"side\": \"positive\", \"points\": false, \"box\": {\"visible\": false}, \"meanline\": {\"visible\": false}, \"line\": {\"color\": \"#228be6\"}, \"fillcolor\": \"rgba(34, 139, 230, 0.3)\"}, {\"type\": \"violin\", \"x\": [19, 29, 33, 40, 58, 25, 36, 49, 44, 51, 65, 22, 39, 46, 56, 27, 31, 43, 47, 61], \"name\": \"合成数据\", \"side\": \"negative\", \"points\": false, \"box\": {\"visible\": false}, \"meanline\": {\"visible\": false}, \"line\": {\"color\": \"#ff922b\"}, \"fillcolor\": \"rgba(255, 146, 43, 0.3)\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-17zjxb\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用密度图（此处使用并列的小提琴图表示）比较年龄分布。蓝色区域显示真实数据的密度，橙色区域显示合成数据的密度。</p>\n</blockquote>\n<p>同样，寻找形状、峰值位置和整体分散情况的相似之处。密度图在确定数据中的众数（峰值）方面特别有用，这些众数在直方图中可能被分箱选择所遮蔽。</p>\n<h3>检查关联性：散点图</h3>\n<p>数据生成不仅仅是正确获取单个特征的分布；它还需要保持特征<em>之间</em>的关联性。例如，在一个真实数据集中，身高和体重可能呈正相关。我们的合成数据是否显示相同的趋势？</p>\n<p>检查两个数值特征之间关联性的简单方法是使用散点图。为真实数据创建一个散点图，为合成数据创建另一个散点图，并绘制相同的两个特征。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-pv7ve4\" \n              data-plot-definition='{\"layout\": {\"title\": \"身高与体重：真实数据\", \"xaxis\": {\"title\": \"身高 (厘米)\"}, \"yaxis\": {\"title\": \"体重 (公斤)\"}}, \"data\": [{\"type\": \"scatter\", \"x\": [165, 170, 175, 180, 168, 172, 178, 182, 166, 173], \"y\": [60, 65, 70, 78, 62, 68, 75, 80, 61, 69], \"mode\": \"markers\", \"marker\": {\"color\": \"#228be6\", \"size\": 8}, \"name\": \"真实\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-pv7ve4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示真实数据集中身高与体重之间关联的散点图。</p>\n</blockquote>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1iirq46\" \n              data-plot-definition='{\"layout\": {\"title\": \"身高与体重：合成数据\", \"xaxis\": {\"title\": \"身高 (厘米)\"}, \"yaxis\": {\"title\": \"体重 (公斤)\"}}, \"data\": [{\"type\": \"scatter\", \"x\": [163, 171, 177, 181, 169, 174, 176, 183, 165, 175], \"y\": [58, 66, 72, 77, 64, 71, 73, 82, 60, 70], \"mode\": \"markers\", \"marker\": {\"color\": \"#ff922b\", \"size\": 8}, \"name\": \"合成\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1iirq46\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示合成数据集中身高与体重之间关联的散点图。</p>\n</blockquote>\n<p>比较这两个图中的模式。合成数据是否显示出与真实数据相似的趋势（例如，正相关、负相关、无清晰模式）？点的分散情况或密度是否大致可比？这里存在的明显差异表明生成方法未能捕获这些特征之间的相互关系。</p>\n<p>通过使用直方图、密度图和散点图直观地比较分布，可以比单独使用基本统计量更全面地认识合成数据质量。它有助于我们评估合成数据是否真正模仿了真实数据中存在的结构和关联性，使我们更接近于了解其潜在的真实度。</p>",
+  "slug": "comparing-data-distributions",
+  "updates": [],
+  "references": [
+    {
+      "id": 15943,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "",
+      "note": "数据可视化综合指南，涵盖直方图、密度图和散点图，用于比较数据分布和关系。",
+      "order": 1,
+      "created_at": "2025-09-06T10:57:32.597235Z",
+      "updated_at": "2025-09-10T13:10:00.603270Z"
+    },
+    {
+      "id": 15944,
+      "title": "Practical Statistics for Data Scientists: 50 Essential Concepts",
+      "author": "Peter Bruce and Andrew Bruce",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/",
+      "doi": "",
+      "note": "解释了与数据科学相关的统计概念，包括通过视觉和数值汇总比较数据分布的方法。",
+      "order": 2,
+      "created_at": "2025-09-06T10:57:32.600655Z",
+      "updated_at": "2025-09-10T13:10:13.665806Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

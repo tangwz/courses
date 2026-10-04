@@ -1,0 +1,61 @@
+{
+  "id": 1851,
+  "title": "动手实践：构建回归模型",
+  "meta_title": "实践：构建Scikit-learn回归模型",
+  "meta_description": "在样本数据集上训练、预测和评估线性回归模型。",
+  "content": "<p>使用Scikit-learn构建、训练和评估简单线性回归模型的完整过程将被演示。这将涉及使用真实数据集来预测一个连续目标变量。</p>\n<h3>准备工作：导入和数据</h3>\n<p>首先，我们需要导入所需的库和模块。我们将需要Pandas进行可能的数据处理（尽管Scikit-learn数据集通常返回NumPy数组或Bunch对象），以及Scikit-learn用于数据集、模型、分割函数和评估指标。</p>\n<pre><code class=\"language-python\">import numpy as np\nimport pandas as pd\nfrom sklearn.datasets import fetch_california_housing\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score\nimport plotly.graph_objects as go # For visualization\n</code></pre>\n<p>我们将使用加利福尼亚住房数据集，这是一个在Scikit-learn中直接提供的常用回归任务数据集。目标是根据普查数据中的各种特征，预测加利福尼亚各区域的房屋中位价。</p>\n<pre><code class=\"language-python\"># Load the dataset\ncalifornia = fetch_california_housing(as_frame=True)\nX = california.data\ny = california.target\n\n# Display some information about the data\nprint(\"特征 (X):\")\nprint(X.head())\nprint(\"\\n目标 (y) - 房屋中位价:\")\nprint(y.head())\nprint(\"\\n数据集描述:\")\nprint(california.DESCR[:500] + \"...\") # 打印描述的前500个字符\n</code></pre>\n<p>输出显示了我们特征（如收入中位数、房龄、平均房间数）和目标变量（房屋中位价）的前几行。描述提供了特征和预测任务的背景信息。</p>\n<h3>分割数据以进行可靠评估</h3>\n<p>在训练之前，标准做法是将数据集分成两部分：训练集和测试集。模型从训练集中学习模式。然后，我们在未见过的测试集上评估其性能，以获得模型在新数据上泛化能力的无偏估计。我们为此使用了Scikit-learn的<code>train_test_split</code>函数。</p>\n<pre><code class=\"language-python\"># 将数据分割为训练集（80%）和测试集（20%）\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\nprint(f\"X_train 的形状: {X_train.shape}\")\nprint(f\"X_test 的形状: {X_test.shape}\")\nprint(f\"y_train 的形状: {y_train.shape}\")\nprint(f\"y_test 的形状: {y_test.shape}\")\n</code></pre>\n<p>我们设置<code>test_size=0.2</code>来分配20%的数据用于测试，并使用<code>random_state</code>以确保可重现性，从而保证每次运行代码时都能获得相同的分割结果。</p>\n<h3>训练线性回归模型</h3>\n<p>现在我们实例化<code>LinearRegression</code>模型，并使用我们的训练数据（<code>X_train</code>和<code>y_train</code>）对其进行拟合。<code>fit</code>方法是模型学习特征与目标变量之间关系的地方，它会计算线性方程的最佳系数。</p>\n<pre><code class=\"language-python\"># 创建一个线性回归模型实例\nmodel = LinearRegression()\n\n# 使用训练数据训练模型\nmodel.fit(X_train, y_train)\n\nprint(\"模型训练完成。\")\nprint(f\"截距: {model.intercept_}\")\nprint(f\"系数: {model.coef_}\")\n</code></pre>\n<p>拟合后，模型学习了截距和每个特征的系数。这些表示在训练数据中确定的线性关系。</p>\n<h3>进行预测</h3>\n<p>模型训练完成后，我们现在可以使用它在新数据（未见过的数据）上进行预测。我们对测试集（<code>X_test</code>）使用<code>predict</code>方法。</p>\n<pre><code class=\"language-python\"># 在测试集上进行预测\ny_pred = model.predict(X_test)\n\n# 显示前5个预测值和实际值\nprint(\"前5个预测值:\", y_pred[:5])\nprint(\"前5个实际值:\", y_test[:5].values)\n</code></pre>\n<p>模型输出一个基于<code>X_test</code>中特征的预测房屋中位价数组。我们可以将这些预测值（<code>y_pred</code>）与实际已知值（<code>y_test</code>）进行比较。</p>\n<h3>评估模型性能</h3>\n<p>这些预测效果如何？我们需要量化 (quantization)指标来评估模型的性能。我们将使用前面讨论的评估指标：平均绝对误差（MAE）、均方误差（MSE）和R平方（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">R^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0077em;\">R</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>）分数。这些指标通过比较预测值（<code>y_pred</code>）与实际值（<code>y_test</code>）计算得出。</p>\n<pre><code class=\"language-python\"># 计算评估指标\nmae = mean_absolute_error(y_test, y_pred)\nmse = mean_squared_error(y_test, y_pred)\nrmse = np.sqrt(mse) # 计算均方根误差\nr2 = r2_score(y_test, y_pred)\n\nprint(f\"平均绝对误差 (MAE): {mae:.4f}\")\nprint(f\"均方误差 (MSE): {mse:.4f}\")\nprint(f\"均方根误差 (RMSE): {rmse:.4f}\")\nprint(f\"R平方 (R2 分数): {r2:.4f}\")\n</code></pre>\n<p>我们来解读这些结果：</p>\n<ul>\n<li><strong>MAE</strong>：平均而言，模型的预测值偏差约0.53个房屋中位价单位（以10万美元为单位，即53,000美元）。</li>\n<li><strong>MSE/RMSE</strong>：RMSE约为0.72个单位（72,000美元）。与MAE类似，它衡量预测误差，但MSE（以及RMSE）由于平方运算，对大误差的惩罚更重。</li>\n<li><strong>R² 分数</strong>：R平方约为0.59，表示测试集中约59%的房屋中位价方差可以由我们的模型根据特征进行解释。R平方为1则表示完美拟合。</li>\n</ul>\n<h3>预测值与实际值可视化</h3>\n<p>通过散点图比较实际值（<code>y_test</code>）与预测值（<code>y_pred</code>），可以对模型的性能进行视觉评估。对于一个好的模型，我们期望点紧密聚集在预测值等于实际值的对角线附近。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1lkz31f\" \n              data-plot-definition='{\"layout\": {\"title\": \"实际房屋中位价 vs. 预测房屋中位价\", \"xaxis\": {\"title\": \"实际值\"}, \"yaxis\": {\"title\": \"预测值\"}, \"width\": 600, \"height\": 450, \"shapes\": [{\"type\": \"line\", \"x0\": 0, \"y0\": 0, \"x1\": 5, \"y1\": 5, \"line\": {\"color\": \"#fa5252\", \"width\": 2, \"dash\": \"dash\"}}]}, \"data\": [{\"x\": [2.0, 4.5, 3.8, 1.5, 5.0, 0.8, 2.5, 3.1, 1.9, 4.2, 2.8, 3.5, 1.2, 4.8, 2.2, 3.9, 1.7, 4.6, 2.9, 3.3], \"y\": [2.2, 4.1, 3.5, 1.8, 4.8, 1.1, 2.7, 3.0, 2.1, 4.0, 2.5, 3.7, 1.5, 4.5, 2.4, 3.6, 1.9, 4.3, 2.8, 3.1], \"mode\": \"markers\", \"type\": \"scatter\", \"marker\": {\"color\": \"#339af0\", \"size\": 8, \"opacity\": 0.7}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 450px;\"\n            >\n              <div id=\"plot-1lkz31f\" style=\"width: 100%; min-height: 450px;\"></div>\n            </div>\n          \n<blockquote>\n<p>散点图比较了部分测试数据样本的预测房屋中位价（y轴）与实际值（x轴）。红色虚线表示完美预测（y=x）。点越靠近这条线，表示预测效果越好。</p>\n</blockquote>\n<p>这个可视化证实了评估指标的结果。虽然存在明显的正相关性，但点在理想线附近有些分散，这反映了计算出的R平方分数约为0.59以及非零的误差指标。</p>\n<p>您现在已经成功地使用Scikit-learn构建、训练、预测并评估了一个线性回归模型。这个实践工作流程是处理许多回归问题的根本。在后续章节中，我们将了解更复杂的模型和提升性能的技术。</p>",
+  "slug": "practice-building-regression-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 5304,
+      "title": "1.1. Linear models",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "scikit-learn User Guide",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/linear_model.html",
+      "doi": "",
+      "note": "scikit-learn线性模型模块的官方文档，详细介绍了`LinearRegression`类、其用法及相关概念。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:45.931619Z",
+      "updated_at": "2025-09-08T05:20:47.376461Z"
+    },
+    {
+      "id": 5305,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/",
+      "doi": "",
+      "note": "构建和评估机器学习模型的实用指南，包含使用scikit-learn进行线性回归、数据分割和性能指标的章节。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:45.941583Z",
+      "updated_at": "2025-09-08T05:20:48.766558Z"
+    },
+    {
+      "id": 5306,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.springer.com/book/9780387848570",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "一本基础教科书，详细阐述了线性回归、模型选择和性能评估方法的统计处理。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:45.944778Z",
+      "updated_at": "2025-09-08T05:20:49.666953Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

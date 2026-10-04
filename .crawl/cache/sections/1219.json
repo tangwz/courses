@@ -1,0 +1,61 @@
+{
+  "id": 1219,
+  "title": "使用 Matplotlib 配合 DataFrame 列",
+  "meta_title": "将 Matplotlib 与 Pandas DataFrame 列配合使用",
+  "meta_description": "了解如何明确地将 Pandas DataFrame 列作为输入传递给 Matplotlib 绘图函数。",
+  "content": "<p>虽然 Pandas DataFrame 提供便捷的内置绘图方法，但通过直接使用 Matplotlib 函数处理 DataFrame 数据，您通常会获得更多控制和灵活性。这种方式让您能够使用 Matplotlib 库的所有功能进行自定义，并处理更复杂的图表结构，例如子图。</p>\n<p>核心思路很简单：不是在 DataFrame 本身调用方法（例如 <code>df.plot()</code>），而是调用 Matplotlib 函数（例如 <code>plt.scatter()</code> 或 <code>plt.plot()</code>），并传递 DataFrame 中的特定列作为数据输入。</p>\n<h3>获取 DataFrame 列进行绘图</h3>\n<p>回想一下，一个 Pandas DataFrame 就像一个表格，其中每列都有一个名称（标签）。您可以使用方括号表示法 <code>df['column_name']</code> 或点表示法 <code>df.column_name</code>（如果列名是有效的 Python 标识符且不与 DataFrame 方法冲突）来选择单个列。以这种方式选择列会返回一个 Pandas Series 对象，Matplotlib 能够将其识别为输入数据。</p>\n<h3>使用 Matplotlib 函数创建图表</h3>\n<p>假设您已将数据加载到名为 <code>sales_df</code> 的 DataFrame 中，其结构大致如下：</p>\n<pre><code class=\"language-python\"># 示例 DataFrame 创建（在实际情况中，您会从文件中加载数据）\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\ndata = {'month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],\n        'units_sold': [150, 165, 180, 175, 190, 210],\n        'revenue': [3000, 3300, 3600, 3500, 3800, 4200]}\nsales_df = pd.DataFrame(data)\n\nprint(sales_df)\n# 输出：\n#   month  units_sold  revenue\n# 0   Jan         150     3000\n# 1   Feb         165     3300\n# 2   Mar         180     3600\n# 3   Apr         175     3500\n# 4   May         190     3800\n# 5   Jun         210     4200\n</code></pre>\n<p>现在，您可以使用 Matplotlib 函数来显示数据内的关系。</p>\n<h4>示例 1：按月份销量折线图</h4>\n<p>要绘制 <code>units_sold</code> 在 <code>month</code> 上的趋势，您可以将相应列传递给 <code>plt.plot()</code>：</p>\n<pre><code class=\"language-python\"># 选择列并将其传递给 Matplotlib 的绘图函数\nplt.plot(sales_df['month'], sales_df['units_sold'])\n\n# 添加标签和标题以增强清晰度\nplt.xlabel('Month')\nplt.ylabel('Units Sold')\nplt.title('Monthly Units Sold')\n\n# 显示图表\nplt.grid(True, linestyle='--', alpha=0.6) # 添加一个不显眼的网格\nplt.show()\n</code></pre>\n<p>这段代码直接指示 Matplotlib 使用 'month' 列作为 x 轴值，使用 'units_sold' 列作为 y 轴值。然后，我们使用 <code>plt.xlabel()</code>、<code>plt.ylabel()</code> 和 <code>plt.title()</code> 等标准 Matplotlib 函数为图表添加注释。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1a5nm68\" \n              data-plot-definition='{\"data\": [{\"type\": \"scatter\", \"mode\": \"lines+markers\", \"x\": [\"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\"], \"y\": [150, 165, 180, 175, 190, 210], \"marker\": {\"color\": \"#228be6\"}, \"name\": \"销量\"}], \"layout\": {\"title\": \"月销量\", \"xaxis\": {\"title\": \"月份\"}, \"yaxis\": {\"title\": \"销量\"}, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 40, \"b\": 40}, \"height\": 300, \"template\":\"simple_white\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1a5nm68\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>月销量趋势图，使用 Matplotlib 并从特定的 DataFrame 列获取数据生成。</p>\n</blockquote>\n<h4>示例 2：收入与销量的散点图</h4>\n<p>要查看 <code>units_sold</code> 与 <code>revenue</code> 之间的关系，您可以使用 <code>plt.scatter()</code> 创建一个散点图：</p>\n<pre><code class=\"language-python\"># 将列传递给 Matplotlib 的散点图函数\nplt.scatter(sales_df['units_sold'], sales_df['revenue'], color='#fd7e14', marker='o') # 使用橙色圆点\n\n# 添加标签和标题\nplt.xlabel('Units Sold')\nplt.ylabel('Revenue ($)')\nplt.title('Revenue vs. Units Sold')\n\n# 显示图表\nplt.grid(True, linestyle=':', alpha=0.5) # 添加一个虚线网格\nplt.show()\n</code></pre>\n<p>这里，<code>sales_df['units_sold']</code> 提供散点图中每个点的 x 坐标，<code>sales_df['revenue']</code> 提供 y 坐标。我们还在 Matplotlib 函数调用中直接指定了颜色和标记 (token)样式。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-11e6zqi\" \n              data-plot-definition='{\"data\": [{\"type\": \"scatter\", \"mode\": \"markers\", \"x\": [150, 165, 180, 175, 190, 210], \"y\": [3000, 3300, 3600, 3500, 3800, 4200], \"marker\": {\"color\": \"#fd7e14\", \"size\": 8}, \"name\": \"销售数据\"}], \"layout\": {\"title\": \"收入与销量\", \"xaxis\": {\"title\": \"销量\"}, \"yaxis\": {\"title\": \"收入 ($)\"}, \"margin\": {\"l\": 60, \"r\": 20, \"t\": 40, \"b\": 40}, \"height\": 300, \"template\":\"simple_white\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-11e6zqi\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>销量与收入的关系图，使用 Matplotlib 散点图并以 DataFrame 列作为输入显示。</p>\n</blockquote>\n<h3>为何采用这种方式？</h3>\n<ol>\n<li><strong>对 Matplotlib 的全面控制：</strong> 您可以直接访问整个 Matplotlib API。这包括对图表每个元素的精细控制，例如特定的标记 (token)样式、复杂的注释、误差棒等，可以直接在函数调用中实现，或使用 Figure 和 Axes 对象（后续会介绍）。</li>\n<li><strong>一致性：</strong> 如果您已大量使用 Matplotlib 处理各种绘图任务，那么直接配合 DataFrame 使用它能够保持一致的工作流程。</li>\n<li><strong>复杂布局：</strong> 当创建包含多个子图的图表时，这种方法能够自然地集成。您可以轻松地将不同的 DataFrame 列或数据子集引导到同一 Figure 中的不同 Axes 对象。</li>\n</ol>\n<h3>总结</h3>\n<p>直接使用 Matplotlib 函数配合 Pandas DataFrame 列，提供了一种强大而灵活的方式来生成可视化内容。您可以从 DataFrame 中选择所需的列（Pandas Series），并将其作为参数 (parameter)传递给 Matplotlib 绘图函数，例如 <code>plt.plot()</code>、<code>plt.scatter()</code>、<code>plt.bar()</code> 等。这种方式让您能够对图表的外观和结构进行全面控制，当内置的 Pandas 绘图方法不足，或者当您需要将绘图紧密集成到更大的 Matplotlib 图表结构中时，它是一项重要技巧。这强调了这些库的作用：Pandas 用于数据管理，Matplotlib 用于制作可视化内容。</p>",
+  "slug": "matplotlib-with-pandas-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 889,
+      "title": "`pyplot` tutorial",
+      "author": "Matplotlib Developers",
+      "year": "2024",
+      "publisher": "Matplotlib Development Team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/introductory/pyplot.html",
+      "doi": "",
+      "note": "解释了`matplotlib.pyplot`模块，该模块提供类似MATLAB的绘图接口，包括创建图形、绘图区域和自定义绘图元素的函数。",
+      "order": 1,
+      "created_at": "2025-09-04T15:07:09.355317Z",
+      "updated_at": "2025-09-07T16:25:12.947179Z"
+    },
+    {
+      "id": 890,
+      "title": "User Guide: Indexing and selecting data",
+      "author": "Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html",
+      "doi": "",
+      "note": "详细介绍了从Pandas DataFrame和Series中选择数据的各种方法，这对于将数据传递给绘图函数至关重要。",
+      "order": 2,
+      "created_at": "2025-09-04T15:07:09.358017Z",
+      "updated_at": "2025-09-07T16:25:05.226581Z"
+    },
+    {
+      "id": 891,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "579",
+      "url": "https://oreil.ly/python-data-analysis-3e",
+      "doi": "",
+      "note": "Pandas创建者撰写的权威参考书，全面涵盖了使用Pandas进行数据操作及其与Matplotlib的数据可视化集成。",
+      "order": 3,
+      "created_at": "2025-09-04T15:07:09.362214Z",
+      "updated_at": "2025-09-07T16:25:25.314946Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

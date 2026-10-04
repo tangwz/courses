@@ -1,0 +1,61 @@
+{
+  "id": 2093,
+  "title": "代码重用性中的装饰器",
+  "meta_title": "Python 装饰器详解",
+  "meta_description": "学习如何在 Python 中使用装饰器来修改或加强函数和方法。",
+  "content": "<p>装饰器提供了一种强大且Python风格的方式来修改或加强函数和方法。它们允许您在现有代码周围添加额外功能，而无需永久改变原始函数的定义。这有助于提升代码重用性和关注点分离，这在构建数据处理管道或机器学习 (machine learning)工作流时是非常有益的做法。</p>\n<p>本质上，装饰器是一个可调用对象（通常是函数），它接受另一个函数作为输入并返回一个新函数。直接放置在函数定义上方的 <code>@decorator_name</code> 语法是一种语法糖，简化了此过程。</p>\n<p>来看一下这个基本结构：</p>\n<pre><code class=\"language-python\">import functools\n\ndef my_decorator(func):\n    @functools.wraps(func) # 保留原始函数元数据\n    def wrapper(*args, **kwargs):\n        # 在原始函数运行之前执行的代码\n        print(f\"在调用 {func.__name__} 之前发生了一些事情。\")\n        result = func(*args, **kwargs) # 调用原始函数\n        # 在原始函数运行之后执行的代码\n        print(f\"在 {func.__name__} 完成之后发生了一些事情。\")\n        return result\n    return wrapper\n\n@my_decorator\ndef say_hello(name):\n    \"\"\"问候用户。\"\"\"\n    print(f\"你好, {name}!\")\n\n# 调用被装饰函数\nsay_hello(\"Data Scientist\")\n\n# 输出:\n# 在调用 say_hello 之前发生了一些事情。\n# 你好, Data Scientist!\n# 在 say_hello 完成之后发生了一些事情。\n</code></pre>\n<p>在这里，<code>my_decorator</code> 是装饰器函数。它定义了一个内部函数 <code>wrapper</code>，其中包含额外逻辑。<code>wrapper</code> 函数会调用传递给装饰器的原始函数 (<code>func</code>)。<code>say_hello</code> 上方的 <code>@my_decorator</code> 语法等同于在函数定义之后编写 <code>say_hello = my_decorator(say_hello)</code>。</p>\n<p>注意在装饰器内部使用 <code>@functools.wraps(func)</code>。这是一个辅助装饰器，它通过复制 <code>__name__</code>、<code>__doc__</code> 和参数 (parameter)签名等属性，使 <code>wrapper</code> 函数看起来像原始函数 (<code>func</code>)。如果没有 <code>@functools.wraps</code>，内省工具（以及其他潜在代码）将看到 <code>wrapper</code> 函数的信息，而不是 <code>say_hello</code> 函数的信息。</p>\n<h3>装饰器工作原理图解</h3>\n<p>您可以将装饰器看作是在原始函数周围应用了一个层：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-2mo32m\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n    edge [fontsize=10];\n\n    subgraph cluster_decorator {\n        label = \"my_decorator\";\n        bgcolor=\"#e9ecef\";\n        style=filled;\n        node [fillcolor=\"#ffffff\", style=filled];\n\n        wrapper [label=\"wrapper(*args, **kwargs)\"];\n        before_code [label=\"print(...) # 之前\", shape=plaintext];\n        after_code [label=\"print(...) # 之后\", shape=plaintext];\n        original_call [label=\"result = func(*args, **kwargs)\"];\n\n        before_code -> original_call;\n        original_call -> after_code;\n        wrapper -> before_code [style=invis]; # 布局提示\n    }\n\n    original_func [label=\"say_hello(name)\", shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\"];\n    call_decorated [label=\"调用 say_hello(...)\"];\n\n    call_decorated -> wrapper [label=\"执行 wrapper\"];\n    original_call -> original_func [label=\"调用原始函数\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-2mo32m\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>装饰器 (<code>my_decorator</code>) 定义了一个 <code>wrapper</code>。当被装饰函数 (<code>say_hello</code>) 被调用时，<code>wrapper</code> 执行，在调用原始函数 (<code>func</code>) 之前和之后运行代码。</p>\n</blockquote>\n<h3>数据科学中的常见应用场景</h3>\n<p>装饰器对于添加与数据分析和机器学习 (machine learning)任务相关的跨领域功能特别有用：</p>\n<ol>\n<li>\n<p><strong>函数执行计时：</strong> 衡量特定数据处理步骤或计算的耗时对于优化很重要。</p>\n<pre><code class=\"language-python\">import time\nimport functools\nimport pandas as pd\nimport numpy as np\n\ndef timer(func):\n    @functools.wraps(func)\n    def wrapper_timer(*args, **kwargs):\n        start_time = time.perf_counter() # 比 time.time() 更精确\n        value = func(*args, **kwargs)\n        end_time = time.perf_counter()\n        run_time = end_time - start_time\n        print(f\"' {func.__name__!r} ' 完成于 {run_time:.4f} 秒\")\n        return value\n    return wrapper_timer\n\n@timer\ndef simulate_data_processing(rows=1000000):\n    \"\"\"模拟一个可能耗时的数据操作。\"\"\"\n    df = pd.DataFrame(np.random.rand(rows, 5), columns=list('ABCDE'))\n    # 模拟一些计算\n    result = df['A'] * np.sin(df['B']) - df['C'] * np.cos(df['D'])\n    time.sleep(0.5) # 模拟 I/O 或其他延迟\n    return result.mean()\n\nmean_value = simulate_data_processing(rows=500000)\nprint(f\"平均结果: {mean_value}\")\n\n# 示例输出:\n# 'simulate_data_processing' 完成于 0.6123 秒\n# 平均结果: 0.001...\n</code></pre>\n</li>\n<li>\n<p><strong>日志记录：</strong> 追踪函数调用、参数 (parameter)或结果对于调试复杂管道非常有帮助。</p>\n<pre><code class=\"language-python\">import logging\nimport functools\n\nlogging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')\n\ndef logger(func):\n    @functools.wraps(func)\n    def wrapper_logger(*args, **kwargs):\n        logging.info(f\"调用 {func.__name__}，参数: {args}，关键字参数: {kwargs}\")\n        try:\n            result = func(*args, **kwargs)\n            logging.info(f\"{func.__name__} 返回: {type(result)}\")\n            return result\n        except Exception as e:\n            logging.error(f\" {func.__name__} 中发生异常: {e}\", exc_info=True)\n            raise # 记录后重新引发异常\n    return wrapper_logger\n\n@logger\ndef load_data(filepath):\n    \"\"\"加载数据，可能引发错误。\"\"\"\n    if not filepath.endswith(\".csv\"):\n        raise ValueError(\"文件类型无效，预期为 .csv\")\n    # 模拟加载数据\n    print(f\"从 {filepath} 加载数据...\")\n    return pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]}) # 虚拟 DataFrame\n\ntry:\n    df = load_data(\"my_data.csv\")\n    # df_error = load_data(\"my_data.txt\") # 取消注释以查看错误日志\nexcept ValueError as e:\n    print(f\"捕获到预期错误: {e}\")\n\n# 示例日志输出:\n# 2023-10-27 10:30:00,123 - INFO - 调用 load_data，参数: ('my_data.csv',)，关键字参数: {}\n# 从 my_data.csv 加载数据...\n# 2023-10-27 10:30:00,124 - INFO - load_data 返回: &#x3C;class 'pandas.core.frame.DataFrame'>\n# (如果错误情况取消注释)\n# 2023-10-27 10:30:00,125 - INFO - 调用 load_data，参数: ('my_data.txt',)，关键字参数: {}\n# 2023-10-27 10:30:00,126 - ERROR - load_data 中发生异常: 文件类型无效，预期为 .csv\n# Traceback (most recent call last): ...\n# 捕获到预期错误: 文件类型无效，预期为 .csv\n</code></pre>\n</li>\n<li>\n<p><strong>输入验证：</strong> 在继续之前，确保函数接收的数据格式正确（例如，具有特定列的 DataFrame）。</p>\n<pre><code class=\"language-python\">import functools\nimport pandas as pd\n\ndef requires_columns(required_cols):\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper_validator(*args, **kwargs):\n            # 假设 DataFrame 是第一个位置参数\n            if args and isinstance(args[0], pd.DataFrame):\n                df = args[0]\n                missing_cols = set(required_cols) - set(df.columns)\n                if missing_cols:\n                    raise ValueError(f\" {func.__name__} 的 DataFrame 中缺少所需列: {missing_cols}\")\n            else:\n                # 可以为 kwargs 或其他位置添加更复杂的检查\n                pass # 或者如果未在预期位置找到 DF 则引发错误\n            return func(*args, **kwargs)\n        return wrapper_validator\n    return decorator\n\n@requires_columns(['feature1', 'target'])\ndef process_features(df):\n    \"\"\"处理 DataFrame 中的特定特征。\"\"\"\n    print(\"正在处理特征...\")\n    # 实际处理逻辑在此处\n    return df['feature1'] * 2\n\ndata_ok = pd.DataFrame({'feature1': [1, 2, 3], 'target': [0, 1, 0], 'extra': [5, 6, 7]})\ndata_bad = pd.DataFrame({'feature_typo': [1, 2, 3], 'target': [0, 1, 0]})\n\nresult = process_features(data_ok) # 正常运行\n\ntry:\n    process_features(data_bad) # 引发 ValueError\nexcept ValueError as e:\n    print(f\"验证失败: {e}\")\n\n# 输出:\n# 正在处理特征...\n# 验证失败: process_features 的 DataFrame 中缺少所需列: {'feature1'}\n</code></pre>\n<p>此示例还展示了<strong>带参数的装饰器</strong>。<code>requires_columns</code> 是一个工厂函数，它接受所需列列表并<em>返回</em>实际的装饰器函数。这允许定制装饰器的行为。</p>\n</li>\n<li>\n<p><strong>记忆化（缓存）：</strong> 存储计算开销大的函数调用的结果，并在相同输入再次出现时返回缓存结果。Python 的 <code>functools</code> 模块为此提供了 <code>lru_cache</code>（最近最少使用缓存）。</p>\n<pre><code class=\"language-python\">import functools\nimport time\n\n@functools.lru_cache(maxsize=None) # None 表示缓存大小无限制\ndef expensive_calculation(a, b):\n    \"\"\"模拟一个开销大的计算。\"\"\"\n    print(f\"正在对 ({a}, {b}) 执行开销大的计算...\")\n    time.sleep(1) # 模拟工作\n    return a + b * b\n\nprint(expensive_calculation(2, 3)) # 运行计算\nprint(expensive_calculation(5, 2)) # 运行计算\nprint(expensive_calculation(2, 3)) # 立即返回缓存结果\nprint(expensive_calculation(5, 2)) # 立即返回缓存结果\n\n# 输出:\n# 正在对 (2, 3) 执行开销大的计算...\n# 11\n# 正在对 (5, 2) 执行开销大的计算...\n# 9\n# 11\n# 9\n</code></pre>\n<p>尽管 NumPy 和 Pandas 操作通常在内部高度优化，但 <code>lru_cache</code> 对于您的工作流中重复对相同输入执行大量计算的自定义 Python 函数很有益处。</p>\n</li>\n</ol>\n<h3>装饰器堆叠</h3>\n<p>您可以将多个装饰器应用于单个函数。它们在语法上从下到上应用，但执行时从上到下（最外层包装器首先运行）。</p>\n<pre><code class=\"language-python\">@timer\n@logger\n# @requires_columns(['input']) # 示例：添加验证\ndef complex_step(data):\n    # ... 处理逻辑 ...\n    print(\"正在执行复杂步骤...\")\n    time.sleep(0.2)\n    return \"Done\"\n\ncomplex_step(\"Some Input Data\")\n\n# 日志输出将显示计时器在日志消息前后开始/结束。\n# 执行顺序：计时器包装器 -> 日志记录器包装器 -> 原始 complex_step\n</code></pre>\n<p>装饰器是一种灵活的工具，可以在不使核心逻辑变得混乱的情况下，为您的函数添加日志记录、计时、验证或缓存等行为。熟练使用它们能帮助你编写更模块化、可重用和易于维护的 Python 代码，这在工作流可能变得复杂的数据科学和机器学习 (machine learning)项目中非常有优势。</p>",
+  "slug": "python-decorators",
+  "updates": [],
+  "references": [
+    {
+      "id": 5711,
+      "title": "functools - Higher-order functions and operations on callable objects",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/functools.html",
+      "doi": "",
+      "note": "functools 模块的官方文档，包含 @functools.wraps 和 @functools.lru_cache 等核心装饰器实用工具。",
+      "order": 1,
+      "created_at": "2025-09-05T01:15:55.696502Z",
+      "updated_at": "2025-09-07T20:06:38.262499Z"
+    },
+    {
+      "id": 5712,
+      "title": "Fluent Python, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056375/",
+      "doi": "",
+      "note": "全面涵盖了 Python 装饰器，包括其实现细节、使用场景以及与闭包和一流函数的关系。",
+      "order": 2,
+      "created_at": "2025-09-05T01:15:55.708305Z",
+      "updated_at": "2025-09-07T20:07:03.362952Z"
+    },
+    {
+      "id": 5713,
+      "title": "Python Cookbook, 3rd Edition",
+      "author": "David Beazley and Brian K. Jones",
+      "year": "2013",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Python_Cookbook_3rd_Edition.html?id=L8YqBAAAQBAJ",
+      "doi": "",
+      "note": "提供了实现自定义装饰器和理解高级函数包装技术的实用示例和代码方案。",
+      "order": 3,
+      "created_at": "2025-09-05T01:15:55.713311Z",
+      "updated_at": "2025-09-07T20:06:57.428619Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

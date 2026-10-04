@@ -1,0 +1,61 @@
+{
+  "id": 7766,
+  "title": "应用分块策略",
+  "meta_title": "应用分块策略",
+  "meta_description": "实施各种分块策略，例如固定大小分块和递归字符分割。",
+  "content": "<p>将加载的数据分割成较小、易于管理的部分，这是为嵌入 (embedding)和检索做准备的一个必不可少的步骤。文本分割的方法会很大程度上影响RAG系统的性能。不同的策略在简单性、语义连贯性和计算开销之间提供了权衡。下面将介绍几种常见且高效的分块策略。</p>\n<h3>固定大小分块</h3>\n<p>最直接的方法是固定大小分块。此方法将文档分割成预设长度（以字符为单位）的片段。它实现简单，计算效率高。</p>\n<p>然而，其主要缺点在于它不考虑文本的结构或含义。这可能导致分块在句中甚至词中突然结束，从而破坏呈现给语言模型的信息的语义完整性。</p>\n<p>您可以使用<code>chunk_text</code>工具来实现一个基本的固定大小分块器。</p>\n<pre><code class=\"language-python\">from kerb.chunk import chunk_text\n\ntext = \"Artificial intelligence is transforming industries. Machine learning enables computers to learn from data. Natural language processing helps them understand text.\"\n\n# 将文本分割成80个字符大小、无重叠的分块\nchunks = chunk_text(text, chunk_size=80, overlap=0)\n\nfor i, chunk in enumerate(chunks):\n    print(f\"Chunk {i+1}: '{chunk}'\")\n</code></pre>\n<p>输出显示了这种简单方法的问题。请注意第二个分块是如何以之前句子的片段开头的。</p>\n<pre><code class=\"language-text\">Chunk 1: 'Artificial intelligence is transforming industries. Machine learning enables compute'\nChunk 2: 'rs to learn from data. Natural language processing helps them understand text.'\n</code></pre>\n<p>为减少这种上下文 (context)损失，您可以在连续分块之间引入重叠。重叠确保一个分块末尾的一小部分文本在下一个分块的开头重复。这有助于保留分割点周围的局部上下文，对嵌入 (embedding)模型有益。</p>\n<pre><code class=\"language-python\">from kerb.chunk import chunk_text\n\ntext = \"Artificial intelligence is transforming industries. Machine learning enables computers to learn from data. Natural language processing helps them understand text.\"\n\n# 将文本分割成80个字符大小、有15个字符重叠的分块\nchunks_with_overlap = chunk_text(text, chunk_size=80, overlap=15)\n\nfor i, chunk in enumerate(chunks_with_overlap):\n    print(f\"Chunk {i+1}: '{chunk}'\")\n</code></pre>\n<p>输出现在显示了第一个分块的末尾如何与第二个分块的开头重叠，为处理任一分块的模型提供了更好的上下文。</p>\n<pre><code class=\"language-text\">Chunk 1: 'Artificial intelligence is transforming industries. Machine learning enables compute'\nChunk 2: 'enables computers to learn from data. Natural language processing helps them underst'\nChunk 3: 'elps them understand text.'\n</code></pre>\n<p>尽管重叠有帮助，但固定大小分块仍然是一个不够精细的方法。对于大多数应用，更倾向于采用一种结构感知的方法。</p>\n<h3>递归字符分割</h3>\n<p>一种更精细的方法是递归字符分割。此策略旨在通过根据分层分隔符列表分割文本来保留语义边界。它首先尝试按最高优先级分隔符（如双换行符，通常用于分隔段落）分割文本。如果生成的分块仍然过大，它会递归地应用层次结构中的下一个分隔符（单换行符、句子、单词，最后是单个字符），直到所有分块都达到期望的大小。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14dvcis\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"Arial\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", color=\"#868e96\", fontcolor=\"#868e96\"];\n  A [label=\"原始文本\"];\n  B [label=\"按段落分割\\n(\\\"\\\\n\\\\n\\\")\"];\n  C [label=\"按行分割\\n(\\\"\\\\n\\\")\"];\n  D [label=\"按句子分割\\n(\\\". \\\")\"];\n  E [label=\"按单词分割\\n(\\\" \\\")\"];\n  A -> B [label=\"先尝试\"];\n  B -> C [label=\"如果分块过大\"];\n  C -> D [label=\"如果仍然过大\"];\n  D -> E [label=\"……依此类推\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14dvcis\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>递归分割过程会尝试使用尽可能大的语义分隔符，然后再转向较小的分隔符。</p>\n</blockquote>\n<p>这种自上而下的方法有效，因为它优先保持段落等高级语义单元的完整性。默认的分隔符层级为 <code>[\"\\n\\n\", \"\\n\", \". \", \" \", \"\"]</code>。</p>\n<p>您可以使用<code>recursive_chunker</code>函数来应用此策略。</p>\n<pre><code class=\"language-python\">from kerb.chunk import recursive_chunker\n\nmulti_paragraph_text = \"\"\"\nRetrieval-Augmented Generation (RAG) is a powerful technique for LLM applications. It combines the benefits of retrieval systems with generative models.\n\nThe process works in several steps. First, documents are chunked and embedded. Then, relevant chunks are retrieved based on the query. Finally, the LLM generates a response using the retrieved context.\n\nVector databases play an important role in RAG systems.\n\"\"\".strip()\n\n# 在可能的情况下，创建尊重段落边界的分块\nchunks = recursive_chunker(multi_paragraph_text, chunk_size=200)\n\nfor i, chunk in enumerate(chunks, 1):\n    print(f\"Chunk {i} ({len(chunk)} chars):\")\n    print(f\"  '{chunk}'\\n\")\n</code></pre>\n<p>输出显示了此方法如何成功地将第一个段落完整地保留为一个分块，因为它符合200个字符的限制。第二个较长的段落则在句子边界处进行了分割。</p>\n<pre><code class=\"language-text\">Chunk 1 (148 chars):\n  'Retrieval-Augmented Generation (RAG) is a powerful technique for LLM applications. It combines the benefits of retrieval systems with generative models.'\n\nChunk 2 (198 chars):\n  'The process works in several steps. First, documents are chunked and embedded. Then, relevant chunks are retrieved based on the query. Finally, the LLM generates a response using the retrieved context.'\n\nChunk 3 (62 chars):\n  Vector databases play an important role in RAG systems.\n</code></pre>\n<p>对于大多数非结构化或半结构化文本，递归字符分割是一种可靠且推荐的默认策略。</p>\n<h3>基于句子的分块</h3>\n<p>对于RAG系统，尤其是在问答场景中，确保每个分块包含完整的句子非常有益。基于句子的分块首先将整个文档分割成独立的句子，然后将它们组合成分块。此方法保证任何句子都不会被分割到两个分块中。</p>\n<p>与固定大小分块一样，此方法也受益于重叠，但在句子层面。例如，一个句子的重叠意味着分块N的最后一个句子成为分块N+1的第一个句子。</p>\n<p><code>sentence_window_chunker</code>实现了此策略。您可以以句子的数量定义窗口大小和句子重叠。</p>\n<pre><code class=\"language-python\">from kerb.chunk import sentence_window_chunker\n\narticle_text = \"Vector databases are essential for RAG. They store embeddings and enable fast search. Pinecone is a popular managed solution. Weaviate is a flexible open-source alternative. Chroma is great for local development. Choosing the right one depends on your needs.\"\n\n# 将文本按3个句子一组分块，并有1个句子的重叠\nchunks = sentence_window_chunker(\n    article_text,\n    window_sentences=3,\n    overlap_sentences=1\n)\n\nfor i, chunk in enumerate(chunks, 1):\n    print(f\"Chunk {i}:\")\n    print(f\"  '{chunk}'\\n\")\n</code></pre>\n<p>输出清楚地说明了窗口化和重叠行为。</p>\n<pre><code class=\"language-text\">Chunk 1:\n  'Vector databases are essential for RAG. They store embeddings and enable fast search. Pinecone is a popular managed solution.'\n\nChunk 2:\n  'Pinecone is a popular managed solution. Weaviate is a flexible open-source alternative. Chroma is great for local development.'\n\nChunk 3:\n  'Chroma is great for local development. Choosing the right one depends on your needs.'\n</code></pre>\n<p>请注意“Pinecone is a popular managed solution.”是如何出现在第一个分块的末尾和第二个分块的开头的。这种重叠提供了有益的上下文 (context)关联，提高了检索质量，因为用户的查询可能与两个分块边界附近的内容语义匹配。</p>\n<h3>选择您的策略</h3>\n<p>合适的块策略取决于您的数据和应用。</p>\n<ul>\n<li><strong>固定大小重叠分块</strong>：因其简单性和速度而使用，特别适用于语义边界不那么重要的高度结构化或统一文本。</li>\n<li><strong>递归分割</strong>：最佳通用选择。它智能地适应文档结构，使其成为混合或未知内容的默认方法。</li>\n<li><strong>基于句子的分割</strong>：强烈推荐用于RAG系统。它提供清晰、语义完整的块，非常适合生成准确的嵌入 (embedding)并为大型语言模型提供清晰的上下文 (context)。</li>\n</ul>\n<p>应用分块策略后，您将得到一组可供进一步优化的文本分块。我们流程中的下一步是应用文本预处理来清理和标准化此内容，从而进一步提高其对嵌入模型的质量。</p>",
+  "slug": "applying-chunking-strategies",
+  "updates": [],
+  "references": [
+    {
+      "id": 21727,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksa Gordić, Vladimir Karpukhin, Myle Ott, Sebastian Riedel, Douwe van der Vaart",
+      "year": "2020",
+      "publisher": "Neural Information Processing Systems Foundation",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS 2020)",
+      "volume": "33",
+      "pages": "9459-9474",
+      "url": "https://papers.nips.cc/paper/2020/file/6b49323027b4e9f55e51d935df683416-Paper.pdf",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "这篇开创性论文介绍了检索增强生成（RAG）框架，确立了文本分块等有效数据准备方法对于提升语言模型性能的必要性。",
+      "order": 1,
+      "created_at": "2025-10-20T07:25:28.220413Z",
+      "updated_at": "2025-10-20T07:50:05.376808Z"
+    },
+    {
+      "id": 21728,
+      "title": "Text splitters",
+      "author": "LangChain Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/concepts/#text-splitters",
+      "doi": "",
+      "note": "官方文档提供了多种文本分块策略的解释和实现细节，包括固定大小和递归方法，这些策略在实际的RAG应用中被使用。",
+      "order": 2,
+      "created_at": "2025-10-20T07:25:28.224582Z",
+      "updated_at": "2025-10-20T07:50:01.987342Z"
+    },
+    {
+      "id": 21729,
+      "title": "The Impact of Document Chunking Strategies on Retrieval-Augmented Generation Performance",
+      "author": "Luyang Weng, Yujie Cheng, Hongye Liu, Yifan Liu",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2312.00067",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/pdf/2312.00067.pdf",
+      "doi": "10.48550/arXiv.2312.00067",
+      "note": "这篇研究论文分析了不同文本分块策略对检索增强生成系统整体性能的影响，并展示了实证结果。",
+      "order": 3,
+      "created_at": "2025-10-20T07:25:28.227770Z",
+      "updated_at": "2025-10-20T07:50:10.006917Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

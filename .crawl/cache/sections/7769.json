@@ -1,0 +1,61 @@
+{
+  "id": 7769,
+  "title": "生成嵌入",
+  "meta_title": "生成嵌入",
+  "meta_description": "使用嵌入模块为您的文本块生成向量嵌入。",
+  "content": "<p>为了让计算机能够根据含义理解和比较文档内容，会使用文本嵌入 (embedding)。这些嵌入是文本的数值表示，即向量 (vector)。它们能捕捉文本的语义核心，使系统能够找到与用户查询主题相关的文档片段，即使两者没有共享直接关键词。</p>\n<p>Kerb 的 <code>embedding</code> 模块提供了一个统一接口，用于使用各种模型生成这些嵌入，从用于测试的本地、无依赖选项到来自 OpenAI 等服务商的高性能模型。</p>\n<h3>创建您的第一个嵌入 (embedding)</h3>\n<p>生成嵌入最直接的方式是使用 <code>embed</code> 函数。它接收一个文本字符串，并返回一个向量 (vector)，该向量以浮点数列表的形式呈现。</p>\n<p>让我们为一个简单的句子生成嵌入，并检查其属性：</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, embedding_dimension, vector_magnitude\r\n\r\ntext = \"Machine learning transforms data into insights\"\r\nembedding = embed(text)\r\n\r\nprint(f\"Text: '{text}'\")\r\nprint(f\"Embedding dimension: {embedding_dimension(embedding)}\")\r\nprint(f\"Vector magnitude: {vector_magnitude(embedding):.6f}\")\r\nprint(f\"First 5 values: {[round(v, 4) for v in embedding[:5]]}\")\n</code></pre>\n<p>这将产生类似于以下内容的输出：</p>\n<pre><code>Text: 'Machine learning transforms data into insights'\r\nEmbedding dimension: 384\r\nVector magnitude: 1.000000\r\nFirst 5 values: [0.034, -0.0121, 0.0589, 0.0076, -0.045]\n</code></pre>\n<p>默认情况下，<code>embed</code> 函数使用本地的、基于哈希的方法，不需要外部依赖或 API 调用。这对于原型设计和测试很有用，因为它快速且确定。然而，它不会产生语义上有意义的向量。对于真正的语义搜索，您需要使用更完善的模型。</p>\n<h3>选择嵌入 (embedding)模型</h3>\n<p><code>embed</code> 函数通过其 <code>model</code> 参数 (parameter)支持多种模型。您可以使用 <code>EmbeddingModel</code> 枚举来指定模型，这提供了一种便捷、类型安全的方式，从知名本地模型和基于 API 的模型中选择。</p>\n<h4>使用 Sentence Transformers 的本地模型</h4>\n<p>对于许多应用，在本地运行嵌入模型是一个很好的选择。它兼顾了高质量嵌入、隐私保护和无 API 成本。该工具包与 <code>sentence-transformers</code> 库集成以支持此功能。</p>\n<p>要使用 Sentence Transformers 模型，您必须首先安装必要的依赖项：</p>\n<pre><code class=\"language-shell\">pip install sentence-transformers\n</code></pre>\n<p>安装后，您可以指定 <code>EmbeddingModel.ALL_MINILM_L6_V2</code> 等模型，这是一个流行的、性能均衡的选择。</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, EmbeddingModel\r\n\r\n# 此代码需要 'pip install sentence-transformers'\r\ntext = \"Natural language processing enables AI to understand text\"\r\nst_embedding = embed(\r\n    text,\r\n    model=EmbeddingModel.ALL_MINILM_L6_V2\r\n)\r\n\r\nprint(f\"Sentence Transformers 模型生成了一个具有 {len(st_embedding)} 维度的嵌入。\")\n</code></pre>\n<h4>来自 OpenAI 的基于 API 的模型</h4>\n<p>要获取最高质量的嵌入，您可以使用来自 OpenAI 等提供商的基于 API 的模型。这需要 API 密钥并按使用量收费，但通常能为语义检索提供最佳表现。</p>\n<p>首先，请确保已安装 OpenAI 库：</p>\n<pre><code class=\"language-shell\">pip install openai\n</code></pre>\n<p>您还需要将 OpenAI API 密钥设置为环境变量 (<code>OPENAI_API_KEY</code>)。然后，您可以选择 <code>EmbeddingModel.TEXT_EMBEDDING_3_SMALL</code> 等 OpenAI 模型。</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed, EmbeddingModel\r\n\r\n# 此代码需要 'pip install openai' 和一个 API 密钥\r\ntext = \"Natural language processing enables AI to understand text\"\r\nopenai_embedding = embed(\r\n    text,\r\n    model=EmbeddingModel.TEXT_EMBEDDING_3_SMALL\r\n)\r\n\r\nprint(f\"OpenAI 模型生成了一个具有 {len(openai_embedding)} 维度的嵌入。\")\n</code></pre>\n<p>不同的模型产生不同维度的嵌入。例如，<code>ALL_MINILM_L6_V2</code> 创建一个 384 维向量 (vector)，而 OpenAI 的 <code>TEXT_EMBEDDING_3_SMALL</code> 创建一个 1536 维向量。虽然较大的向量能捕捉更多细节，但它们也需要更多的存储和计算资源。</p>\n<h3>批量处理文档</h3>\n<p>在典型的 RAG 系统中，您需要嵌入 (embedding)数百或数千个文档片段。循环调用 <code>embed</code> 处理每个片段效率低下，尤其是在使用 GPU 加速的本地模型或进行 API 调用时。</p>\n<p><code>embed_batch</code> 函数专为此情景设计。它在一次优化调用中处理文本列表，显著提高性能。</p>\n<pre><code class=\"language-python\">from kerb.embedding import embed_batch, EmbeddingModel\r\n\r\n# 来自上一章的文档片段列表\r\ndocument_chunks = [\r\n    \"Python is a high-level programming language\",\r\n    \"Machine learning models learn patterns from data\",\r\n    \"Natural language processing helps computers understand text\",\r\n    \"Deep neural networks have multiple layers\",\r\n    \"Data science combines statistics and programming\"\r\n]\r\n\r\n# 一次性为所有片段生成嵌入\r\n# 注意：此操作需要 'pip install sentence-transformers'\r\nchunk_embeddings = embed_batch(\r\n    document_chunks,\r\n    model=EmbeddingModel.ALL_MINILM_L6_V2\r\n)\r\n\r\nprint(f\"生成了 {len(chunk_embeddings)} 个嵌入。\")\r\nprint(f\"每个嵌入有 {len(chunk_embeddings[0])} 个维度。\")\n</code></pre>\n<p>使用 <code>embed_batch</code> 是为 RAG 系统准备知识库的标准做法。它确保您的整个文本片段语料库能高效地转换为向量 (vector)集合，准备好进行存储和检索。有了这些向量，您现在就可以进行数学比较以查找语义相关信息，我们将在下一节介绍。</p>",
+  "slug": "generating-embeddings",
+  "updates": [],
+  "references": [
+    {
+      "id": 21623,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3982-3992",
+      "url": "https://aclanthology.org/D19-1410/",
+      "doi": "10.18653/v1/D19-1410",
+      "note": "介绍了Sentence-BERT架构，用于生成具有语义意义的句子嵌入，是`sentence-transformers`库的基础。",
+      "order": 1,
+      "created_at": "2025-10-20T07:13:33.382773Z",
+      "updated_at": "2025-10-20T07:36:24.087559Z"
+    },
+    {
+      "id": 21624,
+      "title": "Embeddings",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/embeddings",
+      "doi": "",
+      "note": "OpenAI嵌入模型的官方指南，包括`text-embedding-3-small`，及其使用实践。",
+      "order": 2,
+      "created_at": "2025-10-20T07:13:33.395371Z",
+      "updated_at": "2025-10-20T07:36:31.760003Z"
+    },
+    {
+      "id": 21626,
+      "title": "Speech and Language Processing (3rd ed. draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 5: Embeddings",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本广受推崇的自然语言处理教材，涵盖了向量语义和词/句子嵌入等基础概念。请参阅相关章节（例如，第6章）。",
+      "order": 4,
+      "created_at": "2025-10-20T07:13:33.402443Z",
+      "updated_at": "2025-10-20T07:36:33.936058Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

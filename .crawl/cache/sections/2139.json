@@ -1,0 +1,61 @@
+{
+  "id": 2139,
+  "title": "Pandas数据结构简介",
+  "meta_title": "Pandas Series和DataFrame简介",
+  "meta_description": "理解Pandas的核心数据结构：Series（一维）和DataFrame（二维）。",
+  "content": "<p>组织和处理机器学习 (machine learning)中常见的数据集，需要有效的数据结构。NumPy为同构数值数组提供了高效数值运算的强大工具，但数据常常以表格形式呈现，混合多种数据类型（数字、文本、日期），并需要行和列的标签。对于这些复杂的数据需求，Pandas库提供了卓越的能力。</p>\n<p>Pandas引入了两种对Python数据分析和处理不可或缺的基本数据结构：<code>Series</code>和<code>DataFrame</code>。这些结构构建在NumPy数组之上，提供增强的灵活性和功能，专门用于处理带标签和关系型数据。可以将它们视为精巧的容器，使数据处理变得直观高效。</p>\n<h3>The Pandas Series</h3>\n<p><strong>Series</strong>本质上是一维数组，能够保存任何类型的数据（整数、字符串、浮点数、Python对象等）。与NumPy数组相比，Series的决定性特征是其<strong>索引</strong>。索引是关联的标签数组，允许您使用这些标签而不是仅通过整数位置来访问数据。</p>\n<p>可以将Series想象成电子表格或表中的单列。Series中的每个值在索引中都有一个对应的标签。如果您在创建Series时不指定索引，Pandas会自动创建一个从0到N-1的默认整数索引，其中N是数据的长度。</p>\n<p>我们来创建一个简单的Series：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 从Python列表创建Series\ndata = [10, 20, 30, 40, 50]\ns = pd.Series(data)\nprint(s)\n</code></pre>\n<p>Output:</p>\n<pre><code>0    10\n1    20\n2    30\n3    40\n4    50\ndtype: int64\n</code></pre>\n<p>请注意，输出显示了两列：左侧是索引（0到4），右侧是对应的值。<code>dtype: int64</code>表示Series中存储值的数据类型。</p>\n<p>我们也可以创建一个带有自定义索引的Series：</p>\n<pre><code class=\"language-python\"># 使用自定义标签创建Series\npopulation = {'California': 39538223, 'Texas': 29145505,\n              'Florida': 21538187, 'New York': 20201249}\npop_series = pd.Series(population, name='State Population') # 给Series命名\nprint(pop_series)\n</code></pre>\n<p>Output:</p>\n<pre><code>California    39538223\nTexas         29145505\nFlorida       21538187\nNew York      20201249\nName: State Population, dtype: int64\n</code></pre>\n<p>这里，州名用作索引标签。您可以使用<code>.values</code>属性访问底层的NumPy数组，并使用<code>.index</code>属性访问索引对象。</p>\n<pre><code class=\"language-python\">print(\"值:\", pop_series.values)\nprint(\"索引:\", pop_series.index)\n</code></pre>\n<p>Output:</p>\n<pre><code>Values: [39538223 29145505 21538187 20201249]\nIndex: Index(['California', 'Texas', 'Florida', 'New York'], dtype='object')\n</code></pre>\n<p>Series提供了一个强大的根基，它既像NumPy数组（支持矢量化 (quantization)操作），又像Python字典（将索引标签映射到值）。</p>\n<h3>The Pandas DataFrame</h3>\n<p>Series表示单列数据，而<strong>DataFrame</strong>表示完整的表格或电子表格。它是一个二维的、大小可变的、可能异构的表格数据结构，带有标签的轴（行和列）。您可以将DataFrame视为：</p>\n<ul>\n<li>共享相同索引的Series对象的集合。</li>\n<li>一个字典，其中键是列名，值是表示这些列的Series对象。</li>\n<li>一个带有行和列标签的结构化NumPy数组。</li>\n</ul>\n<p>DataFrame是Pandas的主力，也是您在执行数据分析和机器学习 (machine learning)模型准备时最常打交道的结构。</p>\n<p>我们来使用字典创建一个DataFrame，其中键成为列标签，列表成为列数据：</p>\n<pre><code class=\"language-python\"># 从列表字典创建DataFrame\ndata = {'State': ['California', 'Texas', 'Florida', 'New York'],\n        'Population': [39538223, 29145505, 21538187, 20201249],\n        'Area (sq mi)': [163696, 268597, 65758, 54556]}\nstates_df = pd.DataFrame(data)\nprint(states_df)\n</code></pre>\n<p>Output:</p>\n<pre><code>        State  Population  Area (sq mi)\n0  California    39538223        163696\n1       Texas    29145505        268597\n2     Florida    21538187         65758\n3    New York    20201249         54556\n</code></pre>\n<p>与Series一样，如果没有指定索引，Pandas会创建一个默认的整数索引。我们可以在创建时使用<code>index</code>参数 (parameter)指定自定义行标签，或者使用<code>.set_index()</code>方法将现有列设置为索引（我们将在后面介绍）。</p>\n<p>您可以分别使用<code>.index</code>和<code>.columns</code>属性访问行标签（索引）和列标签。底层数据通常表示为NumPy数组（如果数据类型跨列不同，则为多个数组），可以通过<code>.values</code>属性访问，尽管直接操作通常通过Pandas方法进行。</p>\n<pre><code class=\"language-python\">print(\"索引:\", states_df.index)\nprint(\"列:\", states_df.columns)\n# print(states_df.values) # 输出是数据的NumPy数组\n</code></pre>\n<p>Output:</p>\n<pre><code>Index: RangeIndex(start=0, stop=4, step=1)\nColumns: Index(['State', 'Population', 'Area (sq mi)'], dtype='object')\n</code></pre>\n<p>DataFrame中的每一列都是一个Series：</p>\n<pre><code class=\"language-python\"># 访问列会返回一个Series\npopulation_col = states_df['Population']\nprint(type(population_col))\nprint(population_col)\n</code></pre>\n<p>Output:</p>\n<pre><code>&#x3C;class 'pandas.core.series.Series'>\n0    39538223\n1    29145505\n2    21538187\n3    20201249\nName: Population, dtype: int64\n</code></pre>\n<h3>Why Use Pandas Structures?</h3>\n<p>这些结构在数据分析方面相比标准Python列表或字典，甚至原始NumPy数组，提供了若干优势：</p>\n<ol>\n<li><strong>基于标签的索引：</strong> 通过有意义的标签（如'Population'或'California'）而不是仅仅通过整数位置来访问数据，使代码更易读，并减少出错的可能性。</li>\n<li><strong>处理异构数据：</strong> DataFrames可以轻松容纳同一张表中具有不同数据类型的列。</li>\n<li><strong>数据对齐 (alignment)：</strong> Series或DataFrame之间的操作会根据其索引自动对齐数据，简化了涉及相关但可能顺序不同的数据集的计算。</li>\n<li><strong>缺失数据处理：</strong> Pandas提供了专门用于查找、筛选和填充缺失数据（通常表示为<code>NaN</code>，即非数字）的函数。</li>\n<li><strong>集成操作：</strong> 常见的数据处理任务，如分组、连接、合并、重塑和数据透视，都是内置的高性能方法。</li>\n</ol>\n<p>理解Series和DataFrame是有效使用Pandas的第一步。它们奠定了基础，后续所有的数据加载、清洗、转换和分析操作都建立在此之上。在接下来的章节中，我们将学习如何创建、检查和处理这些结构，以便为机器学习 (machine learning)任务准备数据。</p>",
+  "slug": "intro-pandas-structures",
+  "updates": [],
+  "references": [
+    {
+      "id": 2799,
+      "title": "User Guide: Intro to Data Structures",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/dsintro.html",
+      "doi": "",
+      "note": "官方文档，详细且实时地解释了 Pandas Series 和 DataFrame。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:36.643046Z",
+      "updated_at": "2025-09-08T06:00:27.017983Z"
+    },
+    {
+      "id": 2800,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "Pandas 创始人撰写的权威书籍，详细介绍了其核心数据结构，并提供实用示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:36.771718Z",
+      "updated_at": "2025-09-08T03:09:18.133667Z"
+    },
+    {
+      "id": 2801,
+      "title": "Data Structures for Statistical Computing in Python",
+      "author": "Wes McKinney",
+      "year": "2010",
+      "publisher": "SciPy",
+      "journal": "Proceedings of the 9th Python in Science Conference (SciPy 2010)",
+      "volume": "",
+      "pages": "56-61",
+      "url": "http://conference.scipy.org/proceedings/scipy2010/mckinney.html",
+      "doi": "10.25080/majora-92bf1922-00a",
+      "note": "一篇基础性论文，介绍了构成 Pandas Series 和 DataFrame 的数据结构的设计原则和初始实现。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:36.776419Z",
+      "updated_at": "2025-09-08T06:00:34.496153Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

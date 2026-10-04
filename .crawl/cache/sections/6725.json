@@ -1,0 +1,61 @@
+{
+  "id": 6725,
+  "title": "工具增强型语言模型的基本原理",
+  "meta_title": "掌握工具增强型大语言模型",
+  "meta_description": "理解能够使用外部工具的语言模型的基本原理。",
+  "content": "<p>大型语言模型（LLM）虽拥有丰富的知识储备，但其信息通常是静态的，固定在其上次训练时的数据上。为了执行需要即时信息、与外部系统交互或专门计算的任务，LLM需要借助工具进行增强。这种增强将LLM从一个复杂的文本生成器，转变为一个能够在多种环境中执行操作的AI代理的思考中枢。</p>\n<p>本质上，工具增强型LLM依据委托原则运行。LLM本身不直接执行网页搜索或运行Python代码片段。相反，它利用其高级推理 (inference)能力来理解何时需要外部工具、哪种特定工具适合该工作以及该工具需要什么输入。在这种情况下，LLM的输出不仅仅是文本答案；它是一个“工具调用”的结构化表示，供外部系统执行。可以将LLM看作一位懂得如何将任务有效委派给专业团队成员（工具）的高级经理。</p>\n<h3>使用工具系统的结构组成</h3>\n<p>使LLM能够使用工具的系统通常由几个共同工作的主要组成部分构成：</p>\n<ol>\n<li><strong>语言模型（LLM）：</strong> 这是主要的推理 (inference)引擎。它处理用户请求、其当前上下文 (context)以及可用工具的描述，以决定行动方案。</li>\n<li><strong>工具规格/描述：</strong> LLM要使用工具，就必须“了解”它们。工具规格是精心制作的描述（通常在提示中提供），详细说明每个工具的功能、它预期的输入以及其输出格式。我们将在本章后续部分介绍如何有效组织这些内容。</li>\n<li><strong>工具调用与执行层：</strong> 这是实际执行操作的外部环境。当LLM决定使用某个工具（例如，天气API）时，它会生成一个结构化请求（例如带参数 (parameter)的函数调用）。该层解析请求，调用实际工具或API，并收集结果。</li>\n<li><strong>反馈机制：</strong> 一旦工具执行完毕，其输出（无论是成功数据还是错误消息）必须返回给LLM。此反馈成为LLM上下文的一部分，使它能够理解操作结果并规划下一步。</li>\n</ol>\n<h3>操作循环：思考、行动、观察</h3>\n<p>这些组成部分之间的交互通常遵循一个迭代循环，最显著地在ReAct（推理 (inference)与行动）等框架中被明确。这个循环使代理能够分解复杂问题并对新信息作出反应：</p>\n<ol>\n<li>\n<p><strong>思考：</strong> LLM分析当前目标、现有知识以及先前行动和观察的历史。基于此，它形成一个想法或计划，其中可能包括决定使用特定工具。例如，如果被问到“伦敦天气如何？”，LLM可能会想：“我需要当前天气信息。我应该使用<code>get_weather</code>工具。”</p>\n</li>\n<li>\n<p><strong>行动：</strong> 如果某个工具被认为必要，LLM会生成一个结构化的“行动”命令。这并非自由格式的文本，而是一个精确指令，通常以JSON或执行层可以解析的特定函数调用语法格式呈现。对于天气示例，行动可能是：<code>get_weather(location=\"London\")</code>。</p>\n</li>\n<li>\n<p><strong>观察：</strong> 工具调用层执行此行动。<code>get_weather</code>工具将调用伦敦的天气API。此执行的结果（例如，“15°C，部分多云”）或遇到的任何错误，随后被格式化为“观察结果”并反馈到LLM的上下文 (context)中。</p>\n</li>\n</ol>\n<p>这个“思考-行动-观察”循环重复进行。LLM考虑新的观察结果，完善其想法，并决定下一步行动，这可能是使用另一个工具、综合答案或提出一个澄清问题。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-va0sfq\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    bgcolor=\"transparent\";\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", margin=0.15];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    LLM [label=\"LLM\\n(推理与提示处理)\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"];\n    Thought [label=\"思考\\n(例如, &#39;我需要查找X&#39;)\", fillcolor=\"#ffec99\", color=\"#f59f00\"];\n    Action [label=\"行动\\n(例如, 生成 tool_call(&#39;search&#39;, &#39;X&#39;))\", fillcolor=\"#b2f2bb\", color=\"#37b24d\"];\n    Observation [label=\"观察\\n(例如, 工具输出: &#39;X的搜索结果...&#39;)\", fillcolor=\"#ffd8a8\", color=\"#f76707\"];\n    ToolExecutor [label=\"工具执行\\n环境\", shape=cylinder, style=\"filled\", fillcolor=\"#ced4da\", color=\"#868e96\", height=0.8];\n\n    LLM -> Thought [label=\"1. 初始任务/\\n先前上下文\", color=\"#495057\"];\n    Thought -> Action [label=\"2. 决定工具并\\n生成调用\", color=\"#495057\"];\n    Action -> ToolExecutor [label=\"3. 执行调用\", color=\"#495057\"];\n    ToolExecutor -> Observation [label=\"4. 返回输出/\\n错误\", color=\"#495057\"];\n    Observation -> LLM [label=\"5. 更新LLM上下文\", color=\"#495057\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-va0sfq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>工具增强型LLM的迭代循环：思考、行动和观察，由提示指令驱动。</p>\n</blockquote>\n<h3>提示：指导工具协调</h3>\n<p>在这个框架中，提示远不止简单的查询。它们是指示和引导LLM在使用工具方面行为的主要机制。一个设计良好的提示将：</p>\n<ul>\n<li>\n<p><strong>定义可用工具：</strong> 列出代理可以使用的工具，并清晰描述其功能、所需输入（及其类型）和预期输出格式。例如：</p>\n<pre><code class=\"language-text\">您可以使用以下工具：\n- `web_search(query: string)`: 根据给定查询搜索网络并返回最相关结果。\n- `run_python_code(code: string)`: 执行提供的Python代码并返回其输出或错误。\n</code></pre>\n</li>\n<li>\n<p><strong>引导工具选择：</strong> 指导LLM根据任务决定何时以及使用哪个工具。</p>\n</li>\n<li>\n<p><strong>指定输出格式：</strong> 规定LLM在调用工具时必须使用的精确语法，确保工具执行层能够解析它。这可能涉及要求JSON输出或特定的函数调用字符串。</p>\n</li>\n<li>\n<p><strong>管理工具输出处理：</strong> 帮助LLM解读工具返回的结果（或错误），并将此信息整合到其持续推理 (inference)过程中，以决定下一步。</p>\n</li>\n</ul>\n<p>例如，在<code>web_search</code>行动之后，观察结果可能包含一个搜索片段列表。提示随后指导LLM如何使用这些片段来回答原始用户查询，或判断是否需要另一个工具或行动。</p>\n<h3>从文本生成到可执行指令</h3>\n<p>工具使用的转变代表了LLM的重大进展。它们不再仅仅生成人类可读的文本，而是学习生成<em>机器可解释的指令</em>。这种方法的优点在于，LLM通常可以学会使用它们从未专门进行微调 (fine-tuning)的工具，仅仅通过理解提示中通过上下文 (context)学习提供的工具描述。LLM不仅仅是回忆事实；它正在将其推理 (inference)能力应用于这些新的工具描述来解决问题。</p>\n<p>这种与外部系统交互的能力带来了一系列应用，从能执行研究和总结发现的代理，到能管理您的日程、与电子商务网站交互，甚至通过执行代码并分析输出来帮助调试的代理。</p>\n<p>理解这些基本原理很重要。在本章后续部分，我们将介绍有效管理工具交互每个阶段所需的具体提示工程 (prompt engineering)技术：选择正确的工具、格式化其输入、处理其输出以及从错误中恢复。这些技术将帮助您构建真正有能力的AI代理。</p>",
+  "slug": "principles-tool-augmented-llms",
+  "updates": [],
+  "references": [
+    {
+      "id": 17906,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "本文介绍了ReAct框架，结合了语言模型中的推理（思考）和行动（动作），与文中描述的运行周期直接相关。",
+      "order": 1,
+      "created_at": "2025-09-06T12:14:07.525804Z",
+      "updated_at": "2025-09-11T10:33:15.914094Z"
+    },
+    {
+      "id": 17909,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEVBC2xbf4JYNtb_qwwgVkL3JpzTNF_8jLHYrmbignfheNRReY_CwSuzSNpHXqzzXXx_MkL-DBHedQYjmLK48GSzW8-MBu6l-WtPYBzX_2XcYEopj1IPwRRAVYcsu2xN0TrJDiAgz-fR9v0KuhrtbJRk_UdcsZ3QbP95cg0EblYHYigS0KkU6PIVA==",
+      "doi": "",
+      "note": "提供了LLM通过函数调用使用外部工具的实用指南和示例，是工具增强的一种具体实现。",
+      "order": 2,
+      "created_at": "2025-09-06T12:14:08.254915Z",
+      "updated_at": "2025-09-11T10:33:29.478462Z"
+    },
+    {
+      "id": 17913,
+      "title": "A Survey on Large Language Model Based Autonomous Agents",
+      "author": "Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2308.11432",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2308.11432",
+      "doi": "10.48550/arXiv.2308.11432",
+      "note": "本综述概述了代理架构，包括工具使用，为工具增强型LLM如何融入基于LLM的自主代理领域提供了背景。",
+      "order": 4,
+      "created_at": "2025-09-06T12:14:08.594670Z",
+      "updated_at": "2025-09-11T10:33:14.689364Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

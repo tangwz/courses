@@ -1,0 +1,61 @@
+{
+  "id": 2643,
+  "title": "注意力机制概览",
+  "meta_title": "注意力机制概览",
+  "meta_description": "简要介绍注意力机制增强序列模型的理念。",
+  "content": "<p>标准循环神经网络 (neural network) (RNN)，尤其是编码器-解码器结构中的LSTMs和GRUs，在许多序列建模任务中表现良好，但它们在处理非常长的序列时面临问题。基本的编码器-解码器架构将整个输入序列压缩成一个固定大小的向量 (vector)，通常称为上下文 (context)向量或“思想向量”。这个向量必须表示整个输入的含义。对于长输入，期望单个向量捕获所有必要信息成为一个重要的瓶颈，可能导致序列早期部分的细节丢失。</p>\n<p>注意力机制 (attention mechanism)提供了一种方法来克服这一限制。解码器不再仅仅依赖编码器的最终隐藏状态，而是被允许在生成输出的每一步“关注”整个输入序列的不同部分。试想人类如何翻译句子。你不会仅仅读完整个句子一次，完美记住其含义，然后写出翻译。相反，你在生成目标翻译的对应部分时，通常会回过头来关注源句子中的特定词语或短语。注意力机制为神经网络带来了类似的能力。</p>\n<h3>注意力机制 (attention mechanism)如何工作：概览</h3>\n<p>在生成输出的每一步（例如，预测翻译中的下一个词），注意力机制执行以下一般步骤：</p>\n<ol>\n<li><strong>比较解码器状态与编码器状态：</strong> 解码器当前的隐藏状态与编码器为输入序列生成的所有隐藏状态进行比较。这种比较生成一组“注意力分数”，表示每个输入词（由其编码器隐藏状态表示）与当前输出步骤的关联程度。</li>\n<li><strong>计算注意力权重 (weight)：</strong> 这些分数通常会经过一个<code>softmax</code>函数。这会将分数转换为总和为1的概率（注意力权重）。特定输入隐藏状态的权重越高，表示其对当前输出预测越重要。</li>\n<li><strong>计算上下文 (context)向量 (vector)：</strong> 使用注意力权重计算编码器隐藏状态的加权和。这会创建一个动态上下文向量，专门为当前的解码步骤定制。这个上下文向量不是一个固定的单一向量，而是着重于当前与输入序列最相关联的部分。</li>\n<li><strong>生成输出：</strong> 解码器使用这个动态计算的上下文向量，连同其自身的隐藏状态，来生成当前时间步的输出（例如，下一个词）。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-2p28kd\" \n              data-graph-definition='digraph G {\n  rankdir=TD;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_encoder {\n    label = \"编码器隐藏状态\";\n    bgcolor=\"#e9ecef\";\n    rank=same;\n    e1 [label=\"h₁ (输入 1)\"];\n    e2 [label=\"h₂ (输入 2)\"];\n    e_dots [label=\"...\", shape=plaintext];\n    en [label=\"h<0xE2><0x82><0x99> (输入 n)\"];\n    e1 -> e2 [style=invis];\n    e2 -> e_dots [style=invis];\n    e_dots -> en [style=invis];\n  }\n\n  subgraph cluster_decoder {\n    label = \"解码器 (在时间步 t)\";\n    bgcolor=\"#ffec99\";\n    d_state [label=\"解码器状态 s<0xE1><0xB5><0x9C>\"];\n  }\n\n  subgraph cluster_attention {\n    label = \"注意力机制\";\n    bgcolor=\"#b2f2bb\";\n    a_scores [label=\"计算分数:\\nscore(s<0xE1><0xB5><0x9C>, h<0xE1><0xB5><0xA2>)\", shape=ellipse, fillcolor=\"#d8f5a2\"];\n    a_weights [label=\"计算权重:\\nsoftmax(scores)\", shape=ellipse, fillcolor=\"#d8f5a2\"];\n    a_context [label=\"计算上下文:\\nΣ weights<0xE1><0xB5><0xA2> * h<0xE1><0xB5><0xA2>\", shape=ellipse, fillcolor=\"#d8f5a2\"];\n    output [label=\"生成输出:\\nf(s<0xE1><0xB5><0x9C>, context)\", shape=box, style=\"rounded,filled\", fillcolor=\"#ffc9c9\"];\n  }\n\n  d_state -> a_scores [lhead=cluster_attention];\n  e1 -> a_scores [style=dashed];\n  e2 -> a_scores [style=dashed];\n  en -> a_scores [style=dashed];\n\n  a_scores -> a_weights;\n  a_weights -> a_context;\n  a_context -> output;\n  d_state -> output;\n\n}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-2p28kd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图示意了注意力机制的一般流程。时间 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi></mrow><annotation encoding=\"application/x-tex\">t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6151em;\"></span><span class=\"mord mathnormal\">t</span></span></span></span> 的解码器状态 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>s</mi><mi>t</mi></msub></mrow><annotation encoding=\"application/x-tex\">s_t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.5806em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">s</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2806em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">t</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span>) 与所有编码器隐藏状态 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>h</mi><mn>1</mn></msub><mo separator=\"true\">,</mo><mi mathvariant=\"normal\">.</mi><mi mathvariant=\"normal\">.</mi><mi mathvariant=\"normal\">.</mi><mo separator=\"true\">,</mo><msub><mi>h</mi><mi>n</mi></msub></mrow><annotation encoding=\"application/x-tex\">h_1, ..., h_n</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">h</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3011em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">1</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">...</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">h</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.1514em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">n</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span>) 产生联系，以计算注意力权重。这些权重用于创建一个上下文向量，该向量与 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>s</mi><mi>t</mi></msub></mrow><annotation encoding=\"application/x-tex\">s_t</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.5806em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">s</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2806em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">t</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span></span></span></span> 一起，有助于生成该步骤的输出。</p>\n</blockquote>\n<h3>注意力机制 (attention mechanism)的优势</h3>\n<ul>\n<li><strong>改善长序列性能：</strong> 通过让模型关注输入的相关部分，注意力机制显著缓解了固定大小上下文 (context)向量 (vector)的信息瓶颈。这带来了更好的性能，特别是在涉及机器翻译或文档摘要等长输入序列的任务上。</li>\n<li><strong>更好的对齐 (alignment)：</strong> 注意力有助于模型学习输入和输出序列之间的软对齐。例如，在翻译中，它可以学习哪些源词与每个生成的 H目标词的对应关联最强。</li>\n<li><strong>可解释性：</strong> 注意力权重 (weight)本身可以被可视化。绘制权重图可让你看到模型在生成输出的特定部分时关注了输入序列的哪些部分。这为模型的决策过程提供了有价值的洞察。</li>\n</ul>\n<p>注意力机制并非RNNs、LSTMs或GRUs的替代品。相反，它们通常与这些循环架构结合，尤其是在编码器-解码器框架（通常称为带注意力的序列到序列模型）内，以增强其处理复杂序列建模任务的能力。虽然我们在此仅提供简要介绍，但理解动态关注相关输入部分的核心思想，对许多现代序列处理系统而言非常重要。</p>",
+  "slug": "overview-attention-mechanisms",
+  "updates": [],
+  "references": [
+    {
+      "id": 7562,
+      "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+      "author": "Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio",
+      "year": "2014",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR 2015) (arXiv preprint)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1409.0473",
+      "doi": "10.48550/arXiv.1409.0473",
+      "note": "介绍了神经机器翻译中序列到序列模型的原始注意力机制，解决了固定大小上下文向量的局限性。",
+      "order": 1,
+      "created_at": "2025-09-05T01:38:49.481307Z",
+      "updated_at": "2025-09-07T22:24:12.264602Z"
+    },
+    {
+      "id": 7563,
+      "title": "Effective Approaches to Attention-based Neural Machine Translation",
+      "author": "Minh-Thang Luong, Hieu Pham, and Christopher D. Manning",
+      "year": "2015",
+      "publisher": "",
+      "journal": "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+      "volume": "",
+      "pages": "1412-1421",
+      "url": "https://arxiv.org/abs/1508.04025",
+      "doi": "10.48550/arXiv.1508.04025",
+      "note": "研究并比较了多种注意力机制，包括全局和局部注意力，以及不同的评分函数，在先前研究的基础上进一步发展。",
+      "order": 2,
+      "created_at": "2025-09-05T01:38:49.493523Z",
+      "updated_at": "2025-09-07T22:24:17.025918Z"
+    },
+    {
+      "id": 7564,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 30 (NIPS 2017)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍了Transformer架构，该架构完全依赖于注意力机制（自注意力）并取代了循环层，成为现代自然语言处理深度学习的核心组成部分。",
+      "order": 3,
+      "created_at": "2025-09-05T01:38:49.498113Z",
+      "updated_at": "2025-09-07T22:24:15.037752Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

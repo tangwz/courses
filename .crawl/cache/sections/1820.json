@@ -1,0 +1,61 @@
+{
+  "id": 1820,
+  "title": "应用聚合函数",
+  "meta_title": "Pandas GroupBy 聚合",
+  "meta_description": "将 sum()、mean()、count()、size()、min()、max() 等函数应用于分组数据。",
+  "content": "<p>应用聚合函数首先需要通过在 DataFrame 上调用 <code>groupby()</code> 方法来创建 <code>GroupBy</code> 对象。然后，下一步是对每个组应用一个函数以计算汇总统计量。这一操作是“拆分-应用-合并”模式中的“应用”部分。</p>\n<p>Pandas 的 <code>GroupBy</code> 对象内置了多个聚合方法，它们与 Series 和 DataFrame 上的对应方法功能非常相似。这些方法会自动独立地对每个组进行操作，然后将结果合并到一个新的 Series 或 DataFrame 中。</p>\n<p>让我们看一个简单的数据框，它表示不同产品在各个区域的销售数据：</p>\n<pre><code class=\"language-python\">import pandas as pd\r\nimport numpy as np\r\n\r\n# 示例数据\r\ndata = {'Region': ['North', 'South', 'North', 'South', 'East', 'East', 'North'],\r\n        'Product': ['A', 'A', 'B', 'B', 'A', 'C', 'B'],\r\n        'Sales': [100, 150, 200, 50, 120, 80, 180],\r\n        'Quantity': [10, 15, 20, 5, 12, 8, 15]}\r\ndf = pd.DataFrame(data)\r\n\r\nprint(\"原始数据框:\")\r\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">原始数据框:\r\n  Region Product  Sales  Quantity\r\n0  North       A    100        10\r\n1  South       A    150        15\r\n2  North       B    200        20\r\n3  South       B     50         5\r\n4   East       A    120        12\r\n5   East       C     80         8\r\n6  North       B    180        15\n</code></pre>\n<p>现在，让我们按“Region”对这些数据进行分组：</p>\n<pre><code class=\"language-python\">grouped_by_region = df.groupby('Region')\n</code></pre>\n<p><code>grouped_by_region</code> 对象现在包含已分离的组，但我们尚未进行任何计算。</p>\n<h3>常用聚合函数</h3>\n<p>您可以直接将常用聚合函数应用于 <code>GroupBy</code> 对象。Pandas 会智能地将函数应用于每个组中合适的列（通常是数值列）。</p>\n<ol>\n<li>\n<p><strong>求和 (<code>.sum()</code>)</strong>：计算每个组的值的总和。</p>\n<pre><code class=\"language-python\"># 计算每个区域的总销售额和总数量\r\nregion_totals = grouped_by_region.sum()\r\nprint(\"\\n每个区域的总销售额和总数量:\")\r\nprint(region_totals)\n</code></pre>\n<pre><code class=\"language-text\">每个区域的总销售额和总数量:\r\n       Sales  Quantity\r\nRegion\r\nEast     200        20\r\nNorth    480        45\r\nSouth    200        20\n</code></pre>\n<p>请注意，输出是一个新的数据框，其中索引是分组键（“Region”），列是原始数据框中的数值列（“Sales”、“Quantity”），包含每个区域的总和值。非数值的“Product”列自动从求和中排除。</p>\n</li>\n<li>\n<p><strong>平均值 (<code>.mean()</code>)</strong>：计算每个组的平均值。</p>\n<pre><code class=\"language-python\"># 计算每个区域的平均销售额和平均数量\r\nregion_means = grouped_by_region.mean(numeric_only=True)\r\nprint(\"\\n每个区域的平均销售额和平均数量:\")\r\nprint(region_means)\n</code></pre>\n<pre><code class=\"language-text\">每个区域的平均销售额和平均数量:\r\n          Sales  Quantity\r\nRegion\r\nEast   100.000000  10.000000\r\nNorth  160.000000  15.000000\r\nSouth  100.000000  10.000000\n</code></pre>\n<p>同样，输出索引是“Region”，值代表属于每个区域的行的“Sales”和“Quantity”的平均值。</p>\n</li>\n<li>\n<p><strong>计数 (<code>.count()</code>)</strong>：计算每个组中每列的非空条目数。</p>\n<pre><code class=\"language-python\"># 计算每个区域每列的条目数\r\nregion_counts = grouped_by_region.count()\r\nprint(\"\\n每个区域的条目数:\")\r\nprint(region_counts)\n</code></pre>\n<pre><code class=\"language-text\">每个区域的条目数:\r\n       Product  Sales  Quantity\r\nRegion\r\nEast         2      2         2\r\nNorth        3      3         3\r\nSouth        2      2         2\n</code></pre>\n<p>这里，<code>count()</code> 包含“Product”列，因为它计算任何非缺失值，无论数据类型如何。它显示了有多少记录属于每个区域的组。</p>\n</li>\n<li>\n<p><strong>大小 (<code>.size()</code>)</strong>：返回每个组的总行数（包括空值，与 <code>count()</code> 不同）。</p>\n<pre><code class=\"language-python\"># 获取每个区域的总行数（大小）\r\nregion_sizes = grouped_by_region.size()\r\nprint(\"\\n每个区域组的大小:\")\r\nprint(region_sizes)\n</code></pre>\n<pre><code class=\"language-text\">每个区域组的大小:\r\nRegion\r\nEast     2\r\nNorth    3\r\nSouth    2\r\ndtype: int64\n</code></pre>\n<p><code>size()</code> 的输出是一个 Pandas Series，其中索引是分组键（“Region”），值是属于该组的行数。</p>\n</li>\n<li>\n<p><strong>最小值 (<code>.min()</code>) 和最大值 (<code>.max()</code>)</strong>：找出每个组中每个适用列的最小值或最大值。</p>\n<pre><code class=\"language-python\"># 找出每个区域的最小销售额\r\nregion_min_sales = grouped_by_region['Sales'].min() # 应用于特定列\r\nprint(\"\\n每个区域的最小销售额:\")\r\nprint(region_min_sales)\r\n\r\n# 找出每个区域的最大数量\r\nregion_max_quantity = grouped_by_region['Quantity'].max()\r\nprint(\"\\n每个区域的最大数量:\")\r\nprint(region_max_quantity)\n</code></pre>\n<pre><code class=\"language-text\">每个区域的最小销售额:\r\nRegion\r\nEast      80\r\nNorth    100\r\nSouth     50\r\nName: Sales, dtype: int64\r\n\r\n每个区域的最大数量:\r\nRegion\r\nEast     12\r\nNorth    20\r\nSouth    15\r\nName: Quantity, dtype: int64\n</code></pre>\n<p>在这些示例中，我们首先从 <code>GroupBy</code> 对象中选择一个特定列（<code>['Sales']</code> 或 <code>['Quantity']</code>），然后再应用聚合。这会得到一个 Series，其中索引是分组键（“Region”），值是该组所选列的最小/最大值。如果您在未首先选择列的情况下直接将 <code>.min()</code> 或 <code>.max()</code> 应用于 <code>GroupBy</code> 对象，它将计算所有适用（通常是数值）列的最小/最大值，类似于 <code>.sum()</code> 或 <code>.mean()</code>。</p>\n</li>\n</ol>\n<h3>应用于特定列</h3>\n<p>正如在 <code>.min()</code> 和 <code>.max()</code> 中所见的，您可以在分组后将聚合函数应用于特定列。当您只需要某些特征的汇总时，这很有用。</p>\n<pre><code class=\"language-python\"># 计算每个区域的总销售额\r\ntotal_sales_per_region = df.groupby('Region')['Sales'].sum()\r\nprint(\"\\n每个区域的总销售额（特定列）:\")\r\nprint(total_sales_per_region)\r\n\r\n# 计算每个产品的平均数量\r\navg_quantity_per_product = df.groupby('Product')['Quantity'].mean()\r\nprint(\"\\n每个产品的平均数量:\")\r\nprint(avg_quantity_per_product)\n</code></pre>\n<pre><code class=\"language-text\">每个区域的总销售额（特定列）:\r\nRegion\r\nEast     200\r\nNorth    480\r\nSouth    200\r\nName: Sales, dtype: int64\r\n\r\n每个产品的平均数量:\r\nProduct\r\nA    12.333333\r\nB    13.333333\r\nC     8.000000\r\nName: Quantity, dtype: float64\n</code></pre>\n<p>在聚合<em>之前</em>选择列 (<code>df.groupby('Region')['Sales'].sum()</code>) 通常比计算所有列的聚合然后选择您需要的列 (<code>df.groupby('Region').sum()['Sales']</code>) 更有效，尤其是在大型数据集上。</p>\n<p>这些基本聚合函数（<code>sum</code>、<code>mean</code>、<code>count</code>、<code>size</code>、<code>min</code>、<code>max</code>、<code>std</code>、<code>var</code>、<code>median</code> 等）涵盖了许多常见的数据汇总任务。它们是理解 Pandas 中按组操作的基本要素。在下一节中，我们将学习如何一次应用多个聚合函数。</p>",
+  "slug": "applying-aggregation-functions",
+  "updates": [],
+  "references": [
+    {
+      "id": 1889,
+      "title": "Pandas User Guide: Group by: split-apply-combine",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html",
+      "doi": "",
+      "note": "这份官方文档详细解释并提供了 Pandas `groupby` 操作和聚合函数的示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:14.500931Z",
+      "updated_at": "2025-09-08T05:07:33.855288Z"
+    },
+    {
+      "id": 1890,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "这本书由 Pandas 的创建者撰写，是 Python 数据操作的权威指南，其中包含关于 `groupby` 和聚合的专门章节（第三版）。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:14.508134Z",
+      "updated_at": "2025-09-08T05:07:37.175636Z"
+    },
+    {
+      "id": 1891,
+      "title": "Effective Pandas: Powerful Tools for Data Manipulation",
+      "author": "Matt Harrison",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "497",
+      "url": "https://www.goodreads.com/book/show/59846272-effective-pandas",
+      "doi": "",
+      "note": "这本实用指南为使用 Pandas `groupby` 进行高效数据聚合和操作提供了清晰的解释和示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:14.512705Z",
+      "updated_at": "2025-09-08T05:07:48.909441Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

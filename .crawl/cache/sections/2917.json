@@ -1,0 +1,61 @@
+{
+  "id": 2917,
+  "title": "为后端（CPU/GPU/TPU）实现转换规则",
+  "meta_title": "JAX 原语转换规则",
+  "meta_description": "说明如何为不同的硬件后端将自定义原语转换为低级代码（例如，XLA HLO）。",
+  "content": "<p>为了在 CPU、GPU 或 TPU 等特定硬件上实际执行自定义 JAX 原语，需要一个重要的翻译过程。这个过程被称为“转换”，其中高级原语被转换为硬件后端能够理解的低级指令。尽管自定义原语在形状和数据类型方面已抽象定义，但使它们能够在不同硬件后端上实际执行是一个必要的步骤，通常通过 XLA (加速线性代数) 编译器完成。</p>\n<h3>为什么需要转换规则</h3>\n<p>JAX 通过使用 XLA 将 Python 函数即时编译为优化的可执行代码来提高性能。XLA 在其自身的中间表示形式 HLO (高级优化器 IR) 上运行。当 JAX 在编译过程中遇到一个原语（例如 <code>jax.lax.add</code> 或您的自定义原语）时，它需要一种方法将该原语转换为相应的 HLO 指令序列。如果没有转换规则，XLA 将不知道为您的自定义操作生成什么机器代码。</p>\n<p>每个后端（CPU、GPU、TPU）可能有不同的最佳方式来实现相同的操作。因此，您需要为打算支持的每个后端提供专门的转换规则。</p>\n<h3>目标：XLA HLO</h3>\n<p>JAX 中的转换过程几乎总是以 XLA HLO 为目标。您的转换规则的任务是接收原语的输入（表示为 XLA 值），并使用 XLA 构建器对象构建执行预期操作的 HLO 计算图。XLA 随后会将此 HLO 图进一步编译为目标加速器的高度优化机器代码。</p>\n<h3>注册转换函数</h3>\n<p>您可以使用 JAX 的内部 API 为特定原语和后端注册转换规则。一种常见的方法涉及 <code>xla_client.register_translation</code> 等函数。您将您的原语对象与执行转换的 Python 函数进行关联。</p>\n<pre><code class=\"language-python\"># 示例：为 'my_custom_op_p' 原语注册转换规则\nfrom jax.lib import xla_client\nfrom jax.interpreters import xla\n\n# 假设 'my_custom_op_p' 是您的 Primitive 对象\n\ndef my_custom_op_lowering_cpu(builder, *args, **params):\n  \"\"\"my_custom_op 在 CPU 上的转换规则。\"\"\"\n  # 'builder' 是一个 XlaBuilder 实例\n  # 'args' 是输入的 XLA 计算值\n  # 'params' 是原语的静态参数\n\n  # 使用构建器来构建 HLO 操作...\n  # 示例：如果 my_custom_op 添加 1.0\n  # operand = args[0]\n  # one = builder.ConstantF32Scalar(1.0)\n  # result = builder.Add(operand, one)\n  # return [result] # 返回输出 XLA 值的列表\n\n  # 替换为您的原语的实际 HLO 构建\n  pass \n\n# 为 CPU 后端注册\nxla_client.register_translation(my_custom_op_p, \n                                my_custom_op_lowering_cpu, \n                                platform='cpu')\n\n# 类似地，为 'gpu' 和 'tpu' 平台定义和注册\n# def my_custom_op_lowering_gpu(builder, *args, **params): ...\n# xla_client.register_translation(my_custom_op_p, my_custom_op_lowering_gpu, platform='gpu') \n\n# def my_custom_op_lowering_tpu(builder, *args, **params): ...\n# xla_client.register_translation(my_custom_op_p, my_custom_op_lowering_tpu, platform='tpu') \n</code></pre>\n<p><em>(注意：具体的 API 细节可能会有所变化；请查阅当前的 JAX 文档以获取最新的注册方法。)</em></p>\n<h3>使用 XLA 构建器</h3>\n<p>传递给转换函数的 <code>builder</code> 对象是构建 HLO 的主要工具。它提供了以下方法：</p>\n<ul>\n<li>创建常量（例如，<code>builder.ConstantF32Scalar(1.0)</code>）。</li>\n<li>执行逐元素算术运算（例如，<code>builder.Add</code>、<code>builder.Mul</code>、<code>builder.Log1p</code>）。</li>\n<li>矩阵操作（例如，<code>builder.DotGeneral</code>）。</li>\n<li>数据操作（例如，<code>builder.Reshape</code>、<code>builder.Transpose</code>、<code>builder.Slice</code>）。</li>\n<li>控制流（尽管在 JAX 中通常在更高层次处理）。</li>\n<li>以及许多更专业的操作。</li>\n</ul>\n<p>您使用这些方法，将它们链接在一起，接收输入 <code>args</code>（它们是 XLA 值的句柄）并生成表示您的原语结果的输出 XLA 值。您之前定义的抽象评估规则提供了构建器通常需要正确构建这些操作的形状和数据类型信息。</p>\n<h3>后端特定考量</h3>\n<p>尽管某些原语在不同后端上可能具有相同的转换规则，但性能要求高的操作通常受益于后端专门化：</p>\n<ul>\n<li><strong>CPU：</strong> 转换可能会生成标准 HLO 操作，XLA 可以有效地为多核 CPU 进行编译，并可能使用向量 (vector)指令（如 AVX）。</li>\n<li><strong>GPU：</strong> 转换规则可能会生成与 CUDA 内核很好匹配的 HLO。这可能涉及使用已知在 GPU 上高效的特定 HLO 操作，或者构造计算以最大化并行度并最小化内存传输。对于 HLO 中不直接可用的操作，您可能需要在转换规则中使用 <code>gpu_kernel</code> 调用，嵌入 (embedding) CUDA 代码（这会大大增加复杂性）。</li>\n<li><strong>TPU：</strong> 转换需要考虑 TPU 的架构，特别是其强大的矩阵乘法单元 (MXU) 和向量处理单元。高效的 TPU 代码通常涉及将计算构造为大型矩阵乘法或为 TPU 硬件优化的特定 HLO 操作。</li>\n</ul>\n<h3>示例：简单 <code>relu</code> 的转换</h3>\n<p>假设我们正在定义一个自定义 ReLU 原语 <code>my_relu_p</code>。ReLU 操作是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>m</mi><mi>a</mi><mi>x</mi><mo stretchy=\"false\">(</mo><mn>0</mn><mo separator=\"true\">,</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">max(0, x)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">ma</span><span class=\"mord mathnormal\">x</span><span class=\"mopen\">(</span><span class=\"mord\">0</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span></span></span></span>。</p>\n<pre><code class=\"language-python\"># my_relu_p 的转换\n# 假设 my_relu_p 是 Primitive 对象\n# 假设抽象评估规则已定义\n\ndef my_relu_lowering(builder, x_operand, **params):\n  \"\"\"将 my_relu(x) = max(0, x) 转换为 HLO。\"\"\"\n\n  # 从操作数获取形状和数据类型\n  # 抽象评估确保 x_operand 具有正确的抽象值\n  shape = builder.GetShape(x_operand) \n  dtype = shape.element_type() # 例如，F32\n\n  # 创建一个与操作数相同类型和形状的常数零\n  zero = builder.Broadcast(builder.ConstantElement(0, dtype), shape.dimensions())\n\n  # 计算逐元素最大值\n  result = builder.Max(zero, x_operand)\n\n  return [result] # 返回包含单个输出的列表\n\n# 为相关平台注册此规则\n# xla_client.register_translation(my_relu_p, my_relu_lowering, platform='cpu')\n# xla_client.register_translation(my_relu_p, my_relu_lowering, platform='gpu')\n# xla_client.register_translation(my_relu_p, my_relu_lowering, platform='tpu') \n</code></pre>\n<p>在此示例中，转换很简单：创建一个与输入形状和类型相同的零张量，并使用 <code>Max</code> HLO 操作。这条规则可能对所有后端都足够，因为 XLA 知道如何为每个后端高效地编译 <code>Max</code>。</p>\n<h3>复杂性和高级用法</h3>\n<p>编写转换规则可以从简单（如 ReLU 示例）到高度复杂。如果您的操作不能很好地映射到现有的 HLO 指令，您可能需要：</p>\n<ol>\n<li><strong>组合多个 HLO 操作：</strong> 从现有的 HLO 原语构建您的功能。</li>\n<li><strong>实现后端特定内核：</strong> 对于 GPU，编写自定义 CUDA 代码并通过 HLO 的 <code>CustomCall</code> 调用它。这需要 HLO 和目标硬件编程模型（例如 CUDA）方面的专业知识。</li>\n<li><strong>理解 XLA 优化：</strong> 注意 XLA 如何融合或优化您生成的 HLO。</li>\n</ol>\n<p>调试转换规则也可能具有挑战性，通常需要使用 JAX 或 XLA 提供的工具检查生成的 HLO 本身。</p>\n<p>通过实现转换规则，您提供了 JAX 在所需硬件上高效编译和运行您的自定义原语所需的最后一部分，使其成为 JAX 生态系统中的一等公民，可以用于 <code>jit</code>、<code>vmap</code>、<code>pmap</code>，甚至进行微分（一旦您定义了其微分规则）。</p>",
+  "slug": "implementing-lowering-rules",
+  "updates": [],
+  "references": [
+    {
+      "id": 7628,
+      "title": "How to write JAX XLA Lowering",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "JAX documentation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/aot.html",
+      "doi": "",
+      "note": "解释如何为自定义 JAX 原语定义降低规则，涵盖 XLA HLO 和 `xla_client.register_translation` 等 API 的使用。",
+      "order": 1,
+      "created_at": "2025-09-05T01:43:02.898744Z",
+      "updated_at": "2025-09-09T01:28:06.030007Z"
+    },
+    {
+      "id": 7629,
+      "title": "XLA: Accelerated Linear Algebra",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla",
+      "doi": "",
+      "note": "提供了 XLA 编译器的概述、其功能，并链接到有关其中间表示 (HLO) 和硬件目标的信息。",
+      "order": 2,
+      "created_at": "2025-09-05T01:43:02.907915Z",
+      "updated_at": "2025-09-09T01:27:59.878786Z"
+    },
+    {
+      "id": 7631,
+      "title": "A Domain-Specific Compiler for Tensor Processing Units",
+      "author": "Heejin Jo, Andrew Siena, Mark Weiser, Nicholas P. Johnson, Robert S. French, Paul M. Smith, Kevin S. Lee, Cliff L. Biffle, Eric S. Chung, and Norman P. Jouppi",
+      "year": "2021",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS '21)",
+      "volume": "",
+      "pages": "385-399",
+      "url": "https://dl.acm.org/doi/10.1145/3445814.3446700",
+      "doi": "10.1145/3445814.3446700",
+      "note": "研究了 XLA 编译器如何针对 Google 的张量处理单元 (TPU) 进行优化，提供了针对专用硬件的后端特定编译器策略的示例。",
+      "order": 4,
+      "created_at": "2025-09-05T01:43:02.925047Z",
+      "updated_at": "2025-09-09T01:28:30.593840Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

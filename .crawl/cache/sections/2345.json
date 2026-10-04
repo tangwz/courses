@@ -1,0 +1,61 @@
+{
+  "id": 2345,
+  "title": "用于并行执行的 `multiprocessing` 模块",
+  "meta_title": "Python `multiprocessing` 用于并行机器学习",
+  "meta_description": "使用 `multiprocessing` 模块（Pool, Process）在Python中并行化CPU密集型机器学习计算。",
+  "content": "<p>全局解释器锁（GIL）阻止多个线程在不同CPU核心上同时执行Python字节码。这一限制在标准CPython中处理CPU密集型机器学习 (machine learning)任务时尤为突出。这大大限制了通过线程在计算密集型工作（如机器学习中常见的数值计算）中可获得的性能提升。<code>multiprocessing</code> 模块提供了一个很好的替代方案，它通过创建独立的进程来实现，每个进程拥有自己的Python解释器和内存空间，从而绕过GIL，实现多核系统上的真正并行执行。</p>\n<p>这种方法特别适合计算量远大于通信开销的任务，例如复杂的数据转换、超参数 (parameter) (hyperparameter)搜索期间的并行模型训练，或者同时评估多种模型变体。</p>\n<h3>使用 <code>Process</code> 创建和管理独立进程</h3>\n<p><code>multiprocessing</code> 中的基本构建块是 <code>Process</code> 类。您可以通过实例化 <code>Process</code> 来创建一个新进程，通过 <code>target</code> 参数 (parameter)指定要在新进程中执行的目标函数，并使用 <code>args</code>（元组）或 <code>kwargs</code>（字典）参数传递任何必需的参数。</p>\n<p>创建 <code>Process</code> 对象后，您可以通过调用 <code>start()</code> 方法启动其执行。这会生成一个新的子进程，该子进程开始运行指定的目标函数。为确保主程序在继续执行前等待子进程完成工作，您需要在 <code>Process</code> 对象上调用 <code>join()</code> 方法。这对于同步结果或确保任务在进入后续步骤前完成很重要。</p>\n<p>考虑一个简化情况，我们将计算密集型的特征工程步骤应用于数据的不同部分：</p>\n<pre><code class=\"language-python\">import multiprocessing\nimport time\nimport os\n\ndef compute_intensive_feature(data_chunk):\n    \"\"\"模拟对数据块进行CPU密集型计算。\"\"\"\n    pid = os.getpid()\n    print(f\"进程 {pid}: 开始对大小为 {len(data_chunk)} 的数据块进行计算\")\n    # 模拟工作\n    result = sum(x * x for x in data_chunk) \n    time.sleep(1) \n    print(f\"进程 {pid}: 完成计算。\")\n    return result\n\nif __name__ == \"__main__\": # multiprocessing 的重要保护\n    # 示例数据，分成块\n    data = list(range(100000)) \n    chunk1 = data[:50000]\n    chunk2 = data[50000:]\n\n    print(\"主进程: 启动子进程...\")\n    start_time = time.time()\n\n    # 创建 Process 对象\n    p1 = multiprocessing.Process(target=compute_intensive_feature, args=(chunk1,))\n    p2 = multiprocessing.Process(target=compute_intensive_feature, args=(chunk2,))\n\n    # 启动进程\n    p1.start()\n    p2.start()\n\n    # 等待进程完成\n    p1.join()\n    p2.join()\n\n    end_time = time.time()\n    print(f\"主进程: 所有子进程在 {end_time - start_time:.2f} 秒内完成。\")\n    # 注意: 像这样直接获取结果需要进程间通信（稍后介绍）。\n    # 此示例侧重于并行执行流程。\n</code></pre>\n<blockquote>\n<p><strong>重要的:</strong> 在使用 <code>spawn</code> 或 <code>forkserver</code> 启动方法（如Windows或有时macOS）的平台上，您必须将脚本中创建进程的主体部分置于 <code>if __name__ == \"__main__\":</code> 块中。这可以防止子进程重新导入并重新执行进程创建代码，从而导致无限递归。</p>\n</blockquote>\n<h3>使用 <code>Pool</code> 有效管理工作进程</h3>\n<p>尽管创建独立的 <code>Process</code> 对象提供了细粒度控制，但手动管理大量进程会变得繁琐。<code>multiprocessing.Pool</code> 类提供了一种便捷的方式来管理一组工作进程。它会自动处理任务到可用工作进程的分配。</p>\n<p>常见的模式是使用 <code>Pool.map()</code> 方法。它将给定函数应用于可迭代对象（如列表）中的每个项，将工作分配到池中的工作进程。它收集结果并以列表形式返回它们，同时保持与输入可迭代对象对应的顺序。</p>\n<p>让我们修改前面的示例来使用 <code>Pool</code>：</p>\n<pre><code class=\"language-python\">import multiprocessing\nimport time\nimport os\nimport math\n\ndef compute_intensive_feature_pool(x):\n    \"\"\"模拟对单个项进行CPU密集型计算。\"\"\"\n    # 模拟单个项的工作 - 更适合 map\n    result = math.sqrt(x) * math.sin(x) * math.cos(x) \n    # 添加一个小的延迟来表示计算\n    for _ in range(10000): \n        pass \n    return result\n\nif __name__ == \"__main__\":\n    data = list(range(200000)) # 用于 Pool 演示的更大数据集\n\n    print(\"主进程: 启动 Pool 处理...\")\n    start_time_serial = time.time()\n\n    # 串行执行以进行比较\n    # results_serial = [compute_intensive_feature_pool(item) for item in data] \n    # 取消注释上面一行以运行串行比较，但这会很慢。\n    # print(f\"主进程: 串行执行完成 (示例 - 已注释)。\")\n\n    start_time_parallel = time.time()\n\n    # 确定进程数（通常基于CPU核心数）\n    num_processes = multiprocessing.cpu_count() \n    print(f\"主进程: 使用 {num_processes} 个进程的池。\")\n\n    # 创建一个 Pool 上下文管理器（自动处理关闭/连接）\n    with multiprocessing.Pool(processes=num_processes) as pool:\n        # 并行应用函数\n        results_parallel = pool.map(compute_intensive_feature_pool, data)\n\n    end_time_parallel = time.time()\n\n    print(f\"主进程: 并行执行在 {end_time_parallel - start_time_parallel:.2f} 秒内完成。\")\n    # print(f\"结果长度: {len(results_parallel)}\") # 验证输出长度\n\n</code></pre>\n<p><code>Pool</code> 会自动将 <code>data</code> 可迭代对象分成块，并将每个块分配给一个工作进程。<code>map</code> 会阻塞，直到所有结果都被计算并返回。</p>\n<p>其他有用的 <code>Pool</code> 方法包括：</p>\n<ul>\n<li><code>apply_async()</code>: 为一组参数 (parameter)异步执行一个函数。它会立即返回一个 <code>AsyncResult</code> 对象，允许主程序在函数于工作进程中运行时执行其他任务。您可以使用 <code>get()</code> 稍后获取结果。</li>\n<li><code>imap()</code> / <code>imap_unordered()</code>: <code>map</code> 的惰性版本。它们返回迭代器，一旦结果可用就生成结果，这对于非常大的数据集来说可以节省内存。<code>imap</code> 保持顺序，而 <code>imap_unordered</code> 则按完成的顺序返回结果。</li>\n</ul>\n<p>向 <code>Pool</code> 提交所有任务后，您通常应调用 <code>pool.close()</code> 来表明不再提交任务，随后调用 <code>pool.join()</code> 来等待所有已提交的任务完成。将 <code>Pool</code> 作为上下文 (context)管理器使用（如示例中 <code>with multiprocessing.Pool(...) as pool:</code> 所示）会自动处理 <code>close()</code> 和 <code>join()</code>，这是推荐的做法。</p>\n<h3>进程间数据传输</h3>\n<p>由于进程在独立的内存空间中运行，任何传递给子进程（作为参数 (parameter)）或从子进程返回的数据都需要进行传输。<code>multiprocessing</code> 主要通过序列化来处理此问题，默认使用 <code>pickle</code> 模块。传递给 <code>target</code> 函数或通过 <code>Pool</code> 方法提交的参数会在主进程中被封装，并在工作进程中解封。返回值会在工作进程中被封装，并在主进程中（或调用 <code>AsyncResult</code> 上 <code>get()</code> 的进程中）解封。</p>\n<blockquote>\n<p>封装会带来开销，特别是对于大型对象。如果管理不当，在进程间传输大型数据集（如NumPy数组或Pandas DataFrame）可能会成为瓶颈。此外，并非所有Python对象都可以被封装（例如，生成器、lambda函数、嵌套函数、一些复杂的自定义对象）。在设计用于并行执行的函数时，此限制很重要。针对需要更复杂数据交换的情况，更高级的进程间通信（IPC）技术，例如 <code>Queue</code> 或共享内存，将在后面进行介绍。</p>\n</blockquote>\n<h3><code>multiprocessing</code> 在机器学习 (machine learning)中的常见应用</h3>\n<p><code>multiprocessing</code> 模块在加速机器学习工作流程中有很多应用：</p>\n<ol>\n<li><strong>数据预处理：</strong> 将复杂的特征提取、缩放或转换函数应用于大型数据集的独立数据块。</li>\n<li><strong>超参数 (parameter) (hyperparameter)调整（网格搜索/随机搜索）：</strong> 并行训练和评估具有不同超参数组合的模型。每个进程处理一个或多个组合。</li>\n<li><strong>交叉验证：</strong> 同时执行交叉验证不同折叠的训练和评估。</li>\n<li><strong>集成方法：</strong> 在合并预测之前，并行训练独立的（例如在随机森林或 bagging 集成中）基本模型。</li>\n<li><strong>批量推断：</strong> 通过将大批量数据分配到多个进程来运行预测。</li>\n</ol>\n<h3>性能考量</h3>\n<p>尽管 <code>multiprocessing</code> 实现了真正的并行，但请记住以下几点：</p>\n<ul>\n<li><strong>进程创建开销：</strong> 启动新进程比启动线程需要更多的资源（时间和内存）。使用 <code>Pool</code> 有助于将此成本分摊到多个任务中。</li>\n<li><strong>序列化开销：</strong> 封装和解封数据所需的时间可能相当可观，特别是对于大型或复杂对象。如果这成为瓶颈，请尽量减少数据传输或使用更有效的IPC机制。</li>\n<li><strong>进程数量：</strong> 创建过多进程（远超可用CPU核心数）可能导致收益递减，甚至由于上下文 (context)切换开销和资源争用而导致性能下降。使用 <code>multiprocessing.cpu_count()</code> 是一个常见的起始点，但最佳性能可能需要根据具体任务和硬件进行调整。</li>\n<li><strong>任务粒度：</strong> 任务应足够大（计算量上），以抵消进程创建和数据序列化的开销。寿命很短的任务串行运行可能更快。</li>\n</ul>\n<p><code>multiprocessing</code> 模块是使用多核处理器来加速Python机器学习 (machine learning)管线中CPU密集型计算的重要工具。通过了解如何使用 <code>Process</code> 创建进程并使用 <code>Pool</code> 有效管理它们，您可以显著减少耗时任务的执行时间，从而加快实验和模型开发周期。在设计并行解决方案时，请记住考虑与进程创建和数据序列化相关的权衡。</p>",
+  "slug": "multiprocessing-module-parallel",
+  "updates": [],
+  "references": [
+    {
+      "id": 3164,
+      "title": "multiprocessing - Process-based parallelism",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/multiprocessing.html",
+      "doi": "",
+      "note": "有关`multiprocessing`模块的官方文档，详细介绍了其类、函数和一般用法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:21.958977Z",
+      "updated_at": "2025-09-08T03:15:58.075806Z"
+    },
+    {
+      "id": 3165,
+      "title": "High Performance Python: Practical Performant Programming for Humans with Computers",
+      "author": "Micha Gorelick, Ian Ozsvald",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/high-performance-python/9781492055020/",
+      "doi": "",
+      "note": "一本关于优化Python代码的资源，涵盖并行处理策略，适用于数据密集型和科学应用。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:22.124522Z",
+      "updated_at": "2025-09-07T20:50:33.957278Z"
+    },
+    {
+      "id": 3167,
+      "title": "Effective Python: 90 Specific Ways to Write Better Python",
+      "author": "Brett Slatkin",
+      "year": "2019",
+      "publisher": "Addison-Wesley Professional",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.informit.com/store/effective-python-90-specific-ways-to-write-better-9780134853987",
+      "doi": "",
+      "note": "提供编写健壮且高效Python代码的指导，其中一节专门介绍使用`multiprocessing`模块实现并发和并行。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:22.366097Z",
+      "updated_at": "2025-09-08T03:16:06.657746Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

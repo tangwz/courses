@@ -1,0 +1,61 @@
+{
+  "id": 5310,
+  "title": "FastAPI 应用中的日志记录",
+  "meta_title": "FastAPI 应用中的日志记录",
+  "meta_description": "实现有效的日志记录，以监控请求、错误和应用行为。",
+  "content": "<p>有效的日志记录是构建和维护可靠应用不可或缺的一部分，尤其是在将机器学习 (machine learning)模型部署为API时。当您的预测服务在生产环境中运行时，日志成为您了解其行为、诊断问题、监控性能和追踪使用模式的主要工具。如果日志记录不足，排查诸如意外预测结果、响应时间慢或推理 (inference)过程中出现错误等问题将变得异常困难。</p>\n<p>FastAPI 应用与任何 Python 应用一样，可以使用 Python 内置的 <code>logging</code> 模块。这个标准库为从您的应用组件发出日志消息提供了灵活且功能强大的框架。<code>logging</code> 模块的核心涉及几个主要组成部分：</p>\n<ul>\n<li><strong>记录器（Loggers）：</strong> 这些是您的应用代码直接交互的对象，用于发出消息（如 <code>logger.info(...)</code>、<code>logger.error(...)</code> 等）。记录器通常采用分层结构命名，常反映您项目的模块结构（例如 <code>logging.getLogger(__name__)</code>）。</li>\n<li><strong>处理器（Handlers）：</strong> 处理器决定日志消息发送到何处。常见的处理器包括 <code>StreamHandler</code>（将日志发送到 <code>stderr</code> 或 <code>stdout</code>，这在容器化应用中很常见）、<code>FileHandler</code>（将日志写入文件）、<code>SysLogHandler</code>、<code>HTTPHandler</code> 等。</li>\n<li><strong>格式化器（Formatters）：</strong> 格式化器控制日志记录的最终输出格式。您可以包含时间戳、日志级别、模块名称、特定消息内容等。</li>\n<li><strong>过滤器（Filters）：</strong> 过滤器对哪些日志记录从记录器传递到处理器提供细粒度控制。</li>\n</ul>\n<p>尽管运行 FastAPI 应用的 ASGI 服务器（如 Uvicorn）通常提供基本的访问日志（显示传入请求、状态码和耗时），但应用级别的日志记录能让您更详尽地了解 API 的内部运作机制，特别是机器学习推理逻辑。</p>\n<h3>基本日志配置</h3>\n<p>您可以使用 Python 代码配置日志记录。对于简单设置，<code>logging.basicConfig</code> 可能足够，但对于复杂应用，使用更结构化的配置方法通常是更好的做法。</p>\n<p>要在 FastAPI 应用中开始日志记录，您首先需要获取一个记录器实例，通常以当前模块的名称命名：</p>\n<pre><code class=\"language-python\">import logging\nfrom fastapi import FastAPI\n\n# 配置基本日志记录（可选，根据需要自定义）\n# 这通常在应用启动时执行一次\nlogging.basicConfig(level=logging.INFO, \n                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')\n\n# 获取当前模块的记录器实例\nlogger = logging.getLogger(__name__)\n\napp = FastAPI()\n\n@app.get(\"/\")\nasync def read_root():\n    logger.info(\"Root endpoint was accessed.\")\n    return {\"message\": \"Hello World\"}\n\n@app.post(\"/predict/\")\nasync def predict(data: dict): # 为简洁起见，假设输入是一个简单的字典\n    logger.info(f\"Prediction request received with data keys: {list(data.keys())}\")\n    try:\n        # 模型推理的占位符\n        prediction_result = {\"prediction\": \"example_class\", \"probability\": 0.95} \n        logger.info(f\"Prediction successful: {prediction_result}\")\n        return prediction_result\n    except Exception as e:\n        logger.error(f\"Error during prediction: {e}\", exc_info=True) # exc_info=True 会记录堆栈跟踪\n        # 重新抛出或返回适当的错误响应\n        raise e \n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们导入了 <code>logging</code> 模块。</li>\n<li><code>logging.basicConfig</code> 将最低日志级别设置为 <code>INFO</code> 并定义了基本的日志消息格式。低于 <code>INFO</code> 级别（如 <code>DEBUG</code>）的消息将被忽略。</li>\n<li><code>logging.getLogger(__name__)</code> 获取一个特定于其调用模块的记录器。</li>\n<li>在路由处理程序内部，<code>logger.info()</code> 和 <code>logger.error()</code> 用于记录事件。在 <code>logger.error</code> 中使用 <code>exc_info=True</code> 会自动包含异常信息和堆栈跟踪，这对调试极有价值。</li>\n</ol>\n<h3>记录什么以及如何记录</h3>\n<p>决定 <em>记录什么</em> 很重要。目标是在详细程度和实用性之间取得平衡。日志记录过多会占用过多存储空间，并使查找相关信息变得困难。日志记录过少则在问题发生时让您无法了解情况。请考虑记录以下内容：</p>\n<ul>\n<li><strong>请求信息：</strong> 关于传入请求的重要细节（例如，相关参数 (parameter)、请求ID）。除非绝对必要且已妥善保护/匿名化，否则请格外小心，<em>不要</em> 记录敏感信息，如密码、API 密钥或个人身份信息 (PII)。</li>\n<li><strong>ML 推理 (inference)：</strong> 记录输入特征（如果输入很大，则记录摘要/哈希）、预测输出以及可能的模型置信度分数。</li>\n<li><strong>外部交互：</strong> 对数据库、其他 API 或文件系统的调用。</li>\n<li><strong>错误和异常：</strong> 始终记录错误，并附带足够多的上下文 (context)，包括堆栈跟踪。</li>\n<li><strong>重要的状态变化：</strong> 记录应用状态中的重要事件或变化。</li>\n</ul>\n<h3>结构化日志记录</h3>\n<p>虽然人类可读的日志格式在开发期间很有用，但结构化日志（通常是 JSON 格式）在生产环境中非常有益。它们允许日志消息被日志聚合和监控系统（如 Elasticsearch/Logstash/Kibana (ELK)、Splunk、Datadog 等）方便地解析、索引和分析。</p>\n<p>您可以配置 Python 的日志模块以输出 JSON 格式。像 <code>python-json-logger</code> 这样的库可以简化此过程。</p>\n<pre><code class=\"language-python\"># 使用 python-json-logger 的示例设置（安装命令：pip install python-json-logger）\nimport logging\nfrom pythonjsonlogger import jsonlogger\n\n# 获取根记录器\nlog = logging.getLogger() \nlog.setLevel(logging.INFO)\n\n# 创建一个输出到控制台（stderr）的处理器\nlogHandler = logging.StreamHandler()\n\n# 使用 JSON 格式化器\nformatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')\nlogHandler.setFormatter(formatter)\n\n# 将处理器添加到根记录器\n# 如果在其他地方配置，请注意不要多次添加处理器\nif not log.hasHandlers():\n    log.addHandler(logHandler)\n\n# 获取您应用模块的记录器实例\nlogger = logging.getLogger(__name__)\n\n# --- FastAPI 应用定义 ---\napp = FastAPI()\n\n@app.get(\"/status\")\nasync def get_status():\n    extra_data = {\"service_version\": \"1.2.3\", \"uptime_seconds\": 12345}\n    logger.info(\"Status check performed\", extra=extra_data) \n    return {\"status\": \"OK\"}\n\n# 示例日志输出 (JSON):\n# {\"asctime\": \"...\", \"levelname\": \"INFO\", \"name\": \"__main__\", \"message\": \"Status check performed\", \"service_version\": \"1.2.3\", \"uptime_seconds\": 12345} \n</code></pre>\n<p>使用 <code>extra</code> 字典，您可以方便地为结构化日志记录添加自定义字段。</p>\n<h3>关联 ID</h3>\n<p>在处理多个并发请求的系统中，将属于同一请求的日志消息关联起来可能很困难。一种常见模式是为每个传入请求分配一个唯一的 <em>关联 ID</em>，并在处理该请求时生成的每条日志消息中包含此 ID。这使得通过日志追踪特定请求的整个生命周期变得简单得多。</p>\n<p>FastAPI 中间件是生成和管理关联 ID 的合适位置，您可以将它们存储在请求上下文 (context)中或显式传递。像 <code>asgi-correlation-id</code> 这样的库可以帮助实现此模式。</p>\n<p>实施日志记录最初可能看起来是额外的精力，但在您需要理解、排查问题和维护生产环境中的机器学习 (machine learning) API 时，它会带来巨大的回报。通过配置适当的日志级别、格式（最好是结构化），并在代码中的重要时点记录相关信息，您可以提升您的 FastAPI 应用的可观测性和可靠性。</p>",
+  "slug": "logging-fastapi-applications",
+  "updates": [],
+  "references": [
+    {
+      "id": 14530,
+      "title": "`logging` - Logging facility for Python",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/logging.html",
+      "doi": "",
+      "note": "Python标准日志库的官方文档，详细介绍了其架构和应用程序日志记录的用法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:54:09.342956Z",
+      "updated_at": "2025-09-09T14:18:42.376815Z"
+    },
+    {
+      "id": 14531,
+      "title": "FastAPI Documentation",
+      "author": "Sebastián Ramírez",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "FastAPI框架的官方文档，是API开发中整合日志记录实践的重要资源。",
+      "order": 2,
+      "created_at": "2025-09-05T08:54:09.348054Z",
+      "updated_at": "2025-09-09T14:18:31.478026Z"
+    },
+    {
+      "id": 14532,
+      "title": "Site Reliability Engineering: How Google Runs Production Systems",
+      "author": "Niall Richard Murphy, Betsy Beyer, Chris Jones, Jennifer Petoff",
+      "year": "2016",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/site-reliability-engineering/9781491929110/",
+      "doi": "",
+      "note": "一本关于运行可靠生产系统的基础著作，涵盖了部署的日志记录、监控和可观察性原则。",
+      "order": 3,
+      "created_at": "2025-09-05T08:54:09.351039Z",
+      "updated_at": "2025-09-09T14:18:44.160808Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

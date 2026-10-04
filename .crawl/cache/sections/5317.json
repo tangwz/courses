@@ -1,0 +1,45 @@
+{
+  "id": 5317,
+  "title": "优化镜像大小：多阶段构建",
+  "meta_title": "使用多阶段构建优化机器学习推理镜像",
+  "meta_description": "在 Dockerfile 中使用多阶段构建来制作更小的、生产可用的推理镜像。",
+  "content": "<p>在部署机器学习 (machine learning)模型进行推理 (inference)时，Docker 镜像的大小是一个重要因素。较大的镜像下载时间更长，占用存储空间更多，并且可能通过包含不必要的构建工具或库来增加受攻击面。导致镜像过大的一个常见原因是包含了构建时依赖，例如编译器、头文件，甚至整个 SDK，这些是安装库所需的，但在运行最终应用时却不需要。</p>\n<p>多阶段构建为此问题提供了一个有效办法。它们允许您在一个 Dockerfile 中使用多个 <code>FROM</code> 指令。每个 <code>FROM</code> 指令都可以使用不同的基础镜像，并开始一个新的构建“阶段”。您可以选择性地将产物（例如编译后的代码、已安装的依赖或模型文件）从一个阶段复制到另一个阶段，而将最终镜像中不需要的一切留下。</p>\n<h3>多阶段构建的工作原理</h3>\n<p>这种做法包括为构建和运行应用设定不同的阶段：</p>\n<ol>\n<li><strong>构建阶段：</strong> 此阶段通常以一个较大的基础镜像开始，其中包含所有需要的编译器、构建工具和开发头文件。您在此阶段执行安装依赖（可能涉及编译）、下载模型或预处理数据等任务。您通常使用 <code>AS &#x3C;stage_name></code>（例如 <code>AS builder</code>）来给这个阶段命名。</li>\n<li><strong>最终阶段：</strong> 此阶段以一个适合运行时的最小基础镜像开始（例如 <code>python:3.9-slim</code> 或一个 distroless 镜像）。它只包含运行您的推理 (inference)服务所必需的组件。</li>\n<li><strong>复制产物：</strong> 重要一步是在最终阶段使用 <code>COPY --from=&#x3C;stage_name></code> 指令。此命令将指定的前一阶段（例如 <code>builder</code>）中的特定文件或目录复制到最终阶段的文件系统中。</li>\n</ol>\n<p>这个过程确保最终镜像只包含运行时应用、其直接依赖项以及任何需要的数据文件，同时舍弃中间构建环境及其附带的冗余。</p>\n<h3>示例：优化 Python 推理 (inference)服务</h3>\n<p>考虑一个使用 FastAPI 构建的推理服务，它需要可能带有复杂构建依赖的库。一个多阶段 Dockerfile 可能像这样：</p>\n<pre><code class=\"language-dockerfile\"># 阶段 1: 构建器阶段，包含构建工具\nFROM python:3.9 AS builder\n\nWORKDIR /app\n\n# 如有需要，安装构建必备工具（Debian系镜像示例）\n# RUN apt-get update &#x26;&#x26; apt-get install -y --no-install-recommends build-essential\n\n# 先只复制 requirements 文件，以利用 Docker 缓存\nCOPY requirements.txt .\n\n# 安装所有依赖，包括构建时依赖\n# 在构建阶段使用虚拟环境有助于隔离软件包\nRUN python -m venv /opt/venv\nENV PATH=\"/opt/venv/bin:$PATH\"\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 复制应用代码的其余部分\nCOPY . .\n\n# 可选：如果模型文件没有随代码复制，则在此处下载\n# RUN python download_model.py\n\n# 阶段 2: 最终阶段，使用精简运行时环境\nFROM python:3.9-slim\n\nWORKDIR /app\n\n# 从构建器阶段复制虚拟环境\nCOPY --from=builder /opt/venv /opt/venv\n\n# 复制应用代码（如有需要请调整路径）\nCOPY --from=builder /app /app\n\n# 如果模型文件在构建器阶段已下载或属于应用代码的一部分，则在此处复制\n# COPY --from=builder /app/models /app/models\n\n# 使端口 80 在容器外部可用\nEXPOSE 80\n\n# 定义环境变量\nENV NAME\n\n# 设置路径以包含虚拟环境的二进制文件\nENV PATH=\"/opt/venv/bin:$PATH\"\n\n# 运行应用\nCMD [\"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"80\"]\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li><code>builder</code> 阶段使用标准 <code>python:3.9</code> 镜像，将 <code>requirements.txt</code> 中的依赖安装到虚拟环境 (<code>/opt/venv</code>) 中，并复制应用代码。</li>\n<li>最终阶段从小得多的 <code>python:3.9-slim</code> 镜像开始。</li>\n<li><code>COPY --from=builder /opt/venv /opt/venv</code> 将包含所有已安装 Python 软件包的<em>整个</em>虚拟环境从构建器阶段复制到最终阶段。</li>\n<li><code>COPY --from=builder /app /app</code> 复制应用源代码。</li>\n<li>最终镜像包含精简的 Python 运行时、虚拟环境中需要的已安装软件包以及应用代码，但<em>不包含</em>构建工具或来自 <code>builder</code> 阶段的中间层。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1y5f86o\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled]; edge [color=\"#495057\"]; subgraph cluster_0 { label=\"Dockerfile\"; bgcolor=\"#e9ecef\"; \"Stage 1 (Builder)\" [color=\"#a5d8ff\", label=\"阶段 1: 构建器\\n(python:3.9)\\n- 构建工具\\n- 安装依赖\\n- 复制源码\\n- 构建产物\"]; \"Stage 2 (Final)\" [color=\"#96f2d7\", label=\"阶段 2: 最终\\n(python:3.9-slim)\\n- 最小运行时\\n- 复制的虚拟环境\\n- 复制的源码\\n- 复制的模型\"]; } \"Stage 1 (Builder)\" -> \"Stage 2 (Final)\" [label=\" COPY --from=builder\\n /opt/venv → /opt/venv\\n /app → /app\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1y5f86o\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图示说明了在多阶段 Docker 构建中，如何将特定产物（虚拟环境、应用代码）从较大的构建阶段复制到较小的最终运行时阶段。</p>\n</blockquote>\n<h3>多阶段构建对推理 (inference)的好处</h3>\n<ul>\n<li><strong>减小镜像大小：</strong> 这是主要优点。移除构建工具、临时文件和不必要的库可以大幅缩小最终镜像的大小，从而加快部署并降低存储成本。</li>\n<li><strong>提高安全性：</strong> 通过将构建工具和开发库从最终镜像中排除，您可以减少潜在的攻击面。组件越少意味着潜在漏洞越少。</li>\n<li><strong>清晰分离：</strong> 它使得构建环境和运行时环境之间有了清晰的分离，让 Dockerfile 更易于理解和维护。</li>\n<li><strong>优化缓存：</strong> Docker 可以缓存各个阶段。如果构建阶段的依赖没有改变，Docker 可以复用缓存的构建阶段，即使最终阶段需要修改，也能加快后续构建速度。</li>\n</ul>\n<h3>注意事项</h3>\n<ul>\n<li><strong>识别产物：</strong> 您需要仔细确定哪些文件和目录是运行时所需，并确保使用 <code>COPY --from</code> 正确复制它们。这可能包含已安装的软件包（例如 <code>site-packages</code> 目录或虚拟环境）、编译后的二进制文件、静态资源和模型文件。检查中间构建阶段容器的文件系统（<code>docker run --rm -it &#x3C;builder_image_id> bash</code>）会很有帮助。</li>\n<li><strong>基础镜像选择：</strong> 为每个阶段选择合适的基础镜像。构建阶段可能需要完整的操作系统发行版或特定的 SDK 镜像，而最终阶段应尽可能精简（例如 <code>slim</code>、<code>alpine</code> 或 <code>distroless</code>）。</li>\n</ul>\n<p>多阶段构建是创建生产可用容器镜像的标准做法，对于效率和安全性是重要考量的机器学习 (machine learning)推理 (inference)服务来说尤其适用。通过将构建时需求与运行时必要项分离，您可以创建更精简、更快速、更安全的容器来服务您的模型。</p>",
+  "slug": "optimizing-image-size-multistage",
+  "updates": [],
+  "references": [
+    {
+      "id": 14135,
+      "title": "Use multi-stage builds",
+      "author": "Docker Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/build/building/multi-stage/",
+      "doi": "",
+      "note": "本官方指南介绍并解释了 Docker 的多阶段构建功能，详细说明了其指令和实现高效镜像创建的模式。",
+      "order": 1,
+      "created_at": "2025-09-05T08:48:06.844010Z",
+      "updated_at": "2025-09-11T02:17:42.353206Z"
+    },
+    {
+      "id": 14137,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "本书涵盖了部署机器学习模型的实践方面，其中容器化和优化推理服务镜像大小是重要的操作考量。",
+      "order": 3,
+      "created_at": "2025-09-05T08:48:06.871807Z",
+      "updated_at": "2025-09-11T02:17:48.667665Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

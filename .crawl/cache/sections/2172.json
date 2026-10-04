@@ -1,0 +1,61 @@
+{
+  "id": 2172,
+  "title": "Matplotlib 绘图基本原理",
+  "meta_title": "Matplotlib 绘图基本原理",
+  "meta_description": "理解 Matplotlib 绘图的基本构成：图形、坐标系和绘图指令。",
+  "content": "<p>Matplotlib 是一个基础库，用于在 Python 中创建静态、交互式和动态可视化。尽管 Seaborn（我们很快会讲到）等其他库为特定统计图表提供了更高级的接口，但理解 Matplotlib 的结构很重要，因为许多其他绘图库都是在其基础上构建的。可以将 Matplotlib 视为支撑 Python 大部分 2D 绘图功能的核心。</p>\n<p>为了有效使用 Matplotlib，理解其主要组成部分会有所帮助。可视化是逐层构建的，从整体容器开始，逐步添加特定的绘图元素。</p>\n<h3>Matplotlib 绘图的结构</h3>\n<p>在最高层级，我们有 <code>Figure</code>。可以把它想象成绘制所有内容的整个窗口或页面。它是所有绘图元素的顶层容器，包括标题、图例，以及最重要的是，一个或多个 <code>Axes</code>。</p>\n<p>一个 <code>Axes</code> 对象代表一个独立的图或图表（不要混淆复数 <code>Axes</code> 和单数 <code>Axis</code>）。它是用 X 轴和 Y 轴（或 3D 中的其他坐标）绘制数据的区域。一个 <code>Figure</code> 可以包含多个 <code>Axes</code> 对象，通常排列成网格。这对于并排比较数据的不同视图很有用。每个 <code>Axes</code> 都有自己的标题、X 轴标签和 Y 轴标签。</p>\n<p>在一个 <code>Axes</code> 内部，有 <code>Axis</code> 对象（对于 2D 图通常有两个：X 轴和 Y 轴）。这些对象处理数据范围（限制）的缩放、刻度线（沿轴的位置）以及刻度标签（表示刻度处值的文本）。</p>\n<p>以下是其分解：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-bdhiq8\" \n              data-graph-definition='digraph G {\n  bgcolor=\"transparent\";\n  rankdir=TB;\n  node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n\n  Figure [label=\"Figure\\n(整体窗口/页面)\", fillcolor=\"#a5d8ff\"];\n  Axes [label=\"Axes\\n(独立的绘图区域)\", fillcolor=\"#96f2d7\"];\n  XAxis [label=\"X-轴\\n(控制限制、刻度、标签)\", fillcolor=\"#ffe066\"];\n  YAxis [label=\"Y-轴\\n(控制限制、刻度、标签)\", fillcolor=\"#ffe066\"];\n  PlotElements [label=\"绘图元素\\n(线条、点、条形等)\", fillcolor=\"#ffc9c9\"];\n  Title [label=\"标题\", shape=plaintext];\n  XLabel [label=\"X-轴标签\", shape=plaintext];\n  YLabel [label=\"Y-轴标签\", shape=plaintext];\n\n  Figure -> Axes [label=\" 包含 \"];\n  Axes -> XAxis [label=\" 拥有 \"];\n  Axes -> YAxis [label=\" 拥有 \"];\n  Axes -> PlotElements [label=\" 显示 \"];\n  Axes -> Title;\n  Axes -> XLabel;\n  Axes -> YLabel;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-bdhiq8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图表展示了层次结构：一个 <code>Figure</code> 包含一个或多个 <code>Axes</code>，每个 <code>Axes</code> 包含 <code>Axis</code> 对象和实际绘制的数据（线条、点等），以及标题和标签等描述性元素。</p>\n</blockquote>\n<h3>两种接口：<code>pyplot</code> 和面向对象</h3>\n<p>Matplotlib 提供了两种主要的绘图方式：</p>\n<ol>\n<li><strong><code>pyplot</code> 模块：</strong> 这提供了一组函数（<code>plt.plot()</code>、<code>plt.title()</code> 等），它们隐式地作用于“当前”的图形和坐标系。它常用于快速、交互式绘图，因为它启动所需代码量少。它维护一个内部状态，在需要时自动创建图形和坐标系。</li>\n<li><strong>面向对象 (OO) 接口：</strong> 这涉及显式地创建 <code>Figure</code> 和 <code>Axes</code> 对象，然后直接在这些对象上调用方法（例如 <code>ax.plot()</code>、<code>ax.set_title()</code>）。这种方法通常推荐用于更复杂的图表、可重用函数，或者需要对图形元素进行更精细控制的情况。它使代码更清楚地指示正在修改哪个图。</li>\n</ol>\n<p>尽管 <code>pyplot</code> 对于简单任务很方便，但本课程将主要侧重于面向对象的方法，因为它更符合构建更结构化、可能更复杂的视觉效果的需求，这在机器学习 (machine learning)工作流中常会用到。</p>\n<h3>创建你的第一个图（面向对象风格）</h3>\n<p>让我们看看如何使用 OO 接口创建一个基本图。标准的第一个步骤是导入必要的库：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n</code></pre>\n<p>我们通常将 <code>matplotlib.pyplot</code> 导入为 <code>plt</code>。即使在使用 OO 接口时，<code>pyplot</code> 仍用于创建图形和坐标系（<code>plt.subplots()</code>）以及显示图表（<code>plt.show()</code>）等函数。</p>\n<p>接下来，我们创建一个 <code>Figure</code> 和一组 <code>Axes</code>。<code>plt.subplots()</code> 函数是完成此操作的便捷方法。它返回一个包含 <code>Figure</code> 对象和一个或多个 <code>Axes</code> 对象的元组。</p>\n<pre><code class=\"language-python\"># 示例数据\nx = np.linspace(0, 10, 100) # 从 0 到 10 的 100 个点\ny = np.sin(x)\n\n# 创建一个 Figure 和一个 Axes 对象\nfig, ax = plt.subplots()\n\n# 在 Axes 上绘图\nax.plot(x, y, color='#1c7ed6', linewidth=2) # 蓝色线条\n\n# 使用 Axes 方法自定义图表\nax.set_title(\"简单的正弦波\")\nax.set_xlabel(\"X 值\")\nax.set_ylabel(\"Y 值 (sin(x))\")\nax.grid(True, linestyle=':', color='#adb5bd') # 添加一个浅灰色网格\n\n# 显示图表\nplt.show()\n</code></pre>\n<p>此代码片段执行以下操作：</p>\n<ol>\n<li>导入 <code>matplotlib.pyplot</code> 和 <code>numpy</code>。</li>\n<li>使用 NumPy 生成一些示例数据。</li>\n<li><code>plt.subplots()</code> 创建一个 <code>Figure</code>（赋值给 <code>fig</code>）和该图形内的一个 <code>Axes</code>（赋值给 <code>ax</code>）。</li>\n<li><code>ax.plot(x, y, ...)</code> 直接在 <code>Axes</code> 对象 <code>ax</code> 上绘制折线图。我们指定数据并可选地自定义其外观（颜色、线宽）。</li>\n<li><code>ax.set_title()</code>、<code>ax.set_xlabel()</code> 和 <code>ax.set_ylabel()</code> 为图表添加描述性文本，同样是通过在 <code>ax</code> 对象上调用方法。</li>\n<li><code>ax.grid(True, ...)</code> 添加背景网格以便于阅读。</li>\n<li><code>plt.show()</code> 显示包含我们图表的图形。在某些环境（如 Jupyter Notebooks）中，图表可能会自动渲染，但明确调用 <code>plt.show()</code> 是一个好习惯，尤其是在脚本中。</li>\n</ol>\n<p>这种使用 <code>fig, ax = plt.subplots()</code> 然后在 <code>ax</code> 上调用方法（如 <code>ax.plot</code>、<code>ax.set_title</code>）的基本结构，构成了使用 Matplotlib 创建各种可视化的基础，我们将在接下来的章节中在此基础上进行构建。理解 <code>Figure</code> 和 <code>Axes</code> 对象的作用是掌握 Python 数据可视化的第一步。</p>",
+  "slug": "matplotlib-fundamentals",
+  "updates": [],
+  "references": [
+    {
+      "id": 2260,
+      "title": "Anatomy of a Matplotlib Plot",
+      "author": "The Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/introductory/usage.html#anatomy-of-a-figure",
+      "doi": "",
+      "note": "详细介绍了Matplotlib图表的基本组成部分，例如Figure、Axes和Axis对象，它们构成了可视化的基础。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:13.750193Z",
+      "updated_at": "2025-09-08T03:09:47.485098Z"
+    },
+    {
+      "id": 2263,
+      "title": "Usage Guide",
+      "author": "The Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/introductory/usage.html",
+      "doi": "",
+      "note": "介绍了Matplotlib中绘图的两种主要接口（pyplot和面向对象），阐明了它们的使用场景和典型工作流程。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:13.914777Z",
+      "updated_at": "2025-09-08T03:09:46.551941Z"
+    },
+    {
+      "id": 2265,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本标准资源，其中包含专门的Matplotlib章节，在数据分析的更广阔背景下解释其数据可视化用途。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:13.918729Z",
+      "updated_at": "2025-09-08T03:09:49.658535Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

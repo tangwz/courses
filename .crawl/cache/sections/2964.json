@@ -1,0 +1,61 @@
+{
+  "id": 2964,
+  "title": "注意力分数计算：一个宏观视角",
+  "meta_title": "注意力分数计算的宏观视角",
+  "meta_description": "解释基于查询、键和值向量的注意力分数计算的总体过程。",
+  "content": "<p>让我们从注意力这个<em>想法</em>转向它实际如何开始运作，至少从宏观角度来看是这样。我们知道注意力旨在让模型在生成输出时关注输入序列的特定部分。但模型如何决定对于给定步骤<em>哪些</em>部分是重要的呢？这便是注意力分数计算发挥作用的地方。</p>\n<p>想象你在翻译一个句子。当在目标语言中生成特定词时，你可能需要回头看源句子中的特定词。注意力将这种直觉形式化。它计算一组<em>注意力分数</em>，这些分数量化 (quantization)了每个输入元素与当前处理步骤的相关性。</p>\n<p>为此，我们引入三个重要想法，它们表示为从输入嵌入 (embedding)派生的向量 (vector)（我们稍后会具体介绍这些是如何派生的）：</p>\n<ol>\n<li>\n<p><strong>查询 (Q)：</strong> 可以将查询向量视为表示当前的关注点或问题。例如，在序列到序列模型的解码器中，查询可能表示试图预测下一个词的状态。它在问：“鉴于我当前的状态，输入序列的哪些部分现在最相关？”</p>\n</li>\n<li>\n<p><strong>键 (K)：</strong> 输入序列中的每个元素都有一个关联的键向量。可以将键视为该输入元素内容的一种标签或标识符，用于与查询进行匹配。查询将与所有键进行比较。</p>\n</li>\n<li>\n<p><strong>值 (V)：</strong> 每个输入元素也有一个值向量。该向量表示该输入元素的实际内容或含义。一旦我们知道每个输入元素<em>有多相关</em>（通过比较 Q 和 K），值向量就会提供我们实际将使用的信息。</p>\n</li>\n</ol>\n<p>过程通常如下展开：</p>\n<ol>\n<li>\n<p><strong>计算相似度分数：</strong> 模型将查询向量（表示当前关注点）与输入序列中<em>每个</em>元素的向量进行比较。这种比较会为每个输入元素生成一个原始的<em>相似度分数</em>。计算这种相似度的常用方法是使用查询向量与每个键向量的点积。分数越高，表示查询的需求与输入元素的描述之间越相关。</p>\n</li>\n<li>\n<p><strong>将分数归一化 (normalization)为权重 (weight)：</strong> 这些原始相似度分数需要被归一化，以便它们表示重要性分布。通常，对分数应用 softmax 函数。softmax 函数将分数转换为总和为 1 的概率。这些结果值称为<em>注意力权重</em>。注意力权重越高的输入元素，被认为对当前查询越重要。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1hie69h\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fillcolor=\"#e9ecef\", style=filled];\n  edge [fontname=\"sans-serif\"];\n\n  subgraph cluster_input {\n    label = \"输入序列元素\";\n    bgcolor=\"#f8f9fa\";\n    node [fillcolor=\"#a5d8ff\"];\n    K1 [label=\"1\"];\n    V1 [label=\"值 1\"];\n    K2 [label=\"2\"];\n    V2 [label=\"值 2\"];\n    Kn [label=\"n\"];\n    Vn [label=\"值 n\"];\n    K1 -> V1 [style=invis];\n    K2 -> V2 [style=invis];\n    Kn -> Vn [style=invis];\n  }\n\n  subgraph cluster_process {\n    label = \"注意力计算\";\n    bgcolor=\"#f8f9fa\";\n    Q [label=\"查询 (Q)\", fillcolor=\"#ffec99\"];\n    Scores [label=\"计算相似度\\n(例如，Q · K)\", shape=ellipse, fillcolor=\"#d0bfff\"];\n    Softmax [label=\"归一化分数\\n(Softmax)\", shape=ellipse, fillcolor=\"#96f2d7\"];\n    Weights [label=\"注意力权重\\n(总和为 1)\", shape= Mrecord, fillcolor=\"#96f2d7\"];\n  }\n\n  Q -> Scores [label=\" 比较 \"];\n  {K1, K2, Kn} -> Scores [label=\" 对每个键 \"];\n  Scores -> Softmax;\n  Softmax -> Weights;\n\n  label = \"注意力分数计算总体流程\";\n  fontsize=12;\n  fontcolor=\"#495057\";\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1hie69h\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图显示了流程：查询与多个键进行比较以生成相似度分数，这些分数随后通过（例如 Softmax）归一化为注意力权重。</p>\n</blockquote>\n<p>这些注意力权重是该阶段的核心输出。它们根据当前查询，准确地告诉模型对输入序列中的每个元素应该给予多少“注意力”或专注。在下一节中，我们将了解如何将这些权重与值向量结合使用，以创建一个单一的、信息丰富的上下文 (context)向量。这种机制提供了一种动态灵活的方式来处理序列中的依赖关系，弥补了简单 RNN 方法中固定上下文向量的主要局限性。</p>",
+  "slug": "attention-score-calculation-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 4201,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "5998-6008",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍Transformer架构和自注意力机制的基础论文，提供了Query、Key和Value相互作用及其在注意力分数计算中作用的原始描述。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:28.779738Z",
+      "updated_at": "2025-09-09T02:39:16.713261Z"
+    },
+    {
+      "id": 4203,
+      "title": "The Annotated Transformer",
+      "author": "Alexander Rush",
+      "year": "2018",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://nlp.seas.harvard.edu/2018/04/03/attention.html",
+      "doi": "",
+      "note": "一个广受认可的交互式指南，通过在PyTorch中实现Transformer架构来解释其工作原理，对Query、Key和Value注意力机制及其分数计算提供了清晰的解释。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:28.786847Z",
+      "updated_at": "2025-09-09T02:39:07.823945Z"
+    },
+    {
+      "id": 4204,
+      "title": "Transformer Models: An Introduction",
+      "author": "Llion Jones, Ashish Vaswani, Noam Shazeer, Jakob Uszkoreit, and Illia Polosukhin",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/transformer-models/9781098132921/",
+      "doi": "",
+      "note": "由部分Transformer模型原作者撰写的权威书籍，对Transformer模型，包括注意力机制及其评分过程，提供了全面且更新的介绍。",
+      "order": 4,
+      "created_at": "2025-09-04T16:56:28.791489Z",
+      "updated_at": "2025-09-09T02:39:34.019215Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

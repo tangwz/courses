@@ -1,0 +1,61 @@
+{
+  "id": 1209,
+  "title": "管理图例",
+  "meta_title": "管理 Matplotlib 和 Seaborn 中的图例",
+  "meta_description": "控制可视化中图例的位置、外观和内容。",
+  "content": "<p>当您创建包含多条线、多种颜色、标记 (token)或样式以表示不同类别或数据集的图表时，图例变得必不可少。它作为指引，说明每个视觉元素的含义。当您为绘图数据提供标签时，Matplotlib 和 Seaborn 通常会自动生成图例，但您经常需要调整它们的位置、外观或内容，以获得最佳清晰度。</p>\n<h3>自动图例生成</h3>\n<p>获取图例的最简单方法是为您的绘图命令添加 <code>label</code> 参数 (parameter)。Matplotlib 会记录这些标签，并在指示时显示它们。</p>\n<p>考虑绘制两条线：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 示例数据\nx = np.linspace(0, 10, 100)\ny1 = np.sin(x)\ny2 = np.cos(x)\n\n# 使用函数式 API 创建图表\nplt.figure(figsize=(6, 4))\nplt.plot(x, y1, label='Sine Wave')\nplt.plot(x, y2, label='Cosine Wave', linestyle='--')\nplt.title('Sine and Cosine Waves')\nplt.xlabel('X-axis')\nplt.ylabel('Y-axis')\n\n# 指示 Matplotlib 显示图例\nplt.legend()\n\nplt.show()\n</code></pre>\n<p>在此脚本中，我们在每个 <code>plt.plot()</code> 调用中都提供了 <code>label</code> 参数。最后的 <code>plt.legend()</code> 命令告诉 Matplotlib 收集所有定义的标签并将它们显示在图例框中。如果您使用带有 Axes 对象的面向对象方法，则应调用 <code>ax.legend()</code> 而不是 <code>plt.legend()</code>。</p>\n<h3>控制图例位置</h3>\n<p>Matplotlib 尝试自动为图例找到“最佳”位置 (<code>loc='best'</code>)，以尽量减少与绘图数据的重叠。然而，这种自动放置可能并非总是理想的。您可以使用 <code>legend()</code> 函数中的 <code>loc</code> 参数 (parameter)明确控制图例的位置。</p>\n<p>常用的 <code>loc</code> 值包括：</p>\n<ul>\n<li><code>'best'</code> (默认)</li>\n<li><code>'upper right'</code></li>\n<li><code>'upper left'</code></li>\n<li><code>'lower left'</code></li>\n<li><code>'lower right'</code></li>\n<li><code>'right'</code></li>\n<li><code>'center left'</code></li>\n<li><code>'center right'</code></li>\n<li><code>'lower center'</code></li>\n<li><code>'upper center'</code></li>\n<li><code>'center'</code></li>\n</ul>\n<p>让我们修改之前的示例，将图例放置在左下角：</p>\n<pre><code class=\"language-python\"># ... (x, y1, y2 的先前设置代码)\n\nplt.figure(figsize=(6, 4))\nplt.plot(x, y1, label='Sine Wave')\nplt.plot(x, y2, label='Cosine Wave', linestyle='--')\nplt.title('Sine and Cosine Waves')\nplt.xlabel('X-axis')\nplt.ylabel('Y-axis')\n\n# 将图例放置在左下角\nplt.legend(loc='lower left')\n\nplt.show()\n</code></pre>\n<p>尝试不同的 <code>loc</code> 值有助于找到最合适的位置，确保图例不会遮挡重要数据点或趋势。</p>\n<p>为了更精确地控制这些字符串代码，您可以使用 <code>bbox_to_anchor</code> 参数，它允许指定相对于坐标轴或图形的坐标。这更高级，通常不适用于基本图表，但对于复杂布局很有用。</p>\n<h3>基本图例自定义</h3>\n<p>关于放置，您可以修改图例的外观：</p>\n<ul>\n<li><strong>标题：</strong> 使用 <code>title</code> 参数 (parameter)为图例框添加标题。</li>\n<li><strong>列：</strong> 使用 <code>ncol</code> 将图例项排列成多列。这对于包含许多项的图例很有用。</li>\n<li><strong>边框：</strong> 使用 <code>frameon=False</code> 删除图例框周围的边框。</li>\n<li><strong>字体大小：</strong> 使用 <code>fontsize</code> 调整文本大小。</li>\n</ul>\n<p>以下是应用其中一些自定义设置的示例：</p>\n<pre><code class=\"language-python\"># ... (x, y1, y2 的先前设置代码)\n\nplt.figure(figsize=(7, 5)) # 稍微大一点的图\nplt.plot(x, y1, label='Sine')\nplt.plot(x, y2, label='Cosine', linestyle='--')\nplt.plot(x, y1*0.5, label='Sine/2', linestyle=':')\nplt.plot(x, y2*0.5, label='Cosine/2', linestyle='-.')\n\nplt.title('Multiple Trigonometric Functions')\nplt.xlabel('X-axis')\nplt.ylabel('Y-axis')\n\n# 自定义图例\nplt.legend(loc='upper center', ncol=2, title='Functions', frameon=False, fontsize='small')\n\nplt.show()\n</code></pre>\n<p>这会将图例放置在顶部中央，将四个项目排列成两列，添加标题“函数”，删除边框，并使用稍微小一点的字体。</p>\n<h3>Seaborn 中的图例</h3>\n<p>Seaborn 与 Matplotlib 紧密集成，通常会自动处理图例，特别是在使用 <code>hue</code>、<code>size</code> 或 <code>style</code> 等参数 (parameter)区分数据时。如果 Seaborn 预测会发生重叠，它通常会将图例放置在绘图区域之外。</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport pandas as pd\n\n# 创建适合 Seaborn 的 DataFrame\ndata = pd.DataFrame({\n    'x': np.tile(x, 2),\n    'y': np.concatenate([y1, y2]),\n    'type': ['Sine Wave'] * len(x) + ['Cosine Wave'] * len(x)\n})\n\nplt.figure(figsize=(6, 4))\n# Seaborn 根据 'hue' 自动创建图例\nsns.lineplot(data=data, x='x', y='y', hue='type')\nplt.title('Seaborn Plot with Automatic Legend')\nplt.xlabel('X-axis')\nplt.ylabel('Y-axis')\n\n# 我们仍然可以访问 Matplotlib Axes，以便在需要时修改图例\n# ax = plt.gca() # 获取当前 Axes\n# ax.legend(loc='lower left') # 示例：移动 Seaborn 生成的图例\n\nplt.show()\n</code></pre>\n<p>即使 Seaborn 创建了图例，您通常仍然可以使用 Matplotlib 的 <code>ax.legend()</code>（例如，通过 <code>ax = sns.lineplot(...)</code> 或 <code>ax = plt.gca()</code> 获取 Axes 对象后）来修改其属性，如位置、标题或边框可见性，就像您对纯 Matplotlib 图表所做的那样。</p>\n<p>有效管理图例是创建清晰易懂的可视化的重要组成部分。通过正确使用标签并了解如何调整图例的位置和基本外观，您可以确保您的受众可以轻松理解图中不同的元素。</p>",
+  "slug": "plot-managing-legends",
+  "updates": [],
+  "references": [
+    {
+      "id": 822,
+      "title": "Matplotlib: Legend Guide",
+      "author": "The Matplotlib development team",
+      "year": "2024",
+      "publisher": "The Matplotlib development team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/tutorials/intermediate/legend_guide.html",
+      "doi": "",
+      "note": "官方指南，详细介绍了如何在Matplotlib图中创建、定位和自定义图例。",
+      "order": 1,
+      "created_at": "2025-09-04T15:02:20.301598Z",
+      "updated_at": "2025-09-07T16:21:56.857031Z"
+    },
+    {
+      "id": 823,
+      "title": "seaborn.lineplot",
+      "author": "Michael Waskom and The Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.lineplot.html",
+      "doi": "",
+      "note": "Seaborn线图函数的文档，展示了通过'hue'参数自动生成图例以及与Matplotlib图例控制的集成。",
+      "order": 2,
+      "created_at": "2025-09-04T15:02:20.305758Z",
+      "updated_at": "2025-09-07T16:21:56.955972Z"
+    },
+    {
+      "id": 824,
+      "title": "Customizing Legends",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.06-customizing-legends.html",
+      "doi": "",
+      "note": "来自一本广受认可的手册中的章节，为Matplotlib中自定义图例提供了实用见解和示例。",
+      "order": 3,
+      "created_at": "2025-09-04T15:02:20.308843Z",
+      "updated_at": "2025-09-07T16:22:02.592792Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

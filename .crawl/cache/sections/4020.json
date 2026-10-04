@@ -1,0 +1,61 @@
+{
+  "id": 4020,
+  "title": "在 Docker 容器中运行应用",
+  "meta_title": "在 Docker 容器中运行 Flask 机器学习应用",
+  "meta_description": "如何将您新构建的 Docker 镜像作为容器运行，并访问 Flask 应用。",
+  "content": "<p>Docker 镜像可以将 Flask 预测服务及其所有依赖项打包成一个独立的蓝图。当作为容器运行时，这个蓝图便会变为现实。容器是 Docker 镜像的一个实时运行实例，它提供了一个应用程序在其内部执行的独立环境。</p>\n<h2>使用 <code>docker run</code> 启动您的容器</h2>\n<p>从镜像启动容器的基本命令是 <code>docker run</code>。它的基本结构如下：</p>\n<pre><code class=\"language-bash\">docker run [OPTIONS] IMAGE[:TAG] [COMMAND] [ARG...]\n</code></pre>\n<ul>\n<li><code>OPTIONS</code>：修改容器行为的标志（我们稍后会介绍一些重要选项）。</li>\n<li><code>IMAGE[:TAG]</code>：您要运行的镜像名称。如果您按照上一节操作，这可能是 <code>prediction-service</code> 之类的名称。如果未指定标签，Docker 默认为 <code>:latest</code> 标签。</li>\n<li><code>COMMAND</code> 和 <code>ARG...</code>：在容器内部执行的可选命令和参数 (parameter)，它们会覆盖 Dockerfile 中指定的默认命令（例如 <code>CMD [\"python\", \"app.py\"]</code> 指令）。</li>\n</ul>\n<p>让我们试着运行 Flask 应用的容器。如果您的镜像名为 <code>prediction-service</code>，一个简单的执行方式是：</p>\n<pre><code class=\"language-bash\"># 这可能会在前台运行，并把 Flask 日志输出到您的终端\ndocker run prediction-service\n</code></pre>\n<p>您可能会看到 Flask 的输出，提示服务器已启动。但是，这样运行会占用您的终端。要停止它，您可以按下 <code>Ctrl+C</code>。对于一个 Web 服务，我们通常希望它在后台运行。</p>\n<h2>在分离模式下运行</h2>\n<p>要在后台（分离模式）运行容器，请使用 <code>-d</code> 选项：</p>\n<pre><code class=\"language-bash\">docker run -d prediction-service\n</code></pre>\n<p>此命令会启动容器并立即返回您的终端提示符，同时打印一个长容器 ID。但是我们如何与在容器 <em>内部</em> 运行的 Flask 应用交互呢？默认情况下，容器端口无法从您的宿主机访问。我们需要进行映射。</p>\n<h2>端口映射以便访问</h2>\n<p>容器内的 Flask 应用正在监听一个特定端口（可能是在 Flask 应用或 Dockerfile 中配置的 5000 端口）。要从我们的宿主机浏览器或 <code>curl</code> 等工具访问它，我们需要将宿主机上的一个端口映射到容器的端口。这通过使用 <code>-p</code> 或 <code>--publish</code> 选项来完成，格式为 <code>host_port:container_port</code>。</p>\n<p>例如，要将宿主机上的 5000 端口映射到容器内部的 5000 端口，您可以使用 <code>-p 5000:5000</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-303q0e\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\"];\n    subgraph cluster_host {\n        label = \"您的计算机 (宿主机)\";\n        bgcolor = \"#e9ecef\"; // 灰色\n        host_port [label=\"端口 5000\", shape=oval, style=filled, fillcolor=\"#74c0fc\"]; // 蓝色\n    }\n    subgraph cluster_docker {\n        label = \"Docker\";\n        bgcolor = \"#a5d8ff\"; // 浅蓝色\n        subgraph cluster_container {\n            label = \"容器\";\n            bgcolor=\"#d0bfff\"; // 紫色\n            container_port [label=\"端口 5000\", shape=oval, style=filled, fillcolor=\"#9775fa\"]; // 紫色\n            flask_app [label=\"Flask 应用\"];\n            container_port -> flask_app [label=\"监听\"];\n        }\n    }\n    host_port -> container_port [label=\" 映射到 (-p 5000:5000)\"];\n    edge [style=dashed];\n    user [label=\"您的浏览器 /\\n curl\", shape=rect]\n    user -> host_port [label=\"连接到\\nlocalhost:5000\"]\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-303q0e\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图说明了 <code>-p</code> 标志如何将宿主机上的端口连接到 Flask 应用在容器内部运行的端口。</p>\n</blockquote>\n<h2>为容器命名</h2>\n<p>Docker 会为容器分配随机名称（例如 <code>focused_turing</code>）。这些名称虽然功能正常，但不太容易记住。您可以使用 <code>--name</code> 选项分配一个特定名称，这会使管理容器变得更方便。</p>\n<h2>综合运用</h2>\n<p>让我们将这些选项组合起来运行 Flask 服务容器：</p>\n<ol>\n<li>在分离模式下运行（<code>-d</code>）。</li>\n<li>将宿主机上的 5000 端口发布到容器中的 5000 端口（<code>-p 5000:5000</code>）。</li>\n<li>给它一个方便记忆的名称，例如 <code>my-prediction-app</code>（<code>--name my-prediction-app</code>）。</li>\n<li>指定镜像名称（<code>prediction-service</code>）。</li>\n</ol>\n<pre><code class=\"language-bash\">docker run -d -p 5000:5000 --name my-prediction-app prediction-service\n</code></pre>\n<p>如果成功，Docker 将打印容器 ID，并且容器将在后台运行。</p>\n<h2>验证正在运行的容器</h2>\n<p>您如何知道它确实在运行呢？ <code>docker ps</code> 命令会列出所有当前正在运行的容器：</p>\n<pre><code class=\"language-bash\">docker ps\n</code></pre>\n<p>您应该会看到类似这样的输出（具体细节可能有所不同）：</p>\n<pre><code>CONTAINER ID   IMAGE                COMMAND                  CREATED          STATUS          PORTS                    NAMES\na1b2c3d4e5f6   prediction-service   \"python app.py\"          15 seconds ago   Up 14 seconds   0.0.0.0:5000->5000/tcp   my-prediction-app\n</code></pre>\n<p>这确认了：</p>\n<ul>\n<li>您的容器（<code>my-prediction-app</code>）正在运行。</li>\n<li>它基于 <code>prediction-service</code> 镜像。</li>\n<li>宿主机上的 5000 端口（<code>0.0.0.0:5000</code>）已映射到容器内部的 5000 端口。</li>\n</ul>\n<p>您还可以使用 <code>docker logs</code> 命令查看容器内部应用产生的日志：</p>\n<pre><code class=\"language-bash\">docker logs my-prediction-app\n</code></pre>\n<p>这应该会显示您的 Flask 应用的启动消息。</p>\n<h2>访问您的服务</h2>\n<p>现在容器正在运行且端口已映射，您可以像在本地测试时一样向您的预测服务发送请求，但目标是您发布的 <em>宿主机</em> 端口（我们示例中是 5000）上的 <code>localhost</code>。</p>\n<p>使用 <code>curl</code>（假设您的 API 在 <code>/predict</code> 端点期望 JSON 输入）：</p>\n<pre><code class=\"language-bash\">curl -X POST -H \"Content-Type: application/json\" \\\n     -d '{\"features\": [1.0, 2.5, 3.0, 4.5]}' \\\n     http://localhost:5000/predict\n</code></pre>\n<p>或者使用 Python 的 <code>requests</code> 库：</p>\n<pre><code class=\"language-python\">import requests\nimport json\n\n# 示例输入数据（根据您的模型需求调整）\ndata = {\"features\": [1.0, 2.5, 3.0, 4.5]}\n\n# Docker 中运行的服务的 URL\nurl = \"http://localhost:5000/predict\" # 使用宿主机端口\n\ntry:\n    response = requests.post(url, json=data)\n    response.raise_for_status() # 对于错误的 HTTP 状态码（4xx 或 5xx）抛出异常\n\n    prediction = response.json()\n    print(f\"预测响应: {prediction}\")\n\nexcept requests.exceptions.RequestException as e:\n    print(f\"连接服务时出错: {e}\")\nexcept json.JSONDecodeError:\n    print(f\"无法解码 JSON 响应: {response.text}\")\n\n</code></pre>\n<p>您应该会收到模型提供的预测输出，这些输出由完全在独立的 Docker 容器内运行的 Flask 应用提供服务！</p>\n<h2>停止和清理</h2>\n<p>完成实验后，您可以停止并删除容器以释放资源。</p>\n<p><strong>停止容器：</strong> 使用 <code>docker stop</code> 命令，后跟容器的名称或 ID：</p>\n<pre><code class=\"language-bash\">docker stop my-prediction-app\n</code></pre>\n<p><strong>删除容器：</strong> 已停止的容器仍然存在。要完全删除它，请使用 <code>docker rm</code>：</p>\n<pre><code class=\"language-bash\">docker rm my-prediction-app\n</code></pre>\n<p>您只能删除已停止的容器。如果您想一次性停止并删除，可以在 <code>docker rm</code> 命令中使用 <code>-f</code>（强制）标志，但通常更好的做法是先停止它。</p>\n<p>要查看所有容器，包括已停止的，请使用 <code>docker ps -a</code>。定期删除不再需要的已停止容器是良好的维护习惯。</p>\n<p>您现在已成功在 Docker 容器中运行了您的机器学习 (machine learning)预测服务，这使其可移植并确保了运行环境的一致性。这是可靠部署应用的一个基础步骤。</p>",
+  "slug": "running-app-docker-container",
+  "updates": [],
+  "references": [
+    {
+      "id": 10904,
+      "title": "docker run",
+      "author": "Docker Docs",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/cli/docker/run/",
+      "doi": "",
+      "note": "此官方参考资料详细说明了 `docker run` 命令及其各种选项，例如分离模式（-d）、端口发布（-p）和命名（--name），这些对于容器执行至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T06:55:43.688729Z",
+      "updated_at": "2025-09-08T13:23:26.145572Z"
+    },
+    {
+      "id": 10905,
+      "title": "Get started with Docker containers",
+      "author": "Docker Docs",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/get-started/overview/",
+      "doi": "",
+      "note": "提供对 Docker 概念的基础理解，包括镜像和容器之间的区别，以及运行应用程序的基本步骤。",
+      "order": 2,
+      "created_at": "2025-09-05T06:55:43.701074Z",
+      "updated_at": "2025-09-08T13:23:24.983094Z"
+    },
+    {
+      "id": 10906,
+      "title": "Docker in Action, Second Edition",
+      "author": "Jeff Nickoloff and Stephen Kuenzli",
+      "year": "2019",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/docker-in-action-second-edition",
+      "doi": "",
+      "note": "一本实用书籍，解释了 Docker 基础知识、容器管理和应用程序的部署策略。",
+      "order": 3,
+      "created_at": "2025-09-05T06:55:43.704139Z",
+      "updated_at": "2025-09-08T13:23:27.992010Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

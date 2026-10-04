@@ -1,0 +1,61 @@
+{
+  "id": 7795,
+  "title": "大型语言模型应用测试概述",
+  "meta_title": "大型语言模型应用测试概述",
+  "meta_description": "了解测试不确定性大型语言模型应用的特有难题。",
+  "content": "<p>传统软件测试是一项成熟的实践。您提供一个已知输入，并预期得到一个已知且确定性的输出。如果您构建一个将两个数字相加的函数，<code>add(2, 2)</code> 必须始终返回 <code>4</code>。这种可预测性是自动化测试框架的基础，它使开发者能够构建持续集成流程，以便在问题上线前发现并解决。</p>\n<p>然而，大型语言模型驱动的应用程序对这一基础提出了挑战。大型语言模型本身的特性引入了多变性和不确定性，这可能导致传统测试方法变得不可靠、成本高昂且运行缓慢。</p>\n<h3>不确定性的难题</h3>\n<p>测试大型语言模型应用的首要难题在于其不确定性行为。当您向一个 <code>temperature</code> 设置大于零的模型发送提示时，即使输入相同，也无法保证每次都收到相同的回复。模型可能会重新措辞句子、使用同义词或以不同方式组织其回复。</p>\n<p>尽管这种多变性是一个特点，使大型语言模型显得有创造性和自然，但它对于传统的断言式测试来说是一个突出问题。设想一个生成俳句的简单函数：</p>\n<pre><code class=\"language-python\">import unittest\nimport random\n\ndef generate_haiku(topic: str) -> str:\n    # 这个函数通常会调用一个大型语言模型 API。\n    # 我们在此模拟其不确定性行为。\n    if topic == \"winter\":\n        return random.choice([\n            \"Winter's cold hold,\\nSnowflakes fall on silent ground,\\nPeace settles.\",\n            \"Silent, soft, and white,\\nWinter's blanket on the land,\\nNature is at rest.\"\n        ])\n    return \"No haiku found.\"\n\nclass TestHaikuGenerator(unittest.TestCase):\n    def test_winter_haiku(self):\n        expected_output = \"Winter's cold,\\nSnowflakes fall on silent ground,\\nPeace settles the earth.\"\n        actual_output = generate_haiku(\"winter\")\n        \n        # 这个断言大约有 50% 的几率会失败。\n        self.assertEqual(expected_output, actual_output)\n</code></pre>\n<p>这个测试是“不稳定”的。它这次通过，下次可能就失败，并非因为我们代码中有bug，而是因为大型语言模型返回了一个不同但同样有效的俳句。一个充满不稳定测试的测试集很快会被置之不理，违背了自动化测试的初衷。</p>\n<h3>语义正确性与精确匹配</h3>\n<p>另一个难题是评估语义正确性。大型语言模型可能会生成一个事实正确但措辞与您测试的预期输出不同的答案。例如，如果您预期“Paris is the capital of France”，模型可能会返回“The capital of France is Paris”。两者都正确，但简单的字符串比较会失败。</p>\n<p>测试大型语言模型输出需要摆脱精确匹配的断言方式，转向评估其含义。这通常涉及更精巧的方法，例如：</p>\n<ul>\n<li><strong>关键词检查：</strong> 验证是否存在核心词汇。</li>\n<li><strong>正则表达式：</strong> 匹配输出中的特定结构或模式。</li>\n<li><strong>以大型语言模型作裁判：</strong> 调用另一个大型语言模型，根据一组标准评估回复质量。</li>\n</ul>\n<h3>实时API带来的实际困难</h3>\n<p>在测试集中依赖实时大型语言模型 API 调用会带来一些实际问题：</p>\n<ul>\n<li><strong>成本：</strong> 每次调用专属模型 API 的测试运行都会产生费用。对于一个拥有数百个测试且在 CI/CD 流程中频繁运行的项目，这些成本会迅速累积。</li>\n<li><strong>延迟：</strong> 调用大型模型的 API 可能需要几秒钟。一个原本应在毫秒内完成的测试集可能会变得非常慢，需要数分钟才能完成。这种延迟会阻碍频繁测试并减慢开发速度。</li>\n<li><strong>外部依赖：</strong> 您的测试会变得依赖于外部服务的可用性和性能。网络问题、API 调用频率限制或提供商中断都可能导致测试失败，即使您的应用程序代码本身没有问题。</li>\n</ul>\n<h3>分层测试方法</h3>\n<p>为应对这些难题，最好为大型语言模型应用采用分层测试策略。与其将应用程序视为一个单一、不可测试的黑盒 (black box)，不如以不同方式测试其各个组成部分。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-te3mw2\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n    edge [fontname=\"Arial\", fontsize=9];\n    \n    subgraph cluster_app {\n        label=\"大型语言模型应用流程\";\n        style=\"dotted\";\n        bgcolor=\"#e9ecef\";\n        \n        input [label=\"用户输入\"];\n        preprocess [label=\"预处理\"];\n        llm_call [label=\"大型语言模型 API 调用\", style=filled, fillcolor=\"#ffc9c9\"];\n        postprocess [label=\"后处理\"];\n        output [label=\"最终输出\"];\n        \n        input -> preprocess -> llm_call -> postprocess -> output;\n    }\n    \n    subgraph cluster_tests {\n        label=\"测试策略\";\n        \n        unit_tests [label=\"单元测试\\n(确定性，模拟大型语言模型)\", style=filled, fillcolor=\"#96f2d7\"];\n        integration_tests [label=\"集成测试\\n(输出验证，断言)\", style=filled, fillcolor=\"#a5d8ff\"];\n        evaluation [label=\"评估\\n(性能指标)\", style=filled, fillcolor=\"#ffec99\"];\n    }\n\n    {rank=same; preprocess; postprocess} -> unit_tests [label=\"隔离并测试逻辑\", style=dashed];\n    output -> integration_tests [label=\"验证结构和质量\", style=dashed];\n    output -> evaluation [label=\"衡量整体性能\", style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-te3mw2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>分层测试策略可以在大型语言模型应用流程的不同阶段实现有针对性的质量保障。</p>\n</blockquote>\n<ol>\n<li><strong>单元测试：</strong> 用于测试应用程序的确定性部分，例如数据准备和输出解析。在此阶段，您通过用可预测的“模拟”替代实际的 API 调用，将代码与大型语言模型隔离。这使得您的测试快速、免费且完全可靠。</li>\n<li><strong>集成测试：</strong> 用于验证所有组件是否协同正常工作。这些测试可能会使用真实的大型语言模型，但侧重于验证最终输出的<em>结构</em>、<em>格式</em>或<em>质量</em>，而非其精确内容。例如，输出是否包含有效的 JSON？是否不含不良内容？</li>\n<li><strong>评估：</strong> 这是一种更全面的测试形式，应用程序针对更大的输入数据集运行，以衡量准确性、相关性和忠实度等性能指标。这不仅仅是简单的通过/失败判断，更多的是关于理解系统整体质量。</li>\n</ol>\n<p>本章侧重于前两个层次：使用模拟构建可靠的单元测试和执行输出验证。通过职责分离，您可以构建一个全面的测试集，让您对应用程序的可靠性充满信心，同时避免了针对实时大型语言模型进行测试的弊端。</p>",
+  "slug": "introduction-to-llm-testing",
+  "updates": [],
+  "references": [
+    {
+      "id": 21696,
+      "title": "Holistic Evaluation of Language Models",
+      "author": "Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Transactions on Machine Learning Research (TMLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "doi": "10.48550/arXiv.2211.09110",
+      "note": "这篇基础性论文提出了一个评估语言模型在各种场景下的综合框架，帮助读者理解与LLM应用质量相关的基准和指标。",
+      "order": 1,
+      "created_at": "2025-10-20T07:21:50.599172Z",
+      "updated_at": "2025-10-20T07:46:29.342881Z"
+    },
+    {
+      "id": 21697,
+      "title": "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena",
+      "author": "Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang, Joseph E. Gonzalez, Ion Stoica",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023 Datasets and Benchmarks Track",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2306.05685",
+      "doi": "10.48550/arXiv.2306.05685",
+      "note": "这篇论文详细介绍了使用大型语言模型作为裁判来评估其他LLM输出质量的有效性和局限性，与语义正确性测试直接相关。",
+      "order": 2,
+      "created_at": "2025-10-20T07:21:50.602340Z",
+      "updated_at": "2025-10-20T07:46:20.244462Z"
+    },
+    {
+      "id": 21698,
+      "title": "Building LLM-Powered Applications: From Prompt Engineering to Production",
+      "author": "Josh Harrison, Andrew Ng, Jon Krohn, Sinan Ozdemir",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/building-llm-powered-applications/9781098150499/",
+      "doi": "",
+      "note": "这本书为LLM应用的端到端开发提供了实用指导，涵盖了设计、测试策略和部署考虑，以构建可靠的系统。",
+      "order": 3,
+      "created_at": "2025-10-20T07:21:50.604593Z",
+      "updated_at": "2025-10-20T07:46:25.714752Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7325,
+  "title": "Kubernetes 存储概念",
+  "meta_title": "Kubernetes 存储概念概览",
+  "meta_description": "Kubernetes 存储抽象介绍，包括 Volume、PersistentVolume 和 PersistentVolumeClaim。",
+  "content": "<p>虽然 Pod 为容器提供了运行环境，但其内部文件系统是临时的。当 Pod 停止运行时，其中的数据也会随之消失。对于任何需要保持状态的应用（从简单的数据库到机器学习 (machine learning)模型检查点），这种临时性都构成了巨大的挑战。Kubernetes 通过一套分层的存储抽象来解决这个问题，这些抽象可以独立于 Pod 生命周期来管理数据持久化。</p>\n<h3>Volume（卷）抽象</h3>\n<p>在最基础的层面上，Kubernetes 使用 <code>Volume</code> 来管理存储。Volume 是一个目录，其中可能包含一些数据，Pod 中的容器可以访问该目录。Volume 的定义特征是其生命周期与所属的 Pod 直接挂钩。它在 Pod 被调度到节点上时创建，并只要该 Pod 存在就一直存在。</p>\n<p>这意味着如果 Pod 中的容器重启，Volume 的内容会被保留。这对于在多容器 Pod 之间共享数据，或者在容器崩溃后保留数据非常有用。例如，简单的 <code>emptyDir</code> 类型的 Volume 提供了一个临时的临时空间，它在 Pod 分配到节点时初始化，在 Pod 被移除时删除。</p>\n<p>但是，如果 Pod 本身被删除并替换，<code>emptyDir</code> 也会被销毁。虽然这种模式很有用，但它并没有解决长期数据持久化的问题。为此，我们需要一种将存储生命周期与 Pod 生命周期解耦的机制。</p>\n<h3>使用 PersistentVolume 和 Claim 实现存储解耦</h3>\n<p>为了有效地支持有状态应用，开发人员不应该需要了解底层存储基础设施的细节。无论存储是由 Google Persistent Disk 等云服务商提供的，还是像 NFS 这样的网络连接系统，亦或是本地存储阵列，都应该是实现层面的细节。</p>\n<p>Kubernetes 通过两个主要的 API 对象实现了这种关注点分离：</p>\n<ul>\n<li><strong>PersistentVolume (PV)</strong>：集群中的一块存储，由管理员预先配置，或使用 <code>StorageClass</code> 动态配置。PV 是集群中的一种资源，就像 CPU 或内存资源一样。它的生命周期独立于任何使用它的单个 Pod。</li>\n<li><strong>PersistentVolumeClaim (PVC)</strong>：用户或开发人员对存储的请求。PVC 是开发人员消耗存储资源的方式。它指定了所需的容量大小和访问模式（例如，是一次只能由一个节点挂载，还是可以由多个节点以只读方式挂载）。</li>\n</ul>\n<p>这种交互建立了一个清晰的职责划分。集群管理员通过创建 <code>PersistentVolume</code> 对象来配置和管理可用存储池。开发人员在无需了解底层存储技术的情况下，创建 <code>PersistentVolumeClaim</code> 为其应用请求存储。随后，Kubernetes 控制平面会寻找满足该 Claim 要求的合适 PV，并将两者绑定在一起。</p>\n<p>一旦 PVC 绑定到了 PV，该 PV 就会为该 Claim 保留，不能再被其他 Claim 绑定。开发人员可以定义一个引用该 PVC 的 Pod，Kubernetes 会将底层存储挂载到 Pod 的容器中。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-9s1jxt\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  splines=ortho;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n  subgraph cluster_user {\n    label=\"开发人员领域\";\n    bgcolor=\"#bac8ff44\";\n    pod [label=\"Pod\\n(引用 my-pvc)\", fillcolor=\"#bac8ff\"];\n    pvc [label=\"PersistentVolumeClaim (PVC)\\n(请求 10Gi 存储)\", fillcolor=\"#bac8ff\"];\n    pod -> pvc [label=\" 使用\"];\n  }\n  subgraph cluster_admin {\n    label=\"管理员领域\";\n    bgcolor=\"#96f2d744\";\n    pv [label=\"PersistentVolume (PV)\\n(通过存储提供 10Gi)\", fillcolor=\"#96f2d7\"];\n    storage [label=\"物理存储\\n(NFS, EBS, GCE PD...)\", shape=cylinder, fillcolor=\"#ced4da\"];\n    pv -> storage [label=\" 后端支撑为\"];\n  }\n  control_plane [label=\"Kubernetes 控制平面\", shape=octagon, fillcolor=\"#e9ecef\"];\n  pvc -> control_plane [label=\" 请求绑定\", dir=back, style=dashed, color=\"#495057\"];\n  control_plane -> pv [label=\" 绑定\", style=dashed, color=\"#495057\"];\n  {rank=same; pvc; pv;}\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-9s1jxt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Pod、PersistentVolumeClaim (PVC) 和 PersistentVolume (PV) 之间的关系。开发人员的 Pod 通过 PVC 请求存储，Kubernetes 将其绑定到管理员配置的可用 PV 上。</p>\n</blockquote>\n<h3>使用 StorageClass 进行动态配置</h3>\n<p>为每个存储请求手动创建 <code>PersistentVolume</code> 对象可能效率低下，特别是在大型多租户集群中。为了自动完成这个过程，Kubernetes 引入了另一个对象：<code>StorageClass</code>。</p>\n<p><code>StorageClass</code> 为管理员提供了一种定义不同存储“类型”的方法。每种类型可能对应不同的服务质量、备份策略或底层存储系统。例如，管理员可以定义 <code>fast-ssd</code>（由高性能 SSD 支持）和 <code>standard-hdd</code>（由机械硬盘支持）等类别。</p>\n<p>当开发人员创建 <code>PersistentVolumeClaim</code> 时，可以指定 <code>StorageClass</code> 名称。集群中该 <code>StorageClass</code> 的置备程序（provisioner）会自动为该请求创建一个新的 PV，而不是将其绑定到现有的、手动创建的 PV 上。这个过程称为动态配置，它消除了管理员预先配置存储的需求，实现了存储的按需创建。</p>\n<p>通过 Volume、PersistentVolume/Claim 和 StorageClass 这三种抽象，Kubernetes 提供了一个灵活且强大的存储管理框架。接下来的章节将演示如何定义这些对象并将持久化存储附加到应用中。</p>",
+  "slug": "kubernetes-storage-concepts",
+  "updates": [],
+  "references": [
+    {
+      "id": 19778,
+      "title": "Persistent Volumes",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/",
+      "doi": "",
+      "note": "Kubernetes 持久化存储概念的基本指南，涵盖 PV、PVC 和 StorageClass。",
+      "order": 1,
+      "created_at": "2025-09-06T13:14:57.341380Z",
+      "updated_at": "2025-09-10T05:15:13.633641Z"
+    },
+    {
+      "id": 19779,
+      "title": "Kubernetes: Up and Running: Dive into the Future of Infrastructure, Fourth Edition",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "320",
+      "url": "https://www.vitalsource.com/products/kubernetes-up-and-running-brendan-burns-v9781098110154",
+      "doi": "",
+      "note": "一本全面介绍 Kubernetes 架构和操作方面的书籍，包含专门的存储管理章节。",
+      "order": 2,
+      "created_at": "2025-09-06T13:14:57.491483Z",
+      "updated_at": "2025-09-10T05:15:30.284144Z"
+    },
+    {
+      "id": 19780,
+      "title": "Kubernetes in Action, Second Edition",
+      "author": "Marko Lukša, Kevin Conner",
+      "year": "2026",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action-second-edition",
+      "doi": "",
+      "note": "提供了 Kubernetes 核心概念的实用、深入解释，包含关于持久化存储和卷管理的详细章节。",
+      "order": 3,
+      "created_at": "2025-09-06T13:14:57.509616Z",
+      "updated_at": "2025-09-10T05:15:15.225557Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

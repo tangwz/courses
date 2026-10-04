@@ -1,0 +1,67 @@
+{
+  "id": 1179,
+  "title": "多元数据可视化：对图",
+  "meta_title": "Seaborn对图用于多元分析",
+  "meta_description": "使用Seaborn的对图同时展示多个变量间的成对关系。",
+  "content": "<p>尽管单变量和双变量分析能提供数据聚焦的视图，但同时理解多个变量间的联系对于展现复杂结构常常很必要。逐对检查变量可能费力，特别是当数据集包含许多特征时。我们需要一种方法来快速展示多个变量之间关系的方法。</p>\n<p>这就是对图的用武之地。一个对图，通常使用Python中的Seaborn库生成，它会创建一个图矩阵，显示数据集中变量间的成对关系。这是获取多个变量如何交互的高级概览的一种高效方法。</p>\n<h3>理解对图网格</h3>\n<p><code>seaborn.pairplot()</code>函数是完成此任务的主要工具。当你调用<code>sns.pairplot(dataframe)</code>时，它会生成一个坐标轴网格，具体如下：</p>\n<ol>\n<li><strong>对角线上的坐标轴</strong>：对角线上的每个图都显示单个变量的单变量分布。默认情况下，这通常是直方图或核密度估计 (KDE) 图，让你能够快速评估图中每个变量的形状、中心和分散程度。</li>\n<li><strong>非对角线上的坐标轴</strong>：非对角线上的每个图表示两个不同变量之间的关系。y轴上的变量对应行，x轴上的变量对应列。通常，这些是散点图，有助于发现相关性、趋势和潜在聚类。</li>\n</ol>\n<p>让我们假设我们有一个Pandas DataFrame <code>df</code>，其中包含<code>feature_A</code>、<code>feature_B</code>和<code>feature_C</code>等数值特征。一个基本的对图可以轻松生成：</p>\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\n# Create a sample DataFrame for demonstration\r\nnp.random.seed(42)\r\ndata = {\r\n    'feature_A': np.random.rand(50),\r\n    'feature_B': np.random.randn(50),\r\n    'feature_C': np.random.randint(1, 10, 50)\r\n}\r\ndf = pd.DataFrame(data)\r\n\r\n# Generate and display the basic pair plot\r\nsns.pairplot(df)\r\nplt.show()\n</code></pre>\n<p>执行此操作将生成一个3x3的网格（因为我们有3个特征）。</p>\n<ul>\n<li>左上角的图显示<code>feature_A</code>的分布。</li>\n<li>中间的图显示<code>feature_B</code>的分布。</li>\n<li>右下角的图显示<code>feature_C</code>的分布。</li>\n<li>第一行第二列的图显示<code>feature_A</code>（y轴）与<code>feature_B</code>（x轴）的关系。</li>\n<li>第二行第一列的图显示<code>feature_B</code>（y轴）与<code>feature_A</code>（x轴）的关系，所有成对关系依此类推。</li>\n</ul>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1179_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T031653Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=23515489836780c47151cb4c5ce8bf7c471d5bc05e342f7be4ad03bc246db40a\" alt=\"Understanding the Pair Plot Grid\"></p>\n<h3>增强对图以获取更全面的理解</h3>\n<p>基本对图很有用，但Seaborn提供了几个参数 (parameter)来自定义它并提取更多信息：</p>\n<ul>\n<li>\n<p><strong>按类别着色 (<code>hue</code>)</strong>：这是最强大的功能之一。如果你的DataFrame包含一个分类列（例如，'species'、'customer_segment'），你可以使用<code>hue</code>参数为散点图中的点着色，并根据此类别在对角线图上叠加分布。这立即有助于直观地看出不同组之间关系或分布是否存在差异。</p>\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\n# Create a sample DataFrame with a categorical column\r\nnp.random.seed(42)\r\ndata = {\r\n    'petal_length': np.random.normal(4.5, 1.5, 100),\r\n    'petal_width': np.random.normal(1.2, 0.5, 100),\r\n    'species': np.random.choice(['Setosa', 'Versicolor', 'Virginica'], 100)\r\n}\r\ndf_iris = pd.DataFrame(data)\r\n\r\n# Use hue to color the points by species\r\nsns.pairplot(df_iris, hue='species', palette='viridis')\r\nplt.show()\n</code></pre>\n<p>使用<code>hue</code>通常会显现出分离、聚类或子组内不同的趋势，这些在没有<code>hue</code>的情况下是不可见的。\r\n<img src=\"https://apxml.s3.amazonaws.com/content_images/section_1179_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T031653Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=8a5961a97687fb736eacc4c17ad4930b9aba87dc747cf6c893850b20ee560a2b\" alt=\"Coloring by Category\"></p>\n</li>\n<li>\n<p><strong>更改图类型 (<code>kind</code>、<code>diag_kind</code>)</strong>：你可以控制使用的图类型。</p>\n<ul>\n<li><code>diag_kind</code>：对于对角线上的单变量图，设置为<code>'hist'</code>（默认）或<code>'kde'</code>。KDE图对于展示分布形状可以更平滑。</li>\n<li><code>kind</code>：对于非对角线上的双变量图，设置为<code>'scatter'</code>（默认）或<code>'reg'</code>。使用<code>'reg'</code>会在散点图上添加线性回归拟合和置信区间，有助于展示线性趋势。</li>\n</ul>\n<!-- end list -->\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\n# Create a sample DataFrame with a linear relationship\r\nnp.random.seed(42)\r\ndata = {\r\n    'x': np.random.normal(10, 2, 50),\r\n    'y': 2 * np.random.normal(10, 2, 50) + np.random.normal(0, 1, 50)\r\n}\r\ndf_linear = pd.DataFrame(data)\r\n\r\n# Use KDE on the diagonal and regression plots off-diagonal\r\nsns.pairplot(df_linear, kind='reg', diag_kind='kde')\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1179_3.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T031653Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=55926dfa683c2cd94b800e99211ca1b17fe75778803eae15978824d48bb7d9f3\" alt=\"Changing Plot Types\"></p>\n</li>\n<li>\n<p><strong>选择变量 (<code>vars</code>)</strong>：如果你的数据集有许多列，为所有列生成对图可能计算成本高且视觉上令人难以承受。你可以使用<code>vars</code>参数指定列的子集。</p>\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\n# Create a DataFrame with multiple features\r\nnp.random.seed(42)\r\ndata = {\r\n    'feature_A': np.random.rand(50),\r\n    'feature_B': np.random.randn(50),\r\n    'feature_C': np.random.randint(1, 10, 50),\r\n    'feature_D': np.random.gamma(2, 2, 50),\r\n    'feature_E': np.random.beta(2, 5, 50)\r\n}\r\ndf_large = pd.DataFrame(data)\r\n\r\n# Plot relationships only for specific columns\r\nsns.pairplot(df_large, vars=['feature_A', 'feature_C', 'feature_E'])\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1179_4.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T031653Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=bb8a81134754fd53ed9b604b2897174f515d03dff75d6164b792536e51b0481c\" alt=\"Selecting Variables\"></p>\n</li>\n<li>\n<p><strong>自定义图表美观 (<code>plot_kws</code>、<code>diag_kws</code>)</strong>：你可以传递关键字参数字典来微调 (fine-tuning)非对角线图 (<code>plot_kws</code>) 和对角线图 (<code>diag_kws</code>) 的外观。这允许你控制点大小 (<code>s</code>)、透明度 (<code>alpha</code>)、直方图箱数 (<code>bins</code>) 等方面。</p>\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\n# Create a sample DataFrame\r\nnp.random.seed(42)\r\ndata = {\r\n    'x': np.random.normal(10, 2, 200),\r\n    'y': np.random.normal(15, 3, 200)\r\n}\r\ndf_custom = pd.DataFrame(data)\r\n\r\n# Make scatter points semi-transparent and adjust histogram bins\r\nsns.pairplot(df_custom,\r\n             plot_kws={'alpha': 0.6, 's': 50},\r\n             diag_kws={'bins': 25})\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1179_5.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T031653Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=2022bd19ebfe87e1f7e04ae53dfa446beec43b429f3eefae45efa8c6b304dd66\" alt=\"Customizing Plot Aesthetics\"></p>\n</li>\n</ul>\n<h3>在EDA中解释对图</h3>\n<p>对图在EDA中有多重用途：</p>\n<ul>\n<li><strong>关系发现</strong>：快速识别成对数值变量之间潜在的线性或非线性关系。</li>\n<li><strong>分布检查</strong>：评估单个变量的分布。它们是否偏斜？是否多峰？是否近似正态？</li>\n<li><strong>聚类识别</strong>：散点图，尤其是在使用<code>hue</code>着色时，可以显示数据中的自然分组或聚类。</li>\n<li><strong>异常值检测</strong>：极端点在单变量和双变量图中都可能显眼。</li>\n<li><strong>组间比较</strong>：使用<code>hue</code>可以直接比较不同类别间的关系和分布。</li>\n</ul>\n<p>思考这个示例可视化，它表示一个可能出现在对图非对角线上的散点图，并使用<code>hue</code>按分类变量着色。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-ek7tsy\" \n              data-plot-definition='{\"layout\":{\"xaxis\":{\"title\":\"萼片长度 (厘米)\"},\"yaxis\":{\"title\":\"萼片宽度 (厘米)\"},\"legend\":{\"title\":\"物种\"},\"title\":\"按物种划分的萼片宽度与长度\",\"margin\":{\"l\":50,\"r\":50,\"t\":50,\"b\":50}},\"data\":[{\"type\":\"scatter\",\"mode\":\"markers\",\"x\":[5.1,4.9,4.7,4.6,5.0,5.4,4.6,5.0,4.4,4.9],\"y\":[3.5,3.0,3.2,3.1,3.6,3.9,3.4,3.4,2.9,3.1],\"marker\":{\"color\":\"#228be6\",\"size\":8},\"name\":\"山鸢尾\"},{\"type\":\"scatter\",\"mode\":\"markers\",\"x\":[7.0,6.4,6.9,5.5,6.5,5.7,6.3,4.9,6.6,5.2],\"y\":[3.2,3.2,3.1,2.3,2.8,2.8,3.3,2.4,2.9,2.7],\"marker\":{\"color\":\"#12b886\",\"size\":8},\"name\":\"变色鸢尾\"},{\"type\":\"scatter\",\"mode\":\"markers\",\"x\":[6.3,5.8,7.1,6.3,6.5,7.6,4.9,7.3,6.7,7.2],\"y\":[3.3,2.7,3.0,2.9,3.0,3.0,2.5,2.9,2.5,3.6],\"marker\":{\"color\":\"#fab005\",\"size\":8},\"name\":\"维吉尼亚鸢尾\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-ek7tsy\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>散点图示例，显示萼片宽度与萼片长度的关系，并按鸢尾花物种着色。这样的图有助于识别不同物种是否表现出这两种特征之间不同的关系。</p>\n</blockquote>\n<h3>考虑事项与局限</h3>\n<p>尽管功能强大，但对图也存在局限：</p>\n<ul>\n<li><strong>可伸缩性</strong>：随着变量数量的增加，性能会下降，图表变得杂乱且难以解释。对于包含数十或数百个变量的数据集，对图通常不实用。在这种情况下，首先查看相关性热图以找出潜在的有趣成对关系，或者使用降维技术可能更合适。</li>\n<li><strong>重叠绘制</strong>：在数据点众多的数据集中，散点图可能会出现过度绘点问题，即点严重重叠，掩盖了底层关系。使用透明度 (<code>alpha</code>) 或对数据进行采样有助于缓解此问题，但这仍然是一个挑战。</li>\n<li><strong>侧重于成对关系</strong>：对图仅显示成对关系。它们可能无法显示涉及三个或更多变量同时进行的复杂交互。</li>\n</ul>\n<p>尽管有这些局限，对图在EDA的初始阶段仍是一种标准且有价值的技术，它能提供数据特征中可管理子集内成对交互的全面视觉概括。它们有效地弥合了单变量/双变量分析与更复杂的建模步骤之间的差距。</p>",
+  "slug": "multivariate-pair-plots",
+  "updates": [
+    {
+      "message": "更新代码和绘图，使其更易于理解",
+      "created_at": "2025-08-25T13:14:55.142226Z",
+      "updated_at": "2025-08-25T13:14:55.142244Z"
+    }
+  ],
+  "references": [
+    {
+      "id": 325,
+      "title": "seaborn.pairplot API Reference",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.pairplot.html",
+      "doi": "",
+      "note": "提供了pairplot函数所有参数和用法的详细信息。",
+      "order": 1,
+      "created_at": "2025-09-04T14:22:31.136004Z",
+      "updated_at": "2025-09-07T16:11:06.559305Z"
+    },
+    {
+      "id": 326,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/",
+      "doi": "",
+      "note": "提供了使用Seaborn进行Python数据探索分析的实践指导，包括对偶图。",
+      "order": 2,
+      "created_at": "2025-09-04T14:22:31.141428Z",
+      "updated_at": "2025-09-07T16:11:04.723952Z"
+    },
+    {
+      "id": 327,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "",
+      "note": "讨论了多变量可视化的原理，包括类似于对偶图的技术，提供了一个理论基础。",
+      "order": 3,
+      "created_at": "2025-09-04T14:22:31.145014Z",
+      "updated_at": "2025-09-07T16:11:07.143314Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

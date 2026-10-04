@@ -1,0 +1,61 @@
+{
+  "id": 7797,
+  "title": "使用多模态模型处理图像输入",
+  "meta_title": "处理多模态输入",
+  "meta_description": "学习如何使用多模态模块处理视觉语言模型的图像输入。",
+  "content": "<p>虽然许多应用处理并生成文本，但现代大型语言模型（LLMs）正变得越来越支持多模态 (multimodal)，能够理解语言之外的输入，比如图像。结合视觉功能可以构建能够“看”和解析视觉情境的应用，由此带来一类具有高效能的新应用场景。</p>\n<p>本部分介绍如何使用视觉语言模型（VLMs）处理和分析图像。您将学习如何准备图像以进行API调用，通过统一的接口将它们发送到不同模型，并通过有针对性的提示来指导模型分析，从而完成物体识别、文本提取和结构化数据生成等任务。</p>\n<h3>从像素到提示</h3>\n<p>视觉语言模型不直接处理图像文件。相反，它们需要将图像数据编码成一种可以通过API传输的格式，通常是Base64。这个过程将图像的二进制数据转换为字符串表示。该工具包会自动处理这种编码，但了解其过程很有帮助。</p>\n<p><code>image_to_base64</code> 函数提供了一种直接的方法来执行此转换。</p>\n<pre><code class=\"language-python\">from kerb.multimodal import image_to_base64\n\n# 假设您有一个名为 'product-diagram.jpg' 的图像文件\nimage_path = \"product-diagram.jpg\"\n\n# 将图像编码为 Base64 字符串\nencoded_image = image_to_base64(image_path)\n\nprint(f\"Base64 编码字符串（前60个字符）：{encoded_image[:60]}...\")\n</code></pre>\n<p>这个编码后的字符串，连同您的文本提示，构成了发送到视觉模型的多模态 (multimodal)输入。</p>\n<h3>统一的图像分析</h3>\n<p>不同的提供商，如OpenAI、Anthropic和Google，都有各自处理多模态 (multimodal)输入的API格式。该工具包通过一个单一函数 <code>analyze_image_with_vision_model</code> 简化了这一点，它将提供商特定的细节抽象化。这使得您可以编写一次代码，并通过很小的改动就能在不同的视觉模型之间切换。</p>\n<p>下图展示了图像分析的典型工作流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-52igoc\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    Image [label=\"图像文件\\n(例如：product.jpg)\", fillcolor=\"#a5d8ff\"];\n    Prompt [label=\"文本提示\\n(例如：&#39;描述这张图片。&#39;)\", fillcolor=\"#b2f2bb\"];\n\n    subgraph cluster_toolkit {\n        label=\"工具包函数\";\n        style=\"dotted\";\n        Analyze [label=\"analyze_image_with_vision_model\", fillcolor=\"#ffec99\"];\n    }\n\n    VLM [label=\"视觉语言模型\\n(GPT-4o, Claude 3.5, Gemini 1.5)\", fillcolor=\"#eebefa\"];\n    Analysis [label=\"文本分析\\n(描述、JSON等)\", fillcolor=\"#96f2d7\"];\n\n    Image -> Analyze;\n    Prompt -> Analyze;\n    Analyze -> VLM [label=\"发送格式化的API请求\"];\n    VLM -> Analysis [label=\"返回响应\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-52igoc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该函数自动处理 Base64 编码，并根据所选模型的要求格式化请求。</p>\n</blockquote>\n<p>让我们从一个基本任务开始：让模型描述一张图片。我们提供图像路径和引导分析的文本提示。</p>\n<pre><code class=\"language-python\">from kerb.multimodal import analyze_image_with_vision_model, VisionModel\n\n# 假设 'product-diagram.jpg' 是产品示意图的图像\nimage_path = \"product-diagram.jpg\"\nprompt_text = \"描述这张图片中显示的对象。\"\n\n# 使用 OpenAI 的 GPT-4o 模型分析图像\nanalysis_result = analyze_image_with_vision_model(\n    image_path=image_path,\n    prompt=prompt_text,\n    model=VisionModel.GPT4O\n)\n\nprint(analysis_result.description)\n</code></pre>\n<p>使用 <code>VisionModel</code> 枚举的 <code>model</code> 参数 (parameter)，决定要使用哪个提供商和模型。通过简单地将 <code>model=VisionModel.CLAUDE_3_5_SONNET</code> 更改，您可以切换到 Anthropic 的 Claude 3.5 Sonnet。</p>\n<h3>通过提示指导分析</h3>\n<p>分析的质量在很大程度上取决于您提供的文本提示。通过具体化，您可以引导模型执行多种高级任务。</p>\n<h4>使用 OCR 提取文本</h4>\n<p>视觉模型在光学字符识别（OCR）方面表现良好，可以从扫描文档、截图或照片等图像中提取文本。</p>\n<pre><code class=\"language-python\"># 假设 'product-specs.jpg' 包含带有产品规格的文本\nocr_prompt = \"提取此图片中的所有文本。按其显示的样子精确转录。\"\n\nocr_result = analyze_image_with_vision_model(\n    image_path=\"product-specs.jpg\",\n    prompt=ocr_prompt,\n    model=VisionModel.GPT4O\n)\n\nprint(\"提取的文本:\\n\")\nprint(ocr_result.description)\n</code></pre>\n<p>这对于构建需要从数字和扫描文档组合中索引文本的RAG系统特别有帮助。</p>\n<h4>结构化数据提取</h4>\n<p>视觉语言模型最效能高的应用之一是从图像中提取结构化数据。通过指示模型以JSON等特定格式返回其结果，您可以创建可靠的数据处理流程。</p>\n<p>想象您有一张名片的图像。您可以要求模型将联系信息提取到一个JSON对象中。</p>\n<pre><code class=\"language-python\"># 假设 'business-card.jpg' 是一张名片的图像\nstructured_prompt = \"\"\"\n分析图片中的名片并提取以下信息。\n以有效的JSON对象形式返回输出，包含以下键：\n- 姓名\n- 职位\n- 公司\n- 电话\n- 电子邮件\n- 网站\n\"\"\"\n\nstructured_result = analyze_image_with_vision_model(\n    image_path=\"business-card.jpg\",\n    prompt=structured_prompt,\n    model=VisionModel.GPT4O\n)\n\n# 现在可以轻松解析和使用结果\nimport json\ncontact_info = json.loads(structured_result.description)\nprint(json.dumps(contact_info, indent=2))\n</code></pre>\n<p>此技术可用于发票、收据、表格或任何包含结构化信息的图像。</p>\n<h3>分析多张图像</h3>\n<p>您也可以在一次调用中提供多张图像进行比较分析。该函数接受 <code>image_path</code> 参数 (parameter)的图像路径列表。这对于比较产品版本、识别两张图表之间的变化或在一组图像中找出异类等任务很有帮助。</p>\n<pre><code class=\"language-python\"># 假设您有两张来自不同季度的图表图像\nimage_paths = [\"sales-q1.jpg\", \"sales-q2.jpg\"]\ncomparison_prompt = \"这两张图片显示了第一季度和第二季度的销售图表。 \" \\\n                    \"比较它们并描述您观察到的主要趋势。\"\n\ncomparison_result = analyze_image_with_vision_model(\n    image_path=image_paths,\n    prompt=comparison_prompt,\n    model=VisionModel.GPT4O\n)\n\nprint(comparison_result.description)\n</code></pre>\n<p>通过在同一上下文 (context)中提供两张图像，模型可以直接引用并比较它们，从而提供比单独处理更具说明性的分析。</p>",
+  "slug": "processing-multimodal-inputs",
+  "updates": [],
+  "references": [
+    {
+      "id": 21588,
+      "title": "Learning Transferable Visual Models From Natural Language Supervision",
+      "author": "Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, Ilya Sutskever",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2103.00020",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2103.00020",
+      "doi": "10.48550/arXiv.2103.00020",
+      "note": "描述了CLIP，一个将图像和文本对齐的基础模型，实现零样本识别，并为许多现代视觉语言模型奠定基础。",
+      "order": 1,
+      "created_at": "2025-10-20T07:09:54.674071Z",
+      "updated_at": "2025-10-20T07:32:13.371369Z"
+    },
+    {
+      "id": 21589,
+      "title": "Vision (GPT-4o) - OpenAI API Reference",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/vision-models",
+      "doi": "",
+      "note": "关于使用OpenAI视觉能力的官方指南，包含图像格式（Base64）、提示构建以及对GPT-4o等模型的支持。",
+      "order": 2,
+      "created_at": "2025-10-20T07:09:54.678591Z",
+      "updated_at": "2025-10-20T07:32:37.388627Z"
+    },
+    {
+      "id": 21592,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGWZ33wnLS-fkFg3Afragzv3vrOa5PVQJ4-aZKW7UOMSDrKka0pYJLJkBCLjIxpRwIDSh47mAqP4O1r41Xkom6pYHVcupEYbvCDBbc-xr8hCuanYvtQlYkT-u56Cio-c2hp5NJ9Wo_wCB_mlHP_MaJhdoUqiVbMFJsgiPPqfwKBVkWE26H5QVnG",
+      "doi": "",
+      "note": "一本涵盖深度学习概念（包含图像处理和神经网络架构）的实践指南，对于在处理高级多模态模型之前理解其基础很有价值。",
+      "order": 5,
+      "created_at": "2025-10-20T07:09:54.689689Z",
+      "updated_at": "2025-10-20T07:32:34.460155Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

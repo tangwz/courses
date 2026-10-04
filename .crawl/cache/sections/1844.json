@@ -1,0 +1,61 @@
+{
+  "id": 1844,
+  "title": "实践操作：组合数据集",
+  "meta_title": "实践组合 DataFrames",
+  "meta_description": "应用 concat、merge 和 join 操作以组合不同的 DataFrames。",
+  "content": "<p>提供使用 <code>pd.concat</code>、<code>pd.merge</code> 和 <code>.join()</code> 方法的实际操作示例。我们将使用小型、清晰的数据集来说明每种技术的工作方式。</p>\n<p>首先，确保已导入 Pandas。我们将使用约定俗成的别名 <code>pd</code>。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np # 通常与 Pandas 一起使用\n</code></pre>\n<h3>准备示例 DataFrame</h3>\n<p>为了演示连接和合并，我们来创建几个简单的 DataFrame。</p>\n<pre><code class=\"language-python\"># 用于连接的 DataFrame 示例\ndf1 = pd.DataFrame({'A': ['A0', 'A1', 'A2'],\n                    'B': ['B0', 'B1', 'B2'],\n                    'C': ['C0', 'C1', 'C2']},\n                   index=[0, 1, 2])\n\ndf2 = pd.DataFrame({'A': ['A3', 'A4', 'A5'],\n                    'B': ['B3', 'B4', 'B5'],\n                    'C': ['C3', 'C4', 'C5']},\n                   index=[3, 4, 5])\n\ndf3 = pd.DataFrame({'D': ['D0', 'D1', 'D2'],\n                    'E': ['E0', 'E1', 'E2'],\n                    'F': ['F0', 'F1', 'F2']},\n                   index=[0, 1, 2])\n\n# 用于合并/连接的 DataFrame 示例\nleft_df = pd.DataFrame({'key': ['K0', 'K1', 'K2', 'K3'],\n                        'L_val': ['L0', 'L1', 'L2', 'L3']})\n\nright_df = pd.DataFrame({'key': ['K0', 'K1', 'K4', 'K5'],\n                         'R_val': ['R0', 'R1', 'R4', 'R5']})\n\n# 用于基于索引连接的 DataFrame 示例\nleft_join_df = pd.DataFrame({'L_val': ['L0', 'L1', 'L2']},\n                             index=pd.Index(['K0', 'K1', 'K2'], name='key'))\n\nright_join_df = pd.DataFrame({'R_val': ['R0', 'R1', 'R4']},\n                              index=pd.Index(['K0', 'K1', 'K4'], name='key'))\n\n</code></pre>\n<p>我们来看看最初的 DataFrame：</p>\n<pre><code class=\"language-python\">print(\"--- df1 ---\")\nprint(df1)\nprint(\"\\n--- df2 ---\")\nprint(df2)\nprint(\"\\n--- df3 ---\")\nprint(df3)\nprint(\"\\n--- left_df ---\")\nprint(left_df)\nprint(\"\\n--- right_df ---\")\nprint(right_df)\nprint(\"\\n--- left_join_df ---\")\nprint(left_join_df)\nprint(\"\\n--- right_join_df ---\")\nprint(right_join_df)\n</code></pre>\n<h3>实践：使用 <code>pd.concat</code> 进行连接</h3>\n<p>连接类似于将 DataFrame 堆叠或拼接在一起。</p>\n<h4>垂直连接（堆叠行）</h4>\n<p>这是 <code>pd.concat</code> 的默认行为。它垂直堆叠 DataFrame，按名称对齐 (alignment)列。</p>\n<pre><code class=\"language-python\"># 垂直连接 df1 和 df2 (axis=0 是默认值)\nvertical_concat = pd.concat([df1, df2])\n\nprint(\"--- 垂直连接（默认）---\")\nprint(vertical_concat)\n</code></pre>\n<p>请注意 <code>df2</code> 是如何附加在 <code>df1</code> 下方的。原始 DataFrame 的索引被保留了。如果索引的唯一性很重要，或者你更喜欢一个整洁的从 0 开始的索引，请使用 <code>ignore_index=True</code>。</p>\n<pre><code class=\"language-python\"># 连接 df1 和 df2，忽略原始索引\nvertical_concat_new_index = pd.concat([df1, df2], ignore_index=True)\n\nprint(\"\\n--- 垂直连接 (ignore_index=True) ---\")\nprint(vertical_concat_new_index)\n</code></pre>\n<h4>水平连接（添加列）</h4>\n<p>要根据 DataFrame 的索引将它们并排放置，请使用 <code>axis=1</code>。</p>\n<pre><code class=\"language-python\"># 水平连接 df1 和 df3 (axis=1)\nhorizontal_concat = pd.concat([df1, df3], axis=1)\n\nprint(\"--- 水平连接 (axis=1) ---\")\nprint(horizontal_concat)\n</code></pre>\n<p>这里，<code>df1</code> 和 <code>df3</code> 是根据匹配的索引标签（0, 1, 2）组合的。如果索引没有完美对齐，Pandas 将为缺失的匹配项引入 <code>NaN</code> 值（这是一种沿着索引的外连接行为）。</p>\n<h3>实践：使用 <code>pd.merge</code> 进行合并</h3>\n<p>合并根据公共列中的值组合 DataFrame，类似于 SQL 连接。</p>\n<h4>内连接（默认）</h4>\n<p>内连接只保留键在<em>两个</em> DataFrame 中都存在的行。</p>\n<pre><code class=\"language-python\"># 对列执行内连接\ninner_merge = pd.merge(left_df, right_df, on='key', how='inner') # 'how=inner' 是默认值\n\nprint(\"--- 内连接 ---\")\nprint(inner_merge)\n</code></pre>\n<p>只有同时存在于 <code>left_df</code> 和 <code>right_df</code> 中的键 'K0' 和 'K1' 出现在结果中。</p>\n<h4>外连接</h4>\n<p>外连接保留<em>两个</em> DataFrame 中的所有行。如果一个键在其中一个 DataFrame 中不存在，则会为源自该 DataFrame 的列引入 <code>NaN</code> 值。</p>\n<pre><code class=\"language-python\"># 对列执行外连接\nouter_merge = pd.merge(left_df, right_df, on='key', how='outer')\n\nprint(\"\\n--- 外连接 ---\")\nprint(outer_merge)\n</code></pre>\n<p>键 'K0'、'K1'、'K2'、'K3'、'K4' 和 'K5' 都存在。请注意，当键在其中一个原始 DataFrame 中缺失时（例如，'K2' 和 'K3' 的 <code>R_val</code> 为 <code>NaN</code>，'K4' 和 'K5' 的 <code>L_val</code> 为 <code>NaN</code>），会出现 <code>NaN</code> 值。</p>\n<h4>左连接</h4>\n<p>左连接保留<em>左侧</em> DataFrame 中的所有行，并包含来自右侧 DataFrame 的匹配行。如果左侧 DataFrame 的键在右侧不存在，则右侧 DataFrame 的列将使用 <code>NaN</code>。</p>\n<pre><code class=\"language-python\"># 对列执行左连接\nleft_merge = pd.merge(left_df, right_df, on='key', how='left')\n\nprint(\"\\n--- 左连接 ---\")\nprint(left_merge)\n</code></pre>\n<p><code>left_df</code> 中的所有键（'K0'、'K1'、'K2'、'K3'）都存在。'K2' 和 'K3' 的 <code>R_val</code> 为 <code>NaN</code>，因为它们不在 <code>right_df</code> 中。仅存在于 <code>right_df</code> 中的键（'K4'、'K5'）被排除。</p>\n<h4>右连接</h4>\n<p>右连接与左连接相反。它保留<em>右侧</em> DataFrame 中的所有行，并包含来自左侧的匹配行。</p>\n<pre><code class=\"language-python\"># 对列执行右连接\nright_merge = pd.merge(left_df, right_df, on='key', how='right')\n\nprint(\"\\n--- 右连接 ---\")\nprint(right_merge)\n</code></pre>\n<p><code>right_df</code> 中的所有键（'K0'、'K1'、'K4'、'K5'）都存在。'K4' 和 'K5' 的 <code>L_val</code> 为 <code>NaN</code>。仅存在于 <code>left_df</code> 中的键（'K2'、'K3'）被排除。</p>\n<p>为了帮助可视化这些连接，可以将键视为集合：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14zw1r9\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=plaintext, fontsize=12];\n    subgraph cluster_0 {\n        label = \"内连接\\n(双方都有的键)\";\n        bgcolor=\"#e9ecef\";\n        node [shape=circle, style=filled, fillcolor=\"#74c0fc\", fontcolor=white]; a; b;\n        node [shape=circle, style=solid, color=\"#adb5bd\", fontcolor=\"#495057\"]; c; d; e; f;\n        a [label=\"K0\"]; b [label=\"K1\"];\n        c [label=\"K2\"]; d [label=\"K3\"];\n        e [label=\"K4\"]; f [label=\"K5\"];\n        edge [style=invis];\n        a -> b -> c -> d -> e -> f;\n    }\n    subgraph cluster_1 {\n        label = \"左连接\\n(左侧所有键)\";\n        bgcolor=\"#e9ecef\";\n        node [shape=circle, style=filled, fillcolor=\"#74c0fc\", fontcolor=white]; g; h; i; j;\n        node [shape=circle, style=solid, color=\"#adb5bd\", fontcolor=\"#495057\"]; k; l;\n        g [label=\"K0\"]; h [label=\"K1\"]; i [label=\"K2\"]; j [label=\"K3\"];\n        k [label=\"K4\"]; l [label=\"K5\"];\n        edge [style=invis];\n        g -> h -> i -> j -> k -> l;\n    }\n    subgraph cluster_2 {\n        label = \"右连接\\n(右侧所有键)\";\n        bgcolor=\"#e9ecef\";\n        node [shape=circle, style=filled, fillcolor=\"#74c0fc\", fontcolor=white]; m; n; o; p;\n        node [shape=circle, style=solid, color=\"#adb5bd\", fontcolor=\"#495057\"]; q; r;\n        m [label=\"K0\"]; n [label=\"K1\"]; o [label=\"K4\"]; p [label=\"K5\"];\n        q [label=\"K2\"]; r [label=\"K3\"];\n        edge [style=invis];\n        m -> n -> o -> p -> q -> r;\n    }\n    subgraph cluster_3 {\n        label = \"外连接\\n(双方所有键)\";\n        bgcolor=\"#e9ecef\";\n        node [shape=circle, style=filled, fillcolor=\"#74c0fc\", fontcolor=white]; s; t; u; v; w; x;\n        s [label=\"K0\"]; t [label=\"K1\"]; u [label=\"K2\"]; v [label=\"K3\"]; w [label=\"K4\"]; x [label=\"K5\"];\n        edge [style=invis];\n        s -> t -> u -> v -> w -> x;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14zw1r9\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基于键 'K0'-'K5' 的不同连接类型的图示。蓝色实心圆表示每种连接类型的结果中包含的键，假设 <code>left_df</code> 的键是 K0-K3，<code>right_df</code> 的键是 K0, K1, K4, K5。</p>\n</blockquote>\n<h4>基于不同列名进行合并</h4>\n<p>如果 DataFrame 中的列具有不同的名称，请使用 <code>left_on</code> 和 <code>right_on</code>。</p>\n<pre><code class=\"language-python\"># 临时重命名 right_df 中的 'key'，用于演示\nright_df_renamed = right_df.rename(columns={'key': 'common_key'})\n\nprint(\"\\n--- right_df_renamed ---\")\nprint(right_df_renamed)\n\n# 使用 left_on 和 right_on 进行合并\nmerge_diff_names = pd.merge(left_df, right_df_renamed,\n                            left_on='key', right_on='common_key',\n                            how='inner')\n\nprint(\"\\n--- 使用不同名称合并 (left_on, right_on) ---\")\nprint(merge_diff_names)\n</code></pre>\n<p>结果中包含两个原始列（<code>left_df</code> 中的 <code>key</code> 和 <code>right_df_renamed</code> 中的 <code>common_key</code>）。之后你可能需要删除其中一个。</p>\n<h3>实践：使用 <code>.join</code> 进行基于索引的连接</h3>\n<p><code>.join()</code> 方法是一种基于 DataFrame 索引执行合并的便捷方式。它默认为左连接。</p>\n<pre><code class=\"language-python\"># 对索引执行默认（左）连接\nleft_index_join = left_join_df.join(right_join_df, how='left') # 'how=left' 是默认值\n\nprint(\"--- 左索引连接（默认 .join()）---\")\nprint(left_index_join)\n</code></pre>\n<p>这会保留 <code>left_join_df</code> 中的所有索引值（'K0'、'K1'、'K2'），并添加来自 <code>right_join_df</code> 的相应 <code>R_val</code>。'K2' 的 <code>R_val</code> 为 <code>NaN</code>，因为它不在 <code>right_join_df</code> 的索引中。</p>\n<p>你可以使用 <code>how</code> 参数 (parameter)指定其他连接类型，就像使用 <code>pd.merge</code> 一样。</p>\n<pre><code class=\"language-python\"># 使用 .join() 对索引执行外连接\nouter_index_join = left_join_df.join(right_join_df, how='outer')\n\nprint(\"\\n--- 外索引连接 (.join(how='outer')) ---\")\nprint(outer_index_join)\n</code></pre>\n<p>这包含两个 DataFrame 的所有索引值（'K0'、'K1'、'K2'、'K4'），并用 <code>NaN</code> 填充缺失值。</p>\n<p>你还可以使用 <code>.join()</code> 将 DataFrame 的索引与另一个 DataFrame 中的列进行连接，方法是将连接列<em>临时</em>设置为另一个 DataFrame 的索引，或者使用 <code>.join()</code> 中的 <code>on</code> 参数。</p>\n<pre><code class=\"language-python\"># 将 left_df（使用列）与 right_join_df（使用其索引）连接\n# 我们可以在 join 中使用 'on' 参数来指定 left_df 中的列\ncolumn_index_join = left_df.join(right_join_df, on='key', how='inner')\n\nprint(\"\\n--- 将列连接到索引 (right_join_df) ---\")\nprint(column_index_join)\n</code></pre>\n<p>本次实践涵盖了在 Pandas 中组合 DataFrame 的主要方法。连接是堆叠数据，而合并和连接是根据共享键（在列或索引中）使用不同的逻辑规则（内、外、左、右）组合数据。请在你自己的数据集上试验这些技术，以巩固你的理解。</p>",
+  "slug": "combining-datasets-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5530,
+      "title": "User Guide: Merging, joining, and concatenating",
+      "author": "Wes McKinney and the pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html",
+      "doi": "",
+      "note": "官方用户指南，提供`pd.concat`、`pd.merge`和`.join()`方法的概念解释和实际示例。",
+      "order": 1,
+      "created_at": "2025-09-05T01:11:27.468771Z",
+      "updated_at": "2025-09-08T02:37:44.974212Z"
+    },
+    {
+      "id": 5531,
+      "title": "pandas.merge",
+      "author": "Wes McKinney and the pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.merge.html",
+      "doi": "",
+      "note": "`pandas.merge`函数的详细API规范，涵盖所有参数及其功能。",
+      "order": 2,
+      "created_at": "2025-09-05T01:11:27.586137Z",
+      "updated_at": "2025-09-08T02:37:44.191555Z"
+    },
+    {
+      "id": 5532,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas创建者的权威书籍；全面介绍了组合Pandas对象和数据操作方法（第三版）。",
+      "order": 3,
+      "created_at": "2025-09-05T01:11:27.590576Z",
+      "updated_at": "2025-09-08T02:37:39.092508Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 3050,
+  "title": "智能体简介",
+  "meta_title": "LLM框架中的智能体简介",
+  "meta_description": "构建利用LLM决定行动并与工具交互的智能体。",
+  "content": "<p>LLM框架通常使用“链式调用”来执行预设的LLM调用序列及其他操作。然而，许多任务需要比这些固定序列更具动态性的行为。设想一个场景，应用需要回答一个问题，例如“伦敦昨天的天气如何，以及上个月那里报告的下雨天数的平方根是多少？”一个直接的链式调用可能难以处理，因为具体步骤依赖于中间结果（例如，查询天气报告，提取下雨天数，然后进行计算）。对于这类情况，智能体非常有效。</p>\n<h3>智能体究竟是什么？</h3>\n<p>在LangChain这类LLM框架中，一个<strong>智能体</strong>不只是使用大型语言模型生成文本，更是将其作为推理 (inference)引擎，来决定要执行的一系列动作。与其说它像遵循食谱（链式调用），不如说它更像一个能够利用一系列可用<strong>工具</strong>来找出如何完成目标的助手。</p>\n<p>其核心思想是智能体：</p>\n<ol>\n<li>接收一个输入或目标。</li>\n<li>利用LLM“思考”下一步该怎么做。</li>\n<li>这步可能涉及使用特定工具（如网页搜索、计算器或访问你数据库的自定义函数），或者判断自己已有足够信息来给出最终回复。</li>\n<li>如果使用了工具，智能体将执行它并观察结果。</li>\n<li>结果（或“观察”）会反馈给LLM，以便进行下一轮“思考”。</li>\n<li>这个循环会一直重复，直到达成目标。</li>\n</ol>\n<h3>智能体循环</h3>\n<p>这种决策过程在一个循环中运行，这个循环通常被称为“智能体执行器”或“运行时”。在每一步中，LLM不仅会收到原始目标，还会收到迄今为止已执行动作的历史记录和收到的观察结果，以及它<em>可以</em>使用的工具的描述。</p>\n<p>以下是智能体执行流程的简化视图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-m5ksa5\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fontsize=10, margin=0.2, fillcolor=\"#e9ecef\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  UserInput [label=\"用户输入/目标\", fillcolor=\"#a5d8ff\"];\n  LLM [label=\"LLM推理\\n(思考过程)\", fillcolor=\"#ffec99\"];\n  ActionDecision [label=\"行动决策\\n(使用工具或回复？)\", shape=diamond, style=\"rounded,filled\", fillcolor=\"#ffd8a8\"];\n  ToolExecution [label=\"执行工具\", fillcolor=\"#bac8ff\"];\n  ToolOutput [label=\"工具输出\\n(观察)\", fillcolor=\"#e9ecef\"];\n  FinalResponse [label=\"最终回复\", fillcolor=\"#b2f2bb\"];\n\n  UserInput -> LLM [color=\"#1c7ed6\"];\n  LLM -> ActionDecision [color=\"#f59f00\"];\n  ActionDecision -> ToolExecution [label=\" 选择工具\", color=\"#fd7e14\"];\n  ToolExecution -> ToolOutput [color=\"#4263eb\"];\n  ToolOutput -> LLM [label=\" 反馈观察结果\", color=\"#495057\"];\n  ActionDecision -> FinalResponse [label=\" 生成回复\", color=\"#fd7e14\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-m5ksa5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图表，说明了智能体执行循环，其中LLM根据输入和之前的步骤决定是使用工具还是生成最终回复。</p>\n</blockquote>\n<p>用于引导LLM推理 (inference)的提示语非常重要。它通常会指导LLM如何一步步思考，列出可用工具及其功能和预期输入，并指定LLM应使用的格式来指示其选择的动作及其输入。ReAct（思考+行动）等技术常作为这些提示语的基础，鼓励LLM在选择动作前明确说明其推理过程。</p>\n<h3>为什么要使用智能体？</h3>\n<p>智能体在处理某些类型的问题时，比简单的链式调用具有显著优势：</p>\n<ul>\n<li><strong>灵活性：</strong> 它们可以根据中间结果调整方法，按需选择不同的工具或动作序列。</li>\n<li><strong>复杂问题解决：</strong> 它们能将复杂目标分解为更小、更易于管理的小步，并在此过程中使用工具收集信息或执行计算。</li>\n<li><strong>交互性：</strong> 它们使LLM能够以结构化的方式与外部系统（数据库、API、文件系统）交互，运用其预训练 (pre-training)知识来发挥作用。</li>\n</ul>\n<p>然而，这种动态特性也意味着智能体可能不如链式调用那样可预测。它们的行为很大程度上取决于LLM的质量、提示语的清晰度以及工具的可靠性。调试有时需要追溯智能体在多个步骤中的思考过程。此外，如果推理 (inference)引导不当或工具产生意外错误，智能体也有可能陷入循环或未能完成任务。另外，由于智能体在其执行循环中经常对LLM进行多次调用，因此与单次链式调用相比，它们可能产生更高的运营成本。</p>\n<p>在下一节中，我们将详细了解如何定义和整合这些赋予智能体行动能力的“工具”。</p>",
+  "slug": "introduction-to-agents-frameworks",
+  "updates": [],
+  "references": [
+    {
+      "id": 8780,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "International Conference on Learning Representations",
+      "journal": "International Conference on Learning Representations",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct提示策略，该策略结合了推理和行动步骤，对于LLM代理选择行动和与工具交互很重要。",
+      "order": 1,
+      "created_at": "2025-09-05T02:10:10.396097Z",
+      "updated_at": "2025-09-09T04:55:06.963157Z"
+    },
+    {
+      "id": 8781,
+      "title": "LangChain Agents Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/",
+      "doi": "",
+      "note": "LangChain框架中实现代理的官方文档，提供了代理类型、工具和执行的实践示例和详细信息。",
+      "order": 2,
+      "created_at": "2025-09-05T02:10:10.419462Z",
+      "updated_at": "2025-09-09T04:55:15.649891Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

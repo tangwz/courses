@@ -1,0 +1,61 @@
+{
+  "id": 2906,
+  "title": "模型验证与分析",
+  "meta_title": "TFX Evaluator 与 ModelValidator 用于分析",
+  "meta_description": "使用 TFX Evaluator 和 ModelValidator 对训练后的模型进行细致分析和验证。",
+  "content": "<p>即使潜在的模型候选已经通过 <code>Trainer</code> 组件进行了训练，仅仅在静态测试集上取得良好性能不足以将其部署到生产环境。生产系统要求全面的验证，以确保模型不仅整体表现良好，而且在不同数据分段中表现可预测且公平，更重要的是，与当前服务的模型相比没有性能下降。因此，TFX 管道中的模型验证和分析步骤变得非常必要。</p>\n<p>负责这种细致性能分析的主要 TFX 组件是 <code>Evaluator</code>。它远不止计算一个单一的准确率分数。<code>Evaluator</code> 借助 Apache Beam 的能力进行可扩展分析，并与 TensorFlow Model Analysis (TFMA) 库紧密集成，以提供关于模型行为的详细信息。</p>\n<h3>了解 TFX Evaluator</h3>\n<p><code>Evaluator</code> 组件通常接收：</p>\n<ol>\n<li><strong>示例：</strong> 评估数据，通常由训练期间使用的相同 <code>Transform</code> 图处理，以确保一致性。</li>\n<li><strong>模型：</strong> 由 <code>Trainer</code> 组件导出的新训练的候选模型。</li>\n<li><strong>基准模型（可选但建议）：</strong> 当前在生产中服务的模型或之前验证过的模型。这使得能够直接比较，以防止性能下降。</li>\n</ol>\n<p>其核心功能是计算多种评估指标，不仅整体上，而且跨数据不同<em>切片</em>。切片分析可以帮助您查看模型是否在特定用户群、时间段、特征值或其他重要数据分段中表现不同。例如，您可能希望验证模型在不同地理区域的用户或不同产品类别上的表现是否同样良好。</p>\n<pre><code class=\"language-python\"># 示例：在 TFX 管道定义中配置 Evaluator\nfrom tfx.components import Evaluator\nfrom tfx.proto import evaluator_pb2\n\n# 假设 'trainer'、'examples_gen' 和 'schema_gen' 已在上游定义\n\neval_config = evaluator_pb2.EvalConfig(\n    model_specs=[\n        # 指定候选模型\n        evaluator_pb2.ModelSpec(label_key='loan_status_binary')\n    ],\n    slicing_specs=[\n        # 定义切片：整体数据集\n        evaluator_pb2.SlicingSpec(),\n        # 按特定特征 'employment_length' 进行切片\n        evaluator_pb2.SlicingSpec(\n            feature_keys=['employment_length']\n        ),\n        # 按两个特征的交叉进行切片\n        evaluator_pb2.SlicingSpec(\n            feature_keys=['home_ownership', 'verification_status']\n        )\n    ],\n    metrics_specs=[\n        # 定义使用 TFMA 指标定义来计算的指标\n        evaluator_pb2.MetricsSpec(\n            metrics=[\n                evaluator_pb2.MetricConfig(class_name='AUC'),\n                evaluator_pb2.MetricConfig(class_name='Precision'),\n                evaluator_pb2.MetricConfig(class_name='Recall'),\n                evaluator_pb2.MetricConfig(\n                    class_name='ExampleCount' # 总是很有用\n                ),\n                evaluator_pb2.MetricConfig(\n                  # 阈值设置示例：候选模型 AUC 必须比基准模型高 1%\n                  class_name='AUC',\n                  threshold=evaluator_pb2.MetricThreshold(\n                      value_threshold=evaluator_pb2.GenericValueThreshold(\n                          lower_bound={'value': 0.01}),\n                      # 相对于基准模型的 AUC 进行比较\n                      change_threshold=evaluator_pb2.GenericChangeThreshold(\n                          direction=evaluator_pb2.MetricDirection.HIGHER_IS_BETTER,\n                          absolute={'value': 0.01})\n                  )\n                )\n            ]\n        )\n    ]\n)\n\nevaluator = Evaluator(\n    examples=examples_gen.outputs['examples'],\n    model=trainer.outputs['model'],\n    # baseline_model=model_resolver.outputs['model'], # 如果与基准模型进行比较\n    eval_config=eval_config,\n    schema=schema_gen.outputs['schema'] # 模式有助于 TFMA 解释特征\n)\n\n# 此 'evaluator' 组件随后将添加到管道的组件列表中\n</code></pre>\n<p>TFMA 支持的 <code>Evaluator</code> 的重要方面包括：</p>\n<ul>\n<li><strong>切片评估：</strong> 在由特征值定义的数据子集上计算指标。这对于识别性能差异和潜在的公平性问题非常重要。</li>\n<li><strong>指标计算：</strong> 计算标准分类和回归指标（AUC、Precision、Recall、RMSE 等），以及通过 TensorFlow/Keras 定义的自定义指标。</li>\n<li><strong>基准比较：</strong> 在相同的评估数据切片上，直接将候选模型的指标与基准模型进行比较。这有助于确保新模型确实是改进，并且不会降低某些用户分段的性能。</li>\n<li><strong>阈值设置：</strong> 定义候选模型必须满足的特定性能标准，无论是绝对值（例如，AUC > 0.85）还是相对于基准（例如，Precision 不得降低）。</li>\n<li><strong>公平性指标：</strong> TFMA 包含评估敏感人口统计或基于组的切片上的公平性指标的能力，有助于识别和减轻意外的模型偏差。</li>\n</ul>\n<p><code>Evaluator</code> 的输出包括详细的分析结果，通常使用 TensorBoard 的 TFMA 插件进行可视化，以及一个重要的验证结果（通常称为“祝福”）。此结果表明模型是否通过了预定义的质量阈值。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-15jdk48\" \n              data-plot-definition='{\"layout\": {\"title\": \"AUC 比较：候选模型与基准模型在各切片上的表现\", \"xaxis\": {\"title\": \"数据切片\"}, \"yaxis\": {\"title\": \"AUC\", \"range\": [0.6, 1.0]}, \"barmode\": \"group\", \"legend\": {\"title\": {\"text\": \"模型\"}}}, \"data\": [{\"type\": \"bar\", \"name\": \"候选模型\", \"x\": [\"Overall\", \"Region A\", \"Region B\", \"New Users\"], \"y\": [0.88, 0.86, 0.91, 0.83], \"marker\": {\"color\": \"#228be6\"}}, {\"type\": \"bar\", \"name\": \"基准模型\", \"x\": [\"Overall\", \"Region A\", \"Region B\", \"New Users\"], \"y\": [0.85, 0.87, 0.86, 0.84], \"marker\": {\"color\": \"#adb5bd\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-15jdk48\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>此比较显示了跨不同数据切片的性能。虽然候选模型显示出整体 AUC 提高，并在区域 B 表现良好，但在区域 A 和新用户方面与基准模型相比略有退步。这种由 <code>Evaluator</code> 的切片分析提供的信息，对于做出明智的部署决策非常重要。</p>\n</blockquote>\n<h3>使用 ModelValidator 确保模型健全</h3>\n<p><code>Evaluator</code> 侧重于<em>预测性能</em>，而另一个组件 <code>ModelValidator</code> 则处理模型工件本身的<em>技术有效性</em>和<em>一致性</em>。它有助于发现仅凭性能指标可能不明显的问题，但可能在服务期间引发问题或表明底层数据漂移。</p>\n<p><code>ModelValidator</code> 通常检查：</p>\n<ul>\n<li><strong>基础设施验证：</strong> 确保模型能够被服务基础设施（例如 TensorFlow Serving）实际加载。它执行基本检查，如尝试加载 SavedModel。</li>\n<li><strong>漂移和异常检测：</strong> 比较当前模型预测或内部激活的统计数据与先前版本或基准分布的统计数据。显著的偏差可能表明训练/服务偏差或数据模式中出现意外变化。它通常使用来自 <code>SchemaGen</code> 的模式信息和来自 <code>StatisticsGen</code> 的统计数据进行这些比较。</li>\n</ul>\n<p><code>Evaluator</code> 询问“这个模型<em>更好</em>吗？”，而 <code>ModelValidator</code> 询问“这个模型<em>健全</em>且<em>一致</em>吗？”。两者都是部署前的重要检查。</p>\n<h3>守门员角色</h3>\n<p><code>Evaluator</code>（有时也包括 <code>ModelValidator</code>）生成的验证结果充当关键的关卡。下游的 <code>Pusher</code> 组件负责将模型部署到服务环境或模型注册表，它通常会使用验证结果。如果 <code>Evaluator</code> 未“祝福”模型（即，它未达到性能阈值或显示性能下降），<code>Pusher</code> 将不会部署它。这种自动化质量检查可以防止次优或性能下降的模型进入生产环境，维护机器学习 (machine learning)系统的可靠性和可信赖性。</p>\n<p>总之，模型验证和分析阶段主要由使用 TFMA 的 <code>Evaluator</code> 组件驱动，它提供生产环境所需的细致、多方面的性能信息。通过跨数据切片评估模型、与基准模型比较以及执行质量阈值，TFX 确保只有经过充分验证且性能稳定的模型才会被考虑部署。</p>",
+  "slug": "tfx-model-validation-analysis",
+  "updates": [],
+  "references": [
+    {
+      "id": 6993,
+      "title": "TensorFlow Extended (TFX) Documentation",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/tfx",
+      "doi": "",
+      "note": "提供关于TFX组件（包括评估器和模型验证器）及其在生产ML管道中作用的全面信息。",
+      "order": 1,
+      "created_at": "2025-09-05T01:30:20.382373Z",
+      "updated_at": "2025-09-09T02:30:41.181505Z"
+    },
+    {
+      "id": 6994,
+      "title": "TensorFlow Model Analysis (TFMA) Guide",
+      "author": "Google",
+      "year": "2024",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGcwXAeJ31_ZHj5Wm-Q0JQUMPOCxzGj30Z9KRlsOV8GngolloFlpRnY4fDKuIE8nOp2fffbDwjO-sGAu_twRGFpORa7VHSYlX_G4gF_tTraqxZuuPU8cCb57cMMBZtkkdERJ1NHHGFhcSccgY-iSLkZbHbJAA==",
+      "doi": "",
+      "note": "深入了解TFMA功能的详细资源，特别是在切片评估、基线比较和公平性指标方面。",
+      "order": 2,
+      "created_at": "2025-09-05T01:30:20.474061Z",
+      "updated_at": "2025-09-09T02:31:00.697654Z"
+    },
+    {
+      "id": 6995,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本关于构建、部署和维护机器学习系统的综合指南，涵盖了生产环境中健全验证和分析的重要性。",
+      "order": 3,
+      "created_at": "2025-09-05T01:30:20.477956Z",
+      "updated_at": "2025-09-09T02:30:41.139071Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

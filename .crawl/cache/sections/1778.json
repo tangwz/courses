@@ -1,0 +1,45 @@
+{
+  "id": 1778,
+  "title": "选取列",
+  "meta_title": "在 Pandas DataFrame 中选取列",
+  "meta_description": "按名称访问 DataFrame 中的单个或多个列。",
+  "content": "<p>提取一个或多个列是在处理 DataFrame 时最常见的任务之一。也许您只需要从一个更大的数据集中获取姓名和年龄，或者您想对某个数值列执行计算。Pandas 提供了直接的方法来实现这一点。</p>\n<p>让我们从一个示例 DataFrame 开始，以演示这些原理。假设我们有关于个人的数据，包括他们的姓名、年龄、城市和薪资：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\ndata = {'Name': ['Alice', 'Bob', 'Charlie', 'David'],\n        'Age': [25, 30, 35, 40],\n        'City': ['New York', 'Los Angeles', 'Chicago', 'Houston'],\n        'Salary': [70000, 80000, 90000, 100000]}\ndf = pd.DataFrame(data)\n\nprint(\"Original DataFrame:\")\nprint(df)\n</code></pre>\n<p>Output:</p>\n<pre><code>Original DataFrame:\n      Name  Age         City  Salary\n0    Alice   25     New York   70000\n1      Bob   30  Los Angeles   80000\n2  Charlie   35      Chicago   90000\n3    David   40      Houston  100000\n</code></pre>\n<h3>选取单个列</h3>\n<p>选取单个列最直接的方法是使用方括号 <code>[]</code>，并在其中放入列名（字符串形式）：</p>\n<pre><code class=\"language-python\"># 选取 'Name' 列\nnames = df['Name']\n\nprint(\"Selected 'Name' column:\")\nprint(names)\nprint(\"\\nType of the selected object:\", type(names))\n</code></pre>\n<p>Output:</p>\n<pre><code>Selected 'Name' column:\n0      Alice\n1        Bob\n2    Charlie\n3      David\nName: Name, dtype: object\n\nType of the selected object: &#x3C;class 'pandas.core.series.Series'>\n</code></pre>\n<p>请注意，以这种方式选取单个列会返回一个 Pandas Series 对象，而不是 DataFrame。Series 类似于一个一维带标签数组，它保存了该列的数据及其索引。</p>\n<h3>选取多个列</h3>\n<p>要选取多个列，您再次使用方括号 <code>[]</code>。然而，在方括号内，您需要提供一个您想选取的列名<em>列表</em>：</p>\n<pre><code class=\"language-python\"># 选取 'Name' 和 'City' 列\nsubset = df[['Name', 'City']]\n\nprint(\"Selected 'Name' and 'City' columns:\")\nprint(subset)\nprint(\"\\nType of the selected object:\", type(subset))\n</code></pre>\n<p>Output:</p>\n<pre><code>Selected 'Name' and 'City' columns:\n      Name         City\n0    Alice     New York\n1      Bob  Los Angeles\n2  Charlie      Chicago\n3    David      Houston\n\nType of the selected object: &#x3C;class 'pandas.core.frame.DataFrame'>\n</code></pre>\n<p>重要说明：当您在方括号 <code>[['Col1', 'Col2']]</code> 内使用列表选取多列时，结果是一个新的 DataFrame，它只包含您指定的列，并按您列出的顺序排列。</p>\n<h3>另一种方法：点表示法</h3>\n<p>Pandas 也允许使用点表示法访问单个列，类似于访问对象的属性，前提是列名是有效的 Python 标识符（例如，没有空格，不以数字开头，不与现有 DataFrame 方法冲突）：</p>\n<pre><code class=\"language-python\"># 使用点表示法选取 'Age' 列\nages_dot = df.Age\n\nprint(\"Selected 'Age' column using dot notation:\")\nprint(ages_dot)\nprint(\"\\nType of the selected object:\", type(ages_dot))\n</code></pre>\n<p>Output:</p>\n<pre><code>Selected 'Age' column using dot notation:\n0    25\n1    30\n2    35\n3    40\nName: Age, dtype: int64\n\nType of the selected object: &#x3C;class 'pandas.core.series.Series'>\n</code></pre>\n<p>与选取单个列的方括号表示法一样，点表示法也返回一个 Series。</p>\n<h3>为何更推荐方括号表示法 (<code>[]</code>)？</h3>\n<p>尽管点表示法在快速访问时可能很方便，但通常推荐使用方括号表示法（<code>df['Column']</code> 或 <code>df[['Col1', 'Col2']]</code>）来选取列，特别是对于初学者，原因有以下几点：</p>\n<ol>\n<li><strong>适用所有列名：</strong> 方括号表示法适用于<em>任何</em>列名，包括那些包含空格、特殊字符或数字的列名（例如，<code>df['First Name']</code>，<code>df['Sales 2023']</code>）。点表示法对此类名称无效。</li>\n<li><strong>避免冲突：</strong> 列名可能与现有 DataFrame 方法或属性冲突（例如，如果您有一个名为 <code>count</code> 的列，<code>df.count</code> 将指代方法，而非您的列）。方括号表示法（<code>df['count']</code>）避免了这种歧义。</li>\n<li><strong>一致性：</strong> 方括号表示法用于选取单列和多列（通过传递字符串或字符串列表）。它也与我们很快会看到的 <code>.loc</code> 和 <code>.iloc</code> 索引器密切相关，提供更一致的语法模式。</li>\n<li><strong>赋值：</strong> 为列赋值需要使用方括号表示法（例如，<code>df['New Column'] = values</code>）。</li>\n</ol>\n<p>基于这些原因，尽管您可能会在示例中遇到点表示法，但坚持使用方括号表示法进行列选取有助于编写更清晰、更不易出错的代码。</p>\n<p>选取合适的列通常是您为进一步分析或处理选取所需数据的第一步。接下来，我们将了解如何将列选取与行选取结合起来，以实现更强大的数据获取。</p>",
+  "slug": "selecting-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 1704,
+      "title": "Indexing and selecting data",
+      "author": "The Pandas Development Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html",
+      "doi": "",
+      "note": "官方文档，涵盖了Pandas DataFrame和Series中选择数据的基本方法，包括使用方括号和点符号进行列选择。",
+      "order": 1,
+      "created_at": "2025-09-04T16:20:51.467180Z",
+      "updated_at": "2025-09-08T05:02:55.227140Z"
+    },
+    {
+      "id": 1705,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas的权威指南，全面涵盖了数据结构、数据操作和数据选择技术。(第3版)",
+      "order": 2,
+      "created_at": "2025-09-04T16:20:51.470164Z",
+      "updated_at": "2025-09-08T05:02:43.471781Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

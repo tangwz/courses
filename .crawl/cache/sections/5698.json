@@ -1,0 +1,45 @@
+{
+  "id": 5698,
+  "title": "基本统计比较",
+  "meta_title": "统计比较指标",
+  "meta_description": "比较真实数据集和合成数据集之间简单的统计属性（平均值、中位数、方差）。",
+  "content": "<p>观察图表能让你对数据有不错的感知，但有时我们需要确切的数字来进行更客观的比较。这时，基本的统计比较就很有用了。它们提供了一种定量的方法，来检验合成数据中单个特征（比如表格中的列）的根本属性是否与真实数据中的相符。</p>\n<p>可以把这些统计数据看作是简单的概括。就像你可能会用几句话概括一本长书一样，平均值、中位数或标准差等统计量概括了数据列的重要方面。通过比较真实数据集和合成数据集之间的这些概括，你可以快速地从数值上查看它们在基本层面上的相似程度。</p>\n<h3>比较核心趋势和离散程度</h3>\n<p>最常比较的统计量是集中趋势和离散程度的度量。</p>\n<ul>\n<li><strong>平均值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>μ</mi></mrow><annotation encoding=\"application/x-tex\">\\mu</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.625em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">μ</span></span></span></span>)：</strong> 这是一个特征的平均数值。比较平均值可以判断，平均而言，合成特征中的值是否与真实特征中的值围绕在同一点。例如，如果真实客户数据中的平均年龄是45.2岁，你会希望合成数据中的平均年龄与此接近。</li>\n<li><strong>中位数：</strong> 这是数据排序后的中间值。与平均值相比，它对极端异常值不那么敏感。比较中位数有助于检查中心点是否相似，特别是当你的数据包含一些非常大或非常小的值时。</li>\n<li><strong>标准差 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">\\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>)：</strong> 这衡量了数据相对于平均值的离散程度。小的标准差意味着数据点紧密地聚集在平均值附近，而大的标准差则表示它们更分散。比较标准差可以判断你的合成数据是否与真实数据具有相似的变异程度。</li>\n<li><strong>方差 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup></mrow><annotation encoding=\"application/x-tex\">\\sigma^2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>)：</strong> 这就是标准差的平方。它也衡量离散程度，但单位是平方，这在数学上有时很有用。比较方差可以达到与比较标准差相似的目的。</li>\n<li><strong>最小值和最大值：</strong> 比较特征的最小和最大值有助于确保合成数据保持在原始数据中观察到的实际范围内。</li>\n</ul>\n<h3>如何进行比较</h3>\n<p>过程很简单：</p>\n<ol>\n<li><strong>选择一个特征：</strong> 选择要评估的列（特征），对于这些统计数据，通常是数值型（例如，“年龄”、“收入”、“温度”）。</li>\n<li><strong>计算统计量：</strong> 使用<em>真实</em>数据集计算该特征所需的统计量（例如，平均值、标准差）。</li>\n<li><strong>再次计算统计量：</strong> 为<em>合成</em>数据集中对应的特征计算<em>相同</em>的统计量。</li>\n<li><strong>比较：</strong> 查看这两个数字。它们有多接近？</li>\n</ol>\n<p>例如，假设你拥有真实的客户数据和生成的合成客户数据。我们来看看“年龄”列：</p>\n<ul>\n<li>真实数据：平均年龄 = 42.3岁，年龄标准差 = 10.5岁</li>\n<li>合成数据：平均年龄 = 41.9岁，年龄标准差 = 10.8岁</li>\n</ul>\n<p>在这种情况下，平均值非常接近（42.3对41.9），标准差也相当相似（10.5对10.8）。这表明，对于“年龄”特征，合成数据生成过程在捕捉平均值和围绕该平均值的典型离散程度上做得相当不错。</p>\n<p>如果合成数据中的平均年龄是35.1岁呢？那个明显的差异会立即指出一个问题。与真实数据相比，合成数据在年龄上没有正确地居中。同样，如果合成数据的标准差是2.5岁，这将表明合成年龄不切实际地聚集在平均值附近，缺乏真实数据的多样性。</p>\n<h3>统计差异的可视化</h3>\n<p>逐对比较数字是可行的，但如果特征很多，可能会很繁琐。一种常见的方法是计算两个数据集中<em>所有</em>相关特征的基本统计数据，然后将它们并排绘制出来，以便于比较。柱状图常用于此目的。</p>\n<p>假设我们比较了三个特征的平均值：“年龄”、“收入”（单位：千美元）和“客户年限”。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-z8l5w3\" \n              data-plot-definition='{\"layout\":{\"title\":\"平均值比较（真实 vs. 合成）\",\"xaxis\":{\"title\":\"特征\"},\"yaxis\":{\"title\":\"平均值\"},\"barmode\":\"group\",\"legend\":{\"traceorder\":\"reversed\"},\"template\":\"plotly_white\"},\"data\":[{\"type\":\"bar\",\"name\":\"合成数据\",\"x\":[\"Age\",\"Income\",\"Years_Customer\"],\"y\":[41.9,58.2,4.1],\"marker\":{\"color\":\"#74c0fc\"}},{\"type\":\"bar\",\"name\":\"真实数据\",\"x\":[\"Age\",\"Income\",\"Years_Customer\"],\"y\":[42.3,61.5,4.5],\"marker\":{\"color\":\"#ffa94d\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-z8l5w3\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>选定特征在真实数据集和合成数据集之间的平均值比较。</p>\n</blockquote>\n<p>我们可以对标准差做同样的事情：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-rdl1f4\" \n              data-plot-definition='{\"layout\":{\"title\":\"标准差比较（真实 vs. 合成）\",\"xaxis\":{\"title\":\"特征\"},\"yaxis\":{\"title\":\"标准差\"},\"barmode\":\"group\",\"legend\":{\"traceorder\":\"reversed\"},\"template\":\"plotly_white\"},\"data\":[{\"type\":\"bar\",\"name\":\"合成数据\",\"x\":[\"Age\",\"Income\",\"Years_Customer\"],\"y\":[10.8,22.1,2.9],\"marker\":{\"color\":\"#74c0fc\"}},{\"type\":\"bar\",\"name\":\"真实数据\",\"x\":[\"Age\",\"Income\",\"Years_Customer\"],\"y\":[10.5,25.8,3.1],\"marker\":{\"color\":\"#ffa94d\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-rdl1f4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>选定特征在真实数据集和合成数据集之间的标准差比较。</p>\n</blockquote>\n<p>这些图表能让你快速发现真实数据和合成数据之间基本统计量存在显著差异的特征。在上述例子中，“收入”在平均值和标准差方面都显示出比“年龄”或“客户年限”更大的相对差异，这表明合成过程对该特定特征的准确性可能较低。</p>\n<h3>重要注意事项</h3>\n<p>匹配平均值和标准差等基本统计量是一个很好的初步检查，但这<strong>不</strong>保证合成数据是完美的复制品。两个数据集可能拥有相同的平均值和标准差，但形状或分布可能截然不同。考虑一下：一个值集中在两端的数据集，其平均值可能与一个值都集中在中间的数据集相同。</p>\n<p>因此，这些基本的统计比较是评估中必要但并非充分的一步。它们能告诉你合成数据是否正确居中，以及单个特征是否具有相似的整体离散程度，但它们没有捕捉到数据结构的完整情况，也没有捕捉到特征<em>之间</em>的关系。我们需要将这种分析与目视检查以及比较整个数据分布的方法结合起来，我们将在接下来讨论这些。</p>",
+  "slug": "basic-statistical-comparisons",
+  "updates": [],
+  "references": [
+    {
+      "id": 15910,
+      "title": "Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python",
+      "author": "Peter Bruce and Andrew Bruce",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/",
+      "doi": "",
+      "note": "涵盖均值、中位数、标准差和方差等描述性统计量，这些是比较数据分布的核心内容。",
+      "order": 1,
+      "created_at": "2025-09-06T10:57:03.448698Z",
+      "updated_at": "2025-09-10T13:05:24.205575Z"
+    },
+    {
+      "id": 15911,
+      "title": "Introduction to Probability and Statistics",
+      "author": "Jeremy Orloff, Jonathan Bloom",
+      "year": "2014",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2014/",
+      "doi": "",
+      "note": "提供概率和描述性统计的基础知识，包括集中趋势和离散度量，这对于数据比较至关重要。",
+      "order": 2,
+      "created_at": "2025-09-06T10:57:03.457969Z",
+      "updated_at": "2025-09-10T13:05:31.496053Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7320,
+  "title": "集群内的服务发现",
+  "meta_title": "Kubernetes 服务发现方法",
+  "meta_description": "了解应用程序如何使用 DNS 在集群内发现其他服务并与之通信。",
+  "content": "<p>Kubernetes Service 为一组 Pod 分配稳定的 IP 地址和端口。Service 建立后，集群内的应用程序需要一种可靠的方式找到它。在应用程序代码中硬编码 Service 的 ClusterIP 并非长久之计，因为如果 Service 被删除并重建，这些 IP 可能会发生变化。Kubernetes 为此提供了一种内置机制：集群内部 DNS 系统。</p>\n<h3>集群 DNS 的作用</h3>\n<p>默认情况下，Kubernetes 集群配置有内部 DNS 服务。该服务通常由 CoreDNS 实现，它会自动为集群中创建的每个新 Service 创建 DNS 记录。应用程序的 Pod 被配置为使用此内部 DNS 服务器进行名称解析，从而使它们能够仅通过名称来定位其他服务。</p>\n<p>Service 的标准 DNS 记录遵循一个可预测的模式：</p>\n<p><code>&#x3C;service-name>.&#x3C;namespace-name>.svc.cluster.local</code></p>\n<ul>\n<li><strong><code>service-name</code></strong>: 您在配置清单中为 Service 指定的名称。</li>\n<li><strong><code>namespace-name</code></strong>: Service 所在的命名空间。</li>\n<li><strong><code>svc.cluster.local</code></strong>: 可配置的集群域名后缀。</li>\n</ul>\n<p>例如，在 <code>production</code> 命名空间中名为 <code>api-gateway</code> 的 Service，其全限定域名 (FQDN) 为 <code>api-gateway.production.svc.cluster.local</code>。当应用程序解析此名称时，集群 DNS 会返回该 Service 的 <code>ClusterIP</code>。</p>\n<p>该系统的一个显著优点是，运行在同一个命名空间中的应用程序只需使用短名称 <code>service-name</code>。例如，<code>production</code> 命名空间中的 Pod 只需连接到 <code>http://api-gateway</code> 即可访问网关。DNS 解析器会自动在本地命名空间内搜索，从而简化了应用程序配置。</p>\n<p>下图展示了这一过程。客户端 Pod 需要与后端服务通信。它不需要知道后端 Pod 的具体 IP 地址，而是对 Service 名称执行 DNS 查询。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ra6uct\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"]; edge [fontname=\"Helvetica\"]; newrank=true; compound=true; subgraph cluster_client { label=\"客户端 Pod\"; color=\"#4263eb\"; fontcolor=\"#4263eb\"; bgcolor=\"#bac8ff\"; client_pod [label=\"客户端容器\", shape=component, fillcolor=\"#748ffc\"]; } subgraph cluster_dns { label=\"集群 DNS (CoreDNS)\"; color=\"#1098ad\"; fontcolor=\"#1098ad\"; bgcolor=\"#99e9f2\"; coredns [label=\"DNS 服务\", shape=cylinder, fillcolor=\"#3bc9db\"]; } subgraph cluster_service { label=\"Service 抽象层\"; color=\"#7048e8\"; fontcolor=\"#7048e8\"; bgcolor=\"#d0bfff\"; service [label=\"my-backend (Service)\\nClusterIP: 10.100.20.15\", shape=oval, fillcolor=\"#9775fa\"]; } subgraph cluster_backend { label=\"后端 Pods\"; color=\"#37b24d\"; fontcolor=\"#37b24d\"; bgcolor=\"#b2f2bb\"; backend_pod1 [label=\"Pod 1\", shape=component, fillcolor=\"#69db7c\"]; backend_pod2 [label=\"Pod 2\", shape=component, fillcolor=\"#69db7c\"]; } client_pod -> coredns [label=\"1. 对 &#39;my-backend&#39; 的 DNS 查询\"]; coredns -> client_pod [label=\"2. 响应: 10.100.20.15\"]; client_pod -> service [label=\"3. 请求发送至 10.100.20.15\"]; service -> backend_pod1 [label=\"4. 流量由 kube-proxy 路由\"]; service -> backend_pod2 [style=dashed]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ra6uct\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>客户端 Pod 通过内部集群 DNS 解析 <code>my-backend</code> Service 名称以获取其 ClusterIP。发送到该 IP 的流量随后由 kube-proxy 自动负载均衡到其中一个健康的后端 Pod。</p>\n</blockquote>\n<h3>Pod 如何使用集群 DNS</h3>\n<p>这种集成是自动处理的。当 Pod 被调度到节点上时，kubelet 会配置其容器网络。此设置的一部分包括修改容器的 <code>/etc/resolv.conf</code> 文件。该文件告知操作系统的网络栈将 DNS 查询发送到何处。</p>\n<p>Pod 内部典型的 <code>/etc/resolv.conf</code> 如下所示：</p>\n<pre><code>nameserver 10.96.0.10\nsearch my-namespace.svc.cluster.local svc.cluster.local cluster.local\noptions ndots:5\n</code></pre>\n<p>让我们来分析一下：</p>\n<ul>\n<li><strong><code>nameserver 10.96.0.10</code></strong>: 这是集群 DNS 服务本身的 <code>ClusterIP</code>。来自此 Pod 的所有 DNS 查询都将发送到此地址。</li>\n<li><strong><code>search ...</code></strong>: 这定义了 DNS 搜索路径。当您尝试解析像 <code>api-gateway</code> 这样的短名称时，系统会按顺序尝试附加这些域名，直到找到匹配项。这就是为什么来自 <code>my-namespace</code> 命名空间的 Pod 对 <code>api-gateway</code> 的查询能成功解析为 <code>api-gateway.my-namespace.svc.cluster.local</code>。</li>\n</ul>\n<p>您可以通过在 Pod 内部运行 shell 并检查该文件来亲自验证：</p>\n<pre><code class=\"language-bash\"># 启动一个临时的 busybox pod 作为客户端使用\n$ kubectl run dns-test --image=busybox:1.28 --restart=Never -it -- rm\n\n# 进入 pod 的 shell 后，检查 resolv.conf\n/ # cat /etc/resolv.conf\nnameserver 10.96.0.10\nsearch default.svc.cluster.local svc.cluster.local cluster.local\noptions ndots:5\n\n# 使用 nslookup 解析相同命名空间中的 kubernetes 服务\n/ # nslookup kubernetes.default\nServer:    10.96.0.10\nAddress 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local\n\nName:      kubernetes.default\nAddress 1: 10.96.0.1\n</code></pre>\n<h3>环境变量：一种较旧的方法</h3>\n<p>在基于 DNS 的方法成为标准之前，Kubernetes 使用环境变量进行服务发现。当创建一个新 Pod 时，kubelet 会为集群中<em>已经存在</em>的每个 Service 注入一组环境变量。</p>\n<p>对于名为 <code>my-api</code> 且暴露端口 <code>8080</code> 的 Service，新 Pod 将看到如下变量：</p>\n<pre><code>MY_API_SERVICE_HOST=10.101.45.12\nMY_API_SERVICE_PORT=8080\nMY_API_PORT=tcp://10.101.45.12:8080\nMY_API_PORT_8080_TCP=tcp://10.101.45.12:8080\nMY_API_PORT_8080_TCP_PROTO=tcp\nMY_API_PORT_8080_TCP_PORT=8080\nMY_API_PORT_8080_TCP_ADDR=10.101.45.12\n</code></pre>\n<p>这种方法存在明显的顺序依赖性：Service 必须在任何需要连接到它的客户端 Pod 之前创建。如果您先创建客户端 Pod，然后再创建 Service，则客户端 Pod 将不会收到环境变量，从而无法找到该 Service。</p>\n<p>由于这个限制，使用内部集群 DNS 是推荐的、且更具灵活性的服务发现方式。它允许您的组件按任何顺序创建并动态地相互发现。</p>",
+  "slug": "service-discovery-within-cluster",
+  "updates": [],
+  "references": [
+    {
+      "id": 19899,
+      "title": "DNS for Services and Pods",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/",
+      "doi": "",
+      "note": "官方文档，详细介绍了 Kubernetes 的内置 DNS 服务，包括 FQDN 和 Pod resolv.conf 配置如何用于服务发现。",
+      "order": 1,
+      "created_at": "2025-09-06T13:16:41.938693Z",
+      "updated_at": "2025-09-10T05:19:27.405983Z"
+    },
+    {
+      "id": 19900,
+      "title": "Services",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/services-networking/service/",
+      "doi": "",
+      "note": "官方文档，提供了 Kubernetes Service 的基础知识，包括其类型及其在抽象 Pod 网络访问中的作用。",
+      "order": 2,
+      "created_at": "2025-09-06T13:16:41.942401Z",
+      "updated_at": "2025-09-10T05:19:26.298139Z"
+    },
+    {
+      "id": 19901,
+      "title": "Kubernetes Up & Running: Dive into the Future of Infrastructure",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://oreilly.com/catalog/errata.csp?isbn=9781492046530",
+      "doi": "",
+      "note": "一本关于 Kubernetes 架构的书籍，其中包括有关 DNS 等服务发现机制的章节。",
+      "order": 3,
+      "created_at": "2025-09-06T13:16:41.946125Z",
+      "updated_at": "2025-09-10T05:19:45.149779Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

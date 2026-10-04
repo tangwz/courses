@@ -1,0 +1,61 @@
+{
+  "id": 1827,
+  "title": "动手实践：使用 GroupBy 汇总数据",
+  "meta_title": "练习 Pandas GroupBy",
+  "meta_description": "应用 groupby 操作以多种方式细分和聚合数据。",
+  "content": "<p>分组和聚合是数据操作中的基本概念。我们将通过使用示例数据集的多个例子，演示 Pandas <code>groupby()</code> 的分拆-应用-组合模式。</p>\n<h3>设置示例数据</h3>\n<p>首先，确保已导入 Pandas。如果您在 Jupyter Notebook 或 Python 脚本中跟随操作，请从这里开始：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np # 通常与 Pandas 一起使用很有用\n</code></pre>\n<p>现在，我们来创建一个简单的 DataFrame，它表示不同产品类别在各个区域的销售数据。这将是我们练习的数据。</p>\n<pre><code class=\"language-python\"># 创建示例数据\ndata = {'Category': ['Electronics', 'Clothing', 'Electronics', 'Groceries', 'Clothing', 'Groceries', 'Electronics', 'Clothing'],\n        'Region': ['North', 'South', 'North', 'East', 'West', 'East', 'West', 'South'],\n        'Sales': [1200, 300, 1500, 250, 450, 200, 1800, 350],\n        'Quantity': [2, 3, 1, 5, 4, 4, 3, 4]}\nsales_df = pd.DataFrame(data)\n\nprint(\"示例销售数据：\")\nprint(sales_df)\n</code></pre>\n<p>这应该输出：</p>\n<pre><code>Sample Sales Data:\n      Category Region  Sales  Quantity\n0  Electronics  North   1200         2\n1     Clothing  South    300         3\n2  Electronics  North   1500         1\n3    Groceries   East    250         5\n4     Clothing   West    450         4\n5    Groceries   East    200         4\n6  Electronics   West   1800         3\n7     Clothing  South    350         4\n</code></pre>\n<h3>按单列分组</h3>\n<p>我们的首要任务是找出每个产品<code>类别</code>的总销售额。这需要按<code>类别</code>拆分 DataFrame，然后对每个组内的<code>销售额</code>列应用 <code>sum()</code> 函数，最后合并结果。</p>\n<pre><code class=\"language-python\"># 按“类别”分组并计算每个类别的“销售额”总和\ncategory_sales_sum = sales_df.groupby('Category')['Sales'].sum()\n\nprint(\"\\n每个类别的总销售额：\")\nprint(category_sales_sum)\n</code></pre>\n<p>输出：</p>\n<pre><code>Total Sales per Category:\nCategory\nClothing        1100\nElectronics     4500\nGroceries        450\nName: Sales, dtype: int64\n</code></pre>\n<p>请注意，结果是一个 Pandas Series，其索引是我们分组的<code>类别</code>，值是汇总后的<code>销售额</code>。</p>\n<p>如果我们想知道每个类别的<em>平均</em>销售数量呢？</p>\n<pre><code class=\"language-python\"># 按“类别”分组并计算“数量”的平均值\ncategory_quantity_avg = sales_df.groupby('Category')['Quantity'].mean()\n\nprint(\"\\n每个类别的平均数量：\")\nprint(category_quantity_avg)\n</code></pre>\n<p>输出：</p>\n<pre><code>Average Quantity per Category:\nCategory\nClothing       3.666667\nElectronics    2.000000\nGroceries      4.500000\nName: Quantity, dtype: float64\n</code></pre>\n<p>您也可以类似地应用其他聚合函数，例如 <code>count()</code>、<code>size()</code>、<code>min()</code>、<code>max()</code>、<code>std()</code>（标准差）等。请记住，<code>count()</code> 不包括缺失值 (NaN)，而 <code>size()</code> 包括它们。</p>\n<h3>应用多个聚合操作</h3>\n<p>通常，您会希望一次性计算每个组的多个汇总统计量。<code>.agg()</code> 方法非常适合此目的。</p>\n<p>我们来计算每个<code>类别</code>的总销售额 (<code>sum</code>) 和平均数量 (<code>mean</code>)。</p>\n<pre><code class=\"language-python\"># 按“类别”分组并应用多个聚合操作\ncategory_summary = sales_df.groupby('Category').agg(\n    Total_Sales=('Sales', 'sum'),\n    Average_Quantity=('Quantity', 'mean'),\n    Number_of_Sales=('Sales', 'count') # 统计非缺失的销售条目\n)\n\nprint(\"\\n每个类别的汇总统计量：\")\nprint(category_summary)\n</code></pre>\n<p>输出：</p>\n<pre><code>Summary Statistics per Category:\n             Total_Sales  Average_Quantity  Number_of_Sales\nCategory\nClothing            1100          3.666667                3\nElectronics         4500          2.000000                3\nGroceries            450          4.500000                2\n</code></pre>\n<p>在这里，我们向 <code>.agg()</code> 传递了一个字典。字典的键（'Total_Sales'、'Average_Quantity'、'Number_of_Sales'）成为结果 DataFrame 中的新列名。值是元组，其中第一个元素是要聚合的原始列（'Sales' 或 'Quantity'），第二个元素是聚合函数（'sum'、'mean'、'count'）。这提供了一个清晰且有条理的汇总。</p>\n<p>或者，如果您想将相同的聚合函数集应用于所有数值列（或选定列），可以传递一个函数列表：</p>\n<pre><code class=\"language-python\"># 计算每个类别的最小和最大销售额\ncategory_sales_min_max = sales_df.groupby('Category')['Sales'].agg(['min', 'max'])\n\nprint(\"\\n每个类别的最小和最大销售额：\")\nprint(category_sales_min_max)\n</code></pre>\n<p>输出：</p>\n<pre><code>Min and Max Sales per Category:\n             min   max\nCategory\nClothing     300   450\nElectronics 1200  1800\nGroceries    200   250\n</code></pre>\n<h3>按多列分组</h3>\n<p>通过向 <code>groupby()</code> 传递列名列表，我们可以创建更细粒度的分组。我们来找出<code>区域</code>和<code>类别</code>每个组合的总销售额。</p>\n<pre><code class=\"language-python\"># 同时按“区域”和“类别”分组，然后对“销售额”求和\nregion_category_sales = sales_df.groupby(['Region', 'Category'])['Sales'].sum()\n\nprint(\"\\n每个区域和类别的总销售额：\")\nprint(region_category_sales)\n</code></pre>\n<p>输出：</p>\n<pre><code>Total Sales per Region and Category:\nRegion  Category\nEast    Groceries     450\nNorth   Electronics  2700\nSouth   Clothing      650\nWest    Clothing      450\n        Electronics  1800\nName: Sales, dtype: int64\n</code></pre>\n<p>结果是一个带有 <code>MultiIndex</code>（区域、类别）的 Series。这个分层索引表示分组的组合。</p>\n<p>您也可以在这里应用多个聚合操作：</p>\n<pre><code class=\"language-python\"># 同时按“区域”和“类别”分组，计算销售额总和与数量平均值\nregion_category_summary = sales_df.groupby(['Region', 'Category']).agg(\n    Total_Sales=('Sales', 'sum'),\n    Average_Quantity=('Quantity', 'mean')\n)\n\nprint(\"\\n每个区域和类别的汇总：\")\nprint(region_category_summary)\n</code></pre>\n<p>输出：</p>\n<pre><code>Summary per Region and Category:\n                     Total_Sales  Average_Quantity\nRegion Category\nEast   Groceries             450               4.5\nNorth  Electronics          2700               1.5\nSouth  Clothing              650               3.5\nWest   Clothing              450               4.0\n       Electronics          1800               3.0\n</code></pre>\n<p>这给我们一个行上带有 <code>MultiIndex</code> 的 DataFrame。</p>\n<h3>分组数据的可视化</h3>\n<p>聚合数据通常通过可视化更容易理解。我们来使用 Plotly 创建一个简单的条形图，显示每个类别的总销售额。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-hrtdoq\" \n              data-plot-definition='{\"data\":[{\"type\":\"bar\",\"x\":[\"Clothing\",\"Electronics\",\"Groceries\"],\"y\":[1100,4500,450],\"marker\":{\"color\":[\"#228be6\",\"#ae3ec9\",\"#74b816\"]}}],\"layout\":{\"title\":{\"text\":\"各产品类别的总销售额\"},\"xaxis\":{\"title\":{\"text\":\"类别\"}},\"yaxis\":{\"title\":{\"text\":\"总销售额 ($)\"}},\"template\":\"plotly_white\",\"width\":600,\"height\":400}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-hrtdoq\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>各产品类别产生的总销售额。在这个小型数据集中，电子产品明显占主导地位。</p>\n</blockquote>\n<h3>练习任务</h3>\n<p>现在，请使用 <code>sales_df</code> DataFrame 独自尝试以下任务：</p>\n<ol>\n<li>找出每个<code>区域</code>的平均<code>销售额</code>。</li>\n<li>统计每个<code>区域</code>的销售记录数量 (<code>size()</code>)。</li>\n<li>找出每个<code>区域</code>和<code>类别</code>组合中的<code>最大</code>销售数量。</li>\n<li>计算每个<code>区域</code>的<code>销售额</code>总和与<code>数量</code>总和。使用 <code>.agg()</code> 方法。</li>\n</ol>\n<p>这些练习巩固了您应用 <code>groupby()</code> 和聚合函数，从数据中提取有价值汇总的不同方法。掌握分组是使用 Pandas 进行数据分析的重要一步。</p>",
+  "slug": "groupby-summarizing-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5510,
+      "title": "Group by: split-apply-combine",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html",
+      "doi": "",
+      "note": "Pandas官方用户指南中关于数据分组的部分，详细介绍了拆分-应用-组合模式和核心的groupby功能。",
+      "order": 1,
+      "created_at": "2025-09-05T01:11:04.631101Z",
+      "updated_at": "2025-09-08T02:38:41.449564Z"
+    },
+    {
+      "id": 5511,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于使用Python和Pandas进行数据操作的著名书籍，其中有一章详细介绍了使用groupby和聚合方法进行数据分组。",
+      "order": 2,
+      "created_at": "2025-09-05T01:11:04.705503Z",
+      "updated_at": "2025-09-08T02:38:42.255406Z"
+    },
+    {
+      "id": 5512,
+      "title": "pandas.DataFrame.agg",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.agg.html",
+      "doi": "",
+      "note": ".agg()方法的官方API参考，展示了如何在分组数据上执行多个和命名聚合。",
+      "order": 3,
+      "created_at": "2025-09-05T01:11:04.709245Z",
+      "updated_at": "2025-09-08T02:38:42.036556Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

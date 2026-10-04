@@ -1,0 +1,61 @@
+{
+  "id": 7051,
+  "title": "动手实践：实现一个基本 MoE 层",
+  "meta_title": "动手实践：在 PyTorch 中实现一个基本 MoE 层",
+  "meta_description": "一个实用指南，介绍如何使用 PyTorch 框架从零开始实现一个可用的混合专家层。",
+  "content": "<p>将混合专家层（Mixture of Experts layer）的架构转化为一个实用的 PyTorch 实现，需要构建一个包含门控和专家逻辑的独立 <code>nn.Module</code>。对于这个初步的实现，我们将侧重于一种简单而有效的 <code>top-1</code> 路由策略，即每个 token 被路由到一个最合适的专家。这为我们在后续章节中处理更复杂的 <code>top-k</code> 和开关式机制打下了良好开端。</p>\n<p>我们将使用三个主要部分来构建 MoE 层：</p>\n<ol>\n<li><strong>专家模块：</strong> 一个标准的、处理 token 的前馈网络。</li>\n<li><strong>门控网络：</strong> 一个小型网络，用于决定哪个专家应处理每个 token。</li>\n<li><strong>MoE 层：</strong> 负责协调路由并组合输出的主类。</li>\n</ol>\n<h3>专家模块</h3>\n<p>在大多数基于 Transformer 的 MoE 模型中，\"专家\"就是简单的前馈网络（FFN）。每个专家在结构上相同，但由于接收到的数据有特殊性，它们在训练过程中会学习到不同的功能。让我们定义一个简单的 <code>Expert</code> 模块。它包含两个线性层，中间夹着一个 GELU 激活函数 (activation function)，这是现代 Transformer 中常见的模式。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Expert(nn.Module):\n    \"\"\"\n    一个简单的前馈网络专家。\n    它处理形状为 (..., d_model) 的输入张量，并返回相同形状的输出。\n    \"\"\"\n    def __init__(self, d_model: int, d_hidden: int):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(d_model, d_hidden),\n            nn.GELU(),\n            nn.Linear(d_hidden, d_model)\n        )\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        return self.net(x)\n</code></pre>\n<p>这个 <code>Expert</code> 类是一个标准的构建块。MoE 层有趣的部分并非专家本身，而是模型如何将信息路由到它们那里。</p>\n<h3>完整的 MoE 层</h3>\n<p>现在我们将组装主 <code>MoELayer</code> 类。这个类将包含门控网络和专家模块列表。<code>forward</code> 方法的实现包含了 token 分派的核心逻辑。</p>\n<p>前向传播的流程如下：</p>\n<ol>\n<li>获取 token 嵌入 (embedding)的输入张量，通常形状为 <code>(batch_size, sequence_length, d_model)</code>。</li>\n<li>将输入重塑为 <code>(batch_size * sequence_length, d_model)</code>，以便独立处理每个 token。</li>\n<li>将展平的 token 通过一个线性层（门控）以获取每个专家的 logits。</li>\n<li>对 logits 应用 <code>softmax</code> 函数以得到门控权重 (weight) <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>g</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">g(x)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">g</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span></span></span></span>。</li>\n<li>对于我们的 <code>top-1</code> 路由器，为每个 token 找出得分最高的专家。</li>\n<li>将每个 token 分派到其指定的专家。</li>\n<li>收集专家们的输出并将它们组合起来。在 <code>top-1</code> 路由中，输出就是所选专家的输出，并按其门控分数加权。</li>\n<li>将最终张量重塑回原始输入形状。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1cw4qir\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=line;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n    edge [fontname=\"Helvetica\"];\n\n    // 节点\n    input [label=\"输入 Token\\n(S, D)\", fillcolor=\"#a5d8ff\"];\n    gating [label=\"门控网络\\n(线性层)\", fillcolor=\"#ffd8a8\"];\n    softmax [label=\"Softmax\", shape=oval, fillcolor=\"#ffec99\"];\n    routing_logic [label=\"Top-1 选择\\n(argmax)\", shape=diamond, fillcolor=\"#ffc9c9\"];\n\n    subgraph cluster_experts {\n        label=\"专家模块\";\n        bgcolor=\"#e9ecef\";\n        style=\"rounded\";\n        expert1 [label=\"专家 1\", fillcolor=\"#b2f2bb\"];\n        expert2 [label=\"专家 2\", fillcolor=\"#b2f2bb\"];\n        expert_n [label=\"...\", shape=plaintext];\n        expert_k [label=\"专家 K\", fillcolor=\"#b2f2bb\"];\n    }\n\n    output [label=\"最终输出\\n(S, D)\", fillcolor=\"#bac8ff\"];\n\n    // 边\n    input -> gating;\n    gating -> softmax [label=\"Logits\"];\n    softmax -> routing_logic [label=\"权重 g(x)\"];\n\n    routing_logic -> expert1 [label=\"分派\", style=dashed, color=\"#868e96\"];\n    routing_logic -> expert2 [label=\"分派\", style=dashed, color=\"#868e96\"];\n    routing_logic -> expert_k [label=\"分派\", style=dashed, color=\"#868e96\"];\n\n    expert1 -> output [label=\"收集\", style=dashed, color=\"#868e96\"];\n    expert2 -> output [label=\"收集\", style=dashed, color=\"#868e96\"];\n    expert_k -> output [label=\"收集\", style=dashed, color=\"#868e96\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1cw4qir\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p><code>top-1</code> MoE 层的数据流程。Token 被传递到门控网络，门控网络选择一个专家进行处理。然后收集结果以形成最终输出。</p>\n</blockquote>\n<p>这是 <code>MoELayer</code> 类的实现。请仔细注意 <code>forward</code> 方法中的注释，它们说明了分派机制。</p>\n<pre><code class=\"language-python\">class MoELayer(nn.Module):\n    \"\"\"\n    混合专家层。\n\n    参数：\n        d_model (int): 输入和输出的维度。\n        num_experts (int): 专家总数。\n        d_hidden (int): 每个专家 FFN 的隐藏层维度。\n        top_k (int): 每个 token 路由到的专家数量。目前只支持 top_k=1。\n    \"\"\"\n    def __init__(self, d_model: int, num_experts: int, d_hidden: int, top_k: int = 1):\n        super().__init__()\n        if top_k != 1:\n            raise ValueError(\"This basic implementation only supports top_k=1\")\n\n        self.d_model = d_model\n        self.num_experts = num_experts\n        self.top_k = top_k\n\n        # 门控网络\n        self.gate = nn.Linear(d_model, num_experts)\n        # 专家网络\n        self.experts = nn.ModuleList([Expert(d_model, d_hidden) for _ in range(num_experts)])\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        \"\"\"\n        MoE 层的前向传播。\n\n        参数：\n            x (torch.Tensor): 形状为 (batch_size, seq_len, d_model) 的输入张量\n\n        返回：\n            torch.Tensor: 形状为 (batch_size, seq_len, d_model) 的输出张量\n        \"\"\"\n        batch_size, seq_len, d_model = x.shape\n\n        # 重塑以进行 token 级别的处理\n        x = x.view(-1, d_model) # (batch_size * seq_len, d_model)\n\n        # 1. 获取门控 logits 和权重\n        router_logits = self.gate(x)\n        gating_weights = F.softmax(router_logits, dim=1)\n\n        # 2. 为每个 token 选择 top-1 专家\n        # topk 返回一个元组 (值, 索引)\n        top_k_weights, top_k_indices = torch.topk(gating_weights, self.top_k, dim=1)\n\n        # 对于 top-1，top_k_indices 形状为 (num_tokens, 1)。我们将其压缩。\n        expert_indices = top_k_indices.squeeze(1)\n\n        # 3. 创建一个最终输出张量，初始化为零\n        final_output = torch.zeros_like(x)\n\n        # 4. 将 token 分派到其选定的专家\n        # 这是一种简单但性能不高的方法。\n        # 实际中，分派和组合步骤经过了大量优化。\n        for i in range(self.num_experts):\n            # 找到所有路由到该专家的 token\n            token_mask = (expert_indices == i)\n\n            # 如果没有 token 路由，则继续\n            if token_mask.sum() == 0:\n                continue\n\n            # 获取当前专家的 token\n            selected_tokens = x[token_mask]\n\n            # 通过专家处理 token\n            expert_output = self.experts[i](selected_tokens)\n\n            # 获取相应的门控权重以缩放输出\n            # 对于 top-1，我们可以直接使用 top_k_weights，因为它形状为 (num_tokens, 1)\n            # 我们选择路由到该专家的 token 的权重\n            gating_scores = top_k_weights[token_mask]\n\n            # 将缩放后的专家输出放回最终输出张量\n            final_output[token_mask] = expert_output * gating_scores\n\n        # 重塑回原始维度\n        return final_output.view(batch_size, seq_len, d_model)\n\n</code></pre>\n<h3>运行前向传播</h3>\n<p>让我们用一些模拟数据测试我们的实现，以确保它按预期运行。我们将实例化 <code>MoELayer</code> 并将一个随机张量传递给它。</p>\n<pre><code class=\"language-python\"># Configuration\nbatch_size = 4\nseq_len = 16\nd_model = 128\nnum_experts = 8\nd_hidden = 512 # Hidden dimension of each expert FFN\n\n# Create a random input tensor\ninput_tensor = torch.randn(batch_size, seq_len, d_model)\n\n# Instantiate the MoE layer\nmoe_layer = MoELayer(d_model=d_model, num_experts=num_experts, d_hidden=d_hidden, top_k=1)\n\n# Perform a forward pass\noutput_tensor = moe_layer(input_tensor)\n\n# Print shapes to verify\nprint(\"Input shape:\", input_tensor.shape)\nprint(\"Output shape:\", output_tensor.shape)\n\n# Check that the output shape is correct\nassert input_tensor.shape == output_tensor.shape\n</code></pre>\n<p>运行这段代码会产生以下输出，确认该层正确处理了输入并返回了相同维度的张量。</p>\n<pre><code class=\"language-text\">Input shape: torch.Size([4, 16, 128])\nOutput shape: torch.Size([4, 16, 128])\n</code></pre>\n<h3>分析和局限性</h3>\n<p>这个实现提供了一个可用的 <code>top-1</code> MoE 层，并演示了稀疏路由的基本机制。但有必要认识到它的局限性，这些局限性也突出了为生产环境构建此类模型的复杂性：</p>\n<ul>\n<li><strong>分派效率低：</strong> 遍历每个专家的 <code>for</code> 循环易于理解，但效率极低。它不能很好地并行化专家计算，并引入了显著的开销。高性能的 MoE 实现使用优化的内核在 GPU 上高效执行这种分派和收集操作。</li>\n<li><strong>缺少辅助损失：</strong> 我们尚未实现本章前面讨论的负载均衡辅助损失。<code>forward</code> 方法需要返回 <code>router_logits</code> 和 <code>gating_weights</code>，这样上层训练循环就可以计算此损失并将其添加到主任务损失中。这是稳定训练的一个重要组成部分。</li>\n<li><strong>仅限于 <code>top-1</code>：</strong> 我们的代码是为 <code>top_k=1</code> 硬编码的。将其扩展到 <code>top_k > 1</code> 将需要一种更复杂的策略来组合多个专家为一个 token 提供的输出。</li>\n</ul>\n<p>本次动手实践是一个可靠的起点。您现在拥有了一个可在此基础上构建的 MoE 层工作模型。在后续章节中，我们将通过考察高级路由策略、训练优化技术以及高效大规模部署的方法来解决这些局限性。</p>",
+  "slug": "hands-on-basic-moe-layer",
+  "updates": [],
+  "references": [
+    {
+      "id": 19536,
+      "title": "Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer",
+      "author": "Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean",
+      "year": "2017",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1701.06538",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1701.06538",
+      "doi": "10.48550/arXiv.1701.06538",
+      "note": "介绍了稀疏门控混合专家（MoE）层，详细阐述了其架构、top-k 路由以及负载均衡辅助损失。本文为讨论 MoE 层提供了基础。",
+      "order": 1,
+      "created_at": "2025-09-06T13:10:05.676382Z",
+      "updated_at": "2025-09-07T15:24:23.910940Z"
+    },
+    {
+      "id": 19537,
+      "title": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
+      "author": "William Fedus, Barret Zoph, Noam Shazeer",
+      "year": "2022",
+      "publisher": "",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "23",
+      "pages": "1-39",
+      "url": "https://arxiv.org/abs/2101.03961",
+      "doi": "10.48550/arXiv.2101.03961",
+      "note": "讨论了现代 MoE 架构，包括本节中实现的 top-1 路由策略，以及将 MoE 模型扩展到大量参数的方法。它还详细阐述了高效实现和辅助损失的作用。",
+      "order": 2,
+      "created_at": "2025-09-06T13:10:05.761239Z",
+      "updated_at": "2025-09-07T15:24:23.204225Z"
+    },
+    {
+      "id": 19538,
+      "title": "torch.nn - A powerful building block",
+      "author": "PyTorch Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/nn.html",
+      "doi": "",
+      "note": "PyTorch 官方 `torch.nn` 模块文档，该模块用于构建 `Expert` 和 `MoELayer` 等神经网络层和模型。提供了详细的 API 参考和使用示例。",
+      "order": 3,
+      "created_at": "2025-09-06T13:10:05.765243Z",
+      "updated_at": "2025-09-07T15:24:22.425332Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

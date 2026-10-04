@@ -1,0 +1,61 @@
+{
+  "id": 2222,
+  "title": "优化 NumPy 和 Pandas 的方法",
+  "meta_title": "优化 NumPy 和 Pandas 代码",
+  "meta_description": "学习向量化和高效数据类型等方法，以加速 NumPy 和 Pandas 操作。",
+  "content": "<p>尽管 NumPy 和 Pandas 为数值计算和数据处理提供了强大的抽象能力，但要达到最佳性能通常需要有意识的努力。如果实现方式未能优化，看似简单的操作可能导致计算开销大或内存占用高。在机器学习 (machine learning)场景中，这一点尤为重要，因为数据集可能很庞大，并且在实验和模型训练过程中数据处理步骤会频繁重复。专注于高效使用 NumPy 和 Pandas 可以直接带来更快的迭代，并能够处理更大的数据集。有多种技术可以用于加快代码运行速度并减少内存占用。</p>\n<h3>使用向量 (vector)化</h3>\n<p>优化 NumPy 和 Pandas 代码的最重要方法是<strong>向量化 (quantization)</strong>。向量化涉及将计算表示为对整个数组或 Series/DataFrames 的操作，而不是使用显式 Python 循环逐个元素迭代。</p>\n<p>NumPy 的核心优势在于其通用函数 (ufuncs)。这些函数对 <code>ndarray</code> 对象进行逐元素操作，并在底层执行高度优化的 C 或 Fortran 代码。当你编写 <code>c = a + b</code>（其中 <code>a</code> 和 <code>b</code> 是 NumPy 数组）时，NumPy 不会在 Python 中逐元素循环。相反，它通过一个快速的编译循环完成加法运算。</p>\n<p>考虑添加两个大型数组：</p>\n<pre><code class=\"language-python\">import numpy as np\nimport time\n\nsize = 1_000_000\na = np.random.rand(size)\nb = np.random.rand(size)\n\n# 低效的基于循环的方法\nstart_loop = time.time()\nc_loop = np.zeros(size)\nfor i in range(size):\n    c_loop[i] = a[i] + b[i]\nend_loop = time.time()\nprint(f\"Python 循环耗时: {end_loop - start_loop:.6f} 秒\")\n\n# 高效的向量化方法\nstart_vec = time.time()\nc_vec = a + b # 使用 NumPy 的向量化 '+' ufunc\nend_vec = time.time()\nprint(f\"向量化耗时: {end_vec - start_vec:.6f} 秒\")\n\n# >> Python 循环耗时: 0.178451 秒 # 示例计时\n# >> 向量化耗时: 0.002135 秒   # 示例计时\n</code></pre>\n<p>差异巨大。向量化操作快了几个数量级，因为它避免了 Python 对每个元素进行解释循环的开销，并使用了预编译的优化代码。Pandas 操作通常构建在 NumPy 数组之上，因此同样的原则适用。总是寻找方法，将作用于数组或 Series 元素的 Python 循环替换为等效的向量化 NumPy 或 Pandas 函数（例如，算术运算符、比较运算符、数学函数如 <code>np.log</code>、<code>np.exp</code>、<code>df.abs()</code>）。</p>\n<h3>使用高效索引和选择</h3>\n<p>在 Pandas DataFrame 中访问和修改数据的方式会显著影响性能。虽然使用 <code>df.iterrows()</code> 等方法逐行迭代可能看起来直观，但它通常非常慢，因为它涉及为每一行创建一个新的 Series 对象。</p>\n<p>优先使用向量 (vector)化布尔索引或基于标签/位置的 <code>.loc</code> 和 <code>.iloc</code> 索引。</p>\n<ul>\n<li><strong>布尔索引：</strong> <code>df[df['column'] > value]</code> 对于基于条件筛选行非常高效。</li>\n<li><strong><code>.loc</code>：</strong> 通过标签（索引和列名）选择数据。<code>df.loc[row_labels, column_labels]</code></li>\n<li><strong><code>.iloc</code>：</strong> 通过整数位置选择数据。<code>df.iloc[row_indices, column_indices]</code></li>\n</ul>\n<p>比较使用迭代和布尔索引进行筛选：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\nimport time\n\n# 示例 DataFrame\ndf = pd.DataFrame({\n    'value': np.random.randint(0, 100, size=500_000),\n    'category': np.random.choice(['X', 'Y', 'Z'], size=500_000)\n})\n\n# 使用 .iterrows() 的慢速迭代\nstart_iter = time.time()\nselected_iter = []\nfor index, row in df.iterrows():\n    if row['value'] > 50 and row['category'] == 'X':\n        selected_iter.append(index)\nresult_iter = df.loc[selected_iter]\nend_iter = time.time()\nprint(f\".iterrows() 耗时: {end_iter - start_iter:.6f} 秒\")\n\n# 快速布尔索引\nstart_bool = time.time()\ncondition = (df['value'] > 50) &#x26; (df['category'] == 'X')\nresult_bool = df[condition]\nend_bool = time.time()\nprint(f\"布尔索引耗时: {end_bool - start_bool:.6f} 秒\")\n\n# >> .iterrows() 耗时: 4.351201 秒       # 示例计时\n# >> 布尔索引耗时: 0.015978 秒 # 示例计时\n</code></pre>\n<p>同样，向量化 (quantization)方法（布尔索引）显示出明显更好的性能。当通过标签或位置选择特定行/列时，使用 <code>.loc</code> 或 <code>.iloc</code>；并使用布尔掩码进行条件筛选。</p>\n<h3>使用合适的数据类型优化内存占用</h3>\n<p>NumPy 和 Pandas 通常默认使用 64 位整数 (<code>int64</code>) 和浮点数 (<code>float64</code>)。虽然这些提供了高精度和广范围，但它们可能消耗比你特定数据所需更多的内存。如果你的整数值相对较小，或者你不需要 64 位浮点的全部精度，你通常可以将这些类型<strong>降级</strong>为更小的变体，如 <code>int32</code>、<code>int16</code>、<code>float32</code> 等。这可以带来大量内存节省，尤其对于大型数据集，进而可以加速计算，因为更多数据可以放入 CPU 缓存。</p>\n<p>使用 <code>df.info(memory_usage='deep')</code> 来检查 DataFrame 的内存占用。你可以使用 <code>.astype()</code> 方法更改数据类型。</p>\n<pre><code class=\"language-python\"># 假设 'data' 是上一节的 DataFrame\nprint(\"---\n--- 原始内存占用 ---\")\ndata.info(memory_usage='deep')\n\n# 降级数据类型\ndata_optimized = data.copy()\ndata_optimized['value'] = data_optimized['value'].astype('int16') # 最大值为 99，int16 足以容纳\n# 假设浮点精度允许使用 float32\n# data_optimized['some_float_col'] = data_optimized['some_float_col'].astype('float32')\n\nprint(\"\\n--- 优化后的内存占用 (整数) ---\")\ndata_optimized.info(memory_usage='deep')\n</code></pre>\n<p>另一个重要的优化是在 Pandas 中对具有有限数量唯一值（低基数）的字符串列使用 <strong><code>category</code></strong> 数据类型。在内部，Pandas 使用映射到唯一字符串值的整数代码表示分类数据。这比存储重复字符串的内存效率高得多。</p>\n<pre><code class=\"language-python\"># 继续使用前面的例子\nmem_before_cat = data_optimized.memory_usage(deep=True).sum()\n\n# 将 'category' 列转换为分类类型\ndata_optimized['category'] = data_optimized['category'].astype('category')\n\nmem_after_cat = data_optimized.memory_usage(deep=True).sum()\n\nprint(\"\\n---\n--- 优化后的内存占用 (分类) ---\")\ndata_optimized.info(memory_usage='deep')\n\nprint(f\"\\n转换为分类类型前内存: {mem_before_cat / (1024**2):.2f} MB\")\nprint(f\"转换为分类类型后内存:  {mem_after_cat / (1024**2):.2f} MB\")\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1n6gg75\" \n              data-plot-definition='{\"layout\": {\"title\": \"DataFrame 内存占用优化\", \"xaxis\": {\"title\": \"数据类型策略\"}, \"yaxis\": {\"title\": \"内存占用 (MB)\"}, \"barmode\": \"group\"}, \"data\": [{\"type\": \"bar\", \"name\": \"原始\", \"x\": [\"整数\", \"字符串/对象\"], \"y\": [3.81, 31.4], \"marker\": {\"color\": \"#fa5252\"}}, {\"type\": \"bar\", \"name\": \"优化 (整数降级)\", \"x\": [\"整数\", \"字符串/对象\"], \"y\": [0.95, 31.4], \"marker\": {\"color\": \"#ff922b\"}}, {\"type\": \"bar\", \"name\": \"优化 (整数降级 + 分类)\", \"x\": [\"整数\", \"字符串/对象\"], \"y\": [0.95, 0.48], \"marker\": {\"color\": \"#51cf66\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1n6gg75\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>50 万行 DataFrame 在应用整数降级和分类转换前后的内存使用对比。实际节省取决于数据特性。</p>\n</blockquote>\n<p>选择合适的数据类型是高效管理内存资源的简单而有效的方法。</p>\n<h3>避免不必要的副本（视图与副本）</h3>\n<p>NumPy 和 Pandas 操作有时返回原始数据的<strong>视图</strong>，有时返回<strong>副本</strong>。视图与原始数组或 DataFrame 共享相同的底层数据缓冲区。修改视图会修改原始对象。副本是一个全新的对象，拥有自己的数据缓冲区。</p>\n<p>这种区别很重要。如果你修改了你认为是临时子集的东西，而它是一个视图，就可能无意中更改你的主要数据集。相反，如果你操作的是副本，而期望修改会影响原始数据，则会导致错误。</p>\n<p>Pandas 试图通过 <code>SettingWithCopyWarning</code> 警告你可能存在的模糊情况。这通常在<strong>链式索引</strong>时出现，例如 <code>df[condition]['column'] = value</code>。不清楚第一个选择 (<code>df[condition]</code>) 返回的是视图还是副本。如果它是一个副本，则随后的赋值 (<code>['column'] = value</code>) 会修改这个临时副本，然后该副本被丢弃，原始 <code>df</code> 保持不变。</p>\n<p>为避免模糊不清并确保你的赋值按预期工作：</p>\n<ol>\n<li>使用 <code>.loc</code> 进行基于标签/条件的赋值：<code>df.loc[condition, 'column'] = value</code>。这直接操作原始 DataFrame。</li>\n<li>如果你确实需要切片或筛选后的 DataFrame 的独立副本以进行单独操作，请显式使用 <code>.copy()</code> 方法：<code>subset = df[df['column'] > value].copy()</code>。</li>\n</ol>\n<p>理解和管理视图与副本可避免一些不易察觉的错误，并确保数据操作可预测。</p>\n<h3>使用内置函数</h3>\n<p>NumPy 和 Pandas 为聚合（<code>sum</code>、<code>mean</code>、<code>median</code>、<code>std</code>、<code>count</code>）、转换（<code>cumsum</code>、<code>cumprod</code>）等常见操作提供了丰富的内置函数集。这些函数几乎总是用优化的 C 代码实现，并运用向量 (vector)化。</p>\n<p>当存在向量化 (quantization)替代方案时，优先使用这些内置函数，而不是编写自己的 Python 循环或可能较慢的方法，如 <code>apply</code>。</p>\n<ul>\n<li><strong>聚合操作：</strong> <code>df.sum()</code>、<code>df.mean()</code>、<code>df.groupby('group_col').agg(['mean', 'std'])</code> 都高度优化。</li>\n<li><strong>转换操作：</strong> <code>df['col'].cumsum()</code>、<code>df.rank()</code>。</li>\n</ul>\n<p>Pandas 中的 <code>apply</code> 方法（<code>df.apply(func, axis=...)</code>）可用于逐行或逐列应用自定义函数。然而，请注意 <code>apply</code> 通常在幕后涉及迭代，如果存在完全向量化的方法，这会慢得多。优先考虑向量化选项，然后再使用 <code>apply</code>。如果必须使用 <code>apply</code>，尽量确保所应用的函数本身在内部也使用了向量化操作。</p>\n<p>通过持续应用这些方法，专注于向量化、高效索引、合适的数据类型、审慎的副本/视图处理以及内置函数，你可以显著提升 NumPy 和 Pandas 代码在机器学习 (machine learning)工作流中的性能，并减少内存占用。这会带来更快的开发周期，以及有效处理更大、更复杂数据集的能力。</p>",
+  "slug": "optimizing-numpy-pandas",
+  "updates": [],
+  "references": [
+    {
+      "id": 5937,
+      "title": "The N-dimensional array (ndarray) and Universal functions (ufunc)",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/arrays.ndarray.html",
+      "doi": "",
+      "note": "解释NumPy核心数据结构和高度优化矢量化操作的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T01:17:27.118615Z",
+      "updated_at": "2025-09-07T20:10:57.972146Z"
+    },
+    {
+      "id": 5938,
+      "title": "User Guide - Enhancing performance",
+      "author": "Pandas Developers",
+      "year": "2020",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancing_performance.html",
+      "doi": "",
+      "note": "详细说明优化Pandas代码技术的官方指南，包括索引、数据类型和避免复制。",
+      "order": 2,
+      "created_at": "2025-09-05T01:17:27.122452Z",
+      "updated_at": "2025-09-07T20:11:04.248522Z"
+    },
+    {
+      "id": 5939,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "579",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104030/",
+      "doi": "",
+      "note": "Pandas创建者撰写的全面指南，涵盖NumPy和Pandas的高效数据操作和计算。",
+      "order": 3,
+      "created_at": "2025-09-05T01:17:27.126149Z",
+      "updated_at": "2025-09-07T20:11:20.348408Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

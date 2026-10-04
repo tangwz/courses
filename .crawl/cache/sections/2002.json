@@ -1,0 +1,61 @@
+{
+  "id": 2002,
+  "title": "逐叶式树生长",
+  "meta_title": "LightGBM 逐叶式树生长",
+  "meta_description": "对比逐叶式生长与层级式生长及其影响。",
+  "content": "<p>大多数决策树算法，包括标准梯度提升实现和XGBoost中使用的算法，采用<strong>层级式</strong>（或深度优先）树生长方式，使树逐层扩展。在进入下一个更深层级之前，给定深度上的所有节点都会被分裂。这种方法保持了平衡的树结构，易于管理，并且不太容易立即出现过拟合 (overfitting)。</p>\n<p>然而，LightGBM默认采用一种不同的策略：<strong>逐叶式</strong>（或最佳优先）树生长。它不是逐层扩展，逐叶式策略侧重于在当前树结构中的任意位置找到能使损失函数 (loss function)减少幅度最大的单个叶节点，然后分裂该特定叶节点。这个过程重复进行：找到潜在损失减少最大的叶节点并分裂它。</p>\n<h3>层级式与逐叶式生长比较</h3>\n<p>想象构建一棵树。</p>\n<ul>\n<li><strong>层级式：</strong> 你找到根节点的最佳分裂。然后，你找到两个结果子节点的最佳分裂。接着，你找到下一层级所有四个节点的最佳分裂，依此类推。你横向构建树，每次完成一层。</li>\n<li><strong>逐叶式：</strong> 你找到根节点的最佳分裂。现在你有两个叶子。你评估分裂其中任意一个叶子可能带来的损失减少。假设分裂左侧叶子比分裂右侧叶子能带来更大的损失减少。你分裂左侧叶子。现在你有三个叶子。你再次评估分裂这三个叶子中任意一个的潜在改进，并分裂能提供最佳改进的那个。树倾向于沿着一条路径更深地生长，然后才考虑其他路径。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-54vrw6\" \n              data-graph-definition='digraph G {\n  layout=dot;\n  rankdir=TB;\n  node [shape=box, style=\"filled\", fillcolor=\"#a5d8ff\"];\n  edge [color=\"#868e96\"];\n\n  subgraph cluster_0 {\n    label = \"层级式生长（示例顺序）\";\n    style=dashed;\n    color=\"#adb5bd\";\n    fontcolor=\"#495057\";\n\n    L0 [label=\"根节点（分裂1）\"];\n    L1_1 [label=\"节点（分裂2）\"];\n    L1_2 [label=\"节点（分裂3）\"];\n    L2_1 [label=\"节点（分裂4）\"];\n    L2_2 [label=\"节点（分裂5）\"];\n    L2_3 [label=\"节点（分裂6）\"];\n    L2_4 [label=\"节点（分裂7）\"];\n\n    L0 -> L1_1;\n    L0 -> L1_2;\n    L1_1 -> L2_1;\n    L1_1 -> L2_2;\n    L1_2 -> L2_3;\n    L1_2 -> L2_4;\n  }\n\n  subgraph cluster_1 {\n    label = \"逐叶式生长（示例顺序）\";\n    style=dashed;\n    color=\"#adb5bd\";\n    fontcolor=\"#495057\";\n    node [fillcolor=\"#96f2d7\"];\n\n    W0 [label=\"根节点（分裂1）\"];\n    W1_1 [label=\"节点（分裂2）\"];\n    W1_2 [label=\"叶子\"];\n    W2_1 [label=\"节点（分裂3）\"];\n    W2_2 [label=\"叶子\"];\n    W3_1 [label=\"节点（分裂4）\"];\n    W3_2 [label=\"叶子\"];\n\n    W0 -> W1_1;\n    W0 -> W1_2;\n    W1_1 -> W2_1;\n    W1_1 -> W2_2;\n    W2_1 -> W3_1;\n    W2_1 -> W3_2;\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-54vrw6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>层级式和逐叶式生长之间的分裂顺序差异示例。逐叶式优先分裂能带来最大损失减少的节点，这通常会使树在初期呈现不对称形态。</p>\n</blockquote>\n<h3>逐叶式生长的优点</h3>\n<p>逐叶式策略的主要优点是<strong>收敛速度快</strong>。通过总是分裂能带来最大即时改进（损失减少）的节点，模型可能以更少的分裂次数达到更低的损失值，相比层级式方法。这是因为它不会浪费计算资源去分裂那些只为完成一个层级而提供微小提升的节点。对于大型数据集，这可以转化为显著更快的训练时间，并且在相同叶子数量下，模型可能更精确，因为算法将精力集中在最重要的部分。</p>\n<p>结合基于直方图的分裂查找（这种方法能快速评估潜在分裂），逐叶式生长使LightGBM能够快速构建有效的树。</p>\n<h3>缺点与正则化 (regularization)</h3>\n<p>逐叶式生长的主要缺点是它倾向于产生<strong>更深、可能不平衡的树</strong>，并且过拟合 (overfitting)的风险增加，尤其是在较小的数据集上。由于它贪婪地追求损失减少最大的路径，它可能会生成非常深的树枝，这些树枝基于完美拟合训练数据噪声的分裂，而不是先考虑特征空间的其他部分。</p>\n<p>为了解决这个问题，LightGBM大量依赖特定的正则化参数 (parameter)：</p>\n<ul>\n<li><code>num_leaves</code>：这是在使用逐叶式生长时，LightGBM中用于控制树模型复杂度的主要参数。它直接限制每棵树的叶节点总数。较小的<code>num_leaves</code>值会产生更简单的树，并有助于防止过拟合。在逐叶式策略中，它通常比<code>max_depth</code>在控制复杂度方面更有效。</li>\n<li><code>max_depth</code>：虽然仍可使用，但<code>max_depth</code>起着保护作用。它对树的深度施加了明确的限制，防止单个分支变得过深，即使尚未达到<code>num_leaves</code>的限制。设置<code>max_depth</code>有时可以帮助防止仅靠<code>num_leaves</code>无法避免的过拟合，但调整<code>num_leaves</code>通常是第一步。</li>\n<li><code>min_child_samples</code>（或<code>min_data_in_leaf</code>）：此参数指定叶节点所需的最小数据点数量。如果分裂会导致叶节点中的样本少于此阈值，则该分裂将被拒绝，从而有效防止模型对非常小的数据点组中的噪声进行拟合。</li>\n</ul>\n<p>在使用LightGBM时，有效调整<code>num_leaves</code>非常重要。默认值（31）通常是一个不错的起点，但它经常需要根据数据集的大小和复杂性进行调整。</p>\n<p>总而言之，逐叶式生长是LightGBM速度和效率的一个重要影响因素。它通过关注最有希望的分裂，使模型能够快速收敛。然而，这种积极的策略需要仔细的正则化，主要通过<code>num_leaves</code>参数，以避免过拟合并确保良好的泛化性能。</p>",
+  "slug": "lightgbm-leaf-wise-growth",
+  "updates": [],
+  "references": [
+    {
+      "id": 6313,
+      "title": "LightGBM: A Highly Efficient Gradient Boosting Decision Tree",
+      "author": "Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, Tie-Yan Liu",
+      "year": "2017",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "30",
+      "pages": "3146-3154",
+      "url": "http://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.pdf",
+      "doi": "10.55917/cb_volume30-2017-1090",
+      "note": "LightGBM 的基础论文，介绍了其高效的叶子生长策略决策树算法及其优势。",
+      "order": 1,
+      "created_at": "2025-09-05T01:21:11.886800Z",
+      "updated_at": "2025-09-08T05:32:32.839470Z"
+    },
+    {
+      "id": 6314,
+      "title": "Parameters",
+      "author": "Microsoft (LightGBM Contributors)",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://lightgbm.readthedocs.io/en/latest/Parameters.html",
+      "doi": "",
+      "note": "LightGBM 官方文档，涵盖了 `num_leaves`、`max_depth` 和 `min_child_samples` 等参数，这些参数对于调节叶子生长策略的树至关重要。",
+      "order": 2,
+      "created_at": "2025-09-05T01:21:11.896096Z",
+      "updated_at": "2025-09-08T05:32:28.089296Z"
+    },
+    {
+      "id": 6315,
+      "title": "XGBoost: A Scalable Tree Boosting System",
+      "author": "Tianqi Chen, Carlos Guestrin",
+      "year": "2016",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining",
+      "volume": "",
+      "pages": "785-794",
+      "url": "https://doi.org/10.1145/2939672.2939785",
+      "doi": "10.1145/2939672.2939785",
+      "note": "介绍了 XGBoost 算法，该算法主要采用层级生长策略的决策树，与 LightGBM 的叶子生长策略形成对比。",
+      "order": 3,
+      "created_at": "2025-09-05T01:21:11.898580Z",
+      "updated_at": "2025-09-08T05:32:33.579908Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

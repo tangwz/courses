@@ -1,0 +1,61 @@
+{
+  "id": 2859,
+  "title": "多主机编程简介",
+  "meta_title": "JAX 多主机编程概述",
+  "meta_description": "JAX 并行性如何从单机扩展到多台机器（如 TPU Pods）的介绍。",
+  "content": "<p><code>pmap</code>在JAX中广泛应用于在连接到<em>一台</em>机器或主机上的多个加速器（GPU或TPU）之间进行并行计算。这种方法对许多任务非常有效，能够通过数据并行实现显著加速。然而，最严峻的机器学习 (machine learning)挑战，特别是训练拥有数十亿或数万亿参数 (parameter)的基础模型，需要的计算资源远远超出了单台主机所能提供的范围，即使是配备了多个加速器的主机也无法满足。这促使我们转向多主机编程。</p>\n<p>JAX中的多主机编程将我们之前讨论过的并行性思路进行了扩展，以便通过网络协调多台独立机器上的计算。设想一下一个机器集群，每台机器都可能配备多个GPU或TPU。目标是调度这些机器，共同完成一个大型计算任务。</p>\n<h3>扩展到多个节点</h3>\n<p>虽然与单主机<code>pmap</code>类似，多主机执行带来了重要的实际考量：</p>\n<ol>\n<li><strong>网络通信：</strong> 在单个主机内部，设备通常通过PCIe或NVLink等快速互连方式进行通信。主机之间，通信则依赖于网络（例如以太网、InfiniBand或专用TPU互连）。网络延迟和带宽通常比主机内部互连差几个数量级，这使得跨主机通信可能成为性能瓶颈。高效的集合通信算法变得非常重要。</li>\n<li><strong>同步与协调：</strong> 你不再处理由单个操作系统管理的线程。相反，你有运行在不同机器上的独立Python进程，它们需要协调各自的执行。这包括确保进程正确启动、相互发现，并在特定时刻（例如在集合操作期间）进行同步。</li>\n<li><strong>基础设施与作业启动：</strong> 设置和管理多主机环境更为复杂。你需要有方法在所有参与主机上启动相同的JAX脚本、配置网络，并可能处理故障。这通常涉及使用集群管理系统（如SLURM）或云服务商专用工具（例如Google Cloud管理TPU Pod切片的工具）。JAX本身不提供这些基础设施工具；它提供的是在此类环境<em>中</em>运行的编程原语。</li>\n</ol>\n<h3>多主机环境中的JAX原语</h3>\n<p>好消息是，JAX的核心原语在设计时就考虑到了多主机场景，特别是针对SPMD（单程序，多数据）工作负载。</p>\n<ul>\n<li><strong>全局设备感知：</strong> 当JAX程序在一个正确配置的多主机环境（例如TPU Pod）中运行时，<code>jax.devices()</code>将返回跨越<em>所有</em>主机的<em>所有</em>参与设备的列表。JAX会自动识别设备布局。</li>\n<li><strong>跨主机<code>pmap</code>：</strong> <code>pmap</code>函数作用于这个全局设备列表。为单个主机编写的<code>pmap</code>代码通常可以在多主机环境中运行。你可以将函数映射到所有可用设备上，无论它们位于哪个主机。数据分片需要考虑到全局设备的总数。</li>\n<li><strong>跨主机集合操作：</strong> <code>jax.lax.psum</code>、<code>pmean</code>、<code>all_gather</code>等集合通信原语是设备间信息交换的主要方式。在多主机设置中，这些操作透明地处理所需的网络通信。在TPU Pod等平台上，这些集合操作经过高度优化，以便使用TPU芯片之间专用的高速互连，从而减少通信开销。</li>\n<li><strong>进程识别：</strong> JAX提供了<code>jax.process_index</code>和<code>jax.process_count</code>。<code>jax.process_count</code>会告知有多少个不同的JAX进程（通常每个主机一个）参与了计算。<code>jax.process_index</code>给出当前进程的唯一序号（通常从0到<code>process_count - 1</code>）。这些可用于，例如，让每个主机从磁盘加载大型数据集的不同分片。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-13ciyhc\" \n              data-graph-definition='digraph G {rankdir=TB;bgcolor=\"white\";node [shape=record,style=filled,fillcolor=\"#e9ecef\",fontname=\"sans-serif\"];subgraph cluster0 {label=\"主机 0 (process_index=0)\";bgcolor=\"#f8f9fa\";node [fillcolor=\"#a5d8ff\"];H0D0 [label=\"设备 0\"];H0D1 [label=\"设备 1\"];H0D2 [label=\"设备 2\"];H0D3 [label=\"设备 3\"];} subgraph cluster1 {label=\"主机 1 (process_index=1)\";bgcolor=\"#f8f9fa\";node [fillcolor=\"#a5d8ff\"];H1D0 [label=\"设备 4\"];H1D1 [label=\"设备 5\"];H1D2 [label=\"设备 6\"];H1D3 [label=\"设备 7\"];} pmap[label=\"pmap(f, axis_name=&#39;batch&#39;)\",shape=box,fillcolor=\"#ffec99\"];psum[label=\"psum(..., axis_name=&#39;batch&#39;)\",shape=diamond,fillcolor=\"#96f2d7\"];pmap -> H0D0;pmap -> H0D1;pmap -> H0D2;pmap -> H0D3;pmap -> H1D0;pmap -> H1D1;pmap -> H1D2;pmap -> H1D3;H0D0 -> psum;H0D1 -> psum;H0D2 -> psum;H0D3 -> psum;H1D0 -> psum;H1D1 -> psum;H1D2 -> psum;H1D3 -> psum;psum -> pmap [label=\"聚合结果\",style=dashed,color=\"#0ca678\",fontsize=10];}\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-13ciyhc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个<code>pmap</code>作用于两个主机（每个主机有四个设备）的视图。<code>pmap</code>将工作分配到所有八个全局设备上。集合操作（<code>psum</code>）聚合所有设备上的结果，这需要通过主机间的网络互连进行通信。</p>\n</blockquote>\n<h3>SPMD 的扩展</h3>\n<p>单程序多数据模型自然地适用于多主机。每个主机都会启动并运行包含JAX代码的<em>完全相同</em>的Python脚本。在此脚本内部：</p>\n<ul>\n<li>数据加载可能因主机而异，使用<code>jax.process_index</code>进行区分。</li>\n<li><code>pmap</code>将函数<code>f</code>应用于分配给该主机的本地设备，对相应的数据分片进行操作。</li>\n<li><code>pmap</code>内部的集合操作处理所有参与集合的主机上所有设备之间必要的数据交换，通过<code>axis_name</code>指定。</li>\n</ul>\n<p>以数据并行训练为例：每个主机加载全局小批量数据的不同部分。<code>pmap</code>在每个主机的设备上本地计算梯度。<code>jax.lax.pmean</code>会沿着映射轴对梯度求平均值，跨越<em>所有</em>全局设备，在优化器步骤执行之前（优化器步骤也可能通过<code>pmap</code>执行或在所有主机上相同运行）。</p>\n<h3>展望</h3>\n<p>本节为多主机编程提供了基本内容。实际实施和运行多主机JAX作业涉及具体的设置步骤，这些步骤取决于你的硬件（例如TPU Pods、多节点GPU集群）以及基础设施（云平台、SLURM）。尽管针对特定环境的详细实施指南超出了我们目前的范围，但理解这些内容很重要。这展示了JAX的设计如何使用<code>pmap</code>和集合操作等一致的编程抽象，从单设备执行扩展到大型分布式系统。后面会讨论的Flax和Haiku等框架通常在这些原语之上构建，以提供更方便的API，用于在多主机设置中管理分布式训练循环和模型状态。</p>",
+  "slug": "multi-host-programming-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 7616,
+      "title": "Distributed JAX",
+      "author": "The JAX authors",
+      "year": "2024",
+      "publisher": "The JAX authors",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/multi_host.html",
+      "doi": "",
+      "note": "这份官方文档详细介绍了JAX的分布式计算方法，涵盖了全局设备管理、跨主机pmap和集合操作。",
+      "order": 1,
+      "created_at": "2025-09-05T01:42:04.305508Z",
+      "updated_at": "2025-09-09T01:26:55.706637Z"
+    },
+    {
+      "id": 7617,
+      "title": "Cloud TPU system architecture",
+      "author": "Google Cloud Documentation",
+      "year": "2024",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/tpu/docs/system-architecture",
+      "doi": "",
+      "note": "提供了Google Cloud TPU的技术描述，包括其高速互连以及如何高效支持分布式训练。",
+      "order": 2,
+      "created_at": "2025-09-05T01:42:05.190874Z",
+      "updated_at": "2025-09-09T01:26:46.096279Z"
+    },
+    {
+      "id": 7619,
+      "title": "Using MPI: Portable Parallel Programming with the Message-Passing Interface",
+      "author": "William Gropp, Ewing Lusk, and Anthony Skjellum",
+      "year": "1994",
+      "publisher": "The MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/using-mpi",
+      "doi": "",
+      "note": "一本广泛认可的书籍，解释了消息传递接口，其集合通信概念对于多主机JAX程序中的高效数据交换至关重要。",
+      "order": 4,
+      "created_at": "2025-09-05T01:42:05.532560Z",
+      "updated_at": "2025-09-09T01:26:51.677194Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

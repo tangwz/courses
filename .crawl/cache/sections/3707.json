@@ -1,0 +1,61 @@
+{
+  "id": 3707,
+  "title": "控制输出长度和格式",
+  "meta_title": "控制LLM输出长度和格式",
+  "meta_description": "影响LLM生成文本长度和结构的方法。",
+  "content": "<p>一旦你理解了如何使用提示词 (prompt)给出基本指令，你就可以改进它们，以便更好地控制大型语言模型的输出。你能影响的两个重要方面是生成文本的长度和结构（即格式）。让模型生成符合你特定长度要求或遵循所需布局的文本，这在实际使用中往往很重要。</p>\n<h3>控制输出长度的方法</h3>\n<p>大型语言模型没有像文字处理器那样严格遵循的内置字数计数器，但你可以在提示词 (prompt)中给出清晰的指令，引导它们生成特定长度的回复。</p>\n<ol>\n<li>\n<p><strong>明确长度要求：</strong> 最直接的方法就是直接提出要求。</p>\n<ul>\n<li><code>用一句话准确概括上一段。</code></li>\n<li><code>写一份约50字的产品描述。</code></li>\n<li><code>用一段话解释光合作用的原理。</code></li>\n<li><code>列出步骤，每一步不超过10个字。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>指定项目数量：</strong> 对于列表或要点，要求一个具体数量是有效的方法。</p>\n<ul>\n<li><code>使用Python的3个主要好处是什么？</code></li>\n<li><code>给我5个关于可再生能源的博客文章点子。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>使用相对词语（谨慎使用）：</strong> 像“简要地”、“短小”或“详细”这样的词语可以影响长度，但它们是主观的，大型语言模型的理解可能会有所不同。明确的限定通常更可靠。</p>\n<ul>\n<li><code>简要解释什么是API。</code> （比直接问 <code>解释什么是API。</code> 会得到更短的答案）</li>\n<li><code>详细阐述水循环。</code> （会得到更长的答案）</li>\n</ul>\n</li>\n</ol>\n<p>大型语言模型是概率性地生成文本，通常是逐字（或逐token）生成。尽管模型会尝试遵循长度限制，但可能无法完全精准，尤其是在字符数或精确字数方面。不过，提供这些限制会大大增加获得接近你所需长度输出的可能性。</p>\n<h3>控制输出格式的方法</h3>\n<p>你常常需要大型语言模型的回复是特定结构。你可以通过细致的提示来引导模型生成格式化的输出。</p>\n<ol>\n<li>\n<p><strong>请求特定格式：</strong> 直接告诉模型你希望输出如何组织。</p>\n<ul>\n<li><code>以项目符号列表的形式列出太阳系中的行星。</code></li>\n<li><code>以JSON格式提供联系信息（姓名、电子邮件、电话）。</code></li>\n<li><code>使用编号步骤撰写说明。</code></li>\n<li><code>生成一个将两个数字相加的Python函数。</code> （这意味着代码格式）。</li>\n<li><code>将主要区别格式化为包含两列（特性和描述）的表格。</code></li>\n</ul>\n</li>\n<li>\n<p><strong>使用示例（少量示例提示）：</strong> 正如之前讨论的，提供示例是向模型展示你预期准确格式的有效方式。</p>\n<ul>\n<li>\n<p>提示词 (prompt)：</p>\n<pre><code>将英文单词翻译成法文：\n\n英文：cat\n法文：chat\n\n英文：dog\n法文：chien\n\n英文：house\n法文：?\n</code></pre>\n<p>示例的结构引导模型仅提供法文单词。</p>\n</li>\n<li>\n<p>提示词：</p>\n<pre><code>从文本中提取姓名和职称。格式为JSON。\n\n文本：“Sarah Chen 是 TechCorp 的首席数据科学家。”\n输出：{\"name\": \"Sarah Chen\", \"job_title\": \"Lead Data Scientist\"}\n\n文本：“项目经理 David Lee 将与您联系。”\n输出：?\n</code></pre>\n<p>这清楚地体现了所需的JSON结构。</p>\n</li>\n</ul>\n</li>\n<li>\n<p><strong>组织你的提示词：</strong> 有时，你组织提示词本身的方式就可以暗示所需的输出格式。</p>\n<ul>\n<li>提示词：<code>提供电动汽车的优缺点。\\n\\n优点：\\n- \\n\\n缺点：\\n- </code>\n通过开始列表结构，你可以鼓励模型继续它。</li>\n</ul>\n</li>\n</ol>\n<h3>结合长度和格式控制</h3>\n<p>你可以在一个提示词 (prompt)中结合这些方法，同时控制这两个方面。</p>\n<ul>\n<li><code>以编号列表形式列出运动的3个主要好处。</code></li>\n<li><code>生成下方文章的简短摘要（最多2句话）。</code></li>\n<li><code>提供5个与“机器学习”相关的关键词，作为逗号分隔列表。</code></li>\n<li><code>创建一个包含3本经典科幻书籍的“标题”和“作者”的JSON对象。</code></li>\n</ul>\n<h3>迭代是常态</h3>\n<p>精准控制长度和格式可能需要尝试几次。如果第一次回复不完全是你想要的，就改进你的提示词 (prompt)。更具体些，调整你的限定，或者添加更清晰的示例。例如，如果“用一段话概括”生成了太多文本，可以尝试“用3-4句话概括。”尝试不同的措辞是与大型语言模型有效交互的常规部分。</p>\n<p>通过在提示词中清晰地表达你对长度和结构的要求，你可以引导大型语言模型生成不仅相关，而且以你所需方式呈现的文本。</p>",
+  "slug": "controlling-output-length-format",
+  "updates": [],
+  "references": [
+    {
+      "id": 10178,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "提供有关设计有效提示的实用指导，包括控制输出长度和格式的技巧。",
+      "order": 1,
+      "created_at": "2025-09-05T06:38:35.821062Z",
+      "updated_at": "2025-09-09T12:29:37.832139Z"
+    },
+    {
+      "id": 10180,
+      "title": "Language Models are Few-Shot Learners",
+      "author": "Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei",
+      "year": "2020",
+      "publisher": "",
+      "journal": "ArXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.14165",
+      "doi": "10.48550/arXiv.2005.14165",
+      "note": "一篇介绍少样本学习的基础论文，该方法通过提供示例来引导LLM生成特定格式的输出。",
+      "order": 3,
+      "created_at": "2025-09-05T06:38:35.828270Z",
+      "updated_at": "2025-09-09T12:28:59.453591Z"
+    },
+    {
+      "id": 10181,
+      "title": "Introduction to Prompt Design",
+      "author": "Google AI",
+      "year": "2025",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/vertex-ai/docs/generative-ai/learn/introduction-prompt-design",
+      "doi": "",
+      "note": "提供设计有效提示的一般原则和建议实践，包括实现所需输出结构和长度的方法。",
+      "order": 4,
+      "created_at": "2025-09-05T06:38:35.832164Z",
+      "updated_at": "2025-09-09T12:29:12.350548Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 7091,
+  "title": "语音单位与言语基本组成部分简介",
+  "meta_title": "音素简介",
+  "meta_description": "介绍音素，即语言中不同的声音单位，以及它们在语音识别中的重要性。",
+  "content": "<p>将声波转换为一串数字后，下一步是确定计算机应从这些数据中识别什么。原始音频信号是复杂、连续的波形，但语言由离散的单元构成。为了弥合这一差异，我们需要将言语分解成其最基本的组成单元。这些单元并非字母，而是构成一种语言的独特声音。</p>\n<h3>最小声音单元</h3>\n<p>在语言学中，能够改变词语含义的最小声音单位称为<strong>音素</strong>。可以把它们看作口语的原子。只改变一个音素就能使一个词变成一个截然不同的词。</p>\n<p>以“pat”这个词为例。它由三个不同的声音组成：</p>\n<ol>\n<li>开头的“p”音。</li>\n<li>中间的“a”音。</li>\n<li>结尾的“t”音。</li>\n</ol>\n<p>如果将第一个音“p”替换为“b”音，你会得到一个新词：“bat”。如果将中间的“a”音改为“e”音，你会得到“pet”。如果将结尾的“t”音改为“d”音，你会得到“pad”。/p/、/b/、/t/、/d/、/æ/（如 pat 中的音）和 /ɛ/（如 pet 中的音）都是英语音素的例子。英语大约使用44个音素来构成其所有词语。</p>\n<h3>为什么字母不够用</h3>\n<p>一个常见的混淆点是字母（称为<em>字素</em>）与音素之间的区别。英语字母表的26个字母与我们口语中使用的44种声音没有一对一的关系。这种不一致性是ASR系统侧重于音素而非字母的原因。</p>\n<p>以下是这种不匹配的几个例子：</p>\n<ul>\n<li>**一字母，多发音：**字母“c”在“cat”中发出/k/音，但在“city”中发出/s/音。</li>\n<li>**多字母，一发音：**字母“ph”组合在“phone”中发出单个/f/音。字母“sh”在“ship”中发出/ʃ/音。</li>\n<li><strong>不发音字母：</strong>“know”这个词发音为/noʊ/。“k”和“w”不发音。</li>\n</ul>\n<p>由于拼写上的这种模糊性，ASR系统不能简单地尝试将音频与字母匹配。它必须首先识别出正在说的音素序列。</p>\n<h3>声音的标准：IPA</h3>\n<p>为了处理这种模糊性，语言学家开发了<strong>国际音标（IPA）</strong>。IPA是一个标准化系统，其中每个符号精确地代表一个音素。这使得对任何语言的言语进行精确转录成为可能，从而消除了常规拼写中的猜测。</p>\n<p>你不需要记住IPA，但了解它如何澄清发音很有用。</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">词语</th>\n<th align=\"left\">拼写</th>\n<th align=\"left\">音标（IPA）</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Cat</td>\n<td align=\"left\">c-a-t</td>\n<td align=\"left\">/kæt/</td>\n</tr>\n<tr>\n<td align=\"left\">Phone</td>\n<td align=\"left\">p-h-o-n-e</td>\n<td align=\"left\">/foʊn/</td>\n</tr>\n<tr>\n<td align=\"left\">Though</td>\n<td align=\"left\">t-h-o-u-g-h</td>\n<td align=\"left\">/ðoʊ/</td>\n</tr>\n<tr>\n<td align=\"left\">Tough</td>\n<td align=\"left\">t-h-o-u-g-h</td>\n<td align=\"left\">/tʌf/</td>\n</tr>\n</tbody>\n</table>\n<p>注意“though”和“tough”，尽管它们的拼写相似，但却有非常不同的音标转录。这是ASR系统必须处理的细节程度。</p>\n<h3>音素在ASR流程中的作用</h3>\n<p><strong>声学模型</strong>作为任何ASR系统的核心组成部分，其核心任务正是解决这个问题。它接收处理后的音频数据（我们将在下一章介绍），并计算在任何给定时刻正在说的音素的可能性。</p>\n<p>该系统不会“听到”说的是“cat”。它会分析音频信号并确定最有可能的声音序列是/k/，接着是/æ/，然后是/t/。这个音素序列随后被传递给流程的后续阶段，这些阶段使用词典（一种字典）和语言模型来确定序列/kæt/对应于“cat”这个词。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-x4ppfe\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    graph [fontname=\"sans-serif\", fontsize=10];\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\", fontsize=10];\n    edge [fontname=\"sans-serif\", fontsize=9];\n\n    Audio [label=\"“ship”的音频信号\", fillcolor=\"#a5d8ff\"];\n    AcousticModel [label=\"声学模型\", fillcolor=\"#d0bfff\"];\n    Phonemes [label=\"音素序列\\n/ʃ/ /ɪ/ /p/\", shape=note, fillcolor=\"#b2f2bb\"];\n    Lexicon [label=\"词典与语言模型\", fillcolor=\"#ffd8a8\"];\n    Text [label=\"文本输出\\n\\\"ship\\\"\", shape=document, fillcolor=\"#ffc9c9\"];\n\n    Audio -> AcousticModel [label=\"分析音频特征\"];\n    AcousticModel -> Phonemes [label=\"输出最可能的声音\"];\n    Phonemes -> Lexicon [label=\"将音素与词语匹配\"];\n    Lexicon -> Text [label=\"选择最可能的词语\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-x4ppfe\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ASR系统首先将音频信号转换为音素序列，然后利用这些序列来确定最终的文本。</p>\n</blockquote>\n<p>了解音素是基础。它们是连接杂乱、连续的声波范畴与结构化、离散的词语和句子范畴的桥梁。在后续章节中，你将了解到计算机如何从音频中提取特征以识别这些声音，以及模型如何被训练来完成这种惊人的转换。</p>",
+  "slug": "introduction-to-phonemes",
+  "updates": [],
+  "references": [
+    {
+      "id": 19551,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "这本教材涵盖了语音识别的理论和实践方面，其中专门章节讨论了语音学、音系学和声学建模，这对于理解音素在ASR系统中如何处理至关重要。",
+      "order": 2,
+      "created_at": "2025-09-06T13:10:28.249354Z",
+      "updated_at": "2025-09-10T03:55:42.407610Z"
+    },
+    {
+      "id": 19552,
+      "title": "Handbook of the International Phonetic Association: A Guide to the Use of the International Phonetic Alphabet",
+      "author": "International Phonetic Association",
+      "year": "1999",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyfhL2O8FR0wlaWBDU9P3T7qdA1pjSerEGGI-3YziaEavRUDBhJe7052jCgyzEjKn39MAH3gdinTi0BfsIfAF1BVQIOUL2-0AMTXxitjp1FGNdNOZ3p7JxgQStyn2IO-6g9bQeqf-OOiJOH3jXjb3_VxvX2MrX-LZDJBMNaP8PAT5yLMb5pWEx1O7y5eq2EO197duBgEGKRGVgOYnv",
+      "doi": "10.1017/CBO9780511521759",
+      "note": "这是国际音标（IPA）的官方指南，提供了所有IPA符号的详细描述、其用法以及语音转写的原则，与本节中对IPA的解释直接相关。",
+      "order": 3,
+      "created_at": "2025-09-06T13:10:28.251876Z",
+      "updated_at": "2025-09-10T03:55:58.699379Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

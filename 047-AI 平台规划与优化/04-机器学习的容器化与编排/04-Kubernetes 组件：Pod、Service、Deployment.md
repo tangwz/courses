@@ -1,0 +1,92 @@
+# Kubernetes 组件：Pod、Service、Deployment
+
+来源：[原文](https://apxml.com/zh/courses/planning-optimizing-ai-infrastructure/chapter-4-containerization-orchestration-for-ml/kubernetes-components-overview)
+
+[返回章节目录](README.md) · [返回课程目录](../README.md)
+
+Kubernetes 是一个管理容器化应用的系统。为了定义和运行机器学习 (machine learning)工作负载，需要理解其主要对象。尽管 Kubernetes 包含许多组件，但日常操作主要围绕三个对象：Pod、Service 和 Deployment。掌握这三者，能够在该平台上构建可伸缩且具有弹性的机器学习系统。
+
+### Pod：部署的最小单元
+
+在 Kubernetes 环境中，最小、最基本的部署对象不是容器，而是 **Pod**。Pod 代表集群中运行进程的单个实例，并封装一个或多个容器。它还包含这些容器的共享存储和网络资源。
+
+尽管您可以在单个 Pod 中运行多个容器，但常见做法是一个 Pod 中包含一个主应用容器。这种“每个容器一个进程”的方法使您的架构保持整洁。那么，什么时候会使用多个容器呢？机器学习 (machine learning)中的一个典型用法是“Sidecar”模式。设想您有一个容器用于模型服务。您可以在同一 Pod 中添加第二个“Sidecar”容器，处理次要任务，例如从云存储获取模型更新或将日志发送到中央收集器。因为 Pod 中的容器共享相同的网络命名空间并可以共享存储卷，它们可以高效地相互通信。
+
+> 一个包含主应用容器和用于辅助任务的 Sidecar 的 Pod。
+
+Pod 的一个重要特点是它们被认为是短暂的。它们可能因节点故障、资源限制或应用更新而被终止。当一个 Pod 被销毁时，它就永远消失了，连同其唯一的 IP 地址。这种短暂性意味着对于任何需要可靠性的应用，您不应直接创建和管理单个 Pod。相反，您应该使用更高级别的控制器，例如 Deployment，来为您管理它们。
+
+### Deployment：管理应用生命周期
+
+**Deployment** 是一种控制器，它为 Pod 提供声明式更新。您在 Deployment 对象中描述所需状态，Deployment 控制器会以受控的速度将实际状态更改为所需状态。
+
+其主要功能是：
+
+1. **管理副本：** 您指定希望运行的 Pod 的相同副本（或称为“副本”）数量。Deployment 确保始终维持这个数量。如果托管您的 Pod 的一个节点发生故障，Deployment 将自动在集群中另一个健康的节点上调度一个替换 Pod。这是使您的机器学习 (machine learning)服务具有弹性的自愈机制。
+2. **处理更新：** 当您需要更新应用时，例如部署新的模型版本或新的 API 代码版本，您只需更新 Deployment 中指定的容器镜像即可。Deployment 将管理**滚动更新**，逐步替换旧 Pod 为新 Pod，确保服务不中断。
+
+在底层，Deployment 管理一个 **ReplicaSet**，它是负责维护指定副本数量的对象。您几乎从不直接与 ReplicaSet 交互，因为 Deployment 会协调它们来处理版本控制和更新。
+
+这是一个简化的 Deployment YAML 配置示例。该文件声明式地定义了一个所需状态：一个模型服务应用的三个副本。
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-api-deployment
+spec:
+  replicas: 3 # 1. 我们希望运行 3 个相同的 Pod
+  selector:
+    matchLabels:
+      app: inference-api # 2. Deployment 会查找带有此标签的 Pod
+  template: # 3. 这是 Deployment 创建 Pod 的蓝图
+    metadata:
+      labels:
+        app: inference-api # 4. Pod 会获得此标签
+    spec:
+      containers:
+      - name: model-server
+        image: your-repo/your-model-server:v1.2 # 5. 要运行的容器镜像
+        ports:
+        - containerPort: 8000
+```
+
+1. `replicas`: 告诉 Deployment 维护我们的 Pod 的三个运行实例。
+2. `selector`: 定义 Deployment 如何找到要管理的 Pod。它会查找带有 `app: inference-api` 标签的 Pod。
+3. `template`: Deployment 将创建的 Pod 的蓝图。它包含自己的 `metadata` 和 `spec`。
+4. `template.metadata.labels`: 应用于此 Deployment 创建的每个 Pod 的标签。选择器必须匹配这些标签。
+5. `template.spec.containers`: 要在 Pod 内运行的容器列表。这里，我们使用特定的镜像版本定义了一个名为 `model-server` 的单个容器。
+
+### Service：暴露您的应用
+
+我们已经明确，Deployment 管理着一组相同但短暂的 Pod。每个 Pod 都有自己的内部 IP 地址，该地址在重新创建时可能会改变。这带来一个问题：如果模型服务 Pod 的地址不断变化，其他应用或外部用户如何可靠地连接到它们？
+
+这就是 **Service** 对象的作用。Service 为一组 Pod 提供了一个稳定、抽象的端点。它在集群内获得一个持久的 IP 地址和一个 DNS 名称。当流量发送到 Service 时，它充当内部负载均衡器，自动将请求路由到它所指向的健康 Pod 之一。Service 使用与 Deployment 相同的标签和选择器机制来查找其目标 Pod。
+
+Kubernetes 提供多种类型的 Service，但对于机器学习 (machine learning)应用，您最常使用这两种：
+
+- \*\*ClusterIP：\*\*这是默认类型。Service 获取一个 IP 地址，该地址仅在 Kubernetes 集群*内部*可访问。这非常适合内部通信。例如，一个 Web 前端 Pod 可以通过 `ClusterIP` Service 与后端推理 (inference) Pod 进行通信。
+- \*\*LoadBalancer：\*\*此类型使用云提供商的负载均衡器将 Service 对外暴露。当您在 AWS、GCP 或 Azure 等云平台上创建 `LoadBalancer` Service 时，Kubernetes 将自动配置一个外部负载均衡器，并将其配置为将外部互联网流量路由到您的 Service 的 Pod。这是向公众暴露生产推理 API 的标准方式。
+
+下图展示了这些组件如何协同工作。Deployment 确保有三个 Pod 正在运行。一个 `LoadBalancer` Service 为外部流量提供一个单一、稳定的入口点，并在 Pod 之间分配请求。
+
+> 外部请求被发送到稳定的 `LoadBalancer` IP，Service 会将其路由到匹配其标签选择器的可用 Pod 之一。Deployment 确保所需的 Pod 数量始终运行。
+
+总而言之，Deployment 和 Service 共同构成了 Kubernetes 上可伸缩应用的核心支柱。Deployment 处理模型服务 Pod 的生命周期和可用性，而 Service 提供一个稳定的网络端点，使其可被访问。
+
+## 参考资料
+
+- [Pods](https://kubernetes.io/docs/concepts/workloads/pods/) — Kubernetes Authors (2024)
+  Kubernetes官方文档，解释了Kubernetes中最小的可部署单元、其生命周期以及诸如边车模式等多容器模式。
+- [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) — Kubernetes Authors (2024)
+  Kubernetes Deployment的官方文档，详细说明了如何管理Pod的声明式更新、处理滚动更新以及使用ReplicaSet。
+- [Services, Load Balancing, and Networking](https://kubernetes.io/docs/concepts/services-networking/service/) — Kubernetes Authors (2024)
+  Kubernetes Service对象的官方文档，描述了稳定的网络端点、各种服务类型（例如ClusterIP、LoadBalancer）及其在实现Pod通信中的作用。
+- [Kubernetes in Action, Second Edition](https://www.manning.com/books/kubernetes-in-action-second-edition) — Marko Lukša, Kevin Conner (2026)
+  Publisher: Manning Publications
+  一本备受推崇的书籍，提供了关于Kubernetes的详细实用指南，包括对其核心组件如Pod、Deployment和Service的深入解释。
+
+---
+
+[上一节](03-Kubernetes%20%E7%AE%A1%E7%90%86%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0%E5%B7%A5%E4%BD%9C%E8%B4%9F%E8%BD%BD%E7%AE%80%E4%BB%8B.md) · [下一节](05-%E5%9C%A8Kubernetes%E9%9B%86%E7%BE%A4%E4%B8%AD%E7%AE%A1%E7%90%86GPU%E8%B5%84%E6%BA%90.md)

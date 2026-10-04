@@ -1,0 +1,61 @@
+{
+  "id": 7097,
+  "title": "特征提取简介",
+  "meta_title": "音频特征提取简介",
+  "meta_description": "了解为什么原始音频不适合机器学习，以及特征提取如何生成有意义的表示。",
+  "content": "<p>将模拟声波转换为数字序列后，您可能会想，是否能将这些数据直接输入到机器学习 (machine learning)模型中。简短的回答是：我们通常不会这样做。原始数字音频虽然完整地代表了声音，但对于语音识别系统来说，它的格式并不适用。</p>\n<h3>为什么不使用原始音频？</h3>\n<p>将原始音频样本序列输入模型会带来一些重要问题：</p>\n<ul>\n<li>\n<p><strong>高维度：</strong> 数据量之大是一个主要难题。一秒钟以16 kHz采样的音频会产生16,000个数字。五秒钟的片段就是80,000个数字。在如此长的序列上训练模型计算量很大，并且可能导致模型难以学习到有用的规律。</p>\n</li>\n<li>\n<p><strong>不相关信息：</strong> 原始音频包含大量与识别说话内容不相关的信息。这包括持续的背景噪音、说话者声音的特定音高（变化可能很大）以及其他声学干扰。我们的目标是从这些噪音中分离出信号，即语音。</p>\n</li>\n<li>\n<p><strong>缺乏一致性：</strong> 一个词的原始波形在两个人说出时可能看起来截然不同，即使是同一个人在不同音量或不同情绪下说出时，也会有很大不同。在这些原始值上训练的模型将难以泛化，并在这些变化中识别出相同的词。</p>\n</li>\n</ul>\n<p>为了解决这些问题，我们进行<strong>特征提取</strong>。目标是将高维、嘈杂的音频信号转换为更紧凑、稳定且有用的表示。这种新的表示是一组<em>特征</em>。</p>\n<p>可以将其想象成概括一部长电影。您不会描述每一个画面，而是会描述主要人物、重要情节和背景。这些就是电影的“特征”。在语音识别中，特征是描述音频一小段重要声学属性的数值，这使得机器学习 (machine learning)模型的任务更容易处理。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-154kf6z\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; \"原始音频\" [fillcolor=\"#a5d8ff\"]; \"特征\" [fillcolor=\"#96f2d7\"]; \"原始音频\" -> \"预处理\" [label=\"分帧、加窗\"]; \"预处理\" -> \"FFT\" [label=\"生成频谱\"]; \"FFT\" -> \"频谱图\"; \"频谱图\" -> \"梅尔滤波器组\" [label=\"应用感知尺度\"]; \"梅尔滤波器组\" -> \"DCT\" [label=\"去相关与压缩\"]; \"DCT\" -> \"特征\" [label=\"MFCCs\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-154kf6z\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>特征提取流程将原始音频信号转换为一组紧凑的特征。</p>\n</blockquote>\n<h3>从频谱图到感知特征</h3>\n<p>在上一节中，我们了解了频谱图如何将频率内容随时间显示。频谱图是对原始波形的重大改进，并且本身就是一种特征表示形式。它使我们从分析简单的振幅转变为分析丰富的频谱，在此频谱中，与语音相关的规律开始显现。</p>\n<p>标准频谱图采用线性频率尺度。例如，在标准频谱图中，100 Hz和200 Hz之间的距离与4000 Hz和4100 Hz之间的距离被同等对待。但人类听觉的感知方式并非如此。我们对低频声音变化的感知远比对高频声音变化敏感。对于语音，将一个音素与另一个音素区分开来的大部分信息都集中在这些较低的频率中。</p>\n<p>为了构建更好的特征集，我们需要一种更接近模仿人类听觉属性的表示。这引出了<strong>梅尔尺度</strong>，一种感知音高尺度。梅尔尺度的设计使在该尺度上间隔相等的声音，人类听起来也感觉间隔相等。</p>\n<p>通过将我们的频率信息转换到梅尔尺度上，我们可以更重视那些对理解人类语音最相关的频段。这是**梅尔频率倒谱系数（MFCCs）**背后的核心思想，它是语音识别系统中运用最成功、最广泛的特征之一。</p>\n<p>在下一节中，我们将详细介绍从频谱图计算这些有效特征的具体步骤。</p>",
+  "slug": "introduction-to-feature-extraction",
+  "updates": [],
+  "references": [
+    {
+      "id": 19487,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2023",
+      "publisher": "Stanford University (Online Draft)",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 8",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/8.pdf",
+      "doi": "",
+      "note": "涵盖语音特征提取的基本概念，包括MFCC、其动机和感知基础。（第三版草稿）",
+      "order": 1,
+      "created_at": "2025-09-06T13:08:39.562583Z",
+      "updated_at": "2025-09-10T03:52:07.437845Z"
+    },
+    {
+      "id": 19488,
+      "title": "Digital Processing of Speech Signals",
+      "author": "Lawrence R. Rabiner and Ronald W. Schafer",
+      "year": "1978",
+      "publisher": "Prentice-Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Digital_Processing_of_Speech_Signals.html?id=83fNAAAAMAAJ",
+      "doi": "",
+      "note": "阐述语音分析的数字信号处理基础技术，包括分帧、加窗和频谱分析。",
+      "order": 2,
+      "created_at": "2025-09-06T13:08:39.565953Z",
+      "updated_at": "2025-09-10T03:52:07.009353Z"
+    },
+    {
+      "id": 19489,
+      "title": "Spoken Language Processing: A Guide to Theory, Algorithm and System Development",
+      "author": "Xuedong Huang, Alex Acero, and Hsiao-Wuen Hon",
+      "year": "2001",
+      "publisher": "Prentice Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Spoken_Language_Processing.html?id=DqQdAAAAMAAJ",
+      "doi": "",
+      "note": "详细介绍语音处理的理论和算法，包含声学特征提取、梅尔尺度和MFCC等章节。",
+      "order": 3,
+      "created_at": "2025-09-06T13:08:39.568947Z",
+      "updated_at": "2025-09-10T03:52:04.873274Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

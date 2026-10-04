@@ -1,0 +1,61 @@
+{
+  "id": 7426,
+  "title": "为链和代理增加记忆功能",
+  "meta_title": "如何为LangChain链加入记忆功能",
+  "meta_description": "一份关于将记忆对象整合到大型语言模型链（LLMChain）或对话式代理中的实用步骤指南。",
+  "content": "<h3>结合记忆与链</h3>\n<p>使应用程序保持状态的现代方法是，通过封装链的执行过程并加入历史管理能力。使用LangChain表达式语言（LCEL），我们可以定义一个链，然后通过<code>RunnableWithMessageHistory</code>来提升它的功能。这个组件管理对话历史，在提示执行前自动读取之前的消息，并用新的交互更新历史记录。</p>\n<p>为使其运行，需要如下设置：</p>\n<ol>\n<li>包含一个用于对话历史的<code>MessagesPlaceholder</code>的<code>ChatPromptTemplate</code>。</li>\n<li>一个<code>get_session_history</code>函数，用于获取或创建针对给定会话ID的消息历史对象。</li>\n</ol>\n<p>我们来看一个实际实现方案。我们将使用<code>ChatOpenAI</code>创建一个简单的链，并为其加入记忆功能。</p>\n<pre><code class=\"language-python\">import os\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder\nfrom langchain_core.runnables.history import RunnableWithMessageHistory\nfrom langchain_community.chat_message_histories import ChatMessageHistory\nfrom langchain_core.chat_history import BaseChatMessageHistory\n\n# 设置语言模型\n# 请确保您的OPENAI_API_KEY已在环境变量中设置\nllm = ChatOpenAI(temperature=0.7)\n\n# 1. 定义ChatPromptTemplate\n# 我们使用MessagesPlaceholder来动态插入聊天历史。\nprompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"你是一个友好的聊天机器人，正在与人类对话。\"),\n    MessagesPlaceholder(variable_name=\"chat_history\"),\n    (\"human\", \"{input}\"),\n])\n\n# 2. 使用LCEL创建链\nchain = prompt | llm\n\n# 3. 定义记忆管理\n# 我们需要一个函数来获取特定会话的历史记录。\nstore = {}\n\ndef get_session_history(session_id: str) -> BaseChatMessageHistory:\n    if session_id not in store:\n        store[session_id] = ChatMessageHistory()\n    return store[session_id]\n\n# 4. 用消息历史包装链\nconversation_chain = RunnableWithMessageHistory(\n    chain,\n    get_session_history,\n    input_messages_key=\"input\",\n    history_messages_key=\"chat_history\",\n)\n\n# 第一次交互\n# 我们必须提供一个包含session_id的配置，以保留历史记录\nresponse_1 = conversation_chain.invoke(\n    {\"input\": \"Hi there! My name is Alex.\"},\n    config={\"configurable\": {\"session_id\": \"session_1\"}}\n)\nprint(response_1.content)\n# > Hi Alex! It's nice to meet you. My name is AI. How can I help you today?\n\n# 第二次交互\nresponse_2 = conversation_chain.invoke(\n    {\"input\": \"What was the name I just told you?\"},\n    config={\"configurable\": {\"session_id\": \"session_1\"}}\n)\nprint(response_2.content)\n# > You told me your name is Alex.\n</code></pre>\n<p>以下图表说明此数据流。<code>RunnableWithMessageHistory</code>包装器充当一个有状态管理器，在每次执行期间从记忆存储中读取数据并写入数据。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1f3mf50\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=0.2]; edge [fontname=\"Arial\"]; newrank=true; \"User Input\" [fillcolor=\"#e9ecef\"]; \"Output\" [fillcolor=\"#e9ecef\"]; \"LLM\" [fillcolor=\"#d0bfff\"]; \"Prompt\" [fillcolor=\"#a5d8ff\"]; \"Memory\" [fillcolor=\"#bac8ff\", shape=cylinder]; subgraph cluster_chain { label=\"链的执行\"; color=\"#ced4da\"; style=\"rounded\"; \"Prompt\"; \"LLM\"; } \"User Input\" -> \"Prompt\" [label=\" 新输入\"]; \"Memory\" -> \"Prompt\" [label=\" 历史\"]; \"Prompt\" -> \"LLM\"; \"LLM\" -> \"Output\"; {rank=same; \"LLM\" -> \"Memory\" [label=\" 更新历史\"];} }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1f3mf50\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>有状态链执行的内部运作流程。每次运行时，包装器为提示词 (prompt)提供之前的上下文 (context)，在大型语言模型生成响应后，记忆会用最新一轮对话进行更新。</p>\n</blockquote>\n<h3>结合记忆与代理</h3>\n<p>代理使用大型语言模型来做决定，关于使用哪些工具，它们也需要记忆功能来处理多轮交互。例如，用户可能会让代理在线查找信息，然后问一个关于查找结果的后续问题。没有记忆功能，代理将没有上下文 (context)来回答第二个问题。</p>\n<p>在现代LangChain中，我们定义代理，然后使用<code>AgentExecutor</code>来执行它。记忆通常通过将一个<code>memory</code>对象传递给执行器来管理。这使代理能够维持跨越不同步骤和交互的上下文。</p>\n<p>这里是一个对话式代理的示例，它使用一个搜索工具并记住之前的交互。</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\nfrom langchain.agents import AgentExecutor, create_tool_calling_agent, load_tools\nfrom langchain.memory import ConversationBufferMemory\nfrom langchain import hub\n\n# 初始化模型\nllm = ChatOpenAI(temperature=0)\n\n# 加载工具\n# 使用'ddg-search'需要duckduckgo-search包\ntools = load_tools([\"ddg-search\"], llm=llm)\n\n# 获取用于工具调用代理的标准提示词\n# 这个提示词包含一个用于'chat_history'的占位符\nprompt = hub.pull(\"hwchase17/openai-tools-agent\")\n\n# 初始化代理\nagent = create_tool_calling_agent(llm, tools, prompt)\n\n# 初始化记忆功能\n# 对于聊天模型，'return_messages=True'是很重要的\nmemory = ConversationBufferMemory(memory_key=\"chat_history\", return_messages=True)\n\n# 初始化AgentExecutor\n# 我们将记忆传递给执行器\nagent_executor = AgentExecutor(\n    agent=agent,\n    tools=tools,\n    memory=memory,\n    verbose=True\n)\n\n# 第一次交互\nagent_executor.invoke({\"input\": \"Who is the current CEO of NVIDIA?\"})\n\n# 第二次交互，引用第一次交互的内容\nagent_executor.invoke({\"input\": \"What year was that company founded?\"})\n</code></pre>\n<p>在第二次调用<code>agent_executor.invoke()</code>时，代理明白“那家公司”指的是NVIDIA。这是因为<code>AgentExecutor</code>自动加载来自<code>ConversationBufferMemory</code>的上下文，并将其包含在发送给大型语言模型的提示词 (prompt)中。大型语言模型随后看到之前的问题和答案，使其能够正确解析这个指代，并使用搜索工具找到NVIDIA的成立年份。</p>\n<p>此机制依赖于提示词具有一个特定的占位符（通常是<code>chat_history</code>），<code>AgentExecutor</code>在调用代理之前会从记忆对象中填充数据。这种简单的配置将一个无状态的工具使用系统转换成一个有能力的对话助手。</p>",
+  "slug": "adding-memory-to-chains-agents",
+  "updates": [],
+  "references": [
+    {
+      "id": 14755,
+      "title": "Memory",
+      "author": "LangChain Contributors",
+      "year": "2023",
+      "publisher": "LangChain Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/memory/",
+      "doi": "",
+      "note": "LangChain官方文档，解释各种内存类型、其配置以及它们如何在LLM应用中管理对话历史。",
+      "order": 1,
+      "created_at": "2025-09-05T09:05:44.717104Z",
+      "updated_at": "2025-09-11T10:48:47.293418Z"
+    },
+    {
+      "id": 14756,
+      "title": "Agents",
+      "author": "LangChain Contributors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/agents/",
+      "doi": "",
+      "note": "LangChain官方文档，详细介绍了智能体、其设计原则、支持的类型以及它们如何集成工具和内存以进行复杂的多轮交互。",
+      "order": 2,
+      "created_at": "2025-09-05T09:05:44.732682Z",
+      "updated_at": "2025-09-11T10:47:51.342468Z"
+    },
+    {
+      "id": 14757,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.03629",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct范式的基础论文，该范式将语言模型的推理和行动步骤结合起来。这种方法对于理解LangChain等复杂智能体如何使用LLM进行决策和利用带内存的工具很重要。",
+      "order": 3,
+      "created_at": "2025-09-05T09:05:44.737024Z",
+      "updated_at": "2025-09-11T10:47:37.863712Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

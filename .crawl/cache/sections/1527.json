@@ -1,0 +1,61 @@
+{
+  "id": 1527,
+  "title": "编码分类特征",
+  "meta_title": "为机器学习编码分类数据",
+  "meta_description": "学习如何使用独热编码将分类（非数值）特征转换为数值格式。",
+  "content": "<p>机器学习 (machine learning)算法，特别是数学类算法，例如线性回归，主要处理数值数据。它们执行加法、乘法和距离计算，而这些操作对“红色”、“蓝色”、“纽约”或“巴黎”之类的文本标签没有意义。那么，当数据集包含描述性的非数值类别时，该怎么办呢？需要一种方法将这些分类特征转换为算法能够理解的数值格式，同时不丢失原始信息或引入误导性的关联。这个过程称为编码。</p>\n<h3>什么是分类特征？</h3>\n<p>分类特征表示可以分为不同组或类别的数据。这些类别可能没有自然的数值顺序。举例如下：</p>\n<ul>\n<li><strong>颜色:</strong> '红色', '绿色', '蓝色'</li>\n<li><strong>城市:</strong> '伦敦', '东京', '纽约'</li>\n<li><strong>产品类型:</strong> '电子产品', '服装', '食品杂货'</li>\n<li><strong>客户等级:</strong> '青铜', '白银', '黄金' (此项<em>可能</em>有顺序，称为序数类别，但很多只是标签，称为名义类别)</li>\n</ul>\n<p>直接将这些文本标签输入大多数算法是行不通的。例如，我们无法计算“红色”和“蓝色”的平均值。我们需要一个数值表示。</p>\n<h3>介绍独热编码</h3>\n<p>一种常见且有效的方法，用于处理名义分类特征（即类别之间没有固有顺序的情况），是<strong>独热编码</strong>。</p>\n<p>这个思路很简单：对于一个有 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 个独特类别的分类特征，我们创建 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>k</mi></mrow><annotation encoding=\"application/x-tex\">k</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0315em;\">k</span></span></span></span> 个新的二元特征（列）。每个新列对应一个原始类别。对于给定的数据点（行），与其原始类别对应的列赋值为 1，而与该原始特征相关的其他所有新列则赋值为 0。</p>\n<p>让我们用一个例子来说明。假设我们有一个名为“颜色”的特征，它有三个可能的值：“红色”、“绿色”和“蓝色”。</p>\n<p><strong>原始数据:</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"center\">ID</th>\n<th align=\"center\">颜色</th>\n<th align=\"center\">其他特征</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"center\">1</td>\n<td align=\"center\">红色</td>\n<td align=\"center\">10</td>\n</tr>\n<tr>\n<td align=\"center\">2</td>\n<td align=\"center\">绿色</td>\n<td align=\"center\">15</td>\n</tr>\n<tr>\n<td align=\"center\">3</td>\n<td align=\"center\">蓝色</td>\n<td align=\"center\">12</td>\n</tr>\n<tr>\n<td align=\"center\">4</td>\n<td align=\"center\">红色</td>\n<td align=\"center\">18</td>\n</tr>\n</tbody>\n</table>\n<p>对“颜色”特征应用独热编码后，它会变成这样：</p>\n<p><strong>独热编码后:</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"center\">ID</th>\n<th align=\"center\">Color_Red</th>\n<th align=\"center\">Color_Green</th>\n<th align=\"center\">Color_Blue</th>\n<th align=\"center\">其他特征</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"center\">1</td>\n<td align=\"center\">1</td>\n<td align=\"center\">0</td>\n<td align=\"center\">0</td>\n<td align=\"center\">10</td>\n</tr>\n<tr>\n<td align=\"center\">2</td>\n<td align=\"center\">0</td>\n<td align=\"center\">1</td>\n<td align=\"center\">0</td>\n<td align=\"center\">15</td>\n</tr>\n<tr>\n<td align=\"center\">3</td>\n<td align=\"center\">0</td>\n<td align=\"center\">0</td>\n<td align=\"center\">1</td>\n<td align=\"center\">12</td>\n</tr>\n<tr>\n<td align=\"center\">4</td>\n<td align=\"center\">1</td>\n<td align=\"center\">0</td>\n<td align=\"center\">0</td>\n<td align=\"center\">18</td>\n</tr>\n</tbody>\n</table>\n<p>注意，“颜色”这一列被三个新列取代：“Color_Red”、“Color_Green”和“Color_Blue”。每行现在都在这些列中的一个精确位置有“1”，表示原始颜色，其他位置为“0”。这种数值表示可以轻松地被机器学习 (machine learning)算法使用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-kbnhh6\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#adb5bd\"]; edge [color=\"#868e96\"]; \"原始特征\\n(颜色)\" -> {\"新特征 1\\n(Color_Red)\", \"新特征 2\\n(Color_Green)\", \"新特征 3\\n(Color_Blue)\"} [label=\" 转换为 \"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-kbnhh6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>独热编码将单个分类特征转换为多个二元特征的示意图。</p>\n</blockquote>\n<h3>为何使用独热编码？</h3>\n<ul>\n<li><strong>无隐含顺序：</strong> 它将类别转换为算法理解的格式，而不会暗示类别之间的任何顺序或关联（例如，它不暗示“蓝色”比“红色”拥有“更大”的值）。</li>\n<li><strong>兼容性：</strong> 大多数标准机器学习 (machine learning)算法可以直接处理这些二元特征。</li>\n</ul>\n<h3>潜在考量</h3>\n<p>独热编码的一个潜在问题是，当一个分类特征拥有非常大量的独特值时（例如，邮政编码、用户ID）。这可能导致数据集中列（特征）的数量显著增加，有时被称为“维度灾难”。虽然我们在此不会详细说明解决方案，但请注意，对于此类情况，在更进阶的情境下，可能会考虑其他编码方法或特征工程技术。</p>\n<h3>那如果只分配数字（0、1、2...）呢？</h3>\n<p>您可能会想：“为什么不直接为每个类别分配一个数字，比如红色=0、绿色=1、蓝色=2？”这称为<strong>标签编码</strong>。尽管更简单，但通常<strong>不推荐用于名义分类特征</strong>。赋值0、1、2暗示了顺序和大小（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>2</mn><mo>></mo><mn>1</mn><mo>></mo><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">2 > 1 > 0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6835em;vertical-align:-0.0391em;\"></span><span class=\"mord\">2</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6835em;vertical-align:-0.0391em;\"></span><span class=\"mord\">1</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span>）。算法可能会将这些数字解释为具有数学意义，而这在原始数据中并不存在（例如，假设蓝色某种程度上是绿色的“两倍”）。这可能会对模型性能产生负面影响。标签编码通常保留给<em>序数</em>特征，即类别<em>确实</em>具有有意义的顺序（如“小”、“中”、“大”）的情况。对于没有自然顺序的类别，独热编码通常是更安全的方法。</p>\n<h3>接下来的步骤</h3>\n<p>编码分类特征是为机器学习 (machine learning)准备数据的标准步骤。独热编码提供了一种将非数值标签转换为适合算法的格式的方法，且不强加人为的顺序。Python 中的 Scikit-learn 等库提供了方便的函数来实现这项技术，您将在后续的实际练习中遇到。拥有数值编码的特征使我们离将数据输入学习算法又近了一步。</p>",
+  "slug": "encoding-categorical-features",
+  "updates": [],
+  "references": [
+    {
+      "id": 4526,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "提供了数据预处理的实践指导，包括使用Python Scikit-learn进行分类特征编码的详细解释和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:09.725959Z",
+      "updated_at": "2025-09-07T18:26:07.370461Z"
+    },
+    {
+      "id": 4527,
+      "title": "sklearn.preprocessing.OneHotEncoder",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html",
+      "doi": "",
+      "note": "Scikit-learn OneHotEncoder的官方文档，详细说明其参数、方法和独热编码分类特征的示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:09.731960Z",
+      "updated_at": "2025-09-07T18:26:05.697096Z"
+    },
+    {
+      "id": 4528,
+      "title": "Introduction to Machine Learning with Python: A Guide for Data Scientists",
+      "author": "Andreas C. Müller and Sarah Guido",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introduction-to-machine/9781449369880/",
+      "doi": "",
+      "note": "讨论了分类变量表示的重要性，以及在Scikit-learn生态系统中OneHotEncoder和LabelEncoder的实际实现。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:09.734487Z",
+      "updated_at": "2025-09-07T18:26:15.397335Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

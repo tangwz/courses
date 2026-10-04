@@ -1,0 +1,61 @@
+{
+  "id": 6727,
+  "title": "为LLM理解工具规范的格式化处理",
+  "meta_title": "描述LLM代理的工具",
+  "meta_description": "学习如何格式化工具描述和API，以便LLM能够明白并运用它们。",
+  "content": "<p>为了让AI代理可靠地运用外部工具，它首先必须明白工具是什么，它的功能，如何调用，以及预期返回什么。这种明白并非源于先天知识，而是来自我们精心准备的描述。可以这样想：你不会在没有API文档的情况下，将一个新的软件库交给开发人员。同样，LLM需要一份它可能运用的每个工具的“手册”，这份手册就是工具规范。如何组织这些规范，直接影响着LLM能否有效明白并运用其可用的工具。</p>\n<p>LLM“读取”工具规范的方式与人类程序员截然不同。LLM将信息作为文本序列处理。该规范成为LLM决定是否运用工具以及如何格式化其请求时考虑的上下文 (context)的一部分。一个格式良好的规范使LLM能够准确识别工具的用途，将用户意图对应到工具输入，并正确组织它需要发送给工具的信息。缺少这一点，代理可能会选错工具，提供格式错误的输入，或误读工具的输出，从而导致错误和任务失败。</p>\n<h3>工具规范的基本组成部分</h3>\n<p>为确保LLM能够有效运用工具，其规范应清楚定义几项重要信息。这些组成部分是LLM推理 (inference)过程与工具功能之间的主要接口。</p>\n<ol>\n<li>\n<p><strong>工具名称</strong>：</p>\n<ul>\n<li>工具的独特且一致的标识符。LLM将运用此名称表明它运用工具的意图。</li>\n<li><strong>良好做法</strong>：运用清晰、描述性的名称。常见惯例包括 <code>snake_case</code>（例如，<code>get_stock_price</code>）或 <code>camelCase</code>（例如，<code>fetchWeatherData</code>）。避免可能难以让LLM解析或一致生成空格或特殊字符。</li>\n<li>例子：<code>calculator</code>、<code>web_search_engine</code>、<code>product_database_lookup</code></li>\n</ul>\n</li>\n<li>\n<p><strong>描述</strong>：</p>\n<ul>\n<li>对工具的用途、其能力以及（重要地）何时运用它进行简洁的自然语言说明。此描述不仅是为了明白<em>如何</em>运用工具，也是为了LLM<em>选定</em>工具的决策过程。</li>\n<li><code>unit_converter</code>工具的例子：“在不同度量单位之间转换值（例如，摄氏度到华氏度，千克到磅）。当请求在指定单位之间进行转换时运用此工具。”</li>\n</ul>\n</li>\n<li>\n<p><strong>输入参数 (parameter)（参数）</strong>：</p>\n<ul>\n<li>这可以说是工具正确调用的最重要的部分。工具接受的每个参数都需要清楚定义。\n<ul>\n<li><strong>名称</strong>：参数的描述性名称（例如，<code>query</code>、<code>unit_from</code>、<code>value_to_convert</code>）。</li>\n<li><strong>类型</strong>：预期数据类型（例如，<code>string</code>、<code>number</code>、<code>boolean</code>、<code>array</code>、<code>object</code>）。指定类型有助于LLM正确格式化数据。运用类似JSON Schema的类型定义通常有益。</li>\n<li><strong>描述</strong>：清楚说明参数代表什么以及任何特定约束或格式（例如，“要在网上查询的搜索词”，或“温度值，必须是数字类型”）。</li>\n<li><strong>必填/可选</strong>：表明参数对于工具运行是否必需。</li>\n</ul>\n</li>\n<li><code>send_email</code>工具参数的示例片段：\n<pre><code class=\"language-json\">{\n  \"recipient_address\": {\n    \"type\": \"string\",\n    \"description\": \"收件人邮箱地址，例如'user@example.com'。\"\n  },\n  \"subject_line\": {\n    \"type\": \"string\",\n    \"description\": \"邮件主题。\"\n  },\n  \"email_body\": {\n    \"type\": \"string\",\n    \"description\": \"邮件主要内容。\"\n  }\n}\n</code></pre>\n</li>\n</ul>\n</li>\n<li>\n<p><strong>输出结构（返回值）</strong>：</p>\n<ul>\n<li>工具在成功运行后预期返回的数据结构和类型。这有助于LLM预期工具响应的格式并正确解析它。</li>\n<li><strong>类型</strong>：输出的数据类型（例如，<code>string</code>、<code>number</code>、<code>object</code>、<code>array</code>）。</li>\n<li><strong>描述</strong>：输出代表什么。如果是对象，描述其属性。</li>\n<li><code>unit_converter</code>工具的例子：\n<pre><code class=\"language-json\">{\n  \"converted_value\": {\n    \"type\": \"number\",\n    \"description\": \"转换的数值结果。\"\n  },\n  \"new_unit\": {\n    \"type\": \"string\",\n    \"description\": \"值被转换到的单位。\"\n  }\n}\n</code></pre>\n</li>\n</ul>\n</li>\n<li>\n<p><strong>运用例子（可选但强烈推荐）</strong>：</p>\n<ul>\n<li>提供一些工具被调用的例子（输入参数）以及典型输出的样子，可以显著提升LLM正确运用工具的能力。这符合少样本提示原则。</li>\n<li><code>calculator.add</code>的例子：\n<pre><code>用户请求: \"15加27是多少？\"\n代理操作: { \"tool_name\": \"calculator\", \"operation\": \"add\", \"parameters\": { \"num1\": 15, \"num2\": 27 } }\n工具响应: { \"result\": 42 }\n</code></pre>\n</li>\n</ul>\n</li>\n</ol>\n<h3>工具规范的常见格式结构</h3>\n<p>尽管规范的内容是主要的，但其格式也同样重要。LLM需要高效解析这些信息。以下是几种常见方法：</p>\n<h4>JSON（JavaScript 对象表示法）</h4>\n<p>JSON是一种广泛运用的数据交换格式，通常被LLM很好地明白。运用JSON结构（通常借鉴JSON Schema来定义参数 (parameter)和输出）来描述工具是一种方法。</p>\n<pre><code class=\"language-json\">{\n  \"tool_name\": \"get_current_weather\",\n  \"description\": \"获取指定地点的当前天气情况。\",\n  \"parameters\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"location\": {\n        \"type\": \"string\",\n        \"description\": \"城市名称（例如，'伦敦'，'东京'）。\"\n      },\n      \"unit\": {\n        \"type\": \"string\",\n        \"description\": \"温度单位：'celsius'或'fahrenheit'。默认为'celsius'。\",\n        \"enum\": [\"celsius\", \"fahrenheit\"]\n      }\n    },\n    \"required\": [\"location\"]\n  },\n  \"returns\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"temperature\": {\n        \"type\": \"number\",\n        \"description\": \"指定单位下的当前温度。\"\n      },\n      \"condition\": {\n        \"type\": \"string\",\n        \"description\": \"天气情况的简要描述（例如，'晴朗'，'多云'）。\"\n      },\n      \"humidity_percent\": {\n        \"type\": \"integer\",\n        \"description\": \"当前湿度百分比。\"\n      }\n    }\n  }\n}\n</code></pre>\n<blockquote>\n<p>一个定义<code>get_current_weather</code>工具的JSON对象，包括其描述、带有类型和约束的参数，以及预期的返回结构。</p>\n</blockquote>\n<h4>带分隔符的结构化自然语言</h4>\n<p>对于更简单的工具，或者如果你想在提示中以更易读的方式呈现信息，带有清晰分隔符的结构化自然语言是可行的。一致性在这里很重要。</p>\n<pre><code class=\"language-text\">工具: find_city_timezone\n描述: 获取给定城市的当前IANA时区。\n参数:\n  city_name (string, required): 城市名称（例如，“New York”，“Paris”）。\n  country_code (string, optional): 用于区分同名城市的两位ISO国家代码（例如，“US”，“FR”）。\n返回值:\n  timezone (string): IANA时区标识符（例如，“America/New_York”）。\n  error (string, optional): 如果找不到时区的错误消息。\n</code></pre>\n<blockquote>\n<p>一个运用结构化自然语言并为每个组成部分提供清晰标签的工具规范。</p>\n</blockquote>\n<h4>专用工具/函数调用格式</h4>\n<p>许多现代LLM API，例如OpenAI的API，提供特定的“函数调用”或“工具运用”能力。这些API通常期望工具规范采用预定义的JSON格式。在运用其专用工具运用功能时，遵循这些供应商特定格式是必需的。</p>\n<p>例如，OpenAI的API可能期望工具定义列表如下：</p>\n<pre><code class=\"language-json\">[\n  {\n    \"type\": \"function\",\n    \"function\": {\n      \"name\": \"get_flight_booking_status\",\n      \"description\": \"根据预订ID获取航班预订状态。\",\n      \"parameters\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"booking_id\": {\n            \"type\": \"string\",\n            \"description\": \"航班预订的独特标识符，例如'FGH789'。\"\n          }\n        },\n        \"required\": [\"booking_id\"]\n      }\n    }\n  }\n]\n</code></pre>\n<blockquote>\n<p>一个工具可能如何为支持专用函数调用的LLM API定义的例子，显示通常需要的嵌套结构。</p>\n</blockquote>\n<p>查阅你正在运用的特定LLM或框架的文档很重要，因为它们通常规定工具规范的首选格式。</p>\n<h3>编写有效工具规范的良好做法</h3>\n<ul>\n<li><strong>清晰和简洁</strong>：在描述中避免运用行话或过于复杂的句子。规范会增加整体提示长度，因此请注意token限制。</li>\n<li><strong>一致性</strong>：在所有工具定义中运用统一的命名规范（例如，所有参数 (parameter)名称都采用<code>snake_case</code>）和结构。这有助于LLM学习模式。</li>\n<li><strong>描述性命名</strong>：为工具和参数选择清晰表明其用途的名称（例如，<code>user_query</code>优于<code>inp1</code>）。</li>\n<li><strong>明确列出枚举值</strong>：如果参数只接受特定值集合（枚举），请清楚列出它们（例如，<code>status: \"pending\" | \"completed\" | \"failed\"</code>）。</li>\n<li><strong>预期常见变体</strong>：在描述中，你可以暗示如何处理用户请求中的微小变体。例如，对于搜索工具，你可能会指定“运用此工具查找关于主题、人物或事件的信息。”</li>\n<li><strong>版本控制</strong>：如果你的工具随时间变化（例如，新参数、不同输出），请考虑在规范中包含<code>version</code>字段。你的代理逻辑可能需要处理不同工具版本。</li>\n<li><strong>迭代改进</strong>：你的工具规范的第一个版本可能不完美。测试LLM明白和运用工具的程度。观察其生成的工具调用并根据任何误解或错误改进规范。这是提示工程 (prompt engineering)工作流的常见部分。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-qhivju\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled,rounded\", fontname=\"Arial\", fillcolor=\"#dee2e6\"];\n    edge [fontname=\"Arial\"];\n\n    spec [label=\"有效工具规范\", fillcolor=\"#4dabf7\", fontcolor=\"white\"];\n\n    tool_name [label=\"工具名称\\n(例如，&#39;image_analyzer&#39;)\", fillcolor=\"#a5d8ff\"];\n    description [label=\"用途与运用描述\\n(它做什么，何时清楚运用)\", fillcolor=\"#a5d8ff\"];\n    parameters [label=\"输入参数\", fillcolor=\"#a5d8ff\"];\n    output_format [label=\"预期输出格式\\n(结果的结构和类型)\", fillcolor=\"#a5d8ff\"];\n    examples [label=\"运用例子\\n(示例调用和响应)\", fillcolor=\"#a5d8ff\"];\n\n    param_name [label=\"名称 (例如，&#39;image_url&#39;)\", shape=ellipse, fillcolor=\"#d0bfff\"];\n    param_type [label=\"数据类型 (例如，&#39;string&#39;, &#39;url&#39;)\", shape=ellipse, fillcolor=\"#d0bfff\"];\n    param_desc [label=\"参数描述\\n(含义，约束)\", shape=ellipse, fillcolor=\"#d0bfff\"];\n    param_req [label=\"必填/可选\\n(是必需的吗？)\", shape=ellipse, fillcolor=\"#d0bfff\"];\n\n    spec -> tool_name [penwidth=1.5];\n    spec -> description [penwidth=1.5];\n    spec -> parameters [penwidth=1.5];\n    spec -> output_format [penwidth=1.5];\n    spec -> examples [penwidth=1.5];\n\n    parameters -> param_name;\n    parameters -> param_type;\n    parameters -> param_desc;\n    parameters -> param_req;\n\n    subgraph cluster_llm_interaction {\n        label=\"LLM解释周期\";\n        style=\"filled\";\n        color=\"#f1f3f5\";\n        node [fillcolor=\"#ffe066\"];\n        llm [label=\"LLM引擎\", shape=oval, fillcolor=\"#fab005\", fontcolor=\"black\"];\n        parsed_spec [label=\"规范解析\"];\n        tool_invocation_plan [label=\"工具调用形成\"];\n\n        llm -> parsed_spec [label=\"读取并明白\"];\n        spec -> parsed_spec [style=dashed, arrowhead=none, label=\"提供架构\"];\n        parsed_spec -> tool_invocation_plan [label=\"指导\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-qhivju\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>为LLM明白而设计的全面工具规范的组成部分。该规范充当架构，指导LLM解析其细节并形成准确的工具调用。</p>\n</blockquote>\n<p>通过投入时间创建清晰、全面且格式良好的工具规范，你为LLM提供了必要知识，使其能够在你的代理系统中充当有能力且可靠的组成部分。这个基础很重要，才能接着管理实际工具运行时输入和输出的动态流动，我们将在接下来讨论这一点。</p>",
+  "slug": "formatting-tool-specifications-llm",
+  "updates": [],
+  "references": [
+    {
+      "id": 18180,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHb7SvTlcL5mF8XBbCSRCJiSiIhrC588dS1Mg-j567UBU4Y_AgIDmnLO2zUBszyklTEo4FOA-w56bx5Pi2EaCDudauhRCRq8tNBS2j8aofhAIG7ryzu4_rhXA-nYqpI6zikevfAgsT-FXbiGJtCqL25pw=",
+      "doi": "",
+      "note": "OpenAI官方文档，详细介绍了如何使用OpenAI大型语言模型定义和调用函数（工具），提供了工具规范的实用示例和最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-06T12:18:29.929027Z",
+      "updated_at": "2025-09-11T08:24:20.020516Z"
+    },
+    {
+      "id": 18181,
+      "title": "Tool calling in Gemini",
+      "author": "Google AI",
+      "year": "2024",
+      "publisher": "Google AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ai.google.dev/docs/guides/function_calling",
+      "doi": "",
+      "note": "Google AI的文档，阐述了将自定义工具与Gemini模型集成和使用的过程，展示了他们定义工具和进行交互的具体方法。",
+      "order": 2,
+      "created_at": "2025-09-06T12:18:29.933246Z",
+      "updated_at": "2025-09-11T08:24:19.444763Z"
+    },
+    {
+      "id": 18183,
+      "title": "JSON Schema",
+      "author": "JSON Schema community",
+      "year": "2020",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://json-schema.org/",
+      "doi": "",
+      "note": "JSON Schema的官方网站和规范，是定义JSON数据结构、内容和验证规则的标准，非常适用于构建LLM工具参数和输出。",
+      "order": 4,
+      "created_at": "2025-09-06T12:18:29.940187Z",
+      "updated_at": "2025-09-11T08:23:56.887865Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

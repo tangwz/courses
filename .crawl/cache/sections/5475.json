@@ -1,0 +1,61 @@
+{
+  "id": 5475,
+  "title": "金丝雀发布与 A/B 测试模型",
+  "meta_title": "扩散模型与采样器的 A/B 测试",
+  "meta_description": "通过金丝雀发布和 A/B 测试，安全推出新模型版本或生成参数。",
+  "content": "<p>机器学习 (machine learning)模型更新在生产环境中的部署总是有风险的，但扩散模型的复杂性和计算要求大大增加了这些风险。采样器中的一个看似微小的改变、一个不同的检查点或量化 (quantization)等优化措施，都可能导致生成质量、性能和成本发生不易察觉或剧烈的变化。直接用未经测试的新版本替换稳定的生产模型，可能导致服务质量下降、运营成本增加或用户体验不佳。金丝雀发布和 A/B 测试等先进的部署策略，为引入变更和做出关于模型更新的数据驱动型决策提供了有条理、低风险的方法。</p>\n<p>这些技术超越了简单的部署方式，让您可以将新模型版本或配置暴露给一部分真实流量或用户，在全面发布之前，仔细监控其表现。这对于扩散模型尤为重要，因为其成功与否通常不仅通过延迟等技术指标衡量，还通过生成图像的主观质量来衡量。</p>\n<h3>金丝雀发布：安全渐进式发布</h3>\n<p>金丝雀发布是指将您的扩散模型服务的新版本（即“金丝雀”）与稳定的生产版本一同部署。最初，只有一小部分用户流量（例如 1%、5% 或 10%）被路由到金丝雀版本，而大部分用户仍使用稳定版本。</p>\n<p>主要目的是在用户影响最小的情况下尽早发现问题。如果金丝雀版本根据预定义的指标（延迟、错误率、GPU 利用率、每次推理 (inference)成本，以及可能的自动化质量检查或有限的人工审查）表现良好，您可以逐步增加路由到该版本的流量百分比。如果出现问题，流量可以迅速切换回稳定版本，从而将问题的影响范围降至最低。</p>\n<p><strong>实现机制：</strong></p>\n<ul>\n<li><strong>基础设施层路由：</strong> Kubernetes 入口控制器（Nginx、Traefik）、服务网格（Istio、Linkerd）或云服务提供商负载均衡器等工具通常支持基于权重 (weight)的流量拆分。您可以配置规则，根据权重将特定比例的请求指向金丝雀部署。</li>\n<li><strong>应用层路由：</strong> API 网关或后端服务本身可以实现逻辑，根据用户 ID、会话 Cookie 或随机采样来路由请求，将一部分请求指向金丝雀模型端点。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-7ig1bl\" \n              data-graph-definition='digraph CanaryRelease {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n\n  User [label=\"用户流量\"];\n  LoadBalancer [label=\"负载均衡器 / 路由器\\n(流量拆分)\", shape=diamond, color=\"#228be6\"];\n  StableService [label=\"稳定模型服务 (v1.0)\\n[95% 流量]\", peripheries=2, color=\"#12b886\"];\n  CanaryService [label=\"金丝雀模型服务 (v1.1)\\n[5% 流量]\", color=\"#fab005\"];\n  Monitoring [label=\"监控与告警\", shape=cylinder, color=\"#7950f2\"];\n\n  User -> LoadBalancer;\n  LoadBalancer -> StableService [label=\" 95%\"];\n  LoadBalancer -> CanaryService [label=\" 5%\"];\n  StableService -> Monitoring;\n  CanaryService -> Monitoring;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-7ig1bl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>金丝雀发布设置中流量流动的示意图。负载均衡器将一小部分用户流量指向新的金丝雀版本，而大部分流量则指向稳定版本。两者均受到监控。</p>\n</blockquote>\n<p><strong>金丝雀监控：</strong></p>\n<p>密切监控是必不可少的。重要指标包括：</p>\n<ul>\n<li><strong>性能：</strong> 推理延迟（平均值、p95、p99）、吞吐量 (throughput)。</li>\n<li><strong>资源使用：</strong> GPU 利用率、内存消耗。</li>\n<li><strong>成本：</strong> 每生成图像的成本（如果可衡量）。</li>\n<li><strong>错误率：</strong> HTTP 错误代码 (5xx)、应用层错误。</li>\n<li><strong>输出质量：</strong> 自动化检查（如果可行，例如检查空白图像、伪影）或对金丝雀输出进行有针对性的人工审查。</li>\n</ul>\n<p>如果金丝雀版本在足够长的时间和流量下，其性能和质量达到或超过稳定版本，您就可以进行全面发布，通常是通过逐步将金丝雀的流量份额增加到 100%。</p>\n<h3>A/B 测试：比较不同方案</h3>\n<p>金丝雀发布侧重于安全地推出一个旨在替换当前版本的<em>单一</em>新版本，而 A/B 测试（或多变量测试）旨在根据特定指标，明确地<em>比较</em>两个或更多版本（A 对比 B，或 A 对比 B 对比 C）。用户或请求被分段，并且每个分段都一致地指向一个特定版本。</p>\n<p>对于扩散模型而言，A/B 测试对于评估可能以主观方式影响输出质量或用户偏好的变更非常有价值。</p>\n<p><strong>扩散模型常见的 A/B 测试：</strong></p>\n<ul>\n<li><strong>模型检查点：</strong> 比较基础 Stable Diffusion 模型与针对特定风格的微调 (fine-tuning)版本。</li>\n<li><strong>采样器：</strong> 在相同步数下评估 DDIM 与 DPM-Solver++ 的速度和感知质量。</li>\n<li><strong>推理 (inference)步数：</strong> 测试将步数从 50 减少到 25 以获得更快结果时，用户满意度和生成质量。</li>\n<li><strong>优化：</strong> 比较 FP16 量化 (quantization)模型与原始 FP32 模型在速度、成本和视觉保真度方面的表现。</li>\n<li><strong>提示工程 (prompt engineering)变体：</strong> 测试 API 应用的不同内部提示模板或负面提示策略。</li>\n<li><strong>硬件配置：</strong> 比较在不同 GPU 类型上运行相同模型的性能和成本。</li>\n</ul>\n<p><strong>实现：</strong></p>\n<p>与金丝雀发布类似，A/B 测试依赖于流量拆分机制。然而，路由逻辑通常需要确保用户一致性（例如，特定用户始终获得版本 A 或版本 B），或根据定义标准进行流量分段。功能标记 (token)系统通常与基础设施路由结合使用，以管理分配。</p>\n<p><strong>指标与评估：</strong></p>\n<p>评估扩散模型的 A/B 测试需要结合定量和定性数据：</p>\n<ul>\n<li><strong>定量指标：</strong> 测量每个版本（A 和 B）的延迟、吞吐量 (throughput)、成本和错误率。这有助于判断哪个版本明显更快或更便宜。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-f34u98\" \n              data-plot-definition='{\"data\":[{\"type\":\"bar\",\"x\":[\"Model A (FP32)\",\"Model B (INT8)\"],\"y\":[8.5, 6.2],\"marker\":{\"color\":[\"#4dabf7\",\"#51cf66\"]}}],\"layout\":{\"title\":{\"text\":\"A/B 测试：平均推理延迟\"},\"yaxis\":{\"title\":\"延迟 (秒)\"},\"xaxis\":{\"title\":\"模型版本\"},\"font\":{\"family\":\"sans-serif\"},\"margin\":{\"l\":50,\"r\":30,\"t\":40,\"b\":40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-f34u98\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>在 A/B 测试中比较两个模型版本（例如，原始 FP32 与量化 INT8）之间的平均推理延迟。</p>\n</blockquote>\n<ul>\n<li><strong>定性指标：</strong> 这通常是决定因素。\n<ul>\n<li><strong>人工评估：</strong> 建立人工评估小组，根据提示遵循度、图像质量、美学或无伪影等标准，对不同版本的输出进行评分。这可以通过盲评进行。</li>\n<li><strong>用户反馈：</strong> 将简单的反馈机制（例如，点赞/点踩、评分等级）集成到使用 API 的应用程序中，让用户隐式或显式地对不同模型版本的生成质量进行投票。</li>\n<li><strong>代理指标：</strong> 使用 FID (Fréchet Inception Distance) 或 CLIP Score 等指标来自动感知质量差异。然而，请注意，这些指标并不总是与人类感知完全相关，特别是对于风格元素。将它们作为辅助数据，而非唯一的决策标准。</li>\n</ul>\n</li>\n</ul>\n<p><strong>选择获胜版本：</strong></p>\n<p>A/B 测试中的“获胜”版本并非总是最快或最便宜的。对于生成式模型，即使某个版本稍微慢一些或更昂贵，只要它符合可接受的性能阈值，但能生成明显更好或更受欢迎的图像（基于定性反馈），也可能被选中。决策通常需要在性能、成本和质量之间根据业务目标进行权衡。</p>\n<h3>回滚策略</h3>\n<p>金丝雀发布和 A/B 测试都需要可靠的回滚机制。如果监控显示新版本存在严重问题（高错误率、不可接受的延迟、低质量输出、过高成本），您需要能够迅速将流量切换回已知的稳定版本。自动化在此处非常重要。配置基于关键指标的告警，并可能将这些告警与自动化脚本或部署系统功能关联起来，以便立即将 100% 的流量从有问题版本上移走。</p>\n<p>通过系统地使用金丝雀发布和 A/B 测试，您可以更有信心地将优化、新功能和更新的模型引入您的大规模扩散模型部署中，利用数据来指导决策，并最大程度地降低与变更相关的风险。这些实践是生成式 AI (Generative AI) 成熟 MLOps 策略的基本组成部分。</p>",
+  "slug": "canary-ab-testing-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 14947,
+      "title": "Engineering MLOps: From Model to Production",
+      "author": "Emmanuel Raj, Larysa Visengeriyeva, Arpit Shah",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/engineering-mlops/9781098104473/",
+      "doi": "",
+      "note": "一本涵盖完整 MLOps 生命周期的综合书籍，包括专门针对机器学习模型的金丝雀发布和 A/B 测试等高级部署策略。",
+      "order": 1,
+      "created_at": "2025-09-05T14:33:10.681856Z",
+      "updated_at": "2025-09-10T02:25:34.150406Z"
+    },
+    {
+      "id": 14948,
+      "title": "Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing",
+      "author": "Ron Kohavi, Diane Tang, Ya Xu",
+      "year": "2020",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "288",
+      "url": "https://www.cambridge.org/9781108724265",
+      "doi": "",
+      "note": "这本权威指南提供了关于设计、运行和分析在线实验的深刻见解，对于在生产机器学习系统中实施严谨的 A/B 测试非常有价值。",
+      "order": 2,
+      "created_at": "2025-09-05T14:33:10.698927Z",
+      "updated_at": "2025-09-10T02:25:32.452711Z"
+    },
+    {
+      "id": 14950,
+      "title": "MLOps: A guide to the machine learning lifecycle",
+      "author": "Google Cloud",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning",
+      "doi": "",
+      "note": "官方 Google Cloud 架构指南，讨论 MLOps 原则，包括大规模部署和管理机器学习系统的持续交付和实验策略。",
+      "order": 4,
+      "created_at": "2025-09-05T14:33:10.712446Z",
+      "updated_at": "2025-09-10T02:25:20.887077Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

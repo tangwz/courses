@@ -1,0 +1,45 @@
+{
+  "id": 1806,
+  "title": "使用 PyTree 管理分层状态",
+  "meta_title": "使用 JAX PyTree 管理分层状态",
+  "meta_description": "处理嵌套的 Python 容器（列表、元组、字典）作为状态对象。",
+  "content": "<p>\"在上一节中，我们看到了通过显式地将状态传入函数并接收其更新版本作为输出的状态管理方式。这种方式对于简单状态，例如单个计数器，效果不错。但应用程序常涉及更复杂的状态。考虑神经网络 (neural network)的参数 (parameter)，它们通常包含多个权重 (weight)矩阵和偏置 (bias)向量 (vector)，并经常按层级排列。同样，优化器状态可能包含动量值或每个参数的自适应学习率。手动传递和返回几十个单独的数组会很繁琐且容易出错。\"</p>\n<p>JAX 提供了 PyTree 机制来高效管理复杂状态。PyTree 不是您可以从 JAX 导入的特定数据类型或类。相反，它只是 JAX 用来指代的一种由标准 Python 容器构建的树状结构。被识别为 PyTree 节点的最常见容器是列表、元组和字典。树的“叶子”通常是 JAX 数组或其他非容器对象。</p>\n<p>看一个简单例子，表示两层线性模型的参数：</p>\n<pre><code class=\"language-python\">import jax.numpy as jnp\n\nparams = {\n    'layer1': {\n        'weights': jnp.ones((3, 2)),\n        'bias': jnp.zeros((2,))\n    },\n    'layer2': {\n        'weights': jnp.ones((2, 1)),\n        'bias': jnp.zeros((1,))\n    }\n}\n</code></pre>\n<p>这个嵌套字典 <code>params</code> 就是一个 PyTree。这些字典（<code>params</code>、<code>params['layer1']</code>、<code>params['layer2']</code>）充当内部节点，而 JAX 数组（<code>jnp.ones(...)</code>、<code>jnp.zeros(...)</code>）则是叶子。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-13q4d8\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [arrowhead=none];\n\n  params [label=\"params (字典)\", shape=ellipse, style=filled, fillcolor=\"#ced4da\"];\n  layer1_dict [label=\"层1 (字典)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  layer2_dict [label=\"层2 (字典)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  l1_w [label=\"权重 (数组)\", shape=box, style=filled, fillcolor=\"#a5d8ff\"];\n  l1_b [label=\"偏置 (数组)\", shape=box, style=filled, fillcolor=\"#a5d8ff\"];\n  l2_w [label=\"权重 (数组)\", shape=box, style=filled, fillcolor=\"#74c0fc\"];\n  l2_b [label=\"偏置 (数组)\", shape=box, style=filled, fillcolor=\"#74c0fc\"];\n\n  params -> layer1_dict [label=\" &#39;layer1&#39;\"];\n  params -> layer2_dict [label=\" &#39;layer2&#39;\"];\n  layer1_dict -> l1_w [label=\" &#39;weights&#39;\"];\n  layer1_dict -> l1_b [label=\" &#39;bias&#39;\"];\n  layer2_dict -> l2_w [label=\" &#39;weights&#39;\"];\n  layer2_dict -> l2_b [label=\" &#39;bias&#39;\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-13q4d8\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>嵌套字典 <code>params</code> 作为 PyTree 的视觉图示。字典是内部节点，JAX 数组是叶子。</p>\n</blockquote>\n<p>PyTree 的重要性在于 JAX 的函数变换如何与它们协同工作。像 <code>jax.jit</code>、<code>jax.grad</code>、<code>jax.vmap</code> 和 <code>jax.pmap</code> 这样的函数都被设计为对 PyTree 进行操作。当你将这些变换应用于接受或返回 PyTree 的 Python 函数时，JAX 会自动遍历树结构，将核心逻辑应用于叶节点（如 JAX 数组），同时保持容器结构不变。</p>\n<p>我们来设想一个简化的 <code>update_params</code> 函数，它接收 <code>params</code> PyTree 和（结构相同的）梯度，并执行一个梯度下降 (gradient descent)步骤：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 假设 'params' 如上文所示定义\n# 假设 'grads' 是一个与 'params' 结构相同的 PyTree，包含梯度\n\ndef update_params(params, grads, learning_rate):\n  # 此函数使用梯度更新权重和偏置\n  # 我们需要将更新应用于 params 树中的每个叶子（数组）\n  # JAX 提供了相关工具，例如 jax.tree_util.tree_map\n  def sgd_update(param, grad):\n    return param - learning_rate * grad\n\n  # 将 sgd_update 函数应用于 params 和 grads 中的每个叶子对\n  updated_params = jax.tree_util.tree_map(sgd_update, params, grads)\n  return updated_params\n\n# 示例用法（这里的梯度仅为占位符）\ngrads = {\n    'layer1': {'weights': jnp.full((3, 2), 0.1), 'bias': jnp.full((2,), 0.01)},\n    'layer2': {'weights': jnp.full((2, 1), 0.2), 'bias': jnp.full((1,), 0.02)}\n}\n\nlearning_rate = 0.01\nnew_params = update_params(params, grads, learning_rate)\n\n# 一个重要点是，我们可以直接 JIT 编译此函数\njitted_update_params = jax.jit(update_params)\nnew_params_jitted = jitted_update_params(params, grads, learning_rate)\n\n# JAX 在编译和执行期间会自动处理 PyTree 结构。\n# new_params 和 new_params_jitted 将具有相同的嵌套字典结构\n# 并包含相同的更新数值。\n</code></pre>\n<p>在此示例中，<code>jax.tree_util.tree_map</code> 被显式使用，将 <code>sgd_update</code> 函数应用于 <code>params</code> 和 <code>grads</code> PyTree 中对应的叶子。<code>tree_map</code> 接收一个函数和一个或多个 PyTree，将函数逐元素地应用于 PyTree 的叶子，并返回一个具有相同结构、包含结果的新 PyTree。</p>\n<p>请注意，我们可以直接将 <code>jax.jit</code> 应用于 <code>update_params</code>。JAX 知道 <code>params</code> 和 <code>grads</code> 是 PyTree。在追踪期间，它会识别叶节点（数组），并为这些叶子编译在 <code>sgd_update</code> 中定义的操作。容器结构（字典和键）会被保留并自动处理。您无需手动将参数展平为列表、执行更新，然后再重建嵌套字典。</p>\n<p>这种透明性也适用于其他变换。如果您对以 <code>params</code> 为输入的损失函数 (loss function)使用 <code>jax.grad</code>，则生成的梯度将自动具有与 <code>params</code> 相同的 PyTree 结构。如果您使用 <code>jax.vmap</code> 处理一批数据，并且您的函数返回了一个激活值的 PyTree，那么 <code>vmap</code> 会处理激活值 PyTree 叶子上的批处理。</p>\n<p>尽管 <code>jax.tree_util</code> 包含像 <code>tree_map</code>、<code>tree_leaves</code>（将所有叶子作为扁平列表获取）和 <code>tree_unflatten</code>（从叶子和结构定义重建树）这样的函数，但当您只是通过变换后的函数传递状态时，通常无需直接与它们交互。它们的主要作用是当您需要在自己的函数逻辑中显式地对 PyTree 的叶子进行操作时，如 <code>update_params</code> 示例所示。</p>\n<p>使用 PyTree，您可以用标准的 Python 字典、列表和元组以自然易读的方式组织复杂状态，例如模型参数或优化器状态。JAX 在其变换系统中隐式处理这些结构的能力是一个重要的便利，它使得编写用于复杂计算的简洁、函数式代码变得容易得多，同时仍能从编译、自动微分和向量化 (quantization)中获益。它弥合了 Python 灵活数据结构与 JAX 高性能函数式核心之间的差异。</p>",
+  "slug": "using-pytrees-structured-state",
+  "updates": [],
+  "references": [
+    {
+      "id": 3694,
+      "title": "PyTrees",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/pytrees.html",
+      "doi": "",
+      "note": "JAX官方文档，解释了PyTree的概念、其结构以及JAX变换如何与它们交互。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:25.364162Z",
+      "updated_at": "2025-09-08T04:48:33.448174Z"
+    },
+    {
+      "id": 3696,
+      "title": "`jax.tree_util` API documentation",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/jax.tree_util.html",
+      "doi": "",
+      "note": "提供了用于操作和检查PyTree（例如`tree_map`、`tree_leaves`和`tree_unflatten`）函数的详细API参考。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:25.370814Z",
+      "updated_at": "2025-09-08T04:48:35.939590Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

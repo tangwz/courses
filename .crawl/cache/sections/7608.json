@@ -1,0 +1,61 @@
+{
+  "id": 7608,
+  "title": "正则化的抽样参数",
+  "meta_title": "使用抽样进行 GBM 正则化",
+  "meta_description": "理解行抽样 (`subsample`) 和列抽样 (`colsample_bytree`) 如何引入随机性并作为有效的正则化手段。",
+  "content": "<p>尽管像 <code>max_depth</code> 和 <code>min_child_weight</code> 这样的参数 (parameter)用于控制单棵树的复杂度，但另一种有效的正则化 (regularization)方法是在树的构建过程中引入随机性。这种被称为随机梯度提升的技术，让每个新的学习器在数据的不同子样本上进行训练。这样做可以降低模型的方差及其过拟合 (overfitting)的趋势，这与随机森林等算法中的装袋法（bagging）运作方式很相似。</p>\n<p>这种随机性主要通过两种方式注入：通过对训练实例（行）进行抽样，以及通过对特征（列）进行抽样。</p>\n<h3>行抽样以提高模型泛化能力</h3>\n<p>行抽样是指在总训练数据的一个子集上训练每棵树。这由 Scikit-Learn 和 XGBoost 中的 <code>subsample</code> 超参数 (parameter) (hyperparameter)，或 LightGBM 中的 <code>bagging_fraction</code> 参数控制。</p>\n<p>在每次提升迭代开始时，会不放回地选择训练数据的一个随机子集。序列中的下一棵树仅针对这个子集来修正错误。这可以防止任何单棵树受到特定训练实例（例如异常值）的过度影响，这些实例可能主导梯度计算。</p>\n<p><code>subsample</code> 的典型值在 0.5 到 0.8 之间。</p>\n<ul>\n<li>值为 <code>1.0</code> 意味着所有训练数据都用于每棵树，这相当于没有这种形式正则化 (regularization)的标准梯度提升。</li>\n<li>值为 <code>0.7</code> 意味着每棵树在随机选择的 70% 训练数据上进行训练。</li>\n</ul>\n<p>减小 <code>subsample</code> 值会增加随机性，并能提供更强的正则化效果。然而，将其设置得过低可能导致欠拟合 (underfitting)，因为每棵树都是基于过少的信息构建的。这还可能增加训练时间，因为模型可能需要更多的树 (<code>n_estimators</code>) 才能收敛。</p>\n<h3>列抽样以使特征多样化</h3>\n<p>除了行抽样，我们还可以在构建每棵树时对列（特征）进行抽样。这项技术对于具有许多特征的数据集特别有效，因为其中一些特征可能高度相关。它促使模型考虑更广泛的特征，而不是反复依赖少数几个主导特征。</p>\n<p>对此最常用的超参数 (parameter) (hyperparameter)是 <code>colsample_bytree</code>。该参数指定在构建<em>每棵树</em>时随机抽样列的比例。例如，如果在拥有 100 个特征的数据集中将 <code>colsample_bytree</code> 设置为 <code>0.8</code>，那么每棵新树都将使用随机选择的 80 个特征子集进行构建。</p>\n<p>其他相关参数提供更细致的控制：</p>\n<ul>\n<li><code>colsample_bylevel</code>：控制树的每个<em>级别</em>抽样的列的比例。</li>\n<li><code>colsample_by_node</code>：控制树内每个<em>分裂</em>抽样的列的比例。</li>\n</ul>\n<p>使用 <code>colsample_bytree</code> 促使模型构建一组更多样化的弱学习器，这能提高最终集成模型的整体稳健性。</p>\n<p>下图说明了行抽样和列抽样如何一起运作。对于每棵新树，都会使用行和列的不同的子集进行训练。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-19xyx9b\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n  \n  data [label=\"完整训练数据\\n(N 个样本, P 个特征)\", fillcolor=\"#e9ecef\"];\n  \n  subgraph cluster_0 {\n    label = \"第 m 次迭代\";\n    style=\"dashed\";\n    bgcolor=\"#f8f9fa\";\n    tree_m [label=\"用于第 m 棵树的数据\\n(subsample * N 个样本,\\ncolsample_bytree * P 个特征)\", fillcolor=\"#a5d8ff\"];\n  }\n\n  subgraph cluster_1 {\n    label = \"第 m+1 次迭代\";\n    style=\"dashed\";\n    bgcolor=\"#f8f9fa\";\n    tree_m1 [label=\"用于第 m+1 棵树的数据\\n(不同的 subsample * N 个样本,\\n不同的 colsample_bytree * P 个特征)\", fillcolor=\"#b2f2bb\"];\n  }\n  \n  data -> tree_m [label=\"抽样\"];\n  data -> tree_m1 [label=\"抽样\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-19xyx9b\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>提升序列中的每棵树都在原始数据行和列的独有随机抽样子集上进行训练。</p>\n</blockquote>\n<h3>实际操作</h3>\n<p>实际上，行抽样和列抽样会一起使用。将 <code>subsample</code> 和 <code>colsample_bytree</code> 都设置为小于 1.0 的值是正则化 (regularization) XGBoost、LightGBM 及其他梯度提升模型的标准做法。</p>\n<p>以下是初始化 XGBoost 模型时设置这些参数 (parameter)的方式：</p>\n<pre><code class=\"language-python\">import xgboost as xgb\n\n# 使用抽样初始化 XGBoost 回归器\nxgb_model = xgb.XGBRegressor(\n    n_estimators=500,\n    learning_rate=0.05,\n    max_depth=4,\n    subsample=0.8,          # 使用 80% 的数据训练每棵树\n    colsample_bytree=0.8,   # 使用 80% 的特征训练每棵树\n    random_state=42\n)\n\n# 接下来你会用你的数据拟合这个模型\n# xgb_model.fit(X_train, y_train)\n</code></pre>\n<p>这些参数的最优值取决于数据集。一个常见做法是，从 0.7 到 0.9 之间的值开始，然后使用网格搜索或随机搜索等搜索技术（我们将在后面介绍），以找到在验证集上产生最佳性能的组合。通过引入这种结构化的随机性，您可以构建功能强大且对未见过的数据具有良好泛化能力的模型。</p>",
+  "slug": "subsampling-for-regularization",
+  "updates": [],
+  "references": [
+    {
+      "id": 21398,
+      "title": "Stochastic Gradient Boosting",
+      "author": "Jerome H. Friedman",
+      "year": "2002",
+      "publisher": "Elsevier",
+      "journal": "Computational Statistics & Data Analysis",
+      "volume": "38",
+      "pages": "367-378",
+      "url": "https://www.sciencedirect.com/science/article/pii/S0167947301000652",
+      "doi": "10.1016/S0167-9473(01)00065-2",
+      "note": "将子采样（随机性）的概念引入梯度提升算法，以提高模型的泛化能力。",
+      "order": 1,
+      "created_at": "2025-09-30T05:41:25.465405Z",
+      "updated_at": "2025-09-30T05:54:20.011746Z"
+    },
+    {
+      "id": 21399,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://hastie.stanford.edu/ElemStatLearn/ESLII_print12.pdf",
+      "doi": "",
+      "note": "一本全面的统计学习教材，详细介绍了包括提升、装袋等集成方法及其正则化方面的内容。",
+      "order": 2,
+      "created_at": "2025-09-30T05:41:25.469710Z",
+      "updated_at": "2025-09-30T05:54:24.862202Z"
+    },
+    {
+      "id": 21400,
+      "title": "XGBoost Parameters",
+      "author": "XGBoost Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://xgboost.readthedocs.io/en/stable/parameter.html",
+      "doi": "",
+      "note": "官方文档，介绍了XGBoost中`subsample`、`colsample_bytree`等超参数及其在正则化中的作用。",
+      "order": 3,
+      "created_at": "2025-09-30T05:41:25.472270Z",
+      "updated_at": "2025-09-30T05:54:21.242239Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

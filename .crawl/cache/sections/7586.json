@@ -1,0 +1,61 @@
+{
+  "id": 7586,
+  "title": "梯度提升模型的拟合与预测",
+  "meta_title": "使用 Scikit-Learn 梯度提升模型进行拟合与预测",
+  "meta_description": "了解使用 .fit() 方法训练梯度提升模型以及使用 .predict() 和 .predict_proba() 生成预测的标准工作流程。",
+  "content": "<p>一旦从 Scikit-Learn 实例化一个梯度提升模型，对其进行训练并用于预测会遵循一个熟悉且一致的模式。该过程与库的标准 API 保持一致，该 API 包含两个主要方法：<code>.fit()</code> 用于训练模型和 <code>.predict()</code> 用于生成输出。这个工作流程使得梯度提升模型（GBM）算法的应用变得简单直接。</p>\n<h3>标准模型训练工作流程</h3>\n<p>从数据到预测的整个过程可以概括为几个步骤。您首先准备数据，将其分成训练集和测试集，然后使用这些集合来训练模型并评估其表现。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-9o3xei\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=0.2];\n    edge [fontname=\"sans-serif\"];\n\n    subgraph cluster_data {\n        label=\"数据准备\";\n        style=\"filled\";\n        color=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n        rawData [label=\"原始数据\"];\n        splitData [label=\"拆分数据\\n(训练集与测试集)\"];\n        rawData -> splitData;\n    }\n\n    subgraph cluster_model {\n        label=\"模型训练\";\n        style=\"filled\";\n        color=\"#e9ecef\";\n        node [fillcolor=\"#96f2d7\"];\n        instantiate [label=\"实例化模型\\n(例如，GradientBoostingRegressor)\"];\n        fit [label=\"拟合模型\\n.fit(X_train, y_train)\"];\n        instantiate -> fit;\n    }\n\n    subgraph cluster_predict {\n        label=\"预测\";\n        style=\"filled\";\n        color=\"#e9ecef\";\n        node [fillcolor=\"#bac8ff\"];\n        trainedModel [label=\"已训练模型\"];\n        predict [label=\"生成预测\\n.predict(X_test)\"];\n        predictions [label=\"预测结果\", shape=document, fillcolor=\"#ffec99\"];\n        trainedModel -> predict -> predictions;\n    }\n\n    splitData -> instantiate [style=dashed, lhead=cluster_model];\n    fit -> trainedModel [style=dashed, ltail=cluster_model, lhead=cluster_predict];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-9o3xei\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Scikit-Learn 中典型的机器学习 (machine learning)工作流程。模型在一个数据子集上训练，并用于在另一个子集上进行预测。</p>\n</blockquote>\n<h3>使用 <code>.fit()</code> 拟合模型</h3>\n<p><code>.fit(X, y)</code> 方法是任何 Scikit-Learn 估计器的核心方法。当您在梯度提升模型上调用此方法时，您就启动了我们在上一章中讨论的顺序树构建过程。</p>\n<p><code>X</code> 参数 (parameter)是您的特征矩阵（通常是 pandas DataFrame 或 NumPy 数组），而 <code>y</code> 是目标向量 (vector)（pandas Series 或 NumPy 数组）。</p>\n<p>让我们通过 <code>GradientBoostingRegressor</code> 来看一下实际操作。假设我们有一个小型房产特征数据集，并希望预测价格。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.ensemble import GradientBoostingRegressor\n\n# 示例数据\ndata = {\n    'Area': [2100, 1600, 2400, 1800, 3000, 2200],\n    'Bedrooms': [3, 3, 3, 2, 4, 3],\n    'Age': [5, 10, 2, 8, 1, 7],\n    'Price': [400, 310, 430, 350, 550, 410] # 价格以千为单位\n}\ndf = pd.DataFrame(data)\n\nX = df[['Area', 'Bedrooms', 'Age']]\ny = df['Price']\n\n# 将数据拆分为训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)\n\n# 1. 实例化模型\ngbr = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, random_state=42)\n\n# 2. 使用训练数据拟合模型\ngbr.fit(X_train, y_train)\n\nprint(\"模型训练完成。\")\n</code></pre>\n<p>当执行 <code>gbr.fit(X_train, y_train)</code> 时，模型在内部执行以下步骤：</p>\n<ol>\n<li>它用一个简单的预测（通常是 <code>y_train</code> 的均值）初始化模型。</li>\n<li>它计算预测值与实际值之间的误差（残差）。</li>\n<li>它根据这些残差拟合一棵决策树。</li>\n<li>它将这棵新树添加到集成模型中，并根据 <code>learning_rate</code> 进行缩放。</li>\n<li>它更新预测并重复该过程，根据新的残差拟合新的树。</li>\n</ol>\n<p>这个过程持续 <code>n_estimators</code> 次迭代，每棵新树都修正了其之前集成模型的误差。</p>\n<h3>使用 <code>.predict()</code> 生成预测</h3>\n<p>模型训练完成后，<code>.predict(X)</code> 方法用于在新、未见过的数据上生成预测。它接受一个与训练数据结构相同的特征矩阵 <code>X</code>，并返回一个预测值数组。</p>\n<p>继续我们的回归例子：</p>\n<pre><code class=\"language-python\"># 3. 在测试集上生成预测\npredictions = gbr.predict(X_test)\n\n# 显示测试数据和模型的预测结果\nresults = X_test.copy()\nresults['Actual_Price'] = y_test\nresults['Predicted_Price'] = predictions.round(1)\n\nprint(results)\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>      Area  Bedrooms  Age  Actual_Price  Predicted_Price\n1     1600         3   10           310            334.8\n5     2200         3    7           410            404.7\n</code></pre>\n<p><code>.predict()</code> 方法通过让输入数据通过集成模型中的每棵树来工作。给定样本的最终预测是初始预测与所有后续树的输出之和，每棵树的输出都按学习率进行缩放。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-a9ci3\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"回归：实际值与预测值\"}, \"xaxis\": {\"title\": {\"text\": \"实际价格（千美元）\"}}, \"yaxis\": {\"title\": {\"text\": \"预测价格（千美元）\"}}, \"plot_bgcolor\": \"#e9ecef\", \"paper_bgcolor\": \"#ffffff\"}, \"data\": [{\"type\": \"scatter\", \"mode\": \"markers\", \"x\": [310, 410], \"y\": [334.8, 404.7], \"marker\": {\"color\": \"#4263eb\", \"size\": 12}}, {\"type\": \"scatter\", \"mode\": \"lines\", \"x\": [300, 450], \"y\": [300, 450], \"line\": {\"color\": \"#fa5252\", \"dash\": \"dash\"}, \"name\": \"理想拟合\"}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-a9ci3\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>实际价格与预测价格的比较。越接近虚线的点表示预测越准确。</p>\n</blockquote>\n<h3>分类预测：<code>.predict()</code> 与 <code>.predict_proba()</code></h3>\n<p>对于使用 <code>GradientBoostingClassifier</code> 的分类任务，您有两种方法进行预测，每种方法都有不同的作用。</p>\n<ol>\n<li>\n<p><strong><code>.predict(X)</code></strong>：此方法返回最终的预测类别标签（例如，0 或 1，'是' 或 '否'）。模型计算每个类别的概率，并返回概率最高的那个。</p>\n</li>\n<li>\n<p><strong><code>.predict_proba(X)</code></strong>：此方法返回每个类别的概率估计值。对于二元分类问题，它返回一个二维数组，其中每行包含两个值：负类别的概率和正类别的概率。</p>\n</li>\n</ol>\n<p>我们通过一个简单的客户流失预测例子来说明。</p>\n<pre><code class=\"language-python\">from sklearn.ensemble import GradientBoostingClassifier\n\n# 示例分类数据\nc_data = {\n    'Tenure': [2, 48, 12, 1, 36, 24],\n    'MonthlySpend': [50, 100, 80, 45, 110, 95],\n    'Churn': [1, 0, 0, 1, 0, 1] # 1 表示流失，0 表示未流失\n}\nc_df = pd.DataFrame(c_data)\n\nX_c = c_df[['Tenure', 'MonthlySpend']]\ny_c = c_df['Churn']\n\n# 实例化并拟合分类器\ngbc = GradientBoostingClassifier(n_estimators=100, random_state=42)\ngbc.fit(X_c, y_c)\n\n# 用于预测的新数据\nnew_customers = pd.DataFrame({'Tenure': [3, 25], 'MonthlySpend': [60, 105]})\n\n# 获取类别预测\nclass_predictions = gbc.predict(new_customers)\nprint(f\"类别预测: {class_predictions}\")\n\n# 获取概率预测\nproba_predictions = gbc.predict_proba(new_customers)\nprint(\"概率预测（未流失，流失）：\")\nprint(proba_predictions.round(3))\n</code></pre>\n<p><strong>输出：</strong></p>\n<pre><code>Class Predictions: [1 0]\nProbability Predictions (No Churn, Churn):\n[[0.435 0.565]\n [0.528 0.472]]\n</code></pre>\n<p>下面是如何解释输出结果：</p>\n<ul>\n<li>对于第一个新客户（<code>Tenure</code>：3，<code>MonthlySpend</code>：60），预测类别为 <code>1</code>（流失）。这是因为流失的概率（0.565）大于未流失的概率（0.435）。</li>\n<li>对于第二个客户（<code>Tenure</code>：25，<code>MonthlySpend</code>：105），预测类别为 <code>0</code>（未流失），因为其概率（0.528）更高。</li>\n</ul>\n<p><code>.predict_proba()</code> 的输出通常比 <code>.predict()</code> 提供更多信息。它使您能够了解模型的置信度并为分类设置自定义阈值。例如，根据业务背景，您可能只在预测概率高于 0.7 时才将客户归类为“流失”。</p>",
+  "slug": "fitting-and-predicting-gbm",
+  "updates": [],
+  "references": [
+    {
+      "id": 21347,
+      "title": "sklearn.ensemble.GradientBoostingRegressor",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "scikit-learn project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html",
+      "doi": "",
+      "note": "描述 GradientBoostingRegressor 类参数和方法（.fit()、.predict()）的官方文档，对本节的实际示例至关重要。",
+      "order": 1,
+      "created_at": "2025-09-30T05:37:17.405109Z",
+      "updated_at": "2025-09-30T05:49:26.394449Z"
+    },
+    {
+      "id": 21348,
+      "title": "Greedy Function Approximation: A Gradient Boosting Machine",
+      "author": "Jerome H. Friedman",
+      "year": "2001",
+      "publisher": "Institute of Mathematical Statistics (IMS)",
+      "journal": "The Annals of Statistics",
+      "volume": "29",
+      "pages": "1189-1232",
+      "url": "https://projecteuclid.org/journals/annals-of-statistics/volume-29/issue-4/Greedy-Function-Approximation-A-Gradient-Boosting-Machine/10.1214/aos/1013203451.full",
+      "doi": "10.1214/aos/1013203451",
+      "note": "这篇开创性论文介绍了梯度提升机算法，解释了其理论基础和用于序列误差校正的机制，构成了所讨论模型的基础。",
+      "order": 2,
+      "created_at": "2025-09-30T05:37:17.410390Z",
+      "updated_at": "2025-09-30T05:49:26.171997Z"
+    },
+    {
+      "id": 21349,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://hastie.su.domains/ElemStatLearn/",
+      "doi": "",
+      "note": "一本关于统计学习的基础教材，深入介绍了集成方法，包括梯度提升的理论背景和实际应用。",
+      "order": 3,
+      "created_at": "2025-09-30T05:37:17.412697Z",
+      "updated_at": "2025-09-30T05:49:31.775157Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

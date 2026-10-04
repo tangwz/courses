@@ -1,0 +1,61 @@
+{
+  "id": 7036,
+  "title": "分析本地部署总拥有成本",
+  "meta_title": "本地部署AI总拥有成本 (TCO)",
+  "meta_description": "了解如何计算本地部署AI基础设施的总拥有成本（TCO），包括硬件、电力、冷却和维护。",
+  "content": "<p>评估本地部署方案时，只看硬件采购价格是一个常见但代价高昂的错误。总拥有成本（TCO）提供了一个更全面的财务视图，它涵盖了硬件整个使用寿命内产生的所有费用。了解TCO对于在自建基础设施和使用云服务之间进行合理的财务比较必不可少。</p>\n<p>如前所述，TCO可以分为两大类：前期投入和持续运营成本。</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mi>T</mi><mi>C</mi><mi>O</mi><mo>=</mo><mtext>资本支出 (CapEx)</mtext><mo>+</mo><mtext>运营支出 (OpEx)</mtext></mrow><annotation encoding=\"application/x-tex\">TCO = \\text{资本支出 (CapEx)} + \\text{运营支出 (OpEx)}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">T</span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">C</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">O</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">资本支出</span><span class=\"mord\"> (CapEx)</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">运营支出</span><span class=\"mord\"> (OpEx)</span></span></span></span></span></span>\n<p>我们来逐一分析构成此公式的各项费用。</p>\n<h3>资本支出 (CapEx)</h3>\n<p>资本支出是购置和设置物理基础设施所需的一次性前期费用。这通常是预算中最显眼的部分，但务必全面考虑所有必需的组成部分。</p>\n<ul>\n<li><strong>计算硬件：</strong> 这是最大的一项，包括服务器、CPU，尤其是为AI工作负载提供动力的GPU或其他加速器。</li>\n<li><strong>网络设备：</strong> 此处包括高速交换机（例如100GbE InfiniBand）、路由器、网卡（NIC）以及所有必需的光纤或铜缆。对于分布式训练而言，这是一个重要的性能和成本因素。</li>\n<li><strong>存储系统：</strong> 这包括用于数据缓存的高性能本地存储（如NVMe SSD），以及更大规模的集中式存储方案，如网络附加存储（NAS）或存储区域网络（SAN）。</li>\n<li><strong>数据中心基础设施：</strong> 您还必须考虑服务器的物理安置。这包括服务器机架、电源分配单元（PDU），以及如果您使用托管设施的任何初始设置费用。</li>\n<li><strong>初始软件许可：</strong> 这涵盖了操作系统、虚拟化软件（例如VMware vSphere）或基础设施管理工具的任何一次性永久许可。</li>\n</ul>\n<h3>运营支出 (OpEx)</h3>\n<p>运营支出是日常运行和维护基础设施的经常性费用。在硬件的整个使用寿命中，这些费用很容易超过最初的资本投入。</p>\n<ul>\n<li><strong>电力与冷却：</strong> GPU耗电量大。一台配有多块高端GPU的服务器在满载时可消耗数千瓦电力。这种直接的功耗，加上HVAC系统散热所需的额外电力，构成了您每月账单的主要部分。</li>\n<li><strong>数据中心空间：</strong> 如果您使用托管设施，这是一笔简单的月费或年费。如果您拥有数据中心，此费用包括建筑物维护、物理安全和房产税，按您的AI硬件所占用的空间进行分摊。</li>\n<li><strong>人员成本：</strong> 您的基础设施不会自动管理。您必须考虑进行硬件设置、网络配置、系统管理和故障排除所需工程师的成本。即使只分配多名工程师薪水的一小部分给这些任务，累积起来也相当可观。</li>\n<li><strong>维护与支持合同：</strong> 硬件会发生故障。来自NVIDIA或戴尔等供应商的延长保修和支持合同可确保您获得及时的更换和专家支持，但它们会产生经常性费用。</li>\n<li><strong>软件订阅：</strong> 与永久许可不同，许多现代软件工具采用订阅模式。这包括监控平台、调度器或MLOps软件的经常性费用。</li>\n</ul>\n<p>下图展示了这些不同费用如何构成总拥有成本（TCO）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-16f0v1w\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#f8f9fa\"];\n    edge [color=\"#868e96\"];\n    \n    TCO [label=\"总拥有成本\", fillcolor=\"#d0bfff\"];\n    \n    CapEx [label=\"资本支出 (CapEx)\", fillcolor=\"#a5d8ff\"];\n    OpEx [label=\"运营支出 (OpEx)\", fillcolor=\"#ffc9c9\"];\n    \n    TCO -> CapEx;\n    TCO -> OpEx;\n    \n    subgraph cluster_capex {\n        label = \"\";\n        style = \"invis\";\n        c1 [label=\"计算硬件 (服务器, GPU)\"];\n        c2 [label=\"网络设备\"];\n        c3 [label=\"存储系统\"];\n        c4 [label=\"机架和PDU\"];\n    }\n\n    subgraph cluster_opex {\n        label = \"\";\n        style = \"invis\";\n        o1 [label=\"电力与冷却\"];\n        o2 [label=\"数据中心空间\"];\n        o3 [label=\"人员 / 工程时间\"];\n        o4 [label=\"维护合同\"];\n    }\n    \n    CapEx -> {c1, c2, c3, c4} [arrowhead=none];\n    OpEx -> {o1, o2, o3, o4} [arrowhead=none];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-16f0v1w\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>总拥有成本的组成部分，分为初始资本支出和持续运营支出。</p>\n</blockquote>\n<h3>TCO计算示例</h3>\n<p>为了更具体地说明，我们来为一个小型本地部署集群计算三年期的总拥有成本。假设硬件的有效使用寿命也是三年。</p>\n<p><strong>情景：</strong></p>\n<ul>\n<li><strong>硬件：</strong> 1台服务器，配有四块高端GPU。</li>\n<li><strong>总资本支出：</strong> 30,000美元（用于服务器、GPU以及部分网络/机架费用）。</li>\n<li><strong>资产寿命：</strong> 3年。</li>\n</ul>\n<p>我们可以通过将资本支出分摊到使用寿命中来计算年化硬件成本：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>年化硬件成本</mtext><mo>=</mo><mfrac><mrow><mi mathvariant=\"normal\">$</mi><mn>30</mn><mo separator=\"true\">,</mo><mn>000</mn></mrow><mrow><mn>3</mn><mtext> </mtext><mtext>年</mtext></mrow></mfrac><mo>=</mo><mi mathvariant=\"normal\">$</mi><mn>10</mn><mo separator=\"true\">,</mo><mn>000</mn><mtext> </mtext><mtext>每年</mtext></mrow><annotation encoding=\"application/x-tex\">\\text{年化硬件成本} = \\frac{\\$30,000}{3 \\: \\text{年}} = \\$10,000 \\: \\text{每年}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">年化硬件成本</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.113em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.427em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">年</span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord\">$30</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.9444em;vertical-align:-0.1944em;\"></span><span class=\"mord\">$10</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">每年</span></span></span></span></span></span>\n<p>现在，我们来估算年度运营支出：</p>\n<ul>\n<li><strong>电力与冷却：</strong> 服务器消耗约2千瓦。以0.12美元/千瓦时的电价计算，24/7运行每年大约花费2,100美元。我们将增加40%用于冷却，约为2,940美元。我们四舍五入为<strong>3,000美元</strong>。</li>\n<li><strong>人员：</strong> 仅分配一名系统工程师10%的时间（含福利成本每年150,000美元）即为<strong>15,000美元</strong>。</li>\n<li><strong>维护与空间：</strong> 支持合同和托管费用的保守估算约为<strong>2,000美元</strong>。</li>\n</ul>\n<p><strong>年度总成本：</strong> 10,000美元（硬件）+ 3,000美元（电力）+ 15,000美元（人员）+ 2,000美元（维护/空间）= <strong>30,000美元</strong></p>\n<p><strong>3年总拥有成本：</strong> 30,000美元每年 * 3年 = <strong>90,000美元</strong></p>\n<p>请注意，最初的30,000美元硬件成本仅占其整个使用寿命总成本的三分之一。下图展示了这些成本的年度分布情况。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1h261rt\" \n              data-plot-definition='{\"layout\":{\"barmode\":\"stack\",\"title\":{\"text\":\"本地部署年度成本细分（1台服务器）\"},\"xaxis\":{\"title\":{\"text\":\"年份\"}},\"yaxis\":{\"title\":{\"text\":\"成本 ($)\"},\"tickprefix\":\"$\"},\"font\":{\"family\":\"sans-serif\"},\"plot_bgcolor\":\"#ffffff\",\"paper_bgcolor\":\"#ffffff\",\"legend\":{\"orientation\":\"h\",\"yanchor\":\"bottom\",\"y\":1.02,\"xanchor\":\"right\",\"x\":1}},\"data\":[{\"x\":[\"第1年\",\"第2年\",\"第3年\"],\"y\":[10000,10000,10000],\"type\":\"bar\",\"name\":\"硬件（摊销）\",\"marker\":{\"color\":\"#4dabf7\"}},{\"x\":[\"第1年\",\"第2年\",\"第3年\"],\"y\":[3000,3000,3000],\"type\":\"bar\",\"name\":\"电力与冷却\",\"marker\":{\"color\":\"#ff922b\"}},{\"x\":[\"第1年\",\"第2年\",\"第3年\"],\"y\":[2000,2000,2000],\"type\":\"bar\",\"name\":\"维护与空间\",\"marker\":{\"color\":\"#69db7c\"}},{\"x\":[\"第1年\",\"第2年\",\"第3年\"],\"y\":[15000,15000,15000],\"type\":\"bar\",\"name\":\"人员\",\"marker\":{\"color\":\"#ff8787\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1h261rt\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>单台本地部署AI服务器在其3年使用寿命内的年度成本构成。人员和电力等运营支出占持续成本的大部分。</p>\n</blockquote>\n<p>这项TCO分析是进行有效财务规划的根本。通过计算每年的总成本（30,000美元）甚至每小时的成本（约3.42美元，假设24/7运行），您可以建立一个清晰的基准。这个基准数字将在接下来的部分中用于与云服务提供商的定价模型进行直接且充分了解的比较。如果没有它，您是在将本地部署的全部投入与一张单独的云账单进行比较，这不是一个准确的比较。</p>",
+  "slug": "analyzing-on-premise-tco",
+  "updates": [],
+  "references": [
+    {
+      "id": 20304,
+      "title": "2023 Data Center Industry Survey",
+      "author": "Uptime Institute",
+      "year": "2023",
+      "publisher": "Uptime Institute",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://uptimeinstitute.com/resources/asset/2023-data-center-industry-survey",
+      "doi": "",
+      "note": "介绍了数据中心运营趋势、成本和主要挑战的研究结果，提供了与电力、冷却和效率相关的数据，这些是重要的运营支出。",
+      "order": 2,
+      "created_at": "2025-09-06T14:00:10.154134Z",
+      "updated_at": "2025-09-11T03:33:08.535017Z"
+    },
+    {
+      "id": 20305,
+      "title": "FinOps Framework",
+      "author": "FinOps Foundation",
+      "year": "Continuously updated",
+      "publisher": "FinOps Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.finops.org/framework/",
+      "doi": "",
+      "note": "描述了一个针对云计算的协作式财务管理框架，其成本透明度、分配和优化原则高度适用于理解和比较本地部署与云基础设施的总拥有成本。",
+      "order": 3,
+      "created_at": "2025-09-06T14:00:10.156965Z",
+      "updated_at": "2025-09-11T03:33:00.988531Z"
+    },
+    {
+      "id": 20306,
+      "title": "NVIDIA AI Enterprise Documentation",
+      "author": "NVIDIA Corporation",
+      "year": "Ongoing updates",
+      "publisher": "NVIDIA Corporation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.nvidia.com/ai-enterprise/",
+      "doi": "",
+      "note": "提供了部署和管理NVIDIA AI基础设施的详细指导，包括硬件兼容性、软件配置和运营最佳实践，这些直接影响AI工作负载的资本支出和运营支出。",
+      "order": 4,
+      "created_at": "2025-09-06T14:00:10.159526Z",
+      "updated_at": "2025-09-11T03:32:58.552068Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

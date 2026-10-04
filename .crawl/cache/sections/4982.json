@@ -1,0 +1,61 @@
+{
+  "id": 4982,
+  "title": "TensorBoard 简介",
+  "meta_title": "TensorBoard 可视化简介",
+  "meta_description": "在 Keras 中使用 TensorBoard 可视化训练进度、模型图和其他指标。",
+  "content": "<p>仅凭控制台输出来监控训练过程可能存在局限，尤其是对于复杂模型或长时间训练。尽管每个时期（epoch）结束时打印的指标能提供瞬时视图，但要了解训练的<em>动态变化</em>、指标随时间如何变化、模型参数 (parameter)如何演变以及网络结构，则需要更精密的工具。TensorBoard 是为此目的专门设计的强大可视化工具包，它能以图形方式帮助您观察 TensorFlow 和 Keras 模型训练。</p>\n<p>可以将 TensorBoard 视为机器学习 (machine learning)实验的仪表盘。它读取训练期间生成的日志文件，并在交互式网页界面中显示数据。这使您能够直观地跟踪和比较不同的训练运行，从而更有效地调试、优化和理解您的模型。</p>\n<h3>TensorBoard 的特点</h3>\n<p>尽管 TensorBoard 提供了多种功能，但有几项对我们已经讨论过的工作流程特别有用：</p>\n<ol>\n<li><strong>跟踪指标随时间的变化：</strong> 可视化训练集和验证集在各个时期上的损失（loss）和准确率（accuracy）等标量值。这对于发现趋势、收敛速度以及过拟合 (overfitting)或欠拟合 (underfitting)的迹象必不可少。</li>\n<li><strong>模型图的可视化：</strong> 以图形方式查看您的 Keras 模型结构。这有助于确认层连接是否符合预期，尤其是在使用函数式 API 构建更复杂的架构时。</li>\n<li><strong>查看权重 (weight)、偏差和激活值的直方图：</strong> 观察参数 (parameter)值或层输出随时间的变化分布。剧烈变化或分布坍缩到零可能提示潜在问题，例如梯度消失或初始化选择不当。</li>\n<li><strong>比较运行：</strong> TensorBoard 允许您叠加来自不同训练实验的指标，从而轻松评估不同超参数 (hyperparameter)、优化器或模型架构的影响。</li>\n</ol>\n<h3>将 TensorBoard 与 Keras 训练结合</h3>\n<p>由于 <code>TensorBoard</code> 回调函数，在 Keras 中使用 TensorBoard 十分简单。这个回调函数属于 <code>keras.callbacks</code> 的一部分，它会在 <code>model.fit()</code> 过程中自动记录指定的信息。</p>\n<p>要使用它，首先导入回调函数：</p>\n<pre><code class=\"language-python\">from keras.callbacks import TensorBoard\nimport datetime # 可选：用于创建唯一的日志目录\n</code></pre>\n<p>接着，实例化回调函数，通常需要提供一个 <code>log_dir</code> 参数 (parameter)。最佳做法是为每次训练运行创建一个唯一的子目录，通常使用时间戳，以便保持实验的条理。</p>\n<pre><code class=\"language-python\"># 定义日志路径\nlog_dir = \"logs/fit/\" + datetime.datetime.now().strftime(\"%Y%m%d-%H%M%S\")\n\n# 创建 TensorBoard 回调实例\ntensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)\n# histogram_freq=1 会在每个时期记录直方图（可能消耗更多资源）\n</code></pre>\n<p>最后，在调用 <code>model.fit()</code> 时，将此回调实例添加到 <code>callbacks</code> 列表中：</p>\n<pre><code class=\"language-python\"># 假设模型已编译，并且 x_train、y_train、x_val、y_val 已准备好\n\nhistory = model.fit(x_train, y_train,\n                    epochs=50,\n                    batch_size=32,\n                    validation_data=(x_val, y_val),\n                    callbacks=[tensorboard_callback]) # 在此处传递回调函数\n</code></pre>\n<p>在训练期间，Keras 会将包含记录数据（标量、图、如果启用则包含直方图）的事件文件写入指定的 <code>log_dir</code>。</p>\n<h3>启动和使用 TensorBoard</h3>\n<p>训练开始（或结束）并生成日志文件后，您可以从终端启动 TensorBoard 界面。导航到<em>包含</em>日志目录的父目录（或更高级别的目录）并运行：</p>\n<pre><code class=\"language-bash\">tensorboard --logdir logs/fit\n</code></pre>\n<p>将 <code>logs/fit</code> 替换为包含特定运行文件夹的目录路径（例如，如果您的运行位于 <code>logs/fit/RUN1</code>、<code>logs/fit/RUN2</code> 中，则使用 <code>logs</code>）。</p>\n<p>TensorBoard 将启动一个本地 Web 服务器并打印 URL（通常是 <code>http://localhost:6006</code>）。在您的网页浏览器中打开此 URL。</p>\n<p>在 TensorBoard 内部，您会看到几个选项卡：</p>\n<ul>\n<li><strong>标量（SCALARS）：</strong> 显示损失和准确率等指标随时期变化的图表。您可以选择不同的运行进行比较。这通常是您查看训练进度和发现过拟合 (overfitting)等问题（即验证损失开始增加而训练损失继续减少）的首要位置。</li>\n<li><strong>图（GRAPHS）：</strong> 显示您模型的计算图。您可以查看各层及其连接。</li>\n<li><strong>分布与直方图（DISTRIBUTIONS &#x26; HISTOGRAMS）：</strong> 显示权重 (weight)、偏差或激活值分布随时间如何变化。对调试很有帮助。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-21s8qf\" \n              data-plot-definition='{\"layout\": {\"title\": \"训练和验证损失随时期变化\", \"xaxis\": {\"title\": \"时期\"}, \"yaxis\": {\"title\": \"损失\"}, \"legend\": {\"title\":\"数据集\"}}, \"data\": [{\"x\": [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50], \"y\": [1.2, 0.8, 0.6, 0.5, 0.45, 0.4, 0.38, 0.37, 0.36, 0.35, 0.34], \"mode\": \"lines+markers\", \"name\": \"训练集\", \"line\":{\"color\": \"#1c7ed6\"}}, {\"x\": [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50], \"y\": [1.4, 1.0, 0.8, 0.7, 0.65, 0.62, 0.61, 0.63, 0.66, 0.69, 0.72], \"mode\": \"lines+markers\", \"name\": \"验证集\", \"line\":{\"color\": \"#fd7e14\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-21s8qf\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>TensorBoard SCALARS 面板中的典型图表，显示训练损失持续下降，而验证损失在第 25 个时期后开始上升，这表明过拟合的出现。</p>\n</blockquote>\n<p>通过可视化训练指标和模型结构，TensorBoard 提供了远超简单打印语句的宝贵反馈。它帮助您加深对训练过程的理解，并就模型架构、超参数 (parameter) (hyperparameter)和正则化 (regularization)策略做出更明智的决策，从而直接支持提升模型性能和优化工作流程的目标。</p>",
+  "slug": "introduction-tensorboard",
+  "updates": [],
+  "references": [
+    {
+      "id": 12385,
+      "title": "Get started with TensorBoard",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/tensorboard/get_started",
+      "doi": "",
+      "note": "提供了TensorBoard的全面介绍，涵盖了其功能和与TensorFlow及Keras结合使用的基本方法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:02:30.915584Z",
+      "updated_at": "2025-09-08T03:34:08.744566Z"
+    },
+    {
+      "id": 12386,
+      "title": "Keras Callbacks API",
+      "author": "Keras Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://keras.io/api/callbacks/",
+      "doi": "",
+      "note": "详细介绍了Keras中的`TensorBoard`回调函数，解释了其参数以及如何将其集成到模型训练中。",
+      "order": 2,
+      "created_at": "2025-09-05T08:02:30.925870Z",
+      "updated_at": "2025-09-08T03:34:07.257228Z"
+    },
+    {
+      "id": 12387,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实用的指南，包含关于使用Keras和TensorFlow构建和监控深度学习模型的详细章节，其中广泛涵盖了TensorBoard。",
+      "order": 3,
+      "created_at": "2025-09-05T08:02:30.929445Z",
+      "updated_at": "2025-09-08T03:34:19.392025Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

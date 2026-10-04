@@ -1,0 +1,61 @@
+{
+  "id": 6392,
+  "title": "神经网络简介",
+  "meta_title": "神经网络：速览",
+  "meta_description": "自编码器的基础：简要介绍神经网络。了解其层和连接。",
+  "content": "<p>在了解自编码器的具体细节之前，先了解它们的基础——<strong>神经网络 (neural network)</strong>，这会有所帮助。如果您是机器学习 (machine learning)的新手，可以将神经网络视为一种计算系统，它松散地受大脑工作方式的启发，旨在从数据中学习模式。自编码器是一种特定类型的神经网络，因此在此掌握这些基础知识将有助于更顺畅地理解自编码器。</p>\n<p>本质上，神经网络由简单的处理单元构成，通常称为<strong>神经元</strong>或<strong>节点</strong>。可以想象这些神经元像公司划分不同部门一样分层组织。</p>\n<h3>构成要素：神经元和层</h3>\n<p>一个典型的神经网络 (neural network)至少有三种类型的层：</p>\n<ol>\n<li>\n<p><strong>输入层：</strong> 这是数据首次进入网络的地方。输入层中的每个神经元通常代表数据的一个单一特征。例如，如果您处理图像，每个输入神经元可能对应于单个像素的亮度。</p>\n</li>\n<li>\n<p><strong>隐藏层：</strong> 在输入层和输出层之间设有一个或多个隐藏层。它们是网络的主要工作部分。隐藏层中的神经元从前一层获取信息，进行计算，并将其结果传递给下一层。正是在这些隐藏层中，网络开始识别数据中更复杂的模式和关系。一个网络可以有许多隐藏层；拥有多个隐藏层的网络通常被称为“深度”神经网络。</p>\n</li>\n<li>\n<p><strong>输出层：</strong> 这一层产生网络处理的最终结果。此输出代表什么取决于具体的任务。它可以是一个预测（例如，“这位顾客会点击广告吗？”）、一个分类（例如，“这张图片是猫还是狗？”），或者，在自编码器的情况下，是输入数据的重建版本。</p>\n</li>\n</ol>\n<p>下面是一个简单的图表，说明了这种分层结构：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1k4ukne\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=circle, style=filled, margin=0.1, width=0.5, height=0.5, fontname=\"sans-serif\", fontsize=10];\n    edge [arrowhead=vee, arrowsize=0.7];\n\n    subgraph cluster_input {\n        label=\"输入层\";\n        bgcolor=\"#e9ecef\";\n        I1 [label=\"I1\", fillcolor=\"#a5d8ff\"];\n        I2 [label=\"I2\", fillcolor=\"#a5d8ff\"];\n        I3 [label=\"I3\", fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_hidden {\n        label=\"隐藏层\";\n        bgcolor=\"#e9ecef\";\n        H1 [label=\"H1\", fillcolor=\"#b2f2bb\"];\n        H2 [label=\"H2\", fillcolor=\"#b2f2bb\"];\n        H3 [label=\"H3\", fillcolor=\"#b2f2bb\"];\n        H4 [label=\"H4\", fillcolor=\"#b2f2bb\"];\n    }\n\n    subgraph cluster_output {\n        label=\"输出层\";\n        bgcolor=\"#e9ecef\";\n        O1 [label=\"O1\", fillcolor=\"#ffc9c9\"];\n        O2 [label=\"O2\", fillcolor=\"#ffc9c9\"];\n    }\n\n    # 连接\n    {I1, I2, I3} -> {H1, H2, H3, H4} [color=\"#adb5bd\"];\n    {H1, H2, H3, H4} -> {O1, O2} [color=\"#adb5bd\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1k4ukne\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个基本的神经网络结构，展示了输入层、单个隐藏层和输出层。信息从左到右（或如图所示从上到下）流动，通过神经元之间的连接传递。</p>\n</blockquote>\n<h3>连接和权重 (weight)：网络的知识</h3>\n<p>一层中的神经元通常会连接到下一层的神经元。这些连接中的每一个都带有一个<strong>权重</strong>。您可以将这些权重理解为代表着两个神经元之间连接的强度或重要性。如果一个权重具有较大的正值，则表示第一个神经元的信号强烈地激活第二个。如果它是一个较大的负值，则会强烈地抑制它。如果权重接近于零，则第一个神经元对第二个神经元的影响很小。</p>\n<p>这些权重是神经网络 (neural network)的“可调节旋钮”。神经网络中的“学习”过程主要包括根据其所看到的数据来调整这些权重。</p>\n<h3>信息如何流动</h3>\n<p>当您将数据输入神经网络 (neural network)时：</p>\n<ol>\n<li>输入层神经元接收初始数据值。</li>\n<li>这些值沿着连接传递给第一个隐藏层中的神经元。</li>\n<li>隐藏层中的每个神经元计算其输入的加权和（即，将每个传入值乘以连接的权重 (weight)并全部加起来）。</li>\n<li>这个和通常会通过一个<strong>激活函数 (activation function)</strong>。激活函数是一个简单的数学函数，有助于为网络引入非线性，使其能够学习更复杂的模式。它决定一个神经元是否应该被“激活”，或者激活的程度如何。</li>\n<li>隐藏层神经元的输出随后传递给下一层，这个过程重复，直到达到输出层。</li>\n<li>输出层神经元产生网络的最终输出。</li>\n</ol>\n<h3>学习：调整旋钮</h3>\n<p>那么，神经网络 (neural network)如何学习执行任务，例如识别物体，或者像我们将在自编码器中看到的那样，重建其输入呢？它通过迭代调整其权重 (weight)来学习。在“训练过程”中，网络会看到来自数据集的许多示例。对于每个示例，它会做出预测或产生输出。然后将此输出与期望目标（在监督学习 (supervised learning)中）进行比较，或者根据某个目标（在无监督学习 (unsupervised learning)中）进行评估。</p>\n<p>如果网络的输出与期望值相距甚远，一个算法（最常见的是<strong>反向传播 (backpropagation)</strong>，我们将在“自编码器如何学习”中后续讨论）会计算网络中每个权重对误差的贡献程度。然后，权重会朝应能减少此误差的方向进行微调 (fine-tuning)。这个过程会重复许多次，使用许多不同的数据示例，直到网络的表现令人满意。</p>\n<h3>作为自编码器基础的神经网络 (neural network)</h3>\n<p>自编码器是本课程的主要内容，它们是一种特定类型的神经网络。它们利用这种由层、神经元、连接和权重 (weight)组成的底层架构，学习如何将数据压缩（编码）成更小的表示形式，然后将其重建（解码）回原始形式。理解这些基本的神经网络组成部分，是理解自编码器如何实现其从数据中学习特征这一显著能力的第一步。</p>\n<p>随着我们继续学习，我们将看到输入层、隐藏层和输出层如何在自编码器的编码器-解码器结构中扮演特定的角色。目前，请记住神经网络是一个由相互连接的处理单元构成的系统，它通过调整连接的强度来从数据中学习。</p>",
+  "slug": "neural-networks-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 16989,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本全面且权威的教材，涵盖了深度学习的理论基础和实践方面，包括对神经网络的详细解释。",
+      "order": 1,
+      "created_at": "2025-09-06T11:51:40.897656Z",
+      "updated_at": "2025-09-10T05:55:00.068284Z"
+    },
+    {
+      "id": 16990,
+      "title": "Neural Networks and Deep Learning",
+      "author": "Michael A. Nielsen",
+      "year": "2015",
+      "publisher": "Determination Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://neuralnetworksanddeeplearning.com/",
+      "doi": "",
+      "note": "一本易于理解的在线书籍，为神经网络、其组成部分以及学习机制提供了直观的介绍。",
+      "order": 2,
+      "created_at": "2025-09-06T11:51:40.901651Z",
+      "updated_at": "2025-09-10T05:54:59.554649Z"
+    },
+    {
+      "id": 16991,
+      "title": "Deep Learning (CS230) Lecture Notes",
+      "author": "Andrew Ng, Kian Katanforoosh",
+      "year": "2018",
+      "publisher": "Stanford University",
+      "journal": "Stanford University Course Materials",
+      "volume": "",
+      "pages": "",
+      "url": "http://cs230.stanford.edu/",
+      "doi": "",
+      "note": "领先大学课程的官方讲义和材料，为深度学习和神经网络基础知识提供了结构化的介绍。",
+      "order": 3,
+      "created_at": "2025-09-06T11:51:40.904030Z",
+      "updated_at": "2025-09-10T05:55:02.319686Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

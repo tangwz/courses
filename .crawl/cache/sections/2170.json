@@ -1,0 +1,61 @@
+{
+  "id": 2170,
+  "title": "练习：构建一个简单网络",
+  "meta_title": "PyTorch网络构建练习 | nn.Module",
+  "meta_description": "动手练习，使用`nn.Module`、层和激活函数定义一个简单的神经网络。",
+  "content": "<p>让我们将本章的理念付诸实践，通过搭建一个简单的神经网络 (neural network)。我们将构建一个小型的前馈网络，专为二分类任务而设计。假设我们有包含两个特征的输入数据，并想将每个数据点归入两个类别（0或1）中的一个。</p>\n<p>任何PyTorch模型的基础都是<code>torch.nn.Module</code>类。通过继承<code>nn.Module</code>可以创建自定义网络，并在<code>__init__</code>方法中定义层，在<code>forward</code>方法中定义数据流。</p>\n<h3>定义网络架构</h3>\n<p>我们将创建一个具有以下特点的网络：</p>\n<ol>\n<li>一个接受2个特征的输入层。</li>\n<li>一个包含10个神经元和ReLU激活函数 (activation function)的隐藏层。</li>\n<li>一个包含1个神经元的输出层，生成适合二分类的单个logit值。</li>\n</ol>\n<p>以下是定义此架构的Python代码：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.optim as optim\n\n# 定义网络结构\nclass SimpleNet(nn.Module):\n    def __init__(self, input_size, hidden_size, output_size):\n        super(SimpleNet, self).__init__() # 初始化父类\n        self.layer_1 = nn.Linear(input_size, hidden_size)\n        self.relu = nn.ReLU()\n        self.layer_2 = nn.Linear(hidden_size, output_size)\n\n    def forward(self, x):\n        # 定义前向传播\n        out = self.layer_1(x)\n        out = self.relu(out)\n        out = self.layer_2(out)\n        # 注意：如果后续使用BCEWithLogitsLoss，这里不应用Sigmoid\n        return out\n\n# 定义网络参数\ninput_features = 2\nhidden_units = 10\noutput_classes = 1 # 二分类logit的单个输出\n\n# 实例化网络\nmodel = SimpleNet(input_features, hidden_units, output_classes)\n\n# 打印模型结构\nprint(model)\n</code></pre>\n<p>运行此代码将打印我们新定义网络的结构，显示层及其顺序：</p>\n<pre><code>SimpleNet(\n  (layer_1): Linear(in_features=2, out_features=10, bias=True)\n  (relu): ReLU()\n  (layer_2): Linear(in_features=10, out_features=1, bias=True)\n)\n</code></pre>\n<p>此输出证实我们有一个线性层，将2个输入特征映射到10个隐藏单元，接着是ReLU激活，最后是另一个线性层，将10个隐藏单元映射到单个输出值。</p>\n<h3>准备训练组件</h3>\n<p>在我们开始训练之前（训练的详细内容将在后面介绍），我们需要实例化模型，定义损失函数 (loss function)，并选择一个优化器。让我们来设置这些。</p>\n<pre><code class=\"language-python\"># --- 数据准备（示例占位符）---\n# 假设我们有一些输入数据(X)和目标标签(y)\n# 对于此示例，我们创建一些虚拟张量\n# 包含5个样本的迷你批次，每个样本有2个特征\ndummy_input = torch.randn(5, input_features)\n# 对应的虚拟标签（0或1）- BCEWithLogitsLoss需要浮点类型\ndummy_labels = torch.randint(0, 2, (5, 1)).float()\n\n# --- 实例化模型、损失和优化器 ---\n# 模型已在上面实例化：model = SimpleNet(...)\n\n# 损失函数：带Logits的二元交叉熵\n# 此损失函数适用于二分类，并期望接收原始logits作为输入\ncriterion = nn.BCEWithLogitsLoss()\n\n# 优化器：Adam是一个常用的选择\n# 我们将模型的参数传递给优化器\nlearning_rate = 0.01\noptimizer = optim.Adam(model.parameters(), lr=learning_rate)\n\nprint(f\"\\n使用的损失函数: {criterion}\")\nprint(f\"使用的优化器: {optimizer}\")\n</code></pre>\n<h3>模拟前向和反向传播 (backpropagation)</h3>\n<p>现在我们已经准备好模型、损失函数 (loss function)和优化器，让我们模拟训练过程中的单个步骤，来查看这些组件如何协同工作。这包括：</p>\n<ol>\n<li>将输入数据通过模型（前向传播）。</li>\n<li>计算模型输出与真实标签之间的损失。</li>\n<li>使用反向传播计算梯度。</li>\n<li>使用优化器更新模型的权重 (weight)。</li>\n</ol>\n<pre><code class=\"language-python\"># --- 模拟单个训练步骤 ---\n\n# 1. 前向传播：获取模型预测（logits）\noutputs = model(dummy_input)\nprint(f\"\\n模型输出（logits）形状：{outputs.shape}\")\n# print(f\"Sample outputs: {outputs.detach().numpy().flatten()}\") # 可选：查看输出\n\n# 2. 计算损失\nloss = criterion(outputs, dummy_labels)\nprint(f\"计算的损失：{loss.item():.4f}\") # .item()获取标量值\n\n# 3. 反向传播：计算梯度\n# 首先，确保梯度已从上一步归零（在实际循环中很重要）\noptimizer.zero_grad()\nloss.backward() # 计算损失相对于模型参数的梯度\n\n# 4. 优化器步骤：更新模型权重\noptimizer.step() # 根据计算出的梯度更新参数\n\n# --- 检查参数（可选）---\n# 您可以在反向传播后（在optimizer.step()之前）检查梯度\n# print(\"\\nlayer_1权重的梯度（示例）：\")\n# print(model.layer_1.weight.grad[0, :]) # 访问特定参数的梯度\n\n# 或者在步骤后检查参数值\n# print(\"\\n更新后的layer_1权重（示例）：\")\n# print(model.layer_1.weight[0, :])\n</code></pre>\n<p>在此步骤中，我们执行了前向传播，从我们的<code>SimpleNet</code>获取原始输出（logits）。然后我们使用<code>BCEWithLogitsLoss</code>计算这些输出和我们的<code>dummy_labels</code>之间的差异。调用<code>loss.backward()</code>触发了Autograd计算所有<code>requires_grad=True</code>参数 (parameter)的梯度（默认包括我们<code>nn.Linear</code>层的权重和偏置 (bias)）。最后，<code>optimizer.step()</code>使用计算出的梯度和Adam优化算法更新了模型的参数。请记住在实际训练循环中的下一次反向传播之前调用<code>optimizer.zero_grad()</code>，以防止梯度累积。</p>\n<p>您现在已成功使用<code>torch.nn</code>构建了一个简单的神经网络 (neural network)，定义了其层和前向传播，实例化了它，并将其与损失函数和优化器连接起来，为下一阶段：训练做好了准备。</p>",
+  "slug": "practice-building-simple-network",
+  "updates": [],
+  "references": [
+    {
+      "id": 6341,
+      "title": "Learn the Basics: PyTorch Tutorials",
+      "author": "Suraj Subramanian, Seth Juarez, Cassie Breviu, Dmitry Soshnikov, Ari Bornstein",
+      "year": "2024",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/basics/intro.html",
+      "doi": "",
+      "note": "一个入门教程系列，涵盖了PyTorch的基本概念，包括使用 `torch.nn` 构建神经网络以及使用损失函数和优化器的训练流程。",
+      "order": 1,
+      "created_at": "2025-09-05T01:21:37.400547Z",
+      "updated_at": "2025-09-07T20:38:05.766652Z"
+    },
+    {
+      "id": 6342,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础教科书，涵盖了人工神经网络、前馈网络、激活函数、损失函数以及Adam等优化算法。",
+      "order": 2,
+      "created_at": "2025-09-05T01:21:37.406555Z",
+      "updated_at": "2025-09-07T20:38:03.959655Z"
+    },
+    {
+      "id": 6343,
+      "title": "Adam: A Method for Stochastic Optimization",
+      "author": "Diederik P. Kingma and Jimmy Ba",
+      "year": "2015",
+      "publisher": "",
+      "journal": "International Conference on Learning Representations (ICLR) 2015",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1412.6980",
+      "doi": "10.48550/arXiv.1412.6980",
+      "note": "介绍了Adam优化算法，该算法因其自适应学习率而被广泛用于训练深度神经网络。",
+      "order": 3,
+      "created_at": "2025-09-05T01:21:37.408844Z",
+      "updated_at": "2025-09-07T20:38:06.023232Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

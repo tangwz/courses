@@ -1,0 +1,29 @@
+{
+  "id": 4272,
+  "title": "llama.cpp 简介 (核心思想)",
+  "meta_title": "llama.cpp 是什么？",
+  "meta_description": "llama.cpp 作为用C/C++编写的核心推理引擎的简要介绍。",
+  "content": "<p>在自己的电脑上运行强大的大型语言模型正变得相当可行，这得益于Ollama和LM Studio等工具。您可能想知道，在不需要大型服务器的情况下，幕后有什么让这成为可能。通常，一个名为<code>llama.cpp</code>的重要软件会参与其中。</p>\n<p>可以将<code>llama.cpp</code>看作一个专门为运行特定类型大型语言模型而打造的高效引擎，而不是像LM Studio那样用户友好的应用程序。它是一个主要用C++编程语言编写的库。</p>\n<h3>为什么要用C++？性能很重要</h3>\n<p>为什么要用C++？主要原因是性能。C++代码编译后运行速度非常快，可以直接与电脑硬件交互。这很重要，因为大型语言模型生成文本需要大量的计算。<code>llama.cpp</code>经过优化，可以尽可能快地执行这些计算，尤其是在每台电脑都有的标准中央处理器（CPU）上。虽然图形处理器（GPU）可以进一步加速大型语言模型（如第2章所述），但<code>llama.cpp</code>使得仅用CPU和RAM运行中等大小的模型成为可能，从而降低了使用门槛。</p>\n<h3>幕后引擎</h3>\n<p>许多易于使用的工具，包括可能Ollama或LM Studio使用的后端，都在内部使用<code>llama.cpp</code>。想象一下您的大型语言模型运行程序（如LM Studio）是一辆汽车。您操作方向盘、踏板和仪表盘。<code>llama.cpp</code>就像引擎盖下的发动机——您通常不直接与其交互，但它正在进行处理模型和根据您的提示生成文本的重要工作。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6u8ped\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [color=\"#adb5bd\"];\n\n  User [label=\"您\"];\n  App [label=\"Ollama / LM Studio\\n(用户界面)\"];\n  Engine [label=\"llama.cpp\\n(推理引擎)\"];\n  Model [label=\"大型语言模型\\n(例如，GGUF文件)\"];\n\n  User -> App [label=\"输入提示\"];\n  App -> Engine [label=\"发送提示和模型信息\"];\n  Engine -> Model [label=\"加载并运行模型\"];\n  Model -> Engine [label=\"生成输出词元\"];\n  Engine -> App [label=\"发送生成的文本\"];\n  App -> User [label=\"显示响应\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6u8ped\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简化视图，展示了用户界面如何通常依赖于像<code>llama.cpp</code>这样的底层引擎来与模型文件交互。</p>\n</blockquote>\n<h3>与GGUF模型的关联</h3>\n<p>还记得我们在第3章讨论的GGUF模型格式吗？<code>llama.cpp</code>与它紧密相关。GGUF格式是与<code>llama.cpp</code>一起开发的，专门设计用于被该引擎高效加载和运行。GGUF文件以一种<code>llama.cpp</code>可以轻松地在CPU和GPU上使用的方式打包模型权重 (weight)（通常经过量化 (quantization)以节省空间和内存）。这种密切关系是GGUF成为本地共享和运行模型的流行标准的原因。</p>\n<h3>llama.cpp的优点</h3>\n<p>因此，尽管您可能不会直接输入<code>llama.cpp</code>命令（除非您选择之后了解更高级的用法），但了解它的存在很重要，因为它为本地大型语言模型社区提供了多项好处：</p>\n<ul>\n<li><strong>CPU效率高：</strong> 使得在标准硬件上运行有能力的大型语言模型成为可能。</li>\n<li><strong>跨平台：</strong> 可在Windows、macOS和Linux上运行。</li>\n<li><strong>重要支持：</strong> 为许多用户友好的工具提供了核心推理 (inference)能力。</li>\n<li><strong>优化：</strong> 与GGUF等量化 (quantization)模型格式有效配合，减少了资源需求。</li>\n</ul>\n<p>总的来说，<code>llama.cpp</code>是一个重要的C++库，专注于在消费级硬件上高效运行大型语言模型，尤其是在GGUF格式下。它是本章所学工具能将大型语言模型的能力直接带到您的台式机或笔记本电脑上的一个重要原因。了解它的作用有助于弄清这些模型如何在本地运行。</p>",
+  "slug": "intro-llama-cpp",
+  "updates": [],
+  "references": [
+    {
+      "id": 11455,
+      "title": "GGML - Tensor library for Machine Learning",
+      "author": "Georgi Gerganov and the GGML contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/ggerganov/ggml",
+      "doi": "",
+      "note": "用于在 CPU 上高效执行张量运算的基础 C 库，是 `llama.cpp` 和 GGUF 格式开发的核心。",
+      "order": 3,
+      "created_at": "2025-09-05T07:18:30.282789Z",
+      "updated_at": "2025-09-09T13:27:16.726139Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

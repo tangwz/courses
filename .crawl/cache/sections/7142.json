@@ -1,0 +1,61 @@
+{
+  "id": 7142,
+  "title": "使用预训练模型进行转录",
+  "meta_title": "在Python中使用预训练ASR模型",
+  "meta_description": "学习如何加载和使用预训练ASR模型，从而避免从零开始训练自己的模型。",
+  "content": "<p>从零开始训练语音识别模型是一项艰巨的任务。它需要大量、精心整理的音频和对应文本数据集，通常长达数千小时。此过程还需要大量计算资源，涉及在专用硬件上进行数周甚至数月的训练。对于大多数开发者和项目而言，这种做法根本不切实际。</p>\n<p>幸运的是，我们可以站在巨人的肩膀上。我们不必从头构建自己的模型，而是可以<strong>使用预训练 (pre-training)模型</strong>。这些模型已由研究机构或大型公司在海量数据集上训练完成。它们包含了数千小时音频中所有复杂的学习成果，可供您在自己的应用中使用。</p>\n<p>可以这样想：您不是从字母表和基本语法开始学习一门语言，而是雇佣了一位流利且专业的翻译。您的任务不再是教导模型，而是向其提供音频，然后获得文本。</p>\n<h3>模型中心的功用</h3>\n<p>为了使预训练 (pre-training)的语音识别模型易于获取，社区通常依赖于中央存储库，或称“中心”。Hugging Face Hub 就是一个著名的例子，它托管了数千个用于各种任务的预训练模型，包括自动语音识别。我们可以使用像 <code>transformers</code> 这样的 Python 库，仅需几行代码即可轻松下载和使用这些模型。</p>\n<p>当您从中心加载预训练的 ASR 模型时，您通常不仅仅获得模型权重 (weight)。您会得到一个完整、即用的软件包，其中包括：</p>\n<ol>\n<li><strong>特征提取器</strong>：此组件处理第2章中讨论的音频预处理步骤，将原始音频波形转换为模型所需的数字格式，例如梅尔频谱图。</li>\n<li><strong>模型</strong>：这是核心神经网络 (neural network)，经过训练可以将音频特征映射到音素序列或其他语言单位。</li>\n<li><strong>分词 (tokenization)器 (tokenizer)</strong>：此组件接收模型的输出并将其解码为人类可读的文本字符串，将语言单位转换为单词。</li>\n</ol>\n<p><code>transformers</code> 库方便地将这些组件捆绑到一个 <code>pipeline</code> 对象中，抽象化了底层复杂性。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1eqgjeo\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", margin=\"0.2,0.1\"];\n    edge [fontname=\"sans-serif\", fontsize=10];\n\n    subgraph cluster_pipeline {\n        label = \"预训练ASR流程\";\n        style = \"rounded,dashed\";\n        color = \"#adb5bd\";\n        fontname = \"sans-serif\";\n\n        feature_extractor [label=\"1. 特征提取器\", fillcolor=\"#a5d8ff\", color=\"#1c7ed6\"];\n        model [label=\"2. ASR 模型\\n(例如，Wav2Vec2)\", fillcolor=\"#d0bfff\", color=\"#7048e8\"];\n        tokenizer [label=\"3. 分词器 / 解码器\", fillcolor=\"#96f2d7\", color=\"#0ca678\"];\n    }\n\n    audio_file [label=\"音频文件 (.wav)\", shape=note, fillcolor=\"#e9ecef\", color=\"#868e96\"];\n    text_output [label=\"\\\"Hello world\\\"\", shape=document, fillcolor=\"#e9ecef\", color=\"#868e96\"];\n\n    audio_file -> feature_extractor [lhead=cluster_pipeline];\n    feature_extractor -> model [style=solid];\n    model -> tokenizer [style=solid];\n    tokenizer -> text_output [ltail=cluster_pipeline];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1eqgjeo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>预训练ASR流程的组成部分。<code>pipeline</code> 对象管理从音频输入到最终文本转录的流程，并在内部处理特征提取、模型处理和解码。</p>\n</blockquote>\n<h3>在代码中使用 <code>pipeline</code></h3>\n<p>加载整个转录系统非常简单。您可以使用 <code>pipeline()</code> 函数并指定任务“automatic-speech-recognition”以及您想从中心使用的模型名称。</p>\n<pre><code class=\"language-python\"># 确保您已安装所需的库：\n# pip install transformers torch\n\nfrom transformers import pipeline\n\n# 使用特定的预训练模型加载整个 ASR 流程\n# \"facebook/wav2vec2-base-960h\" 是一个流行的模型，在 960 小时英语语音上训练得到\ntranscriber = pipeline(\"automatic-speech-recognition\", model=\"facebook/wav2vec2-base-960h\")\n\n# 'transcriber' 对象现在已准备好使用。\n# 它包含特征提取器、模型和分词器。\nprint(transcriber)\n</code></pre>\n<p>执行此代码将下载模型文件（如果您尚未拥有）并初始化 <code>transcriber</code> 对象。此对象现在是一个功能齐全的语音识别引擎。在接下来的章节中，我们将传递一个音频文件给它，并看它如何运行。</p>\n<h3>选择合适的模型</h3>\n<p>我们选择的模型 <code>facebook/wav2vec2-base-960h</code> 是一个非常适合英语的通用选择。然而，该中心包含数千个模型。在选择时，您可以考虑以下几点：</p>\n<ul>\n<li><strong>语言：</strong> 模型几乎总是语言专用的。一个在英语上训练的模型将无法理解西班牙语。您必须选择为您的目标语言训练的模型。</li>\n<li><strong>训练数据：</strong> 模型的表现受其训练数据的影响很大。一个在清晰有声读物录音上训练的模型（如我们选择的）在类似任务中会表现出色，但在嘈杂的电话对话中可能表现不佳。还有一些模型专门针对这些不同场景进行了“微调 (fine-tuning)”。</li>\n<li><strong>大小和速度：</strong> 更大的模型通常提供更高的准确性，但需要更多内存且运行速度较慢。对于初学者的应用来说，“基础”模型是一个极好的起点，它在性能和资源使用之间提供了良好的平衡。</li>\n</ul>\n<p>通过使用预训练 (pre-training)模型，您可以绕过机器学习 (machine learning)中最耗资源的部分，并立即开始构建您的应用。既然我们的 <code>transcriber</code> 已准备就绪，那么让我们给它一些音频进行处理吧。</p>",
+  "slug": "using-a-pretrained-model-for-transcription",
+  "updates": [],
+  "references": [
+    {
+      "id": 19234,
+      "title": "wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations",
+      "author": "Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael Auli",
+      "year": "2020",
+      "publisher": "Neural Information Processing Systems (NeurIPS)",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS 2020)",
+      "volume": "33",
+      "pages": "",
+      "url": "https://openreview.net/forum?id=Q5Gq5eBfE8g",
+      "doi": "10.48550/arXiv.2006.11477",
+      "note": "介绍了像 Wav2Vec 2.0 这样模型中使用的语音表示自监督学习方法。",
+      "order": 1,
+      "created_at": "2025-09-06T13:04:03.350721Z",
+      "updated_at": "2025-09-10T03:43:56.804854Z"
+    },
+    {
+      "id": 19235,
+      "title": "Automatic Speech Recognition with 🤗 Transformers",
+      "author": "Hugging Face team",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/main/en/task_summary#automatic-speech-recognition",
+      "doi": "",
+      "note": "解释如何使用 `transformers` 库进行 ASR 的官方文档，涵盖 `pipeline` API 和模型选择。",
+      "order": 2,
+      "created_at": "2025-09-06T13:04:03.399920Z",
+      "updated_at": "2025-09-10T03:43:49.532539Z"
+    },
+    {
+      "id": 19236,
+      "title": "Speech and Language Processing (3rd edition draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本涵盖语音识别基础知识的教材，包括声学特征、隐马尔可夫模型和神经网络方法。",
+      "order": 3,
+      "created_at": "2025-09-06T13:04:03.404589Z",
+      "updated_at": "2025-09-10T03:43:46.969002Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

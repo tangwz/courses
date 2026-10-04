@@ -1,0 +1,61 @@
+{
+  "id": 5237,
+  "title": "NumPy 数组：机器学习数值处理的根本",
+  "meta_title": "用于机器学习数据的 NumPy 数组",
+  "meta_description": "了解 NumPy 数组、广播和向量化，助力机器学习高效数值计算。",
+  "content": "<p>虽然 Python 内置的列表和字典用途广泛，但在处理机器学习 (machine learning)中常见的大型数值数据集时，它们通常显得不足。对列表进行逐元素的数学运算，使用 Python 循环会带来较高的计算成本。正因如此，NumPy（数值 Python）变得不可或缺。它提供功能强劲的 N 维数组对象和先进的函数，并针对数值计算进行了优化，是许多 Python 科学计算和机器学习库的核心组成部分。</p>\n<h3>NumPy <code>ndarray</code>：实现高速运算的核心</h3>\n<p>NumPy 的核心是 <code>ndarray</code>（N 维数组）。与 Python 列表不同，Python 列表可以容纳不同类型的对象，并将其引用分散存储在内存中，而 NumPy 数组具有以下特性，使其在数值处理任务中表现出高效率：</p>\n<ol>\n<li><strong>同构数据类型：</strong> 单个 NumPy 数组中的所有元素必须是相同的数据类型（例如，全部为 32 位整数或全部为 64 位浮点数）。这种一致性使得 NumPy 能够紧凑地存储数据。</li>\n<li><strong>固定大小：</strong> NumPy 数组的大小在创建时就已经确定。虽然您可以基于现有数组创建新数组，但原始数组的大小不会像 Python 列表那样动态改变。</li>\n<li><strong>连续内存：</strong> NumPy 数组将其元素存储在连续的内存块中。这使得处理器能够更快地访问和处理数据，借助低级别优化（如 CPU 向量 (vector)指令）。Python 列表存储指向可能分散对象的指针，不具备此优势。</li>\n</ol>\n<p>考虑创建一个简单数组：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 从 Python 列表创建数组\nmy_list = [1, 2, 3, 4, 5]\nmy_array = np.array(my_list)\n\nprint(my_array)\n# 输出: [1 2 3 4 5]\n\nprint(my_array.dtype)\n# 输出: int64 (或 int32，取决于系统)\n</code></pre>\n<h3>向量 (vector)化：消除慢速循环</h3>\n<p>NumPy 最主要的性能优势之一源于<strong>向量化 (quantization)</strong>。这意味着操作一次性应用于整个数组，而不是通过显式的 Python 循环逐元素进行。NumPy 通过将循环下推到高度优化、预编译的 C 代码来实现这一点。</p>\n<p>让我们比较两种大型序列的加法，一种使用 Python 列表，另一种使用 NumPy 数组：</p>\n<pre><code class=\"language-python\">import numpy as np\nimport time\n\nsize = 1_000_000\n\n# 使用 Python 列表\nlist1 = list(range(size))\nlist2 = list(range(size))\n\nstart_time = time.time()\nresult_list = [x + y for x, y in zip(list1, list2)]\nlist_time = time.time() - start_time\n\n# 使用 NumPy 数组\narr1 = np.arange(size)\narr2 = np.arange(size)\n\nstart_time = time.time()\nresult_array = arr1 + arr2\nnumpy_time = time.time() - start_time\n\nprint(f\"Python 列表加法时间: {list_time:.4f} 秒\")\nprint(f\"NumPy 数组加法时间:  {numpy_time:.4f} 秒\")\n\n# 示例输出（时间会有所不同）:\n# Python 列表加法时间: 0.1234 秒\n# NumPy 数组加法时间:  0.0056 秒\n</code></pre>\n<p>NumPy 运算通常快几个数量级。这是因为 NumPy 数组上的 <code>+</code> 运算会在内部触发一个单一、优化的 C 循环，而列表推导式则涉及每个元素的许多较慢的 Python 级别操作。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-txqh50\" \n              data-plot-definition='{\"layout\": {\"title\": \"性能对比：列表与 NumPy 加法\", \"xaxis\": {\"title\": \"操作类型\"}, \"yaxis\": {\"title\": \"相对时间（越低越好）\", \"range\": [0, 25]}, \"template\": \"simple_white\", \"bargap\": 0.5}, \"data\": [{\"type\": \"bar\", \"x\": [\"Python 列表（循环）\", \"NumPy 数组（向量化）\"], \"y\": [22, 1], \"marker\": {\"color\": [\"#ff8787\", \"#74c0fc\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-txqh50\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>两种大型序列的元素相加的相对时间比较，分别使用 Python 循环和 NumPy 的向量化加法。NumPy 明显更快。</p>\n</blockquote>\n<h3>广播：对不同形状进行智能操作</h3>\n<p>NumPy 还具有<strong>广播</strong>功能，这是一套用于对不同形状的数组应用二元运算（例如加法、乘法）的规则。在可能的情况下，NumPy 避免创建显式的数据副本，而是像将较小的数组“拉伸”或“广播”以匹配较大数组的形状那样执行操作。</p>\n<p>一个常见的例子是将标量（单个数字）添加到数组中：</p>\n<pre><code class=\"language-python\">import numpy as np\n\narr = np.array([1, 2, 3])\nscalar = 10\n\nresult = arr + scalar # 广播标量\nprint(result)\n# 输出: [11 12 13]\n</code></pre>\n<p>这里，NumPy 将标量 <code>10</code> 视为一个数组 <code>[10, 10, 10]</code>，但实际上并没有在内存中创建该数组，从而节省了时间和空间。</p>\n<p>广播也适用于更高维度。您可以将一维数组添加到二维数组的每一行：</p>\n<pre><code class=\"language-python\">import numpy as np\n\nmatrix = np.array([[1, 2, 3],\n                   [4, 5, 6],\n                   [7, 8, 9]])\n\nrow_vector = np.array([10, 20, 30])\n\n# 通过广播将 row_vector 添加到矩阵的每一行\nresult = matrix + row_vector\nprint(result)\n# 输出:\n# [[11 22 33]\n#  [14 25 36]\n#  [17 28 39]]\n</code></pre>\n<p>广播通过避免手动平铺或重复数据，简化了代码并提高了效率。</p>\n<h3>机器学习 (machine learning)中的重要 NumPy 操作</h3>\n<p>NumPy 提供了大量函数库。以下是机器学习流程中常用的一些基本操作：</p>\n<ul>\n<li><strong>数组创建：</strong> 除了 <code>np.array()</code>，<code>np.zeros()</code>、<code>np.ones()</code>、<code>np.arange()</code>、<code>np.linspace()</code> 和 <code>np.random.rand()</code> 等函数也常用于初始化数组。\n<pre><code class=\"language-python\">zeros_arr = np.zeros((2, 3)) # 创建一个 2x3 的零数组\nprint(zeros_arr)\n# 输出:\n# [[0. 0. 0.]\n#  [0. 0. 0.]]\n\nrange_arr = np.arange(0, 10, 2) # 类似 Python 的 range，但创建的是数组\nprint(range_arr)\n# 输出: [0 2 4 6 8]\n</code></pre>\n</li>\n<li><strong>索引和切片：</strong> 访问元素和子数组的方式类似于 Python 列表，但很自然地扩展到多个维度。\n<pre><code class=\"language-python\">arr_2d = np.array([[1, 2, 3], [4, 5, 6]])\nprint(arr_2d[0, 1])  # 访问第 0 行第 1 列的元素\n# 输出: 2\n\nprint(arr_2d[:, 1]) # 访问所有行，第 1 列\n# 输出: [2 5]\n\nprint(arr_2d[0, :])  # 访问第 0 行，所有列\n# 输出: [1 2 3]\n</code></pre>\n</li>\n<li><strong>数学运算：</strong> 逐元素操作（<code>+</code>、<code>-</code>、<code>*</code>、<code>/</code>、<code>**</code>）是标准功能。更高级的线性代数操作，如点积（<code>np.dot</code> 或用于矩阵乘法的 <code>@</code> 运算符），对于线性回归、逻辑回归和神经网络 (neural network)等算法来说非常重要。\n<pre><code class=\"language-python\">A = np.array([[1, 2], [3, 4]])\nB = np.array([[5, 6], [7, 8]])\n\n# 逐元素乘积\nprint(A * B)\n# 输出: [[ 5 12]\n#          [21 32]]\n\n# 矩阵乘法（点积）\nprint(A @ B)\n# 输出: [[19 22]\n#          [43 50]]\n# 等同于: np.dot(A, B)\n</code></pre>\n</li>\n<li><strong>聚合函数：</strong> <code>np.sum()</code>、<code>np.mean()</code>、<code>np.std()</code>、<code>np.min()</code>、<code>np.max()</code> 等函数对数组执行计算，通常使用 <code>axis</code> 参数 (parameter)来指定是按行、按列还是对整个数组进行聚合。\n<pre><code class=\"language-python\">data = np.array([[1, 5], [2, 3], [6, 4]])\n\nprint(np.sum(data)) # 所有元素的和\n# 输出: 21\n\nprint(np.mean(data, axis=0)) # 每列的平均值\n# 输出: [3. 4.]\n\nprint(np.max(data, axis=1)) # 每行的最大值\n# 输出: [5 3 6]\n</code></pre>\n</li>\n<li><strong>重塑数组：</strong> 使用 <code>reshape()</code> 改变数组的形状而不改变其数据。这对于根据特定机器学习模型输入要求准备数据很有用。\n<pre><code class=\"language-python\">flat_arr = np.arange(6) # [0 1 2 3 4 5]\nreshaped_arr = flat_arr.reshape((2, 3))\nprint(reshaped_arr)\n# 输出:\n# [[0 1 2]\n#  [3 4 5]]\n</code></pre>\n</li>\n</ul>\n<h3>NumPy 在更广泛的机器学习 (machine learning)环境中的作用</h3>\n<p>NumPy 的效率和以数组为中心的设计使其成为许多其他重要 Python 库的构建底层。</p>\n<ul>\n<li><strong>Pandas：</strong> 内部使用 NumPy 数组来支持其 Series 和 DataFrame 对象，提供更高级别的数据操作和分析工具。</li>\n<li><strong>Scikit-learn：</strong> Python 中标准的机器学习库，其输入数据、模型参数 (parameter)和内部计算都高度依赖 NumPy 数组。</li>\n<li><strong>深度学习 (deep learning)框架（TensorFlow、PyTorch）：</strong> 尽管它们有自己的张量对象，但它们与 NumPy 数组良好衔接，通常可以方便地在格式间进行转换。数据预处理通常在馈入这些框架之前会涉及 NumPy。</li>\n</ul>\n<p>简而言之，机器学习流程中的数据通常从原始输入开始，可能使用 Pandas 加载和清洗，然后转换为 NumPy 数组进行数值处理，并馈入使用 Scikit-learn 或深度学习库构建的模型。因此，理解 NumPy 对于理解数据如何在大多数基于 Python 的机器学习工作流中高效流动和操作是必要的。</p>",
+  "slug": "numpy-arrays-ml",
+  "updates": [],
+  "references": [
+    {
+      "id": 14212,
+      "title": "NumPy documentation",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/",
+      "doi": "",
+      "note": "NumPy所有功能的官方且最全面的资源，涵盖ndarray结构、性能和API细节。",
+      "order": 1,
+      "created_at": "2025-09-05T08:49:18.680741Z",
+      "updated_at": "2025-09-11T01:58:36.325890Z"
+    },
+    {
+      "id": 14213,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "Pandas创建者撰写的权威指南，通过实际示例和对向量化、广播等核心概念的解释，阐明NumPy在Python数据堆栈中的作用。",
+      "order": 2,
+      "created_at": "2025-09-05T08:49:18.685776Z",
+      "updated_at": "2025-09-11T01:58:37.414594Z"
+    },
+    {
+      "id": 14214,
+      "title": "SciPy Lecture Notes",
+      "author": "Gael Varoquaux, Emmanuelle Gouillart, and Olivier Martin",
+      "year": "2022",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scipy-lectures.org/",
+      "doi": "",
+      "note": "免费、高质量的教育资源，涵盖NumPy、SciPy、Matplotlib及其他科学Python工具，解释了核心概念和实际应用。",
+      "order": 3,
+      "created_at": "2025-09-05T08:49:18.688682Z",
+      "updated_at": "2025-09-11T01:58:25.269628Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

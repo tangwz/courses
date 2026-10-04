@@ -1,0 +1,45 @@
+{
+  "id": 5981,
+  "title": "处理冗余内容与标记删除",
+  "meta_title": "从网页数据中删除HTML/标记",
+  "meta_description": "用于提取主要内容并删除广告、导航等的技巧",
+  "content": "<p>从大型爬取（如Common Crawl）获取的网页通常以HTML编码，它不仅包含主要文本内容，还包括结构标记 (token)、样式信息（CSS）、交互元素（JavaScript）、导航菜单、广告、页眉、页脚以及其他常被称为“样板内容”的周边文本。将这些无关材料留在训练数据中可能引入噪音，稀释高质量文本的有效信息，并使模型对自然语言结构的理解产生偏差。因此，有效移除标记和样板内容是为LLM预训练 (pre-training)准备网页数据的标准步骤。</p>\n<h3>解析HTML结构</h3>\n<p>处理HTML文档的第一步是解析其结构。原始HTML是文本字符串，但库可以将其转换为结构化表示，通常是树形结构，便于浏览和处理。Python为此提供了几个优秀的库。<code>Beautiful Soup</code> 因其灵活性和易用性而广泛使用，尤其擅长处理网页上常见的非标准或格式错误的HTML。<code>lxml</code> 是另一个功能强大的选择，以其速度著称，常被用作 <code>Beautiful Soup</code> 的后端解析器。</p>\n<p>这是一个使用 <code>Beautiful Soup</code> 解析HTML字符串并提取所有文本内容的简单示例，去除了标签：</p>\n<pre><code class=\"language-python\">from bs4 import BeautifulSoup\nimport torch # PyTorch集成未来的占位符\n\n# 示例HTML内容（实际情况通常复杂得多）\nhtml_doc = \"\"\"\n&#x3C;html>&#x3C;head>&#x3C;title>Sample Page&#x3C;/title>\n&#x3C;style>body {font-size: 12px;}&#x3C;/style>&#x3C;/head>\n&#x3C;body>\n&#x3C;header>&#x3C;h1>Main Title&#x3C;/h1>&#x3C;nav>&#x3C;a>Home&#x3C;/a> &#x3C;a>About&#x3C;/a>&#x3C;/nav>&#x3C;/header>\n&#x3C;main>\n&#x3C;p>This is the primary article content we want to keep.\nIt discusses important topics.&#x3C;/p>\n&#x3C;p>Another paragraph of useful information.&#x3C;/p>\n&#x3C;script>console.log('Some script');&#x3C;/script>\n&#x3C;/main>\n&#x3C;footer>&#x3C;p>Copyright 2023. Some footer links.&#x3C;/p>&#x3C;/footer>\n&#x3C;/body>&#x3C;/html>\n\"\"\"\n\nsoup = BeautifulSoup(html_doc, 'lxml') # 使用lxml解析器\n\n# 获取所有文本，去除标签\nall_text = soup.get_text(separator=' ', strip=True)\nprint(\"所有文本（包含样板内容）：\")\nprint(all_text)\n# 输出：Sample Page Main Title Home About 这是我们希望保留的主要文章\n# 内容。它讨论了重要主题。另一个有用的信息段落。console.log('Some script'); 版权所有\n# 2023。一些页脚链接。\n\n# 尝试只获取主要内容文本（简单示例）\nmain_content_tag = soup.find('main')\nif main_content_tag:\n    main_text = main_content_tag.get_text(separator=' ', strip=True)\n    print(\"\\n主要内容文本（简单提取）：\")\n    print(main_text)\n    # 输出：这是我们希望保留的主要文章内容。它\n    # 讨论了重要主题。另一个有用的信息段落。console.log('Some script');\nelse:\n    print(\"\\n未找到'main'标签。\")\n</code></pre>\n<p>正如示例所示，简单地对整个文档调用 <code>get_text()</code> 通常会包含来自页眉、页脚以及（如果包含文本节点）脚本的不必要文本。虽然查找像 <code>&#x3C;main></code> 这样的特定标签会有所帮助，但这依赖于语义化HTML的使用，而这在不同网站之间并不总是一致的。还要注意到，上述简单提取仍然包含了 <code>&#x3C;main></code> 中 <code>&#x3C;script></code> 标签的内容。</p>\n<h3>基于规则的样板内容删除</h3>\n<p>一个常见的起点是使用基于规则的方法。这包括识别与样板内容相关联的HTML标签，并在提取文本之前将其及其内容完全移除。常见目标包括：</p>\n<ul>\n<li><code>&#x3C;script></code>: 包含JavaScript代码。</li>\n<li><code>&#x3C;style></code>: 包含CSS样式规则。</li>\n<li><code>&#x3C;nav></code>: 通常包含网站导航链接。</li>\n<li><code>&#x3C;header></code>: 通常包含徽标、网站标题和顶部导航。</li>\n<li><code>&#x3C;footer></code>: 通常包含版权声明、联系信息和底部链接。</li>\n<li><code>&#x3C;aside></code>: 表示侧边栏或与主要内容略微相关的部分。</li>\n<li>通常与广告相关的标签（例如，来自广告网络的特定类名或 <code>&#x3C;iframe></code> 标签）。</li>\n</ul>\n<p>我们可以使用 <code>Beautiful Soup</code> 的 <code>decompose()</code> 方法在文本提取之前从解析树中移除这些元素。</p>\n<pre><code class=\"language-python\">from bs4 import BeautifulSoup\nimport torch # 占位符\n\nhtml_doc = \"\"\"\n&#x3C;html>&#x3C;head>&#x3C;title>Sample Page&#x3C;/title>\n&#x3C;style>body {font-size: 12px;}&#x3C;/style>&#x3C;/head>\n&#x3C;body>\n&#x3C;header>&#x3C;h1>Main Title&#x3C;/h1>&#x3C;nav>&#x3C;a>Home&#x3C;/a> &#x3C;a>About&#x3C;/a>&#x3C;/nav>&#x3C;/header>\n&#x3C;main>\n&#x3C;p>This is the primary article content we want to keep.\nIt discusses important topics.&#x3C;/p>\n&#x3C;div class=\"sidebar\">&#x3C;p>Related Links&#x3C;/p>&#x3C;/div>\n&#x3C;p>Another paragraph of useful information.&#x3C;/p>\n&#x3C;script>console.log('Some script');&#x3C;/script>\n&#x3C;/main>\n&#x3C;footer>&#x3C;p>Copyright 2023. Some footer links.&#x3C;/p>&#x3C;/footer>\n&#x3C;/body>&#x3C;/html>\n\"\"\"\n\nsoup = BeautifulSoup(html_doc, 'lxml')\n\n# 要删除的标签\ntags_to_remove = ['script', 'style', 'nav', 'header', 'footer', 'aside']\n# 也删除通过常见样板内容类/ID识别的元素（示例）\nselectors_to_remove = ['.sidebar', '#ads']\n\nfor tag_name in tags_to_remove:\n    for tag in soup.find_all(tag_name):\n        tag.decompose() # 删除标签及其内容\n\nfor selector in selectors_to_remove:\n    for tag in soup.select(selector): # 使用CSS选择器\n        tag.decompose()\n\n# 从修改后的BeautifulSoup对象中提取文本\ncleaned_text = soup.get_text(separator=' ', strip=True)\nprint(\"基于规则删除后的文本：\")\nprint(cleaned_text)\n# 输出：示例页面 这是我们希望保留的主要文章内容。\n# 它讨论了重要主题。另一个有用的信息段落。\n</code></pre>\n<p>尽管基于规则的方法在移除显而易见的样板内容方面很有效，但它们也有限制。它们可能很脆弱；网站内容结构各异，依赖 <code>&#x3C;main></code> 等特定标签或 <code>sidebar</code> 等类名并非普遍可靠。如果例如，图的标题放在 <code>&#x3C;footer></code> 标签内，激进的移除也可能丢弃有用信息。在多样化的网络上维护全面的规则是一项挑战。</p>\n<h3>内容提取算法</h3>\n<p>更高级的技术侧重于识别页面的<em>主要内容块</em>，而不仅仅是删除已知的样板标签。这些算法通常基于以下原则运作：主要内容在其部分内的文本密度通常相对于HTML标记 (token)量更高，而导航菜单或页脚包含许多链接（标记）但连续文本较少。</p>\n<p>像 <code>trafilatura</code> 这样的库是专门为此任务设计的，通常包含关于文本密度、链接密度、标签模式和文档结构的启发式规则。它们旨在稳定地从新闻页面、博客和其他网页文档中提取核心文章文本，同时丢弃周围的样板内容。</p>\n<p>使用 <code>trafilatura</code> 通常很简单：</p>\n<pre><code class=\"language-python\">import trafilatura\nimport torch # 占位符\n\n# 假设 'html_doc' 包含先前示例中的原始HTML字符串\n# 对于trafilatura，通常最好直接为其提供原始HTML字符串\n\n# 第二个HTML文档的示例\nhtml_doc = \"\"\"\n&#x3C;html>&#x3C;head>&#x3C;title>Sample Page&#x3C;/title>&#x3C;style>body {font-size: 12px;}&#x3C;/style>&#x3C;/head>\n&#x3C;body>\n&#x3C;header>&#x3C;h1>Main Title&#x3C;/h1>&#x3C;nav>&#x3C;a>Home&#x3C;/a> &#x3C;a>About&#x3C;/a>&#x3C;/nav>&#x3C;/header>\n&#x3C;main>\n&#x3C;p>This is the primary article content we want to keep. It discusses important topics.&#x3C;/p>\n&#x3C;div class=\"sidebar\">&#x3C;p>Related Links&#x3C;/p>&#x3C;/div>\n&#x3C;p>Another paragraph of useful information.&#x3C;/p>\n&#x3C;script>console.log('Some script');&#x3C;/script>\n&#x3C;/main>\n&#x3C;footer>&#x3C;p>Copyright 2023. Some footer links.&#x3C;/p>&#x3C;/footer>\n&#x3C;/body>&#x3C;/html>\n\"\"\"\n\n# 对于LLM数据，通常将 include_comments=False\n# favor_recall=True 可能会包含稍多的文本，可能是一些边缘的\n# 样板内容\n# favor_precision=True 更严格，可能会遗漏一些主要内容\nextracted_text = trafilatura.extract(\n    html_doc,\n    include_comments=False,\n    include_tables=True\n)\n\nprint(\"Trafilatura提取的文本：\")\nif extracted_text:\n    print(extracted_text)\nelse:\n    print(\"Trafilatura未能提取到主要内容。\")\n\n# 预期输出（可能因库版本/启发式规则略有不同）：\n# 主标题 # 如果H1标题靠近主要文本，Trafilatura有时会包含它\n# 主要文本\n# 这是我们希望保留的主要文章内容。它讨论了重要主题。\n# 另一个有用的信息段落。\n</code></pre>\n<p>这些工具在准确性和大规模处理的计算效率之间通常提供了很好的平衡。它们封装了从分析大量网页中获得的复杂启发式规则，省去了您自行开发和维护复杂规则集的麻烦。</p>\n<h3>挑战与考量</h3>\n<ul>\n<li><strong>动态内容：</strong> 许多现代网站在初始HTML页面加载后，会使用JavaScript加载内容。处理静态HTML源的基本HTML解析器和 <code>trafilatura</code> 等工具无法看到这些动态加载的内容。处理此类网站需要使用无头浏览器（例如，使用 <code>Selenium</code>、<code>Playwright</code> 或 <code>Puppeteer</code> 等工具）渲染页面，这会大幅增加处理时间和资源消耗。对于处理数十亿网页来说，这通常不切实际，这也是Common Crawl等来源的数据集可能低估高度动态网站内容的原因之一。</li>\n<li><strong>非HTML格式：</strong> 数据源可能包含PDF、Word文档或其他格式。每种格式都需要特定的提取工具（例如 <code>PyPDF2</code> 或 <code>Apache Tika</code>），然后才能进行文本清洗。</li>\n<li><strong>提取准确性：</strong> 没有完美的样板内容移除技术。基于密度的方法可能在结构不寻常的页面（如论坛或主要由列表组成的页面）上失效。通常存在一种权衡：激进的清洗有删除有效内容的风险，而宽松的清洗则会留下更多噪音。最佳平衡取决于下游应用以及数据集对噪音的容忍度。</li>\n<li><strong>语言特异性：</strong> 一些启发式规则可能与语言相关（例如，单词或句子的典型长度）。像 <code>trafilatura</code> 这样的库通常具有一定的语言感知能力，但性能可能有所不同。</li>\n</ul>\n<h3>整合到数据处理流程中</h3>\n<p>样板内容和标记 (token)移除通常在数据处理流程的早期进行，通常是在获取原始HTML内容之后，以及在计算开销更大的步骤（如近似重复检测或质量过滤）之前。通过首先移除不相关的标记和文本，后续步骤可以在更小、更干净的数据上操作，从而提高效率和效用。例如，在提取的主要内容上计算文本质量分数或检测重复项比在包含导航链接和广告的完整HTML源上更有意义。这一步，无论是基于规则还是使用专用库，都应设计为可扩展的，能够在像Apache Spark或Dask这样的分布式框架中并行处理文档，正如本课程后面将讨论的。</p>",
+  "slug": "handling-boilerplate-markup-removal",
+  "updates": [],
+  "references": [
+    {
+      "id": 16477,
+      "title": "Beautiful Soup Documentation",
+      "author": "Leonard Richardson",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.crummy.com/software/BeautifulSoup/bs4/doc/",
+      "doi": "",
+      "note": "该 Python 库的官方文档，涵盖 HTML 解析和导航。",
+      "order": 1,
+      "created_at": "2025-09-06T11:10:09.631735Z",
+      "updated_at": "2025-09-10T14:04:08.186433Z"
+    },
+    {
+      "id": 16479,
+      "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer",
+      "author": "Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, Peter J. Liu",
+      "year": "2020",
+      "publisher": "Journal of Machine Learning Research",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "21",
+      "pages": "1-67",
+      "url": "https://jmlr.org/papers/v21/20-074.html",
+      "doi": "",
+      "note": "描述了从 Common Crawl 构建 C4 数据集的过程，包括用于 LLM 预训练的网页数据过滤和清理步骤。",
+      "order": 3,
+      "created_at": "2025-09-06T11:10:09.638647Z",
+      "updated_at": "2025-09-10T14:03:56.631147Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

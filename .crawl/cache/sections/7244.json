@@ -1,0 +1,61 @@
+{
+  "id": 7244,
+  "title": "动手实践：使用 GitHub Actions 创建简单的 CI 流水线",
+  "meta_title": "动手实践：使用 GitHub Actions 为机器学习构建 CI 流水线",
+  "meta_description": "按照分步指南，使用 GitHub Actions 为机器学习项目构建简单的持续集成 (CI) 流水线。",
+  "content": "<p>构建一个实现持续集成原则的简单 CI 流水线。该流水线使用 GitHub Actions（直接集成在 GitHub 中的自动化工具），在代码发生变更时自动测试机器学习 (machine learning)代码。</p>\n<p>通过此动手练习，你将设置一个工作流来检查代码质量并运行基础测试，从而确保项目保持稳定可靠。</p>\n<h3>练习准备条件</h3>\n<p>若要进行此练习，你需要一个 GitHub 账号和一个新的空仓库。我们将在该仓库中创建一个虽然小巧但完整的机器学习 (machine learning)项目。</p>\n<p>首先，在项目的根目录下创建以下三个文件：</p>\n<ol>\n<li>\n<p><strong>数据文件 (<code>data.csv</code>)</strong>：一小部分示例数据。在本例中，我们可以使用著名的鸢尾花 (Iris) 数据集中的几行内容。</p>\n<pre><code class=\"language-csv\">sepal_length,sepal_width,petal_length,petal_width,species\n5.1,3.5,1.4,0.2,setosa\n4.9,3.0,1.4,0.2,setosa\n6.2,2.9,4.3,1.3,versicolor\n5.9,3.0,5.1,1.8,virginica\n</code></pre>\n</li>\n<li>\n<p><strong>Python 训练脚本 (<code>train.py</code>)</strong>：该脚本将使用我们的数据训练一个简单的模型。请注意，它并没有复杂的逻辑，其主要目的是作为一段可运行的代码，供 CI 流水线进行检查。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.linear_model import LogisticRegression\n\ndef run_training():\n    \"\"\"\n    一个用于加载数据和训练模型的简单函数。\n    \"\"\"\n    # 加载数据集\n    df = pd.read_csv('data.csv')\n\n    # 定义特征和目标变量\n    X = df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']]\n    y = df['species']\n\n    # 拆分数据\n    X_train, X_test, y_train, y_test = train_test_split(\n        X, y, test_size=0.3, random_state=42\n    )\n\n    # 初始化并训练模型\n    model = LogisticRegression(max_iter=200)\n    model.fit(X_train, y_train)\n\n    print(\"训练成功完成。\")\n\nif __name__ == '__main__':\n    run_training()\n</code></pre>\n</li>\n<li>\n<p><strong>依赖文件 (<code>requirements.txt</code>)</strong>：此文件列出了项目所需的 Python 库。我们的 CI 流水线将使用此文件来创建一个一致的环境。其中包含了用于代码规范检查的 <code>flake8</code> 和用于测试的 <code>pytest</code>。</p>\n<pre><code class=\"language-text\">pandas\nscikit-learn\nflake8\npytest\n</code></pre>\n</li>\n</ol>\n<p>将这三个文件提交到 GitHub 仓库的 <code>main</code> 分支。项目结构就绪后，我们现在可以定义自动化流程了。</p>\n<h3>理解 GitHub Actions 工作流</h3>\n<p>GitHub Actions 工作流是在 YAML 文件中定义的自动化流程。你将这些工作流文件存储在仓库中一个名为 <code>.github/workflows/</code> 的特殊目录下。当仓库中发生特定事件（如推送代码）时，GitHub 就会触发相应的工作流。</p>\n<p>我们的目标是创建一个执行三个主要任务的工作流：</p>\n<ol>\n<li>设置一个包含 Python 及所需库的干净环境。</li>\n<li>对代码进行规范检查，以查看是否存在格式问题。</li>\n<li>运行一个简单的测试，确保训练脚本能够正常运行。</li>\n</ol>\n<h3>创建你的第一个 CI 工作流</h3>\n<p>在你的仓库中，创建一个名为 <code>.github</code> 的新目录，并在其内部再创建一个名为 <code>workflows</code> 的目录。在 <code>.github/workflows/</code> 中，创建一个名为 <code>ci-pipeline.yml</code> 的新文件。</p>\n<p>将以下 YAML 内容复制到 <code>ci-pipeline.yml</code> 中。随后我们将详细拆解每个部分的功能。</p>\n<pre><code class=\"language-yaml\"># 工作流的描述性名称\nname: Basic ML Code CI\n\n# 当代码推送到 main 分支时触发工作流\non:\n  push:\n    branches: [ \"main\" ]\n\n# 定义要运行的作业\njobs:\n  test-and-lint:\n    # 使用最新版本的 Ubuntu 作为运行环境\n    runs-on: ubuntu-latest\n\n    # 定义作业中的步骤序列\n    steps:\n      # 步骤 1：检出仓库代码\n      - name: Check out repository code\n        uses: actions/checkout@v4\n\n      # 步骤 2：设置特定版本的 Python\n      - name: Set up Python 3.9\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.9'\n\n      # 步骤 3：从 requirements.txt 安装项目依赖\n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install -r requirements.txt\n\n      # 步骤 4：使用 flake8 检查代码规范和格式问题\n      - name: Lint with flake8\n        run: |\n          # 如果存在 Python 语法错误或未定义的名称，则停止构建\n          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics\n          # exit-zero 将所有错误视为警告。GitHub 编辑器宽度为 127 字符\n          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics\n\n      # 步骤 5：运行基础测试以确保脚本可执行\n      - name: Test with pytest\n        run: |\n          pytest\n</code></pre>\n<h4>工作流文件拆解</h4>\n<ul>\n<li><strong><code>name</code></strong>：这是一个易于理解的名称，会显示在 GitHub 仓库的 “Actions” 选项卡中。</li>\n<li><strong><code>on: push: branches: [ \"main\" ]</code></strong>：这是触发器。它告知 GitHub 每当有人向 <code>main</code> 分支推送提交时，就运行此工作流。</li>\n<li><strong><code>jobs</code></strong>：工作流由一个或多个作业组成。我们的工作流包含一个名为 <code>test-and-lint</code> 的作业。</li>\n<li><strong><code>runs-on: ubuntu-latest</code></strong>：这指定了作业将在 GitHub 托管的新虚拟机上运行，使用的是最新版本的 Ubuntu 操作系统。</li>\n<li><strong><code>steps</code></strong>：这是最核心的部分。它定义了作业将要执行的一系列任务。\n<ul>\n<li><strong><code>uses: actions/checkout@v4</code></strong>：这是一个预构建的动作，用于将仓库代码副本下载到运行器上，以便后续步骤可以访问你的文件。</li>\n<li><strong><code>uses: actions/setup-python@v5</code></strong>：另一个预构建的动作，用于安装特定版本的 Python，在本例中为 3.9 版本。</li>\n<li><strong><code>run: pip install -r requirements.txt</code></strong>：<code>run</code> 命令用于执行命令行指令。在这里，我们使用 <code>pip</code> 安装 <code>requirements.txt</code> 文件中列出的所有库。</li>\n<li><strong><code>run: flake8 . --count ...</code></strong>：此步骤运行 <code>flake8</code> 代码检查器。检查器在不实际运行代码的情况下分析代码是否存在潜在错误和风格问题。这是维护代码质量的标准做法。</li>\n<li><strong><code>run: pytest</code></strong>：最后一步执行 <code>pytest</code> 测试框架。我们还没有创建任何测试，所以现在来创建一个。</li>\n</ul>\n</li>\n</ul>\n<h3>添加一个简单的测试</h3>\n<p>为了让 CI 流水线具有实际意义，它需要一些测试对象。让我们创建一个非常基础的测试，确认我们的 <code>train.py</code> 脚本可以被导入并运行而不会崩溃。</p>\n<p>在项目的根目录下创建一个名为 <code>test_script.py</code> 的新文件：</p>\n<pre><code class=\"language-python\">import pytest\nfrom train import run_training\n\ndef test_training_runs():\n    \"\"\"\n    测试训练函数是否能在不抛出异常的情况下运行。\n    \"\"\"\n    try:\n        run_training()\n    except Exception as e:\n        pytest.fail(f\"run_training() 抛出了异常：{e}\")\n\n</code></pre>\n<p>对于 CI 检查来说，这个测试简单且有效。它导入 <code>run_training</code> 函数并调用它。如果运行期间出现任何错误，就会触发 <code>pytest.fail()</code>，导致流水线中的测试步骤失败。</p>\n<h3>可视化流水线</h3>\n<p>我们定义的工作流遵循清晰的线性步骤序列。这个过程确保了在任何代码被认定为“合格”之前，它都经过了代码检出、环境构建，并且通过了质量与功能检查。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1e2eskz\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=0.3];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_trigger {\n        label = \"触发器\";\n        style=dashed;\n        color=\"#adb5bd\";\n        Push [label=\"推送到 &#39;main&#39; 分支\", shape=cds, fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_job {\n        label = \"作业：在 ubuntu-latest 上进行测试与代码检查\";\n        style=dashed;\n        color=\"#adb5bd\";\n\n        Checkout [label=\"1. 检出代码\", fillcolor=\"#e9ecef\"];\n        Setup [label=\"2. 设置 Python\", fillcolor=\"#e9ecef\"];\n        Install [label=\"3. 安装依赖\", fillcolor=\"#e9ecef\"];\n        Lint [label=\"4. 使用 flake8 检查代码\", fillcolor=\"#96f2d7\"];\n        Test [label=\"5. 使用 pytest 测试\", fillcolor=\"#96f2d7\"];\n\n        Checkout -> Setup -> Install -> Lint -> Test;\n    }\n\n    Push -> Checkout [lhead=cluster_job];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1e2eskz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>持续集成工作流中的自动化步骤序列。该流程始于代码推送，随后进行环境设置、代码检查和测试。</p>\n</blockquote>\n<h3>运行工作流并查看结果</h3>\n<p>你现在可以准备查看流水线的运行情况了。</p>\n<ol>\n<li>将 <code>ci-pipeline.yml</code> 和 <code>test_script.py</code> 文件添加、提交并推送到你的 GitHub 仓库。</li>\n<li>在 GitHub 网站上进入你的仓库，点击 “Actions” 选项卡。</li>\n<li>你会看到列出的 “Basic ML Code CI” 工作流。GitHub 自动检测到了新的工作流文件，并因为你向 <code>main</code> 分支推送了代码而触发了一次运行。</li>\n</ol>\n<p>点击该工作流运行记录以查看详情。你可以展开 <code>test-and-lint</code> 作业，查看每个步骤的日志输出。如果所有步骤都成功完成，你会在它们旁边看到一个绿色对勾。如果某个步骤失败（例如 <code>flake8</code> 发现了语法错误或 <code>pytest</code> 测试未通过），该步骤将被标记 (token)为红色的 “X”，且整个工作流运行将被标记为失败。</p>\n<p>你现在已经成功构建了一个基础的 CI 流水线。这种简单的自动化为你的项目增加了一层安全保障和质量控制。它充当了自动化的守护者，确保对主分支的每次更改都经过自动审核，让你能够专注于开发新功能。这是构建可靠且可维护的机器学习 (machine learning)系统的基本做法。</p>",
+  "slug": "practice-ci-pipeline-github-actions",
+  "updates": [],
+  "references": [
+    {
+      "id": 20167,
+      "title": "GitHub Actions Documentation",
+      "author": "GitHub Docs",
+      "year": "2024",
+      "publisher": "GitHub",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.github.com/en/actions",
+      "doi": "",
+      "note": "GitHub Actions官方指南，涵盖工作流语法、事件触发器和运行器环境。",
+      "order": 1,
+      "created_at": "2025-09-06T13:20:23.246587Z",
+      "updated_at": "2025-09-10T05:05:39.625667Z"
+    },
+    {
+      "id": 20168,
+      "title": "Introducing MLOps: How to go from Model to Production",
+      "author": "Mark Treveil, Nicolas Omont, Clement Stenac, Kenji Lefevre, Du Phan, Joachim Zentici, Adrien Lavoillotte, Makoto Miyazaki, Lynn Heidmann",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "",
+      "doi": "",
+      "note": "关于MLOps实践的资源，包括将CI/CD集成到机器学习工作流中。",
+      "order": 2,
+      "created_at": "2025-09-06T13:20:23.254536Z",
+      "updated_at": "2025-09-10T05:06:02.243115Z"
+    },
+    {
+      "id": 20169,
+      "title": "Continuous Integration",
+      "author": "Martin Fowler",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://martinfowler.com/articles/continuousIntegration.html",
+      "doi": "",
+      "note": "一篇定义持续集成原则和实践的文章，为CI管道的理论基础提供支持。",
+      "order": 3,
+      "created_at": "2025-09-06T13:20:23.256991Z",
+      "updated_at": "2025-09-10T05:05:46.433998Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

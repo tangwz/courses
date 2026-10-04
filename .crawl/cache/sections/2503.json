@@ -1,0 +1,61 @@
+{
+  "id": 2503,
+  "title": "序列感知的必要性",
+  "meta_title": "自然语言处理中序列感知的必要性",
+  "meta_description": "了解为何在许多自然语言处理任务中，对序列顺序进行建模很重要。",
+  "content": "<p>TF-IDF等方法是将文本数值化表示的有效手段。这些方法通常基于“词袋”假设，将文档视为无序的词语集合。虽然对于某些任务，例如基于主题的文档分类，这种方法行之有效，但它忽略了语言的一个基本特点：其序列性。词语出现的顺序对于理解其原意通常非常重要。</p>\n<p>请看下面这些简单的句子：</p>\n<ul>\n<li>“狗咬人。”</li>\n<li>“人咬狗。”</li>\n</ul>\n<p>如果使用基本的词袋表示，这两个句子可能看起来非常相似。它们包含完全相同的词语：{狗, 咬, 人}。然而，它们的含义截然不同，这种差异完全取决于词语的顺序。一个忽略顺序的模型无法区分这两种情况。</p>\n<p>这并非一个孤立的问题。许多重要的自然语言处理任务都很大程度上依赖于理解文本的序列结构：</p>\n<ul>\n<li><strong>机器翻译：</strong> 将“Ich bin müde”（德语）翻译成“I am tired”（英语）需要将序列进行对应，因为不同语言的词序和结构有所不同。简单地逐字翻译通常会导致语法错误或无意义的输出。</li>\n<li><strong>情感分析：</strong> 所表达的情感会根据词序和上下文 (context)而变化。比较“这部电影很好”与“这部电影不好”。“不”这个词改变了“好”的情感，但它的位置很重要。模型需要处理序列以理解这种否定。</li>\n<li><strong>词性标注（POS）：</strong> 判断“book”（预订/书）是名词还是动词通常取决于周围的词语。在“请预订航班”中，“book”是动词。在“我读这本书”中，它是名词。序列提供了必要的语境。</li>\n<li><strong>命名实体识别（NER）：</strong> 识别像“纽约市”这样的实体需要识别出这三个词语共同构成一个单一实体，这与“新”、“约克”或“市”单独出现的情况有所不同。</li>\n<li><strong>语言模型：</strong> 此处的目的是在给定前文词语的情况下，预测序列中的下一个词。这本质上需要理解词语之间按顺序的依赖关系。</li>\n</ul>\n<p>TF-IDF等基于频率的方法擅长捕捉文档或语料库中存在<em>哪些</em>词以及它们的重要性，但它们抛弃了序列中编码的<em>位置</em>和<em>时序</em>信息。这些方法本质上是把所有词语放进一个袋子，摇匀，然后数数。这个过程丢失了序列所提供的语法结构和语境关系。</p>\n<p>为了处理顺序很重要的任务，我们需要能够逐步处理输入的模型，这些模型会保持某种形式的记忆或内部状态，用于捕捉序列中前面元素的信息。这种“记忆”过去信息的能力使得模型能够结合之前的语境理解当前的输入。</p>\n<p>本章介绍一类专门为序列数据设计的模型：循环神经网络 (neural network) (RNN)（RNNs）及其更高级的版本，如LSTM和GRU。这些模型解决了忽略顺序表示的局限性，并为处理序列不可或缺的复杂语言理解任务奠定了基础。我们将首先研究RNN的基本架构。</p>",
+  "slug": "need-for-sequence-awareness",
+  "updates": [],
+  "references": [
+    {
+      "id": 2224,
+      "title": "Speech and Language Processing",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本标准教材，涵盖传统自然语言处理技术、与顺序无关模型的局限性，并介绍了神经序列模型。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:09.527753Z",
+      "updated_at": "2025-09-07T22:06:56.577168Z"
+    },
+    {
+      "id": 2226,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本全面的资源，提供了深度学习的数学基础，包括关于循环神经网络及其变体的详细章节。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:09.723539Z",
+      "updated_at": "2025-09-07T22:06:56.725427Z"
+    },
+    {
+      "id": 2227,
+      "title": "Long Short-Term Memory",
+      "author": "Sepp Hochreiter and Jürgen Schmidhuber",
+      "year": "1997",
+      "publisher": "MIT Press",
+      "journal": "Neural Computation",
+      "volume": "9",
+      "pages": "1735-1780",
+      "url": "https://doi.org/10.1162/neco.1997.9.8.1735",
+      "doi": "10.1162/neco.1997.9.8.1735",
+      "note": "提出长短期记忆（LSTM）网络的原始论文，解决了循环神经网络中的梯度消失问题。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:09.802480Z",
+      "updated_at": "2025-09-07T22:07:08.604647Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 3560,
+  "title": "语义搜索与关键词搜索再比较",
+  "meta_title": "语义搜索与关键词搜索对比",
+  "meta_description": "对比理解含义与匹配词语的方法和益处。",
+  "content": "<p>当我们开始构建端到端的语义搜索流程时，重新审视语义搜索与其前身关键词搜索之间的基本区别是很有价值的。虽然您可能已经从之前的讨论中了解了其不同，但在设计系统内数据和查询的实际流程时，理解它们的核心机制和局限性变得尤为重要。选择合适的方法，甚至将它们结合起来，在很大程度上取决于您应用程序的具体需求。</p>\n<h3>关键词搜索：匹配词语</h3>\n<p>传统的关键词搜索系统主要基于词汇匹配。其核心在于识别包含用户查询中特定词语或短语的文档。</p>\n<ul>\n<li><strong>索引：</strong> 这些系统通常构建倒排索引。这种结构将文档库中找到的每个独有的词（或<em>术语</em>）映射到包含该术语的文档列表，通常还包含位置信息和频率计数。诸如词干提取（将词语还原为词根形式，例如，“running” -> “run”）和词形还原（将词语还原为词典形式，例如，“ran” -> “run”）等技术常用于在索引之前规范化术语。停用词（常见的词语如“the”、“a”、“is”）通常会被移除。</li>\n<li><strong>查询：</strong> 当用户提交查询时，系统会进行类似处理（分词 (tokenization)、词干提取/词形还原、移除停用词）。然后，系统会在倒排索引中查找已处理的查询术语，以检索匹配的文档。</li>\n<li><strong>排序：</strong> 相关性通常使用评分算法来确定，例如TF-IDF（词频-逆文档频率）或更现代的变体如BM25（最佳匹配25）。这些算法优先考虑查询术语在文档中出现频率较高（TF）但在整个语料库中相对较少（IDF）的文档，这表示更高的相关性。</li>\n</ul>\n<p><strong>局限性：</strong> 关键词搜索难以处理歧义和上下文 (context)。</p>\n<ol>\n<li><strong>同义词：</strong> 它无法检索使用不同但含义相似的词语的文档。搜索“fast laptop”可能会错过描述“quick notebook”或“high-speed portable computer”的文档。</li>\n<li><strong>多义词：</strong> 当查询术语具有多个含义时，它可能会返回不相关的结果。搜索“python”可能会返回关于蛇而不是编程语言的结果，这取决于语料库。</li>\n<li><strong>理解：</strong> 它无法把握查询背后的潜在意图或内容。搜索“how to fix a dripping sink”可能会错过一篇标题为“Stopping Leaks in Kitchen Plumbing”的优秀指南，如果其中不包含完全匹配的关键词。</li>\n</ol>\n<h3>语义搜索：理解含义</h3>\n<p>语义搜索，由向量 (vector)嵌入 (embedding)和向量数据库驱动，通过操作查询和文档之间的<em>含义</em>或<em>语义相似性</em>来解决这些局限性。</p>\n<ul>\n<li><strong>索引：</strong> 语义搜索系统不索引术语，而是首先使用预训练 (pre-training)的嵌入模型（如Sentence-BERT或OpenAI的模型）将文本片段（或其他数据）转换为高维数值向量（嵌入）。这些向量捕捉内容的语义核心。向量数据库随后对这些嵌入进行索引，通常使用近似最近邻（ANN）算法（如第3章所述）进行高效检索。相关的元数据通常与向量一同存储。</li>\n<li><strong>查询：</strong> 当用户提交查询时，相同的嵌入模型会将查询文本转换为向量。系统随后在向量索引中搜索在高维空间 (high-dimensional space)中最接近查询向量的文档向量，使用余弦相似度或欧氏距离等距离度量。</li>\n<li><strong>排序：</strong> 主要的排序机制是查询向量与文档向量之间的相似度得分（或距离）。向量“更接近”查询向量的文档被认为在语义上更相关。基于元数据或其他信号，可能会应用进一步的重新排序步骤。</li>\n</ul>\n<p><strong>优势：</strong> 语义搜索在关键词搜索不足的地方表现出色。</p>\n<ol>\n<li><strong>同义词/上下文 (context)：</strong> 它能自然处理同义词和相关内容。“Fast laptop”和“quick notebook”可能具有相似的向量表示，因此可以为同一个查询被检索到。</li>\n<li><strong>意图识别：</strong> 它能更好地理解用户的潜在需求，即使措辞差异很大也能检索到相关信息。“dripping sink”的查询更有可能找到“Stopping Leaks”的指南。</li>\n</ol>\n<h3>为什么这种区别现在很重要</h3>\n<p>理解这些差异，在您设计搜索流程（本章的主要内容）时非常重要。</p>\n<ul>\n<li><strong>组件选择：</strong> 您选择的索引机制（倒排索引与向量 (vector)索引）、查询处理（术语规范化与向量生成）以及排序策略（BM25与向量相似度）直接来源于您是优先考虑词汇匹配还是语义理解。</li>\n<li><strong>混合方法：</strong> 许多现代系统采用<em>混合搜索</em>，结合两者的优势。关键词搜索对于特定实体查找（例如，产品ID、确切名称）可能有效，而语义搜索则处理更详细的查询。识别两者的不同之处对于设计有效的结合策略（我们将在本章稍后讨论）是必不可少的。</li>\n<li><strong>权衡：</strong> 关键词搜索通常计算成本较低且更易于解释（您可以根据术语的存在看出文档<em>为何</em>匹配）。语义搜索需要强大的嵌入 (embedding)模型和专门的向量数据库，虽然非常有效，但解释两个向量<em>为何</em>被认为是相似的可能不太直观。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-36h1bf\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n    subgraph cluster_keyword {\n        label = \"关键词搜索\";\n        style=filled;\n        color=\"#e9ecef\";\n        kw_query [label=\"查询：\\n&#39;fastest laptop&#39;\"];\n        kw_index [label=\"索引：\\n词频\\n(BM25)\"];\n        kw_result [label=\"结果：\\n包含\\n&#39;fastest&#39;、&#39;laptop&#39;的文档\"];\n        kw_query -> kw_index [label=\"词语匹配\"];\n        kw_index -> kw_result [label=\"分数计算\"];\n    }\n\n    subgraph cluster_semantic {\n        label = \"语义搜索\";\n        style=filled;\n        color=\"#d0bfff\";\n        node [color=\"#7048e8\", fontcolor=\"#7048e8\"];\n        edge [color=\"#9775fa\"];\n        sm_query [label=\"查询：\\n&#39;fastest laptop&#39;\"];\n        sm_emb_query [label=\"查询嵌入\\n(向量)\"];\n        sm_index [label=\"向量索引\\n(ANN搜索)\"];\n        sm_result [label=\"结果：\\n关于高性能计算、\\n强大笔记本电脑、\\n高速便携设备的文档\"];\n        sm_query -> sm_emb_query [label=\"生成向量\"];\n        sm_emb_query -> sm_index [label=\"相似度搜索\"];\n        sm_index -> sm_result [label=\"最近邻\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-36h1bf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>关键词和语义搜索流程的比较，针对查询“fastest laptop”。关键词搜索侧重于术语存在，而语义搜索则使用向量相似性来查找相关文档。</p>\n</blockquote>\n<p>在设计语义搜索流程的架构时，请记住这些基本差异。它们将指导您如何处理数据准备、嵌入生成、索引、查询和结果排序，以构建一个真正理解用户意图的系统。</p>",
+  "slug": "semantic-vs-keyword-revisited",
+  "updates": [],
+  "references": [
+    {
+      "id": 2091,
+      "title": "Introduction to Information Retrieval",
+      "author": "Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze",
+      "year": "2008",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nlp.stanford.edu/IR-book/",
+      "doi": "",
+      "note": "本书是信息检索领域的标准教材，全面涵盖了关键词搜索机制、倒排索引、TF-IDF 和 BM25 等传统搜索的基础知识。",
+      "order": 1,
+      "created_at": "2025-09-04T16:45:50.909782Z",
+      "updated_at": "2025-09-09T10:37:57.339021Z"
+    },
+    {
+      "id": 2101,
+      "title": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+      "author": "Nils Reimers and Iryna Gurevych",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+      "volume": "",
+      "pages": "3982-3992",
+      "url": "https://aclanthology.org/D19-1410/",
+      "doi": "10.18653/v1/D19-1410",
+      "note": "这篇论文介绍了Sentence-BERT，一种广泛采用的方法，用于从类BERT模型生成具有语义意义的句子嵌入，直接展示了语义搜索系统如何生成查询和文档向量。",
+      "order": 3,
+      "created_at": "2025-09-04T16:45:55.464727Z",
+      "updated_at": "2025-09-09T10:37:56.747463Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

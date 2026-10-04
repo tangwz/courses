@@ -1,0 +1,61 @@
+{
+  "id": 1682,
+  "title": "安装与设置",
+  "meta_title": "JAX 的安装和设置",
+  "meta_description": "安装 JAX 并支持 CPU、GPU 或 TPU 的指南。",
+  "content": "<p>JAX 是一个为高性能数值计算而设计的框架，主要通过自动微分和函数变换实现。要开始使用 JAX，您需要设置您的环境。安装 JAX 通常很简单，但根据您是想在 CPU、NVIDIA GPU 还是 Google TPU 上运行，需要略微不同的步骤。</p>\n<p>本课程假设您已安装了可用的 Python (3.7 或更高版本)，并熟悉使用 <code>pip</code> 或 <code>conda</code> 进行包管理。强烈建议使用虚拟环境，以避免与其他项目或您系统的 Python 安装发生冲突。</p>\n<h3>创建虚拟环境（推荐）</h3>\n<p>在安装 JAX 之前，请创建并激活一个虚拟环境。</p>\n<p><strong>使用 <code>venv</code>：</strong></p>\n<pre><code class=\"language-bash\"># 创建一个名为 .venv（或您喜欢的其他名称）的虚拟环境\npython -m venv .venv\n\n# 激活环境\n# 在 Linux/macOS 上：\nsource .venv/bin/activate\n# 在 Windows (命令提示符) 上：\n.\\.venv\\Scripts\\activate.bat\n# 在 Windows (PowerShell) 上：\n.\\.venv\\Scripts\\Activate.ps1\n</code></pre>\n<p><strong>使用 <code>conda</code>：</strong></p>\n<pre><code class=\"language-bash\"># 创建一个名为 'jax-env' 的 conda Python 环境\nconda create -n jax-env python=3.9  # 或您想要的 Python 版本\n\n# 激活环境\nconda activate jax-env\n</code></pre>\n<p>一旦您的环境被激活，您就可以继续进行 JAX 的安装。</p>\n<h3>为 CPU 安装 JAX</h3>\n<p>如果您只打算使用 CPU，安装很简单。JAX 本身是一个纯 Python 包，而 <code>jaxlib</code> 包含编译后的后端 (XLA) 和平台特定代码。</p>\n<p>使用 pip 安装 <code>jax</code> 和 <code>jaxlib</code> 的最新版本：</p>\n<pre><code class=\"language-bash\">pip install --upgrade jax jaxlib\n</code></pre>\n<p>此命令会安装针对您系统 CPU 架构优化的 <code>jaxlib</code> 构建。</p>\n<h3>为 NVIDIA GPU 安装 JAX</h3>\n<p>要使用 NVIDIA GPU，您的系统需要安装兼容的 NVIDIA 驱动、CUDA 工具包以及可选的 cuDNN。JAX 需要特定版本的 CUDA 和 cuDNN，这些版本与预构建的 <code>jaxlib</code> wheels 相对应。</p>\n<p>安装正确支持 GPU 的 <code>jaxlib</code> 的<strong>最可靠方法</strong>是遵循 JAX 官方 GitHub 仓库上的具体说明，因为所需的版本和安装命令经常变化。</p>\n<p><strong>访问：</strong> <a href=\"https://github.com/google/jax#installation\">https://github.com/google/jax#installation</a></p>\n<p>查找适合您特定 CUDA 和 cuDNN 版本的命令。命令通常看起来像这样（但<strong>请勿</strong>在未查看官方说明的情况下运行此精确命令）：</p>\n<pre><code class=\"language-bash\"># 仅供示例 - 请检查 JAX 官方 GitHub 以获取正确命令！\npip install --upgrade jax jaxlib[cuda11_cudnn82] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html\n</code></pre>\n<p><code>[cuda&#x3C;version>_cudnn&#x3C;version>]</code> 部分指定了目标构建。使用错误的版本很可能导致 JAX 无法检测或使用您的 GPU。请始终参考 JAX 官方安装指南以获取最新命令。</p>\n<h3>为 Google TPU 安装 JAX</h3>\n<p>在 TPU 上使用 JAX 主要通过 Google Cloud Platform (GCP) 或 Google Colaboratory (Colab) 完成。</p>\n<ul>\n<li><strong>Google Colab:</strong> 如果您在 Colab 中选择 TPU 运行时 (<code>运行时</code> -> <code>更改运行时类型</code> -> <code>TPU</code>)，JAX 通常预装，或者可以使用标准 CPU 安装命令进行安装。Colab 管理 TPU 驱动程序和底层软件栈。\n<pre><code class=\"language-bash\">pip install --upgrade jax jaxlib\n</code></pre>\n</li>\n<li><strong>Google Cloud TPU 虚拟机：</strong> 在 GCP 上使用 TPU 虚拟机时，环境通常已预配置。您通常可以在 TPU 虚拟机环境中使用标准 pip 命令安装 JAX。如有需要，请参考 GCP 的具体文档来设置 TPU 虚拟机。</li>\n</ul>\n<h3>验证安装</h3>\n<p>安装后，您可以验证 JAX 是否正确安装，并检查它能检测到哪些设备（CPU、GPU、TPU）。打开 Python 解释器或运行以下代码的脚本：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\ntry:\n  devices = jax.devices()\n  print(\"JAX 检测到以下设备：\")\n  for i, device in enumerate(devices):\n      print(f\"{i}: {device.platform.upper()} ({device.device_kind})\")\n\n  # 测试一个简单计算\n  key = jax.random.PRNGKey(0)\n  x = jax.random.normal(key, (10,))\n  y = jnp.dot(x, x)\n  print(f\"\\n成功执行了一个简单的 JAX 操作。结果：{y}\")\n\n  # 检查默认设备\n  print(f\"\\n默认设备：{jax.default_backend()}\")\n\nexcept Exception as e:\n  print(\"JAX 验证过程中发生错误：\")\n  print(e)\n  print(\"\\n请检查您的安装步骤，特别是 GPU 驱动/CUDA 版本（如果适用）。\")\n\n</code></pre>\n<p><strong>示例输出（仅 CPU）：</strong></p>\n<pre><code class=\"language-text\">JAX 检测到以下设备：\n0: CPU (cpu)\n\n成功执行了一个简单的 JAX 操作。结果：10.811179161071777\n\n默认设备：cpu\n</code></pre>\n<p><strong>示例输出（单 GPU）：</strong></p>\n<pre><code class=\"language-text\">JAX 检测到以下设备：\n0: GPU (NVIDIA GeForce RTX 3090) # 您的 GPU 型号会有所不同\n1: CPU (cpu)\n\n成功执行了一个简单的 JAX 操作。结果：10.811179161071777\n\n默认设备：gpu\n</code></pre>\n<p><strong>示例输出（多 GPU 或 TPU）：</strong></p>\n<p>您会看到列出多个 GPU 或 TPU 设备。</p>\n<pre><code class=\"language-text\">JAX 检测到以下设备：\n0: TPU (TPU v3)\n1: TPU (TPU v3)\n... # (可能还有更多 TPU)\nN: CPU (cpu) \n\n成功执行了一个简单的 JAX 操作。结果：10.811179161071777\n\n默认设备：tpu\n</code></pre>\n<p>如果脚本运行无误并列出预期设备，您的 JAX 安装就绪。如果遇到错误，特别是与 CUDA 或 GPU 相关的错误，请再次检查您的驱动程序、CUDA 工具包和 <code>jaxlib</code> 版本是否兼容，方法是查阅 JAX 官方安装指南。</p>\n<p>JAX 安装完成后，您就可以直接使用 JAX 数组并了解其核心功能了。</p>",
+  "slug": "jax-installation-setup",
+  "updates": [],
+  "references": [
+    {
+      "id": 3801,
+      "title": "JAX Installation",
+      "author": "Google",
+      "year": "2023",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/google/jax#installation",
+      "doi": "",
+      "note": "提供JAX安装的官方和最新说明，包括CPU、GPU和TPU的平台特定指南。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:37.771686Z",
+      "updated_at": "2025-09-08T04:49:25.127992Z"
+    },
+    {
+      "id": 3802,
+      "title": "`venv` - Creation of virtual environments",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "官方Python文档，解释如何使用内置的`venv`模块创建和管理虚拟环境。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:37.832074Z",
+      "updated_at": "2025-09-08T04:49:41.110937Z"
+    },
+    {
+      "id": 3803,
+      "title": "Managing environments",
+      "author": "Anaconda Inc.",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.conda.io/en/latest/user-guide/tasks/manage-environments.html",
+      "doi": "",
+      "note": "使用Conda创建、激活和管理独立Python环境的官方指南，这是包管理的常见做法。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:37.835005Z",
+      "updated_at": "2025-09-08T04:49:27.038902Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1829,
+  "title": "Scikit-learn API 概述",
+  "meta_title": "Scikit-learn API 概述",
+  "meta_description": "一致的 API 设计介绍：评估器、预测器和转换器。",
+  "content": "<p>Scikit-learn 的广泛应用部分归因于其高度一致且精心设计的应用程序接口（API）。一旦您掌握了其基本结构和约定，应用不同算法或预处理步骤通常感觉很直接，且所需代码改动很少。这种一致性提升了构建机器学习 (machine learning)模型的效率。</p>\n<p>Scikit-learn API 的核心围绕几种基本对象类型及其相关方法。我们来了解主要组成部分。</p>\n<h3>评估器：基础对象</h3>\n<p>Scikit-learn 的中心是 <code>Estimator</code> 对象。库中几乎所有内容，无论是用于分类或回归的模型，还是用于转换数据的工具，都继承自这个基础类。评估器的决定性特点是其 <code>fit()</code> 方法。</p>\n<ul>\n<li><strong><code>fit(X, y=None)</code></strong>: 这是最主要的方法。其目的是根据训练数据调整评估器的内部状态。\n<ul>\n<li><code>X</code>: 表示输入数据，通常是一个二维 NumPy 数组或 Pandas DataFrame。行对应样本，列对应特征。</li>\n<li><code>y</code>: 表示目标值（用于监督学习 (supervised learning)）。通常是一个一维 NumPy 数组或 Pandas Series，包含标签（用于分类）或连续值（用于回归）。对于无监督评估器，<code>y</code> 通常被省略或忽略。</li>\n</ul>\n</li>\n<li><strong>实例化</strong>: 评估器像任何 Python 对象一样被实例化，通常在创建时设置配置参数 (parameter)（超参数 (hyperparameter)）。例如：<code>model = LinearRegression(fit_intercept=True)</code>。</li>\n<li><strong>学习到的参数</strong>: 调用 <code>fit()</code> 后，评估器将拟合过程的结果存储在通常以 _ 结尾的属性中（例如，<code>model.coef_</code>，<code>scaler.mean_</code>）。这些属性表示评估器从数据中学习到的内容。</li>\n</ul>\n<h3>预测器：进行预测</h3>\n<p>预测器是专门用于监督学习 (supervised learning)任务（分类和回归）的评估器。它们继承了 Estimator 基础类的 <code>fit()</code> 方法以从数据中学习。此外，它们提供了对新的、未见过的数据进行预测的方法。</p>\n<ul>\n<li><strong><code>predict(X)</code></strong>: 评估器拟合完成后，此方法接受新的输入数据 <code>X</code>（与训练数据具有相同的特征结构）并根据学习到的模型返回预测的目标值。\n<ul>\n<li>对于回归，它返回连续值。</li>\n<li>对于分类，它返回预测的类别标签。</li>\n</ul>\n</li>\n<li><strong><code>score(X, y)</code></strong>: 大多数预测器也具有 <code>score()</code> 方法，该方法评估模型在给定数据集 <code>X</code> 上，使用真实标签 <code>y</code> 的性能。它返回一个适合该任务的默认评估指标（例如，回归的 R-squared，分类的平均准确率）。</li>\n</ul>\n<p>预测器的常见例子包括 <code>LinearRegression</code>、<code>LogisticRegression</code>、<code>KNeighborsClassifier</code> 和 <code>SVC</code>。</p>\n<h3>转换器：修改数据</h3>\n<p>转换器是用于数据预处理、特征提取或特征选择的评估器。它们也使用 <code>fit()</code> 方法从数据中学习（例如，学习用于缩放的均值和标准差）。但它们主要目标是修改或筛选输入数据。</p>\n<ul>\n<li><strong><code>transform(X)</code></strong>: 此方法接受输入数据 <code>X</code> 并应用学习到的转换（在 <code>fit()</code> 期间确定），返回修改后的数据集。例如，缩放器可能会对特征进行中心化和缩放。</li>\n<li><strong><code>fit_transform(X, y=None)</code></strong>: 为了方便和计算效率，转换器通常提供 <code>fit_transform()</code> 方法。此方法在<em>相同</em>数据上一步完成拟合和转换。这在将预处理步骤应用于训练集时尤其有用，因为它确保转换参数 (parameter)仅从训练数据中学习，然后才应用。</li>\n</ul>\n<p>转换器的例子包括 <code>StandardScaler</code>（用于特征缩放）、<code>OneHotEncoder</code>（用于转换分类特征）和 <code>SimpleImputer</code>（用于处理缺失值）。</p>\n<h3>API 一致性的实践</h3>\n<p>这种设计的优势在于其统一性。考虑以下步骤：</p>\n<ol>\n<li><strong>实例化</strong>: 创建一个评估器（无论是模型还是预处理器）的实例，并设置超参数 (parameter) (hyperparameter)。\n<pre><code class=\"language-python\"># 实例化示例\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\n\nscaler = StandardScaler()\nmodel = LogisticRegression(C=1.0)\n</code></pre>\n</li>\n<li><strong>拟合</strong>: 使用 <code>fit()</code> 方法和训练数据（<code>X_train</code>、<code>y_train</code>）来学习参数。对于转换器，通常只需要 <code>X_train</code>。\n<pre><code class=\"language-python\"># 在训练特征上拟合缩放器\nscaler.fit(X_train)\n\n# 在训练特征和标签上拟合模型\nmodel.fit(X_train_scaled, y_train) # 假设 X_train_scaled 是缩放器的输出\n</code></pre>\n</li>\n<li><strong>转换/预测</strong>: 将拟合好的对象应用于新数据。对转换器使用 <code>transform()</code>，对预测器使用 <code>predict()</code>。\n<pre><code class=\"language-python\"># 将拟合好的缩放器应用于训练和测试数据\nX_train_scaled = scaler.transform(X_train)\nX_test_scaled = scaler.transform(X_test)\n\n# 对缩放后的测试数据进行预测\npredictions = model.predict(X_test_scaled)\n</code></pre>\n</li>\n</ol>\n<p>请注意核心方法（<code>fit</code>、<code>transform</code>、<code>predict</code>）是如何一致地用于不同类型的对象。这使得尝试不同的预处理技术或算法变得容易得多。您通常只需少量修改工作流代码，即可用一个评估器替换另一个兼容的评估器。这种结构也是构建 Scikit-learn 流水线（Pipelines）的基础，它将多个步骤连接在一起，我们将在后续章节中看到。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-v5cmbq\" \n              data-graph-definition='digraph API_Flow {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"sans-serif\", color=\"#868e96\", fontcolor=\"#868e96\"];\n\n  subgraph cluster_fit {\n    label = \"学习阶段\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    edge [color=\"#339af0\"];\n    Data [label=\"训练数据\\n(X_train, y_train)\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n    Fit [label=\"fit(X_train, y_train)\"];\n    State [label=\"评估器状态\\n(学习到的参数)\", style=filled, fillcolor=\"#ffec99\"];\n    Data -> Fit;\n    Fit -> State;\n  }\n\n  subgraph cluster_apply {\n    label = \"应用阶段\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    edge [color=\"#339af0\"];\n    NewData [label=\"新数据\\n(X_new)\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n    Predict [label=\"predict(X_new)\", style=filled, fillcolor=\"#b2f2bb\"];\n    Transform [label=\"transform(X_new)\", style=filled, fillcolor=\"#ffd8a8\"];\n    OutputPred [label=\"预测结果\", shape=note, style=filled, fillcolor=\"#ced4da\"];\n    OutputTrans [label=\"转换后的数据\", shape=note, style=filled, fillcolor=\"#ced4da\"];\n\n    NewData -> Predict;\n    NewData -> Transform;\n    Predict -> OutputPred;\n    Transform -> OutputTrans;\n  }\n\n  State -> Predict [style=dashed, color=\"#fa5252\", label=\"使用状态\"];\n  State -> Transform [style=dashed, color=\"#fa5252\", label=\"使用状态\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-v5cmbq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基本工作流程，展示了学习阶段（<code>fit</code>）创建评估器内部状态，与应用阶段（<code>predict</code> 或 <code>transform</code>）在新数据上使用该状态之间的分离。</p>\n</blockquote>\n<p>了解这些核心 API 概念——评估器、预测器、转换器以及 <code>fit</code>、<code>predict</code>、<code>transform</code> 方法——为高效使用 Scikit-learn 提供了坚实的基础。在接下来的章节中，我们将了解这些方法需要的数据格式，并了解库中包含的数据集。</p>",
+  "slug": "overview-scikit-learn-api",
+  "updates": [],
+  "references": [
+    {
+      "id": 2843,
+      "title": "Scikit-learn User Guide",
+      "author": "Scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/user_guide.html",
+      "doi": "",
+      "note": "一个主要资源，解释了该库的架构和API元素，包括Estimator、Predictor和Transformer。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:42.236870Z",
+      "updated_at": "2025-09-08T03:00:42.273739Z"
+    },
+    {
+      "id": 2844,
+      "title": "Scikit-learn: Machine Learning in Python",
+      "author": "Fabian Pedregosa, GaÃ«l Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake Vanderplas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, Ã‰douard Duchesnay",
+      "year": "2011",
+      "publisher": "",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "12",
+      "pages": "2825−2830",
+      "url": "https://www.jmlr.org/papers/v12/pedregosa11a.html",
+      "doi": "",
+      "note": "介绍Scikit-learn库及其设计原则的奠基性学术论文。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:42.241350Z",
+      "updated_at": "2025-09-08T03:00:43.618047Z"
+    },
+    {
+      "id": 2845,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本被广泛认可的图书，提供了Scikit-learn API和组件的详细说明及实用示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:42.245153Z",
+      "updated_at": "2025-09-08T03:00:47.190762Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

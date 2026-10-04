@@ -1,0 +1,461 @@
+{
+  "id": 226,
+  "title": "Kubernetes 入门教程",
+  "meta_title": "Kubernetes 课程：Pod、Deployment 与 Service",
+  "meta_description": "面向工程师的 Kubernetes 中级课程。学习通过 Pod、Deployment、Service 及 ConfigMap 管理容器化应用。",
+  "description": "本课程面向已有容器化常识的工程师与开发人员，提供 Kubernetes 技术入门指导。你将学习如何操作该系统的核心组件来部署、管理并扩缩应用。内容结合命令行实战案例，讲解 Pod、Deployment、Service 及配置管理。完成学习后，你将能熟练处理容器化工作负载，并理解其作为现代应用部署规范的架构逻辑。",
+  "short_description": "使用 Kubernetes 核心组件部署、管理并扩缩容器化应用。",
+  "excerpt": "面向开发人员与 AI 工程师的实战技术课，教你如何通过 Kubernetes 部署并管理应用，掌握 Pod、Deployment 及 Service 的用法。",
+  "prerequisites": "具备容器化常识",
+  "cover_color": "orange",
+  "learning_outcomes": [
+    {
+      "topic": "Kubernetes 架构",
+      "description": "说明 Kubernetes 控制平面与工作节点的组成部分。"
+    },
+    {
+      "topic": "Pod 管理",
+      "description": "使用 YAML 清单定义、部署并查看单容器或多容器 Pod。"
+    },
+    {
+      "topic": "应用部署",
+      "description": "使用 Deployment 和 ReplicaSet 管理应用生命周期、扩缩容及版本更新。"
+    },
+    {
+      "topic": "服务发现与网络",
+      "description": "通过 Service 和 Ingress 在集群内外公开应用访问入口。"
+    },
+    {
+      "topic": "配置与存储",
+      "description": "管理应用配置与机密数据，并为有状态应用配置持久化存储。"
+    }
+  ],
+  "duration": 8,
+  "slug": "getting-started-with-kubernetes",
+  "level": 2,
+  "category": "Programming",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-08-14T15:54:24.164734Z",
+  "updated_at": "2026-10-02T08:18:19.843395Z",
+  "chapters": [
+    {
+      "id": 1268,
+      "title": "Kubernetes 基础知识",
+      "meta_title": "Kubernetes 基础：架构与环境搭建",
+      "meta_description": "学习 Kubernetes 架构、控制平面与节点组件、kubectl，以及如何使用 Minikube 或 Kind 搭建本地 Kubernetes 集群。",
+      "number": 1,
+      "slug": "kubernetes-fundamentals",
+      "content": "运行单个容器已不再是难题，但管理由多个容器组成的分布式应用会带来不小的运维难度。像 Kubernetes 这样的容器编排器正是为了解决这些难题而设计的。本章介绍使用 Kubernetes 的架构与操作基础，帮助你建立关于系统构造及交互方式的功能模型。\n\n你将从了解 Kubernetes 的核心架构组件开始。内容包括：\n\n*   **控制平面：** 负责集群全局决策的组件，例如 API Server、调度器和 etcd。\n*   **工作节点：** 运行在每个节点上以维护 Pod 运行的组件，包括 Kubelet 和容器运行时。\n*   **`kubectl`：** 用于与 Kubernetes API 通信的命令行工具。\n*   **声明式管理：** 与运行命令式指令相比，这种做法通过 YAML 文件定义期望状态。\n\n为了将理论付诸实践，本章将指导你搭建本地 Kubernetes 集群。最后通过动手练习，你将使用 `kubectl` 检查集群组件，在开始部署应用前巩固所学内容。",
+      "sections": [
+        {
+          "id": 7295,
+          "title": "什么是容器编排",
+          "meta_title": "什么是容器编排",
+          "meta_description": "了解容器编排的目的，以及为什么在大规模管理应用程序时需要像 Kubernetes 这样的系统。",
+          "slug": "what-is-container-orchestration",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7296,
+          "title": "Kubernetes 架构：控制平面",
+          "meta_title": "Kubernetes 控制平面架构",
+          "meta_description": "从技术角度分析 Kubernetes 控制平面的组件，包括 API 服务器、etcd、调度器和控制器管理器。",
+          "slug": "kubernetes-architecture-control-plane",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7297,
+          "title": "Kubernetes 架构：工作节点",
+          "meta_title": "Kubernetes 工作节点组件",
+          "meta_description": "了解运行在 Kubernetes 工作节点上的组件，包括 Kubelet、Kube-proxy 和容器运行时。",
+          "slug": "kubernetes-architecture-worker-node",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7298,
+          "title": "kubectl 的作用",
+          "meta_title": "使用 kubectl：Kubernetes 命令行工具",
+          "meta_description": "kubectl 入门介绍，它是用于与 Kubernetes API server 交互以管理集群资源的命令行工具。",
+          "slug": "role-of-kubectl",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7299,
+          "title": "声明式与指令式管理",
+          "meta_title": "Kubernetes 声明式与指令式管理对比",
+          "meta_description": "比较管理 Kubernetes 对象的两种方法，并了解使用 YAML 清单的声明式模型的优势。",
+          "slug": "declarative-vs-imperative-management",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7300,
+          "title": "搭建本地 Kubernetes 集群",
+          "meta_title": "如何搭建本地 Kubernetes 集群",
+          "meta_description": "使用 Minikube 或 Kind 等工具搭建本地 Kubernetes 开发环境的分步指南。",
+          "slug": "setting-up-local-kubernetes-cluster",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7301,
+          "title": "动手实践：集群检查",
+          "meta_title": "实践：检查你的 Kubernetes 集群",
+          "meta_description": "动手实践练习，配置 kubectl 并运行命令以检查新创建的本地集群的状态和组件。",
+          "slug": "hands-on-cluster-inspection",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1269,
+      "title": "管理 Pod",
+      "meta_title": "管理 Kubernetes Pod",
+      "meta_description": "学习如何定义、创建和管理 Kubernetes Pod，这是 Kubernetes 中最小的可部署单元。内容涉及 YAML 清单、生命周期和健康探针。",
+      "number": 2,
+      "slug": "managing-pods",
+      "content": "Pod 是 Kubernetes 中调度的原子单位。它代表集群中运行的进程，作为一个或多个容器及其共享存储和网络资源的封装。由于所有容器化应用都在 Pod 中运行，学会如何创建和管理它们是使用 Kubernetes 的必备技能。\n\n本章提供了管理 Pod 的技术指南。我们将从 Pod 抽象本身以及如何使用 YAML 清单定义其规范开始。你将学会创建单容器和多容器 Pod，了解 Pod 经历的生命周期阶段，并使用 `kubectl` 进行查看和调试等常用操作。最后，我们将配置存活（liveness）和就绪（readiness）探针，帮助 Kubernetes 自动管理应用程序的健康状况。",
+      "sections": [
+        {
+          "id": 7302,
+          "title": "Pod 抽象层",
+          "meta_title": "Kubernetes Pod 抽象层",
+          "meta_description": "了解什么是 Pod、它为什么存在，以及它在 Kubernetes 模型中与容器的关系。",
+          "slug": "pod-abstraction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7303,
+          "title": "在 YAML 中编写 Pod 清单",
+          "meta_title": "如何编写 Kubernetes Pod 清单",
+          "meta_description": "关于 Pod 清单文件结构和语法的指南，在 YAML 中定义其规格、容器和元数据。",
+          "slug": "writing-pod-manifest-yaml",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7304,
+          "title": "单容器与多容器 Pod",
+          "meta_title": "单容器与多容器 Pod 对比",
+          "meta_description": "对比使用单容器 Pod 与多容器 Pod 的设计模式，涵盖边车、代理和适配器。",
+          "slug": "single-and-multi-container-pods",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7305,
+          "title": "Pod 的生命周期",
+          "meta_title": "Kubernetes Pod 生命周期",
+          "meta_description": "了解 Pod 经历的不同阶段，从 Pending 到 Running、Succeeded 和 Failed，以及每个阶段所代表的含义。",
+          "slug": "pod-lifecycle",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7306,
+          "title": "使用 kubectl 进行 Pod 操作",
+          "meta_title": "用于 Pod 管理的 kubectl 命令",
+          "meta_description": "在集群中创建、检查、删除和排查 Pod 故障时常用的 kubectl 命令参考。",
+          "slug": "kubectl-pod-operations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7307,
+          "title": "健康检查：存活探针与就绪探针",
+          "meta_title": "Kubernetes 存活探针与就绪探针",
+          "meta_description": "了解如何配置存活探针和就绪探针，以帮助 Kubernetes 管理应用程序的健康状况和可用性。",
+          "slug": "health-probes-liveness-readiness",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7308,
+          "title": "练习：部署与检查 Pod",
+          "meta_title": "练习：Kubernetes Pod 部署",
+          "meta_description": "一个实操练习课程，你将编写 Pod 清单，将其部署到集群，并使用 kubectl 检查其状态和日志。",
+          "slug": "practice-deploying-inspecting-pods",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1270,
+      "title": "使用控制器管理工作负载",
+      "meta_title": "Kubernetes 控制器：Deployment 与 ReplicaSet",
+      "meta_description": "使用 Kubernetes 控制器管理应用的伸缩性与弹性。了解用于发布的 Deployment 以及保障可用性的 ReplicaSet。",
+      "number": 3,
+      "slug": "workload-management-controllers",
+      "content": "尽管 Pod 是 Kubernetes 中的基本执行单元，但逐个管理它们并不是运行应用程序的高效方案。如果节点出现故障，独立的 Pod 不会被重新调度，且扩缩容需要你手动逐个创建或删除 Pod。这种手动操作方式效率较低，且无法提供现代容器编排器所应具备的抗风险能力。\n\n为了实现工作负载管理的自动化，Kubernetes 使用了 **控制器**。控制器是一种主动调节机制，负责跟踪至少一种 Kubernetes 资源类型。这些对象包含一个表示期望状态的 spec 字段。控制器的任务是使当前状态与期望状态保持一致。\n\n本章介绍管理无状态应用工作负载的控制器。我们将学习如何：\n\n*   使用 **ReplicaSet** 确保指定数量的 Pod 副本始终运行。\n*   使用 **Deployment** 以声明式方式管理应用的发布与更新。\n*   执行滚动更新，在不停机的情况下部署应用新版本，并在需要时回滚到之前的版本。\n\n学完本章后，你将不再局限于管理单个 Pod，而是学会使用更高层级的抽象来管理整个应用生命周期，从而实现扩缩容、自愈和自动更新。",
+      "sections": [
+        {
+          "id": 7309,
+          "title": "Kubernetes 控制器简介",
+          "meta_title": "什么是 Kubernetes 控制器？",
+          "meta_description": "了解 Kubernetes 控制器的角色，以及它们如何维护集群的期望状态并自动执行运维任务。",
+          "slug": "introduction-kubernetes-controllers",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7310,
+          "title": "使用 ReplicaSet 确保 Pod 可用性",
+          "meta_title": "在 Kubernetes 中使用 ReplicaSet",
+          "meta_description": "了解 ReplicaSet 如何确保在任何给定时间都有指定数量的 Pod 副本在运行。",
+          "slug": "replicasets-for-pod-availability",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7311,
+          "title": "使用 Deployment 进行应用发布",
+          "meta_title": "使用 Deployment 管理应用发布",
+          "meta_description": "了解 Deployment 控制器，它是用于管理 ReplicaSet 并为应用提供声明式更新的高级抽象。",
+          "slug": "deployments-for-application-rollouts",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7312,
+          "title": "定义 Deployment 清单",
+          "meta_title": "如何定义 Kubernetes Deployment 清单",
+          "meta_description": "在 YAML 中编写 Deployment 清单的指南，包括指定期望的副本数、容器镜像和更新策略。",
+          "slug": "defining-deployment-manifest",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7313,
+          "title": "执行 Deployment 更新与回滚",
+          "meta_title": "Kubernetes Deployment 更新与回滚",
+          "meta_description": "了解如何对应用程序执行无停机滚动更新，以及在出现问题时如何回滚到之前的版本。",
+          "slug": "executing-deployment-updates-rollbacks",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7314,
+          "title": "检查 Deployment 状态",
+          "meta_title": "如何检查 Deployment 状态",
+          "meta_description": "使用 kubectl 检查 Deployment 的状态，监控更新进度并查看其历史记录。",
+          "slug": "inspecting-deployment-status",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7315,
+          "title": "动手实践：创建与更新 Deployment",
+          "meta_title": "实践：Kubernetes Deployment",
+          "meta_description": "动手练习创建 Deployment、进行扩缩容、执行到新应用版本的滚动更新以及执行回滚操作。",
+          "slug": "hands-on-creating-updating-deployments",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1271,
+      "title": "Kubernetes 网络",
+      "meta_title": "Kubernetes 网络：Service 与 Ingress",
+      "meta_description": "学习 Kubernetes 的网络工作原理。内容包括网络模型、服务发现，以及如何通过 Service 和 Ingress 对外发布应用程序。",
+      "number": 4,
+      "slug": "networking-in-kubernetes",
+      "content": "在前面的章节中，你学会了使用 Pod 运行应用程序，并通过 Deployment 管理其生命周期。然而，Pod 是暂时的，其 IP 地址并不固定，这给通信带来了挑战。应用程序的各个组件如何可靠地相互发现并进行对话？你又该如何让集群外部的用户访问你的程序？本章主要讲解旨在解决这些问题的 Kubernetes 网络模型。\n\n你将先学习集群内部通信的原理。接着，我们会介绍 `Service` 对象，这是一种为一组 Pod 提供持久网络端点的抽象方式。你将学会区分并使用各种 Service 类型，包括 `ClusterIP`、`NodePort` 和 `LoadBalancer`，从而控制程序的公开方式。最后，我们会讲解 `Ingress`，这是一种管理集群内服务外部 HTTP 和 HTTPS 访问的资源。",
+      "sections": [
+        {
+          "id": 7316,
+          "title": "Kubernetes 网络模型",
+          "meta_title": "Kubernetes 网络模型解析",
+          "meta_description": "概述 Kubernetes 网络的基础要求，包括 Pod 到 Pod 以及 Pod 到 Service 的通信。",
+          "slug": "kubernetes-networking-model",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7317,
+          "title": "Service 简介",
+          "meta_title": "什么是 Kubernetes Service？",
+          "meta_description": "了解 Service 如何为一组 Pod 提供稳定端点，从而实现可靠的通信和服务发现。",
+          "slug": "introduction-to-services",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7318,
+          "title": "Service 类型：ClusterIP、NodePort 与 LoadBalancer",
+          "meta_title": "Kubernetes Service 类型详解",
+          "meta_description": "对比不同的 Service 类型——ClusterIP、NodePort 和 LoadBalancer，并了解每种类型的适用场景。",
+          "slug": "service-types-clusterip-nodeport-loadbalancer",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7319,
+          "title": "定义 Service 清单",
+          "meta_title": "如何定义 Kubernetes Service 清单",
+          "meta_description": "在 YAML 中编写 Service 清单的指南，包括指定选择器、端口和所需的 Service 类型。",
+          "slug": "defining-service-manifest",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7320,
+          "title": "集群内的服务发现",
+          "meta_title": "Kubernetes 服务发现方法",
+          "meta_description": "了解应用程序如何使用 DNS 在集群内发现其他服务并与之通信。",
+          "slug": "service-discovery-within-cluster",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7321,
+          "title": "通过 Ingress 暴露服务",
+          "meta_title": "使用 Kubernetes Ingress 暴露服务",
+          "meta_description": "了解如何使用 Ingress 控制器和 Ingress 资源来管理服务的外部访问，通常用于 HTTP/S 路由。",
+          "slug": "exposing-services-with-ingress",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7322,
+          "title": "动手实践：暴露应用程序",
+          "meta_title": "实践：暴露 Kubernetes 应用程序",
+          "meta_description": "通过动手实践为 Deployment 创建 Service，并使用 NodePort 或 Ingress 资源将其暴露到集群外部。",
+          "slug": "hands-on-exposing-application",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1272,
+      "title": "配置与持久化存储",
+      "meta_title": "Kubernetes 配置与存储：ConfigMaps 与 PVC",
+      "meta_description": "学习使用 ConfigMaps 和 Secrets 管理应用配置，并通过 Volume 和 PVC 为有状态应用提供持久化存储。",
+      "number": 5,
+      "slug": "configuration-and-persistent-storage",
+      "content": "应用程序通常需要外部配置，以及一个能够存放持久化数据的地方，以确保数据在容器实例销毁后依然存在。尽管 Deployment 和 Pod 能有效管理应用逻辑，但它们本身并不能解决配置文件、凭证或持久化数据的管理问题。\n\n本章介绍为这些需求设计的 Kubernetes 对象。我们首先来看应用配置，学习如何将其与容器镜像分离。你将学会使用 `ConfigMaps` 处理非敏感数据，并使用 `Secrets` 管理数据库密码或 `$API_KEY` 等敏感信息。\n\n接下来，我们将讨论数据持久化。容器的文件系统是临时的，一旦容器停止，其中的内容就会丢失。为了管理有状态应用，需要一种将数据存储在可靠位置的方法。我们将了解 Kubernetes 的存储架构，特别是 `PersistentVolumes` (PV) 和 `PersistentVolumeClaims` (PVC)，它们允许应用程序申请并连接到稳定的存储资源。\n\n完成本章学习后，你将能够为应用注入配置并提供持久化存储，从而掌握在 Kubernetes 集群中管理有状态服务所需的各项技能。",
+      "sections": [
+        {
+          "id": 7323,
+          "title": "使用 ConfigMap 管理配置",
+          "meta_title": "使用 ConfigMap 进行应用程序配置",
+          "meta_description": "了解如何使用 ConfigMap 存储非敏感配置数据，从而实现配置产物与容器镜像的解耦。",
+          "slug": "managing-configuration-with-configmaps",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7324,
+          "title": "使用 Secret 处理凭据",
+          "meta_title": "使用 Kubernetes Secret 管理凭据",
+          "meta_description": "了解如何使用 Secret 存储和管理敏感信息，例如密码、OAuth 令牌和 SSH 密钥。",
+          "slug": "handling-credentials-with-secrets",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7325,
+          "title": "Kubernetes 存储概念",
+          "meta_title": "Kubernetes 存储概念概览",
+          "meta_description": "Kubernetes 存储抽象介绍，包括 Volume、PersistentVolume 和 PersistentVolumeClaim。",
+          "slug": "kubernetes-storage-concepts",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7326,
+          "title": "PersistentVolumes 和 PersistentVolumeClaims",
+          "meta_title": "PersistentVolumes (PV) 和 PersistentVolumeClaims (PVC)",
+          "meta_description": "了解管理员如何配置存储 (PV) 以及用户如何请求存储 (PVC)，从而实现独立于 Pod 的存储生命周期管理。",
+          "slug": "persistentvolumes-and-persistentvolumeclaims",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7327,
+          "title": "将存储卷挂载到 Pod",
+          "meta_title": "如何将存储卷挂载到 Kubernetes Pod",
+          "meta_description": "关于如何将不同类型的存储卷（包括 ConfigMap、Secret 和 PersistentVolumeClaim）挂载到 Pod 的技术指南。",
+          "slug": "attaching-volumes-to-pods",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 7328,
+          "title": "实践：注入配置并挂载卷",
+          "meta_title": "实践：Kubernetes 配置与存储",
+          "meta_description": "通过动手实践课程创建 ConfigMap 和 Secret 并将其注入 Pod，同时为有状态数据附加持久卷。",
+          "slug": "practice-injecting-config-mounting-volume",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

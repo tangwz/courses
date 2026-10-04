@@ -1,0 +1,61 @@
+{
+  "id": 2019,
+  "title": "CatBoost API: 参数与配置",
+  "meta_title": "CatBoost API: 参数与配置",
+  "meta_description": "CatBoost库中重要参数指南，特别是针对分类数据。",
+  "content": "<p>CatBoost采用了有序目标统计和无偏树等创新方法。为了有效配置CatBoost模型，需要通过其API控制其行为。了解可用的参数 (parameter)非常重要，尤其是在处理富含分类信息或需要性能优化的数据集时。</p>\n<p>主要的接口是<code>catboost</code> Python库中的<code>CatBoostClassifier</code>和<code>CatBoostRegressor</code>类。虽然许多参数与其他梯度提升实现重叠，但CatBoost提供了为其算法专门设计的独特选项。</p>\n<h3>核心训练参数 (parameter)</h3>\n<p>这些参数控制提升过程的基本方面，类似于Scikit-learn、XGBoost和LightGBM等库中的参数。</p>\n<ul>\n<li><strong><code>iterations</code></strong> (或 <code>n_estimators</code>): 指定要构建的最大提升轮次或树的数量。这是影响模型复杂度和训练时间最重要的参数之一。其最优值通常使用提前停止来确定。默认值: 1000。</li>\n<li><strong><code>learning_rate</code></strong>: 控制每次迭代的步长，减小每棵新树的贡献。较小的值（例如0.01到0.1）通常需要更多的<code>iterations</code>，但通过防止过拟合 (overfitting)可以带来更好的泛化能力。默认值: 通常根据数据集大小和迭代次数自动检测，但通常在0.03左右。</li>\n<li><strong><code>depth</code></strong>: 定义基本学习器（树）的深度。CatBoost使用<em>无偏树</em>，这意味着相同的分裂标准（特征和阈值）应用于所有同级别节点。这种结构有助于加快预测时间并带来一些固有的正则化 (regularization)。典型值范围为4到10。默认值: 6。</li>\n<li><strong><code>l2_leaf_reg</code></strong>: 指定叶子值L2正则化项的系数。此惩罚会抑制叶子中过大的权重 (weight)，有助于防止过拟合。对应于XGBoost目标函数中的<code>lambda</code>。默认值: 3.0。</li>\n<li><strong><code>loss_function</code></strong>: 确定训练期间要优化的目标函数。常见选择包括:\n<ul>\n<li>回归: <code>'RMSE'</code> (均方根误差 - 默认), <code>'MAE'</code> (平均绝对误差), <code>'Quantile'</code> (分位数), <code>'LogLinQuantile'</code> (对数线性分位数), <code>'Poisson'</code> (泊松), <code>'MAPE'</code> (平均绝对百分比误差)。</li>\n<li>分类: <code>'Logloss'</code> (二分类 - 默认), <code>'MultiClass'</code> (多分类), <code>'CrossEntropy'</code> (交叉熵)。</li>\n<li>也可以实现自定义目标函数。</li>\n</ul>\n</li>\n<li><strong><code>eval_metric</code></strong>: 指定训练期间用于评估模型性能的指标，特别是用于提前停止。例子包括<code>'RMSE'</code>、<code>'MAE'</code>、<code>'Logloss'</code>、<code>'AUC'</code>、<code>'Accuracy'</code>、<code>'F1'</code>、<code>'Precision'</code>、<code>'Recall'</code>、<code>'MultiClass'</code>、<code>'NDCG'</code>、<code>'MAP'</code>。默认值通常与<code>loss_function</code>匹配。</li>\n<li><strong><code>random_seed</code></strong> (或 <code>random_state</code>): 设置随机数生成的种子，确保数据洗牌、特征选择（如果适用）和自助采样等操作的可复现性。</li>\n</ul>\n<h3>分类特征参数 (parameter)</h3>\n<p>这些是CatBoost的特色参数，使其能够专门处理分类数据。</p>\n<ul>\n<li><strong><code>cat_features</code></strong>: 这可以说是发挥CatBoost优势最重要的参数。它接受应被视为分类的列的索引或名称列表。<strong>非常重要的一点是，如果您在此处列出这些特征，则不应自行预处理它们（例如，通过独热编码）。</strong> CatBoost将其内部方法（例如有序目标统计）应用于这些指定的特征。如果未指定（<code>None</code>），CatBoost可能会尝试自动检测分类特征，但为了清晰和控制，建议显式提供它们。默认值: <code>None</code>。</li>\n<li><strong><code>one_hot_max_size</code></strong>: 设置分类特征中唯一值的数量阈值。如果特征的基数小于或等于此值，CatBoost将应用独热编码，而不是其默认的基于目标的统计。对于低基数特征，这有时会更快，但可能无法像有序目标统计那样有效捕获复杂关系。将其设置为较小的值（例如2或10）会强制CatBoost的专用方法处理大多数分类特征。默认值: 2。</li>\n<li><strong><code>max_ctr_complexity</code></strong>: 控制在生成特征组合时可以同时组合的分类特征的最大数量。增加此值可以实现更高阶的交互，但会增加计算成本和内存使用。默认值: 4。</li>\n<li><strong><code>has_time</code></strong>: 如果输入数据具有时间顺序（例如时间序列），则设置为<code>True</code>。这会影响有序目标统计的计算方式，以避免前瞻偏差。默认值: <code>False</code>。</li>\n<li><strong><code>simple_ctr</code>, <code>combinations_ctr</code></strong>: 这些参数允许对分类特征及其组合计算的计数器统计（CTR）的特定类型进行细粒度控制。修改这些参数通常只针对旨在优化特定情况的高级用户。</li>\n</ul>\n<h3>性能与效率参数 (parameter)</h3>\n<p>这些参数有助于管理计算资源和训练速度。</p>\n<ul>\n<li><strong><code>task_type</code></strong>: 指定训练的硬件。设置为<code>'GPU'</code>以使用NVIDIA GPU（如果库安装了GPU支持），这可以显著加速大型数据集上的训练。否则，使用<code>'CPU'</code>。默认值: <code>'CPU'</code>。</li>\n<li><strong><code>devices</code></strong>: 如果<code>task_type='GPU'</code>，此参数指定要使用的GPU设备（例如，<code>'0'</code>表示第一个GPU，<code>'0:1'</code>表示前两个）。</li>\n<li><strong><code>thread_count</code></strong>: 控制当<code>task_type='CPU'</code>时用于计算的CPU线程数。将其设置为-1通常会使用所有可用核心。默认值: -1。</li>\n<li><strong><code>border_count</code></strong>: 确定在构建树之前用于离散化数值特征的分裂（bin）数量。较高的值允许更精确的分裂，但会增加直方图构建阶段的内存使用和计算时间。值通常在32到255之间。默认值: 254 (CPU), 128 (GPU)。</li>\n<li><strong><code>leaf_estimation_method</code></strong>: 用于计算树叶子中值的方法。<code>'Newton'</code>使用二阶导数（收敛速度更快），而<code>'Gradient'</code>使用一阶导数（对于某些目标可能更稳定）。默认值: <code>'Newton'</code>。</li>\n</ul>\n<h3>正则化 (regularization)与训练控制参数 (parameter)</h3>\n<p>这些参数提供了额外的机制来防止过拟合 (overfitting)和管理训练过程。</p>\n<ul>\n<li><strong><code>early_stopping_rounds</code></strong>: 激活提前停止。如果在指定的验证集（<code>eval_set</code>）上的<code>eval_metric</code>连续此轮次未改善，训练将停止。这有助于自动找到最佳<code>iterations</code>数量并防止过拟合。需要<code>fit</code>调用期间提供<code>eval_set</code>。默认值: <code>None</code> (禁用)。</li>\n<li><strong><code>use_best_model</code></strong>: 如果为<code>True</code>（且<code>early_stopping_rounds</code>处于激活状态），则在训练结束后，将恢复与验证集上最佳分数对应的模型状态。如果为<code>False</code>，则保留最终迭代的模型。默认值: 当提供<code>eval_set</code>时为<code>True</code>，否则为<code>False</code>。</li>\n<li><strong><code>subsample</code></strong>: 控制为构建每棵树而采样的训练数据比例（行子采样）。小于1.0的值会引入随机性并起到正则化作用，类似于随机梯度提升。默认值: 1.0 (CPU), 0.8 (GPU)。</li>\n<li><strong><code>bootstrap_type</code></strong>: 定义观测权重 (weight)采样的方法。\n<ul>\n<li><code>'Bayesian'</code> (贝叶斯): 默认。使用贝叶斯自助采样，分配从指数分布中抽取的随机权重。这与有序提升机制有内在联系。</li>\n<li><code>'Bernoulli'</code> (伯努利): 有放回地采样观测值（标准子采样）。当<code>subsample</code> &#x3C; 1.0时使用。</li>\n<li><code>'MVS'</code> (最小方差采样): 一种更高级的采样技术。</li>\n<li><code>'No'</code> (无): 不采样。</li>\n</ul>\n</li>\n<li><strong><code>colsample_bylevel</code></strong>: 控制在搜索最佳分裂时，在每个树级别随机选择的特征比例。由于无偏树的特点，在CatBoost中此参数的调整不如在XGBoost/LightGBM中常见。默认值: 1.0。</li>\n</ul>\n<h3>实际配置示例</h3>\n<p>下面是如何实例化和配置<code>CatBoostClassifier</code>，其中包含一些常用参数 (parameter)，包括指定分类特征和设置提前停止：</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom catboost import CatBoostClassifier, Pool\n\n# 示例数据（请替换为您的实际数据）\ntrain_data = pd.DataFrame({\n    'num_feature1': [1.2, 3.4, 0.5, 2.1, 4.5, 1.8],\n    'num_feature2': [5, 2, 8, 6, 3, 7],\n    'cat_feature1': ['A', 'B', 'A', 'C', 'B', 'A'],\n    'cat_feature2': ['X', 'Y', 'Y', 'X', 'X', 'Y'],\n    'target': [1, 0, 1, 0, 1, 0]\n})\neval_data = pd.DataFrame({\n    'num_feature1': [2.5, 0.8, 3.1],\n    'num_feature2': [4, 9, 1],\n    'cat_feature1': ['B', 'A', 'C'],\n    'cat_feature2': ['Y', 'X', 'Y'],\n    'target': [0, 1, 0]\n})\n\n# 识别分类特征的索引或名称\ncategorical_features_indices = [2, 3] # 'cat_feature1', 'cat_feature2' 的索引\n# 或按名称: categorical_features_names = ['cat_feature1', 'cat_feature2']\n\n# 使用 CatBoost Pool 准备数据，以提高效率并明确声明特征\ntrain_pool = Pool(data=train_data.drop('target', axis=1),\n                  label=train_data['target'],\n                  cat_features=categorical_features_indices)\n\neval_pool = Pool(data=eval_data.drop('target', axis=1),\n                 label=eval_data['target'],\n                 cat_features=categorical_features_indices)\n\n# 配置模型\nmodel = CatBoostClassifier(\n    iterations=1000,                 # 最大树数量\n    learning_rate=0.05,              # 步长\n    depth=6,                         # 树深度（无偏树）\n    l2_leaf_reg=3,                   # L2正则化\n    loss_function='Logloss',         # 二分类目标函数\n    eval_metric='AUC',               # 用于评估和提前停止的指标\n    cat_features=categorical_features_indices, # 显式传递分类特征\n    early_stopping_rounds=50,        # 如果AUC连续50轮未改善则停止\n    random_seed=42,                  # 用于可复现性\n    verbose=100,                     # 每100次迭代打印评估指标\n    # task_type='GPU',               # 取消注释以在可用时使用GPU\n    # devices='0'                    # 如果使用GPU，请指定GPU设备\n)\n\n# 训练模型\nmodel.fit(train_pool,\n          eval_set=eval_pool,\n          # verbose=False, # 如果需要，可以抑制迭代输出\n          plot=False       # 设置为 True 以在 Jupyter 中可视化训练过程\n         )\n\n# 进行预测\n# preds_proba = model.predict_proba(eval_pool)\n# preds_class = model.predict(eval_pool)\n\nprint(f\"获得的最佳分数: {model.get_best_score()['validation']['AUC']:.4f}\")\nprint(f\"最佳迭代次数: {model.get_best_iteration()}\")\n</code></pre>\n<blockquote>\n<p><code>CatBoostClassifier</code> 的示例配置，强调了<code>iterations</code>、<code>learning_rate</code>、<code>depth</code>、<code>l2_leaf_reg</code>、<code>loss_function</code>、<code>eval_metric</code>、<code>cat_features</code>和<code>early_stopping_rounds</code>等重要参数。建议使用<code>Pool</code>对象以获得最佳性能和明确的特征指定。</p>\n</blockquote>\n<h3>配置总结</h3>\n<p>使用CatBoost API时：</p>\n<ol>\n<li><strong>始终指定<code>cat_features</code></strong>: 这是启用CatBoost专门处理的基础。确保这些特征以其原始分类格式传递。</li>\n<li><strong>使用<code>early_stopping_rounds</code></strong>: 这是找到合适<code>iterations</code>数量并防止过拟合 (overfitting)的标准方法，需要一个<code>eval_set</code>。</li>\n<li><strong>调整核心参数 (parameter)</strong>: <code>learning_rate</code>、<code>depth</code>和<code>l2_leaf_reg</code>通常是在设置提前停止后首先要调整的参数。</li>\n<li><strong>考虑<code>task_type='GPU'</code></strong>: 如果您有兼容的硬件和大型数据集，GPU训练可以提供显著的速度优势。</li>\n<li><strong>尝试分类处理</strong>: 尽管默认值通常效果不错，但调整<code>one_hot_max_size</code>或检查CTR配置（<code>max_ctr_complexity</code>等）在特定情况下可能会带来改进，特别是对于高基数特征或复杂交互。</li>\n</ol>\n<p>熟练掌握这些参数可以帮助您微调 (fine-tuning)CatBoost模型，利用它们的强大功能实现出色性能，尤其是在以分类变量为主的数据集上。接下来的章节将在此部分之上进一步展开，包括超参数 (hyperparameter)优化策略和高级应用。</p>",
+  "slug": "catboost-api-parameters",
+  "updates": [],
+  "references": [
+    {
+      "id": 6467,
+      "title": "CatBoost Parameters",
+      "author": "CatBoost Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://catboost.ai/docs/concepts/algorithm-parameters.html",
+      "doi": "",
+      "note": "官方文档，提供所有CatBoost API参数和配置选项的详细解释及使用示例。",
+      "order": 1,
+      "created_at": "2025-09-05T01:23:39.309063Z",
+      "updated_at": "2025-09-08T05:38:10.925943Z"
+    },
+    {
+      "id": 6468,
+      "title": "CatBoost: Unbiased Boosting with Categorical Features",
+      "author": "Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Dorogush, Andrey Gulin",
+      "year": "2018",
+      "publisher": "Neural Information Processing Systems Foundation, Inc. (NeurIPS)",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "31",
+      "pages": "6639-6649",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2018/file/6f4922f45568161a8cdf4ad2299f6d23-Paper.pdf",
+      "doi": "10.55917/cb_catboost",
+      "note": "介绍CatBoost算法的原始研究论文，详细阐述了有序目标统计、遗忘树和有序提升，这些是其专用参数的基础。",
+      "order": 2,
+      "created_at": "2025-09-05T01:23:39.312721Z",
+      "updated_at": "2025-09-08T05:38:10.699208Z"
+    },
+    {
+      "id": 6469,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "",
+      "note": "对包括梯度提升在内的集成方法进行统计和理论论述，有助于理解许多核心训练参数的背景。",
+      "order": 3,
+      "created_at": "2025-09-05T01:23:39.315757Z",
+      "updated_at": "2025-09-08T05:38:07.255219Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

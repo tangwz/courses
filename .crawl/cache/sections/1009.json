@@ -1,0 +1,45 @@
+{
+  "id": 1009,
+  "title": "撤销提交 (git revert)",
+  "meta_title": "安全撤销提交 | git revert 命令",
+  "meta_description": "学习如何通过使用 `git revert` 创建新的撤销提交来安全地撤销之前的提交。",
+  "content": "<p>有时，你创建了一个提交，后来发现它引入了错误或包含了你不想保留的更改。虽然 <code>git commit --amend</code> 命令可以用于修改<em>最近一个</em>提交，但如果问题提交在你的历史记录中更靠前怎么办？删除或重写可能已与他人共享的历史记录会引发问题。Git 提供了一种更安全的方式来撤销之前提交的更改：<code>git revert</code>。</p>\n<p>与修改现有历史记录的命令（例如我们将在别处讨论的 <code>git reset</code>，或 <code>git commit --amend</code>）不同，<code>git revert</code> 不会删除任何内容。相反，它会计算出特定提交所引入的更改，并创建一个执行<em>完全相反操作</em>的<em>新</em>提交。这个新的“撤销提交”能够有效地撤销原始提交的更改，同时保留项目的历史记录。由于它添加了一个新提交而不是重写历史，因此即使在已与协作者共享的分支上使用，也是安全的。</p>\n<h3>git revert 的工作方式</h3>\n<p>可以把它想象成在会计账本中添加一个条目来修正之前的错误。你不会抹去原始的错误条目；而是添加一个新条目来反转其效果。</p>\n<p>当你运行 <code>git revert &#x3C;commit-hash></code> 时，Git 会执行以下步骤：</p>\n<ol>\n<li>它检查指定的提交 (<code>&#x3C;commit-hash></code>)，以确定它相对于其父提交引入的更改。</li>\n<li>它计算撤销原始提交效果所需的逆向更改。</li>\n<li>它将这些逆向更改应用到你的当前工作目录并暂存它们。</li>\n<li>它用这些逆向更改创建一个新提交。默认情况下，Git 会自动生成一个类似“Revert '[原始提交主题]'”的提交消息，并打开你配置的文本编辑器，允许你在撤销提交最终确定前修改该消息。</li>\n</ol>\n<h3>执行撤销操作</h3>\n<p>假设你的提交历史记录如下（简化版）：</p>\n<ul>\n<li><code>a1b2c3d</code> 添加功能 Y</li>\n<li><code>e4f5g6h</code> 修复功能 X 中的错误</li>\n<li><code>i7j8k9l</code> 项目初始设置</li>\n</ul>\n<p>你意识到提交 <code>e4f5g6h</code>（“修复功能 X 中的错误”）实际上引入了另一个不明显的错误。你想撤销该特定提交所做的更改。</p>\n<p>你会使用以下命令：</p>\n<pre><code class=\"language-bash\">git revert e4f5g6h\n</code></pre>\n<p>接着，Git 会：</p>\n<ol>\n<li>\n<p>计算如何反转 <code>e4f5g6h</code> 中所做的更改。</p>\n</li>\n<li>\n<p>应用这些反转。</p>\n</li>\n<li>\n<p>打开你的编辑器，并预填充一条消息，可能如下：</p>\n<pre><code>Revert \"Fix bug in feature X\"\n\nThis reverts commit e4f5g6h1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8.\n</code></pre>\n</li>\n<li>\n<p>在你保存并关闭编辑器后，Git 会创建一个新提交。</p>\n</li>\n</ol>\n<p>你的历史记录现在看起来像这样：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-j0eb7g\" \n              data-graph-definition='digraph G { rankdir=\"RL\"; node [shape=circle, style=filled, fillcolor=\"#a5d8ff\", fontname=\"Helvetica\"]; edge [fontname=\"Helvetica\"]; subgraph cluster_0 { style=invis; \"revert_commit\" [label=\"撤销\n\\\"修复错误...\\\"\\n(新)\", fillcolor=\"#ffc9c9\"]; \"commit_b\" [label=\"修复错误...\n(e4f5g6h)\"]; \"commit_a\" [label=\"添加功能 Y\n(a1b2c3d)\"]; \"commit_init\" [label=\"初始\n(i7j8k9l)\"]; \"revert_commit\" -> \"commit_a\"; \"commit_a\" -> \"commit_b\"; \"commit_b\" -> \"commit_init\"; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-j0eb7g\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图显示了 <code>git revert</code> 如何添加一个新提交（红色）来撤销提交 <code>e4f5g6h</code> 的更改，同时保持原始历史记录的完整。</p>\n</blockquote>\n<p>如果你检查你的项目文件，<code>e4f5g6h</code> 引入的更改将不再存在。原始提交 <code>e4f5g6h</code> 仍然存在于历史记录中，但其效果已被新的撤销提交抵消。</p>\n<h3>Revert 与 Reset 的对比</h3>\n<p>理解 <code>git revert</code> 和 <code>git reset</code>（后者修改历史记录）之间的区别是很重要的。</p>\n<ul>\n<li><code>git revert</code>：创建一个<em>新</em>提交来撤销更改。对共享历史记录安全。保留了原始更改及其撤销的记录。</li>\n<li><code>git reset</code>：移动分支指针，可能丢弃提交。重写历史记录。对于已与他人共享的提交通常不安全。</li>\n</ul>\n<p>对于撤销属于你的公共或共享历史记录的更改，<code>git revert</code> 几乎总是首选方法。它清晰地表明之前的更改已被撤销，而不会抹去历史上下文 (context)。</p>\n<h3>潜在冲突</h3>\n<p>就像合并分支一样，撤销一个提交有时也会导致冲突。如果后续提交修改了你正在撤销的提交也涉及到的相同代码行，就会发生这种情况。如果 Git 在撤销过程中遇到冲突，它会停止并告诉你哪些文件存在冲突。你需要手动编辑这些文件来解决冲突的更改，然后使用 <code>git add</code> 将它们标记 (token)为已解决，最后运行 <code>git revert --continue</code> 来完成该过程。(或者使用 <code>git revert --abort</code> 来取消撤销操作)。</p>\n<p>使用 <code>git revert</code> 提供了一种安全的机制，可以在不中断协作或丢失有价值上下文 (context)的情况下，纠正项目历史记录中的错误。它是维护清晰易懂提交历史记录的重要工具。</p>",
+  "slug": "git-revert-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 285,
+      "title": "git-revert(1) Manual Page",
+      "author": "Git Documentation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-revert",
+      "doi": "",
+      "note": "提供 `git revert` 命令的官方详细技术规范，包括所有可用选项及其用法。",
+      "order": 1,
+      "created_at": "2025-09-04T14:03:48.981238Z",
+      "updated_at": "2025-09-07T15:45:20.339425Z"
+    },
+    {
+      "id": 286,
+      "title": "Reverting a Commit (from \"Pro Git\" book)",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History#_revert",
+      "doi": "",
+      "note": "提供了对 `git revert` 的全面解释，将其作为一种不修改现有历史记录的安全撤销更改的方法，并与其它历史修改工具进行了区分。",
+      "order": 2,
+      "created_at": "2025-09-04T14:03:48.985115Z",
+      "updated_at": "2025-09-07T15:45:23.738386Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

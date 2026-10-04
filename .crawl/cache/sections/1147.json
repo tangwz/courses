@@ -1,0 +1,61 @@
+{
+  "id": 1147,
+  "title": "检测和处理重复记录",
+  "meta_title": "在Pandas中查找和移除重复行",
+  "meta_description": "使用Pandas识别和移除数据集中重复条目的方法。",
+  "content": "<p>重复记录，即在所有或部分列中包含完全相同信息的行，会明显扭曲分析结果和模型表现。它们可能使计数虚高，使统计摘要（如均值或频率）产生偏差，并可能导致合作方得出错误结论。识别并妥善处理这些重复项是加载数据并进行初步检查后的重要一步。</p>\n<h3>识别重复行</h3>\n<p>Pandas提供了一个简单直接的方法，<code>duplicated()</code>，用于识别DataFrame中的重复行。默认情况下，此方法会检查整行是否是DataFrame中<em>之前出现过</em>的行的精确副本。它返回一个布尔Series，其中<code>True</code>表示该行是前面某行的重复项。</p>\n<p>我们来看一个简单的DataFrame：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\ndata = {'col_a': ['apple', 'banana', 'orange', 'apple', 'banana', 'grape'],\n        'col_b': [1, 2, 3, 1, 2, 4],\n        'col_c': [True, False, True, True, False, False]}\ndf_duplicates = pd.DataFrame(data)\n\nprint(\"原始DataFrame：\")\nprint(df_duplicates)\n\n# 识别重复行（基于所有列）\nduplicate_mask = df_duplicates.duplicated()\nprint(\"\\n重复项的布尔掩码：\")\nprint(duplicate_mask)\n</code></pre>\n<p>这段代码将输出：</p>\n<pre><code>Original DataFrame:\n    col_a  col_b  col_c\n0   apple      1   True\n1  banana      2  False\n2  orange      3   True\n3   apple      1   True\n4  banana      2  False\n5   grape      4  False\n\nBoolean mask for duplicates:\n0    False\n1    False\n2    False\n3     True\n4     True\n5    False\ndtype: bool\n</code></pre>\n<p>正如你所见，第3行和第4行被标记 (token)为<code>True</code>，因为它们分别是第0行和第1行的精确重复项。</p>\n<p>要获取重复行的计数，你可以简单地对布尔Series求和：</p>\n<pre><code class=\"language-python\">num_duplicates = df_duplicates.duplicated().sum()\nprint(f\"\\n找到的重复行数量: {num_duplicates}\")\n# 输出: 找到的重复行数量: 2\n</code></pre>\n<p>要查看实际的重复行，你可以使用布尔索引：</p>\n<pre><code class=\"language-python\">print(\"\\n重复行：\")\nprint(df_duplicates[df_duplicates.duplicated()])\n</code></pre>\n<pre><code>Duplicate rows:\n    col_a  col_b  col_c\n3   apple      1   True\n4  banana      2  False\n</code></pre>\n<p>有时，重复项的定义并非基于整行匹配，而是基于特定列子集具有相同值。例如，如果两条记录共享相同的用户ID和时间戳，即使其他列略有不同（可能是由于数据录入差异），你也可以认为它们是重复项。你可以使用<code>subset</code>参数 (parameter)指定要考虑的列：</p>\n<pre><code class=\"language-python\"># 仅基于'col_a'和'col_b'检查重复项\nsubset_duplicates = df_duplicates.duplicated(subset=['col_a', 'col_b'])\nprint(\"\\n基于'col_a'和'col_b'的重复项：\")\nprint(subset_duplicates)\n\nprint(\"\\n基于子集识别为重复项的DataFrame行：\")\nprint(df_duplicates[subset_duplicates])\n</code></pre>\n<pre><code>Duplicates based on 'col_a' and 'col_b':\n0    False\n1    False\n2    False\n3     True\n4     True\n5    False\ndtype: bool\n\nDataFrame rows identified as duplicates based on subset:\n    col_a  col_b  col_c\n3   apple      1   True\n4  banana      2  False\n</code></pre>\n<p>在这个例子中，结果与检查所有列时相同，因为这些重复项无论如何都匹配了所有列。但是，如果第3行的<code>col_c</code>是<code>False</code>，在使用<code>subset=['col_a', 'col_b']</code>时，它<em>仍然</em>会被标记为重复项。</p>\n<h3>处理重复行</h3>\n<p>一旦识别出来，处理重复行最常用的方法是将其移除。Pandas为此提供了<code>drop_duplicates()</code>方法。与<code>duplicated()</code>类似，它默认作用于整行，也可以限定到列的<code>subset</code>。</p>\n<p>一个重要的参数 (parameter)用于<code>drop_duplicates()</code>是<code>keep</code>，用于决定保留哪个重复行：</p>\n<ul>\n<li><code>keep='first'</code>: （默认）保留重复行的第一次出现，移除后续的。</li>\n<li><code>keep='last'</code>: 保留重复行的最后一次出现，移除前面的。</li>\n<li><code>keep=False</code>: 移除所有作为重复项的行。如果一行出现两次，则这两个实例都会被移除。</li>\n</ul>\n<p>我们来看看这是如何运作的：</p>\n<pre><code class=\"language-python\"># 移除重复项，保留第一次出现（默认）\ndf_no_duplicates_first = df_duplicates.drop_duplicates()\nprint(\"\\n移除重复项后（保留第一次）的DataFrame：\")\nprint(df_no_duplicates_first)\n\n# 移除重复项，保留最后一次出现\ndf_no_duplicates_last = df_duplicates.drop_duplicates(keep='last')\nprint(\"\\n移除重复项后（保留最后一次）的DataFrame：\")\nprint(df_no_duplicates_last)\n\n# 移除重复项，删除所有重复实例\ndf_no_duplicates_all = df_duplicates.drop_duplicates(keep=False)\nprint(\"\\n移除重复项后（不保留任何）的DataFrame：\")\nprint(df_no_duplicates_all)\n\n# 基于子集移除重复项，保留第一次出现\ndf_no_duplicates_subset = df_duplicates.drop_duplicates(subset=['col_a', 'col_b'], keep='first')\nprint(\"\\n基于子集移除重复项后（保留第一次）的DataFrame：\")\nprint(df_no_duplicates_subset)\n\n</code></pre>\n<p>输出展示了不同的行为：</p>\n<pre><code>DataFrame after dropping duplicates (keeping first):\n    col_a  col_b  col_c\n0   apple      1   True\n1  banana      2  False\n2  orange      3   True\n5   grape      4  False\n\nDataFrame after dropping duplicates (keeping last):\n    col_a  col_b  col_c\n2  orange      3   True\n3   apple      1   True\n4  banana      2  False\n5   grape      4  False\n\nDataFrame after dropping duplicates (keeping none):\n    col_a  col_b  col_c\n2  orange      3   True\n5   grape      4  False\n\nDataFrame after dropping duplicates based on subset (keeping first):\n    col_a  col_b  col_c\n0   apple      1   True\n1  banana      2  False\n2  orange      3   True\n5   grape      4  False\n</code></pre>\n<p>请注意，<code>keep='first'</code>保留了第0、1、2、5行；<code>keep='last'</code>保留了第2、3、4、5行；而<code>keep=False</code>仅保留了第2和第5行，因为它们是原始DataFrame中唯一的行。在这种特定情况下，基于子集<code>['col_a', 'col_b']</code>移除重复项并使用<code>keep='first'</code>与默认的<code>drop_duplicates()</code>结果相同。</p>\n<p>默认情况下，<code>drop_duplicates()</code>返回一个移除了重复项的<em>新</em>DataFrame。原始DataFrame保持不变。如果你想直接修改DataFrame，可以使用<code>inplace=True</code>参数，尽管通常将结果赋值给新变量或覆盖现有变量（如<code>df = df.drop_duplicates()</code>）更安全、更清晰。</p>\n<p>处理重复项是数据清洗中的标准流程。决定是检查所有列还是子集，以及决定保留哪个重复项（如果有的话），在很大程度上取决于你的数据背景和分析目标。在决定移除策略之前，务必考虑重复可能出现的原因（例如，数据录入错误、系统日志问题、有意重复）。</p>",
+  "slug": "handling-duplicates",
+  "updates": [],
+  "references": [
+    {
+      "id": 418,
+      "title": "pandas.DataFrame.duplicated",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.duplicated.html",
+      "doi": "",
+      "note": "Pandas `duplicated()` 方法的官方文档，解释了其用于识别重复行的用法。",
+      "order": 1,
+      "created_at": "2025-09-04T14:29:37.779960Z",
+      "updated_at": "2025-09-07T16:16:14.960521Z"
+    },
+    {
+      "id": 419,
+      "title": "pandas.DataFrame.drop_duplicates",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html",
+      "doi": "",
+      "note": "Pandas `drop_duplicates()` 方法的官方文档，详细说明了其删除重复行的参数。",
+      "order": 2,
+      "created_at": "2025-09-04T14:29:37.784794Z",
+      "updated_at": "2025-09-07T16:16:20.551384Z"
+    },
+    {
+      "id": 420,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本使用 Python 和 Pandas 进行数据分析的基础书籍，涵盖数据清洗，包括重复记录的识别和删除。",
+      "order": 3,
+      "created_at": "2025-09-04T14:29:37.787097Z",
+      "updated_at": "2025-09-07T16:16:17.623102Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

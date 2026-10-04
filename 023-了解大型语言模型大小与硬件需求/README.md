@@ -1,0 +1,64 @@
+# 了解大型语言模型大小与硬件需求
+
+来源：[了解大型语言模型大小与硬件需求](https://apxml.com/zh/courses/llm-model-sizes-hardware)
+
+学习大型语言模型（LLM）大小（以参数衡量）的基本知识，以及它们与图形处理器（GPU）、中央处理器（CPU）和内存（RAM/VRAM）等硬件的关系。本课程说明运行和操作不同大小LLM所需的硬件。
+
+预计学时：4 小时
+
+先修要求：无需预备知识。
+
+## 课程目录
+
+### 1. [大型语言模型及其规模介绍](01-%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E8%A7%84%E6%A8%A1%E4%BB%8B%E7%BB%8D/README.md)
+
+- 1. [什么是大型语言模型（LLM）？](01-%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E8%A7%84%E6%A8%A1%E4%BB%8B%E7%BB%8D/01-%E4%BB%80%E4%B9%88%E6%98%AF%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%EF%BC%88LLM%EF%BC%89%EF%BC%9F.md)
+- 2. [了解模型参数](01-%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E8%A7%84%E6%A8%A1%E4%BB%8B%E7%BB%8D/02-%E4%BA%86%E8%A7%A3%E6%A8%A1%E5%9E%8B%E5%8F%82%E6%95%B0.md)
+- 3. [模型大小如何衡量](01-%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E8%A7%84%E6%A8%A1%E4%BB%8B%E7%BB%8D/03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E5%A6%82%E4%BD%95%E8%A1%A1%E9%87%8F.md)
+- 4. [不同模型大小的例子](01-%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%8F%8A%E5%85%B6%E8%A7%84%E6%A8%A1%E4%BB%8B%E7%BB%8D/04-%E4%B8%8D%E5%90%8C%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E7%9A%84%E4%BE%8B%E5%AD%90.md)
+- [章节测验](https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-1-intro-llms-model-size/quiz)
+
+### 2. [人工智能必需的硬件组件](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/README.md)
+
+- 1. [中央处理器 (CPU)](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/01-%E4%B8%AD%E5%A4%AE%E5%A4%84%E7%90%86%E5%99%A8%20%28CPU%29.md)
+- 2. [随机存取存储器 (RAM)](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/02-%E9%9A%8F%E6%9C%BA%E5%AD%98%E5%8F%96%E5%AD%98%E5%82%A8%E5%99%A8%20%28RAM%29.md)
+- 3. [图形处理器 (GPU)](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/03-%E5%9B%BE%E5%BD%A2%E5%A4%84%E7%90%86%E5%99%A8%20%28GPU%29.md)
+- 4. [视频内存 (VRAM)](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/04-%E8%A7%86%E9%A2%91%E5%86%85%E5%AD%98%20%28VRAM%29.md)
+- 5. [TPU简要介绍](02-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%BF%85%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E7%BB%84%E4%BB%B6/05-TPU%E7%AE%80%E8%A6%81%E4%BB%8B%E7%BB%8D.md)
+- [章节测验](https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-2-essential-hardware-components/quiz)
+
+### 3. [模型大小与硬件需求的关联](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/README.md)
+
+- 1. [模型参数与内存占用](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/01-%E6%A8%A1%E5%9E%8B%E5%8F%82%E6%95%B0%E4%B8%8E%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8.md)
+- 2. [数据类型与精度 (FP16, INT8)](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/02-%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%B8%8E%E7%B2%BE%E5%BA%A6%20%28FP16%2C%20INT8%29.md)
+- 3. [量化简介](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/03-%E9%87%8F%E5%8C%96%E7%AE%80%E4%BB%8B.md)
+- 4. [计算需求 (FLOPS)](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/04-%E8%AE%A1%E7%AE%97%E9%9C%80%E6%B1%82%20%28FLOPS%29.md)
+- 5. [内存带宽的重要性](03-%E6%A8%A1%E5%9E%8B%E5%A4%A7%E5%B0%8F%E4%B8%8E%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82%E7%9A%84%E5%85%B3%E8%81%94/05-%E5%86%85%E5%AD%98%E5%B8%A6%E5%AE%BD%E7%9A%84%E9%87%8D%E8%A6%81%E6%80%A7.md)
+- [章节测验](https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-3-model-size-hardware-connection/quiz)
+
+### 4. [运行LLM：推理与训练](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/README.md)
+
+- 1. [什么是模型推理？](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/01-%E4%BB%80%E4%B9%88%E6%98%AF%E6%A8%A1%E5%9E%8B%E6%8E%A8%E7%90%86%EF%BC%9F.md)
+- 2. [推理的硬件需求](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/02-%E6%8E%A8%E7%90%86%E7%9A%84%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82.md)
+- 3. [什么是模型训练？](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/03-%E4%BB%80%E4%B9%88%E6%98%AF%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83%EF%BC%9F.md)
+- 4. [训练的硬件需求](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/04-%E8%AE%AD%E7%BB%83%E7%9A%84%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82.md)
+- 5. [专注于推理需求](04-%E8%BF%90%E8%A1%8CLLM%EF%BC%9A%E6%8E%A8%E7%90%86%E4%B8%8E%E8%AE%AD%E7%BB%83/05-%E4%B8%93%E6%B3%A8%E4%BA%8E%E6%8E%A8%E7%90%86%E9%9C%80%E6%B1%82.md)
+- [章节测验](https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-4-llm-inference-vs-training/quiz)
+
+### 5. [估算硬件需求](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/README.md)
+
+- 1. [显存需求估算：参数量经验法则](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/01-%E6%98%BE%E5%AD%98%E9%9C%80%E6%B1%82%E4%BC%B0%E7%AE%97%EF%BC%9A%E5%8F%82%E6%95%B0%E9%87%8F%E7%BB%8F%E9%AA%8C%E6%B3%95%E5%88%99.md)
+- 2. [考虑激活内存](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/02-%E8%80%83%E8%99%91%E6%BF%80%E6%B4%BB%E5%86%85%E5%AD%98.md)
+- 3. [影响实际使用量的因素](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/03-%E5%BD%B1%E5%93%8D%E5%AE%9E%E9%99%85%E4%BD%BF%E7%94%A8%E9%87%8F%E7%9A%84%E5%9B%A0%E7%B4%A0.md)
+- 4. [检查硬件配置](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/04-%E6%A3%80%E6%9F%A5%E7%A1%AC%E4%BB%B6%E9%85%8D%E7%BD%AE.md)
+- 5. [实践：简单的显存估算](05-%E4%BC%B0%E7%AE%97%E7%A1%AC%E4%BB%B6%E9%9C%80%E6%B1%82/05-%E5%AE%9E%E8%B7%B5%EF%BC%9A%E7%AE%80%E5%8D%95%E7%9A%84%E6%98%BE%E5%AD%98%E4%BC%B0%E7%AE%97.md)
+- [章节测验](https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-5-estimating-hardware-needs/quiz)
+
+## 学习目标
+
+- **大型语言模型概述**：明确大型语言模型（LLM）是什么及其基本功能。
+- **模型参数**：解释模型参数是什么，以及它们与LLM大小的关系。
+- **硬件组成部分**：识别运行大型语言模型所需的主要硬件组成部分（CPU、GPU、内存、显存）。
+- **大小与硬件关系**：描述LLM中参数数量与所需硬件资源之间的关联。
+- **推理与训练需求对比**：区分运行大型语言模型推理与训练（概括性地）所需的硬件需求。
+- **初步需求估算**：基于模型大小，对内存（显存）进行简单估算。

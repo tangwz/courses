@@ -1,0 +1,603 @@
+{
+  "id": 133,
+  "title": "大型模型MLOps (LLMOps)",
+  "meta_title": "高级LLMOps：大型语言模型的部署",
+  "meta_description": "学习面向大型模型（LLMOps）的先进MLOps技术。内容涵盖LLM在生产中的基础设施、部署、监控和优化。",
+  "description": "<p>本课程旨在指导您在生产环境中实施并管理大型语言模型（LLM）的运行周期。内容涵盖适用于LLM规模及复杂性的各项先进方法，例如基础设施管理、模型部署、性能优化及监控等。您将学习构建稳定、可扩展且经济高效的LLMOps流程。</p>",
+  "short_description": "实施并管理生产环境用大型语言模型的运行周期。",
+  "excerpt": "掌握有效管理大型语言模型所需的专业实践，应对规模、成本及性能方面的挑战。",
+  "prerequisites": "需具备MLOps基本知识。",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "LLM基础设施设计",
+      "description": "构建可扩展的基础设施，用于训练及提供大型语言模型服务，并考虑GPU/TPU资源及网络配置。"
+    },
+    {
+      "topic": "分布式训练管理",
+      "description": "实施并管理针对数十亿参数模型的分布式训练任务，运用DeepSpeed或Megatron-LM等框架。"
+    },
+    {
+      "topic": "高效微调操作",
+      "description": "在MLOps工作流程中应用参数高效微调（PEFT）方法。"
+    },
+    {
+      "topic": "LLM高级部署",
+      "description": "部署大型模型，运用优化推理服务器、量化技术及专用服务模式。"
+    },
+    {
+      "topic": "LLM监控与可观测性",
+      "description": "实施全面的监控策略，以评估LLM的性能、成本、漂移及输出质量。"
+    },
+    {
+      "topic": "成本优化",
+      "description": "应用策略，管理及优化与大型模型训练和提供服务相关联的高昂成本。"
+    },
+    {
+      "topic": "RAG系统运行管理",
+      "description": "管理检索增强生成系统（RAG）的运行方面，包括向量数据库管理。"
+    }
+  ],
+  "duration": 28,
+  "slug": "mlops-for-large-models-llmops",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-05T14:27:02.308844Z",
+  "updated_at": "2026-10-02T05:48:11.032993Z",
+  "chapters": [
+    {
+      "id": 680,
+      "title": "LLMOps 基本原理",
+      "meta_title": "大型模型的 LLMOps 基本原理",
+      "meta_description": "理解在处理大型语言模型 (LLM) 时 MLOps 的特殊难题和要求。",
+      "number": 1,
+      "slug": "foundations-llmops",
+      "content": "运行标准模型的机器学习系统已是成熟做法。然而，大型语言模型 (LLM) 通常包含数十亿或数万亿个参数 (例如，参数量 $P \\gg 10^9$ 的模型)，带来了不同的运行要求，这些要求对传统 MLOps 提出了更高要求。它们庞大的规模、训练和推理的计算需求以及特有的故障模式，使得需要采用专门的方法。\r\n\r\n本章阐述了 LLMOps 的基本原理。我们将审视已有的 MLOps 原理如何调整适用，以及它们在应用于 LLM 时存在的不足之处。您将了解到：\r\n\r\n*   LLMOps 与传统 MLOps 的主要区别。\r\n*   LLM 带来的具体运行难题，包括规模、成本和性能管理。\r\n*   支持 LLM 生命周期所需的硬件和软件架构。\r\n*   开发、部署和维护 LLM 所涉及的各个阶段的概览。\r\n*   选择合适的工具和平台用于 LLMOps 技术栈时需考虑的事项。\r\n\r\n在本章结束时，您将理解大型模型在运行管理方面的特殊情况和要求，这将为您学习后续章节中介绍的具体方法做好准备。",
+      "sections": [
+        {
+          "id": 3101,
+          "title": "从MLOps到LLMOps的转变",
+          "meta_title": "从MLOps到LLMOps：主要差异",
+          "meta_description": "明确将MLOps原则应用于大型模型时的根本差异和增加的复杂性。",
+          "slug": "mlops-to-llmops-transition",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3103,
+          "title": "大语言模型在生产中的特有挑战",
+          "meta_title": "大语言模型实际应用难题",
+          "meta_description": "分析大语言模型带来的具体难题，包括规模、推理延迟、成本和监控复杂性。",
+          "slug": "llm-production-challenges",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3106,
+          "title": "大型模型所需的基础设施",
+          "meta_title": "大型模型运行所需的基础设施",
+          "meta_description": "详细说明大型语言模型整个运行流程所需的硬件（GPU/TPU集群）和软件设施。",
+          "slug": "llm-infrastructure-requirements",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3109,
+          "title": "LLMOps 生命周期阶段",
+          "meta_title": "了解 LLMOps 生命周期",
+          "meta_description": "概述 LLMOps 生命周期所涉及的不同阶段，包括从开发到监控和再训练。",
+          "slug": "llmops-lifecycle-stages",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3114,
+          "title": "LLMOps 工具选用要点",
+          "meta_title": "LLMOps 工具栈选择",
+          "meta_description": "评估适用于管理 LLMOps 工作流各个阶段的不同工具和平台。",
+          "slug": "llmops-tooling-considerations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 682,
+      "title": "大规模基础设施与数据管理",
+      "meta_title": "LLM基础设施与数据管理",
+      "meta_description": "学习管理训练和微调大型语言模型所需的基础设施和海量数据集。",
+      "number": 2,
+      "slug": "llm-infrastructure-data-management",
+      "content": "运行大型语言模型，其对基础设施和数据管理的要求与小型模型有着很大差异。处理规模可达PB级 ($PB$) 的训练数据集，以及调度数百甚至数千个GPU ($N_{GPU}$)，都需要特定的架构模式和操作方法。简单地扩展标准MLOps技术往往不足或成本过高。\r\n\r\n本章侧重于构建和管理LLM运营基础的实际方面。您将学会如何：\r\n\r\n*   设计可扩展的计算集群 (GPU/TPU)，并处理高效分布式处理所需的网络考量。\r\n*   实施存储、访问和预处理超大规模数据集的策略。\r\n*   构建专门为LLM需求定制的有效数据管道，包括数据清洗和分词。\r\n*   应用适合大规模数据和模型制品的版本控制方法。\r\n*   评估LLMOps中云端和本地基础设施方案之间的权衡。\r\n\r\n我们首先考察可扩展计算和网络的设计原则，然后转到数据本身的管理，包括存储、预处理和版本控制。",
+      "sections": [
+        {
+          "id": 3117,
+          "title": "设计可扩展的计算基础设施",
+          "meta_title": "LLM可扩展计算基础设施设计",
+          "meta_description": "为大规模模型训练和推理构建优化的计算集群（GPU/TPU）。",
+          "slug": "designing-scalable-compute",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3120,
+          "title": "分布式系统的网络考量",
+          "meta_title": "分布式LLM训练的网络",
+          "meta_description": "应对高效分布式训练和数据传输的网络带宽和延迟需求。",
+          "slug": "distributed-systems-networking",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3122,
+          "title": "管理PB级数据集",
+          "meta_title": "用于LLM的PB级数据集管理",
+          "meta_description": "实施用于存储、访问和处理LLM训练中使用的海量数据集的策略。",
+          "slug": "managing-large-datasets",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3124,
+          "title": "大语言模型数据预处理流程",
+          "meta_title": "构建大语言模型数据预处理流程",
+          "meta_description": "开发高效且可扩展的数据清理、分词和预处理流程。",
+          "slug": "llm-data-preprocessing-pipelines",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3128,
+          "title": "大型数据和模型的版本控制",
+          "meta_title": "大型资源的版本管理策略",
+          "meta_description": "应用适合处理大型数据集和模型检查点的版本管理技术。",
+          "slug": "version-control-large-data-models",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3130,
+          "title": "云端与本地基础设施的权衡",
+          "meta_title": "云端与本地大模型基础设施",
+          "meta_description": "评估云服务与自建硬件在大模型操作中的利弊。",
+          "slug": "cloud-vs-onprem-infrastructure",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3133,
+          "title": "实践：配置可扩展存储",
+          "meta_title": "实践：配置可扩展数据存储",
+          "meta_description": "动手实践配置和操作大型数据集的可扩展存储方案。",
+          "slug": "practice-scalable-storage-setup",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 685,
+      "title": "大模型训练与微调的运行管理",
+      "meta_title": "大语言模型训练与微调运行管理",
+      "meta_description": "使用先进方法，对大型语言模型的训练和微调过程进行运行管理。",
+      "number": 3,
+      "slug": "llm-training-finetuning-ops",
+      "content": "训练和微调参数量达数十亿的模型，需要采用有别于标准机器学习工作流程的专门操作方法。这种规模在计算、内存管理以及可能跨数百个加速器进行协调方面带来了很多难题。\r\n\r\n本章侧重于管理这些大规模训练过程的运行管理方面。您将学习如何：\r\n*   高效地编排和管理分布式训练任务。\r\n*   实现不同的并行策略，包括数据并行、张量并行和流水线并行，以处理超出单个设备内存的模型。例如，理解如何将模型层拆分到多个GPU上（流水线并行）或将单个层计算分布到多个设备上（张量并行），这很重要。\r\n*   使用 DeepSpeed 和 Megatron-LM 等专门框架，这些框架旨在简化和优化大模型训练。\r\n*   将参数高效微调（PEFT）技术（例如 LoRA）整合到运行流程中，从而经济高效地调整模型。\r\n*   调整实验追踪和检查点方法，以应对大规模训练运行的规模和持续时间，确保可复现性和容错性。\r\n\r\n在本章结束时，您将掌握在MLOps框架内成功训练和微调大型语言模型的主要技术和运行管理方面的考量。",
+      "sections": [
+        {
+          "id": 3138,
+          "title": "编排分布式训练任务",
+          "meta_title": "编排分布式大型语言模型训练",
+          "meta_description": "管理和调度跨多个节点和加速器的复杂分布式训练任务。",
+          "slug": "orchestrating-distributed-training",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3140,
+          "title": "实现数据并行策略",
+          "meta_title": "大型语言模型的数据并行实现",
+          "meta_description": "应用数据并行技术来加速大型语言模型训练。",
+          "slug": "implementing-data-parallelism",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3142,
+          "title": "实现模型并行策略",
+          "meta_title": "模型并行实现（张量并行、流水线并行）",
+          "meta_description": "通过张量并行和流水线模型并行，将大型模型放入内存中。",
+          "slug": "implementing-model-parallelism",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3145,
+          "title": "使用 DeepSpeed 和 Megatron-LM 等框架",
+          "meta_title": "使用 DeepSpeed 和 Megatron-LM 框架",
+          "meta_description": "借助专用框架进行高效的大规模模型训练。",
+          "slug": "deepspeed-megatron-frameworks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3148,
+          "title": "参数高效微调（PEFT）的实施",
+          "meta_title": "PEFT技术（LoRA、Adapter）的实施",
+          "meta_description": "将LoRA等PEFT方法整合到MLOps流程中，实现模型的高效适应。",
+          "slug": "operationalizing-peft",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3151,
+          "title": "大规模运行的实验跟踪",
+          "meta_title": "大型LLM运行的实验跟踪",
+          "meta_description": "针对LLM训练和微调的规模，调整实验跟踪工具和方法。",
+          "slug": "large-scale-experiment-tracking",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3154,
+          "title": "检查点与容错机制",
+          "meta_title": "大模型训练检查点与容错",
+          "meta_description": "为长期运行的训练任务实施稳定的检查点策略与容错功能。",
+          "slug": "checkpointing-fault-tolerance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3160,
+          "title": "实践操作：分布式训练配置",
+          "meta_title": "实践操作：基本分布式训练任务",
+          "meta_description": "使用常用框架配置并运行一个基本分布式训练任务。",
+          "slug": "hands-on-distributed-training",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 688,
+      "title": "LLM部署与服务优化",
+      "meta_title": "LLM部署与服务优化",
+      "meta_description": "高效部署大型语言模型，并优化其服务性能和成本。",
+      "number": 4,
+      "slug": "llm-deployment-serving-optimization",
+      "content": "从模型训练转向生产使用，需要部署大型语言模型并高效提供推理服务。本章侧重于这一转变的运行方面，特别关注大型语言模型（LLM）特有的规模和资源需求。\r\n\r\n您将研究以下技术：\r\n*   打包大型模型及其依赖项。\r\n*   使用专用服务器（如 Triton 或 vLLM）和硬件加速来优化推理速度和吞吐量。\r\n*   通过量化和知识蒸馏等方法减小模型大小和计算需求。\r\n*   实施适用于LLM的部署模式，例如金丝雀发布和A/B测试。\r\n*   通过自动扩缩容管理可变请求负载。\r\n*   评估无服务器GPU推理的方案。\r\n\r\n目标是提供实用方法，用于构建高性能、可扩展且成本敏感的LLM服务系统。",
+      "sections": [
+        {
+          "id": 3164,
+          "title": "大型模型服务中的挑战",
+          "meta_title": "大型语言模型服务中的挑战",
+          "meta_description": "分析部署大型语言模型的具体难点，包括延迟、吞吐量和资源需求。",
+          "slug": "llm-serving-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3166,
+          "title": "大型语言模型 (LLM) 的模型打包与容器化",
+          "meta_title": "打包和容器化大型模型",
+          "meta_description": "使用容器化技术有效打包大型模型及其依赖项。",
+          "slug": "llm-packaging-containerization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3169,
+          "title": "GPU 推理服务器优化",
+          "meta_title": "GPU 推理服务器优化技术",
+          "meta_description": "使用 NVIDIA Triton、TensorRT-LLM 或 vLLM 等工具，提升推理时的 GPU 使用效率。",
+          "slug": "gpu-inference-optimization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3172,
+          "title": "应用模型量化方法",
+          "meta_title": "大语言模型的模型量化应用",
+          "meta_description": "应用训练后和量化感知训练方法，以减小模型尺寸并改善延迟。",
+          "slug": "implementing-quantization",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3175,
+          "title": "知识蒸馏在部署中的应用",
+          "meta_title": "使用知识蒸馏部署LLM",
+          "meta_description": "采用知识蒸馏创建更小、更快的学生模型以供部署。",
+          "slug": "knowledge-distillation-deployment",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3178,
+          "title": "高级部署模式 (金丝雀发布, A/B 测试)",
+          "meta_title": "大型语言模型的高级部署模式",
+          "meta_description": "为大型语言模型实施金丝雀发布、A/B 测试（用于提示语或模型）和影子部署。",
+          "slug": "advanced-llm-deployment-patterns",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3181,
+          "title": "自动扩缩容推理端点",
+          "meta_title": "大型语言模型推理端点自动扩缩容",
+          "meta_description": "根据负载和性能指标配置大型语言模型推理端点的自动扩缩容。",
+          "slug": "autoscaling-inference-endpoints",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3185,
+          "title": "无服务器 GPU 推理的考量",
+          "meta_title": "LLM 的无服务器 GPU 推理",
+          "meta_description": "评估并实施用于部署 LLM 推理端点的无服务器方案。",
+          "slug": "serverless-gpu-inference",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3189,
+          "title": "实践：部署量化模型",
+          "meta_title": "实践：部署量化大型语言模型",
+          "meta_description": "动手实践量化一个较小型大型语言模型并将其部署到推理服务器。",
+          "slug": "practice-deploy-quantized-model",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 693,
+      "title": "监控、可观测性与维护",
+      "meta_title": "大型语言模型监控、可观测性与维护",
+      "meta_description": "为生产环境中的大型语言模型设计和实施可靠的监控与维护策略。",
+      "number": 5,
+      "slug": "llm-monitoring-observability-maintenance",
+      "content": "部署大型语言模型是重要一步，但运营工作在首次上线后仍需长期进行。保持性能、管理成本并确保生产环境中的大型语言模型（LLM）可靠性，需要专门的监控、可观测性和维护策略，这些策略应适应其独有特点。大型语言模型的规模、成本和特有故障模式，决定了它们所需的监控方法不同于标准应用监控。\r\n\r\n本章着重介绍保持生产环境中大型语言模型健康且高效所需的实践。您将学习如何：\r\n\r\n*   定义并追踪大型语言模型特有的性能指标，例如推理延迟和令牌吞吐量。\r\n*   监控底层基础设施，密切关注GPU利用率和内存消耗。\r\n*   部署系统以追踪与大型语言模型训练和服务相关的高昂运营成本。\r\n*   检测语言模型特有的数据漂移和语义漂移。\r\n*   监控大型语言模型输出质量，包括发现幻觉或不期望出现的内容模式等问题的技术方法。\r\n*   建立反馈循环以收集数据，用于模型改进和再训练触发条件的设定。\r\n*   在LLMOps环境中有效地使用日志记录和可观测性工具。\r\n\r\n我们将介绍所需的工具和技术，帮助您了解模型行为，主动处理问题，并确保其持续产生价值。",
+      "sections": [
+        {
+          "id": 3192,
+          "title": "界定大语言模型特有的性能指标",
+          "meta_title": "界定大语言模型性能指标（延迟、吞吐量）",
+          "meta_description": "识别并追踪推理延迟、吞吐量和令牌生成速度等重要性能指标。",
+          "slug": "llm-performance-metrics",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3195,
+          "title": "监控基础设施使用情况（GPU、内存）",
+          "meta_title": "监控LLM基础设施使用情况",
+          "meta_description": "追踪GPU/TPU使用率、内存使用情况和网络I/O，适用于训练和推理工作负载。",
+          "slug": "monitoring-llm-infrastructure",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3198,
+          "title": "追踪运营成本",
+          "meta_title": "追踪LLM运营成本",
+          "meta_description": "实施机制来监控和归属LLM运营相关的成本。",
+          "slug": "tracking-llm-costs",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3200,
+          "title": "检测大型语言模型中的数据与响应模式漂移",
+          "meta_title": "大型语言模型的数据与响应模式漂移检测",
+          "meta_description": "应用方法来检测大型语言模型中输入数据分布和底层响应模式的变化。",
+          "slug": "detecting-llm-drift",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3203,
+          "title": "监控 LLM 输出质量（有害性、偏见）",
+          "meta_title": "监控 LLM 输出质量指标",
+          "meta_description": "实施策略以监控 LLM 输出的有害性、偏见和相关性等（不侧重于伦理）。",
+          "slug": "monitoring-llm-output-quality",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3207,
+          "title": "幻觉检测方法",
+          "meta_title": "幻觉检测的技术方法",
+          "meta_description": "了解 LLM 输出中识别潜在幻觉的技术方法和指标。",
+          "slug": "hallucination-detection-techniques",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3211,
+          "title": "建立反馈循环以实现持续改进",
+          "meta_title": "实施大语言模型反馈循环",
+          "meta_description": "设计并实现反馈系统（人工或自动化），以收集数据用于模型再训练或微调。",
+          "slug": "llm-feedback-loops",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3214,
+          "title": "LLMOps的日志记录与可观测性平台",
+          "meta_title": "LLMOps中的日志记录与可观测性平台",
+          "meta_description": "利用日志记录和可观测性平台来了解生产环境中LLM的行为。",
+          "slug": "llm-logging-observability",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3217,
+          "title": "动手实践：设置基本的LLM监控",
+          "meta_title": "动手实践：基础LLM性能监控",
+          "meta_description": "为LLM端点设置基本监控，跟踪延迟和吞吐量。",
+          "slug": "hands-on-llm-monitoring-setup",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 696,
+      "title": "进阶LLMOps系统与工作流",
+      "meta_title": "进阶LLMOps系统与工作流",
+      "meta_description": "探讨LLMOps中的进阶系统和自动化工作流，包括RAG操作和提示管理。",
+      "number": 6,
+      "slug": "advanced-llmops-systems-workflows",
+      "content": "在前面介绍的模型训练、部署和监控等核心操作的基础上，本章将讨论如何将这些组成部分整合到更全面的自动化系统和专门针对大型模型的精巧工作流中。\r\n\r\n您将学习提示工程的实用操作方法，管理检索增强生成（RAG）系统（包括向量数据库）的组成部分，并搭建用于模型重训练或微调的自动化流程。此外，我们还将审视LLMOps相关的安全考虑，LLM部署的治理和合规方法，以及将这些专用工作流与标准持续集成与持续部署（CI/CD）实践连接的策略。本章重点在于将这些操作组件组合起来，形成高效、端到端的LLM系统。",
+      "sections": [
+        {
+          "id": 3221,
+          "title": "提示工程的运行化",
+          "meta_title": "提示工程工作流程的运行化",
+          "meta_description": "整合提示的版本控制、测试和管理到MLOps流程中。",
+          "slug": "operationalizing-prompt-engineering",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3223,
+          "title": "检索增强生成（RAG）系统管理",
+          "meta_title": "RAG系统的运行管理",
+          "meta_description": "应对RAG系统部署和维护的运行难题。",
+          "slug": "managing-rag-systems",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3226,
+          "title": "向量数据库操作与管理",
+          "meta_title": "LLMOps中的向量数据库操作",
+          "meta_description": "管理RAG和语义搜索中使用的向量数据库的生命周期、扩展和更新。",
+          "slug": "vector-database-operations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3230,
+          "title": "LLM再训练与微调流程自动化",
+          "meta_title": "LLM再训练流程自动化",
+          "meta_description": "根据监控触发器或计划，构建用于LLM再训练或微调的自动化流程。",
+          "slug": "automating-llm-retraining",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3233,
+          "title": "LLMOps中的安全考量",
+          "meta_title": "LLMOps管道的安全考量",
+          "meta_description": "解决LLMOps中与模型访问、数据隐私和基础设施保护相关的安全方面。",
+          "slug": "llmops-security-considerations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3236,
+          "title": "LLM部署中的合规性与治理",
+          "meta_title": "LLM部署的合规性与治理",
+          "meta_description": "为LLM使用实践合规要求并建立治理框架。",
+          "slug": "llm-compliance-governance",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3239,
+          "title": "将LLMOps与CI/CD系统集成",
+          "meta_title": "将LLMOps与现有CI/CD系统集成",
+          "meta_description": "连接LLMOps工作流程与更广泛的软件开发CI/CD实践。",
+          "slug": "integrating-llmops-cicd",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3241,
+          "title": "实践：构建提示词管理工作流程",
+          "meta_title": "实践：基本提示词管理工作流程",
+          "meta_description": "实现一个对LLM任务的不同提示词进行版本控制和测试的简单工作流程。",
+          "slug": "practice-prompt-management",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

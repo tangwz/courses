@@ -1,0 +1,579 @@
+{
+  "id": 186,
+  "title": "大规模部署扩散模型",
+  "meta_title": "大规模部署扩散模型 | 高级课程",
+  "meta_description": "部署扩散模型的高级指南。学习优化、扩展基础设施（云、Kubernetes）、API设计以及生成式AI的MLOps。",
+  "description": "<p>本课程提供在生产环境中高效可靠地部署生成式扩散模型的高级方法。您将学习优化模型推理 (inference)、使用云服务和编排工具构建可扩展的基础架构、设计稳定的API，以及为大规模图像生成任务实施有效的监控与维护策略。本课程适合负责将复杂深度学习 (deep learning)模型投入运营的AI工程师和MLOps专业人员。</p>",
+  "short_description": "掌握在生产环境中大规模可靠地部署、优化和管理扩散模型。",
+  "excerpt": "掌握为高吞吐量生成任务部署扩散模型的复杂要点。内容涵盖优化、基础设施、API设计和MLOps。",
+  "prerequisites": "机器学习/深度学习、Python、云/运维知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "模型优化",
+      "description": "应用量化和蒸馏等方法优化扩散模型，以实现更快、成本更低的推理。"
+    },
+    {
+      "topic": "可扩展基础设施",
+      "description": "设计并实施使用云服务、容器和编排技术来部署扩散模型的可扩展基础设施。"
+    },
+    {
+      "topic": "推理API开发",
+      "description": "构建稳定高效的API，用于大规模服务扩散模型推理请求。"
+    },
+    {
+      "topic": "性能调优",
+      "description": "分析并调整已部署扩散模型的性能，解决延迟和吞吐量瓶颈。"
+    },
+    {
+      "topic": "生成模型MLOps",
+      "description": "实施专为生产环境中扩散模型设计的监控、日志记录和维护策略。"
+    },
+    {
+      "topic": "成本管理",
+      "description": "制定策略，管理并优化大规模扩散模型部署相关的运营成本。"
+    }
+  ],
+  "duration": 20,
+  "slug": "deploying-diffusion-models-scale",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-27T04:13:54.484703Z",
+  "updated_at": "2026-10-02T06:14:23.870764Z",
+  "chapters": [
+    {
+      "id": 989,
+      "title": "扩展难题与系统架构",
+      "meta_title": "扩散模型扩展：难题与架构",
+      "meta_description": "理解扩散模型扩展的独特难题，以及部署时常用的架构模式。",
+      "number": 1,
+      "slug": "scaling-challenges-architectures",
+      "content": "生成式扩散模型由于其计算密集性，带来了独特的运行难题。将这些模型从研究环境迁移到为真实用户提供可靠、高效服务的生产系统，会带来显著的工程障碍。本章重点讲解如何理解这些具体的难题。\n\n我们将分析扩散过程中固有的计算和内存需求，特别是在推理阶段。我们会考量生成延迟（输出生成的速度）与吞吐量（能同时处理的请求数量）之间的权衡。此外，我们还将回顾用于服务大型生成模型的常见系统架构，对比处理用户请求的同步与异步处理方法，并调整核心 MLOps 原则，以便在生产环境中持续管理扩散模型。在本章结束时，您将对有效部署扩散模型的主要障碍和基本方法有清晰的认识。",
+      "sections": [
+        {
+          "id": 5360,
+          "title": "扩散模型的计算要求",
+          "meta_title": "扩散模型的计算需求",
+          "meta_description": "分析扩散模型推理步骤的高计算和内存需求。",
+          "slug": "diffusion-computational-requirements",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5363,
+          "title": "延迟与吞吐量的考虑",
+          "meta_title": "扩散模型中的延迟与吞吐量",
+          "meta_description": "考察生成速度（延迟）与请求量（吞吐量）之间的权衡。",
+          "slug": "latency-throughput-considerations",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5366,
+          "title": "生成式AI部署的架构模式",
+          "meta_title": "生成式AI部署架构",
+          "meta_description": "审视用于提供大型生成模型服务的常见系统架构。",
+          "slug": "generative-ai-deployment-patterns",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5371,
+          "title": "同步处理与异步处理",
+          "meta_title": "图像生成中的同步与异步处理对比",
+          "meta_description": "比较处理图像生成请求的同步和异步方式。",
+          "slug": "synchronous-asynchronous-processing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5374,
+          "title": "扩散模型的MLOps准则",
+          "meta_title": "扩散模型部署的MLOps",
+          "meta_description": "调整MLOps准则，以实现扩散模型的持续集成、交付和监控。",
+          "slug": "mlops-diffusion-models",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 991,
+      "title": "优化扩散模型推理",
+      "meta_title": "优化扩散模型：推理速度与成本",
+      "meta_description": "学习量化、剪枝和蒸馏等方法，以加速扩散模型推理。",
+      "number": 2,
+      "slug": "optimizing-diffusion-models-inference",
+      "content": "第一章概述了部署扩散模型的架构难题，本章则聚焦于模型本身。扩散过程的迭代特性，通常包含数百个步骤，数据需通过大型神经网络，这在推理期间产生了巨大的计算需求。这导致了与延迟、吞吐量和成本相关的问题。\n\n本章介绍一些方法来缓解这些性能瓶颈：\n\n*   **分析瓶颈：** 找出扩散采样过程中最耗资源的部分。\n*   **模型压缩：** 运用量化（将精度降低到 $INT8$ 或 $FP16$ 等格式）和知识蒸馏等方法，以创建更小、更快的模型。\n*   **采样器效率：** 考察减少生成所需采样步骤数的策略，同时不造成显著质量损失。\n*   **硬件和编译器优化：** 学习有效利用 GPUs/TPUs，并借助 TensorRT 和 OpenVINO 等编译器以获取优化的执行图。\n*   **性能评估：** 制定严格的基准测试流程，以量化延迟、吞吐量和成本的提升。\n\n通过详细的说明和动手实践环节，您将掌握大幅提升扩散模型推理效率的技能。",
+      "sections": [
+        {
+          "id": 5377,
+          "title": "扩散模型推理中的瓶颈",
+          "meta_title": "扩散模型推理瓶颈",
+          "meta_description": "识别扩散模型采样过程中的计算热点。",
+          "slug": "inference-bottlenecks-diffusion",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5381,
+          "title": "模型量化技术 (INT8, FP16)",
+          "meta_title": "扩散模型量化 (INT8/FP16)",
+          "meta_description": "应用量化方法以减小模型尺寸、提升推理速度，同时保持极小的质量损失。",
+          "slug": "model-quantization-diffusion",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5383,
+          "title": "扩散模型的知识蒸馏",
+          "meta_title": "扩散模型的知识蒸馏",
+          "meta_description": "训练更小、更快的学生模型以模仿大型教师扩散模型的输出。",
+          "slug": "knowledge-distillation-diffusion",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5387,
+          "title": "采样器优化策略",
+          "meta_title": "扩散模型采样器优化",
+          "meta_description": "减少采样器所需步数的方法（例如DDIM、PNDM）。",
+          "slug": "sampler-optimization-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5390,
+          "title": "硬件加速（GPU、TPU）",
+          "meta_title": "扩散模型的GPU/TPU加速",
+          "meta_description": "有效使用专用硬件以加快扩散计算。",
+          "slug": "hardware-acceleration-diffusion",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5393,
+          "title": "编译器优化 (TensorRT, OpenVINO)",
+          "meta_title": "编译器优化 (TensorRT/OpenVINO)",
+          "meta_description": "使用深度学习编译器优化目标硬件的执行图。",
+          "slug": "compiler-optimization-diffusion",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5396,
+          "title": "推理性能基准测试",
+          "meta_title": "扩散模型推理的基准测试",
+          "meta_description": "建立准确测量延迟、吞吐量和成本的方法。",
+          "slug": "benchmarking-inference-performance",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5399,
+          "title": "实践操作：优化扩散模型",
+          "meta_title": "实践：优化扩散模型",
+          "meta_description": "将优化技术（量化、编译器）应用于预训练扩散模型。",
+          "slug": "practice-optimizing-diffusion-model",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 996,
+      "title": "可扩展部署架构",
+      "meta_title": "扩散模型的可扩展部署架构",
+      "meta_description": "构建可扩展的部署架构，使用容器、Kubernetes 和云端 GPU/无服务器资源。",
+      "number": 3,
+      "slug": "infrastructure-scalable-deployment",
+      "content": "在对扩散模型进行推理优化之后，下一步是构建其能够高效进行大规模运行的运行环境。本章将专注于构建必要的支撑体系。我们将介绍如何使用 Docker 等容器打包模型及其依赖项、使用 Kubernetes 等编排工具管理部署和扩展，以及配置云资源，包括 GPU 等专用硬件和无服务器计算选项。\n\n主要议题包括管理容器内的 GPU 资源、根据推理需求实现自动扩展，以及处理大型模型和生成数据时的存储考量。您将学习设计并实现能够处理可变负载同时管理计算资源的系统，专门处理 GPU 密集型扩散模型的需求。实践练习将指导您在 Kubernetes 集群上部署容器化模型。",
+      "sections": [
+        {
+          "id": 5404,
+          "title": "扩散模型Docker容器化",
+          "meta_title": "扩散模型与 Docker",
+          "meta_description": "将扩散模型及其依赖项打包到可移植的 Docker 容器中。",
+          "slug": "containerizing-diffusion-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5407,
+          "title": "容器中的 GPU 资源管理",
+          "meta_title": "Docker/Kubernetes 中的 GPU 管理",
+          "meta_description": "配置容器以有效获取和使用 GPU 资源。",
+          "slug": "gpu-resource-management-containers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5411,
+          "title": "使用 Kubernetes 进行编排",
+          "meta_title": "Kubernetes 用于扩散模型部署",
+          "meta_description": "在 Kubernetes 上部署容器化扩散模型以实现可伸缩性和弹性。",
+          "slug": "kubernetes-diffusion-deployment",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5414,
+          "title": "管理 Kubernetes 中的 GPU 节点",
+          "meta_title": "Kubernetes 集群中的 GPU 节点管理",
+          "meta_description": "配置带有 GPU 节点的 Kubernetes 集群并处理设备插件的需求。",
+          "slug": "managing-gpu-nodes-kubernetes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5417,
+          "title": "推理工作负载的自动扩缩容策略",
+          "meta_title": "扩散模型推理的自动扩缩容",
+          "meta_description": "实施基于自定义指标（例如GPU利用率、队列长度）的水平Pod自动扩缩容（HPA）。",
+          "slug": "autoscaling-inference-workloads",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5421,
+          "title": "无服务器GPU推理选项",
+          "meta_title": "用于扩散模型的无服务器GPU",
+          "meta_description": "评估并使用提供GPU加速推理的无服务器平台。",
+          "slug": "serverless-gpu-inference",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5425,
+          "title": "模型与数据的存储考量",
+          "meta_title": "大型模型及生成数据的存储",
+          "meta_description": "应对与存储大型模型检查点及生成图片/数据相关的难题。",
+          "slug": "storage-considerations-models-data",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5429,
+          "title": "动手实践：在 Kubernetes 上部署",
+          "meta_title": "实践：在 K8s 上部署扩散模型",
+          "meta_description": "在支持 GPU 的 Kubernetes 集群上部署容器化的扩散模型服务。",
+          "slug": "practice-deploying-kubernetes",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 999,
+      "title": "构建可伸缩的推理API",
+      "meta_title": "构建用于扩散模型的可伸缩推理API",
+      "meta_description": "设计与实现健壮的API，以高效地处理扩散模型的推理请求。",
+      "number": 4,
+      "slug": "building-scalable-inference-apis",
+      "content": "在对模型进行推理优化并建立可伸缩的基础设施之后，重点转向通过明确定义的接口来展现模型的功能。本章讨论构建应用程序编程接口 (API)，这些API专门用于高效地大规模处理扩散模型的推理请求。\n\n您将考察适用于生成式任务的API设计模式，包括通过异步操作和消息队列来管理长时间运行的图像生成过程的策略。请求批处理以最大化GPU吞吐量、实现速率限制以保护服务、处理身份验证以及管理API版本等技术都将涉及。目标是让您掌握构建可靠高效的访问点所需的知识，以用于您已部署的扩散模型。",
+      "sections": [
+        {
+          "id": 5432,
+          "title": "生成式模型的API设计模式",
+          "meta_title": "生成式AI的API设计",
+          "meta_description": "设计RESTful或gRPC API以进行图像生成任务的最佳实践。",
+          "slug": "api-design-generative-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5435,
+          "title": "处理长时间运行的生成任务",
+          "meta_title": "处理长时间图像生成请求",
+          "meta_description": "实施Webhook或轮询等策略进行异步API操作。",
+          "slug": "handling-long-running-tasks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5439,
+          "title": "请求批处理技术",
+          "meta_title": "推理请求批处理",
+          "meta_description": "通过批处理传入的推理请求，提高GPU利用率。",
+          "slug": "request-batching-techniques",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5442,
+          "title": "实现请求队列",
+          "meta_title": "扩散模型的请求队列",
+          "meta_description": "使用消息队列（例如，RabbitMQ，SQS）管理推理工作负载和缓冲请求。",
+          "slug": "implementing-request-queues",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5447,
+          "title": "速率限制与节流",
+          "meta_title": "API速率限制与节流",
+          "meta_description": "使用速率限制策略保护推理服务免受过载。",
+          "slug": "rate-limiting-throttling",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5450,
+          "title": "认证与授权",
+          "meta_title": "保护生成式AI API安全",
+          "meta_description": "为API请求的认证和授权实施安全措施。",
+          "slug": "authentication-authorization-apis",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5453,
+          "title": "API 版本管理策略",
+          "meta_title": "机器学习模型的API版本管理",
+          "meta_description": "随时间推移管理推理API的更改和更新。",
+          "slug": "api-versioning-strategies",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5455,
+          "title": "动手实践：构建推理API",
+          "meta_title": "实践：构建扩散模型API",
+          "meta_description": "开发一个简单的Web API（例如，使用FastAPI）来提供扩散模型服务。",
+          "slug": "practice-building-inference-api",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1002,
+      "title": "监控和维护已部署模型",
+      "meta_title": "监控和维护已部署扩散模型",
+      "meta_description": "实践MLOps方法，监控生产环境中扩散模型的性能、成本和质量。",
+      "number": 5,
+      "slug": "monitoring-maintaining-deployed-models",
+      "content": "成功部署扩散模型是第一步；在生产环境中保持其健康和效率是一个持续过程。本章将重点转向模型上线后的运行管理。\n\n你将学习有效监控已部署扩散模型的必要方法。我们将研究如何识别和跟踪重要的性能指标，包括生成延迟 ($L_{gen}$)、请求吞吐量 ($T_{req}$)、错误率以及GPU使用率 ($U_{gpu}$) 等硬件使用情况。我们将涉及设置全面的日志和追踪来诊断问题，使用常见的监控工具和平台，以及建立检测性能退化或输出质量变化的方法。此外，还将讨论管理基础设施成本和使用CI/CD原则实施安全模型更新流程的策略。本章结束后，你将明白如何使你的规模化扩散模型部署平稳可靠地运行。",
+      "sections": [
+        {
+          "id": 5457,
+          "title": "扩散模型部署的核心指标",
+          "meta_title": "扩散模型监控的指标",
+          "meta_description": "识别并追踪指标：延迟、吞吐量、错误率、GPU使用率、成本。",
+          "slug": "metrics-diffusion-deployment",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5460,
+          "title": "设置日志和追踪",
+          "meta_title": "扩散推理的日志和追踪",
+          "meta_description": "实施结构化日志和分布式追踪，用于排查问题和性能分析。",
+          "slug": "logging-tracing-diffusion",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5461,
+          "title": "监控工具与平台",
+          "meta_title": "监控工具 (Prometheus, Grafana, CloudWatch)",
+          "meta_description": "使用Prometheus、Grafana、Datadog或云提供商服务等工具进行监控。",
+          "slug": "monitoring-tools-platforms",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5463,
+          "title": "检测性能下降",
+          "meta_title": "机器学习中的性能下降检测",
+          "meta_description": "用于识别更新后运行缓慢或错误率增加的策略。",
+          "slug": "detecting-performance-regressions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5465,
+          "title": "监控生成质量",
+          "meta_title": "监控扩散模型输出质量",
+          "meta_description": "通过自动化或人工反馈循环评估生成图像质量的技术。",
+          "slug": "monitoring-generation-quality",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5467,
+          "title": "成本监控与预警",
+          "meta_title": "机器学习推理的云成本监控",
+          "meta_description": "追踪基础设施成本并设置预算超支预警。",
+          "slug": "cost-monitoring-alerting",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5469,
+          "title": "模型再训练与更新策略",
+          "meta_title": "已部署模型的再训练与更新",
+          "meta_description": "实施CI/CD流水线以安全地更新生产环境中的扩散模型。",
+          "slug": "model-retraining-update-strategies",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5471,
+          "title": "动手实践：建立监控",
+          "meta_title": "实践：监控已部署的模型",
+          "meta_description": "为已部署的服务配置基本监控（例如，指标抓取、简单仪表盘）。",
+          "slug": "practice-setting-up-monitoring",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1004,
+      "title": "高级部署技术",
+      "meta_title": "高级扩散模型部署技术",
+      "meta_description": "涵盖多区域部署、A/B测试、高级成本优化以及特定硬件的使用。",
+      "number": 6,
+      "slug": "advanced-deployment-techniques",
+      "content": "基于前面学过的部署方法，本章解决大规模运行扩散模型时经常遇到的更复杂的运行要求。你将学习到一些技术，用于在地理上分散模型，通过多区域架构以降低延迟并提高可用性。我们将介绍安全引入变更的方法，例如对新模型版本或采样参数进行A/B测试。此外，本章还提出用于成本优化的高级策略，包括有效使用竞价实例以及减轻其中断影响的方法。最后，我们将分析具体的运行挑战，例如管理冷启动延迟以及配置适合扩散模型推理长时间处理的负载均衡。",
+      "sections": [
+        {
+          "id": 5473,
+          "title": "多区域与全球部署策略",
+          "meta_title": "低延迟的多区域部署",
+          "meta_description": "设计在多个地理区域部署扩散模型的架构。",
+          "slug": "multi-region-global-deployment",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5475,
+          "title": "金丝雀发布与 A/B 测试模型",
+          "meta_title": "扩散模型与采样器的 A/B 测试",
+          "meta_description": "通过金丝雀发布和 A/B 测试，安全推出新模型版本或生成参数。",
+          "slug": "canary-ab-testing-models",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5477,
+          "title": "高级成本优化策略",
+          "meta_title": "高级推理成本优化",
+          "meta_description": "使用竞价实例、优化实例类型和智能自动扩缩容等方法。",
+          "slug": "advanced-cost-optimization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5479,
+          "title": "处理 GPU 故障和竞价实例中断",
+          "meta_title": "处理 GPU 故障和竞价中断",
+          "meta_description": "构建可处理硬件故障和可抢占实例的容错系统。",
+          "slug": "handling-gpu-failures-spot-interruptions",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5480,
+          "title": "优化数据传输成本",
+          "meta_title": "优化数据传输成本",
+          "meta_description": "减少模型数据和生成图片传输相关成本的方法。",
+          "slug": "optimizing-data-transfer-costs",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5481,
+          "title": "无服务器和容器环境中的冷启动",
+          "meta_title": "管理扩散模型的冷启动",
+          "meta_description": "解决加载大型扩散模型时冷启动带来的延迟问题。",
+          "slug": "cold-starts-serverless-containers",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5482,
+          "title": "有状态/长时间任务的负载均衡策略",
+          "meta_title": "长时间推理任务的负载均衡",
+          "meta_description": "为可能长时间运行的图像生成请求有效配置负载均衡器。",
+          "slug": "load-balancing-long-tasks",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

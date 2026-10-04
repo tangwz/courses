@@ -1,0 +1,61 @@
+{
+  "id": 8516,
+  "title": "动手实践：实现 LoRA 配置",
+  "meta_title": "实践：实现 LoRA",
+  "meta_description": "将 PEFT 配置应用于基础 SLM，为参数高效训练做好准备。",
+  "content": "<p>将低秩自适应（Low-Rank Adaptation）的数学原理转化为可运行的 Python 代码，需要使用 Hugging Face 的 <code>peft</code> 和 <code>transformers</code> 库。这包括加载基础语言模型、应用 4 位量化 (quantization)，并将 LoRA 适配器附加到特定的神经网络 (neural network)层。这一过程为训练模型做好准备，同时将显存 (VRAM)消耗严格控制在消费级硬件的限制范围内。</p>\n<h3>安装所需的库</h3>\n<p>在编写实现脚本之前，请确保您的环境已安装必要的库。该实现依赖于用于加载模型的 <code>transformers</code>、用于量化 (quantization)的 <code>bitsandbytes</code> 以及用于应用适配器的 <code>peft</code>。</p>\n<pre><code class=\"language-python\"># PEFT 配置的标准导入\nimport torch\nfrom transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig\nfrom peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model\n</code></pre>\n<h3>使用 QLoRA 加载基础模型</h3>\n<p>为了最大化内存效率，您应该以 4 位精度加载基础模型。这会显著减少冻结的基础模型权重 (weight)的内存占用。您可以使用 <code>BitsAndBytesConfig</code> 类来配置此行为。</p>\n<pre><code class=\"language-python\">bnb_config = BitsAndBytesConfig(\n    load_in_4bit=True,\n    bnb_4bit_use_double_quant=True,\n    bnb_4bit_quant_type=\"nf4\",\n    bnb_4bit_compute_dtype=torch.bfloat16\n)\n</code></pre>\n<p>在此配置中，<code>load_in_4bit</code> 指示库将权重压缩为 4 位整数。<code>bnb_4bit_quant_type</code> 设置为 <code>nf4</code>，代表 NormalFloat 4-bit，这是一种适用于正态分布模型权重的优化数据类型。<code>bnb_4bit_compute_dtype</code> 规定虽然权重以 4 位存储，但在前向和反向传播 (backpropagation)过程中的实际数学运算将以 <code>bfloat16</code> 进行，以保持数值稳定性。</p>\n<p>定义好配置后，您可以将模型和分词 (tokenization)器 (tokenizer)加载到内存中。</p>\n<pre><code class=\"language-python\">model_id = \"your-chosen-slm-path\"\n\ntokenizer = AutoTokenizer.from_pretrained(model_id)\nmodel = AutoModelForCausalLM.from_pretrained(\n    model_id,\n    quantization_config=bnb_config,\n    device_map=\"auto\"\n)\n</code></pre>\n<h3>为参数 (parameter)高效训练准备模型</h3>\n<p>以 4 位精度加载的模型不能直接进行适配器注入。您必须对其进行处理以确保训练循环保持稳定。<code>peft</code> 库提供了一个名为 <code>prepare_model_for_kbit_training</code> 的实用函数。</p>\n<p>该函数执行必要的结构调整。它将某些归一化 (normalization)层转换为 <code>float32</code> 以获得更好的稳定性，并使模型准备好使用梯度检查点（gradient checkpointing）。梯度检查点通过在反向传播 (backpropagation)期间重新计算某些激活值，而不是将它们全部存储在内存中，从而用计算量换取内存空间。</p>\n<pre><code class=\"language-python\">model.gradient_checkpointing_enable()\nmodel = prepare_model_for_kbit_training(model)\n</code></pre>\n<h3>定义 LoRA 配置</h3>\n<p>基础模型准备就绪后，下一步是使用 <code>LoraConfig</code> 对象定义低秩自适应的结构参数 (parameter)。这定义了新引入的权重 (weight)的形状以及它们的注入位置。</p>\n<pre><code class=\"language-python\">lora_config = LoraConfig(\n    r=8,\n    lora_alpha=16,\n    target_modules=[\"q_proj\", \"v_proj\"],\n    lora_dropout=0.05,\n    bias=\"none\",\n    task_type=\"CAUSAL_LM\"\n)\n</code></pre>\n<p>每个参数都决定了微调 (fine-tuning)数学更新的具体方面：</p>\n<ul>\n<li><code>r</code>：低秩矩阵的秩。秩为 8 意味着更新矩阵相对较小。增加 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>r</mi></mrow><annotation encoding=\"application/x-tex\">r</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">r</span></span></span></span> 会为模型提供更多可训练参数和更强的学习新模式的能力，但也会增加内存使用量。</li>\n<li><code>lora_alpha</code>：LoRA 权重的缩放因子。标准做法是将 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>α</mi></mrow><annotation encoding=\"application/x-tex\">\\alpha</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0037em;\">α</span></span></span></span> 设置为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>r</mi></mrow><annotation encoding=\"application/x-tex\">r</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">r</span></span></span></span> 值的两倍。</li>\n<li><code>target_modules</code>：指定哪些 Transformer 层接收适配器。针对自注意力 (self-attention)机制 (attention mechanism)中的查询投影（<code>q_proj</code>）和值投影（<code>v_proj</code>）是一个标准基准，通常能产生不错的效果。</li>\n<li><code>lora_dropout</code>：引入 5% 的概率在训练步骤中忽略某个适配器权重。这起到正则化 (regularization)的作用，防止在小型指令数据集上产生过拟合 (overfitting)。</li>\n<li><code>task_type</code>：指定任务目标。对于文本生成，这设置为因果语言建模。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ladu80\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=filled, fontname=\"Helvetica\", color=\"#adb5bd\"]; Base [label=\"预训练语言模型\", fillcolor=\"#e9ecef\"]; QuantConfig [label=\"BitsAndBytesConfig\\n(4位量化)\", fillcolor=\"#bac8ff\"]; FrozenModel [label=\"准备好的冻结模型\", fillcolor=\"#91a7ff\"]; LoraConf [label=\"LoraConfig\\n(参数与目标)\", fillcolor=\"#ffec99\"]; PeftModel [label=\"PEFT 模型\\n(已附加可训练适配器)\", fillcolor=\"#b2f2bb\"]; Base -> QuantConfig; QuantConfig -> FrozenModel; LoraConf -> PeftModel; FrozenModel -> PeftModel; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ladu80\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将标准预训练 (pre-training)语言模型转换为适用于监督训练的内存高效型 PEFT 模型所需的操作序列。</p>\n</blockquote>\n<h3>应用适配器</h3>\n<p>最后一步是将加载的模型与定义的配置合并。<code>get_peft_model</code> 函数接收庞大的冻结模型，并将微小的、可训练的适配器矩阵拼接到指定的目标模块中。</p>\n<pre><code class=\"language-python\">peft_model = get_peft_model(model, lora_config)\npeft_model.print_trainable_parameters()\n</code></pre>\n<p>运行 <code>print_trainable_parameters()</code> 将直接在控制台输出摘要。对于一个拥有 70 亿个参数 (parameter)的普通小型语言模型，对注意力投影应用秩为 8 的配置通常会产生大约 400 万到 1000 万个可训练参数。这意味着更新的模型权重 (weight)不足总量的 0.2%。优化器现在只需跟踪这一小部分网络的优化状态，使整个训练流水线能够轻松装入消费级显存 (VRAM)中。</p>",
+  "slug": "hands-on-practical-implementing-lora",
+  "updates": [],
+  "references": [
+    {
+      "id": 22855,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2106.09685",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍 LoRA 方法的原始研究论文，为秩分解矩阵提供了数学基础。",
+      "order": 1,
+      "created_at": "2026-03-18T03:04:53.107343Z",
+      "updated_at": "2026-03-18T04:01:56.951876Z"
+    },
+    {
+      "id": 22856,
+      "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+      "author": "Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "36",
+      "pages": "10088-10115",
+      "url": "https://arxiv.org/abs/2305.14314",
+      "doi": "10.48550/arXiv.2305.14314",
+      "note": "4比特量化（NF4）的奠基性论文，介绍了代码实现中 bitsandbytes 与 PEFT 的集成方式。",
+      "order": 2,
+      "created_at": "2026-03-18T03:04:53.110084Z",
+      "updated_at": "2026-03-18T04:01:55.694643Z"
+    },
+    {
+      "id": 22857,
+      "title": "PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods",
+      "author": "Sourab Mangrulkar, Sylvain Gugger, Lysandre Debut, Younes Belkada, Sayak Paul, Benjamin Bossan",
+      "year": "2022",
+      "publisher": "Hugging Face",
+      "journal": "Hugging Face Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/huggingface/peft",
+      "doi": "",
+      "note": "Hugging Face PEFT 库的官方文档，涵盖了 LoraConfig 和 get_peft_model 的具体实现。",
+      "order": 3,
+      "created_at": "2026-03-18T03:04:53.112439Z",
+      "updated_at": "2026-03-18T04:01:55.607176Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

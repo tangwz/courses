@@ -1,0 +1,61 @@
+{
+  "id": 5138,
+  "title": "主要构成：模型、提示词、输出解析器",
+  "meta_title": "LangChain 主要构成：模型、提示词、解析器",
+  "meta_description": "了解 LangChain 应用的基本组成部分。",
+  "content": "<p>LangChain 围绕模型、提示词 (prompt)和输出解析器这三个主要组成部分来组织与大型语言模型 (LLM) 的交互。在 Python 中构建有效的 LLM 工作流，需要了解这些组成部分如何运行和相互配合。可以将它们视为构建 LLM 应用的必要成分。</p>\n<h3>模型：语言引擎接口</h3>\n<p>在 LangChain 中，<code>模型</code>是一个抽象层，提供了一个标准化接口，用于与各种语言模型进行交互。这种设计使得您可以在不同的模型提供方（如 OpenAI、Anthropic、Cohere 或通过 Hugging Face 的开源模型）之间切换，只需极少的代码改动。LangChain 区分两种主要类型的语言模型：</p>\n<ol>\n<li><strong>LLMs</strong>：这些封装了接受字符串输入并返回字符串输出的模型。它们适合直接的文本补全任务。</li>\n<li><strong>聊天模型</strong>：这些封装了以一系列聊天消息作为输入并返回聊天消息作为输出的模型。这种基于消息的结构更符合对话式人工智能，并允许在交互历史中存在不同的角色（系统、人类、AI），通常能为基于对话的任务带来更好的表现。</li>\n</ol>\n<p>实例化模型通常很简单。例如，要使用 OpenAI 聊天模型，您首先需要确保已安装所需的库（<code>pip install langchain-openai</code>）并配置好您的 API 密钥（如第 2 章所述）。然后，您可以导入并初始化模型：</p>\n<pre><code class=\"language-python\">from langchain_openai import ChatOpenAI\n\n# 假设 OPENAI_API_KEY 环境变量已设置\nllm = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0.7)\n\n# 示例用法（我们将在后面介绍调用方法）\n# response = llm.invoke(\"讲个短笑话。\")\n# print(response.content)\n</code></pre>\n<p>这里的 <code>temperature</code> 参数 (parameter)控制输出的随机性；较低的值使输出更确定，而较高的值会增加创造性（和潜在的可变性）。不同的模型和提供方提供了各种参数来微调 (fine-tuning)模型行为。LangChain 提供的主要优势就是这种一致的接口，无论底层模型提供方是谁。</p>\n<h3>提示词 (prompt)：引导模型的响应</h3>\n<p>模型提供了引擎，而 <code>提示词</code> 则是您操控引擎的方式。提示词是提供给语言模型的输入，经过精心设计以引出期望的响应。LangChain 提供了强大的工具来构建和管理提示词，主要通过 <code>PromptTemplate</code> 对象实现。</p>\n<p><code>PromptTemplate</code> 有助于根据用户输入或其他变量创建动态提示词。它定义了一个包含变量占位符的模板字符串，并指定预期哪些变量。</p>\n<p>考虑一个任务，您希望 LLM 用简单的语言解释一个编程原理。您可以创建这样一个模板：</p>\n<pre><code class=\"language-python\">from langchain_core.prompts import PromptTemplate\n\ntemplate_string = \"\"\"\n用简单的语言解释编程原理 '{concept}'，适合初学者。\n聚焦核心思想，并提供一个简短、易于理解的类比。\n\"\"\"\n\nprompt_template = PromptTemplate(\n    input_variables=[\"concept\"],\n    template=template_string\n)\n\n# 使用特定概念格式化提示词\nformatted_prompt = prompt_template.format(concept=\"API\")\n\n# print(formatted_prompt)\n# 输出将是模板字符串，其中 {concept} 被 \"API\" 替换\n</code></pre>\n<p>这种模板化方法使您的代码更清晰，并让您轻松管理发送给 LLM 的复杂指令。LangChain 也支持更复杂的模板化，例如用于聊天模型的 <code>ChatPromptTemplate</code>，它将输入构造为一系列消息（例如，设置上下文 (context)的系统消息，后跟包含查询的人类消息）。</p>\n<pre><code class=\"language-python\">from langchain_core.prompts import ChatPromptTemplate\nfrom langchain_core.messages import SystemMessage, HumanMessage\n\nchat_template = ChatPromptTemplate.from_messages([\n    (\"system\", \"你是一个乐于助人的助手，能够简单地解释复杂主题。\"),\n    (\"human\", \"解释 '{concept}' 的含义。\")\n])\n\nformatted_messages = chat_template.format_messages(concept=\"Machine Learning\")\n\n# print(formatted_messages)\n# 输出: [SystemMessage(content='...'), HumanMessage(content='解释 'Machine Learning' 的含义。')]\n</code></pre>\n<p>有效的提示词使用是艺术与科学的结合，第 8 章将讨论各种技术。LangChain 的提示词工具提供了以编程方式实现这些技术所需的结构。</p>\n<h3>输出解析器：结构化 LLM 的输出</h3>\n<p>LLM 通常生成非结构化文本。然而，应用程序通常需要特定格式的数据，例如 JSON、列表或自定义 Python 对象。<code>输出解析器</code> 是 LangChain 组件，旨在弥合这一差距。它们执行两个主要功能：</p>\n<ol>\n<li><strong>指导模型</strong>：它们可以在发送给 LLM 的提示词 (prompt)中附加格式化指令，引导其生成解析器能理解的输出。</li>\n<li><strong>解析输出</strong>：它们获取 LLM 的原始文本输出，并将其解析为期望的结构。</li>\n</ol>\n<p>LangChain 提供了几种内置的输出解析器，包括：</p>\n<ul>\n<li><code>CommaSeparatedListOutputParser</code>：将逗号分隔的列表解析为 Python 列表。</li>\n<li><code>StructuredOutputParser</code>：根据预定义模式提取信息，返回一个字典。</li>\n<li><code>PydanticOutputParser</code>：将输出解析为 Pydantic 模型，提供强类型和验证。</li>\n</ul>\n<p>我们用一个简化的 <code>PydanticOutputParser</code> 场景来说明。假设您希望 LLM 从一个句子中提取一个人的姓名和年龄，并将其作为结构化对象返回。</p>\n<pre><code class=\"language-python\">from langchain_core.pydantic_v1 import BaseModel, Field\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\nfrom langchain.output_parsers import PydanticOutputParser\n\n# 1. 定义期望的数据结构\nclass PersonInfo(BaseModel):\n    name: str = Field(description=\"这个人的姓名\")\n    age: int = Field(description=\"这个人的年龄\")\n\n# 2. 设置解析器\nparser = PydanticOutputParser(pydantic_object=PersonInfo)\n\n# 3. 创建一个包含格式化指令的提示词模板\nprompt = PromptTemplate(\n    template=\"从文本中提取相关信息。\\n{format_instructions}\\n文本：{query}\\n\",\n    input_variables=[\"query\"],\n    partial_variables={\"format_instructions\": parser.get_format_instructions()}\n)\n\n# 4. 实例化模型\nmodel = ChatOpenAI(model=\"gpt-3.5-turbo\", temperature=0)\n\n# 5. 格式化输入\ninput_query = \"安娜 30 岁，是一名软件工程师。\"\nformatted_input = prompt.format_prompt(query=input_query)\n\n# 6. 获取模型的输出（字符串形式）\n# 在实际的链中，这会自动发生，但这里展示步骤：\n# output_str = model.invoke(formatted_input).content\n\n# 7. 解析输出（示例输出字符串可能看起来像 JSON）\n# example_output_str = '{\"name\": \"安娜\", \"age\": 30}'\n# parsed_output = parser.parse(example_output_str)\n\n# print(parsed_output)\n# 输出: name='安娜' age=30\n</code></pre>\n<p>在此示例中，<code>parser.get_format_instructions()</code> 生成文本，告知 LLM 如何格式化其响应（通常要求与 <code>PersonInfo</code> 模式匹配的 JSON）。然后，解析器使用这种期望的格式将 LLM 的字符串输出转换为 <code>PersonInfo</code> 对象。</p>\n<h3>连接各个组成部分</h3>\n<p>这三个组成部分，模型、提示词 (prompt)和输出解析器，很少单独工作。LangChain 的强大之处在于将它们连接起来，通常以被称为“链”的序列形式。最基本的流程涉及接收用户输入，使用 <code>PromptTemplate</code> 对其进行格式化，发送给 <code>模型</code>，然后使用 <code>输出解析器</code> 结构化 <code>模型</code> 的响应。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-ghq4yn\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  UserInput [label=\"用户输入 / 变量\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  Prompt [label=\"提示词模板\\n(格式化输入)\", style=filled, fillcolor=\"#a5d8ff\"];\n  Model [label=\"LLM / 聊天模型\\n(生成响应)\", style=filled, fillcolor=\"#b2f2bb\"];\n  Parser [label=\"输出解析器\\n(结构化响应)\", style=filled, fillcolor=\"#ffec99\"];\n  StructuredOutput [label=\"结构化输出\\n(例如, JSON, 对象)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n\n  UserInput -> Prompt [label=\" 注入 \"];\n  Prompt -> Model [label=\" 发送格式化提示词 \"];\n  Model -> Parser [label=\" 发送原始文本输出 \"];\n  Parser -> StructuredOutput [label=\" 返回解析后的数据 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-ghq4yn\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个基本的 LangChain 流程：输入由提示词模板格式化，由模型处理，结果由输出解析器结构化。</p>\n</blockquote>\n<p>掌握这些主要组成部分非常重要。它们是 LangChain 更高级构造（例如复杂的链和代理）的重要支撑，我们将在下一章讨论。通过了解如何与模型对接、精心设计有效的提示词以及解析产生的输出，您就获得了构建可预测的 LLM 驱动应用程序的必要工具。</p>",
+  "slug": "langchain-core-concepts",
+  "updates": [],
+  "references": [
+    {
+      "id": 13145,
+      "title": "LangChain Documentation: Core Components & LangChain Expression Language (LCEL)",
+      "author": "LangChain Development Team",
+      "year": "Accessed 2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/",
+      "doi": "",
+      "note": "LangChain官方文档，涵盖了LangChain工作流的基本构建模块，包括模型、提示词和输出解析器，以及它们如何通过LCEL结合使用。",
+      "order": 1,
+      "created_at": "2025-09-05T08:28:46.002776Z",
+      "updated_at": "2025-09-09T03:25:38.201134Z"
+    },
+    {
+      "id": 13146,
+      "title": "Language Models are Few-Shot Learners",
+      "author": "Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.14165",
+      "doi": "10.48550/arXiv.2005.14165",
+      "note": "这篇开创性论文展示了大型语言模型的能力，尤其是它们对提示词的敏感性以及通过少量示例执行任务的能力，为提示工程奠定了基础。",
+      "order": 2,
+      "created_at": "2025-09-05T08:28:46.006967Z",
+      "updated_at": "2025-09-09T03:25:41.606951Z"
+    },
+    {
+      "id": 13147,
+      "title": "Prompt Engineering Guide",
+      "author": "Learn Prompting Community",
+      "year": "Accessed 2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.promptingguide.ai/",
+      "doi": "",
+      "note": "一个全面的社区驱动资源，用于理解和应用提示工程技术，与有效引导LLM响应高度相关。",
+      "order": 3,
+      "created_at": "2025-09-05T08:28:46.010398Z",
+      "updated_at": "2025-09-09T03:25:55.519561Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

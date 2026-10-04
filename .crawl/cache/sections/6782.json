@@ -1,0 +1,45 @@
+{
+  "id": 6782,
+  "title": "修改循环行为：`break` 和 `continue`",
+  "meta_title": "Julia 循环控制：`break` 和 `continue` 语句",
+  "meta_description": "学习如何使用 Julia 中的 `break` 和 `continue` 语句来控制循环的执行。",
+  "content": "<p><code>for</code> 和 <code>while</code> 循环非常适合重复代码块，但有时你需要调整它们标准的执行流程。Julia 提供了两个语句，<code>break</code> 和 <code>continue</code>，它们在循环中提供了这种更精细的控制。这些语句允许你根据循环内部判断的条件，分别提前退出循环或跳过特定的迭代。</p>\n<h3>使用 <code>break</code> 提前退出循环</h3>\n<p><code>break</code> 语句会立即终止遇到它的最内层循环（<code>for</code> 或 <code>while</code>）。一旦 <code>break</code> 执行，程序的控制流会跳到已终止循环后的第一个语句。当你寻找某个东西并在找到后立即停止时，或者当某个条件使得后续迭代不必要或可能出错时，这非常有用。</p>\n<p>设想一个情况，你正在遍历一个数字列表，以找到满足特定条件的第一个数字。一旦找到，继续检查剩余的数字将是低效的。</p>\n<pre><code class=\"language-julia\">println(\"寻找第一个大于5的数字：\")\nnumbers = [1, 3, 7, 2, 8, 4]\nfound_item = nothing # 使用 'nothing' 表示尚未找到\n\nfor num in numbers\n    println(\"正在检查: \", num)\n    if num > 5\n        found_item = num\n        println(\"找到 \", num, \"! 正在退出循环。\")\n        break # 现在退出循环\n    end\n    println(num, \" 不大于5。\")\nend\n\nif found_item !== nothing\n    println(\"第一个大于5的数字是: \", found_item)\nelse\n    println(\"没有找到大于5的数字。\")\nend\n</code></pre>\n<p>在这个例子中，当 <code>num</code> 变为 <code>7</code> 时，条件 <code>num > 5</code> 为真。<code>found_item</code> 被更新，打印一条消息，然后 <code>break</code> 被执行。循环立即终止，<code>num</code> 为 <code>7</code> 时的 <code>println(num, \" 不大于5。\")</code> 行被跳过，<code>num</code> 为 <code>2</code>、<code>8</code> 和 <code>4</code> 的所有后续迭代也都被跳过。程序随后执行循环后的 <code>if found_item !== nothing</code> 检查。</p>\n<p><code>break</code> 语句通过减少冗余操作，可以使你的循环更高效。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-hne7fb\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    start [label=\"进入循环\", shape=ellipse, fillcolor=\"#96f2d7\"];\n    loop_condition [label=\"循环条件为真？\", shape=diamond, fillcolor=\"#a5d8ff\"];\n    loop_body_start [label=\"执行循环体（第一部分）\"];\n    break_condition [label=\"&#39;break&#39; 条件为真？\", shape=diamond, fillcolor=\"#ffc9c9\"];\n    execute_break [label=\"break\", fillcolor=\"#ff8787\"];\n    loop_body_end [label=\"执行循环体（第二部分，如果没有break）\"];\n    update_iteration [label=\"更新循环变量 / 进入下一个迭代\"];\n    exit_loop [label=\"退出循环\", shape=ellipse, fillcolor=\"#96f2d7\"];\n\n    start -> loop_condition;\n    loop_condition -> loop_body_start [label=\"是\"];\n    loop_condition -> exit_loop [label=\"否\"];\n    loop_body_start -> break_condition;\n    break_condition -> execute_break [label=\"是\"];\n    break_condition -> loop_body_end [label=\"否\"];\n    execute_break -> exit_loop;\n    loop_body_end -> update_iteration;\n    update_iteration -> loop_condition;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-hne7fb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>带有 <code>break</code> 语句的循环的运行流程。如果 <code>break</code> 条件达成，循环终止。</p>\n</blockquote>\n<h3>使用 <code>continue</code> 跳过迭代</h3>\n<p><code>continue</code> 语句跳过当前循环迭代的剩余部分，并立即进入下一个迭代。与 <code>break</code> 不同，<code>continue</code> 不会完全终止循环。当你在一个迭代中遇到需要忽略或以不同方式处理的特定情况时，它很有用，而且不影响后续迭代。</p>\n<p>假设你只想对列表中所有的正数求和，忽略任何负数或零。</p>\n<pre><code class=\"language-julia\">println(\"只对正数求和：\")\ndata = [10, -2, 5, 0, -8, 12]\nsum_of_positives = 0\n\nfor x in data\n    print(\"正在处理: \", x)\n    if x &#x3C;= 0\n        println(\"... 跳过（非正数）。\")\n        continue # 跳过本次迭代的剩余部分，进入下一个 x\n    end\n    sum_of_positives += x\n    println(\"... 已添加。当前和: \", sum_of_positives)\nend\n\nprintln(\"正数的总和: \", sum_of_positives)\n</code></pre>\n<p>在这段代码中，当 <code>x</code> 是 <code>-2</code>、<code>0</code> 或 <code>-8</code> 时，条件 <code>x &#x3C;= 0</code> 为真。<code>println</code> 消息表明跳过，并且 <code>continue</code> 被执行。这导致程序立即跳到 <code>data</code> 中的下一个值（例如，从 <code>-2</code> 跳到 <code>5</code>）。<code>sum_of_positives += x</code> 行以及随后的 <code>println</code> 对于这些非正数都不会被执行。循环继续，直到 <code>data</code> 中的所有项都被处理完毕。</p>\n<p><code>continue</code> 语句通过允许你绕过某些迭代中逻辑的特定部分，有助于简化循环体。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-187zhmv\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    start [label=\"进入循环\", shape=ellipse, fillcolor=\"#96f2d7\"];\n    loop_condition [label=\"循环条件为真？\", shape=diamond, fillcolor=\"#a5d8ff\"];\n    loop_body_start [label=\"执行循环体（第一部分）\"];\n    continue_condition [label=\"&#39;continue&#39; 条件为真？\", shape=diamond, fillcolor=\"#ffec99\"];\n    execute_continue [label=\"continue\", fillcolor=\"#ffd43b\"];\n    loop_body_end [label=\"执行循环体（第二部分，如果没有continue）\"];\n    update_iteration [label=\"更新循环变量 / 进入下一个迭代\"];\n    exit_loop [label=\"退出循环\", shape=ellipse, fillcolor=\"#96f2d7\"];\n\n    start -> loop_condition;\n    loop_condition -> loop_body_start [label=\"是\"];\n    loop_condition -> exit_loop [label=\"否\"];\n    loop_body_start -> continue_condition;\n    continue_condition -> execute_continue [label=\"是\"];\n    continue_condition -> loop_body_end [label=\"否\"];\n    execute_continue -> update_iteration;\n    loop_body_end -> update_iteration;\n    update_iteration -> loop_condition;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-187zhmv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>带有 <code>continue</code> 语句的执行流程。如果 <code>continue</code> 条件达成，当前迭代的剩余部分被跳过，循环进入下一个迭代。</p>\n</blockquote>\n<p><code>break</code> 和 <code>continue</code> 都是管理循环执行的有效手段。然而，要谨慎使用它们。过度使用，特别是在复杂的嵌套循环中，有时会降低代码可读性。通常，重构循环条件或使用更多的 <code>if-elseif-else</code> 块可以使代码更清晰。尽管如此，当使用得当，<code>break</code> 和 <code>continue</code> 可以通过直接体现所需的控制流，使你的代码更简洁和高效。</p>",
+  "slug": "modifying-loop-behavior-break-continue",
+  "updates": [],
+  "references": [
+    {
+      "id": 20923,
+      "title": "Control Flow",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/manual/control-flow/",
+      "doi": "",
+      "note": "Julia官方文档直接而全面地解释了控制流语句，包括`break`和`continue`。",
+      "order": 1,
+      "created_at": "2025-09-06T14:12:31.547645Z",
+      "updated_at": "2025-09-10T02:54:24.647486Z"
+    },
+    {
+      "id": 20924,
+      "title": "Think Julia: How to Think Like a Computer Scientist",
+      "author": "Ben Lauwens, Allen B. Downey",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 7: Iteration",
+      "url": "https://onlinebooks.library.upenn.edu/webbin/book/lookupid?key=olbp81797",
+      "doi": "",
+      "note": "一本介绍性的书籍，涵盖了Julia中的基本编程概念，其中有专门介绍循环和修改其执行流程的部分。",
+      "order": 2,
+      "created_at": "2025-09-06T14:12:31.552261Z",
+      "updated_at": "2025-09-10T02:54:52.191118Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

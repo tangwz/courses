@@ -1,0 +1,61 @@
+{
+  "id": 3935,
+  "title": "安全的输出处理与解析",
+  "meta_title": "LangChain 中的安全输出处理",
+  "meta_description": "确保 LLM 输出得到安全处理，防止下游漏洞。",
+  "content": "<p>对大型语言模型（LLM）生成的输出进行妥善处理，对于构建安全的应用来说非常重要。LLM 基于从大量数据集中学到的模式生成文本，但它们缺乏对安全影响、上下文 (context)边界或其生成内容对下游系统可能造成的影响的内在理解。原始的LLM输出绝不应被盲目信任，也不应直接传递给敏感功能或执行环境。安全的输出处理和解析构成了抵御LLM应用特有多种漏洞的主要防御层。</p>\n<h3>未经检查的LLM输出的风险</h3>\n<p>未能妥善处理和解析LLM输出，可能使您的应用面临重要风险：</p>\n<ol>\n<li><strong>间接提示注入：</strong> LLM 可能生成包含恶意指令的输出，这些指令旨在操纵处理链中更下游的另一个 LLM 或系统。例如，一个LLM在总结用户反馈时，可能无意中将用户尝试注入提示的行为包含在摘要中，这进而可能影响后续的分析LLM。</li>\n<li><strong>数据泄露：</strong> 模型虽经训练以避免泄露特定训练数据实例，但若提示得当，或敏感数据在生成过程中无意中被包含在上下文 (context)窗口中，它们有时仍会生成包含敏感模式、占位符甚至重构片段的文本。</li>\n<li><strong>不安全的代码执行：</strong> 如果您的应用期望 LLM 提供代码（例如 SQL、Python、JavaScript）并直接执行，输出中的恶意或仅仅是错误的代码可能导致严重后果，比如数据损坏、未经授权的访问或远程代码执行（RCE）。</li>\n<li><strong>拒绝服务 (DoS)：</strong> LLM 可能生成过长、计算成本高（例如复杂的正则表达式）或深度嵌套的结构化数据（如 JSON），从而使解析器、数据库或其他下游组件过载，导致服务不可用。</li>\n<li><strong>逻辑缺陷和可被利用的格式：</strong> 输出可能语法正确但在逻辑上存在缺陷，这种缺陷可能被后续处理步骤利用。例如，如果解析过于宽松，生成带有意外字段或数据类型的 JSON 可能会绕过业务逻辑检查。格式错误的输出也可能在错误处理不足时直接导致下游解析器崩溃。</li>\n</ol>\n<h3>安全输出解析和处理的策略</h3>\n<p>实施输出处理涉及多层防御，通常会结合 LangChain 的解析组件和自定义验证逻辑。</p>\n<h4>使用结构化输出解析器</h4>\n<p>在可能的情况下，引导 LLM 以可预测的结构化格式（如 JSON 或 YAML）生成输出，并使用 LangChain 专为这些格式设计的 <code>OutputParser</code> 实现。这比解析自由格式文本要安全得多。</p>\n<ul>\n<li>\n<p><strong><code>PydanticOutputParser</code>：</strong> 这通常是处理复杂数据结构的首选。定义一个表示预期输出模式的 Pydantic 模型。解析器将尝试将 LLM 的输出字符串解析为此模型的一个实例，自动验证您的 Pydantic 模型中定义的数据类型、必填字段和约束。</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\nfrom langchain_core.output_parsers import PydanticOutputParser\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\n\n# 定义您期望的数据结构。\nclass AnalysisResult(BaseModel):\n    sentiment: str = Field(description=\"文本情感（积极、消极、中性）\")\n    key_topics: list[str] = Field(description=\"讨论的主要话题列表\")\n    confidence_score: float = Field(description=\"置信度评分（0.0到1.0）\")\n\n# 设置解析器\nparser = PydanticOutputParser(pydantic_object=AnalysisResult)\n\n# 定义带有格式指令的提示\nprompt_template = \"\"\"\nAnalyze the following text:\n{user_text}\n\n{format_instructions}\n\"\"\"\n\nprompt = PromptTemplate(\n    template=prompt_template,\n    input_variables=[\"user_text\"],\n    partial_variables={\"format_instructions\": parser.get_format_instructions()},\n)\n\n# 示例用法（假设 'llm' 是一个已初始化的 LLM）\n# llm = ChatOpenAI(model=\"gpt-4o\", temperature=0)\n# chain = prompt | llm | parser\n# try:\n#     result: AnalysisResult = chain.invoke({\"user_text\": \"LangChain is great for building LLM apps!\"})\n#     print(f\"情感: {result.sentiment}, 置信度: {result.confidence_score}\")\n# except Exception as e:\n#     print(f\"输出解析失败: {e}\")\n\n</code></pre>\n</li>\n<li>\n<p><strong><code>SimpleJsonOutputParser</code> / <code>JsonOutputParser</code>：</strong> 适用于 Pydantic 可能过于繁琐的简单 JSON 对象，不过 <code>PydanticOutputParser</code> 通常提供更强的验证功能。</p>\n</li>\n<li>\n<p><strong>自定义解析器：</strong> 对于内置解析器未涵盖的独特格式或复杂验证逻辑，可继承自 <code>BaseOutputParser</code> 并实现自定义的 <code>parse</code> 逻辑（如第1章所述）。</p>\n</li>\n</ul>\n<h4>实施严格的验证和净化</h4>\n<p>仅有解析是不够的。务必验证解析后输出的<em>内容</em>和<em>结构</em>。</p>\n<ul>\n<li><strong>模式强制：</strong> <strong>严格</strong>使用 Pydantic 或类似的模式验证库。拒绝任何不符合预期结构、类型或值约束（例如，枚举值、数值范围）的输出。</li>\n<li><strong>内容净化：</strong> 即使结构正确，内容也可能有害。\n<ul>\n<li><strong>HTML/脚本转义：</strong> 如果输出将用于网页渲染，务必转义 HTML 和 JavaScript 内容（例如，使用 Python 的 <code>html.escape</code>）以防止跨站脚本（XSS）攻击。</li>\n<li><strong>黑名单/白名单：</strong> 过滤掉已知的危险模式（例如，如果输出影响数据库查询，则过滤掉像 <code>DROP TABLE</code>、<code>UNION SELECT</code> 这样的 SQL 注入关键词），或仅允许预期模式/值。这对自由格式文本来说有难度，但对结构化数据字段而言更可行。</li>\n<li><strong>控制字符移除：</strong> 清除可能在下游系统中引发问题的意外控制字符。</li>\n</ul>\n</li>\n<li><strong>长度和复杂度限制：</strong> 对输出字符串的大小或解析结构（例如，列表最大长度、JSON 最大嵌套深度）的复杂度/深度施加合理限制，以降低 DoS 风险。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1tb65tw\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    LLM [label=\"LLM\\n生成\", shape=cylinder, style=filled, fillcolor=\"#a5d8ff\"];\n    RawOutput [label=\"原始文本输出\", style=filled, fillcolor=\"#ffec99\"];\n    Parser [label=\"结构化解析器\\n(例如 PydanticOutputParser)\", style=filled, fillcolor=\"#d0bfff\"];\n    Validator [label=\"模式与内容\\n验证\", style=filled, fillcolor=\"#b2f2bb\"];\n    Sanitizer [label=\"输出净化\\n(例如转义)\", style=filled, fillcolor=\"#ffd8a8\"];\n    SafeOutput [label=\"安全、已解析的输出\", shape=ellipse, style=filled, fillcolor=\"#96f2d7\"];\n    ErrorHandler [label=\"错误处理\\n(日志、重试、回退)\", style=filled, fillcolor=\"#ffc9c9\"];\n\n    LLM -> RawOutput;\n    RawOutput -> Parser [label=\" 尝试解析 \"];\n    Parser -> Validator [label=\" 已解析数据 \"];\n    Parser -> ErrorHandler [label=\" 解析失败 \"];\n    Validator -> Sanitizer [label=\" 有效数据 \"];\n    Validator -> ErrorHandler [label=\" 无效数据 \"];\n    Sanitizer -> SafeOutput [label=\" 已净化数据 \"];\n    Sanitizer -> ErrorHandler [label=\" 净化失败 / 风险内容 \"];\n    SafeOutput -> \"下游系统\" [style=dashed];\n    ErrorHandler -> \"下游系统\" [label=\" 安全回退 / 错误 \", style=dashed];\n\n    subgraph cluster_processing {\n        label = \"安全输出处理流程\";\n        style=filled;\n        fillcolor=\"#e9ecef\";\n        Parser; Validator; Sanitizer; ErrorHandler; SafeOutput;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1tb65tw\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个安全处理 LLM 输出的典型流程，在使用到下游系统之前，包含解析、验证、净化和错误处理。</p>\n</blockquote>\n<h4>安全处理代码生成</h4>\n<p>如果您的应用依赖 LLM 生成可执行代码：</p>\n<ul>\n<li>绝不要在原始 LLM 输出上使用 <code>eval()</code> 或类似功能。</li>\n<li><strong>使用沙盒：</strong> 在严格控制、隔离的环境中执行生成的代码（例如，具有受限权限的专用 Docker 容器、WebAssembly 运行时或专门的代码执行沙盒服务）。监测资源使用（CPU、内存、网络）以防止 DoS 攻击。</li>\n<li><strong>限制权限：</strong> 仅授予执行环境最低必需的权限。例如，如果生成 SQL，尽可能使用只读数据库用户。</li>\n<li><strong>静态分析：</strong> 在执行前对生成的代码执行静态分析，以检测潜在的恶意模式，如果目标语言允许的话。</li>\n</ul>\n<h4>使用具备函数/工具调用功能的模型</h4>\n<p>现代 LLM 通常支持通过函数或工具调用功能生成结构化输出（如第2章所述）。提示模型使用带有已定义模式的特定工具/函数，可促使它生成符合该模式的输出（通常是 JSON）。LangChain 通过 <code>with_structured_output</code> 方法抽象了这些能力，允许您直接将 Pydantic 模型或模式传递给 LLM，以原生方式强制执行输出格式。这相较于仅在主提示文本中进行指令，显著提升了获得结构化、可解析输出的可靠性。</p>\n<h4>实施错误处理</h4>\n<p>解析和验证有时<em>会</em>失败。请为此做好计划：</p>\n<ul>\n<li><strong>捕获异常：</strong> 将解析和验证逻辑包裹在 <code>try...except</code> 块中，以优雅地处理错误，而非导致程序崩溃。</li>\n<li><strong>重试机制：</strong> 实施 LangChain 的 <code>OutputFixingParser</code> 等策略，它尝试将错误反馈给 LLM 以修正输出。请谨慎使用重试，因为它们会增加延迟和成本。</li>\n<li><strong>回退：</strong> 定义安全的回退行为：返回默认值、请求用户澄清或返回特定错误消息。避免回退到处理原始、未解析的输出。</li>\n<li><strong>日志记录：</strong> 记录所有解析/验证失败，包括有问题的输出（如果包含敏感信息，可能需要截断或净化）和错误详情。这对于监控和调试至关重要（与第5章内容关联）。</li>\n</ul>\n<p>将 LLM 输出视为不可信输入是安全 LLM 应用开发的一个基本原则。结合结构化解析、<strong>严格</strong>验证、上下文 (context)感知的净化、安全执行实践（如果适用）以及<strong>全面的</strong>错误处理，您可以显著降低与不可预测或潜在恶意模型生成相关的风险。这种多层方法可确保集成到应用逻辑中的输出既可用又安全。</p>",
+  "slug": "secure-output-handling",
+  "updates": [],
+  "references": [
+    {
+      "id": 11060,
+      "title": "OWASP Top 10 for Large Language Model Applications",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://llm.owasp.org/",
+      "doi": "",
+      "note": "全面概述了LLM应用中最关键的安全风险，包括提示注入、不安全的输出处理和数据泄露。",
+      "order": 1,
+      "created_at": "2025-09-05T06:58:21.670782Z",
+      "updated_at": "2025-09-08T12:48:24.078606Z"
+    },
+    {
+      "id": 11062,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and Pydantic Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/",
+      "doi": "",
+      "note": "Pydantic的官方文档，Pydantic是一个数据验证和设置管理库，广泛用于定义和验证结构化数据，这对于安全的LLM输出解析至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T06:58:21.677971Z",
+      "updated_at": "2025-09-08T12:48:21.451573Z"
+    },
+    {
+      "id": 11063,
+      "title": "LangChain Expression Language (LCEL) - Output Parsers",
+      "author": "LangChain Developers",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/how_to/output_parsers/",
+      "doi": "",
+      "note": "LangChain的官方文档，详细介绍了各种输出解析器，包括PydanticOutputParser，以及在LangChain应用中实现结构化输出和错误处理的技术。",
+      "order": 4,
+      "created_at": "2025-09-05T06:58:21.680999Z",
+      "updated_at": "2025-09-08T12:48:42.664583Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3864,
+  "title": "处理工具错误与智能体恢复",
+  "meta_title": "智能体错误处理与恢复",
+  "meta_description": "使智能体在工具执行期间更能应对故障的策略。",
+  "content": "<p>智能体本质上通过工具与外部系统进行交互。无论是查询数据库、调用网络API、执行代码还是访问文件系统，这些交互都发生在智能体核心逻辑的受控环境之外。因此，在生产环境中的智能体系统中，工具执行是故障的常见原因。API可能不可用，数据库可能遇到连接问题，输入可能无效，或者工具本身可能包含程序错误。构建能够妥善处理这些不可避免的错误并尝试恢复的智能体，对于创建可靠的应用是极其重要的。</p>\n<p>如果没有可靠的错误处理，智能体在遇到单个工具故障时可能会完全崩溃，过早放弃任务，或者更糟的是，进入一个无效的循环。本节将阐述在LangChain智能体中检测、管理和从工具错误中恢复的策略。</p>\n<h3>工具执行错误的来源</h3>\n<p>故障可能源于智能体与工具交互生命周期中的不同阶段：</p>\n<ol>\n<li><strong>网络与连接：</strong> 超时、DNS解析失败，或无法访问支持工具的服务（例如，外部API）。</li>\n<li><strong>外部服务错误：</strong> 工具成功连接到服务，但服务返回错误（例如，HTTP 4xx客户端错误，如 <code>401 Unauthorized</code>、<code>429 Too Many Requests</code>，或HTTP 5xx服务器错误）。</li>\n<li><strong>输入验证问题：</strong> LLM为工具生成的参数 (parameter)不符合工具预期的架构或限制。这对于结构化工具尤其相关。</li>\n<li><strong>输出处理失败：</strong> 工具成功执行，但返回的数据格式异常，智能体的解析逻辑或LLM无法正确解读。</li>\n<li><strong>工具内部逻辑错误：</strong> 实现工具功能的自定义代码中存在错误，导致在执行过程中出现未处理的异常。</li>\n<li><strong>资源限制：</strong> 工具执行可能超出分配的时间、内存或其他资源限制。</li>\n</ol>\n<h3>在LangChain中检测并报告错误</h3>\n<p>LangChain提供了捕获和报告源自工具的错误的机制。但是，默认情况下，工具中未处理的异常通常会停止智能体的执行。为了避免这种情况并让智能体能够恢复，您必须在工具实例或类上明确启用错误处理。</p>\n<p>当工具上的 <code>handle_tool_error</code> 设置为 <code>True</code>（或指定自定义错误处理函数）时，执行器会捕获执行方法（例如 <code>_run</code>）引发的异常。随后，它将异常（通常是 <code>ToolException</code>）格式化为一个观察字符串。此字符串会在下一个推理 (inference)步骤中返回给LLM，告知智能体其尝试的操作失败了。</p>\n<p>例如，如果一个用于获取天气数据的工具因网络超时而失败，提供给LLM的观察结果可能如下所示：</p>\n<pre><code class=\"language-text\">观察结果：错误：工具'weather_api'失败，错误信息：连接天气服务API时请求超时。\n思考：天气API工具因超时而失败。我应该再试一次，也许使用更短的查询，或者考虑是否有其他方法获取信息。如果再次失败，我可能需要告知用户目前无法获取天气。\n</code></pre>\n<p>有效的错误检测也依赖于全面的日志记录和追踪。观察智能体的执行轨迹，包括输入、思考、工具调用以及由此产生的错误或观察结果，是调试智能体为何失败以及它是如何尝试处理这种情况的根本。像LangSmith（第五章会提及）这样的工具对于在开发和生产环境中捕获和分析这些轨迹非常有价值。</p>\n<h3>智能体内部的错误处理策略</h3>\n<p>一旦检测到错误，智能体就需要一个处理策略。主要机制是让LLM根据观察结果中提供的错误信息进行推理 (inference)。</p>\n<h4>告知LLM</h4>\n<p>对于简单情况，默认行为通常已足够。LLM接收错误信息并将其纳入其推理过程。根据其指令和错误上下文 (context)，它可能会决定：</p>\n<ul>\n<li><strong>重试同一工具：</strong> 如果错误表明是输入问题，可能会修改参数 (parameter)后重试。</li>\n<li><strong>使用不同工具：</strong> 如果有替代方案可以达成相同的子目标。</li>\n<li><strong>请求澄清：</strong> 如果错误模糊不清或需要用户输入。</li>\n<li><strong>修改其计划：</strong> 如果失败的步骤表明当前方法存在缺陷。</li>\n<li><strong>报告失败：</strong> 如果它已用尽所有选项或判定任务无法完成。</li>\n</ul>\n<p>传递回LLM的错误信息质量非常重要。过分冗长的堆栈跟踪会占用宝贵的上下文窗口空间，并可能使LLM感到困惑。简洁、信息丰富的错误信息通常更受欢迎。您可以通过对智能体或执行器进行子类化，或通过封装工具来定制工具异常的格式。</p>\n<h4>智能体执行器错误处理参数</h4>\n<p><code>AgentExecutor</code> 自身提供了一些参数来影响错误处理：</p>\n<ul>\n<li><code>handle_parsing_errors</code>：此参数专门处理当智能体无法解析LLM输出（例如，LLM的响应未能正确格式化所需的工具名称或参数）时发生的错误。它不直接处理<em>来自</em>工具执行本身的错误。将其设置为 <code>True</code> 会向LLM提供一个默认的错误消息。您还可以提供一个自定义字符串或函数，以获得更具体的反馈，引导LLM修正其输出格式。</li>\n<li><code>max_iterations</code>：限制智能体可以执行的步骤数（LLM调用 + 工具调用）。这可以防止无限循环，这种循环有时可能由失败的工具调用和无效重试的循环触发。</li>\n<li><code>max_execution_time</code>：为整个智能体运行设置时间限制，防止智能体无限期地卡住，这可能是由于重复的工具超时导致的。</li>\n</ul>\n<h4>实现自定义错误处理逻辑</h4>\n<p>为了获得更精细的控制，您可以实现自定义错误处理，而不是仅仅依赖LLM对错误字符串的反应。</p>\n<ol>\n<li>\n<p><strong>重试机制：</strong> 使用重试装饰器或函数封装您的工具执行逻辑。这对于网络中断或临时速率限制等瞬时问题特别有效。指数退避（在每次重试之间逐步延长等待时间）是一种常规做法。</p>\n<pre><code class=\"language-python\">import time\nimport random\nfrom typing import Type\nfrom requests.exceptions import RequestException\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field\n\ndef retry_with_backoff(retries=3, initial_delay=1, backoff_factor=2, jitter=0.1):\n    def decorator(func):\n        def wrapper(*args, **kwargs):\n            delay = initial_delay\n            for i in range(retries):\n                try:\n                    return func(*args, **kwargs)\n                except RequestException as e: # 示例：捕获特定的瞬时错误\n                    if i == retries - 1:\n                        raise # 重新抛出最后一个异常\n                    # 对延迟应用抖动\n                    actual_delay = delay + random.uniform(-jitter * delay, jitter * delay)\n                    time.sleep(actual_delay)\n                    delay *= backoff_factor\n                except Exception as e:\n                    # Handle non-retryable errors differently or re-raise\n                    raise e\n        return wrapper\n    return decorator\n\nclass SearchInput(BaseModel):\n    query: str = Field(description=\"要搜索的查询字符串\")\n\nclass MyApiTool(BaseTool):\n    name: str = \"my_api\"\n    description: str = \"调用我的特殊API\"\n    args_schema: Type[BaseModel] = SearchInput\n    \n    # 必要：将其设置为True，以便将错误呈现给LLM而不是导致崩溃\n    handle_tool_error: bool = True\n\n    @retry_with_backoff(retries=3, initial_delay=1)\n    def _run(self, query: str) -> str:\n        # 替换为使用'requests'或类似库的实际API调用逻辑\n        print(f\"正在尝试使用查询：{query} 进行API调用\")\n        # 模拟潜在故障\n        if random.random() &#x3C; 0.5:\n             raise RequestException(\"模拟的网络错误\")\n        return f\"API对查询：{query} 调用成功\"\n\n    # 注意：如果未实现_arun，LangChain将默认在线程池中运行_run。\n\n# 在智能体中使用时，将涉及创建实例：\n# tool = MyApiTool()\n</code></pre>\n</li>\n<li>\n<p><strong>备用工具：</strong> 设计智能体的提示或逻辑，以识别特定错误类型并明确尝试替代工具。例如，如果主要 <code>search_internal_docs</code> 工具失败，智能体可能会被指示尝试更通用的 <code>web_search</code> 工具。</p>\n</li>\n<li>\n<p><strong>优雅降级：</strong> 如果工具失败且没有替代方案，智能体可以被设计为提供部分响应，或指示特定信息不可用，而不是导致整个任务失败。</p>\n</li>\n<li>\n<p><strong>结构化错误报告：</strong> 不要只返回字符串，让工具在失败时返回结构化错误对象。这需要在智能体循环中进行自定义处理，但允许LLM或自定义逻辑根据错误代码或类型做出更准确的反应。</p>\n</li>\n</ol>\n<h3>设计有弹性的工具</h3>\n<p>主动预防错误通常比被动处理错误更有效。在开发自定义工具时：</p>\n<ul>\n<li><strong>添加输入验证：</strong> 在工具定义中（特别是对于 <code>StructuredTool</code>），使用Pydantic等库来验证LLM提供的参数 (parameter)，<em>在</em>尝试执行之前。如果验证失败，返回信息丰富的错误消息。</li>\n<li><strong>处理预期异常：</strong> 在工具代码中，使用 <code>try...except</code> 块封装外部调用（API、数据库查询）。捕获特定异常（例如 <code>requests.exceptions.Timeout</code>、<code>sqlalchemy.exc.OperationalError</code>），并返回清晰、可操作的错误消息，而不是让原始异常冒泡上浮。</li>\n<li><strong>提供清晰的错误消息：</strong> 确保工具返回的错误消息对LLM（或自定义逻辑）来说足够清晰，以便理解失败的性质。</li>\n<li><strong>考虑幂等性：</strong> 如果工具会修改外部状态，请考虑在可能的情况下使其幂等（可以安全重试而不会产生意外副作用）。</li>\n</ul>\n<h3>智能体恢复流程示例</h3>\n<p>一个涉及错误处理的典型流程可能如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1aqpvwi\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled];\n    edge [fontname=\"sans-serif\", color=\"#495057\"];\n\n    Start [label=\"智能体启动\"];\n    Think [label=\"LLM思考/\\n规划下一步\"];\n    ChooseTool [label=\"LLM选择工具\\n及参数\"];\n    ExecuteTool [label=\"执行工具\"];\n    HandleError [label=\"处理错误\"];\n    UpdateState [label=\"更新智能体状态/\\n暂存区\"];\n    End [label=\"智能体结束/\\n最终答案\"];\n    Fail [label=\"报告失败/\\n警报\"];\n\n    Start -> Think;\n    Think -> ChooseTool;\n    ChooseTool -> ExecuteTool;\n    ExecuteTool -> UpdateState [label=\"成功\"];\n    ExecuteTool -> HandleError [label=\"失败\", color=\"#f03e3e\", fontcolor=\"#f03e3e\"];\n    UpdateState -> Think [label=\"需要更多步骤\"];\n    UpdateState -> End [label=\"任务完成\"];\n\n    HandleError -> ExecuteTool [label=\"重试工具\", color=\"#fd7e14\", fontcolor=\"#fd7e14\"];\n    HandleError -> ChooseTool [label=\"尝试备用工具\", color=\"#fab005\", fontcolor=\"#fab005\"];\n    HandleError -> UpdateState [label=\"告知LLM错误\\n(继续推理)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n    HandleError -> Fail [label=\"无法恢复\", color=\"#d6336c\", fontcolor=\"#d6336c\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1aqpvwi\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>智能体执行流程，包含潜在的工具故障和错误处理分支。</p>\n</blockquote>\n<p>有效地处理工具错误，能将智能体从一个脆弱的原型转变为一个更具弹性的系统，能够应对交互中的不确定性。通过结合向LLM提供信息丰富的错误反馈、策略性地运用执行器参数 (parameter)、自定义处理逻辑（如重试）以及妥善设计工具，您可以显著提升LangChain智能体在生产环境中的可靠性和表现。</p>",
+  "slug": "agent-error-handling",
+  "updates": [],
+  "references": [
+    {
+      "id": 10919,
+      "title": "LangChain Agents Documentation",
+      "author": "LangChain Contributors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5ZTb9SMV6L6IHFNepRuHhVrXc6J90Xu3uVX9EAtZnEyCzIG8KHGwf0o_JjKIQxMrHqAP25MARSduFF82BMYNYJPXDRPRc8rYY70SePdqIFN0PMylRWs59-hVT2V723ueq8urVXyppIaS8k6zNAh33yQfNOA==",
+      "doi": "",
+      "note": "提供关于构建和配置代理的全面信息，包括AgentExecutor参数（如handle_parsing_errors和max_iterations）的详细信息，以及框架内工具交互和错误报告的机制。",
+      "order": 1,
+      "created_at": "2025-09-05T06:55:56.612904Z",
+      "updated_at": "2025-09-08T12:43:59.056197Z"
+    },
+    {
+      "id": 10920,
+      "title": "Release It!: Design and Deploy Production-Ready Software",
+      "author": "Michael T. Nygard",
+      "year": "2018",
+      "publisher": "The Pragmatic Programmers",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pragprog.com/titles/mcrelease2/",
+      "doi": "",
+      "note": "一本关于构建健壮、有弹性和容错软件系统的基础著作，涵盖重试、超时和断路器等模式，与通用错误处理和恢复策略直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T06:55:56.626120Z",
+      "updated_at": "2025-09-08T12:43:46.125244Z"
+    },
+    {
+      "id": 10922,
+      "title": "Building Microservices: Designing Fine-Grained Systems",
+      "author": "Sam Newman",
+      "year": "2021",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=Pj9gEAAAQBAJ",
+      "doi": "",
+      "note": "讨论了服务及其交互的设计，包括错误处理、弹性模式和健壮的API契约，适用于将工具视为代理系统内的组件。",
+      "order": 4,
+      "created_at": "2025-09-05T06:55:56.631581Z",
+      "updated_at": "2025-09-08T12:43:54.871913Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

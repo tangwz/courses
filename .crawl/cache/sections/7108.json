@@ -1,0 +1,61 @@
+{
+  "id": 7108,
+  "title": "基于神经网络的声学模型介绍",
+  "meta_title": "神经网络声学模型",
+  "meta_description": "简要介绍现代深度学习和神经网络如何取代了传统的高斯混合模型-隐马尔可夫模型系统。",
+  "content": "<p>高斯混合模型（GMM）和隐马尔可夫模型（HMM）的结合多年来一直是语音识别的主力，但它们也存在一定的局限性。例如，GMM难以有效建模语音数据中高度复杂和非线性的模式。HMM对状态独立性的假设，对于人类语言的流畅性而言也可能过于严格。</p>\n<p>为应对这些挑战，研究人员转向了一种更有效的工具：神经网络 (neural network)。神经网络是一种计算系统，它学习识别数据中的模式。对于声学建模来说，这意味着它能够以比传统方法高得多的准确度，学习音频特征到音素之间的精密映射。</p>\n<h3>混合模型的兴起</h3>\n<p>第一个主要转变是**混合深度神经网络 (neural network)-隐马尔可夫模型（DNN-HMM）**的出现。在这种架构中，经典系统中的GMM组件被深度神经网络（DNN）取代，但HMM得以保留。</p>\n<p>其运作方式如下：</p>\n<ol>\n<li><strong>输入：</strong> 与之前一样，模型接收一系列音频特征向量 (vector)，例如MFCC。</li>\n<li><strong>DNN处理：</strong> 每个特征向量都被输入到DNN中。网络通过多个相互连接的节点层处理此输入。</li>\n<li><strong>输出：</strong> DNN的输出层旨在为每个可能的音素生成概率。对于给定的音频帧，网络计算其对应于/s/、/t/、/a/等的可能性。这与GMM执行的任务相同，但DNN能够以更高的精度学习特征与音素之间的关系。</li>\n<li><strong>HMM序列化：</strong> 由DNN生成的音素概率序列随后传递给HMM。HMM的作用不变。它使用这些概率来找出随时间变化的最可能音素序列，就像它处理来自GMM的概率一样。</li>\n</ol>\n<p>这种混合方法结合了DNN卓越的模式识别能力和HMM处理序列数据的经证实能力，从而显著降低了词错误率。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-11xv2x\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"];\n    edge [fontname=\"Arial\"];\n\n    subgraph cluster_gmm_hmm {\n        label = \"传统GMM-HMM模型\";\n        style=dashed;\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n        \n        gmm_feat [label=\"音频特征\\n(MFCCs)\"];\n        gmm [label=\"GMM\", fillcolor=\"#96f2d7\", shape=ellipse];\n        hmm1 [label=\"HMM\", fillcolor=\"#ffd8a8\"];\n        \n        gmm_feat -> gmm [label=\"针对每帧\"];\n        gmm -> hmm1 [label=\"音素\\n概率\"];\n    }\n\n    subgraph cluster_dnn_hmm {\n        label = \"混合DNN-HMM模型\";\n        style=dashed;\n        bgcolor=\"#e9ecef\";\n        node [fillcolor=\"#a5d8ff\"];\n\n        dnn_feat [label=\"音频特征\\n(MFCCs)\"];\n        dnn [label=\"DNN\", fillcolor=\"#96f2d7\", shape=ellipse];\n        hmm2 [label=\"HMM\", fillcolor=\"#ffd8a8\"];\n\n        dnn_feat -> dnn [label=\"针对每帧\"];\n        dnn -> hmm2 [label=\"音素\\n概率\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-11xv2x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>传统GMM-HMM架构与混合DNN-HMM模型的比较图。DNN取代GMM，为HMM提供更准确的音素概率。</p>\n</blockquote>\n<h3>现代端到端架构</h3>\n<p>混合模型的成功仅仅是个开始。现代自动语音识别（ASR）系统已转向<strong>端到端模型</strong>，这进一步简化了流程。端到端系统不再为声学建模、发音和语言建模设置独立组件，而是使用单一的大型神经网络 (neural network)来学习从音频到文本的直接映射。</p>\n<p>此方面有两种重要的方案：</p>\n<ul>\n<li><strong>连接时序分类（CTC）：</strong> 基于CTC的模型被训练为直接从输入音频特征输出文本字符序列。它们巧妙地处理了语音中字符之间没有清晰边界的事实，自动学习将音频与转录文本对齐 (alignment)。</li>\n<li><strong>注意力机制 (attention mechanism)模型：</strong> 这些模型通常使用“编码器-解码器”结构，首先“听取”整个音频序列以创建高级表示（这是编码器的任务）。然后，解码器每次生成一个词或字符，同时“关注”音频中与所生成文本最相关的部分。</li>\n</ul>\n<p>这些端到端系统已成为领先语音识别的标准，因为它们通常能提供更高的准确度，并大幅简化训练和部署过程。在本课程的后续部分，当我们讨论声学模型时，你可以假定它们基于神经网络，因为这反映了该领域的当前情况。</p>",
+  "slug": "neural-network-acoustic-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 19473,
+      "title": "Deep Neural Networks for Acoustic Modeling in Speech Recognition",
+      "author": "Geoffrey Hinton, Li Deng, Dong Yu, George Dahl, Abdel-rahman Mohamed, Navdeep Jaitly, Andrew Senior, Vincent Vanhoucke, Patrick Nguyen, Tara N. Sainath, Brian Kingsbury",
+      "year": "2012",
+      "publisher": "IEEE",
+      "journal": "IEEE Signal Processing Magazine",
+      "volume": "29",
+      "pages": "82-97",
+      "url": "https://ieeexplore.ieee.org/document/6296526",
+      "doi": "10.1109/MSP.2012.2205597",
+      "note": "这篇基础论文展示了在混合HMM-DNN语音识别系统中，用深度神经网络取代高斯混合模型进行声学建模的有效性。",
+      "order": 1,
+      "created_at": "2025-09-06T13:08:22.482251Z",
+      "updated_at": "2025-09-10T03:53:24.079247Z"
+    },
+    {
+      "id": 19474,
+      "title": "Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks",
+      "author": "Alex Graves, Santiago Fernández, Faustino Gomez, Jürgen Schmidhuber",
+      "year": "2006",
+      "publisher": "ACM",
+      "journal": "Proceedings of the 23rd International Conference on Machine Learning",
+      "volume": "",
+      "pages": "369-376",
+      "url": "https://doi.org/10.1145/1143844.1143891",
+      "doi": "10.1145/1143844.1143891",
+      "note": "介绍了连接时序分类（CTC），一种用于训练循环神经网络标注未分段序列数据的方法，在端到端语音识别中应用广泛。",
+      "order": 2,
+      "created_at": "2025-09-06T13:08:22.486024Z",
+      "updated_at": "2025-09-10T03:53:35.841549Z"
+    },
+    {
+      "id": 19475,
+      "title": "Listen, Attend and Spell: A Neural Network for Large Vocabulary Conversational Speech Recognition",
+      "author": "William Chan, Navdeep Jaitly, Quoc V. Le, Oriol Vinyals",
+      "year": "2016",
+      "publisher": "IEEE",
+      "journal": "2016 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)",
+      "volume": "",
+      "pages": "4960-4964",
+      "url": "https://ieeexplore.ieee.org/document/7472659",
+      "doi": "10.1109/ICASSP.2016.7472659",
+      "note": "介绍了“听、注意和拼写”（LAS）模型，这是端到端语音识别中基于注意力的编码器-解码器架构的一个早期且有影响力的例子。",
+      "order": 3,
+      "created_at": "2025-09-06T13:08:22.488845Z",
+      "updated_at": "2025-09-10T03:53:31.463509Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

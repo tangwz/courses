@@ -1,0 +1,61 @@
+{
+  "id": 1815,
+  "title": "数据排序",
+  "meta_title": "Pandas DataFrame 数据排序",
+  "meta_description": "使用 `sort_index()` 和 `sort_values()` 按索引标签或列值对 DataFrame 进行排序。",
+  "content": "<p>为了进行有效的数据分析，按有意义的顺序排列数据通常是必要的一步。排序允许您按从低到高、字母顺序或根据自定义标准查看数据，使模式更容易发现，特定条目更容易找到。Pandas 提供了灵活的方法，可以根据索引标签或列中的实际值对数据进行排序。</p>\n<h3>按索引排序</h3>\n<p>有时，您需要根据行或列标签（即索引）排列数据。如果索引表示时间序列、有序类别，或者只是需要按字母或数字顺序排列，这会特别有用。<code>sort_index()</code> 方法可处理这种情况。</p>\n<p>我们从一个简单的 DataFrame 开始：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'col_b': [4, 7, 1, 8, 5],\n        'col_a': ['apple', 'banana', 'orange', 'apple', 'banana'],\n        'col_c': [10.0, np.nan, 20.0, 10.0, 15.0]}\ndf = pd.DataFrame(data, index=['R3', 'R1', 'R5', 'R2', 'R4'])\n\nprint(\"原始 DataFrame:\")\nprint(df)\n</code></pre>\n<pre><code class=\"language-text\">原始 DataFrame:\n    col_b   col_a  col_c\nR3      4   apple   10.0\nR1      7  banana    NaN\nR5      1  orange   20.0\nR2      8   apple   10.0\nR4      5  banana   15.0\n</code></pre>\n<p>请注意，行索引（<code>R3</code>、<code>R1</code>、<code>R5</code> 等）未按字母顺序排列。要根据索引标签对 DataFrame 行进行排序：</p>\n<pre><code class=\"language-python\">df_sorted_by_index = df.sort_index()\n\nprint(\"\\n按行索引排序的 DataFrame（升序）：\")\nprint(df_sorted_by_index)\n</code></pre>\n<pre><code class=\"language-text\">按行索引排序的 DataFrame（升序）：\n    col_b   col_a  col_c\nR1      7  banana    NaN\nR2      8   apple   10.0\nR3      4   apple   10.0\nR4      5  banana   15.0\nR5      1  orange   20.0\n</code></pre>\n<p>默认情况下，<code>sort_index()</code> 按升序排序。要按降序排序，请使用 <code>ascending=False</code> 参数 (parameter)：</p>\n<pre><code class=\"language-python\">df_sorted_by_index_desc = df.sort_index(ascending=False)\n\nprint(\"\\n按行索引排序的 DataFrame（降序）：\")\nprint(df_sorted_by_index_desc)\n</code></pre>\n<pre><code class=\"language-text\">按行索引排序的 DataFrame（降序）：\n    col_b   col_a  col_c\nR5      1  orange   20.0\nR4      5  banana   15.0\nR3      4   apple   10.0\nR2      8   apple   10.0\nR1      7  banana    NaN\n</code></pre>\n<p>您也可以通过列索引（列名）进行排序，通过指定 <code>axis=1</code>：</p>\n<pre><code class=\"language-python\">df_sorted_by_columns = df.sort_index(axis=1)\n\nprint(\"\\n按列索引排序的 DataFrame（升序）：\")\nprint(df_sorted_by_columns)\n</code></pre>\n<pre><code class=\"language-text\">按列索引排序的 DataFrame（升序）：\n     col_a  col_b  col_c\nR3   apple      4   10.0\nR1  banana      7    NaN\nR5  orange      1   20.0\nR2   apple      8   10.0\nR4  banana      5   15.0\n</code></pre>\n<p>与许多 Pandas 操作一样，<code>sort_index()</code> 默认情况下会返回一个新的已排序 DataFrame。如果您想直接修改原始 DataFrame，请使用 <code>inplace=True</code> 参数。使用 <code>inplace=True</code> 时请务必小心，因为它会覆盖您的原始数据结构。</p>\n<pre><code class=\"language-python\">df_copy = df.copy() # 在副本上操作以保留原始 df\ndf_copy.sort_index(inplace=True)\n\nprint(\"\\n按索引就地排序后的原始 DataFrame：\")\nprint(df_copy)\n</code></pre>\n<pre><code class=\"language-text\">按索引就地排序后的原始 DataFrame：\n    col_b   col_a  col_c\nR1      7  banana    NaN\nR2      8   apple   10.0\nR3      4   apple   10.0\nR4      5  banana   15.0\nR5      1  orange   20.0\n</code></pre>\n<h3>按值排序</h3>\n<p>更常见的情况是，您会希望根据一个或多个列中的值对 DataFrame 进行排序。<code>sort_values()</code> 方法用于此目的。<code>sort_values()</code> 最重要的参数 (parameter)是 <code>by</code>，它指定了用于排序的列名（或列名列表）。</p>\n<p>我们根据 <code>col_b</code> 中的值对原始 DataFrame <code>df</code> 进行排序：</p>\n<pre><code class=\"language-python\">df_sorted_by_col_b = df.sort_values(by='col_b')\n\nprint(\"\\n按 'col_b' 排序的 DataFrame（升序）：\")\nprint(df_sorted_by_col_b)\n</code></pre>\n<pre><code class=\"language-text\">按 'col_b' 排序的 DataFrame（升序）：\n    col_b   col_a  col_c\nR5      1  orange   20.0\nR3      4   apple   10.0\nR4      5  banana   15.0\nR1      7  banana    NaN\nR2      8   apple   10.0\n</code></pre>\n<p>同样，默认排序顺序是升序。使用 <code>ascending=False</code> 可进行降序排序：</p>\n<pre><code class=\"language-python\">df_sorted_by_col_b_desc = df.sort_values(by='col_b', ascending=False)\n\nprint(\"\\n按 'col_b' 排序的 DataFrame（降序）：\")\nprint(df_sorted_by_col_b_desc)\n</code></pre>\n<pre><code class=\"language-text\">按 'col_b' 排序的 DataFrame（降序）：\n    col_b   col_a  col_c\nR2      8   apple   10.0\nR1      7  banana    NaN\nR4      5  banana   15.0\nR3      4   apple   10.0\nR5      1  orange   20.0\n</code></pre>\n<p>您可以通过向 <code>by</code> 参数传递一个列名列表来通过多列进行排序。Pandas 将首先按列表中的第一列排序，然后使用第二列来处理并列情况，以此类推。</p>\n<p>我们先按 <code>col_a</code>（按字母顺序）排序，然后对于 <code>col_a</code> 值相同的行，再按 <code>col_b</code>（按数字顺序）排序：</p>\n<pre><code class=\"language-python\">df_sorted_by_multi = df.sort_values(by=['col_a', 'col_b'])\n\nprint(\"\\n按 'col_a' 然后按 'col_b' 排序的 DataFrame（升序）：\")\nprint(df_sorted_by_multi)\n</code></pre>\n<pre><code class=\"language-text\">按 'col_a' 然后按 'col_b' 排序的 DataFrame（升序）：\n    col_b   col_a  col_c\nR3      4   apple   10.0\nR2      8   apple   10.0\nR4      5  banana   15.0\nR1      7  banana    NaN\nR5      1  orange   20.0\n</code></pre>\n<p>请注意，带有“apple”的行在一起，并按 <code>col_b</code> 排序（4 然后 8），带有“banana”的行在一起，并按 <code>col_b</code> 排序（5 然后 7）。</p>\n<p>当通过多列排序时，您还可以为每列指定不同的排序顺序。将布尔值列表传递给 <code>ascending</code> 参数，与传递给 <code>by</code> 的列表相对应。</p>\n<p>我们按 <code>col_a</code> 升序和 <code>col_b</code> 降序排序：</p>\n<pre><code class=\"language-python\">df_sorted_by_multi_mixed = df.sort_values(by=['col_a', 'col_b'], ascending=[True, False])\n\nprint(\"\\n按 'col_a'（升序）然后按 'col_b'（降序）排序的 DataFrame：\")\nprint(df_sorted_by_multi_mixed)\n</code></pre>\n<pre><code class=\"language-text\">按 'col_a'（升序）然后按 'col_b'（降序）排序的 DataFrame：\n    col_b   col_a  col_c\nR2      8   apple   10.0\nR3      4   apple   10.0\nR1      7  banana    NaN\nR4      5  banana   15.0\nR5      1  orange   20.0\n</code></pre>\n<p>现在，对于“apple”，<code>col_b</code>=8 的行排在 <code>col_b</code>=4 的行之前。对于“banana”，<code>col_b</code>=7 的行排在 <code>col_b</code>=5 的行之前。</p>\n<h4>排序时处理缺失值</h4>\n<p>排序时缺失值 (<code>NaN</code>) 会怎样？默认情况下，<code>sort_values()</code> 会将 <code>NaN</code> 值放置在排序输出的<em>末尾</em>，无论排序是升序还是降序。您可以使用 <code>na_position</code> 参数控制此行为，该参数接受 <code>'first'</code> 或 <code>'last'</code>。</p>\n<p>我们对 <code>col_c</code>（包含 <code>NaN</code>）进行排序，并明确将 <code>NaN</code> 放在首位：</p>\n<pre><code class=\"language-python\">df_sorted_nan_first = df.sort_values(by='col_c', na_position='first')\n\nprint(\"\\n按 'col_c' 排序的 DataFrame，NaN 优先：\")\nprint(df_sorted_nan_first)\n</code></pre>\n<pre><code class=\"language-text\">按 'col_c' 排序的 DataFrame，NaN 优先：\n    col_b   col_a  col_c\nR1      7  banana    NaN\nR3      4   apple   10.0\nR2      8   apple   10.0\nR4      5  banana   15.0\nR5      1  orange   20.0\n</code></pre>\n<p>与 <code>sort_index()</code> 一样，<code>sort_values()</code> 也接受 <code>inplace=True</code> 参数以直接修改 DataFrame。</p>\n<p>排序是一种基本操作，用于组织和理解数据。无论是按索引标签排列行，还是根据列内容排序，<code>sort_index()</code> 和 <code>sort_values()</code> 方法都提供了必要的工具，为您的 DataFrames 带来结构。</p>",
+  "slug": "sorting-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 5564,
+      "title": "pandas.DataFrame.sort_values",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_values.html",
+      "doi": "",
+      "note": "提供按列值排序DataFrame的完整细节，包括`by`、`ascending`、`inplace`和`na_position`等参数。",
+      "order": 1,
+      "created_at": "2025-09-05T01:12:01.857262Z",
+      "updated_at": "2025-09-08T02:40:07.089019Z"
+    },
+    {
+      "id": 5565,
+      "title": "pandas.DataFrame.sort_index",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_index.html",
+      "doi": "",
+      "note": "展示按索引标签排序DataFrame的完整信息，涵盖`axis`、`ascending`和`inplace`等参数。",
+      "order": 2,
+      "created_at": "2025-09-05T01:12:01.861995Z",
+      "updated_at": "2025-09-08T02:40:05.779975Z"
+    },
+    {
+      "id": 5566,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "学习Pandas数据分析的参考资料，提供数据操作技巧（如DataFrame排序）的实用指南。第三版。",
+      "order": 3,
+      "created_at": "2025-09-05T01:12:01.866076Z",
+      "updated_at": "2025-09-08T02:40:08.091261Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

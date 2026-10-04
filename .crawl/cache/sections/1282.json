@@ -1,0 +1,61 @@
+{
+  "id": 1282,
+  "title": "模板匹配详解",
+  "meta_title": "模板匹配详解",
+  "meta_description": "学习一种在大图中找出模板图像出现位置的简单方法。",
+  "content": "<p>我们已经明确了目标：在图像中找出特定物体。但我们如何实际地告诉计算机去<em>找到</em>某个特定内容，比如一个特定标志或游戏角色，在一张大图中呢？一种最直接的方法称为<strong>模板匹配</strong>。</p>\n<p>想象你有一张你正在寻找的精确物体的小图——这就是你的<strong>模板</strong>。接着，你有一张大图——<strong>源图像</strong>——你怀疑这个物体可能藏在里面。模板匹配的工作方式很像你在堆满拼图碎片的桌子上寻找一块特定拼图：你拿起你已知的碎片（模板），系统地将其滑过整个桌面（源图像），在每个可能的位置检查它是否吻合。</p>\n<h3>滑动窗口方法</h3>\n<p>模板匹配的主要思路是<strong>滑动窗口</strong>。具体操作如下：</p>\n<ol>\n<li><strong>获取模板：</strong> 你从模板图像开始（例如，一个特定按钮的小图）。</li>\n<li><strong>放置到源图上：</strong> 你虚拟地将此模板放置到较大源图像的左上角。</li>\n<li><strong>比较：</strong> 算法直接将模板图像与当前其覆盖的源图像区域进行比较。它计算一个<strong>相似度分数</strong>，量化 (quantization)模板中的像素与下方源图像区域中的像素的匹配程度。高分表示匹配良好；低分表示匹配不佳。有不同的数学方法来计算此分数（例如比较像素差异或寻找相关性），但基本思路是衡量模板和当前区域的“相似程度”。</li>\n<li><strong>滑动：</strong> 算法随后将模板向右滑动一个像素（或几个像素），并重复比较，为这个新位置计算一个新的相似度分数。</li>\n<li><strong>扫描：</strong> 它继续沿当前行滑动模板，一旦到达行尾，它会向下移动一个像素（或几个像素），并开始滑动下一行。这样一直持续，直到模板与源图像中每个可能的区域位置都进行了比较。</li>\n<li><strong>找出最佳匹配：</strong> 随着模板的滑动，算法会记录为每个位置计算的所有相似度分数。找到最高相似度分数的位置被认为是最佳匹配——也就是模板模式最有可能出现在源图像中的位置。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1yp585q\" \n              data-graph-definition='digraph TemplateMatching { rankdir=LR; node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#adb5bd\", arrowhead=vee]; subgraph cluster_source { label = \"源图像\"; bgcolor=\"#e9ecef\"; style=filled; S [label=\"大图像区域\", shape=rect, width=2.5, height=1.5, style=dotted]; } subgraph cluster_template { label = \"模板\"; bgcolor=\"#d0bfff44\"; style=filled; T [label=\"目标模式\", shape=rect, width=1, height=0.75, color=\"#7048e8\", fontcolor=\"#7048e8\"]; } subgraph cluster_process { label = \"流程\"; bgcolor=\"#a5d8ff44\"; style=filled; Start [label=\"1. 放置模板\\n(左上角)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Compare [label=\"2. 比较像素\\n(计算相似度)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Store [label=\"3. 存储此位置\\n的分数\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Move [label=\"4. 滑动模板\\n(例如：右/下)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Repeat [label=\"5. 重复2-4步\\n遍历整个图像\", shape=ellipse, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; FindMax [label=\"6. 找出最高分数\\n的位置\", shape=diamond, style=filled, color=\"#15aabf\", fillcolor=\"#99e9f2\", fontcolor=\"#1098ad\"]; } T -> Start [style=invis]; Start -> Compare; Compare -> Store; Store -> Move; Move -> Repeat [label=\" 如果未完成\"]; Repeat -> Compare [label=\" 下一个位置\"]; Repeat -> FindMax [label=\" 如果完成\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1yp585q\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用滑动窗口方法的模板匹配流程。</p>\n</blockquote>\n<p>这个过程的结果通常可视化为一个<strong>结果图</strong>，一张图像，其中每个像素的亮度对应于模板在该像素在源图像中位置居中时计算出的相似度分数。结果图中的亮点表示可能的匹配。</p>\n<p>模板匹配在需要在一个大图中找到特定模式的精确或非常接近精确的副本时特别有用，假设模式在大小或方向上没有太大变化。它是一种基本方法，有助于说明在图像中定位物体的基本挑战。</p>",
+  "slug": "template-matching-explained",
+  "updates": [],
+  "references": [
+    {
+      "id": 497,
+      "title": "Computer Vision: Algorithms and Applications",
+      "author": "Richard Szeliski",
+      "year": "2022",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://szeliski.org/Book",
+      "doi": "10.1007/978-3-030-80209-9",
+      "note": "一本综合性教材，提供计算机视觉的知识，其中有专门一章介绍目标检测，包括模板匹配。",
+      "order": 1,
+      "created_at": "2025-09-04T14:36:38.904494Z",
+      "updated_at": "2025-09-07T16:31:43.412082Z"
+    },
+    {
+      "id": 498,
+      "title": "Template Matching",
+      "author": "OpenCV",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html",
+      "doi": "",
+      "note": "OpenCV库中模板匹配实际应用的官方文档，详细介绍了各种比较方法。",
+      "order": 2,
+      "created_at": "2025-09-04T14:36:38.913770Z",
+      "updated_at": "2025-09-07T16:31:30.895532Z"
+    },
+    {
+      "id": 499,
+      "title": "Computer Vision: A Modern Approach",
+      "author": "David A. Forsyth, Jean Ponce",
+      "year": "2002",
+      "publisher": "Prentice Hall",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=QJ8d-Qf41_QC&printsec=frontcover&dq=\"Computer+Vision:+A+Modern+Approach\"+Prentice+Hall+David+A.+Forsyth+and+Jean+Ponce&hl=en&newbks=1&newbks_redir=0&sa=X&ved=2ahUKEwjG3I2G1_SDAxWqIUQIHRXfA9AQ6AF6BAgMEAI",
+      "doi": "",
+      "note": "一本经典教材，介绍了计算机视觉的算法和数学基础，提供了关于基于相关性模式识别的见解。",
+      "order": 3,
+      "created_at": "2025-09-04T14:36:38.917296Z",
+      "updated_at": "2025-09-07T16:31:41.384217Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

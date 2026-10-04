@@ -1,0 +1,569 @@
+{
+  "id": 182,
+  "title": "Docker与容器化在机器学习项目中的应用",
+  "meta_title": "Docker在机器学习项目中的应用：容器化指南",
+  "meta_description": "关于Docker在机器学习中应用的进阶课程。学习构建Dockerfile，管理环境，将训练容器化，以及打包机器学习模型。",
+  "description": "学习如何使用Docker打包、分发和管理机器学习应用。本课程将讲授创建可复现的机器学习环境，将训练流程容器化，以及为模型部署做准备。",
+  "short_description": "使用Docker容器可靠地打包、管理和部署机器学习应用。",
+  "excerpt": "使用Docker规范化您的机器学习工作流。构建一致性环境，将训练和推理容器化，并简化部署。",
+  "prerequisites": "Python和命令行基础知识",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "可复现环境",
+      "description": "通过Dockerfile为机器学习项目创建一致且可共享的开发和运行环境。"
+    },
+    {
+      "topic": "依赖管理",
+      "description": "在容器内管理复杂的Python依赖项（如TensorFlow、PyTorch、scikit-learn）。"
+    },
+    {
+      "topic": "工作流容器化",
+      "description": "将机器学习训练脚本和推理应用打包到Docker容器中。"
+    },
+    {
+      "topic": "容器内数据处理",
+      "description": "实施使用Docker数据卷和绑定挂载来管理数据集和模型产物的策略。"
+    },
+    {
+      "topic": "优化机器学习镜像",
+      "description": "运用多阶段构建等方式，为机器学习应用构建高效的Docker镜像。"
+    },
+    {
+      "topic": "GPU加速",
+      "description": "配置Docker容器以使用NVIDIA GPU进行加速的机器学习任务。"
+    }
+  ],
+  "duration": 15,
+  "slug": "docker-for-ml-projects",
+  "level": 2,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": true,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-21T08:27:21.261876Z",
+  "updated_at": "2026-10-02T06:58:10.826170Z",
+  "chapters": [
+    {
+      "id": 971,
+      "title": "Docker 机器学习核心知识",
+      "meta_title": "Docker 机器学习应用要点回顾",
+      "meta_description": "回顾 Docker 核心要点，如镜像、容器和注册表，着重介绍它们与机器学习工作流的相关性。",
+      "number": 1,
+      "slug": "docker-concepts-for-ml",
+      "content": "机器学习开发常遇到环境配置、依赖冲突以及在不同系统上确保可复现性等问题。容器化，特别是使用 Docker，通过将应用程序及其依赖项打包在一起，提供了一种结构化的方法来解决这些问题。\n\n本章将回顾机器学习工作流中 Docker 的基本要点，从而打下基础。我们将了解：\n\n*   在机器学习项目中，使用容器实现一致性和可扩展性的具体优点。\n*   Docker 核心组件：镜像、容器和层，以及它们与机器学习环境的关系。\n*   管理容器生命周期的基本命令。\n*   介绍如何使用 Dockerfile 定义自定义环境。\n*   Docker 注册表（如 Docker Hub）在共享和获取镜像方面的作用。\n\n在本章结束时，您将明白 Docker 对机器学习为何有益，并获得运行预构建机器学习镜像的实践经验。",
+      "sections": [
+        {
+          "id": 5228,
+          "title": "为何容器化机器学习项目？",
+          "meta_title": "容器化机器学习项目的好处",
+          "meta_description": "理解在机器学习中使用容器实现一致性、可重现性和可伸缩性的优势。",
+          "slug": "why-containerize-ml",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5230,
+          "title": "Docker 镜像基本知识",
+          "meta_title": "机器学习 Docker 镜像基础",
+          "meta_description": "查看与机器学习设置相关的 Docker 镜像、层和基础镜像。",
+          "slug": "docker-image-fundamentals",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5233,
+          "title": "容器生命周期管理",
+          "meta_title": "管理 Docker 容器的生命周期",
+          "meta_description": "学习用于运行、停止、启动和移除 Docker 容器的命令。",
+          "slug": "container-lifecycle",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5236,
+          "title": "Dockerfile 简介",
+          "meta_title": "Dockerfile：定义镜像的概述",
+          "meta_description": "Dockerfile 语法概述及其在构建自定义镜像中的作用。",
+          "slug": "intro-dockerfiles",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5239,
+          "title": "Docker 注册中心与仓库",
+          "meta_title": "使用 Docker Hub 等 Docker 注册中心",
+          "meta_description": "理解如何从 Docker Hub 等注册中心拉取和推送镜像。",
+          "slug": "docker-registries",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5241,
+          "title": "实践操作：运行预构建的机器学习镜像",
+          "meta_title": "练习运行预构建的机器学习 Docker 镜像",
+          "meta_description": "通过从 Docker Hub 拉取并运行现有机器学习镜像来获得实践经验。",
+          "slug": "practice-running-ml-images",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 972,
+      "title": "使用 Dockerfile 构建定制的机器学习环境",
+      "meta_title": "构建定制的机器学习 Dockerfile",
+      "meta_description": "学习编写有效的 Dockerfile，用于创建包含特定库和依赖项的可重现机器学习环境。",
+      "number": 2,
+      "slug": "building-ml-dockerfiles",
+      "content": "在掌握 Docker 基础知识后，本章将侧重于使用 `Dockerfile` 指令为机器学习项目构建定制的容器镜像。您将学习如何组织 `Dockerfile` 的结构，以提高清晰度和效率，选择合适的基础镜像（例如官方 Python 或支持 CUDA 的镜像），使用 `pip` 和 `Conda` 等工具管理复杂的 Python 依赖项，将项目代码和相关文件整合到镜像中，并使用 `WORKDIR`、`ENTRYPOINT` 和 `CMD` 定义容器的运行时行为。目标是创建一致且可重现的环境，以确保机器学习开发的可靠性和执行。",
+      "sections": [
+        {
+          "id": 5245,
+          "title": "Dockerfile 的结构化方法",
+          "meta_title": "Dockerfile 结构化的良好实践",
+          "meta_description": "学习在机器学习 Dockerfile 中组织指令的有效方法，以提高清晰度和构建效率。",
+          "slug": "dockerfile-structure",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5248,
+          "title": "选择恰当的起始映像",
+          "meta_title": "选择机器学习的Docker起始映像",
+          "meta_description": "比较适合机器学习工作负载的不同起始映像（例如，官方Python映像、CUDA映像）。",
+          "slug": "choosing-base-image",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5252,
+          "title": "管理 Python 依赖项 (pip)",
+          "meta_title": "在 Docker 中用 pip 管理 Python 依赖项",
+          "meta_description": "在 Docker 镜像中，使用 requirements.txt 和 pip 安装并管理 Python 包。",
+          "slug": "managing-pip-dependencies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5255,
+          "title": "管理 Python 依赖项 (Conda)",
+          "meta_title": "在 Docker 中使用 Conda 管理 Python 依赖项",
+          "meta_description": "在 Docker 容器内部使用 Conda 进行环境和包管理。",
+          "slug": "managing-conda-dependencies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5258,
+          "title": "使用环境变量",
+          "meta_title": "在 Docker 中使用环境变量进行机器学习",
+          "meta_description": "配置容器行为并使用环境变量传递设置。",
+          "slug": "docker-environment-variables",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5262,
+          "title": "复制代码和文件",
+          "meta_title": "将项目代码复制到 Docker 镜像中",
+          "meta_description": "有效使用 COPY 和 ADD 指令以包含您的机器学习脚本和必要文件。",
+          "slug": "copying-code-artifacts",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5265,
+          "title": "设置工作目录和入口点",
+          "meta_title": "机器学习 Dockerfile 中的 WORKDIR、ENTRYPOINT、CMD",
+          "meta_description": "定义机器学习容器的执行环境和默认命令。",
+          "slug": "workdir-entrypoint-cmd",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5267,
+          "title": "动手实践：构建 Scikit-learn 环境",
+          "meta_title": "练习构建 Scikit-learn Docker 环境",
+          "meta_description": "创建 Dockerfile 以构建包含 Python、Scikit-learn 和 pandas 的镜像。",
+          "slug": "practice-build-sklearn-env",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 976,
+      "title": "在容器中管理数据和模型",
+      "meta_title": "使用 Docker 管理机器学习数据和模型",
+      "meta_description": "掌握在使用机器学习容器时处理数据集、训练好的模型以及其他产物的方法。",
+      "number": 3,
+      "slug": "managing-ml-data-containers",
+      "content": "既然你已经能为机器学习环境构建容器镜像，我们现在来解决一个实际需求：数据管理。机器学习应用需要访问数据集进行训练，并需要方法来存储生成的模型。由于容器通常是短暂的，处理这些持久化数据需要特定的方法。\n\n本章将介绍连接容器与数据的方法。我们将介绍用于管理持久存储的 Docker 卷、在开发过程中有用的绑定挂载，以及与云存储服务交互的办法。你还将了解处理模型产物的不同方式，比如比较将其包含在镜像中与动态加载的做法。最后，你将明白如何为你的容器化机器学习项目选择和实施合适的数据管理策略。",
+      "sections": [
+        {
+          "id": 5270,
+          "title": "理解容器存储",
+          "meta_title": "Docker容器存储方式概览",
+          "meta_description": "介绍Docker容器存储和访问数据的方法。",
+          "slug": "container-storage-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5273,
+          "title": "用于开发的绑定挂载",
+          "meta_title": "在机器学习开发中使用Docker绑定挂载",
+          "meta_description": "在开发过程中，将本地目录挂载到容器中，以快速修改代码和访问数据。",
+          "slug": "bind-mounts-development",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5277,
+          "title": "使用 Docker 卷实现数据持久化",
+          "meta_title": "使用 Docker 卷管理持久化机器学习数据",
+          "meta_description": "使用 Docker 管理的卷来管理数据集和训练好的模型等持久化数据。",
+          "slug": "docker-volumes-persistence",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5278,
+          "title": "比较绑定挂载和卷",
+          "meta_title": "机器学习数据：绑定挂载与卷的比较",
+          "meta_description": "理解它们之间的差异，并为机器学习任务选择合适的数据挂载策略。",
+          "slug": "bind-mounts-vs-volumes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5281,
+          "title": "从容器访问云存储",
+          "meta_title": "从 Docker 访问 S3/GCS/Azure Blob",
+          "meta_description": "从机器学习容器内部安全地访问云存储服务的方法。",
+          "slug": "cloud-storage-access",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5284,
+          "title": "将模型打包到镜像中与卷的使用",
+          "meta_title": "在 Docker 中打包机器学习模型的策略",
+          "meta_description": "讨论将模型内置到镜像中与通过卷加载模型之间的权衡。",
+          "slug": "packaging-models-images-volumes",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5287,
+          "title": "动手实践：挂载数据集和保存模型",
+          "meta_title": "在 Docker 中实践挂载数据和保存模型",
+          "meta_description": "练习使用卷和绑定挂载为容器提供数据并保存输出成果。",
+          "slug": "practice-mounting-data-saving-models",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 978,
+      "title": "容器化机器学习训练流程",
+      "meta_title": "容器化机器学习训练",
+      "meta_description": "学习如何在 Docker 容器中打包并运行你的机器学习模型训练过程，以实现一致性和可扩展性。",
+      "number": 4,
+      "slug": "containerizing-ml-training",
+      "content": "你已经掌握了如何构建 Docker 镜像以及在容器中处理数据。本章将重点转向把这些技术应用于机器学习训练过程本身。直接运行训练脚本常常导致环境差异，使得结果难以复现。容器化通过将训练代码、其依赖项和配置打包成一个单一的可移植单元，提供了一个解决方案。\n\n在本章中，你将学习容器化机器学习训练流程的实用方法。我们将会讨论如何组织训练脚本以在容器中执行，如何传递超参数等配置，以及如何使用 `docker run` 运行训练任务。管理训练日志、使用 NVIDIA GPU 进行加速以及使用 Docker Compose 进行基本的多容器训练设置等技术也将会讲解。",
+      "sections": [
+        {
+          "id": 5291,
+          "title": "容器训练脚本的组织方式",
+          "meta_title": "设计容器友好的机器学习训练脚本",
+          "meta_description": "调整您的训练脚本以在容器中高效运行，并正确处理输入和输出。",
+          "slug": "structuring-training-scripts",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5293,
+          "title": "传递配置和超参数",
+          "meta_title": "将配置传递给机器学习训练容器",
+          "meta_description": "使用环境变量和命令行参数来配置在Docker中运行的训练任务。",
+          "slug": "passing-config-hyperparameters",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5297,
+          "title": "使用 `docker run` 运行训练任务",
+          "meta_title": "使用 `docker run` 执行机器学习训练任务",
+          "meta_description": "使用 `docker run` 命令执行容器化训练脚本。",
+          "slug": "running-training-docker-run",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5299,
+          "title": "管理训练日志",
+          "meta_title": "处理容器化机器学习训练的日志",
+          "meta_description": "捕获和持久化容器化训练期间生成的日志的策略。",
+          "slug": "managing-training-logs",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5302,
+          "title": "训练的GPU加速",
+          "meta_title": "在Docker中使用GPU进行机器学习训练",
+          "meta_description": "配置Docker以结合NVIDIA容器工具包，使用NVIDIA GPU加速模型训练。",
+          "slug": "gpu-acceleration-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5306,
+          "title": "Docker Compose在训练环境中的应用简介",
+          "meta_title": "使用Docker Compose构建简单机器学习训练堆栈",
+          "meta_description": "使用Docker Compose定义并运行多容器训练设置（例如：训练容器 + 数据库）。",
+          "slug": "docker-compose-training",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5308,
+          "title": "动手实践：容器化并运行训练脚本",
+          "meta_title": "实践：容器化并运行机器学习训练脚本",
+          "meta_description": "将一个机器学习训练脚本示例打包成Docker镜像，并以容器形式运行，同时管理数据和输出。",
+          "slug": "practice-containerize-run-training",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 981,
+      "title": "机器学习模型推理的容器化",
+      "meta_title": "机器学习模型推理的容器化",
+      "meta_description": "学习如何将训练好的机器学习模型和推理代码打包成高效的 Docker 容器，使其适用于部署。",
+      "number": 5,
+      "slug": "containerizing-ml-inference",
+      "content": "模型训练完成后，下一步就是准备模型以对新数据进行预测。本章主要讲解如何将训练好的机器学习模型和必要的推理代码打包到 Docker 容器中。目的是构建自包含、高效的单元，用于提供预测服务。\n\n你将掌握以下实用方法：\n\n*   在容器内设计和构建简单的推理服务，通常使用 Flask 或 FastAPI 等 Web 框架。\n*   使用多阶段构建和精细的依赖管理等方法，优化生成的 Docker 镜像，以减小尺寸并提高效率。\n*   配置用于推理的容器，包括暴露网络端口和实现健康检查，以确保服务正常运行。\n*   在容器环境中有效打包模型和相关文件。\n\n学完本章后，你将能够构建优化的 Docker 容器，用于为训练好的机器学习模型提供服务。",
+      "sections": [
+        {
+          "id": 5312,
+          "title": "设计推理服务",
+          "meta_title": "设计容器化机器学习推理服务",
+          "meta_description": "在容器中构建可靠、可扩展推理服务的原则。",
+          "slug": "designing-inference-services",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5315,
+          "title": "构建推理API (Flask/FastAPI)",
+          "meta_title": "在Docker中用Flask/FastAPI构建机器学习推理API",
+          "meta_description": "使用Flask或FastAPI创建简单的Web API，以便从容器中提供模型预测。",
+          "slug": "building-inference-apis",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5317,
+          "title": "优化镜像大小：多阶段构建",
+          "meta_title": "使用多阶段构建优化机器学习推理镜像",
+          "meta_description": "在 Dockerfile 中使用多阶段构建来制作更小的、生产可用的推理镜像。",
+          "slug": "optimizing-image-size-multistage",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5320,
+          "title": "减少推理时的依赖项",
+          "meta_title": "最小化依赖项以创建精简的机器学习推理镜像",
+          "meta_description": "从最终推理镜像中移除不必要的构建时依赖项的方法。",
+          "slug": "reducing-inference-dependencies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5323,
+          "title": "对外开放端口用于API访问",
+          "meta_title": "Docker中端口对外开放用于机器学习推理API",
+          "meta_description": "使用EXPOSE指令和端口映射，让你的推理API可以访问。",
+          "slug": "exposing-ports-api",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5326,
+          "title": "推理容器的健康检查",
+          "meta_title": "为ML推理容器实现健康检查",
+          "meta_description": "在Dockerfile中添加健康检查，以确保您的推理服务正常运行。",
+          "slug": "health-checks-inference",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5329,
+          "title": "实操：容器化简单推理API",
+          "meta_title": "实践：容器化机器学习推理API",
+          "meta_description": "将预训练模型和简单的Flask/FastAPI应用程序打包到优化的Docker容器中。",
+          "slug": "practice-containerize-inference-api",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 984,
+      "title": "使用 Docker Compose 简化工作流程",
+      "meta_title": "Docker Compose 用于机器学习开发工作流程",
+      "meta_description": "使用 Docker Compose 定义和管理多容器机器学习应用程序，用于本地开发和测试。",
+      "number": 6,
+      "slug": "docker-compose-ml-workflows",
+      "content": "到目前为止，我们一直专注于构建和运行独立的 Docker 容器，用于训练或推理等特定任务。然而，许多机器学习的开发和部署场景涉及多个相互配合的组件。例如，您可能需要一个推理 API 容器、一个用于存储元数据的数据库容器，甚至是一个用于异步任务的消息队列容器。使用独立的 `docker run` 命令来管理这些独立容器的设置、网络配置和生命周期，可能会变得效率低下且容易出错。\n\n本章将介绍 Docker Compose，这是一个专门设计的工具，用于简化多容器 Docker 应用程序的定义和管理。您将学习如何使用一个单一的配置文件（通常命名为 `docker-compose.yml`）来定义构成您应用程序堆栈的所有服务。我们将讲解服务的定义、为容器间通信建立网络、使用卷管理持久数据、使用环境变量配置服务，以及直接在 Compose 工作流程中构建容器镜像。在本章结束时，您将能够使用 Docker Compose 在本地搭建和运行复杂的机器学习开发环境。",
+      "sections": [
+        {
+          "id": 5333,
+          "title": "Docker Compose 简介",
+          "meta_title": "Docker Compose 简介",
+          "meta_description": "理解 Docker Compose 的作用及其基本语法 (`docker-compose.yml`)。",
+          "slug": "docker-compose-intro",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5335,
+          "title": "在`docker-compose.yml`中定义服务",
+          "meta_title": "在 docker-compose.yml 中定义服务",
+          "meta_description": "了解如何定义数据库、API 或工作器等单独的容器（服务）。",
+          "slug": "defining-compose-services",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5337,
+          "title": "容器间网络连接",
+          "meta_title": "使用 Docker Compose 进行容器网络配置",
+          "meta_description": "说明 Compose 如何设置网络，以使服务能够互相通信。",
+          "slug": "compose-networking",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5340,
+          "title": "在 Compose 中使用卷",
+          "meta_title": "管理 Docker Compose 中的卷",
+          "meta_description": "定义和管理跨多个服务的持久化数据卷。",
+          "slug": "compose-volumes",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5343,
+          "title": "Compose 中的环境变量",
+          "meta_title": "在 Docker Compose 中使用环境变量",
+          "meta_description": "在 `docker-compose.yml` 中使用环境变量向服务传递配置。",
+          "slug": "compose-environment-variables",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5346,
+          "title": "使用 Compose 构建镜像",
+          "meta_title": "通过 Docker Compose 构建 Docker 镜像",
+          "meta_description": "指示 Compose 从 Dockerfile 构建镜像作为应用程序设置的一部分。",
+          "slug": "compose-building-images",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5349,
+          "title": "常见机器学习栈示例 (例如，API + 数据库)",
+          "meta_title": "Docker Compose 示例机器学习栈",
+          "meta_description": "查看如何定义常见的机器学习开发栈示例，例如带有支持数据库的推理 API。",
+          "slug": "compose-ml-stack-examples",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5353,
+          "title": "动手练习：使用 Compose 构建机器学习应用",
+          "meta_title": "实践：使用 Docker Compose 构建机器学习应用",
+          "meta_description": "编写 `docker-compose.yml` 文件以启动多容器应用（例如，推理服务和消息队列）。",
+          "slug": "practice-compose-ml-app",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": true,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

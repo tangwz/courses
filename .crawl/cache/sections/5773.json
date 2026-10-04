@@ -1,0 +1,61 @@
+{
+  "id": 5773,
+  "title": "动手实践：模型持久化与TorchScript基础",
+  "meta_title": "PyTorch模型保存与TorchScript实践",
+  "meta_description": "实践以不同方式保存和加载PyTorch模型，并尝试TorchScript转换。",
+  "content": "<p>通过编程练习，演示如何保存和加载模型状态、管理检查点，以及将模型转换为TorchScript以实现更灵活的部署。一个简单的神经网络 (neural network)将用作测试实例，以便能侧重于模型持久化和序列化的运作原理。</p>\n<p>首先，让我们设置环境并定义将在这些示例中使用的模型。</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.optim as optim\nimport os\n\n# 定义一个目录来保存模型文件\nMODEL_SAVE_DIR = \"saved_models_practice\"\nos.makedirs(MODEL_SAVE_DIR, exist_ok=True)\n\n# 定义一个简单的神经网络\nclass SimpleNet(nn.Module):\n    def __init__(self, input_size=10, hidden_size=5, output_size=2):\n        super(SimpleNet, self).__init__()\n        self.fc1 = nn.Linear(input_size, hidden_size)\n        self.relu = nn.ReLU()\n        self.fc2 = nn.Linear(hidden_size, output_size)\n\n    def forward(self, x):\n        x = self.fc1(x)\n        x = self.relu(x)\n        x = self.fc2(x)\n        return x\n\n# 辅助函数，用于打印模型参数（以供验证）\ndef print_model_parameters(model):\n    for name, param in model.named_parameters():\n        if param.requires_grad:\n            print(f\"{name}: {param.data.numpy().sum():.4f}\") # 打印权重的总和，以求简洁\n</code></pre>\n<p>这个<code>SimpleNet</code>是一个基本的两层全连接网络。我们将用它来演示各种保存和加载技术。</p>\n<h3>保存和加载模型参数 (parameter) (state_dict)</h3>\n<p>持久化PyTorch模型的推荐方法是保存模型的<code>state_dict</code>。这个字典对象将每一层映射到其可学习参数（权重 (weight)和偏置 (bias)）。与保存整个模型对象相比，它更轻量，对代码更改也更可靠。</p>\n<p><strong>保存<code>state_dict</code></strong></p>\n<p>让我们实例化模型并保存其参数。</p>\n<pre><code class=\"language-python\"># 实例化模型\nmodel_state_dict_example = SimpleNet()\nprint(\"Initial parameters (sum):\")\nprint_model_parameters(model_state_dict_example)\n\n# 定义保存state_dict的路径\nSTATE_DICT_PATH = os.path.join(MODEL_SAVE_DIR, \"simplenet_state_dict.pth\")\n\n# 保存模型的state_dict\ntorch.save(model_state_dict_example.state_dict(), STATE_DICT_PATH)\nprint(f\"\\nModel state_dict saved to {STATE_DICT_PATH}\")\n</code></pre>\n<p><code>state_dict()</code> 方法返回一个包含所有权重和偏置的Python字典。然后，<code>torch.save()</code> 将这个字典序列化到磁盘上。<code>.pth</code> 扩展名是PyTorch模型文件的常见约定。</p>\n<p><strong>加载<code>state_dict</code></strong></p>\n<p>要加载参数，首先需要模型结构的一个实例。然后，加载保存的<code>state_dict</code>并将其应用到这个模型实例上。</p>\n<pre><code class=\"language-python\"># 创建一个新的模型实例\nloaded_model_state_dict = SimpleNet()\nprint(\"\\nParameters of new model instance (before loading, sum):\")\nprint_model_parameters(loaded_model_state_dict)\n\n# 加载已保存的state_dict\nstate_dict = torch.load(STATE_DICT_PATH)\n\n# 将加载的state_dict应用到模型\nloaded_model_state_dict.load_state_dict(state_dict)\nprint(\"\\nParameters of model after loading state_dict (sum):\")\nprint_model_parameters(loaded_model_state_dict)\n\n# 如果您将模型用于推理，请记住调用 model.eval()\nloaded_model_state_dict.eval()\n</code></pre>\n<p>请注意，加载后 <code>loaded_model_state_dict</code> 的参数与原始 <code>model_state_dict_example</code> 的参数一致。重要的是，您的脚本中定义的模型架构必须与保存 <code>state_dict</code> 时使用的架构相符。</p>\n<h3>保存和加载整个模型</h3>\n<p>PyTorch也允许您使用Python的<code>pickle</code>模块保存整个模型对象。虽然这很方便，但它的移植性可能较差，因为它将保存的文件与保存期间使用的特定类结构和目录路径绑定。如果您重构代码或移动文件，加载模型时可能会遇到问题。</p>\n<p><strong>保存整个模型</strong></p>\n<pre><code class=\"language-python\"># 实例化另一个模型\nmodel_full_save_example = SimpleNet(input_size=10, hidden_size=8, output_size=3) # 不同的架构，以便清晰演示\nmodel_full_save_example.fc1.weight.data.fill_(0.5) # 修改权重以便区分\n\nprint(\"\\nParameters of model for full save (sum):\")\nprint_model_parameters(model_full_save_example)\n\n# 定义保存完整模型的路径\nFULL_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, \"simplenet_full_model.pth\")\n\n# 保存整个模型\ntorch.save(model_full_save_example, FULL_MODEL_PATH)\nprint(f\"\\nEntire model saved to {FULL_MODEL_PATH}\")\n</code></pre>\n<p><strong>加载整个模型</strong></p>\n<p>加载完整保存的模型很简单，因为 <code>torch.load()</code> 直接返回模型对象。</p>\n<pre><code class=\"language-python\"># 加载整个模型\nloaded_full_model = torch.load(FULL_MODEL_PATH)\nprint(\"\\nParameters of fully loaded model (sum):\")\nprint_model_parameters(loaded_full_model)\n\n# 设置为评估模式\nloaded_full_model.eval()\n\n# 您可以直接将其用于推理\ndummy_input = torch.randn(1, 10) # 此模型的原始 input_size 为 10\n# If loaded_full_model was SimpleNet(input_size=10, hidden_size=8, output_size=3)\n# dummy_input should have 10 features\n# output = loaded_full_model(dummy_input)\n# print(f\"\\nOutput from fully loaded model: {output}\")\n</code></pre>\n<p>这种方法更简单，但如前所述，对于长期存储或在不同项目或Python环境之间共享而言，其灵活性较差。<code>SimpleNet</code>的类定义必须在您加载模型的环境中可用且可访问。</p>\n<h3>训练期间的检查点</h3>\n<p>检查点（Checkpointing）是指在漫长的训练过程中，在不同时间点保存模型的状态（以及可能包括优化器状态和 epoch 数等其他训练信息）。这使得您可以在训练中断时恢复训练，或者将模型恢复到表现最佳的状态。</p>\n<p>让我们模拟一个基本的检查点机制。</p>\n<pre><code class=\"language-python\"># 模拟训练循环的设置\nmodel_for_checkpointing = SimpleNet()\noptimizer = optim.Adam(model_for_checkpointing.parameters(), lr=0.001)\nnum_epochs_mock = 5\ncurrent_epoch = 0\n\nCHECKPOINT_PATH = os.path.join(MODEL_SAVE_DIR, \"simplenet_checkpoint.pth\")\n\nprint(\"\\nSimulating training and checkpointing...\")\nfor epoch in range(num_epochs_mock):\n    current_epoch = epoch\n    # 模拟一些训练（例如，在此示例中手动更新权重）\n    for param in model_for_checkpointing.parameters():\n        if param.requires_grad:\n            param.data += 0.01 * (epoch + 1) # 简单修改\n\n    mock_loss = 1.0 / (epoch + 1)\n    print(f\"Epoch {epoch+1}, Mock Loss: {mock_loss:.4f}\")\n\n    # 每2个epoch保存一个检查点\n    if (epoch + 1) % 2 == 0:\n        checkpoint = {\n            'epoch': epoch + 1,\n            'model_state_dict': model_for_checkpointing.state_dict(),\n            'optimizer_state_dict': optimizer.state_dict(),\n            'loss': mock_loss,\n        }\n        torch.save(checkpoint, CHECKPOINT_PATH)\n        print(f\"Checkpoint saved at epoch {epoch + 1} to {CHECKPOINT_PATH}\")\n\nprint(\"\\nSimulated training finished.\")\nprint(\"Parameters of model after simulated training (sum):\")\nprint_model_parameters(model_for_checkpointing)\n</code></pre>\n<p>现在，让我们看看如何从这个检查点恢复。</p>\n<pre><code class=\"language-python\"># 要恢复训练，请创建模型和优化器的新实例\nresumed_model = SimpleNet()\nresumed_optimizer = optim.Adam(resumed_model.parameters(), lr=0.001) # 确保优化器参数一致\n\nprint(\"\\nParameters of new model before loading checkpoint (sum):\")\nprint_model_parameters(resumed_model)\n\n# 加载检查点\nif os.path.exists(CHECKPOINT_PATH):\n    checkpoint = torch.load(CHECKPOINT_PATH)\n\n    resumed_model.load_state_dict(checkpoint['model_state_dict'])\n    resumed_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])\n    start_epoch = checkpoint['epoch']\n    last_loss = checkpoint['loss']\n\n    print(f\"\\nCheckpoint loaded. Resuming from epoch {start_epoch}.\")\n    print(\"Parameters of model after loading checkpoint (sum):\")\n    print_model_parameters(resumed_model)\n\n    # 如果您打算继续训练，请将模型设置为训练模式\n    resumed_model.train() \n    # 或者如果用于推理，则设置为评估模式\n    # resumed_model.eval()\nelse:\n    print(\"\\nNo checkpoint found to resume from.\")\n</code></pre>\n<p>保存优化器的<code>state_dict</code>很重要，因为它包含在训练期间更新的缓冲区和参数 (parameter)（如学习率或动量值）。</p>\n<h3>模型部署的TorchScript简介</h3>\n<p>TorchScript提供了一种方法来创建PyTorch模型的可序列化和可优化的表示，这些表示可以独立于Python运行，例如在C++环境中或在Python开销不理想的场景中。将PyTorch模型转换为TorchScript有两种主要方法：追踪（tracing）和脚本化（scripting）。</p>\n<ul>\n<li><strong>追踪（Tracing）（<code>torch.jit.trace</code>)</strong>: 您提供一个示例输入，TorchScript会记录该输入通过模型时执行的操作。这非常适用于具有直接、数据无关控制流的模型。</li>\n<li><strong>脚本化（Scripting）（<code>torch.jit.script</code>)</strong>: TorchScript直接分析您模型的Python源代码（包括<code>if</code>语句和循环等控制流），并将其转换为TorchScript中间表示。这更适合具有复杂控制流的模型。</li>\n</ul>\n<p>对于本次实践，我们将侧重于追踪，因为它通常更容易上手。</p>\n<p><strong>追踪模型</strong></p>\n<pre><code class=\"language-python\"># 实例化一个用于追踪的模型\nmodel_to_trace = SimpleNet()\nmodel_to_trace.eval() # 重要：将模型设置为评估模式以便追踪\n\n# 创建一个形状正确的示例输入张量\n# 我们的SimpleNet期望 input_size 为 10\nexample_input = torch.randn(1, 10) # 批大小为 1，10 个特征\n\n# 追踪模型\ntry:\n    traced_model = torch.jit.trace(model_to_trace, example_input)\n    print(\"\\nModel successfully traced.\")\n\n    # 您可以检查追踪模型的图（可选）\n    # print(traced_model.graph) \n    # 及其代码（可选）\n    # print(traced_model.code)\n\nexcept Exception as e:\n    print(f\"\\nError during tracing: {e}\")\n    traced_model = None\n</code></pre>\n<p><code>traced_model</code>现在是一个<code>torch.jit.ScriptModule</code>对象。它已经捕获了<code>model_to_trace</code>在给定<code>example_input</code>时执行的操作序列。</p>\n<p><strong>保存追踪模型</strong></p>\n<p>追踪模型有自己的保存方法。</p>\n<pre><code class=\"language-python\">TRACED_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, \"simplenet_traced.pt\") # .pt 是 TorchScript 的常见扩展名\n\nif traced_model:\n    traced_model.save(TRACED_MODEL_PATH)\n    print(f\"Traced model saved to {TRACED_MODEL_PATH}\")\n</code></pre>\n<p><strong>加载和使用追踪模型</strong></p>\n<p>您可以使用<code>torch.jit.load()</code>加载TorchScript模型。一个重要优势是，您不需要原始的Python模型类定义（在本例中是<code>SimpleNet</code>）即可加载和运行追踪模型。</p>\n<pre><code class=\"language-python\">if os.path.exists(TRACED_MODEL_PATH):\n    loaded_traced_model = torch.jit.load(TRACED_MODEL_PATH)\n    print(\"\\nTraced model loaded successfully.\")\n\n    # 您现在可以使用加载的追踪模型进行推理\n    # 确保输入张量具有正确的形状和类型\n    test_input = torch.randn(1, 10) \n    with torch.no_grad(): # 对推理而言，这始终是一个良好的实践\n        output = loaded_traced_model(test_input)\n\n    print(f\"Output from loaded traced model: {output.numpy()}\")\n\n    # 与原始模型验证输出（可选，如果可用）\n    # original_output = model_to_trace(test_input)\n    # print(f\"Output from original Python model: {original_output.detach().numpy()}\")\n\nelse:\n    print(\"\\nTraced model file not found.\")\n\n</code></pre>\n<p>这种无需原始Python代码即可运行的能力使得TorchScript模型具有高度可移植性，并适用于各种部署场景。</p>\n<p>这些练习涵盖了模型持久化的基本技术以及TorchScript的介绍。当您处理更复杂的模型和部署需求时，您将在这些方面进一步学习。例如，您可能研究TorchScript脚本化用于具有动态控制流的模型，或关注ONNX以实现与其他机器学习 (machine learning)框架的互操作性。在您自己的模型上尝试这些方法，以巩固您的理解。</p>",
+  "slug": "practical-pytorch-model-persistence-torchscript",
+  "updates": [],
+  "references": [
+    {
+      "id": 16217,
+      "title": "Saving and Loading Models",
+      "author": "Matthew Inkawhich",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/saving_loading_models.html",
+      "doi": "",
+      "note": "PyTorch官方教程，详细介绍了保存和加载模型参数、完整模型以及实现检查点的方法。",
+      "order": 1,
+      "created_at": "2025-09-06T11:01:44.577566Z",
+      "updated_at": "2025-09-10T02:27:51.738148Z"
+    },
+    {
+      "id": 16218,
+      "title": "Introduction to TorchScript",
+      "author": "PyTorch Contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/Intro_to_TorchScript_tutorial.html",
+      "doi": "",
+      "note": "PyTorch官方教程，解释了TorchScript的基础知识，包括用于模型部署的追踪和脚本化。",
+      "order": 2,
+      "created_at": "2025-09-06T11:01:44.581561Z",
+      "updated_at": "2025-09-10T02:27:56.145971Z"
+    },
+    {
+      "id": 16219,
+      "title": "Deep Learning with PyTorch",
+      "author": "Eli Stevens, Luca Antiga, Thomas Viehmann",
+      "year": "2020",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-pytorch",
+      "doi": "",
+      "note": "一本全面介绍PyTorch的书籍，涵盖了模型持久化、序列化和部署概念。",
+      "order": 3,
+      "created_at": "2025-09-06T11:01:44.583866Z",
+      "updated_at": "2025-09-10T02:27:54.112425Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2611,
+  "title": "动手实践：在特定数据集上微调模型",
+  "meta_title": "动手实践：特定数据集上的模型微调",
+  "meta_description": "一个实操练习，涉及在特定或小型数据集上使用高级微调技术。",
+  "content": "<p>微调 (fine-tuning)一个在特定数据集上预训练 (pre-training)的CNN模型涉及应用高级方法，例如差异化学习率和逐步解冻。这种做法在将最初在ImageNet等大型数据集上训练的强大模型调整到数据可能有限的更专业任务时非常普遍。</p>\n<p>假设我们有一个特定数据集，称之为“精细部件”，其中包含螺丝、螺栓和垫圈等各种工业部件的图像，这些图像被分为50个具体子类别。此数据集远小于ImageNet，并显示出不同的视觉特点（例如，金属纹理、统一背景、类别间的细微差异）。我们的目标是为这些部件构建一个准确的分类器。</p>\n<h3>设置预训练 (pre-training)模型</h3>\n<p>我们将从一个标准架构（如ResNet50）开始，它已在ImageNet上预训练过。大多数深度学习 (deep learning)框架都易于使用这类模型。我们假设您有一个已配置好的PyTorch或TensorFlow环境。在此，我们将使用类似PyTorch的语法进行说明。</p>\n<p>首先，加载预训练模型。我们需要将最初为1000个ImageNet类别训练的最终分类层，替换为一个适用于我们50个“精细部件”类别的新层。</p>\n<pre><code class=\"language-python\">import torch\nimport torchvision.models as models\nimport torch.nn as nn\n\n# 加载预训练的ResNet50模型\nmodel = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)\n\n# 获取分类器的输入特征数量\nnum_ftrs = model.fc.in_features\n\n# 替换最后的全连接层\n# 我们的数据集有50个类别\nnum_classes = 50\nmodel.fc = nn.Linear(num_ftrs, num_classes)\n\n# 定义设备\ndevice = torch.device(\"cuda:0\" if torch.cuda.is_available() else \"cpu\")\nmodel = model.to(device)\n\nprint(\"模型已加载，并且最终层已替换。\")\n# 输出应确认模型结构变化\n</code></pre>\n<h3>朴素微调 (fine-tuning)与高级方法</h3>\n<p>一种简单的方法是同时使用单个小型学习率对所有层进行微调。然而，正如之前所讨论的，这可能不是最佳选择。预训练 (pre-training)模型中的早期层通常学习普遍的特征（如边缘、纹理），这些特征普遍有用；而后期层则学习更多针对特定任务的特征。从一开始就积极更新所有层，特别是在小型或不相似的数据集上，可能会破坏早期层中有用的已学习表示。这就是高级技术发挥作用的地方。</p>\n<h3>策略1：差异化学习率</h3>\n<p>此技术涉及对网络的不同部分应用不同的学习率。我们通常对早期层使用较小的学习率（以保留通用特征），而对后期层使用较大的学习率（以适应特定特征和新的分类器头部）。</p>\n<p>让我们为ResNet50模型定义参数 (parameter)组。我们可以将初始卷积块、顺序残差块（layer1, layer2, layer3, layer4）以及最终分类层进行分组。</p>\n<pre><code class=\"language-python\">import torch.optim as optim\n\n# 定义基础学习率和乘数\nbase_lr = 1e-4\nlr_multiplier = 10\n\n# 将参数按不同学习率分组\n# 早期层使用较小的学习率，后期层/分类器使用较大的学习率\noptimizer = optim.AdamW([\n    {'params': model.conv1.parameters(), 'lr': base_lr / (lr_multiplier**4)},\n    {'params': model.bn1.parameters(), 'lr': base_lr / (lr_multiplier**4)},\n    {'params': model.relu.parameters(), 'lr': base_lr / (lr_multiplier**4)},\n    {'params': model.maxpool.parameters(), 'lr': base_lr / (lr_multiplier**4)},\n\n    {'params': model.layer1.parameters(), 'lr': base_lr / (lr_multiplier**3)},\n    {'params': model.layer2.parameters(), 'lr': base_lr / (lr_multiplier**2)},\n    {'params': model.layer3.parameters(), 'lr': base_lr / lr_multiplier},\n    {'params': model.layer4.parameters(), 'lr': base_lr},\n\n    {'params': model.avgpool.parameters(), 'lr': base_lr * lr_multiplier},\n    {'params': model.fc.parameters(), 'lr': base_lr * lr_multiplier}\n], lr=base_lr) # 默认学习率（如果所有参数都已分组，则不会使用）\n\nprint(\"优化器已配置差异化学习率。\")\n# 验证优化器参数组（可选）\n# for group in optimizer.param_groups:\n#     print(f\"LR: {group['lr']}, Num Params: {sum(p.numel() for p in group['params'])}\")\n</code></pre>\n<p>此设置将指数级递减的学习率分配给早期层，使得新添加的分类器和后期层能更快适应，同时保护预训练 (pre-training)期间学习到的基础特征。</p>\n<h3>策略2：逐步解冻</h3>\n<p>另一种有效策略，特别适用于较小的目标数据集，是逐步解冻。最初，我们冻结所有预训练 (pre-training)层，只训练新添加的分类器头部。一旦分类器开始学习，我们就逐步解冻网络中位于深部的层并继续训练，通常随着更多层变为可训练而降低整体学习率。</p>\n<p><strong>阶段1：仅训练分类器头部</strong></p>\n<pre><code class=\"language-python\"># 冻结除最终分类器外的所有层\nfor param in model.parameters():\n    param.requires_grad = False\nmodel.fc.requires_grad = True\n\n# 仅用于分类器参数的优化器\noptimizer_phase1 = optim.AdamW(model.fc.parameters(), lr=base_lr * lr_multiplier)\n\nprint(\"阶段1：仅训练分类器头部。\")\n# 假设存在一个 train_model(model, optimizer, num_epochs) 函数\n# train_model(model, optimizer_phase1, num_epochs=5)\n</code></pre>\n<p><strong>阶段2：解冻上层并训练</strong></p>\n<p>在初始阶段之后，解冻一些后期层（例如<code>layer4</code>和<code>layer3</code>），并以较低的学习率继续训练，也可能使用差异化学习率。</p>\n<pre><code class=\"language-python\"># 解冻 layer4 和 layer3\nfor param in model.layer4.parameters():\n    param.requires_grad = True\nfor param in model.layer3.parameters():\n    param.requires_grad = True\n\n# 使用来自 fc、layer4、layer3 的参数重新配置优化器\n# 此处为简化起见，使用单一的较低学习率示例\n# 之前展示的差异化方法也可在此应用\ntrainable_params = list(model.fc.parameters()) + \\\n                   list(model.layer4.parameters()) + \\\n                   list(model.layer3.parameters())\noptimizer_phase2 = optim.AdamW(trainable_params, lr=base_lr / 10)\n\nprint(\"阶段2：训练分类器头部、layer4 和 layer3。\")\n# train_model(model, optimizer_phase2, num_epochs=10) # 继续训练\n</code></pre>\n<p><strong>后续阶段：</strong></p>\n<p>您可以继续此过程，解冻更多层（例如<code>layer2</code>，<code>layer1</code>）并进一步降低学习率，直到整个网络可训练，或直到性能趋于稳定。</p>\n<h3>策略组合与监测</h3>\n<p>差异化学习率和逐步解冻可以结合使用。例如，在解冻一个层块后，您可以根据分类器头部和其他层块，为其分配特定的学习率。</p>\n<p>在此过程中，仔细监测非常重要。跟踪训练和验证损失，以及准确率（或您特定任务的其他相关指标）。密切关注验证性能，以检测过拟合 (overfitting)，这在小型数据集上进行微调 (fine-tuning)时是常见的风险。第2章讨论的技术，例如数据增强、Dropout和权重 (weight)衰减，在此处尤为重要。</p>\n<p>让我们使用“精细部件”数据集，可视化不同微调策略下验证准确率的进展。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-qwhujc\" \n              data-plot-definition='{\"layout\": {\"title\": \"微调验证准确率比较\", \"xaxis\": {\"title\": \"训练轮次\"}, \"yaxis\": {\"title\": \"验证准确率 (%)\", \"range\": [50, 95]}, \"legend\": {\"title\": \"策略\"}, \"template\": \"plotly_white\", \"width\": 700, \"height\": 400}, \"data\": [{\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], \"y\": [65, 72, 75, 76, 77, 78, 78.5, 79, 79, 79.5, 79.5, 80, 80, 80.5, 80.5], \"mode\": \"lines+markers\", \"name\": \"朴素微调（所有层）\", \"line\": {\"color\": \"#4dabf7\"}}, {\"x\": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], \"y\": [70, 78, 82, 84, 85, 87, 88, 89, 89.5, 90, 90.5, 91, 91.5, 91.5, 91.8], \"mode\": \"lines+markers\", \"name\": \"逐步解冻 + 差异化学习率\", \"line\": {\"color\": \"#f76707\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-qwhujc\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>图示为“精细部件”数据集上，朴素微调与结合了逐步解冻和差异化学习率的策略在训练轮次中验证准确率的比较。高级策略通常能带来更快的收敛和更高的最终准确率。</p>\n</blockquote>\n<h3>特定数据集的考虑要点</h3>\n<ul>\n<li><strong>数据集规模：</strong> 如果您的特定数据集非常小，激进的微调 (fine-tuning)（快速解冻多层）会增加过拟合 (overfitting)的风险。逐步解冻和强正则化 (regularization)很重要。</li>\n<li><strong>领域相似性：</strong> 如果特定数据集在视觉上与ImageNet差异很大（例如，医疗扫描、卫星图像），可能需要更广泛的微调，甚至可能包括解冻早期层。然而，开始时请假设早期特征是有用的。</li>\n<li><strong>评估指标：</strong> 确保您的评估指标与您特定任务的具体目标一致。准确率对于平衡分类可能已足够，但对于不平衡数据集或特定应用需求，F1分数、精确率、召回率或AUC等指标可能更合适。</li>\n</ul>\n<p>本次实操练习展示了高级微调技术如何让您有效调整强大的预训练 (pre-training)模型，即使面对特定数据集样本有限或数据分布与原始预训练数据不同的挑战。请记住，最佳策略通常需要针对您的具体模型、数据集和任务进行实验和仔细监测。</p>",
+  "slug": "fine-tuning-specialized-datasets-practical",
+  "updates": [],
+  "references": [
+    {
+      "id": 7479,
+      "title": "Universal Language Model Fine-tuning for Text Classification",
+      "author": "Jeremy Howard, Sebastian Ruder",
+      "year": "2018",
+      "publisher": "",
+      "journal": "Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (ACL)",
+      "volume": "1",
+      "pages": "397-407",
+      "url": "https://arxiv.org/abs/1801.06146",
+      "doi": "10.48550/arXiv.1801.06146",
+      "note": "本文介绍并规范了判别性学习率和渐进式解冻等高级微调技术，这些技术在包括计算机视觉在内的各种深度学习领域中非常有效且应用广泛。",
+      "order": 2,
+      "created_at": "2025-09-05T01:35:36.579931Z",
+      "updated_at": "2025-09-08T11:02:07.690119Z"
+    },
+    {
+      "id": 7480,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本标准教材，全面涵盖了深度学习的基础知识，包括与神经网络架构、训练和迁移学习相关的概念。",
+      "order": 3,
+      "created_at": "2025-09-05T01:35:36.583467Z",
+      "updated_at": "2025-09-08T11:01:56.783705Z"
+    },
+    {
+      "id": 7481,
+      "title": "Transfer Learning for Computer Vision Tutorial",
+      "author": "Sasank Chilamkurthy",
+      "year": "2017",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html",
+      "doi": "",
+      "note": "PyTorch官方教程，演示了使用预训练模型进行图像分类迁移学习和微调的实际实现，可作为设置此类实验的实用指南。",
+      "order": 4,
+      "created_at": "2025-09-05T01:35:36.585657Z",
+      "updated_at": "2025-09-08T11:02:02.334974Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

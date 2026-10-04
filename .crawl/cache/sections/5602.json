@@ -1,0 +1,45 @@
+{
+  "id": 5602,
+  "title": "实践：Git 基本命令",
+  "meta_title": "实践：Git 基本命令",
+  "meta_description": "动手操作练习使用版本控制的基本 Git 命令。",
+  "content": "<p>Git 基本命令是管理数据工程项目所必需的。这些动手操作练习涵盖了常用 Git 命令。持续使用版本控制是专业软件开发的一个标志，对于数据工程而言，它在追踪代码、配置乃至有时是文档的变动方面同样不可或缺。</p>\n<p>若要跟随操作，您的系统上需要安装 Git。如果您尚未安装，可以在 Git 官方网站 (<a href=\"https://git-scm.com/downloads\">https://git-scm.com/downloads</a>) 上找到安装说明。安装完成后，打开您偏好的命令行界面（macOS/Linux 上的终端，Windows 上的 Git Bash 或命令提示符/PowerShell）。</p>\n<h3>初始化仓库</h3>\n<p>使用 Git 追踪项目的第一步是初始化一个仓库。Git 仓库本质上是项目文件夹中一个隐藏目录（<code>.git</code>），Git 会在此处存储项目的所有历史和元数据。</p>\n<ol>\n<li><strong>创建一个项目目录：</strong> 我们为本次练习创建一个新目录。\n<pre><code class=\"language-bash\">mkdir my-data-project\n</code></pre>\n</li>\n<li><strong>进入该目录：</strong>\n<pre><code class=\"language-bash\">cd my-data-project\n</code></pre>\n</li>\n<li><strong>初始化 Git：</strong> 指示 Git 开始追踪此目录。\n<pre><code class=\"language-bash\">git init\n</code></pre>\n您应该看到类似于以下内容的输出：\n<pre><code>Initialized empty Git repository in /path/to/your/my-data-project/.git/\n</code></pre>\n</li>\n</ol>\n<p>现在，<code>my-data-project</code> 已是一个 Git 仓库。您在此处添加的任何文件都可以被追踪。</p>\n<h3>查看状态、暂存和提交变动</h3>\n<p>核心 Git 工作流程包括对文件进行变动，将这些变动添加到“暂存区”，然后（附带消息）将它们永久提交到仓库的历史记录中。</p>\n<ol>\n<li>\n<p><strong>创建文件：</strong> 我们创建一个简单的文本文件来模拟项目资源，例如脚本或笔记。</p>\n<pre><code class=\"language-bash\"># 在 Linux/macOS 上\necho \"Initial configuration for data pipeline\" > config.txt\n\n# 在 Windows (命令提示符) 上\necho Initial configuration for data pipeline > config.txt\n\n# 在 Windows (PowerShell) 上\n\"Initial configuration for data pipeline\" | Out-File -Encoding UTF8 config.txt\n</code></pre>\n</li>\n<li>\n<p><strong>检查状态：</strong> 使用 <code>git status</code> 查看 Git 对您项目文件的了解情况。</p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<p>输出会类似于这样：</p>\n<pre><code>On branch main\n\nNo commits yet\n\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        config.txt\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n</code></pre>\n<p>Git 看到了 <code>config.txt</code> 但告诉您它处于“未追踪”状态。这意味着 Git 尚未监测它的变动。</p>\n</li>\n<li>\n<p><strong>暂存文件：</strong> 使用 <code>git add</code> 将文件移至暂存区。这会告诉 Git 您希望将此文件的当前版本包含在<em>下一次</em>提交中。</p>\n<pre><code class=\"language-bash\">git add config.txt\n</code></pre>\n<blockquote>\n<p><strong>提示：</strong> 您可以使用 <code>git add .</code>（注意句点）暂存当前目录及子目录中所有已修改和新增的文件。使用此命令时请注意，确保您没有意外暂存不打算追踪的文件。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>再次检查状态：</strong></p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<p>输出现在变了：</p>\n<pre><code>On branch main\n\nNo commits yet\n\nChanges to be committed:\n  (use \"git rm --cached &#x3C;file>...\" to unstage)\n        new file:   config.txt\n</code></pre>\n<p>Git 现在在“要提交的变动”下显示 <code>config.txt</code>。它已暂存。</p>\n</li>\n<li>\n<p><strong>提交变动：</strong> 使用 <code>git commit</code> 将暂存的变动保存到仓库历史记录中。<code>-m</code> 标志允许您直接提供描述性的提交消息。</p>\n<pre><code class=\"language-bash\">git commit -m \"Add initial pipeline configuration file\"\n</code></pre>\n<p>您会看到确认提交的输出：</p>\n<pre><code>[main (root-commit) abc1234] Add initial pipeline configuration file\n 1 file changed, 1 insertion(+)\n create mode 100644 config.txt\n</code></pre>\n<p><code>abc1234</code> 部分是此次提交的唯一标识符（哈希）的开头。</p>\n</li>\n<li>\n<p><strong>最后一次检查状态：</strong></p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<p>输出应该指示一个干净的工作目录：</p>\n<pre><code>On branch main\nnothing to commit, working tree clean\n</code></pre>\n</li>\n</ol>\n<h3>查看提交历史</h3>\n<p>要查看您所做提交的历史记录，请使用 <code>git log</code> 命令。</p>\n<pre><code class=\"language-bash\">git log\n</code></pre>\n<p>这会显示一个详细的提交列表，从最近的提交开始：</p>\n<pre><code>commit abc1234567890defabcdef1234567890abcdef (HEAD -> main)\nAuthor: Your Name &#x3C;your.email@example.com>\nDate:   Tue Sep 17 10:30:00 2023 -0700\n\n    Add initial pipeline configuration file\n</code></pre>\n<blockquote>\n<p><strong>提示：</strong> 如需更紧凑的视图，请尝试 <code>git log --oneline</code>：</p>\n<pre><code class=\"language-bash\">git log --oneline\n</code></pre>\n<p>输出：</p>\n<pre><code>abc1234 (HEAD -> main) Add initial pipeline configuration file\n</code></pre>\n</blockquote>\n<h3>忽略文件</h3>\n<p>项目通常会生成您<em>不</em>希望 Git 追踪的文件，例如日志文件、临时文件、大型数据文件或敏感信息（如 API 密钥）。您可以通过在仓库的根目录中创建 <code>.gitignore</code> 文件，指示 Git 忽略特定的文件或模式。</p>\n<ol>\n<li>\n<p><strong>创建 <code>.gitignore</code> 文件：</strong></p>\n<pre><code class=\"language-bash\"># 在 Linux/macOS 上\ntouch .gitignore\n\n# 在 Windows (命令提示符) 上 - 创建一个空文件\ntype nul > .gitignore\n\n# 在 Windows (PowerShell) 上\nNew-Item .gitignore -ItemType File\n</code></pre>\n</li>\n<li>\n<p><strong>编辑 <code>.gitignore</code> 文件：</strong> 添加要忽略的文件/目录模式。在文本编辑器中打开 <code>.gitignore</code> 并添加以下行：</p>\n<pre><code># 忽略日志文件\n*.log\n\n# 忽略临时目录中的文件\ntemp/\n\n# 忽略敏感凭证\ncredentials.json\n</code></pre>\n<p>每行指定一个模式。<code>*</code> 是通配符。末尾的 <code>/</code> 表示一个目录。</p>\n</li>\n<li>\n<p><strong>暂存并提交 <code>.gitignore</code>：</strong> 由于 <code>.gitignore</code> 是项目配置的一部分，您应该像处理其他项目文件一样添加并提交它。</p>\n<pre><code class=\"language-bash\">git add .gitignore\ngit commit -m \"Add .gitignore file\"\n</code></pre>\n<p>现在，如果您创建一个名为 <code>app.log</code> 的文件或一个名为 <code>temp</code> 的目录，<code>git status</code> 将不会将其列为未追踪文件。</p>\n</li>\n</ol>\n<h3>克隆现有仓库</h3>\n<p>您通常不是从新项目开始，而是从 GitHub、GitLab 或 Bitbucket 等远程托管服务上已有的项目开始操作。您可以使用 <code>git clone</code> 获取仓库的本地副本。</p>\n<ol>\n<li>\n<p><strong>查找仓库 URL：</strong> 前往 GitHub 等服务，找到您感兴趣的公共仓库。查找“克隆”或“代码”按钮，它将提供一个 URL（通常以 <code>.git</code> 结尾）。</p>\n</li>\n<li>\n<p><strong>克隆仓库：</strong> 导航到 <code>my-data-project</code> 文件夹<em>之外</em>的目录，您希望将此新项目放置在此处。然后运行克隆命令：</p>\n<pre><code class=\"language-bash\"># 使用 URL 的示例\ngit clone https://github.com/some-user/some-repo.git\n</code></pre>\n<p>Git 将下载整个项目历史记录并创建一个名为 <code>some-repo</code>（或仓库名称）的新目录。然后您可以 <code>cd some-repo</code> 并使用相同的 <code>status</code>、<code>add</code>、<code>commit</code> 和 <code>log</code> 命令开始操作。克隆会自动设置一个连接（称为“远程”，通常命名为 <code>origin</code>）到原始仓库 URL。</p>\n</li>\n</ol>\n<p>这些命令（<code>init</code>、<code>status</code>、<code>add</code>、<code>commit</code>、<code>log</code>、<code>clone</code> 和使用 <code>.gitignore</code>）构成使用 Git 的核心。通过对 <code>config.txt</code> 文件进行更多变动、添加新文件、暂存并提交它们来练习这些命令。在每个步骤中观察 <code>git status</code> 和 <code>git log</code> 的输出。掌握这些基本操作对于有效协作和管理数据工程项目的演变很有帮助。</p>",
+  "slug": "practice-basic-git-commands",
+  "updates": [],
+  "references": [
+    {
+      "id": 15461,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "Git的官方综合指南，涵盖了基本命令和高级概念。",
+      "order": 1,
+      "created_at": "2025-09-06T10:45:49.812518Z",
+      "updated_at": "2025-09-11T02:49:40.393863Z"
+    },
+    {
+      "id": 15463,
+      "title": "GitHub Docs: Getting Started with Git and GitHub",
+      "author": "GitHub Docs",
+      "year": "2024",
+      "publisher": "GitHub",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBs8WVmUSMZMrU6QLKOkHlyQ_MkMsK-Ixvm_QCwtDuo4EbJ3yN6f5kTvwmEO3EXRLjLbbxf39uJGkjjGMSJukqpkRCq8Ru8dY6306uR8Pv3xfFy8hR1LSAO5WJJTsyxAYv_4C01jeFyd20qirr-xFvfJfLeSiX2L2CuyYe2G2ZBYA31BzjNeAnF-U=",
+      "doi": "",
+      "note": "提供Git基本概念以及将Git与GitHub结合用于项目协作的指南。",
+      "order": 3,
+      "created_at": "2025-09-06T10:45:49.819966Z",
+      "updated_at": "2025-09-11T02:49:49.844102Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

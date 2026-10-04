@@ -1,0 +1,45 @@
+{
+  "id": 5675,
+  "title": "动手实践：运行TSTR评估",
+  "meta_title": "实践：运行TSTR评估",
+  "meta_description": "使用 scikit-learn 和合成数据集实现 TSTR 评估。",
+  "content": "<p>实现训练-合成-测试-真实 (TSTR) 评估流程涉及使用 Python 和常用数据科学库。目标是仅使用合成数据训练机器学习 (machine learning)模型，并用未见过的真实数据评估其性能，从而直接衡量合成数据对于后续任务的实用性。</p>\n<h3>设置评估环境</h3>\n<p>首先，我们需要准备数据集：原始真实数据集和从中生成的合成数据集。为了评估的公平性，我们必须对真实数据进行合理划分。一部分将用于训练基准模型（训练-真实-测试-真实，即TRTR），而另一部分独立保留的数据将作为基准模型和TSTR模型<em>共同</em>的测试集。非常必要的是，这个真实测试集在合成数据生成过程中不能以任何形式被使用过。</p>\n<p>假设你的真实数据在名为 <code>real_df</code> 的 Pandas DataFrame 中，而合成数据在 <code>synthetic_df</code> 中。两者都应包含特征和目标变量（我们称之为 <code>'target'</code>）。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.metrics import accuracy_score, f1_score, roc_auc_score\nimport numpy as np\n\n# 假设 real_df 和 synthetic_df 是已预加载的 Pandas DataFrame\n# 示例结构:\n# real_df = pd.DataFrame(np.random.rand(1000, 5), columns=[f'feat_{i}' for i in range(5)])\n# real_df['target'] = np.random.randint(0, 2, 1000)\n# synthetic_df = pd.DataFrame(np.random.rand(1000, 5), columns=[f'feat_{i}' for i in range(5)])\n# synthetic_df['target'] = np.random.randint(0, 2, 1000)\n\n# 分离真实数据的特征 (X) 和目标 (y)\nX_real = real_df.drop('target', axis=1)\ny_real = real_df['target']\n\n# 将真实数据分割为训练集和测试集\n# 测试集 (X_test_real, y_test_real) 仅保留用于评估。\nX_train_real, X_test_real, y_train_real, y_test_real = train_test_split(\n    X_real, y_real, test_size=0.3, random_state=42, stratify=y_real\n)\n\n# 准备合成数据（假设其列与真实数据相同）\nX_synthetic = synthetic_df.drop('target', axis=1)\ny_synthetic = synthetic_df['target']\n\nprint(f\"真实训练集大小: {X_train_real.shape[0]}\")\nprint(f\"真实测试集大小: {X_test_real.shape[0]}\")\nprint(f\"合成训练集大小: {X_synthetic.shape[0]}\")\n</code></pre>\n<p>确保对真实训练数据执行的任何预处理步骤（如缩放或编码）在训练TSTR模型之前也一致地应用于合成数据，并在评估之前应用于真实测试数据。</p>\n<h3>训练基准模型 (TRTR)</h3>\n<p>为了了解合成数据表现如何，我们需要一个参照。这个参照是通过在真实训练数据上训练模型，并在真实测试数据上进行评估来确定的。我们在此示例中使用一个标准分类器，如随机森林。</p>\n<pre><code class=\"language-python\"># 初始化分类器\n# TRTR 和 TSTR 都使用相同的模型类型和超参数\nmodel_params = {'n_estimators': 100, 'max_depth': 10, 'random_state': 42}\nbaseline_model = RandomForestClassifier(**model_params)\n\n# 在真实数据上训练基准模型\nbaseline_model.fit(X_train_real, y_train_real)\n\n# 在真实测试集上评估基准模型\nbaseline_predictions = baseline_model.predict(X_test_real)\nbaseline_probabilities = baseline_model.predict_proba(X_test_real)[:, 1] # 用于计算 AUC 的概率\n\n# 计算基准模型性能指标\nbaseline_accuracy = accuracy_score(y_test_real, baseline_predictions)\nbaseline_f1 = f1_score(y_test_real, baseline_predictions)\nbaseline_auc = roc_auc_score(y_test_real, baseline_probabilities)\n\nprint(\"\\n基准模型性能 (训练真实数据, 测试真实数据):\")\nprint(f\"准确率: {baseline_accuracy:.4f}\")\nprint(f\"F1 分数: {baseline_f1:.4f}\")\nprint(f\"AUC: {baseline_auc:.4f}\")\n\n# 存储结果以供比较\nresults = {\n    'TRTR': {'Accuracy': baseline_accuracy, 'F1': baseline_f1, 'AUC': baseline_auc}\n}\n</code></pre>\n<p>这些 TRTR 分数表示在所选模型设置下使用原始数据可达到的性能。</p>\n<h3>训练 TSTR 模型</h3>\n<p>现在，我们执行 TSTR 的核心步骤。我们训练一个相同的模型（相同类型，相同超参数 (parameter) (hyperparameter)），但使用<em>合成</em>数据进行训练。评估仍需在<em>真实</em>测试集（<code>X_test_real</code>，<code>y_test_real</code>）上进行，这一点很重要。</p>\n<pre><code class=\"language-python\"># 为 TSTR 初始化一个相同的分类器\ntstr_model = RandomForestClassifier(**model_params)\n\n# 在合成数据上训练 TSTR 模型\n# 确保 X_synthetic 具有与 X_train_real 相同的特征\ntstr_model.fit(X_synthetic, y_synthetic)\n\n# 在真实测试集上评估 TSTR 模型\ntstr_predictions = tstr_model.predict(X_test_real)\ntstr_probabilities = tstr_model.predict_proba(X_test_real)[:, 1] # 用于计算 AUC 的概率\n\n# 计算 TSTR 性能指标\ntstr_accuracy = accuracy_score(y_test_real, tstr_predictions)\ntstr_f1 = f1_score(y_test_real, tstr_predictions)\ntstr_auc = roc_auc_score(y_test_real, tstr_probabilities)\n\nprint(\"\\nTSTR 模型性能 (训练合成数据, 测试真实数据):\")\nprint(f\"准确率: {tstr_accuracy:.4f}\")\nprint(f\"F1 分数: {tstr_f1:.4f}\")\nprint(f\"AUC: {tstr_auc:.4f}\")\n\n# 存储结果以供比较\nresults['TSTR'] = {'Accuracy': tstr_accuracy, 'F1': tstr_f1, 'AUC': tstr_auc}\n</code></pre>\n<h3>结果比较与解读</h3>\n<p>最后一步是比较 TRTR 基准和 TSTR 评估的性能指标。TSTR 指标越接近 TRTR 指标，合成数据在机器学习 (machine learning)方面的实用性就越高。</p>\n<pre><code class=\"language-python\"># 创建一个 DataFrame 以便比较\nresults_df = pd.DataFrame(results).T # 转置以提高可读性\nprint(\"\\n模型性能比较:\")\nprint(results_df)\n\n# 计算性能比率（例如，TSTR 分数 / TRTR 分数）\nperformance_ratio = results_df.loc['TSTR'] / results_df.loc['TRTR']\nprint(\"\\n性能比率 (TSTR 分数 / TRTR 分数):\")\nprint(performance_ratio)\n</code></pre>\n<p>性能比率接近 1.0 表明实用性出色；在合成数据上训练的模型性能几乎与在真实数据上训练的模型一样好。明显低于 1.0 的比率（例如 &#x3C; 0.8）表明合成数据缺乏真实数据中存在的关键模式，限制了其对特定任务和模型的有用性。中等比率（例如 0.8 - 0.95）可能可接受，这取决于应用的容忍度和使用合成数据所带来的益处（如隐私）。</p>\n<p>我们可以将此比较可视化：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1qbo8mu\" \n              data-plot-definition='{\"layout\": {\"title\": \"TSTR 与 TRTR 模型性能比较\", \"barmode\": \"group\", \"xaxis\": {\"title\": \"指标\"}, \"yaxis\": {\"title\": \"分数\", \"range\": [0, 1]}, \"legend\": {\"title\": \"训练数据\"}, \"autosize\": true}, \"data\": [{\"type\": \"bar\", \"name\": \"TRTR (真实数据)\", \"x\": [\"准确率\", \"F1 分数\", \"AUC\"], \"y\": [0.85, 0.82, 0.90], \"marker\": {\"color\": \"#1c7ed6\"}}, {\"type\": \"bar\", \"name\": \"TSTR (合成数据)\", \"x\": [\"准确率\", \"F1 分数\", \"AUC\"], \"y\": [0.78, 0.75, 0.84], \"marker\": {\"color\": \"#ff922b\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1qbo8mu\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较在真实数据 (TRTR) 和合成数据 (TSTR) 上训练的模型（两者均在相同真实测试集上评估）的性能指标（准确率、F1 分数、AUC）。TSTR 条形图越低表示实用性越差。</p>\n</blockquote>\n<h3>进一步考虑</h3>\n<ul>\n<li><strong>模型选择：</strong> 模型选择（本例中为随机森林）会影响结果。通常有益的做法是使用与您实际后续应用相关的不同类型模型（例如，逻辑回归、梯度提升、神经网络 (neural network)）重复进行 TSTR 评估。</li>\n<li><strong>超参数 (parameter) (hyperparameter)：</strong> 我们使用了固定的超参数。如前所述，合成数据可能会导致与真实数据不同的最优超参数。分别为 TRTR 和 TSTR 情况运行超参数优化可以提供更多信息，但这会增加比较的复杂性。</li>\n<li><strong>数据大小：</strong> 合成数据集相对于真实训练集的相对大小会影响性能。请确保您正在比较大小合理的数据集。</li>\n<li><strong>任务复杂性：</strong> 实用性可能会因预测任务的复杂性而异（例如，二元分类 vs. 多分类 vs. 回归）。</li>\n</ul>\n<p>本实践练习演示了 TSTR 的核心流程。通过系统地比较在合成数据与真实数据上训练的模型的性能，您可以获得有关合成数据对您的机器学习 (machine learning)目标所具有实际价值的量化 (quantization)证据。请记住根据您的具体用例调整模型、指标和解读。</p>",
+  "slug": "practice-running-tstr-evaluations",
+  "updates": [],
+  "references": [
+    {
+      "id": 15566,
+      "title": "A Review of Synthetic Data Generation Methods and Their Evaluation",
+      "author": "Qi-Yue Ma, Sheng-Jun Huang, Wen-Bo Hu",
+      "year": "2022",
+      "publisher": "ACM",
+      "journal": "ACM Computing Surveys",
+      "volume": "55",
+      "pages": "Article 145, pp. 1-36",
+      "url": "https://dl.acm.org/doi/10.1145/3544673",
+      "doi": "10.1145/3544673",
+      "note": "本综述讨论了多种合成数据生成方法，并提供了评估指标的分类，包括评估TSTR等机器学习效用的指标。",
+      "order": 1,
+      "created_at": "2025-09-06T10:51:12.942235Z",
+      "updated_at": "2025-09-08T03:41:13.225043Z"
+    },
+    {
+      "id": 15568,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125968/",
+      "doi": "",
+      "note": "这本实用指南提供了关于使用Scikit-Learn进行机器学习模型实现、训练和评估的清晰说明，支持了所提供的代码示例和方法。",
+      "order": 3,
+      "created_at": "2025-09-06T10:51:12.950240Z",
+      "updated_at": "2025-09-08T03:41:51.848945Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

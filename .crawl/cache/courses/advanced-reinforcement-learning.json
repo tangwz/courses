@@ -1,0 +1,971 @@
+{
+  "id": 139,
+  "title": "高级强化学习技术",
+  "meta_title": "高级强化学习 | 深度强化学习方法",
+  "meta_description": "掌握高级强化学习算法：深度Q网络、策略梯度、Actor-Critic、多智能体强化学习以及基于模型的技术。实现复杂的强化学习方案。",
+  "description": "<p>本课程涵盖高级强化学习 (reinforcement learning)算法与方法论。它侧重于深度强化学习、策略优化、寻觅方法、基于模型的技术以及多智能体系统。学习者将掌握处理复杂序列决策问题的理论知识与实践操作技能。</p>",
+  "short_description": "应用高级强化学习算法，解决复杂序列决策难题。",
+  "excerpt": "掌握高级强化学习算法，包括深度Q网络、高级策略梯度（PPO、TRPO）、基于模型的强化学习以及多智能体强化学习。实现并优化复杂的强化学习方案。",
+  "prerequisites": "Python，机器学习与强化学习基本知识。",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "深度Q网络变体",
+      "description": "实现并理解DQN、Double DQN、Dueling DQN和优先经验回放等算法。"
+    },
+    {
+      "topic": "高级策略梯度方法",
+      "description": "掌握A2C、A3C、DDPG、TRPO和PPO的理论与应用。"
+    },
+    {
+      "topic": "高级寻觅策略",
+      "description": "应用除epsilon-greedy之外的寻觅技术，包括好奇心驱动和基于计数的方法。"
+    },
+    {
+      "topic": "基于模型的强化学习",
+      "description": "开发能够学习环境模型并用于规划的智能体（例如Dyna-Q、MCTS集成思路）。"
+    },
+    {
+      "topic": "多智能体强化学习",
+      "description": "理解多智能体场景中的难题，并实现协作和竞争模式下的算法（例如MADDPG）。"
+    },
+    {
+      "topic": "离线强化学习",
+      "description": "学习如何使用固定数据集训练强化学习智能体，处理诸如分布偏移等难题。"
+    },
+    {
+      "topic": "实现与优化",
+      "description": "有效优化深度强化学习的实现、调整超参数并调试智能体行为。"
+    }
+  ],
+  "duration": 70,
+  "slug": "advanced-reinforcement-learning",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-06T04:28:03.549700Z",
+  "updated_at": "2026-10-02T09:34:45.820125Z",
+  "chapters": [
+    {
+      "id": 712,
+      "title": "基础重温与函数近似",
+      "meta_title": "强化学习基础回顾 | 高阶强化学习课程",
+      "meta_description": "在处理高阶主题之前，回顾强化学习的核心理念，如马尔可夫决策过程、贝尔曼方程、时序差分学习、Q-学习 和 基本策略梯度。",
+      "number": 1,
+      "slug": "rl-foundations-revisited",
+      "content": "为了给高阶强化学习方法奠定扎实基础，本章将对核心理念进行重点回顾。我们首先梳理马尔可夫决策过程 (MDP) 框架。将再次回顾诸如价值函数 ($V^\\pi(s)$) 和行动价值函数 ($Q^\\pi(s, a)$) 的贝尔曼方程等主要组成部分，以及动态规划求解方案（价值迭代和策略迭代）。接着，我们概述时序差分 (TD) 学习的基本算法，包括 Q-学习 和 SARSA，以及通过 REINFORCE 算法介绍策略梯度方法的基本原理。重要的是，本章引入了函数近似的理念，解释了其处理大型状态空间的必要性，并指出了结合离策略学习、函数近似和自举时可能出现的“致命三元组”带来的潜在不稳定性。这为您为本课程后续部分中会使用的深度学习方法做好了准备。",
+      "sections": [
+        {
+          "id": 3343,
+          "title": "马尔可夫决策过程表述回顾",
+          "meta_title": "MDP 表述回顾 | 高级强化学习",
+          "meta_description": "马尔可夫决策过程（MDP）组成部分的简要回顾：状态、动作、转移、奖励和策略。",
+          "slug": "mdp-formulation-review",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3346,
+          "title": "贝尔曼方程与最优性条件",
+          "meta_title": "贝尔曼方程回顾 | 高级强化学习",
+          "meta_description": "再看值函数和Q函数的贝尔曼期望方程和最优性方程。",
+          "slug": "bellman-optimality-review",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3349,
+          "title": "价值迭代与策略迭代",
+          "meta_title": "价值与策略迭代 | 高级强化学习",
+          "meta_description": "概述经典的动态规划方法：用于求解MDP的价值迭代和策略迭代。",
+          "slug": "vi-pi-review",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3352,
+          "title": "时序差分学习方法",
+          "meta_title": "时序差分学习 | 高级强化学习",
+          "meta_description": "了解时序差分（TD）学习，包括TD(0)、SARSA和Q学习的基础。",
+          "slug": "td-learning-review",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3354,
+          "title": "策略梯度方法入门",
+          "meta_title": "策略梯度基础 | 高级强化学习",
+          "meta_description": "回顾策略梯度定理和REINFORCE算法，作为高级方法的基础。",
+          "slug": "policy-gradient-basics",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3357,
+          "title": "强化学习中的函数逼近",
+          "meta_title": "强化学习中的函数逼近 | 高级强化学习",
+          "meta_description": "函数逼近（线性与非线性）在大型状态/动作空间中的重要性。",
+          "slug": "function-approximation-rl",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3360,
+          "title": "离策略学习中的致命三元组",
+          "meta_title": "致命三元组 | 高级强化学习",
+          "meta_description": "了解离策略学习、函数逼近和自举结合所带来的挑战与不稳定现象。",
+          "slug": "deadly-triad-off-policy",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 715,
+      "title": "深度Q网络及其改进",
+      "meta_title": "深度Q网络 (DQN) | 高级强化学习技术",
+      "meta_description": "学习深度Q网络 (DQN) 算法及其重要的改进，例如双重DQN、对偶网络和优先回放。",
+      "number": 2,
+      "slug": "deep-q-networks",
+      "content": "第一章回顾了强化学习的基本原理以及函数逼近的应用。线性函数逼近器虽然有用，但在处理高维状态空间时往往表现不足，例如屏幕的原始像素输入或复杂的特征向量。为解决这些局限，我们将借助深度神经网络的表达能力。\n\n本章将介绍深度Q网络 (DQN)，这是一种核心算法，它成功地将Q学习与深度神经网络结合，在有难度的任务上取得了出色的表现。我们将研究使训练稳定有效的核心组成部分，即经验回放和目标网络的应用。\n\n在标准DQN算法的基础上，我们将分析几项重要的改进，旨在解决其具体不足：\n\n*   **双重DQN (DDQN)：** 减轻Q学习更新中固有的高估偏差。\n*   **对偶网络架构：** 将Q值分解为状态值和动作优势，以实现更好的泛化能力。\n*   **优先经验回放 (PER)：** 通过侧重于信息量更大的转换来提高样本效率。\n*   **分布强化学习原理：** 不再仅仅关注期望值，而是对回报的完整分布进行建模。\n*   **彩虹DQN：** 将多项DQN改进组合成一个单一的、高性能的智能体。\n\n您将了解这些技术背后的运作原理，并学习如何实现DQN及其主要变体。",
+      "sections": [
+        {
+          "id": 3363,
+          "title": "线性函数近似的局限性",
+          "meta_title": "线性近似限制 | 高级强化学习",
+          "meta_description": "讨论线性函数近似失效的情形以及对深度学习的需求出现的原因。",
+          "slug": "linear-approximation-limits",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3365,
+          "title": "深度Q网络 (DQN) 算法",
+          "meta_title": "DQN算法详解 | 进阶强化学习",
+          "meta_description": "详细阐述深度Q网络架构及其使用经验回放和目标网络的训练过程。",
+          "slug": "dqn-algorithm",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3367,
+          "title": "经验回放机制",
+          "meta_title": "DQN中的经验回放 | 进阶强化学习",
+          "meta_description": "了解经验回放如何打破相关性并提高DQN中的数据效率。",
+          "slug": "experience-replay",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3368,
+          "title": "用于训练稳定性的目标网络",
+          "meta_title": "DQN中的目标网络 | 进阶强化学习",
+          "meta_description": "目标网络在稳定DQN中Q学习更新过程中的作用。",
+          "slug": "target-networks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3370,
+          "title": "双重深度Q网络 (DDQN)",
+          "meta_title": "双重DQN (DDQN) | 进阶强化学习",
+          "meta_description": "使用双重DQN算法解决Q值过高估计偏差问题。",
+          "slug": "double-dqn",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3371,
+          "title": "对偶网络架构",
+          "meta_title": "对偶网络架构 | 强化学习进阶",
+          "meta_description": "实现对偶DQN以分别估计状态价值和动作优势。",
+          "slug": "dueling-dqn",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3373,
+          "title": "优先经验回放 (PER)",
+          "meta_title": "优先经验回放 | 高级强化学习",
+          "meta_description": "通过PER更频繁地回放有用的转移来提高学习效果。",
+          "slug": "prioritized-experience-replay",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3375,
+          "title": "分布强化学习原理",
+          "meta_title": "分布式强化学习简介 | 高阶强化学习",
+          "meta_description": "关于回报分布建模而非仅期望值的介绍（例如C51、QR-DQN）。",
+          "slug": "distributional-rl-intro",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3377,
+          "title": "Rainbow DQN 集成",
+          "meta_title": "Rainbow DQN 组件 | 进阶强化学习",
+          "meta_description": "将多项 DQN 改进（Double, Dueling, PER, Distributional, Noisy Nets）集成到 Rainbow 代理中。",
+          "slug": "rainbow-dqn",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3379,
+          "title": "DQN变体实现动手实践",
+          "meta_title": "DQN 实现实践 | 高级强化学习",
+          "meta_description": "使用深度学习框架动手实现DQN及其变体（DDQN，对决DQN）。",
+          "slug": "dqn-implementation-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 717,
+      "title": "高级策略梯度与 Actor-Critic 方法",
+      "meta_title": "高级策略梯度 | Actor-Critic | PPO | DDPG",
+      "meta_description": "学习高级策略梯度和 Actor-Critic 方法，包括 A2C、A3C、DDPG、TRPO 和 PPO，适用于连续和离散动作空间。",
+      "number": 3,
+      "slug": "advanced-policy-gradients-actor-critic",
+      "content": "基础策略梯度方法，例如 REINFORCE，其梯度估计常存在高方差问题，导致学习缓慢或不稳定。本章介绍 Actor-Critic 方法，这是一类旨在应对此局限性的算法。其核心思想是维持两个组成部分：一个 *actor*（行动者），它学习策略 $\\pi(a|s)$；以及一个 *critic*（评估者），它学习价值函数（例如 $V(s)$ 或 $Q(s,a)$）来评估 actor 的行动并提供低方差的梯度信号。\n\n你将学习在此框架基础上的一些重要进展：\n\n*   **方差降低**：例如使用基线以及 Advantage Actor-Critic (A2C/A3C) 来稳定策略更新的方法。\n*   **优势估计**：理解广义优势估计 (GAE) 以平衡偏差与方差。\n*   **连续控制**：例如深度确定性策略梯度 (DDPG) 等适用于连续动作空间的算法。\n*   **策略优化稳定性**：确保更可靠策略改进的方法，具体而言是信任区域策略优化 (TRPO) 和近端策略优化 (PPO)。\n*   **最大熵强化学习**：Soft Actor-Critic (SAC)，一种采用熵最大化以获得更好试探能力和稳定性的离策略方法。\n\n在本章结束时，你将理解这些高级算法的原理，并准备好实现它们以解决更复杂的强化学习问题。",
+      "sections": [
+        {
+          "id": 3381,
+          "title": "基本策略梯度面临的挑战",
+          "meta_title": "策略梯度挑战 | 强化学习进阶",
+          "meta_description": "讨论 REINFORCE 算法相关的高方差和样本效率低下问题。",
+          "slug": "policy-gradient-challenges",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3383,
+          "title": "行动者-评论者架构基本原理",
+          "meta_title": "行动者-评论者基本原理 | 高级强化学习",
+          "meta_description": "介绍行动者-评论者框架，其中策略（行动者）和价值函数（评论者）逼近器是独立的。",
+          "slug": "actor-critic-fundamentals",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3386,
+          "title": "降低方差的基线",
+          "meta_title": "方差降低基线 | 强化学习进阶",
+          "meta_description": "使用状态值函数作为基线，降低策略梯度估计中的方差。",
+          "slug": "variance-reduction-baselines",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3387,
+          "title": "优势 Actor-Critic (A2C) 和 A3C",
+          "meta_title": "A2C 和 A3C 算法 | 强化学习进阶",
+          "meta_description": "优势演员-评论家方法的同步 (A2C) 和异步 (A3C) 变体。",
+          "slug": "a2c-a3c",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3390,
+          "title": "广义优势估计 (GAE)",
+          "meta_title": "广义优势估计 | 高级强化学习",
+          "meta_description": "理解 GAE 如何权衡优势函数估计中的偏差和方差。",
+          "slug": "generalized-advantage-estimation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3393,
+          "title": "深度确定性策略梯度 (DDPG)",
+          "meta_title": "DDPG算法 | 进阶强化学习",
+          "meta_description": "一种专为连续动作空间设计的离策略Actor-Critic算法，结合了DQN的思路。",
+          "slug": "ddpg-algorithm",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3396,
+          "title": "信任区域策略优化 (TRPO)",
+          "meta_title": "TRPO 原理 | 高级强化学习",
+          "meta_description": "TRPO 的理论基础，确保策略更新保持在信任区域内以实现稳定学习。",
+          "slug": "trpo-concepts",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3399,
+          "title": "近端策略优化 (PPO)",
+          "meta_title": "PPO算法 | 高级强化学习",
+          "meta_description": "使用截断代理目标或KL散度惩罚实现PPO，以实现更简洁的实施和优秀性能。",
+          "slug": "ppo-algorithm",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3403,
+          "title": "软演员-评论家 (SAC)",
+          "meta_title": "软演员-评论家 (SAC) | 高阶强化学习",
+          "meta_description": "一种基于最大熵强化学习框架的离策略演员-评论家方法，促进环境交互。",
+          "slug": "sac-algorithm",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3407,
+          "title": "演员-评论家方法实现实践",
+          "meta_title": "演员-评论家实现 | 高级强化学习",
+          "meta_description": "动手实践实现PPO或SAC等算法，以用于标准强化学习基准测试。",
+          "slug": "actor-critic-implementation-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 720,
+      "title": "进阶搜寻策略",
+      "meta_title": "强化学习中的进阶搜寻 | 内在动机",
+      "meta_description": "学习超越简单方法的精密搜寻技术，包括 UCB、汤普森采样、基于计数的方法和内在动机。",
+      "number": 4,
+      "slug": "advanced-exploration-strategies",
+      "content": "有效的强化学习需要在搜寻环境以发现更好的策略与利用现有知识以获得即时奖励之间取得谨慎的平衡。基本的搜寻方法，例如 $\\epsilon$-贪心法，在涉及大型状态空间或稀疏反馈的复杂情境中往往力有不逮。本章介绍进阶搜寻技术，能够实现更高效、更有方向性的发现。\n\n你将考察根植于管理不确定性的策略，包括上置信区间（UCB）方法和汤普森采样。我们还将研究基于计数的方法，这些方法鼓励访问较不熟悉的状态，以及内在动机技术，其中智能体根据预测误差（如ICM）、状态新颖性（如RND）或信息增益产生内部奖励。最后，将讨论参数空间噪声在搜寻中的应用。理解这些方法将为你提供工具，来设计能够应对困难搜寻难题的智能体。",
+      "sections": [
+        {
+          "id": 3410,
+          "title": "再谈试错-利用权衡",
+          "meta_title": "试错-利用权衡 | 高级强化学习",
+          "meta_description": "分析复杂强化学习问题中有效试探的必要性和挑战。",
+          "slug": "exploration-exploitation-revisited",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3413,
+          "title": "不确定性下的乐观主义：UCB 方法",
+          "meta_title": "UCB 方法用于试探 | 高级强化学习",
+          "meta_description": "应用上限置信区间（UCB）原则用于强化学习中的行动选择。",
+          "slug": "ucb-methods-rl",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3414,
+          "title": "概率匹配：汤普森采样",
+          "meta_title": "强化学习中的汤普森采样 | 高级强化学习",
+          "meta_description": "利用贝叶斯方法和汤普森采样高效寻新。",
+          "slug": "thompson-sampling-rl",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3416,
+          "title": "参数空间噪声用于行为多样性",
+          "meta_title": "参数空间噪声 | 进阶强化学习",
+          "meta_description": "直接向策略参数注入噪声以促进行为多样性，与行动空间噪声形成对比。",
+          "slug": "parameter-space-noise",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3419,
+          "title": "伪计数：基于计数的寻访方法",
+          "meta_title": "基于计数的寻访 | 高级强化学习",
+          "meta_description": "通过使用密度模型或基于哈希的计数来访问不常出现的状态，从而鼓励寻访。",
+          "slug": "count-based-exploration",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3422,
+          "title": "预测误差作为好奇心：内生激励",
+          "meta_title": "通过预测误差的内在激励 | 高级强化学习",
+          "meta_description": "根据智能体预测环境动态的能力生成内在奖励（例如，ICM）。",
+          "slug": "intrinsic-motivation-prediction",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3425,
+          "title": "状态新颖性：随机网络蒸馏 (RND)",
+          "meta_title": "随机网络蒸馏 | 高级强化学习",
+          "meta_description": "使用固定随机网络的预测误差作为内在奖励信号，用于寻觅新颖状态。",
+          "slug": "random-network-distillation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3429,
+          "title": "信息增益在行动引导中的应用",
+          "meta_title": "信息增益行动引导 | 高级强化学习",
+          "meta_description": "基于最大化环境动态信息增益的行动引导策略。",
+          "slug": "information-gain-exploration",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3432,
+          "title": "行为策略的对比与结合",
+          "meta_title": "行为策略对比 | 高级强化学习",
+          "meta_description": "对不同高级行为方法的优势和劣势进行分析。",
+          "slug": "comparing-exploration-techniques",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3435,
+          "title": "寻优策略实施实践",
+          "meta_title": "寻优实现 | 高级强化学习",
+          "meta_description": "在RL环境中动手实施和比较不同的高级寻优策略。",
+          "slug": "exploration-implementation-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 723,
+      "title": "基于模型的强化学习",
+      "meta_title": "基于模型的强化学习 | Dyna-Q | MCTS",
+      "meta_description": "了解智能体如何学习环境的模型并运用它进行规划，内容涵盖Dyna-Q、MCTS集成以及MPC的理念。",
+      "number": 5,
+      "slug": "model-based-reinforcement-learning",
+      "content": "迄今为止，我们主要关注了直接通过互动学习的无模型算法。本章将转向研究基于模型的强化学习。其核心思想是让智能体建立一个内部模型来描述环境的运作方式。这包括学习近似的状态转移概率（通常表示为 $P(s'|s, a)$）以及预期奖励函数 $R(s, a, s')$。\n\n一旦模型被习得，即使是不完美的模型，智能体也可以在内部运用它进行规划或模拟经验，这可能促使真实互动的使用效率更高。我们将考察学习这些动态模型的方法，以及如何将它们与规划结合。主要内容包括Dyna-Q架构，运用已学模型进行轨迹采样，蒙特卡洛树搜索（MCTS）的原理及其集成方式，以及与模型预测控制（MPC）的联系。我们还将考虑与模型准确性以及规划计算成本相关的实际问题。在本章结束时，你将熟悉基于模型的强化学习所使用的原理、技术和常用方法。",
+      "sections": [
+        {
+          "id": 3438,
+          "title": "基于模型的强化学习的理由",
+          "meta_title": "为何选择基于模型的强化学习？ | 高级强化学习",
+          "meta_description": "讨论基于模型方法可能带来的好处，例如样本效率和规划能力。",
+          "slug": "model-based-rl-rationale",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3441,
+          "title": "基于模型方法的分类",
+          "meta_title": "基于模型强化学习的分类 | 高级强化学习",
+          "meta_description": "对学习和使用环境模型方法的分类。",
+          "slug": "model-based-taxonomy",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3443,
+          "title": "学习环境动态模型",
+          "meta_title": "学习环境模型 | 高级强化学习",
+          "meta_description": "从经验中学习转移函数和奖励函数的方法，包括概率模型。",
+          "slug": "learning-environment-models",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3445,
+          "title": "Dyna 架构：学习与规划的结合",
+          "meta_title": "Dyna 架构 (Dyna-Q) | 高级强化学习",
+          "meta_description": "Dyna-Q 算法将真实经验与学习模型生成的模拟经验结合。",
+          "slug": "dyna-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3449,
+          "title": "使用已学习模型进行规划：轨迹采样",
+          "meta_title": "通过轨迹采样进行规划 | 高级强化学习",
+          "meta_description": "使用已学习模型模拟轨迹，并改进策略或价值函数。",
+          "slug": "planning-trajectory-sampling",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3452,
+          "title": "蒙特卡洛树搜索（MCTS）基本原理",
+          "meta_title": "MCTS 基本原理 | 高级强化学习",
+          "meta_description": "介绍蒙特卡洛树搜索作为一种强大的规划算法。",
+          "slug": "mcts-fundamentals",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3455,
+          "title": "将MCTS与习得模型整合",
+          "meta_title": "MCTS与习得模型的整合 | 高级强化学习",
+          "meta_description": "将习得模型与MCTS结合以改进策略，受AlphaGo/AlphaZero等系统启发。",
+          "slug": "mcts-learned-models",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3457,
+          "title": "模型预测控制 (MPC) 的关联",
+          "meta_title": "MPC 与基于模型的强化学习 | 进阶强化学习",
+          "meta_description": "基于模型的强化学习与模型预测控制思路之间的关系。",
+          "slug": "mpc-connections-rl",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3460,
+          "title": "挑战：模型准确性与计算成本",
+          "meta_title": "基于模型的强化学习挑战 | 高级强化学习",
+          "meta_description": "处理与不完善模型（模型偏差）以及规划计算开销相关的问题。",
+          "slug": "model-based-challenges",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3463,
+          "title": "简单基于模型的智能体实践",
+          "meta_title": "基于模型的强化学习实现 | 高级强化学习",
+          "meta_description": "基于模型的强化学习智能体的动手实现，可能基于Dyna-Q。",
+          "slug": "model-based-agent-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 726,
+      "title": "多智能体强化学习",
+      "meta_title": "多智能体强化学习 (MARL)",
+      "meta_description": "学习多智能体环境下的强化学习。涵盖非平稳性等挑战以及合作/竞争算法。",
+      "number": 6,
+      "slug": "multi-agent-reinforcement-learning",
+      "content": "许多顺序决策问题都包含多个彼此影响的智能体，从机器人团队和自动驾驶车辆，到经济建模和博弈游戏。单智能体强化学习方法在这些情况下往往力有不逮，因为每个智能体的最佳策略都依赖于其他智能体的行为。本章将介绍多智能体强化学习（MARL），把强化学习的原则推广到多个智能体的环境中。\n\n我们将首先对多智能体问题进行形式化，通常使用随机博弈（或马尔可夫博弈）的框架。多智能体强化学习中的一个主要难题是*非平稳性*：从任何单个智能体的角度来看，当其他智能体调整其策略时，环境动态会发生变化。我们将研究解决这些及其他挑战的不同方法，对比集中式训练方法与分布式执行策略（CTDE）。\n\n你将学习到：\n\n*   多智能体强化学习独有的基本挑战，主要是非平稳性。\n*   不同的多智能体强化学习模式，如独立学习、参数共享和 CTDE。\n*   针对合作任务设计的具体算法，例如价值分解网络（VDN）和 QMIX。\n*   适用于混合合作-竞争场景的算法，例如多智能体深度确定性策略梯度（MADDPG）。\n*   与智能体通信相关的内容。\n\n到本章结束时，你将理解多智能体强化学习的核心问题，并熟悉几种用于训练多个彼此影响的智能体的常用算法。",
+      "sections": [
+        {
+          "id": 3464,
+          "title": "多智能体系统介绍",
+          "meta_title": "多智能体系统介绍 | 多智能体强化学习",
+          "meta_description": "定义多智能体环境以及多智能体强化学习（MARL）的范围。",
+          "slug": "multi-agent-systems-intro",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3466,
+          "title": "MARL问题表述：随机博弈",
+          "meta_title": "MARL问题表述 | 高级强化学习",
+          "meta_description": "使用马尔可夫博弈（随机博弈）等框架形式化MARL问题。",
+          "slug": "marl-stochastic-games",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3468,
+          "title": "集中式与分布式控制",
+          "meta_title": "集中式与分布式多智能体强化学习 | 高级强化学习",
+          "meta_description": "比较完全集中式训练/执行与分布式方法。",
+          "slug": "centralized-decentralized-marl",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3470,
+          "title": "挑战：非静态性问题",
+          "meta_title": "MARL中的非静态性 | 高级强化学习",
+          "meta_description": "了解同时学习的智能体如何从个体智能体的角度使环境变为非静态。",
+          "slug": "marl-non-stationarity",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3472,
+          "title": "独立学习者 (IQL, IDDPG)",
+          "meta_title": "多智能体强化学习中的独立学习者 | 高级强化学习",
+          "meta_description": "将单智能体强化学习算法独立应用于每个智能体及其局限性。",
+          "slug": "independent-learners-marl",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3474,
+          "title": "参数共享方法",
+          "meta_title": "多智能体强化学习中的参数共享 | 高级强化学习",
+          "meta_description": "在同类智能体之间使用共享网络参数以提升学习效率。",
+          "slug": "parameter-sharing-marl",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3476,
+          "title": "集中式训练与去中心化执行 (CTDE)",
+          "meta_title": "MARL中的CTDE模式 | 高级强化学习",
+          "meta_description": "CTDE方法：在训练时运用全局信息，同时实现去中心化执行。",
+          "slug": "ctde-marl",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3478,
+          "title": "价值分解方法 (VDN, QMIX)",
+          "meta_title": "价值分解 (VDN, QMIX) | 多智能体强化学习",
+          "meta_description": "使用 VDN 和 QMIX 等方法将全局 Q 函数分解为单个智能体的 Q 函数。",
+          "slug": "value-decomposition-marl",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3480,
+          "title": "多智能体深度确定性策略梯度 (MADDPG)",
+          "meta_title": "MADDPG 算法 | MARL",
+          "meta_description": "使用集中式评论器和分散式执行者，将 DDPG 扩展到多智能体环境。",
+          "slug": "maddpg-algorithm",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3481,
+          "title": "多智能体强化学习中的通信协议",
+          "meta_title": "多智能体强化学习中的通信 | 高级强化学习",
+          "meta_description": "实现智能体之间显式或隐式通信的方法。",
+          "slug": "communication-marl",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3482,
+          "title": "MARL实现实践",
+          "meta_title": "MARL实现实践 | 高级强化学习",
+          "meta_description": "在多智能体环境中动手实践MARL算法（例如IQL、MADDPG）的实现。",
+          "slug": "marl-implementation-practice",
+          "order": 11,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 728,
+      "title": "离线强化学习",
+      "meta_title": "离线强化学习 | 批量强化学习",
+      "meta_description": "了解离线强化学习（批量强化学习），它完全通过固定数据集学习策略，无需与环境交互。解决分布偏移问题。",
+      "number": 7,
+      "slug": "offline-reinforcement-learning",
+      "content": "之前的章节主要关注通过与环境主动交互来提升能力的强化学习智能体。本章将转向**离线强化学习**，它常被称为批量强化学习（Batch RL）。在这里，面临的挑战是仅凭静态的、预先收集好的转移数据集来学习有效策略，而没有机会再与环境进行交互。\n\n我们将首先阐述离线学习的动机，并强调它与之前讨论的在线和异策略设置之间的主要区别。离线强化学习的一个核心难题是**分布偏移**：即固定数据集（由某种行为策略 $ \\pi_b $ 生成）中状态和动作的分布，与正在评估或学习的新策略所产生的分布不匹配。\n\n本章将论述：\n*   分布偏移的含义及其影响。\n*   **离线异策略评估（OPE）**的方法，包括重要性采样及其在实践中遇到的难题。\n*   专门设计用于缓解分布偏移的算法，例如**策略约束方法**（如BCQ），这些方法将学习到的策略限制在数据支持的动作上。\n*   **值正则化技术**（如CQL），这些技术会惩罚数据集中未出现的动作所产生的不切实际的Q值。\n*   与离线设置相关的实际实现细节。",
+      "sections": [
+        {
+          "id": 3483,
+          "title": "离线强化学习（批处理强化学习）简介",
+          "meta_title": "离线强化学习简介 | 批处理强化学习",
+          "meta_description": "离线强化学习的缘由与定义：从预先收集的数据中进行学习。",
+          "slug": "offline-rl-introduction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3484,
+          "title": "离线强化学习与在线及离策略强化学习的区别",
+          "meta_title": "离线与在线/离策略强化学习 | 高级强化学习",
+          "meta_description": "对比离线强化学习与标准在线及离策略学习设置。",
+          "slug": "offline-vs-online-offpolicy",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3485,
+          "title": "挑战：分布偏移",
+          "meta_title": "离线RL中的分布偏移 | 高级RL",
+          "meta_description": "理解评估与行为策略不同的策略如何因数据覆盖范围有限而导致错误。",
+          "slug": "offline-rl-distributional-shift",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3486,
+          "title": "离策略评估在离线设置中",
+          "meta_title": "离线离策略评估 | 高级强化学习",
+          "meta_description": "仅使用离线数据估计策略价值的方法，包括重要性采样。",
+          "slug": "offline-off-policy-evaluation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3487,
+          "title": "重要性采样及其局限性",
+          "meta_title": "离线强化学习中的重要性采样 | 高级强化学习",
+          "meta_description": "使用重要性采样进行离策略评估及其挑战，特别是高方差。",
+          "slug": "offline-importance-sampling",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3488,
+          "title": "拟合Q迭代（FQI）方法",
+          "meta_title": "拟合Q迭代（FQI）| 离线强化学习",
+          "meta_description": "在离线设置中迭代地拟合Q函数到数据。",
+          "slug": "fitted-q-iteration-offline",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3489,
+          "title": "策略约束方法",
+          "meta_title": "策略约束方法 | 离线强化学习",
+          "meta_description": "约束学习到的策略使其贴近行为策略分布（例如BCQ、BEAR）。",
+          "slug": "offline-policy-constraint",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3490,
+          "title": "批处理约束深度Q学习 (BCQ)",
+          "meta_title": "批处理约束Q学习 (BCQ) | 离线强化学习",
+          "meta_description": "细致了解适用于离线基于价值学习的BCQ算法。",
+          "slug": "bcq-offline",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3491,
+          "title": "值函数正则化方法",
+          "meta_title": "值函数正则化方法 | 离线强化学习",
+          "meta_description": "训练期间对Q函数进行正则化，以防止对分布外动作的过高估计（例如，CQL）。",
+          "slug": "offline-value-regularization",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3492,
+          "title": "保守Q学习 (CQL)",
+          "meta_title": "保守Q学习 (CQL) | 离线强化学习",
+          "meta_description": "了解CQL算法及其如何惩罚OOD动作的Q值。",
+          "slug": "cql-offline",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3493,
+          "title": "离线强化学习实现方面的考量",
+          "meta_title": "离线强化学习实现要点 | 高级强化学习",
+          "meta_description": "实现和评估离线强化学习算法的实际考量。",
+          "slug": "offline-rl-implementation-notes",
+          "order": 11,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3494,
+          "title": "离线强化学习算法实践",
+          "meta_title": "离线强化学习实践 | 进阶强化学习",
+          "meta_description": "动手实践在静态数据集上实现BCQ或CQL等离线强化学习算法。",
+          "slug": "offline-rl-practice",
+          "order": 12,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 729,
+      "title": "实现细节与优化",
+      "meta_title": "强化学习实现与优化 | 高级强化学习",
+      "meta_description": "侧重于实现、调优和调试高级深度强化学习智能体的实用层面，包括架构选择和分布式配置。",
+      "number": 8,
+      "slug": "rl-implementation-optimization",
+      "content": "理解高级强化学习算法是事情的一方面。本章讨论有效实现、训练和改进这些复杂智能体所需的实际考量。\n\n你将了解选择合适的神经网络架构、超参数调优策略、强化学习项目代码组织，以及使用现有软件框架等方面。我们还将涉及分布式训练方法、提高可复现性的方法、调试智能体行为的技术以及优化计算性能。重点在于将理论知识转化为可用且高效的强化学习系统。",
+      "sections": [
+        {
+          "id": 3495,
+          "title": "强化学习中的神经网络架构",
+          "meta_title": "强化学习中的神经网络架构 | 强化学习进阶",
+          "meta_description": "用于策略和值函数设计的网络架构（CNN、RNN、Transformer）的最佳实践。",
+          "slug": "rl-network-architectures",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3496,
+          "title": "超参数调整策略",
+          "meta_title": "强化学习中的超参数调整 | 进阶强化学习",
+          "meta_description": "深度强化学习算法中超参数调整的技术和挑战。",
+          "slug": "rl-hyperparameter-tuning",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3497,
+          "title": "动作空间与观测空间表示",
+          "meta_title": "动作/观测空间 | 进阶强化学习",
+          "meta_description": "处理不同类型的动作空间（离散、连续、混合）和观测空间（图像、向量）。",
+          "slug": "rl-space-representation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3498,
+          "title": "强化学习项目的代码结构",
+          "meta_title": "强化学习代码结构 | 高级强化学习",
+          "meta_description": "组织强化学习代码库，以提高清晰度、可复用性和可维护性。",
+          "slug": "rl-code-structure",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3499,
+          "title": "软件框架与库",
+          "meta_title": "强化学习框架 (Stable Baselines3, RLlib) | 高级强化学习",
+          "meta_description": "常用强化学习库（如Stable Baselines3、RLlib、Tianshou）及其功能概述。",
+          "slug": "rl-frameworks-libraries",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3500,
+          "title": "分布式强化学习方法",
+          "meta_title": "分布式强化学习 | 进阶强化学习",
+          "meta_description": "扩展强化学习训练的背后原理（例如，分布式数据收集，分布式训练）。",
+          "slug": "distributed-rl",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3501,
+          "title": "深度强化学习的可复现性",
+          "meta_title": "深度强化学习的可复现性 | 高级强化学习",
+          "meta_description": "确保深度强化学习实验可复现性的挑战与最佳实践。",
+          "slug": "reproducibility-deep-rl",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3502,
+          "title": "调试与可视化技术",
+          "meta_title": "调试强化学习智能体 | 高级强化学习",
+          "meta_description": "强化学习训练中常见的失败模式及调试智能体的方法，包括可视化工具。",
+          "slug": "rl-debugging-visualization",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3503,
+          "title": "性能优化与硬件考量",
+          "meta_title": "强化学习性能优化 | 高级强化学习",
+          "meta_description": "优化强化学习代码以提高速度和效率，考量GPU使用和数据管道。",
+          "slug": "rl-performance-optimization",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 3504,
+          "title": "智能体调试与调优实践",
+          "meta_title": "强化学习智能体调试实践 | 高级强化学习",
+          "meta_description": "专注于识别并解决强化学习智能体训练中的常见问题。",
+          "slug": "rl-debugging-tuning-practice",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

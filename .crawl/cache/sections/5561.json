@@ -1,0 +1,61 @@
+{
+  "id": 5561,
+  "title": "理解目标模式",
+  "meta_title": "数据载入中的目标模式理解",
+  "meta_description": "了解目标系统结构（模式）对成功载入的重要性。",
+  "content": "<p>你已成功从各种来源提取了数据，并精心转换以满足质量标准和业务需求。现在，这些经过处理的数据将去往何处？它们需要载入到目标系统，例如数据仓库、数据库或数据湖中，以便用于分析、报告或驱动应用程序。</p>\n<p>然而，你不能随意倾倒数据。目标系统对数据如何组织有特定的结构和规则。这种结构由<strong>目标模式</strong>定义。将模式看作数据目的地的蓝图。它规定了布局、允许的数据类型以及必须遵守的约束。在尝试执行‘载入’步骤之前，完全了解此模式是十分重要的。</p>\n<h3>目标模式由哪些部分组成？</h3>\n<p>关系型数据库或数据仓库是ETL的常见目标，其模式通常定义以下元素：</p>\n<ul>\n<li><strong>表：</strong> 它们是存放数据的主要结构，按行和列组织，非常像电子表格。例如，你可能有存放<code>客户</code>、<code>产品</code>和<code>订单</code>的表。</li>\n<li><strong>列（或字段）：</strong> 每张表都由列组成，代表数据的特定属性。对于<code>客户</code>表，列可能包含<code>customer_id</code>、<code>first_name</code>、<code>last_name</code>、<code>email</code>和<code>registration_date</code>。</li>\n<li><strong>数据类型：</strong> 每列都分配有特定的数据类型，它规定了可以存储的数据种类。常见类型包括<code>INTEGER</code>（整数）、<code>VARCHAR</code>（可变长度文本）、<code>CHAR</code>（固定长度文本）、<code>DATE</code>（日期）、<code>TIMESTAMP</code>（时间戳）、<code>BOOLEAN</code>（布尔值，真/假）以及<code>DECIMAL</code>或<code>NUMERIC</code>（用于带有小数部分的数字，例如货币）。数据类型通常包含大小限制，例如<code>VARCHAR(100)</code>表示最多100个字符的文本。</li>\n<li><strong>约束：</strong> 这些是应用于列或表的规则，用于确保数据完整性。示例包括：\n<ul>\n<li><code>PRIMARY KEY</code>（主键）：唯一标识表中的每一行（例如，<code>customer_id</code>）。不能为null。</li>\n<li><code>FOREIGN KEY</code>（外键）：将一个表中的列链接到另一个表中的<code>PRIMARY KEY</code>，强制执行关系（例如，将<code>orders.customer_id</code>链接到<code>customers.customer_id</code>）。</li>\n<li><code>NOT NULL</code>（非空）：确保列必须始终有值；它不能是空的。</li>\n<li><code>UNIQUE</code>（唯一）：确保列中的所有值在不同行之间是唯一的。</li>\n<li><code>CHECK</code>（检查）：强制执行特定条件（例如，<code>order_quantity > 0</code>）。</li>\n</ul>\n</li>\n</ul>\n<h3>目标模式的可视化</h3>\n<p>让我们来看一个数据库中<code>orders</code>表的简单模式示例：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-17np8ux\" \n              data-graph-definition='digraph TargetSchema {\n    node [shape=plaintext];\n    table [label=<\n        <TABLE BORDER=\"1\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#e9ecef\">\n        <TR><TD COLSPAN=\"3\" BGCOLOR=\"#74c0fc\"><B>表：`orders`</B></TD></TR>\n        <TR><TD BGCOLOR=\"#ced4da\"><B>列名</B></TD><TD BGCOLOR=\"#ced4da\"><B>数据类型</B></TD><TD BGCOLOR=\"#ced4da\"><B>约束</B></TD></TR>\n        <TR><TD>`order_id`</TD><TD>INTEGER</TD><TD>PRIMARY KEY</TD></TR>\n        <TR><TD>`customer_id`</TD><TD>INTEGER</TD><TD>FOREIGN KEY (引用 `customers`)</TD></TR>\n        <TR><TD>`order_date`</TD><TD>DATE</TD><TD>NOT NULL</TD></TR>\n        <TR><TD>`total_amount`</TD><TD>DECIMAL(10, 2)</TD><TD>NULL</TD></TR>\n        </TABLE>\n    >];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-17np8ux\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个图表，代表<code>orders</code>表的模式，展示了列名、它们的数据类型以及应用的主键和外键等约束。</p>\n</blockquote>\n<p>在此示例中：</p>\n<ul>\n<li>该表名为<code>orders</code>。</li>\n<li><code>order_id</code>是整数，并用作主键，这意味着每个订单都必须具有唯一的ID。</li>\n<li><code>customer_id</code>是链接到<code>customers</code>表的整数。</li>\n<li><code>order_date</code>必须是有效的日期，并且不能留空（<code>NOT NULL</code>）。</li>\n<li><code>total_amount</code>是一个十进制数字，总共允许最多10位数字，其中小数点后有2位（适用于货币）。它可以留空（<code>NULL</code>）。</li>\n</ul>\n<h3>模式为何对载入十分重要</h3>\n<p>目标模式在载入过程中充当守门员。你转换后的数据必须严格遵守此模式：</p>\n<ol>\n<li><strong>结构对齐 (alignment)：</strong> 你转换后数据集中的列必须与目标表中的列对应。你需要知道哪个源列对应哪个目标列（这将在模式映射中说明）。</li>\n<li><strong>数据类型兼容性：</strong> 你转换后数据的数据类型必须与目标列的数据类型兼容。尝试将“Expensive”之类的文本载入到<code>total_amount</code>（DECIMAL）列中会引起错误。同样，如果目标系统要求'YYYY-MM-DD'格式，将“2023-Feb-28”载入到<code>order_date</code>（DATE）列中可能会失败。</li>\n<li><strong>约束符合性：</strong> 数据必须满足所有定义的约束。由于<code>NOT NULL</code>约束，你不能载入没有<code>order_date</code>的订单记录。由于<code>PRIMARY KEY</code>约束，你不能载入<code>order_id</code>已存在的订单。如果<code>customer_id</code>是外键，你通常不能载入在<code>customers</code>表中不存在<code>customer_id</code>的订单。</li>\n<li><strong>大小限制：</strong> 文本数据不得超过定义的长度（例如，<code>VARCHAR(100)</code>）。载入超出限制的文本可能会导致错误或数据截断（字符丢失），具体取决于系统配置。</li>\n</ol>\n<p>忽视目标模式就像是试图将方钉硬塞进圆孔。这必然会导致载入过程中的问题。错误可能包括载入作业失败、数据被拒绝、数据截断，或者如果类型转换隐式发生但有误，则可能出现数据损坏。</p>\n<p>因此，在开始任何数据载入之前，你必须完全了解目标系统模式的结构、数据类型和约束。这些信息指导转换阶段的最后步骤（确保数据类型和格式与目标匹配），并且对于正确配置载入过程十分重要。下一节“模式映射”将基于此了解直接进行说明，阐明如何明确地将转换后的数据字段连接到目标模式列。</p>",
+  "slug": "understanding-target-schemas",
+  "updates": [],
+  "references": [
+    {
+      "id": 15137,
+      "title": "The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling",
+      "author": "Ralph Kimball and Margy Ross",
+      "year": "2013",
+      "publisher": "John Wiley & Sons, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "608",
+      "url": "https://books.google.com/books/about/The_Data_Warehouse_Toolkit.html?id=Rz2gAQAAQBAJ",
+      "doi": "",
+      "note": "涵盖维度建模原则、ETL系统设计以及数据仓库的加载阶段。",
+      "order": 1,
+      "created_at": "2025-09-05T14:36:18.452896Z",
+      "updated_at": "2025-09-11T02:26:29.915503Z"
+    },
+    {
+      "id": 15138,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.db-book.com/",
+      "doi": "",
+      "note": "一本基础教科书，解释了关系数据库模型、模式定义、数据类型和完整性约束。",
+      "order": 2,
+      "created_at": "2025-09-05T14:36:18.462552Z",
+      "updated_at": "2025-09-11T02:26:19.563707Z"
+    },
+    {
+      "id": 15139,
+      "title": "PostgreSQL 16.2 Documentation: Data Types, Table Creation, and Constraints",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2025",
+      "publisher": "The PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/16/",
+      "doi": "",
+      "note": "PostgreSQL 16版本的官方文档，详细介绍了数据类型定义、表创建以及如何实现主键、外键和非空等各种完整性约束。",
+      "order": 3,
+      "created_at": "2025-09-05T14:36:18.468652Z",
+      "updated_at": "2025-09-11T02:26:27.907614Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

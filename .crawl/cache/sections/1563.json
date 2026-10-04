@@ -1,0 +1,45 @@
+{
+  "id": 1563,
+  "title": "选择特定列",
+  "meta_title": "如何在SQL中选择特定列",
+  "meta_description": "优化您的查询，只从表中获取您所需的列。",
+  "content": "<p>虽然使用 <code>SELECT *</code>（我们将在后续章节讲解）从表中获取所有数据对于初步查看可能有用，但对于特定任务而言，这通常效率不高且没必要。通常，您只需要可用列中的一部分数据。例如，如果您有一个包含客户信息的表，您可能只需要他们的姓名和电子邮件地址用于邮件列表，而不需要他们的完整地址或购买记录。</p>\n<p>SQL 允许您精确指定要在查询结果中获取哪些列。这会使您的查询更有效率（获取更少数据），并且结果也更易于使用，因为它们只包含与您当前目的相关的信息。</p>\n<h3>语法</h3>\n<p>要选择特定列，您需要在 <code>SELECT</code> 关键字后列出它们的名称，用逗号分隔。基本结构如下：</p>\n<pre><code class=\"language-sql\">SELECT column_name1, column_name2, column_name3\nFROM table_name;\n</code></pre>\n<p>我们来分解一下：</p>\n<ul>\n<li><code>SELECT</code>: 获取数据的每个查询都以该关键字开始。</li>\n<li><code>column_name1, column_name2, column_name3</code>: 您希望从中获取数据的列名。每个列名必须用逗号分隔。您可以列出所需数量的列。</li>\n<li><code>FROM table_name</code>: 指定要从中获取这些列的表。</li>\n<li><code>;</code>: 分号表示SQL语句的结束。虽然并非所有SQL工具都严格要求，但这是一个标准约定和良好习惯。</li>\n</ul>\n<h3>示例：选择姓名和电子邮件地址</h3>\n<p>假设我们有一个 <code>Customers</code> 表，结构如下：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">customer_id</th>\n<th align=\"left\">first_name</th>\n<th align=\"left\">last_name</th>\n<th align=\"left\">email</th>\n<th align=\"left\">city</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Anya</td>\n<td align=\"left\">Petrova</td>\n<td align=\"left\"><a href=\"mailto:anya.p@example.com\">anya.p@example.com</a></td>\n<td align=\"left\">Springfield</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Ben</td>\n<td align=\"left\">Carter</td>\n<td align=\"left\"><a href=\"mailto:ben.carter@example.org\">ben.carter@example.org</a></td>\n<td align=\"left\">Rivertown</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Chloe</td>\n<td align=\"left\">Davis</td>\n<td align=\"left\"><a href=\"mailto:chloe.d@sample.net\">chloe.d@sample.net</a></td>\n<td align=\"left\">Mapleton</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">David</td>\n<td align=\"left\">Evans</td>\n<td align=\"left\"><a href=\"mailto:d.evans@emailprovider.com\">d.evans@emailprovider.com</a></td>\n<td align=\"left\">Springfield</td>\n</tr>\n</tbody>\n</table>\n<p>如果只想获取所有客户的名字和电子邮件地址，我们可以编写以下查询：</p>\n<pre><code class=\"language-sql\">SELECT first_name, email\nFROM Customers;\n</code></pre>\n<p>执行此查询将生成一个只包含这两列的结果集：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">first_name</th>\n<th align=\"left\">email</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Anya</td>\n<td align=\"left\"><a href=\"mailto:anya.p@example.com\">anya.p@example.com</a></td>\n</tr>\n<tr>\n<td align=\"left\">Ben</td>\n<td align=\"left\"><a href=\"mailto:ben.carter@example.org\">ben.carter@example.org</a></td>\n</tr>\n<tr>\n<td align=\"left\">Chloe</td>\n<td align=\"left\"><a href=\"mailto:chloe.d@sample.net\">chloe.d@sample.net</a></td>\n</tr>\n<tr>\n<td align=\"left\">David</td>\n<td align=\"left\"><a href=\"mailto:d.evans@emailprovider.com\">d.evans@emailprovider.com</a></td>\n</tr>\n</tbody>\n</table>\n<h3>列的顺序很重要</h3>\n<p>您在 <code>SELECT</code> 语句中列出列的顺序决定了它们在输出中出现的顺序。如果希望电子邮件地址出现在名字之前，只需在查询中颠倒它们的顺序即可：</p>\n<pre><code class=\"language-sql\">SELECT email, first_name\nFROM Customers;\n</code></pre>\n<p>这将产生：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">email</th>\n<th align=\"left\">first_name</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><a href=\"mailto:anya.p@example.com\">anya.p@example.com</a></td>\n<td align=\"left\">Anya</td>\n</tr>\n<tr>\n<td align=\"left\"><a href=\"mailto:ben.carter@example.org\">ben.carter@example.org</a></td>\n<td align=\"left\">Ben</td>\n</tr>\n<tr>\n<td align=\"left\"><a href=\"mailto:chloe.d@sample.net\">chloe.d@sample.net</a></td>\n<td align=\"left\">Chloe</td>\n</tr>\n<tr>\n<td align=\"left\"><a href=\"mailto:d.evans@emailprovider.com\">d.evans@emailprovider.com</a></td>\n<td align=\"left\">David</td>\n</tr>\n</tbody>\n</table>\n<h3>重要事项</h3>\n<ul>\n<li><strong>逗号：</strong> 记住用逗号分隔列名。忘记逗号或在不应该的地方多加一个逗号是常见的语法错误原因。</li>\n<li><strong>大小写敏感性：</strong> SQL关键字如 <code>SELECT</code> 和 <code>FROM</code> 通常不区分大小写（所以 <code>select</code>、<code>Select</code> 或 <code>SELECT</code> 都可以）。然而，表名和列名（<code>Customers</code>、<code>first_name</code>）的大小写敏感性通常取决于具体的数据库系统（如PostgreSQL、MySQL、SQL Server）及其配置。最佳做法是与定义表时使用的精确大小写保持一致。</li>\n</ul>\n<p>选择特定列是您在进行数据分析时经常使用的基本方法。它允许您让数据获取精确符合所需，为后续更复杂的筛选、聚合和连接操作构成基础。</p>",
+  "slug": "selecting-specific-columns",
+  "updates": [],
+  "references": [
+    {
+      "id": 1961,
+      "title": "SELECT",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html",
+      "doi": "",
+      "note": "提供 SELECT 语句的官方规范和详细解释，包括显式列选择。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:46.292310Z",
+      "updated_at": "2025-09-07T18:47:19.597098Z"
+    },
+    {
+      "id": 1964,
+      "title": "SQL Tutorial - SELECT basics",
+      "author": "SQLZoo",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://sqlzoo.net/wiki/SELECT_basics",
+      "doi": "",
+      "note": "一个交互式在线教程，为基本的 SQL SELECT 语句（包括列选择）提供实践练习。",
+      "order": 4,
+      "created_at": "2025-09-04T16:37:46.301751Z",
+      "updated_at": "2025-09-07T18:47:20.925431Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

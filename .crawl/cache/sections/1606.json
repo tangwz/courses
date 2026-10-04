@@ -1,0 +1,61 @@
+{
+  "id": 1606,
+  "title": "使用AVG计算平均值",
+  "meta_title": "SQL中AVG函数的使用",
+  "meta_description": "计算数值列的平均值。",
+  "content": "<p>数据分析中，一项常见需求是找出数值列的平均值。无论你需要订单总额的平均值、客户满意度的平均分数，还是典型的会话时长，<code>AVG()</code>函数都是完成这项工作的工具。它计算一组数字的算术平均值。</p>\n<h3><code>AVG()</code>的基本用法</h3>\n<p><code>AVG()</code>函数通过将指定列中所有非空数值求和，然后除以这些非空值的计数来工作。</p>\n<p>基本语法很简单：</p>\n<pre><code class=\"language-sql\">SELECT AVG(column_name)\nFROM table_name;\n</code></pre>\n<p>我们来看一个包含客户购买信息的<code>orders</code>表：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">订单ID</th>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">订单日期</th>\n<th align=\"left\">订单总额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">5</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">150.75</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">12</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">85.00</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">5</td>\n<td align=\"left\">2023-10-27</td>\n<td align=\"left\">210.50</td>\n</tr>\n<tr>\n<td align=\"left\">104</td>\n<td align=\"left\">21</td>\n<td align=\"left\">2023-10-27</td>\n<td align=\"left\">NULL</td>\n</tr>\n<tr>\n<td align=\"left\">105</td>\n<td align=\"left\">12</td>\n<td align=\"left\">2023-10-28</td>\n<td align=\"left\">110.25</td>\n</tr>\n</tbody>\n</table>\n<p>为了找出所有已完成订单的平均<code>order_total</code> (忽略总额为<code>NULL</code>的订单)，你可以这样写：</p>\n<pre><code class=\"language-sql\">SELECT AVG(order_total)\nFROM orders;\n</code></pre>\n<p>数据库执行此计算：<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mn>150.75</mn><mo>+</mo><mn>85.00</mn><mo>+</mo><mn>210.50</mn><mo>+</mo><mn>110.25</mn><mo stretchy=\"false\">)</mo><mi mathvariant=\"normal\">/</mi><mn>4</mn><mo>=</mo><mn>556.50</mn><mi mathvariant=\"normal\">/</mi><mn>4</mn><mo>=</mo><mn>139.125</mn></mrow><annotation encoding=\"application/x-tex\">(150.75 + 85.00 + 210.50 + 110.25) / 4 = 556.50 / 4 = 139.125</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">150.75</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">85.00</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">210.50</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">110.25</span><span class=\"mclose\">)</span><span class=\"mord\">/4</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">556.50/4</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">139.125</span></span></span></span>。</p>\n<p>结果可能如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">平均值</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">139.125000</td>\n</tr>\n</tbody>\n</table>\n<p>小数位的确切数量可能不同，这取决于数据库系统和<code>order_total</code>列的数据类型。</p>\n<h3><code>AVG()</code>中别名的使用</h3>\n<p>与其他函数和列一样，默认的输出列名 (通常是<code>avg</code>或类似名称) 可能不够有描述性。你可以使用<code>AS</code>关键字通过别名指定一个更有意义的名称：</p>\n<pre><code class=\"language-sql\">SELECT AVG(order_total) AS average_order_value\nFROM orders;\n</code></pre>\n<p>这个查询会产生一个更清晰的结果：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">平均订单价值</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">139.125000</td>\n</tr>\n</tbody>\n</table>\n<h3>使用<code>WHERE</code>计算子集的平均值</h3>\n<p>通常，你只会想计算数据中特定部分的平均值。你可以将<code>AVG()</code>与<code>WHERE</code>子句结合使用，在计算平均值<em>之前</em>筛选行。</p>\n<p>例如，要找出<code>customer_id</code>为12的客户的平均订单总额：</p>\n<pre><code class=\"language-sql\">SELECT AVG(order_total) AS avg_order_total_cust12\nFROM orders\nWHERE customer_id = 12;\n</code></pre>\n<p>此查询首先筛选<code>orders</code>表，以仅包含<code>customer_id</code>为12的行：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">订单ID</th>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">订单日期</th>\n<th align=\"left\">订单总额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">12</td>\n<td align=\"left\">2023-10-26</td>\n<td align=\"left\">85.00</td>\n</tr>\n<tr>\n<td align=\"left\">105</td>\n<td align=\"left\">12</td>\n<td align=\"left\">2023-10-28</td>\n<td align=\"left\">110.25</td>\n</tr>\n</tbody>\n</table>\n<p>然后，它计算这些行的平均<code>order_total</code>：<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">(</mo><mn>85.00</mn><mo>+</mo><mn>110.25</mn><mo stretchy=\"false\">)</mo><mi mathvariant=\"normal\">/</mi><mn>2</mn><mo>=</mo><mn>195.25</mn><mi mathvariant=\"normal\">/</mi><mn>2</mn><mo>=</mo><mn>97.625</mn></mrow><annotation encoding=\"application/x-tex\">(85.00 + 110.25) / 2 = 195.25 / 2 = 97.625</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord\">85.00</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">110.25</span><span class=\"mclose\">)</span><span class=\"mord\">/2</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">195.25/2</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">97.625</span></span></span></span>。</p>\n<p>结果是：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">客户12的平均订单总额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">97.625000</td>\n</tr>\n</tbody>\n</table>\n<h3>关于<code>NULL</code>值的重要说明</h3>\n<p>记住<code>AVG()</code>这一点很重要，与大多数聚合函数一样 (除了<code>COUNT(*)</code>), 它完全忽略<code>NULL</code>值。它计算非<code>NULL</code>值的总和，并除以非<code>NULL</code>值的<em>计数</em>。在我们最初的例子中，<code>order_id</code>为104的行被排除在求和和计数之外。</p>\n<p>请注意这种行为。如果<code>NULL</code>在你的数据环境中实际上表示零，那么简单地使用<code>AVG()</code>会给出非零值的平均值，这可能不是你想要的。如果你需要在平均值计算中将<code>NULL</code>视为零，你通常需要使用一个函数在聚合<em>之前</em>将<code>NULL</code>替换为0，但这是一种更高级的技巧。目前，只需记住<code>AVG()</code>计算的是<em>现有</em>值的平均值。</p>\n<h3>数据类型考量</h3>\n<p><code>AVG()</code>函数是为数值数据类型设计的，例如<code>INTEGER</code>、<code>DECIMAL</code>、<code>FLOAT</code>、<code>NUMERIC</code>等。尝试在非数值列 (如文本或日期) 上使用<code>AVG()</code>通常会导致错误。</p>\n<p>计算平均值是数据汇总的一个基本步骤。<code>AVG()</code>提供了一种直接方法来计算针对整个列或由<code>WHERE</code>子句定义的特定子集的平均值。稍后，你将了解如何使用<code>GROUP BY</code>子句同时计算多个组的平均值。</p>",
+  "slug": "calculating-averages-avg",
+  "updates": [],
+  "references": [
+    {
+      "id": 3019,
+      "title": "PostgreSQL 16 Documentation: Aggregate Functions",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2025",
+      "publisher": "PostgreSQL Global Development Group",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/functions-aggregate.html",
+      "doi": "",
+      "note": "PostgreSQL官方文档，描述包括AVG()在内的聚合函数的行为和语法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:03.667936Z",
+      "updated_at": "2025-09-07T18:54:07.996272Z"
+    },
+    {
+      "id": 3021,
+      "title": "MySQL 8.0 Reference Manual: Aggregate (Group-By) Functions",
+      "author": "Oracle and/or its affiliates",
+      "year": "2024",
+      "publisher": "Oracle",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dev.mysql.com/doc/refman/8.0/en/group-by-functions.html",
+      "doi": "",
+      "note": "MySQL官方文档，详细介绍了聚合函数及其用法，与AVG()相关。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:04.660957Z",
+      "updated_at": "2025-09-07T18:54:10.631254Z"
+    },
+    {
+      "id": 3022,
+      "title": "Learning SQL: Master SQL Fundamentals",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492057631/",
+      "doi": "",
+      "note": "一本关于SQL基础的实用指南，其中一个章节专门讨论了AVG()等聚合函数。第三版。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:04.928843Z",
+      "updated_at": "2025-09-07T18:54:36.600546Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

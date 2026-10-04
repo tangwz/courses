@@ -1,0 +1,61 @@
+{
+  "id": 2475,
+  "title": "高级分词方法",
+  "meta_title": "高级分词方法 (BPE, WordPiece)",
+  "meta_description": "了解并运用BPE和WordPiece等子词分词技术。",
+  "content": "<p>虽然基于空格或标点符号的简单分词 (tokenization)方法是基本的首要步骤，但它们在处理语言的复杂性时常常显得不足。请考虑以下难题：</p>\n<ul>\n<li><strong>词汇量剧增：</strong> 在大型文本集合中，独特词汇的数量可能变得非常庞大，导致特征空间维度极高，并带来计算效率低下。</li>\n<li><strong>词外词（OOV）问题：</strong> 标准分词器 (tokenizer)难以处理训练中未出现的词语，例如生僻词、错别字、新词或专业术语。这些词外词通常被映射到一个通用的“未知”标记 (token)，丢失有价值的信息。</li>\n<li><strong>词形变化：</strong> 语言常通过词形变化（例如，“run”、“running”、“ran”、“runner”）来表达语法差异。简单的分词将这些视为完全独立的实体，未能捕获其潜在的语义关联 (semantic relationship)。</li>\n</ul>\n<p>为了更有效地处理文本，基于<strong>子词 (subword)单元</strong>的更复杂分词策略已成为现代NLP深度学习 (deep learning)模型中的标准做法。子词分词不把整个词作为基本单元，而是将词语拆分为更小的、有意义的片段。这种方法巧妙地平衡了字符级标记的细粒度与词级标记的语义表示。两种主要技术是字节对编码（BPE）和WordPiece。</p>\n<h3>字节对编码（BPE）</h3>\n<p>字节对编码（BPE）最初是作为一种数据压缩算法开发的，后被应用于NLP分词 (tokenization)，以有效管理词汇量并处理词形变化。其核心思想是迭代合并频繁出现的字符序列。</p>\n<p><strong>BPE工作原理：</strong></p>\n<ol>\n<li><strong>初始化：</strong> 从包含训练语料库中所有单个字符的词汇表 (vocabulary)开始。在语料库中每个词的末尾添加一个特殊的词尾符号（如<code>&#x3C;/w></code>或<code>&#x3C;/s></code>）以区分词的边界。</li>\n<li><strong>迭代：</strong> 重复计算语料库中所有相邻符号对（字符或已合并的子词 (subword)）的出现频率。</li>\n<li><strong>合并：</strong> 找出最频繁出现的相邻对（例如，<code>'t'</code>后跟<code>'h'</code>）。将这对合并成一个新的符号（例如，<code>'th'</code>）。</li>\n<li><strong>词汇表更新：</strong> 将这个新合并的符号添加到词汇表。</li>\n<li><strong>重复：</strong> 继续迭代（计算符号对并合并最频繁的对），直到达到预设的合并操作次数，或达到预期的词汇表大小。</li>\n</ol>\n<p><strong>示例：</strong></p>\n<p>让我们追踪语料“hug hugger huge hugs”上的一个简化BPE过程，添加<code>&#x3C;/w></code>来标记 (token)词尾：</p>\n<ul>\n<li>初始语料表示：<code>h u g &#x3C;/w> h u g g e r &#x3C;/w> h u g e &#x3C;/w> h u g s &#x3C;/w></code></li>\n<li>初始词汇表：<code>{h, u, g, &#x3C;/w>, e, r, s}</code></li>\n<li>字符计数：<code>h:4, u:4, g:5, &#x3C;/w>:4, e:2, r:1, s:1</code></li>\n<li>初始对频率：<code>(h u):4, (u g):4, (g &#x3C;/w>):1, (g g):1, (g e):2, (e r):1, (r &#x3C;/w>):1, (e &#x3C;/w>):1, (g s):1, (s &#x3C;/w>):1</code></li>\n<li><strong>合并1：</strong> <code>(h u)</code>和<code>(u g)</code>对最频繁（4次）。我们将<code>u</code>和<code>g</code>合并成<code>ug</code>。\n<ul>\n<li>新词汇表：<code>{h, u, g, &#x3C;/w>, e, r, s, ug}</code></li>\n<li>语料：<code>h ug &#x3C;/w> h ug g e r &#x3C;/w> h ug e &#x3C;/w> h ug s &#x3C;/w></code></li>\n</ul>\n</li>\n<li><strong>合并2：</strong> 现在再次计算对的频率。<code>(h ug)</code>出现4次。合并<code>h</code>和<code>ug</code>成<code>hug</code>。\n<ul>\n<li>新词汇表：<code>{h, u, g, &#x3C;/w>, e, r, s, ug, hug}</code></li>\n<li>语料：<code>hug &#x3C;/w> hug g e r &#x3C;/w> hug e &#x3C;/w> hug s &#x3C;/w></code></li>\n</ul>\n</li>\n<li><strong>合并3：</strong> 计算对的频率：<code>(hug &#x3C;/w>):1, (hug g):1, (g e):2, (e r):1, (r &#x3C;/w>):1, (hug e):1, (e &#x3C;/w>):1, (hug s):1, (s &#x3C;/w>):1</code>。最频繁的对是<code>(g e)</code>（2次）。合并<code>g</code>和<code>e</code>成<code>ge</code>。\n<ul>\n<li>新词汇表：<code>{h, u, g, &#x3C;/w>, e, r, s, ug, hug, ge}</code></li>\n<li>语料：<code>hug &#x3C;/w> hug g er &#x3C;/w> hug ge &#x3C;/w> hug s &#x3C;/w></code></li>\n</ul>\n</li>\n</ul>\n<p>这个过程会继续。像“er”这样的频繁序列可能会被合并。最终，词汇表将包含常用字符和频繁的子词单元。</p>\n<p><strong>新文本分词：</strong> 要对一个新词（例如，“hugging”）进行分词，BPE会贪婪地应用学到的合并规则。它会首先将其拆分为字符<code>h, u, g, g, i, n, g, &#x3C;/w></code>。然后它会按照学习的顺序应用学到的合并规则。如果先学到了<code>ug</code>，然后是<code>hug</code>，再是<code>ing</code>（假设），结果可能是<code>['hug', 'g', 'ing', '&#x3C;/w>']</code>。一个未知词如“snuggles”可能会被拆解为<code>['s', 'n', 'ug', 'gle', 's', '&#x3C;/w>']</code>，如果这些子词存在于词汇表中，通过使用已知部分来表示，从而有效处理词外词问题。</p>\n<p>OpenAI的GPT系列等模型使用BPE。</p>\n<h3>WordPiece</h3>\n<p>WordPiece是另一种流行的子词 (subword)分词 (tokenization)算法，与BPE相似，但合并准则不同。Google的BERT等模型使用它。</p>\n<p><strong>WordPiece工作原理：</strong></p>\n<ol>\n<li><strong>初始化：</strong> 从包含训练语料库中所有单个字符的基本词汇表 (vocabulary)开始。</li>\n<li><strong>迭代与似然：</strong> 与BPE类似，它通过合并单元迭代构建词汇表。然而，WordPiece不合并最<em>频繁</em>的对，而是合并在被选择时能最大化训练数据<em>似然</em>值的对。这种似然通常根据该对的计数以及构成该对的单个单元的计数来计算。对合并A和B的分数，一个简化的思考方式与其相关：\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>得分</mtext><mo stretchy=\"false\">(</mo><mi>A</mi><mo separator=\"true\">,</mo><mi>B</mi><mo stretchy=\"false\">)</mo><mo>=</mo><mfrac><mrow><mtext>频率</mtext><mo stretchy=\"false\">(</mo><mi>A</mi><mi>B</mi><mo stretchy=\"false\">)</mo></mrow><mrow><mtext>频率</mtext><mo stretchy=\"false\">(</mo><mi>A</mi><mo stretchy=\"false\">)</mo><mo>×</mo><mtext>频率</mtext><mo stretchy=\"false\">(</mo><mi>B</mi><mo stretchy=\"false\">)</mo></mrow></mfrac></mrow><annotation encoding=\"application/x-tex\">\\text{得分}(A, B) = \\frac{\\text{频率}(AB)}{\\text{频率}(A) \\times \\text{频率}(B)}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">得分</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">A</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.363em;vertical-align:-0.936em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.427em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">频率</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">A</span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">频率</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mclose\">)</span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">频率</span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">A</span><span class=\"mord mathnormal\" style=\"margin-right:0.0502em;\">B</span><span class=\"mclose\">)</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.936em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span></span></span></span></span>\n相对其各自频率而言，频繁共同出现的对会获得优先。这倾向于优先合并形成更“像词”的单元。</li>\n<li><strong>词汇表更新：</strong> 得分最高的对被合并，新单元被添加到词汇表。</li>\n<li><strong>重复：</strong> 这个过程重复进行，直到达到目标词汇表大小。</li>\n</ol>\n<p><strong>分词策略：</strong> 对新文本进行分词时，WordPiece尝试找到词汇表中可能的最长子词，它与当前词的开头匹配。如果一个子词单元不表示原始词的开头，它通常会加上一个特殊前缀符号，通常是<code>##</code>（例如，“tokenization”可能变为<code>['token', '##ization']</code>）。这种明确的标记 (token)有助于模型理解<code>##ization</code>是前一部分的延续。</p>\n<p><strong>对比：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特征</th>\n<th align=\"left\">BPE</th>\n<th align=\"left\">WordPiece</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">合并准则</td>\n<td align=\"left\">相邻对的最高频率</td>\n<td align=\"left\">数据似然的最大提升</td>\n</tr>\n<tr>\n<td align=\"left\">实现方式</td>\n<td align=\"left\">更简单，纯粹基于计数</td>\n<td align=\"left\">更复杂，涉及似然计算</td>\n</tr>\n<tr>\n<td align=\"left\">子词标记</td>\n<td align=\"left\">通常使用词尾符号（<code>&#x3C;/w></code>）</td>\n<td align=\"left\">常使用前缀标记（<code>##</code>）表示延续</td>\n</tr>\n<tr>\n<td align=\"left\">常用模型</td>\n<td align=\"left\">GPT, RoBERTa</td>\n<td align=\"left\">BERT, DistilBERT</td>\n</tr>\n</tbody>\n</table>\n<p>BPE和WordPiece都能有效减少词汇量，与词级标记相比，它们通过将词外词拆分为已知子词来处理词外词问题，并捕获词形关系（例如，“run”、“running”可能共享“run”这个子词）。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-131iqpd\" \n              data-plot-definition='{\"layout\":{\"title\":\"词汇量对比\",\"xaxis\":{\"title\":\"分词方法\"},\"yaxis\":{\"title\":\"近似词汇量（对数刻度）\",\"type\":\"log\"},\"legend\":{\"traceorder\":\"reversed\"},\"colorway\":[\"#4263eb\", \"#15aabf\", \"#f76707\"]},\"data\":[{\"type\":\"bar\",\"name\":\"字符级\",\"x\":[\"Character\",\"Subword (BPE/WordPiece)\",\"Word-Level\"],\"y\":[100,30000,1000000]},{\"type\":\"bar\",\"name\":\"子词（BPE/WordPiece）\",\"x\":[\"Character\",\"Subword (BPE/WordPiece)\",\"Word-Level\"],\"y\":[0,30000,0]},{\"type\":\"bar\",\"name\":\"词级\",\"x\":[\"Character\",\"Subword (BPE/WordPiece)\",\"Word-Level\"],\"y\":[0,0,1000000]}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-131iqpd\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>子词分词提供了一个中间方案，在提供可管理的词汇量的同时，比字符级标记保留更多语义信息，并比词级标记更能处理词外词。请注意Y轴上的对数刻度。</p>\n</blockquote>\n<h3>SentencePiece</h3>\n<p>值得一提的是，Google开发的<strong>SentencePiece</strong>。它将输入文本视为一个原始的Unicode字符流，包括空格。这意味着它无需依赖预分词 (tokenization)（如按空格拆分）就能学习分词，并能更容易地处理多种语言。SentencePiece可配置为使用BPE或unigram语言建模方法来构建其子词 (subword)词汇表 (vocabulary)。一个重要优势是其完全可逆的分词；原始文本可以从标记 (token)中完美重建，因为空格被视为子词单元的一部分（通常由一个元符号如<code> </code>表示）。</p>\n<h3>选择和使用高级分词 (tokenization)器 (tokenizer)</h3>\n<p>BPE、WordPiece或SentencePiece之间的选择通常取决于您打算使用的特定预训练 (pre-training)模型，因为模型通常会与其对应的已训练分词器一起发布。Hugging Face的<code>transformers</code>等库抽象化了许多实现细节，使您能够轻松加载和使用给定模型的相应分词器（例如，<code>BertTokenizer</code>使用WordPiece，<code>GPT2Tokenizer</code>使用BPE）。</p>\n<p>训练这些分词器需要大量代表您所从事领域的数据。然而，对于许多应用来说，使用与预训练语言模型关联的预训练分词器是最实际的方法。</p>\n<p>理解这些高级分词方法很重要，因为文本的拆分方式从根本上影响着下游模型如何解释和处理语言数据。它们标志着一个重要进展，使现代NLP模型能够更有效地处理多样的词汇和词形。</p>",
+  "slug": "advanced-tokenization-methods",
+  "updates": [],
+  "references": [
+    {
+      "id": 2692,
+      "title": "Neural Machine Translation of Rare Words with Subword Units",
+      "author": "Rico Sennrich, Barry Haddow, and Alexandra Birch",
+      "year": "2016",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+      "volume": "",
+      "pages": "1715-1725",
+      "url": "https://aclanthology.org/P16-1162/",
+      "doi": "10.18653/v1/P16-1162",
+      "note": "介绍了用于开放词汇神经机器翻译的字节对编码（BPE），是NLP子词分词的一项工作。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:25.559720Z",
+      "updated_at": "2025-09-07T22:10:50.581277Z"
+    },
+    {
+      "id": 2694,
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "author": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova",
+      "year": "2019",
+      "publisher": "Association for Computational Linguistics",
+      "journal": "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers)",
+      "volume": "",
+      "pages": "4171-4186",
+      "url": "https://aclanthology.org/N19-1423/",
+      "doi": "10.18653/v1/N19-1423",
+      "note": "虽然主要介绍BERT模型，但本文详细阐述了所使用的WordPiece分词策略，使其成为理解WordPiece的来源。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:25.564574Z",
+      "updated_at": "2025-09-07T22:10:48.611409Z"
+    },
+    {
+      "id": 2698,
+      "title": "Tokenizers",
+      "author": "Hugging Face",
+      "year": "2023",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/course/chapter2/5?fw=pt",
+      "doi": "",
+      "note": "提供了现代分词方法（包括BPE、WordPiece和SentencePiece）的实用指导和概述，并附有实现示例。",
+      "order": 4,
+      "created_at": "2025-09-04T16:53:25.569022Z",
+      "updated_at": "2025-09-07T22:10:51.043315Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

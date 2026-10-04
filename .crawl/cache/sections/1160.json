@@ -1,0 +1,61 @@
+{
+  "id": 1160,
+  "title": "可视化分类变量：柱状图",
+  "meta_title": "为分类数据创建柱状图",
+  "meta_description": "使用柱状图有效呈现分类变量的频率分布。",
+  "content": "<p>在计算出分类变量的频率计数后，下一步就是将这些分布进行可视化。尽管数字表格很精确，但图表形式通常能更直观地呈现数据中的相对频率和模式。在显示单个分类变量的类别频率或比例时，最常用且有效的可视化方式是柱状图。</p>\n<p>柱状图使用矩形条，其长度与它们所代表的值成比例。对于单变量分类分析，条形图通常显示落入每个类别的观测值的计数（频率）或比例。这使得比较不同类别变得一目了然。</p>\n<h3>使用 Python 创建柱状图</h3>\n<p>Matplotlib 和 Seaborn 等 Python 库提供了便捷的函数，可以直接从 Pandas Series 或 DataFrame 生成柱状图。Seaborn 在 Matplotlib 的基础上构建，提供了专门用于统计可视化的函数，对于常见图表通常只需较少代码。</p>\n<p>创建类别计数柱状图的一种常用方法是使用 Seaborn 的 <code>countplot</code> 函数。它会自动计算指定列中每个类别的频率并绘图。</p>\n<pre><code class=\"language-python\">import seaborn as sns\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\n\r\n# 假设 'df' 是你的 DataFrame，'product_category' 是你关注的列\r\n# 示例 DataFrame 创建：\r\ndata = {'product_category': ['Electronics', 'Clothing', 'Groceries', 'Electronics', 'Clothing', 'Electronics', 'Home Goods', 'Clothing', 'Groceries', 'Electronics']}\r\ndf = pd.DataFrame(data)\r\n\r\nplt.figure(figsize=(8, 5)) # 可选：调整图表大小\r\nsns.countplot(data=df, x='product_category', palette=['#4dabf7', '#69db7c', '#ff922b', '#be4bdb']) # 使用调色板中的颜色\r\nplt.title('产品类别频率')\r\nplt.xlabel('产品类别')\r\nplt.ylabel('计数')\r\nplt.xticks(rotation=45) # 如果标签重叠，则旋转\r\nplt.tight_layout() # 调整布局\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1160_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T070819Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=ec85ccb9e60a20e4d75b48bd6b19ed8d63158b10d35f23848a059668d5971163\" alt=\"Image 17\">\r\n或者，你可以先使用 Pandas 计算值计数，然后使用 Matplotlib 或 Pandas 的绘图函数：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\r\nimport pandas as pd\r\n\r\n# 假设 'df' 是你的 DataFrame，'product_category' 是列\r\n# 示例 DataFrame 创建（与上面相同）：\r\ndata = {'product_category': ['Electronics', 'Clothing', 'Groceries', 'Electronics', 'Clothing', 'Electronics', 'Home Goods', 'Clothing', 'Groceries', 'Electronics']}\r\ndf = pd.DataFrame(data)\r\n\r\ncategory_counts = df['product_category'].value_counts()\r\n\r\nplt.figure(figsize=(8, 5))\r\ncategory_counts.plot(kind='bar', color=['#4dabf7', '#69db7c', '#ff922b', '#be4bdb'])\r\nplt.title('产品类别频率')\r\nplt.xlabel('产品类别')\r\nplt.ylabel('计数')\r\nplt.xticks(rotation=45, ha='right') # 旋转并对齐标签\r\nplt.tight_layout()\r\nplt.show()\n</code></pre>\n<p><img src=\"https://apxml.s3.amazonaws.com/content_images/section_1160_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&#x26;X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&#x26;X-Amz-Date=20261002T070819Z&#x26;X-Amz-Expires=3600&#x26;X-Amz-SignedHeaders=host&#x26;X-Amz-Signature=dc91220b884348c3001c4d54f92741c90f1713b8dbbe988e49f7e8b57618b790\" alt=\"Image 18\">\r\n两种方法都能达到类似的结果。Seaborn 的 <code>countplot</code> 对于简单的频率图可能更直接一些，而 Pandas 的方法则在绘图前明确提供了计数，这可能很有用。</p>\n<h3>解读柱状图</h3>\n<p>查看分类变量的柱状图时，请考虑以下几点：</p>\n<ol>\n<li><strong>比较高度：</strong> 哪些类别出现最频繁？哪些最不频繁？条形的相对高度直接表示相对计数。</li>\n<li><strong>分布形态：</strong> 尽管“形态”更正式地与数值分布关联，但也要留意是否有任何模式。是否存在一个主导类别？分布在各类别中是相对均匀的，还是严重偏向一两个类别？</li>\n<li><strong>类别数量：</strong> 有多少个不同的类别？类别数量非常多可能会使标准柱状图显得杂乱。在这种情况下，你可以考虑将不那么常见的类别归入“其他”类别，或者使用水平柱状图（在 Pandas 绘图中是 <code>kind='barh'</code>，在 Seaborn 中是 <code>y=</code> 而不是 <code>x=</code>）以便更好地阅读标签。</li>\n</ol>\n<p>下面是一个使用 Plotly 呈现的虚构客户满意度评分分布示例。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-kecn03\" \n              data-plot-definition='{\"data\": [{\"type\": \"bar\", \"x\": [\"非常满意\", \"满意\", \"中立\", \"不满意\", \"非常不满意\"], \"y\": [125, 280, 95, 45, 15], \"marker\": {\"color\": [\"#37b24d\", \"#69db7c\", \"#ffec99\", \"#ffa8a8\", \"#f03e3e\"]}}], \"layout\": {\"title\": \"客户满意度评分分布\", \"xaxis\": {\"title\": \"评分\"}, \"yaxis\": {\"title\": \"客户数量\"}, \"width\": 600, \"height\": 400}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-kecn03\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>客户满意度回应分布，显示“满意”是最常见的评分。</p>\n</blockquote>\n<p>柱状图是 EDA（探索性数据分析）工具包中的一项基本工具，用于理解分类数据的构成。它们将频率表转换为易于理解的视觉格式，显示数据集中不同群体的普遍性和分布情况。</p>",
+  "slug": "visualizing-bar-charts",
+  "updates": [],
+  "references": [
+    {
+      "id": 411,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/",
+      "doi": "",
+      "note": "一份关于创建有效数据可视化的综合指南，其中包含专门讨论如何适当使用和解读分类数据的条形图的章节。",
+      "order": 1,
+      "created_at": "2025-09-04T14:29:07.793573Z",
+      "updated_at": "2025-09-07T16:15:43.720024Z"
+    },
+    {
+      "id": 412,
+      "title": "seaborn.countplot - seaborn 0.13.0 documentation",
+      "author": "Michael Waskom and the Seaborn development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.countplot.html",
+      "doi": "",
+      "note": "Seaborn `countplot` 函数的官方文档，详细说明了其参数和用于可视化分类数据频率分布的用法。",
+      "order": 2,
+      "created_at": "2025-09-04T14:29:07.797756Z",
+      "updated_at": "2025-09-07T16:15:54.058819Z"
+    },
+    {
+      "id": 413,
+      "title": "Visualization - pandas 2.2.0 documentation",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#bar-plots",
+      "doi": "",
+      "note": "Pandas 官方用户指南的可视化章节，展示了如何使用 `.plot()` 方法直接从 Series 或 DataFrame 生成条形图。",
+      "order": 3,
+      "created_at": "2025-09-04T14:29:07.800328Z",
+      "updated_at": "2025-09-07T16:16:07.289842Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

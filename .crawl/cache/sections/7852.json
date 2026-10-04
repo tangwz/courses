@@ -1,0 +1,61 @@
+{
+  "id": 7852,
+  "title": "错误处理与报告",
+  "meta_title": "MCP 工具中的错误处理",
+  "meta_description": "捕获异常并向客户端返回有助益错误的规范方法。",
+  "content": "<p>软件开发中的健壮性通常指在应用程序遇到意外情况时防止其崩溃。在模型上下文 (context)协议（MCP）的环境中，健壮性有了第二层含义：当某个操作失败时，告知大型语言模型（LLM），以便它尝试修正。当LLM调用工具时，它会期待一个结果。如果该结果是导致服务器崩溃的未处理异常，对话就会终止。然而，如果结果是结构化的错误消息，模型就可以理解失败原因，例如找出缺失的文件或格式不正确的SQL查询，并生成一个新的、已修正的请求。</p>\n<p>本节阐述如何在工具实现中管理异常，区分协议层错误和应用层故障，以及如何使用 <code>isError</code> 标志妥善报告它们。</p>\n<h3>MCP 错误层级</h3>\n<p>MCP 环境中的错误通常分为两类：协议错误和工具执行错误。理解这种区别对于决定在何处捕获异常是很有必要的。</p>\n<ol>\n<li><strong>协议错误：</strong> 当 JSON-RPC 消息本身无效时发生，例如格式不正确的 JSON 负载或请求不存在的工具。MCP SDK 通常会自动处理这些错误，返回标准的 JSON-RPC 错误码（例如，<code>-32601</code> 表示方法未找到）。</li>\n<li><strong>工具执行错误：</strong> 这些错误发生在您的自定义逻辑中。例如，JSON-RPC 请求有效，工具也存在，但数据库被锁定，或者 API 凭据无效。</li>\n</ol>\n<p>作为开发者，您的主要职责是管理工具执行错误。目的是捕获这些异常并返回一个有效的 <code>CallToolResult</code> 对象，该对象在不中断连接的情况下表明失败。</p>\n<h3>实现 <code>isError</code> 标志</h3>\n<p>MCP 规范在工具结果对象中包含一个名为 <code>isError</code> 的布尔字段。当其设置为 <code>true</code> 时，它会向客户端（以及随后的 LLM）表明工具已尝试执行但未能完成所请求的任务。</p>\n<p>与错误结果关联的内容不应是原始堆栈跟踪。相反，它应该是一个描述性消息，帮助模型了解出了什么问题。</p>\n<p>考虑请求处理逻辑的流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-vp5yqo\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=filled, fontname=\"Helvetica\"];\n    \n    start [label=\"收到工具请求\", fillcolor=\"#e9ecef\"];\n    validate [label=\"校验参数\", fillcolor=\"#a5d8ff\"];\n    logic [label=\"执行核心逻辑\", fillcolor=\"#a5d8ff\"];\n    success [label=\"返回结果\\nisError: false\", fillcolor=\"#b2f2bb\"];\n    catch [label=\"捕获异常\", fillcolor=\"#ffc9c9\"];\n    error_res [label=\"返回结果\\nisError: true\", fillcolor=\"#ffc9c9\"];\n\n    start -> validate;\n    validate -> logic [label=\"有效\"];\n    validate -> catch [label=\"无效\"];\n    logic -> success [label=\"成功\"];\n    logic -> catch [label=\"异常\"];\n    catch -> error_res [label=\"格式化错误\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-vp5yqo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>处理工具请求的逻辑流程。一个实现会捕获验证和执行异常，并将它们转换为结构化的错误响应，而不是终止进程。</p>\n</blockquote>\n<h3>Python 中的实际实现</h3>\n<p>使用 Python SDK 时，您将工具逻辑包装在 try-except 块中。以下示例展示了一个旨在从数据库中读取特定行的工具。它明确处理潜在的连接问题和缺失记录。</p>\n<pre><code class=\"language-python\">from mcp.server.fastmcp import FastMCP\nimport sqlite3\n\nmcp = FastMCP(\"DatabaseServer\")\n\n@mcp.tool()\ndef get_user_by_id(user_id: int) -> str:\n    \"\"\"根据 ID 获取用户详情。如果未找到，则返回错误字符串。\"\"\"\n    try:\n        conn = sqlite3.connect(\"users.db\")\n        cursor = conn.cursor()\n        \n        # 执行查询\n        cursor.execute(\"SELECT name, email FROM users WHERE id = ?\", (user_id,))\n        row = cursor.fetchone()\n        \n        conn.close()\n\n        if row is None:\n            # 逻辑错误：查询成功，但数据表明未能找到目标\n            # 我们抛出异常或明确返回错误上下文\n            raise ValueError(f\"User with ID {user_id} not found.\")\n            \n        return f\"Name: {row[0]}, Email: {row[1]}\"\n\n    except sqlite3.Error as e:\n        # 数据库操作错误（例如，锁定，文件缺失）\n        # 在原始实现中，我们会手动构建 Result 对象。\n        # FastMCP 通过格式化返回值来处理异常，\n        # 但为了上下文，更推荐显式处理。\n        return f\"Error: Database operation failed. Details: {str(e)}\"\n        \n    except ValueError as e:\n        # 领域逻辑错误\n        return f\"Error: {str(e)}\"\n        \n    except Exception as e:\n        # 捕获所有意外的运行时错误\n        return f\"Error: An unexpected system error occurred. {str(e)}\"\n</code></pre>\n<p>在低层次的 MCP 实现中（没有 <code>FastMCP</code> 包装器），您必须手动构建响应对象。这提供了对 <code>isError</code> 标志的更大控制权。</p>\n<pre><code class=\"language-python\"># 低层次实现模式\nfrom mcp.types import CallToolResult, TextContent\n\ndef handle_tool_call(arguments):\n    try:\n        result_data = perform_risky_operation(arguments)\n        return CallToolResult(\n            content=[TextContent(type=\"text\", text=result_data)],\n            isError=False\n        )\n    except Exception as e:\n        return CallToolResult(\n            content=[TextContent(type=\"text\", text=f\"Operation failed: {str(e)}\")],\n            isError=True\n        )\n</code></pre>\n<h3>设计对模型友好的错误消息</h3>\n<p>您在错误内容中返回的文本会被 AI 模型使用。因此，错误消息的质量直接影响模型恢复的能力。一个模糊的消息，例如 <code>KeyError: 'id'</code>，对 Python 开发者来说很有用，但对于不了解脚本内部字典结构的 LLM 来说则令人困惑。</p>\n<p>一个可恢复的错误消息应该回答三个问题：</p>\n<ol>\n<li><strong>发生了什么？</strong> （例如，“数据库查询失败。”）</li>\n<li><strong>为什么发生？</strong> （例如，“列 'last_name' 不存在。”）</li>\n<li><strong>什么是有效格式？</strong> （例如，“可用列为：id, name, email。”）</li>\n</ol>\n<p>如果您提供这些上下文 (context)，LLM 就能分析其之前的工具调用，发现它请求了一个不存在的列，然后发出一个新的、正确的工具调用，而无需人工干预。</p>\n<h3>错误恢复可视化</h3>\n<p>客户端（LLM）和服务器在错误状态下的关系是循环的。错误不是终点，而是一个反馈信号。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-apenik\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": \"模型恢复概率与错误详情对比\",\n    \"xaxis\": {\n      \"title\": \"错误消息详细程度\",\n      \"showgrid\": false\n    },\n    \"yaxis\": {\n      \"title\": \"成功重试率 (%)\",\n      \"range\": [0, 100]\n    },\n    \"width\": 600,\n    \"height\": 400,\n    \"plot_bgcolor\": \"#ffffff\"\n  },\n  \"data\": [\n    {\n      \"type\": \"bar\",\n      \"x\": [\"通用错误\", \"异常名称\", \"上下文描述\", \"描述 + 模式提示\"],\n      \"y\": [15, 35, 75, 95],\n      \"marker\": {\n        \"color\": [\"#ced4da\", \"#bac8ff\", \"#748ffc\", \"#4263eb\"]\n      }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-apenik\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>错误消息质量对模型自我修正能力的影响。通用错误很少能带来成功的重试，而提供模式提示则能大大改善结果。</p>\n</blockquote>\n<h3>错误报告中的安全措施</h3>\n<p>尽管详细性有助于 LLM，但它也带来了安全风险。我们必须在上下文 (context)和保密性之间取得平衡。常见的堆栈跟踪通常包含文件路径、环境变量片段或内部逻辑结构，这些不应暴露给客户端（客户端可能是第三方 SaaS LLM）。</p>\n<p><strong>应避免的做法：</strong></p>\n<ul>\n<li><strong>返回原始 Traceback 对象：</strong> 这会暴露您服务器的文件结构。</li>\n<li><strong>回显原始 SQL 错误：</strong> 如果 SQL 注入尝试导致语法错误，返回原始数据库错误可能会向恶意用户透露数据库供应商或表结构。</li>\n</ul>\n<p><strong>推荐方法：</strong>\n使用异常掩盖。捕获特定的低层次异常（例如 <code>sqlite3.OperationalError</code>），并将其包装在经过清理的高层次消息中。</p>\n<p>例如，不要返回：\n<code>sqlite3.OperationalError: no such table: user_data_v2</code></p>\n<p>而应返回：\n<code>Error: 无法访问请求的资源。请根据提供的模式工具验证表名。</code></p>\n<p>这会告诉模型 <em>哪里</em> 出了问题（表名问题），而不会证实数据库架构的内部状态。</p>\n<h3>集成 Pydantic 验证错误</h3>\n<p>在上一节中，我们使用 Pydantic 定义了模式。当输入类型不匹配时，Pydantic 会自动抛出 <code>ValidationError</code> 异常。</p>\n<p>当 Pydantic 模型未能验证 LLM 传递的参数 (parameter)时，MCP 服务器应该专门捕获它。<code>ValidationError</code> 对象包含一个验证失败的字段列表。将此列表解析为人类可读的字符串，可以使 LLM 识别出具体哪个参数不正确。</p>\n<p>例如，如果模型向一个预期整数的字段传递字符串“five”，则返回给模型的错误消息应为：\n<code>Validation Error: Argument 'quantity' expected an integer, but received 'five'.</code></p>\n<p>这使得模型能够识别类型不匹配，并用整数 <code>5</code> 重新调用工具。通过将错误视为有助益的反馈而非系统故障，我们创建了一个代理循环，模型可以在其中应对障碍以达成其目标。</p>",
+  "slug": "error-handling-reporting",
+  "updates": [],
+  "references": [
+    {
+      "id": 21912,
+      "title": "JSON-RPC 2.0 Specification",
+      "author": "JSON-RPC Working Group",
+      "year": "2010",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.jsonrpc.org/specification",
+      "doi": "",
+      "note": "描述了JSON-RPC 2.0规范，包括错误代码和消息结构，这是MCP中协议级错误的基础。",
+      "order": 1,
+      "created_at": "2025-11-19T12:02:58.238779Z",
+      "updated_at": "2025-11-19T12:41:00.596044Z"
+    },
+    {
+      "id": 21913,
+      "title": "Toolformer: Language Models That Can Use Tools",
+      "author": "Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2302.04761",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2302.04761",
+      "doi": "10.48550/arXiv.2302.04761",
+      "note": "提出了一种训练语言模型使用外部工具的方法，通过学习生成工具使用提示并解释其输出来展示模型对工具输出和失败的适应能力。",
+      "order": 2,
+      "created_at": "2025-11-19T12:02:58.249064Z",
+      "updated_at": "2025-11-19T12:40:57.645657Z"
+    },
+    {
+      "id": 21916,
+      "title": "Pydantic Documentation: Validation",
+      "author": "Pydantic Development Team",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/usage/validation/",
+      "doi": "",
+      "note": "解释了Pydantic的数据验证能力，包括处理`ValidationError`和构建验证错误消息，这对于处理工具参数很有用。",
+      "order": 5,
+      "created_at": "2025-11-19T12:02:58.265689Z",
+      "updated_at": "2025-11-19T12:41:05.290205Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

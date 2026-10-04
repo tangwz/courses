@@ -1,0 +1,61 @@
+{
+  "id": 2178,
+  "title": "使用子图",
+  "meta_title": "使用 Matplotlib 子图",
+  "meta_description": "创建包含多个图（子图）的图形，这些图以网格形式排列，用于比较性可视化。",
+  "content": "<p>数据分析常常需要比较数据的不同视图或将多个相关的图表一起显示。虽然为每个图表创建独立的图形是可行的，但通常更有效的方法是将它们安排在同一个图形中。Matplotlib 提供了一个强大的机制，可以通过子图实现这一点。这种方法可以直接进行视觉比较，并生成更规整、更全面的可视化内容。</p>\n<h3><code>plt.subplots()</code> 方法</h3>\n<p>创建包含多个子图的图形的推荐方法是使用 <code>plt.subplots()</code> 函数（注意末尾的 's'）。此函数同时创建一个图形和一个子图（坐标轴）网格，并返回这两个对象。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 创建一些示例数据\nx = np.linspace(0, 2 * np.pi, 100)\ny_sin = np.sin(x)\ny_cos = np.cos(x)\ny_tan = np.tan(x)\nrandom_data = np.random.randn(1000)\n\n# 创建一个图形和一个 2x2 的子图网格\n# fig 是整个图形窗口\n# axes 是一个包含各个子图（Axes）对象的二维 NumPy 数组\nfig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))\n\nprint(axes.shape)\n# 输出: (2, 2)\n\n# axes[0, 0] 指的是第一行、第一列的子图\n# axes[0, 1] 指的是第一行、第二列的子图\n# 等等。\n</code></pre>\n<p><code>plt.subplots()</code> 接受多个参数 (parameter)，最常用的是 <code>nrows</code> 和 <code>ncols</code>，用于指定网格尺寸。<code>figsize</code> 参数控制图形的整体尺寸（单位为英寸）。主要之处在于它返回两个对象：</p>\n<ol>\n<li><code>fig</code>: 一个 <code>matplotlib.figure.Figure</code> 对象，表示绘制所有内容的整个窗口或页面。</li>\n<li><code>axes</code>: 一个 <code>matplotlib.axes._axes.Axes</code> 对象的数组（通常是 NumPy 数组）。每个 <code>Axes</code> 对象表示网格中的一个子图，并拥有自己的绘图方法。</li>\n</ol>\n<p>如果您创建单行或单列的子图（例如 <code>plt.subplots(3, 1)</code> 或 <code>plt.subplots(1, 3)</code>），那么 <code>axes</code> 将是一个一维 NumPy 数组。</p>\n<h3>在单独的坐标轴上绘图</h3>\n<p>一旦您有了 <code>axes</code> 数组，就可以通过直接在相应的 <code>Axes</code> 对象上调用绘图方法，而不是使用全局 <code>plt</code> 函数（如 <code>plt.plot()</code>、<code>plt.hist()</code> 等），来在特定子图上绘制数据。您可以使用标准的数组索引访问各个 <code>Axes</code> 对象。</p>\n<pre><code class=\"language-python\"># 在左上角子图（索引 [0, 0]）上绘图\naxes[0, 0].plot(x, y_sin, color='#4263eb')\naxes[0, 0].set_title('正弦波')\naxes[0, 0].set_xlabel('弧度')\naxes[0, 0].set_ylabel('值')\naxes[0, 0].grid(True, linestyle='--', alpha=0.6)\n\n# 在右上角子图（索引 [0, 1]）上绘图\naxes[0, 1].plot(x, y_cos, color='#12b886')\naxes[0, 1].set_title('余弦波')\naxes[0, 1].set_xlabel('弧度')\n# 如果坐标轴共享或上下文清晰，我们可以在这里省略 y 轴标签\n\n# 在左下角子图（索引 [1, 0]）上绘图\naxes[1, 0].scatter(x, y_sin + np.random.normal(0, 0.1, 100), color='#f06595', alpha=0.6, s=10) # 散点图\naxes[1, 0].set_title('含噪声正弦散点图')\naxes[1, 0].set_xlabel('弧度')\naxes[1, 0].set_ylabel('值')\n\n# 在右下角子图（索引 [1, 1]）上绘图\naxes[1, 1].hist(random_data, bins=30, color='#fd7e14', alpha=0.7)\naxes[1, 1].set_title('随机数据直方图')\naxes[1, 1].set_xlabel('值')\naxes[1, 1].set_ylabel('频率')\n\n# 显示包含所有子图的图形\nplt.show() # 此命令通常在 Jupyter 等交互式环境之外需要\n</code></pre>\n<p>请注意，像 <code>plot()</code>、<code>set_title()</code>、<code>set_xlabel()</code>、<code>set_ylabel()</code> 和 <code>grid()</code> 等方法是如何在特定的 <code>axes</code> 对象（例如 <code>axes[0, 0].plot(...)</code>）上调用的。这种面向对象的方法使您能够精确控制每个子图。</p>\n<h3>共享坐标轴</h3>\n<p>在比较图表时，让它们共享相同的 x 轴或 y 轴限制和刻度通常是有益的。这使得直接比较变得更加容易。<code>plt.subplots()</code> 为此提供了方便的参数 (parameter)：<code>sharex</code> 和 <code>sharey</code>。</p>\n<p>设置 <code>sharex=True</code> 意味着所有子图将共享相同的 x 轴。在一个图表的 x 轴上缩放或平移会影响所有其他图表。同样，<code>sharey=True</code> 会关联 y 轴。您还可以将它们设置为 <code>'col'</code> 或 <code>'row'</code>，以便分别仅在同一列或同一行内共享坐标轴。</p>\n<pre><code class=\"language-python\"># 创建一个 2x1 的网格，其中子图共享 x 轴\nfig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 6), sharex=True)\n\naxes[0].plot(x, y_sin, color='#7048e8')\naxes[0].set_title('正弦波')\naxes[0].set_ylabel('值')\naxes[0].grid(True, linestyle='--', alpha=0.6)\n\naxes[1].plot(x, y_cos, color='#0ca678')\naxes[1].set_title('余弦波')\naxes[1].set_xlabel('弧度')\naxes[1].set_ylabel('值')\naxes[1].grid(True, linestyle='--', alpha=0.6)\n\n# 注意，由于坐标轴是共享的，只有底部图表需要 x 轴标签。\n# Matplotlib 会自动隐藏顶部图表上的 x 轴刻度标签。\n\nplt.show()\n</code></pre>\n<p>当坐标轴共享时，Matplotlib 通常足够智能，会自动隐藏多余的刻度标签（例如上面示例中顶部图表上的 x 轴标签），从而使外观更整洁。</p>\n<h3>调整布局</h3>\n<p>有时，不同子图的标题、标签或刻度标签可能会重叠，导致图形难以阅读。Matplotlib 提供了一个简单的函数来自动调整子图参数 (parameter)，以实现紧凑布局。</p>\n<pre><code class=\"language-python\"># 沿用之前的 2x2 示例：\nfig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))\n\naxes[0, 0].plot(x, y_sin, color='#4263eb')\naxes[0, 0].set_title('正弦波')\n# ... 像之前一样添加其他图表和标签 ...\naxes[0, 1].plot(x, y_cos, color='#12b886')\naxes[0, 1].set_title('余弦波')\naxes[1, 0].scatter(x, y_sin + np.random.normal(0, 0.1, 100), color='#f06595', alpha=0.6, s=10)\naxes[1, 0].set_title('含噪声正弦散点图')\naxes[1, 1].hist(random_data, bins=30, color='#fd7e14', alpha=0.7)\naxes[1, 1].set_title('随机数据直方图')\n\n# 在绘图和设置标签/标题之后调用 tight_layout()\nplt.tight_layout()\n\nplt.show()\n</code></pre>\n<p>在所有绘图命令之后调用 <code>plt.tight_layout()</code>（或 <code>fig.tight_layout()</code>）通常可以通过调整子图之间的间距来解决大多数重叠问题。如需对间距进行更精细的控制，可以查看 <code>plt.subplots_adjust()</code> 函数，尽管 <code>tight_layout()</code> 对于许多常见情况已足够。</p>\n<p>使用子图是数据分析和机器学习 (machine learning)中创建信息丰富的仪表盘和比较性可视化内容的基础。通过熟练掌握 <code>plt.subplots()</code> 函数和使用 <code>Axes</code> 对象的面向对象绘图方法，您可以更好地控制复杂图形的布局和外观。</p>",
+  "slug": "matplotlib-subplots",
+  "updates": [],
+  "references": [
+    {
+      "id": 4972,
+      "title": "matplotlib.pyplot.subplots",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html",
+      "doi": "",
+      "note": "plt.subplots函数的官方API参考文档，详细说明其参数和用于创建多个子图的用法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:03.937439Z",
+      "updated_at": "2025-09-07T20:05:31.176331Z"
+    },
+    {
+      "id": 4973,
+      "title": "Figures and Axes Tutorial",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "Matplotlib Development Team",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/users/explain/figures/anatomy.html",
+      "doi": "",
+      "note": "解释Matplotlib中Figure和Axes对象区别的教程，这是使用子图进行面向对象绘图的核心。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:03.941429Z",
+      "updated_at": "2025-09-07T20:05:33.880423Z"
+    },
+    {
+      "id": 4974,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本广受好评的书籍，其中包含有关Matplotlib的实用章节，展示了其在数据可视化背景下的应用。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:03.944771Z",
+      "updated_at": "2025-09-07T20:05:25.106897Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,45 @@
+{
+  "id": 1582,
+  "title": "使用 IN 和 BETWEEN 进行筛选",
+  "meta_title": "使用 IN 和 BETWEEN 运算符进行筛选",
+  "meta_description": "使用 IN 简化多值筛选，使用 BETWEEN 简化范围筛选。",
+  "content": "<p>SQL 提供了专用运算符来增强数据筛选功能。当条件需要检查一个值是否属于某个特定选项集合或是否在一个连续范围内时，可以使用 <code>IN</code> 和 <code>BETWEEN</code> 运算符。这些运算符提供了一种更简洁易读的方式来执行此类筛选任务。</p>\n<h3>使用 IN 检查值列表</h3>\n<p>假设你想获取特定列与几个可能值之一匹配的行数据。例如，你可能想找出所有居住在“加利福尼亚”、“内华达”或“亚利桑那”的客户。你可以使用多个 <code>OR</code> 条件来编写：</p>\n<pre><code class=\"language-sql\">SELECT customer_name, state\nFROM customers\nWHERE state = 'California' OR state = 'Nevada' OR state = 'Arizona';\n</code></pre>\n<p>这种方法可行，但如果你的值列表变长，查询语句可能会变得冗长且难以阅读。<code>IN</code> 运算符提供了一种更简洁的方式来表达相同的逻辑。它允许你指定一个值列表进行检查。</p>\n<p>基本语法是：</p>\n<p><code>WHERE column_name IN (value1, value2, value3, ...)</code></p>\n<p>使用 <code>IN</code>，之前的查询会变得更加紧凑：</p>\n<pre><code class=\"language-sql\">SELECT customer_name, state\nFROM customers\nWHERE state IN ('California', 'Nevada', 'Arizona');\n</code></pre>\n<p>这个查询与使用 <code>OR</code> 的查询结果完全相同，但通常更易于编写和理解，尤其是在列表较长时。<code>IN</code> 运算符适用于多种数据类型，包括数字和字符串。</p>\n<p>这是一个选择具有特定状态码订单的例子：</p>\n<pre><code class=\"language-sql\">SELECT order_id, order_date, status_code\nFROM orders\nWHERE status_code IN (100, 205, 410);\n</code></pre>\n<p>你还可以将 <code>IN</code> 与 <code>AND</code> 或 <code>OR</code> 的其他条件结合使用。例如，要找出居住在特定州 <em>并且</em> 在某个日期之后注册的客户：</p>\n<pre><code class=\"language-sql\">SELECT customer_name, state, signup_date\nFROM customers\nWHERE state IN ('California', 'Nevada', 'Arizona')\n  AND signup_date > '2023-01-01';\n</code></pre>\n<p>就像你可以将 <code>NOT</code> 与其他运算符一起使用一样，你可以使用 <code>NOT IN</code> 来查找列值与列表中任何值都 <em>不</em> 匹配的行：</p>\n<pre><code class=\"language-sql\">SELECT customer_name, state\nFROM customers\nWHERE state NOT IN ('California', 'Nevada', 'Arizona');\n</code></pre>\n<p>这将返回除加利福尼亚、内华达和亚利桑那之外所有州的客户。</p>\n<h3>使用 BETWEEN 检查范围</h3>\n<p>另一种常见的筛选情况是选择列值落在特定范围（包括边界）内的行。例如，查找价格在 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>50</mn><mtext>到</mtext></mrow><annotation encoding=\"application/x-tex\">50 到 </annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">50</span><span class=\"mord cjk_fallback\">到</span></span></span></span>100 之间（含两端）的产品。你可以使用 <code>AND</code> 和比较运算符：</p>\n<pre><code class=\"language-sql\">SELECT product_name, price\nFROM products\nWHERE price >= 50 AND price &#x3C;= 100;\n</code></pre>\n<p>同样，这种方法也完全可行。然而，SQL 提供了 <code>BETWEEN</code> 运算符，作为表达范围的更直接方式。</p>\n<p>语法是：</p>\n<p><code>WHERE column_name BETWEEN lower_bound AND upper_bound</code></p>\n<p>一个重要细节是 <code>BETWEEN</code> 是<strong>包含边界的</strong>：它包含列值等于 <code>lower_bound</code> 或 <code>upper_bound</code> 的行。</p>\n<p>使用 <code>BETWEEN</code>，产品价格查询如下：</p>\n<pre><code class=\"language-sql\">SELECT product_name, price\nFROM products\nWHERE price BETWEEN 50 AND 100;\n</code></pre>\n<p>这通常被认为是表达范围更易读的方式。<code>BETWEEN</code> 常用于数字和日期。</p>\n<p>日期示例（语法可能因具体 SQL 数据库而略有不同）：</p>\n<pre><code class=\"language-sql\">SELECT event_name, event_date\nFROM events\nWHERE event_date BETWEEN '2024-06-01' AND '2024-06-30';\n</code></pre>\n<p>此查询选择发生在 2024 年 6 月的事件，包括 6 月 1 日和 6 月 30 日的事件。</p>\n<p>类似于 <code>IN</code>，你还可以用 <code>NOT BETWEEN</code> 来排除一个范围：</p>\n<pre><code class=\"language-sql\">SELECT product_name, price\nFROM products\nWHERE price NOT BETWEEN 50 AND 100;\n</code></pre>\n<p>这会返回价格低于 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>50</mn><mtext>或高于</mtext></mrow><annotation encoding=\"application/x-tex\">50 或高于 </annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord\">50</span><span class=\"mord cjk_fallback\">或高于</span></span></span></span>100 的产品。</p>\n<p><code>IN</code> 和 <code>BETWEEN</code> 都简化了常见的筛选任务。与使用多个 <code>OR</code> 条件或带有 <code>AND</code> 的复合不等式相比，它们使你的 <code>WHERE</code> 子句更短，并且通常更易于理解。熟练使用它们是编写高效 SQL 查询的重要一步。</p>",
+  "slug": "filtering-in-between",
+  "updates": [],
+  "references": [
+    {
+      "id": 3346,
+      "title": "MySQL 8.0 Reference Manual :: 12.5.3.2 Comparison Operators",
+      "author": "Oracle and/or its affiliates",
+      "year": "2020",
+      "publisher": "Oracle",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dev.mysql.com/doc/refman/8.0/en/comparison-functions-and-operators.html",
+      "doi": "",
+      "note": "MySQL比较运算符的官方文档，详细介绍了IN和BETWEEN运算符及其使用方法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:42.138729Z",
+      "updated_at": "2025-09-07T18:52:47.453465Z"
+    },
+    {
+      "id": 3347,
+      "title": "Learning SQL, Third Edition",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "51-70",
+      "url": "https://www.oreilly.com/library/view/learning-sql-third-edition/9781492057611/",
+      "doi": "",
+      "note": "一本广泛使用的SQL入门书籍，涵盖了基本的过滤技术，包括IN和BETWEEN运算符。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:42.257977Z",
+      "updated_at": "2025-09-07T18:53:11.356159Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

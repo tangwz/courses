@@ -1,0 +1,61 @@
+{
+  "id": 5211,
+  "title": "单元测试组件",
+  "meta_title": "LLM 组件单元测试 | LLM 测试",
+  "meta_description": "编写提示模板和解析器等各个部分的单元测试方法。",
+  "content": "<p>虽然LLM应用程序的端到端行为可能不可预测，但工作流程中的许多独立组件是确定性的，非常适合传统单元测试。对这些构成要素应用单元测试具有明显好处：它有助于隔离错误，在开发期间提供快速反馈，并确保系统中可预测的部分在与LLM交互之前正常运行。这种方法建立了可靠性，即使最终LLM输出不同。</p>\n<p>可以把您的LLM工作流程看作一个管道。单元测试侧重于独立验证该管道内的每个不同阶段或工具。</p>\n<h3>测试提示模板</h3>\n<p>提示模板负责构建发送给LLM的最终提示。提示格式错误可能导致糟糕或不正确的回复。单元测试可以验证您的模板是否正确包含变量并生成预期结构。</p>\n<p>以LangChain的<code>PromptTemplate</code>为例：</p>\n<pre><code class=\"language-python\">from langchain.prompts import PromptTemplate\n\n# 示例模板\ntemplate_string = \"Summarize the following text about {topic}: {text}\"\nprompt_template = PromptTemplate(\n    input_variables=[\"topic\", \"text\"],\n    template=template_string\n)\n\n# 使用 pytest 进行单元测试\ndef test_prompt_template_formatting():\n    topic = \"Renewable Energy\"\n    text_input = \"Solar power is becoming increasingly popular...\"\n    expected_output = \"Summarize the following text about Renewable Energy: Solar power is becoming increasingly popular...\"\n\n    formatted_prompt = prompt_template.format(topic=topic, text=text_input)\n\n    assert formatted_prompt == expected_output\n\ndef test_prompt_template_missing_variable():\n    # 使用 pytest 的 raises 上下文管理器示例\n    import pytest\n    from langchain_core.exceptions import KeyErrorOutputParser\n\n    with pytest.raises(KeyError): # LangChain 模板在缺少变量时会引发 KeyError\n         prompt_template.format(topic=\"Climate Change\") # 缺少 'text' 变量\n\n</code></pre>\n<p>这些测试确认，模板引擎对于有效输入能按预期运行，并能适当处理缺少变量等错误，而无需调用实际的LLM。</p>\n<h3>测试输出解析器</h3>\n<p>输出解析器将LLM的原始文本输出转换为更结构化的格式（例如JSON、列表或自定义对象）。它们的逻辑可能复杂，涉及正则表达式或特定字符串操作。单元测试很重要，以确保它们能正确解析预期输出，并优雅地处理潜在的变体或格式错误的响应。</p>\n<p>假设您有一个自定义解析器，或正在使用LangChain的<code>OutputParser</code>，例如<code>SimpleJsonOutputParser</code>：</p>\n<pre><code class=\"language-python\">from langchain.output_parsers import SimpleJsonOutputParser\nimport json\nimport pytest\n\n# 假设 SimpleJsonOutputParser 旨在提取 JSON 块\nparser = SimpleJsonOutputParser()\n\ndef test_json_parser_valid_output():\n    # 模拟包含 JSON 的 LLM 输出\n    llm_output = 'Some introductory text.\\n```json\\n{\"name\": \"Alice\", \"age\": 30}\\n```\\nSome concluding text.'\n    expected_parsed_output = {\"name\": \"Alice\", \"age\": 30}\n\n    parsed_output = parser.parse(llm_output)\n\n    assert parsed_output == expected_parsed_output\n\ndef test_json_parser_malformed_json():\n    # 模拟包含无效 JSON 的 LLM 输出\n    llm_output = 'Here is the data:\\n```json\\n{\"name\": \"Bob\", \"age\": 40,\\n```\\n' # 格式错误的 JSON\n\n    # 检查解析器是否引发了适当的异常（例如 OutputParserException）\n    from langchain_core.exceptions import OutputParserException\n    with pytest.raises(OutputParserException):\n        parser.parse(llm_output)\n\ndef test_json_parser_no_json():\n     llm_output = \"There seems to be no JSON data here.\"\n     from langchain_core.exceptions import OutputParserException\n     with pytest.raises(OutputParserException): # 如果未找到 JSON，则预期会报错\n         parser.parse(llm_output)\n\n</code></pre>\n<p>这些测试使用示例字符串输入，模仿潜在的LLM响应，以验证解析器的逻辑，而无需任何LLM交互。您可以为各种边界情况创建测试，包括不完整的JSON、格式不同的代码块，或完全缺少预期结构的输出。</p>\n<h3>测试数据加载器和格式器</h3>\n<p>如果您的应用程序涉及检索增强生成（RAG），那么在索引前加载、拆分或格式化数据的组件是进行单元测试的重要对象。</p>\n<ul>\n<li><strong>数据加载器：</strong> 验证它们能否正确读取不同文件类型（PDF、TXT、HTML）。测试空文件或编码异常的文件等边界情况。</li>\n<li><strong>文本拆分器：</strong> 确保文本按照所需策略进行分块（例如，按字符数、令牌或递归方式）。测试短文本、长文本 (long context)和结构多变的文本。</li>\n<li><strong>元数据提取器：</strong> 确认相关元数据（例如，源文件名、页码）已正确提取并与数据块关联。</li>\n</ul>\n<pre><code class=\"language-python\"># 示例：测试文本拆分器\nfrom langchain.text_splitter import CharacterTextSplitter # 示例拆分器\n\ndef test_character_splitter_basic():\n    splitter = CharacterTextSplitter(chunk_size=20, chunk_overlap=5)\n    text = \"This is a sample text for testing the splitter functionality.\"\n    chunks = splitter.split_text(text)\n\n    assert len(chunks) > 1 # 预期文本会被拆分\n    assert chunks[0] == \"This is a sample text\" # 检查第一个块的内容（近似）\n    # 根据预期的块大小和重叠添加更多断言\n\ndef test_character_splitter_small_text():\n    splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=10)\n    text = \"Short text.\"\n    chunks = splitter.split_text(text)\n\n    assert len(chunks) == 1 # 如果文本小于块大小，则不应拆分\n    assert chunks[0] == text\n\n</code></pre>\n<h3>测试实用函数</h3>\n<p>您为数据清理、输入验证或链/代理中特定逻辑等任务编写的任何辅助函数都应有专门的单元测试。这些通常是标准Python函数，其正确性可以轻松验证。</p>\n<pre><code class=\"language-python\"># 示例：测试一个简单的验证函数\ndef is_valid_email(email: str) -> bool:\n    # （用于演示的简化检查）\n    return \"@\" in email and \".\" in email.split('@')[-1]\n\ndef test_email_validation():\n    assert is_valid_email(\"test@example.com\") == True\n    assert is_valid_email(\"test.example.com\") == False\n    assert is_valid_email(\"test@domain\") == False\n    assert is_valid_email(\"\") == False\n</code></pre>\n<p>通过全面对这些各个组件进行单元测试，您可以确保LLM应用程序的确定性部分稳固。这使得调试更简单，因为您可以更有信心认为工作流程中后期遇到的错误可能与LLM交互或组件间的集成有关，而不是构成要素中的根本缺陷。这些测试是LLM应用程序全面测试策略的重要组成部分。</p>",
+  "slug": "unit-testing-llm-components",
+  "updates": [],
+  "references": [
+    {
+      "id": 13092,
+      "title": "pytest documentation",
+      "author": "pytest-dev team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pytest.org/",
+      "doi": "",
+      "note": "pytest框架的官方文档，提供了在Python中编写和运行单元测试的完整指南，包括功能和实践。",
+      "order": 1,
+      "created_at": "2025-09-05T08:27:59.640872Z",
+      "updated_at": "2025-09-09T03:26:06.185017Z"
+    },
+    {
+      "id": 13093,
+      "title": "LangChain Documentation",
+      "author": "LangChain Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/get_started/introduction",
+      "doi": "",
+      "note": "LangChain框架的官方文档，对于理解LLM应用开发中使用的PromptTemplates、输出解析器和文本分割器等组件很有价值。",
+      "order": 2,
+      "created_at": "2025-09-05T08:27:59.650289Z",
+      "updated_at": "2025-09-09T03:26:07.757633Z"
+    },
+    {
+      "id": 13095,
+      "title": "Test-Driven Development: By Example",
+      "author": "Kent Beck",
+      "year": "2002",
+      "publisher": "Addison-Wesley Professional",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/test-driven-development/0321146530/",
+      "doi": "",
+      "note": "一本介绍测试驱动开发（TDD）原则和实践的书籍，侧重于在编写代码之前先写测试，以增强设计、减少错误并为确定性组件提供快速反馈。",
+      "order": 4,
+      "created_at": "2025-09-05T08:27:59.656251Z",
+      "updated_at": "2025-09-09T03:26:15.339655Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

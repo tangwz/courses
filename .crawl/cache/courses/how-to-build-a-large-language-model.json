@@ -1,0 +1,2135 @@
+{
+  "id": 195,
+  "title": "如何构建大语言模型",
+  "meta_title": "如何构建大语言模型（完整指南）",
+  "meta_description": "本课程面向工程师，讲解如何构建大语言模型。内容涵盖Transformer、分布式训练、数据准备、评估和优化。学习构建人工智能模型。",
+  "description": "<p>本课程为工程师提供了构建、训练和优化大语言模型 (LLM)的全面指南。内容涵盖主要组成部分，从数据准备和基于Transformer的架构设计，到高级分布式训练方法和高效部署策略。掌握开发复杂语言模型所需的实用知识。</p>",
+  "short_description": "掌握构建、训练和优化复杂大语言模型的工程技能。",
+  "excerpt": "学习创建大语言模型的端到端流程。掌握数据处理、Transformer架构、分布式训练系统、评估方法以及推理优化。",
+  "prerequisites": "编程与深度学习",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "大语言模型架构设计",
+      "description": "实现并定制用于大规模语言建模的基于Transformer的架构。"
+    },
+    {
+      "topic": "大语言模型数据管理",
+      "description": "建立用于获取、清洗和管理适用于大语言模型预训练的海量文本数据集的流程。"
+    },
+    {
+      "topic": "分布式训练实现",
+      "description": "配置并运行使用各种并行策略和框架的大语言模型分布式训练任务。"
+    },
+    {
+      "topic": "模型训练与优化",
+      "description": "应用高级优化技术、学习率调度和专用于大语言模型训练的正则化方法。"
+    },
+    {
+      "topic": "大语言模型评估技术",
+      "description": "使用内部指标和下游任务基准评估模型性能。"
+    },
+    {
+      "topic": "推理优化",
+      "description": "实现模型压缩和高效推理服务的方法。"
+    }
+  ],
+  "duration": 80,
+  "slug": "how-to-build-a-large-language-model",
+  "level": 3,
+  "category": "Large Language Models",
+  "is_masterclass": true,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-05-17T03:19:20.353480Z",
+  "updated_at": "2026-10-02T06:41:29.703781Z",
+  "chapters": [
+    {
+      "id": 1079,
+      "title": "大型语言模型概论",
+      "meta_title": "大型语言模型（LLM）概览",
+      "meta_description": "了解构建和训练大型语言模型所需的背景、规模及其工程方面的挑战。",
+      "number": 1,
+      "slug": "introduction-large-scale-language-modeling",
+      "content": "本章旨在为理解大型语言模型（LLM）打好铺垫。我们将从大型语言模型（LLM）的定义讲起，并将其与此前的序列模型作对比，梳理其发展脉络，直到当前的模型结构。此外，本章会说明模型大小和数据规模为何是影响大型语言模型表现和其涌现能力的根本原因。同时，我们还会概括这些模型开发过程中固有的主要计算和内存限制，并引出大型语言模型应用中涉及的常用软件框架及硬件加速器。",
+      "sections": [
+        {
+          "id": 5947,
+          "title": "定义大型语言模型",
+          "meta_title": "什么是大型语言模型？",
+          "meta_description": "定义大型语言模型，并根据规模和能力将其与较小型模型区分开来。",
+          "slug": "defining-large-language-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5948,
+          "title": "序列建模的历史背景",
+          "meta_title": "自然语言处理中序列模型的历史",
+          "meta_description": "回顾从N-gram和RNN到大型Transformer模型兴起的历程。",
+          "slug": "historical-context-sequence-modeling",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5949,
+          "title": "规模的重要性",
+          "meta_title": "为何规模对LLM重要",
+          "meta_description": "讨论模型大小、数据量与涌现能力之间的关系。",
+          "slug": "significance-of-scale",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5950,
+          "title": "计算方面的挑战概览",
+          "meta_title": "LLM训练中的计算难题",
+          "meta_description": "概述LLM开发期间面临的主要计算和内存限制。",
+          "slug": "computational-challenges-overview",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5951,
+          "title": "软件与硬件环境",
+          "meta_title": "LLM开发环境概览",
+          "meta_description": "说明LLM常用的软件框架和硬件加速器。",
+          "slug": "software-hardware-ecosystem",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1080,
+      "title": "大型语言模型的数学预备知识",
+      "meta_title": "大型语言模型的数学要点",
+      "meta_description": "回顾理解大型语言模型架构和训练所需的线性代数、微积分和概率内容。",
+      "number": 2,
+      "slug": "mathematical-preliminaries-llms",
+      "content": "构建大型语言模型需要扎实掌握其背后的数学原理。尽管深度学习框架处理许多底层计算，但理解这些数学对于设计高效架构、理解训练过程、调试诸如梯度爆炸 ($ \\nabla L \\to \\infty $) 等问题以及实现自定义组件都很有帮助。\r\n\r\n本章将回顾构成本课程所讨论技术支撑的主要数学内容。我们将回顾：\r\n\r\n*   **线性代数：** 重点在于向量、矩阵和运算，它们对神经网络中数据表示和转换非常重要。\r\n*   **微积分：** 涵盖导数、梯度（例如 $ \\nabla f(x) $）和链式法则，这些对于理解反向传播和梯度下降等优化算法是不可或缺的：\r\n    $$ \\theta_{t+1} = \\theta_t - \\eta \\nabla_{\\theta} J(\\theta) $$\r\n*   **概率与统计：** 讨论诸如概率分布、熵和采样等内容，它们在语言建模和评估中扮演重要角色。\r\n*   **数值稳定性：** 简要提及在实现深度学习模型时遇到的实际问题。\r\n\r\n我们还将确立后续章节中使用的数学符号，以确保清晰。本次回顾旨在重温这些知识，为全面理解大型语言模型构建和训练的技术细节提供必要的背景。",
+      "sections": [
+        {
+          "id": 5952,
+          "title": "线性代数回顾：向量与矩阵",
+          "meta_title": "大型语言模型线性代数基本知识",
+          "meta_description": "回顾向量空间、矩阵运算以及与神经网络相关的分解。",
+          "slug": "linear-algebra-vectors-matrices",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5953,
+          "title": "微积分回顾：梯度与优化",
+          "meta_title": "用于神经网络优化的微积分",
+          "meta_description": "重温偏导数、链式法则和基于梯度的优化基本原理。",
+          "slug": "calculus-gradients-optimization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5954,
+          "title": "概率与统计基础知识",
+          "meta_title": "语言建模中的概率思想",
+          "meta_description": "涵盖概率分布、信息论基础知识（熵、KL 散度）和采样。",
+          "slug": "probability-statistics-fundamentals",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5955,
+          "title": "数值稳定性考量",
+          "meta_title": "深度学习中的数值稳定性",
+          "meta_description": "阐述梯度消失/爆炸等问题及归一化的作用。",
+          "slug": "numerical-stability-considerations",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5956,
+          "title": "本课程中使用的符号表示",
+          "meta_title": "数学符号指南",
+          "meta_description": "建立用于方程和算法的标准数学表示法。",
+          "slug": "notation-used-throughout-course",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1081,
+      "title": "回顾序列处理架构",
+      "meta_title": "序列处理：RNN、LSTM、GRU",
+      "meta_description": "简要回顾循环架构（RNN、LSTM、GRU），以便与 Transformer 模型进行对比。",
+      "number": 3,
+      "slug": "revisiting-sequence-processing-architectures",
+      "content": "为了理解 Transformer 架构的创新之处，首先了解其之前的序列处理模型结构是有帮助的。本章简要回顾循环神经网络 (RNN) 及其更为复杂的变体：长短期记忆 (LSTM) 网络和门控循环单元 (GRU)。\r\n\r\n我们将考察：\r\n*   RNN 中使用隐藏状态进行序列处理的核心思想。\r\n*   简单 RNN 面临的难题，例如由于梯度消失而难以捕捉长期依赖关系。\r\n*   LSTM 和 GRU 中的门控机制如何被设计来缓解这些问题。\r\n*   这些循环架构在序列到序列 (seq2seq) 任务中的应用。\r\n\r\n此次回顾为理解为何注意力机制和 Transformer 架构在序列数据建模中代表了重大转变提供了背景，我们将在后续章节中进行讲解。",
+      "sections": [
+        {
+          "id": 5957,
+          "title": "循环神经网络 (RNN) 的基本内容",
+          "meta_title": "循环神经网络基本知识",
+          "meta_description": "阐述基本 RNN 中隐状态和序列处理的原理。",
+          "slug": "fundamentals-rnns",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5958,
+          "title": "简单RNN的局限性",
+          "meta_title": "简单RNN面临的挑战",
+          "meta_description": "讨论梯度消失问题以及获取长距离依赖的困难。",
+          "slug": "limitations-simple-rnns",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5959,
+          "title": "长短期记忆（LSTM）网络",
+          "meta_title": "理解LSTM网络",
+          "meta_description": "详细描述LSTM中的门控机制（输入、遗忘、输出）。",
+          "slug": "long-short-term-memory-lstm",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5960,
+          "title": "门控循环单元 (GRU)",
+          "meta_title": "了解GRU网络",
+          "meta_description": "描述GRU的结构和功能，作为LSTM的一种替代方案。",
+          "slug": "gated-recurrent-units-grus",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5961,
+          "title": "基于RNN的序列到序列模型",
+          "meta_title": "使用RNN的Seq2Seq模型",
+          "meta_description": "回顾使用循环架构的编码器-解码器框架。",
+          "slug": "sequence-to-sequence-models-rnns",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1082,
+      "title": "Transformer 架构",
+      "meta_title": "Transformer 模型架构详解",
+      "meta_description": "详细介绍 Transformer 模型的组成部分，包括自注意力、多头注意力以及位置编码。",
+      "number": 4,
+      "slug": "transformer-architecture",
+      "content": "在上一章中回顾了循环架构后，我们现在来看 Transformer 模型。循环模型逐个处理序列中的标记，这对并行计算以及建立长距离关联构成了难题。Transformer 架构通过完全用注意力机制替代循环结构，解决了这些局限。\r\n\r\n本章将讲解 Transformer 的结构。你会了解到：\r\n\r\n*   **缩放点积注意力**机制，它是使用查询、键和值（$Q$、$K$、$V$）的核心组成部分。\r\n*   **多头注意力**如何让模型能够同时关注来自不同表示子空间的信息。\r\n*   引入序列顺序的方法，即使用**位置编码**，因为自注意力本身具有排列不变性。\r\n*   **编码器和解码器堆叠**的结构，它由注意力层和前馈层构成。\r\n*   **层归一化和残差连接**在稳定深度网络训练中的作用。\r\n\r\n本章结束后，你将了解使 Transformer 在序列建模任务中有效运作的基本组成部分。",
+      "sections": [
+        {
+          "id": 5962,
+          "title": "通过注意力机制解决循环问题",
+          "meta_title": "使用注意力机制，摆脱RNN的限制",
+          "meta_description": "说明注意力机制作为顺序处理的替代方案的缘由。",
+          "slug": "overcoming-recurrence-with-attention",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5963,
+          "title": "缩放点积注意力",
+          "meta_title": "缩放点积自注意力细节",
+          "meta_description": "说明查询、键、值的理念以及自注意力的机制。",
+          "slug": "scaled-dot-product-attention",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5964,
+          "title": "多头注意力机制",
+          "meta_title": "理解多头注意力",
+          "meta_description": "描述多头注意力如何处理不同的表示子空间。",
+          "slug": "multi-head-attention-mechanism",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5965,
+          "title": "位置编码方法",
+          "meta_title": "注入位置信息",
+          "meta_description": "解释用于序列顺序的正弦和学习到的位置编码。",
+          "slug": "positional-encoding-techniques",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5966,
+          "title": "编码器与解码器堆叠",
+          "meta_title": "Transformer 编码器-解码器架构",
+          "meta_description": "详细说明编码器和解码器模块内部的层（注意力、前馈、归一化）。",
+          "slug": "encoder-decoder-stacks",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5967,
+          "title": "层归一化与残差连接的作用",
+          "meta_title": "Transformer中的归一化与残差",
+          "meta_description": "阐述层归一化和残差连接对训练深层Transformer模型的重要性。",
+          "slug": "layer-norm-residual-connections",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1083,
+      "title": "大词汇量分词",
+      "meta_title": "LLM 分词方法 (BPE, WordPiece)",
+      "meta_description": "了解用于处理庞大和开放词汇量的子词分词算法，如 BPE、WordPiece 和 SentencePiece。",
+      "number": 5,
+      "slug": "tokenization-large-vocabularies",
+      "content": "在像 Transformer 这样的模型处理文本之前，原始字符序列必须被转换为一系列数字 ID。这个转换过程被称为分词。虽然像按空格分割文本这样的简单方法对小任务有效，但它们难以应对用于大型语言模型（LLM）的海量数据集中的庞大词汇量和形态变化。处理未知词（词汇表外词或 OOV）以及管理可能数百万个独特的词需要更复杂的方法。\r\n\r\n本章侧重于旨在解决这些挑战的子词分词算法。您将了解字节对编码（BPE）和 WordPiece，这些技术基于频繁的子词单元而非整个词来构建词汇表。我们还将讨论 SentencePiece 框架、特殊标记（如 `[CLS]`、`[SEP]`）的作用和管理，以及选择词汇表大小 ($|V|$)、平衡模型表达能力和计算效率的实际考量。学习结束时，您将明白如何有效地为大型模型准备文本数据。",
+      "sections": [
+        {
+          "id": 5968,
+          "title": "子词分词的必要性",
+          "meta_title": "为何子词分词是必要的",
+          "meta_description": "讨论词级别分词面临的挑战（OOV词汇、词汇表规模）。",
+          "slug": "need-for-subword-tokenization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5969,
+          "title": "字节对编码 (BPE) 算法",
+          "meta_title": "字节对编码 (BPE) 解析",
+          "meta_description": "详述 BPE 算法迭代合并生成子词的过程。",
+          "slug": "byte-pair-encoding-bpe",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5970,
+          "title": "WordPiece 分词",
+          "meta_title": "WordPiece 分词算法",
+          "meta_description": "说明 WordPiece 算法及其与 BPE 的不同之处，重点在于似然性。",
+          "slug": "wordpiece-tokenization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5971,
+          "title": "SentencePiece 实现",
+          "meta_title": "SentencePiece：语言无关的分词",
+          "meta_description": "介绍 SentencePiece 这一包含 BPE 和 Unigram 模型的框架。",
+          "slug": "sentencepiece-implementation",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5972,
+          "title": "处理特殊分词",
+          "meta_title": "大型语言模型中的特殊分词管理",
+          "meta_description": "讨论特殊分词（CLS、SEP、PAD、UNK、MASK）的使用与管理。",
+          "slug": "handling-special-tokens",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5973,
+          "title": "词汇量大小选择的权衡",
+          "meta_title": "分词器词汇量大小的选择",
+          "meta_description": "分析词汇量大小对模型表现和序列长度的影响。",
+          "slug": "vocabulary-size-selection-tradeoffs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1084,
+      "title": "大规模文本数据的获取与收集",
+      "meta_title": "用于大语言模型训练的文本数据获取",
+      "meta_description": "涵盖获取大量文本数据的方法，包括网络爬取和使用Common Crawl等现有语料库。",
+      "number": 6,
+      "slug": "sourcing-acquiring-massive-text-datasets",
+      "content": "大型语言模型的有效性与其训练所用的文本数据的规模和质量直接相关。获取足够大的数据集（通常以TB甚至PB为单位）是构建大语言模型的一个基础步骤，并带来其自身的一系列工程难题。\r\n\r\n本章主要讲解获取和收集这些预训练所需大规模文本集合的实用方法。您将学习多种策略，其中包括：\r\n\r\n*   识别网络爬取数据、书籍和代码库等潜在来源。\r\n*   访问和处理大规模网络档案（特别是Common Crawl）的方法。\r\n*   实施高效且负责任的网络抓取实践。\r\n*   寻找并使用现有开放许可的文本语料库。\r\n*   理解与数据收集相关的必要法律和伦理考量。\r\n\r\n在本章结束时，您将对获取开始构建大语言模型所需的原始文本数据所涉及的常用方法和挑战有清晰的认识。",
+      "sections": [
+        {
+          "id": 5974,
+          "title": "确定潜在数据来源",
+          "meta_title": "大型文本数据集的来源",
+          "meta_description": "查看适用于预训练的各种文本数据来源（网络、图书、代码）。",
+          "slug": "identifying-potential-data-sources",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5975,
+          "title": "使用 Common Crawl 数据",
+          "meta_title": "使用 Common Crawl 数据",
+          "meta_description": "讨论访问、解析和过滤 Common Crawl 档案中的数据。",
+          "slug": "utilizing-common-crawl-data",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5976,
+          "title": "规模化网页抓取技术",
+          "meta_title": "大规模网页抓取方法",
+          "meta_description": "实施高效且负责任的网页爬取策略（robots.txt，频率限制）。",
+          "slug": "web-scraping-techniques-scale",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5977,
+          "title": "使用开放许可数据集",
+          "meta_title": "使用开放文本语料库",
+          "meta_description": "识别和使用公开可用、许可宽松的文本数据集（例如The Pile）。",
+          "slug": "leveraging-open-licensed-datasets",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5978,
+          "title": "数据获取的法律考量",
+          "meta_title": "数据获取的法律事宜",
+          "meta_description": "简要介绍文本数据收集中的版权和许可问题。",
+          "slug": "data-acquisition-legal-considerations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1085,
+      "title": "数据清洗与预处理流水线",
+      "meta_title": "用于大型语言模型的文本数据清洗与预处理",
+      "meta_description": "构建可靠的流水线，用于清洗、过滤和规范化大型文本数据集，以训练大型语言模型。",
+      "number": 7,
+      "slug": "data-cleaning-preprocessing-pipelines",
+      "content": "原始文本数据，特别是来自网络爬取这样的大型数据源，在有效用于训练大型语言模型之前，需要大幅整理。本章讲述清洗和整理这些数据集所涉及的实际操作步骤。我们将介绍过滤低质量内容、规范化文本表示、移除HTML标签和导航元素等不必要内容、识别和处理重复文档，以及分离目标语言文本的方法。最后，我们会探讨如何将这些操作组织成可扩展的数据处理流水线，以便处理非常大量的数据。",
+      "sections": [
+        {
+          "id": 5979,
+          "title": "质量筛选策略",
+          "meta_title": "文本数据质量筛选技术",
+          "meta_description": "使用启发式方法和模型去除低质量或含噪的文本内容。",
+          "slug": "strategies-quality-filtering",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5980,
+          "title": "文本标准化方法",
+          "meta_title": "规范化文本数据（Unicode，大小写）",
+          "meta_description": "实施文本标准化步骤，例如 Unicode 规范化和大小写折叠。",
+          "slug": "text-normalization-methods",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5981,
+          "title": "处理冗余内容与标记删除",
+          "meta_title": "从网页数据中删除HTML/标记",
+          "meta_description": "用于提取主要内容并删除广告、导航等的技巧",
+          "slug": "handling-boilerplate-markup-removal",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5982,
+          "title": "近似重复和精确重复检测",
+          "meta_title": "用于大型语言模型的文本数据去重",
+          "meta_description": "实现MinHash等方法，用于识别和移除重复文件。",
+          "slug": "near-duplicate-exact-duplicate-detection",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5983,
+          "title": "语种识别与过滤",
+          "meta_title": "数据集中的语言识别与过滤",
+          "meta_description": "使用工具识别文档语言并过滤出目标语言。",
+          "slug": "language-identification-filtering",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5984,
+          "title": "构建可扩展的预处理流水线",
+          "meta_title": "可扩展数据预处理流水线",
+          "meta_description": "使用Apache Spark或Dask等工具设计数据处理流程。",
+          "slug": "building-scalable-preprocessing-pipelines",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1086,
+      "title": "建立和管理大规模数据集",
+      "meta_title": "管理拍字节规模的LLM数据集",
+      "meta_description": "应对存储、索引、版本控制以及高效访问LLM训练所需海量数据集的挑战。",
+      "number": 8,
+      "slug": "building-managing-large-scale-datasets",
+      "content": "在获取并预处理了潜在的数太字节乃至拍字节文本数据后，下一个工程步骤是有效地存储、组织和访问这些海量数据集合。本章介绍管理数据集所需的基础设施和技术，以适应大型语言模型训练的规模需求。\r\n\r\n我们将讨论实际的考量，例如：\r\n*   选择合适的数据存储格式（如文本、Apache Arrow 或 Parquet）。\r\n*   使用分布式文件系统，例如 HDFS 或云对象存储。\r\n*   实施数据索引以实现高效检索。\r\n*   建立数据集版本控制实践以保证可复现性。\r\n*   设计流式数据加载器，将数据有效地输入到分布式训练流程中。",
+      "sections": [
+        {
+          "id": 5985,
+          "title": "数据存储格式（文本、Arrow、Parquet）",
+          "meta_title": "大型数据集的存储格式",
+          "meta_description": "比较用于高效存储已处理文本数据的不同文件格式。",
+          "slug": "data-storage-formats",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5986,
+          "title": "分布式文件系统 (HDFS, S3)",
+          "meta_title": "使用分布式文件系统 (S3, HDFS)",
+          "meta_description": "使用云存储或分布式文件系统存储数据集。",
+          "slug": "distributed-file-systems",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5987,
+          "title": "数据索引用于高效检索",
+          "meta_title": "大型数据集索引",
+          "meta_description": "索引数据集的方法，以实现快速查找或子集选择。",
+          "slug": "data-indexing-efficient-retrieval",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5988,
+          "title": "数据集版本管理与复现性",
+          "meta_title": "LLM数据集版本管理",
+          "meta_description": "实施数据集版本管理策略，确保训练复现性。",
+          "slug": "dataset-versioning-reproducibility",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5989,
+          "title": "用于训练的流式数据加载器",
+          "meta_title": "用于训练的高效数据加载",
+          "meta_description": "构建能够高效地将数据从存储流式传输到训练工作进程的数据加载器。",
+          "slug": "streaming-data-loaders-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1087,
+      "title": "训练中的数据取样策略",
+      "meta_title": "LLM训练数据取样方法",
+      "meta_description": "检视训练期间数据取样的不同策略，包括混合数据来源和课程学习等方法。",
+      "number": 9,
+      "slug": "data-sampling-strategies-training",
+      "content": "在收集和处理了大量文本数据集之后，下一步是决定如何在漫长的训练过程中有效地将这些数据提供给模型。简单地将所有数据打乱混合可能并非最佳。数据呈现的构成和顺序可以显著影响模型的学习过程及其最终表现。\r\n\r\n本章将介绍训练期间数据取样的方法。你将了解到：\r\n\r\n*   混合不同来源数据的重要性以及如何构成这些混合数据。\r\n*   为不同数据源分配权重，以强调或弱化某些文本类型的方法。\r\n*   使用基于温度的取样方法来控制抽取数据批次的分布。\r\n*   课程学习的思想，即数据可能以特定顺序呈现，例如从简单到更复杂的例子。\r\n*   数据配速和退火等策略，涉及在整个训练期间动态改变数据混合。\r\n\r\n理解这些取样策略对于指导训练过程并塑造最终大语言模型的能力非常重要。",
+      "sections": [
+        {
+          "id": 5990,
+          "title": "数据配比的重要性",
+          "meta_title": "配置大语言模型训练数据配比",
+          "meta_description": "讨论数据来源配比如何影响模型能力。",
+          "slug": "importance-data-mixture-composition",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5991,
+          "title": "来源权重策略",
+          "meta_title": "训练时数据来源加权",
+          "meta_description": "实现对不同来源数据进行过采样或欠采样的方法。",
+          "slug": "source-weighting-strategies",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5992,
+          "title": "基于温度的采样",
+          "meta_title": "数据混合的温度采样",
+          "meta_description": "使用温度参数调整跨来源的采样分布。",
+          "slug": "temperature-based-sampling",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5993,
+          "title": "课程学习简介",
+          "meta_title": "面向大型语言模型的课程学习",
+          "meta_description": "按结构化顺序（例如先易后难）呈现数据的理念。",
+          "slug": "introduction-curriculum-learning",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5994,
+          "title": "数据步进与退火调度",
+          "meta_title": "数据退火调度",
+          "meta_description": "在训练过程中动态改变数据混合或难度。",
+          "slug": "data-pacing-annealing-schedules",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1088,
+      "title": "从零开始实现Transformer",
+      "meta_title": "Transformer模型的代码实现",
+      "meta_description": "逐步实现Transformer架构的精简版本，并使用常用的深度学习框架。",
+      "number": 10,
+      "slug": "implementing-transformer-from-scratch",
+      "content": "在前面章节中，我们已经了解了Transformer架构的理论原理，本章将重点把这些理论转化为可运行的代码。我们将使用一个常用的深度学习框架，一步步地构建Transformer模型的重要组成部分。\r\n\r\n你将学习实现：\r\n*   缩放点积注意力，这种基本的注意力机制。\r\n*   多头注意力，它将多种注意力视角结合起来。\r\n*   逐位置前馈网络。\r\n*   编码器和解码器层的结构，包括残差连接和层归一化。\r\n*   通过组装这些部分来构建完整的Transformer模型。\r\n\r\n本章结束后，你将拥有一个清晰、可操作的Transformer实现，这将使你对这些模型在代码层面如何运作有清晰的认识，并为你后续关于扩展和优化的章节做好准备。我们将建立一个基本的项目配置，并按逻辑顺序逐步实现每个架构元素。",
+      "sections": [
+        {
+          "id": 5995,
+          "title": "设置项目环境",
+          "meta_title": "Transformer 代码项目设置",
+          "meta_description": "建立所需的库（PyTorch/TensorFlow、NumPy）和项目结构。",
+          "slug": "setting-up-project-environment",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5996,
+          "title": "实现缩放点积注意力",
+          "meta_title": "编写缩放点积注意力代码",
+          "meta_description": "编写核心自注意力机制的代码。",
+          "slug": "implementing-scaled-dot-product-attention",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5997,
+          "title": "构建多头注意力层",
+          "meta_title": "编码多头注意力层",
+          "meta_description": "结合多个注意力头和线性投影。",
+          "slug": "building-multi-head-attention-layer",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5998,
+          "title": "实现位置感知前馈网络",
+          "meta_title": "编写前馈网络 (FFN)",
+          "meta_description": "实现 Transformer 模块中的 FFN 组件。",
+          "slug": "implementing-position-wise-feed-forward",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5999,
+          "title": "构建编码器层和解码器层",
+          "meta_title": "编码Transformer编码器和解码器层",
+          "meta_description": "将注意力层和FFN层与归一化及残差连接组合起来。",
+          "slug": "constructing-encoder-decoder-layers",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6000,
+          "title": "组装完整的Transformer模型",
+          "meta_title": "组装Transformer模型代码",
+          "meta_description": "组合编码器/解码器堆栈、嵌入和输出层。",
+          "slug": "assembling-full-transformer-model",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1089,
+      "title": "Transformer模型规模化：架构选择",
+      "meta_title": "大型语言模型规模化的架构选择",
+      "meta_description": "讨论Transformer模型规模化时的设计考量，包含深度与宽度、激活函数及稀疏注意力等。",
+      "number": 11,
+      "slug": "scaling-transformers-architectural-choices",
+      "content": "在构建了一个Transformer模型之后，下一步是要弄明白如何有效地增大其规模。单纯地增大模型规模并非总是最佳途径；随着模型增长，特定的架构选择对性能、训练稳定性和计算需求有很大影响。\r\n\r\n本章侧重讨论Transformer模型规模化过程中的设计考量。我们将讨论：\r\n\r\n*   将模型大小、数据集大小和计算量与性能关联起来的经验性缩放法则，常表示为 $Performance \\propto Compute^{\\alpha} Data^{\\beta} Size^{\\gamma}$。\r\n*   增加模型深度（层数）与宽度（隐藏维度大小）所带来的影响。\r\n*   GeLU或SwiGLU等不同激活函数在前馈网络中的表现。\r\n*   将层归一化置于残差连接之前或之后（Pre-LN对比Post-LN）所带来的影响。\r\n*   对稀疏注意力机制的介绍，这些机制旨在处理自注意力在极长序列中的二次方复杂度问题。\r\n\r\n在本章结束时，你将对设计更大、能力更强的Transformer模型时可用的架构调整手段，以及每种选择所关联的权衡取舍，有更清楚的认识。",
+      "sections": [
+        {
+          "id": 6001,
+          "title": "神经网络语言模型的缩放定律",
+          "meta_title": "理解大型语言模型缩放定律",
+          "meta_description": "回顾模型表现如何随大小、数据和计算量进行缩放的经验研究结果。",
+          "slug": "scaling-laws-neural-language-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6002,
+          "title": "深度与宽度取舍",
+          "meta_title": "Transformer深度与宽度分析",
+          "meta_description": "分析增加模型深度（层数）与宽度（隐藏尺寸）的影响。",
+          "slug": "depth-vs-width-tradeoffs",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6003,
+          "title": "激活函数选择 (ReLU, GeLU, SwiGLU)",
+          "meta_title": "Transformer中的激活函数",
+          "meta_description": "比较FFN层中使用的不同激活函数 (ReLU, GeLU, SwiGLU)。",
+          "slug": "choice-activation-functions",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6004,
+          "title": "规范化层放置位置（前置LN vs. 后置LN）",
+          "meta_title": "前置LN与后置LN的Transformer设计",
+          "meta_description": "讨论层规范化在残差连接之前或之后放置的影响。",
+          "slug": "normalization-layer-placement",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6005,
+          "title": "稀疏注意力机制简介",
+          "meta_title": "用于高效Transformer的稀疏注意力",
+          "meta_description": "旨在降低自注意力二次方复杂度的技术概览",
+          "slug": "introduction-sparse-attention-mechanisms",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1090,
+      "title": "深度网络的初始化方法",
+      "meta_title": "深度Transformer的权重初始化",
+      "meta_description": "介绍有效的权重初始化策略，例如Xavier/Glorot和Kaiming初始化，这些策略对于训练非常深的模型非常重要。",
+      "number": 12,
+      "slug": "initialization-techniques-deep-networks",
+      "content": "训练非常深层的神经网络，例如前面讨论过的多层Transformer，带来独特的难题。影响训练稳定性和收敛速度的一个重要因素是模型权重最初如何设置。不当的初始化会导致诸如梯度消失或梯度爆炸的问题，在此情况下，网络中传播的信号变得过小或过大，从而阻碍学习过程。\r\n\r\n本章着重介绍旨在减轻这些问题的系统性权重初始化方法。我们将考察有助于在数据前向流动和梯度反向流动穿过深度网络时保持适当信号方差的已有技术。\r\n\r\n你将学到：\r\n\r\n*   有原则的权重初始化背后的原理。\r\n*   Xavier（或Glorot）初始化，适用于具有对称激活函数的层，例如$tanh$。\r\n*   Kaiming（或He）初始化，专为使用修正线性单元（ReLU）及其变体的层设计。\r\n*   如何将这些方法具体应用于Transformer架构中的不同组成部分，包括嵌入层、注意力机制和前馈网络。\r\n*   针对模型最终层初始化的特殊考量。\r\n\r\n掌握和运用这些技术对于成功训练大型语言模型所需的深层架构非常必要。",
+      "sections": [
+        {
+          "id": 6006,
+          "title": "恰当初始化的重要性",
+          "meta_title": "为何权重初始化很重要",
+          "meta_description": "阐述初始化如何影响收敛速度和训练稳定性。",
+          "slug": "importance-proper-initialization",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6007,
+          "title": "Xavier（Glorot）初始化",
+          "meta_title": "Xavier/Glorot 初始化详解",
+          "meta_description": "详细说明 Xavier 初始化对于 tanh/sigmoid 等激活函数的推导与应用。",
+          "slug": "xavier-glorot-initialization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6008,
+          "title": "Kaiming (何) 初始化",
+          "meta_title": "Kaiming/何 初始化解读",
+          "meta_description": "详细说明基于ReLU激活函数的Kaiming初始化的推导和应用。",
+          "slug": "kaiming-he-initialization",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6009,
+          "title": "Transformer组件中的初始化",
+          "meta_title": "初始化Transformer层",
+          "meta_description": "将初始化方法具体应用于嵌入层、注意力层和FFN层。",
+          "slug": "initialization-transformer-components",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6010,
+          "title": "末尾层的小初始化",
+          "meta_title": "最终输出层的初始化",
+          "meta_description": "讨论模型输出附近层的特定初始化考量。",
+          "slug": "small-initialization-final-layers",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1091,
+      "title": "位置编码的变体",
+      "meta_title": "更高级的位置编码方法",
+      "meta_description": "了解对标准正弦位置编码的替代方案和改进，其中包括相对和旋转嵌入。",
+      "number": 13,
+      "slug": "positional-encoding-variations",
+      "content": "Transformer模型完全依赖于注意力机制，缺乏循环神经网络（RNN）固有的序列感知能力。因此，注入位置信息是不可或缺的。虽然前面介绍过的标准正弦和学习型绝对位置编码提供了一个基础，但它们也存在一些局限性，尤其是在推广至更长序列以及明确表示token间相对距离方面。\r\n\r\n本章将探讨旨在更有效或高效地编码位置信息的其他方法。我们将学习：\r\n\r\n*   不再局限于绝对位置编码的理由。\r\n*   相对位置编码背后的原理，即编码的是位置*之间*的关系。\r\n*   具体的实现方法，例如将相对位置偏差直接添加到注意力分数中（Shaw等人的工作）。\r\n*   Transformer-XL中采用的相对编码方案。\r\n*   旋转位置编码（RoPE），这是一种根据位置对查询和键向量进行旋转的处理方法。\r\n\r\n学完本章，您将掌握这些更高级的位置编码技术的运作原理，并了解它们在哪些场景下比标准绝对编码更具优势。",
+      "sections": [
+        {
+          "id": 6011,
+          "title": "绝对位置编码的局限性",
+          "meta_title": "绝对位置编码的缺点",
+          "meta_description": "讨论固定或学习得到的绝对位置表示可能存在的问题。",
+          "slug": "limitations-absolute-positional-encodings",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6012,
+          "title": "相对位置编码的原理",
+          "meta_title": "介绍相对位置编码",
+          "meta_description": "阐述编码标记间相对距离而非绝对位置的思路。",
+          "slug": "relative-positional-encoding-concepts",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6013,
+          "title": "Shaw 等人的相对位置实现",
+          "meta_title": "Shaw 等人的相对位置编码",
+          "meta_description": "详细描述将相对位置偏置添加到注意力分数的方法。",
+          "slug": "implementation-shaw-relative-position",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6014,
+          "title": "Transformer-XL 相对位置编码",
+          "meta_title": "Transformer-XL 相对位置编码",
+          "meta_description": "解释 Transformer-XL 中使用的相对位置编码方案。",
+          "slug": "transformer-xl-relative-positional-encoding",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6015,
+          "title": "旋转位置编码 (RoPE)",
+          "meta_title": "旋转位置编码（RoPE）解析",
+          "meta_description": "详细说明旋转位置编码（RoPE）的机制与优势。",
+          "slug": "rotary-position-embedding-rope",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1092,
+      "title": "高级架构改进",
+      "meta_title": "高级Transformer改进 (Adapter, MoE)",
+      "meta_description": "讨论近期架构创新，例如参数高效Adapter和专家混合(MoE)层。",
+      "number": 14,
+      "slug": "advanced-architectural-modifications",
+      "content": "在熟悉了核心Transformer架构及其扩展能力后，实际应用常常需要为提高效率或进行专门适配而做更多调整。为满足每个新要求而完全重新训练大型模型，这在计算上成本很高，且常常是不必要的。\r\n\r\n本章着重介绍对标准Transformer设计所做的修改，以满足这些需求。我们将考察：\r\n\r\n*   **参数高效适配：** 像Adapter模块这样的技术，能够通过只修改总参数的一小部分来对特定任务进行微调。\r\n*   **条件计算：** 像专家混合(MoE)层这样的方法，它们增加了模型中参数总数以提升能力，但对任意给定输入只激活一部分参数，从而控制计算成本。\r\n\r\n您将了解这些方法背后的原因，明白它们与基础Transformer的结构区别，并研究MoE系统中路由机制和负载均衡等实现时的考量。",
+      "sections": [
+        {
+          "id": 6016,
+          "title": "参数高效微调的需求",
+          "meta_title": "参数高效微调的需求",
+          "meta_description": "促使开发避免完整模型微调的方法。",
+          "slug": "parameter-efficient-fine-tuning-needs",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6017,
+          "title": "Transformer的适配器模块",
+          "meta_title": "适配器模块详解",
+          "meta_description": "介绍适配器层的高效微调理念与实现。",
+          "slug": "adapter-modules-transformers",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6018,
+          "title": "专家混合模型 (MoE) 简介",
+          "meta_title": "专家混合模型 (MoE) 层简介",
+          "meta_description": "阐述稀疏激活的专家混合模型层如何提升模型容量。",
+          "slug": "introduction-mixture-of-experts-moe",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6019,
+          "title": "MoE 中的路由机制",
+          "meta_title": "MoE 路由机制",
+          "meta_description": "讨论将令牌路由到专家的不同策略（例如，Top-k 门控）。",
+          "slug": "routing-mechanisms-moe",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6020,
+          "title": "MoE 层中的负载均衡",
+          "meta_title": "MoE 中的负载均衡问题",
+          "meta_description": "阐述专家间负载均衡的必要性及方法。",
+          "slug": "load-balancing-moe-layers",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1093,
+      "title": "分布式训练策略",
+      "meta_title": "LLM 分布式训练策略概述",
+      "meta_description": "阐述用于在多个设备上训练大型模型的基本并行化技术：数据并行、张量并行和流水线并行。",
+      "number": 15,
+      "slug": "distributed-training-strategies",
+      "content": "训练大型语言模型对现有硬件构成严峻挑战。对于拥有数十亿甚至数万亿参数的模型，存储参数、激活值和梯度经常超出单个加速器（如 GPU 或 TPU）的内存容量。同样地，计算成本，尤其是自注意力机制对于序列长度 $N$ 的二次方复杂度 $O(N^2)$，使得在单个设备上训练时间过长，难以接受。\r\n\r\n为克服这些限制，我们必须将训练过程分布到多个计算设备上。本章介绍用于大型语言模型训练的基本并行化方法。\r\n\r\n您将了解到：\r\n\r\n*   **数据并行 (DP)：** 在不同设备上复制模型并分割数据批次。\r\n*   **张量并行 (TP)：** 将单个模型层或张量拆分到不同设备上（层内并行）。\r\n*   **流水线并行 (PP)：** 将模型层划分为不同阶段并将这些阶段分配给不同设备。\r\n*   **混合方法：** 组合这些策略（例如，DP + TP，DP + PP）以获得最佳性能。\r\n*   **通信开销：** 分析与不同并行方法相关的通信额外负担。\r\n\r\n理解这些策略对于有效训练先进的语言模型必不可少。我们将考查每种方法的运作方式、优势和权衡。",
+      "sections": [
+        {
+          "id": 6021,
+          "title": "动机：为什么要进行分布式训练？",
+          "meta_title": "LLM为何需要分布式训练？",
+          "meta_description": "重申内存和计算限制，使得分布式方法成为必然。",
+          "slug": "motivation-why-distributed-training",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6022,
+          "title": "数据并行 (DP)",
+          "meta_title": "数据并行解析",
+          "meta_description": "详细描述在设备间复制模型和分片数据的思想。",
+          "slug": "data-parallelism-dp",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6023,
+          "title": "张量并行 (TP)",
+          "meta_title": "张量并行解析",
+          "meta_description": "解释单个层/张量如何在设备间拆分（层内并行）。",
+          "slug": "tensor-parallelism-tp",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6024,
+          "title": "流水线并行 (PP)",
+          "meta_title": "流水线并行解析",
+          "meta_description": "描述将模型层拆分为在不同设备上执行的阶段。",
+          "slug": "pipeline-parallelism-pp",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6025,
+          "title": "混合并行策略 (DP+TP, DP+PP等)",
+          "meta_title": "组合并行策略",
+          "meta_description": "讨论如何有效地组合不同的并行技术。",
+          "slug": "interplay-hybrid-approaches",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6026,
+          "title": "通信开销分析",
+          "meta_title": "分布式训练中的通信成本",
+          "meta_description": "分析每种策略（AllReduce、点对点）相关的通信模式和成本。",
+          "slug": "communication-overhead-analysis",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1094,
+      "title": "实现分布式训练框架",
+      "meta_title": "使用 DeepSpeed 和 Megatron-LM 进行大型语言模型训练",
+      "meta_description": "学习使用 DeepSpeed 和 Megatron-LM 等流行框架，进行复杂的分布式训练配置。",
+      "number": 16,
+      "slug": "implementing-distributed-training-frameworks",
+      "content": "训练真正的大模型，不只是要理解像数据并行 ($DP$)、张量并行 ($TP$) 和流水线并行 ($PP$) 这样的并行策略；还需要专为处理其复杂性而设计的工具。本章将从之前讨论的理论思路转向使用专门框架的实际运用。\r\n\r\n你将学习如何通过配置和使用 DeepSpeed 和 Megatron-LM 等流行库来运用这些策略。我们将介绍 DeepSpeed 的 ZeRO 内存优化设置（阶段 $1$、$2$ 和 $3$），以及使用 Megatron-LM 配置张量并行和流水线并行。本章结束时，你将能够把分布式训练理论付诸实践，应用到你自己的大模型项目中。",
+      "sections": [
+        {
+          "id": 6027,
+          "title": "分布式训练库概述",
+          "meta_title": "分布式训练库概览",
+          "meta_description": "介绍基于 PyTorch/TensorFlow 构建的分布式训练库。",
+          "slug": "overview-distributed-training-libraries",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6028,
+          "title": "DeepSpeed 介绍",
+          "meta_title": "DeepSpeed 框架介绍",
+          "meta_description": "DeepSpeed 功能概览（ZeRO、卸载、流水线并行）",
+          "slug": "introduction-deepspeed",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6029,
+          "title": "使用 DeepSpeed ZeRO 优化",
+          "meta_title": "DeepSpeed ZeRO 优化阶段",
+          "meta_description": "实现 ZeRO 阶段 (1, 2, 3) 以优化数据并行中的内存使用。",
+          "slug": "using-deepspeed-zero-optimizations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6030,
+          "title": "Megatron-LM 介绍",
+          "meta_title": "Megatron-LM 框架介绍",
+          "meta_description": "Megatron-LM 侧重于张量并行和流水线并行实现的概述。",
+          "slug": "introduction-megatron-lm",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6031,
+          "title": "配置 Megatron-LM 中的张量和流水线并行",
+          "meta_title": "配置 Megatron-LM 并行",
+          "meta_description": "使用 Megatron-LM 特定的 API 和配置实现模型并行。",
+          "slug": "configuring-megatron-lm",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6032,
+          "title": "结合框架与策略",
+          "meta_title": "整合DeepSpeed和Megatron-LM",
+          "meta_description": "讨论结合使用多个库功能的方法。",
+          "slug": "combining-frameworks-strategies",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1095,
+      "title": "LLMs的优化算法",
+      "meta_title": "LLMs训练的优化器与调度器",
+      "meta_description": "讨论AdamW等优化器、学习率调度（预热、衰减）以及适合LLMs的梯度裁剪方法。",
+      "number": 17,
+      "slug": "optimization-algorithms-llms",
+      "content": "训练大型语言模型面临着特有的优化难题，因为它们规模庞大且计算需求高。标准的优化方法通常需要进行调整，以便有效地训练LLMs。本章将讲解常用到的优化算法和策略。\r\n\r\n我们会先简要回顾梯度下降方法，然后把重点放在自适应优化器上，例如Adam和AdamW，并解释解耦权重衰减的原理。您将学习如何实现包含预热和衰减阶段的常见学习率调度策略 (例如：$$ \\eta_{t} = \\text{schedule}(\\text{step}) $$)。我们还会介绍梯度裁剪，这是一种常用来防止梯度爆炸并提升训练稳定性的方法，通常通过重新缩放那些范数超出阈值$c$的梯度来实现：$$ \\mathbf{g} \\leftarrow \\frac{c}{\\|\\mathbf{g}\\|} \\mathbf{g} \\text{ if } \\|\\mathbf{g}\\| > c $$ 最后，我们将谈到选择优化器重要超参数的实用指导，例如学习率$\\eta$、Adam的动量项($\\beta_1, \\beta_2$)、数值稳定性项$\\epsilon$以及权重衰减系数$\\lambda$。",
+      "sections": [
+        {
+          "id": 6033,
+          "title": "梯度下降算法变体回顾 (SGD, 动量)",
+          "meta_title": "梯度下降算法回顾",
+          "meta_description": "简要回顾标准梯度下降优化方法。",
+          "slug": "review-gradient-descent-variants",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6034,
+          "title": "自适应优化器：Adam和AdamW",
+          "meta_title": "Adam和AdamW优化器解读",
+          "meta_description": "阐述Adam优化器及带有解耦权重衰减的AdamW形式。",
+          "slug": "adaptive-optimizers-adam-adamw",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6035,
+          "title": "学习率调度策略",
+          "meta_title": "大型语言模型学习率调度",
+          "meta_description": "实现预热后接线性或余弦衰减调度。",
+          "slug": "learning-rate-scheduling-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6036,
+          "title": "梯度裁剪方法",
+          "meta_title": "梯度裁剪的实现",
+          "meta_description": "应用梯度范数裁剪以防止训练过程中梯度爆炸。",
+          "slug": "gradient-clipping-techniques",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6037,
+          "title": "选择优化器超参数 (lr, betas, eps, weight_decay)",
+          "meta_title": "调整优化器超参数",
+          "meta_description": "讨论设置优化器超参数的常见做法和注意事项。",
+          "slug": "choosing-optimizer-hyperparameters",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1096,
+      "title": "大型语言模型训练的硬件考量",
+      "meta_title": "大型语言模型训练的硬件",
+      "meta_description": "了解大型语言模型训练的硬件需求，侧重于GPU/TPU选择、内存容量和高速互连技术。",
+      "number": 18,
+      "slug": "hardware-considerations-llm-training",
+      "content": "训练大型语言模型需要大量计算资源。这些模型规模庞大，通常包含数十亿或数万亿参数，对传统硬件的能力造成了挑战。本章将介绍使大型语言模型训练得以实现的硬件系统。\r\n\r\n我们将研究图形处理单元（GPU）和张量处理单元（TPU）的具体特性，它们专门用于加速深度学习计算。你将了解内存需求，尤其是高带宽内存（HBM），以及NVLink和InfiniBand等高速互连技术在分布式训练配置中的作用。我们还将分析硬件选择中涉及的权衡，包括成本、性能和可用性。扎实理解这些硬件考量对于规划和管理大规模模型训练来说非常重要。",
+      "sections": [
+        {
+          "id": 6038,
+          "title": "GPU 架构 (NVIDIA Ampere, Hopper)",
+          "meta_title": "NVIDIA GPU 在 AI 中的架构",
+          "meta_description": "讨论与深度学习相关的现代 GPU 特性（张量核心、内存）。",
+          "slug": "gpu-architectures-nvidia",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6039,
+          "title": "TPU 架构（Google TPU）",
+          "meta_title": "Google TPU 架构在 AI 中的应用",
+          "meta_description": "Google 张量处理单元及其机器学习工作负载设计概览。",
+          "slug": "tpu-architectures-google",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6040,
+          "title": "内存需求（HBM、GPU显存）",
+          "meta_title": "LLM训练的内存需求",
+          "meta_description": "分析激活值、权重和梯度的内存高带宽需求。",
+          "slug": "memory-requirements-hbm-gpu-ram",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6041,
+          "title": "互连技术 (NVLink, InfiniBand)",
+          "meta_title": "GPU的高速互连",
+          "meta_description": "阐述高速互连在分布式训练中高效通信的作用。",
+          "slug": "interconnect-technologies-nvlink-infiniband",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6042,
+          "title": "硬件选择的权衡 (成本、性能、可用性)",
+          "meta_title": "LLM训练的硬件选择",
+          "meta_description": "讨论影响LLM训练集群硬件选择的因素。",
+          "slug": "hardware-selection-tradeoffs",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1097,
+      "title": "检查点和容错",
+      "meta_title": "大型语言模型训练的检查点保存策略",
+      "meta_description": "实施可靠的检查点保存机制，以应对故障并有效恢复长时间运行的大型语言模型训练作业。",
+      "number": 19,
+      "slug": "checkpointing-fault-tolerance",
+      "content": "训练大型语言模型是一个资源消耗大的过程，在大型计算集群上常常持续数天甚至数周。鉴于持续时间长，遇到硬件故障、软件问题或意外中断的可能性很大。如果没有保存进度的办法，这些中断可能导致训练从头开始，浪费大量计算资源和时间。\r\n\r\n本章讨论了在大型训练中通过检查点保存实现容错的实际需要。我们将介绍定期保存训练作业完整状态所需的方法。您将学到：\r\n\r\n*   训练状态由哪些部分组成（模型权重、优化器状态、调度器状态、数据加载器进度）。\r\n*   如何在分布式训练环境中有效实现检查点保存，确保多个工作节点之间的一致性。\r\n*   保存检查点的不同策略（同步与异步）及其相关的权衡取舍。\r\n*   确定检查点保存频率以及管理可能很大的检查点文件存储需求时需要考虑的事项。\r\n*   如何从已保存的检查点正确恢复训练作业，包括恢复模型、优化器和数据迭代状态的步骤。",
+      "sections": [
+        {
+          "id": 6043,
+          "title": "长时间训练中检查点的必要性",
+          "meta_title": "检查点为何必不可少",
+          "meta_description": "指出多日/周训练期间硬件或软件故障的可能性。",
+          "slug": "need-for-checkpointing",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6044,
+          "title": "保存模型状态（权重、优化器状态）",
+          "meta_title": "检查点中需要保存什么",
+          "meta_description": "说明为完整恢复训练状态需要保存的组成部分。",
+          "slug": "saving-model-state",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6045,
+          "title": "处理分布式检查点",
+          "meta_title": "分布式环境中的检查点",
+          "meta_description": "解决在多个工作节点之间一致地保存和加载检查点所面临的困难。",
+          "slug": "handling-distributed-checkpointing",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6046,
+          "title": "异步检查点与同步检查点",
+          "meta_title": "异步与同步检查点",
+          "meta_description": "比较同步与异步检查点方法及其开销。",
+          "slug": "asynchronous-vs-synchronous-checkpointing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6047,
+          "title": "检查点频率与存储管理",
+          "meta_title": "检查点频率与存储",
+          "meta_description": "讨论确定检查点频率和管理检查点存储的策略。",
+          "slug": "checkpoint-frequency-storage-management",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6048,
+          "title": "从检查点恢复训练",
+          "meta_title": "恢复大语言模型训练运行",
+          "meta_description": "实现正确恢复训练的逻辑，包括数据加载器状态。",
+          "slug": "resuming-training-from-checkpoints",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1098,
+      "title": "混合精度训练方法",
+      "meta_title": "大型语言模型的混合精度训练（$FP16$, $BF16$）",
+      "meta_description": "运用$FP16$和$BF16$混合精度训练来加快训练速度、减少内存占用，同时保持训练的稳定性。",
+      "number": 20,
+      "slug": "mixed-precision-training-techniques",
+      "content": "训练大型语言模型对现有硬件造成较大压力，这主要是因为进行标准32位浮点($FP32$)运算时会产生大量的内存占用和计算开销。混合精度训练提供了一种缓解这些制约的方法。通过有策略地运用低精度数值格式，特别是16位浮点($FP16$)和bfloat16 ($BF16$)，我们能够大幅减少内存占用，并且通常能加快计算速度，尤其是在支持NVIDIA Tensor Cores等专用硬件上。\r\n\r\n本章将详细介绍大型语言模型混合精度训练的应用方法。我们将考察$FP16$和$BF16$格式的特点，并讨论与$FP32$相比的权衡取舍。我们将讨论使用低精度时遇到的常见稳定性问题，特别是$FP16$的有限范围，并介绍_损失缩放_等方法，以在训练过程中保持数值稳定性。$BF16$格式的作用和好处也将予以讨论。最后，我们将考察如何运用主流深度学习框架中内置的自动混合精度（AMP）支持，以简化实现过程。",
+      "sections": [
+        {
+          "id": 6049,
+          "title": "浮点数格式（FP32、FP16、BF16）简介",
+          "meta_title": "FP32、FP16、BF16浮点类型",
+          "meta_description": "阐述不同浮点数格式的范围和精度特性。",
+          "slug": "introduction-floating-point-formats",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6050,
+          "title": "低精度的好处（速度、内存）",
+          "meta_title": "混合精度训练的优点",
+          "meta_description": "讨论FP16/BF16如何借助硬件加速（Tensor Cores）并减少内存占用。",
+          "slug": "benefits-lower-precision",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6051,
+          "title": "FP16训练中的挑战（范围问题）",
+          "meta_title": "FP16训练稳定性挑战",
+          "meta_description": "描述激活值或梯度超出FP16可表示范围的问题。",
+          "slug": "challenges-fp16-training",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6052,
+          "title": "损失缩放技术",
+          "meta_title": "FP16 稳定性损失缩放",
+          "meta_description": "实施静态和动态损失缩放，以将梯度保持在 FP16 范围内。",
+          "slug": "loss-scaling-techniques",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6053,
+          "title": "使用 BF16 (BFloat16) 格式",
+          "meta_title": "BF16 混合精度训练",
+          "meta_description": "讨论 BF16 比 FP16 更宽动态范围的优势。",
+          "slug": "using-bf16-bfloat16-format",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6054,
+          "title": "框架对混合精度（AMP）的支持",
+          "meta_title": "自动混合精度 (AMP) 库",
+          "meta_description": "使用 PyTorch 和 TensorFlow 中可用的自动混合精度工具。",
+          "slug": "framework-support-mixed-precision-amp",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1099,
+      "title": "内在评估指标",
+      "meta_title": "内在大型语言模型评估指标（困惑度）",
+      "meta_description": "理解并计算困惑度等内在评估指标，以直接衡量语言建模性能。",
+      "number": 21,
+      "slug": "intrinsic-evaluation-metrics",
+      "content": "在投入大量计算和数据资源训练大型语言模型后，下一步是衡量它在基本任务——建模语言——上的实际表现。评估这些复杂系统需要特定的方法。有一类评估方法直接关注模型预测文本序列的能力，而无需在下游应用中对其进行测试。\r\n\r\n本章着重介绍这些*内在*评估方法。我们将研究直接从模型为文本序列分配的概率中得出的指标。最常见的内在指标是**困惑度**，它量化了概率模型预测样本的效果。它与训练期间使用的交叉熵损失有紧密联系。较低的困惑度分数通常表明模型在预测测试数据方面表现更好，这意味着它为观测到的序列分配了更高的概率。对于序列 $W = w_1, w_2, ..., w_N$，困惑度可以根据模型分配的概率 $p(w_i | w_{<i}; \\theta)$ 表示为：\r\n\r\n$$ PPL(W) = \\exp\\left(-\\frac{1}{N}\\sum_{i=1}^N \\log p(w_i | w_{<i}; \\theta)\\right) $$\r\n\r\n理解困惑度为模型的语言建模质量提供了一个基础评估。\r\n\r\n在本章中，你将学到：\r\n\r\n*   困惑度的定义及其从模型输出中的计算方法。\r\n*   如何解释困惑度值，并理解其相对含义和局限性。\r\n*   其他相关指标，例如每字符比特数或每词比特数。\r\n*   不同分词策略对计算出的困惑度分数可能产生的影响。",
+      "sections": [
+        {
+          "id": 6055,
+          "title": "语言模型评估方法",
+          "meta_title": "大语言模型评估的原理",
+          "meta_description": "阐述评估训练后的语言模型表现的各类方法。",
+          "slug": "concept-language-model-evaluation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6056,
+          "title": "困惑度：定义与计算",
+          "meta_title": "计算大型语言模型的困惑度",
+          "meta_description": "说明困惑度与交叉熵损失的关系，并衡量预测的不确定性。",
+          "slug": "perplexity-definition-calculation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6057,
+          "title": "理解困惑度得分",
+          "meta_title": "如何理解困惑度值",
+          "meta_description": "讨论较低/较高困惑度表明什么及其局限性。",
+          "slug": "interpreting-perplexity-scores",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6058,
+          "title": "每字符/词比特数",
+          "meta_title": "每字符/词比特数指标",
+          "meta_description": "阐释与信息论相关的其他内在评估指标。",
+          "slug": "bits-per-character-word",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6059,
+          "title": "分词对困惑度的影响",
+          "meta_title": "分词对困惑度的影响",
+          "meta_description": "分析分词器的选择如何影响计算出的困惑度值。",
+          "slug": "effect-tokenization-perplexity",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1100,
+      "title": "下游任务外部评估",
+      "meta_title": "在下游NLP任务上评估大型语言模型 (LLM)",
+      "meta_description": "通过评估大型语言模型在各种下游NLP基准测试（如GLUE、SuperGLUE）上的表现，间接评定其效用。",
+      "number": 22,
+      "slug": "extrinsic-evaluation-downstream-tasks",
+      "content": "尽管困惑度等内部指标能衡量模型预测下一个词元的能力，但它们不总能完整体现模型的实际作用。单纯基于模型内部的语言建模能力进行评估，可能不足以了解其在具体应用中的表现。\r\n\r\n本章将重心转向外部评估方法。我们将研究如何通过衡量大型语言模型（LLM）在具体的下游自然语言处理（NLP）任务上的表现来评定它们。这种方法能让人们更实在地了解模型在部署后可能遇到的情况中的表现。\r\n\r\n您将学到:\r\n*   为何要使用下游任务进行评估。\r\n*   常见的基准任务，例如文本分类、问答和摘要。\r\n*   专门为这些评估任务微调预训练模型的标准步骤。\r\n*   广泛使用的基准测试集，例如GLUE和SuperGLUE。\r\n*   在少样本和零样本设置中评估模型，考察它们在只有少量任务相关示例时泛化的能力。\r\n*   设计根据独特需求定制的自定义评估任务时需要考虑的方面。\r\n\r\n在本章结束时，您将了解如何通过将LLM应用于具体的、实际的NLP问题来衡量其有效性，这将补充从内部指标获得的信息。",
+      "sections": [
+        {
+          "id": 6060,
+          "title": "下游任务评估的理由",
+          "meta_title": "为何在下游任务上进行评估？",
+          "meta_description": "解释为何内在指标无法全面衡量模型的效用。",
+          "slug": "rationale-downstream-task-evaluation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6061,
+          "title": "常见下游自然语言处理任务",
+          "meta_title": "下游自然语言处理任务概述",
+          "meta_description": "考察文本分类、问答、摘要、翻译等任务。",
+          "slug": "common-downstream-nlp-tasks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6062,
+          "title": "评估时的微调步骤",
+          "meta_title": "用于评估的LLM微调",
+          "meta_description": "描述预训练LLM适应特定任务的标准流程。",
+          "slug": "fine-tuning-procedures-evaluation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6063,
+          "title": "标准基准：GLUE 和 SuperGLUE",
+          "meta_title": "使用GLUE和SuperGLUE基准测试",
+          "meta_description": "解释GLUE和SuperGLUE基准测试集的结构和任务。",
+          "slug": "standard-benchmarks-glue-superglue",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6064,
+          "title": "少量示例和零示例评估",
+          "meta_title": "少量示例和零示例的大语言模型评估",
+          "meta_description": "在有限或无需特定任务微调数据的情况下评估模型能力。",
+          "slug": "few-shot-zero-shot-evaluation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6065,
+          "title": "开发定制评估任务",
+          "meta_title": "创建定制大语言模型评估任务",
+          "meta_description": "与特定应用程序相关的评估任务的设计指南。",
+          "slug": "developing-custom-evaluation-tasks",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1101,
+      "title": "分析模型行为",
+      "meta_title": "分析大型语言模型行为与可解释性",
+      "meta_description": "学习理解大型语言模型内部工作、探查其表示并分析所学行为的方法。",
+      "number": 23,
+      "slug": "analyzing-model-behavior",
+      "content": "训练大型语言模型会得到一个强大的工具，但其内部运作方式往往不透明。仅仅在评估指标上表现良好，并不能完全说明模型是如何得出其结果的，也无法保证它在各种情况下的可靠性。本章侧重于介绍一些方法，用于观察“黑箱”内部，并分析这些复杂系统所学到的行为。\r\n\r\n您将了解一些技术，用于解释模型决策并发现潜在的不足。具体来说，本章将包含以下内容：\r\n\r\n*   可视化注意力图，以理解模型如何权衡输入词元。\r\n*   使用探针任务，评估模型隐藏状态中捕获的语言信息。\r\n*   分析单个神经元或层的激活模式。\r\n*   识别和理解常见故障模式的策略。\r\n\r\n理解这些分析技术有助于调试模型，建立对其输出的信任，并指导后续的改进或对齐工作。",
+      "sections": [
+        {
+          "id": 6066,
+          "title": "解读大型语言模型的难题",
+          "meta_title": "大型语言模型的可解释性难题",
+          "meta_description": "讨论大型模型决策过程的理解难度。",
+          "slug": "challenges-interpreting-llms",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6067,
+          "title": "注意力图可视化",
+          "meta_title": "可视化 Transformer 注意力图",
+          "meta_description": "可视化自注意力权重的方法及其局限性。",
+          "slug": "attention-map-visualization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6068,
+          "title": "探查内部表示",
+          "meta_title": "探查LLM隐藏状态",
+          "meta_description": "在隐藏状态上训练简单的分类器探针，以测试编码的语言信息。",
+          "slug": "probing-internal-representations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6069,
+          "title": "神经元激活分析",
+          "meta_title": "分析单个神经元激活",
+          "meta_description": "考察激活网络内特定神经元或组件的刺激。",
+          "slug": "neuron-activation-analysis",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6070,
+          "title": "找出失效模式",
+          "meta_title": "找出大型语言模型失效模式",
+          "meta_description": "寻找模型在哪些输入类型或情境中表现不佳的方法。",
+          "slug": "identifying-failure-modes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1102,
+      "title": "识别与应对训练不稳定现象",
+      "meta_title": "处理大型语言模型训练不稳定与损失飙升",
+      "meta_description": "诊断并应对常见的训练不稳定情况，如损失飙升、发散以及数值溢出/下溢。",
+      "number": 24,
+      "slug": "identifying-mitigating-training-instabilities",
+      "content": "训练大型语言模型时间一长，常会遇到一些意料之外的问题。原本看似稳定的训练过程可能突然发散，产生`NaN`（非数值）损失等无效输出，或者损失函数突然急剧升高。这些情况会阻碍训练进展，并消耗大量计算资源。\r\n\r\n本章主要讲解如何应对这些训练挑战。你将学会通过监测损失值和梯度范数($||\\nabla L||$)等重要指标，来识别常见的不稳定迹象。我们将会介绍诊断此类问题根源的方法，比如损失飙升和数值精度错误，特别是在使用混合精度格式（$FP16$或$BF16$）时。我们还会回顾稳定化方法，包括梯度裁剪和适当的学习率调整，并考虑模型架构选择如何影响训练的稳定表现。学完本章，你将能更好地预判、诊断并处理大规模训练中出现的不稳定情况。",
+      "sections": [
+        {
+          "id": 6071,
+          "title": "不稳定性常见表现",
+          "meta_title": "LLM 训练不稳定性的表现",
+          "meta_description": "识别如 NaN 损失、性能突然下降或指标波动等迹象。",
+          "slug": "common-symptoms-instability",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6072,
+          "title": "监控训练指标（损失、梯度范数）",
+          "meta_title": "训练期间的指标监控",
+          "meta_description": "训练期间跟踪损失曲线、梯度范数和激活统计数据。",
+          "slug": "monitoring-training-metrics",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6073,
+          "title": "诊断损失飙升",
+          "meta_title": "训练中损失飙升的诊断",
+          "meta_description": "检查异常数据批次、过大学习率或数值问题等潜在原因。",
+          "slug": "diagnosing-loss-spikes",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6074,
+          "title": "调试数值精度问题",
+          "meta_title": "调试混合精度问题",
+          "meta_description": "确定与FP16/BF16使用相关的问题，例如上溢或下溢。",
+          "slug": "debugging-numerical-precision-issues",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6075,
+          "title": "稳定方法回顾（梯度裁剪、学习率、预热）",
+          "meta_title": "回顾稳定化方法",
+          "meta_description": "强调梯度裁剪、学习率调度和预热的作用。",
+          "slug": "stabilization-techniques-revisited",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6076,
+          "title": "架构选择对稳定性的影响",
+          "meta_title": "架构选择与稳定性",
+          "meta_description": "讨论像预归一化（Pre-LN）与后归一化（Post-LN）这样的选择如何影响训练稳定性。",
+          "slug": "impact-architectural-choices-stability",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1103,
+      "title": "对齐微调：监督式微调 (SFT)",
+      "meta_title": "通过监督式微调 (SFT) 实现大型语言模型对齐",
+      "meta_description": "学习如何使用监督技术微调预训练大型语言模型，以实现指令遵循、对话和特定任务适配。",
+      "number": 25,
+      "slug": "supervised-fine-tuning-alignment",
+      "content": "预训练大型语言模型从海量文本语料库中习得了广泛的知识和生成能力。然而，这种预训练目标本身并不能保证模型会遵循特定指令、进行自然对话或遵守安全准则。弥合这一差距需要进行*对齐*，即调整模型以更好地符合人类意图和偏好的过程。\r\n\r\n本章主要讲解监督式微调 (SFT)，它通常是对齐过程中的第一步。SFT 采用精心整理的提示-响应示例数据集来教导模型实现期望行为，例如遵循指令或执行特定任务。我们将探讨驱动大型语言模型对齐的目标、SFT 过程的详细机制、创建有效指令数据集的方法、适当的数据格式、训练循环和超参数的考量，以及评估 SFT 达到其对齐目标程度的技术。",
+      "sections": [
+        {
+          "id": 6077,
+          "title": "大型语言模型对齐的目标",
+          "meta_title": "为何对齐大型语言模型？有用性、诚实性、无害性",
+          "meta_description": "了解对齐大型语言模型超越预训练表现的目的。",
+          "slug": "goals-llm-alignment",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6078,
+          "title": "监督微调（SFT）介绍",
+          "meta_title": "什么是监督微调（SFT）？",
+          "meta_description": "说明 SFT 的思想，用于调整大语言模型以适应特定的下游行为。",
+          "slug": "introduction-sft",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6079,
+          "title": "构建高质量指令数据集",
+          "meta_title": "构建用于遵循指令的数据集",
+          "meta_description": "整理或生成SFT指令-响应对的方法。",
+          "slug": "creating-sft-instruction-datasets",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6080,
+          "title": "SFT数据格式（提示词，回应）",
+          "meta_title": "SFT训练的数据格式化",
+          "meta_description": "为SFT高效微调构建输入提示词与期望输出。",
+          "slug": "sft-data-formatting",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6081,
+          "title": "SFT训练过程与超参数",
+          "meta_title": "SFT训练的实施",
+          "meta_description": "逐步了解SFT的训练循环、损失函数和超参数调整。",
+          "slug": "sft-training-process",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6082,
+          "title": "评估SFT模型对齐目标",
+          "meta_title": "SFT模型表现评估",
+          "meta_description": "使用定性和定量方法评估SFT的有效性。",
+          "slug": "evaluating-sft-models",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1104,
+      "title": "人类反馈强化学习 (RLHF)",
+      "meta_title": "LLM与RLHF对齐：训练与实现",
+      "meta_description": "实现人类反馈强化学习流程，包括奖励模型构建和强化学习微调，从而使大型语言模型与人类偏好保持一致。",
+      "number": 26,
+      "slug": "reinforcement-learning-human-feedback-rlhf",
+      "content": "监督微调（SFT）使模型能够遵循指令，但要使其与人类在助益性、诚实性和无害性等方面的更为复杂的价值取向对齐，通常需要额外的步骤。本章介绍人类反馈强化学习（RLHF），这是一种借助人类对输出质量的评估来微调语言模型的方法。\r\n\r\n我们将考察标准的RLHF流程，从收集成对偏好数据开始。您将学习训练一个奖励模型（$RM$），该模型能够预测人类可能更喜欢哪种模型生成的内容。在此之后，我们将详细说明如何在强化学习框架（通常是近端策略优化PPO）中，将此$RM$用作奖励信号，以调整SFT模型的表现。我们将阐释Kullback-Leibler（$KL$）散度惩罚在稳定强化学习过程中的作用，并简要概述直接偏好优化（DPO）等其他方法。在本章末尾，您将理解用于大型语言模型对齐的RLHF流程的各个构成和具体实现方式。",
+      "sections": [
+        {
+          "id": 6083,
+          "title": "RLHF 流程概述",
+          "meta_title": "理解 RLHF 工作流程",
+          "meta_description": "概述 RLHF 涉及的阶段：SFT、奖励模型训练和强化学习微调。",
+          "slug": "rlhf-pipeline-overview",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6084,
+          "title": "收集人类偏好数据",
+          "meta_title": "收集RLHF所需的人类偏好",
+          "meta_description": "设计收集人类成对比较数据的界面和流程。",
+          "slug": "collecting-human-preference-data",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6085,
+          "title": "训练奖励模型 (RM)",
+          "meta_title": "构建奖励模型 (RM)",
+          "meta_description": "训练模型，使其根据标注的比较数据预测人类偏好评分。",
+          "slug": "training-reward-model",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6086,
+          "title": "近端策略优化 (PPO) 介绍",
+          "meta_title": "近端策略优化 (PPO) 讲解",
+          "meta_description": "了解在 RLHF 中常用于 RL 微调的 PPO 算法。",
+          "slug": "introduction-ppo-for-llms",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6087,
+          "title": "RL PPO 微调",
+          "meta_title": "强化学习微调的实现",
+          "meta_description": "使用 PPO 微调 SFT 模型，以奖励模型为指导。",
+          "slug": "rl-fine-tuning-ppo",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6088,
+          "title": "KL散度惩罚的作用",
+          "meta_title": "RLHF中的KL散度惩罚",
+          "meta_description": "说明KL惩罚如何阻止模型过度偏离原始SFT模型。",
+          "slug": "kl-divergence-penalty-rlhf",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6089,
+          "title": "RLHF中的挑战与考量",
+          "meta_title": "RLHF的挑战与最佳实践",
+          "meta_description": "讨论奖励作弊、数据质量和计算成本等常见问题。",
+          "slug": "rlhf-challenges-considerations",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6090,
+          "title": "替代方法：直接偏好优化 (DPO)",
+          "meta_title": "直接偏好优化 (DPO) 概述",
+          "meta_description": "简要介绍 DPO 作为 RLHF 的一种更简单的替代方法。",
+          "slug": "direct-preference-optimization-dpo",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1105,
+      "title": "模型压缩技术",
+      "meta_title": "LLM压缩：量化、剪枝、蒸馏",
+      "meta_description": "应用量化、剪枝和知识蒸馏等方法，减小LLM模型大小并提高推理效率。",
+      "number": 27,
+      "slug": "model-compression-techniques",
+      "content": "成功训练大型语言模型后，通常会得到具有数十亿参数的模型。虽然功能强大，但这些模型在实际部署时面临显著难题，因为它们占用大量内存（需要大量 $VRAM$），并且推理时的计算成本高昂，这会带来延迟和运行开支。\r\n\r\n本章将介绍模型压缩技术，以应对这些难题。这些方法旨在减小大型语言模型（LLM）的体积并降低其计算需求，使其更易于部署，尤其是在资源有限的环境或需要低延迟的应用中。\r\n\r\n您将了解到几种主要策略：\r\n\r\n*   **量化：** 使用低精度数值格式（如 $INT8$ 或 $FP4$）而非标准32位浮点数（$FP32$）来表示模型权重以及可能的激活值的方法。我们将介绍训练后量化（PTQ）和量化感知训练（QAT）。\r\n*   **剪枝：** 移除神经网络中冗余参数或连接的方法，从而有效稀疏化模型。这包括非结构化剪枝（单个权重）和结构化剪枝（神经元、注意力头）。\r\n*   **知识蒸馏：** 一种训练较小“学生”模型模仿较大、预训练“教师”模型的输出行为或内部表示的过程。\r\n\r\n我们将考察每种方法背后的机制，讨论实现时的考量，并分析其固有的权衡，即达到的压缩程度与对模型性能指标的潜在影响之间的平衡。",
+      "sections": [
+        {
+          "id": 6091,
+          "title": "模型压缩的动因",
+          "meta_title": "为什么要压缩大型语言模型？",
+          "meta_description": "谈论对更小模型的需要，以用于边缘设备部署或实现更快推理。",
+          "slug": "motivation-model-compression",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6092,
+          "title": "权重量化 (INT8, INT4)",
+          "meta_title": "LLM 权重量化方法",
+          "meta_description": "实现训练后量化和量化感知训练以处理降低精度的权重。",
+          "slug": "weight-quantization-int8-int4",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6093,
+          "title": "激活量化考量",
+          "meta_title": "LLM 中的激活量化",
+          "meta_description": "讨论推理期间量化模型激活的难题与技术。",
+          "slug": "activation-quantization-considerations",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6094,
+          "title": "网络剪枝（结构化与非结构化）",
+          "meta_title": "LLM剪枝方法",
+          "meta_description": "采用基于幅度的剪枝或结构化剪枝，去除冗余权重或组件。",
+          "slug": "network-pruning-structured-unstructured",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6095,
+          "title": "知识蒸馏",
+          "meta_title": "LLM 的知识蒸馏",
+          "meta_description": "训练一个较小的“学生”模型，使其模仿较大“教师”模型的输出或内部状态。",
+          "slug": "knowledge-distillation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6096,
+          "title": "评估性能与压缩的权衡",
+          "meta_title": "压缩与性能分析",
+          "meta_description": "评估压缩技术对模型准确度和推理速度的影响。",
+          "slug": "evaluating-performance-compression-tradeoffs",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1106,
+      "title": "高效推理策略",
+      "meta_title": "优化LLM推理速度与内存",
+      "meta_description": "实行加速LLM推理的技术，包括KV缓存、注意力优化和推测解码。",
+      "number": 28,
+      "slug": "efficient-inference-strategies",
+      "content": "训练大型语言模型计算量很大，但将其应用于实时场景时，仍面临性能方面的难题。逐个生成文本令牌的过程，即自回归解码，本身速度可能较慢，且对内存消耗大。每次生成新令牌通常需要处理整个之前的序列，这会带来较大的计算开销和延迟，尤其是在输出较长时。\r\n\r\n本章侧重于优化此生成过程的实用技术。我们将介绍减少冗余计算、高效管理内存以及提高整体吞吐量和降低延迟的方法。我们也会审视一些主要策略，例如键值 (KV) 缓存，以避免为之前的令牌重新计算注意力部分。我们还将研究优化过的注意力实现，例如 FlashAttention，它们可最大程度减少内存读写操作。此外，我们将讨论批处理技术以提高吞吐量，并探讨推测解码以实现更快的生成。实行这些策略对于使大型语言模型在实际部署场景中变得实用且具有成本效益十分必要。",
+      "sections": [
+        {
+          "id": 6097,
+          "title": "自回归解码中的挑战",
+          "meta_title": "自回归解码瓶颈",
+          "meta_description": "分析逐标记生成过程中的计算和内存瓶颈。",
+          "slug": "challenges-autoregressive-decoding",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6098,
+          "title": "键值（KV）缓存",
+          "meta_title": "为大型语言模型实作KV缓存",
+          "meta_description": "实作KV缓存以避免对先前标记的键和值进行重复计算。",
+          "slug": "key-value-kv-caching",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6099,
+          "title": "优化的注意力实现 (FlashAttention)",
+          "meta_title": "用于推理的 FlashAttention",
+          "meta_description": "利用 FlashAttention 等优化注意力算法以减少内存 I/O。",
+          "slug": "optimized-attention-implementations-flashattention",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6100,
+          "title": "吞吐量批处理策略",
+          "meta_title": "推理批处理技术",
+          "meta_description": "实施动态批处理以提升总体推理吞吐量。",
+          "slug": "batching-strategies-throughput",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6101,
+          "title": "推测解码",
+          "meta_title": "推测解码解析",
+          "meta_description": "使用小型草稿模型提出候选词元，再由大型模型验证。",
+          "slug": "speculative-decoding",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1107,
+      "title": "大规模部署大型语言模型",
+      "meta_title": "高效部署大型语言模型",
+      "meta_description": "应对涉及可靠高效地部署和提供大型语言模型服务的基础设施和软件难题。",
+      "number": 29,
+      "slug": "serving-llms-at-scale",
+      "content": "在大型语言模型训练、对齐和优化后，接下来的工程任务是有效部署它，以便应用程序能使用其能力。部署拥有数十亿参数的模型会带来与硬件使用率、延迟、吞吐量和运行稳定性相关的特定难题。仅仅拥有一个训练好的模型文件是不够的；需要专门的基础设施和一套方法来高效处理实际使用情况。\r\n\r\n本章将讨论在生产环境中部署大型语言模型的实际事宜。您将学习如何：\r\n\r\n*   为与模型交互设计合适的应用程序编程接口（API）。\r\n*   使用NVIDIA Triton推理服务器和TorchServe等专用模型部署框架来管理部署。\r\n*   实施处理并发用户请求和优化资源使用的方法。\r\n*   在多个模型副本或硬件加速器之间进行推理请求负载均衡的方法。\r\n*   监控已部署大型语言模型的主要指标，例如延迟、吞吐量、成本和系统健康状况的方法。\r\n\r\n我们将考察构建可靠且可扩展的服务系统所需的软件和基础设施组件，这些系统能够应对大型语言模型的需求。",
+      "sections": [
+        {
+          "id": 6102,
+          "title": "LLM 交互的 API 设计",
+          "meta_title": "LLM 服务的 API 设计",
+          "meta_description": "设计面向用户用于文本生成或其他任务的 API 的考量。",
+          "slug": "api-design-llm-interaction",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6103,
+          "title": "模型服务框架 (Triton, TorchServe)",
+          "meta_title": "使用模型服务框架",
+          "meta_description": "使用专门用于在生产环境中部署和管理机器学习模型的框架。",
+          "slug": "model-serving-frameworks",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6104,
+          "title": "处理并发请求",
+          "meta_title": "LLM服务中的并发管理",
+          "meta_description": "管理并发请求和最大化硬件利用率的策略。",
+          "slug": "handling-concurrent-requests",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6105,
+          "title": "跨模型实例的负载均衡",
+          "meta_title": "LLM推理的负载均衡",
+          "meta_description": "实现负载均衡以在多个GPU或服务器上分配推理请求。",
+          "slug": "load-balancing-across-model-instances",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6106,
+          "title": "监控服务性能和成本",
+          "meta_title": "监控 LLM 服务基础设施",
+          "meta_description": "跟踪延迟、吞吐量、资源利用率和成本等指标。",
+          "slug": "monitoring-serving-performance-cost",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1108,
+      "title": "持续训练与模型更新",
+      "meta_title": "大语言模型持续训练以改进",
+      "meta_description": "讨论大语言模型持续训练和更新的方法，以适应新数据或架构改进。",
+      "number": 30,
+      "slug": "continuous-training-model-updates",
+      "content": "部署大语言模型是一个重要节点，但并非最终一步。模型存在于信息变化、数据分布转移、用户期望演变的环境中。为保持效果和适用性，大语言模型通常需要持续更新和改进。\r\n\r\n本章讲解大语言模型初次部署后进行维护和完善的实践方面。我们将介绍持续训练、纳入新知识以及管理演进中模型生命周期的方法。\r\n\r\n具体来说，您将了解：\r\n\r\n*   **持续预训练**的方法，以引入新数据同时避免灾难性遗忘。\r\n*   持续进行**有监督微调（SFT）**和**基于人类反馈的强化学习（RLHF）**的方法，以根据新数据或反馈优化对齐。\r\n*   将**新数据源**安全地引入训练流程的技术。\r\n*   使用**架构修改**更新模型时涉及的考量。\r\n*   在生产环境中对持续更新的模型进行**版本管理、部署以及可能的版本回滚**的流程。\r\n\r\n我们将审视确保模型在其运行周期内保持最新和良好表现所需的工程实践。",
+      "sections": [
+        {
+          "id": 6107,
+          "title": "持续改进的缘由",
+          "meta_title": "为何持续训练大型语言模型？",
+          "meta_description": "说明保持模型用新信息更新并应对不断变化数据分布的必要性。",
+          "slug": "motivation-continuous-improvement",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6108,
+          "title": "持续预训练策略",
+          "meta_title": "持续预训练方法",
+          "meta_description": "在新数据上恢复预训练以避免灾难性遗忘的方法。",
+          "slug": "strategies-continual-pre-training",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6109,
+          "title": "持续微调（SFT/RLHF）的策略",
+          "meta_title": "持续对齐调整",
+          "meta_description": "使用新反馈或数据更新对齐性（SFT/RLHF）的方法。",
+          "slug": "strategies-continual-fine-tuning",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6110,
+          "title": "安全地整合新数据源",
+          "meta_title": "安全地将新数据加入LLM训练",
+          "meta_description": "用于将新数据集整合到现有流程中，同时监测模型性能退步的方法。",
+          "slug": "incorporating-new-data-sources-safely",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6111,
+          "title": "模型架构变动后的更新",
+          "meta_title": "部署后更新LLM架构",
+          "meta_description": "在初次部署后修改模型架构时的考量。",
+          "slug": "updating-models-architectural-changes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 6112,
+          "title": "版本管理、部署与回滚策略",
+          "meta_title": "更新大语言模型的版本管理与部署",
+          "meta_description": "实施持续训练模型的版本管理、更新部署以及必要时回滚的实践。",
+          "slug": "versioning-deployment-rollback-strategies",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7476,
+  "title": "动手实践：使用 SVD 生成推荐内容",
+  "meta_title": "练习使用 SVD 生成推荐",
+  "meta_description": "动手实现使用 SVD 生成个性化电影推荐的推荐系统。",
+  "content": "<p>我们将使用 <code>surprise</code> 库构建一个完整的推荐引擎。目标是在 MovieLens 数据集上训练 SVD 模型，并利用该模型为特定用户生成电影推荐排名列表。</p>\n<h3>设置环境与数据</h3>\n<p>首先，请确保已安装必要的库。我们将使用 <code>pandas</code> 进行数据操作，并使用 <code>surprise</code> 实现 SVD 模型。我们将使用广泛采用的 MovieLens 100k 数据集。</p>\n<p>让我们先将用户评分和电影标题加载到 pandas DataFrame 中。</p>\n<pre><code class=\"language-python\">import pandas as pd\nfrom surprise import Dataset, Reader, SVD\n\n# 加载电影和评分数据集\nmovies_df = pd.read_csv('ml-latest-small/movies.csv')\nratings_df = pd.read_csv('ml-latest-small/ratings.csv')\n\n# 显示每个 dataframe 的前几行以进行检查\nprint(\"Movies DataFrame:\")\nprint(movies_df.head())\n\nprint(\"\\nRatings DataFrame:\")\nprint(ratings_df.head())\n</code></pre>\n<p><code>ratings_df</code> 包含了格式为 <code>(userId, movieId, rating)</code> 的用户-物品交互数据。这是我们协同过滤模型的主要输入。<code>movies_df</code> 稍后将用于将推荐结果中的 <code>movieId</code> 映射回易于阅读的电影标题。</p>\n<h3>为 Surprise 库准备数据</h3>\n<p><code>surprise</code> 库要求数据符合特定格式。我们需要定义一个 <code>Reader</code> 对象来解析评分数据，并指定评分范围（在本例中，MovieLens 数据集的评分为 0.5 到 5.0）。然后，我们将 DataFrame 加载到 <code>surprise</code> 的 <code>Dataset</code> 对象中。</p>\n<pre><code class=\"language-python\"># Reader 对象帮助解析文件或 dataframe\nreader = Reader(rating_scale=(0.5, 5.0))\n\n# 从 pandas dataframe 加载数据\n# 列的顺序必须是：用户、物品、评分\ndata = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)\n</code></pre>\n<p>通过这种方式加载数据，<code>surprise</code> 就能理解其结构并将其用于模型训练和预测。</p>\n<h3>训练 SVD 模型</h3>\n<p>数据准备就绪后，我们现在可以实例化并训练 SVD 模型。在生成最终推荐时，通常做法是在整个数据集上训练模型，以捕捉尽可能多的用户-物品交互模式。<code>surprise</code> 库通过 <code>build_full_trainset()</code> 方法使这一过程变得非常直接。</p>\n<pre><code class=\"language-python\"># 从整个数据集构建训练集\ntrainset = data.build_full_trainset()\n\n# 实例化 SVD 算法\nsvd_model = SVD(n_factors=100, n_epochs=20, random_state=42)\n\n# 在训练集上训练算法\nprint(\"正在训练 SVD 模型...\")\nsvd_model.fit(trainset)\nprint(\"训练完成。\")\n</code></pre>\n<p>在这里，我们初始化了具有 100 个隐因子 (<code>n_factors</code>) 的 SVD 算法，并将其设置为在优化过程中对数据进行 20 次迭代 (<code>n_epochs</code>)。在 <code>fit</code> 方法执行完毕后，<code>svd_model</code> 就是我们训练好的模型，可以开始进行预测了。</p>\n<h3>为用户生成 Top-N 推荐</h3>\n<p>推荐系统的主要功能不仅仅是预测单个物品的评分，而是生成用户可能喜欢的物品排名列表。为此，我们需要对用户<em>尚未</em>看过的所有物品进行评分预测，然后对这些预测结果进行排序，找出表现最好的物品。</p>\n<p>下图说明了生成推荐的工作流程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-dnzblj\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#a5d8ff\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\"];\n\n  subgraph cluster_input {\n    label=\"输入\";\n    style=\"rounded\";\n    bgcolor=\"#e9ecef\";\n    user_id [label=\"目标用户 ID\", fillcolor=\"#ffc9c9\"];\n    trained_model [label=\"训练好的 SVD 模型\"];\n    all_items [label=\"所有物品集合\"];\n  }\n\n  subgraph cluster_process {\n    label=\"推荐逻辑\";\n    style=\"rounded\";\n    bgcolor=\"#e9ecef\";\n\n    get_unrated [label=\"1. 识别用户未评分物品\"];\n    predict_loop [label=\"2. 预测每个未评分物品的评分\"];\n    sort_items [label=\"3. 按预测评分排序物品\"];\n  }\n\n  subgraph cluster_output {\n    label=\"输出\";\n    style=\"rounded\";\n    bgcolor=\"#e9ecef\";\n    top_n [label=\"Top-N 推荐物品\", fillcolor=\"#b2f2bb\"];\n  }\n\n  user_id -> get_unrated;\n  all_items -> get_unrated;\n  trained_model -> predict_loop;\n  get_unrated -> predict_loop;\n  predict_loop -> sort_items;\n  sort_items -> top_n;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-dnzblj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该过程从目标用户和训练好的模型开始。它会识别出用户尚未互动的物品，为每个物品预测分数，最后返回排序后的前 N 项推荐列表。</p>\n</blockquote>\n<p>让我们在 Python 函数中实现这一逻辑。该函数将用户 ID 和我们训练好的模型作为输入，并返回前 10 部推荐电影。</p>\n<pre><code class=\"language-python\">def get_top_n_recommendations(user_id, model, ratings_df, movies_df, n=10):\n    \"\"\"\n    使用训练好的 SVD 模型为指定用户生成 top-N 推荐。\n    \"\"\"\n    # 获取所有电影 ID 的列表\n    all_movie_ids = ratings_df['movieId'].unique()\n\n    # 获取该用户已评分的电影 ID 列表\n    rated_movie_ids = ratings_df[ratings_df['userId'] == user_id]['movieId'].unique()\n\n    # 获取该用户未评分的电影 ID 列表\n    unrated_movie_ids = [movie_id for movie_id in all_movie_ids if movie_id not in rated_movie_ids]\n\n    # 为所有未评分电影预测评分\n    predictions = [model.predict(user_id, movie_id) for movie_id in unrated_movie_ids]\n\n    # 按预估评分降序排列预测结果\n    predictions.sort(key=lambda x: x.est, reverse=True)\n\n    # 获取前 N 个电影 ID\n    top_n_predictions = predictions[:n]\n    top_n_movie_ids = [pred.iid for pred in top_n_predictions]\n\n    # 获取前 N 个电影 ID 对应的电影标题\n    recommended_movies = movies_df[movies_df['movieId'].isin(top_n_movie_ids)]\n\n    return recommended_movies\n\n# 让我们为 ID 为 50 的用户生成推荐\nuser_id_to_recommend = 50\nrecommendations = get_top_n_recommendations(user_id_to_recommend, svd_model, ratings_df, movies_df)\n\nprint(f\"\\n为用户 {user_id_to_recommend} 推荐的前 10 部电影：\")\nprint(recommendations)\n</code></pre>\n<p>让我们看看用户 50 的输出结果。</p>\n<p><strong>为用户 50 推荐的前 10 部电影：</strong></p>\n<table>\n<thead>\n<tr>\n<th align=\"right\"></th>\n<th align=\"right\">movieId</th>\n<th align=\"left\">title</th>\n<th align=\"left\">genres</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"right\">14</td>\n<td align=\"right\">15</td>\n<td align=\"left\">As Good as It Gets (1997)</td>\n<td align=\"left\">Comedy, Drama, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">27</td>\n<td align=\"right\">28</td>\n<td align=\"left\">Persuasion (1995)</td>\n<td align=\"left\">Drama, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">163</td>\n<td align=\"right\">194</td>\n<td align=\"left\">Stargate (1994)</td>\n<td align=\"left\">Action, Adventure, Sci-Fi</td>\n</tr>\n<tr>\n<td align=\"right\">176</td>\n<td align=\"right\">208</td>\n<td align=\"left\">Waterworld (1995)</td>\n<td align=\"left\">Action, Adventure, Sci-Fi</td>\n</tr>\n<tr>\n<td align=\"right\">227</td>\n<td align=\"right\">266</td>\n<td align=\"left\">While You Were Sleeping (1995)</td>\n<td align=\"left\">Comedy, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">315</td>\n<td align=\"right\">357</td>\n<td align=\"left\">Four Weddings and a Funeral (1994)</td>\n<td align=\"left\">Comedy, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">451</td>\n<td align=\"right\">515</td>\n<td align=\"left\">Remains of the Day, The (1993)</td>\n<td align=\"left\">Drama, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">465</td>\n<td align=\"right\">529</td>\n<td align=\"left\">My Life as a Dog (Mitt liv som hund) (1985)</td>\n<td align=\"left\">Comedy, Drama</td>\n</tr>\n<tr>\n<td align=\"right\">470</td>\n<td align=\"right\">534</td>\n<td align=\"left\">Sense and Sensibility (1995)</td>\n<td align=\"left\">Drama, Romance</td>\n</tr>\n<tr>\n<td align=\"right\">520</td>\n<td align=\"right\">608</td>\n<td align=\"left\">Fargo (1996)</td>\n<td align=\"left\">Comedy, Crime, Drama, Thriller</td>\n</tr>\n</tbody>\n</table>\n<p>我们的函数成功生成了一份个性化推荐列表。该模型从该用户过去的评分中学习了其偏好，并识别出他们可能喜欢的其他电影。这展示了矩阵分解的效用；即使不了解电影内容的任何信息，模型也能根据在用户-物品交互矩阵中发现的隐因子来推断匹配度。</p>\n<p>至此，你已成功构建并使用了一个基于模型的协同过滤系统。下一步是对其性能进行评估，我们将在接下来的章节中介绍。</p>",
+  "slug": "practice-recommendations-with-svd",
+  "updates": [],
+  "references": [
+    {
+      "id": 21148,
+      "title": "Matrix Factorization Techniques for Recommender Systems",
+      "author": "Yehuda Koren, Robert Bell, and Chris Volinsky",
+      "year": "2009",
+      "publisher": "IEEE",
+      "journal": "Computer",
+      "volume": "42",
+      "pages": "30-37",
+      "url": "https://doi.org/10.1109/MC.2009.263",
+      "doi": "10.1109/MC.2009.263",
+      "note": "介绍矩阵分解（包括SVD）在推荐系统协同过滤中应用的奠基性论文。",
+      "order": 1,
+      "created_at": "2025-09-13T07:16:15.848119Z",
+      "updated_at": "2025-09-13T07:48:38.842093Z"
+    },
+    {
+      "id": 21149,
+      "title": "Surprise: A Python scikit for building and analyzing recommender systems",
+      "author": "Nicolas Hug",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://surprise.readthedocs.io/en/stable/",
+      "doi": "",
+      "note": "`surprise` Python库的官方文档，提供构建和评估推荐系统的指南和API参考。",
+      "order": 2,
+      "created_at": "2025-09-13T07:16:15.856221Z",
+      "updated_at": "2025-09-13T07:48:38.693709Z"
+    },
+    {
+      "id": 21150,
+      "title": "Recommender Systems: An Introduction",
+      "author": "Dietmar Jannach, Markus Zanker, Alexander Felfernig, and Gerhard Friedrich",
+      "year": "2011",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=f_d_mR74u0gC",
+      "doi": "10.1017/CBO9781316104885",
+      "note": "一本全面的教科书，涵盖各种推荐系统技术，包括协同过滤和矩阵分解。第二版。",
+      "order": 3,
+      "created_at": "2025-09-13T07:16:15.859148Z",
+      "updated_at": "2025-09-13T07:48:44.629794Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

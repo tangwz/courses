@@ -1,0 +1,633 @@
+{
+  "id": 179,
+  "title": "强化学习与人类反馈 (RLHF)",
+  "meta_title": "RLHF高阶课程：大型语言模型与人类反馈对齐",
+  "meta_description": "掌握用于大型语言模型对齐的高阶RLHF技术。涵盖奖励模型、PPO及数据策略。要求扎实的强化学习/深度学习背景。",
+  "description": "本课程是关于强化学习与人类反馈 (RLHF) 在大型语言模型对齐方面的高阶课程。内容涵盖RLHF的理论基础和具体实现，包括奖励模型构建、近端策略优化 (PPO) 微调以及数据收集方法。适合具备扎实机器学习和深度学习背景的工程师和研究人员。",
+  "short_description": "应用强化学习与人类反馈 (RLHF) 的原理和技术，使大型语言模型与人类意图对齐。",
+  "excerpt": "构建并优化RLHF流程，利用人类偏好数据对齐大型语言模型，内容包含奖励模型构建、PPO调整以及高阶方法。",
+  "prerequisites": "具备高阶机器学习与深度学习知识。",
+  "cover_color": "red",
+  "learning_outcomes": [
+    {
+      "topic": "RLHF流程实现",
+      "description": "实现完整的三阶段RLHF流程：监督微调 (SFT)、奖励模型 (RM) 训练和强化学习优化。"
+    },
+    {
+      "topic": "奖励模型构建",
+      "description": "设计、训练和评估基于人类偏好数据的奖励模型，并理解数据收集与标注。"
+    },
+    {
+      "topic": "RLHF中的PPO应用",
+      "description": "应用与配置近端策略优化 (PPO) 在RLHF框架内专门用于大型语言模型微调，包括管理KL散度约束。"
+    },
+    {
+      "topic": "RLHF高阶方法",
+      "description": "分析与应用高阶技术，例如直接偏好优化 (DPO)、奖励模型校准，以及提升训练稳定性的策略。"
+    },
+    {
+      "topic": "数据处理",
+      "description": "管理人类偏好数据集，理解数据质量的影响，并实现用于RLHF的高效数据处理。"
+    },
+    {
+      "topic": "评估方法",
+      "description": "评估经过RLHF微调的模型，结合自动化指标与人工评估规程，侧重于对齐方面。"
+    }
+  ],
+  "duration": 24,
+  "slug": "rlhf-reinforcement-learning-human-feedback",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-21T06:51:10.385312Z",
+  "updated_at": "2026-10-02T07:50:12.531784Z",
+  "chapters": [
+    {
+      "id": 948,
+      "title": "RLHF与语言模型对齐的初步介绍",
+      "meta_title": "RLHF入门：对齐语言模型",
+      "meta_description": "回顾与RLHF相关的一些强化学习（RL）和大型语言模型（LLM）主要思想，以及AI对齐的难题。",
+      "number": 1,
+      "slug": "rlhf-foundations-alignment",
+      "content": "本章将帮助您开始了解人类反馈强化学习（RLHF）在大型语言模型（LLMs）中的应用。我们首先审视主要难题：让大型语言模型（LLMs）与人类意图和价值观对齐。这项任务是传统监督微调通常无法完全做到的。\n\n您将了解到：\n\n*   AI对齐问题在大型语言模型（LLMs）方面的具体情况。\n*   为什么传统监督微调（SFT）不足以完成细致的对齐任务。\n*   回顾强化学习（RL）的一些重要思想，特别是对RLHF不可或缺的近端策略优化（PPO）。\n*   标准三阶段RLHF流程的初步概览：监督微调（SFT）、奖励模型构建和RL微调。\n*   关于如何设置整个课程实践操作所需软件环境和库的指导。\n\n在本章结束时，您将清楚地了解RLHF为什么是必需的以及涉及的基本组成部分，从而为后续章节中详细的实现讨论做好准备。",
+      "sections": [
+        {
+          "id": 5082,
+          "title": "大型语言模型中的人工智能对齐问题",
+          "meta_title": "大型语言模型中的人工智能对齐问题",
+          "meta_description": "理解为何需要将大型语言模型与人类意图和价值观对齐。",
+          "slug": "llm-alignment-problem",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5085,
+          "title": "监督微调的局限性",
+          "meta_title": "监督微调 (SFT) 的局限性",
+          "meta_description": "分析仅靠 SFT 实现细致对齐的不足之处。",
+          "slug": "sft-limitations",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5089,
+          "title": "强化学习原理回顾",
+          "meta_title": "强化学习原理回顾",
+          "meta_description": "对马尔可夫决策过程、策略梯度和PPO核心内容的集中回顾，这些对RLHF很实用。",
+          "slug": "rl-principles-refresher",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5091,
+          "title": "RLHF流程简介",
+          "meta_title": "RLHF流程总览",
+          "meta_description": "RLHF的三大主要阶段：SFT、奖励模型构建和RL微调。",
+          "slug": "intro-rlhf-process",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5094,
+          "title": "设置开发环境",
+          "meta_title": "设置 RLHF 开发环境",
+          "meta_description": "配置必需的库（Transformers、TRL、PyTorch/TensorFlow）和工具。",
+          "slug": "setting-up-dev-environment",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 951,
+      "title": "监督微调 (SFT) 阶段",
+      "meta_title": "RLHF 中的监督微调 (SFT) 阶段",
+      "meta_description": "详细说明 RLHF 初始 SFT 步骤的流程和重要性。",
+      "number": 2,
+      "slug": "sft-phase-rlhf",
+      "content": "基于人类反馈的强化学习 (RLHF) 过程通常从监督微调 (SFT) 开始。这一初始步骤使一个通用预训练大型语言模型 (LLM) 适应，以更好地符合目标任务或应用场景，*在*强化学习阶段*之前*。SFT 使用一个包含高质量提示-响应示例的数据集，为模型提供对所需行为和输出格式的扎实基础认知。\n\n本章侧重于SFT阶段。您将学习：\n\n*   SFT 在为 RLHF 初始化策略时的作用。\n*   收集合适演示数据集的方法。\n*   重要的实施方面，包括训练配置和超参数。\n*   评估 SFT 模型表现的技巧。\n\n我们将通过一个实际练习来结束本章，演示如何在语言模型上进行 SFT。理解 SFT 对于构建一个高效的 RLHF 流程非常重要。",
+      "sections": [
+        {
+          "id": 5098,
+          "title": "SFT在RLHF流程中的作用",
+          "meta_title": "SFT在RLHF流程中的作用",
+          "meta_description": "说明SFT如何为后续的强化学习微调初始化策略模型。",
+          "slug": "sft-role-in-rlhf",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5102,
+          "title": "高质量SFT数据集的整理",
+          "meta_title": "高质量SFT数据集的整理",
+          "meta_description": "用于收集或创建有效SFT示范数据的策略。",
+          "slug": "sft-dataset-curation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5106,
+          "title": "SFT 实现细节",
+          "meta_title": "LLM 的 SFT 实现细节",
+          "meta_description": "LLM 微调的技术方面，包括超参数和训练设置。",
+          "slug": "sft-implementation-details",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5109,
+          "title": "评估 SFT 模型表现",
+          "meta_title": "评估 SFT 模型表现",
+          "meta_description": "评估 SFT 模型质量的衡量指标与方法，在奖励建模之前进行。",
+          "slug": "evaluating-sft-performance",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5112,
+          "title": "动手实践：SFT 执行",
+          "meta_title": "SFT 动手实践：模型微调",
+          "meta_description": "在预训练语言模型上执行监督微调的实际操作步骤。",
+          "slug": "sft-execution-practical",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 954,
+      "title": "基于人类偏好构建奖励模型",
+      "meta_title": "在RLHF中基于人类偏好构建奖励模型",
+      "meta_description": "学习训练预测人类偏好的模型，用于AI对齐。",
+      "number": 3,
+      "slug": "reward-modeling-human-preferences",
+      "content": "监督微调（SFT）提供了基线，但实现对齐需要更直接的方法来纳入人类对响应质量的判断。本章将重心转向构建奖励模型（$RM$），这是一个重要部分，它学习预测人类偏好哪些AI生成的响应。\n\n您将学习创建这个$RM$的流程，从直接从成对比较中学习的思路开始。我们将介绍收集人类偏好数据的方法、组织这些数据集的方式以及选择合适的模型架构。本章详细介绍常见的训练目标，例如基于Bradley-Terry模型的那些，其公式如下：\n\n$$ P(\\text{response}_1 \\succ \\text{response}_2 | \\text{prompt}) = \\sigma(RM(\\text{prompt}, \\text{response}_1) - RM(\\text{prompt}, \\text{response}_2)) $$\n\n$\\sigma$代表sigmoid函数，$\\succ$表示偏好。\n\n此外，我们将研究校准奖励模型分数以更好地反映偏好强度的方法，并讨论奖励建模过程中可能遇到的问题，包括数据质量问题以及模型发现意外捷径（奖励欺骗）的风险。在本章结束时，您将明白如何训练一个能量化人类偏好的模型，为强化学习优化做好准备。",
+      "sections": [
+        {
+          "id": 5116,
+          "title": "偏好学习的思路",
+          "meta_title": "偏好学习的思路",
+          "meta_description": "使用成对比较推断奖励信号的理论依据。",
+          "slug": "learning-from-preferences",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5118,
+          "title": "人类偏好数据收集",
+          "meta_title": "人类偏好数据收集策略",
+          "meta_description": "用于收集人类比较反馈的方法和界面。",
+          "slug": "preference-data-collection",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5121,
+          "title": "偏好数据集的格式与结构",
+          "meta_title": "偏好数据集格式（例如，Anthropic HH-RLHF）",
+          "meta_description": "了解存储人类偏好数据的常见结构。",
+          "slug": "preference-dataset-formats",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5124,
+          "title": "奖励模型架构",
+          "meta_title": "用于LLMs的奖励模型架构",
+          "meta_description": "NLP中奖励建模常用的神经网络设计。",
+          "slug": "reward-model-architectures",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5127,
+          "title": "奖励模型训练目标",
+          "meta_title": "奖励模型训练目标 (Bradley-Terry)",
+          "meta_description": "用于训练奖励模型的数学表述和损失函数。",
+          "slug": "reward-model-training-objectives",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5130,
+          "title": "奖励模型校准",
+          "meta_title": "奖励模型校准",
+          "meta_description": "确保奖励模型分数准确反映偏好程度的方法。",
+          "slug": "reward-model-calibration",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5133,
+          "title": "奖励模型中可能出现的问题",
+          "meta_title": "奖励模型中的潜在问题",
+          "meta_description": "应对非传递性、偏差和奖励作弊等难题。",
+          "slug": "reward-modeling-issues",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5136,
+          "title": "动手实践：训练奖励模型",
+          "meta_title": "动手实践：训练奖励模型",
+          "meta_description": "实现并训练一个奖励模型，使用一个示例偏好数据集。",
+          "slug": "reward-model-training-practical",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 958,
+      "title": "使用近端策略优化（PPO）进行强化学习微调",
+      "meta_title": "RLHF：使用PPO强化学习微调",
+      "meta_description": "关于使用PPO优化语言模型以符合学到奖励模型的详细指南。",
+      "number": 4,
+      "slug": "rl-ppo-fine-tuning",
+      "content": "在确定了模拟人类偏好的方法之后，下一步是使用这个信号直接改进语言模型的表现。本章主要关注强化学习（RL）的微调阶段，特别是采用近端策略优化（PPO）。PPO 是一种策略梯度方法，常用于 RLHF 中，以优化语言模型策略，使其符合学到的奖励模型，同时确保不会与原始的监督微调模型偏离过远。\n\n您将学习如何在大型语言模型的环境中应用 PPO 算法。我们将分析策略网络和价值网络的设置，KL散度惩罚（$D_{KL}$）对于训练稳定的重要作用，计算广义优势估计（GAE）等优势值的方法，以及超参数调整的实际考量。我们还将查看使用 Hugging Face 的 TRL 等库进行实现的例子，并讨论训练不稳定等常见挑战。目标是让您掌握实现和管理 RLHF 流程中基于 PPO 的优化阶段的知识。",
+      "sections": [
+        {
+          "id": 5141,
+          "title": "RLHF背景下的PPO算法",
+          "meta_title": "RLHF背景下的PPO算法",
+          "meta_description": "PPO算法在大型语言模型微调中的应用。",
+          "slug": "ppo-for-rlhf-context",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5144,
+          "title": "策略网络与价值网络的实现",
+          "meta_title": "RLHF中策略网络与价值网络的实现",
+          "meta_description": "为PPO设置actor（策略）网络和critic（价值）网络。",
+          "slug": "policy-value-network-impl",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5148,
+          "title": "KL散度惩罚的作用",
+          "meta_title": "KL散度惩罚在PPO中的作用",
+          "meta_description": "理解并实践KL约束以防止策略崩溃。",
+          "slug": "kl-divergence-penalty-role",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5152,
+          "title": "优势和回报的计算",
+          "meta_title": "PPO中优势与回报的计算",
+          "meta_description": "使用广义优势估计 (GAE) 等方法实现稳定更新。",
+          "slug": "ppo-advantages-returns",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5156,
+          "title": "LLM的PPO超参数调整",
+          "meta_title": "LLM的PPO超参数调整",
+          "meta_description": "设置学习率、批次大小、训练轮次和KL系数的指导。",
+          "slug": "ppo-hyperparameter-tuning-llms",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5159,
+          "title": "常用 PPO 实现库 (TRL)",
+          "meta_title": "常用 PPO 实现库 (TRL)",
+          "meta_description": "使用 Hugging Face 的 TRL 等库来高效实现 PPO。",
+          "slug": "ppo-implementation-libraries-trl",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5161,
+          "title": "PPO训练不稳定性故障排除",
+          "meta_title": "PPO训练不稳定性故障排除",
+          "meta_description": "诊断并解决策略偏离或奖励不稳定等常见问题。",
+          "slug": "troubleshooting-ppo-instability",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5164,
+          "title": "实践：实现PPO更新步骤",
+          "meta_title": "实践：实现PPO更新步骤",
+          "meta_description": "侧重于PPO核心损失计算和优化步骤的代码实践。",
+          "slug": "ppo-update-step-practice",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 961,
+      "title": "整合完整的RLHF流程",
+      "meta_title": "整合完整的RLHF流程",
+      "meta_description": "结合SFT、奖励模型构建和RL微调，形成一个协调的工作流程。",
+      "number": 5,
+      "slug": "integrating-rlhf-pipeline",
+      "content": "之前的章节讨论了RLHF的核心组成部分：监督微调 (SFT)、奖励模型 (RM) 训练，以及近端策略优化 (PPO) 微调。现在，我们着重于将这些阶段连接起来，形成一个连贯的系统。\n\n本章详细说明构建和运行完整的RLHF流程的实际操作。你将学会如何：\n\n*   安排工作流程，管理SFT、RM和PPO阶段之间的操作顺序和数据流动。\n*   处理所涉及的各种模型：加载基础模型、初始化SFT模型、使用奖励模型进行评分，以及在RL更新期间管理策略模型和价值模型。\n*   实现使用当前策略模型生成回复的过程，并使用训练好的奖励模型对这些回复进行评分，为PPO提供信号。\n*   考虑代码组织方式，以构建可维护的端到端RLHF系统。\n\n我们将审视数据如何在系统中流动，以及模型如何加载、使用和可能同步，最后将通过一个实践练习，运行完整循环的简化版本。",
+      "sections": [
+        {
+          "id": 5169,
+          "title": "工作流编排",
+          "meta_title": "RLHF工作流编排",
+          "meta_description": "在三个阶段之间构建数据流和模型检查点。",
+          "slug": "rlhf-workflow-orchestration",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5173,
+          "title": "模型加载与配置",
+          "meta_title": "RLHF 模型加载与配置",
+          "meta_description": "管理基础模型、SFT 模型、奖励模型、策略模型和价值模型。",
+          "slug": "rlhf-model-loading-initialization",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5175,
+          "title": "使用策略模型生成回复",
+          "meta_title": "使用策略模型生成回复",
+          "meta_description": "在强化学习训练期间从当前策略中采样文本的方法。",
+          "slug": "generating-responses-policy-model",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5177,
+          "title": "使用奖励模型为回应评分",
+          "meta_title": "使用奖励模型为回应评分",
+          "meta_description": "使用训练好的奖励模型为生成文本赋予奖励信号。",
+          "slug": "scoring-responses-reward-model",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5179,
+          "title": "训练过程中模型的同步",
+          "meta_title": "RLHF训练中模型的同步",
+          "meta_description": "（如适用）处理分布式系统中的模型状态和参数更新。",
+          "slug": "synchronizing-models-training",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5181,
+          "title": "端到端 RLHF 系统的代码结构",
+          "meta_title": "端到端 RLHF 系统的代码结构",
+          "meta_description": "为 RLHF 实验设计模块化且易于维护的代码库。",
+          "slug": "code-structure-e2e-rlhf",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5183,
+          "title": "动手实践：运行简化的RLHF循环",
+          "meta_title": "动手实践：运行简化的RLHF循环",
+          "meta_description": "在一个小规模上执行一个基本的端到端RLHF训练过程。",
+          "slug": "simplified-rlhf-loop-practical",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 964,
+      "title": "进阶RLHF方法和替代方案",
+      "meta_title": "进阶RLHF方法和替代方案",
+      "meta_description": "探讨标准PPO-RLHF以外的方法，以提升对齐和效率。",
+      "number": 6,
+      "slug": "advanced-rlhf-techniques",
+      "content": "在确立了使用近端策略优化（PPO）的标准三阶段人类反馈强化学习（RLHF）流程后，我们将重心转向更进阶的方法和替代方案。尽管基于PPO的方法有效，持续的研究已带来一些技术，能在稳定性、样本效率或简化整体流程方面提供益处。\n\n本章将讨论其中几种前沿技术。我们将来审视直接偏好优化（DPO），这种方法通过直接根据偏好数据优化语言模型策略，从而规避了对显式奖励模型的需要。我们还会讨论来自AI反馈的强化学习（RLAIF），这种方式中AI模型取代人工标注者来生成偏好标签。此外，我们将涉及专门旨在提升RLHF训练效率的策略、用于检测和减轻奖励欺骗的方法、多目标奖励建模的想法，以及RLHF如何适用于特定语境情况。了解这些进阶方法，能让我们更全面地了解可用于对齐语言模型的技术。",
+      "sections": [
+        {
+          "id": 5186,
+          "title": "直接偏好优化 (DPO)",
+          "meta_title": "直接偏好优化 (DPO)",
+          "meta_description": "了解DPO作为显式奖励模型构建的一种替代方法。",
+          "slug": "direct-preference-optimization-dpo",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5188,
+          "title": "基于AI反馈的强化学习 (RLAIF)",
+          "meta_title": "基于AI反馈的强化学习 (RLAIF)",
+          "meta_description": "使用AI模型而非人类提供偏好（宪法AI）。",
+          "slug": "reinforcement-learning-ai-feedback-rlaif",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5190,
+          "title": "提升RLHF中的样本效率",
+          "meta_title": "提升RLHF中的样本效率",
+          "meta_description": "RLHF中离线强化学习或经验回放调整等方法。",
+          "slug": "improving-sample-efficiency",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5192,
+          "title": "明确处理奖励欺诈",
+          "meta_title": "明确处理奖励欺诈",
+          "meta_description": "检测和缓解策略钻奖励模型缺陷的方法。",
+          "slug": "addressing-reward-hacking",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5194,
+          "title": "多目标奖励模型",
+          "meta_title": "多目标奖励模型",
+          "meta_description": "在奖励信号中平衡多个标准（例如，有用性、无害性）。",
+          "slug": "multi-objective-reward-models",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5195,
+          "title": "上下文和条件式RLHF",
+          "meta_title": "上下文和条件式RLHF",
+          "meta_description": "根据用户情境或具体条件调整RLHF。",
+          "slug": "contextual-conditional-rlhf",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5198,
+          "title": "实践：PPO与DPO方法的比较",
+          "meta_title": "实践：PPO与DPO方法的比较",
+          "meta_description": "分析PPO与DPO的理论差异及潜在的实现影响。",
+          "slug": "comparing-ppo-dpo-practice",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 966,
+      "title": "评估、分析与部署",
+      "meta_title": "RLHF评估、分析与部署",
+      "meta_description": "评估RLHF模型的方法，分析其行为，以及部署时的考量。",
+      "number": 7,
+      "slug": "rlhf-evaluation-deployment",
+      "content": "完成RLHF流程的各个阶段后，重点将转向评估所得模型的一致性，并为投入实际使用做好准备。本章提供关于评估通过人类反馈训练的模型、理解其行为以及处理部署考量的指导。\n\n我们将考察衡量一致性的方法，包括具体指标、人类评估规范和自动化基准。此外，您将学习如何分析RL微调期间的模型变化，通过“红队”等技术进行安全评估，并了解计算成本和可扩展性因素。本章以部署经过RLHF微调模型的实际方面作结。",
+      "sections": [
+        {
+          "id": 5200,
+          "title": "对齐模型的评估指标",
+          "meta_title": "对齐LLM的评估指标",
+          "meta_description": "超越标准NLP指标：衡量有益性、无害性、诚实性。",
+          "slug": "metrics-evaluating-aligned-models",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5202,
+          "title": "人工评估方法",
+          "meta_title": "RLHF的人工评估方法",
+          "meta_description": "设计和运行高效的人工研究，以评估模型对齐。",
+          "slug": "human-evaluation-protocols",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5204,
+          "title": "自动化评估套件",
+          "meta_title": "用于对齐的自动化评估套件",
+          "meta_description": "使用基准和工具（例如HELM、EleutherAI Eval Harness）进行自动化检查。",
+          "slug": "automated-evaluation-suites",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5205,
+          "title": "分析RL微调期间的策略变化",
+          "meta_title": "分析RL微调期间的策略变化",
+          "meta_description": "追踪模型行为在RLHF过程中的变化。",
+          "slug": "analyzing-policy-shift",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5207,
+          "title": "红队测试与安全测试",
+          "meta_title": "RLHF模型的红队测试与安全测试",
+          "meta_description": "对抗性测试以寻找失败模式和安全弱点。",
+          "slug": "red-teaming-safety-testing",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5209,
+          "title": "计算成本与可扩展性",
+          "meta_title": "RLHF计算成本与可扩展性",
+          "meta_description": "理解RLHF模型的训练和部署资源需求。",
+          "slug": "computational-costs-scalability",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5212,
+          "title": "RLHF模型的部署考量",
+          "meta_title": "RLHF模型的部署考量",
+          "meta_description": "与推理速度、监控和更新对齐模型相关的挑战。",
+          "slug": "deployment-considerations-rlhf",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 5214,
+          "title": "动手实践：分析RLHF运行日志",
+          "meta_title": "动手实践：分析RLHF运行日志",
+          "meta_description": "理解RLHF运行中的训练日志（奖励、KL散度、评估指标）",
+          "slug": "analyzing-rlhf-logs-practical",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

@@ -1,0 +1,61 @@
+{
+  "id": 6743,
+  "title": "提示词的信息精简技巧",
+  "meta_title": "智能体提示词中的信息精简",
+  "meta_description": "制定精简和压缩信息的方法，以便其能够良好地融入智能体提示词。",
+  "content": "<p>正如我们所知，智能体的短期记忆主要在其上下文 (context)窗口内管理，这是一种有限的资源。处理大量交互、冗长文档或详细工具输出时，原始信息会迅速占用这个有限的空间。此时，信息精简技巧变得不可或缺。通过智能地减少信息量同时保留其核心含义，您可以让智能体处理更复杂的场景，维持更长时间的对话，并更高效地运行。本节主要说明如何使用提示词 (prompt)指导大型语言模型有效精简信息，以供智能体记忆使用。</p>\n<p>核心思路是将冗长信息转换为智能体可以方便使用或存储的更紧凑形式。这不仅仅是缩短内容；更是要为智能体的当前目标和未来动作保留最相关细节。</p>\n<h2>提示词 (prompt)进行总结</h2>\n<p>总结是精简信息最直接的方式之一。您可以指示大型语言模型创建给定文本的简洁版本。您的提示词可以引导这些总结的风格、长度和侧重点。</p>\n<h3>抽象式与抽取式总结的引导</h3>\n<p>虽然您通常不会在提示词 (prompt)中明确指定“抽象式”或“抽取式”总结，但您的措辞可以引导大型语言模型倾向于其中一种：</p>\n<ul>\n<li>\n<p><strong>鼓励抽象式总结</strong>（即大型语言模型生成新措辞以捕捉核心内容），可使用如下提示词：</p>\n<ul>\n<li>“将以下客户反馈总结为一个段落，突出其主要观点和建议。”</li>\n<li>“提供随附文章的简要概览，侧重其核心发现。”</li>\n<li>“将我们对话的最后三个回合浓缩成一句话，概括请求的当前状态。”</li>\n</ul>\n</li>\n<li>\n<p><strong>鼓励抽取式总结</strong>（即大型语言模型直接从文本中提取重要句子或短语），您可以这样问：</p>\n<ul>\n<li>“从这份报告中提取概述项目风险的最重要句子。”</li>\n<li>“识别用户查询中的主要内容。”（这通常会得到抽取出的短语）。</li>\n</ul>\n</li>\n</ul>\n<p>实际上，大型语言模型通常会生成混合式总结。重要的是，您的提示词要清楚界定期望的结果和优先处理的信息。</p>\n<h3>智能体中总结的使用场景：</h3>\n<ul>\n<li><strong>对话历史</strong>：精简对话先前的回合，以便智能体了解上下文 (context)而不超出token限制。例如，每隔几回合后：“总结我们目前的对话，侧重已做出的决定和未解决的问题。”</li>\n<li><strong>工具输出</strong>：许多工具返回冗长的JSON或文本。可以提示智能体总结这些输出：“搜索工具返回以下内容：[长文本 (long context)]。总结相关发现，以回答用户关于X的问题。”</li>\n<li><strong>文档处理</strong>：当智能体需要“阅读”一份长文档时，它可以分块处理，总结每个块，然后总结这些总结，以构建全面的理解。</li>\n</ul>\n<h2>关键词和关键短语提取</h2>\n<p>有时，不需要完整的总结，而是需要一组代表文本核心主题的重要术语。提示词 (prompt)进行关键词或关键短语提取是一种非常高效的精简方法。</p>\n<ul>\n<li><strong>示例提示词</strong>：\n<ul>\n<li>“从以下文本中提取5个最重要的关键词：[文本]。”</li>\n<li>“列出本文档中提到的主要技术术语。”</li>\n<li>“此用户请求中讨论的主要议题是什么？”</li>\n</ul>\n</li>\n</ul>\n<p>关键词可以用作标签，用于快速相关性检查，或作为从知识库中进一步检索信息的输入。</p>\n<h2>结构化数据转换</h2>\n<p>通常，如果将散布在自然语言中的信息转换为JSON等结构化格式，可以更有效地存储和处理。这是一种强大的信息凝练方法，因为它不仅减少了冗长，还组织了信息，以便智能体或其他系统更容易进行程序化访问。</p>\n<ul>\n<li><strong>示例提示词 (prompt)</strong>：\n<ul>\n<li>“将以下用户请求转换为JSON对象。请求是：'我想订购3个大号意式辣香肠披萨和一杯健怡可乐，送到主街123号。' JSON应包含键'items'（一个包含'name'和'quantity'的对象数组）、'drink'和'address'。”</li>\n<li>“分析此产品评论并提取产品名称、评分（1-5星）以及提到的优缺点列表。以JSON对象形式呈现。”</li>\n<li>“从以下会议记录片段中，识别待办事项。对于每个待办事项，提供事项本身和分配人员，格式为JSON对象列表：[会议记录片段]。”</li>\n</ul>\n</li>\n</ul>\n<p>此方法特别适用于从非结构化文本中提取特定信息，并使其可由智能体的逻辑或工具直接使用。</p>\n<h2>引导精简过程</h2>\n<p>有效的精简依赖于提示词 (prompt)中清晰的指令。</p>\n<ul>\n<li>\n<p><strong>长度和细节</strong>：明确所需的简洁程度。</p>\n<ul>\n<li>“总结为一句话。”</li>\n<li>“提供不超过3项的要点列表。”</li>\n<li>“将其精简至100字以内。”</li>\n</ul>\n</li>\n<li>\n<p><strong>侧重点和相关性</strong>：指导大型语言模型保留哪些重要信息，尤其是在与智能体当前任务或总体目标相关时。</p>\n<ul>\n<li>“总结用户的问题描述，侧重他们正在经历的症状，并忽略任何客套话。”</li>\n<li>“从此API响应中，只提取'id'和'status'字段。”</li>\n</ul>\n</li>\n<li>\n<p><strong>保持完整性</strong>：虽然简洁很好，但要确保重要信息不丢失。</p>\n<ul>\n<li>“精简之前的步骤，但确保所有提及的限制和用户偏好都得以保留。”</li>\n</ul>\n</li>\n</ul>\n<h2>渐进式精简</h2>\n<p>对于持续交互或随时间演进的任务，渐进式精简是一种有价值的策略。智能体不是重新处理所有历史数据，而是维护一个运行中的总结或精简状态，并用新信息进行更新。</p>\n<ul>\n<li>\n<p><strong>提示词 (prompt)策略</strong>：</p>\n<ol>\n<li>提供当前精简的总结/状态。</li>\n<li>提供新的信息（例如，最新的用户消息、新的工具输出）。</li>\n<li>指示大型语言模型将新信息整合到现有总结中，创建一个更新的、仍然精简的版本。</li>\n</ol>\n<ul>\n<li>示例：“这是我们进展的总结：[之前的总结]。用户刚刚添加：[新的用户消息]。更新总结以反映此新信息，并保持简洁。”</li>\n</ul>\n</li>\n</ul>\n<p>这种方法有助于在长期运行的智能体工作流中有效管理上下文 (context)。</p>\n<p>下面的图表说明了由提示词引导的信息精简的一般流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1fw36yq\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=0.2, fillcolor=\"#e9ecef\"];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    raw_info [label=\"原始信息\\n（例如，用户查询、工具输出、过往对话）\", fillcolor=\"#a5d8ff\", shape=parallelogram];\n    prompt_template [label=\"精简提示词\\n（例如，“侧重X总结”，“提取关键词”）\", fillcolor=\"#ffe066\"];\n    llm_agent [label=\"大型语言模型智能体\", shape=oval, fillcolor=\"#69db7c\"];\n    condensed_info [label=\"精简信息\\n（例如，总结、关键词、结构化数据）\", fillcolor=\"#b2f2bb\", shape=parallelogram];\n    memory_store [label=\"智能体工作记忆 / 提示词\", fillcolor=\"#ced4da\"];\n\n    raw_info -> llm_agent [label=\"输入文本\"];\n    prompt_template -> llm_agent [label=\"指令\"];\n    llm_agent -> condensed_info [label=\"生成\"];\n    condensed_info -> memory_store [label=\"存储 / 用于下一个提示词\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1fw36yq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>智能体使用特定提示词指示大型语言模型处理原始信息，并生成精简版本，此版本随后用于更新智能体的工作记忆或为后续提示词提供信息。</p>\n</blockquote>\n<h2>简洁性与细节的平衡</h2>\n<p>信息精简中的主要权衡在于简洁性和信息保真度之间。过度激进的精简可能导致重要细节的丢失，从而妨碍智能体准确执行任务的能力。相反，精简不足则无法缓解上下文 (context)窗口的压力。</p>\n<ul>\n<li><strong>迭代改进</strong>：找到合适的平衡点通常需要反复试验。测试不同的精简提示词 (prompt)，并观察它们对智能体性能及其记忆质量的影响。</li>\n<li><strong>任务依赖的精简</strong>：精简总结中最佳的细节程度可能因智能体当前任务而异。例如，用于快速状态更新的总结可能比旨在捕捉复杂决策过程所有细节的总结要短。</li>\n</ul>\n<p>通过掌握这些由提示词驱动的精简技巧，您可以使您的AI智能体更有效地处理大量信息，从而提高连贯性，在长时间交互中做出更好的决策，并更高效地使用大型语言模型的能力。这些精简后的信息不仅对短期回忆有用，也是存储在长期记忆系统中的优秀备选，我们将在后续内容中对其进行更多说明。</p>",
+  "slug": "information-condensation-prompts",
+  "updates": [],
+  "references": [
+    {
+      "id": 18381,
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "author": "Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2304.03442",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2304.03442",
+      "doi": "10.48550/arXiv.2304.03442",
+      "note": "这项研究展示了大型语言模型如何模拟人类行为，其中很大一部分内容专门介绍内存流和反思等架构组件，这些组件涉及迭代的概括和凝练，以管理上下文并从经验中学习。",
+      "order": 1,
+      "created_at": "2025-09-06T12:24:10.796736Z",
+      "updated_at": "2025-09-11T04:59:01.027821Z"
+    },
+    {
+      "id": 18383,
+      "title": "Scaling Instruction-Finetuned Language Models",
+      "author": "Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus, Yunxuan Li, Xuezhi Wang, Mostafa Dehghani, Siddhartha Brahma, Albert Webson, Shixiang Shane Gu, Zhuyun Dai, Mirac Suzgun, Xinyun Chen, Aakanksha Chowdhery, Alex Castro-Ros, Marie Pellat, Kevin Robinson, Dasha Valter, Sharan Narang, Gaurav Mishra, Adams Yu, Vincent Zhao, Yanping Huang, Andrew Dai, Hongkun Yu, Slav Petrov, Ed H. Chi, Jeff Dean, Jacob Devlin, Adam Roberts, Denny Zhou, Quoc V. Le, Jason Wei",
+      "year": "2022",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2210.11416",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.11416",
+      "doi": "10.48550/arXiv.2210.11416",
+      "note": "这项研究考察了指令微调在提高大型语言模型在各种任务中性能的有效性，包括遵循复杂指令进行概括和结构化信息提取的能力。",
+      "order": 3,
+      "created_at": "2025-09-06T12:24:10.936490Z",
+      "updated_at": "2025-09-11T04:59:04.462406Z"
+    },
+    {
+      "id": 18384,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "这份官方指南解释了如何通过定义函数使大型语言模型生成结构化JSON数据，这是一种直接适用于将自然语言转换为代理处理的程序化格式的方法。",
+      "order": 4,
+      "created_at": "2025-09-06T12:24:10.941694Z",
+      "updated_at": "2025-09-11T04:59:10.784488Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

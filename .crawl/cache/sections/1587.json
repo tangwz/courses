@@ -1,0 +1,45 @@
+{
+  "id": 1587,
+  "title": "`SELECT` 语句：获取数据",
+  "meta_title": "SQL `SELECT` 语句：如何获取数据",
+  "meta_description": "学习 `SELECT` 语句的基本语法，以从数据库表中获取数据。",
+  "content": "<p>关系型数据库将数据存储在结构化表格中。但是，当你需要数据时，如何实际地将其<em>取出</em>呢？SQL中完成这项工作的主要工具是<code>SELECT</code>语句。可以将它视为你向数据库询问所包含信息的准确方式。</p>\n<p><code>SELECT</code>语句可以说是最常用的SQL命令。它的基本目的是从一个或多个数据库表中获取数据。<code>SELECT</code>查询的结果总是一个包含所请求数据的临时表，通常称之为“结果集”。</p>\n<h3>基本语法</h3>\n<p><code>SELECT</code>语句最简单的形式遵循以下结构：</p>\n<pre><code class=\"language-sql\">SELECT column1, column2, ...\nFROM table_name;\n</code></pre>\n<p>我们来分析一下：</p>\n<ol>\n<li><code>SELECT</code>：此关键词告诉数据库你想要获取数据。</li>\n<li><code>column1, column2, ...</code>：你列出你想要从中获取数据的具体列名，用逗号分隔。</li>\n<li><code>FROM</code>：此关键词指示数据所在的表格。</li>\n<li><code>table_name</code>：这是你正在查询的表格的名称。</li>\n<li><code>;</code>：分号标记 (token)SQL语句的结束。虽然并非所有数据库系统或接口都严格要求，但这是标准做法，有助于分隔多个命令。</li>\n</ol>\n<h3>选择特定列</h3>\n<p>通常，你只需要表格中少数特定列的数据。为此，你在<code>SELECT</code>关键词后列出所需列的名称。</p>\n<p>假设我们有一个<code>Products</code>表，如下所示：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">ProductID</th>\n<th align=\"left\">ProductName</th>\n<th align=\"left\">Price</th>\n<th align=\"left\">Category</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">1200.00</td>\n<td align=\"left\">Electronics</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Mouse</td>\n<td align=\"left\">25.00</td>\n<td align=\"left\">Electronics</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Coffee Mug</td>\n<td align=\"left\">15.50</td>\n<td align=\"left\">Home Goods</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Notebook</td>\n<td align=\"left\">3.00</td>\n<td align=\"left\">Stationery</td>\n</tr>\n</tbody>\n</table>\n<p>如果你只想查看所有产品的名称和价格，你可以这样写：</p>\n<pre><code class=\"language-sql\">SELECT ProductName, Price\nFROM Products;\n</code></pre>\n<p>数据库将处理此请求并返回以下结果集：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">ProductName</th>\n<th align=\"left\">Price</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">1200.00</td>\n</tr>\n<tr>\n<td align=\"left\">Mouse</td>\n<td align=\"left\">25.00</td>\n</tr>\n<tr>\n<td align=\"left\">Coffee Mug</td>\n<td align=\"left\">15.50</td>\n</tr>\n<tr>\n<td align=\"left\">Notebook</td>\n<td align=\"left\">3.00</td>\n</tr>\n</tbody>\n</table>\n<p>请注意，结果只包含我们明确要求的列（<code>ProductName</code>和<code>Price</code>），并包含原始<code>Products</code>表中的所有行。</p>\n<h3>选择所有列</h3>\n<p>如果你想查看表格中存储的<em>所有</em>信息怎么办？SQL提供了一种方便的简写方式：星号（<code>*</code>）。</p>\n<pre><code class=\"language-sql\">SELECT *\nFROM Products;\n</code></pre>\n<p><code>*</code>作为通配符，表示“所有列”。此查询将返回整个<code>Products</code>表，与前面所示完全一致：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">ProductID</th>\n<th align=\"left\">ProductName</th>\n<th align=\"left\">Price</th>\n<th align=\"left\">Category</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">1200.00</td>\n<td align=\"left\">Electronics</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Mouse</td>\n<td align=\"left\">25.00</td>\n<td align=\"left\">Electronics</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">Coffee Mug</td>\n<td align=\"left\">15.50</td>\n<td align=\"left\">Home Goods</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Notebook</td>\n<td align=\"left\">3.00</td>\n<td align=\"left\">Stationery</td>\n</tr>\n</tbody>\n</table>\n<p><strong>何时使用<code>*</code>：</strong> 当你首次查看一个表格时，或者在开发过程中需要快速查看所有数据时，使用<code>SELECT *</code>非常方便。</p>\n<p><strong>何时避免使用<code>*</code>：</strong> 在应用程序或生产代码中，明确列出所需列（<code>SELECT ProductName, Price ...</code>）通常是更好的做法。为什么呢？</p>\n<ul>\n<li><strong>性能：</strong> 获取不必要的列可能会消耗更多资源（网络带宽、内存）。</li>\n<li><strong>清晰度：</strong> 明确列出列名可以使你的查询意图对其他人（以及未来的自己）更清楚。</li>\n<li><strong>稳定性：</strong> 如果以后表格中添加或移除了列，<code>SELECT *</code>可能会返回意想不到的结果，或者导致依赖特定列集的应用程序代码出错。通过明确列出列，如果表格结构发生变化，但未影响你选择的列，你的查询就不太可能失效。</li>\n</ul>\n<h3>理解结果集</h3>\n<p>请记住，任何<code>SELECT</code>查询的输出本身都是一个类似表格的结构，称为<strong>结果集</strong>。它有列（你选择的那些）和行（符合你条件，在这些基本例子中是所有行）。此结果集通常是临时的；它由数据库生成以响应你的查询，但通常不会永久存储，除非你明确指示它这样做（使用更高级的命令）。</p>\n<p><code>SELECT</code>语句是获取信息的基础。你现在已经了解了如何从表格中获取所有列或特定列。接下来，你将学习如何使用<code>WHERE</code>子句改进这些查询，以仅获取符合特定条件的行。</p>",
+  "slug": "select-statement-retrieving-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 2184,
+      "title": "Database System Concepts",
+      "author": "Abraham Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2020",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mheducation.com/highered/product/database-system-concepts-silberschatz-korth/9781260200257.html",
+      "doi": "",
+      "note": "提供数据库系统的全面学术基础，包含对SQL语法和语义（例如SELECT语句）的详细解释。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:04.440794Z",
+      "updated_at": "2025-09-07T19:06:28.235115Z"
+    },
+    {
+      "id": 2188,
+      "title": "SELECT",
+      "author": "PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-select.html",
+      "doi": "",
+      "note": "PostgreSQL数据库的官方文档，提供了SELECT语句精确而全面的指南，适用于标准SQL原则。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:05.229695Z",
+      "updated_at": "2025-09-07T19:06:31.611268Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

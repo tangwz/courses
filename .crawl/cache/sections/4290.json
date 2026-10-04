@@ -1,0 +1,61 @@
+{
+  "id": 4290,
+  "title": "实践：简单的提示技巧",
+  "meta_title": "实践基本的LLM提示",
+  "meta_description": "使用本地LLM尝试不同的简单提示来生成各种文本输出。",
+  "content": "<p>使用您的本地LLM进行简单的提示练习。这些练习将演示如何运用提示、指令、上下文 (context)和温度。目标是让您熟悉与模型交互，并观察不同输入如何影响其响应。</p>\n<p>为了进行这些操作，您需要运行本地LLM环境，最好使用上一章讨论过的工具之一，例如Ollama（通过命令行）或LM Studio（使用其图形界面）。对于这些初始练习，像<code>phi3:mini</code>这样的小型模型，或者3B/7B参数 (parameter)的GGUF格式模型通常就足够了，并且能提供更快的响应。</p>\n<h3>练习1：提问简单问题</h3>\n<p>让我们从最直接的交互方式开始：提问。</p>\n<ol>\n<li><strong>打开您的交互工具：</strong>\n<ul>\n<li>如果使用Ollama：打开您的终端并与已下载的模型开始聊天会话，例如：<code>ollama run phi3:mini</code>（将<code>phi3:mini</code>替换为您选择的模型）。</li>\n<li>如果使用LM Studio：启动应用程序，在“聊天”选项卡中加载您选择的模型。</li>\n</ul>\n</li>\n<li><strong>提出事实性问题：</strong> 输入一个简单的问题并按回车键。尝试这些例子：\n<ul>\n<li><code>日本使用什么货币？</code></li>\n<li><code>谁画了蒙娜丽莎？</code></li>\n<li><code>2加2等于多少？</code></li>\n</ul>\n</li>\n<li><strong>观察响应：</strong> 查看LLM提供的答案。它准确吗？是简短还是详细？它只是回答了问题，还是添加了额外信息？LLM经过海量文本训练，因此它们通常擅长获取事实信息，尽管有时它们也会出错（被称为“幻觉 (hallucination)”）。</li>\n<li><strong>尝试变体：</strong> 使用略微不同的措辞提出相同的问题。例如：\n<ul>\n<li><code>日本的货币？</code></li>\n<li><code>告诉我日本的货币。</code></li>\n<li><code>列奥纳多·达·芬奇画了哪幅著名肖像？</code>\n模型给出相同的答案了吗？措辞上的微小变化有时会导致不同的响应或详细程度。</li>\n</ul>\n</li>\n</ol>\n<h3>练习2：给出简单指令</h3>\n<p>现在，让我们从提问转向给LLM布置简单的任务。</p>\n<ol>\n<li><strong>请求文本生成：</strong> 要求模型创作一些简单的内容。\n<ul>\n<li><code>写一句关于晴天的句子。</code></li>\n<li><code>创作一首关于机器人的两行诗。</code></li>\n</ul>\n</li>\n<li><strong>请求文本处理：</strong> 给模型一些文本并要求它修改。\n<ul>\n<li><code>用一句话总结这段话：在过去十年中，人工智能研究取得了显著进展，这得益于计算能力、大数据集和算法创新的进步。许多应用程序现在很常见，从虚拟助手到推荐系统。</code></li>\n<li><code>改写这句话：会议因不可预见的情况而推迟。</code></li>\n</ul>\n</li>\n<li><strong>请求结构化输出：</strong> 要求以特定格式提供信息。\n<ul>\n<li><code>列出三种水果。</code></li>\n<li><code>提供在本地运行LLM的两个好处。</code></li>\n</ul>\n</li>\n<li><strong>观察结果：</strong> 模型是否准确地遵循了您的指令？对于总结或改写，它是否抓住了主要思想？对于列表，格式是否清晰？这表明模型除了简单问题之外，还能理解命令。</li>\n</ol>\n<h3>练习3：查看上下文 (context)窗口</h3>\n<p>上下文窗口在对话过程中作用类似于LLM的短期记忆。让我们看看它的实际作用。</p>\n<ol>\n<li><strong>开始新的对话：</strong> 如果您的工具允许，清除当前聊天记录或开始新的会话。这可确保您从一个空的上下文开始。\n<ul>\n<li>Ollama CLI：您可能需要退出（<code>/bye</code>）并重新启动<code>ollama run</code>命令。</li>\n<li>LM Studio：使用“新聊天”按钮。</li>\n</ul>\n</li>\n<li><strong>建立一个事实：</strong> 提供一条信息。\n<ul>\n<li><code>我最喜欢的动物是水獭。</code>（等待LLM的确认，通常是简单的“好的”或类似的话）。</li>\n</ul>\n</li>\n<li><strong>测试记忆：</strong> 询问您刚刚提供的信息。\n<ul>\n<li><code>我最喜欢的动物是什么？</code>\n模型应该正确回忆出“水獭”，因为您之前的消息仍在其上下文窗口内。</li>\n</ul>\n</li>\n<li><strong>引入不相关话题：</strong> 进行一个关于不同内容的简短交流。\n<ul>\n<li><code>提示1：</code> <code>Python的常见用途是什么？</code></li>\n<li><code>提示2：</code> <code>讲个笑话。</code></li>\n</ul>\n</li>\n<li><strong>再次测试记忆：</strong> 询问最初的事实。\n<ul>\n<li><code>我之前说我最喜欢的动物是什么？</code>\n根据中间对话的长度以及模型具体的上下文窗口大小，它可能仍然记得，也可能已经“忘记”了关于水獭的信息。这表明上下文窗口的大小是有限的。长对话中很早之前的信息可能会超出这个窗口，从而变得不可用于模型生成后续响应。</li>\n</ul>\n</li>\n</ol>\n<h3>练习4：观察温度参数 (parameter)的影响</h3>\n<p>如前所述，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>t</mi><mi>e</mi><mi>m</mi><mi>p</mi><mi>e</mi><mi>r</mi><mi>a</mi><mi>t</mi><mi>u</mi><mi>r</mi><mi>e</mi></mrow><annotation encoding=\"application/x-tex\">temperature</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8095em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\">t</span><span class=\"mord mathnormal\">e</span><span class=\"mord mathnormal\">m</span><span class=\"mord mathnormal\">p</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">er</span><span class=\"mord mathnormal\">a</span><span class=\"mord mathnormal\">t</span><span class=\"mord mathnormal\">u</span><span class=\"mord mathnormal\" style=\"margin-right:0.0278em;\">r</span><span class=\"mord mathnormal\">e</span></span></span></span>（温度）参数控制着LLM输出的随机性。较高的值会产生更多样化、有时更具创造性的响应，而较低的值会产生更可预测、更集中的文本。<em>注意：此设置在LM Studio等工具中易于访问，但在基本的Ollama命令行聊天会话中可能无法直接调整。</em></p>\n<ol>\n<li><strong>找到温度设置：</strong> 如果使用LM Studio等工具，找到配置面板（通常在聊天界面的右侧）。您应该会看到一个标有“Temperature”（温度）的设置，通常显示为一个滑块或数字输入字段（范围通常从<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span>到<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span>或更高）。</li>\n<li><strong>设置低温度：</strong> 将温度调整到一个较低的值，例如<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.2</mn></mrow><annotation encoding=\"application/x-tex\">0.2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.2</span></span></span></span>。</li>\n<li><strong>生成文本：</strong> 使用一个简单的创意提示并运行几次。\n<ul>\n<li><code>提示：</code> <code>写一个描述魔法森林的句子。</code></li>\n<li>运行此提示2-3次。观察输出可能非常相似，也许仅在措辞上略有不同。</li>\n</ul>\n</li>\n<li><strong>设置高温度：</strong> 大幅提高温度，例如到<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.9</mn></mrow><annotation encoding=\"application/x-tex\">0.9</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.9</span></span></span></span>或<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>1.0</mn></mrow><annotation encoding=\"application/x-tex\">1.0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1.0</span></span></span></span>。</li>\n<li><strong>再次生成文本：</strong> 使用与之前完全相同的提示。\n<ul>\n<li><code>提示：</code> <code>写一个描述魔法森林的句子。</code></li>\n<li>运行此提示2-3次。请注意，与低温度的例子相比，生成的句子可能彼此之间有很大不同。它们可能更富有想象力，但也可能连贯性较差或不够集中。</li>\n</ul>\n</li>\n</ol>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1xru3gt\" \n              data-plot-definition='{\"data\": [{\"x\": [0.1, 0.2, 0.5, 0.8, 1.0, 1.2], \"y\": [1, 2, 4, 7, 9, 10], \"mode\": \"lines+markers\", \"type\": \"scatter\", \"name\": \"随机性/多样性\", \"marker\": {\"color\": \"#228be6\"}, \"line\": {\"color\": \"#228be6\"}}], \"layout\": {\"title\": \"温度对输出多样性的影响\", \"xaxis\": {\"title\": \"温度设置\"}, \"yaxis\": {\"title\": \"相对输出多样性/随机性\", \"range\": [0, 11]}, \"margin\": {\"l\": 60, \"r\": 20, \"t\": 40, \"b\": 40}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1xru3gt\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>温度设置与LLM生成文本中观察到的多样性或随机性之间的关系。较低的温度会导致较少的随机性，而较高的温度会增加随机性。</p>\n</blockquote>\n<p>这个练习有助于说明您如何影响LLM的输出风格。对于需要事实准确性或一致性的任务，通常首选较低的温度。对于创意写作或头脑风暴，较高的温度可能会产生更有趣的结果。</p>\n<p>这些练习为与您的本地LLM交互提供了一个起点。不要犹豫继续尝试！尝试不同类型的问题、指令和模型。您练习得越多，就越能更好地制定能够获得所需响应的提示。</p>",
+  "slug": "practice-simple-prompting",
+  "updates": [],
+  "references": [
+    {
+      "id": 11446,
+      "title": "Prompt Engineering Guide",
+      "author": "N/A",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.promptingguide.ai/",
+      "doi": "",
+      "note": "提供提示工程原理和技术的全面概述，包括基本和高级提示示例。",
+      "order": 1,
+      "created_at": "2025-09-05T07:18:11.557129Z",
+      "updated_at": "2025-09-09T13:27:43.893145Z"
+    },
+    {
+      "id": 11447,
+      "title": "Text Generation Strategies for Language Models",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/main/en/generation_strategies",
+      "doi": "",
+      "note": "解释了温度、top-k和top-p等文本生成参数，这些参数直接影响大型语言模型输出的多样性和连贯性。",
+      "order": 2,
+      "created_at": "2025-09-05T07:18:11.560606Z",
+      "updated_at": "2025-09-09T13:27:32.603616Z"
+    },
+    {
+      "id": 11448,
+      "title": "Stanford CS324: Large Language Models (Course Homepage)",
+      "author": "Percy Liang and various contributors",
+      "year": "2021",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://stanford-cs324.github.io/",
+      "doi": "",
+      "note": "提供大型语言模型的基础知识，涵盖上下文窗口、模型架构和幻觉等常见问题。",
+      "order": 3,
+      "created_at": "2025-09-05T07:18:11.563842Z",
+      "updated_at": "2025-09-09T13:27:42.866258Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

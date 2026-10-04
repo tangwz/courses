@@ -1,0 +1,45 @@
+{
+  "id": 7844,
+  "title": "URI 方案和模式",
+  "meta_title": "资源 URI 方案与模式匹配",
+  "meta_description": "构建统一资源标识符 (URI) 以唯一标识和路由数据。",
+  "content": "<p>统一资源标识符 (URI) 是模型上下文 (context)协议的寻址系统。客户端-宿主-服务器拓扑搭建了通信链路，而 URI 则提供了定位和获取数据所需的具体坐标。当大型语言模型（LLM）或客户端应用需要获取特定的上下文内容，如文件、数据库中的一行或系统日志时，它会使用一个结构化字符串来唯一标识该项。</p>\n<p>在 MCP 中，URI 不仅是静态地址。它们与 <strong>URI 模板</strong>一同使用，服务器可借此公布可获取资源的类别，而非逐一列出每个项目。这一区别对性能非常要紧。一个封装了数百万行数据库的服务器，在初始化握手时无法向客户端发送数百万个 URI 列表。相反，它会发送一个模板，展示访问这些行的模式。</p>\n<h3>MCP URI 的构成</h3>\n<p>MCP URI 遵循 RFC 3986 中定义的标准语法。掌握这种结构对于设计直观且无冲突的资源名称来说很有必要。一个典型的 URI 包含 <strong>方案</strong>、可选的 <strong>授权信息</strong> 和 <strong>路径</strong>。</p>\n<p><span class=\"katex-error\" title=\"ParseError: KaTeX parse error: Expected &#x27;EOF&#x27;, got &#x27;#&#x27; at position 40: … 路径 [&#x22;?&#x22; 查询] [&#x22;#̲&#x22; 片段]\" style=\"color:#cc0000\">URI = 方案 \":\" [\"//\" 授权信息] 路径 [\"?\" 查询] [\"#\" 片段]</span></p>\n<p>在 MCP 服务器中，各组成部分的功能如下：</p>\n<ol>\n<li><strong>方案：</strong> 标识协议或具体的数据源类型。虽然 <code>file</code>、<code>http</code> 和 <code>https</code> 普遍使用，但 MCP 服务器常定义自定义方案，如 <code>linear</code>、<code>postgres</code> 或 <code>app-logs</code>，来对资源进行命名空间划分。</li>\n<li><strong>授权信息：</strong> 在本地 MCP 服务器中常被省略，但如果服务器管理多个外部系统的连接，则可用来区分不同的实例或主机名。</li>\n<li><strong>路径：</strong> 用于标识具体资源的分层标识符。</li>\n</ol>\n<p>下图说明了 MCP 服务器如何解析这些组成部分，从而将请求路由到正确的内部处理程序。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1imxjrd\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [fontname=\"Helvetica\", shape=box, style=filled, color=\"#dee2e6\", fillcolor=\"#f8f9fa\"];\n    edge [color=\"#adb5bd\"];\n\n    Request [label=\"客户端请求\\nuri=&#39;memo://notes/daily/2023-10-27&#39;\", fillcolor=\"#d0bfff\"];\n    \n    subgraph cluster_parsing {\n        label=\"URI 解析\";\n        style=dashed;\n        color=\"#868e96\";\n        \n        Scheme [label=\"方案: &#39;memo&#39;\", fillcolor=\"#a5d8ff\"];\n        Path [label=\"路径: &#39;/notes/daily/2023-10-27&#39;\", fillcolor=\"#a5d8ff\"];\n    }\n\n    Router [label=\"资源路由器\", fillcolor=\"#ffc9c9\"];\n    Handler [label=\"函数: read_note(date=&#39;2023-10-27&#39;)\", fillcolor=\"#b2f2bb\"];\n\n    Request -> Scheme;\n    Request -> Path;\n    Scheme -> Router;\n    Path -> Router;\n    Router -> Handler [label=\"匹配模式\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1imxjrd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>URI 请求通过服务器解析流程，送达对应函数处理程序的示意。</p>\n</blockquote>\n<h3>URI 模板和动态资源</h3>\n<p>静态资源表示一个单一、不变的 URI，例如 <code>config://application/settings</code>。这适用于单个资产。然而，多数应用处理的是动态数据集合。为了应对这种情况，MCP 使用了 URI 模板 (RFC 6570)。</p>\n<p>模板含有用大括号括起来的变量，例如 <code>file:///{path}</code>。当服务器注册此资源时，它会告诉客户端：“我能处理任何与此模式相符的 URI。”</p>\n<p>当客户端请求 <code>file:///Users/jdoe/project/readme.md</code> 时，MCP SDK 会自动执行模式匹配。它从 URI 中取出 <code>/Users/jdoe/project/readme.md</code>，并将其作为参数 (parameter)传递给您注册的函数。这种将<em>接口</em>（模板）与<em>实现</em>（函数）分开的做法，使得资源公开可扩展。</p>\n<h4>在 Python 中定义模式</h4>\n<p>使用 Python SDK 时，您通过装饰器定义这些模式。框架会进行路由处理。</p>\n<pre><code class=\"language-python\">from mcp.server.fastmcp import FastMCP\n\nmcp = FastMCP(\"FileSystemServer\")\n\n# 静态资源：无变量\n@mcp.resource(\"app://metadata\")\ndef get_metadata() -> str:\n    return \"Version 1.0.0 - File Reader System\"\n\n# 动态资源：使用模板变量 {path}\n@mcp.resource(\"file:///{path}\")\ndef read_file(path: str) -> str:\n    \"\"\"从本地文件系统读取文件。\"\"\"\n    try:\n        # 在实际实现中，需验证 'path' 以防止目录遍历\n        with open(path, \"r\") as f:\n            return f.read()\n    except FileNotFoundError:\n        return \"Error: File not found.\"\n</code></pre>\n<p>在此示例中，SDK 注册了模式 <code>file:///{path}</code>。如果 LLM 生成了 <code>file:///etc/hosts</code> 的请求，变量 <code>path</code> 将获取值 <code>/etc/hosts</code>。</p>\n<h3>方案设计策略</h3>\n<p>选取正确的方案是一个架构决定，它会作用于 LLM 如何解读数据上下文 (context)。一个清晰、语义化的方案能让模型在读取内容之前就把握数据的性质。</p>\n<ol>\n<li><strong>标准数据使用标准方案：</strong> 如果您从磁盘提供实际文件，请使用 <code>file://</code>。这向客户端传达，路径很可能符合文件系统约定。</li>\n<li><strong>为自定义数据设定命名空间：</strong> 如果您正在为某个应用构建服务器，请使用该应用的名称作为方案。例如，<code>slack://channels/{id}</code> 比 <code>app://slack/channels/{id}</code> 更具描述性。</li>\n<li><strong>代理避免使用 <code>http/https</code>：</strong> 除非您的资源确实是要获取的网页，否则请避免使用 <code>http</code> 或 <code>https</code>。如果您的服务器从 REST API 获取数据并返回 JSON 对象，请定义一个自定义方案，如 <code>api://</code>。使用 <code>https</code> 可能会让模型误以为可以直接浏览网页，而非与您的特定 API 包装器交互。</li>\n</ol>\n<h3>模式匹配处理</h3>\n<p>MCP 服务器内部的匹配过程遵循特定的优先级。掌握此点有助于避免路由冲突，尤其当存在重叠模式时。</p>\n<p>通常，精确匹配优先于模板匹配。如果您同时定义了一个通用文件读取器和一个用于 readme 文件的具体处理程序，那么当请求该精确 URI 时，具体处理程序应被触发。</p>\n<p>考虑一个公布用户记录的数据库服务器的路由处理方式：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3ncqn5\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [fontname=\"Helvetica\", shape=ellipse, style=filled, color=\"#dee2e6\", fillcolor=\"#e9ecef\"];\n    edge [color=\"#868e96\"];\n\n    Input [label=\"传入 URI\", shape=box, fillcolor=\"#d0bfff\"];\n    \n    CheckStatic [label=\"是否精确匹配？\", shape=diamond, fillcolor=\"#ffec99\"];\n    CheckTemplate [label=\"是否匹配模板？\", shape=diamond, fillcolor=\"#ffec99\"];\n    \n    StaticEndpoint [label=\"执行静态处理程序\", shape=box, fillcolor=\"#b2f2bb\"];\n    DynamicEndpoint [label=\"提取变量并执行\", shape=box, fillcolor=\"#b2f2bb\"];\n    Error [label=\"返回 404/错误\", shape=box, fillcolor=\"#ffc9c9\"];\n\n    Input -> CheckStatic;\n    CheckStatic -> StaticEndpoint [label=\"是\"];\n    CheckStatic -> CheckTemplate [label=\"否\"];\n    \n    CheckTemplate -> DynamicEndpoint [label=\"是\"];\n    CheckTemplate -> Error [label=\"否\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3ncqn5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将传入 URI 路由到相应处理程序的决策树。</p>\n</blockquote>\n<h3>处理查询参数 (parameter)</h3>\n<p>MCP URI 支持查询参数，这些参数在不改变资源身份的情况下，可用于筛选或修改资源表示。例如，您可能只想获取日志文件的最后 50 行。</p>\n<p>URI 可能看起来像 <code>logs://system/error.log?lines=50</code>。</p>\n<p>在您的资源处理程序中，解析这些参数取决于具体的 SDK 实现细节，但通常，完整的 URI 可供查看。在定义模式时，通常的做法是在模板中定义路径 (<code>logs://{type}/{name}</code>)，并将查询字符串视为在函数内部处理的可选元数据。</p>\n<h3>URI 设计的最佳实践</h3>\n<ul>\n<li><strong>稳定性：</strong> URI 应保持稳定。如果资源的 URI 改变，LLM 的上下文 (context)窗口可能含有过时引用，从而引发幻觉 (hallucination)或错误。</li>\n<li><strong>可读性：</strong> 尽管主要供机器使用，但可读的 URI 在调试时会有便利。<code>users://123/profile</code> 优于 <code>data://obj?id=5921&#x26;type=u</code>。</li>\n<li><strong>安全性：</strong> 切勿盲目信任从 URI 模板派生出的输入。就像网络开发一样，如果 ID 直接传递给数据库查询，“路径”变量的输入必须经过清理，以避免目录遍历攻击或 SQL 注入。</li>\n</ul>\n<p>通过严谨地确立您的 URI 方案和模式，您创建了一个可预测的数据图。这使得 LLM 能够充当智能导航器，准确请求其回答用户查询所需的上下文。</p>",
+  "slug": "uri-schemes-patterns",
+  "updates": [],
+  "references": [
+    {
+      "id": 21953,
+      "title": "Uniform Resource Identifier (URI): Generic Syntax",
+      "author": "T. Berners-Lee, R. Fielding, L. Masinter",
+      "year": "2005",
+      "publisher": "The Internet Society",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://datatracker.ietf.org/doc/html/rfc3986",
+      "doi": "",
+      "note": "定义了URI的通用语法，包括方案、授权、路径、查询和片段组件，是资源识别的基础。",
+      "order": 1,
+      "created_at": "2025-11-19T12:05:44.701759Z",
+      "updated_at": "2025-11-19T12:28:58.695371Z"
+    },
+    {
+      "id": 21955,
+      "title": "Designing Web APIs: Building APIs That Developers Love",
+      "author": "Brenda Jin, Saurabh Sahni, and Amir Shevat",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-web-apis/9781492037911/",
+      "doi": "",
+      "note": "为设计稳定、可读且安全的URI和API结构提供了指导，这与URI设计原则和最佳实践直接相关。",
+      "order": 3,
+      "created_at": "2025-11-19T12:05:44.821570Z",
+      "updated_at": "2025-11-19T12:28:18.337264Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

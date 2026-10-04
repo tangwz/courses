@@ -1,0 +1,45 @@
+{
+  "id": 7767,
+  "title": "文本预处理以提升检索效果",
+  "meta_title": "用于检索的文本预处理",
+  "meta_description": "使用预处理模块清洗和转换您的文本内容，以提升检索效果。",
+  "content": "<p>清洗和标准化文本是为有效检索准备数据的一个非常重要的环节。检索系统的表现与它所搜索的数据质量直接相关。原始文本，特别是来自网页或扫描文档等来源的文本，通常充满可能降低嵌入 (embedding)模型表现的噪音。这些噪音包括格式瑕疵、不一致的空白字符、不相关的元数据以及敏感内容。</p>\n<p>预处理旨在创建文本的干净、一致表示，以准确捕捉其语义。通过移除干扰元素，您可以帮助嵌入模型关注有用的内容，从而获得更准确、更相关的检索结果。本节将向您介绍标准化和清洗文本数据的常用方法。</p>\n<h3>文本标准化以保持一致</h3>\n<p>文本标准化是将文本转换为单一、规范形式的过程。这很有必要，因为嵌入 (embedding)模型对输入中的变体很敏感，而这些变体对于人类读者来说可能不会改变其含义。例如，如果大小写不是您程序中的主要考虑因素，那么“Hello World”和“hello world”应该理想地以相似方式表示。</p>\n<p>一个典型的起点是处理空白字符。来自不同来源的文本可能包含不规则的间距、多个换行符或制表符，这会为您的嵌入带来干扰。您可以通过将多个空白字符合并为一个空格并标准化换行符来统一它们。</p>\n<pre><code class=\"language-python\">from kerb.preprocessing import normalize_whitespace\n\nraw_text = \"This text    has extra spaces\\n\\n\\nand multiple newlines.\"\nnormalized = normalize_whitespace(raw_text)\n\nprint(f\"原始: {repr(raw_text)}\")\nprint(f\"标准化后: {repr(normalized)}\")\n# 原始: 'This text    has extra spaces\\n\\n\\nand multiple newlines.'\n# 标准化后: 'This text has extra spaces and multiple newlines.'\n</code></pre>\n<p>另一个微小但很有用的工作是Unicode标准化。像“é”这样的字符在Unicode中可以用多种方式表示。对其进行标准化可确保相同的字符始终由相同的字节序列表示，这对保持分词 (tokenization)一致性很有意义。</p>\n<h3>清理特定来源的杂质</h3>\n<p>不同的文档格式会带来特有的噪音类型。网页中充满了HTML标签、脚本和CSS，而从PDF中提取的文本可能包含因换行符和不规则间距造成的连字符瑕疵。移除这些结构性噪音是首要步骤。</p>\n<p>对于HTML内容，您可以提取干净、人类可读的文本，同时丢弃所有标记 (token)。</p>\n<pre><code class=\"language-python\">from kerb.preprocessing import extract_text_from_html\n\nhtml_content = \"\"\"\n&#x3C;html>\n    &#x3C;body>\n        &#x3C;h1>Main Title&#x3C;/h1>\n        &#x3C;p>This is &#x3C;strong>important&#x3C;/strong> content.&#x3C;/p>\n        &#x3C;script>alert('noise');&#x3C;/script>\n    &#x3C;/body>\n&#x3C;/html>\n\"\"\"\n\nclean_content = extract_text_from_html(html_content)\nprint(clean_content)\n# Main Title\n# This is important content.\n</code></pre>\n<p>类似地，如果您正在使用Markdown，您可能希望去除格式以获取底层文本。<code>strip_markdown</code>函数可用于此目的，将<code>**bold**</code>文本转换为<code>bold</code>。</p>\n<h3>移除不相关和敏感内容</h3>\n<p>对于许多RAG程序，URL、电子邮件地址和电话号码等元素是可能扭曲文本块语义的噪音。移除它们有助于嵌入 (embedding)模型关注主要内容。更值得一提的是，移除或编辑个人身份信息（PII）是保护隐私和数据安全的常规做法。</p>\n<p>您可以单独移除这些元素，也可以将其作为大型清洗流程的一部分。对于处理敏感数据的程序，您可能选择编辑而非仅仅移除PII，用一个通用占位符替换敏感数据。</p>\n<pre><code class=\"language-python\">from kerb.safety import redact_pii\n\nsensitive_text = \"Please contact support at support@example.com or call 555-123-4567 for help.\"\nredacted_text = redact_pii(sensitive_text)\n\nprint(f\"原始: {sensitive_text}\")\nprint(f\"编辑后: {redacted_text}\")\n# 原始: Please contact support at support@example.com or call 555-123-4567 for help.\n# 编辑后: Please contact support at [REDACTED_EMAIL] or call [REDACTED_PHONE] for help.\n</code></pre>\n<p>这种方法在保护敏感内容的同时，保留了有关某段内容存在的上下文 (context)。</p>\n<h3>构建预处理流程</h3>\n<p>虽然您可以逐个应用这些函数，但定义一个可重用的预处理流程会更高效。<code>normalize_text</code>函数与<code>NormalizationConfig</code>结合使用，允许您以声明式方式协调多个清洗和标准化步骤。您可以为不同类型的内容或RAG流程的不同阶段定义不同的配置。</p>\n<p>让我们构建一个处理网络抓取文章的常规流程。目的是将文本转为小写，移除URL和电子邮件，并标准化所有空白字符和引号。</p>\n<pre><code class=\"language-python\">from kerb.preprocessing import normalize_text, NormalizationConfig, NormalizationLevel\n\n# 为我们的流程定义一个配置\nweb_article_config = NormalizationConfig(\n    level=NormalizationLevel.STANDARD, # 应用标准Unicode、引号和空白字符标准化\n    lowercase=True,\n    remove_urls=True,\n    remove_emails=True,\n    remove_extra_spaces=True\n)\n\nmessy_article_snippet = \"\"\"\nCheck   out our new \"Report\" at https://example.com/report!\nContact editor@example.com for info.\nIt's an in-depth analysis of AI’s impact.\n\"\"\"\n\n# 一次调用应用整个流程\nprocessed_text = normalize_text(messy_article_snippet, config=web_article_config)\n\nprint(\"### 预处理前 ###\")\nprint(messy_article_snippet)\nprint(\"\\n### 预处理后 ###\")\nprint(processed_text)\n</code></pre>\n<p>此“前后”对比呈现了我们流程的结果：</p>\n<p><strong>预处理前</strong></p>\n<pre><code>Check   out our new \"Report\" at https://example.com/report!\nContact editor@example.com for info.\nIt's an in-depth analysis of AI’s impact.\n</code></pre>\n<p><strong>预处理后</strong></p>\n<pre><code>check out our new \"report\" at !\ncontact for info.\nit's an in-depth analysis of ai's impact.\n</code></pre>\n<p>现在的输出是一段干净、标准化的文本块。这个清理过的版本更适合嵌入 (embedding)模型，因为噪音已被清除，只留下核心文本内容。预处理的程度需要权衡。过于激进的清洗可能会移除有用的上下文 (context)，因此测试您的流程对检索效果的影响总是一个明智的做法。</p>\n<p>在文档加载、分块并彻底清洗之后，我们拥有了一个高质量的文本片段数据集。每个片段都是一个语义连贯且标准化的信息单元，为下一步做好了准备：通过嵌入将文本转换为数值表示。</p>",
+  "slug": "text-preprocessing-for-retrieval",
+  "updates": [],
+  "references": [
+    {
+      "id": 21735,
+      "title": "Introduction to Information Retrieval",
+      "author": "Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze",
+      "year": "2008",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nlp.stanford.edu/IR-book/",
+      "doi": "",
+      "note": "一本经典的情報检索教科书，详细阐述了文本处理和索引对于有效搜索和检索系统的基础作用。",
+      "order": 2,
+      "created_at": "2025-10-20T07:26:14.381574Z",
+      "updated_at": "2025-10-20T07:50:36.133929Z"
+    },
+    {
+      "id": 21736,
+      "title": "The Unicode Standard",
+      "author": "The Unicode Consortium",
+      "year": "2025",
+      "publisher": "The Unicode Consortium",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.unicode.org/versions/latest/",
+      "doi": "",
+      "note": "定义字符编码的官方标准，包括规范化形式（NFC、NFD、NFKC、NFKD），对一致性文本处理很重要。",
+      "order": 3,
+      "created_at": "2025-10-20T07:26:14.384342Z",
+      "updated_at": "2025-10-20T07:50:53.462112Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

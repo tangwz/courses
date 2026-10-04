@@ -1,0 +1,45 @@
+{
+  "id": 6138,
+  "title": "针对不同微调框架的数据组织",
+  "meta_title": "用于LLM微调的数据格式",
+  "meta_description": "了解LLM微调常用的数据格式（例如JSONL）和组织要求。",
+  "content": "<p>为大型语言模型（LLM）微调 (fine-tuning)构建合成数据结构是一个必需的实际步骤。微调框架和库不会自动识别任意数据排列，它们要求数据按特定结构和格式组织。正确处理这一点对于成功进行微调训练是根本性的。可以将其想象成调用程序中的一个函数：你需要按照预设的顺序和格式传递参数 (parameter)，函数才能正常运行。将详细介绍LLM微调中常用的数据格式和组织规范。</p>\n<h3>微调 (fine-tuning)常用数据格式</h3>\n<p>尽管LLM工具一直在演变，一些数据格式因其简洁和实用性而变得流行。</p>\n<h4>JSON行（JSONL）</h4>\n<p>JSON行，通常简写为JSONL，是微调数据集的一种普遍采用的格式。在JSONL文件中，每一行都是一个完整、独立存在的JSON对象。这种结构具有多项优点：</p>\n<ol>\n<li><strong>可流式处理</strong>：你可以逐行处理文件，这对于可能无法完全载入内存的超大数据集来说非常高效。</li>\n<li><strong>易读性</strong>：JSON具有人类可读性，方便检查和调试你的数据。</li>\n<li><strong>灵活性</strong>：每个JSON对象可以拥有复杂的结构，能容纳各种类型的微调数据，例如指令-响应对或对话历史。</li>\n</ol>\n<p>对于指令微调，一个典型的JSONL条目可能如下所示：</p>\n<pre><code class=\"language-json\">{\"instruction\": \"将以下英文句子翻译成法文。\", \"input\": \"你好，各位！\", \"output\": \"你好，各位！\"}\n{\"instruction\": \"总结所提供文本的要点。\", \"input\": \"该文本讨论了规律运动的好处，包括改善心血管健康、体重管理和提升精神健康。它还提到了持之以恒的重要性。\", \"output\": \"规律运动有益于心脏健康、体重控制和精神状态改善，并且持之以恒很重要。\"}\n{\"instruction\": \"编写一个计算数字阶乘的Python函数。\", \"output\": \"def factorial(n):\\n    if n == 0:\\n        return 1\\n    else:\\n        return n * factorial(n-1)\"}\n</code></pre>\n<p>注意，<code>input</code>字段是可选的。如果一个指令除了指令本身不需要额外上下文 (context)，<code>input</code>字段可以省略或留作空字符串。一些框架可能会使用略有不同的名称，例如<code>prompt</code>和<code>completion</code>，或者一个包含完整格式化提示（包括指令、输入和响应占位符）的<code>text</code>字段。请务必查阅你所使用的特定微调框架的文档。</p>\n<h4>逗号分隔值（CSV）或制表符分隔值（TSV）</h4>\n<p>CSV和TSV文件是更简单的文本格式，其中数据按行组织，每行中的值分别用逗号或制表符分隔。尽管对于复杂的嵌套数据，它们的灵活性不如JSONL，但它们适用于直接的提示-补全对。</p>\n<p>用于微调的CSV文件可能包含<code>prompt</code>和<code>completion</code>等列：</p>\n<pre><code class=\"language-csv\">prompt,completion\n\"泰国的首都是哪里？\",\"曼谷\"\n\"用简单的语言解释光合作用的原理。\",\"光合作用是植物将光能转化为化学能以制造自身食物的过程。\"\n</code></pre>\n<p>使用CSV或TSV时，请密切注意文本字段中的换行符和特殊字符的处理方式，因为它们有时会导致解析问题。</p>\n<h3>针对不同微调 (fine-tuning)目标的数据结构化</h3>\n<p>你在这些格式中组织合成数据的方式很大程度上取决于微调目标。</p>\n<h4>指令微调（IFT）</h4>\n<p>如JSONL示例所示，IFT数据集通常由指令-响应对组成。目标是训练LLM有效遵循指示。你生成的合成数据应清晰界定：</p>\n<ul>\n<li><strong>指令</strong>：模型应执行的特定任务。</li>\n<li><strong>输入（可选）</strong>：指令操作的任何上下文 (context)或数据。</li>\n<li><strong>输出/响应</strong>：期望的模型生成内容。</li>\n</ul>\n<p>许多微调脚本会在内部将这些字段组合成一个单一的格式化提示字符串，供模型在训练时使用。常见的模板模式可能如下所示：</p>\n<pre><code>下方是一条描述任务的指令。请编写一个适当完成请求的响应。\n\n### 指令：\n{instruction}\n\n### 输入：\n{input}\n\n### 响应：\n{output}\n</code></pre>\n<p>如果<code>input</code>字段为空，模板的该部分将被省略。在应用此类模板时保持一致性对于模型学习模式非常重要。</p>\n<h4>聊天和对话微调</h4>\n<p>为了微调模型使其成为高效的聊天机器人或对话代理，数据需要代表多轮对话。数据集中的每个条目，通常是JSONL文件中的一个JSON对象，将代表一个完整的对话或其一部分。在此对象中，你通常会有一个消息列表，其中每条消息都指定了<code>role</code>（例如，<code>system</code>、<code>user</code>、<code>assistant</code>）和消息的<code>content</code>。</p>\n<p>以下是一个用于对话微调的单个JSONL条目示例：</p>\n<pre><code class=\"language-json\">{\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"你是一个乐于助人、提供简洁回答的助手。\"},\n    {\"role\": \"user\", \"content\": \"使用合成数据进行LLM微调的主要好处是什么？\"},\n    {\"role\": \"assistant\", \"content\": \"它允许创建有针对性、特定任务的数据集，尤其是在数据稀缺或难以获取时。\"}\n  ]\n}\n</code></pre>\n<p>这种结构化格式使得模型能够学习对话流程以及根据之前的对话和发言者的角色给出适当的响应。</p>\n<h4>持续预训练 (pre-training)或方面适配</h4>\n<p>如果你的目标是将现有LLM适配到特定方面（例如法律文本、医学研究）或特定风格，你的合成数据可能包含代表该方面或风格的大段文本。在这种情况下，结构可以非常简单，通常只是一个JSONL文件，其中每行包含一个带有一个<code>text</code>字段的JSON对象：</p>\n<pre><code class=\"language-json\">{\"text\": \"这是一段以19世纪科学文章风格编写的合成长文本...\"}\n{\"text\": \"另一份侧重于法律术语和判例的文件示例...\"}\n</code></pre>\n<p>模型随后会在此专业语料库上进一步预训练，使其内部表示和生成模式得到适配。</p>\n<p>下图显示了原始合成数据组件如何转换为JSONL条目，以及随后如何将其格式化为指令微调任务的提示字符串。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-2406j\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"]; edge [fontname=\"Arial\"]; subgraph cluster_raw_data { label=\"原始合成数据组件\"; bgcolor=\"#f8f9fa\"; style=\"rounded\"; instruction [label=\"指令：\\n&#39;总结此文本&#39;\", fillcolor=\"#a5d8ff\"]; input_node [label=\"输入（可选）：\\n&#39;LLMs功能强大...&#39;\", fillcolor=\"#a5d8ff\"]; output_node [label=\"输出：\\n&#39;LLMs提供能力...&#39;\", fillcolor=\"#a5d8ff\"]; } subgraph cluster_jsonl { label=\"JSONL结构\"; bgcolor=\"#f8f9fa\"; style=\"rounded\"; jsonl_entry [label=<{\"instruction\": \"总结此文本\",<br/>\"input\": \"LLMs功能强大...\",<br/>\"output\": \"LLMs提供能力...\"}>, shape=note, fillcolor=\"#96f2d7\"]; } subgraph cluster_templated_prompt { label=\"模板化提示字符串（示例）\"; bgcolor=\"#f8f9fa\"; style=\"rounded\"; prompt_string [label=<\"### 指令：<br/>总结此文本<br/><br/>### 输入：<br/>LLMs功能强大...<br/><br/>### 响应：<br/>LLMs提供能力...\">, shape=document, fillcolor=\"#ffd8a8\"]; } instruction -> jsonl_entry [label=\"组合成\"]; input_node -> jsonl_entry; output_node -> jsonl_entry; jsonl_entry -> prompt_string [label=\"格式化为\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-2406j\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据从独立组件转换为JSONL条目，再转换为适用于微调框架的格式化提示字符串。</p>\n</blockquote>\n<h3>分词 (tokenization)和特殊标记 (token)</h3>\n<p>无论采用何种格式，你准备的文本数据最终都将由LLM的分词器 (tokenizer)转换为标记。尽管原始数据结构通常不直接包含标记，但其设计应便于后续添加任何所需的特殊标记（例如，<code>&#x3C;s></code>用于序列开始，<code>&#x3C;/s></code>用于序列结束，<code>[INST]</code>和<code>[/INST]</code>用于Llama 2指令标记）。</p>\n<p>例如，如果你使用的是带有<code>role</code>和<code>content</code>字段的聊天格式，微调 (fine-tuning)脚本通常会遍历消息并应用模型特定的聊天模板，自动在轮次之间或用户/助手消息周围插入特殊标记。如果你正在创建单一的提示字符串，你可能需要在数据生成或模板逻辑中直接包含这些特殊标记。</p>\n<h3>数据划分：训练集、验证集和测试集</h3>\n<p>尽管这并非严格意义上的单个数据点格式问题，但请记住，你的整体合成数据集需要划分为训练集、验证集，有时还包括测试集。这通常通过创建单独的文件（例如，<code>train.jsonl</code>、<code>validation.jsonl</code>）或通过在每个数据条目中添加一个字段来指示其归属（尽管对于微调 (fine-tuning)而言，单独文件更常见）来完成。每个文件内部的结构与上述讨论的格式保持一致。</p>\n<h3>运用工具和库</h3>\n<p>许多流行的LLM库，例如Hugging Face的<code>datasets</code>，提供了方便的工具来加载JSONL或CSV等标准格式的数据。它们通常允许你明确定义数据集特征，并能处理大量的解析和预处理工作。使用此类库可以节省你的时间，并有助于确保微调 (fine-tuning)脚本正确加载你的数据。例如，<code>datasets</code>库可以通过一个简单命令加载JSONL文件：</p>\n<pre><code class=\"language-python\"># Python代码示例\nfrom datasets import load_dataset\n\n# 从JSONL文件加载数据集\n# 假设你的数据位于'my_synthetic_data.jsonl'\n# dataset = load_dataset('json', data_files='my_synthetic_data.jsonl')\n\n# 对于指令微调，你可能需要将其映射到特定格式\n# def format_instruction(example):\n#     if example.get('input'):\n#         return {'text': f\"Instruction: {example['instruction']}\\nInput: {example['input']}\\nOutput: {example['output']}\"}\n#     else:\n#         return {'text': f\"Instruction: {example['instruction']}\\nOutput: {example['output']}\"}\n\n# formatted_dataset = dataset.map(format_instruction)\n</code></pre>\n<p>此代码片段展示了你如何加载并转换结构化的JSONL数据，使其符合特定模型或微调脚本所需的精确字符串格式。</p>\n<p>总之，恰当地组织合成数据是微调的一个非常重要的准备步骤。尽管JSONL是一种多功能且常用的选择，但请务必参考你所选微调框架或模型的文档，了解具体的格式要求。本章后面的实践环节将为你提供一个通过为特定任务创建和组织合成数据集来应用这些原则的机会。</p>",
+  "slug": "structuring-data-fine-tuning-frameworks",
+  "updates": [],
+  "references": [
+    {
+      "id": 16179,
+      "title": "Fine-tune a large language model",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/main/en/llm_tutorial",
+      "doi": "",
+      "note": "涵盖LLM微调的通用流程，包括数据准备考量和提示词模板的使用。",
+      "order": 1,
+      "created_at": "2025-09-06T11:01:15.096534Z",
+      "updated_at": "2025-09-11T03:15:03.921627Z"
+    },
+    {
+      "id": 16180,
+      "title": "Loading a dataset",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/datasets/main/en/loading_methods",
+      "doi": "",
+      "note": "详细说明加载数据集的各种方法，包括从JSONL和CSV文件加载，这对数据摄取很重要。",
+      "order": 2,
+      "created_at": "2025-09-06T11:01:15.100814Z",
+      "updated_at": "2025-09-11T03:15:33.389207Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

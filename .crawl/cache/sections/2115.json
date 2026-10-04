@@ -1,0 +1,61 @@
+{
+  "id": 2115,
+  "title": "理解广播机制",
+  "meta_title": "PyTorch 张量广播机制说明",
+  "meta_description": "了解 PyTorch 如何自动扩展张量维度以进行逐元素操作。",
+  "content": "<p>当对张量执行逐元素操作（如加法、减法或乘法）时，它们的形状通常需要对齐 (alignment)。但是，手动调整或重复张量以匹配形状可能会很繁琐且效率低下，尤其是在处理大型数据集时。PyTorch 通过一种称为**广播（broadcasting）**的机制解决了这个问题。</p>\n<p>广播提供了一套规则，允许 PyTorch 在执行操作时自动扩展张量维度，前提是它们的形状满足特定的兼容标准。这在许多常见情况下省去了显式维度扩展的需要，使得代码更简洁，内存使用更优化，因为实际数据并未重复；只有计算行为像数据重复了一样。</p>\n<h3>广播规则</h3>\n<p>PyTorch 通过逐元素比较两个张量的形状来判断它们是否“可广播”，比较从<em>末尾</em>（最右侧）维度开始。如果满足以下条件，则两个张量可兼容进行广播（从右到左比较每个维度对）：</p>\n<ol>\n<li><strong>维度相等：</strong> 维度大小相等。</li>\n<li><strong>其中一个维度为 1：</strong> 两个维度中的一个为 1。</li>\n<li><strong>缺少维度：</strong> 一个张量不具备该维度（在此比较中，其大小被视为 1）。</li>\n</ol>\n<p>如果所有维度对都满足这些条件，则张量是可广播的。结果张量的形状将沿每个维度对取最大尺寸。如果任何维度对不满足条件（即，维度不同且都不为 1），则会引发 <code>RuntimeError</code>。</p>\n<p>我们来分析一下这个过程：</p>\n<ol>\n<li><strong>对齐 (alignment)形状：</strong> 张量根据它们的末尾维度进行对齐。如果一个张量的维度少于另一个，那么为了对齐，会在其形状前面添加大小为 1 的维度。</li>\n<li><strong>检查兼容性并确定结果形状：</strong> 从最右侧维度开始，比较尺寸：\n<ul>\n<li>如果维度相等，则结果维度大小就是该尺寸。</li>\n<li>如果一个维度为 1，则结果维度大小是另一个（较大）维度的大小。</li>\n<li>如果一个张量缺少某个维度（由于对齐），则结果维度大小是另一个张量中该维度的大小。</li>\n</ul>\n</li>\n<li><strong>执行操作：</strong> 操作的执行方式，就像是沿着给定维度大小为 1 的张量，其值被复制以匹配另一个张量中对应维度的大小一样。</li>\n</ol>\n<h3>广播示例</h3>\n<p>我们用代码示例来说明。</p>\n<h4>标量与张量</h4>\n<p>将标量（一个 0 维张量）添加到任何张量时，总是通过广播机制生效。标量会有效地扩展以匹配张量的形状。</p>\n<pre><code class=\"language-python\">import torch\n\n# 张量 A: 形状 [2, 3]\na = torch.tensor([[1, 2, 3], [4, 5, 6]])\n# 标量 B: 形状 [] (0 维度)\nb = torch.tensor(10)\n\n# 将标量添加到张量\nc = a + b\n\nprint(f\"Shape of a: {a.shape}\")\n# 张量 a 的形状: torch.Size([2, 3])\nprint(f\"Shape of b: {b.shape}\")\n# 标量 b 的形状: torch.Size([])\nprint(f\"Shape of c: {c.shape}\")\n# 张量 c 的形状: torch.Size([2, 3])\nprint(f\"Result c:\\n{c}\")\n# 结果 c:\n# tensor([[11, 12, 13],\n#         [14, 15, 16]])\n</code></pre>\n<p>这里，<code>b</code>（形状 <code>[]</code>）被广播到形状 <code>[2, 3]</code> 以匹配 <code>a</code>。</p>\n<h4>行向量 (vector)与矩阵</h4>\n<p>考虑将一个行向量（形状 <code>[3]</code>）添加到一个矩阵（形状 <code>[2, 3]</code>）中。</p>\n<pre><code class=\"language-python\"># 张量 A: 形状 [2, 3]\na = torch.tensor([[1, 2, 3],\n                  [4, 5, 6]])\n# 张量 B: 形状 [3] (为了广播，可以视为 [1, 3])\nb = torch.tensor([10, 20, 30])\n\n# 将行向量添加到矩阵\nc = a + b\n\nprint(f\"Shape of a: {a.shape}\") # torch.Size([2, 3])\nprint(f\"Shape of b: {b.shape}\") # torch.Size([3])\nprint(f\"Shape of c: {c.shape}\") # torch.Size([2, 3])\nprint(f\"Result c:\\n{c}\")\n# 结果 c:\n# tensor([[11, 22, 33],\n#         [14, 25, 36]])\n</code></pre>\n<ul>\n<li><strong>对齐 (alignment)：</strong> <code>a</code> 的形状为 <code>[2, 3]</code>。<code>b</code> 的形状为 <code>[3]</code>。右侧对齐结果如下：\n<pre><code>  张量 A:   2 x 3\n  张量 B:       3\n</code></pre>\n</li>\n<li><strong>兼容性检查：</strong>\n<ul>\n<li>末尾维度：<code>3</code> 等于 <code>3</code>。兼容。结果维度大小为 <code>3</code>。</li>\n<li>下一个维度：<code>a</code> 为 <code>2</code>，<code>b</code> 在此处没有维度（隐式大小为 <code>1</code>）。兼容。结果维度大小为 <code>2</code>。</li>\n</ul>\n</li>\n<li><strong>结果形状：</strong> <code>[2, 3]</code>。</li>\n<li><strong>扩展：</strong> 张量 <code>b</code> 被视为形状 <code>[1, 3]</code>，并且其单行沿第一个维度复制以匹配 <code>a</code> 的形状 <code>[2, 3]</code>。</li>\n</ul>\n<h4>列向量与矩阵</h4>\n<p>现在，我们来将一个列向量（形状 <code>[2, 1]</code>）添加至同一矩阵（形状 <code>[2, 3]</code>）。</p>\n<pre><code class=\"language-python\"># 张量 A: 形状 [2, 3]\na = torch.tensor([[1, 2, 3],\n                  [4, 5, 6]])\n# 张量 B: 形状 [2, 1]\nb = torch.tensor([[10], [20]])\n\n# 将列向量添加到矩阵\nc = a + b\n\nprint(f\"Shape of a: {a.shape}\") # torch.Size([2, 3])\nprint(f\"Shape of b: {b.shape}\") # torch.Size([2, 1])\nprint(f\"Shape of c: {c.shape}\") # torch.Size([2, 3])\nprint(f\"Result c:\\n{c}\")\n# 结果 c:\n# tensor([[11, 12, 13],\n#         [24, 25, 26]])\n</code></pre>\n<ul>\n<li><strong>对齐：</strong>\n<pre><code>  张量 A:   2 x 3\n  张量 B:   2 x 1\n</code></pre>\n</li>\n<li><strong>兼容性检查：</strong>\n<ul>\n<li>末尾维度：<code>a</code> 为 <code>3</code>，<code>b</code> 为 <code>1</code>。兼容（其中一个为 1）。结果维度大小为 <code>3</code>。</li>\n<li>下一个维度：<code>a</code> 为 <code>2</code>，<code>b</code> 为 <code>2</code>。兼容（相等）。结果维度大小为 <code>2</code>。</li>\n</ul>\n</li>\n<li><strong>结果形状：</strong> <code>[2, 3]</code>。</li>\n<li><strong>扩展：</strong> 张量 <code>b</code> 中大小为 <code>1</code> 的维度（列维度）通过跨列复制值来扩展，以匹配 <code>a</code> 的形状 <code>[2, 3]</code>。</li>\n</ul>\n<h4>可视化示例</h4>\n<p>我们来可视化张量 <code>A</code>（形状 <code>[3, 1]</code>）和 <code>B</code>（形状 <code>[4]</code>）的广播过程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-6nqxf5\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=record, style=filled, fillcolor=\"#e9ecef\", fontname=\"Helvetica\"];\n    edge [arrowhead=none, style=dashed, color=\"#adb5bd\"];\n\n    subgraph cluster_A {\n        label = \"张量 A (形状: [3, 1])\";\n        bgcolor=\"#d0bfff\";\n        A [label=\"{ {A1} | {A2} | {A3} }\"];\n    }\n\n    subgraph cluster_B {\n        label = \"张量 B (形状: [4])\";\n        bgcolor=\"#a5d8ff\";\n        B [label=\"{ B1 | B2 | B3 | B4 }\"];\n    }\n\n    subgraph cluster_Broadcast {\n        label = \"广播 A + B → 结果 (形状: [3, 4])\";\n        bgcolor=\"#96f2d7\";\n\n        A_expanded [label=\"{ {A1, A1, A1, A1} | {A2, A2, A2, A2} | {A3, A3, A3, A3} }\", fillcolor=\"#eebefa\"];\n        B_expanded [label=\"{ {B1, B2, B3, B4} | {B1, B2, B3, B4} | {B1, B2, B3, B4} }\", fillcolor=\"#bac8ff\"];\n        Result [label=\"{ {A1+B1, A1+B2, A1+B3, A1+B4} | {A2+B1, A2+B2, A2+B3, A2+B4} | {A3+B1, A3+B2, A3+B3, A3+B4} }\", fillcolor=\"#b2f2bb\", labeljust=\"c\", labelloc=\"t\"];\n    }\n\n     A -> A_expanded [label=\"扩展维度 1\\n(大小 1 → 4)\", fontsize=10, color=\"#ae3ec9\"];\n     B -> B_expanded [label=\"添加维度 0 并扩展\\n(大小 [4] → [1,4] → [3,4])\", fontsize=10, color=\"#4263eb\"];\n     {A_expanded, B_expanded} -> Result [style=solid, arrowhead=open, label=\"+\", color=\"#37b24d\"];\n\n     // 用于对齐的不可见节点/边\n     node [style=invis]; edge [style=invis];\n     A -> B [style=invis]; B -> A_expanded [style=invis];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-6nqxf5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>张量 A (形状 [3, 1]) 和张量 B (形状 [4]) 进行广播加法的示意图。张量 A 的第二个维度（大小 1）扩展到 4。张量 B 获得一个大小为 1 的前置维度（变为形状 [1, 4]），然后扩展到大小 3。两者都有效地变为形状 [3, 4] 以进行逐元素加法。</p>\n</blockquote>\n<h4>不兼容的形状</h4>\n<p>如果非匹配维度不为 1，则广播会失败。</p>\n<pre><code class=\"language-python\"># 张量 A: 形状 [2, 3]\na = torch.tensor([[1, 2, 3], [4, 5, 6]])\n# 张量 B: 形状 [2]\nb = torch.tensor([10, 20])\n\ntry:\n    c = a + b\nexcept RuntimeError as e:\n    print(f\"Error: {e}\")\n# 错误: 张量 a (3) 的大小必须与张量 b (2) 在非单例维度 1 处匹配\n</code></pre>\n<ul>\n<li><strong>对齐：</strong>\n<pre><code>  张量 A:   2 x 3\n  张量 B:       2\n</code></pre>\n</li>\n<li><strong>兼容性检查：</strong>\n<ul>\n<li>末尾维度：<code>a</code> 为 <code>3</code>，<code>b</code> 为 <code>2</code>。两者都不为 1。<strong>不兼容。</strong> 操作失败。</li>\n</ul>\n</li>\n</ul>\n<h3>常见用途</h3>\n<p>广播在神经网络 (neural network)中经常使用：</p>\n<ul>\n<li><strong>添加偏置 (bias)：</strong> 将偏置向量 (vector)（形状 <code>[output_features]</code>）添加到线性层的输出（形状 <code>[batch_size, output_features]</code>）。</li>\n<li><strong>归一化 (normalization)：</strong> 从一批数据中减去均值（标量或按特征向量）并除以标准差（标量或按特征向量）。</li>\n<li><strong>应用掩码：</strong> 将数据与可能具有较少维度的布尔掩码进行逐元素乘法。</li>\n</ul>\n<p>理解广播对于编写简洁高效的 PyTorch 代码非常重要。它允许你自然地对不同形状的张量执行操作，只要它们遵守兼容性规则，从而简化了许多常见的数据处理和建模任务。</p>",
+  "slug": "understanding-broadcasting",
+  "updates": [],
+  "references": [
+    {
+      "id": 5664,
+      "title": "Broadcasting Semantics",
+      "author": "PyTorch Authors",
+      "year": "2021",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/notes/broadcasting.html",
+      "doi": "",
+      "note": "解释 PyTorch 在张量运算中广播规则的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T01:15:38.779489Z",
+      "updated_at": "2025-09-07T20:28:56.857882Z"
+    },
+    {
+      "id": 5665,
+      "title": "Broadcasting",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.broadcasting.html",
+      "doi": "",
+      "note": "定义了数组操作的基本广播规则，PyTorch 紧密遵循这些规则。",
+      "order": 2,
+      "created_at": "2025-09-05T01:15:38.818074Z",
+      "updated_at": "2025-09-07T20:28:57.706044Z"
+    },
+    {
+      "id": 5666,
+      "title": "2.1. NDArray (Tensor) - Operations",
+      "author": "Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola",
+      "year": "2023",
+      "publisher": "Cambridge University Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://d2l.ai/chapter_introduction/ndarray.html",
+      "doi": "",
+      "note": "一本广泛使用的开源深度学习教科书中的章节，涵盖张量运算，包括广播，并提供了 PyTorch 示例。",
+      "order": 3,
+      "created_at": "2025-09-05T01:15:38.823856Z",
+      "updated_at": "2025-09-07T20:29:00.343757Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3947,
+  "title": "常见数据质量问题来源",
+  "meta_title": "不良数据源于何处？",
+  "meta_description": "识别数据质量问题的常见原因，例如输入错误或集成问题。",
+  "content": "<p>数据很少以原始、即用状态呈现。就像食材在烹饪前需要准备一样，数据在分析前也需要清洗。理解数据变得混乱的<em>原因</em>是学习如何解决问题的第一步。缺陷可能在各个阶段悄悄出现，从初始收集到存储和处理。我们来看看这些数据质量问题的一些常见源头。</p>\n<h3>人工数据输入错误</h3>\n<p>人类在许多情况下参与数据的收集和输入，而人会犯错。这些通常是脏数据最常见和多样的来源：</p>\n<ul>\n<li><strong>打字错误：</strong> 文本字段中简单的拼写错误（例如将 <code>New York</code> 写成 <code>New Yrok</code>），或数字中颠倒的数字（例如将 <code>123</code> 写成 <code>132</code>）。</li>\n<li><strong>格式不一致：</strong> 以不同方式输入日期（<code>01/15/2023</code>、<code>15-Jan-2023</code>、<code>2023/01/15</code>），使用不同单位但未注明（英里 vs. 公里），或大小写不一致（<code>california</code>、<code>California</code>、<code>CA</code>）。</li>\n<li><strong>缩写/标签不一致：</strong> 对同一事物使用不同术语，例如 <code>USA</code>、<code>U.S.A.</code>、<code>United States</code>，或 <code>Female</code>、<code>F</code>、<code>Woman</code>。</li>\n<li><strong>缺失值输入不正确：</strong> 有时，用户不会将字段真正留空（系统通常表示为 <code>NULL</code> 或 <code>NaN</code>），而是输入 <code>N/A</code>、<code>Missing</code>、<code>?</code>、<code>999</code>，甚至是空格等占位符。从系统角度看，这些并非真正缺失，但它们表示需要特别处理的缺失信息。</li>\n<li><strong>转录错误：</strong> 从一个来源（例如纸质表格）向另一个来源（例如电子表格）复制数据时犯的错误。</li>\n</ul>\n<h3>数据集成问题</h3>\n<p>组织经常将来自多个来源（例如不同的数据库、部门或外部合作伙伴）的数据结合起来。这种集成过程会带来一些问题：</p>\n<ul>\n<li><strong>模式不匹配：</strong> 不同的来源可能使用不同的列名（<code>CustomerID</code> 与 <code>CustID</code>）、数据类型（数字与字符串）或结构来存储相似的信息。合并它们需要仔细的映射和转换。</li>\n<li><strong>冲突的值：</strong> 同一实体（例如客户）在不同来源系统中可能具有不同信息（例如一个系统中的旧地址和另一个系统中的新地址）。决定哪个值正确（或如何同时表示两者）是一个难题。</li>\n<li><strong>重复记录：</strong> 如果所有系统之间没有可靠的唯一标识符，合并数据集很容易引入重复条目。例如，基于姓名合并客户列表可能会导致同名人员的条目重复。</li>\n</ul>\n<h3>系统和软件错误</h3>\n<p>自动化系统也可能产生数据问题：</p>\n<ul>\n<li><strong>软件缺陷：</strong> 用于数据收集、转换或存储的代码中的错误可能损坏数据或记录不正确的值。例如，有缺陷的脚本可能会截断文本字段或错误计算值。</li>\n<li><strong>数据传输错误：</strong> 数据在系统之间传输时可能会损坏，尤其是在不稳定的网络上。这可能表现为乱码文本或不正确的数值。</li>\n<li><strong>传感器故障：</strong> 在物联网或科学研究等方面，物理传感器可能由于校准问题、环境因素或硬件缺陷而失效或提供不准确的读数。</li>\n<li><strong>字符编码问题：</strong> 不同的系统可能使用不同的标准（例如 UTF-8、ASCII、Latin-1）来表示字符。在没有正确处理的情况下混合编码可能导致文本无法读取（例如，<code>\\u00e2\\u20ac\\u0153</code> 而不是引号）。</li>\n</ul>\n<h3>数据衰减</h3>\n<p>\"信息会随着时间推移而过时。这对于涉及人员、组织或状态的数据尤为重要：\"</p>\n<ul>\n<li><strong>属性变化：</strong> 人们搬家、换工作、更改电话号码或电子邮件地址。企业更改名称或地点。产品停产。以前收集的数据可能不再反映当前实际情况。</li>\n<li><strong>相关性改变：</strong> 某些数据点的重要性和含义可能会改变。例如，随着客户偏好演变，历史购买数据对于预测未来行为的相关性可能会降低。</li>\n</ul>\n<h3>缺少明确标准</h3>\n<p>如果在数据收集开始<em>之前</em>没有建立明确的指导方针，那么不一致几乎是必然的：</p>\n<ul>\n<li><strong>未定义数据字典：</strong> 没有中心参考来定义每个字段的含义、应采用的格式、允许的值（例如，对于分类数据），或如何指示缺失值。</li>\n<li><strong>单位不一致：</strong> 不同的团队或系统可能使用不同单位（例如磅与千克，华氏度与摄氏度）记录测量值，而未明确说明所用单位。</li>\n<li><strong>分类标签各异：</strong> 对同一类别可能使用不同的代码或文本字符串（例如，性别使用 <code>1</code>、<code>M</code>、<code>Male</code>；州使用 <code>CA</code>、<code>Calif.</code>、<code>California</code>）。</li>\n</ul>\n<p>识别这些潜在来源有助于您预判在新数据集中可能遇到的问题类型。这种认知指导您初步查看数据，并告知您需要应用哪些具体的清洗技术，我们将在后续章节中讲解这些技术。</p>",
+  "slug": "sources-dirty-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 10799,
+      "title": "Data Quality: Concepts, Methodologies and Techniques",
+      "author": "Yang W. Lee, Stuart Madnick, Richard Y. Wang, and Harry S. Woodside",
+      "year": "2006",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/data-quality-1",
+      "doi": "",
+      "note": "这本基础性书籍全面讨论了数据质量维度和常见问题，直接适用于理解脏数据的来源。",
+      "order": 1,
+      "created_at": "2025-09-05T06:54:04.664085Z",
+      "updated_at": "2025-09-08T13:01:00.381419Z"
+    },
+    {
+      "id": 10801,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本标准教材，在数据库管理系统的更广阔背景下涵盖了数据完整性、模式设计和数据质量问题，提供了基础知识。",
+      "order": 3,
+      "created_at": "2025-09-05T06:54:04.672774Z",
+      "updated_at": "2025-09-08T13:00:56.100814Z"
+    },
+    {
+      "id": 10802,
+      "title": "Data Cleaning: A Practical Approach",
+      "author": "R. K. Agrawal",
+      "year": "2023",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Data+Cleaning%3A+A+Practical+Approach-p-9781119904250",
+      "doi": "",
+      "note": "本书提供了有关数据清洗流程的最新实践见解，包括本节中讨论的各种数据质量问题的识别和解决。",
+      "order": 4,
+      "created_at": "2025-09-05T06:54:04.677985Z",
+      "updated_at": "2025-09-08T13:01:07.522672Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7308,
+  "title": "练习：部署与检查 Pod",
+  "meta_title": "练习：Kubernetes Pod 部署",
+  "meta_description": "一个实操练习课程，你将编写 Pod 清单，将其部署到集群，并使用 kubectl 检查其状态和日志。",
+  "content": "<p>你将在本地 Kubernetes 集群中创建、部署、检查并管理一个 Pod，应用有效的 Pod 管理方法。你将直接使用 <code>kubectl</code> 和 YAML 清单，以巩固对 Pod 生命周期及其运维管理的理解。</p>\n<h3>目标</h3>\n<p>完成此练习后，你将能够：</p>\n<ul>\n<li>为单容器应用编写基础的 Pod 清单。</li>\n<li>使用 <code>kubectl</code> 将 Pod 部署到集群。</li>\n<li>检查 Pod 的状态、事件和日志。</li>\n<li>从本地机器访问 Pod 内运行的应用程序。</li>\n<li>修改清单以包含健康检查探针。</li>\n<li>清理创建的资源。</li>\n</ul>\n<p>在开始之前，请确保你有一个正在运行的本地 Kubernetes 集群，并且已按照第 1 章所述配置好 <code>kubectl</code> 以便与其交互。</p>\n<h3>第 1 步：编写并部署 Pod 清单</h3>\n<p>我们的第一个任务是创建一个运行简单 NGINX Web 服务器的 Pod。这需要定义一个指定预期状态的清单文件。</p>\n<p>创建一个名为 <code>nginx-pod.yaml</code> 的新文件，并添加以下内容：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Pod\nmetadata:\n  name: nginx-server\n  labels:\n    app: nginx\nspec:\n  containers:\n  - name: web-server\n    image: nginx:1.25\n    ports:\n    - containerPort: 80\n</code></pre>\n<p>让我们简要查看此清单中的字段：</p>\n<ul>\n<li><code>apiVersion: v1</code>：指定 Pod 对象的 API 版本，属于核心 API 组。</li>\n<li><code>kind: Pod</code>：声明我们正在定义一个 Pod 对象。</li>\n<li><code>metadata</code>：包含有助于唯一标识对象的数据，包括其 <code>name</code>（名称）和描述性的 <code>labels</code>（标签）。</li>\n<li><code>spec</code>：定义 Pod 的预期状态。</li>\n<li><code>containers</code>：要在 Pod 中运行的一个或多个容器的列表。\n<ul>\n<li><code>name</code>：Pod 内容器的名称。</li>\n<li><code>image</code>：要从镜像仓库拉取的容器镜像。</li>\n<li><code>ports</code>：要从容器暴露的网络端口列表。<code>containerPort: 80</code> 告知 Kubernetes 该 NGINX 容器正在监听 80 端口。</li>\n</ul>\n</li>\n</ul>\n<p>现在，使用 <code>kubectl</code> 将此清单应用到你的集群：</p>\n<pre><code class=\"language-sh\">kubectl apply -f nginx-pod.yaml\n</code></pre>\n<p>你应该会看到一条确认消息：<code>pod/nginx-server created</code>。此命令指示 Kubernetes 读取清单并创建对象，努力使集群状态与你声明的状态相匹配。</p>\n<h3>第 2 步：检查 Pod</h3>\n<p>应用清单后，Kubernetes 控制平面会开始调度并运行 Pod。我们可以使用几个 <code>kubectl</code> 命令来观察这个过程。</p>\n<p>首先，检查 Pod 的状态。在拉取镜像时，状态可能需要一点时间从 <code>Pending</code>（待定）或 <code>ContainerCreating</code>（正在创建容器）转变为 <code>Running</code>（正在运行）。</p>\n<pre><code class=\"language-sh\">kubectl get pod nginx-server\n</code></pre>\n<p>输出结果将类似于：</p>\n<pre><code>NAME           READY   STATUS    RESTARTS   AGE\nnginx-server   1/1     Running   0          30s\n</code></pre>\n<p><code>STATUS</code> 列显示 Pod 正在运行，<code>READY</code> 列表示 Pod 中的 <code>1/1</code> 个容器已准备好处理流量。</p>\n<p>要查看更详细的信息，请使用 <code>describe</code> 命令。这是排查故障的利器。</p>\n<pre><code class=\"language-sh\">kubectl describe pod nginx-server\n</code></pre>\n<p>输出内容较多，但提供了丰富的信息。请关注以下部分：</p>\n<ul>\n<li><strong>IP：</strong> 在集群网络内分配给 Pod 的内部 IP 地址。</li>\n<li><strong>Containers：</strong> 有关容器状态、镜像 ID 和端口映射的详细信息。</li>\n<li><strong>Events：</strong> 调度器和 kubelet 针对此 Pod 采取的操作的时间线记录。如果 Pod 启动失败，原因通常可以在这里找到。</li>\n</ul>\n<pre><code>...\nEvents:\n  Type    Reason     Age   From               Message\n  ----    ------     ----  ----               -------\n  Normal  Scheduled  1m    default-scheduler  Successfully assigned default/nginx-server to minikube\n  Normal  Pulling    1m    kubelet            Pulling image \"nginx:1.25\"\n  Normal  Pulled     50s   kubelet            Successfully pulled image \"nginx:1.25\" in 10s\n  Normal  Created    50s   kubelet            Created container web-server\n  Normal  Started    50s   kubelet            Started container web-server\n</code></pre>\n<h3>第 3 步：与运行中的应用程序交互</h3>\n<p>我们的 NGINX 容器正在 Pod 内部运行，但只能在集群的专用网络内访问。为了从本地机器与其交互，我们可以使用 <code>kubectl port-forward</code>。此命令会在你的本地机器和 Pod 之间创建一个安全隧道。</p>\n<p>打开一个新的终端窗口并运行以下命令：</p>\n<pre><code class=\"language-sh\">kubectl port-forward pod/nginx-server 8080:80\n</code></pre>\n<p>此命令将流量从本地端口 <code>8080</code> 转发到 Pod 的容器端口 <code>80</code>。只要隧道保持开启，该命令就会一直处于活动状态。</p>\n<p>现在，你可以访问 NGINX 欢迎页面。使用浏览器访问 <code>http://localhost:8080</code> 或在另一个终端中使用 <code>curl</code>：</p>\n<pre><code class=\"language-sh\">curl http://localhost:8080\n</code></pre>\n<p>你应该能看到标准的 NGINX HTML 响应，确认你的应用正在运行且可访问。</p>\n<p>你还可以查看容器生成的日志。回到第一个终端（未运行端口转发的那个）并执行：</p>\n<pre><code class=\"language-sh\">kubectl logs nginx-server\n</code></pre>\n<p>这将显示 NGINX 访问日志，包括你刚才用 <code>curl</code> 发出的请求。要在容器内使用交互式 shell，请使用 <code>exec</code>：</p>\n<pre><code class=\"language-sh\">kubectl exec -it nginx-server -- /bin/bash\n</code></pre>\n<p>这会为你提供 <code>web-server</code> 容器内的 root shell。在这里，你可以检查文件系统和正在运行的进程。输入 <code>exit</code> 返回本地 shell。</p>\n<h3>第 4 步：添加存活和就绪探针</h3>\n<p>运行中的应用程序并不总是健康的。让我们修改清单以包含健康探针，让 Kubernetes 能够自动管理 Pod 的健康状态。</p>\n<p>使用以下 <code>livenessProbe</code>（存活探针）和 <code>readinessProbe</code>（就绪探针）更新 <code>nginx-pod.yaml</code>：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: Pod\nmetadata:\n  name: nginx-server\n  labels:\n    app: nginx\nspec:\n  containers:\n  - name: web-server\n    image: nginx:1.25\n    ports:\n    - containerPort: 80\n    readinessProbe:\n      httpGet:\n        path: /\n        port: 80\n      initialDelaySeconds: 5\n      periodSeconds: 10\n    livenessProbe:\n      httpGet:\n        path: /\n        port: 80\n      initialDelaySeconds: 15\n      periodSeconds: 20\n</code></pre>\n<p>以下是我们添加的内容：</p>\n<ul>\n<li><strong>readinessProbe：</strong> kubelet 将向端口 80 上的 <code>/</code> 发送 HTTP GET 请求。如果收到成功代码，则 Pod 被标记 (token)为 <code>Ready</code>（就绪）。在就绪探针成功之前，Kubernetes 不会将流量发送到该 Pod。</li>\n<li><strong>livenessProbe：</strong> 如果此探针失败，kubelet 将杀死容器并根据 Pod 的重启策略将其重启。这有助于从死锁的应用中恢复。</li>\n</ul>\n<p>保存文件并重新应用。Kubernetes 能够使用新配置更新现有对象。</p>\n<pre><code class=\"language-sh\">kubectl apply -f nginx-pod.yaml\n</code></pre>\n<p>你会看到 <code>pod/nginx-server configured</code>。再次描述 Pod 以查看新的探针定义：</p>\n<pre><code class=\"language-sh\">kubectl describe pod nginx-server\n</code></pre>\n<p>注意容器描述中新增的 <code>Liveness</code> 和 <code>Readiness</code> 部分。Pod 的状态也会在 <code>kubectl get pod</code> 中反映就绪状态。</p>\n<h3>第 5 步：清理</h3>\n<p>为了结束本次练习，我们将从集群中删除该 Pod。你可以按名称进行命令式删除，也可以使用创建时使用的文件进行声明式删除。通常首选使用文件，因为这能确保你删除的内容与定义的内容完全一致。</p>\n<pre><code class=\"language-sh\">kubectl delete -f nginx-pod.yaml\n</code></pre>\n<p>输出 <code>pod \"nginx-server\" deleted</code> 确认资源已被移除。你可以通过运行 <code>kubectl get pods</code> 来验证。到这里，我们关于创建和检查基础 Kubernetes 对象的实操练习就完成了。</p>",
+  "slug": "practice-deploying-inspecting-pods",
+  "updates": [],
+  "references": [
+    {
+      "id": 20086,
+      "title": "Pods",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/workloads/pods/",
+      "doi": "",
+      "note": "Kubernetes Pod 的基础指南，涵盖其作用、生命周期和基本配置。",
+      "order": 1,
+      "created_at": "2025-09-06T13:19:11.318420Z",
+      "updated_at": "2025-09-10T05:25:07.015621Z"
+    },
+    {
+      "id": 20087,
+      "title": "kubectl Overview",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/reference/kubectl/overview/",
+      "doi": "",
+      "note": "`kubectl` 的官方参考资料，详细介绍了其命令以及如何与 Kubernetes 集群交互。",
+      "order": 2,
+      "created_at": "2025-09-06T13:19:11.324539Z",
+      "updated_at": "2025-09-10T05:25:05.342260Z"
+    },
+    {
+      "id": 20088,
+      "title": "Configure Liveness, Readiness and Startup Probes",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/",
+      "doi": "",
+      "note": "关于如何在 Kubernetes Pod 中的容器内实现和配置健康探针的实用指南。",
+      "order": 3,
+      "created_at": "2025-09-06T13:19:11.327581Z",
+      "updated_at": "2025-09-10T05:25:12.023655Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

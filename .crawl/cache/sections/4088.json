@@ -1,0 +1,45 @@
+{
+  "id": 4088,
+  "title": "使用 MLflow 用户界面",
+  "meta_title": "使用 MLflow 用户界面进行分析",
+  "meta_description": "浏览 MLflow 网页界面，查看、比较和分析实验结果。",
+  "content": "<p>MLflow 用户界面（UI）提供了一个功能强大的基于网页的控制面板，用于可视化和分析训练脚本使用 MLflow 追踪 API 记录的实验信息。该控制面板支持实验运行的交互式查看、比较和管理，为通过 API 进行的程序化访问提供了用户友好的替代方案。</p>\n<h3>启动 MLflow 用户界面</h3>\n<p>要启动用户界面，请在您的终端中进入项目根目录（如果您使用默认的本地文件存储，也可以是包含 <code>mlruns</code> 文件夹的任何目录），然后运行以下命令：</p>\n<pre><code class=\"language-bash\">mlflow ui\n</code></pre>\n<p>默认情况下，此命令会启动一个本地网页服务器，通常可以通过 <code>http://127.0.0.1:5000</code> 访问。MLflow 将在您的终端中打印准确的 URL。</p>\n<p>如果您在记录运行时，将 MLflow 配置为使用不同的后端存储（例如数据库或远程追踪服务器），您需要将用户界面指向同一位置。请使用 <code>--backend-store-uri</code> 标志：</p>\n<pre><code class=\"language-bash\"># PostgreSQL 后端的例子\nmlflow ui --backend-store-uri postgresql://user:password@host:port/database\n\n# 远程追踪服务器的例子\nmlflow ui --backend-store-uri http://your-mlflow-server.com:5000\n</code></pre>\n<p>在网页浏览器中打开提供的 URL 即可访问该界面。</p>\n<h3>浏览界面</h3>\n<p>MLflow 用户界面以简洁有序的方式展示您的实验和运行。</p>\n<h4>实验视图</h4>\n<p>默认视图通常在左侧导航面板中列出所有实验。实验将相关的运行分组，例如针对特定任务训练模型的不同尝试。点击实验名称会过滤主视图，使其只显示与该实验关联的运行。如果您在记录时未指定实验，则会自动创建“Default”（默认）实验。</p>\n<h4>运行列表</h4>\n<p>选中一个实验后，主区域会显示一个列出单个运行的表格。每一行代表一次对您追踪的脚本 (<code>mlflow.start_run()</code>) 的独立执行。以下重要信息会呈现在各列中：</p>\n<ul>\n<li><strong>开始时间：</strong> 运行开始的时间。</li>\n<li><strong>持续时间：</strong> 运行花费的时间。</li>\n<li><strong>运行名称：</strong> 一个可选的、易于阅读的名称（如果未指定，通常会自动生成）。</li>\n<li><strong>源：</strong> 启动运行的入口脚本或笔记本。</li>\n<li><strong>版本：</strong> 与运行关联的 Git 提交哈希值（如果在 Git 仓库中运行）。</li>\n<li><strong>参数 (parameter)：</strong> 每项记录的超参数 (hyperparameter)的列（例如 <code>learning_rate</code>、<code>n_estimators</code>）。</li>\n<li><strong>指标：</strong> 每项记录的指标的列（例如 <code>accuracy</code>、<code>rmse</code>、<code>val_loss</code>）。您通常会在此处看到最终记录的值。</li>\n</ul>\n<p>您可以自定义显示的列，按任意列排序（例如，按 <code>accuracy</code> 降序排序以找到最佳运行），以及使用搜索框根据参数值或指标得分来筛选运行。</p>\n<h4>运行详情页</h4>\n<p>点击特定运行的开始时间或名称，即可进入其详情页。此页面提供对该次运行所有记录内容的完整查看：</p>\n<ul>\n<li><strong>运行 ID：</strong> 运行的唯一标识符。</li>\n<li><strong>状态：</strong> 指示运行是已完成、失败还是仍在进行中。</li>\n<li><strong>参数：</strong> 一个专用部分，列出了所有已记录的超参数及其值。</li>\n<li><strong>指标：</strong> 一个显示已记录指标的部分。对于多次记录的指标（例如，每个周期的损失），MLflow 通常会显示交互式图表，展示指标随步骤或时间的变化历史。</li>\n<li><strong>标签：</strong> 与运行关联的任何自定义标签。标签对于添加定性信息或标记 (token)很有用。</li>\n<li><strong>工件：</strong> 所有已记录工件的文件浏览器视图。您将在此处找到保存的模型、输出文件、图像、图表等。</li>\n</ul>\n<h3>查看运行详情</h3>\n<p>运行详情页是您查看单个实验尝试具体信息的地方。</p>\n<ul>\n<li><strong>参数 (parameter)：</strong> 快速核实特定运行使用的确切配置。</li>\n<li><strong>指标：</strong> 分析性能结果。如果您在训练步骤中记录了指标（例如，在每个周期后记录验证准确率），您可以直接在用户界面中将训练进度可视化。将鼠标悬停在图表上通常会显示特定点的精确值。</li>\n<li><strong>工件：</strong> 这对于访问运行的输出特别有用。您可以：\n<ul>\n<li>下载已保存的模型文件（例如 <code>.pkl</code>、<code>.h5</code>、<code>saved_model</code> 目录）。</li>\n<li>直接在浏览器中查看已记录的图像或图表（例如混淆矩阵、特征重要性图）。</li>\n<li>下载运行期间记录的任何其他文件，例如处理后的数据样本或评估报告。</li>\n</ul>\n</li>\n</ul>\n<h3>比较实验运行</h3>\n<p>MLflow 用户界面最有价值的功能之一是能够并排比较多个运行。</p>\n<ol>\n<li>返回实验的运行列表视图。</li>\n<li>选择您想要比较的运行旁边的复选框。</li>\n<li>点击出现的“比较”按钮。</li>\n</ol>\n<p>这将打开一个专用的比较视图：</p>\n<ul>\n<li><strong>参数 (parameter)比较：</strong> 显示所选运行的不同参数值，并突出显示差异。</li>\n<li><strong>指标比较：</strong> 显示每次运行已记录指标的值，从而方便查看哪次运行根据特定标准表现最佳。</li>\n<li><strong>可视化工具：</strong>\n<ul>\n<li><strong>散点图：</strong> 有助于将参数与指标（例如 <code>learning_rate</code> 与 <code>accuracy</code>）之间或两个指标之间的关系可视化。</li>\n<li><strong>等高线图：</strong> 有助于将两个参数与一个指标之间的关系可视化。</li>\n<li><strong>平行坐标图：</strong> 非常适用于可视化多个超参数 (hyperparameter)的组合如何影响众多运行的产出指标。</li>\n</ul>\n</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-q9davi\" \n              data-plot-definition='{\"data\":[{\"type\":\"scatter\",\"x\":[0.01,0.001,0.1,0.01,0.001],\"y\":[0.85,0.91,0.72,0.88,0.90],\"mode\":\"markers\",\"marker\":{\"color\":[\"#1f77b4\",\"#ff7f0e\",\"#2ca02c\",\"#d62728\",\"#9467bd\"],\"size\":12},\"name\":\"运行\"},{\"type\":\"scatter\",\"x\":[null],\"y\":[null],\"xaxis\":\"x\",\"yaxis\":\"y\",\"showlegend\":false,\"hoverinfo\":\"none\"}],\"layout\":{\"title\":\"准确率与学习率对比\",\"xaxis\":{\"title\":\"学习率\",\"type\":\"log\",\"autorange\":true},\"yaxis\":{\"title\":\"验证准确率\",\"range\":[0.7,0.95],\"autorange\":false},\"showlegend\":false,\"margin\":{\"l\":60,\"r\":20,\"t\":40,\"b\":50},\"hovermode\":\"closest\"}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-q9davi\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>散点图比较了五次不同实验运行的验证准确率与学习率。</p>\n</blockquote>\n<p>这些比较工具通过视觉化地整理多次试验的结果，大大加快了超参数调整和模型选择的速度。</p>\n<h3>搜索和筛选</h3>\n<p>对于有大量运行的实验，搜索功能是不可或缺的。您可以根据以下内容构建查询：</p>\n<ul>\n<li><strong>指标：</strong> <code>metrics.accuracy > 0.9</code></li>\n<li><strong>参数 (parameter)：</strong> <code>params.learning_rate = '0.01'</code> 或 <code>params.optimizer = 'Adam'</code></li>\n<li><strong>标签：</strong> <code>tags.data_version = 'v2'</code></li>\n<li><strong>属性：</strong> <code>attributes.status = 'FINISHED'</code></li>\n</ul>\n<p>使用 <code>AND</code> 组合这些条件以创建特定的筛选器，从而帮助您快速找到符合复杂条件的运行。</p>\n<p>MLflow 用户界面将实验追踪从一种被动的日志记录活动，转变为一个主动的分析和决策制定工具。通过提供直观的方法来查看、排序、筛选、比较和检查单次运行，它帮助您理解模型的行为，找到最佳配置，并最终更高效地构建更好的机器学习 (machine learning)模型。</p>",
+  "slug": "using-mlflow-ui",
+  "updates": [],
+  "references": [
+    {
+      "id": 8228,
+      "title": "MLflow UI",
+      "author": "MLflow Project",
+      "year": "2024",
+      "publisher": "MLflow Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBgM3sBpTY_AeJ07dcuQ7jCsphmHvKGVpsaXXiMqFLHKRQxYM77IVep8wwnOjZa-VoqrLuGCgyx8YXP6NV-ErYiDYE2wDHCSWXIr-in5TliRTiLeKTu6rOTdfabsTW64Ck9BCJd0odHRfA5wE3jzA5eounSVHjlj7tpUCNc13CCM8W24CPy2bK828KgIYA17BmOxhRLuDRkpGevQoKCWHNTNNJO_KSEUXgmbYn",
+      "doi": "",
+      "note": "详细介绍了MLflow用户界面的功能和操作，用于记录、比较和检查实验运行。",
+      "order": 1,
+      "created_at": "2025-09-05T01:52:49.404341Z",
+      "updated_at": "2025-09-08T14:18:40.519831Z"
+    },
+    {
+      "id": 8230,
+      "title": "Practical MLOps: Operationalizing Machine Learning Models into Production",
+      "author": "Krishna Kumar",
+      "year": "2022",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/practical-mlops/9781801815822",
+      "doi": "",
+      "note": "MLOps的实用指南，包含实验跟踪和模型管理的原则与工具，为MLflow UI提供背景信息。",
+      "order": 3,
+      "created_at": "2025-09-05T01:52:49.413298Z",
+      "updated_at": "2025-09-08T14:18:37.023634Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

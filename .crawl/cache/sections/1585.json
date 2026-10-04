@@ -1,0 +1,61 @@
+{
+  "id": 1585,
+  "title": "处理 NULL 值",
+  "meta_title": "如何在 SQL WHERE 子句中处理 NULL 值",
+  "meta_description": "学习如何使用 IS NULL 和 IS NOT NULL 来特别筛选或排除 NULL 值。",
+  "content": "<p>数据常常包含不完整的信息。有时，某行中特定列的值可能缺失、未知或不适用。SQL 使用一个特殊的标记 (token) <code>NULL</code> 来表示这种值的缺失。<code>NULL</code> 不同于数字的零 (0)、文本的空字符串 ('') 或任何其他特定值。<code>NULL</code> 特指“没有值”。</p>\n<p>在使用 <code>WHERE</code> 子句筛选数据时，您可能自然地尝试使用标准比较运算符如 <code>=</code> 或 <code>&#x3C;></code> (或 <code>!=</code>) 来查找包含或不包含 <code>NULL</code> 值的行。例如，您可能会尝试：</p>\n<pre><code class=\"language-sql\">-- 这不会按预期工作\nSELECT product_name, price\nFROM products\nWHERE price = NULL;\n</code></pre>\n<p>或者可能：</p>\n<pre><code class=\"language-sql\">-- 这也不会按预期工作\nSELECT product_name, price\nFROM products\nWHERE price &#x3C;> NULL;\n</code></pre>\n<p>令人惊讶的是，这两个查询通常都不会返回您期望的行。这是因为 <code>NULL</code> 表示一种未知状态。将任何东西与一个未知值进行比较，甚至是另一个未知值，结果都是 <code>UNKNOWN</code>。在 <code>WHERE</code> 子句中，计算结果为 <code>UNKNOWN</code> 的条件被视为 <code>FALSE</code>，这意味着这些行<em>不</em>会包含在结果集中。</p>\n<p>那么，如何正确筛选值缺失或存在的行呢？SQL 为此提供了特定的运算符：<code>IS NULL</code> 和 <code>IS NOT NULL</code>。</p>\n<h3>使用 IS NULL 查找缺失值</h3>\n<p>要选择特定列包含 <code>NULL</code> 值的行，您可以使用 <code>IS NULL</code> 运算符。</p>\n<p><strong>语法：</strong></p>\n<pre><code class=\"language-sql\">SELECT column1, column2, ...\nFROM table_name\nWHERE column_name IS NULL;\n</code></pre>\n<p><strong>例子：</strong></p>\n<p>假设我们有一个 <code>customers</code> 表，并且有些客户没有提供他们的电子邮件地址。要找到这些客户，您会这样写：</p>\n<pre><code class=\"language-sql\">SELECT customer_id, first_name, last_name\nFROM customers\nWHERE email IS NULL;\n</code></pre>\n<p>这个查询将返回 <code>customers</code> 表中所有 <code>email</code> 列明确包含 <code>NULL</code> 标记 (token)的行，这表明电子邮件地址缺失。</p>\n<h3>使用 IS NOT NULL 查找存在的值</h3>\n<p>相反，要选择特定列<em>确实</em>包含值（即，它<em>不</em>是 <code>NULL</code>）的行，您可以使用 <code>IS NOT NULL</code> 运算符。</p>\n<p><strong>语法：</strong></p>\n<pre><code class=\"language-sql\">SELECT column1, column2, ...\nFROM table_name\nWHERE column_name IS NOT NULL;\n</code></pre>\n<p><strong>例子：</strong></p>\n<p>如果您只想获取<em>已</em>提供电子邮件地址的客户，您会使用：</p>\n<pre><code class=\"language-sql\">SELECT customer_id, first_name, last_name, email\nFROM customers\nWHERE email IS NOT NULL;\n</code></pre>\n<p>这个查询只返回 <code>customers</code> 表中 <code>email</code> 列有值存在的行，不包括那些标记 (token)为 <code>NULL</code> 的行。</p>\n<h3>结合 NULL 检查与其他条件</h3>\n<p>您可以使用 <code>AND</code> 和 <code>OR</code> 轻松地将 <code>IS NULL</code> 和 <code>IS NOT NULL</code> 与其他筛选条件结合起来。</p>\n<p><strong>例子：</strong></p>\n<p>让我们找出所有缺货（数量为 0）或价格未设置（<code>price</code> 为 <code>NULL</code>）的产品：</p>\n<pre><code class=\"language-sql\">SELECT product_name, price, quantity\nFROM products\nWHERE quantity = 0 OR price IS NULL;\n</code></pre>\n<p><strong>例子：</strong></p>\n<p>找出所有来自“加利福尼亚”并且<em>已</em>提供电子邮件地址的客户：</p>\n<pre><code class=\"language-sql\">SELECT first_name, last_name, email\nFROM customers\nWHERE state = 'CA' AND email IS NOT NULL;\n</code></pre>\n<p>\"知道并正确使用 <code>IS NULL</code> 和 <code>IS NOT NULL</code> 在处理通常含有缺失信息的数据集时非常重要。能够根据数据的存在与否来识别或排除行，是数据清洗和准备分析的必要步骤。对于数据科学家来说，妥善识别和处理缺失值是确保分析结果可信度的重要组成部分。\"</p>",
+  "slug": "handling-null-values",
+  "updates": [],
+  "references": [
+    {
+      "id": 4088,
+      "title": "PostgreSQL 16.2 Documentation - 4.2. Value Expressions - NULL",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/current/sql-expressions.html#SQL-EXPRESSIONS-NULL-LOGIC",
+      "doi": "",
+      "note": "提供 NULL 行为、三值逻辑以及在广泛使用的 SQL 数据库系统中比较规则的官方说明。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:13.608901Z",
+      "updated_at": "2025-09-07T18:54:57.125912Z"
+    },
+    {
+      "id": 4089,
+      "title": "Learning SQL: Generate, Manipulate, and Retrieve Data",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Learning_SQL_Generate_Manipulate_and_Ret.html?id=YwK2DwAAQBAJ",
+      "doi": "",
+      "note": "一本广泛使用的 SQL 学习书籍，清晰地解释了 NULL 值等核心概念、它们在比较中的行为以及使用 IS NULL 和 IS NOT NULL 的正确处理方法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:13.644471Z",
+      "updated_at": "2025-09-07T18:55:03.610392Z"
+    },
+    {
+      "id": 4090,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本经典的学术教材，提供了数据库系统的理论基础，包括 NULL 的形式定义、三值逻辑以及它们在关系数据库理论和查询处理中的作用。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:13.648136Z",
+      "updated_at": "2025-09-07T18:54:45.413147Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

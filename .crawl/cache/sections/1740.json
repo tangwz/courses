@@ -1,0 +1,61 @@
+{
+  "id": 1740,
+  "title": "使用 model.evaluate() 评估模型表现",
+  "meta_title": "使用 Keras model.evaluate() 评估模型",
+  "meta_description": "使用 evaluate 方法评估您训练好的模型在未见过的数据上的表现。",
+  "content": "<p>在使用 <code>model.fit()</code> 训练模型后，接下来可以评估模型在从未见过的数据上的表现。尽管在 <code>fit()</code> 期间使用的验证数据能给出训练过程中泛化能力的一个提示，但在一个专门的 <em>测试集</em> 上进行最终评估，能提供一个对模型在实际情况中表现的偏差更小的衡量。<code>model.evaluate()</code> 方法就在这里发挥作用了。</p>\n<p><code>model.evaluate()</code> 方法使用提供的测试数据集，计算损失以及您在编译模型时指定的任何其他度量。它对整个数据集进行批量单次处理，计算度量，并返回最终值。与 <code>model.fit()</code> 不同，它不进行任何权重 (weight)更新，仅仅测量表现。</p>\n<h3>使用 <code>model.evaluate()</code></h3>\n<p>要使用 <code>model.evaluate()</code>，您需要两项内容：</p>\n<ol>\n<li>您训练好的 Keras 模型对象。</li>\n<li>测试数据集，包含输入特征和对应的真实标签（或目标值）。这些数据必须独立于训练集和验证集。</li>\n</ol>\n<p>该方法可以接受多种格式的测试数据，类似于 <code>model.fit()</code>：</p>\n<ul>\n<li><strong>NumPy 数组</strong>：将测试特征和标签作为独立的 NumPy 数组传入：<code>model.evaluate(x_test, y_test)</code>。</li>\n<li><strong><code>tf.data.Dataset</code></strong>：传入一个 <code>tf.data.Dataset</code> 对象，该对象生成 <code>(特征, 标签)</code> 的元组：<code>model.evaluate(test_dataset)</code>。对于大型数据集，通常更推荐使用 <code>tf.data.Dataset</code>，因为它与下一章讨论的输入管道结合良好。</li>\n</ul>\n<p>我们来看一个常见的用法，假设您有测试数据 <code>x_test</code> 和 <code>y_test</code>：</p>\n<pre><code class=\"language-python\"># 假设 'model' 是您已编译和训练的 Keras 模型\n# 假设 'x_test' 和 'y_test' 是您的测试特征和标签\n\nprint(\"正在评估模型在测试数据上的表现...\")\nresults = model.evaluate(x_test, y_test, batch_size=128, verbose=1)\n\n# 'results' 变量包含损失和度量值\n# 顺序与 model.metrics_names 一致\nprint(\"测试损失:\", results[0])\nprint(\"测试准确率:\", results[1]) # 假设准确率是指定的第一个度量\n\n# 或者，如果您使用命名度量进行编译：\n# results_dict = model.evaluate(x_test, y_test, return_dict=True)\n# print(results_dict)\n</code></pre>\n<h3>理解输出</h3>\n<p><code>model.evaluate()</code> 方法默认返回一个标量损失值，以及模型编译时包含的任何额外度量值。</p>\n<ul>\n<li>如果您在 <code>model.compile()</code> 期间传入了一个度量列表，<code>evaluate()</code> 会返回一个列表，其中第一个元素是测试损失，后续元素是按提供顺序计算的每个度量的值。您可以检查 <code>model.metrics_names</code> 以查看与返回的值对应的名称。</li>\n<li>如果您将 <code>return_dict=True</code> 传入 <code>evaluate()</code>，它会返回一个字典，将度量名称（包括 'loss'）映射到其计算出的标量值。这通常更易读。</li>\n</ul>\n<p><code>verbose</code> 参数 (parameter)控制评估期间的输出：</p>\n<ul>\n<li><code>verbose=0</code>：静默模式，无输出。</li>\n<li><code>verbose=1</code>：进度条（默认）。</li>\n<li><code>verbose=2</code>：每轮一个输出行（在这里不那么适用，因为是单次评估，但与 <code>fit</code> 保持一致）。</li>\n</ul>\n<h3>解释评估结果</h3>\n<p>评估的主要目的是估计模型的泛化能力。将从 <code>model.evaluate()</code> 获得的测试损失和度量与在 <code>model.fit()</code> 最终阶段观察到的验证损失和度量进行比较。</p>\n<ul>\n<li><strong>好的泛化能力</strong>：如果测试度量值接近验证度量值，这表示您的模型对未见过的数据有良好的泛化能力。</li>\n<li><strong>潜在的过拟合 (overfitting)</strong>：如果测试度量值明显差于验证度量值（例如，损失高很多，准确率低），您的模型可能对训练数据过拟合了，并且验证集可能未能完全代表数据，或者超参数 (parameter) (hyperparameter)可能在不经意间根据验证表现进行了调整。此时可能需要正则化 (regularization)、Dropout 或收集更多样化的训练/验证数据等方法。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-v5rrjb\" \n              data-plot-definition='{\"layout\": {\"title\": \"模型表现比较\", \"xaxis\": {\"title\": \"度量指标\"}, \"yaxis\": {\"title\": \"值\", \"range\": [0,1]}, \"barmode\": \"group\", \"width\": 600, \"height\": 400}, \"data\": [{\"type\": \"bar\", \"name\": \"训练\", \"x\": [\"损失\", \"准确率\"], \"y\": [0.15, 0.95], \"marker\": {\"color\": \"#4263eb\"}}, {\"type\": \"bar\", \"name\": \"验证\", \"x\": [\"损失\", \"准确率\"], \"y\": [0.30, 0.89], \"marker\": {\"color\": \"#15aabf\"}}, {\"type\": \"bar\", \"name\": \"测试\", \"x\": [\"损失\", \"准确率\"], \"y\": [0.32, 0.88], \"marker\": {\"color\": \"#fd7e14\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-v5rrjb\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示例比较：显示训练损失/准确率、验证损失/准确率（可能来自训练结束时），以及通过 <code>model.evaluate()</code> 获得的最终测试损失/准确率。验证和测试度量值接近，表明泛化能力尚可，尽管表现低于训练数据本身，这是正常的。</p>\n</blockquote>\n<p>请记住，测试集只应用于最终评估，<em>并且</em>应在所有训练和超参数调整（基于验证集）完成后进行。使用测试集的结果来指导后续模型开发会使它作为无偏表现估计的目的失效。严格评估您的模型能增加对其在部署时预期表现的信心。</p>",
+  "slug": "evaluating-model-evaluate",
+  "updates": [],
+  "references": [
+    {
+      "id": 3978,
+      "title": "tf.keras.Model.evaluate",
+      "author": "TensorFlow Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/Model#evaluate",
+      "doi": "",
+      "note": "Keras `evaluate()` 方法的官方文档，详细介绍了其参数、用法和返回值。",
+      "order": 1,
+      "created_at": "2025-09-04T16:56:01.741376Z",
+      "updated_at": "2025-09-08T02:58:26.103073Z"
+    },
+    {
+      "id": 3979,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "一本实用指南，解释了模型评估、训练/验证/测试集的作用以及如何使用 Keras 和 TensorFlow 解释结果。",
+      "order": 2,
+      "created_at": "2025-09-04T16:56:01.769827Z",
+      "updated_at": "2025-09-08T02:58:50.859182Z"
+    },
+    {
+      "id": 3980,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "97-106",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "提供了泛化、过拟合以及专用测试集在机器学习中重要性的理论基础。参见第5章。",
+      "order": 3,
+      "created_at": "2025-09-04T16:56:01.772908Z",
+      "updated_at": "2025-09-08T02:58:22.895354Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

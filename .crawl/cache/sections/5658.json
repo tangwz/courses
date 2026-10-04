@@ -1,0 +1,61 @@
+{
+  "id": 5658,
+  "title": "理解表格数据结构",
+  "meta_title": "表格数据结构解析",
+  "meta_description": "回顾与数据合成相关的表格数据结构（行、列、数据类型）。",
+  "content": "<p>表格数据指的是以行和列格式组织的信息。想象一下常见的电子表格，比如你在Microsoft Excel或Google Sheets中使用的，或者数据库中的一个表；这就是这种核心结构。生成能整齐地符合这种行和列格式的人工数据是一个主要关注点，因为这种结构在机器学习 (machine learning)任务中非常普遍。了解这种组织方式有助于创建看起来和行为都像真实数据的人工数据。</p>\n<h2>表格数据的构成要素</h2>\n<p>表格数据是按网格排列的组织好的信息。下面我们来分解其基本组成部分：</p>\n<h3>行：单个记录</h3>\n<p>表中的每一<strong>行</strong>通常代表一个单一的观察值、记录或项。如果你的表是关于客户的，那么每行可能代表一位特定的客户。如果它是一个关于产品销售的表，那么每行可能对应一次单一的交易。单行中的所有信息都属于该特定记录。</p>\n<h3>列：特征或属性</h3>\n<p>每<strong>列</strong>代表在所有行中被测量或记录的特定特点、特征或属性。在我们的客户表示例中，列可能包括“客户ID”、“姓名”、“年龄”、“城市”和“购买金额”。单列中的所有值通常具有相同的数据类型（如数字或文本），并描述每个记录的相同属性。</p>\n<h3>单元格：交汇处</h3>\n<p><strong>单元格</strong>是行和列相交的特定位置。它包含一个单一值，代表该特定记录（行）的特定属性（列）。例如，在“客户123”这一行与“年龄”这一列的交汇处的单元格将包含该特定客户的年龄。</p>\n<h3>列标题：命名属性</h3>\n<p>大多数表格都包含一个特殊的首行，称为<strong>标题行</strong>。这一行不包含关于记录的数据；相反，它为每列提供了名称或标签。这些标题（如“客户ID”、“年龄”、“城市”）使表格易于理解，并且在程序化处理数据时很重要。</p>\n<h2>结构可视化</h2>\n<p>这里有一个表格数据的简单示例：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">客户ID</th>\n<th align=\"left\">姓名</th>\n<th align=\"center\">年龄</th>\n<th align=\"left\">城市</th>\n<th align=\"left\">购买金额</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">101</td>\n<td align=\"left\">Alice</td>\n<td align=\"center\">28</td>\n<td align=\"left\">New York</td>\n<td align=\"left\">150.75</td>\n</tr>\n<tr>\n<td align=\"left\">102</td>\n<td align=\"left\">Bob</td>\n<td align=\"center\">34</td>\n<td align=\"left\">San Francisco</td>\n<td align=\"left\">85.00</td>\n</tr>\n<tr>\n<td align=\"left\">103</td>\n<td align=\"left\">Charlie</td>\n<td align=\"center\">22</td>\n<td align=\"left\">Chicago</td>\n<td align=\"left\">210.20</td>\n</tr>\n<tr>\n<td align=\"left\">104</td>\n<td align=\"left\">Diana</td>\n<td align=\"center\">45</td>\n<td align=\"left\">New York</td>\n<td align=\"left\">55.50</td>\n</tr>\n</tbody>\n</table>\n<blockquote>\n<p>一个显示客户信息的基本表格。每行代表一位客户，每列描述一个属性，如“姓名”或“年龄”。</p>\n</blockquote>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-n9ptcg\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled, fillcolor=\"#e9ecef\"]; edge [arrowhead=none]; splines=ortho; {rank=same; \"行 1\"; \"101\"; \"Alice\"; \"28\"; \"New York\"; \"150.75\";} {rank=same; \"行 2\"; \"102\"; \"Bob\"; \"34\"; \"San Francisco\"; \"85.00\";} {rank=same; \"行 3\"; \"103\"; \"Charlie\"; \"22\"; \"Chicago\"; \"210.20\";} {rank=same; \"标题\"; \"客户ID\"; \"姓名\"; \"年龄\"; \"城市\"; \"购买金额\";} \"标题\" -> \"客户ID\" -> \"姓名\" -> \"年龄\" -> \"城市\" -> \"购买金额\" [style=invis]; \"行 1\" -> \"101\" -> \"Alice\" -> \"28\" -> \"New York\" -> \"150.75\" [style=invis]; \"行 2\" -> \"102\" -> \"Bob\" -> \"34\" -> \"San Francisco\" -> \"85.00\" [style=invis]; \"行 3\" -> \"103\" -> \"Charlie\" -> \"22\"; \"Chicago\"; \"210.20\" [style=invis]; \"标题\" -> \"行 1\" -> \"行 2\" -> \"行 3\" [style=invis]; subgraph cluster_columns { style=dotted; color=\"#adb5bd\"; label=\"列 (特征)\"; \"客户ID\"; \"姓名\"; \"年龄\"; \"城市\"; \"购买金额\"; } subgraph cluster_rows { style=dotted; color=\"#adb5bd\"; label=\"行 (记录)\"; \"标题\"; \"行 1\"; \"行 2\"; \"行 3\"; }}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-n9ptcg\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示表格数据行和列结构的图示。</p>\n</blockquote>\n<h2>列中常见的数据类型</h2>\n<p>列中的数据类型是其结构的一个重要方面。在生成人工数据时，我们通常需要准确地模拟这些类型。常见数据类型包括：</p>\n<ul>\n<li><strong>数值型：</strong> 表示数量。\n<ul>\n<li><strong>整型：</strong> 整数（例如，“年龄”列中的28、34、22）。</li>\n<li><strong>浮点型（或小数型）：</strong> 带小数点的数字（例如，“购买金额”列中的150.75、85.00）。</li>\n</ul>\n</li>\n<li><strong>类别型：</strong> 表示不同的组或标签。\n<ul>\n<li><strong>名义型：</strong> 没有内在顺序的类别（例如，“城市”列中的“New York”、“San Francisco”、“Chicago”）。名称本身只是标签。</li>\n<li><strong>序数型：</strong> 具有有意义顺序的类别（例如，“Small”、“Medium”、“Large”，或“ 만족”（满意度）级别如“Low”、“Medium”、“High”）。</li>\n</ul>\n</li>\n<li><strong>文本型（或字符串型）：</strong> 自由格式文本数据（例如，“姓名”列中的“Alice”、“Bob”等名称，或可能是产品描述、评论）。</li>\n<li><strong>日期/时间型：</strong> 表示特定的时间点或持续时间（例如，“2023-10-26”、“14:30:00”）。</li>\n</ul>\n<p>了解每列的数据类型是生成数据的基本要求，因为创建真实的数字与生成合理的城市名称或日期，需要适用不同的技术。</p>\n<h2>数据的形态：行和列</h2>\n<p>我们通常通过数据集的<strong>形态</strong>来描述表格数据集的大小，这简单来说就是行数和列数。一个包含1000行和15列的数据集，其形态为(1000, 15)。这让我们能快速了解数据集的维度。</p>\n<p>“了解这些结构要素——行、列、标题、单元格和数据类型，为有效处理人工表格数据的生成提供了依据。随着本章内容的推进，我们将在这一理解的基础上，应用特定的技术来创建类似表格的人工数据集。”</p>",
+  "slug": "understanding-tabular-structure",
+  "updates": [],
+  "references": [
+    {
+      "id": 15676,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "全面介绍了DataFrame和Series等基本结构，涵盖了行、列和数据类型，适用于实际数据分析。",
+      "order": 1,
+      "created_at": "2025-09-06T10:53:20.424012Z",
+      "updated_at": "2025-09-10T12:58:36.553692Z"
+    },
+    {
+      "id": 15677,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "解释了数据如何组织成特征（列）和实例（行）作为机器学习模型的输入。",
+      "order": 2,
+      "created_at": "2025-09-06T10:53:20.435447Z",
+      "updated_at": "2025-09-10T12:58:46.793879Z"
+    },
+    {
+      "id": 15678,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "全面介绍了关系数据模型，该模型构成了表格数据结构的理论基础，包括关系、属性和元组的概念。",
+      "order": 3,
+      "created_at": "2025-09-06T10:53:20.439612Z",
+      "updated_at": "2025-09-10T12:58:29.638415Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

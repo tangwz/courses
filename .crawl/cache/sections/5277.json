@@ -1,0 +1,45 @@
+{
+  "id": 5277,
+  "title": "使用 Docker 卷实现数据持久化",
+  "meta_title": "使用 Docker 卷管理持久化机器学习数据",
+  "meta_description": "使用 Docker 管理的卷来管理数据集和训练好的模型等持久化数据。",
+  "content": "<p>将应用程序代码容器化可以提供一致性，但容器的临时性给机器学习 (machine learning)任务带来了问题：数据集从何而来，训练好的模型又将存放何处？默认情况下，容器在被移除后会丢失其中写入的所有数据。对于机器学习而言，数据集可能很大，而训练好的模型代表着大量的计算投入，这种方式是行不通的。我们需要一种方法来独立于容器的生命周期来保存数据。</p>\n<p>Docker 卷是持久化 Docker 容器生成和使用的数据的首选机制。可以将卷看作是主机文件系统上一个专用的、由 Docker 管理的目录。其主要好处在于 Docker 管理卷的存储区域、生命周期和权限，从而将数据完全与任何特定容器分离。</p>\n<p>与绑定挂载（我们接下来会讨论）不同，绑定挂载是将主机上的特定目录映射到容器中，而卷是由 Docker 自己创建和管理的。您可以通过名称来与它们交互。这种抽象使得它们在不同环境和平台上的管理更加简便。</p>\n<h3>创建和管理卷</h3>\n<p>您可以使用 Docker 命令行显式创建一个卷：</p>\n<pre><code class=\"language-bash\">docker volume create my-ml-data\n</code></pre>\n<p>此命令会创建一个名为 <code>my-ml-data</code> 的新卷。Docker 会处理该卷在主机文件系统上 <em>实际位于何处</em>。您通常不需要知道确切的主机路径，只需知道卷的名称即可。</p>\n<p>您可以列出现有卷：</p>\n<pre><code class=\"language-bash\">docker volume ls\n</code></pre>\n<p>输出：</p>\n<pre><code>驱动    卷名称\nlocal     my-ml-data\n</code></pre>\n<p>要获取特定卷的更多详情，包括其在主机上的挂载点（尽管您很少直接与此交互）：</p>\n<pre><code class=\"language-bash\">docker volume inspect my-ml-data\n</code></pre>\n<p>当您不再需要卷中的数据时，可以将其移除（请谨慎使用！）：</p>\n<pre><code class=\"language-bash\">docker volume rm my-ml-data\n</code></pre>\n<p>重要的一点是，您不总是需要在事先显式创建卷。如果在运行容器时指定了一个命名卷且该卷不存在，Docker 会自动为您创建它。</p>\n<h3>容器与卷的使用</h3>\n<p>要使卷中的数据可供容器访问，您可以使用 <code>docker run</code> 命令的 <code>-v</code> 或 <code>--mount</code> 标志来挂载它。使用 <code>-v</code> 的最常见语法指定卷的名称以及它在容器内部应挂载的路径：</p>\n<pre><code class=\"language-bash\"># 语法: -v &#x3C;卷名称>:&#x3C;容器内路径>\ndocker run -d --name my-training-app -v my-ml-data:/app/data my-image\n</code></pre>\n<p>在此示例中：</p>\n<ul>\n<li><code>my-ml-data</code> 是 Docker 卷的名称（如果该卷不存在，Docker 会创建它）。</li>\n<li><code>/app/data</code> 是容器内卷内容将出现的绝对路径。应用程序写入 <code>/app/data</code> 的任何数据都将存储在主机上的 <code>my-ml-data</code> 卷中。</li>\n</ul>\n<p>如果您停止并移除 <code>my-training-app</code> 容器：</p>\n<pre><code class=\"language-bash\">docker stop my-training-app\ndocker rm my-training-app\n</code></pre>\n<p><code>my-ml-data</code> 卷及其内部存储的所有数据 <em>保持不变</em>。然后您可以启动一个新的容器并挂载相同的卷来访问持久化的数据。</p>\n<pre><code class=\"language-bash\"># 启动一个新容器，可能用于推理，挂载相同的卷\ndocker run --name my-inference-app -v my-ml-data:/app/input-models my-other-image\n</code></pre>\n<p>现在，第二个容器可以从其 <code>/app/input-models</code> 目录读取由第一个容器保存的模型或数据。</p>\n<h3>机器学习 (machine learning)工作流的优点</h3>\n<p>使用卷提供了多项好处，尤其是对于机器学习任务而言：</p>\n<ol>\n<li><strong>数据持久性：</strong> 这是主要好处。存储在卷中的大型数据集、训练好的模型文件（<code>.h5</code>、<code>.pkl</code>、SavedModel 格式）、检查点、日志和评估指标在容器重启、移除和更新后依然存在。</li>\n<li><strong>存储与容器解耦：</strong> 数据的生命周期独立于您的应用程序容器。您可以更新训练脚本的 Docker 镜像，而不会丢失数据集或训练好的模型。</li>\n<li><strong>容器间数据共享：</strong> 卷可以在多个容器之间轻松共享。一种常见模式是让训练容器将模型写入卷中，而独立的推理 (inference)或评估容器则挂载相同的卷来读取模型。</li>\n<li><strong>性能：</strong> Docker 管理卷的位置和 I/O。在 Docker Desktop（macOS、Windows）等系统上，由于文件系统虚拟化层，卷通常比从主机用户空间绑定挂载目录提供更好的磁盘密集型操作 I/O 性能。</li>\n<li><strong>备份和迁移：</strong> Docker 提供命令和工具，可以方便地备份卷数据或在主机之间迁移卷，尽管备份管理通常涉及针对卷数据内容的特定策略。</li>\n<li><strong>平台一致性：</strong> Docker 管理卷存储位置，与依赖主机特定路径的绑定挂载相比，这在不同主机操作系统（Linux、macOS、Windows）上提供了更一致的行为。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-lwu75o\" \n              data-graph-definition='digraph G { bgcolor=\"transparent\"; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2]; edge [fontname=\"Arial\", fontsize=9]; subgraph cluster_host { label = \"主机文件系统\"; style=filled; color=\"#e9ecef\"; rankdir=TB; docker_area [label=\"Docker 管理区域\", shape=folder, style=filled, color=\"#ced4da\"]; host_files [label=\"其他主机文件\", shape=folder, style=filled, color=\"#ced4da\"]; } subgraph cluster_docker { label = \"Docker 引擎\"; style=dashed; color=\"#adb5bd\"; vol [label=\"my-ml-data\\n(Docker 卷)\", shape=cylinder, style=filled, color=\"#a5d8ff\"]; cont1 [label=\"训练容器\", style=filled, color=\"#96f2d7\"]; cont2 [label=\"推理容器\", style=filled, color=\"#ffec99\"]; cont1 -> vol [label=\"/data_in_cont\"]; cont2 -> vol [label=\"/model_in_cont\"]; } docker_area -> vol [style=invis]; vol -> docker_area [label=\" 数据存储在此处\\n(位置由 Docker 管理)\", dir=back, style=dashed, color=\"#495057\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-lwu75o\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了 Docker 卷如何在主机文件系统上 Docker 管理的区域内存在。容器，例如“训练容器”和“推理容器”，将这些卷挂载到其内部的特定路径（例如 <code>/data_in_cont</code>、<code>/model_in_cont</code>），从而实现了独立于容器生命周期的持久化存储和数据共享。</p>\n</blockquote>\n<h3>卷的常见机器学习 (machine learning)应用场景</h3>\n<p>卷非常适合管理机器学习项目中的各种持久化数据：</p>\n<ul>\n<li><strong>数据集：</strong> 存储训练容器需要读取的大型数据集（图像、文本语料库、表格数据）。</li>\n<li><strong>训练好的模型：</strong> 保存由训练任务生成的模型工件（例如权重 (weight)、模型架构文件）。</li>\n<li><strong>日志和指标：</strong> 持久化训练日志、TensorBoard 事件文件或运行期间生成的评估结果。</li>\n<li><strong>检查点：</strong> 在长时间训练过程中保存中间模型状态，允许在中断后恢复。</li>\n<li><strong>预处理数据：</strong> 存储由一个容器生成供另一个容器使用的特征或中间数据表示。</li>\n</ul>\n<h3>实际示例：保存模型工件</h3>\n<p>让我们用一个简单的例子来说明。设想一个容器内有一个 Python 脚本（<code>save_model.py</code>），它模拟保存一个模型工件。</p>\n<p><strong><code>save_model.py</code>：</strong></p>\n<pre><code class=\"language-python\">import os\nimport time\nimport datetime\n\n# 定义容器内的输出目录\noutput_dir = \"/app/output\"\n# 根据时间创建唯一文件名\ntimestamp = datetime.datetime.now().strftime(\"%Y%m%d_%H%M%S\")\nmodel_filename = os.path.join(output_dir, f\"model_{timestamp}.txt\")\n\n# 确保输出目录存在（容器内的良好做法）\nos.makedirs(output_dir, exist_ok=True)\n\nprint(f\"模拟模型训练...\")\ntime.sleep(1) # 模拟工作\nprint(f\"正在将模拟模型工件保存到: {model_filename}\")\n\n# 向文件写入一些内容\nwith open(model_filename, \"w\") as f:\n    f.write(\"这是一个模拟的模型工件。\\n\")\n    f.write(f\"保存时间: {datetime.datetime.now()}\\n\")\n\nprint(\"模型工件已保存。\")\n</code></pre>\n<p><strong><code>Dockerfile</code>：</strong></p>\n<pre><code class=\"language-dockerfile\">FROM python:3.9-slim\nWORKDIR /app\nCOPY save_model.py .\n# 运行脚本的默认命令\nCMD [\"python\", \"save_model.py\"]\n</code></pre>\n<p>现在，让我们构建并运行镜像，使用名为 <code>model-storage</code> 的卷来持久化输出。</p>\n<pre><code class=\"language-bash\"># 1. 构建 Docker 镜像\ndocker build -t simple-saver .\n\n# 2. 创建一个命名卷（可选，docker run 也可以创建）\n# docker volume create model-storage\n\n# 3. 运行容器，将卷挂载到 /app/output\n#    --rm 标志会在容器退出时自动移除它。\necho \"正在运行容器以保存模型...\"\ndocker run --rm \\\n  -v model-storage:/app/output \\\n  --name saver-instance \\\n  simple-saver\n\n# 容器运行，打印消息，将文件保存到 /app/output，然后退出。\n# 容器被移除，但数据保留在 'model-storage' 卷中。\n\n# 4. 通过从另一个容器检查卷来验证数据是否存在\necho \"正在检查卷内容...\"\ndocker run --rm \\\n  -v model-storage:/data \\\n  python:3.9-slim ls -l /data\n</code></pre>\n<p>您应该会看到类似以下的输出（确切的文件名会不同）：</p>\n<pre><code>正在运行容器以保存模型...\n模拟模型训练...\n正在将模拟模型工件保存到: /app/output/model_20231027_103045.txt\n模型工件已保存。\n正在检查卷内容...\ntotal 4\n-rw-r--r-- 1 root root 81 Oct 27 10:30 model_20231027_103045.txt\n</code></pre>\n<p>这表明，即使 <code>saver-instance</code> 容器被移除，它在 <code>/app/output</code> 内创建的模型文件也已持久化到 <code>model-storage</code> 卷中，并且稍后可以被访问（在本例中，由一个挂载相同卷的临时 <code>python:3.9-slim</code> 容器访问）。</p>\n<p>总之，Docker 卷提供了一种可靠且易于管理的方式来处理容器化机器学习 (machine learning)应用程序中的持久化数据需求。它们允许您将数据问题与应用程序代码分离，确保数据集、模型和日志在单个容器之外仍然存在，这对于高效的机器学习开发和部署流程非常重要。</p>",
+  "slug": "docker-volumes-persistence",
+  "updates": [],
+  "references": [
+    {
+      "id": 14173,
+      "title": "Use volumes",
+      "author": "Docker, Inc.",
+      "year": "2024",
+      "publisher": "Docker, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/storage/volumes/",
+      "doi": "",
+      "note": "Docker卷的官方指南，涵盖了它们的创建、管理以及用于数据持久化的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T08:48:42.023681Z",
+      "updated_at": "2025-09-11T02:16:38.712015Z"
+    },
+    {
+      "id": 14175,
+      "title": "Introducing MLOps: How to go from Model to Production",
+      "author": "Mark Treveil, Nicolas Omont, Rishabh Bahri, Aurélien Géron, Dmitry Kandalov, Costa Mirian, Josh Newman, Chetan Parikh, Tom Phelan, Michael Redman",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/introducing-mlops/9781492083283/",
+      "doi": "",
+      "note": "提供了MLOps工作流中数据持久化挑战和解决方案的背景知识，将容器化与机器学习领域需求相结合。",
+      "order": 3,
+      "created_at": "2025-09-05T08:48:42.032542Z",
+      "updated_at": "2025-09-11T02:16:51.000435Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

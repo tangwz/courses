@@ -1,0 +1,61 @@
+{
+  "id": 997,
+  "title": "检查文件状态 (git status)",
+  "meta_title": "在 Git 中检查文件状态 | git status 命令",
+  "meta_description": "使用 `git status` 命令来查看你的仓库中哪些文件已修改、已暂存或未跟踪。",
+  "content": "<p>在使用 Git 仓库时，了解其当前状态非常重要。你经常会想知道：你更改了哪些文件？哪些文件已准备好提交？是否有 Git 尚不知道的新文件？回答这些问题的命令是 <code>git status</code>。它可能是 Git 中最常用的命令，因为它会报告你工作目录和暂存区的当前状态。可以把它当作你仓库当前状况的仪表盘。</p>\n<p>运行 <code>git status</code> 总是安全的；它不会更改你的任何文件或仓库中的任何内容。它只提供信息。</p>\n<p>我们来看看你可能会看到的不同类型的输出。</p>\n<h3>清洁工作目录</h3>\n<p>如果你在 <code>git commit</code> 后立即运行 <code>git status</code>，或在克隆仓库后立即运行，并且你尚未进行任何更改，你可能会看到类似于以下内容的输出：</p>\n<pre><code class=\"language-bash\">$ git status\nOn branch main\nnothing to commit, working tree clean\n</code></pre>\n<p>此消息告诉你一些事项：</p>\n<ul>\n<li><code>On branch main</code>：你当前在名为 <code>main</code> 的分支上。分支是开发线，而 <code>main</code> 是 Git 中的默认分支名。我们将在稍后详细介绍分支。</li>\n<li><code>nothing to commit, working tree clean</code>：这是主要部分。这意味着 Git 没有跟踪任何已修改的文件，并且没有更改暂存以供下次提交。你的工作目录与仓库中的上一个快照（提交）完全匹配。</li>\n</ul>\n<h3>未跟踪文件</h3>\n<p>现在，假设你在项目目录中创建了一个新文件，例如 <code>README.md</code>。如果你再次运行 <code>git status</code>，输出将改变：</p>\n<pre><code class=\"language-bash\">$ touch README.md # 创建一个名为 README.md 的空文件\n$ git status\nOn branch main\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        README.md\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n</code></pre>\n<p>下面是具体说明：</p>\n<ul>\n<li><code>Untracked files</code>：此部分列出了存在于你的工作目录中但尚未成为 Git 仓库一部分的文件。Git 看到了该文件（<code>README.md</code>），但没有跟踪它的历史记录。</li>\n<li><code>(use \"git add &#x3C;file>...\" ...)</code>：Git 贴心地建议下一步：使用 <code>git add</code> 开始跟踪新文件并将其暂存以供下次提交。</li>\n</ul>\n<h3>未暂存的更改（已修改文件）</h3>\n<p>假设你有一个 Git 正在跟踪的文件（这意味着它是先前提交的一部分），并且你对其进行了修改。假设 <code>report.txt</code> 已经提交。如果你编辑 <code>report.txt</code>，然后运行 <code>git status</code>：</p>\n<pre><code class=\"language-bash\">$ git status\nOn branch main\nChanges not staged for commit:\n  (use \"git add &#x3C;file>...\" to update what will be committed)\n  (use \"git restore &#x3C;file>...\" to discard changes in working directory)\n        modified:   report.txt\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n</code></pre>\n<ul>\n<li><code>Changes not staged for commit</code>：此部分列出了 Git 知道的文件（它们在上次提交中），但自那以后在你的工作目录中已被修改。然而，这些更改尚未标记 (token)为包含在下次提交中。</li>\n<li><code>modified: report.txt</code>：清楚地表明 <code>report.txt</code> 已被更改。</li>\n<li>Git 再次提供了有用的提示：使用 <code>git add</code> 暂存更改，或使用 <code>git restore</code>（在旧版 Git 中是 <code>git checkout -- &#x3C;file></code>）放弃你在工作目录中进行的更改。</li>\n</ul>\n<h3>待提交的更改（已暂存文件）</h3>\n<p>你通过使用 <code>git add</code> 将更改添加到暂存区来告诉 Git 你希望在下次提交中包含哪些更改。如果你添加已修改的 <code>report.txt</code> 和新的 <code>README.md</code> 文件：</p>\n<pre><code class=\"language-bash\">$ git add report.txt README.md\n$ git status\nOn branch main\nChanges to be committed:\n  (use \"git restore --staged &#x3C;file>...\" to unstage)\n        modified:   report.txt\n        new file:   README.md\n\n</code></pre>\n<ul>\n<li><code>Changes to be committed</code>：此部分很重要。它列出了当前暂存区中的所有更改。如果你现在运行 <code>git commit</code>，这些更改将包含在提交中。</li>\n<li><code>modified: report.txt</code>：对 <code>report.txt</code> 的修改现在已暂存。</li>\n<li><code>new file: README.md</code>：新创建的 <code>README.md</code> 现在已暂存。</li>\n<li>如果你错误地添加了文件，Git 还会告诉你如何取消暂存文件（<code>git restore --staged &#x3C;file>...</code> 或在旧版本中是 <code>git reset HEAD &#x3C;file>...</code>）。</li>\n</ul>\n<h3>混合状态</h3>\n<p>文件同时处于多种状态是很常见的。例如，你可能会暂存 <code>report.txt</code>，但在提交之前再次修改它。或者你可能暂存一个文件，而另一个文件仍处于已修改但未暂存的状态，第三个文件是新创建但未被跟踪的。<code>git status</code> 清楚地处理了这种情况：</p>\n<pre><code class=\"language-bash\">$ git status\nOn branch main\nChanges to be committed:\n  (use \"git restore --staged &#x3C;file>...\" to unstage)\n        modified:   report.txt\n\nChanges not staged for commit:\n  (use \"git restore &#x3C;file>...\" to discard changes in working directory)\n        modified:   report.txt # 暂存后再次修改\n        modified:   utils.py   # 另一个已修改但未暂存的文件\n\nUntracked files:\n  (use \"git add &#x3C;file>...\" to include in what will be committed)\n        config.yaml\n\n</code></pre>\n<p>此输出显示：</p>\n<ol>\n<li><code>report.txt</code> 已暂存（你使用 <code>git add</code> 添加的版本）。</li>\n<li><code>report.txt</code> 自暂存后也在工作目录中被修改了。如果你现在提交，只有暂存的版本会进入提交。你需要再次运行 <code>git add report.txt</code> 来暂存最新的更改。</li>\n<li><code>utils.py</code> 已被修改但未暂存。</li>\n<li><code>config.yaml</code> 是一个 Git 尚未跟踪的新文件。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1yxf6p\" \n              data-graph-definition='digraph git_states {\n    rankdir=LR;\n    node [shape=record, fontname=\"Arial\", fontsize=10];\n\n    States [label=\"{ <wd> 工作目录 | <sa> 暂存区 | <repo> 仓库（HEAD 提交）}\", style=filled, fillcolor=\"#e9ecef\"];\n\n    node [shape=ellipse, style=filled, fontname=\"Arial\", fontsize=9, margin=\"0.1,0.05\"];\n\n    untracked [label=\"未跟踪\", fillcolor=\"#ffc9c9\", tooltip=\"仅在工作目录中\"];\n    modified [label=\"已修改\\n（未暂存）\", fillcolor=\"#ffd8a8\", tooltip=\"在工作目录中已更改，与暂存区 / HEAD 不同\"];\n    staged [label=\"已暂存\", fillcolor=\"#b2f2bb\", tooltip=\"在暂存区中，准备提交\"];\n    unmodified [label=\"未修改\", fillcolor=\"#dee2e6\", tooltip=\"在工作目录中，与 HEAD 匹配，未暂存\"];\n\n\n    edge [style=invis]; // 用于布局的不可见边\n    {rank=same; untracked modified unmodified}\n    untracked -> States:wd[minlen=2];\n    modified -> States:wd[minlen=2];\n    staged -> States:sa[minlen=2];\n    unmodified -> States:wd[minlen=2];\n\n    label = \"\\n`git status` 报告的文件状态与仓库区域的关系\";\n    fontsize=12;\n    fontcolor=\"#495057\";\n    labelloc=\"b\"; // 将标签放置在底部\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1yxf6p\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图示说明了文件相对于工作目录和暂存区可能处于的不同状态，正如 <code>git status</code> 所报告的。</p>\n</blockquote>\n<h3>简短状态输出</h3>\n<p>为了获得更紧凑的视图，你可以使用 <code>-s</code> 或 <code>--short</code> 标志：</p>\n<pre><code class=\"language-bash\">$ git status -s\n M report.txt  # M 在第一列：已暂存\n M report.txt  # M 在第二列：已修改但未暂存\n M utils.py    # M 在第二列：已修改但未暂存\n?? config.yaml # ?? 表示未跟踪\n</code></pre>\n<p>这些字母指示了状态：</p>\n<ul>\n<li><code>M</code>（第一列，绿色）：已修改并已暂存</li>\n<li><code>A</code>（第一列，绿色）：已添加（新文件）并已暂存</li>\n<li><code> M</code>（第二列，红色）：已修改但未暂存</li>\n<li><code>??</code>（红色）：未跟踪</li>\n</ul>\n<p>一旦你熟悉了状态码，这种简短格式会很有用。</p>\n<p>经常使用 <code>git status</code> 是个好习惯。它能帮助你跟踪你的工作，确保你只提交你打算提交的更改，并为其他 Git 命令（如 <code>git add</code> 和 <code>git commit</code>）提供上下文 (context)。</p>",
+  "slug": "git-status-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 239,
+      "title": "`git-status` Documentation",
+      "author": "Git Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-status",
+      "doi": "",
+      "note": "提供 `git status` 命令及其各种输出和可用选项的权威解释，对于理解 Git 中的文件状态至关重要。",
+      "order": 1,
+      "created_at": "2025-09-04T14:00:15.666345Z",
+      "updated_at": "2025-09-07T15:41:19.031113Z"
+    },
+    {
+      "id": 240,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "一本 Git 基础知识的全面指南，详细解释了 Git 工作流程、工作目录、暂存区和仓库，并清晰阐述了 `git status` 的输出。在线版本持续更新。",
+      "order": 2,
+      "created_at": "2025-09-04T14:00:15.673762Z",
+      "updated_at": "2025-09-07T15:41:22.239495Z"
+    },
+    {
+      "id": 241,
+      "title": "Git Status Tutorial",
+      "author": "Atlassian",
+      "year": "2024",
+      "publisher": "Atlassian",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9fURrWpnUV4pnyE3hm5PFTD_g-9aTVrgbsPOIMqVgznCYzrjKOiMknFkeVRl2NCyrJeAJIcyiMimpvL9CQBw4bHpi11B5uMRQCFz-JDNT0H-E6dhTKRheOzhY1Mg2naJIrD343fnGB-gNxr-8185bhh7aOcRHO54c",
+      "doi": "",
+      "note": "提供清晰实用的 `git status` 输出解释和示例，通过广受欢迎的在线资源帮助用户理解文件状态和 Git 工作流程。",
+      "order": 3,
+      "created_at": "2025-09-04T14:00:15.676148Z",
+      "updated_at": "2025-09-07T15:41:29.027994Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

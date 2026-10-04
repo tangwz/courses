@@ -1,0 +1,61 @@
+{
+  "id": 7040,
+  "title": "管理数据存储与传输成本",
+  "meta_title": "管理云端数据存储与传输费用",
+  "meta_description": "了解云存储分层和数据出站的相关费用，并学习有效管理这些费用的方法。",
+  "content": "<p>虽然GPU的计算成本常是关注的焦点，但存储和移动数据相关的费用可能累积成您AI基础设施预算中的很大一部分。对于处理PB级数据或跨多个地理区域运行的项目而言，这些“隐性”成本绝非微不足道。有效管理数据存储和网络传输不仅是一种优化手段；它更是构建财务可持续AI系统的基本要求。</p>\n<h3>拆解云存储成本</h3>\n<p>云存储定价并非单一固定费用。它由多个因素构成，而理解这些因素是实现优化的第一步。您将遇到的两个主要组成部分是静态存储和数据访问操作。</p>\n<h4>存储分层：平衡成本与访问速度</h4>\n<p>云服务提供商提供分层存储模型，让您可以根据数据的访问频率匹配合适的成本结构。将您很少访问的数据存储在高性能、昂贵的层级中是一个常见且代价高昂的错误。大多数提供商都提供类似的选项层级。</p>\n<ul>\n<li>\n<p><strong>标准（热）存储：</strong> 这是默认的高性能层级，专为频繁访问的数据设计。它具有每GB最高的存储成本，但延迟最低，且无数据检索费用。适用于活跃的训练数据集、当前正在处理的模型检查点以及任何需要即时访问的数据。</p>\n</li>\n<li>\n<p><strong>不频繁访问（IA）存储：</strong> 此层级优化用于访问频率较低但需要在时即时可用的数据。其每GB存储成本低于标准层级，但每次从中检索数据时需支付少量每GB费用。这适合旧的训练集、实验产物或未投入生产但可能被重新查看的模型。</p>\n</li>\n<li>\n<p><strong>归档存储：</strong> 此层级专为长期数据保留和数字归档设计，提供极低的存储成本。其权衡之处在于检索时间和成本。数据访问并非即时，可能需要几分钟到数小时不等。它非常适合合规性要求、备份最终模型版本或存储数月或数年内不打算使用的原始数据。一些提供商甚至提供更冷的“深度归档”层级，成本更低，检索时间更长。</p>\n</li>\n</ul>\n<p>选择合适的层级，是您存储数据支付的费用与取回数据的速度之间的直接权衡。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-akegbk\" \n              data-plot-definition='{\"layout\":{\"title\":{\"text\":\"存储层级成本与检索时间权衡\"},\"xaxis\":{\"title\":{\"text\":\"相对存储成本（每GB/月）\"}},\"yaxis\":{\"title\":{\"text\":\"数据检索时间\"}},\"showlegend\":false,\"annotations\":[{\"x\":0.9,\"y\":0,\"text\":\"<b>标准 / 热存储</b><br>即时访问\",\"showarrow\":false,\"font\":{\"color\":\"#495057\"}},{\"x\":0.5,\"y\":1,\"text\":\"<b>不频繁访问</b><br>即时访问<br>（含检索费）\",\"showarrow\":false,\"font\":{\"color\":\"#495057\"}},{\"x\":0.1,\"y\":2,\"text\":\"<b>归档</b><br>几分钟到几小时\",\"showarrow\":false,\"font\":{\"color\":\"#495057\"}}]},\"data\":[{\"x\":[0.9,0.5,0.1],\"y\":[0,1,2],\"type\":\"bar\",\"orientation\":\"h\",\"marker\":{\"color\":[\"#ff6b6b\",\"#ffc078\",\"#a5d8ff\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-akegbk\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>常用存储层级比较。随着存储数据月成本的降低，检索所需时间通常会增加。</p>\n</blockquote>\n<h3>移动数据的高成本：理解出站费用</h3>\n<p>对于新用户而言，最令人意外的云账单之一通常与数据传输相关。虽然云服务提供商通常不对数据进入其网络（入站）收费，但几乎总是对数据移出（出站）收费。这些出站费用可适用于AI工作流程中常见的多种场景。</p>\n<ul>\n<li><strong>跨区域传输：</strong> 在不同地理区域之间移动数据（例如，从<code>us-east-1</code>到<code>eu-west-1</code>）会产生出站费用。</li>\n<li><strong>跨云传输：</strong> 将数据从一个云服务提供商发送到另一个（例如，从AWS到GCP）是一种出站形式。</li>\n<li><strong>云到本地传输：</strong> 从云端下载大型数据集或模型到您的本地或内部部署服务器需要支付出站费用。</li>\n<li><strong>服务用户：</strong> 当您部署模型API时，通过公共互联网发送给用户的每一个预测结果都属于数据出站。</li>\n</ul>\n<p>出站费用通常按GB计算，虽然单个GB的价格可能看起来很小，但在处理TB级数据集或高流量推理 (inference)服务时，这些费用会迅速增加。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-czl4lo\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=rounded, fontname=\"sans-serif\", margin=\"0.2,0.1\"]; edge [fontname=\"sans-serif\", fontsize=10]; bgcolor=\"transparent\"; \"Cloud\" [label=\"云服务提供商\\n(us-east-1)\", style=filled, fillcolor=\"#e9ecef\"]; \"Compute\" [label=\"GPU实例\", style=filled, fillcolor=\"#a5d8ff\"]; \"Storage\" [label=\"对象存储\\n(S3 / GCS)\", style=filled, fillcolor=\"#a5d8ff\"]; \"OnPrem\" [label=\"本地服务器\", style=filled, fillcolor=\"#b2f2bb\"]; \"OtherCloud\" [label=\"另一个云区域\\n(eu-west-1)\", style=filled, fillcolor=\"#e9ecef\"]; \"User\" [label=\"终端用户\"]; subgraph cluster_0 { style=invis; Cloud; Compute; Storage; } subgraph cluster_1 { style=invis; OtherCloud; } Storage -> Compute [label=\" 免费传输 \\n (同区域) \", color=\"#12b886\", fontcolor=\"#12b886\"]; Compute -> Storage [label=\" 免费传输 \\n (同区域) \", color=\"#12b886\", fontcolor=\"#12b886\"]; Cloud -> OnPrem [label=\" 收取出站费用 \", color=\"#f03e3e\", fontcolor=\"#f03e3e\"]; Cloud -> OtherCloud [label=\" 收取出站费用 \", color=\"#f03e3e\", fontcolor=\"#f03e3e\"]; Cloud -> User [label=\" 收取出站费用 \", color=\"#f03e3e\", fontcolor=\"#f03e3e\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-czl4lo\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>同一云区域内的数据传输通常免费，而离开提供商区域网络边界的传输会产生出站费用。</p>\n</blockquote>\n<h3>管理数据成本的策略</h3>\n<p>积极主动是控制存储和传输费用的最佳方式。与其被动应对高额账单，不如从一开始就实施数据管理策略。</p>\n<h4>1. 应用存储生命周期策略</h4>\n<p>管理静态存储成本最有效的工具是自动化。所有主要云服务提供商都提供生命周期策略，可以根据您定义的规则自动在存储层级之间迁移数据。</p>\n<p>例如，您可以制定一条规则，内容如下：</p>\n<ol>\n<li>上传到我们<code>raw-training-data</code>存储桶的所有新数据从标准层级开始。</li>\n<li>30天不活跃后，将此数据迁移到不频繁访问层级。</li>\n<li>180天后，将数据移至归档层级。</li>\n<li>3年后，永久删除数据。</li>\n</ol>\n<p>这种“设置后即无需操心”的方法确保您始终根据数据的生命周期和访问模式使用最具成本效益的层级，无需任何手动干预。</p>\n<h4>2. 将计算资源和数据置于同一区域</h4>\n<p>为避免跨区域数据传输费用，请务必将您的计算资源（如GPU虚拟机）配置在与您的对象存储桶相同的地理区域。这是基于云的AI主要架构原则。如果您的数据位于<code>us-east-1</code>，您的训练集群也应位于<code>us-east-1</code>。这种内部流量的带宽更高且成本为零。</p>\n<p>对于全球分布式推理 (inference)端点，请考虑使用内容分发网络（CDN）。CDN会在更靠近用户的边缘位置缓存您模型的静态资产或常见API响应。这可以降低延迟，并且通常提供比从主区域直接出站更便宜的数据传输费率。</p>\n<h4>3. 压缩数据并使用高效格式</h4>\n<p>存储和传输成本根据大小计算。您可以通过减小数据体积直接降低这些成本。</p>\n<ul>\n<li><strong>压缩：</strong> 上传前，使用Gzip或Zstandard等算法压缩大文件（如文本语料库、日志或JSON记录）。压缩和解压缩所花费的少量CPU时间，通常会在存储节省方面获得多倍回报。</li>\n<li><strong>列式格式：</strong> 对于表格数据，请使用Apache Parquet或Apache Arrow等高效的列式格式，而非CSV或JSON。这些格式不仅更紧凑，而且允许查询引擎仅读取查询所需的特定列，大幅减少了扫描和检索的数据量，这也能降低访问成本。</li>\n</ul>\n<p>通过将数据存储和传输作为您基础设施成本模型的主要组成部分，您可以构建出不仅性能良好，而且在大规模运行时也经济可行的系统。</p>",
+  "slug": "managing-data-storage-transfer-costs",
+  "updates": [],
+  "references": [
+    {
+      "id": 20658,
+      "title": "Amazon S3 Storage Classes",
+      "author": "Amazon Web Services",
+      "year": "2024",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://aws.amazon.com/s3/storage-classes/",
+      "doi": "",
+      "note": "详细介绍了Amazon S3的分层存储模型，概述了不同的存储类别、其用例以及成本与访问速度的权衡，这些代表了主要云服务提供商的通用模式。",
+      "order": 1,
+      "created_at": "2025-09-06T14:06:22.714113Z",
+      "updated_at": "2025-09-10T03:05:44.219262Z"
+    },
+    {
+      "id": 20660,
+      "title": "Cloud FinOps: Collaborative, Real-Time, Decision Making",
+      "author": "J.R. Storment, Mike Fuller",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/cloud-finops-2nd-edition/9781492098348/",
+      "doi": "",
+      "note": "一本提供云成本管理框架的书籍，其中包括优化数据存储和传输费用的策略，与构建可持续的AI系统相关。",
+      "order": 3,
+      "created_at": "2025-09-06T14:06:22.722727Z",
+      "updated_at": "2025-09-10T03:05:55.445539Z"
+    },
+    {
+      "id": 20661,
+      "title": "Apache Parquet",
+      "author": "The Apache Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://parquet.apache.org/",
+      "doi": "",
+      "note": "Apache Parquet的官方网站和文档，这是一种在处理大数据时广泛使用的列式存储格式，因其存储效率和分析查询性能而能直接降低数据成本。",
+      "order": 4,
+      "created_at": "2025-09-06T14:06:22.725179Z",
+      "updated_at": "2025-09-10T03:05:38.555609Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

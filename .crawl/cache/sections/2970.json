@@ -1,0 +1,61 @@
+{
+  "id": 2970,
+  "title": "实际操作：简单提示词实验",
+  "meta_title": "实践简单提示词实验",
+  "meta_description": "实际操作，编写基本提示词并观察 LLM 在不同参数下的回复。",
+  "content": "<p>实践简单提示词 (prompt)，并观察大型语言模型（LLM）如何响应不同的指令和设置。</p>\n<h3>前提条件</h3>\n<p>开始前，请确保你拥有 LLM 的访问权限，无论是通过在线平台界面还是以编程方式通过 API。如果使用 API，你将需要：</p>\n<ol>\n<li>来自 LLM 提供商的 API 密钥（例如，OpenAI、Anthropic、Cohere）。</li>\n<li>一个已安装所需库（例如，<code>requests</code> 或提供商的特定 SDK，如 <code>openai</code>）的 Python 环境。</li>\n</ol>\n<p>对于代码示例，我们假设存在一个辅助函数 <code>call_llm(prompt, temperature=0.7, max_tokens=100)</code>，它处理 API 调用并返回 LLM 的文本回复。你需要根据你具体的 API 提供商和设置进行调整。请记住安全地管理你的 API 密钥，例如使用环境变量。</p>\n<h3>实验 1：基本指令遵循</h3>\n<p>我们从一个直接的任务开始：根据简单指令生成创意文本。</p>\n<p><strong>任务：</strong> 让 LLM 为一个环保咖啡新品牌编写一句简短的宣传语。</p>\n<p><strong>提示词 (prompt)：</strong></p>\n<pre><code class=\"language-text\">Write a short, catchy tagline for a new brand of sustainable, bird-friendly coffee beans called 'Wing &#x26; Bean'.\n</code></pre>\n<p><strong>示例代码：</strong></p>\n<pre><code class=\"language-python\">prompt_v1 = \"\"\"\nWrite a short, catchy tagline for a new brand of sustainable, bird-friendly coffee beans called 'Wing &#x26; Bean'.\n\"\"\"\n\nresponse_v1 = call_llm(prompt=prompt_v1, temperature=0.7, max_tokens=50)\n\nprint(f\"回复 1:\\n{response_v1}\")\n\n# 现在，我们增加一个限制：强调口感。\nprompt_v2 = \"\"\"\nWrite a short, catchy tagline for a new brand of sustainable, bird-friendly coffee beans called 'Wing &#x26; Bean'. Focus on the rich taste.\n\"\"\"\n\nresponse_v2 = call_llm(prompt=prompt_v2, temperature=0.7, max_tokens=50)\n\nprint(f\"\\n回复 2 (口感侧重):\\n{response_v2}\")\n</code></pre>\n<p><strong>预期观察：</strong></p>\n<p>第一个回复可能更广泛地侧重于可持续性或对鸟类友好的方面。第二个回复，受“强调浓郁口感”这一额外指令的引导，应该会生成强调风味的宣传语。这显示了在指令中增加具体限制或细节如何影响输出。</p>\n<p><strong>尝试一下：</strong> 进一步修改提示词。要求生成押韵的宣传语，或少于五个字的宣传语。观察 LLM 如何适应这些新指令。</p>\n<h3>实验 2：摘要生成</h3>\n<p>LLM 通常用于文本摘要。我们来测试一下这项能力。</p>\n<p><strong>任务：</strong> 总结一段关于远程工作益处的文字。</p>\n<p><strong>输入文本：</strong></p>\n<pre><code class=\"language-text\">Remote work offers significant advantages for both employees and employers. Employees gain flexibility in their schedules, eliminate commuting time and costs, and often report a better work-life balance. Employers can access a wider talent pool, potentially reduce office overhead expenses, and may see increased productivity from focused employees. However, challenges like maintaining company culture and ensuring effective communication need careful management.\n</code></pre>\n<p><strong>提示词 (prompt)：</strong></p>\n<pre><code class=\"language-text\">Summarize the following text about remote work in a single sentence:\n\nRemote work offers significant advantages for both employees and employers. Employees gain flexibility in their schedules, eliminate commuting time and costs, and often report a better work-life balance. Employers can access a wider talent pool, potentially reduce office overhead expenses, and may see increased productivity from focused employees. However, challenges like maintaining company culture and ensuring effective communication need careful management.\n</code></pre>\n<p><strong>示例代码：</strong></p>\n<pre><code class=\"language-python\">input_text = \"\"\"\nRemote work offers significant advantages for both employees and employers. Employees gain flexibility in their schedules, eliminate commuting time and costs, and often report a better work-life balance. Employers can access a wider talent pool, potentially reduce office overhead expenses, and may see increased productivity from focused employees. However, challenges like maintaining company culture and ensuring effective communication need careful management.\n\"\"\"\n\nprompt = f\"Summarize the following text about remote work in a single sentence:\\n\\n{input_text}\"\n\nresponse = call_llm(prompt=prompt, temperature=0.5, max_tokens=60)\n\nprint(f\"摘要:\\n{response}\")\n</code></pre>\n<p><strong>预期观察：</strong></p>\n<p>LLM 应该提供简洁的摘要，概括原始文本的主要内容，理想情况下如所要求地用一句话完成。</p>\n<p><strong>尝试一下：</strong> 改变提示词，要求生成三句话的摘要。要求其专门为 CEO 受众进行总结。留意摘要的长度以及可能侧重点如何根据指令变化。</p>\n<h3>实验 3：温度参数 (parameter)的影响</h3>\n<p>如前所述，<code>temperature</code> 参数控制输出的随机性或创造性。较低的温度使输出更集中、更确定，而较高的温度则带来更多样化、有时出乎意料的结果。</p>\n<p><strong>任务：</strong> 为一个奇幻故事的情节生成构思。</p>\n<p><strong>提示词 (prompt)：</strong></p>\n<pre><code class=\"language-text\">Brainstorm three plot ideas for a fantasy story involving a lost map and a hidden city.\n</code></pre>\n<p><strong>示例代码（比较温度参数）：</strong></p>\n<pre><code class=\"language-python\">prompt = \"Brainstorm three plot ideas for a fantasy story involving a lost map and a hidden city.\"\n\n# 低温度：更可预测、集中的输出\nresponse_low_temp = call_llm(prompt=prompt, temperature=0.2, max_tokens=150)\nprint(f\"回复 (温度=0.2):\\n{response_low_temp}\\n\")\n\n# 高温度：更有创意、更多样化的输出\nresponse_high_temp = call_llm(prompt=prompt, temperature=0.9, max_tokens=150)\nprint(f\"回复 (温度=0.9):\\n{response_high_temp}\")\n\n# 注意：多次运行高温度提示词可能会\n# 每次产生明显不同的结果，而低温度\n# 提示词会生成更相似的输出。\n</code></pre>\n<p><strong>预期观察：</strong></p>\n<p>低温度（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.2</mn></mrow><annotation encoding=\"application/x-tex\">0.2</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.2</span></span></span></span>）的回复可能会提供与地图和隐藏城市相关的标准奇幻套路，每次运行时可能都非常相似。高温度（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0.9</mn></mrow><annotation encoding=\"application/x-tex\">0.9</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0.9</span></span></span></span>）的回复应该会提供更多样、可能更不寻常的情节转折或角色构思。它可能以不那么显眼的方式连接思想。多次运行高温度提示词可能会产生明显不同的构思组合，显示出增加的随机性。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-qrqy5l\" \n              data-plot-definition='{\"layout\": {\"title\": \"温度对下一个词概率的影响\", \"xaxis\": {\"title\": \"可能的下一个词\"}, \"yaxis\": {\"title\": \"概率\", \"range\": [0, 0.6]}, \"bargap\": 0.2}, \"data\": [{\"type\": \"bar\", \"name\": \"低温度（例如 0.2）\", \"x\": [\"the\", \"a\", \"ancient\", \"hidden\", \"magical\"], \"y\": [0.5, 0.15, 0.1, 0.05, 0.03], \"marker\": {\"color\": \"#339af0\"}}, {\"type\": \"bar\", \"name\": \"高温度（例如 0.9）\", \"x\": [\"the\", \"a\", \"ancient\", \"hidden\", \"magical\"], \"y\": [0.25, 0.2, 0.18, 0.15, 0.12], \"marker\": {\"color\": \"#ff922b\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-qrqy5l\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>较低的温度使概率分布更集中，使得最有可能的下一个词的概率大大增加。较高的温度使分布趋于平坦，增加了选择不常见词语的机会。</p>\n</blockquote>\n<p><strong>尝试一下：</strong> 使用一个提示词，让 LLM 完成一个句子，例如“宇宙飞船降落在了一个由……组成的星球上。”将其在 <code>temperature=0.1</code> 和 <code>temperature=1.0</code> 下多次运行。比较补全内容的连贯性和创造性。</p>\n<h3>实验 4：使用 <code>max_tokens</code> 管理输出长度</h3>\n<p><code>max_tokens</code> 参数 (parameter)设置生成回复的长度限制（在某些模型中包括提示词 (prompt)，但通常指生成部分）。它对控制成本、延迟和确保输出符合要求都很重要。</p>\n<p><strong>任务：</strong> 让 LLM 解释光合作用。</p>\n<p><strong>提示词：</strong></p>\n<pre><code class=\"language-text\">Explain the process of photosynthesis in simple terms.\n</code></pre>\n<p><strong>示例代码（比较 <code>max_tokens</code>）：</strong></p>\n<pre><code class=\"language-python\">prompt = \"Explain the process of photosynthesis in simple terms.\"\n\n# 低 max_tokens：截断输出\nresponse_short = call_llm(prompt=prompt, temperature=0.5, max_tokens=25)\nprint(f\"回复 (max_tokens=25):\\n{response_short}\\n\")\n\n# 高 max_tokens：更完整的输出\nresponse_long = call_llm(prompt=prompt, temperature=0.5, max_tokens=150)\nprint(f\"回复 (max_tokens=150):\\n{response_long}\")\n</code></pre>\n<p><strong>预期观察：</strong></p>\n<p><code>max_tokens=25</code> 的回复可能会在解释中途被截断，甚至可能在句中被截断。它只提供了答案的开头部分。<code>max_tokens=150</code> 的回复应该会提供一个更完整但仍然简单的光合作用解释。这表明 <code>max_tokens</code> 如何作为生成长度的硬性限制。</p>\n<p><strong>尝试一下：</strong> 尝试编写一个短篇故事的任务。将 <code>max_tokens</code> 设置为一个非常小的值（例如 10），然后逐渐增加。观察故事如何发展，直到感觉完整或达到 token 限制。考虑权衡：更大的 <code>max_tokens</code> 允许更完整的答案，但会增加 API 成本和响应时间。</p>\n<h3>实验总结</h3>\n<p>这些简单的实验显示了与 LLM 的基本互动：</p>\n<ul>\n<li><strong>指令重要：</strong> 清晰、具体的指令对于引导 LLM 生成所需输出是必要的。措辞上的细微变化可能导致不同的结果。</li>\n<li><strong>参数 (parameter)调整行为：</strong> 像 <code>temperature</code> 这样的参数对输出的风格（创意型 vs. 可预测型）有很大影响，而 <code>max_tokens</code> 控制长度。</li>\n<li><strong>迭代必要：</strong> 获得完美回复通常需要尝试不同的提示词 (prompt)和参数设置。</li>\n</ul>\n<p>这些基本技能是更高级提示工程 (prompt engineering)的起点。随着课程的推进，你将学习处理更复杂任务和提高 LLM 在你应用中回复可靠性的方法。继续尝试！尝试不同的提示词、任务和参数组合，以培养你对 LLM 行为的直觉。</p>",
+  "slug": "practice-simple-prompt-experiments",
+  "updates": [],
+  "references": [
+    {
+      "id": 9026,
+      "title": "Chat Completions API Reference",
+      "author": "OpenAI",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "详细介绍了与OpenAI聊天模型交互参数的官方文档，包括`temperature`和`max_tokens`。",
+      "order": 1,
+      "created_at": "2025-09-05T02:13:58.431624Z",
+      "updated_at": "2025-09-09T04:58:28.078935Z"
+    },
+    {
+      "id": 9027,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "一份官方指南，提供了有效编写提示词以从大型语言模型获取预期输出的策略和最佳实践。",
+      "order": 2,
+      "created_at": "2025-09-05T02:13:58.435544Z",
+      "updated_at": "2025-09-09T04:58:34.890617Z"
+    },
+    {
+      "id": 9028,
+      "title": "Prompt Engineering for Developers",
+      "author": "Andrew Ng, Isa Fulford",
+      "year": "2023",
+      "publisher": "DeepLearning.AI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearning.ai/courses/chatgpt-prompt-engineering-for-developers/",
+      "doi": "",
+      "note": "一个实用的在线课程，提供关于提示工程技术的结构化学习，包括如何使用LLM参数完成不同任务。",
+      "order": 3,
+      "created_at": "2025-09-05T02:13:58.438286Z",
+      "updated_at": "2025-09-09T04:58:25.530827Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

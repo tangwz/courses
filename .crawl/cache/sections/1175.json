@@ -1,0 +1,61 @@
+{
+  "id": 1175,
+  "title": "用于表示比例的饼图",
+  "meta_title": "使用 Matplotlib 创建饼图",
+  "meta_description": "学习如何使用 Matplotlib 的 `pie` 函数创建饼图，并了解其常见局限性。",
+  "content": "<p>条形图和直方图有助于比较不同数值或展示分布，但有时，您需要将不同部分如何构成整体的情况可视化。这时，饼图就派上用场了。饼图是一种圆形统计图，通过切片来表示数值比例。每个切片的弧长（以及其中心角和面积）与它所代表的数量成比例。</p>\n<p>想象一下在朋友之间分一个真实的派；饼图对您的数据也如此，显示每个类别在总数中所占的百分比。当您拥有的类别数量较少（通常少于6个）并希望突出单个实体如何划分为不同部分时，它们最有效。</p>\n<h3>使用 <code>plt.pie()</code> 创建基本饼图</h3>\n<p>Matplotlib 提供了 <code>plt.pie()</code> 函数来创建饼图。其最基本的用法需要一个参数 (parameter)：一个表示每个切片大小的数值数组或列表。</p>\n<p>假设我们对100人进行了一项关于他们最喜欢的原色的调查，结果是：45人选择蓝色，30人选择红色，15人选择绿色，10人选择黄色。</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 数据：每种颜色的票数\nvotes = np.array([45, 30, 15, 10])\ncolors = ['Blue', 'Red', 'Green', 'Yellow']\n\nplt.figure(figsize=(6, 6)) # 使图形呈圆形\nplt.pie(votes)\nplt.title('最喜欢原色的调查结果（100票）')\nplt.show()\n</code></pre>\n<p>这段简单的代码生成了一个饼图，但它缺少一些重要信息，比如哪个切片对应哪种颜色。</p>\n<h3>自定义饼图</h3>\n<p><code>plt.pie()</code> 函数提供了几个参数 (parameter)，让您的图表更具信息量和视觉吸引力：</p>\n<ol>\n<li><strong><code>labels</code></strong>：一个字符串列表，为每个切片提供标签。顺序应与数据数组中值的顺序一致。</li>\n<li><strong><code>autopct</code></strong>：一个字符串或函数，用于格式化显示在每个切片上的数值。一个常用的格式字符串是 <code>'%1.1f%%'</code>，它显示百分比，保留一位小数，后面跟着一个 '%' 符号。末尾的 '%%' 用于转义百分号，使其原样显示。</li>\n<li><strong><code>colors</code></strong>：一个颜色名称或十六进制代码列表，用于手动设置每个切片的颜色。如果未提供，Matplotlib 会使用默认的颜色循环。</li>\n<li><strong><code>startangle</code></strong>：将第一个切片的起始位置从X轴逆时针旋转（以度为单位指定）。默认值为0。设置 <code>startangle=90</code> 通常看起来不错，它将第一个切片置于顶部（12点钟位置）。</li>\n<li><strong><code>explode</code></strong>：允许您将一个或多个切片从中心“拉出”以进行突出。它接受一个与您的数据长度相同的元组或列表，其中每个值指定切片偏移半径的比例。值为0表示切片保持原位。</li>\n</ol>\n<p>让我们改进之前的例子：</p>\n<pre><code class=\"language-python\">import matplotlib.pyplot as plt\nimport numpy as np\n\n# 数据\nvotes = np.array([45, 30, 15, 10])\ncolors_labels = ['Blue', 'Red', 'Green', 'Yellow']\n# 使用建议调色板中的十六进制代码定义自定义颜色\ncustom_colors = ['#339af0', '#fa5252', '#51cf66', '#fcc419']\n# 略微“拉出”蓝色切片\nexplode_values = (0.1, 0, 0, 0) \n\nplt.figure(figsize=(7, 7)) \nplt.pie(votes, \n        labels=colors_labels, \n        colors=custom_colors,\n        autopct='%1.1f%%', # 显示百分比\n        startangle=90,      # 将第一个切片置于顶部\n        explode=explode_values) # 突出第一个切片\nplt.title('最喜欢原色的调查结果（100票）')\nplt.show() \n</code></pre>\n<p>这个版本清晰许多。我们可以看到标签、每种颜色的百分比贡献，以及蓝色切片为了突出而略微偏移。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1kqukfh\" \n              data-plot-definition='{\"layout\": {\"title\": \"最喜欢原色的比例\", \"width\": 500, \"height\": 500, \"showlegend\": true, \"margin\": {\"l\": 20, \"r\": 20, \"t\": 50, \"b\": 20}}, \"data\": [{\"type\": \"pie\", \"values\": [45, 30, 15, 10], \"labels\": [\"蓝色\", \"红色\", \"绿色\", \"黄色\"], \"marker\": {\"colors\": [\"#339af0\", \"#fa5252\", \"#51cf66\", \"#fcc419\"]}, \"pull\": [0.1, 0, 0, 0], \"textinfo\": \"百分比+标签\", \"hoverinfo\": \"标签+百分比+数值\", \"insidetextorientation\": \"radial\"}]}' \n              style=\"max-width: 600px; margin: 0 auto; min-height: 500px;\"\n            >\n              <div id=\"plot-1kqukfh\" style=\"width: 100%; min-height: 500px;\"></div>\n            </div>\n          \n<blockquote>\n<p>最喜欢原色的投票比例。蓝色切片略微拉出以作突出。</p>\n</blockquote>\n<h3>局限性以及何时避免使用饼图</h3>\n<p>虽然饼图在显示整体各部分时直观易懂，但它们存在明显局限：</p>\n<ul>\n<li><strong>难以比较相似的切片</strong>：人类不擅长精确判断角度和面积。如果切片大小相似（例如，23%、25%、27%），仅凭饼图很难判断哪个最大或精确估计差异。</li>\n<li><strong>类别过多时表现不佳</strong>：随着切片数量的增加，图表会变得杂乱且难以阅读。标签可能会重叠，小切片变得难以区分。一般建议是避免将饼图用于超过5-6个类别的情况。</li>\n<li><strong>零值或负值</strong>：饼图无法表示零值或负值，因为它们处理的是正总数的比例。</li>\n</ul>\n<p><strong>替代方案：</strong> 为了比较类别之间的特定值，特别是当您有多个类别时，<strong>条形图</strong>（<code>plt.bar()</code> 或 <code>plt.barh()</code>）几乎总是更好的选择。条形图使用公共基线上的长度，这比角度或面积更容易让我们的眼睛进行精确比较。堆叠条形图也能有效地显示部分与整体的关系。</p>\n<p><strong>谨慎使用饼图。</strong> 它们在以下情况最适用：</p>\n<ul>\n<li>您想显示整体的大致比例。</li>\n<li>类别总数较少（理想情况下为5个或更少）。</li>\n<li>各部分总和构成有意义的100%。</li>\n<li>您想突出各部分对总体的相对贡献，而不是精确比较各部分之间的数据。</li>\n</ul>\n<p>总结来说，<code>plt.pie()</code> 允许您创建表示比例的图表。虽然生成简单，但请记住它们在精确比较和适用于多类别方面的局限性。请始终考虑条形图是否能更有效地传达您的数据。</p>",
+  "slug": "matplotlib-pie-charts",
+  "updates": [],
+  "references": [
+    {
+      "id": 916,
+      "title": "matplotlib.pyplot.pie",
+      "author": "Matplotlib Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.pie.html",
+      "doi": "",
+      "note": "Matplotlib饼图函数的官方文档，提供了详细的API参考和使用示例。",
+      "order": 1,
+      "created_at": "2025-09-04T15:08:57.030117Z",
+      "updated_at": "2025-09-07T16:27:00.416315Z"
+    },
+    {
+      "id": 917,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/04.05-histograms-and-binnings.html",
+      "doi": "",
+      "note": "Python数据科学工具的综合指南，其中包含有关Matplotlib的详细部分，涵盖各种图表类型和自定义设置。",
+      "order": 2,
+      "created_at": "2025-09-04T15:08:57.032761Z",
+      "updated_at": "2025-09-07T16:27:04.572477Z"
+    },
+    {
+      "id": 918,
+      "title": "Fundamentals of Data Visualization",
+      "author": "Claus O. Wilke",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://clauswilke.com/dataviz/amounts.html",
+      "doi": "",
+      "note": "提供了一种数据可视化的原则性方法，讨论了何时使用以及何时避免使用饼图等特定图表类型。",
+      "order": 3,
+      "created_at": "2025-09-04T15:08:57.038211Z",
+      "updated_at": "2025-09-07T16:27:15.108324Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

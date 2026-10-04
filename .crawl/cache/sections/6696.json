@@ -1,0 +1,61 @@
+{
+  "id": 6696,
+  "title": "分布式问题解决方法",
+  "meta_title": "智能体分布式问题解决",
+  "meta_description": "考察使一组智能体能够共同解决问题的方法。",
+  "content": "<p>智能体群组通过实际方法共同处理复杂问题。分布式问题解决（DPS）提供了一个框架，用于将大型、多方面任务分解为可管理的小问题，这些问题可以由单个智能体或子群组处理。这些小问题的解随后被整合，形成对原始挑战的全面解决方案。在运用专用大型语言模型智能体的多样能力时，这种方法尤其有力。</p>\n<h3>分布式问题解决的核心</h3>\n<p>从根本上讲，分布式问题解决是一项协作活动，自主智能体网络协调其活动，以解决超出任何单个智能体能力或知识范围的问题。当我们设计带有大型语言模型智能体的系统时，这一点变得越来越有意义，每个智能体都可能针对特定方面进行微调 (fine-tuning)或配备独特工具。DPS的一般流程通常包含几个主要阶段：</p>\n<ol>\n<li><strong>问题分解：</strong> 主要问题被分解成更小、更易处理的子问题。这种分解可以基于功能专业化、数据划分或工作流依赖。</li>\n<li><strong>任务分配/分发：</strong> 子问题（现在是任务）被分配给系统内合适的智能体。这种分配可以基于智能体能力、当前工作量或竞标机制。</li>\n<li><strong>子问题解决：</strong> 单个智能体或智能体团队处理分配的任务，运用其特定技能、知识和工具（包括大型语言模型推理 (inference)）来生成部分解决方案。</li>\n<li><strong>解决方案整合：</strong> 智能体生成的局部解决方案被收集、整合并可能进行改进，以产生一个针对原始问题的连贯、整体解决方案。</li>\n</ol>\n<p>以下图表说明了这一一般流程：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-z466ik\" \n              data-graph-definition='digraph DPS_Flow {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    Problem [label=\"整体问题\", fillcolor=\"#ffc9c9\"];\n    Decomposition [label=\"问题分解\", fillcolor=\"#a5d8ff\"];\n    Task1 [label=\"子问题 1\", fillcolor=\"#b2f2bb\"];\n    Task2 [label=\"子问题 2\", fillcolor=\"#b2f2bb\"];\n    TaskN [label=\"子问题 N\", fillcolor=\"#b2f2bb\"];\n    Allocation [label=\"任务分配\", fillcolor=\"#a5d8ff\"];\n    Agent1 [label=\"智能体 1 解决子问题 1\", fillcolor=\"#ffd8a8\"];\n    Agent2 [label=\"智能体 2 解决子问题 2\", fillcolor=\"#ffd8a8\"];\n    AgentN [label=\"智能体 N 解决子问题 N\", fillcolor=\"#ffd8a8\"];\n    Synthesis [label=\"解决方案整合\", fillcolor=\"#a5d8ff\"];\n    GlobalSolution [label=\"整体解决方案\", fillcolor=\"#ffc9c9\"];\n\n    Problem -> Decomposition;\n    Decomposition -> Task1 [label=\"生成\"];\n    Decomposition -> Task2 [label=\"生成\"];\n    Decomposition -> TaskN [label=\"生成\"];\n\n    Task1 -> Allocation;\n    Task2 -> Allocation;\n    TaskN -> Allocation;\n\n    Allocation -> Agent1 [label=\"分配给\"];\n    Allocation -> Agent2 [label=\"分配给\"];\n    Allocation -> AgentN [label=\"分配给\"];\n\n    Agent1 -> Synthesis [label=\"提供局部解决方案\"];\n    Agent2 -> Synthesis [label=\"提供局部解决方案\"];\n    AgentN -> Synthesis [label=\"提供局部解决方案\"];\n    Synthesis -> GlobalSolution;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-z466ik\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>分布式问题解决的一般流程，从最初的问题陈述到最终整合的解决方案。</p>\n</blockquote>\n<h3>问题分解策略</h3>\n<p>分解复杂问题的初始步骤具有根本性。这种分解方式会很大程度上影响整个DPS过程的效率和有效性。</p>\n<ul>\n<li><strong>目标驱动分解：</strong> 整体目标被分层分解为子目标。每个子目标进而成为一个子问题。例如，“推出新产品”这一目标可能被分解为“市场调研”、“产品设计”、“生产设置”和“营销活动规划”等子目标。大型语言模型在接收到主要目标和关于可用智能体专长的背景提示时，通常能够提出一个合理的初始分解。</li>\n<li><strong>数据驱动分解：</strong> 如果问题涉及处理很多数据，数据本身可以被划分，智能体可以并行处理不同的数据分区。例如，分析来自不同来源的客户反馈可能涉及将每个来源（如社交媒体、调查、支持工单）分配给不同的智能体。</li>\n<li><strong>功能分解：</strong> 问题根据所需的不同功能或专业知识进行划分。这与由专用智能体组成的系统自然契合。大型语言模型协调器可能会分析一个复杂查询，并将其部分内容分派给具有对应知识的智能体（例如，“财务分析师”智能体和“法律合规”智能体）。</li>\n</ul>\n<p>有效分解旨在使子问题相对独立，以最大程度地减少复杂的依赖关系，同时在总体上全面，以涵盖原始问题。</p>\n<h3>任务分配与分发机制</h3>\n<p>一旦子问题被确定，它们必须被分配给智能体。有几种机制可以促进这种分发：</p>\n<h4>契约网协议（CNP）</h4>\n<p>多智能体系统中一个成熟的任务分配协议。CNP模仿人类的合同签订过程：</p>\n<ol>\n<li><strong>任务发布：</strong> 一个智能体（“管理者”或“发起者”）确定一个需要完成的任务，并向其他智能体（潜在的“承包者”）广播任务通知。此通知通常包含任务规格和任何限制。</li>\n<li><strong>竞标：</strong> 收到通知的智能体评估其本领和执行任务的意愿。如果感兴趣且有本领，它们会向管理者提交投标。投标可以包含预期解决方案质量、所需资源或预计完成时间等内容。大型语言模型可以协助承包智能体根据任务规格和自身本领生成详细且有说服力的投标。</li>\n<li><strong>授予：</strong> 管理者智能体评估收到的投标，并根据预设标准（例如，最佳投标、最快完成）将合同（任务）授予最合适的智能体。</li>\n<li><strong>执行与报告：</strong> 被授予任务的智能体（承包者）执行任务并将结果报告给管理者。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1cibacx\" \n              data-graph-definition='digraph ContractNetProtocol {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\"];\n\n    Manager [label=\"管理者智能体\", fillcolor=\"#74c0fc\"];\n    ContractorA [label=\"承包者智能体 A\", fillcolor=\"#96f2d7\"];\n    ContractorB [label=\"承包者智能体 B\", fillcolor=\"#96f2d7\"];\n    ContractorC [label=\"承包者智能体 C\", fillcolor=\"#96f2d7\"];\n\n    subgraph cluster_phases {\n        label = \"契约网协议阶段\";\n        bgcolor=\"#e9ecef\";\n        style=\"rounded\";\n\n        Announcement [label=\"1. 任务发布\\n(例如，“需要对X进行数据分析”)\", shape=ellipse, fillcolor=\"#ffec99\"];\n        BiddingA [label=\"2. 智能体 A 投标\\n(例如，“2小时内完成，花费 Y”)\", shape=ellipse, fillcolor=\"#ffe066\"];\n        BiddingB [label=\"2. 智能体 B 投标\\n(例如，“1小时内完成，花费 Z”)\", shape=ellipse, fillcolor=\"#ffe066\"];\n        NoBidC [label=\"智能体 C: 未投标 / 不符合条件\", shape=ellipse, fillcolor=\"#ced4da\"];\n        Award [label=\"3. 管理者授予任务\\n(例如，根据投标授予智能体 B)\", shape=ellipse, fillcolor=\"#ffec99\"];\n        Execution [label=\"4. 智能体 B 执行任务\", shape=ellipse, fillcolor=\"#ffe066\"];\n        Result [label=\"5. 智能体 B 报告结果\", shape=ellipse, fillcolor=\"#ffec99\"];\n\n        Manager -> Announcement [dir=none, style=invis]; // Layout helper\n        Announcement -> BiddingA [style=invis]; BiddingA -> BiddingB [style=invis]; BiddingB -> NoBidC [style=invis]; // Layout helper\n\n    }\n\n    Manager -> Announcement [label=\"广播\"];\n    Announcement -> ContractorA [label=\"接收\"];\n    Announcement -> ContractorB [label=\"接收\"];\n    Announcement -> ContractorC [label=\"接收\"];\n\n    ContractorA -> Manager [label=\"提交投标 A\"];\n    ContractorB -> Manager [label=\"提交投标 B\"];\n\n    Manager -> Award [label=\"评估投标\"];\n    Award -> ContractorB [label=\"授予合同\"];\n\n    ContractorB -> Execution [label=\"执行任务\"];\n    Execution -> Result;\n    Result -> Manager [label=\"发送结果\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1cibacx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>契约网协议通过发布、竞标和授予的过程促进动态任务分配。</p>\n</blockquote>\n<h4>基于市场的机制</h4>\n<p>这些方法将任务和智能体本领视为虚拟市场中的商品。智能体可以从其他智能体那里“购买”服务，或“出售”其执行特定任务的本领。价格会根据供需波动，从而导致高效的资源分配。例如，一个需要某个内容较快的智能体可能会提供更高的“价格”，以激励其他智能体提供该内容。</p>\n<h4>集中式与分布式分配</h4>\n<ul>\n<li><strong>集中式：</strong> 一个专门的协调器或管理者智能体负责所有任务分配。这简化了控制和监控，但可能成为瓶颈和单点故障。</li>\n<li><strong>分布式：</strong> 任务通过智能体之间的直接协商分发，或智能体根据其本领和系统目标主动认领任务。这种方式通常更具伸缩性，但需要在智能体之间使用更复杂的协调协议。</li>\n</ul>\n<h3>子问题解决与信息交流</h3>\n<p>任务分配后，智能体借助其底层大型语言模型和特定工具，着手解决分配的子问题。在此阶段，有效的信息交流非常重要：</p>\n<ul>\n<li><strong>中间结果：</strong> 智能体可能需要分享可能影响他人工作的中间发现。例如，一个研究某个主题的智能体可能会发现一个限制，影响另一个智能体的设计任务。</li>\n<li><strong>共享知识库：</strong> 如第2章所述，智能体可以向共享知识结构（例如，向量 (vector)数据库、图数据库）贡献并获取内容。这使得隐式协调成为可能，智能体的输出成为其他智能体的输入或背景，无需直接消息传递。</li>\n<li><strong>约束传播：</strong> 如果一个智能体的工作对整体问题施加新的限制，这些限制必须传达给对应智能体，以避免浪费精力或产生不兼容的解决方案。</li>\n</ul>\n<p>大型语言模型擅长生成、总结和解释此阶段交流的文本内容，确保智能体之间的交流有意义且可操作。</p>\n<h3>解决方案整合：整合局部结果</h3>\n<p>DPS的最后一步是将单个智能体的局部解决方案结合起来，形成一个连贯而完整的整体解决方案。</p>\n<ul>\n<li><strong>分层整合：</strong> 一种常见方法是，一个指定的“整合者”智能体（通常是来自CNP的管理者或一个专用整合智能体）收集所有局部解决方案。该智能体随后负责将其组装、解决冲突并格式化最终输出。大型语言模型在此角色中可以特别有效，接收到类似提示：“给出智能体A、B和C的这些报告，整合出一个全面的项目计划，并突出主要可交付成果和潜在风险。”</li>\n<li><strong>迭代改进：</strong> 智能体可能会协作地基于共享解决方案草案进行构建。一个智能体提出初始解决方案，其他智能体轮流或并行审查、评论和改进它。这类似于协作文档编辑，但由自主智能体执行。</li>\n<li><strong>黑板系统：</strong> 在这种模型中，智能体将其贡献（假设、局部解决方案、数据）发布到一个共享工作区（“黑板”）。其他智能体可以观察黑板，并根据新内容触发自己的行动，逐步构建一个完整的解决方案。</li>\n</ul>\n<p>整合中的挑战包括处理局部解决方案之间的不一致性、管理依赖关系，以及确保组合解决方案满足原始问题的所有要求。大型语言模型可以通过识别差异、提出解决方案或为清晰度重新措辞组合文本来提供协助。</p>\n<h3>DPS中大型语言模型的特定考量</h3>\n<p>尽管DPS的原则已经成熟，但将其应用于基于大型语言模型的智能体时，会引入特定的考量：</p>\n<ul>\n<li><strong>用于元推理 (inference)的大型语言模型：</strong> 大型语言模型智能体可以充当DPS过程本身的监督者或元控制器。它可以监控进展，识别任务分配或整合中的瓶颈，甚至根据观察到的表现提出修改DPS策略的建议。</li>\n<li><strong>协作提示工程 (prompt engineering)：</strong> 参与DPS的智能体的提示需要精心设计，不仅要用于单个任务执行，还要引导产生易于与其他智能体工作整合的输出。这可能涉及指定输出格式（例如，JSON、结构化文本）或要求智能体明确说明其置信水平或假设。</li>\n<li><strong>上下文 (context)窗口管理：</strong> 在整合来自多个智能体的内容时，如果局部解决方案量很多，整合者智能体（或执行整合的大型语言模型）可能面临上下文窗口限制的挑战。多阶段总结或分层整合等办法有助于处理此情况。</li>\n<li><strong>开销和延迟：</strong> 每次涉及大型语言模型调用的智能体往来都会产生开销和延迟。需要大量大型语言模型智能体之间反复交流的DPS工作流可能变得昂贵而缓慢。改进子问题的粒度和交流模式非常必要。</li>\n</ul>\n<p>通过理解这些不同的分布式问题解决方法，你可以设计多智能体大型语言模型系统，以有效地分工复杂任务，运用专用智能体本领，并整合集体智慧以达到复杂目标。决定特定的分解、分配和整合方法将取决于问题的本质、智能体的数量和种类，以及控制、灵活性和效率之间所需的权衡。</p>",
+  "slug": "distributed-problem-resolution",
+  "updates": [],
+  "references": [
+    {
+      "id": 18195,
+      "title": "An Introduction to MultiAgent Systems",
+      "author": "Michael Wooldridge",
+      "year": "2002",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/An+Introduction+to+MultiAgent+Systems%2C+3rd+Edition-p-9781119730249",
+      "doi": "",
+      "note": "一本基础教材，涵盖多智能体系统原理，包括协作、合作以及契约网协议等分布式问题解决技术。",
+      "order": 1,
+      "created_at": "2025-09-06T12:18:48.117189Z",
+      "updated_at": "2026-02-04T11:35:22.209368Z"
+    },
+    {
+      "id": 18196,
+      "title": "A Survey on Large Language Model based Autonomous Agents",
+      "author": "Lifa Wang, Daqi Liu, Shuo Wang, Bo Chen, Zhaochun Ren, Ziran Li, Pengjie Ren",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Frontiers of Computer Science",
+      "volume": "18",
+      "pages": "1-26",
+      "url": "https://arxiv.org/abs/2308.11432",
+      "doi": "",
+      "note": "全面概述了基于LLM的自主智能体，讨论了其架构、能力和应用，与设计多智能体LLM系统高度相关。",
+      "order": 2,
+      "created_at": "2025-09-06T12:18:48.120944Z",
+      "updated_at": "2026-02-04T11:35:23.320955Z"
+    },
+    {
+      "id": 18198,
+      "title": "The Contract Net Protocol: High-level communication and control in a distributed problem solver",
+      "author": "Reid G. Smith",
+      "year": "1980",
+      "publisher": "",
+      "journal": "IEEE Transactions on Computers",
+      "volume": "C-29",
+      "pages": "1104-1113",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEqxHK2zjXJrCGkDNZ0mwZYGoI12JT0UMaaPZ_ITNz9HUgi794E5dSMIq1SfbSown9eJlm3N_PoKWa_kiXGH69cq5nPvhoy40UHUMIMMHGxW9JxFoM3KFyuCutYqTih2H-i4Odj77ad2aLttkVHGd9iAiM3tiwHAlNz9nJfPjmfgt-9eyAv7mCUEqCBgkiuS13e-iBQCze61cTyT-j-yQ==",
+      "doi": "10.1109/TC.1980.1675661",
+      "note": "引入契约网协议的开创性论文，该协议是分布式问题解决系统中任务分配和协调的基本机制。",
+      "order": 4,
+      "created_at": "2025-09-06T12:18:48.126837Z",
+      "updated_at": "2026-02-04T11:35:23.445366Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

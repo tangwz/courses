@@ -1,0 +1,45 @@
+{
+  "id": 5597,
+  "title": "命令行界面 (CLI) 基本操作",
+  "meta_title": "命令行界面 (CLI) 基本操作",
+  "meta_description": "学习使用命令行与系统交互的基本命令。",
+  "content": "<p>尽管图形用户界面 (GUI) 提供了通过窗口、图标和菜单与计算机进行视觉化交互的方式，但数据工程中的许多工作是在幕后通过一种基于文本的方法进行的，这便是命令行界面 (CLI)。可以将 CLI 视为与操作系统进行的直接对话，您输入命令，系统则以文本形式给出回应。</p>\n<h3>为何使用命令行？</h3>\n<p>对于数据工程师来说，CLI 因以下几个原因而不可或缺：</p>\n<ol>\n<li><strong>自动化与脚本编写：</strong> 处理日志文件或部署代码等重复性任务，可以通过编写执行一系列 CLI 命令的脚本来轻松实现自动化。</li>\n<li><strong>远程服务器访问：</strong> 数据基础设施通常运行在远程服务器上（位于其他地方的机器，可能在数据中心或云端）。连接和管理这些服务器的标准方式是通过 CLI，通常会用到像 SSH (安全外壳协议) 这样的工具。</li>\n<li><strong>资源效率：</strong> CLI 通常比 GUI 消耗更少的系统资源（内存、CPU），这在处理可能资源受限的服务器时很重要。</li>\n<li><strong>工具可用性：</strong> 许多强大的数据处理工具和实用程序主要设计为从命令行使用，有时甚至完全没有图形用户界面。</li>\n<li><strong>精确与控制：</strong> CLI 对操作提供细粒度控制，其程度通常超出视觉界面所能提供的。</li>\n</ol>\n<h3>访问您的终端</h3>\n<p>您访问 CLI 的方式取决于您的操作系统：</p>\n<ul>\n<li><strong>macOS：</strong> 使用内置的 <strong>终端 (Terminal)</strong> 应用程序（可在“应用程序”>“实用工具”中找到）。</li>\n<li><strong>Linux：</strong> 有各种终端模拟器可用，通常命名为 <strong>Terminal</strong>、<strong>Konsole</strong> 或 <strong>xterm</strong>。</li>\n<li><strong>Windows：</strong> 您可以使用 <strong>命令提示符 (Command Prompt)</strong> (cmd.exe) 或更现代、功能更强的 <strong>PowerShell</strong>。适用于 Linux 的 Windows 子系统 (WSL) 也是在 Windows 上直接运行 Linux 环境（包括其 CLI 工具）的常用选项。</li>\n</ul>\n<p>当您打开终端窗口时，会看到一个<strong>提示符</strong>。这是您输入命令的地方。它通常包含您的用户名和当前目录等信息，通常以 <code>$</code>、<code>%</code> 或 <code>></code> 等符号结尾（如果您拥有管理权限，则为 <code>#</code>）。</p>\n<pre><code class=\"language-text\">username@hostname:~$ _\n</code></pre>\n<h3>文件系统导航</h3>\n<p>您的计算机以分层结构组织文件和文件夹（也称为目录），就像树上的分支一样。CLI 提供了在此结构中移动的命令。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-8yj8el\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=folder, style=filled, fillcolor=\"#a5d8ff\"];\n  edge [color=\"#495057\"];\n\n  root [label=\"/ (根目录)\"];\n  home [label=\"home\"];\n  user [label=\"用户\"];\n  projects [label=\"项目\"];\n  data [label=\"数据\"];\n  bin_ [label=\"bin\"];\n  etc_ [label=\"etc\"];\n\n  root -> home;\n  root -> bin_;\n  root -> etc_;\n  home -> user;\n  user -> projects;\n  user -> data;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-8yj8el\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>典型的 Linux/macOS 目录结构简化视图。</p>\n</blockquote>\n<p>以下是基本导航命令：</p>\n<ul>\n<li>\n<p><strong><code>pwd</code> (打印工作目录):</strong> 显示您当前所在目录的完整路径。</p>\n<pre><code class=\"language-bash\">pwd\n</code></pre>\n<p>输出可能为 <code>/home/username</code> 或 <code>/Users/username</code>。</p>\n</li>\n<li>\n<p><strong><code>ls</code> (列出):</strong> 列出您当前目录中的文件和目录。</p>\n<pre><code class=\"language-bash\">ls\n</code></pre>\n<p>常用有用选项（以 <code>-</code> 开头的参数 (parameter)）：</p>\n<ul>\n<li><code>ls -l</code>：显示详细（“长”）列表，包括权限、所有者、大小和修改日期。</li>\n<li><code>ls -a</code>：显示所有文件，包括隐藏文件（以点 <code>.</code> 开头的文件）。您可以组合选项：<code>ls -la</code>。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>cd</code> (更改目录):</strong> 用于进入不同的目录。</p>\n<pre><code class=\"language-bash\"># 进入名为 'documents' 的目录\ncd documents\n\n# 返回上一级目录（父目录）\ncd ..\n\n# 直接进入您的主目录\ncd ~\n# 或者直接输入 cd，不带任何参数\ncd\n\n# 进入根目录\ncd /\n</code></pre>\n</li>\n</ul>\n<h3>处理文件和目录</h3>\n<p>数据工程师经常处理文件，并需要组织它们。</p>\n<ul>\n<li>\n<p><strong><code>mkdir</code> (创建目录):</strong> 创建一个新目录。</p>\n<pre><code class=\"language-bash\">mkdir my_new_project\n</code></pre>\n</li>\n<li>\n<p><strong><code>touch</code>：</strong> 创建一个空文件或更新现有文件的修改时间。</p>\n<pre><code class=\"language-bash\">touch script.py\n</code></pre>\n</li>\n<li>\n<p><strong><code>cp</code> (复制):</strong> 复制文件或目录。</p>\n<pre><code class=\"language-bash\"># 复制文件\ncp source_file.txt destination_file.txt\n\n# 复制文件到目录\ncp important_data.csv data_backup/\n\n# 复制整个目录（需要 -r 选项进行递归复制）\ncp -r project_folder project_folder_backup\n</code></pre>\n</li>\n<li>\n<p><strong><code>mv</code> (移动):</strong> 将文件或目录移动到不同位置，如果目标在同一目录中，则对其进行重命名。</p>\n<pre><code class=\"language-bash\"># 重命名文件\nmv old_name.txt new_name.txt\n\n# 移动文件到目录\nmv report.pdf documents/\n</code></pre>\n</li>\n<li>\n<p><strong><code>rm</code> (删除):</strong> 删除文件。<strong>谨慎使用！从 CLI 删除的文件通常无法恢复。</strong></p>\n<pre><code class=\"language-bash\"># 删除文件\nrm temporary_file.txt\n\n# 删除空目录\nrmdir empty_directory\n\n# 删除目录及其所有内容（需要 -r 进行递归删除，请小心使用！）\nrm -r directory_to_delete\n</code></pre>\n</li>\n</ul>\n<h3>查看文件内容</h3>\n<p>快速查看文件内容是一项常见任务。</p>\n<ul>\n<li>\n<p><strong><code>cat</code> (连接):</strong> 显示一个或多个文件的全部内容。最适合小文件。</p>\n<pre><code class=\"language-bash\">cat config.txt\n</code></pre>\n</li>\n<li>\n<p><strong><code>less</code>：</strong> 一次显示一屏幕的文件内容。使用箭头键或 Page Up/Down 键进行导航，按 <code>q</code> 退出。非常适合大文件。</p>\n<pre><code class=\"language-bash\">less large_log_file.log\n</code></pre>\n</li>\n<li>\n<p><strong><code>head</code>：</strong> 显示文件的前几行（默认 10 行）。</p>\n<pre><code class=\"language-bash\">head data.csv\n</code></pre>\n</li>\n<li>\n<p><strong><code>tail</code>：</strong> 显示文件的最后几行（默认 10 行）。用于查看最近的日志条目。使用 <code>tail -f</code> 可实时查看文件新增内容。</p>\n<pre><code class=\"language-bash\">tail error.log\n</code></pre>\n</li>\n</ul>\n<h3>组合命令：管道与重定向</h3>\n<p>CLI 的两个强大功能是管道和重定向：</p>\n<ul>\n<li>\n<p><strong>管道 (<code>|</code>)：</strong> 将一个命令的输出作为另一个命令的输入。这允许您将命令串联起来。</p>\n<pre><code class=\"language-bash\"># 列出文件，然后过滤包含 '.py' 的行\nls -l | grep .py\n</code></pre>\n</li>\n<li>\n<p><strong>重定向 (<code>></code> 和 <code>>></code>)：</strong> 将命令的输出发送到文件，而不是屏幕。</p>\n<pre><code class=\"language-bash\"># 用 ls 的输出覆盖 file_list.txt\nls > file_list.txt\n\n# 将 ls 的输出追加到 file_list.txt\nls >> file_list.txt\n</code></pre>\n</li>\n</ul>\n<h3>为何这对数据工程很重要</h3>\n<p>尽管这些命令看起来很基础，但它们是许多数据工程任务的构建模块。您将使用 CLI 来：</p>\n<ul>\n<li>导航包含数据或代码的服务器目录。</li>\n<li>运行用于数据处理的 Python 脚本或编译程序。</li>\n<li>检查日志文件中的错误。</li>\n<li>管理配置文件。</li>\n<li>与云提供商的 CLI（如 AWS CLI、gcloud、az cli）交互以管理云资源。</li>\n<li>自动化部署和工作流执行。</li>\n</ul>\n<p>掌握命令行是一项基本技能。它提供对数据所在和处理系统的直接访问，所实现的效率和自动化远远超出 GUI 单独能提供的。从练习这些基本命令开始吧；它们将很快变得得心应手。</p>",
+  "slug": "command-line-interface-cli-basics",
+  "updates": [],
+  "references": [
+    {
+      "id": 15064,
+      "title": "The Missing Semester of Your CS Education",
+      "author": "Anish Athalye, Jon Gjengset, and Jose Javier Gonzalez Ortiz",
+      "year": "2020",
+      "publisher": "MIT",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://missing.csail.mit.edu/",
+      "doi": "",
+      "note": "一门介绍实用计算机科学工具的课程，包含对shell的广泛讲解。",
+      "order": 2,
+      "created_at": "2025-09-05T14:35:00.458918Z",
+      "updated_at": "2025-09-11T02:39:51.580912Z"
+    },
+    {
+      "id": 15065,
+      "title": "GNU Bash Reference Manual",
+      "author": "Chet Ramey and Brian Fox",
+      "year": "2025",
+      "publisher": "GNU",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.gnu.org/software/bash/manual/bash.html",
+      "doi": "",
+      "note": "GNU Bash shell的官方详细参考手册，该shell在许多操作系统中得到广泛使用。",
+      "order": 3,
+      "created_at": "2025-09-05T14:35:00.464047Z",
+      "updated_at": "2025-09-11T02:39:58.413033Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

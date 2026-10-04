@@ -1,0 +1,61 @@
+{
+  "id": 1028,
+  "title": "向远程仓库推送更改 (git push)",
+  "meta_title": "上传更改到远程仓库 | git push 命令",
+  "meta_description": "使用 `git push` 将你的本地提交和分支上传到已配置的远程仓库。",
+  "content": "<p>当你在本地进行了一些修改，并使用 <code>git commit</code> 将它们保存为提交后，通常会希望将这些更新分享给其他人，或者只是将它们备份到远程仓库（例如 GitHub 或 GitLab）。此时就用到 <code>git push</code> 命令了。它是将已提交的更改<em>从</em>本地仓库<em>发送到</em>远程仓库的主要方式。</p>\n<p>把它想象成将你保存在计算机上的文档上传到共享在线文件夹。你的一系列提交就是文档的更新，而远程仓库就是大家可以看到最新版本的共享文件夹。</p>\n<h3><code>git push</code> 的工作原理</h3>\n<p>该命令的基本结构很简单：</p>\n<pre><code class=\"language-bash\">git push &#x3C;remote-name> &#x3C;branch-name>\n</code></pre>\n<p>我们来分解一下：</p>\n<ul>\n<li><code>git push</code>：这是命令本身，告诉 Git 你打算将已提交的更改<em>发送</em>到远程位置。</li>\n<li><code>&#x3C;remote-name></code>：这指定了你要将更改发送到<em>哪个</em>远程仓库。记得在之前的章节中提到过，你可能使用 <code>git remote add</code> 添加了一个远程仓库，或者克隆时会自动设置一个吗？通常，你克隆或手动添加的默认远程仓库名为 <code>origin</code>。因此，你在这里会经常使用 <code>origin</code>。你可以随时使用 <code>git remote -v</code> 列出你配置的远程仓库及其 URL，以确保正确。</li>\n<li><code>&#x3C;branch-name></code>：这指定了你要发送<em>哪个</em>本地分支的提交。如果你一直在主开发线上直接进行提交，这通常是 <code>main</code>（在一些旧项目中可能是 <code>master</code>）。如果你创建了一个功能分支来处理某个具体事项（如分支章节中所述），你会在这个地方使用该分支的名称，例如 <code>feature-login</code>。</li>\n</ul>\n<h3>一个常见示例</h3>\n<p>最常见的使用情况是，将你在本地 <code>main</code> 分支上所做的提交推送到 <code>origin</code> 远程仓库：</p>\n<pre><code class=\"language-bash\">git push origin main\n</code></pre>\n<p>当你执行此命令时，Git 会执行以下几个步骤：</p>\n<ol>\n<li>它查看你本地 <code>main</code> 分支的历史。</li>\n<li>它与 <code>origin</code> 远程仓库通信，以查看其 <code>main</code> 分支的历史。</li>\n<li>它确定哪些提交存在于你的本地 <code>main</code> 分支上，但 <code>origin/main</code> 分支上没有。</li>\n<li>它将那些缺失的提交和相关数据传输（推送）到 <code>origin</code> 远程仓库。</li>\n<li>最后，它更新 <code>origin</code> 远程仓库上的 <code>main</code> 分支指针，使其指向你刚刚推送的最新提交。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-w1ouc1\" \n              data-graph-definition='digraph GitPushFlow { rankdir=TB; node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10]; edge [arrowhead=vee, arrowsize=0.7]; LocalRepo [label=\"你的本地仓库\\n(包含新提交)\", peripheries=2]; RemoteRepo [label=\"远程仓库（例如 GitHub）\\n(缺少你的新提交)\", color=\"#a5d8ff\", style=filled]; Command [label=\"git push origin main\", shape=parallelogram, color=\"#fab005\"]; Result [label=\"远程仓库已更新\\n(现在包含你的新提交)\", color=\"#69db7c\", style=filled]; LocalRepo -> Command [label=\"你运行命令\"]; Command -> RemoteRepo [label=\"上传提交\"]; RemoteRepo -> Result [label=\"更改已应用\"]; labelloc=\"t\"; label=\"推送更改的工作流程\"; fontsize=12; fontcolor=\"#495057\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-w1ouc1\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了 <code>git push</code> 命令如何从你的本地仓库获取提交并将其发送以更新远程仓库。</p>\n</blockquote>\n<h3>首次推送新分支</h3>\n<p>如果你在本地创建了一个全新的分支，比如 <code>fix-typos</code>，并在上面做了一些提交，现在想把它分享到远程仓库怎么办？第一次推送这个新分支时，远程仓库（<code>origin</code>）甚至还不知道它的存在。你需要明确地告诉 Git 在远程仓库上创建这个分支，而且重要的是，将你的本地分支与这个新的远程分支关联起来。</p>\n<p>你可以使用 <code>-u</code> 选项来完成此操作（它是 <code>--set-upstream</code> 的简写）：</p>\n<pre><code class=\"language-bash\">git push -u origin fix-typos\n</code></pre>\n<p>这个命令会执行两个重要操作：</p>\n<ol>\n<li>它将你的本地 <code>fix-typos</code> 分支，连同远程仓库没有的所有可从该分支到达的提交，推送到 <code>origin</code> 远程仓库。这会在远程仓库上创建 <code>fix-typos</code> 分支。</li>\n<li>它在你的本地 <code>fix-typos</code> 分支和远程仓库上的 <code>origin/fix-typos</code> 分支之间建立了一个“跟踪关系”。</li>\n</ol>\n<p>这种跟踪关系很方便。一旦建立好（通过首次推送时使用 <code>-u</code>），对于你在 <code>fix-typos</code> 分支上进行的任何后续推送，你通常只需输入更简单的命令：</p>\n<pre><code class=\"language-bash\">git push\n</code></pre>\n<p>Git 会自动知道你打算将当前分支（<code>fix-typos</code>）推送到其对应的已跟踪远程分支（<code>origin/fix-typos</code>）。这种跟踪关系也简化了拉取更改的操作，我们将在 <code>git pull</code> 部分详细介绍。</p>\n<h3>如果推送失败怎么办？（非快进错误）</h3>\n<p>有时，你的推送尝试可能会被远程仓库拒绝。Git 通常会显示包含 <code>rejected</code>、<code>failed to push some refs</code> 等字样以及经常出现的 <code>non-fast-forward</code> 的错误信息。</p>\n<p>此错误通常表示远程分支在你上次与它同步本地仓库（使用 <code>git fetch</code> 或 <code>git pull</code> 等命令）后，接收了新的提交。设想你基于提交 <code>B</code> 开始工作，然后添加了提交 <code>C</code>。同时，其他人也从提交 <code>B</code> 开始，添加了提交 <code>D</code>，并在你尝试推送 <code>C</code> 之前成功地将 <code>D</code> 推送到了远程仓库。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1vtymig\" \n              data-graph-definition='digraph NonFastForward { rankdir=LR; node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10]; edge [arrowhead=vee, arrowsize=0.7]; subgraph cluster_local { label = \"本地仓库 (main)\"; bgcolor=\"#e9ecef\"; L_A [label=\"A\"]; L_B [label=\"B\"]; L_C [label=\"C (你的新提交)\"]; L_A -> L_B -> L_C; } subgraph cluster_remote { label = \"远程仓库 (origin/main)\"; bgcolor=\"#a5d8ff\"; R_A [label=\"A\"]; R_B [label=\"B\"]; R_D [label=\"D (别人的提交)\"]; R_A -> R_B -> R_D; } L_C -> R_D [style=dashed, arrowhead=none, color=\"#f03e3e\", label=\"推送失败！\\n (非快进)\"]; label=\"场景：远程仓库有你没有的更改\"; fontsize=12; fontcolor=\"#495057\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1vtymig\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>这种情况发生在远程分支在你上次更新本地副本后，有了新的提交。推送你的更改会覆盖远程仓库上现有但不同的历史。</p>\n</blockquote>\n<p>Git 会阻止这种“非快进”推送，因为接受你的提交 <code>C</code> 会导致远程仓库丢失提交 <code>D</code>。历史已发生分歧。</p>\n<p>标准的解决办法是，在再次推送<em>之前</em>，先将远程更改合并到你的本地分支。你需要获取最新更改（包括提交 <code>D</code>）并将其与你的本地工作（提交 <code>C</code>）合并。<code>git pull</code> 命令就是为这种获取和合并操作而设计的，我们将在其专属章节中详细介绍。目前，主要的要点是，“非快进”错误通常意味着在 <code>push</code> 之前你需要 <code>pull</code>。</p>\n<h3>认证注意事项</h3>\n<p>推送更改涉及向远程仓库写入数据，因此几乎总是需要认证。你需要向远程服务器（如 GitHub、GitLab 或 Bitbucket）证明你拥有修改项目的必要权限。</p>\n<p>认证方法取决于你连接远程仓库时使用的协议（通常是 HTTPS 或 SSH）：</p>\n<ul>\n<li>**HTTPS：<strong>你可能会被要求输入用户名和密码。现在更常见的是，出于安全考虑，托管平台会要求你使用</strong>个人访问令牌（PAT）**而非普通密码。你可以在该平台的网站上生成此令牌，并在 Git 提示时将其用作密码。</li>\n<li>**SSH：**此方法使用加密密钥对。你将你的公共 SSH 密钥添加到托管平台上的账户，Git 会使用你的私钥（安全地存储在你的计算机上）自动进行认证，无需为每次推送输入密码或令牌。</li>\n</ul>\n<p>如果 <code>git push</code> 因认证错误而失败，Git 的信息通常会指引你找到解决办法。你可能需要检查你存储的凭据、生成 PAT，或确保你的 SSH 密钥已正确配置并添加到远程平台。请查阅你的特定 Git 托管服务的文档以获取详细说明。</p>\n<p>有效地使用 <code>git push</code> 可以让你分享你的贡献，与团队成员协作，并在远程服务器上保留项目历史的备份。它是与远程 Git 仓库协作的基本命令。</p>",
+  "slug": "git-push-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 294,
+      "title": "git-push(1) Manual Page",
+      "author": "Git Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-push",
+      "doi": "",
+      "note": "`git push` 命令的官方和最权威指南，详细说明其语法、选项和操作细节。",
+      "order": 1,
+      "created_at": "2025-09-04T14:04:36.680938Z",
+      "updated_at": "2025-09-07T15:45:49.781684Z"
+    },
+    {
+      "id": 295,
+      "title": "Working with Remotes (from Pro Git, 2nd Edition)",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Working-with-Remotes",
+      "doi": "",
+      "note": "《Pro Git》一书中的一个综合章节，解释了远程仓库的基本概念、如何管理它们以及 `git push` 在共享更改中的作用。",
+      "order": 2,
+      "created_at": "2025-09-04T14:04:36.685480Z",
+      "updated_at": "2025-09-07T15:45:49.928823Z"
+    },
+    {
+      "id": 296,
+      "title": "Creating a personal access token (classic)",
+      "author": "GitHub Docs",
+      "year": "2024",
+      "publisher": "GitHub",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token",
+      "doi": "",
+      "note": "GitHub 官方文档，详细说明了生成和使用个人访问令牌（PAT）的过程，以实现在通过 HTTPS 推送时的安全认证，这是一项重要的安全实践。",
+      "order": 3,
+      "created_at": "2025-09-04T14:04:36.691936Z",
+      "updated_at": "2025-09-07T15:45:54.313672Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

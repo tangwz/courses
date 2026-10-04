@@ -1,0 +1,45 @@
+{
+  "id": 3016,
+  "title": "动手实践：提示词优化挑战",
+  "meta_title": "练习提示词优化",
+  "meta_description": "动手实践，优化效果不佳的提示词，以提升LLM输出的质量和一致性。",
+  "content": "<p>本次动手实践练习将迭代设计和评估应用于提示工程 (prompt engineering)的实际情境。通常，第一次尝试的提示词 (prompt)不会产生理想的结果。此过程包括获取一个效果不佳的提示词，分析其不足之处，并系统地完善它，以提高大型语言模型（LLM）输出的质量、一致性和结构。</p>\n<h3>挑战：提取结构化信息</h3>\n<p>假设您有一些客户反馈邮件，需要从中提取特定信息：客户的主要情感（正面、负面、中立）、提及的产品（如果有），以及对反馈核心问题或赞扬的简要总结。</p>\n<p><strong>初始情境：</strong></p>\n<p>您将从包含多封客户邮件的一大段文本开始。以下是代表一封邮件的片段：</p>\n<pre><code class=\"language-text\">主题：喜欢新的Xylos功能！\n\n团队您好，\n\n只想说Xylos平台的最新更新，尤其是仪表板自定义功能，非常棒！它让我的工作流程顺畅了许多。我确实注意到一个小毛病，日期筛选器有时会意外重置，但总体来说，这是一个巨大的改进。请继续保持出色的工作！\n\n此致，\nAlex Chen\n</code></pre>\n<p><strong>效果不佳的提示词 (prompt)（尝试1）：</strong></p>\n<pre><code class=\"language-text\">这是一些客户反馈：\n[在此插入邮件文本]\n\n这份反馈是关于什么的？\n</code></pre>\n<p><strong>典型输出（尝试1）：</strong></p>\n<p>LLM可能会回应如下内容：</p>\n<pre><code class=\"language-text\">这份反馈是关于Xylos平台更新的。客户喜欢仪表板自定义功能，但发现日期筛选器有一个小毛病。他们认为总体来说这是一个很大的改进。\n</code></pre>\n<p><strong>尝试1的分析：</strong></p>\n<p>尽管LLM理解了基本内容，但其输出在我们的目标方面存在几个问题：</p>\n<ol>\n<li><strong>缺乏结构：</strong> 这是一个自由格式的文本摘要。我们想要特定的字段（情感、产品、摘要）。</li>\n<li><strong>隐式信息：</strong> 情感（“正面”）是暗示的，但未按要求明确说明。产品（“Xylos”）有提及，但未明确提取为数据点。</li>\n<li><strong>缺少限制：</strong> 提示词没有指导LLM<em>如何</em>呈现信息。</li>\n</ol>\n<h3>第一次迭代：添加指示和结构</h3>\n<p>让我们完善提示词 (prompt)，使其对任务和期望的输出格式更具体。我们将使用清晰的指示，并要求采用像JSON这样的结构化格式，这更容易让应用程序解析。</p>\n<p><strong>改进的提示词（尝试2）：</strong></p>\n<pre><code class=\"language-text\">分析以下客户反馈邮件。提取主要情感（正面、负面或中立）、提及的具体产品（如果有，否则使用“无”），以及反馈核心要点的简洁总结（1-2句话）。将输出格式化为JSON对象，包含键：“sentiment”、“product”和“summary”。\n\n反馈邮件：\n'''\n主题：喜欢新的Xylos功能！\n\n团队您好，\n\n只想说Xylos平台的最新更新，尤其是仪表板自定义功能，非常棒！它让我的工作流程顺畅了许多。我确实注意到一个小毛病，日期筛选器有时会意外重置，但总体来说，这是一个巨大的改进。请继续保持出色的工作！\n\n此致，\nAlex Chen\n'''\n\n输出：\n</code></pre>\n<p><strong>预期输出（尝试2）：</strong></p>\n<pre><code class=\"language-json\">{\n  \"sentiment\": \"Positive\",\n  \"product\": \"Xylos\",\n  \"summary\": \"客户赞赏Xylos平台更新中的仪表板自定义功能，但报告了日期筛选器重置的小错误。\"\n}\n</code></pre>\n<p><strong>尝试2的分析：</strong></p>\n<p>这明显更好了！</p>\n<ul>\n<li><strong>结构化输出：</strong> JSON格式正是我们进行后续处理所需的。</li>\n<li><strong>明确提取：</strong> 情感和产品都清晰地识别出来了。</li>\n<li><strong>简洁性：</strong> 总结侧重于核心要点。</li>\n<li><strong>清晰指示：</strong> 提示词清晰地定义了任务、所需字段和输出格式。</li>\n</ul>\n<h3>第二次迭代：处理模糊情况和特殊情况（可选优化）</h3>\n<p>如果反馈更模糊或者没有提及产品怎么办？让我们考虑这样的反馈：</p>\n<pre><code class=\"language-text\">主题：登录问题\n\n我今天早上似乎无法访问我的账户。它一直在转圈。是不是有什么问题？- Sam\n</code></pre>\n<p>使用提示词 (prompt)2可能会产生：</p>\n<pre><code class=\"language-json\">{\n  \"sentiment\": \"Negative\",\n  \"product\": \"None\",\n  \"summary\": \"客户无法登录账户，遇到了无限加载的问题。\"\n}\n</code></pre>\n<p>这很好，但也许我们想确保总结<em>总是</em>捕捉负面反馈的主要<em>问题</em>或正面反馈的主要<em>亮点</em>。我们可以稍微调 (fine-tuning)整指示。</p>\n<p><strong>进一步改进的提示词（尝试3）：</strong></p>\n<pre><code class=\"language-text\">您是一位分析反馈的客户支持助理。分析以下客户反馈邮件。确定主要情感（严格分类为“正面”、“负面”或“中立”）。识别提及的具体产品（如果没有提及特定产品，则使用“无”）。创建一个简洁的总结（1-2句话），如果情感是负面/中立，则侧重于核心问题；如果是正面，则侧重于主要赞扬。\n\n将结果输出为JSON对象，包含键：“sentiment”、“product”和“summary”。\n\n反馈邮件：\n'''\n[在此插入邮件文本]\n'''\n\nJSON 输出：\n</code></pre>\n<p>此版本增加了一个“角色”（<code>客户支持助理</code>），并根据<code>情感</code>稍微调整了<code>总结</code>的指示。这增加了可靠性，能更精确地引导LLM处理不同类型的反馈。</p>\n<h3>评估</h3>\n<p>我们如何知道我们的提示词 (prompt)正在变好？</p>\n<ol>\n<li><strong>准确性：</strong> 提取的信息是否正确反映了邮件内容？情感分类是否准确？是否识别出正确的产品？</li>\n<li><strong>完整性：</strong> 输出中是否包含所有要求的字段？</li>\n<li><strong>格式遵循：</strong> 输出是否始终符合要求的JSON结构？</li>\n<li><strong>简洁性：</strong> 总结是否简明扼要？</li>\n<li><strong>一致性：</strong> 提示词是否能可靠地处理不同的示例邮件（正面、负面、中立、提及产品、未提及产品）？</li>\n</ol>\n<p>您可以创建一组包含不同邮件的小型测试集，并针对它们运行每个提示词版本，将输出与手动创建的“理想”提取结果进行比较。这构成了系统评估的依据，这对于构建可靠的LLM应用程序来说非常重要。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-y7eu7d\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_0 {\n        label = \"提示词优化循环\";\n        bgcolor=\"#e9ecef\";\n\n        P1 [label=\"尝试1：\\n模糊提示词\", style=\"filled\", fillcolor=\"#ffc9c9\"];\n        O1 [label=\"输出1：\\n非结构化摘要\", style=\"filled\", fillcolor=\"#ffc9c9\"];\n        A1 [label=\"分析：\\n- 缺乏结构\\n- 隐式信息\\n- 没有限制\", style=\"filled\", fillcolor=\"#ffe066\"];\n\n        P2 [label=\"尝试2：\\n添加指示，\\n请求JSON\", style=\"filled\", fillcolor=\"#b2f2bb\"];\n        O2 [label=\"输出2：\\n结构化JSON\", style=\"filled\", fillcolor=\"#b2f2bb\"];\n        A2 [label=\"分析：\\n- 处理模糊情况？\\n- 特殊情况？\", style=\"filled\", fillcolor=\"#ffe066\"];\n\n        P3 [label=\"尝试3：\\n细化摘要逻辑，\\n添加角色\", style=\"filled\", fillcolor=\"#a5d8ff\"];\n        O3 [label=\"输出3：\\nJSON\", style=\"filled\", fillcolor=\"#a5d8ff\"];\n        E [label=\"评估：\\n- 准确性\\n- 格式\\n- 一致性\", style=\"filled\", fillcolor=\"#74c0fc\"];\n\n        P1 -> O1 [label=\"生成\"];\n        O1 -> A1 [label=\"审查\"];\n        A1 -> P2 [label=\"优化\"];\n        P2 -> O2 [label=\"生成\"];\n        O2 -> A2 [label=\"审查\"];\n        A2 -> P3 [label=\"优化（可选）\"];\n        P3 -> O3 [label=\"生成\"];\n        O3 -> E [label=\"最终检查\"];\n        E -> P1 [style=dashed, label=\"如有需要，重复\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-y7eu7d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>提示词优化的迭代过程包括生成输出、分析其不足、根据分析完善提示词，并评估新的输出。</p>\n</blockquote>\n<p>这种动手实践的过程表明，提示词工程并不总是立即找到一个“神奇”的提示词。它通常是一个有条不紊的循环过程，包括创建、测试、分析和完善，以引导LLM生成您的应用程序所需的精确输出。在构建自己的提示词时，请牢记这些迭代完善和仔细评估的原则。</p>",
+  "slug": "practice-prompt-optimization-challenge",
+  "updates": [],
+  "references": [
+    {
+      "id": 9090,
+      "title": "Prompt engineering",
+      "author": "OpenAI",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/prompt-engineering",
+      "doi": "",
+      "note": "针对有效提示词设计的实用指南，涵盖清晰性、特异性以及LLM交互的迭代优化。",
+      "order": 1,
+      "created_at": "2025-09-05T02:15:27.061397Z",
+      "updated_at": "2025-09-09T05:00:50.108620Z"
+    },
+    {
+      "id": 9092,
+      "title": "Holistic Evaluation of Language Models",
+      "author": "Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew E. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda",
+      "year": "2023",
+      "publisher": "",
+      "journal": "Transactions on Machine Learning Research (TMLR)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2211.09110",
+      "doi": "10.48550/arXiv.2211.09110",
+      "note": "介绍了一个评估语言模型的综合框架，涵盖各种任务和指标，适用于评估提示词的效果。",
+      "order": 4,
+      "created_at": "2025-09-05T02:15:27.072972Z",
+      "updated_at": "2025-09-09T05:00:35.707457Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

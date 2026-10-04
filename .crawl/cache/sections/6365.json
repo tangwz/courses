@@ -1,0 +1,61 @@
+{
+  "id": 6365,
+  "title": "提出可操作的缓解措施建议",
+  "meta_title": "可操作的LLM缓解措施 | AI安全计划",
+  "meta_description": "如何为已识别的LLM漏洞提供实用且可操作的缓解建议。",
+  "content": "<p>将已识别并根据其潜在影响进行优先级排序的漏洞转化为明确、有效的修复指导至关重要。仅仅指出问题是不够的；建议是连接红队成果与LLM系统实际安全改进的桥梁。目标是提供开发和安全团队能够理解、执行和验证的建议。</p>\n<h3>编写建议的主要原则</h3>\n<p>为确保您的缓解建议能带来真正的改变，请牢记以下原则。有效的建议不仅仅关乎<em>要修复什么</em>，更关乎<em>如何</em>以实际方式修复。</p>\n<ul>\n<li>\n<p><strong>清晰和准确：</strong> 使用明确的语言。您的建议应易于目标受众理解，这些受众可能包括开发人员和产品经理。如果需要技术术语，请确保它们在团队内部普遍理解或进行简要说明。例如，不要只说“强化提示界面”，而是明确说明<em>如何</em>强化它。</p>\n</li>\n<li>\n<p><strong>详细：</strong> 这非常必要。诸如“改进输入验证”之类的模糊建议不太可能有效执行。请明确指出：</p>\n<ul>\n<li><strong>什么：</strong> 需执行的准确修改或控制。</li>\n<li><strong>哪里：</strong> 受影响的相应组件、API端点、模型或数据管道阶段。</li>\n<li><strong>如何（如果适用）：</strong> 提出某些技术、算法或配置调整。例如，“对提交到<code>/v1/query</code>端点的提示中的特殊字符实施允许列表。”</li>\n</ul>\n</li>\n<li>\n<p><strong>可行性：</strong> 提出对组织实际可行的方案。考虑其现有技术栈、可用资源和操作限制。一个理论上完美但无法实现的方案是没有帮助的。如果缓解措施可能影响性能或用户体验，请承认潜在的权衡，并可能提出平衡这些的方法。</p>\n</li>\n<li>\n<p><strong>优先级驱动：</strong> 您的建议应自然地源于每项漏洞的风险评估。高风险发现需要更即时且可能更全面的缓解策略。确保您的建议的紧迫性和详细程度与您分配的严重性保持一致。</p>\n</li>\n<li>\n<p><strong>可验证性：</strong> 好的建议是其实现可以被测试的。您的建议应清楚说明如何验证修复措施已到位且有效。例如，“实施输出过滤器后，尝试引出社会安全号码应导致屏蔽输出，这可以通过重新运行测试用例#123来验证。”</p>\n</li>\n</ul>\n<h3>建议的结构</h3>\n<p>在报告中逻辑地组织您的建议，可以使其更易于理解和执行。对于每项重要的发现，或一组关系密切的发现，可以考虑包含以下内容：</p>\n<ol>\n<li>\n<p><strong>漏洞概述：</strong> 对正在处理的漏洞进行简要（1-2句话）提醒。这提供了背景信息，无需读者在报告中来回翻阅。</p>\n<ul>\n<li><em>示例：</em> “发现3.1：通过摄入文档进行的间接提示注入允许未经授权的API调用。”</li>\n</ul>\n</li>\n<li>\n<p><strong>建议措施：</strong> 这是您建议的主要部分。详细说明需采取的步骤。如果涉及多个步骤，请清楚列出。</p>\n<ul>\n<li><em>示例：</em> “1. 清理从摄入文档中提取的所有文本，以中和或删除可能被LLM解释为指令的常见控制字符和Markdown。 2. 对从外部来源传递到LLM上下文 (context)窗口的内容实施更严格的解析和验证。”</li>\n</ul>\n</li>\n<li>\n<p><strong>理由：</strong> 解释<em>为什么</em>建议此措施以及它如何解决已识别的漏洞。这有助于利益相关者理解所提议更改的目的。</p>\n<ul>\n<li><em>示例：</em> “在将文档内容添加到LLM上下文之前进行清理，可防止嵌入 (embedding)在这些文档中的恶意指令被执行。更严格的解析确保只处理预期的数据结构。”</li>\n</ul>\n</li>\n<li>\n<p><strong>预期成果：</strong> 描述成功实施缓解措施将实现的目标。</p>\n<ul>\n<li><em>示例：</em> “此缓解措施应能阻止LLM根据已处理文档中的隐藏指令执行操作，从而阻断未经授权的API调用路径。”</li>\n</ul>\n</li>\n<li>\n<p><strong>(可选) 工作量/资源级别：</strong> 高级别的估算（例如：低、中、高）可以帮助团队规划和分配修复资源。</p>\n</li>\n<li>\n<p><strong>(可选) 替代方案：</strong> 如果有其他方法可以解决该漏洞，您可以简要提及它们，并解释为什么您的主要建议更受青睐。这表明您已从多方面进行考虑。</p>\n</li>\n</ol>\n<h3>示例：从模糊到可操作</h3>\n<p>我们来看看如何将一般想法转化为明确、可操作的建议。下表说明了常见LLM漏洞的这一转化过程。</p>\n<table>\n<thead>\n<tr>\n<th>漏洞类型示例</th>\n<th>弱建议</th>\n<th>强且可操作的建议</th>\n<th>可操作元素</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>直接提示注入</td>\n<td>“防范提示注入。”</td>\n<td>“在用户提示提交API (<code>/api/chat</code>) 上实施输入清理。特别是，转义或拒绝元字符和指令类序列（例如，'忽略之前的指令...'）。根据新出现的攻击技术定期更新这些模式。”</td>\n<td>特定API、模式类型、持续改进</td>\n</tr>\n<tr>\n<td>输出中的敏感数据泄露</td>\n<td>“阻止模型泄露个人身份信息。”</td>\n<td>“部署一个输出清理模块，对所有LLM响应进行后处理。该模块应使用正则表达式检测和屏蔽常见的个人身份信息模式（例如，信用卡号、电话号码），并使用经过训练的命名实体识别（NER）模型来识别和修订内部项目代号。”</td>\n<td>相关技术（正则表达式、NER）、目标数据类型</td>\n</tr>\n<tr>\n<td>越狱/策略绕过</td>\n<td>“让模型遵守规则。”</td>\n<td>“1. 增强现有输入内容过滤器，以检测并阻止已知的越狱前缀和角色扮演请求。 2. 实施输出监控器，标记 (token)显示成功越狱特征的响应（例如，突然生成受限内容、对禁用请求的肯定答复），以便人工审查和过滤器优化。”</td>\n<td>多层防御、相应检测点</td>\n</tr>\n<tr>\n<td>训练数据投毒</td>\n<td>“确保训练数据干净。”</td>\n<td>“为所有新的训练和微调 (fine-tuning)数据集建立数据验证管道。该管道应包括异常检测，以标记数据分布中的异常值，并对对抗性或有偏见的内容进行人工抽查，特别是对于来自不受信任的外部数据源的数据。”</td>\n<td>相应流程、检查类型、数据源</td>\n</tr>\n</tbody>\n</table>\n<p>请注意，“强且可操作的建议”列提供了更多的指导。它告诉开发团队<em>要做什么</em>，通常是<em>在哪里做</em>，有时甚至暗示<em>如何做</em>。</p>\n<h3>针对不同受众调整建议</h3>\n<p>尽管您的主要红队报告将包含完整的技术细节，但您通常需要将这些建议传达给不同的群体。</p>\n<ul>\n<li><strong>针对开发团队：</strong> 他们需要技术细节。提供有关算法、库、配置设置的详细信息，如果能帮助阐明实现，甚至可以提供伪代码。</li>\n<li><strong>针对产品经理和领导层：</strong> 侧重于通过实施建议所实现的风险降低。解释它如何提高用户安全、信任或与业务目标保持一致。在这里，对投入与收益进行高级别总结会非常有效。</li>\n</ul>\n<p>通常，一份全面的报告作为事实来源，然后为不同的利益相关者创建执行摘要或有针对性的演示文稿。</p>\n<h3>提出短期和长期修复方案</h3>\n<p>有时，漏洞可能需要快速修复以立即降低风险，而更具战略性的解决方案则需要更长时间来开发和部署。</p>\n<ul>\n<li><strong>短期（战术性）：</strong> 这些通常是更简单的更改，例如阻止某个恶意输入模式，向WAF添加临时规则，或禁用正在被利用的次要功能。\n<ul>\n<li><em>示例：</em> “立即阻止包含完全相同字符串‘<!-- RENDER_OUTPUT_AS_ADMIN -->’的提示。”</li>\n</ul>\n</li>\n<li><strong>长期（战略性）：</strong> 这些是更全面的方案，例如使用新的安全数据重新训练模型，重新设计输入处理管道，或实施复杂的异常检测系统。\n<ul>\n<li><em>示例：</em> “开发并集成一个上下文 (context)感知的输入过滤系统，该系统使用辅助LLM在用户提示到达主要生成模型之前评估其意图。”</li>\n</ul>\n</li>\n</ul>\n<p>如果您同时提出这两种方案，请清楚区分它们并解释理由。这使得组织能够在有效管理风险的同时，致力于更持久的解决方案。</p>\n<h3>协作的作用</h3>\n<p>请记住，作为一名红队成员，您是顾问。您的建议是专家意见，但负责LLM系统的团队（通常称为蓝队或开发团队）将最终实施它们。将您的建议作为讨论的起点。他们可能对系统限制或同样有效的替代方法有更深的理解。下一节“与开发团队协作进行修复”将对此协作方面进行更多阐述。</p>\n<p>通过专注于创建可操作、清晰且有充分理由的缓解措施，您将大大提高您的红队工作促成更安全可靠的LLM的可能性。</p>",
+  "slug": "recommending-actionable-mitigation-steps",
+  "updates": [],
+  "references": [
+    {
+      "id": 17513,
+      "title": "OWASP Top 10 for Large Language Model Applications",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "OWASP Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/www-project-top-10-for-llm-applications/",
+      "doi": "",
+      "note": "提供LLM应用中最关键安全风险的标准化列表，详细说明攻击向量并提供具体的缓解策略，有助于制定可操作的建议。",
+      "order": 1,
+      "created_at": "2025-09-06T12:00:37.639812Z",
+      "updated_at": "2026-02-04T11:28:22.927226Z"
+    },
+    {
+      "id": 17515,
+      "title": "Technical Guide to Information Security Testing and Assessment",
+      "author": "Karen Scarfone, Murugiah Souppaya, Amanda Cody, Angela Orebaugh",
+      "year": "2008",
+      "publisher": "National Institute of Standards and Technology",
+      "journal": "Special Publication (NIST SP)",
+      "volume": "800-115",
+      "pages": "",
+      "url": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=152164",
+      "doi": "",
+      "note": "提供关于进行安全评估和报告结果的全面指南，强调适用于任何技术领域的清晰、具体和可操作的建议。",
+      "order": 3,
+      "created_at": "2025-09-06T12:00:37.646312Z",
+      "updated_at": "2026-02-04T11:28:23.299033Z"
+    },
+    {
+      "id": 17516,
+      "title": "Red Teaming LLMs",
+      "author": "Microsoft Azure Documentation",
+      "year": "2024",
+      "publisher": "Microsoft Learn",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_1wenXjWqWqh27JI8KJr9nv-O16to_qiX5gt2NBHHu0lRy5A-FXE1qUysbnUyKv5B60m6M7YscMZW7e4f-25Fx1KJVsLUVg6S0V8UQ31BvtIh3Y9kaxSErhkF5k-JJlo7YaZNG3kkw7XyYQD6PDqSNlzmZU6DzhzWjlwYpPRri5q1B5wQbpiRd0IOeKzZhdqhArfezKRLG8TJSEg=",
+      "doi": "",
+      "note": "描述了LLM红队测试的方法论和注意事项，为发现的漏洞类型及其修复方法提供了实践背景。",
+      "order": 4,
+      "created_at": "2025-09-06T12:00:37.652771Z",
+      "updated_at": "2026-02-04T11:28:23.874369Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

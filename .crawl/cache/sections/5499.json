@@ -1,0 +1,61 @@
+{
+  "id": 5499,
+  "title": "明确ETL需求",
+  "meta_title": "明确ETL流程的需求",
+  "meta_description": "了解如何确定ETL任务的基本需求和目标。",
+  "content": "<p>在编写任何一行代码或在ETL工具中拖放任何组件之前，您需要清楚地知道自己究竟要实现<strong>什么</strong>。就像建造房屋需要蓝图一样，构建ETL流程需要一套清晰的需求。跳过这一步是项目延迟、预算超支以及最终未能提供用户实际所需数据的原因之一。</p>\n<p>明确需求包括提出正确的问题，以弄清数据源、期望结果以及实现过程所需的步骤。可以将其视为在开始一项任务前收集信息。</p>\n<h3>为何要在需求上投入时间？</h3>\n<p>花时间提前定义需求能带来多项重要优势：</p>\n<ol>\n<li><strong>目标明确：</strong> 确保所有参与者都理解ETL流程的目标以及为何要构建它。</li>\n<li><strong>准确设计：</strong> 指导提取、转换和加载步骤的设计，确保最终的数据结构和内容符合需求。</li>\n<li><strong>减少返工：</strong> 尽早发现误解或缺失信息，比之后修复已完成的流程成本低得多。</li>\n<li><strong>实际估算：</strong> 有助于估算开发和维护所需的工作量、时间和资源。</li>\n<li><strong>明智的工具选择：</strong> 需求（如数据量、转换复杂性、所需速度）会影响选择合适的ETL工具或技术。</li>\n<li><strong>可测试性：</strong> 清晰的需求使得定义测试用例以验证ETL过程是否正确运行变得更容易。</li>\n</ol>\n<h3>收集需求的基本问题</h3>\n<p>为了给您的ETL流程奠定坚实基础，您需要通过提出具体问题来收集信息。以下是需要考察的基本方面：</p>\n<h4>1. 业务目标是什么？</h4>\n<p>这是“为什么”。您通过这些数据要解决什么问题或促成什么机会？</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>这些数据将支持哪些业务决策？（例如：“我们需要查看各区域的每日销售总额以调整营销。”）</li>\n<li>哪些报告、仪表板或应用程序将使用这些数据？（例如：“这些数据将为主要销售业绩仪表板提供支持。”）</li>\n<li>最终数据应该能够回答哪些具体问题？（例如：“哪些产品的退货率最高？”）</li>\n</ul>\n</li>\n</ul>\n<p>理解目标为所有后续决策提供了背景信息。</p>\n<h4>2. 数据来自何处？(来源)</h4>\n<p>确定包含您所需数据的每个源系统。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>哪些系统存储原始数据？（例如：“我们的在线商店的PostgreSQL数据库”、“营销部门使用Salesforce”、“库存数据在FTP服务器的每日CSV文件中。”）</li>\n<li>我们如何访问每个来源？（例如：数据库凭据、API密钥、文件路径）。</li>\n<li>数据采用何种格式？（例如：关系表、API返回的JSON对象、定宽文本文件）。</li>\n<li>我们是否有权限访问这些数据？</li>\n</ul>\n</li>\n</ul>\n<h4>3. 需要哪些具体数据？(范围)</h4>\n<p>通常，您不需要来自某个来源的<strong>所有</strong>数据。请明确具体范围。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>哪些具体的表、文件或API端点是相关的？</li>\n<li>这些来源中哪些列或字段是必需的？</li>\n<li>是否存在任何筛选条件？（例如：“仅限‘已完成’订单”、“北美客户”、“过去12个月的数据。”）</li>\n</ul>\n</li>\n</ul>\n<h4>4. 数据需要如何改变？(转换)</h4>\n<p>这定义了ETL中的“T”。原始数据必须如何修改才能在目标系统中变得有用？</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li><strong>清洗：</strong> 如何处理缺失值（例如：删除行、填充默认值、估算）？如何处理错误或异常值？</li>\n<li><strong>格式化：</strong> 日期、数字或地址是否需要标准化？（例如：“将所有日期转换为 YYYY-MM-DD 格式。”）</li>\n<li><strong>结构化：</strong> 数据集是否需要连接？（例如：“将客户数据与订单数据合并。”）数据是否需要拆分？（例如：“将地址组件拆分为街道、城市、省份。”）</li>\n<li><strong>丰富：</strong> 我们是否需要添加信息？（例如：“计算利润率”、“根据产品ID查找产品类别。”）</li>\n<li><strong>聚合：</strong> 数据是否需要汇总？（例如：“计算每日总销售额”、“统计每月独立客户数量。”）</li>\n</ul>\n</li>\n</ul>\n<h4>5. 数据去向何处？(目标)</h4>\n<p>明确已处理数据的目的地。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>目标系统是什么？（例如：“一个Snowflake数据仓库”、“MySQL数据库中的特定表”、“Amazon S3中的文件。”）</li>\n<li>目标中期望的结构（模式）是什么？（例如：表名、列名、数据类型）。如果目标模式不存在，定义它属于需求的一部分。</li>\n<li>数据应如何加载？（例如：完全覆盖现有数据（全量加载）？添加新数据并更新现有记录（增量加载）？）</li>\n</ul>\n</li>\n</ul>\n<h4>6. 数据需要多久更新一次？(频率与延迟)</h4>\n<p>确定ETL过程的时效要求。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>ETL过程需要多久运行一次？（例如：每小时、每日凌晨3点、每周日、由事件触发）。</li>\n<li>源系统中事件发生与数据在目标中可用之间的可接受延迟是多少？（例如：“数据必须在1小时内可用”、“次日可用即可。”）</li>\n</ul>\n</li>\n</ul>\n<h4>7. 数据量有多大？(数据量与速度)</h4>\n<p>估算数据流的大小和速度。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>初始数据加载的大约大小是多少？（例如：兆字节、吉字节、太字节）。</li>\n<li>每天/每小时/每周生成多少新数据？（例如：“每天大约10,000条新记录。”）</li>\n<li>数据是批量到达还是作为连续流到达？</li>\n</ul>\n</li>\n</ul>\n<p>这些答案会影响基础设施选择和处理策略。</p>\n<h4>8. 什么构成正确数据？(数据质量)</h4>\n<p>设定数据准确性和完整性的预期。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>数据必须满足哪些规则才能被视为有效？（例如：“订单总额必须为正数”、“电子邮件地址必须包含‘@’”、“产品ID必须存在于产品表中。”）</li>\n<li>未能通过验证的数据应如何处理？（例如：拒绝该记录、将其加载到错误表、标记 (token)以供审核、尝试修正）。</li>\n</ul>\n</li>\n</ul>\n<h4>9. 谁需要访问权限以及规则是什么？(安全与合规)</h4>\n<p>考虑数据保护和用户访问。</p>\n<ul>\n<li><em>示例问题:</em>\n<ul>\n<li>是否存在任何敏感数据元素（个人身份信息 - PII）？</li>\n<li>是否存在适用的监管要求（如GDPR、HIPAA、CCPA）？</li>\n<li>目标数据的最终用户是谁，他们需要哪些权限？</li>\n</ul>\n</li>\n</ul>\n<h3>记录您的发现</h3>\n<p>不仅仅是提出问题；还要记下答案！需求应清晰记录并与所有相关方（业务用户、开发人员、分析师）共享。这份文档将成为开发和测试的参考点。对于简单项目，它不需要过于正式；一份清单或结构化文档通常足够。</p>\n<p>下图说明了这些不同的调查领域如何共同促成需求文档的创建。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-xj0exx\" \n              data-graph-definition='digraph Requirements {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fillcolor=\"#e9ecef\", style=\"filled,rounded\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  Goal [label=\"目标是什么？\\n(业务目标)\", fillcolor=\"#a5d8ff\"];\n  Sources [label=\"数据在哪里？\\n(来源)\", fillcolor=\"#96f2d7\"];\n  Scope [label=\"需要哪些数据？\\n(范围)\", fillcolor=\"#96f2d7\"];\n  Transform [label=\"数据应如何呈现？\\n(转换)\", fillcolor=\"#ffec99\"];\n  Target [label=\"数据去向何处？\\n(目标)\", fillcolor=\"#d0bfff\"];\n  Frequency [label=\"多久更新一次？\\n(频率)\", fillcolor=\"#ffd8a8\"];\n  Volume [label=\"数据量有多大？\\n(数据量)\", fillcolor=\"#ffd8a8\"];\n  Quality [label=\"什么质量标准？\\n(验证)\", fillcolor=\"#ffc9c9\"];\n  Security [label=\"谁需要访问？\\n(安全)\", fillcolor=\"#bac8ff\"];\n\n  ReqDoc [label=\"ETL需求\\n文档\", shape=note, fillcolor=\"#ced4da\"];\n\n  {Goal, Sources, Scope, Transform, Target, Frequency, Volume, Quality, Security} -> ReqDoc [label=\"收集信息\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-xj0exx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图显示了涉及信息收集的主要问题类别，它们都共同促成了最终的ETL需求文档。</p>\n</blockquote>\n<h3>简单示例：每日销售汇总</h3>\n<p>让我们将这些问题应用于一个基本场景：创建按产品类别划分的每日总销售额汇总报告。</p>\n<ul>\n<li><strong>目标：</strong> 为销售经理提供每日快照，查看哪些产品类别表现最佳。</li>\n<li><strong>来源：</strong> 一个名为<code>orders_YYYYMMDD.csv</code>的单CSV文件（每日生成），包含<code>order_id</code>、<code>product_id</code>、<code>quantity</code>、<code>price_per_item</code>。一个单独的<code>products.csv</code>文件（不经常更新），包含<code>product_id</code>、<code>category</code>。</li>\n<li><strong>范围：</strong> 每日订单文件中的所有记录。产品文件中的<code>product_id</code>和<code>category</code>。</li>\n<li><strong>转换：</strong>\n<ul>\n<li>针对每行订单计算<code>total_sale</code>（<code>quantity * price_per_item</code>）。</li>\n<li>将每日订单数据与产品数据通过<code>product_id</code>连接，以获取<code>category</code>。</li>\n<li>按<code>category</code>聚合<code>total_sale</code>。</li>\n<li>将输出格式化，包含<code>category</code>和<code>total_sales_amount</code>列。</li>\n</ul>\n</li>\n<li><strong>目标：</strong> 一个名为<code>daily_category_summary_YYYYMMDD.csv</code>的新CSV文件。</li>\n<li><strong>频率：</strong> 每日<code>orders_YYYYMMDD.csv</code>文件到达后，每日运行一次。</li>\n<li><strong>数据量：</strong> 订单文件每日大约5MB（约50,000行）。产品文件较小（1MB）。</li>\n<li><strong>质量：</strong> <code>quantity</code>和<code>price_per_item</code>必须是正数。订单文件中的<code>product_id</code>必须存在于产品文件中（对于此简单情况，忽略包含未知产品的订单行）。</li>\n<li><strong>安全：</strong> 不涉及个人身份信息。销售经理需要对输出文件有读取权限。</li>\n</ul>\n<p>即使是这种简单情况，回答这些问题也能大大明确任务。随着ETL流程变得更复杂，涉及更多来源、复杂的转换和更严格的性能要求，这种结构化方法变得不可或缺。投入时间理解并记录需求是构建高效可靠ETL流程的第一步，也是必要一步。</p>",
+  "slug": "identifying-etl-requirements",
+  "updates": [],
+  "references": [
+    {
+      "id": 15237,
+      "title": "Building the Data Warehouse",
+      "author": "William H. Inmon",
+      "year": "2005",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.google.com/books/edition/Building_the_Data_Warehouse/zR7-eNf3h4UC?hl=en&gbpv=1&dq=Building+the+Data+Warehouse+W.H.+Inmon+Wiley&printsec=frontcover",
+      "doi": "",
+      "note": "提供了数据仓库架构和开发的经典方法，强调了理解业务需求的重要性。",
+      "order": 2,
+      "created_at": "2025-09-06T10:42:18.834864Z",
+      "updated_at": "2025-09-10T05:38:31.445339Z"
+    },
+    {
+      "id": 15238,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449373320/",
+      "doi": "",
+      "note": "讨论了构建数据系统中的挑战，包括理解数据需求、一致性和可靠性，这些对ETL设计均相关。",
+      "order": 3,
+      "created_at": "2025-09-06T10:42:18.841500Z",
+      "updated_at": "2025-09-10T05:38:35.429273Z"
+    },
+    {
+      "id": 15239,
+      "title": "Data Quality: The Ten Big Problems and How to Avoid Them",
+      "author": "Peter Aiken",
+      "year": "2017",
+      "publisher": "Technics Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.technicsg.com/products/data-quality-the-ten-big-problems-and-how-to-avoid-them-peter-aiken/",
+      "doi": "",
+      "note": "探讨了常见的数据质量问题及其预防和解决策略，与定义数据质量需求直接相关。",
+      "order": 4,
+      "created_at": "2025-09-06T10:42:18.845777Z",
+      "updated_at": "2025-09-10T05:38:26.949265Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

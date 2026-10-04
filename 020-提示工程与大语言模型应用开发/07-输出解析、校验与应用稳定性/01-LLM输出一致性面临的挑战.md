@@ -1,0 +1,100 @@
+# LLM输出一致性面临的挑战
+
+来源：[原文](https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-7-output-parsing-validation-reliability/challenges-llm-output-consistency)
+
+[返回章节目录](README.md) · [返回课程目录](../README.md)
+
+尽管大型语言模型（LLM）擅长为多种任务生成类人文本，但在软件应用中直接依赖其输出会带来重大的工程难题。核心问题在于LLM响应固有的可变性以及缺乏保证的结构。了解这种不一致性的性质和根本原因，是构建可靠系统的第一步。
+
+LLM本质上是概率系统。在生成文本时，它们根据从庞大训练数据集中学到的模式，以及提示和迄今已生成的文本中的前序词语序列，来预测下一个词语（或标记 (token)）。`温度`和`top-p`（您在第1章中遇到过）等参数 (parameter)直接影响此选择过程的随机性。较高的温度会鼓励更多样化、有时甚至是意想不到的输出，而即使在低温度下，也常常存在不止一个合理的下一个标记，这导致在相同提示的重复请求中出现细微差异。这种概率生成意味着您很少能两次获得完全相同的输出。
+
+此外，LLM对输入提示表现出高度敏感性。措辞、标点符号、间距或示例的看似微小改动，都可能引导模型产生截然不同的响应。对人类来说似乎是相同的指令，可能会在模型内部触发不同的路径，从而导致以下方面的变化：
+
+- **输出格式：** 您可能明确要求JSON格式，但LLM可能返回：
+  - 完全有效的JSON。
+  - 包含在Markdown代码块中的JSON（例如，`json ...` ）。
+  - Python字典表示形式。
+  - 编号列表或描述数据的纯文本，而不是请求的格式。
+  - 带有细微语法错误的JSON（例如，末尾逗号、缺少引号）。
+  - 带有意外键、缺少必需键或命名约定不一致的JSON（例如，`userName` vs. `user_name`）。
+
+
+
+[交互图表：LLM输出格式一致性（请求JSON时）](https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-7-output-parsing-validation-reliability/challenges-llm-output-consistency#plot-7i4b9o)
+
+<details>
+<summary>图表数据（JSON）</summary>
+
+```json
+{
+  "layout": {
+    "title": "LLM输出格式一致性（请求JSON时）",
+    "xaxis": {
+      "title": "接收到的输出格式"
+    },
+    "yaxis": {
+      "title": "频率（%）"
+    },
+    "bargap": 0.2,
+    "width": 600,
+    "height": 400
+  },
+  "data": [
+    {
+      "type": "bar",
+      "x": [
+        "有效JSON",
+        "格式错误JSON",
+        "纯文本/其他",
+        "拒绝/错误"
+      ],
+      "y": [
+        70,
+        15,
+        10,
+        5
+      ],
+      "marker": {
+        "color": [
+          "#37b24d",
+          "#f59f00",
+          "#ff8787",
+          "#adb5bd"
+        ]
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+
+
+> LLM在明确要求JSON输出时接收到的输出格式分布，说明了常见的一致性问题。
+
+- **内容和细节：** 响应的实质内容可能有所不同。摘要的长度或侧重点可能不同。解释可能包含不同的示例或深度不一。事实不准确或“幻觉 (hallucination)”（即模型生成看似合理但不正确的信息）可能会不一致地出现。
+- **语气和风格：** 即使被指示采用特定角色（例如，“充当一个有用的助手”），响应的正式程度、热情或直接性也可能波动。
+- **无关文本：** LLM经常添加会话填充词、介绍性短语（“好的，这是您请求的JSON：”）、结束语（“希望这有帮助！”），甚至以未预料到的方式拒绝回答，从而在所需的核心输出周围增加干扰。
+
+这种可变性给应用开发带来了直接问题：
+
+- **解析失败：** 依赖严格格式假设的代码（例如`json.loads()`期望完美JSON，或正则表达式搜索精确模式）在输出偏离时会经常中断。
+- **数据完整性问题：** 如果应用程序期望结构化输出中的特定字段，它们不一致的存在或命名会使数据提取和处理变得复杂。缺少数据或意外值可能导致下游逻辑错误。
+- **应用程序行为不可靠：** 基于LLM输出构建的逻辑变得不可预测。一个功能可能在一次API调用中正常工作，但在下一次调用中因响应格式或内容的细微变化而失败。
+- **用户体验不佳：** 不一致的格式、语气转变或无关文本的突然出现可能会让用户感到困惑，并使应用程序显得不完善或出现故障。
+
+解决这些不一致性并非要消除LLM的概率性质。相反，它需要构建能够预见并妥善处理这种可变性的弹性应用程序。本章后续部分将介绍输出解析、数据验证模式以及错误处理策略（如重试）等技术，正是为了应对这些挑战，确保您的LLM驱动应用程序运行稳定。
+
+## 参考资料
+
+- [The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751) — Ari Holtzman, Jan Buys, Li Du, Maxwell Forbes, and Yejin Choi (2019)
+  Journal: International Conference on Learning Representations (ICLR); Publisher: arXiv.org; DOI: [10.48550/arXiv.1904.09751](https://doi.org/10.48550/arXiv.1904.09751)
+  本文介绍了核采样（top-p）并讨论了不同解码策略之间的权衡，直接解释了温度和top-p如何影响输出的可变性。
+- [Language Models are Few-Shot Learners](https://arxiv.org/pdf/2005.14165.pdf) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 33; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  本文展示了LLM性能和输出对提示设计的强烈依赖性，包括示例的使用，并强调了其非确定性，这对于输入敏感性和内容可变性非常重要。
+
+---
+
+[上一节](../06-%E6%95%B4%E5%90%88%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E4%B8%8E%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%20%28RAG%29/09-%E5%AE%9E%E6%93%8D%EF%BC%9A%E6%9E%84%E5%BB%BA%E6%96%87%E6%A1%A3RAG%E9%97%AE%E7%AD%94%E7%B3%BB%E7%BB%9F.md) · [下一节](02-%E6%8F%90%E7%A4%BA%E7%94%9F%E6%88%90%E7%BB%93%E6%9E%84%E5%8C%96%E6%95%B0%E6%8D%AE%EF%BC%88%E5%86%8D%E8%B0%88%EF%BC%89.md)

@@ -1,0 +1,61 @@
+{
+  "id": 4025,
+  "title": "测试集：评估性能",
+  "meta_title": "什么是测试集？",
+  "meta_description": "说明测试数据集的用途和特点。",
+  "content": "<p>在划分数据并使用训练集来训练模型之后，您需要一种方法来检查模型实际学习的泛化能力如何。这就是<strong>测试集</strong>的作用。可以把测试集看作是模型的期末考试。</p>\n<p>\"测试集是您原始数据中独立的一部分，模型在训练过程中<em>从不</em>接触它。它包含模型完全未见过的数据，模拟模型遇到以前未处理过的数据的场景。\"</p>\n<h3>测试集的目的</h3>\n<p>测试集的主要目的是提供对最终模型在未见过数据上表现的<em>无偏</em>评估。通过将训练好的模型应用于测试集，并将其预测与实际结果（这些结果也一直保持隐藏）进行比较，您可以计算之前学过的评估指标（例如分类任务中的准确率、精确率、召回率，或回归任务中的平均绝对误差、均方误差、均方根误差）。在测试集上计算出的这些指标，能为您在模型部署时可能达到的性能提供一个实际的预估。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-p2rpw6\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10];\n  edge [fontname=\"helvetica\", fontsize=9];\n\n  RawData [label=\"原始数据集\"];\n  Split [label=\"分割数据\", shape= Mdiamond, style=filled, fillcolor=\"#a5d8ff\"];\n  TrainSet [label=\"训练集\\n(用于学习)\", style=filled, fillcolor=\"#b2f2bb\"];\n  TestSet [label=\"测试集\\n(保留，未见)\", style=filled, fillcolor=\"#ffc9c9\"];\n  Model [label=\"训练模型\", shape=ellipse, style=filled, fillcolor=\"#d0bfff\"];\n  Evaluate [label=\"评估性能\", shape=ellipse, style=filled, fillcolor=\"#ffd8a8\"];\n  Performance [label=\"性能指标\\n(例如：准确率, 平均绝对误差)\", style=filled, fillcolor=\"#ffe066\"];\n\n  RawData -> Split;\n  Split -> TrainSet [label=\" 通常70-80% \"];\n  Split -> TestSet [label=\" 通常20-30% \"];\n  TrainSet -> Model;\n  Model -> Evaluate;\n  TestSet -> Evaluate;\n  Evaluate -> Performance;\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-p2rpw6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据被分为训练集用于模型学习，测试集则保留用于最终的无偏评估。</p>\n</blockquote>\n<h3>重要原则：只使用一次</h3>\n<p>将测试集视为一个最终的、一次性的检查点，这一点非常重要。你<strong>只在</strong>完成所有训练和任何调优（例如选择模型参数 (parameter)）<em>之后</em>才应该使用测试集来评估你的模型。</p>\n<p>为什么这如此重要？如果你反复使用测试集来检查性能，然后根据结果调整模型，你就会无意中将测试集的信息泄露到模型选择或训练过程中。你的模型可能开始在<em>那个特定的</em>测试集上表现良好，但它不一定能很好地泛化到真正的新数据上。这就像让一个学生多次重考期末考试，直到他们取得好成绩；这不代表他们真的更好地掌握了材料，只是他们学会了如何通过<em>那次特定的考试</em>。</p>\n<p>\"过早地使用测试集会导致过于乐观的性能预估和不佳的结果。将其保留到最后，以便真实衡量模型的性能。测试集评估的结果会告诉你在部署模型时可以有多大的信心。\"</p>",
+  "slug": "test-set-definition",
+  "updates": [],
+  "references": [
+    {
+      "id": 10779,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "",
+      "note": "提供了数据分割、验证和评估模型泛化能力的理论基础。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:39.578069Z",
+      "updated_at": "2025-09-08T13:31:52.046462Z"
+    },
+    {
+      "id": 10780,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, & TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine/9781098125964/",
+      "doi": "",
+      "note": "提供了数据分割、测试集使用和防止数据泄漏的实践指导。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:39.582569Z",
+      "updated_at": "2025-09-08T13:32:12.459595Z"
+    },
+    {
+      "id": 10781,
+      "title": "CS229 Lecture Notes: Machine Learning",
+      "author": "Andrew Ng, Tengyu Ma (updates)",
+      "year": "2018",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://cs229.stanford.edu/notes/cs229-notes1.pdf",
+      "doi": "",
+      "note": "清晰阐释了模型评估中数据分割和验证的基本概念。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:39.585703Z",
+      "updated_at": "2025-09-08T13:36:16.882083Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

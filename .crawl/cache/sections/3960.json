@@ -1,0 +1,61 @@
+{
+  "id": 3960,
+  "title": "检测缺失数据的方法",
+  "meta_title": "如何找出数据中的缺失值",
+  "meta_description": "了解基本的编程技巧，以识别缺失数据的存在和位置。",
+  "content": "<p>识别缺失数据的位置并量化 (quantization)其程度，是数据清洗和预处理中的基本步骤。仅仅知道数据缺失是不够的；需要系统的方法来精确确定其发生位置。这通常涉及使用编程工具来检查数据结构，例如表格或DataFrame。</p>\n<p>假设我们正在处理已加载到pandas DataFrame中的数据，这是Python中用于数据分析的常见结构。Pandas提供了专门设计用于检测缺失值的便捷函数，它通常将缺失值识别为<code>NaN</code>（非数字）或<code>None</code>。</p>\n<h3>检查缺失值</h3>\n<p>检查缺失条目最直接的方法是使用<code>isnull()</code>方法（或其相同别名<code>isna()</code>）。当应用于pandas DataFrame或Series（单列）时，它不会改变数据本身。相反，它会返回一个相同形状的新对象，其中填充了布尔值：<code>True</code>表示该位置的原始值缺失，<code>False</code>表示它存在。</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 包含缺失值的示例数据\ndata = {'Product ID': [101, 102, 103, 104, 105],\n        'Category': ['Electronics', 'Apparel', np.nan, 'Electronics', 'Home Goods'],\n        'Price': [1200, 55, 250, np.nan, 80],\n        'Rating': [4.5, np.nan, 3.8, 4.1, np.nan]}\ndf = pd.DataFrame(data)\n\n# 检测缺失值\nmissing_mask = df.isnull()\n\nprint(missing_mask)\n# 输出:\n#    产品ID  类别  价格  评分\n# 0       False     False  False   False\n# 1       False     False  False    True\n# 2       False      True  False   False\n# 3       False     False   True   False\n# 4       False     False  False    True\n</code></pre>\n<p>这种布尔掩码对于查看每个缺失值的确切位置很有用，但对于大型数据集而言，查看大量<code>True</code>/<code>False</code>值对于总结问题不是很实用。</p>\n<h3>计数缺失值</h3>\n<p>一个更常见的任务是统计每列中存在多少缺失值。我们可以通过在<code>.isnull()</code>之后链式调用<code>.sum()</code>方法来实现这一点。当你对布尔值求和时，<code>True</code>被视为1，<code>False</code>被视为0。对<code>isnull()</code>生成的布尔DataFrame应用<code>.sum()</code>可以有效地统计每列中<code>True</code>值（缺失条目）的数量。</p>\n<pre><code class=\"language-python\"># 统计每列的缺失值\nmissing_counts = df.isnull().sum()\n\nprint(missing_counts)\n# 输出:\n# 产品ID    0\n# 类别      1\n# 价格      1\n# 评分      2\n# dtype: int64\n</code></pre>\n<p>这个输出是一个pandas Series，其中索引表示列名，值表示这些列中缺失条目的数量。这立即告知我们，“产品ID”没有缺失值，“类别”和“价格”各有一个，“评分”有两个。</p>\n<p>要获得表示整个DataFrame中缺失值总数的一个数字，可以再次应用<code>.sum()</code>：</p>\n<pre><code class=\"language-python\"># 整个DataFrame中的缺失值总数\ntotal_missing = df.isnull().sum().sum()\n\nprint(f\"数据集中缺失值的总数: {total_missing}\")\n# 输出:\n# 数据集中缺失值的总数: 4\n</code></pre>\n<h3>计算缺失值的百分比</h3>\n<p>计数很有用，但理解缺失数据相对于每列总大小的比例通常能提供更好的背景信息。在一万行的数据集中缺失10个值的列，比在只有50行的列中缺失10个值不那么令人担忧。</p>\n<p>我们可以这样计算每列缺失值的百分比：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>缺失百分比</mtext><mo>=</mo><mfrac><mtext>缺失值数量</mtext><mtext>总行数</mtext></mfrac><mo>×</mo><mn>100</mn></mrow><annotation encoding=\"application/x-tex\">\\text{缺失百分比} = \\frac{\\text{缺失值数量}}{\\text{总行数}} \\times 100</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">缺失百分比</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:2.0463em;vertical-align:-0.686em;\"></span><span class=\"mord\"><span class=\"mopen nulldelimiter\"></span><span class=\"mfrac\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:1.3603em;\"><span style=\"top:-2.314em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">总行数</span></span></span></span><span style=\"top:-3.23em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"frac-line\" style=\"border-bottom-width:0.04em;\"></span></span><span style=\"top:-3.677em;\"><span class=\"pstrut\" style=\"height:3em;\"></span><span class=\"mord\"><span class=\"mord text\"><span class=\"mord cjk_fallback\">缺失值数量</span></span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.686em;\"><span></span></span></span></span></span><span class=\"mclose nulldelimiter\"></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">100</span></span></span></span></span>\n<p>在pandas中，这表示为：</p>\n<pre><code class=\"language-python\"># 计算每列缺失值的百分比\ntotal_rows = len(df)\nmissing_percentage = (df.isnull().sum() / total_rows) * 100\n\nprint(missing_percentage)\n# 输出:\n# 产品ID     0.0\n# 类别      20.0\n# 价格      20.0\n# 评分      40.0\n# dtype: float64\n</code></pre>\n<p>这表明“类别”和“价格”条目有20%缺失，而“评分”条目有显著的40%缺失。百分比有助于确定哪些列在清洗过程中可能需要更多关注。</p>\n<h3>可视化缺失数据计数</h3>\n<p>尽管数值摘要很重要，但有时可视化表示可以使缺失数据在各列中的分布更直观。一个显示每列缺失值数量的简单条形图通常很有效。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1pr6pfg\" \n              data-plot-definition='{\"layout\":{\"title\":\"每列缺失值计数\",\"xaxis\":{\"title\":\"列名\"},\"yaxis\":{\"title\":\"缺失值数量\"},\"template\":\"plotly_white\",\"bargap\":0.2},\"data\":[{\"type\":\"bar\",\"x\":[\"产品ID\",\"类别\",\"价格\",\"评分\"],\"y\":[0,1,1,2],\"marker\":{\"color\":[\"#495057\",\"#228be6\",\"#228be6\",\"#f03e3e\"]}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1pr6pfg\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>这个条形图可视化了从<code>df.isnull().sum()</code>得出的计数，使得比较不同特征间缺失数据的程度变得容易。</p>\n</blockquote>\n<p>这些编程方法结合了布尔检查、计数和百分比，构成了了解数据集中缺失数据范围的基础。一旦你确定了数据缺失的<em>位置</em>和<em>程度</em>，就可以继续选择并应用适当的策略来处理它，我们将在后续章节中介绍。</p>",
+  "slug": "detecting-missing-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 10738,
+      "title": "pandas.DataFrame.isnull - pandas 2.2.0 documentation",
+      "author": "pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.isnull.html",
+      "doi": "",
+      "note": "pandas DataFrame 和 Series 中用于检测缺失值的核心方法的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:04.797083Z",
+      "updated_at": "2025-09-08T12:58:43.726619Z"
+    },
+    {
+      "id": 10739,
+      "title": "Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "582",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104030/",
+      "doi": "",
+      "note": "pandas 创建者撰写的权威指南，全面涵盖数据操作，包括识别缺失数据的实用技术。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:04.862530Z",
+      "updated_at": "2025-09-08T12:59:08.660133Z"
+    },
+    {
+      "id": 10740,
+      "title": "Hands-On Data Preprocessing with Python: Learn how to effectively prepare your data for successful data science projects",
+      "author": "Sinan Ozdemir",
+      "year": "2020",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.packtpub.com/product/hands-on-data-preprocessing-with-python/9781838645060",
+      "doi": "",
+      "note": "一本专注于 Python 数据预处理技术的实用指南，其中包含检测和处理缺失数据的方法。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:04.865954Z",
+      "updated_at": "2025-09-08T12:58:51.902962Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

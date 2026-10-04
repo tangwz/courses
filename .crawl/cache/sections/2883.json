@@ -1,0 +1,61 @@
+{
+  "id": 2883,
+  "title": "jax.custom_jvp 自定义求导规则",
+  "meta_title": "JAX 中的自定义 JVP 规则",
+  "meta_description": "使用 `jax.custom_jvp` 定义自定义前向模式微分规则。",
+  "content": "<p>虽然 <code>jax.grad</code> 和 <code>jax.vjp</code> 为反向模式自动微分提供支持，这对于训练大多数神经网络 (neural network)很重要，但在某些情况下，需要直接控制前向模式微分（雅可比向量 (vector)积）。前向模式计算输入变化（由“切线”向量表示）如何通过函数向前传播以影响输出。<code>jax.jvp</code> 函数直接计算此值。</p>\n<p>有时，JAX 自动推导 JVP 规则的结果可能不是最佳的，甚至无法进行。这可能由以下几个原因引起：</p>\n<ul>\n<li><strong>数值稳定性：</strong> 标准导数计算对于某些输入可能存在浮点数问题（例如，当输入接近于零时，对于 <code>sqrt(x)</code> 或 <code>log(x)</code> 等函数）。</li>\n<li><strong>性能：</strong> 您可能知道一种计算 JVP 的更有效方法，优于 JAX 自动推导的方法。</li>\n<li><strong>不可微分点：</strong> 您可能想在函数数学上不可微分的点定义特定的梯度行为（例如，在 <code>jnp.clip</code> 的边界处）。</li>\n<li><strong>外部代码：</strong> 如果您的函数调用外部代码（例如通过 <code>jax.pure_callback</code>），JAX 无法看到其内部以计算导数。</li>\n</ul>\n<p>在这些情况下，您可以使用 <code>jax.custom_jvp</code> 装饰器定义自己的 JVP 规则。这使您能够精确地告诉 JAX 如何计算函数的前向模式导数。</p>\n<h3>定义自定义 JVP</h3>\n<p>要定义自定义 JVP，您需要使用 <code>@jax.custom_jvp</code> 装饰您的函数，然后使用 <code>@[您的函数名].defjvp</code> 装饰器定义一个与该函数关联的单独的 JVP 规则函数。</p>\n<p>让我们通过一个简单例子进行说明：实现一个数值稳定的 <code>jnp.sqrt</code> 版本，它处理 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi><mo>=</mo><mn>0</mn></mrow><annotation encoding=\"application/x-tex\">x=0</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">0</span></span></span></span> 处的导数。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n@jax.custom_jvp\ndef stable_sqrt(x):\n  \"\"\"计算 sqrt(x)，在接近零时使用一个小的 epsilon 保证稳定性。\"\"\"\n  is_zero = (x == 0.0)\n  # 如果 x 恰好为零，避免在梯度计算中出现除以零的情况\n  safe_x = jnp.where(is_zero, 1.0, x) \n  return jnp.sqrt(safe_x)\n\n# 为 stable_sqrt 定义自定义 JVP 规则\n@stable_sqrt.defjvp\ndef stable_sqrt_jvp(primals, tangents):\n  \"\"\"stable_sqrt 的自定义 JVP 规则。\"\"\"\n  x, = primals\n  t, = tangents # t 是切线向量 dx\n\n  # 原始计算（前向传播结果）\n  primal_out = stable_sqrt(x)\n\n  # 切线计算（导数部分）\n  # sqrt(x) 的导数是 0.5 * x**(-0.5)\n  # 显式处理 x=0 情况，避免出现 NaN/inf\n  is_zero = (x == 0.0)\n  # 在 0 处使用一个大的有限数作为导数，或者使用 0， \n  # 取决于所需行为。这里，我们使用 0。\n  safe_x = jnp.where(is_zero, 1.0, x) # 避免除以零\n  deriv = 0.5 * jax.lax.rsqrt(safe_x) \n  tangent_out = jnp.where(is_zero, 0.0, deriv * t) # 在 x=0 处将导数设置为 0\n\n  return primal_out, tangent_out\n\n# 示例用法\nx_val = jnp.array(0.0)\nt_val = jnp.array(1.0) # 切线向量\n\n# 使用自定义规则计算 JVP\nprimal_output, tangent_output = jax.jvp(stable_sqrt, (x_val,), (t_val,))\n\nprint(f\"输入 x: {x_val}\")\nprint(f\"输入切线 t: {t_val}\")\nprint(f\"原始输出 (stable_sqrt(x)): {primal_output}\")\nprint(f\"切线输出 (x 处导数 * t): {tangent_output}\") \n\nx_val_pos = jnp.array(4.0)\nprimal_output_pos, tangent_output_pos = jax.jvp(stable_sqrt, (x_val_pos,), (t_val,))\n\nprint(f\"\\n输入 x: {x_val_pos}\")\nprint(f\"输入切线 t: {t_val}\")\nprint(f\"原始输出 (stable_sqrt(x)): {primal_output_pos}\") \nprint(f\"切线输出 (x 处导数 * t): {tangent_output_pos}\") # 应为 0.5 * 4**(-0.5) * 1 = 0.25\n</code></pre>\n<h3>理解 JVP 规则函数</h3>\n<p>使用 <code>.defjvp</code> 装饰的函数（此处为 <code>stable_sqrt_jvp</code>）接受两个参数 (parameter)：</p>\n<ol>\n<li><code>primals</code>：一个元组，包含原始函数 (<code>stable_sqrt</code>) 的原始输入。在我们的示例中，<code>primals</code> 是 <code>(x,)</code>。</li>\n<li><code>tangents</code>：一个元组，包含与原始输入对应的切线值。这些值表示微分的“方向”。在我们的示例中，<code>tangents</code> 是 <code>(t,)</code>，而 <code>t</code> 对应于 <code>x</code>。</li>\n</ol>\n<p>JVP 规则函数必须返回一对值：</p>\n<ol>\n<li><code>primal_out</code>：计算原始函数的结果（前向传播）。通常通过调用原始函数本身来计算，如上所示：<code>primal_out = stable_sqrt(x)</code>。</li>\n<li><code>tangent_out</code>：雅可比向量 (vector)积的结果。这表示输出如何响应输入沿 <code>tangents</code> 指定的方向变化。在数学上，如果 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi></mrow><annotation encoding=\"application/x-tex\">f</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span></span></span></span> 是函数，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span> 是输入，它计算 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>J</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo><mi>v</mi></mrow><annotation encoding=\"application/x-tex\">J(x) v</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0962em;\">J</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span></span></span></span>，其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>J</mi><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">J(x)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0962em;\">J</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mclose\">)</span></span></span></span> 是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi></mrow><annotation encoding=\"application/x-tex\">f</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span></span></span></span> 在 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>x</mi></mrow><annotation encoding=\"application/x-tex\">x</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">x</span></span></span></span> 处的雅可比矩阵，<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>v</mi></mrow><annotation encoding=\"application/x-tex\">v</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">v</span></span></span></span> 是输入切线向量。在示例中，这是 <code>jnp.where(is_zero, 0.0, deriv * t)</code>。</li>\n</ol>\n<h3>与 <code>jax.custom_vjp</code> 的关系</h3>\n<p><code>jax.custom_jvp</code> 定义前向模式微分规则。其对应项 <code>jax.custom_vjp</code> 定义反向模式规则（向量 (vector)雅可比积），这是 <code>jax.grad</code> 的依据。</p>\n<ul>\n<li>如果您只需要前向模式微分（例如，直接使用 <code>jax.jvp</code>，或通过 <code>jax.jacfwd</code> 计算完整雅可比矩阵），则仅定义 <code>jax.custom_jvp</code> 可能就足够了。</li>\n<li>如果您需要反向模式微分（例如，使用 <code>jax.grad</code>），通常需要使用 <code>jax.custom_vjp</code> 定义自定义 VJP 规则。</li>\n<li>JAX 有时可以通过自动转置从已定义的 JVP 自动推导出 VJP（反之亦然）。然而，此过程可能并非总是高效或数值稳定的。为了获得最大控制和稳定性，尤其是在处理复杂函数或数值稳定性问题时，如果您的函数需要前向和反向模式能力，通常最佳做法是明确定义 <strong><code>jax.custom_jvp</code> 和 <code>jax.custom_vjp</code> 两者</strong>。</li>\n</ul>\n<h3>用例回顾</h3>\n<p>定义自定义 JVP 规则在以下情况下特别有用：</p>\n<ol>\n<li><strong>提升数值稳定性：</strong> 手动指定问题点处的导数。</li>\n<li><strong>优化性能：</strong> 提供手动优化的 JVP 计算。</li>\n<li><strong>处理不连续性：</strong> 明确定义梯度行为（例如，将 <code>clip</code> 的导数设置为 0 或 1）。</li>\n<li><strong>与非 JAX 代码接口：</strong> 为 JAX 无法自动微分的函数提供导数信息。</li>\n</ol>\n<p>与大多数 JAX 变换一样，具有自定义 JVP 规则的函数可以与 <code>jax.jit</code>、<code>jax.vmap</code> 和其他变换正确配合使用。JAX 将在追踪和编译期间使用您的自定义规则。</p>\n<p>通过熟练掌握 <code>jax.custom_jvp</code>，您可以更好地控制 JAX 的前向模式自动微分，从而为专门的计算任务实现更高效的实现。这补充了 <code>jax.custom_vjp</code> 为反向模式微分提供的控制。</p>",
+  "slug": "custom-jvp-rules",
+  "updates": [],
+  "references": [
+    {
+      "id": 7601,
+      "title": "`jax.custom_jvp`",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.custom_jvp.html",
+      "doi": "",
+      "note": "JAX 中定义自定义雅可比向量积（前向模式微分规则）的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-05T01:40:46.544723Z",
+      "updated_at": "2025-09-09T01:24:09.152509Z"
+    },
+    {
+      "id": 7602,
+      "title": "Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation",
+      "author": "Andreas Griewank and George F. Corliss",
+      "year": "2008",
+      "publisher": "Society for Industrial and Applied Mathematics (SIAM)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.1137/1.9780898717765",
+      "doi": "10.1137/1.9780898717765",
+      "note": "基础教科书，对自动微分（包括前向模式）进行了透彻的数学和算法处理。",
+      "order": 2,
+      "created_at": "2025-09-05T01:40:46.645142Z",
+      "updated_at": "2025-09-09T01:24:14.056451Z"
+    },
+    {
+      "id": 7603,
+      "title": "Automatic Differentiation in Machine Learning: a Survey",
+      "author": "Atilim Gunes Baydin, Barak A. Pearlmutter, Alexey Andreyevich Radul, Jeffrey Mark Siskind",
+      "year": "2018",
+      "publisher": "Journal of Machine Learning Research",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "18",
+      "pages": "1-43",
+      "url": "http://jmlr.org/papers/v18/17-468.html",
+      "doi": "",
+      "note": "一篇研究综述，详细阐述了自动微分的原理和各种技术，特别是在机器学习应用背景下。",
+      "order": 3,
+      "created_at": "2025-09-05T01:40:46.649429Z",
+      "updated_at": "2025-09-09T01:24:11.141875Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

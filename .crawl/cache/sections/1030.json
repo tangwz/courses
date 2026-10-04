@@ -1,0 +1,61 @@
+{
+  "id": 1030,
+  "title": "从远程拉取更改 (git pull)",
+  "meta_title": "下载并合并远程更改 | git pull 命令",
+  "meta_description": "了解 `git pull` 如何将从远程拉取更改和将其合并到当前本地分支结合起来。",
+  "content": "<p><code>git fetch</code> 命令从远程仓库下载新数据，但不会自动将任何数据合并到你的工作文件中。它会更新你的远程跟踪分支（如 <code>origin/main</code>），让你能看到远程仓库中有什么改变，在决定如何纳入它们之前。</p>\n<p>虽然先拉取再手动合并能提供精细的控制，但一个非常常见的工作流程是简单地使用其对应的远程分支的最新更改来更新你当前的本地分支。为此，Git 提供了 <code>git pull</code> 命令。</p>\n<p>可以把 <code>git pull</code> 看作一个方便的快捷方式。在最基本的形式中，它连续执行两个操作：</p>\n<ol>\n<li><code>git fetch</code>: 它从远程仓库下载最新更改，更新你本地仓库中的远程跟踪分支（例如，<code>origin/main</code>）。</li>\n<li><code>git merge</code>: 它立即尝试将对应的已下载的远程跟踪分支合并到你当前的本地分支中。</li>\n</ol>\n<h3>基本用法</h3>\n<p>如果你的当前本地分支被设置来跟踪一个远程分支（这在使用 <code>git clone</code> 时会自动完成，也可以手动配置），那么只需运行 <code>git pull</code> 通常就足够了：</p>\n<pre><code class=\"language-bash\"># 确保你位于想要更新的分支上，例如 main\ngit switch main\n\n# 从跟踪的远程分支（通常是 origin/main）拉取更改\ngit pull\n</code></pre>\n<p>Git 会根据与你当前本地分支（本例中是 <code>main</code>）关联的跟踪信息，推断要从哪个远程仓库拉取（通常是 <code>origin</code>）以及要合并哪个远程分支。</p>\n<p>如果你需要明确指定，或者你的分支没有跟踪远程分支，你可以指定远程名称和分支名称：</p>\n<pre><code class=\"language-bash\"># 从远程仓库 'origin' 的 'main' 分支拉取更改\ngit pull origin main\n</code></pre>\n<p>这个命令明确告诉 Git：“从名为 <code>origin</code> 的远程仓库拉取 <code>main</code> 分支，然后将 <code>origin/main</code> 合并到我当前的本地分支。”</p>\n<h3>了解底层的拉取与合并操作</h3>\n<p>想象一下 <code>git pull</code> 的作用会有帮助。想象你的本地 <code>main</code> 分支和远程 <code>origin/main</code> 分支略有分歧：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1i9j2dv\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, color=\"#adb5bd\", fixedsize=true, width=0.5, height=0.5, label=\"\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_local {\n    label = \"本地仓库\";\n    bgcolor=\"#e9ecef\";\n    A -> B -> C [label=\"main\", color=\"#4263eb\"];\n    C [color=\"#4263eb\"];\n  }\n\n  subgraph cluster_remote_before {\n    label = \"远程 &#39;origin&#39; (拉取前)\";\n    bgcolor=\"#e9ecef\";\n    Aᵣ -> Bᵣ -> Dᵣ [label=\"origin/main\", color=\"#f76707\"];\n    Dᵣ [color=\"#f76707\"];\n  }\n\n  // 对齐 A 和 Aᵣ\n  { rank=same; A; Aᵣ; }\n  // 对齐 B 和 Bᵣ\n  { rank=same; B; Bᵣ; }\n  // 使 C 和 Dᵣ 稍微偏移并对齐\n  C -> Dᵣ [style=invis];\n\n  // 表示连接，不属于历史的一部分\n  A [label=\"A\"];\n  B [label=\"B\"];\n  C [label=\"C\"];\n  Aᵣ [label=\"A\"];\n  Bᵣ [label=\"B\"];\n  Dᵣ [label=\"D\"];\n\n  // 连接\n  Aᵣ -> Bᵣ [color=\"#f76707\"];\n  Bᵣ -> Dᵣ [color=\"#f76707\"];\n  A -> B [color=\"#4263eb\"];\n  B -> C [color=\"#4263eb\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1i9j2dv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>你的本地 <code>main</code> 分支有提交 <code>C</code>，而远程 <code>origin/main</code> 分支有提交 <code>D</code>。两者都从提交 <code>B</code> 分出。</p>\n</blockquote>\n<p>当你在本地 <code>main</code> 分支上运行 <code>git pull origin main</code> 时：</p>\n<ol>\n<li>\n<p><strong>拉取 (Fetch):</strong> Git 联系 <code>origin</code>，下载提交 <code>D</code>，并更新你的本地 <code>origin/main</code> 指针使其指向 <code>D</code>。此时你的本地 <code>main</code> 分支保持不变。</p>\n</li>\n<li>\n<p><strong>合并 (Merge):</strong> Git 接着运行 <code>git merge origin/main</code>。由于你的本地 <code>main</code> (在 <code>C</code>) 和已拉取的 <code>origin/main</code> (在 <code>D</code>) 从它们的共同祖先 <code>B</code> 分出，Git 执行合并。这会在你的本地 <code>main</code> 分支上创建一个新的合并提交（我们称之为 <code>E</code>），它结合了 <code>C</code> 和 <code>D</code> 的更改。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-h1kn1m\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=circle, style=filled, color=\"#adb5bd\", fixedsize=true, width=0.5, height=0.5, label=\"\"];\n  edge [arrowhead=none];\n\n  subgraph cluster_local {\n    label = \"本地仓库 (拉取后)\";\n    bgcolor=\"#e9ecef\";\n    A -> B -> C -> E [label=\"main\", color=\"#4263eb\"];\n    B -> D [color=\"#f76707\"]; // 显示 D 现在存在于本地\n    D -> E [color=\"#f76707\"];\n    D [label=\"D\", color=\"#f76707\"];\n    E [label=\"E\", color=\"#12b886\"]; // 合并提交\n    C [color=\"#4263eb\"];\n    origin_main [label=\"origin/main\", shape=plaintext, style=solid, fontcolor=\"#f76707\"];\n    origin_main -> D [style=\"dashed\", arrowhead=normal, constraint=false, color=\"#f76707\"];\n\n  }\n\n  // 基础历史\n  A [label=\"A\"];\n  B [label=\"B\"];\n  C [label=\"C\"];\n\n  // 连接\n  A -> B [color=\"#adb5bd\"];\n  B -> C [color=\"#4263eb\"];\n  B -> D [color=\"#f76707\"];\n  C -> E [color=\"#4263eb\"];\n  D -> E [color=\"#f76707\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-h1kn1m\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在 <code>git pull</code> 之后，你的本地 <code>main</code> 分支现在指向新的合并提交 <code>E</code>，它包含了你之前的本地提交 <code>C</code> 和已拉取的远程提交 <code>D</code> 的更改。<code>origin/main</code> 指针也反映了已拉取的状态 (<code>D</code>)。</p>\n</blockquote>\n<p>如果你的本地分支自上次同步以来没有新的提交，并且远程分支只是顺序添加了新的提交，<code>git pull</code> 将会执行 <em>快进合并</em>。这只是将你的本地分支指针向前移动以匹配远程跟踪分支，而不创建合并提交。</p>\n<h3>处理合并冲突</h3>\n<p>因为 <code>git pull</code> 执行合并操作，如果你的本地分支和远程分支在历史分歧后修改了同一文件的相同行，你可能会遇到合并冲突。</p>\n<p>如果发生冲突，<code>git pull</code> 将在创建合并提交之前停止，并报告冲突文件。解决这些冲突的过程与第4章中合并本地分支时描述的完全相同：</p>\n<ol>\n<li>Git 会在受影响的文件中标记 (token)冲突。</li>\n<li>你手动编辑文件来解决差异，选择保留哪些更改。</li>\n<li>你使用 <code>git add &#x3C;file></code> 暂存已解决的文件。</li>\n<li>你通过运行 <code>git commit</code> 完成合并（Git 通常会提供默认的合并提交消息）。</li>\n</ol>\n<h3><code>pull</code> 与 <code>fetch</code> + <code>merge</code> 的比较</h3>\n<p>那么，你应该使用 <code>git pull</code> 还是先 <code>git fetch</code> 再 <code>git merge</code> 这两步操作呢？</p>\n<ul>\n<li><code>git pull</code>: 当你想快速用远程更改更新当前分支，并且有充分理由相信立即合并是合适的时候，可以使用此命令。它方便日常同步。</li>\n<li><code>git fetch</code> + <code>git merge</code>: 当你需要更多控制时使用此方法。先拉取可以让你在决定合并之前检查传入的更改。你可以使用 <code>git log origin/main..main</code> 等命令查看远程分支上有哪些提交但本地分支还没有，或者使用 <code>git diff origin/main</code> 查看实际的代码差异。如果你有本地更改，或者想在合并远程更新之前仔细审查，这种方法通常更安全。</li>\n</ul>\n<p>对于初学者，<code>git pull</code> 通常更简单，适合直接更新。随着你变得更熟练，尤其是在复杂的协作项目中，你可能会更喜欢单独拉取和合并所提供的控制。</p>\n<h3>最佳实践</h3>\n<ul>\n<li><strong>干净的工作目录：</strong> 在运行 <code>git pull</code> 之前，通常最好确保你的工作目录是干净的（没有未提交的更改）。运行 <code>git status</code> 检查。在有未提交更改的情况下拉取有时会使合并过程复杂化。如果你有尚未准备好提交的本地更改，可以考虑在拉取之前使用 <code>git stash</code>（这是一个更高级的学习主题）。</li>\n<li><strong>了解你的分支：</strong> 在拉取之前，请确保你位于正确的本地分支上（<code>git status</code> 或 <code>git branch</code> 会告诉你）。拉取会将更改合并到你的<em>当前</em>分支中。</li>\n</ul>\n<p>总之，<code>git pull</code> 是用于从远程仓库获取更改并立即合并到当前本地分支的命令。它简化了与协作者保持同步的过程，使其成为处理远程仓库的基本命令。</p>",
+  "slug": "git-pull-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 322,
+      "title": "git-pull Documentation",
+      "author": "Git Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-pull",
+      "doi": "",
+      "note": "《git pull》命令的官方文档，详细说明其用法、选项以及与《git fetch》和《git merge》的交互。",
+      "order": 1,
+      "created_at": "2025-09-04T14:16:15.083457Z",
+      "updated_at": "2025-09-07T15:49:09.699365Z"
+    },
+    {
+      "id": 323,
+      "title": "git-merge Documentation",
+      "author": "Git Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-merge",
+      "doi": "",
+      "note": "《git merge》命令的官方文档，解释了其不同的合并策略、冲突解决及其作为《git pull》一部分的作用。",
+      "order": 2,
+      "created_at": "2025-09-04T14:16:15.087896Z",
+      "updated_at": "2025-09-07T15:49:11.325545Z"
+    },
+    {
+      "id": 324,
+      "title": "Pro Git (2nd Edition)",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Remote-Branches",
+      "doi": "",
+      "note": "Git官方书籍，提供了Git概念的全面解释，包括《git pull》在远程工作流和分支策略中的作用。链接指向“远程分支”章节。",
+      "order": 3,
+      "created_at": "2025-09-04T14:16:15.091964Z",
+      "updated_at": "2025-09-07T15:49:07.846340Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

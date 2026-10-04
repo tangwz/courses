@@ -1,0 +1,61 @@
+{
+  "id": 1888,
+  "title": "动手实践：数据预处理",
+  "meta_title": "实践：使用 Scikit-learn 进行数据预处理",
+  "meta_description": "使用 Scikit-learn 对数据集应用缩放、编码和插补技术。",
+  "content": "<p>数据预处理包括数值特征缩放、分类特征编码以及缺失值处理。一个具体实例将演示如何使用Scikit-learn的转换器将这些技术应用到一个小型、有代表性的数据集中。</p>\n<p>假设我们有一个包含员工信息的数据集，包括他们的年龄、薪水、部门和经验水平。我们的目标是为潜在的机器学习 (machine learning)模型准备这些数据。</p>\n<p>首先，我们使用 Pandas 来创建这个示例数据集：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\n# 创建示例数据\ndata = {\n    'Age': [25, 45, 30, 55, 22, 38, np.nan, 41, 29, 50],\n    'Salary': [50000, 80000, 62000, 110000, 45000, 75000, 58000, np.nan, 60000, 98000],\n    'Department': ['HR', 'Engineering', 'Sales', 'Engineering', 'Sales', 'HR', 'Sales', 'Engineering', 'HR', 'Sales'],\n    'Experience_Level': ['Entry', 'Senior', 'Mid', 'Senior', 'Entry', 'Mid', 'Mid', 'Senior', 'Entry', 'Senior']\n}\ndf = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(df)\n</code></pre>\n<p>我们的 DataFrame 看起来是这样的：</p>\n<pre><code>   Age    Salary   Department Experience_Level\n0  25.0   50000.0           HR            Entry\n1  45.0   80000.0  Engineering           Senior\n2  30.0   62000.0        Sales              Mid\n3  55.0  110000.0  Engineering           Senior\n4  22.0   45000.0        Sales            Entry\n5  38.0   75000.0           HR              Mid\n6   NaN   58000.0        Sales              Mid\n7  41.0       NaN  Engineering           Senior\n8  29.0   60000.0           HR            Entry\n9  50.0   98000.0        Sales           Senior\n</code></pre>\n<p>我们可以立即发现几个需要预处理的地方：</p>\n<ol>\n<li><strong>缺失值：</strong> 'Age' 和 'Salary' 列包含 <code>NaN</code> 条目。</li>\n<li><strong>数值特征：</strong> 'Age' 和 'Salary' 是数值型特征，可能从缩放中受益，特别是如果我们计划使用对特征大小敏感的算法（如 KNN 或正则化 (regularization)回归）。</li>\n<li><strong>分类特征：</strong> 'Department' 是名义型（无内在顺序），而 'Experience_Level' 是序数型（有明确顺序：Entry &#x3C; Mid &#x3C; Senior）。它们需要数值编码。</li>\n</ol>\n<h3>处理缺失值</h3>\n<p>我们首先使用插补来处理缺失值。我们将使用 <code>SimpleImputer</code> 用平均年龄填充缺失的 'Age'，并用中位薪水填充缺失的 'Salary'（中位数通常更适用于像薪水这样可能偏斜的数据）。</p>\n<pre><code class=\"language-python\">from sklearn.impute import SimpleImputer\n\n# 用平均值填充 'Age'\nmean_imputer = SimpleImputer(strategy='mean')\n# 注意：插补器需要2D数组状输入，因此使用 df[['Age']]\ndf['Age'] = mean_imputer.fit_transform(df[['Age']])\n\n# 用中位数填充 'Salary'\nmedian_imputer = SimpleImputer(strategy='median')\ndf['Salary'] = median_imputer.fit_transform(df[['Salary']])\n\nprint(\"\\n插补后的 DataFrame:\")\nprint(df)\n</code></pre>\n<p>输出显示 <code>NaN</code> 值已被替换：</p>\n<pre><code>DataFrame after Imputation:\n        Age    Salary   Department Experience_Level\n0  25.000000   50000.0           HR            Entry\n1  45.000000   80000.0  Engineering           Senior\n2  30.000000   62000.0        Sales              Mid\n3  55.000000  110000.0  Engineering           Senior\n4  22.000000   45000.0        Sales            Entry\n5  38.000000   75000.0           HR              Mid\n6  37.222222   58000.0        Sales              Mid # 插补后的年龄（均值）\n7  41.000000   68500.0  Engineering           Senior # 插补后的薪水（中位数）\n8  29.000000   60000.0           HR            Entry\n9  50.000000   98000.0        Sales           Senior\n</code></pre>\n<p>注意 <code>fit_transform</code> 的用法。<code>fit</code> 步骤从列中的非缺失值计算出统计量（均值或中位数），而 <code>transform</code> 步骤则使用计算出的统计量填充缺失的条目。</p>\n<h3>缩放数值特征</h3>\n<p>现在，我们来缩放 'Age' 和 'Salary' 列。我们将使用 <code>StandardScaler</code>，它将数据转换为零均值和单位方差（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi><mo>=</mo><mo stretchy=\"false\">(</mo><mi>x</mi><mo>−</mo><mi>μ</mi><mo stretchy=\"false\">)</mo><mi mathvariant=\"normal\">/</mi><mi>σ</mi></mrow><annotation encoding=\"application/x-tex\">z = (x - \\mu) / \\sigma</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\">x</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\">μ</span><span class=\"mclose\">)</span><span class=\"mord\">/</span><span class=\"mord mathnormal\" style=\"margin-right:0.0359em;\">σ</span></span></span></span>）。</p>\n<pre><code class=\"language-python\">from sklearn.preprocessing import StandardScaler\n\nscaler = StandardScaler()\nnumerical_cols = ['Age', 'Salary']\n\n# 拟合并转换数值列\ndf[numerical_cols] = scaler.fit_transform(df[numerical_cols])\n\nprint(\"\\n数值特征缩放后的 DataFrame:\")\nprint(df[numerical_cols].head()) # 为简洁起见，只显示缩放后的列\n</code></pre>\n<p>输出将显示缩放后的值：</p>\n<pre><code>DataFrame after Scaling Numerical Features:\n        Age    Salary\n0 -1.213538 -1.007992\n1  0.770603  0.439769\n2 -0.717503 -0.475179\n3  1.762674  1.887530\n4 -1.510762 -1.248957\n</code></pre>\n<p>这些值现在表示每个特征与均值的标准差。例如，第一位员工的年龄在插补后比平均年龄低约 1.21 个标准差。</p>\n<p>让我们可视化 'Salary' 缩放前后的分布：</p>\n<pre><code class=\"language-python\"># 存储缩放前的原始薪水用于对比图\noriginal_salary = median_imputer.transform(pd.DataFrame(data)['Salary']) # 获取插补后的原始规模薪水\n\n# 创建图表数据\nimport plotly.graph_objects as go\n\nfig = go.Figure()\nfig.add_trace(go.Histogram(x=original_salary.flatten(), name='原始薪水', marker_color='#1f77b4', opacity=0.75))\nfig.add_trace(go.Histogram(x=df['Salary'], name='缩放后的薪水', marker_color='#ff7f0e', opacity=0.75))\n\n# 更新布局以提高清晰度\nfig.update_layout(\n    title_text='薪水标准化前后的分布',\n    xaxis_title_text='值',\n    yaxis_title_text='计数',\n    barmode='overlay', # 叠加直方图\n    legend_title_text='特征'\n)\nfig.update_traces(opacity=0.7) # 调整透明度\n\n# 转换为 JSON 字符串以供显示\nimport plotly.io as pio\nplotly_json = pio.to_json(fig)\nprint(f\"\\n```plotly\\n{plotly_json}\\n```\")\n\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-m6s7xk\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"薪水标准化前后的分布\"}, \"xaxis\": {\"title\": {\"text\": \"值\"}}, \"yaxis\": {\"title\": {\"text\": \"计数\"}}, \"barmode\": \"overlay\", \"legend\": {\"title\": {\"text\": \"特征\"}}}, \"data\": [{\"type\": \"histogram\", \"x\": [50000.0, 80000.0, 62000.0, 110000.0, 45000.0, 75000.0, 58000.0, 68500.0, 60000.0, 98000.0], \"name\": \"原始薪水\", \"marker\": {\"color\": \"#1f77b4\", \"opacity\": 0.75}, \"opacity\": 0.7}, {\"type\": \"histogram\", \"x\": [-1.007992195562181, 0.439769157308326, -0.4751791781343862, 1.887530510178833, -1.2489565775801822, 0.20859830869432495, -0.6671907437463873, -0.1660836963123837, -0.5711849609403867, 1.3947094800001823], \"name\": \"缩放后的薪水\", \"marker\": {\"color\": \"#ff7f0e\", \"opacity\": 0.75}, \"opacity\": 0.7}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-m6s7xk\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>直方图显示了薪水的分布。蓝色条表示原始薪水（插补后），橙色条表示标准化后的薪水。注意分布的形状得以保留，但 x 轴上的比例显著变化，缩放后的版本以零为中心。</p>\n</blockquote>\n<h3>编码分类特征</h3>\n<p>接下来，我们处理分类列。</p>\n<p><strong>名义特征：部门</strong>\n'Department' 没有内在顺序，因此独热编码是合适的。它为每个类别创建新的二元列。</p>\n<pre><code class=\"language-python\">from sklearn.preprocessing import OneHotEncoder\n\n# 选择分类列\ncat_col = ['Department']\none_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore') # 为可读性生成密集数组\n\n# 拟合并转换\none_hot_encoded = one_hot_encoder.fit_transform(df[cat_col])\n\n# 创建带有有意义列名的新 DataFrame\none_hot_df = pd.DataFrame(one_hot_encoded, columns=one_hot_encoder.get_feature_names_out(cat_col))\n\nprint(\"\\n独热编码后的 'Department'（前 5 行）：\")\nprint(one_hot_df.head())\n\n# 我们可以删除原始的 'Department' 列并连接新的列\ndf = df.drop(cat_col, axis=1)\ndf = pd.concat([df.reset_index(drop=True), one_hot_df.reset_index(drop=True)], axis=1)\n</code></pre>\n<p>输出显示了新的二元列：</p>\n<pre><code>One-Hot Encoded 'Department' (first 5 rows):\n   Department_Engineering  Department_HR  Department_Sales\n0                     0.0            1.0               0.0\n1                     1.0            0.0               0.0\n2                     0.0            0.0               1.0\n3                     1.0            0.0               0.0\n4                     0.0            0.0               1.0\n</code></pre>\n<p><strong>序数特征：经验水平</strong>\n'Experience_Level' 有一个顺序（'Entry' &#x3C; 'Mid' &#x3C; 'Senior'）。我们可以使用 <code>OrdinalEncoder</code> 并指定顺序。</p>\n<pre><code class=\"language-python\">from sklearn.preprocessing import OrdinalEncoder\n\n# 定义期望的顺序\nexp_order = ['Entry', 'Mid', 'Senior']\nordinal_encoder = OrdinalEncoder(categories=[exp_order]) # 以列表形式传入顺序\n\n# 拟合并转换\ndf['Experience_Level'] = ordinal_encoder.fit_transform(df[['Experience_Level']])\n\nprint(\"\\n序数编码 'Experience_Level' 后的 DataFrame:\")\nprint(df.head()) # 现在显示完整的 DataFrame\n</code></pre>\n<p>经过所有预处理步骤后的最终 DataFrame 看起来是这样的（显示前 5 行）：</p>\n<pre><code>DataFrame after Ordinal Encoding 'Experience_Level':\n        Age    Salary  Experience_Level  Department_Engineering  Department_HR  Department_Sales\n0 -1.213538 -1.007992               0.0                     0.0            1.0               0.0\n1  0.770603  0.439769               2.0                     1.0            0.0               0.0\n2 -0.717503 -0.475179               1.0                     0.0            0.0               1.0\n3  1.762674  1.887530               2.0                     1.0            0.0               0.0\n4 -1.510762 -1.248957               0.0                     0.0            0.0               1.0\n</code></pre>\n<p>我们的数据现在已经完全数值化、已缩放并且没有缺失值。它现在以一种更好的格式用于许多 Scikit-learn 机器学习 (machine learning)模型的输入。</p>\n<p>这个动手练习演示了如何使用 Scikit-learn 的转换器应用单个预处理步骤。请记住，在实际机器学习工作流程中，仅在训练数据上拟合转换器以避免数据泄露非常重要，然后使用<em>相同</em>的已拟合转换器来转换您的训练和测试数据。在第六章中，您将学习如何使用 Scikit-learn Pipelines 将这些步骤优雅而安全地串联起来。</p>",
+  "slug": "practice-preprocessing-data",
+  "updates": [],
+  "references": [
+    {
+      "id": 5503,
+      "title": "Preprocessing data",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+      "doi": "",
+      "note": "解释了使用 Scikit-learn 转换器进行数据预处理的各种方法，包括缺失值处理、特征缩放和编码。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:58.616561Z",
+      "updated_at": "2025-09-08T05:21:36.747608Z"
+    },
+    {
+      "id": 5504,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "涵盖了使用 Scikit-learn 示例进行数据预处理和特征工程的实用方法（第3版）。",
+      "order": 2,
+      "created_at": "2025-09-05T01:10:58.651704Z",
+      "updated_at": "2025-09-08T05:21:33.499829Z"
+    },
+    {
+      "id": 5505,
+      "title": "Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists",
+      "author": "Alice Zheng, Amanda Casari",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEruhS14FXrKmj-NMEe_lmcHcISY0CTlxhDheognY1d5yZ5x_SaRtyf4bnZZt63GDLGD5kgtceCGx182ABUCtMLJc8zy6W8pklLYInnsb4A4VBJu7UWISEUL9-vdmzgRJGAEj182ueMxZns-cXse8D0JfOE5B68K3tQGCf4HFUVLwh0xC_Unp5VSHUwFv3bGe5sClVFAJcSzHPFIiM=",
+      "doi": "",
+      "note": "提供了一本特征工程指南，详细介绍了缺失值处理、特征缩放和编码。",
+      "order": 3,
+      "created_at": "2025-09-05T01:10:58.655741Z",
+      "updated_at": "2025-09-08T05:21:46.167955Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

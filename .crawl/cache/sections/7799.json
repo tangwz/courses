@@ -1,0 +1,61 @@
+{
+  "id": 7799,
+  "title": "为微调准备数据集",
+  "meta_title": "为微调准备数据集",
+  "meta_description": "了解如何使用微调工具来准备您的数据，以便训练自定义模型。",
+  "content": "<p>尽管微调 (fine-tuning)大型语言模型是一个涉及训练基础设施和成本管理的复杂过程，但成功的决定性因素是训练数据的质量。一个准备充分的数据集能让模型学习特定任务，采用特定风格，或获得新知识。此工具集提供了一系列实用工具来构建、清理和格式化您的数据，这是任何微调项目中的基本第一步。</p>\n<h3>构建微调 (fine-tuning)数据</h3>\n<p>在模型能从您的数据中学习之前，数据需要被组织成一致的格式。大多数微调任务使用两种主要结构之一：</p>\n<ul>\n<li><strong>完成格式</strong>: 这是一种简单的提示与响应对。模型在看到相似的 <code>prompt</code> 时，会学习生成 <code>completion</code> 文本。这种格式适用于分类、简单问答或从起点生成文本等任务。</li>\n<li><strong>聊天格式</strong>: 这种格式包含一系列消息，通常来自 <code>system</code>、<code>user</code> 和 <code>assistant</code>。它用于训练对话任务模型，其中来自先前轮次的上下文 (context)信息很关键。</li>\n</ul>\n<p>此工具集使用 <code>TrainingExample</code> 和 <code>TrainingDataset</code> 类来表示这些。<code>TrainingExample</code> 是一个单一数据点，而 <code>TrainingDataset</code> 是这些示例的集合，以及关于数据集格式的元数据。</p>\n<p>以下是如何为每种格式创建 <code>TrainingExample</code>：</p>\n<pre><code class=\"language-python\">from kerb.fine_tuning import TrainingExample\n\n# 完成格式示例\ncompletion_example = TrainingExample(\n    prompt=\"Translate to French: Hello\",\n    completion=\"Bonjour\"\n)\n\n# 聊天格式示例\nchat_example = TrainingExample(\n    messages=[\n        {\"role\": \"system\", \"content\": \"你是一个乐于助人的编程助手。\"},\n        {\"role\": \"user\", \"content\": \"如何在 Python 中创建一个列表？\"},\n        {\"role\": \"assistant\", \"content\": \"你可以使用方括号来创建一个列表：my_list = [1, 2, 3]\"}\n    ]\n)\n</code></pre>\n<h3>从原始数据准备数据集</h3>\n<p>手动创建 <code>TrainingExample</code> 对象很有用，但您通常会从大量原始数据开始，比如一个字典列表。<code>prepare_dataset</code> 函数旨在简化将这些原始数据转换为结构化 <code>TrainingDataset</code> 的过程，同时进行检查和清理。</p>\n<p>此函数可以自动处理几项必要步骤：</p>\n<ul>\n<li><strong>检查</strong>: 它检查每个示例是否符合预期的结构（例如，聊天消息具有 <code>role</code> 和 <code>content</code> 键）。</li>\n<li><strong>去重</strong>: 它移除完全重复的示例，这可能对训练产生负面影响。</li>\n<li><strong>洗牌</strong>: 它随机化示例的顺序，以防止模型从数据中学习到任何非故意的序列。</li>\n</ul>\n<p>假设您有原始对话数据。您可以通过一次函数调用将其处理成干净、可用的数据集。</p>\n<pre><code class=\"language-python\">from kerb.fine_tuning import prepare_dataset, DatasetFormat, FineTuningProvider\n\nraw_data = [\n    {\n        \"messages\": [\n            {\"role\": \"user\", \"content\": \"什么是字典？\"},\n            {\"role\": \"assistant\", \"content\": \"字典是 Python 中的一种键值数据结构。\"}\n        ]\n    },\n    # 与第一个条目相同，以显示去重功能\n    {\n        \"messages\": [\n            {\"role\": \"user\", \"content\": \"什么是字典？\"},\n            {\"role\": \"assistant\", \"content\": \"字典是 Python 中的一种键值数据结构。\"}\n        ]\n    },\n    {\n        \"messages\": [\n            {\"role\": \"user\", \"content\": \"如何遍历列表？\"},\n            {\"role\": \"assistant\", \"content\": \"使用 for 循环：for item in my_list: print(item)\"}\n        ]\n    }\n]\n\n# 准备数据集，启用所有清理选项\ndataset = prepare_dataset(\n    data=raw_data,\n    format=DatasetFormat.CHAT,\n    provider=FineTuningProvider.OPENAI,\n    validate=True,\n    deduplicate=True,\n    shuffle=True\n)\n\nprint(f\"原始示例数: {len(raw_data)}\")\nprint(f\"准备好的示例数: {len(dataset)}\")\n</code></pre>\n<p>请注意，最终数据集的示例数少于原始数据，因为重复条目已自动移除。<code>provider</code> 参数 (parameter)有助于为像 OpenAI 这样的特定服务定制检查规则。</p>\n<h3>分析数据集质量</h3>\n<p>在投入时间和金钱进行微调 (fine-tuning)工作之前，检查数据集的质量是一个好习惯。具有空条目、长度差异过大或个人身份信息 (PII) 等问题的数据集可能导致模型表现不佳或隐私风险。</p>\n<p>函数 <code>analyze_dataset</code> 提供了一个高层次的统计概览，包括 token 计数、重复计数和标签分布。</p>\n<pre><code class=\"language-python\">from kerb.fine_tuning import analyze_dataset\n\n# 假设 'dataset' 是上一步中的 TrainingDataset\nstats = analyze_dataset(dataset)\n\nprint(f\"总示例数: {stats.total_examples}\")\nprint(f\"总 token 数: {stats.total_tokens}\")\nprint(f\"每个示例平均 token 数: {stats.avg_tokens_per_example:.2f}\")\nprint(f\"重复计数: {stats.duplicate_count}\")\n</code></pre>\n<p>如需更细致的检查，您可以使用专用函数。例如，<code>detect_pii</code> 帮助您查找并移除敏感信息，这是确保隐私和安全的一个必要步骤。</p>\n<pre><code class=\"language-python\">from kerb.fine_tuning.quality import detect_pii\n\ntext_with_pii = \"请通过 john.doe@example.com 或 555-123-4567 联系我\"\npii_found = detect_pii(text_with_pii)\n\nif pii_found:\n    print(\"检测到 PII:\")\n    for pii_type, values in pii_found.items():\n        print(f\"  {pii_type}: {values}\")\n</code></pre>\n<p>进行这些质量检查有助于您及早发现并解决问题，从而避免训练失败，并获得更有效的微调模型。</p>\n<h3>制作遵循指令的数据集</h3>\n<p>许多微调 (fine-tuning)项目旨在创建擅长特定任务的“指令调优”模型。<code>system</code> 提示是实现这一目标的一个有效方法，因为它为模型设定了上下文 (context)和角色。为保持一致性，最好在数据集中的所有示例中使用标准化的系统提示。</p>\n<p><code>standardize_system_prompts</code> 函数允许您将单个系统消息应用于整个数据集，替换任何现有的消息。这确保了模型在训练期间接收到一致的指令集。</p>\n<pre><code class=\"language-python\">from kerb.fine_tuning.prompts import standardize_system_prompts\n\n# 假设 'dataset' 是我们准备好的数据集\nstandard_prompt = \"你是一名资深的 Python 程序员。请提供清晰准确的代码示例。\"\nstandardized_dataset = standardize_system_prompts(dataset, standard_prompt)\n\n# 'standardized_dataset' 中的所有示例现在都具有相同的系统提示\nprint(\"系统提示已在整个数据集中标准化。\")\n</code></pre>\n<h3>为微调 (fine-tuning)服务格式化</h3>\n<p>不同的模型提供商要求微调数据以特定方式格式化，通常是 JSONL（JSON Lines）文件。此工具集通过提供函数将您的 <code>TrainingDataset</code> 转换为主要提供商所需的结构，从而简化了这一过程。</p>\n<p>一旦您的数据集准备好，您可以将其格式化为 OpenAI 适用并写入文件。</p>\n<pre><code class=\"language-python\">import tempfile\nimport os\nfrom kerb.fine_tuning import to_openai_format, write_jsonl\n\n# 将数据集转换为 OpenAI API 预期的格式\nopenai_formatted_data = to_openai_format(dataset)\n\n# 将数据写入 JSONL 文件\nwith tempfile.TemporaryDirectory() as temp_dir:\n    file_path = os.path.join(temp_dir, \"training_data.jsonl\")\n    write_jsonl(openai_formatted_data, file_path)\n    print(f\"数据集已写入 {file_path}\")\n\n    # 您可以检查文件的第一行以查看格式\n    with open(file_path, 'r') as f:\n        print(\"\\nJSONL 文件的第一行:\")\n        print(f.readline().strip())\n</code></pre>\n<p>这个最终的 JSONL 文件就是您需要上传到提供商服务以开始微调工作的。通过遵循这个结构化的准备过程，从原始数据到经过检查且特定于提供商的文件，您为创建高性能的自定义模型打下了坚实根基。</p>",
+  "slug": "preparing-datasets-for-fine-tuning",
+  "updates": [],
+  "references": [
+    {
+      "id": 21692,
+      "title": "Fine-tuning",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/fine-tuning",
+      "doi": "",
+      "note": "OpenAI大型语言模型微调官方指南，详细说明了数据准备、格式要求（补全和聊天）及最佳实践。",
+      "order": 1,
+      "created_at": "2025-10-20T07:21:23.122083Z",
+      "updated_at": "2025-10-20T07:45:53.556465Z"
+    },
+    {
+      "id": 21693,
+      "title": "datasets library documentation",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/datasets/index",
+      "doi": "",
+      "note": "Hugging Face `datasets`库的文档，提供加载、处理和管理自然语言处理数据集的工具和指南，适用于微调数据准备。",
+      "order": 2,
+      "created_at": "2025-10-20T07:21:23.126139Z",
+      "updated_at": "2025-10-20T07:45:53.140680Z"
+    },
+    {
+      "id": 21695,
+      "title": "Natural Language Processing with Transformers",
+      "author": "Lewis Tunstall, Leandro von Werra, and Thomas Wolf",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://learning.oreilly.com/library/view/natural-language-processing/9781098136789/",
+      "doi": "",
+      "note": "本书提供准备和处理Transformer模型文本数据的实用指南，包含数据集结构化和数据质量保证的考虑。",
+      "order": 4,
+      "created_at": "2025-10-20T07:21:23.131303Z",
+      "updated_at": "2025-10-20T07:46:04.805807Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

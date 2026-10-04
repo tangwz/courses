@@ -1,0 +1,45 @@
+{
+  "id": 3636,
+  "title": "RAG 对比微调：理解其差异",
+  "meta_title": "RAG 对比微调大型语言模型：主要差异",
+  "meta_description": "比较并对照 RAG 与大型语言模型微调，指出它们各自的优势和应用。",
+  "content": "<p>为了更好地定制大型语言模型 (LLM)，将检索增强生成 (RAG) 与另一种广泛使用的方法：<strong>微调 (fine-tuning)</strong>进行对比是很有帮助的。这两种方法都旨在使通用大型语言模型适应特定任务或知识范围，但它们的工作方式大不相同。</p>\n<h3>什么是微调 (fine-tuning)？</h3>\n<p>微调是指将一个预训练 (pre-training)的大型语言模型（它已经从海量数据集中学习了通用语言模式），并在针对特定任务或范围的较小、精选数据集上继续其训练过程。此过程会调整模型本身的内部参数 (parameter)或权重 (weight)。</p>\n<p>可以将其类比为让一个受过广泛教育的人（预训练大型语言模型）去一所专业学校学习特定学科，例如医学或法律（微调数据集）。目标是将这种专业知识或行为直接植入模型的内部表示中。</p>\n<p>微调常用于：</p>\n<ol>\n<li><strong>调整模型的风格或语气：</strong> 使大型语言模型以特定的品牌声音或角色特征进行交流。</li>\n<li><strong>教授特定的响应格式：</strong> 训练模型生成具有特定结构（如 JSON 或特定报告格式）的输出。</li>\n<li><strong>灌输特定范围的知识：</strong> 提升模型在特定小众区域的理解和术语使用，假设该知识不会快速变化。</li>\n</ol>\n<h3>RAG 如何不同</h3>\n<p>检索增强生成 (RAG)，正如我们所讨论的，不会修改大型语言模型的基础权重 (weight)。相反，它为现有预训练 (pre-training)大型语言模型配备了一个外部知识源和一种机制，以便在<em>进行查询时</em>（推理 (inference)时）从中检索相关信息。</p>\n<p>用我们的类比来说，RAG 就像给那个受过广泛教育的人提供一个全面的、可搜索的图书馆或数据库，专门用于手头的任务。对于提出的每个问题，他们首先会在图书馆中查找相关信息，<em>然后</em>利用其通用技能根据所查到的内容来组织答案。这个人的核心知识没有改变，但他们使用图书馆信息回答特定问题的能力得到了显著提升。</p>\n<h3>差异总结</h3>\n<p>让我们从几个重要方面来剖析 RAG 与微调 (fine-tuning)之间的主要区别：</p>\n<h4>1. 知识整合</h4>\n<ul>\n<li><strong>微调：</strong> 通过修改大型语言模型的内部参数 (parameter)（权重 (weight)）来整合知识。这种知识变为<em>参数化</em>的，隐式存储在模型结构内部。</li>\n<li><strong>RAG：</strong> 在推理 (inference)时通过检索外部数据并将其作为上下文 (context)提供给提示，从而动态整合知识。这种知识是<em>非参数化</em>的，存储在模型外部。</li>\n</ul>\n<h4>2. 知识更新</h4>\n<ul>\n<li><strong>微调：</strong> 要更新模型的知识，通常需要整理一个反映最新信息的新数据集，并重复微调过程。这可能在计算上成本高昂且耗时。</li>\n<li><strong>RAG：</strong> 更新知识只需更新外部数据源（例如，向向量 (vector)数据库添加新文档并对其进行索引）。这通常比重新训练快得多，资源消耗也更少，使 RAG 系统能更轻松地保持最新。</li>\n</ul>\n<h4>3. 计算资源</h4>\n<ul>\n<li><strong>微调：</strong> 训练阶段需要大量的计算资源（GPU、TPU）和时间。推理成本通常是基础大型语言模型的成本（尽管如果模型变大，有时会略高）。</li>\n<li><strong>RAG：</strong> 设置时计算量极小（使用预训练 (pre-training)模型）。主要的计算成本发生在推理期间，包括检索步骤（查询向量数据库）和生成步骤（处理包含检索上下文的较长提示）。索引外部数据源有前期成本，但通常低于微调。</li>\n</ul>\n<h4>4. 事实性和幻觉 (hallucination)</h4>\n<ul>\n<li><strong>微调：</strong> 尽管微调可以提高特定任务的性能，但它本身并不能解决幻觉问题。模型仍可能根据预训练或微调期间学到的模式生成听起来合理但不正确的信息。很难追溯输出中特定信息的来源。</li>\n<li><strong>RAG：</strong> 直接将大型语言模型的响应建立在检索到的事实文档上。通过提供相关上下文，RAG 显著降低了幻觉的可能性，并提高了事实准确性，前提是检索到的信息是正确的。此外，它允许进行<strong>来源归属</strong>，因为系统可以引用用于生成答案的文档，从而增强透明度和可验证性。</li>\n</ul>\n<h4>5. 用例适用性</h4>\n<ul>\n<li><strong>微调：</strong> 非常适合调整大型语言模型输出的<em>行为</em>、<em>风格</em>或<em>格式</em>。它也适用于那些核心知识相对稳定且需要与模型推理过程紧密结合的范围。</li>\n<li><strong>RAG：</strong> 在知识密集型任务中表现出色，这些任务中获取特定、最新或专有信息非常重要。例子包括对公司内部文档进行问答，根据最新的产品手册提供客户支持，或从最新新闻文章中合成信息。</li>\n</ul>\n<p>以下图表描绘了基本工作流程的差异：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-m0c4lm\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  subgraph cluster_ft {\n    label = \"微调过程\";\n    style=dashed;\n    bgcolor=\"#fff3bf\"; // 淡黄/橙色背景\n\n    ft_data [label=\"任务专用\\n数据集\", shape=cylinder, style=filled, fillcolor=\"#ffd8a8\"];\n    ft_llm [label=\"预训练大型语言模型\", style=filled, fillcolor=\"#ced4da\"];\n    ft_process [label=\"微调\\n（权重更新）\", shape=cds, style=filled, fillcolor=\"#ffc078\"];\n    ft_tuned_llm [label=\"微调后的大型语言模型\", style=filled, fillcolor=\"#f76707\"];\n\n    ft_data -> ft_process;\n    ft_llm -> ft_process;\n    ft_process -> ft_tuned_llm;\n  }\n\n  subgraph cluster_rag {\n    label = \"RAG 推理过程\";\n    style=dashed;\n    bgcolor=\"#d0ebff\"; // 淡蓝色背景\n\n    rag_query [label=\"用户查询\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n    rag_retriever [label=\"检索器\", shape=component, style=filled, fillcolor=\"#a5d8ff\"];\n    rag_db [label=\"外部知识\\n（向量数据库）\", shape=cylinder, style=filled, fillcolor=\"#74c0fc\"];\n    rag_context [label=\"检索到的上下文\", shape=note, style=filled, fillcolor=\"#e9ecef\"];\n    rag_llm [label=\"预训练大型语言模型\\n（生成器）\", style=filled, fillcolor=\"#ced4da\"];\n    rag_prompt [label=\"增强提示\\n（查询 + 上下文）\", shape=parallelogram, style=filled, fillcolor=\"#a5d8ff\"];\n    rag_response [label=\"最终响应\", shape=ellipse, style=filled, fillcolor=\"#1c7ed6\"];\n\n    rag_query -> rag_retriever;\n    rag_retriever -> rag_db [label=\"搜索\"];\n    rag_db -> rag_context [label=\"相关文档\"];\n    rag_context -> rag_prompt;\n    rag_query -> rag_prompt;\n    rag_prompt -> rag_llm;\n    rag_llm -> rag_response [label=\"生成\"];\n  }\n\n  ft_inference [label=\"推理（微调后）\"];\n  ft_query [label=\"用户查询\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\n  ft_response [label=\"响应\", shape=ellipse, style=filled, fillcolor=\"#f76707\"];\n\n  ft_tuned_llm -> ft_inference [style=invis]; // 定位链接\n  ft_query -> ft_inference [label=\"输入\"];\n  ft_inference -> ft_response [label=\"生成\"];\n  ft_tuned_llm -> ft_inference [style=invis];\n\n  //用于布局间距的不可见边\n  ft_tuned_llm -> rag_query [style=invis, minlen=3];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-m0c4lm\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图对比了微调（顶部）的一次性权重更新过程与 RAG（底部）的动态推理时检索和增强过程。</p>\n</blockquote>\n<p>值得一提的是，RAG 和微调并非相互排斥。一个大型语言模型可以为特定范围的风格和术语进行微调，<em>然后</em>在 RAG 系统中用作生成器组件，以访问该范围内的最新文档。然而，对于本入门课程，我们将主要侧重于在 RAG 架构中使用标准预训练模型。</p>\n<p>\"理解这些差异对于决定哪种方法或哪种组合最适合您在使用大型语言模型时的具体目标非常重要。RAG 提供了一种有效途径，可以在不改变底层模型的情况下，用外部动态知识增强大型语言模型，为许多应用带来了准确性、时效性和可验证性方面的重要优势。\"</p>",
+  "slug": "rag-vs-finetuning",
+  "updates": [],
+  "references": [
+    {
+      "id": 10067,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "NeurIPS",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS) 33",
+      "volume": "33",
+      "pages": "",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2020/file/6b493230237300c7ee6416dd3438a531-Paper.pdf",
+      "doi": "10.55917/ccf.JMDJDS.871",
+      "note": "介绍了RAG框架，概述了其架构以及结合检索与生成的优势。",
+      "order": 1,
+      "created_at": "2025-09-05T06:36:27.492538Z",
+      "updated_at": "2025-09-09T12:09:04.722534Z"
+    },
+    {
+      "id": 10068,
+      "title": "A Survey of Large Language Models",
+      "author": "Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.18223",
+      "volume": "",
+      "pages": "144",
+      "url": "https://arxiv.org/abs/2303.18223",
+      "doi": "10.48550/arXiv.2303.18223",
+      "note": "提供了大型语言模型的概述，包括对微调和各种适应技术的讨论。",
+      "order": 2,
+      "created_at": "2025-09-05T06:36:27.496676Z",
+      "updated_at": "2025-09-09T12:08:54.454411Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

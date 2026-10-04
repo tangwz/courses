@@ -1,0 +1,45 @@
+{
+  "id": 4471,
+  "title": "结构化记忆表示",
+  "meta_title": "结构化记忆表示（图，数据库）",
+  "meta_description": "集成知识图谱或关系数据库作为结构化记忆组成部分。",
+  "content": "<p>虽然向量 (vector)数据库在从非结构化文本中检索语义相似信息方面表现出色，但当智能体需要访问确切事实、复杂关联或由明确模式管理的数据时，它们往往力有不逮。获取 <code>product_sku_12345</code> 的确切当前库存量，或绘制模拟组织内的层级汇报结构，都需要能理解并处理显式结构的机制。正是在这里，结构化记忆表示，例如知识图谱和关系数据库，成为智能体记忆架构中的重要组成部分。它们通过提供对精心整理、相互关联且可验证信息的访问，对非结构化检索形成补充。</p>\n<h3>知识图谱（KG）作为记忆</h3>\n<p>知识图谱将信息表示为实体（节点）和关系（边）的网络。实体可以是任何人、地点或抽象观念，而边则定义了这些实体如何关联（例如，<code>位于</code>、<code>管理</code>、<code>一部分</code>）。这种结构本身适合存储复杂的关联知识、分类法和本体论信息，智能体可以查询以获取特定信息。</p>\n<p><strong>与大型语言模型（LLM）智能体的集成：</strong></p>\n<p>智能体通常通过专用工具或界面与知识图谱进行交互。这种交互通常包括：</p>\n<ol>\n<li><strong>查询形成：</strong> 智能体根据其推理 (inference)过程，确定需要特定结构化信息。它可能会使用标准知识图谱查询语言（如SPARQL用于RDF图，或Cypher用于属性图）形成查询，通常是通过提示LLM将自然语言问题翻译成形式化查询。\n<em>Cypher查询生成示例：</em>\n<em>自然语言：</em> “‘数据科学团队’目前被分配到哪些项目？”\n<em>生成的Cypher查询：</em> <code>MATCH (t:Team {name: 'Data Science Team'})-[:ASSIGNED_TO]->(p:Project) RETURN p.name</code></li>\n<li><strong>查询执行：</strong> 形成的查询将针对知识图谱数据库（例如Neo4j、Amazon Neptune、RDF4J）执行。</li>\n<li><strong>结果解析：</strong> 返回的结果（通常是JSON等结构化格式）被解析并整合回智能体的操作语境或短期记忆中。这可能涉及总结发现或提取智能体计划下一步所需的特定数据点。</li>\n<li><strong>知识图谱更新（高级）：</strong> 在某些情景下，智能体可能被授予更新知识图谱的权限，根据它们处理的信息添加新的实体或关系。这需要谨慎实施，并带有验证步骤以维护数据完整性。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1wtaryj\" \n              data-graph-definition='digraph KG_Example { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#4263eb\", fontcolor=\"#495057\"]; edge [fontname=\"sans-serif\", fontsize=10, color=\"#868e96\"]; bgcolor=\"transparent\"; \"Agent Smith\" [color=\"#f03e3e\"]; \"Project Alpha\" [color=\"#1c7ed6\"]; \"Task 1.1\" [color=\"#37b24d\"]; \"Task 1.2\" [color=\"#37b24d\"]; \"Neo4j DB\" [shape=cylinder, color=\"#adb5bd\"]; \"Agent Smith\" -> \"Project Alpha\" [label=\"管理\"]; \"Project Alpha\" -> \"Task 1.1\" [label=\"包含任务\"]; \"Project Alpha\" -> \"Task 1.2\" [label=\"包含任务\"]; \"Task 1.1\" -> \"Agent Smith\" [label=\"分配给\"]; \"Project Alpha\" -> \"Neo4j DB\" [label=\"存储于\", style=dotted]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1wtaryj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>知识图谱的一个简单片段，描述了项目管理关系，可能存储在一个智能体可访问的图数据库中。</p>\n</blockquote>\n<p>知识图谱为智能体访问复杂、相互关联的事实提供了一种有效方式，而这些事实仅靠嵌入 (embedding)难以表示或可靠检索。</p>\n<h3>关系数据库（SQL DB）作为记忆</h3>\n<p>传统关系数据库仍是存储大量结构化表格数据的重要支撑。对于智能体系统，SQL数据库可以作为记忆来源用于：</p>\n<ul>\n<li><strong>事务记录：</strong> 销售数据、事件日志、交互历史记录。</li>\n<li><strong>实体属性：</strong> 用户档案、产品目录、配置设置。</li>\n<li><strong>操作状态：</strong> 当前库存量、系统状态标志、工作流进度。</li>\n</ul>\n<p><strong>与LLM智能体的集成：</strong></p>\n<p>交互通常遵循文本到SQL模式：</p>\n<ol>\n<li><strong>模式感知：</strong> 智能体需要访问数据库模式（表名、列名、类型、关系）以形成有效查询。这种模式信息可以在智能体的提示中提供，通过专用工具获取，或嵌入 (embedding)到LLM的微调 (fine-tuning)数据中。</li>\n<li><strong>SQL查询生成：</strong> LLM将智能体的数据自然语言请求翻译成SQL查询。这是一项复杂任务，易于出错，例如语法错误、虚构的表名/列名或低效的查询结构。谨慎的实现需要细致的提示工程 (prompt engineering)、少样本示例，以及可能经过微调且专门用于文本到SQL的模型。\n<em>文本到SQL示例：</em>\n<em>自然语言：</em> “显示过去30天内订购了产品‘X’的加利福尼亚客户的电子邮件地址。”\n<em>生成的SQL查询：</em>\n<pre><code class=\"language-sql\">SELECT T1.email\nFROM customers T1\nJOIN orders T2 ON T1.customer_id = T2.customer_id\nJOIN order_items T3 ON T2.order_id = T3.order_id\nWHERE T1.state = 'CA'\n  AND T3.product_name = 'X'\n  AND T2.order_date >= date('now', '-30 days');\n</code></pre>\n</li>\n<li><strong>查询执行与安全：</strong> 直接在生产数据库上执行LLM生成的SQL会带来重要的安全风险（SQL注入）和潜在的意外数据修改（更新/删除）。执行应在沙盒环境中进行，在可能的情况下使用只读连接，采用查询净化，并可能包含人工参与的验证步骤以处理敏感操作。</li>\n<li><strong>结果处理：</strong> 查询结果（通常是表格形式）返回给智能体，需要解析并整合到其工作记忆中。</li>\n</ol>\n<h3>混合结构化和非结构化记忆</h3>\n<p>通常，最有效的记忆架构结合了结构化和非结构化方法。智能体可能使用向量 (vector)数据库来查找讨论通用主题（例如“关于产品X的客户反馈”）的相关文档，然后查询SQL数据库以获取与该反馈中提到的实体相关的精确结构化数据（例如“获取反馈文档ID 987中提到的客户ID 5678的订单历史”）。</p>\n<p>混合检索方法包括：</p>\n<ul>\n<li><strong>实体链接：</strong> 识别非结构化文本中的实体（人员、组织、产品），并用它们查询知识图谱或SQL数据库以获取详细属性或关系。</li>\n<li><strong>知识图谱增强检索：</strong> 借助知识图谱中的关系或元数据来优化或扩展发送到向量数据库的查询。例如，不仅查找与“阿尔法项目”相关的文档，还查找与知识图谱中该项目关联的团队成员相关的文档。</li>\n<li><strong>结构化数据丰富：</strong> 检索结构化数据（例如从SQL获取产品规格），并将其与非结构化描述一起嵌入 (embedding)向量存储，以便在语义搜索中提供更丰富的语境。</li>\n</ul>\n<h3>实施考量</h3>\n<p>集成结构化记忆需要细致的设计：</p>\n<ul>\n<li><strong>工具定义：</strong> 将知识图谱/SQL查询能力表示为具有清晰描述、输入/输出模式，并可能为LLM规划器提供示例的工具。</li>\n<li><strong>查询验证：</strong> 实施检查，确保生成的查询（SPARQL、Cypher、SQL）在执行前语法正确且语义合理。这可能涉及解析器、linter，甚至使用LLM本身进行验证提示。</li>\n<li><strong>模式管理：</strong> 制定策略为智能体提供最新的模式信息，而不占用过多上下文 (context)窗口空间。这可以包括模式总结或按需检索。</li>\n<li><strong>安全与权限：</strong> 建立严格的访问控制、读/写权限和查询过滤，以防止未经授权的访问或有害操作，尤其当智能体可以触发更新或删除时。</li>\n</ul>\n<p>通过结合知识图谱和关系数据库，我们使LLM智能体能够访问并推理 (inference)精确、事实性且相互关联的信息。这补充了基于向量 (vector)检索的优点，使智能体能够应对更广泛的复杂任务，既需要语义理解又需要结构化数据访问。知识图谱与SQL数据库之间的选择，或决定两者都用，在很大程度上取决于数据的具体性质和智能体设计要执行的任务。</p>",
+  "slug": "structured-memory-representations",
+  "updates": [],
+  "references": [
+    {
+      "id": 8315,
+      "title": "Knowledge Graphs",
+      "author": "Aidan Hogan, Eva Blomqvist, Michael Cochez, Claudio D'Amato, Heiko Ebner, Jorge E. G. Lopez, Sabrina Kirrane, Marko Krötzsch, Jose E. Labra Gayo, Roberto Navigli, Axel-Cyrille Ngonga Ngomo, Axel Polleres, Simon Razniewski, Ralph Schaefermeier, Sebastian Schmidt, Michael Strohmaier, and Anna Tordai",
+      "year": "2021",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/knowledge-graphs",
+      "doi": "",
+      "note": "一本基础书籍，深入介绍了知识图谱的原理、技术和应用。",
+      "order": 3,
+      "created_at": "2025-09-05T01:54:09.705409Z",
+      "updated_at": "2025-09-10T08:04:28.424085Z"
+    },
+    {
+      "id": 8316,
+      "title": "Toolformer: Language Models That Can Use Tools",
+      "author": "Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2302.04761",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2302.04761",
+      "doi": "10.48550/arXiv.2302.04761",
+      "note": "介绍了一种教授大型语言模型使用外部工具的方法，这直接适用于智能体与知识图谱和关系数据库等结构化内存系统进行交互的情况。",
+      "order": 4,
+      "created_at": "2025-09-05T01:54:09.710629Z",
+      "updated_at": "2025-09-10T08:04:25.975726Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

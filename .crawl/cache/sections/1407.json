@@ -1,0 +1,45 @@
+{
+  "id": 1407,
+  "title": "封装器方法概述",
+  "meta_title": "封装器方法概述",
+  "meta_description": "介绍使用特定机器学习模型评估特征子集的封装器方法。",
+  "content": "<p>过滤方法根据特征的固有属性进行快速评估，独立于任何机器学习 (machine learning)模型。尽管高效，这种独立性也可能是一个局限。根据统计检验，一个特征单独看起来可能很弱，但当与特定算法的其他特征结合使用时，它可能极具价值。</p>\n<p>封装器方法正是在这里发挥作用。封装器方法不单独评估特征，而是使用特定的机器学习算法本身来评估特征子集的有用性。可以将机器学习模型看作特征选择过程的“包装器”。</p>\n<p>核心思想是将特征选择视为一个搜索问题。生成特征的不同组合（子集），对于每个子集，选定的机器学习模型被训练和评估。模型在保留集上或通过交叉验证的表现（例如，准确率、F1分数、R平方）作为目标函数来指导搜索。最终选择产生最佳模型表现的特征子集。</p>\n<h3>封装器方法如何运作</h3>\n<p>从宏观层面来看，这个过程通常包括以下步骤：</p>\n<ol>\n<li><strong>搜索策略：</strong> 定义一种在可能的特征子集空间中进行遍历的方式。常见策略包括：\n<ul>\n<li><em>向前选择：</em> 从一个空集开始，迭代地添加最能改善模型表现的特征。</li>\n<li><em>向后消除：</em> 从所有特征开始，迭代地移除对模型表现损害最小（或改善最大）的特征。</li>\n<li><em>递归特征消除 (RFE)：</em> 从所有特征开始，训练模型，对特征进行排名（例如，根据系数或特征重要性），移除排名最低的特征，然后递归重复。我们将在本章稍后详细介绍 RFE。</li>\n</ul>\n</li>\n<li><strong>模型训练：</strong> 选择一个特定的机器学习 (machine learning)算法（例如，逻辑回归、支持向量 (vector)机、随机森林）用于评估。</li>\n<li><strong>评估：</strong> 使用当前特征子集训练并评估所选模型。这种评估通常使用与问题相关的表现指标进行（例如，分类任务的准确率，回归任务的均方误差 MSE），并且通常通过交叉验证进行评估以获得估计值。</li>\n<li><strong>停止准则：</strong> 定义何时停止搜索（例如，当达到所需的特征数量时，当表现不再明显提高时，或者当搜索策略下的所有可能性都已尝试时）。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-zci53x\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10];\n  edge [fontname=\"helvetica\", fontsize=9];\n\n  subgraph cluster_wrapper {\n    label = \"封装器方法循环\";\n    bgcolor=\"#e9ecef\";\n\n    GenerateSubset [label=\"1. 生成\\n特征子集\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    TrainModel [label=\"2. 训练模型\\n（例如，随机森林，逻辑回归）\", style=filled, fillcolor=\"#bac8ff\"];\n    EvaluateModel [label=\"3. 评估模型\\n（例如，准确率，均方误差）\", style=filled, fillcolor=\"#d0bfff\"];\n    SelectBest [label=\"4. 选择最佳\\n表现子集\", shape=diamond, style=filled, fillcolor=\"#eebefa\"];\n\n    GenerateSubset -> TrainModel [label=\"使用子集\"];\n    TrainModel -> EvaluateModel [label=\"评估表现\"];\n    EvaluateModel -> SelectBest [label=\"比较结果\"];\n    SelectBest -> GenerateSubset [label=\"迭代 / 优化搜索\", dir=back];\n  }\n\n  InputFeatures [label=\"原始\\n特征\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n  SelectedFeatures [label=\"已选\\n特征\", shape=cylinder, style=filled, fillcolor=\"#96f2d7\"];\n\n  InputFeatures -> GenerateSubset;\n  SelectBest -> SelectedFeatures [label=\"最终选择\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-zci53x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>封装器特征选择方法中迭代过程的概述。</p>\n</blockquote>\n<h3>优点与缺点</h3>\n<p>封装器方法的主要优点是它们能够找到为所选模型带来更高预测准确率的特征子集。因为它们直接优化特定学习算法的表现，所以可以捕捉到过滤方法可能遗漏的特征间相互关系。</p>\n<p>然而，这会带来显著的计算成本。训练和评估针对众多不同特征子集的模型可能非常耗时，特别是对于大型数据集、高维特征空间或复杂模型。在包含数百个特征的数据集上，使用10折交叉验证运行封装器方法可能需要数小时甚至数天。</p>\n<p>此外，封装器方法存在对搜索过程中使用的特定模型过拟合 (overfitting)的风险。所选特征可能对所选的“封装器”算法高度优化，但如果将不同类型的模型用于最终预测任务，则泛化能力可能不佳。</p>\n<h3>选择合适的模型</h3>\n<p>在封装器方法中使用的机器学习 (machine learning)模型的选择是一个重要考量。更简单、更快的模型（如线性回归或逻辑回归）可以使搜索过程更快。然而，使用与您打算用于最终任务相同类型的模型，通常会选择最适合该特定算法学习模式方式的特征。</p>\n<p>封装器方法提供了一种强大的、以模型为中心的特征选择方法。与过滤方法相比，它们通常能带来表现更好的模型，但需要仔细考虑计算资源和过拟合 (overfitting)的可能性。在接下来的部分中，我们将更详细地研究递归特征消除 (RFE) 和序列特征选择 (SFS) 等具体实现。</p>",
+  "slug": "wrapper-methods-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 1214,
+      "title": "An Introduction to Variable and Feature Selection",
+      "author": "Isabelle Guyon, André Elisseeff",
+      "year": "2003",
+      "publisher": "",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "3",
+      "pages": "1157-1182",
+      "url": "http://www.jmlr.org/papers/volume3/guyon03a/guyon03a.pdf",
+      "doi": "10.1162/153244303322753616",
+      "note": "这篇基础论文介绍了特征选择方法的分类（过滤、封装、嵌入），并讨论了它们的特点，这有助于理解封装方法的背景。",
+      "order": 2,
+      "created_at": "2025-09-04T15:31:16.879133Z",
+      "updated_at": "2025-09-07T17:10:53.036547Z"
+    },
+    {
+      "id": 1215,
+      "title": "Gene Selection for Cancer Classification Using Support Vector Machines",
+      "author": "Isabelle Guyon, Jason Weston, Stephen Barnhill, Vladimir Vapnik",
+      "year": "2002",
+      "publisher": "",
+      "journal": "Machine Learning",
+      "volume": "46",
+      "pages": "389-422",
+      "url": "https://link.springer.com/article/10.1023/A:1012487302797",
+      "doi": "10.1023/A:1012487302797",
+      "note": "这篇是提出递归特征消除（RFE）的原始论文，RFE是本节讨论的一个重要的封装方法，提供了该特定技术的概念基础。",
+      "order": 3,
+      "created_at": "2025-09-04T15:31:16.882687Z",
+      "updated_at": "2025-09-07T17:10:52.171565Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

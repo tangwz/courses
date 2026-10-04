@@ -1,0 +1,61 @@
+{
+  "id": 7313,
+  "title": "执行 Deployment 更新与回滚",
+  "meta_title": "Kubernetes Deployment 更新与回滚",
+  "meta_description": "了解如何对应用程序执行无停机滚动更新，以及在出现问题时如何回滚到之前的版本。",
+  "content": "<p>在更新运行中的应用程序时，Deployment 对象具有显著优势。Deployment 能够自动执行变更的滚动更新过程，确保从一个应用版本过渡到另一个版本的过程平稳进行，且对用户的影响极小甚至完全没有影响。这种自动化的流程替代了手动停止旧 Pod 并启动新 Pod 的方式，从而降低了操作出错的可能性。</p>\n<h3>滚动更新策略</h3>\n<p>默认情况下，Deployment 使用 <code>RollingUpdate</code>（滚动更新）策略。当你修改 Deployment 规范（specification）中的 Pod 模板（例如更改容器镜像标签）时，Deployment 控制器会启动受控的发布过程。它不会一次性停止所有旧 Pod，而是逐步用新 Pod 替换它们。</p>\n<p>具体流程如下：</p>\n<ol>\n<li>创建一个带有更新后 Pod 规范的新 <code>ReplicaSet</code>。</li>\n<li>新 ReplicaSet 开始逐个增加（Scale up）Pod 数量。</li>\n<li>与此同时，旧 ReplicaSet 开始减少（Scale down）Pod 数量，终止旧 Pod。</li>\n<li>该过程持续进行，直到所有旧 Pod 都被新 Pod 替换，并且新版本的副本数量达到预设值。</li>\n</ol>\n<p>由于在更新过程中始终有新旧版本并存来处理流量，这确保了应用在整个更新期间持续可用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-17nhfr1\" \n              data-graph-definition='digraph RollingUpdate {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\"];\n    edge [style=dashed, fontname=\"Helvetica\"];\n\n    subgraph cluster_v1 {\n        label=\"状态 1：版本 1 激活\";\n        bgcolor=\"#a5d8ff44\";\n        rs1 [label=\"ReplicaSet v1\", fillcolor=\"#74c0fc\"];\n        p1_1 [label=\"Pod v1\", fillcolor=\"#a5d8ff\"];\n        p1_2 [label=\"Pod v1\", fillcolor=\"#a5d8ff\"];\n    }\n\n    subgraph cluster_transition {\n        label=\"状态 2：正在更新\";\n        bgcolor=\"#ffd8a844\";\n        rs1_t [label=\"ReplicaSet v1\\n(正在缩减)\", fillcolor=\"#74c0fc\"];\n        rs2_t [label=\"ReplicaSet v2\\n(正在扩容)\", fillcolor=\"#8ce99a\"];\n        p1_t [label=\"Pod v1\", fillcolor=\"#a5d8ff\"];\n        p2_t [label=\"Pod v2\", fillcolor=\"#b2f2bb\"];\n    }\n\n    subgraph cluster_v2 {\n        label=\"状态 3：版本 2 激活\";\n        bgcolor=\"#96f2d744\";\n        rs2 [label=\"ReplicaSet v2\", fillcolor=\"#8ce99a\"];\n        p2_1 [label=\"Pod v2\", fillcolor=\"#b2f2bb\"];\n        p2_2 [label=\"Pod v2\", fillcolor=\"#b2f2bb\"];\n    }\n\n    rs1 -> rs1_t [label=\" 触发更新 \"];\n    rs1_t -> rs2 [label=\" 发布完成 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-17nhfr1\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图展示了滚动更新期间的过渡过程。Deployment 控制器管理着两个 ReplicaSet，逐步从旧版本过渡到新版本以保持可用性。</p>\n</blockquote>\n<h3>执行更新</h3>\n<p>你可以通过两种主要方式触发更新：使用 <code>kubectl</code> 的命令式操作，或通过应用更新后的清单文件进行声明式操作。</p>\n<h4>使用 kubectl 进行命令式更新</h4>\n<p>更新应用镜像最快的方法是使用 <code>kubectl set image</code> 命令。此命令直接修改集群中运行的 Deployment 对象。</p>\n<p>假设你有一个名为 <code>webapp</code> 的 Deployment，运行着标签为 <code>1.21.0</code> 的 Nginx 镜像。要将其更新为 <code>1.22.0</code>，可以运行：</p>\n<pre><code class=\"language-bash\">kubectl set image deployment/webapp nginx=nginx:1.22.0 --record\n</code></pre>\n<p><code>--record</code> 标志非常有用，它会将该命令记录在 Deployment 的注解（annotation）中，方便日后查看每个修订版本中所做的具体变更。</p>\n<h4>使用清单文件进行声明式更新</h4>\n<p>虽然命令式命令在快速修改时很方便，但在生产环境和 GitOps 工作流中推荐使用声明式方法。你只需修改 Deployment 的 YAML 文件并重新应用即可。</p>\n<p>如果原始的 <code>deployment.yaml</code> 如下所示：</p>\n<pre><code class=\"language-yaml\">apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: webapp\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: webapp\n  template:\n    metadata:\n      labels:\n        app: webapp\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.21.0 # 旧镜像版本\n        ports:\n        - containerPort: 80\n</code></pre>\n<p>你需要将 <code>image</code> 字段改为 <code>nginx:1.22.0</code> 并重新应用清单：</p>\n<pre><code class=\"language-bash\">kubectl apply -f deployment.yaml\n</code></pre>\n<p>Kubernetes 会自动计算现有状态与文件中定义的新状态之间的差异（diff），仅在 Pod 模板发生变化时才会触发滚动更新。</p>\n<h3>控制发布速度</h3>\n<p>你可以通过 Deployment 规范中的两个参数 (parameter)来微调 (fine-tuning)滚动更新过程：<code>maxUnavailable</code> 和 <code>maxSurge</code>。</p>\n<ul>\n<li><code>maxUnavailable</code>：指定更新期间可以处于不可用状态的 Pod 最大数量。它可以是绝对数值（如 <code>1</code>）或所需副本数的百分比（如 <code>25%</code>）。</li>\n<li><code>maxSurge</code>：定义可以创建的超过所需副本数量的最大 Pod 数量。这也可以是绝对数值或百分比。</li>\n</ul>\n<p>在清单中的定义示例如下：</p>\n<pre><code class=\"language-yaml\">spec:\n  replicas: 10\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxUnavailable: 1\n      maxSurge: 1\n</code></pre>\n<p>对于 10 个副本的配置，控制器将确保始终至少有 9 个 Pod 在运行（<code>10 - 1</code>）。同时，它也会确保在更新过程中的任何时刻，总 Pod 数量不会超过 11 个（<code>10 + 1</code>）。这些设置有助于在更新速度和安全性之间取得平衡。</p>\n<h3>监控发布状态</h3>\n<p>要查看发布的进展情况，可以使用 <code>kubectl rollout status</code> 命令：</p>\n<pre><code class=\"language-bash\">kubectl rollout status deployment/webapp\n</code></pre>\n<p>该命令将提供实时反馈，仅在更新完成或失败时才会结束。</p>\n<pre><code class=\"language-text\">Waiting for rollout to finish: 2 of 3 new replicas have been updated...\nWaiting for rollout to finish: 2 of 3 new replicas have been updated...\nWaiting for rollout to finish: 2 of 3 new replicas have been updated...\nWaiting for rollout to finish: 3 of 3 new replicas have been updated...\ndeployment \"webapp\" successfully rolled out\n</code></pre>\n<p>你还可以使用 <code>kubectl get deployments</code> 和 <code>kubectl get replicasets</code> 来观察过程中新旧 ReplicaSet 的管理情况。</p>\n<h3>执行回滚</h3>\n<p>有时新版本可能会引入 Bug。Deployment 提供了一种简单的机制来恢复到之前的版本。</p>\n<p>首先，你可以查看 Deployment 的修订历史：</p>\n<pre><code class=\"language-bash\">kubectl rollout history deployment/webapp\n</code></pre>\n<p>输出将显示修订版本列表，每一项都对应 Deployment Pod 模板的一个历史版本。</p>\n<pre><code class=\"language-text\">REVISION  CHANGE-CAUSE\n1         &#x3C;none>\n2         kubectl set image deployment/webapp nginx=nginx:1.22.0 --record=true\n</code></pre>\n<p><code>CHANGE-CAUSE</code> 列由 <code>--record</code> 标志或 <code>kubernetes.io/change-cause</code> 注解填充，这也体现了养成良好记录习惯的原因。</p>\n<p>要回滚到上一个版本（在本例中为修订版本 1），可以使用 <code>undo</code> 命令：</p>\n<pre><code class=\"language-bash\">kubectl rollout undo deployment/webapp\n</code></pre>\n<p>这将触发另一次滚动更新，但这次是将 Pod 模板还原为上一个修订版本的配置。</p>\n<p>如果你需要回滚到特定的修订版本，可以使用 <code>--to-revision</code> 标志指定：</p>\n<pre><code class=\"language-bash\">kubectl rollout undo deployment/webapp --to-revision=1\n</code></pre>\n<p>这种回滚能力提供了一层安全保障，让你能够快速从有问题的部署中恢复，而无需手动干预。通过管理从部署、更新到回滚的完整应用生命周期，Deployment 为在 Kubernetes 上运行无状态应用提供了一种可靠且自动化的方式。</p>",
+  "slug": "executing-deployment-updates-rollbacks",
+  "updates": [],
+  "references": [
+    {
+      "id": 19965,
+      "title": "Deployments",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/",
+      "doi": "",
+      "note": "这份官方指南详细介绍了Kubernetes Deployment对象、其滚动更新策略以及它如何管理应用程序的生命周期，包括更新和回滚。",
+      "order": 1,
+      "created_at": "2025-09-06T13:17:35.031322Z",
+      "updated_at": "2025-09-10T05:20:02.783763Z"
+    },
+    {
+      "id": 19966,
+      "title": "Kubernetes in Action, Second Edition",
+      "author": "Marko Lukša, Kevin Conner",
+      "year": "2026",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/kubernetes-in-action-second-edition",
+      "doi": "",
+      "note": "这是一本全面的书籍，提供了Kubernetes核心概念的实践解释和示例，包括对Deployment、滚动更新和回滚的讲解。",
+      "order": 2,
+      "created_at": "2025-09-06T13:17:35.036471Z",
+      "updated_at": "2025-09-10T05:20:06.850656Z"
+    },
+    {
+      "id": 19967,
+      "title": "kubectl rollout",
+      "author": "Kubernetes Authors",
+      "year": "2020",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#rollout",
+      "doi": "",
+      "note": "这是`kubectl`管理回滚的官方命令参考，包括用于查看状态、历史记录和撤销部署的命令，直接支持了讨论中的实践操作。",
+      "order": 3,
+      "created_at": "2025-09-06T13:17:35.039558Z",
+      "updated_at": "2025-09-10T05:19:56.894570Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

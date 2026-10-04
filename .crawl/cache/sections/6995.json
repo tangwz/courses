@@ -1,0 +1,61 @@
+{
+  "id": 6995,
+  "title": "托管AI服务与IaaS的比较",
+  "meta_title": "托管AI服务对比IaaS",
+  "meta_description": "评估使用高级托管AI平台（如SageMaker、Vertex AI）与基于原始基础设施即服务（IaaS）构建之间的权衡。",
+  "content": "<p>在使用云平台进行AI工作时，您将面临的首要选择之一是两种不同的服务模式：基础设施即服务（IaaS）和托管AI平台。这个选择代表了控制与便捷之间的基本权衡。您的决定将对团队的工作流程、开发速度和运维职责产生很大影响。</p>\n<h3>基础设施即服务（IaaS）：底层构件</h3>\n<p>IaaS为您提供原始的计算、存储和网络组件。可以将其视为在云中租用一台裸机服务器。您几乎负责硬件虚拟化层之上的所有事务。</p>\n<p>采用IaaS方法，您的工作流程通常包括：</p>\n<ol>\n<li><strong>配置虚拟机（VM）：</strong> 您选择一个虚拟机实例，例如Amazon EC2实例、Google Compute Engine VM或Azure虚拟机。您选择CPU、内存以及连接的GPU类型和数量。</li>\n<li><strong>配置环境：</strong> 您连接到机器（通常通过SSH）并扮演系统管理员的角色。这包括安装操作系统、NVIDIA驱动程序、CUDA工具包以及特定版本的Python和机器学习 (machine learning)库，例如PyTorch或TensorFlow。</li>\n<li><strong>管理数据和代码：</strong> 您负责将数据集传输到机器的存储中并管理代码库。</li>\n<li><strong>运行工作负载：</strong> 您从命令行手动运行训练脚本或部署推理 (inference)服务器，或通过自定义自动化脚本进行。</li>\n</ol>\n<p>IaaS的主要优点是<strong>控制</strong>。您可以构建一个完全自定义的环境，根据特定或不寻常的需求进行定制。如果您的工作依赖于专有软件或托管平台不支持的非常特殊的库版本，这会很有用。</p>\n<p>然而，这种控制的代价是<strong>高昂的运维开销</strong>。您的团队必须具备管理系统依赖、应用安全补丁和解决低层基础设施问题的专业知识。开始使用通常较慢，因为在任何机器学习工作开始之前都需要大量的设置。</p>\n<h3>托管AI服务：集成平台</h3>\n<p>托管AI服务是更高级别的平台，它们抽象了底层基础设施。Amazon SageMaker、Google Cloud的Vertex AI和Azure机器学习 (machine learning)等服务专为机器学习生命周期设计。它们将计算资源与一套用于数据标注、模型训练、超参数 (parameter) (hyperparameter)调优和部署的工具捆绑在一起。</p>\n<p>使用托管服务，您的工作流程会有明显变化：</p>\n<ol>\n<li><strong>定义任务：</strong> 您通常通过网页界面、SDK或配置文件定义训练任务或端点，而不是配置虚拟机。</li>\n<li><strong>指定资源：</strong> 您仍然选择实例的类型和数量（例如，<code>ml.g4dn.xlarge</code>），但您不直接管理这些实例。</li>\n<li><strong>提供脚本或容器：</strong> 您将服务指向您的训练脚本或Docker容器。平台负责供应基础设施、运行您的代码，并在任务完成后销毁资源。</li>\n<li><strong>使用集成工具：</strong> 您获得内置功能，用于自动化超参数调优、实验跟踪以及带自动伸缩功能的一键式模型部署。</li>\n</ol>\n<p>这里的主要好处是<strong>生产力</strong>。数据科学家可以更多地专注于模型开发，减少基础设施管理。从构想到训练好的模型所需时间通常大大缩短。这些平台还提供清晰的生产路径，并具备集成的MLOps能力。</p>\n<p>权衡之下是<strong>灵活性</strong>的降低。您在平台提供的环境中操作，这可能对库版本或系统配置有所限制。也存在一定程度的厂商锁定，因为使用特定平台SDK构建的管道不容易移植到另一个云提供商。</p>\n<h3>职责比较</h3>\n<p>这两种模式之间的差异可以通过查看谁负责技术堆栈的每一层来呈现。对于IaaS，您的团队责任范围延伸至堆栈的较深层。对于托管服务，云提供商处理大部分运维负担。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1f5fu4t\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=ortho;\n    node [shape=box, style=\"filled,rounded\", fontname=\"sans-serif\"];\n\n    subgraph cluster_0 {\n        label = \"IaaS 模式（例如，EC2，Compute Engine）\";\n        style=filled;\n        color=\"#f8f9fa\";\n        node [style=\"filled,rounded\"];\n        iaas_hw [label=\"硬件与虚拟化\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        iaas_os [label=\"操作系统与驱动（例如，CUDA）\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n        iaas_deps [label=\"框架与依赖项\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n        iaas_app [label=\"您的模型与应用程序代码\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n        iaas_app -> iaas_deps -> iaas_os -> iaas_hw [dir=none];\n    }\n\n    subgraph cluster_1 {\n        label = \"托管服务模式（例如，SageMaker，Vertex AI）\";\n        style=filled;\n        color=\"#f8f9fa\";\n        node [style=\"filled,rounded\"];\n        managed_hw [label=\"硬件与虚拟化\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        managed_os [label=\"操作系统与驱动（例如，CUDA）\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        managed_deps [label=\"框架与依赖项\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        managed_platform [label=\"机器学习平台（SDKs，超参数优化等）\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        managed_app [label=\"您的模型与应用程序代码\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n        managed_app -> managed_platform -> managed_deps -> managed_os -> managed_hw [dir=none];\n    }\n\n    subgraph cluster_key {\n        label = \"图例\";\n        bgcolor=\"transparent\";\n        rank=\"sink\";\n        k1 [label=\"由您管理\", fillcolor=\"#1c7ed6\", fontcolor=\"white\"];\n        k2 [label=\"由云提供商管理\", fillcolor=\"#495057\", fontcolor=\"white\"];\n        k1 -> k2 [style=invis];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1f5fu4t\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>IaaS与托管AI服务的职责堆栈。使用IaaS时，您从操作系统向上管理环境。使用托管服务时，您主要专注于应用程序代码，而提供商管理平台和底层软件。</p>\n</blockquote>\n<h3>做出正确选择</h3>\n<p>选择合适的模式取决于您的团队技能、项目需求和业务目标。</p>\n<p><strong>选择IaaS，如果：</strong></p>\n<ul>\n<li>您需要运行自定义软件，或需要托管平台不支持的环境。</li>\n<li>您拥有能够构建和维护基础设施的强大DevOps或MLOps团队。</li>\n<li>按小时计费的成本优化是主要驱动因素，并且您拥有稳定、长时间运行的工作负载，设置开销是合理的。</li>\n<li>您需要避免平台层面的厂商锁定，并希望您的运维脚本具有最大可移植性。</li>\n</ul>\n<p><strong>选择托管AI服务，如果：</strong></p>\n<ul>\n<li>您的主要目标是加速机器学习 (machine learning)开发和实验周期。</li>\n<li>您的团队主要由希望专注于建模的数据科学家和研究人员组成。</li>\n<li>您需要开箱即用的完整MLOps方案，包括实验跟踪、自动化调优和简化部署。</li>\n<li>您愿意为便捷性、减少运维负担和更快的上市时间支付更高的费用。</li>\n</ul>\n<p>采用<strong>混合方法</strong>也很常见。一个团队可能使用IaaS（原始虚拟机）处理繁重、自定义的数据预处理任务，然后使用托管服务的训练和托管能力进行模型阶段。这使得您能够混合搭配服务，为管道的每个部分使用最合适的工具。这个选择并非一成不变；您可以随着团队和项目的成熟调整策略。</p>",
+  "slug": "comparing-managed-ai-services-iaas",
+  "updates": [],
+  "references": [
+    {
+      "id": 20404,
+      "title": "What is Amazon EC2?",
+      "author": "Amazon Web Services",
+      "year": "2024",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/ec2/latest/devguide/what-is-amazon-ec2.html",
+      "doi": "",
+      "note": "提供了Amazon EC2的详细概述，展示了计算资源的核心IaaS功能。",
+      "order": 2,
+      "created_at": "2025-09-06T14:02:00.568371Z",
+      "updated_at": "2025-09-11T03:37:18.262497Z"
+    },
+    {
+      "id": 20405,
+      "title": "What is Amazon SageMaker?",
+      "author": "Amazon Web Services",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/sagemaker/latest/dg/whatis.html",
+      "doi": "",
+      "note": "介绍了Amazon SageMaker用于机器学习生命周期的集成功能，作为托管AI服务的示例。",
+      "order": 3,
+      "created_at": "2025-09-06T14:02:00.575658Z",
+      "updated_at": "2025-09-11T03:37:16.603864Z"
+    },
+    {
+      "id": 20406,
+      "title": "Building Machine Learning Powered Applications: Going from Idea to Product",
+      "author": "Emmanuel Ameisen",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGwzLpXvL_mYAqPNc-MQzRRNzkxacWAmUKqYTSJc-6gGqosJjkMgM9j2qT1Cw1Ft_CCQFJAwoTYLbmDZ8E8zDR2ux9dJWHAJcujVBKM6GHvU7z5NtN_Y9x9s-hBC7Me1RDNjWeXX2PSEZ-n_CP9nEbguyR5Z3RnU1KsIEqmkOMv3gQLLxBzOGbEPV7b7xmaBPq9Yb7pX3iMKPSmaSMLr5CcLALNjo=",
+      "doi": "",
+      "note": "提供了构建和部署机器学习应用程序的实用指导，包括对基础设施选择和托管服务简化的MLOps实践的讨论。",
+      "order": 4,
+      "created_at": "2025-09-06T14:02:00.581787Z",
+      "updated_at": "2025-09-11T03:37:39.775808Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

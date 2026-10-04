@@ -1,0 +1,61 @@
+{
+  "id": 4037,
+  "title": "动手实践：数据分割",
+  "meta_title": "数据分割的动手实践",
+  "meta_description": "使用常用工具对样本数据集执行简单的训练-测试分割。",
+  "content": "<p>将数据分成训练集和测试集对于可靠的模型评估是基础的。这里将演示如何实际执行这种分割，采用一种在Python中常用且广受欢迎的<code>scikit-learn</code>库所使用的方法。不过，这种做法适用于各种工具，不受具体工具的限制。</p>\n<p>设想我们有一个小型数据集，我们想要预测一个水果是苹果（用0表示）还是橙子（用1表示），这基于两个特征：水果的重量（克）和质地（0表示光滑，1表示凹凸不平）。</p>\n<p>我们的数据可能看起来像这样：</p>\n<ul>\n<li><strong>特征 (X)：</strong> 每个水果的重量和质地。</li>\n<li><strong>标签 (y)：</strong> 实际的水果类型（0代表苹果，1代表橙子）。</li>\n</ul>\n<p>假设我们有10个水果的数据：</p>\n<p><strong>特征 (X)：</strong>\n<code>[[150, 0], [170, 0], [140, 1], [130, 1], [160, 0], [180, 0], [125, 1], [135, 1], [190, 0], [145, 1]]</code></p>\n<p><strong>标签 (y)：</strong>\n<code>[0, 0, 1, 1, 0, 0, 1, 1, 0, 1]</code></p>\n<p>我们有10个数据点（行）。<code>X</code>中的每一行都对应着<code>y</code>中相同位置的标签。例如，第一个水果重150克，质地光滑（<code>[150, 0]</code>），并且是苹果（<code>0</code>）。</p>\n<p>我们的目标是将这些数据分成训练集（用于训练模型）和测试集（用于评估模型学习得如何）。我们将采用常见的70/30分割比例，这表示70%的数据（7个样本）将用于训练，而30%（3个样本）将保留用于测试。</p>\n<h3>使用 <code>scikit-learn</code> 进行分割</h3>\n<p>在Python中，<code>scikit-learn</code>库在其<code>model_selection</code>模块中提供了一个便捷的函数，名为<code>train_test_split</code>。让我们看看如何使用它。</p>\n<p>首先，通常需要导入函数并准备数据（通常使用NumPy等库，但对于这个简单的例子，Python列表也适用）：</p>\n<pre><code class=\"language-python\"># 导入函数\nfrom sklearn.model_selection import train_test_split\nimport numpy as np # 常用于数据表示\n\n# 我们的特征数据（重量，质地）\nX = np.array([[150, 0], [170, 0], [140, 1], [130, 1], [160, 0], \n              [180, 0], [125, 1], [135, 1], [190, 0], [145, 1]])\n\n# 我们的标签数据（0=苹果，1=橙子）\ny = np.array([0, 0, 1, 1, 0, 0, 1, 1, 0, 1])\n\n# 执行分割（70% 训练，30% 测试）\n# 我们设置 random_state 以获得可复现的结果\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.3, random_state=42\n)\n\n# 让我们看看结果\nprint(\"原始数据点数量：\", len(X))\nprint(\"训练数据点数量：\", len(X_train))\nprint(\"测试数据点数量：\", len(X_test))\n\nprint(\"\\n训练特征 (X_train)：\\n\", X_train)\nprint(\"\\n训练标签 (y_train)：\\n\", y_train)\n\nprint(\"\\n测试特征 (X_test)：\\n\", X_test)\nprint(\"\\n测试标签 (y_test)：\\n\", y_test)\n</code></pre>\n<h3>理解 <code>train_test_split</code> 函数</h3>\n<p>让我们分解<code>train_test_split(X, y, test_size=0.3, random_state=42)</code>的重要组成部分：</p>\n<ol>\n<li><strong><code>X</code></strong>: 这是我们的输入特征数据。</li>\n<li><strong><code>y</code></strong>: 这是我们对应的标签数据。该函数确保在分割过程中，特征行与其标签之间的关联得到保持。</li>\n<li><strong><code>test_size=0.3</code></strong>: 此参数 (parameter)指定数据集中用于测试分割的比例。这里，<code>0.3</code>表示30%的数据将被分配给测试集（<code>X_test</code>，<code>y_test</code>），其余70%将用于训练集（<code>X_train</code>，<code>y_train</code>）。您也可以使用<code>train_size=0.7</code>来达到相同的效果。如果您提供一个整数而不是浮点数（例如，<code>test_size=3</code>），它指定了测试样本的绝对数量。</li>\n<li><strong><code>random_state=42</code></strong>: 如前所述，分割通常涉及在划分数据之前对其进行随机打乱。将<code>random_state</code>设置为一个特定的整数（例如42、0或任何其他数字）可确保每次运行代码时都会发生<em>相同</em>的随机打乱和分割。这对于获得可复现的结果很重要。如果省略<code>random_state</code>，每次都会得到不同的分割结果，这会使调试或比较结果变得困难。</li>\n</ol>\n<h3>查看输出</h3>\n<p>运行上述代码将产生类似于这样的输出（具体行取决于使用的<code>random_state</code>）：</p>\n<pre><code>Original data points: 10\nTraining data points: 7\nTest data points: 3\n\nTraining Features (X_train):\n [[145 1]\n [170 0]\n [140 1]\n [160 0]\n [135 1]\n [180 0]\n [125 1]]\n\nTraining Labels (y_train):\n [1 0 1 0 1 0 1]\n\nTest Features (X_test):\n [[190 0]\n [130 1]\n [150 0]]\n\nTest Labels (y_test):\n [0 1 0]\n</code></pre>\n<p>请注意：</p>\n<ul>\n<li>我们最初有10个数据点。</li>\n<li>训练集（<code>X_train</code>，<code>y_train</code>）包含7个数据点（10个数据点的70%）。</li>\n<li>测试集（<code>X_test</code>，<code>y_test</code>）包含3个数据点（10个数据点的30%）。</li>\n<li><code>X_train</code>中的行对应<code>y_train</code>中的标签，测试集也一样。特征和标签的原始关联在每个集合中都得到了保持。</li>\n<li>数据在分割前已被打乱，这得益于<code>train_test_split</code>的特性（由<code>random_state</code>控制）。</li>\n</ul>\n<p>这里是该过程的简单示意图：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-17fjntb\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10];\n  edge [arrowhead=vee];\n\n  subgraph cluster_0 {\n    label = \"原始数据集（10个样本）\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [style=filled, color=\"#ced4da\"];\n    Original [label=\"特征 (X)\\n标签 (y)\"];\n  }\n\n  subgraph cluster_1 {\n    label = \"分割过程\\n（70% 训练 / 30% 测试）\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [style=filled];\n    Splitter [label=\"train_test_split\\n(random_state=42)\", shape=invhouse, color=\"#a5d8ff\"];\n  }\n\n  subgraph cluster_2 {\n     label = \"结果集合\";\n     style=filled;\n     color=\"#e9ecef\";\n     node [style=filled];\n     TrainSet [label=\"训练集\\n（7个样本）\", color=\"#b2f2bb\"];\n     TestSet [label=\"测试集\\n（3个样本）\", color=\"#ffc9c9\"];\n  }\n\n  Original -> Splitter;\n  Splitter -> TrainSet [label=\" X_train\\n y_train\"];\n  Splitter -> TestSet [label=\" X_test\\n y_test\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-17fjntb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图展示了原始数据集通过分割函数，生成具有指定比例的独立训练集和测试集的过程。</p>\n</blockquote>\n<p>这种数据分割的实际操作步骤很重要。您现在有了一个训练集（<code>X_train</code>，<code>y_train</code>）来训练您的模型，以及一个模型尚未见过的完全独立的测试集（<code>X_test</code>，<code>y_test</code>）。这个测试集将在之后用来公正评估您的模型如何根据我们学到的指标来适应新的、未见过的数据。</p>",
+  "slug": "practical-data-splitting",
+  "updates": [],
+  "references": [
+    {
+      "id": 11130,
+      "title": "sklearn.model_selection.train_test_split",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html",
+      "doi": "",
+      "note": "此为`train_test_split`函数的官方文档，详细介绍了其参数和行为。",
+      "order": 1,
+      "created_at": "2025-09-05T07:00:14.281554Z",
+      "updated_at": "2025-09-08T13:50:34.225996Z"
+    },
+    {
+      "id": 11131,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "本书阐述了数据分割的统计学和理论依据，旨在评估模型性能和泛化误差。",
+      "order": 2,
+      "created_at": "2025-09-05T07:00:14.401809Z",
+      "updated_at": "2025-09-08T13:50:43.617863Z"
+    },
+    {
+      "id": 11132,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "850-856",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/",
+      "doi": "",
+      "note": "本书提供了在完整机器学习项目中，使用常用Python库应用`train_test_split`的实践示例和背景信息。",
+      "order": 3,
+      "created_at": "2025-09-05T07:00:14.405495Z",
+      "updated_at": "2025-09-08T13:51:17.164026Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7032,
+  "title": "剖析GPU和CPU使用情况",
+  "meta_title": "如何剖析GPU和CPU使用情况",
+  "meta_description": "使用NVIDIA的`nvsmi`以及PyTorch/TensorFlow剖析器等工具，以获取资源利用的详细信息。",
+  "content": "<p>为了优化您的系统，首先必须了解其行为。简单地运行一个训练作业并等待其完成，无法知道其耗时原因。剖析是衡量应用程序不同部分的资源消耗和执行时间的过程。它使您能够从性能猜测转变为基于数据的决策。GPU未充分利用是一个常见问题，通常由受CPU限制的数据管道或低效操作引起。通过使用正确的工具，您可以准确找出系统时间花费的位置，并识别要解决的主要瓶颈。</p>\n<h3>高级系统监控</h3>\n<p>在研究复杂的剖析库之前，对系统资源进行简单、实时的检查可以提供即时线索。这些命令行工具是任何性能检查的第一步。</p>\n<h4>使用 <code>htop</code> 监控CPU和内存</h4>\n<p><code>htop</code> 工具是一个用于类Unix系统的交互式进程查看器，比传统的 <code>top</code> 命令有明显改进。它为您提供CPU核心、内存使用情况以及按资源消耗排序的运行进程列表的彩色实时视图。</p>\n<p>当您运行训练脚本时，打开另一个终端并运行 <code>htop</code>。观察顶部的CPU仪表。如果看到一个或多个CPU核心持续保持在100%而GPU处于空闲状态，则很可能存在CPU瓶颈。这通常发生在数据预处理期间，例如图像增强或文本分词 (tokenization)等任务在数据发送到GPU之前在CPU上运行。</p>\n<h4>使用 <code>nvidia-smi</code> 监控GPU</h4>\n<p>对于任何配备NVIDIA GPU的系统，NVIDIA系统管理界面（<code>nvidia-smi</code>）都是一个必不可少的工具。它提供所有可用GPU状态的详细摘要。要获取持续更新的视图，请使用 <code>watch</code> 命令运行它。</p>\n<pre><code class=\"language-bash\">watch -n 1 nvidia-smi\n</code></pre>\n<p>此命令每秒刷新输出。以下是如何解读这些重要字段：</p>\n<pre><code class=\"language-text\">+-----------------------------------------------------------------------------+\n| NVIDIA-SMI 515.65.01    Driver Version: 515.65.01    CUDA Version: 11.7     |\n|-------------------------------+----------------------+----------------------+\n| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |\n|                               |                      |               MIG M. |\n|===============================+======================+======================|\n|   0  NVIDIA A100-SXM...  On   | 00000000:00:04.0 Off |                    0 |\n| N/A   38C    P0    59W / 400W |   1540MiB / 40960MiB |     95%      Default |\n+-------------------------------+----------------------+----------------------+\n</code></pre>\n<ul>\n<li><strong>GPU利用率 (GPU-Util):</strong> 这是训练中最重要的指标。它显示了在最后一秒内一个或多个内核在GPU上执行的时间百分比。对于优化良好的深度学习 (deep learning)工作负载，此数值应持续较高，理想情况下高于90%。如果它剧烈波动或保持较低水平，则表示您的GPU正在等待数据。</li>\n<li><strong>内存使用量 (Memory-Usage):</strong> 这显示了GPU内存（VRAM）的使用量。如果此值接近GPU的容量，您可能会遇到内存不足（OOM）错误。这是另一种问题，通常通过减小批次大小或使用混合精度训练等技术来解决。</li>\n<li><strong>功耗 (Pwr:Usage/Cap):</strong> 这表示当前功耗相对于GPU最大容量的比例。高功耗是GPU正在努力工作的另一个迹象。</li>\n</ul>\n<p>如果 <code>nvidia-smi</code> 显示 <code>GPU利用率</code> 较低，您的检查应立即转向数据管道和受CPU限制的操作。</p>\n<h3>使用框架剖析器进行细粒度分析</h3>\n<p>尽管 <code>nvidia-smi</code> 能告诉您GPU是否繁忙，但它不会告诉您GPU正在做什么。要了解模型中各个操作的性能，您需要使用机器学习 (machine learning)框架内置的剖析器。这些工具可以分解每个函数、内核启动和内存复制的执行时间。</p>\n<h4>PyTorch中的剖析</h4>\n<p>PyTorch包含一个内置的剖析器 <code>torch.profiler</code>，它易于集成到您的训练脚本中。您只需将要分析的代码（通常是训练循环）包装在上下文 (context)管理器中。该剖析器可以跟踪CPU和GPU活动。</p>\n<p>以下是其基本使用示例：</p>\n<pre><code class=\"language-python\">import torch\nimport torchvision.models as models\nfrom torch.profiler import profile, record_function, ProfilerActivity\n\nmodel = models.resnet18().cuda()\ninputs = torch.randn(16, 3, 224, 224).cuda()\n\nwith profile(\n    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],\n    record_shapes=True,\n    with_stack=True\n) as prof:\n    with record_function(\"model_inference\"):\n        model(inputs)\n\n# 打印总结到控制台\nprint(prof.key_averages().table(sort_by=\"cuda_time_total\", row_limit=10))\n\n# 如需更详细的视图，可导出到TensorBoard\n# prof.export_chrome_trace(\"trace.json\")\n</code></pre>\n<p><code>prof.key_averages().table()</code> 的输出为您提供操作列表，显示每个操作在CPU和GPU上花费的时间。这对于找出哪些特定层或函数耗时最多非常有用。为了获得更强大的视图，您可以将结果导出为Chrome trace文件或在TensorBoard中查看。trace视图显示了操作的时间线，使得容易发现GPU空闲的间隙。</p>\n<h4>TensorFlow中的剖析</h4>\n<p>TensorFlow的剖析器与TensorBoard紧密集成。捕获剖析的最简单方法是在使用 <code>tf.keras</code> 进行模型训练期间使用 <code>TensorBoard</code> 回调。您可以将其配置为剖析特定批次。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\n\n# ... 模型和数据设置 ...\n\n# 创建一个TensorBoard回调\nlog_dir = \"logs/profile/\"\ntensorboard_callback = tf.keras.callbacks.TensorBoard(\n    log_dir=log_dir,\n    profile_batch='10,20' # 剖析批次10到20\n)\n\nmodel.fit(\n    train_dataset,\n    epochs=5,\n    callbacks=[tensorboard_callback]\n)\n</code></pre>\n<p>运行此代码后，启动TensorBoard并导航到“剖析”选项卡。您会发现多种工具：</p>\n<ul>\n<li><strong>概览页 (Overview Page):</strong> 这为您提供高级摘要和建议。它通常会直接告诉您程序是否受输入限制。</li>\n<li><strong>跟踪查看器 (Trace Viewer):</strong> 这是最有价值的工具。与PyTorch跟踪类似，它提供了CPU和GPU上所有操作的时间线。</li>\n<li><strong>输入管道分析器 (Input Pipeline Analyzer):</strong> 此工具专门分析您的 <code>tf.data</code> 管道，以找出数据加载和预处理中的瓶颈。</li>\n</ul>\n<h3>可视化性能时间线</h3>\n<p>PyTorch和TensorFlow剖析器中提供的跟踪查看器对于理解CPU和GPU之间的相互影响非常重要。一个常见的性能问题是数据加载管道无法跟上GPU的速度。跟踪查看器使这个问题变得明显。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1qgon2h\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=false;\n    node [shape=box, style=filled];\n    \n    subgraph cluster_cpu {\n        label=\"CPU时间线\";\n        bgcolor=\"#e9ecef\";\n        rank=same;\n        cpu_load [label=\"加载数据\\n(批次 N)\", fillcolor=\"#a5d8ff\"];\n        cpu_prep [label=\"预处理\\n(批次 N)\", fillcolor=\"#74c0fc\"];\n        cpu_xfer [label=\"传输到GPU\\n(批次 N)\", fillcolor=\"#4dabf7\"];\n        cpu_load2 [label=\"加载数据\\n(批次 N+1)\", fillcolor=\"#a5d8ff\"];\n        cpu_prep2 [label=\"预处理\\n(批次 N+1)\", fillcolor=\"#74c0fc\"];\n        \n        cpu_load -> cpu_prep -> cpu_xfer -> cpu_load2 -> cpu_prep2;\n    }\n    \n    subgraph cluster_gpu {\n        label=\"GPU时间线\";\n        bgcolor=\"#e9ecef\";\n        rank=same;\n        gpu_idle1 [label=\"空闲 (等待数据)\", shape=box, style=dashed, fillcolor=\"#ced4da\"];\n        gpu_work [label=\"内核执行\\n(批次 N-1)\", fillcolor=\"#69db7c\"];\n        gpu_idle2 [label=\"空闲 (等待数据)\", shape=box, style=dashed, fillcolor=\"#ced4da\"];\n        \n        gpu_work -> gpu_idle1;\n        {rank=same; gpu_idle1, cpu_xfer}\n        gpu_idle1 -> gpu_idle2 [style=invis];\n    }\n    \n    cpu_xfer -> gpu_idle2 [style=invis, minlen=2]; # 这是一个用于对齐的不可见边\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1qgon2h\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个显示受GPU限制工作负载的性能跟踪。GPU完成工作后进入空闲状态，等待CPU加载、预处理并传输下一批数据。GPU时间线中的这些间隙代表了浪费的计算能力。</p>\n</blockquote>\n<p>在此图中，GPU快速执行一批工作，然后处于空闲状态。在此空闲期间，CPU正忙于准备下一批数据。优化的目标是流水化这些活动，使得CPU总是在准备未来的批次，而GPU正在处理当前批次，从而消除GPU时间线上的“空闲”间隙。通过分析剖析器的真实跟踪，您可以测量这些间隙的持续时间，并确认输入管道确实是您的瓶颈。</p>",
+  "slug": "profiling-gpu-cpu-usage",
+  "updates": [],
+  "references": [
+    {
+      "id": 20810,
+      "title": "PyTorch Profiler",
+      "author": "PyTorch Authors",
+      "year": "2025",
+      "publisher": "PyTorch",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/profiler.html",
+      "doi": "",
+      "note": "详细介绍了 `torch.profiler` API 的使用方法以及如何与 TensorBoard 集成，用于分析 PyTorch 应用中的 CPU 和 GPU 活动。",
+      "order": 1,
+      "created_at": "2025-09-06T14:08:57.171579Z",
+      "updated_at": "2025-09-10T03:09:13.857897Z"
+    },
+    {
+      "id": 20812,
+      "title": "NVIDIA System Management Interface",
+      "author": "NVIDIA Corporation",
+      "year": "2025",
+      "publisher": "NVIDIA",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.nvidia.com/nvidia-system-management-interface",
+      "doi": "",
+      "note": "关于 `nvidia-smi` 的官方文档，详细说明了其命令、输出解读以及如何用于监控 NVIDIA GPU 的健康和性能。",
+      "order": 3,
+      "created_at": "2025-09-06T14:08:57.179912Z",
+      "updated_at": "2025-09-10T03:09:36.768659Z"
+    },
+    {
+      "id": 20813,
+      "title": "Deep Learning Performance Documentation",
+      "author": "NVIDIA Corporation",
+      "year": "2023",
+      "publisher": "NVIDIA",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.nvidia.com/deeplearning/performance/index.html",
+      "doi": "",
+      "note": "NVIDIA 提供的指南和实践集，用于优化 NVIDIA GPU 上的深度学习工作负载，涵盖了多种性能策略和识别瓶颈的工具。",
+      "order": 4,
+      "created_at": "2025-09-06T14:08:57.182718Z",
+      "updated_at": "2025-09-10T03:09:06.089327Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

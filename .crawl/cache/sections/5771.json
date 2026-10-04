@@ -1,0 +1,61 @@
+{
+  "id": 5771,
+  "title": "使用 ONNX 实现框架互操作性",
+  "meta_title": "ONNX：PyTorch 与 TensorFlow 模型转换",
+  "meta_description": "了解开放神经网络交换 (ONNX) 格式，用于在 PyTorch、TensorFlow 和其他框架之间转换模型。",
+  "content": "<p>以下是根据英文更新内容同步修改后的完整中文文本：</p>\n<p>尽管 PyTorch 的 <code>state_dict</code> 和 TorchScript 为在 PyTorch 生态系统内保存和部署模型提供了很好的机制，但有时你需要模型能在不同的机器学习 (machine learning)框架中运行。也许你的团队使用 TensorFlow 进行部署，或者你希望使用对通用模型格式有优化支持的特定硬件加速器。在这种情况下，开放神经网络 (neural network)交换 (ONNX) 格式就变得非常有用了。</p>\n<p>ONNX 是一个用于表示机器学习模型的开放标准。它定义了一组通用的运算符（模型的基本组成部分，如卷积或矩阵乘法）和一种通用文件格式（<code>.onnx</code>）。目标是实现互操作性：你可以在一个框架中训练模型（如 PyTorch），将其导出为 ONNX 格式，然后在另一个框架（如 TensorFlow、Caffe2、MXNet）或专用的 ONNX 运行时中加载并运行它。</p>\n<h3>为什么需要 ONNX？</h3>\n<p>对于熟悉 TensorFlow 生态系统的开发者来说，该生态系统包括用于部署的 SavedModel 和用于移动设备的 TensorFlow Lite，ONNX 可能看起来是多余的一步。然而，它提供了多个优点：</p>\n<ol>\n<li><strong>框架灵活性</strong>：你不会被锁定在单一框架中。你可以借助 PyTorch 的动态性和对 Python 的友好性进行研究和开发，然后通过 ONNX 导出模型，以便在可能针对其他工具进行优化或标准化的环境中部署。</li>\n<li><strong>硬件加速</strong>：许多硬件供应商和芯片制造商为 ONNX 模型提供优化的运行时或编译器。导出到 ONNX 可以提升在特定 CPU、GPU 或专用 AI 加速器上的性能。</li>\n<li><strong>模型共享与协作</strong>：如果你与使用不同机器学习 (machine learning)框架的团队或个人合作，ONNX 提供了一种中立的中间表示形式，用于共享模型。</li>\n<li><strong>使用更广泛的生态系统</strong>：ONNX 生态系统包含多种用于模型可视化、优化和转换的工具。</li>\n</ol>\n<p>可以把 ONNX 看作你的神经网络 (neural network)模型的通用翻译器。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-spmmhz\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fillcolor=\"#e9ecef\"];\n  edge [fontname=\"Helvetica\"];\n\n  pytorch_model [label=\"PyTorch 模型\\n(nn.Module)\", fillcolor=\"#4263eb\", fontcolor=\"white\"];\n  onnx_export [label=\"torch.onnx.export()\", shape=ellipse, fillcolor=\"#ffec99\"];\n  onnx_file [label=\"model.onnx\\n(ONNX 格式)\", shape=cylinder, fillcolor=\"#96f2d7\"];\n\n  onnx_runtime [label=\"ONNX 运行时\", fillcolor=\"#74c0fc\"];\n  tf_ecosystem [label=\"TensorFlow 生态系统\\n(通过 onnx2tf 转换器)\", fillcolor=\"#f76707\", fontcolor=\"white\"];\n  other_frameworks [label=\"其他框架\\n和硬件加速器\", fillcolor=\"#be4bdb\", fontcolor=\"white\"];\n\n  pytorch_model -> onnx_export;\n  onnx_export -> onnx_file;\n  onnx_file -> onnx_runtime [label=\" 推理\"];\n  onnx_file -> tf_ecosystem [label=\" 转换并使用\"];\n  onnx_file -> other_frameworks [label=\" 部署/优化\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-spmmhz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ONNX 工作流程：一个 PyTorch 模型被导出到 ONNX 格式，然后可以被各种运行时和工具使用，包括 TensorFlow 生态系统中的工具。</p>\n</blockquote>\n<h3>将 PyTorch 模型导出到 ONNX</h3>\n<p>PyTorch 使用 <code>torch.onnx.export()</code> 函数内置支持将模型导出到 ONNX 格式。此函数会跟踪你的模型，将其操作转换为 ONNX 图。</p>\n<p>让我们看一下 <code>torch.onnx.export()</code> 的常见参数 (parameter)：</p>\n<ul>\n<li><code>model</code>：你的 PyTorch 模型（<code>torch.nn.Module</code> 的实例）。</li>\n<li><code>args</code>：模型期望的示例输入元组。此输入用于跟踪模型的执行路径。此示例输入的形状和数据类型很重要。</li>\n<li><code>f</code>：ONNX 模型将要保存的路径（例如，<code>\"my_model.onnx\"</code>）。</li>\n<li><code>input_names</code>：（可选）为 ONNX 图中的输入节点指定的名称列表。</li>\n<li><code>output_names</code>：（可选）为 ONNX 图中的输出节点指定的名称列表。</li>\n<li><code>dynamic_axes</code>：（可选）一个字典，指定输入/输出的哪些轴是动态的（例如，批大小、序列长度）。例如，<code>{'input_tensor': {0: 'batch_size'}, 'output_tensor': {0: 'batch_size'}}</code> 表示输入和输出的第一个维度都是动态的。</li>\n<li><code>opset_version</code>：要使用的 ONNX 运算符集版本。ONNX 在发展，新版本增加了对更多运算符的支持。通常最好使用目标部署环境支持的、相对较新的版本。</li>\n</ul>\n<p>这是一个导出基本 PyTorch 模型的简单例子：</p>\n<pre><code class=\"language-python\">import torch\nimport torch.nn as nn\nimport torch.onnx\n\n# 定义一个简单模型\nclass SimpleModel(nn.Module):\n    def __init__(self):\n        super(SimpleModel, self).__init__()\n        self.linear = nn.Linear(10, 5) # 输入特征数：10，输出特征数：5\n\n    def forward(self, x):\n        return self.linear(x)\n\n# 实例化模型\nmodel = SimpleModel()\nmodel.eval() # 将模型设置为评估模式\n\n# 创建与模型预期输入形状匹配的虚拟输入\n# 批大小为 1，10 个输入特征\ndummy_input = torch.randn(1, 10)\n\n# 为 ONNX 模型中的输入和输出定义名称，以提高清晰度\ninput_names = [\"input_tensor\"]\noutput_names = [\"output_tensor\"]\n\n# 导出模型\ntorch.onnx.export(model,\n                  dummy_input,\n                  \"simple_model.onnx\",\n                  input_names=input_names,\n                  output_names=output_names,\n                  opset_version=14,\n                  dynamic_axes={'input_tensor': {0: 'batch_size'},\n                                'output_tensor': {0: 'batch_size'}})\n\nprint(\"模型已导出到 simple_model.onnx\")\n</code></pre>\n<p>当你运行此代码时，PyTorch 会使用 <code>dummy_input</code> 执行你的 <code>SimpleModel</code>，记录操作，并将其转换为 ONNX 格式，将结果保存为 <code>simple_model.onnx</code>。<code>dynamic_axes</code> 参数特别重要。没有它，导出的 ONNX 模型将期望固定批大小（本例中为 1）的输入。通过指定 <code>dynamic_axes</code>，我们告诉 ONNX 导出器批处理维度可以变化。</p>\n<h3>使用 ONNX 模型</h3>\n<p>一旦你有了 <code>.onnx</code> 文件，就需要一个运行时来执行它。最常见的是 <strong>ONNX Runtime</strong>，它是一个用于 ONNX 模型的开源、高性能推理 (inference)引擎。它是跨平台的，并支持硬件加速。</p>\n<p>你可以通过 pip 安装 ONNX Runtime：\n<code>pip install onnxruntime</code></p>\n<p>下面是如何加载并运行我们刚刚创建的 <code>simple_model.onnx</code>：</p>\n<pre><code class=\"language-python\">import onnxruntime\nimport numpy as np\n\n# 创建一个 ONNX Runtime 推理会话\nort_session = onnxruntime.InferenceSession(\"simple_model.onnx\")\n\n# 准备一个示例输入（必须与模型的预期输入匹配，包括批大小）\n# 在此次推理运行中使用批大小为 3\ninput_data = np.random.randn(3, 10).astype(np.float32)\n\n# 从模型获取输入名称（或使用我们在导出时定义的名称）\ninput_name = ort_session.get_inputs()[0].name\n\n# 运行推理\nort_inputs = {input_name: input_data}\nort_outs = ort_session.run(None, ort_inputs)\n\n# 输出是一个 numpy 数组列表\noutput_data = ort_outs[0]\nprint(\"输入形状:\", input_data.shape)\nprint(\"输出形状:\", output_data.shape)\nprint(\"输出数据（第一行）:\", output_data[0])\n</code></pre>\n<p>此代码片段加载 ONNX 模型，准备一个 NumPy 输入数组，并使用 ONNX Runtime 执行推理。你会注意到我们可以使用与导出时 <code>dummy_input</code> （1）不同的批大小（3），这得益于 <code>dynamic_axes</code>。</p>\n<h3>与 TensorFlow 的互操作性</h3>\n<p>作为一名 TensorFlow 开发者，你可能会想 ONNX 如何适应你现有的工作流程。如果你收到一个 ONNX 模型（可能从 PyTorch 导出），你可以将其转换为 TensorFlow 格式（如 SavedModel 或 TFLite），以便将其集成到基于 TensorFlow 的部署流程中（例如 TensorFlow Serving）。</p>\n<p>目前推荐且积极维护的工具是 <code>onnx2tf</code>：</p>\n<pre><code class=\"language-bash\">pip install onnx2tf\n</code></pre>\n<p>你可以直接通过 Python 或其命令行界面进行转换：</p>\n<pre><code class=\"language-python\">import onnx2tf\n\n# 将 ONNX 模型转换为 TensorFlow SavedModel 格式\nonnx2tf.convert(\n    input_onnx_file_path=\"simple_model.onnx\",\n    output_folder_path=\"simple_model_tf_savedmodel\",\n    non_verbose=True\n)\n\nprint(\"ONNX 模型已转换为 TensorFlow SavedModel 格式，位于 'simple_model_tf_savedmodel'\")\n</code></pre>\n<p>或者，你也可以在命令行中进行转换：</p>\n<pre><code class=\"language-bash\">onnx2tf -in simple_model.onnx -co simple_model_tf_savedmodel\n</code></pre>\n<p>这会创建一个标准的 TensorFlow SavedModel 目录，然后可以使用 <code>tf.saved_model.load()</code> 加载或通过 TensorFlow Serving 部署。</p>\n<p>反之，如果你有 TensorFlow 模型，可以使用 <code>tf2onnx</code> 等工具将其转换为 ONNX（<code>pip install tf2onnx</code>）。这使得你可以将 TensorFlow 模型引入 ONNX 生态系统，可能供 PyTorch 或其他 ONNX 兼容工具使用，尽管本课程侧重于从 PyTorch 到 TensorFlow 的方向。</p>\n<h3>注意事项与推荐做法</h3>\n<p>尽管 ONNX 很强大，但请记住以下几点：</p>\n<ol>\n<li><strong>运算符支持</strong>：大多数常见的神经网络 (neural network)操作都有良好支持。然而，高度自定义或非常新的 PyTorch 操作在所选 ONNX <code>opset_version</code> 中可能没有直接的等效项。你可能需要简化模型或实现自定义 ONNX 运算符（这是一个高级话题）。请务必查看 ONNX 文档以了解支持的运算符。</li>\n<li><strong>版本兼容性</strong>：确保 PyTorch、ONNX、你选择的 ONNX <code>opset_version</code>、ONNX Runtime 版本以及任何转换工具（如 <code>onnx2tf</code>）之间的兼容性。不匹配可能导致错误或意想不到的行为。</li>\n<li><strong>全面测试</strong>：将模型导出到 ONNX 并可能转换为另一种格式后，务必将其预测结果与原始 PyTorch 模型进行严格对比测试。检查是否存在数值差异和性能问题。</li>\n<li><strong>模型追踪</strong>：<code>torch.onnx.export</code> 函数通过使用样本输入追踪模型来工作。如果你的模型具有基于输入数据变化的控制流（这对于旨在导出到 ONNX 的模型来说不太常见，但在 PyTorch 中可能出现），追踪可能无法捕捉到所有执行路径。前面讨论的 TorchScript，有时对于具有复杂控制流的模型，在导出到 ONNX 之前会更稳定。</li>\n<li><strong>输入/输出命名</strong>：在导出期间使用 <code>input_names</code> 和 <code>output_names</code> 会使 ONNX 模型在后续使用时更方便，尤其是在使用 ONNX Runtime 或转换工具时。</li>\n</ol>\n<p>ONNX 在不同机器学习 (machine learning)框架之间搭建了一个重要桥梁。对于学习 PyTorch 的 TensorFlow 开发者来说，理解如何将 PyTorch 模型导出到 ONNX，为将这些模型集成到现有的以 TensorFlow 为中心的部署流程中，或运用更广泛的 ONNX 生态系统进行优化和执行提供了机会。</p>",
+  "slug": "onnx-pytorch-tensorflow-interoperability",
+  "updates": [],
+  "references": [
+    {
+      "id": 16044,
+      "title": "Open Neural Network Exchange (ONNX)",
+      "author": "ONNX Community",
+      "year": "2024",
+      "publisher": "Linux Foundation AI & Data Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://onnx.ai/",
+      "doi": "",
+      "note": "ONNX（开放神经网络交换）格式的官方网站和文档，详细介绍了其规范、运算符和生态系统。",
+      "order": 1,
+      "created_at": "2025-09-06T10:59:09.776486Z",
+      "updated_at": "2025-09-10T02:24:07.629741Z"
+    },
+    {
+      "id": 16045,
+      "title": "torch.onnx - PyTorch Documentation",
+      "author": "PyTorch",
+      "year": "2025",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/onnx.html",
+      "doi": "",
+      "note": "PyTorch 官方关于将模型导出为 ONNX 格式的文档，涵盖了 `torch.onnx.export` 函数及其参数。",
+      "order": 2,
+      "created_at": "2025-09-06T10:59:09.791553Z",
+      "updated_at": "2025-09-10T02:24:15.557747Z"
+    },
+    {
+      "id": 16046,
+      "title": "ONNX Runtime",
+      "author": "Microsoft and ONNX Runtime Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://onnxruntime.ai/",
+      "doi": "",
+      "note": "ONNX Runtime 的官方网站和文档，这是一个用于在各种硬件和平台上执行 ONNX 模型的高性能推理引擎。",
+      "order": 3,
+      "created_at": "2025-09-06T10:59:09.794735Z",
+      "updated_at": "2025-09-10T02:24:09.846870Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

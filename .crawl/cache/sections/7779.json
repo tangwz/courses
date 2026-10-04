@@ -1,0 +1,45 @@
+{
+  "id": 7779,
+  "title": "实现对话缓存记忆",
+  "meta_title": "实现对话缓存记忆",
+  "meta_description": "使用缓存记忆来记录对话中近期的往来信息。",
+  "content": "<p>让语言模型掌握对话历史最直接的方法，就是在每次新请求时，直接向它展示对话的最新部分。这种技术被称为对话缓存记忆，它保存了交互的逐字记录。当你需要生成新的回复时，你将这段连续的历史信息提供给大型语言模型（LLM），使其能够把握最新用户输入的背景。</p>\n<p><code>memory</code> 模块提供了 <code>ConversationBuffer</code> 类来自动管理这个过程。它像是对话上的一个滑动窗口，记录消息并确保历史记录不会无限增长。</p>\n<h3>初始化对话缓存</h3>\n<p>通过实例化 <code>ConversationBuffer</code> 类来创建缓存。它的构造函数接受几个参数 (parameter)来控制其行为，其中最主要的是 <code>max_messages</code>。此参数设定了缓存将保留的消息数量上限，防止对话历史占用过多内存或超出大型语言模型的上下文 (context)窗口。</p>\n<pre><code class=\"language-python\">from kerb.memory import ConversationBuffer\n\n# 创建一个最多存储100条消息的缓存\nbuffer = ConversationBuffer(max_messages=100)\n</code></pre>\n<p>在这个例子中，缓存被设置为保留最新的100条消息。一旦添加第101条消息，最旧的消息（第一条消息）会自动被移除，以便腾出空间。这种“先进先出”的行为是缓存管理其大小的基本方式。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-xi5j5y\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, width=1.5, height=0.8]; subgraph cluster_buffer { label=\"对话缓存 (max_messages=4)\"; bgcolor=\"#e9ecef\"; \"消息 1\" -> \"消息 2\" -> \"消息 3\" -> \"消息 4\" [style=invis]; } \"新消息\" [shape=ellipse, style=filled, fillcolor=\"#74c0fc\"]; \"新消息\" -> \"消息 4\" [label=\" 添加到缓存\"]; \"消息 1\" -> \"已移除\" [style=dashed, label=\" 被移除\"]; \"已移除\" [shape=none, label=\"\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-xi5j5y\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>当对话缓存达到其 <code>max_messages</code> 上限时，最旧的消息会被清除，为最新的消息腾出空间，从而保持固定大小的历史记录。</p>\n</blockquote>\n<h3>向缓存添加消息</h3>\n<p>为构建对话历史，你会使用 <code>add_message</code> 方法。此方法需要一个 <code>role</code>（通常是“user”或“assistant”）以及消息的 <code>content</code>（内容）。许多应用程序也会以“system”消息开始对话，以设定大型语言模型（LLM）的角色或指令。</p>\n<p>我们来模拟与一个 Python 编程助手的简短对话。</p>\n<pre><code class=\"language-python\"># 系统消息，用于设定背景\nbuffer.add_message(\n    \"system\",\n    \"你是一个擅长 Python 编程的有用人工智能助手。\"\n)\n\n# 第一个用户查询\nbuffer.add_message(\n    \"user\",\n    \"你能解释一下 Python 中的 async/await 吗？\"\n)\n\n# 助手的回复\nbuffer.add_message(\n    \"assistant\",\n    \"Python 中的 async/await 允许你编写异步代码。'async def' \"\n    \"关键字定义了一个协程，而 'await' 会暂停执行，直到所等待的操作完成。\"\n)\n\n# 后续用户查询\nbuffer.add_message(\n    \"user\",\n    \"你推荐哪些库用于异步网页抓取？\"\n)\n\nprint(f\"缓存中的消息总数: {len(buffer.messages)}\")\n</code></pre>\n<p>执行这些调用后，缓存将包含四个 <code>Message</code> 对象，每个对象都存储着角色、内容和时间戳。这段历史现在可作为下一次大型语言模型调用的背景。</p>\n<h3>获取作为背景的历史记录</h3>\n<p>当用户发送新消息时，你需要向大型语言模型提供近期的对话历史，以便它能生成相关的回复。<code>ConversationBuffer</code> 为此提供了两种主要方法：<code>get_recent_messages</code> 和 <code>get_context</code>。</p>\n<p><code>get_recent_messages</code> 方法从缓存中获取最近的 <code>Message</code> 对象列表。当你需要自己构建 API 调用的提示载荷时，此方法很有用。</p>\n<pre><code class=\"language-python\"># 从缓存中获取最近的3条消息\nrecent_messages = buffer.get_recent_messages(count=3)\n\nfor msg in recent_messages:\n    print(f\"{msg.role}: {msg.content[:70]}...\")\n</code></pre>\n<p>这将输出最近的助手回复和最后两条用户消息。</p>\n<p>为了更方便，<code>get_context</code> 方法返回一个格式化的字符串，其中包含近期的对话历史。这个字符串设计用于直接插入到大型语言模型的提示中。</p>\n<pre><code class=\"language-python\"># 获取格式化后的近期历史字符串\ncontext_string = buffer.get_context(include_summary=False)\n\nprint(context_string)\n</code></pre>\n<p>输出是一个清晰、易于人类阅读的记录，大型语言模型可以轻松解析：</p>\n<pre><code class=\"language-text\">system: 你是一个擅长 Python 编程的有用人工智能助手。\nuser: 你能解释一下 Python 中的 async/await 吗？\nassistant: Python 中的 async/await 允许你编写异步代码。'async def' 关键字定义了一个协程，而 'await' 会暂停执行，直到所等待的操作完成。\nuser: 你推荐哪些库用于异步网页抓取？\n</code></pre>\n<p>然后，在将其发送给生成模型之前，你会将用户的最新查询附加到这个背景字符串中。这能确保模型拥有即时对话历史的完整视角。尽管对于中短对话有效，这种存储和发送完整历史记录的方法可能会变得低效。随着对话增长，缓存背景的 token 计数可能会超出模型的限制，从而导致错误或昂贵的截断。下一节将介绍摘要记忆，这是一种在更长对话中应对此挑战的方案。</p>",
+  "slug": "conversation-buffer-memory",
+  "updates": [],
+  "references": [
+    {
+      "id": 21642,
+      "title": "Chat Completions API",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "doi": "",
+      "note": "官方文档展示了如何使用角色（系统、用户、助手）来构建消息，为大型语言模型提供对话上下文，其中隐含了上下文窗口的概念。",
+      "order": 2,
+      "created_at": "2025-10-20T07:15:47.071542Z",
+      "updated_at": "2025-10-20T07:38:44.241251Z"
+    },
+    {
+      "id": 21643,
+      "title": "Introduction to Algorithms",
+      "author": "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein",
+      "year": "2022",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition",
+      "doi": "",
+      "note": "第10章“基本数据结构”解释了队列及其先进先出（FIFO）行为，这是对话缓冲区记忆固定大小滑动窗口方法的底层机制。",
+      "order": 3,
+      "created_at": "2025-10-20T07:15:47.074937Z",
+      "updated_at": "2025-10-20T07:38:40.486638Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

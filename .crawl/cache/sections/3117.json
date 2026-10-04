@@ -1,0 +1,61 @@
+{
+  "id": 3117,
+  "title": "设计可扩展的计算基础设施",
+  "meta_title": "LLM可扩展计算基础设施设计",
+  "meta_description": "为大规模模型训练和推理构建优化的计算集群（GPU/TPU）。",
+  "content": "<p>训练和服务大型语言模型从根本上拓展了计算基础设施的界限。与单个强大机器可能足以应对的小型模型不同，LLM通常需要由专业硬件组成的集群配合运行。设计此类基础设施需要仔细考量处理能力、内存容量，以及可能最重要的是连接组件的通信结构。</p>\n<h3>核心计算组件：GPU和TPU</h3>\n<p>大多数LLM基础设施的计算核心是图形处理单元（GPU）或张量处理单元（TPU）。这些加速器专为大规模并行计算而设计，使其非常适合深度学习 (deep learning)中固有的矩阵乘法运算。</p>\n<ul>\n<li>\n<p><strong>GPU：</strong> 由NVIDIA主导（例如A100、H100系列），GPU提供高灵活性和成熟的软件生态系统（CUDA）。为LLM选择GPU时，重要考量因素包括：</p>\n<ul>\n<li><strong>显存 (VRAM)容量：</strong> 大型模型需要大量的VRAM（视频内存）来存储模型参数 (parameter)、激活值和优化器状态。每块GPU 40GB、80GB甚至更高是常见的。内存不足需要模型并行技术，这会增加通信开销。</li>\n<li><strong>显存带宽：</strong> 需要高带宽才能快速将数据传输到计算核心。这会影响训练速度，特别是对于大型嵌入 (embedding)或中间激活值。</li>\n<li><strong>计算性能：</strong> 以FLOPS（每秒浮点运算次数）衡量，特别是对于FP16（半精度）或BF16（Bfloat16）等低精度格式，这些是LLM训练的标准。</li>\n<li><strong>互联：</strong> 对于多GPU节点，NVIDIA的NVLink等高速连接对实现快速的GPU之间直接通信必不可少，可绕过较慢的PCIe总线。</li>\n</ul>\n</li>\n<li>\n<p><strong>TPU：</strong> 谷歌的定制ASIC专为张量运算而优化。它们在特定工作负载的每瓦原始性能方面通常表现出色，并与Google Cloud基础设施紧密集成。TPU通常以 Pod（大型互联组）的形式访问，这简化了大规模分布式训练的设置，但配置灵活性低于GPU集群。</p>\n</li>\n</ul>\n<p>GPU和TPU之间的选择通常取决于运算规模、现有云提供商承诺、特定模型架构以及工具偏好。</p>\n<h3>节点架构与集群互联</h3>\n<p>单个计算节点通常容纳多个加速器（例如4或8块GPU）。然而，训练真正大型的模型需要将工作负载分布到许多此类节点上。这种分布的效率在很大程度上取决于节点<em>之间</em>的网络互联。</p>\n<p>标准数据中心以太网可能成为瓶颈。LLM训练涉及节点之间频繁同步和交换大量数据（梯度、激活值、参数 (parameter)）。需要高带宽、低延迟的互联技术：</p>\n<ul>\n<li><strong>InfiniBand：</strong> 一种常用的高性能网络标准，与传统以太网相比，可提供明显更高的带宽和更低的延迟。RDMA（远程直接内存访问）等技术允许不同节点上的GPU直接访问彼此的内存，绕过主机CPU并减少通信开销。</li>\n<li><strong>带RoCE的高速以太网：</strong> 以太网速度已大幅增加（100/200/400 Gbps），RoCE（基于融合以太网的RDMA）等协议提供RDMA功能，使高速以太网在某些情况下成为InfiniBand的可行替代方案。</li>\n</ul>\n<p>网络<em>拓扑</em>也很重要。无阻塞或低阻塞拓扑（例如胖树拓扑）可确保集群中任意两个节点之间有足够的带宽可用，即使在重负载下也能避免通信瓶颈。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-5byt8c\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  splines=ortho;\n  node [shape=box, style=\"filled\", fillcolor=\"#e9ecef\", fontname=\"Helvetica\", fontsize=10];\n  edge [arrowhead=none, color=\"#868e96\", penwidth=1.5];\n\n  subgraph cluster_0 {\n    label = \"计算节点 1\";\n    bgcolor=\"#f8f9fa\";\n    node [fillcolor=\"#a5d8ff\"];\n    CPU1 [label=\"主机CPU\"];\n    GPU1_1 [label=\"GPU 0\\n(80GB 显存)\"];\n    GPU1_2 [label=\"GPU 1\"];\n    GPU1_3 [label=\"GPU 2\"];\n    GPU1_4 [label=\"GPU 3\"];\n    CPU1 -> {GPU1_1, GPU1_2, GPU1_3, GPU1_4} [style=dashed, penwidth=1.0, color=\"#adb5bd\"];\n    GPU1_1 -> GPU1_2 -> GPU1_3 -> GPU1_4 -> GPU1_1 [constraint=false, label=\" NVLink \", fontcolor=\"#1c7ed6\", fontsize=9, penwidth=2.0, color=\"#74c0fc\"];\n    NIC1 [label=\"高速网卡\\n(InfiniBand/RoCE)\", fillcolor=\"#ffec99\"];\n    CPU1 -> NIC1;\n  }\n\n  subgraph cluster_1 {\n    label = \"计算节点 2\";\n    bgcolor=\"#f8f9fa\";\n    node [fillcolor=\"#a5d8ff\"];\n    CPU2 [label=\"主机CPU\"];\n    GPU2_1 [label=\"GPU 0\"];\n    GPU2_2 [label=\"GPU 1\"];\n    GPU2_3 [label=\"GPU 2\"];\n    GPU2_4 [label=\"GPU 3\"];\n    CPU2 -> {GPU2_1, GPU2_2, GPU2_3, GPU2_4} [style=dashed, penwidth=1.0, color=\"#adb5bd\"];\n    GPU2_1 -> GPU2_2 -> GPU2_3 -> GPU2_4 -> GPU2_1 [constraint=false, label=\" NVLink \", fontcolor=\"#1c7ed6\", fontsize=9, penwidth=2.0, color=\"#74c0fc\"];\n    NIC2 [label=\"高速网卡\\n(InfiniBand/RoCE)\", fillcolor=\"#ffec99\"];\n    CPU2 -> NIC2;\n  }\n\n  Switch [label=\"高速交换网络\\n(例如，InfiniBand 交换机)\", shape=cylinder, fillcolor=\"#ced4da\", width=3];\n\n  NIC1 -> Switch [penwidth=2.0];\n  NIC2 -> Switch [penwidth=2.0];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-5byt8c\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>两个通过高速交换网络连接的多GPU计算节点的简化视图。节点内通信使用NVLink，而节点间通信依赖于InfiniBand或RoCE网卡以及交换网络。</p>\n</blockquote>\n<h3>平衡计算、内存和通信</h3>\n<p>设计可扩展集群涉及平衡这些要素。增加更多GPU（横向扩展）会提高原始计算能力，但同时也需要相应强大的互联技术，以避免通信成为新的瓶颈。</p>\n<p>考虑不同并行化策略的通信模式：</p>\n<ul>\n<li><strong>数据并行：</strong> 主要涉及梯度交换。大小随模型参数 (parameter)而变化，需要高带宽。</li>\n<li><strong>流水线并行：</strong> 涉及在不同阶段之间传递激活值。在此延迟更重要，以保持流水线饱和。</li>\n<li><strong>张量并行：</strong> 需要层内频繁、细粒度的通信，要求极低的延迟和高带宽，通常最适合节点内NVLink或NVSwitch连接。</li>\n</ul>\n<p>理想的集群设计通过加速器提供足够的计算能力，有足够的本地显存 (VRAM)以最小化内存瓶颈，以及高性能互联网络（包括节点内和节点间），能够支持所选分布式训练策略所需的通信模式。在一个方面过度配置而忽视另一方面会导致资源利用效率低下和成本增加。</p>\n<h3>编排与管理</h3>\n<p>管理这些复杂集群需要先进的编排工具。Slurm（在HPC中常见）或Kubernetes（随着Kubeflow等操作器的出现，越来越适合机器学习 (machine learning)工作负载）等调度器用于：</p>\n<ul>\n<li>将GPU资源分配给特定的训练或推理 (inference)任务。</li>\n<li>管理任务队列和优先级。</li>\n<li>监控节点健康状况和资源利用率。</li>\n<li>处理故障容忍和任务重新调度。</li>\n</ul>\n<p>容器化技术（例如Docker）是打包模型代码、依赖项，甚至特定CUDA版本的标准方法，可确保集群节点之间的一致性。</p>\n<p>设计计算基础设施是构建LLMOps平台的重要一步。它需要透彻了解硬件能力、网络原理以及大规模分布式机器学习工作负载的特定需求。后续章节将承接此部分内容，探讨数据管理、训练框架和使用此强大基础设施的部署策略。</p>",
+  "slug": "designing-scalable-compute",
+  "updates": [],
+  "references": [
+    {
+      "id": 2169,
+      "title": "NVIDIA H100 Tensor Core GPU Architecture",
+      "author": "NVIDIA Corporation",
+      "year": "2022",
+      "publisher": "NVIDIA Corporation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQERAMu1D4dkxH4J3UqNqUvPHWizbFAZ6uzWu5R1Ymg-B9zT2ML6ZuuMewlQ4tDRbCpZet5hFptccM4nerpIQVmI4nDMMeV7g0jsuypV1EJJXfMHJB68pFr--eKpCyt-3HHuxrvwxN3tHuBtCKQ2mq_aBeXzTaaA_AhnLIR9_pj9qCs6ld1SBgRPwCZI1m1B-DRxb4=",
+      "doi": "",
+      "note": "深入探讨NVIDIA H100 GPU的技术细节，包括其 Hopper 架构、Tensor Cores、NVLink和内存层次结构，对于理解高性能计算至关重要。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:02.223847Z",
+      "updated_at": "2025-09-09T08:41:42.690855Z"
+    },
+    {
+      "id": 2171,
+      "title": "About TPUs on Google Cloud",
+      "author": "Google Cloud",
+      "year": "2024",
+      "publisher": "Google Cloud",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cloud.google.com/tpu/docs/tpus",
+      "doi": "",
+      "note": "官方文档，描述了谷歌的张量处理单元（TPU），包括其架构、类型以及如何与Google Cloud集成以支持大规模机器学习工作负载。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:04.147246Z",
+      "updated_at": "2025-09-09T08:41:27.502479Z"
+    },
+    {
+      "id": 2179,
+      "title": "Kubeflow Documentation",
+      "author": "The Kubeflow Authors",
+      "year": "2020",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.kubeflow.org/docs/",
+      "doi": "",
+      "note": "Kubeflow的官方文档，这是一个在Kubernetes上编排和部署机器学习工作负载的开源机器学习平台，涵盖了大型模型的资源管理和作业调度。",
+      "order": 5,
+      "created_at": "2025-09-04T16:46:04.376439Z",
+      "updated_at": "2025-09-09T08:41:26.469606Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

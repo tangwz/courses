@@ -1,0 +1,61 @@
+{
+  "id": 1828,
+  "title": "使用Web API获取数据",
+  "meta_title": "使用Web API进行数据获取",
+  "meta_description": "使用Python库从Web API获取结构化数据的技术。",
+  "content": "<p>数据库提供对内部管理数据的访问，但许多组织和服务通过应用程序编程接口（API）对外提供数据。API充当标准化约定，使不同的软件系统能够进行通信。对数据科学家来说，Web API是结构化数据的常用来源，这些数据通常是实时数据，涵盖社交媒体活动、金融市场、天气预报和政府统计数据等。</p>\n<p>与抓取为人类设计的HTML网页不同，API通常以JSON（JavaScript对象表示法）或XML等机器可读格式提供数据，这使得数据提取更整洁、更可靠。我们将把重点放在REST（表征状态传输）API上，这是一种使用标准HTTP方法的Web API常用架构风格。</p>\n<h3>了解API交互</h3>\n<p>与REST API的交互通常遵循请求-响应模式：</p>\n<ol>\n<li>\n<p><strong>客户端请求：</strong> 您的Python脚本（客户端）向API服务器上的特定URL（端点）发送HTTP请求。此请求包括：</p>\n<ul>\n<li>一个<strong>HTTP方法：</strong> 通常是 <code>GET</code>，用于获取数据。其他方法如 <code>POST</code>、<code>PUT</code>、<code>DELETE</code> 用于创建、更新或删除资源，但对于简单的数据获取来说不太常用。</li>\n<li><strong>请求头：</strong> 关于请求的元数据，例如预期的响应格式 (<code>Accept: application/json</code>) 或认证凭据 (<code>Authorization: Bearer YOUR_API_KEY</code>)。</li>\n<li><strong>参数 (parameter)（可选）：</strong> 添加到URL（查询参数）中的键值对，用于过滤或指定请求的数据（例如，<code>?city=London&#x26;units=metric</code>）。</li>\n<li><strong>请求体（可选）：</strong> 随请求发送的数据，通常与 <code>POST</code> 或 <code>PUT</code> 一起使用，对于获取数据的 <code>GET</code> 请求通常不需要。</li>\n</ul>\n</li>\n<li>\n<p><strong>服务器响应：</strong> API服务器处理请求并返回HTTP响应，其中包含：</p>\n<ul>\n<li>一个<strong>状态码：</strong> 表示成功或失败（例如，<code>200 OK</code>、<code>404 Not Found</code>、<code>401 Unauthorized</code>、<code>500 Internal Server Error</code>）。</li>\n<li><strong>响应头：</strong> 关于响应的元数据。</li>\n<li><strong>响应体：</strong> 请求的数据，通常为JSON格式。</li>\n</ul>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-glak81\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n  // 定义节点，使用中文\n  Client [label=\"Python脚本\\n(requests库)\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n  Server [label=\"API服务器\", color=\"#0ca678\", fontcolor=\"#0ca678\"];\n\n  // 定义它们之间的边\n  Client -> Server [label=\"HTTP请求\\n 方法: GET\\n 端点URL\\n + 参数\\n + 请求头 (认证等)\"];\n  Server -> Client [label=\"HTTP响应\\n 状态码 (例如, 200)\\n 响应体 (例如, JSON数据)\\n + 响应头\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-glak81\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用HTTP GET请求从Web API获取数据时的客户端-服务器交互简化视图。</p>\n</blockquote>\n<h3>使用Python的<code>requests</code>库发出API请求</h3>\n<p><code>requests</code>库是Python中发出HTTP请求的实际标准库。如果您尚未安装，通常可以使用pip进行安装：</p>\n<pre><code class=\"language-bash\">pip install requests\n</code></pre>\n<p>接下来看看如何使用它来获取数据。我们将使用JSONPlaceholder API（<code>https://jsonplaceholder.typicode.com</code>），这是一个免费的模拟在线REST API，用于测试和原型开发。</p>\n<p><strong>基本GET请求</strong></p>\n<p>要获取帖子列表，您可以向<code>/posts</code>端点发出GET请求：</p>\n<pre><code class=\"language-python\">import requests\nimport pandas as pd\n\n# 定义API端点URL\nurl = \"https://jsonplaceholder.typicode.com/posts\"\n\ntry:\n    # 发送GET请求\n    response = requests.get(url)\n\n    # 对于错误的HTTP状态码（4xx或5xx）抛出异常\n    response.raise_for_status()\n\n    # 如果请求成功（状态码200）\n    print(\"请求成功！\")\n\n    # 解析JSON响应体\n    data = response.json() # 返回字典列表\n\n    # 可选：转换为Pandas DataFrame\n    df_posts = pd.DataFrame(data)\n    print(f\"成功获取了 {len(df_posts)} 条帖子。\")\n    print(df_posts.head())\n\nexcept requests.exceptions.RequestException as e:\n    # 处理连接错误、超时等\n    print(f\"请求失败: {e}\")\nexcept requests.exceptions.HTTPError as e:\n    # 处理特定的HTTP错误（如404 Not Found, 401 Unauthorized）\n    print(f\"HTTP错误发生: {e}\")\n    print(f\"状态码: {e.response.status_code}\")\n    # 您可能需要检查 e.response.text 以获取API的更多详细信息\nexcept requests.exceptions.JSONDecodeError:\n    # 处理响应体不是有效JSON的情况\n    print(\"解析JSON响应失败。\")\n    print(\"响应文本:\", response.text) # 记录原始文本\n\n</code></pre>\n<p><strong>添加URL参数 (parameter)</strong></p>\n<p>许多API允许您使用附加到URL的查询参数（例如，<code>?userId=1</code>）来过滤或自定义结果。<code>requests</code>库通过使用接受字典的<code>params</code>参数，使这变得容易。</p>\n<pre><code class=\"language-python\">import requests\nimport pandas as pd\n\n# 仅获取userId = 5的帖子\nparams = {\"userId\": 5}\nurl = \"https://jsonplaceholder.typicode.com/posts\"\n\ntry:\n    response = requests.get(url, params=params)\n    response.raise_for_status() # 检查HTTP错误\n\n    data = response.json()\n    df_user5_posts = pd.DataFrame(data)\n    print(f\"\\n获取了 {len(df_user5_posts)} 条 userId=5 的帖子：\")\n    print(df_user5_posts.head())\n\nexcept requests.exceptions.RequestException as e:\n    print(f\"请求失败: {e}\")\nexcept requests.exceptions.HTTPError as e:\n    print(f\"HTTP错误发生: {e} (状态: {e.response.status_code})\")\n</code></pre>\n<p><code>requests</code>会自动编码字典并正确地将其附加到URL（例如，<code>https://jsonplaceholder.typicode.com/posts?userId=5</code>）。</p>\n<p><strong>自定义请求头和认证</strong></p>\n<p>API通常需要认证，通常通过API密钥。您可能还需要设置其他请求头，例如<code>User-Agent</code>或<code>Accept</code>。请求头作为字典传递给<code>headers</code>参数。</p>\n<p>常见的认证模式包括：</p>\n<ol>\n<li><strong>请求头中的API密钥：</strong> 通常使用<code>Authorization</code>请求头（例如，<code>Authorization: Bearer YOUR_KEY</code> 或 <code>Authorization: ApiKey YOUR_KEY</code>）或自定义请求头（例如，<code>X-API-Key: YOUR_KEY</code>）。</li>\n<li><strong>查询参数中的API密钥：</strong> 安全性较低，但有时会使用（例如，<code>?apiKey=YOUR_KEY</code>）。</li>\n</ol>\n<p>让我们模拟添加一个API密钥和一个自定义User-Agent请求头（尽管JSONPlaceholder不需要它们）：</p>\n<pre><code class=\"language-python\">import requests\n\n# 如果其他API需要，请将'YOUR_ACTUAL_API_KEY'替换为实际密钥\napi_key = \"YOUR_ACTUAL_API_KEY\"\nheaders = {\n    \"Authorization\": f\"Bearer {api_key}\",\n    \"User-Agent\": \"MyDataScienceApplication/1.0\",\n    \"Accept\": \"application/json\"\n}\n\nurl = \"https://jsonplaceholder.typicode.com/todos/1\" # 示例：获取单个'todo'项目\n\ntry:\n    # 传递headers字典\n    response = requests.get(url, headers=headers)\n    response.raise_for_status()\n\n    todo_item = response.json()\n    print(\"\\n获取了单个待办事项（含模拟请求头）：\")\n    print(todo_item)\n\nexcept requests.exceptions.RequestException as e:\n    print(f\"请求失败: {e}\")\nexcept requests.exceptions.HTTPError as e:\n    print(f\"HTTP错误发生: {e} (状态: {e.response.status_code})\")\n    # 如果您收到401或403错误，很可能是认证问题。\n</code></pre>\n<p>始终查阅特定API的文档，了解正确的认证方法和所需的请求头。</p>\n<h3>处理响应</h3>\n<p>成功发出请求只是过程的一半。您需要正确地解释响应。</p>\n<ul>\n<li><strong>检查状态码：</strong> 始终检查<code>response.status_code</code>或使用<code>response.raise_for_status()</code>来确保请求成功（通常是状态码<code>200</code>）。<code>4xx</code>代码表示客户端错误（错误请求、缺少认证、资源未找到），而<code>5xx</code>代码表示服务器错误。</li>\n<li><strong>解析JSON：</strong> 如果API返回JSON（最常用格式），请使用<code>response.json()</code>将其解析为Python字典或列表。如果响应不是有效的JSON，请准备好处理<code>requests.exceptions.JSONDecodeError</code>。</li>\n<li><strong>错误处理：</strong> 将您的API调用包装在<code>try...except</code>块中，以优雅地处理网络问题（<code>requests.exceptions.RequestException</code>）、HTTP错误（<code>requests.exceptions.HTTPError</code>）和JSON解析错误。在出现错误时记录状态码和响应文本（<code>response.text</code>）有助于调试。</li>\n</ul>\n<h3>API使用规范：速率限制和服务条款</h3>\n<p>API是共享资源。大多数API实行<strong>速率限制</strong>，限制您在特定时间窗口内可以发出的请求数量（例如，每分钟100个请求）。超过这些限制可能会导致暂时性封锁（例如，状态码<code>429 Too Many Requests</code>）。</p>\n<p>始终：</p>\n<ol>\n<li><strong>阅读API文档：</strong> 了解使用限制、认证要求和数据使用政策。</li>\n<li><strong>实施延迟：</strong> 如果发出大量请求，请在它们之间添加暂停（例如，使用<code>time.sleep()</code>）。</li>\n<li><strong>处理<code>429</code>错误：</strong> 如果您收到<code>429</code>状态码，您的脚本应该等待（响应中的<code>Retry-After</code>请求头通常会指示等待时长），然后再尝试。</li>\n<li><strong>缓存结果：</strong> 如果数据不经常变化，请避免重复获取相同数据。</li>\n</ol>\n<p>遵守API条款可确保持续访问和负责任的数据获取。</p>\n<p>熟练掌握使用<code>requests</code>等库与Web API的交互，您可以获取到全面的动态数据集，显著扩展了可纳入您数据科学项目的数据范围。这构成了数据获取工具包的重要组成部分，是对从数据库和文件获取数据的补充。</p>",
+  "slug": "web-api-retrieval",
+  "updates": [],
+  "references": [
+    {
+      "id": 1628,
+      "title": "Architectural Styles and the Design of Network-based Software Architectures",
+      "author": "Roy Thomas Fielding",
+      "year": "2000",
+      "publisher": "University of California, Irvine",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.ics.uci.edu/~fielding/pubs/dissertation/fielding_dissertation.pdf",
+      "doi": "",
+      "note": "这篇基础论文介绍了代表性状态传输 (REST) 及其定义，作为分布式超媒体系统的一种架构风格，它是现代Web API的基石。",
+      "order": 1,
+      "created_at": "2025-09-04T16:02:35.239489Z",
+      "updated_at": "2025-09-08T02:42:30.901262Z"
+    },
+    {
+      "id": 1629,
+      "title": "Requests: HTTP for Humans™",
+      "author": "Kenneth Reitz and the Requests Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://requests.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "Python `requests` 库的官方文档，提供了进行HTTP请求、处理响应和管理各种API交互模式的全面指南和示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:02:35.243570Z",
+      "updated_at": "2025-09-08T02:42:36.470973Z"
+    },
+    {
+      "id": 1631,
+      "title": "Data Wrangling with Python: Learn how to gather, store, and make sense of data",
+      "author": "Jacqueline Kazil, Katharine Jarmul, Mike Dewar",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/data-wrangling-with/9781491948781/",
+      "doi": "",
+      "note": "这本更新版书籍提供了从各种网络源（包括使用Python的Web API）获取数据的实用指导，对数据科学家很重要。",
+      "order": 4,
+      "created_at": "2025-09-04T16:02:35.250304Z",
+      "updated_at": "2025-09-08T02:42:46.015892Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

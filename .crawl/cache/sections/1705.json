@@ -1,0 +1,61 @@
+{
+  "id": 1705,
+  "title": "实践操作：创建和查看数组",
+  "meta_title": "实践创建 NumPy 数组",
+  "meta_description": "一个实践环节，使用各种方法创建 NumPy 数组并检查它们的属性。",
+  "content": "<p>示例演示了使用多种方法创建多个 NumPy 数组。创建后，使用查看属性检查这些数组的结构。</p>\n<p>首先，请确保已安装 NumPy 并将其导入。通常的约定是将其导入为别名 <code>np</code>。如果你在 Jupyter Notebook 或交互式 Python 环境中工作，请执行以下代码：</p>\n<pre><code class=\"language-python\">import numpy as np\n</code></pre>\n<h3>从 Python 列表创建数组</h3>\n<p>创建 NumPy 数组最直接的方法是从现有 Python 列表或元组创建。</p>\n<p><strong>1. 一维数组：</strong>\n让我们从一个简单的整数列表开始。</p>\n<pre><code class=\"language-python\"># 创建一个 Python 列表\nlist_1d = [1, 3, 5, 7, 9]\n\n# 从列表中创建一个 NumPy 数组\narray_1d = np.array(list_1d)\n\n# 打印数组\nprint(array_1d)\n</code></pre>\n<p>输出：</p>\n<pre><code>[1 3 5 7 9]\n</code></pre>\n<p>现在，让我们查看其属性：</p>\n<pre><code class=\"language-python\">print(f\"类型: {type(array_1d)}\")\nprint(f\"数据类型 (dtype): {array_1d.dtype}\")\nprint(f\"维度 (ndim): {array_1d.ndim}\")\nprint(f\"形状: {array_1d.shape}\")\nprint(f\"大小: {array_1d.size}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>类型: &#x3C;class 'numpy.ndarray'>\n数据类型 (dtype): int64\n维度 (ndim): 1\n形状: (5,)\n大小: 5\n</code></pre>\n<p>请注意，NumPy 将数据类型推断为 <code>int64</code>（一个64位整数，默认整数类型通常取决于你的系统）。它是一个1维数组（<code>ndim=1</code>），包含5个元素（<code>size=5</code>），其形状表示为 <code>(5,)</code>，表示沿着单个轴有5个元素。</p>\n<p><strong>2. 二维数组：</strong>\n现在，让我们使用嵌套列表来创建一个2维数组（类似于矩阵）。</p>\n<pre><code class=\"language-python\"># 创建一个嵌套的 Python 列表\nlist_2d = [[1, 2, 3], [4, 5, 6]]\n\n# 创建一个 2D NumPy 数组\narray_2d = np.array(list_2d)\n\n# 打印数组\nprint(array_2d)\n</code></pre>\n<p>输出：</p>\n<pre><code>[[1 2 3]\n [4 5 6]]\n</code></pre>\n<p>让我们查看这个2维数组：</p>\n<pre><code class=\"language-python\">print(f\"数据类型 (dtype): {array_2d.dtype}\")\nprint(f\"维度 (ndim): {array_2d.ndim}\")\nprint(f\"形状: {array_2d.shape}\")\nprint(f\"大小: {array_2d.size}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>数据类型 (dtype): int64\n维度 (ndim): 2\n形状: (2, 3)\n大小: 6\n</code></pre>\n<p>这次，NumPy 正确识别出它是一个2维数组（<code>ndim=2</code>）。形状 <code>(2, 3)</code> 告诉我们它有2行3列。元素总数（<code>size</code>）是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>2</mn><mo>×</mo><mn>3</mn><mo>=</mo><mn>6</mn></mrow><annotation encoding=\"application/x-tex\">2 \\times 3 = 6</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">2</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">6</span></span></span></span>。</p>\n<h3>使用内置数组创建函数</h3>\n<p>NumPy 提供无需从 Python 列表开始创建数组的函数，这通常更高效。</p>\n<p><strong>1. <code>np.zeros</code> 和 <code>np.ones</code>：</strong>\n这些函数分别创建填充零或一的数组。你需要将所需形状作为元组提供。</p>\n<pre><code class=\"language-python\"># 创建一个 3x4 的全零数组\nzeros_array = np.zeros((3, 4))\nprint(\"全零数组:\n\", zeros_array)\nprint(f\"全零数组数据类型: {zeros_array.dtype}\n\") # 默认为 float64\n\n# 创建一个包含 5 个一的 1D 数组，指定整数类型\nones_array = np.ones(5, dtype=np.int16)\nprint(\"全一数组:\n\", ones_array)\nprint(f\"全一数组数据类型: {ones_array.dtype}\")\nprint(f\"全一数组形状: {ones_array.shape}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>全零数组:\n [[0. 0. 0. 0.]\n [0. 0. 0. 0.]\n [0. 0. 0. 0.]]\n全零数组数据类型: float64\n\n全一数组:\n [1 1 1 1 1]\n全一数组数据类型: int16\n全一数组形状: (5,)\n</code></pre>\n<p>注意 <code>np.zeros</code> 默认为浮点数（<code>float64</code>），而我们为 <code>np.ones</code> 明确要求了16位整数（<code>int16</code>）。</p>\n<p><strong>2. <code>np.arange</code>：</strong>\n类似于 Python 的 <code>range</code>，但返回一个 NumPy 数组。</p>\n<pre><code class=\"language-python\"># 创建一个数组，值从 0 开始到（但不包含）10，步长为 2\nrange_array = np.arange(0, 10, 2)\nprint(\"Arange 数组:\n\", range_array)\nprint(f\"Arange 形状: {range_array.shape}\")\nprint(f\"Arange 数据类型: {range_array.dtype}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>Arange 数组:\n [0 2 4 6 8]\nArange 形状: (5,)\nArange 数据类型: int64\n</code></pre>\n<p><strong>3. <code>np.linspace</code>：</strong>\n创建一个数组，包含指定数量的元素，这些元素在起始值和结束值之间均匀间隔（包含两端）。</p>\n<pre><code class=\"language-python\"># 创建一个数组，包含 6 个在 0 到 1 之间（包含两端）均匀间隔的值\nlinspace_array = np.linspace(0, 1, 6)\nprint(\"Linspace 数组:\n\", linspace_array)\nprint(f\"Linspace 形状: {linspace_array.shape}\")\nprint(f\"Linspace 数据类型: {linspace_array.dtype}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>Linspace 数组:\n [0.  0.2 0.4 0.6 0.8 1. ]\nLinspace 形状: (6,)\nLinspace 数据类型: float64\n</code></pre>\n<h3>理解数据类型 (dtypes)</h3>\n<p>NumPy 数组之所以高效，是因为所有元素通常共享相同的数据类型。让我们看看当我们创建数组并指定类型时会发生什么。</p>\n<pre><code class=\"language-python\"># 从包含浮点数的列表创建数组\nfloat_array = np.array([1.0, 2.5, 3.7, 4.2])\nprint(\"浮点数数组:\", float_array)\nprint(f\"数据类型: {float_array.dtype}\n\")\n\n# 明确指定整数类型（会发生截断）\nint_from_float = np.array([1.0, 2.5, 3.7, 4.2], dtype=np.int32)\nprint(\"从浮点数转换的整数数组:\", int_from_float)\nprint(f\"数据类型: {int_from_float.dtype}\n\")\n\n# 从混合列表创建（NumPy 会向上转换到兼容类型）\nmixed_array = np.array([1, 2.5, 3, 4.8])\nprint(\"混合数组:\", mixed_array)\nprint(f\"数据类型: {mixed_array.dtype}\")\n</code></pre>\n<p>输出：</p>\n<pre><code>浮点数数组: [1.  2.5 3.7 4.2]\n数据类型: float64\n\n从浮点数转换的整数数组: [1 2 3 4]\n数据类型: int32\n\n混合数组: [1.  2.5 3.  4.8]\n数据类型: float64\n</code></pre>\n<p>当我们强制将浮点数转换为 <code>int32</code> 数组时，小数部分被截断了。当从包含整数和浮点数的混合列表创建数组且未指定 <code>dtype</code> 时，NumPy 会智能地将所有元素向上转换为 <code>float64</code>，以容纳浮点数且不丢失信息。</p>\n<h3>数组结构可视化</h3>\n<p>有时，视觉表示有助于理解结构，特别是对于2维数组。让我们将之前创建的 <code>array_2d</code>（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">[</mo><mo stretchy=\"false\">[</mo><mn>1</mn><mo separator=\"true\">,</mo><mn>2</mn><mo separator=\"true\">,</mo><mn>3</mn><mo stretchy=\"false\">]</mo><mo separator=\"true\">,</mo><mo stretchy=\"false\">[</mo><mn>4</mn><mo separator=\"true\">,</mo><mn>5</mn><mo separator=\"true\">,</mo><mn>6</mn><mo stretchy=\"false\">]</mo><mo stretchy=\"false\">]</mo></mrow><annotation encoding=\"application/x-tex\">[[1, 2, 3], [4, 5, 6]]</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">[[</span><span class=\"mord\">1</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">2</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">3</span><span class=\"mclose\">]</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mopen\">[</span><span class=\"mord\">4</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">5</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">6</span><span class=\"mclose\">]]</span></span></span></span>）可视化，它的形状是 <code>(2, 3)</code>。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-16kak19\" \n              data-plot-definition='{\"data\": [{\"type\": \"heatmap\", \"z\": [[1, 2, 3], [4, 5, 6]], \"x\": [\"列 0\", \"列 1\", \"列 2\"], \"y\": [\"行 0\", \"行 1\"], \"colorscale\": [[0.0, \"#e9ecef\"], [0.5, \"#74c0fc\"], [1.0, \"#1c7ed6\"]], \"showscale\": false, \"xgap\": 3, \"ygap\": 3}, {\"type\": \"scatter\", \"x\": [\"列 0\", \"列 1\", \"列 2\", \"列 0\", \"列 1\", \"列 2\"], \"y\": [\"行 0\", \"行 0\", \"行 0\", \"行 1\", \"行 1\", \"行 1\"], \"mode\": \"text\", \"text\": [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"], \"textfont\": {\"size\": 14, \"color\": \"#495057\"}}], \"layout\": {\"title\": \"2x3 NumPy 数组的可视化\", \"xaxis\": {\"title\": \"列\", \"side\": \"top\"}, \"yaxis\": {\"title\": \"行\", \"autorange\": \"reversed\"}, \"margin\": {\"l\": 50, \"r\": 10, \"t\": 60, \"b\": 10}, \"width\": 400, \"height\": 250}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 250px;\"\n            >\n              <div id=\"plot-16kak19\" style=\"width: 100%; min-height: 250px;\"></div>\n            </div>\n          \n<blockquote>\n<p>热力图形象地表示了 <code>array_2d</code> 的2行3列。每个单元格对应数组中的一个元素，显示其值和位置。</p>\n</blockquote>\n<p>本次实践环节涵盖了从列表创建 NumPy 数组，以及使用 <code>np.zeros</code>、<code>np.ones</code>、<code>np.arange</code> 和 <code>np.linspace</code> 等专用函数。我们还练习了查看数组的基本属性：<code>dtype</code>、<code>ndim</code>、<code>shape</code> 和 <code>size</code>。理解这些创建方法和属性是有效使用 NumPy 进行数值计算任务的重要前提。你现在已具备能力，可以创建 Python 中数据分析和科学计算的基本构成要素。</p>",
+  "slug": "creating-inspecting-arrays-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 5465,
+      "title": "NumPy User Guide: The Absolute Basics",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/absolute_beginners.html",
+      "doi": "",
+      "note": "提供 NumPy 的基础介绍，涵盖数组创建方法、形状、维度和数据类型等核心数组属性，以及基本操作。",
+      "order": 1,
+      "created_at": "2025-09-05T01:10:40.771445Z",
+      "updated_at": "2025-09-08T02:36:56.003758Z"
+    },
+    {
+      "id": 5466,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "一本重要的数据处理参考书，其中关于 NumPy 的章节介绍数组创建、属性和基本操作。",
+      "order": 2,
+      "created_at": "2025-09-05T01:10:40.787757Z",
+      "updated_at": "2025-09-08T02:36:55.041859Z"
+    },
+    {
+      "id": 5467,
+      "title": "Guide to NumPy",
+      "author": "Travis E. Oliphant",
+      "year": "2006",
+      "publisher": "Trelgol Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEaHKCSIxoCbgLVtDshESAAGsqYfUhAbV4XptRPVQsc4emKm6GuRbL7_sFLcCJYvJBcJhQqLwA1YdMIcmadUvIZ8LUYKn5PXoR0tyI-dLqexRzSphuoiKGhakonN2qywAdjNjOdLULm-34shg==",
+      "doi": "",
+      "note": "由 NumPy 的创建者撰写，本指南详细阐述该库的设计原则和 NumPy 数组的基本操作。",
+      "order": 3,
+      "created_at": "2025-09-05T01:10:40.789983Z",
+      "updated_at": "2025-09-08T02:37:06.045788Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 7438,
+  "title": "创建自定义工具",
+  "meta_title": "为LangChain代理创建自定义工具",
+  "meta_description": "学习如何定义您自己的自定义工具，赋予代理新功能，例如与特定API进行交互。",
+  "content": "<p>虽然标准工具为许多任务提供了坚实基础，但当代理能够与您的特定环境进行交互时，它们的真正作用才会显现出来。许多应用程序要求代理连接到专有数据库、内部服务或专用第三方API。创建自定义工具使这成为可能。</p>\n<p>自定义工具本质上是一个Python函数，附带一个LLM能够理解的清晰说明。代理的效力几乎完全由您如何定义这些工具来决定。</p>\n<h3>工具的结构</h3>\n<p>LangChain工具的核心由三个主要组成部分构成：</p>\n<ul>\n<li><strong>name</strong> (str)：工具的唯一标识符。LLM使用此名称来指定它想要使用的工具。</li>\n<li><strong>description</strong> (str)：对工具功能的详细说明。这是最重要的组成部分。LLM的推理 (inference)引擎完全依赖于此说明来判断何时该工具合适以及它预期什么输入。一个精心编写的说明决定了代理的成败。</li>\n<li><strong>func</strong> (callable)：当代理调用该工具时执行的实际Python函数。</li>\n</ul>\n<p>您可以使用 <code>langchain.tools</code> 中的 <code>Tool</code> 类直接构造一个工具。让我们创建一个简单的工具，根据给定半径计算圆的周长。</p>\n<pre><code class=\"language-python\">import math\nfrom langchain.tools import Tool\n\ndef calculate_circumference(radius: str) -> str:\n    \"\"\"根据给定半径计算圆的周长。\"\"\"\n    try:\n        # 代理以字符串形式提供输入，因此我们必须进行类型转换。\n        radius_float = float(radius)\n        circumference = 2 * math.pi * radius_float\n        return f\"周长为 {circumference:.2f}。\"\n    except ValueError:\n        return \"输入无效。请为半径提供一个有效数字。\"\n\ncircumference_tool = Tool(\n    name=\"CircleCircumferenceCalculator\",\n    description=\"使用此工具计算圆的周长。输入应为圆的半径，一个数字。\",\n    func=calculate_circumference,\n)\n\nprint(circumference_tool.invoke(\"10\"))\n</code></pre>\n<p>在此示例中，<code>description</code> 清晰地告知LLM工具的用途及其预期输入格式。函数本身包含基本错误处理，这是您应始终遵循的做法。</p>\n<h3>使用 @tool 装饰器简化操作</h3>\n<p>编写 <code>Tool</code> 类定义可能会变得重复。LangChain提供了一种更符合Python风格且方便的方式，使用 <code>@tool</code> 装饰器来创建工具。此装饰器自动根据函数名推断工具的 <code>name</code>，并且重要的是，使用函数的文档字符串作为其 <code>description</code>。</p>\n<p>这种方法不仅减少了样板代码，还鼓励良好的文档编写习惯。让我们重构我们的周长计算器。</p>\n<pre><code class=\"language-python\">from langchain.tools import tool\n\n@tool\ndef circle_circumference_calculator(radius: str) -> str:\n    \"\"\"\n    计算圆的周长。\n    当你需要根据给定半径求圆的周长时，请使用此工具。\n    此工具的输入应为表示半径数值的字符串。\n    \"\"\"\n    try:\n        radius_float = float(radius)\n        circumference = 2 * math.pi * radius_float\n        return f\"周长为 {circumference:.2f}。\"\n    except ValueError:\n        return \"输入无效。请为半径提供一个有效数字。\"\n\n# 现在该工具是一个可调用对象\nprint(circle_circumference_calculator.name)\nprint(circle_circumference_calculator.description)\nprint(circle_circumference_calculator.invoke(\"10\"))\n</code></pre>\n<p>输出显示装饰器正确地将函数名和文档字符串分配给了工具的属性。对于大多数自定义工具，装饰器是推荐的方法。</p>\n<p>下图展示了代理如何使用工具的描述来决定采取何种行动。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-mfu27s\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", fillcolor=\"#e9ecef\", color=\"#adb5bd\"];\n    edge [fontname=\"Arial\"];\n\n    UserQuery [label=\"用户查询\\n&#39;比特币的价格是多少？&#39;\", fillcolor=\"#bac8ff\"];\n    AgentExecutor [label=\"代理执行器\"];\n    LLM [label=\"LLM\\n(推理引擎)\", shape=oval, fillcolor=\"#a5d8ff\"];\n    ToolDesc [label=\"工具描述:\\n&#39;用于获取加密货币的当前价格。\\n输入应为股票代码。&#39;\", shape=note, fillcolor=\"#ffec99\"];\n    ToolFunc [label=\"工具函数:\\n`get_crypto_price(&#39;bitcoin&#39;)`\", shape=invhouse, fillcolor=\"#96f2d7\"];\n    API [label=\"外部API\\n(例如，CoinGecko)\", shape=cylinder, fillcolor=\"#ffd8a8\"];\n    FinalAnswer [label=\"最终答案\\n&#39;比特币的当前价格是...&#39;\", fillcolor=\"#b2f2bb\"];\n\n    UserQuery -> AgentExecutor;\n    AgentExecutor -> LLM [label=\"1. 形成思考\"];\n    LLM -> ToolDesc [label=\"2. 扫描描述\"];\n    LLM -> AgentExecutor [label=\"3. 选择&#39;get_crypto_price&#39;\\n并提供参数\"];\n    AgentExecutor -> ToolFunc [label=\"4. 调用函数\"];\n    ToolFunc -> API [label=\"5. 进行API调用\"];\n    API -> ToolFunc [label=\"6. 返回数据\"];\n    ToolFunc -> AgentExecutor [label=\"7. 返回结果\"];\n    AgentExecutor -> LLM [label=\"8. 提供结果作为观察\"];\n    LLM -> FinalAnswer [label=\"9. 合成最终答案\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-mfu27s\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>代理的决策循环。LLM查看可用工具的描述，根据用户的查询及其内部推理 (inference)过程选择合适的行动。</p>\n</blockquote>\n<h3>定义结构化工具输入</h3>\n<p>默认情况下，使用 <code>@tool</code> 装饰器或 <code>Tool</code> 类创建的工具接受单个字符串参数 (parameter)。然而，许多函数和API调用需要多个结构化参数。您可以使用Pydantic <code>BaseModel</code> 为工具定义结构化输入模式。</p>\n<p>这为LLM提供了它需要生成的参数的清晰格式，从而提高了可靠性。让我们为“用户资料API”创建一个工具，该API需要 <code>user_id</code> 和一个可选的 <code>include_history</code> 标志。</p>\n<pre><code class=\"language-python\">from langchain.tools import tool\nfrom pydantic import BaseModel, Field\n\nclass UserProfileInput(BaseModel):\n    \"\"\"用户资料工具的输入模型。\"\"\"\n    user_id: int = Field(description=\"用户的唯一标识符。\")\n    include_history: bool = Field(default=False, description=\"是否包含用户的订单历史。\")\n\n@tool(args_schema=UserProfileInput)\ndef get_user_profile(user_id: int, include_history: bool = False) -> str:\n    \"\"\"\n    获取用户的个人资料信息。\n    用它来获取特定用户ID的详细资料。\n    您可以选择包含他们的订单历史。\n    \"\"\"\n    # 在实际应用中，这将查询数据库或API。\n    profile = f\"用户 {user_id} 的资料: 姓名 - Alex, 自2022年起成为会员。\"\n    if include_history:\n        history = \" 订单历史: [订单 #123, 订单 #456]。\"\n        return profile + history\n    return profile\n\n# 代理现在知道如何构造输入\nprint(get_user_profile.args)\n</code></pre>\n<p>通过提供 <code>args_schema</code>，您准确地指导代理如何格式化其请求到工具。当LLM决定使用此工具时，它将尝试生成一个匹配 <code>UserProfileInput</code> 模式的JSON对象。</p>\n<h3>一个实用示例：天气API工具</h3>\n<p>让我们构建一个更实用的工具，从外部API获取真实数据。我们将创建一个工具，使用OpenWeatherMap API获取给定城市的当前天气。</p>\n<p>首先，确保您拥有OpenWeatherMap的API密钥，并且 <code>requests</code> 库已安装（<code>pip install requests</code>）。</p>\n<pre><code class=\"language-python\">import os\nimport requests\nfrom langchain.tools import tool\nfrom pydantic import BaseModel, Field\n\n# 将您的API密钥设置为环境变量\n# os.environ[\"OPENWEATHERMAP_API_KEY\"] = \"your_api_key_here\"\n\nclass WeatherInput(BaseModel):\n    \"\"\"GetCurrentWeather 工具的输入。\"\"\"\n    city: str = Field(description=\"要获取天气的城市名称。\")\n\n@tool(args_schema=WeatherInput)\ndef get_current_weather(city: str) -> str:\n    \"\"\"\n    获取指定城市的当前天气。\n    使用此工具查询任何城市的温度和天气状况。\n    \"\"\"\n    api_key = os.getenv(\"OPENWEATHERMAP_API_KEY\")\n    if not api_key:\n        return \"错误：OPENWEATHERMAP_API_KEY 环境变量未设置。\"\n\n    base_url = \"http://api.openweathermap.org/data/2.5/weather\"\n    params = {\"q\": city, \"appid\": api_key, \"units\": \"metric\"}\n\n    try:\n        response = requests.get(base_url, params=params)\n        response.raise_for_status()  # 对错误的响应（4xx或5xx）抛出HTTPError\n        data = response.json()\n\n        temperature = data[\"main\"][\"temp\"]\n        description = data[\"weather\"][0][\"description\"]\n\n        return f\"当前 {city} 的天气是 {temperature}°C，{description}。\"\n    except requests.exceptions.HTTPError as http_err:\n        return f\"发生HTTP错误：城市未找到或API错误。\"\n    except Exception as e:\n        return f\"发生错误：{e}\"\n\n# 直接运行工具的示例\nprint(get_current_weather.invoke({\"city\": \"London\"}))\n</code></pre>\n<p>该工具可靠：它具有结构化输入、清晰的描述、调用外部服务，并处理潜在错误，例如缺少API密钥或无效城市名。这就是您应该为代理构建的工具的质量。当集成到代理中时，它现在可以通过推理 (inference)出需要使用 <code>get_current_weather</code> 工具并传入参数 (parameter) <code>city=\"Tokyo\"</code> 来回答“东京天气如何？”之类的问题。</p>",
+  "slug": "creating-custom-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 14724,
+      "title": "Tools",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/how_to/tool_calling/",
+      "doi": "",
+      "note": "LangChain框架中创建和使用自定义工具的官方文档，包括结构化输入方案和`@tool`装饰器。",
+      "order": 1,
+      "created_at": "2025-09-05T09:03:12.511529Z",
+      "updated_at": "2025-09-11T10:44:45.275125Z"
+    },
+    {
+      "id": 14725,
+      "title": "Pydantic Documentation",
+      "author": "Samuel Colvin and Pydantic Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/",
+      "doi": "",
+      "note": "Pydantic的指南，用于为LangChain工具定义结构化输入方案（`args_schema`），确保类型验证和LLM的清晰度。",
+      "order": 2,
+      "created_at": "2025-09-05T09:03:12.518888Z",
+      "updated_at": "2025-09-11T09:10:27.281969Z"
+    },
+    {
+      "id": 14727,
+      "title": "Function calling",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/function-calling",
+      "doi": "",
+      "note": "关于GPT等大型语言模型如何设计用于调用带有结构化参数的外部函数的介绍，提供了LangChain工具集成的底层机制。",
+      "order": 4,
+      "created_at": "2025-09-05T09:03:12.524445Z",
+      "updated_at": "2025-09-11T10:44:10.322104Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

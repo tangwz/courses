@@ -1,0 +1,61 @@
+{
+  "id": 1395,
+  "title": "理解偏度和峰度",
+  "meta_title": "理解偏度和峰度",
+  "meta_description": "解释偏度和峰度，以便认识数据分布的形态。",
+  "content": "<p>均值、中位数、众数、方差和标准差等统计量可以告诉我们数据的中心位置和离散程度，但它们无法展现数据的全貌。两个数据集可能拥有相同的均值和标准差，但其形态可能大相径庭。此时，描述形态的统计量，特别是偏度和峰度，就显得很重要。它们分别帮助我们了解数据分布的不对称性和“尾部特征”。</p>\n<h3>偏度：衡量不对称性</h3>\n<p>偏度量化 (quantization)了分布偏离完全对称的程度。一个对称的分布，例如经典的钟形曲线（正态分布），其偏度为零。它的左右两边以中心峰值为轴呈镜像对称。</p>\n<ul>\n<li><strong>正偏态（右偏）：</strong> 如果分布的尾部延伸到右侧更远，则该分布呈正偏态。这表示存在一个低值聚集区，而尾部则指向高值。在正偏态分布中，均值通常大于中位数，而中位数又通常大于众数。出现这种情况是因为尾部的大数值将均值向上拉动。可以设想收入分布；大多数人收入适中，但少数高收入者会使平均收入明显升高。偏度值 > 0。</li>\n<li><strong>负偏态（左偏）：</strong> 相反，负偏态分布的尾部延伸到左侧更远。存在一个高值聚集区，而尾部则指向低值。在这种情况下，均值通常小于中位数，而中位数又通常小于众数。尾部的低数值将均值向下拉动。可以设想退休年龄；大多数人会在某个年龄段退休，但有些人会提早许多退休，从而拉低了平均值。偏度值 &#x3C; 0。</li>\n<li><strong>零偏态（对称）：</strong> 该分布完全对称。均值、中位数和众数通常相等（或在实际中非常接近）。偏度值 ≈ 0。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1xvujwj\" \n              data-plot-definition='{\"layout\": {\"title\": \"偏度示例\", \"xaxis\": {\"title\": \"数值\", \"range\": [-5, 15]}, \"yaxis\": {\"title\": \"密度\", \"showticklabels\": false}, \"height\": 350, \"legend\": {\"yanchor\": \"top\", \"y\": 0.99, \"xanchor\": \"right\", \"x\": 0.99}}, \"data\": [{\"x\": [-3.8, -3.4, -3, -2.6, -2.2, -1.8, -1.4, -1, -0.6, -0.2, 0.2, 0.6, 1, 1.4, 1.8, 2.2, 2.6, 3, 3.4, 3.8], \"y\": [0.008, 0.018, 0.035, 0.063, 0.101, 0.147, 0.194, 0.238, 0.273, 0.295, 0.295, 0.273, 0.238, 0.194, 0.147, 0.101, 0.063, 0.035, 0.018, 0.008], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"对称（偏度 ≈ 0）\", \"line\": {\"color\": \"#4263eb\"}}, {\"x\": [0.2, 0.6, 1, 1.4, 1.8, 2.2, 2.6, 3, 3.4, 3.8, 4.2, 4.6, 5, 5.4, 5.8, 6.2, 6.6, 7, 10, 14], \"y\": [0.01, 0.05, 0.1, 0.18, 0.25, 0.3, 0.32, 0.3, 0.27, 0.22, 0.18, 0.14, 0.11, 0.09, 0.07, 0.05, 0.04, 0.03, 0.01, 0.005], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"正偏态（右偏）\", \"line\": {\"color\": \"#f76707\"}}, {\"x\": [-13, -9, -6, -5.6, -5.2, -4.8, -4.4, -4, -3.6, -3.2, -2.8, -2.4, -2, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8], \"y\": [0.005, 0.01, 0.03, 0.04, 0.05, 0.07, 0.09, 0.11, 0.14, 0.18, 0.22, 0.27, 0.3, 0.32, 0.3, 0.25, 0.18, 0.1, 0.05, 0.01], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"负偏态（左偏）\", \"line\": {\"color\": \"#ae3ec9\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-1xvujwj\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较对称（蓝色）、正偏态（橙色）和负偏态（紫色）分布。注意长尾相对于主峰的位置。</p>\n</blockquote>\n<p>了解偏度很重要，因为高度偏斜的数据可能违反某些统计检验和机器学习 (machine learning)模型的假设（特别是那些假定数据正态性的模型，如线性回归）。有时，会对偏斜数据进行变换（如对数变换），使其在建模前更趋对称。</p>\n<h3>峰度：衡量尾部厚度和峰度</h3>\n<p>峰度衡量分布的“尾部特征”——即数据在尾部相对于中心部分的集中程度。它常与正态分布进行比较，正态分布被认为是<strong>中峰态</strong>。</p>\n<p>标准的衡量方式是<em>超额峰度</em>，计算公式如下：\r\n<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>超额峰度</mtext><mo>=</mo><mtext>峰度</mtext><mo>−</mo><mn>3</mn></mrow><annotation encoding=\"application/x-tex\">\\text{超额峰度} = \\text{峰度} - 3</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">超额峰度</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">峰度</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">−</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">3</span></span></span></span>\r\n正态分布的峰度为3，因此其超额峰度为0。</p>\n<ul>\n<li><strong>尖峰态（超额峰度 > 0）：</strong> 超额峰度为正的分布称为尖峰态。它们拥有比正态分布更厚的尾部，且通常峰值更尖锐。这表示极端值（异常值）出现的可能性比在正态分布中更大。金融市场回报常表现出尖峰态，这意味着大的收益或损失比正态模型预测的更常见。峰度值 > 3。</li>\n<li><strong>中峰态（超额峰度 ≈ 0）：</strong> 这描述的是尾部与正态分布相似的分布，例如正态分布本身。峰度值 ≈ 3。</li>\n<li><strong>平峰态（超额峰度 &#x3C; 0）：</strong> 超额峰度为负的分布称为平峰态。它们拥有更薄的尾部，并且倾向于比正态分布更平坦（峰值更低）。这表示极端值出现的可能性较小。连续均匀分布是平峰态分布的一个例子。峰度值 &#x3C; 3。</li>\n</ul>\n<p>一个常见的误解是峰度<em>只</em>衡量分布的峰值高低。尽管峰值高低常有关联，但峰度的主要决定因素是尾部的“厚度”（权重 (weight)）。一个分布可以有高耸的峰值但尾部较薄，也可以有较低的峰值但尾部较厚。峰度具体反映了极端值的影响。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-150of5d\" \n              data-plot-definition='{\"layout\": {\"title\": \"峰度示例\", \"xaxis\": {\"title\": \"数值\", \"range\": [-5, 5]}, \"yaxis\": {\"title\": \"密度\", \"showticklabels\": false}, \"height\": 350, \"legend\": {\"yanchor\": \"top\", \"y\": 0.99, \"xanchor\": \"right\", \"x\": 0.99}}, \"data\": [{\"x\": [-4.8, -4.4, -4, -3.6, -3.2, -2.8, -2.4, -2, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.4, 4.8], \"y\": [0.001, 0.003, 0.005, 0.010, 0.020, 0.035, 0.060, 0.091, 0.136, 0.183, 0.226, 0.258, 0.270, 0.258, 0.226, 0.183, 0.136, 0.091, 0.060, 0.035, 0.020, 0.010, 0.005, 0.003, 0.001], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"尖峰态（厚尾，K > 3）\", \"line\": {\"color\": \"#f03e3e\"}}, {\"x\": [-4.8, -4.4, -4, -3.6, -3.2, -2.8, -2.4, -2, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.4, 4.8], \"y\": [0.001, 0.002, 0.004, 0.011, 0.027, 0.054, 0.097, 0.150, 0.212, 0.266, 0.312, 0.352, 0.399, 0.352, 0.312, 0.266, 0.212, 0.150, 0.097, 0.054, 0.027, 0.011, 0.004, 0.002, 0.001], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"中峰态（正态尾部，K ≈ 3）\", \"line\": {\"color\": \"#4263eb\"}}, {\"x\": [-4.8, -4.4, -4, -3.6, -3.2, -2.8, -2.4, -2, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2, 1.6, 2, 2.4, 2.8, 3.2, 3.6, 4, 4.4, 4.8], \"y\": [0.000, 0.000, 0.000, 0.000, 0.001, 0.010, 0.030, 0.075, 0.140, 0.190, 0.220, 0.235, 0.240, 0.235, 0.220, 0.190, 0.140, 0.075, 0.030, 0.010, 0.001, 0.000, 0.000, 0.000, 0.000], \"type\": \"scatter\", \"mode\": \"lines\", \"name\": \"平峰态（薄尾，K < 3）\", \"line\": {\"color\": \"#37b24d\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-150of5d\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>比较不同峰度的分布：尖峰态（红色，厚尾）、中峰态（蓝色，正态尾部）和平峰态（绿色，薄尾）。</p>\n</blockquote>\n<p>高峰度（尖峰态）表明可能存在显著的异常值或肥尾现象，这对风险管理和模型选择很重要。低峰度（平峰态）则可能表示数据比正态分布更集中或更均匀。</p>\n<p>偏度和峰度一起，对数据分布提供了更详尽的描述，补充了简单的中心和离散程度信息。计算这些值是探索性数据分析（EDA）中的一个标准步骤，并有助于确定后续的分析选择。像 Pandas 这样的库使得计算这些指标变得简单，我们将在本章后面看到。</p>",
+  "slug": "skewness-kurtosis",
+  "updates": [],
+  "references": [
+    {
+      "id": 1342,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "579",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104030/",
+      "doi": "",
+      "note": "一本Python数据分析实用指南，展示了如何将偏度和峰度的计算与解释作为探索性数据分析（EDA）的一部分。",
+      "order": 2,
+      "created_at": "2025-09-04T15:40:50.410879Z",
+      "updated_at": "2025-09-07T17:42:06.302509Z"
+    },
+    {
+      "id": 1343,
+      "title": "Introduction to Probability and Statistics (Lecture 4: Descriptive Statistics: Mean, Variance, Skew, Kurtosis)",
+      "author": "Jeremy Orloff, Jonathan Bloom",
+      "year": "2014",
+      "publisher": "MIT OpenCourseWare",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2014/pages/lecture-notes/",
+      "doi": "",
+      "note": "大学课程讲义，提供了偏度和峰度的概念解释及视觉示例。",
+      "order": 3,
+      "created_at": "2025-09-04T15:40:50.414433Z",
+      "updated_at": "2025-09-07T17:42:42.978742Z"
+    },
+    {
+      "id": 1344,
+      "title": "SciPy Reference Guide: Statistical Functions (scipy.stats)",
+      "author": "SciPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.scipy.org/doc/scipy/reference/stats.html",
+      "doi": "",
+      "note": "SciPy官方文档，详细介绍了Python中计算偏度和峰度等描述性统计量的函数及其数学定义。",
+      "order": 4,
+      "created_at": "2025-09-04T15:40:50.417574Z",
+      "updated_at": "2025-09-07T17:41:50.059673Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

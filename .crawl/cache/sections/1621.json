@@ -1,0 +1,45 @@
+{
+  "id": 1621,
+  "title": "SQL 与 NoSQL：基本比较",
+  "meta_title": "SQL 与 NoSQL 数据库：主要区别",
+  "meta_description": "总结 SQL 与 NoSQL 数据库在结构、可伸缩性和查询语言方面的主要区别。",
+  "content": "<p>对 NoSQL 数据库（例如文档型、键值型、列族型和图存储）与关系型（SQL）数据库进行直接比较很有帮助。理解它们的主要区别有助于确定哪种类型的数据库可能适合特定任务。它们并非严格意义上的竞争对手；通常，它们是为解决不同问题而设计的不同工具。</p>\n<p>以下是对几个重要方面的基本比较：</p>\n<h3>数据模型与模式</h3>\n<ul>\n<li><strong>SQL 数据库：</strong> 采用高度结构化的模型，基于具有预定义列和数据类型的表。可以想象数据整齐地放入具有固定列的电子表格中。模式（结构定义）通常是固定的，并且必须在数据插入<em>之前</em>定义。更改结构通常需要仔细规划和迁移步骤。这确保了数据格式的强一致性和可预测性。</li>\n<li><strong>NoSQL 数据库：</strong> 提供更大的灵活性。\n<ul>\n<li><em>文档型数据库</em> 以类似 JSON 的文档形式存储数据，其中每个文档可以有自己的结构。</li>\n<li><em>键值存储</em> 使用唯一的键与值配对的简单模型。</li>\n<li><em>列族存储</em> 将数据分组到列中，这对于涉及许多记录中特定数据属性的查询很有帮助。</li>\n<li><em>图数据库</em> 将数据建模为节点和关系。\n在大多数 NoSQL 系统中，模式是动态的或不存在的（“无模式”或“读时模式”）。您通常可以添加新字段或更改数据结构，而无需更改预定义的总计划。这在处理多样化或不断变化的数据时很有利。</li>\n</ul>\n</li>\n</ul>\n<h3>可伸缩性</h3>\n<ul>\n<li><strong>SQL 数据库：</strong> 传统上是<em>垂直</em>扩展。这意味着增加单个服务器的资源（CPU、内存、存储）以处理更多负载。虽然可行，但垂直扩展最终会达到物理限制并变得昂贵。关系型数据库的<em>水平</em>扩展（添加更多服务器以分配负载）是可能的，但实施和管理通常很复杂，尤其是在多台机器上维护事务一致性方面。</li>\n<li><strong>NoSQL 数据库：</strong> 通常设计为<em>水平</em>扩展。这意味着将数据和负载分布到许多商用服务器上。这种方法通常更具成本效益，并且比垂直扩展更容易处理大量数据和高流量负载。这种分布式特性是 NoSQL 数据库在大规模 Web 应用程序和大数据处理中受欢迎的主要原因。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1j20wwf\" \n              data-graph-definition='digraph Scaling {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"Arial\"];\n\n  subgraph cluster_sql {\n    label = \"SQL（通常垂直扩展）\";\n    bgcolor=\"#a5d8ff\"; // Light Blue background\n    sql_server [label=\"更大服务器\", fillcolor=\"#4dabf7\"]; // Blue\n  }\n\n  subgraph cluster_nosql {\n    label = \"NoSQL（通常水平扩展）\";\n    bgcolor=\"#b2f2bb\"; // Light Green background\n    node [fillcolor=\"#69db7c\"]; // Green\n    nosql_1 [label=\"服务器 1\"];\n    nosql_2 [label=\"服务器 2\"];\n    nosql_3 [label=\"服务器 ...\"];\n    nosql_4 [label=\"服务器 N\"];\n    nosql_1 -> nosql_2 [style=invis];\n    nosql_2 -> nosql_3 [style=invis];\n    nosql_3 -> nosql_4 [style=invis];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1j20wwf\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图描绘了通常与 SQL 数据库相关的垂直扩展（使单个服务器更强大），以及 NoSQL 数据库中常见的水平扩展（添加更多服务器）。</p>\n</blockquote>\n<h3>查询语言</h3>\n<ul>\n<li><strong>SQL 数据库：</strong> 使用 <strong>SQL（结构化查询语言）</strong> 作为定义、操作和查询数据的标准。SQL 功能强大，是声明性的（您指定要<em>什么</em>数据，而不是<em>如何</em>获取它），并且被广泛理解。</li>\n<li><strong>NoSQL 数据库：</strong> 没有像 SQL 那样单一的通用查询语言。查询方法因数据库类型和具体产品而异。一些拥有类似 SQL 的查询语言（有时被称为“不只是 SQL”），而另一些则使用特定的 API、自定义查询语言或 MapReduce 函数。对于跨不同数据结构的复杂连接，这些查询可能不如 SQL 表达力强，但可以针对特定数据模型进行高度优化（例如，键值存储中快速的键查找）。</li>\n</ul>\n<h3>一致性</h3>\n<ul>\n<li><strong>SQL 数据库：</strong> 通常优先考虑强一致性，常遵循 <strong>ACID</strong> 特性（原子性、一致性、隔离性、持久性）。这通常意味着一旦事务（例如转账）完成，其更改会立即对所有后续查询可见，并且即使发生故障，数据也保持一致状态。这对于银行或库存管理等应用程序非常重要。</li>\n<li><strong>NoSQL 数据库：</strong> 通常放宽强一致性要求，以支持可用性和分区容错性，尤其是在分布式系统中（基于 CAP 定理）。许多 NoSQL 系统提供<strong>最终一致性</strong>，这意味着如果您写入数据，它<em>最终</em>会在集群中的所有节点上保持一致，但可能会有短暂延迟。这种权衡（常由 <strong>BASE</strong> 模型描述——基本可用、软状态、最终一致）对于不需要所有操作都具备即时、完美一致性的应用程序（例如，社交媒体信息流、会话管理）来说是可以接受的。</li>\n</ul>\n<h3>区别总结</h3>\n<table>\n<thead>\n<tr>\n<th align=\"left\">特性</th>\n<th align=\"left\">SQL 数据库</th>\n<th align=\"left\">NoSQL 数据库</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\"><strong>数据模型</strong></td>\n<td align=\"left\">带行和列的表</td>\n<td align=\"left\">文档、键值、列族、图等</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>模式</strong></td>\n<td align=\"left\">预定义、固定</td>\n<td align=\"left\">动态、灵活</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>可伸缩性</strong></td>\n<td align=\"left\">通常垂直</td>\n<td align=\"left\">通常水平</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>查询</strong></td>\n<td align=\"left\">SQL（标准化语言）</td>\n<td align=\"left\">各异（API、自定义语言）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>一致性</strong></td>\n<td align=\"left\">强（常 ACID）</td>\n<td align=\"left\">可变（常最终一致性 / BASE）</td>\n</tr>\n<tr>\n<td align=\"left\"><strong>示例</strong></td>\n<td align=\"left\">MySQL, PostgreSQL, SQL Server, Oracle</td>\n<td align=\"left\">MongoDB, Redis, Cassandra, Neo4j</td>\n</tr>\n</tbody>\n</table>\n<p>在 SQL 和 NoSQL 之间做出选择在很大程度上取决于应用程序的需求。如果您拥有结构化数据，需要强大的事务保证，并需要跨相关表的复杂查询能力，关系型数据库通常是一个可靠的选择。如果您正在处理大量非结构化或半结构化数据，需要高可伸缩性和可用性，并且可以容忍可能较弱的一致性，NoSQL 数据库可能更适合。许多现代系统甚至结合使用两者，根据不同数据库最擅长的任务来选用它们（这种方法有时被称为多语言持久化）。</p>",
+  "slug": "sql-vs-nosql-basic-comparison",
+  "updates": [],
+  "references": [
+    {
+      "id": 4996,
+      "title": "NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence",
+      "author": "Pramod J. Sadalage, Martin Fowler",
+      "year": "2012",
+      "publisher": "Addison-Wesley Professional",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://martinfowler.com/books/nosql.html",
+      "doi": "",
+      "note": "这本基础书籍简明而全面地介绍了各种NoSQL数据库类型、它们的架构风格以及它们出现的根本原因，并与传统关系型数据库进行了直接比较。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:09.156321Z",
+      "updated_at": "2025-09-07T19:14:15.577575Z"
+    },
+    {
+      "id": 4997,
+      "title": "Database System Concepts",
+      "author": "Abraham Silberschatz, Henry F. Korth",
+      "year": "2020",
+      "publisher": "McGraw-Hill Education",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.mheducation.com/highered/product/database-system-concepts-silberschatz-korth/M9781260200880.html",
+      "doi": "",
+      "note": "一本广泛使用的教科书，涵盖了关系数据库基础（SQL、ACID、模式）和现代数据库概念，包括对各种NoSQL模型和分布式数据库原理的介绍。",
+      "order": 2,
+      "created_at": "2025-09-04T16:58:09.161659Z",
+      "updated_at": "2025-09-07T19:14:25.016791Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

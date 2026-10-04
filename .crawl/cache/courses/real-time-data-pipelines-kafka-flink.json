@@ -1,0 +1,559 @@
+{
+  "id": 256,
+  "title": "使用Apache Kafka和Flink的实时数据管道",
+  "meta_title": "高级实时数据管道 | Kafka与Flink课程",
+  "meta_description": "熟练掌握Apache Kafka和Flink的实时数据工程。掌握精确一次语义、状态管理和AI管道的性能调优。",
+  "description": "构建弹性、低延迟数据管道，需要熟练掌握消息代理与流处理引擎间的配合。本课程讲解使用Apache Kafka和Apache Flink搭建生产级流处理系统所需的高级架构模式和实现细节。您将分析分布式系统一致性、状态管理策略以及适用于高吞吐量环境的性能调优方法。\n\n课程内容逐步讲解Kafka的事务协议和Flink检查点算法的内部工作原理。您将实现精确一次处理语义，使用RocksDB管理大规模状态，并应对复杂事件处理场景。本课程内容会涉及实时AI中的特定难题，例如在线特征工程和流式模型服务。课程结束时，您将具备架构、部署和优化数据流的技术能力，以毫秒级延迟为机器学习模型和分析仪表盘提供服务。",
+  "short_description": "利用Kafka和Flink为实时AI应用架构并优化弹性数据流。",
+  "excerpt": "熟练掌握高级流处理架构。学习如何使用Apache Kafka和Flink构建、调优和扩展实时数据管道，以支持AI和分析应用。",
+  "prerequisites": "Kafka、Flink、Java/Scala基础",
+  "cover_color": "cyan",
+  "learning_outcomes": [
+    {
+      "topic": "架构",
+      "description": "设计能够统一批处理和流处理的容错型Kappa架构。"
+    },
+    {
+      "topic": "可靠性",
+      "description": "使用Kafka事务和Flink两阶段提交，实现精确一次处理语义。"
+    },
+    {
+      "topic": "状态管理",
+      "description": "配置并调优RocksDB状态后端，以支持流处理应用中的大规模状态管理。"
+    },
+    {
+      "topic": "优化",
+      "description": "诊断反压、优化序列化并调优并行度，以适应高吞吐量环境。"
+    }
+  ],
+  "duration": 35,
+  "slug": "real-time-data-pipelines-kafka-flink",
+  "level": 3,
+  "category": "Data Engineering",
+  "is_masterclass": false,
+  "python_enabled": false,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-11-26T04:47:21.087803Z",
+  "updated_at": "2026-10-02T07:24:21.948721Z",
+  "chapters": [
+    {
+      "id": 1412,
+      "title": "流处理架构与语义",
+      "meta_title": "流处理架构 | Kafka 与 Flink",
+      "meta_description": "分析流处理模式。了解 Lambda 与 Kappa 架构以及分布式系统中的数据一致性语义。",
+      "number": 1,
+      "slug": "stream-processing-architectures-semantics",
+      "content": "构建有弹性的流式应用程序，需要清晰地了解数据如何在分布式环境中流动和持久化。与数据集有限的批处理不同，流处理处理的是持续到达且通常乱序的无界数据集。本部分确立了使用 Apache Kafka 和 Flink 设计生产级数据管道所需的架构原则。\n\n我们将从审视分布式日志开始。这种只追加的数据结构构成了 Kafka 存储引擎的底层，并实现了生产者与消费者之间的解耦。你将分析日志如何支持顺序访问模式和数据重放以应对系统故障。\n\n在存储层之后，我们将对比两种架构模式：Lambda 和 Kappa。Lambda 架构为批处理和流处理维护独立层，而 Kappa 架构通过将所有数据视为流来简化技术栈。我们将阐述 Flink 的一致性机制如何使 Kappa 架构能够替代复杂的 Lambda 部署。\n\n本章以处理保证和时间的专业定义作结。你将辨别至多一次、至少一次和精确一次的传输语义。此外，我们还将通过区分事件时间 $t_e$ 和处理时间 $t_p$ 来处理时间偏差问题。理解这些定义是正确处理延迟数据并确保应用程序中结果确定性所必需的。",
+      "sections": [
+        {
+          "id": 8081,
+          "title": "分布式日志的发展",
+          "meta_title": "分布式日志与流存储",
+          "meta_description": "了解分布式日志在服务解耦和数据一致性维护中的作用。",
+          "slug": "evolution-distributed-logs",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8083,
+          "title": "Lambda 与 Kappa 架构",
+          "meta_title": "Lambda 与 Kappa 架构模式对比",
+          "meta_description": "比较 Lambda 和 Kappa 架构在实时数据处理和长期存储方面的应用。",
+          "slug": "lambda-vs-kappa-architecture",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8085,
+          "title": "处理保障和含义",
+          "meta_title": "至少一次 vs 恰好一次处理的含义",
+          "meta_description": "关于交付保障的技术解析：最多一次、至少一次和恰好一次处理。",
+          "slug": "processing-guarantees-semantics",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8087,
+          "title": "事件时间与处理时间",
+          "meta_title": "流处理中的事件时间与处理时间对比",
+          "meta_description": "区分事件时间与处理时间，确保乱序数据的准确性。",
+          "slug": "event-time-vs-processing-time",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8089,
+          "title": "动手实践：设计一个Kappa管道",
+          "meta_title": "实践：设计Kappa架构",
+          "meta_description": "动手实践设计一个使用Kafka和Flink的完整Kappa架构管道。",
+          "slug": "hands-on-designing-kappa-pipeline",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1414,
+      "title": "高级 Kafka 生产者和消费者工作原理",
+      "meta_title": "高级 Kafka 内部原理 | 调优与可靠性",
+      "meta_description": "加深对 Kafka 内部原理的认识。精通复制协议、ISR、分区策略和事务性消息。",
+      "number": 2,
+      "slug": "advanced-kafka-producer-consumer-internals",
+      "content": "基本的生产者配置通常会牺牲持久性以换取吞吐量。当您需要强一致性时，了解分区领导者选举和复制的内部运作方式就变得十分必要。本单元将从默认配置出发，考察 Apache Kafka 如何在分布式环境中保证消息的持久性和顺序。\n\n我们将分析领导者副本与同步副本集 (ISR) 之间的关系。您将看到 `min.insync.replicas` 设置如何与生产者确认机制配合，以防止数据丢失。其中会说明可用性要求，即集群必须保持特定数量的同步节点才能安全地接收写入。\n\n要达到精确一次语义，不仅仅需要重试逻辑。我们将实现幂等生产者和事务性写入，允许应用程序原子地写入多个分区。这保证了一组消息要么完全提交，要么完全丢弃，从而在网络故障期间也能保持数据完整性。\n\n在读取方面，我们将说明消费者组的运作方式。标准的再平衡协议通常会完全暂停消费，从而导致延迟峰值。我们将介绍能够减少这种停机时间的协作式再平衡策略。最后，我们将编写自定义分区器来覆盖默认的分发逻辑，以确保当默认哈希算法不足时，特定键的数据局部性。",
+      "sections": [
+        {
+          "id": 8091,
+          "title": "复制协议和ISR",
+          "meta_title": "Kafka 复制与同步副本",
+          "meta_description": "分析 Kafka 复制机制、领导者选举和同步副本 (ISR) 要求。",
+          "slug": "replication-protocols-isrs",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8093,
+          "title": "幂等生产者与事务",
+          "meta_title": "Kafka幂等性与事务",
+          "meta_description": "实施幂等生产者和事务以确保跨分区的数据完整性。",
+          "slug": "idempotent-producers-transactions",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8095,
+          "title": "自定义分区策略",
+          "meta_title": "Apache Kafka 中的自定义分区",
+          "meta_description": "编写自定义分区器以控制数据分布并优化消费者并行度。",
+          "slug": "custom-partitioning-strategies",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8097,
+          "title": "消费者组再平衡协议",
+          "meta_title": "Kafka 消费者再平衡协议",
+          "meta_description": "了解急切再平衡与协作再平衡协议，以减少消费者停机时间。",
+          "slug": "consumer-group-rebalancing",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8099,
+          "title": "动手实践：实现事务性写入",
+          "meta_title": "实践：Kafka 事务性生产者",
+          "meta_description": "在 Kafka 中配置并执行事务性写入，以确保原子性的多分区更新。",
+          "slug": "hands-on-implementing-transactional-writes",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1416,
+      "title": "Flink 状态管理与检查点",
+      "meta_title": "Flink 状态管理与 RocksDB 调优",
+      "meta_description": "精通 Flink 状态后端。学习配置 RocksDB，管理增量检查点，并处理状态演变。",
+      "number": 3,
+      "slug": "flink-state-management-checkpointing",
+      "content": "独立处理单个事件很简单。然而，复杂的流式应用需要上下文。无论是计算移动平均值，还是联接用户活动流，系统都必须保留之前事件的信息。这些保留的信息就是状态。在分布式集群中管理这些数据比较困难，因为即使在硬件故障或网络分区时，系统也必须保证正确性。\n\n本章介绍 Flink 实现容错和一致状态访问的机制。您将分析可用的状态后端，比较在 Java 堆上存储对象与使用嵌入式 RocksDB 键值存储的性能特点。后端选择会影响性能和稳定性，尤其当总状态大小 $S$ 超过可用内存时，通常需要将数据溢出到磁盘。\n\n我们还会讲解 Flink 如何使用异步屏障快照算法来协调分布式快照，以确保精确一次处理。您将实践增量检查点等优化技术，以减少写入持久化存储的数据量。最后，本内容阐述了当应用逻辑变化时，演进状态模式的操作步骤，确保更新不会破坏现有数据。",
+      "sections": [
+        {
+          "id": 8101,
+          "title": "状态后端：HashMap 对比 RocksDB",
+          "meta_title": "Flink 状态后端对比",
+          "meta_description": "对比堆内 HashMap 状态后端与堆外 RocksDB，以适应不同工作负载需求。",
+          "slug": "state-backends-hashmap-rocksdb",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8103,
+          "title": "异步屏障快照",
+          "meta_title": "Flink 检查点算法",
+          "meta_description": "分析 Flink 用于轻量级异步快照的 Chandy-Lamport 算法变体。",
+          "slug": "asynchronous-barrier-snapshots",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8105,
+          "title": "增量检查点",
+          "meta_title": "Flink 中的增量检查点",
+          "meta_description": "通过 RocksDB 增量检查点，提升快照性能。",
+          "slug": "incremental-checkpointing",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8107,
+          "title": "状态模式演变",
+          "meta_title": "应对 Flink 状态模式更改",
+          "meta_description": "打理 protocol buffer 和 Avro 模式更改，同时不丢失现有应用状态。",
+          "slug": "state-schema-evolution",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8109,
+          "title": "动手实践：使用 Savepoint 进行状态迁移",
+          "meta_title": "实践：Flink Savepoint 迁移",
+          "meta_description": "使用 Flink Savepoint 执行应用程序升级和扩缩容操作。",
+          "slug": "hands-on-state-migration-savepoints",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1418,
+      "title": "高级窗口与时间属性",
+      "meta_title": "高级 Flink 窗口与水位线",
+      "meta_description": "处理复杂的时间序列数据。实现自定义水位线、触发器和会话窗口，用于乱序流。",
+      "number": 4,
+      "slug": "advanced-windowing-time-attributes",
+      "content": "处理无限数据流时，需要将时间划分为有限的片段以计算聚合结果。虽然基本的滚动窗口足以满足简单的监控需求，但精确的流处理，则需处理事件发生时间与到达操作符时间之间的不一致性。这种差异，通常由网络延迟或分布式系统滞后引起，使得精确的时间属性和窗口操作逻辑变得必要。\n\n本章考察 Flink 用来追踪时间进程并管理窗口内状态的机制。我们侧重区分 *事件时间*与*处理时间*，以及在事件乱序到达时如何保持数据准确性。你将分析水位线作为时间进程主要标志的作用。水位线 $W(t)$ 在流中传递，表明所有时间戳小于 $t$ 的事件均已到达。\n\n除了标准的时钟对齐窗口，我们将实现动态窗口操作策略。用户行为常以爆发式出现，而非固定间隔，这使得会话窗口（根据活动间隔对事件进行分组）成为一种更准确的数据分析模型。我们还将配置自定义触发器和淘汰器。这些组件让你可以定义复杂的条件，决定何时评估窗口内容或清除数据，提供了超出默认行为的控制能力。\n\n处理延迟数据是构建可靠数据管道的必需。丢弃水位线之后到达的事件可以降低延迟，但通常会违反严格的一致性要求。我们将配置允许的延迟参数，并将延迟到达的事件路由到侧输出，确保所有数据都得到处理，即使它们超出预期的时间范围。到本章结束时，你将能实现窗口操作逻辑，在延迟、完整性和准确性之间取得平衡。",
+      "sections": [
+        {
+          "id": 8111,
+          "title": "水位线生成策略",
+          "meta_title": "Flink 水位线策略",
+          "meta_description": "实现周期性水位线和打点式水位线，以平衡延迟和完整性。",
+          "slug": "watermark-generation-strategies",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8113,
+          "title": "处理延迟数据与侧输出",
+          "meta_title": "管理 Flink 中的延迟到达数据",
+          "meta_description": "配置允许的延迟并将丢弃的事件导向侧输出进行重新处理。",
+          "slug": "handling-late-data-side-outputs",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8115,
+          "title": "自定义窗口触发器和驱逐器",
+          "meta_title": "自定义 Flink 窗口触发器",
+          "meta_description": "通过编写自定义触发器和驱逐器来扩展窗口功能，以实现复杂业务逻辑。",
+          "slug": "custom-window-triggers-evictors",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8117,
+          "title": "会话窗口与间隔分析",
+          "meta_title": "流处理中的会话窗口",
+          "meta_description": "实现动态会话窗口以根据活动间隔对事件进行分组。",
+          "slug": "session-windows-gap-analysis",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8119,
+          "title": "动手实践：制作自定义触发器",
+          "meta_title": "实践：自定义 Flink 窗口触发器",
+          "meta_description": "制作自定义触发器，根据外部信号或数据模式触发窗口计算。",
+          "slug": "hands-on-building-custom-trigger",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1420,
+      "title": "使用 ProcessFunction 的底层操作",
+      "meta_title": "Flink ProcessFunction 和 Broadcast State",
+      "meta_description": "摆脱 DataStream API 的限制。使用 ProcessFunction、计时器和 Broadcast State 进行复杂事件处理。",
+      "number": 5,
+      "slug": "low-level-operations-processfunctions",
+      "content": "DataStream API 中的高级操作符能够高效处理许多标准转换任务。然而，特定的业务需求往往要求逻辑超越预定义窗口或简单聚合的能力。当您需要实现复杂事件处理、自定义状态过期或动态连接时，仅依赖标准操作符可能会受到局限。\n\nApache Flink 提供了 `ProcessFunction` 作为底层接口以应对这些情况。此函数让您的应用能够直接访问流处理的基本要素：状态和计时器。通过直接与这些组件交互，您可以定义任意处理行为，例如检测多个流中的模式或管理依赖于时间的工作流。\n\n本单元侧重于 `ProcessFunction` 及其特殊变体的实现。我们将分析如何手动管理键控状态以及使用 `TimerService` 调度回调。本文将介绍 `CoProcessFunction` 用于连接不同流，以及 Broadcast State 模式用于向所有并行实例分发控制消息。最后，我们将实现异步 I/O 来执行对外部数据库的非阻塞查找，确保网络延迟不会降低管道的吞吐量。",
+      "sections": [
+        {
+          "id": 8121,
+          "title": "ProcessFunction 结构体系",
+          "meta_title": "理解 Flink ProcessFunction",
+          "meta_description": "使用 KeyedProcessFunction 和 CoProcessFunction 访问原始状态和定时器。",
+          "slug": "processfunction-hierarchy",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8122,
+          "title": "定时器服务与事件调度",
+          "meta_title": "Flink 定时器服务",
+          "meta_description": "注册处理时间定时器和事件时间定时器，用于调度流内的未来动作。",
+          "slug": "timer-services-event-scheduling",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8123,
+          "title": "广播状态模式",
+          "meta_title": "Flink 中的广播状态模式",
+          "meta_description": "使用广播状态将配置或规则动态分发到所有并行实例。",
+          "slug": "broadcast-state-pattern",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8124,
+          "title": "外部查找的异步 I/O",
+          "meta_title": "Flink 中的异步 I/O",
+          "meta_description": "使用异步 I/O 丰富流数据与外部数据以保持高吞吐量。",
+          "slug": "async-io-external-lookups",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8125,
+          "title": "动手实践：动态规则评估",
+          "meta_title": "实践：使用广播状态的动态规则",
+          "meta_description": "构建一个在运行时使用广播状态更新处理逻辑的流处理应用。",
+          "slug": "hands-on-dynamic-rule-evaluation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1421,
+      "title": "生产部署与可靠性",
+      "meta_title": "Kafka & Flink 生产部署",
+      "meta_description": "确保生产可靠性。处理序列化、schema 演进，并集成 Kafka Connect。",
+      "number": 6,
+      "slug": "production-deployment-reliability",
+      "content": "将 Flink 应用从本地开发环境迁移到分布式生产集群，需要高度关注数据完整性和运行稳定性。在单机上正常运行的代码，在分布式系统固有的可变延迟和部分故障面前，经常会失效。本章讨论了维护长期运行数据管道所需的工程标准。\n\n我们首先分析序列化效率。像 JSON 这样的文本格式会带来显著的存储和处理开销。你将使用 Apache Avro 和 Protocol Buffers 实现二进制序列化，以减小有效载荷大小。为了管理数据结构随时间的变化，我们引入了 Schema Registry，它在解耦的生产者和消费者之间强制执行兼容性约定。这确保了对生产者 schema 的更新不会破坏下游的消费者应用。\n\n接着，重点转向集成和弹性。我们使用 Kafka Connect 作为一种标准化的机制，用于在 broker 之间传输数据，减少对自定义连接器代码的需求。最后，我们定义了用于处理“毒丸”消息的恢复策略——这些消息是导致处理失败的畸形数据事件——并概述了在基础设施中断时避免数据丢失的措施。",
+      "sections": [
+        {
+          "id": 8126,
+          "title": "Avro 和 Protobuf 序列化",
+          "meta_title": "流式序列化格式",
+          "meta_description": "在 Flink 和 Kafka 中使用 Avro 和 Protobuf 实现高效的二进制序列化。",
+          "slug": "serialization-avro-protobuf",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8127,
+          "title": "模式注册表集成",
+          "meta_title": "Confluent 模式注册表与 Flink",
+          "meta_description": "使用模式注册表强制执行模式兼容性和管理。",
+          "slug": "schema-registry-integration",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8128,
+          "title": "Kafka Connect 用于源和目标",
+          "meta_title": "Kafka Connect 集成",
+          "meta_description": "使用 Kafka 连接器可靠地摄取和导出数据，无需编写自定义代码。",
+          "slug": "kafka-connect-sink-source",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8129,
+          "title": "故障恢复策略",
+          "meta_title": "流处理恢复策略",
+          "meta_description": "为集群故障、网络分区和“毒丸”消息制定应对计划。",
+          "slug": "failure-recovery-strategies",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8130,
+          "title": "实战：运行中的模式演进",
+          "meta_title": "实操：处理模式演进",
+          "meta_description": "更新生产者模式并验证消费者兼容性，无需重启数据管道。",
+          "slug": "hands-on-schema-evolution",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1422,
+      "title": "性能调优与监控",
+      "meta_title": "调优 Flink 与 Kafka 性能",
+      "meta_description": "优化数据管道性能。分析反压，调整内存管理，并配置序列化。",
+      "number": 7,
+      "slug": "performance-tuning-monitoring",
+      "content": "部署流式数据管道不仅需要功能代码；它还需要一套权衡吞吐量与延迟的配置策略。Apache Flink 和 Kafka 的默认设置通常将兼容性置于原始速度之前，这可能在处理负载增加时导致资源未充分利用或出现稳定性问题。本单元介绍在高速运行环境中维持性能所必需的具体配置和操作实践。\n\n我们首先分析反压。在分布式系统中，慢速的下游操作器会将压力沿着处理图向上回传，最终会停止数据源。您将学习如何解读 Flink 的反压指标，以准确定位您拓扑结构中的瓶颈。之后，我们会查看内存管理。Flink 采用一套复杂的内存分级结构运行，同时管理 JVM 堆内存和堆外直接内存中的数据。理解如何配置网络缓冲区大小和分配内存槽位，对于防止 `OutOfMemoryError` 崩溃以及减少垃圾回收停顿是必需的。\n\n状态访问延迟是另一个常见的性能瓶颈。由于我们使用 RocksDB 进行大规模状态管理，我们将调整其压缩方式和块缓存设置，以最小化磁盘 I/O。在数据摄入端，我们会测量 Kafka 消费者延迟，其技术定义如下：\n\n$$Lag = \\text{LogEndOffset} - \\text{CurrentOffset}$$\n\n监控此指标可确保应用程序与输入速率保持同步。本章以一个关于处理数据倾斜的实践练习结束，您将重新分配键以消除那些限制整个集群性能的“热点”分区。",
+      "sections": [
+        {
+          "id": 8131,
+          "title": "识别反压",
+          "meta_title": "Flink 反压分析",
+          "meta_description": "使用 Flink 指标和 UI 定位并诊断反压来源。",
+          "slug": "identifying-backpressure",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8132,
+          "title": "内存管理与槽位分配",
+          "meta_title": "Flink 内存管理",
+          "meta_description": "配置 TaskManager 内存段、网络缓冲区和槽位共享组。",
+          "slug": "memory-management-slot-allocation",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8133,
+          "title": "优化 RocksDB 性能",
+          "meta_title": "RocksDB 性能优化",
+          "meta_description": "优化 RocksDB 配置参数以实现高吞吐量的状态访问。",
+          "slug": "tuning-rocksdb-performance",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8134,
+          "title": "Kafka 消费者滞后分析",
+          "meta_title": "监控 Kafka 消费者滞后",
+          "meta_description": "对消费者组滞后进行监控和预警，以避免数据丢失或违反服务等级协议。",
+          "slug": "kafka-consumer-lag-analysis",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8135,
+          "title": "实操：解决数据倾斜",
+          "meta_title": "实践：处理数据倾斜",
+          "meta_description": "识别数据倾斜问题，并实施再平衡策略以恢复管道性能。",
+          "slug": "hands-on-resolving-skewed-data",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 1423,
+      "title": "实时AI与特征工程",
+      "meta_title": "使用Flink实现实时AI特征",
+      "meta_description": "构建AI管道。计算实时特征，服务模型，并处理流上的请求-响应模式。",
+      "number": 8,
+      "slug": "real-time-ai-feature-engineering",
+      "content": "机器学习系统只有在输入数据反映环境当前状态时才能有效运行。在传统批处理架构中，特征工程周期性进行，导致在推断时数据过时。本章处理将这些计算转移到流处理环境所带来的工程难题，从而实现模型预测的毫秒级延迟。\n\n我们首先分析在线特征生成。你将编写Flink作业来计算滑动窗口上的聚合，例如计算时间序列的移动平均值。如果模型需要特定特征在窗口 $w$ 上的平均值 $\\bar{x}$，流处理器必须维护状态并在新事件到达时增量更新它：\n\n$$ \\bar{x}_t = \\frac{1}{N} \\sum_{i=1}^{N} x_{t-i} $$\n\n在特征生成之后，我们查看模型服务的架构模式。你将比较将模型直接嵌入Flink TaskManager以避免网络开销，与通过HTTP或gRPC使用外部推断服务之间的优劣权衡。本节还包含对资源隔离以及独立于流处理集群进行扩展的讨论。\n\n本章也介绍异步流上的请求-响应模式。由于Kafka将生产者和消费者解耦，实现同步面向用户的应用需要使用临时回复队列的特定关联策略。最后，我们将这些组件与特征存储集成。你将配置管道将计算出的特征写入低延迟存储，保证训练数据集和在线推断环境之间的一致性。",
+      "sections": [
+        {
+          "id": 8136,
+          "title": "在线特征生成",
+          "meta_title": "实时特征工程",
+          "meta_description": "实时计算机器学习模型的滑动窗口聚合和复杂特征。",
+          "slug": "online-feature-generation",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8137,
+          "title": "流处理中的模型服务模式",
+          "meta_title": "Flink中的机器学习模型服务",
+          "meta_description": "评估嵌入模型与调用外部推理服务的策略。",
+          "slug": "model-serving-patterns-streams",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8138,
+          "title": "基于异步流的请求-响应机制",
+          "meta_title": "Kafka 中的请求-响应模式",
+          "meta_description": "实现关联ID和临时队列，以处理基于异步主题的同步请求。",
+          "slug": "request-response-async-streams",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8139,
+          "title": "特征存储的整合",
+          "meta_title": "实时数据流入特征存储",
+          "meta_description": "将实时算出的特征数据传输到Redis或Cassandra等快速响应的存储中。",
+          "slug": "feature-store-integration",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 8140,
+          "title": "动手实践：实时推理管道",
+          "meta_title": "实践：实时机器学习推理",
+          "meta_description": "构建一个在实时数据流上生成特征并提供模型预测的管道。",
+          "slug": "hands-on-real-time-inference",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

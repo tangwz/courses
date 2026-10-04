@@ -1,0 +1,45 @@
+{
+  "id": 4081,
+  "title": "配置 MLflow",
+  "meta_title": "配置 MLflow 进行实验追踪",
+  "meta_description": "安装 MLflow 并设置追踪环境（本地和服务器）的指南。",
+  "content": "<p>MLflow 为系统地记录机器学习 (machine learning)实验提供了一种实用且直接的方法。MLflow 的上手过程很简单。</p>\n<h3>安装</h3>\n<p>MLflow 是一个 Python 包，可以使用 Python 标准包管理器 pip 进行安装。打开您的终端或命令行界面，然后运行：</p>\n<pre><code class=\"language-bash\">pip install mlflow\n</code></pre>\n<p>此命令会安装 MLflow 核心库，其中包括本章的重点——追踪组件。根据您的项目需求，您之后可能还会安装额外的 MLflow 扩展（例如用于数据库后端或特定机器学习 (machine learning)库集成的 <code>mlflow[extras]</code>），但基础安装目前足够使用。</p>\n<p>要验证安装，您可以运行：</p>\n<pre><code class=\"language-bash\">mlflow --version\n</code></pre>\n<p>这会打印出已安装的 MLflow 版本号。</p>\n<h3>MLflow 追踪环境</h3>\n<p>MLflow 追踪设计灵活，允许您根据配置和需求以不同方式记录运行。当您的 Python 脚本使用 MLflow 日志函数（例如 <code>mlflow.log_param()</code> 或 <code>mlflow.log_metric()</code>，我们稍后会讲到）时，它需要知道<em>将</em>这些信息发送到哪里。这个目标地点被称为<strong>追踪后端</strong>。MLflow 支持多种后端类型：</p>\n<ol>\n<li>\n<p><strong>本地文件系统（默认）：</strong> 这是最简单的选项，也是您未进行其他配置时的默认行为。当您运行一个已集成 MLflow 的脚本时，MLflow 会自动在脚本执行的当前工作目录下创建一个名为 <code>mlruns</code> 的目录。<code>mlruns</code> 内部会以结构化的文件格式存储运行元数据、参数 (parameter)、指标和工件。这非常适合个人实验和快速上手。</p>\n</li>\n<li>\n<p><strong>本地追踪服务器：</strong> 您可以运行一个本地 MLflow 追踪服务器。这提供一个专门的用户界面 (UI)，您可以通过网页浏览器访问它来查看和比较运行，即使这些运行来自您机器上的不同目录或项目。服务器默认仍将数据存储在本地文件系统（使用指定目录）上，但集中了访问权限。</p>\n</li>\n<li>\n<p><strong>远程追踪服务器：</strong> 为了协作或更持久的数据存储，您可以配置 MLflow 以记录到远程追踪服务器。此服务器可以将追踪数据存储在关系型数据库（例如 PostgreSQL、MySQL）等后端中，并将工件存储在共享存储（例如 S3、Azure Blob Storage、GCS 或 NFS）中。这种设置在团队环境或 MLOps 流水线中很常见。</p>\n</li>\n</ol>\n<p>我们来看看如何使用前两个选项。</p>\n<h4>选项 1：记录到本地文件系统</h4>\n<p>如前所述，安装 MLflow 后，此选项无需额外配置。如果您运行包含 MLflow 日志命令的 Python 脚本，它会自动创建 <code>mlruns</code> 目录。</p>\n<pre><code class=\"language-python\"># 示例：simple_script.py\nimport mlflow\nimport os\n\n# 无需服务器配置，MLflow 默认记录到 ./mlruns\nmlflow.start_run()\n\n# 记录一些示例数据\nmlflow.log_param(\"learning_rate\", 0.01)\nmlflow.log_metric(\"accuracy\", 0.95)\n\n# 创建一个示例工件文件\nos.makedirs(\"outputs\", exist_ok=True)\nwith open(\"outputs/model.txt\", \"w\") as f:\n    f.write(\"This is a dummy model file.\")\nmlflow.log_artifact(\"outputs/model.txt\")\n\nmlflow.end_run()\n\nprint(\"MLflow 运行已记录到本地 './mlruns' 目录。\")\n</code></pre>\n<p>如果您执行 <code>python simple_script.py</code>，您会发现出现了一个新的 <code>mlruns</code> 目录。</p>\n<p>要在 MLflow UI 中查看这些本地运行，请在终端中导航到<em>包含</em> <code>mlruns</code> 文件夹的目录，然后运行：</p>\n<pre><code class=\"language-bash\">mlflow ui\n</code></pre>\n<p>此命令会启动一个本地 Web 服务器（通常在 <code>http://127.0.0.1:5000</code> 或 <code>http://localhost:5000</code>），该服务器提供 MLflow 追踪 UI。在浏览器中打开此地址，您将看到脚本运行的结果。在终端中按 <code>Ctrl+C</code> 可以停止 UI 服务器。</p>\n<h4>选项 2：使用本地追踪服务器</h4>\n<p>虽然 <code>mlflow ui</code> 直接从 <code>mlruns</code> 读取，但有时您需要一个持久的服务器进程，可以接受您机器上（甚至本地网络中的其他机器上）任何位置运行的脚本的运行记录。</p>\n<p>首先，启动追踪服务器。选择一个目录作为服务器的数据存储位置（此目录将包含 <code>mlruns</code> 的等效内容）。我们使用一个名为 <code>mlflow_server_data</code> 的目录。</p>\n<pre><code class=\"language-bash\"># 为服务器数据创建目录\nmkdir mlflow_server_data\n\n# 启动 MLflow 服务器\n# --backend-store-uri: 指定存储运行元数据、指标、参数、标签的位置。\n# --default-artifact-root: 指定存储工件（如模型、文件）的位置。\n# --host: 要监听的网络接口（127.0.0.1 是本地主机）\n# --port: 要使用的端口（默认是 5000，这里使用 8080）\nmlflow server \\\n    --backend-store-uri ./mlflow_server_data \\\n    --default-artifact-root ./mlflow_server_data \\\n    --host 127.0.0.1 \\\n    --port 8080\n</code></pre>\n<p>此命令会在您的终端中启动服务器进程。它会持续运行，直到您停止它（例如，通过 <code>Ctrl+C</code>）。</p>\n<p>现在，您需要让您的 Python 脚本记录到此服务器，而不是本地文件系统。您可以通过在启动运行<em>之前</em>，使用 <code>mlflow.set_tracking_uri()</code> 函数设置<strong>追踪 URI</strong> 来实现。</p>\n<pre><code class=\"language-python\"># 示例：script_log_to_server.py\nimport mlflow\nimport os\n\n# 设置追踪 URI，指向正在运行的服务器\nmlflow.set_tracking_uri(\"http://127.0.0.1:8080\") \n\n# 现在，当我们启动一个运行，它会记录到服务器\nmlflow.start_run()\n\nmlflow.log_param(\"learning_rate\", 0.02)\nmlflow.log_metric(\"accuracy\", 0.98)\n\n# 创建另一个示例工件\nos.makedirs(\"outputs\", exist_ok=True)\nwith open(\"outputs/advanced_model.txt\", \"w\") as f:\n    f.write(\"This is another dummy model file.\")\nmlflow.log_artifact(\"outputs/advanced_model.txt\")\n\nmlflow.end_run()\n\nprint(\"MLflow 运行已记录到服务器 http://127.0.0.1:8080\")\n</code></pre>\n<p>如果您运行 <code>python script_log_to_server.py</code>（在另一个终端中运行着 <code>mlflow server</code> 命令时），运行数据将被发送到服务器并存储在 <code>mlflow_server_data</code> 目录中。您可以通过在网页浏览器中打开 <code>http://127.0.0.1:8080</code> 来查看这些运行。</p>\n<p>或者，您可以使用 <code>MLFLOW_TRACKING_URI</code> 环境变量来设置追踪 URI，这通常更适合自动化工作流：</p>\n<pre><code class=\"language-bash\">export MLFLOW_TRACKING_URI=\"http://127.0.0.1:8080\"\npython your_training_script.py \n</code></pre>\n<p>如果设置了此环境变量，<code>mlflow.start_run()</code> 将自动使用它，您的代码中就不需要 <code>mlflow.set_tracking_uri()</code> 了。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1molai3\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\"];\n  subgraph cluster_local {\n    label = \"本地文件系统记录\";\n    style=dashed;\n    color=\"#adb5bd\";\n    script_local [label=\"Python 脚本\"];\n    mlruns [label=\"mlruns 目录\", shape=folder, style=filled, color=\"#e9ecef\"];\n    script_local -> mlruns [label=\"直接记录\"];\n    ui_local [label=\"mlflow ui (读取 ./mlruns)\"];\n    ui_local -> mlruns [style=dotted, arrowhead=none, label=\"读取自\"];\n  }\n  subgraph cluster_server {\n    label = \"本地服务器记录\";\n    style=dashed;\n    color=\"#adb5bd\";\n    script_server [label=\"Python 脚本\\n(mlflow.set_tracking_uri(...))\"];\n    server [label=\"mlflow 服务器\\n(例如，localhost:8080)\"];\n    server_data [label=\"服务器数据目录\\n(例如，./mlflow_server_data)\", shape=folder, style=filled, color=\"#e9ecef\"];\n    script_server -> server [label=\"发送记录\"];\n    server -> server_data [label=\"存储数据\"];\n    ui_server [label=\"网页浏览器\"];\n    ui_server -> server [label=\"访问 UI\"];\n  }\n  subgraph cluster_remote {\nlabel = \"远程服务器记录\";\n    style=dashed;\n    color=\"#adb5bd\";\n    script_remote [label=\"Python 脚本\\n(远程 URI)\"];\n    remote_server [label=\"远程 MLflow 服务器\\n(云端/本地部署)\"];\n    database [label=\"数据库后端\", shape=cylinder, style=filled, color=\"#a5d8ff\"];\n    artifact_store [label=\"工件存储\\n(S3, GCS 等)\", shape=folder, style=filled, color=\"#ffd8a8\"];\n    script_remote -> remote_server;\n    remote_server -> database [label=\"元数据\"];\n    remote_server -> artifact_store [label=\"工件\"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1molai3\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>不同的 MLflow 追踪设置配置。Python 脚本可以直接记录到本地 <code>mlruns</code> 目录，到本地 <code>mlflow server</code> 进程（集中存储），或到通常用于团队或生产环境的远程服务器。</p>\n</blockquote>\n<h4>选择您的设置</h4>\n<ul>\n<li><strong>简单开始：</strong> 对于初步尝试或个人项目，直接记录到本地文件系统（<code>mlruns</code>）并使用 <code>mlflow ui</code> 通常是最简单的上手方法。</li>\n<li><strong>本地集中：</strong> 如果您在同一台机器上从不同项目目录运行实验并希望获得统一的 UI 视图，运行一个指向共享数据目录的本地 <code>mlflow server</code> 是一个不错的下一步。</li>\n<li><strong>团队协作 / 持久性：</strong> 当在团队中工作，需要独立于本地机器的持久运行历史，或集成到 CI/CD 时，配置带数据库后端和共享工件存储的远程追踪服务器是标准做法。远程服务器的配置细节很大程度上取决于所选的后端（数据库类型、云存储供应商），并遵循设置追踪 URI 的类似原则。</li>\n</ul>\n<p>对于本章的练习，记录到本地文件系统或使用本地 <code>mlflow server</code> 将足够使用。既然 MLflow 已安装，并且您已明白基本配置选项，那么我们继续调整您的训练代码，使其能够实际记录有用信息。</p>",
+  "slug": "setting-up-mlflow",
+  "updates": [],
+  "references": [
+    {
+      "id": 7877,
+      "title": "MLflow Tracking",
+      "author": "Databricks, Inc.",
+      "year": "2024",
+      "publisher": "Databricks, Inc.",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow实验追踪组件的官方文档，涵盖安装、API以及各种服务器配置。",
+      "order": 1,
+      "created_at": "2025-09-05T01:48:31.578413Z",
+      "updated_at": "2025-09-08T14:10:07.904309Z"
+    },
+    {
+      "id": 7879,
+      "title": "MLflow: A Machine Learning Lifecycle Platform",
+      "author": "Matei Zaharia, Andy Konwinski, Ben Lorica, Jules S. Damji, Ali Ghodsi, and Aaron Davidson",
+      "year": "2019",
+      "publisher": "ACM",
+      "journal": "ACM Queue",
+      "volume": "17",
+      "pages": "84-93",
+      "url": "https://dl.acm.org/doi/10.1145/3361098.3361099",
+      "doi": "10.1145/3361098.3361099",
+      "note": "介绍MLflow平台的原始出版物，详细阐述了其架构和包括追踪系统在内的各个组件的设计原则。",
+      "order": 3,
+      "created_at": "2025-09-05T01:48:31.587843Z",
+      "updated_at": "2025-09-08T14:10:11.840042Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

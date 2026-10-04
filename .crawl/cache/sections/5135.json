@@ -1,0 +1,45 @@
+{
+  "id": 5135,
+  "title": "LangChain 介绍",
+  "meta_title": "LangChain 介绍 | LangChain 基础",
+  "meta_description": "LangChain 的目的、架构和主要组成概述。",
+  "content": "<p>直接使用 <code>requests</code> 等 Python 库或供应商特定的 SDK 与大型语言模型 (LLM) API 交互很重要。这让您可以发送提示并接收补全。然而，构建比简单问答更复杂的应用程序通常涉及多个步骤：动态格式化提示，可能需要对 LLM 进行多次调用，与外部工具（如搜索引擎或数据库）交互，以及构造最终输出。手动管理这种繁琐性会很快变得麻烦且容易出错。</p>\n<p>这就是 LangChain 出现的地方。LangChain 是一个开源框架，旨在简化使用语言模型开发应用程序。它提供了一个标准、可扩展的接口和组件，用于创建精细的工作流程。可以将其视为一个工具包，帮助您组装 LLM 驱动应用程序所需的构成要素，而不是从零开始构建每个连接和交互。</p>\n<p>使用 LangChain 这样框架的主要目的是管理复杂情况并提高模块化程度。LangChain 鼓励您将应用程序分解为独立、易于管理的部分，而不是编写庞大的脚本。它为常见任务提供了抽象，例如：</p>\n<ul>\n<li><strong>与模型交互：</strong> 提供与各种 LLM 提供商（如 OpenAI、Anthropic、Cohere 或托管在 Hugging Face 上的开源模型）交互的一致方式，而无需学习每个具体 API 的细节。</li>\n<li><strong>管理提示：</strong> 提供工具，用于创建动态、可重用的提示模板，这些模板可以包含用户输入、之前步骤的上下文 (context)或从外部来源获取的数据。</li>\n<li><strong>结构化输出：</strong> 包含名为“输出解析器”的实用程序，有助于将 LLM 通常是非结构化的文本输出转换为更易用的格式，例如 JSON 对象或 Python 数据类。</li>\n<li><strong>连接组件：</strong> 支持创建“链”（Chains），它定义操作序列，将提示、模型、解析器和其他工具连接起来，以执行更复杂的任务。我们将在下一章中更详细地介绍链。</li>\n</ul>\n<p>本质上，LangChain 提供了一组可以组合的构成要素或模块。本章我们将重点关注的几个重要模块是 <code>Models</code>、<code>Prompts</code> 和 <code>Output Parsers</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1lgxcsj\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#868e96\"];\n\n  subgraph cluster_langchain {\n    label = \"LangChain 应用程序\";\n    bgcolor=\"#e9ecef\";\n    color=\"#adb5bd\";\n    fontname=\"Arial\";\n    fontsize=11;\n\n    PromptTemplate [label=\"提示模板\", shape=note, fillcolor=\"#a5d8ff\", style=\"filled, rounded\"];\n    LLM [label=\"LLM 模型\\n(例如：OpenAI)\", shape=cylinder, fillcolor=\"#bac8ff\", style=\"filled, rounded\"];\n    OutputParser [label=\"输出解析器\", shape=cds, fillcolor=\"#b2f2bb\", style=\"filled, rounded\"];\n\n    PromptTemplate -> LLM [label=\"格式化提示\"];\n    LLM -> OutputParser [label=\"原始响应\"];\n  }\n\n  UserInput [label=\"用户输入\", shape=ellipse, fillcolor=\"#ffec99\", style=\"filled, rounded\"];\n  StructuredOutput [label=\"结构化输出\", shape=ellipse, fillcolor=\"#d8f5a2\", style=\"filled, rounded\"];\n\n  UserInput -> PromptTemplate;\n  OutputParser -> StructuredOutput;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1lgxcsj\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LangChain 工作流程的简要视图：用户输入由提示模板格式化，发送给 LLM 模型，响应再由输出解析器结构化。</p>\n</blockquote>\n<p>这种基于组件的方法使您的代码更简洁、更易于调试且易于调整。如果您想替换一个 LLM 或改变输出解析方式，通常只需要修改相应组件，而无需重写应用程序的大部分逻辑。</p>\n<p>在以下部分中，我们将详细研究这些 LangChain 主要组件，首先介绍 LangChain 如何抽象化与不同语言模型的交互。您将学会如何使用这些构成要素，使用 LangChain 框架构建您的第一个简单 LLM 应用程序。</p>",
+  "slug": "introduction-to-langchain",
+  "updates": [],
+  "references": [
+    {
+      "id": 13010,
+      "title": "LangChain Documentation",
+      "author": "LangChain Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/get_started/introduction",
+      "doi": "",
+      "note": "理解LangChain架构、模块和API的主要官方资源。",
+      "order": 1,
+      "created_at": "2025-09-05T08:26:40.764317Z",
+      "updated_at": "2025-09-09T03:03:29.575135Z"
+    },
+    {
+      "id": 13011,
+      "title": "The Architecture of a New Generative AI Application",
+      "author": "Harrison Chase",
+      "year": "2023",
+      "publisher": "LangChain Blog",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://blog.langchain.dev/the-architecture-of-a-new-generative-ai-application/",
+      "doi": "",
+      "note": "阐释构建复杂LLM应用框架背后的设计原则和动机。",
+      "order": 2,
+      "created_at": "2025-09-05T08:26:40.778721Z",
+      "updated_at": "2025-09-09T03:04:57.447812Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2351,
+  "title": "使用 `concurrent.futures` 实现高级并发",
+  "meta_title": "Python `concurrent.futures` 用于机器学习",
+  "meta_description": "使用 `concurrent.futures` 模块（ThreadPoolExecutor, ProcessPoolExecutor）简化并发执行。",
+  "content": "<p>在 Python 中管理并发和并行，尤其是针对机器学习 (machine learning)工作负载，当直接处理线程或进程时可能会面临挑战。这通常涉及复杂的通信处理和细致的资源清理。Python 3.2 中引入的 <code>concurrent.futures</code> 模块提供了一个更高级别的接口，用于异步执行可调用对象，从而实现线程池和进程池的更高效管理。</p>\n<p>它抽象化了大量与创建、管理和加入线程或进程相关的样板代码。其主要思想围绕着 <code>Executor</code> 抽象基类，该类提供了异步执行调用的方法。它提供了两种具体实现：用于基于线程的并发的 <code>ThreadPoolExecutor</code> 和用于基于进程的并行的 <code>ProcessPoolExecutor</code>。</p>\n<h3>Executor 接口和 Future 对象</h3>\n<p><code>concurrent.futures</code> 模块的核心是 <code>Executor</code> 子类和 <code>Future</code> 对象。你实例化一个执行器（可以是 <code>ThreadPoolExecutor</code> 或 <code>ProcessPoolExecutor</code>），然后向其提交任务。</p>\n<ol>\n<li><strong><code>Executor.submit(fn, *args, **kwargs)</code></strong>：此方法安排可调用对象 <code>fn</code> 以 <code>fn(*args, **kwargs)</code> 的形式执行，并返回一个表示可调用对象执行的 <code>Future</code> 对象。</li>\n<li><strong><code>Future</code> 对象</strong>：此对象表示一个可能已完成也可能尚未完成的计算。它充当结果的占位符。你可以查询其状态、添加回调，并获取结果或执行期间引发的任何异常。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-k31o28\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  Client [label=\"你的代码\"];\n  Executor [label=\"执行器\\n(线程池或进程池)\"];\n  Worker [label=\"工作者\\n(线程或进程)\"];\n  Future [label=\"Future 对象\"];\n  Result [label=\"结果或异常\", shape=ellipse];\n\n  Client -> Executor [label=\"提交(任务)\"];\n  Executor -> Worker [label=\"分配任务\"];\n  Executor -> Future [label=\"立即返回\"];\n  Client -> Future [label=\"查询状态\\n(例如：done())\"];\n  Worker -> Result [label=\"计算\"];\n  Future -> Result [label=\"持有引用\"];\n  Client -> Future [label=\"result() / exception()\\n(阻塞直到完成)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-k31o28\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 <code>concurrent.futures</code> 的基本流程：向执行器提交任务，立即收到一个 Future 对象，随后从 Future 中获取结果。</p>\n</blockquote>\n<p><code>Future</code> 对象的主要方法包括：</p>\n<ul>\n<li><code>done()</code>: 如果调用已成功取消或完成运行，则返回 <code>True</code>。</li>\n<li><code>result(timeout=None)</code>: 返回调用返回的值。如果调用尚未完成，此方法将等待最多 <code>timeout</code> 秒。如果调用引发了异常，此方法会引发相同的异常。如果 future 被取消，它会引发 <code>CancelledError</code>。</li>\n<li><code>exception(timeout=None)</code>: 返回调用引发的异常对象。如果调用完成时未引发异常，则返回 <code>None</code>。如果尚未完成，它会像 <code>result()</code> 一样等待。</li>\n<li><code>add_done_callback(fn)</code>: 附加一个可调用对象 <code>fn</code>，当 future 被取消或完成运行后，将以 future 对象作为唯一参数 (parameter)调用该 <code>fn</code>。</li>\n</ul>\n<h3>用于 I/O 密集型任务的 ThreadPoolExecutor</h3>\n<p>如前所述，CPython 中的线程适合处理 I/O 密集型任务，因为在阻塞 I/O 操作（如网络请求、磁盘读写）期间，GIL 会被解除。<code>ThreadPoolExecutor</code> 管理一个线程池，对提交的任务重复利用这些线程。这避免了为每个任务创建新线程的开销。</p>\n<p>考虑从不同 URL 获取多个数据集或配置文件。这主要是一个 I/O 密集型操作。</p>\n<pre><code class=\"language-python\">import concurrent.futures\nimport requests\nimport time\nimport logging\n\nlogging.basicConfig(level=logging.INFO, format='%(asctime)s - %(threadName)s - %(message)s')\n\nURLS = [\n    'https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/sklearn/datasets/data/iris.csv',\n    'https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/sklearn/datasets/data/diabetes_data.csv.gz',\n    'https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/sklearn/datasets/data/wine_data.csv'\n]\n\ndef download_data(url):\n    \"\"\"从 URL 下载数据并返回其大小。\"\"\"\n    try:\n        logging.info(f\"Starting download: {url.split('/')[-1]}\")\n        response = requests.get(url, timeout=10)\n        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)\n        logging.info(f\"Finished download: {url.split('/')[-1]}, Size: {len(response.content)}\")\n        return url, len(response.content)\n    except requests.exceptions.RequestException as e:\n        logging.error(f\"Error downloading {url}: {e}\")\n        return url, None\n\n# 使用上下文管理器进行自动关闭\nstart_time = time.time()\nresults = {}\n\n# max_workers 决定池中线程的数量\nwith concurrent.futures.ThreadPoolExecutor(max_workers=3, thread_name_prefix='Downloader') as executor:\n    # 提交任务并存储 Future 对象\n    future_to_url = {executor.submit(download_data, url): url for url in URLS}\n\n    # 结果一完成就处理\n    for future in concurrent.futures.as_completed(future_to_url):\n        url = future_to_url[future]\n        try:\n            url_res, data_size = future.result()\n            if data_size is not None:\n                results[url_res] = data_size\n                logging.info(f\"Result obtained for {url_res.split('/')[-1]}\")\n            else:\n                logging.warning(f\"Download failed for {url_res.split('/')[-1]}\")\n        except Exception as exc:\n            logging.error(f'{url} generated an exception: {exc}')\n\nend_time = time.time()\n\nprint(f\"\\nDownloaded data sizes: {results}\")\nprint(f\"Total time using ThreadPoolExecutor: {end_time - start_time:.2f} seconds\")\n\n</code></pre>\n<p>在此示例中，<code>ThreadPoolExecutor</code> 并发管理多个下载任务。由于 <code>requests.get</code> 涉及等待网络响应（I/O），线程可以解除 GIL，允许其他线程运行，从而实现比顺序下载更快的整体完成速度。我们使用 <code>concurrent.futures.as_completed</code> 在结果可用时立即处理它们。</p>\n<h3>用于 CPU 密集型任务的 ProcessPoolExecutor</h3>\n<p>对于 CPython 中的 CPU 密集型任务，当 GIL 阻止 Python 字节码在使用线程时在多个 CPU 核上真正并行执行时，<code>ProcessPoolExecutor</code> 是更优的选择。它管理一个独立的进程池。每个进程都有自己的 Python 解释器和内存空间，从而绕过了 GIL 的限制。</p>\n<p>提交给 <code>ProcessPoolExecutor</code> 执行的任务的数据以及从这些任务返回的结果必须是可 pickle 化的，因为进程间通信通常涉及序列化。</p>\n<p>我们来修改一个 CPU 密集型特征计算任务。</p>\n<pre><code class=\"language-python\">import concurrent.futures\nimport time\nimport math\nimport os\n\n# 一个模拟的 CPU 密集型函数\ndef compute_heavy_feature(item_id, data_value):\n    \"\"\"模拟一个复杂的计算。\"\"\"\n    pid = os.getpid()\n    print(f\"[PID {pid}] Processing item {item_id}...\")\n    result = 0\n    for i in range(int(data_value * 1e6)): # Simulate work\n        result += math.sqrt(i) * math.sin(i)\n    print(f\"[PID {pid}] Finished item {item_id}.\")\n    return item_id, result\n\ndata_to_process = {\n    1: 5.1,\n    2: 6.3,\n    3: 4.8,\n    4: 7.2,\n    5: 5.5,\n    6: 6.8\n}\n\n# 使用上下文管理器进行自动关闭\nstart_time = time.time()\nresults = {}\n\n# 默认情况下，使用 os.cpu_count() 个工作进程\n# 确保此代码块仅在主脚本中运行\nif __name__ == \"__main__\": # 对于某些操作系统的多进程来说很重要\n    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:\n        # 提交任务：函数、参数1、参数2、...\n        future_to_item = {executor.submit(compute_heavy_feature, item_id, value): item_id\n                          for item_id, value in data_to_process.items()}\n\n        # 获取结果\n        for future in concurrent.futures.as_completed(future_to_item):\n            item_id = future_to_item[future]\n            try:\n                item_res, computed_value = future.result()\n                results[item_res] = computed_value\n                print(f\"Main: Result received for item {item_res}\")\n            except Exception as exc:\n                print(f'Main: Item {item_id} generated an exception: {exc}')\n\n    end_time = time.time()\n\n    print(f\"\\nComputed feature results (first 10 chars): { {k: str(v)[:10] + '...' for k, v in results.items()} }\")\n    print(f\"Total time using ProcessPoolExecutor: {end_time - start_time:.2f} seconds\")\n</code></pre>\n<p><strong>注意：</strong> 在脚本中使用 <code>multiprocessing</code>（<code>ProcessPoolExecutor</code> 依赖于它）时，特别是 Windows 上，<code>if __name__ == \"__main__\":</code> 守护代码块很重要，以防止与进程创建相关的问题。</p>\n<p>在此，<code>ProcessPoolExecutor</code> 创建多个独立的 Python 进程。每个 <code>compute_heavy_feature</code> 调用都在一个单独的进程中运行，允许多个计算在不同的 CPU 核上并行进行，从而显著加快了 CPU 密集型工作负载的总计算时间。</p>\n<h3>使用 Executor.map</h3>\n<p>对于想要将同一函数应用于可迭代对象中多个项的更简单情况，<code>Executor.map</code> 提供了一个类似于内置 <code>map</code> 函数的接口。它将函数应用于每个项，并返回一个迭代器，该迭代器按照<em>原始可迭代对象的顺序</em>生成结果。</p>\n<pre><code class=\"language-python\">import concurrent.futures\nimport time\nimport os\n\ndef square_number(x):\n    pid = os.getpid()\n    # print(f\"[PID {pid}] 计算 {x} 的平方\")\n    time.sleep(0.1) # 模拟一些工作\n    return x * x\n\nnumbers = range(10)\n\nif __name__ == \"__main__\":\n    start_time = time.time()\n    # 对于潜在的 CPU 密集型工作，使用 ProcessPoolExecutor\n    with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:\n        # map 返回一个按顺序生成结果的迭代器\n        results_iterator = executor.map(square_number, numbers)\n\n        # 消费迭代器以获取结果\n        results = list(results_iterator)\n\n    end_time = time.time()\n\n    print(f\"Original numbers: {list(numbers)}\")\n    print(f\"Squared numbers: {results}\")\n    print(f\"Total time using map: {end_time - start_time:.2f} seconds\")\n</code></pre>\n<p><code>map</code> 很方便，但灵活性不如 <code>submit</code>。它按顺序等待结果，处理异常需要遍历结果迭代器，并可能在迭代周围使用 <code>try...except</code> 代码块。<code>submit</code> 结合 <code>as_completed</code> 允许在任务完成时立即处理结果，如果任务持续时间不同，这会更高效。</p>\n<h3>上下文 (context)管理器用法</h3>\n<p><code>ThreadPoolExecutor</code> 和 <code>ProcessPoolExecutor</code> 都实现了上下文管理器协议。使用 <code>with</code> 语句可确保在退出代码块时执行器被正确关闭（调用 <code>executor.shutdown(wait=True)</code>），即使发生错误也是如此。这是使用执行器的推荐方式，因为它保证资源（线程或进程）得到正确清理。</p>\n<h3>选择合适的执行器</h3>\n<p><code>ThreadPoolExecutor</code> 和 <code>ProcessPoolExecutor</code> 之间的选择主要取决于你的工作负载性质以及 GIL 的限制：</p>\n<ul>\n<li><strong><code>ThreadPoolExecutor</code></strong>：最适合 I/O 密集型任务（网络请求、文件操作），因为线程会花费大量时间等待，从而允许 GIL 被解除。它的开销比进程创建要低。</li>\n<li><strong><code>ProcessPoolExecutor</code></strong>：对于 CPU 密集型任务（纯 Python 中的大量数值计算、复杂数据转换）是必要的，当你需要跨多个 CPU 核的真正并行时。它克服了 GIL 的限制，但由于进程创建和进程间通信（pickling）会带来更高的开销。</li>\n</ul>\n<p><code>concurrent.futures</code> 模块大大简化了 Python 中并发操作的管理。通过 <code>ThreadPoolExecutor</code> 和 <code>ProcessPoolExecutor</code> 提供统一的接口，它使开发者能够根据任务特点轻松应用线程或多进程，从而加速涉及 I/O 或密集计算的机器学习 (machine learning)工作流程。在选择合适的执行器时，请记住考虑任务类型（I/O 密集型 vs. CPU 密集型）以及每种方法相关的开销。</p>",
+  "slug": "concurrent-futures-concurrency",
+  "updates": [],
+  "references": [
+    {
+      "id": 4917,
+      "title": "concurrent.futures - Launching parallel tasks",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/concurrent.futures.html",
+      "doi": "",
+      "note": "`concurrent.futures`模块的官方权威文档，详细介绍了其API、类和使用方法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:57.150091Z",
+      "updated_at": "2025-09-08T03:23:09.956925Z"
+    },
+    {
+      "id": 4919,
+      "title": "Fluent Python, 2nd Edition",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 18-20 (Concurrency)",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056345/",
+      "doi": "",
+      "note": "一本关于现代Python的优秀综合指南，包含专门的并发部分，特别是关于`concurrent.futures`的讲解。",
+      "order": 2,
+      "created_at": "2025-09-04T16:57:57.354895Z",
+      "updated_at": "2025-09-08T03:23:46.798032Z"
+    },
+    {
+      "id": 4921,
+      "title": "Python Concurrency with asyncio",
+      "author": "Matthew Fowler",
+      "year": "2022",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "Part 1 (Foundation for Concurrency)",
+      "url": "https://www.manning.com/books/python-concurrency-with-asyncio",
+      "doi": "",
+      "note": "一本专注于Python并发功能的书籍，深入探讨了`concurrent.futures`及其在线程和进程管理中的作用。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:57.387939Z",
+      "updated_at": "2025-09-08T03:23:11.778985Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3206,
+  "title": "形式验证方法（局限与前景）",
+  "meta_title": "LLM安全的正式验证",
+  "meta_description": "介绍LLM属性形式验证的理念和当前局限。",
+  "content": "<p>与红队测试或基准测试等经验方法相比，形式验证提供了一种根本不同的方法来确保系统正确性。形式验证并非测试缺陷，而是旨在数学上 <em>证明</em> 系统在由其属性定义的所有可能条件下符合特定属性集。对于大型语言模型（LLM），期望是获得关于安全性和对齐 (alignment)性的可证明保证。</p>\n<p>设想能够以数学确定性证明，LLM在给定特定类型输入时将 <em>绝不</em> 生成有害内容，或者它将始终根据其训练数据如实遵循特定指令。这是形式验证的承诺。它包括建立一个系统（LLM或其部分）的正式模型，以及所需属性（例如，安全约束）的正式规范。然后，使用源自逻辑和自动化推理 (inference)的技术，例如模型检查或定理证明，尝试证明模型在逻辑上满足规范。</p>\n<h3>提升LLM安全性的可能性</h3>\n<p>将形式验证应用于LLM的潜在益处很显著：</p>\n<ol>\n<li><strong>强力保证：</strong> 与只能显示错误存在（而非不存在）的测试不同，成功的形式验证可以提供强力保证，确保在验证属性的范围内 <em>不会</em> 出现某些不希望的行为。这对于安全关键应用来说非常需要。</li>\n<li><strong>系统化分析：</strong> 形式方法强制对安全属性进行严格定义。这个过程可以显现出对LLM而言“安全”究竟意味着什么的歧义或理解不足。</li>\n<li><strong>鲁棒性认证：</strong> 它可能认证针对特定类别对抗性攻击的鲁棒性，证明在定义集合内的输入（例如，在特定扰动距离内的输入）无法触发有害输出或绕过安全机制。</li>\n<li><strong>补充方法：</strong> 验证可以针对经验测试难以完全覆盖的方面，可能发现红队测试或标准基准遗漏的极端情况。</li>\n</ol>\n<h3>困难重重：局限与挑战</h3>\n<p>尽管有吸引力，将形式验证严格应用于现代大规模LLM面临巨大障碍：</p>\n<ul>\n<li>\n<p><strong>规模与复杂性：</strong> 最新LLM包含数十亿甚至数万亿参数 (parameter)，以高度复杂、非线性的方式相互作用。穷尽分析此类系统的计算成本随规模呈指数增长（即“维度灾难”）。当前的形式验证技术主要为硬件或较小软件系统开发，无法扩展到验证GPT-4或Llama 3等整个模型的属性。其状态空间之大难以想象。</p>\n</li>\n<li>\n<p><strong>复杂属性的公式化：</strong> 如何数学上定义“无害”、“诚实”或“不具操纵性”，以捕捉人类语言和互动的深度？将这些高层次、通常依赖上下文 (context)的抽象转化为自动化工具可推理 (inference)的精确逻辑公式，极其困难。过于狭窄的正式定义可能可验证但无法反映真实的安全问题，而宽泛的定义可能无法验证。例如，验证“不输出仇恨言论”需要对仇恨言论进行机器可理解的正式定义，涵盖其所有形式，这本身就是一个尚未解决的问题。</p>\n</li>\n<li>\n<p><strong>抽象鸿沟：</strong> 为使验证可行，研究人员常依赖于抽象或简化模型或属性。例如，可能验证LLM的较小、精炼版本的属性，或验证局部行为的线性近似。风险在于，为抽象证明的保证可能不适用于实际运行的复杂LLM。这些简化可能恰好忽略了要预防的弱点。</p>\n</li>\n<li>\n<p><strong>验证与现实：</strong> 形式验证通常分析模型 <em>现有</em> 的结构和参数。它本身不处理源自训练数据（偏见、投毒）的缺陷，除非所验证的属性是专门为此类问题设计的，这增加了另一层复杂性。此外，验证通常假定模型是静态的，而部署中的LLM与上下文、用户历史和外部工具动态交互，不断改变被推理的有效“状态”。</p>\n</li>\n<li>\n<p><strong>连续性：</strong> LLM在连续表示（嵌入 (embedding)）上运行，并涉及连续计算（浮点运算）。许多传统形式验证技术更适合离散状态系统。尽管存在验证连续动态系统的方法，但它们带来了显著复杂性，尤其是在LLM的规模下。</p>\n</li>\n</ul>\n<h3>当前研究与未来方向</h3>\n<p>鉴于这些挑战，将形式验证直接应用于整个大型LLM以实现广泛安全属性，在很大程度上仍是期望。然而，研究正积极寻求更受限但可能有价值的应用：</p>\n<ul>\n<li><strong>验证较小组件：</strong> 努力集中于验证LLM系统内较小、重要的模块，而非验证整个LLM。这可能包括验证安全防护栏、内容过滤器的逻辑，或在较大应用中用于特定任务的较小专业模型的行为。</li>\n<li><strong>属性专用验证：</strong> 研究旨在开发专门用于验证特定、狭义定义的属性的技术。例子包括认证针对某些类型对抗性扰动的鲁棒性边界（例如，使用与区间边界传播相关的技术），或在有限条件下验证简单的行为属性。</li>\n<li><strong>验证引导测试：</strong> 形式方法不一定用于完全证明，但可用于识别数学上具有挑战性或可能包含故障的输入区域或模型状态。这些发现随后可以指导更有针对性的经验测试或红队工作。</li>\n<li><strong>近似与概率验证：</strong> 一些方法追求概率保证（例如，“在这些条件下，输出有害内容的概率小于 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding=\"application/x-tex\">10^{-9}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord\">1</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\"><span class=\"mord mtight\">−</span><span class=\"mord mtight\">9</span></span></span></span></span></span></span></span></span></span></span></span>”）或行为界限，而非绝对确定性。这以完整性换取可行性。</li>\n</ul>\n<p>形式验证是建立系统信任的有力方法。尽管其直接应用于证明当今大规模LLM的综合安全属性，目前受限于规模和复杂语言行为形式化的难度，其原则具有影响力。研究继续拓展可能性，特别是在验证较小组件或特定属性方面。目前，形式验证应被视为构建更安全AI系统的更大工具箱中的一种工具，是严谨测试、红队测试、对抗训练和审慎系统设计的补充而非替代。它指向一个未来，我们可能实现更高水平的保证，即使对整个LLM进行全面证明仍是遥远的目标。</p>",
+  "slug": "formal-verification-approaches",
+  "updates": [],
+  "references": [
+    {
+      "id": 9278,
+      "title": "Model Checking",
+      "author": "Edmund M. Clarke Jr., Orna Grumberg, Doron Peleg",
+      "year": "1999",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mitpress.mit.edu/books/model-checking",
+      "doi": "",
+      "note": "全面介绍了模型检测，这是文中提到的核心形式化验证技术。",
+      "order": 1,
+      "created_at": "2025-09-05T02:24:16.121035Z",
+      "updated_at": "2025-09-08T12:07:51.870266Z"
+    },
+    {
+      "id": 9279,
+      "title": "Reluplex: An Efficient SMT Solver for Verifying Deep Neural Networks",
+      "author": "Guy Katz, Clark Barrett, David L. Dill, Kyle Julian, Mykel J. Kochenderfer",
+      "year": "2017",
+      "publisher": "Springer",
+      "journal": "Computer Aided Verification - 29th International Conference, CAV 2017, Proceedings",
+      "volume": "10426",
+      "pages": "97-117",
+      "url": "https://doi.org/10.1007/978-3-319-63387-9_5",
+      "doi": "10.1007/978-3-319-63387-9_5",
+      "note": "将形式化验证应用于深度神经网络（特别是鲁棒性）的开创性工作，与LLM的鲁棒性认证相关。",
+      "order": 2,
+      "created_at": "2025-09-05T02:24:16.132889Z",
+      "updated_at": "2025-09-08T12:08:22.198261Z"
+    },
+    {
+      "id": 9280,
+      "title": "Formal Specification and Verification of AI Systems: Challenges and Opportunities",
+      "author": "Roderick Bloem, Krishnendu Chatterjee, Ruediger Ehlers, Susmit Jha, and Swarat Chaudhuri",
+      "year": "2020",
+      "publisher": "IEEE",
+      "journal": "IEEE Design & Test",
+      "volume": "37",
+      "pages": "26-34",
+      "url": "https://ieeexplore.ieee.org/document/9073105",
+      "doi": "10.1109/MDAT.2020.2982823",
+      "note": "讨论了将形式化方法应用于AI系统的挑战和机遇，尤其是在定义和验证复杂属性方面，与文中“严峻挑战”部分相符。",
+      "order": 3,
+      "created_at": "2025-09-05T02:24:16.136070Z",
+      "updated_at": "2025-09-08T12:07:57.133546Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

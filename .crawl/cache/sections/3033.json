@@ -1,0 +1,61 @@
+{
+  "id": 3033,
+  "title": "基本实现概述",
+  "meta_title": "Transformer基本实现概述",
+  "meta_description": "概述从组件构建和训练一个简单Transformer模型的步骤。",
+  "content": "<p>训练Transformer需要必要的要素，包括：通过分词 (tokenization)和批处理准备数据，理解损失函数 (loss function)，以及选择合适的优化和正则化 (regularization)策略。一个路线图概述了如何将这些要素与架构组成部分（如编码器和解码器层）组合成一个功能完备的Transformer模型。尽管动手实践练习可能侧重于构建单个组件，但整体实现流程说明了它们如何在 PyTorch 或 TensorFlow 等深度学习 (deep learning)框架中组合起来。</p>\n<h3>构建Transformer模型</h3>\n<p>实现一个Transformer通常涉及定义一个主模型类，该类封装了各种子模块。可以将其想象成用预制部件建造一个复杂的物体。</p>\n<ol>\n<li><strong>模型定义：</strong> 你将首先定义一个类，例如命名为 <code>Transformer</code>，它将包含所有必要的层。在其构造函数（Python 中的 <code>__init__</code>）中，你将实例化其构建模块：\n<ul>\n<li>源和目标嵌入 (embedding)层：将输入和输出令牌ID转换为密集向量 (vector) (dense vector)。</li>\n<li>位置编码 (positional encoding)：一个用于生成并向嵌入添加位置信息的模块，如第3章所述。</li>\n<li>编码器堆栈：N个相同的编码器层的堆栈。每个编码器层包含多头自注意力 (self-attention)、位置前馈网络，以及残差连接和层归一化 (normalization)。你可以重用实践练习中的 <code>EncoderLayer</code> 实现。</li>\n<li>解码器堆栈：N个相同的解码器层的堆栈。每个解码器层包含带掩码的多头自注意力、多头编码器-解码器注意力、前馈网络，也包括残差连接和归一化。</li>\n<li>最终线性层：一个将解码器输出映射到词汇表 (vocabulary)大小的线性层。</li>\n</ul>\n</li>\n</ol>\n<ul>\n<li>Softmax层：通常在损失函数 (loss function)（如 <code>CrossEntropyLoss</code>）中隐式应用，它将线性层的输出转换为概率。</li>\n</ul>\n<ol start=\"2\">\n<li><strong>前向传播逻辑：</strong> 核心逻辑位于模型的 <code>forward</code> 方法中。此方法定义了数据在训练和推理 (inference)期间如何在模型中流动：\n<ul>\n<li><strong>输入处理：</strong> 接收源序列令牌和目标序列令牌（在训练期间）作为输入。</li>\n<li><strong>掩码生成：</strong> 生成必要的掩码：\n<ul>\n<li><em>填充掩码：</em> 在注意力计算期间，忽略源序列和目标序列中的填充令牌。</li>\n<li><em>前瞻掩码：</em> 用于解码器的自注意力，阻止其关注目标序列中的未来令牌。</li>\n</ul>\n</li>\n<li><strong>嵌入和位置编码：</strong> 将源和目标令牌转换为嵌入并添加位置编码。</li>\n<li><strong>编码器传递：</strong> 将源嵌入和填充掩码通过编码器堆栈。输出表示输入序列的编码上下文 (context)。</li>\n<li><strong>解码器传递：</strong> 将目标嵌入（训练期间右移）、编码器输出、前瞻掩码和源填充掩码通过解码器堆栈。</li>\n<li><strong>最终投影：</strong> 对解码器输出应用最终线性层，以获取目标序列中每个位置的 logits。</li>\n</ul>\n</li>\n</ol>\n<p>下图说明了这种数据流。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1n05zob\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=\"rounded,filled\", fillcolor=\"#e9ecef\", fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  subgraph cluster_input {\n    label = \"输入\";\n    style=filled;\n    fillcolor=\"#f8f9fa\";\n    src_tokens [label=\"源令牌\"];\n    tgt_tokens [label=\"目标令牌 (右移)\"];\n  }\n\n  subgraph cluster_embedding {\n    label = \"嵌入与位置编码\";\n    style=filled;\n    fillcolor=\"#f8f9fa\";\n    src_embed [label=\"源嵌入 + 位置编码\", fillcolor=\"#bac8ff\"];\n    tgt_embed [label=\"目标嵌入 + 位置编码\", fillcolor=\"#bac8ff\"];\n  }\n\n  subgraph cluster_masks {\n    label = \"掩码生成\";\n    style=filled;\n    fillcolor=\"#f8f9fa\";\n    padding_mask [label=\"填充掩码\", fillcolor=\"#ffec99\"];\n    lookahead_mask [label=\"前瞻掩码\", fillcolor=\"#ffec99\"];\n  }\n\n  subgraph cluster_encoder {\n    label = \"编码器堆栈\";\n    style=filled;\n    fillcolor=\"#d0bfff\";\n    encoder [label=\"编码器层 (N次)\\n(多头自注意力, FFNN)\", shape=box3d, fillcolor=\"#eebefa\"];\n  }\n\n  subgraph cluster_decoder {\n    label = \"解码器堆栈\";\n    style=filled;\n    fillcolor=\"#a5d8ff\";\n    decoder [label=\"解码器层 (N次)\\n(带掩码自注意力, 编码器-解码器注意力, FFNN)\", shape=box3d, fillcolor=\"#99e9f2\"];\n  }\n\n  subgraph cluster_output {\n    label = \"输出投影\";\n    style=filled;\n    fillcolor=\"#f8f9fa\";\n    linear [label=\"线性层\", fillcolor=\"#b2f2bb\"];\n    softmax [label=\"Softmax\", fillcolor=\"#b2f2bb\"];\n    output_probs [label=\"输出概率\"];\n  }\n\n  # Connections\n  src_tokens -> src_embed;\n  tgt_tokens -> tgt_embed;\n  src_tokens -> padding_mask [label=\" 生成\"];\n  tgt_tokens -> padding_mask [label=\" 生成\"];\n  tgt_tokens -> lookahead_mask [label=\" 生成\"];\n\n  src_embed -> encoder;\n  padding_mask -> encoder [label=\" 使用\"];\n\n  encoder -> decoder [label=\" 编码器输出 (K, V)\"];\n  tgt_embed -> decoder [label=\" 解码器输入 (Q)\"];\n  lookahead_mask -> decoder [label=\" 使用 (自注意力)\"];\n  padding_mask -> decoder [label=\" 使用 (编码器-解码器注意力)\"];\n\n  decoder -> linear;\n  linear -> softmax;\n  softmax -> output_probs;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1n05zob\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据在基本Transformer模型的前向传播过程中流动。输入经过处理，生成掩码，通过编码器和解码器堆栈，最终投影到输出概率。</p>\n</blockquote>\n<h3>训练循环</h3>\n<p>模型定义好后，训练循环协调学习过程。它通常包含：</p>\n<ol>\n<li><strong>迭代：</strong> 遍历数据集，加载批次的源序列、目标序列和相应掩码。</li>\n<li><strong>前向传播：</strong> 将批次输入到模型实例中，以获取输出 logits。</li>\n<li><strong>损失计算：</strong> 使用合适的损失函数 (loss function)（如交叉熵）将模型的输出 logits 与实际目标令牌（排除初始 <code>&#x3C;sos></code> 令牌并考虑填充）进行比较。请记住，模型预测每个位置的<em>下一个</em>令牌，因此你将模型在位置 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi></mrow><annotation encoding=\"application/x-tex\">i</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6595em;\"></span><span class=\"mord mathnormal\">i</span></span></span></span> 的输出与位置 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>i</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding=\"application/x-tex\">i+1</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7429em;vertical-align:-0.0833em;\"></span><span class=\"mord mathnormal\">i</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">1</span></span></span></span> 的目标令牌进行比较。</li>\n<li><strong>反向传播 (backpropagation)：</strong> 计算损失相对于模型参数 (parameter)的梯度。</li>\n<li><strong>优化步骤：</strong> 使用选择的优化器（例如 Adam）更新模型权重 (weight)，并应用任何学习率调度。</li>\n<li><strong>梯度裁剪（可选但推荐）：</strong> 为防止梯度爆炸，尤其是在训练早期，将梯度裁剪到最大范数。</li>\n<li><strong>日志记录和评估：</strong> 定期记录训练损失，并使用相关指标（例如，语言建模的困惑度，翻译的BLEU分数）在验证集上评估模型，以监控进展并防止过拟合 (overfitting)。</li>\n</ol>\n<p>本概述简化了该过程，抽象掉了大部分框架特有的代码。然而，它说明了理论组成部分和训练先决条件如何组合起来。成功实现这一点需要仔细处理张量形状、掩码和训练方案，直接建立在本课程中介绍的知识点和实践步骤之上。下一步通常涉及使用库中预构建的实现，或针对特定任务改进此基本结构以提高性能。</p>",
+  "slug": "basic-implementation-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 4587,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "30",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍Transformer架构、多头注意力机制和位置编码的基础论文，这些是其实现的核心。",
+      "order": 1,
+      "created_at": "2025-09-04T16:57:16.260188Z",
+      "updated_at": "2025-09-09T02:40:19.991716Z"
+    },
+    {
+      "id": 4592,
+      "title": "Speech and Language Processing (3rd ed. draft)",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本关于自然语言处理的教材，广泛涵盖了Transformer架构、其组件和训练过程。",
+      "order": 3,
+      "created_at": "2025-09-04T16:57:16.273570Z",
+      "updated_at": "2025-09-09T02:40:17.018474Z"
+    },
+    {
+      "id": 4593,
+      "title": "Stanford CS224N: Natural Language Processing with Deep Learning",
+      "author": "Diyi Yang, Tatsunori Hashimoto",
+      "year": "2025",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/class/cs224n/",
+      "doi": "",
+      "note": "一门大学课程，涵盖了构建和训练神经NLP模型的理论背景和实践方面，包括关于Transformer的详细课程。",
+      "order": 4,
+      "created_at": "2025-09-04T16:57:16.275706Z",
+      "updated_at": "2025-09-09T02:40:14.777686Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

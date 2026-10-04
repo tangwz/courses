@@ -1,0 +1,61 @@
+{
+  "id": 2480,
+  "title": "动手实践：构建预处理流程",
+  "meta_title": "实践：构建NLP预处理管道",
+  "meta_description": "练习使用常用NLP库实现文本预处理步骤。",
+  "content": "<p>标准化、分词 (tokenization)、停用词去除和词形还原这些用于清洗和组织原始文本的单独技术，被整合以构建一套完整的文本预处理流程。构建这样的流程是许多NLP应用中的一个常见首要步骤，它能确保文本数据的一致性，并为后续分析或模型训练做好准备。</p>\n<p>我们将使用Python以及NLTK或spaCy等常用库。请确保您已安装这些库并下载了所需的资源（如停用词列表和词形还原模型）。</p>\n<pre><code class=\"language-python\"># NLTK 示例设置（如果需要，请在您的 Python 环境中运行这些命令）\n# import nltk\n# nltk.download('punkt')      # 用于分词\n# nltk.download('wordnet')    # 用于词形还原\n# nltk.download('stopwords')  # 用于停用词\n</code></pre>\n<h3>定义示例数据</h3>\n<p>我们从一些包含需要处理的常见文本变体的示例句子开始：</p>\n<pre><code class=\"language-python\">sample_texts = [\n    \"The QUICK brown fox Jumped over the LAZY dog!!\",\n    \"Preprocessing text data is an important first step.\",\n    \"We'll be removing punctuation, numbers (like 123), and applying lemmatization.\",\n    \"Stop words such as 'the', 'is', 'and' will be filtered out.\"\n]\n</code></pre>\n<p>我们的目标是将这些原始句子转换为清洗后有意义的词元 (token)列表。</p>\n<h3>逐步构建流程</h3>\n<p>一个预处理流程通常执行一系列操作。顺序有时很重要，因此有必要考虑每一步对后续步骤的影响。</p>\n<h4>步骤1：文本标准化（转为小写）</h4>\n<p>将文本转为小写是一种简单但有效的标准化方法，它能确保像“The”和“the”这样的词被视为相同。</p>\n<pre><code class=\"language-python\">import re\n\ndef normalize_text(text):\n  \"\"\"将文本转为小写并去除所有非字母数字字符。\"\"\"\n  text = text.lower()\n  # 使用正则表达式去除标点和数字\n  text = re.sub(r'[^a-z\\s]', '', text)\n  # 去除多余空格\n  text = re.sub(r'\\s+', ' ', text).strip()\n  return text\n\nnormalized_texts = [normalize_text(text) for text in sample_texts]\nprint(\"标准化后的文本:\")\nfor text in normalized_texts:\n  print(f\"- {text}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Normalized Texts:\n- the quick brown fox jumped over the lazy dog\n- preprocessing text data is an important first step\n- well be removing punctuation numbers like and applying lemmatization\n- stop words such as the is and will be filtered out\n</code></pre>\n<p>在这里，我们将转为小写与去除标点和数字结合起来，使用了正则表达式<code>[^a-z\\s]</code>，它只保留小写字母和空格。</p>\n<h4>步骤2：分词 (tokenization)</h4>\n<p>接下来，我们将标准化后的文本分成单独的单词或词元 (token)。我们将使用NLTK的<code>word_tokenize</code>函数。</p>\n<pre><code class=\"language-python\">from nltk.tokenize import word_tokenize\n\ntokenized_texts = [word_tokenize(text) for text in normalized_texts]\nprint(\"\\n分词后的文本:\")\nfor tokens in tokenized_texts:\n  print(f\"- {tokens}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Tokenized Texts:\n- ['the', 'quick', 'brown', 'fox', 'jumped', 'over', 'the', 'lazy', 'dog']\n- ['preprocessing', 'text', 'data', 'is', 'an', 'important', 'first', 'step']\n- ['well', 'be', 'removing', 'punctuation', 'numbers', 'like', 'and', 'applying', 'lemmatization']\n- ['stop', 'words', 'such', 'as', 'the', 'is', 'and', 'will', 'be', 'filtered', 'out']\n</code></pre>\n<h4>步骤3：停用词去除</h4>\n<p>现在，我们过滤掉对分析通常没有太多语义价值的常见词（停用词）。我们将使用NLTK的标准英语停用词列表，并演示如何添加自定义停用词。</p>\n<pre><code class=\"language-python\">from nltk.corpus import stopwords\n\n# 获取标准英语停用词\nstop_words = set(stopwords.words('english'))\n\n# 示例：如果需要，添加特定领域停用词\n# stop_words.add('data') # 取消注释以将“data”添加为停用词\n\ndef remove_stopwords(tokens):\n  \"\"\"从词元列表中去除停用词。\"\"\"\n  return [token for token in tokens if token not in stop_words]\n\nfiltered_texts = [remove_stopwords(tokens) for tokens in tokenized_texts]\nprint(\"\\n去除停用词后的文本:\")\nfor tokens in filtered_texts:\n  print(f\"- {tokens}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Texts after Stop Word Removal:\n- ['quick', 'brown', 'fox', 'jumped', 'lazy', 'dog']\n- ['preprocessing', 'text', 'data', 'important', 'first', 'step']\n- ['well', 'removing', 'punctuation', 'numbers', 'like', 'applying', 'lemmatization']\n- ['stop', 'words', 'filtered']\n</code></pre>\n<p>请注意，像“the”、“is”、“an”、“be”、“and”、“will”、“out”、“such”、“as”这些词已被去除。如果取消注释<code>stop_words.add('data')</code>，单词“data”也会从第二个句子中被去除。根据具体任务或范围自定义停用词列表通常很有用。</p>\n<h4>步骤4：词形还原</h4>\n<p>最后，我们使用词形还原将单词还原为它们的原始或字典形式（词元）。这有助于将一个词的不同变体归为一类。我们将使用NLTK的<code>WordNetLemmatizer</code>。</p>\n<pre><code class=\"language-python\">from nltk.stem import WordNetLemmatizer\n\nlemmatizer = WordNetLemmatizer()\n\ndef lemmatize_tokens(tokens):\n  \"\"\"对词元列表进行词形还原。\"\"\"\n  # 注意：通过提供词性标签可以改进词形还原效果，\n  # 但为简单起见，这里我们使用默认（名词）处理。\n  return [lemmatizer.lemmatize(token) for token in tokens]\n\nlemmatized_texts = [lemmatize_tokens(tokens) for tokens in filtered_texts]\nprint(\"\\n词形还原后的文本:\")\nfor tokens in lemmatized_texts:\n  print(f\"- {tokens}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Lemmatized Texts:\n- ['quick', 'brown', 'fox', 'jumped', 'lazy', 'dog']\n- ['preprocessing', 'text', 'data', 'important', 'first', 'step']\n- ['well', 'removing', 'punctuation', 'number', 'like', 'applying', 'lemmatization']\n- ['stop', 'word', 'filtered']\n</code></pre>\n<p>可以看到，“jumped”保持不变（因为默认的词形还原POS标签是名词），“numbers”变为“number”，“words”变为“word”。更复杂的词形还原会在词形还原之前进行词性（POS）标注，以获得更准确的基本形式（例如，如果被标注为动词，则将“jumped”正确地还原为“jump”）。</p>\n<h3>整合为一个可复用函数</h3>\n<p>让我们将这些步骤整合到一个单一的函数中，以便于复用。</p>\n<pre><code class=\"language-python\">import re\nfrom nltk.tokenize import word_tokenize\nfrom nltk.corpus import stopwords\nfrom nltk.stem import WordNetLemmatizer\n\n# 一次性初始化资源\nstop_words = set(stopwords.words('english'))\nlemmatizer = WordNetLemmatizer()\n\ndef preprocess_text(text):\n  \"\"\"将完整的预处理流程应用于单个文本字符串。\"\"\"\n  # 1. 标准化（小写，去除标点/数字）\n  text = text.lower()\n  text = re.sub(r'[^a-z\\s]', '', text)\n  text = re.sub(r'\\s+', ' ', text).strip()\n\n  # 2. 分词\n  tokens = word_tokenize(text)\n\n  # 3. 去除停用词\n  filtered_tokens = [token for token in tokens if token not in stop_words]\n\n  # 4. 词形还原\n  lemmatized_tokens = [lemmatizer.lemmatize(token) for token in filtered_tokens]\n\n  return lemmatized_tokens\n\n# 将流程应用于我们的原始示例\nprocessed_texts = [preprocess_text(text) for text in sample_texts]\n\nprint(\"\\n完全处理后的文本:\")\nfor tokens in processed_texts:\n  print(f\"- {tokens}\")\n</code></pre>\n<p>Output:</p>\n<pre><code>Fully Processed Texts:\n- ['quick', 'brown', 'fox', 'jumped', 'lazy', 'dog']\n- ['preprocessing', 'text', 'data', 'important', 'first', 'step']\n- ['well', 'removing', 'punctuation', 'number', 'like', 'applying', 'lemmatization']\n- ['stop', 'word', 'filtered']\n</code></pre>\n<p>这个<code>preprocess_text</code>函数现在封装了我们整个流程。</p>\n<h3>流程可视化</h3>\n<p>我们可以使用一个简单的图表来呈现操作序列：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1rolzus\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=filled, color=\"#ced4da\", fillcolor=\"#e9ecef\"]; edge [color=\"#495057\"]; \"原始文本\" -> \"标准化\" -> \"分词\" -> \"去除停用词\" -> \"词形还原\" -> \"处理后的词元\" [color=\"#1c7ed6\", penwidth=1.5]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1rolzus\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个图表，展示了文本预处理流程中的步骤顺序。</p>\n</blockquote>\n<h3>注意事项</h3>\n<ul>\n<li><strong>操作顺序：</strong> 在分词 (tokenization)之前去除标点与之后去除有何不同？通常，先去除标点可以简化分词。转为小写应该在去除停用词之前还是之后？如果停用词是小写，文本也必须先转为小写。设计流程时，请考虑这些相互影响。</li>\n<li><strong>库的选择：</strong> 我们这里使用了NLTK，但spaCy提供了类似（通常更集成和高效）的预处理功能。例如，spaCy的处理能够一次性处理分词、词形还原和词性标注。</li>\n<li><strong>定制：</strong> 这个流程只是一个模板。您可能需要根据您的具体文本数据和任务要求添加步骤（例如，处理缩写、拼写校正）或修改现有步骤（例如，使用词干提取代替词形还原、微调 (fine-tuning)正则表达式以去除噪声、构建高度定制的停用词列表）。</li>\n</ul>\n<p>这个实践练习展示了如何将基本的文本预处理技术组合构建一个可用的流程。生成的清洗并还原词形的词元 (token)现在处于更好的状态，可用于后续的NLP任务，比如我们将在下一章介绍的特征工程方法。</p>",
+  "slug": "practice-preprocessing-pipelines",
+  "updates": [],
+  "references": [
+    {
+      "id": 6829,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本全面的教材，涵盖自然语言处理的基本概念和技术，包括文本标准化、分词和形态学分析。",
+      "order": 1,
+      "created_at": "2025-09-05T01:29:03.606273Z",
+      "updated_at": "2025-09-07T22:20:42.527462Z"
+    },
+    {
+      "id": 6831,
+      "title": "Natural Language Processing with Python - Analyzing Text with the Natural Language Toolkit",
+      "author": "Steven Bird, Ewan Klein, and Edward Loper",
+      "year": "2009",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.nltk.org/book/",
+      "doi": "",
+      "note": "NLTK（自然语言工具包）的官方书籍，提供了使用NLTK实现各种文本预处理步骤的详细教程和示例。",
+      "order": 2,
+      "created_at": "2025-09-05T01:29:03.817752Z",
+      "updated_at": "2025-09-07T22:20:43.276418Z"
+    },
+    {
+      "id": 6832,
+      "title": "Processing Pipelines - spaCy Documentation",
+      "author": "Explosion",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://spacy.io/usage/processing-pipelines",
+      "doi": "",
+      "note": "官方文档，解释spaCy如何通过其管道处理文本，涵盖分词、词形还原和其他语言学标注的集成方式。",
+      "order": 3,
+      "created_at": "2025-09-05T01:29:03.838123Z",
+      "updated_at": "2025-09-07T22:20:43.545728Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

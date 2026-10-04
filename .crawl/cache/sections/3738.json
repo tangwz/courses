@@ -1,0 +1,61 @@
+{
+  "id": 3738,
+  "title": "发送您的第一个API请求",
+  "meta_title": "发送您的第一个LLM API请求",
+  "meta_description": "一份关于如何向LLM服务发起简单API调用的分步指南。",
+  "content": "<p>应用程序编程接口（API）使代码能够与远程服务通信，包括那些托管强大大型语言模型的服务。通过这些“桥梁”发送请求，即可建立这种互动。</p>\n<p>可以把发起API请求想象成向LLM服务发送一封非常具体、有条理的“信件”。这封“信件”需要有目的地地址、处理方式的指示、身份证明（认证）以及实际消息（您的提示词 (prompt)）。</p>\n<h3>API请求的组成部分</h3>\n<p>与LLM API进行的大多数交互都使用网络标准协议，特别是HTTP请求。一个典型请求包含以下几个部分：</p>\n<ol>\n<li><strong>端点URL：</strong> 这是您发送请求的特定网址（URL）。每个LLM服务提供商都有自己的端点URL，用于不同的操作（例如生成文本）。例如，它可能看起来像 <code>https://api.example-llm-provider.com/v1/generate</code>。</li>\n<li><strong>HTTP方法：</strong> 这告诉服务器您想执行什么操作。向LLM发送数据以获取响应时，方法几乎总是 <code>POST</code>。</li>\n<li><strong>头部：</strong> 这些包含关于您请求的元信息。两个重要的头部是：\n<ul>\n<li><code>Content-Type</code>：告诉服务器您在请求体中发送的数据格式。这通常是 <code>application/json</code>。</li>\n<li><code>Authorization</code>：提供您的凭据，通常是API密钥，以证明您有权限使用该服务。稍后会详细说明。</li>\n</ul>\n</li>\n<li><strong>正文（Payload）：</strong> 这包含您要发送的实际数据，通常以JSON（JavaScript对象表示法）格式。它包含您的提示词 (prompt)和任何控制LLM行为的参数 (parameter)。</li>\n</ol>\n<h3>认证：您的API密钥</h3>\n<p>在发送请求之前，您几乎总是需要一个API密钥。您通常通过在LLM服务提供商处注册账户获得此密钥。</p>\n<p><strong>重要：</strong> 像对待密码一样对待您的API密钥。保守其秘密并确保其安全。切勿将其直接嵌入 (embedding)到可能公开共享的代码中（例如在版本控制系统中）。环境变量或安全的密钥管理工具是应用程序中处理密钥的更好方法。</p>\n<p>API密钥通常包含在 <code>Authorization</code> 头部中。常见格式是 <code>Bearer YOUR_API_KEY</code>，其中 <code>YOUR_API_KEY</code> 替换为从提供商处获得的实际密钥。</p>\n<h3>构建请求正文（Payload）</h3>\n<p>请求正文是您放置LLM指令的地方。它是一个包含键值对的JSON对象。常见元素包括：</p>\n<ul>\n<li><code>prompt</code>：（字符串）您希望LLM处理或响应的文本输入。</li>\n<li><code>model</code>：（字符串）指定您想使用的特定LLM（例如，<code>example-model-v2</code> 或 <code>llama-3-8b-instruct</code>）。提供商通常提供具有不同能力和规模的多种模型。</li>\n<li><code>max_tokens</code>：（整数）您希望生成响应包含的最大token数量（大致相当于单词或单词的一部分）。这有助于控制长度和成本。</li>\n<li><code>temperature</code>：（浮点数，通常在0到1之间）控制输出的随机性。较低的值（例如0.2）使输出更集中和确定，而较高的值（例如0.8）使其更具创造性和多样性。</li>\n</ul>\n<p>以下是一个简单JSON有效载荷的示例：</p>\n<pre><code class=\"language-json\">{\n  \"model\": \"example-model-v1-instruct\",\n  \"prompt\": \"Translate the following English text to French: 'Hello, world!'\",\n  \"max_tokens\": 50,\n  \"temperature\": 0.7\n}\n</code></pre>\n<h3>发送请求：使用 <code>curl</code> 的示例</h3>\n<p><code>curl</code> 是一个用于通过URL传输数据的命令行工具。它非常适合快速测试API端点。以下是您如何发送上述请求的示例（将 <code>YOUR_API_KEY</code> 和URL替换为实际值）：</p>\n<pre><code class=\"language-bash\"># 将 YOUR_OPENAI_API_KEY 替换为您的实际API密钥\n# 如果需要，将 gpt-3.5-turbo 替换为您想要的模型\ncurl https://api.openai.com/v1/chat/completions \\\n  -X POST \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\" \\\n  -d '{\n    \"model\": \"gpt-3.5-turbo\",\n    \"messages\": [\n      {\n        \"role\": \"user\",\n        \"content\": \"Translate the following English text to French: 'Hello!'\"\n      }\n    ],\n    \"max_tokens\": 50,\n    \"temperature\": 0.7\n  }'\n</code></pre>\n<p>让我们分析一下这个命令：</p>\n<ul>\n<li><code>curl https://.../v1/generate</code>：指定工具 (<code>curl</code>) 和端点URL。</li>\n<li><code>-X POST</code>：将HTTP方法设置为 <code>POST</code>。</li>\n<li><code>-H \"Content-Type: application/json\"</code>：添加内容类型头部。</li>\n<li><code>-H \"Authorization: Bearer YOUR_API_KEY\"</code>：添加授权头部（请记住使用您的真实密钥）。</li>\n<li><code>-d '{...}'</code>：指定要在请求体中发送的数据（有效载荷）。请注意，在命令行中，JSON 使用单引号括起来，并且提示字符串内部的单引号需要进行转义 (<code>\\'</code>)。</li>\n</ul>\n<h3>发送请求：使用 Python 的示例</h3>\n<p>在实际操作中，您通常会在脚本或应用程序中进行API调用。Python的 <code>requests</code> 库是实现此目的的常用选择。</p>\n<p>首先，请确保您已安装 <code>requests</code>（<code>pip install requests</code>）。</p>\n<pre><code class=\"language-python\">import requests\nimport json\nimport os # 推荐用于处理API密钥\n\n# --- 配置 ---\n# 最佳实践：从环境变量或安全存储加载API密钥\n# api_key = os.getenv(\"YOUR_API_KEY\")\napi_key = \"YOUR_API_KEY\" # 如果不使用环境变量，请替换为您的实际API密钥\nif not api_key:\n    raise ValueError(\"OpenAI API key not found. Set the OPENAI_API_KEY environment variable.\")\n\napi_endpoint = \"https://api.openai.com/v1/chat/completions\"\n\n# --- 请求头部 ---\nheaders = {\n    \"Content-Type\": \"application/json\",\n    \"Authorization\": f\"Bearer {api_key}\"\n}\n\n# --- 请求有效载荷（OpenAI聊天补全格式）---\npayload = {\n    \"model\": \"gpt-3.5-turbo\", # 指定您想使用的模型\n    \"messages\": [\n        {\n            \"role\": \"user\", # 角色可以是'system'、'user'或'assistant'\n            \"content\": \"Translate the following English text to French: 'Hello, world!'\" # 用户的提示词\n        }\n        # 您可以在此处添加更多消息以提供对话历史，例如：\n        # {\"role\": \"assistant\", \"content\": \"Bonjour le monde!\"},\n        # {\"role\": \"user\", \"content\": \"Now translate 'goodbye'\"}\n    ],\n    \"max_tokens\": 50,     # 要生成的最大token数量\n    \"temperature\": 0.7    # 控制随机性（0.0到2.0）\n}\n\n# --- 发送请求 ---\ntry:\n    response = requests.post(api_endpoint, headers=headers, json=payload)\n\n    # --- 检查成功响应 ---\n    response.raise_for_status() # 对于错误响应（4xx或5xx）抛出HTTPError异常\n\n    # 如果成功，继续处理响应\n    print(\"请求成功！\")\n    response_data = response.json()\n    # 访问生成文本的示例（结构可能略有不同）\n    # print(json.dumps(response_data, indent=2)) # 格式化打印完整响应\n    if response_data.get(\"choices\"):\n        print(\"生成文本：\", response_data[\"choices\"][0][\"message\"][\"content\"])\n    else:\n        print(\"响应中未找到choices。\")\n\nexcept requests.exceptions.RequestException as e:\n    print(f\"API请求期间发生错误：{e}\")\n    if hasattr(e, 'response') and e.response is not None:\n        print(f\"状态码：{e.response.status_code}\")\n        try:\n            # 尝试解析并打印来自OpenAI的错误详情（如果可用）\n            error_details = e.response.json()\n            print(f\"响应体：{json.dumps(error_details, indent=2)}\")\n        except json.JSONDecodeError:\n            # 如果响应不是JSON，则打印原始文本\n            print(f\"响应体：{e.response.text}\")\n    else:\n        print(\"未从服务器收到响应。\")\n\nexcept Exception as ex:\n    print(f\"发生意外错误：{ex}\")\n\n</code></pre>\n<p>这段Python代码与 <code>curl</code> 命令做的事情基本相同：它定义了URL、头部和有效载荷，然后发送一个 <code>POST</code> 请求。我们还添加了基本的错误检查，使用了 <code>try...except</code> 块和 <code>response.raise_for_status()</code>，这是一个好习惯。使用 <code>requests.post</code> 时，<code>json=</code>参数 (parameter)会自动将Python字典 <code>payload</code> 转换为JSON字符串并正确设置 <code>Content-Type</code> 头部。</p>\n<h3>请求流程图</h3>\n<p>为了便于理解，请查看您的请求路径：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-14g86tz\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#adb5bd\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  Client [label=\"您的计算机\\n（例如，curl或Python脚本）\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"];\n  APIServer [label=\"LLM服务提供商API服务器\\n（例如，api.example-llm-provider.com）\", color=\"#ae3ec9\", fontcolor=\"#ae3ec9\"];\n  LLM [label=\"大型语言模型\", shape=cylinder, color=\"#f76707\", fontcolor=\"#f76707\"];\n\n  Client -> APIServer [label=\" POST 请求\\n URL: /v1/generate\\n 头部: 认证, 内容类型\\n 正文: JSON有效载荷 (提示词, 模型等)\"];\n  APIServer -> LLM [label=\"处理请求\"];\n  LLM -> APIServer [label=\"生成文本\"];\n  APIServer -> Client [label=\" HTTP 响应\\n 状态码 (例如，200 OK)\\n 正文: JSON响应 (结果)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-14g86tz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表显示您的客户端向API服务器发送一个HTTP POST请求，其中包含必要的信息（URL、头部、正文）。服务器验证请求，将指令传递给实际的LLM，接收生成的文本，并通过HTTP响应将其发送回您的客户端。</p>\n</blockquote>\n<p>您现在已经了解了API请求的结构，以及如何使用常用工具来构建和发送请求。下一步是理解LLM服务返回的内容。</p>",
+  "slug": "sending-first-api-request",
+  "updates": [],
+  "references": [
+    {
+      "id": 10142,
+      "title": "HTTP Overview",
+      "author": "Mozilla Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "MDN Web Docs",
+      "volume": "",
+      "pages": "",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview",
+      "doi": "",
+      "note": "提供超文本传输协议 (HTTP) 的全面介绍，包括请求方法、头部和状态码，这些是理解 API 交互的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T06:37:54.954133Z",
+      "updated_at": "2025-09-09T12:29:53.946238Z"
+    },
+    {
+      "id": 10143,
+      "title": "Requests: HTTP for Humans™",
+      "author": "Kenneth Reitz and The Requests Project Contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://requests.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "`requests` 库的官方文档，提供了在 Python 中进行 HTTP 请求的详细指南和 API 参考，与 Python 示例直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T06:37:54.985414Z",
+      "updated_at": "2025-09-09T12:29:51.275833Z"
+    },
+    {
+      "id": 10144,
+      "title": "API Reference - Chat Completions",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "OpenAI",
+      "journal": "OpenAI Documentation",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/api-reference/chat/completions",
+      "doi": "",
+      "note": "OpenAI Chat Completions API 的官方文档，详细说明了本节中演示的 `model`、`messages`、`temperature` 和 `max_tokens` 等请求参数。",
+      "order": 3,
+      "created_at": "2025-09-05T06:37:54.988281Z",
+      "updated_at": "2025-09-09T12:29:57.107002Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

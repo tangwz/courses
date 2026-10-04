@@ -1,0 +1,102 @@
+# TorchServe PyTorch 模型服务概览
+
+来源：[原文](https://apxml.com/zh/courses/pytorch-for-tensorflow-developers/chapter-5-pytorch-model-persistence-deployment/pytorch-model-serving-torchserve)
+
+[返回章节目录](README.md) · [返回课程目录](../README.md)
+
+将训练好的 PyTorch 模型部署到生产环境，使其可用于预测，是模型训练和保存之后的一个必要环节。这正是模型服务工具发挥作用的地方。对于 PyTorch 生态系统而言，TorchServe 是官方支持的开源解决方案，旨在简化大规模部署训练好的 PyTorch 模型。由 AWS 和 Meta 合作开发，TorchServe 提供了一条将模型从研究阶段推向生产的直接途径。
+
+如果您有 TensorFlow Serving 的使用经验，会发现 TorchServe 对于 PyTorch 模型而言扮演着类似的角色。它被设计为轻量级、多功能，并能很好地融入云原生环境。让我们来看看选择 TorchServe 的原因及其重要特性。
+
+### 为什么选择 TorchServe？
+
+将模型部署到实际运行的系统中，不仅仅是加载权重 (weight)那么简单。您需要处理传入请求、预处理输入数据、运行推理 (inference)、后处理输出，并管理多个模型版本，同时确保性能和稳定性。TorchServe 旨在处理 PyTorch 模型的这些操作方面，提供多项优点：
+
+- **PyTorch 易用性：** 它是专为 PyTorch 设计的，使得部署模型变得容易，无需大量的自定义封装代码。
+- **生产可用特性：** 包含多模型服务、版本控制、请求批处理和开箱即用的指标等功能。
+- **可扩展性：** 允许使用自定义处理程序进行预处理、后处理和自定义逻辑，为您提供灵活性。
+- **性能：** 为低延迟和高吞吐量 (throughput)推理而构建。
+- **可伸缩性：** 可以水平扩展，并与 Kubernetes 等编排工具集成。
+
+### TorchServe 的重要特性
+
+TorchServe 配备了一系列功能来促进模型部署：
+
+- **模型归档：** PyTorch 模型使用 `torch-model-archiver` 命令行工具打包成 `.mar`（模型归档）文件。此归档文件包含序列化模型（例如 `.pt` 文件，通常是 TorchScript 模型，以获得更好的性能和可移植性）、处理程序脚本（定义预处理、推理 (inference)和后处理的 Python 文件）以及任何其他必需的资产。这种自包含的格式简化了模型管理和部署。
+- **交互 API：** TorchServe 暴露两个主要的 REST API：
+
+  - **推理 API：** (默认端口 8080) 用于向您部署的模型发送预测请求。它通常支持 `/predictions/{model_name}` 和 `/predictions/{model_name}/{version}` 等端点。
+  - **管理 API：** (默认端口 8081) 用于管理 TorchServe 服务的模型。您可以注册新模型、取消注册现有模型、设置模型的默认版本，以及调整分配给每个模型的工作线程数。
+    它还支持用于推理和管理的 gRPC 端点，以应对更高性能的场景。
+- **请求批处理：** 对于能从批处理中受益的模型（如许多深度学习 (deep learning)模型），TorchServe 可以自动批处理传入的推理请求。这通常通过更好地运用 GPU 等硬件加速器来显著提高吞吐量 (throughput)。您可以配置批大小和最大批处理延迟。
+- **自定义处理程序：** 虽然 TorchServe 为常见任务提供了默认处理程序，但您可以编写自定义 Python 脚本来定义输入数据的特定预处理步骤、模型 `forward` 方法的调用方式，以及如何将模型的输出后处理成用户友好的格式。这是一个强大的功能，用于根据您的精确需求定制服务逻辑。
+- **指标：** TorchServe 提供内置指标，可用于监控您部署模型的健康状况和性能。这些指标可以以 Prometheus 格式公开，包括请求计数、错误率、延迟以及 CPU/内存利用率等。
+- **模型版本控制：** 您可以同时部署同一模型的多个版本。这对于 A/B 测试新模型版本或逐步推出更新很有用。
+
+### TorchServe 的典型工作流程
+
+使用 TorchServe 部署模型通常遵循以下步骤：
+
+1. **训练模型：** 像往常一样开发和训练您的 PyTorch 模型。
+2. **准备模型构件：**
+   - 保存模型的 `state_dict`，或者，为了部署，最好使用 `torch.jit.script()` 或 `torch.jit.trace()` 将模型转换为 TorchScript。TorchScript 模型经过优化，可以在没有 Python 依赖的环境中运行。
+   - 编写一个处理程序脚本（例如 `my_handler.py`），它定义了 TorchServe 应如何处理您的模型请求。此脚本通常会包含 `initialize`、`preprocess`、`inference` 和 `postprocess` 函数。
+3. **归档模型：** 使用 `torch-model-archiver` 工具创建 `.mar` 文件。
+
+   ```bash
+   torch-model-archiver --model-name my_model \ # 模型名称
+                        --version 1.0 \ # 版本
+                        --serialized-file model.pt \ # 序列化文件
+                        --handler my_handler.py \ # 处理程序
+                        --export-path /path/to/model_store # 导出路径
+   ```
+
+   此命令将 `model.pt` 和 `my_handler.py` 打包成 `my_model.mar` 并将其放置到指定的模型存储目录中。
+4. **启动 TorchServe：** 启动 TorchServe HTTP 服务器，将其指向您的模型存储。
+
+   ```bash
+   torchserve --start \ # 启动
+              --model-store /path/to/model_store \ # 模型存储
+              --models my_model=my_model.mar # 模型
+   ```
+
+   或者，您可以仅启动 TorchServe 并指定模型存储，随后通过管理 API 注册模型。
+5. **管理模型（可选）：** 使用管理 API（在端口 8081 上）注册、取消注册或扩展模型，而无需重启服务器。例如，注册一个模型：
+
+   ```bash
+   curl -X POST "http://localhost:8081/models?url=my_model.mar&model_name=my_model&initial_workers=1"
+   ```
+6. **发送推理 (inference)请求：** 您的客户端应用程序现在可以向推理 API（在端口 8080 上）发送请求。
+
+   ```bash
+   curl http://localhost:8080/predictions/my_model -T input_data.json
+   ```
+
+下面的图表展示了这一通用工作流程：
+
+> 使用 TorchServe 部署 PyTorch 模型的通用工作流程，从模型准备到服务客户端请求。
+
+### TorchServe 的部署
+
+TorchServe 是一个用于直接服务 PyTorch 模型的强大工具。它可以作为独立服务部署，也可以集成到更大的 MLOps 流水线和服务基础设施中。例如，TorchServe 可以在 Docker 容器中运行，并由 Kubernetes 等编排系统管理，通常与 Seldon Core 或 KServe（前身为 KFServing）等工具结合使用，以实现更高级的部署模式，如金丝雀发布、解释器和负载日志记录。
+
+对于有 TensorFlow 背景的人来说，TorchServe 提供了一个类似于 TensorFlow Serving 的解决方案，专为 PyTorch 框架定制。它解决了生产模型部署中的许多常见难题，让您能够高效可靠地服务 PyTorch 模型。
+
+尽管本章提供了一个概览，但官方的 TorchServe 文档及其 GitHub 仓库提供了大量示例和详细指南，用于更高级的配置和使用场景。当您着手部署 PyTorch 模型时，TorchServe 是一个值得您服务策略考虑的重要组成部分。
+
+## 参考资料
+
+- [TorchServe Documentation](https://pytorch.org/serve/) — AWS and Meta (2020)
+  TorchServe 的官方文档，提供了部署 PyTorch 模型的全面指南、教程和 API 参考。
+- [TorchServe GitHub Repository](https://github.com/pytorch/serve) — PyTorch (2024)
+  Publisher: PyTorch
+  TorchServe 的官方开源代码库，包含源代码、示例和社区贡献。
+- [Introduction to TorchScript](https://pytorch.org/docs/stable/jit.html) — PyTorch Developers (2018)
+  TorchScript 的官方指南，它是准备 PyTorch 模型进行部署的关键组件，尤其是在 TorchServe 中使用时。
+- [Engineering MLOps: From Model to Production](https://www.oreilly.com/library/view/engineering-mlops/9781098104192/) — Emmanuel Raj, Larysa Visengeriyeva, Arpit Shah (2022)
+  Publisher: O'Reilly Media
+  一本关于在生产环境中构建和运行机器学习系统的实用指南，涵盖模型服务和 MLOps 策略。
+
+---
+
+[上一节](06-%E4%BD%BF%E7%94%A8%20ONNX%20%E5%AE%9E%E7%8E%B0%E6%A1%86%E6%9E%B6%E4%BA%92%E6%93%8D%E4%BD%9C%E6%80%A7.md) · [下一节](08-%E5%8A%A8%E6%89%8B%E5%AE%9E%E8%B7%B5%EF%BC%9A%E6%A8%A1%E5%9E%8B%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8ETorchScript%E5%9F%BA%E7%A1%80.md)

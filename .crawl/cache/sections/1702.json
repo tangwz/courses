@@ -1,0 +1,61 @@
+{
+  "id": 1702,
+  "title": "数组基本属性",
+  "meta_title": "NumPy 数组属性",
+  "meta_description": "查看数组属性，如形状、大小、维度数量 (ndim) 和数据类型 (dtype)。",
+  "content": "<p>理解 NumPy 数组的结构通常是必需的，尤其当数组很大时，而无需打印整个数组的内容。NumPy 数组带有一些实用的属性，它们提供关于数组本身的元数据。这些属性不像方法那样需要括号 <code>()</code>；你可以直接使用点表示法访问它们（例如，<code>my_array.attribute</code>）。主要的属性有：<code>ndim</code>、<code>shape</code>、<code>size</code> 和 <code>dtype</code>。</p>\n<p>假设你已经创建了两个这样的数组：</p>\n<pre><code class=\"language-python\">import numpy as np\n\n# 一个一维数组\narr1d = np.array([1, 2, 3, 4, 5])\n\n# 一个二维数组（3行，4列）\narr2d = np.array([[1.0, 2.0, 3.0, 4.0],\n                  [5.0, 6.0, 7.0, 8.0],\n                  [9.0, 10.0, 11.0, 12.0]])\n</code></pre>\n<p>现在，我们来查看它们的属性。</p>\n<h3><code>ndim</code>：轴（维度）的数量</h3>\n<p><code>ndim</code> 属性告诉你数组的轴或维度的数量。一维数组有一个轴，二维数组有两个轴（就像电子表格中的行和列），三维数组有三个，以此类推。</p>\n<pre><code class=\"language-python\">print(arr1d.ndim)\n# 预期输出: 1\n\nprint(arr2d.ndim)\n# 预期输出: 2\n</code></pre>\n<p>了解维度的数量对于理解如何索引数组以及操作可能如何表现非常重要。</p>\n<h3><code>shape</code>：数组的维度</h3>\n<p><code>ndim</code> 告诉你轴的<em>数量</em>，而 <code>shape</code> 属性告诉你数组沿每个轴的<em>大小</em>。它返回一个整数元组，表示每个维度上的元素数量。</p>\n<p>对于我们的一维数组 <code>arr1d</code>，其形状反映了它的长度：</p>\n<pre><code class=\"language-python\">print(arr1d.shape)\n# 预期输出: (5,)\n</code></pre>\n<p>请注意元组 <code>(5,)</code> 中的逗号。这表示它是一个只含一个元素的元组，指明一个长度为 5 的维度。</p>\n<p>对于我们的二维数组 <code>arr2d</code>，其形状反映了其行和列的结构：</p>\n<pre><code class=\"language-python\">print(arr2d.shape)\n# 预期输出: (3, 4)\n</code></pre>\n<p>这个输出 <code>(3, 4)</code> 告诉我们数组有 2 个维度（因为元组中有两个数字，与 <code>arr2d.ndim</code> 匹配）。第一个轴的长度是 3（可以认为是行），第二个轴的长度是 4（可以认为是列）。</p>\n<p><code>shape</code> 是最常用的属性之一，因为它能快速概览数组的结构。</p>\n<h3><code>size</code>：元素总数</h3>\n<p><code>size</code> 属性提供数组中元素的总数量。它简单地等于 <code>shape</code> 元组中所有元素的乘积。</p>\n<pre><code class=\"language-python\">print(arr1d.size)\n# 预期输出: 5\n\nprint(arr2d.size)\n# 预期输出: 12\n</code></pre>\n<p>对于 <code>arr1d</code>，大小是 5（与它的形状 <code>(5,)</code> 匹配）。对于 <code>arr2d</code>，大小是 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>3</mn><mo>×</mo><mn>4</mn><mo>=</mo><mn>12</mn></mrow><annotation encoding=\"application/x-tex\">3 \\times 4 = 12</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">3</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">12</span></span></span></span>（与它的形状 <code>(3, 4)</code> 匹配）。这个属性对于快速了解你正在处理的数据量很方便。</p>\n<h3><code>dtype</code>：数组元素的数据类型</h3>\n<p>我们之前讨论过 NumPy 数组包含相同数据类型的元素。<code>dtype</code> 属性显示了该数据类型是什么。NumPy 在你创建数组时会自动推断出合适的数据类型，但你也可以明确指定它。</p>\n<pre><code class=\"language-python\">print(arr1d.dtype)\n# 预期输出: dtype('int64') (或者可能是 'int32'，取决于你的系统)\n\nprint(arr2d.dtype)\n# 预期输出: dtype('float64')\n</code></pre>\n<p>在 <code>arr1d</code> 中，NumPy 检测到整数，所以它很可能分配了一个 64 位整数类型 (<code>int64</code>)。在 <code>arr2d</code> 中，我们使用了带小数点的数字（例如 <code>1.0</code>），所以 NumPy 分配了一个 64 位浮点类型 (<code>float64</code>)。</p>\n<p>了解 <code>dtype</code> 很重要，原因如下：</p>\n<ul>\n<li><strong>内存占用：</strong> 不同的数据类型占用不同大小的内存（例如，<code>int64</code> 比 <code>int8</code> 占用更多内存）。</li>\n<li><strong>精度：</strong> 浮点类型（<code>float32</code>、<code>float64</code>）提供不同级别的精度。</li>\n<li><strong>兼容性：</strong> 某些操作需要特定的数据类型。</li>\n</ul>\n<p>这些属性（<code>ndim</code>、<code>shape</code>、<code>size</code>、<code>dtype</code>）是你检查和理解 NumPy 数组结构和性质的首要工具。定期检查它们有助于确保你的数组结构符合预期，然后再进行更复杂的操作。</p>",
+  "slug": "basic-array-attributes",
+  "updates": [],
+  "references": [
+    {
+      "id": 3683,
+      "title": "The N-dimensional array (ndarray)",
+      "author": "NumPy Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/arrays.ndarray.html",
+      "doi": "",
+      "note": "官方文档详细介绍了 NumPy `ndarray` 的结构及其核心属性，例如 `ndim`、`shape`、`size` 和 `dtype`。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:24.633759Z",
+      "updated_at": "2025-09-08T02:32:51.426675Z"
+    },
+    {
+      "id": 3684,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "这本广受认可的书籍提供了 NumPy 的实践介绍，包括如何创建数组和检查其基本属性。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:24.643538Z",
+      "updated_at": "2025-09-08T02:32:55.188903Z"
+    },
+    {
+      "id": 3685,
+      "title": "NumPy arrays",
+      "author": "Gaël Varoquaux, Emmanuelle Gouillart, Olav Vahtras, and contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.scipy-lectures.org/intro/numpy/",
+      "doi": "",
+      "note": "一个广受好评的在线资源，清晰地解释了 NumPy 数组的基本概念，包括它们的维度、形状、大小和数据类型。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:24.646474Z",
+      "updated_at": "2025-09-08T02:33:05.536441Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

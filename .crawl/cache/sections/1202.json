@@ -1,0 +1,61 @@
+{
+  "id": 1202,
+  "title": "分类变量的箱线图 (boxplot)",
+  "meta_title": "Seaborn 分类数据箱线图",
+  "meta_description": "应用 Seaborn 的箱线图来比较不同类别的数据分布。",
+  "content": "<p>虽然条形图能让我们了解数值变量在不同类别中的集中趋势（如均值或中位数），但它们却不能很好地说明数据在每个类别中是如何分布的。数值是紧密集中，还是广泛散布？有很多异常值吗？为了回答这些问题并比较整体数据分布情况，我们可以使用箱线图。</p>\n<p>箱线图（或称箱须图）简洁地展示了数据集的分布概况。它呈现了五个重要统计量：</p>\n<ol>\n<li><strong>中位数 (Q2):</strong> 数据的中间值（50th 百分位数），由箱体内的线表示。</li>\n<li><strong>下四分位数 (Q1):</strong> 25% 的数据低于此值（25th 百分位数）。这是箱体的底部边缘。</li>\n<li><strong>上四分位数 (Q3):</strong> 75% 的数据低于此值（75th 百分位数）。这是箱体的顶部边缘。</li>\n<li><strong>四分位距 (IQR):</strong> Q1 和 Q3 之间的范围 (IQR = Q3 - Q1)。箱体本身代表四分位距，包含中间 50% 的数据。</li>\n<li><strong>须（或触须）:</strong> 从箱体延伸出的线，通常显示 Q1 和 Q3 之外 1.5 倍四分位距内的数据范围。超出须的数值常被视为潜在异常值，并单独绘制。</li>\n</ol>\n<p>Seaborn 的 <code>boxplot</code> 函数专门用于创建箱线图，使得比较不同类别的数据分布变得容易。</p>\n<h3>使用 <code>seaborn.boxplot</code> 创建箱线图</h3>\n<p>基本语法包括指定一个轴（通常是 <code>x</code>）上的分类变量，另一个轴（通常是 <code>y</code>）上的数值变量，以及使用 <code>data</code> 参数 (parameter)指定包含数据的 DataFrame。</p>\n<p>我们来使用 Seaborn 自带的常用“tips”数据集。我们可以比较每周各天的总账单金额的分布情况。</p>\n<pre><code class=\"language-python\">import seaborn as sns\nimport matplotlib.pyplot as plt\nimport pandas as pd\n\n# 加载示例数据集\ntips = sns.load_dataset(\"tips\")\n\n# 创建箱线图\nplt.figure(figsize=(8, 5)) # 调整图表大小以提高可读性\nsns.boxplot(x=\"day\", y=\"total_bill\", data=tips, palette=[\"#74c0fc\", \"#ffc078\", \"#8ce99a\", \"#ffc9c9\"])\n\n# 添加标题和标签（可选但建议）\nplt.title(\"每日总账单金额分布\")\nplt.xlabel(\"星期\")\nplt.ylabel(\"总账单 ($)\")\n\n# 显示图表\nplt.show()\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-3k91as\" \n              data-plot-definition='{\"data\":[{\"type\":\"box\",\"y\":[16.99,10.34,21.01,23.68,24.59,25.29,8.77,26.88,15.04,14.78,10.27,35.26,15.42,18.43,14.83,21.58,10.33,16.29,16.97,20.65,17.92,20.29,15.77,39.42,19.82,17.81,13.37,12.69,21.7,19.65,9.55,18.35,15.06,20.69,17.78,24.06,16.31,16.93,18.69,31.27,16.04,17.46,13.94,9.68,30.4,18.29,22.23,32.4,28.55,18.04,12.54,10.29,34.81,9.94,25.56,19.49,38.01,26.41,11.24,48.27,20.29,13.81,11.02,18.29,17.59,20.08,16.45,3.07,20.23,15.01,12.02,17.07,26.86,12.46,25.89,48.33,13.0,13.51,18.71,12.74,13.0,24.55,19.77,29.85,10.65,12.43,14.52,23.33,11.35,23.17,40.55,20.49,16.58,31.71,10.51,17.92,27.18,22.76,17.29,19.44,8.58,15.98,13.42,16.27,10.77,15.53,10.07,12.6,32.68,15.95,34.83,13.03,18.28,24.71,30.06,12.03,21.01,16.66,16.47,20.53,16.49,28.97,22.49,5.75,16.32,22.12,24.01,15.69,11.61,10.59,10.63,18.99,18.15,20.45,13.28,22.12,24.08,11.69,13.42,7.25,31.85,16.82,32.9,17.89,14.48,9.6,10.33,11.17,27.05,16.43,28.17,12.9,7.51,14.07,13.13,17.26,18.8,15.38,18.28,15.71,12.16,22.82,19.08,15.69],\"boxpoints\":false,\"name\":\"周四\",\"marker\":{\"color\":\"#74c0fc\"}},{\"type\":\"box\",\"y\":[7.56,43.11,13.27,28.44,29.8,8.51,14.15,12.26,10.09,29.03,27.28,12.13,21.16,28.67,11.59,7.74,30.14,12.16,13.16,17.47,34.3,41.19,27.05,14.31,15.0,10.51,10.07,12.64,9.78,32.83,35.83,29.83,10.07,19.81,14.24,11.38,22.42,20.92,15.47,11.35,16.21,13.81,13.0],\"boxpoints\":false,\"name\":\"周五\",\"marker\":{\"color\":\"#ffc078\"}},{\"type\":\"box\",\"y\":[20.59,27.2,22.75,40.17,27.18,25.0,17.82,19.44,50.81,15.81,7.25,31.87,23.1,15.48,14.0,11.87,9.17,26.59,19.63,38.73,24.27,12.76,30.06,25.28,14.73,10.51,17.92,29.93,20.69,30.46,18.15,23.02,11.57,44.3,22.4,25.56,15.43,18.35,21.5,12.48,34.63,34.65,23.33,45.35,23.17,13.39,16.0,13.16,28.17,12.9,13.16,29.85,38.07,23.95,32.4,11.17,23.0,12.02,24.71,10.07,17.07,15.44,14.31,16.4,18.64,24.52,20.76,31.27,13.81,18.28,10.09,22.28,17.51,24.55,14.07,17.15,18.8,15.38,12.16,12.74,19.08,15.71,22.82,15.69],\"boxpoints\":false,\"name\":\"周六\",\"marker\":{\"color\":\"#8ce99a\"}},{\"type\":\"box\",\"y\":[16.24,21.15,17.31,16.0,16.49,20.45,25.21,14.78,17.51,10.58,29.8,10.29,34.3,17.07,19.63,15.81,17.48,13.94,9.68,13.42,8.77,48.17,25.0,13.81,17.89,20.49,20.69,24.52,20.76,17.92,19.81,28.15,11.59,11.61,7.25,31.71,17.31,14.48,9.6,10.59,10.63,15.04,18.15,11.17,23.1,11.02,18.29,13.0,22.23,16.0,10.27,14.0,12.03,21.01,16.66,16.47,20.53,16.49,28.97,22.49,27.18,22.76,17.29,19.44,8.58,15.98,13.42,16.27,10.77,15.53,10.07,12.6,32.68,15.95,34.83,13.03,18.28,24.71,30.06,17.82],\"boxpoints\":false,\"name\":\"周日\",\"marker\":{\"color\":\"#ffc9c9\"}}],\"layout\":{\"yaxis\":{\"title\":{\"text\":\"总账单 ($)\"},\"autorange\":true},\"xaxis\":{\"title\":{\"text\":\"星期\"},\"autorange\":true},\"title\":{\"text\":\"每日总账单金额分布\"},\"boxmode\":\"group\",\"margin\":{\"t\":60,\"b\":40,\"l\":60,\"r\":20},\"height\":350,\"width\":600,\"showlegend\":false}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 350px;\"\n            >\n              <div id=\"plot-3k91as\" style=\"width: 100%; min-height: 350px;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用 Seaborn 的 <code>boxplot</code> 函数绘制的每周各天总账单金额分布。</p>\n</blockquote>\n<h3>解读箱线图</h3>\n<p>从上图我们可以得出一些观察结果：</p>\n<ul>\n<li><strong>中位数：</strong> 每个箱体内的线表示总账单的中位数。周六和周日的总账单中位数通常高于周四和周五。</li>\n<li><strong>分布（四分位距）：</strong> 箱体的高度（四分位距）表明了中间 50% 账单的分布情况。周六的四分位距似乎更大，表示账单金额的变动性比周四更大。</li>\n<li><strong>须：</strong> 须显示了常见账单的范围。周末（周六、周日）的范围似乎更广，数值也更高。</li>\n<li><strong>异常值：</strong> 绘制在须之外的独立点代表潜在异常值。周日和周六显示有几个高值异常值，表示这些天有一些特别大的账单。周四也有一个相当高的异常值。</li>\n</ul>\n<p>与仅显示每日平均账单的条形图相比，箱线图让我们对每天账单金额的变动情况有了更全面的认识。</p>\n<h3>自定义箱线图</h3>\n<p>与其他 Seaborn 函数类似，<code>boxplot</code> 提供了多种自定义选项。</p>\n<ul>\n<li>\n<p><strong>方向：</strong> 你可以通过交换 <code>x</code> 和 <code>y</code> 的位置或设置 <code>orient='h'</code> 来创建水平箱线图。</p>\n<pre><code class=\"language-python\"># 水平箱线图\nsns.boxplot(x=\"total_bill\", y=\"day\", data=tips, orient='h', palette=[\"#74c0fc\", \"#ffc078\", \"#8ce99a\", \"#ffc9c9\"])\nplt.title(\"每日总账单金额分布\")\nplt.xlabel(\"总账单 ($)\")\nplt.ylabel(\"星期\")\nplt.show()\n</code></pre>\n</li>\n<li>\n<p><strong>顺序：</strong> 使用 <code>order</code> 参数 (parameter)并传入一个类别名称列表，以控制类别的显示顺序。</p>\n<pre><code class=\"language-python\"># 指定日期的顺序\nday_order = [\"Thur\", \"Fri\", \"Sat\", \"Sun\"]\nsns.boxplot(x=\"day\", y=\"total_bill\", data=tips, order=day_order, palette=[\"#74c0fc\", \"#ffc078\", \"#8ce99a\", \"#ffc9c9\"])\n# ... (添加标题/标签并显示图表)\n</code></pre>\n</li>\n<li>\n<p><strong>色调（Hue）：</strong> 你可以使用 <code>hue</code> 参数添加另一个分类维度，这会在 x 轴上的每个主要类别中，为 <code>hue</code> 变量的每个水平创建独立的、并排的箱体。例如，你可以按天比较账单，并根据顾客是否吸烟进行划分。</p>\n<pre><code class=\"language-python\"># 将“smoker”作为色调维度添加\nsns.boxplot(x=\"day\", y=\"total_bill\", hue=\"smoker\", data=tips, palette=\"pastel\")\nplt.title(\"按日期和吸烟者状态划分的总账单分布\")\nplt.xlabel(\"星期\")\nplt.ylabel(\"总账单 ($)\")\nplt.show()\n</code></pre>\n</li>\n</ul>\n<p>箱线图在你想要比较数值变量在由一个或多个分类变量定义的多个组中的分布时，特别有效。它们提供了一种快速方法来评估各组之间集中趋势、分布范围以及异常值存在情况的差异。</p>",
+  "slug": "seaborn-categorical-boxplot",
+  "updates": [],
+  "references": [
+    {
+      "id": 880,
+      "title": "seaborn.boxplot",
+      "author": "Seaborn Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://seaborn.pydata.org/generated/seaborn.boxplot.html",
+      "doi": "",
+      "note": "Seaborn `boxplot` 函数的官方文档，详细介绍了其参数和用法。",
+      "order": 1,
+      "created_at": "2025-09-04T15:06:30.422097Z",
+      "updated_at": "2025-09-07T16:24:30.507757Z"
+    },
+    {
+      "id": 881,
+      "title": "Python for Data Analysis: Data Wrangling with pandas, NumPy, and IPython",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本使用 Pandas、Matplotlib 和 Seaborn 等库进行 Python 数据处理和可视化的实用指南。",
+      "order": 2,
+      "created_at": "2025-09-04T15:06:30.431256Z",
+      "updated_at": "2025-09-07T16:24:25.182819Z"
+    },
+    {
+      "id": 882,
+      "title": "An Introduction to Statistical Learning: With Applications in Python",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani, Jonathan Taylor",
+      "year": "2023",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "10.1007/978-3-031-38747-0",
+      "note": "为数据分析和可视化提供了全面的统计学基础，包括箱线图背后的原理。",
+      "order": 3,
+      "created_at": "2025-09-04T15:06:30.433865Z",
+      "updated_at": "2025-09-07T16:24:38.736496Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

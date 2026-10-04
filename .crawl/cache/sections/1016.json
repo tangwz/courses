@@ -1,0 +1,45 @@
+{
+  "id": 1016,
+  "title": "列出分支",
+  "meta_title": "列出 Git 分支 | 本地和远程",
+  "meta_description": "使用 `git branch` 命令配合不同选项来列出本地和远程分支。",
+  "content": "<p>在本地 Git 仓库中管理不同的开发路径时，需要一种有效的方法来查看所有可用分支。Git 提供了 <code>git branch &#x3C;branch-name></code> 命令来创建新分支，并允许使用 <code>git switch &#x3C;branch-name></code>（或旧版 <code>git checkout &#x3C;branch-name></code>）来切换分支。跟踪这些分支对于有效管理工作和理解项目结构至关重要。</p>\n<h3><code>git branch</code> 命令</h3>\n<p>查看本地分支最简单的方法是运行不带任何参数 (parameter)的 <code>git branch</code> 命令：</p>\n<pre><code class=\"language-sh\">git branch\n</code></pre>\n<p>此命令会列出本地仓库中存在的所有分支。Git 还会通过在其名称旁放置星号 (<code>*</code>) 并通常用不同颜色（取决于你的终端配置）突出显示来指示你当前正在处理的分支。</p>\n<p>例如，如果你有一个 <code>main</code> 分支和一个 <code>feature-login</code> 分支，并且你当前正在 <code>feature-login</code> 上工作，输出可能如下所示：</p>\n<pre><code>  main\n* feature-login\n</code></pre>\n<p>这表示存在两个本地分支（<code>main</code> 和 <code>feature-login</code>），并且你的工作目录当前反映了 <code>feature-login</code> 分支的状态。你现在进行的任何提交都将添加到 <code>feature-login</code> 分支的历史记录中。</p>\n<h3>查看远程跟踪分支</h3>\n<p>通常，你会使用连接到远程服务器（如 GitHub 或 GitLab）的仓库，这将在即将到来的关于远程仓库的章节中进行讨论。Git 使用一种特殊的引用，称为 <em>远程跟踪分支</em>，来跟踪远程服务器上分支的状态。这些就像本地书签，显示你上次与远程通信（例如，使用 <code>git fetch</code> 或 <code>git pull</code>）时远程分支所处的位置。</p>\n<p>要只查看这些远程跟踪分支，你可以使用 <code>-r</code>（表示“remote”）标志：</p>\n<pre><code class=\"language-sh\">git branch -r\n</code></pre>\n<p>输出通常会在分支名称前加上远程仓库的名称（通常是 <code>origin</code>）。</p>\n<pre><code>  origin/HEAD -> origin/main\n  origin/main\n  origin/develop\n  origin/feature-login\n</code></pre>\n<p>这里，<code>origin/main</code> 和 <code>origin/develop</code> 代表 <code>main</code> 和 <code>develop</code> 分支在 <code>origin</code> 远程上的状态。<code>origin/HEAD</code> 是一个特殊指针，通常指示远程上的默认分支。请注意，这些不是 <em>你的</em> 本地分支；它们反映的是远程仓库的状态。</p>\n<h3>查看所有分支（本地和远程）</h3>\n<p>要获取所有分支的完整视图，包括本地和远程跟踪分支，请使用 <code>-a</code>（表示“all”）标志：</p>\n<pre><code class=\"language-sh\">git branch -a\n</code></pre>\n<p>此命令结合了 <code>git branch</code> 和 <code>git branch -r</code> 的输出，为你提供一个综合列表。</p>\n<pre><code>  main\n* feature-login\n  remotes/origin/HEAD -> origin/main\n  remotes/origin/main\n  remotes/origin/develop\n  remotes/origin/feature-login\n</code></pre>\n<p>你可以看到你的本地分支（<code>main</code>、<code>feature-login</code>）和远程跟踪分支（以 <code>remotes/origin/</code> 为前缀）。这对于将你的本地工作与远程仓库的状态进行比较特别有用。</p>\n<h3>获取更多信息</h3>\n<p>有时，只看到分支名称是不够的。你可能想知道每个分支上的最新提交是什么。<code>-v</code>（表示“verbose”）标志提供了这些信息，显示每个分支上最新提交的短 SHA-1 哈希值和主题行：</p>\n<pre><code class=\"language-sh\">git branch -v\n</code></pre>\n<pre><code>  main           a1b2c3d Initial project setup\n* feature-login  e4f5g6h Add login form fields\n</code></pre>\n<p>再添加一个 <code>v</code> (<code>-vv</code>) 会提供更详细的信息，包括你的本地分支正在跟踪的上游分支（如果有），这在处理远程仓库时很有帮助。</p>\n<pre><code class=\"language-sh\">git branch -vv\n</code></pre>\n<pre><code>  main           a1b2c3d [origin/main] Initial project setup\n* feature-login  e4f5g6h [origin/feature-login: ahead 1] Add login form fields\n</code></pre>\n<p>此输出告诉你 <code>main</code> 正在跟踪 <code>origin/main</code> 并且是最新的，而 <code>feature-login</code> 正在跟踪 <code>origin/feature-login</code> 并有一个提交（<code>ahead 1</code>）尚未推送到远程仓库。</p>\n<p>总而言之，<code>git branch</code> 命令及其 <code>-r</code>、<code>-a</code> 和 <code>-v</code>/<code>-vv</code> 选项提供了查看仓库中不同开发线的重要工具，帮助你有效地使用和管理工作。</p>",
+  "slug": "git-list-branches",
+  "updates": [],
+  "references": [
+    {
+      "id": 266,
+      "title": "git-branch Documentation",
+      "author": "Git Development Community",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-branch",
+      "doi": "",
+      "note": "关于 `git branch` 命令的官方和全面参考资料，详细介绍了其所有功能和用于列出本地及远程分支的选项。",
+      "order": 1,
+      "created_at": "2025-09-04T14:02:09.946536Z",
+      "updated_at": "2025-09-07T15:41:55.549615Z"
+    },
+    {
+      "id": 267,
+      "title": "Git Branching - Branch Management",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "Chapter 3.3",
+      "url": "https://git-scm.com/book/en/v2/Git-Branching-Branch-Management",
+      "doi": "",
+      "note": "这部分来自权威书籍《Pro Git》的内容提供了创建、列出和管理 Git 分支的实用指南，包括理解本地和远程跟踪分支。",
+      "order": 2,
+      "created_at": "2025-09-04T14:02:09.949759Z",
+      "updated_at": "2025-09-07T15:42:00.303363Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

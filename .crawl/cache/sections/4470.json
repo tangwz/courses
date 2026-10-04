@@ -1,0 +1,61 @@
+{
+  "id": 4470,
+  "title": "图重写系统",
+  "meta_title": "ML编译器中的图重写系统",
+  "meta_description": "理解用于模式匹配和重写计算图的机制。",
+  "content": "<p>如前所述，优化计算图涉及改变其结构以提升效率。这些变换，比如算子融合或代数简化，并非随意应用。相反，它们依赖于被称为<strong>图重写系统</strong>的系统化机制。这些系统提供了一种基本框架，用于识别图中的特定模式，并应用预定义的变换，以更优化的结构替换这些模式。</p>\n<p>图重写系统作用于计算图，计算图通常表示为有向无环图（DAG）。在此DAG中，节点代表运算（如卷积、矩阵乘法或激活），边代表数据依赖关系，通常是运算之间流动的数据。</p>\n<h3>图重写系统的组成部分</h3>\n<p>图重写系统主要由两部分组成：</p>\n<ol>\n<li>\n<p><strong>一套重写规则：</strong> 每条规则定义一个特定的变换。它通常包含两部分：</p>\n<ul>\n<li><strong>模式（或左侧 - LHS）：</strong> 描述要搜索的子图结构。此模式指定运算类型、它们的连接关系（依赖关系），以及节点属性（如数据类型或张量形状）可能存在的限制。</li>\n<li><strong>替换（或右侧 - RHS）：</strong> 定义应替换匹配模式的新子图结构。这可能涉及创建新节点、删除现有节点，以及调整边（数据依赖关系）以将替换子图正确连接到主图中。</li>\n</ul>\n</li>\n<li>\n<p><strong>一个引擎：</strong> 该组件组织重写过程。其职责包括：</p>\n<ul>\n<li><strong>模式匹配：</strong> 高效地在整个计算图中搜索重写规则中定义的所有模式出现。</li>\n<li><strong>规则应用：</strong> 选择要应用的匹配规则，并按照规则的替换模式执行图修改。</li>\n<li><strong>策略：</strong> 确定应用规则的顺序和迭代方法。应用一条规则可能会启用或禁用其他规则，因此策略对最终优化后的图影响很大。</li>\n</ul>\n</li>\n</ol>\n<h3>模式匹配</h3>\n<p>模式匹配是在较大计算图中寻找与重写规则中定义的模式同构（结构等效）的子图的过程。此过程需要考虑：</p>\n<ul>\n<li><strong>节点类型：</strong> 匹配特定的运算（例如，<code>Conv2D</code>、<code>ReLU</code>、<code>Add</code>）。</li>\n<li><strong>连接性：</strong> 确保子图中节点之间的数据依赖关系与模式指定的边相符。</li>\n<li><strong>属性和限制：</strong> 验证节点属性（如步幅、填充、数据类型，甚至常量值）是否满足模式中指定的任何限制。例如，融合模式可能只在数据类型匹配或操作数是常量时才适用。</li>\n</ul>\n<p>匹配可以是简单的相邻节点检查，也可以是复杂的子图同构问题。相关技术常借鉴项重写和编译器优化，有时会使用专门的模式描述语言（如MLIR的模式描述语言 - PDL）来正式定义复杂的模式及其相关限制。</p>\n<h3>替换与变换</h3>\n<p>一旦模式匹配成功，重写引擎就会应用规则替换部分定义的变换。这涉及对图数据结构的细致操作：</p>\n<ol>\n<li><strong>节点创建：</strong> 实例化替换模式中指定的新节点。</li>\n<li><strong>节点删除：</strong> 移除属于匹配模式但不属于替换部分的节点。</li>\n<li><strong>边重连：</strong> 边（数据依赖关系）得到更新。原始匹配子图的输入可能会重新路由到替换子图的输入。替换子图的输出连接到原始匹配子图输出的消费者。</li>\n</ol>\n<p>此变换必须保持计算的语义等效性（或进行改进，例如通过移除冗余运算），以及图结构的整体有效性。</p>\n<h3>应用策略</h3>\n<p>由于多条规则可能同时匹配图的不同部分，或者应用一条规则可能为其他规则创造机会，因此应用规则的策略很重要。常见的策略包括：</p>\n<ul>\n<li><strong>迭代应用：</strong> 重复扫描图并应用规则，直到没有更多规则可以应用（达到不动点）。</li>\n<li><strong>基于优先级的应用：</strong> 为规则分配优先级，确保可能更具影响或作为前提的变换优先应用。</li>\n<li><strong>成本建模：</strong> 使用成本模型来评估应用规则的性能影响（例如，缩短执行时间、减少内存使用），从而指导选择过程，倾向于能带来最大效益的变换。</li>\n</ul>\n<p>贪心应用（应用第一个匹配的规则）常用于简化，但不能保证找到最优的图配置，这通常是一个NP难问题。</p>\n<h3>示例：代数简化</h3>\n<p>考虑一个简单的代数恒等式：<code>Transpose(Transpose(A)) = A</code>。一条重写规则可以体现这一点：</p>\n<ul>\n<li><strong>模式：</strong> 一个 <code>Transpose</code> 运算，其输入是另一个 <code>Transpose</code> 运算的输出。</li>\n<li><strong>替换：</strong> 将外部的 <code>Transpose</code> 运算替换为从内部 <code>Transpose</code> 的输入直接连接到外部 <code>Transpose</code> 的结构。实际上，两个 <code>Transpose</code> 节点都被绕过，如果没有其他使用者，它们可能会被移除。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-k8s7ao\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\"];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_pattern {\n        label = \"模式 (LHS)\";\n        bgcolor=\"#e9ecef\";\n        A_pat [label=\"输入 A\"];\n        T1_pat [label=\"转置\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n        T2_pat [label=\"转置\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n        Out_pat [label=\"输出\", shape=plaintext];\n        A_pat -> T1_pat;\n        T1_pat -> T2_pat;\n        T2_pat -> Out_pat [style=dashed];\n    }\n\n    subgraph cluster_replacement {\n        label = \"替换 (RHS)\";\n        bgcolor=\"#e9ecef\";\n        A_rep [label=\"输入 A\"];\n        Out_rep [label=\"输出\", shape=plaintext];\n        A_rep -> Out_rep [label=\"直接连接\"];\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-k8s7ao\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该重写规则识别出两个连续的转置操作，并将其替换为从原始输入到最终输出的直接连接。</p>\n</blockquote>\n<h3>示例：简单融合</h3>\n<p>另一种常见模式是将一个运算与其后续的激活函数 (activation function)融合，例如 <code>Convolution -> ReLU</code>。</p>\n<ul>\n<li><strong>模式：</strong> 一个 <code>ReLU</code> 运算，其输入是 <code>Conv</code> 运算的输出。通常包含限制条件，例如 <code>Conv</code> 的输出仅被此 <code>ReLU</code> 使用。</li>\n<li><strong>替换：</strong> 一个单一的 <code>FusedConvReLU</code> 运算，它接收原始 <code>Conv</code> 的输入，并产生等同于原始 <code>ReLU</code> 的输出。原始的 <code>Conv</code> 和 <code>ReLU</code> 节点将被移除。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-uqaxkc\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=\"0.1,0.05\"];\n    edge [fontname=\"Arial\", fontsize=9];\n\n    subgraph cluster_pattern {\n        label = \"模式 (LHS)\";\n        bgcolor=\"#e9ecef\";\n            Input_pat [label=\"输入\"];\n            Weights_pat [label=\"权重\"];\n            Conv_pat [label=\"卷积\", shape=ellipse, style=filled, fillcolor=\"#74c0fc\"];\n            ReLU_pat [label=\"ReLU\", shape=ellipse, style=filled, fillcolor=\"#96f2d7\"];\n            Output_pat [label=\"输出\", shape=plaintext];\n\n            Input_pat -> Conv_pat;\n            Weights_pat -> Conv_pat;\n            Conv_pat -> ReLU_pat;\n            ReLU_pat -> Output_pat [style=dashed];\n    }\n\n    subgraph cluster_replacement {\n        label = \"替换 (RHS)\";\n        bgcolor=\"#e9ecef\";\n            Input_rep [label=\"输入\"];\n            Weights_rep [label=\"权重\"];\n            Fused_rep [label=\"融合卷积ReLU\", shape=ellipse, style=filled, fillcolor=\"#12b886\"];\n            Output_rep [label=\"输出\", shape=plaintext];\n\n            Input_rep -> Fused_rep;\n            Weights_rep -> Fused_rep;\n            Fused_rep -> Output_rep;\n    }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-uqaxkc\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将卷积和ReLU运算融合为单一的FusedConvReLU节点可减少内核启动开销并改善数据局部性。</p>\n</blockquote>\n<p>图重写系统为后续章节讨论的高级图级优化提供了核心机制。通过定义模式及其对应的替换，编译器可以系统地重构ML计算图以提升性能，然后再进行低级代码生成。理解这些系统对掌握高级优化（如算子融合、代数简化和布局变换）如何在实践中实现非常重要。</p>",
+  "slug": "graph-rewriting-systems",
+  "updates": [],
+  "references": [
+    {
+      "id": 11986,
+      "title": "Graph Transformation: Basic Concepts and Applications",
+      "author": "Hartmut Ehrig, Gregor Engels, Hans-Jörg Kreowski, Grzegorz Rozenberg (Editors)",
+      "year": "2007",
+      "publisher": "Springer Berlin Heidelberg",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/3-540-27202-0",
+      "doi": "10.1007/3-540-27202-0",
+      "note": "关于图转换和重写系统的基础教材，提供了全面的理论概念。",
+      "order": 1,
+      "created_at": "2025-09-05T07:55:42.591500Z",
+      "updated_at": "2025-09-09T02:58:21.657518Z"
+    },
+    {
+      "id": 11988,
+      "title": "TVM: An Automatic End-to-End Optimizing Compiler for Deep Learning",
+      "author": "Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy",
+      "year": "2018",
+      "publisher": "USENIX Association",
+      "journal": "13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18)",
+      "volume": "",
+      "pages": "578-594",
+      "url": "https://www.usenix.org/conference/osdi18/presentation/chen",
+      "doi": "",
+      "note": "介绍了TVM，一个深度学习编译器，通过灵活的重写系统实现图级优化，包括融合和其他转换。",
+      "order": 3,
+      "created_at": "2025-09-05T07:55:42.596383Z",
+      "updated_at": "2025-09-10T08:43:42.975895Z"
+    },
+    {
+      "id": 11989,
+      "title": "MLIR's Pattern Rewriting",
+      "author": "The MLIR Team",
+      "year": "Current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlir.llvm.org/docs/PatternRewriter/",
+      "doi": "",
+      "note": "MLIR框架中模式匹配和重写机制的官方文档，包括模式描述语言（PDL）的使用。",
+      "order": 4,
+      "created_at": "2025-09-05T07:55:42.598578Z",
+      "updated_at": "2025-09-09T02:57:40.142759Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

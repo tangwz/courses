@@ -1,0 +1,61 @@
+{
+  "id": 7758,
+  "title": "解析JSON与代码片段",
+  "meta_title": "解析JSON与代码片段",
+  "meta_description": "使用 Kerb 提供的专用解析器，可靠地从文本中提取JSON对象和代码块。",
+  "content": "<p>从模型生成结构化输出是一个常见需求，但原始响应通常无法直接使用。大型语言模型本质上是文本生成器，其输出可能被对话文本包裹、包含在Markdown块中，甚至含有小的格式错误。直接使用Python的<code>json</code>模块等标准库进行解析可能不稳定，并造成应用程序出错。</p>\n<p>这时，专用解析器就显得不可或缺。它们被设计用于从大型语言模型有时产生的嘈杂、不可预测的文本中查找并提取结构化数据，为您提供一种可靠的方法，将原始字符串转换为可用数据结构。</p>\n<h3>从周围文本中提取JSON</h3>\n<p>您会常遇到的一种模式是大型语言模型提供一个被解释性文本或Markdown代码块包裹的JSON对象。例如，您可能会请求用户数据，并收到类似这样的响应：</p>\n<pre><code>当然！这是您请求的用户信息，格式为JSON对象：\r\n\r\n```json\r\n{\r\n  \"name\": \"Alice Johnson\",\r\n  \"email\": \"alice@example.com\",\r\n  \"age\": 28,\r\n  \"roles\": [\"developer\", \"team_lead\"]\r\n}\r\n```\r\n\r\n如果您需要其他详细信息，请告诉我。\n</code></pre>\n<p>标准的JSON解析器无法处理这段文本。然而，<code>extract_json</code>函数就是为了处理这种特定情况而设计的。它会扫描文本，识别出JSON块，并将其提取出来进行解析。</p>\n<pre><code class=\"language-python\">from kerb.parsing import extract_json\r\n\r\nllm_output = \"\"\"这是您请求的用户数据：\r\n\r\n```json\r\n{\r\n  \"name\": \"Alice Johnson\",\r\n  \"email\": \"alice@example.com\",\r\n  \"age\": 28,\r\n  \"roles\": [\"developer\", \"team_lead\"]\r\n}\r\n```\r\n\r\n此数据是从用户数据库中提取的。\"\"\"\r\n\r\nresult = extract_json(llm_output)\r\n\r\nif result.success:\r\n    user_data = result.data\r\n    print(f\"成功提取用户：{user_data.get('name')}\")\r\nelse:\r\n    print(f\"提取JSON失败：{result.error}\")\n</code></pre>\n<p>该函数返回一个包含结果的<code>ParseResult</code>对象。<code>success</code>属性告知您操作是否成功，如果成功，<code>data</code>属性则包含已解析的Python字典。这使得构建能够应对大型语言模型输出多样性（冗长程度）的灵活工作流变得简单。</p>\n<h3>处理格式错误和嵌入 (embedding)式JSON</h3>\n<p>有时，大型语言模型的输出<em>几乎</em>正确，但包含小的语法错误，这会使严格的解析器无法运行。常见问题包括尾随逗号、键缺少引号或使用单引号而非双引号。</p>\n<p>此外，模型可能会将JSON对象直接嵌入句子中，而没有任何特殊格式。例如：<code>配置是：{\"api_key\": \"sk-xxx\", \"timeout\": 30}，这应该可以运行。</code></p>\n<p>为了处理这些情况，您可以使用<code>parse_json</code>或<code>extract_json</code>，并采用更宽松的解析模式。</p>\n<ul>\n<li><code>ParseMode.STRICT</code>：要求输入为格式完全正确的JSON字符串。</li>\n<li><code>ParseMode.LENIENT</code>：在解析前尝试修复常见错误，例如尾随逗号或缺少引号。它仍只会在整个字符串旨在为JSON时进行解析。</li>\n<li><code>ParseMode.BEST_EFFORT</code>：扫描字符串以找到第一个看起来有效的JSON对象或数组，即使它嵌入在其他文本中。</li>\n</ul>\n<p>我们来看看<code>ParseMode.LENIENT</code>如何自动修复格式错误的JSON字符串。</p>\n<pre><code class=\"language-python\">from kerb.parsing import parse_json, ParseMode\r\n\r\n# 这个JSON有未加引号的键和尾随逗号\r\nmalformed_json = \"\"\"{\r\n    name: \"Bob\",\r\n    age: 35,\r\n    active: true,\r\n}\"\"\"\r\n\r\nresult = parse_json(malformed_json, mode=ParseMode.LENIENT)\r\n\r\nif result.success:\r\n    print(f\"数据：{result.data}\")\r\n    print(f\"JSON是否已修复？{result.fixed}\")\n</code></pre>\n<p>处理嵌入在文本中的JSON时，<code>ParseMode.BEST_EFFORT</code>是您的最佳选择。它会找到并提取结构化部分，忽略其余内容。</p>\n<pre><code class=\"language-python\">from kerb.parsing import extract_json, ParseMode\r\n\r\nllm_output = '配置是：{\"api_key\": \"sk-xxx\", \"timeout\": 30, \"retries\": 3}，这应该可以运行。'\r\n\r\n# BEST_EFFORT 会在句子中找到JSON\r\nresult = extract_json(llm_output, mode=ParseMode.BEST_EFFORT)\r\n\r\nif result.success:\r\n    print(f\"提取的配置：{result.data}\")\n</code></pre>\n<p>使用这些模式提供了安全保障，使您的应用程序在面对大型语言模型输出质量中虽小但常见的多样性时更加可靠。</p>\n<h3>解析代码片段</h3>\n<p>提取代码也遵循类似的模式。尽管大型语言模型擅长生成代码，但它们通常会将其包裹在Markdown块中并添加解释。一种可靠的代码提取方法是指导模型将其置于JSON对象内部。这把解析代码的问题变成了更易于处理的解析JSON问题。</p>\n<p>例如，您可以提示模型以特定JSON结构返回其输出。</p>\n<p><strong>提示：</strong></p>\n<pre><code>分析以下Python函数，并将其转换为包含这些字段的JSON表示形式：“name”、“docstring”、“parameters”和“return_type”。\r\n\r\n```python\r\ndef calculate_bmi(weight: float, height: float) -float:\r\n    \"\"\"计算身体质量指数。\"\"\"\r\n    return weight / (height ** 2)\r\n```\r\n\r\n仅返回一个单一的、有效的JSON对象。\n</code></pre>\n<p>模型理想情况下会返回一个干净的JSON对象，您可以使用我们已讨论过的技术进行解析。</p>\n<pre><code class=\"language-python\">from kerb.parsing import extract_json\r\n\r\n# 对上述提示的模拟大型语言模型响应\r\nllm_response = \"\"\"\r\n```json\r\n{\r\n  \"name\": \"calculate_bmi\",\r\n  \"docstring\": \"计算身体质量指数。\",\r\n  \"parameters\": [\r\n    {\"name\": \"weight\", \"type\": \"float\"},\r\n    {\"name\": \"height\", \"type\": \"float\"}\r\n  ],\r\n  \"return_type\": \"float\"\r\n}\r\n```\r\n\"\"\"\r\n\r\nresult = extract_json(llm_response)\r\n\r\nif result.success:\r\n    code_info = result.data\r\n    print(f\"函数名称：{code_info.get('name')}\")\r\n    print(f\"文档字符串：{code_info.get('docstring')}\")\n</code></pre>\n<p>这种方法使用了模型遵循格式指令的能力，使输出变得可预测且易于使用现有工具进行解析。通过将代码视为大型JSON结构中的字符串值，您可以可靠地提取它，用于代码分析、生成或执行工作流。</p>",
+  "slug": "parsing-json-and-code",
+  "updates": [],
+  "references": [
+    {
+      "id": 21759,
+      "title": "JSON encoder and decoder",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/json.html",
+      "doi": "",
+      "note": "Python内置JSON解析模块的官方文档，说明其标准的、严格的行为，这在处理LLM输出的变化时常遇到困难。",
+      "order": 1,
+      "created_at": "2025-10-20T07:29:27.590082Z",
+      "updated_at": "2025-10-20T07:53:24.166321Z"
+    },
+    {
+      "id": 21760,
+      "title": "JSON mode",
+      "author": "OpenAI",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://platform.openai.com/docs/guides/text-generation/json-mode",
+      "doi": "",
+      "note": "关于如何提示大型语言模型可靠生成结构化JSON输出的实用指南，这是高级提示中的一项关键技术，需要强大的下游解析能力。",
+      "order": 2,
+      "created_at": "2025-10-20T07:29:27.594784Z",
+      "updated_at": "2025-10-20T07:53:34.940988Z"
+    },
+    {
+      "id": 21761,
+      "title": "JSON",
+      "author": "Douglas Crockford",
+      "year": "2017",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.json.org/json-en.html",
+      "doi": "",
+      "note": "定义JSON数据交换格式的官方网站，阐述其严格的语法规则，这使得处理LLM生成的文本中常见偏差时需要专门的解析器。",
+      "order": 3,
+      "created_at": "2025-10-20T07:29:27.598435Z",
+      "updated_at": "2025-10-20T07:53:30.790148Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

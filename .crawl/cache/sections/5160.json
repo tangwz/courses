@@ -1,0 +1,45 @@
+{
+  "id": 5160,
+  "title": "代理可用工具",
+  "meta_title": "LangChain 代理的可用工具 | 进阶",
+  "meta_description": "了解代理可用的标准工具（如搜索、计算等）。",
+  "content": "<p>代理不只进行简单的文本生成，它们的能力因此得以提升。它们通过<strong>工具</strong>进行交互。可以将工具看作是代理可以选择使用的专业功能或服务，以完成任务的特定部分。如果说大型语言模型（LLM）是代理的大脑，负责决定<em>做什么</em>，那么工具就是它的手，让它能够<em>执行</em>操作。LangChain 提供了一系列预构建工具，并且可以方便地定义自己的工具。</p>\n<p>让代理能够使用工具，会显著增加其能力范围。仅凭大型语言模型本身，无法浏览当前的互联网、执行精确计算或查询私有数据库中的信息。工具弥补了这一不足。</p>\n<h3>常用工具分类</h3>\n<p>LangChain 提供了多种工具，通常分为几个实用的类别：</p>\n<ol>\n<li>\n<p><strong>搜索工具：</strong> 这类工具让代理能够查询 Google、DuckDuckGo、Bing 等搜索引擎，或专门的搜索 API（例如维基百科、ArXiv）。当代理需要获取最新信息或训练数据中没有的事实时，这类工具非常必要。例如，当代理被问及今天的天气时，就会使用搜索工具。设置这些工具通常需要从相应的搜索提供商获取 API 密钥，并安全地配置它们（如第 2 章中说明的）。</p>\n</li>\n<li>\n<p><strong>计算工具：</strong> 尽管大型语言模型理解数学思想，但它们在精确算术或复杂计算方面常有不足。计算工具解决了这个问题。</p>\n<ul>\n<li><code>LLMMathChain</code>：此工具使用大型语言模型确定<em>需要进行什么</em>计算，然后使用一个独立的、性能稳定的计算器（如 Python 的 <code>numexpr</code> 库）来获得精确答案。</li>\n<li><code>Python REPL Tool</code>：这为代理提供了访问 Python 读取-评估-打印循环（Read-Eval-Print Loop）的能力。代理可以编写和执行 Python 代码来执行计算、操作数据或进行 Python 允许的任何其他操作。<em>请极其谨慎地使用此工具</em>，因为它允许任意代码执行。</li>\n</ul>\n</li>\n<li>\n<p><strong>数据库工具：</strong> 代理可以与存储在 SQL 数据库中的结构化数据进行交互。<code>SQLDatabaseToolkit</code>（或特定工具如 <code>QuerySQLDataBaseTool</code>）允许代理查看数据库模式、根据自然语言请求构建 SQL 查询、执行这些查询并理解结果。这使得询问公司数据库中存储的业务指标等应用成为可能。</p>\n</li>\n<li>\n<p><strong>API 交互工具：</strong> 许多现代应用程序依赖于 API。代理可以配备与特定 API 交互的工具。这可能包括：</p>\n<ul>\n<li>通用 HTTP 请求工具（如 <code>requests</code> 库的封装），代理可以在其中生成 API 调用。</li>\n<li>专门为与特定 API 端点交互而构建的自定义工具（例如，一个通过公司内部 API 查询客户订单历史的工具）。</li>\n</ul>\n</li>\n<li>\n<p><strong>文件系统工具：</strong> 代理可以获得在本地文件系统上读取、写入和列出文件的工具。与 Python REPL 工具类似，这需要仔细考虑安全方面的问题，因为它可能授予广泛的访问权限。</p>\n</li>\n<li>\n<p><strong>网页浏览工具：</strong> 除了简单的搜索，有些工具还允许代理加载网页内容，可能从中提取特定信息，甚至在网站中进行导航。这在底层使用了 <code>requests</code> 或 <code>BeautifulSoup</code> 等库。</p>\n</li>\n</ol>\n<h3>代理如何使用工具</h3>\n<p>当你初始化一个代理时，你需要向它提供一个可用 <code>Tool</code> 对象列表。每个 <code>Tool</code> 通常都有一个 <code>name</code>（例如，“搜索”、“计算器”）和一个 <code>description</code>。代理的大型语言模型利用这些描述来决定哪个工具（如果有的话）适合满足用户的请求或帮助达成其目标。代理的内部逻辑决定了序列：接收输入，决定采取行动（使用工具或直接回应），执行行动，观察结果，然后重复，直到任务完成。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1bero4m\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n  edge [fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"];\n\n  subgraph cluster_agent {\n    label = \"代理\";\n    bgcolor=\"#e9ecef\";\n    Agent [label=\"LLM (推理)\"];\n  }\n\n  subgraph cluster_tools {\n    label = \"工具\";\n    bgcolor=\"#e9ecef\";\n    Search [label=\"搜索工具\", shape=ellipse, color=\"#228be6\", fontcolor=\"#228be6\"];\n    Calculator [label=\"计算工具\", shape=ellipse, color=\"#40c057\", fontcolor=\"#40c057\"];\n    Database [label=\"数据库工具\", shape=ellipse, color=\"#fab005\", fontcolor=\"#fab005\"];\n    CustomAPI [label=\"自定义API工具\", shape=ellipse, color=\"#ae3ec9\", fontcolor=\"#ae3ec9\"];\n  }\n\n  UserInput [label=\"用户输入\", shape=cds, color=\"#f03e3e\", fontcolor=\"#f03e3e\"];\n  AgentOutput [label=\"代理输出\", shape=cds, color=\"#1098ad\", fontcolor=\"#1098ad\"];\n  ToolOutput [label=\"工具结果\"];\n\n\n  UserInput -> Agent [label=\" 请求 \"];\n  Agent -> Search [label=\" 选择工具 \"];\n  Agent -> Calculator [style=dotted];\n  Agent -> Database [style=dotted];\n  Agent -> CustomAPI [style=dotted];\n\n  Search -> ToolOutput [label=\" 执行 \"];\n  Calculator -> ToolOutput [style=dotted];\n  Database -> ToolOutput [style=dotted];\n  CustomAPI -> ToolOutput [style=dotted];\n\n  ToolOutput -> Agent [label=\" 观察 \"];\n  Agent -> AgentOutput [label=\" 回应 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1bero4m\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个代理接收用户输入，分析所需动作，选择并执行合适的工具（如搜索），观察结果，并组织最终回应的过程。</p>\n</blockquote>\n<h3>自定义工具</h3>\n<p>你不仅限于使用 LangChain 提供的工具。此框架的一个重要优势在于能够轻松地从自己的 Python 函数创建自定义工具。通过添加一个描述函数功能的特定文档字符串（docstring），你可以将其封装在一个 <code>Tool</code> 对象中，赋予其名称和描述，并使其可供代理使用。这使你能够整合专有逻辑、内部服务或应用程序所需的任何专业功能。</p>\n<p>了解可用工具以及代理如何选择和使用它们，对于构建能够有效解决复杂多步问题的智能工作流程非常重要。接下来的部分将指导你如何实现代理并在实际中应用这些工具。</p>",
+  "slug": "langchain-agent-tools",
+  "updates": [],
+  "references": [
+    {
+      "id": 13414,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2023",
+      "publisher": "",
+      "journal": "ICLR",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "提出了一种通用框架，使语言模型能够交错进行推理轨迹和任务特定行动，通过工具使用在解决问题和事实核查方面展现出增强的能力。",
+      "order": 2,
+      "created_at": "2025-09-05T08:32:55.728830Z",
+      "updated_at": "2025-09-10T12:08:54.611919Z"
+    },
+    {
+      "id": 13416,
+      "title": "Generative AI with LangChain: Build great LLM-powered applications with LangChain",
+      "author": "Ashwin Ramachandran, Raymond Hsiao, Anurag Singh, Anubhav Singh",
+      "year": "2024",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/generative-ai-with/9781098150499/",
+      "doi": "",
+      "note": "一本实用指南，提供了使用LangChain开发应用的详细示例和实践，包括关于代理和集成各种工具的章节。",
+      "order": 4,
+      "created_at": "2025-09-05T08:32:55.737566Z",
+      "updated_at": "2025-09-10T12:08:51.575962Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

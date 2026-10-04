@@ -1,0 +1,61 @@
+{
+  "id": 1697,
+  "title": "内置数组创建函数",
+  "meta_title": "NumPy数组创建函数",
+  "meta_description": "使用arange、zeros、ones、linspace和eye等函数高效创建数组。",
+  "content": "<p>使用NumPy的专门函数生成数组通常更方便高效。这些函数允许您创建具有特定结构或初始值的数组，而无需先构建Python列表。以下是一些常用的函数。</p>\n<h3>使用 <code>arange</code> 创建序列</h3>\n<p>与Python的内置 <code>range</code> 函数类似，NumPy的 <code>arange</code> 函数在给定区间内创建一个包含等间距值的数组。然而，<code>range</code> 生成的是一个生成器，而 <code>arange</code> 则直接返回一个NumPy数组。</p>\n<p>其基本语法是 <code>np.arange(start, stop, step)</code>，参数 (parameter)说明如下：</p>\n<ul>\n<li><code>start</code>: 区间的起始值（包含）。如果未提供，默认为0。</li>\n<li><code>stop</code>: 区间的结束值（不包含）。</li>\n<li><code>step</code>: 值之间的间隔。默认为1。</li>\n</ul>\n<pre><code class=\"language-python\">import numpy as np\n\n# 创建一个从0开始到（但不包括）5的数组\narr1 = np.arange(5)\nprint(arr1)\n# 输出: [0 1 2 3 4]\n\n# 创建一个从2开始到（但不包括）8的数组\narr2 = np.arange(2, 8)\nprint(arr2)\n# 输出: [2 3 4 5 6 7]\n\n# 创建一个从1到10，步长为2的数组\narr3 = np.arange(1, 10, 2)\nprint(arr3)\n# 输出: [1 3 5 7 9]\n</code></pre>\n<p>请注意，<code>arange</code> 和Python的 <code>range</code> 一样，结果中不包含 <code>stop</code> 值。此外，<code>arange</code> 可以使用浮点数作为步长，但由于潜在的浮点数精度问题，请谨慎使用。对于非整数步长，如果精确的点数更重要，通常更推荐使用 <code>linspace</code>（接下来会介绍）。</p>\n<h3>创建全零或全一数组</h3>\n<p>通常，您需要用占位值（通常是零或一）来初始化特定大小的数组。NumPy为此提供了 <code>zeros</code> 和 <code>ones</code> 函数。</p>\n<ul>\n<li><code>np.zeros(shape, dtype=float)</code>: 创建一个填充零的数组。</li>\n<li><code>np.ones(shape, dtype=float)</code>: 创建一个填充一的数组。</li>\n</ul>\n<p><code>shape</code> 参数 (parameter)是一个元组，用于指定数组的维度（例如，<code>(3,)</code> 表示一个大小为3的一维数组，<code>(2, 4)</code> 表示一个2行4列的二维数组）。<code>dtype</code> 参数是可选的，用于指定数据类型（默认为 <code>float64</code>）。</p>\n<pre><code class=\"language-python\"># 创建一个包含4个零的一维数组（默认数据类型为浮点数）\nzeros_arr_1d = np.zeros(4)\nprint(zeros_arr_1d)\n# 输出: [0. 0. 0. 0.]\n\n# 创建一个2x3的整数类型全一数组\nones_arr_2d_int = np.ones((2, 3), dtype=np.int64)\nprint(ones_arr_2d_int)\n# 输出:\n# [[1 1 1]\n#  [1 1 1]]\n\n# 检查数据类型\nprint(ones_arr_2d_int.dtype)\n# 输出: int64\n</code></pre>\n<h3>使用 <code>linspace</code> 创建等间距数组</h3>\n<p>有时，您需要在起始值和结束值之间创建一个包含特定数量等间距点的数组。<code>linspace</code> 在这种情况下很有用。</p>\n<p>其语法是 <code>np.linspace(start, stop, num=50)</code>，参数 (parameter)如下：</p>\n<ul>\n<li><code>start</code>: 序列的起始值（包含）。</li>\n<li><code>stop</code>: 序列的结束值（默认为包含）。</li>\n<li><code>num</code>: 要生成的样本数量。默认为50。</li>\n</ul>\n<p>与 <code>arange</code> 不同，<code>linspace</code> 在数组中包含 <code>stop</code> 值。</p>\n<pre><code class=\"language-python\"># 创建一个在0到1之间（包含）包含5个等间距值的数组\nlin_arr1 = np.linspace(0, 1, 5)\nprint(lin_arr1)\n# 输出: [0.   0.25 0.5  0.75 1.  ]\n\n# 创建一个在0到10之间包含11个等间距值的数组\nlin_arr2 = np.linspace(0, 10, 11)\nprint(lin_arr2)\n# 输出: [ 0.  1.  2.  3.  4.  5.  6.  7.  8.  9. 10.]\n\n# 如果需要，您可以排除结束点\nlin_arr3 = np.linspace(0, 1, 5, endpoint=False)\nprint(lin_arr3)\n# 输出: [0.  0.2 0.4 0.6 0.8]\n</code></pre>\n<p><code>linspace</code> 在生成绘图或模拟的坐标时特别方便。</p>\n<h3>使用 <code>eye</code> 创建单位矩阵</h3>\n<p>单位矩阵是一种方阵（行数等于列数），其主对角线（从左上到右下）上为一，其他地方为零。NumPy的 <code>eye</code> 函数可以创建这类矩阵。</p>\n<p>其语法是 <code>np.eye(N, dtype=float)</code>，其中 <code>N</code> 是行数（和列数）。</p>\n<pre><code class=\"language-python\"># 创建一个3x3的单位矩阵\nidentity_matrix = np.eye(3)\nprint(identity_matrix)\n# 输出:\n# [[1. 0. 0.]\n#  [0. 1. 0.]\n#  [0. 0. 1.]]\n\n# 创建一个4x4的整数类型单位矩阵\nidentity_matrix_int = np.eye(4, dtype=int)\nprint(identity_matrix_int)\n# 输出:\n# [[1 0 0 0]\n#  [0 1 0 0]\n#  [0 0 1 0]\n#  [0 0 0 1]]\n</code></pre>\n<p>单位矩阵在线性代数运算中非常重要。</p>\n<h3>使用 <code>full</code> 创建填充特定值的数组</h3>\n<p>如果您需要一个给定形状、且完全填充除0或1之外的常数值的数组，可以使用 <code>np.full</code>。</p>\n<p>其语法是 <code>np.full(shape, fill_value, dtype=None)</code>。</p>\n<pre><code class=\"language-python\"># 创建一个2x4的数组，填充数字7\nfull_arr = np.full((2, 4), 7)\nprint(full_arr)\n# 输出:\n# [[7 7 7 7]\n#  [7 7 7 7]]\n\n# 创建一个大小为3的一维数组，填充π\npi_arr = np.full(3, np.pi)\nprint(pi_arr)\n# 输出: [3.14159265 3.14159265 3.14159265]\n</code></pre>\n<p>数据类型会从 <code>fill_value</code> 推断，除非使用 <code>dtype</code> 显式指定。</p>\n<h3>生成随机数组</h3>\n<p>NumPy还包含一个功能强大的子模块 <code>numpy.random</code>，用于创建从各种分布中抽取的随机数数组。以下是一些常见例子：</p>\n<ul>\n<li><code>np.random.rand(d0, d1, ..., dn)</code>: 创建一个给定形状的数组，其中包含从 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mo stretchy=\"false\">[</mo><mn>0</mn><mo separator=\"true\">,</mo><mn>1</mn><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">[0, 1)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mopen\">[</span><span class=\"mord\">0</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">1</span><span class=\"mclose\">)</span></span></span></span> 均匀分布中抽取的随机样本。</li>\n<li><code>np.random.randn(d0, d1, ..., dn)</code>: 创建一个给定形状的数组，其中包含从标准正态分布（均值为0，方差为1）中抽取的随机样本。</li>\n<li><code>np.random.randint(low, high=None, size=None, dtype=int)</code>: 创建一个指定大小的数组，其中包含从 <code>low</code>（包含）到 <code>high</code>（不包含）的随机整数。</li>\n</ul>\n<pre><code class=\"language-python\"># 创建一个2x3的数组，其中包含0到1之间的随机值\nrand_arr = np.random.rand(2, 3)\nprint(rand_arr)\n# 示例输出（会变化）:\n# [[0.11150118 0.38348479 0.45066311]\n#  [0.86726997 0.13023643 0.80802871]]\n\n# 创建一个大小为4的一维数组，其中包含从标准正态分布中抽取的样本\nrandn_arr = np.random.randn(4)\nprint(randn_arr)\n# 示例输出（会变化）:\n# [-1.04782338  0.88233694 -0.22512731  0.280441  ]\n\n# 创建一个大小为5的一维数组，其中包含从10（包含）到20（不包含）的随机整数\nrandint_arr = np.random.randint(10, 20, size=5)\nprint(randint_arr)\n# 示例输出（会变化）:\n# [15 11 18 10 13]\n</code></pre>\n<p>这些随机数函数对于模拟、统计建模以及机器学习 (machine learning)算法中的参数 (parameter)初始化都很重要。</p>\n<p>这些内置函数提供了灵活高效的方式来创建NumPy数组，以应对各种计算任务，是Python中许多数值工作流程的重要构成部分。</p>",
+  "slug": "array-creation-functions",
+  "updates": [],
+  "references": [
+    {
+      "id": 2013,
+      "title": "Array creation routines",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/reference/routines.array-creation.html",
+      "doi": "",
+      "note": "NumPy所有数组创建函数的官方、最详细参考资料。",
+      "order": 1,
+      "created_at": "2025-09-04T16:38:07.144028Z",
+      "updated_at": "2025-09-08T05:09:01.877884Z"
+    },
+    {
+      "id": 2014,
+      "title": "Array creation (from NumPy User Guide)",
+      "author": "NumPy Developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://numpy.org/doc/stable/user/basics.html#array-creation",
+      "doi": "",
+      "note": "提供创建NumPy数组的各种方法的概念概述和基本示例。",
+      "order": 2,
+      "created_at": "2025-09-04T16:38:07.147371Z",
+      "updated_at": "2025-09-08T05:08:59.419571Z"
+    },
+    {
+      "id": 2015,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本关于Python数据分析的基础书籍，广泛涵盖了NumPy数组的创建和操作，并提供实际示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:38:07.149710Z",
+      "updated_at": "2025-09-08T05:08:56.414796Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

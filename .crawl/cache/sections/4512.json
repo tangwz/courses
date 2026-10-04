@@ -1,0 +1,61 @@
+{
+  "id": 4512,
+  "title": "协作解决问题架构",
+  "meta_title": "协作解决问题架构",
+  "meta_description": "用于合作的架构，如辩论、层级团队和专业分工。",
+  "content": "<p>虽然LLM智能体之间非结构化交流可能足以应对简单协作，但要合作处理复杂、多方面的问题，需要更明确的互动模式。实施特定架构能够提供组织，明确分工，管理信息传递，并最终增强系统达成复杂目标的能力。这些架构并非互斥；复杂的系统通常会结合多种模式的构成部分。</p>\n<p>接下来，让我们查看多智能体LLM系统中几种已有的合作解决问题架构。</p>\n<h3>层级团队</h3>\n<p>这种架构类似于传统组织结构。一个中央“管理者”或“协调者”智能体将一个高层目标分解成更小、更易管理的子任务。这些子任务随后被分派给下属“工作者”智能体，这些工作者可能进一步组织成子团队。管理者监督进展，整合成果，并处理通信传递。</p>\n<p><strong>运行方式：</strong></p>\n<ol>\n<li>一个主智能体接收主要任务。</li>\n<li>它分析任务并将其分解为子目标。</li>\n<li>它将每个子目标分配给一个适当的工作者智能体（可能具备专业能力）。</li>\n<li>工作者智能体执行其分配的任务，可能与工具或记忆进行交互。</li>\n<li>工作者向管理者报告成果。</li>\n<li>管理者综合成果，可能要求修改或增加任务，直到达成主要目标。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-100cnqz\" \n              data-graph-definition='digraph G {\r\n  rankdir=TB;\r\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.1];\r\n  edge [fontname=\"Arial\", fontsize=9];\r\n\r\n  Goal [label=\"总体目标\\n(例如：市场分析报告)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\r\n  Manager [label=\"管理者智能体\\n(分解，综合)\", style=filled, fillcolor=\"#a5d8ff\"];\r\n  Worker1 [label=\"工作者智能体1\\n(数据收集)\", style=filled, fillcolor=\"#b2f2bb\"];\r\n  Worker2 [label=\"工作者智能体2\\n(情感分析)\", style=filled, fillcolor=\"#b2f2bb\"];\r\n  Worker3 [label=\"工作者智能体3\\n(报告生成)\", style=filled, fillcolor=\"#b2f2bb\"];\r\n\r\n  Goal -> Manager [label=\"接收任务\"];\r\n  Manager -> Worker1 [label=\"委派子任务1\"];\r\n  Manager -> Worker2 [label=\"委派子任务2\"];\r\n  Manager -> Worker3 [label=\"委派子任务3\"];\r\n  Worker1 -> Manager [label=\"返回数据\"];\r\n  Worker2 -> Manager [label=\"返回分析\"];\r\n  Worker3 -> Manager [label=\"返回报告草稿\"];\r\n  Manager -> Goal [label=\"输出最终报告\", style=dashed];\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-100cnqz\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一种典型的层级结构，其中管理者智能体协调专业的G工作者智能体。</p>\n</blockquote>\n<p><strong>优点：</strong></p>\n<ul>\n<li>对可清晰分解的任务有效。</li>\n<li>允许工作者智能体专业化。</li>\n<li>集中控制简化了协调。</li>\n</ul>\n<p><strong>缺点/挑战：</strong></p>\n<ul>\n<li>管理者智能体可能成为瓶颈。</li>\n<li>通信开销可能很大。</li>\n<li>管理者故障可能导致整个流程中断。</li>\n<li>僵硬的结构可能不易适应意想不到的进展。</li>\n</ul>\n<p><strong>实施考量：</strong> 通过系统提示定义明确的职责和通信接口是很重要的。状态管理需要仔细考虑，特别是关于共享信息与智能体特定上下文 (context)。对委派任务进行错误处理是必要的。</p>\n<h3>辩论与评审</h3>\n<p>受对抗性合作或自我评审机制启发，这种架构涉及多个智能体迭代地审查和改进工作。一个智能体可能提出解决方案，而其他智能体提供评审意见，找出缺陷，或提出改进建议。这个循环持续进行，直到达成共识或满足预设质量标准。</p>\n<p><strong>运行方式：</strong></p>\n<ol>\n<li>一个初始智能体（或多个智能体）生成一份提案（例如：代码、文本、计划）。</li>\n<li>一个或多个评审智能体根据特定标准（例如：正确性、清晰度、完整性、潜在风险）评估该提案。</li>\n<li>评审意见反馈给提案智能体（或另一个改进智能体）。</li>\n<li>提案根据反馈进行修改。</li>\n<li>步骤2-4重复一定轮数，或者直到评审不再发现其他重大问题。</li>\n</ol>\n<p><strong>优点：</strong></p>\n<ul>\n<li>提高输出的质量、可靠性和真实性。</li>\n<li>对需要改进、验证或创意发想的任务有效（例如：写作、编码、规划）。</li>\n<li>可显现隐藏的假设或边缘情况。</li>\n</ul>\n<p><strong>缺点/挑战：</strong></p>\n<ul>\n<li>由于多次迭代，计算成本可能较高。</li>\n<li>需要仔细设计角色和评审指南，以避免无益的循环或僵局。</li>\n<li>定义终止条件（何时输出“足够好”？）可能很困难。</li>\n<li>管理可能冲突的评审意见需要一种解决策略。</li>\n</ul>\n<p><strong>实施考量：</strong> 提示工程 (prompt engineering)对定义独特的“提案者”和“评审者”角色以及评估标准很关键。可能需要一个协调者或管理者智能体来管理轮次，综合反馈，并决定终止。支持会话智能体或状态机的框架通常有益。</p>\n<h3>专家咨询（路由/调度）</h3>\n<p>此模式类似于“专家混合”方法。一个中央路由或调度智能体分析传入任务或子问题，并将其路由到系统中最适合的专业智能体。每个专业智能体都针对特定功能进行优化（可能通过微调 (fine-tuning)或特定提示）。</p>\n<p><strong>运行方式：</strong></p>\n<ol>\n<li>一个协调者或路由智能体接收任务或查询。</li>\n<li>它分析请求以判断所需的专业能力（例如：数学计算、代码生成、数据库查询、文献审查）。</li>\n<li>它将请求路由给指定的专业智能体。</li>\n<li>专业智能体使用其定制能力和可能具备的专业工具处理请求。</li>\n<li>结果返回给路由，或直接传递给更大工作流程中的下一步。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1bz5yhl\" \n              data-graph-definition='digraph G {\r\n  rankdir=LR;\r\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.1];\r\n  edge [fontname=\"Arial\", fontsize=9];\r\n\r\n  Input [label=\"用户查询\\n(例如：&#39;分析销售数据\\n并预测第三季度&#39;)\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\r\n  Router [label=\"路由智能体\\n(任务分析与路由)\", style=filled, fillcolor=\"#a5d8ff\"];\r\n  Specialist1 [label=\"数据分析智能体\\n(SQL, Python)\", style=filled, fillcolor=\"#ffec99\"];\r\n  Specialist2 [label=\"预测智能体\\n(时间序列模型)\", style=filled, fillcolor=\"#ffec99\"];\r\n  Specialist3 [label=\"报告智能体\\n(总结)\", style=filled, fillcolor=\"#ffec99\"];\r\n  Output [label=\"最终报告\", shape=ellipse, style=filled, fillcolor=\"#e9ecef\"];\r\n\r\n  Input -> Router;\r\n  Router -> Specialist1 [label=\"路由&#39;分析&#39;\"];\r\n  Router -> Specialist2 [label=\"路由&#39;预测&#39;\"];\r\n  Specialist1 -> Router [label=\"返回分析结果\"];\r\n  Specialist2 -> Router [label=\"返回预测结果\"];\r\n  Router -> Specialist3 [label=\"路由&#39;总结&#39;\"];\r\n  Specialist3 -> Output [label=\"输出报告\"];\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1bz5yhl\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>路由智能体根据所需专业能力，将子任务分配给专业智能体。</p>\n</blockquote>\n<p><strong>优点：</strong></p>\n<ul>\n<li>使用优化过的智能体，在特定子任务上获得更高表现。</li>\n<li>模块化设计便于更新或添加新专业智能体。</li>\n<li>对涉及多种能力的工作流程高效。</li>\n</ul>\n<p><strong>缺点/挑战：</strong></p>\n<ul>\n<li>路由正确分类和路由任务的能力是基础；错误路由会导致错误或效率低下。</li>\n<li>需要仔细设计，并可能对专业智能体进行微调。</li>\n<li>管理路由与专业智能体之间的状态和上下文 (context)移交可能很复杂。</li>\n</ul>\n<p><strong>实施考量：</strong> 路由智能体通常需要复杂的推理 (inference)能力或分类模型才能有效履行其功能。为专业智能体定义清晰的API或函数调用规范是很重要的。LLM提示中的函数调用或工具描述等技术常用于路由逻辑。</p>\n<h3>流水线/装配线</h3>\n<p>在这种直接的架构中，智能体按顺序排列。一个智能体的输出作为下一个智能体的输入，模仿装配线流程。每个智能体在更大工作流程中执行特定的转换或步骤。</p>\n<p><strong>运行方式：</strong></p>\n<ol>\n<li>初始智能体接收输入数据或任务。</li>\n<li>它执行其指定操作（例如：数据提取）。</li>\n<li>其输出直接传递给序列中的下一个智能体。</li>\n<li>第二个智能体执行其操作（例如：数据清洗）。</li>\n<li>如此沿着流水线继续，直到最终智能体产生最终成果。</li>\n</ol>\n<p><strong>优点：</strong></p>\n<ul>\n<li>对线性工作流程来说直观且易于实施。</li>\n<li>控制和数据的流动清晰。</li>\n<li>适用于具有明确顺序阶段的任务。</li>\n</ul>\n<p><strong>缺点/挑战：</strong></p>\n<ul>\n<li>缺乏灵活性；偏离线性路径很难处理。</li>\n<li>早期阶段的错误可能传播并对下游智能体造成负面影响。</li>\n<li>如果各阶段处理时间差异很大（造成瓶颈），可能效率低下。</li>\n<li>没有固有机制用于非相邻阶段之间的反馈循环或修改。</li>\n</ul>\n<p><strong>实施考量：</strong> 需要相邻智能体之间有明确的输入/输出格式。每个阶段的错误处理很重要，以防止级联故障。如果智能体处理时间差异很大，可能需要缓冲或异步处理。</p>\n<h3>选择与组合架构</h3>\n<p>最佳选择很大程度上取决于具体问题：</p>\n<ul>\n<li><strong>可分解性：</strong> 当任务可以清晰分解时，层级团队表现优异。</li>\n<li><strong>改进需求：</strong> 当质量、可靠性或考察替代方案很重要时，辩论/评审很有价值。</li>\n<li><strong>专业技能：</strong> 当需要多样、特定专业能力时，专家咨询模式有效。</li>\n<li><strong>线性流程：</strong> 流水线模式对明确定义的顺序工作流程效果良好。</li>\n</ul>\n<p>在实践中，复杂应用常采用<strong>混合架构</strong>。例如，一个层级系统可能使用专业智能体作为工作者，或流水线阶段内部使用辩论机制进行质量控制。设计有效的合作式多智能体系统需要理解这些基本模式，并精心组合它们以满足当前任务的需求，始终考虑复杂性、通信开销、可靠性和计算成本之间的权衡。AutoGen、CrewAI或LangGraph等框架提供抽象和工具，极大地帮助实施和管理这些合作结构。</p>",
+  "slug": "collaborative-problem-solving-architectures",
+  "updates": [],
+  "references": [
+    {
+      "id": 8107,
+      "title": "An Introduction to MultiAgent Systems",
+      "author": "Michael Wooldridge",
+      "year": "2009",
+      "publisher": "John Wiley & Sons",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/An+Introduction+to+MultiAgent+Systems%2C+2nd+Edition-p-9780470519462",
+      "doi": "",
+      "note": "提供多智能体系统的基本概念，包括架构和协调机制。",
+      "order": 1,
+      "created_at": "2025-09-05T01:51:26.022290Z",
+      "updated_at": "2025-09-10T08:01:26.541650Z"
+    },
+    {
+      "id": 8110,
+      "title": "Tree of Thoughts: Deliberate Problem Solving with Large Language Models",
+      "author": "Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, Karthik Narasimhan",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2305.10601",
+      "doi": "10.48550/arXiv.2305.10601",
+      "note": "描述一个LLM分层探索解决问题路径的框架，与任务分解相关。",
+      "order": 4,
+      "created_at": "2025-09-05T01:51:26.085154Z",
+      "updated_at": "2025-09-10T08:01:28.908630Z"
+    },
+    {
+      "id": 8111,
+      "title": "Toolformer: Language Models Can Teach Themselves to Use Tools",
+      "author": "Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2302.04761",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2302.04761",
+      "doi": "10.48550/arXiv.2302.04761",
+      "note": "探讨LLM学习使用外部工具，为路由到专门功能提供基础。",
+      "order": 5,
+      "created_at": "2025-09-05T01:51:26.088449Z",
+      "updated_at": "2025-09-10T08:01:28.174489Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

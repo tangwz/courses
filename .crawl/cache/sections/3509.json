@@ -1,0 +1,45 @@
+{
+  "id": 3509,
+  "title": "联邦环境中的难题",
+  "meta_title": "联邦学习的难题：异质性与规模",
+  "meta_description": "审视联邦学习固有的难题，包括统计异质性、系统异质性、规模和隐私顾虑。",
+  "content": "<p>尽管在不直接访问数据的情况下训练模型的想法很强大，但在实际部署联邦学习时会带来许多在典型集中式机器学习 (machine learning)中不存在的重大障碍。这些困难直接源于客户端运行环境的分布式且不受控的特性。在学习高级缓解技术之前，了解这些十分必要。</p>\n<h3>统计异质性（非独立同分布数据）</h3>\n<p>统计异质性是联邦学习面临的一个主要挑战，并且是一个被广泛研究的问题。在传统分布式训练中，数据通常会在工作节点间随机打乱并分发，以确保每个工作节点看到的数据点都是从总体分布中独立同分布（IID）抽取的。联邦学习从根本上打破了这一假设。</p>\n<p>客户端数据是根据个人使用模式、人口统计学信息、地理位置和时间生成的。这导致本地数据集在网络中通常是**非独立同分布（Non-IID）**的。</p>\n<p>非独立同分布数据分布的常见类型包括：</p>\n<ul>\n<li><strong>特征分布倾斜：</strong> 客户端的数据可能具有明显不同的底层特征分布（例如，不同国家的移动键盘用户有不同的词汇）。</li>\n<li><strong>标签分布倾斜：</strong> 客户端拥有的数据可能偏向特定标签（例如，一个用户主要拍摄狗，另一个主要拍摄猫）。</li>\n<li><strong>数量倾斜：</strong> 客户端拥有的数据量极度不同。</li>\n<li><strong>概念漂移：</strong> 特定客户端的底层数据生成过程可能随时间变化。</li>\n</ul>\n<p>这种异质性对联邦平均（FedAvg）等标准算法构成了主要问题。当本地模型在统计偏斜的数据上训练时，它们的更新（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi mathvariant=\"normal\">∇</mi><msub><mi>F</mi><mi>k</mi></msub><mo stretchy=\"false\">(</mo><mi>w</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">\\nabla F_k(w)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">∇</span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3361em;\"><span style=\"top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0315em;\">k</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mclose\">)</span></span></span></span>）可能将全局模型拉向冲突的方向。每个客户端优化其本地目标<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>F</mi><mi>k</mi></msub><mo stretchy=\"false\">(</mo><mi>w</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">F_k(w)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3361em;\"><span style=\"top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\" style=\"margin-right:0.0315em;\">k</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mclose\">)</span></span></span></span>，这可能与全局目标<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>F</mi><mo stretchy=\"false\">(</mo><mi>w</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">F(w)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">F</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"mclose\">)</span></span></span></span>显著偏离。这种现象常被称为<strong>客户端漂移</strong>，可能导致：</p>\n<ul>\n<li>全局模型收敛速度减慢甚至发散。</li>\n<li>最终全局模型在真实底层数据分布上表现不佳，或在不同客户端上泛化能力差。</li>\n<li>训练期间稳定性降低。</li>\n</ul>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-9bxt4y\" \n              data-plot-definition='{\"layout\": {\"title\": \"示例：跨客户端的非独立同分布标签分配\", \"xaxis\": {\"title\": \"数据标签类别\"}, \"yaxis\": {\"title\": \"样本数量\"}, \"barmode\": \"group\"}, \"data\": [{\"type\": \"bar\", \"name\": \"客户端A\", \"x\": [\"类别1\", \"类别2\", \"类别3\"], \"y\": [100, 10, 5], \"marker\": {\"color\": \"#4c6ef5\"}}, {\"type\": \"bar\", \"name\": \"客户端B\", \"x\": [\"类别1\", \"类别2\", \"类别3\"], \"y\": [5, 15, 90], \"marker\": {\"color\": \"#f76707\"}}, {\"type\": \"bar\", \"name\": \"客户端C\", \"x\": [\"类别1\", \"类别2\", \"类别3\"], \"y\": [40, 50, 10], \"marker\": {\"color\": \"#12b886\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-9bxt4y\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>客户端A、B和C呈现高度偏斜的标签分布，与均衡的IID数据集中可能预期的情况相比差异很大。有效训练单个全局模型变得困难。</p>\n</blockquote>\n<h3>系统异质性</h3>\n<p>除了数据差异，客户端本身也表现出显著差异。<strong>系统异质性</strong>指的是以下方面的差异：</p>\n<ul>\n<li><strong>硬件：</strong> 客户端范围从高性能服务器（在跨组织联邦学习中）到资源受限的移动电话或物联网设备（在跨设备联邦学习中）。这包括CPU速度、可用内存以及GPU/TPU是否存在方面的差异。</li>\n<li><strong>网络连接：</strong> 网络条件差异很大。客户端可能连接高速Wi-Fi、不可靠的蜂窝网络，或偶尔离线。带宽和延迟差异很大。</li>\n<li><strong>电源可用性：</strong> 移动设备使用电池供电，限制了它们进行大量计算或通信的能力。</li>\n<li><strong>可用性：</strong> 客户端可能不可预测地加入或退出联邦，或在训练轮次期间变得不可用（滞后者）。</li>\n</ul>\n<p>系统异质性带来了实际困难：</p>\n<ul>\n<li><strong>滞后者：</strong> 较慢的设备或网络连接不佳的客户端可能延迟同步联邦学习协议中的整个训练轮次，从而降低整体效率。</li>\n<li><strong>客户端掉线：</strong> 设备可能由于连接丢失或电池耗尽而在训练中途掉线，导致部分或丢失的更新。</li>\n<li><strong>资源限制：</strong> 模型和计算必须设计为在联邦中能力最弱的设备上运行，可能限制模型复杂度和性能。</li>\n<li><strong>偏差：</strong> 较快的客户端可能更频繁或更可靠地贡献，如果处理不当，可能使全局模型产生偏差。</li>\n</ul>\n<h3>规模</h3>\n<p>联邦网络可能包含为数众多的客户端，从跨组织设置中的少数几个组织到跨设备场景中可能数百万甚至数十亿设备。管理如此规模的训练带来了操作上的困难：</p>\n<ul>\n<li><strong>协调：</strong> 协调大量间歇性客户端的训练是复杂的。</li>\n<li><strong>通信瓶颈：</strong> 聚合来自数百万客户端的更新可能使中央服务器不堪重负。</li>\n<li><strong>容错性：</strong> 客户端故障的可能性随规模增大而显著增加。</li>\n<li><strong>可变性：</strong> 统计异质性和系统异质性的影响在规模上被放大。</li>\n</ul>\n<h3>隐私顾虑</h3>\n<p>尽管联邦学习旨在通过将原始数据保留在本地来提升隐私保护，但它并非本质上完全隐私。训练期间共享的模型更新（梯度或模型权重 (weight)）可能泄露有关客户端本地数据的敏感信息。恶意行为者（中央服务器或其他客户端）可能尝试各种攻击，例如：</p>\n<ul>\n<li><strong>成员推断：</strong> 判断某个特定数据点是否属于客户端的训练集。</li>\n<li><strong>属性推断：</strong> 推断客户端数据的聚合属性。</li>\n<li><strong>数据重建：</strong> 在某些情况下，从更新中重建部分原始训练数据。</li>\n</ul>\n<p>这些潜在的脆弱性使得使用明确的隐私增强技术成为必要，例如差分隐私（DP）、安全多方计算（SMC）和同态加密（HE），这些技术将在第3章中详细阐述。</p>\n<h3>通信效率</h3>\n<p>通信经常是联邦学习的主要瓶颈，尤其是在跨设备设置中。客户端设备的上传带宽通常有限，而下载带宽相对较大。在每个轮次中，从许多客户端向服务器传输大型模型更新（深度学习 (deep learning)模型可能包含数百万个参数 (parameter)）既昂贵又耗时。</p>\n<p>通信方面的困难包括：</p>\n<ul>\n<li><strong>带宽限制：</strong> 限制了模型更新的大小和频率。</li>\n<li><strong>延迟：</strong> 接收更新的延迟，在同步设置中尤为突出。</li>\n<li><strong>成本：</strong> 数据传输在按量计费的网络上可能产生费用。</li>\n</ul>\n<p>这促使人们采取减少通信开销的技术，例如梯度压缩、稀疏化和模型量化 (quantization)，这些技术将在第5章中介绍。</p>\n<p>这些相互关联的难题表明，仅仅应用标准分布式训练技术对于有效的联邦学习来说是不够的。它们使得开发和应用专门的算法和系统设计成为必要，这些算法和设计应针对联邦环境的独特限制和特点量身定制。接下来的章节将在此理解的基础上，介绍解决这些特定问题的高级方法。</p>",
+  "slug": "fl-challenges-heterogeneity-scale",
+  "updates": [],
+  "references": [
+    {
+      "id": 10238,
+      "title": "Communication-Efficient Learning of Deep Networks from Decentralized Data",
+      "author": "Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, Blaise Aguera y Arcas",
+      "year": "2017",
+      "publisher": "PMLR",
+      "journal": "Proceedings of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS)",
+      "volume": "54",
+      "pages": "1273-1282",
+      "url": "https://proceedings.mlr.press/v54/mcmahan17a.html",
+      "doi": "",
+      "note": "介绍了联邦平均（FedAvg）这一基础算法，并讨论了非独立同分布（Non-IID）数据带来的挑战，特别是统计异质性。",
+      "order": 1,
+      "created_at": "2025-09-05T06:39:46.366440Z",
+      "updated_at": "2025-09-09T10:59:24.499370Z"
+    },
+    {
+      "id": 10240,
+      "title": "Towards Federated Learning at Scale: System Design",
+      "author": "Keith Bonawitz, Hubert Eichner, Wolfgang Grieskamp, Dzmitry Huba, Alex Ingerman, Vladimir Ivanov, Chloe Kiddon, Jakub Konečný, Stefano Mazzocchi, H. Brendan McMahan, Timon Van Overveldt, David Petrou, Daniel Ramage, Jason Roselander",
+      "year": "2019",
+      "publisher": "",
+      "journal": "Proceedings of the 2nd MLSys Conference",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1902.01046",
+      "doi": "10.48550/arXiv.1902.01046",
+      "note": "着重于大规模联邦学习部署的实际系统设计方面，解决了与系统异质性相关的客户端选择、通信和容错等问题。",
+      "order": 3,
+      "created_at": "2025-09-05T06:39:46.372638Z",
+      "updated_at": "2025-09-09T10:59:22.406676Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

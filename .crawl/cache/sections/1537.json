@@ -1,0 +1,61 @@
+{
+  "id": 1537,
+  "title": "使用库加载和准备数据",
+  "meta_title": "使用库（Scikit-learn）处理数据",
+  "meta_description": "介绍如何使用Scikit-learn等机器学习库来加载和准备数据。",
+  "content": "<p>既然您已经了解了构建机器学习 (machine learning)模型的整体步骤，接下来我们看看如何实际操作。从头手动实现数据加载、预处理和算法功能是可行的，但通常效率低下且容易出错，尤其当数据集和模型变得更复杂时。幸好有强大的库可以有效处理这些常见任务。</p>\n<h3>使用库提高效率</h3>\n<p>机器学习 (machine learning)库为许多标准操作提供了预构建、优化且经过充分测试的功能。使用它们可以使您专注于模型构建的更上层内容，例如理解数据、选择合适的算法以及解释结果，而不是陷入低级别的实现细节中。</p>\n<p>Python生态系统中机器学习常用的库之一是 <strong>Scikit-learn</strong>（通常导入为<code>sklearn</code>）。它提供了数据预处理、模型选择、训练各种算法（回归、分类、聚类等）以及评估的工具。在实践中构建机器学习模型时，Scikit-learn将用于完成这些任务。我们还会经常使用 <strong>Pandas</strong>，这是另一个Python库，它非常适合处理和操作结构化数据，例如您经常在表格或电子表格（如CSV文件）中找到的数据。</p>\n<h3>加载数据集</h3>\n<p>第一步始终是将数据载入编程环境。数据可以来自各种来源，但常见格式包括CSV（逗号分隔值）文件或数据库。像Pandas这样的库使得加载这些数据变得简单明了。</p>\n<p>假设您的数据在一个名为<code>dataset.csv</code>的CSV文件中。您可以使用一个简单的命令将其加载到Pandas DataFrame中，Pandas DataFrame本质上是一个表格结构：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 从CSV文件加载数据\ndata = pd.read_csv('dataset.csv')\n\n# 显示前几行以检查数据\nprint(data.head())\n</code></pre>\n<p>此命令读取文件并将其内容存储在<code>data</code>变量中。<code>head()</code>方法对于快速检查前几行和列名以确保数据正确加载很有用。</p>\n<p>Scikit-learn还包含一些小型标准数据集，它们有助于学习和测试算法，而无需寻找外部文件。您可以直接加载这些数据集：</p>\n<pre><code class=\"language-python\">from sklearn.datasets import load_iris\n\n# 加载内置的Iris数据集\niris_data = load_iris()\n\n# 数据本身（特征）通常在'.data'中\n# 目标标签通常在'.target'中\n# 特征名称和目标名称也可能可用\nX_iris = iris_data.data\ny_iris = iris_data.target\n\nprint(\"Iris 特征形状:\", X_iris.shape)\nprint(\"Iris 目标形状:\", y_iris.shape)\n</code></pre>\n<h3>分离特征和目标变量</h3>\n<p>机器学习 (machine learning)模型学习从输入特征到输出目标的映射。因此，您需要将加载的数据分成两个不同的部分：</p>\n<ol>\n<li><strong>特征 (X)：</strong> 模型将用来进行预测的输入变量或属性。这通常是一个2D数组或DataFrame，其中行代表样本，列代表特征。</li>\n<li><strong>目标 (y)：</strong> 模型试图预测的输出变量（例如，回归中的价格，分类中的类别标签）。这通常是一个1D数组或Series，每个样本有一个值。</li>\n</ol>\n<p>如果您使用Pandas加载了数据，可以选择列来创建您的<code>X</code>和<code>y</code>。假设目标变量在一个名为“target_column”的列中：</p>\n<pre><code class=\"language-python\"># 假设 'data' 是您之前加载的Pandas DataFrame\n# 选择除目标列以外的所有列作为特征\nX = data.drop('target_column', axis=1)\n\n# 仅选择目标列作为目标变量\ny = data['target_column']\n\n# 显示形状以验证\nprint(\"特征 (X) 形状:\", X.shape)\nprint(\"目标 (y) 形状:\", y.shape)\n</code></pre>\n<p><code>drop</code>函数中的<code>axis=1</code>参数 (parameter)告诉Pandas删除列，而不是行。</p>\n<h3>使用Scikit-learn应用基本准备步骤</h3>\n<p>在第6章中，我们讨论了为什么处理缺失值、特征缩放和数据分割等步骤是必需的。Scikit-learn提供了方便的工具来执行这些操作。</p>\n<p><strong>1. 处理缺失值：</strong>\n如果您的数据集中有缺失条目（通常表示为<code>NaN</code>），您可以使用Scikit-learn的<code>SimpleImputer</code>来填充它们，例如使用相应列的平均值。</p>\n<pre><code class=\"language-python\">from sklearn.impute import SimpleImputer\nimport numpy as np # 常用于表示NaN\n\n# 假设X可能包含缺失值（表示为np.nan）\n# 创建一个填充器对象，用平均值替换NaN\nimputer = SimpleImputer(missing_values=np.nan, strategy='mean')\n\n# 将填充器拟合到数据（计算平均值）并转换X\nX = imputer.fit_transform(X)\n</code></pre>\n<p><em>拟合</em>计算必要的统计量（如平均值），而<em>转换</em>则应用填充。<code>fit_transform</code>可以方便地完成这两个步骤。</p>\n<p><strong>2. 特征缩放：</strong>\n如前所述，将特征缩放到相似的范围通常很重要。<code>StandardScaler</code>（用于标准化）和<code>MinMaxScaler</code>（用于归一化 (normalization)）是常见的选择。</p>\n<pre><code class=\"language-python\">from sklearn.preprocessing import StandardScaler\n\n# 创建一个缩放器对象\nscaler = StandardScaler()\n\n# 将缩放器拟合到数据（计算平均值和标准差）并转换X\nX_scaled = scaler.fit_transform(X)\n</code></pre>\n<p>现在，<code>X_scaled</code>包含特征数据，其中每列的平均值约为0，标准差为1。</p>\n<p><strong>3. 分割数据：</strong>\n最后，在训练之前，您需要将数据分成训练集和测试集。Scikit-learn的<code>train_test_split</code>函数使得这变得非常容易。</p>\n<pre><code class=\"language-python\">from sklearn.model_selection import train_test_split\n\n# 将X和y分成训练集（例如80%）和测试集（例如20%）\n# 'test_size=0.2' 表示20%用于测试，80%用于训练\n# 'random_state' 确保每次运行代码时分割结果都相同（为了可复现性）\nX_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)\n\n# 验证结果集的形状\nprint(\"X_train 形状:\", X_train.shape)\nprint(\"X_test 形状:\", X_test.shape)\nprint(\"y_train 形状:\", y_train.shape)\nprint(\"y_test 形状:\", y_test.shape)\n</code></pre>\n<p>这是数据准备流程的简单可视化：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ck0dnk\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fillcolor=\"#e9ecef\", style=filled]; edge [color=\"#adb5bd\"]; splines=ortho; \"原始数据 (CSV)\" -> \"加载 (Pandas)\" [label=\" read_csv()\"]; \"加载 (Pandas)\" -> \"分离 X, y\" [label=\" drop(), [] \"]; \"分离 X, y\" -> \"填充缺失值 (sklearn)\" [label=\" SimpleImputer \"]; \"填充缺失值 (sklearn)\" -> \"缩放特征 (sklearn)\" [label=\" StandardScaler \"]; \"缩放特征 (sklearn)\" -> \"分割数据 (sklearn)\" [label=\" train_test_split() \"]; \"分割数据 (sklearn)\" -> \"X_训练集, y_训练集\" [color=\"#1c7ed6\"]; \"分割数据 (sklearn)\" -> \"X_测试集, y_测试集\" [color=\"#f03e3e\"]; subgraph cluster_input { label=\"\"; color=white; \"原始数据 (CSV)\"; } subgraph cluster_process { label=\"使用库进行预处理\"; color=\"#ced4da\"; style=filled; fillcolor=\"#f8f9fa\"; \"加载 (Pandas)\"; \"分离 X, y\"; \"填充缺失值 (sklearn)\"; \"缩放特征 (sklearn)\"; \"分割数据 (sklearn)\"; } subgraph cluster_output { label=\"已准备数据\"; color=white; \"X_训练集, y_训练集\" [shape=ellipse, fillcolor=\"#a5d8ff\"]; \"X_测试集, y_测试集\" [shape=ellipse, fillcolor=\"#ffc9c9\"]; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ck0dnk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示使用库函数进行数据加载和准备的工作流程，最终得到独立的训练集和测试集。</p>\n</blockquote>\n<p>通过使用这些库函数，您已经高效地加载了数据，将其分离为特征和目标，处理了潜在的缺失值，缩放了特征，并创建了下一阶段所需的训练集和测试集：训练您的机器学习 (machine learning)模型。这种结构化的方法，由Pandas和Scikit-learn等库提供便利，构成了实际机器学习项目的基础。</p>",
+  "slug": "loading-preparing-data-library",
+  "updates": [],
+  "references": [
+    {
+      "id": 3129,
+      "title": "scikit-learn User Guide",
+      "author": "scikit-learn developers",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/user_guide.html",
+      "doi": "",
+      "note": "为数据预处理模块（如 SimpleImputer、StandardScaler 和 train_test_split）提供全面的细节和示例。",
+      "order": 1,
+      "created_at": "2025-09-04T16:54:18.986428Z",
+      "updated_at": "2025-09-07T18:22:54.750501Z"
+    },
+    {
+      "id": 3130,
+      "title": "pandas User Guide",
+      "author": "pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/index.html",
+      "doi": "",
+      "note": "提供加载和操作结构化数据的信息，包括 read_csv 和用于数据选择的 DataFrame 操作。",
+      "order": 2,
+      "created_at": "2025-09-04T16:54:18.992717Z",
+      "updated_at": "2025-09-07T18:23:00.225655Z"
+    },
+    {
+      "id": 3131,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实用的指南，展示了如何使用 Scikit-learn 和其他库进行数据准备、模型训练和评估。",
+      "order": 3,
+      "created_at": "2025-09-04T16:54:18.995432Z",
+      "updated_at": "2025-09-07T18:23:07.113838Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 5349,
+  "title": "常见机器学习栈示例 (例如，API + 数据库)",
+  "meta_title": "Docker Compose 示例机器学习栈",
+  "meta_description": "查看如何定义常见的机器学习开发栈示例，例如带有支持数据库的推理 API。",
+  "content": "<p>Docker Compose 中的独立服务、卷和网络是核心组成部分。这些元素结合起来，构成机器学习 (machine learning)项目中常见的应用栈。使用 <code>docker-compose.yml</code> 文件，可以声明式地高效定义和管理这些多组件系统，用于本地开发和测试，从而模拟更复杂的部署配置。</p>\n<h3>示例 1: 带数据库后端的推理 (inference) API</h3>\n<p>一个常见模式是部署已训练模型作为 API 端点，用于进行预测。通常，此 API 需要与数据库交互，以存储预测日志、获取用户信息或管理其他应用状态。Docker Compose 使设置这种 API 加数据库的组合变得简单直接。</p>\n<p>考虑一个由以下部分组成的应用：</p>\n<ol>\n<li><strong>API 服务 (<code>api</code>):</strong> 一个自定义容器，运行一个网络框架（如 Flask 或 FastAPI），加载训练好的模型并提供预测端点。它需要访问数据库。</li>\n<li><strong>数据库服务 (<code>db</code>):</strong> 一个标准数据库容器（如 PostgreSQL 或 MySQL），API 服务可以在此容器中读写数据。它的数据需要在容器重启后保持不变。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1skdzqq\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  subgraph cluster_compose {\n    label = \"Docker Compose 栈\";\n    bgcolor=\"#e9ecef\";\n\n    api [label=\"API 服务\\n(Flask/FastAPI + 模型)\"];\n    db [label=\"数据库服务\\n(PostgreSQL)\"];\n    nw [label=\"Docker 网络\", shape=oval, style=dashed, color=\"#adb5bd\"];\n    db_volume [label=\"数据库数据卷\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n\n    api -> nw [dir=both, label=\"连接\"];\n    db -> nw [dir=both, label=\"连接\"];\n    db -> db_volume [label=\"持久化数据\"];\n\n    api -> db [label=\"数据库查询 (通过网络)\"];\n  }\n\n  user [label=\"用户请求\", shape=cds, style=filled, fillcolor=\"#a5d8ff\"];\n  user -> api [label=\"HTTP 请求\"];\n  api -> user [label=\"预测响应\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1skdzqq\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表显示用户请求到达 API 服务，该服务通过共享的 Docker 网络与数据库服务通信。数据库服务使用卷来持久化数据。</p>\n</blockquote>\n<p>以下是表示此栈的简化 <code>docker-compose.yml</code>：</p>\n<pre><code class=\"language-yaml\">version: '3.8' # 指定 Compose 文件版本\n\nservices:\n  api:\n    build: ./api # API Dockerfile 所在目录的路径\n    ports:\n      - \"5000:5000\" # 将主机端口 5000 映射到容器端口 5000\n    volumes:\n      - ./api:/app # 将本地 API 代码挂载到容器中 (用于开发)\n      - ./models:/app/models # 挂载模型目录\n    environment:\n      - DATABASE_URL=postgresql://user:password@db:5432/mydatabase\n      # 其他 API 特定配置...\n    depends_on:\n      - db # 等待数据库服务健康 (如果定义了健康检查)\n    networks:\n      - app-net\n\n  db:\n    image: postgres:14-alpine # 使用官方 PostgreSQL 镜像\n    volumes:\n      - postgres_data:/var/lib/postgresql/data # 挂载命名卷以持久化数据\n    environment:\n      - POSTGRES_USER=user\n      - POSTGRES_PASSWORD=password\n      - POSTGRES_DB=mydatabase\n    networks:\n      - app-net\n    # 可选: 为 depends_on 添加健康检查\n    # healthcheck:\n    #   test: [\"CMD-SHELL\", \"pg_isready -U user -d mydatabase\"]\n    #   interval: 10s\n    #   timeout: 5s\n    #   retries: 5\n\nvolumes:\n  postgres_data: # 定义命名卷\n\nnetworks:\n  app-net: # 定义自定义网络\n    driver: bridge\n</code></pre>\n<p>此示例的要点总结：</p>\n<ul>\n<li><strong>服务：</strong> 我们定义了两个服务：<code>api</code> 和 <code>db</code>。</li>\n<li><strong>构建与镜像：</strong> <code>api</code> 服务使用 <code>build: ./api</code> 从本地 <code>Dockerfile</code> 构建，而 <code>db</code> 服务使用来自 Docker Hub 的预构建镜像 (<code>image: postgres:14-alpine</code>)。</li>\n<li><strong>网络：</strong> 两个服务都连接到一个自定义网络 <code>app-net</code>。这使得 <code>api</code> 服务可以使用主机名 <code>db</code>（服务名称）和标准 PostgreSQL 端口 <code>5432</code> 连接到数据库。连接字符串 <code>postgresql://user:password@db:5432/mydatabase</code> 很好地说明了这一点。</li>\n<li><strong>卷：</strong> <code>api</code> 服务使用了绑定挂载 (<code>./api:/app</code>)，以便在开发过程中主机上的代码更改可以立即反映在容器中。<code>db</code> 服务使用命名卷 (<code>postgres_data</code>)，以确保即使 <code>db</code> 容器被移除并重新创建，数据库文件也能持久存在。</li>\n<li><strong>环境变量：</strong> <code>environment</code> 用于传递配置。<code>db</code> 服务使用它们来初始化数据库（用户、密码、名称）。<code>api</code> 服务使用它们来知道如何连接到数据库。</li>\n<li><strong>端口：</strong> <code>ports</code> 映射 <code>- \"5000:5000\"</code> 使 API 可以通过主机上的端口 5000 访问。</li>\n<li><strong><code>depends_on</code>：</strong> 这确保了 <code>db</code> 服务在 <code>api</code> 服务尝试连接之前启动，尽管如果没有 <code>healthcheck</code>，它并不能保证容器<em>内部</em>的数据库已完全准备就绪。</li>\n</ul>\n<p>在包含此文件的目录中运行 <code>docker compose up</code> 将会构建 API 镜像（如果需要）、拉取 PostgreSQL 镜像、创建网络和卷，并启动两个容器。</p>\n<h3>示例 2: 带 MLflow 跟踪的训练任务</h3>\n<p>另一个常见情况是在容器中运行训练脚本，同时将指标、参数 (parameter)和工件记录到像 MLflow 这样的实验跟踪服务器。Docker Compose 可以管理训练容器、MLflow 跟踪服务器，以及可能用于 MLflow 的后端数据库。</p>\n<p>组件：</p>\n<ol>\n<li><strong>训练服务 (<code>trainer</code>):</strong> 一个运行机器学习 (machine learning)训练脚本的容器。它需要知道 MLflow 服务器的 URI。</li>\n<li><strong>MLflow 服务器服务 (<code>mlflow</code>):</strong> 运行 MLflow 跟踪服务器的用户界面和 API。</li>\n<li><strong>后端存储服务 (<code>db</code>):</strong> （可选，但建议为求稳定）一个数据库（例如 PostgreSQL），由 MLflow 用于存储实验元数据。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1c9p93k\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [fontname=\"Helvetica\", fontsize=9];\n\n  subgraph cluster_compose {\n    label = \"Docker Compose 栈\";\n    bgcolor=\"#e9ecef\";\n\n    trainer [label=\"训练服务\\n(Python + 脚本)\"];\n    mlflow [label=\"MLflow 服务器\"];\n    db [label=\"MLflow 后端数据库\\n(PostgreSQL)\"];\n    nw [label=\"Docker 网络\", shape=oval, style=dashed, color=\"#adb5bd\"];\n    db_volume [label=\"MLflow 数据库卷\", shape=cylinder, style=filled, fillcolor=\"#ced4da\"];\n    artifact_volume [label=\"MLflow 工件\\n(共享卷/挂载点)\", shape=folder, style=filled, fillcolor=\"#ced4da\"];\n\n    trainer -> nw [dir=both, label=\"连接\"];\n    mlflow -> nw [dir=both, label=\"连接\"];\n    db -> nw [dir=both, label=\"连接\"];\n\n    trainer -> mlflow [label=\"记录指标/参数 (通过网络)\"];\n    trainer -> artifact_volume [label=\"保存模型工件\"];\n    mlflow -> db [label=\"存储元数据 (通过网络)\"];\n    mlflow -> artifact_volume [label=\"读取/提供工件\"];\n    db -> db_volume [label=\"持久化元数据\"];\n  }\n\n  developer [label=\"开发者\", shape=cds, style=filled, fillcolor=\"#a5d8ff\"];\n  developer -> mlflow [label=\"查看界面 (端口 5001)\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1c9p93k\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图表显示训练服务通过网络向 MLflow 服务器发送日志。MLflow 服务器将元数据存储在后端数据库中，并从共享卷/挂载点读写工件。开发者可访问 MLflow 用户界面。</p>\n</blockquote>\n<p>一个可能的 <code>docker-compose.yml</code> 可能如下所示：</p>\n<pre><code class=\"language-yaml\">version: '3.8'\n\nsrvices:\n  trainer:\n    build: ./training # 训练脚本 Dockerfile 上下文路径\n    command: python train.py --data /data/input.csv --model-output /artifacts\n    volumes:\n      - ./training/src:/app # 挂载训练代码\n      - ./data:/data # 挂载输入数据\n      - mlflow_artifacts:/artifacts # 挂载工件卷\n    environment:\n      - MLFLOW_TRACKING_URI=http://mlflow:5001 # 告知脚本 MLflow 服务器位置\n    depends_on:\n      mlflow:\n        condition: service_started # 基本依赖\n      db:\n        condition: service_healthy # 等待数据库 (需要健康检查)\n    networks:\n      - ml-net\n\n  mlflow:\n    # 考虑使用官方或维护良好的 MLflow 镜像，\n    # 或在需要自定义时自行构建。\n    # 此示例假设存在一个接受这些参数的预构建镜像。\n    image: ghcr.io/mlflow/mlflow:v2.10.0\n    command: >\n      mlflow server\n      --backend-store-uri postgresql://mlflow_user:mlflow_pass@db:5432/mlflow_db\n      --default-artifact-root /mlflow_artifacts\n      --host 0.0.0.0\n      --port 5001\n    ports:\n      - \"5001:5001\" # 暴露 MLflow UI 端口\n    volumes:\n      - mlflow_artifacts:/mlflow_artifacts # 共享工件卷\n    depends_on:\n      db:\n        condition: service_healthy # 等待数据库\n    networks:\n      - ml-net\n\n  db:\n    image: postgres:14-alpine\n    volumes:\n      - mlflow_db_data:/var/lib/postgresql/data\n    environment:\n      - POSTGRES_USER=mlflow_user\n      - POSTGRES_PASSWORD=mlflow_pass\n      - POSTGRES_DB=mlflow_db\n    networks:\n      - ml-net\n    healthcheck: # 此项对于 depends_on condition: service_healthy 必不可少\n      test: [\"CMD-SHELL\", \"pg_isready -U mlflow_user -d mlflow_db\"]\n      interval: 10s\n      timeout: 5s\n      retries: 5\n\nvolumes:\n  mlflow_db_data:\n  mlflow_artifacts: # 用于存储模型工件、参数等的卷。\n\nnetworks:\n  ml-net:\n    driver: bridge\n</code></pre>\n<p>在此配置中：</p>\n<ul>\n<li><code>trainer</code> 服务运行训练脚本 (<code>train.py</code>)。它通过 <code>MLFLOW_TRACKING_URI</code> 环境变量接收 MLflow 服务器的位置 (<code>http://mlflow:5001</code>)。脚本中的 MLflow 客户端库使用此 URI 进行连接。</li>\n<li><code>mlflow</code> 服务运行跟踪服务器。其 <code>command</code> 将 PostgreSQL 数据库（<code>db</code> 服务）指定为 <code>--backend-store-uri</code>，并将共享卷（<code>mlflow_artifacts</code>）指定为 <code>--default-artifact-root</code>。</li>\n<li><code>db</code> 服务提供 PostgreSQL 数据库用于 MLflow 元数据持久化，使用其自身的命名卷 (<code>mlflow_db_data</code>)。增加了 <code>healthcheck</code>，以便其他服务可以使用 <code>depends_on</code> 稳定地等待它就绪。</li>\n<li>共享命名卷 <code>mlflow_artifacts</code> 被 <code>trainer</code>（用于写入工件）和 <code>mlflow</code>（用于读取/提供工件）都挂载。</li>\n<li>带有 <code>condition: service_healthy</code> 的 <code>depends_on</code> 确保 <code>trainer</code> 和 <code>mlflow</code> 服务等待 <code>db</code> 就绪。</li>\n</ul>\n<p>这些示例阐明了 Docker Compose 如何定义机器学习开发中常见的互联服务。你可以通过添加数据预处理服务、用于异步任务的消息队列（如 Redis 或 RabbitMQ）、监控工具或不同类型的数据库来扩展这些模式，所有这些都可以在单个 <code>docker-compose.yml</code> 文件中管理。这种方式显著简化了本地开发环境的设置和管理，使其与潜在的生产部署结构非常接近。</p>",
+  "slug": "compose-ml-stack-examples",
+  "updates": [],
+  "references": [
+    {
+      "id": 14547,
+      "title": "Overview of Docker Compose",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/compose/",
+      "doi": "",
+      "note": "Docker官方文档，提供了使用Docker Compose声明式定义和管理多容器应用的关键信息，包括本节中展示的服务、网络和卷。",
+      "order": 1,
+      "created_at": "2025-09-05T08:54:24.313114Z",
+      "updated_at": "2025-09-09T13:57:52.431611Z"
+    },
+    {
+      "id": 14548,
+      "title": "MLflow Tracking",
+      "author": "MLflow Team",
+      "year": "2024",
+      "publisher": "MLflow (LF AI & Data Foundation)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlflow.org/docs/latest/tracking.html",
+      "doi": "",
+      "note": "MLflow官方文档，详细介绍了MLflow跟踪服务器的设置和使用，包括后端和工件存储，与实验跟踪示例直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T08:54:24.318269Z",
+      "updated_at": "2025-09-09T13:57:53.477282Z"
+    },
+    {
+      "id": 14549,
+      "title": "Practical MLOps: How to Take a Machine Learning Model from Idea to Production",
+      "author": "Vishnu Rachakonda",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/practical-mlops/9781098103002/",
+      "doi": "",
+      "note": "一本关于在生产环境中构建和部署机器学习系统的综合资源，提供了架构模式、MLOps最佳实践以及容器化ML堆栈的背景知识。",
+      "order": 3,
+      "created_at": "2025-09-05T08:54:24.321581Z",
+      "updated_at": "2025-09-09T13:57:58.755283Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

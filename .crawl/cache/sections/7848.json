@@ -1,0 +1,61 @@
+{
+  "id": 7848,
+  "title": "动手实践：构建文件读取服务器",
+  "meta_title": "实践：构建MCP文件读取服务器",
+  "meta_description": "分步指南，指导您构建一个读取并提供本地文件服务的MCP服务器。",
+  "content": "<p>我们现在从架构定义转向具体实现。在本节中，我们将构建一个能工作的MCP服务器，它能够从本地目录读取文件并将其内容提供给客户端。此练习巩固了之前讨论的URI方案、资源注册和同步读取模式的理解。</p>\n<p>我们将构建一个名为<code>filesystem-reader</code>的服务器，它将对外提供一个包含日志文件的特定目录。这模拟了一种常见的生产情况，其中LLM需要访问服务器日志进行错误排查，而无需直接的机器shell访问权限。</p>\n<h3>环境与依赖</h3>\n<p>确保您的开发环境已安装MCP Python SDK。我们将使用<code>FastMCP</code>类，它为定义资源和工具提供了一个简化的接口，无需样板式的事件循环处理。</p>\n<pre><code class=\"language-bash\">pip install mcp\n</code></pre>\n<p>创建一个名为<code>mcp-file-server</code>的目录，并在其中添加一个名为<code>logs</code>的子目录。在<code>logs</code>目录中放入两个简单的文本文件：<code>app.log</code>和<code>error.log</code>，其中包含虚拟数据。这个结构将作为我们对外提供资源的目标。</p>\n<h3>服务器初始化</h3>\n<p>创建一个名为<code>server.py</code>的文件。入口点涉及导入所需的类并实例化服务器。我们将服务器名称定义为<code>filesystem-reader</code>，客户端将使用它来识别上下文 (context)的来源。</p>\n<pre><code class=\"language-python\">from mcp.server.fastmcp import FastMCP\nimport os\n\n# 初始化MCP服务器\nmcp = FastMCP(\"filesystem-reader\")\n\n# 定义我们资源的基准路径\n# 在生产环境中，请使用绝对路径或环境变量\nBASE_DIR = os.path.abspath(\"./logs\")\n</code></pre>\n<h3>实现资源列表功能</h3>\n<p>MCP服务器的第一个要求是告知客户端可用数据。客户端通过<code>resources/list</code>功能获取数据信息。我们通过扫描目标目录并将每个文件转换为<code>Resource</code>对象来实现这一点。</p>\n<p>URI是这里的核心标识符。我们将使用自定义方案<code>logs://</code>来区分我们的内部日志资源和通用文件路径。这种抽象使我们能够将内部文件系统结构与外部资源标识符分离。</p>\n<pre><code class=\"language-python\">@mcp.resource(\"logs://{filename}\")\ndef get_log_file(filename: str) -> str:\n    \"\"\"\n    根据文件名读取日志文件。\n    \"\"\"\n    # 安全检查：确保文件名不包含路径遍历字符\n    if \"..\" in filename or \"/\" in filename or \"\\\\\" in filename:\n        raise ValueError(\"无效文件名：不允许路径遍历\")\n\n    file_path = os.path.join(BASE_DIR, filename)\n    \n    try:\n        with open(file_path, \"r\", encoding=\"utf-8\") as f:\n            return f.read()\n    except FileNotFoundError:\n        raise ValueError(f\"日志文件{filename}未找到\")\n    except Exception as e:\n        raise RuntimeError(f\"无法读取文件：{str(e)}\")\n</code></pre>\n<p>在上面的代码中，装饰器<code>@mcp.resource</code>有两个作用。首先，它将该函数注册为处理匹配<code>logs://{filename}</code>模式的读取请求的处理器。其次，它隐式地设置了列表逻辑。当客户端请求资源列表时，SDK会使用此定义来了解可用的端点。</p>\n<p>然而，对于像文件目录这样可能会出现新文件的动态资源，我们通常需要一个明确的列出器来告诉客户端当前<em>确切</em>存在哪些文件。模式匹配适用于读取，但列表功能需要遍历目录。</p>\n<pre><code class=\"language-python\">from mcp.types import Resource\n\n@mcp.resource_listing\ndef list_resources() -> list[Resource]:\n    \"\"\"\n    扫描日志目录并返回可用日志资源的列表。\n    \"\"\"\n    resources = []\n    if not os.path.exists(BASE_DIR):\n        return []\n\n    for filename in os.listdir(BASE_DIR):\n        if filename.endswith(\".log\"):\n            resources.append(Resource(\n                uri=f\"logs://{filename}\",\n                name=f\"系统日志：{filename}\",\n                description=f\"服务器应用程序日志文件：{filename}\",\n                mimeType=\"text/plain\"\n            ))\n    return resources\n</code></pre>\n<p>这种关注点分离很有意义。<strong>列表处理器</strong>充当目录，返回元数据（URI、名称、MIME类型）。<strong>读取处理器</strong>在请求特定URI时执行I/O操作。</p>\n<p>下图说明了客户端与这些处理器交互时的消息流。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-fgsxon\" \n              data-graph-definition='digraph MCP_Flow {\n    rankdir=LR;\n    node [shape=box, style=\"filled\", fontname=\"Arial\", fontsize=10, color=\"#dee2e6\"];\n    edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n    Client [label=\"MCP客户端\\n（例如，Claude）\", fillcolor=\"#e7f5ff\", color=\"#74c0fc\"];\n    Server [label=\"MCP服务器\\n（文件系统读取器）\", fillcolor=\"#f3f0ff\", color=\"#b197fc\"];\n    FileSystem [label=\"本地磁盘\\n./logs/\", shape=cylinder, fillcolor=\"#fff9db\", color=\"#fcc419\"];\n\n    Client -> Server [label=\"resources/list\"];\n    Server -> FileSystem [label=\"os.listdir()\"];\n    FileSystem -> Server [label=\"[&#39;app.log&#39;]\"];\n    Server -> Client [label=\"资源列表\"];\n    \n    Client -> Server [label=\"resources/read\\nuri=&#39;logs://app.log&#39;\"];\n    Server -> FileSystem [label=\"open(&#39;app.log&#39;)\"];\n    FileSystem -> Server [label=\"文件内容\"];\n    Server -> Client [label=\"内容数据包\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-fgsxon\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>操作顺序将资源查找与内容获取分开，使客户端能够在请求大量数据包之前整理可用上下文 (context)。</p>\n</blockquote>\n<h3>添加上下文 (context)提示</h3>\n<p>虽然直接访问文件有益，但提示使我们能够将这些数据打包成可操作的指令。我们可以定义一个提示，它会自动获取日志文件并要求LLM进行分析。这减轻了最终用户进行提示工程 (prompt engineering)的负担。</p>\n<p>我们定义了一个名为<code>analyze-log</code>的提示，它接受一个<code>filename</code>参数 (parameter)。</p>\n<pre><code class=\"language-python\">@mcp.prompt(\"analyze-log\")\ndef analyze_log_prompt(filename: str) -> list:\n    \"\"\"\n    创建一个提示上下文来分析特定的日志文件。\n    \"\"\"\n    return [\n        {\n            \"role\": \"user\",\n            \"content\": {\n                \"type\": \"text\",\n                \"text\": f\"请分析以下日志文件中的错误和警告模式：logs://{filename}\"\n            }\n        }\n    ]\n</code></pre>\n<p>当在客户端中选择此提示时，它会注入一条包含URI的用户消息。客户端识别URI后，将使用我们之前定义的资源处理器获取内容，并将其嵌入 (embedding)上下文窗口，然后发送给LLM。</p>\n<h3>运行服务器</h3>\n<p><code>FastMCP</code>类处理通过标准输入/输出（stdio）进行的底层JSON-RPC通信。要运行服务器，您只需调用该脚本。</p>\n<pre><code class=\"language-python\">if __name__ == \"__main__\":\n    mcp.run()\n</code></pre>\n<p>要测试此集成，您不能单独直接运行此Python脚本。相反，您需要配置一个MCP客户端（如MCP Inspector或Claude Desktop）来执行此脚本。客户端管理进程生命周期，向<code>stdin</code>发送请求并从<code>stdout</code>读取响应。</p>\n<h3>安全措施</h3>\n<p>向LLM公开文件系统需要实行严格的界限执行。在我们的<code>get_log_file</code>函数中，我们实现了一个基本的路径遍历检查（<code>..</code>）。在生产环境中，您应该使用更严格的路径检查：</p>\n<ol>\n<li><strong>路径规范化：</strong> 将请求的路径解析为绝对形式。</li>\n<li><strong>前缀检查：</strong> 验证已解析的路径是否以<code>BASE_DIR</code>路径开头。</li>\n<li><strong>只读模式：</strong> 确保服务器进程的文件系统权限被限制为对数据目录的只读访问。</li>\n</ol>\n<p>通过遵循这些做法，您可以为本地数据进入模型的上下文 (context)创建一个安全的通道，将静态文件转变为动态信息资源。</p>",
+  "slug": "hands-on-practice-file-reader-server",
+  "updates": [],
+  "references": [
+    {
+      "id": 21986,
+      "title": "Model Context Protocol (MCP) Documentation",
+      "author": "Anthropic",
+      "year": "2024",
+      "publisher": "Anthropic",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.anthropic.com/en/docs/mcp",
+      "doi": "",
+      "note": "针对模型上下文协议的官方文档，详细介绍了架构、SDK 使用以及使用 `FastMCP` 和资源定义实现服务器。",
+      "order": 1,
+      "created_at": "2025-11-19T12:11:43.309826Z",
+      "updated_at": "2025-11-19T12:56:52.235900Z"
+    },
+    {
+      "id": 21988,
+      "title": "FastAPI Documentation",
+      "author": "Sebastián Ramírez",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://fastapi.tiangolo.com/",
+      "doi": "",
+      "note": "为 `FastMCP` 使用的基于装饰器的 API 定义风格提供了背景，展示了现代 Python 服务器开发实践。",
+      "order": 3,
+      "created_at": "2025-11-19T12:11:43.318405Z",
+      "updated_at": "2025-11-19T12:55:58.948213Z"
+    },
+    {
+      "id": 21989,
+      "title": "Uniform Resource Identifier (URI): Generic Syntax",
+      "author": "T. Berners-Lee, R. Fielding, L. Masinter",
+      "year": "2005",
+      "publisher": "The Internet Society",
+      "journal": "IETF RFC 3986",
+      "volume": "",
+      "pages": "",
+      "url": "https://datatracker.ietf.org/doc/html/rfc3986",
+      "doi": "10.17487/RFC3986",
+      "note": "定义统一资源标识符 (URI) 通用语法的基础规范，包括方案等组件，这对于 `logs://` URI 设计至关重要。",
+      "order": 4,
+      "created_at": "2025-11-19T12:11:43.322987Z",
+      "updated_at": "2025-11-19T12:55:48.797809Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

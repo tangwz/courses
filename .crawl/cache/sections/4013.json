@@ -1,0 +1,61 @@
+{
+  "id": 4013,
+  "title": "处理数值转换中的错误",
+  "meta_title": "管理数值转换中的错误",
+  "meta_description": "处理在转换尝试中存在非数值时出现的问题。",
+  "content": "<p>将数据转换为正确的数值类型，例如整数或浮点数，对执行计算和分析非常重要。然而，数据通常是混乱的。当你尝试转换一个预期包含数字的列时，可能会遇到不符合预期数值格式的值。这可能导致转换过程意外失败。</p>\n<p>假设你有一个表示产品价格的列，但它包含的不是 <code>19.99</code> 或 <code>100</code> 这样的纯数字，而是像 <code>$19.99</code>、<code>不可用</code>，甚至是像 <code>2S.00</code> 这样的拼写错误。直接将这样的列转换为数值类型通常会导致错误，从而中断你的数据准备流程。</p>\n<h3>数值转换为何失败</h3>\n<p>转换错误通常发生是因为数据包含以下情况：</p>\n<ul>\n<li><strong>非数字字符：</strong> 值可能包含货币符号（<code>$</code>、<code>£</code>）、百分号（<code>%</code>）、单位（<code>kg</code>、<code>lbs</code>）、用作千位分隔符的逗号（<code>1,000</code>）或其他非数字字符。</li>\n<li><strong>文本占位符：</strong> 用于表示缺失或未知信息的条目，例如 <code>N/A</code>、<code>Unknown</code>、<code>missing</code>、<code>null</code> 或简单的空字符串（<code>''</code>）。</li>\n<li><strong>混合表示：</strong> 一个列可能不一致地包含数字字符串和文本描述，例如同一列中的 <code>10</code> 和 <code>ten</code>。</li>\n</ul>\n<p>大多数数据分析工具对转换有严格要求。当一个函数试图将 <code>'$19.99'</code> 或 <code>'Unknown'</code> 转换为数字时，它不知道如何解释非数字部分。默认情况下，许多工具会引发错误并停止。这通常是一种安全机制，旨在防止不正确的结果，但这意味着你需要一种方法来管理这些有问题的值。</p>\n<h3>处理转换错误的方法</h3>\n<p>当数据难以直接进行数值转换时，你有以下几种方法：</p>\n<h4>1. 转换前清理数据</h4>\n<p>这通常是最细致的方法。在尝试转换之前，你需要检查列中常见的非数字模式并进行清理。</p>\n<ul>\n<li><strong>识别有问题的值：</strong> 找出列中独特的非数字条目，以了解问题的范围。</li>\n<li><strong>使用字符串操作：</strong> 应用字符串操作函数来删除或替换不需要的字符。例如：\n<ul>\n<li>移除货币符号：<code>'$19.99'</code> 变为 <code>'19.99'</code>。</li>\n<li>移除逗号：<code>'1,200'</code> 变为 <code>'1200'</code>。</li>\n<li>去除空白：<code>' 50 '</code> 变为 <code>'50'</code>。</li>\n</ul>\n</li>\n<li><strong>处理文本占位符：</strong> 决定如何处理像 <code>'N/A'</code> 这样的条目。你可以将它们替换为空字符串或一个特定标记 (token)，以便稍后处理（例如将它们转换为缺失值指示符，如 <code>NaN</code>）。</li>\n</ul>\n<p>清理后，你可以再次尝试对修改后的数据进行数值转换。此方法提供了细致的控制，但需要识别并解决存在的每种类型的问题。</p>\n<h4>2. 转换时强制处理错误</h4>\n<p>许多数据处理库提供了一种更直接的方式来处理转换过程中的错误。一种常见的方法是“强制处理”错误，这意味着强制进行转换，并自动将任何导致错误的值替换为表示缺失数据的特殊标记。</p>\n<p>在流行的 Python pandas 库中，<code>to_numeric()</code> 函数有一个 <code>errors</code> 参数 (parameter)。将 <code>errors='coerce'</code> 设置为：</p>\n<ul>\n<li>如果一个值可以转换为数字，则进行转换。</li>\n<li>如果一个值<em>无法</em>转换（它引发错误），则将其替换为 <code>NaN</code>（非数字）。</li>\n</ul>\n<p><strong>示例：</strong>\n假设你有以下数据：<code>['101', '102.5', '£103', 'missing', '105']</code></p>\n<p>在数值转换时使用 <code>errors='coerce'</code> 可能会得到：\n<code>[101.0, 102.5, NaN, NaN, 105.0]</code></p>\n<p>值 <code>'£103'</code> 和 <code>'missing'</code> 无法直接转换为数字，因此它们被替换为 <code>NaN</code>。</p>\n<p><strong>影响：</strong> 这种方法将转换问题转变为缺失数据问题。现在你的列中有了 <code>NaN</code> 值，你可以使用第2章中讨论的技术（如删除或填补）来处理它们。当非数字值确实代表缺失或无效条目时，强制处理是有效的。</p>\n<h4>3. 忽略错误（通常不推荐用于数值转换）</h4>\n<p>一些工具可能提供简单忽略转换错误的选项（例如 pandas <code>to_numeric</code> 中的 <code>errors='ignore'</code>）。如果你使用此选项，成功转换的值将变为数值，而导致错误的值则保持其原始格式（例如，作为字符串）不变。</p>\n<p><strong>结果：</strong> 这通常会导致列中出现<em>混合数据类型</em>（同时包含数字和字符串）。</p>\n<p><strong>注意：</strong> 当你的目标是用于计算或建模的纯数值列时，这种方法通常<strong>不适用</strong>。算术运算（<code>+</code>、<code>-</code>、<code>*</code>、<code>/</code>）、比较（<code>></code>、<code>&#x3C;</code>）以及许多统计函数在包含混合类型的列上会失败或产生无意义的结果。虽然忽略错误可以防止进程停止，但它通常会在后续带来更大的问题。最好是先清理数据，或者强制将错误转换为 <code>NaN</code> 并明确处理缺失值。</p>\n<h3>选择你的方法</h3>\n<ul>\n<li><strong>优先清理：</strong> 当非数字字符代表可以通过系统移除以显露有效数字的格式问题（如 <code>$</code>、<code>,</code>、<code>%</code>）时，这种方法最适用。它需要更多前期工作，但能保留字符串中隐藏的有效数值信息。</li>\n<li><strong>强制处理错误：</strong> 当非数字条目代表真正缺失、无效或无法恢复的数据（<code>N/A</code>、<code>Unknown</code>、拼写错误）时，这种方法是理想的。它是快速获得数值列的方法，但你随后必须有意识地处理生成的 <code>NaN</code> 值。</li>\n<li><strong>忽略错误：</strong> 很少是数值转换的正确选择。除非你有非常具体的原因，并且了解以混合数据类型告终的后果，否则应避免使用此选项。</li>\n</ul>\n<p>成功处理数值转换中的错误是创建适合分析的干净、可靠数据的重要一步。通过选择正确的方法，你可以确保数据格式正确，而不会让意外值阻碍你的工作。</p>",
+  "slug": "handling-numeric-conversion-errors",
+  "updates": [],
+  "references": [
+    {
+      "id": 11018,
+      "title": "pandas.to_numeric",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "pandas",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.to_numeric.html",
+      "doi": "",
+      "note": "pandas `to_numeric` 函数的官方文档，详细说明了 `errors` 参数及其将非数字值强制转换为 `NaN` 的用法。",
+      "order": 1,
+      "created_at": "2025-09-05T06:57:34.590262Z",
+      "updated_at": "2025-09-08T13:04:49.517294Z"
+    },
+    {
+      "id": 11019,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "第3版。使用 pandas 进行数据操作和清洗的综合指南，内容涵盖类型转换、字符串操作和缺失数据处理。",
+      "order": 2,
+      "created_at": "2025-09-05T06:57:34.595892Z",
+      "updated_at": "2025-09-08T13:04:55.962946Z"
+    },
+    {
+      "id": 11020,
+      "title": "Data Mining: Concepts and Techniques",
+      "author": "Jiawei Han, Micheline Kamber, and Jian Pei",
+      "year": "2011",
+      "publisher": "Elsevier",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1",
+      "doi": "",
+      "note": "第3版。一本基础教材，其中一章专门介绍数据预处理，包括数据清洗、集成、转换和归约，与准备数据进行分析高度相关。",
+      "order": 3,
+      "created_at": "2025-09-05T06:57:34.598830Z",
+      "updated_at": "2025-09-08T13:04:53.565442Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

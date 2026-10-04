@@ -1,0 +1,61 @@
+{
+  "id": 6871,
+  "title": "监督模型的训练与评估：动手实践",
+  "meta_title": "在Julia中实践监督模型 | MLJ.jl动手实践",
+  "meta_description": "使用MLJ.jl及其相关工具在一个数据集上训练、评估和调整各类监督学习模型。",
+  "content": "<p>我们将实际操作训练和评估监督学习 (supervised learning)模型，使用MLJ.jl。我们将使用一个常见的数据集，实现几种不同的模型，使用交叉验证评估它们的性能，然后观察超参数 (parameter) (hyperparameter)调整如何改善结果。通过学习，您将更熟练地将MLJ.jl的工作流程应用于自己的监督学习任务。</p>\n<h3>环境与数据准备</h3>\n<p>首先，请确保您已安装MLJ.jl及其他所需包。我们将从加载这些包以及本次练习使用的数据集开始。鸢尾花数据集是分类任务的经典选项，MLJ.jl提供了简便的加载方式。</p>\n<pre><code class=\"language-julia\">using MLJ\nusing DataFrames\nusing PrettyPrinting # 为MLJ对象提供更美观的输出\nusing StableRNGs # 为了结果可重复\n\n# 加载鸢尾花数据集\nX, y = @load_iris; # X是特征表，y是目标分类向量\n\n# 用于数据划分和模型训练的可重复性\nrng = StableRNG(123)\n\n# 显示特征和目标的前几行\nfirst(X, 3) |> pretty\nfirst(y, 3) |> pretty\n</code></pre>\n<p>特征<code>X</code>是150朵鸢尾花的萼片长度、萼片宽度、花瓣长度和花瓣宽度的测量值。目标<code>y</code>是每朵花的种类。</p>\n<p>接下来，我们将数据分为训练集和测试集。这是评估模型在新数据上表现的标准做法。</p>\n<pre><code class=\"language-julia\"># 将数据分为训练集和测试集（70%训练，30%测试）\ntrain_rows, test_rows = partition(eachindex(y), 0.7, rng=rng);\n\nX_train = X[train_rows, :];\ny_train = y[train_rows];\nX_test = X[test_rows, :];\ny_test = y[test_rows];\n</code></pre>\n<h3>逻辑回归模型的训练与评估</h3>\n<p>我们从线性模型：逻辑回归开始（在MLJ.jl中，对于多分类问题也称为<code>MultinomialClassifier</code>）。</p>\n<ol>\n<li><strong>加载模型</strong>：我们使用<code>@load</code>使模型类型可用。</li>\n<li><strong>创建模型实例</strong>：生成一个模型实例。</li>\n<li><strong>创建机器</strong>：将模型和数据封装在<code>machine</code>对象中。</li>\n<li><strong>拟合机器</strong>：使用<code>fit!</code>训练模型。</li>\n<li><strong>进行预测</strong>：在测试集上使用<code>predict</code>。</li>\n<li><strong>评估性能</strong>：计算准确率。</li>\n</ol>\n<pre><code class=\"language-julia\"># 加载多项式分类器模型类型\nLogisticClassifier = @load MultinomialClassifier pkg=MLJLinearModels verbosity=0\n\n# 创建模型实例\nlogreg_model = LogisticClassifier()\n\n# 将模型和训练数据封装到机器中\nlogreg_machine = machine(logreg_model, X_train, y_train)\n\n# 训练模型\nfit!(logreg_machine, verbosity=0)\n\n# 在测试集上进行预测\ny_pred_logreg = predict(logreg_machine, X_test)\n\n# 评估准确率\naccuracy_logreg = accuracy(mode.(y_pred_logreg), y_test) # 使用mode是因为predict返回的是分布\nprintln(\"Logistic Regression Accuracy: $(round(accuracy_logreg, digits=3))\")\n</code></pre>\n<p>您应该会看到打印出的准确率分数。对于鸢尾花数据集，逻辑回归通常表现良好。在本次演示中，我们假设它达到了约0.956的准确率。</p>\n<h3>决策树分类器的训练与评估</h3>\n<p>现在，让我们尝试不同类型的模型，一个决策树分类器。</p>\n<pre><code class=\"language-julia\"># 加载决策树分类器模型类型\nDecisionTreeClassifier = @load DecisionTreeClassifier pkg=DecisionTree verbosity=0\n\n# 创建模型实例\ntree_model = DecisionTreeClassifier(rng=deepcopy(rng)) # 传入rng以保证树本身的可重复性\n\n# 封装到机器中\ntree_machine = machine(tree_model, X_train, y_train)\n\n# 训练模型\nfit!(tree_machine, verbosity=0)\n\n# 进行预测\ny_pred_tree = predict(tree_machine, X_test)\n\n# 评估准确率\naccuracy_tree = accuracy(mode.(y_pred_tree), y_test)\nprintln(\"Decision Tree Accuracy (default): $(round(accuracy_tree, digits=3))\")\n</code></pre>\n<p>默认参数 (parameter)的决策树可能会给出略有不同的结果。例如，我们可能会观察到约0.933的准确率。</p>\n<h3>交叉验证评估</h3>\n<p>在单次训练-测试集划分上评估有时会因为数据划分的特定方式而产生误导。交叉验证提供了更可靠的模型性能估计。MLJ.jl的<code>evaluate!</code>函数使这变得简单。我们将对决策树模型使用6折交叉验证。</p>\n<pre><code class=\"language-julia\"># 定义重采样策略：6折交叉验证\ncv_strategy = CV(nfolds=6, rng=deepcopy(rng))\n\n# 使用交叉验证评估决策树模型\n# 我们直接使用“模型”，而不是已绑定数据的机器\n# 我们将verbosity=0设置为在评估期间抑制输出\ntree_eval = evaluate(tree_model, X_train, y_train,\n                     resampling=cv_strategy,\n                     measure=accuracy,\n                     verbosity=0)\n\n# 显示评估结果\nprintln(\"Decision Tree Cross-Validation Results:\")\nprintln(\"Mean Accuracy: $(round(tree_eval.measurement[1], digits=3))\")\nprintln(\"Per-fold Accuracy: $(round.(tree_eval.per_fold[1], digits=3))\")\n</code></pre>\n<p>输出将显示每折的准确率以及所有折的平均准确率。这使我们更能了解模型平均的表现。例如，平均准确率可能在0.945左右。</p>\n<h3>超参数 (parameter) (hyperparameter)调整</h3>\n<p>大多数机器学习 (machine learning)模型都有超参数，可以通过调整来改善性能。对于<code>DecisionTreeClassifier</code>，其中一个超参数是<code>max_depth</code>，它控制树的最大深度。让我们使用<code>Grid</code>搜索策略来调整它。</p>\n<ol>\n<li><strong>定义参数范围</strong>：指定要尝试的<code>max_depth</code>值。</li>\n<li><strong>设置调整策略</strong>：我们将使用<code>Grid</code>搜索。</li>\n<li><strong>创建<code>TunedModel</code></strong>：将基础模型、调整策略、重采样策略和参数范围封装。</li>\n<li><strong>拟合<code>TunedModel</code></strong>：此过程会为每个超参数组合训练模型并选择最佳模型。</li>\n<li><strong>检查结果</strong>：查看最佳模型及其性能。</li>\n</ol>\n<pre><code class=\"language-julia\"># 定义max_depth超参数的范围\ntree_model_tunable = DecisionTreeClassifier() # 用于调整的新实例\nr_max_depth = range(tree_model_tunable, :max_depth, lower=1, upper=10, scale=:linear);\n\n# 定义调整策略（网格搜索）\ntuning_strategy = Grid(resolution=10) # resolution表示范围内有10个值\n\n# 定义用于调整的重采样（例如，3折交叉验证以加速调整）\nresampling_strategy_tuning = CV(nfolds=3, rng=deepcopy(rng))\n\n# 创建TunedModel\ntuned_tree_model = TunedModel(model=tree_model_tunable,\n                              resampling=resampling_strategy_tuning,\n                              tuning=tuning_strategy,\n                              range=r_max_depth,\n                              measure=accuracy,\n                              train_best=true) # 自动在完整训练数据上重新训练最佳模型\n\n# 将TunedModel封装到机器中并拟合\ntuned_tree_machine = machine(tuned_tree_model, X_train, y_train)\nfit!(tuned_tree_machine, verbosity=0)\n\n# 检查调整结果报告\ntuning_report = report(tuned_tree_machine)\nbest_model_params = tuning_report.best_model\nbest_max_depth = best_model_params.max_depth\nprintln(\"Best max_depth found: $best_max_depth\")\n\n# 提取最佳模型的拟合参数\nfitted_params(tuned_tree_machine).best_model |> pretty\n\n# 在测试集上评估调整后的模型\ny_pred_tuned_tree = predict(tuned_tree_machine, X_test)\naccuracy_tuned_tree = accuracy(mode.(y_pred_tuned_tree), y_test)\nprintln(\"Tuned Decision Tree Accuracy: $(round(accuracy_tuned_tree, digits=3))\")\n</code></pre>\n<p>调整后，您可能会发现特定的<code>max_depth</code>（例如3或4）在调整期间使用的交叉验证集上能带来更好的性能。将此调整后的模型应用于我们的保留测试集，可能会使准确率得到提升，例如达到约0.978。</p>\n<h3>模型性能比较</h3>\n<p>我们现在已经训练并评估了几种模型。可视化它们的性能通常很有用。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-b1y3hb\" \n              data-plot-definition='{\n  \"data\": [\n    {\n      \"x\": [\"逻辑回归\", \"决策树（默认）\", \"决策树（调整后）\"],\n      \"y\": [0.956, 0.933, 0.978],\n      \"type\": \"bar\",\n      \"marker\": {\n        \"color\": [\"#228be6\", \"#12b886\", \"#7950f2\"],\n        \"line\": {\"width\": 1, \"color\": \"#495057\"}\n      },\n      \"text\": [0.956, 0.933, 0.978],\n      \"textposition\": \"auto\"\n    }\n  ],\n  \"layout\": {\n    \"title\": \"模型性能比较（测试集准确率）\",\n    \"xaxis\": {\"title\": \"模型配置\"},\n    \"yaxis\": {\"title\": \"准确率\", \"range\": [0.85, 1.0]},\n    \"autosize\": true,\n    \"font\": {\"family\": \"Arial, sans-serif\"},\n    \"paper_bgcolor\": \"#f8f9fa\",\n    \"plot_bgcolor\": \"#e9ecef\",\n    \"margin\": {\"l\": 60, \"r\": 30, \"b\": 120, \"t\": 60, \"pad\": 4}\n  }\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-b1y3hb\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>逻辑回归、默认决策树以及超参数 (parameter) (hyperparameter)调整后的决策树在鸢尾花测试集上的准确率比较。示例值显示了潜在的改善。</p>\n</blockquote>\n<p>本次动手练习展示了MLJ.jl中监督学习 (supervised learning)的主要工作流程：</p>\n<ul>\n<li>加载和准备数据。</li>\n<li>实例化、训练不同模型并进行预测。</li>\n<li>使用交叉验证获取更可靠的性能估计。</li>\n<li>调整超参数以优化模型。</li>\n</ul>\n<p>建议您进一步尝试。可以尝试MLJ.jl中提供的不同模型，研究其他超参数，或将这些技术应用于其他数据集。您在此练习中掌握的技能是使用Julia构建更复杂机器学习 (machine learning)解决方案的基础。</p>",
+  "slug": "julia-supervised-models-practice",
+  "updates": [],
+  "references": [
+    {
+      "id": 20769,
+      "title": "MLJ.jl Documentation",
+      "author": "The MLJ.jl Developers",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://mlj.ai/",
+      "doi": "",
+      "note": "MLJ.jl 的官方文档，提供 Julia 机器学习工作流的详细指南和 API 参考。",
+      "order": 1,
+      "created_at": "2025-09-06T14:08:19.959258Z",
+      "updated_at": "2025-09-11T10:34:50.071464Z"
+    },
+    {
+      "id": 20770,
+      "title": "An Introduction to Statistical Learning: with Applications in R",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, and Rob Tibshirani",
+      "year": "2013",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "10.1007/978-1-4614-7138-7",
+      "note": "一本广泛使用的教科书，介绍了监督学习、模型评估以及逻辑回归和决策树等常见算法的基础概念。",
+      "order": 2,
+      "created_at": "2025-09-06T14:08:20.005167Z",
+      "updated_at": "2025-09-11T10:34:49.135574Z"
+    },
+    {
+      "id": 20771,
+      "title": "The Elements of Statistical Learning: Data Mining, Inference, and Prediction",
+      "author": "Trevor Hastie, Robert Tibshirani, and Jerome Friedman",
+      "year": "2009",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~hastie/ElemStatLearn/",
+      "doi": "10.1007/978-0-387-84858-7",
+      "note": "一本更高级的教科书，对机器学习方法进行了全面的统计和数学处理，包括模型选择、交叉验证和各种分类算法。",
+      "order": 3,
+      "created_at": "2025-09-06T14:08:20.012719Z",
+      "updated_at": "2025-09-11T10:34:49.611695Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

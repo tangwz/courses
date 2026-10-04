@@ -1,0 +1,61 @@
+{
+  "id": 3439,
+  "title": "使用ARIMA模型进行预测",
+  "meta_title": "使用Python进行ARIMA模型预测",
+  "meta_description": "生成未来预测及置信区间，基于已拟合的ARIMA模型。",
+  "content": "<p>在ARIMA模型成功拟合并进行诊断检查以确保其有效性之后，该模型可用于预测未来数值。此过程称为预测。</p>\n<h3>生成预测</h3>\n<p><code>statsmodels</code>库为已拟合的模型结果对象（在示例中常命名为<code>results</code>或<code>arima_results</code>）提供了便利的方法，用来生成预测。两种主要方法是<code>predict()</code>和<code>forecast()</code>。尽管<code>predict()</code>可用于样本内预测和样本外预测，但<code>forecast()</code>方法专为在训练数据结束后生成预测而设计，并且通常更直接。</p>\n<p>假设您有一个已拟合的ARIMA结果对象，名为<code>arima_results</code>，它是通过将ARIMA模型拟合到您的时间序列数据而获得的。</p>\n<h4>使用<code>forecast()</code></h4>\n<p><code>forecast()</code>方法是生成样本外预测的最简单方法。您只需指定您希望预测的未来步数（时间段）即可。</p>\n<pre><code class=\"language-python\"># 假设arima_results是您已拟合的ARIMA模型对象\n# 预测未来12个时间步\nforecast_steps = 12\nforecast_values = arima_results.forecast(steps=forecast_steps)\n\nprint(forecast_values)\n</code></pre>\n<p>这将返回一个Pandas Series，其中包含指定未来时间步的点预测。返回的Series的索引通常会遵循您原始数据的时间索引。</p>\n<h4>使用<code>predict()</code></h4>\n<p><code>predict()</code>方法提供更多灵活性。它允许您为预测指定<code>start</code>和<code>end</code>点。这些点可以是索引或时间戳。</p>\n<ul>\n<li><strong>样本内预测</strong>: 如果<code>start</code>和<code>end</code>落在原始数据索引范围内，<code>predict()</code>生成拟合值。</li>\n<li><strong>样本外预测</strong>: 如果<code>start</code>和/或<code>end</code>落在原始数据索引范围之外，<code>predict()</code>生成预测。</li>\n</ul>\n<pre><code class=\"language-python\"># 假设arima_results是您已拟合的模型\n# 假设原始数据结束于索引'n'或时间戳't_end'\n\n# 获取最后一个观测值的索引\nlast_index = ts_data.index[-1] # 或者，如果适用，使用整数索引\n\n# 定义预测未来12个步长的起始和结束\n# 注意：索引必须与您数据（例如，日期时间）的索引类型兼容\nforecast_start_index = last_index + pd.Timedelta(days=1) # 每日数据的示例\nforecast_end_index = last_index + pd.Timedelta(days=12) # 每日数据的示例\n\n# 或者，如果适用，使用整数索引\n# forecast_start_index = len(ts_data)\n# forecast_end_index = len(ts_data) + 11\n\nforecast_values_pred = arima_results.predict(start=forecast_start_index, end=forecast_end_index)\n\nprint(forecast_values_pred)\n</code></pre>\n<p>尽管<code>predict()</code>可用，但在纯粹生成未来值时，<code>forecast()</code>通常因其简洁性而更受青睐。</p>\n<h3>获取置信区间</h3>\n<p>点预测为未来值提供单一最佳估计，但它们不表明与预测相关的不确定性。ARIMA模型作为统计模型，允许我们计算这些预测周围的置信区间。置信区间提供了一个范围，真实未来值预计将以特定概率（例如95%）落在该范围内。</p>\n<p>要同时获取点预测和置信区间，请使用<code>get_forecast()</code>方法。这将返回一个<code>PredictionResults</code>对象，其中包含更详细的信息。</p>\n<pre><code class=\"language-python\"># 假设arima_results是您已拟合的模型\nforecast_steps = 12\n\n# 获取预测对象\nforecast_obj = arima_results.get_forecast(steps=forecast_steps)\n\n# 提取预测均值（点预测）\npredicted_mean = forecast_obj.predicted_mean\n\n# 提取置信区间（默认alpha=0.05表示95%置信区间）\nconfidence_intervals = forecast_obj.conf_int(alpha=0.05)\n\n# confidence_intervals是一个DataFrame，包含类似'lower y'和'upper y'的列\nprint(\"点预测:\\n\", predicted_mean)\nprint(\"\\n置信区间 (95%):\\n\", confidence_intervals)\n</code></pre>\n<p><code>alpha</code>参数 (parameter)决定置信水平。<code>alpha=0.05</code>对应95%置信区间（1 - alpha），表示在模型正确设定的前提下，我们预计真实值有95%的概率落在计算出的上下限之间。</p>\n<h3>预测可视化</h3>\n<p>强烈推荐将预测与历史数据及置信区间一同显示。它能直观地理解模型预测及相关的不确定性。</p>\n<p>下面是如何使用Plotly绘制此图：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport plotly.graph_objects as go\n\n# 假设:\n# ts_data: 原始历史时间序列 (Pandas Series)\n# predicted_mean: 预测值 (Pandas Series)\n# confidence_intervals: 包含'lower y'和'upper y'列的DataFrame\n\n# 示例数据（请替换为您的实际数据）\n# 创建虚拟历史数据\ndates_hist = pd.to_datetime(pd.date_range(start='2023-01-01', periods=50, freq='D'))\nts_data = pd.Series(range(50), index=dates_hist) + 10 * (pd.Series(range(50))/50)**2 + 5 * pd.np.random.randn(50)\n\n# 创建虚拟预测数据\ndates_fcst = pd.to_datetime(pd.date_range(start=ts_data.index[-1] + pd.Timedelta(days=1), periods=12, freq='D'))\npredicted_mean = pd.Series([ts_data.iloc[-1] + i * 0.5 + 2 * pd.np.random.randn(1)[0] for i in range(1, 13)], index=dates_fcst)\nci_lower = predicted_mean - (pd.Series(range(1, 13)) * 0.8)\nci_upper = predicted_mean + (pd.Series(range(1, 13)) * 0.8)\nconfidence_intervals = pd.DataFrame({'lower y': ci_lower, 'upper y': ci_upper})\n\n# 创建图表\nfig = go.Figure()\n\n# 添加历史数据\nfig.add_trace(go.Scatter(\n    x=ts_data.index,\n    y=ts_data,\n    mode='lines',\n    name='历史数据',\n    line=dict(color='#1c7ed6') # 蓝色\n))\n\n# 添加预测线\nfig.add_trace(go.Scatter(\n    x=predicted_mean.index,\n    y=predicted_mean,\n    mode='lines',\n    name='预测',\n    line=dict(color='#f76707') # 橙色\n))\n\n# 添加置信区间区域\nfig.add_trace(go.Scatter(\n    x=confidence_intervals.index.tolist() + confidence_intervals.index.tolist()[::-1], # x values for shape\n    y=confidence_intervals['upper y'].tolist() + confidence_intervals['lower y'].tolist()[::-1], # y values for shape\n    fill='toself',\n    fillcolor='rgba(253, 126, 20, 0.2)', # 橙色透明\n    line=dict(color='rgba(255,255,255,0)'), # 无边框线\n    hoverinfo=\"skip\", # 不显示图形的悬停标签\n    name='95% 置信区间'\n))\n\n# 更新布局以更好显示\nfig.update_layout(\n    title='ARIMA模型预测及置信区间',\n    xaxis_title='时间',\n    yaxis_title='值',\n    hovermode='x unified',\n    legend=dict(x=0.01, y=0.99)\n)\n\n# 显示图表（在Jupyter环境中，否则使用fig.show()）\n# fig.show()\n\n# 如果需要，转换为JSON以便嵌入\n# print(fig.to_json())\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-5767or\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": {\"text\": \"ARIMA模型预测及置信区间\"}, \n    \"xaxis\": {\"title\": {\"text\": \"时间\"}}, \n    \"yaxis\": {\"title\": {\"text\": \"值\"}}, \n    \"hovermode\": \"x unified\", \n    \"legend\": {\"x\": 0.01, \"y\": 0.99}\n  }, \n  \"data\": [\n    {\n      \"type\": \"scatter\", \n      \"x\": [\"2023-01-01T00:00:00\", \"2023-01-02T00:00:00\", \"2023-01-03T00:00:00\", \"2023-01-04T00:00:00\", \"2023-01-05T00:00:00\", \"2023-01-06T00:00:00\", \"2023-01-07T00:00:00\", \"2023-01-08T00:00:00\", \"2023-01-09T00:00:00\", \"2023-01-10T00:00:00\", \"2023-01-11T00:00:00\", \"2023-01-12T00:00:00\", \"2023-01-13T00:00:00\", \"2023-01-14T00:00:00\", \"2023-01-15T00:00:00\", \"2023-01-16T00:00:00\", \"2023-01-17T00:00:00\", \"2023-01-18T00:00:00\", \"2023-01-19T00:00:00\", \"2023-01-20T00:00:00\", \"2023-01-21T00:00:00\", \"2023-01-22T00:00:00\", \"2023-01-23T00:00:00\", \"2023-01-24T00:00:00\", \"2023-01-25T00:00:00\", \"2023-01-26T00:00:00\", \"2023-01-27T00:00:00\", \"2023-01-28T00:00:00\", \"2023-01-29T00:00:00\", \"2023-01-30T00:00:00\", \"2023-01-31T00:00:00\", \"2023-02-01T00:00:00\", \"2023-02-02T00:00:00\", \"2023-02-03T00:00:00\", \"2023-02-04T00:00:00\", \"2023-02-05T00:00:00\", \"2023-02-06T00:00:00\", \"2023-02-07T00:00:00\", \"2023-02-08T00:00:00\", \"2023-02-09T00:00:00\", \"2023-02-10T00:00:00\", \"2023-02-11T00:00:00\", \"2023-02-12T00:00:00\", \"2023-02-13T00:00:00\", \"2023-02-14T00:00:00\", \"2023-02-15T00:00:00\", \"2023-02-16T00:00:00\", \"2023-02-17T00:00:00\", \"2023-02-18T00:00:00\", \"2023-02-19T00:00:00\"], \n      \"y\": [5.28, 3.48, 2.07, -1.97, 3.82, 0.16, -2.04, 11.98, 5.98, 11.20, 9.41, 12.38, 11.67, 14.19, 15.88, 14.02, 14.63, 18.19, 16.53, 22.23, 22.75, 22.14, 21.33, 26.72, 29.24, 28.92, 34.40, 33.48, 28.11, 31.60, 31.76, 34.72, 37.42, 33.77, 35.02, 37.65, 38.01, 41.41, 41.87, 44.03, 45.68, 45.68, 49.63, 51.66, 49.06, 54.12, 58.01, 59.10, 61.39, 55.28], \n      \"mode\": \"lines\", \n      \"name\": \"历史数据\", \n      \"line\": {\"color\": \"#1c7ed6\"}\n    }, \n    {\n      \"type\": \"scatter\", \n      \"x\": [\"2023-02-20T00:00:00\", \"2023-02-21T00:00:00\", \"2023-02-22T00:00:00\", \"2023-02-23T00:00:00\", \"2023-02-24T00:00:00\", \"2023-02-25T00:00:00\", \"2023-02-26T00:00:00\", \"2023-02-27T00:00:00\", \"2023-02-28T00:00:00\", \"2023-03-01T00:00:00\", \"2023-03-02T00:00:00\", \"2023-03-03T00:00:00\"], \n      \"y\": [53.33, 56.94, 57.18, 57.13, 55.53, 55.37, 59.73, 58.50, 61.81, 62.40, 63.68, 61.64], \n      \"mode\": \"lines\", \n      \"name\": \"预测\", \n      \"line\": {\"color\": \"#f76707\"}\n    }, \n    {\n      \"type\": \"scatter\", \n      \"x\": [\"2023-02-20T00:00:00\", \"2023-02-21T00:00:00\", \"2023-02-22T00:00:00\", \"2023-02-23T00:00:00\", \"2023-02-24T00:00:00\", \"2023-02-25T00:00:00\", \"2023-02-26T00:00:00\", \"2023-02-27T00:00:00\", \"2023-02-28T00:00:00\", \"2023-03-01T00:00:00\", \"2023-03-02T00:00:00\", \"2023-03-03T00:00:00\", \"2023-03-03T00:00:00\", \"2023-03-02T00:00:00\", \"2023-03-01T00:00:00\", \"2023-02-28T00:00:00\", \"2023-02-27T00:00:00\", \"2023-02-26T00:00:00\", \"2023-02-25T00:00:00\", \"2023-02-24T00:00:00\", \"2023-02-23T00:00:00\", \"2023-02-22T00:00:00\", \"2023-02-21T00:00:00\", \"2023-02-20T00:00:00\"], \n      \"y\": [54.13, 58.54, 59.58, 60.33, 59.53, 60.17, 65.33, 64.90, 69.01, 70.40, 72.48, 71.24, 52.04, 54.88, 54.40, 54.61, 52.10, 54.13, 50.57, 51.53, 53.93, 54.78, 55.34, 52.53], \n      \"fill\": \"toself\", \n      \"fillcolor\": \"rgba(253, 126, 20, 0.2)\", \n      \"line\": {\"color\": \"rgba(255,255,255,0)\"}, \n      \"hoverinfo\": \"skip\", \n      \"name\": \"95% 置信区间\"\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-5767or\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>历史数据以蓝色显示，点预测以橙色显示，阴影区域表示95%置信区间。</p>\n</blockquote>\n<p>注意，置信区间通常随预测时间范围的增加而变宽。这表明未来不确定性增加；较远期的预测固有地比近期预测更不确定。</p>\n<h3>重要考量</h3>\n<ul>\n<li><strong>模型稳定性</strong>: ARIMA预测很大程度上依赖于以下假定：时间序列的统计特性（均值、方差、自相关结构），由模型参数 (parameter)和差分阶数表示，未来保持不变。基础过程的显著变化将使预测无效。</li>\n<li><strong>不确定性</strong>: 务必考虑置信区间。单独的点预测可能产生误导。区间的宽度与中心预测值同样重要。</li>\n<li><strong>外生变量</strong>: 标准ARIMA模型不包含可能影响时间序列的外部因素（外生变量）。如果这些因素很重要，ARIMAX等模型或其他基于回归的方法可能更合适。</li>\n</ul>\n<p>凭借生成预测并量化 (quantization)其不确定性的能力，您现在拥有一个预测未来趋势的有效工具，此工具基于ARIMA模型识别的历史模式。下一章将扩展这些思路，使用SARIMA模型处理季节性。</p>",
+  "slug": "forecasting-with-arima",
+  "updates": [],
+  "references": [
+    {
+      "id": 9453,
+      "title": "Time Series Analysis: Forecasting and Control",
+      "author": "George E. P. Box, Gwilym M. Jenkins, Gregory C. Reinsel, Greta M. Ljung",
+      "year": "2015",
+      "publisher": "Wiley",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.wiley.com/en-us/Time+Series+Analysis%3A+Forecasting+and+Control%2C+5th+Edition-p-9781118675021",
+      "doi": "",
+      "note": "一本经典教材，提供ARIMA模型构建、估计和预测的理论基础和方法。",
+      "order": 1,
+      "created_at": "2025-09-05T02:28:21.920578Z",
+      "updated_at": "2025-09-08T12:28:02.107207Z"
+    },
+    {
+      "id": 9454,
+      "title": "Forecasting: Principles and Practice",
+      "author": "Rob J Hyndman, George Athanasopoulos",
+      "year": "2021",
+      "publisher": "OTexts",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://otexts.com/fpp3/",
+      "doi": "",
+      "note": "一本全面实用的在线教材，涵盖多种预测方法，包括关于ARIMA模型、其应用和预测不确定性的专门章节。",
+      "order": 2,
+      "created_at": "2025-09-05T02:28:21.976285Z",
+      "updated_at": "2025-09-08T12:28:05.126985Z"
+    },
+    {
+      "id": 9455,
+      "title": "statsmodels.tsa.arima.model.ARIMAResults",
+      "author": "Statsmodels Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statsmodels.org/stable/generated/statsmodels.tsa.arima.model.ARIMAResults.html",
+      "doi": "",
+      "note": "`statsmodels` 中ARIMA结果对象的官方文档，详细介绍了用于生成预测和置信区间的 `forecast()`、`predict()` 和 `get_forecast()` 等方法。",
+      "order": 3,
+      "created_at": "2025-09-05T02:28:21.979335Z",
+      "updated_at": "2025-09-08T12:28:05.323143Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

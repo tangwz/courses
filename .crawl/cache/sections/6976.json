@@ -1,0 +1,61 @@
+{
+  "id": 6976,
+  "title": "动手实践：CPU 与 GPU 性能对比",
+  "meta_title": "实践：对比 CPU 与 GPU 性能",
+  "meta_description": "一个动手实验，用于对比简单机器学习任务在 CPU 和 GPU 上的性能。",
+  "content": "<p>本次动手实验着重于直接的性能测量。一个简单的 Python 脚本将执行常见的机器学习 (machine learning)操作——矩阵乘法，并对比其在 CPU 和 GPU 上的运行时间。这项练习将提供对 GPU 为并行任务带来的加速的直观感受。</p>\n<p>目的不是进行严谨的科学研究，而是观察导致人工智能硬件选择的量级差异。</p>\n<h3>对比任务：矩阵乘法</h3>\n<p>大多数神经网络 (neural network)的核心是一个基本操作：矩阵乘法。神经网络的一层通常可以表示为：</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mtext>输出</mtext><mo>=</mo><mtext>激活</mtext><mo stretchy=\"false\">(</mo><mtext>权重</mtext><mo>⋅</mo><mtext>输入</mtext><mo>+</mo><mtext>偏置</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">\\text{输出} = \\text{激活}(\\text{权重} \\cdot \\text{输入} + \\text{偏置})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">输出</span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">激活</span></span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord cjk_fallback\">权重</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7667em;vertical-align:-0.0833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">输入</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">偏置</span></span><span class=\"mclose\">)</span></span></span></span></span>\n<p>操作 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mtext>权重</mtext><mo>⋅</mo><mtext>输入</mtext></mrow><annotation encoding=\"application/x-tex\">\\text{权重} \\cdot \\text{输入}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">权重</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">⋅</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord text\"><span class=\"mord cjk_fallback\">输入</span></span></span></span></span> 是一个大型矩阵乘法。计算结果矩阵中的每个元素可以独立于其他元素进行，这使其成为一个“高度并行”的问题。这正是 GPU 架构凭借其数千个核心，预计能胜过 CPU 少数但更强大核心的工作负载类型。</p>\n<h3>前提条件</h3>\n<p>要进行此操作，您需要一个安装了 PyTorch 的 Python 环境。PyTorch 是一个流行的深度学习 (deep learning)框架，它为在不同硬件设备上运行计算提供了简单的接口。</p>\n<p>如果您有 NVIDIA GPU，请确保安装支持 CUDA 的 PyTorch 版本。您可以在 <a href=\"https://pytorch.org/get-started/locally/\">PyTorch 官方网站</a>上找到正确的命令。它通常看起来像这样：</p>\n<pre><code class=\"language-bash\"># 示例命令，请查看官网获取最新版本\npip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118\n</code></pre>\n<p>如果您没有本地 GPU，可以在 Google Colab 上免费运行整个练习，它提供了支持 GPU 的环境。只需打开一个新的 Colab 笔记本，在菜单中选择 <code>Runtime > Change runtime type</code> 并选择 <code>GPU</code> 作为硬件加速器。</p>\n<h3>对比代码</h3>\n<p>我们将编写一个脚本，执行相同的任务——一系列大型矩阵乘法，首先在 CPU 上，然后在 GPU 上。我们两者都使用 PyTorch 以确保公平对比，因为操作的底层实现是相同的；只有执行它的硬件发生了变化。</p>\n<p>创建一个名为 <code>benchmark.py</code> 的文件，并添加以下代码：</p>\n<pre><code class=\"language-python\">import torch\nimport time\n\ndef benchmark(device_name, matrix_size=4096, iterations=10):\n    \"\"\"\n    在指定设备上执行矩阵乘法对比测试。\n\n    参数:\n        device_name (str): 要运行的设备，'cpu' 或 'cuda'。\n        matrix_size (int): 方形矩阵的维度。\n        iterations (int): 重复乘法的次数。\n    \"\"\"\n    print(f\"--- 在 {device_name.upper()} 上进行对比测试 ---\")\n\n    # 设置张量分配的设备\n    device = torch.device(device_name)\n\n    # 在指定设备上创建两个大型随机矩阵\n    # 使用 .to(device) 将张量移动到目标硬件\n    try:\n        a = torch.randn(matrix_size, matrix_size, device=device)\n        b = torch.randn(matrix_size, matrix_size, device=device)\n    except torch.cuda.OutOfMemoryError:\n        print(f\"GPU 内存不足。请尝试更小的 matrix_size。\")\n        return\n    except Exception as e:\n        print(f\"发生错误: {e}\")\n        return\n\n    # 预热运行，以处理任何初始设置成本\n    _ = torch.matmul(a, b)\n\n    # 对于 GPU，在开始计时前同步，以确保\n    # 所有先前的操作都已完成。\n    if device.type == 'cuda':\n        torch.cuda.synchronize()\n\n    start_time = time.time()\n\n    for _ in range(iterations):\n        c = torch.matmul(a, b)\n\n    # 对于 GPU，再次同步以确保乘法\n    # 在我们停止计时器前完成。\n    if device.type == 'cuda':\n        torch.cuda.synchronize()\n\n    end_time = time.time()\n\n    total_time = end_time - start_time\n    avg_time_per_iter = (total_time / iterations) * 1000  # 单位：毫秒\n\n    print(f\"矩阵大小: {matrix_size}x{matrix_size}\")\n    print(f\"迭代次数: {iterations}\")\n    print(f\"总时间: {total_time:.4f} 秒\")\n    print(f\"每次乘法的平均时间: {avg_time_per_iter:.4f} 毫秒\\n\")\n\nif __name__ == \"__main__\":\n    # 在 CPU 上进行对比测试\n    benchmark('cpu')\n\n    # 检查 CUDA-启用 的 GPU 是否可用\n    if torch.cuda.is_available():\n        # 在 GPU 上进行对比测试\n        benchmark('cuda')\n    else:\n        print(\"--- 此系统上没有可用的 CUDA (GPU)。---\")\n        print(\"跳过 GPU 对比测试。\")\n\n</code></pre>\n<h4>理解代码</h4>\n<ul>\n<li><strong>设备处理:</strong> <code>torch.device(device_name)</code> 调用会创建一个设备对象。当我们创建张量 <code>a</code> 和 <code>b</code> 时，我们传递 <code>device=device</code> 以确保它们直接在目标硬件（CPU 内存或 GPU 显存 (VRAM)）上创建。</li>\n<li><strong><code>torch.cuda.synchronize()</code>:</strong> 这是进行精确 GPU 计时的一个重要函数。CPU 代码和 GPU 代码是异步运行的。当您在 GPU 上调用 <code>torch.matmul(a, b)</code> 时，CPU 会将操作排队，并可能在 GPU 实际完成计算之前立即移动到下一行代码（例如停止计时器）。<code>torch.cuda.synchronize()</code> 强制 CPU 等待所有先前排队的 GPU 任务完成，从而为我们提供准确的实际运行时间测量。</li>\n</ul>\n<h3>运行对比测试</h3>\n<p>打开您的终端，导航到保存 <code>benchmark.py</code> 的目录，然后运行它：</p>\n<pre><code class=\"language-bash\">python benchmark.py\n</code></pre>\n<h3>分析结果</h3>\n<p>您将看到类似以下内容的输出，尽管确切数字会因您具体的 CPU 和 GPU 型号而有很大差异。</p>\n<pre><code>--- Benchmarking on CPU ---\nMatrix Size: 4096x4096\nIterations: 10\nTotal time: 11.8921 seconds\nAverage time per multiplication: 1189.2100 ms\n\n--- Benchmarking on GPU ---\nMatrix Size: 4096x4096\nIterations: 10\nTotal time: 0.0754 seconds\nAverage time per multiplication: 7.5400 ms\n</code></pre>\n<p>差异显著。在这个示例运行中，GPU 完成相同任务的速度比 CPU 快 150 多倍。这并非因为 CPU “不好”。它只是不适合这项特定的工作。CPU 的核心忙于顺序处理指令，而 GPU 的数千个核心则同时处理矩阵乘法的一小部分。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-dsmilz\" \n              data-plot-definition='{\n  \"layout\": {\n    \"title\": {\n      \"text\": \"对比测试：CPU 与 GPU 矩阵乘法\"\n    },\n    \"xaxis\": {\n      \"title\": {\n        \"text\": \"硬件设备\"\n      }\n    },\n    \"yaxis\": {\n      \"title\": {\n        \"text\": \"总时间（秒）\"\n      }\n    },\n    \"plot_bgcolor\": \"#f8f9fa\",\n    \"paper_bgcolor\": \"#f8f9fa\"\n  },\n  \"data\": [\n    {\n      \"x\": [\n        \"CPU\",\n        \"GPU\"\n      ],\n      \"y\": [\n        11.89,\n        0.075\n      ],\n      \"type\": \"bar\",\n      \"marker\": {\n        \"color\": [\n          \"#339af0\",\n          \"#20c997\"\n        ]\n      }\n    }\n  ]\n}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-dsmilz\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>10 次 4096x4096 大小矩阵乘法的执行时间。GPU 完成任务所需的时间只是 CPU 的一小部分。值越小越好。</p>\n</blockquote>\n<p>这一实际结果是 GPU 成为深度学习 (deep learning)事实标准的核心原因。以数量级加速这些核心并行操作的能力，直接意味着将模型训练时间从数周缩短到数小时。随着我们继续，请记住这一根本的性能差距。它影响着我们做出的每一个决定，从选择云实例到设计多节点训练集群。</p>",
+  "slug": "practical-benchmarking-cpu-gpu",
+  "updates": [],
+  "references": [
+    {
+      "id": 20943,
+      "title": "PyTorch Documentation",
+      "author": "PyTorch Contributors",
+      "year": "2023",
+      "publisher": "PyTorch Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/index.html",
+      "doi": "",
+      "note": "PyTorch 深度学习框架的官方文档，涵盖张量操作、设备管理和 CUDA 集成，这些对于 CPU/GPU 基准测试至关重要。",
+      "order": 1,
+      "created_at": "2025-09-06T14:13:12.803610Z",
+      "updated_at": "2025-09-10T03:17:02.772073Z"
+    },
+    {
+      "id": 20944,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "一本基础教科书，提供神经网络的全面理论背景，包括矩阵乘法在深度学习模型中的作用。",
+      "order": 2,
+      "created_at": "2025-09-06T14:13:12.816764Z",
+      "updated_at": "2025-09-10T03:17:02.813955Z"
+    },
+    {
+      "id": 20945,
+      "title": "Programming Massively Parallel Processors: A Hands-on Approach",
+      "author": "David B. Kirk, Wen-mei W. Hwu",
+      "year": "2017",
+      "publisher": "Morgan Kaufmann",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Programming_Massively_Parallel_Processors.html?id=c738DQAAQBAJ",
+      "doi": "10.1016/C2016-0-03099-X",
+      "note": "这本书解释了 GPU 的架构和编程原理，深入了解了它们为何在高性能计算中擅长矩阵乘法等并行任务。",
+      "order": 3,
+      "created_at": "2025-09-06T14:13:12.819712Z",
+      "updated_at": "2025-09-10T03:17:09.178963Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

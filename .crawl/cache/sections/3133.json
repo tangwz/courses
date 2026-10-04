@@ -1,0 +1,45 @@
+{
+  "id": 3133,
+  "title": "实践：配置可扩展存储",
+  "meta_title": "实践：配置可扩展数据存储",
+  "meta_description": "动手实践配置和操作大型数据集的可扩展存储方案。",
+  "content": "<p>管理PB级数据集需要可扩展的存储方案。主流云平台（如AWS S3、Google Cloud Storage、Azure Blob Storage）提供的对象存储服务是LLMOps数据基础设施的基础构建块。它们提供几乎无限的容量、高持久性以及适合大文件和分布式访问的访问模式。</p>\n<p>本次实践侧重于使用AWS S3作为主要范例，设置和操作一个可扩展的对象存储桶。其原理和命令对于其他云提供商类似。</p>\n<h2>目标</h2>\n<p>完成本次实践后，您将能够：</p>\n<ol>\n<li>创建配置为支持大规模使用的S3存储桶。</li>\n<li>使用AWS命令行界面（CLI）上传和下载文件。</li>\n<li>列出存储桶中的对象，模拟与大型数据集的交互。</li>\n<li>使用Python和<code>boto3</code>通过程序方式与存储桶交互。</li>\n</ol>\n<h2>先决条件</h2>\n<ul>\n<li>一个AWS账户。</li>\n<li>已安装AWS CLI并配置了相应的凭证（例如，通过<code>aws configure</code>）。请确保您的IAM用户具有创建和管理S3存储桶的权限（<code>s3:CreateBucket</code>、<code>s3:PutObject</code>、<code>s3:GetObject</code>、<code>s3:ListBucket</code>、<code>s3:DeleteObject</code>、<code>s3:DeleteBucket</code>）。</li>\n<li>已安装Python 3并安装了<code>boto3</code>库（<code>pip install boto3</code>）。</li>\n<li>一个用于上传的示例文件（如果需要，我们将创建一个）。</li>\n</ul>\n<h2>设置您的可扩展存储桶</h2>\n<p>对象存储桶作为您数据的容器。选择合适的区域和名称对于性能和组织管理很重要。</p>\n<h3>步骤 1：创建S3存储桶</h3>\n<p>我们将使用AWS CLI创建一个存储桶。存储桶名称必须是全局唯一的。选择一个唯一的名称，可以包含您的首字母缩写、项目名称和日期，以确保其唯一性。另外，选择一个靠近您的计算资源或用户的区域，以减少延迟。</p>\n<pre><code class=\"language-bash\"># 选择一个唯一的存储桶名称（请替换 'your-unique-llmops-data-bucket-yyyymmdd'）\nBUCKET_NAME=\"your-unique-llmops-data-bucket-yyyymmdd\"\n\n# 选择您偏好的AWS区域（例如，us-east-1）\nAWS_REGION=\"us-east-1\"\n\n# 创建存储桶\naws s3api create-bucket \\\n    --bucket ${BUCKET_NAME} \\\n    --region ${AWS_REGION} \\\n    --create-bucket-configuration LocationConstraint=${AWS_REGION}\n\necho \"存储桶 ${BUCKET_NAME} 已在 ${AWS_REGION} 区域创建。\"\n</code></pre>\n<p><em>注意：</em> 对于<code>us-east-1</code>以外的区域，需要指定<code>LocationConstraint</code>。对于<code>us-east-1</code>，您可以省略<code>--region</code>和<code>--create-bucket-configuration</code>。</p>\n<h3>步骤 2：准备一个示例文件</h3>\n<p>我们创建一个小型文本文件，用于测试上传和下载。在实际场景中，这可能是一个大型数据集分片、模型检查点或配置文件。</p>\n<pre><code class=\"language-bash\">echo \"这是一个用于测试S3操作的示例文件。\" > sample_data.txt\necho \"LLMOps需要高效管理大型文件。\" >> sample_data.txt\n</code></pre>\n<h3>步骤 3：使用AWS CLI上传文件</h3>\n<p><code>aws s3 cp</code> 命令处理上传。对于大文件（通常大于100MB，但可配置），CLI会自动使用分段上传，将文件分成多个部分并并行上传，以获得更好的吞吐量 (throughput)和弹性。虽然我们的示例文件很小，但命令是相同的。</p>\n<pre><code class=\"language-bash\"># 将文件上传到存储桶的根目录\naws s3 cp sample_data.txt s3://${BUCKET_NAME}/\n\n# 您也可以上传到特定的“文件夹”（前缀）\naws s3 cp sample_data.txt s3://${BUCKET_NAME}/raw_data/sample_data_v1.txt\n\necho \"已将 sample_data.txt 上传到 s3://${BUCKET_NAME}/ 和 s3://${BUCKET_NAME}/raw_data/\"\n</code></pre>\n<p><em>提示：</em> 前缀（如 <code>raw_data/</code>）对于在存储桶中组织大量文件很重要，可以实现高效的文件列表和访问控制。</p>\n<h3>步骤 4：列出存储桶中的对象</h3>\n<p>您可以列出根级别或特定前缀内的对象。</p>\n<pre><code class=\"language-bash\"># 列出根目录下的对象\necho \"根目录下的对象：\"\naws s3 ls s3://${BUCKET_NAME}/\n\n# 递归列出 'raw_data/' 前缀下的对象\necho \"raw_data/ 下的对象：\"\naws s3 ls s3://${BUCKET_NAME}/raw_data/ --recursive\n</code></pre>\n<p>对于包含数百万或数十亿对象的存储桶，简单的 <code>ls</code> 命令可能很慢或不完整。有效使用前缀，并在需要时考虑使用S3清单（S3 Inventory）来获取全面的、按计划生成的报告。</p>\n<h3>步骤 5：使用AWS CLI下载文件</h3>\n<p>下载使用相同的 <code>cp</code> 命令，只是源和目的地反过来。</p>\n<pre><code class=\"language-bash\"># 创建一个用于下载的目录\nmkdir downloaded_files\n\n# 从根目录下载文件\naws s3 cp s3://${BUCKET_NAME}/sample_data.txt downloaded_files/downloaded_sample_root.txt\n\n# 从前缀下载文件\naws s3 cp s3://${BUCKET_NAME}/raw_data/sample_data_v1.txt downloaded_files/downloaded_sample_raw.txt\n\necho \"文件已下载到 'downloaded_files' 目录。\"\ncat downloaded_files/downloaded_sample_root.txt\n</code></pre>\n<p>验证下载文件的内容是否与原始的 <code>sample_data.txt</code> 匹配。</p>\n<h3>步骤 6：通过程序方式与Python (<code>boto3</code>) 交互</h3>\n<p>自动化流程依赖程序化访问。以下是如何使用Python的<code>boto3</code>库执行类似操作的示例。</p>\n<p>创建一个名为 <code>s3_interact.py</code> 的Python脚本：</p>\n<pre><code class=\"language-python\">import boto3\nimport os\n\n# 使用您创建的存储桶名称\nbucket_name = os.environ.get(\"S3_BUCKET_NAME\", \"your-unique-llmops-data-bucket-yyyymmdd\")\nlocal_file_path = \"sample_data.txt\"\nupload_key_python = \"programmatic_uploads/sample_via_python.txt\"\ndownload_path_python = \"downloaded_files/downloaded_via_python.txt\"\n\n# 创建一个S3客户端\ns3 = boto3.client('s3')\n# 或者使用资源接口进行更高级的操作\n# s3_resource = boto3.resource('s3')\n# bucket = s3_resource.Bucket(bucket_name)\n\nprint(f\"正在与存储桶交互: {bucket_name}\")\n\n# 1. 上传文件\ntry:\n    print(f\"正在上传 {local_file_path} 到 s3://{bucket_name}/{upload_key_python}\")\n    s3.upload_file(local_file_path, bucket_name, upload_key_python)\n    print(\"上传成功。\")\nexcept Exception as e:\n    print(f\"上传文件错误: {e}\")\n\n# 2. 列出对象（使用前缀）\ntry:\n    print(\"\\n列出前缀为 'programmatic_uploads/' 的对象：\")\n    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=\"programmatic_uploads/\")\n    if 'Contents' in response:\n        for obj in response['Contents']:\n            print(f\"- {obj['Key']} (大小: {obj['Size']})\")\n    else:\n        print(\"没有找到该前缀的对象。\")\nexcept Exception as e:\n    print(f\"列出对象错误: {e}\")\n\n# 3. 下载文件\ntry:\n    print(f\"\\n正在下载 s3://{bucket_name}/{upload_key_python} 到 {download_path_python}\")\n    # 确保下载目录存在\n    os.makedirs(os.path.dirname(download_path_python), exist_ok=True)\n    s3.download_file(bucket_name, upload_key_python, download_path_python)\n    print(\"下载成功。\")\n    # 验证内容\n    with open(download_path_python, 'r') as f:\n        print(f\"下载文件的内容：\\n{f.read()}\")\nexcept Exception as e:\n    print(f\"下载文件错误: {e}\")\n\n</code></pre>\n<p>运行前，请设置存储桶名称的环境变量：</p>\n<pre><code class=\"language-bash\">export S3_BUCKET_NAME=\"your-unique-llmops-data-bucket-yyyymmdd\"\npython s3_interact.py\n</code></pre>\n<p>该脚本展示了将存储集成到LLM数据管道和工作流程中的主要上传、列表和下载操作。<code>boto3</code> 还提供更多功能，包括管理存储桶策略、生命周期规则以及并行操作（通过底层使用的<code>s3transfer</code>等库或更高级的抽象）。</p>\n<h2>大规模应用的性能考量</h2>\n<p>尽管这些示例使用小文件，但对于PB级数据，请记住以下几点：</p>\n<ul>\n<li><strong>并行性：</strong> 对于大文件或大量文件，利用分段上传/下载以及支持并行传输的工具（如<code>aws s3 sync</code>或<code>s5cmd</code>等库）。</li>\n<li><strong>前缀结构：</strong> 精心设计的前缀结构（例如，<code>/dataset_name/version/split/part-*.parquet</code>）可以显著加快数据子集的列表和处理速度。避免将数百万个文件直接放在存储桶的根目录。</li>\n<li><strong>存储类别：</strong> 根据访问频率和时长选择合适的S3存储类别（标准、智能分层、Glacier）以优化成本。生命周期策略可以自动化数据转换。</li>\n<li><strong>区域选择：</strong> 将存储和计算资源保持在同一区域，以最大程度减少延迟和数据传输成本。</li>\n<li><strong>一致性：</strong> S3为新对象提供强读写一致性，为覆盖/删除操作提供最终一致性，这通常足以满足机器学习 (machine learning)工作负载的需求，但理解这一点很重要。</li>\n</ul>\n<h2>清理</h2>\n<p>为避免持续产生AWS费用，请删除对象和存储桶。</p>\n<pre><code class=\"language-bash\"># 首先删除对象（对前缀使用 --recursive）\naws s3 rm s3://${BUCKET_NAME}/sample_data.txt\naws s3 rm s3://${BUCKET_NAME}/raw_data/sample_data_v1.txt --recursive\naws s3 rm s3://${BUCKET_NAME}/programmatic_uploads/sample_via_python.txt --recursive\n\n# 现在删除空存储桶\naws s3api delete-bucket --bucket ${BUCKET_NAME}\n\n# 清理本地文件\nrm sample_data.txt\nrm -rf downloaded_files\n\necho \"已清理S3对象、存储桶 ${BUCKET_NAME} 和本地文件。\"\n</code></pre>\n<h2>结论</h2>\n<p>您已成功设置S3存储桶，使用CLI和Python执行了基本文件操作，并了解了LLMOps中大规模数据管理相关的组织和性能考量。这种可扩展的对象存储是数据预处理管道、版本控制系统（如指向S3的DVC）以及分布式训练任务（直接从S3读取数据）的构建基础。掌握与这些存储系统的交互是管理大型模型数据生命周期的重要能力。</p>",
+  "slug": "practice-scalable-storage-setup",
+  "updates": [],
+  "references": [
+    {
+      "id": 9086,
+      "title": "Amazon Simple Storage Service User Guide",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html",
+      "doi": "",
+      "note": "AWS S3的官方文档，涵盖了可扩展对象存储的概念、特性、管理和最佳实践。",
+      "order": 1,
+      "created_at": "2025-09-05T02:15:17.385247Z",
+      "updated_at": "2025-09-09T08:58:22.528829Z"
+    },
+    {
+      "id": 9087,
+      "title": "boto3 Docs: S3",
+      "author": "Amazon Web Services",
+      "year": "2023",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html",
+      "doi": "",
+      "note": "使用`boto3` Python库以编程方式与AWS S3交互的官方API参考和指南。",
+      "order": 2,
+      "created_at": "2025-09-05T02:15:17.397845Z",
+      "updated_at": "2025-09-09T08:58:26.242567Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

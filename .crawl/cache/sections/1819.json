@@ -1,0 +1,45 @@
+{
+  "id": 1819,
+  "title": "使用 groupby() 方法对数据进行分组",
+  "meta_title": "Pandas GroupBy 方法",
+  "meta_description": "使用 groupby() 方法根据列值将 DataFrame 分割成组。",
+  "content": "<p>“分-应用-合并”策略是数据分析中一种强大的模式。此过程的第一步是根据某些条件将数据分成组。Pandas 主要通过 <code>groupby()</code> 方法实现此目的。</p>\n<p>可以将 <code>groupby()</code> 理解为告诉 Pandas：“将此 DataFrame 的行分离到不同的‘桶’中，每个‘桶’包含在特定列（或多列）中具有相同值的行。”此操作不会立即改变 DataFrame 或显示已分离的数据。相反，它会创建一个特殊的中间对象，称为 <code>GroupBy</code> 对象。该对象包含所有必要的分组信息，并已准备好进行下一步：对每个组应用函数（例如计算总和或平均值）。</p>\n<h3><code>groupby()</code> 方法</h3>\n<p>基本语法很简单：你在 DataFrame 上调用 <code>groupby()</code> 方法，并传入你希望作为分组依据的列名（或列名列表）。</p>\n<p>让我们用一个例子来说明。假设我们有一个小数据集，记录了不同产品在各个区域的销售情况。</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 示例销售数据\ndata = {'Region': ['North', 'South', 'North', 'South', 'East', 'East', 'North'],\n        'Product': ['A', 'A', 'B', 'B', 'A', 'B', 'A'],\n        'Sales': [100, 150, 200, 50, 120, 80, 90]}\ndf = pd.DataFrame(data)\n\nprint(\"原始 DataFrame:\")\nprint(df)\n</code></pre>\n<p>Output:</p>\n<pre><code>原始 DataFrame:\n  Region Product  Sales\n0  North       A    100\n1  South       A    150\n2  North       B    200\n3  South       B     50\n4   East       A    120\n5   East       B     80\n6  North       A     90\n</code></pre>\n<p>现在，让我们按照‘Region’列对这个 DataFrame 进行分组：</p>\n<pre><code class=\"language-python\"># 按照‘Region’列进行分组\ngrouped_by_region = df.groupby('Region')\n\nprint(\"\\ngroupby('Region') 的结果：\")\nprint(grouped_by_region)\n</code></pre>\n<p>Output:</p>\n<pre><code>groupby('Region') 的结果：\n&#x3C;pandas.core.groupby.generic.DataFrameGroupBy object at 0x...>\n</code></pre>\n<p>注意，输出本身并不是分组后的数据。它是一个 <code>DataFrameGroupBy</code> 对象。这个对象实际上包含多个小型 DataFrame，‘Region’列中的每个唯一值（‘North’、‘South’、‘East’）对应一个。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-3e52wb\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.2];\n  edge [arrowhead=vee, arrowsize=0.7];\n\n  subgraph cluster_df {\n    label = \"原始 DataFrame (df)\";\n    bgcolor=\"#e9ecef\";\n    df_node [label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">\n      <TR><TD BGCOLOR=\"#ced4da\"><B>区域</B></TD><TD BGCOLOR=\"#ced4da\"><B>产品</B></TD><TD BGCOLOR=\"#ced4da\"><B>销售额</B></TD></TR>\n      <TR><TD>North</TD><TD>A</TD><TD>100</TD></TR>\n      <TR><TD>South</TD><TD>A</TD><TD>150</TD></TR>\n      <TR><TD>North</TD><TD>B</TD><TD>200</TD></TR>\n      <TR><TD>South</TD><TD>B</TD><TD>50</TD></TR>\n      <TR><TD>East</TD><TD>A</TD><TD>120</TD></TR>\n      <TR><TD>East</TD><TD>B</TD><TD>80</TD></TR>\n      <TR><TD>North</TD><TD>A</TD><TD>90</TD></TR>\n    </TABLE>>, shape=plain];\n  }\n\n  subgraph cluster_groupby {\n      label = \"df.groupby(&#39;Region&#39;)\";\n      bgcolor=\"#a5d8ff\";\n      groupby_obj [label=\"DataFrameGroupBy 对象\\n(包含分组信息)\", shape=ellipse, style=filled, fillcolor=\"#d0bfff\"];\n  }\n\n  subgraph cluster_groups {\nlabel = \"组（GroupBy 对象内部）\";\n    bgcolor=\"#b2f2bb\";\n    node [style=filled];\n    group_north [label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#ffffff\">\n      <TR><TD COLSPAN=\"3\" BGCOLOR=\"#74c0fc\"><B>组：North</B></TD></TR>\n      <TR><TD>North</TD><TD>A</TD><TD>100</TD></TR>\n      <TR><TD>North</TD><TD>B</TD><TD>200</TD></TR>\n      <TR><TD>North</TD><TD>A</TD><TD>90</TD></TR>\n    </TABLE>>, shape=plain, fillcolor=\"#ffffff\"];\n\n    group_south [label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#ffffff\">\n      <TR><TD COLSPAN=\"3\" BGCOLOR=\"#74c0fc\"><B>组：South</B></TD></TR>\n      <TR><TD>South</TD><TD>A</TD><TD>150</TD></TR>\n      <TR><TD>South</TD><TD>B</TD><TD>50</TD></TR>\n    </TABLE>>, shape=plain, fillcolor=\"#ffffff\"];\n\n    group_east [label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" BGCOLOR=\"#ffffff\">\n      <TR><TD COLSPAN=\"3\" BGCOLOR=\"#74c0fc\"><B>组：East</B></TD></TR>\n      <TR><TD>East</TD><TD>A</TD><TD>120</TD></TR>\n      <TR><TD>East</TD><TD>B</TD><TD>80</TD></TR>\n    </TABLE>>, shape=plain, fillcolor=\"#ffffff\"];\n  }\n\n  df_node -> groupby_obj [label=\"groupby(&#39;Region&#39;)\"];\n  groupby_obj -> group_north [style=dashed, arrowhead=none];\n  groupby_obj -> group_south [style=dashed, arrowhead=none];\n  groupby_obj -> group_east [style=dashed, arrowhead=none];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-3e52wb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将 <code>groupby('Region')</code> 应用到 DataFrame 的示意图。该方法创建一个 <code>GroupBy</code> 对象，其中包含原始 DataFrame 中每个唯一区域的子集引用。</p>\n</blockquote>\n<h3>GroupBy 对象有何用途？</h3>\n<p>这个 <code>GroupBy</code> 对象是分-应用-合并过程的根本。虽然它本身不直接显示太多，但已准备好进行“应用”步骤。你可以对其执行各种操作，例如：</p>\n<ol>\n<li><strong>聚合：</strong> 为每个组独立计算汇总统计量（如平均值、总和、计数）。这是最常见的用法，将在下一节（“应用聚合函数”）中说明。</li>\n<li><strong>转换：</strong> 执行组特定的计算，并返回与原始 DataFrame 形状一致的结果。</li>\n<li><strong>筛选：</strong> 根据某些组级别计算丢弃整个组。</li>\n<li><strong>迭代：</strong> 遍历各个组（我们将在后面的“迭代分组”中看到这一点）。</li>\n</ol>\n<p>目前，重要的要点是 <code>df.groupby('column_name')</code> 能根据指定列高效地分割 DataFrame，并创建一个 <code>GroupBy</code> 对象，为后续对每个组的分析打下基础。</p>",
+  "slug": "grouping-data-groupby",
+  "updates": [],
+  "references": [
+    {
+      "id": 1736,
+      "title": "Group by: split-apply-combine",
+      "author": "The pandas development team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html",
+      "doi": "",
+      "note": "`groupby()`方法的官方文档，详细说明其机制和在数据聚合中的应用。",
+      "order": 1,
+      "created_at": "2025-09-04T16:25:27.007323Z",
+      "updated_at": "2025-09-08T05:05:02.054220Z"
+    },
+    {
+      "id": 1738,
+      "title": "Hands-On Data Analysis with Pandas",
+      "author": "Stefanie Molin",
+      "year": "2019",
+      "publisher": "Packt Publishing",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books?id=i9i_DwAAQBAJ",
+      "doi": "",
+      "note": "一本实用的资源，包含使用`groupby()`和Pandas中其他数据分析功能的实际案例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:25:27.013645Z",
+      "updated_at": "2025-09-08T05:05:11.063489Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

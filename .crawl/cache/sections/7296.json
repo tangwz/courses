@@ -1,0 +1,45 @@
+{
+  "id": 7296,
+  "title": "Kubernetes 架构：控制平面",
+  "meta_title": "Kubernetes 控制平面架构",
+  "meta_description": "从技术角度分析 Kubernetes 控制平面的组件，包括 API 服务器、etcd、调度器和控制器管理器。",
+  "content": "<p>每个 Kubernetes 集群的核心都是控制平面。可以把它看作操作的中枢，负责管理集群状态、做出调度决策以及响应事件。它确保您的应用程序和集群本身按照您预期的状态运行。控制平面不直接运行您的应用程序容器；该任务交由工作节点完成。相反，它从中心指挥点对它们进行编排。</p>\n<p>控制平面不是一个单一的进程，而是多个协同工作的独立组件集合。虽然您通常通过单一的 API 与集群交互，但这些组件就在幕后工作，每个组件都有特定的职责。让我们看看构成控制平面的主要组件。</p>\n<h3>API 服务器 (kube-apiserver)</h3>\n<p>API 服务器是 Kubernetes 控制平面的入口。与集群的所有交互，无论是来自运行 <code>kubectl</code> 的用户、脚本还是另一个控制平面组件，都要经过 API 服务器。它充当网关，执行三个主要功能：</p>\n<ol>\n<li><strong>认证与授权：</strong> 它验证客户端的身份，并检查他们是否有权限执行所请求的操作。</li>\n<li><strong>校验：</strong> 它对传入的请求进行校验，以确保其格式正确并符合 Kubernetes 对象模型的规则。例如，它会拒绝指定了无效容器镜像名称的 Pod 定义。</li>\n<li><strong>状态管理：</strong> 它是唯一直接与 <code>etcd</code> 通信的组件。它从 <code>etcd</code> 读取集群的当前状态，并在验证请求后，将新的期望状态写回其中。</li>\n</ol>\n<p>由于它是所有通信的中心枢纽，API 服务器被设计为一个无状态、可水平扩展的 REST 服务。所有修改集群状态的请求在持久化之前都会在此处理。</p>\n<h3>etcd</h3>\n<p>如果说 API 服务器是入口，那么 <code>etcd</code> 就是集群的官方记录本。它是一个一致且高可用的键值存储，用作 Kubernetes 所有集群数据的后端存储。您在 Kubernetes 中创建的每个对象（例如 Pod、Deployment 或 Service）都表现为 <code>etcd</code> 中的一个条目。</p>\n<p>它是整个集群的单一事实来源。当您向 API 服务器查询 Pod 的状态时，API 服务器会从 <code>etcd</code> 中检索该信息。当调度器决定将 Pod 放置在特定节点上时，它会通知 API 服务器，然后 API 服务器将该决定记录在 <code>etcd</code> 中。</p>\n<p>对于生产集群，<code>etcd</code> 通常以 3 或 5 个节点的集群形式运行，以确保高可用性和数据持久性。这种冗余设计可以防止在单个控制平面节点发生故障时丢失集群状态。</p>\n<h3>调度器 (kube-scheduler)</h3>\n<p>调度器有一项特定的职责：它决定哪个工作节点应该运行新创建的 Pod。它实际上并不运行容器；它只负责做出位置决策。</p>\n<p>调度过程涉及对每个需要调度的 Pod 执行两步操作：</p>\n<ol>\n<li><strong>过滤：</strong> 调度器首先为 Pod 找到一组可用的节点。它会过滤掉任何无法满足 Pod 要求的节点。这些要求可能包括 CPU 和内存请求、节点标签，或者规定 Pod 应如何共同放置的亲和性与反亲和性规则。</li>\n<li><strong>打分：</strong> 过滤之后，如果有多个合适的节点，调度器会通过为每个节点评分来对剩余节点进行排序。这种评分基于一组优先级函数，例如，可能倾向于运行 Pod 较少的节点，或者本地已缓存所需容器镜像的节点。得分最高的节点会被选中。</li>\n</ol>\n<p>决策完成后，调度器会通知 API 服务器，API 服务器随后在 <code>etcd</code> 中用分配的节点名称更新 Pod 的定义。然后，目标节点上的 Kubelet 接管并运行该 Pod。</p>\n<h3>控制器管理器 (kube-controller-manager)</h3>\n<p>控制器管理器是主动将集群的“当前状态”推向“期望状态”的组件。它是一个包含多个控制器进程的单一二进制文件，每个进程负责管理集群的一个特定方面。</p>\n<p>每个控制器都按照“调解循环”模式运行：</p>\n<ol>\n<li>它监控 API 服务器中其关心的对象更改。</li>\n<li>它将对象指定的期望状态与其当前的实际状态进行比较。</li>\n<li>它采取行动使当前状态与期望状态相匹配。</li>\n</ol>\n<p>例如，<strong>ReplicaSet 控制器</strong>监控 ReplicaSet 对象。如果一个 ReplicaSet 规定它应该有三个 Pod 副本，但控制器只看到两个在运行，它将与 API 服务器通信以创建第三个副本。如果它看到四个，它将终止一个。</p>\n<p>捆绑在控制器管理器中的其他组件包括：</p>\n<ul>\n<li><strong>节点控制器：</strong> 监控工作节点的健康状况，并在节点停止响应时采取行动。</li>\n<li><strong>Deployment 控制器：</strong> 通过创建和管理底层的 ReplicaSet 来管理新应用程序版本的发布。</li>\n<li><strong>Service 控制器：</strong> 将 Service 连接到相应的 Pod，并在云环境中配置云提供商的负载均衡器。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1tgxmwr\" \n              data-graph-definition='digraph G {\r\n  rankdir=TB;\r\n  splines=ortho;\r\n  node [shape=box, style=\"rounded,filled\", fontname=\"Helvetica\", fontsize=10];\r\n  edge [fontname=\"Helvetica\", fontsize=9];\r\n\r\n  subgraph cluster_control_plane {\r\n    label=\"控制平面\";\r\n    style=\"rounded,filled\";\r\n    fillcolor=\"#e9ecef\";\r\n    color=\"#adb5bd\";\r\n    \r\n    api_server [label=\"API 服务器\", fillcolor=\"#a5d8ff\"];\r\n    scheduler [label=\"调度器\", fillcolor=\"#bac8ff\"];\r\n    controller_manager [label=\"控制器管理器\", fillcolor=\"#bac8ff\"];\r\n    etcd [label=\"etcd\\n(集群状态)\", shape=cylinder, fillcolor=\"#96f2d7\"];\r\n  }\r\n\r\n  subgraph cluster_external {\r\n    label=\"外部及工作节点\";\r\n    style=\"rounded,filled\";\r\n    fillcolor=\"#dee2e6\";\r\n    color=\"#adb5bd\";\r\n    kubectl [label=\"kubectl\", shape=rect, fillcolor=\"#ced4da\"];\r\n    worker [label=\"工作节点\\n(Kubelet)\", shape=rect, fillcolor=\"#ced4da\"];\r\n  }\r\n\r\n  kubectl -> api_server [label=\"用户命令\"];\r\n  worker -> api_server [label=\"节点状态\"];\r\n  api_server -> worker [label=\"Pod 信息\"];\r\n\r\n  scheduler -> api_server [label=\"监听 Pod\"];\r\n  api_server -> scheduler [label=\"将 Pod 分配给节点\"];\r\n\r\n  controller_manager -> api_server [label=\"监听状态变化\"];\r\n  api_server -> controller_manager [label=\"创建/更新对象\"];\r\n\r\n  api_server -> etcd [dir=both, label=\"读/写状态\"];\r\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1tgxmwr\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Kubernetes 控制平面内的通信流程。API 服务器作为中心网关，协调所有其他组件之间的交互，并将集群状态持久化在 etcd 中。</p>\n</blockquote>\n<h3>云控制器管理器 (cloud-controller-manager)</h3>\n<p>在许多现代部署中，Kubernetes 运行在 AWS、Google Cloud 或 Azure 等云提供商上。为了与这些云平台的特定功能集成，Kubernetes 使用了<strong>云控制器管理器</strong>。</p>\n<p>此组件运行特定于云提供商的控制器。例如，如果您在云环境中创建一个 <code>LoadBalancer</code> 类型的 Service，云控制器管理器中的一个控制器将与云提供商的 API 交互，以配置实际的负载均衡器并将其设置为将流量路由到您的 Pod。通过将此逻辑从核心的 <code>kube-controller-manager</code> 中分离出来，Kubernetes 保持了云中立性，同时允许与底层基础设施紧密结合。</p>\n<p>这些组件共同构成了一个灵活且可扩展的系统，用于管理容器化应用程序。虽然您大部分时间都会通过 <code>kubectl</code> 与 API 服务器交互，但了解调度器、<code>etcd</code> 和控制器管理器的作用，为解决问题和设计有效的应用程序部署提供了稳固的基础。</p>",
+  "slug": "kubernetes-architecture-control-plane",
+  "updates": [],
+  "references": [
+    {
+      "id": 19680,
+      "title": "Kubernetes Components",
+      "author": "The Kubernetes Authors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/overview/components/",
+      "doi": "",
+      "note": "此官方文档页面详细解释了每个 Kubernetes 控制平面组件及其作用。",
+      "order": 1,
+      "created_at": "2025-09-06T13:13:27.203507Z",
+      "updated_at": "2025-09-10T05:13:10.650515Z"
+    },
+    {
+      "id": 19681,
+      "title": "Kubernetes Up & Running: Dive into the Future of Infrastructure",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/kubernetes-up-and/9781492046492/",
+      "doi": "",
+      "note": "一本广受认可的书籍，全面解释了 Kubernetes 架构，包括控制平面的内部工作原理。",
+      "order": 2,
+      "created_at": "2025-09-06T13:13:27.207005Z",
+      "updated_at": "2025-09-10T05:13:24.151231Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

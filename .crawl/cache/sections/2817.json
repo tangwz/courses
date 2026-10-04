@@ -1,0 +1,45 @@
+{
+  "id": 2817,
+  "title": "理解 JAX 计算图 (jaxpr)",
+  "meta_title": "理解 JAX 计算图 (jaxpr)",
+  "meta_description": "查看 JAX 生成的中间表示 (jaxpr)，以了解其追踪的操作。",
+  "content": "<p>虽然 <code>jax.jit</code> 能为加速器编译您的 Python 函数，但有时需要仔细研究其内部运作，以理解 JAX 究竟在编译什么。调试性能问题或异常行为时，这会特别有用。JAX 使用一种名为 <strong>jaxpr</strong>（JAX 程序表示）的中间表示来表示从您的 Python 代码派生出的计算图，然后将其传递给 XLA 编译器。理解 jaxpr 有助于识别 JAX 如何追踪函数，并能定位效率低下或重新编译的起因。</p>\n<h3>什么是 Jaxpr？</h3>\n<p>您可以将 jaxpr 视为您计算的简化、函数式和明确的表示。当 JAX 追踪您的 Python 函数时（这发生在您首次使用特定输入类型和形状调用 <code>jit</code> 编译的函数时），它不会直接执行 Python 代码。相反，它会用特殊的追踪器对象替换您的输入，并记录在这些追踪器上执行的每个 JAX 原语操作。此追踪过程的结果就是 jaxpr。</p>\n<p>jaxpr 的特点包括：</p>\n<ol>\n<li><strong>函数式：</strong> Jaxpr 是纯函数。它们仅根据输入定义输出，没有副作用。</li>\n<li><strong>静态类型：</strong> jaxpr 中的所有变量都具有明确定义的形状和数据类型 (dtypes)。</li>\n<li><strong>明确操作：</strong> Jaxpr 由一系列等式组成，每个等式都将特定的 JAX 原语（如 <code>add</code>、<code>sin</code>、<code>dot_general</code>、<code>reduce_sum</code>）应用于输入变量或常量，以生成输出变量。Python 控制流，例如 <code>if</code> 语句或 <code>for</code> 循环（除非使用 JAX 控制流原语，如 <code>lax.cond</code> 或 <code>lax.scan</code>），在追踪过程中会被展开。</li>\n<li><strong>中间表示 (IR)：</strong> 它位于您的高级 Python 代码和用于编译器优化的低级 XLA HLO（高级操作）表示之间。</li>\n</ol>\n<h3>生成和检查 Jaxpr</h3>\n<p>在典型的模型开发过程中，您通常不会直接与 jaxpr 交互，但 JAX 提供了在需要时检查它们的工具。主要用于此的函数是 <code>jax.make_jaxpr</code>。它接收一个函数和示例输入（如 <code>jit</code>），并返回一个表示 jaxpr 的对象，以及其他信息。</p>\n<p>我们来看一个简单例子：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\ndef example_function(x, y):\n  a = jnp.sin(x)\n  b = jnp.cos(y)\n  return a + b * 2.0\n\n# Define example inputs\nkey = jax.random.PRNGKey(0)\nx_example = jax.random.normal(key, (10,))\ny_example = jax.random.normal(key, (10,))\n\n# Generate the jaxpr\njaxpr_obj = jax.make_jaxpr(example_function)(x_example, y_example)\nprint(jaxpr_obj.jaxpr)\n</code></pre>\n<p>运行此代码将打印 jaxpr 对象。其结构可能类似于这样（细节可能因 JAX 版本而异）：</p>\n<pre><code>{ lambda ; a:f32[10] b:f32[10]. let\n    c:f32[10] = sin a\n    d:f32[10] = cos b\n    e:f32[10] = mul d 2.0\n    f:f32[10] = add c e\n  in (f,) }\n</code></pre>\n<p>我们来分解一下这个打印出的表示：</p>\n<ul>\n<li><code>{ lambda ; ... }</code>：将 jaxpr 定义为一个 lambda 函数。</li>\n<li><code>a:f32[10] b:f32[10]</code>：这些是输入变量 (<code>invars</code>) 及其类型 (float32) 和形状 (<code>[10]</code>)。它们对应于 <code>example_function</code> 的 <code>x</code> 和 <code>y</code> 参数 (parameter)。</li>\n<li><code>let ... in ...</code>：这表示 jaxpr 的主体部分。</li>\n<li><code>c:f32[10] = sin a</code>：这是一个等式 (<code>eqn</code>)。它将 <code>sin</code> 原语应用于输入变量 <code>a</code>，并将结果绑定到一个新的中间变量 <code>c</code>，其类型也是 <code>f32[10]</code>。</li>\n<li><code>d:f32[10] = cos b</code>：另一个等式，将 <code>cos</code> 原语应用于 <code>b</code>，得到 <code>d</code>。</li>\n<li><code>e:f32[10] = mul d 2.0</code>：将乘法原语 (<code>mul</code>) 应用于变量 <code>d</code> 和常量 <code>2.0</code>。从函数环境 (<code>constvars</code>) 捕获的常量也在此处出现。</li>\n<li><code>f:f32[10] = add c e</code>：将加法原语 (<code>add</code>) 应用于中间变量 <code>c</code> 和 <code>e</code>，生成 <code>f</code>。</li>\n<li><code>in (f,)</code>：指定 jaxpr 的输出变量 (<code>outvars</code>)，在此例中，仅为 <code>f</code>。</li>\n</ul>\n<p>请注意，Python 代码的结构是如何被转换为作用于类型化变量的线性原语操作序列的。这种明确、简化的形式比原始 Python 代码更容易让编译器进行分析和优化。</p>\n<h3>为何 Jaxpr 对优化很重要</h3>\n<p>理解 jaxpr 在优化 JAX 代码时有多种帮助：</p>\n<ol>\n<li><strong>追踪可见性：</strong> Jaxpr 向您展现 JAX 从您的 Python 代码中导出的操作序列。这可以表明 JAX 是否追踪了超出您预期的计算量，或者是否以不同于您预期的方式使用了原语。例如，NumPy 与 <code>jax.numpy</code> 使用上的细微差别可能会导致不同的原语。</li>\n<li><strong>理解转换：</strong> 您可以在应用 <code>jax.grad</code> 或 <code>jax.vmap</code> 等转换后检查 jaxpr，以查看它们如何修改计算图。这对于调试求导或向量 (vector)化的行为很有用。</li>\n<li><strong>诊断重新编译：</strong> 如果 jaxpr 结构在函数调用之间发生变化，<code>jax.jit</code> 会重新编译您的函数。这通常发生在操作序列依赖于参数 (parameter)的<em>值</em>，而不仅仅是它们的形状和类型时（这是基于张量值的 Python 级控制流的常见问题）。比较不同调用生成的 jaxpr 可以突出显示重新编译的原因。如果 <code>eqns</code> 列表差异明显，则表明存在 JAX 必须重新追踪的动态行为。</li>\n<li><strong>连接 XLA：</strong> Jaxpr 是 JAX 提供给 XLA 编译器的表示。虽然 XLA 执行其自身的复杂优化（如操作符融合，稍后讨论），但输入 jaxpr 的结构会影响 XLA <em>能够</em>优化的内容。一个清晰、可预测的 jaxpr 通常比由复杂、展开的 Python 逻辑产生的 jaxpr 更容易被 XLA 有效优化。</li>\n</ol>\n<h3>带控制流的例子</h3>\n<p>考虑一个使用 <code>jax.lax.cond</code> 的函数，这是 JAX 用于 <code>jit</code> 编译代码中条件执行的原语：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax import lax\n\ndef conditional_function(use_sin, x):\n  # 注意：lax.cond 的 `pred` 必须是标量布尔值\n  pred = use_sin > 0.5\n\n  # 定义真分支和假分支的函数\n  def true_fun(operand):\n      return jnp.sin(operand)\n\n  def false_fun(operand):\n      return jnp.cos(operand)\n\n  # 使用 lax.cond\n  return lax.cond(pred, true_fun, false_fun, x)\n\n# 示例输入\nx_example = jnp.ones((3,))\npred_true_example = jnp.array(0.7) # 标量值 > 0.5\npred_false_example = jnp.array(0.3) # 标量值 &#x3C;= 0.5\n\n# 当 pred 为 True 时的 Jaxpr\njaxpr_true = jax.make_jaxpr(conditional_function)(pred_true_example, x_example)\nprint(\"Jaxpr (可能执行真分支):\")\nprint(jaxpr_true.jaxpr)\n\n# 当 pred 为 False 时的 Jaxpr\njaxpr_false = jax.make_jaxpr(conditional_function)(pred_false_example, x_example)\nprint(\"\\nJaxpr (可能执行假分支):\")\nprint(jaxpr_false.jaxpr)\n</code></pre>\n<p>您会注意到生成的 jaxpr 包含一个 <code>cond</code> 原语。重要的是，即使我们提供了具体的布尔值（<code>0.7</code> 对应 <code>True</code>，<code>0.3</code> 对应 <code>False</code>），jaxpr 本身也<em>不</em>仅仅包含一个分支的操作。相反，它包含了 <code>cond</code> 原语，该原语封装了<em>两个</em>分支的逻辑。无论追踪过程中谓词的具体值如何，只要两个分支的输入和输出的<em>类型</em>和<em>形状</em>一致，jaxpr 看起来都会相似。这对于 <code>jit</code> 编译非常重要，因为编译后的代码需要在运行时处理任一分支。</p>\n<pre><code># Jaxpr 的简化表示（结构可能不同）\n{ lambda ; a:f32[] b:f32[3]. let\n    c:bool[] = gt a 0.5\n    # 真分支 jaxpr 的定义（例如，{ lambda ; x:f32[3]. let y = sin x in (y,) }）\n    # 假分支 jaxpr 的定义（例如，{ lambda ; x:f32[3]. let y = cos x in (y,) }）\n    d:f32[3] = cond c true_branch false_branch b # 传递给 cond 的操作数\n  in (d,) }\n</code></pre>\n<p>检查 jaxpr 会显示 <code>cond</code> 原语和传递给 XLA 的结构，这证实了 JAX 使用其特定原语正确追踪了条件逻辑。</p>\n<h3>局限性</h3>\n<p>尽管 jaxpr 提供了很多信息，但它仍是一个中间步骤。它不显示 XLA 执行的最终优化，例如操作符融合（将多个原语合并为一个更高效的内核）或为目标加速器生成的精确低级代码。然而，它提供了对编译器输入的重要视图，使其成为调试性能和了解 JAX 内部机制的必备工具，尤其是在简单应用 <code>@jit</code> 不足以解决问题时。</p>\n<p>通过熟悉 jaxpr，您能更清楚地理解 JAX 如何将您的 Python 代码转换为适合高性能编译的形式，使您能够编写更高效、更可预测的 JAX 程序。</p>",
+  "slug": "understanding-jaxpr",
+  "updates": [],
+  "references": [
+    {
+      "id": 5313,
+      "title": "XLA: Optimizing Compiler for Machine Learning",
+      "author": "Google Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/xla",
+      "doi": "",
+      "note": "介绍XLA，它是JAX的后端编译器，接收jaxpr并进行硬件特定的优化。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:47.096125Z",
+      "updated_at": "2025-09-08T07:15:17.380434Z"
+    },
+    {
+      "id": 5314,
+      "title": "Control Flow in JAX (from JAX documentation)",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html#control-flow",
+      "doi": "",
+      "note": "解释JAX在追踪过程中如何处理Python控制流，并介绍JAX特有的控制流原语如`lax.cond`，展示它们在jaxpr中的表示。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:47.098977Z",
+      "updated_at": "2025-09-08T07:15:10.048648Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

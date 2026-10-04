@@ -1,0 +1,61 @@
+{
+  "id": 1707,
+  "title": "Keras：TensorFlow 的高级 API",
+  "meta_title": "Keras 作为 TensorFlow 的高级 API",
+  "meta_description": "Keras 概览及其在简化 TensorFlow 模型构建中的作用。",
+  "content": "<p>TensorFlow 使用 <code>tf.GradientTape</code> 为张量操作和自动微分提供了强大的工具。虽然可以直接使用这些基本操作构建复杂的模型，但手动跟踪变量、梯度和计算图会变得非常复杂且容易出错，尤其对于深度网络来说。</p>\n<p>这就是 Keras 的作用所在。Keras 是一个用于构建和训练神经网络 (neural network)的高级 API，它与 TensorFlow 2.x 紧密结合。可以将 Keras 视为一个用户友好的界面，它位于 TensorFlow 核心功能之上。与直接使用底层 TensorFlow 操作相比，它让你能以少得多的代码和更低的思维负担来定义、训练和评估模型。</p>\n<h3>为什么要用 Keras？</h3>\n<p>Keras 的主要目标是让深度学习 (deep learning)的开发更快速、更简单。它通过以下几个设计原则做到了这一点：</p>\n<ol>\n<li><strong>用户友好性：</strong> Keras API 设计直观且一致。常见的神经网络 (neural network)组件，如层、激活函数 (activation function)、优化器和损失函数 (loss function)，都作为预构建、可配置的模块随时可用。这减少了你需要编写的样板代码量。</li>\n<li><strong>模块化：</strong> Keras 模型通常通过连接可配置的构建块（如层）来构建。这些组件可以轻松组合和复用，促进了有条理的模型开发。</li>\n<li><strong>可扩展性：</strong> 尽管 Keras 提供了许多标准组件，它也让创建用于研究或特殊应用的自定义层、损失函数和指标变得简单。我们将在本章稍后部分提到这一点。</li>\n<li><strong>紧密的 TensorFlow 集成：</strong> 由于 Keras 是 TensorFlow 官方的高级 API，它能与其他 TensorFlow 功能（如用于高效数据管道的 <code>tf.data</code> 和用于图优化的 <code>tf.function</code>）很好地配合使用。在需要时，你可以轻松地将 Keras 组件与底层 TensorFlow 代码混合使用。</li>\n</ol>\n<h3>Keras：不仅仅是一个封装层</h3>\n<p>理解这一点很重要：Keras 不仅仅是 TensorFlow 的一个封装层；对于大多数用户而言，它<em>就是</em>在 TensorFlow <em>中</em>构建模型的标准方式。当你使用 <code>tensorflow.keras</code> 时，你就是在使用 TensorFlow。Keras 提供了抽象（如 <code>Layer</code>、<code>Model</code>、<code>Sequential</code>），这些抽象将你的模型定义转换为底层的 TensorFlow 计算图和操作。</p>\n<p>可以这样看待它们的关系：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-zhf08n\" \n              data-graph-definition='digraph G {\n  rankdir=TB;\n  node [shape=box, style=filled, color=\"#ced4da\", fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n  edge [fontname=\"Arial\", color=\"#495057\"];\n\n  User [label=\"你的模型代码\\n（例如，定义层）\", fillcolor=\"#a5d8ff\"];\n  Keras [label=\"Keras API\\n(tf.keras.Model, tf.keras.layers, ...)\", fillcolor=\"#bac8ff\"];\n  TFCore [label=\"TensorFlow 核心\\n(tf.Tensor, tf.Variable, tf.GradientTape, tf.function, ...)\", fillcolor=\"#d0bfff\"];\n  Hardware [label=\"硬件执行\\n(CPU / GPU / TPU)\", fillcolor=\"#eebefa\"];\n\n  User -> Keras [label=\"定义模型架构\"];\n  Keras -> TFCore [label=\"转换为 TF 操作\"];\n  TFCore -> Hardware [label=\"执行计算\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-zhf08n\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Keras 在 TensorFlow 的核心操作之上提供了一个高级抽象层，简化了模型开发。</p>\n</blockquote>\n<p>通过使用 Keras，你可以充分发挥 TensorFlow 的性能优化（如通过 <code>tf.function</code> 进行图执行）和硬件加速能力（CPU、GPU、TPU），在大多数情况下无需直接管理这些细节。</p>\n<p>在接下来的部分中，我们将了解 Keras 定义模型的主要方式：即用于简单线性层堆叠的 Sequential API，以及用于构建具有多个输入、输出或共享层的更复杂架构的 Functional API。</p>",
+  "slug": "keras-high-level-api",
+  "updates": [],
+  "references": [
+    {
+      "id": 1835,
+      "title": "What is Keras?",
+      "author": "Keras team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://keras.io/about/",
+      "doi": "",
+      "note": "阐述了 Keras API 的设计理念和目标，包括用户友好性和模块化。",
+      "order": 1,
+      "created_at": "2025-09-04T16:36:55.588076Z",
+      "updated_at": "2025-09-08T02:46:56.451684Z"
+    },
+    {
+      "id": 1836,
+      "title": "Keras guides and tutorials",
+      "author": "TensorFlow team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras",
+      "doi": "",
+      "note": "官方 TensorFlow 指南，说明如何使用 Keras API 构建和训练模型，并详细介绍其集成方式。",
+      "order": 2,
+      "created_at": "2025-09-04T16:36:55.593770Z",
+      "updated_at": "2025-09-08T02:46:55.286514Z"
+    },
+    {
+      "id": 1837,
+      "title": "Deep Learning with Python, Second Edition",
+      "author": "François Chollet",
+      "year": "2021",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/deep-learning-with-python-second-edition",
+      "doi": "",
+      "note": "Keras 创建者撰写的权威书籍，全面介绍了 Keras 的原理和应用。",
+      "order": 3,
+      "created_at": "2025-09-04T16:36:55.599073Z",
+      "updated_at": "2025-09-08T02:46:49.249738Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

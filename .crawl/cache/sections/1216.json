@@ -1,0 +1,61 @@
+{
+  "id": 1216,
+  "title": "Pandas Series 和 DataFrame 简要介绍",
+  "meta_title": "Pandas Series 和 DataFrame 介绍",
+  "meta_description": "Pandas Series 和 DataFrame 结构的快速概览，它们在 Python 中进行数据处理时必不可少。",
+  "content": "<p>要在 Python 环境中有效管理和组织数据，特别是处理来自 CSV 文件或数据库等外部来源的数据时，Pandas 库提供了必要的工具。Pandas 提供了高性能、易用的数据结构和数据分析工具，构成了 Python 中许多数据科学工作流程的核心支持。</p>\n<p>Pandas 的核心是两种主要数据结构：<code>Series</code> 和 <code>DataFrame</code>。理解它们对于准备数据以使用 Matplotlib 和 Seaborn 进行可视化非常重要。</p>\n<h3>Pandas Series</h3>\n<p>可以将 Pandas <code>Series</code> 视为一个一维数组，能够存储任何单一类型的数据（整数、字符串、浮点数、Python 对象等）。它类似于 NumPy 数组，但有一个重要补充：一个相关联的数据标签数组，称为其 <strong>索引</strong>。如果不指定索引，Pandas 会自动创建一个从 0 开始的默认整数索引。</p>\n<p>可以将其设想为电子表格或表格中的单列。</p>\n<p>下面是一个从 Python 列表创建 <code>Series</code> 的简单例子：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 创建一个存储每日气温的 Series\ntemperatures = pd.Series([22.1, 25.0, 24.3, 26.7, 23.9], name='Temperature (C)')\n\nprint(temperatures)\n</code></pre>\n<p>运行此代码将得到以下输出：</p>\n<pre><code>0    22.1\n1    25.0\n2    24.3\n3    26.7\n4    23.9\nName: Temperature (C), dtype: float64\n</code></pre>\n<p>请注意这两列：左列是索引（本例中为 0 到 4），右列包含实际数据值。<code>Name</code> 属性为 <code>Series</code> 提供了一个标签，这可能很有用，<code>dtype</code> 则显示了这些值的数据类型（此处为 float64）。</p>\n<h3>Pandas DataFrame</h3>\n<p><code>DataFrame</code> 是最常用的 Pandas 对象。它表示一个矩形数据表，包含按顺序排列的列集合，每列可以是不同的值类型（数值、字符串、布尔值等）。可以将 <code>DataFrame</code> 设想为：</p>\n<ul>\n<li>您可能在 Excel 或 Google 表格中使用的电子表格。</li>\n<li>一个 SQL 表。</li>\n<li>一个字典，它的键是列名，值是表示这些列的 <code>Series</code> 对象。</li>\n</ul>\n<p>\"特别值得指出的是，<code>DataFrame</code> 既有行索引，也有列索引。这种二维结构使得它在处理数据集方面功能非常强大，数据集通常包含每个观测（行）的多个变量（列）。\"</p>\n<p>我们来创建一个简单的 <code>DataFrame</code>：</p>\n<pre><code class=\"language-python\">import pandas as pd\n\n# 多个城市的数据\ndata = {\n    'City': ['London', 'Paris', 'Tokyo', 'New York'],\n    'Temperature (C)': [15.2, 18.5, 21.0, 19.8],\n    'Humidity (%)': [70, 65, 75, 60]\n}\n\n# 从字典创建 DataFrame\nweather_df = pd.DataFrame(data)\n\nprint(weather_df)\n</code></pre>\n<p>输出将是一个结构化表格：</p>\n<pre><code>       City  Temperature (C)  Humidity (%)\n0    London             15.2            70\n1     Paris             18.5            65\n2     Tokyo             21.0            75\n3  New York             19.8            60\n</code></pre>\n<p>这里，'City'、'Temperature (C)' 和 'Humidity (%)' 是列标签。数字 0、1、2、3 构成了行索引。此 <code>DataFrame</code> 中的每一列实际上是一个 Pandas <code>Series</code>。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1d5gocd\" \n              data-graph-definition='digraph G {\n    rankdir=LR;\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"Arial\"];\n    edge [fontname=\"Arial\", fontsize=10];\n\n    subgraph cluster_dataframe {\n        label = \"DataFrame (weather_df)\";\n        style=filled;\n        fillcolor=\"#dee2e6\";\n        fontname=\"Arial\";\n        node [shape=record, style=filled, fillcolor=\"#a5d8ff\"];\n\n        df [label=\"{ 索引 | 城市 | 气温 (C) | 湿度 (%) } | { 0 | London | 15.2 | 70 } | { 1 | Paris | 18.5 | 65 } | { 2 | Tokyo | 21.0 | 75 } | { 3 | New York | 19.8 | 60 }\"];\n    }\n\n    subgraph cluster_series_city {\n        label = \"Series (列: 城市)\";\n        style=filled;\n        fillcolor=\"#ced4da\";\n        fontname=\"Arial\";\n        node [shape=record, style=filled, fillcolor=\"#ffec99\"];\n        series_city [label=\"{ 索引 | 值 } | { 0 | London } | { 1 | Paris } | { 2 | Tokyo } | { 3 | New York }\"];\n    }\n        subgraph cluster_series_temp {\n        label = \"Series (列: 气温)\";\n        style=filled;\n        fillcolor=\"#ced4da\";\n        fontname=\"Arial\";\n        node [shape=record, style=filled, fillcolor=\"#b2f2bb\"];\n        series_temp [label=\"{ 索引 | 值 } | { 0 | 15.2 } | { 1 | 18.5 } | { 2 | 21.0 } | { 3 | 19.8 }\"];\n    }\n        subgraph cluster_series_hum {\n        label = \"Series (列: 湿度)\";\n        style=filled;\n        fillcolor=\"#ced4da\";\n        fontname=\"Arial\";\n        node [shape=record, style=filled, fillcolor=\"#bac8ff\"];\n        series_hum [label=\"{ 索引 | 值 } | { 0 | 70 } | { 1 | 65 } | { 2 | 75 } | { 3 | 60 }\"];\n    }\n\n    df -> series_city [label=\"列 &#39;城市&#39;\"];\n    df -> series_temp [label=\"列 &#39;气温 (C)&#39;\"];\n    df -> series_hum [label=\"列 &#39;湿度 (%)&#39;\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1d5gocd\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>将 DataFrame 视为共享公共索引的 Series 对象集合的视图。</p>\n</blockquote>\n<h3>为何使用 Pandas 进行可视化？</h3>\n<p>虽然 Matplotlib 和 Seaborn 可以从简单的列表或 NumPy 数组绘制数据，但使用 Pandas <code>DataFrames</code> 提供了显著的优势，尤其当数据集变得复杂时：</p>\n<ol>\n<li><strong>带标签的数据：</strong> DataFrames 存储列名和行索引，使代码更具可读性，并且图表更容易理解（例如，轴标签通常可以自动推断）。\n\"2.  <strong>处理混合数据类型：</strong> 数据集包含多种数据类型（数值、文本、日期）。DataFrames 可以自然地处理这些。\"</li>\n<li><strong>集成性：</strong> Matplotlib 和 Seaborn（特别是 Seaborn）都设计为与 DataFrames 配合使用。您通常可以将整个 DataFrame 传递给绘图函数，并指定哪些列用于不同的绘图美学（x轴、y轴、颜色、大小等），使用它们的字符串名称。</li>\n<li><strong>数据准备：</strong> Pandas 提供了强大的工具用于在绘图<em>之前</em>清洗、筛选、分组和转换数据，这是常见的要求。</li>\n</ol>\n<p>在接下来的章节中，您将看到如何将数据加载到这些结构中，并直接与 Matplotlib 和 Seaborn 结合使用，以创建富有洞察力的可视化图表。</p>",
+  "slug": "intro-pandas-series-dataframe",
+  "updates": [],
+  "references": [
+    {
+      "id": 809,
+      "title": "Pandas User Guide: Intro to Data Structures",
+      "author": "The Pandas Development Team",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/dsintro.html",
+      "doi": "",
+      "note": "官方文档是理解Pandas Series和DataFrame基本数据结构的首要参考资料。",
+      "order": 1,
+      "created_at": "2025-09-04T15:01:26.951319Z",
+      "updated_at": "2025-09-07T16:17:29.537184Z"
+    },
+    {
+      "id": 810,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://wesmckinney.com/book/",
+      "doi": "",
+      "note": "本书由Pandas库的创建者撰写，详细解释了Series和DataFrame等数据结构，以及实用的数据处理技术。",
+      "order": 2,
+      "created_at": "2025-09-04T15:01:26.954495Z",
+      "updated_at": "2025-09-07T16:17:24.613184Z"
+    },
+    {
+      "id": 811,
+      "title": "Python Data Science Handbook: Essential Tools for Working with Data",
+      "author": "Jake VanderPlas",
+      "year": "2016",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jakevdp.github.io/PythonDataScienceHandbook/",
+      "doi": "",
+      "note": "这本手册为核心Python数据科学库提供了坚实基础，其中包括专门介绍用于数据存储和操作的Pandas部分，这对可视化至关重要。",
+      "order": 3,
+      "created_at": "2025-09-04T15:01:26.957005Z",
+      "updated_at": "2025-09-07T16:17:30.388543Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

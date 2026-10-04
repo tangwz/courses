@@ -1,0 +1,61 @@
+{
+  "id": 7112,
+  "title": "什么是语言模型？",
+  "meta_title": "ASR中的语言模型是什么？",
+  "meta_description": "语言模型的定义及其功能：计算词语序列出现的概率。",
+  "content": "<p>声学模型将音频信号转换为音素序列。尽管这是语音识别中很重要的一步，但它经常产生模糊的结果。一个听起来像“wreck a nice beach”的音频片段，在声学上与“recognize speech”几乎相同。如果单独运行，声学模型可能会认为这两种选项同样合理。为了生成准确的转写，系统需要一种方法来判断哪个词语序列更说得通。</p>\n<p>这就是语言模型发挥作用的地方。语言模型是一种统计工具，旨在回答一个单一而重要的问题：给定一个词语序列出现的概率是多少？它的作用是提供声学模型所缺少的语言背景。它充当语法和风格检查器，评估一个词串在特定语言中出现的可能性有多大。</p>\n<h3>为句子分配概率</h3>\n<p>形式上，语言模型计算词语序列 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>W</mi></mrow><annotation encoding=\"application/x-tex\">W</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span></span></span></span> 的概率，表示为 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mi>W</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(W)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"mclose\">)</span></span></span></span>。概率越高，意味着该序列越常见或语法越正确。</p>\n<p>让我们再看一遍我们的例子。一个在英文文本集合上训练的语言模型会分析这两个相互竞争的短语：</p>\n<ol>\n<li><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>W</mi><mn>1</mn></msub><mo>=</mo><mtext>\"recognize speech\"</mtext></mrow><annotation encoding=\"application/x-tex\">W_1 = \\text{\"recognize speech\"}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8333em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3011em;\"><span style=\"top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">1</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord text\"><span class=\"mord\">\"recognize speech\"</span></span></span></span></span></li>\n<li><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><msub><mi>W</mi><mn>2</mn></msub><mo>=</mo><mtext>\"wreck a nice beach\"</mtext></mrow><annotation encoding=\"application/x-tex\">W_2 = \\text{\"wreck a nice beach\"}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8333em;vertical-align:-0.15em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">W</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3011em;\"><span style=\"top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord text\"><span class=\"mord\">\"wreck a nice beach\"</span></span></span></span></span></li>\n</ol>\n<p>模型会计算每个短语的概率。根据其训练数据，它会发现短语“recognize speech”在日常语言和技术文档中远比“wreck a nice beach”常见。因此，它会给第一个序列赋予更高的概率。</p>\n<span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><semantics><mrow><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>\"recognize speech\"</mtext><mo stretchy=\"false\">)</mo><mo>≫</mo><mi>P</mi><mo stretchy=\"false\">(</mo><mtext>\"wreck a nice beach\"</mtext><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">P(\\text{\"recognize speech\"}) \\gg P(\\text{\"wreck a nice beach\"})</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord\">\"recognize speech\"</span></span><span class=\"mclose\">)</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≫</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1389em;\">P</span><span class=\"mopen\">(</span><span class=\"mord text\"><span class=\"mord\">\"wreck a nice beach\"</span></span><span class=\"mclose\">)</span></span></span></span></span>\n<p>这种概率为ASR系统提供了一个有力的信号。即使声学模型稍微倾向于“wreck a nice beach”的发音，语言模型对“recognize speech”的强烈倾向也会引导最终决定走向正确的转写。</p>\n<h3>在ASR流水线中的作用</h3>\n<p>语言模型并非单独工作。它与解码器内的声学模型相互配合，解码器是ASR流水线中进行最终决策的组件。解码器的目标是找到最能解释输入音频的词语序列。它通过结合每种可能转写的两种证据来实现这一点：</p>\n<ol>\n<li><strong>声学得分：</strong> 音频中的声音与提议词语的音素匹配程度如何？（由声学模型提供）</li>\n<li><strong>语言得分：</strong> 这个词语序列在目标语言中出现的可能性有多大？（由语言模型提供）</li>\n</ol>\n<p>解码器整合这两个分数，以得出最终假设。下图说明了这一过程。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1dewuud\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"sans-serif\", fillcolor=\"#e9ecef\"]; edge [fontname=\"sans-serif\"]; \"Audio\" [label=\"音频\", fillcolor=\"#a5d8ff\"]; \"Final\" [label=\"结果\", fillcolor=\"#b2f2bb\"]; \"AM\" [label=\"声学模型\"]; \"LM\" [label=\"语言模型\"]; \"Decoder\" [label=\"解码器\"]; \"Audio\" -> \"AM\"; \"AM\" -> \"Decoder\" [label=\"声学\\n得分\"]; \"LM\" -> \"Decoder\" [label=\"语言\\n得分\"]; \"Decoder\" -> \"Final\" [label=\"最佳假设\"]; {rank=same; \"AM\"; \"LM\"}; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1dewuud\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>解码器结合声学模型和语言模型的得分，以确定最可能的转写。</p>\n</blockquote>\n<p>可以将声学模型想象成一个勤勉的转写员，准确地写下他们听到的内容；而语言模型则是一个编辑，审阅转写的连贯性。转写员可能不知道“wreck a nice beach”是不是一个常用短语，但编辑凭借其丰富的语言知识，可以立即将其标记 (token)为与替代选项相比不太可能。</p>\n<h3>语言知识从何而来？</h3>\n<p>语言模型通过在庞大的文本数据集（称为<strong>文本语料库</strong>，复数：corpora）上训练来学习这些概率。一个语料库可以包含来自书籍、新闻文章、网站、转录对话和其他来源的数十亿词语。通过处理这些数据，模型学习语言的统计模式，包括：</p>\n<ul>\n<li>哪些词最常见。</li>\n<li>哪些词倾向于跟随其他词（例如，“speech”比“wreck”更可能跟随“recognize”）。</li>\n<li>常见的语法结构和措辞。</li>\n</ul>\n<p>本质上，语言模型构建了语言的统计表示。这种表示使其能够为任何词语序列分配概率得分，为ASR系统提供所需的背景信息，以解决歧义并生成更准确、更像人类的转写。</p>",
+  "slug": "what-is-a-language-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 19017,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本权威的教科书，涵盖统计语言建模、其在语音识别系统中的应用以及现代语言模型架构。",
+      "order": 1,
+      "created_at": "2025-09-06T13:00:47.703978Z",
+      "updated_at": "2025-09-10T03:38:37.218592Z"
+    },
+    {
+      "id": 19018,
+      "title": "Automatic Speech Recognition: A Deep Learning Approach",
+      "author": "Dong Yu and Li Deng",
+      "year": "2014",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.1007/978-1-4939-2471-6",
+      "doi": "10.1007/978-1-4939-2471-6",
+      "note": "一本专门介绍自动语音识别系统架构和组件的书，包括语言模型在现代ASR流程中的作用。",
+      "order": 2,
+      "created_at": "2025-09-06T13:00:47.760944Z",
+      "updated_at": "2025-09-10T03:38:49.514271Z"
+    },
+    {
+      "id": 19019,
+      "title": "Recurrent Neural Network Based Language Model",
+      "author": "Tomas Mikolov, Martin Karafiát, Lukáš Burget, Jan Cernocký, and Sanjeev Khudanpur",
+      "year": "2010",
+      "publisher": "",
+      "journal": "Proc. Interspeech",
+      "volume": "",
+      "pages": "1045-1048",
+      "url": "https://www.isca-speech.org/archive/interspeech_2010/i10_1045.html",
+      "doi": "",
+      "note": "一篇重要的早期论文，介绍了用于语言建模的循环神经网络，标志着从传统N-gram模型向新方法的转变。",
+      "order": 3,
+      "created_at": "2025-09-06T13:00:47.764627Z",
+      "updated_at": "2025-09-10T03:38:44.684929Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

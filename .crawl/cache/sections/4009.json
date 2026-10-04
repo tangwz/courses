@@ -1,0 +1,61 @@
+{
+  "id": 4009,
+  "title": "Docker 核心理念：镜像与容器",
+  "meta_title": "Docker 镜像与容器解析",
+  "meta_description": "了解 Docker 镜像（蓝图）与容器（运行实例）的区别。",
+  "content": "<p>为了解决“在我的机器上能运行”的问题，Docker 使用了两个基本原理：<strong>镜像</strong>和<strong>容器</strong>。明白它们之间的区别是有效使用 Docker 打包和运行应用程序的第一步。可以将它们看作是蓝图和根据蓝图建造出来的建筑。</p>\n<h3>什么是 Docker 镜像？</h3>\n<p>Docker 镜像是一个<strong>轻量级、独立、可执行的软件包</strong>，它包含了运行一段软件所需的一切：代码、运行时环境（如 Python）、系统工具、系统库和配置。它本质上是一个<strong>模板</strong>或<strong>蓝图</strong>。</p>\n<p>Docker 镜像的特点包括：</p>\n<ol>\n<li><strong>只读模板：</strong> 镜像一旦构建完成，就不会改变。这种不变性确保了每次使用该镜像启动容器时的一致性。</li>\n<li><strong>分层文件系统：</strong> 镜像以分层方式构建。<code>Dockerfile</code>（我们将在下一节介绍）中的每条指令通常都会创建一个新层。这种分层方式使构建和分发高效，因为 Docker 只需重建或下载已更改的层。例如，您的基础操作系统层可以在许多镜像中复用。</li>\n<li><strong>包含所需的一切：</strong> 镜像打包了应用程序代码（如您的 Flask 应用）、依赖项（<code>requirements.txt</code>）、Python 解释器本身，以及应用程序正确运行所需的任何操作系统库或工具。</li>\n</ol>\n<p>可以将 Docker 镜像想象成制作蛋糕的详细食谱。食谱列出了所有配料（库、代码）、特定的烤箱设置（运行时配置）和分步说明（构建过程）。食谱本身是不会改变的。</p>\n<h3>什么是 Docker 容器？</h3>\n<p>Docker 容器是 Docker 镜像的<strong>运行实例</strong>。如果说镜像是一个蓝图（或食谱），那么容器就是根据蓝图建造的实际房屋（或根据食谱烘焙的蛋糕）。</p>\n<p>当您“运行”一个镜像时，您就创建了一个容器。容器的特点如下：</p>\n<ol>\n<li><strong>执行环境：</strong> 这是一个隔离环境，您的应用程序在此运行。容器拥有自己的进程空间、网络接口和文件系统，在很大程度上与宿主机和其他容器隔离。</li>\n<li><strong>基于镜像：</strong> 每个容器都是从镜像创建的。容器实质上运行着该镜像中打包的应用程序。</li>\n<li><strong>可写层：</strong> 尽管镜像本身是只读的，但容器会在镜像层之上添加一个薄的可写层。容器运行时所做的任何更改（如写入日志文件或临时数据）都发生在此层。除非使用特定的存储机制，否则这些更改在容器被移除时通常会丢失。</li>\n<li><strong>多个实例：</strong> 您可以从同一个镜像创建并运行多个容器，就像您可以使用同一个食谱烘焙多个相同的蛋糕一样。每个容器都独立运行。</li>\n</ol>\n<p>用我们的类比来说，容器就像实际使用食谱（镜像）烘焙蛋糕。您遵循说明，混合配料，然后放入烤箱。烘焙出的蛋糕就是容器，它是从食谱创建出的一个具体实例。您可以使用那个食谱（镜像）烘焙出许多相同的蛋糕（容器）。</p>\n<h3>镜像与容器：蓝图与实例</h3>\n<p>核心关系很简单：<strong>镜像是在构建时生成的产物，而容器是在运行时生成的产物。</strong> 您只需构建一次镜像，然后可以在不同的机器上多次运行它，每次都创建相同的容器。</p>\n<p>这种关系提供了部署所需的一致性。因为镜像打包了应用程序<em>及其</em>环境，所以从该镜像运行容器可确保应用程序的行为方式一致，无论底层宿主系统的配置如何。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-bkrcx6\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Helvetica\", fontsize=10];\n  edge [fontname=\"Helvetica\", fontsize=10];\n\n  Dockerfile [label=\"Dockerfile\\n(指令)\"];\n  Image [label=\"Docker 镜像\\n(只读模板)\\n应用 + 库 + 运行时\", style=\"rounded,filled\", fillcolor=\"#a5d8ff\"];\n  Container1 [label=\"容器 1\\n(运行实例)\", style=\"rounded,filled\", fillcolor=\"#96f2d7\"];\n  Container2 [label=\"容器 2\\n(运行实例)\", style=\"rounded,filled\", fillcolor=\"#96f2d7\"];\n  Container3 [label=\"容器 3\\n(运行实例)\", style=\"rounded,filled\", fillcolor=\"#96f2d7\"];\n\n  Dockerfile -> Image [label=\" docker build \"];\n  Image -> Container1 [label=\" docker run \"];\n  Image -> Container2 [label=\" docker run \"];\n  Image -> Container3 [label=\" docker run \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-bkrcx6\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该过程始于包含指令的 <code>Dockerfile</code>。运行 <code>docker build</code> 会创建一个只读的 Docker 镜像。使用此镜像运行 <code>docker run</code> 会启动一个或多个独立可运行的容器。</p>\n</blockquote>\n<p>理解这种区别非常重要。我们构建一个包含 Flask 应用程序、其依赖项和 Python 运行时的镜像。然后，我们将这个镜像作为容器运行，它会在隔离、一致的环境中执行我们的 Flask 应用程序，准备好提供预测服务。在后续章节中，我们将学习如何编写 <code>Dockerfile</code>（食谱）来为我们的预测服务构建镜像。</p>",
+  "slug": "docker-images-containers",
+  "updates": [],
+  "references": [
+    {
+      "id": 10672,
+      "title": "Docker overview",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/get-started/overview/",
+      "doi": "",
+      "note": "官方文档，介绍Docker的核心概念，包括镜像和容器的详细解释及其关系。",
+      "order": 1,
+      "created_at": "2025-09-05T06:52:04.868315Z",
+      "updated_at": "2025-09-08T13:15:38.558381Z"
+    },
+    {
+      "id": 10673,
+      "title": "Get Started with Docker",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/get-started/",
+      "doi": "",
+      "note": "官方教程系列，通过实践步骤和概念性见解介绍Docker镜像和容器。",
+      "order": 2,
+      "created_at": "2025-09-05T06:52:04.873231Z",
+      "updated_at": "2025-09-08T13:15:41.286089Z"
+    },
+    {
+      "id": 10674,
+      "title": "Docker in Action",
+      "author": "Jeff Nickoloff and Stephen Kuenzli",
+      "year": "2019",
+      "publisher": "Manning Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.manning.com/books/docker-in-action-second-edition",
+      "doi": "",
+      "note": "一本涵盖Docker概念的指南，包括对镜像、容器及其生命周期的说明。",
+      "order": 3,
+      "created_at": "2025-09-05T06:52:04.877443Z",
+      "updated_at": "2025-09-08T13:15:44.077722Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

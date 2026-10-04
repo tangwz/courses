@@ -1,0 +1,45 @@
+{
+  "id": 1774,
+  "title": "介绍 `jax.pmap`",
+  "meta_title": "`jax.pmap` 简介",
+  "meta_description": "`jax.pmap` 转换的基本用法，用于跨设备并行执行。",
+  "content": "<p><code>jax.jit</code> 为单个加速器上的高效运行编译代码，而 <code>jax.vmap</code> 提供自动向量 (vector)化功能。但是，将计算分配到<em>多个</em>设备（例如 GPU 或 TPU）则需要另一种工具：<code>jax.pmap</code>。</p>\n<p><code>pmap</code> 代表“并行映射”。它是一种函数转换，专门为单一程序、多重数据（SPMD）模型设计。在该模型中，您编写一次程序（您的函数），<code>pmap</code> 会安排其在多个设备上同时运行。每个设备接收并处理输入数据的不同部分。这是一种实现数据并行、通过分割工作负载来加速计算的常见且有效的方法。</p>\n<h3>基本使用方法</h3>\n<p>本质上，<code>pmap</code> 的使用方式在语法上与 <code>jit</code> 或 <code>vmap</code> 相似。您可以将其作为装饰器应用，或者直接在函数上调用。让我们从一个简单例子开始。</p>\n<p>首先，让我们查看 JAX 能检测到哪些设备。这很重要，因为 <code>pmap</code> 需要多个设备来分配工作。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 检查可用设备\nprint(f\"Available JAX devices: {jax.devices()}\")\nnum_devices = len(jax.devices())\nprint(f\"Number of devices: {num_devices}\")\n</code></pre>\n<p>如果您在多 GPU 机器或 TPU pod 上运行此代码，<code>jax.devices()</code> 将列出这些设备。如果您只有一个 CPU 或单个 GPU，<code>pmap</code> 仍然有效，但它会在该单个设备上运行所有计算，实质上模仿了 <code>vmap</code>（尽管对此目的而言效率较低）。当 <code>num_devices > 1</code> 时，真正的优势才会显现。</p>\n<p>现在，让我们定义一个简单函数并应用 <code>pmap</code>：</p>\n<pre><code class=\"language-python\"># 一个应用 pmap 的简单函数\ndef simple_computation(x):\n  return x * 2\n\n# 应用 pmap\npmapped_computation = jax.pmap(simple_computation)\n\n# 准备输入数据：需要一个与设备数量匹配的前导轴\ntry:\n    # 创建跨设备分片的数据\n    # 示例：如果设备数量为 4，则创建形状为 (4, ...) 的数组\n    input_data = jnp.arange(num_devices * 3).reshape((num_devices, 3))\n    print(f\"Input data shape: {input_data.shape}\")\n\n    # 执行 pmap 化的函数\n    result = pmapped_computation(input_data)\n\n    print(f\"Output result:\\n{result}\")\n    print(f\"Output type: {type(result)}\")\n    print(f\"Output shape: {result.shape}\")\n    print(f\"Output devices: {result.devices()}\")\n\nexcept Exception as e:\n    print(f\"Error during pmap execution: {e}\")\n    print(\"Note: pmap typically requires the size of the mapped axis\")\n    print(\"to be equal to the number of available devices.\")\n    print(\"If running with only 1 device, this example might not show parallelism.\")\n\n</code></pre>\n<p>您会在这里看到几件重要的事情：</p>\n<ol>\n<li><strong>输入数据分片：</strong> 输入数据 <code>input_data</code> 需要一个前导维度，其大小等于 <code>num_devices</code>。这里，我们创建了一个形状为 <code>(num_devices, 3)</code> 的数组。<code>pmap</code> 自动沿第一个轴（默认是轴 0）分割此数组，并将每个切片（在本例中形状为 <code>(3,)</code>）发送到不同的设备。</li>\n<li><strong>执行：</strong> 每个设备并发地在其自己的数据切片上执行 <code>simple_computation</code>。</li>\n<li><strong>输出：</strong> 输出 <code>result</code> 通常是 <code>ShardedDeviceArray</code>（或类似的分布式数组类型）。这表明结果数据也物理上分布在设备上。它的形状与输入形状 <code>(num_devices, 3)</code> 相同，您可以使用 <code>result.devices()</code> 确认其分布。</li>\n</ol>\n<h3><code>pmap</code> 的工作方式</h3>\n<p>可以把 <code>pmap</code> 看作在做以下事情：</p>\n<ol>\n<li><strong>编译：</strong> 像 <code>jit</code> 一样，<code>pmap</code> 首先将您的 Python 函数（使用 XLA）编译成一个优化过的、适用于目标硬件（GPU/TPU）的可执行程序。</li>\n<li><strong>复制：</strong> 它将此编译好的程序复制到每个可用设备上。</li>\n<li><strong>数据分配：</strong> 当您调用 <code>pmap</code> 化的函数时，JAX 获取输入数组并沿指定轴（默认为轴 0）分割它们。每个数据块被发送到一个设备。</li>\n<li><strong>并行执行：</strong> 所有设备同时执行相同的编译程序，但每个设备都在其独特的数据块上操作（SPMD）。</li>\n<li><strong>结果收集：</strong> 从每个设备获得的结果被收集起来。默认情况下，它们保持分布在设备上，形成一个 <code>ShardedDeviceArray</code>。</li>\n</ol>\n<p>这是一个简化的视觉表示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-b9ch3x\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=record, style=filled, fillcolor=\"#e9ecef\"]; subgraph cluster_0 { label=\"输入数据（CPU 内存）\"; style=filled; color=\"#dee2e6\"; Input [label=\"{ 轴 0 (设备维度) | 数据切片 0 | 数据切片 1 | ... | 数据切片 N-1 }\", fillcolor=\"#ffffff\"]; } subgraph cluster_1 { label=\"pmap 执行\"; style=filled; color=\"#dee2e6\"; subgraph cluster_d0 { label=\"设备 0\"; color=\"#a5d8ff\"; Device0 [label=\"{ 程序 | 数据切片 0 | 结果 0 }\"]; } subgraph cluster_d1 { label=\"设备 1\"; color=\"#a5d8ff\"; Device1 [label=\"{ 程序 | 数据切片 1 | 结果 1 }\"]; } subgraph cluster_dN { label=\"设备 N-1\"; color=\"#a5d8ff\"; DeviceN [label=\"{ 程序 | 数据切片 N-1 | 结果 N-1 }\"]; } Input -> Device0 [label=\"沿轴 0 分割\", taillabel=\"pmap\"]; Input -> Device1; Input -> DeviceN; } subgraph cluster_2 { label=\"输出数据（分布式）\"; style=filled; color=\"#dee2e6\"; Output [label=\"{ ShardedDeviceArray | 结果 0 (在设备 0 上) | 结果 1 (在设备 1 上) | ... | 结果 N-1 (在设备 N-1 上) }\", fillcolor=\"#ffffff\"]; } Device0 -> Output; Device1 -> Output; DeviceN -> Output; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-b9ch3x\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一张图显示了 <code>pmap</code> 如何沿第一个轴分割输入数据，将每个切片发送到不同设备以并行执行相同的程序，并将结果收集到分布式数组中。</p>\n</blockquote>\n<h3><code>pmap</code> 与 <code>vmap</code> 对比</h3>\n<p>将 <code>pmap</code> 与 <code>vmap</code> 进行对比很有帮助：</p>\n<ul>\n<li><strong><code>vmap</code>（向量 (vector)化）：</strong> 将处理单个示例的函数转换为在单个计算图内处理批次示例的函数。它通过在<em>单个</em>设备上的向量化 (quantization)指令来实现并行。它本身不将工作分配到多个物理设备上。</li>\n<li><strong><code>pmap</code>（并行化）：</strong> 明确地将计算复制到<em>多个</em>物理设备上。它在不同加速器上并行执行<em>相同</em>的函数，但处理不同的数据切片。</li>\n</ul>\n<p>尽管两者都可以处理批次数据，但 <code>pmap</code> 是通过使用单个机器上的多个可用加速器来扩展计算的工具。</p>\n<p>在接下来的部分中，我们将查看如何控制映射哪些轴，如何处理多个参数 (parameter)，以及如何在 <code>pmap</code> 化的函数中使用集合操作进行设备间通信。</p>",
+  "slug": "introducing-jax-pmap",
+  "updates": [],
+  "references": [
+    {
+      "id": 2049,
+      "title": "jax.pmap",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.pmap.html",
+      "doi": "",
+      "note": "提供 `jax.pmap` 详细 API 参考和使用示例的官方文档。",
+      "order": 1,
+      "created_at": "2025-09-04T16:38:21.406227Z",
+      "updated_at": "2025-09-08T04:43:24.983575Z"
+    },
+    {
+      "id": 2051,
+      "title": "Distributed Arrays and the JAX Device Mesh",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/jep/9407-jax-distributed-arrays.html",
+      "doi": "",
+      "note": "解释 JAX 分布式数组设计的文档，这是 `pmap` 和分布式计算中数据处理的基础。",
+      "order": 3,
+      "created_at": "2025-09-04T16:38:21.412355Z",
+      "updated_at": "2025-09-08T04:43:25.898082Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

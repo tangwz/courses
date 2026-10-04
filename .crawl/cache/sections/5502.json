@@ -1,0 +1,61 @@
+{
+  "id": 5502,
+  "title": "连接数据源",
+  "meta_title": "连接数据源进行提取",
+  "meta_description": "查看建立与数据库、文件等多种数据源连接的方法。",
+  "content": "<p>提取是任何提取、转换、加载（ETL）过程中的基础性第一步。在转换或加载任何数据之前，您首先需要从其来源获取数据。这需要您的ETL系统（无论是工具还是脚本）与各种数据源之间建立连接。这就像将数据线插入设备一样；您需要正确的连接器和正确的端口才能使其正常运行。</p>\n<p>数据存在于许多不同的位置和格式中。您的ETL管道可能需要从传统数据库、服务器上存储的简单文件，甚至是互联网上提供数据的网络服务中提取信息。我们来看看一些常见数据源类型如何建立连接。</p>\n<h3>连接到数据库</h3>\n<p>数据库是高度组织化的数据存储库，通常是关系型（如PostgreSQL、MySQL、SQL Server），有时是非关系型（如MongoDB、Cassandra）。连接它们通常需要将特定信息打包成所谓的<strong>连接字符串</strong>。</p>\n<p>连接字符串就像是数据库的地址和一套密钥。它通常包含：</p>\n<ol>\n<li><strong>驱动程序/提供程序信息：</strong> 指定您要连接的数据库软件类型（例如，MySQL、PostgreSQL）。</li>\n<li><strong>服务器地址：</strong> 数据库服务器运行的网络主机名或IP地址。</li>\n<li><strong>端口号：</strong> 数据库监听的特定网络端口（例如，PostgreSQL为5432，MySQL为3306）。</li>\n<li><strong>数据库名称：</strong> 您要访问的服务器上特定数据库的名称。</li>\n<li><strong>凭据：</strong> 用户名和密码（或其他身份验证令牌），用于证明您有权访问数据。</li>\n</ol>\n<p>例如，连接字符串可能看起来像这样（具体格式因数据库类型和驱动程序而异）：</p>\n<pre><code>postgresql://username:password@database.server.com:5432/mydatabase\n</code></pre>\n<p>为了建立实际连接，ETL工具常使用标准接口，如<strong>JDBC</strong>（Java数据库连接）或<strong>ODBC</strong>（开放数据库连接）。它们充当中间层，将ETL工具的请求翻译成特定数据库能够理解的命令。您需要安装要连接的数据库的相应驱动程序。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-388gqx\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, margin=0.1];\n  edge [fontname=\"Arial\", fontsize=9];\n\n  ETL [label=\"ETL工具 / 脚本\", shape=cylinder, style=filled, fillcolor=\"#a5d8ff\"];\n  DB [label=\"数据库\\n(例如，PostgreSQL)\", shape=cylinder, style=filled, fillcolor=\"#ffc9c9\"];\n  File [label=\"文件系统\\n(例如，CSV, JSON)\", shape=folder, style=filled, fillcolor=\"#b2f2bb\"];\n  API [label=\"Web API\\n(例如，REST API)\", shape=cloud, style=filled, fillcolor=\"#ffd8a8\"];\n\n  subgraph cluster_db {\n    label = \"数据库连接\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [shape=plaintext, fontsize=9];\n    DB_Conn [label=\"连接字符串\\n(服务器, 端口, 数据库, 凭据)\"];\n    Driver [label=\"JDBC/ODBC 驱动\"];\n    ETL -> Driver [label=\"使用\"];\n    Driver -> DB [label=\"通过连接\"];\n    DB_Conn -> Driver [label=\"配置\", style=dotted];\n  }\n\n  subgraph cluster_file {\n    label = \"文件访问\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [shape=plaintext, fontsize=9];\n    File_Path [label=\"文件路径\\n(本地, 网络, 云URI)\"];\n    Perms [label=\"读取权限\"];\n    ETL -> File [label=\"通过读取\"];\n    File_Path -> ETL [label=\"指定\", style=dotted];\n    Perms -> ETL [label=\"要求\", style=dotted];\n  }\n\n  subgraph cluster_api {\n    label = \"API交互\";\n    style=dashed;\n    color=\"#adb5bd\";\n    node [shape=plaintext, fontsize=9];\n    Endpoint [label=\"API 端点 (URL)\"];\n    Auth [label=\"身份验证\\n(API 密钥, 令牌)\"];\n    ETL -> API [label=\"请求 (HTTP GET)\"];\n    Endpoint -> ETL [label=\"目标\", style=dotted];\n    Auth -> ETL [label=\"验证\", style=dotted];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-388gqx\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ETL过程与数据库、文件系统和Web API等各种数据源之间建立的连接，重点说明了所涉及的典型组成部分（连接字符串、驱动程序、路径、权限、端点、身份验证）。</p>\n</blockquote>\n<h3>连接到文件</h3>\n<p>数据常以文件形式出现，例如逗号分隔值 (CSV)、JavaScript对象表示法 (JSON) 或可扩展标记 (token)语言 (XML)。这些文件可能位于运行ETL进程的同一机器上、共享网络驱动器中，或者越来越多地，在Amazon S3、Azure Blob Storage或Google Cloud Storage等云存储服务中。</p>\n<p>连接文件主要涉及指定指向文件位置的<strong>文件路径</strong>或<strong>统一资源标识符 (URI)</strong>。</p>\n<ul>\n<li><strong>本地文件：</strong> 路径如<code>/data/source/customers.csv</code>或<code>C:\\Input\\orders.json</code>。</li>\n<li><strong>网络共享：</strong> 路径如<code>\\\\fileserver\\share\\logs.xml</code>。</li>\n<li><strong>云存储：</strong> URI如<code>s3://my-data-bucket/raw/sales/data.csv</code>或<code>wasbs://container@account.blob.core.windows.net/input/data.json</code>。</li>\n</ul>\n<p>除了位置，ETL过程还需要必要的<strong>读取权限</strong>才能访问文件或其所在的目录。对于云存储，这通常涉及配置访问密钥或角色，以授予从特定存储桶或容器读取的权限。</p>\n<h3>连接到API</h3>\n<p>许多现代应用程序和服务通过<strong>应用程序编程接口 (API)</strong> 公开数据，特别是使用HTTP/HTTPS上的<strong>REST</strong>（表述性状态传输）等协议的Web API。可以将API视为计算机系统通过网络相互请求信息的结构化方式。</p>\n<p>连接到API通常涉及：</p>\n<ol>\n<li><strong>端点URL：</strong> 您发送请求的特定网址（URL）。例如，<code>https://api.example.com/v1/products</code>。</li>\n<li><strong>HTTP 方法：</strong> 通常使用<code>GET</code>方法来获取数据。</li>\n<li><strong>身份验证：</strong> API几乎总是需要身份验证来识别请求应用程序并确保其拥有权限。常见方法包括：\n<ul>\n<li><strong>API 密钥：</strong> 随请求发送的唯一字符串（常在请求头或查询参数 (parameter)中）。</li>\n<li><strong>OAuth 令牌：</strong> 一种更复杂但安全的标准，应用程序可获取临时访问令牌。</li>\n</ul>\n</li>\n<li><strong>参数（可选）：</strong> 您可以在URL（例如，<code>?status=active</code>）或请求体中包含参数，以筛选或指定所需数据。</li>\n</ol>\n<p>ETL过程向API端点发出HTTP请求，并包含身份验证详细信息。如果成功，API会返回请求的数据，通常格式为JSON或XML。</p>\n<h3>安全考量</h3>\n<p>无论数据源类型如何，安全性都是基本。连接凭据，如数据库密码、API密钥或云存储访问密钥，必须安全处理。避免将它们直接硬编码到脚本或配置文件中。使用安全的凭据管理系统或环境变量。</p>\n<p>此外，确保连接已加密，尤其是在数据通过网络传输时。对数据库连接使用SSL/TLS（通常是连接字符串中的一个选项），对API调用使用HTTPS，以保护传输中的数据免受窃听。</p>\n<p>建立这些可靠且安全的连接是任何提取过程中的重要第一步。连接建立后，您可以继续实际获取数据，我们将在下文中讨论这一点。</p>",
+  "slug": "connecting-to-sources",
+  "updates": [],
+  "references": [
+    {
+      "id": 14807,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "本书详细介绍了各种数据系统，包括如何连接数据库以及如何集成来自不同来源的数据。",
+      "order": 1,
+      "created_at": "2025-09-05T14:30:58.283454Z",
+      "updated_at": "2025-09-11T02:25:26.866525Z"
+    },
+    {
+      "id": 14809,
+      "title": "RESTful Web Services",
+      "author": "Leonard Richardson and Sam Ruby",
+      "year": "2007",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/restful-web-services/9780596529260/",
+      "doi": "",
+      "note": "这本基础性书籍描述了RESTful网络服务的架构风格和原则，这对于与现代API交互至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T14:30:58.446348Z",
+      "updated_at": "2025-09-11T02:25:33.214921Z"
+    },
+    {
+      "id": 14810,
+      "title": "Fundamentals of Data Engineering: Plan and Build Robust Data Systems",
+      "author": "Joe Reis, Matt Housley",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://books.google.com/books/about/Fundamentals_of_Data_Engineering_Plan_an.html?id=lq_2EAAAQBAJ",
+      "doi": "",
+      "note": "一本关于现代数据工程实践的指南，包括连接各种数据源、处理基于云的数据以及数据管道中的安全问题。",
+      "order": 4,
+      "created_at": "2025-09-05T14:30:58.449053Z",
+      "updated_at": "2025-09-11T02:25:39.509292Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

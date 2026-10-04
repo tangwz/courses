@@ -1,0 +1,61 @@
+{
+  "id": 5163,
+  "title": "建立一个基本智能体",
+  "meta_title": "创建基本智能体 | 高级LangChain",
+  "meta_description": "实现一个能够使用工具达成目标的简单智能体。",
+  "content": "<p>智能体代表了一种动态的LLM工作流方法。与链式结构不同，链式结构按预设顺序连接组件，其中开发者定义精确的操作顺序。而智能体则使用大型语言模型（LLM）作为推理 (inference)引擎，根据一组可用<code>工具</code>来决定采取<em>哪些</em>行动以及以<em>何种</em>顺序。这使得它们能够处理那些事先不明确解决方案路径的更复杂、不可预测的任务。</p>\n<p>建立一个基本智能体需要结合几个特定组件：</p>\n<ol>\n<li><strong>LLM：</strong> 为智能体推理过程提供支持的核心语言模型。</li>\n<li><strong>工具：</strong> 智能体可用于与外部环境交互或执行特定任务的功能或能力（例如，搜索网页、执行计算、查询数据库）。</li>\n<li><strong>智能体提示模板：</strong> 一个专用提示，指导大型语言模型如何推理、哪些工具可用、如何格式化其思考和行动，以及如何处理输入查询和中间步骤。</li>\n<li><strong>智能体执行器：</strong> 管理智能体执行循环的运行时环境：调用大型语言模型、解析其输出以识别工具使用、运行选定的工具，并将结果反馈给大型语言模型，直到任务完成。</li>\n</ol>\n<h3>定义工具</h3>\n<p>对于一个基本智能体，我们可以从LangChain提供的简单、预构建工具开始。让我们考虑一个需要执行数学计算的智能体。LangChain提供了一个<code>load_tools</code>函数，简化了常用工具的加载。我们将加载<code>llm-math</code>工具，该工具使用大型语言模型执行计算。</p>\n<pre><code class=\"language-python\">from langchain.agents import load_tools\nfrom langchain_openai import OpenAI # 或者你偏好的大型语言模型提供商\n\n# 假设LLM对象已初始化（例如，llm = OpenAI(temperature=0)）\n# 工具名称是LangChain可识别的特定字符串\ntool_names = [\"llm-math\"]\ntools = load_tools(tool_names, llm=llm)\n\nprint(f\"已加载工具: {tools[0].name}\")\nprint(f\"工具说明: {tools[0].description}\")\n</code></pre>\n<p><code>load_tools</code>函数返回<code>Tool</code>对象的列表。每个工具都有一个<code>name</code>（智能体用于识别它）和一个<code>description</code>（对大型语言模型理解工具功能和何时使用它很重要）。</p>\n<h3>选择智能体类型和提示</h3>\n<p>LangChain支持多种智能体类型，每种都采用不同的提示策略。对于初学者而言，一种常见且有效的类型是**ReAct（推理 (inference)与行动）**智能体。ReAct提示指导大型语言模型遵循特定的思考过程：</p>\n<ol>\n<li><strong>思考（Thought）：</strong> 思考当前状态并决定下一步。</li>\n<li><strong>行动（Action）：</strong> 指定要使用的工具。</li>\n<li><strong>行动输入（Action Input）：</strong> 为选定的工具提供输入。</li>\n<li><strong>观察（Observation）：</strong> （这是智能体执行器在运行工具后提供的）记录工具的结果。</li>\n<li>重复步骤1-4，直到获得最终答案，然后输出最终答案。</li>\n</ol>\n<p>LangChain为不同的智能体类型提供了标准化提示。对于基本智能体，我们通常不需要手动制作这些复杂的提示。</p>\n<h3>初始化智能体</h3>\n<p>大型语言模型和工具准备好后，我们就可以初始化智能体了。我们使用<code>create_react_agent</code>函数（或其他智能体类型的类似函数），传入大型语言模型、工具列表以及一个适合ReAct智能体的预定义提示结构。LangChain通常会根据你正在创建的智能体类型自动拉取正确的提示。</p>\n<pre><code class=\"language-python\">from langchain import hub\nfrom langchain.agents import create_react_agent\n\n# 拉取标准ReAct提示模板\n# 此提示旨在与ReAct智能体逻辑配合使用\nprompt = hub.pull(\"hwchase17/react\")\n\n# 创建ReAct智能体\nagent = create_react_agent(llm, tools, prompt)\n\n# 注意：'agent' 对象本身包含逻辑蓝图，\n# 但它需要AgentExecutor才能实际运行。\n</code></pre>\n<p>现在，这个<code>agent</code>对象捆绑了大型语言模型、可用工具以及关于大型语言模型应如何使用这些工具进行推理 (inference)和行动的特定指令（即提示）。</p>\n<h3>智能体执行器</h3>\n<p>最后一部分是<code>AgentExecutor</code>。这是实际执行智能体推理 (inference)循环的运行时。它以<code>agent</code>对象和<code>tools</code>作为输入。</p>\n<pre><code class=\"language-python\">from langchain.agents import AgentExecutor\n\n# 创建智能体执行器\n# verbose=True 允许我们查看智能体的思考过程\nagent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=5)\n\n# max_iterations 防止潜在的无限循环\n</code></pre>\n<p>在开发期间强烈建议使用<code>verbose=True</code>参数 (parameter)，因为它会打印智能体的内部独白（思考、行动、观察），这使得理解其行为和调试问题变得容易得多。<code>max_iterations</code>是一个安全措施，用于防止智能体陷入循环。</p>\n<p>智能体执行循环可以如下所示：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-5eowqv\" \n              data-graph-definition='digraph G {\n  rankdir=TD;\n  node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#adb5bd\", fontcolor=\"#495057\"];\n  edge [fontname=\"Arial\", fontsize=9, color=\"#495057\"];\n\n  subgraph cluster_loop {\n    label = \"智能体执行循环\";\n    bgcolor = \"#e9ecef\";\n    color=\"#ced4da\";\n\n    LLM [label=\"智能体大型语言模型\\n(接收查询 + 草稿本)\", shape=ellipse, style=filled, fillcolor=\"#a5d8ff\"];\n    Parse [label=\"解析大型语言模型输出\\n(思考、行动、输入)\", style=filled, fillcolor=\"#96f2d7\"];\n    CheckTool [label=\"识别工具\\n(例如，&#39;计算器&#39;)\", shape=diamond, style=filled, fillcolor=\"#ffec99\"];\n    ExecuteTool [label=\"执行工具\\n(例如，运行计算器)\", style=filled, fillcolor=\"#ffd8a8\"];\n    Observation [label=\"获取观察结果\\n(工具结果)\", style=filled, fillcolor=\"#bac8ff\"];\n    UpdateScratchpad [label=\"更新草稿本\\n(添加观察结果)\", style=filled, fillcolor=\"#eebefa\"];\n\n    LLM -> Parse;\n    Parse -> CheckTool;\n    CheckTool -> ExecuteTool [label=\" 找到工具 \"];\n    ExecuteTool -> Observation;\n    Observation -> UpdateScratchpad;\n    UpdateScratchpad -> LLM [label=\" 反馈 \"];\n  }\n\n  Input [label=\"用户查询\", shape=invhouse, style=filled, fillcolor=\"#ffc9c9\"];\n  CheckDone [label=\"任务是否完成？\", shape=diamond, style=filled, fillcolor=\"#ffec99\"];\n  FinalAnswer [label=\"最终答案\", shape=house, style=filled, fillcolor=\"#b2f2bb\"];\n\n  Input -> LLM;\n  CheckTool -> CheckDone [label=\" 无工具 / 最终答案行动 \"];\n  CheckDone -> FinalAnswer [label=\" 是 \"];\n  CheckDone -> LLM [label=\" 否 (继续推理) \"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-5eowqv\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图表说明了智能体执行器内部的流程。大型语言模型进行推理，提出行动，执行器解析此内容，如果指定则运行工具，获取结果（观察），将其添加到草稿本，并反馈给大型语言模型，直到确定最终答案。</p>\n</blockquote>\n<h3>运行智能体</h3>\n<p>现在，我们可以使用<code>AgentExecutor</code>的<code>invoke</code>方法，通过特定任务来调用智能体。</p>\n<pre><code class=\"language-python\"># 我们的数学智能体的示例查询\nquery = \"What is 25 percent of 300?\"\n\n# 运行智能体执行器\nresponse = agent_executor.invoke({\"input\": query})\n\nprint(\"\\n最终回应:\")\nprint(response)\n\n# 一个更复杂的计算\nquery_complex = \"If a train travels at 60 km/h for 2.5 hours, how far does it travel?\"\n# 注意：基础的'llm-math'工具可能在单位转换或隐式物理计算方面表现不佳。\n# 它主要用于算术/代数计算。\n# 一个更完善的智能体可能需要特定的物理工具或更强的推理能力。\nresponse_complex = agent_executor.invoke({\"input\": query_complex})\nprint(\"\\n最终回应（复杂查询）:\")\nprint(response_complex)\n\n</code></pre>\n<p>如果设置了<code>verbose=True</code>，你将在执行期间看到类似以下输出：</p>\n<pre><code class=\"language-text\">> 进入新的AgentExecutor链...\n思考：用户想计算300的25%。我可以使用计算器工具。计算式是0.25 * 300。\n行动：计算器\n行动输入：0.25 * 300\n观察：答案：75.0\n思考：我已从计算器获得结果。答案是75.0。我现在可以向用户提供最终答案。\n最终答案：300的25%是75.0。\n\n> 链已完成。\n\n最终回应:\n{'input': 'What is 25 percent of 300?', 'output': '25 percent of 300 is 75.0.'}\n\n# ... （第二个查询的类似输出，可能涉及 60 * 2.5）\n</code></pre>\n<p>此输出清晰地显示了ReAct流程：智能体的思考、选定的行动及其输入、从工具接收到的观察结果，以及最终导致答案的思考。</p>\n<p>这个例子演示了创建和运行一个基本智能体的核心过程。你初始化一个大型语言模型，加载必要的工具，使用创建函数（如<code>create_react_agent</code>）将它们与适当的智能体提示结合，将所有内容封装在<code>AgentExecutor</code>中，然后用你的查询来调用它。执行器处理交互循环，运用大型语言模型的推理 (inference)能力来决定如何有效使用工具。在下一节中，我们将了解当事情不按计划进行时的调试方法。</p>",
+  "slug": "creating-basic-langchain-agent",
+  "updates": [],
+  "references": [
+    {
+      "id": 13660,
+      "title": "Agents",
+      "author": "LangChain Contributors",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/agents/",
+      "doi": "",
+      "note": "LangChain框架构建LLM代理的官方文档，涵盖各种代理类型、工具和执行器。",
+      "order": 1,
+      "created_at": "2025-09-05T08:37:19.129961Z",
+      "updated_at": "2025-09-10T12:12:54.741434Z"
+    },
+    {
+      "id": 13661,
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "author": "Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao",
+      "year": "2022",
+      "publisher": "",
+      "journal": "ICLR",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2210.03629",
+      "doi": "10.48550/arXiv.2210.03629",
+      "note": "介绍了ReAct框架，一种指导语言模型进行推理和行动的提示策略，与本节讨论的代理类型直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T08:37:19.140761Z",
+      "updated_at": "2025-09-10T12:12:21.737002Z"
+    },
+    {
+      "id": 13662,
+      "title": "A Survey on Large Language Model based Autonomous Agents",
+      "author": "Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2308.11432",
+      "doi": "10.48550/arXiv.2308.11432",
+      "note": "对基于LLM的自主代理进行了全面综述，包括其架构、能力和挑战，为代理设计提供了更广阔的背景。",
+      "order": 3,
+      "created_at": "2025-09-05T08:37:19.144691Z",
+      "updated_at": "2025-09-10T12:12:32.751109Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

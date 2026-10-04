@@ -1,0 +1,61 @@
+{
+  "id": 2321,
+  "title": "唯一项：集合",
+  "meta_title": "Python 集合 | 独一无二项的无序集合",
+  "meta_description": "了解集合，Python 的无序集合类型，它只存储独一无二的元素，有助于成员资格检查和消除重复项。",
+  "content": "<p>Python 提供了多种集合类型，例如列表、元组和字典。<code>set</code> 类型是另一种集合，专门用于存储独一无二的项，并且不考虑元素的顺序。</p>\n<p>可以把集合想象成一个数学上的集合：一组不同的对象。如果你尝试添加一个集合中已有的项，什么都不会发生；集合保持不变，因为它只存储每个独一无二项的一个副本。这一特性使得集合在从其他集合中移除重复项，或快速检查某项是否属于某个组等任务中非常有用。</p>\n<p>集合的另一个特点是它们是无序的。与列表或元组不同，集合不按任何特定顺序保存元素。这意味着你不能使用索引（例如 <code>my_list[0]</code>）访问元素，因为没有定义“第一个”或“第二个”元素。</p>\n<h3>创建集合</h3>\n<p>你可以通过将逗号分隔的元素放在花括号 <code>{}</code> 中来创建一个集合。</p>\n<pre><code class=\"language-python\"># 创建一个包含独一无二元素的集合\nunique_numbers = {1, 2, 3, 4, 5}\nprint(unique_numbers)\n# 输出可能是 {1, 2, 3, 4, 5} 或其他顺序\n\n# 创建一个包含重复项的集合 - 重复项会自动移除\ncolors = {'red', 'green', 'blue', 'red'}\nprint(colors)\n# 输出: {'blue', 'red', 'green'} (顺序可能不同)\n</code></pre>\n<p>请注意，即使我们最初将 <code>'red'</code> 包含两次，它在 <code>colors</code> 集合中也只出现一次。</p>\n<p>一个虽小但重要的地方：创建一个<em>空</em>集合需要使用不带任何参数 (parameter)的 <code>set()</code> 函数。使用空花括号 <code>{}</code> 实际上会创建一个空<em>字典</em>，我们之前已经讲过。</p>\n<pre><code class=\"language-python\"># 创建空集合的正确方法\nempty_s = set()\nprint(type(empty_s))\n# Output: &#x3C;class 'set'>\nprint(empty_s)\n# Output: set()\n\n# 这会创建一个空字典，而不是集合\nempty_d = {}\nprint(type(empty_d))\n# Output: &#x3C;class 'dict'>\n</code></pre>\n<p>你也可以使用 <code>set()</code> 函数从任何可迭代对象（如列表、元组或字符串）创建集合。这是从序列中移除重复项的常用方法。</p>\n<pre><code class=\"language-python\"># 从包含重复项的列表中创建集合\nnumbers_list = [1, 2, 2, 3, 4, 4, 4, 5]\nunique_numbers_set = set(numbers_list)\nprint(unique_numbers_set)\n# 输出: {1, 2, 3, 4, 5} (顺序可能不同)\n\n# 从字符串创建集合\nletters_set = set('hello')\nprint(letters_set)\n# 输出: {'h', 'l', 'o', 'e'} (顺序可能不同)\n</code></pre>\n<h3>修改集合</h3>\n<p>像列表一样，集合是可变的，这意味着你可以在创建后改变它们的内容。</p>\n<h4>添加元素</h4>\n<p>要向集合中添加单个元素，请使用 <code>.add()</code> 方法。</p>\n<pre><code class=\"language-python\">permissions = {'read', 'write'}\nprint(permissions)\n# 输出: {'write', 'read'} (顺序可能不同)\n\n# 添加一个新权限\npermissions.add('execute')\nprint(permissions)\n# 输出: {'write', 'read', 'execute'} (顺序可能不同)\n\n# 尝试添加一个已有的元素 - 无变化\npermissions.add('read')\nprint(permissions)\n# 输出: {'write', 'read', 'execute'} (顺序可能不同)\n</code></pre>\n<h4>移除元素</h4>\n<p>有两种主要方法可以移除元素：</p>\n<ol>\n<li><code>.remove(element)</code>: 此方法移除指定元素。但是，如果集合中找不到该元素，它会引发 <code>KeyError</code>。</li>\n<li><code>.discard(element)</code>: 此方法也移除指定元素，但如果找不到该元素，它<em>不会</em>引发错误。在这种情况下，它只是什么都不做。</li>\n</ol>\n<p>选择 <code>.remove()</code> 还是 <code>.discard()</code> 取决于你是否希望在尝试移除不存在的元素时（使用 <code>.remove()</code>）程序停止，还是希望它默默地继续执行（使用 <code>.discard()</code>）。</p>\n<pre><code class=\"language-python\">data_points = {10, 20, 30, 40}\n\n# 使用 remove() 移除一个已有的元素\ndata_points.remove(20)\nprint(data_points)\n# 输出: {10, 40, 30} (顺序可能不同)\n\n# 尝试使用 remove() 移除一个不存在的元素 - 这将导致错误\n# data_points.remove(99) # 引发 KeyError: 99\n\n# 使用 discard() 移除一个已有的元素\ndata_points.discard(30)\nprint(data_points)\n# 输出: {10, 40} (顺序可能不同)\n\n# 尝试使用 discard() 移除一个不存在的元素 - 无错误\ndata_points.discard(99)\nprint(data_points)\n# 输出: {10, 40} (顺序可能不同)\n</code></pre>\n<h3>检查成员资格</h3>\n<p>集合中最有效率的操作之一是使用 <code>in</code> 关键字检查元素是否存在。这比检查列表中成员资格要快得多，特别是对于大型集合。</p>\n<pre><code class=\"language-python\">allowed_users = {'alice', 'bob', 'charlie'}\n\n# 检查用户是否被允许\nprint('bob' in allowed_users)\n# Output: True\n\nprint('eve' in allowed_users)\n# Output: False\n\n# 检查用户是否未被允许\nprint('david' not in allowed_users)\n# Output: True\n</code></pre>\n<h3>何时使用集合</h3>\n<p>在以下情况中，集合是理想的选择：</p>\n<ol>\n<li><strong>要求独一无二：</strong> 你需要存储一组项，其中不允许有重复项或需要自动移除重复项。</li>\n<li><strong>频繁进行成员资格检查：</strong> 你的程序经常需要检查集合中是否存在某个项。集合提供非常快速的查找。</li>\n<li><strong>顺序不重要：</strong> 元素的顺序或位置对你的应用不重要。</li>\n<li><strong>需要进行数学集合运算：</strong> 你计划执行诸如查找共同元素（交集）、组合元素（并集）或查找集合间差异等操作。我们将在下一节讨论这些操作。</li>\n</ol>\n<p>例如，如果你有一个从日志条目中获取的用户 ID 列表，并且想要一份访问过系统的独一无二的用户列表：</p>\n<pre><code class=\"language-python\">log_entries = ['user1', 'user2', 'user1', 'user3', 'user2', 'user1']\n\n# 使用集合查找独一无二的用户\nunique_users_set = set(log_entries)\nprint(unique_users_set)\n# 输出: {'user2', 'user3', 'user1'} (顺序可能不同)\n\n# 如果你需要一个独一无二的用户列表（顺序可能与原始顺序不同）\nunique_users_list = list(unique_users_set)\nprint(unique_users_list)\n# 输出: ['user2', 'user3', 'user1'] (顺序可能不同)\n</code></pre>\n<p>集合提供了一种强大且高效的方法来处理集合，其中独一无二性和快速成员资格检查是主要要求。接下来，我们将学习你可以对集合执行的特定数学操作。</p>",
+  "slug": "python-sets",
+  "updates": [],
+  "references": [
+    {
+      "id": 6277,
+      "title": "Set Types (set, frozenset)",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset",
+      "doi": "",
+      "note": "对 Python 内置集合类型、其操作和行为提供全面详细说明。",
+      "order": 1,
+      "created_at": "2025-09-05T01:20:48.594716Z",
+      "updated_at": "2025-09-07T21:23:16.170984Z"
+    },
+    {
+      "id": 6278,
+      "title": "Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming",
+      "author": "Eric Matthes",
+      "year": "2022",
+      "publisher": "No Starch Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nostarch.com/python-crash-course-3rd-edition/",
+      "doi": "",
+      "note": "在适合初学者的背景下，介绍基本的 Python 编程概念，包括集合的应用。",
+      "order": 2,
+      "created_at": "2025-09-05T01:20:48.600311Z",
+      "updated_at": "2025-09-07T21:23:07.100371Z"
+    },
+    {
+      "id": 6279,
+      "title": "Lecture 8: Tuples, Sets, and Efficiency, MIT 6.0001 Introduction to Computer Science and Programming in Python",
+      "author": "Ana Bell, Eric Grimson, John Guttag",
+      "year": "2016",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+      "doi": "",
+      "note": "在学术背景下，提供关于集合作为 Python 数据结构的基础教学，讨论其特性和效率。",
+      "order": 3,
+      "created_at": "2025-09-05T01:20:48.602707Z",
+      "updated_at": "2025-09-07T21:23:29.941241Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

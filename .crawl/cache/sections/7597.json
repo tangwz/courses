@@ -1,0 +1,61 @@
+{
+  "id": 7597,
+  "title": "动手实践：训练XGBoost模型",
+  "meta_title": "动手实践：训练您的第一个XGBoost模型",
+  "meta_description": "一个编程实践，您将使用XGBoost库在数据集上训练模型，评估其表现，并查看其特征。",
+  "content": "<p>您将使用核心Python API训练您的第一个XGBoost模型，从而实现其功能。内容包括加载数据、监督训练、进行预测以及结果解读。此次练习将应用到<code>DMatrix</code>数据结构和目标函数使用等主要概念。</p>\n<p>我们将使用加州房价数据集，这是一个经典的回归问题，目标是根据多个特征预测加州某区域的房屋中位数价值。</p>\n<h3>环境与数据准备</h3>\n<p>首先，请确保您已安装所需的库。您需要<code>xgboost</code>、用于数据集和评估指标的<code>scikit-learn</code>，以及用于数据操作的<code>pandas</code>。</p>\n<p>我们先加载数据集并将其分为训练集和测试集。这是一个标准步骤，用于将模型训练数据与评估模型在未见过示例上表现的数据分开。</p>\n<pre><code class=\"language-python\">import xgboost as xgb\nimport pandas as pd\nfrom sklearn.datasets import fetch_california_housing\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import mean_squared_error\nimport numpy as np\n\n# 加载数据集\nhousing = fetch_california_housing()\nX = pd.DataFrame(housing.data, columns=housing.feature_names)\ny = pd.Series(housing.target)\n\n# 创建训练集和测试集划分\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n\nprint(\"训练集形状:\", X_train.shape)\nprint(\"测试集形状:\", X_test.shape)\n</code></pre>\n<h3>将数据转换为DMatrix格式</h3>\n<p>如前所述，XGBoost有其自己的优化数据结构，名为<code>DMatrix</code>。它在内存使用和训练速度方面都非常高效。在进行训练之前，我们需要将pandas DataFrame和Series转换为这种格式。</p>\n<pre><code class=\"language-python\"># 将数据集转换为DMatrix\ndtrain = xgb.DMatrix(X_train, label=y_train)\ndtest = xgb.DMatrix(X_test, label=y_test)\n\nprint(\"已为训练集和测试集创建DMatrix对象。\")\n</code></pre>\n<h3>定义参数 (parameter)和训练模型</h3>\n<p>数据准备就绪后，下一步是定义模型的超参数 (hyperparameter)。这些参数在一个Python字典中设置。对于这个初始模型，我们将定义一个目标函数、一个评估指标，以及一些控制学习过程和树结构的参数。</p>\n<ul>\n<li><code>objective</code>：<code>'reg:squarederror'</code>表明我们正在执行回归任务，并希望使实际值与预测值之间的平方差最小化。</li>\n<li><code>eval_metric</code>：<code>'rmse'</code>（均方根误差）将用于在训练期间监督模型在评估集上的表现。</li>\n<li><code>eta</code>：这是学习率，用于调整每棵树的贡献。较低的值会使提升过程更加保守。</li>\n<li><code>max_depth</code>：这控制每棵决策树的最大深度，有助于防止过拟合 (overfitting)。</li>\n</ul>\n<p>我们还将创建一个观察列表（watchlist），它是一个<code>DMatrix</code>对象列表。模型将在每个提升轮次后报告其在这些数据集上的表现，使我们能实时观察其学习情况。</p>\n<pre><code class=\"language-python\"># 指定模型参数\nparams = {\n    'objective': 'reg:squarederror',\n    'eval_metric': 'rmse',\n    'eta': 0.1,\n    'max_depth': 4,\n    'seed': 42\n}\n\n# 指定提升轮次数量\nnum_boost_round = 100\n\n# 创建观察列表以监督表现\nwatchlist = [(dtrain, 'train'), (dtest, 'test')]\n\n# 训练模型\nbst = xgb.train(\n    params,\n    dtrain,\n    num_boost_round=num_boost_round,\n    evals=watchlist,\n    verbose_eval=10  # 每10轮打印评估结果\n)\n</code></pre>\n<p>当您运行此代码时，XGBoost将每10轮打印训练集和测试集的RMSE。您应该会看到两个集合的RMSE都在减小。如果测试集的RMSE开始增加而训练集的RMSE持续减小，这是过拟合的迹象。使用观察列表是确定最佳提升轮次数量的有效方法。</p>\n<h3>进行预测和评估表现</h3>\n<p>模型训练完成后，我们可以用它对测试数据进行预测。<code>predict</code>方法接受<code>DMatrix</code>作为输入，并返回一个预测数组。然后，我们可以使用与训练期间监督的相同指标（RMSE）将这些预测与实际值（<code>y_test</code>）进行比较。</p>\n<pre><code class=\"language-python\"># 对测试集进行预测\npreds = bst.predict(dtest)\n\n# 评估模型\nrmse = np.sqrt(mean_squared_error(y_test, preds))\nprint(f\"测试集上的最终RMSE: {rmse:.4f}\")\n</code></pre>\n<p>所得的RMSE提供了一个数值，用于衡量模型的预测误差。例如，RMSE为0.5意味着模型的预测平均误差约为<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>500</mn><mo separator=\"true\">,</mo><mn>000</mn><mtext>，因为目标变量的单位是</mtext></mrow><annotation encoding=\"application/x-tex\">500,000，因为目标变量的单位是</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8778em;vertical-align:-0.1944em;\"></span><span class=\"mord\">500</span><span class=\"mpunct\">,</span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\">000</span><span class=\"mord cjk_fallback\">，因为目标变量的单位是</span></span></span></span>100,000。</p>\n<h3>通过特征重要性解释模型</h3>\n<p>XGBoost这类基于树的模型的一个主要优点是其可解释性。我们可以轻松查看模型在进行预测时认为哪些特征最重要。XGBoost提供了一种简单的方法来获取这些重要性分数，甚至可以将其绘制出来。</p>\n<p>默认的重要性类型<code>'weight'</code>衡量一个特征在树中出现的次数。</p>\n<pre><code class=\"language-python\"># 获取特征重要性分数\nimportance_scores = bst.get_score(importance_type='weight')\nprint(importance_scores)\n\n# 使用XGBoost内置函数绘制特征重要性\n# 需要安装matplotlib\n# xgb.plot_importance(bst)\n# plt.show()\n</code></pre>\n<p>可视化特征重要性使得理解模型行为变得容易得多。下面的图表显示了我们训练模型的特征重要性分数，表明哪些房屋特征对其预测影响最大。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-13fuk5l\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"XGBoost 特征重要性\"}, \"xaxis\": {\"title\": {\"text\": \"F-分数（频率）\"}}, \"yaxis\": {\"title\": {\"text\": \"特征\"}, \"categoryorder\": \"total ascending\"}, \"margin\": {\"l\": 120, \"r\": 20, \"t\": 60, \"b\": 60}, \"template\": \"plotly_white\", \"height\": 400}, \"data\": [{\"type\": \"bar\", \"x\": [35, 45, 62, 75, 88, 110, 150, 205], \"y\": [\"HouseAge\", \"AveBedrms\", \"Population\", \"AveOccup\", \"Longitude\", \"Latitude\", \"AveRooms\", \"MedInc\"], \"orientation\": \"h\", \"marker\": {\"color\": \"#228be6\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 400px;\"\n            >\n              <div id=\"plot-13fuk5l\" style=\"width: 100%; min-height: 400px;\"></div>\n            </div>\n          \n<blockquote>\n<p>F-分数表示每个特征在决策树中用于创建分裂的次数。值越高表示越重要。在此例中，中位数收入（MedInc）是使用最频繁的特征。</p>\n</blockquote>\n<p>您现在已经成功训练、评估并解释了一个XGBoost模型。此工作流程构成了几乎所有梯度提升任务的基础。在接下来的章节中，我们将了解其他强大的库，并学习如何系统地调整模型的超参数 (parameter) (hyperparameter)以获得更好的表现。</p>",
+  "slug": "practice-training-xgboost-model",
+  "updates": [],
+  "references": [
+    {
+      "id": 21426,
+      "title": "XGBoost Documentation",
+      "author": "XGBoost Contributors",
+      "year": "Current",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://xgboost.readthedocs.io/en/stable/",
+      "doi": "",
+      "note": "XGBoost Python API、数据结构和训练过程的全面指南。",
+      "order": 1,
+      "created_at": "2025-09-30T05:43:29.274192Z",
+      "updated_at": "2025-09-30T05:57:11.282213Z"
+    },
+    {
+      "id": 21427,
+      "title": "XGBoost: A Scalable Tree Boosting System",
+      "author": "Tianqi Chen and Carlos Guestrin",
+      "year": "2016",
+      "publisher": "ACM",
+      "journal": "KDD '16: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining",
+      "volume": "",
+      "pages": "785–794",
+      "url": "https://doi.org/10.1145/2939672.2939785",
+      "doi": "10.1145/2939672.2939785",
+      "note": "描述XGBoost算法设计与优化技术的原始学术论文。",
+      "order": 2,
+      "created_at": "2025-09-30T05:43:29.293674Z",
+      "updated_at": "2025-09-30T05:57:15.719708Z"
+    },
+    {
+      "id": 21429,
+      "title": "Applied Predictive Modeling",
+      "author": "Max Kuhn and Kjell Johnson",
+      "year": "2013",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://link.springer.com/book/10.1007/978-1-4614-6849-3",
+      "doi": "10.1007/978-1-4614-6849-3",
+      "note": "一本提供预测建模实用背景的书籍，包括梯度提升等集成方法。",
+      "order": 4,
+      "created_at": "2025-09-30T05:43:29.302405Z",
+      "updated_at": "2025-09-30T05:57:11.692860Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

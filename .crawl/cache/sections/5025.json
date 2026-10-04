@@ -1,0 +1,61 @@
+{
+  "id": 5025,
+  "title": "激活函数的作用",
+  "meta_title": "激活函数在神经网络中的作用",
+  "meta_description": "解释非线性激活函数对深度学习模型的必要性。",
+  "content": "<p>多层感知机 (MLP) 通过堆叠人工神经元层来获得功能。每个神经元计算其输入的加权和并加上偏置 (bias)项。如果仅仅将这个和直接传递给下一层而不进行额外处理，那么我们的深度网络并不会比单层模型的功能强多少。</p>\n<p>这是为什么呢？设想一个双层网络，其中每层只进行线性变换（加权和加偏置）。第一层的输出将是输入的线性函数。第二层的输出将是第一层输出的线性函数。组合两个线性函数，结果仍是一个线性函数。无论我们堆叠多少个线性层，整个网络都将表现得像一个单一的线性变换。它无法对数据中的非线性模式进行建模，就像我们之前遇到的异或问题。</p>\n<p>正是在这里，<strong>激活函数 (activation function)</strong>发挥了作用。激活函数是一个固定的非线性函数，应用于神经元内部的加权和（加偏置）计算结果，在结果传递给下一层之前。</p>\n<p>在数学上，如果 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi></mrow><annotation encoding=\"application/x-tex\">z</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span></span></span></span> 是加权和加偏置 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>z</mi><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msub><mi>w</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mi>b</mi></mrow><annotation encoding=\"application/x-tex\">z = \\sum_i w_i x_i + b</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1.0497em;vertical-align:-0.2997em;\"></span><span class=\"mop\"><span class=\"mop op-symbol small-op\" style=\"position:relative;top:0em;\">∑</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.162em;\"><span style=\"top:-2.4003em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.2997em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.1667em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.0269em;\">w</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t vlist-t2\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.3117em;\"><span style=\"top:-2.55em;margin-left:0em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mathnormal mtight\">i</span></span></span></span><span class=\"vlist-s\">​</span></span><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.15em;\"><span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6944em;\"></span><span class=\"mord mathnormal\">b</span></span></span></span>)，神经元的输出 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>a</mi></mrow><annotation encoding=\"application/x-tex\">a</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">a</span></span></span></span> 由以下公式给出：\n<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>a</mi><mo>=</mo><mi>f</mi><mo stretchy=\"false\">(</mo><mi>z</mi><mo stretchy=\"false\">)</mo></mrow><annotation encoding=\"application/x-tex\">a = f(z)</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.4306em;\"></span><span class=\"mord mathnormal\">a</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span><span class=\"mopen\">(</span><span class=\"mord mathnormal\" style=\"margin-right:0.044em;\">z</span><span class=\"mclose\">)</span></span></span></span>\n其中 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi></mrow><annotation encoding=\"application/x-tex\">f</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span></span></span></span> 是激活函数。</p>\n<p><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>f</mi></mrow><annotation encoding=\"application/x-tex\">f</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.8889em;vertical-align:-0.1944em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.1076em;\">f</span></span></span></span> 的重要性质是它的<strong>非线性</strong>。通过在每层线性计算后引入这一非线性步骤，网络打破了线性链条。现在，堆叠层使得MLP能够近似任意形式的函数，使其能够学到线性模型无法捕获的数据中的细致关系和样式。</p>\n<p>可以把它想象成弯曲或扭曲数据所存在的空间。线性变换只能拉伸、旋转或剪切这个空间。非线性激活函数使得网络能够在每一步执行更多样的变换，最终使其能够分离那些非线性可分的数据点。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1o1aje4\" \n              data-plot-definition='{\"layout\": {\"xaxis\": {\"title\": \"输入 (z)\", \"range\": [-5, 5]}, \"yaxis\": {\"title\": \"输出 (a)\", \"range\": [-2, 5]}, \"title\": \"线性与非线性激活函数对比\", \"legend\": {\"yanchor\": \"top\", \"y\": 0.99, \"xanchor\": \"left\", \"x\": 0.01}, \"autosize\": true, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 40, \"b\": 40}}, \"data\": [{\"x\": [-5, 5], \"y\": [-5, 5], \"mode\": \"lines\", \"name\": \"线性函数 (a=z)\", \"line\": {\"color\": \"#228be6\"}}, {\"x\": [-5, 0, 5], \"y\": [0, 0, 5], \"mode\": \"lines\", \"name\": \"ReLU 函数 (a=max(0,z))\", \"line\": {\"color\": \"#40c057\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1o1aje4\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>简单线性'激活'（恒等函数）与常见非线性激活函数（ReLU）的对比。非线性使得网络能够对更多样化的关系进行建模。</p>\n</blockquote>\n<p>本质上，激活函数的主要作用是引入深度神经网络 (neural network)学习输入到输出的非线性映射所需的非线性。没有它们，MLP的表示能力将大大降低。虽然有些激活函数有额外的有用特性（比如限制输出范围，我们稍后会讨论），但它们最主要的效用是实现非线性计算。</p>\n<p>激活函数的选择可以对网络的训练过程和性能产生很大影响。在接下来的章节中，我们将介绍几种流行的激活函数，并说明它们的特点、优点和缺点。</p>",
+  "slug": "role-of-activation-functions",
+  "updates": [],
+  "references": [
+    {
+      "id": 12901,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org",
+      "doi": "",
+      "note": "这本综合性教材为深度学习提供了详细的理论基础，包括激活函数的作用和类型。",
+      "order": 1,
+      "created_at": "2025-09-05T08:24:58.375530Z",
+      "updated_at": "2025-09-08T15:58:04.004280Z"
+    },
+    {
+      "id": 12902,
+      "title": "Neural Networks and Deep Learning",
+      "author": "Michael A. Nielsen",
+      "year": "2015",
+      "publisher": "Determination Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://neuralnetworksanddeeplearning.com/index.html",
+      "doi": "",
+      "note": "这本易于理解的在线书籍清晰地解释了神经网络的基本概念，包括非线性激活函数的必要性。",
+      "order": 2,
+      "created_at": "2025-09-05T08:24:58.397912Z",
+      "updated_at": "2025-09-08T15:58:05.395541Z"
+    },
+    {
+      "id": 12903,
+      "title": "CS231n: Convolutional Neural Networks for Visual Recognition - Neural Networks Part 1: Setting up the Architecture",
+      "author": "Justin Johnson, Andrej Karpathy, and Fei-Fei Li",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs231n.github.io/convolutional-networks/#activations",
+      "doi": "",
+      "note": "这是一门知名大学课程的最新讲义，提供了关于神经网络架构组件（包括激活函数）的实用见解。",
+      "order": 3,
+      "created_at": "2025-09-05T08:24:58.400085Z",
+      "updated_at": "2025-09-08T15:58:10.539229Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

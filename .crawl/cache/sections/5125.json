@@ -1,0 +1,61 @@
+{
+  "id": 5125,
+  "title": "认证方式",
+  "meta_title": "API 认证方式 | Python LLM 交互",
+  "meta_description": "了解安全认证 API 请求的不同方式。",
+  "content": "<p>当你的 Python 应用与大型语言模型（LLM）提供商的 API 沟通时，它需要证明自己有权限这样做。API 通常不是开放的通道；它们需要身份凭证来管理访问、追踪计费使用情况并保证安全。这个过程称为认证。没有正确的认证，你的 API 请求很可能会被拒绝。</p>\n<p>大多数 LLM 提供商使用 <strong>API 密钥</strong> 作为服务器到服务器认证的主要方式。API 密钥通常是一个在你注册服务时分配给你的唯一、长的字符串。可以把它看作是专门用于你应用程序的密码。</p>\n<h3>在 HTTP 请求头中使用 API 密钥</h3>\n<p>发送 API 密钥最常见的方式是在你的请求的 HTTP 请求头中。许多 API 遵循使用 <code>Authorization</code> 请求头和 <code>Bearer</code> 令牌方案的惯例。</p>\n<p>以下是使用 <code>requests</code> 库在请求中包含 API 密钥的示例：</p>\n<pre><code class=\"language-python\">import requests\r\nimport os\r\n\r\n# 从环境变量加载 API 密钥以提高安全性\r\nAPI_KEY = os.getenv(\"LLM_PROVIDER_API_KEY\")\r\nAPI_ENDPOINT = \"https://api.example-llm-provider.com/v1/completions\"\r\n\r\nheaders = {\r\n    \"Authorization\": f\"Bearer {API_KEY}\",\r\n    \"Content-Type\": \"application/json\"\r\n}\r\n\r\ndata = {\r\n    \"model\": \"model-name\",\r\n    \"prompt\": \"Explain API authentication simply.\",\r\n    \"max_tokens\": 50\r\n}\r\n\r\ntry:\r\n    response = requests.post(API_ENDPOINT, headers=headers, json=data)\r\n    response.raise_for_status() # 对于错误响应（4XX 或 5XX）抛出 HTTPError\r\n\r\n    # 处理成功响应\r\n    result = response.json()\r\n    print(result)\r\n\r\nexcept requests.exceptions.RequestException as e:\r\n    print(f\"发生 API 请求错误：{e}\")\r\nexcept Exception as e:\r\n    print(f\"发生意外错误：{e}\")\r\n\n</code></pre>\n<p>在此示例中：</p>\n<ol>\n<li>我们从环境变量 <code>LLM_PROVIDER_API_KEY</code> 中获取 API 密钥。<strong>切勿将 API 密钥直接硬编码在你的源代码中。</strong> 这会带来很大的安全风险。请参阅第二章，了解管理密钥的安全方式。</li>\n<li>我们创建一个 <code>headers</code> 字典。</li>\n<li>字典中的 <code>Authorization</code> 键被设置为字符串 <code>Bearer </code>，后面跟着实际的 API 密钥。<code>Bearer</code> 后面的空格很重要。</li>\n<li>这个 <code>headers</code> 字典被传递给 <code>requests.post</code> 函数。</li>\n</ol>\n<p>一些 API 可能使用不同的请求头名称，例如 <code>X-API-Key</code> 或在其文档中说明的自定义名称。务必查阅具体的 LLM 提供商的 API 文档，以了解正确的请求头和格式。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-l40zin\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10, color=\"#495057\", fontcolor=\"#495057\"]; edge [fontname=\"Arial\", fontsize=10, color=\"#495057\"]; client [label=\"你的 Python 代码\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; api [label=\"LLM API 服务器\", color=\"#7048e8\", fontcolor=\"#7048e8\"]; auth_svc [label=\"认证服务\", color=\"#f76707\", fontcolor=\"#f76707\"]; client -> api [label=\"1. POST 请求\\n+ Authorization: Bearer <API_KEY>\", color=\"#1c7ed6\"]; api -> auth_svc [label=\"2. 验证密钥\", color=\"#7048e8\"]; auth_svc -> api [label=\"3. 验证结果\", color=\"#f76707\"]; api -> client [label=\"4. 处理请求并\\n返回响应（如果有效）\", color=\"#7048e8\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-l40zin\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>涉及通过 Authorization 请求头进行 API 密钥认证的请求流程。</p>\n</blockquote>\n<h3>使用客户端库进行认证</h3>\n<p>正如上一节所述，LLM 提供商通常会提供官方的 Python 客户端库（SDK）以简化交互。这些库通常会为你处理认证的细节。</p>\n<p>通常，你只需配置一次库，提供你的 API 密钥，这通常是在初始化客户端对象时完成的。然后，该库会自动以正确的格式将密钥包含在所有后续请求中。</p>\n<p>许多库都设计为自动在特定的环境变量中查找 API 密钥（例如，OpenAI 库使用 <code>OPENAI_API_KEY</code>，Anthropic 库使用 <code>ANTHROPIC_API_KEY</code>）。</p>\n<pre><code class=\"language-python\"># 使用 'llm_provider_sdk' 库的示例\r\nimport os\r\n# pip install llm_provider_sdk\r\n# 假设已设置 LLM_PROVIDER_API_KEY 环境变量\r\n# （请查阅具体库的文档以获取确切的变量名）\r\n\r\ntry:\r\n    # 库可能会自动从环境中获取标识符\r\n    # 或者你可以明确地初始化它：\r\n    # client = llm_provider_sdk.Client(api_key=os.getenv(\"LLM_PROVIDER_API_KEY\"))\r\n\r\n    # 如果库默认使用环境变量：\r\n    import llm_provider_sdk\r\n    client = llm_provider_sdk.Client() # 隐式使用环境变量\r\n\r\n    response = client.completions.create(\r\n        model=\"model-name\",\r\n        prompt=\"Explain API authentication simply using a client library.\",\r\n        max_tokens=60\r\n    )\r\n    print(response)\r\n\r\nexcept ImportError:\r\n    print(\"请安装所需的 SDK: pip install llm_provider_sdk\")\r\nexcept Exception as e:\r\n    # 捕获可能的错误，如缺少 API 密钥或连接问题\r\n    print(f\"发生错误：{e}\")\r\n\n</code></pre>\n<p>使用官方客户端库通常是推荐的方式，因为它封装了 HTTP 请求和认证请求头的底层细节，带来更清晰、更易于维护的代码。它也保证你遵循了提供商预设的交互方式。</p>\n<h3>其他认证机制</h3>\n<p>尽管 API 密钥在直接访问 LLM API 中普遍存在，但你偶尔也会遇到其他方式，尤其是在企业或云集成场景中：</p>\n<ul>\n<li><strong>OAuth 2.0:</strong> 当应用程序需要代表最终用户操作时（例如，聊天机器人通过 Google Drive API 访问用户文档），这种方式更常见。它涉及用户同意和令牌交换。对于本课程关注的直接服务器到 LLM 通信来说，它不那么常见。</li>\n<li><strong>云提供商 IAM/服务账户：</strong> 当使用集成到主要云平台（AWS Bedrock、Google Vertex AI、Azure OpenAI Service）的 LLM 时，认证通常通过云提供商的身份和访问管理（IAM）系统处理，使用服务账户凭证或托管身份。对应的云 SDK 通常会管理此认证流程。</li>\n</ul>\n<p>对于从你的 Python 后端调用标准 LLM API 的主要任务，通过环境变量安全管理并可能通过客户端库封装的 API 密钥将是你的主要方式。始终优先考虑安全：避免在代码或版本控制中暴露密钥，并使用环境变量或合适的密钥管理方案，尤其是在生产环境中。</p>",
+  "slug": "api-authentication-methods",
+  "updates": [],
+  "references": [
+    {
+      "id": 13589,
+      "title": "Requests: HTTP for Humans™",
+      "author": "Kenneth Reitz and the Requests Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python-requests.org/en/latest/",
+      "doi": "",
+      "note": "Python `requests`库的官方文档，解释了如何发起HTTP请求、设置请求头和处理响应。",
+      "order": 1,
+      "created_at": "2025-09-05T08:36:04.705862Z",
+      "updated_at": "2025-09-10T12:14:45.341420Z"
+    },
+    {
+      "id": 13590,
+      "title": "Hypertext Transfer Protocol (HTTP/1.1): Authentication",
+      "author": "R. Fielding and J. Reschke",
+      "year": "2014",
+      "publisher": "Internet Engineering Task Force (IETF)",
+      "journal": "RFC 7235",
+      "volume": "",
+      "pages": "",
+      "url": "https://datatracker.ietf.org/doc/html/rfc7235",
+      "doi": "10.17487/RFC7235",
+      "note": "此RFC定义了HTTP的`Authorization`请求头和认证框架，包括用于API密钥认证的`Bearer`令牌方案。",
+      "order": 2,
+      "created_at": "2025-09-05T08:36:04.711906Z",
+      "updated_at": "2025-09-10T12:14:41.407520Z"
+    },
+    {
+      "id": 13591,
+      "title": "OWASP API Security Top 10",
+      "author": "Erez Yalon, Inon Shkedy, Paulo Silva",
+      "year": "2023",
+      "publisher": "OWASP Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://owasp.org/API-Security/",
+      "doi": "",
+      "note": "API安全风险和缓解策略的指南，包含了API认证和安全凭证处理的基本实践。",
+      "order": 3,
+      "created_at": "2025-09-05T08:36:04.718080Z",
+      "updated_at": "2025-09-10T12:14:48.161411Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

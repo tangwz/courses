@@ -1,0 +1,61 @@
+{
+  "id": 1784,
+  "title": "使用整数位置选择行 (.iloc)",
+  "meta_title": "Pandas .iloc：行选择",
+  "meta_description": "使用 .iloc 访问器，根据整数位置从 DataFrame 中选择行和列。",
+  "content": "<p>Pandas 中的数据选择常需要根据数据的确切位置而不是其标签来访问信息。有时，你需要完全根据数据的整数位置来检索数据，而无需考虑 DataFrame 中分配的索引标签或列名。当行或列的顺序已知但其具体标签未知时，或者在处理使用默认整数索引的 DataFrame 时，这种方法尤其有用。为了满足这一特定需求，Pandas 提供了 <code>.iloc</code> 访问器。</p>\n<p><code>.iloc</code> 访问器的工作方式很像标准的 Python 列表和 NumPy 数组索引。它使用基于 0 的整数位置来选择行和列。请记住，Python 的切片约定适用：起始边界包含在内，而结束边界不包含在内。</p>\n<h3>基本语法</h3>\n<p>一般语法是 <code>DataFrame.iloc[row_indexer, column_indexer]</code>。<code>row_indexer</code> 和 <code>column_indexer</code> 都接受整数、整数列表、带有整数的切片或布尔数组（尽管使用标准 <code>[]</code> 或 <code>.loc</code> 进行布尔索引通常更清晰）。如果你只提供一个索引器，则默认为行索引器。</p>\n<p>我们来用一个示例 DataFrame 进行说明：</p>\n<pre><code class=\"language-python\">import pandas as pd\nimport numpy as np\n\ndata = {'col_a': [10, 20, 30, 40, 50],\n        'col_b': [0.1, 0.2, 0.3, 0.4, 0.5],\n        'col_c': ['x', 'y', 'z', 'x', 'y']}\n# 注意自定义字符串索引\ndf_example = pd.DataFrame(data, index=['row1', 'row2', 'row3', 'row4', 'row5'])\n\nprint(\"示例 DataFrame:\")\nprint(df_example)\n</code></pre>\n<pre><code>示例 DataFrame:\n      col_a  col_b col_c\nrow1     10    0.1     x\nrow2     20    0.2     y\nrow3     30    0.3     z\nrow4     40    0.4     x\nrow5     50    0.5     y\n</code></pre>\n<h3>选择单行</h3>\n<p>要通过整数位置选择单行，请将该整数传递给 <code>.iloc</code>：</p>\n<pre><code class=\"language-python\"># 选择第一行（位置 0）\nfirst_row = df_example.iloc[0]\nprint(\"\\n第一行（位置 0）：\")\nprint(first_row)\n\n# 选择第三行（位置 2）\nthird_row = df_example.iloc[2]\nprint(\"\\n第三行（位置 2）：\")\nprint(third_row)\n</code></pre>\n<pre><code>第一行（位置 0）：\ncol_a     10\ncol_b    0.1\ncol_c      x\nName: row1, dtype: object\n\n第三行（位置 2）：\ncol_a     30\ncol_b    0.3\ncol_c      z\nName: row3, dtype: object\n</code></pre>\n<p>注意，尽管我们的索引由字符串（如 <code>'row1'</code>、<code>'row2'</code> 等）组成，但 <code>.iloc</code> 仍根据行基于 0 的整数位置来访问它们。结果是一个 Pandas Series，包含该行的数据，并以原始列名作为其索引。</p>\n<h3>使用列表或切片选择多行</h3>\n<p>你可以通过提供整数列表来选择多个特定行，或者使用切片表示法选择一系列行。</p>\n<pre><code class=\"language-python\"># 选择第一行和第三行（位置 0 和 2）\nrows_0_2 = df_example.iloc[[0, 2]]\nprint(\"\\n位置 0 和 2 的行：\")\nprint(rows_0_2)\n\n# 选择从位置 1 开始，直到（但不包含）位置 4 的行\nrows_1_to_3 = df_example.iloc[1:4] # 选择索引为 1、2、3 的行\nprint(\"\\n从位置 1 到位置 4 的行：\")\nprint(rows_1_to_3)\n\n# 选择从开头到位置 3（不包含）的行\nfirst_three_rows = df_example.iloc[:3]\nprint(\"\\n前三行：\")\nprint(first_three_rows)\n\n# 选择从位置 3 到末尾的行\nlast_rows = df_example.iloc[3:]\nprint(\"\\n从位置 3 到末尾的行：\")\nprint(last_rows)\n</code></pre>\n<pre><code>位置 0 和 2 的行：\n      col_a  col_b col_c\nrow1     10    0.1     x\nrow3     30    0.3     z\n\n从位置 1 到位置 4 的行：\n      col_a  col_b col_c\nrow2     20    0.2     y\nrow3     30    0.3     z\nrow4     40    0.4     x\n\n前三行：\n      col_a  col_b col_c\nrow1     10    0.1     x\nrow2     20    0.2     y\nrow3     30    0.3     z\n\n从位置 3 到末尾的行：\n      col_a  col_b col_c\nrow4     40    0.4     x\nrow5     50    0.5     y\n</code></pre>\n<p>正如所料，选择多行会返回一个包含指定行的新 DataFrame。切片行为 <code>start:end</code> 包含 <code>start</code> 但不包含 <code>end</code>，这与 Python 标准一致。</p>\n<h3>同时选择行和列</h3>\n<p>当你需要根据行和列的位置选择特定元素或子部分时，<code>.iloc</code> 的优势明显。你先提供行索引器，然后是列索引器，两者之间用逗号分隔。</p>\n<pre><code class=\"language-python\"># 选择行位置 1、列位置 0 的元素\nelement_1_0 = df_example.iloc[1, 0]\nprint(f\"\\n行位置 1、列位置 0 的元素：{element_1_0}\")\n\n# 选择第一行（位置 0）和前两列（位置 0、1）\nrow0_cols01 = df_example.iloc[0, 0:2]\nprint(\"\\n第一行，前两列：\")\nprint(row0_cols01)\n\n# 选择前三行（位置 0、1、2）和第一列及第三列（位置 0、2）\nsubset = df_example.iloc[0:3, [0, 2]]\nprint(\"\\n前三行，列 0 和 2：\")\nprint(subset)\n\n# 选择所有行和最后一列（位置 -1 也可以！）\nlast_col = df_example.iloc[:, -1]\nprint(\"\\n所有行，最后一列：\")\nprint(last_col)\n</code></pre>\n<pre><code>行位置 1、列位置 0 的元素：20\n\n第一行，前两列：\ncol_a     10\ncol_b    0.1\nName: row1, dtype: object\n\n前三行，列 0 和 2：\n      col_a col_c\nrow1     10     x\nrow2     20     y\nrow3     30     z\n\n所有行，最后一列：\nrow1    x\nrow2    y\nrow3    z\nrow4    x\nrow5    y\nName: col_c, dtype: object\n</code></pre>\n<p>使用 <code>:</code> 选择所有行或所有列，这与 NumPy 切片相似。负数索引从末尾开始计数（例如，<code>-1</code> 是最后一列）。</p>\n<h3>区别：<code>.iloc</code> 与 <code>.loc</code></h3>\n<p>记住它们的区别非常重要：</p>\n<ul>\n<li><code>.loc</code>：基于<strong>标签</strong>选择（索引标签、列名）。使用标签进行切片时，起始和结束标签都包含在内。</li>\n<li><code>.iloc</code>：基于<strong>整数位置</strong>选择（基于 0）。使用整数进行切片时，不包含结束位置。</li>\n</ul>\n<p>尝试将标签与 <code>.iloc</code> 结合使用，或将整数位置与 <code>.loc</code> 结合使用（除非标签<strong>恰好</strong>是整数）将导致错误。理解这种区别对于正确获取所需数据很重要。</p>\n<p>熟练使用 <code>.iloc</code> 提供了一种根据数据在 DataFrame 结构中的位置来获取数据的精确方法，补充了 <code>.loc</code> 提供的基于标签的选择功能。</p>",
+  "slug": "selecting-rows-iloc",
+  "updates": [],
+  "references": [
+    {
+      "id": 1912,
+      "title": "pandas.DataFrame.iloc",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iloc.html",
+      "doi": "",
+      "note": "`.iloc`访问器的官方文档，提供直接使用示例和技术细节。",
+      "order": 1,
+      "created_at": "2025-09-04T16:37:25.662613Z",
+      "updated_at": "2025-09-08T05:09:33.021522Z"
+    },
+    {
+      "id": 1913,
+      "title": "Indexing and Selecting Data",
+      "author": "The Pandas Development Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html",
+      "doi": "",
+      "note": "Pandas用户指南的一部分，解释了多种数据选择方法，包括.iloc，并将其与.loc进行对比。",
+      "order": 2,
+      "created_at": "2025-09-04T16:37:25.680273Z",
+      "updated_at": "2025-09-08T05:09:31.258049Z"
+    },
+    {
+      "id": 1914,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一本学习Pandas的基础书籍，全面介绍了包括.iloc在内的数据选择技术。",
+      "order": 3,
+      "created_at": "2025-09-04T16:37:25.682737Z",
+      "updated_at": "2025-09-08T05:09:33.972085Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

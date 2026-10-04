@@ -1,0 +1,61 @@
+{
+  "id": 3402,
+  "title": "存储优化和成本管理",
+  "meta_title": "特征存储的存储与成本优化",
+  "meta_description": "有关高效数据存储、分级以及特征存储运营成本管理的方案。",
+  "content": "<p>虽然低延迟检索和高计算吞吐量 (throughput)是主要目标，但要持续达成这些目标，需要细致管理存储资源及其相关费用。随着特征存储不断增长，处理数TB或PB的历史数据以及每秒数百万的在线请求，存储和计算开销可能成为可观的运营开销。优化这些方面不仅是节省开支；它直接影响机器学习 (machine learning)平台的扩展性和长期可行性。</p>\n<h3>优化离线存储</h3>\n<p>离线存储通常保存着最大量的数据，常位于数据湖或数据仓库中。在此进行高效管理需采取多种策略：</p>\n<ul>\n<li><strong>高效文件格式：</strong> 标准化使用Apache Parquet或ORC等列式格式。这些格式提供出色的压缩比（例如Snappy、Gzip、Zstd），减少存储占用和I/O成本。其列式特点使查询引擎（如Spark、Presto、BigQuery）只读取特征计算或训练数据生成所需的列，大幅减少扫描数据量，提升查询性能。大规模分析工作负载应避免使用CSV或JSON等行式格式。</li>\n<li><strong>数据分区：</strong> 依据常见查询模式对数据进行分区，逻辑地组织离线存储。基于日期的分区（例如，<code>year=YYYY/month=MM/day=DD/</code>）几乎总是有益于时间序列特征和时间点查找。按特征组或实体ID分区也能带来性能优势和成本节省，因为这允许查询引擎修剪分区，在扫描时完全跳过不相关数据。选择合适的分区方案需要了解特征如何用于训练和批量推理 (inference)。</li>\n<li><strong>数据合并：</strong> 批量摄取流程，尤其是流式摄取，可能导致离线存储中大量小文件的产生。这种“小文件问题”会降低查询性能，因为文件系统列表操作变慢，且查询引擎打开大量文件会产生额外开销。执行定期合并任务，将小文件合并成更大、更优化的文件（通常目标大小在128MB到1GB之间，取决于底层文件系统和查询引擎）。Apache Spark和Delta Lake等工具提供合并功能。</li>\n<li><strong>数据生命周期管理和分级：</strong> 并非所有历史特征数据都需要即时访问。实施生命周期策略，自动转移较旧或访问频率较低的数据到更便宜的存储层级。云服务商提供多种选项（例如：AWS S3 Standard-IA、Glacier Instant Retrieval、Glacier Deep Archive；GCP Nearline、Coldline、Archive；Azure Cool、Archive）。根据数据年限或访问模式设定规则。例如，超过18个月的特征数据可以移至不常访问存储，超过5年的数据移至归档存储。确保回填和训练流程在需要时仍能访问分级数据，并了解潜在的检索延迟和成本影响。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-a7jw1i\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", margin=0.2];\n  edge [fontname=\"sans-serif\"];\n\n  raw_data [label=\"原始数据源\", fillcolor=\"#ced4da\"];\n  ingest [label=\"摄取与\\n转换\", shape=cylinder, fillcolor=\"#a5d8ff\"];\n  hot [label=\"离线存储\\n(热层)\\nS3 Standard / GCS Standard\", fillcolor=\"#ffc9c9\"];\n  warm [label=\"离线存储\\n(温层)\\nS3 Standard-IA / GCS Nearline\", fillcolor=\"#ffec99\"];\n  cold [label=\"离线存储\\n(冷层)\\nS3 Glacier IR / GCS Coldline\", fillcolor=\"#bac8ff\"];\n  archive [label=\"离线存储\\n(归档)\\nS3 Glacier Deep / GCS Archive\", fillcolor=\"#e9ecef\"];\n\n  train [label=\"模型训练\\n(频繁访问)\", shape=component, fillcolor=\"#b2f2bb\"];\n  analysis [label=\"分析/回填\\n(不常访问)\", shape=component, fillcolor=\"#d8f5a2\"];\n  compliance [label=\"合规保留\\n(极少访问)\", shape=component, fillcolor=\"#eebefa\"];\n\n  raw_data -> ingest;\n  ingest -> hot [label=\"近期特征\"];\n  hot -> train;\n  hot -> warm [label=\"生命周期策略\\n(例如，> 90 天)\"];\n  warm -> analysis;\n  warm -> cold [label=\"生命周期策略\\n(例如，> 1 年)\"];\n  cold -> compliance;\n  cold -> archive [label=\"生命周期策略\\n(例如，> 7 年)\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-a7jw1i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>基于访问频率和数据年限的离线特征存储数据分级策略。</p>\n</blockquote>\n<h3>优化在线存储</h3>\n<p>在线存储优先考虑低延迟读取，但存储效率依然重要，尤其是在大规模场景下。</p>\n<ul>\n<li><strong>针对大小的数据建模：</strong> 细致设计特征模式。如果过度存储过大的对象或过度非规范化的数据会显著增加存储大小而无相应的延迟优势，应避免这样做。使用合适的数据类型（例如，尽可能使用整数而非字符串，选择定点小数）。考虑使用Protocol Buffers或Avro等序列化格式进行二进制存储，它们比数据库值中的JSON字符串更紧凑。</li>\n<li><strong>生存时间（TTL）：</strong> 许多在线特征在一定时间后会失去时效性（例如，过去一小时的用户活动特征）。大多数用于在线服务的键值存储（如Redis、DynamoDB、Cassandra）支持TTL设置。使用TTL自动使过期数据失效并删除，保持在线存储大小可控，防止无限制增长。这对于控制预置容量数据库的成本很重要。</li>\n<li><strong>数据库选择权衡：</strong> 在线数据库技术（例如，Redis等内存数据库、DynamoDB等托管NoSQL、Cassandra等自托管数据库）的选择对成本有直接影响。内存数据库提供最佳延迟，但因内存成本可能昂贵。托管服务通常采用按请求付费或预置吞吐量 (throughput)定价模式。分析读写模式、所需延迟SLO和项目大小，以选择最符合性能要求且具成本效益的选项。有时，分级在线存储方法（例如，Redis用于P99延迟，由更便宜的NoSQL支持不太关键的查找）可能更为合适。</li>\n</ul>\n<h3>管理计算成本</h3>\n<p>特征计算，无论是批量还是流式，都会消耗计算资源，增加总成本。</p>\n<ul>\n<li><strong>高效转换逻辑：</strong> 优化特征计算代码。在Spark中适时使用广播连接，避免不必要的混洗，明智地缓存中间结果，并选择高效算法。对任务进行性能分析以识别瓶颈。</li>\n<li><strong>使用竞价/可抢占实例：</strong> 对于容错的批量计算任务（离线特征生成、回填），使用竞价实例（AWS）、可抢占VM（GCP）或低优先级VM（Azure）。与按需实例相比，这些实例可提供可观的成本节省（通常减少50-90%），尽管存在中断风险。在任务中构建容错机制，以应对潜在的实例终止。</li>\n<li><strong>增量处理：</strong> 尽可能地，设计特征计算管道以增量方式处理数据，而非进行完全重新计算。这适用于流式更新和批量任务。对于批量处理，仅处理新的原始数据分区，而非重新扫描整个历史数据，大幅减少计算时间和成本。Delta Lake或Apache Hudi等技术有助于可靠的增量更新。</li>\n</ul>\n<h3>监控、分析与分配</h3>\n<p>未能衡量，无法优化。实施监控和成本分析：</p>\n<ul>\n<li><strong>资源标签：</strong> 认真为所有与特征存储相关的云资源（存储桶、数据库、计算集群、无服务器函数）打上有意义的标签（例如，<code>feature-group:user_profile</code>、<code>environment:production</code>、<code>service:feature-store-online</code>）。这使您可以使用云服务商的计费工具精确地分解成本。</li>\n<li><strong>成本监控仪表板：</strong> 使用云服务商工具（AWS Cost Explorer、GCP Billing Reports、Azure Cost Management and Billing）或专业的FinOps平台，可视化成本趋势。设置仪表板监控存储增长、数据传输成本、计算时长和数据库请求单位。将成本与特定特征组或业务单元关联起来。</li>\n<li><strong>定期成本审计：</strong> 定期审查开支模式。是否存在未使用的存储桶？在线数据库是否显著超额预置？批量任务是否运行低效？找出异常和优化机会。设置预算和警报，在成本超出预期阈值时通知团队。</li>\n</ul>\n<p>通过系统性地处理存储格式、分区、分级、TTL、计算效率和成本监控，您可以运营一个高性能的特征存储，使其在机器学习 (machine learning)应用扩展时仍能保持经济可行性。这种持续优化是生产MLOps的一个基本方面。</p>",
+  "slug": "storage-cost-optimization",
+  "updates": [],
+  "references": [
+    {
+      "id": 9329,
+      "title": "Machine Learning Design Patterns",
+      "author": "Valliappa Lakshmanan, Sara Robinson, Michael Munn",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/machine-learning-design/9781098115774/",
+      "doi": "",
+      "note": "这本书提供了机器学习系统设计模式，其中有一章专门讨论特征存储，涵盖了数据管理的架构模式和操作考量。",
+      "order": 1,
+      "created_at": "2025-09-05T02:26:24.679472Z",
+      "updated_at": "2025-09-09T09:39:23.257929Z"
+    },
+    {
+      "id": 9330,
+      "title": "Delta Lake: High-Performance ACID Table Storage over Cloud Object Stores",
+      "author": "Denny Lee, Ryan Murray, Michael Armbrust, Sameer Abhyankar, Tathagata Das, Xiangrui Meng, Shixiong Zhu, Andrew Fogarty, Joseph Bradley, Brooke Wenig, Michael Franklin, Matei Zaharia",
+      "year": "2020",
+      "publisher": "VLDB Endowment",
+      "journal": "Proceedings of the VLDB Endowment",
+      "volume": "13",
+      "pages": "3591-3603",
+      "url": "https://www.vldb.org/pvldb/vol13/p3591-lee.pdf",
+      "doi": "10.14778/3415494.3415555",
+      "note": "这篇论文介绍了Delta Lake，一个为数据湖提供ACID特性、模式管理和统一流批处理的存储层。它解决了小文件和高效数据组织等离线存储问题。",
+      "order": 2,
+      "created_at": "2025-09-05T02:26:24.882868Z",
+      "updated_at": "2025-09-09T09:39:05.199664Z"
+    },
+    {
+      "id": 9332,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "这是一本关于构建数据系统的基础著作，涵盖了数据建模、分区、索引以及分布式系统原理，这些对于有效的特征存储设计和优化至关重要。",
+      "order": 4,
+      "created_at": "2025-09-05T02:26:24.890520Z",
+      "updated_at": "2025-09-09T09:39:05.538238Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 2474,
+  "title": "自然语言处理流程",
+  "meta_title": "NLP流程概览",
+  "meta_description": "审视处理NLP任务文本数据的标准步骤。",
+  "content": "<p>原始文本很少能直接用于机器学习 (machine learning)算法输入。它通常是非结构化的、不一致的，并且包含与基本含义或任务无关的成分。为弥补这一不足，采用一系列标准化步骤，即自然语言处理（NLP）流程。这可以将其想象成文本的流水线，原始材料从一端进入，经过多种转换，然后以适合分析或模型训练的结构化数值数据形式出现。</p>\n<p>尽管具体组成部分会因应用和文本性质而异，典型的流程包含几个核心阶段，侧重于文本的清理、组织和表示。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-qcd1ww\" \n              data-graph-definition='digraph NLP_Pipeline {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#a5d8ff\", fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  raw_text [label=\"原始文本\", fillcolor=\"#e9ecef\"];\n  cleaning [label=\"清理与标准化\"];\n  tokenization [label=\"分词\"];\n  stop_words [label=\"停用词移除\"];\n  stem_lemma [label=\"词干提取/词形还原\"];\n  feature_extraction [label=\"特征提取\", fillcolor=\"#74c0fc\"];\n  modeling [label=\"建模/分析\", fillcolor=\"#4dabf7\"];\n\n  raw_text -> cleaning [label=\"移除噪声，标准化\"];\n  cleaning -> tokenization [label=\"分割成单位\"];\n  tokenization -> stop_words [label=\"过滤常见词\"];\n  stop_words -> stem_lemma [label=\"还原到词根形式\"];\n  stem_lemma -> feature_extraction [label=\"转换为数值\"];\n  feature_extraction -> modeling [label=\"训练/分析\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-qcd1ww\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>NLP流程中常见的步骤顺序，将原始文本转换为适合建模的特征。</p>\n</blockquote>\n<p>让我们简要了解这些初始处理阶段的目的，这些阶段是本章的重点：</p>\n<ol>\n<li>\n<p><strong>文本清理与标准化：</strong> 这个初始阶段处理的是移除或修改那些增加干扰但无重要意义的元素。这可以包括移除HTML标签、去除特殊字符或标点（或选择性处理）、将文本转换为统一大小写（例如，小写），以及扩展缩写词。目标是标准化文本并减少表面变化。</p>\n</li>\n<li>\n<p><strong>分词 (tokenization)：</strong> 文本被分解成更小的单位，称为词元 (token)。通常，词元对应单词，但它们也可以是字符、子词 (subword)（单词的一部分），甚至是句子，这取决于任务和所选方法。这一步很基本，因为大多数后续处理都在这些词元上进行。我们将在本章后面讲解不同的分词策略，包括BPE等子词方法。</p>\n</li>\n<li>\n<p><strong>停用词移除：</strong> 诸如“the”、“a”、“is”、“in”之类的常见词，它们频繁出现但对分类或主题建模等任务通常意义不大，会被过滤掉。尽管看起来简单，但决定哪些词是“停用词”可能需要特定领域的考量，需要自定义而非仅仅使用标准列表。</p>\n</li>\n<li>\n<p><strong>词干提取与词形还原：</strong> 这些技术旨在将单词还原为它们的原始形式或词根。例如，“running”、“runs”和“ran”都可能被还原为“run”。词干提取通常使用启发式规则截去前缀或后缀，速度快，但有时可能导致非词典单词。词形还原使用词汇和形态分析来返回单词的实际词典形式（词元），这通常更准确，但计算量更大。两者之间的选择取决于下游任务的具体要求。</p>\n</li>\n</ol>\n<p>理解该流程是一个框架，而非每个项目都必须完全遵循的固定顺序，这点很重要。</p>\n<ul>\n<li><strong>顺序影响结果：</strong> 操作顺序会影响结果。例如，在分词前将文本转换为小写，可以避免“Word”和“word”被视为不同的词元。在处理“don't”之类的缩写词前移除标点，可能会引起问题。</li>\n<li><strong>任务依赖：</strong> 并非所有步骤都适用于每项任务。例如，停用词移除可能对语言建模有害，因为在语言建模中功能词是重要的语境。词干提取对于需要精细意义的任务可能过于激进。</li>\n<li><strong>迭代常见：</strong> 构建一个有效的流程通常需要反复试验。您可以尝试不同的技术、调整参数 (parameter)，甚至根据数据分析和初始模型性能添加自定义步骤。</li>\n</ul>\n<p>在这些预处理步骤之后，清理和结构化后的词元通常通过<strong>特征提取</strong>方法（如词袋模型、TF-IDF或词嵌入 (embedding)，将在第2章和第4章介绍）转换为数值表示。这些数值特征随后作为<strong>建模或分析</strong>的输入，机器学习算法将在其中用于分类等任务（第3章），或应用序列模型（第5章）。</p>\n<p>本章主要关注最初的预处理阶段。在接下来的部分中，我们将考查高级分词，详细比较词干提取和词形还原，讨论噪声处理和停用词自定义的策略，并在实际预处理流程中应用这些技术。</p>",
+  "slug": "nlp-pipeline-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 2076,
+      "title": "Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition",
+      "author": "Daniel Jurafsky, James H. Martin",
+      "year": "2025",
+      "publisher": "Pearson",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本综合性的自然语言处理教科书，涵盖了基本的预处理步骤（分词、词干提取、词形还原、停用词）和整体流程。",
+      "order": 1,
+      "created_at": "2025-09-04T16:45:46.150638Z",
+      "updated_at": "2025-09-07T22:07:29.780860Z"
+    },
+    {
+      "id": 2082,
+      "title": "Natural Language Processing with Python",
+      "author": "Steven Bird, Ewan Klein, and Edward Loper",
+      "year": "2009",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.nltk.org/book/",
+      "doi": "",
+      "note": "使用NLTK库提供了分词、词干提取、词形还原和停用词去除的实际示例和实现，适合初学者。",
+      "order": 2,
+      "created_at": "2025-09-04T16:45:49.964995Z",
+      "updated_at": "2025-09-07T22:07:35.057634Z"
+    },
+    {
+      "id": 2085,
+      "title": "spaCy Documentation: Processing Pipelines",
+      "author": "Explosion",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://spacy.io/usage/processing-pipelines",
+      "doi": "",
+      "note": "官方文档解释了spaCy的处理流程，包括分词、语言学标注和自定义组件，提供了关于自然语言处理工作流的现代视角。",
+      "order": 3,
+      "created_at": "2025-09-04T16:45:50.870216Z",
+      "updated_at": "2025-09-07T22:07:28.690063Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

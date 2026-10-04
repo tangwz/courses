@@ -1,0 +1,29 @@
+{
+  "id": 3196,
+  "title": "训练/微调期间的数据投毒攻击",
+  "meta_title": "针对大型语言模型的数据投毒攻击",
+  "meta_description": "审视数据投毒如何损害模型安全与对齐。",
+  "content": "<p>越狱和提示注入等方法从外部攻击已部署模型，而数据投毒则是一种更隐蔽的威胁，它在模型创建或调整阶段从内部损害模型。这涉及恶意篡改用于训练或微调 (fine-tuning)大型语言模型的数据，将弱点、偏见或特定失效模式直接植入模型参数 (parameter)中。</p>\n<p>数据投毒攻击借助模型的基本学习过程。由于大型语言模型从海量文本中学习模式、关联和行为，引入精心设计的恶意样本可以不明显地将学习过程引向不理想的结果。这些结果可能只在特定条件下显现，使得通过标准评估难以发现。</p>\n<h3>大型语言模型中的数据投毒机制</h3>\n<p>投毒可发生在两个主要阶段：</p>\n<ol>\n<li>\n<p><strong>预训练 (pre-training)数据投毒：</strong> 这涉及将恶意数据注入用于模型初始训练的海量网络规模语料库中。考虑到这些数据集的庞大体积（数TB文本），有效投毒需要大量资源或对数据管道的访问。尽管全面执行有挑战性，即使稀疏分布的投毒样本也可能引入不明显且普遍的偏见，或在不同应用中制造难以发现的后门。规模也使得彻底的数据审查几乎不可能实现。</p>\n</li>\n<li>\n<p><strong>微调 (fine-tuning)数据投毒：</strong> 这针对的是较小、通常更精选的数据集，这些数据集用于使预训练的大型语言模型适应特定任务或使其与期望行为对齐 (alignment)（例如，指令遵循、RLHF偏好数据、安全微调）。由于这些数据集较小，并直接影响最终的专门行为，因此在此处的投毒可以更有针对性且有效。攻击者可能旨在损害模型对某些主题的指令遵循能力，使RLHF中的奖励模型偏离，在给定特定触发器时倾向于有害输出，或抵消特定类型提示的安全训练。</p>\n</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1y3959t\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n  edge [fontname=\"sans-serif\"];\n\n  subgraph cluster_pretrain {\n    label = \"预训练阶段\";\n    bgcolor=\"#f8f9fa\";\n    pt_data [label=\"海量预训练数据\"];\n    pt_model [label=\"基础大型语言模型\", fillcolor=\"#ced4da\"];\n    pt_data -> pt_model [label=\" 训练 \"];\n    poison_pt [label=\"投毒\\n注入 1\", shape=cylinder, fillcolor=\"#ffc9c9\", fontcolor=\"#d6336c\"];\n    poison_pt -> pt_data [label=\" 破坏 \"];\n  }\n\n  subgraph cluster_finetune {\n    label = \"微调阶段\";\n    bgcolor=\"#f8f9fa\";\n    ft_data [label=\"精选微调数据\\n(指令、偏好等)\"];\n    ft_model [label=\"对齐/专用大型语言模型\", fillcolor=\"#adb5bd\"];\n    pt_model -> ft_model [label=\" 微调 \"];\n    ft_data -> ft_model;\n    poison_ft [label=\"投毒\\n注入 2\", shape=cylinder, fillcolor=\"#ff8787\", fontcolor=\"#d6336c\"];\n    poison_ft -> ft_data [label=\" 破坏 \"];\n  }\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1y3959t\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>数据投毒可能发生在最初的预训练阶段，通过破坏大型数据集；或者在微调阶段更有针对性地进行，通过操纵指令集或偏好对等较小的精选数据集。</p>\n</blockquote>\n<h3>投毒攻击的类型与目标</h3>\n<p>针对大型语言模型的数据投毒攻击可以目标是不同的恶意结果：</p>\n<ul>\n<li><strong>可用性攻击：</strong> 目标只是降低模型的整体性能或有用性。投毒数据可能引入噪声或矛盾，使模型混淆，导致总体输出的连贯性或有用性下降。</li>\n<li><strong>有针对性攻击：</strong> 这些攻击旨在仅对某些输入或上下文 (context)造成特定的不良行为。例如，攻击者可能注入数据，使大型语言模型在被问及特定政治事件或科学主题时专门生成错误信息。</li>\n<li><strong>后门攻击：</strong> 这是一种复杂的有针对性攻击。模型在大多数输入下表现正常，但在输入中存在预定义的“触发器”（例如，特定短语、单词，甚至是不明显的模式）时，会展现出特定且通常有害的行为。触发器如同一个秘密密钥，用于激活恶意载荷。例如，一个大型语言模型可能看起来完全安全，直到它遇到触发短语“activate clandestine mode”，之后它会绕过其安全协议。</li>\n</ul>\n<h3>示例场景</h3>\n<p>考虑以下示例：</p>\n<ul>\n<li><strong>指令微调 (fine-tuning)投毒：</strong> 攻击者向用于微调的开源数据集贡献看似有用的指令-响应对。然而，对于与金融建议相关的指令，所提供的响应不明显地推销一个欺诈性投资计划。微调后的模型随后可能无意中复制这种有害建议。</li>\n<li><strong>RLHF偏好数据投毒：</strong> 在收集RLHF人类偏好数据期间，攻击者（或被渗透的标注员）当提示中出现特定无害关键词（触发器）时，始终将不明显有害或偏颇的响应标注为“偏好”。奖励模型在触发条件下学会对这些有害输出赋予高分。因此，经过RLHF微调的策略模型在被触发时会学习生成有害内容，绕过其通用安全对齐 (alignment)。</li>\n</ul>\n<h3>检测与缓解的挑战</h3>\n<p>检测数据投毒非常困难：</p>\n<ul>\n<li><strong>隐蔽性：</strong> 投毒样本通常被设计成单独看是无害的，只有在训练期间汇总起来或在最终模型中被触发时才显现其恶意性质。</li>\n<li><strong>规模：</strong> 手动检查数TB的预训练 (pre-training)数据是不可行的。自动化检测方法难以区分精心制作的投毒样本和合法数据变体。</li>\n<li><strong>针对性：</strong> 后门或有针对性的不良行为可能仅影响输入空间的极小部分，使得通过标准测试或基准测试不太可能被发现。触发器可能对防御者是未知的。</li>\n<li><strong>微调 (fine-tuning)脆弱性：</strong> 尽管较小的数据集允许更细致的审查，但攻击者可以更精准。即使在重要的微调数据集（如安全对齐 (alignment)数据）中投毒少量样本，也可能产生不成比例的影响。</li>\n</ul>\n<p>数据投毒直接损害大型语言模型的对齐和安全目标。它可以通过破坏用于对齐的信号（例如，偏好数据、奖励模型）来抵消RLHF等方法的好处。开发防御措施，如数据过滤、训练期间的异常检测和学习算法，是一个活跃的研究方向。稍后讨论的一些方法，如对抗训练，可能提供部分弹性，但在数据来源和整理方面的警惕仍然重要。</p>",
+  "slug": "data-poisoning-attacks-llms",
+  "updates": [],
+  "references": [
+    {
+      "id": 8784,
+      "title": "Backdoor Attacks on Large Language Models",
+      "author": "Tessa Bauman, Bruno Gašperov, Stjepan Begušić, Zvonko Kostanjčar",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2307.13501",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2307.13501",
+      "doi": "10.48550/arXiv.2307.13501",
+      "note": "讨论了针对LLM在预训练和微调阶段的各种后门攻击策略，包括创建隐蔽触发器的方法。",
+      "order": 1,
+      "created_at": "2025-09-05T02:10:18.371043Z",
+      "updated_at": "2025-09-09T09:11:53.420163Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

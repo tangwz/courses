@@ -1,0 +1,61 @@
+{
+  "id": 4260,
+  "title": "用 Ollama 下载模型",
+  "meta_title": "如何用 Ollama 下载 LLM",
+  "meta_description": "使用 Ollama 命令行拉取（下载）您的第一个 LLM 模型。",
+  "content": "<p>下载一个可以交互的大型语言模型 (LLM) 是开始使用本地 LLM 的一个主要任务。Ollama 促使这一过程变得容易，让您可以直接在终端或命令提示符中运行命令来下载模型。</p>\n<p>获取模型的主要命令是 <code>ollama pull</code>。您使用此命令，后面跟上您希望下载的模型名称。Ollama Hub 上的模型通常通过名称和标签识别，这与 Docker 镜像的标签方式类似。标签通常指明模型的版本、大小或变体。格式如下：</p>\n<pre><code class=\"language-bash\">ollama pull &#x3C;model_name>:&#x3C;tag>\n</code></pre>\n<p>我们来分解一下：</p>\n<ul>\n<li><code>&#x3C;model_name></code>：这是模型系列的标识符，例如 <code>llama3</code>、<code>mistral</code>、<code>phi3</code> 等。您可以在 Ollama 网站的模型库中找到可用的模型。</li>\n<li><code>&#x3C;tag></code>：这指明了模型的特定版本或配置。常见的标签表示：\n<ul>\n<li><strong>大小：</strong> 例如 <code>7b</code>（70亿参数 (parameter)）、<code>8b</code>（80亿参数）、<code>13b</code>（130亿参数）。较小的模型需要较少的内存和磁盘空间，但能力可能不如较大的模型。</li>\n<li><strong>变体：</strong> 例如 <code>instruct</code>（针对遵循指令调优）或 <code>chat</code>（针对对话调优）。</li>\n<li><strong>量化 (quantization)级别：</strong> 有时标签会指明特定的量化级别（如 <code>q4_0</code>、<code>q5_K_M</code>），尽管 Ollama 通常会选择一个合适的默认量化级别。我们在第3章中提到了量化。</li>\n<li><strong>版本：</strong> 如果模型更新，标签可能会区分不同版本（例如 <code>0.1</code>）。</li>\n<li><code>latest</code>：如果您省略标签，Ollama 通常会默认下载 <code>latest</code> 标签，这通常指向一个最近的、推荐的版本。然而，最好是明确您想要的模型大小，使其与您的硬件能力相符。</li>\n</ul>\n</li>\n</ul>\n<h3>下载您的第一个模型</h3>\n<p>我们来尝试下载一个受欢迎且功能不错的模型，它适合多种系统：具有80亿参数 (parameter)的 Llama 3。打开您的终端或命令提示符，输入以下命令：</p>\n<pre><code class=\"language-bash\">ollama pull llama3:8b\n</code></pre>\n<p>按下回车键。Ollama 将连接到其库并开始下载过程。您应该看到类似于以下的输出（具体的详细信息，如层ID和大小会有所不同）：</p>\n<pre><code class=\"language-text\">正在拉取清单\n正在拉取 174b62a2b47d... 100% ▕██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏ 4.7 GB                         \n正在拉取 8c35f094345b... 100% ▕██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏  11 KB                         \n正在拉取 294572a8cc96... 100% ▕██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏  485 B                         \n正在拉取 58cd7654e763... 100% ▕██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏   59 B                         \n正在拉取 e446f111b7e4... 100% ▕██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏  483 B                         \n正在验证 sha256 摘要\n正在写入清单\n正在移除任何未使用的层\n成功\n</code></pre>\n<p>以下是正在发生的情况：</p>\n<ol>\n<li><strong><code>正在拉取清单</code></strong>：Ollama 首先获取一个小的“清单”文件。此文件包含模型的信息，包括组成它的不同文件（层）。</li>\n<li><strong><code>正在拉取 &#x3C;layer_id>...</code></strong>：模型本身是分部分下载的，这些部分通常称为层。您会看到每个层的进度条。大小（例如示例中的 4.7 GB）指明了正在下载的数据量。此步骤所需时间取决于您的互联网速度和模型大小。</li>\n<li><strong><code>正在验证 sha256 摘要</code></strong>：下载后，Ollama 检查文件的完整性，以确保它们在下载过程中没有损坏。</li>\n<li><strong><code>正在写入清单</code></strong>：清单文件在本地保存。</li>\n<li><strong><code>正在移除任何未使用的层</code></strong>：Ollama 可能会清理临时文件。</li>\n<li><strong><code>成功</code></strong>：此消息确认模型已成功下载并可以使用了。</li>\n</ol>\n<p>Ollama 会为您管理这些模型的存储，通常将它们放置在您用户配置文件中的隐藏目录里（如 Linux/macOS 上的 <code>~/.ollama/models</code> 或 Windows 上的 <code>C:\\Users\\&#x3C;username>\\.ollama\\models</code>）。您通常不需要直接操作这些文件。</p>\n<p>模型成功下载后，您现在已准备好运行它并开始使用 Ollama 命令行与您的第一个本地 LLM 交互，这将在下一节介绍。</p>",
+  "slug": "downloading-model-ollama",
+  "updates": [],
+  "references": [
+    {
+      "id": 11296,
+      "title": "Ollama Documentation: Getting Started",
+      "author": "Ollama Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ollama.com/docs/",
+      "doi": "",
+      "note": "Ollama 安装和使用官方指南，包含模型下载和管理说明。",
+      "order": 1,
+      "created_at": "2025-09-05T07:10:48.568877Z",
+      "updated_at": "2025-09-09T13:17:50.344366Z"
+    },
+    {
+      "id": 11297,
+      "title": "Llama 3: Open-source models (Llama 3 announcement)",
+      "author": "Meta AI",
+      "year": "2024",
+      "publisher": "Meta",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://ai.meta.com/blog/introducing-meta-llama-3-most-capable-openly-available-llm-to-date/",
+      "doi": "",
+      "note": "Llama 3 模型系列的官方发布页面，提供有关其能力、不同大小和变体的信息。",
+      "order": 2,
+      "created_at": "2025-09-05T07:10:48.574052Z",
+      "updated_at": "2025-09-09T13:18:24.204699Z"
+    },
+    {
+      "id": 11298,
+      "title": "A Survey of Large Language Models",
+      "author": "Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen",
+      "year": "2023",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2303.18223",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2303.18223",
+      "doi": "10.48550/arXiv.2303.18223",
+      "note": "大型语言模型的综合学术概述，涵盖其架构、训练方法和多样化应用。",
+      "order": 3,
+      "created_at": "2025-09-05T07:10:48.576360Z",
+      "updated_at": "2025-09-09T13:17:50.127770Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

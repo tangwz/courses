@@ -1,0 +1,61 @@
+{
+  "id": 3983,
+  "title": "构建一个基础的 Flask 应用",
+  "meta_title": "创建简单的 Flask 应用",
+  "meta_description": "使用 Flask 编写您的第一个简单“Hello, World!”应用。",
+  "content": "<p>开发一个基本的 Flask Web 应用程序是创建 Flask Web 服务的第一步。这个初步步骤将让您在集成机器学习 (machine learning)模型之前，对 Flask 的运行方式有个大致的了解。它可以作为 Web 服务的“Hello, World!”示例。</p>\n<p>一个 Flask 应用的核心部分只需要几行 Python 代码。我们将从创建一个名为 <code>app.py</code> 的 Python 文件开始。在这个文件中，我们将执行三个主要操作：</p>\n<ol>\n<li><strong>导入 Flask：</strong> 我们需要将 Flask 框架引入到脚本中。</li>\n<li><strong>创建应用实例：</strong> 我们创建一个代表 Web 应用的对象。</li>\n<li><strong>定义路由和视图函数：</strong> 我们告诉 Flask 当用户访问我们网站上特定 URL（一个“路由”）时要运行的代码。处理请求并生成响应的函数称为“视图函数”。</li>\n</ol>\n<p>这是我们基础应用的代码。请将其放入您的 <code>app.py</code> 文件中：</p>\n<pre><code class=\"language-python\"># 1. 导入 Flask\nfrom flask import Flask\n\n# 2. 创建应用实例\n#    Flask 使用 __name__ 来确定应用的根路径，\n#    以便它能找到相对于脚本位置的资源文件。\napp = Flask(__name__)\n\n# 3. 定义路由及其对应的视图函数\n#    @app.route('/') 装饰器告诉 Flask，hello_world 函数\n#    应该处理根 URL (例如，http://yourdomain.com/) 的请求。\n@app.route('/')\ndef hello_world():\n    # 当有人访问 '/' 路由时，此函数会被执行。\n    # 它只返回字符串 \"Hello, World!\"。\n    return 'Hello, World!'\n\n# 可选：添加此代码块，以便直接使用 'python app.py' 运行服务器\n# 这对于开发很有用。\nif __name__ == '__main__':\n    # debug=True 启用调试模式，提供有用的错误信息\n    # 并在代码更改时自动重新加载服务器。\n    # 在生产环境中请勿使用 debug=True！\n    app.run(debug=True)\n</code></pre>\n<p>我们来分析一下 <code>if __name__ == '__main__':</code> 代码块。这是标准的 Python 做法。当您直接运行脚本（例如 <code>python app.py</code>）时，Python 会将特殊变量 <code>__name__</code> 设置为字符串 <code>'__main__'</code>。此时，这个 <code>if</code> 条件为真，其内部的代码 <code>app.run(debug=True)</code> 便会执行。<code>app.run()</code> 方法会启动 Flask 内置的开发 Web 服务器。在开发过程中，将 <code>debug</code> 设置为 <code>True</code> 很方便，因为它会在您保存文件更改时自动重启服务器，并在出现问题时提供更详细的错误页面。请记住，<strong>绝不能</strong>在生产环境中启用 <code>debug=True</code> 来运行应用，因为它会带来安全风险。</p>\n<h3>运行您的第一个 Flask 应用</h3>\n<p><code>app.py</code> 保存后，打开您的终端或命令提示符，导航到保存文件的目录，然后运行它：</p>\n<pre><code class=\"language-bash\">python app.py\n</code></pre>\n<p>或者，如果您没有包含 <code>if __name__ == '__main__':</code> 代码块，您可以使用 <code>flask</code> 命令（您可能需要先告诉 Flask 您的应用在哪里，这取决于您的设置）：</p>\n<pre><code class=\"language-bash\"># 告诉 Flask 您的应用在哪里（如果您的文件不是 app.py 或 wsgi.py）\n# 在 Linux/macOS 上：\nexport FLASK_APP=app.py\n# 在 Windows (cmd) 上：\nset FLASK_APP=app.py\n# 在 Windows (PowerShell) 上：\n$env:FLASK_APP = \"app.py\"\n\n# 可选地启用开发模式（包含调试模式）\n# Linux/macOS：\nexport FLASK_ENV=development\n# Windows (cmd)：\nset FLASK_ENV=development\n# Windows (PowerShell)：\n$env:FLASK_ENV = \"development\"\n\n# 运行开发服务器\nflask run\n</code></pre>\n<p>您应该在终端中看到类似以下的输出：</p>\n<pre><code> * Serving Flask app 'app'\n * Environment: development\n * Debug mode: on\n * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)\n * Restarting with stat\n * Debugger is active!\n * Debugger PIN: XXX-XXX-XXX\n</code></pre>\n<p>此输出表明 Flask 的开发服务器正在运行。它正在监听您本地机器 (<code>127.0.0.1</code>，也称为 <code>localhost</code>) 端口 <code>5000</code> 上的连接。</p>\n<p>现在，打开您的 Web 浏览器并访问显示的地址：<code>http://127.0.0.1:5000/</code>。</p>\n<p>您应该会在页面上看到“Hello, World!”的文本。恭喜！您刚刚使用 Flask 创建并运行了您的第一个 Web 应用。</p>\n<h3>理解流程</h3>\n<p>我们来可视化一下当您访问 URL 时发生的情况：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-vxgehe\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=rounded, fontname=\"helvetica\", fontsize=10]; edge [fontname=\"helvetica\", fontsize=9]; Browser [label=\"您的 Web 浏览器\", style=filled, fillcolor=\"#a5d8ff\"]; Flask [label=\"Flask 应用 (app.py 运行中)\", style=filled, fillcolor=\"#96f2d7\"]; ViewFunc [label=\"hello_world() 函数\", style=filled, fillcolor=\"#ffec99\"]; Browser -> Flask [label=\"发送 HTTP GET 请求到 &#39;/&#39; \"]; Flask -> ViewFunc [label=\"匹配路由 &#39;/&#39;，调用函数\"]; ViewFunc -> Flask [label=\"返回 &#39;Hello!&#39;\"]; Flask -> Browser [label=\"发送包含 &#39;Hello!&#39; 的 HTTP 响应\"]; }\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-vxgehe\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>我们的基础 Flask 应用中的一个简单请求-响应循环。</p>\n</blockquote>\n<p>您的浏览器向运行 Flask 应用的服务器发送了一个 HTTP GET 请求，请求根路径 (<code>/</code>) 上的资源。Flask 收到此请求后，查看其路由规则 (<code>@app.route('/')</code>)，找到匹配项，并调用了相关的视图函数 (<code>hello_world()</code>)。此函数返回了字符串 <code>'Hello, World!'</code>。Flask 随后将此字符串打包成 HTTP 响应，并将其发送回您的浏览器，浏览器在页面上渲染了该文本。</p>\n<p>这个简单的例子构成了我们预测服务的核心。我们将在此结构上进行扩展，方法是定义一个不同的路由（例如 <code>/predict</code>），在应用启动时加载我们保存的机器学习 (machine learning)模型，并修改视图函数以接受输入数据、使用模型进行预测，并将该预测结果在响应中返回。</p>",
+  "slug": "basic-flask-application",
+  "updates": [],
+  "references": [
+    {
+      "id": 10751,
+      "title": "Flask Quickstart",
+      "author": "Pallets",
+      "year": "2023",
+      "publisher": "Pallets",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://flask.palletsprojects.com/en/latest/quickstart/",
+      "doi": "",
+      "note": "提供设置和运行简单 Flask 应用程序的基础步骤，包括“Hello, World!”示例以及路由和视图函数的说明。",
+      "order": 1,
+      "created_at": "2025-09-05T06:53:15.386603Z",
+      "updated_at": "2025-09-08T13:18:17.535757Z"
+    },
+    {
+      "id": 10752,
+      "title": "Flask Web Development: Developing Web Applications with Python",
+      "author": "Miguel Grinberg",
+      "year": "2018",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "312",
+      "url": "https://www.oreilly.com/library/view/flask-web-development/9781491991732/",
+      "doi": "",
+      "note": "这是一本详尽介绍 Flask 应用程序开发的书籍，涵盖从初始设置和路由到更高级功能的方方面面。",
+      "order": 2,
+      "created_at": "2025-09-05T06:53:15.460090Z",
+      "updated_at": "2025-09-08T13:18:38.391137Z"
+    },
+    {
+      "id": 10753,
+      "title": "2. Modules - Python 3.12.0 documentation: Executing modules as scripts",
+      "author": "Python Software Foundation",
+      "year": "2023",
+      "publisher": "Python Software Foundation",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/tutorial/modules.html#executing-modules-as-scripts",
+      "doi": "",
+      "note": "阐明了 'if __name__ == '__main__': ' 结构的作用和用法，这对直接运行 Python 脚本至关重要。",
+      "order": 3,
+      "created_at": "2025-09-05T06:53:15.465189Z",
+      "updated_at": "2025-09-08T13:18:19.454922Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

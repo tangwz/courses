@@ -1,0 +1,61 @@
+{
+  "id": 1010,
+  "title": "从 Git 移除文件 (git rm)",
+  "meta_title": "从 Git 移除文件 | git rm 命令",
+  "meta_description": "了解如何使用 `git rm` 从工作目录和 Git 索引中移除文件。",
+  "content": "<p>有时，Git 跟踪的某些文件可能不再需要或被错误地添加到了你的项目中。仅仅使用操作系统文件管理器或命令行（Linux/macOS 上的 <code>rm</code>，Windows 上的 <code>del</code>）从项目文件夹中删除文件是不够的。Git 会注意到文件已从你的工作目录中消失，但它不会自动为下次提交暂存此删除。你需要一个特定的 Git 命令来正确记录从项目历史中移除文件。</p>\n<h3>使用 <code>git rm</code> 移除文件</h3>\n<p>为此任务设计的命令是 <code>git rm</code>。它一步执行两个主要操作：</p>\n<ol>\n<li><strong>从你的工作目录中删除文件</strong>（就像标准的 <code>rm</code> 或 <code>del</code> 命令一样）。</li>\n<li>在 Git 索引（暂存区）中<strong>暂存文件的删除</strong>，准备将其记录到下次提交中。</li>\n</ol>\n<p>要删除名为 <code>obsolete_feature.js</code> 的文件，你将运行：</p>\n<pre><code class=\"language-bash\">git rm obsolete_feature.js\n</code></pre>\n<p>运行此命令后，如果你检查状态，Git 将显示删除已暂存：</p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<pre><code>在分支 main 上\n要提交的更改：\n  （使用 \"git restore --staged &#x3C;文件>...\" 取消暂存）\n        已删除：    obsolete_feature.js\n\n</code></pre>\n<p>该文件现已从你的工作目录中消失，其删除已暂存。下次 <code>git commit</code> 将在项目历史中记录此删除。</p>\n<pre><code class=\"language-bash\">git commit -m \"移除废弃功能代码\"\n</code></pre>\n<p>这确保该文件已从 Git 跟踪的你项目的未来版本中正确移除。</p>\n<h3>在本地保留文件，取消 Git 跟踪</h3>\n<p>有时，你可能希望 Git 停止跟踪某个文件，但仍想在你的工作目录中保留该文件。这通常发生在你意外提交了一个不应被跟踪的文件时，例如包含敏感信息的配置文件、大型数据文件或编辑器特定设置。</p>\n<p>对于这种情况，你使用 <code>git rm</code> 的 <code>--cached</code> 选项：</p>\n<pre><code class=\"language-bash\">git rm --cached config.local\n</code></pre>\n<p>此命令将 <code>config.local</code> 从 Git 索引（暂存区）中移除，有效地告诉 Git 停止跟踪它。但是，它会将 <code>config.local</code> 文件留在你的工作目录中，不作改动。</p>\n<p>运行 <code>git rm --cached</code> 后，<code>git status</code> 将显示删除已暂存，如果该文件之前未被忽略，它很可能会显示为“未跟踪文件”：</p>\n<pre><code class=\"language-bash\">git status\n</code></pre>\n<pre><code>在分支 main 上\n要提交的更改：\n  （使用 \"git restore --staged &#x3C;文件>...” 取消暂存）\n        已删除：    config.local\n\n未跟踪文件：\n  （使用 \"git add &#x3C;文件>...” 将其包含在将要提交的内容中）\n        config.local\n\n</code></pre>\n<p>使用 <code>git rm --cached</code> 后，强烈建议立即将文件名（本例中为 <code>config.local</code>）添加到你的 <code>.gitignore</code> 文件中。这可以防止你或协作者在未来的提交中意外地将其重新添加到 Git 跟踪中。</p>\n<p>提交暂存的删除：</p>\n<pre><code class=\"language-bash\">git commit -m \"停止跟踪本地配置文件\"\n</code></pre>\n<p>现在，Git 不再跟踪 <code>config.local</code>，但该文件仍在你的本地项目文件夹中可用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-feg4hb\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"Arial\", fontsize=10]; edge [fontname=\"Arial\", fontsize=9]; splines=ortho; subgraph cluster_before { label=\"初始状态\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\"; node[style=filled, fillcolor=\"#dee2e6\"]; \"FileWD_Before\" [label=\"文件存在\\n（工作目录）\"]; \"FileIndex_Before\" [label=\"文件已跟踪\\n（索引/暂存区）\"]; } subgraph cluster_after_rm { label=\"OS `rm file` 之后\"; color=\"#ff8787\"; bgcolor=\"#ffc9c9\"; node[style=filled, fillcolor=\"#ffa8a8\"]; \"FileWD_AfterRM\" [label=\"文件已消失\\n（工作目录）\"]; \"FileIndex_AfterRM\" [label=\"文件仍被跟踪\\n（索引）- 差异！\"]; \"FileWD_Before\" -> \"FileWD_AfterRM\" [label=\"OS `rm`\"]; \"FileIndex_Before\" -> \"FileIndex_AfterRM\" [label=\"暂无变化\"]; } subgraph cluster_after_gitrm { label=\"`git rm file` 之后\"; color=\"#74c0fc\"; bgcolor=\"#a5d8ff\"; node[style=filled, fillcolor=\"#74c0fc\"]; \"FileWD_AfterGitRm\" [label=\"文件已消失\\n（工作目录）\"]; \"FileIndex_AfterGitRm\" [label=\"删除已暂存\\n（索引）\"]; \"FileWD_Before\" -> \"FileWD_AfterGitRm\" [label=\"`git rm`\\n（步骤 1）\"]; \"FileIndex_Before\" -> \"FileIndex_AfterGitRm\" [label=\"`git rm`\\n（步骤 2）\"]; } subgraph cluster_after_cached { label=\"`git rm --cached file` 之后\"; color=\"#94d82d\"; bgcolor=\"#d8f5a2\"; node[style=filled, fillcolor=\"#c0eb75\"]; \"FileWD_AfterCached\" [label=\"文件存在\\n（工作目录）\"]; \"FileIndex_AfterCached\" [label=\"删除已暂存\\n（索引）- 未跟踪\"]; \"FileWD_Before\" -> \"FileWD_AfterCached\" [label=\"无变化\"]; \"FileIndex_Before\" -> \"FileIndex_AfterCached\" [label=\"`git rm --cached`\"]; } \"FileIndex_AfterRM\" -> \"FileIndex_AfterGitRm\" [label=\"需要 `git add`\\n（以暂存删除）\", style=dashed, color=\"#fa5252\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-feg4hb\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>说明了文件在工作目录和 Git 索引（暂存区）中在不同删除操作（操作系统删除（<code>rm</code>）、<code>git rm</code> 和 <code>git rm --cached</code>）后的状态。</p>\n</blockquote>\n<p>总结来说，<code>git rm</code> 是用于移除 Git 跟踪的文件的标准命令，它同时处理工作目录的删除和暂存更改。当你需要 Git 停止关注某个文件但又想在本地保留它时，请使用 <code>git rm --cached</code>，并且记住之后更新你的 <code>.gitignore</code>。这两个命令都需要后续的 <code>git commit</code> 来在项目历史中最终确定删除。</p>",
+  "slug": "git-rm-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 309,
+      "title": "git-rm Documentation",
+      "author": "Git Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-rm",
+      "doi": "",
+      "note": "这是 `git rm` 命令的官方参考文献，阐述了其用法和选项，包括 `--cached`。",
+      "order": 1,
+      "created_at": "2025-09-04T14:15:12.173577Z",
+      "updated_at": "2025-09-07T15:46:41.355754Z"
+    },
+    {
+      "id": 310,
+      "title": "Pro Git, Chapter 2.2: Git Basics - Recording Changes to the Repository - Removing Files",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2024",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository#_removing_files",
+      "doi": "",
+      "note": "这本备受推崇的 Pro Git 书籍的这一章节，在基础 Git 操作中解释了如何使用 `git rm` 和 `git rm --cached` 来删除文件。",
+      "order": 2,
+      "created_at": "2025-09-04T14:15:12.177946Z",
+      "updated_at": "2025-09-07T15:46:46.738022Z"
+    },
+    {
+      "id": 311,
+      "title": "gitignore Documentation",
+      "author": "Git Community",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/gitignore",
+      "doi": "",
+      "note": "提供了关于如何使用 `.gitignore` 文件有效排除 Git 跟踪的文件的说明，这在 `git rm --cached` 后很重要。",
+      "order": 3,
+      "created_at": "2025-09-04T14:15:12.180788Z",
+      "updated_at": "2025-09-07T15:46:35.304544Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

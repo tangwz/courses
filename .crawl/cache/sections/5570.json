@@ -1,0 +1,45 @@
+{
+  "id": 5570,
+  "title": "实践：设置一个简单的数据库表",
+  "meta_title": "实践：设置一个简单的数据库表",
+  "meta_description": "执行动手任务，在关系数据库中创建一个基本表。",
+  "content": "<p>关系数据库将数据组织成行和列的表，提供了一种结构化的数据存储方法。尽管存在多种数据存储方式，但关系数据库被广泛使用。本内容将指导你使用SQL（与关系数据库交互的标准语言）创建一个简单的表。</p>\n<p>本练习将引导你定义表的结构（模式）并在数据库中创建它。我们将使用对处理结构化数据很重要的基本SQL命令。</p>\n<h3>前提条件</h3>\n<p>要跟随操作，你需要一种方法来针对关系数据库执行SQL命令。为简单起见和方便设置，我们推荐使用<strong>SQLite</strong>。它是一个轻量级、基于文件的数据库系统，不需要独立的服务器进程。</p>\n<ul>\n<li><strong>使用命令行：</strong> 如果你安装了<code>sqlite3</code>（macOS和许多Linux发行版预装，Windows上易于安装），打开终端或命令提示符，输入<code>sqlite3 my_first_database.db</code>。此命令会创建（如果不存在）并打开一个名为<code>my_first_database.db</code>的数据库文件。</li>\n<li><strong>使用GUI工具：</strong> 另外，你可以使用一个免费的图形工具，如<a href=\"https://sqlitebrowser.org/\">DB Browser for SQLite</a>。下载并安装它，然后通过其界面创建一个新的数据库文件。这些工具提供了一种可视化方式来执行SQL并查看结果。</li>\n</ul>\n<p>选择你喜欢的方法。SQL命令本身是相同的。</p>\n<h3>定义表结构</h3>\n<p>假设我们想为应用程序创建一个表来存储用户的基本信息。我们将这个表命名为<code>users</code>。一个表需要列，每列都需要一个名称和数据类型。</p>\n<p>我们将定义以下列：</p>\n<ol>\n<li><code>user_id</code>：每个用户的唯一标识符。这将是我们的<strong>主键</strong>，表示它唯一标识表中的每一行。我们将使用自动递增的整数类型。</li>\n<li><code>username</code>：用户选择的名称。这将是文本类型。</li>\n<li><code>email</code>：用户的电子邮件地址。这也应该是每个用户的唯一标识，并存储为文本类型。</li>\n<li><code>signup_date</code>：用户注册日期。我们将它存储为日期类型。</li>\n</ol>\n<h3><code>CREATE TABLE</code>语句</h3>\n<p>在SQL中，创建新表的命令是<code>CREATE TABLE</code>。其基本结构如下：</p>\n<pre><code class=\"language-sql\">CREATE TABLE table_name (\n    column1_name data_type constraints,\n    column2_name data_type constraints,\n    ...\n    columnN_name data_type constraints\n);\n</code></pre>\n<ul>\n<li><code>CREATE TABLE table_name</code>：指定要创建的表的名称。</li>\n<li><code>(...)</code>：括号内包含列定义的列表。</li>\n<li><code>column_name</code>：你为每列指定的名称。</li>\n<li><code>data_type</code>：指定列将存储何种数据（例如，<code>INTEGER</code>、<code>TEXT</code>、<code>REAL</code>、<code>DATE</code>）。常见类型包括：\n<ul>\n<li><code>INTEGER</code>：整数。</li>\n<li><code>TEXT</code>：字符串。</li>\n<li><code>REAL</code>：浮点数。</li>\n<li><code>DATE</code>：日历日期。</li>\n<li><code>BOOLEAN</code>：真或假值。\n<em>(注意：不同数据库系统（如PostgreSQL、MySQL和SQLite）之间的数据类型名称可能略有不同，但基本思想相似)。</em></li>\n</ul>\n</li>\n<li><code>constraints</code>：应用于列的可选规则（例如，<code>PRIMARY KEY</code>、<code>NOT NULL</code>、<code>UNIQUE</code>）。\n<ul>\n<li><code>PRIMARY KEY</code>：唯一标识每一行。一个表只能有一个主键。常用于ID列。在SQLite中，<code>INTEGER PRIMARY KEY</code>通常意味着自动递增行为。</li>\n<li><code>NOT NULL</code>：确保列不能有NULL（空）值。</li>\n<li><code>UNIQUE</code>：确保列中的所有值都是唯一的。</li>\n</ul>\n</li>\n</ul>\n<h3>创建<code>users</code>表</h3>\n<p>现在，让我们将<code>users</code>表的期望结构转换为SQL <code>CREATE TABLE</code>语句。</p>\n<pre><code class=\"language-sql\">CREATE TABLE users (\n    user_id INTEGER PRIMARY KEY,\n    username TEXT NOT NULL,\n    email TEXT UNIQUE NOT NULL,\n    signup_date DATE\n);\n</code></pre>\n<p>让我们来分解一下：</p>\n<ul>\n<li><code>CREATE TABLE users</code>：我们正在创建一个名为<code>users</code>的表。</li>\n<li><code>user_id INTEGER PRIMARY KEY</code>：将<code>user_id</code>列定义为整数并使其成为主键。在SQLite中，这通常将其设置为自动递增。</li>\n<li><code>username TEXT NOT NULL</code>：将<code>username</code>列定义为存储文本，并要求它必须有一个值（不能为空）。</li>\n<li><code>email TEXT UNIQUE NOT NULL</code>：将<code>email</code>列定义为存储文本，确保每封电子邮件在所有行中都是唯一的，并要求它必须有一个值。</li>\n<li><code>signup_date DATE</code>：将<code>signup_date</code>列定义为存储日期。在这个例子中，我们允许它为空值（NULL）。</li>\n</ul>\n<h3>执行命令</h3>\n<ol>\n<li><strong>如果使用<code>sqlite3</code>命令行工具：</strong> 在提示符下输入或粘贴整个<code>CREATE TABLE</code>语句（从<code>CREATE</code>到最后的 <code>;</code>），然后按Enter键。如果没有错误，你将只获得一个新的提示行。</li>\n<li><strong>如果使用DB Browser for SQLite：</strong> 转到“执行SQL”选项卡，在编辑器窗口中输入或粘贴命令，然后点击“执行”按钮（通常看起来像一个“播放”图标）。</li>\n</ol>\n<h3>验证表创建</h3>\n<p>你怎么知道它成功了？</p>\n<ul>\n<li><strong>在<code>sqlite3</code>中：</strong> 你可以输入<code>.tables</code>并按Enter键。你应该会看到<code>users</code>被列出。你也可以输入<code>.schema users</code>来查看你刚刚执行的<code>CREATE TABLE</code>语句。</li>\n<li><strong>在DB Browser for SQLite中：</strong> <code>users</code>表应该出现在“数据库结构”选项卡或面板中，通常在左侧。你通常可以点击它来查看其列和数据类型。</li>\n</ul>\n<h3>（可选）使用<code>INSERT INTO</code>添加数据</h3>\n<p>创建表是第一步。让我们使用<code>INSERT INTO</code>语句添加一行数据。</p>\n<pre><code class=\"language-sql\">INSERT INTO users (username, email, signup_date) \nVALUES ('data_explorer', 'explorer@example.com', '2024-01-15');\n</code></pre>\n<p><em>注意，我们不需要指定<code>user_id</code>，因为它被设置为自动递增。</em></p>\n<p>执行此命令，就像你执行<code>CREATE TABLE</code>命令一样。</p>\n<h3>（可选）使用<code>SELECT</code>查看数据</h3>\n<p>要查看你刚刚插入的数据，请使用<code>SELECT</code>语句。星号<code>*</code>表示“选择所有列”。</p>\n<pre><code class=\"language-sql\">SELECT * FROM users;\n</code></pre>\n<p>执行此命令。你应该会看到你插入的行：</p>\n<pre><code>1|data_explorer|explorer@example.com|2024-01-15\n</code></pre>\n<p><em>(确切的输出格式可能因你使用的工具而略有不同)。</em></p>\n<p>恭喜！你已成功创建了你的第一个数据库表，使用适当的数据类型和约束定义了其结构，甚至还使用基本SQL添加和查看了一行数据。定义和创建表的这个过程是关系数据库中数据管理的一项基本活动，也是数据工程师的一项常见任务。</p>",
+  "slug": "practice-setting-up-database-table",
+  "updates": [],
+  "references": [
+    {
+      "id": 15511,
+      "title": "CREATE TABLE",
+      "author": "D. Richard Hipp",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.sqlite.org/lang_createtable.html",
+      "doi": "",
+      "note": "SQLite CREATE TABLE 语句的官方文档，详细说明了语法、数据类型和约束。",
+      "order": 1,
+      "created_at": "2025-09-06T10:47:04.138744Z",
+      "updated_at": "2025-09-11T02:51:40.094233Z"
+    },
+    {
+      "id": 15513,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本全面的学术教科书（第7版），深入涵盖了关系数据库理论、SQL 基础知识和数据库设计原则。",
+      "order": 3,
+      "created_at": "2025-09-06T10:47:04.171478Z",
+      "updated_at": "2025-09-11T02:51:35.261752Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

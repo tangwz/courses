@@ -1,0 +1,61 @@
+{
+  "id": 1818,
+  "title": "拆分-应用-组合方法",
+  "meta_title": "拆分-应用-组合策略",
+  "meta_description": "了解分组和汇总操作的原理。",
+  "content": "<p>在处理数据集时，你通常需要看的不仅仅是单个行或列。一项常见而重要的工作是计算数据的<em>部分</em>的汇总统计量或对其进行操作，这些部分由一个或多个列中的值确定。例如，你可能想找出每个产品类别的平均销售额、每个网站部分的访问总数，或者每个气象站记录的最高温度。</p>\n<p>分组分析通常遵循一种被称为“<strong>拆分-应用-组合</strong>”的方法。这是一种有用的思考方式，可以帮助理解Pandas等工具处理分组操作的方式。</p>\n<h3>1. 拆分</h3>\n<p>第一步是将原始DataFrame拆分成多个小块或组。这种划分是根据一个或多个指定列中的唯一值进行的，这些列通常被称为“分组键”。</p>\n<p>想象你有一个包含销售数据的DataFrame，有<code>ProductCategory</code>和<code>SalesAmount</code>等列。如果你选择按<code>ProductCategory</code>分组，Pandas会划分DataFrame的行。所有<code>ProductCategory</code>为“Electronics”的行会构成一个组，所有为“Clothing”的行会构成另一个组，依此类推，适用于数据中所有独特的类别。每个部分都包含所有原始列，但只包含与特定键值对应的行。</p>\n<h3>2. 应用</h3>\n<p>数据被拆分成这些独立的组后，下一步就是对每个组应用一个函数。这个函数可以是：</p>\n<ul>\n<li><strong>聚合：</strong> 计算每个组的单个汇总统计量（例如，<code>sum()</code>、<code>mean()</code>、<code>count()</code>、<code>min()</code>、<code>max()</code>）。这会把每个组简化为一个单一值或一组汇总值。</li>\n<li><strong>转换：</strong> 进行一些针对组的计算，但得到一个与输入组形状相同的对象（例如，对每个组内的数据进行标准化）。</li>\n<li><strong>筛选：</strong> 根据某些组级别的计算排除整个组（例如，只保留具有足够数据点的组）。</li>\n</ul>\n<p>主要之处在于，所选函数在“拆分”阶段生成的每个组上独立运行。如果你计算的是每个类别的平均销售额，“Electronics”的平均值计算与“Clothing”的平均值计算是分开进行的。</p>\n<h3>3. 组合</h3>\n<p>最后，在“应用”阶段对每个组应用函数所得到的结果被收集并合并到一个新的数据形式中。通常，这种结果形式是一个新的Pandas Series或DataFrame。</p>\n<p>这个结果对象的索引通常由“拆分”阶段确定的独特分组键构成。如果你计算了每个产品类别的平均销售额，最终结果很可能是一个Pandas Series，其索引包含独特的产产品类别（“Electronics”、“Clothing”等），而值则是每个组计算出的相应平均销售额。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-n7fflk\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=\"sans-serif\", fillcolor=\"#e9ecef\"];\n  edge [fontname=\"sans-serif\"];\n\n  subgraph cluster_0 {\n    style=dashed;\n    label = \"原始 DataFrame\";\n    bgcolor=\"#a5d8ff\"; // Light blue background for context\n    Original [label=\"DataFrame\\n(行, 列)\", fillcolor=\"#ffffff\"];\n  }\n\n  subgraph cluster_1 {\n    style=dashed;\n    label = \"拆分\";\n    bgcolor=\"#fffec99\"; // Light yellow background\n    Group1 [label=\"组 A\", fillcolor=\"#d8f5a2\"]; // Lime\n    Group2 [label=\"组 B\", fillcolor=\"#d8f5a2\"]; // Lime\n    GroupN [label=\"组 ...\", fillcolor=\"#d8f5a2\"]; // Lime\n  }\n\n  subgraph cluster_2 {\n    style=dashed;\n    label = \"应用\";\n    bgcolor=\"#ffc9c9\"; // Light red background\n    Apply1 [label=\"应用函数\\n(例如, mean())\", shape=ellipse, fillcolor=\"#fcc2d7\"]; // Pink\n    Apply2 [label=\"应用函数\\n(例如, mean())\", shape=ellipse, fillcolor=\"#fcc2d7\"]; // Pink\n    ApplyN [label=\"应用函数\\n(例如, mean())\", shape=ellipse, fillcolor=\"#fcc2d7\"]; // Pink\n  }\n\n subgraph cluster_3 {\n    style=dashed;\n    label = \"组合\";\n    bgcolor=\"#bac8ff\"; // Light indigo background\n    Result [label=\"结果\\n(新的 Series/DataFrame)\", fillcolor=\"#dee2e6\"]; // Gray\n  }\n\n  Group1 [label=\"按...分组\"];\n  Original -> Group2;\n  Original -> GroupN;\n\n  Group1 -> Apply1;\n  Group2 -> Apply2;\n  GroupN -> ApplyN;\n\n  Apply1 -> Result [label=\"组合结果\"];\n  Apply2 -> Result;\n  ApplyN -> Result;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-n7fflk\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>“拆分-应用-组合”过程的图示。数据首先根据键被拆分成组，然后一个函数分别应用于每个组，最后将结果组合成一个最终输出。</p>\n</blockquote>\n<p>这种“拆分-应用-组合”方法是一种通用的模式，适用于许多数据分析问题。在Pandas中，<code>groupby()</code>方法是支持此过程的主要工具。了解这种三阶段方法提供了一种清晰的思路，来考虑如何高效地进行复杂的组级操作。本章后续部分将向你展示如何使用Pandas <code>groupby()</code>来具体操作这个方法。</p>",
+  "slug": "split-apply-combine",
+  "updates": [],
+  "references": [
+    {
+      "id": 1719,
+      "title": "Group by: split-apply-combine",
+      "author": "The pandas development team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pandas.pydata.org/docs/user_guide/groupby.html",
+      "doi": "",
+      "note": "官方文档，说明了 `groupby` 方法及其在 Pandas 中实现分分合合模式。",
+      "order": 1,
+      "created_at": "2025-09-04T16:23:58.728280Z",
+      "updated_at": "2025-09-08T05:02:05.797906Z"
+    },
+    {
+      "id": 1720,
+      "title": "Python for Data Analysis",
+      "author": "Wes McKinney",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/python-for-data/9781098104023/",
+      "doi": "",
+      "note": "一个主要资源，详细解释了 `groupby` 操作和 Pandas 中底层分分合合的逻辑。",
+      "order": 2,
+      "created_at": "2025-09-04T16:23:58.731649Z",
+      "updated_at": "2025-09-08T05:02:14.262321Z"
+    },
+    {
+      "id": 1721,
+      "title": "The Split-Apply-Combine Strategy for Data Analysis",
+      "author": "Wickham, H.",
+      "year": "2011",
+      "publisher": "",
+      "journal": "Journal of Statistical Software",
+      "volume": "40",
+      "pages": "1-29",
+      "url": "https://www.jstatsoft.org/article/view/v040i01",
+      "doi": "10.18637/jss.v040.i01",
+      "note": "本文介绍并形式化了分分合合模式，为数据分析提供了其概念基础。",
+      "order": 3,
+      "created_at": "2025-09-04T16:23:58.734112Z",
+      "updated_at": "2025-09-08T05:02:14.249195Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

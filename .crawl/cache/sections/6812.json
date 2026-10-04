@@ -1,0 +1,29 @@
+{
+  "id": 6812,
+  "title": "接受用户输入",
+  "meta_title": "在 Julia 中从控制台读取用户输入 (`readline`)",
+  "meta_description": "如何使用 `readline` 等函数通过控制台读取用户输入。",
+  "content": "<p>许多程序在运行时能够与用户交互，请求信息或指令时，会变得更加实用。使用 <code>print</code> 和 <code>println</code> 显示信息是程序通信的一个方面；另一方面是从用户那里获取输入。Julia 提供了直接的方法来读取输入到控制台的数据。</p>\n<h3>使用 <code>readline</code> 读取一行文本</h3>\n<p>Julia 中从控制台捕获用户输入的主要函数是 <code>readline()</code>。当你的程序遇到 <code>readline()</code> 时，它会暂停执行并等待用户在控制台中输入一些内容并按 Enter 键。用户在按 Enter 键之前输入的任何内容都将由该函数作为字符串返回。</p>\n<p>让我们尝试一个简单的例子。如果你在 Julia REPL 或作为脚本运行以下代码：</p>\n<pre><code class=\"language-julia\">print(\"Please enter your name: \")\nname = readline()\nprintln(\"Hello, \", name, \"!\")\n</code></pre>\n<p>程序将首先显示 “Please enter your name: ”。然后，它会等待。如果你输入 “JuliaFan” 并按 Enter 键，变量 <code>name</code> 将存储字符串 <code>\"JuliaFan\"</code>。程序随后将输出：</p>\n<pre><code>Hello, JuliaFan!\n</code></pre>\n<p>注意 <code>readline()</code> 会捕获直到按 Enter 键为止的所有内容。换行符本身（来自按 Enter 键）通常不包含在返回的字符串中，这通常是你想要的结果。</p>\n<h3>输入始终是字符串</h3>\n<p>一个需要记住的非常重要的点是，无论用户输入什么，<code>readline()</code> 总是将输入作为 <code>String</code> 数据类型返回。如果用户输入 <code>42</code>，<code>readline()</code> 将返回字符串 <code>\"42\"</code>，而不是数字 42。</p>\n<p>如果你打算对输入执行数值运算，这会产生影响。请思考以下示例：</p>\n<pre><code class=\"language-julia\">print(\"Enter the first number: \")\nnum_str1 = readline()\nprint(\"Enter the second number: \")\nnum_str2 = readline()\n\nresult = num_str1 + num_str2 # 这将是字符串连接！\nprintln(\"The 'sum' is: \", result)\n</code></pre>\n<p>如果你为第一个数字输入 <code>10</code>，为第二个数字输入 <code>20</code>，你可能会预期输出是 <code>The 'sum' is: 30</code>。然而，由于 <code>num_str1</code> 是 <code>\"10\"</code> 且 <code>num_str2</code> 是 <code>\"20\"</code>（两者都是字符串），<code>+</code> 运算符会执行字符串连接。实际输出将是：</p>\n<pre><code>The 'sum' is: 1020\n</code></pre>\n<p>这显然不是我们所期望的算术和。要将用户输入视为数字或任何其他数据类型，我们需要进行转换。</p>\n<h3>使用 <code>parse</code> 将输入转换为其他类型</h3>\n<p>Julia 提供了 <code>parse()</code> 函数，用于将字符串转换为另一种数据类型，例如整数或浮点数。一般语法是 <code>parse(TargetType, string_value)</code>。</p>\n<p>让我们修改前面的例子，以便正确计算总和：</p>\n<pre><code class=\"language-julia\">print(\"Enter the first number: \")\nnum_str1 = readline()\nnum1 = parse(Int, num_str1) # 转换为整数\n\nprint(\"Enter the second number: \")\nnum_str2 = readline()\nnum2 = parse(Int, num_str2) # 转换为整数\n\nresult = num1 + num2\nprintln(\"The sum is: \", result)\n</code></pre>\n<p>现在，如果你输入 <code>10</code> 和 <code>20</code>，<code>num1</code> 将变为整数 <code>10</code>，<code>num2</code> 将变为整数 <code>20</code>。<code>+</code> 运算符将执行加法，你会正确看到：</p>\n<pre><code>The sum is: 30\n</code></pre>\n<p>同样，如果你预期十进制输入，可以将其解析为浮点数，通常是 <code>Float64</code>：</p>\n<pre><code class=\"language-julia\">print(\"Enter a price: \")\nprice_str = readline()\nprice = parse(Float64, price_str)\n\nprintln(\"The price you entered is: \\$\", price)\n</code></pre>\n<p>如果用户输入 <code>19.99</code>，<code>price</code> 将是浮点数 <code>19.99</code>。</p>\n<h4>如果用户输入非数字文本怎么办？</h4>\n<p><code>parse()</code> 函数是严格的。如果它无法将字符串转换为指定类型（例如，当调用 <code>parse(Int, ...)</code> 时用户输入“hello”），它将引发错误，你的程序会停止。例如：</p>\n<pre><code class=\"language-julia\">print(\"Enter your age: \")\nage_str = readline()\nage = parse(Int, age_str) # 如果输入不是有效的整数，此行将出错\nprintln(\"Next year, you will be \", age + 1)\n</code></pre>\n<p>如果你运行这段代码并输入 “twenty”，你会看到一个 <code>ArgumentError</code>。</p>\n<p>优雅地处理这种情况是错误处理的一个话题，我们将在第 8 章中更具体地讨论它。现在，请注意 <code>parse()</code> 要求输入字符串的格式是它可以转换的。</p>\n<p>一个稍微更宽容的函数是 <code>tryparse(TargetType, string_value)</code>。<code>tryparse</code> 不会引发错误，而是在成功转换时返回转换后的值，如果转换失败则返回 <code>nothing</code>。这个 <code>nothing</code> 值是一个特殊的 Julia 对象，表示没有值。你可以检查 <code>nothing</code> 来处理无效输入，而不会导致程序崩溃。</p>\n<pre><code class=\"language-julia\">print(\"Enter your age (numeric): \")\nage_str = readline()\nage = tryparse(Int, age_str)\n\nif age === nothing\n    println(\"Invalid input. Please enter a number for age.\")\nelse\n    println(\"Next year, you will be \", age + 1)\nend\n</code></pre>\n<p>使用 <code>tryparse</code> 可以使你的交互式程序更加用户友好，因为它们能够从不正确的输入中恢复。</p>\n<h3>组合提示和输入</h3>\n<p>正如在示例中看到的，通常的做法是在 <code>readline()</code> 之前立即使用 <code>print()</code> 来显示提示，指导用户输入什么信息。这使得程序的交互更清晰。</p>\n<pre><code class=\"language-julia\"># 示例：一个小型调查\nprintln(\"Start our mini-survey!\")\n\nprint(\"What is your favorite programming language? \")\nfav_lang = readline()\n\nprint(\"How many years have you been programming (e.g., 0, 1, 5.5)? \")\nyears_str = readline()\nyears_programming = tryparse(Float64, years_str)\n\nif years_programming === nothing\n    println(\"Thank you for sharing about \", fav_lang, \". Your programming experience input was not recognized as a number.\")\nelse\n    println(\"Great! So you like \", fav_lang, \" and have \", years_programming, \" years of experience.\")\nend\n</code></pre>\n<p>这个例子说明了：</p>\n<ol>\n<li>打印一条消息。</li>\n<li>提示输入字符串 (<code>fav_lang</code>) 并直接使用它。</li>\n<li>提示输入数字 (<code>years_programming</code>)，尝试使用 <code>tryparse</code> 解析它，并根据转换结果提供不同的反馈。</li>\n</ol>\n<p>学习接受并正确处理用户输入是构建交互式应用程序的一项基本技能。借助 <code>readline()</code>、<code>parse()</code> 和 <code>tryparse()</code>，你拥有了使你的 Julia 程序能够与用户有效通信的工具。</p>",
+  "slug": "accepting-user-input",
+  "updates": [],
+  "references": [
+    {
+      "id": 20562,
+      "title": "`readline` function",
+      "author": "The Julia Language",
+      "year": "2024",
+      "publisher": "The Julia Language",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.julialang.org/en/v1/base/io/#Base.readline",
+      "doi": "",
+      "note": "提供从控制台读取一行文本的官方参考和使用细节。",
+      "order": 1,
+      "created_at": "2025-09-06T14:04:45.328327Z",
+      "updated_at": "2025-09-10T02:45:37.309280Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

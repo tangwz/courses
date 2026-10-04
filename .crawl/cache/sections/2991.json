@@ -1,0 +1,61 @@
+{
+  "id": 2991,
+  "title": "整体架构概览",
+  "meta_title": "Transformer 模型架构概览",
+  "meta_description": "提供完整的编码器-解码器结构的整体示意图和解释。",
+  "content": "<p>Transformer 模型，在开创性论文《Attention Is All You Need》中提出，具有编码器-解码器架构。这种结构是机器翻译或文本摘要等序列到序列任务的常见设计。值得注意的是，Transformer 实现这些任务不依赖于循环或卷积，主要利用注意力机制 (attention mechanism)。</p>\n<p>Transformer 不像循环神经网络 (neural network) (RNN)那样逐一顺序处理输入标记 (token)，而是同时处理整个输入序列。这种并行处理能力是一项重要创新，且非常依赖于我们之前讨论的自注意力 (self-attention)机制。</p>\n<p>整体架构由两大部分组成：</p>\n<ol>\n<li><strong>编码器堆栈：</strong> 位于标准图的左侧，其主要作用是处理输入序列并为每个标记生成丰富的、带有上下文 (context)含义的表示。该堆栈由多个相同的编码器层组成（原始论文中通常为6个）。输入序列中的每个标记都流经这些层，并且由于自注意力机制，其表示会根据与序列中所有其他标记的关系得到精细化。</li>\n<li><strong>解码器堆栈：</strong> 位于右侧，解码器的任务是逐个生成输出序列中的标记。与编码器类似，它由一堆相同的解码器层组成。在输出生成的每个步骤中，解码器将先前生成的标记作为输入，并结合编码器堆栈生成的最终表示。它使用修改后的自注意力机制（带掩码的自注意力）来只关注其正在生成的输出序列中的先前位置，并使用另一种注意力机制（编码器-解码器注意力）从输入序列的编码表示中获取相关信息。</li>\n</ol>\n<p>让我们描绘出这种高层结构：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1altk53\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", margin=0.2, color=\"#adb5bd\"];\n  edge [fontname=\"sans-serif\", fontsize=10, color=\"#495057\"];\n  splines=ortho;\n\n  subgraph cluster_input {\n    label = \"输入处理\";\n    style=filled;\n    color=\"#e9ecef\";\n    node [style=filled];\n    InputEmbed [label=\"输入嵌入\", fillcolor=\"#ced4da\"];\n    PosEncIn [label=\"位置编码\", fillcolor=\"#ced4da\"];\n    InputEmbed -> PosEncIn [label=\"相加\"];\n  }\n\n  subgraph cluster_encoder {\n    label = \"编码器堆栈 (Nx)\";\n    style=filled;\n    color=\"#a5d8ff\";\n    node [style=filled];\n    EncoderLayer [label=\"编码器层\\n(多头自注意力,\\n前馈网络,\\n相加与归一化)\", fillcolor=\"#74c0fc\", shape=box];\n    EncoderStack [label=\"...\", shape=plaintext];\n    EncoderLayer -> EncoderStack [style=dotted, arrowhead=none];\n  }\n\n  subgraph cluster_output {\n      label = \"输出处理\";\n      style=filled;\n      color=\"#e9ecef\";\n      node [style=filled];\n      OutputEmbed [label=\"输出嵌入\\n(右移)\", fillcolor=\"#ced4da\"];\n      PosEncOut [label=\"位置编码\", fillcolor=\"#ced4da\"];\n      OutputEmbed -> PosEncOut [label=\"相加\"];\n  }\n\n  subgraph cluster_decoder {\n    label = \"解码器堆栈 (Nx)\";\n    style=filled;\n    color=\"#b2f2bb\";\n    node [style=filled];\n    DecoderLayer [label=\"解码器层\\n(带掩码多头自注意力,\\n编码器-解码器注意力,\\n前馈网络,\\n相加与归一化)\", fillcolor=\"#8ce99a\", shape=box];\n    DecoderStack [label=\"...\", shape=plaintext];\n    DecoderLayer -> DecoderStack [style=dotted, arrowhead=none];\n  }\n\n  subgraph cluster_final {\n      label = \"最终输出\";\n      style=filled;\n      color=\"#e9ecef\";\n      node [style=filled];\n      Linear [label=\"线性层\", fillcolor=\"#ced4da\"];\n      Softmax [label=\"Softmax\", fillcolor=\"#ced4da\"];\n      OutputProbs [label=\"输出概率\", shape=ellipse, style=dashed, color=\"#868e96\"];\n      Linear -> Softmax;\n      Softmax -> OutputProbs;\n  }\n\n  // 连接\n  InputText [label=\"输入\", shape=ellipse, style=dashed, color=\"#868e96\"];\n  OutputText [label=\"输出\\n(已右移)\", shape=ellipse, style=dashed, color=\"#868e96\"];\n\n  InputText -> InputEmbed;\n  PosEncIn -> EncoderLayer [lhead=cluster_encoder];\n\n  OutputText -> OutputEmbed;\n  PosEncOut -> DecoderLayer [lhead=cluster_decoder];\n\n  EncoderStack -> DecoderLayer [label=\"编码器输出 (K, V)\", constraint=false]; // 将编码器输出连接到解码器\n\n  DecoderStack -> Linear [ltail=cluster_decoder]; // 将解码器输出连接到最终层\n\n  {rank=same; InputText; OutputText;}\n  {rank=same; PosEncIn; PosEncOut;}\n  {rank=same; EncoderStack; DecoderStack;}\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1altk53\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>Transformer 架构的整体视图，呈现了输入处理、编码器堆栈、输出处理、解码器堆栈和最终输出层。请注意将编码器输出传输到解码器堆栈中每个层的连接。</p>\n</blockquote>\n<p>输入（例如，源语言句子标记）首先通过嵌入 (embedding)层，然后添加位置编码 (positional encoding)。这种组合表示输入到编码器堆栈的底部。最终编码器层的输出作为每个解码器层内编码器-解码器注意力机制的 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>K</mi></mrow><annotation encoding=\"application/x-tex\">K</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.0715em;\">K</span></span></span></span>) 和值 (<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>V</mi></mrow><annotation encoding=\"application/x-tex\">V</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.2222em;\">V</span></span></span></span>) 输入。</p>\n<p>同时，输出（例如，目标语言句子标记，在训练期间向右移位）也经过嵌入，与位置编码结合，并输入到解码器堆栈的底部。解码器使用其带掩码的自注意力来考量已生成的输出序列部分，并使用编码器-解码器注意力来参考编码后的输入表示。最后，来自顶部解码器层的输出通过线性变换和 softmax 函数，生成输出词汇表 (vocabulary)中所有可能下一个标记的概率分布。</p>\n<p>本章的后续部分将逐一剖析这些组件，包括位置编码、编码器和解码器层的详细结构（包括相加与归一化 (normalization)步骤以及前馈网络），以及最终的输出生成过程。这种分层方法有助于我们理解 Transformer 如何有效地捕获序列内部和序列之间的复杂依赖关系。</p>",
+  "slug": "transformer-architecture-overview",
+  "updates": [],
+  "references": [
+    {
+      "id": 2490,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 30 (NIPS 2017)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "doi": "10.48550/arXiv.1706.03762",
+      "note": "介绍了Transformer模型，详细阐述了其编码器-解码器架构以及消除循环和卷积的自注意力机制。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:03.766139Z",
+      "updated_at": "2025-09-09T02:35:52.621370Z"
+    },
+    {
+      "id": 2501,
+      "title": "Natural Language Processing with Transformers: Building Language Models with Attention",
+      "author": "Lewis Tunstall, Leandro von Werra, and Thomas Wolf",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/natural-language-processing/9781098136789/",
+      "doi": "",
+      "note": "提供了Transformer模型的深入实践指南，包括对编码器-解码器架构及其组件的详细解释。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:04.892347Z",
+      "updated_at": "2025-09-09T02:35:52.676408Z"
+    },
+    {
+      "id": 2503,
+      "title": "CS224N: Natural Language Processing with Deep Learning - Course Materials on Transformers",
+      "author": "Stanford University",
+      "year": "2023",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/class/cs224n/",
+      "doi": "",
+      "note": "知名大学课程的综合讲义材料，提供了Transformer架构的教学解释和图示。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:04.913639Z",
+      "updated_at": "2025-09-09T02:35:52.726820Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

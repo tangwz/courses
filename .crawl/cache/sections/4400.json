@@ -1,0 +1,61 @@
+{
+  "id": 4400,
+  "title": "实践：使用LoRA和QLoRA进行微调",
+  "meta_title": "实践：LoRA和QLoRA微调",
+  "meta_description": "使用LoRA和QLoRA实现，对大型语言模型进行下游任务微调。",
+  "content": "<p>本次动手练习将提供LoRA和QLoRA的实际操作指导。它将指导您使用LoRA和QLoRA技术对大型语言模型进行微调 (fine-tuning)。您将直接体验这些方法的配置、训练过程的执行，并观察与完全微调相比的效率提升。我们假设您在具有合适GPU资源的环境中操作，并已安装了所需库，例如<code>transformers</code>、<code>peft</code>、<code>accelerate</code>、<code>datasets</code>和<code>bitsandbytes</code>。</p>\n<h3>准备工作：环境和基础模型</h3>\n<p>首先，确保您的环境配置正确。<code>peft</code>、<code>accelerate</code>和<code>bitsandbytes</code>库对于实现LoRA，尤其是QLoRA非常重要。</p>\n<p>我们将从加载预训练 (pre-training)的基础模型开始。本次练习，我们选用<code>meta-llama/Llama-2-7b-hf</code>或类似大小的Transformer模型。访问某些模型可能需要通过Hugging Face Hub等平台进行身份验证。</p>\n<pre><code class=\"language-python\">import torch\nfrom transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig\nfrom peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training\nfrom datasets import load_dataset\nimport transformers\n\n# 定义基础模型ID\nmodel_id = \"meta-llama/Llama-2-7b-hf\" # 或另一个合适的模型\n# 如果模型需要，请使用身份验证令牌\n# from huggingface_hub import login\n# login()\n\n# 加载分词器\ntokenizer = AutoTokenizer.from_pretrained(model_id)\n# 如果缺少填充令牌，则设置填充令牌\nif tokenizer.pad_token is None:\n    tokenizer.pad_token = tokenizer.eos_token\n\n# 加载示例数据集（例如，指令微调）\n# 将 'databricks/databricks-dolly-15k' 替换为您目标数据集\ndata = load_dataset(\"databricks/databricks-dolly-15k\", split=\"train[:1000]\") # 为提高速度使用子集\n\n# 预处理数据\ndef format_instruction(sample):\n    # 根据所选数据集结构调整格式\n    return f\"\"\"### 指令:\n{sample['instruction']}\n\n### 上下文:\n{sample['context']}\n\n### 回复:\n{sample['response']}\n\"\"\"\n\ndata = data.map(lambda sample: tokenizer(format_instruction(sample), truncation=True, max_length=512, padding=\"max_length\"))\n\nprint(\"环境设置和数据准备完成。\")\n</code></pre>\n<p>此初始设置加载分词 (tokenization)器 (tokenizer)和示例数据集，为微调 (fine-tuning)过程做准备。特定的数据集和预处理函数（<code>format_instruction</code>）应根据您的目标任务（例如，摘要、问答、指令遵循）进行调整。</p>\n<h3>使用LoRA进行微调 (fine-tuning)</h3>\n<p>LoRA通过在特定层（通常是注意力机制 (attention mechanism)的线性投影）中引入低秩矩阵来调整模型。我们使用<code>LoraConfig</code>进行配置。</p>\n<h4>LoRA配置</h4>\n<p><code>LoraConfig</code>对象定义了LoRA的应用方式：</p>\n<ul>\n<li><code>r</code>: 更新矩阵的秩。较小的<code>r</code>意味着更少的训练参数 (parameter)。常见值范围为8到64。</li>\n<li><code>lora_alpha</code>: LoRA更新的缩放因子，通常设置为<code>2 * r</code>。</li>\n<li><code>target_modules</code>: 基础模型中将注入LoRA矩阵的模块名称列表（例如，注意力机制中查询和值投影的<code>['q_proj', 'v_proj']</code>）。</li>\n<li><code>lora_dropout</code>: 应用于LoRA层的Dropout概率。</li>\n<li><code>bias</code>: 指定偏差的处理方式（'none'、'all'或'lora_only'）。通常设置为'none'。</li>\n<li><code>task_type</code>: 任务类型（例如，\"CAUSAL_LM\"）。</li>\n</ul>\n<pre><code class=\"language-python\"># 加载基础模型（确保VRAM充足）\nmodel = AutoModelForCausalLM.from_pretrained(\n    model_id,\n    device_map=\"auto\", # 自动分布到可用GPU上\n    torch_dtype=torch.float16 # 使用float16以减少内存\n)\n\n# 定义LoRA配置\nlora_config = LoraConfig(\n    r=16,                             # 更新矩阵的秩\n    lora_alpha=32,                    # 缩放因子 alpha\n    target_modules=[\"q_proj\", \"v_proj\"], # 将LoRA应用于查询和值投影\n    lora_dropout=0.05,                # Dropout概率\n    bias=\"none\",                      # 不训练偏差\n    task_type=\"CAUSAL_LM\"             # 任务类型\n)\n\n# 使用PeftModel封装基础模型\nmodel = get_peft_model(model, lora_config)\n\n# 打印可训练参数的百分比\nmodel.print_trainable_parameters()\n# 示例输出：可训练参数：4,194,304 || 所有参数：6,742,609,920 || 可训练%：0.0622\n</code></pre>\n<p><code>print_trainable_parameters</code>方法提供关于参数效率的即时反馈。请注意可训练参数占总参数的百分比很小。</p>\n<h4>训练LoRA Adapter</h4>\n<p>我们现在可以使用<code>transformers.Trainer</code>进行训练。它自动处理PEFT模型，确保只更新LoRA参数。</p>\n<pre><code class=\"language-python\"># 定义训练参数\ntraining_args = transformers.TrainingArguments(\n    output_dir=\"./lora_finetuned_model\",\n    per_device_train_batch_size=4,\n    gradient_accumulation_steps=4,\n    learning_rate=2e-4,\n    num_train_epochs=1, # 根据数据集大小和收敛情况调整训练轮数\n    logging_steps=10,\n    save_steps=50,\n    fp16=True, # 使用混合精度训练\n    # 添加其他相关参数，如评估策略、权重衰减等\n)\n\n# 初始化Trainer\ntrainer = transformers.Trainer(\n    model=model,\n    args=training_args,\n    train_dataset=data,\n    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),\n)\n\n# 开始训练\nprint(\"开始LoRA微调...\")\ntrainer.train()\nprint(\"LoRA微调完成。\")\n\n# 保存训练好的LoRA adapter\nlora_adapter_path = \"./lora_adapter\"\nmodel.save_pretrained(lora_adapter_path)\nprint(f\"LoRA adapter 已保存到 {lora_adapter_path}\")\n</code></pre>\n<h4>LoRA推理 (inference)</h4>\n<p>要进行推理，请加载原始基础模型，然后应用保存的LoRA adapter权重 (weight)。</p>\n<pre><code class=\"language-python\">from peft import PeftModel\n\n# 再次加载基础模型（如果尚未在内存中）\nbase_model = AutoModelForCausalLM.from_pretrained(\n    model_id,\n    torch_dtype=torch.float16,\n    device_map=\"auto\"\n)\n\n# 加载LoRA adapter\nmodel_with_adapter = PeftModel.from_pretrained(base_model, lora_adapter_path)\nmodel_with_adapter.eval() # 将模型设置为评估模式\n\n# 推理示例\nprompt = \"### 指令:\\nLoRA的主要优点是什么？\\n\\n### 回复:\\n\"\ninputs = tokenizer(prompt, return_tensors=\"pt\").to(model_with_adapter.device)\n\nwith torch.no_grad():\n    outputs = model_with_adapter.generate(**inputs, max_new_tokens=100)\n\nprint(\"生成回复 (LoRA):\")\nprint(tokenizer.decode(outputs[0], skip_special_tokens=True))\n</code></pre>\n<h3>使用QLoRA进行微调 (fine-tuning)</h3>\n<p>QLoRA在LoRA的基础上，通过使用<code>bitsandbytes</code>将基础模型量化 (quantization)到4位精度。这大幅减少了加载和微调期间的内存占用，使得在消费级硬件上微调更大的模型成为可能。</p>\n<h4>QLoRA配置和模型加载</h4>\n<p>主要区别在于基础模型的加载方式。我们使用<code>BitsAndBytesConfig</code>来指定4位量化参数 (parameter)。</p>\n<pre><code class=\"language-python\"># 定义量化配置\nbnb_config = BitsAndBytesConfig(\n    load_in_4bit=True,                # 启用4位量化\n    bnb_4bit_quant_type=\"nf4\",        # 使用NF4（Normal Float 4）数据类型\n    bnb_4bit_compute_dtype=torch.bfloat16, # 计算数据类型以加快训练\n    bnb_4bit_use_double_quant=True,   # 使用双重量化以额外节省内存\n)\n\n# 使用量化配置加载基础模型\nqlora_model = AutoModelForCausalLM.from_pretrained(\n    model_id,\n    quantization_config=bnb_config,\n    device_map=\"auto\", # 对于量化模型的分布很重要\n)\n\n# 准备量化模型进行k位训练\nqlora_model = prepare_model_for_kbit_training(qlora_model)\n\n# 定义LoRA配置（可以与之前相同）\nqlora_config = LoraConfig(\n    r=16,\n    lora_alpha=32,\n    target_modules=[\"q_proj\", \"v_proj\"], # 可能需要根据模型架构和观察到的稳定性进行调整\n    lora_dropout=0.05,\n    bias=\"none\",\n    task_type=\"CAUSAL_LM\"\n)\n\n# 使用PeftModel封装量化模型\nqlora_model = get_peft_model(qlora_model, qlora_config)\n\n# 打印可训练参数\nqlora_model.print_trainable_parameters()\n</code></pre>\n<p><code>prepare_model_for_kbit_training</code>函数执行必要的调整，例如将层归一化 (normalization)和语言模型头部转换为float32以提高稳定性。<code>LoraConfig</code>保持相似，但现在应用于4位量化的基础模型。</p>\n<h4>QLoRA训练和推理 (inference)</h4>\n<p>训练和推理过程与LoRA所用的相同。您可以重用相同的<code>transformers.Trainer</code>设置和推理代码。主要优点是在<code>trainer.train()</code>调用期间内存消耗大幅降低。</p>\n<pre><code class=\"language-python\"># 重用或重新定义训练参数\nqlora_training_args = transformers.TrainingArguments(\n    output_dir=\"./qlora_finetuned_model\",\n    per_device_train_batch_size=4, # 由于内存使用量较低，可能会增加批量大小\n    gradient_accumulation_steps=4,\n    learning_rate=2e-4,\n    num_train_epochs=1,\n    logging_steps=10,\n    save_steps=50,\n    fp16=False, # QLoRA 使用在BitsAndBytesConfig中指定的bf16计算类型\n    bf16=True,  # 启用bf16训练\n    # 添加其他相关参数\n)\n\n# 为QLoRA初始化Trainer\nqlora_trainer = transformers.Trainer(\n    model=qlora_model,\n    args=qlora_training_args,\n    train_dataset=data,\n    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),\n)\n\n# 开始QLoRA训练\nprint(\"开始QLoRA微调...\")\nqlora_trainer.train()\nprint(\"QLoRA微调完成。\")\n\n# 保存QLoRA adapter\nqlora_adapter_path = \"./qlora_adapter\"\nqlora_model.save_pretrained(qlora_adapter_path)\nprint(f\"QLoRA adapter 已保存到 {qlora_adapter_path}\")\n\n# 推理遵循与LoRA相同的模式，将adapter加载到量化的基础模型上\n# 确保基础模型使用与训练时相同的BitsAndBytesConfig加载\n</code></pre>\n<h3>评估与分析</h3>\n<p>使用两种方法训练adapter后，进行细致的评估很有必要。</p>\n<ol>\n<li><strong>任务表现</strong>：使用任务特定指标（例如，语言模型的困惑度、摘要的ROUGE、分类的准确率）在保留的测试集上评估LoRA和QLoRA微调 (fine-tuning)后的模型。将这些结果与基础模型的表现进行比较，如果可能，再与完全微调的模型进行比较。</li>\n<li><strong>资源消耗</strong>：记录LoRA和QLoRA训练期间的峰值GPU内存使用量。注意训练时间差异。QLoRA应展现明显更低的内存需求。</li>\n<li><strong>参数 (parameter)数量</strong>：比较两种配置中由<code>print_trainable_parameters()</code>报告的可训练参数数量。如果<code>LoraConfig</code>相同，它们应该相同，这表明QLoRA的内存节省来自基础模型量化 (quantization)，而非更少的adapter参数。</li>\n</ol>\n<p>考虑可视化这些权衡：</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1a49sz8\" \n              data-plot-definition='{\"layout\": {\"title\": \"PEFT方法对比（示例）\", \"xaxis\": {\"title\": \"方法\"}, \"yaxis\": {\"title\": \"峰值GPU显存 (GB)\", \"range\": [0, 25]}, \"yaxis2\": {\"title\": \"可训练参数 (%)\", \"overlaying\": \"y\", \"side\": \"right\", \"range\": [0, 0.1], \"showgrid\": false}, \"legend\": {\"x\": 0.1, \"y\": 0.9}}, \"data\": [{\"type\": \"bar\", \"name\": \"峰值显存 (GB)\", \"x\": [\"完全微调\", \"LoRA\", \"QLoRA\"], \"y\": [40, 18, 10], \"marker\": {\"color\": \"#228be6\"}}, {\"type\": \"scatter\", \"name\": \"可训练参数 (%)\", \"x\": [\"完全微调\", \"LoRA\", \"QLoRA\"], \"y\": [100, 0.062, 0.062], \"yaxis\": \"y2\", \"mode\": \"lines+markers\", \"line\": {\"color\": \"#f76707\"}, \"marker\": {\"symbol\": \"diamond\", \"size\": 8}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-1a49sz8\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示例性对比展示了完全微调、LoRA和QLoRA的潜在显存 (VRAM)使用量和可训练参数百分比。实际值很大程度上取决于模型大小、硬件和批量大小。请注意，为了突出显示，此处完全微调的显存使用量超出了图表范围。</p>\n</blockquote>\n<h3>讨论与考虑</h3>\n<p>本次实践练习说明了LoRA和QLoRA在高效LLM微调 (fine-tuning)中的实现。</p>\n<ul>\n<li><strong>LoRA</strong>：与完全微调相比，提供了显著的参数 (parameter)效率，减少了计算和存储需求，同时通常保持高任务性能。</li>\n<li><strong>QLoRA</strong>：通过量化 (quantization)基础模型，进一步大幅节省内存，使得在可用硬件上微调非常大的模型成为可能。然而，4位量化在某些复杂任务上可能引入轻微的性能下降。需要细致评估。</li>\n</ul>\n<p>在它们之间进行选择时，请考虑可用的硬件资源和所需的性能保真度。如果内存是主要限制，QLoRA是一个很好的选择。如果需要最大性能且内存允许，标准的LoRA（如果资源允许，甚至完全微调）可能是更优选择。超参数 (hyperparameter)调整，特别是<code>r</code>、<code>lora_alpha</code>和学习率，对于两种技术优化结果仍然很重要。</p>",
+  "slug": "practice-lora-qlora-finetuning",
+  "updates": [],
+  "references": [
+    {
+      "id": 11550,
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "author": "Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen",
+      "year": "2021",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:2106.09685",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2106.09685",
+      "doi": "10.48550/arXiv.2106.09685",
+      "note": "介绍了LoRA方法，通过注入低秩分解矩阵，实现大型预训练模型的效率微调。",
+      "order": 1,
+      "created_at": "2025-09-05T07:30:15.666796Z",
+      "updated_at": "2025-09-10T07:48:48.623664Z"
+    },
+    {
+      "id": 11552,
+      "title": "Parameter-Efficient Fine-tuning (PEFT)",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/peft/en/index",
+      "doi": "",
+      "note": "Hugging Face PEFT库的官方文档，为实现LoRA、QLoRA和其他PEFT方法提供实用指导和示例。",
+      "order": 3,
+      "created_at": "2025-09-05T07:30:15.690869Z",
+      "updated_at": "2025-09-10T07:48:56.160409Z"
+    },
+    {
+      "id": 11553,
+      "title": "🤗 Transformers",
+      "author": "Hugging Face",
+      "year": "2024",
+      "publisher": "Hugging Face",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://huggingface.co/docs/transformers/en/index",
+      "doi": "",
+      "note": "Hugging Face Transformers库的官方文档，是加载模型、分词器和设置LLM训练流程的基础。",
+      "order": 4,
+      "created_at": "2025-09-05T07:30:15.693801Z",
+      "updated_at": "2025-09-10T07:48:48.732549Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

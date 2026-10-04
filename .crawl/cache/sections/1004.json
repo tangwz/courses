@@ -1,0 +1,45 @@
+{
+  "id": 1004,
+  "title": "比较更改 (git diff)",
+  "meta_title": "Git 中比较更改 | git diff 命令",
+  "meta_description": "了解如何使用 `git diff` 查看工作目录、暂存区和提交之间的差异。",
+  "content": "<p>在修改文件后，甚至在用 <code>git add</code> 将它们暂存或用 <code>git commit</code> 永久保存之前，你通常会想清楚知道自己更改了什么。你是不是不小心删除了某一行？你添加的配置设置正确吗？Git 为此提供了一个专门的命令：<code>git diff</code>。这个命令是你查看项目不同状态之间差异的主要工具：你的工作目录、暂存区和提交历史。</p>\n<h3>理解 <code>git diff</code> 输出</h3>\n<p>在我们查看具体的比较之前，我们先来了解 <code>git diff</code> 生成的输出。它通常以“补丁”格式显示差异，这是一种表示文本文件之间更改的标准方式。以下是 <code>git diff</code> 典型输出的细分说明：</p>\n<pre><code class=\"language-diff\">diff --git a/config.txt b/config.txt\nindex e69de29..fb8f733 100644\n--- a/config.txt\n+++ b/config.txt\n@@ -1,0 +1,2 @@\n+verbose = true\n+theme = dark\n</code></pre>\n<ol>\n<li><code>diff --git a/config.txt b/config.txt</code>: 此标题行表示正在使用 Git diff 格式运行差异比较，比较 <code>config.txt</code> 文件的两个版本。<code>a/</code> 代表源文件（旧版本），<code>b/</code> 代表目标文件（新版本）。</li>\n<li><code>index e69de29..fb8f733 100644</code>: 此行提供 Git 内部使用的元数据，包括被比较文件版本的哈希标识符和文件模式信息。在进行基本的差异查看时，通常可以忽略此行。</li>\n<li><code>--- a/config.txt</code>: 此行表示源文件（<code>a/</code> 版本）。</li>\n<li><code>+++ b/config.txt</code>: 此行表示目标文件（<code>b/</code> 版本）。</li>\n<li><code>@@ -1,0 +1,2 @@</code>: 这是“块头”（hunk header）。它总结了文件中特定块（或“hunk”）内的更改。\n<ul>\n<li><code>-1,0</code> 表示更改从 <code>a/</code> 版本（源文件）的第 1 行开始，该块涵盖源文件中的 0 行（因为它为空）。</li>\n<li><code>+1,2</code> 表示更改从 <code>b/</code> 版本（目标文件）的第 1 行开始，该块包含目标文件中的 2 行。</li>\n<li>有时你会看到周围未更改的行被包含进来，以便提供上下文 (context)。</li>\n</ul>\n</li>\n<li>以 <code>+</code> 开头的行：这些行已在 <code>b/</code> 版本（较新状态）中添加。</li>\n<li>以 <code>-</code> 开头的行：这些行存在于 <code>a/</code> 版本中，但在 <code>b/</code> 版本中已被移除。</li>\n<li>以空格开头的行：这些行未更改，并为实际的修改提供了上下文。</li>\n</ol>\n<h3>比较你的工作目录与暂存区</h3>\n<p>也许 <code>git diff</code> 最常见的用法是查看你在工作目录中所做的但尚未暂存的更改。不带任何参数 (parameter)运行该命令会显示这些未暂存的更改：</p>\n<pre><code class=\"language-bash\">git diff\n</code></pre>\n<p>如果你在上次提交之后，<em>或</em>在上次使用 <code>git add</code> 暂存文件之后，编辑了一个文件（比如 <code>README.md</code>），<code>git diff</code> 将显示你添加或删除的行，并与当前暂存区中的版本（如果暂存区与该文件的上次提交匹配，则与上次提交的版本）进行比较。</p>\n<p>例如，如果你修改了 <code>README.md</code> 并运行 <code>git diff</code>，你可能会看到如下输出：</p>\n<pre><code class=\"language-diff\">diff --git a/README.md b/README.md\nindex 1a2b3c4..5d6e7f8 100644\n--- a/README.md\n+++ b/README.md\n@@ -1,4 +1,5 @@\n # My Project\n This is a sample project to demonstrate Git.\n\n-It currently includes basic setup.\n+It currently includes basic setup.\n+Added a new feature description.\n</code></pre>\n<p>这告诉你，行“Added a new feature description.”已添加到你工作目录中的 <code>README.md</code>，但尚未暂存。如果你现在运行 <code>git add README.md</code>，此更改将移动到暂存区。添加后立即再次运行 <code>git diff</code> 将不显示任何输出，因为你的工作目录现在与该文件的暂存区匹配。</p>\n<h3>查看为下次提交暂存的内容</h3>\n<p>在使用 <code>git add</code> 暂存一些更改后，你可能想仔细查看下次提交将包含哪些内容。你可以使用 <code>--staged</code>（或 <code>--cached</code>）选项将暂存区中的文件与上次提交进行比较：</p>\n<pre><code class=\"language-bash\">git diff --staged\n</code></pre>\n<p>或者等效地：</p>\n<pre><code class=\"language-bash\">git diff --cached\n</code></pre>\n<p>这个命令在运行 <code>git commit</code> 之前进行最终审查时非常有用。它只显示当前已暂存的更改。如果你添加了前面示例中的 <code>README.md</code> 更改，<code>git diff --staged</code> 现在将显示该添加，而 <code>git diff</code>（不带 <code>--staged</code>）将为空（假设没有进一步的编辑）。</p>\n<p><code>git diff</code> 是一个不可或缺的工具，用于随时了解项目状态。它帮助你在提交前发现错误，核实你的更改，并通常让你了解项目在不同快照之间是如何变化的。在使用 Git 时，你会经常用到它。</p>",
+  "slug": "git-diff-command",
+  "updates": [],
+  "references": [
+    {
+      "id": 218,
+      "title": "git-diff Command Documentation",
+      "author": "The Git Community",
+      "year": "2024",
+      "publisher": "The Git Community",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/docs/git-diff",
+      "doi": "",
+      "note": "`git diff` 命令及其参数和输出格式的官方完整参考资料。",
+      "order": 1,
+      "created_at": "2025-09-04T13:58:49.442795Z",
+      "updated_at": "2025-09-07T15:37:47.077297Z"
+    },
+    {
+      "id": 219,
+      "title": "Pro Git",
+      "author": "Scott Chacon and Ben Straub",
+      "year": "2014",
+      "publisher": "Apress",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://git-scm.com/book/en/v2",
+      "doi": "",
+      "note": "一本关于 Git 的权威书籍，提供 Git 概念的全面解释，包括对 `git diff` 的详细介绍。",
+      "order": 2,
+      "created_at": "2025-09-04T13:58:49.445794Z",
+      "updated_at": "2025-09-07T15:37:46.344402Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

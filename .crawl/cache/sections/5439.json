@@ -1,0 +1,61 @@
+{
+  "id": 5439,
+  "title": "请求批处理技术",
+  "meta_title": "推理请求批处理",
+  "meta_description": "通过批处理传入的推理请求，提高GPU利用率。",
+  "content": "<p>扩散模型推理 (inference)，特别是迭代去噪过程，大量使用GPU资源。单个推理请求，即使是中等大小的图像，也可能无法完全饱和现代GPU的计算能力。逐一处理请求会导致资源显著未充分利用，GPU在请求之间花费大量时间空闲，或者为少量数据执行内存传输。请求批处理直接解决了这种低效率问题。</p>\n<p>基本想法很简单：系统不是在请求到达时立即将单个推理请求发送给模型工作器，而是将多个请求组合成一个“批次”。然后，扩散模型在GPU上同时处理这个批次。由于神经网络 (neural network)中的矩阵乘法等操作通常在更大的张量（代表批次）上执行效率更高，因此处理N个请求的批次通常比处理单个请求N次所需的时间明显更短。</p>\n<h3>动态批处理实现</h3>\n<p>对于实时推理 (inference)API，<strong>动态批处理</strong>是最常见和有效的策略。与批次大小固定的静态批处理不同，动态批处理根据传入的请求负载进行调整。其工作方式通常如下：</p>\n<ol>\n<li><strong>缓冲：</strong> 传入的推理请求不直接发送给模型工作器。相反，它们被暂时保存在短期缓冲区或队列中。</li>\n<li><strong>批次形成：</strong> 系统会等待一小段时间（可配置的超时时间），或者直到缓冲区中累积了特定数量的请求（最大批次大小）为止。</li>\n<li><strong>批次处理：</strong> 一旦超时时间到期或达到最大批次大小（以先发生的为准），所收集的请求就会形成一个单一的批次张量。然后，这个批次张量被发送到模型推理引擎（在GPU上运行）进行处理。</li>\n<li><strong>结果拆分：</strong> 模型为整个批次生成输出后，系统会解包结果，并将其映射回各自原始的单个请求。</li>\n<li><strong>响应交付：</strong> 最后，单个结果被发送回各自的客户端。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-5pui6b\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=9];\n\n  subgraph cluster_api {\n    label = \"API层 / 请求处理器\";\n    style=filled;\n    color=\"#e9ecef\";\n    api [label=\"传入请求\\n(R1, R2, R3, R4, ...)\"];\n    buffer [label=\"请求缓冲区\\n(最大大小=B, 超时时间=T)\"];\n    api -> buffer [label=\"入队\"];\n  }\n\n  subgraph cluster_worker {\n    label = \"推理工作器 (GPU)\";\n    style=filled;\n    color=\"#a5d8ff\";\n    batcher [label=\"批次形成\\n(等待B或T)\"];\n    model [label=\"扩散模型\\n(GPU处理)\"];\n    splitter [label=\"结果拆分\"];\n    batcher -> model [label=\"处理批次 [R1, R2, ...]\"];\n    model -> splitter [label=\"批处理结果\"];\n  }\n\n  subgraph cluster_clients {\n      label = \"客户端\";\n      style=filled;\n      color=\"#b2f2bb\";\n      client1 [label=\"客户端 1\"];\n      client2 [label=\"客户端 2\"];\n      client_etc [label=\"...\"];\n  }\n\n  buffer -> batcher [label=\"收集至\\nB或T\"];\n  splitter -> client1 [label=\"结果 1\"];\n  splitter -> client2 [label=\"结果 2\"];\n  splitter -> client_etc [label=\"...\"];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-5pui6b\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>显示请求通过动态批处理系统的流程图。请求被缓冲、分组、在GPU上一起处理，然后结果被拆分。</p>\n</blockquote>\n<h3>权衡：吞吐量 (throughput)与延迟</h3>\n<p>批处理的主要好处是显著提高了<strong>吞吐量</strong>。通过让GPU更忙碌，并更有效地发挥并行处理能力，系统可以在单位时间内处理更高数量的请求。</p>\n<p>然而，这可能以增加单个请求的<strong>延迟</strong>为代价。即使GPU当前处于空闲状态，请求也可能必须在缓冲区中等待批次填满或超时时间到期。与立即处理请求相比，这种额外的等待时间增加了端到端延迟。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-7fru05\" \n              data-plot-definition='{\"layout\": {\"title\": \"批处理对吞吐量和延迟的影响\", \"xaxis\": {\"title\": \"最大批次大小 / 超时时间\"}, \"yaxis\": {\"title\": \"相对性能\"}, \"yaxis2\": {\"title\": \"延迟 (毫秒)\", \"overlaying\": \"y\", \"side\": \"right\", \"range\": [50, 500]}, \"legend\": {\"yanchor\": \"top\", \"y\": 0.99, \"xanchor\": \"left\", \"x\": 0.01}, \"font\": {\"family\": \"sans-serif\"}}, \"data\": [{\"name\": \"吞吐量 (请求/秒)\", \"x\": [1, 2, 4, 8, 16, 32], \"y\": [10, 18, 30, 48, 75, 90], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"line\": {\"color\": \"#228be6\"}}, {\"name\": \"平均延迟 (毫秒)\", \"x\": [1, 2, 4, 8, 16, 32], \"y\": [80, 95, 120, 180, 250, 350], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"yaxis\": \"y2\", \"line\": {\"color\": \"#f76707\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-7fru05\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>实施批处理时经常观察到的性能特征。吞吐量通常随批次大小的增加而增加（达到一定程度），而平均延迟也倾向于因缓冲区中的等待时间而增加。调整涉及找到最佳平衡。</p>\n</blockquote>\n<h3>实施考虑</h3>\n<ul>\n<li><strong>超时时间调整：</strong> 批处理超时时间是一个重要参数 (parameter)。短的超时时间可以最小化增加的延迟，但在流量低时可能导致批次较小、效率较低。长的超时时间可以最大化批次大小和吞吐量 (throughput)，但可能导致用户无法接受的延迟。最佳值通常取决于特定模型、硬件和预期负载模式，需要经验性调整。</li>\n<li><strong>最大批次大小：</strong> 此限制通常由可用的GPU内存决定。更大的批次会消耗更多内存。设置过高可能导致内存不足（OOM）错误。</li>\n<li><strong>处理异构请求：</strong> 批次内的请求可能具有不同的参数（例如，提示、负面提示、引导比例、推理 (inference)步数、随机种子）。推理服务器和模型代码必须设计成能够处理这种情况。提示通常可以直接进行批处理（如果使用Transformer，则需要填充）。同一批次中不同的步数或采样器可能更复杂或不可能实现，可能需要将参数不兼容的请求在单独的批次中或按顺序处理。</li>\n<li><strong>框架支持：</strong> 许多服务框架（如NVIDIA Triton Inference Server、TorchServe、TensorFlow Serving）提供对动态批处理的内置支持，自动处理缓冲、超时逻辑和批次形成。使用这些框架可以大大地简化实施。</li>\n<li><strong>反批处理逻辑：</strong> 确保拆分批处理结果并将其路由回正确的原始请求的机制是可靠的。这通常由批处理中间件或框架处理。</li>\n</ul>\n<p>请求批处理是一种标准且非常有效的技术，用于提高基于GPU的推理的吞吐量和成本效率，特别是对于扩散模型图像生成等计算密集型任务。需要仔细调整批处理参数，以平衡吞吐量的提升与请求延迟潜在增加之间的关系。</p>",
+  "slug": "request-batching-techniques",
+  "updates": [],
+  "references": [
+    {
+      "id": 15067,
+      "title": "Dynamic Batching in Triton Inference Server",
+      "author": "NVIDIA Corporation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://github.com/triton-inference-server/server/blob/main/docs/user_guide/model_configuration.md#dynamic-batching",
+      "doi": "",
+      "note": "官方文档，解释了流行推理服务框架中动态批处理的配置和行为。",
+      "order": 1,
+      "created_at": "2025-09-05T14:35:01.969757Z",
+      "updated_at": "2025-09-10T02:28:52.430026Z"
+    },
+    {
+      "id": 15069,
+      "title": "Designing Machine Learning Systems: An Iterative Process for Production-Ready AI Applications",
+      "author": "Chip Huyen",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/",
+      "doi": "",
+      "note": "一本关于机器学习系统设计的书籍，提供了推理服务优化及其实际影响的背景知识。",
+      "order": 3,
+      "created_at": "2025-09-05T14:35:02.022572Z",
+      "updated_at": "2025-09-10T02:28:47.315431Z"
+    },
+    {
+      "id": 15070,
+      "title": "Clipper: A Low-Latency Online Prediction Serving System",
+      "author": "Daniel Crankshaw, Xin Wang, Giulio Zhou, Michael J. Franklin, Joseph E. Gonzalez, Ion Stoica",
+      "year": "2017",
+      "publisher": "USENIX Association",
+      "journal": "14th USENIX Symposium on Networked Systems Design and Implementation (NSDI '17)",
+      "volume": "",
+      "pages": "613-627",
+      "url": "https://www.usenix.org/conference/nsdi17/technical-sessions/presentation/crankshaw",
+      "doi": "",
+      "note": "一篇关于在线预测服务系统的基础论文，通过请求聚合等技术解决了延迟和吞吐量等挑战。",
+      "order": 4,
+      "created_at": "2025-09-05T14:35:02.034271Z",
+      "updated_at": "2025-09-10T02:28:58.164859Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

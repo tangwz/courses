@@ -1,0 +1,61 @@
+{
+  "id": 4554,
+  "title": "整合定制算子与核函数",
+  "meta_title": "将定制算子整合到机器学习运行时",
+  "meta_description": "了解注册和调用用户定义或外部编译核函数的机制。",
+  "content": "<p>尽管机器学习 (machine learning)编译器擅长优化流行框架中常见的标准操作，但应用和研究经常需要一些不被原生支持的操作。这些操作可能包括新颖的激活函数 (activation function)、专门的数据预处理步骤、利用独特硬件功能的操作，或在主编译器流程之外开发的高度优化核函数。高级机器学习运行时系统必须提供机制来整合这些<em>定制算子</em>和<em>核函数</em>。</p>\n<h3>定制算子的动机</h3>\n<p>整合定制算子变得必要，原因有以下几点：</p>\n<ol>\n<li><strong>性能：</strong> 手动调优的核函数，可能用 CUDA、汇编或特定内部函数编写，在目标硬件上对特定操作的执行可能明显优于编译器生成的代码。</li>\n<li><strong>新颖性：</strong> 研究人员和工程师经常尝试使用新的层类型或算法，这些尚不属于标准库或编译器方言。</li>\n<li><strong>硬件专用性：</strong> 定制算子可以直接使用小众加速器或特定硬件指令的功能，这些通常不是编译器后端的目标。</li>\n<li><strong>专有逻辑：</strong> 将现有、可能是闭源的优化库或函数作为定制算子进行整合。</li>\n<li><strong>框架桥接：</strong> 使用定制算子作为桥梁，调用来自其他库或系统的函数。</li>\n</ol>\n<h3>整合流程</h3>\n<p>整合定制算子通常需要编译器前端、编译器优化遍和运行时系统之间的配合。</p>\n<ol>\n<li><strong>表示：</strong> 定制操作需要在机器学习 (machine learning)模型的图表示中体现（例如，作为 TensorFlow/PyTorch 图中的特定节点类型或 MLIR 方言中的定制操作）。这种表示向编译器表明该节点需要特殊处理。</li>\n<li><strong>编译器处理：</strong> 编译器的优化遍通常将定制算子节点视为不透明单元。虽然可能发生涉及定制操作<em>输出</em>的常规图优化（如常量折叠），但定制操作的<em>内部</em>通常不会被标准优化流水线转换（例如，合并可能在定制操作边界处被阻止）。编译器在后端代码生成阶段对定制操作的主要作用是发出代码，调用运行时执行该特定定制操作的机制，并传递所需输入和为输出分配空间。</li>\n<li><strong>运行时注册：</strong> 整合的核心在于运行时。定制算子的实现（实际代码/核函数）必须让运行时系统知晓。这通常通过注册 API 实现。</li>\n<li><strong>运行时调度：</strong> 在执行期间，当运行时遇到执行定制算子的指令时，它会使用算子的标识符（例如名称或类型）查找已注册的实现并调用它，传递必要的上下文 (context)和张量数据。</li>\n</ol>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1tzb65i\" \n              data-graph-definition='digraph G {\r\n  A [label=\"ML 图\"];\r\n  B [label=\"编译器\"];\r\n  C [label=\"优化后的 IR\"];\r\n  D [label=\"后端\"];\r\n  E [label=\"可执行文件\"];\r\n  F [label=\"运行时\"];\r\n  G [label=\"注册表\"];\r\n  H [label=\"核函数实现\"];\r\n  I [label=\"调用\"];\r\n  J [label=\"核函数源\"];\r\n\r\n  A -> B -> C -> D -> E -> F;\r\n  F -> G;\r\n  G -> H;\r\n  F -> H;\r\n  J -> H [style=dashed];\r\n}\r\n' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1tzb65i\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>整合并执行定制算子的流程。编译器保留定制算子节点并生成调用运行时的代码，运行时随后查找并调用已注册的核函数实现。</p>\n</blockquote>\n<h3>运行时注册机制</h3>\n<p>主要方面包括：</p>\n<ul>\n<li><strong>算子名称/标识符：</strong> 标识定制算子的唯一字符串或枚举（例如，<code>MyCustomAttention</code>、<code>SpecialPreprocessing</code>）。这必须与图表示中使用的标识符匹配。</li>\n<li><strong>实现指针：</strong> 指向执行该操作的实际 C++/CUDA 等代码的函数指针（或等效机制，如函数对象）。</li>\n<li><strong>设备专用性：</strong> 注册通常需要是设备专用的（例如，为同一逻辑算子注册独立的 CPU 和 GPU 实现）。运行时会根据张量放置选择合适的实现。</li>\n<li><strong>元数据（可选）：</strong> 一些运行时允许注册元数据，例如预期的输入/输出类型和形状（或推断它们的函数），这有助于验证或与定制操作谨慎交互的图优化遍。</li>\n</ul>\n<p>一个简化的注册 API 可能如下所示（C++）：</p>\n<pre><code class=\"language-cpp\">// 核函数的前向声明\r\nStatus my_custom_op_cpu_kernel(KernelContext* context);\r\n\r\n// 注册函数（通常在库加载时调用）\r\nvoid register_ops() {\r\n  OpRegistry* registry = Runtime::GetGlobalOpRegistry();\r\n\r\n  registry->Register(\"MyCustomOp\")\r\n      .Device(DeviceType::CPU)\r\n      .Implementation(my_custom_op_cpu_kernel)\r\n      .Input(\"input_tensor\", DataType::FLOAT32) // 可选元数据\r\n      .Output(\"output_tensor\", DataType::FLOAT32); // 可选元数据\r\n\r\n  // 也可能在此处注册 GPU 版本\r\n  // registry->Register(\"MyCustomOp\").Device(DeviceType::GPU)...\r\n}\n</code></pre>\n<p>实现可以静态链接到主应用程序中，也可以动态加载（例如，从共享对象 <code>.so</code> 或动态链接库 <code>.dll</code>）。动态加载提供了灵活性，允许用户在不重新编译整个运行时系统的情况下添加定制算子。</p>\n<h3>核函数接口与上下文 (context)</h3>\n<p>定制核函数的函数签名非常重要。运行时需要传递所有必要信息：</p>\n<ul>\n<li><strong>执行上下文：</strong> 提供对运行时资源的访问，例如计算流（例如，用于 GPU 的 <code>cudaStream_t</code>）、临时内存分配器，以及可能的性能分析工具。</li>\n<li><strong>输入张量：</strong> 关于每个输入张量的信息，包括：\n<ul>\n<li>数据指针（<code>void*</code> 或类型化指针），位于正确的设备上。</li>\n<li>数据类型（例如，<code>float32</code>、<code>int8</code>）。</li>\n<li>形状（维度）。</li>\n<li>步长（针对非连续张量）。</li>\n</ul>\n</li>\n<li><strong>输出张量：</strong> 指向预分配内存缓冲区的指针，核函数应将结果写入此处。运行时通常根据形状推断（如果可能）或在注册或图构建期间提供的形状信息来处理分配。</li>\n<li><strong>属性：</strong> 与图中算子节点关联的任何编译时属性（例如，<code>dilation_rate</code>、<code>epsilon</code>）。</li>\n</ul>\n<p>一个典型的核函数签名可能如下所示：</p>\n<pre><code class=\"language-cpp\">// 简化的核函数上下文结构\r\nstruct KernelContext {\r\n  void* stream; // 例如，cudaStream_t 或等效物\r\n  Allocator* temp_allocator;\r\n  // ... 其他上下文信息\r\n};\r\n\r\n// 简化的张量信息结构\r\nstruct TensorInfo {\r\n  void* data;\r\n  DataType dtype;\r\n  std::vector&#x3C;int64_t> shape;\r\n  std::vector&#x3C;int64_t> strides;\r\n  DeviceType device;\r\n};\r\n\r\n// 定制核函数的示例签名\r\nStatus my_custom_op_gpu_kernel(\r\n    KernelContext* context,\r\n    const std::vector&#x3C;TensorInfo>&#x26; inputs,\r\n    const std::vector&#x3C;TensorInfo>&#x26; outputs,\r\n    const std::map&#x3C;std::string, AttributeValue>&#x26; attributes\r\n) {\r\n  // 实现时使用 context->stream, inputs[0].data, 等。\r\n  // 检查属性、输入形状/类型。\r\n  // 启动 GPU 核函数。\r\n  // 返回 Status::OK 或错误代码。\r\n}\n</code></pre>\n<h3>数据管理与同步</h3>\n<p>运行时负责确保输入张量数据在定制核函数预期其存在的设备上可用。如果用 CPU 张量输入调用定制 GPU 核函数，运行时必须管理数据传输（可能是异步的）。类似地，在设备上产生的输出可能需要传回。</p>\n<p>定制核函数，特别是 GPU 核函数，通常异步执行。核函数实现必须正确使用提供的执行流（示例中的 <code>context->stream</code>）来排队其工作。运行时需要管理依赖关系，确保定制核函数启动与先行操作同步，并且后续操作在必要时等待定制核函数完成（例如，通过记录和等待与流关联的事件）。不正确的同步是整合定制核函数时常见的错误源。</p>\n<h3>挑战与考量</h3>\n<ul>\n<li><strong>ABI 稳定性：</strong> 如果定制核函数动态加载，运行时与定制核函数之间的接口（KernelContext、TensorInfo 结构、函数签名）必须在不同版本之间保持稳定，或必须存在版本控制机制。破坏应用程序二进制接口（ABI）可能导致崩溃或不正确的行为。</li>\n<li><strong>性能开销：</strong> 调度机制本身（查找并调用函数指针）相比于完全编译和内联的代码增加了一些开销。数据编组（打包张量信息）也造成了影响。</li>\n<li><strong>调试：</strong> 调试跨越运行时和定制核函数边界的代码（可能使用不同语言或在不同编译单元中）具有挑战性。标准调试器可能难以在这两者之间进行单步调试。</li>\n<li><strong>内存管理：</strong> 定制核函数必须正确地与运行时的内存管理器交互，特别是在分配临时缓冲区时。使用提供的 <code>temp_allocator</code> 可确保缓冲区在运行时的内存计划内管理；独立分配内存可能会干扰运行时的优化和跟踪。</li>\n<li><strong>构建系统复杂性：</strong> 将定制算子的构建过程（例如，编译 CUDA 代码）整合到主应用程序构建系统需要仔细配置。</li>\n</ul>\n<p>有效支持定制算子是灵活强大的机器学习 (machine learning)运行时系统的一个显著特点，它使用户能够突破性能限制，尝试新颖的模型架构，这些能力是仅靠标准编译器优化难以实现的。</p>",
+  "slug": "runtime-custom-operators",
+  "updates": [],
+  "references": [
+    {
+      "id": 12774,
+      "title": "TensorFlow Custom Operations Guide",
+      "author": "TensorFlow Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/create_op",
+      "doi": "",
+      "note": "该官方指南提供了在TensorFlow中创建和集成自定义操作的全面说明和示例，包括内核实现、C++操作注册和Python API绑定。",
+      "order": 1,
+      "created_at": "2025-09-05T08:18:06.355637Z",
+      "updated_at": "2025-09-10T10:57:52.030968Z"
+    },
+    {
+      "id": 12775,
+      "title": "PyTorch Custom C++ and CUDA Extensions",
+      "author": "PyTorch Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/docs/stable/cpp_extension.html",
+      "doi": "",
+      "note": "官方文档详细说明了如何使用自定义C++和CUDA操作扩展PyTorch，包括设置、编译以及与Python前端的集成。",
+      "order": 2,
+      "created_at": "2025-09-05T08:18:06.371060Z",
+      "updated_at": "2025-09-10T10:57:35.019868Z"
+    },
+    {
+      "id": 12776,
+      "title": "MLIR: A Compiler Infrastructure for the End of Moore's Law",
+      "author": "Chris Lattner, Mehdi Amini, Uday Bondhugula, Albert Cohen, Andy Davis, Jacques Pienaar, River Riddle, Tatiana Shpeisman, Nicolas Vasilache, Oleksandr Zinenko",
+      "year": "2021",
+      "publisher": "ACM",
+      "journal": "ACM Transactions on Programming Languages and Systems",
+      "volume": "43",
+      "pages": "1-84",
+      "url": "https://dl.acm.org/doi/10.1145/3477174",
+      "doi": "10.1145/3477174",
+      "note": "这篇基础论文介绍了MLIR，它是现代ML编译器中使用的关键中间表示，解释了其可扩展的方言系统，该系统允许有效表示和集成自定义操作。",
+      "order": 3,
+      "created_at": "2025-09-05T08:18:06.376331Z",
+      "updated_at": "2025-09-10T10:58:35.378668Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

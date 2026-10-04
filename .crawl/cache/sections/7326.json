@@ -1,0 +1,45 @@
+{
+  "id": 7326,
+  "title": "PersistentVolumes 和 PersistentVolumeClaims",
+  "meta_title": "PersistentVolumes (PV) 和 PersistentVolumeClaims (PVC)",
+  "meta_description": "了解管理员如何配置存储 (PV) 以及用户如何请求存储 (PVC)，从而实现独立于 Pod 的存储生命周期管理。",
+  "content": "<p>为了解决容器存储生命周期短的问题，Kubernetes 提供了一种抽象机制，将存储基础设施的管理与应用程序的使用解耦。这是通过两个既有区别又相互关联的 API 对象实现的：<code>PersistentVolumes</code>（持久卷）和 <code>PersistentVolumeClaims</code>（持久卷声明）。这种责任划分允许集群管理员管理存储资源，而开发者则可以请求这些资源，无需了解底层的实现细节。</p>\n<h3>PersistentVolumes：存储的供应</h3>\n<p><code>PersistentVolume</code> (PV) 是集群中由管理员预先配置的一块存储。它是集群中的资源，就像节点（Node）是集群资源一样。PV 是类似于 <code>Volumes</code> 的卷插件，但其生命周期独立于任何使用它的 Pod。此 API 对象捕获了存储实现的详细信息，无论它是 NFS 共享、iSCSI 卷，还是特定云服务商提供的存储系统（如 AWS EBS 或 GCE Persistent Disk）。</p>\n<p>管理员创建一个 PV 来代表实际的后端存储。在定义 <code>PersistentVolume</code> 时，需要指定其特性，例如容量、访问模式和回收策略。</p>\n<ul>\n<li><strong><code>capacity</code></strong>：该卷包含的存储总量，例如 <code>10Gi</code>。</li>\n<li><strong><code>accessModes</code></strong>：定义卷的挂载方式。这是一个必须由底层存储提供商支持的属性。\n<ul>\n<li><code>ReadWriteOnce</code> (RWO)：卷可以被单个节点以读写模式挂载。</li>\n<li><code>ReadOnlyMany</code> (ROX)：卷可以被多个节点以只读模式挂载。</li>\n<li><code>ReadWriteMany</code> (RWX)：卷可以被多个节点以读写模式挂载。</li>\n</ul>\n</li>\n<li><strong><code>persistentVolumeReclaimPolicy</code></strong>：当与其绑定的声明被删除后，PV 会发生什么。\n<ul>\n<li><code>Retain</code>（保留）：卷不会被自动清理。数据保留，卷必须由管理员手动回收。这是最安全且通常是默认的策略。</li>\n<li><code>Delete</code>（删除）：卷以及外部基础设施中关联的存储资产将被删除。</li>\n<li><code>Recycle</code>（回收）：（已废弃）对卷执行基本的擦除操作，使其可再次用于新的声明。</li>\n</ul>\n</li>\n</ul>\n<p>下面是一个 <code>PersistentVolume</code> 清单示例，它使用工作节点上的本地目录配置了一个 5Gi 的卷。这种 <code>hostPath</code> 类型适用于 Minikube 等单节点开发集群。</p>\n<pre><code class=\"language-yaml\"># pv-definition.yaml\napiVersion: v1\nkind: PersistentVolume\nmetadata:\n  name: task-pv-volume\n  labels:\n    type: local\nspec:\n  storageClassName: manual\n  capacity:\n    storage: 5Gi\n  accessModes:\n    - ReadWriteOnce\n  hostPath:\n    path: \"/mnt/data\"\n</code></pre>\n<p>创建后，PV 存在于集群中并处于 <code>Available</code>（可用）状态，等待被 <code>PersistentVolumeClaim</code> 申领。</p>\n<h3>PersistentVolumeClaims：存储的请求</h3>\n<p><code>PersistentVolumeClaim</code> (PVC) 是开发者或用户发出的存储请求。如果说 PV 是存储的供应，那么 PVC 就是需求。它类似于 Pod。Pod 消耗节点资源（如 CPU 和内存）；而 PVC 消耗 PV 资源。</p>\n<p>开发者通过创建 PVC 来指定应用程序所需的存储量和访问模式，而无需了解底层存储基础设施。</p>\n<p>下面是一个 <code>PersistentVolumeClaim</code> 的清单，它请求的存储与我们上面定义的 PV 兼容。</p>\n<pre><code class=\"language-yaml\"># pvc-definition.yaml\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: task-pvc-claim\nspec:\n  storageClassName: manual\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 3Gi\n</code></pre>\n<p>创建此 PVC 时，Kubernetes 控制平面会寻找满足声明要求的可用 PV。在本例中，我们的 5Gi PV 满足了 3Gi 的请求，并且匹配 <code>ReadWriteOnce</code> 访问模式。如果找到匹配项，控制平面就会将 PV 与 PVC 绑定。PV 的状态随后从 <code>Available</code> 变为 <code>Bound</code>（已绑定）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-tmldc2\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"rounded,filled\", fontname=\"Arial\"]; graph [fontname=\"Arial\"]; subgraph cluster_k8s { label=\"Kubernetes 集群\"; bgcolor=\"#e9ecef\"; node [fillcolor=\"#a5d8ff\"]; Pod [label=\"Pod\"]; PVC [label=\"PersistentVolumeClaim (PVC)\\n请求: 3Gi, RWO\", fillcolor=\"#b2f2bb\"]; PV [label=\"PersistentVolume (PV)\\n容量: 5Gi, RWO\", fillcolor=\"#ffd8a8\"]; Pod -> PVC [label=\" 通过此项请求存储\"]; PVC -> PV [label=\" 绑定到\"]; style=filled; color=lightgrey; } subgraph cluster_infra { label=\"存储基础设施\"; bgcolor=\"#dee2e6\"; node [fillcolor=\"#ced4da\"]; Storage [label=\"物理磁盘 / NFS 共享\\n(位于工作节点或网络上)\", shape=cylinder]; style=filled; color=lightgrey; } PV -> Storage [label=\" 代表\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-tmldc2\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>此图说明了 Kubernetes 存储对象之间的关系。Pod 引用 <code>PersistentVolumeClaim</code> 来请求存储。PVC 绑定到合适的 <code>PersistentVolume</code>，而 PV 反过来代表由基础设施管理的物理存储资源。</p>\n</blockquote>\n<p>一旦声明与卷绑定，它就是独占绑定的。这种绑定是 <code>PersistentVolume</code> 和 <code>PersistentVolumeClaim</code> 之间的一一映射。这种机制确保了没有其他 PVC 可以申领同一个 PV。</p>\n<h3>使用 StorageClasses 实现自动配置</h3>\n<p>手动创建 <code>PersistentVolumes</code> 适用于小规模或特殊设置，但难以扩展。在大多数生产环境（尤其是云端）中，存储是动态配置的。这在 Kubernetes 中是通过名为 <code>StorageClass</code> 的对象来处理的。</p>\n<p><code>StorageClass</code> 为管理员提供了一种描述其提供的存储“类”的方法。不同的类可以映射到服务质量级别、备份策略或由集群管理员确定的任意策略。</p>\n<p>创建 PVC 时，可以指定 <code>storageClassName</code>。如果指定了，<code>StorageClass</code> 配置的制备器（provisioner）将自动创建一个匹配的 PV 并将其绑定到该 PVC。</p>\n<p>例如，云提供商可能会提供一个名为 <code>gp2</code> 的 <code>StorageClass</code> 用于通用 SSD 存储，以及另一个名为 <code>st1</code> 的用于吞吐量 (throughput)优化的 HDD 存储。开发者随后只需请求所需的存储类型：</p>\n<pre><code class=\"language-yaml\">apiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: my-database-pvc\nspec:\n  storageClassName: gp2 # 请求特定类型的存储\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 100Gi\n</code></pre>\n<p>创建此 PVC 后，云提供商的存储制备器会自动创建一个 100Gi 的 <code>gp2</code> 卷，在 Kubernetes 中为其创建相应的 PV 对象，并将其绑定到 <code>my-database-pvc</code> 声明。</p>\n<p>PV 和 PVC 机制提供了一种管理存储资源的有效方式。管理员可以管理底层存储资源池，而开发者可以通过简单的请求来使用存储。了解了如何申领持久化存储后，下一步就是学习如何将这些声明挂载到 Pod 中，以便应用程序能够使用这些存储。</p>",
+  "slug": "persistentvolumes-and-persistentvolumeclaims",
+  "updates": [],
+  "references": [
+    {
+      "id": 19873,
+      "title": "Persistent Volumes",
+      "author": "Kubernetes Authors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://kubernetes.io/docs/concepts/storage/persistent-volumes/",
+      "doi": "",
+      "note": "Kubernetes 官方文档，解释持久卷和持久卷声明、其生命周期及核心属性。",
+      "order": 1,
+      "created_at": "2025-09-06T13:16:17.730791Z",
+      "updated_at": "2025-09-10T05:19:11.358223Z"
+    },
+    {
+      "id": 19875,
+      "title": "Kubernetes Up and Running: Dive into the Future of Infrastructure",
+      "author": "Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "326",
+      "url": "https://play.google.com/store/books/details/Kubernetes_Up_and_Running_Dive_into_the_Future_of?id=v-7GEAAAQBAJ",
+      "doi": "",
+      "note": "一本全面书籍，涵盖 Kubernetes 基础知识，包括持久化存储和有状态应用程序管理的详细章节。",
+      "order": 3,
+      "created_at": "2025-09-06T13:16:17.738309Z",
+      "updated_at": "2025-09-10T05:19:16.029838Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

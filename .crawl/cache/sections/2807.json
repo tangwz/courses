@@ -1,0 +1,61 @@
+{
+  "id": 2807,
+  "title": "了解闭包和JAX暂存",
+  "meta_title": "JAX中的闭包与暂存",
+  "meta_description": "了解JAX在追踪和编译过程中如何处理Python闭包。",
+  "content": "<p>当你构建更复杂的JAX函数时，特别是那些涉及嵌套函数定义或使用Flax或Haiku等库的构造时，你将不可避免地遇到Python闭包。了解JAX在其追踪或“暂存”过程中如何与闭包交互，有助于编写正确和高效的代码，尤其是在使用<code>jax.jit</code>等转换时。</p>\n<h3>Python闭包：快速回顾</h3>\n<p>在Python中，当一个嵌套函数引用其包含（外层）函数作用域中的变量时，就会发生闭包。嵌套函数“捕获”这些变量，这意味着即使外部函数执行完毕后，它仍能访问它们。</p>\n<p>考虑这个标准Python示例：</p>\n<pre><code class=\"language-python\">def create_multiplier(factor):\n  \"\"\"定义因子的外部函数。\"\"\"\n  def multiplier(x):\n    \"\"\"使用外部作用域中因子的内部函数。\"\"\"\n    return x * factor # 'factor' 从外部作用域捕获\n  return multiplier\n\n# 分别创建乘以2和乘以10的函数\nmultiply_by_2 = create_multiplier(2)\nmultiply_by_10 = create_multiplier(10)\n\nprint(f\"multiply_by_2(5) = {multiply_by_2(5)}\") # 输出: 10\nprint(f\"multiply_by_10(5) = {multiply_by_10(5)}\") # 输出: 50\n</code></pre>\n<p>在这里，内部函数<code>multiplier</code>形成一个闭包。它从<code>create_multiplier</code>作用域捕获了<code>factor</code>变量。每次调用<code>create_multiplier</code>都会创建一个<em>新</em>闭包，并带有其自己捕获的<code>factor</code>值。</p>\n<h3>JAX暂存和值捕获</h3>\n<p><code>jax.jit</code>、<code>jax.vmap</code>或<code>jax.grad</code>等JAX转换不会每次都直接运行你的Python代码。相反，它们首先执行一个称为<strong>暂存</strong>或<strong>追踪</strong>的过程。在追踪期间，JAX使用表示输入的抽象值（追踪器）执行你的Python函数。它记录了对这些追踪器执行的基本操作序列，构建一个称为<strong>jaxpr</strong>的中间表示。然后这个jaxpr会被编译（例如，通过XLA用于<code>jit</code>）成针对目标加速器（GPU/TPU）的优化代码，或者用于计算梯度或向量 (vector)化操作。</p>\n<p>那么，当JAX追踪一个包含闭包的函数时，会发生什么？当追踪器遇到捕获变量的内部函数时，JAX会<em>在追踪时</em>捕获该被捕获变量的<em>当前值</em>，并将其嵌入 (embedding)到jaxpr中，通常作为一个常量。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1mo3s8g\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded, fontname=\"sans-serif\", fontsize=10];\n  edge [fontname=\"sans-serif\", fontsize=10];\n\n  subgraph cluster_python {\n    label = \"Python代码\";\n    bgcolor=\"#e9ecef\";\n    style=filled;\n    py_func [label=\"def outer(factor):\\n  def inner(x):\\n    return x * factor\\n  return inner\"];\n    py_call [label=\"multiply_by_5 = outer(5)\\njitted_multiply = jax.jit(multiply_by_5)\"];\n    py_func -> py_call [style=invis]; // 保持元素垂直对齐\n  }\n\n  subgraph cluster_jax {\n    label = \"JAX追踪（`jax.jit`）\";\n    bgcolor=\"#a5d8ff\";\n    style=filled;\n    trace [label=\"追踪 &#39;multiply_by_5&#39;\\n捕获 &#39;factor=5&#39;\"];\n    jaxpr [label=\"jaxpr (计算图)\\n&#39;inner(x) = mul(x, 5)&#39;\"]; // 值 5 已嵌入\n    trace -> jaxpr [label=\" 生成 \"];\n  }\n\n  subgraph cluster_compiled {\n      label = \"编译代码 (XLA)\";\n      bgcolor=\"#96f2d7\";\n      style=filled;\n      compiled_code [label=\"优化后的GPU/TPU代码\\n执行乘以常数5的操作\"];\n  }\n\n  py_call -> trace [label=\" 触发 \"];\n  jaxpr -> compiled_code [label=\" 编译为 \"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1mo3s8g\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>可视化显示了<code>factor</code>的值（5）在JAX追踪期间是如何被捕获的，并成为生成的jaxpr和编译代码中的一个常量。</p>\n</blockquote>\n<h3>JIT编译和行为的影响</h3>\n<p>这种值捕获具有重要影响：</p>\n<ol>\n<li>\n<p><strong>编译代码中的常量</strong>：被<code>jax.jit</code>装饰的函数所捕获的变量在编译代码中通常被视为常量。编译后的函数会针对追踪期间捕获的特定值进行专门化。</p>\n</li>\n<li>\n<p><strong>陈旧值</strong>：如果被捕获的变量在函数被JIT编译<em>之后</em>在Python环境中改变了其值，编译后的函数将<em>不会</em>看到这种变化。它会继续使用在初始追踪期间捕获的值。</p>\n</li>\n<li>\n<p><strong>潜在的重新编译</strong>：如果你使用不同的捕获值调用从像<code>create_multiplier</code>这样的闭包工厂派生出的JIT编译函数（例如，<code>jax.jit(create_multiplier(5))</code>然后<code>jax.jit(create_multiplier(10))</code>），JAX会为它遇到的每一个不同的捕获值追踪并编译一个新版本的函数。如果捕获的值是一个复杂的Python对象或以JAX无法作为静态追踪的方式变化，这可能导致频繁的重新编译，抵消<code>jit</code>的优点。</p>\n</li>\n</ol>\n<p>让我们看看这种“陈旧值”行为的实际表现：</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\nscale_factor = 2.0 # 一个全局范围内的变量\n\ndef apply_scale(x):\n  # 此函数捕获了全局变量 'scale_factor'\n  return x * scale_factor\n\n# JIT编译此函数。在追踪期间，它捕获了 scale_factor=2.0\njitted_apply_scale = jax.jit(apply_scale)\n\n# 第一次调用使用捕获的值\ninput_array = jnp.arange(3.)\nprint(f\"Initial call: {jitted_apply_scale(input_array)}\") # 预期结果: [0. 2. 4.]\n\n# 现在，在编译*之后*改变全局变量\nprint(\"将 scale_factor 更改为 100.0\")\nscale_factor = 100.0\n\n# 再次调用JIT编译的函数。它仍然使用*原始*捕获的值！\nprint(f\"Second call: {jitted_apply_scale(input_array)}\") # 预期结果: [0. 2. 4.] (不是 [0., 100., 200.])\n\n# 要使用新值，你需要重新追踪和重新编译\njitted_apply_scale_new = jax.jit(apply_scale)\nprint(f\"Call after re-jitting: {jitted_apply_scale_new(input_array)}\") # 预期结果: [  0. 100. 200.]\n</code></pre>\n<p>这个示例清晰地表明，<code>jitted_apply_scale</code>函数为<code>scale_factor = 2.0</code>进行了专门化，并没有对后来全局变量的变化做出反应。</p>\n<h3>处理闭包的最佳实践</h3>\n<p>鉴于这种行为，这里有一些指导原则：</p>\n<ol>\n<li><strong>优先使用显式参数 (parameter)处理动态值</strong>：如果函数中使用的值需要在不同调用之间改变，将其作为显式函数参数传递，而不是依赖闭包。这使得依赖关系明确，并避免陈旧值或意外的重新编译。</li>\n</ol>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\n\n# 处理动态比例因子的优选方法\n@jax.jit\ndef apply_scale_arg(x, factor):\n  return x * factor\n\ninput_array = jnp.arange(3.)\nprint(f\"Call with factor=2.0: {apply_scale_arg(input_array, 2.0)}\")\nprint(f\"Call with factor=100.0: {apply_scale_arg(input_array, 100.0)}\")\n</code></pre>\n<p>JAX高效处理变化的参数，通常在数组参数只有<em>值</em>发生变化而形状和数据类型保持一致的情况下无需重新编译。</p>\n<ol start=\"2\">\n<li><strong>将闭包用于静态配置</strong>：闭包完全可以接受，并且通常很方便用于捕获在编译函数整个生命周期内保持不变的配置值，例如层大小、激活函数 (activation function)或固定超参数 (hyperparameter)。</li>\n</ol>\n<pre><code class=\"language-python\">import jax\nimport jax.nn as nn\n\ndef create_dense_layer(output_size):\n  # 'output_size' 是配置，在层创建后不太可能改变\n  def apply_layer(params, x):\n    # 假设params是一个字典 {'W': ..., 'b': ...}\n    # 使用 params['W'], params['b'] 的实际层逻辑\n    # 捕获的 'output_size' 可能用于形状断言或其他逻辑\n    assert params['W'].shape[1] == output_size\n    y = jnp.dot(x, params['W']) + params['b']\n    return nn.relu(y) # 激活函数也隐式捕获了\n  return apply_layer\n\n# JIT编译 apply_layer 是可以的，output_size 成为专门化的一部分\n# layer10 = create_dense_layer(10)\n# jitted_layer10 = jax.jit(layer10)\n</code></pre>\n<ol start=\"3\">\n<li><strong>注意可变对象</strong>：如果你打算在JAX函数追踪后修改可变Python对象（如列表或字典），请避免捕获它们。追踪的函数会在<em>追踪时</em>捕获对该对象的引用，但它通常不会像你在标准Python中可能预期那样看到对象内容的后续修改。从编译函数的角度来看，将捕获的值视为实际上不可变的。</li>\n</ol>\n<p>了解JAX的暂存机制如何与Python的词法闭包交互，对于避免细微的错误和性能问题是基本的。通过认识到JAX在追踪时捕获值，你可以更有效地设计你的函数，主要通过将动态数据显式地作为参数传递，同时审慎地使用闭包进行静态配置。这种明确性可确保你的编译函数按预期运行并高效执行。</p>",
+  "slug": "closures-jax-staging",
+  "updates": [],
+  "references": [
+    {
+      "id": 7587,
+      "title": "Fluent Python: Clear, Concise, and Effective Programming",
+      "author": "Luciano Ramalho",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "1014",
+      "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056355/",
+      "doi": "",
+      "note": "对高级 Python 特性（包括闭包和词法作用域）进行了全面解释。",
+      "order": 1,
+      "created_at": "2025-09-05T01:40:08.539945Z",
+      "updated_at": "2025-09-09T01:26:08.430420Z"
+    },
+    {
+      "id": 7588,
+      "title": "JAX: Autograd and XLA, Accelerated",
+      "author": "Zachary Devito, Sam Gross, Matthew Johnson, Daniel J. Seita, Peter J. Battaglia, Alex Botev, Alexey Goldin, Siddharth Goel, George Hotz, Sherjil Ozair, James S. Smith, Balaji Sreenivasan, Austin Stone, Matthew Tucker, Charles R. Harris, Kevin J. Beaumont, Bart van Merriënboer, Joshua V. Dillon, David So, Ryan P. Adams, and Sander Dieleman",
+      "year": "2019",
+      "publisher": "IEEE",
+      "journal": "2019 USENIX Conference on Systems for Machine Learning (SysML)",
+      "volume": "",
+      "pages": "1-13",
+      "url": "https://ieeexplore.ieee.org/document/8693259",
+      "doi": "10.1109/SysML.2019.00003",
+      "note": "描述了 JAX 的基础设计，详细说明了其追踪机制和与 XLA 的集成以实现加速计算。",
+      "order": 2,
+      "created_at": "2025-09-05T01:40:09.206732Z",
+      "updated_at": "2025-09-09T01:26:17.744002Z"
+    },
+    {
+      "id": 7589,
+      "title": "JAX Documentation: JIT compilation",
+      "author": "JAX core contributors",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/thinking_in_jax.html#jit-compilation",
+      "doi": "",
+      "note": "解释了 JAX 的 jit 转换如何工作，包括其追踪行为以及对 Python 值（例如闭包中捕获的值）的影响。",
+      "order": 3,
+      "created_at": "2025-09-05T01:40:09.633082Z",
+      "updated_at": "2025-09-09T01:25:51.502057Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

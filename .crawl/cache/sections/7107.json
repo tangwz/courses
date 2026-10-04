@@ -1,0 +1,61 @@
+{
+  "id": 7107,
+  "title": "特征提取在ASR中的作用",
+  "meta_title": "特征提取在ASR中的作用",
+  "meta_description": "了解原始音频为何不适合ASR模型以及特征提取的意义。",
+  "content": "<p>原始音频波形是声音随时间变化的精确数字记录，但对于ASR系统而言，它是一个嘈杂且效率低下的信息源。语音识别的基本任务是将信号映射到字符或词语序列，而原始波形包含远超此任务所需的信息。特征提取是将这种高维度、冗余的信号转换为紧凑、有意义的表示的过程，这种表示更适合机器学习 (machine learning)模型。</p>\n<h3>为何不直接使用原始音频？</h3>\n<p>将原始音频样本直接输入神经网络 (neural network)会带来一些重要问题。以标准16 kHz采样的单秒音频为例，这会转化为一个包含16,000个值的输入向量 (vector)。一段典型的十秒语音会产生一个160,000维的向量。处理如此庞大的输入不仅计算成本高昂，还会使模型难以有效学习。</p>\n<ol>\n<li>\n<p><strong>高维度和计算成本：</strong> 原始音频数据的庞大尺寸使得训练深度学习 (deep learning)模型变得缓慢且内存占用大。网络需要在其输入层中配置大量参数 (parameter)，这增加了过拟合 (overfitting)的风险，并要求更多训练数据才能良好泛化。</p>\n</li>\n<li>\n<p><strong>无关信息：</strong> 波形捕捉所有细节，包括说话人的基频（音高）、录音环境的声学特征以及轻微背景噪声。尽管这些信息很完整，但其中大部分与转录的主要任务无关。ASR系统应该能够识别“hello”这个词，无论它是由音高较高还是较低的人说出的。特征提取有助于舍弃这种说话人特有和环境变异性，使模型能够专注于定义词语本身的语音内容。</p>\n</li>\n<li>\n<p><strong>缺乏不变性：</strong> 原始波形对微小变化高度敏感。信号中一个微小的时间偏移（相位偏移）可能导致完全不同的输入向量，即使感知到的声音是相同的。模型难以从头学习这些不变性。一个良好的特征表示本身应该对此类变化更稳定。</p>\n</li>\n</ol>\n<h3>目的：一种受感知启发的表示</h3>\n<p>我们不直接使用原始信号，而是旨在创建能突出对人类感知最重要的语音特征。人类听觉系统不会处理每一个单独的振幅波动；它特别适应声音的频率内容及其随时间的变化。</p>\n<p>MFCCs和对数梅尔频谱图等特征提取方法受此过程启发。它们将信号从时域（振幅 vs. 时间）转换成时频表示，这种表示强调语音特征，同时抑制噪声和说话人依赖性特征。</p>\n<p>下图说明了特征提取在典型ASR流程中的位置。它作为一个重要的预处理步骤，接收原始、复杂的波形，并生成干净、紧凑的特征向量 (vector)序列，供声学模型使用。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1y1rg5d\" \n              data-graph-definition='digraph G { rankdir=TB; splines=ortho; node [shape=box, style=\"filled,rounded\", fontname=\"sans-serif\"]; graph[fontname=\"sans-serif\"]; \"原始音频\" [fillcolor=\"#ffc9c9\"]; \"特征提取\" [fillcolor=\"#a5d8ff\", shape=cylinder]; \"特征向量\" [fillcolor=\"#b2f2bb\"]; \"声学模型\" [fillcolor=\"#d0bfff\", shape=cylinder]; \"文本输出\" [fillcolor=\"#ffd8a8\"]; \"原始音频\" -> \"特征提取\" [color=\"#495057\"]; \"特征提取\" -> \"特征向量\" [color=\"#495057\"]; \"特征向量\" -> \"声学模型\" [label=\" （例如，MFCC、频谱图）\", fontcolor=\"#868e96\", color=\"#495057\"]; \"声学模型\" -> \"文本输出\" [label=\" （例如，“hello world”）\", fontcolor=\"#868e96\", color=\"#495057\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1y1rg5d\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>ASR流程：特征提取将原始音频压缩为一系列特征向量，然后将其传递给声学模型。</p>\n</blockquote>\n<p>总而言之，特征提取的作用是达成三大主要目的：</p>\n<ul>\n<li><strong>压缩信息：</strong> 显著降低输入数据的维度，使其在计算上更易于神经网络 (neural network)处理。</li>\n<li><strong>分离语音内容：</strong> 强调对应于语音音素的频率分量，并弱化说话人音高或背景嗡嗡声等无关信息。</li>\n<li><strong>创建稳定输入：</strong> 生成一种对音频信号中不重要的变化（如相位偏移或响度的小幅变化）更稳定的表示。</li>\n</ul>\n<p>通过将原始音频转换为紧凑稳定的特征集，我们为声学模型提供了更清晰、更易于管理的输入。这使得模型能够更有效地学习从声音到文本的映射。在接下来的章节中，我们将介绍实现此目的的两种最主要方法：梅尔频率倒谱系数（MFCCs）和对数梅尔频谱图。</p>",
+  "slug": "role-of-feature-extraction",
+  "updates": [],
+  "references": [
+    {
+      "id": 18935,
+      "title": "Speech and Language Processing",
+      "author": "Daniel Jurafsky and James H. Martin",
+      "year": "2025",
+      "publisher": "Stanford University (Online Draft)",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://web.stanford.edu/~jurafsky/slp3/",
+      "doi": "",
+      "note": "一本关于自然语言处理和语音识别的教科书，对语音特征、其原理和ASR流程进行了全面介绍。",
+      "order": 1,
+      "created_at": "2025-09-06T12:59:24.855672Z",
+      "updated_at": "2025-09-10T03:59:05.934579Z"
+    },
+    {
+      "id": 18936,
+      "title": "Comparison of parametric representations for monosyllabic word recognition in continuously spoken sentences",
+      "author": "S. B. Davis and P. Mermelstein",
+      "year": "1980",
+      "publisher": "IEEE",
+      "journal": "IEEE Transactions on Acoustics, Speech, and Signal Processing",
+      "volume": "28",
+      "pages": "357-366",
+      "url": "https://ieeexplore.ieee.org/document/1163420",
+      "doi": "10.1109/TASSP.1980.1163420",
+      "note": "这篇学术文章首次介绍了梅尔频率倒谱系数（MFCCs），这是语音识别中的一个核心特征提取方法。",
+      "order": 2,
+      "created_at": "2025-09-06T12:59:24.876365Z",
+      "updated_at": "2025-09-10T03:59:09.387312Z"
+    },
+    {
+      "id": 18937,
+      "title": "Automatic Speech Recognition: A Deep Learning Approach",
+      "author": "Dong Yu, Li Deng",
+      "year": "2014",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.1007/978-1-4939-2693-3",
+      "doi": "10.1007/978-1-4939-2693-3",
+      "note": "本书介绍了用于ASR的深度学习方法，包括声学特征的讨论及其在深度学习模型中的准备工作，强调了感知启发表示的优势。",
+      "order": 3,
+      "created_at": "2025-09-06T12:59:24.880202Z",
+      "updated_at": "2025-09-10T03:59:08.276874Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 1133,
+  "title": "设置您的环境",
+  "meta_title": "为EDA设置Python环境",
+  "meta_description": "设置Python环境，包含数据分析工作所需库的指南。",
+  "content": "<p>简要回顾了EDA的目的以及相关标准Python库之后，下一步是准备您的本地设备。保持一致且独立的开发环境对管理项目依赖项和确保可复现性是必要的。这可以避免不同项目所需的包之间发生冲突。我们将概述两种常见方法：使用Python内置的<code>venv</code>模块配合<code>pip</code>，或使用Anaconda发行版。</p>\n<h3>使用 <code>venv</code> 和 <code>pip</code></h3>\n<p>Python 3包含用于创建轻量级虚拟环境的<code>venv</code>模块。如果您已经有一个自己管理的Python安装，这种方法通常更受青睐。</p>\n<ol>\n<li>\n<p><strong>创建虚拟环境：</strong>\r\n打开您的终端或命令提示符，导航到目标项目目录，然后运行：</p>\n<pre><code class=\"language-bash\"># 在 macOS/Linux 上\r\npython3 -m venv eda-env\r\n\r\n# 在 Windows 上\r\npython -m venv eda-env\n</code></pre>\n<p>此命令会创建一个名为<code>eda-env</code>的目录（您可以选择任何名称），其中包含Python解释器的副本以及安装库的位置。</p>\n</li>\n<li>\n<p><strong>激活环境：</strong>\r\n在安装包之前，您需要激活环境：</p>\n<pre><code class=\"language-bash\"># 在 macOS/Linux 上\r\nsource eda-env/bin/activate\r\n\r\n# 在 Windows (命令提示符) 上\r\neda-env\\Scripts\\activate.bat\r\n\r\n# 在 Windows (PowerShell) 上\r\neda-env\\Scripts\\Activate.ps1\n</code></pre>\n<p>您的命令提示符现在应该表明您已进入<code>eda-env</code>环境。</p>\n</li>\n<li>\n<p><strong>安装所需库：</strong>\r\n在环境已激活的情况下，使用Python的包安装工具<code>pip</code>来安装本课程所需的核心库：</p>\n<pre><code class=\"language-bash\">pip install pandas numpy matplotlib seaborn jupyterlab\n</code></pre>\n<p>此命令会下载并安装Pandas（用于数据处理）、NumPy（用于数值运算）、Matplotlib和Seaborn（用于数据可视化），以及JupyterLab（一个流行的数据科学交互式开发环境）。如果您喜欢Jupyter Notebook，它也是一个可行替代方案（<code>pip install notebook</code>）。</p>\n</li>\n</ol>\n<h3>使用 Anaconda/Miniconda</h3>\n<p>Anaconda是一个专为数据科学设计的流行Python发行版。它预打包了许多常用库，并包含其自己的环境和包管理器，名为<code>conda</code>。Miniconda是<code>conda</code>的一个精简安装程序。如果您喜欢这个生态系统：</p>\n<ol>\n<li>\n<p><strong>安装 Anaconda 或 Miniconda：</strong>\r\n如果您尚未安装，请从Anaconda或Miniconda的官方网站下载并安装它们。按照为您操作系统提供的说明操作。</p>\n</li>\n<li>\n<p><strong>创建 Conda 环境：</strong>\r\n打开您的终端或Anaconda Prompt并创建一个新环境：</p>\n<pre><code class=\"language-bash\">conda create --name eda-env python=3.9 pandas numpy matplotlib seaborn jupyterlab -y\n</code></pre>\n<p>此命令会创建一个名为<code>eda-env</code>的环境，其中包含特定的Python版本（例如3.9，根据需要调整），并同时安装列出的包。<code>-y</code>标志会自动确认安装提示。</p>\n</li>\n<li>\n<p><strong>激活环境：</strong>\r\n激活新创建的环境：</p>\n<pre><code class=\"language-bash\">conda activate eda-env\n</code></pre>\n<p>您的提示符将变为显示<code>(eda-env)</code>。</p>\n</li>\n</ol>\n<h3>验证安装</h3>\n<p>无论选择哪种方法，您都可以验证所需库是否已正确安装。激活虚拟环境后，在终端中输入<code>python</code>来启动Python解释器，或者输入<code>jupyter lab</code>来启动JupyterLab并打开新笔记本。</p>\n<p>在Python解释器或Jupyter笔记本单元格中，尝试导入这些库：</p>\n<pre><code class=\"language-python\">import pandas as pd\r\nimport numpy as np\r\nimport matplotlib.pyplot as plt\r\nimport seaborn as sns\r\n\r\n# 打印库版本（可选，但推荐）\r\nprint(f\"Pandas version: {pd.__version__}\")\r\nprint(f\"NumPy version: {np.__version__}\")\r\n# 注意：Matplotlib和Seaborn的版本打印需要访问其特定版本属性\r\nimport matplotlib\r\nprint(f\"Matplotlib version: {matplotlib.__version__}\")\r\nprint(f\"Seaborn version: {sns.__version__}\")\r\n\r\n# 测试一个简单命令\r\ndf_test = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})\r\nprint(\"\\n测试 DataFrame 创建成功：\")\r\nprint(df_test.head())\n</code></pre>\n<p>如果这些命令在没有<code>ImportError</code>消息的情况下执行，则您的环境已正确配置所需库。</p>\n<p>您现在已具备工具和专用环境，可以在后续章节中进行数据加载、清洗、分析和可视化。</p>",
+  "slug": "setting-up-environment",
+  "updates": [],
+  "references": [
+    {
+      "id": 394,
+      "title": "`venv` - Creation of virtual environments",
+      "author": "Python Software Foundation",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "Python内置模块创建独立环境的官方指南。",
+      "order": 1,
+      "created_at": "2025-09-04T14:27:51.487348Z",
+      "updated_at": "2025-09-07T16:15:12.080905Z"
+    },
+    {
+      "id": 395,
+      "title": "pip documentation",
+      "author": "The pip developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pip.pypa.io/en/stable/",
+      "doi": "",
+      "note": "安装和管理Python包的官方指南。",
+      "order": 2,
+      "created_at": "2025-09-04T14:27:51.490088Z",
+      "updated_at": "2025-09-07T16:15:13.482605Z"
+    },
+    {
+      "id": 396,
+      "title": "Managing environments",
+      "author": "Anaconda, Inc.",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html",
+      "doi": "",
+      "note": "创建和管理Conda环境的官方说明。",
+      "order": 3,
+      "created_at": "2025-09-04T14:27:51.492785Z",
+      "updated_at": "2025-09-07T16:15:18.943883Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

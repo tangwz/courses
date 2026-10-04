@@ -1,0 +1,689 @@
+{
+  "id": 126,
+  "title": "JAX 高级编程：性能、优化与规模化",
+  "meta_title": "JAX 高级编程：性能、优化与规模化",
+  "meta_description": "掌握 JAX 进阶技巧。学习性能优化、分布式计算（pmap）、自定义变换和在 GPU/TPU 上进行大型模型训练。",
+  "description": "<p>熟练运用 JAX 的进阶方法，以达成高性能机器学习 (machine learning)。本课程内容包含 JAX 核心机制、针对 GPU 和 TPU 的性能优化策略、使用 <code>pmap</code> 进行分布式计算、进阶自动微分、自定义操作，以及大型模型训练技术。运用 JAX 的函数式编程和编译能力，构建复杂且高效的机器学习系统。</p>",
+  "short_description": "运用 JAX 进阶变换、分布式计算和自定义操作，优化并规模化机器学习模型。",
+  "excerpt": "运用 JAX 高级编程技巧，优化、分发并扩容您的机器学习模型。",
+  "prerequisites": "Python, 机器学习入门, JAX 入门",
+  "cover_color": "pink",
+  "learning_outcomes": [
+    {
+      "topic": "性能优化",
+      "description": "对 JAX 代码进行性能分析和优化，以在 GPU 和 TPU 等加速器上获得最佳性能。"
+    },
+    {
+      "topic": "分布式计算",
+      "description": "实现数据并行和模型并行，运用 `pmap` 及其他分布式基本操作以进行多设备执行。"
+    },
+    {
+      "topic": "进阶变换",
+      "description": "使用复杂的控制流基本操作（如 `scan`, `cond`, `while_loop`），并理解它们与 JAX 变换的相互关系。"
+    },
+    {
+      "topic": "自定义自动微分规则",
+      "description": "定义自定义的向量-雅可比乘积（VJP）和雅可比-向量乘积（JVP），用于非标准操作。"
+    },
+    {
+      "topic": "JAX 核心机制",
+      "description": "透彻理解 JAX 的编译过程 (XLA) 及其内部表示 (jaxprs)。"
+    },
+    {
+      "topic": "大型训练",
+      "description": "应用 JAX 进阶模式和库（如 Flax 或 Haiku），以高效训练大型神经网络。"
+    }
+  ],
+  "duration": 30,
+  "slug": "advanced-jax",
+  "level": 3,
+  "category": "Machine Learning",
+  "is_masterclass": false,
+  "python_enabled": true,
+  "has_reviewed": false,
+  "added_to_roadmap": false,
+  "has_purchased": false,
+  "has_project": false,
+  "has_completion_certificate": false,
+  "has_verified_certificate": false,
+  "superseded_by": null,
+  "created_at": "2025-04-04T12:50:26.270797Z",
+  "updated_at": "2026-10-02T06:09:07.418489Z",
+  "chapters": [
+    {
+      "id": 640,
+      "title": "高级 JAX 变换与控制流",
+      "meta_title": "高级 JAX 变换与控制流",
+      "meta_description": "掌握 JAX 更高阶的变换。理解 `lax.scan`、`cond`、`while_loop`、遮蔽以及用于复杂模型的自定义导数。",
+      "number": 1,
+      "slug": "advanced-jax-transformations-control-flow",
+      "content": "你已经使用过 JAX 的核心变换：`jit` 用于编译，`grad` 用于微分，以及 `vmap` 用于向量化。尽管这些是核心要素，但许多精密的模型需要更复杂的计算结构，例如循环步骤、条件执行或动态循环。\n\n本章介绍 JAX 的函数式控制流原语，它们使你能够在 JAX 可追踪和可编译的框架内表达这些复杂的模式。我们将探讨以下内容：\n\n*   使用 `lax.scan` 有效实现序列操作，例如循环神经网络 (RNN) 中的操作。\n*   使用 `lax.cond` 在编译函数内部实现条件逻辑。\n*   使用 `lax.while_loop` 处理动态迭代。\n*   理解这些控制流操作如何与 `jit`、`grad` 和 `vmap` 配合。\n*   应用遮蔽技术进行选择性计算，这通常是可变长度数据所必需的。\n*   JAX 在追踪过程中如何处理涉及闭包的 Python 代码。\n\n学完本章，你将能够构建和分析包含循环、条件和序列依赖的 JAX 函数，为你构建更复杂的模型和算法做好准备。",
+      "sections": [
+        {
+          "id": 2789,
+          "title": "核心转换回顾：jit, grad, vmap",
+          "meta_title": "回顾 JAX jit, grad, vmap",
+          "meta_description": "快速总结 JAX 的基本转换：即时编译、自动微分和向量化。",
+          "slug": "review-core-transformations",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2793,
+          "title": "精通 lax.scan 处理序列操作",
+          "meta_title": "在 JAX 中使用 lax.scan",
+          "meta_description": "使用 lax.scan 高效实现循环计算和序列处理，并了解它与其他转换的协同作用。",
+          "slug": "mastering-lax-scan",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2796,
+          "title": "使用 lax.cond 进行条件执行",
+          "meta_title": "使用 lax.cond 实现条件逻辑",
+          "meta_description": "在 JIT 编译的函数中使用 lax.cond 实现分支逻辑，并了解其性能影响。",
+          "slug": "conditional-execution-lax-cond",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2798,
+          "title": "使用 lax.while_loop 进行循环",
+          "meta_title": "在 JAX 中使用 lax.while_loop",
+          "meta_description": "使用 lax.while_loop 及其相关限制在编译的 JAX 代码中处理动态循环。",
+          "slug": "looping-lax-while-loop",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2801,
+          "title": "结合控制流与变换",
+          "meta_title": "组合 JAX 控制流与变换",
+          "meta_description": "了解像 grad 和 vmap 这样的变换如何与像 scan、cond 和 while_loop 这样的控制流原语配合使用。",
+          "slug": "combining-control-flow-transformations",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2805,
+          "title": "高级掩码技术",
+          "meta_title": "JAX 中的高级掩码",
+          "meta_description": "实施复杂的掩码模式，以处理变长序列或选择性计算。",
+          "slug": "advanced-masking-techniques",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2807,
+          "title": "了解闭包和JAX暂存",
+          "meta_title": "JAX中的闭包与暂存",
+          "meta_description": "了解JAX在追踪和编译过程中如何处理Python闭包。",
+          "slug": "closures-jax-staging",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2811,
+          "title": "实践：实现复杂的循环逻辑",
+          "meta_title": "JAX 循环逻辑动手实践",
+          "meta_description": "练习结合 lax.scan 及其他基本操作来实现复杂的循环神经网络单元。",
+          "slug": "practical-complex-recurrent-logic",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 644,
+      "title": "JAX 代码的性能优化",
+      "meta_title": "JAX 性能优化方法",
+      "meta_description": "优化 JAX 代码，提升运行速度。分析 GPU/TPU 的执行情况，理解内存布局，XLA 编译，以及高级 JIT 策略。",
+      "number": 2,
+      "slug": "optimizing-jax-code-performance",
+      "content": "JAX 提供了强大的抽象方式，例如 `jit`，能够大幅加速你的 Python 和 NumPy 代码，尤其是在硬件加速器上。然而，要达到最佳性能，往往需要审视其内部机制。仅仅应用 `@jit` 并不能保证达到最高速度。\n\n本章主要介绍诊断性能瓶颈的方法，以及优化 JAX 程序以适用于 GPU 和 TPU。我们将介绍如何分析 JAX 执行情况，理解跟踪过程中生成的中间 `jaxpr` 表示，了解 XLA 编译器在优化中的职能，考虑内存布局的影响，尽量减少代价高昂的重新编译，识别算子融合，并使用 JAX 的异步调度机制正确地进行代码基准测试。完成本章后，你将能够有条理地分析并提升你的 JAX 计算的执行速度。",
+      "sections": [
+        {
+          "id": 2814,
+          "title": "在 CPU、GPU 和 TPU 上分析 JAX 代码",
+          "meta_title": "在加速器上分析 JAX 代码",
+          "meta_description": "使用 JAX 内置的分析工具和外部分析器（如 TensorBoard）来发现性能瓶颈。",
+          "slug": "profiling-jax-code",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2817,
+          "title": "理解 JAX 计算图 (jaxpr)",
+          "meta_title": "理解 JAX 计算图 (jaxpr)",
+          "meta_description": "查看 JAX 生成的中间表示 (jaxpr)，以了解其追踪的操作。",
+          "slug": "understanding-jaxpr",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2820,
+          "title": "XLA 编译的作用",
+          "meta_title": "JAX 中的 XLA 编译",
+          "meta_description": "了解 JAX 如何借助 XLA 编译器在不同硬件后端上优化数值计算。",
+          "slug": "role-of-xla-compilation",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2824,
+          "title": "内存布局及其对性能的影响",
+          "meta_title": "JAX内存布局与性能",
+          "meta_description": "分析数据布局（例如行主序与列主序）如何影响GPU和TPU上的性能。",
+          "slug": "memory-layout-performance",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2827,
+          "title": "避免重复编译",
+          "meta_title": "避免 JAX 重复编译",
+          "meta_description": "识别 JIT 重复编译的常见原因，以及使用静态参数和函数转换来减少它们的策略。",
+          "slug": "avoiding-recompilation",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2830,
+          "title": "算子合并与操作优化",
+          "meta_title": "JAX 算子合并与操作优化",
+          "meta_description": "了解 XLA 如何合并操作以减少内存带宽占用并提升执行速度。",
+          "slug": "fusion-operator-optimization",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2832,
+          "title": "异步调度",
+          "meta_title": "JAX 异步调度",
+          "meta_description": "了解 JAX 的异步调度机制，以及如何使用 `block_until_ready()` 正确测试代码性能。",
+          "slug": "asynchronous-dispatch",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2836,
+          "title": "实践：优化数值计算",
+          "meta_title": "JAX优化实践",
+          "meta_description": "应用性能分析和优化技术来加速一个JAX示例计算。",
+          "slug": "practice-optimizing-computation",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 647,
+      "title": "JAX 分布式计算",
+      "meta_title": "JAX 中的 pmap 分布式计算",
+      "meta_description": "使用 pmap 扩展 JAX 计算以支持多设备（GPU/TPU）。学习数据并行、集合操作和设备管理。",
+      "number": 3,
+      "slug": "distributed-computing-jax",
+      "content": "随着机器学习模型规模和复杂度的增长，在单一加速器（如 GPU 或 TPU）上进行计算已不足够。训练大型模型或处理大规模数据集通常需要将任务分配到多个设备上。本章主要介绍 JAX 如何实现这种分布式计算。\n\n我们将从与机器学习工作负载相关的并行性基础知识讲起。您将了解 JAX 如何管理不同的计算设备，以及如何使用其用于多设备执行的核心原语：`pmap`（并行映射）。我们将介绍 `pmap` 所采用的单程序多数据（SPMD）模式，并演示如何实现数据并行，这是一种常用的训练加速技术。\n\n此外，您将学习在 `pmap` 处理的函数中，聚合跨设备信息（例如梯度）所需的必要集合通信操作（如 `psum`、`pmean`）。我们还将讨论如何使用轴名称来更明确地控制这些集合操作，并涉及高级分区策略以及多主机分布背后的机制。本章结束时，您将掌握如何使用 `pmap` 在多个加速器上有效扩展您的 JAX 计算。",
+      "sections": [
+        {
+          "id": 2838,
+          "title": "并行处理原理介绍",
+          "meta_title": "JAX 并行处理基本认识",
+          "meta_description": "概览机器学习背景下的数据并行、模型并行和流水线并行。",
+          "slug": "introduction-parallelism-concepts",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2840,
+          "title": "JAX 中的设备管理",
+          "meta_title": "JAX 设备管理",
+          "meta_description": "查询可用设备（CPU、GPU、TPU）并明确放置计算。",
+          "slug": "device-management-jax",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2843,
+          "title": "使用 pmap 进行单一程序多数据 (SPMD) 运算",
+          "meta_title": "JAX pmap 用于 SPMD",
+          "meta_description": "了解 `pmap` 在多设备上并行运行的基本方式。",
+          "slug": "spmd-with-pmap",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2846,
+          "title": "使用 pmap 实现数据并行",
+          "meta_title": "JAX 与 pmap 进行数据并行",
+          "meta_description": "使用 `pmap` 在设备间分发数据和复制模型，以进行并行训练。",
+          "slug": "data-parallelism-pmap",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2849,
+          "title": "集合通信原语 (psum, pmean 等)",
+          "meta_title": "JAX 集合通信 (psum, pmean)",
+          "meta_description": "在 `pmap` 中使用集合操作，以跨设备聚合结果（例如梯度）。",
+          "slug": "collective-communication-primitives",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2852,
+          "title": "pmap 中轴名称的处理",
+          "meta_title": "JAX `pmap` 中的轴名称",
+          "meta_description": "使用轴名称，使集合操作的指定更明确、更可靠。",
+          "slug": "handling-axis-names-pmap",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2856,
+          "title": "嵌套 pmap 与进阶分区",
+          "meta_title": "嵌套 pmap 与 JAX 进阶分区",
+          "meta_description": "了解涉及嵌套并行和手动设备放置的更复杂场景。",
+          "slug": "nested-pmap-advanced-partitioning",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2859,
+          "title": "多主机编程简介",
+          "meta_title": "JAX 多主机编程概述",
+          "meta_description": "JAX 并行性如何从单机扩展到多台机器（如 TPU Pods）的介绍。",
+          "slug": "multi-host-programming-overview",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2862,
+          "title": "实践：分布式数据并行训练",
+          "meta_title": "JAX 分布式训练实践",
+          "meta_description": "使用 `pmap` 和集合操作实现一个简单的数据并行训练循环。",
+          "slug": "practice-distributed-data-parallel-training",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 650,
+      "title": "进阶自动微分方法",
+      "meta_title": "JAX中的进阶自动微分",
+      "meta_description": "了解JAX的自动微分系统。实现自定义VJP/JVP，处理高阶导数，并通过控制流进行微分。",
+      "number": 4,
+      "slug": "advanced-automatic-differentiation",
+      "content": "自动微分是JAX的核心组成部分，它使得机器学习模型能够进行基于梯度的优化。虽然`jax.grad`提供了获取梯度的便捷接口，但了解并控制其内部运作将为复杂任务带来更大的灵活性和更高的效率。\n\n本章将基于`jax.grad`的初步知识进行拓展。你将学习自动微分的两种基本模式：正向模式（雅可比向量积，JVP）和反向模式（向量雅可比积，VJP）。我们将介绍如何直接使用`jax.jvp`和`jax.vjp`计算它们，这些构成了`jax.grad`及其他变换的构建块。\n\n主要内容包括：\n\n*   计算通过组合微分变换得到的高阶导数。\n*   高效计算完整雅可比矩阵和海森矩阵的方法。\n*   使用`jax.custom_vjp`和`jax.custom_jvp`为函数定义自定义微分规则，这可用于提高数值稳定性、优化性能或处理非JAX代码。\n*   理解自动微分在`lax.scan`、`lax.cond`和`lax.while_loop`等控制流原语中如何运作。\n*   处理不可微分函数或需要明确停止梯度传播的函数的方法，例如使用`jax.lax.stop_gradient`。\n\n在本章结束时，你将对JAX的自动微分系统有更全面的理解，并掌握在进阶场景中有效应用它的工具。",
+      "sections": [
+        {
+          "id": 2865,
+          "title": "前向和反向模式自动微分回顾",
+          "meta_title": "回顾前向/反向模式自动微分",
+          "meta_description": "回顾前向模式（JVP）和反向模式（VJP）自动微分背后的原理。",
+          "slug": "review-autodiff-modes",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2868,
+          "title": "雅可比向量积 (JVPs) 与 jax.jvp",
+          "meta_title": "雅可比向量积 (jax.jvp)",
+          "meta_description": "使用 `jax.jvp` 高效计算 JVP 并了解其应用。",
+          "slug": "jacobian-vector-products-jvp",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2870,
+          "title": "向量-雅可比积 (VJPs) 与 jax.vjp",
+          "meta_title": "向量-雅可比积 (jax.vjp)",
+          "meta_description": "使用 `jax.vjp` 计算 VJP，这是 `jax.grad` 的根基，并理解其工作原理。",
+          "slug": "vector-jacobian-products-vjp",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2874,
+          "title": "高阶导数",
+          "meta_title": "JAX 中的高阶导数",
+          "meta_description": "通过组合 `grad`、`jvp` 和 `vjp`，计算二阶导数（海森矩阵）及更高阶导数。",
+          "slug": "higher-order-derivatives",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2877,
+          "title": "计算完整的雅可比矩阵和海森矩阵",
+          "meta_title": "在 JAX 中计算完整的雅可比矩阵和海森矩阵",
+          "meta_description": "使用 `vmap` 或 `jacfwd`/`jacrev` 高效计算完整雅可比矩阵或海森矩阵的策略。",
+          "slug": "computing-full-jacobians-hessians",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2880,
+          "title": "使用 jax.custom_vjp 的自定义微分规则",
+          "meta_title": "JAX 中的自定义 VJP 规则",
+          "meta_description": "使用 `jax.custom_vjp` 为函数定义自定义反向模式微分规则。",
+          "slug": "custom-vjp-rules",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2883,
+          "title": "jax.custom_jvp 自定义求导规则",
+          "meta_title": "JAX 中的自定义 JVP 规则",
+          "meta_description": "使用 `jax.custom_jvp` 定义自定义前向模式微分规则。",
+          "slug": "custom-jvp-rules",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2885,
+          "title": "通过控制流原语求导",
+          "meta_title": "对JAX控制流求导",
+          "meta_description": "了解自动求导如何与`lax.scan`、`lax.cond`和`lax.while_loop`交互。",
+          "slug": "differentiation-through-control-flow",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2890,
+          "title": "处理不可微分函数",
+          "meta_title": "JAX 中不可微分函数的处理",
+          "meta_description": "处理 JAX 计算中不可微分运算的方法，包括使用 `jax.lax.stop_gradient`。",
+          "slug": "handling-non-differentiable-functions",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2893,
+          "title": "实践：实现自定义梯度",
+          "meta_title": "JAX 自定义梯度实践",
+          "meta_description": "为特定数学函数实现自定义 VJP 并验证其正确性。",
+          "slug": "practice-implementing-custom-gradient",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 655,
+      "title": "互操作性与自定义操作",
+      "meta_title": "JAX 互操作性与自定义操作",
+      "meta_description": "将 JAX 与其他框架结合使用。了解 DLPack，调用外部代码，以及在 JAX 中创建自定义原语操作。",
+      "number": 5,
+      "slug": "jax-interoperability-custom-operations",
+      "content": "JAX 计算常需要与科学 Python 生态的其他部分协同工作，或需要专门的底层功能。本章讨论如何将 JAX 与外部系统连接，并扩展其核心操作。\n\n您将学到实用的方法，包括：\n*   将数据在 JAX 和 NumPy 数组之间进行转换。\n*   应用 DLPack 标准实现高效、零拷贝的数据共享，与 PyTorch 或 TensorFlow 等其他库。\n*   在 JAX 程序中执行外部 Python 函数，使用 `host_callback` 和 `pure_callback`，了解它们的用途和限制。\n*   理解 JAX 原语作为系统已知的基本操作。\n*   构建自定义原语，通过定义它们的抽象求值行为（形状、数据类型），实现后端特定的低层化规则（XLA HLO 生成），并指定自定义微分规则（JVP/VJP），以确保它们能完全融入 JAX 的转换系统。",
+      "sections": [
+        {
+          "id": 2896,
+          "title": "JAX 与 NumPy 的集成",
+          "meta_title": "JAX 与 NumPy 的集成",
+          "meta_description": "JAX 数组和 NumPy 数组之间数据转换的优良做法。",
+          "slug": "integrating-jax-numpy",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2899,
+          "title": "使用 DLPack 实现零拷贝数据共享",
+          "meta_title": "通过 DLPack 进行零拷贝数据共享",
+          "meta_description": "采用 DLPack 标准，在 JAX 与其他框架（PyTorch、TensorFlow、CuPy）之间进行高效的零拷贝张量共享。",
+          "slug": "zero-copy-dlpack",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2904,
+          "title": "使用 jax.experimental.host_callback 调用外部 CPU/GPU 代码",
+          "meta_title": "从 JAX 调用外部代码",
+          "meta_description": "在 JAX 计算期间，使用 host_callback 在宿主端执行任意 Python 代码（带注意事项）。",
+          "slug": "calling-external-code-host-callback",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2907,
+          "title": "使用 jax.pure_callback 进行无副作用调用",
+          "meta_title": "使用 jax.pure_callback",
+          "meta_description": "在 JIT 编译的代码中安全调用保证纯粹的外部 Python 函数。",
+          "slug": "using-jax-pure-callback",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2909,
+          "title": "JAX 原语简介",
+          "meta_title": "JAX 原语简介",
+          "meta_description": "理解JAX所知的基本运算——原语的理念。",
+          "slug": "introduction-jax-primitives",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2912,
+          "title": "定义自定义原语",
+          "meta_title": "定义自定义 JAX 原语",
+          "meta_description": "概述在 JAX 系统中注册新原语运算的过程。",
+          "slug": "defining-custom-primitives",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2914,
+          "title": "实现抽象求值规则",
+          "meta_title": "JAX原语抽象求值",
+          "meta_description": "定义自定义原语在JAX追踪中如何根据形状和dtype来行为。",
+          "slug": "implementing-abstract-evaluation",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2917,
+          "title": "为后端（CPU/GPU/TPU）实现转换规则",
+          "meta_title": "JAX 原语转换规则",
+          "meta_description": "说明如何为不同的硬件后端将自定义原语转换为低级代码（例如，XLA HLO）。",
+          "slug": "implementing-lowering-rules",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2921,
+          "title": "制定自定义原语的求导规则",
+          "meta_title": "自定义JAX原语的微分",
+          "meta_description": "规定JVP和VJP规则以使自定义原语可自动微分。",
+          "slug": "differentiation-rules-custom-primitives",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2925,
+          "title": "实践：整合 C++ 函数",
+          "meta_title": "JAX C++ 集成实践",
+          "meta_description": "构建一个简单示例，通过回调函数或自定义原语将外部 C++ 函数整合到 JAX 计算中。",
+          "slug": "practice-integrating-cpp-function",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    },
+    {
+      "id": 658,
+      "title": "大规模模型训练方法",
+      "meta_title": "使用JAX生态系统训练大型模型",
+      "meta_description": "应用进阶JAX进行大规模机器学习。结合pmap、优化和Flax/Haiku等框架，以高效训练大型模型。",
+      "number": 6,
+      "slug": "large-scale-model-training-jax",
+      "content": "训练现代机器学习模型经常会达到单个加速器内存和计算能力的极限。本章着重介绍有效扩展JAX应用所需的方法。\n\n我们将考察如何使用Flax和Haiku等库来构建大型模型，以及如何在这些框架中结合`pmap`实现分布式数据并行。你将学习到一些实用策略，例如梯度累积（模拟更大的有效批量大小）、梯度检查点（`jax.checkpoint`）（以重新计算为代价减少内存使用）以及混合精度训练（进一步节省内存并可能提高速度）。我们还将介绍与模型并行性相关的一些思想，并讨论适用于分布式环境的优化器。\n\n本章结束后，你将明白如何结合这些不同的JAX功能和生态系统工具，以应对训练大型神经网络的挑战。",
+      "sections": [
+        {
+          "id": 2927,
+          "title": "大型模型训练中的挑战概述",
+          "meta_title": "大型模型训练中的难题",
+          "meta_description": "讨论与大型机器学习模型相关的内存限制、计算成本和通信开销。",
+          "slug": "challenges-large-model-training",
+          "order": 1,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2930,
+          "title": "JAX 生态系统库（Flax, Haiku）简介",
+          "meta_title": "JAX 生态系统库：Flax 与 Haiku",
+          "meta_description": "概述基于 JAX 构建的流行神经网络库，用于模型结构化和训练循环。",
+          "slug": "introduction-jax-ecosystem-libraries",
+          "order": 2,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2935,
+          "title": "模型参数和状态的处理",
+          "meta_title": "JAX 中的参数与状态管理",
+          "meta_description": "在 JAX 中处理复杂模型状态（参数、优化器状态、RNG 密钥）的策略，通常借助库支持。",
+          "slug": "managing-model-parameters-state",
+          "order": 3,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2936,
+          "title": "将 pmap 与训练框架结合使用",
+          "meta_title": "pmap 与 Flax/Haiku 的使用",
+          "meta_description": "在 Flax 或 Haiku 典型训练结构中集成 `pmap` 以实现数据并行。",
+          "slug": "combining-pmap-training-frameworks",
+          "order": 4,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2939,
+          "title": "梯度累积",
+          "meta_title": "JAX 中的梯度累积",
+          "meta_description": "在内存受限时，实现梯度累积以模拟更大的批处理大小。",
+          "slug": "gradient-accumulation-jax",
+          "order": 5,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2941,
+          "title": "梯度检查点（再物化）",
+          "meta_title": "JAX 中的梯度检查点",
+          "meta_description": "使用梯度检查点（`jax.checkpoint`）通过在反向传播期间重新计算激活来交换计算量以节省内存。",
+          "slug": "gradient-checkpointing-jax",
+          "order": 6,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2943,
+          "title": "混合精度训练",
+          "meta_title": "JAX 中的混合精度训练",
+          "meta_description": "使用低精度格式（如bfloat16）以减少内存占用并可能加速计算。",
+          "slug": "mixed-precision-training-jax",
+          "order": 7,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2944,
+          "title": "模型并行策略",
+          "meta_title": "JAX 中的模型并行原理",
+          "meta_description": "探讨在 JAX 环境下将大型模型拆分到多个设备的方法（张量并行、流水线并行）。",
+          "slug": "conceptual-model-parallelism",
+          "order": 8,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2946,
+          "title": "大规模优化算法",
+          "meta_title": "JAX大规模优化算法",
+          "meta_description": "简要概述适用于大规模分布式训练的优化器（例如，AdamW，LAMB）。",
+          "slug": "optimization-algorithms-large-scale",
+          "order": 9,
+          "has_completed": false,
+          "has_bookmarked": false
+        },
+        {
+          "id": 2949,
+          "title": "实践：实现梯度检查点",
+          "meta_title": "JAX 梯度检查点实操",
+          "meta_description": "将 `jax.checkpoint` 应用于示例网络层，以查看其对内存使用的影响。",
+          "slug": "practice-gradient-checkpointing",
+          "order": 10,
+          "has_completed": false,
+          "has_bookmarked": false
+        }
+      ],
+      "has_completed": false,
+      "has_quiz": false,
+      "has_passed_quiz": false
+    }
+  ],
+  "project": null
+}

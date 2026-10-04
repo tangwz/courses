@@ -1,0 +1,61 @@
+{
+  "id": 5716,
+  "title": "动手操作：图像数据FID计算",
+  "meta_title": "实践：计算合成图像的FID",
+  "meta_description": "使用标准库实现图像数据集的FID计算。",
+  "content": "<p>Fréchet Inception Distance (FID) 是评估合成图像质量和多样性的有用指标。动手计算一组真实图像和一组合成生成图像之间的 FID 分数，使用 Python 进行。</p>\n<p>FID 通过比较预训练 (pre-training)神经网络 (neural network)（通常是 Inception v3 模型）提取的特征统计数据，来衡量两个图像分布之间的相似度。较低的 FID 分数表示合成图像的分布更接近真实图像的分布，表明其质量和多样性更优。</p>\n<h3>前提条件与设置</h3>\n<p>在我们开始之前，请确保您已安装所需的库。我们将主要使用 TensorFlow 加载 Inception v3 模型并执行计算，NumPy 进行数值运算，如果直接实现公式，可能还需要 SciPy 进行矩阵计算。</p>\n<pre><code class=\"language-bash\">pip install tensorflow numpy scipy Pillow\n</code></pre>\n<p>您还需要两组图像：</p>\n<ol>\n<li>一个包含您的真实图像的目录。</li>\n<li>一个包含您的模型生成的合成图像的目录。</li>\n</ol>\n<p>在本示例中，我们假设这些图像分别存储在 <code>path/to/real/images</code> 和 <code>path/to/synthetic/images</code> 中。</p>\n<h3>图像加载与预处理</h3>\n<p>Inception v3 模型需要特定大小的输入图像（通常是 299x299 像素），并以特定方式进行预处理（像素值缩放到 [-1, 1] 范围）。我们需要确保真实图像和合成图像都符合这些要求。</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nimport numpy as np\nimport os\nfrom PIL import Image\nimport warnings\n\n# 抑制特定的 TensorFlow 警告，以获得更清晰的输出\nwarnings.filterwarnings(\"ignore\", category=FutureWarning)\ntf.get_logger().setLevel('ERROR')\n\n# 定义 Inception v3 所需的图像大小\nIMAGE_SIZE = (299, 299)\n\ndef preprocess_image(image_path):\n    \"\"\"为 Inception v3 加载并预处理图像。\"\"\"\n    try:\n        img = tf.keras.preprocessing.image.load_img(\n            image_path, target_size=IMAGE_SIZE\n        )\n        img_array = tf.keras.preprocessing.image.img_to_array(img)\n        # 将像素值缩放到 [-1, 1] 范围，符合 InceptionV3 的预期\n        img_array = tf.keras.applications.inception_v3.preprocess_input(img_array)\n        return img_array\n    except Exception as e:\n        print(f\"警告：由于错误 {e}，跳过文件 {image_path}\")\n        return None\n\ndef load_and_preprocess_images(dir_path, max_images=None):\n    \"\"\"从目录加载并预处理所有图像。\"\"\"\n    image_paths = [os.path.join(dir_path, fname) for fname in os.listdir(dir_path)\n                   if fname.lower().endswith(('.png', '.jpg', '.jpeg'))]\n\n    if max_images is not None:\n        image_paths = image_paths[:max_images]\n        print(f\"从 {dir_path} 处理最多 {max_images} 张图像\")\n\n    processed_images = []\n    for path in image_paths:\n        processed = preprocess_image(path)\n        if processed is not None:\n            processed_images.append(processed)\n\n    if not processed_images:\n        raise ValueError(f\"在目录中未找到有效图像或未处理任何图像：{dir_path}\")\n\n    return np.array(processed_images)\n\n# --- 占位符路径：请替换为您的实际目录 ---\n# 建议使用至少几千张图像以获得稳定的 FID。\n# 为演示目的，我们可能会使用较少图像，但请注意结果会有所不同。\nPATH_REAL_IMAGES = 'path/to/real/images' \nPATH_SYNTHETIC_IMAGES = 'path/to/synthetic/images' \nMAX_IMAGES_PER_SET = 100 # 使用少量图像进行快速演示；进行实际评估时请增加数量\n\nprint(\"正在加载和预处理真实图像...\")\n# 添加目录存在性错误处理\nif not os.path.isdir(PATH_REAL_IMAGES):\n    print(f\"错误：未找到真实图像目录：{PATH_REAL_IMAGES}\")\n    print(\"请将 'path/to/real/images' 替换为正确的路径。\")\n    # 将 real_images 设置为 None 或进行适当处理\n    real_images = None \nelse:\n    real_images = load_and_preprocess_images(PATH_REAL_IMAGES, MAX_IMAGES_PER_SET)\n\nprint(\"正在加载和预处理合成图像...\")\nif not os.path.isdir(PATH_SYNTHETIC_IMAGES):\n    print(f\"错误：未找到合成图像目录：{PATH_SYNTHETIC_IMAGES}\")\n    print(\"请将 'path/to/synthetic/images' 替换为正确的路径。\")\n    # 将 synthetic_images 设置为 None 或进行适当处理\n    synthetic_images = None\nelse:\n    synthetic_images = load_and_preprocess_images(PATH_SYNTHETIC_IMAGES, MAX_IMAGES_PER_SET)\n\n# 在继续之前检查图像是否成功加载\nif real_images is None or synthetic_images is None:\n    print(\"\\n由于图像数据缺失，中止执行。请检查路径和图像文件。\")\n    # 如果数据缺失，则退出或跳过 FID 计算\n    # 对于脚本，您可以在导入 sys 后使用：sys.exit(1)\nelse:\n    print(f\"已加载 {len(real_images)} 张真实图像和 {len(synthetic_images)} 张合成图像。\")\n    print(\"预处理完成。\")\n\n</code></pre>\n<p>请务必将 <code>path/to/real/images</code> 和 <code>path/to/synthetic/images</code> 替换为您的图像数据集的实际路径。我们还添加了一个 <code>MAX_IMAGES_PER_SET</code> 变量用于演示目的；为了获得可靠的 FID 分数，您应该使用更多图像（通常是数千张）。</p>\n<h3>使用 Inception V3 计算激活值</h3>\n<p>下一步是将这些预处理过的图像输入到 Inception v3 模型（在 ImageNet 上预训练 (pre-training)）中，并从其中一个较深层提取激活值。通常使用的层是分类输出之前的最终池化层，因为它的特征捕获了高级图像特性。</p>\n<pre><code class=\"language-python\">from scipy.linalg import sqrtm # 用于矩阵平方根\n\ndef calculate_activations(images, model):\n    \"\"\"使用模型计算一批图像的激活值。\"\"\"\n    if images is None or len(images) == 0:\n        return np.array([])\n    activations = model.predict(images)\n    return activations\n\ndef calculate_fid(act1, act2):\n    \"\"\"计算两组激活值之间的 FID 分数。\"\"\"\n    if act1.size == 0 or act2.size == 0:\n        print(\"警告：一个或两个激活集为空。无法计算 FID。\")\n        return float('inf') # 或作为错误处理\n\n    # 计算均值和协方差统计数据\n    mu1, sigma1 = act1.mean(axis=0), np.cov(act1, rowvar=False)\n    mu2, sigma2 = act2.mean(axis=0), np.cov(act2, rowvar=False)\n\n    # 计算均值之间的平方差和\n    ssdiff = np.sum((mu1 - mu2)**2.0)\n\n    # 计算协方差矩阵乘积的平方根\n    # 有时可能需要添加一个小的 epsilon 以提高数值稳定性\n    eps = 1e-6\n    covmean, _ = sqrtm(sigma1.dot(sigma2), disp=False) \n\n    # 检查并修正 sqrtm 产生的虚数\n    if np.iscomplexobj(covmean):\n        # print(\"警告：矩阵平方根中产生了复数。取实部。\")\n        covmean = covmean.real\n\n    # 协方差矩阵的数值稳定性检查\n    if not np.isfinite(sigma1).all() or not np.isfinite(sigma2).all():\n         print(\"警告：在协方差矩阵中发现非有限值。FID 可能不稳定。\")\n         return float('inf') # 表示不稳定\n\n    # 计算分数\n    fid = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)\n\n    # 检查是否存在负 FID（可能由于数值不稳定性而发生）\n    if fid &#x3C; 0:\n        # print(f\"警告：计算出负 FID ({fid})。截断为 0。\")\n        # 进行适当处理，例如，记录问题或截断\n        fid = 0.0\n\n    return fid\n\n# 仅在图像成功加载后继续\nif real_images is not None and synthetic_images is not None:\n    # 加载在 ImageNet 上预训练的 InceptionV3 模型，不包括顶部分类层\n    # 输出将是全局平均池化层的特征\n    print(\"正在加载 InceptionV3 模型...\")\n    inception_model = tf.keras.applications.InceptionV3(\n        include_top=False, \n        pooling='avg', # 全局平均池化层输出\n        input_shape=(IMAGE_SIZE[0], IMAGE_SIZE[1], 3),\n        weights='imagenet'\n    )\n    print(\"模型已加载。\")\n\n    print(\"正在计算真实图像的激活值...\")\n    activations_real = calculate_activations(real_images, inception_model)\n\n    print(\"正在计算合成图像的激活值...\")\n    activations_synthetic = calculate_activations(synthetic_images, inception_model)\n\n    if activations_real.size > 0 and activations_synthetic.size > 0:\n        print(\"正在计算 FID 分数...\")\n        # 确保激活值是二维数组，以便进行协方差计算\n        if activations_real.ndim == 1: activations_real = activations_real.reshape(-1, 1)\n        if activations_synthetic.ndim == 1: activations_synthetic = activations_synthetic.reshape(-1, 1)\n\n        fid_score = calculate_fid(activations_real, activations_synthetic)\n        print(f\"\\n计算出的 FID 分数：{fid_score:.4f}\")\n    else:\n        print(\"\\n由于激活集为空，跳过 FID 计算。\")\n\n</code></pre>\n<p>此代码加载 Inception v3 模型，使用 <code>predict</code> 方法计算两个图像集的激活值，然后使用我们的 <code>calculate_fid</code> 函数应用 FID 公式。我们使用 <code>scipy.linalg.sqrtm</code> 进行矩阵平方根计算，这通常是数值上最具挑战性的部分。我们已包含对空激活值和潜在数值问题（如复数或非有限值）的基本检查。</p>\n<h3>结果说明与注意事项</h3>\n<p>输出的 <code>fid_score</code> 代表 Fréchet Inception Distance。请记住：</p>\n<ul>\n<li><strong>值越低越好：</strong> 分数越接近 0 表示真实和合成图像特征的分布越相似。</li>\n<li><strong>背景环境很重要：</strong> FID 分数是相对的。请将您生成的图像的 FID 与基准模型或生成器的先前迭代进行比较。对于一个复杂的、当前最佳为 40 的数据集，FID 为 50 可能算不错，但如果典型分数低于 10，则表示不佳。</li>\n<li><strong>样本量：</strong> FID 对所用图像数量很敏感。确保您使用来自真实和合成数据集的足够大且有代表性的样本（理想情况下是数千张图像），以获得稳定和有意义的结果。使用过少的图像（如我们 <code>MAX_IMAGES_PER_SET=100</code> 的示例）将导致分数不可靠。</li>\n<li><strong>计算成本：</strong> 计算数千张图像的激活值可能很耗时，特别是在没有 GPU 加速的情况下。</li>\n<li><strong>特征提取器：</strong> 尽管 Inception v3 是标准配置，但其他特征提取器也可使用，可能导致不同的 FID 分数。对于比较而言，使用相同提取器保持一致性很重要。</li>\n</ul>\n<p>本实践练习展示了计算 FID 的核心步骤。通过应用此指标，您可以量化 (quantization)地评估您的生成模型捕获真实数据分布视觉特性的能力，这是评估合成图像质量的一个重要方面。请记住在将其应用于您自己的项目时，调整路径并考虑实际限制。</p>",
+  "slug": "practice-calculating-fid",
+  "updates": [],
+  "references": [
+    {
+      "id": 15562,
+      "title": "GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium",
+      "author": "Martin Heusel, Hubert Ramsauer, Thomas Unterthiner, Bernhard Nessler, Sepp Hochreiter",
+      "year": "2017",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems 30 (NIPS 2017)",
+      "volume": "30",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1706.08500",
+      "doi": "10.48550/arXiv.1706.08500",
+      "note": "介绍了用于评估生成模型的Fréchet Inception Distance（FID），提供了其数学基础和实际应用。",
+      "order": 1,
+      "created_at": "2025-09-06T10:50:55.200433Z",
+      "updated_at": "2025-09-08T03:42:34.253214Z"
+    },
+    {
+      "id": 15564,
+      "title": "Deep Learning",
+      "author": "Ian Goodfellow, Yoshua Bengio, and Aaron Courville",
+      "year": "2016",
+      "publisher": "MIT Press",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "http://www.deeplearningbook.org/",
+      "doi": "",
+      "note": "提供深度学习的全面背景，包括生成模型（如GANs）及其评估方法。",
+      "order": 3,
+      "created_at": "2025-09-06T10:50:55.209181Z",
+      "updated_at": "2025-09-08T03:42:22.682550Z"
+    },
+    {
+      "id": 15565,
+      "title": "Keras Applications: InceptionV3",
+      "author": "TensorFlow Developers",
+      "year": "2023",
+      "publisher": "Google",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/applications/InceptionV3",
+      "doi": "",
+      "note": "Keras中InceptionV3模型的官方文档，详细说明其用法、参数和预处理要求。",
+      "order": 4,
+      "created_at": "2025-09-06T10:50:55.212133Z",
+      "updated_at": "2025-09-08T03:42:32.120715Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

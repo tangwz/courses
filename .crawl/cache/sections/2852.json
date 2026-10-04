@@ -1,0 +1,61 @@
+{
+  "id": 2852,
+  "title": "pmap 中轴名称的处理",
+  "meta_title": "JAX `pmap` 中的轴名称",
+  "meta_description": "使用轴名称，使集合操作的指定更明确、更可靠。",
+  "content": "<p>当编写打算用 <code>pmap</code> 进行并行执行的函数时，特别是那些涉及 <code>lax.psum</code> 或 <code>lax.pmean</code> 等集合通信操作的函数，明确指定通信应在<em>哪一组设备之间</em>进行是很要紧的。JAX 通常在基本示例中能正确推断集合操作是作用于 <code>pmap</code> 映射的单个轴。然而，这种隐式行为在更复杂的场合，例如嵌套的 <code>pmap</code> 调用或旨在在不同并行环境重复使用的函数中，可能会变得不明确或导致问题。</p>\n<p>为了使意图更清楚，JAX 允许你为 <code>pmap</code> 映射的轴命名。你可以通过 <code>axis_name</code> 参数 (parameter)来提供这个名称。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax import lax, pmap\n\n# 定义要映射的函数\ndef scaled_sum(x):\n  # 执行一些计算\n  scaled_x = x * 2.0\n  # 对参与 pmap 的设备结果求和\n  # 为集合操作明确指定轴的名称\n  total_sum = lax.psum(scaled_x, axis_name='devices')\n  return total_sum\n\n# 设备数量\nn_devices = jax.local_device_count()\nprint(f\"使用 {n_devices} 个设备。\")\n\n# 创建一些输入数据，并将其分片到设备上\ndata = jnp.arange(n_devices, dtype=jnp.float32)\n\n# 应用 pmap，提供 axis_name 'devices'\n# 此名称将字符串 'devices' 绑定到映射轴（输入数据的第 0 轴）\nparallel_computation = pmap(scaled_sum, axis_name='devices')\n\n# 运行计算\nresult = parallel_computation(data)\n\nprint(\"输入数据:\", data)\n# 所有设备上的结果应相同: sum(输入 * 2)\n# 示例：如果数据是 [0., 1.]，结果是 [2., 2.]，因为 sum(0*2 + 1*2) = 2\n# 示例：如果数据是 [0., 1., 2., 3.]，结果是 [12., 12., 12., 12.]，因为 sum(0*2 + 1*2 + 2*2 + 3*2) = 12\nprint(\"结果（所有设备上相同）:\", result)\n\n# 手动验证总和\nexpected_sum = jnp.sum(data * 2.0)\nprint(\"预期总和:\", expected_sum)\n\n# 注意：输出 'result' 将在所有设备上复制。\n# 访问 result[0] 可以得到计算的总和。\nassert jnp.allclose(result[0], expected_sum)\n</code></pre>\n<p>在这个例子中，<code>pmap(scaled_sum, axis_name='devices')</code> 将 <code>scaled_sum</code> 函数应用于输入 <code>data</code> 数组的每个元素，这些元素分布在可用的设备上。<code>data</code> 的第一个维度（大小为 <code>n_devices</code>）是映射轴。我们将名称 <code>'devices'</code> 指定给这个轴。</p>\n<p>在 <code>scaled_sum</code> 函数内部，<code>lax.psum(scaled_x, axis_name='devices')</code> 调用明确告知集合操作沿着名为 <code>'devices'</code> 的轴对 <code>scaled_x</code> 的值进行求和。如果没有 <code>axis_name</code>，<code>lax.psum(scaled_x)</code> 在这个简单情况中可能仍然通过隐式地对映射轴求和而正常工作，但使用名称消除了任何不明确之处。</p>\n<h3>使用轴名称的优势</h3>\n<ol>\n<li><strong>清晰度：</strong> 代码变得能够自我说明。看到 <code>lax.psum(..., axis_name='batch')</code> 清楚地表明求和操作是在被并行处理的批次维度上执行的。</li>\n<li><strong>稳定性：</strong> 它避免了在更复杂计算中出现问题。如果你嵌套 <code>pmap</code> 调用，每个层级都可以有独立的 <code>axis_name</code>。集合操作可以通过引用对应的名称来针对特定的并行层级。例如，你可能有 <code>pmap(..., axis_name='model_replicas')</code> 嵌套在 <code>pmap(..., axis_name='data_shards')</code> 内部。使用 <code>axis_name='data_shards'</code> 的集合操作将在持有不同数据分片但相同模型副本的设备间进行，而 <code>axis_name='model_replicas'</code> 将在持有不同模型副本但相同数据分片的设备间进行（这是某些模型并行方法中常见的模式）。</li>\n<li><strong>可组合性：</strong> 使用命名轴设计的函数更容易被重复使用。一个在名为 <code>'spatial'</code> 的轴上执行归约操作的函数，可以在任何映射了该名称轴的 <code>pmap</code> 调用中使用，而不论是否存在其他命名轴。</li>\n</ol>\n<h3>例子：数据并行中的梯度平均</h3>\n<p><code>pmap</code> 中集合操作的一个常见应用是在数据并行训练期间平均梯度。每个设备计算其本地数据分片的梯度，这些梯度需要在更新模型参数 (parameter)之前在所有设备之间进行平均。</p>\n<pre><code class=\"language-python\">import jax\nimport jax.numpy as jnp\nfrom jax import lax, pmap, grad\n\n# 模拟损失函数（例如，均方误差）\ndef loss_fn(params, local_batch):\n  # 替换为实际的模型计算和损失\n  predictions = params['w'] * local_batch['x'] + params['b']\n  error = predictions - local_batch['y']\n  return jnp.mean(error**2)\n\n# 在单个设备上计算梯度的函数\ndef compute_gradients(params, local_batch):\n  return grad(loss_fn)(params, local_batch)\n\n# 包含梯度平均的更新步骤\ndef parallel_update_step(params, sharded_batch):\n  # 在每个设备上局部计算梯度\n  local_grads = compute_gradients(params, sharded_batch)\n\n  # 使用命名轴 'data_parallel_axis' 在设备间平均梯度\n  # 直接使用 pmean 进行平均。使用 psum 后再除以数量也有效。\n  avg_grads = lax.pmean(local_grads, axis_name='data_parallel_axis')\n\n  # 简单的梯度下降更新（可替换为 Adam 等）\n  learning_rate = 0.01\n  # 注意：在实际情况中，对任意 pytree 结构使用 jax.tree_map\n  new_params = {\n      'w': params['w'] - learning_rate * avg_grads['w'],\n      'b': params['b'] - learning_rate * avg_grads['b']\n  }\n  return new_params\n\n# 获取设备数量\nn_devices = jax.local_device_count()\n\n# 初始化模拟参数（最初在所有设备上相同）\nparams = {'w': jnp.ones(()), 'b': jnp.zeros(())}\n\n# 创建分片到设备上的模拟数据\n# 形状：(设备数量, 每个设备的批次, ...)\nxs = jnp.arange(n_devices * 4, dtype=jnp.float32).reshape((n_devices, 4, 1))\nys = (xs * 2.0) + 0.5 # 真实 w=2.0, b=0.5\nsharded_batch = {'x': xs, 'y': ys}\n\n# 使用带有轴名称的 pmap 定义并行更新函数\np_update_step = pmap(parallel_update_step, axis_name='data_parallel_axis')\n\n# 执行一个更新步骤\nnew_params = p_update_step(params, sharded_batch)\n\n# 参数基于所有设备的平均梯度进行更新\n# new_params 将在设备间复制。访问单个设备上的参数：\nprint(\"原始参数:\", params)\nprint(\"更新后的参数（设备 0 上）:\", jax.tree_map(lambda x: x[0], new_params))\n</code></pre>\n<p>在此训练步骤中，<code>pmap</code> 将 <code>parallel_update_step</code> 函数映射到 <code>sharded_batch</code> 的第一个轴上，我们将其命名为 <code>'data_parallel_axis'</code>。函数内部的 <code>lax.pmean(local_grads, axis_name='data_parallel_axis')</code> 确保梯度平均操作明确地在参与此数据并行计算的设备之间进行。</p>\n<p>尽管 JAX 在简单情况下可能正确推断出轴，但使用 <code>axis_name</code> 明确命名它是一种非常值得推荐的做法。它使你的分布式计算显著更清楚，更不容易出现细微的问题，并且更易于维护和组合，尤其当你的并行策略变得更复杂时。</p>",
+  "slug": "handling-axis-names-pmap",
+  "updates": [],
+  "references": [
+    {
+      "id": 7445,
+      "title": "jax.pmap",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.pmap.html",
+      "doi": "",
+      "note": "JAX pmap 转换的官方文档，详细说明其用法、参数以及 axis_name 如何促进显式设备映射和集体操作。",
+      "order": 1,
+      "created_at": "2025-09-05T01:35:02.867014Z",
+      "updated_at": "2025-09-08T11:51:03.195783Z"
+    },
+    {
+      "id": 7446,
+      "title": "jax.lax collective primitives (psum, pmean)",
+      "author": "The JAX Authors",
+      "year": "2024",
+      "publisher": "The JAX Authors",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.html",
+      "doi": "",
+      "note": "JAX 集体通信原语（如 lax.psum 和 lax.pmean）的官方文档，解释了它们如何与 axis_name 结合使用以协调跨设备的计算。",
+      "order": 2,
+      "created_at": "2025-09-05T01:35:02.933957Z",
+      "updated_at": "2025-09-08T11:51:05.346043Z"
+    },
+    {
+      "id": 7448,
+      "title": "Distributed arrays and automatic sharding",
+      "author": "JAX developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_sharding.html",
+      "doi": "",
+      "note": "一份 JAX 指南，解释了分布式数组和分片的进阶概念，其中 axis_name 对于定义超出基本 pmap 的并行计算以及管理数据分布至关重要。",
+      "order": 4,
+      "created_at": "2025-09-05T01:35:02.951549Z",
+      "updated_at": "2025-09-08T11:50:59.091661Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

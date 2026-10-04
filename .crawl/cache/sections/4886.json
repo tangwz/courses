@@ -1,0 +1,61 @@
+{
+  "id": 4886,
+  "title": "配置开发环境",
+  "meta_title": "配置开发环境",
+  "meta_description": "关于为课程实践配置所需工具和库的指南。",
+  "content": "<p>要有效学习泛化和过拟合 (overfitting)，以及模型正则化 (regularization)和优化中用到的方法，你需要一个稳定且可用的 Python 环境。通过此配置，你将能够运行代码示例，尝试不同的正则化和优化方法，并完成动手实践环节。</p>\n<p>我们建议使用最新版本的 Python，理想情况下是 Python 3.8 或更高版本。管理依赖项对于实现结果可复现性很重要，我们建议使用 Conda（特别是 Miniconda 或 Anaconda）或 Python 内置的 <code>venv</code> 模块结合 <code>pip</code>。</p>\n<h3>核心库</h3>\n<p>我们主要依赖的库有：</p>\n<ol>\n<li><strong>PyTorch：</strong> 我们的主要深度学习 (deep learning)框架。它提供了构建、训练和评估神经网络 (neural network)所需的工具，包括正则化 (regularization)层和优化算法的实现。</li>\n<li><strong>NumPy：</strong> Python 中用于数值计算的基本包。PyTorch 与 NumPy 集成良好，我们将用它进行各种数据操作。</li>\n<li><strong>Matplotlib（可选 Seaborn）：</strong> 用于绘制和可视化数据，如学习曲线、权重 (weight)分布和模型预测，这对于诊断模型行为非常重要。</li>\n<li><strong>Scikit-learn：</strong> 可用于数据分割、性能指标以及可能的简单基线模型等辅助工具。</li>\n</ol>\n<h3>使用 Conda 安装</h3>\n<p>如果你使用 Conda，可以创建一个专用环境并安装所需包。打开你的终端或 Anaconda Prompt，然后运行：</p>\n<pre><code class=\"language-bash\"># 创建一个新环境（例如，命名为 'dl-regopt'），使用 Python 3.9\nconda create -n dl-regopt python=3.9\n\n# 激活环境\nconda activate dl-regopt\n\n# 安装 PyTorch, torchvision, torchaudio (如果需要，请根据你的操作系统/CUDA 版本进行调整)\n# 请访问 PyTorch 官方网站 (pytorch.org) 获取最新的安装命令\n# Linux/macOS 上仅支持 CPU 的示例：\nconda install pytorch torchvision torchaudio cpuonly -c pytorch\n\n# 安装其他库\nconda install numpy matplotlib scikit-learn seaborn jupyterlab\n\n</code></pre>\n<p><em>注意：</em> 对于 GPU 支持（强烈建议以加快训练速度），请访问 PyTorch 官方网站 (<a href=\"https://pytorch.org/\">https://pytorch.org/</a>)，并根据你的操作系统和 CUDA 版本选择合适的安装命令。</p>\n<h3>使用 pip 和 venv 安装</h3>\n<p>如果你更喜欢使用 <code>pip</code> 结合虚拟环境：</p>\n<pre><code class=\"language-bash\"># 为你的项目创建一个目录（如果尚未创建）\nmkdir deeplearning-course\ncd deeplearning-course\n\n# 创建一个虚拟环境（例如，命名为 '.venv'）\npython -m venv .venv\n\n# 激活环境\n# 在 macOS/Linux 上：\nsource .venv/bin/activate\n# 在 Windows 上：\n# .\\.venv\\Scripts\\activate\n\n# 升级 pip\npython -m pip install --upgrade pip\n\n# 安装 PyTorch (如果需要，请根据你的操作系统/CUDA 版本进行调整)\n# 请访问 PyTorch 官方网站 (pytorch.org) 获取最新的安装命令\n# 仅支持 CPU 的示例：\npip install torch torchvision torchaudio\n\n# 安装其他库\npip install numpy matplotlib scikit-learn seaborn jupyterlab\n</code></pre>\n<h3>验证安装</h3>\n<p>安装完成后，你可以快速验证核心组件是否正常工作。启动 Python 解释器或 Jupyter Notebook，并尝试导入库：</p>\n<pre><code class=\"language-python\">import torch\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport sklearn\n\nprint(f\"PyTorch 版本: {torch.__version__}\")\nprint(f\"NumPy 版本: {np.__version__}\")\nprint(f\"Scikit-learn 版本: {sklearn.__version__}\")\n\n# 检查 PyTorch 是否支持 CUDA (GPU)\nif torch.cuda.is_available():\n    print(f\"CUDA 可用: {torch.cuda.is_available()}\")\n    print(f\"CUDA 版本: {torch.version.cuda}\")\n    print(f\"设备名称: {torch.cuda.get_device_name(0)}\")\nelse:\n    print(\"CUDA 不可用。正在 CPU 上运行。\")\n\n# 测试一个简单的 PyTorch 张量操作\nx = torch.rand(5, 3)\nprint(\"\\nPyTorch 张量示例：\")\nprint(x)\n</code></pre>\n<p>如果这些命令执行无误，并显示版本和张量输出，那么你的环境就已准备就绪。你现在拥有了跟进实践示例所需的工具，从可视化过拟合 (overfitting)的影响开始。拥有这样一个稳定的配置，可以确保在你研究不同方法来改进模型泛化能力时，代码能按预期运行。</p>",
+  "slug": "setup-dev-environment",
+  "updates": [],
+  "references": [
+    {
+      "id": 13666,
+      "title": "PyTorch Installation Guide",
+      "author": "PyTorch Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch.org/get-started/locally/",
+      "doi": "",
+      "note": "提供在不同操作系统和配置（CPU/GPU）上安装 PyTorch、torchvision 和 torchaudio 的全面说明。",
+      "order": 1,
+      "created_at": "2025-09-05T08:37:28.642054Z",
+      "updated_at": "2025-09-08T15:46:36.745546Z"
+    },
+    {
+      "id": 13667,
+      "title": "Managing environments with Conda",
+      "author": "conda documentation",
+      "year": "2024",
+      "publisher": "Conda",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html",
+      "doi": "",
+      "note": "创建、激活和管理 Conda 环境以及安装包的官方指南。",
+      "order": 2,
+      "created_at": "2025-09-05T08:37:28.681986Z",
+      "updated_at": "2025-09-08T15:46:38.557080Z"
+    },
+    {
+      "id": 13668,
+      "title": "`venv` - Creation of virtual environments",
+      "author": "Python Documentation Team",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.python.org/3/library/venv.html",
+      "doi": "",
+      "note": "解释如何使用内置 `venv` 模块创建和管理独立的 Python 环境。",
+      "order": 3,
+      "created_at": "2025-09-05T08:37:28.687841Z",
+      "updated_at": "2025-09-08T15:46:33.950833Z"
+    }
+  ],
+  "type": "Setup",
+  "show_calculator_banner": false
+}

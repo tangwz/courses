@@ -1,0 +1,61 @@
+{
+  "id": 2369,
+  "title": "开发自定义评估器",
+  "meta_title": "Develop Custom Scikit-learn Estimators",
+  "meta_description": "Build custom prediction models (estimators) in Python following the Scikit-learn interface conventions.",
+  "content": "<p>预测模型本身，即<em>评估器</em>，是许多机器学习 (machine learning)任务的核心。尽管专门的数据操作通常由转换器处理，但评估器是主要预测逻辑所在之处。Scikit-learn 提供了一系列丰富的评估器，但有时会出现需要实现自定义建模算法、以独特方式修改现有算法，或封装库中没有的特定预测策略的情况。此处将介绍如何创建自己的评估器，使其与 Scikit-learn 生态系统良好结合。</p>\n<p>开发自定义评估器需要遵循与自定义转换器相同的核心 API 原则，确保与 <code>Pipeline</code>、<code>GridSearchCV</code> 和 <code>cross_val_score</code> 等工具的兼容性。</p>\n<h3>Scikit-learn 评估器接口</h3>\n<p>从根本上讲，Scikit-learn 评估器是一个实现特定方法的 Python 类。通过遵循这些约定，您的自定义评估器可以与库的工具实现互操作性。</p>\n<ol>\n<li>\n<p><strong><code>__init__(self, **hyperparameters)</code></strong>:</p>\n<ul>\n<li>构造函数应接受评估器的超参数 (parameter) (hyperparameter)作为显式关键字参数。</li>\n<li><strong>非常重要的一点是</strong>，它不应执行任何数据验证或模型拟合。其唯一目的是存储超参数。</li>\n<li>每个关键字参数都应有默认值。</li>\n<li>将传入的超参数<em>不变地</em>存储为公共属性（例如，<code>self.my_param = my_param</code>）。这是 <code>get_params</code> 和 <code>set_params</code> 正确运行所必需的。</li>\n<li>可选地，定义 <code>_estimator_type</code> 属性（例如，<code>\"classifier\"</code> 或 <code>\"regressor\"</code>）。虽然对于基本功能并非严格要求，但它有助于 Scikit-learn 工具识别评估器类型。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>fit(self, X, y=None, **fit_params)</code></strong>:</p>\n<ul>\n<li>这是评估器从数据中学习的主要训练方法。</li>\n<li>它接受训练数据 <code>X</code>（通常是形状为 <code>[n_samples, n_features]</code> 的 NumPy 数组或稀疏矩阵）以及可选的目标值 <code>y</code>（对于监督学习 (supervised learning)，是形状为 <code>[n_samples]</code> 的 NumPy 数组）。</li>\n<li><code>fit</code> 方法应执行任何必要的输入验证（通常使用 Scikit-learn 的验证工具）。</li>\n<li>它包含学习算法的主要逻辑。</li>\n<li>学习到的参数（例如，模型系数、聚类中心）<strong>必须</strong>作为名称以尾随下划线 (<code>_</code>) 结尾的属性存储，例如 <code>self.coef_</code> 或 <code>self.cluster_centers_</code>。此约定将学习到的参数与初始化期间设置的超参数区分开来。</li>\n<li>该方法<strong>必须</strong>返回 <code>self</code>（评估器实例）。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>predict(self, X)</code></strong> (适用于监督评估器):</p>\n<ul>\n<li>接受新数据 <code>X</code>（具有与训练数据相同的特征数量），并返回预测值（例如，类别标签、回归值）。</li>\n<li>在进行预测之前，它应该检查 <code>fit</code> 是否已被调用（通常通过 <code>sklearn.utils.validation</code> 中的 <code>check_is_fitted</code>）。</li>\n<li>它使用在 <code>fit</code> 期间存储的学习到的参数（那些以 <code>_</code> 结尾的参数）。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>score(self, X, y)</code></strong> (可选，通常由 mixin 提供):</p>\n<ul>\n<li>评估模型在给定数据 <code>X</code> 和真实标签 <code>y</code> 上的性能。</li>\n<li>返回一个分数（例如，分类器的准确率，回归器的 R^2）。</li>\n</ul>\n</li>\n<li>\n<p><strong><code>get_params(self, deep=True)</code></strong> 和 <strong><code>set_params(self, **params)</code></strong> (通常继承而来):</p>\n<ul>\n<li>这些方法对于超参数调优和模型检查非常重要。</li>\n<li><code>get_params</code> 获取评估器的超参数。</li>\n<li><code>set_params</code> 允许修改超参数。</li>\n<li>通常通过继承 <code>sklearn.base.BaseEstimator</code> 免费获得这些功能。</li>\n</ul>\n</li>\n</ol>\n<h3>运用基类和混入类</h3>\n<p>Scikit-learn 在 <code>sklearn.base</code> 中提供基类和混入类，以简化自定义评估器开发：</p>\n<ul>\n<li><strong><code>BaseEstimator</code></strong>：这是所有评估器的基本类。从 <code>BaseEstimator</code> 继承会自动提供符合规范的 <code>get_params</code> 和 <code>set_params</code> 方法，前提是您的 <code>__init__</code> 方法遵循上述约定。</li>\n<li><strong><code>RegressorMixin</code></strong>：适用于回归评估器。从该混入类（以及 <code>BaseEstimator</code>）继承会提供一个默认的 <code>score</code> 方法，用于计算 R^2 分数。您只需要实现 <code>fit</code> 和 <code>predict</code>。</li>\n<li><strong><code>ClassifierMixin</code></strong>：适用于分类评估器。它提供一个默认的 <code>score</code> 方法，用于计算平均准确率。您需要实现 <code>fit</code> 和 <code>predict</code>（通常还包括 <code>predict_proba</code>）。</li>\n<li><strong><code>TransformerMixin</code></strong>：提供 <code>fit_transform</code>。您需要实现 <code>fit</code> 和 <code>transform</code>。（在自定义转换器的上下文 (context)中会有更多介绍）。</li>\n<li><strong><code>ClusterMixin</code></strong>：适用于聚类评估器。提供 <code>fit_predict</code>。您需要实现 <code>fit</code> 和通常的 <code>labels_</code>。</li>\n</ul>\n<p>通过继承 <code>BaseEstimator</code> 和相关的混入类（例如 <code>RegressorMixin</code>），您可以大幅减少样板代码。</p>\n<h3>示例：一个简单均值回归器</h3>\n<p>让我们构建一个非常基本的回归器，它总是预测训练期间目标变量的平均值。这展现了基本结构。</p>\n<pre><code class=\"language-python\">import numpy as np\nfrom sklearn.base import BaseEstimator, RegressorMixin\nfrom sklearn.utils.validation import check_X_y, check_array, check_is_fitted\nfrom sklearn.utils.multiclass import check_classification_targets\n\nclass MeanRegressor(BaseEstimator, RegressorMixin):\n    \"\"\"\n    一个简单回归器，预测训练目标变量的均值。\n    \"\"\"\n    # 这个简单模型不需要超参数，因此 __init__ 函数非常简洁\n    def __init__(self):\n        pass # 无超参数需要存储\n\n    def fit(self, X, y):\n        \"\"\"\n        学习目标变量 y 的均值。\n\n        参数\n        ----------\n        X : 形状为 (n_samples, n_features) 的类数组\n            训练数据。此评估器会忽略，但 API 要求。\n        y : 形状为 (n_samples,) 的类数组\n            目标值。\n\n        返回\n        -------\n        self : 对象\n            返回实例本身。\n        \"\"\"\n        # 1. 验证输入：检查 X 和 y，如果需要则转换为 NumPy 数组。\n        #    确保 y 被视为回归目标。\n        X, y = check_X_y(X, y, accept_sparse=False, y_numeric=True)\n\n        # 2. 存储数据属性（可选但推荐）\n        #    此评估器忽略 X，因此不需要 n_features_in_，\n        #    但这是一种标准做法。\n        self.n_features_in_ = X.shape[1]\n\n        # 3. 学习参数：计算 y 的均值\n        self.mean_ = np.mean(y)\n\n        # 4. 将评估器标记为已拟合（可选但推荐）\n        self.is_fitted_ = True\n\n        # 5. 返回 self\n        return self\n\n    def predict(self, X):\n        \"\"\"\n        预测 X 中所有样本的学习到的均值。\n\n        参数\n        ----------\n        X : 形状为 (n_samples, n_features) 的类数组\n            待预测的样本。\n\n        返回\n        -------\n        y_pred : 形状为 (n_samples,) 的 ndarray\n            每个样本的预测均值。\n        \"\"\"\n        # 1. 检查 fit 是否已被调用\n        check_is_fitted(self, 'mean_') # 检查 self.mean_ 是否存在\n\n        # 2. 验证输入 X：确保 X 有效（例如，NumPy 数组）\n        #    并且具有 fit 所需的正确特征数量。\n        X = check_array(X, accept_sparse=False)\n        if X.shape[1] != self.n_features_in_:\n             raise ValueError(f\"Expected {self.n_features_in_} features but got {X.shape[1]}\")\n\n        # 3. 执行预测：返回一个包含存储均值的数组\n        #    其长度与 X 中样本的数量相同。\n        n_samples = X.shape[0]\n        y_pred = np.full(shape=n_samples, fill_value=self.mean_)\n\n        return y_pred\n\n    # 我们从 RegressorMixin 继承 score 方法（计算 R^2）\n    # 我们从 BaseEstimator 继承 get_params/set_params\n\n    # 可选，但推荐用于兼容性检查\n    def _more_tags(self):\n        return {'non_deterministic': False, # 我们的评估器是确定性的\n                'requires_y': True}         # Fit 需要 y\n</code></pre>\n<p>这个 <code>MeanRegressor</code> 显示了主要的组成部分：</p>\n<ul>\n<li>从 <code>BaseEstimator</code> 和 <code>RegressorMixin</code> 继承。</li>\n<li>一个什么也不做的 <code>__init__</code>（因为没有超参数 (parameter) (hyperparameter)）。</li>\n<li>一个 <code>fit</code> 方法，它使用 <code>check_X_y</code> 验证输入，计算均值，将其存储在 <code>self.mean_</code> 中，存储 <code>n_features_in_</code>，设置 <code>is_fitted_</code>，并返回 <code>self</code>。</li>\n<li>一个 <code>predict</code> 方法，它使用 <code>check_is_fitted</code> 检查模型是否已拟合，使用 <code>check_array</code> 验证输入 <code>X</code>，检查特征数量，并根据学习到的 <code>mean_</code> 返回预测。</li>\n</ul>\n<h3>输入验证工具函数</h3>\n<p>Scikit-learn 在 <code>sklearn.utils.validation</code> 中提供有用的验证函数：</p>\n<ul>\n<li><code>check_array(array, ...)</code>：检查输入是否为 NumPy 数组或类似类型，必要时进行转换，并执行检查，例如确保非空、有限值、正确的数据类型或特征数量。</li>\n<li><code>check_X_y(X, y, ...)</code>：同时检查 <code>X</code> 和 <code>y</code>，确保它们具有一致的长度和格式。它在监督评估器的 <code>fit</code> 方法中特别有用。您可以为回归指定 <code>y_numeric=True</code>，或为分类单独使用 <code>check_classification_targets(y)</code>。</li>\n<li><code>check_is_fitted(estimator, attributes=None, ...)</code>：通过验证指定属性（那些以 <code>_</code> 结尾的属性）的存在来检查评估器是否已拟合。在 <code>predict</code>、<code>transform</code> 或 <code>score</code> 方法的开始时调用此函数。</li>\n</ul>\n<p>使用这些工具函数使您的评估器更符合标准 Scikit-learn 行为。</p>\n<h3>与 Scikit-learn 工具的集成</h3>\n<p>由于我们的 <code>MeanRegressor</code> 遵循 Scikit-learn API（主要通过继承 <code>BaseEstimator</code> 和 <code>RegressorMixin</code> 并正确实现 <code>fit</code>/<code>predict</code>），因此它可以与 Scikit-learn 的元评估器和模型评估工具配合使用：</p>\n<pre><code class=\"language-python\">from sklearn.model_selection import cross_val_score\nfrom sklearn.datasets import make_regression\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\n\n# 生成样本回归数据\nX, y = make_regression(n_samples=100, n_features=5, random_state=42)\n\n# 实例化自定义评估器\nmean_reg = MeanRegressor()\n\n# 使用交叉验证进行评估\nscores = cross_val_score(mean_reg, X, y, cv=5)\nprint(f\"交叉验证 R^2 分数: {scores}\")\n# 示例输出：交叉验证 R^2 分数: [-0.0015 -0.0032 -0.0079 -0.0006 -0.0064]\n# （对于此基线模型，分数接近 0 是预期的）\n\n# 在 Pipeline 中使用它\npipe = Pipeline([\n    ('scaler', StandardScaler()),\n    ('mean_model', MeanRegressor())\n])\n\npipe.fit(X, y)\npredictions = pipe.predict(X[:5])\nprint(f\"Pipeline 预测 (前 5 个): {predictions}\")\n# 示例输出：Pipeline 预测 (前 5 个): [3.61 3.61 3.61 3.61 3.61] (所有预测都是学习到的均值)\n</code></pre>\n<p>将自定义逻辑直接集成到标准工作流中而无需修改的能力是遵循 API 约定的一个重要优点。</p>\n<h3>构建更复杂的评估器</h3>\n<p>“<code>MeanRegressor</code> 特意设计得很简单。自定义评估器通常涉及：”</p>\n<ul>\n<li><strong>超参数 (parameter) (hyperparameter)</strong>：在 <code>__init__</code> 中定义并作为属性存储。</li>\n<li><strong>复杂的 <code>fit</code> 逻辑</strong>：实现特定算法（例如，梯度下降 (gradient descent)、自定义树构建、专门的距离度量）。</li>\n<li><strong>多个学习到的参数</strong>：存储 <code>fit</code> 过程的各种结果（例如，<code>coef_</code>、<code>intercept_</code>、<code>support_vectors_</code>）。</li>\n<li><strong>概率预测</strong>：为分类器实现 <code>predict_proba(X)</code> 以返回类别概率。</li>\n<li><strong>特定验证</strong>：为超参数或输入数据添加领域特定的检查。</li>\n</ul>\n<p>在构建更复杂的评估器时，请记住：</p>\n<ol>\n<li>从基本框架开始（<code>BaseEstimator</code>，适当的混入类）。</li>\n<li>明确区分超参数（在 <code>__init__</code> 中设置）与学习到的参数（在 <code>fit</code> 中设置，以 <code>_</code> 结尾）。</li>\n<li>恰当地使用验证工具函数（<code>check_X_y</code>、<code>check_array</code>、<code>check_is_fitted</code>）。</li>\n<li>确保 <code>fit</code> 返回 <code>self</code>。</li>\n<li>彻底测试，最好使用 <code>sklearn.utils.estimator_checks.check_estimator</code>（在测试部分会介绍）。</li>\n</ol>\n<p>通过掌握自定义评估器的开发，您可以获得在 Scikit-learn 的可组合框架内封装独特建模方法的能力，从而实现更精细和定制化的机器学习 (machine learning)方案。</p>",
+  "slug": "developing-custom-estimators",
+  "updates": [],
+  "references": [
+    {
+      "id": 3606,
+      "title": "Developing your own scikit-learn estimators",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/developers/develop.html",
+      "doi": "",
+      "note": "创建与Scikit-learn API兼容的自定义估计器的官方用户指南。它详细说明了所需的方法和约定。",
+      "order": 1,
+      "created_at": "2025-09-04T16:55:15.675672Z",
+      "updated_at": "2025-09-08T03:21:22.578653Z"
+    },
+    {
+      "id": 3607,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow",
+      "author": "Aurélien Géron",
+      "year": "2019",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFb1-g3-V6er2GjQXEIudCSGux_zfhJBbqNZ-65VoAbk3nfkcjRhisSC8LGcBNLgDsjl54Gvk3d79pWiip9iUnXi6rd2awELFSVkAprlmQwP6wZHHc_2XH-fhUs3zstexirYK4vkHdTC4PHcg6HrKS3RWTXIrY_hA1JAAGHesNgFG8OjRYQrRk5PVfCVxlwSPoEG4KiWWNz66nJivX2Y9Xux8lTYmFLLQEu_eZQzPllCt0XlYsNuVHEyI8Har_JrUQ==",
+      "doi": "",
+      "note": "一本广泛使用的实践书籍，其中包含使用自定义组件（包括估计器）扩展Scikit-learn的实践示例和解释。",
+      "order": 2,
+      "created_at": "2025-09-04T16:55:15.682426Z",
+      "updated_at": "2025-09-08T03:21:29.312842Z"
+    },
+    {
+      "id": 3608,
+      "title": "Scikit-learn: Machine Learning in Python",
+      "author": "Fabian Pedregosa, Gaël Varoquaux, Alexandre Gramfort, Vincent Michel, Bertrand Thirion, Olivier Grisel, Mathieu Blondel, Peter Prettenhofer, Ron Weiss, Vincent Dubourg, Jake Vanderplas, Alexandre Passos, David Cournapeau, Matthieu Brucher, Matthieu Perrot, Édouard Duchesnay",
+      "year": "2011",
+      "publisher": "Journal of Machine Learning Research",
+      "journal": "Journal of Machine Learning Research",
+      "volume": "12",
+      "pages": "2825-2830",
+      "url": "http://jmlr.org/papers/v12/pedregosa11a.html",
+      "doi": "",
+      "note": "介绍Scikit-learn库的基础论文，提供了对其设计原则和架构的了解，有助于理解自定义估计器的API约定。",
+      "order": 3,
+      "created_at": "2025-09-04T16:55:15.685363Z",
+      "updated_at": "2025-09-08T03:21:18.281239Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

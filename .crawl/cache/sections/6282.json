@@ -1,0 +1,45 @@
+{
+  "id": 6282,
+  "title": "实践：为模拟LLM红队行动界定范围",
+  "meta_title": "实践：LLM红队范围界定 | AI安全",
+  "meta_description": "运用所学知识，为一个假设的LLM红队场景界定范围。",
+  "content": "<p>本次实践练习将引导你为一次模拟LLM红队行动界定范围。界定范围是LLM红队行动成功的一个主要要素，它明确了行动的目标、限制和预期成果。一个明确界定的范围是确保一次成功的、有重点的行动的必要前提，它能确保所有参与者都明白其具体参数 (parameter)。</p>\n<h3>场景：\"GenieQuery\" - Innovatech 公司内部助手</h3>\n<p>假设你是Innovatech公司（一家中型科技公司）新成立的人工智能红队的一员。Innovatech 最近部署了\"GenieQuery\"，一个由LLM驱动的内部助手。</p>\n<ul>\n<li><strong>目的</strong>：GenieQuery 旨在通过回答基于公司内部文档库的问题来帮助员工。这包括人力资源政策、项目文档（过去和现在）、技术指南和会议纪要。</li>\n<li><strong>访问方式</strong>：员工通过基于网络的聊天界面访问 GenieQuery。</li>\n<li><strong>底层技术</strong>：它使用Innovatech人工智能团队根据其内部文档微调 (fine-tuning)的专有LLM。该系统有一个供网页界面调用的API。</li>\n<li><strong>数据敏感性</strong>：GenieQuery 可访问的文档包含各种信息，从可公开分享的人力资源福利到未发布产品（“奇美拉项目”）的高度机密细节、内部财务预测，以及会议记录中可能存在的敏感员工信息片段。</li>\n<li><strong>管理层的担忧</strong>：\n<ol>\n<li><strong>机密信息泄露</strong>：主要的担忧是敏感信息泄露，特别是关于“奇美拉项目”或内部财务的细节泄露给未经授权的员工。</li>\n<li><strong>错误信息</strong>：提供关于人力资源政策或重要项目细节的不正确或误导性信息。</li>\n<li><strong>滥用</strong>：员工试图出于非工作目的破坏系统，或找到他们无权获知的信息。</li>\n<li><strong>声誉损害（内部）</strong>：如果系统容易被操纵或提供有害输出，可能会损害公司内部对AI项目的信任。</li>\n</ol>\n</li>\n</ul>\n<h3>你的任务：起草一份初步范围文件</h3>\n<p>你的任务是为针对GenieQuery的红队行动起草一份初步范围文件。这份文件将作为一份基本协议，说明将测试什么、如何测试以及在什么界限内测试。请记住本章前面在“设定LLM红队行动目标和范围”和“LLM漏洞：介绍”中讨论的原则。</p>\n<h3>范围文件的主要要素</h3>\n<p>请围绕以下主要要素构建你的范围文件。针对GenieQuery的场景，对每个要素进行审慎思考。</p>\n<ol>\n<li>\n<p><strong>红队行动目标</strong></p>\n<ul>\n<li>本次评估的主要目标是什么？务必具体。</li>\n<li>你试图为Innovatech管理层回答哪些问题？</li>\n<li><em>思考示例</em>：鉴于管理层对“奇美拉项目”的担忧，一个重要目标可能是：“评估GenieQuery通过定向提示技术无意中泄露与‘奇美拉项目’相关的机密信息的风险。”_</li>\n</ul>\n</li>\n<li>\n<p><strong>目标系统界定</strong></p>\n<ul>\n<li>明确界定“GenieQuery”系统的边界。</li>\n<li><strong>范围内的组件</strong>：列出属于本次行动一部分的GenieQuery系统的所有组成部分。\n<ul>\n<li>考虑：网页用户界面、API 端点、LLM模型本身，以及其直接交互以获取知识的任何特定数据库或文档存储库。</li>\n</ul>\n</li>\n<li><strong>范围外的组件</strong>：列出不属于本次行动的特定系统、基础设施或区域。\n<ul>\n<li>考虑：总体公司网络、员工工作站、数据中心的物理安全、底层云服务提供商的基础设施（除非Innovatech服务在其上的特定错误配置相关）。</li>\n</ul>\n</li>\n</ul>\n</li>\n<li>\n<p><strong>需要保护的重要资产</strong></p>\n<ul>\n<li>识别与GenieQuery相关，且红队将尝试影响的最重要资产。</li>\n<li>考虑：\n<ul>\n<li>特定数据集（例如，“奇美拉项目”文档、个人身份信息）的机密性。</li>\n<li>LLM提供信息的完整性（例如，人力资源政策回复的准确性）。</li>\n<li>GenieQuery服务的可用性（尽管破坏性测试通常受到限制）。</li>\n<li>系统和人工智能团队的声誉。</li>\n</ul>\n</li>\n</ul>\n</li>\n<li>\n<p><strong>需要调查的威胁（攻击途径）</strong></p>\n<ul>\n<li>根据前面讨论的LLM漏洞（例如，提示注入、越狱、数据投毒、敏感信息提取），列出将要研究的攻击类型或威胁场景。</li>\n<li>根据GenieQuery进行调整。例如，如果仅测试<em>已部署</em>的系统，对其<em>训练</em>数据进行数据投毒可能超出范围，但试图通过其直接输入（提示注入）影响其行为将会在范围内。</li>\n<li>示例：“调查对旨在窃取未宣布项目信息的直接和间接提示注入攻击的易受攻击性。”</li>\n<li>示例：“测试绕过安全过滤器以引出不适当或与工作无关回复的越狱技术。”</li>\n</ul>\n</li>\n<li>\n<p><strong>行动规则（约束与限制）</strong></p>\n<ul>\n<li><strong>时间范围</strong>：为主动测试阶段指定一个实际的持续时间（例如，“2周，从YYYY-MM-DD到YYYY-MM-DD”）。</li>\n<li><strong>允许的技术</strong>：允许哪些方法？有什么限制吗？例如，“不得进行可能显著影响GenieQuery对普通员工可用性的拒绝服务（DoS）攻击。”“对Innovatech员工的社会工程学攻击超出本次行动范围。”</li>\n<li><strong>测试账户/访问</strong>：红队将使用标准员工账户、特别提供的测试账户，还是尝试未经身份验证的攻击？</li>\n<li><strong>事件处理</strong>：如果发现严重漏洞，即时报告协议是什么？</li>\n<li><strong>数据处理</strong>：红队发现的任何敏感数据将如何处理、存储和报告？</li>\n</ul>\n</li>\n<li>\n<p><strong>假设</strong></p>\n<ul>\n<li>列出在范围界定期间做出的任何假设。</li>\n<li>示例：“红队假设所提供的测试环境忠实反映了生产环境的GenieQuery系统。”</li>\n<li>示例：“假设在行动期间，核心LLM模型不会更新。”</li>\n</ul>\n</li>\n</ol>\n<h3>范围边界可视化</h3>\n<p>理解哪些在范围内哪些在范围外非常重要。一个简单的图表通常可以为所有利益相关者澄清这一点。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-v0v803\" \n              data-graph-definition='digraph GenieQueryScope {\n    rankdir=TB;\n    graph [fontname=\"Arial\", fontsize=12, bgcolor=\"transparent\"];\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\", color=\"#495057\", fillcolor=\"#dee2e6\"];\n    edge [fontname=\"Arial\", fontsize=10, color=\"#495057\"];\n\n    subgraph cluster_in_scope {\n        label=\"范围内：GenieQuery 系统\";\n        style=\"filled\";\n        color=\"#ced4da\"; // 子图的浅灰色边框\n        bgcolor=\"#e9ecef\"; // 子图的更浅灰色背景\n\n        node [fillcolor=\"#a5d8ff\"]; // 范围内组件的蓝色\n        \"GenieQuery 网页用户界面\";\n        \"GenieQuery API\";\n        \"专有LLM\";\n        \"内部文档数据库\";\n\n        \"GenieQuery 网页用户界面\" -> \"GenieQuery API\" [label=\"调用\"];\n        \"GenieQuery API\" -> \"专有LLM\" [label=\"查询\"];\n        \"专有LLM\" -> \"内部文档数据库\" [label=\"RAG访问\"];\n    }\n\n    subgraph cluster_out_of_scope {\n        label=\"范围外\";\n        style=\"filled\";\n        color=\"#ffc9c9\"; // 浅红色边框\n        bgcolor=\"#ffe3e3\"; // 更浅的红色背景\n\n        node [fillcolor=\"#ffa8a8\"]; // 范围外组件的浅红色\n        \"员工笔记本电脑\";\n        \"公司网络基础设施\";\n        \"物理数据中心\";\n        \"第三方软件（例如，操作系统，浏览器）\";\n    }\n\n    \"Innovatech 员工\" [shape=oval, fillcolor=\"#b2f2bb\", color=\"#37b24d\"]; // 合法用户的绿色\n    \"红队操作员\" [shape=oval, fillcolor=\"#ffd8a8\", color=\"#f76707\"]; // 红队的橙色\n\n    \"Innovatech 员工\" -> \"GenieQuery 网页用户界面\" [label=\"通过...交互\"];\n    \"红队操作员\" -> \"GenieQuery 网页用户界面\" [label=\"测试\", style=dashed];\n    \"红队操作员\" -> \"GenieQuery API\" [label=\"测试\", style=dashed];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-v0v803\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>该图显示了GenieQuery系统的主要组件，这些组件被视为红队评估的范围内，例如其网页界面、API、LLM及其使用的文档数据库。它还划定了员工笔记本电脑和总体公司基础设施等要素为范围外。普通员工和红队操作员都与系统交互，通常通过其用户界面或API。</p>\n</blockquote>\n<h3>整合所有内容：轮到你了</h3>\n<p>现在，请根据场景细节和上述要素，为GenieQuery红队行动起草你自己的范围文件。不必追求完美；目标是练习思考过程。请侧重于清晰和具体。</p>\n<p>例如，在界定<strong>目标</strong>时，你可以写：</p>\n<ol>\n<li><strong>目标1</strong>：识别并记录GenieQuery中可能导致未经授权泄露“奇美拉项目”相关机密信息的漏洞。</li>\n<li><strong>目标2</strong>：评估GenieQuery对提示注入攻击的易受攻击性，此类攻击旨在绕过安全机制或生成违反Innovatech内部沟通政策的回复。</li>\n<li><strong>目标3</strong>：确定GenieQuery是否可以被操纵以提供可验证的虚假或误导性的人力资源政策信息，并评估此类错误信息的潜在影响。</li>\n</ol>\n<p>继续完成所有部分。</p>\n<h3>关于迭代的说明</h3>\n<p>请记住，范围文件通常是一份动态文档，尤其是在早期阶段。它可能会被起草，然后与利益相关者（例如AI开发团队、管理层以及必要时的法律/合规部门）讨论，然后根据反馈或在初步、非侵入式侦察期间收集到的新信息进行完善。</p>\n<h3>最后检查</h3>\n<p>在你认为你的模拟范围界定完成之前，请对其进行审查。你界定的范围是否：</p>\n<ul>\n<li><strong>具</strong>体：目标、靶标和约束是否明确界定？</li>\n<li><strong>可</strong>衡量：你能确定目标是否已达成吗？</li>\n<li><strong>可</strong>实现：考虑到潜在限制（例如时间、资源、允许的方法），范围是否现实？</li>\n<li><strong>相</strong>关：范围是否解决了Innovatech的主要风险和担忧？</li>\n<li><strong>有</strong>时限：行动是否有明确的时间范围？</li>\n</ul>\n<p>“本次练习为LLM红队行动的规划提供了扎实的起点。随着你本课程的学习进展，你将学习执行在此类范围中界定的活动所需的技术。”</p>",
+  "slug": "hands-on-defining-scope-mock-red-team",
+  "updates": [],
+  "references": [
+    {
+      "id": 17874,
+      "title": "NIST AI Risk Management Framework (AI RMF 1.0)",
+      "author": "National Institute of Standards and Technology (NIST)",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf",
+      "doi": "",
+      "note": "提供了一个管理AI系统风险的全面框架，指导红队行动中目标、范围和风险识别的建立。",
+      "order": 1,
+      "created_at": "2025-09-06T12:11:41.908395Z",
+      "updated_at": "2026-02-04T11:29:41.671253Z"
+    },
+    {
+      "id": 17876,
+      "title": "OWASP Top 10 for Large Language Model Applications",
+      "author": "OWASP Foundation",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://llmtop10.com/",
+      "doi": "",
+      "note": "列出了大型语言模型应用中最关键的十大安全风险，为红队评估期间识别潜在威胁和漏洞提供了实用指导。",
+      "order": 3,
+      "created_at": "2025-09-06T12:11:41.914486Z",
+      "updated_at": "2026-02-04T11:29:41.831670Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

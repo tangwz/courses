@@ -1,0 +1,45 @@
+{
+  "id": 1790,
+  "title": "仅保存权重",
+  "meta_title": "保存和载入 Keras 模型权重",
+  "meta_description": "学习如何仅保存模型的训练好的参数（权重）。",
+  "content": "<p>有时，您不需要保存整个模型结构，特别是当模型架构已在代码中定义时。您可能只对保留训练好的参数 (parameter)（即训练过程中获得的知识所代表的权重 (weight)和偏置 (bias)）感兴趣。仅保存权重在您希望将这些参数载入到不同但架构兼容的模型中时也很有用，例如用于迁移学习 (transfer learning)或微调 (fine-tuning)。与保存整个模型相比，它通常会使文件更小。</p>\n<p>TensorFlow 通过 Keras 提供了一种保存和载入模型权重的方法。</p>\n<h3>使用 <code>model.save_weights</code> 保存权重 (weight)</h3>\n<p><code>model.save_weights(filepath)</code> 方法允许您保存与模型关联的所有变量（权重和偏置 (bias)）的当前值。</p>\n<p><code>filepath</code> 参数 (parameter)指定了权重的保存位置和文件名。TensorFlow 支持两种主要的权重保存格式：</p>\n<ol>\n<li><strong>TensorFlow 检查点格式：</strong> 这是默认格式（如果您提供 <code>my_model_weights.weights</code> 这样的路径，则由 <code>.weights.ckpt</code> 后缀表示）。它以 TensorFlow 原生格式保存权重。使用此格式时，TensorFlow 可能会创建多个文件（例如 <code>.weights.ckpt.index</code>、<code>.weights.ckpt.data-00000-of-00001</code>）。载入时，您通常只需提供基本路径（<code>my_model_weights.weights.ckpt</code>）。这种格式通常是建议的，因为它与 TensorFlow 生态系统兼容性好。</li>\n<li><strong>HDF5 格式：</strong> 这种格式使用 HDF5 标准（分层数据格式），通常会生成一个独立文件（后缀为 <code>.weights.h5</code>）。您可以通过使用 <code>save_format='h5'</code> 或将文件路径以 <code>.h5</code> 或 <code>.keras</code> 结尾来明确要求此格式。尽管以前被广泛使用，但 TensorFlow 检查点格式通常更受青睐，因为它在 TensorFlow 工具中具有更好的兼容性。</li>\n</ol>\n<p>假设您已经训练了一个简单模型：</p>\n<pre><code class=\"language-python\">import tensorflow as tf\nfrom tensorflow import keras\nfrom tensorflow.keras import layers\nimport numpy as np\n\n# 定义一个简单的Sequential模型\ndef build_simple_model():\n    model = keras.Sequential([\n        layers.Dense(64, activation='relu', input_shape=(784,)),\n        layers.Dense(10, activation='softmax')\n    ])\n    model.compile(optimizer='adam',\n                  loss='sparse_categorical_crossentropy',\n                  metrics=['accuracy'])\n    return model\n\nmodel = build_simple_model()\n\n# 生成模拟数据\n(x_train, y_train), _ = keras.datasets.mnist.load_data()\nx_train = x_train.reshape(60000, 784).astype('float32') / 255.0\ny_train = y_train.astype('int32')\n\n# 训练模型（简短演示）\nprint(\"正在训练模型...\")\nmodel.fit(x_train[:1000], y_train[:1000], epochs=1, batch_size=32, verbose=0)\nprint(\"训练完成。\")\n\n# 将权重保存为TensorFlow检查点格式（默认）\nprint(\"正在保存权重为TF检查点格式...\")\nmodel.save_weights('my_model_weights.weights.ckpt')\nprint(\"权重已保存。\")\n\n# 将权重显式保存为HDF5格式\nprint(\"正在保存权重为HDF5格式...\")\nmodel.save_weights('my_model_weights.weights.h5', save_format='h5')\nprint(\"权重已保存。\")\n\n</code></pre>\n<p>运行此代码后，您将在目录中找到与 <code>my_model_weights.weights.ckpt</code> 相关的文件（如 <code>.index</code> 和 <code>.data-...</code> 文件）以及一个独立的 <code>my_model_weights.weights.h5</code> 文件。</p>\n<h3>使用 <code>model.load_weights</code> 载入权重 (weight)</h3>\n<p>要载入保存的权重，您首先需要一个模型实例，其<strong>架构</strong>必须与保存权重时的模型<strong>完全相同</strong>。这包括相同的层、相同的顺序和相同的配置（单元数量、激活函数 (activation function)等）。如果架构不匹配，TensorFlow 将无法知道如何将保存的权重映射到模型的层，并会报错。</p>\n<p>拥有兼容的模型实例后，您可以使用 <code>model.load_weights(filepath)</code> 载入权重。<code>filepath</code> 应指向保存时使用的相同路径前缀（对于 TF 检查点）或文件名（对于 HDF5）。</p>\n<pre><code class=\"language-python\"># 构建一个相同模型架构的新实例\nnew_model = build_simple_model()\n\n# 载入权重前验证性能（应为随机性能）\nprint(\"\\n正在评估载入权重前的新模型：\")\nloss, acc = new_model.evaluate(x_train[:1000], y_train[:1000], verbose=0)\nprint(f\"未经训练的模型准确率: {acc:.4f}\")\n\n# 载入之前保存的权重（来自TF检查点格式）\nprint(\"正在从TF检查点文件载入权重...\")\nnew_model.load_weights('my_model_weights.weights.ckpt')\nprint(\"权重已载入。\")\n\n# 载入权重后验证性能（应与训练过的模型匹配）\nprint(\"\\n正在评估载入权重后的新模型：\")\nloss, acc = new_model.evaluate(x_train[:1000], y_train[:1000], verbose=0)\nprint(f\"载入权重后的模型准确率: {acc:.4f}\")\n\n# 你也可以从HDF5文件载入\n# new_model.load_weights('my_model_weights.weights.h5')\n</code></pre>\n<p>输出将显示 <code>new_model</code> 最初表现不佳（像未经训练的模型），但在载入权重后，其准确率与最初训练过的模型相同。</p>\n<h3>架构兼容性是必需的</h3>\n<p>需要再次强调：<code>model.load_weights()</code> 要求接收权重 (weight)的模型具有兼容的结构。例如，您不能将从卷积神经网络 (neural network) (CNN)保存的权重载入到简单的全连接网络中。TensorFlow 根据层的顺序和命名来匹配权重。此方法假定模型的架构已在其他地方（例如在您的 Python 脚本中）定义，并且只传输训练好的参数 (parameter)。</p>\n<p>当您对训练过程进行迭代或部署应用程序时，此方法特别方便，因为模型结构在代码中定义，您只需载入训练好的参数。这也是 <code>ModelCheckpoint</code> 回调在配置 <code>save_weights_only=True</code> 时使用的底层机制，它允许您在长时间训练过程中自动保存表现最好的权重，而无需重复保存整个模型结构。</p>",
+  "slug": "saving-weights-only",
+  "updates": [],
+  "references": [
+    {
+      "id": 2318,
+      "title": "Save and load Keras models",
+      "author": "Neel Kovelamudi, Francois Chollet",
+      "year": "2024",
+      "publisher": "TensorFlow",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.tensorflow.org/guide/keras/save_and_serialize",
+      "doi": "",
+      "note": "官方指南，介绍了如何保存和加载Keras模型，包括保存和加载权重、支持的格式以及架构兼容性的详细说明。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:21.536468Z",
+      "updated_at": "2025-09-08T02:51:03.071417Z"
+    },
+    {
+      "id": 2319,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2023",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "一本实用指南，全面介绍了在TensorFlow生态系统中保存和加载Keras模型及其权重的方法，并提供了实用的示例和最佳实践。(第5版)",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:21.652358Z",
+      "updated_at": "2025-09-08T02:51:28.318419Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,29 @@
+{
+  "id": 4637,
+  "title": "量化感知训练的必要性",
+  "meta_title": "为何使用量化感知训练 (QAT)？",
+  "meta_description": "了解PTQ不足以及为保持模型精度何时需要使用QAT的情况。",
+  "content": "<p>训练后量化 (quantization) (PTQ) 提供有效方法，例如校准和像 GPTQ 这样的较好方法，对预训练 (pre-training)模型进行量化。PTQ 具有吸引力，因为它不需要访问原始训练流程或数据集，并且计算成本比重新训练低。</p>\n<p>然而，PTQ 对模型进行操作，其权重 (weight)已为高精度浮点运算（如 FP32 或 FP16）进行了优化。当这些权重映射到较低精度的整数（INT8，特别是 INT4 或更低）时，引入的量化误差，即原始值与其量化表示之间的差异，有时会比较大。</p>\n<h3>PTQ 不足时：精度挑战</h3>\n<p>PTQ 的主要局限在于其事后处理的特性。模型在训练时并未考虑到量化 (quantization)。这可能导致一些问题，特别是在以下情况：</p>\n<ol>\n<li>\n<p>**对权重 (weight)扰动的高敏感性：**LLM 中有些参数 (parameter)比其他参数更敏感。将这些敏感权重映射到有限的整数值集所造成的微小变化，可能不均衡地影响模型输出并降低精度。PTQ 方法试图减少这种误差，但它们无法根本上改变模型在原始训练期间形成的固有敏感性。</p>\n</li>\n<li>\n<p>**激进的量化目标：**随着比特数的减少，精度下降通常会更明显。对于许多使用标准 PTQ 的模型来说，从 FP16 到 INT8 可能只会导致可以忽略或接受的精度损失。然而，进一步推进到 INT4 或 INT3 会显著降低数据类型的表示能力。PTQ 在此类严格限制下难以保持精度，因为量化误差相对于原始权重值而言变得大得多。</p>\n</li>\n<li>\n<p>**激活离群值：**激活图中的大值（离群值）对量化来说是困难的。尽管像校准这样的 PTQ 方法试图设置量化范围（尺度和零点）以适应典型分布，但极端的离群值会迫使这些范围显著拓宽。这减少了可用于更常见、较小值的精度，从而有效地增加了大部分激活的量化误差。像 SmoothQuant（第三章）这样的方法在一定程度上解决了这个问题，但根本性难题依然存在，尤其是在极低位深时。</p>\n</li>\n<li>\n<p>**累积误差：**网络早期层中引入的量化误差会随着数据通过后续层而传播和放大。某一层的微小误差可能会导致最终预测出现更大的偏差。</p>\n</li>\n</ol>\n<p>可以直观地看一下这种权衡。随着精度的降低，PTQ 的精度下降通常比 QAT 更剧烈，尤其是在位深极低时。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-puzugs\" \n              data-plot-definition='{\"data\": [{\"x\": [\"FP16\", \"INT8\", \"INT4\"], \"y\": [100, 98.5, 85], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"PTQ\", \"line\": {\"color\": \"#339af0\"}, \"marker\": {\"color\": \"#339af0\", \"size\": 8}}, {\"x\": [\"FP16\", \"INT8\", \"INT4\"], \"y\": [100, 99.5, 96], \"type\": \"scatter\", \"mode\": \"lines+markers\", \"name\": \"QAT\", \"line\": {\"color\": \"#20c997\"}, \"marker\": {\"color\": \"#20c997\", \"size\": 8}}], \"layout\": {\"title\": {\"text\": \"精度与量化级别对比\"}, \"xaxis\": {\"title\": {\"text\": \"量化精度\"}}, \"yaxis\": {\"title\": {\"text\": \"模型相对精度 (%)\"}, \"range\": [80, 101]}, \"legend\": {\"yanchor\": \"bottom\", \"y\": 0.01, \"xanchor\": \"right\", \"x\": 0.99}, \"margin\": {\"l\": 50, \"r\": 20, \"t\": 50, \"b\": 50}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-puzugs\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>PTQ 和 QAT 在不同精度级别下的精度下降比较。QAT 通常保持更高的精度，尤其是在 INT4 等较低位深时。</p>\n</blockquote>\n<h3>进入量化 (quantization)感知训练</h3>\n<p>当通过 PTQ（即使是较好方法）达到的精度不符合您的应用要求时，特别是针对激进的低位量化时，量化感知训练 (QAT) 变得必要。</p>\n<p>QAT 与 PTQ 的根本区别在于它在训练或微调 (fine-tuning)过程中融入量化的影响。QAT 不是对已为浮点优化过的模型进行量化，而是帮助模型学习对量化引入的噪声和信息损失更具弹性的权重 (weight)。它让模型在学习的同时能够“适应”低精度算术的限制。</p>\n<p>可以这样想：PTQ 就像让一个为理想条件训练的运动员，穿着不太好的装备进行比赛。他们可能有所适应，但最佳表现可能会受到影响。QAT 则像从一开始（或在特定的体能训练阶段）就让运动员穿着他们实际将使用的装备进行训练，从而使他们能够专门针对这些限制优化技术和力量。</p>\n<p>因此，在以下情况您应考虑使用 QAT：</p>\n<ul>\n<li>您需要量化到极低位深（例如 INT4 或更低），而 PTQ 通常难以保持精度时。</li>\n<li>您的应用对精度有严格要求，且 PTQ 导致的精度下降不可接受时。</li>\n<li>您有证据（通过评估）表明特定模型架构或任务对量化噪声特别敏感时。</li>\n<li>您有资源（时间、计算、数据）进行微调，因为 QAT 包含一个训练阶段时。</li>\n</ul>\n<p>以下章节将说明 QAT 如何通过在训练期间模拟量化来达到此目的，处理通过量化操作进行的梯度计算，以及实现 QAT 工作流所包含的实际步骤。</p>",
+  "slug": "need-for-qat",
+  "updates": [],
+  "references": [
+    {
+      "id": 12033,
+      "title": "LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale",
+      "author": "Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer",
+      "year": "2022",
+      "publisher": "",
+      "journal": "NeurIPS 2022",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2208.07339",
+      "doi": "10.48550/arXiv.2208.07339",
+      "note": "尽管是一种后训练方法，本文指出了量化大型语言模型的关键挑战，特别是激活异常值的影响，说明了PTQ可能难以应对的原因。",
+      "order": 3,
+      "created_at": "2025-09-05T07:56:36.103858Z",
+      "updated_at": "2025-09-10T11:30:24.390590Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

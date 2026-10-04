@@ -1,0 +1,61 @@
+{
+  "id": 1899,
+  "title": "访问流水线步骤",
+  "meta_title": "访问 Scikit-learn 流水线步骤",
+  "meta_description": "如何检查和访问已定义的流水线中的各个步骤。",
+  "content": "<p>一个 <code>Pipeline</code> 作为一个单独的 Scikit-learn 估计器。然而，它封装了多个步骤，通常是一系列转换器之后接一个最终的预测器。您可能需要检查这些独立的组件，也许是为了理解标量（scaler）学到的参数 (parameter)，或是流水线拟合后线性模型确定的系数。Scikit-learn 提供了简单直接的方法来访问这些内部步骤。</p>\n<p>访问 <code>Pipeline</code> 组件的主要属性是 <code>steps</code>。该属性包含一个列表，其中每个元素都是一个元组，包括您为步骤提供的名称和估计器对象本身。</p>\n<p>考虑一个由标量（scaler）和逻辑回归分类器组成的简单流水线：</p>\n<pre><code class=\"language-python\">from sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nimport numpy as np\n\n# 示例数据（请替换为实际数据）\nX_train = np.array([[1, 2], [2, 3], [3, 4], [4, 5]])\ny_train = np.array([0, 0, 1, 1])\n\n# 定义流水线\npipe = Pipeline([\n    ('scaler', StandardScaler()),\n    ('classifier', LogisticRegression(random_state=42))\n])\n\n# 拟合流水线\npipe.fit(X_train, y_train)\n</code></pre>\n<h3>按索引访问步骤</h3>\n<p>由于 <code>steps</code> 是一个列表，您可以使用标准列表索引来访问各个步骤。每个元素都是一个 <code>(名称, 估计器)</code> 元组。</p>\n<pre><code class=\"language-python\"># 获取第一个步骤（标量元组）\nfirst_step_tuple = pipe.steps[0]\nprint(f\"第一个步骤元组: {first_step_tuple}\")\n\n# 获取第一个步骤的名称\nfirst_step_name = pipe.steps[0][0]\nprint(f\"第一个步骤名称: {first_step_name}\") # 输出: scaler\n\n# 获取第一个步骤的估计器对象\nfirst_step_estimator = pipe.steps[0][1]\nprint(f\"第一个步骤估计器: {first_step_estimator}\") # 输出: StandardScaler()\n\n# 获取第二个步骤（分类器元组）\nsecond_step_tuple = pipe.steps[1]\nprint(f\"第二个步骤元组: {second_step_tuple}\")\n\n# 获取最终的估计器对象\nfinal_estimator = pipe.steps[-1][1] # 使用 -1 获取最后一个步骤\nprint(f\"最终估计器: {final_estimator}\") # 输出: LogisticRegression(...)\n</code></pre>\n<h3>按名称访问步骤</h3>\n<p>尽管索引访问可行，但可读性可能较差，尤其是在较长的流水线中。Scikit-learn 流水线也支持使用您为步骤分配的名称进行字典式访问。这通常是更便捷和明确的方法。</p>\n<pre><code class=\"language-python\"># 按名称访问标量对象\nscaler_object = pipe['scaler']\nprint(f\"按名称访问的标量对象: {scaler_object}\") # 输出: StandardScaler()\n\n# 按名称访问分类器对象\nclassifier_object = pipe['classifier']\nprint(f\"按名称访问的分类器对象: {classifier_object}\") # 输出: LogisticRegression(...)\n</code></pre>\n<p>这种按名称访问的方式使您的代码对流水线顺序的变化有更强的适应性（尽管改变顺序通常意味着不同的工作流程）。</p>\n<h3>检查流水线中拟合的参数 (parameter)</h3>\n<p>访问各个步骤的一个主要原因是检查流水线拟合后的状态。当您对整个流水线调用 <code>fit()</code> 时，它会依次对每个转换器调用 <code>fit_transform()</code>，最后对最后一个估计器调用 <code>fit()</code>。拟合后的属性（例如 <code>StandardScaler</code> 的 <code>mean_</code> 或 <code>LogisticRegression</code> 的 <code>coef_</code>）存储在流水线内部各自的估计器对象中。</p>\n<p>您可以通过命名的步骤来访问这些属性：</p>\n<pre><code class=\"language-python\"># 访问 StandardScaler 学到的均值\nscaler_mean = pipe['scaler'].mean_\nprint(f\"标量学到的均值: {scaler_mean}\")\n\n# 访问 LogisticRegression 学到的系数\nclassifier_coef = pipe['classifier'].coef_\nprint(f\"分类器学到的系数: {classifier_coef}\")\n\n# 访问 LogisticRegression 学到的截距\nclassifier_intercept = pipe['classifier'].intercept_\nprint(f\"分类器学到的截距: {classifier_intercept}\")\n</code></pre>\n<p>这使您能够解释预处理步骤的结果，并理解最终模型的参数，即使它们被整齐地封装在流水线中。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-cbsf6l\" \n              data-graph-definition='digraph G {\n  rankdir=LR;\n  node [shape=box, style=filled, color=\"#ced4da\"];\n  edge [color=\"#495057\"];\n\n  subgraph cluster_pipeline {\n    label = \"流水线 (&#39;pipe&#39;)\";\n    bgcolor=\"#e9ecef\";\n    node [fillcolor=\"#a5d8ff\"];\n\n    step0 [label=\"步骤 0:\\n&#39;scaler&#39;\\n(StandardScaler)\"];\n    step1 [label=\"步骤 1:\\n&#39;classifier&#39;\\n(LogisticRegression)\"];\n\n    step0 -> step1 [label=\"数据流\"];\n  }\n\n  access_index [label=\"pipe.steps[0]\\npipe.steps[1]\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n  access_name [label=\"pipe[&#39;scaler&#39;]\\npipe[&#39;classifier&#39;]\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n  access_params [label=\"pipe[&#39;scaler&#39;].mean_\\npipe[&#39;classifier&#39;].coef_\", shape=plaintext, fontcolor=\"#1c7ed6\"];\n\n  access_index -> step0 [style=dashed, color=\"#748ffc\", arrowhead=none];\n  access_index -> step1 [style=dashed, color=\"#748ffc\", arrowhead=none];\n\n  access_name -> step0 [style=dashed, color=\"#748ffc\", arrowhead=none];\n  access_name -> step1 [style=dashed, color=\"#748ffc\", arrowhead=none];\n\n  access_params -> step0 [style=dashed, color=\"#748ffc\", arrowhead=none];\n  access_params -> step1 [style=dashed, color=\"#748ffc\", arrowhead=none];\n\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-cbsf6l\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>示例流水线 <code>pipe</code> 中访问步骤及其参数的图示。名称和索引提供了访问内部估计器的途径。</p>\n</blockquote>\n<p>理解如何按名称访问流水线步骤在与 <code>GridSearchCV</code> 等工具进行超参数 (hyperparameter)调优时也很重要。您需要使用 <code>estimator_name__parameter_name</code> 语法来指定参数，这直接依赖于您分配给流水线步骤的名称。我们将在“流水线中的网格搜索”部分详细介绍这一点。</p>",
+  "slug": "accessing-pipeline-steps",
+  "updates": [],
+  "references": [
+    {
+      "id": 2417,
+      "title": "Pipelines and composite estimators",
+      "author": "Scikit-learn developers",
+      "year": "2024",
+      "publisher": "Scikit-learn Project",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/compose.html",
+      "doi": "",
+      "note": "Scikit-learn官方用户指南，解释了管道的目的、结构和基本用法。",
+      "order": 1,
+      "created_at": "2025-09-04T16:46:33.256675Z",
+      "updated_at": "2025-09-08T03:01:41.528530Z"
+    },
+    {
+      "id": 2418,
+      "title": "sklearn.pipeline.Pipeline",
+      "author": "Scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html",
+      "doi": "",
+      "note": "《Pipeline》类的官方API文档，详细介绍了其属性（如`steps`）和方法。",
+      "order": 2,
+      "created_at": "2025-09-04T16:46:33.269251Z",
+      "updated_at": "2025-09-08T03:01:31.040954Z"
+    },
+    {
+      "id": 2419,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "864",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125964/",
+      "doi": "",
+      "note": "一本涵盖Scikit-learn管道的综合实践指南，包括访问内部步骤和检查拟合参数的详细示例。",
+      "order": 3,
+      "created_at": "2025-09-04T16:46:33.278818Z",
+      "updated_at": "2025-09-08T03:02:09.172151Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

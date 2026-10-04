@@ -1,0 +1,61 @@
+{
+  "id": 7645,
+  "title": "针对大规模图数据的分批处理",
+  "meta_title": "PyG 中的大规模图分批处理",
+  "meta_description": "了解 PyTorch Geometric 如何处理多个图的分批操作，以便在大数据集上进行高效训练。",
+  "content": "<p>在使用标准的深度学习 (deep learning)模型（如处理图像的 CNN）时，数据的分批处理非常直观。你可以将多张固定大小的图像堆叠成一个张量。然而，图数据并不统一，每个图的节点和边数都不尽相同，因此无法将它们直接堆叠成整齐的矩形张量。一种常见的直观想法是将邻接矩阵填充到最大尺寸，但这会导致张量极其稀疏且占用大量内存，效率极低。</p>\n<p>PyTorch Geometric 采用了一种高效的策略来应对这一挑战：它将一组小图组成的一个批次（mini-batch）视为一个由不连通组件构成的大图。这种方法并不是强行将图放入死板的张量结构中，而是将它们合并成一个可以在单次前向传播中处理的大型图。</p>\n<h3>不连通图的分批策略</h3>\n<p>核心思想是将一列小图组合成一个大的 <code>Data</code> 对象。假设我们有一个包含 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 个图的批次。PyG 会创建一个包含这 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>N</mi></mrow><annotation encoding=\"application/x-tex\">N</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.109em;\">N</span></span></span></span> 个图中所有节点和边的单一大图。由于各个原始图之间没有边相连，它们在大图结构中仍然保持为独立的组件。这使得 GNN 层能够正确执行消息传递，因为信息只会在每个原始子图的范围内流动。</p>\n<p>这个过程主要分为三个步骤：</p>\n<ol>\n<li><strong>拼接节点特征</strong>：将批次中所有图的节点特征矩阵沿着节点维度进行拼接。</li>\n<li><strong>拼接并偏移边索引</strong>：边索引张量也会进行拼接。但是，后续每个图的索引必须增加前面所有图的累计节点总数。这能确保边能够指向新大特征矩阵中正确的节点。</li>\n<li><strong>创建 <code>batch</code> 属性</strong>：创建一个新的属性 <code>batch</code>。这是一个列向量 (vector)，用于将每个节点映射到它在批次中所属的原始图。例如，第一个图的所有节点索引为 0，第二个图的所有节点索引为 1，依此类推。</li>\n</ol>\n<p>下图展示了如何将两个小图合并成一个分批后的图。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-32bz0u\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=false;\n    node [shape=circle, style=filled, fontname=\"Helvetica\", margin=0.1];\n    edge [fontname=\"Helvetica\"];\n    \n    subgraph cluster_0 {\n        label = \"图 1 (3 个节点)\";\n        style=dashed;\n        color=\"#adb5bd\";\n        \n        A [label=\"0\", fillcolor=\"#a5d8ff\"];\n        B [label=\"1\", fillcolor=\"#a5d8ff\"];\n        C [label=\"2\", fillcolor=\"#a5d8ff\"];\n        \n        A -> B;\n        B -> C;\n        A -> C;\n    }\n    \n    subgraph cluster_1 {\n        label = \"图 2 (2 个节点)\";\n        style=dashed;\n        color=\"#adb5bd\";\n        \n        D [label=\"0\", fillcolor=\"#b2f2bb\"];\n        E [label=\"1\", fillcolor=\"#b2f2bb\"];\n        \n        D -> E;\n    }\n    \n    subgraph cluster_2 {\n        label = \"分批后的图 (5 个节点)\";\n        style=filled;\n        color=\"#e9ecef\";\n        \n        A2 [label=\"0\", fillcolor=\"#a5d8ff\"];\n        B2 [label=\"1\", fillcolor=\"#a5d8ff\"];\n        C2 [label=\"2\", fillcolor=\"#a5d8ff\"];\n        \n        D2 [label=\"3\", fillcolor=\"#b2f2bb\"];\n        E2 [label=\"4\", fillcolor=\"#b2f2bb\"];\n        \n        A2 -> B2;\n        B2 -> C2;\n        A2 -> C2;\n        \n        D2 -> E2;\n    }\n    \n    label_plus [label=\"+\", shape=plaintext, fontsize=24];\n    label_arrow [label=\"➡️\", shape=plaintext, fontsize=24];\n    \n    A -> label_plus [style=invis];\n    label_plus -> D [style=invis];\n    D -> label_arrow [style=invis];\n    label_arrow -> A2 [style=invis];\n    \n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-32bz0u\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>在这个分批后的图中，图 2 的节点索引偏移了 3（图 1 的节点数）。消息传递操作自然会限制在各自的原始子图中，因为蓝色节点组和绿色节点组之间不存在边。</p>\n</blockquote>\n<h3>使用 <code>DataLoader</code> 进行实践</h3>\n<p>幸运的是，你不需要手动执行这些分批操作。PyTorch Geometric 提供了一个 <code>DataLoader</code> 类，类似于标准 PyTorch 中的同名类，它可以自动处理整个过程。</p>\n<p>你只需要将 <code>Data</code> 对象列表（即你的数据集）传递给 <code>DataLoader</code>，它就会产出代表整个批次的 <code>Data</code> 对象。</p>\n<pre><code class=\"language-python\">from torch_geometric.datasets import TUDataset\nfrom torch_geometric.loader import DataLoader\n\n# 加载一个包含许多小图的数据集\ndataset = TUDataset(root='/tmp/ENZYMES', name='ENZYMES')\n\n# 创建 DataLoader\nloader = DataLoader(dataset, batch_size=32, shuffle=True)\n\n# 遍历批次\nfor batch in loader:\n    # batch 是一个代表 32 个图的单一 Data 对象\n    print(batch)\n    # > DataBatch(edge_index=[2, 2166], x=[597, 21], y=[32], batch=[597], ptr=[33])\n\n    # batch.num_graphs 提供批次中的图数量\n    print(f\"批次中的图数量: {batch.num_graphs}\")\n    # > 批次中的图数量: 32\n</code></pre>\n<p>产出的 <code>DataBatch</code> 对象中的 <code>batch</code> 属性对于执行图级操作非常有用。例如，在图分类任务中，你会使用这个 <code>batch</code> 向量 (vector)来执行池化操作（如 <code>global_mean_pool</code>），从而分别为批次中的每个图聚合节点嵌入 (embedding)。</p>\n<h3>关于超大图采样的说明</h3>\n<p>这里描述的分批策略适用于包含许多中小型图的数据集，例如分子集合。它不适用于像社交网络这样的单一海量图。由于内存限制，在单次计算中处理拥有数百万个节点的图往往是不可行的。</p>\n<p>对于单一的大图环境，会使用一种称为<strong>邻域采样</strong>的技术。这种方法不再对整个图进行分批，而是通过为一组根节点采样固定数量的邻居来创建小批次。这是 GraphSAGE 等模型采用的方法，使其能够在内存无法容纳的超大图上进行训练。PyTorch Geometric 也为此提供了工具，例如 <code>NeighborLoader</code>，不过这属于进阶内容，超出了初学入门的范围。</p>",
+  "slug": "mini-batching-large-graphs",
+  "updates": [],
+  "references": [
+    {
+      "id": 21524,
+      "title": "PyTorch Geometric Documentation",
+      "author": "PyTorch Geometric Developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://pytorch-geometric.readthedocs.io/en/latest/",
+      "doi": "",
+      "note": "官方文档详细介绍了 `torch_geometric.data.Data`、`torch_geometric.data.Batch` 和 `torch_geometric.loader.DataLoader`，这些是PyG中高效图批处理的核心。",
+      "order": 1,
+      "created_at": "2025-09-30T09:36:08.465978Z",
+      "updated_at": "2025-09-30T09:55:51.748241Z"
+    },
+    {
+      "id": 21526,
+      "title": "Relational Inductive Biases, Deep Learning, and Graph Networks",
+      "author": "Peter W. Battaglia, Jessica B. Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinícius Flores Zambaldi, Mateusz Malinowski, Andrea Tacchetti, David Raposo, Adam Santoro, Ryan Faulkner, Caglar Gulcehre, Francis Song, Andrew Ballard, Justin Gilmer, George Dahl, Ashish Vaswani, Kelsey Allen, Charles Nash, Victoria Langston, Chris Dyer, Nicolas Heess, Daan Wierstra, Pushmeet Kohli, Matt Botvinick, Oriol Vinyals, Yujia Li, Razvan Pascanu",
+      "year": "2018",
+      "publisher": "",
+      "journal": "arXiv:1806.01261 [cs.LG]",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1806.01261",
+      "doi": "10.48550/arXiv.1806.01261",
+      "note": "这篇综述论文提出了图神经网络及其计算操作的统一概念框架，提供了消息传递如何应用的理解，这对理解批处理策略为何有效非常有帮助。",
+      "order": 3,
+      "created_at": "2025-09-30T09:36:08.473849Z",
+      "updated_at": "2025-09-30T09:55:53.818681Z"
+    },
+    {
+      "id": 21527,
+      "title": "CS224W: Machine Learning with Graphs",
+      "author": "Jure Leskovec, Charilaos Kanatsoulis",
+      "year": "2025",
+      "publisher": "Stanford University",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://cs224w.stanford.edu/",
+      "doi": "",
+      "note": "一门知名的图神经网络大学课程，包括数据结构、批处理和各种GNN模型的实现细节。",
+      "order": 4,
+      "created_at": "2025-09-30T09:36:08.478487Z",
+      "updated_at": "2025-09-30T09:56:04.036681Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

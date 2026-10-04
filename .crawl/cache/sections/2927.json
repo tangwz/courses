@@ -1,0 +1,61 @@
+{
+  "id": 2927,
+  "title": "大型模型训练中的挑战概述",
+  "meta_title": "大型模型训练中的难题",
+  "meta_description": "讨论与大型机器学习模型相关的内存限制、计算成本和通信开销。",
+  "content": "<p>随着机器学习 (machine learning)模型在复杂度和参数 (parameter)数量上持续增长，特别是在自然语言处理和计算机视觉等领域，有效训练它们带来了重大障碍。尽管JAX提供了强大的加速和微分工具，但扩展这些模型会遇到根本性的硬件限制。概述了训练大型模型时遇到的主要难题，为解决这些问题的JAX特定技术提供了背景。</p>\n<h3>内存限制：主要的瓶颈</h3>\n<p>最直接的难题通常是训练期间保存模型及其相关数据所需的庞大内存。单个现代加速器（GPU或TPU核心）拥有有限的高带宽内存（HBM），通常范围在16GB到80GB。大型模型很容易超出此容量。内存的主要消耗者包括：</p>\n<ol>\n<li><strong>模型参数 (parameter)：</strong> 这些是训练过程中学习到的权重 (weight)和偏差。对于大型模型，这很容易达到数十亿个参数。一个具有100亿参数的模型，以标准32位浮点精度（FP32）存储时，仅参数本身就需要40GB（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup><mtext> 参数</mtext><mo>×</mo><mn>4</mn><mtext> 字节/参数</mtext></mrow><annotation encoding=\"application/x-tex\">10 \\times 10^9 \\text{ 参数} \\times 4 \\text{ 字节/参数}</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8974em;vertical-align:-0.0833em;\"></span><span class=\"mord\">1</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">9</span></span></span></span></span></span></span></span><span class=\"mord text\"><span class=\"mord\"> </span><span class=\"mord cjk_fallback\">参数</span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1em;vertical-align:-0.25em;\"></span><span class=\"mord\">4</span><span class=\"mord text\"><span class=\"mord\"> </span><span class=\"mord cjk_fallback\">字节</span><span class=\"mord\">/</span><span class=\"mord cjk_fallback\">参数</span></span></span></span></span>）。这个数字随着模型大小的增加而迅速增长。</li>\n<li><strong>优化器状态：</strong> Adam或AdamW等优化器会为每个参数维护内部状态（例如，一阶矩和二阶矩）。这些状态通常需要相当于模型参数两到三倍的存储空间。对于我们100亿参数的例子，Adam可能会额外增加80GB（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>10</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup><mo>×</mo><mn>2</mn><mo>×</mo><mn>4</mn></mrow><annotation encoding=\"application/x-tex\">10 \\times 10^9 \\times 2 \\times 4</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">10</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8974em;vertical-align:-0.0833em;\"></span><span class=\"mord\">1</span><span class=\"mord\"><span class=\"mord\">0</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">9</span></span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.7278em;vertical-align:-0.0833em;\"></span><span class=\"mord\">2</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">×</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">4</span></span></span></span> 字节），使总的静态内存需求达到120GB，这已经超出了大多数单设备容量。</li>\n<li><strong>激活值：</strong> 在前向传播期间，每一层的中间结果（激活值）必须存储起来，以便在反向传播 (backpropagation)（梯度计算）中使用。激活值所需的内存随批处理大小、序列长度（对于序列模型）以及模型深度/宽度而变化。对于深度网络和长序列，激活值内存可以远超过参数内存。</li>\n<li><strong>梯度：</strong> 在反向传播期间计算的梯度通常与模型参数具有相同的维度，需要等量的存储空间（对于我们100亿参数的FP32例子，额外需要40GB）。</li>\n<li><strong>工作区内存：</strong> XLA等编译器和cuDNN等库通常需要额外的临时工作区内存以实现高效的核函数执行。</li>\n</ol>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-lvloan\" \n              data-plot-definition='{\"layout\": {\"title\": \"大型模型训练期间的典型内存分配\", \"xaxis\": {\"title\": \"内存组成部分\"}, \"yaxis\": {\"title\": \"估计内存使用量 (GB)\", \"rangemode\": \"tozero\"}, \"barmode\": \"stack\"}, \"data\": [{\"type\": \"bar\", \"name\": \"参数 (FP32)\", \"x\": [\"大型模型示例\"], \"y\": [40], \"marker\": {\"color\": \"#4263eb\"}}, {\"type\": \"bar\", \"name\": \"优化器状态 (Adam)\", \"x\": [\"大型模型示例\"], \"y\": [80], \"marker\": {\"color\": \"#748ffc\"}}, {\"type\": \"bar\", \"name\": \"激活值\", \"x\": [\"大型模型示例\"], \"y\": [60], \"marker\": {\"color\": \"#f76707\"}}, {\"type\": \"bar\", \"name\": \"梯度\", \"x\": [\"大型模型示例\"], \"y\": [40], \"marker\": {\"color\": \"#ff922b\"}}, {\"type\": \"bar\", \"name\": \"工作区/其他\", \"x\": [\"大型模型示例\"], \"y\": [20], \"marker\": {\"color\": \"#adb5bd\"}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-lvloan\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>用于训练具有Adam优化器和适中批处理大小/序列长度的100亿参数模型的内存估计分解。实际激活内存可能会有很大差异。</p>\n</blockquote>\n<p>超出设备内存会导致内存不足（OOM）错误，从而中止训练。梯度检查点和混合精度等策略（将在后面讨论）直接旨在减少激活值和参数/梯度内存占用。</p>\n<h3>计算成本和训练时间</h3>\n<p>除了内存，计算成本（以浮点运算数FLOPs衡量）随模型大小显着增加。训练大型模型涉及对海量数据集进行潜在数万亿次的矩阵乘法和卷积运算。</p>\n<ul>\n<li><strong>FLOPs扩展：</strong> 计算成本通常与模型维度呈非线性增长。例如，在Transformer模型中，自注意力 (self-attention)机制 (attention mechanism)通常随序列长度呈二次方增长。训练一个深度或宽度增加一倍的模型可能需要远超过两倍的计算量。</li>\n<li><strong>训练时长：</strong> 即使使用强大的加速器，庞大的运算量也意味着训练可能需要数天、数周甚至数月。如此长的持续时间增加了硬件成本、能源消耗以及研发迭代时间。</li>\n<li><strong>硬件要求：</strong> 有效训练这些模型需要高性能GPU集群或大型TPU Pods，这代表着巨大的资本或运营支出。</li>\n</ul>\n<p>减少总FLOPs通常涉及算法变更或模型架构修改，但混合精度等技术有时可以通过使用更快、精度更低的计算单元来提供加速。</p>\n<h3>分布式训练中的通信开销</h3>\n<p>当模型或所需批处理大小超出单个加速器的能力时，跨多个设备的分布式训练变得必不可少。尽管JAX的<code>pmap</code>简化了分布式代码的编写（如第三章所述），但设备间的通信引入了新的瓶颈。</p>\n<ul>\n<li><strong>数据并行：</strong> 最常用的策略是在每个设备上复制模型，并并行处理数据批次的不同分片。在每个设备上完成局部反向传播 (backpropagation)后，梯度必须在所有设备之间同步，然后进行优化器步骤。这种同步通常使用All-Reduce集合操作。</li>\n<li><strong>通信成本：</strong> 梯度同步所需的时间取决于模型大小（要传输的数据总量）以及设备间的互连带宽和延迟。对于非常大型的模型，这个通信步骤可能成为总步骤时间的重要组成部分，从而限制扩展效率。慢速互连（例如，以太网与NVLink或TPU互连相比）会加剧此问题。</li>\n<li><strong>其他并行策略：</strong> 更复杂的策略，如模型并行（在设备之间分割单个层）或流水线并行（在设备之间分阶段处理层），会引入不同且通常更复杂的通信模式，涉及特定设备子集之间的激活值和梯度。</li>\n</ul>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-h2dsh4\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=filled, color=\"#ced4da\"]; edge [color=\"#495057\"]; bgcolor=\"transparent\"; Input [label=\"输入数据分片\"]; subgraph cluster_0 { label=\"多设备训练 (pmap)\"; color=\"#adb5bd\"; bgcolor=\"#e9ecef\"; Device1 [label=\"设备 1\\n(模型副本)\\n计算梯度 G1\", fillcolor=\"#a5d8ff\"]; Device2 [label=\"设备 2\\n(模型副本)\\n计算梯度 G2\", fillcolor=\"#a5d8ff\"]; DeviceN [label=\"设备 N\\n(模型副本)\\n计算梯度 GN\", fillcolor=\"#a5d8ff\"]; AllReduce [label=\"All-Reduce\\n(梯度求和)\", shape=circle, fillcolor=\"#ffc9c9\"]; Optimizer [label=\"优化器步骤\\n(同步梯度)\", fillcolor=\"#b2f2bb\"]; Input -> {Device1, Device2, DeviceN} [label=\"数据分片\"]; {Device1, Device2, DeviceN} -> AllReduce; AllReduce -> Optimizer [label=\"G = G1+G2+...+GN\"]; Optimizer -> {Device1, Device2, DeviceN} [label=\"更新权重\", style=dashed]; }}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-h2dsh4\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>使用<code>pmap</code>进行数据并行时的通信模式。在优化器同步更新所有副本的模型权重 (weight)之前，每个设备本地计算的梯度必须通过All-Reduce等集合通信操作进行聚合（例如求和）。</p>\n</blockquote>\n<p>最小化通信通常涉及优化集合通信算法，在可能的情况下将通信与计算重叠，以及选择平衡计算负载和通信需求的并行策略。解决这些相互关联的难题需要结合高效的编程模型、算法技术和硬件感知。本章的后续部分将介绍JAX及其生态系统如何提供工具来管理内存、优化计算并使用分布式硬件训练真正的大型模型。</p>",
+  "slug": "challenges-large-model-training",
+  "updates": [],
+  "references": [
+    {
+      "id": 4998,
+      "title": "Attention Is All You Need",
+      "author": "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin",
+      "year": "2017",
+      "publisher": "Curran Associates, Inc.",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "30",
+      "pages": "5998-6008",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf",
+      "doi": "10.55988/neurips-2017-578",
+      "note": "提出 Transformer 架构的奠基性论文，该架构极大地推动了大型语言模型的增长及其相关的训练挑战。",
+      "order": 1,
+      "created_at": "2025-09-04T16:58:09.037515Z",
+      "updated_at": "2025-09-08T07:11:21.311423Z"
+    },
+    {
+      "id": 5004,
+      "title": "Mixed-Precision Training",
+      "author": "Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu",
+      "year": "2017",
+      "publisher": "",
+      "journal": "ICLR 2018",
+      "volume": "",
+      "pages": "",
+      "url": "https://doi.org/10.48550/arXiv.1710.03740",
+      "doi": "10.48550/arXiv.1710.03740",
+      "note": "描述了混合精度训练技术，通过使用 FP16 等低精度浮点格式，减少了内存占用并加速了计算。",
+      "order": 3,
+      "created_at": "2025-09-04T16:58:09.188048Z",
+      "updated_at": "2025-09-08T07:11:19.159644Z"
+    },
+    {
+      "id": 5006,
+      "title": "Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism",
+      "author": "Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, Bryan Catanzaro",
+      "year": "2019",
+      "publisher": "",
+      "journal": "arXiv preprint arXiv:1909.08053",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/1909.08053",
+      "doi": "10.48550/arXiv.1909.08053",
+      "note": "提出了一个用于训练超大型语言模型的框架，该框架利用模型并行和流水线并行，解决了分布式训练中的内存和通信挑战。",
+      "order": 4,
+      "created_at": "2025-09-04T16:58:09.191739Z",
+      "updated_at": "2025-09-08T07:11:21.723795Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

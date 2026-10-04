@@ -1,0 +1,29 @@
+{
+  "id": 5256,
+  "title": "响应模型定义",
+  "meta_title": "FastAPI 响应模型定义",
+  "meta_description": "定义响应模型，以控制和记录 API 响应的结构。",
+  "content": "<p>Pydantic 模型在 API 数据管理中扮演着核心角色。它们用于验证传入的请求数据，并且在定义和管理 API 响应回传的数据方面尤其有用。通过使用 <code>response_model</code>，API 能够遵守预定义的契约，自动过滤传出数据，并显著提升其文档性和易用性。</p>\n<h3>为何定义响应模型？</h3>\n<p>虽然您可以直接从路径操作函数返回任意数据结构，如字典或列表，但明确定义响应模型有多项好处：</p>\n<ol>\n<li><strong>数据验证：</strong> FastAPI 验证您从函数返回的数据是否符合 <code>response_model</code> 中定义的结构和类型。这作为一项安全检查，避免意外暴露不正确或格式错误的数据。</li>\n<li><strong>数据过滤：</strong> 如果您的函数返回的对象字段多于 <code>response_model</code> 中定义的，FastAPI 会自动过滤掉多余的字段。这对于精确控制向客户端公开的数据、隐藏内部实现细节或敏感信息非常有用。</li>\n<li><strong>序列化控制：</strong> Pydantic 会根据 <code>response_model</code> 的定义，将您的返回对象（可以是 Pydantic 模型实例、字典、数据库对象等）转换为客户端期望的 JSON 格式。</li>\n<li><strong>自动文档：</strong> FastAPI 使用 <code>response_model</code> 在您的 API 文档中（例如 <code>/docs</code> 处的交互式 Swagger UI）生成预期响应的模式。这使得您的 API 可以自我文档化，并且更易于使用者理解。</li>\n<li><strong>编辑器支持：</strong> 使用明确的模型可在您的开发环境中提供更好的自动补全和类型检查。</li>\n</ol>\n<h3>定义和使用响应模型</h3>\n<p>定义响应模型与定义请求模型相同：您创建一个继承自 Pydantic <code>BaseModel</code> 的类。</p>\n<p>我们设想一个机器学习 (machine learning)预测场景。假设我们的模型预测一个分类标签（字符串）和一个置信度得分（浮点数）。我们可以为这个输出定义一个 Pydantic 模型：</p>\n<pre><code class=\"language-python\">from pydantic import BaseModel, Field\n\nclass PredictionResult(BaseModel):\n    label: str = Field(..., description=\"预测的类别标签。\")\n    confidence: float = Field(..., ge=0.0, le=1.0, description=\"预测置信度得分（0.0 到 1.0）。\")\n\n# 我们的函数可能生成的内部数据结构示例\n# 注意它有一个额外的 'internal_model_version' 字段\ninternal_data = {\n    \"label\": \"cat\",\n    \"confidence\": 0.95,\n    \"internal_model_version\": \"v1.2.3\"\n}\n</code></pre>\n<p>现在，我们使用路径操作装饰器中的 <code>response_model</code> 参数 (parameter)，将此模型应用于响应：</p>\n<pre><code class=\"language-python\"># 假设 'app' 是您的 FastAPI 实例\n# from fastapi import FastAPI\n# app = FastAPI()\n\n@app.post(\"/predict/\", response_model=PredictionResult)\nasync def make_prediction(input_data: dict): # 假设输入验证在其他地方进行\n    # ... 处理 input_data 并运行机器学习模型 ...\n    # 函数返回一个字典，其字段多于 PredictionResult 定义的字段\n    prediction_output = {\n        \"label\": \"cat\",\n        \"confidence\": 0.95,\n        \"internal_model_version\": \"v1.2.3\",\n        \"processing_time_ms\": 50\n    }\n    return prediction_output\n</code></pre>\n<p>当客户端调用 <code>/predict/</code> 端点时，即使 <code>make_prediction</code> 函数返回的字典包含 <code>internal_model_version</code> 和 <code>processing_time_ms</code>，FastAPI 也会执行以下步骤：</p>\n<ol>\n<li>它获取返回的字典 <code>prediction_output</code>。</li>\n<li>它根据 <code>PredictionResult</code> 模型验证此字典。它检查 <code>label</code> 是否为字符串以及 <code>confidence</code> 是否为 0.0 到 1.0 之间的浮点数。如果验证失败，它将引发内部服务器错误。</li>\n<li>它过滤数据，只保留 <code>PredictionResult</code> 中定义的字段（<code>label</code> 和 <code>confidence</code>）。<code>internal_model_version</code> 和 <code>processing_time_ms</code> 字段将从最终响应中丢弃。</li>\n<li>它将过滤后的数据序列化为发送给客户端的 JSON 响应。</li>\n</ol>\n<p>客户端将收到：</p>\n<pre><code class=\"language-json\">{\n  \"label\": \"cat\",\n  \"confidence\": 0.95\n}\n</code></pre>\n<p>这种过滤机制是维护清晰 API 约定的一个强大功能。您可以在应用程序逻辑中使用更丰富的内部对象，但仅在外部公开必要的字段。</p>\n<h3>响应序列化微调 (fine-tuning)</h3>\n<p>FastAPI 提供参数 (parameter)，可进一步控制响应中包含的字段，通常有助于优化负载大小或隐藏默认值：</p>\n<ul>\n<li><code>response_model_exclude_unset=True</code>：排除在返回数据中未明确设置且仍具有默认值的字段。</li>\n<li><code>response_model_exclude_defaults=True</code>：排除值等于其默认值的字段，即使已明确设置。</li>\n<li><code>response_model_exclude_none=True</code>：排除值为 <code>None</code> 的字段。</li>\n</ul>\n<pre><code class=\"language-python\">class Item(BaseModel):\n    name: str\n    description: str | None = None\n    price: float\n    tax: float | None = 0.0 # 默认税率为 0.0\n\n@app.get(\"/items/{item_id}\", response_model=Item, response_model_exclude_none=True)\nasync def read_item(item_id: str):\n    # 设想获取一个没有描述的物品\n    item_data = {\"name\": \"Thingamajig\", \"price\": 10.50, \"description\": None, \"tax\": 0.0}\n    return item_data\n</code></pre>\n<p>在此示例中，使用 <code>response_model_exclude_none=True</code>，响应将省略 <code>description</code> 字段，因为其值为 <code>None</code>。如果同时使用 <code>response_model_exclude_defaults=True</code>，则 <code>tax</code> 字段也会被省略，因为其值（0.0）与默认值匹配。</p>\n<h3>处理多种响应类型</h3>\n<p>有时，端点可能需要根据结果返回不同的数据结构。一种常见的处理方式是在 <code>response_model</code> 中使用 Python 的 <code>Union</code> 类型提示。</p>\n<pre><code class=\"language-python\">from typing import Union\n\nclass SuccessResponse(BaseModel):\n    message: str\n    result_id: int\n\nclass ErrorResponse(BaseModel):\n    error_code: int\n    detail: str\n\n@app.post(\"/process/\", response_model=Union[SuccessResponse, ErrorResponse])\nasync def process_data(data: dict):\n    try:\n        # ... 处理数据 ...\n        if success:\n             return SuccessResponse(message=\"Processing successful\", result_id=123)\n        else:\n             # 这通常通过 HTTPException 处理，\n             # 但这里是为了说明返回不同的模型结构。\n             return ErrorResponse(error_code=5001, detail=\"Processing failed\")\n    except Exception as e:\n        return ErrorResponse(error_code=9999, detail=str(e))\n\n</code></pre>\n<p>FastAPI 会尝试将返回的对象与 <code>Union</code> 中指定的类型匹配，并在 API 模式中记录这两种可能性。请注意，对于标准 HTTP 错误（如 4xx 或 5xx），通常更推荐抛出 <code>HTTPException</code>，而不是在成功路径中返回自定义错误模型。</p>\n<p>通过定义清晰的响应模型，您可以提升机器学习 (machine learning) API 的可靠性、可维护性和文档，确保客户端以正确的格式收到他们预期的数据。这是构建可靠 Web 服务的基本做法。</p>",
+  "slug": "response-model-definition",
+  "updates": [],
+  "references": [
+    {
+      "id": 14181,
+      "title": "Models",
+      "author": "Samuel Colvin and Pydantic contributors",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.pydantic.dev/latest/usage/models/",
+      "doi": "",
+      "note": "Pydantic官方文档，阐述了`BaseModel`的定义和特性，它是FastAPI响应模型的底层结构。",
+      "order": 2,
+      "created_at": "2025-09-05T08:48:46.042800Z",
+      "updated_at": "2025-09-09T14:10:32.896178Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

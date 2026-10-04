@@ -1,0 +1,45 @@
+{
+  "id": 5586,
+  "title": "数据验证方法",
+  "meta_title": "基本数据验证方法",
+  "meta_description": "学习检查数据质量和准确性的简单方法。",
+  "content": "<p>在清除数据以修复明显错误后，下一步重要工作是<em>数据验证</em>。可以将其视为数据质量控制。数据清理侧重于修正或移除已知问题，而数据验证则是在您将其用于分析或输入其他系统<em>之前</em>，系统地检查数据是否符合特定标准或规定。跳过验证就像在不稳固的地基上盖房子；任何基于未验证数据进行的分析或构建的应用都可能存在缺陷或误导性。“垃圾进，垃圾出”的原则在这里非常适用。</p>\n<p>数据验证需要定义一组规则，然后对照这些规则检查您的数据。如果数据未能通过检查，则会被标记 (token)为无效。这个过程有助于确保数据集的准确性、一致性和可用性。</p>\n<h3>为什么数据验证重要？</h3>\n<ul>\n<li><strong>避免错误：</strong> 提早发现问题，防止它们在数据管道中传播并损坏下游分析或应用。</li>\n<li><strong>保证一致性：</strong> 确保数据在您的系统中遵循预期的标准和格式。</li>\n<li><strong>提升可靠性：</strong> 促成更值得信赖的数据，从而带来更可靠的分析结果和决策。</li>\n<li><strong>保持完整性：</strong> 通过防止不正确的数据加载，保护数据库和数据仓库的完整性。</li>\n</ul>\n<h3>常见数据验证方法</h3>\n<p>以下是几种用于验证数据的基本方法。它们通常作为数据处理流程的一部分同时应用。</p>\n<h4>1. 数据类型检查</h4>\n<p>这是最基本的检查之一。它验证特定字段中的数据是否与预期的数据类型匹配。例如：</p>\n<ul>\n<li><code>Age</code>（年龄）列应包含数字（整数）。“twenty-five”（二十五）之类的文本将是无效的。</li>\n<li><code>UserName</code>（用户名）列应包含文本（字符串）。</li>\n<li><code>OrderDate</code>（订单日期）列应包含日期。像 <code>99/99/9999</code> 或 <code>yesterday</code>（昨天）这样的值将无法通过特定的日期类型检查。</li>\n</ul>\n<p>如果数据与预期类型不匹配，这通常表明在数据输入或提取过程中存在错误。</p>\n<h4>2. 范围检查</h4>\n<p>这些检查确保数值或日期值落在可接受的最小和最大范围之内。</p>\n<ul>\n<li><strong>数值例子：</strong> <code>ItemQuantity</code>（商品数量）可能需要大于0。<code>DiscountPercentage</code>（折扣百分比）可能需要介于0到100之间（<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mn>0</mn><mo>≤</mo><mtext>折扣</mtext><mo>≤</mo><mn>100</mn></mrow><annotation encoding=\"application/x-tex\">0 \\le 折扣 \\le 100</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.7804em;vertical-align:-0.136em;\"></span><span class=\"mord\">0</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≤</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8193em;vertical-align:-0.136em;\"></span><span class=\"mord cjk_fallback\">折扣</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">≤</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.6444em;\"></span><span class=\"mord\">100</span></span></span></span>）。</li>\n<li><strong>日期例子：</strong> <code>BirthDate</code>（出生日期）不能在未来。<code>EventStartDate</code>（事件开始日期）必须在<code>EventEndDate</code>（事件结束日期）之前发生。</li>\n</ul>\n<p>范围检查有助于发现异常值或逻辑上不可能的值。</p>\n<h4>3. 格式检查</h4>\n<p>许多类型的数据需要遵循特定的模式或格式。格式检查使用模式（通常通过正则表达式，即“regex”定义）来验证这种结构。</p>\n<ul>\n<li><strong>电子邮件地址：</strong> 应遵循 <code>local-part@domain</code> 这样的模式。像 <code>john.doe@com</code> 这样的值可能会被标记 (token)。</li>\n<li><strong>电话号码：</strong> 可能需要匹配特定的格式，如 <code>(###) ###-####</code> 或国际标准。</li>\n<li><strong>邮政编码：</strong> 必须符合特定国家/地区使用的结构（例如，美国邮政编码为5位数字，加拿大邮政编码为 <code>A#A #A#</code>）。</li>\n<li><strong>日期格式：</strong> 确保日期表示一致，例如 <code>YYYY-MM-DD</code>（如 <code>2023-10-27</code>）。如果要求严格为 <code>YYYY-MM-DD</code> 格式，<code>10/27/2023</code> 将会失败。</li>\n</ul>\n<h4>4. 完整性检查（非空检查）</h4>\n<p>这验证了关键字段是否包含值，并且不为空或 <code>NULL</code>。有些字段对于记录的意义是必需的。</p>\n<ul>\n<li>订单表中的 <code>CustomerID</code>（客户ID）必须始终存在。</li>\n<li>每个售出商品可能都需要 <code>ProductSKU</code>（产品SKU）。</li>\n</ul>\n<p>如果缺少必需字段，该记录可能不完整且可能无法使用。</p>\n<h4>5. 唯一性检查</h4>\n<p>数据集中的所有记录中，某些字段必须包含唯一值。</p>\n<ul>\n<li>用户表中的 <code>UserID</code>（用户ID）必须是唯一的。</li>\n<li>订单表中的 <code>OrderNumber</code>（订单号）应该是唯一的。</li>\n</ul>\n<p>这些字段中的重复值可能导致数据完整性和关系映射方面的重大问题。</p>\n<h4>6. 集合成员检查（包含检查）</h4>\n<p>这类检查确保字段的值来自预定义的可接受值列表（一个集合或枚举）。</p>\n<ul>\n<li><code>OrderStatus</code>（订单状态）字段可能只接受集合 {'待处理', '处理中', '已发货', '已送达', '已取消'} 中的值。像 '等待' 这样的值将是无效的。</li>\n<li><code>CountryCode</code>（国家代码）字段可能需要与ISO国家代码的官方列表匹配。</li>\n</ul>\n<p>这对于分类数据非常常见，因为这类数据只有有限数量的有效选项。</p>\n<h4>7. 一致性检查</h4>\n<p>这些检查审视不同字段<em>之间</em>的关系，以确保它们在逻辑上相互匹配。</p>\n<ul>\n<li>如果 <code>Country</code>（国家）是“美国”，那么 <code>State</code>（州/省）就不能是“巴伐利亚”。</li>\n<li><code>ShippingDate</code>（发货日期）必须在 <code>OrderDate</code>（订单日期）当天或之后。</li>\n<li>如果 <code>IsMember</code>（是否会员）为“False”，那么 <code>MembershipLevel</code>（会员级别）很可能应为 <code>NULL</code> 或“无”。</li>\n</ul>\n<p>一致性检查有助于发现更不明显的错误，这些错误在孤立地查看字段时可能不明显。</p>\n<h3>无效数据处理</h3>\n<p>当数据未能通过验证时会发生什么？没有一个单一的答案；这取决于具体情况和问题的严重程度。常见的方法包括：</p>\n<ul>\n<li><strong>拒绝：</strong> 完全丢弃无效记录。如果错误是关键性的且不易修复（例如，缺少主键），这很常见。</li>\n<li><strong>标记 (token)：</strong> 将记录标记为无效，但保留它以供后续手动审查或更正。</li>\n<li><strong>隔离：</strong> 将无效记录移至单独的位置（例如错误表或文件）以供后续检查。</li>\n<li><strong>记录日志：</strong> 记录错误详情（哪个记录、哪个字段、哪个验证规则失败），用于监控和调试。</li>\n<li><strong>替换（谨慎使用）：</strong> 用默认值或 <code>NULL</code> 替换无效值。这应谨慎操作，因为它可能掩盖潜在问题或引入偏差。</li>\n</ul>\n<p>策略的选择通常取决于数据管道的设计和业务需求。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-35o14u\" \n              data-graph-definition='digraph G {\n    bgcolor=\"transparent\";\n    node [shape=box, style=filled, fillcolor=\"#e9ecef\", fontname=\"sans-serif\"];\n    edge [fontname=\"sans-serif\"];\n\n    RawData [label=\"传入数据记录\", fillcolor=\"#a5d8ff\"];\n    Validate [label=\"应用验证规则\\n(类型、范围、格式等)\", shape=diamond, fillcolor=\"#ffe066\"];\n    IsValid [label=\"数据有效吗？\", shape=diamond, fillcolor=\"#ffe066\"];\n    ValidData [label=\"有效数据记录\", fillcolor=\"#b2f2bb\"];\n    InvalidData [label=\"无效数据记录\", fillcolor=\"#ffc9c9\"];\n    Process [label=\"处理/加载数据\", fillcolor=\"#b2f2bb\"];\n    HandleError [label=\"处理错误\\n(拒绝、标记、记录)\", fillcolor=\"#ffc9c9\"];\n\n    RawData -> Validate;\n    Validate -> IsValid;\n    IsValid -> ValidData [label=\" 是\"];\n    IsValid -> InvalidData [label=\" 否\"];\n    ValidData -> Process;\n    InvalidData -> HandleError;\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-35o14u\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个简单的流程，展示了数据验证如何融入处理序列。记录对照规则进行检查；有效数据继续处理，而无效数据则单独处理。</p>\n</blockquote>\n<p>数据验证并非一次性任务；它是一个持续的过程，特别是当数据源或要求发生变化时。实施验证检查对于构建可靠的数据系统，并确保从数据中获得的分析结果准确可靠至关重要。它是将原始数据转换为有价值信息的重要一步。</p>",
+  "slug": "data-validation-techniques",
+  "updates": [],
+  "references": [
+    {
+      "id": 15476,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+      "doi": "",
+      "note": "面向数据工程师的参考资料，在构建数据系统和管道的背景下，讨论了数据完整性、可靠性和验证。",
+      "order": 2,
+      "created_at": "2025-09-06T10:46:02.344984Z",
+      "updated_at": "2025-09-11T02:49:20.946328Z"
+    },
+    {
+      "id": 15477,
+      "title": "The DAMA Guide to the Data Management Body of Knowledge (DAMA-DMBOK2)",
+      "author": "DAMA International",
+      "year": "2017",
+      "publisher": "Technics Publications",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.dama.org/dama-dmbook",
+      "doi": "",
+      "note": "行业标准，为数据管理提供了广泛的框架，其中包含专门讨论数据质量、数据治理和验证过程的章节。",
+      "order": 3,
+      "created_at": "2025-09-06T10:46:02.356222Z",
+      "updated_at": "2025-09-11T02:49:27.670140Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

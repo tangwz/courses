@@ -1,0 +1,61 @@
+{
+  "id": 1590,
+  "title": "使用 WHERE 子句筛选数据",
+  "meta_title": "SQL WHERE 子句：筛选查询结果",
+  "meta_description": "了解如何使用 WHERE 子句与 SELECT 语句结合，根据指定条件筛选行。",
+  "content": "<p>尽管 <code>SELECT</code> 语句可以从表中获取数据，但您通常不需要<em>每一行</em>数据。设想一个有数千条记录的 <code>Customers</code> 表；您可能只想查看特定城市的客户，或在某个日期之后注册的客户。获取所有数据并手动筛选既低效又不切实际。</p>\n<p>这就是 <code>WHERE</code> 子句发挥作用的地方。它作为 <code>SELECT</code> 语句的过滤器，让您能够指定行必须满足的条件，以便包含在结果集中。可以把它看作是为您数据获取设置的标准。</p>\n<h3>基本语法</h3>\n<p><code>WHERE</code> 子句在 <code>SELECT</code> 语句中位于 <code>FROM</code> 子句之后：</p>\n<pre><code class=\"language-sql\">SELECT column1, column2, ...\nFROM table_name\nWHERE condition;\n</code></pre>\n<p><code>condition</code> 部分是您定义筛选逻辑的地方。该条件对表中的每一行进行真假判断。只有条件为真的行才会被返回。</p>\n<h3>使用比较运算符</h3>\n<p>定义条件最常见的方法是使用比较运算符。这些运算符将列中的值与指定值进行比较。假设我们有一个简单的 <code>Products</code> 表：</p>\n<table>\n<thead>\n<tr>\n<th align=\"left\">产品ID</th>\n<th align=\"left\">名称</th>\n<th align=\"left\">类别</th>\n<th align=\"left\">价格</th>\n<th align=\"left\">库存量</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"left\">1</td>\n<td align=\"left\">Laptop</td>\n<td align=\"left\">Electronics</td>\n<td align=\"left\">1200</td>\n<td align=\"left\">50</td>\n</tr>\n<tr>\n<td align=\"left\">2</td>\n<td align=\"left\">Coffee Mug</td>\n<td align=\"left\">Home Goods</td>\n<td align=\"left\">15</td>\n<td align=\"left\">200</td>\n</tr>\n<tr>\n<td align=\"left\">3</td>\n<td align=\"left\">T-Shirt</td>\n<td align=\"left\">Clothing</td>\n<td align=\"left\">25</td>\n<td align=\"left\">150</td>\n</tr>\n<tr>\n<td align=\"left\">4</td>\n<td align=\"left\">Smartphone</td>\n<td align=\"left\">Electronics</td>\n<td align=\"left\">800</td>\n<td align=\"left\">75</td>\n</tr>\n<tr>\n<td align=\"left\">5</td>\n<td align=\"left\">Notebook</td>\n<td align=\"left\">Stationery</td>\n<td align=\"left\">5</td>\n<td align=\"left\">500</td>\n</tr>\n<tr>\n<td align=\"left\">6</td>\n<td align=\"left\">Jeans</td>\n<td align=\"left\">Clothing</td>\n<td align=\"left\">60</td>\n<td align=\"left\">100</td>\n</tr>\n</tbody>\n</table>\n<p>以下是标准比较运算符以及使用我们 <code>Products</code> 表的示例：</p>\n<ul>\n<li>\n<p><strong><code>=</code> (等于):</strong> 查找列值与指定值完全匹配的行。请注意，文本值（字符串）通常用单引号 (<code>' '</code>) 括起来。</p>\n<pre><code class=\"language-sql\">-- 查找 'Clothing' 类别的产品\nSELECT Name, Price\nFROM Products\nWHERE Category = 'Clothing';\n</code></pre>\n<p><em>结果:</em> T恤, 牛仔裤</p>\n</li>\n<li>\n<p><strong><code>&#x3C;></code> 或 <code>!=</code> (不等于):</strong> 查找列值与指定值<em>不</em>匹配的行。这两个运算符通常都有效，但 <code>&#x3C;></code> 是标准 SQL。</p>\n<pre><code class=\"language-sql\">-- 查找不在 'Electronics' 类别的产品\nSELECT Name, Category\nFROM Products\nWHERE Category &#x3C;> 'Electronics';\n</code></pre>\n<p><em>结果:</em> 咖啡杯, T恤, 笔记本, 牛仔裤</p>\n</li>\n<li>\n<p><strong><code>></code> (大于):</strong> 查找列值在数值上或字母顺序上大于指定值的行。</p>\n<pre><code class=\"language-sql\">-- 查找价格高于100美元的产品\nSELECT Name, Price\nFROM Products\nWHERE Price > 100;\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, 智能手机</p>\n</li>\n<li>\n<p><strong><code>&#x3C;</code> (小于):</strong> 查找列值小于指定值的行。</p>\n<pre><code class=\"language-sql\">-- 查找库存量小于100件的产品\nSELECT Name, StockQuantity\nFROM Products\nWHERE StockQuantity &#x3C; 100;\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, 智能手机</p>\n</li>\n<li>\n<p><strong><code>>=</code> (大于或等于):</strong> 查找列值大于或等于指定值的行。</p>\n<pre><code class=\"language-sql\">-- 查找价格为800美元或更高的产品\nSELECT Name, Price\nFROM Products\nWHERE Price >= 800;\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, 智能手机</p>\n</li>\n<li>\n<p><strong><code>&#x3C;=</code> (小于或等于):</strong> 查找列值小于或等于指定值的行。</p>\n<pre><code class=\"language-sql\">-- 查找价格为25美元或更低的产品\nSELECT Name, Price\nFROM Products\nWHERE Price &#x3C;= 25;\n</code></pre>\n<p><em>结果:</em> 咖啡杯, T恤, 笔记本</p>\n</li>\n</ul>\n<h3>使用逻辑运算符组合条件</h3>\n<p>通常，您需要基于多个条件进行筛选。SQL 提供了逻辑运算符（<code>AND</code>、<code>OR</code>、<code>NOT</code>）来在 <code>WHERE</code> 子句中组合多个条件。</p>\n<ul>\n<li>\n<p><strong><code>AND</code>:</strong> 要求所有关联条件都为真，行才能被包含。</p>\n<pre><code class=\"language-sql\">-- 查找价格低于1000美元的“电子产品”类别产品\nSELECT Name, Price\nFROM Products\nWHERE Category = 'Electronics' AND Price &#x3C; 1000;\n</code></pre>\n<p><em>结果:</em> 智能手机（它是“电子产品”<em>并且</em>价格低于1000美元）</p>\n</li>\n<li>\n<p><strong><code>OR</code>:</strong> 要求至少一个关联条件为真，行才能被包含。</p>\n<pre><code class=\"language-sql\">-- 查找属于“服装”类别或价格低于10美元的产品\nSELECT Name, Category, Price\nFROM Products\nWHERE Category = 'Clothing' OR Price &#x3C; 10;\n</code></pre>\n<p><em>结果:</em> T恤, 笔记本, 牛仔裤（T恤和牛仔裤符合类别条件，笔记本符合价格条件）</p>\n</li>\n<li>\n<p><strong><code>NOT</code>:</strong> 反转条件的结果。它常与其他运算符（如 <code>IN</code> 或 <code>LIKE</code>，接下来会讨论）一起使用，但也可否定简单的比较。</p>\n<pre><code class=\"language-sql\">-- 查找不是“服装”类别的产品\nSELECT Name, Category\nFROM Products\nWHERE NOT Category = 'Clothing';\n-- 这等同于：WHERE Category &#x3C;> 'Clothing'\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, 咖啡杯, 智能手机, 笔记本</p>\n</li>\n</ul>\n<p>混合使用 <code>AND</code> 和 <code>OR</code> 时，您可以使用括号 <code>()</code> 来控制求值顺序，就像在数学中一样。括号内的条件会首先被求值。</p>\n<pre><code class=\"language-sql\">-- 查找电子产品 或 (价格高于50美元的服装类产品)\nSELECT Name, Category, Price\nFROM Products\nWHERE Category = 'Electronics' OR (Category = 'Clothing' AND Price > 50);\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, 智能手机, 牛仔裤</p>\n<h3>其他有用的筛选运算符</h3>\n<p>SQL 提供更多专门的运算符来处理常见的筛选任务：</p>\n<ul>\n<li>\n<p><strong><code>BETWEEN</code>:</strong> 检查值是否在指定范围内（包含边界值）。</p>\n<pre><code class=\"language-sql\">-- 查找价格在50美元到100美元之间（包含）的产品\nSELECT Name, Price\nFROM Products\nWHERE Price BETWEEN 50 AND 100;\n</code></pre>\n<p><em>结果:</em> 牛仔裤</p>\n</li>\n<li>\n<p><strong><code>IN</code>:</strong> 检查值是否与提供列表中的任何值匹配。这通常比使用多个 <code>OR</code> 条件更简洁。</p>\n<pre><code class=\"language-sql\">-- 查找“家居用品”、“文具”或“服装”类别的产品\nSELECT Name, Category\nFROM Products\nWHERE Category IN ('Home Goods', 'Stationery', 'Clothing');\n</code></pre>\n<p><em>结果:</em> 咖啡杯, T恤, 笔记本, 牛仔裤</p>\n</li>\n<li>\n<p><strong><code>LIKE</code>:</strong> 对字符串值进行简单的模式匹配。它使用通配符：</p>\n<ul>\n<li><code>%</code>: 代表零个、一个或多个字符。</li>\n<li><code>_</code>: 代表恰好一个字符。</li>\n</ul>\n<pre><code class=\"language-sql\">-- 查找名称以 'L' 开头的产品\nSELECT Name\nFROM Products\nWHERE Name LIKE 'L%';\n</code></pre>\n<p><em>结果:</em> 笔记本电脑</p>\n<pre><code class=\"language-sql\">-- 查找名称以 't' 结尾的产品\nSELECT Name\nFROM Products\nWHERE Name LIKE '%t';\n</code></pre>\n<p><em>结果:</em> 笔记本电脑, T恤, 笔记本</p>\n<pre><code class=\"language-sql\">-- 查找名称第二个字母是 'o' 的产品\nSELECT Name\nFROM Products\nWHERE Name LIKE '_o%';\n</code></pre>\n<p><em>结果:</em> 咖啡杯, 笔记本</p>\n</li>\n</ul>\n<h3>数据类型很重要</h3>\n<p>请记住，在编写条件时，您需要遵循列的数据类型：</p>\n<ul>\n<li><strong>字符串 (文本):</strong> 用单引号括起值（例如，<code>'Electronics'</code>）。大小写敏感性（例如，<code>'Electronics'</code> 是否与 <code>'electronics'</code> 匹配）取决于具体的数据库系统及其配置。</li>\n<li><strong>数字:</strong> 不要用引号括起值（例如，<code>1200</code>，<code>15.99</code>）。</li>\n<li><strong>日期:</strong> 通常用引号括起，但所需的格式（例如，<code>'YYYY-MM-DD'</code>）在不同的数据库系统（如 MySQL、PostgreSQL、SQL Server）之间有很大差异。</li>\n</ul>\n<p>有效使用 <code>WHERE</code> 子句是处理数据库的根本。它将 <code>SELECT</code> 从一个获取所有数据的粗略工具，转变为一个基于特定标准精确提取所需信息的工具。随着您的练习，您会发现它对于提出有意义的数据问题是不可或缺的。</p>",
+  "slug": "filtering-data-where-clause",
+  "updates": [],
+  "references": [
+    {
+      "id": 2498,
+      "title": "Database System Concepts",
+      "author": "Avi Silberschatz, Henry F. Korth, S. Sudarshan",
+      "year": "2019",
+      "publisher": "McGraw-Hill",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.db-book.com/",
+      "doi": "",
+      "note": "一本标准教材，为数据库系统提供坚实的基础，包括对 SQL 查询和数据操作的详细介绍。",
+      "order": 1,
+      "created_at": "2025-09-04T16:53:04.432161Z",
+      "updated_at": "2025-09-07T19:08:25.740193Z"
+    },
+    {
+      "id": 2506,
+      "title": "PostgreSQL 16 Documentation: SELECT Command",
+      "author": "The PostgreSQL Global Development Group",
+      "year": "2023",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.postgresql.org/docs/16/sql-select.html",
+      "doi": "",
+      "note": "PostgreSQL 的官方文档，提供了 SQL SELECT 语句（包括 WHERE 子句及其运算符）的精确语法和行为解释。",
+      "order": 2,
+      "created_at": "2025-09-04T16:53:05.038470Z",
+      "updated_at": "2025-09-07T19:08:28.792710Z"
+    },
+    {
+      "id": 2507,
+      "title": "Learning SQL: Master SQL Fundamentals",
+      "author": "Alan Beaulieu",
+      "year": "2020",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "380",
+      "url": "https://www.oreilly.com/library/view/learning-sql-3rd/9781492057604/",
+      "doi": "",
+      "note": "一本针对 SQL 新手的实用指南，提供清晰的解释和大量示例，说明如何有效地查询、过滤和操作数据。",
+      "order": 3,
+      "created_at": "2025-09-04T16:53:05.185366Z",
+      "updated_at": "2025-09-07T19:09:09.002438Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

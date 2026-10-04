@@ -1,0 +1,61 @@
+{
+  "id": 3099,
+  "title": "动手实践：一个简单LLM应用的容器化",
+  "meta_title": "练习容器化LLM应用",
+  "meta_description": "动手练习使用Docker打包一个基本的LLM应用。",
+  "content": "<p>LLM应用需要打包以进行部署，这是开发过程中的重要一步。容器化，主要是使用Docker，是一种标准做法，可帮助确保你的应用在从开发机到测试服再到生产服等不同环境中都能稳定运行。</p>\n<p>本动手练习将引导你完成一个简单LLM应用的容器化过程，类似于你可能在前面章节中构建的问答机器人或代理。</p>\n<p><strong>前提条件</strong></p>\n<p>在开始之前，请确保你已具备：</p>\n<ol>\n<li>\n<p><strong>Docker已安装：</strong> 你的系统需要安装并运行Docker Desktop（适用于Mac/Windows）或Docker Engine（适用于Linux）。你可以在Docker官方网站上找到安装说明。</p>\n</li>\n<li>\n<p><strong>一个简单LLM应用：</strong> 准备一个基本的Python应用。这可以是一个简单的Flask或FastAPI Web服务器，其端点接受用户查询，与LLM API（如OpenAI的）交互，并返回结果。假设你的应用结构如下所示：</p>\n<pre><code>llm_app/\n├── app.py         # 你的主应用脚本（例如，Flask/FastAPI）\n├── requirements.txt # 列出Python依赖项（例如，openai, flask）\n└── .env           # 可选：用于本地存储环境变量的文件（不应提交）\n</code></pre>\n<p>你的<code>requirements.txt</code>可能包含：</p>\n<pre><code>flask\nopenai\npython-dotenv\n</code></pre>\n<p>你的<code>app.py</code>通常会从环境变量中加载API密钥，并定义一个路由（例如，<code>/ask</code>）来处理请求。</p>\n</li>\n</ol>\n<p><strong>步骤1：创建Dockerfile</strong></p>\n<p><code>Dockerfile</code>是一个文本文件，包含Docker用来构建应用镜像的指令。在你的<code>llm_app</code>项目的根目录下创建一个名为<code>Dockerfile</code>（无扩展名）的文件。</p>\n<p>将以下内容添加到你的<code>Dockerfile</code>中：</p>\n<pre><code class=\"language-dockerfile\"># 使用官方Python运行时作为基础镜像\nFROM python:3.10-slim\n\n# 设置容器中的工作目录\nWORKDIR /app\n\n# 将requirements文件复制到容器的/app目录中\nCOPY requirements.txt .\n\n# 安装requirements.txt中指定的任何所需包\n# 使用--no-cache-dir来减小镜像大小\nRUN pip install --no-cache-dir -r requirements.txt\n\n# 将其余应用代码复制到容器的/app目录中\nCOPY . .\n\n# 使端口5000在容器外部可用（如果使用Flask默认端口）\n# 如果你的应用使用不同端口，请调整\nEXPOSE 5000\n\n# 定义API密钥的环境变量（占位符）\n# 重要提示：这对于生产环境不安全。请参阅下面的说明。\nENV OPENAI_API_KEY=your_default_or_placeholder_key \n\n# 容器启动时运行应用的命令\n# 根据你运行应用的方式（例如，FastAPI使用uvicorn）调整此命令\nCMD [\"python\", \"app.py\"]\n</code></pre>\n<p><strong>理解Dockerfile指令：</strong></p>\n<ul>\n<li><code>FROM python:3.10-slim</code>: 指定基础镜像。我们使用的是官方Python 3.10镜像的精简版本。</li>\n<li><code>WORKDIR /app</code>: 设置容器内后续指令的默认目录。</li>\n<li><code>COPY requirements.txt .</code>: 首先只复制requirements文件。Docker会缓存层，因此如果<code>requirements.txt</code>没有改变，<code>pip install</code>步骤在后续构建时将无需再次运行，从而加快速度。</li>\n<li><code>RUN pip install ...</code>: 执行安装依赖项的命令。</li>\n<li><code>COPY . .</code>: 将你的其余应用代码（如<code>app.py</code>）复制到容器中的<code>/app</code>目录。</li>\n<li><code>EXPOSE 5000</code>: 通知Docker容器在运行时监听端口5000。这实际上并未发布端口；它更像是一种文档。</li>\n<li><code>ENV OPENAI_API_KEY=...</code>: 在容器镜像<em>内部</em>设置一个环境变量。<strong>警告：</strong> 像这样直接硬编码密钥，甚至通过<code>ENV</code>设置它们，在生产环境中通常是不安全且不良的做法。它会使密钥在镜像层中可见。我们在此处这样做是为了简便，但在实际应用中，你应在运行时注入密钥（如步骤3所示）或使用密钥管理工具。请返回查阅“管理API密钥和秘密信息”部分，以了解更好的方法。</li>\n<li><code>CMD [\"python\", \"app.py\"]</code>: 指定从此镜像启动容器时要执行的默认命令。</li>\n</ul>\n<p><strong>步骤2：构建Docker镜像</strong></p>\n<p>打开你的终端或命令提示符，导航到包含你的<code>Dockerfile</code>和应用代码（<code>llm_app/</code>）的目录，然后运行构建命令：</p>\n<pre><code class=\"language-bash\">docker build -t my-llm-app .\n</code></pre>\n<ul>\n<li><code>docker build</code>: 构建镜像的命令。</li>\n<li><code>-t my-llm-app</code>: 为镜像打上名称（<code>my-llm-app</code>）标签，并可选择一个标记 (token)（默认为<code>latest</code>）。这使得以后引用该镜像更加方便。</li>\n<li><code>.</code>: 指定构建上下文 (context)（当前目录），其中包含<code>Dockerfile</code>和你的应用代码。</li>\n</ul>\n<p>Docker将一步一步地执行你<code>Dockerfile</code>中的指令，下载基础镜像并为每条指令创建层。</p>\n<p><strong>步骤3：运行Docker容器</strong></p>\n<p>镜像成功构建后，你可以基于它运行一个容器：</p>\n<pre><code class=\"language-bash\">docker run -p 5001:5000 --env OPENAI_API_KEY=\"YOUR_ACTUAL_API_KEY\" --name llm_container my-llm-app\n</code></pre>\n<ul>\n<li><code>docker run</code>: 创建并启动容器的命令。</li>\n<li><code>-p 5001:5000</code>: 将你主机上的端口5001映射到容器内部的端口5000（你的应用正在监听的端口，由<code>EXPOSE</code>和你可能设置的Flask/FastAPI指定）。你现在可以通过<code>http://localhost:5001</code>访问你的应用。</li>\n<li><code>--env OPENAI_API_KEY=\"YOUR_ACTUAL_API_KEY\"</code>: 这比通过<code>ENV</code>将其内置到镜像中更安全。它仅在运行时为这个特定的容器实例设置环境变量。将<code>\"YOUR_ACTUAL_API_KEY\"</code>替换为你的真实密钥。</li>\n<li><code>--name llm_container</code>: 为正在运行的容器分配一个易于识别的名称。</li>\n<li><code>my-llm-app</code>: 要运行的镜像名称。</li>\n</ul>\n<p>如果你想让容器在后台运行（分离模式），请添加<code>-d</code>标志：</p>\n<pre><code class=\"language-bash\">docker run -d -p 5001:5000 --env OPENAI_API_KEY=\"YOUR_ACTUAL_API_KEY\" --name llm_container my-llm-app\n</code></pre>\n<p>你可以使用<code>docker logs llm_container</code>查看日志。要停止容器，请使用<code>docker stop llm_container</code>。要删除它，请使用<code>docker rm llm_container</code>。</p>\n<p><strong>步骤4：测试容器化应用</strong></p>\n<p>容器运行后，打开一个新终端或使用Postman或<code>curl</code>等工具，向你的应用发送请求，该应用现在可以通过你映射的主机端口（例如，5001）访问：</p>\n<pre><code class=\"language-bash\"># 使用curl的示例，假设你的应用在/ask处有一个POST端点\ncurl -X POST http://localhost:5001/ask \\\n     -H \"Content-Type: application/json\" \\\n     -d '{\"query\": \"以简单的术语解释容器化。\"}'\n</code></pre>\n<p>你应该收到由LLM生成的响应，该响应由在Docker容器内运行的应用提供。</p>\n<p><strong>优点和后续步骤</strong></p>\n<p>你已成功容器化你的简单LLM应用！这个包（Docker镜像）包含你的应用、其依赖项和运行时，确保在任何有Docker的地方都能稳定运行。这简化了与他人共享你的应用、将其部署到云平台以及可靠地管理依赖项。</p>\n<p>对于更复杂的场景，可以考虑以下内容：</p>\n<ul>\n<li><strong>.dockerignore:</strong> 创建一个<code>.dockerignore</code>文件（语法类似于<code>.gitignore</code>），以便将文件和目录（如<code>.git</code>、<code>__pycache__</code>、<code>.env</code>）排除在镜像复制之外，使其更小更安全。</li>\n<li><strong>多阶段构建：</strong> 在你的<code>Dockerfile</code>中使用多个<code>FROM</code>语句，将构建时依赖项与运行时依赖项分离，从而生成更小的最终镜像。</li>\n<li><strong>生产密钥管理：</strong> 调查诸如Docker Secrets、Kubernetes Secrets或云提供商服务（例如，AWS Secrets Manager、Google Secret Manager）等工具，用于在生产环境中处理API密钥等敏感数据。</li>\n</ul>\n<p>容器化是现代应用开发和部署的基本技能，其中包括使用大型语言模型构建的应用。</p>",
+  "slug": "practice-containerizing-llm-app",
+  "updates": [],
+  "references": [
+    {
+      "id": 9067,
+      "title": "Dockerfile reference",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/reference/dockerfile/",
+      "doi": "",
+      "note": "权威指南，详细说明创建Dockerfile的语法和指令，对于将应用程序打包成Docker镜像至关重要。",
+      "order": 1,
+      "created_at": "2025-09-05T02:14:52.819550Z",
+      "updated_at": "2025-09-09T05:01:37.655311Z"
+    },
+    {
+      "id": 9068,
+      "title": "Best practices for writing Dockerfiles",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "Docker",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/develop/develop-images/dockerfile_best-practices/",
+      "doi": "",
+      "note": "提供构建高效、安全、可维护Docker镜像的实用建议和模式，包含缓存和镜像大小优化的策略。",
+      "order": 2,
+      "created_at": "2025-09-05T02:14:52.848303Z",
+      "updated_at": "2025-09-09T05:01:40.552300Z"
+    },
+    {
+      "id": 9069,
+      "title": "Manage sensitive data with Docker secrets",
+      "author": "Docker",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.docker.com/engine/swarm/secrets/",
+      "doi": "",
+      "note": "说明如何利用Docker的原生秘密管理功能处理API密钥等敏感信息，相较于将其嵌入环境变量是更安全的方法。",
+      "order": 3,
+      "created_at": "2025-09-05T02:14:52.851069Z",
+      "updated_at": "2025-09-09T05:01:36.319653Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}

@@ -1,0 +1,61 @@
+{
+  "id": 3903,
+  "title": "LangSmith 生产环境应用介绍",
+  "meta_title": "LangSmith 生产环境应用概览",
+  "meta_description": "设置和使用 LangSmith 进行生产应用的追踪、监控和调试。",
+  "content": "<p>成功部署 LangChain 应用，不单单是编写出可用的链和代理。转向生产环境时，需要有力的机制来了解应用表现、诊断问题并确保性能稳定。考虑到大型语言模型的多变性以及LangChain应用中常常出现的情况多样（涉及大型语言模型、检索器、工具和解析器等多个组件），传统的日志和监控方法常常不足。这时，LangSmith 就成了操作工具集中不可或缺的一部分。</p>\n<p>LangSmith 是一个专门为应对由大型语言模型驱动的应用（尤其是用 LangChain 构建的）在开发、部署和维护整个生命周期中的难题而设计的平台。它提供集成工具，用于追踪、监控、调试、测试、评估和收集反馈，从而能深刻洞察你的链和代理的内部运作。可以把它看作是你的 LangChain 应用一旦离开了本地机器的受控环境后的控制中心。</p>\n<h3>生产环境的核心功能</h3>\n<p>LangSmith 提供了一些集成功能，这些功能在生产环境中运行 LangChain 应用时尤为有价值：</p>\n<ol>\n<li>\n<p><strong>执行追踪：</strong> 其核心是，LangSmith 自动捕获你的 LangChain 组件每次执行的详细追踪信息。当链或代理被调用时，LangSmith 会记录每个步骤：大型语言模型调用的输入和输出、检索器查询和结果、工具调用以及解析器操作。这为整个过程创建了一个全面、分层的视图。例如，一个 RAG 查询的追踪信息可能会显示初始用户输入、查询转换步骤、向量 (vector)数据库查询、检索到的文档、发送给大型语言模型的最终提示以及生成的响应。将这些追踪信息可视化，可以帮助开发者和操作人员精确地跟踪数据和控制流向，这对于理解情况多样的交互非常宝贵。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-m548fe\" \n              data-graph-definition='digraph G { rankdir=TB; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#adb5bd\", fontcolor=\"#495057\"]; edge [color=\"#adb5bd\"]; \"用户输入\" -> \"链启动\"; \"链启动\" -> \"检索文档\" [label=\" 查询\"]; \"检索文档\" -> \"大型语言模型调用\" [label=\" 上下文\"]; \"链启动\" -> \"大型语言模型调用\" [label=\" 输入\"]; \"大型语言模型调用\" -> \"解析输出\"; \"解析输出\" -> \"最终响应\"; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-m548fe\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>LangSmith 捕获的追踪流的简化表示，展示了组件间的互动。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>调试和根本原因分析：</strong> 当出现故障或应用行为偏离预期时，LangSmith 追踪信息提供第一道防线。不再仅仅依赖应用日志，你可以检查追踪中每一步的精确输入、输出和错误。这大幅加快了根本原因分析的速度。大型语言模型是否出现幻觉 (hallucination)？检索器是否未能找到相关文档？解析大型语言模型的输出时是否出错？追踪信息通常能提供答案，显示那些否则难以捕获的中间状态。这种细致的可见性对于调试非确定性的大型语言模型行为或多样的代理决策过程尤为重要。</p>\n</li>\n<li>\n<p><strong>监控和性能分析：</strong> 尽管单独的追踪信息有助于调试特定的运行，LangSmith 也会汇总多次运行的数据，以提供高层级的监控仪表板。你可以跟踪对生产环境健康至关紧要的指标：</p>\n<ul>\n<li><strong>延迟：</strong> 监控端到端执行时间以及各个组件的延迟（例如，大型语言模型调用、工具使用）。</li>\n<li><strong>成本/令牌使用量：</strong> 跟踪大型语言模型调用消耗的令牌数量，帮助管理运营成本。</li>\n<li><strong>错误率：</strong> 观察特定链或组件内的故障频率。</li>\n<li><strong>质量指标：</strong> 利用在线评估器（自动化工具）根据语义标准（如相关性、忠实度或毒性）对一部分生产运行进行评分，提供超出简单的运行统计数据的应用性能质量持续信号。</li>\n<li><strong>反馈分数：</strong> 如果收集用户反馈，监控用户满意度趋势（例如，点赞/点踩率）。</li>\n</ul>\n<p>这些汇总的指标提供了一个关于应用整体健康状况和随时间变化的性能趋势的视图。</p>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-g228u8\" \n              data-plot-definition='{\"data\":[{\"type\": \"scatter\", \"x\": [\"2024-07-01\", \"2024-07-02\", \"2024-07-03\", \"2024-07-04\", \"2024-07-05\"], \"y\": [1.2, 1.5, 1.3, 1.6, 1.4], \"mode\": \"lines+markers\", \"name\": \"P95 延迟 (秒)\", \"line\": {\"color\": \"#228be6\"}}, {\"type\": \"scatter\", \"x\": [\"2024-07-01\", \"2024-07-02\", \"2024-07-03\", \"2024-07-04\", \"2024-07-05\"], \"y\": [2100, 2500, 2200, 2800, 2600], \"mode\": \"lines+markers\", \"name\": \"平均令牌数\", \"yaxis\": \"y2\", \"line\": {\"color\": \"#fab005\"}}], \"layout\": {\"title\": \"应用性能指标随时间变化\", \"xaxis\": {\"title\": \"日期\"}, \"yaxis\": {\"title\": \"延迟 (秒)\", \"color\": \"#228be6\"}, \"yaxis2\": {\"title\": \"令牌数\", \"overlaying\": \"y\", \"side\": \"right\", \"color\": \"#fab005\"}, \"legend\": {\"x\": 0.1, \"y\": 1.1, \"orientation\": \"h\"}, \"margin\": {\"l\": 50, \"r\": 50, \"t\": 50, \"b\": 50}, \"font\": {\"family\": \"sans-serif\"}}}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 300px;\"\n            >\n              <div id=\"plot-g228u8\" style=\"width: 100%; min-height: 300px;\"></div>\n            </div>\n          \n<blockquote>\n<p>示例图表，显示了可能在 LangSmith 监控仪表板中看到的延迟和令牌使用趋势。</p>\n</blockquote>\n</li>\n<li>\n<p><strong>评估框架：</strong> LangSmith 集成了强大的工具来评估应用质量。你可以创建包含输入和预期输出（或参考标签）的数据集，然后针对这些数据集运行你的 LangChain 应用。LangSmith 有助于定义自定义评估器（用 Python 编写）或使用预构建的评估器，包括“大型语言模型作裁判”评估器，这些评估器使用另一个大型语言模型来评估正确性、连贯性或有害性等标准。评估结果与追踪信息关联，让你能够深入查看应用表现不佳的特定示例。这种系统性评估对于改进提示、检索策略和整体应用逻辑非常关键。</p>\n</li>\n<li>\n<p><strong>反馈收集集成：</strong> 了解用户感知对于不断优化至关紧要。LangSmith 提供直接的机制来记录用户反馈（例如，点赞/点踩、评分、文字评论），并自动将其与生成响应的特定执行追踪关联。这让你能够根据反馈分数过滤追踪信息，识别不满意的响应中的模式，并优先考虑需要改进的方面。</p>\n</li>\n</ol>\n<h3>将 LangSmith 集成到你的生产工作流中</h3>\n<p>开始使用 LangSmith 通常涉及在你的应用部署环境中设置几个环境变量：</p>\n<ul>\n<li><code>LANGCHAIN_TRACING_V2=true</code>：启用 LangSmith 追踪。</li>\n<li><code>LANGCHAIN_API_KEY</code>：你从 LangSmith 网站获取的独有的 API 密钥。</li>\n<li><code>LANGCHAIN_PROJECT</code>：将运行分配到 LangSmith 内的特定项目。这对于组织追踪信息非常推荐，尤其是在你管理多个应用或环境时（例如，<code>my-app-prod</code>，<code>my-app-staging</code>）。</li>\n</ul>\n<p>确保你的生产环境具有访问 LangSmith API 端点（<code>api.smith.langchain.com</code>）的网络权限。另外，良好的做法是为你的运行添加元数据或标签（在 LangChain 调用或上下文 (context)管理器中使用 <code>tags</code> 或 <code>metadata</code> 参数 (parameter)），以便于在 LangSmith UI 中进行过滤和分析。例如，用部署环境（<code>prod</code>、<code>dev</code>）或应用版本标记 (token)运行，可以大幅简化组织工作。</p>\n<p>尽管 LangSmith 也包含用于共享和版本化提示的 LangSmith Hub，但它在生产环境中的主要价值在于此处讨论的追踪、监控和评估功能。这些功能提供了必要的可见性和控制，以可靠地大规模运行 LangChain 应用。通过在开发过程早期集成 LangSmith 并将其带入生产环境，你就为可观察性奠定了一个基础，这大幅简化了多样的大型语言模型系统的操作管理。</p>",
+  "slug": "langsmith-introduction-production",
+  "updates": [],
+  "references": [
+    {
+      "id": 10546,
+      "title": "LangSmith Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.smith.langchain.com/",
+      "doi": "",
+      "note": "LangSmith 的官方文档，详细介绍了其用于 LLM 应用程序的追踪、调试、监控、评估和反馈收集功能。",
+      "order": 1,
+      "created_at": "2025-09-05T06:50:12.360574Z",
+      "updated_at": "2025-09-08T12:39:58.873990Z"
+    },
+    {
+      "id": 10547,
+      "title": "LangChain Python Documentation",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/get_started/introduction",
+      "doi": "",
+      "note": "LangChain 框架的主要文档，为构建 LangSmith 在生产中协助管理的 LLM 应用程序提供了背景信息。",
+      "order": 2,
+      "created_at": "2025-09-05T06:50:12.366922Z",
+      "updated_at": "2025-09-08T12:39:59.639423Z"
+    },
+    {
+      "id": 10548,
+      "title": "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena",
+      "author": "Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang, Joseph E. Gonzalez, Ion Stoica",
+      "year": "2023",
+      "publisher": "",
+      "journal": "NeurIPS 2023 Datasets and Benchmarks Track",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2306.05685",
+      "doi": "10.48550/arXiv.2306.05685",
+      "note": "一篇研究论文，探讨了使用大型语言模型作为裁判来评估其他 LLM 生成文本质量的方法和挑战，与 LangSmith 的评估框架相关。",
+      "order": 3,
+      "created_at": "2025-09-05T06:50:12.370069Z",
+      "updated_at": "2025-09-08T12:40:01.586501Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

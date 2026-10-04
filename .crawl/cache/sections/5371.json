@@ -1,0 +1,61 @@
+{
+  "id": 5371,
+  "title": "同步处理与异步处理",
+  "meta_title": "图像生成中的同步与异步处理对比",
+  "meta_description": "比较处理图像生成请求的同步和异步方式。",
+  "content": "<p>部署扩散模型时，一个基本的架构选择在于系统如何处理推理 (inference)请求。考虑到扩散模型通常需要大量的计算时间（每次生成从几秒到几分钟），同步处理与异步处理的选择直接影响用户体验、资源使用和系统扩展能力。</p>\n<h3>同步处理：直接请求与响应</h3>\n<p>当使用同步模型时，客户端向推理 (inference)API发送请求并等待，保持连接开放，直到生成完成并将结果（例如生成的图像或错误）在同一响应中返回。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-l2obo1\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#495057\"]; Client -> Server [label=\"请求（例如：提示词）\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; Server -> Client [label=\"响应（图像/错误）\\n（连接保持开放）\", color=\"#f76707\", fontcolor=\"#f76707\"]; Server [label=\"API服务器\\n（处理请求）\"]; Client [label=\"用户应用程序 / 客户端\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-l2obo1\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个基本的同步请求流程。客户端等待服务器完成生成。</p>\n</blockquote>\n<p><strong>特点：</strong></p>\n<ul>\n<li><strong>简单：</strong> 从客户端的角度来看，这直接简单。发送请求，获取响应。服务器端的逻辑最初看起来也更简单。</li>\n<li><strong>即时反馈（理论上）：</strong> 如果生成是即时的，客户端将获得即时反馈。然而，对于扩散模型而言，“即时”可能意味着几十秒甚至更长。</li>\n<li><strong>阻塞性：</strong> 客户端应用程序被阻塞，等待响应。对于Web应用程序，这通常意味着用户会看到长时间的加载指示。与请求关联的服务器连接在整个持续时间内被占用。</li>\n<li><strong>资源效率低下：</strong> 长时间保持网络连接开放会消耗服务器资源（内存、连接槽），即使主要瓶颈是GPU计算。Web服务器和负载均衡器可能会对长时间运行的请求超时。</li>\n<li><strong>扩展能力挑战：</strong> 处理许多并发的长时间同步请求会迅速耗尽服务器资源，并可能导致性能不佳或请求失败。基于活跃连接的自动扩展可能具有误导性，因为连接可能处于等待状态而非积极消耗计算资源。</li>\n</ul>\n<p>对于典型的扩散模型使用场景，如果生成时间超过几秒，同步处理通常不适用于面向用户的应用程序。它可能只适用于内部工具或API，其中调用者被设计用于处理长时间等待，或者如果扩散过程经过高度优化，能够持续在不到一两秒内执行完成。</p>\n<h3>异步处理：请求与获取分离</h3>\n<p>在异步模型中，客户端发送请求，API服务器立即确认接收，通常返回一个任务ID或状态URL。实际的计算在后台进行，与初始请求-响应周期分离。客户端必须稍后检查状态（轮询）或在结果准备好时接收通知（Webhook/WebSocket）。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-7wczww\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\", color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#495057\"]; subgraph cluster_req { label=\"初始请求\"; style=dashed; color=\"#adb5bd\"; fontcolor=\"#495057\"; Client -> API_Server [label=\"1. 请求（提示词）\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; API_Server -> Client [label=\"2. 确认接收（任务ID）\", color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; } subgraph cluster_poll { label=\"结果获取\"; style=dashed; color=\"#adb5bd\"; fontcolor=\"#495057\"; Client -> API_Server_Poll [label=\"3. 轮询状态（任务ID）\", color=\"#f76707\", fontcolor=\"#f76707\"]; API_Server_Poll -> Client [label=\"4. 结果（图像URL / 数据）\", color=\"#f76707\", fontcolor=\"#f76707\"]; } API_Server [label=\"API服务器\"]; API_Server_Poll [label=\"API服务器\\n（状态检查）\"]; Client [label=\"用户应用程序 / 客户端\"]; }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-7wczww\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>一个使用轮询的异步请求流程。客户端接收一个ID，稍后回头检查结果。</p>\n</blockquote>\n<p><strong>特点：</strong></p>\n<ul>\n<li><strong>非阻塞性：</strong> 初始API请求快速返回，释放客户端应用程序。用户体验可以围绕此进行设计，允许用户在生成在后台进行时执行其他操作。</li>\n<li><strong>扩展能力提升：</strong> 前端API服务器快速处理确认，并能管理大量传入请求，而不受长时间计算时间的束缚。实际工作负载通常由一个独立的工人池管理，它们从队列中处理任务。</li>\n<li><strong>资源效率：</strong> 处理连接的服务器资源短暂使用。计算密集型工作由专用工作程序处理，它们通常根据队列长度或处理负载独立扩展。</li>\n<li><strong>容错性：</strong> 如果处理任务的工作程序失败，该任务通常可以从队列中重试，而无需客户端重新提交原始请求。</li>\n<li><strong>增加的复杂性：</strong> 此模式引入了更多组件：\n<ul>\n<li><strong>任务队列：</strong> （例如，RabbitMQ、Redis Streams、AWS SQS、Google Pub/Sub）用于在API和工作程序之间缓冲请求。</li>\n<li><strong>后台工作程序：</strong> 一个进程或服务池，它们从队列中获取任务并执行扩散模型推理 (inference)。这些工作程序需要访问GPU。</li>\n<li><strong>结果存储：</strong> 一个存储生成输出的地方（例如，S3、GCS、数据库Blob存储），与任务ID关联。</li>\n<li><strong>状态/通知机制：</strong> 一个用于轮询的端点，或一个用于推送通知（Webhook、WebSocket）的系统，以通知客户端结果何时准备好。</li>\n</ul>\n</li>\n<li><strong>客户端逻辑：</strong> 客户端需要处理异步流程：提交请求、存储任务ID、实施轮询或监听通知，以及获取结果。</li>\n</ul>\n<p>以下是一个简化的架构图，说明了异步系统中经常涉及的组件：</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-8lk9zt\" \n              data-graph-definition='digraph G { rankdir=LR; node [shape=box, style=rounded, fontname=\"sans-serif\"]; subgraph cluster_main { label=\"异步推理系统\"; fontcolor=\"#495057\"; bgcolor=\"#e9ecef\"; node [color=\"#495057\", fontcolor=\"#495057\"]; edge [color=\"#495057\"]; Client [label=\"客户端\\n应用程序\"]; APIGateway [label=\"API网关 / 负载均衡器\", shape=component, color=\"#7048e8\", fontcolor=\"#7048e8\"]; Queue [label=\"请求队列\\n（例如：SQS, RabbitMQ）\", shape=cylinder, color=\"#be4bdb\", fontcolor=\"#be4bdb\"]; WorkerPool [label=\"GPU工作程序池\\n（Kubernetes Pods / 虚拟机）\", shape=box3d, color=\"#1c7ed6\", fontcolor=\"#1c7ed6\"]; ResultStore [label=\"结果存储\\n（例如：S3, GCS）\", shape=folder, color=\"#f76707\", fontcolor=\"#f76707\"]; NotificationService [label=\"通知服务\\n（Webhook / 轮询端点）\", shape=component, color=\"#15aabf\", fontcolor=\"#15aabf\"]; Client -> APIGateway [label=\"1. 提交请求\"]; APIGateway -> Queue [label=\"2. 任务入队\"]; APIGateway -> Client [label=\"3. 确认接收（任务ID）\"]; WorkerPool -> Queue [label=\"4. 任务出队\", dir=back]; WorkerPool -> ResultStore [label=\"5. 存储结果\"]; WorkerPool -> NotificationService [label=\"6. 通知完成\"]; NotificationService -> Client [label=\"7. 结果就绪\\n（通过Webhook或轮询）\"]; Client -> ResultStore [label=\"8. 获取结果\", style=dashed, color=\"#868e96\"]; } }' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-8lk9zt\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>扩散模型推理异步架构的总体视图。</p>\n</blockquote>\n<h3>如何选择</h3>\n<p>对于扩散模型的同步和异步处理的选择，生产系统通常倾向于选择<strong>异步</strong>，因为涉及的典型推理 (inference)时间。</p>\n<ul>\n<li>\n<p><strong>何时使用同步：</strong></p>\n<ul>\n<li>您的模型和硬件经过优化，能够持续<em>非常</em>快速地生成结果（例如，持续在2-3秒内完成）。</li>\n<li>应用程序的用户体验能容忍短暂的阻塞等待。</li>\n<li>预期负载较低，或者您有足够的资源在整个持续时间内处理峰值并发连接。</li>\n<li>对于长时间任务，实现简单性是绝对的最高优先级，高于扩展能力和用户体验。</li>\n</ul>\n</li>\n<li>\n<p><strong>何时使用异步：</strong></p>\n<ul>\n<li>生成时间可变或经常超过几秒。</li>\n<li>您需要同时处理中等至高量的请求。</li>\n<li>需要非阻塞的用户体验，允许用户在生成进行时继续交互。</li>\n<li>您需要高效利用服务器资源，并对API处理和计算工作程序进行独立扩展。</li>\n<li>抵抗工作程序故障的容错性很重要。</li>\n</ul>\n</li>\n</ul>\n<p>虽然异步系统引入了更多的活动部分，但在大规模部署计算密集型扩散模型时，其在用户体验、扩展能力和资源管理方面的益处通常超过了增加的复杂性。理解这种权衡对于设计一个能够满足性能和可靠性要求的系统架构非常重要。</p>",
+  "slug": "synchronous-asynchronous-processing",
+  "updates": [],
+  "references": [
+    {
+      "id": 15140,
+      "title": "Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems",
+      "author": "Martin Kleppmann",
+      "year": "2017",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://dataintensive.net/",
+      "doi": "",
+      "note": "一本基础书籍，涵盖可伸缩性、可靠性以及各种数据系统的原则，包括消息队列和分布式事务，这些都是同步和异步架构模式的基础。",
+      "order": 1,
+      "created_at": "2025-09-05T14:36:20.694243Z",
+      "updated_at": "2025-09-10T02:30:25.836614Z"
+    },
+    {
+      "id": 15141,
+      "title": "Enterprise Integration Patterns: Designing, Building, and Deploying Messaging Solutions",
+      "author": "Gregor Hohpe and Bobby Woolf",
+      "year": "2003",
+      "publisher": "Addison-Wesley",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.enterpriseintegrationpatterns.com/index.html",
+      "doi": "",
+      "note": "一份经典参考文献，记录了使用消息传递集成企业应用的常见模式，包括请求-回复、异步消息传递、消息队列和轮询消费者，与本节中的架构图直接相关。",
+      "order": 2,
+      "created_at": "2025-09-05T14:36:20.700154Z",
+      "updated_at": "2025-09-10T02:30:36.219248Z"
+    },
+    {
+      "id": 15142,
+      "title": "Amazon Simple Queue Service (SQS) Developer Guide",
+      "author": "Amazon Web Services",
+      "year": "2025",
+      "publisher": "Amazon Web Services",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://docs.aws.amazon.com/AWSSimpleQueueService/latest/dg/welcome.html",
+      "doi": "",
+      "note": "这份全面的指南介绍了Amazon SQS，一种托管消息队列服务，详细说明了它如何实现解耦的异步架构，适用于长时间运行的任务。它涵盖了云环境中的队列类型、消息处理和集成模式。",
+      "order": 3,
+      "created_at": "2025-09-05T14:36:20.704475Z",
+      "updated_at": "2025-09-10T02:30:33.911347Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

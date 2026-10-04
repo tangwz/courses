@@ -1,0 +1,61 @@
+{
+  "id": 7432,
+  "title": "使用检索器获取数据",
+  "meta_title": "LangChain 检索器解析",
+  "meta_description": "学习如何配置和使用检索器，根据用户查询获取最匹配的文档块。",
+  "content": "<p>查询包含文档嵌入 (embedding)的向量 (vector)存储是寻找与用户问题对应信息的一种基本方式。虽然向量存储提供了直接查询的方式，但 LangChain 为此给出了一个更标准且通用的接口：<code>检索器</code>。</p>\n<p>检索器是一个对象，它实现了一个通用接口，用于根据查询来获取文档。它的首要作用是接收一个字符串查询，并返回一个 <code>Document</code> 对象列表。这种抽象很有意义，因为它将您的应用程序逻辑与特定的数据源分离开。一个检索器可能从向量存储、传统 SQL 数据库，甚至 Web API 中获取数据，但您的应用程序代码与它的交互方式是相同的。</p>\n\n            <div\n              class=\"graphviz-container graphviz-enlargeable\" \n              data-graph-id=\"graph-1ilg5\" \n              data-graph-definition='digraph G {\n    rankdir=TB;\n    splines=true;\n    node [shape=box, style=\"rounded,filled\", fontname=\"Arial\", margin=\"0.2,0.1\"];\n    edge [fontname=\"Arial\"];\n\n    user_query [label=\"用户查询\", fillcolor=\"#a5d8ff\"];\n    retriever [label=\"检索器接口\\n(调用)\", fillcolor=\"#96f2d7\"];\n    vectorstore [label=\"向量存储\\n(例如，Chroma, FAISS)\", fillcolor=\"#bac8ff\"];\n    api [label=\"其他来源\\n(例如，API, SQL 数据库)\", fillcolor=\"#ffd8a8\"];\n    docs [label=\"已检索文档\", fillcolor=\"#ffc9c9\"];\n\n    user_query -> retriever [label=\" 字符串\"];\n    retriever -> vectorstore [label=\" 查询\"];\n    retriever -> api [style=dashed];\n    vectorstore -> retriever [label=\" 文档\"];\n    api -> retriever [style=dashed];\n    retriever -> docs [label=\" 文档列表\"];\n}' \n              data-original-width=\"1200px\"\n              style=\"max-width: 1200px; margin: 0 auto; cursor: pointer; display: flex; align-items: center; justify-content: center; min-height: 200px;\"\n              title=\"Click to enlarge\"\n              aria-label=\"Graphviz diagram - click to enlarge\"\n              tabindex=\"0\"\n              role=\"button\"\n              onclick=\"window.enlargeGraphviz(this)\"\n              onkeydown=\"if(event.key==='Enter') window.enlargeGraphviz(this)\"\n            >\n              <div id=\"graph-1ilg5\" style=\"width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;\"></div>\n            </div>\n          \n<blockquote>\n<p>检索器在应用程序逻辑和不同底层数据源之间充当通用接口。</p>\n</blockquote>\n<h3>从向量 (vector)存储到检索器</h3>\n<p>实例化检索器的最普遍方法是直接从一个已有的向量存储对象进行。这个过程直截了当，通过 <code>as_retriever()</code> 方法完成。我们假设您已经从上一节初始化了一个 <code>vectorstore</code>。</p>\n<pre><code class=\"language-python\"># 假设 'vectorstore' 是一个已初始化的 Chroma 或 FAISS 向量存储对象\nretriever = vectorstore.as_retriever()\n\n# 检索器现在已可使用\nquery = \"What is the architecture of a RAG system?\"\nrelevant_docs = retriever.invoke(query)\n\n# 打印第一个检索到的文档内容\nprint(relevant_docs[0].page_content)\n</code></pre>\n<p>执行 <code>vectorstore.as_retriever()</code> 会创建一个 <code>VectorStoreRetriever</code> 实例。默认情况下，此检索器被设定为执行相似性搜索，即在嵌入 (embedding)空间中找到与查询向量最接近的文档向量。</p>\n<h3>自定义检索行为</h3>\n<p>默认的相似性搜索很有用，但在某些情况下，您可能需要对检索过程进行更多控制。<code>as_retriever()</code> 方法支持通过其参数 (parameter)进行自定义，特别就是 <code>search_type</code> 和 <code>search_kwargs</code>。</p>\n<h4>控制文档数量</h4>\n<p>一个经常性的调整是更改要检索的文档数量。这由 <code>search_kwargs</code> 内的 <code>k</code> 参数控制。<code>k</code> 的值决定了多少文档作为上下文 (context)传递给 LLM。较小的 <code>k</code> 速度更快，使用的 token 更少，但可能会错过核心上下文。较大的 <code>k</code> 提供更多上下文，但会增加成本并可能引入噪音。</p>\n<pre><code class=\"language-python\"># 创建一个检索器，它获取最匹配的5个文档\nretriever_k5 = vectorstore.as_retriever(\n    search_kwargs={\"k\": 5}\n)\n\nrelevant_docs_k5 = retriever_k5.invoke(query)\nprint(f\"Retrieved {len(relevant_docs_k5)} documents.\")\n# 预期输出：检索到 5 份文档。\n</code></pre>\n<h4>通过最大边际匹配度（MMR）提升丰富性</h4>\n<p>有时，排在前 <code>k</code> 位的文档彼此非常相似，给出重复信息。为获得更多不同种类的结果，您可以使用最大边际匹配度（MMR）搜索类型。MMR 的作用是，首先选择与查询最相似的文档，然后迭代选择后续文档，这些文档代表了与查询的相似性和与已选文档的不同性的最佳结合。这有助于对主题提供更宽广的看法。</p>\n<pre><code class=\"language-python\"># 创建一个使用 MMR 选择文档的检索器\nretriever_mmr = vectorstore.as_retriever(\n    search_type=\"mmr\"\n)\n\nrelevant_docs_mmr = retriever_mmr.invoke(query)\n</code></pre>\n<p>使用 <code>mmr</code> 对于复杂查询可能尤其有用，其中不同文档可以覆盖答案的不同方面。</p>\n<h4>通过相似度分数进行过滤</h4>\n<p>另一种有助的技术是基于匹配度阈值过滤结果。这确保您只检索满足最低相似度分数的文档，有助于过滤掉不匹配的结果，特别是当用户查询的主题在您的知识库中未被充分涵盖时。</p>\n<p>对于支持此功能的向量 (vector)存储（如 Chroma），您可以使用 <code>similarity_score_threshold</code> 搜索类型。</p>\n<pre><code class=\"language-python\"># 创建一个检索器，它只返回相似度分数为 0.7 或更高的文档\nretriever_threshold = vectorstore.as_retriever(\n    search_type=\"similarity_score_threshold\",\n    search_kwargs={\"score_threshold\": 0.7}\n)\n\nrelevant_docs_threshold = retriever_threshold.invoke(query)\n</code></pre>\n<p>这种配置可以防止低质量或不相关的文档传递给 LLM，这可以提高最终答案的准确性。</p>\n<p>配置好的功能性检索器，能够为特定查询获取最匹配且内容丰富的情境，至此我们已拥有构建 RAG 系统所需的所有组件。下一节将展示如何将此检索器与 LLM 和提示模板组合起来，构建一个完整的问答链。</p>",
+  "slug": "fetching-data-with-retrievers",
+  "updates": [],
+  "references": [
+    {
+      "id": 14762,
+      "title": "LangChain Conceptual Guide: Retrievers",
+      "author": "LangChain",
+      "year": "2024",
+      "publisher": "LangChain",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://python.langchain.com/docs/modules/data_connection/retrievers/",
+      "doi": "",
+      "note": "提供了在LangChain框架中实现和定制检索器的实用指南。",
+      "order": 1,
+      "created_at": "2025-09-05T09:06:19.702331Z",
+      "updated_at": "2025-09-11T10:45:37.284427Z"
+    },
+    {
+      "id": 14763,
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "author": "Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela",
+      "year": "2020",
+      "publisher": "",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "",
+      "pages": "",
+      "url": "https://arxiv.org/abs/2005.11401",
+      "doi": "10.48550/arXiv.2005.11401",
+      "note": "本文介绍了检索增强生成（RAG）框架，该框架为结合检索与语言模型提供了架构基础。",
+      "order": 2,
+      "created_at": "2025-09-05T09:06:19.708080Z",
+      "updated_at": "2025-09-11T10:45:27.801031Z"
+    },
+    {
+      "id": 14764,
+      "title": "Using MMR for Diversity and Novelty in Information Retrieval",
+      "author": "Jaime Carbonell, Jade Goldstein",
+      "year": "1998",
+      "publisher": "ACM Press",
+      "journal": "SIGIR '98: Proceedings of the 21st Annual International ACM SIGIR Conference on Research and Development in Information Retrieval",
+      "volume": "",
+      "pages": "335-336",
+      "url": "https://doi.org/10.1145/290941.291025",
+      "doi": "10.1145/290941.291025",
+      "note": "介绍了最大边际相关性（MMR），这是一种选择既与查询相关又相互多样化文档的策略，与定制检索器行为相关。",
+      "order": 3,
+      "created_at": "2025-09-05T09:06:19.710680Z",
+      "updated_at": "2025-09-11T10:45:49.276409Z"
+    }
+  ],
+  "type": "Content",
+  "show_calculator_banner": false
+}

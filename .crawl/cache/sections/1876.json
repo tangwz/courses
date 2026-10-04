@@ -1,0 +1,61 @@
+{
+  "id": 1876,
+  "title": "实践操作：构建分类模型",
+  "meta_title": "实践：构建Scikit-learn分类模型",
+  "meta_description": "训练、预测并评估逻辑回归、KNN和SVM模型。",
+  "content": "<p>使用Scikit-learn实现分类模型的实践操作。这包括逻辑回归、K近邻 (KNN) 和支持向量 (vector)机 (SVM)，以及评估它们在标准数据集上的表现并理解这些结果。我们假设您已安装了Scikit-learn、NumPy和Pandas，并拥有一个可运行的Python环境。</p>\n<h3>设置环境和数据</h3>\n<p>首先，让我们导入必要的库并加载一个数据集。我们将使用Scikit-learn中自带的常用鸢尾花数据集。该数据集包含150朵鸢尾花的测量数据，这些花属于三种不同种类：山鸢尾 (setosa)、变色鸢尾 (versicolor) 和维吉尼亚鸢尾 (virginica)。目的是根据萼片长度、萼片宽度、花瓣长度和花瓣宽度对花卉种类进行分类。</p>\n<pre><code class=\"language-python\">import numpy as np\nimport pandas as pd\nfrom sklearn.datasets import load_iris\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.neighbors import KNeighborsClassifier\nfrom sklearn.svm import SVC\nfrom sklearn.metrics import accuracy_score, classification_report, confusion_matrix\nimport plotly.graph_objects as go\nimport plotly.io as pio\n\n# 配置 Plotly 以获得更好的显示效果\npio.templates.default = \"plotly_white\"\n\n# 加载数据集\niris = load_iris()\nX = iris.data\ny = iris.target\nfeature_names = iris.feature_names\ntarget_names = iris.target_names\n\n# 创建一个DataFrame以便于查看（可选）\ndf = pd.DataFrame(X, columns=feature_names)\ndf['species'] = y\ndf['species_name'] = df['species'].map({i: name for i, name in enumerate(target_names)})\n# print(df.head())\n# print(f\"Target names: {target_names}\")\n\n# 将数据拆分为训练集和测试集\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)\n\n# print(f\"Training set shape: X={X_train.shape}, y={y_train.shape}\")\n# print(f\"Testing set shape: X={X_test.shape}, y={y_test.shape}\")\n\n# 特征缩放\n# 像 KNN 和 SVM 这样的算法对特征尺度敏感。\n# 逻辑回归也能从中受益。\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train)\nX_test_scaled = scaler.transform(X_test)\n</code></pre>\n<p>我们加载数据，分离特征 (<code>X</code>) 和目标变量 (<code>y</code>)，然后使用 <code>train_test_split</code> 将它们拆分为训练集和测试集。<code>stratify=y</code> 参数 (parameter)确保了每个类别在训练集和测试集中的比例大致相同，这对于分类任务来说是很必要的，特别是在数据不平衡的情况下（尽管鸢尾花数据集是平衡的）。最后，我们应用 <code>StandardScaler</code> 通过去除均值并缩放到单位方差来标准化特征。请注意，我们只在训练数据上 <code>fit</code> 缩放器，然后 <code>transform</code> 训练和测试数据，以避免测试集的信息泄露。</p>\n<h3>实现逻辑回归</h3>\n<p>逻辑回归是一种常用的线性模型，用于二分类，但Scikit-learn的实现也支持使用一对多 (OvR) 或多项式方案进行多类别问题（如鸢尾花）的分类。</p>\n<pre><code class=\"language-python\"># 初始化并训练逻辑回归模型\nlog_reg = LogisticRegression(random_state=42, multi_class='ovr', solver='liblinear') # 使用缩放后的数据\nlog_reg.fit(X_train_scaled, y_train)\n\n# 在测试集上进行预测\ny_pred_log_reg = log_reg.predict(X_test_scaled)\n\n# 评估模型\naccuracy_log_reg = accuracy_score(y_test, y_pred_log_reg)\nreport_log_reg = classification_report(y_test, y_pred_log_reg, target_names=target_names)\n\nprint(\"--- 逻辑回归评估 ---\")\nprint(f\"准确率: {accuracy_log_reg:.4f}\")\nprint(\"分类报告:\")\nprint(report_log_reg)\n</code></pre>\n<p>这里，我们初始化 <code>LogisticRegression</code>。我们指定 <code>multi_class='ovr'</code>（一对多）并选择一个适合该数据集的 <code>solver</code>（'liblinear' 对于较小数据集表现良好）。我们使用缩放后的训练数据 (<code>X_train_scaled</code>, <code>y_train</code>) 训练模型，然后为缩放后的测试数据 (<code>X_test_scaled</code>) 预测标签。最后，我们计算准确率并生成分类报告，报告列出了每个类别的精确率、召回率和F1分数。</p>\n<h3>实现K近邻 (KNN)</h3>\n<p>KNN根据特征空间中其 'k' 个最近邻居的多数类别来分类一个数据点。'k' 的选择和距离度量是主要的考量。由于KNN依赖于距离计算，通常需要进行特征缩放。</p>\n<pre><code class=\"language-python\"># 初始化并训练 KNN 模型\n# 让我们从 k=5 开始\nknn = KNeighborsClassifier(n_neighbors=5) # 使用缩放后的数据\nknn.fit(X_train_scaled, y_train)\n\n# 进行预测\ny_pred_knn = knn.predict(X_test_scaled)\n\n# 评估模型\naccuracy_knn = accuracy_score(y_test, y_pred_knn)\nreport_knn = classification_report(y_test, y_pred_knn, target_names=target_names)\n\nprint(\"\\n--- K近邻 (k=5) 评估 ---\")\nprint(f\"准确率: {accuracy_knn:.4f}\")\nprint(\"分类报告:\")\nprint(report_knn)\n</code></pre>\n<p>我们使用 <code>n_neighbors=5</code>（'k' 的一个常用起始点）初始化 <code>KNeighborsClassifier</code>。我们像逻辑回归一样，在缩放后的训练数据上训练它，并在缩放后的测试数据上评估它。KNN的性能可能对 <code>k</code> 的值很敏感；通常需要进行实验（常用第5章中介绍的交叉验证等技术）来找到一个最佳值。</p>\n<h3>实现支持向量 (vector)机 (SVM)</h3>\n<p>支持向量机旨在找到在特征空间中分离不同类别的最佳超平面。我们将使用Scikit-learn中的 <code>SVC</code>（支持向量分类器）类。SVM通常也需要缩放后的特征。</p>\n<pre><code class=\"language-python\"># 初始化并训练 SVM 模型\n# 使用默认参数（RBF 核，C=1.0）\nsvm_clf = SVC(random_state=42) # 使用缩放后的数据\nsvm_clf.fit(X_train_scaled, y_train)\n\n# 进行预测\ny_pred_svm = svm_clf.predict(X_test_scaled)\n\n# 评估模型\naccuracy_svm = accuracy_score(y_test, y_pred_svm)\nreport_svm = classification_report(y_test, y_pred_svm, target_names=target_names)\n\nprint(\"\\n--- 支持向量机 (SVC) 评估 ---\")\nprint(f\"准确率: {accuracy_svm:.4f}\")\nprint(\"分类报告:\")\nprint(report_svm)\n</code></pre>\n<p>我们使用其默认参数 (parameter)初始化 <code>SVC</code>，其中包括径向基函数 (RBF) 核。训练和评估遵循与之前相同的模式，使用缩放后的数据。SVM有几个超参数 (hyperparameter)（如RBF核的 <code>C</code> 和 <code>gamma</code>）会很大程度上影响性能；这些参数的调整将在后续章节中讲解。</p>\n<h3>可视化混淆矩阵</h3>\n<p>混淆矩阵比单独的准确率更能提供分类性能的详细分类。它显示了每个类别的正确和不正确预测的数量。让我们使用Plotly可视化SVM模型的混淆矩阵。</p>\n<pre><code class=\"language-python\"># 计算 SVM 的混淆矩阵\ncm_svm = confusion_matrix(y_test, y_pred_svm)\n\n# 使用 Plotly 创建热图\nfig = go.Figure(data=go.Heatmap(\n                   z=cm_svm,\n                   x=target_names,\n                   y=target_names,\n                   hoverongaps=False,\n                   colorscale=[[0.0, '#e9ecef'], [0.25, '#a5d8ff'], [0.5, '#74c0fc'], [0.75, '#4dabf7'], [1.0, '#1c7ed6']], # 灰到蓝渐变\n                   colorbar=dict(title='计数')))\n\nfig.update_layout(\n    title='SVM 混淆矩阵',\n    xaxis_title=\"预测标签\",\n    yaxis_title=\"真实标签\",\n    xaxis={'side': 'top'},\n    yaxis_autorange='reversed', # 混淆矩阵的标准方向\n    width=500, height=450, # 根据需要调整大小\n    margin=dict(l=50, r=50, t=100, b=50) # 调整边距\n)\n\n# 用于显示图表（例如，在 Jupyter 环境中或保存为 HTML）\n# fig.show()\n\n# 如果不在交互式环境中，则打印原始矩阵\nprint(\"\\n--- SVM 混淆矩阵 ---\")\nprint(cm_svm)\n\n# 为网页嵌入生成 Plotly JSON\nplotly_json_svm_cm = pio.to_json(fig)\nprint(f\"\\n```plotly\\n{plotly_json_svm_cm}\\n```\") # 用于嵌入\n</code></pre>\n\n            <div\n              class=\"plotly-container\" \n              data-plot-id=\"plot-1memoei\" \n              data-plot-definition='{\"layout\": {\"title\": {\"text\": \"SVM 混淆矩阵\"}, \"xaxis\": {\"title\": {\"text\": \"预测标签\"}, \"side\": \"top\", \"tickvals\": [\"setosa\", \"versicolor\", \"virginica\"], \"ticktext\": [\"setosa\", \"versicolor\", \"virginica\"]}, \"yaxis\": {\"title\": {\"text\": \"真实标签\"}, \"autorange\": \"reversed\", \"tickvals\": [\"setosa\", \"versicolor\", \"virginica\"], \"ticktext\": [\"setosa\", \"versicolor\", \"virginica\"]}, \"width\": 500, \"height\": 450, \"margin\": {\"l\": 50, \"r\": 50, \"t\": 100, \"b\": 50}, \"template\": \"plotly_white\"}, \"data\": [{\"z\": [[15, 0, 0], [0, 14, 1], [0, 1, 14]], \"x\": [\"setosa\", \"versicolor\", \"virginica\"], \"y\": [\"setosa\", \"versicolor\", \"virginica\"], \"hoverongaps\": false, \"type\": \"heatmap\", \"colorscale\": [[0.0, \"#e9ecef\"], [0.25, \"#a5d8ff\"], [0.5, \"#74c0fc\"], [0.75, \"#4dabf7\"], [1.0, \"#1c7ed6\"]], \"colorbar\": {\"title\": {\"text\": \"计数\"}}}]}' \n              style=\"max-width: 800px; margin: 0 auto; min-height: 450px;\"\n            >\n              <div id=\"plot-1memoei\" style=\"width: 100%; min-height: 450px;\"></div>\n            </div>\n          \n<blockquote>\n<p>SVM分类器的混淆矩阵。行表示实际类别，列表示预测类别。对角线元素显示正确预测，而非对角线元素显示错误分类。例如，一个“变色鸢尾”实例被错误分类为“维吉尼亚鸢尾”，一个“维吉尼亚鸢尾”实例被错误分类为“变色鸢尾”。所有“山鸢尾”实例均被正确分类。</p>\n</blockquote>\n<p>这种可视化有助于找出特定的混淆模式，例如哪些类别最常被误判为彼此。您可以为逻辑回归和KNN生成类似的矩阵，以比较它们的错误模式。</p>\n<h3>总结</h3>\n<p>\"在此实践练习中，您实现了三种基本分类算法：逻辑回归、K近邻和支持向量 (vector)机。您学习到了标准的Scikit-learn工作流程：实例化模型，在训练数据上 <code>fit</code> 模型（适当时使用缩放后的特征），在测试数据上 <code>predict</code>，并使用准确率、精确率、召回率、F1分数和混淆矩阵等指标进行评估。您看出，即使使用默认参数 (parameter)，这些模型也能在鸢尾花数据集上达到较高的准确率。请记住，数据集通常需要更多的数据预处理（第4章）以及仔细的模型选择和调整（第5章）才能取得最佳结果。\"</p>",
+  "slug": "practice-building-classification-models",
+  "updates": [],
+  "references": [
+    {
+      "id": 5513,
+      "title": "scikit-learn User Guide",
+      "author": "scikit-learn developers",
+      "year": "2024",
+      "publisher": "",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://scikit-learn.org/stable/user_guide.html",
+      "doi": "",
+      "note": "Scikit-learn官方文档，提供所有模块和算法的详细解释和示例，包括分类和评估指标。",
+      "order": 1,
+      "created_at": "2025-09-05T01:11:12.958347Z",
+      "updated_at": "2025-09-08T05:22:17.854714Z"
+    },
+    {
+      "id": 5514,
+      "title": "Hands-On Machine Learning with Scikit-Learn, Keras, & TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems",
+      "author": "Aurélien Géron",
+      "year": "2022",
+      "publisher": "O'Reilly Media",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+      "doi": "",
+      "note": "使用Scikit-learn实现机器学习模型的实用指南，涵盖分类算法、数据预处理和评估技术。",
+      "order": 2,
+      "created_at": "2025-09-05T01:11:13.036475Z",
+      "updated_at": "2025-09-08T05:22:25.461636Z"
+    },
+    {
+      "id": 5515,
+      "title": "An Introduction to Statistical Learning: With Applications in Python",
+      "author": "Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani, Jonathan Taylor",
+      "year": "2023",
+      "publisher": "Springer",
+      "journal": "",
+      "volume": "",
+      "pages": "",
+      "url": "https://www.statlearning.com/",
+      "doi": "",
+      "note": "一本关于统计学习方法的综合性入门教材，解释了逻辑回归、K近邻和支持向量机等算法的理论基础。",
+      "order": 3,
+      "created_at": "2025-09-05T01:11:13.040707Z",
+      "updated_at": "2025-09-08T05:22:18.259158Z"
+    }
+  ],
+  "type": "Exercise",
+  "show_calculator_banner": false
+}
