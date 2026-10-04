@@ -86,7 +86,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-[Image 20](https://apxml.s3.amazonaws.com/content_images/section_1174_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070832Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=f6eead937592eb774774ec49fa766ecc883d8a1f3696ea4470d343509bf7aaaa)
+![Image 20](https://apxml.s3.amazonaws.com/content_images/section_1174_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070832Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=f6eead937592eb774774ec49fa766ecc883d8a1f3696ea4470d343509bf7aaaa)
 或者，使用Seaborn的`histplot`：
 
 ```python
@@ -104,7 +104,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-[Image 21](https://apxml.s3.amazonaws.com/content_images/section_1174_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070832Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=119d36bb6475aa0ecfcb2491e1ec7d1958cd7d82bbc09f0ad41248077c4f88b8)
+![Image 21](https://apxml.s3.amazonaws.com/content_images/section_1174_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070832Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=119d36bb6475aa0ecfcb2491e1ec7d1958cd7d82bbc09f0ad41248077c4f88b8)
 有时，如果将条形标准化以代表100%，则比较比例会更容易。这通常被称为“填充”堆叠条形图。
 
 ```python

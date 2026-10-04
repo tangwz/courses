@@ -45,6 +45,8 @@ def main():
                     references.decompose()
                 for tag in article.select('.katex, .course-plot, pre, script, style'):
                     tag.decompose()
+                for image in article.find_all('img'):
+                    image.replace_with(image.get('alt') or '\u56fe\u7247')
                 for block in article.find_all(['h1','h2','h3','h4','h5','h6','p','li']):
                     if block.find(['p','ul','ol','pre','table']):
                         continue

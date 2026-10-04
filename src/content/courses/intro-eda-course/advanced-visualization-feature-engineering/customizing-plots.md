@@ -37,7 +37,7 @@ sns.scatterplot(x='feature_A', y='feature_B', data=df)
 plt.show()
 ```
 
-[Image 7](https://apxml.s3.amazonaws.com/content_images/section_1181_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=986fc81915335355c055f359d946ca91e40a80ac171671f8b1026cbe3abc5031)
+![Image 7](https://apxml.s3.amazonaws.com/content_images/section_1181_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=986fc81915335355c055f359d946ca91e40a80ac171671f8b1026cbe3abc5031)
 这个初始图表展示了关系，但缺少背景信息。我们来改进它。
 
 ### 添加标题
@@ -55,7 +55,7 @@ ax.set_title('特征 A 与特征 B 之间的关系')
 plt.show()
 ```
 
-[Image 8](https://apxml.s3.amazonaws.com/content_images/section_1181_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=f1c1806498771720cff5c434c5653bd279df7b3d7bc168a4a23a0d7d958c1051)
+![Image 8](https://apxml.s3.amazonaws.com/content_images/section_1181_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=f1c1806498771720cff5c434c5653bd279df7b3d7bc168a4a23a0d7d958c1051)
 添加 `ax.set_title()` 可立即提供图表所表示内容的背景信息。选择标题时要简洁且信息量大。
 
 ### 设置坐标轴标签
@@ -75,7 +75,7 @@ ax.set_ylabel('特征 B (响应)')
 plt.show()
 ```
 
-[Image 9](https://apxml.s3.amazonaws.com/content_images/section_1181_3.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5df9a3985d75ee32ee192c1eb0fc74dc11d70ca9fe945493afa77d9437fbf511)
+![Image 9](https://apxml.s3.amazonaws.com/content_images/section_1181_3.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5df9a3985d75ee32ee192c1eb0fc74dc11d70ca9fe945493afa77d9437fbf511)
 现在，任何查看图表的人都能准确了解哪些变量绘制在哪个轴上。
 
 ### 管理图例
@@ -100,7 +100,7 @@ ax.set_ylabel('特征 B (响应)')
 plt.show()
 ```
 
-[Image 10](https://apxml.s3.amazonaws.com/content_images/section_1181_4.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=cf34894521de98abc80c4037a30067b8eab3ad0dfee790238e0ee3896328282c)
+![Image 10](https://apxml.s3.amazonaws.com/content_images/section_1181_4.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=cf34894521de98abc80c4037a30067b8eab3ad0dfee790238e0ee3896328282c)
 因为我们使用了 `hue` 参数，Seaborn 自动添加了图例。图例将颜色映射到类别名称（'Group 1'，'Group 2'）。
 
 有时您可能需要对图例进行更多控制。Matplotlib 的 `ax.legend()` 提供了位置 (`loc`)、为图例添加标题 (`title`)、移除边框 (`frameon=False`) 等选项。常见的 `loc` 值包括 'best'、'upper right'、'upper left'、'lower left'、'lower right'、'center left'、'center right'、'lower center'、'upper center'、'center'。Seaborn 有时可能会将图例放置在不合适的位置，因此调整 `loc` 可以提高可读性。
@@ -135,7 +135,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-[Image 11](https://apxml.s3.amazonaws.com/content_images/section_1181_5.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=881912678fc4fa4a27b34555a0d0ec3514de75cbfc8cf2a1e815f7cd9c2387ea)
+![Image 11](https://apxml.s3.amazonaws.com/content_images/section_1181_5.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070837Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=881912678fc4fa4a27b34555a0d0ec3514de75cbfc8cf2a1e815f7cd9c2387ea)
 这个最终图表明显更加清晰：
 
 - 标题清楚地说明了图表的用途和背景。

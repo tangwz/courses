@@ -42,7 +42,7 @@ plt.tight_layout() # 调整布局
 plt.show()
 ```
 
-[Image 17](https://apxml.s3.amazonaws.com/content_images/section_1160_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070819Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=ec85ccb9e60a20e4d75b48bd6b19ed8d63158b10d35f23848a059668d5971163)
+![Image 17](https://apxml.s3.amazonaws.com/content_images/section_1160_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070819Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=ec85ccb9e60a20e4d75b48bd6b19ed8d63158b10d35f23848a059668d5971163)
 或者，你可以先使用 Pandas 计算值计数，然后使用 Matplotlib 或 Pandas 的绘图函数：
 
 ```python
@@ -66,7 +66,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-[Image 18](https://apxml.s3.amazonaws.com/content_images/section_1160_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070819Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=dc91220b884348c3001c4d54f92741c90f1713b8dbbe988e49f7e8b57618b790)
+![Image 18](https://apxml.s3.amazonaws.com/content_images/section_1160_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070819Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=dc91220b884348c3001c4d54f92741c90f1713b8dbbe988e49f7e8b57618b790)
 两种方法都能达到类似的结果。Seaborn 的 `countplot` 对于简单的频率图可能更直接一些，而 Pandas 的方法则在绘图前明确提供了计数，这可能很有用。
 
 ### 解读柱状图

@@ -256,7 +256,7 @@ def render_html(content, source_url=BASE + "/"):
         def convert_img(self, el, text, parent_tags):
             src = el.get('src', '')
             alt = el.get('alt') or '\u56fe\u7247'
-            return f'[{markdown_label(alt)}]({markdown_url(src)})' if src else ''
+            return f'![{markdown_label(alt)}]({markdown_url(src)})' if src else ''
 
         def convert_input(self, el, text, parent_tags):
             if el.get('type') == 'checkbox':
@@ -570,7 +570,11 @@ def crawl_sections(browser, catalog, details, report, fetch_missing=True):
                 render_section(task, load_json(task['cache']))
                 report['completed_sections'] += 1
             except Exception as error:
-                report['errors'].append({'url': task['url'], 'error': str(error)})
+                cache_error = {'url': task['url'], 'error': str(error)}
+                report['errors'].append(cache_error)
+                if fetch_missing:
+                    task['cache_error'] = cache_error
+                    pending.append(task)
                 print(f'ERROR {task["url"]}: {error}', flush=True)
         else:
             pending.append(task)
@@ -591,6 +595,9 @@ def crawl_sections(browser, catalog, details, report, fetch_missing=True):
                 section = {k: v for k, v in section.items() if k not in {'has_completed', 'has_bookmarked', 'like_count'}}
                 render_section(task, section)
                 save_json(task['cache'], section)
+                cache_error = task.pop('cache_error', None)
+                if cache_error is not None:
+                    report['errors'].remove(cache_error)
                 report['completed_sections'] += 1
             except Exception as error:
                 report['errors'].append({'url': task['url'], 'error': str(error)})
@@ -646,7 +653,8 @@ def main():
         crawl_sections(browser, catalog, details, report, fetch_missing=args.phase != 'render')
     write_index(catalog, details, report)
     print(json.dumps({k: v for k, v in report.items() if k != 'errors'}, ensure_ascii=False), flush=True)
+    return 1 if report['errors'] else 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

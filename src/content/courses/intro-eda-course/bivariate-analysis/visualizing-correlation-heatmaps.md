@@ -83,7 +83,7 @@ plt.title('数值特征的相关矩阵')
 plt.show()
 ```
 
-[Image 19](https://apxml.s3.amazonaws.com/content_images/section_1169_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T035243Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=bfc329659884821dca70773eab26deb4d91d4cfca8f5a77fbddeaca6221ba29f)
+![Image 19](https://apxml.s3.amazonaws.com/content_images/section_1169_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T035243Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=bfc329659884821dca70773eab26deb4d91d4cfca8f5a77fbddeaca6221ba29f)
 我们来分析一下`sns.heatmap()`中使用的重要参数 (parameter)：
 
 - `correlation_matrix`：这是主要输入，一个包含相关值的Pandas DataFrame。
