@@ -1,0 +1,128 @@
+---
+course: "vae-representation-learning"
+chapter: "probabilistic-models-representation-foundations"
+lesson: "information-theory-representation-learning"
+sourceId: 6279
+sourceUrl: "https://apxml.com/zh/courses/vae-representation-learning/chapter-1-probabilistic-models-representation-foundations/information-theory-representation-learning"
+title: "表征学习中的信息论"
+description: "互信息等信息论原理在表征学习中的作用。"
+order: 6
+plots: []
+sourceHash: "a0fcd1995361d821f77630ae35f1ec067abfaf2f5e06bf35de059704f01981c7"
+sourceCorrections: []
+---
+
+信息论提供了一个强大的定量框架，用于理解何谓有效表征。数学的这一分支使我们能够衡量不确定性和信息量，为分析和设计表征学习算法（包括本课程的核心——变分自编码器VAE）提供了精确的工具。理解这些原理将有助于阐明为何使用某些目标函数，以及我们如何评估所学表征的质量。
+
+### 信息和不确定性的量化 (quantization)
+
+信息论的核心是一些基本量，它们帮助我们理解数据和模型。
+
+#### 熵
+
+熵，对于随机变量$X$表示为$H(X)$，衡量与$X$的结果相关的平均不确定性或“惊喜”量。对于具有概率质量函数$P(x)$的离散随机变量$X$，其熵为：
+
+
+$$
+H(X) = - \sum_{x \in \mathcal{X}} P(x) \log_2 P(x)
+$$
+
+
+对数通常以2为底，此时熵的单位为比特。一个尖锐集中的分布（即某个结果的可能性很高）具有较低的熵，而均匀分布（所有结果可能性均等）在给定状态数量下具有最大熵。在表征学习中，熵可以描述数据特征或潜在变量的多样性或复杂性。
+
+#### 互信息
+
+互信息（MI）衡量一个随机变量包含另一个随机变量的信息量。对于两个随机变量$X$和$Z$，它们的互信息$I(X;Z)$量化了因了解$Z$而导致的$X$不确定性的减少，反之亦然。其定义为：
+
+
+$$
+I(X;Z) = H(X) - H(X|Z) = H(Z) - H(Z|X)
+$$
+
+
+其中$H(X|Z)$是给定$Z$时$X$的条件熵。MI也可以使用KL散度（接下来讨论）表示：
+
+
+$$
+I(X;Z) = D_{KL}(P(x,z) || P(x)P(z))
+$$
+
+
+这表明MI衡量$X$和$Z$之间的依赖关系。如果$X$和$Z$相互独立，$I(X;Z) = 0$。
+
+在表征学习中，我们通常关注一个潜在表征$Z$，它能捕捉关于输入$X$的大量信息。因此，高$I(X;Z)$通常是期望的。例如，自编码器中的编码器旨在产生一个$Z$，它尽可能多地保留关于$X$的信息，以便进行准确重建。MI也是理解和促进解耦的基础，我们可能希望潜在向量 (vector)$Z = (Z_1, ..., Z_d)$的不同分量对数据中不同、独立的变异因素提供信息，这意味着当$i \neq j$时，$I(Z_i; Z_j)$较低。
+
+#### Kullback-Leibler (KL) 散度
+
+Kullback-Leibler (KL) 散度，或称相对熵，衡量一个概率分布$P$与第二个期望概率分布$Q$之间的差异。对于定义在相同概率空间$\mathcal{X}$上的离散分布$P$和$Q$，它由以下公式给出：
+
+
+$$
+D_{KL}(P || Q) = \sum_{x \in \mathcal{X}} P(x) \log \frac{P(x)}{Q(x)}
+$$
+
+
+对于连续分布，求和被积分代替。
+KL散度的重要性质包括：
+
+- $D_{KL}(P || Q) \ge 0$。
+- $D_{KL}(P || Q) = 0$当且仅当$P = Q$时成立。
+- 它不是对称的：一般情况下，$D_{KL}(P || Q) \neq D_{KL}(Q || P)$。
+
+在变分自编码器（VAE）中，正如我们将在第2章详细讨论的那样，KL散度扮演重要角色。它通常作为正则化 (regularization)项出现在VAE目标函数中，促使所学潜在变量的分布$q(z|x)$（近似后验）接近选定的先验分布$p(z)$（例如，标准正态分布）。这种正则化对于确保潜在空间具有良好的生成性质很重要。
+
+### 信息瓶颈原理
+
+信息瓶颈（IB）原理提供了一个正式的框架，用于学习既压缩又信息丰富的表征。给定输入变量$X$和目标变量$Y$（可以是监督任务中的类别标签，或者用于重建的$X$本身），目标是学习一个到表征$Z$的随机映射$p(z|x)$，使其充当“瓶颈”。这个$Z$应该对$Y$提供最大信息量，同时对$X$提供最小信息量。
+
+这种权衡由以下目标函数形式化：
+
+
+$$
+\mathcal{L}_{IB} = I(Z;Y) - \beta I(X;Z)
+$$
+
+
+我们旨在最大化这个拉格朗日量，其中$\beta$是拉格朗日乘数，它控制着$Z$对$Y$的信息量与$X$压缩到$Z$之间的权衡。
+
+- 最大化$I(Z;Y)$意味着$Z$应该尽可能多地保留关于目标$Y$的信息。
+- 最小化$I(X;Z)$（通过最大化$-I(X;Z)$）意味着$Z$应该压缩$X$，丢弃$X$中与$Y$无关的信息。
+
+> 信息瓶颈框架。表征$Z$被学得为输入$X$的压缩版本，同时保留与目标$Y$相关的信息。
+
+信息瓶颈（IB）原理与变分自编码器（VAE）高度相关。虽然并非总是明确地这样表述，但VAE目标鼓励学习一个压缩的潜在表征$Z$（通过KL散度项，在某些条件下它与$I(X;Z)$相关），它足以重建$X$（这与当$Y=X$时的$I(X;Z)$或$I(Z;X)$相关）。理解IB有助于说明VAE目标的结构以及所学潜在空间中期望的性质。
+
+### VAE中的信息论
+
+如前所述，信息论量不仅是分析工具；它们与VAE的机制紧密相关。
+
+1. **重建和$I(X;Z)$：** VAE目标中的重建项，通常为$-\mathbb{E}_{q(z|x)}[\log p(x|z)]$，促使解码器$p(x|z)$从$Z$准确重建$X$。这隐式地促使$Z$保留关于$X$的信息，从而与$I(X;Z)$相关。一个对$X$提供大量信息的$Z$将允许更好的重建。
+2. **KL散度与正则化 (regularization)：** VAE目标中的$D_{KL}(q(z|x) || p(z))$项强制每个输入$x$的近似后验$q(z|x)$接近先验$p(z)$。此项可以从几个方面解释：
+   - 作为正则化器，它防止$q(z|x)$变得过于复杂或过于特定于单个$x_i$，从而促进更平滑、更有组织的潜在空间。
+   - 它鼓励编码效率，因为$z$样本可以被视为从$p(z)$中抽取。
+   - 它与$I(X;Z)$有联系。例如，如果$p(z)$是因子化的（即，分量是独立的），并且$q(z|x)$也被鼓励是因子化的，这有助于实现某种形式的解耦。在证据下界（ELBO）最大化下最小化$D_{KL}(q(z|x) || p(z))$隐式控制了$X$和$Z$之间的信道容量。
+
+### 表征评估
+
+在指导学习过程中，信息论提供评估所学表征质量的工具。例如，互信息可以用来评估：
+
+- **信息量：** 潜在变量$Z_i$对数据中已知的底层变异因素提供了多少信息？
+- **解耦性：** 不同的潜在变量$Z_i$和$Z_j$是否统计独立？$I(Z_i; Z_j)$可以量化 (quantization)这一点。
+  我们将在第5章讨论解耦指标时再次讨论这些评估方面，其中许多源自信息论原理。
+
+总之，信息论提供了一种精确的语言和一套工具来分析VAE等概率模型中的信息流。它帮助我们理解什么是“好”的表征（例如，信息丰富、压缩、解耦），并提供将这些性质构建到模型中的机制。这一基础对于我们进一步学习VAE及其高级变体的数学细节将很有价值。
+
+## 参考资料
+
+- [Elements of Information Theory](https://stanford.edu/...) — Thomas M. Cover, Joy A. Thomas (2006)
+  Publisher: Wiley-Interscience
+  一本关于信息论数学基础的全面权威教材，涵盖了熵、互信息和Kullback-Leibler散度。
+- [The Information Bottleneck Method](https://proceedings.neurips.cc/paper_files/paper/1999/file/9985ee1903c7793d5f1cfb36c0d8b49e-Paper.pdf) — Naftali Tishby, Fernando C. Pereira, and William Bialek (1999)
+  Journal: Advances in Neural Information Processing Systems 12 (NIPS 1999); Pages: 463-469
+  介绍了信息瓶颈原理，这是一个学习压缩且信息丰富的表示的基础框架。
+- [Auto-Encoding Variational Bayes](https://openreview.net/document/94ac4bf7-6122-449a-90af-0ac47e98dda0) — Diederik P. Kingma, Max Welling (2014)
+  Journal: International Conference on Learning Representations (ICLR 2014); DOI: [10.48550/arXiv.1312.6114](https://doi.org/10.48550/arXiv.1312.6114)
+  介绍了变分自编码器（VAE）及其目标函数，该函数将Kullback-Leibler散度融入表示学习中。
+- [Deep Variational Information Bottleneck](https://arxiv.org/abs/1612.00410) — Alexander A. Alemi, Ian Fischer, Joshua V. Dillon, and Kevin Murphy (2017)
+  Journal: Proceedings of the International Conference on Learning Representations (ICLR) 2017; DOI: [10.48550/arXiv.1612.00410](https://doi.org/10.48550/arXiv.1612.00410)
+  提出了一种将信息瓶颈原理应用于深度神经网络的方法，为学习压缩且信息丰富的表示提供了现代视角。

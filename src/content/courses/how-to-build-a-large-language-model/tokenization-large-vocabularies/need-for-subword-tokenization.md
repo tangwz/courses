@@ -1,0 +1,112 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "tokenization-large-vocabularies"
+lesson: "need-for-subword-tokenization"
+sourceId: 5968
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-5-tokenization-large-vocabularies/need-for-subword-tokenization"
+title: "子词分词的必要性"
+description: "讨论词级别分词面临的挑战（OOV词汇、词汇表规模）。"
+order: 1
+plots: ["plots/5968-0.json"]
+sourceHash: "cd1eb3ade7cd58c5c741f8448b04199cf6ab292a922adcca7786b51d56254e24"
+sourceCorrections: []
+---
+
+将原始文本转换为适合神经网络 (neural network)的格式，具体来说是数值ID序列，这是非常基础的第一步。此过程称为分词 (tokenization)。一种直接的方法可能是根据空格和标点符号分割文本，并为训练语料库中遇到的每个不同词汇分配一个唯一的整数ID。
+
+考虑一个简单的句子：“LLMs learn representations.”
+一个词级别分词器 (tokenizer)可能产生：`["LLMs", "learn", "representations", "."]`
+如果我们的词汇表 (vocabulary)将“LLMs”映射到5，“learn”映射到123，“representations”映射到456，而“.”映射到7，则数值序列将是`[5, 123, 456, 7]`。
+
+这种词级别方法虽然简单直观，但在处理训练大型语言模型所需的海量数据集时，会迅速出现问题。一些重要问题：
+
+### 词汇表 (vocabulary)规模急剧增长
+
+主要问题是所需词汇表的庞大规模。网络规模的文本语料库不仅包含标准字典词汇，还包括名称、地点、技术术语、代码片段、俚语、拼写错误以及形态变体（例如，“run”、“runs”、“running”、“ran”）。从此类数据构建的词级别词汇表很容易膨胀到包含数百万甚至数千万个独特的类型。
+
+这带来了严峻的实际挑战：
+
+1. **内存占用：** 模型的输入嵌入 (embedding)层将每个词汇ID映射到一个稠密向量 (vector)（例如，1024维或更多）。1000万词的词汇表需要一个 $10,000,000 \times d_{model}$ 参数 (parameter)的嵌入矩阵。即使 $d_{model}=1024$ 规模不大，仅此一层也需要大约41GB的内存来以标准32位浮点格式存储权重 (weight)。
+
+   ```python
+   import torch
+   import torch.nn as nn
+
+   # 参数
+   d_model = 1024  # 模型隐藏维度
+
+   # 词级别场景（示例）
+   word_vocab_size = 10_000_000
+
+   # 因规模过大而避免实例化
+   # word_embeddings = nn.Embedding(word_vocab_size, d_model)
+
+   word_memory_bytes = word_vocab_size * d_model * 4 # FP32 = 4 bytes
+   word_memory_gb = word_memory_bytes / (1024**3)
+   print(
+       f"Word Embedding Memory Estimate (Vocab={word_vocab_size:,}, "
+       f"d_model={d_model}): {word_memory_gb:.2f} GB"
+   )
+
+   # 子词级别场景（典型）
+   subword_vocab_size = 50_000
+   subword_embeddings = nn.Embedding(subword_vocab_size, d_model)
+   subword_memory_bytes = subword_vocab_size * d_model * 4 # FP32
+   subword_memory_gb = subword_memory_bytes / (1024**3)
+   print(
+       f"Subword Embedding Memory Estimate (Vocab={subword_vocab_size:,}, "
+       f"d_model={d_model}): {subword_memory_gb:.2f} GB"
+   )
+   ```
+2. **计算成本：** 典型语言模型的最后一层通常涉及对整个词汇表进行softmax计算，以预测下一个词元 (token)。此操作的复杂度与词汇表大小成比例，即 $O(|V|)$。数百万词的词汇表使得这一最后步骤在训练和推理 (inference)过程中计算成本高昂。
+3. **参数效率低下：** 语言遵循齐普夫定律等分布，其中少数词出现频率很高，而绝大多数词极其罕见（即“长尾”现象）。词级别模型甚至为在大型语料库中只出现一两次的词分配唯一的嵌入向量和参数，这是对模型能力的低效配置。
+
+### 词汇外（OOV）词汇
+
+无论训练语料库有多大，你在推理 (inference)或评估期间都将不可避免地遇到训练数据中不存在的词。这些是词汇外（OOV）词汇。词级别分词 (tokenization)器 (tokenizer)必须有一种处理这些词的策略，通常是将所有未知词映射到一个特殊的单一词元 (token)，通常表示为 `<UNK>` 或 `[UNK]`。
+
+考虑句子：“We analyzed the giga-scale dataset using GloVe embeddings.”
+如果“giga-scale”不在训练词汇表 (vocabulary)中，词分词器可能产生：`["We", "analyzed", "the", "<UNK>", "dataset", "using", "GloVe", "embeddings", "."]`
+
+用 `<UNK>` 替换词汇会导致大量信息丢失。模型没有关于特定未知词的信息，这阻碍了其理解或生成包含新术语、名称、拼写错误或领域特定词汇文本的能力。当模型应用于与其训练数据不同的范围时，OOV词汇的频率会增加。
+
+
+
+![分词：词汇表规模与OOV率对比](plots/5968-0.json)
+
+
+
+> 大型文本语料库上不同分词级别的典型词汇表规模（对数刻度）和词汇外（OOV）率的对比。词级别分词产生大型词汇表和较高的OOV率。字符级别没有OOV但单元最小。子词 (subword)方法提供了一种平衡。
+
+### 形态复杂性
+
+语言通过形态学构成词汇，将词根与前缀、后缀和屈折变化结合。例如，“train”、“trainer”、“training”、“retrain”、“trained”都共享词根“train”。词级别分词 (tokenization)器 (tokenizer)将每个词视为一个完全独立的单元，拥有自己的ID和嵌入 (embedding)向量 (vector)。这是低效的，因为它未能借助这些相关形式之间固有的关联。模型必须完全根据共现统计从头学习“training”和“trained”之间的关联，而不是识别共享的底层词素。这个问题在形态丰富的语言（如土耳其语、芬兰语或德语）中尤其突出，但在英语中也很重要。
+
+### 子词 (subword)解决方案
+
+为应对这些挑战，现代大型语言模型几乎普遍采用**子词分词 (tokenization)**算法。核心思想是将词汇分解为更小、频繁出现的单元。这些单元可能是词素（如“train”、“ing”、“er”），常见的字符序列，甚至是用于最罕见部分的单个字符。
+
+例如，“tokenization”这个词可能被分解为子词单元，如 `["token", "##ization"]`，其中“##”表示词内连续部分的开始（此标记 (token)法有所不同）。像“giga-scale”这样的罕见词可能变为 `["giga", "-", "scale"]` 或者 `["g", "##iga", "-", "s", "##cale"]`，具体取决于学习到的词汇表 (vocabulary)。
+
+这种方法巧妙地缓解了词级别分词的问题：
+
+- **可控的词汇表规模：** 词汇表不再包含数百万词汇，而是由数万（例如3万到10万）个子词单元组成。这大大降低了嵌入 (embedding)层和softmax层的内存和计算开销。
+- **消除OOV：** 任何新词或罕见词几乎总可以通过组合已知的子词单元来构成。如果一个词包含真正新颖的字符序列，它可以被进一步分解，甚至分解为单个字符，这些字符必定在词汇表中。 `<UNK>` 词元 (token)变得很大程度上不再必要。
+- **处理形态学：** 形态相关的词汇自然共享常见的子词单元（例如，“training”和“trainer”中的“train”）。这使得模型能够潜在地共享表示，并更有效地学习词形之间的语义关联 (semantic relationship)。序列 `["train", "##ing"]` 通过共享的“train”子词元，固有地与 `["train", "##ed"]` 相关联。
+
+通过在子词级别操作，我们实现了平衡：词汇表保持可管理规模，OOV问题几乎被消除，模型获得了更好地理解词汇结构的能力。那么问题就来了：我们如何确定给定语料库的最佳子词单元集？字节对编码（BPE）、WordPiece和Unigram语言模型分割等技术，常在SentencePiece等框架中使用，提供了构建这些子词词汇表的数据驱动方法，我们将在后续章节中介绍这些内容。
+
+## 参考资料
+
+- [Neural Machine Translation of Rare Words with Subword Units](https://aclanthology.org/P16-1162/) — Rico Sennrich, Barry Haddow, and Alexandra Birch (2016)
+  Journal: Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Volume: 1; Pages: 1715-1725; DOI: [10.18653/v1/P16-1162](https://doi.org/10.18653/v1/P16-1162)
+  介绍了用于子词分词的字节对编码（BPE），解决了神经机器翻译中稀有词和词表外问题。
+- [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://aclanthology.org/D18-2012/) — Taku Kudo and John Richardson (2018)
+  Journal: Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing: System Demonstrations; Publisher: Association for Computational Linguistics; Pages: 66-71; DOI: [10.18653/v1/D18-2012](https://doi.org/10.18653/v1/D18-2012)
+  介绍了 SentencePiece，一种语言无关的子词分词器，实现了 BPE 和 Unigram 语言模型分段，适用于大规模文本处理。
+- [Subword Regularization: Improving Word Embeddings and Language Models with Morphological Information](https://aclanthology.org/P18-1007/) — Taku Kudo (2018)
+  Journal: Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Volume: 1; Pages: 66-75; DOI: [10.18653/v1/P18-1007](https://doi.org/10.18653/v1/P18-1007)
+  介绍了用于子词切分的 Unigram 语言模型，增强了词嵌入和语言模型中形态学信息的处理。
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://aclanthology.org/N19-1423/) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (2019)
+  Journal: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Publisher: Association for Computational Linguistics; Volume: 1; Pages: 4171-4186; DOI: [10.18653/v1/N19-1423](https://doi.org/10.18653/v1/N19-1423)
+  介绍了 BERT 模型，该模型使用了 WordPiece 分词技术，展示了子词方法在大型语言模型预训练中的应用。

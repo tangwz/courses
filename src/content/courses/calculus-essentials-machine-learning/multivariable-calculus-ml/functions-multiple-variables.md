@@ -1,0 +1,74 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "multivariable-calculus-ml"
+lesson: "functions-multiple-variables"
+sourceId: 1369
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-3-multivariable-calculus-ml/functions-multiple-variables"
+title: "多变量函数"
+description: "理解接受多个输入的函数，这在机器学习模型中很常见。"
+order: 1
+plots: ["plots/1369-0.json"]
+sourceHash: "403c961f05fc5e7076838e0af63fd00c15f9f2db87f681e3ce19c14386e0caa3"
+sourceCorrections: []
+---
+
+虽然单个输入变量的函数，例如 $f(x)$，以及其导数（描述这些函数变化速度）是基础，但机器学习 (machine learning)中的许多情况都涉及同时依赖多个输入的函数。以预测房价为例。房价不仅取决于房屋的面积；它还可能取决于卧室数量、房龄和位置。同样，我们在模型训练期间旨在最小化的成本函数通常取决于模型*所有*的参数 (parameter)（权重 (weight)和偏置 (bias)），对于复杂模型来说，这些参数的数量可以达到数千甚至数百万。
+
+为了应对这些情况，我们需要将微积分工具扩展到多变量函数。
+
+### 什么是多变量函数？
+
+多变量函数接受一个以上的输入值，并产生一个输出值（在我们的语境中通常是单个标量值）。如果函数 $f$ 取决于 $n$ 个变量，例如 $x_1, x_2, \dots, x_n$，我们将其写为：
+
+$f(x_1, x_2, \dots, x_n)$
+
+或者，我们可以将输入变量组合成一个向量 (vector) $\mathbf{x} = [x_1, x_2, \dots, x_n]^T$。这样，函数可以更简洁地写成：
+
+$f(\mathbf{x})$
+
+输出通常是一个实数，特别是在处理机器学习 (machine learning)中的成本函数时，输出表示误差或“成本”的度量。
+
+**示例：** 考虑一个简单的二变量函数 $x$ 和 $y$：
+
+$f(x, y) = x^2 + 2y^2$
+
+这里，输入由一对值 $(x, y)$ 组成，输出是使用公式计算的单个数字。例如，$f(1, 2) = 1^2 + 2(2^2) = 1 + 8 = 9$。
+
+### 可视化多变量函数
+
+随着输入变量数量的增加，可视化函数变得更具挑战性。
+
+- **一个变量 ($y = f(x)$)：** 我们可以很容易地将其可视化为二维平面（x轴和y轴）上的一条曲线。
+- **两个变量 ($z = f(x, y)$)：** 我们可以将其可视化为三维空间中的一个曲面，其中 $z$ 高度（在 $xy$ 平面之上）表示函数在点 $(x, y)$ 的值。
+
+让我们来看看函数 $z = x^2 + y^2$。这个方程描述了一个向上开口的抛物面，其最小值在 $(0, 0)$。
+
+
+
+![z = x^2 + y^2 的曲面图](plots/1369-0.json)
+
+
+
+> 一个三维曲面图，表示函数 $z = x^2 + y^2$。高度 ($z$) 对应于函数对于每对 $(x, y)$ 坐标的数值。最小值 (0) 出现在 $(x, y) = (0, 0)$。
+
+- **三个或更多变量 ($w = f(x, y, z, \dots)$)：** 无法直接在三维空间中可视化。对于三个变量的函数，我们有时会使用*等值面*（三维空间中函数值恒定的曲面）。对于具有三个以上变量的函数，我们主要依赖数学分析而非直接的几何直觉。我们通常通过观察函数在特定方向上的表现或检查其横截面来分析它。
+
+### 在机器学习 (machine learning)中的作用
+
+多变量函数在机器学习中是基础：
+
+1. **成本函数：** 如前所述，成本函数 $J$ 根据其参数 (parameter)（权重 (weight) $\mathbf{w}$ 和偏置 (bias) $b$）衡量模型表现的好坏。对于具有 $n$ 个权重的模型，成本函数为 $J(w_1, w_2, \dots, w_n, b)$。训练模型涉及找到使这个多变量函数最小化的 $w_1, \dots, w_n, b$ 值。例如，对于具有两个特征 ($x_1, x_2$) 和参数 $w_1, w_2, b$ 的线性回归的均方误差成本为：
+   $J(w_1, w_2, b) = \frac{1}{2m} \sum_{i=1}^{m} ( (w_1 x_1^{(i)} + w_2 x_2^{(i)} + b) - y^{(i)} )^2$
+   这里，$m$ 是训练样本的数量，$(x_1^{(i)}, x_2^{(i)})$ 是第 $i$ 个样本的特征，而 $y^{(i)}$ 是其真实标签。函数 $J$ 取决于三个参数 $w_1, w_2,$ 和 $b$。
+2. **模型预测：** 预测函数 $h(\mathbf{x})$ 本身通常是一个多变量函数。对于线性回归， $h_{\mathbf{w}, b}(\mathbf{x}) = w_1 x_1 + w_2 x_2 + \dots + w_n x_n + b$。预测结果取决于输入特征 $x_1, \dots, x_n$。
+
+理解如何分析这些多变量函数，特别是当我们调整其输入（参数）时它们如何变化，对优化非常重要。这自然引出了偏导数的思想，它衡量的是在保持其他变量不变的情况下，函数相对于一个变量的变化率。我们接下来会研究这个。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  深度学习的奠基性教材。第四章讨论数值计算，将多变量微积分应用于成本函数和优化。
+- [Multivariable Calculus (18.02SC)](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/) — Denis Auroux (2010)
+  Publisher: Massachusetts Institute of Technology
+  麻省理工学院提供的免费在线课程，系统介绍多变量微积分，包括函数及其可视化。

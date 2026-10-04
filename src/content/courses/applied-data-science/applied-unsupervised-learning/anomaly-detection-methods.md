@@ -1,0 +1,76 @@
+---
+course: "applied-data-science"
+chapter: "applied-unsupervised-learning"
+lesson: "anomaly-detection-methods"
+sourceId: 1887
+sourceUrl: "https://apxml.com/zh/courses/applied-data-science/chapter-4-applied-unsupervised-learning/anomaly-detection-methods"
+title: "异常检测方法简介"
+description: "识别不寻常数据点或异常值的方法概述。"
+order: 4
+plots: ["plots/1887-0.json"]
+sourceHash: "455384b20a433600cc73362def15096558a3e09e2d2edf3606f8d2d094bb6f81"
+sourceCorrections: []
+---
+
+聚类算法帮助我们在数据中发现群组，而无监督学习 (supervised learning) (unsupervised learning)中另一个重要任务是识别那些似乎不属于*任何*群组，或明显不同于一般模式的数据点。这就是**异常检测**的范畴，也叫离群点检测。
+
+异常是指与大多数数据或与所谓“正常”行为明显不同的数据点、事件或观测值。与监督分类中可能拥有特定“欺诈”或“缺陷”标签不同，在无监督异常检测中，我们通常没有预先给这些例外情况打上标签。相反，我们根据它们与数据集中其他部分的固有差异来识别它们。
+
+### 为什么异常检测很重要？
+
+识别这些异常情况在许多方面都很有价值：
+
+- **欺诈检测：** 发现可能表明欺诈行为的异常信用卡交易、保险索赔或金融活动。
+- **入侵检测：** 识别可能预警安全漏洞的可疑网络流量模式或用户活动。
+- **系统健康监测：** 检测工业设备中的异常传感器读数（预测性维护）、不寻常的服务器性能指标或系统日志中的错误。
+- **数据质量保障：** 发现可能需要调查或修正的数据输入错误、测量不准确或极端值，以便在进一步分析或建模之前处理。
+- **医疗应用：** 识别异常患者检测结果或可能表明健康问题的迹象。
+
+本质上，异常情况通常代表着重要信息，预警着错误、机遇或需要关注的事件。
+
+### 异常类型
+
+尽管核心思想是偏离常态，但异常可以以不同方式表现：
+
+1. **点异常：** 这些是远离数据分布其余部分的单个数据点。如果我们对数据进行二维或三维可视化，这些点将显得孤立。
+
+   
+   
+   ![点异常示例](plots/1887-0.json)
+   
+   
+
+   > 这个散点图显示了一组典型数据点（蓝色）和两个远离主要群组的点异常（红色）。
+2. **情境异常（条件异常）：** 这些数据点仅在特定情境下被视为异常。例如，网络流量的突然激增在产品发布期间可能正常，但在平常周二凌晨3点则异常。同样，25摄氏度的温度在夏季正常，但在许多地方的冬季则异常。识别这些异常需要理解数据点所处的情境。
+3. **集体异常：** 一组相关数据实例作为一个整体可能是异常的，即使单个实例看起来正常。例如，在人体心电图（ECG）中，单个心跳可能看起来正常，但缺少特定心跳模式的序列可能代表集体异常，表明存在健康问题。
+
+### 异常检测的常见方法
+
+识别异常存在多种技术，通常分为以下几大类：
+
+- **统计方法：** 这些方法假设正常数据点遵循某种潜在统计分布（例如，高斯分布）。由该分布生成概率低的点会被标记 (token)为异常。计算Z-分数（一个点与均值相差均值多少个标准差）是一个简单例子。
+  $z = \frac{x - \mu}{\sigma}$
+  > 其中 $x$ 是数据点，$\mu$ 是均值，$\sigma$ 是标准差。具有高绝对Z-分数（例如，> 3）的点通常被视为离群值。
+- **基于邻近度的方法：** 这些技术依赖于距离或密度。异常被识别为那些远离其邻居的点（例如，使用k-最近邻距离）或位于低密度区域的点。诸如DBSCAN之类的算法，之前在聚类中讨论过，其本身会将稀疏区域的点识别为噪声，这些噪声通常可以被解释为异常。
+- **基于机器学习 (machine learning)的方法：** 有几种机器学习算法是专门为异常检测设计或适用于异常检测的。例子包括：
+  - **孤立森林 (Isolation Forest)：** 构建一个树的集成，将容易被隔离的点（即需要更少划分才能到达叶节点）识别为异常。
+  - **单类支持向量 (vector)机 (One-Class SVM)：** 学习正常数据点周围的边界；落在此边界之外的点被标记为异常。
+
+方法的选择通常取决于数据的性质、所寻找的异常类型、数据的维度以及计算效率是否是一个主要限制因素。
+
+本概述有助于理解异常的定义及其发现的用途。虽然本课程不会实现每种类型的异常检测算法，但理解这些原则对实用数据分析很必要，因为离群值会明显影响数据摘要、可视化以及后续机器学习模型的性能。
+
+## 参考资料
+
+- [Outlier Analysis](https://link.springer.com/book/10.1007/978-3-319-47578-3) — Charu C. Aggarwal (2017)
+  Publisher: Springer; DOI: [10.1007/978-3-319-47578-3](https://doi.org/10.1007/978-3-319-47578-3)
+  本书对异常检测技术进行了全面概述，涵盖了各种方法和应用。
+- [Isolation forest](https://ieeexplore.ieee.org/document/4781136) — Fei Tony Liu, Kai Ming Ting, Zhi-Hua Zhou (2008)
+  Journal: 2008 Eighth IEEE International Conference on Data Mining; Publisher: IEEE; Pages: 413-422; DOI: [10.1109/ICDM.2008.17](https://doi.org/10.1109/ICDM.2008.17)
+  介绍Isolation Forest算法的原始研究论文，这是一种用于异常检测的机器学习方法。
+- [Estimating the support of a high-dimensional distribution](https://doi.org/10.1162/089976601750264965) — Bernhard Schölkopf, John C. Platt, John Shawe-Taylor, Alex J. Smola, Robert C. Williamson (2001)
+  Journal: Neural computation; Publisher: MIT Press; Volume: 13; Pages: 1443-1471; DOI: [10.1162/089976601750264965](https://doi.org/10.1162/089976601750264965)
+  一篇基础论文，描述了单类支持向量机，一种适用于异常检测的机器学习技术。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781492032632/) — Aurélien Géron (2019)
+  Publisher: O'Reilly Media
+  一本实用指南，包含使用常用Python库实现各种机器学习算法（包括异常检测方法）的详细信息。

@@ -1,0 +1,114 @@
+---
+course: "getting-started-with-git"
+chapter: "first-git-repository"
+lesson: "understanding-gitignore"
+sourceId: 1002
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-git/chapter-2-first-git-repository/understanding-gitignore"
+title: "了解 .gitignore 文件"
+description: "了解如何创建和使用 .gitignore 文件，以告诉 Git 哪些文件或目录需要忽略。"
+order: 8
+plots: []
+sourceHash: "7626bd3c17281b6a6522998a2efcad8b0b3dc4ff8829410f2f0aad1c9c735357"
+sourceCorrections: []
+---
+
+当你进行项目工作时，并非所有文件都应纳入版本控制历史中。构建产物、日志文件、临时编辑器文件、操作系统特定文件（如 macOS 上的 `.DS_Store` 或 Windows 上的 `Thumbs.db`），以及包含下载依赖项的目录（如 JavaScript 项目中的 `node_modules`）通常在开发过程中生成，或特定于用户环境。跟踪这些文件会使你的仓库变得杂乱，增加合并的难度，并无谓地增大仓库的体积。
+
+Git 提供了一种直接的方法来指定 Git 应该忽略的、有意不跟踪的文件。这通过使用一个名为 `.gitignore` 的特殊文件完成。
+
+### .gitignore 如何运作
+
+你在 Git 仓库的根目录下创建一个名为 `.gitignore` 的文件（注意开头的点）。在此文件中，你列出 Git 应忽略的文件名或目录名的模式。`.gitignore` 文件中的每一行都指定一个模式。
+
+当决定是否忽略某个路径时，Git 通常会从多个来源检查 `.gitignore` 模式，优先级较高的模式会覆盖优先级较低的模式：
+
+1. 从支持它们的命令的命令行读取的模式。
+2. 从与路径在同一目录或任何父目录中的 `.gitignore` 文件读取的模式，距离更近的目录中的模式具有优先权。
+3. 从 `$GIT_DIR/info/exclude` 读取的模式。
+4. 从由配置变量 `core.excludesFile` 指定的文件读取的模式（默认是 `~/.config/git/ignore` 或 `~/.gitignore`）。
+
+匹配 `.gitignore` 中模式的文件通常不会被 `git status` 列为“未跟踪文件”，Git 会阻止你使用 `git add .` 等命令意外地添加它。
+
+### .gitignore 模式格式
+
+这些模式的规则简单而灵活：
+
+- **空行或以 `#` 开头的行会被忽略。** 这使得可以添加注释和空白行以提高可读性。
+- **标准 glob 模式有效。** 它们类似于 shell 中常用的简化版正则表达式。
+  - 星号（`*`）匹配零个或多个字符（例如，`*.log` 匹配任何以 `.log` 结尾的文件）。
+  - 问号（`?`）匹配正好一个字符。
+  - 方括号（`[]`）匹配指定范围或集合中的一个字符（例如，`[abc]` 匹配 `a`、`b` 或 `c`）。
+- **末尾斜杠（`/`）表示目录。** 例如，`build/` 会忽略名为 `build` 的目录及其内部的所有内容。
+- **开头的斜杠（`/`）将模式锚定到仓库根目录。** 例如，`/TODO` 只匹配根目录下的 `TODO` 文件，而不匹配 `src/TODO`。如果没有开头的斜杠，该模式将匹配仓库中任何位置具有该名称的文件或目录。
+- **否定模式：** 一个可选的前缀 `!`，它否定模式；任何被先前模式排除的匹配文件将再次被包含。如果一个文件既匹配常规模式又匹配否定模式，则如果否定模式（`!`）在文件中出现得*更晚*，它会胜出。如果文件的父目录已被排除，则无法再次包含该文件。
+
+### 常见 .gitignore 示例
+
+以下是一个 `.gitignore` 文件示例，列举了常见模式：
+
+```
+# 忽略操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 忽略日志文件
+*.log
+npm-debug.log*
+
+# 忽略构建输出目录
+/build/
+/dist/
+
+# 忽略依赖目录
+/node_modules/
+/vendor/
+
+# 忽略编辑器/IDE 特定文件
+.vscode/
+.idea/
+*.swp
+
+# 忽略敏感配置（最好存储在其他位置）
+config.local
+
+# 否定示例：忽略所有 .txt 文件，但 important.txt 除外
+*.txt
+!important.txt
+```
+
+### 创建和使用 .gitignore
+
+1. 在你的终端或文件浏览器中，导航到 Git 仓库的根目录。
+2. 创建一个名为 `.gitignore` 的新文件。
+3. 在文本编辑器中打开该文件。
+4. 添加你希望 Git 忽略的文件和目录模式，每行一个模式。
+5. 保存文件。
+
+**重要提示：** `.gitignore` 文件本身*应该*被添加到你的仓库并提交。这可以确保忽略规则与克隆该仓库的其他人共享，从而使所有协作人员的行为保持一致。
+
+```bash
+# 检查状态，.gitignore 可能会显示为未跟踪
+git status
+
+# 暂存 .gitignore 文件
+git add .gitignore
+
+# 提交 .gitignore 文件
+git commit -m "Add .gitignore file"
+
+# 再次检查状态，被忽略的文件不应再显示为未跟踪
+git status
+```
+
+一旦 `.gitignore` 文件到位并提交，匹配其模式的文件通常会从 Git 的跟踪机制中“消失”，从而帮助你将仓库集中于必要的源代码和配置。如果你需要跟踪以前被忽略的文件（也许你添加的模式过于宽泛），你可以删除或修改 `.gitignore` 中的模式，然后使用 `git add -f <filename>` 强制添加它。但是，通常情况下，列在 `.gitignore` 中的文件旨在保持未跟踪状态。
+
+## 参考资料
+
+- [\`git-ignore\` Manual Page](https://git-scm.com/docs/gitignore) — Various contributors to the Git project (2023)
+  官方文档，详细说明了`.gitignore`文件的模式、优先级规则和一般用法。
+- [Ignoring Files](https://git-scm.com/book/en/v2/Git-Basics-Ignoring-Files) — Scott Chacon, Ben Straub (2014)
+  Publisher: Apress
+  一本广受认可的Git书籍，清晰解释了如何使用`.gitignore`有效管理未跟踪文件。
+- [Ignoring files](https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files) — GitHub Documentation (2024)
+  Publisher: GitHub
+  GitHub提供的实用指南，用于有效忽略Git仓库中的文件，涵盖常见模式和最佳实践。

@@ -1,0 +1,107 @@
+---
+course: "speech-recognition-synthesis-asr-tts"
+chapter: "advanced-text-to-speech-synthesis"
+lesson: "flow-based-tts"
+sourceId: 3173
+sourceUrl: "https://apxml.com/zh/courses/speech-recognition-synthesis-asr-tts/chapter-4-advanced-text-to-speech-synthesis/flow-based-tts"
+title: "基于流的文本到语音合成模型"
+description: "运用归一化流实现TTS中的高保真声学建模。"
+order: 3
+plots: []
+sourceHash: "c7a3cc3786ce31a6a5691c105ebbf9749d0608822c2c31c1afeb975e61f026d7"
+sourceCorrections: []
+---
+
+基于流的生成模型为文本到语音（TTS）中的声学建模提供了一种有效的框架。这些模型是Tacotron等自回归 (autoregressive)模型和FastSpeech等非自回归方法之外的一种选择。不同于按顺序生成输出或仅仅依靠辅助损失来实现并行生成的方法，基于流的模型学习一种精确、可逆的转换，将简单的基本分布（如高斯分布）转换为梅尔谱图的复杂数据分布，并以输入文本为条件。
+
+### 归一化 (normalization)流的基本原理
+
+其核心是，归一化流通过对从简单的基本分布 $p_Z(z)$（通常是标准多元高斯分布）中提取的样本 $z$ 应用一系列可逆且可微分的变换 $f$，来构建复杂的分布。目标是建模目标数据分布 $p_X(x)$，其中 $x$ 代表我们的数据（例如，梅尔谱图）。
+
+变换 $x = f(z)$ 使我们能够使用概率论中的变量变换公式来计算数据点 $x$ 的精确似然。如果 $z = f^{-1}(x)$，则 $x$ 的概率密度函数由以下公式给出：
+
+
+$$
+p_X(x) = p_Z(f^{-1}(x)) \left| \det\left(\frac{\partial f^{-1}(x)}{\partial x}\right) \right|
+$$
+
+
+等价地，使用反函数定理：
+
+
+$$
+p_X(x) = p_Z(z) \left| \det\left(\frac{\partial z}{\partial x}\right) \right| = p_Z(z) \left| \det\left(\frac{\partial f(z)}{\partial z}\right) \right|^{-1}
+$$
+
+
+这里，$\frac{\partial f^{-1}(x)}{\partial x}$（或 $\frac{\partial f(z)}{\partial z}$）是变换（或其逆变换）的雅可比矩阵，$\det(\cdot)$ 表示其行列式。
+
+重要的思想是，如果我们这样设计变换 $f$：
+
+1. 易于反演（即，计算 $z = f^{-1}(x)$ 效率很高）。
+2. 其雅可比行列式易于计算。
+
+那么，我们就可以高效地计算任何给定数据点 $x$ 的精确似然 $p_X(x)$。训练通常通过最大化训练数据的对数似然进行：
+
+
+$$
+\log p_X(x) = \log p_Z(z) - \log \left| \det\left(\frac{\partial f(z)}{\partial z}\right) \right|
+$$
+
+
+这里 $z = f^{-1}(x)$。
+
+### 将流应用于声学建模
+
+在TTS的背景下，我们希望建模梅尔谱图 $x$ 在给定某些语言特征或文本嵌入 (embedding) $c$ 时的条件分布。因此，流 $f$ 变为条件流：$x = f(z; c)$。基本分布 $p_Z(z)$ 仍然是一个简单的先验分布，例如 $\mathcal{N}(0, I)$。
+
+- **训练：** 在训练期间，我们使用真实梅尔谱图 $x$ 及其对应的条件 $c$。我们计算 $z = f^{-1}(x; c)$，并使用变量变换公式最大化条件对数似然 $\log p_X(x|c)$。这直接优化模型，使其为从文本到语音特征的真实映射分配高概率。
+- **推理 (inference)（合成）：** 为了为新的条件 $c$ 合成梅尔谱图，我们首先从先验分布 $p_Z(z)$ 中采样一个潜在变量 $z$。然后，我们使用正向变换计算相应的梅尔谱图 $x$：$x = f(z; c)$。由于正向传播 $f$ 通常设计为高效且并行（通常涉及卷积和仿射变换等操作），合成可以非常快，类似于非自回归 (autoregressive)模型。
+
+> 条件流模型在TTS中的概览。推理将噪声转换为数据，而训练将数据转换为噪声并最大化似然。条件化引导转换。
+
+### 主要的基于流的TTS架构
+
+几种具体的架构已成功将归一化 (normalization)流应用于TTS声学建模：
+
+- **Glow-TTS：** 受图像生成Glow模型的启发，Glow-TTS 针对梅尔谱图生成调整了流架构（仿射耦合层、可逆1x1卷积）。它使用在训练期间通过变分方式学习的对齐 (alignment)机制（与注意力相关，但在推理 (inference)期间是单调的）来处理文本输入和语音输出之间的变长对齐。这种对齐是使流适用于TTS等序列到序列任务的重要组成部分。
+- **Flowtron：** 该模型直接将Tacotron的元素（例如用于对齐的位置敏感注意力）集成到基于流的解码器架构中（具体来说，使用类似于Glow的仿射耦合层）。Flowtron 明确地将潜在代码 $z$ 中的变化映射到语音韵律和风格的变化，从而可以控制合成输出。通过操作 $z$ 的部分，可以影响生成语音的音高、韵律和其他表达方面。
+
+这些模型通常由以下部分组成：
+
+1. 一个**文本编码器**（例如，Transformer或LSTM层），用于将输入文本/音素转换为隐藏表示。
+2. 一个**对齐机制**（例如，基于注意力或时长预测器），用于将文本表示与梅尔谱图帧率对齐。
+3. 一个**条件流解码器**，用于将来自先验分布的样本 $z$ 转换为梅尔谱图帧 $x$，以对齐的文本表示为条件。该解码器由设计为可逆且具有易于计算的雅可比行列式的层构成。
+
+### 优点与考量
+
+基于流的模型为TTS带来了独特的特性：
+
+**优点：**
+
+- **精确对数似然训练：** 训练基于最大化数据的精确对数似然，提供一个稳定且易于理解的优化目标，与GAN的对抗训练不同。
+- **快速并行合成：** 与其他非自回归 (autoregressive)方法一样，一旦采样了潜在变量 $z$，推理 (inference)就是并行且快速的。整个梅尔谱图通常可以通过流网络的一次正向传播生成。
+- **潜在空间控制：** 从结构化潜在空间 $Z$ 到数据空间 $X$ 的明确映射为可控合成提供了可能性。操作 $z$ 可以影响说话者身份、韵律或情感等属性，特别是在像Flowtron这样为此目的设计的模型中。
+- **高质量输出：** 基于流的模型已证明能够生成高保真梅尔谱图，当与好的神经声码器结合时，可产生听起来自然的合成语音。
+
+**考量：**
+
+- **模型复杂度和大小：** 流网络通常需要足够深才能有效地建模复杂数据分布，这可能导致模型规模庞大和训练期间的计算需求显著增加。
+- **架构限制：** 可逆性和易于计算的雅可比行列式的要求限制了网络层的设计选择（例如，仿射耦合、可逆卷积）。这可能会限制其表示能力，与约束较少的架构相比。
+- **对齐 (alignment)处理：** 在流框架内有效地将输入文本序列与输出梅尔谱图序列对齐需要细致的设计，通常涉及独立的注意力机制 (attention mechanism)或时长预测器，增加了复杂性。
+
+与自回归模型相比，流模型提供更快的合成速度，但可能需要更复杂的架构以获得高质量。与其他非自回归模型（如FastSpeech）相比，流模型提供了精确似然训练的优势，但计算量可能更大。它们通常比GAN提供更稳定的训练，同时达到具有竞争力的质量。
+
+基于流的模型在语音合成的生成建模中代表了一个有吸引力的方向，它平衡了并行推理速度与基于似然的原则性训练，并提供了表达控制的途径。了解其机制有助于理解构建先进TTS系统可用的多种技术。
+
+## 参考资料
+
+- [Density estimation using Real NVP](https://arxiv.org/abs/1605.08803) — Laurent Dinh, Jascha Sohl-Dickstein, and Samy Bengio (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1605.08803](https://doi.org/10.48550/arXiv.1605.08803)
+  本文介绍了Real NVP模型，提出了仿射耦合层和可逆1x1卷积，这些是许多后续基于流的生成模型的核心构建模块。
+- [Glow: Generative Flow with Invertible 1x1 Convolutions](https://arxiv.org/abs/1807.03039) — Diederik P. Kingma, Prafulla Dhariwal (2018)
+  Journal: arXiv; Volume: 31; DOI: [10.48550/arXiv.1807.03039](https://doi.org/10.48550/arXiv.1807.03039)
+  介绍了Glow架构，这是图像生成中标准化流的一个重要进展，通过利用可逆1x1卷积和仿射耦合层直接启发了Glow-TTS。
+- [Flowtron: An Autoregressive Flow-based Generative Network for Speech Synthesis](https://arxiv.org/abs/2005.05957) — Rafael Valle, Kevin Shih, Ryan Prenger, Bryan Catanzaro (2020)
+  Journal: International Conference on Machine Learning (ICML) Workshops; DOI: [10.48550/arXiv.2005.05957](https://doi.org/10.48550/arXiv.2005.05957)
+  介绍了Flowtron模型，这是一种基于流的文本到语音模型，它集成了自回归组件，并通过其结构化的潜在空间实现对语音属性的精细控制。

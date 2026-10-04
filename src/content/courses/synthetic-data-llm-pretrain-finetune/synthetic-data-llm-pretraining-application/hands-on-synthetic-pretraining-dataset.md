@@ -1,0 +1,209 @@
+---
+course: "synthetic-data-llm-pretrain-finetune"
+chapter: "synthetic-data-llm-pretraining-application"
+lesson: "hands-on-synthetic-pretraining-dataset"
+sourceId: 6133
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-llm-pretrain-finetune/chapter-3-synthetic-data-llm-pretraining-application/hands-on-synthetic-pretraining-dataset"
+title: "动手实践：构建一个合成预训练数据集片段"
+description: "一次动手实践，集中于为LLM预训练构建一个小型合成数据集样本。"
+order: 7
+plots: []
+sourceHash: "1546dae4372a7d3759a422eb0ad43ade373edec201de60eab9eca081fa2c42ea"
+sourceCorrections: []
+---
+
+合成数据在扩充甚至构成大型语言模型预训练 (pre-training)语料库方面发挥着重要作用。预训练效果与数据的体量（$V_{data}$）和多样性密切相关。本指南演示如何构建此类数据集的一个小部分，提供了一种组装合成预训练数据的实践方法。
+
+本次动手练习将引导您构建一个合成预训练数据集的*片段*。我们的目的并非立即创建一个巨大的语料库，而是理解生成和收集适合LLM初始训练文本所涉及的基本步骤。这个过程将让您直观感受到合成数据生成如何助力LLM的基本数据需求。
+
+### 准备工作
+
+在我们开始之前，请确保您已具备以下条件：
+
+- 已安装Python 3.7或更高版本。
+- 可使用大型语言模型API。本例中我们将使用OpenAI的API，因此您需要一个API密钥。如果您使用不同的LLM提供商或本地模型，则需要相应调整API调用。
+- 已安装`openai` Python库。您可以使用pip进行安装：
+
+  ```bash
+  pip install openai
+  ```
+- 一个文本编辑器或集成开发环境（IDE），例如VS Code。
+
+> **关于API使用的提示：**
+> 请记住，调用商业LLM API通常会产生费用。请务必留意您的使用量及相关费用。本次练习中，我们将进行少量调用。如果您能使用可本地运行的开源模型（例如，通过Hugging Face Transformers），可以随意调整生成步骤以使用它们。
+
+### 目标
+
+完成本次实践后，您将能够：
+
+1. 设计出旨在获取信息丰富、通用性文本的提示词 (prompt)，这些文本适合用于预训练 (pre-training)。
+2. 使用LLM API根据这些提示词生成多个文本样本。
+3. 将这些生成的样本组合成一个文本文件，构成一个微型合成预训练数据集片段。
+
+### 步骤1：设置您的环境
+
+首先，让我们配置我们的Python脚本。创建一个新的Python文件，例如`create_pretrain_snippet.py`。
+您需要设置您的OpenAI API密钥。最佳实践是将其设置为环境变量。
+
+```python
+import openai
+import os
+
+# 建议将您的API密钥设置为环境变量
+# 例如，export OPENAI_API_KEY='your_api_key_here'
+# openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# 出于演示目的，您可以暂时在代码中设置它，
+# 但请注意不要将您的私钥提交到版本控制中。
+# 如果未使用环境变量，请将'YOUR_API_KEY'替换为您的实际密钥。
+# 请确保在生产环境中移除或安全管理此行。
+try:
+    openai.api_key = os.environ["OPENAI_API_KEY"]
+    if not openai.api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set.")
+except KeyError:
+    print("Error: The OPENAI_API_KEY environment variable is not set.")
+    print("Please set it before running the script.")
+    print("Example: export OPENAI_API_KEY='your_api_key_here'")
+    exit() # 如果API密钥不可用，则退出
+
+# LLM的配置
+MODEL_NAME = "gpt-3.5-turbo-instruct" # 一个适合文本补全的模型
+MAX_TOKENS_PER_SAMPLE = 300 # 根据所需长度调整
+TEMPERATURE = 0.7 # 平衡创造性和连贯性
+NUMBER_OF_SAMPLES = 5 # 要生成多少文本片段
+OUTPUT_FILE = "synthetic_pretrain_snippet.txt"
+```
+
+我们在这里使用`gpt-3.5-turbo-instruct`，它很适合根据提示生成更长、连贯的文本。调整`MAX_TOKENS_PER_SAMPLE`以控制每个生成文本片段的大致长度。`TEMPERATURE`影响随机性；0.7左右的值通常能提供良好平衡。
+
+### 步骤2：设计预训练 (pre-training)数据的提示词 (prompt)
+
+预训练数据理想情况下包含高质量、信息丰富且多样的文本。对于我们的片段，我们将目标定为生成通用知识文本。我们可以使用一个多样化的话题列表来引导生成。
+
+```python
+topics = [
+    "植物的光合作用过程",
+    "互联网的历史与发展",
+    "面向普通读者的量子力学基本原理",
+    "工业革命对社会的影响",
+    "主要可再生能源概述"
+]
+```
+
+我们的提示词将要求LLM为每个话题生成一段描述性文字。我们想要的文本应类似于您在百科全书、教科书或写作精良的文章中可能找到的内容。
+
+### 步骤3：生成文本样本
+
+现在，我们来编写一个函数，与LLM交互并为每个话题生成文本。
+
+```python
+def generate_text_sample(topic):
+    """
+    使用OpenAI API为给定话题生成文本样本。
+    """
+    prompt_template = (
+        f"撰写一段关于{topic}的详细且信息丰富的文章。 "
+        "该文章应适合用于预训练大型语言模型的通用知识语料库。 "
+        "注重清晰度、事实准确性以及对该话题主要方面的全面介绍。 "
+        "避免口语化风格或直接称呼读者。文本应为数段的长度。"
+    )
+
+    try:
+        response = openai.completions.create(
+            model=MODEL_NAME,
+            prompt=prompt_template,
+            max_tokens=MAX_TOKENS_PER_SAMPLE,
+            temperature=TEMPERATURE,
+            n=1, # 我们需要每个提示词一次补全
+            stop=None # 让模型决定何时停止，或使用特定的停止序列
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        print(f"为话题'{topic}'生成文本时出错：{e}")
+        return None
+
+# 确保我们的样本数量不超过话题数量
+# 本次动手实践中，我们将为每个提供的话题生成一个样本。
+# 如果NUMBER_OF_SAMPLES小于len(topics)，我们将切片topics[:NUMBER_OF_SAMPLES]
+actual_samples_to_generate = min(NUMBER_OF_SAMPLES, len(topics))
+selected_topics = topics[:actual_samples_to_generate]
+
+generated_texts = []
+print(f"正在生成{actual_samples_to_generate}个文本样本...")
+for i, topic in enumerate(selected_topics):
+    print(f"正在为话题：{topic}生成样本{i+1}/{actual_samples_to_generate}...")
+    text_sample = generate_text_sample(topic)
+    if text_sample:
+        generated_texts.append(text_sample)
+        print(f"成功为'{topic}'生成样本。")
+    else:
+        print(f"未能为'{topic}'生成样本。")
+
+print("\n文本生成完成。")
+```
+
+这段代码遍历我们选定的话题，为每个话题设计一个提示词 (prompt)，并调用OpenAI API。每个成功生成的内容都会添加到`generated_texts`列表中。
+
+### 步骤4：组装数据集片段
+
+最后一步是收集所有生成的文本样本并将其保存到一个文件中。对于预训练 (pre-training)，数据通常存储在纯文本文件中，文档之间通过换行符或特定分隔符分隔。为简单起见，我们将每个生成的段落后添加两个换行符，以便清楚地分隔它们。
+
+```python
+if generated_texts:
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        for i, text in enumerate(generated_texts):
+            f.write(text)
+            # 在文档之间添加分隔符，除了最后一个
+            if i < len(generated_texts) - 1:
+                f.write("\n\n==END_OF_DOCUMENT==\n\n") # 一个自定义分隔符
+            else:
+                f.write("\n") # 确保文件以换行符结尾
+
+    print(f"\n合成预训练数据集片段已保存到'{OUTPUT_FILE}'。")
+    print(f"它包含{len(generated_texts)}个文本样本。")
+else:
+    print("\n未生成任何文本样本。输出文件未创建。")
+```
+
+运行您的完整脚本（`create_pretrain_snippet.py`）后，您应该会在同一目录中找到一个名为`synthetic_pretrain_snippet.txt`的文件。打开它，查看您组装的合成数据！每个段落将通过我们的`==END_OF_DOCUMENT==`标记 (token)分隔。
+
+以下是`synthetic_pretrain_snippet.txt`内容可能的样子（节选）：
+
+```text
+光合作用是绿色植物、藻类和某些细菌将光能转化为化学能的基本生物过程……这个过程不仅对生产者本身重要，也构成了地球上大多数食物链的根本，为异养生物提供能量。此外，光合作用释放氧气作为副产品，这对动物和许多其他生物的有氧呼吸至关重要，并在地质时期深刻改变了地球大气层。
+
+==END_OF_DOCUMENT==
+
+互联网，一个由相互连接的计算机网络组成的全球系统，其起源于1960年代美国政府委托进行的研究，旨在通过计算机网络构建容错通信……它的发展涉及诸如包交换和TCP/IP协议套件等创新。从其前身ARPANET开始，互联网通过学术和研究网络演进，然后在1990年代广泛商业化，导致万维网的出现和应用的爆发式增长，这些应用在全球范围改变了通信、商业、教育和娱乐。
+
+==END_OF_DOCUMENT==
+
+... （其他话题以此类推）
+```
+
+### 讨论与后续步骤
+
+您刚刚创建了一个非常小的合成预训练 (pre-training)数据集片段！虽然本次练习只使用了少数样本，但请想象大幅扩展这个过程。
+
+- **规模扩展：** 真实的预训练数据集可包含数TB的文本，相当于数十亿或数万亿个token。合成生成如此大的数据量需要：
+  - 更多样和大量的起始提示词 (prompt)或生成策略。
+  - 大量的计算资源和API预算。
+  - 用于生成、过滤和去重的数据流程。
+- **多样性：** 我们使用了少量话题。对于大型数据集，确保广泛的话题覆盖、风格多样性和多样的语言结构是必不可少的。这可能涉及使用更精密的提示工程 (prompt engineering)，结合不同的生成方法（如第2章所述），或从大型知识库获取起始话题。
+- **质量控制：** 尽管LLM可以生成流畅的文本，但在大规模生成中确保事实准确性、连贯性并减少有害偏见是一个主要挑战。这通常涉及生成后过滤、对部分数据进行人工审核以及细致的提示词设计，我们将在第5章（高级方法与数据优化）和第6章（评估合成数据）中更详细地介绍这些话题。
+- **与数据结合：** 如本章前面所述，合成数据通常在与数据结合使用时效果最佳。您在此处实践的技术可用于生成有针对性的内容，以填补现有语料库的空白，或为专业领域创建数据。
+
+本次动手实践为组装用于预训练的合成文本提供了基本理解。在本章的后续部分，我们将讨论构建更大规模合成语料库、将它们与真实数据混合以及评估它们对预训练结果影响的策略。您创建的数据集片段虽小，但代表着核心思想：借助生成模型创建文本数据，原则上这些数据可以助力训练强大的LLM。
+
+## 参考资料
+
+- [Scaling Laws for Neural Language Models](https://doi.org/10.48550/arXiv.2001.08361) — Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei (2020)
+  Journal: arXiv preprint arXiv:2001.08361; DOI: [10.48550/arXiv.2001.08361](https://doi.org/10.48550/arXiv.2001.08361)
+  提供了模型性能如何随数据集大小、模型大小和计算资源扩展的基础理解，与数据量和预训练有效性讨论直接相关。
+- [The Pile: An 800GB Dataset of Diverse Text for Language Models](https://doi.org/10.48550/arXiv.2101.00027) — Leo Gao, Stella Biderman, Sid Black, Laurence Golding, Travis Hoppe, Charles Foster, Jason Phang, Horace He, Anish Thite, Noa Nabeshima, Shawn Presser, Connor Leahy (2020)
+  Journal: arXiv preprint arXiv:2101.00027; DOI: [10.48550/arXiv.2101.00027](https://doi.org/10.48550/arXiv.2101.00027)
+  介绍了广泛使用的用于语言模型预训练的大规模多样化数据集，为合成数据生成旨在达到或补充的规模和多样性提供了参考。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei (2020)
+  Journal: arXiv preprint arXiv:2005.14165; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，一个基础大型语言模型，展示了其生成连贯多样文本的能力，是本实践练习利用LLM进行数据生成的基础。

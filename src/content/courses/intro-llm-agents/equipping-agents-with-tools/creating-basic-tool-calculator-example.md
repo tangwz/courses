@@ -1,0 +1,129 @@
+---
+course: "intro-llm-agents"
+chapter: "equipping-agents-with-tools"
+lesson: "creating-basic-tool-calculator-example"
+sourceId: 6584
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-4-equipping-agents-with-tools/creating-basic-tool-calculator-example"
+title: "创建基本工具：一个计算器示例"
+description: "设计和实现代理用简单计算器工具的实际示例。"
+order: 3
+plots: []
+sourceHash: "646d5cf2c49550cbd86bac09c2477455134a97283b27cbab4f50681d7bec8161"
+sourceCorrections: []
+---
+
+为了真正让我们的LLM代理多功能，我们需要给它们提供互动的方式，而不仅仅是处理文本。想象一下，请求代理查询当前天气、数学问题结果，或在线查找事实。LLM本身虽然在理解语言和生成回复方面表现出色，但它并非天生就能直接或准确地执行这些操作。这就是“工具”发挥作用的地方。
+
+在LLM代理的语境中，工具本质上是一种特定的能力或功能，代理可以借此执行自身无法完成的任务或获取信息。可以把它想象成给人类助手配备计算器、搜索引擎或日历。助手（LLM代理）很聪明，但这些工具赋予它超凡的能力。
+
+让我们通过设计和实现一个非常简单的工具——计算器，来具体说明这一点。LLM通常可以执行文本中包含的简单算术，但对于可靠且精确的计算，特别是作为更大任务的一部分时，一个专门的计算器工具要好得多。它们可能会“胡编乱造”或在数学上出错，因为它们的优势在于语言模式识别，而非正式计算。
+
+### 设计我们的计算器工具
+
+在我们编写任何代码之前，先思考一下我们的计算器工具需要完成什么以及代理如何使用它。一个好的工具定义应该是清晰明确的。
+
+1. **目的：** 该工具应执行基本的算术运算：加法、减法、乘法和除法。
+2. **输入：** 为了执行计算，工具需要：
+   - 第一个数字（我们称之为 `operand1`）。
+   - 第二个数字（`operand2`）。
+   - 要执行的运算（例如，'add'、'subtract'、'multiply'、'divide'）。我们将用字符串表示。
+3. **输出：** 工具应返回：
+   - 计算的数值结果。
+   - 或者，如果出现问题（如尝试除以零或提供未知运算），则返回错误消息。
+
+这种设计帮助我们为工具定义了一个明确的“契约”。代理将学习到（或被告知），要使用计算器，它需要以特定格式提供这些具体的输入，并且可以预期获得数值结果或错误消息作为回报。
+
+### 在Python中实现一个基本计算器
+
+现在，让我们创建一个简单的Python函数，作为我们的计算器工具。对于初学者课程，我们将保持其直接简单。
+
+```python
+def simple_calculator(operand1, operand2, operation):
+    """
+    执行基本算术运算。
+    支持的运算：'add'（加）、'subtract'（减）、'multiply'（乘）、'divide'（除）。
+    """
+    allowed_operations = ['add', 'subtract', 'multiply', 'divide']
+
+    if not isinstance(operand1, (int, float)) or not isinstance(operand2, (int, float)):
+        return "错误：两个操作数都必须是数字。"
+
+    if operation not in allowed_operations:
+        return f"错误：未知运算 '{operation}'。支持的运算有：{', '.join(allowed_operations)}。"
+
+    if operation == 'add':
+        return operand1 + operand2
+    elif operation == 'subtract':
+        return operand1 - operand2
+    elif operation == 'multiply':
+        return operand1 * operand2
+    elif operation == 'divide':
+        if operand2 == 0:
+            return "错误：不能除以零。"
+        return operand1 / operand2
+```
+
+我们来解析一下这段Python代码：
+
+- 我们定义了一个函数 `simple_calculator`，它接受三个参数 (parameter)：`operand1`、`operand2` 和 `operation`。
+- 我们首先检查 `operand1` 和 `operand2` 是否确实是数字（整数或浮点数）。如果不是，我们返回一条有用的错误消息。这种输入验证对于使工具可靠很重要。
+- 然后，我们检查 `operation` 字符串是否是我们支持的运算之一（'add'、'subtract'、'multiply'、'divide'）。如果它是无法识别的运算，我们返回另一条错误消息。
+- 接着，我们使用 `if/elif` 语句，根据 `operation` 字符串执行正确的计算。
+- 对于除法，我们添加了一个特定检查，以防止“除以零”错误，这种错误会导致许多程序崩溃。相反，我们返回一条有用的错误消息。
+- 如果所有输入都有效且运算受支持，函数将返回计算结果。
+
+你可以在Python中直接测试这个函数：
+
+```python
+result1 = simple_calculator(10, 5, 'add')
+print(f"10 + 5 = {result1}") # 输出: 10 + 5 = 15
+
+result2 = simple_calculator(10, 0, 'divide')
+print(f"10 / 0 = {result2}") # 输出: 10 / 0 = 错误：不能除以零。
+
+result3 = simple_calculator(10, 'hello', 'multiply')
+print(f"10 * 'hello' = {result3}") # 输出: 10 * 'hello' = 错误：两个操作数都必须是数字。
+```
+
+这个简单的函数现在就是一个我们的代理可以使用的“工具”。
+
+### 代理如何“看待”工具
+
+理解这一点很重要：LLM代理不会直接读取或执行 `simple_calculator` 的Python代码。相反，代理通常会获得一份工具的*描述*。这份描述会告知代理：
+
+- **工具名称：** 一个唯一标识符，例如 `CalculatorTool`。
+- **工具描述：** 对工具功能的人类可读解释，例如：“对两个数字执行基本的算术运算，如加法、减法、乘法和除法。”
+- **输入参数 (parameter)：**
+  - `operand1`：计算的第一个数字。（类型：数字）
+  - `operand2`：计算的第二个数字。（类型：数字）
+  - `operation`：要执行的算术运算。（类型：字符串，例如'add'、'subtract'、'multiply'、'divide'）
+- **输出：**
+  - 计算的数值结果。（类型：数字）
+  - 或者，如果无法执行计算，则返回错误消息。（类型：字符串）
+
+这种结构化的描述是代理底层LLM用来理解*如何*使用工具以及*预期*从中获得什么的信息来源。当代理决定需要计算某物时，它会尝试格式化其请求以匹配这些输入参数。我们将在后续章节中更正式地介绍代理如何决定使用工具以及我们如何格式化这些描述。
+
+The following diagram illustrates the components involved in defining a tool for an agent:
+
+> 该图显示，工具由其元数据（名称、目的）、输入要求、输出规范以及实际底层实现（如我们的Python函数）定义。代理主要通过描述部分来理解如何使用该工具。
+
+### 为什么计算器是一个好的起点
+
+计算器示例很有用，因为：
+
+1. **需求明确：** 它解决了一个LLM单独处理可能不可靠的常见任务。LLM擅长*理解*数学问题，但不总能准确地*执行*计算。
+2. **接口简单：** 输入（两个数字，一个运算）和输出（一个数字或一个错误）易于定义和理解。
+3. **确定性输出：** 对于给定输入，计算器工具提供可预测的正确答案（或可预测的错误）。这种可靠性是代理从工具中所需的重要特性。
+4. **体现外部能力：** 它清楚地说明了代理如何将特定类型的任务交给更专业的组件处理。
+
+通过创建这个 `simple_calculator` 函数，我们迈出了为代理配备外部能力的第一步。在接下来的章节中，我们将学习如何让代理感知此类工具，它如何决定针对特定问题使用哪个工具，以及它如何实际调用工具并使用其输出。这个计算器是构建更复杂、更有能力的代理的组成部分。
+
+## 参考资料
+
+- [Function calling](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFlr1mgkl7eOOw7V6jFK0ECNsZdgk2hknWDEK4qPGdDjZXOrFpzBmsQG-bntB_noN4Qtfe5AWuNUniznDAUgQwOQ-nahsR52aQGfuL8VqzoTmam4rHrBHCj1Dxx5K8Wfjh6R4TzWFx8_1ASFLdpzTSJMrY=) — OpenAI (2024)
+  官方指南，解释如何将自定义函数（工具）与OpenAI的语言模型集成，展示了所讨论概念的实际应用。
+- [Tools](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHVHPVP2_2bS1OpjkIZkBbwQ7xOpqPTUYPEtthiIXR3n1ZiwrQwyudTKnY6sMsqr9Bf6TyJOOFScSFmwD6T5ODoM9kzYUKcBFyjpnCMlWgp_S45r5ulWjD9LmJE8TGXyN2lcBBz6eXV2nARXK9hqw==) — LangChain (2024)
+  提供了在流行的LangChain框架中定义和使用工具的详细文档和示例，用于构建LLM智能体。
+- [On the Dangers of Stochastic Parrots: Can Language Models Be Too Big? 🦜](https://dl.acm.org/doi/10.1145/3442188.3445922) — Emily M. Bender, Timnit Gebru, Angelina McMillan-Major, Shmargaret Shmitchell (2021)
+  Journal: Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency; Pages: 610–623; DOI: [10.1145/3442188.3445922](https://doi.org/10.1145/3442188.3445922)
+  讨论了大型语言模型的基本局限性和潜在危害，包括它们倾向于生成看似合理但错误或无意义的信息（幻觉），这使得对外部工具的需求变得必要以提高可靠性。

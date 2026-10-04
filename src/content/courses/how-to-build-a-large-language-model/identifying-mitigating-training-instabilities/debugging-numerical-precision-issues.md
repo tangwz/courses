@@ -1,0 +1,168 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "identifying-mitigating-training-instabilities"
+lesson: "debugging-numerical-precision-issues"
+sourceId: 6074
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-24-identifying-mitigating-training-instabilities/debugging-numerical-precision-issues"
+title: "调试数值精度问题"
+description: "确定与FP16/BF16使用相关的问题，例如上溢或下溢。"
+order: 4
+plots: []
+sourceHash: "6aefc60e5e436adf7cfc62d92e4bd3b93b8eb222efcc7a4572f9bcd5cfe05442"
+sourceCorrections: []
+---
+
+混合精度训练，使用 $FP16$ (半精度) 或 $BF16$ (bfloat16) 等较低精度格式，是加快LLM训练和减少内存占用的一种常用方法。然而，这些格式的可表示范围比默认的 $FP32$ (单精度) 明显更窄。缩小的范围可能导致数值不稳定，表现为激活值、梯度或损失本身中出现 `NaN` (非数字) 或 `Inf` (无穷大) 值，从而使训练过程脱轨。调试这些问题需要仔细检查并弄明白精度限制可能在何处引发问题。
+
+### 理解精度限制
+
+回顾第20章，$FP16$ 的动态范围有限。非常小的数字（比如小梯度）可能变成零（下溢），从而有效阻止这些参数 (parameter)的学习。反之，大数字（激活值或梯度）可能超出最大可表示值，变成 `Inf`（上溢）。 `NaN` 值通常来自数学上未定义的操作，如 $0/0$、$\sqrt{-1}$ 或 $\infty - \infty$，当中间计算涉及到 `Inf` 时就可能出现。
+
+$BF16$ 在设计时考虑了深度学习 (deep learning)，提供与 $FP32$ 相同的动态范围，但精度降低（尾数位数更少）。这相比 $FP16$ 大大缓解了上溢问题，通常无需使用损失缩放等方法。然而，其较低的精度有时仍可能在对微小数值差异敏感的操作中导致问题，尽管这比 $FP16$ 的下溢/上溢情况少见。
+
+### 确定不稳定的出现
+
+数值精度问题通常会突然出现。正在顺利进行的训练可能会突然遇到 `NaN` 损失或梯度。重要迹象包括：
+
+1. **NaN/Inf 损失：** 最明显的迹象。如果损失变为 `NaN` 或 `Inf`，反向传播 (backpropagation)就无法正确进行。
+2. **NaN/Inf 梯度：** 即使损失保持有限，某些参数 (parameter)的梯度也可能变为 `NaN` 或 `Inf`。这会阻止优化器更新这些参数，如果不处理，可能会很快损坏模型。
+3. **梯度范数爆炸：** 全局梯度范数（如前一节所述）突然出现的大幅飙升通常在 `NaN`/`Inf` 值之前出现或同时发生，表明发生了上溢。
+4. **训练停滞 / 零梯度：** 如果训练意外停滞，特别是在使用 $FP16$ 且没有有效损失缩放的情况下，这可能表明梯度下溢，即梯度变得太小以至于无法表示并被清零。
+
+### 找出问题来源的方法
+
+一旦你怀疑存在数值精度问题，目标是隔离不稳定性出现的具体操作或模块。一个层中生成的 `NaN` 或 `Inf` 可以迅速传播到后续计算中。
+
+#### 暂时切换到FP32
+
+最简单的第一步通常是禁用混合精度训练，并完全在 $FP32$ 中运行。如果 instabilities 消失，则强烈表明是低精度格式的问题。如果 instability 在 $FP32$ 中仍然存在，根本原因可能是其他问题，例如模型代码中的错误、不良数据或不合适的超参数 (parameter) (hyperparameter)（例如，过高的学习率）。
+
+#### 前向和后向钩子
+
+PyTorch 的钩子机制提供了一种有效方法，可以在前向传播期间检查中间张量（激活值），在后向传播期间检查梯度，而不根本改变模型结构。你可以在特定的模块或张量上注册钩子，以便在它们计算后立即检查 `NaN`/`Inf` 值。
+
+这是注册前向钩子以检查特定线性层后激活值中是否存在 `NaN` 或 `Inf` 值的示例：
+
+```python
+import torch
+import torch.nn as nn
+
+def check_nan_inf_hook(module, input, output):
+    """前向钩子，检查模块输出中是否存在NaNs/Infs。"""
+    if isinstance(output, torch.Tensor):
+        if torch.isnan(output).any() or torch.isinf(output).any():
+            print(f"在模块 {module} 的输出中检测到NaN/Inf")
+            # （可选）抛出错误或进入调试器
+            # import pdb; pdb.set_trace()
+    elif isinstance(output, tuple): # 处理返回元组的模块
+        for i, out in enumerate(output):
+             if isinstance(out, torch.Tensor):
+                if torch.isnan(out).any() or torch.isinf(out).any():
+                    print(
+                        f"在模块 {module} 的输出元组元素 {i} 中检测到NaN/Inf "
+                        f"of module: {module}"
+                    )
+                    # import pdb; pdb.set_trace()
+
+# 假设 'model' 是你的 LLM 实例
+# 在特定层上注册钩子，
+# 例如，块 5 中的第一个 FFN 层
+target_layer = model.transformer.h[5].mlp.c_fc
+handle = target_layer.register_forward_hook(check_nan_inf_hook)
+
+# --- 运行你的训练迭代 ---
+# output = model(input_ids)
+# loss = criterion(output, targets)
+# loss.backward()
+# ---
+
+# 调试完成后记得移除钩子
+handle.remove()
+```
+
+同样，你可以注册后向钩子（模块使用 `register_full_backward_hook`，特定张量使用 `register_hook`）来检查梯度（`grad_input`、`grad_output`）。通过策略性地放置这些钩子，你可以缩小不稳定性首次出现的计算步骤范围。
+
+#### 直接检查梯度
+
+在 `loss.backward()` 之后，你可以遍历模型参数并检查它们的 `.grad` 属性：
+
+```python
+import torch
+
+def check_gradients(model):
+    """检查所有模型参数是否存在NaN/Inf梯度。"""
+    nan_inf_found = False
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            if torch.isnan(param.grad).any():
+                print(f"在参数 {name} 的梯度中检测到NaN")
+                nan_inf_found = True
+            if torch.isinf(param.grad).any():
+                print(f"在参数 {name} 的梯度中检测到Inf")
+                nan_inf_found = True
+    if not nan_inf_found:
+        print("未检测到NaN/Inf梯度。")
+    return nan_inf_found
+
+# 在 loss.backward() 之后，optimizer.step() 之前
+# check_gradients(model)
+# （可选）在检查前裁剪梯度
+# torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+# check_gradients(model)
+```
+
+#### 检查损失缩放器状态 (FP16)
+
+如果使用 $FP16$ 进行动态损失缩放（例如通过 PyTorch 的 `torch.cuda.amp.GradScaler`），缩放器本身可能会提供线索。反向传播 (backpropagation)过程中上溢的梯度将导致缩放器跳过优化器步骤并减小后续迭代的损失缩放。如果这种情况反复发生，损失缩放可能变得极小甚至为零，导致梯度下溢。反之，如果损失缩放顺利增长到很大，则可能会增加后续中间上溢的可能性。
+
+你可以检查 `GradScaler` 当前的缩放因子：
+
+```python
+import torch
+
+# 假设 'scaler' 是你的 torch.cuda.amp.GradScaler 实例
+current_loss_scale = scaler.get_scale()
+print(f"当前损失缩放：{current_loss_scale}")
+
+# 检查缩放器是否跳过了上次优化器步骤
+# 这需要稍微修改你的训练循环以捕获状态
+# 在 scaler.update() 之前：
+# inf_detected = scaler._check_inf_per_device(optimizer)
+# 在 scaler.update() 之后：
+# if inf_detected:
+#     print("由于Inf/NaN梯度，优化器步骤被跳过。")
+```
+
+长时间监控 `current_loss_scale` 可以发现有问题的情况。反复崩溃的缩放表明存在持续的上溢问题。降到极低值的缩放可能预示着随后的下溢问题。
+
+#### 数值不稳定操作
+
+某些数学运算本身更容易产生 `NaN` 或 `Inf`，尤其是在精度有限的情况下：
+
+- **零或负数的对数：** `torch.log(x)`，其中 $x \le 0$。这通常发生在概率或 softmax 输出可能在数值上评估为零时。使用 `torch.log_softmax` 通常比 `torch.log(torch.softmax(x))` 更稳定。
+- **负数的平方根：** `torch.sqrt(x)`，其中 $x < 0$。
+- **除以零：** 确保分母非零，可以通过在适当的地方添加一个小的 epsilon $\epsilon$（例如，在 RMSNorm 或 LayerNorm 等归一化 (normalization)层中，如果方差接近零）来实现。
+- **大指数：** `torch.exp(x)` 对于大的 $x$ 值很容易上溢。
+
+在调试时，要密切关注涉及这些操作的计算，尤其是在自定义层或损失函数 (loss function)中。在平方根或分母内部添加小的 epsilon 值（$1e-8$ 到 $1e-6$）有时可以防止由接近零的中间值引起的 `NaN`，但请注意这会轻微改变计算。
+
+### 缓解策略回顾
+
+调试通常涉及应用或调整之前讨论的稳定化方法：
+
+- **梯度裁剪：** 对于防止导致 `Inf` 的梯度爆炸非常重要。如果发生不稳定性，请考虑裁剪阈值是否合适。
+- **损失缩放 (FP16)：** 对于 $FP16$ 防止下溢是必须的。确保动态缩放器正常运行且缩放没有崩溃。如果使用静态缩放，找到合适的缩放值很重要。
+- **切换到 BF16：** 如果 $FP16$ 持续出现问题，特别是上溢，切换到 $BF16$（如果硬件支持）通常是最有效的解决方案，通常无需损失缩放。
+- **数值稳定性：** 用更稳定的等效方法替换可能不稳定的操作序列（例如，`log_softmax`）。在需要的地方谨慎添加 epsilon 值。
+- **超参数 (parameter) (hyperparameter)调整：** 过于激进的学习率会加剧数值问题。将学习率调整与预热和衰减策略（第17章）结合使用是标准做法。
+- **初始化：** 尽管在稳定训练期间作为 `NaN` 的直接原因不常见，但糟糕的初始化（第12章）可能导致早期激活值过大，从而可能增加上溢风险。
+
+调试大规模训练中的数值精度问题需要耐心和系统的检查。通过监控重要指标，运用钩子等工具，以及了解低精度格式的限制，你可以有效地诊断并解决这些不稳定性，保持你的长时间训练顺利进行。
+
+## 参考资料
+
+- [Mixed-Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  这篇基础论文介绍了使用FP16和动态损失缩放的混合精度训练，解释了其益处和实际挑战。
+- [Automatic Mixed Precision examples](https://pytorch.org/docs/stable/notes/amp_examples.html) — PyTorch Contributors (2024)
+  PyTorch官方文档，提供了使用 `torch.cuda.amp.GradScaler` 实现和调试混合精度训练的示例和指导。

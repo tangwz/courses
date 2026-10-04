@@ -1,0 +1,153 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "data-validation-pydantic"
+lesson: "structuring-complex-models"
+sourceId: 5264
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-2-data-validation-pydantic/structuring-complex-models"
+title: "构建复杂数据模型"
+description: "构建嵌套的 Pydantic 模型以表示机器学习输入/输出的复杂 JSON 结构。"
+order: 7
+plots: []
+sourceHash: "6589f23dbd5368e38b6e34c3ae875476f921d821282d6dc005a57e06517344b4"
+sourceCorrections: []
+---
+
+Pydantic 模型能够有效地管理各种数据结构，包括简单扁平的结构。然而，机器学习 (machine learning)的输入和输出通常具有更复杂、嵌套的结构。例如，您可能需要随输入特征一起发送配置参数 (parameter)，或者返回预测结果以及置信度分数和元数据。Pydantic 允许您通过在其他模型中嵌套模型来定义这些复杂结构。
+
+这种做法与 JSON 自然表示分层数据的方式完美契合，使得明确定义您的 API 期望接收和返回的数据变得简单。
+
+### 定义嵌套模型
+
+在 Pydantic 中创建嵌套模型非常直观。您只需将另一个 Pydantic 模型用作主模型中某个字段的类型标注。
+
+让我们考虑一个例子，我们的机器学习 (machine learning)模型不仅需要主要的输入数据，还需要一些配置设置。我们可以为配置和整体请求结构定义独立的模型。
+
+```python
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+# 定义配置设置的模型
+class ModelConfig(BaseModel):
+    model_version: str = "latest"
+    confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    return_probabilities: bool = False
+
+# 定义主要输入数据模型
+class InputFeatures(BaseModel):
+    sepal_length: float
+    sepal_width: float
+    petal_length: float
+    petal_width: float
+
+# 定义整体请求模型，嵌套 ModelConfig 和 InputFeatures
+class PredictionRequest(BaseModel):
+    request_id: str
+    features: InputFeatures           # 嵌套 InputFeatures 模型
+    config: Optional[ModelConfig] = None # 嵌套 ModelConfig，使其成为可选
+```
+
+在此 `PredictionRequest` 模型中：
+
+- `features` 字段被明确类型化为 `InputFeatures`。Pydantic 期望此字段的数据符合 `InputFeatures` 模式。
+- `config` 字段类型为 `Optional[ModelConfig]`。这意味着它期望数据符合 `ModelConfig` 模式，但如果请求中未提供此字段（它将默认为 `None`），也是可以接受的。如果 *确实* 提供了，它必须是一个有效的 `ModelConfig` 结构。
+
+### 在 FastAPI 中使用嵌套模型
+
+FastAPI 集成了这些嵌套的 Pydantic 模型。当您在路径操作函数中将 `PredictionRequest` 用作请求体参数 (parameter)的类型提示时，FastAPI 在 Pydantic 的支持下，将自动执行以下操作：
+
+1. **解析：** 读取传入的 JSON 请求体。
+2. **验证：** 检查 JSON 结构是否与 `PredictionRequest` 匹配，包括（如果提供的）嵌套的 `InputFeatures` 和 `ModelConfig` 结构。它会验证数据类型（例如，宽度的 `float` 类型，`request_id` 的 `str` 类型）和约束条件（例如，`confidence_threshold` 在 0.0 到 1.0 之间）。
+3. **实例化：** 创建一个 `PredictionRequest` 类的实例，并使用已验证的数据进行填充。
+
+以下是您在端点中使用 `PredictionRequest` 的方法：
+
+```python
+from fastapi import FastAPI
+
+# 假设 PredictionRequest、InputFeatures、ModelConfig 已如上定义
+
+app = FastAPI()
+
+@app.post("/predict")
+async def create_prediction(request: PredictionRequest):
+    # 轻松访问嵌套数据
+    features_data = request.features
+    config_data = request.config if request.config else ModelConfig() # 如果未提供，则使用默认值
+
+    print(f"Received request: {request.request_id}")
+    print(f"Features: {features_data.dict()}")
+    print(f"Config: Version={config_data.model_version}, Threshold={config_data.confidence_threshold}")
+
+    # （模型推理逻辑在此处）
+    # ...
+
+    prediction = {"class": "setosa", "probability": 0.95} # 示例输出
+
+    return {"request_id": request.request_id, "prediction": prediction}
+```
+
+如果客户端发送了结构无效的请求，例如为 `sepal_length` 提供字符串或遗漏了像 `request_id` 这样的必填字段，FastAPI 将自动返回 `422 Unprocessable Entity` 错误响应，其中详细说明了验证问题，甚至无需运行您的端点代码。
+
+### 用于响应数据的嵌套模型
+
+正如您构建复杂的输入一样，您通常也需要构建复杂的输出。例如，返回的不仅是预测标签，还有关联的概率或边界框。您可以在路径操作装饰器中使用 `response_model` 参数 (parameter)来使用嵌套的 Pydantic 模型。
+
+```python
+from pydantic import BaseModel
+from typing import List, Dict
+
+class PredictionResult(BaseModel):
+    predicted_class: str
+    probability: Optional[float] = None
+
+class PredictionResponse(BaseModel):
+    request_id: str
+    results: List[PredictionResult] # 包含嵌套 PredictionResult 模型的列表
+    model_version_used: str
+
+# 假设 app 和 PredictionRequest 已如上定义
+
+@app.post("/predict_detailed", response_model=PredictionResponse)
+async def create_detailed_prediction(request: PredictionRequest):
+    # （模型推理逻辑）
+    # 假设模型预测多个结果或概率
+    model_output = [
+        {"predicted_class": "setosa", "probability": 0.98},
+        {"predicted_class": "versicolor", "probability": 0.02},
+    ]
+    config_data = request.config if request.config else ModelConfig()
+
+    # 构建符合 PredictionResponse 的响应
+    response_data = PredictionResponse(
+        request_id=request.request_id,
+        results=[PredictionResult(**item) for item in model_output],
+        model_version_used=config_data.model_version
+    )
+
+    return response_data
+```
+
+通过设置 `response_model=PredictionResponse`，FastAPI 确保：
+
+1. **验证：** 您的函数返回的数据会根据 `PredictionResponse` 模式进行验证（包括嵌套的 `PredictionResult` 列表）。
+2. **序列化：** 返回的 Pydantic 模型实例将自动序列化为 JSON。
+3. **过滤：** 最终的 HTTP 响应中仅包含 `PredictionResponse` 中定义的字段，防止内部数据意外泄露。
+4. **文档：** API 文档（例如 Swagger UI）会准确反映嵌套的响应结构。
+
+### 图表：嵌套输入模型结构
+
+以下图表说明了前面定义的 `PredictionRequest` 模型的构成。
+
+> `PredictionRequest` 模型包含一个 `InputFeatures` 实例，并可选地包含一个 `ModelConfig` 实例。
+
+使用嵌套来构建数据模型是一种有效方式，可以处理许多机器学习 (machine learning)任务中固有的复杂性，同时确保 API 定义的数据完整性和清晰度。这种使用 Pydantic 的声明式方法显著简化了 FastAPI 应用程序中的验证逻辑。
+
+## 参考资料
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) — Sebastián Ramírez (2024)
+  涵盖FastAPI与Pydantic的集成，用于自动数据验证、序列化和文档生成，特别是针对嵌套请求和响应模型。
+- [Pydantic Documentation](https://docs.pydantic.dev/) — Samuel Colvin and Contributors (2024)
+  提供定义Pydantic模型的全面指导，包括嵌套、字段验证和数据结构化，这是FastAPI应用的基础。
+- [Building Data Science Applications with FastAPI](https://portal.igpublish.com/iglibrary/search/PACKT0006042.html) — François Voron (2021)
+  Publisher: Packt Publishing
+  提供使用FastAPI和Pydantic进行数据科学和机器学习应用的实践示例和最佳实践，包括复杂数据结构化。

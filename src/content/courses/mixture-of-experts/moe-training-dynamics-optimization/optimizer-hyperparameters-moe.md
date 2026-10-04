@@ -1,0 +1,95 @@
+---
+course: "mixture-of-experts"
+chapter: "moe-training-dynamics-optimization"
+lesson: "optimizer-hyperparameters-moe"
+sourceId: 4696
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts/chapter-3-moe-training-dynamics-optimization/optimizer-hyperparameters-moe"
+title: "优化器选择与超参数的影响"
+description: "研究优化器（AdamW 等）和学习率对 MoE 稳定性的影响。"
+order: 6
+plots: ["plots/4696-0.json"]
+sourceHash: "35e6fd8da08d1efc50bdc42b43321408f95b9e920399bbcb1d8f3b585015cb4b"
+sourceCorrections: []
+---
+
+为了实现稳定的 MoE (混合专家模型) 训练，优化器的选择及其相关超参数 (parameter) (hyperparameter)（学习率、权重 (weight)衰减、动量参数）起着很大作用。这些设置直接影响梯度（包括来自负载均衡损失的梯度）如何更新模型参数，从而影响专家模型的专业化和路由器的稳定性。未能适当地调整这些参数可能会削弱复杂 MoE 架构或辅助损失所带来的优势。
+
+### MoE 训练中的标准优化器
+
+对于大型基于 Transformer 的模型，包括 MoE 模型，AdamW 优化器仍然是一个常用且通常有效的选择。AdamW 将自适应学习率（如 Adam）与解耦权重 (weight)衰减（不同于 Adam 的 L2 正则化 (regularization)实现）结合起来。这种组合通常很适合大型模型的复杂性。
+
+Adam/AdamW 的自适应特性，即根据梯度的一阶和二阶矩估计来维持每个参数 (parameter)的学习率，可能对 MoE 层有利。不常激活的专家平均可能收到较小的梯度更新；自适应方法可以帮助弥补这一点，确保即使不常用到的专家也能持续学习。然而，这种自适应性有时可能与辅助负载均衡损失以及路由器的梯度产生意料之外的作用。
+
+### 学习率敏感度
+
+学习率可以说是 MoE 训练稳定性最重要的超参数 (parameter) (hyperparameter)，特别是对于门控网络。
+
+- **路由器敏感度**：门控网络的参数决定路由决策。如果学习率过高，路由器的输出在更新之间会剧烈变化，导致路由分配不稳定、负载均衡指标波动，并可能引起训练发散。流向路由器的梯度取决于主任务损失和辅助负载均衡损失 $L_{aux}$。高学习率与较大的辅助损失系数 $\alpha$ 结合，可能导致对路由器权重 (weight)进行过度激进的更新。
+- **专家学习**：虽然专家通常是标准的**前馈网络**，但它们的学习受条件计算的影响。适合密集训练的学习率可能需要根据专家激活的频率和整体训练稳定性进行调整。
+- **学习率调度**：采用学习率调度，例如线性预热后跟余弦或线性衰减，是标准做法，并非常推荐用于 MoE 模型。预热使模型（尤其是路由器）在训练早期、较高学习率生效前稳定下来。随后的衰减有助于模型微调 (fine-tuning)以趋向收敛。预热阶段的持续时间可能需要仔细调整；在困难设置中，较长的预热有时有助于稳定路由。
+
+可以考虑尝试差异化学习率，例如对门控网络使用比专家更小的学习率，但这会增加训练配置的复杂性。
+
+### 权重 (weight)衰减
+
+权重衰减作为一种正则化 (regularization)方法，惩罚大的参数 (parameter)值以防止过拟合 (overfitting)。在 MoE 模型中：
+
+- 它适用于专家参数和门控网络参数。
+- 对于专家，其作用类似于标准网络正则化。
+- 对于路由器，权重衰减有时有助于阻止路由器在早期对特定路由决策过度自信，可能促进更多尝试。
+- 它与负载均衡损失 $L_{aux}$ 的相互作用需要考虑。如果 $L_{aux}$ 大力鼓励多样化，那么对路由器进行激进的权重衰减可能不太必要，甚至如果它过度抑制了学习到的路由信号，则可能适得其反。与其他超参数 (hyperparameter)一样，其最佳值通常通过实验得出。
+
+### 优化器状态：AdamW 中的 Beta 值
+
+AdamW 使用指数移动平均来估算梯度的一阶矩（均值，由 $\beta_1$ 控制）和二阶矩（非中心方差，由 $\beta_2$ 控制）。
+
+- $\beta_1$ 控制动量效应。值越接近 1，表示过去的梯度影响越持久。
+- $\beta_2$ 控制自适应学习率的缩放。值越接近 1，表示过去的平方梯度影响越持久，导致每个参数 (parameter)的学习率变化更慢。
+
+虽然默认值（例如，$\beta_1=0.9, \beta_2=0.999$ 或在某些大型模型训练中为 $\beta_2=0.95$）通常表现良好，但高度不稳定的 MoE 训练运行有时可能通过调整这些参数获得改善。例如，稍微降低 $\beta_2$ 可以使自适应学习率对最近的梯度信息更敏感，这可能有利或有害，具体取决于失稳模式。然而，调整 beta 值通常被认为是优化学习率和辅助损失系数之后的次要调整步骤。
+
+### 与负载均衡和梯度裁剪的联系
+
+优化器处理总损失的梯度：
+
+
+$$
+\nabla L_{total} = \nabla L_{task} + \alpha \nabla L_{aux}
+$$
+
+
+$\nabla L_{aux}$ 相对于 $\nabla L_{task}$ 的大小，由 $\alpha$ 调整，直接影响 AdamW 计算出的更新。如果 $\alpha$ 过大，负载均衡梯度可能会占据主导，可能扰乱与主要任务相关的学习动态。这凸显了 $\alpha$ 和学习率的联合调整。
+
+梯度裁剪，即在优化器步骤前限制梯度的范数，是提高 MoE 稳定性的一种重要方法。它防止偶尔出现的大梯度（可能源于不稳定的路由或某些困难批次）破坏优化器状态的稳定性（尤其是 AdamW 中的矩估计）并引起大的参数 (parameter)波动。常用的裁剪值可能是 1.0，但这个值也可以调整。
+
+
+
+![学习率对 MoE 负载均衡稳定性的影响](plots/4696-0.json)
+
+
+
+> 不同学习率下，MoE 初始训练期间负载均衡指标的变化情况。较高的学习率可能导致专家负载分配出现波动或不稳定。
+
+### 实用建议
+
+为 MoE 训练寻找优化器设置和超参数 (parameter) (hyperparameter)的最佳组合通常是一个经验过程。
+
+1. **从默认值开始**：从标准的 AdamW 设置（$\beta_1=0.9, \beta_2=0.999$）、成熟的学习率调度（预热 + 衰减）和中等权重 (weight)衰减（例如 0.01 或 0.1）开始。
+2. **联合调整学习率和 $\alpha$**：峰值学习率和辅助损失系数 $\alpha$ 通常是最敏感的参数。一起改变这些参数进行扫描或实验，同时监测任务损失和负载均衡指标。
+3. **监测指标**：在整个训练过程密切跟踪负载均衡指标（例如，专家负载的变异系数）、路由器熵/置信度以及丢弃令牌的数量。这些方面的不稳定通常表明超参数次优。
+4. **使用梯度裁剪**：实施梯度范数裁剪，作为防止梯度爆炸的安全措施。
+5. **考虑更长的预热**：如果初始稳定性是个问题，可以尝试延长学习率预热阶段。
+
+总而言之，虽然复杂的架构选择和辅助损失是 MoE 模型成功的根本，但它们必须与优化器及其超参数的仔细选择和调整相结合。学习率、其调度以及它与负载均衡系数的联系是特别影响路由器稳定性、专家使用率和整体收敛的因素。
+
+## 参考资料
+
+- [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  介绍了AdamW，一种广泛用于大型模型的优化器，并解释了解耦权重衰减。
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了稀疏门控专家混合层，讨论了初步的训练考量。
+- [GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding](https://arxiv.org/abs/2006.16668) — Dmitry Lepikhin, HyoukJoong Lee, Yuanzhong Xu, Dehao Chen, Orhan Firat, Yanping Huang, Maxim Krikun, Noam Shazeer, Zhifeng Chen (2020)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2006.16668](https://doi.org/10.48550/arXiv.2006.16668)
+  描述了MoE的扩展，并引入了辅助负载均衡损失，直接影响优化器选择和超参数。

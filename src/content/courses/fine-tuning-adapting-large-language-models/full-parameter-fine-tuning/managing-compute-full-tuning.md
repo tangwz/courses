@@ -1,0 +1,122 @@
+---
+course: "fine-tuning-adapting-large-language-models"
+chapter: "full-parameter-fine-tuning"
+lesson: "managing-compute-full-tuning"
+sourceId: 3009
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-adapting-large-language-models/chapter-3-full-parameter-fine-tuning/managing-compute-full-tuning"
+title: "计算资源管理"
+description: "应对全参数微调中显著的内存和计算需求的相关策略。"
+order: 5
+plots: ["plots/3009-0.json"]
+sourceHash: "81e12c72bb145468f50f294bc011fa3426cde6e18dd2e1afc83554891b69253a"
+sourceCorrections: []
+---
+
+全参数 (parameter)微调 (fine-tuning)虽然直接，但面临明显的计算难题，主要在于GPU内存占用和训练时间。更新一个拥有数十亿参数的模型的每个参数$\theta$，需要大量资源。提出了管理这些需求的实用策略，使得即使在资源受限的情况下，也能实现全参数微调。
+
+### 理解资源瓶颈
+
+微调 (fine-tuning)过程中的主要资源限制是GPU内存（VRAM）和计算时间。理解这些资源消耗在何处，是进行优化的第一步。
+
+1. **GPU内存：** 所需总内存可以大致估计为以下各项所需内存的总和：
+
+   - **模型参数 (parameter)：** 模型本身的权重 (weight)（$\theta$）。通常以FP32（每个参数4字节）或FP16/BF16（每个参数2字节）存储。
+   - **梯度：** 在反向传播 (backpropagation)过程中为每个参数计算。通常需要与参数相同的精度。
+   - **优化器状态：** AdamW等优化器会为每个参数存储动量和方差估计值，这通常会使所需内存相比仅参数存储翻倍（例如，AdamW每个参数需要两个状态，通常为FP32）。
+   - **激活值：** 前向传播过程中计算的中间结果，需要存储以供反向传播中的梯度计算。激活值所需的内存随批次大小、序列长度和模型隐藏维度大小明显增加。这个部分通常是最大的内存消耗者，尤其是在处理长上下文 (context)时。
+   - **临时缓冲区：** 框架和库常会使用额外内存进行中间计算。
+
+   
+   
+   ![GPU内存组成估算（潜在LLM）](plots/3009-0.json)
+   
+   
+
+   > 该图表显示了激活值如何相比参数、梯度和优化器状态，在内存使用中占据主导地位，尤其是在典型的微调批次大小和序列长度下。
+2. **计算时间：** 训练时长取决于每次迭代所需的浮点运算（FLOPs）数量和总迭代次数。这受模型大小、批次大小、序列长度、数据集大小以及硬件计算吞吐量 (throughput)（GPU每秒FLOPs）的影响。
+
+### 内存管理策略
+
+由于GPU内存常是最紧张的限制，有几种技术专门用于减少VRAM使用量。
+
+#### 梯度累积
+
+这项技术使您能够模拟一个比GPU内存单次前向/反向传播 (backpropagation)能够实际容纳的批次更大的有效批次大小。并非在处理每个小“微批次”后就更新模型权重 (weight)，而是将多个微批次的梯度进行累积。只有在处理完指定数量的微批次后，才会执行优化器步骤（更新模型权重$\theta$）并清除梯度。
+
+- **机制：**
+
+  1. 使用一个微批次进行前向传播。
+  2. 执行反向传播，计算该微批次的梯度。
+  3. 不执行`optimizer.step()`，而是将计算出的梯度添加到累加缓冲区。**暂不**调用`optimizer.zero_grad()`。
+  4. 重复步骤1-3，直至达到预设的`accumulation_steps`次数。
+  5. 在累积完`accumulation_steps`个微批次后，使用累积的梯度执行`optimizer.step()`。
+  6. 此时，调用`optimizer.zero_grad()`以清除梯度，准备下一次累积循环。
+- **优点：** 达到更大批次大小的梯度统计效果（例如，有效批次大小 = `micro_batch_size * accumulation_steps`），而只需单个微批次激活值所需的内存。
+- **代价：** 增加了每个有效训练步所需的时间，因为在每次权重更新前，它涉及多次顺序的前向/反向传播。
+
+#### 激活检查点（梯度检查点）
+
+前向传播过程中存储的激活值会消耗大量内存。激活检查点以计算时间换取内存节省。并非存储指定层（如Transformer块）的所有中间激活值，它只存储这些设置检查点的段的输入。在反向传播过程中，当需要梯度时，这些段内的激活值会即时重新计算。
+
+- **优点：** 可以大幅减少内存使用量，特别是激活值部分，从而支持更大的批次大小或更长的序列长度。
+- **代价：** 增加了训练时间，因为在反向传播过程中需要重新计算（通常会增加约20-30%的计算时间，但这高度取决于模型架构和检查点策略）。
+- **实现：** 现代深度学习 (deep learning)框架为此提供了工具（例如，PyTorch中的`torch.utils.checkpoint.checkpoint`）。您通常使用检查点函数封装特定模块（如Transformer层）。
+
+#### 混合精度训练（AMP）
+
+这涉及使用较低精度浮点格式进行部分计算，主要指16位格式，如FP16（半精度）或BF16（bfloat16），而非标准的32位（FP32）。
+
+- **机制：**
+  - 模型权重、激活值和梯度以16位格式存储或计算。这使得这些组件所需的内存相比FP32减半。
+  - 某些操作，如归约（跨批次求和梯度），为了数值稳定性可能仍以FP32执行。
+  - **损失缩放：** 使用FP16时，小的梯度值可能变为零（“下溢”）。动态损失缩放通过在反向传播前将损失值乘以一个大缩放因子，将梯度移入FP16可表示的范围。然后在优化器步骤前将梯度缩回。BF16通常比FP16具有更好的动态范围，且通常不需要损失缩放。
+- **优点：** 大幅减少内存占用（参数 (parameter)、梯度、激活值）并加快计算速度，尤其是在具有为低精度数学设计的专用Tensor Core的GPU上。
+- **代价：** 有时可能导致轻微的不稳定性或需要仔细的超参数 (hyperparameter)调整。FP16需要管理损失缩放。BF16支持通常在较新的GPU（Ampere架构及后续）上可用。
+- **实现：** PyTorch（`torch.cuda.amp`）和TensorFlow等框架提供自动混合精度（AMP）工具，以最少的代码改动处理类型转换和损失缩放。
+
+#### 优化器选择
+
+虽然AdamW是标准选择，但由于它为每个参数存储两个状态（动量、方差），通常是FP32格式，因此其内存占用相当大。存在替代方案：
+
+- **8位优化器：** `bitsandbytes`等库提供了AdamW等优化器的8位实现。它们对优化器状态进行量化 (quantization)，大幅减少其内存占用，通常对收敛影响极小。这常与QLoRA（稍后讲解）结合使用，但也可应用于全参数微调 (fine-tuning)。
+- **Adafactor：** 一种比AdamW使用更少内存的优化器，通过分解二阶矩估计或仅存储滚动平均值实现，尽管其收敛特性可能有所不同。
+
+### 计算时间管理
+
+虽然内存常是第一个瓶颈，但计算时间也是一个主要因素。
+
+- **硬件加速：** 使用具有高FLOPs和足够内存带宽的现代GPU是减少训练时间最直接的方式。
+- **混合精度训练：** 如前所述，AMP也能在兼容硬件上加速计算。
+- **分布式训练：** 对于单GPU训练不可行或速度过慢的超大模型或数据集，会采用分布式训练策略。这涉及使用多个GPU（甚至多台机器）来并行化工作负载。常见策略包括：
+  - **数据并行（DP）：** 在每个GPU上复制模型，在每个GPU上处理不同的数据批次，并同步梯度。实现简单，但每个GPU的内存没有减少。
+  - **张量并行（TP）：** 将单个模型层（例如，权重 (weight)矩阵）分割到多个GPU上。减少了每个GPU的内存，但需要高GPU间带宽。
+  - **流水线并行（PP）：** 将模型层顺序地划分到多个GPU上，形成流水线。可以减少每个GPU的内存，但会引入流水线气泡（空闲时间）。
+  - 这些技术较为复杂，常需要专用库（例如，DeepSpeed、PyTorch FSDP、Megatron-LM）。它们将在第7章中更详细地讲解。
+
+### 实际实现与监控
+
+有效管理资源需要结合这些技术并监控其效果。
+
+- **使用库：** Hugging Face的`Accelerate`等库简化了梯度累积、混合精度和分布式训练在各种硬件配置（单GPU、多GPU、TPU）上的应用设置。
+- **监控资源：** 定期检查GPU内存使用量（例如，使用终端中的`nvidia-smi`或框架特定的内存分析工具）和训练吞吐量 (throughput)（每秒样本数）。这有助于找出瓶颈并调整`batch_size`、`gradient_accumulation_steps`等参数 (parameter)，并确定是否需要激活检查点。
+- **试验：** 技术的最佳组合高度取决于具体的LLM架构、您的硬件（GPU类型、VRAM、互连）以及目标数据集的特点（序列长度）。从AMP和梯度累积开始，如果内存限制仍然超出，则引入激活检查点或考虑其他优化器选择。
+
+通过策略性地应用这些资源管理技术，您可以使全参数微调 (fine-tuning)这一计算要求较高的过程更易于处理，使得即使面对硬件限制也能调整大型模型。请记住，大多数技术都涉及权衡，通常是牺牲增加的计算时间以换取减少的内存使用，这需要根据您的具体限制和目标进行仔细考量。
+
+## 参考资料
+
+- [Mixed-Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR) 2018; DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  介绍混合精度训练技术（包括损失缩放）的奠基性论文，旨在显著降低内存使用并加速深度学习模型训练。
+- [Training Deep Nets with Sublinear Memory Cost](https://arxiv.org/abs/1604.06174) — Tianqi Chen, Bing Xu, Chiyuan Zhang, Carlos Guestrin (2016)
+  Journal: arXiv preprint arXiv:1604.06174; DOI: [10.48550/arXiv.1604.06174](https://doi.org/10.48550/arXiv.1604.06174)
+  提出梯度检查点（也称为激活检查点）的原始研究论文，通过计算换取内存，从而实现更深层神经网络的训练。
+- [QLoRA: Efficient Finetuning of Quantized LLMs via LoRA](https://arxiv.org/abs/2305.14314) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: arXiv preprint arXiv:2305.14314; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了 QLoRA，一种微调量化大型语言模型的方法，其内存节省主要依赖于8位优化器和分页优化器。
+- [DeepSpeed: Large Scale Distributed Training of DL Models with System Optimizations](https://www.vldb.org/pvldb/vol15/p321-agarwal.pdf) — Saurabh Agarwal, Shuai Che, Michael Gschwind, Hanwen Chang, Minjia Zhang, Reza Yazdani, Jeff Rasley, Elton Zheng, Minmin Gong, Xinggang Wang, Hao Liu, Bo Li, Yuxiong He (2021)
+  Journal: Proceedings of the VLDB Endowment; Publisher: VLDB Endowment; Volume: 15; Pages: 321-334; DOI: [10.14778/3554821.3554867](https://doi.org/10.14778/3554821.3554867)
+  介绍了 DeepSpeed，一个深度学习优化库，通过各种系统优化（包括内存管理）实现高效的大规模分布式训练。
+- [Hugging Face Accelerate Documentation](https://huggingface.co/docs/accelerate/en/index) — Hugging Face (2024)
+  Publisher: Hugging Face
+  Hugging Face Accelerate 的官方文档，该库简化了混合精度训练、梯度累积和分布式训练的设置。

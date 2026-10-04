@@ -1,0 +1,178 @@
+---
+course: "intro-normalizing-flows"
+chapter: "building-normalizing-flows"
+lesson: "implementing-planar-flows-practice"
+sourceId: 8262
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-2-building-normalizing-flows/implementing-planar-flows-practice"
+title: "实现平面流练习"
+description: "编写 PyTorch 代码来实现平面流层，并将其应用于一个简单的二维数据集。"
+order: 5
+plots: []
+sourceHash: "2096714d3600dd66c7c5bb4cb88cc1ec351639467f8897ddf68cb796ed0c0ccb"
+sourceCorrections: []
+---
+
+将平面流（Planar Flows）的数学公式转化为可运行的 PyTorch 模型，需要从头编写平面流层，堆叠多个层以增强模型的表达能力，并编写训练循环，将标准正态分布映射到复杂的二维目标分布。
+
+### 实现平面流层
+
+单个平面流对输入向量 (vector)应用简单的可逆变换。我们回顾一下平面流变换的数学定义：
+
+
+$$
+f(z) = z + u \tanh(w^T z + b)
+$$
+
+
+这里，$w$ 和 $u$ 是与输入 $z$ 维度相同的可学习参数 (parameter)向量，$b$ 是可学习的标量偏置 (bias)。函数 $\tanh$ 作为非线性激活函数 (activation function)。
+
+为了使该变换成为有效的正规化流，它必须是严格可逆的。可逆性要求变换的导数不改变符号，这对应于数学条件 $1 + u^T \psi(z) > 0$。为了在训练期间满足此条件，我们需要动态修改向量 $u$。我们通过以下修正计算一个安全的向量 $\hat{u}$：
+
+
+$$
+\hat{u} = u + \left( -1 + \log(1 + \exp(w^T u)) - w^T u \right) \frac{w}{\|w\|^2}
+$$
+
+
+我们将此操作直接构建在 PyTorch 模块的前向传播中。我们使用 `torch.nn.functional.softplus` 来安全地计算 $\log(1 + \exp(x))$ 项，避免数值溢出。
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class PlanarFlow(nn.Module):
+    def __init__(self, dim=2):
+        super().__init__()
+        self.w = nn.Parameter(torch.randn(1, dim))
+        self.u = nn.Parameter(torch.randn(1, dim))
+        self.b = nn.Parameter(torch.randn(1))
+
+    def forward(self, z):
+        # 计算 w 和 u 的点积
+        wu = torch.sum(self.w * self.u, dim=-1, keepdim=True)
+
+        # 强制执行可逆性约束以计算 u_hat
+        m_wu = -1 + F.softplus(wu) - wu
+        w_norm_sq = torch.sum(self.w ** 2, dim=-1, keepdim=True)
+        u_hat = self.u + m_wu * self.w / w_norm_sq
+
+        # 计算变换 f(z)
+        linear_term = F.linear(z, self.w, self.b)
+        activation = torch.tanh(linear_term)
+        f_z = z + u_hat * activation
+
+        # 计算雅可比行列式的对数 (log determinant of the Jacobian)
+        psi = (1 - activation ** 2) * self.w
+        det_jacobian = 1 + torch.sum(u_hat * psi, dim=-1)
+
+        # 添加一个极小值 epsilon 以防止对绝对零取对数
+        log_det_jacobian = torch.log(torch.abs(det_jacobian) + 1e-6)
+
+        return f_z, log_det_jacobian
+```
+
+前向方法返回变换后的样本 `f_z` 和雅可比行列式的对数 `log_det_jacobian`。在正规化流中，每一步都返回对数行列式是标准做法，因为我们需要累加这些值来计算最终的概率密度。
+
+### 堆叠流层
+
+单个平面流的行为类似于单个脊函数（ridge function）。它沿着特定的超平面拉伸和压缩概率空间。为了模拟复杂的二维形状，我们必须让数据通过一系列此类变换。
+
+我们通过使用 `nn.ModuleList` 初始化一个 `PlanarFlow` 模块列表来实现这一点。在前向传播中，我们遍历这些层，更新样本 $z$ 并累加对数行列式的总和。
+
+```python
+class NormalizingFlow(nn.Module):
+    def __init__(self, dim=2, num_layers=8):
+        super().__init__()
+        self.layers = nn.ModuleList([PlanarFlow(dim) for _ in range(num_layers)])
+
+    def forward(self, z):
+        log_det_sum = torch.zeros(z.shape[0], device=z.device)
+        for layer in self.layers:
+            z, log_det = layer(z)
+            log_det_sum += log_det
+        return z, log_det_sum
+```
+
+> 堆叠平面流模型的前向传播示意图，显示了变换序列和对数行列式的累加过程。
+
+### 定义目标分布
+
+由于平面流的逆操作在解析上难以处理，在静态数据集上计算精确的最大似然估计在计算上代价极高。因此，平面流通常通过最小化反向库尔贝克-莱布勒（KL）散度来匹配未归一化 (normalization)的目标密度函数。
+
+我们将定义一个未归一化的二维能量函数。流模型将学习生成落入该函数低能量区域的点。
+
+```python
+def target_energy(z):
+    x, y = z[:, 0], z[:, 1]
+
+    # 环状结构
+    u1 = 0.5 * ((torch.norm(z, p=2, dim=1) - 2.0) / 0.4) ** 2
+
+    # 双峰分离以创建分裂环
+    u2 = -torch.log(
+        torch.exp(-0.5 * ((x - 2) / 0.6) ** 2) + 
+        torch.exp(-0.5 * ((x + 2) / 0.6) ** 2) + 1e-6
+    )
+
+    return u1 + u2
+```
+
+### 编写训练循环
+
+训练过程包括从简单基础分布中提取样本，并将其通过正规化流。我们利用变量变换公式计算最终生成样本的对数概率。然后，我们将此生成的对数概率与负目标能量进行比较，以计算损失。
+
+变量变换公式允许我们根据基础分布 $q_0(z_0)$ 计算生成样本的密度 $q_K(z_K)$：
+
+
+$$
+\log q_K(z_K) = \log q_0(z_0) - \sum_{i=1}^{K} \log \left| \det \frac{\partial f_i}{\partial z_{i-1}} \right|
+$$
+
+
+我们最小化生成密度与目标密度之间差异的期望值。
+
+```python
+import torch.optim as optim
+
+# 初始化模型、优化器和基础分布
+model = NormalizingFlow(dim=2, num_layers=16)
+optimizer = optim.Adam(model.parameters(), lr=0.005)
+
+# 我们使用标准二维正态分布作为起点
+base_dist = torch.distributions.MultivariateNormal(
+    torch.zeros(2), torch.eye(2)
+)
+
+epochs = 3000
+batch_size = 512
+
+for epoch in range(epochs):
+    optimizer.zero_grad()
+
+    # 1. 从基础分布中采样
+    z0 = base_dist.sample((batch_size,))
+
+    # 2. 将样本通过堆叠的流模型
+    zK, log_det_sum = model(z0)
+
+    # 3. 计算基础样本的对数概率
+    log_prob_z0 = base_dist.log_prob(z0)
+
+    # 4. 应用变量变换公式
+    log_prob_qK = log_prob_z0 - log_det_sum
+
+    # 5. 计算目标对数概率（负能量）
+    target_log_prob = -target_energy(zK)
+
+    # 6. 计算反向 KL 散度损失
+    loss = torch.mean(log_prob_qK - target_log_prob)
+
+    loss.backward()
+    optimizer.step()
+
+    if epoch % 500 == 0:
+        print(f"Epoch {epoch} | Loss: {loss.item():.4f}")
+```
+
+在此循环中，优化器不断调整每个平面流层的参数 (parameter) $w$、$u$ 和 $b$。通过 16 层变换，模型拥有足够的灵活性，可以将初始的标准高斯分布变形为由能量函数定义的非连通、双峰目标分布。通过观察训练结束时的样本，你会发现原始点已成功迁移到指定的低能量区域。

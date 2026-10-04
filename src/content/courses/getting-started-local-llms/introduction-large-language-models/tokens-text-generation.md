@@ -1,0 +1,71 @@
+---
+course: "getting-started-local-llms"
+chapter: "introduction-large-language-models"
+lesson: "tokens-text-generation"
+sourceId: 4199
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-1-introduction-large-language-models/tokens-text-generation"
+title: "理解标记与文本生成"
+description: "了解标记作为大型语言模型文本处理和生成的构成单位。"
+order: 3
+plots: []
+sourceHash: "8ba47538cf49a94092886e0f32104e3b063cea76f0dbb3be0cb72c023f0362a9"
+sourceCorrections: []
+---
+
+在上一节中，我们确定大型语言模型是处理和生成类人文本的强大工具。但一个本质上处理数字的计算机模型，究竟是如何处理语言这样复杂的事物的呢？它不像我们一样阅读单词或句子。相反，它操作的单位被称为**标记 (token)**。
+
+### 什么是标记 (token)？
+
+可以将标记看作大型语言模型处理文本的基本构成单位。大型语言模型不会逐字符（效率很低）或逐词（难以处理“run”、“running”、“ran”等变体或标点）处理文本，而是将文本分解成精心选择的片段。一个标记通常是一个完整的词，但它也可以是一个词的一部分（子词 (subword)）、一个单个字符或一个标点符号。
+
+例如，句子“Hello world!”可能会被分解成这样的标记：
+`["Hello", " ", "!"]`
+
+请注意，术语前的空格被包含在标记中。一个更复杂的词，如“unbelievably”，根据模型的不同，可能会有不同的分割方式：
+`["un", "believe", "ably"]`
+或可能
+`["unbeliev", "ably"]`
+
+这种子词方法使得模型能够更有效地处理词形变化和新词。它学习常用词缀（`un-`、`-ly`、`-ing`）之间的关系，而不是从头开始学习每一个单独的词形。
+
+### 标记 (token)器：文本与数字之间的转换器
+
+负责将原始文本转换为标记并再转换回来的组件被称为**标记器**。每个大型语言模型都使用特定的标记器进行训练。这个标记器有一个明确的**词汇表 (vocabulary)**，即它所知道的所有可能标记的集合。
+
+以下是该过程：
+
+1. **标记化：** 标记器接收你的输入文本（例如提示），并根据其规则和词汇表将其分解成标记序列。
+2. **ID转换：** 词汇表中的每个标记都对应一个唯一的数字ID。标记器将标记序列转换为这些ID的序列。这些数字就是大型语言模型实际处理的内容。
+3. **反标记化：** 当大型语言模型生成一系列输出ID时，标记器将这些数字转换回标记，然后将它们组合起来形成可读文本。
+
+使用训练模型时所用的相同标记器进行交互非常重要。使用不同的标记器就像试图用不匹配的字典进行交流，会导致毫无意义的结果。
+
+> 这是文本通过大型语言模型的标记化和生成过程的简化图示。
+
+### 文本生成：预测下一个标记 (token)
+
+既然我们理解了标记，那么大型语言模型究竟是如何生成文本的呢？文本生成的本质是一个逐步预测的过程。
+
+1. 你的输入提示被标记化为一系列ID。
+2. 大型语言模型分析这个序列，并预测最有可能的*下一个*标记ID。这个预测是基于其训练时所用的海量文本数据，使其习得模式、语法、事实甚至写作风格。
+3. 这个新预测的标记ID被添加到序列的末尾。
+4. 大型语言模型查看*新的*、稍长的序列，并预测*下一个*标记ID。
+5. 这个过程重复进行，每次添加一个标记，直到模型预测到特殊的“序列结束”标记，达到长度限制，或者被指示停止。
+
+想象一下补全句子：“今天的天气是……”。你可能会根据上下文 (context)预测“晴朗”、“多云”或“多雨”。大型语言模型也做类似的事情，但规模巨大，并且纯粹基于从其训练数据中学习到的统计模式。它计算其词汇表 (vocabulary)中所有可能标记的概率，并通常选择概率最高的标记（尽管后面会讨论的调整“温度”等技术可以增加随机性）。
+
+例如，如果输入标记代表“Once upon a time, there”（很久以前，那里），模型可能会预测“ was”这个标记作为最有可能的下一个标记。序列变为“Once upon a time, there was”（很久以前，那里有一个）。然后，查看这个新序列，它可能会预测“ a”。序列一个标记一个标记地增长：“Once upon a time, there was a...”（很久以前，那里有一个……）。
+
+这种迭代的、逐标记的预测是大型语言模型根据你的输入生成连贯且通常复杂的文本背后的基本机制。模型进行良好预测的能力依赖于其参数 (parameter)中编码的知识，这也是为什么参数更多的大型模型通常能掌握更复杂的语言模式的原因。
+
+## 参考资料
+
+- [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909) — Rico Sennrich, Barry Haddow, and Alexandra Birch (2016)
+  Journal: ACL 2016; DOI: [10.48550/arXiv.1508.07909](https://doi.org/10.48550/arXiv.1508.07909)
+  介绍了用于子词分词的字节对编码（BPE），这是许多大型语言模型中使用的基础方法。
+- [Tokenization](https://www.oreilly.com/library/view/natural-language-processing/9781098136796/) — Lewis Tunstall, Leandro von Werra, and Thomas Wolf (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 3
+  《使用Transformer进行自然语言处理》一书的第3章，解释了各种分词算法及其实现。
+- [A Survey of Large Language Models](https://arxiv.org/abs/2303.18223) — Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen (2023)
+  Journal: arXiv preprint arXiv:2303.18223; DOI: [10.48550/arXiv.2303.18223](https://doi.org/10.48550/arXiv.2303.18223)
+  对大型语言模型进行了一次全面回顾，包括对分词方法和自回归生成过程的讨论。

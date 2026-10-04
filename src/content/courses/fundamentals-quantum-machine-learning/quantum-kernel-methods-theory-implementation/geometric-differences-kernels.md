@@ -1,0 +1,61 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-kernel-methods-theory-implementation"
+lesson: "geometric-differences-kernels"
+sourceId: 1050
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-3-quantum-kernel-methods-theory-implementation/geometric-differences-kernels"
+title: "经典核与量子核的几何差异"
+description: "考察经典核与量子核所形成的特征空间在几何上的区别。"
+order: 4
+plots: []
+sourceHash: "47715cab8cdc291032c99fd552e477f011af9bf708af7860c1f797f44199ef85"
+sourceCorrections: []
+---
+
+经典核方法，例如支持向量 (vector)机（SVM），通过映射 $\phi_{classical}(x)$ 将输入数据 $x$ 隐式地映射到一个更高维的特征空间 $\mathcal{F}_{classical}$ 中。核函数 $k_{classical}(x, x')$ 随后高效地计算此空间中的内积 $\langle \phi_{classical}(x), \phi_{classical}(x') \rangle$，而无需显式地计算 $\phi_{classical}(x)$ 的坐标。这个经典特征空间 $\mathcal{F}_{classical}$ 的几何形态直接由核函数的选择决定。例如：
+
+- **线性核：** $k(x, x') = x^T x'$。特征空间与输入空间相同。几何形态为欧几里得几何。
+- **多项式核：** $k(x, x') = (\gamma x^T x' + r)^d$。特征空间由输入特征的单项式（最高为 $d$ 次）组成。该映射通过在这个更高维的多项式特征空间中找到线性边界，从而在原始空间中创建弯曲的决策边界。
+- **径向基函数（RBF）核：** $k(x, x') = \exp(-\gamma \|x - x'\|^2)$。这对应一个*无限维*的特征空间。从几何角度看，它根据欧几里得距离衡量相似性，在数据点周围形成局部“隆起”的影响区域。
+
+量子核的工作原理与此相似，但它使用量子特征映射 $|\phi(x)\rangle$ 将数据嵌入 (embedding)到量子特征空间中，即多量子比特系统的希尔伯特空间 $\mathcal{H}$。量子核通常由这些量子态的内积计算得到，通常表示为 $k_{quantum}(x, x') = |\langle \phi(x) | \phi(x') \rangle|^2$。这种底层空间和相似性计算方法的差异，与经典核相比，导致明显的几何区别。
+
+### 维度与结构
+
+最直接的区别在于潜在的维度。对于一个 $N$ 量子比特系统，希尔伯特空间 $\mathcal{H}$ 的维度为 $2^N$。这种指数级增长为数据表示提供了一个潜在的庞大空间。
+
+> 经典核映射与量子核映射的比较。量子特征映射将数据嵌入 (embedding)到指数级增长的希尔伯特空间中，并通过量子态重叠计算核。
+
+尽管像RBF这样的经典核也映射到无限维度，但量子力学所施加的结构具有根本性差异。$\mathcal{H}$ 的几何形态不仅“庞大”，它还由叠加和纠缠的原理构建，这些原理由量子特征映射电路 $U_{\phi(x)}$ 产生。
+
+- **叠加：** 使得特征向量 (vector) $|\phi(x)\rangle$ 能够同时存在于基态的组合中。
+- **纠缠：** 在量子比特（$\mathcal{H}$ 中的特征）之间创建关联，这种关联在经典物理中没有类似物。这可能导致嵌入的数据点 $|\phi(x)\rangle$ 之间产生复杂的几何关系。
+
+具体几何形态完全取决于用于编码的量子电路 $U_{\phi(x)}$ 的选择。一个简单的乘积态编码可能产生相对简单的几何形态，而具有强大纠缠能力的电路则可以在希尔伯特空间中创建复杂的结构。
+
+### 内积与相似性
+
+经典核直接计算内积 $\langle \phi_{classical}(x), \phi_{classical}(x') \rangle$。这个值直接关联到 $\mathcal{F}_{classical}$ 中特征向量 (vector)之间的角度，并通常作为相似性的直接衡量。
+
+量子核通常使用内积的平方幅度，即 $k(x, x') = |\langle \phi(x) | \phi(x') \rangle|^2$。这个量与从态 $|\phi(x)\rangle$ 到 $|\phi(x')\rangle$ 转换的*概率*有关（或在由另一个态定义的基中测量一个态）。这种平方运算与直接内积相比，引入了额外的非线性。从几何角度看，这意味着量子核不仅对希尔伯特空间中态向量之间的角度敏感，而且对重叠概率也敏感。如果两对态的整体相位不同，它们之间的角度可能相同但核值不同，尽管在使用平方重叠时，这个相位通常不重要。更重要的是，由于量子门本身的特性，映射 $x \rightarrow |\phi(x)\rangle$ 本身具有高度非线性。
+
+### 可分性与表达能力
+
+希望在于量子特征空间的独特几何形态能够更好地分离复杂数据集。通过将数据映射到这个高维的、有结构的空间，在 $\mathcal{H}$ 中的线性分离（如SVM所执行的）可能对应于原始输入空间中的高度非线性分离。
+
+- **经典：** 分离能力由所选核函数（线性、多项式、RBF）决定。几何形态由这个选择固定。
+- **量子：** 分离能力取决于量子特征映射电路 $U_{\phi(x)}$ 的表达能力。具有更强纠缠能力的更复杂电路，原则上可以产生更复杂的几何形态，并可能分离更复杂的模式。然而，这种能力并非确定，并且伴随挑战。过度复杂或深度电路可能导致核集中现象（将在下一节讨论），即所有核值集中在一个特定值附近，使得区分变得不可能。
+
+几何差异表明，量子核可能擅长处理那些基础数据结构与量子演化（叠加和纠缠）所产生的几何形态良好对齐 (alignment)的任务，可能捕捉到经典核未发现的关联。相反地，经典核可能对那些结构自然符合多项式或高斯关系的问题更有效或更高效。理解和设计能够产生针对特定问题、具有优势的几何形态的特征映射 $U_{\phi(x)}$，是量子核研究中的一个主要侧重。
+
+## 参考资料
+
+- [Learning with Kernels: Support Vector Machines, Regularization, Optimization, and Beyond](https://mitpress.mit.edu/books/learning-kernels) — Bernhard Schölkopf, Alexander J. Smola (2001)
+  Publisher: MIT Press; DOI: [10.7551/mitpress/4296.001.0001](https://doi.org/10.7551/mitpress/4296.001.0001)
+  经典著作，为经典核方法及其数学基础提供了全面的理论和实践基础。
+- [Supervised learning with quantum-enhanced feature spaces](https://www.nature.com/articles/s41586-019-1094-2) — Vojtěch Havlíček, Andreas D. Córcoles, Kristan Temme, Aram W. Harrow, Abhinav Kandala, Jerry M. Chow, Jay M. Gambetta (2019)
+  Journal: Nature; Publisher: Nature; Volume: 567; Pages: 209-212; DOI: [10.1038/s41586-019-1094-2](https://doi.org/10.1038/s41586-019-1094-2)
+  介绍了量子特征映射，并展示了它们在监督学习中的应用，阐释了量子特性如何改进数据表示。
+- [Quantum machine learning in feature Hilbert spaces](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.122.040504) — Maria Schuld, Nathan Killoran (2019)
+  Journal: Physical Review Letters; Publisher: American Physical Society; Volume: 122; Pages: 040504; DOI: [10.1103/PhysRevLett.122.040504](https://doi.org/10.1103/PhysRevLett.122.040504)
+  为量子核方法提供了理论框架，通过明确的量子特征映射将它们与经典核理论联系起来。

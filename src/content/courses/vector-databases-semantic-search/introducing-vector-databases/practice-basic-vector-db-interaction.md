@@ -1,0 +1,243 @@
+---
+course: "vector-databases-semantic-search"
+chapter: "introducing-vector-databases"
+lesson: "practice-basic-vector-db-interaction"
+sourceId: 3536
+sourceUrl: "https://apxml.com/zh/courses/vector-databases-semantic-search/chapter-2-introducing-vector-databases/practice-basic-vector-db-interaction"
+title: "实践操作：向量数据库基本交互"
+description: "设置本地向量数据库实例（例如ChromaDB、Qdrant），并执行基本的CRUD操作。"
+order: 7
+plots: []
+sourceHash: "321e8956f566a70fcf6ea2ba1873a904471d854f8e3099a4d676230fac1e049b"
+sourceCorrections: []
+---
+
+理论奠定了坚实的根基，但动手实践对于了解向量 (vector)数据库的运作方式非常重要。实践涉及直接与向量数据库进行交互，使用一个流行且易于设置的库。执行基本创建、读取、更新和删除（CRUD）操作，以巩固对向量及其相关元数据管理方式的理解。
+
+我们将使用`chromadb`，这是一个开源向量数据库，设计宗旨是简单易用，尤其适合本地起步。尽管存在Qdrant、Weaviate和Milvus等其他强大的选项（我们稍后会提到它们），但ChromaDB使我们能够快速设置环境，并专注于核心交互。
+
+### 设置您的环境
+
+首先，请确保您已安装Python（建议使用3.8或更高版本）。您需要安装`chromadb`库和一个用于嵌入 (embedding)文本数据的句子转换器模型。打开您的终端或命令提示符并运行：
+
+```bash
+pip install chromadb sentence-transformers
+```
+
+此命令安装ChromaDB和`sentence-transformers`库，该库提供了轻松访问预训练 (pre-training)模型以创建文本嵌入的功能。
+
+### 连接到数据库
+
+ChromaDB可以在内存中运行，也可以将数据持久化到磁盘。本次练习中，我们将使用一个将数据保存到本地目录的持久化客户端。
+
+```python
+import chromadb
+import uuid # 用于生成唯一ID
+
+# 设置一个持久化客户端。数据将存储在'my_vector_db'目录中。
+client = chromadb.PersistentClient(path="./my_vector_db")
+
+print("ChromaDB客户端已初始化。")
+# 您可以验证存储路径：
+# print(f"Storage path: {client.settings.persist_directory}")
+```
+
+此代码初始化一个客户端实例，它将把数据存储在当前工作目录中名为`my_vector_db`的子目录里。如果该目录不存在，ChromaDB将创建它。
+
+### 创建集合
+
+在ChromaDB（以及许多其他向量 (vector)数据库）中，数据被组织成“集合”（collections），这类似于关系数据库中的表或搜索引擎中的索引。每个集合通常包含相同维度的向量，并且通常使用特定的距离度量。
+
+让我们创建一个名为`documents_collection`的集合。ChromaDB允许直接指定嵌入 (embedding)函数，这简化了过程，因为它将自动处理文本嵌入。
+
+```python
+from chromadb.utils import embedding_functions
+
+# 使用预构建的句子转换器模型进行嵌入
+# 此模型适用于通用语义搜索
+sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+
+# 创建集合，指定嵌入函数。
+# 如果集合已存在，请使用get_or_create_collection。
+collection_name = "documents_collection"
+try:
+    client.delete_collection(name=collection_name) # 如果上次运行存在，则删除
+    print(f"集合 '{collection_name}' 已删除。")
+except:
+    pass # 集合不存在，忽略错误
+
+collection = client.create_collection(
+    name=collection_name,
+    embedding_function=sentence_transformer_ef,
+    metadata={"hnsw:space": "cosine"} # 指定余弦距离（文本常用）
+)
+
+print(f"集合 '{collection.name}' 创建成功。")
+```
+
+在这里，我们首先尝试删除任何同名集合以确保干净的开始。然后，我们创建集合，传入我们选择的嵌入函数（通过`sentence-transformers`的`all-MiniLM-L6-v2`），并使用`metadata`参数 (parameter)（特别是对于ChromaDB默认使用的HNSW索引）将`cosine`相似度指定为距离度量。
+
+### 添加数据（创建/更新插入）
+
+现在，让我们添加一些数据。ChromaDB集合中的每个项目都需要：
+
+1. 一个唯一的`id`。
+2. 数据本身（在本例中为`documents`，即文本字符串）。
+3. 可选的`metadata`（与向量 (vector)关联的键值对）。
+
+ChromaDB的`add`或`upsert`方法会使用我们在创建集合时提供的函数自动处理文档嵌入 (embedding)。通常更推荐使用`upsert`，因为它可以在ID已存在时添加新项目或更新现有项目。
+
+```python
+# 示例数据：带有相关元数据的文档
+docs = [
+    "The Catcher in the Rye is a classic novel by J.D. Salinger.",
+    "Artificial intelligence is transforming many industries.",
+    "Paris is the capital city of France, known for the Eiffel Tower.",
+    "To Kill a Mockingbird examines themes of justice and prejudice."
+    "Machine learning algorithms learn patterns from data.",
+    "The Louvre Museum in Paris houses famous works of art."
+]
+
+metadata = [
+    {'genre': 'Fiction', 'year': 1951, 'topic': 'Literature'},
+    {'genre': 'Non-fiction', 'year': 2023, 'topic': 'Technology'},
+    {'genre': 'Non-fiction', 'year': 1889, 'topic': 'Geography'}, # 埃菲尔铁塔竣工年份
+    {'genre': 'Fiction', 'year': 1960, 'topic': 'Literature'},
+    {'genre': 'Non-fiction', 'year': 2022, 'topic': 'Technology'},
+    {'genre': 'Non-fiction', 'year': 1793, 'topic': 'Art'} # 卢浮宫开放年份
+]
+
+# 为每个文档生成唯一ID
+ids = [str(uuid.uuid4()) for _ in docs]
+
+# 将数据添加到集合
+collection.add(
+    documents=docs,
+    metadatas=metadata,
+    ids=ids
+)
+
+print(f"已向集合添加{collection.count()}个项目。")
+
+# 验证是否添加了一个项目（可选）
+# print(collection.get(ids=[ids[0]]))
+```
+
+我们准备了文档列表、相应的元数据字典和唯一ID。`collection.add`方法接收这些列表。ChromaDB处理`documents`，使用`all-MiniLM-L6-v2`模型生成嵌入，并将嵌入与文档、元数据和ID一起存储。
+
+### 搜索相似数据（读取）
+
+向量 (vector)数据库中的主要操作是相似度搜索。我们提供一个查询（本例中为文本），ChromaDB使用*相同*的嵌入 (embedding)函数对其进行嵌入，然后根据所选的距离度量（余弦相似度）找到存储的与查询向量最接近的向量。
+
+```python
+# 查询集合
+query_texts = ["Tell me about famous books.", "What is AI?"]
+
+results = collection.query(
+    query_texts=query_texts,
+    n_results=2,  # 为每个查询请求最相似的2个结果
+    include=['documents', 'distances', 'metadatas'] # 指定要返回的数据
+)
+
+# 漂亮地打印结果
+import json
+print("\n搜索结果：")
+print(json.dumps(results, indent=2))
+```
+
+`collection.query`方法接收我们的`query_texts`。我们请求每个查询的前`n_results=2`个匹配项。`include`参数 (parameter)允许我们指定要返回存储数据的哪些部分（原始文档、距离分数和元数据）。结果显示了集合中每个查询最接近的匹配项，以及它们的距离（余弦距离越小表示相似度越高）。
+
+### 使用元数据过滤（读取）
+
+向量 (vector)数据库通常允许将相似度搜索与元数据过滤结合起来。这对于根据特定属性缩小结果范围非常有效。让我们查找与“欧洲地标”相似的文档，但仅考虑主题为“Geography”或“Art”的文档。
+
+```python
+# 使用元数据过滤查询
+filtered_results = collection.query(
+    query_texts=["European landmarks"],
+    n_results=2,
+    where={"topic": {"$in": ["Geography", "Art"]}}, # 过滤：主题必须是'Geography'或'Art'
+    include=['documents', 'distances', 'metadatas']
+)
+
+print("\n过滤后的搜索结果（主题：地理或艺术）：")
+print(json.dumps(filtered_results, indent=2))
+```
+
+`where`子句使用字典来定义过滤条件。这里，`$in`指定元数据中的`topic`字段必须是所提供列表中的值之一。请注意这与未过滤的搜索相比，结果可能发生的变化。
+
+### 更新数据（更新）
+
+如前所述，许多向量 (vector)数据库，包括ChromaDB，都使用`upsert`操作处理更新。如果您使用集合中已存在的ID调用`add`或`upsert`，ChromaDB将用为该ID提供的新数据替换现有条目（向量、文档、元数据）。
+
+```python
+# 让我们更新第一个文档的元数据
+first_id = ids[0]
+print(f"\n正在更新ID为“{first_id}”的元数据")
+
+# 获取此ID的原始文档文本
+original_doc = collection.get(ids=[first_id], include=['documents'])['documents'][0]
+
+collection.update(
+    ids=[first_id],
+    metadatas=[{'genre': 'Classic Fiction', 'year': 1951, 'topic': 'Literature', 'status': 'Updated'}]
+    # 如果需要，您也可以更新文档或嵌入
+    # documents=[new_document_text] # 如果您想更改文本，例如
+)
+
+# 验证更新
+updated_item = collection.get(ids=[first_id], include=['metadatas'])
+print("更新后的项目元数据：")
+print(json.dumps(updated_item['metadatas'][0], indent=2))
+```
+
+我们使用`collection.update`专门针对`first_id`。我们只提供了`metadatas`参数 (parameter)，因此只覆盖了该项目的元数据。原始向量和文档仍与该ID关联，除非明确更新。
+
+### 删除数据（删除）
+
+最后，您可以使用ID从集合中移除项目。
+
+```python
+# 删除我们添加的第二个项目
+item_to_delete_id = ids[1]
+print(f"\n正在删除ID为“{item_to_delete_id}”的项目")
+
+initial_count = collection.count()
+collection.delete(ids=[item_to_delete_id])
+final_count = collection.count()
+
+print(f"删除前集合计数：{initial_count}")
+print(f"删除后集合计数：{final_count}")
+
+# 验证它是否已删除（尝试获取它应返回空结果或错误）
+try:
+    deleted_item_check = collection.get(ids=[item_to_delete_id])
+    if not deleted_item_check['ids']:
+        print(f"项目“{item_to_delete_id}”已成功删除。")
+    else:
+        print(f"项目“{item_to_delete_id}”删除失败。") # 不应发生
+except Exception as e:
+     # 根据客户端版本，它可能会引发错误或返回空值
+     print(f"未找到项目“{item_to_delete_id}”（可能已删除）。错误：{e}")
+```
+
+`collection.delete`方法从集合中移除指定项目。我们通过检查集合计数并尝试检索已删除的项目来验证删除。
+
+### 操作总结
+
+本次实践练习演示了使用ChromaDB在向量 (vector)数据库中数据的基本生命周期：
+
+> 向量数据库集合的基本交互流程。
+
+我们连接到数据库，创建了一个结构化容器（集合），添加了向量化 (quantization)数据以及描述性元数据，执行了相似度搜索（包括通用和过滤后的），更新了一个条目，最后移除了一个项目。这些主要操作构成了实现语义搜索和由向量相似性支持的其他应用的基本要素。您可以随意添加更多数据、尝试不同的查询以及研究各种元数据过滤组合来进行进一步试验。
+
+## 参考资料
+
+- [ChromaDB Documentation](https://docs.trychroma.com/docs/introduction) — ChromaDB Developers (2024)
+  ChromaDB官方文档，涵盖安装、API参考和实用功能。
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410/) — Nils Reimers and Iryna Gurevych (2019)
+  Journal: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP); Publisher: Association for Computational Linguistics; Pages: 3982–3992; DOI: [10.18653/v1/D19-1410](https://doi.org/10.18653/v1/D19-1410)
+  介绍了Sentence-BERT框架，提供了一种生成具有语义意义的句子嵌入的方法。`sentence-transformers`库使用了此方法。
+- [Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs](https://doi.org/10.1109/TPAMI.2018.2889473) — Yu. A. Malkov, D. A. Yashunin (2020)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 42; Pages: 824-836; DOI: [10.1109/TPAMI.2018.2889473](https://doi.org/10.1109/TPAMI.2018.2889473)
+  介绍了分层可导航小世界（HNSW）图算法，这是一种广泛使用的近似最近邻搜索方法，是许多向量数据库的基础。

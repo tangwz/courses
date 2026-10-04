@@ -1,0 +1,92 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-ml-foundations-revisited"
+lesson: "advanced-linear-algebra-quantum-states"
+sourceId: 1033
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-1-quantum-ml-foundations-revisited/advanced-linear-algebra-quantum-states"
+title: "量子态的高级线性代数"
+description: "更透彻理解张量积和希尔伯特空间，它们对QML中的多量子比特系统十分必要。"
+order: 1
+plots: []
+sourceHash: "db5d2fa13b34019d4a41d93e4e61af32b18951131a74cecc20e7c13f4597ed4f"
+sourceCorrections: []
+---
+
+本节将精确定义量子计算（尤其是量子机器学习 (machine learning)，QML）运行所依赖的数学框架。尽管您可能具备线性代数基础，我们将详细说明描述QML算法核心的多量子比特系统所需的具体结构。此内容涵盖复合系统。
+
+## 希尔伯特空间：根基
+
+量子态存在于配备内积的复向量 (vector)空间中，这类空间称为希尔伯特空间。对于由$n$个量子比特组成的系统，相关的希尔伯特空间通常是$2^n$维复数空间，表示为$\mathcal{H}_n = (\mathbb{C}^2)^{\otimes n} \cong \mathbb{C}^{2^n}$。
+
+单个量子比特的状态空间是$\mathcal{H}_1 = \mathbb{C}^2$，由计算基向量 $|0\rangle = \begin{pmatrix} 1 \\ 0 \end{pmatrix}$ 和 $|1\rangle = \begin{pmatrix} 0 \\ 1 \end{pmatrix}$ 张成。任何单个量子比特的纯态都可以表示为这些基态的复线性组合（叠加）：
+$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$
+其中$\alpha, \beta \in \mathbb{C}$是复振幅，它们满足归一化 (normalization)条件$|\alpha|^2 + |\beta|^2 = 1$。这种归一化确保了测量量子比特处于$|0\rangle$或$|1\rangle$态的概率之和为一。
+
+两个态 $|\phi\rangle = \gamma|0\rangle + \delta|1\rangle$ 和 $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ 之间的内积（或标量积）定义为：
+$\langle \phi | \psi \rangle = (\gamma^* \quad \delta^*) \begin{pmatrix} \alpha \\ \beta \end{pmatrix} = \gamma^*\alpha + \delta^*\beta$
+在此，$\langle \phi |$表示列向量$|\phi\rangle$的共轭转置（厄米共轭），通常称为与“ket”向量$|\psi\rangle$对应的“bra”向量。内积提供了一种计算一个态投影到另一个态上的概率幅的方法。测量态$|\psi\rangle$在态$|\phi\rangle$中的概率由$|\langle \phi | \psi \rangle|^2$给出。
+
+## 张量积：组合系统
+
+在处理多个量子比特时，这在QML电路中是标准做法，我们需要一种方法来描述组合态空间。这通过使用张量积（$\otimes$）实现。如果我们有两个量子比特，一个处于态$|\psi_A\rangle \in \mathcal{H}_A = \mathbb{C}^2$，另一个处于态$|\psi_B\rangle \in \mathcal{H}_B = \mathbb{C}^2$，则复合系统的态存在于张量积空间$\mathcal{H}_{AB} = \mathcal{H}_A \otimes \mathcal{H}_B \cong \mathbb{C}^4$。
+
+这个两量子比特系统的计算基是通过对单量子比特基向量 (vector)取张量积形成的：
+
+- $|0\rangle \otimes |0\rangle = |00\rangle = \begin{pmatrix} 1 \\ 0 \end{pmatrix} \otimes \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 1 \cdot \begin{pmatrix} 1 \\ 0 \end{pmatrix} \\ 0 \cdot \begin{pmatrix} 1 \\ 0 \end{pmatrix} \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \\ 0 \\ 0 \end{pmatrix}$
+- $|0\rangle \otimes |1\rangle = |01\rangle = \begin{pmatrix} 1 \\ 0 \end{pmatrix} \otimes \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 1 \cdot \begin{pmatrix} 0 \\ 1 \end{pmatrix} \\ 0 \cdot \begin{pmatrix} 0 \\ 1 \end{pmatrix} \end{pmatrix} = \begin{pmatrix} 0 \\ 1 \\ 0 \\ 0 \end{pmatrix}$
+- $|1\rangle \otimes |0\rangle = |10\rangle = \begin{pmatrix} 0 \\ 1 \end{pmatrix} \otimes \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 0 \cdot \begin{pmatrix} 1 \\ 0 \end{pmatrix} \\ 1 \cdot \begin{pmatrix} 1 \\ 0 \end{pmatrix} \end{pmatrix} = \begin{pmatrix} 0 \\ 0 \\ 1 \\ 0 \end{pmatrix}$
+- $|1\rangle \otimes |1\rangle = |11\rangle = \begin{pmatrix} 0 \\ 1 \end{pmatrix} \otimes \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 0 \cdot \begin{pmatrix} 0 \\ 1 \end{pmatrix} \\ 1 \cdot \begin{pmatrix} 0 \\ 1 \end{pmatrix} \end{pmatrix} = \begin{pmatrix} 0 \\ 0 \\ 0 \\ 1 \end{pmatrix}$
+
+这四个基向量，$|00\rangle, |01\rangle, |10\rangle, |11\rangle$，张成$\mathbb{C}^4$希尔伯特空间。一个一般的两量子比特态是一个叠加：
+$|\Psi\rangle = c_{00}|00\rangle + c_{01}|01\rangle + c_{10}|10\rangle + c_{11}|11\rangle$
+并满足归一化 (normalization)条件$\sum_{ij} |c_{ij}|^2 = 1$。
+
+> 张量积将单个量子比特的希尔伯特空间（$\mathbb{C}^2$）组合成一个更大的希尔伯特空间（对于两个量子比特是$\mathbb{C}^4$），以描述复合系统。
+
+这可以进行直接推广：对于$n$个量子比特，希尔伯特空间是$\mathcal{H}_n = \mathbb{C}^{2^n}$，由$2^n$个计算基态（例如$|x_1 x_2 \dots x_n\rangle$，其中$x_i \in \{0, 1\}$）张成。这种状态空间维度的指数增长既是量子算法潜在计算能力的来源，也是经典模拟面临的一大挑战。
+
+## 可分离态与纠缠态
+
+多量子比特态$|\Psi\rangle \in \mathcal{H}_{AB}$如果可以表示为各个子系统态的简单张量积，即$|\Psi\rangle = |\psi_A\rangle \otimes |\psi_B\rangle$，则称为**可分离的**。例如：
+$|+\rangle \otimes |-\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle) \otimes \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) = \frac{1}{2}(|00\rangle - |01\rangle + |10\rangle - |11\rangle)$
+这个态可以通过独立指定量子比特A和量子比特B的态来完全描述。
+
+然而，并非所有$\mathcal{H}_{AB}$中的态都可以这样表示。*不能*分解为单个量子比特态的张量积的态称为**纠缠态**。典型例子是贝尔态，例如：
+$|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$
+不存在单个量子比特态$|\psi_A\rangle = \alpha|0\rangle + \beta|1\rangle$和$|\psi_B\rangle = \gamma|0\rangle + \delta|1\rangle$能使得$|\psi_A\rangle \otimes |\psi_B\rangle = |\Phi^+\rangle$。您可以通过写出积来验证这一点：
+$(\alpha|0\rangle + \beta|1\rangle) \otimes (\gamma|0\rangle + \delta|1\rangle) = \alpha\gamma|00\rangle + \alpha\delta|01\rangle + \beta\gamma|10\rangle + \beta\delta|11\rangle$
+为了使这等于$\frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$，我们需要$\alpha\delta = 0$和$\beta\gamma = 0$，同时$\alpha\gamma = 1/\sqrt{2}$和$\beta\delta = 1/\sqrt{2}$。这些条件不能同时满足。纠缠态表现出量子比特之间无法用经典方式解释的相关性，它们被认为是量子计算和信息（包括许多QML算法）中的一种基本资源。
+
+## 张量积空间中的算符
+
+作用于这些复合希尔伯特空间的线性算符表示应用于多个量子比特的量子门或测量。如果$U_A$作用于$\mathcal{H}_A$，$U_B$作用于$\mathcal{H}_B$，它们对一个可分离态的组合作用是：
+$(U_A \otimes U_B) (|\psi_A\rangle \otimes |\psi_B\rangle) = (U_A |\psi_A\rangle) \otimes (U_B |\psi_B\rangle)$
+如果只有一个量子比特被作用，例如由$U_A$作用，而另一个不受影响，则该算符是$U_A \otimes I_B$，其中$I_B$是$\mathcal{H}_B$上的单位算符。
+
+例如，CNOT门，一种标准两量子比特门，作用于计算基态的方式是：
+
+- CNOT $|00\rangle = |00\rangle$
+- CNOT $|01\rangle = |01\rangle$
+- CNOT $|10\rangle = |11\rangle$ (如果控制位为1，则翻转目标位)
+- CNOT $|11\rangle = |10\rangle$ (如果控制位为1，则翻转目标位)
+
+它在$|00\rangle, |01\rangle, |10\rangle, |11\rangle$基下的矩阵表示是：
+$\text{CNOT} = \begin{pmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 1 \\ 0 & 0 & 1 & 0 \end{pmatrix}$
+这个算符不能表示为简单的张量积$U_A \otimes U_B$，这表明它能够产生纠缠。
+
+理解如何表示态以及如何使用算符操作这些高维张量积空间中的态，是十分重要的。QML技术非常依赖于这种形式体系。例如，量子特征映射将经典数据点$x$编码为存在于这些可能庞大的希尔伯特空间中的量子态$|\phi(x)\rangle$。量子核方法在此空间中计算内积$K(x_i, x_j) = |\langle \phi(x_i) | \phi(x_j) \rangle|^2$。变分算法使用参数 (parameter)化量子电路——它们是应用于这些多量子比特态的一系列算符（门）——来最小化成本函数。因此，当我们继续学习时，牢固掌握底层线性代数结构是非常必要的。
+
+## 参考资料
+
+- [Quantum Computation and Quantum Information](https://doi.org/10.1017/CBO9780511976667) — Michael A. Nielsen and Isaac L. Chuang (2010)
+  Publisher: Cambridge University Press; DOI: [10.1017/CBO9780511976667](https://doi.org/10.1017/CBO9780511976667)
+  量子计算的权威教材，涵盖希尔伯特空间、张量积、纠缠和算子等描述量子态及其演化的基础概念。
+- [Quantum Machine Learning](https://doi.org/10.1007/978-3-030-83096-2) — Maria Schuld, Francesco Petruccione (2021)
+  Publisher: Springer; Pages: 326; DOI: [10.1007/978-3-030-83096-2](https://doi.org/10.1007/978-3-030-83096-2)
+  介绍了量子机器学习，基于量子力学的线性代数基础解释了QML算法及其实现。
+- [Quantum machine learning: A review and outlook](https://iopscience.iop.org/article/10.1088/1361-6633/aab406) — Vedran Dunjko, Hans J. Briegel (2018)
+  Journal: Reports on Progress in Physics; Publisher: IOP Publishing; Volume: 81; Pages: 074001; DOI: [10.1088/1361-6633/aab406](https://doi.org/10.1088/1361-6633/aab406)
+  一篇关于量子机器学习的评论，讨论了理论基础和潜在应用，为高级线性代数的作用提供了背景。
+- [Quantum Computing: An Applied Approach](https://www.bookdelivery.com/br-en/book-quantum-computing-an-applied-approach/9783030832735/p/54118634) — Jack D. Hidary (2021)
+  Publisher: Springer; Pages: 422; DOI: [10.1007/978-3-030-05047-3](https://doi.org/10.1007/978-3-030-05047-3)
+  本书提供了量子计算的实际示例和面向应用的视角，用当前相关性强化了数学概念。

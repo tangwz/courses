@@ -1,0 +1,157 @@
+---
+course: "introduction-to-llm-fine-tuning"
+chapter: "evaluation-and-deployment"
+lesson: "preparing-models-for-inference"
+sourceId: 7293
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-llm-fine-tuning/chapter-5-evaluation-and-deployment/preparing-models-for-inference"
+title: "为推理准备模型"
+description: "为高效推理准备微调模型的最后步骤，包括量化和模型格式转换。"
+order: 6
+plots: []
+sourceHash: "7aa123a30796dcf76900d51025343846d8a96ec912332c51cabaad741a1254c6"
+sourceCorrections: []
+---
+
+模型经过微调 (fine-tuning)和评估后，重心从训练性能转向推理 (inference)效率。向用户提供模型服务的环境有不同于训练环境的制约因素。在生产环境中，低延迟、高吞吐量 (throughput)和尽可能小的内存占用是主要目标。本节介绍将微调模型从训练产物转化为可用于部署的高效资产的最后工程步骤。
+
+### 通过量化 (quantization)减小模型大小
+
+优化模型的一种非常有效的方法是量化。此过程涉及降低模型权重 (weight)的数值精度。大多数模型使用32位浮点数（`FP32`）进行训练。量化将这些权重转换为较低精度格式，例如8位整数（`INT8`）甚至4位浮点数（`FP4`）。
+
+这种转换有两个主要益处：
+
+1. **模型更小：** 将精度从32位降至8位可以将模型的存储和内存占用量减少四倍。
+2. **计算速度更快：** 许多现代CPU和GPU执行整数运算的速度比浮点运算快得多，从而降低了推理 (inference)延迟。
+
+虽然此过程可能导致模型准确性略有下降，但性能提升通常很可观，使其成为部署的标准做法。Hugging Face生态系统与`bitsandbytes`等库配合使用，使这变得直接简便。
+
+以下是如何加载一个8位量化模型：
+
+```python
+from transformers import AutoModelForCausalLM
+
+# 启用8位量化加载模型
+model_name = "mistralai/Mistral-7B-v0.1"
+model_8bit = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto",
+    load_in_8bit=True
+)
+
+print(model_8bit.get_memory_footprint())
+```
+
+加载4位精度（由QLoRA普及）可提供更大的内存节省，并且也易于使用。
+
+```python
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+
+# 配置4位量化
+quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+
+# 使用4位配置加载模型
+model_4bit = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto",
+    quantization_config=quantization_config
+)
+
+print(model_4bit.get_memory_footprint())
+```
+
+下图显示了这种数据精度的降低。
+
+> 量化过程将高精度浮点权重转换为较低精度格式，减少内存使用并通常加速计算。
+
+### 通过模型编译加速推理 (inference)
+
+另一种高效的优化方法是模型编译。当你运行一个标准PyTorch模型时，Python解释器会引入额外开销。模型编译器将动态操作图转换为静态、优化的版本，该版本针对其运行的特定硬件进行调整。此过程可以涉及将多个操作融合成一个内核，从而最大程度地减少内存移动和计算开销。
+
+PyTorch 2.0 引入了 `torch.compile()`，这是一个提供先进编译技术的函数。应用它通常只需一行代码的修改，即可带来明显的速度提升。
+
+```python
+import torch
+from transformers import AutoModelForCausalLM
+
+# 加载你的微调模型
+model = AutoModelForCausalLM.from_pretrained("./my-finetuned-model")
+model.to("cuda")
+model.eval() # 将模型设置为评估模式
+
+# 编译模型
+# 'max-autotune' 模式使编译器花费更多时间 
+# 寻找最快的可能内核。
+compiled_model = torch.compile(model, mode="max-autotune")
+
+# 像往常一样使用编译后的模型进行推理
+# 第一次运行会因为编译过程而变慢
+# 后续运行会快得多。
+```
+
+使用`torch.compile()`时，首次推理会较慢，因为模型在后台进行优化和编译。随后的调用将使用缓存的优化代码，运行速度会快得多。
+
+### 优化生成循环
+
+文本生成方式对性能有很大影响。`transformers`中的 `generate()` 方法高度可配置，有几个参数 (parameter)对推理 (inference)速度特别有影响。
+
+一个影响很大的参数是 `use_cache`。在自回归 (autoregressive)模型中，每个新令牌都是基于所有先前生成的令牌生成的。注意力机制 (attention mechanism)需要在每一步处理这个不断增长的序列。`use_cache` 参数（默认为 `True`）允许模型存储注意力层的内部状态（键值对）。对于下一个令牌，它只需计算最新令牌的注意力，而无需重新计算整个序列。禁用此缓存将大大减慢除最短输出之外的所有内容的生成速度。
+
+此外，使用贪婪解码（`do_sample=False`）比Top-K或核采样等采样方法更快，因为它避免了构建概率分布并从中采样的额外开销。
+
+### 导出为ONNX便携格式
+
+尽管编译后的PyTorch模型速度很快，但它仍然依赖于Python和PyTorch生态系统。为了实现最大的可移植性并使用专用、高性能的推理 (inference)引擎，可以将模型导出为开放神经网络 (neural network)交换（ONNX）格式。
+
+ONNX为机器学习 (machine learning)模型提供了一种标准化格式。一旦模型采用ONNX格式，您就可以使用ONNX兼容运行时（例如ONNX Runtime）来运行它。这些运行时用C++编写，并针对各种硬件进行了高度优化，包括CPU、GPU和专用AI加速器。
+
+`transformers.onnx`模块有助于此转换。
+
+```python
+from transformers.onnx import export, OnnxConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+model_path = "./my-finetuned-model"
+onnx_path = "./my-finetuned-model-onnx"
+
+# 1. 加载分词器和模型
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForCausalLM.from_pretrained(model_path)
+
+# 2. 定义ONNX配置
+class MyOnnxConfig(OnnxConfig):
+    @property
+    def inputs(self):
+        # 定义模型在ONNX图中的输入
+        return {
+            "input_ids": {0: "batch_size", 1: "sequence_length"},
+            "attention_mask": {0: "batch_size", 1: "sequence_length"},
+        }
+
+# 3. 导出模型
+onnx_config = MyOnnxConfig.from_model_config(model.config)
+export(tokenizer, model, onnx_config, onnx_config.outputs, onnx_path)
+```
+
+此过程会生成一组`.onnx`文件，它们代表模型的计算图。然后，您可以使用ONNX Runtime或NVIDIA Triton Inference Server等推理服务器加载这些文件以进行生产部署。
+
+下图勾勒出一个完整的推理准备流程，从微调 (fine-tuning)模型开始，到可部署的ONNX产物结束。
+
+> 为部署准备模型的典型流程包括可选的量化 (quantization)，然后转换为ONNX等标准格式，最后可通过专用推理引擎提供服务。
+
+通过应用这些技术，您可以将您的微调模型转变为能够处理生产工作负载的高效且可扩展的服务。每个步骤都在性能、大小和准确性之间提供权衡，使您能够根据特定的应用程序需求调整最终模型。
+
+## 参考资料
+
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: arXiv preprint arXiv:2305.14314; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了用于高效LLM微调和推理的4位量化方法。
+- [Quantization](https://huggingface.co/docs/transformers/main/en/quantization) — Hugging Face (2024)
+  Publisher: Hugging Face
+  提供在`transformers`库中对模型应用量化（包括8位和4位方法）的指导。
+- [torch.compile](https://pytorch.org/docs/stable/compile.html) — PyTorch Contributors (2024)
+  官方文档，详细介绍了如何使用`torch.compile`优化PyTorch模型以加快执行速度。
+- [Text generation strategies](https://huggingface.co/docs/transformers/main/en/generation_strategies) — Hugging Face (2024)
+  Publisher: Hugging Face
+  解释了`transformers`库中文本生成策略及参数，包括`use_cache`参数。
+- [Open Neural Network Exchange (ONNX)](https://onnx.ai/) — ONNX Community (2024)
+  一个开放的机器学习模型表示格式的官方网站和标准，实现了模型的可移植性和优化推理。

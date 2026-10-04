@@ -1,0 +1,221 @@
+---
+course: "intro-feature-engineering"
+chapter: "handling-missing-data"
+lesson: "identifying-missing-values"
+sourceId: 1309
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-2-handling-missing-data/identifying-missing-values"
+title: "识别缺失值"
+description: "在Pandas DataFrame中检测缺失数据点的方法。"
+order: 1
+plots: ["plots/1309-0.json"]
+sourceHash: "c11d72966a4b871e7ec7165433112052cc627129b2c6c1256ad8dae6e3b0d21d"
+sourceCorrections: []
+---
+
+识别数据集中缺失数据的准确位置是数据准备的基础。不完整的数据会阻碍模型训练，导致错误或有偏见的结果。幸运的是，Pandas库提供了有效的工具来定位这些缺失的条目。
+
+### Pandas中标准缺失数据表示
+
+Pandas主要使用特殊的浮点值 `NaN` (Not a Number，非数值) 来表示数值数组中的缺失数据。对于 `object` 数据类型（通常包含字符串）的列，Pandas可能使用 `None` 或 `NaN`。了解这种标准表示是识别缺失值的第一步。
+
+考虑一个简单的DataFrame：
+
+```python
+import pandas as pd
+import numpy as np
+
+data = {'col_a': [1, 2, np.nan, 4, 5],
+        'col_b': [np.nan, 'x', 'y', 'z', 'x'],
+        'col_c': [True, False, True, np.nan, False],
+        'col_d': [10.1, 20.2, 30.3, np.nan, 50.5]}
+df = pd.DataFrame(data)
+
+print(df)
+# 输出：
+#    col_a col_b  col_c  col_d
+# 0    1.0   NaN   True   10.1
+# 1    2.0     x  False   20.2
+# 2    NaN     y   True   30.3
+# 3    4.0     z    NaN    NaN
+# 4    5.0     x  False   50.5
+```
+
+### 使用 `isnull()` 和 `isna()` 检测缺失值
+
+Pandas提供了两个基本相同的方法，`isnull()` 和 `isna()`，用于检查缺失值。两者都返回一个与原始DataFrame形状相同的布尔型DataFrame，其中 `True` 表示缺失值 (`NaN` 或 `None`)，`False` 表示存在值。
+
+```python
+# 检查缺失值
+missing_mask = df.isnull()
+print(missing_mask)
+# 输出：
+#    col_a  col_b  col_c  col_d
+# 0  False   True  False  False
+# 1  False  False  False  False
+# 2   True  False  False  False
+# 3  False  False   True   True
+# 4  False  False  False  False
+
+# isna() 产生相同结果
+# missing_mask_alt = df.isna()
+# print(missing_mask_alt)
+```
+
+反之，`notnull()` 和 `notna()` 方法返回相反的布尔掩码，标识数据所在的位置。
+
+```python
+# 检查存在的值
+present_mask = df.notnull()
+print(present_mask)
+# 输出：
+#    col_a  col_b  col_c  col_d
+# 0   True  False   True   True
+# 1   True   True   True   True
+# 2  False   True   True   True
+# 3   True   True  False  False
+# 4   True   True   True   True
+```
+
+### 汇总缺失数据计数
+
+虽然布尔掩码很有用，但我们通常需要聚合统计。由于在数值上下文 (context)中 `True` 等于 1，`False` 等于 0，因此我们可以在 `isnull()` 之后链式调用 `.sum()` 方法来计算每列的缺失值数量。
+
+```python
+# 计算每列的缺失值数量
+missing_counts = df.isnull().sum()
+print(missing_counts)
+# 输出：
+# col_a    1
+# col_b    1
+# col_c    1
+# col_d    1
+# dtype: int64
+```
+
+为了了解缺失数据的比例，您可以将计数除以总行数（DataFrame的长度）：
+
+```python
+# 计算每列缺失值的百分比
+missing_percentage = (df.isnull().sum() / len(df)) * 100
+print(missing_percentage)
+# 输出：
+# col_a    20.0
+# col_b    20.0
+# col_c    20.0
+# col_d    20.0
+# dtype: float64
+```
+
+要获取整个DataFrame中的缺失值总数，您可以对结果进行两次求和：
+
+```python
+# 计算DataFrame中的总缺失值
+total_missing = df.isnull().sum().sum()
+print(f"总缺失值：{total_missing}")
+# 输出：
+# Total missing values: 4
+```
+
+您还可以通过在 `sum()` 方法中指定 `axis=1` 来计算每行的缺失值：`df.isnull().sum(axis=1)`。这有助于识别特别稀疏的行。
+
+### 可视化缺失数据模式
+
+可视化通常能提供比原始数字更直观的缺失数据模式理解。一个常用方法是使用由 `isnull()` 生成的布尔掩码的热力图。Matplotlib 或 Seaborn 等库通常用于此目的。另一个有效的可视化是显示每个特征缺失值数量或百分比的条形图。
+
+下面是使用Plotly生成一个汇总缺失值计数的条形图的方法：
+
+```python
+import plotly.express as px
+
+# 假设 missing_counts Series 来自上一步
+fig = px.bar(x=missing_counts.index, y=missing_counts.values,
+             labels={'x':'特征', 'y':'缺失值数量'},
+             title="每个特征的缺失值数量")
+fig.update_layout(xaxis_tickangle=-45, title_x=0.5)
+# 若要显示图表（在支持Plotly的notebook或环境中）：
+# fig.show()
+
+# 若要在网页内容中包含，可以导出JSON表示：
+print(fig.to_json(pretty=False))
+```
+
+
+
+![每个特征的缺失值数量](plots/1309-0.json)
+
+
+
+> 示例DataFrame中每列缺失条目数量的条形图。
+
+### 处理非标准缺失值表示
+
+有时，缺失数据不以 `NaN` 或 `None` 编码。数据集可能使用占位符字符串，如 `"?"`、`"Unknown"`、`"N/A"`，或不太可能出现的数值，如 `999` 或 `-1` 来表示缺失条目。这些需要明确处理。
+
+使用Pandas加载数据时（例如，使用 `pd.read_csv`），您可以使用 `na_values` 参数 (parameter)指定这些自定义标记 (token)：
+
+```python
+# 示例：假设 'data.csv' 使用 '?' 和 'N/A' 表示缺失值
+# df = pd.read_csv('data.csv', na_values=['?', 'N/A'])
+```
+
+如果数据已加载，您可以使用 `.replace()` 方法将这些占位符转换为 `np.nan`，使得 `isnull()` 能够正确检测它们：
+
+```python
+# 假设 df_dirty 在 'col_b' 列中包含 '?' 而不是 NaN
+df_dirty = pd.DataFrame({
+    'col_a': [1, 2, np.nan],
+    'col_b': [10, '?', 30]
+})
+
+print("替换前：")
+print(df_dirty)
+print("\n替换前缺失值计数：")
+print(df_dirty.isnull().sum())
+
+# 将 '?' 替换为 NaN
+df_clean = df_dirty.replace('?', np.nan)
+
+print("\n替换后：")
+print(df_clean)
+print("\n替换后缺失值计数：")
+print(df_clean.isnull().sum())
+
+# 输出：
+# 替换前：
+#    col_a col_b
+# 0    1.0    10
+# 1    2.0     ?
+# 2    NaN    30
+#
+# 替换前缺失值计数：
+# col_a    1
+# col_b    0 # '?' 尚未被识别为缺失值
+# dtype: int64
+#
+# 替换后：
+#    col_a  col_b
+# 0    1.0   10.0
+# 1    2.0    NaN
+# 2    NaN   30.0
+#
+# 替换后缺失值计数：
+# col_a    1
+# col_b    1 # '?' 现在被正确识别为 NaN
+# dtype: int64
+```
+
+准确识别所有缺失值，无论是标准还是非标准的，都是必要的初始步骤。一旦识别出来，接下来可以了解数据为何缺失并选择合适的处理方法，这些都是本章后续部分的主题。
+
+## 参考资料
+
+- [Working with missing data](https://pandas.pydata.org/docs/user_guide/missing_data.html) — The Pandas Development Team (2023)
+  Pandas官方文档，解释了Pandas如何使用NaN、None、isnull()、isna()及相关方法表示和检测缺失值。
+- [Python for Data Analysis](https://wesmckinney.com/book) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  Pandas创建者的基础著作，涵盖数据处理、清洗和预处理技术，包括识别缺失数据。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://learning.oreilly.com/library/view/-/9781098122461/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  机器学习实用指南，包含识别和处理缺失值等重要数据预处理步骤，并着重阐述其对模型训练的影响。
+- [Python Bar Charts](https://plotly.com/python/bar-charts/) — Plotly Technologies Inc. (2023)
+  Publisher: Plotly Technologies Inc.
+  Plotly Python官方文档，用于创建条形图，提供与可视化缺失数据计数相关的示例。

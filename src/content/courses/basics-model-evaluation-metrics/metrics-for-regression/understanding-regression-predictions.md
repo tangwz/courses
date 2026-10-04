@@ -1,0 +1,96 @@
+---
+course: "basics-model-evaluation-metrics"
+chapter: "metrics-for-regression"
+lesson: "understanding-regression-predictions"
+sourceId: 3988
+sourceUrl: "https://apxml.com/zh/courses/basics-model-evaluation-metrics/chapter-3-metrics-for-regression/understanding-regression-predictions"
+title: "理解回归预测"
+description: "回顾回归模型的输出（连续数值）以及误差的含义。"
+order: 1
+plots: ["plots/3988-0.json"]
+sourceHash: "3f45d8c5537121f4647d1d3d33efc311a4fd25f5b67747a9a7a6153131a55a38"
+sourceCorrections: []
+---
+
+让我们完善对回归模型进行预测时所发生情况的认识。如本章引言所述，回归任务涉及预测连续的数值。请考虑预测以下内容：
+
+- 根据房屋特征（大小、位置、卧室数量）预测房价。
+- 根据历史天气数据预测明日气温。
+- 根据过往表现和营销支出预测下一季度的预期销售收入。
+
+在每种情况下，模型接收一些输入信息，并输出一个单一的数字，这是它对我们感兴趣的数量的最佳猜测。
+
+### 预测值与实际值
+
+对于任何给定的输入实例（例如，特定房屋或某一天气模式），有两个我们关注的值：
+
+1. **预测值 ($\hat{y}$)：** 这是我们训练好的回归模型生成的输出。它是模型对目标变量的估计。我们通常在变量（$y$）上使用“帽子”符号（$\hat{}$）来表示预测值。
+2. **实际值 ($y$)：** 这是该实例的真实观测值。这是我们希望模型能预测到的正确答案（例如，房屋的实际售价，记录的实际温度）。
+
+理想情况下，预测值 $\hat{y}$ 会与实际值 $y$ 完全相等。然而，在实际中，模型很少是完美的。预测值与实际情况之间几乎总会有一些差异。
+
+### 理解预测误差
+
+实际值与预测值之间的这种差异被称为**误差**或有时称为**残差**。我们简单地计算它为：
+
+
+$$
+\text{误差} = \text{实际值} - \text{预测值}
+$$
+
+
+$$
+e = y - \hat{y}
+$$
+
+
+正误差表示模型预测过低。负误差表示预测过高。误差为零表示该特定实例的预测是完美的。
+
+让我们看一个简单的例子：根据面积预测公寓租金。
+
+- **实例 1：**
+  - 面积：500 平方英尺
+  - 实际租金 ($y$)：\$1200
+  - 模型预测 ($\hat{y}$)：\$1150
+  - 误差：$1200 -$1150 = \$50（模型预测过低）
+- **实例 2：**
+  - 面积：800 平方英尺
+  - 实际租金 ($y$)：\$1800
+  - 模型预测 ($\hat{y}$)：\$1850
+  - 误差：$1800 -$1850 = -\$50（模型预测过高）
+- **实例 3：**
+  - 面积：650 平方英尺
+  - 实际租金 ($y$)：\$1400
+  - 模型预测 ($\hat{y}$)：\$1400
+  - 误差：$1400 -$1400 = \$0（模型预测完美）
+
+"模型会犯错，因为数据复杂且通常包含固有的随机性或“噪声”。此外，模型通常是对现实的简化。它们从训练数据中学习模式，但这些模式可能无法完美捕捉在新、未见数据上进行精确预测所需的所有细节。"
+
+评估回归模型的目的不一定是在每一个预测上都达到零误差（这通常是不可能的），而是要理解这些误差在整个数据集中的典型大小和特点。
+
+下图说明了这一道理。蓝色点表示实际数据点（例如，实际租金与面积）。橙色线表示简单线性回归模型做出的预测。垂直灰色线显示了每个点的误差（或残差）——即实际值（点）与预测值（线上点）之间的距离。
+
+
+
+![回归预测值与实际值对比](plots/3988-0.json)
+
+
+
+> 一个简单的线性回归模型，尝试根据单一特征预测目标值。蓝色点是实际数据点，橙色线显示模型的预测，虚线灰色线表示每个点的预测误差（残差）。
+
+当我们使用测试集（模型在训练期间未见过的数据）评估模型时，我们计算每个预测的误差。由于我们会有许多误差（测试集中每个实例一个），我们需要方法将它们总结为有意义的性能指标。这就是像平均绝对误差（MAE）、均方误差（MSE）、均方根误差（RMSE）和 R-平方 ($R^2$) 这样的指标的作用。它们提供了不同的方法来量化 (quantization)我们回归模型的整体准确性和有效性，我们将在后续部分进行讨论。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2021)
+  Publisher: Springer; Pages: Chapter 3; DOI: [10.1007/978-1-0716-1819-3](https://doi.org/10.1007/978-1-0716-1819-3)
+  一本广泛使用的统计学习入门教材，涵盖线性回归、预测和残差。
+- [Pattern Recognition and Machine Learning](https://link.springer.com/book/9780387310732) — Christopher M. Bishop (2006)
+  Publisher: Springer; Pages: Chapter 3; DOI: [10.1007/b139386](https://doi.org/10.1007/b139386)
+  一本关于机器学习的经典教材，详细讨论了回归模型和预测误差。
+- [Lecture Notes for CS229: Machine Learning (Notes 1)](http://cs229.stanford.edu/notes/cs229-notes1.pdf) — Andrew Ng, Tengyu Ma (updates) (2018)
+  Publisher: Stanford University
+  来自一门有影响力的大学课程的讲义，清晰地解释了回归、预测和误差的概念。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH_Eui8OaslqnfumOnSB6cB0z1oWC_u3bp8WyUMknKZWYfxUFEEYoS4eV5zcJ9NrFYcn7PYLNfcscu-5_Cvm7O8E8-8PMSmGj30K4VDYKRq9a1goL1-U1p0yxApC9H6MmsvzemIPrE8XvPfD6PaLgbPFEE3PT53fu2bwaOkw2TJ3hf92AP9P-Y=) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media; Pages: Chapters on Regression
+  一本实用的机器学习指南，通过代码示例清晰地解释了回归概念，包括预测和误差。

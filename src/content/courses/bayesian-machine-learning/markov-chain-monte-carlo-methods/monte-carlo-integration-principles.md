@@ -1,0 +1,121 @@
+---
+course: "bayesian-machine-learning"
+chapter: "markov-chain-monte-carlo-methods"
+lesson: "monte-carlo-integration-principles"
+sourceId: 3529
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-2-markov-chain-monte-carlo-methods/monte-carlo-integration-principles"
+title: "蒙特卡罗积分的原理"
+description: "理解使用随机抽样近似积分的理论依据。"
+order: 1
+plots: ["plots/3529-0.json"]
+sourceHash: "7d3d8d29e97280793222e6355973b89dff5cbf8cdc22559305d4198c78572619"
+sourceCorrections: []
+---
+
+贝叶斯推断依赖于理解后验分布 $p(	heta | D)$。通常，整个分布本身并非主要关注点；相反，从中得到的概括信息更受关注。这些概括信息通常以期望的形式出现。例如，后验均值（参数 (parameter) $heta$ 的常见点估计）的计算方式如下：
+
+
+$$
+E[\theta | D] = \int \theta p(\theta | D) d\theta
+$$
+
+
+类似地，我们可能需要计算后验方差、置信区间或特定假设的概率，所有这些都涉及对某个函数 $f(\theta)$ 关于后验分布进行积分：
+
+
+$$
+E[f(\theta) | D] = \int f(\theta) p(\theta | D) d\theta
+$$
+
+
+主要困难出现的原因是，后验 $p(\theta | D)$ 常常是高维的，并且没有标准的解析形式。直接计算这些积分通常是不可能的。
+
+这就是蒙特卡罗积分思想发挥作用的地方。它是一种使用随机抽样近似计算定积分数值的数值方法。其基本思路基于大数定律 (LLN)。
+
+### 蒙特卡罗估计量
+
+假设我们要估计期望 $E[f(\theta)] = \int f(\theta) p(\theta) d\theta$，其中 $\theta$ 是从分布 $p(\theta)$ 中抽取的。如果我们能以某种方式直接从分布 $p(\theta)$ 中生成 $S$ 个独立样本 $\theta^{(1)}, \theta^{(2)}, ..., \theta^{(S)}$，大数定律告诉我们，随着样本数量的增加，$f(\theta)$ 的样本均值将收敛到真实期望。
+
+我们将 $E[f(\theta)]$ 的**蒙特卡罗估计量**定义为：
+
+
+$$
+\hat{E}_S[f(\theta)] = \frac{1}{S} \sum_{s=1}^{S} f(\theta^{(s)})
+$$
+
+
+其中 $\theta^{(s)} \sim p(\theta)$ 对于 $s=1, ..., S$。
+
+当 $S \to \infty$ 时，该估计量收敛到真实期望：
+
+
+$$
+\lim_{S \to \infty} \frac{1}{S} \sum_{s=1}^{S} f(\theta^{(s)}) = E[f(\theta)]
+$$
+
+
+此外，中心极限定理 (CLT) 通常适用。如果 $f(\theta)$ 的方差（记作 $\text{Var}[f(\theta)]$）是有限的，那么对于很大的 $S$，估计量 $\hat{E}_S[f(\theta)]$ 的分布近似服从正态分布：
+
+
+$$
+\hat{E}_S[f(\theta)] \approx N\left(E[f(\theta)], \frac{\text{Var}[f(\theta)]}{S}\right)
+$$
+
+
+这非常有用，因为它告诉我们估计的准确性如何随着样本增多而提升。估计的标准误差与 $1/\sqrt{S}$ 成比例地减小。我们可以使用计算出的 $f(\theta^{(s)})$ 值的样本方差来估计 $\text{Var}[f(\theta)]$，这为我们量化 (quantization)蒙特卡罗估计的不确定性提供了一种方法。
+
+### 一个说明性例子：估计 Beta 分布的均值
+
+我们来看一个简单的例子。假设我们的参数 (parameter) $\theta$ 服从 Beta 分布，$\theta \sim \text{Beta}(\alpha, \beta)$，它可能表示一系列伯努利试验中未知的成功概率。其概率密度函数为 $p(\theta | \alpha, \beta) = \frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)} \theta^{\alpha-1} (1-\theta)^{\beta-1}$，其中 $\theta \in [0, 1]$。
+
+我们想估计均值 $E[\theta]$。解析地，我们知道 $E[\theta] = \frac{\alpha}{\alpha+\beta}$。我们选择 $\alpha=3$ 和 $\beta=7$。真实均值为 $E[\theta] = 3 / (3+7) = 0.3$。
+
+现在，我们假装不知道解析公式，并使用蒙特卡罗积分。这里，$f(\theta) = \theta$。我们可以使用标准统计软件包库，很容易地直接从 $\text{Beta}(3, 7)$ 分布中抽取样本 $\theta^{(s)}$。
+
+我们抽取 $S$ 个样本并计算蒙特卡罗估计量：
+
+
+$$
+\hat{E}_S[\theta] = \frac{1}{S} \sum_{s=1}^{S} \theta^{(s)}
+$$
+
+
+下图显示了估计值 $\hat{E}_S[\theta]$ 如何随着样本数量 $S$ 的增加而收敛到真实均值 (0.3)。
+
+
+
+![Beta(3, 7) 均值的蒙特卡罗估计](plots/3529-0.json)
+
+
+
+> Beta(3, 7) 分布均值的蒙特卡罗估计的收敛性。蓝线显示了基于 $S$ 个样本的估计值（对数标尺），随着 $S$ 的增加，其值接近真实均值（红色虚线）。
+
+这个简单的例子说明了核心原理：如果你能直接从目标分布 $p(\theta)$ 中抽样，你就可以使用样本均值来近似期望。
+
+### 难点：从后验分布中抽样
+
+蒙特卡罗积分的效力完全依赖于我们从目标分布 $p(\theta)$ 中抽取独立样本 $\theta^{(s)}$ 的能力。在贝叶斯推断中，我们的目标分布是后验 $p(\theta | D)$。
+
+不幸的是，对于大多数值得关注的模型，后验分布 $p(\theta | D) \propto p(D | \theta) p(\theta)$ 是一个复杂的高维函数，我们只知道其比例常数（证据 $p(D)$）。直接从这些分布中生成独立样本通常不可行。我们不能简单地调用像 `numpy.random.beta` 这样的函数来从任意的后验分布中获取样本。
+
+### 与马尔可夫链蒙特卡罗的联系
+
+这个重大限制正是我们需要马尔可夫链蒙特卡罗 (MCMC) 方法的原因。MCMC 技术提供了一个巧妙的解决办法。它们不是*直接*从 $p(\theta | D)$ 生成独立样本，而是构建一个马尔可夫链，其状态是 $\theta$ 的可能值，并且其平衡（或平稳）分布正是目标后验 $p(\theta | D)$。
+
+通过运行这个马尔可夫链足够长的时间，链访问的状态可以被视为来自后验分布的样本。尽管这些样本通常是*相关的*（不同于基本蒙特卡罗中假设的独立样本），但它们仍可在蒙特卡罗积分框架内使用。大数定律在马尔可夫链的特定条件（遍历性）下仍然成立。
+
+因此，MCMC 方法使得我们能够从我们无法直接抽样的分布中生成所需的（尽管相关的）样本 $\theta^{(1)}, \theta^{(2)}, ..., \theta^{(S)}$。一旦有了这些样本，我们就使用标准蒙特卡罗估计量 $\frac{1}{S} \sum_{s=1}^{S} f(\theta^{(s)})$ 来近似后验期望 $E[f(\theta) | D]$。
+
+本章接下来的部分将详细说明如何有效构建和使用这些马尔可夫链，从基本的 Metropolis-Hastings 算法开始。
+
+## 参考资料
+
+- [Bayesian Data Analysis](https://www.crcpress.com/Bayesian-Data-Analysis/Gelman-Carlin-Stern-Dunson-Vehtari-Rubin/p/book/9781439840955) — Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari, Donald B. Rubin (2013)
+  Publisher: Chapman and Hall/CRC; DOI: [10.1201/b16018](https://doi.org/10.1201/b16018)
+  一本标准且全面的教科书，涵盖了现代贝叶斯推断的理论与应用，包括蒙特卡洛和马尔可夫链蒙特卡洛方法。
+- [Monte Carlo Statistical Methods](https://link.springer.com/book/10.1007/978-1-4757-4145-2) — Christian P. Robert, George Casella (2004)
+  Publisher: Springer; DOI: [10.1007/978-1-4757-4145-2](https://doi.org/10.1007/978-1-4757-4145-2)
+  一本权威教科书，严谨地阐述了蒙特卡洛方法，有助于理解其理论基础。
+- [An Introduction to MCMC for Machine Learning](https://link.springer.com/article/10.1023/A:1020281327116) — Christophe Andrieu, Nando de Freitas, Arnaud Doucet, Michael I. Jordan (2003)
+  Journal: Machine Learning; Publisher: Springer; Volume: 50; Pages: 5-43; DOI: [10.1023/A:1020281327116](https://doi.org/10.1023/A%3A1020281327116)
+  一篇被广泛引用的综述文章，提供了马尔可夫链蒙特卡洛方法的入门介绍，并侧重于其在机器学习中的应用。

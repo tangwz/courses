@@ -1,0 +1,94 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "intrinsic-evaluation-metrics"
+lesson: "effect-tokenization-perplexity"
+sourceId: 6059
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-21-intrinsic-evaluation-metrics/effect-tokenization-perplexity"
+title: "分词对困惑度的影响"
+description: "分析分词器的选择如何影响计算出的困惑度值。"
+order: 5
+plots: ["plots/6059-0.json"]
+sourceHash: "d250b9fa2fe85d44c56b8cad7e6db9cd9b37e92e8b4acbdc39433d137c1a8c31"
+sourceCorrections: []
+---
+
+正如我们所知，困惑度是评估语言模型的基础固有指标，量化 (quantization)模型预测给定文本序列的优劣。它直接源于模型对该序列中词元 (token)分配的概率。然而，一个常被忽视的重要事项是，计算出的困惑度对所用的特定**分词 (tokenization)**方案高度敏感。回顾困惑度公式：
+
+困惑度是评估语言模型的一种基本内在指标，它量化了模型预测给定文本序列的能力。它直接来源于模型赋予该序列中令牌的概率。一个经常被忽视的事实是，计算出的困惑度对所使用的特定**分词**方案高度敏感。困惑度公式如下：
+
+这里，$w_i$ 表示序列中的第 $i$ 个*词元*，$N$ 是*词元*总数。这表示单个概率 $p(w_i | w_{<i}; \theta)$ 和序列长度 $N$ 都直接取决于原始文本如何被分割成词元。
+
+考虑一个简单句子：“分词影响困惑度。”
+
+来看看不同分词器 (tokenizer)如何处理此句：
+
+1. **词级别分词器：** 可能会生成 `["Tokenization", "impacts", "perplexity", "."]` -> $N = 4$ 个词元。模型会预测在给定“Tokenization”的情况下“impacts”的概率，然后在给定前两个词的情况下“perplexity”的概率，依此类推。
+2. **字符级别分词器：** 将生成 `['T', 'o', 'k', 'e', 'n', 'i', 'z', 'a', 't', 'i', 'o', 'n', ' ', 'i', 'm', 'p', 'a', 'c', 't', 's', ' ', 'p', 'e', 'r', 'p', 'l', 'e', 'x', 'i', 't', 'y', '.']` -> $N = 33$ 个词元。模型会预测在给定“T”的情况下“o”，在给定“To”的情况下“k”等。预测任务非常不同。
+3. **子词 (subword)分词器（例如，BPE/WordPiece）：** 可能会生成 `["Token", "ization", "Ġimpacts", "Ġperplex", "ity", "."]` -> $N = 6$ 个词元（假设是 GPT-2 风格的分词器，其中 `Ġ` 表示空格）。在这里，模型会预测在给定“Token”的情况下“ization”，在给定“Tokenization”的情况下“Ġimpacts”，依此类推。
+
+此示例显示了两个主要影响：
+
+- **序列长度 (N)：** 不同的分词器对于相同的底层文本会产生不同数量的词元 ($N$)。由于困惑度涉及对 $N$ 求负对数概率的平均值，因此改变 $N$ 会直接改变最终得分，即使分配给整个序列的底层总概率保持不变（通常不会）。通常，对于相同的文本，字符级别分词会导致比子词或词分词更长的序列（更高的 $N$）。
+- **预测任务难度：** 预测任务的性质会发生变化。预测下一个字符通常比预测下一个完整词或复杂子词更容易（条件熵更低）。然而，字符模型需要进行更多的预测。词级别模型进行的预测较少，但每个预测可能更难（从更大的词汇表 (vocabulary)中选择，预测更长的单元）。子词模型介于两者之间。
+
+让我们用一个简短的 PyTorch 示例，使用 `transformers` 库来说明词元差异：
+
+```python
+import torch
+from transformers import AutoTokenizer
+
+# 加载两个不同的分词器
+tokenizer_bert = AutoTokenizer.from_pretrained('bert-base-uncased')
+tokenizer_gpt2 = AutoTokenizer.from_pretrained('gpt2')
+
+text = "Tokenization impacts perplexity."
+
+# 使用 BERT 分词器 (WordPiece) 进行分词
+tokens_bert = tokenizer_bert.tokenize(text)
+ids_bert = tokenizer_bert.encode(text)
+print(f"BERT Tokens ({len(tokens_bert)}): {tokens_bert}")
+# 输出: BERT 词元 (6): ['token', '##ization', 'impacts', 'per',
+# '##plex', '##ity', '.']
+print(f"BERT IDs ({len(ids_bert)}): {ids_bert}")
+# 输出: BERT ID (9): [101, 19204, 17260, 7296, 2361, 18049, 4234,
+# 1012, 102]
+# 注意：包含 [CLS] 和 [SEP] 词元
+
+# 使用 GPT-2 分词器 (BPE) 进行分词
+tokens_gpt2 = tokenizer_gpt2.tokenize(text)
+ids_gpt2 = tokenizer_gpt2.encode(text)
+print(f"GPT-2 Tokens ({len(tokens_gpt2)}): {tokens_gpt2}")
+# 输出: GPT-2 词元 (6): ['Token', 'ization', 'Ġimpacts', 'Ġperplex',
+# 'ity', '.']
+print(f"GPT-2 IDs ({len(ids_gpt2)}): {ids_gpt2}")
+# 输出: GPT-2 ID (6): [11934, 10004, 33333, 21119, 2138, 13]
+# 注意：GPT-2 分词器默认不在此处添加特殊词元，
+# 长度与词元匹配
+```
+
+请注意，即使在两个子词分词器（BERT 的 WordPiece 和 GPT-2 的 BPE）之间，分段也不同（`'token', '##ization'` 与 `'Token', 'ization'`），并且 BERT 的 `encode` 方法默认包含 `[CLS]` 和 `[SEP]` 等特殊词元，这会影响标准困惑度计算中使用的序列长度 ($N$)。
+
+直接结果是，**只有当模型在评估数据集上使用完全相同的分词器和词汇表时，它们的困惑度得分才可以直接比较。** 比较一个使用 50,000 次合并的 BPE 模型与一个使用 30,000 词汇表的 WordPiece 模型的困惑度，就像比较苹果和橘子。底层的预测单元不同。
+
+
+
+![困惑度与分词器对比](plots/6059-0.json)
+
+
+
+> 上图说明了对于*相同的底层文本*，困惑度得分仅因所选分词器不同就可能发生显著变化。较低的值表明模型认为*每个词元*的预测任务更容易，但这并不能直接比较不同分词方案下模型质量。
+
+此外，在分词*之前*应用的预处理步骤，例如转换为小写或 Unicode 规范化，也会对此产生影响。如果一项评估将文本转换为小写而另一项没有，则区分大小写的词元分析器会生成不同的词元，导致困惑度得分无法比较。
+
+在报告或解释困惑度时，请务必清楚了解使用了哪种分词器，包括其词汇表大小和任何相关的预处理步骤。没有这些背景信息，一个原始的困惑度数值对于比较在不同分词机制下评估的其他模型的相对能力提供的信息有限。最可靠的比较是在使用相同评估设置（包括分词器）评估不同模型或检查点时进行的。
+
+## 参考资料
+
+- [Neural Machine Translation of Rare Words with Subword Units](https://aclanthology.org/P16-1162/) — Rico Sennrich, Barry Haddow, and Alexandra Birch (2016)
+  Journal: Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Pages: 1715-1725; DOI: [10.18653/v1/P16-1162](https://doi.org/10.18653/v1/P16-1162)
+  介绍了用于子词分词的字节对编码（BPE），这是GPT-2等许多现代语言模型中使用的基础方法，与讨论的子词示例直接相关。
+- [SentencePiece: A language independent subword tokenizer and detokenizer for Neural Text Processing](https://aclanthology.org/D18-2012/) — Taku Kudo and John Richardson (2018)
+  Journal: Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing: System Demonstrations; Publisher: Association for Computational Linguistics; Pages: 66-71; DOI: [10.18653/v1/D18-2012](https://doi.org/10.18653/v1/D18-2012)
+  介绍了SentencePiece，一个实现了包括WordPiece在内的子词分词算法的工具包，对理解BERT等分词器的工作方式有帮助。
+- [Tokenizers in the transformers library](https://huggingface.co/docs/transformers/main/en/tokenizer_summary) — Hugging Face team (2024)
+  Hugging Face transformers库中分词器的官方文档，解释了如何加载和使用不同的分词算法，与Python代码示例直接相关。

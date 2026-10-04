@@ -1,0 +1,98 @@
+---
+course: "python-llm-workflows"
+chapter: "intro-llm-workflows-python"
+lesson: "llm-application-components"
+sourceId: 5086
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-1-intro-llm-workflows-python/llm-application-components"
+title: "LLM 应用的常见组成部分"
+description: "识别大型语言模型驱动应用的典型构成模块。"
+order: 2
+plots: []
+sourceHash: "c6c137f2a9cc180cb9782dbf5868c9553010e2083d314a05bf98bb039fcf68ac"
+sourceCorrections: []
+---
+
+尽管具体的架构会因应用的复杂性和目的而异，但大多数使用 Python 构建的 LLM 驱动应用都有一套共同的功能模块。了解这些模块有助于设计、构建和调试你自己的 LLM 工作流程。
+
+让我们来看看你通常会遇到的部分：
+
+### 1. 输入/输出接口
+
+这是应用与外部环境（主要是最终用户或另一个系统）交互的方式。
+
+- **输入：** 获取初始请求或数据。这可以是聊天窗口中的文本、上传用于总结的文档、传递给 API 端点的参数 (parameter)，或是传感器数据。
+- **输出：** 呈现 LLM 工作流程生成的最终结果。这可能是显示给用户的文本、API 返回的 JSON 等结构化数据，或是在另一个系统中触发的动作。
+- **工具：** 通常涉及用于 Web 应用/API 的 Flask 或 FastAPI 等 Web 框架，`argparse` 或 Typer 等命令行接口库，或是图形用户界面（GUI）工具包。
+
+### 2. 提示管理
+
+这个模块负责构建发送给 LLM 的具体指令（即提示）。有效的提示能很好地帮助获得有用的回复。
+
+- **模板化：** 使用预定义的结构（模板），其中可以插入用户输入或其他动态数据。这确保了一致性并允许更复杂的指令。
+- **上下文 (context)注入：** 将相关信息加入提示中，例如用于对话上下文的聊天记录，或用于检索增强生成（RAG）的已获取文档。
+- **策略执行：** 以编程方式应用特定的提示工程 (prompt engineering)技术（如少样本示例、角色扮演指令或输出格式规范）。
+- **工具：** LangChain 等库提供强大的提示模板功能。Python 中的简单字符串格式化也足以满足基本情况。
+
+### 3. LLM 交互层
+
+此模块处理与大型语言模型本身的直接通信，通常通过 API 进行。
+
+- **API 调用：** 格式化提示和必要的参数 (parameter)（如温度、最大令牌数），并将请求发送到 LLM 提供商的端点（例如 OpenAI、Anthropic、Cohere 或自托管模型）。
+- **响应处理：** 接收来自 LLM 的原始输出。
+- **错误处理：** 实现处理 API 错误、速率限制、超时和潜在重试的逻辑。
+- **认证：** 安全管理 API 密钥或其他凭证。
+- **工具：** 标准的 Python `requests` 库可用于直接 HTTP 调用。更常见的是，开发者使用 LLM 厂商提供的官方客户端库（例如 `openai`），或 LangChain 等框架提供的抽象，这些都简化了与多个提供商的交互。
+
+### 4. 编排逻辑
+
+这通常是应用的核心，它定义了步骤的顺序，并协调其他模块之间的交互。
+
+- **工作流程定义：** 明确执行流程。LLM 应该先被调用吗？是否需要获取数据？是否需要连续进行多次 LLM 调用？
+- **模块协调：** 管理提示管理器、数据获取器、LLM 交互层和输出解析器之间的数据传递。
+- **条件逻辑：** 根据中间结果实现分支（例如，如果 LLM 要求澄清，则再次提示用户）。
+- **工具：** LangChain 等框架专门为此设计，提供“链”（用于顺序操作）和“代理”（用于更动态、使用工具的工作流程）等构造。自定义 Python 代码也可以实现此逻辑。
+
+### 5. 数据获取（常用于 RAG）
+
+许多高级 LLM 应用需要访问外部或私有数据源，以提供信息丰富或有依据的回复。
+
+- **数据加载：** 从各种来源（文本文件、PDF、网站、数据库）获取数据。
+- **索引：** 处理和组织数据（通常使用向量 (vector)嵌入 (embedding)），以便基于语义含义进行高效搜索。
+- **获取：** 根据用户的查询或当前上下文 (context)获取相关数据块。这些获取到的数据通常会注入到提示中（参见提示管理）。
+- **工具：** LlamaIndex 和 LangChain 在数据加载、索引（常与 Chroma、FAISS、Pinecone、Weaviate 等向量数据库集成）和数据获取方面提供广泛功能。
+
+### 6. 输出解析与格式化
+
+LLM 生成的原始文本通常需要经过处理才能变得有用或可展示。
+
+- **结构提取：** 解析 LLM 的输出以提取特定信息，特别是当提示要求结构化格式（如 JSON 或列表）时。
+- **数据清理：** 移除样板文本、修正小的格式问题，或验证提取的数据。
+- **转换：** 将输出转换为应用所需的最终格式（例如，渲染 HTML，填充数据库记录）。
+- **工具：** LangChain 提供各种“输出解析器”。正则表达式、JSON 解析库（`json`）和标准 Python 字符串操作也经常使用。
+
+### 7. 状态管理（用于对话应用）
+
+涉及来回对话的应用需要记住交互历史。
+
+- **历史追踪：** 存储先前的用户输入和 LLM 响应。
+- **上下文 (context)总结：** 可选地压缩较长的历史记录，以适应 LLM 的上下文窗口限制，同时保留重要信息。
+- **工具：** 简单的 Python 列表或字典可以管理短期状态。对于更复杂的情况，LangChain 提供内存模块，并且可能会使用外部数据库或缓存系统。
+
+以下图表展示了这些模块在一个典型检索增强生成（RAG）工作流程中如何交互：
+
+> 一张图表，显示了基本 RAG 应用中的信息流。用户输入触发编排器，编排器使用数据获取器从向量 (vector)存储中获取上下文。此上下文被添加到提示中，发送给 LLM，响应在显示给用户之前会经过解析。
+
+虽然不是每个应用都会用到这里列出的所有模块（一个简单的总结器可能不需要数据获取或复杂的状态管理），但这种分解提供了一个清晰的思维模型，帮助你思考使用 Python 构建 LLM 应用的架构。后续章节将详细说明如何使用特定的 Python 库和好的实践来实现这些模块。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: NeurIPS 2020; Pages: 9459-9474; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍了检索增强生成（RAG）范式，这是一种利用外部知识为LLM响应提供基础的关键技术，与数据检索组件直接相关。
+- [LangChain Python Documentation](https://python.langchain.com/docs/) — LangChain (2024)
+  LangChain的官方指南，这是一个构建LLM应用程序的主要框架，涵盖了提示管理、编排、数据检索和内存模块。
+- [Prompt Engineering Guide](https://www.promptingguide.ai/) — N/A (2024)
+  一个全面的社区驱动资源，详细介绍了各种提示工程技术和策略，对于有效的LLM交互和提示管理至关重要。
+- [Building LLM-Powered Applications: Learn to Build and Deploy Intelligent Apps with Latest LLM Tech](https://www.packtpub.com/product/building-llm-powered-applications/9781837632607) — Rajarshi Das (2024)
+  Publisher: Packt Publishing
+  一本构建和部署LLM应用程序的实用指南，提供了集成各种组件和使用Python工具的见解。

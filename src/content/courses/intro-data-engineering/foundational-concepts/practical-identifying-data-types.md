@@ -1,0 +1,119 @@
+---
+course: "intro-data-engineering"
+chapter: "foundational-concepts"
+lesson: "practical-identifying-data-types"
+sourceId: 5520
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-2-foundational-concepts/practical-identifying-data-types"
+title: "动手实践：识别数据类型"
+description: "练习从各种来源识别不同类型的数据。"
+order: 7
+plots: []
+sourceHash: "5fa49780f435e3ad7cc659dbd6f312c2668ca3a162f1ada6eef25fb2c1b3c0ea"
+sourceCorrections: []
+---
+
+好的，让我们把所学的数据类型知识付诸实践。能够快速辨别数据是结构化、半结构化还是非结构化的，是每位数据工程师的一项基本能力。为什么呢？因为数据类型决定了您如何收集、存储、处理它，并最终如何使其发挥作用。针对不同的数据组织方式，有最适合的工具和技术。
+
+想象一下整理邮件。您处理账单（带有明确字段的结构化信息）的方式，与处理私人信件（非结构化文本）或杂志（带有文章、广告等的半结构化内容）的方式是不同的。我们来看一些例子，并尝试对它们进行分类。
+
+### 示例一：销售记录
+
+请看以下代表销售交易的片段：
+
+```csv
+TransactionID,ProductID,CustomerID,SaleAmount,Timestamp
+1001,PROD-A,CUST-056,49.99,2023-10-26T10:00:15Z
+1002,PROD-B,CUST-101,120.50,2023-10-26T10:05:22Z
+1003,PROD-A,CUST-056,49.99,2023-10-26T10:12:01Z
+```
+
+**问题：** 这是哪种类型的数据？结构化、半结构化还是非结构化？
+
+此数据呈现清晰的表格格式。其中包含定义列的标题行：`TransactionID`、`ProductID`、`CustomerID`、`SaleAmount`、`Timestamp`。每一后续行都精确遵循此格式，为每个列提供一个值。数据整齐地适配表格形式，如电子表格或数据库表。
+
+这种严格的组织方式，带有预定义的模式（列及其预期数据类型），使其成为**结构化数据**。您可以根据列准确知道每条信息代表什么。常见例子包括关系型数据库中的数据以及像这样的CSV文件。
+
+### 示例二：产品目录条目
+
+现在，审查这部分描述产品的数据：
+
+```json
+{
+  "productId": "BK-003",
+  "name": "Introduction to Data Engineering",
+  "authors": [
+    {"firstName": "Alice", "lastName": "Chen"},
+    {"firstName": "Bob", "lastName": "Miller"}
+  ],
+  "description": "A foundational guide covering data pipelines, storage, and processing.",
+  "details": {
+    "pages": 350,
+    "publisher": "Tech Press",
+    "formats": ["Paperback", "eBook"]
+  },
+  "reviews": []
+}
+```
+
+**问题：** 这是哪种类型的数据？
+
+**分析：**
+这份以JSON格式呈现的数据，带有标签或标记 (token)（如`"productId"`、`"name"`、`"authors"`），赋予其组织性。然而，它不像上一个示例那样，不适配严格的行和列格式。
+
+1. 它使用键值对。
+2. 它包含嵌套结构（`details`）和列表（`authors`、`formats`、`reviews`）。
+3. 尽管有组织性，但其结构不像表格那样严格。例如，另一个产品可能拥有额外的字段，或省略一些可选字段（比如某个产品可能没有多位作者）。
+
+这种标签和分层结构的使用，但在没有对每条记录强制执行严格预定义模式的情况下，将其归类为**半结构化数据**。JSON、XML和YAML是半结构化数据的常见格式。
+
+### 示例三：支持工单邮件
+
+最后，考虑发送给客户支持系统的电子邮件正文：
+
+```text
+Subject: Issue with login
+
+Hi Support Team,
+
+I've been trying to log into my account (username: user123) since this morning, but I keep getting an 'Invalid Credentials' error. I'm certain I'm using the correct password, as I reset it yesterday. Could you please look into this? My last successful login was around 11 PM last night.
+
+Thanks,
+John Doe
+```
+
+**问题：** 这是哪种类型的数据？
+
+**分析：**
+这是自由格式的文本。
+
+1. 没有预定义的格式或模式。
+2. 尽管它包含信息（用户名、问题、时间），但这些信息嵌入 (embedding)在自然语言中。
+3. 提取特定的信息片段（如用户名`user123`）需要解析文本，而不仅仅是读取特定字段。
+
+这种缺乏内在组织性使其成为**非结构化数据**。想想图像、音频文件、视频文件以及像这封邮件正文一样的纯文本文档。它们都包含信息，但没有可被机器轻松解析的结构。
+
+### 总结归纳
+
+我们来将这些类型与结构的关系可视化呈现：
+
+> 数据类型存在于一个组织程度的连续体上，从高度结构化的表格到完全非结构化的文本或媒体。
+
+当您在工作中遇到不同的数据源时，请练习这种识别能力。问问自己：
+
+- 它是否整齐地适配于带有预定义字段的行和列？（结构化）
+- 它是否使用标签、标记 (token)或层次结构来组织数据，但没有严格、统一的模式？（半结构化）
+- 它是否缺乏内在的组织结构，比如自由文本或媒体？（非结构化）
+
+这项能力对选择合适的数据存储工具和策略（例如在关系型数据库、NoSQL数据库或数据湖之间做出决定）以及数据处理十分重要，我们将在后续章节中介绍这些内容。理解数据性质是构建高效数据系统的第一步。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  一本基础书籍，解释了不同数据类型（结构化、半结构化）的数据模型、存储和处理，以及它们对系统设计的影响。
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/) — Joe Reis and Matt Housley (2022)
+  Publisher: O'Reilly Media
+  提供数据工程的全面介绍，包括对不同数据类型（结构化、半结构化、非结构化）及其对数据系统影响的讨论。
+- [The DAMA Guide to the Data Management Body of Knowledge (DAMA-DMBOK2)](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEXLyWbNQ-Fxc-1rwIb4N6mVFO6hhFWlwcFquDIlvUHHJ_ohyX6yhtOSgsbeQeIc3U5hrpIKtiKDjAKKU4HgHakMyhSvLKHzRm7q4fzDAlmzQT71aY7wPvUhBkPfoD-lJJFg9OjFXROo4YcdKXZ3k5ceHpTKqfK7XBV40q0BkP7G5KQjkB5JvsMS5i6Rg==) — DAMA International (2017)
+  Publisher: Technics Publications
+  数据管理原则的综合指南，包括数据架构和数据分类，为理解和分类各种数据类型提供了框架。

@@ -1,0 +1,199 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "normalization-techniques"
+lesson: "batch-norm-backward-pass"
+sourceId: 4955
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-4-normalization-techniques/batch-norm-backward-pass"
+title: "批标准化：反向传播计算"
+description: "说明梯度如何通过批标准化层进行计算。"
+order: 4
+plots: []
+sourceHash: "4264dd60ee34179d7b69d96246e3c3c76d502a3babee7d0791043f7a3c0821a9"
+sourceCorrections: []
+---
+
+在明确了批标准化（BN）在前向传播过程中如何工作，即使用小批量统计数据对输入进行归一化 (normalization)，再进行缩放和平移之后，我们现在转向反向传播 (backpropagation)。为了通过梯度下降 (gradient descent)训练网络，我们需计算损失 $L$ 相对于BN层输入 $x_i$ 及可学习参数 (parameter) $\gamma$ 和 $\beta$ 的变化情况。这要求通过BN变换应用链式法则。
+
+我们回顾一下迷你批次 $\mathcal{B} = \{x_1, ..., x_m\}$ 中单个激活值 $x_i$ 的前向传播过程：
+
+1. 计算迷你批次均值：
+   
+   $$
+   \mu_\mathcal{B} = \frac{1}{m} \sum_{i=1}^{m} x_i
+   $$
+   
+2. 计算迷你批次方差：
+   
+   $$
+   \sigma_\mathcal{B}^2 = \frac{1}{m} \sum_{i=1}^{m} (x_i - \mu_\mathcal{B})^2
+   $$
+   
+3. 归一化输入：
+   
+   $$
+   \hat{x}_i = \frac{x_i - \mu_\mathcal{B}}{\sqrt{\sigma_\mathcal{B}^2 + \epsilon}}
+   $$
+   
+   （其中 $\epsilon$ 是一个用于数值稳定的小常数）
+4. 缩放和平移：
+   
+   $$
+   y_i = \gamma \hat{x}_i + \beta
+   $$
+   
+
+在反向传播过程中，我们从后续层接收到损失相对于BN层输出的梯度 $\frac{\partial L}{\partial y_i}$。我们的目标是计算 $\frac{\partial L}{\partial x_i}$、$\frac{\partial L}{\partial \gamma}$ 和 $\frac{\partial L}{\partial \beta}$。
+
+### 可学习参数 (parameter)（$\gamma$ 和 $\beta$）的梯度
+
+这些是使用链式法则计算的最直接的梯度：
+
+- **相对于 $\beta$ 的梯度**：参数 $\beta$ 直接加到输出 $y_i$ 上。
+
+  
+  $$
+  \frac{\partial L}{\partial \beta} = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i} \frac{\partial y_i}{\partial \beta} = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i} (1) = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i}
+  $$
+  
+
+  $\beta$ 的梯度就是来自输出 $y_i$ 的传入梯度的总和。
+- **相对于 $\gamma$ 的梯度**：参数 $\gamma$ 缩放归一化 (normalization)输入 $\hat{x}_i$。
+
+  
+  $$
+  \frac{\partial L}{\partial \gamma} = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i} \frac{\partial y_i}{\partial \gamma} = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i} (\hat{x}_i) = \sum_{i=1}^{m} \frac{\partial L}{\partial y_i} \hat{x}_i
+  $$
+  
+
+  $\gamma$ 的梯度是传入梯度的总和，每个梯度都由对应的归一化输入 $\hat{x}_i$ 加权。
+
+### 相对于输入（$x_i$）的梯度
+
+计算相对于输入 $x_i$ 的梯度更需细致考虑，因为 $x_i$ 通过多种方式影响输出 $y_i$：
+
+1. 直接通过 $\hat{x}_i$ 中的分子 $(x_i - \mu_\mathcal{B})$。
+2. 间接通过迷你批次均值 $\mu_\mathcal{B}$，它取决于批次中的所有 $x_j$。
+3. 间接通过迷你批次方差 $\sigma_\mathcal{B}^2$，它也取决于所有 $x_j$（包括 $x_i$）和 $\mu_\mathcal{B}$。
+
+我们需要仔细应用链式法则，考虑所有这些路径。设 $\sigma_{\mathcal{B},\epsilon} = \sqrt{\sigma_\mathcal{B}^2 + \epsilon}$。梯度计算通过以下操作逆向进行：
+
+1. **相对于归一化 (normalization)输入 $\hat{x}_i$ 的梯度**：
+
+   
+   $$
+   \frac{\partial L}{\partial \hat{x}_i} = \frac{\partial L}{\partial y_i} \frac{\partial y_i}{\partial \hat{x}_i} = \frac{\partial L}{\partial y_i} \gamma
+   $$
+   
+2. **相对于 $\mu_\mathcal{B}$ 和 $\sigma_\mathcal{B}^2$ 的梯度**：这些需要汇总迷你批次中所有 $\hat{x}_j$ 的贡献，因为这两个统计量都会影响所有归一化输入。
+
+   
+   $$
+   \frac{\partial L}{\partial \sigma_\mathcal{B}^2} = \sum_{i=1}^{m} \frac{\partial L}{\partial \hat{x}_i} \frac{\partial \hat{x}_i}{\partial \sigma_\mathcal{B}^2} = \sum_{i=1}^{m} \frac{\partial L}{\partial \hat{x}_i} (x_i - \mu_\mathcal{B}) \left( -\frac{1}{2} (\sigma_\mathcal{B}^2 + \epsilon)^{-3/2} \right)
+   $$
+   
+   
+   $$
+   \frac{\partial L}{\partial \mu_\mathcal{B}} = \sum_{i=1}^{m} \frac{\partial L}{\partial \hat{x}_i} \frac{\partial \hat{x}_i}{\partial \mu_\mathcal{B}} = \left( \sum_{i=1}^{m} \frac{\partial L}{\partial \hat{x}_i} \frac{-1}{\sigma_{\mathcal{B},\epsilon}} \right) + \frac{\partial L}{\partial \sigma_\mathcal{B}^2} \frac{\partial \sigma_\mathcal{B}^2}{\partial \mu_\mathcal{B}}
+   $$
+   
+
+   其中 $\frac{\partial \sigma_\mathcal{B}^2}{\partial \mu_\mathcal{B}} = \frac{1}{m} \sum_{j=1}^{m} 2(x_j - \mu_\mathcal{B})(-1) = \frac{-2}{m} \sum_{j=1}^{m} (x_j - \mu_\mathcal{B}) = 0$。
+   因此，第二项消失，简化了 $\mu_\mathcal{B}$ 的梯度：
+
+   
+   $$
+   \frac{\partial L}{\partial \mu_\mathcal{B}} = \sum_{i=1}^{m} \frac{\partial L}{\partial \hat{x}_i} \frac{-1}{\sigma_{\mathcal{B},\epsilon}}
+   $$
+   
+3. **相对于输入 $x_i$ 的梯度**：现在我们将路径结合起来。输入 $x_i$ 通过 $\hat{x}_i$、$\mu_\mathcal{B}$ 和 $\sigma_\mathcal{B}^2$ 影响损失。
+
+   
+   $$
+   \frac{\partial L}{\partial x_i} = \frac{\partial L}{\partial \hat{x}_i} \frac{\partial \hat{x}_i}{\partial x_i} + \frac{\partial L}{\partial \sigma_\mathcal{B}^2} \frac{\partial \sigma_\mathcal{B}^2}{\partial x_i} + \frac{\partial L}{\partial \mu_\mathcal{B}} \frac{\partial \mu_\mathcal{B}}{\partial x_i}
+   $$
+   
+
+   我们需要统计量相对于单个输入 $x_i$ 的偏导数：
+
+   - $\frac{\partial \hat{x}_i}{\partial x_i} = \frac{1}{\sigma_{\mathcal{B},\epsilon}}$ (直接路径，忽略此项通过均值/方差的依赖关系)
+   - $\frac{\partial \sigma_\mathcal{B}^2}{\partial x_i} = \frac{2(x_i - \mu_\mathcal{B})}{m}$
+   - $\frac{\partial \mu_\mathcal{B}}{\partial x_i} = \frac{1}{m}$
+
+   代入这些项，得到 $\frac{\partial L}{\partial x_i}$ 的最终表达式：
+
+   
+   $$
+   \frac{\partial L}{\partial x_i} = \frac{\partial L}{\partial \hat{x}_i} \frac{1}{\sigma_{\mathcal{B},\epsilon}} + \frac{\partial L}{\partial \sigma_\mathcal{B}^2} \frac{2(x_i - \mu_\mathcal{B})}{m} + \frac{\partial L}{\partial \mu_\mathcal{B}} \frac{1}{m}
+   $$
+   
+
+   综合所有并简化（完整的推导过程相当细致，通常在论文或教科书的附录中可查阅），结果可以更紧凑地表示。一种常见形式是：
+
+   
+   $$
+   \frac{\partial L}{\partial x_i} = \frac{1}{m \sigma_{\mathcal{B},\epsilon}} \left( m \frac{\partial L}{\partial \hat{x}_i} - \sum_{j=1}^{m} \frac{\partial L}{\partial \hat{x}_j} - \hat{x}_i \sum_{j=1}^{m} \frac{\partial L}{\partial \hat{x}_j} \hat{x}_j \right)
+   $$
+   
+
+   请注意 $\frac{\partial L}{\partial \hat{x}_j} = \frac{\partial L}{\partial y_j} \gamma$。
+
+主要的一点是，梯度 $\frac{\partial L}{\partial x_i}$ 不仅取决于与该特定激活对应的梯度 $\frac{\partial L}{\partial y_i}$，还由于共享的均值和方差计算，取决于*迷你批次中所有其他激活*（$j=1...m$）的梯度和值。
+
+### 梯度流的可视化
+
+反向传播 (backpropagation)过程中的依赖关系可以被可视化。我们考虑单个输出 $y_i$ 的计算图，以及损失梯度如何流回输入 $x_i$，其中包含了共享的 $\mu_\mathcal{B}$ 和 $\sigma_\mathcal{B}^2$ 的影响。
+
+> 此图表展示了批标准化计算中的依赖关系以及反向传播过程中梯度的流动。请注意，输入 $x_i$ 如何直接从 $\hat{x}_i$ 接收梯度贡献，并间接通过迷你批次统计量 $\mu_\mathcal{B}$ 和 $\sigma_\mathcal{B}^2$ 接收。
+
+### 框架中的实现
+
+幸运的是，你很少需要手动实现此反向传播 (backpropagation)。当您定义一个包含BN层的模型时，PyTorch和TensorFlow等深度学习 (deep learning)框架会使用自动微分（autograd）来自动计算这些梯度。例如，在PyTorch中：
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例设置
+batch_size = 4
+num_features = 10
+input_tensor = torch.randn(batch_size, num_features, requires_grad=True)
+
+# 定义一个批标准化层（affine=True 表示 gamma 和 beta 是可学习的）
+bn_layer = nn.BatchNorm1d(num_features=num_features, affine=True)
+
+# 前向传播
+output = bn_layer(input_tensor)
+
+# 假设一个用于演示的虚拟损失
+loss = output.mean()
+
+# 反向传播
+loss.backward()
+
+# 梯度现在已被计算和存储
+# 相对于输入的梯度: input_tensor.grad
+# 相对于 gamma（权重）的梯度: bn_layer.weight.grad
+# 相对于 beta（偏置）的梯度: bn_layer.bias.grad
+
+print("输入梯度的形状:", input_tensor.grad.shape)
+print("gamma 梯度的形状:", bn_layer.weight.grad.shape)
+print("beta 梯度的形状:", bn_layer.bias.grad.shape)
+
+# >>> 输入梯度的形状: torch.Size([4, 10])
+# >>> gamma 梯度的形状: torch.Size([10])
+# >>> beta 梯度的形状: torch.Size([10])
+```
+
+尽管框架处理了具体实现，但理解其背后的计算原理，特别是在输入梯度 $\frac{\partial L}{\partial x_i}$ 上对整个迷你批次的依赖，对于理解模型行为和训练期间可能出现的问题很有价值。这种理解有助于我们知晓BN为何影响训练动态和泛化性能，我们将在下一部分讨论这一点。
+
+## 参考资料
+
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe and Christian Szegedy (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); Pages: 448-456; DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  引入批标准化的开创性论文，提供了其提出的原始动机以及前向和后向传播的详细数学推导。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本全面而权威的深度学习教材，涵盖了深度学习的理论基础和实践方面，包括在优化背景下对批标准化的讨论。
+- [Dive into Deep Learning](https://d2l.ai/chapter_convolutional-neural-networks/batch-norm.html) — Aston Zhang, Zachary C. Lipton, Mu Li, Alex Smola (2023)
+  Publisher: Cambridge University Press
+  一本交互式开源教材，为各种深度学习组件提供了详细的解释和分步数学推导，其中包括关于批标准化的前向和后向传播的专门章节。

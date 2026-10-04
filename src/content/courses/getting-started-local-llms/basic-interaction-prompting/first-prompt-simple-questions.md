@@ -1,0 +1,83 @@
+---
+course: "getting-started-local-llms"
+chapter: "basic-interaction-prompting"
+lesson: "first-prompt-simple-questions"
+sourceId: 4277
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-5-basic-interaction-prompting/first-prompt-simple-questions"
+title: "你的第一个提示：简单问题"
+description: "学习向你的本地LLM提问并获取答案。"
+order: 2
+plots: []
+sourceHash: "bc88953a8990818e9e09438b70b1ad8da54d22f895ec9a43d4df2f9c5cf7c853"
+sourceCorrections: []
+---
+
+与大型语言模型 (LLM) 交互的主要方式是通过一个**提示**。这适用于各种LLM，包括使用Ollama或LM Studio等工具在本地运行的模型，以及基于云服务的模型。
+
+正如我们在章节介绍中提到的，提示就是你提供给模型的输入文本。它是你的指令、你的问题、你的起点。LLM读取你的提示，然后基于它生成文本。
+
+最直接的开始方式是提出简单问题，就像你询问搜索引擎或一位知识渊博的助手一样。可以把LM Studio中的聊天界面或Ollama中的命令行界面看作是与模型直接沟通的途径。你输入问题，按下回车键，模型就会生成回应。
+
+让我们尝试一个基本的常识性问题。如果你在终端中使用Ollama，运行`ollama run llama3`之类的命令后，你会看到类似`>>>`的提示符。你可以直接输入你的问题：
+
+```text
+>>> 法国首都是哪里？
+```
+
+LLM会处理这个输入并生成回应，看起来可能像这样：
+
+```text
+法国首都是巴黎。
+```
+
+如果你使用LM Studio这样的图形工具，你会把同样的问题输入到聊天输入框中并点击发送。原理是一样的：你的问题就是提示，模型会生成答案。
+
+我们再试一个，可能不是那么侧重于事实的：
+
+```text
+>>> 给我家宠物狗起个名字。
+```
+
+模型可能会回应：
+
+```text
+好的，这里有一些受欢迎且友好的狗狗名字：
+* 巴迪
+* 露西
+* 马克斯
+* 黛西
+* 查理
+```
+
+请注意，模型不只给了一个名字；它理解了提示背后的*意图*（“建议”暗示需要多个选项），并提供了一个列表。
+
+### 它是如何工作的（简单说明）？
+
+你可能好奇LLM如何“知道”法国首都是哪里，或者如何想出狗狗的名字。请记住第一章中提到的，LLM是基于海量的文本数据训练的。当你提供像“法国首都是哪里？”这样的提示时，模型实际上是根据它在训练期间学到的模式，预测最有可能跟在该问题之后的词语序列。对于常见的常识性问题，统计上最可能的完成就是正确答案。对于像建议名字这样更开放的问题，它会预测形成常见且相关建议的词语。
+
+它并不是人类意义上的“思考”，而是执行极其复杂的模式匹配和序列预测。你的提示设定了背景，模型则生成最可能的后续内容。
+
+### 鼓励实践
+
+了解你的本地LLM如何回应的最佳方式是向它提出各种简单问题。你可以尝试询问：
+
+- 历史事实（“Python编程语言是什么时候首次发布的？”）
+- 定义（“光合作用是什么？”）
+- 简单看法（“网站按钮用什么颜色好？”）
+- 一般知识（“我们太阳系中有多少颗行星？”）
+
+留意模型如何回应。答案准确吗？详细吗？它听起来自信吗？这种初步的实践有助于你理解你选择运行的特定模型的能力和特点。
+
+提出简单问题是与你的本地LLM交互的起点。在接下来的部分中，我们将查看如何给出更复杂的指令，并理解模型如何处理更长的对话。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [https://doi.org/10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构的奠基性论文，该架构是现代大型语言模型的关键，使其能够处理和生成文本。
+- [OpenAI Prompt Engineering Guide](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2023)
+  Publisher: OpenAI
+  官方指南，提供设计有效提示以与大型语言模型交互的实用建议和技术，从初始概念开始。
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky, James H. Martin (2025)
+  Publisher: Prentice Hall
+  一本广泛使用的自然语言处理教材，涵盖了语言模型和文本生成的理论基础。

@@ -1,0 +1,110 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "conversational-applications-with-memory"
+lesson: "tracking-entities-in-conversation"
+sourceId: 7781
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-7-conversational-applications-with-memory/tracking-entities-in-conversation"
+title: "在对话中追踪实体"
+description: "学习如何使用实体记忆来跟踪对话中提及的特定信息。"
+order: 4
+plots: []
+sourceHash: "2c30f23ec34ac59ec7c3038ae2e54e240a69bdc406bc36186cb5ba4739129af5"
+sourceCorrections: []
+---
+
+缓冲区记忆和摘要记忆在保持对话的整体感知方面表现出色，但它们在保留具体、有结构的事实方面常常表现不佳。用户的姓名、产品型号或送货地址等信息在长篇对话记录或摘要中容易丢失或混乱。为解决这一不足，实体记忆提供了一种专门方法，用于在整个对话过程中准确追踪和找回这些实体信息。
+
+实体记忆如同当前对话的结构化知识库。它提取并追踪具体命名实体，例如人名、地点、组织或产品，并以有序方式存储。这为您的应用提供了一份可靠的“事实清单”供参考，确保相关细节永不遗漏。
+
+### 实体记忆的工作原理
+
+实体记忆并非仅存储原始文本，而是维护一个对象列表，其中每个对象代表对话中提及的一个独特实体。当对话中添加新消息时，实体提取过程（通常使用大型语言模型）会识别新实体或更新现有实体。
+
+`ConversationBuffer` 提供了这项即用功能。通过启用实体追踪，它会自动分析新消息并维护一个内部实体列表。您可以在初始化时通过一个简单标志来启用此功能：
+
+```python
+from kerb.memory import ConversationBuffer
+
+# 在创建缓冲区时启用实体追踪
+entity_buffer = ConversationBuffer(enable_entity_tracking=True)
+```
+
+当 `enable_entity_tracking` 设置为 `True` 时，每次调用 `add_message` 都会启动一个后台进程，用于识别和追踪消息内容中的实体。
+
+每个被追踪项都存储为一个 `Entity` 对象，其中包含实用信息：
+
+- **`name`**: 实体的名称（例如，“Alex”，“旧金山”）。
+- **`type`**: 实体的类别（例如，“人物”，“地点”）。
+- **`mentions`**: 实体被提及的次数。
+- **`first_seen`**: 首次提及的时间戳。
+- **`last_seen`**: 最近一次提及的时间戳。
+
+### 实体追踪的实现
+
+我们来实际操作一下。我们将模拟一次客户支持对话，然后检查缓冲区自动追踪到的实体。
+
+```python
+# 初始化一个启用实体追踪的缓冲区
+entity_buffer = ConversationBuffer(
+    max_messages=100,
+    enable_entity_tracking=True
+)
+
+# 模拟包含多个实体的对话
+entity_buffer.add_message(
+    "system",
+    "You are a support agent for a network hardware company."
+)
+entity_buffer.add_message(
+    "user",
+    "Hi, I'm Alex from Innovate Corp. We're having issues with our Kerb-Router-X500 at our San Francisco office."
+)
+entity_buffer.add_message(
+    "assistant",
+    "Hello Alex, I can certainly help with the Kerb-Router-X500. Could you confirm the device's serial number?"
+)
+entity_buffer.add_message(
+    "user",
+    "Sure, it's KRX500-12345. Innovate Corp purchased it last year."
+)
+
+# 从缓冲区中获取追踪到的实体
+tracked_entities = entity_buffer.get_entities()
+
+print(f"追踪到 {len(tracked_entities)} 个独特实体：")
+for entity in tracked_entities:
+    print(f"\n- 名称: {entity.name}")
+    print(f"  类型: {entity.type}")
+    print(f"  提及次数: {entity.mentions}")
+```
+
+当您运行此代码时，缓冲区会处理每条消息并识别实体。`get_entities()` 方法会返回一个合并后的列表。您会发现“Alex”、“Innovate Corp”和“Kerb-Router-X500”被提及多次，并且 `mentions` 计数反映了这一点，让您了解实体在对话中的相关程度。
+
+### 应用场景与优势
+
+在需要保留特定细节以实现功能的应用程序中，实体记忆尤其有用。
+
+- **个性化助手**：助手可以记住用户的姓名、公司或项目详情，从而实现更流畅和个性化的互动。
+- **客户支持聊天机器人**：支持机器人可以追踪产品名称、序列号、案例ID和客户信息，从而避免反复询问相同信息。
+- **任务导向系统**：旅行机器人可以记住用户的出发地、目的地和旅行日期。点餐机器人可以追踪购物车中的商品。
+
+主要优势是令牌效率和可靠性。与其强迫大型语言模型在长篇对话记录中寻找特定细节，不如直接提供一个简洁、结构化的已知实体列表。这可以包含在每一轮的系统提示中，为模型提供一份始终保持更新的相关事实摘要。例如，您可以格式化实体并将它们添加到提示的开头：
+
+```text
+已知实体：
+- 人物: Alex (提及2次)
+- 组织: Innovate Corp (提及2次)
+- 产品: Kerb-Router-X500 (提及2次)
+- 地点: 旧金山 (提及1次)
+```
+
+这种紧凑格式让大型语言模型能够即时获取相关信息，提升其生成相关且准确回复的能力，同时比包含完整的对话历史记录消耗更少的令牌。通过将实体记忆与缓冲区记忆或摘要记忆结合使用，您可以构建一个高效、多层次的上下文 (context)管理系统，用以开发精密的对话应用程序。
+
+## 参考资料
+
+- [Deep Learning for Named Entity Recognition: A Survey](https://link.springer.com/article/10.1007/s10462-019-09758-5) — Yifan Zhang, Jianbo Yang, and Peng Chen (2020)
+  Journal: Artificial Intelligence Review; Publisher: Springer US; Volume: 53; Pages: 1251–1279; DOI: [10.1007/s10462-019-09758-5](https://doi.org/10.1007/s10462-019-09758-5)
+  一篇关于应用于命名实体识别的深度学习技术的综合综述，这是对话式 AI 系统中实体提取的核心技术。
+- [Prompt Engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2024)
+  Publisher: OpenAI
+  大型语言模型提示工程的官方指南，包括有效管理和提供上下文以改进模型响应和效率的策略。

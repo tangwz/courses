@@ -1,0 +1,277 @@
+---
+course: "introduction-to-machine-learning"
+chapter: "supervised-learning-regression"
+lesson: "practice-simple-linear-regression"
+sourceId: 1488
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-machine-learning/chapter-3-supervised-learning-regression/practice-simple-linear-regression"
+title: "实践：实现简单线性回归"
+description: "在动手实践部分运用简单线性回归原理。"
+order: 7
+plots: ["plots/1488-0.json", "plots/1488-1.json", "plots/1488-2.json"]
+sourceHash: "74103f627843b1c66e4ab64708839f22f6def8a3bd0b6794758ed0689e69b9c4"
+sourceCorrections: []
+---
+
+简单线性回归模拟变量间的线性关系。成本函数衡量预测误差，梯度下降 (gradient descent)通过最小化此误差找到最拟合的线。这个过程的实现将使用 Python 和 NumPy 库（用于数值运算）以及 Matplotlib（用于数据可视化）。
+
+我们将使用一个简单的人造数据集：学习时间与考试分数之间的关系。这能让我们将注意力集中在回归机制本身。
+
+### 准备工具
+
+首先，我们需要导入将要使用的库。如果您尚未安装它们，可能需要先进行安装（例如，使用 `pip install numpy matplotlib`）。
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 图表样式设置，以便更好地显示
+plt.style.use('seaborn-v0_8-whitegrid')
+```
+
+### 我们的样本数据
+
+假设我们有一些学生的数据，显示了他们的学习时间和考试分数。
+
+```python
+# 学习小时数（特征 X）
+X = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+# 考试分数（目标 y）
+y = np.array([45, 50, 55, 60, 65, 70, 75, 80, 85, 90])
+
+# 打印数据以查看
+print("学习小时数 (X):", X)
+print("考试分数 (y):", y)
+```
+
+这些数据显示出一种正向线性关系：学习时间越长通常会导致分数越高。我们来可视化它以确认。
+
+```python
+# 创建图表
+fig, ax = plt.subplots()
+ax.scatter(X, y, color='#1c7ed6', label='学生数据') # 使用蓝色
+ax.set_xlabel("学习小时数")
+ax.set_ylabel("考试分数")
+ax.set_title("考试分数 vs. 学习小时数")
+ax.legend()
+ax.grid(True)
+plt.show()
+```
+
+
+
+![考试分数 vs. 学习小时数](plots/1488-0.json)
+
+
+
+> 显示了我们样本数据中学习时间（X轴）与考试分数（Y轴）之间关系的散点图。
+
+该图清楚地显示了数据点聚集在一条线附近，这使得简单线性回归成为一个合适的模型。
+
+### 线性回归模型
+
+回想一下我们的简单线性回归模型：
+$\hat{y} = mx + b$
+这里，$\hat{y}$ 是预测的考试分数，$x$ 是学习小时数，$m$ 是直线的斜率，$b$ 是 Y 轴截距。我们的目标是找到使直线最拟合数据的 $m$ 和 $b$ 值。
+
+### 实现成本函数（MSE）
+
+我们需要一种方法来衡量给定直线（由 $m$ 和 $b$ 定义）拟合数据的程度。我们使用均方误差（MSE）成本函数：
+$J(m, b) = \frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2 = \frac{1}{N} \sum_{i=1}^{N} (y_i - (mx_i + b))^2$
+其中 $N$ 为数据点的数量。
+
+我们来编写一个 Python 函数来计算它：
+
+```python
+def calculate_cost(X, y, m, b):
+  """
+  计算均方误差成本。
+
+  参数:
+    X: 输入特征的 Numpy 数组。
+    y: 目标值的 Numpy 数组。
+    m: 回归线当前的斜率。
+    b: 回归线当前的 Y 轴截距。
+
+  返回:
+    计算得到的 MSE 成本。
+  """
+  N = len(X)
+  predictions = m * X + b
+  error = y - predictions
+  cost = np.sum(error**2) / N
+  return cost
+
+# 示例：计算初始猜测（m=0, b=0）的成本
+initial_m = 0
+initial_b = 0
+initial_cost = calculate_cost(X, y, initial_m, initial_b)
+print(f"初始成本 (m=0, b=0): {initial_cost}")
+```
+
+### 实现梯度下降 (gradient descent)
+
+现在，我们将实现梯度下降算法，通过迭代地最小化成本函数来找到最佳的 $m$ 和 $b$。我们需要成本函数 $J(m, b)$ 对 $m$ 和 $b$ 的偏导数：
+
+对 $m$ 的导数：
+$\frac{\partial J}{\partial m} = \frac{-2}{N} \sum_{i=1}^{N} x_i(y_i - (mx_i + b))$
+
+对 $b$ 的导数：
+$\frac{\partial J}{\partial b} = \frac{-2}{N} \sum_{i=1}^{N} (y_i - (mx_i + b))$
+
+每次迭代中 $m$ 和 $b$ 的更新规则是：
+$m := m - \alpha \frac{\partial J}{\partial m}$
+$b := b - \alpha \frac{\partial J}{\partial b}$
+其中 $\alpha$ 是学习率。
+
+我们来编写梯度下降函数：
+
+```python
+def gradient_descent(X, y, initial_m, initial_b, learning_rate, iterations):
+  """
+  执行梯度下降以找到最佳的 m 和 b 值。
+
+  参数:
+    X: 输入特征的 Numpy 数组。
+    y: 目标值的 Numpy 数组。
+    initial_m: 初始斜率。
+    initial_b: 初始 Y 轴截距。
+    learning_rate: 更新的步长。
+    iterations: 运行的迭代次数。
+
+  返回:
+    包含最终斜率、最终截距以及每次迭代成本列表的元组 (m, b, cost_history)。
+  """
+  m = initial_m
+  b = initial_b
+  N = len(X)
+  cost_history = [] # 用于存储每次迭代的成本
+
+  for i in range(iterations):
+    # 1. 计算预测值
+    predictions = m * X + b
+
+    # 2. 计算误差
+    error = y - predictions
+
+    # 3. 计算梯度
+    gradient_m = (-2/N) * np.sum(X * error)
+    gradient_b = (-2/N) * np.sum(error)
+
+    # 4. 更新 m 和 b
+    m = m - learning_rate * gradient_m
+    b = b - learning_rate * gradient_b
+
+    # 5. 计算并存储本次迭代的成本
+    cost = calculate_cost(X, y, m, b)
+    cost_history.append(cost)
+
+    # 可选：每隔几次迭代打印成本以监控进度
+    if (i + 1) % 100 == 0:
+      print(f"迭代 {i+1}/{iterations}, 成本: {cost:.4f}")
+
+  return m, b, cost_history
+
+# 设置超参数
+learning_rate = 0.01
+iterations = 1000
+
+# 运行梯度下降
+final_m, final_b, cost_history = gradient_descent(X, y, initial_m, initial_b, learning_rate, iterations)
+
+print(f"\n训练完成。")
+print(f"最终斜率 (m): {final_m:.4f}")
+print(f"最终截距 (b): {final_b:.4f}")
+print(f"最终成本 (MSE): {cost_history[-1]:.4f}")
+```
+
+您应该会看到每次打印的迭代中成本都在下降，这表明梯度下降正在成功地找到更好的 $m$ 和 $b$ 值。
+
+我们还可以绘制成本历史图，以可视化优化过程：
+
+```python
+# 绘制成本历史图
+plt.figure()
+plt.plot(range(iterations), cost_history, color='#f03e3e') # 使用红色
+plt.xlabel("迭代次数")
+plt.ylabel("成本 (MSE)")
+plt.title("成本函数值随迭代次数的变化")
+plt.grid(True)
+plt.show()
+```
+
+
+
+![成本函数值随迭代次数的变化](plots/1488-1.json)
+
+
+
+> 均方误差（MSE）随梯度下降迭代次数的增加而减小，这表明模型正在学习。注意：实际值取决于您的代码生成的 `cost_history` 列表。
+
+### 结果可视化
+
+现在，让我们使用刚找到的 `final_m` 和 `final_b` 值，将原始数据与回归线一起绘制出来。
+
+```python
+# 为回归线生成点
+line_x = np.array([min(X) - 1, max(X) + 1]) # 将线稍微超出数据范围
+line_y = final_m * line_x + final_b
+
+# 创建图表
+fig, ax = plt.subplots()
+ax.scatter(X, y, color='#1c7ed6', label='学生数据') # 数据点用蓝色
+ax.plot(line_x, line_y, color='#f03e3e', label='回归线') # 回归线用红色
+ax.set_xlabel("学习小时数")
+ax.set_ylabel("考试分数")
+ax.set_title("简单线性回归拟合")
+ax.legend()
+ax.grid(True)
+plt.show()
+```
+
+
+
+![简单线性回归拟合](plots/1488-2.json)
+
+
+
+> 学生数据点的散点图，上面叠加了计算出的最佳拟合回归线。注意：精确的线取决于您的代码计算出的 `final_m` 和 `final_b`。`line_y_placeholder` 应替换为使用 `final_m` 和 `final_b` 为 x=0 和 x=11 计算出的实际 y 值。
+
+这条线应该很好地穿过我们数据点的中心。
+
+### 进行预测
+
+有了我们训练好的模型（即找到了 `final_m` 和 `final_b`），我们现在可以预测新的学习小时数对应的考试分数。例如，对于学习了 7.5 小时的人，我们会预测多少分数？
+
+```python
+# 预测 7.5 小时学习时间的得分
+hours_new = 7.5
+predicted_score = final_m * hours_new + final_b
+
+print(f"\n预测 {hours_new} 小时学习时间的得分: {predicted_score:.2f}")
+```
+
+### 总结
+
+在本次实践中，您从头开始实现了简单线性回归：
+
+1. 可视化了样本数据。
+2. 实现了 MSE 成本函数。
+3. 实现了梯度下降 (gradient descent)算法以最小化成本。
+4. 使用学习到的参数 (parameter)（$m$ 和 $b$）绘制了回归线。
+5. 对新数据进行了预测。
+
+尽管像 Scikit-learn 这样的库（我们稍后会遇到）可以用几行代码完成这些步骤，但了解成本函数和梯度下降的工作原理，为您处理更复杂的机器学习 (machine learning)模型打下了扎实的基础。您现在已经看到了模型如何通过迭代调整其参数来减少预测误差，从而从数据中“学习”。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用指南，涵盖了Python中线性回归、成本函数和梯度下降的实现。
+- [Machine Learning (Coursera Course)](https://www.coursera.org/learn/machine-learning) — Andrew Ng (2022)
+  Publisher: DeepLearning.AI and Stanford Online
+  为线性回归和梯度下降提供了清晰的概念和数学基础，通常包含实践练习。
+- [NumPy User Guide](https://numpy.org/doc/stable/user/index.html) — NumPy Developers (2024)
+  Python数值运算的官方指南，包含机器学习实现中重要的数组操作。
+- [Matplotlib Documentation](https://matplotlib.org/stable/contents.html) — Matplotlib Development Team (2024)
+  Publisher: Matplotlib Development Team
+  Python中创建静态、交互式和动画可视化的官方资源，用于绘制数据和回归线。

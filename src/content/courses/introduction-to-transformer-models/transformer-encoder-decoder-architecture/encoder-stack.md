@@ -1,0 +1,62 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "transformer-encoder-decoder-architecture"
+lesson: "encoder-stack"
+sourceId: 3000
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-3-transformer-encoder-decoder-architecture/encoder-stack"
+title: "编码器层堆叠"
+description: "详细说明单个编码器层的组件：多头自注意力机制和位置级别前馈网络。"
+order: 5
+plots: []
+sourceHash: "93b22c96b0d131df859c82b52236cf66ba33c838680fb326e9718b6dea58d14f"
+sourceCorrections: []
+---
+
+编码器在 Transformer 架构中的主要职责是处理输入序列，并生成一系列语境表示，通常称为隐藏状态或上下文 (context)向量 (vector)。可以把它想象成在阅读输入句子时，对句子中每个词语与其他所有词语之间的关系形成充分的理解。这个处理过的序列不仅包含单个词语的含义，还包含它们在整个输入语境中如何彼此关联。
+
+这种编码过程并非一步完成。相反，Transformer 采用堆叠的相同编码器层。最初的“Attention Is All You Need”论文使用了 N=6 个层，但这个数量可以根据具体的模型实现和任务而变化。一个层的输出成为堆叠中下一个层的输入。这种堆叠方式使模型能够逐步学习输入数据中更复杂的表示和关系。
+
+让我们查看单个编码器层的内部结构。每个编码器层包含两个主要子层：
+
+1. **多头自注意力 (self-attention)机制 (attention mechanism)：** 这是第一个子层。如前一章所述，自注意力机制允许模型在编码特定词语时，权衡输入序列中不同词语的重要性。多头注意力 (multi-head attention)机制通过并行执行多次自注意力过程，并使用不同的学习到的线性投影（不同的 Q、K、V 权重 (weight)矩阵组）来增强这一点。这使得每个头能够潜在地专注于不同类型的关系或不同的表示子空间（例如，一个头可能专注于句法关系，另一个专注于语义相似性）。各头的输出被拼接并进行线性投影，以形成该子层的最终输出。
+2. **位置级别前馈网络 (FFN)：** 这是第二个子层。它是一个相对简单的全连接前馈网络，通常包含两次线性变换，中间夹有一个 ReLU（修正线性单元）激活函数 (activation function)。公式通常表示为：
+
+   
+   $$
+   FFN(x) = \max(0, xW_1 + b_1)W_2 + b_2
+   $$
+   
+
+   这里，$x$ 是前一个子层在特定位置的输出，$W_1$、$b_1$、$W_2$ 和 $b_2$ 是学习到的参数 (parameter)（权重矩阵和偏置 (bias)向量）。一个重要的细节是，*虽然在给定层内所有位置使用相同的 FFN（相同的 $W_1, b_1, W_2, b_2$）*，但它被 *独立地* 应用于每个位置的向量表示。这意味着代表“词语 A”的向量的变换不直接依赖于在此 FFN 子层内为“词语 B”发生的变换（尽管上下文已由自注意力层纳入）。该网络通过引入非线性和允许对关注特征进行更复杂的变换，增加了模型的容量。中间层通常在将其投影回 $d_{model}$ 之前，会扩展维度（例如，从 $d_{model}=512$ 扩展到 $d_{ff}=2048$）。
+
+### 残差连接和层归一化 (normalization)（`Add & Norm`）
+
+很重要的一点是，在这两个子层（多头自注意力 (self-attention)机制 (attention mechanism)和位置级别前馈网络）的每一个之后，编码器采用另外两种操作：残差连接，然后是层归一化。这种组合通常被称为“Add & Norm”（加和归一化）。
+
+- **加（残差连接）：** 子层的输入被加到子层的输出上。如果子层的输入是 $x$，并且子层计算的函数是 $Sublayer(x)$，那么残差连接的输出是 $x + Sublayer(x)$。这项技术借鉴自 ResNet 等模型，有助于减轻深度网络中的梯度消失问题，使梯度在训练期间能够更直接地流经网络。它还有助于网络学习对恒等函数的修改，而不是从头开始学习整个变换。
+- **归一化（层归一化）：** 相加之后，应用层归一化。与批归一化不同，层归一化对 *每个* 数据样本的输入在特征维度上独立进行归一化。这有助于稳定网络的激活，从而实现更快、更可靠的训练，尤其是在 Transformer 这样的深层架构中。
+
+因此，对于输入 $x$，一个编码器层内的计算过程如下所示：
+
+1. $AttentionOutput = MultiHeadSelfAttention(x)$
+2. $SubLayer1Output = LayerNorm(x + AttentionOutput)$
+3. $FFNOutput = PositionWiseFFN(SubLayer1Output)$
+4. $LayerOutput = LayerNorm(SubLayer1Output + FFNOutput)$
+
+然后，$LayerOutput$ 成为堆叠中下一个编码器层的输入。
+
+> 流程图显示了单个 Transformer 编码器层中的组件和连接。注意残差连接（虚线表示输入 'x' 在归一化之前被添加）汇入“加和归一化”块。
+
+整个编码器层堆叠的最终输出（经过所有 N 个层之后）是一系列向量 (vector)，每个输入 token 对应一个。这些向量包含从整个输入序列中通过堆叠的自注意力和前馈操作得到的丰富上下文 (context)信息。这组上下文向量随后通常传递给解码器层堆叠的每个层，作为生成输出序列的依据。
+
+## 参考资料
+
+- [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2016)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Pages: 770-778; DOI: [10.1109/CVPR.2016.90](https://doi.org/10.1109/CVPR.2016.90)
+  介绍了残差连接，这是Transformer模型中采用的一个关键架构组件，有助于训练深度神经网络。
+- [Layer Normalization](https://arxiv.org/abs/1607.06450) — Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton (2016)
+  Journal: arXiv preprint arXiv:1607.06450; DOI: [10.48550/arXiv.1607.06450](https://doi.org/10.48550/arXiv.1607.06450)
+  提出了层归一化方法，该方法在Transformer编码器中用于稳定激活并提高训练效率。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/9.pdf) — Daniel Jurafsky and James H. Martin (2023)
+  Publisher: Pearson; Pages: Chapter 9, Section 9.3: The Transformer
+  一本广受认可的教材，全面解释了Transformer模型，包括对编码器内部机制的详细分析。

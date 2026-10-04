@@ -1,0 +1,115 @@
+---
+course: "essential-numpy-pandas"
+chapter: "getting-started-numpy-arrays"
+lesson: "basic-array-attributes"
+sourceId: 1702
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-2-getting-started-numpy-arrays/basic-array-attributes"
+title: "数组基本属性"
+description: "查看数组属性，如形状、大小、维度数量 (ndim) 和数据类型 (dtype)。"
+order: 5
+plots: []
+sourceHash: "39ccd7365076fa918ab5595323f59a8e5c065091b9fc1538c884afc15a9a9290"
+sourceCorrections: []
+---
+
+理解 NumPy 数组的结构通常是必需的，尤其当数组很大时，而无需打印整个数组的内容。NumPy 数组带有一些实用的属性，它们提供关于数组本身的元数据。这些属性不像方法那样需要括号 `()`；你可以直接使用点表示法访问它们（例如，`my_array.attribute`）。主要的属性有：`ndim`、`shape`、`size` 和 `dtype`。
+
+假设你已经创建了两个这样的数组：
+
+```python
+import numpy as np
+
+# 一个一维数组
+arr1d = np.array([1, 2, 3, 4, 5])
+
+# 一个二维数组（3行，4列）
+arr2d = np.array([[1.0, 2.0, 3.0, 4.0],
+                  [5.0, 6.0, 7.0, 8.0],
+                  [9.0, 10.0, 11.0, 12.0]])
+```
+
+现在，我们来查看它们的属性。
+
+### `ndim`：轴（维度）的数量
+
+`ndim` 属性告诉你数组的轴或维度的数量。一维数组有一个轴，二维数组有两个轴（就像电子表格中的行和列），三维数组有三个，以此类推。
+
+```python
+print(arr1d.ndim)
+# 预期输出: 1
+
+print(arr2d.ndim)
+# 预期输出: 2
+```
+
+了解维度的数量对于理解如何索引数组以及操作可能如何表现非常重要。
+
+### `shape`：数组的维度
+
+`ndim` 告诉你轴的*数量*，而 `shape` 属性告诉你数组沿每个轴的*大小*。它返回一个整数元组，表示每个维度上的元素数量。
+
+对于我们的一维数组 `arr1d`，其形状反映了它的长度：
+
+```python
+print(arr1d.shape)
+# 预期输出: (5,)
+```
+
+请注意元组 `(5,)` 中的逗号。这表示它是一个只含一个元素的元组，指明一个长度为 5 的维度。
+
+对于我们的二维数组 `arr2d`，其形状反映了其行和列的结构：
+
+```python
+print(arr2d.shape)
+# 预期输出: (3, 4)
+```
+
+这个输出 `(3, 4)` 告诉我们数组有 2 个维度（因为元组中有两个数字，与 `arr2d.ndim` 匹配）。第一个轴的长度是 3（可以认为是行），第二个轴的长度是 4（可以认为是列）。
+
+`shape` 是最常用的属性之一，因为它能快速概览数组的结构。
+
+### `size`：元素总数
+
+`size` 属性提供数组中元素的总数量。它简单地等于 `shape` 元组中所有元素的乘积。
+
+```python
+print(arr1d.size)
+# 预期输出: 5
+
+print(arr2d.size)
+# 预期输出: 12
+```
+
+对于 `arr1d`，大小是 5（与它的形状 `(5,)` 匹配）。对于 `arr2d`，大小是 $3 \times 4 = 12$（与它的形状 `(3, 4)` 匹配）。这个属性对于快速了解你正在处理的数据量很方便。
+
+### `dtype`：数组元素的数据类型
+
+我们之前讨论过 NumPy 数组包含相同数据类型的元素。`dtype` 属性显示了该数据类型是什么。NumPy 在你创建数组时会自动推断出合适的数据类型，但你也可以明确指定它。
+
+```python
+print(arr1d.dtype)
+# 预期输出: dtype('int64') (或者可能是 'int32'，取决于你的系统)
+
+print(arr2d.dtype)
+# 预期输出: dtype('float64')
+```
+
+在 `arr1d` 中，NumPy 检测到整数，所以它很可能分配了一个 64 位整数类型 (`int64`)。在 `arr2d` 中，我们使用了带小数点的数字（例如 `1.0`），所以 NumPy 分配了一个 64 位浮点类型 (`float64`)。
+
+了解 `dtype` 很重要，原因如下：
+
+- **内存占用：** 不同的数据类型占用不同大小的内存（例如，`int64` 比 `int8` 占用更多内存）。
+- **精度：** 浮点类型（`float32`、`float64`）提供不同级别的精度。
+- **兼容性：** 某些操作需要特定的数据类型。
+
+这些属性（`ndim`、`shape`、`size`、`dtype`）是你检查和理解 NumPy 数组结构和性质的首要工具。定期检查它们有助于确保你的数组结构符合预期，然后再进行更复杂的操作。
+
+## 参考资料
+
+- [The N-dimensional array (ndarray)](https://numpy.org/doc/stable/reference/arrays.ndarray.html) — NumPy Developers (2024)
+  官方文档详细介绍了 NumPy `ndarray` 的结构及其核心属性，例如 `ndim`、`shape`、`size` 和 `dtype`。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  这本广受认可的书籍提供了 NumPy 的实践介绍，包括如何创建数组和检查其基本属性。
+- [NumPy arrays](https://www.scipy-lectures.org/intro/numpy/) — Gaël Varoquaux, Emmanuelle Gouillart, Olav Vahtras, and contributors (2024)
+  一个广受好评的在线资源，清晰地解释了 NumPy 数组的基本概念，包括它们的维度、形状、大小和数据类型。

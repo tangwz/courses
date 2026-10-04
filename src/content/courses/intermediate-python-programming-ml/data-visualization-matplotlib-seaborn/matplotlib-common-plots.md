@@ -1,0 +1,141 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "data-visualization-matplotlib-seaborn"
+lesson: "matplotlib-common-plots"
+sourceId: 2174
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-4-data-visualization-matplotlib-seaborn/matplotlib-common-plots"
+title: "创建常用图表类型"
+description: "使用Matplotlib生成折线图、柱状图、散点图和直方图等标准图表。"
+order: 2
+plots: []
+sourceHash: "6f4cae70cda866a3402f4966dc92363098d9f7ec48245356ed77aa06727abd1f"
+sourceCorrections: []
+---
+
+我们将制作一些最常使用的图表类型。这些可视化方法是数据初步分析的核心，能帮助你快速掌握数据集中蕴含的趋势、关系和分布。我们将使用通常导入为“plt”的“matplotlib.pyplot”，以及用于生成示例数据的NumPy。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 确保图表能在Jupyter notebook等环境中正确显示
+# %matplotlib inline # 如果使用Jupyter，请取消注释
+```
+
+### 折线图
+
+折线图非常适合显示在连续区间或序列上的趋势，如时间序列数据或数学函数的输出。Matplotlib的“plt.plot()”函数用线连接数据点。
+
+我们来绘制一个简单的二次函数：
+
+```python
+# 示例数据：x值及其平方
+x = np.arange(0, 10, 0.5) # 值从0到9.5，步长为0.5
+y = x**2
+
+# 创建图表
+plt.figure(figsize=(8, 4)) # 可选：创建指定大小的图
+plt.plot(x, y)
+
+# 添加基本标签以清晰显示
+plt.xlabel("X 值")
+plt.ylabel("Y 值 (X 的平方)")
+plt.title("简单折线图")
+
+# 显示图表
+plt.show()
+```
+
+“plt.plot(x, y)”命令接受x坐标和y坐标，并在连续点之间绘制线条。这立即呈现二次函数向上弯曲的趋势。
+
+### 散点图
+
+散点图用于显示两个数值变量之间的关系。图表上的每个点代表一个观测值，根据其在x轴和y轴上的值确定位置。它们对于识别相关性、聚类或异常值特别有用。请使用“plt.scatter()”函数。
+
+我们来显示两组随机数，以查看是否存在任何明显的关系：
+
+```python
+# 示例数据：x和y的50个随机点
+np.random.seed(42) # 用于复现性
+x = np.random.rand(50)
+y = np.random.rand(50)
+
+# 创建散点图
+plt.figure(figsize=(8, 5))
+plt.scatter(x, y)
+
+# 添加基本标签
+plt.xlabel("随机变量 X")
+plt.ylabel("随机变量 Y")
+plt.title("两个随机变量的散点图")
+
+# 显示图表
+plt.show()
+```
+
+在此例中，由于数据是随机的，“plt.scatter(x, y)”生成一团没有明显规律的点，表示这两个变量之间没有相关性。如果存在线性关系，点将倾向于沿着一条线分布。
+
+### 柱状图
+
+柱状图非常适合比较不同离散类别之间的数量。每个条的长度代表该类别值的量级。Matplotlib提供“plt.bar()”用于垂直条，“plt.barh()”用于水平条。
+
+假设比较不同水果的计数：
+
+```python
+# 示例数据：类别及其计数
+categories = ['Apples', 'Oranges', 'Bananas', 'Grapes']
+counts = [23, 17, 31, 15]
+
+# 创建柱状图
+plt.figure(figsize=(7, 5))
+plt.bar(categories, counts, color=['red', 'orange', 'yellow', 'purple']) # 可选：指定颜色
+
+# 添加基本标签
+plt.xlabel("水果类型")
+plt.ylabel("数量")
+plt.title("不同水果的数量")
+
+# 显示图表
+plt.show()
+```
+
+“plt.bar(categories, counts)”函数创建柱体，其中x轴上的位置由类别决定，y轴上的高度对应计数。我们在这里使用了“color”参数 (parameter)来展示一个简单的定制化。
+
+### 直方图
+
+直方图有助于显示单个数值变量的分布。它们将数据分组到“箱”（区间）中，并使用柱体显示每个箱中观测值的频率（计数）。这显示其背后的频率分布，例如是否对称、偏斜或多峰。请使用“plt.hist()”函数。
+
+我们来看1000个从标准正态分布中提取的随机数的分布：
+
+```python
+# 示例数据：从标准正态分布中提取的1000个点
+data = np.random.randn(1000)
+
+# 创建直方图
+plt.figure(figsize=(8, 5))
+# “bins=30”表示将数据范围分成30个区间
+plt.hist(data, bins=30, edgecolor='black') # edgecolor使箱体更清晰
+
+# 添加基本标签
+plt.xlabel("值")
+plt.ylabel("频率")
+plt.title("正态分布数据的直方图")
+
+# 显示图表
+plt.show()
+```
+
+“plt.hist(data, bins=30)”自动计算数据范围，将其分成30个等距区间（箱），计数每个箱中落入的数据点数量，并为每个箱绘制一个代表该计数的柱体。生成的形状近似于正态分布的钟形曲线特征。“bins”参数 (parameter)控制分布视图的精细程度。
+
+这四种图表类型：折线图、散点图、柱状图和直方图，为数据初步分析提供了基本工具。虽然这些示例包含了基本标签，但下一节将介绍如何广泛定制图表外观，使其更具信息性并更吸引人。
+
+## 参考资料
+
+- [Matplotlib Documentation](https://matplotlib.org/stable/) — Matplotlib Development Team (2024)
+  Matplotlib库的官方文档，提供了所有图表类型和自定义选项的详细API参考和示例。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本基础性教材，提供了使用Matplotlib、Pandas和NumPy等Python库进行数据操作和可视化的实用示例。
+- [Python Data Science Handbook: Essential Tools for Working with Data](https://jakevdp.github.io/PythonDataScienceHandbook/) — Jake VanderPlas (2016)
+  Publisher: O'Reilly Media
+  在数据科学背景下，详细解释并示例了如何使用Matplotlib创建各种图表以及理解数据分布。

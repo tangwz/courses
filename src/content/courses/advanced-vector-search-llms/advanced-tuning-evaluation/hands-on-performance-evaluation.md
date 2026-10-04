@@ -1,0 +1,184 @@
+---
+course: "advanced-vector-search-llms"
+chapter: "advanced-tuning-evaluation"
+lesson: "hands-on-performance-evaluation"
+sourceId: 3914
+sourceUrl: "https://apxml.com/zh/courses/advanced-vector-search-llms/chapter-5-advanced-tuning-evaluation/hands-on-performance-evaluation"
+title: "动手实践：全面性能评估"
+description: "实践环节，使用标准指标对向量搜索设置进行全面的性能评估。"
+order: 8
+plots: ["plots/3914-0.json", "plots/3914-1.json"]
+sourceHash: "e9de537170674df1cbe4030602505059ad9f64f7994c24be40ae1d59751a6f56"
+sourceCorrections: []
+---
+
+评估向量 (vector)搜索设置的性能对于优化关联性（召回率/精确率）与速度（延迟/吞吐量 (throughput)）之间的权衡非常重要。这个实践练习会引导您完成近似最近邻（ANN）索引的全面性能评估设置与执行。
+
+我们将模拟评估 HNSW 索引，这是第一章中介绍的一种常见选择。我们将侧重于测量 Recall@k 和查询延迟，同时改变一个重要的调优参数 (parameter) `efSearch`。
+
+### 先决条件
+
+开始之前，请确保您有一个正常运行的 Python 环境，其中包含用于数值运算的 `numpy` 等库、用于数据处理的 `pandas`，以及一个能够运行 ANN 搜索的库（例如 `faiss-cpu` 或 `faiss-gpu`、`annoy`，或者向量 (vector)数据库的客户端）。您还需要：
+
+1. **嵌入 (embedding)数据集**：向量嵌入的集合。对于本练习，假设您有一个形状为 `(N, D)` 的 NumPy 数组 `data_vectors`，其中 `N` 是向量数量，`D` 是维度。
+2. **查询集**：一组较小的向量 `query_vectors`（形状为 `(Q, D)`），您希望为其查找邻居。
+3. **真实近邻**：`query_vectors` 中每个查询向量的真实最近邻。这通常是通过对 `data_vectors` 执行精确 k-NN 搜索（例如，暴力计算）预先计算的。假设您已将其存储，可能是一个列表的列表或一个二维数组 `ground_truth_indices`，其中 `ground_truth_indices[i]` 包含 `query_vectors[i]` 的实际前 `K` 个最近邻的索引。让 `K` 为我们关注的邻居数量（例如，K=10）。
+
+### 步骤 1：设置索引
+
+首先，我们需要使用我们选定的库构建 HNSW 索引。以下是使用 Faiss 语法的示例：
+
+```python
+import faiss
+import numpy as np
+import time
+
+# 假设 data_vectors 已加载 (N, D)
+N, D = data_vectors.shape
+
+# HNSW 参数
+M = 32  # 每个节点的连接数
+efConstruction = 100 # 构建质量/速度权衡
+
+# 构建 HNSW 索引
+index = faiss.IndexHNSWFlat(D, M)
+index.hnsw.efConstruction = efConstruction
+
+print("正在构建索引...")
+start_time = time.time()
+index.add(data_vectors)
+build_time = time.time() - start_time
+print(f"索引构建完成，用时 {build_time:.2f} 秒。")
+
+# 注意：在生产环境中，您通常会保存/加载索引
+# faiss.write_index(index, "my_hnsw_index.faiss")
+# index = faiss.read_index("my_hnsw_index.faiss")
+```
+
+这段代码初始化了一个 HNSW 索引，用于维度为 `D` 的向量 (vector)，在构建过程中每层有 `M` 个连接。`efConstruction` 影响索引构建的质量和所需时间。
+
+### 步骤 2：定义评估循环
+
+现在，我们将循环遍历搜索时参数 (parameter) `efSearch` 的不同值。该参数控制 HNSW 搜索阶段维护的动态列表的大小。值越大通常会带来更好的召回率，但延迟也会增加。
+
+我们将测量：
+
+- **Recall@K**：ANN 搜索返回的 K 个结果中，找到真实前 K 个邻居的比例。
+- **平均查询延迟**：执行单次搜索所需的平均时间。
+- **每秒查询数（QPS）**：每秒处理的查询数量。
+
+```python
+# 假设 query_vectors 和 ground_truth_indices 已加载
+# ground_truth_indices 应包含前 K 个邻居的索引
+Q = query_vectors.shape[0]
+K = ground_truth_indices.shape[1] # 要评估的邻居数量（例如，10）
+
+efSearch_values = [16, 32, 64, 128, 256] # 要测试的示例值
+results = []
+
+for efSearch in efSearch_values:
+    print(f"\n正在评估 efSearch = {efSearch}...")
+    index.hnsw.efSearch = efSearch # 设置搜索参数
+
+    all_query_indices = []
+    start_eval_time = time.time()
+
+    # 对所有查询执行搜索
+    # 我们通常搜索 K 个邻居
+    D_ann, I_ann = index.search(query_vectors, K)
+
+    end_eval_time = time.time()
+    total_eval_time = end_eval_time - start_eval_time
+    avg_latency_ms = (total_eval_time / Q) * 1000
+    qps = Q / total_eval_time
+
+    # 计算 Recall@K
+    total_matches = 0
+    for i in range(Q):
+        # 查询 i 的真实近邻
+        true_neighbors = set(ground_truth_indices[i])
+        # 查询 i 检索到的邻居
+        retrieved_neighbors = set(I_ann[i])
+
+        # 计算匹配数
+        matches = len(true_neighbors.intersection(retrieved_neighbors))
+        total_matches += matches
+
+    # 所有查询的平均召回率
+    recall_at_K = total_matches / (Q * K)
+
+    print(f"  Recall@{K}: {recall_at_K:.4f}")
+    print(f"  平均延迟: {avg_latency_ms:.2f} 毫秒")
+    print(f"  QPS: {qps:.2f}")
+
+    results.append({
+        "efSearch": efSearch,
+        "Recall@K": recall_at_K,
+        "Avg Latency (ms)": avg_latency_ms,
+        "QPS": qps
+    })
+
+# 存储结果以供分析
+import pandas as pd
+results_df = pd.DataFrame(results)
+print("\n评估摘要:")
+print(results_df)
+```
+
+这里使用的 Recall@K 公式是：
+
+
+$$
+\text{Recall@K} = \frac{1}{Q} \sum_{i=1}^{Q} \frac{|\text{ANN\_结果}_i \cap \text{真实近邻}_i|}{K}
+$$
+
+
+其中 $\text{ANN\_结果}_i$ 是 ANN 搜索为查询 $i$ 返回的 $K$ 个索引的集合，而 $\text{真实近邻}_i$ 是查询 $i$ 的 $K$ 个真实最近邻索引的集合。
+
+### 步骤 3：分析权衡
+
+`results_df` DataFrame 现在包含了每个测试过的 `efSearch` 值的性能指标。可视化权衡的一种常见方式是绘制 Recall@K 对比平均延迟或 QPS 的图表。
+
+
+
+![HNSW 性能：Recall@10 与延迟对比](plots/3914-0.json)
+
+
+
+> Recall@10 和平均查询延迟对比 HNSW `efSearch` 参数 (parameter)的图表。这种可视化方式清楚地展现了权衡：更高的 `efSearch` 值会提高召回率，但同时也会增加延迟。
+
+或者，您可以绘制 Recall@K 对比 QPS 的图表：
+
+
+
+![HNSW 性能：Recall@10 与吞吐量 (QPS) 对比](plots/3914-1.json)
+
+
+
+> Recall@10 和每秒查询数（QPS）对比 HNSW `efSearch` 参数的图表。这表明增加 `efSearch` 会提高召回率，但会降低系统的吞吐量 (throughput)。
+
+### 解读与后续步骤
+
+从本次评估中生成的图表让您能够对参数 (parameter)调优做出明智的决定。
+
+- **需要高召回率**：如果您的应用（如某些 RAG 场景）需要非常高的召回率，您可能会选择更高的 `efSearch` 值，并接受随之而来的延迟增加或 QPS 降低。
+- **低延迟很重要**：如果低延迟是重要的（例如，实时语义搜索建议），您可能会选择较低的 `efSearch` 值，以牺牲部分召回率为代价换取更快的响应。
+
+这个实践练习提供了一个模板。您可以通过以下方式进行扩展：
+
+- 评估不同的 ANN 算法（IVF、PQ 变体）。
+- 测试不同的参数组合（例如，HNSW 的 `M` 和 `efConstruction`；IVF 的 `nlist` 和 `nprobe`）。
+- 测量索引构建时间和内存使用情况。
+- 酌情加入精确率或其他关联性指标。
+- 在不同硬件上运行评估（CPU 与 GPU），以了解硬件加速的影响。
+
+系统性评估对于构建有效且高效的向量 (vector)搜索系统非常重要。通过应用这些方法，您可以自如地调整系统，以满足您的 LLM 应用对性能和关联性的具体要求。
+
+## 参考资料
+
+- [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://doi.org/10.1016/j.is.2017.10.005) — Yu. A. Malkov and D. A. Yashunin (2018)
+  Journal: Information Systems; Publisher: Elsevier; Volume: 76; Pages: 113-122; DOI: [10.1016/j.is.2017.10.005](https://doi.org/10.1016/j.is.2017.10.005)
+  这是介绍HNSW算法的原始出版物，对本次实践练习至关重要。它详细说明了该算法的构建和搜索原理。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  提供信息检索概念的基础理解，包括用于评估搜索系统的召回率和精确率等相关性度量。

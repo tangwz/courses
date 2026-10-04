@@ -1,0 +1,97 @@
+---
+course: "advanced-diffusion-architectures"
+chapter: "advanced-sampling-optimization"
+lesson: "quantization-diffusion-models"
+sourceId: 5474
+sourceUrl: "https://apxml.com/zh/courses/advanced-diffusion-architectures/chapter-6-advanced-sampling-optimization/quantization-diffusion-models"
+title: "扩散模型的量化"
+description: "应用量化（如8位）以减小模型尺寸并加速推理，同时最大程度地减少质量损失。"
+order: 6
+plots: ["plots/5474-0.json"]
+sourceHash: "bd02542474a60386dd906666ab7a581028f89d4dabcb469cd9847b42743d1768"
+sourceCorrections: []
+---
+
+正如本章前面讨论的，许多扩散技术固有的迭代采样过程，由于计算成本和内存需求，对部署构成了主要的瓶颈。尽管先进的采样器可以减少*步数*，但优化每一步中的计算是加速的另一个重要途径。量化 (quantization)为此提供了一个有效的方法，通过降低模型权重 (weight)以及可能的激活值的数值精度来实现此目的。
+
+### 量化 (quantization)的理由
+
+扩散模型，特别是采用大型U-Net或Transformer的当前先进架构，通常包含数十亿个参数 (parameter)，以32位浮点（FP32）或16位浮点（FP16/BF16）格式存储。量化旨在用较低精度的格式来表示这些参数并进行计算，通常是8位整数（INT8）。
+
+主要益处包括：
+
+1. **减小内存占用：** 将精度从FP32降至INT8理论上可将模型尺寸减小最多4倍。这对于在内存（显存 (VRAM)）有限的设备上部署大型模型，或减少内存带宽瓶颈非常重要。
+2. **更快的推理 (inference)：** 许多现代硬件加速器（GPU、TPU、专用AI芯片）都拥有高度优化的INT8计算单元。使用INT8算术执行矩阵乘法和卷积运算可以比使用FP16或FP32快得多，从而在采样过程中带来更低的延迟。
+3. **更低的能耗：** 数据传输减少和算术运算简化通常意味着功耗降低，这对边缘设备和大规模部署很重要。
+
+### 量化 (quantization)方法
+
+总体而言，量化方法分为两大类：
+
+#### 1. 训练后量化（PTQ）
+
+PTQ指在模型已使用标准浮点精度训练完成后，对其进行量化。这通常更易于实施，因为它不需要更改原始训练流程。
+
+- **流程：** PTQ通常需要一个校准步骤，其中将一个小型、有代表性的数据集通过浮点模型，以收集关于权重 (weight)和激活值范围的统计信息。然后，这些统计信息（例如，最小值/最大值、分布）用于确定从浮点值到较低精度整数范围的最佳映射（缩放因子和零点）。
+
+  - **静态PTQ：** 使用校准数据集离线确定量化参数 (parameter)。激活值根据这些预计算的范围进行量化。
+  - **动态PTQ：** 离线量化权重，但在推理 (inference)过程中动态（即时）确定激活值的量化参数。这有时能提供更好的精度，但会增加运行时开销。
+- **权衡：** PTQ应用更快，但可能导致模型精度出现更明显的下降，特别是对于对精度变化敏感的模型。扩散模型因其迭代细化过程，可能特别易受影响。
+
+#### 2. 感知量化训练（QAT）
+
+QAT在模型训练过程中纳入量化的影响。它模拟了推理时预期的精度降低，使模型能够调整其权重并学习适应量化噪声的表示。
+
+- **流程：** QAT通常涉及在训练期间将“伪”量化操作插入模型图。这些操作模拟了浮点数转换为整数并再转换回浮点数时的舍入和截断效应。模型的优化器随后会考虑这种模拟的量化噪声来调整权重，从而有效地学会对其进行补偿。
+- **权衡：** 与PTQ相比，QAT通常能更好地保持精度，其性能常能接近原始浮点模型。然而，它需要修改训练代码，并显著增加训练的复杂性和时间。
+
+### 扩散模型的具体挑战
+
+与标准分类或检测模型相比，量化 (quantization)扩散模型面临独特的挑战：
+
+- **误差累积：** 去噪过程的迭代特性意味着在早期步骤中引入的微小量化误差可能会在后续步骤中累积和放大，导致最终样本质量出现明显的下降（例如，伪影、精细细节丢失）。
+- **激活值的动态范围：** U-Net或Transformer块中的激活值可能表现出宽泛且有时不可预测的动态范围，特别是在不同的时间步长上。这使得PTQ的精确校准变得困难，也可能对QAT构成难题。选择不当的量化范围可能导致饱和（截断）或分辨率损失。
+- **组件敏感度：** 某些组件可能比其他组件对量化更敏感。例如，注意力机制 (attention mechanism)（特别是softmax操作）和归一化 (normalization)层（如AdaLN或GroupNorm）可能需要仔细处理或更高的精度。时间步嵌入 (embedding)也需要适当的量化策略。
+- **保持生成保真度：** 最终目标是高质量的生成。量化不能显著损害FID（Fréchet Inception Distance）等指标，更重要的是，不能损害生成图像或数据的感知质量。在分类中可以接受的轻微统计偏差，在生成中可能会造成视觉上的不协调。
+
+### 实际实施与评估
+
+为扩散模型实施量化 (quantization)通常包括以下步骤：
+
+1. **性能分析：** 找出原始浮点模型中的性能瓶颈（例如，哪些层消耗的时间/内存最多）。
+2. **选择策略：** 根据精度要求和可用资源，在PTQ（更快，可能质量较低）和QAT（更复杂，可能质量较高）之间做出选择。
+3. **工具：** 使用支持量化的框架和库，例如：
+   - PyTorch Quantization Toolkit
+   - TensorFlow Lite Optimization Toolkit
+   - NVIDIA TensorRT (for deployment optimization, often involving PTQ)
+   - ONNX Runtime (supports quantized model execution)
+4. **校准（针对PTQ）：** 选择一个多样化且有代表性的校准数据集（通常训练数据的一个子集就足够了）。
+5. **微调 (fine-tuning)（针对QAT）：** 修改训练循环以包含伪量化节点并微调模型，通常从预训练 (pre-training)的浮点权重 (weight)开始。
+6. **混合精度：** 考虑对模型的不同部分应用不同的精度级别。例如，将计算量大的线性层和卷积层量化为INT8，而将注意力或归一化 (normalization)层等敏感操作保留为FP16甚至FP32。
+7. **评估：** 严格评估量化后的模型。
+   - **性能：** 衡量推理 (inference)速度（延迟、吞吐量 (throughput)）和内存使用量的减少。
+   - **精度/质量：** 使用FID、IS（Inception Score）等指标比较生成质量，并进行彻底的目视检查，以对比原始模型查看是否存在伪影、模式崩溃或细节丢失。
+
+下图展示了应用量化时通常观察到的总体权衡：
+
+
+
+![量化权衡：速度 vs. 质量](plots/5474-0.json)
+
+
+
+> 典型的数值精度、推理速度和模型质量保持之间的关系。对于INT8，QAT通常比PTQ保留更高的质量，而两者都比浮点格式提供显著的速度提升。
+
+量化是一种有效的优化方法，但将其有效应用于扩散模型需要仔细考虑模型的敏感度以及对生成质量的潜在影响。成功实施后，它能显著提高在资源受限环境中部署这些大型模型的可行性。
+
+## 参考资料
+
+- [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](https://openaccess.thecvf.com/content_cvpr_2018/papers/Jacob_Quantization_and_Training_CVPR_2018_paper.pdf) — Benoit Jacob, Skirmantas Kligys, Bo Chen, Menglong Zhu, Matthew Tang, Andrew Howard, Hartwig Adam, and Dmitry Kalenichenko (2018)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 2704-2713; DOI: [10.1109/CVPR.2018.00216](https://doi.org/10.1109/CVPR.2018.00216)
+  本文介绍了量化感知训练（QAT），这是本节讨论的一种技术，为模型如何训练以抵抗量化提供了基础理解。
+- [Q-Diffusion: Quantizing Diffusion Models for Efficient Generation](https://openaccess.thecvf.com/content/CVPR2023/papers/He_Q-Diffusion_Quantizing_Diffusion_Models_for_Efficient_Generation_CVPR_2023_paper.pdf) — Yefei He, Hanyu Wang, Xiangyu Sun, Jianxing Xu, Qingyi Gu, Yang Liu, Zhaodong Wang, Zhangyang Wang, Kaiyuan Guo, and Wenshuo Li (2023)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: Institute of Electrical and Electronics Engineers (IEEE); Pages: 7855-7865; DOI: [10.1109/CVPR52688.2023.00762](https://doi.org/10.1109/CVPR52688.2023.00762)
+  本文直接解决了扩散模型量化的挑战并提出了解决方案，为实际实现和保持生成质量的策略提供了见解。
+- [Outlier-Aware Quantization for Diffusion Models](https://ieeexplore.ieee.org/document/10168345) — Qingyi Gu, Yefei He, Fan Yang, Yihua Ye, Jianxing Xu, Zhangyang Wang, Kaiyuan Guo, Wenshuo Li (2023)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 7844-7854; DOI: [10.1109/CVPR52688.2023.00761](https://doi.org/10.1109/CVPR52688.2023.00761)
+  这项工作专门解决了扩散模型激活中动态范围和异常值的问题，这是本节强调的一个主要挑战，为更有效的量化提供了先进技术。

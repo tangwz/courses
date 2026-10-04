@@ -1,0 +1,289 @@
+---
+course: "essential-numpy-pandas"
+chapter: "basic-data-manipulation-pandas"
+lesson: "handling-missing-filling"
+sourceId: 1807
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-8-basic-data-manipulation-pandas/handling-missing-filling"
+title: "处理缺失数据：填充"
+description: "用指定值、均值、中位数或前向/后向填充方法替换缺失值。"
+order: 3
+plots: []
+sourceHash: "30fb7e46f843f305e63d69ce2d05b337c4328c252ef9c82386f8b91e68086a21"
+sourceCorrections: []
+---
+
+使用 `dropna()` 删除含有缺失值的行或列是一种简单的方法，但这通常不是最佳方法。删除数据意味着丢失可能有的重要信息，特别是当缺失值稀疏或数据集较小时。一个常用方法是*填充*缺失值，这也被称为数据补全。
+
+Pandas 中处理此问题的主要工具是 `fillna()` 方法。它提供了灵活选项，用于替换 Series 或 DataFrame 中的 `NaN`（非数字）值。
+
+### `fillna()` 方法
+
+我们从一个包含缺失值的简单 DataFrame 开始：
+
+```python
+import pandas as pd
+import numpy as np
+
+data = {'col_a': [1, np.nan, 3, 4, np.nan],
+        'col_b': [np.nan, 6, 7, 8, 9],
+        'col_c': ['apple', 'banana', np.nan, 'orange', 'banana']}
+df = pd.DataFrame(data)
+
+print("原始 DataFrame：")
+print(df)
+print("\n每列的缺失值：")
+print(df.isnull().sum())
+```
+
+运行此代码将显示我们的 DataFrame 以及每列的缺失值计数：
+
+```
+原始 DataFrame：
+   col_a  col_b   col_c
+0    1.0    NaN   apple
+1    NaN    6.0  banana
+2    3.0    7.0     NaN
+3    4.0    8.0  orange
+4    NaN    9.0  banana
+
+每列的缺失值：
+col_a    2
+col_b    1
+col_c    1
+dtype: int64
+```
+
+### 用一个常量值填充
+
+最基本的策略是用一个固定值替换所有 `NaN` 值。值的选择取决于具体情况。对于数值列，0 是一个常用选择，而对于分类列，您可以使用“未知”或“缺失”之类的占位符。
+
+要用 0 填充整个 DataFrame 中的所有 `NaN`：
+
+```python
+df_filled_zero = df.fillna(0)
+print("\n用 0 填充 NaN 后的 DataFrame：")
+print(df_filled_zero)
+```
+
+输出：
+
+```
+用 0 填充 NaN 后的 DataFrame：
+   col_a  col_b     col_c
+0    1.0    0.0     apple
+1    0.0    6.0    banana
+2    3.0    7.0         0
+3    4.0    8.0    orange
+4    0.0    9.0    banana
+```
+
+请注意，`fillna(0)` 将 `col_c`（一个字符串列）中的 `NaN` 替换为整数 0。这可能不太理想。通常，您会希望对不同列应用不同的填充策略。稍后我们将看到如何做到这一点。
+
+### 用统计度量填充（均值、中位数、众数）
+
+除了常量之外，您还可以使用从该列的可用数据中计算出的统计量（例如均值或中位数）来填充缺失的数值。对于分类数据，通常使用众数（最常出现的值）。
+
+- **均值：** 最适合大致呈正态分布（没有极端异常值）的数值数据。
+- **中位数：** 对异常值更具抵抗力，适用于偏斜的数值数据。
+- **众数：** 适用于分类数据或离散数值数据。
+
+我们用 `col_a` 的均值填充它，用 `col_b` 的中位数填充它。首先，我们计算这些值（请记住在计算中跳过 `NaN`，Pandas 默认会这样做）：
+
+```python
+mean_a = df['col_a'].mean()
+median_b = df['col_b'].median()
+
+print(f"\ncol_a 的均值：{mean_a}")
+print(f"col_b 的中位数：{median_b}")
+
+# 使用 col_a 的均值填充
+df['col_a_filled_mean'] = df['col_a'].fillna(mean_a)
+
+# 使用 col_b 的中位数填充
+df['col_b_filled_median'] = df['col_b'].fillna(median_b)
+
+print("\n已填充均值/中位数的 DataFrame 列：")
+print(df[['col_a', 'col_a_filled_mean', 'col_b', 'col_b_filled_median']])
+```
+
+输出：
+
+```
+col_a 的均值：2.6666666666666665
+col_b 的中位数：7.5
+
+已填充均值/中位数的 DataFrame 列：
+   col_a  col_a_filled_mean  col_b  col_b_filled_median
+0    1.0           1.000000    NaN                  7.5
+1    NaN           2.666667    6.0                  6.0
+2    3.0           3.000000    7.0                  7.0
+3    4.0           4.000000    8.0                  8.0
+4    NaN           2.666667    9.0                  9.0
+```
+
+要用 `col_c`（分类）的众数填充它：
+
+```python
+mode_c = df['col_c'].mode()[0] # mode() 返回一个 Series，取第一个元素
+print(f"\ncol_c 的众数：{mode_c}")
+
+df['col_c_filled_mode'] = df['col_c'].fillna(mode_c)
+
+print("\n已填充众数的 DataFrame 列：")
+print(df[['col_c', 'col_c_filled_mode']])
+```
+
+输出：
+
+```
+col_c 的众数：banana
+
+已填充众数的 DataFrame 列：
+    col_c col_c_filled_mode
+0   apple             apple
+1  banana            banana
+2     NaN            banana
+3  orange            orange
+4  banana            banana
+```
+
+### 前向填充 (ffill) 和 后向填充 (bfill)
+
+有时，特别是在处理时间序列数据或有序数据时，根据紧邻其前或后的值来填充缺失值是合理的。
+
+- **前向填充 (`ffill`)**：将最后一个有效观测值向前传播以填充空白。
+- **后向填充 (`bfill`)**：使用下一个有效观测值来填充空白。
+
+您可以使用 `fillna()` 中的 `method` 参数 (parameter)来指定这些方法：
+
+```python
+# 创建一个包含更多 NaN 的 DataFrame 以观察传播
+data_seq = {'value': [10, np.nan, np.nan, 13, np.nan, 15, np.nan, np.nan, np.nan, 20]}
+df_seq = pd.DataFrame(data_seq)
+print("\n序列 DataFrame：")
+print(df_seq)
+
+# 应用前向填充
+df_seq['ffill'] = df_seq['value'].fillna(method='ffill')
+# 应用后向填充
+df_seq['bfill'] = df_seq['value'].fillna(method='bfill')
+
+print("\n前向和后向填充后的 DataFrame：")
+print(df_seq)
+```
+
+输出：
+
+```
+序列 DataFrame：
+   value
+0   10.0
+1    NaN
+2    NaN
+3   13.0
+4    NaN
+5   15.0
+6    NaN
+7    NaN
+8    NaN
+9   20.0
+
+前向和后向填充后的 DataFrame：
+   value  ffill  bfill
+0   10.0   10.0   10.0
+1    NaN   10.0   13.0
+2    NaN   10.0   13.0
+3   13.0   13.0   13.0
+4    NaN   13.0   15.0
+5   15.0   15.0   15.0
+6    NaN   15.0   20.0
+7    NaN   15.0   20.0
+8    NaN   15.0   20.0
+9   20.0   20.0   20.0
+```
+
+观察 `ffill` 如何将最后见到的值（`10`、`13`、`15`）向前传播，而 `bfill` 则用下一个可用值（`13`、`15`、`20`）填充空白。
+
+### 用不同值填充不同列
+
+您通常需要对不同列应用不同的填充策略。您可以通过向 `fillna()` 传递一个字典来实现此目的，其中键是列名，值是相应的填充值或策略（尽管 `ffill`/`bfill` 等方法以此方式使用时会应用于整个 DataFrame，但更常见的是逐列应用它们，或将字典值用于常量/统计量）。
+
+对于不同的策略，更典型的方法是逐列填充或使用字典填充常量值：
+
+```python
+# 重置原始 DataFrame
+df = pd.DataFrame(data)
+
+fill_values = {'col_a': df['col_a'].mean(),
+               'col_b': 0, # 用 0 填充 col_b 的 NaN
+               'col_c': 'Unknown'} # 用 'Unknown' 填充 col_c 的 NaN
+
+df_filled_dict = df.fillna(value=fill_values)
+
+print("\n使用字典填充后的 DataFrame：")
+print(df_filled_dict)
+```
+
+输出：
+
+```
+使用字典填充后的 DataFrame：
+      col_a  col_b    col_c
+0  1.000000    0.0    apple
+1  2.666667    6.0   banana
+2  3.000000    7.0  Unknown
+3  4.000000    8.0   orange
+4  2.666667    9.0   banana
+```
+
+### 原地修改 DataFrame
+
+与许多 Pandas 方法一样，`fillna()` 默认返回一个*新*的 DataFrame，其中包含更改，而原始 DataFrame 保持不变。如果您想直接修改原始 DataFrame，可以使用 `inplace=True` 参数 (parameter)：
+
+```python
+# 再次重置原始 DataFrame
+df = pd.DataFrame(data)
+
+print("\n原始 DataFrame（原地填充前）：")
+print(df)
+
+df.fillna(0, inplace=True) # 直接修改 df
+
+print("\n原始 DataFrame（原地填充后）：")
+print(df)
+```
+
+输出：
+
+```
+原始 DataFrame（原地填充前）：
+   col_a  col_b   col_c
+0    1.0    NaN   apple
+1    NaN    6.0  banana
+2    3.0    7.0     NaN
+3    4.0    8.0  orange
+4    NaN    9.0  banana
+
+原始 DataFrame（原地填充后）：
+   col_a  col_b     col_c
+0    1.0    0.0     apple
+1    0.0    6.0    banana
+2    3.0    7.0         0
+3    4.0    8.0    orange
+4    0.0    9.0    banana
+```
+
+虽然 `inplace=True` 看起来方便，但通常建议（尤其是在学习时）将结果赋值给一个新变量，或者重新赋值回原始变量名（`df = df.fillna(...)`）。这使得数据转换步骤更明确，并可以防止复杂代码中出现意外的副作用。
+
+选择正确的填充策略需要理解您的数据和分析目标。缺失是随机的吗？均值、中位数或众数会引入偏差吗？顺序重要吗（暗示使用 ffill/bfill）？仔细考虑这些问题会带来更有效的数据准备。
+
+## 参考资料
+
+- [DataFrame.fillna](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.fillna.html) — pandas development team (2024)
+  Pandas `fillna`方法的官方文档，详细说明其参数和用于替换缺失值的用例。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 7: Data Cleaning and Preparation
+  Pandas创建者的核心资源，提供了数据准备任务的广泛指导，包括管理缺失数据。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://homl.info/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 2: End-to-End Machine Learning Project (Data Cleaning section)
+  提供了数据准备的实用策略，包括如何在机器学习工作流程中处理缺失值。

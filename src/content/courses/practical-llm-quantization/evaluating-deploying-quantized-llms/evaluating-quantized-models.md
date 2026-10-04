@@ -1,0 +1,80 @@
+---
+course: "practical-llm-quantization"
+chapter: "evaluating-deploying-quantized-llms"
+lesson: "evaluating-quantized-models"
+sourceId: 4667
+sourceUrl: "https://apxml.com/zh/courses/practical-llm-quantization/chapter-6-evaluating-deploying-quantized-llms/evaluating-quantized-models"
+title: "量化模型评估指标"
+description: "讨论用于评估量化模型质量的困惑度及特定任务准确率等标准指标。"
+order: 1
+plots: ["plots/4667-0.json"]
+sourceHash: "6b22db2cca242f6aec243088f2c6e17ed692e33068e0d39edbca0a8914fd678a"
+sourceCorrections: []
+---
+
+量化 (quantization)会对模型进行压缩，但这种压缩并非没有代价。尽管目标是尽可能保留原始模型的能力，但应用量化技术不可避免地会引入近似。因此，需要严谨的评估来准确了解量化对模型预测性能的影响。简单地认为量化模型与原始模型表现一致通常是不准确的，并可能在实际部署中引发意想不到的问题。
+
+评估量化大型语言模型（LLM）涉及比较其与原始的未量化模型（通常称为基准模型，精度通常为FP32、FP16或BF16）的性能。这种比较有助于量化由低精度表示引入的准确性下降程度（如果有的话）。我们主要依靠两类指标：内在指标（如困惑度）和外在的、特定任务的指标。
+
+### 困惑度：语言模型质量的内在衡量
+
+困惑度是一种常用的内在指标，用于评估语言模型。它衡量概率模型预测样本的能力。在LLM的背景下，困惑度量化 (quantization)了模型在给定先前词元 (token)的情况下，对序列中下一个词元的“意外”程度。较低的困惑度分数表示模型在预测测试数据方面表现更好，表明它更有效地掌握了语言的潜在规律。
+
+从数学上讲，对于测试集 $W = w_1, w_2, \dots, w_N$，困惑度计算为每个词元的平均负对数似然的指数：
+
+
+$$
+\text{困惑度}(W) = \exp\left( -\frac{1}{N} \sum_{i=1}^N \log P(w_i | w_1, \dots, w_{i-1}) \right)
+$$
+
+
+评估量化模型时，您需要在一个代表性评估数据集上计算其困惑度，并将其与原始模型在*相同*数据集上的困惑度进行比较。
+
+- **用途：** 困惑度提供了对量化后保留的语言模型能力的快速、普遍的评估。它不需要针对下游任务的标注数据。
+- **解读：** 量化模型相对于基准模型的困惑度显著增加，表明量化过程明显影响了模型预测序列的基本能力。小幅增加可能是可接受的，这取决于具体应用和效率上的提升。
+- **局限性：** 困惑度与在特定下游任务上的表现并非总能完美关联。一个模型可能困惑度略高，但在特定任务（如情感分析或问答）上表现相似甚至更好。
+
+### 特定任务准确性与基准测试：外在评估
+
+“尽管困惑度对模型质量提供了一个普遍感知，但最有意义的评估通常来自衡量LLM旨在处理的特定任务上的表现。这些是外在评估，直接评估模型在应用中的实用性。”
+
+指标的选择在很大程度上取决于任务：
+
+- **分类任务（例如，情感分析、主题分类）：** 准确率（Accuracy）、F1分数（F1-score）、精确率（Precision）、召回率（Recall）、受试者工作特征曲线下面积（AUC）。
+- **文本生成任务（例如，摘要、翻译）：** BLEU（双语评估替补）、ROUGE（面向召回的要点评估替补）、METEOR。这些指标将生成的文本与参考文本进行比较。
+- **问答任务：** 精确匹配（EM）——预测答案是否与真实答案完全一致，以及F1分数——衡量预测答案和真实答案在词元 (token)层面的重叠程度。
+- **通用语言理解/推理 (inference)：** 标准化基准测试提供对多个不同任务的全面评估。常见例子包括：
+  - **GLUE（通用语言理解评估）：** 包含九个不同NLP任务的集合。
+  - **SuperGLUE：** GLUE的更具挑战性的后续版本，任务难度更高。
+  - **MMLU（大规模多任务语言理解）：** 通过多项选择题衡量模型在广泛主题上的知识。
+  - **HELM（语言模型综合评估）：** 旨在广泛涵盖多种情况和指标。
+
+**比较性能：**
+重要步骤是对原始（基准）模型和量化 (quantization)模型都运行评估套件。这使得可以直接比较，量化每个特定任务的性能下降或整体基准分数。
+
+
+
+![任务准确率：基准 vs. 量化](plots/4667-0.json)
+
+
+
+> 基准FP16模型及其INT8量化版本在两个下游任务上的准确率分数比较。这表明了量化通常会引入小幅准确率下降的情况。
+
+评估时，请确保使用：
+
+1. **相同的数据集：** 基准模型和量化模型的评估数据集必须相同。
+2. **一致的评估规程：** 用于计算指标的代码和程序必须相同，以确保公平比较。
+
+最终，可接受的准确性下降程度取决于应用的具体要求和所获得的效率优势（更快的推理速度，更低的内存使用）。如果准确性下降1%能带来2倍的速度提升和模型大小减小4倍，这可能是可以接受的；但如果下降10%，则可能无法接受，需要采用更先进的量化技术（如QAT或不同的PTQ方法），或者接受原始模型更高的成本。分析这些指标提供了做出关于部署量化LLM的明智决策所需的数据。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Pages: Chapter 3 (N-gram Language Models)
+  详细阐述了语言模型、困惑度计算及其在评估语言模型中的应用。
+- [HELM: Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  提出了一个全面的语言模型评估框架和基准，涵盖了多样的任务和指标，与外部评估相关。
+- [BLEU: a Method for Automatic Evaluation of Machine Translation](https://aclanthology.org/P02-1040/) — Kishore Papineni, Salim Roukos, Todd Ward, and Wei-Jing Zhu (2002)
+  Journal: Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics; Publisher: Association for Computational Linguistics; Pages: 311-318; DOI: [10.3115/1073083.1073135](https://doi.org/10.3115/1073083.1073135)
+  介绍了BLEU分数的基础论文，该分数是评估机器翻译等文本生成任务的广泛使用的指标。

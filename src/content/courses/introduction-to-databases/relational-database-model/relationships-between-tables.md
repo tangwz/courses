@@ -1,0 +1,44 @@
+---
+course: "introduction-to-databases"
+chapter: "relational-database-model"
+lesson: "relationships-between-tables"
+sourceId: 1574
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-databases/chapter-2-relational-database-model/relationships-between-tables"
+title: "表之间的关系"
+description: "介绍关系数据库中表可以相互关联的思路。"
+order: 5
+plots: []
+sourceHash: "491653853a52d42e39a50ccce2eb637bb4f5e60dc32d5e23d89e5ae2a6f6fd7e"
+sourceCorrections: []
+---
+
+到目前为止，我们已经了解了数据如何组织成带有行和列的表，以及主键如何为每行提供唯一的标识。但关系模型的真正优势在于其连接存储在*不同*表中的信息的能力。
+
+试想一下管理一个在线书店的信息。你可能有关于书籍的信息（标题、作者、ISBN、价格）和关于作者的信息（姓名、传记、出生年份）。将所有这些信息放入一个单一的巨型表中会导致问题。如果一位作者写了多本书，你将为他写的每一本书重复他们的姓名、传记和出生年份。这种重复，被称为数据冗余，浪费空间并使更新变得困难。如果你需要更正作者的出生年份，你可能需要在许多地方找到并更改它，这会增加错误和不一致的风险。
+
+关系数据库通过将相关但不同的信息分离到不同的表中来处理这个问题。对于我们的书店，我们可以创建一个 `Authors` 表和一个 `Books` 表。
+
+- **`Authors` 表：** 包含作者特有的信息（例如，`AuthorID`、`Name`、`BirthYear`）。`AuthorID` 将是主键。
+- **`Books` 表：** 包含书籍特有的信息（例如，`BookID`、`Title`、`ISBN`、`Price`）。`BookID` 在这里将是主键。
+
+但我们如何知道*哪位*作者写了*哪本书*？我们需要一种方式将这些表连接起来。
+
+通过在一个表中引用另一个表来建立这种连接。由于每个作者在 `Authors` 表中都有唯一的 `AuthorID`（即主键），我们可以在 `Books` 表中包含一个 `AuthorID` 列。对于 `Books` 表中的每条书籍记录，`AuthorID` 列将存储该书作者的 `AuthorID`。
+
+`Books` 表中的这个 `AuthorID` 列充当一个指向 `Authors` 表中相应作者的指针或链接。它基于共享的 `AuthorID` 值在两个表之间创建了一个关系。
+
+这种连接表的思路十分重要。我们不是重复信息，而是将其一次性存储在适当的表中（例如 `Authors` 表中的作者详情），然后从其他表引用它（例如 `Books` 表通过 `AuthorID` 引用作者）。这种方法反映了信息通常是如何关联的：不同的实体（如作者和书籍）是相互连接的。
+
+在下一节中，我们将介绍用于正式定义和实施这些链接的特定机制：外键。理解关系是设计高效、易于维护并准确表示您需要管理的信息的数据库的第一步。
+
+## 参考资料
+
+- [Database System Concepts](https://www.db-book.com/db7/) — Abraham Silberschatz, Henry F. Korth, S. Sudarshan (2019)
+  Publisher: McGraw-Hill Education
+  一本权威教材，全面阐述了关系模型、数据组织、键以及链接表的原则，以避免数据冗余。
+- [Fundamentals of Database Systems](https://www.pearson.com/us/higher-education/program/Elmasri-Fundamentals-of-Database-Systems-7th-edition/PGM296681.html) — Ramez Elmasri, Shamkant B. Navathe (2017)
+  Publisher: Pearson
+  该教材全面介绍了数据库系统原理，包括关系数据模型、ER图和关系数据库设计，这些都是理解表关系的基础。
+- [The Relational Data Model (Lecture 2)](https://ocw.mit.edu/courses/6-830-database-systems-fall-2010/) — Prof. Samuel Madden, Prof. Robert Morris, Prof. Michael Stonebraker, Dr. Carlo Curino (2010)
+  Publisher: Massachusetts Institute of Technology: MIT OpenCourseWare
+  作为一门全面的大学数据库系统课程的一部分，本讲座专门讲解关系数据模型，包括表如何通过共享属性相互关联以及键的概念。

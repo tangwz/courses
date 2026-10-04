@@ -1,0 +1,140 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "gradient-boosting-algorithm-depth"
+lesson: "gbm-regression-loss-functions"
+sourceId: 1935
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-2-gradient-boosting-algorithm-depth/gbm-regression-loss-functions"
+title: "回归中常见的损失函数"
+description: "GBM 中平方误差、绝对误差和 Huber 损失的剖析。"
+order: 3
+plots: ["plots/1935-0.json"]
+sourceHash: "8952ff3f23c81e436d924ef95894391aca5093921af7c4123fecd253d429594e"
+sourceCorrections: []
+---
+
+梯度提升机（GBM）通过迭代地添加基础学习器（例如决策树）来最小化损失函数 (loss function) $L(y, F(x))$。在此背景下，$y$ 代表真实目标值，而 $F(x)$ 表示当前的集成预测。这种最小化过程被视为函数梯度下降 (gradient descent)，其中每个新的树 $h_m(x)$ 都被训练以逼近损失函数相对于当前预测 $F_{m-1}(x)$ 的负梯度。
+
+这些负梯度的具体形式，常被称为*伪残差*，直接取决于所选的损失函数。对于回归问题，目标是预测连续值，会用到几种常见的损失函数，每种函数都会影响模型的表现，尤其是它对异常值的敏感性。下面我们介绍最常用的几种。
+
+### 平方误差 (L2 损失)
+
+回归最常用的损失函数 (loss function)是平方误差，也称为L2损失。它衡量真实值 $y_i$ 和预测值 $F(x_i)$ 之间的平方差。对于单个数据点 $(x_i, y_i)$，其定义如下：
+
+
+$$
+L(y_i, F(x_i)) = \frac{1}{2}(y_i - F(x_i))^2
+$$
+
+
+包含 $\frac{1}{2}$ 这个因子是为了数学上的方便，它简化了求导过程。
+
+为了找到第 $m$ 次迭代的伪残差 $r_{im}$，我们计算该损失函数相对于预测 $F(x_i)$ 的负梯度，该梯度在上一阶段的预测 $F_{m-1}(x_i)$ 处进行评估：
+
+
+$$
+r_{im} = -\left[ \frac{\partial L(y_i, F(x_i))}{\partial F(x_i)} \right]_{F(x_i) = F_{m-1}(x_i)} = -\left[ -(y_i - F(x_i)) \right]_{F(x_i) = F_{m-1}(x_i)} = y_i - F_{m-1}(x_i)
+$$
+
+
+这个结果非常直观。当使用平方误差损失时，伪残差就是当前模型 $F_{m-1}(x_i)$ 的*实际残差*。因此，添加到集成中的每个新树 $h_m(x)$ 都被训练来预测集成到目前为止所犯的误差。
+
+**特点：**
+
+- **侧重均值：** 最小化平方误差对应于对目标变量的条件均值进行建模。
+- **对异常值敏感：** 由于误差是平方的，大误差（异常值）会对损失产生不成比例的巨大影响，进而影响梯度。单个异常值会明显影响后续树的训练。
+- **平滑性：** 损失函数平滑且连续可微，使优化过程简单明了。
+
+### 绝对误差 (L1 损失)
+
+另一种选择是绝对误差，或L1损失，它衡量真实值和预测值之间的绝对差：
+
+
+$$
+L(y_i, F(x_i)) = |y_i - F(x_i)|
+$$
+
+
+该损失函数 (loss function)的负梯度为：
+
+
+$$
+r_{im} = -\left[ \frac{\partial L(y_i, F(x_i))}{\partial F(x_i)} \right]_{F(x_i) = F_{m-1}(x_i)} = -\left[ -\text{符号}(y_i - F(x_i)) \right]_{F(x_i) = F_{m-1}(x_i)} = \text{符号}(y_i - F_{m-1}(x_i))
+$$
+
+
+这里，$\text{符号}(z)$ 表示如果 $z > 0$ 则为 1，如果 $z < 0$ 则为 -1，如果 $z = 0$ 则为 0。
+
+当使用绝对误差损失时，伪残差就是实际残差的*符号*。添加到集成中的每个新树 $h_m(x)$ 都被训练来预测先前集成的预测对于每个数据点是过高（+1）还是过低（-1）。
+
+**特点：**
+
+- **侧重中位数：** 最小化绝对误差对应于对目标变量的条件中位数进行建模。
+- **对异常值有抵抗力：** 由于误差没有平方，大误差对总损失的贡献是线性的。这使得L1损失对异常值的敏感性远低于L2损失。
+- **非平滑性：** 损失函数在 $y_i = F(x_i)$ 处（即残差为零时）其导数存在不连续性。虽然理论上需要次梯度方法，但实现中通常通过将梯度设为0或使用近似方法来处理。
+
+### Huber 损失
+
+Huber 损失在平方误差的敏感性和绝对误差的抵抗力之间提供了一种折衷。它对小误差呈二次行为，对大误差呈线性行为。它引入了一个超参数 (parameter) (hyperparameter) $\delta$，定义了行为改变的阈值。
+
+
+$$
+L_\delta(y_i, F(x_i)) =
+\begin{cases}
+\frac{1}{2}(y_i - F(x_i))^2 & \text{当 } |y_i - F(x_i)| \le \delta \\
+\delta (|y_i - F(x_i)| - \frac{1}{2}\delta) & \text{其他情况}
+\end{cases}
+$$
+
+
+线性部分中的项 $-\frac{1}{2}\delta^2$ 确保函数在 $|y_i - F(x_i)| = \delta$ 的点处连续可微。
+
+对应的负梯度（伪残差）为：
+
+
+$$
+r_{im} = -\left[ \frac{\partial L_\delta(y_i, F(x_i))}{\partial F(x_i)} \right]_{F(x_i) = F_{m-1}(x_i)} =
+\begin{cases}
+y_i - F_{m-1}(x_i) & \text{当 } |y_i - F_{m-1}(x_i)| \le \delta \\
+\delta \cdot \text{符号}(y_i - F_{m-1}(x_i)) & \text{其他情况}
+\end{cases}
+$$
+
+
+对于小于 $\delta$ 的误差，伪残差是实际残差（类似于L2损失）。对于大于 $\delta$ 的误差，伪残差被限制在 $\pm \delta$（类似于L1损失，但按 $\delta$ 缩放）。
+
+**特点：**
+
+- **混合行为：** 结合了L2（在最小值附近平滑）和L1（对异常值有抵抗力）的优点。
+- **可调参数：** 需要调整 $\delta$ 参数。较小的 $\delta$ 使损失函数 (loss function)更像L1损失，增加其抵抗力但可能减慢收敛速度。较大的 $\delta$ 使其更像L2损失。$\delta$ 实际上界定了哪些点被认为是异常值。
+
+### 回归损失函数 (loss function)比较
+
+损失函数的选择是一个重要的建模决策，它取决于数据的具体特征和模型的预期属性。
+
+- 如果你的数据相对干净，没有明显的异常值，或者主要目标是预测均值，则使用**平方误差 (L2)**。它通常是默认选项且计算效率高。
+- 如果你的数据集包含明显的异常值，并且你想要一个对其影响有较强抵抗力的模型，则使用**绝对误差 (L1)**。这使得模型侧重于预测中位数。
+- 当你想要L2和L1之间的平衡时，使用**Huber 损失**，它对异常值提供抵抗力，同时对小误差保持平滑性。这需要调整 $\delta$ 参数 (parameter)，通常通过交叉验证完成。
+
+下图展示了这三种损失函数基于残差 ($y - F(x)$) 的形状。在此示例中，Huber 损失我们使用 $\delta=1$。
+
+
+
+![常见回归损失函数 (Huber δ=1)](plots/1935-0.json)
+
+
+
+> L2 损失、L1 损失和 Huber 损失 ($\\delta=1$) 的比较。请注意L2的二次增长，L1的线性增长，以及Huber从二次到线性的转变。
+
+理解这些损失函数如何转换为伪残差，对把握 GBM 学习方式很有帮助。选择不同的损失函数会影响模型在每次迭代中侧重修正误差的哪些方面。在实践中，Scikit-learn 等库允许您通过参数（例如 `GradientBoostingRegressor` 中的 `loss` 参数，它接受 `'squared_error'`、`'absolute_error'`、`'huber'` 等值）轻松指定所需的损失函数。
+
+## 参考资料
+
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Publisher: Institute of Mathematical Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  这篇论文介绍了梯度提升机算法，详细阐述了其函数梯度下降公式以及各种损失函数在回归和分类任务中的应用。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, Jerome Friedman (2009)
+  Publisher: Springer
+  这本教科书对梯度提升进行了深入探讨，解释了其机制、损失函数的作用及其对统计学习中模型行为的影响。
+- [Robust Statistics: Theory and Methods](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470434232) — Peter J. Huber, Elvezio M. Ronchetti (2009)
+  Publisher: John Wiley & Sons, Inc.; DOI: [10.1002/9780470434232](https://doi.org/10.1002/9780470434232)
+  本书提供了鲁棒统计方法的基础知识，包括Huber损失和L1损失等对异常值具有鲁棒性的损失函数的数学特性和原理。

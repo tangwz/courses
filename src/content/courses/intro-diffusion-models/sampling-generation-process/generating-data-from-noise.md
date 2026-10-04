@@ -1,0 +1,53 @@
+---
+course: "intro-diffusion-models"
+chapter: "sampling-generation-process"
+lesson: "generating-data-from-noise"
+sourceId: 5418
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-5-sampling-generation-process/generating-data-from-noise"
+title: "从噪声生成数据"
+description: "从高斯噪声开始并迭代去噪的整体过程。"
+order: 1
+plots: []
+sourceHash: "dfcf38e617f652131ec98da1749c39346565ae924725cb6de5313d1ec135219b"
+sourceCorrections: []
+---
+
+扩散模型被训练用于预测添加到图像 $x_0$ 中以在特定时间步 $t$ 创建更嘈杂版本 $x_t$ 的噪声 $\epsilon$。其训练目标通常涉及最小化预测噪声 $\epsilon_\theta(x_t, t)$ 与用于生成 $x_t$ 的实际噪声 $\epsilon$ 之间的差异。
+
+那么，我们如何使用这个训练好的模型 $\epsilon_\theta$ 来生成 *新的* 数据样本呢？生成过程，通常称为采样或推理 (inference)，通过逆转前向扩散过程来运作。我们不是从数据开始并添加噪声，而是从纯噪声开始，并在模型引导下逐步去除噪声。
+
+生成的起点是从标准高斯分布中抽取的样本 $x_T$:
+
+
+$$
+x_T \sim \mathcal{N}(0, \mathbf{I})
+$$
+
+
+这个 $x_T$ 代表前向过程中最大加噪步数后的状态，本质上是纯粹、无结构的噪声。我们的目标是逐步地将这个 $x_T$ 随着时间的推移进行去噪，一步一步地，直到我们得到一个干净的样本 $x_0$。
+
+核心思路是使用训练好的噪声预测网络 $\epsilon_\theta$ 在每个时间步 $t$（从 $T$ 到 1）来估计给定当前嘈杂样本 $x_t$ 时，稍不那么嘈杂的样本 $x_{t-1}$ 应该是什么样子。
+
+设想我们在时间步 $t$ 拥有样本 $x_t$。我们的模型 $\epsilon_\theta(x_t, t)$ 提供了 $x_t$ 中噪声成分的估计。我们可以使用这个估计向 $x_{t-1}$ “向后”迈进一步。具体的数学运算取决于所选择的采样算法（例如 DDPM 或 DDIM，我们将在接下来详细说明），但基本原则是一致的：使用预测噪声来引导从 $x_t$ 到 $x_{t-1}$ 近似值的转变。
+
+该过程迭代重复：
+
+1. 从 $x_T \sim \mathcal{N}(0, \mathbf{I})$ 开始。
+2. 对于 $t = T, T-1, \dots, 1$:
+   - 使用模型预测 $x_t$ 中的噪声：$\hat{\epsilon}_t = \epsilon_\theta(x_t, t)$。
+   - 使用 $\hat{\epsilon}_t$ 和 $x_t$ 来计算 $x_{t-1}$ 的估计值。这一步通常涉及在前向过程中定义的方差时间表 ($\beta_t$ 或 $\alpha_t$)，并且可能会根据采样器添加少量受控噪声。
+3. 最终输出 $x_0$ 是生成的样本。
+
+每个反向步骤 $p_\theta(x_{t-1} | x_t)$ 都会细化样本，逐步将最初的无结构噪声转换为模型在训练期间学习到的数据分布。如果模型用人脸图像训练，那么 $x_0$ 应该看起来像一张人脸。如果用猫的图像训练，那么 $x_0$ 应该像一只猫。
+
+以下图表展示了这个迭代去噪流程：
+
+> 生成过程从随机噪声 $x_T$ 开始，并在每个时间步 $t$ 迭代应用学到的去噪函数 $\epsilon_\theta$，以逐步生成更干净的样本，最终得到最终输出 $x_0$。
+
+这一整体流程为生成数据提供了依据。接下来的章节将详细说明具体算法，从 DDPM 开始，这些算法定义了如何使用预测噪声 $\epsilon_\theta(x_t, t)$ 精确计算从 $x_t$ 到 $x_{t-1}$ 的转变。
+
+## 参考资料
+
+- [Denoising Diffusion Implicit Models](https://arxiv.org/abs/2010.02502) — Jiaming Song, Chenlin Meng, and Stefano Ermon (2020)
+  Journal: International Conference on Learning Representations (ICLR 2021); DOI: [10.48550/arXiv.2010.02502](https://doi.org/10.48550/arXiv.2010.02502)
+  提出了去噪扩散隐式模型（DDIM），提供了一种非马尔可夫生成过程，显著加快了扩散模型的采样速度。

@@ -1,0 +1,130 @@
+---
+course: "data-structures-algorithms-ml"
+chapter: "hashing-for-ml"
+lesson: "feature-hashing"
+sourceId: 5279
+sourceUrl: "https://apxml.com/zh/courses/data-structures-algorithms-ml/chapter-3-hashing-for-ml/feature-hashing"
+title: "特征哈希用于降维"
+description: "应用哈希技巧高效表示高维稀疏特征向量。"
+order: 3
+plots: []
+sourceHash: "d8b9c1d91b3b2654483f43046de4dad7137432a464323a58d9c8dec0b428b986"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)模型常需处理高维稀疏特征。比如表示为词袋模型的文本数据，其中词汇量可能非常庞大；或是具有数百万个不同值的类别特征（如用户ID或产品代码）。传统方法（例如独热编码）会生成大部分为零的向量 (vector)，这会导致巨大的内存占用并可能减慢计算速度。
+
+特征哈希，有时也称“哈希技巧”，提供了一种高效的方法，将这些高维特征表示映射到固定大小的低维空间，而无需预先构建词汇表 (vocabulary)或映射字典。这使得它特别适用于流式数据或事先不知道所有特征的情况。
+
+### 特征哈希的工作原理
+
+其核心思想很简单：与独热编码为每个不同特征分配唯一索引不同，我们对特征标识符（例如，单词本身，或“类别=值”字符串）应用哈希函数，并将哈希结果对所需输出向量 (vector)大小 $m$ 取模，以此作为新特征向量中的索引。
+
+假设我们要将特征映射到大小为 $m$ 的向量中。对于给定特征 $f$（例如单词“apple”或特征“country=USA”），过程如下：
+
+1. **哈希：** 计算哈希值 $h(f)$。旨在均匀分布键的标准哈希函数在此处表现良好。
+2. **取模：** 计算索引 $i = h(f) \pmod m$。这确保索引落在我们固定大小向量的范围 $[0, m-1]$ 内。
+3. **分配：** 将特征的值（对于类别或词袋特征通常为1，如果可用则是实际数值）放置在输出向量的索引 $i$ 处。
+
+> 特征使用哈希函数和模运算符映射到固定大小向量中的索引。请注意，`feature_A` 和 `feature_D` 发生冲突，都映射到相同的索引 `1`。
+
+输出向量的大小 $m$ 是您选择的一个超参数 (parameter) (hyperparameter)。它决定了降维的程度和发生冲突的概率。 $m$ 较小可以节省更多内存但会增加冲突；$m$ 较大可以减少冲突但会占用更多内存。
+
+### 处理冲突
+
+将潜在的庞大特征空间映射到固定大小向量 (vector)的结果是，不同特征可能会哈希到相同的索引。这就是哈希冲突。在特征哈希中，冲突表示多个原始特征对结果向量中的相同分量产生贡献。
+
+尽管这听起来像个问题，但在许多机器学习 (machine learning)应用中，特别是对于稀疏数据和线性模型（如逻辑回归或SVM），冲突的负面影响可能出乎意料地小。影响可能会相互抵消，或者模型可能会学习适当权衡合并后的特征。
+
+为了进一步减轻特征简单地在同一索引处累加时冲突的潜在负面影响，一个常见的改进方法是使用*第二个*哈希函数 $g(f)$ 来决定添加到目标索引的值的*符号*。
+
+1. **索引哈希：** $i = h(f) \pmod m$。
+2. **符号哈希：** $s = g(f)$，其中 $g$ 通常将特征映射到 $\{+1, -1\}$。
+3. **分配：** 将 $s \times \text{value}(f)$ 添加到输出向量的索引 $i$ 处。
+
+这样，如果两个特征在索引 $i$ 处发生冲突，它们的贡献可能会相加（$+1, +1$）或相减（$+1, -1$），从而减少了正向干扰不适当地使该索引处的值膨胀的可能性。
+
+### 示例：哈希文本特征
+
+设想处理文本“the quick brown fox”并将其哈希到一个大小为 $m=5$ 的向量 (vector)中。假设我们有哈希函数 $h$ 和 $g$：
+
+| 特征（单词） | $h(f)$ | $i = h(f) \pmod 5$ | $g(f)$（符号） | 向量更新 | 结果向量 |
+| --- | --- | --- | --- | --- | --- |
+| "the" | 123 | 3 | +1 | `vec[3] += 1` | `[0, 0, 0, 1, 0]` |
+| "quick" | 456 | 1 | -1 | `vec[1] -= 1` | `[0, -1, 0, 1, 0]` |
+| "brown" | 789 | 4 | +1 | `vec[4] += 1` | `[0, -1, 0, 1, 1]` |
+| "fox" | 234 | 4 | -1 | `vec[4] -= 1` | `[0, -1, 0, 1, 0]`（冲突） |
+
+在本例中，“brown”和“fox”在索引 4 处发生冲突。使用带符号的哈希，它们的贡献相互抵消（+1 和 -1）。如果没有带符号的哈希，索引 4 的值将变为 2。
+
+### Python 实现
+
+尽管您可以使用Python内置的`hash()`（但请注意其对非数值类型在不同会话/平台之间可能存在变动）和模运算符手动实现特征哈希，但像Scikit-learn这样的库提供了实现。
+
+Scikit-learn 的 `sklearn.feature_extraction.FeatureHasher` 是一个方便的工具：
+
+```python
+from sklearn.feature_extraction import FeatureHasher
+import numpy as np
+
+# 使用所需的输出维度（n_features）初始化 FeatureHasher
+# input_type='string' 假设输入是字符串的可迭代对象
+# alternate_sign=True 启用带符号的哈希技巧
+h = FeatureHasher(n_features=10, input_type='string', alternate_sign=True)
+
+# 示例数据：字典列表（每个样本一个）
+# 键是特征名，值是特征值（通常为1表示存在）
+raw_data = [
+    {'cat': 1, 'dog': 1, 'mouse': 1},
+    {'cat': 1, 'bird': 1},
+    {'dog': 1, 'fish': 1, 'cat': 1}
+]
+
+# 转换数据
+hashed_features = h.transform(raw_data)
+
+# 输出是 SciPy 稀疏矩阵
+print(hashed_features.toarray())
+# 示例输出（值取决于哈希函数的实现）：
+# [[ 0.  1.  0.  0.  0. -1.  0.  0.  1.  0.]
+#  [ 0.  1.  0.  0.  0.  0.  0.  0.  1.  0.]
+#  [ 0.  1.  0.  0.  0. -1. -1.  0.  1.  0.]]
+
+print(f"原始潜在特征数量：无限（或非常大）")
+print(f"哈希特征形状：{hashed_features.shape}")
+# 哈希特征形状：(3, 10)
+```
+
+> 使用 Scikit-learn 的 `FeatureHasher` 将类别特征转换为固定大小的稀疏矩阵表示。
+
+请注意，`FeatureHasher` 直接输出一个稀疏矩阵，这种方式节省内存，因为它只存储非零元素。
+
+### 特征哈希的优点
+
+- **内存效率：** 将潜在的庞大特征空间映射到固定且通常小得多的维度 $m$。无需存储词汇表 (vocabulary)映射。
+- **在线学习：** 适用于流式数据，因为它不需要查看整个数据集来构建特征映射。新特征可以立即处理。
+- **无状态：** 转换本身不具备从数据中学习到的“状态”（如词汇表），这使得它在某些分布式或并行处理流程中更为简单。
+
+### 缺点与注意事项
+
+- **可解释性：** 生成的哈希特征缺乏直接的可解释性。向量 (vector)中的索引 `k` 表示潜在的许多原始特征的聚合；您无法轻松将其追溯到特定的原始特征，例如“country=USA”。
+- **冲突：** 冲突通常可以管理，但它们会引入噪声。如果 $m$ 相对于活跃特征的数量过小，或者如果某些冲突对模型特别不利，性能可能会下降。
+- **参数 (parameter)调整：** 输出维度 $m$ 是一个超参数 (hyperparameter)，需要仔细选择，通常需要交叉验证。哈希函数的选择（尽管通常由库处理）也可能重要。
+
+### 何时使用特征哈希
+
+特征哈希在以下情况中特别有效：
+
+- **极高维稀疏特征：** 文本分类（词袋/N-gram）、广告中的大规模类别特征（用户ID、广告ID）或推荐系统（用户/物品交互）。
+- **在线学习系统：** 数据按序到达，且模型需要持续更新而无需存储不断增长的特征字典。
+- **内存受限环境：** 当将大型独热编码矩阵加载到内存中不可行时。
+
+通过运用前面讨论的哈希原理，特征哈希提供了一种强大且实用的机器学习 (machine learning)降维方法，以牺牲完美的特征分离为代价，换取内存效率和计算可扩展性方面的显著提升。
+
+## 参考资料
+
+- [sklearn.feature_extraction.FeatureHasher](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.FeatureHasher.html) — Scikit-learn Developers (2024)
+  Scikit-learn中`FeatureHasher`实现的官方文档，详细说明了其用法、参数和示例。
+- [Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media; Pages: 864
+  提供了机器学习技术的实用指南，包括特征哈希等特征工程方法，并附有Scikit-learn示例。

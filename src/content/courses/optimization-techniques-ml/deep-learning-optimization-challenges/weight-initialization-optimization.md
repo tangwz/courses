@@ -1,0 +1,100 @@
+---
+course: "optimization-techniques-ml"
+chapter: "deep-learning-optimization-challenges"
+lesson: "weight-initialization-optimization"
+sourceId: 1310
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-6-deep-learning-optimization-challenges/weight-initialization-optimization"
+title: "初始化方法及其影响"
+description: "细致权重初始化（如Xavier、He）在优化中的作用。"
+order: 5
+plots: ["plots/1310-0.json"]
+sourceHash: "a4a599964e1bd14946a12d38105460878d21239f92906635302781bbef154840"
+sourceCorrections: []
+---
+
+训练深度神经网络 (neural network)常让人感觉像是在蒙眼穿行于复杂的高维空间 (high-dimensional space)。下降的起点，由网络权重 (weight)的初始值决定，大大影响优化所走过的路径，以及能否高效找到一个好的解。将所有权重设为零看似简单，但这会导致一个严重问题：对称性。如果一层中的所有神经元都以相同的权重开始，它们将计算出相同的输出，并在反向传播 (backpropagation)时收到相同的梯度。它们会保持一致，从而阻止网络学习不同的特征。使用小随机数进行初始化可以打破对称性，但规模影响巨大。
+
+### 不当缩放的危害
+
+考虑通过一个层的前向传播：$y = Wx + b$。如果权重 (weight) $W$ 过大，输出 $y$ 在通过连续的层时会指数级增长，导致激活值和梯度爆炸。反之，如果权重过小，输出会指数级缩小，造成激活值和梯度消失。这在信号必须穿过许多层的深度网络中特别有问题。梯度消失会停止学习，因为更新变得无限小，而梯度爆炸则导致不稳定，常在训练中出现 `NaN` 值。
+
+主要挑战在于初始化权重，使得某层输出的方差大致等于其输入的方差。同样，在反向传播 (backpropagation)时，我们希望梯度方差在反向流经网络时保持稳定。保持这种信号方差有助于确保信息有效传播，防止梯度纯粹因为初始化规模而消失或爆炸。
+
+### 方差感知的初始化方案
+
+幸好，存在有原则的方法来解决这个缩放问题。这些方法从分布中选择初始权重 (weight)，其方差是根据层的维度仔细选择的。
+
+#### Xavier (Glorot) 初始化
+
+Xavier 初始化由 Glorot 和 Bengio 在 2010 年提出，其设计用于使用大致线性且关于零对称的激活函数 (activation function)的层，例如双曲正切（tanh）或 Logistic Sigmoid（尽管对 Sigmoid 效果不佳）。目标是使激活值和反向传播 (backpropagation)梯度的方差在各层间大致保持不变。
+
+假设输入 $x$ 和梯度 $\frac{\partial L}{\partial y}$ 均值为零且相互独立，并且也与权重 $W$ 独立，则层输出 $y_i = \sum_{j=1}^{n_{in}} W_{ij} x_j$ 的方差（方差计算时忽略偏置 (bias)）为：
+
+$\text{Var}(y_i) = n_{in} \text{Var}(W_{ij}) \text{Var}(x_j)$
+
+同样地，对于反向传播时相对于层的输入的梯度计算（$\frac{\partial L}{\partial x_j}$），我们有：
+
+$\text{Var}\left(\frac{\partial L}{\partial x_j}\right) = n_{out} \text{Var}(W_{ij}) \text{Var}\left(\frac{\partial L}{\partial y_i}\right)$
+
+$n_{in}$ 为输入神经元数量（扇入），$n_{out}$ 为输出神经元数量（扇出）。
+
+为确保 $\text{Var}(y_i) \approx \text{Var}(x_j)$ 和 $\text{Var}\left(\frac{\partial L}{\partial x_j}\right) \approx \text{Var}\left(\frac{\partial L}{\partial y_i}\right)$，我们需要：
+
+$n_{in} \text{Var}(W_{ij}) \approx 1 \quad \text{and} \quad n_{out} \text{Var}(W_{ij}) \approx 1$
+
+一个折衷方案是平均这些条件，从而得到权重的期望方差：
+
+$\text{Var}(W_{ij}) = \frac{2}{n_{in} + n_{out}}$
+
+基于此方差，出现两种常见的初始化方法：
+
+1. **正态初始化**：从正态分布 $\mathcal{N}(0, \sigma^2)$ 中抽取权重，$\sigma^2$ 取值为 $\frac{2}{n_{in} + n_{out}}$。
+2. **均匀初始化**：从均匀分布 $\mathcal{U}(-b, b)$ 中抽取权重，$b$ 取值为 $\sqrt{\frac{6}{n_{in} + n_{out}}}$。（$\sqrt{3}$ 因子来自于将 $\mathcal{U}(-b, b)$ 的方差 $b^2/3$ 与目标方差匹配。）
+
+Xavier 初始化大幅改善了具有对称激活的网络训练稳定性。
+
+#### He 初始化
+
+Xavier 初始化所做的假设（尤其是关于零的线性假设）对于整流线性单元（ReLU）及其变体（如 Leaky ReLU 等）不再适用。ReLU 单元对于负输入输出零，这有效地“杀死”了一半的梯度，并相较于输入减少了输出的方差。
+
+He 等人（2015）提出了一种专门为 ReLU 激活函数量身定制的初始化方法。通过分析 ReLU 层的方差传播，他们发现将权重的方差设为：
+
+$\text{Var}(W_{ij}) = \frac{2}{n_{in}}$
+
+有助于在前向传播期间保持激活值的方差。这一推导考虑了 ReLU 将负输入置零，相较于线性单元，将方差的有效贡献项数量减半。
+
+相应的初始化方法是：
+
+1. **正态初始化**：从 $\mathcal{N}(0, \sigma^2)$ 中抽取权重，$\sigma^2$ 取值为 $\frac{2}{n_{in}}$。
+2. **均匀初始化**：从 $\mathcal{U}(-b, b)$ 中抽取权重，$b$ 取值为 $\sqrt{\frac{6}{n_{in}}}$。
+
+使用 ReLU 或其变体时，He 初始化通常是首选方法，这些激活函数在现代深度学习 (deep learning)架构中很常见。
+
+### 实际考量与作用
+
+- **选择正确的方法**：对于后面跟着 ReLU 或其变体的层，使用 He 初始化。对于后面跟着 tanh 或 Sigmoid 的层，使用 Xavier 初始化（尽管现在 ReLU 更常见）。
+- **偏置 (bias)初始化**：偏置通常初始化为零。有时也会将其初始化为一个小常数（例如 0.01），特别是在使用 ReLU 时，以确保一些初始激活，但零初始化是标准做法且通常效果良好。
+- **框架默认设置**：现代深度学习 (deep learning)框架，如 TensorFlow (Keras) 和 PyTorch，通常默认使用适当的方差缩放初始化器（例如，当激活函数 (activation function)未指定或为 ReLU 时，对 `Dense`/`Linear` 和 `Conv2D` 层使用 He 正态/均匀的变体）。然而，理解这些原则有助于在需要时进行明智的定制。
+
+适当初始化对优化的影响很大。由方差感知初始化提供的一个好的起点，将模型置于一个梯度信息量更大的区域。这有助于 SGD、Adam 或 RMSprop 等优化器从最初的几次迭代开始就取得有意义的进展，加速收敛并增加找到高质量最小值的可能性。相反，不好的初始化可能导致极其缓慢的学习或完全停滞，无论使用的优化算法有多么复杂。
+
+考虑早期训练阶段的差异：
+
+
+
+![不同初始化下的损失曲线](plots/1310-0.json)
+
+
+
+> 训练损失进程的比较。适当的初始化（绿色）带来稳定的收敛。不佳的初始化可能导致由于梯度消失（浅红色）而训练停滞，或由于梯度爆炸（深红色，常导致 NaN/Inf 值，由曲线中断表示）而不稳定。
+
+总之，尽管先进的优化算法处理许多困难，但它们依赖于一个合理的起点。Xavier 和 He 等方差感知初始化技术是实现深度神经网络 (neural network)稳定高效训练的重要工具，直接应对深度架构中信号传播带来的挑战。
+
+## 参考资料
+
+- [Understanding the difficulty of training deep feedforward neural networks](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) — Xavier Glorot, Yoshua Bengio (2010)
+  Journal: Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics; Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 9; Pages: 249-256
+  介绍了Xavier初始化方法，解决深度网络中的梯度稳定性问题。
+- [Deep Learning](https://www.deeplearningbook.org/contents/optimization.html) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 287-293 (Chapter 8)
+  深度学习教科书中关于网络初始化及相关问题的章节。

@@ -1,0 +1,35 @@
+---
+course: "time-series-analysis-forecasting"
+chapter: "model-evaluation-selection"
+lesson: "need-for-evaluation"
+sourceId: 3467
+sourceUrl: "https://apxml.com/zh/courses/time-series-analysis-forecasting/chapter-6-model-evaluation-selection/need-for-evaluation"
+title: "模型评估的必要性"
+description: "了解为何评估预测模型表现是必需的。"
+order: 1
+plots: []
+sourceHash: "55a84f1773b4d570d5f8e8696e0b67566904e43583f8d728de4f262ce15ae7c0"
+sourceCorrections: []
+---
+
+时间序列模型如ARIMA和SARIMA，通过拟合 (overfitting)历史数据来理解趋势、季节性和自相关等模式。这些模型是预测的强大工具。然而，仅仅构建一个模型并不能保证它在预测方面的实用性。要判断一个复杂的SARIMA(1,1,1)(1,1,0,12)模型在预测下个月销售额方面是否真的比更简单的ARIMA(2,1,0)模型，甚至是朴素预测更好，需要仔细评估。这就是模型评估变得必不可少的原因。
+
+试想一下：最终目标通常是预测模型在训练过程中未曾见过的*未来*值。一个模型可能非常出色地捕获了历史数据，几乎完美地拟合了训练点，但在要求它推断未来时却表现非常差。这种被称为过拟合的现象发生在模型学习了训练数据的噪声和特定特性，而非潜在信号时。仅凭模型训练过的数据来评估模型可能会导致误导性的乐观结果。
+
+因此，我们需要一种结构化的方法来评估模型在新数据上的表现。模型评估有几个重要目的：
+
+1. **量化 (quantization)预测准确度**: 它提供了客观的衡量标准，用于衡量模型预测与实际结果的接近程度。指标为我们提供具体数值，以了解预测误差的大小和性质，而非仅仅依靠目视检查。模型通常偏离10个单位还是100个单位？它倾向于高估还是低估？
+2. **比较不同模型**: 您通常会开发多个候选模型。可能是ARIMA/SARIMA的不同阶数，甚至完全不同的建模方法。评估指标为在公平的条件下比较这些模型提供了基础，帮助您为特定的预测任务选择在新数据上表现最好的模型。
+3. **建立信心并辅助决策**: 预测结果常常驱动重要决策，例如库存管理、资源分配或财务规划。严格评估有助于增强对所选模型预测结果的信心。了解模型的预期误差范围使得决策者能够考虑不确定性。一个性能不明确或未经评估的模型会带来显著风险。
+4. **发现模型缺陷**: 对未见过的数据进行评估可以显现在模型拟合时不明显的问题。持续较大的误差、有偏的预测或随时间推移性能下降，可能表明模型设定错误、数据中潜在模式的变化或所选方法的局限性等问题。
+
+如果没有正式的评估过程，选择和部署预测模型就会变成猜测。您可能会选择一个比简单模型表现更差的复杂模型，或者部署一个不可靠的未来预测模型。本章的后续部分将为您提供时间序列预测中使用的标准技术和指标，以执行这种必要的评估，首先是关于如何正确划分数据，然后计算像$MAE$、$RMSE$这样的指标，以及使用像$AIC$这样的准则来指导您的模型选择过程。
+
+## 参考资料
+
+- [Forecasting: Principles and Practice (3rd ed.)](https://otexts.com/fpp3/) — Rob J Hyndman and George Athanasopoulos (2021)
+  Publisher: OTexts
+  这本综合教材是时间序列预测的权威指南，其中专门章节讨论模型评估、预测准确性度量以及区分训练集和测试集以避免过拟合的重要性。
+- [Time Series Analysis: Forecasting and Control (5th ed.)](https://www.wiley.com/en-us/Time+Series+Analysis%3A+Forecasting+and+Control%2C+5th+Edition-p-9781118675009) — George E. P. Box, Gwilym M. Jenkins, Gregory C. Reinsel, and Greta M. Ljung (2015)
+  Publisher: John Wiley & Sons; DOI: [10.1002/9781118671629](https://doi.org/10.1002/9781118671629)
+  这是一本时间序列分析（特别是ARIMA模型）的奠基性著作。它详细阐述了模型识别、估计和诊断检查的迭代过程，这本身就包含了评估模型适用性及其数据表示能力，对有效预测至关重要。

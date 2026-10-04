@@ -1,0 +1,249 @@
+---
+course: "data-visualization-matplotlib-seaborn"
+chapter: "matplotlib-plotting-fundamentals"
+lesson: "matplotlib-colors-linestyles"
+sourceId: 1156
+sourceUrl: "https://apxml.com/zh/courses/data-visualization-matplotlib-seaborn/chapter-2-matplotlib-plotting-fundamentals/matplotlib-colors-linestyles"
+title: "更改颜色和线条样式"
+description: "查看自定义 Matplotlib 图表中线条和标记外观的选项。"
+order: 6
+plots: []
+sourceHash: "95563bb808f1c8734e04b6d0e56ae2e28aeb97654d967b8c3151cc52b6c61d7e"
+sourceCorrections: []
+---
+
+自定义线图和散点图的外观对于有效的数据可视化至关重要。更改颜色和线条样式对于区分同一图表上的多个数据集、突出显示特定信息，或仅是提高可视化效果的视觉吸引力和清晰度非常重要。Matplotlib 提供了灵活的选项来控制这些元素。
+
+### 指定颜色
+
+Matplotlib 支持多种颜色格式。设置颜色最常用的方法是在 `plt.plot()` 或 `plt.scatter()` 等绘图函数中使用 `color` 参数 (parameter)。
+
+以下是定义颜色的主要方式：
+
+1. **命名颜色：** 您可以使用常见的颜色名称作为字符串。Matplotlib 能够识别多种标准的 HTML/CSS 颜色名称。
+
+   - 示例：`'blue'`、`'green'`、`'red'`、`'cyan'`、`'magenta'`、`'yellow'`、`'black'`、`'white'`
+2. **短颜色代码：** 为方便起见，单个字母被指定为最常见的颜色。
+
+   - `'b'`: 蓝色
+   - `'g'`: 绿色
+   - `'r'`: 红色
+   - `'c'`: 青色
+   - `'m'`: 品红色
+   - `'y'`: 黄色
+   - `'k'`: 黑色
+   - `'w'`: 白色
+3. **十六进制代码：** 使用 RGB 十六进制字符串指定颜色，类似于网页设计中使用的格式。
+
+   - 示例：`'#FF5733'`（一种橙色），`'#33FFCE'`（一种青绿色），`'#3361FF'`（一种蓝色）
+4. **RGB 或 RGBA 元组：** 将颜色定义为红、绿、蓝值的元组，每个值是 0 到 1 之间的浮点数。您可以选择添加第四个值 Alpha，用于表示透明度（0=完全透明，1=完全不透明）。
+
+   - 示例：`(0.2, 0.4, 0.6)`（一种灰蓝色），`(0.2, 0.4, 0.6, 0.5)`（相同颜色，但半透明）
+5. **灰度强度：** 一个表示 0（黑色）到 1（白色）之间浮点数的字符串。
+
+   - 示例：`'0.75'`（浅灰色）
+
+我们来看看如何在 `plt.plot()` 中应用这些设置：
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.linspace(0, 10, 50)
+y1 = np.sin(x)
+y2 = np.cos(x)
+
+# 创建图表和坐标轴
+fig, ax = plt.subplots()
+
+# 使用命名颜色绘制 y1
+ax.plot(x, y1, color='red', label='正弦 (命名颜色)')
+
+# 使用十六进制代码绘制 y2，并使用 alpha 指定透明度
+ax.plot(x, y2, color='#3361FF', alpha=0.7, label='余弦 (十六进制 + Alpha)')
+
+# 添加标签和图例
+ax.set_xlabel("X 值")
+ax.set_ylabel("Y 值")
+ax.set_title("自定义颜色的图表")
+ax.legend() # 显示标签
+
+plt.show()
+```
+
+### 更改线条样式
+
+对于使用 `plt.plot()` 创建的线图，您可以使用 `linestyle`（或其简写 `ls`）参数 (parameter)来更改线条的样式。这在绘制多条线并需要区分它们时特别有用，无需仅依赖颜色，尤其适用于黑白打印。
+
+常见的线条样式包括：
+
+- `'-'` or `'solid'`: 实线 (默认)
+- `'--'` or `'dashed'`: 虚线
+- `'-.'` or `'dashdot'`: 点划线
+- `':'` or `'dotted'`: 点线
+- `'None'` or `' '` or `''`: 不绘制
+
+这是一个展示不同线条样式的示例：
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.linspace(0, 10, 50)
+y1 = x
+y2 = x + 1
+y3 = x + 2
+y4 = x + 3
+
+# 创建图表和坐标轴
+fig, ax = plt.subplots()
+
+# 绘制不同线条样式的数据
+ax.plot(x, y1, linestyle='-', color='blue', label='实线 (-)')
+ax.plot(x, y2, linestyle='--', color='green', label='虚线 (--)')
+ax.plot(x, y3, linestyle='-.', color='red', label='点划线 (-.)')
+ax.plot(x, y4, linestyle=':', color='black', label='点线 (:)')
+
+# 添加标签和图例
+ax.set_xlabel("X 值")
+ax.set_ylabel("Y 值")
+ax.set_title("不同线条样式的图表")
+ax.legend()
+
+plt.show()
+```
+
+### 添加标记 (token)
+
+有时，尤其是在表示离散数据点的线图中，在每个数据点上显示标记会很有帮助。您也可以单独使用标记，就像在散点图中一样。`marker` 参数 (parameter)控制每个点上使用的形状。
+
+常见的标记样式包括：
+
+- `'.'`: 点标记
+- `','`: 像素标记
+- `'o'`: 圆形标记
+- `'v'`: 向下三角形标记
+- `'^'`: 向上三角形标记
+- `'<'`: 向左三角形标记
+- `'>'`: 向右三角形标记
+- `'s'`: 正方形标记
+- `'p'`: 五边形标记
+- `'*'`: 星形标记
+- `'h'`: 六边形1标记
+- `'H'`: 六边形2标记
+- `'+'`: 加号标记
+- `'x'`: X形标记
+- `'D'`: 菱形标记
+- `'d'`: 细菱形标记
+- `'|'`: 垂直线标记
+- `'_'`: 水平线标记
+
+您可以在 `plt.plot()` 中组合线条样式和标记：
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.arange(1, 6) # 1, 2, 3, 4, 5
+y1 = x**2
+y2 = x*3
+
+# 创建图表和坐标轴
+fig, ax = plt.subplots()
+
+# 绘制带线条样式和标记的图表
+ax.plot(x, y1, color='indigo', linestyle='--', marker='o', label='y = x^2')
+ax.plot(x, y2, color='teal', linestyle=':', marker='s', label='y = 3x')
+
+# 添加标签和图例
+ax.set_xlabel("输入")
+ax.set_ylabel("输出")
+ax.set_title("带标记的线条")
+ax.legend()
+
+plt.show()
+```
+
+对于 `plt.scatter()`，主要视觉元素*就是*标记，因此您主要控制其 `color`、`marker` 形状和 `s`（大小）。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.random.rand(30)
+y = np.random.rand(30)
+sizes = np.random.rand(30) * 300 # 标记的随机大小
+colors = np.random.rand(30) # 颜色映射的随机值
+
+# 创建图表和坐标轴
+fig, ax = plt.subplots()
+
+# 创建带有自定义标记、大小和颜色的散点图
+# 使用颜色映射 (cmap) 将 'colors' 数组映射到实际颜色
+scatter = ax.scatter(x, y, s=sizes, c=colors, marker='*', cmap='viridis', alpha=0.7)
+
+# 添加颜色条以显示映射
+fig.colorbar(scatter, label='颜色强度')
+
+# 添加标签和标题
+ax.set_xlabel("X 坐标")
+ax.set_ylabel("Y 坐标")
+ax.set_title("自定义标记的散点图")
+
+plt.show()
+```
+
+### 格式字符串（简写）
+
+Matplotlib 允许通过将格式字符串作为第三个参数 (parameter)传递给 `plt.plot()`，以一种简洁的方法同时指定颜色、标记 (token)和线条样式。格式通常是 `[颜色][标记][线条]`。
+
+例如：
+
+- `'ro--'`: 红色 (`r`)，圆形标记 (`o`)，虚线 (`--`)
+- `'gs:'`: 绿色 (`g`)，方形标记 (`s`)，点线 (`:`)
+- `'k.'`: 黑色 (`k`)，点标记 (`.`)，无线条
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.linspace(0, 10, 20)
+y1 = x
+y2 = 10 - x
+
+# 创建图表和坐标轴
+fig, ax = plt.subplots()
+
+# 使用格式字符串绘制
+ax.plot(x, y1, 'bo-', label='蓝色实心圆 (bo-)') # 蓝色，圆形，实线
+ax.plot(x, y2, 'gd:', label='绿色点状菱形 (gd:)') # 绿色，菱形，点线
+
+# 添加标签和图例
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_title("使用格式字符串绘图")
+ax.legend()
+
+plt.show()
+```
+
+虽然格式字符串很紧凑，但明确使用 `color`、`linestyle` 和 `marker` 参数通常能使您的代码更具可读性，尤其是在绘制复杂图表或与他人协作时。
+
+通过掌握这些自定义选项，您可以显著提升 Matplotlib 可视化效果，使其不仅更具美感，也更易于理解。
+
+## 参考资料
+
+- [Specifying Colors](https://matplotlib.org/stable/tutorials/colors/colors.html) — Matplotlib Development Team (2024)
+  Matplotlib官方指南，详细介绍了在绘图中使用不同颜色定义方法，包括命名颜色、十六进制代码和RGB(A)元组。
+- [Line styles](https://matplotlib.org/stable/gallery/lines_bars_and_markers/linestyles.html) — Matplotlib Development Team (2024)
+  Matplotlib官方文档，提供不同线型（linestyle参数）的示例和解释。
+- [Marker reference](https://matplotlib.org/stable/gallery/lines_bars_and_wedges/marker_reference.html) — Matplotlib Development Team (2024)
+  Matplotlib绘图中可用标记类型的可视化指南和列表，有助于区分数据点。
+- [Python Data Science Handbook: Essential Tools for Working with Data](https://jakevdp.github.io/PythonDataScienceHandbook/04.00-introduction-to-matplotlib.html) — Jake VanderPlas (2016)
+  Publisher: O'Reilly Media
+  本书第4章介绍了Matplotlib，内容包含基本的绘图自定义，例如颜色、线型和标记。

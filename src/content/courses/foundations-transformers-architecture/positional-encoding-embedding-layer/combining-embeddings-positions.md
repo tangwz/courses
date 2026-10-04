@@ -1,0 +1,71 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "positional-encoding-embedding-layer"
+lesson: "combining-embeddings-positions"
+sourceId: 1996
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-4-positional-encoding-embedding-layer/combining-embeddings-positions"
+title: "结合嵌入与位置编码"
+description: "位置编码通常如何添加到输入令牌嵌入中。"
+order: 5
+plots: []
+sourceHash: "66669d4d357bfc1b04934218b80dcad49fa5c034308638896bd2360ab28e365a"
+sourceCorrections: []
+---
+
+将输入令牌表示为密集向量 (vector) (dense vector)（令牌嵌入 (embedding)）以及生成表示其位置的独特信号（位置编码 (positional encoding)）是Transformer模型处理输入的一个基本步骤。这两种信息源需要被整合。自注意力 (self-attention)机制 (attention mechanism)是Transformer的核心组件，在处理输入元素时本身不了解它们的顺序。因此，我们必须将这种位置信息直接提供给输入到Transformer堆栈的表示中。
+
+原始Transformer论文（《Attention Is All You Need》）中提出的一种标准且非常有效的方法十分直接：逐元素相加。如果 $E \in \mathbb{R}^{L \times d_{model}}$ 表示长度为 $L$ 的序列的令牌嵌入矩阵，且 $P \in \mathbb{R}^{L \times d_{model}}$ 表示对应的位置编码，那么组合后的输入表示 $X \in \mathbb{R}^{L \times d_{model}}$ 的计算方式如下：
+
+
+$$
+X = E + P
+$$
+
+
+这表示序列中每个令牌 $i$（$i$ 的范围从 $0$ 到 $L-1$），其最终输入向量 $x_i$ 是其令牌嵌入 $e_i$ 和其位置编码 $p_i$ 的和：
+
+
+$$
+x_i = e_i + p_i
+$$
+
+
+在此，令牌嵌入 $e_i$ 和位置编码 $p_i$ 都必须具有相同的维度，$d_{model}$。这种维度上的一致性是加法运算的基本要求。
+
+### 加法的理由
+
+为什么是简单的加法？尽管可以设想其他组合函数，但加法具有多项优势：
+
+1. **简洁和效率：** 它计算成本低，只增加很小的额外开销。
+2. **信息保留：** 加法使得网络能够获取语义信息（来自 $E$）和位置信息（来自 $P$）。由于后续层涉及线性变换（如多头注意力 (multi-head attention)中的Q、K、V投影），它们理论上能够学习以所需方式投影组合后的嵌入 (embedding) $X$，从而分离或使用与 $E$ 或 $P$ 相关的部分。
+3. **与正弦编码的兼容性：** 对于正弦编码，加法保留了它们设计用于捕获的相对位置信息。因为正弦函数具有与相对位置的线性变换相关的属性（例如，$PE_{pos+k}$ 可以表示为 $PE_{pos}$ 的线性函数），将它们添加到令牌嵌入中，为模型提供了学习相对距离的一致方式。
+
+### 实现流程
+
+实际操作中，组合嵌入 (embedding)和位置编码 (positional encoding)通常涉及以下步骤：
+
+1. **令牌嵌入查找：** 输入令牌ID通过嵌入层（通常是一个可训练的查找表）映射到其对应的嵌入向量 (vector)。这会得到一个形状为 `[batch_size, sequence_length, d_model]` 的张量。
+2. **位置编码生成/查找：**
+   - 对于正弦编码，它们通常会预先计算到最大预期序列长度并存储起来。然后选择当前序列长度的相应编码。形状通常是 `[1, sequence_length, d_model]` 或 `[sequence_length, d_model]`，可以进行广播或切片。
+   - 对于学习到的位置嵌入，则使用一个单独的嵌入层（查找表），通过位置ID（0, 1, 2,...）进行索引。这也会得到一个形状为 `[1, sequence_length, d_model]` 或类似的张量，其中包含可训练向量。
+3. **逐元素相加：** 位置编码被添加到令牌嵌入中。如果位置编码张量不明确包含批次维度，这里通常会应用广播规则。
+
+> 流程图，说明了通过逐元素相加组合令牌嵌入和位置编码，从而创建Transformer层的输入表示。
+
+### 学习到的位置嵌入 (embedding)的考虑事项
+
+如果使用学习到的位置嵌入而不是正弦嵌入，组合机制保持不变：逐元素相加。主要区别在于，表示位置 $0, 1, 2, \dots$ 的向量 (vector)现在是在训练过程中优化的参数 (parameter)，而不是由固定函数确定。模型会根据数据学习对任务最有效的表示。加法步骤仍然将这些学习到的位置信号与语义令牌嵌入合并。
+
+通过将位置编码 (positional encoding)直接添加到令牌嵌入中，我们创建了一个输入表示 $X$，它为后续的Transformer层提供了精密的序列理解所需的“什么”（来自 $E$ 的语义）和“哪里”（来自 $P$ 的序列顺序）信息。这个组合表示构成了编码器或解码器堆栈第一层的输入。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构的开创性论文，描述了正弦位置编码及其与词嵌入的逐元素相加。
+- [CS224N: Natural Language Processing with Deep Learning, Course Materials](https://web.stanford.edu/class/cs224n/) — Stanford University (2023)
+  Publisher: Stanford University
+  提供关于Transformer架构、词嵌入、位置编码及其组合的学术课程资料和讲座。
+- [Transformers for Natural Language Processing: With TensorFlow and Hugging Face](https://www.packtpub.com/product/transformers-for-natural-language-processing-with-tensorflow-and-hugging-face/9781801077700) — Rezaul Karim, Wael Emara (2021)
+  Publisher: Packt Publishing
+  一本关于Transformer模型的书籍，解释了词嵌入、位置编码等基础组件及其集成。

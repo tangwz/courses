@@ -1,0 +1,173 @@
+---
+course: "fine-tuning-adapting-large-language-models"
+chapter: "optimization-deployment-considerations"
+lesson: "model-serialization-packaging"
+sourceId: 3094
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-adapting-large-language-models/chapter-7-optimization-deployment-considerations/model-serialization-packaging"
+title: "模型序列化与打包"
+description: "保存和分发微调模型文件的格式与实践。"
+order: 6
+plots: []
+sourceHash: "003807cbfa80a5478feecdd0b10f7ad4a7eef3b6b97231248ef9943be012d628"
+sourceCorrections: []
+---
+
+保存并打包微调 (fine-tuning)模型对于可靠的部署和共享不可或缺，尤其是在应用了量化 (quantization)或剪枝等优化技术，或者合并了PEFT适配器之后。妥善的序列化能够正确存储模型的学习参数 (parameter)、配置以及分词 (tokenization)器 (tokenizer)等相关部分，确保在不同环境中一致地加载。打包则将模型与其依赖项和文档捆绑在一起，使其更易于管理和部署。
+
+### 标准模型保存格式
+
+尽管存在多种序列化格式，大型语言模型（LLMs）的生态系统已主要趋于集中在一些常见做法上，主要由Hugging Face的`transformers`等库推动。
+
+#### Hugging Face `save_pretrained` / `from_pretrained`
+
+这可以说是保存和加载基于Transformer的模型（包括微调 (fine-tuning)过的LLMs）的最常用方法。当您调用`model.save_pretrained(save_directory)`时，该库通常会保存以下几个部分：
+
+- **模型权重 (weight)**：模型的学习参数 (parameter)。这些通常以PyTorch的`.bin`格式（`pytorch_model.bin`）保存，或越来越多地以`safetensors`格式（`model.safetensors`）保存。
+- **模型配置**：一个JSON文件（`config.json`），存储模型的架构、超参数 (hyperparameter)（如隐藏层大小、层数）以及重构模型结构所需的其他元数据。
+- **分词 (tokenization)器 (tokenizer)文件**：词汇文件（例如，`vocab.json`，`merges.txt`，`sentencepiece.model`）和分词器配置（`tokenizer_config.json`，`special_tokens_map.json`），这些是模型正确处理文本输入所需的。
+
+```python
+# 示例：保存模型和分词器
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "gpt2" # 或者您的微调模型路径
+model = AutoModelForCausalLM.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# ... 在这里进行微调或优化 ...
+
+output_dir = "./my_finetuned_model"
+model.save_pretrained(output_dir)
+tokenizer.save_pretrained(output_dir)
+
+print(f"模型和分词器已保存到 {output_dir}")
+
+# 稍后，加载模型
+loaded_model = AutoModelForCausalLM.from_pretrained(output_dir)
+loaded_tokenizer = AutoTokenizer.from_pretrained(output_dir)
+print("模型和分词器加载成功。")
+```
+
+使用`save_pretrained`确保所有必需的部分都以标准化结构保存，便于通过`from_pretrained`轻松加载。
+
+#### Safetensors
+
+Safetensors（`.safetensors`）是一种安全、快速的张量存储文件格式，设计目的是替代Python的`pickle`格式，因为后者已知存在安全漏洞（可以执行任意代码）。主要优点包括：
+
+1. **安全性**：加载`safetensors`文件是安全的，因为它不涉及任意代码执行。
+2. **速度**：加载张量通常更快，特别是对于大型模型，因为元数据是单独存储的，这使得高效的内存映射成为可能。
+3. **延迟加载**：该格式有助于根据需要仅将模型部分加载到内存中，尽管完整模型加载更常见。
+4. **跨平台兼容性**：它在不同框架和语言之间提供了一致的格式。
+
+Hugging Face库越来越多地支持并默认使用`safetensors`。您可以明确指定：
+
+```python
+# 明确指定使用safetensors保存
+model.save_pretrained(output_dir, safe_serialization=True)
+```
+
+如果目录中存在`model.safetensors`文件，`from_pretrained`将优先加载它，而不是`pytorch_model.bin`。
+
+#### ONNX (开放神经网络 (neural network)交换)
+
+ONNX提供了一种表示机器学习 (machine learning)模型的标准化格式。将您的微调LLM导出到ONNX可以带来以下好处：
+
+- **互操作性**：使用各种ONNX兼容运行时（如ONNX Runtime）在不同平台（CPU、GPU、专用硬件）上运行模型。
+- **潜在的性能提升**：ONNX运行时通常包含图优化，可以加速推理 (inference)。
+
+导出通常涉及使用示例输入对模型进行追踪。`transformers.onnx`等库提供了简化此过程的实用工具。
+
+```python
+# 导出到ONNX的示例
+from pathlib import Path
+from transformers.onnx import export, FeaturesManager
+
+# 假设模型和分词器已加载
+onnx_output_dir = Path("./my_finetuned_model_onnx")
+onnx_output_dir.mkdir(parents=True, exist_ok=True)
+
+# 获取特征（例如，'causal-lm'）和配置
+model_kind, model_onnx_config = FeaturesManager.check_supported_model_or_raise(model, feature='causal-lm')
+onnx_config = model_onnx_config(model.config)
+
+# 导出模型
+onnx_inputs, onnx_outputs = export(
+    tokenizer=tokenizer,
+    model=model,
+    config=onnx_config,
+    output=onnx_output_dir / "model.onnx",
+    opset=onnx_config.default_onnx_opset # 例如，13或更高
+)
+print(f"模型已导出为ONNX格式，位于 {onnx_output_dir}")
+```
+
+动态形状、自定义操作或确保与目标ONNX运行时版本的兼容性可能会带来挑战。导出后需要进行全面测试。
+
+### 处理PEFT适配器
+
+如果您使用了参数 (parameter)高效微调 (fine-tuning)（PEFT）方法，如LoRA或QLoRA，序列化需要特别注意，因为您通常只保存了*适配器*权重 (weight)，而不是整个模型。
+
+- **保存适配器**：PEFT库通常有自己的保存机制。对于Hugging Face的`peft`，您需要保存适配器配置和权重：
+
+  ```python
+  # 假设 'peft_model' 是您带有适配器的模型
+  adapter_output_dir = "./my_lora_adapter"
+  peft_model.save_pretrained(adapter_output_dir)
+  print(f"适配器已保存到 {adapter_output_dir}")
+  # 这会保存 adapter_model.bin（或 .safetensors）和 adapter_config.json
+  ```
+- **加载适配器**：要使用适配器，您需要先加载*基础*预训练 (pre-training)模型，然后将适配器权重加载到其上：
+
+  ```python
+  from peft import PeftModel, PeftConfig
+  from transformers import AutoModelForCausalLM, AutoTokenizer
+
+  base_model_name = "gpt2" # 原始基础模型
+  adapter_dir = "./my_lora_adapter"
+
+  # 加载基础模型和分词器
+  base_model = AutoModelForCausalLM.from_pretrained(base_model_name)
+  tokenizer = AutoTokenizer.from_pretrained(base_model_name) # 通常使用基础分词器
+
+  # 将适配器加载到基础模型上
+  inference_model = PeftModel.from_pretrained(base_model, adapter_dir)
+  inference_model.eval() # 设置为评估模式
+  print("基础模型已加载PEFT适配器。")
+  ```
+
+  这种方法使基础模型权重保持独立，从而允许同一个基础模型实例可能使用多个适配器。
+- **合并和保存**：如上一节（“合并PEFT适配器”）所述，您可以将适配器权重合并到基础模型的权重中。合并后，您将获得一个标准的`transformers`模型对象。然后，您可以使用标准的`model.save_pretrained(output_dir)`方法保存此合并后的模型。这简化了部署，因为您只需要管理一套模型文件，但会失去独立适配器的模块化优势。
+
+### 打包考量
+
+保存模型权重 (weight)和配置只是其中一部分。妥善的打包需要将模型正确运行和被他人理解所需的所有内容捆绑在一起。
+
+- **依赖项**：在`requirements.txt`文件或环境规范文件（如Conda的`environment.yml`）中明确列出所有必需的Python库及其版本。这包括`torch`、`transformers`、`peft`、`sentencepiece`、`protobuf`（用于ONNX）等库。依赖项版本不一致是常见的错误原因。
+- **配置文件**：确保在`save_pretrained`期间生成的所有必需配置文件（`config.json`、`tokenizer_config.json`等）与模型权重一同包含。
+- **模型卡**：包含一个格式为模型卡的`README.md`文件。此文件应记载：
+  - 模型详情（基础模型、微调 (fine-tuning)任务）。
+  - 微调数据说明。
+  - 预期用途和限制。
+  - 评估结果（指标、偏见评估）。
+  - 道德考量和潜在风险。
+  - 使用示例代码。
+    Hugging Face Hub提供了模型卡的标准模板。
+- **容器化 (Docker)**：为了部署，将模型文件、推理 (inference)代码、依赖项和必要的系统库打包到Docker容器中。`Dockerfile`定义了构建此镜像的步骤。这创建了一个自包含、可重现的环境，简化了跨不同系统的部署。
+
+> 通常在打包微调LLM以供部署时包含的组件。PEFT适配器可以单独包含或合并到主模型权重中。容器化提供了隔离的部署环境。
+
+通过仔细序列化您的优化模型并将其与依赖项和文档一起打包，您创建了一个可靠且可移植的文件，可以集成到下游应用或在社区中共享。这种系统化方法最大限度地减少了部署摩擦并确保了可重现性。
+
+## 参考资料
+
+- [Hugging Face Transformers: Share and Use Models](https://huggingface.co/docs/transformers/main/en/model_sharing) — Hugging Face (2024)
+  Publisher: Hugging Face
+  Hugging Face Transformers库中使用`save_pretrained`和`from_pretrained`方法保存和加载模型、配置和分词器的综合指南。
+- [safetensors GitHub Repository](https://github.com/huggingface/safetensors) — Hugging Face (2022)
+  提供`safetensors`格式的技术规范、实现和背景，强调其相对于传统序列化方法的安全性和性能优势的官方仓库。
+- [Hugging Face PEFT Documentation: Package Structure](https://huggingface.co/docs/peft) — Hugging Face (2024)
+  Publisher: Hugging Face
+  文档描述了保存、加载和将参数高效微调（PEFT）适配器（如LoRA）与基础语言模型集成的具体步骤。
+- [ONNX (Open Neural Network Exchange) Documentation](https://onnx.ai/) — ONNX Community (2024)
+  Publisher: Linux Foundation AI & Data (LFAI)
+  理解ONNX格式、其生态系统以及它如何在各种硬件和运行时实现模型互操作性和优化推理的官方资源。

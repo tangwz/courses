@@ -1,0 +1,68 @@
+---
+course: "advanced-tensorflow"
+chapter: "distributed-training-strategies"
+lesson: "distributed-ml-fundamentals"
+sourceId: 2842
+sourceUrl: "https://apxml.com/zh/courses/advanced-tensorflow/chapter-3-distributed-training-strategies/distributed-ml-fundamentals"
+title: "分布式机器学习的基本原理"
+description: "了解分布式系统及其在机器学习中的并行化基本思路。"
+order: 1
+plots: []
+sourceHash: "43957a565182808275d039366337d3ae677d32a844a90f67430f1c08a3344cbb"
+sourceCorrections: []
+---
+
+训练机器学习 (machine learning)模型的需要常常超出单个计算设备的承载能力。内存限制了模型和数据批次的大小，而计算能力限制则导致训练时间过长。分布式机器学习通过在多个处理单元（可以是单机上的多个GPU，也可以是集群中的多台机器）上并行化训练过程，提供了一条解决途径。
+
+分布式训练的核心目的是加速学习过程，或让单个设备无法容纳的模型得以训练，其方法是分担工作负载。这种分担通常遵循两种主要方式之一：数据并行或模型并行。
+
+### 数据并行
+
+数据并行是加速训练最常用的方式。其基本思路很简单：在多个处理单元（常被称为“工作器”）上复制*整个*模型，然后为每个工作器提供输入数据批次的不同切片。
+
+典型的流程如下：
+
+1. **数据分发：** 当前的小批次数据被分配到各个可用工作器。
+2. **本地计算：** 每个工作器使用其本地模型副本，对其分配到的数据切片执行前向传播和反向传播 (backpropagation)，计算本地梯度。
+3. **梯度聚合：** 各工作器计算出的梯度会在所有工作器之间进行聚合（通常是求平均或求和）。
+4. **模型更新：** 聚合后的梯度用于更新模型参数 (parameter)。此更新必须在所有模型副本之间同步，以确保一致性。
+
+> 数据并行的一个图示。输入数据被拆分，每个工作器使用模型副本处理其数据切片，梯度被合并，参数在所有副本间同步更新。
+
+数据并行有效地增加了每步处理的总批次大小，可能加快收敛速度并缩短训练时间。同步是一个重要方面。*同步训练*会等待所有工作器完成梯度计算后才进行聚合和更新，这能确保一致性，但也可能因最慢的工作器（“落后者”问题）而出现瓶颈。*异步训练*允许工作器独立更新模型，这可以提高吞吐量 (throughput)，但可能因梯度过时而导致训练稳定性降低。TensorFlow的`tf.distribute.Strategy` API提供了处理这两种方法的方式。
+
+### 模型并行
+
+模型并行采用不同的方法。它不是复制模型，而是将*模型本身*拆分到不同的设备上。每个设备只包含模型层和参数 (parameter)的一部分。处理数据时，激活会随着输入通过各层，依次从一个设备流向下一个设备。
+
+> 模型并行（有时称为流水线并行）的一个图示。模型被拆分到不同设备上，数据依次流经各个部分。
+
+这种方法通常用于模型过大以至于单个设备内存无法容纳的情况，即便批次大小很小也如此。常见例子包括非常深的网络或带有巨大嵌入 (embedding)表的模型。模型并行面临的挑战通常是设备利用率不高；当一个设备在计算时，其他设备可能闲置等待数据。更高级的流水线并行技术尝试通过重叠计算阶段来减轻此问题。
+
+实践中，对于在大型集群上训练的超大型模型，有时会使用结合数据并行和模型并行的方法。
+
+### 分布式训练的挑战
+
+分布式训练过程带来了单设备设置中不存在的复杂性：
+
+1. **通信开销：** 在设备之间（单机上的PCIe总线或机器间的网络接口）传输数据、激活和梯度需要时间，并且可能成为一个明显的瓶颈，特别是当工作器数量增加时。计算时间与通信时间的比率是确定分布式训练效率的一个重要因素。
+2. **同步和一致性：** 确保所有工作器都在一致的模型参数 (parameter)版本上运行很重要，特别是在同步数据并行中。异步方法以牺牲一致性换取潜在的速度，这带来了梯度过时的问题。
+3. **容错性：** 在大型分布式系统中，工作器故障的概率会增加。分布式训练框架需要有处理此类故障的机制，而不会损失重要的训练进度。
+4. **调试：** 在分布式环境中识别和修复问题本身就比调试单进程程序更复杂。问题可能源于网络问题、同步错误或工作器环境中的细微差异。
+
+了解这些基本原理和挑战对于有效运用分布式训练技术非常有必要。TensorFlow的`tf.distribute.Strategy` API，我们将在接下来的章节中介绍，它提供了一种高级抽象，旨在处理许多这些复杂性，让您能够更专注于模型架构和训练逻辑，同时发挥分布式计算的优势。
+
+## 参考资料
+
+- [Distributed training with TensorFlow](https://www.tensorflow.org/guide/distributed_training) — TensorFlow Authors (2024)
+  Publisher: TensorFlow
+  TensorFlow官方指南，介绍`tf.distribute.Strategy` API，涵盖各种分布式训练设置和示例。
+- [Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour](https://arxiv.org/abs/1706.02677) — Priya Goyal, Piotr Dollár, Ross Girshick, Pieter Noordhuis, Lukasz Wesolowski, Aapo Kyrola, Andrew Tulloch, Yangqing Jia, Kaiming He (2017)
+  Journal: arXiv preprint arXiv:1706.02677; DOI: [10.48550/arXiv.1706.02677](https://doi.org/10.48550/arXiv.1706.02677)
+  一篇开创性论文，展示了使用大批量同步数据并行来加速深度学习训练，阐述了其实际益处和挑战。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 8, Section 8.7
+  一本权威教材，其中专门有一节介绍并行和分布式训练策略，包括数据并行和模型并行的基本概念。
+- [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://proceedings.neurips.cc/paper/2019/file/093f65e080a295f8076b1c5722a46aa2-Paper.pdf) — Yanping Huang, Youlong Cheng, Ankur Bapna, Orhan Firat, Mia Xu Chen, Dehao Chen, HyoukJoong Lee, Jiquan Ngiam, Quoc V. Le, Yonghui Wu, Zhifeng Chen (2019)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NIPS Foundation; Volume: 32; Pages: 11 pages; DOI: [10.48550/arXiv.1811.06965](https://doi.org/10.48550/arXiv.1811.06965)
+  介绍了流水线并行技术，以提高模型并行的效率，解决了训练超大型模型时设备利用率不足的问题。

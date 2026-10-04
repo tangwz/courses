@@ -1,0 +1,70 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "architectural-patterns-ai-platforms"
+lesson: "high-bandwidth-interconnects"
+sourceId: 6967
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-1-architectural-patterns-ai-platforms/high-bandwidth-interconnects"
+title: "分布式系统的高带宽互连"
+description: "对NVLink、NVSwitch和InfiniBand在多节点训练中高速数据传输的技术考察。"
+order: 3
+plots: []
+sourceHash: "864246ab5d3c176a0e9033172f1b2de6a1ba6dde09f3f1cd09ccd9a004bc557d"
+sourceCorrections: []
+---
+
+在单个GPU上训练模型时，性能受限于处理器自身的计算能力。当您将训练扩展到多个GPU时，会出现一个新的瓶颈：它们之间的通信连接。在分布式训练期间，GPU必须不断交换信息，最主要的是反向传播 (backpropagation)期间计算的梯度。如果这些处理器之间的互连速度慢，GPU将花费更多时间等待数据，而不是执行计算，从而抵消了使用多个加速器的优势。标准主板互连，如PCIe（外围组件互连），虽然对于通用外围设备来说很快，但通常不足以满足大规模模型训练的需求。
+
+这就是专用高带宽互连变得非常重要的地方。它们是现代AI超级计算机的高速数据通道，专门设计用于最小化处理器之间的通信延迟并最大化带宽。我们将考察这方面三项重要技术：NVLink、NVSwitch和InfiniBand。
+
+### 节点内通信：NVLink和NVSwitch
+
+对于*单个服务器或节点内*的通信，NVIDIA开发了一种专有互连技术，提供GPU之间直接、高速的连接。
+
+#### NVLink
+
+NVLink是一种点对点GPU互连，提供比标准PCIe通道显著更高的带宽。例如，单个第三代NVLink提供50 GB/s的双向带宽，而PCIe 4.0 x16插槽提供32 GB/s。更近期代的产品进一步提升了这一性能。通过直接连接GPU，NVLink允许更快地共享模型和数据，这对于模型并行特别有用，因为模型并行中大型模型的不同部分位于不同的GPU上。
+
+然而，简单的点对点连接有局限性。在拥有八个GPU的服务器中，您无法在每个GPU与其他每个GPU之间创建直接的NVLink连接。这将需要不切实际数量的端口和复杂的布线。
+
+#### NVSwitch
+
+NVSwitch解决了节点内的“全对全”通信问题。它充当NVLink的无阻塞交叉开关，使任何GPU都能以完整的NVLink速度同时与任何其他GPU通信。可以把它想象成一个网络交换机，但它是为紧密耦合的GPU所需的极端速度和低延迟而设计的。高端AI服务器，如NVIDIA的DGX系统，使用NVSwitch在节点内的所有GPU之间创建一个统一内存空间。正是这种架构使得在单台机器上训练真正巨大的模型成为可能。
+
+下图说明了架构差异。左侧，传统服务器中的GPU通过PCIe通信，数据通常被迫通过CPU，这会造成争用。右侧，NVSwitch在所有GPU之间提供了直接、高带宽的路径。
+
+> 节点内GPU通信架构比较。NVSwitch模型为所有GPU提供直接、无阻塞的结构，消除了分层PCIe系统中存在的瓶颈。
+
+### 节点间通信：InfiniBand
+
+虽然NVLink和NVSwitch擅长节点内通信，但它们不连接独立的机器。要将训练任务从一台8-GPU服务器扩展到数百台服务器，您需要一个连接节点的高性能网络结构。这是InfiniBand的领域。
+
+InfiniBand是高性能计算（HPC）中使用的计算机网络标准，与传统以太网相比，它提供高吞吐量 (throughput)和非常低的延迟。现代InfiniBand标准，如NDR (NVIDIA Quantum-2)，每链路可提供高达400 Gb/s的带宽。
+
+InfiniBand对AI工作负载的决定性特点是其支持**远程直接内存访问（RDMA）**。RDMA允许一台服务器的网络接口卡（NIC）直接读写另一台服务器的内存，而无需涉及任何一台服务器的操作系统或CPU。在分布式训练中的全归约操作期间，这意味着GPU的数据可以直接发送到远程GPU的内存，且开销极小。绕过CPU和内核显著降低了通信延迟，这在许多节点间执行频繁、小量更新时是一个重要因素。
+
+### 分层通信架构
+
+在实践中，这些技术被组合起来形成一个针对不同规模性能进行优化的分层通信架构。
+
+1. **片上：** 最快的通信发生在GPU内部。
+2. **节点内：** NVLink和NVSwitch为单个服务器内的GPU提供超高速结构。
+3. **节点间：** 带有RDMA的InfiniBand提供快速、低延迟的网络，用于将多个服务器连接成一个大型、紧密的训练集群。
+4. **集群服务：** 标准以太网通常用于较慢、不太重要的通信，例如连接到存储系统、管理网络或用户访问。
+
+这种分层方法确保最频繁和性能最敏感的通信，例如模型并行设置中相邻GPU之间的通信，通过最快的链路进行。
+
+> 多节点AI集群的分层通信架构。NVLink/NVSwitch处理每个节点内的快速通信，而InfiniBand连接节点以进行分布式训练。标准以太网用于对延迟不那么敏感的任务，例如访问存储。
+
+选择合适的互连是基础设施与工作负载匹配的问题。对于小型模型的实验，标准网络可能就足够了。但对于基础模型生产规模的训练，使用NVLink、NVSwitch和InfiniBand的分层架构已不再是奢侈品，而是合理时间内完成训练任务的必要条件。云服务提供商已经认识到这一点，他们最先进的专注于AI的实例现在将这些高性能互连作为标准功能提供。
+
+## 参考资料
+
+- [NVIDIA NVLink](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQENPbJqLDcZvPGZzTJ9sKf3XIZHcpbxy7toe1Cmm5L4oZtIxX_8-aRoTMg3HnbspiTpgN3BcV_Y_KPVtC1N7vRzxqKMAaKz3Uz_0Nd_owo_dyY1J_ADh8XtrR66RxD8GNY22beXw2aXsrT4AkpIoOylEykN39MIy3b7) — NVIDIA Corporation (2023)
+  Publisher: NVIDIA Corporation
+  权威性地概述了 NVLink 和 NVSwitch 技术，解释了它们在 GPU 节点内高带宽通信中的作用。
+- [What is RDMA?](https://blogs.nvidia.com/blog/2020/04/29/what-is-rdma-roce-mellano-x-fast-networks/) — Rick Merritt (2020)
+  Publisher: NVIDIA Blog
+  清晰、权威地解释了远程直接内存访问 (RDMA) 技术及其在分布式系统中实现高性能、低延迟通信的优势，对 InfiniBand 尤其重要。
+- [A Survey of Communication-Efficient Distributed Deep Learning Methods](https://doi.org/10.1016/j.jpdc.2020.08.012) — Haibin Lin, Jin-Hau Li, Xiaogang Zhang, and Bin Luo (2020)
+  Journal: Journal of Parallel and Distributed Computing; Publisher: Elsevier; Volume: 146; Pages: 172-184; DOI: [10.1016/j.jpdc.2020.08.012](https://doi.org/10.1016/j.jpdc.2020.08.012)
+  全面回顾了提高分布式深度学习中通信效率的方法，为理解高带宽互连为什么重要提供了背景信息。

@@ -1,0 +1,72 @@
+---
+course: "bayesian-machine-learning"
+chapter: "bayesian-deep-learning"
+lesson: "motivation-bayesian-deep-learning"
+sourceId: 3623
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-6-bayesian-deep-learning/motivation-bayesian-deep-learning"
+title: "贝叶斯深度学习的缘由"
+description: "了解贝叶斯方法在深度学习中的益处，特别是在不确定性量化方面的益处。"
+order: 1
+plots: []
+sourceHash: "77e94f9a6701842e62d27799799a297e79b5322d44359a3a51bd993e8a27ac4a"
+sourceCorrections: []
+---
+
+深度学习 (deep learning)模型，通常使用随机梯度下降 (gradient descent)等优化方法进行训练，在从图像识别到自然语言处理等不同方面取得了显著表现。标准方法通常会得到一组最优参数 (parameter)（权重 (weight)和偏置 (bias)），常表示为 $w_{MAP}$（最大后验）或 $w_{MLE}$（最大似然）。这些点估计值使模型能够进行预测，但它们本身缺乏一种机制来以合理的方式表达对这些预测的*置信度*或*不确定性*。
+
+考虑一个用于医学图像分析的神经网络 (neural network)。一个标准网络可能会为一个特定诊断输出高概率。但该预测的可靠性如何？高概率是因为图像中有压倒性的证据，还是模型仅仅是进入了输入空间中训练不足的区域，从而导致了缺乏依据的推断？一个只提供点估计预测的模型无法区分这些情况。这一局限性在医疗保健、自主系统或金融建模等高风险实际使用场景中尤其值得关注，在这些场景中，了解模型的确定性与预测本身同样重要。
+
+### 过度自信和校准不佳的问题
+
+标准深度学习 (deep learning)模型通常校准不佳。这意味着它们输出的概率不能准确反映正确的真实可能性。模型可能对一个分类任务赋予99%的概率，但在做出如此自信的预测时，其错误频率却远高于1%。这种过度自信直接来源于仅为模型参数 (parameter) $w$ 找到一个“最佳”设置。如果不考虑其他也能很好地解释数据的参数设置，模型就无法表现出自身的无知。
+
+此外，依赖于单个点估计 $w$ 忽略了训练数据 $\mathcal{D}$ 关于合理参数值所提供的信息的丰富性。贝叶斯观点不寻求单个最佳 $w$，而是旨在描述整个*后验分布* $p(w | \mathcal{D})$。该分布包含所有与观测数据一致的参数值，并根据其后验概率进行加权。
+
+### 量化 (quantization)未知：偶然不确定性与认知不确定性
+
+贝叶斯深度学习 (deep learning)提供了一种正式方法来量化预测不确定性，这种不确定性可以分为两种基本类型：
+
+1. **偶然不确定性（Aleatoric Uncertainty）：** 这反映了数据生成过程本身的固有噪声或随机性。它表示即使我们完全了解底层过程，结果中仍存在的变异性。例如，抛掷一枚公平硬币总是存在不确定性，无论你观察多少次。在深度学习中，这可能对应于传感器噪声或类别标签中的固有模糊性。偶然不确定性通常被认为是无法通过更多同类数据来降低的。
+   "2. **认知不确定性（Epistemic Uncertainty）：** 这体现了模型对其自身参数 (parameter)的不确定性。它产生的原因是模型是在有限数据量上训练的，并且可能没有完美地学习到“真实”的底层函数。它也可能源于所选模型架构与现象复杂性之间的不匹配。认知不确定性通常可以通过收集更多数据来降低，特别是在模型目前不确定的区域。"
+
+> 此图说明了机器学习 (machine learning)预测中不确定性的两个主要来源。偶然不确定性产生于数据生成过程本身的固有随机性或噪声，而认知不确定性源于模型的局限性或可用训练数据的有限性。贝叶斯深度学习旨在明确地对这两种类型进行建模和量化。
+
+区分这些不确定性非常重要。高偶然不确定性暗示了预测的固有局限性，而高认知不确定性则表明模型不确定，并且可能通过更多数据或改进来提升，或者输入远离训练分布（分布外检测）。标准深度学习模型将这些来源混淆或完全忽略。
+
+### 原则性的正则化 (regularization)和数据效率
+
+深度学习 (deep learning)中用于防止过拟合 (overfitting)的常见技术，例如L1/L2正则化（权重 (weight)衰减）和dropout，通常可以解释为贝叶斯推断的近似形式。例如：
+
+- L2正则化等同于带有权重高斯先验的最大后验（MAP）估计。
+- L1正则化对应于带有拉普拉斯先验的MAP估计。
+- Dropout，正如我们将在本章后面学习的那样，可以证明它在数学上等同于高斯过程模型中特定类型的近似变分推断。
+
+贝叶斯深度学习明确了这种联系。通过在网络参数 (parameter)上定义先验分布 $p(w)$，我们以合理的方式融入先验信念或施加约束（如稀疏性或平滑性）。这种贝叶斯形式的正则化自然地带来更不容易过拟合的模型，并且有时可以更好地泛化，尤其是在训练数据有限的情况下。先验有效地传递了信息，可能提高数据效率。
+
+### 为什么要使用贝叶斯深度学习 (deep learning)？
+
+将贝叶斯方法与深度学习结合，相比标准方法具有几个引人注目的优势：
+
+- **可靠的不确定性量化 (quantization)：** 提供校准的概率，并区分偶然不确定性和认知不确定性，这对于风险评估和决策制定非常重要。
+- **改进的性能：** 模型可以表明何时不确定，使其在处理分布外输入或对抗性样本时更有效。
+- **原则性正则化 (regularization)：** 通过参数 (parameter)上的先验，为权重 (weight)衰减和dropout等技术提供理论基础。
+- **有限数据下更好的表现：** 先验可以包含相关知识，当数据稀缺时，可能带来更好的泛化能力。
+- **促进主动学习：** 模型不确定性可以指引选择哪些新数据点对于提升模型最有价值。
+- **促成新应用：** 为需要可信赖AI的应用带来可能，例如自动化科学发现、更安全的自主系统和更可靠的医疗诊断。
+
+虽然标准深度学习擅长发现复杂的模式，但贝叶斯深度学习通过增加一个关于这些模式可靠性的重要自我认知层来补充这一点。然而，对于复杂的、高维神经网络 (neural network)，获取完整的后验分布 $p(w | \mathcal{D})$ 带来了显著的计算难题。接下来的章节将研究高级推断技术，特别是MCMC和变分推断，这些技术旨在克服这些难题并使贝叶斯深度学习变得实用。
+
+## 参考资料
+
+- [Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning](http://proceedings.mlr.press/v48/gal16.pdf) — Yarin Gal, Zoubin Ghahramani (2016)
+  Journal: Proceedings of the 33rd International Conference on Machine Learning (ICML); Volume: 48; Pages: 1050-1059
+  本文展示了神经网络中的Dropout如何被解释为近似贝叶斯推断，为量化认知不确定性提供了一种实用方法。
+- [What Uncertainties Do We Need in Bayesian Deep Learning for Computer Vision?](https://proceedings.neurips.cc/paper/2017/file/f222955c479143fe233ba3247dd84392-Paper.pdf) — Alex Kendall, Yarin Gal (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 30; Publisher: NeurIPS; Pages: 5574-5584; DOI: [10.48550/arXiv.1703.04977](https://doi.org/10.48550/arXiv.1703.04977)
+  本文明确介绍并区分了深度学习中的任意不确定性和认知不确定性，并重点阐述了它们在计算机视觉任务中的应用。
+- [Probabilistic Machine Learning: An Introduction](https://probml.github.io/pml-book/book1.html) — Kevin P. Murphy (2022)
+  Publisher: MIT Press
+  一本全面的教科书，涵盖概率建模和贝叶斯推断的基础知识，对于理解贝叶斯深度学习的理论基础至关重要。
+- [A Survey of Uncertainty in Deep Neural Networks](https://link.springer.com/article/10.1007/s10462-020-09949-3) — Frank Hüllermeier, Gideon Waegeman (2021)
+  Journal: Artificial Intelligence Review; Publisher: Springer; Volume: 54; Pages: 4403–4449; DOI: [10.1007/s10462-020-09949-3](https://doi.org/10.1007/s10462-020-09949-3)
+  对深度学习中不确定性量化的各种方法进行了广泛概述，为贝叶斯深度学习的动机和方法提供了背景。

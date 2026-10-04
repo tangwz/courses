@@ -1,0 +1,167 @@
+---
+course: "getting-started-model-context-protocol"
+chapter: "implementing-tools-and-logic"
+lesson: "error-handling-reporting"
+sourceId: 7852
+sourceUrl: "https://apxml.com/zh/courses/getting-started-model-context-protocol/chapter-3-implementing-tools-and-logic/error-handling-reporting"
+title: "错误处理与报告"
+description: "捕获异常并向客户端返回有助益错误的规范方法。"
+order: 4
+plots: ["plots/7852-0.json"]
+sourceHash: "6ab0765925ed1da5d0ed55f7ed3ad391deeeca71a40116700a7a0005f3517879"
+sourceCorrections: []
+---
+
+软件开发中的健壮性通常指在应用程序遇到意外情况时防止其崩溃。在模型上下文 (context)协议（MCP）的环境中，健壮性有了第二层含义：当某个操作失败时，告知大型语言模型（LLM），以便它尝试修正。当LLM调用工具时，它会期待一个结果。如果该结果是导致服务器崩溃的未处理异常，对话就会终止。然而，如果结果是结构化的错误消息，模型就可以理解失败原因，例如找出缺失的文件或格式不正确的SQL查询，并生成一个新的、已修正的请求。
+
+本节阐述如何在工具实现中管理异常，区分协议层错误和应用层故障，以及如何使用 `isError` 标志妥善报告它们。
+
+### MCP 错误层级
+
+MCP 环境中的错误通常分为两类：协议错误和工具执行错误。理解这种区别对于决定在何处捕获异常是很有必要的。
+
+1. **协议错误：** 当 JSON-RPC 消息本身无效时发生，例如格式不正确的 JSON 负载或请求不存在的工具。MCP SDK 通常会自动处理这些错误，返回标准的 JSON-RPC 错误码（例如，`-32601` 表示方法未找到）。
+2. **工具执行错误：** 这些错误发生在您的自定义逻辑中。例如，JSON-RPC 请求有效，工具也存在，但数据库被锁定，或者 API 凭据无效。
+
+作为开发者，您的主要职责是管理工具执行错误。目的是捕获这些异常并返回一个有效的 `CallToolResult` 对象，该对象在不中断连接的情况下表明失败。
+
+### 实现 `isError` 标志
+
+MCP 规范在工具结果对象中包含一个名为 `isError` 的布尔字段。当其设置为 `true` 时，它会向客户端（以及随后的 LLM）表明工具已尝试执行但未能完成所请求的任务。
+
+与错误结果关联的内容不应是原始堆栈跟踪。相反，它应该是一个描述性消息，帮助模型了解出了什么问题。
+
+考虑请求处理逻辑的流程：
+
+> 处理工具请求的逻辑流程。一个实现会捕获验证和执行异常，并将它们转换为结构化的错误响应，而不是终止进程。
+
+### Python 中的实际实现
+
+使用 Python SDK 时，您将工具逻辑包装在 try-except 块中。以下示例展示了一个旨在从数据库中读取特定行的工具。它明确处理潜在的连接问题和缺失记录。
+
+```python
+from mcp.server.fastmcp import FastMCP
+import sqlite3
+
+mcp = FastMCP("DatabaseServer")
+
+@mcp.tool()
+def get_user_by_id(user_id: int) -> str:
+    """根据 ID 获取用户详情。如果未找到，则返回错误字符串。"""
+    try:
+        conn = sqlite3.connect("users.db")
+        cursor = conn.cursor()
+        
+        # 执行查询
+        cursor.execute("SELECT name, email FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        
+        conn.close()
+
+        if row is None:
+            # 逻辑错误：查询成功，但数据表明未能找到目标
+            # 我们抛出异常或明确返回错误上下文
+            raise ValueError(f"User with ID {user_id} not found.")
+            
+        return f"Name: {row[0]}, Email: {row[1]}"
+
+    except sqlite3.Error as e:
+        # 数据库操作错误（例如，锁定，文件缺失）
+        # 在原始实现中，我们会手动构建 Result 对象。
+        # FastMCP 通过格式化返回值来处理异常，
+        # 但为了上下文，更推荐显式处理。
+        return f"Error: Database operation failed. Details: {str(e)}"
+        
+    except ValueError as e:
+        # 领域逻辑错误
+        return f"Error: {str(e)}"
+        
+    except Exception as e:
+        # 捕获所有意外的运行时错误
+        return f"Error: An unexpected system error occurred. {str(e)}"
+```
+
+在低层次的 MCP 实现中（没有 `FastMCP` 包装器），您必须手动构建响应对象。这提供了对 `isError` 标志的更大控制权。
+
+```python
+# 低层次实现模式
+from mcp.types import CallToolResult, TextContent
+
+def handle_tool_call(arguments):
+    try:
+        result_data = perform_risky_operation(arguments)
+        return CallToolResult(
+            content=[TextContent(type="text", text=result_data)],
+            isError=False
+        )
+    except Exception as e:
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Operation failed: {str(e)}")],
+            isError=True
+        )
+```
+
+### 设计对模型友好的错误消息
+
+您在错误内容中返回的文本会被 AI 模型使用。因此，错误消息的质量直接影响模型恢复的能力。一个模糊的消息，例如 `KeyError: 'id'`，对 Python 开发者来说很有用，但对于不了解脚本内部字典结构的 LLM 来说则令人困惑。
+
+一个可恢复的错误消息应该回答三个问题：
+
+1. **发生了什么？** （例如，“数据库查询失败。”）
+2. **为什么发生？** （例如，“列 'last\_name' 不存在。”）
+3. **什么是有效格式？** （例如，“可用列为：id, name, email。”）
+
+如果您提供这些上下文 (context)，LLM 就能分析其之前的工具调用，发现它请求了一个不存在的列，然后发出一个新的、正确的工具调用，而无需人工干预。
+
+### 错误恢复可视化
+
+客户端（LLM）和服务器在错误状态下的关系是循环的。错误不是终点，而是一个反馈信号。
+
+
+
+![模型恢复概率与错误详情对比](plots/7852-0.json)
+
+
+
+> 错误消息质量对模型自我修正能力的影响。通用错误很少能带来成功的重试，而提供模式提示则能大大改善结果。
+
+### 错误报告中的安全措施
+
+尽管详细性有助于 LLM，但它也带来了安全风险。我们必须在上下文 (context)和保密性之间取得平衡。常见的堆栈跟踪通常包含文件路径、环境变量片段或内部逻辑结构，这些不应暴露给客户端（客户端可能是第三方 SaaS LLM）。
+
+**应避免的做法：**
+
+- **返回原始 Traceback 对象：** 这会暴露您服务器的文件结构。
+- **回显原始 SQL 错误：** 如果 SQL 注入尝试导致语法错误，返回原始数据库错误可能会向恶意用户透露数据库供应商或表结构。
+
+**推荐方法：**
+使用异常掩盖。捕获特定的低层次异常（例如 `sqlite3.OperationalError`），并将其包装在经过清理的高层次消息中。
+
+例如，不要返回：
+`sqlite3.OperationalError: no such table: user_data_v2`
+
+而应返回：
+`Error: 无法访问请求的资源。请根据提供的模式工具验证表名。`
+
+这会告诉模型 *哪里* 出了问题（表名问题），而不会证实数据库架构的内部状态。
+
+### 集成 Pydantic 验证错误
+
+在上一节中，我们使用 Pydantic 定义了模式。当输入类型不匹配时，Pydantic 会自动抛出 `ValidationError` 异常。
+
+当 Pydantic 模型未能验证 LLM 传递的参数 (parameter)时，MCP 服务器应该专门捕获它。`ValidationError` 对象包含一个验证失败的字段列表。将此列表解析为人类可读的字符串，可以使 LLM 识别出具体哪个参数不正确。
+
+例如，如果模型向一个预期整数的字段传递字符串“five”，则返回给模型的错误消息应为：
+`Validation Error: Argument 'quantity' expected an integer, but received 'five'.`
+
+这使得模型能够识别类型不匹配，并用整数 `5` 重新调用工具。通过将错误视为有助益的反馈而非系统故障，我们创建了一个代理循环，模型可以在其中应对障碍以达成其目标。
+
+## 参考资料
+
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification) — JSON-RPC Working Group (2010)
+  描述了JSON-RPC 2.0规范，包括错误代码和消息结构，这是MCP中协议级错误的基础。
+- [Toolformer: Language Models That Can Use Tools](https://arxiv.org/abs/2302.04761) — Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom (2023)
+  Journal: arXiv preprint arXiv:2302.04761; DOI: [10.48550/arXiv.2302.04761](https://doi.org/10.48550/arXiv.2302.04761)
+  提出了一种训练语言模型使用外部工具的方法，通过学习生成工具使用提示并解释其输出来展示模型对工具输出和失败的适应能力。
+- [Pydantic Documentation: Validation](https://docs.pydantic.dev/latest/usage/validation/) — Pydantic Development Team (2025)
+  解释了Pydantic的数据验证能力，包括处理`ValidationError`和构建验证错误消息，这对于处理工具参数很有用。

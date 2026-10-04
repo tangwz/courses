@@ -1,0 +1,70 @@
+---
+course: "intro-large-language-models"
+chapter: "different-llm-types"
+lesson: "open-vs-closed-models"
+sourceId: 3720
+sourceUrl: "https://apxml.com/zh/courses/intro-large-language-models/chapter-4-different-llm-types/open-vs-closed-models"
+title: "开放模型与封闭模型：有何不同？"
+description: "了解开源/开放访问模型与专有/封闭模型之间的区别。"
+order: 3
+plots: []
+sourceHash: "a1845bc9b417645d56e941c6035ebb32aa6e04faa7be4cd48a681a250511c729"
+sourceCorrections: []
+---
+
+当您了解大型语言模型时，会遇到一个重要的区别：即模型是“开放”的还是“封闭”的。这种区别从根本上决定了您如何访问、使用和理解这些强大的工具。这不仅仅是一个技术细节；它对成本、定制和透明度有实际影响。让我们来详细说明这些术语的含义。
+
+### 封闭模型：精致但专有
+
+可以把封闭模型看作商业软件应用。它们通常由特定公司开发、拥有和管理。
+
+- **它们是什么：** 这些是专有模型，其内部运行方式、特定训练数据，甚至通常是完整的模型架构都由创建它们的厂商保密。您通常通过受控界面与这些模型交互，最常见的是由供应商提供的应用程序编程接口（API）或基于网络的聊天应用程序。
+- **访问方式：** 访问通常受到管理，并常常根据模型的使用量收取费用（例如，每处理一个token的成本）。您无法直接访问模型的核心文件或权重 (weight)。
+- **示例：** 著名示例包括OpenAI的GPT-4（支持ChatGPT Plus和API等服务）、Anthropic的Claude系列以及Google的Gemini模型（可通过其API和产品访问）。
+- **特点：**
+  - **高性能：** 通常代表了性能的先进水平，原因在于对训练数据和计算资源的大量投入。
+  - **易用性：** 设计用于通过API或精致的网页界面进行相对简单的集成。
+  - **透明度有限：** 您通常不知道它们经过了哪些准确的数据训练，或其架构的具体细节。这可能会使得理解潜在的偏见或限制变得困难。
+  - **定制性较低：** 您通常不能修改模型本身。定制通常限于提示词 (prompt)技术，或由供应商作为单独服务提供的微调 (fine-tuning)。
+  - **供应商依赖性：** 过度依赖特定封闭模型可能会使将来切换供应商变得困难。
+
+封闭模型通常是一个不错的起点，如果您优先考虑易于访问、开箱即用的先进性能，并且不需要深度定制或模型内部的透明度。
+
+### 开放模型：易于访问和灵活调整
+
+相比之下，“开放”模型（有时被称为开放权重 (weight)或开源模型，尽管许可细节可能有所不同）提供更大的访问权限和透明度。
+
+- **它们是什么：** 对于开放模型，其主要组成部分，如模型的架构细节，以及最重要的是，其训练过的参数 (parameter)（权重）是公开发布的。有时，训练数据的细节甚至数据本身也会被分享。这使得任何具备必要技能和计算资源的人都可以自行查看、修改和运行模型。
+- **访问方式：** 模型权重通常可以下载。您可以在自己的硬件上（如果足够强大）或在云计算平台上运行这些模型。许多社区和公司围绕流行的开放模型构建了界面和服务。
+- **示例：** 主要示例包括Meta的Llama系列（如Llama 3）、Mistral AI的模型（如Mistral 7B和Mixtral），以及来自EleutherAI等社区或TII等机构的模型（如Falcon）。
+- **特点：**
+  - **透明度：** 研究人员和开发人员可以检查模型的架构和权重，从而更好地理解其行为和潜在偏见。
+  - **定制性：** 用户可以在自己的特定数据上微调 (fine-tuning)这些模型，以提高特定任务或领域中的表现。
+  - **控制权：** 在本地或自己的基础设施上运行模型，让您对其使用和数据隐私有完全的控制权。
+  - **社区创新：** 开放性通常会带来快速创新，社区围绕这些模型构建工具、改进和新的应用。
+  - **资源需求：** 运行更大的开放模型可能需要大量的计算能力（内存、GPU）。与使用封闭模型的API相比，入门可能涉及更多的技术设置。
+  - **性能差异：** 尽管许多开放模型功能强大，但其开箱即用的性能有时可能落后于规模最大、资源投入最多的封闭模型，不过这一差距正在不断缩小。
+
+开放模型很有吸引力，如果您重视透明度，需要为特定需求定制模型，希望对部署和数据有更大控制权，或者希望参与更广泛的研究和开发社区。
+
+### 比较访问和控制
+
+核心区别在于模型本身的访问权限和控制权。封闭模型提供服务，而开放模型提供底层组件。
+
+> 这是一个简化的视图，比较了封闭模型和开放模型的访问路径。封闭模型通常涉及通过供应商界面进行交互，而开放模型则允许直接访问模型组件，以进行本地使用或修改。
+
+### 为什么这对您很重要
+
+作为初学者，理解这种区别有助于您在可选方案中做出选择：
+
+- **试用：** 许多封闭模型通过网页界面提供免费层级或试用（如免费版ChatGPT或Claude），使它们一开始易于试用。开放模型可能需要使用Hugging Face等平台或设置本地环境，这会涉及更多的设置工作，但提供了更深入的学习机会。
+- **成本：** 使用封闭模型的API通常会根据使用量产生费用。如果您有合适的硬件，运行开放模型可以是免费的，但如果使用托管基础设施，则会产生云计算费用。
+- **未来项目：** 如果您设想构建需要大量定制或数据隐私是主要考量的应用，考虑开放模型可能更适合长期发展。如果您需要顶级性能且对常见任务的设置要求不高，封闭模型的API可能是一条更快的路径。
+
+开放模型和封闭模型都在AI生态系统中扮演着重要角色。了解其区别有助于您根据自己的目标、资源以及所需的控制和透明度水平来选择合适的模型类型。在不同场景下，您可能会发现自己为了不同目的而使用这两种类型的模型。
+
+## 参考资料
+
+- [On the Opportunities and Risks of Foundation Models](https://crfm.stanford.edu/assets/report.pdf) — Rishi Bommasani, Drew A. Hudson, Kai-Fu Lee, Jack Clark, Daniel E. Ho, Raymond Perrault, Alexy Kurakin, Kevin L. Jackson, Edward W. Felten, Samy Bengio, Percy Liang, John Etchemendy, Peter Eckersley, Tatsuya Kawahara, Michael Bommarito, Jean-Louis Gassée, Yejin Choi, Christopher Manning, James Manyika, J. D. Zamfirescu, Richard Socher, Fei-Fei Li, Michael Kidd, Michael Genesereth, Jeff Dean, James Bridle, Aleksander Madry, Laurent El Ghaoui, Alex Aiken, Mark Z. Jacobson, Michael M. Waldrop, Daniel Ichter, John D. C. Hirst, Kevin K. W. Wong, Brian Christian, Christopher Re, David M. D. W. Y. Ng (2021)
+  Journal: arXiv preprint; Publisher: Stanford Center for Research on Foundation Models; DOI: [10.48550/arXiv.2108.07258](https://doi.org/10.48550/arXiv.2108.07258)
+  提供了基础模型、其发展、部署和对社会影响的广泛概述，有助于理解不同的访问模式。

@@ -1,0 +1,63 @@
+---
+course: "python-for-beginners"
+chapter: "introduction-object-oriented-concepts"
+lesson: "python-creating-objects"
+sourceId: 2370
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-8-introduction-object-oriented-concepts/python-creating-objects"
+title: "创建实例 (对象)"
+description: "学习如何从类定义创建单独的对象（实例）。"
+order: 3
+plots: []
+sourceHash: "1a3feb10d0063be8e3b2191a0f68a3938c39551aac70e2f5c5d0fdf9992b0d3f"
+sourceCorrections: []
+---
+
+你已经了解了如何定义一个`类`，它就像是一个蓝图或模板。但蓝图本身并不是实物。房子的蓝图并非你能居住的房子；它只是设计图。要获得一个实际的房子，你需要依据蓝图来*建造*它。
+
+在编程中，从类蓝图创建实际“事物”的过程称为**实例化**，而你创建的这个“事物”称为**对象**或该类的**实例**。把类想象成饼干模具，而对象就是你用模具制作的每一块饼干。每一块饼干都使用相同的模具（类）制作，但每一块饼干都是一块独立的、不同的饼干（对象）。
+
+### 创建对象
+
+类是创建对象的蓝图或模板。Python 中，要根据这个蓝图构建一个实际的对象，即创建类的实例，过程很简单。只需使用类名，后面加上括号 `()`。
+
+```python
+# 假设我们定义了一个简单的类，如下所示：
+class Dog:
+  # 目前，这个类没有定义任何特定的
+  # 属性或行为。我们很快就会添加这些。
+  pass # 'pass' 关键字表示“什么都不做”
+
+# 现在，让我们创建 Dog 类的实例（对象）
+fido = Dog()
+buddy = Dog()
+
+# fido 和 buddy 现在是两个独立的 Dog 对象
+print(fido)
+print(buddy)
+print(type(fido))
+```
+
+运行这段代码时，`fido` 和 `buddy` 会成为变量，它们指向计算机内存中两个独立的 `Dog` 对象。`print()` 语句可能会显示类似 `<__main__.Dog object at 0x...>` 的内容，其中 `0x...` 表示每个对象的唯一内存地址。这表明它们是源自 `Dog` 类的独立实例。`type()` 函数确认 `fido` 的类型确实是 `Dog`。
+
+### 括号 `()` 的作用
+
+你可能想知道为什么在类名 (`Dog()`) 后面需要括号 `()`。当你这样调用一个类时，你实际上是在启动一个构建对象的流程。Python 会在类中寻找一个特殊的初始化方法（我们很快就会讲到，叫做 `__init__`），用于设置新对象的初始状态。即使你没有明确定义 `__init__` 方法（就像我们上面简单的 `Dog` 类），Python 也会使用默认机制，并且仍然需要括号来触发对象的创建过程。
+
+那么，基本步骤是：
+
+1. 定义你的类（即蓝图）。
+2. 要创建一个对象（一个实例），像调用函数一样调用类名，并使用括号：`object_variable = ClassName()`。
+3. 变量（示例中的 `object_variable`）现在持有内存中新创建对象的引用。
+
+你可以根据一个类创建所需数量的对象，就像你可以用一张蓝图建造多栋房子，或者用一个饼干模具制作多块饼干一样。每个对象都是独立的，尽管它们都共享该类定义的结构和可能的行为。
+
+## 参考资料
+
+- [The Python Tutorial - 9. Classes](https://docs.python.org/3/tutorial/classes.html) — Guido van Rossum and the Python Development Team (2024)
+  Python面向对象特性（包括类定义和对象实例化）的官方说明。
+- [Learning Python, 5th Edition](https://www.oreilly.com/library/view/learning-python-5th/9781449355722/) — Mark Lutz (2013)
+  Publisher: O'Reilly Media; Pages: 753-789
+  全面介绍Python的类机制以及从类创建对象的过程。
+- [Python Crash Course, 3rd Edition](https://nostarch.com/python-crash-course-3rd-edition) — Eric Matthes (2022)
+  Publisher: No Starch Press; Pages: 181-200
+  提供关于Python中定义和使用类以及创建实例的实用、动手介绍。

@@ -1,0 +1,121 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "rl-ppo-fine-tuning"
+lesson: "ppo-advantages-returns"
+sourceId: 5152
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-4-rl-ppo-fine-tuning/ppo-advantages-returns"
+title: "优势和回报的计算"
+description: "使用广义优势估计 (GAE) 等方法实现稳定更新。"
+order: 4
+plots: []
+sourceHash: "c227bf344aa3214db254fada303ad023ba298ef1fc5aa7bf7583536916620277"
+sourceCorrections: []
+---
+
+优化PPO目标下的策略需要可靠地评估所选动作（生成特定令牌）相对于策略在该状态下（当前生成的序列）采取的平均动作有多好。优势函数 $A(s_t, a_t)$ 提供了这种评估。仅依赖即时奖励 $r_t$（这种奖励通常结合了奖励模型信号和KL惩罚）对于此类优化来说是不够的。这是因为即时奖励忽略了动作的长期影响。相反，必须考虑总累积奖励，或称之为*回报*，并将其与由*值函数* $V(s_t)$ 提供的基准进行比较，该函数估计从状态 $s_t$ 获得的预期回报。
+
+### 回报计算
+
+回报 $G_t$ 是从时间步 $t$ 开始直到情节结束（生成的序列）所获得的总折扣奖励。对于长度为 $T$ 的序列，其定义如下：
+
+
+$$
+G_t = \sum_{k=0}^{T-t-1} \gamma^k r_{t+k+1}
+$$
+
+
+此处，$r_{t+k+1}$ 是在状态 $s_{t+k}$ 中采取动作后获得的奖励。在LLM的RLHF背景下，每一步的奖励 $r_t$ 通常包含两个组成部分：一个基于当前策略与参考 (SFT) 策略之间KL散度的惩罚，以及可能来自分配给完整序列 $x$ 的最终奖励模型得分 $R(x)$ 的贡献。一种常见做法是在每个令牌生成步 $t$ 施加KL惩罚 $r_{KL, t} = -\beta D_{KL}(\pi_{\theta}(\cdot|s_t) || \pi_{ref}(\cdot|s_t))$，并且仅在最后一步 $T$ 添加最终奖励模型得分 $R(x)$。因此，对于 $t < T$，有 $r_t = r_{KL, t}$；对于 $t = T$，有 $r_T = r_{KL, T} + R(x)$。
+
+折扣因子 $\gamma \in [0, 1]$ 决定了未来奖励的现值。接近1的 $\gamma$ 赋予未来奖励更多权重 (weight)，而接近0的 $\gamma$ 则优先考虑即时奖励。对于文本生成任务，$\gamma$ 通常设为接近1（例如0.99或1.0），因为质量评估（通过奖励模型）常依赖于完整序列。
+
+### 优势函数
+
+优势函数 $A(s_t, a_t)$ 衡量在状态 $s_t$ 中采取动作 $a_t$ 相对于当前策略 $\pi_\theta$ 下状态 $V(s_t)$ 的预期值的相对价值。其正式定义如下：
+
+
+$$
+A(s_t, a_t) = Q(s_t, a_t) - V(s_t)
+$$
+
+
+其中 $Q(s_t, a_t)$ 是动作-值函数，表示在状态 $s_t$ 中采取动作 $a_t$ 并随后遵循策略 $\pi_\theta$ 后的预期回报。由于我们通常直接使用值网络（评论家）学习 $V(s_t)$，我们可以使用即时奖励 $r_{t+1}$ 和下一状态的值 $V(s_{t+1})$ 来估计 $Q(s_t, a_t)$：
+
+
+$$
+Q(s_t, a_t) \approx r_{t+1} + \gamma V(s_{t+1})
+$$
+
+
+将此代入优势定义，得到一步时序差分 (TD) 误差 $\delta_t$，常被用作基本的优势估计器：
+
+
+$$
+\hat{A}_t \approx \delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)
+$$
+
+
+这个估计显示了观察到的结果 ($r_{t+1} + \gamma V(s_{t+1})$) 是否比预期 ($V(s_t)$) 更好或更差。
+
+### 利用广义优势估计 (GAE) 处理高方差
+
+尽管TD误差 $\delta_t$ 是优势的无偏估计（如果 $V$ 准确），但它可能遭受高方差问题，因为它严重依赖单步奖励 $r_{t+1}$ 和下一状态值估计 $V(s_{t+1})$。这种方差可能导致PPO更新不稳定，尤其是在语言生成等复杂任务中。
+
+广义优势估计 (GAE) 是一种旨在通过融合多个时间步的信息来降低这种方差的技术，它有效地将单步TD误差与更长期的蒙特卡洛回报相结合。GAE引入了一个参数 (parameter) $\lambda \in [0, 1]$（常被称为GAE lambda）来控制这种权衡。
+
+GAE优势估计器被计算为TD误差的指数加权和：
+
+
+$$
+\hat{A}_t^{GAE(\gamma, \lambda)} = \sum_{k=0}^{T-t-1} (\gamma \lambda)^k \delta_{t+k}
+$$
+
+
+其中 $\delta_{t+k} = r_{t+k+1} + \gamma V(s_{t+k+1}) - V(s_{t+k})$ 是时间步 $t+k$ 的TD误差。（注意：如果 $s_T$ 是终止状态，则 $V(s_T)$ 通常定义为0）。
+
+- **若 $\lambda = 0$**：$\hat{A}_t^{GAE(\gamma, 0)} = \delta_t$。这恢复了高方差、低偏差的一步TD误差。
+- **若 $\lambda = 1$**：$\hat{A}_t^{GAE(\gamma, 1)} = \sum_{k=0}^{T-t-1} \gamma^k \delta_{t+k}$。这扩展为 $\sum_{k=0}^{T-t-1} \gamma^k (r_{t+k+1} + \gamma V(s_{t+k+1}) - V(s_{t+k}))$。此和项可消去并近似蒙特卡洛优势估计 $G_t - V(s_t)$，后者通常具有较低方差，但如果值函数 $V$ 不准确，则可能存在偏差，对于长序列（大 $T$）尤其如此。
+- **对于 $0 < \lambda < 1$**：GAE提供了一个中间估计，平衡了偏差-方差权衡。在实践中，$\lambda = 0.95$ 等值很常见，通常比极端情况产生更稳定和高效的学习。
+
+The diagram below illustrates how TD errors over multiple steps contribute to the GAE calculation for $\hat{A}_t$.
+
+> 广义优势估计 (GAE) 的计算流程图。后续状态 ($s$) 的奖励 ($r$) 和值函数估计 ($V$) 用于计算时序差分 (TD) 误差 ($\delta$)。这些TD误差随后根据 $\gamma$ 和 $\lambda$ 的权重 (weight)进行组合，以形成最终的GAE优势估计 $\hat{A}_t^{GAE}$。
+
+### 实现细节
+
+在通常使用TRL（Transformer强化学习 (reinforcement learning)）等库的RLHF实现中，GAE被高效地计算。在PPO rollout阶段，策略逐令牌生成序列。对于每个生成直到序列结束（或最大长度）的令牌，会存储以下内容：
+
+- 状态（目前已生成的序列）$s_t$。
+- 所选动作（令牌）的对数概率 $\log \pi_\theta(a_t|s_t)$。
+- 评论家网络得到的值估计 $V(s_t)$。
+- 奖励中KL散度惩罚部分 $r_{KL, t}$。
+
+一旦生成一批完整的序列：
+
+1. 计算每个序列 $x$ 的最终奖励模型得分 $R(x)$，并将其添加到最终步 $T$ 的奖励中。
+2. 使用值函数 $V(s_t)$ 计算每个序列中所有步 $t$ 的TD误差 $\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)$（从 $T-1$ 向后计算，将 $V(s_T)$ 设为0）。请记住，$r_{t+1}$ 包含 $r_{KL, t+1}$，并且如果 $t+1=T$，可能包含 $R(x)$。
+3. 使用计算出的TD误差 $\delta_t$，$\delta_{t+1}$，...，$\delta_{T-1}$ 以及选定的 $\gamma$ 和 $\lambda$ 计算所有步 $t$ 的GAE优势 $\hat{A}_t^{GAE}$。这通常通过对序列进行另一次反向传递来完成：
+   - 初始化 $\hat{A}_T^{GAE} = 0$。
+   - 对于 $t = T-1$ 到 $0$：
+     
+     $$
+     \hat{A}_t^{GAE} = \delta_t + \gamma \lambda \hat{A}_{t+1}^{GAE}
+     $$
+     
+4. 计算出的回报 $G_t$（常使用 $G_t \approx \hat{A}_t^{GAE} + V(s_t)$ 估计）被用作训练值函数 $V(s_t)$ 的目标，通过最小化均方误差 (MSE) 等损失函数 (loss function)进行：$L_{VF} = \mathbb{E}[(V_{\phi}(s_t) - G_t^{target})^2]$。
+5. 计算出的GAE优势 $\hat{A}_t^{GAE}$ 直接用于PPO策略损失函数中，以更新策略参数 (parameter) $\theta$。
+
+在PPO损失计算中使用优势之前，通常会将一个批次内的优势进行归一化 (normalization)。这包括减去均值并除以批次内优势的标准差，有助于通过防止过大的策略更新来稳定训练。
+
+通过仔细计算回报并使用GAE估计优势，我们为PPO算法提供了一个稳定且提供信息的信号，以引导LLM策略生成与奖励模型所捕获偏好更一致的响应，同时减轻与高方差梯度估计相关的不稳定性。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  一本经典教科书，全面介绍了强化学习概念，包括回报、价值函数和时间差分学习。
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347) — John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov (2017)
+  Journal: arXiv preprint arXiv:1707.06347; DOI: [10.48550/arXiv.1707.06347](https://doi.org/10.48550/arXiv.1707.06347)
+  介绍了近端策略优化（PPO）算法，这是一种广泛使用的策略梯度方法，以其稳定性和样本效率而闻名，该方法依赖于仔细计算的优势估计。
+- [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438) — John Schulman, Philipp Moritz, Sergey Levine, Michael Jordan, Pieter Abbeel (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1506.02438](https://doi.org/10.48550/arXiv.1506.02438)
+  介绍了广义优势估计（GAE），一种利用参数 $\lambda$ 平衡优势估计中偏差-方差权衡的方法，这有助于PPO等稳定策略梯度方法。

@@ -1,0 +1,112 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "forward-propagation"
+lesson: "linear-transformation"
+sourceId: 1948
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-3-forward-propagation/linear-transformation"
+title: "线性变换：加权和计算"
+description: "计算层中神经元的输入加权和与偏置。"
+order: 2
+plots: []
+sourceHash: "a0aa837e724a1a53067cfb61ed4dcfd50b3ee219e29686b5fc667da421f78787"
+sourceCorrections: []
+---
+
+当信息在前向传播过程中开始在网络中流动时，每个神经元中的第一个重要计算是**线性变换**。这一步包括计算连接到该神经元的所有输入的加权和，再加上一个该神经元特有的偏置 (bias)项。可以将其视为根据学习到的重要性（权重 (weight)）组合传入信号，然后将结果按一定量（偏置）进行偏移。
+
+### 单个神经元的加权和计算
+
+在人工神经元中，信息通过一个线性变换进行处理。一个神经元接收多个输入 $x_1, x_2, \dots, x_n$，每个输入 $x_i$ 都关联一个对应的权重 (weight) $w_i$。此外，神经元还包含一个偏置 (bias)项 $b$。线性变换将这些输入、权重和偏置项结合起来，生成一个中间值，通常表示为 $z$。
+
+计算方法如下：
+
+
+$$
+z = (w_1 x_1 + w_2 x_2 + \dots + w_n x_n) + b
+$$
+
+
+这可以用求和符号更紧凑地表示：
+
+
+$$
+z = \sum_{i=1}^{n} (w_i x_i) + b
+$$
+
+
+我们来分解这些组成部分：
+
+- **输入 ($x_i$)**：这些是来自输入数据（对于第一个隐藏层）的特征值，或来自前一层神经元的输出（激活值）。
+- **权重 ($w_i$)**：这些参数 (parameter)表示与每个输入$x_i$关联的连接的强度或重要性。在训练期间，网络学习这些权重的最佳值。较大的正权重表示对应的输入强烈地激励神经元，而较大的负权重表示它强烈地抑制神经元。接近零的权重表示输入影响很小。
+- **偏置 ($b$)**：这是一个与神经元本身相关联的额外参数，独立于输入。它作用类似于一个偏移量，平移加权和的结果。偏置允许神经元独立于输入值调整输出，有效地将激活函数 (activation function)的曲线左右移动，使网络更容易学习模式。
+- **输出 ($z$)**：这是线性变换的结果。它是*在*通过神经元的激活函数之前，原始的、聚合的信号。这个值$z$有时被称为*预激活值*、*logit*或简称为*加权和*。
+
+### 向量 (vector)化表示
+
+单独执行这些求和计算可能计算量很大，特别是在具有许多神经元和输入的网络中。线性代数提供了一种更有效的方法来表示和计算它。如果我们将权重 (weight)组织成向量$\mathbf{w}$，将输入组织成向量$\mathbf{x}$：
+
+
+$$
+\mathbf{w} = \begin{bmatrix} w_1 \\ w_2 \\ \vdots \\ w_n \end{bmatrix}, \quad \mathbf{x} = \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix}
+$$
+
+
+那么加权和（暂时不考虑偏置 (bias)）就是权重向量和输入向量的点积。取决于您是否将$\mathbf{w}$和$\mathbf{x}$视为列向量（在深度学习 (deep learning)文献中常见），点积通常使用转置符号表示：
+
+
+$$
+\mathbf{w}^T \mathbf{x} = \begin{bmatrix} w_1 & w_2 & \dots & w_n \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix} = w_1 x_1 + w_2 x_2 + \dots + w_n x_n
+$$
+
+
+包含偏置，单个神经元的完整线性变换变为：
+
+
+$$
+z = \mathbf{w}^T \mathbf{x} + b
+$$
+
+
+这种向量表示是基本方式，因为它在我们考虑一层中的多个神经元时能高效扩展，我们将看到这涉及矩阵乘法。
+
+### 示例计算
+
+让我们考虑一个具有3个输入以及特定权重 (weight)和偏置 (bias)的神经元：
+
+- 输入：$\mathbf{x} = [2.0, 3.0, -1.0]$
+- 权重：$\mathbf{w} = [0.5, -1.2, 0.8]$
+- 偏置：$b = 0.1$
+
+加权和$z$的计算如下：
+
+$z = (w_1 x_1 + w_2 x_2 + w_3 x_3) + b$
+$z = (0.5 \times 2.0) + (-1.2 \times 3.0) + (0.8 \times -1.0) + 0.1$
+$z = (1.0) + (-3.6) + (-0.8) + 0.1$
+$z = 1.0 - 3.6 - 0.8 + 0.1$
+$z = -3.3$
+
+> 单个神经元加权和计算的简单示意图。输入乘以各自的权重，求和后加上偏置，以产生预激活值$z$。
+
+### 跨整个层
+
+这种线性变换在给定层中的每个神经元上同时发生。重要的是，层中的每个神经元都接收*完全相同的输入向量 (vector)*$\mathbf{x}$（来自前一层或初始数据集）。然而，层中的每个神经元$j$都有其*自己*独特的权重 (weight)向量$\mathbf{w}_j$和其*自己*独特的偏置 (bias)$b_j$。
+
+因此，如果一层有$m$个神经元，它将计算$m$个不同的加权和，$z_1, z_2, \dots, z_m$：
+
+- 神经元 1: $z_1 = \mathbf{w}_1^T \mathbf{x} + b_1$
+- 神经元 2: $z_2 = \mathbf{w}_2^T \mathbf{x} + b_2$
+- ...
+- 神经元 $m$: $z_m = \mathbf{w}_m^T \mathbf{x} + b_m$
+
+每个$z_j$都表示神经元$j$在引入非线性*之前*的聚合输入信号。这一组$z$值构成了下一步的输入：在整个层应用激活函数 (activation function)。我们将在后面的部分中展示如何使用矩阵运算高效地执行这些层级计算。目前，理解这种基本的加权和计算是前向传播中的重要第一步。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  这本教材对神经网络进行了全面的数学和理论介绍，包括前向传播、线性变换和向量化操作的详细解释。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael A. Nielsen (2015)
+  Publisher: Determination Press
+  这本易于理解的在线书籍清晰地解释了神经网络的基本概念，包括神经元中加权和与偏置的机制。适合初学者。
+- [CS231n: Convolutional Neural Networks for Visual Recognition, Lecture Notes](https://cs231n.github.io/) — Stanford University, CS231n Course Staff (2023)
+  提供关于神经网络的优秀入门材料，涵盖前向传播计算、线性层以及为提高效率而使用向量和矩阵运算。

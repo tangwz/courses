@@ -1,0 +1,40 @@
+---
+course: "basics-model-evaluation-metrics"
+chapter: "introduction-model-evaluation"
+lesson: "goal-of-evaluation-metrics"
+sourceId: 3948
+sourceUrl: "https://apxml.com/zh/courses/basics-model-evaluation-metrics/chapter-1-introduction-model-evaluation/goal-of-evaluation-metrics"
+title: "评估指标的目标"
+description: "了解评估指标旨在达到什么目的以及它们如何量化性能。"
+order: 3
+plots: []
+sourceHash: "c6c8f03a65cad8b7f8f0c0ed0cfbcae03e30b46f05244513e5ab7843daa70552"
+sourceCorrections: []
+---
+
+我们已经明确，评估机器学习 (machine learning)模型是必不可少的步骤。仅仅构建模型是不够的；我们需要知道它是否真正运行良好。但我们如何判断“良好”呢？说一个模型“好”或“坏”太模糊了。我们需要一个更精确、更客观的方式来评价其性能。
+
+这时，**评估指标**就发挥作用了。可以把它们看作专门的工具，旨在衡量模型性能的特定方面。就像木匠用卷尺测量长度、用水平仪检查对齐 (alignment)一样，数据科学家使用评估指标来衡量他们的模型学习和做出预测的有效程度。
+
+评估指标的主要目标是**量化 (quantization)模型性能**。它们将模型复杂的行为转化为易于理解的数字或分数。这些分数为了解模型在完成其预期任务方面的表现提供了具体依据，无论是对电子邮件分类、预测房价，还是识别图像中的物体。
+
+为什么量化如此重要？
+
+1. **客观性：** 指标提供了公正的评估。我们不再依赖直觉或传闻证据（例如“它在这几个例子上似乎还可以”），指标为我们提供了基于数据的、一致且可重复的性能衡量标准。
+2. **比较：** 一旦有了数值分数，我们就可以直接比较不同的模型。如果你在相同的数据上训练两种不同类型的模型（比如，用于分类任务的逻辑回归和决策树），指标可以让你判断哪一个根据特定标准表现更好。你也可以使用指标来比较同一个模型的不同版本，例如用不同设置（超参数 (parameter) (hyperparameter)）或特征训练的版本。
+3. **优化：** 指标指导模型开发过程。某些指标的低分可能显示出问题，比如欠拟合 (underfitting)（模型过于简单）或过拟合 (overfitting)（模型学习训练数据过于具体，泛化能力差）。分析指标有助于诊断这些问题，并为如何改进模型提供依据，例如调整其复杂度、收集更多数据或设计更好的特征。
+4. **沟通：** 指标为讨论模型性能提供了标准语言。无论是向同事、经理还是客户汇报结果，准确率或错误率等指标能清晰简洁地概括模型的性能表现和局限性。
+
+想象一下，你正在尝试预测客户是否会点击在线广告（这是一个分类问题）。你构建了一个模型。你如何知道它是否有用？像*准确率*这样的评估指标可以告诉你正确预测的总百分比（点击和未点击）。其他指标（我们将在后面讨论）可能会特别关注它识别出*确实*点击的客户的程度，或者在没有发生点击时却预测为点击的错误频率。
+
+如果你正在预测明天的气温（一个回归问题），像*平均绝对误差*（MAE）这样的指标可以告诉你，平均而言，你的预测与实际温度相差多少摄氏度。这个单一数字概括了典型的误差大小。
+
+明白不同类型的问题（如分类与回归）需要不同类型的指标是很重要的。此外，即使在相同的问题类型中，要使用的最佳指标也常常取决于你应用的具体目标。我们将在接下来的章节中仔细研究分类和回归的这些具体指标。目前，主要的结论是，评估指标是我们理解、比较和改进机器学习模型所使用的必不可少的量化工具。它们将我们从主观判断带向客观的、数据驱动的评估。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  提供了模型评估的实践介绍，阐明了指标的必要性和基本类型。
+- [Model evaluation: quantifying the quality of predictions](https://scikit-learn.org/stable/modules/model_evaluation.html) — scikit-learn developers (2024)
+  官方文档，解释了各种评估指标及其在广泛使用的机器学习库中的应用。

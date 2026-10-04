@@ -1,0 +1,79 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "foundations-prompt-engineering"
+lesson: "what-is-prompt-engineering"
+sourceId: 2958
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-1-foundations-prompt-engineering/what-is-prompt-engineering"
+title: "什么是提示工程？"
+description: "定义提示工程及其在控制大型语言模型输出方面的重要性。"
+order: 2
+plots: []
+sourceHash: "24a436d1f25d77135651300ea4cf96f0c83e98d8f18785938b8ee9ec0d757fd9"
+sourceCorrections: []
+---
+
+大型语言模型（LLM）是强大的工具，能够理解并生成类似人类的文本、代码等。但仅凭使用大型语言模型，不足以确保为特定的应用目标产出有用的结果。我们如何有效地向这些模型传达意图呢？我们如何引导它们以我们所需的精确格式，稳定可靠地完成我们所需的特定任务？这就是提示工程 (prompt engineering)的范畴。
+
+提示工程是精心设计、构建和改进输入文本（即所谓的“提示”）的过程，这些文本被输入到大型语言模型中。目标是使模型产生特定的、期望的响应。把它看作不像传统的编程，而更像是在给一个知识非常丰富、多才多艺但有时可能字面理解的合作者提供精确的指示和背景信息。
+
+### 提示工程 (prompt engineering)为何必要？
+
+与编写具有确定性逻辑（如果X，则执行Y）的常规软件不同，大型语言模型以概率方式运行。当你提供提示时，模型不会执行命令。相反，它根据在大量训练中学习到的模式，预测最有可能跟在你输入之后的文本序列（标记 (token)）。
+
+考虑这种不同点：
+
+- **传统编程：** 你可以编写一个具有明确步骤的Python函数：
+
+  ```python
+  def get_capital(country):
+      if country == "France":
+          return "Paris"
+      # ... other rules
+      else:
+          return "Capital not found"
+  ```
+
+  逻辑是清晰的，对于已知输入，结果是可预测的。
+- **大型语言模型交互：** 你提供一个自然语言提示：
+  `Prompt: What is the capital of France?`
+  大型语言模型凭借其学到的知识来生成可能的补全：`Output: The capital of France is Paris.`
+
+尽管第二个例子看起来简单，但大型语言模型的输出并不能保证。即使是稍微不同的提示，比如`Prompt: France's capital?`，也可能得出相同的答案，或者略有不同的结果，比如`Paris is the capital of France.` 对于更复杂的任务，比如根据严格的长度限制总结一份特定文档，或者将数据提取成精确的JSON格式，你措辞提示的方式就变得非常重要。
+
+一个构造不佳的提示可能导致：
+
+- 模糊或不相关的答案。
+- 格式无法使用的响应。
+- 事实不正确的信息（幻觉 (hallucination)）。
+- 未能遵循指令。
+
+相反，一个精心设计的提示就像一个清晰的规范，引导大型语言模型产出预期的结果。
+
+### 提示的技巧与方法
+
+有效的提示工程 (prompt engineering)结合了清晰沟通、理解大型语言模型行为和迭代尝试的要素。它包括：
+
+1. **指令清晰：** 明确说明大型语言模型应执行什么任务。
+2. **提供背景：** 提供大型语言模型准确执行任务所需的有关背景信息。
+3. **输入数据：** 清晰地呈现大型语言模型应处理的特定数据（例如，要总结的文本，要回答的问题）。
+4. **输出格式：** 定义响应应如何构造（例如，作为项目符号列表、JSON对象、Python代码）。
+
+> 这种基本交互流程中，用户需求被转换为设计后的提示，结合了指令、背景和数据，以引导大型语言模型按照正确的格式生成期望的输出。
+
+因为大型语言模型可能以出乎意料的方式理解提示，提示工程很少是一次性完成的过程。它通常包括一个迭代循环：
+
+1. **设计：** 根据任务要求拟定初始提示。
+2. **测试：** 将提示输入大型语言模型并观察其输出。
+3. **分析：** 根据期望标准评估输出。它准确吗？格式正确吗？是否遵循了所有指令？
+4. **改进：** 根据分析修改提示以改进结果。重复步骤2-4。
+
+这种迭代改进是开发可靠的大型语言模型驱动应用中的一项核心活动。在本课程中，你将学到具体的技术和原则，使这一过程更加系统化和有效，从基本指令到支持复杂应用行为的精巧策略。理解和实践提示工程对于希望使用大型语言模型构建实用软件的任何人来说都非常必要。
+
+## 参考资料
+
+- [Prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2024)
+  Publisher: OpenAI
+  OpenAI官方指南，提供设计有效提示的实用建议和最佳实践，包括指令和格式化。
+- [ChatGPT Prompt Engineering for Developers](https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/) — Andrew Ng and Isa Fulford (2023)
+  Publisher: DeepLearning.AI
+  一门入门课程，提供构建有效提示的实例和方法，适合初学者。

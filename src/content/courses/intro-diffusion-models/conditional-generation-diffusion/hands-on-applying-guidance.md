@@ -1,0 +1,135 @@
+---
+course: "intro-diffusion-models"
+chapter: "conditional-generation-diffusion"
+lesson: "hands-on-applying-guidance"
+sourceId: 5451
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-6-conditional-generation-diffusion/hands-on-applying-guidance"
+title: "动手实践：应用引导"
+description: "代码示例说明如何在采样过程中实现并使用无分类器引导。"
+order: 7
+plots: ["plots/5451-0.json"]
+sourceHash: "ac85a13696ef262447e22648761f04e01b2033b21e78afc6dec8432bb692935f"
+sourceCorrections: []
+---
+
+实施无分类器引导（CFG）于扩散模型采样过程。为实现此目的，提供实际示例和代码结构。假设已拥有一个能够接受条件信息预训练 (pre-training)的U-Net模型。
+
+### 回顾：CFG机制
+
+请记住，CFG引导生成朝向条件$y$（例如类别标签或文本嵌入 (embedding)），而无需单独的分类器模型。它通过运用扩散模型执行条件预测和无条件预测的能力来实现此目标。在每个时间步$t$的采样过程中，我们计算：
+
+1. **条件噪声预测**：$\epsilon_\theta(x_t, t, y)$ - 模型在给定当前含噪图像$x_t$、时间步$t$和特定条件$y$时预测的噪声。
+2. **无条件噪声预测**：$\epsilon_\theta(x_t, t, \emptyset)$ - 模型在给定$x_t$和$t$时，但带有通用“空”或空白条件$\emptyset$时预测的噪声。这表示模型在没有特定引导下会生成的内容。
+
+这两个预测随后使用引导尺度$w$进行组合：
+
+
+$$
+\hat{\epsilon}_t = \epsilon_\theta(x_t, t, \emptyset) + w \cdot (\epsilon_\theta(x_t, t, y) - \epsilon_\theta(x_t, t, \emptyset))
+$$
+
+
+这个$\hat{\epsilon}_t$是用于计算下一个噪声更少的状态$x_{t-1}$的*引导*噪声估计。引导尺度$w$控制生成与条件$y$的符合程度。$w=0$的值会忽略条件，导致无条件采样。增加$w$会更强烈地促使生成朝向条件$y$。
+
+### 准备条件信息
+
+在开始采样循环之前，您需要准备好条件输入$y$和空条件$\emptyset$。
+
+- **类别标签**：如果基于类别标签进行条件设置（例如，对于MNIST或CIFAR-10），您通常会将整数标签转换为嵌入 (embedding)向量 (vector)。这可能涉及模型中的简单嵌入层或固定编码。
+- **文本描述**：对于文本到图像模型，$y$通常是使用预训练 (pre-training)的文本编码器（如CLIP）从文本提示中提取的嵌入。
+- **空条件**：空条件$\emptyset$需要一个对应的表示。这通常是一个特定的学习到的嵌入向量，用于表示没有条件的情况。有时，可以使用一个简单的全零向量，或者在使用文本条件时，它可以与文本编码器词汇表 (vocabulary)中的特定token关联。重要的是，模型经过训练，能够识别这个特定输入作为无条件生成的信号（通过训练期间的条件丢弃）。
+
+假设`y_cond`包含您期望输出的条件向量（例如，“猫”的嵌入或类别7），而`y_null`包含空条件的向量。
+
+### 实现引导采样循环
+
+核心修改发生在采样循环内部（无论使用DDPM还是DDIM）。这是一个简化的类似Python的伪代码结构，假定使用类似PyTorch的框架，并且有一个函数`get_denoised_xt_minus_1`，它在给定$x_t$、$t$和预测噪声$\epsilon$的情况下执行标准的反向步骤（如DDPM论文中的公式11或12，或DDIM更新）：
+
+```python
+# 假设model是您的U-Net，scheduler包含噪声调度信息
+# x_t 开始时为纯噪声：x_T ~ N(0, I)
+# timesteps是一个时间步的列表/张量，例如 [999, 998, ..., 0]
+# y_cond是期望输出的条件向量
+# y_null是空条件向量
+# w是引导尺度（例如，7.5）
+
+x_t = torch.randn_like(initial_sample_shape) # 从随机噪声x_T开始
+
+for t_val in timesteps:
+    t_tensor = torch.tensor([t_val] * batch_size, device=x_t.device)
+
+    # 确保x_t在框架细节需要时，为模型输入要求梯度，
+    # 但我们通常在推理时不需要梯度。
+    # 使用torch.no_grad()是提高效率的常见做法。
+    with torch.no_grad():
+        # 1. 预测条件输入的噪声
+        pred_noise_cond = model(x_t, t_tensor, y_cond)
+
+        # 2. 预测无条件输入的噪声
+        pred_noise_uncond = model(x_t, t_tensor, y_null)
+
+    # 3. 使用CFG公式组合预测结果
+    guided_noise = pred_noise_uncond + w * (pred_noise_cond - pred_noise_uncond)
+
+    # 4. 使用引导噪声计算x_{t-1}
+    # 这一步取决于您是使用DDPM还是DDIM采样逻辑
+    # 假设一个函数封装了反向步骤的示例：
+    x_t = scheduler.step(guided_noise, t_val, x_t) # 将x_t更新为x_{t-1}
+
+# 循环后的最终结果是x_0（生成的样本）
+generated_sample = x_t
+```
+
+**循环中的步骤：**
+
+1. **获取时间步**：获取当前时间步`t`。
+2. **预测条件噪声**：将$x_t$、$t$和*目标条件*`y_cond`传递给模型。
+3. **预测无条件噪声**：将$x_t$、$t$和*空条件*`y_null`传递给模型。
+4. **应用CFG公式**：使用无条件预测、条件预测和引导尺度`w`计算`guided_noise`。
+5. **执行去噪步骤**：在您选择的采样器（DDPM或DDIM）的反向扩散方程中使用此`guided_noise`来计算$x_{t-1}$。为下一次迭代更新`x_t`。
+
+对从$T-1$到0的所有时间步重复此操作。最终的`x_t`将是您生成的样本$x_0$。
+
+### 观察引导尺度（w）的影响
+
+`w`的选择很大程度上影响输出。
+
+- **低`w`值（例如，0或1）**：生成受条件的约束较少。如果$w=0$，则是纯粹的无条件生成。如果$w=1$，它遵循学习到的条件分布，但可能缺乏强烈的符合性。样本可能多样，但与提示`y`的对齐 (alignment)程度较低。
+- **中等`w`值（例如，3到10）**：通常是最佳点。在与条件`y`的符合性、整体样本质量和多样性之间取得平衡。生成的图像清晰地反映了条件。
+- **高`w`值（例如，15+）**：强烈符合条件，但样本可能变得不那么多样，可能出现饱和或伪影。模型可能会过度强调与条件相关的特征。
+
+尝试不同`w`值是常见的做法，以找到特定模型和任务的最佳权衡。
+
+让我们直观地看看改变`w`如何影响使用CFG在MNIST上训练的扩散模型生成数字“8”。
+
+
+
+![引导尺度（w）对数字生成的影响（示意图）](plots/5451-0.json)
+
+
+
+> 这张示意图展现了典型的权衡。随着引导尺度`w`的增加，与条件（生成数字“8”）的符合度通常会提高（蓝线），但样本多样性和潜在的整体质量在某个点之后可能会下降（橙线），有时在极高值时会导致伪影。绿色阴影区域表示通常能找到良好平衡的常见范围。
+
+### 训练要求：条件丢弃
+
+重要的是要记住，采样过程中的CFG依赖于模型经过专门训练以处理条件和无条件输入。这通常在训练阶段通过使用**条件丢弃**来实现：
+
+1. 在每个训练步骤中，选择一批数据$x_0$和相应的条件$y$。
+2. 对于批次中一部分样本（例如10-20%），用空条件嵌入 (embedding)$\emptyset$替换真实的条件$y$。
+3. 使用标准扩散损失（预测噪声$\epsilon$）训练模型，同时提供真实条件$y$或空条件$\emptyset$作为输入，以及$x_t$和$t$。
+
+这迫使模型学习如何在特定条件引导下和在没有提供条件（使用空嵌入）时预测噪声。如果没有这种训练策略，模型将不知道如何解释空条件$\emptyset$，并且CFG公式将不会产生有意义的引导。
+
+通过实现此处描述的引导采样循环，并运用经过条件丢弃训练的模型，您可以有效地引导扩散过程生成符合您期望条件的输出。这很大程度上扩展了扩散模型提供的创作控制。
+
+## 参考资料
+
+- [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598) — Jonathan Ho, Tim Salimans (2022)
+  Journal: arXiv preprint arXiv:2207.12598; DOI: [10.48550/arXiv.2207.12598](https://doi.org/10.48550/arXiv.2207.12598)
+  这是引入无分类器扩散引导（CFG）的原始论文，CFG是本节的核心主题。它详细介绍了无需独立分类器进行条件生成的机制。
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: arXiv; DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  这篇基础论文介绍了去噪扩散概率模型（DDPM），它提供了无分类器引导所修改的核心采样过程。
+- [High-Resolution Image Synthesis with Latent Diffusion Models](https://arxiv.org/abs/2112.10752) — Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer (2022)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); DOI: [10.48550/arXiv.2112.10752](https://doi.org/10.48550/arXiv.2112.10752)
+  这篇论文介绍了潜在扩散模型（LDM），包括稳定扩散（Stable Diffusion）背后的架构。它提供了一个突出示例，说明了无分类器引导如何在最先进的文本到图像模型中使用CLIP嵌入和条件dropout进行应用。

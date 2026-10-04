@@ -1,0 +1,141 @@
+---
+course: "python-for-beginners"
+chapter: "handling-errors-exceptions"
+lesson: "python-handling-specific-exceptions"
+sourceId: 2384
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-9-handling-errors-exceptions/python-handling-specific-exceptions"
+title: "处理特定异常类型"
+description: "了解如何捕获特定类型的异常（例如，ValueError、TypeError、FileNotFoundError），以实现更有针对性的错误处理。"
+order: 4
+plots: []
+sourceHash: "219732b96841c1cd5b0432610963b72ce1d6586c018015a5436427dc02c2cdfd"
+sourceCorrections: []
+---
+
+为管理运行时问题，开发人员通常使用 `try...except` 块。虽然 `try...except` 块能够捕获其关联代码中发生的任何错误，但这种普遍的处理方式有时会适得其反。想象一下，用一张大到足以捕捞湖中所有东西（包括碎屑和您不想要的物品）的网去捕鱼。同样，捕获*所有*可能的异常可能会掩盖您*应该*注意到的意外错误或问题。例如，当您只期望 `ValueError` 时，可能会抑制 `TypeError`，这会使您的程序以后调试起来更困难。
+
+Python 允许您通过在 `except` 子句中指定要处理的异常*类型*来做到更精确。这使得您的代码更可预测且易于理解。
+
+### 捕获单个特定异常
+
+改进错误处理的最常用方法是捕获特定的异常类。让我们重新查看将用户输入转换为整数的示例：
+
+```python
+user_input = input("请输入您的年龄：")
+try:
+    age = int(user_input)
+    print(f"明年您将是 {age + 1} 岁。")
+# 只捕获 ValueError 异常
+except ValueError:
+    print(f"输入无效：'{user_input}' 不是一个有效的整数。")
+
+print("程序继续运行...")
+```
+
+在这段修改后的代码中，`except ValueError:` 块*只有*在 `int()` 函数引发 `ValueError` 时才会执行。这通常发生在用户输入无法被解释为整数的文本时（例如“twenty”或“abc”）。如果 `try` 块内发生不同类型的错误（例如，如果 `user_input` 某种方式是 `None` 而引发 `TypeError`，尽管在这里不太可能），这个 `except` 块将*不会*捕获它。错误将向上 E 传递，可能停止程序，这正是您希望针对意想不到的问题而发生的情况。
+
+### 处理多个特定异常
+
+如果一段代码可能引发几种不同类型的错误，并且您想以不同方式处理它们怎么办？您可以包含多个 `except` 子句，一个接一个，每个子句指定一个不同的异常类型。Python 将按顺序检查它们，并执行*第一个*匹配引发异常的子句。
+
+考虑一个根据用户输入执行除法的场景：
+
+```python
+try:
+    numerator_str = input("请输入分子：")
+    denominator_str = input("请输入分母：")
+
+    numerator = int(numerator_str)
+    denominator = int(denominator_str)
+
+    result = numerator / denominator
+    print(f"结果是：{result}")
+
+except ValueError:
+    print("输入无效。请只输入整数。")
+except ZeroDivisionError:
+    print("错误：不能除以零。")
+
+print("计算尝试结束。")
+```
+
+这里：
+
+1. 如果用户输入非数字文本（例如，“ten”），`int()` 会引发 `ValueError`。第一个 `except ValueError:` 块会捕获它。
+2. 如果用户输入数字文本但分母提供 '0'，除法操作（`/`）会引发 `ZeroDivisionError`。第二个 `except ZeroDivisionError:` 块会捕获它。
+3. 如果发生任何其他意想不到的错误（例如，在资源非常受限的系统上发生 `MemoryError`），这些块都不会处理它，程序可能会停止，提醒您一个未预见的问题。
+
+### 分组处理多个异常
+
+有时，您可能想对几种不同的异常类型执行*相同*的操作。与其编写重复的 `except` 块，不如将异常类型分组到一个元组中，放在一个 `except` 子句内：
+
+```python
+data = {'a': 1, 'b': 2}
+key_to_access = 'c'
+index_to_access = 5
+my_list = [10, 20, 30]
+
+try:
+    # 如果 key_to_access 不在 data 中，可能发生 KeyError
+    value = data[key_to_access]
+    print(f"字典中的值：{value}")
+
+    # 如果 index_to_access 超出范围，可能发生 IndexError
+    item = my_list[index_to_access]
+    print(f"列表中的项：{item}")
+
+# 使用相同的消息处理 KeyError 和 IndexError
+except (KeyError, IndexError):
+    print("错误：无法访问请求的元素（无效的键或索引）。")
+
+print("数据访问尝试结束。")
+```
+
+在这种情况下，如果访问 `data[key_to_access]` 引发 `KeyError` 或访问 `my_list[index_to_access]` 引发 `IndexError`，单个 `except (KeyError, IndexError):` 块将捕获该错误并打印统一的消息。
+
+### 访问异常对象
+
+有时，您可能需要有关所发生错误的更多信息。您可以使用 `except` 子句中的 `as` 关键字来访问异常对象本身。此对象通常包含有用的详细信息，例如错误消息。
+
+```python
+file_path = "non_existent_file.txt"
+
+try:
+    with open(file_path, 'r') as f:
+        content = f.read()
+        print("文件读取成功。")
+# 捕获 FileNotFoundError 并将异常对象存储在 'e' 中
+except FileNotFoundError as e:
+    print(f"访问文件时出错：{e}") # 打印具体的错误消息
+except Exception as e: # 捕获所有其他意想不到的错误
+    print(f"发生了一个意想不到的错误：{e}")
+
+print("文件操作结束。")
+```
+
+如果 `non_existent_file.txt` 不存在，就会引发 `FileNotFoundError`。`except FileNotFoundError as e:` 块会捕获它。变量 `e` 现在持有 `FileNotFoundError` 对象。打印 `e` 通常会显示与该异常关联的标准错误消息（例如，“[Errno 2] No such file or directory: 'non\_existent\_file.txt'”）。这对于记录错误或向用户提供更具体的反馈非常有用。
+
+### 常见内置异常
+
+当您编写更多 Python 代码时，您会遇到各种内置异常类型。以下是一些与目前涵盖的要点相关的常见类型：
+
+- `ValueError`：操作接收到正确类型但值不合适的参数 (parameter)（例如，`int('abc')`）。
+- `TypeError`：操作或函数应用于不合适类型的对象（例如，`'hello' + 5`）。
+- `IndexError`：序列下标超出范围（例如，当列表只有 3 个项时访问 `my_list[10]`）。
+- `KeyError`：字典键未找到（例如，访问 `my_dict['missing_key']`）。
+- `FileNotFoundError`：尝试打开不存在的文件（使用 `open()`）。
+- `ZeroDivisionError`：将任何数除以零。
+- `AttributeError`：尝试访问对象上不存在的属性或方法。
+
+通过处理特定异常，您可以创建更易于维护的程序。您明确说明您预期哪些错误以及如何从中恢复，同时让意想不到的错误指示可能需要调查的更深层问题。这种有针对性的方法是编写可靠 Python 代码的根本。
+
+## 参考资料
+
+- [The \`try\` statement](https://docs.python.org/3/reference/compound_stmts.html#the-try-statement) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  提供了Python `try` 语句的完整描述，包括捕获特定异常的语法、处理多个 `except` 块以及访问异常对象。
+- [Built-in Exceptions](https://docs.python.org/3/library/exceptions.html) — Python Software Foundation (2024)
+  列出了并描述了Python中所有标准的内置异常，提供了 `ValueError`、`TypeError`、`IndexError` 和 `ZeroDivisionError` 等常见类型的定义。
+- [Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming](https://nostarch.com/python-crash-course-3rd-edition/) — Eric Matthes (2022)
+  Publisher: No Starch Press
+  一本广泛推荐的Python学习书籍，此版本提供了处理异常的实际示例和解释，适合基础编程概念。

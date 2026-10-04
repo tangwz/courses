@@ -1,0 +1,189 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "xgboost-extreme-gradient-boosting"
+lesson: "xgboost-regularized-objective"
+sourceId: 1979
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-4-xgboost-extreme-gradient-boosting/xgboost-regularized-objective"
+title: "正则化学习目标"
+description: "XGBoost 目标函数及其 L1/L2 惩罚项的详细解析。"
+order: 2
+plots: []
+sourceHash: "91049300512d4c85a8db7125303e21e46512c817868c215c2df2df94078bc415"
+sourceCorrections: []
+---
+
+XGBoost 相较于传统梯度提升机 (GBM) 的一个显著改进在于其目标函数。标准 GBM 迭代地最小化损失函数 (loss function)，而 XGBoost 则直接将正则化 (regularization)项纳入每次优化的目标中。这种方式提供了对模型复杂度的更直接控制，有助于从根本上避免过拟合 (overfitting)。
+
+回顾一下，梯度提升以累加方式构建集成模型。在第 $t$ 步，我们将新的树 $f_t(x)$ 添加到前一步的预测 $\hat{y}^{(t-1)}$ 中：
+
+
+$$
+\hat{y}^{(t)} = \hat{y}^{(t-1)} + \eta f_t(x)
+$$
+
+
+其中 $\eta$ 是学习率（在 XGBoost 中常被称为 `eta` 或 `learning_rate`）。XGBoost 旨在找到在第 $t$ 步优化以下目标函数的树 $f_t$：
+
+
+$$
+Obj^{(t)} = \sum_{i=1}^n l(y_i, \hat{y}_i^{(t-1)} + f_t(x_i)) + \sum_{k=1}^t \Omega(f_k)
+$$
+
+
+这里，$l(y_i, \hat{y}_i)$ 是可微分损失函数（例如，回归的平方误差，分类的对数损失），衡量第 $i$ 个训练实例的真实标签 $y_i$ 与预测值 $\hat{y}_i$ 之间的差异。$\Omega(f_k)$ 表示第 $k$ 棵树的正则化项，用于惩罚其复杂度。
+
+由于树 $f_1, ..., f_{t-1}$ 的正则化项在第 $t$ 步是常数，我们可以简化寻找最佳 $f_t$ 的目标函数：
+
+
+$$
+Obj^{(t)} \approx \sum_{i=1}^n l(y_i, \hat{y}_i^{(t-1)} + f_t(x_i)) + \Omega(f_t)
+$$
+
+
+直接优化一般的树结构 $f_t$ 的这个目标在计算上具有挑战性。XGBoost 采用了一种巧妙的策略，在当前预测值 $\hat{y}_i^{(t-1)}$ 附近对损失函数进行二阶泰勒展开。
+
+### 泰勒展开以获得易于处理的目标
+
+损失函数 (loss function) $l$ 在 $\hat{y}_i^{(t-1)}$ 附近的泰勒展开为：
+
+
+$$
+l(y_i, \hat{y}_i^{(t-1)} + f_t(x_i)) \approx l(y_i, \hat{y}_i^{(t-1)}) + g_i f_t(x_i) + \frac{1}{2} h_i f_t(x_i)^2
+$$
+
+
+其中 $g_i$ 和 $h_i$ 是损失函数 $l$ 在前一个预测值 $\hat{y}_i^{(t-1)}$ 处评估得到的一阶和二阶导数（梯度和海森）：
+
+
+$$
+g_i = \frac{\partial l(y_i, \hat{y})}{\partial \hat{y}} \bigg|_{\hat{y}=\hat{y}_i^{(t-1)}}
+$$
+
+
+$$
+h_i = \frac{\partial^2 l(y_i, \hat{y})}{\partial \hat{y}^2} \bigg|_{\hat{y}=\hat{y}_i^{(t-1)}}
+$$
+
+
+使用二阶近似相比只使用梯度（如传统 GBM）提供了更多关于损失函数形状的信息，通常会带来更快的收敛和更高的准确度，特别是对于自定义损失函数。
+
+去掉常数项 $l(y_i, \hat{y}_i^{(t-1)})$（它不影响 $f_t$ 的优化），在第 $t$ 步需要最小化的目标函数变为：
+
+
+$$
+Obj^{(t)} \approx \sum_{i=1}^n [g_i f_t(x_i) + \frac{1}{2} h_i f_t(x_i)^2] + \Omega(f_t)
+$$
+
+
+这个近似的目标现在用梯度 $g_i$、海森 $h_i$ 以及我们需要确定的新树 $f_t$ 来表示。
+
+### XGBoost 正则化 (regularization)项
+
+XGBoost 专门针对决策树定义了正则化项 $\Omega(f_t)$。设树 $f_t$ 由其结构（将输入 $x_i$ 映射到叶节点）以及分配给每个叶节点 $j$ 的权重 (weight)（预测分数） $w_j$ 定义。如果树有 $T$ 个叶节点，XGBoost 的正则化项为：
+
+
+$$
+\Omega(f_t) = \gamma T + \frac{1}{2} \lambda \sum_{j=1}^T w_j^2
+$$
+
+
+该项由两部分组成：
+
+1. **$\gamma T$**: 与叶节点数量 $T$ 成比例的惩罚。较高的 $\gamma$ 值（gamma，`gamma` 参数 (parameter)）会使算法更加保守，需要更大的损失减少才能支持添加新的叶节点（即进行分裂）。这类似于剪枝，但直接纳入目标函数中。它可以看作是对叶节点数量的一种 $L_0$ 正则化。
+2. **$\frac{1}{2} \lambda \sum_{j=1}^T w_j^2$**: 对叶节点权重 $w_j$ 的 $L_2$ 正则化惩罚。较高的 $\lambda$ 值（lambda，`reg_lambda` 参数）会将叶节点权重压缩趋近于零，使模型对单个观测值不那么敏感，并降低任何单个树的影响。
+
+XGBoost 也支持对权重进行 $L_1$ 正则化（$\alpha \sum |w_j|$，由 `reg_alpha` 参数控制），这可以在权重中引入稀疏性。完整的正则化项可以是 $\Omega(f_t) = \gamma T + \frac{1}{2} \lambda \sum w_j^2 + \alpha \sum |w_j|$。我们在此关注更常讨论的 $\gamma$ 和 $\lambda$ 项。
+
+### 推导最优叶节点权重 (weight)和结构分数
+
+我们将正则化 (regularization)项纳入到近似目标中。我们定义 $I_j = \{i | q(x_i) = j\}$ 为落入叶节点 $j$ 的训练实例的索引集合，其中 $q(x)$ 表示将实例映射到叶节点索引的树结构。实例 $x_i$ 在叶节点 $j$ 中的预测值 $f_t(x_i)$ 就是叶节点权重 $w_j$。将此以及 $\Omega(f_t)$ 代入目标函数中：
+
+
+$$
+Obj^{(t)} \approx \sum_{i=1}^n [g_i w_{q(x_i)} + \frac{1}{2} h_i w_{q(x_i)}^2] + \gamma T + \frac{1}{2} \lambda \sum_{j=1}^T w_j^2
+$$
+
+
+我们可以根据树的叶节点对求和项进行分组：
+
+
+$$
+Obj^{(t)} \approx \sum_{j=1}^T [ (\sum_{i \in I_j} g_i) w_j + \frac{1}{2} (\sum_{i \in I_j} h_i) w_j^2 ] + \gamma T + \frac{1}{2} \lambda \sum_{j=1}^T w_j^2
+$$
+
+
+重新排列各项：
+
+
+$$
+Obj^{(t)} \approx \sum_{j=1}^T [ (\sum_{i \in I_j} g_i) w_j + \frac{1}{2} (\sum_{i \in I_j} h_i + \lambda) w_j^2 ] + \gamma T
+$$
+
+
+设 $G_j = \sum_{i \in I_j} g_i$ 是叶节点 $j$ 中实例的梯度之和，$H_j = \sum_{i \in I_j} h_i$ 是海森之和。目标函数变为：
+
+
+$$
+Obj^{(t)} \approx \sum_{j=1}^T [ G_j w_j + \frac{1}{2} (H_j + \lambda) w_j^2 ] + \gamma T
+$$
+
+
+现在，对于一个 *固定* 的树结构 $q$（它决定了 $T$ 和集合 $I_j$），这个目标是叶节点权重 $w_j$ 的独立二次函数的和。我们可以通过将目标函数对 $w_j$ 的导数设为零，来找到每个叶节点的最优权重 $w_j^*$：
+
+
+$$
+\frac{\partial Obj^{(t)}}{\partial w_j} = G_j + (H_j + \lambda) w_j = 0
+$$
+
+
+求解 $w_j$：
+
+
+$$
+w_j^* = - \frac{G_j}{H_j + \lambda}
+$$
+
+
+这个公式给出了给定树结构中每个叶节点的最优预测分数。它平衡了梯度之和（期望的变化）与海森之和（损失的曲率）以及 $L_2$ 正则化项 $\lambda$。较大的 $\lambda$ 会将最优权重压缩趋近于零。
+
+将 $w_j^*$ 代回目标函数，得到了该特定树结构 $q$ 所实现的最小目标值：
+
+
+$$
+Obj^{(t)}(q) = \sum_{j=1}^T [ G_j (-\frac{G_j}{H_j + \lambda}) + \frac{1}{2} (H_j + \lambda) (-\frac{G_j}{H_j + \lambda})^2 ] + \gamma T
+$$
+
+
+$$
+Obj^{(t)}(q) = \sum_{j=1}^T [ -\frac{G_j^2}{H_j + \lambda} + \frac{1}{2} \frac{G_j^2}{H_j + \lambda} ] + \gamma T
+$$
+
+
+$$
+Obj^{(t)}(q) = -\frac{1}{2} \sum_{j=1}^T \frac{G_j^2}{H_j + \lambda} + \gamma T
+$$
+
+
+这个最终表达式非常重要。它提供了树结构 $q$ 的**分数**。XGBoost 在树构建过程中使用这个评分函数来评估潜在分裂的质量。算法贪婪地选择分裂，以使这个目标分数的减少量最大化。分裂的“增益”计算方式是父节点的分数减去结果子节点的组合分数，再减去添加新叶节点的复杂度成本 $\gamma$。
+
+### 总结
+
+正则化 (regularization)学习目标是 XGBoost 有效性的核心要素。通过将 $L_1$ 和 $L_2$ 惩罚项（$\alpha$，$\lambda$）以及树复杂度惩罚项（$\gamma$）直接纳入目标函数中，并利用包含梯度 ($g_i$) 和海森 ($h_i$) 的二阶泰勒展开，XGBoost 取得了多项优势：
+
+- **直接复杂度控制**：正则化是优化目标的一部分，而不仅仅是事后考虑。
+- **通用性**：梯度和海森的使用使得该框架能够处理各种可微分损失函数 (loss function)，并易于使用。
+- **高效的树构建**：推导出的目标分数提供了一种有章可循的方式，用于在树构建过程中评估和选择分裂，直接优化正则化目标。
+
+这个精密的（复杂的）目标函数为高效的分裂查找算法和系统优化做好了准备，这些特性进一步使得 XGBoost 表现突出，我们将在接下来进行介绍。
+
+## 参考资料
+
+- [XGBoost: A Scalable Tree Boosting System](https://dl.acm.org/doi/10.1145/2939672.2939785) — Tianqi Chen and Carlos Guestrin (2016)
+  Journal: KDD '16: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining; Publisher: ACM; Pages: 785–794; DOI: [10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+  XGBoost算法的原始学术论文，全面详细介绍了其正则化目标函数、用于优化的二阶泰勒展开以及本节中讨论的特定正则化项。
+- [Introduction to Boosted Trees](https://xgboost.readthedocs.io/en/stable/tutorials/gbt.html) — XGBoost Contributors (2022)
+  Publisher: XGBoost Project
+  XGBoost官方文档，解释了树模型提升的理论基础，包括目标函数的推导、泰勒展开的作用以及正则化参数的影响。
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Volume: 29; Pages: 1189–1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  关于梯度提升机（GBM）的论文，提供了加性建模和使用梯度下降的统计框架，XGBoost在此基础上发展并进行了改进。

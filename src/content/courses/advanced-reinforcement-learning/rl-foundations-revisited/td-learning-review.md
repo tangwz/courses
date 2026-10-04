@@ -1,0 +1,85 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "rl-foundations-revisited"
+lesson: "td-learning-review"
+sourceId: 3352
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-1-rl-foundations-revisited/td-learning-review"
+title: "时序差分学习方法"
+description: "了解时序差分（TD）学习，包括TD(0)、SARSA和Q学习的基础。"
+order: 4
+plots: []
+sourceHash: "77ed81fd0edeb96503f2bdd253ee210806281c44e6fe97d645d3ef01cd4eeeff"
+sourceCorrections: []
+---
+
+虽然像价值迭代和策略迭代这样的动态规划方法为在马尔可夫决策过程（MDPs）中寻找最优策略提供了一种规范途径，但它们依赖于环境的完整模型，需要知道所有转移概率 $P(s'|s, a)$ 和奖励 $R(s, a, s')$。这样的模型在许多实际情况中是无法获得的。这时，时序差分（TD）学习方法就变得不可或缺。TD学习允许智能体直接从原始经验中学习，通过与环境交互（或使用记录的交互）而无需明确了解其动态。
+
+TD方法结合了蒙特卡洛（MC）方法和动态规划（DP）方法的思想。像MC方法一样，TD方法从经验样本中学习。然而，像DP方法一样，TD方法进行*自举*：它们根据其他已学习的估算值来更新估算值，而不像MC方法那样等待一个完整的幕的最终结果。这通常会带来更快的学习速度，特别是在长期或连续任务中。
+
+### TD(0) 预测：学习状态价值
+
+最简单的TD方法，通常称为TD(0)或单步TD，侧重于预测问题：估算给定策略 $\pi$ 的状态价值函数 $V^\pi(s)$。在状态 $S_t$ 执行动作 $A_t$ 并观察到奖励 $R_{t+1}$ 和下一个状态 $S_{t+1}$ 之后，TD(0) 使用以下规则更新状态 $S_t$ 的价值估算：
+
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha [R_{t+1} + \gamma V(S_{t+1}) - V(S_t)]
+$$
+
+
+让我们分析这个更新过程：
+
+1. **目标：** 表达式 $R_{t+1} + \gamma V(S_{t+1})$ 是*TD目标*。它是从状态 $S_t$ 开始的收益估算值。它使用即时奖励 $R_{t+1}$ 并通过当前估算的*下一个*状态的价值 $V(S_{t+1})$ 进行自举。
+2. **TD误差：** 差值 $\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$ 是*TD误差*。它衡量了更新前估算的状态 $S_t$ 价值与观察到状态转移后计算出的更具参考性的TD目标之间的差异。
+3. **学习率：** $\alpha$ 是学习率（步长），控制着TD误差对更新的影响程度。
+
+TD(0)更新根据TD误差指示的方向调整当前价值估算值 $V(S_t)$。因为它在目标中使用了 $V(S_{t+1})$（一个估算值），所以与MC方法（使用实际完整收益 $G_t$）相比，它引入了一些偏差。然而，TD更新通常比MC更新具有明显较低的方差，因为目标仅依赖于下一个奖励和状态价值估算，而不是一个幕中未来奖励的整个序列。
+
+### SARSA：同策略TD控制
+
+要从预测转向控制（即寻找最优策略），我们需要估算动作价值函数 $Q(s, a)$。SARSA是一种同策略TD控制算法，它直接从经验中学习 $Q(s, a)$。“SARSA”这个名称代表了更新中涉及的信息元组：$(S_t, A_t, R_{t+1}, S_{t+1}, A_{t+1})$。
+
+智能体从状态 $S_t$ 开始，选择动作 $A_t$（根据其当前策略，通常是 $\epsilon$-贪婪策略），观察到奖励 $R_{t+1}$ 和下一个状态 $S_{t+1}$，然后选择*下一个*动作 $A_{t+1}$（同样根据其策略）。SARSA更新规则随后应用于*初始*状态-动作对 $(S_t, A_t)$ 的Q值：
+
+
+$$
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]
+$$
+
+
+注意它与TD(0)更新的相似性。TD目标现在是 $R_{t+1} + \gamma Q(S_{t+1}, A_{t+1})$，它使用了*下一个状态和实际执行的下一个动作*的Q值。因为更新依赖于当前策略选择的动作 $A_{t+1}$，所以SARSA是一种*同策略*算法。它学习当前正在遵循的策略的价值，包括其探索策略（例如 $\epsilon$-贪婪选择）的影响。
+
+> SARSA更新过程依赖于状态、动作、奖励、下一状态的序列，以及重要的是，由策略选择的下一个动作。
+
+### Q学习：异策略TD控制
+
+Q学习是另一种基本的TD控制算法，但有一个重要的区别：它是*异策略*的。这意味着它直接学习最优动作价值函数 $Q^*(s, a)$，无论用于生成经验的策略（行为策略）是什么，只要该策略进行充分的探索。
+
+Q学习更新规则是：
+
+
+$$
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a') - Q(S_t, A_t)]
+$$
+
+
+重要的区别在于TD目标： $R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a')$。Q学习不使用*实际执行的下一个动作* ($A_{t+1}$) 的Q值，而是使用在下一个状态 $S_{t+1}$ 中*最大化*Q函数估算值的动作 $a'$ 的Q值。这隐含地假设从状态 $S_{t+1}$ 开始将采取最优（贪婪）动作，从而有效地学习最优策略 $\pi^*$，同时可能遵循一个不同的、更具探索性的行为策略（如 $\epsilon$-贪婪策略）。
+
+这种异策略性质使得Q学习非常强大。它可以从不同策略生成的过去经验中学习，甚至可以从观察人类演示者中学习。然而，结合异策略学习、自举（TD方法固有的）和函数逼近（处理庞大状态空间所必需的）可能导致不稳定，这种现象被称为“致命三要素”，我们很快会进行讨论。
+
+### 总结与后续步骤
+
+TD方法（TD(0)、SARSA、Q学习）提供了高效、无模型的方式，直接从经验中学习价值函数。它们根据其他估算值来更新估算值（自举），允许在幕结束之前进行学习。SARSA是同策略的，学习行为策略的价值，而Q学习是异策略的，直接估算最优价值函数。
+
+这些表格方法是基础性的。然而，它们对价值函数查找表的依赖将它们限制在具有相对较小、离散状态和动作空间的问题上。为了处理复杂问题中遇到的庞大状态空间（例如通过相机图像进行机器人控制或玩复杂游戏），我们需要使用函数逼近器（如线性函数或深度神经网络 (neural network)）来泛化这些价值函数。下一节将介绍这个思想，为本课程的核心——深度强化学习 (reinforcement learning)技术奠定基础，并阐明了将TD学习与强大的函数逼近器结合时出现的挑战。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本广泛认可的强化学习教科书，提供了TD(0)、SARSA和Q-Learning的详细信息。
+- [Learning to Predict by Methods of Temporal Differences](https://link.springer.com/article/10.1007/BF00115009) — Richard S. Sutton (1988)
+  Journal: Machine Learning; Publisher: Springer; Volume: 3; Pages: 9-44; DOI: [10.1007/BF00115009](https://doi.org/10.1007/BF00115009)
+  介绍时序差分学习的原始论文，为后续的TD方法奠定了基础。
+- [On-line Q-learning using Sarsa with experience replay](https://api.semanticscholar.org/CorpusID:59872172) — Gavin Adrian Rummery, Mahesan Niranjan (1994)
+  Publisher: Department of Engineering, University of Cambridge; Pages: 23-86
+  一份技术报告，首次详细介绍了用于在策略时序差分控制的SARSA算法。

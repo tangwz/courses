@@ -1,0 +1,54 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "optimization-refinements-tuning"
+lesson: "parameter-initialization-importance"
+sourceId: 4998
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-7-optimization-refinements-tuning/parameter-initialization-importance"
+title: "参数初始化的重要性"
+description: "讨论为何恰当的权重初始化是成功训练的必要条件。"
+order: 1
+plots: ["plots/4998-0.json"]
+sourceHash: "26ea1e86c33398d3cb3cde3a4822ec5f6976e91a00cfaf3ff3f6a72950fcf899"
+sourceCorrections: []
+---
+
+SGD、Momentum和Adam等优化算法根据反向传播 (backpropagation)过程中计算的梯度，智能地更新模型权重 (weight)。然而，这些算法需要一个起点。训练开始前，为神经网络 (neural network)的权重和偏置 (bias)赋的初始值，在训练过程中有着出乎意料的深远影响。这就是参数 (parameter)初始化的原理。
+
+将神经网络的损失地形想象成一个包含丘陵、山谷和高原的复杂地形。优化的目标是在这片地形中穿行，以找到一个低点（一个好的方案）。你开始下降的位置，即初始权重配置，极大影响着你是否能快速找到一个好的低点，是困在高原上，甚至跌下比喻意义上的悬崖（遇到数值不稳定）。
+
+### 为什么初始化很重要？
+
+不当的初始化会导致几种训练难题：
+
+1. **打破对称性：** 如果连接到某一层的所有权重 (weight)都被初始化为相同的值（例如零），那么在该层的所有神经元在正向传播过程中将产生相同的输出。因此，在反向传播 (backpropagation)过程中，它们都将接收到相同的梯度信号，并以完全相同的方式更新。这种对称性阻止神经元学习不同的特征，从而有效降低了该层的能力。使用小的随机值初始化权重是打破这种对称性的第一步。
+2. **梯度消失：** 如果权重初始化得太小，激活值和梯度在网络中传播时（特别是在梯度计算的反向传播过程中）会逐渐减小。在深层网络中，这可能导致早期层的梯度变得极其接近零。当梯度消失时，这些层的权重会停止更新，有效停止了网络很大一部分的学习。这对于像sigmoid或tanh这样的激活函数 (activation function)尤其成问题，它们会饱和（输出值分别趋于0或1，或-1和1，变得平坦），并在饱和区域具有很小的梯度。
+3. **梯度爆炸：** 相反，如果权重初始化得太大，激活值和梯度在网络中传播时会指数级增长。这会导致非常大的梯度值，引起更新不稳定，超越最佳点，甚至导致数值溢出（表现为`NaN` - 非数字）。梯度爆炸会使训练完全发散。
+
+考虑对激活值的影响。理想情况下，我们希望不同层中神经元输出（激活值）具有大致相似的方差。如果方差层层递增，激活值可能变得非常大，导致饱和或梯度爆炸。如果方差持续减小，激活值可能趋近于零，从而有助于梯度消失。
+
+
+
+![激活值分布](plots/4998-0.json)
+
+
+
+> 一层中基于初始化的激活值分布。不当的初始化可能导致激活值聚集在零附近（消失）或在tanh等激活函数的边界附近饱和（例如，-1或1）。良好初始化旨在实现更健康的分布。
+
+恰当的初始化旨在设置初始权重，使激活值和梯度在整个网络中保持在合理范围，从而促进更快收敛并避免这些问题。它有助于确保信号在正向（用于预测）和反向（用于学习）传播时都能有效流动。
+
+在接下来的章节中，我们将研究Xavier/Glorot和He初始化等具体的初始化策略，这些策略是根据数学原理设计的，旨在维持适当的激活值和梯度方差，从而显著提升深层网络的训练能力。
+
+## 参考资料
+
+- [Understanding the difficulty of training deep feedforward neural networks](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) — Xavier Glorot, Yoshua Bengio (2010)
+  Journal: Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics; Publisher: PMLR; Volume: 9; Pages: 249-256; DOI: [10.5598/AISTATS.2010.53](https://doi.org/10.5598/AISTATS.2010.53)
+  介绍了Xavier初始化方法，通过设置初始权重来帮助维持激活方差并减轻深度网络中的梯度消失/爆炸问题。
+- [Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification](https://www.cv-foundation.org/openaccess/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf) — Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun (2015)
+  Journal: Proceedings of the IEEE International Conference on Computer Vision (ICCV); Pages: 1026-1034; DOI: [10.1109/ICCV.2015.122](https://doi.org/10.1109/ICCV.2015.122)
+  提出了He初始化方法，这是一种专门为使用ReLU激活的神经网络设计的策略，旨在通过保持信号强度来解决梯度消失等问题。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  全面讨论了参数初始化技术，包括其背后的原因和面临的挑战，提供了理论和实践指导（参见第8.4章）。
+- [Neural Networks Part 2: Setting up the Data and the Preprocessing, Loss, Optimization](https://cs231n.github.io/neural-networks-2/) — Andrej Karpathy, Justin Johnson, and Fei-Fei Li (2023)
+  Publisher: Stanford University
+  提供了参数初始化的实用概述，解释了深度神经网络中的常见问题和有效的策略。

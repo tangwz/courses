@@ -1,0 +1,111 @@
+---
+course: "introduction-quantum-computing"
+chapter: "multiple-qubits-entanglement"
+lesson: "tensor-products"
+sourceId: 8158
+sourceUrl: "https://apxml.com/zh/courses/introduction-quantum-computing/chapter-4-multiple-qubits-entanglement/tensor-products"
+title: "张量积"
+description: "使用张量积组合单个量子比特的向量空间。"
+order: 1
+plots: ["plots/8158-0.json"]
+sourceHash: "053280de0a1bc547d958456f7a2cc86a028fd20a2e8e8b48b27d89603549a0bc"
+sourceCorrections: []
+---
+
+单个量子比特可以作为孤立系统进行操作，使用 Hadamard 和 Pauli-X 等门，其结果通常在布洛赫球上可视化。然而，量子计算的真正性能并不在于孤立地操作单个粒子，而在于将多个量子比特连接起来执行并行操作。为了描述具有多个量子比特的系统，需要一种数学方法来组合它们的向量 (vector)空间。这种方法就是张量积。
+
+### 组合状态空间
+
+在经典计算中，如果你有两个比特，系统的状态由第一个比特的状态和第二个比特的状态描述。例如，如果比特 A 是 0，比特 B 是 1，则系统处于状态 “01”。
+
+在量子力学中，我们不能简单地将状态并排罗列。相反，我们将第一个量子比特的向量 (vector)空间与第二个量子比特的向量空间结合，创建一个新的、更大的向量空间。我们使用符号 $\otimes$ 表示的张量积运算来实现这一点。
+
+如果量子比特 $A$ 处于状态 $|\psi\rangle$，量子比特 $B$ 处于状态 $|\phi\rangle$，则系统的集体状态写作：
+
+$|\psi\rangle \otimes |\phi\rangle$
+
+通常，这被简写为 $|\psi\rangle|\phi\rangle$ 或简称为 $|\psi\phi\rangle$。
+
+### 基态的扩展
+
+对于单个量子比特，我们的标准基向量 (vector)是 $|0\rangle$ 和 $|1\rangle$。当我们引入第二个量子比特时，我们对这些基向量的每种组合进行张量积运算。这为双量子比特系统产生了四种可能的计算基态：
+
+$|0\rangle \otimes |0\rangle = |00\rangle$
+$|0\rangle \otimes |1\rangle = |01\rangle$
+$|1\rangle \otimes |0\rangle = |10\rangle$
+$|1\rangle \otimes |1\rangle = |11\rangle$
+
+注意，单个量子比特存在于 2 维复向量空间（$2^1$）中。双量子比特系统存在于 4 维空间（$2^2$）中。这种模式呈指数级增长。三量子比特系统存在于 8 维空间（$2^3$）中。这种指数级的规模增长是量子系统的基本特征。
+
+> 将单个量子比特基态映射到复合状态空间基准。
+
+### 计算张量积
+
+对于更习惯线性代数的人来说，张量积最好通过其矩阵表示来理解，通常称为克罗内克积（Kronecker product）。
+
+如果我们有两个向量 (vector) $A$ 和 $B$：
+
+$A = \begin{bmatrix} a_0 \\ a_1 \end{bmatrix}, \quad B = \begin{bmatrix} b_0 \\ b_1 \end{bmatrix}$
+
+张量积 $A \otimes B$ 的计算方法是将第一个向量的每个元素乘以整个第二个向量：
+
+$A \otimes B = \begin{bmatrix} a_0 \cdot \begin{bmatrix} b_0 \\ b_1 \end{bmatrix} \\ a_1 \cdot \begin{bmatrix} b_0 \\ b_1 \end{bmatrix} \end{bmatrix} = \begin{bmatrix} a_0 b_0 \\ a_0 b_1 \\ a_1 b_0 \\ a_1 b_1 \end{bmatrix}$
+
+让我们看一个具体的例子。假设我们有两个量子比特。第一个处于状态 $|0\rangle$，第二个处于状态 $|1\rangle$。我们想要找到复合状态 $|01\rangle$ 的向量表示。
+
+回顾基态的列向量：
+$|0\rangle = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, \quad |1\rangle = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$
+
+现在我们应用张量积运算：
+
+$|0\rangle \otimes |1\rangle = \begin{bmatrix} 1 \\ 0 \end{bmatrix} \otimes \begin{bmatrix} 0 \\ 1 \end{bmatrix} = \begin{bmatrix} 1 \cdot \begin{bmatrix} 0 \\ 1 \end{bmatrix} \\ 0 \cdot \begin{bmatrix} 0 \\ 1 \end{bmatrix} \end{bmatrix} = \begin{bmatrix} 1 \cdot 0 \\ 1 \cdot 1 \\ 0 \cdot 0 \\ 0 \cdot 1 \end{bmatrix} = \begin{bmatrix} 0 \\ 1 \\ 0 \\ 0 \end{bmatrix}$
+
+得到的向量 $\begin{bmatrix} 0 & 1 & 0 & 0 \end{bmatrix}^T$ 在第二个位置（索引为 1）处为 1，这对应于二进制值 $01$。
+
+### 概率幅度可视化
+
+在单量子比特系统中，我们使用两个幅度（$\alpha$ 和 $\beta$）来可视化状态。在双量子比特系统中，我们的状态向量 (vector)包含四个幅度。如果系统处于叠加态，例如对两个量子比特都应用 Hadamard 门，状态向量在所有四个位置上都将具有非零条目。
+
+考虑两个量子比特都处于完全叠加态（$|+\rangle \otimes |+\rangle$）的情况。生成的向量在每个位置的值均为 $0.5$（因为 $0.5^2 + 0.5^2 + 0.5^2 + 0.5^2 = 1$）。
+
+
+
+![概率分布：处于叠加态的双量子比特](plots/8158-0.json)
+
+
+
+> 对两个量子比特应用 Hadamard 门后的等概率分布。
+
+### Python 实现
+
+Numpy 提供了一个直接计算张量积的方法：`np.kron`。这个函数代表克罗内克积。
+
+在从头开始构建量子模拟器时，你会经常使用这个函数来组合状态向量 (vector)和幺正矩阵。
+
+```python
+import numpy as np
+
+# 将标准基态定义为列向量
+ket_0 = np.array([[1], [0]])
+ket_1 = np.array([[0], [1]])
+
+# 计算 |0⟩ ⊗ |1⟩
+# 预期结果：[0, 1, 0, 0]^T
+state_01 = np.kron(ket_0, ket_1)
+
+print(f"状态 |01⟩ 的向量表示：\n{state_01}")
+
+# 计算 |1⟩ ⊗ |1⟩
+# 预期结果：[0, 0, 0, 1]^T
+state_11 = np.kron(ket_1, ket_1)
+
+print(f"状态 |11⟩ 的向量表示：\n{state_11}")
+```
+
+### 为什么这很重要
+
+理解张量积是操作多量子比特门的前提。正如我们扩展了状态向量 (vector)一样，我们也必须扩展门矩阵。像 Pauli-X 这样的单量子比特门是一个 $2 \times 2$ 矩阵。为了将其应用于双量子比特系统，我们必须使用张量积将其扩展为 $4 \times 4$ 矩阵。
+
+例如，如果我们想在保持第一个量子比特不变（应用单位矩阵 $I$）的同时对第二个量子比特应用 X 门，则整个系统的操作表示为 $I \otimes X$。
+
+这种数学框架允许我们定义一个量子比特的状态影响另一个量子比特的相互作用，这也是本章稍后讨论的 CNOT 门和量子纠缠的基石。

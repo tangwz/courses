@@ -1,0 +1,124 @@
+---
+course: "intro-eda-course"
+chapter: "bivariate-analysis"
+lesson: "numerical-vs-numerical-correlation"
+sourceId: 1168
+sourceUrl: "https://apxml.com/zh/courses/intro-eda-course/chapter-4-bivariate-analysis/numerical-vs-numerical-correlation"
+title: "数值变量与数值变量：相关性分析"
+description: "计算并解读相关系数（皮尔逊，斯皮尔曼），以评估线性及单调关系。"
+order: 2
+plots: []
+sourceHash: "bb419d3b1dfe9131be4918e316c54662d6c46010679640e8e757a230dbee569e"
+sourceCorrections: []
+---
+
+虽然散点图能让我们直观感受两个数值变量间的关系，但我们常需要一个定量指标来描述这种关联的强度和方向。相关性分析正是为此：它提供了一个统计量，总结了两个变量一同变化的紧密程度。
+
+### 理解相关系数
+
+相关系数是一个介于 $-1$ 到 $+1$ 之间的数值。它告诉我们关于两个变量关系的两个方面：
+
+1. **方向**: 正号表示正向关系（一个变量增加时，另一个变量也倾向于增加）。负号表示负向关系（一个变量增加时，另一个变量倾向于减少）。
+2. **强度**: 系数的绝对值表明关系强度。值越接近 $1$（或 $-1$），表示线性关联越强；而越接近 $0$，则表示线性关联越弱或根本不存在线性关系。
+
+### 皮尔逊相关系数 ($r$)
+
+最常用的相关系数是皮尔逊积矩相关系数，通常表示为 $r$。它主要衡量两个连续变量之间*线性*关系的强度和方向。
+
+皮尔逊 $r$ 的值可按如下方式解读：
+
+- $r = +1$: 完美的正向线性关系。
+- $r = -1$: 完美的负向线性关系。
+- $r = 0$: 无线性关系。接近零的值表示非常弱或不存在的线性关联。
+- $0 < r < 1$: 强度不同的正向线性关系。
+- $-1 < r < 0$: 强度不同的负向线性关系。
+
+皮尔逊 $r$ 假定变量近似服从正态分布，且它们之间的关系是线性的。它也可能对异常值敏感。
+
+#### 使用 Pandas 计算皮尔逊 $r$
+
+Pandas 使用 DataFrame 的 `.corr()` 方法，使计算皮尔逊相关性变得简单。默认情况下，它会计算列的成对相关性。
+
+```python
+import pandas as pd
+
+# 示例 DataFrame
+data = {'Temperature': [20, 22, 25, 18, 23, 28],
+        'Ice_Cream_Sales': [150, 170, 200, 130, 180, 230],
+        'Umbrella_Sales': [50, 45, 30, 60, 40, 20]}
+df = pd.DataFrame(data)
+
+# 计算成对的皮尔逊相关矩阵
+correlation_matrix = df.corr(method='pearson')
+
+print(correlation_matrix)
+```
+
+这将产生一个矩阵，其中每个单元格 $(i, j)$ 包含列 $i$ 和列 $j$ 之间的皮尔逊相关系数。对角线元素始终为 $1$，因为一个变量与其自身完全相关。
+
+```
+                 Temperature  Ice_Cream_Sales  Umbrella_Sales
+Temperature         1.000000         0.993399       -0.976701
+Ice_Cream_Sales     0.993399         1.000000       -0.954676
+Umbrella_Sales     -0.976701        -0.954676        1.000000
+```
+
+从该输出可以看出，`Temperature` 和 `Ice_Cream_Sales` 之间存在显著的正相关 ($r \approx 0.99$)，而 `Temperature` 和 `Umbrella_Sales` 之间存在显著的负相关 ($r \approx -0.98$)。
+
+要计算仅两个特定列（Series）之间的相关性，您可以使用一个 Series 的 `.corr()` 方法，并将另一个 Series 作为参数 (parameter)传入：
+
+```python
+# 温度和冰淇淋销量之间的相关性
+temp_sales_corr = df['Temperature'].corr(df['Ice_Cream_Sales'])
+print(f"温度和冰淇淋销量之间的相关性: {temp_sales_corr:.4f}")
+# 输出：温度和冰淇淋销量之间的相关性：0.9934
+```
+
+### 斯皮尔曼等级相关系数 ($\rho$)
+
+如果变量之间的关系不是线性的，但仍普遍呈增加或减少（单调）趋势呢？或者数据包含大幅异常值或不服从正态分布呢？在这种情况下，皮尔逊 $r$ 可能不是最适合的衡量指标。
+
+斯皮尔曼等级相关系数，表示为 $\rho$ (rho)，是一种非参数 (parameter)替代方法。它评定两个变量之间的关系能用单调函数表述的程度。斯皮尔曼相关性不是使用实际值，而是对数据的*等级*计算皮尔逊相关性。
+
+- $\rho = +1$: 完美的正向单调关系。
+- $\rho = -1$: 完美的负向单调关系。
+- $\rho = 0$: 无单调关系。
+
+它比皮尔逊 $r$ 对异常值不那么敏感，并且不假定线性或正态性。
+
+#### 使用 Pandas 计算斯皮尔曼 $\rho$
+
+您可以通过在 `.corr()` 方法中指定 `method='spearman'` 来计算斯皮尔曼相关性：
+
+```python
+# 计算成对的斯皮尔曼相关矩阵
+spearman_corr_matrix = df.corr(method='spearman')
+
+print(spearman_corr_matrix)
+```
+
+```
+                 Temperature  Ice_Cream_Sales  Umbrella_Sales
+Temperature         1.000000         1.000000       -0.942857
+Ice_Cream_Sales     1.000000         1.000000       -0.942857
+Umbrella_Sales     -0.942857        -0.942857        1.000000
+```
+
+请注意，这些值可能与皮尔逊相关性略有不同，尤其是当存在非线性单调关系或异常值时。在此特定示例中，关系非常接近线性，因此斯皮尔曼的结果与 `Umbrella_Sales` 相关性的皮尔逊结果相似但不完全相同。
+
+### 解读与注意事项
+
+- **强度指引**: 尽管情境很重要，但通常的指引有时会将相关性分类为：
+  - $|r|$ 或 $|\rho|$ 介于 $0.7$ 到 $1.0$ 之间：强相关。
+  - $|r|$ 或 $|\rho|$ 介于 $0.4$ 到 $0.7$ 之间：中等相关。
+  - $|r|$ 或 $|\rho|$ 介于 $0.1$ 到 $0.4$ 之间：弱相关。
+  - $|r|$ 或 $|\rho|$ 低于 $0.1$：非常弱或可忽略的相关。
+- **关联不等于因果**: 这是核心理念。两个变量之间存在强关联，并不自动表示一个变量导致另一个变量。可能存在一个未被观察到的第三方变量（混杂因素）共同影响两者，或者这种关系可能纯粹是巧合。例如，冰淇淋销量和犯罪率都可能在炎热的夏季月份增加，表现出强关联，但吃冰淇淋并不会导致犯罪。
+- **线性与单调性**: 请记住，皮尔逊衡量的是*线性*关联，而斯皮尔曼衡量的是*单调*关联。相关系数接近零不一定表示*没有关系*，而仅仅表示不存在线性（对皮尔逊而言）或单调（对斯皮尔曼而言）关系。复杂的非线性关系依然可能存在，这就是为什么通过散点图进行目视检查依然重要的原因。
+
+相关性分析给出数值变量对之间关系的简洁数值汇总，作为散点图获得视觉观察的补充，并指导后续分析或特征选择。
+
+## 参考资料
+
+- [pandas.DataFrame.corr](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html) — pandas development team (2024)
+  Pandas DataFrame.corr()方法的官方文档，详细说明了其用于计算成对相关性的用法，包括'pearson'和'spearman'方法。

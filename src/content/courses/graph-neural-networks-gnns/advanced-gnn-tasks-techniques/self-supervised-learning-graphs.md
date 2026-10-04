@@ -1,0 +1,97 @@
+---
+course: "graph-neural-networks-gnns"
+chapter: "advanced-gnn-tasks-techniques"
+lesson: "self-supervised-learning-graphs"
+sourceId: 2735
+sourceUrl: "https://apxml.com/zh/courses/graph-neural-networks-gnns/chapter-4-advanced-gnn-tasks-techniques/self-supervised-learning-graphs"
+title: "图上的自监督学习"
+description: "为图神经网络实现自监督预训练方法，可采用对比学习或预测任务。"
+order: 5
+plots: []
+sourceHash: "039db92f98e59aefa34273221d405781eb3c2886d9455b8366c8fb91b8546e52"
+sourceCorrections: []
+---
+
+图上的监督学习 (supervised learning)需要大量标注数据，在社交网络、生物网络或知识图等多种情形下，获取这些数据通常成本高昂或不切实际。自监督学习 (self-supervised learning)（SSL）提供了一种有效的替代方案，它直接从无标注的图结构和特征中学习有意义的节点或图表示。其核心思想是设计“代理”任务，这些任务可以借助图数据本身来解决，使得图神经网络 (neural network)（GNN）编码器能够捕获主要的结构和语义信息，而无需依赖外部标签。这些学习到的表示随后可以通过微调 (fine-tuning)或直接作为特征使用，有效地迁移到各种下游任务中。
+
+### 图上自监督学习 (supervised learning) (self-supervised learning)的原理
+
+图数据拥有丰富的内在结构和特征，可以用于自监督学习。与图像或文本（其中旋转或裁剪等增强操作有标准解释）不同，为图定义有意义的增强操作和代理任务需要认真考虑其独特的性质。目标是从图本身生成监督信号，以训练GNN编码器。
+
+### 图上常见的自监督学习 (supervised learning) (self-supervised learning)方法
+
+图上自监督学习主要分为两大类：对比方法和预测方法。
+
+#### 对比学习
+
+对比学习旨在通过最大化同一图实体（节点、子图或整个图）不同增强“视图”之间的一致性，同时最小化与不同实体“视图”（即“负样本”）之间的一致性，来学习表示。
+
+1. **数据增强：** 创建图的不同视图是根本。常见的图增强技术包含：
+
+   - **节点丢弃：** 随机移除一部分节点。
+   - **边扰动：** 随机添加或移除边。
+   - **属性掩蔽：** 随机掩盖一部分节点特征。
+   - **子图采样：** 提取以特定节点为中心的子图。
+     增强方式的选择对学习到的表示有明显影响，通常需要进行领域特定的调整。
+2. **对比目标：** 图神经网络 (neural network)编码器$f_\theta$将增强的图视图映射到嵌入 (embedding)。一种常用的目标是InfoNCE（噪声对比估计），它促使正样本对（同一实体的不同视图，$z_i, z_j$）之间的相似性（例如余弦相似性）较高，而负样本对（不同实体的视图，$z_i, z_k$）之间的相似性较低。通常，在计算对比损失之前，会将一个非线性投影头$g_\phi$应用于嵌入（$h = g_\phi(z)$）：
+
+   
+   $$
+   \mathcal{L}_{i} = -\log \frac{\exp(\text{sim}(h_i, h_j)/\tau)}{\exp(\text{sim}(h_i, h_j)/\tau) + \sum_{k \neq i} \exp(\text{sim}(h_i, h_k)/\tau)}
+   $$
+   
+
+   这里，$\tau$是一个用于缩放相似性的温度超参数 (parameter) (hyperparameter)。
+3. **方法：**
+
+   - **GraphCL：** 在图级别应用各种增强操作（节点丢弃、边扰动等），用于图分类预训练 (pre-training)。
+   - **GRACE（使用自适应损坏和估计进行图表示学习）：** 专注于节点级别的对比学习，通过增强生成两个视图，并对比视图内部和视图间的节点表示。
+   - **InfoGraph：** 将图级别的表示与从同一图导出的块级别（节点）表示进行对比，以最大化互信息。
+
+> 图上对比自监督学习的流程。生成锚定图/节点的两个增强视图，并通过一个共享的GNN编码器和投影头。由此产生的表示在对比损失的引导下，使得正样本的表示相互靠近，同时远离负样本的表示。
+
+#### 预测学习
+
+预测方法基于预测图或其组件的某些属性来定义代理任务。
+
+1. **属性掩蔽：** 类似于自然语言处理（NLP）中的BERT，这种方法涉及掩蔽部分节点特征，并训练GNN根据节点的邻域上下文 (context)和剩余特征来预测被掩蔽的值。这使得GNN能够学习局部结构和特征依赖关系。
+2. **上下文预测：** 这涉及基于局部上下文预测关系或属性。例如，预测两个节点之间的距离，或者两个节点是否属于同一采样子图。
+3. **结构预测：** 代理任务可以涉及预测图的结构属性，如节点度、聚类系数，甚至预测边的存在（将链接预测用作代理任务）。
+
+这些方法通常使用标准损失函数 (loss function)，如交叉熵用于基于分类的预测任务，或均方误差用于基于回归的任务。
+
+### 预训练 (pre-training)GNN的应用
+
+一旦GNN编码器通过自监督学习 (supervised learning) (self-supervised learning)完成预训练，它就可以适应下游任务：
+
+- **微调 (fine-tuning)：** 整个预训练的GNN（或其部分）在一个较小的标注数据集上，使用特定任务的头部（例如分类层）进行端到端微调。
+- **特征提取：** 预训练的GNN被用作固定的特征提取器。生成的节点或图嵌入 (embedding)被输入到一个单独的下游模型中（例如支持向量 (vector)机、多层感知器）。
+
+### 优点与考量
+
+为GNN使用自监督学习 (supervised learning) (self-supervised learning)有若干益处：
+
+- **减少对标签的依赖：** 使得从大量现成的无标注图数据中进行学习成为可能。
+- **提高泛化能力：** 通过自监督学习获得的表示通常能捕捉到更基本的图属性，与纯监督训练相比，这可能带来下游任务上更好的泛化能力，尤其是在标签有限的情况下。
+- **初始化：** 为后续的监督微调 (fine-tuning)提供良好的权重 (weight)初始化。
+
+然而，设计有效的自监督学习方法需要认真思考：
+
+- **增强设计：** 图增强操作必须保留相关的结构或语义信息，同时生成足够多样的视图。不佳的增强会损害性能。
+- **代理任务选择：** 所选的代理任务应与目标下游任务所需的属性保持一致。
+- **负样本采样：** 在对比方法中，选择有信息量的负样本对于高效学习非常重要。简单的随机采样可能效率不高。
+- **计算成本：** 在大型图上进行预训练 (pre-training)可能计算量很大。
+
+自监督学习是图机器学习 (machine learning)中一个快速发展的方面，在标注数据稀缺时为表示学习提供了有力的工具。凭借图的固有结构和特征，自监督学习使得能够训练出多功能的GNN模型，这些模型适用于本章中讨论的各种复杂图分析任务。
+
+## 参考资料
+
+- [Self-supervised Learning on Graphs: A Survey](https://ieeexplore.ieee.org/document/9643447) — Yanqiao Zhu, Yichen Xu, Feng Yu, Qiang Liu, Shu Wu, and Yuan Qi (2021)
+  Journal: IEEE Transactions on Knowledge and Data Engineering; Publisher: IEEE; Volume: 35; Pages: 1121-1142; DOI: [10.1109/TKDE.2021.3134621](https://doi.org/10.1109/TKDE.2021.3134621)
+  本综述全面回顾了图上的自监督学习方法，并对各种技术进行了分类和详细阐述。
+- [Deep Graph Contrastive Representation Learning](https://arxiv.org/abs/2006.04131) — Yanqiao Zhu, Yichen Xu, Feng Yu, Qiang Liu, Shu Wu, Liang Wang (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 33; DOI: [10.48550/arXiv.2006.04131](https://doi.org/10.48550/arXiv.2006.04131)
+  提出了GRACE，一种用于图节点级对比学习的方法，展示了图数据增强的有效性。
+- [Graph Contrastive Learning with Augmentations](https://arxiv.org/abs/2010.13902) — Yuning You, Tianlong Chen, Yongduo Sui, Ting Chen, Zhangyang Wang, Yang Shen (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 33; DOI: [10.48550/arXiv.2010.13902](https://doi.org/10.48550/arXiv.2010.13902)
+  提出了GraphCL，一种用于图级对比学习的方法，探索了多种图数据增强策略。

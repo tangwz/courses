@@ -1,0 +1,112 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "the-training-process"
+lesson: "practice-executing-the-training-loop"
+sourceId: 8521
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-5-the-training-process/practice-executing-the-training-loop"
+title: "实践：执行训练循环"
+description: "在数据集子集上运行完整的微调过程并监控训练日志。"
+order: 5
+plots: ["plots/8521-0.json"]
+sourceHash: "c0447bb7ecc9def9bd3f1ee603aaebd02e499f130c146701c5750a7ac1ccdd90"
+sourceCorrections: []
+---
+
+启动训练过程涉及将模型架构、标记 (token)化的数据集和定义的超参数 (parameter) (hyperparameter)绑定到前向传播、损失计算和权重 (weight)更新的自动化序列中。Hugging Face 的 `Trainer` 类负责管理这一过程，它抽象掉了大部分 PyTorch 样板代码，同时保留了对执行状态的精细控制。
+
+### 准备数据集子集
+
+在投入可能耗时数小时或数天的完整训练运行之前，通常的做法是在一小部分数据上测试流水线。这可以验证内存限制是否得到满足，并确保损失按预期下降，而不会在计算过程中遇到内存溢出错误。
+
+```python
+# 选择一小部分样本进行练习运行
+small_train_dataset = tokenized_dataset["train"].select(range(500))
+small_eval_dataset = tokenized_dataset["test"].select(range(100))
+```
+
+运行受限的数据集可以让你快速验证数据整理器（data collator），并确保输入已正确填充到每个批次的最大长度。
+
+### 组装训练器
+
+要执行循环，需实例化 `Trainer` 类。你需要传入带有 LoRA 适配器的基础模型、前一节定义的训练参数 (parameter)、拆分后的数据集以及数据整理器。数据整理器通过将原始标记 (token)序列组织成统一的张量来为模型准备数据。
+
+```python
+from transformers import Trainer, DataCollatorForLanguageModeling
+
+# 创建一个忽略指令填充的数据整理器
+data_collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer,
+    mlm=False
+)
+
+trainer = Trainer(
+    model=peft_model,
+    args=training_args,
+    train_dataset=small_train_dataset,
+    eval_dataset=small_eval_dataset,
+    data_collator=data_collator,
+)
+```
+
+通过设置 `mlm=False`，你指示整理器为因果语言建模处理数据，这是生成任务的标准方法，模型在其中预测序列中的下一个标记。
+
+### 执行流程
+
+通过调用实例化对象上的 `train` 方法来启动过程。
+
+```python
+# 开始训练循环
+training_results = trainer.train()
+```
+
+当你执行此命令时，自动化循环就开始了。引擎获取数据批次，将其传递给模型，并使用交叉熵损失计算生成的标记 (token)与实际目标标记之间的差异。
+
+> 在单个训练迭代中执行的操作序列。
+
+由于你使用的是参数 (parameter)高效微调 (fine-tuning)（PEFT），反向传播 (backpropagation)仅计算注入的 LoRA 矩阵的梯度。冻结的基础模型权重 (weight)保持不变，从而节省了大量的计算资源。
+
+长度为 $N$ 的单个序列的交叉熵损失计算如下：
+
+$L = -\frac{1}{N} \sum_{i=1}^{N} \log P(x_{i} | x_{<i})$
+
+这里，$P(x_{i} | x_{<i})$ 是在给定所有先前上下文 (context)标记的情况下，模型分配给正确下一个标记的概率。随着训练循环的运行，优化器会调整适配器权重以最大化该概率，从而导致总损失值下降。
+
+### 监控输出日志
+
+随着循环的迭代，你将在终端中按照训练参数 (parameter)中指定的间隔看到输出日志。你应该监控两个主要指标：训练损失和评估损失。
+
+
+
+![训练与评估损失](plots/8521-0.json)
+
+
+
+> 300 步内训练损失与评估损失的对比。末端的偏差表明出现了过拟合 (overfitting)的早期迹象。
+
+成功的运行表现为训练损失和评估损失均稳步下降。如果训练损失继续下降但评估损失开始攀升，说明你的模型已开始背诵训练子集。这意味着它正在失去推广到新数据的能力。如果你观察到这种现象，可以提前停止训练循环或调整学习率和权重 (weight)衰减参数。
+
+### 保存最终适配器
+
+一旦循环成功处理了预定义的轮数（epochs），你必须将新训练的适配器权重 (weight)保存到磁盘。
+
+```python
+# 保存训练好的 LoRA 适配器
+trainer.save_model("./custom-slm-lora-adapters")
+```
+
+请记住，由于你使用了 LoRA，你并不是在保存整个数 GB 大小的语言模型。你只需保存新训练的低秩矩阵，这些矩阵通常仅占用几 MB 的存储空间。在接下来的部署阶段，这些轻量级适配器文件将加载到原始基础模型之上，以改变其文本生成行为。
+
+## 参考资料
+
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: arXiv preprint arXiv:2106.09685; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了低秩自适应（LoRA）技术的奠基性论文，该技术用于在训练循环中高效更新模型权重。
+- [Hugging Face's Transformers: State-of-the-Art Natural Language Processing](https://aclanthology.org/2020.emnlp-demos.6/) — Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue, Anthony Moi, Pierric Cistac, Tim Rault, Rémi Louf, Morgan Funtowicz, Joe Davison, Sam Shleifer, Patrick von Platen, Clara Ma, Yacine Jernite, Julien Plu, Canwen Xu, Teven Le Scao, Sylvain Gugger, Mariama Drame, Quentin Lhoest, Alexander M. Rush (2020)
+  Journal: Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations; Publisher: Association for Computational Linguistics; Pages: 38–45; DOI: [10.18653/v1/2020.emnlp-demos.6](https://doi.org/10.18653/v1/2020.emnlp-demos.6)
+  Transformers 库和 Trainer 类的官方论文，介绍了用于自动化训练序列的相关组件。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 224-270
+  本书第 6 章和第 8 章为训练循环中涉及的反向传播、交叉熵损失和优化算法提供了数学基础。
+- [PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods](https://github.com/huggingface/peft) — Sourab Mangrulkar, Sylvain Gugger, Lysandre Debut, Younes Belkada, Sayak Paul, Benjamin Bossan (2022)
+  Publisher: Hugging Face
+  PEFT 库的官方文档，说明了如何将适配器集成到训练过程中并进行独立保存。

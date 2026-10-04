@@ -1,0 +1,85 @@
+---
+course: "introduction-to-mlops"
+chapter: "model-deployment-and-serving"
+lesson: "introduction-to-model-registries"
+sourceId: 7259
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-5-model-deployment-and-serving/introduction-to-model-registries"
+title: "模型注册中心简介"
+description: "了解模型注册中心作为管理机器学习模型生命周期的中央仓库的功能。"
+order: 5
+plots: []
+sourceHash: "745300136e9f92b40209660ef071a9a6fc1b4f2bb8e4102b28c76d2a3ec693b1"
+sourceCorrections: []
+---
+
+在整个生命周期中有效地管理机器学习 (machine learning)模型是一个巨大的挑战。随着模型走向生产，如何随时间推移可靠地组织、版本化和跟踪模型成为了待解决的问题。简单地将模型文件（如 `model_v1.pkl` 或 `model_v2_final.pkl`）存储在文件夹中并不是一种可扩展或可靠的策略。这样很快就无法追踪生产环境中运行的是哪个模型、它是如何训练的，或者它在评估期间的表现如何。模型注册中心就是为了解决这个问题而设计的。
+
+模型注册中心是一个用于存储、版本化和管理机器学习模型生命周期的集中式系统。可以把它想象成类似于 Python 包管理器 PyPI 的工具，但它是专门为机器学习模型构建的。它为所有候选生产模型提供了一个单一的事实来源，将它们从简单的文件转化为完全可追溯和可审计的软件资产。
+
+### 模型注册中心的功能
+
+模型注册中心不仅仅是一个文件服务器。它通过几个核心功能为机器学习 (machine learning)工作流提供了结构和治理。
+
+#### 版本控制与存储
+
+其核心功能是提供一个存储模型产物的中心位置。每次注册新模型时，它都会被分配一个唯一的、递增的版本号（例如，版本 1，版本 2）。这确保了每个模型都是唯一可识别的。与对源代码进行版本控制的 Git 不同，模型注册中心是对训练过程输出的训练模型**产物**本身进行版本控制。
+
+#### 元数据跟踪
+
+仅有版本号是不够的。注册中心的真正作用在于它能够为每个模型版本关联丰富的元数据。这些元数据提供了模型的完整历史记录，对于复现和调试非常有用。常见的元数据包括：
+
+- **性能指标：** 来自测试集的重要评估分数，如准确率、F1 分数或平均绝对误差 (MAE)。
+- **训练参数 (parameter)：** 训练期间使用的超参数 (hyperparameter)（例如学习率、层数）。
+- **数据集版本：** 对用于训练模型的具体数据版本的引用。
+- **源代码提交：** 运行训练脚本的代码的 Git 提交哈希值。
+- **标签和描述：** 人类可读的注释，例如“使用更新的客户数据训练的第三季度模型”或“紧急回滚候选模型”。
+
+这种关联性使得模型真正具备了可复现性。如果生产模型开始出现故障，你可以使用注册中心将其追溯到创建它的具体代码、数据和参数。
+
+#### 生命周期管理
+
+模型很少直接从数据科学家的笔记本进入生产环境。它们通常会经历几个验证阶段。模型注册中心通过允许你为每个模型版本分配阶段或状态，帮助将这一过程规范化。
+
+常见的生命周期阶段包括：
+
+- **待发布 (Staging)：** 模型是生产候选者，正在预生产环境中进行最终的集成测试。
+- **生产 (Production)：** 模型已获批准，并正在积极处理实时流量。通常，同一时间只有一个版本的模型可以处于“生产”阶段。
+- **已归档 (Archived)：** 模型不再使用（已被弃用或被新版本取代），但保留用于历史记录和分析。
+
+这种阶段化过程为进入生产环境提供了一条清晰且可审计的路径。它确保只有经过验证和批准的模型才能部署，从而大幅降低了发布故障模型的风险。
+
+> 该图展示了模型在模型注册中心各阶段移动时的典型生命周期。
+
+### 模型注册中心在 MLOps 流水线中的角色
+
+模型注册中心作为 MLOps 流水线不同部分之间的联结点，特别是在模型训练和模型部署之间。
+
+考虑一个自动化流水线：
+
+1. **持续训练 (CT)：** 训练流水线自动运行，由新代码或新数据触发，产生一个新的模型产物。
+2. **模型注册：** 在模型训练完成并通初步自动化测试后，流水线将模型文件及其关联的元数据推送到模型注册中心。此操作在“待发布”环境中创建一个新的、版本化的模型。
+3. **模型晋升：** 之后，模型可以接受进一步测试。团队成员或自动化质量门禁可以直接在注册中心界面或通过 API 调用将模型从“待发布”阶段“晋升”到“生产”阶段。
+4. **持续部署 (CD)：** 部署流水线被配置为监听注册中心中“生产”阶段的变化。当新模型晋升时，CD 流水线会自动从注册中心提取该特定模型版本，将其打包并部署到服务环境中。
+
+这种工作流实现了模型训练与部署的解耦。数据科学家可以产出新模型而无需担心部署架构，运维团队可以放心地部署模型，因为他们知道自己提取的是经过审核和批准的版本。
+
+> 一个自动化的 MLOps 工作流，其中模型注册中心充当训练系统和部署系统之间的桥梁。
+
+使用注册中心使得回滚等操作变得简单且安全。如果你发现“模型 v2”在生产环境中的表现不佳，你可以前往注册中心，将“模型 v1”重新晋升到“生产”阶段，部署流水线将自动重新部署旧的、稳定的版本。如果没有注册中心，这个过程将是对正确模型文件的一次手忙脚乱的、手动搜寻过程。
+
+许多 MLOps 平台，如 MLflow、Amazon SageMaker、Google Vertex AI 和 Azure Machine Learning，都内置了模型注册中心。通过采用这一工具，你可以为机器学习 (machine learning)系统带来规范性、可复现性和治理，这是构建专业级 AI 产品的一个必要步骤。
+
+## 参考资料
+
+- [Introducing MLOps: How to go from Model to Production](https://www.oreilly.com/library/view/introducing-mlops/9781492083283/) — Mark Treveil, Nicolas Omont, Clément Stenac, Kenji Lefevre, Du Phan, Joachim Zentici, Adrien Lavoillotte, Makoto Miyazaki, Lynn Heidmann (2020)
+  Publisher: O'Reilly Media
+  本书全面概述MLOps的原则、实践和工具，包括对机器学习生命周期中模型管理和注册的讨论。
+- [MLflow Model Registry](https://mlflow.org/docs/latest/model-registry.html) — MLflow Documentation (2024)
+  Publisher: Databricks, Inc.
+  MLflow模型注册的官方文档，详细说明了其用于机器学习模型的版本控制、元数据跟踪和生命周期管理功能。
+- [Amazon SageMaker Model Registry](https://docs.aws.amazon.com/sagemaker/latest/dg/model-registry.html) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  Amazon SageMaker模型注册的官方指南，解释了如何编目、版本化和管理模型以在不同阶段进行部署。
+- [Register and manage models with Model Registry in Vertex AI](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE280k-Gsc4Snq548WMGwtu5c0hxy5StOmsOCr6YJvabLDxNoPWSxiS8_-sWagmhON3t8y2ZIo2HlYwETbnhe-B0EAH-UUUwGHYesYs5ANeqgIoJZP3Hd1NycYRKpoOyJVGa6lQ11_9lkcNgUYPdk-zjMC8unRetjH0UI0ZEU=) — Google Cloud Documentation (2024)
+  Publisher: Google Cloud
+  Google Cloud关于Vertex AI模型注册的官方文档，概述了其集中式模型管理、版本控制和生命周期转换功能。

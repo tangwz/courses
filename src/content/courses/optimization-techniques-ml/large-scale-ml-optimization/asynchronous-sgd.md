@@ -1,0 +1,82 @@
+---
+course: "optimization-techniques-ml"
+chapter: "large-scale-ml-optimization"
+lesson: "asynchronous-sgd"
+sourceId: 1287
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-4-large-scale-ml-optimization/asynchronous-sgd"
+title: "异步随机梯度下降"
+description: "理解异步SGD及其在并行环境中的影响（如陈旧梯度）。"
+order: 5
+plots: []
+sourceHash: "e13d8cafa010d9e8d96b2c62c7373c517b1d09db36b5fc9959f23a81380fdf44"
+sourceCorrections: []
+---
+
+训练超大模型或使用巨量数据集，对单机优化提出了重大挑战。即使是像SAG和SVRG这样的方差减小算法，它们通过减小梯度噪声来改进标准随机梯度下降 (gradient descent)，也往往不足以应对所需的规模。因此，并行化是必不可少的。将工作负载分散到多个处理单元（CPU或GPU），甚至多台机器上，对使训练时间切实可行非常重要。
+
+一种并行化SGD的直接方法是同步方式：多个“工作器”并行地在不同的mini-batch数据上计算梯度。然而，它们必须全部等待彼此完成，然后才能聚合它们的梯度（通常通过平均）并对模型参数 (parameter)应用一次单一的组合更新。这种同步方法确保每次更新都基于从相同参数状态计算的梯度。主要缺点是什么？整个过程的速度仅与最慢的工作器（“拖后腿者”问题）相当。同步所需的网络通信也可能成为一个主要瓶颈，特别是工作器数量很多时。
+
+异步随机梯度下降（ASGD）提供了一种不同的并行化方法，旨在最大化硬件利用率，并通过消除同步等待来潜在地加快实际训练时间。
+
+### ASGD方法
+
+在典型的ASGD设置中，多个工作进程独立地执行以下循环：
+
+1. **获取参数 (parameter)**：获取模型参数的当前版本（通常来自中央参数服务器或共享内存）。我们将时间 $t$ 时获取的参数记为 $W_t$。
+2. **计算梯度**：使用局部迷你批次数据 $x_i$ 计算梯度 $\nabla L(W_t; x_i)$。
+3. **推送更新**：将计算出的梯度（或参数更新本身，例如 $-\eta \nabla L(W_t; x_i)$）发送回去，以应用于中心参数。
+
+ASGD的定义特点是工作器互不等待。工作器1可能基于参数 $W_t$ 计算其梯度，而工作器2同时基于 $W_{t+1}$ 计算其梯度（因为工作器3已推送了更新）。当工作器1最终推送其更新时，它被应用于当前的参数状态，例如 $W_{t+k}$，这可能比它最初用于梯度计算的参数 $W_t$ 超前好几步。
+
+### 挑战：陈旧梯度
+
+这种缺乏同步带来了ASGD中的主要问题：**陈旧梯度**。如果一个梯度是使用比当前正在应用更新的参数 (parameter)更旧（更“陈旧”）的参数值计算的，则认为它是陈旧的。
+
+想象工作器A获取参数 $W_t$。它需要一些时间来计算其梯度 $\nabla L(W_t)$。在这段时间内，工作器B和C分别获取参数 $W_t$ 和 $W_{t+1}$，计算它们的梯度，并推送它们的更新，使中心参数变为 $W_{t+2}$。当工作器A最终完成并推送其从 $W_t$ 导出的更新时，它被应用于 $W_{t+2}$。这个更新是基于关于模型状态的过时信息。
+
+陈旧程度取决于诸如工作器数量、每个梯度的计算时间以及通信延迟等因素。陈旧梯度会给优化过程带来噪声。这种噪声可能：
+
+- **减慢收敛速度**：更新有时可能指向次优方向，因为它们基于旧信息。
+- **引起不稳定**：在极端情况下，来自高度陈旧梯度的冲突更新可能导致发散，尤其是在学习率较大时。
+- **使分析复杂化**：相比同步SGD，ASGD的理论收敛保证通常更弱或需要更多假设。
+
+### 权衡：同步SGD与异步SGD
+
+选择同步或异步并行化涉及权衡：
+
+| 特性 | 同步SGD (SyncSGD) | 异步SGD (ASGD) |
+| --- | --- | --- |
+| **工作器等待** | 是（等待最慢工作器） | 否（独立更新） |
+| **梯度** | 一致（基于相同参数 (parameter)） | 可能陈旧（基于旧参数） |
+| **吞吐量 (throughput)** | 受拖后腿者和同步成本限制 | 可能高很多 |
+| **收敛** | 通常更稳定，分析更简单 | 噪声更大，每次更新步可能更慢 |
+| **实际运行时间** | 在大型/异构系统中可能较慢 | 由于更高吞吐量通常整体更快 |
+| **调优** | 适用标准SGD调优 | 更复杂，对陈旧性效应敏感 |
+
+下图显示了时间线差异：
+
+> 三个工作器的同步SGD和异步SGD时间线比较。在同步SGD中，所有工作器必须在更新发生前完成计算并同步。在异步SGD中，工作器独立计算和更新，带来更高的吞吐量，但也可能应用陈旧的梯度。
+
+### 实际影响
+
+尽管存在陈旧梯度的问题，ASGD仍能有效。吞吐量 (throughput)的增加通常超过每次更新效率的降低，从而在实际运行时间上带来更快的收敛，特别是在通信延迟高或工作器速度不均的环境中（例如，CPU集群）。
+
+然而，ASGD的调优需要细心：
+
+- **学习率**：与同步SGD相比，通常需要调整（可能降低或更仔细地安排）以处理陈旧性带来的额外噪声。
+- **陈旧度限制**：一些实现允许限制用于更新的梯度的最大陈旧度，以此控制稳定性。
+- **动量**：基于动量的方法有时可以帮助平滑ASGD中固有的噪声更新。
+
+尽管ASGD是一项重要技术，特别是结合参数 (parameter)服务器架构（在第5章进一步讨论），但高速互连（如GPU的NVLink）和高效同步算法（如环形全约化，在第5章介绍）的进步，使得同步方法在现代深度学习 (deep learning)集群中极具竞争力，并常被选用。然而，掌握ASGD的原理和权衡对于理解分布式优化策略的全面情况很有帮助。
+
+## 参考资料
+
+- [Large Scale Distributed Deep Networks](http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf) — Jeffrey Dean, Greg S. Corrado, Rajat Monga, Kai Chen, Matthieu Devin, Quoc V. Le, Mark Z. Mao, Marc'Aurelio Ranzato, Andrew Senior, Paul Tucker, Ke Yang, Andrew Y. Ng (2012)
+  Journal: Advances in Neural Information Processing Systems 25 (NeurIPS 2012); Publisher: NeurIPS; Pages: 1223-1231
+  描述了DistBelief系统，该系统广泛采用异步SGD训练大规模深度学习模型。
+- [Hogwild!: A Lock-Free Approach to Parallelizing Stochastic Gradient Descent](https://proceedings.neurips.cc/paper/2011/file/79a4993bae5d63adfd7423c8f18d538e-Paper.pdf) — Benjamin Recht, Feng Niu, J. Christopher Liu, Rémi Récht, and Stephen J. Wright (2011)
+  Journal: Advances in Neural Information Processing Systems 24 (NeurIPS 2011); Publisher: Neural Information Processing Systems Foundation; Volume: 24; Pages: 693-701; DOI: [10.5591/978-1-60560-630-1.693](https://doi.org/10.5591/978-1-60560-630-1.693)
+  提出了一种早期且有影响力的无锁并行SGD方法，展示了即使存在过时梯度，异步更新的有效性。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本涵盖深度学习优化方法的综合性教科书，包括对分布式训练和异步方法的讨论。

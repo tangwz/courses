@@ -1,0 +1,122 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "applications-training-strategies"
+lesson: "hyperparameter-tuning-strategies"
+sourceId: 2934
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-7-applications-training-strategies/hyperparameter-tuning-strategies"
+title: "超参数调优策略"
+description: "Systematic approaches for tuning hyperparameters like layer sizes, latent dimension, and regularization strength."
+order: 8
+plots: ["plots/2934-0.json"]
+sourceHash: "cae0ced9f844ac6a53c8fd1c84a9165c534c3c7652394726d807ffbcf800c2f2"
+sourceCorrections: []
+---
+
+训练高效的自编码器不仅仅涉及选择合适的架构和损失函数 (loss function)。特定的配置选择，即超参数 (parameter) (hyperparameter)，对模型学习有意义的表示、准确重建数据以及在下游任务上表现良好的能力有很大影响。与训练期间学习的模型参数（权重 (weight)和偏差）不同，超参数是预先设定的，并控制训练过程本身。通常需要调整这些设置以有效地最小化目标函数 $L$，并获得可靠、高质量的结果。
+
+找到最佳超参数组合可能具有挑战性，因为搜索空间通常很大，并且评估每种组合都需要训练模型，这可能导致计算密集。本节概述了在此搜索空间中进行选择的系统方法。
+
+### 识别需要调优的超参数 (parameter) (hyperparameter)
+
+在开始调优过程之前，识别哪些超参数可能对您特定的自编码器变体和应用影响最大非常重要。常见超参数包括：
+
+1. **网络架构：**
+
+   - **层数（深度）：** 控制编码器和解码器映射的复杂度。更深的网络可以模拟更复杂的函数，但训练难度更大。
+   - **每层单元数（宽度）：** 影响每层的容量。
+   - **激活函数 (activation function)：** ReLU、LeakyReLU、Sigmoid 或 Tanh 等选择影响非线性和训练动态。当输入归一化 (normalization)到 $[0, 1]$ 且使用二元交叉熵损失时，Sigmoid 函数常用于输出层。
+2. **瓶颈（潜在）维度：**
+
+   - 瓶颈层的大小 ($d_{latent}$) 是一个基础超参数。它决定了压缩程度，并直接影响重建保真度与潜在空间表示能力之间的权衡。较小的维度会强制进行更强的压缩，可能丢失信息，而较大的维度如果未进行适当正则化 (regularization)，可能导致过拟合 (overfitting)或生成意义不大的表示。
+3. **正则化参数：** 正则化自编码器特有：
+
+   - **稀疏性惩罚（$\lambda$，$\rho$，$\beta$）：** 控制稀疏自编码器中稀疏性约束的强度（例如，L1 系数 $\lambda$、目标稀疏度 $\rho$ 以及 KL 散度的惩罚权重 (weight) $\beta$）。
+   - **损坏程度：** 去噪自编码器（DAEs）中添加到输入的噪声概率或类型。
+   - **收缩惩罚（$\lambda$）：** 收缩自编码器（CAEs）中雅可比惩罚项的权重。
+   - **权重衰减（L2 正则化）：** 对网络权重进行标准正则化以防止过拟合。
+   - **$\beta$ 在 $\beta$-VAE 中：** 控制 VAE 目标函数中 KL 散度项的权重，影响解耦程度与重建质量。$L_{VAE} = E_{q_{\phi}(z|x)}[\log p_{\theta}(x|z)] - \beta D_{KL}(q_{\phi}(z|x) || p(z))$
+4. **优化参数：** 尽管在前面章节讨论过，这些参数常与其他超参数一同调优：
+
+   - **学习率：** 可能是影响最大的优化超参数。
+   - **批量大小：** 影响梯度估计噪声和训练速度/内存使用。
+   - **优化器选择：** Adam、RMSprop、带动量的 SGD 等。
+5. **损失函数 (loss function)权重：** 在具有多个损失组成部分的模型中（如 VAEs 或 AAEs），项之间的相对权重（例如，重建损失与 KL 散度或对抗性损失）充当超参数。
+
+### 系统性调优策略
+
+根据直觉手动调整超参数 (parameter) (hyperparameter)对于简单问题可能有效，但对于深度自编码器等复杂模型，很快会变得低效且不可靠。更系统的方法更受青睐：
+
+#### 网格搜索
+
+网格搜索涉及为每个要调优的超参数定义一组离散值，然后训练并评估模型，针对这些值的每种可能组合进行操作。例如，如果调优瓶颈维度 ($d_{latent}$) 的值为 $\{16, 32, 64\}$，学习率 ($\eta$) 的值为 $\{0.01, 0.001, 0.0001\}$，网格搜索将评估所有 $3 \times 3 = 9$ 种组合。
+
+尽管实现简单，但网格搜索存在“维度灾难”问题。组合数量随超参数数量呈指数增长，这使得它对于参数数量较多或值范围较细的情况在计算上不可行。此外，它在每个维度上花费相同的精力评估点，即使某些超参数的影响较小。
+
+#### 随机搜索
+
+随机搜索，由 Bergstra 和 Bengio (2012) 提出，提供了一种出人意料的有效替代方法。超参数值不是从固定网格中获取，而是从指定的分布中（例如，学习率采用对数尺度上的均匀分布，层数采用离散均匀分布）随机采样固定次数。
+
+研究表明，对于大多数问题，只有少数超参数对性能有很大作用。在相同的计算预算下，随机搜索比网格搜索更有可能为这些重要参数找到好的值，因为它不会在仅影响较小参数的组合上浪费评估。它在超参数空间中更广泛地进行搜索。
+
+
+
+![比较：网格搜索与随机搜索](plots/2934-0.json)
+
+
+
+> 该图显示了随机搜索如何在超参数空间中比网格搜索的固定结构更广泛地采样点，可能更快地找到更好的配置。
+
+#### 贝叶斯优化
+
+贝叶斯优化是一种基于模型的方法，旨在比网格搜索或随机搜索更有效地找到最佳超参数。它的工作原理是：
+
+1. **构建概率代理模型：** 通常是高斯过程（GP），该模型近似真实的客观函数（例如，验证损失作为超参数的函数）。它还提供对其预测的不确定性估计。
+2. **使用采集函数：** 该函数通过平衡试探（在不确定性高的区域采样）和利用（在代理模型预测表现良好的区域采样）来指导搜索。常见的采集函数包括预期改进（EI）或上置信界（UCB）。
+3. **迭代优化：**
+   - 选择使采集函数最大化的超参数组合。
+   - 使用这些超参数训练自编码器，并在验证集上评估其性能。
+   - 使用新的数据点（超参数、性能）更新代理模型。
+   - 重复，直到预算（例如，试验次数）用尽。
+
+与随机搜索或网格搜索相比，贝叶斯优化通常需要较少的评估次数来找到好的超参数，这使得它在模型训练成本很高时很适用。然而，它的实现和配置更复杂。
+
+#### 自动化超参数优化（AutoML）工具
+
+有几个库提供了这些策略的实现，简化了调优过程：
+
+- **Optuna：** 侧重于高效采样和剪枝策略（例如，用于提前停止无前景的试验）。支持包括随机、TPE（与贝叶斯优化相关）和 CMA-ES 在内的各种采样器。
+- **KerasTuner：** 直接与 TensorFlow/Keras 模型集成，提供网格搜索、随机搜索、贝叶斯优化和 Hyperband（一种基于赌博机的策略）。
+- **Hyperopt：** 较早的库之一，主要侧重于贝叶斯优化（使用 TPE）。
+- **Ray Tune：** 一个可扩展的分布式超参数调优框架，支持各种搜索算法和调度技术。
+
+### 评估与选择过程
+
+无论采用何种策略，一致的评估过程都非常重要：
+
+1. **验证集：** 始终基于独立验证数据集的性能来调优超参数 (parameter) (hyperparameter)，该验证集与训练集和最终测试集不同。这可以防止超参数在测试数据上过拟合 (overfitting)。
+2. **指标：** 选择合适的指标。对于标准自编码器，验证重建损失（MSE、BCE）很常见。对于 VAEs，使用验证集上的 ELBO。如果自编码器用于下游任务（例如异常检测），验证集上的 ROC 曲线下面积（AUC）或 F1 分数等指标可能更具相关性。对于解耦，存在专门的指标，但实现和解释可能很复杂。
+3. **交叉验证：** 对于较小的数据集，k 折交叉验证可以提供性能估计，尽管它会将计算成本增加 $k$ 倍。
+
+> 超参数调优的一般工作流程。该循环持续进行，直到达到预设预算（例如，试验次数、时间限制）被满足。
+
+### 实际考量
+
+- **从简开始：** 首先在较宽的范围内调优影响最大的超参数 (parameter) (hyperparameter)（例如，瓶颈大小、学习率、主要正则化 (regularization)参数）。根据初步结果优化搜索空间。
+- **对数尺度：** 在对数尺度上调优学习率和有时正则化强度（例如，从 $10^{-5}$ 到 $10^{-1}$ 采样）。
+- **相关参数：** 注意参数间的关联。例如，最佳正则化强度可能取决于瓶颈大小或网络深度。
+- **计算预算：** 平衡搜索的全面性与可用时间和计算资源。随机搜索和贝叶斯优化通常比网格搜索更适合有限的预算。
+- **可复现性：** 始终记录性能最佳模型所使用的精确超参数、软件版本和随机种子，以确保结果可复现。
+
+系统性超参数调优是开发高性能自编码器模型不可或缺的一部分。通过超越手动调整，采用随机搜索或贝叶斯优化等方法，您可以大大提高找到一个能够最小化损失 $L$ 并在预期任务中表现出色的配置的可能性，无论是重建、生成还是表示学习。
+
+## 参考资料
+
+- [Random Search for Hyper-Parameter Optimization](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHPbubw92GTtQFjxQO22-jk86m4x0dD_XyuESVs42aROp-NZQ4zeGN55Y9oZ3kvCEWHlci-0xeIJGz7h5p89UX7YACUxgS3E9w3smcLTUvVis0swWXgSClWe5RVzktFa6Zj-dlsRpPAHRPIt74IhVXDP6CYVmX_osIjw==) — James Bergstra, Yoshua Bengio (2012)
+  Journal: Journal of Machine Learning Research; Publisher: Journal of Machine Learning Research; Volume: 13; Pages: 281-305; DOI: [10.5555/2188385.2188410](https://doi.org/10.5555/2188385.2188410)
+  介绍了随机搜索在超参数优化方面优于网格搜索的有效性，是该领域的奠基性论文。
+- [Practical Bayesian Optimization of Machine Learning Algorithms](https://neurips.cc/paper/2012/file/05311655a15b75f5d02334f5979505a7-Paper.pdf) — Jasper Snoek, Hugo Larochelle, Ryan P. Adams (2012)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates; Volume: 4; Pages: 2951-2959
+  一篇广泛引用的论文，讨论了贝叶斯优化在调整包括神经网络在内的机器学习模型中的实际应用。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapters 7, 8, 11
+  一本全面的深度学习教科书，涵盖了正则化、优化和实际训练策略等章节，与超参数调整和模型评估直接相关。

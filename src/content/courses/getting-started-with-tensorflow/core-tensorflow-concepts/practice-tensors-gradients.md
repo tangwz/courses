@@ -1,0 +1,275 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "core-tensorflow-concepts"
+lesson: "practice-tensors-gradients"
+sourceId: 1704
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-2-core-tensorflow-concepts/practice-tensors-gradients"
+title: "练习：张量操作与梯度"
+description: "动手练习创建张量、执行操作和计算梯度。"
+order: 6
+plots: []
+sourceHash: "5ec48604f9bd7963fa2b59f0a724e8484c442ac3deaace0c8a853f072b5b4bee"
+sourceCorrections: []
+---
+
+这些练习将巩固您对创建和操作张量、使用变量以及计算梯度的理解，这些都是使用TensorFlow的基本技能。在运行这些示例之前，请确保您已安装并导入TensorFlow（`import tensorflow as tf`）。
+
+### 练习 1：创建和操作张量
+
+在本练习中，您将创建张量并执行基本操作，类似于您在模型中处理数据输入或中间计算的方式。
+
+1. **创建张量：**
+
+   - 创建一个包含值`10.0`的标量（0维张量）。检查其`shape`和`dtype`。
+   - 从Python列表`[1.0, 2.0, 3.0, 4.0]`创建一个向量 (vector)（1维张量）。检查其`shape`和`dtype`。
+   - 创建一个表示一小批数据的矩阵（2维张量）：`[[1, 2], [3, 4]]`。指定`dtype`为`tf.float32`。检查其`shape`。
+   - 创建一个全零张量，形状为`(3, 2)`。
+   - 创建一个从正态分布中抽取随机值并形状为`(2, 2)`的张量。
+
+   ```python
+   import tensorflow as tf
+   import numpy as np
+
+   # 标量
+   scalar = tf.constant(10.0)
+   print("Scalar:", scalar)
+   print("Scalar shape:", scalar.shape)
+   print("Scalar dtype:", scalar.dtype)
+   print("-" * 20)
+
+   # 向量
+   vector = tf.constant([1.0, 2.0, 3.0, 4.0])
+   print("Vector:", vector)
+   print("Vector shape:", vector.shape)
+   print("Vector dtype:", vector.dtype)
+   print("-" * 20)
+
+   # 矩阵
+   matrix = tf.constant([[1, 2], [3, 4]], dtype=tf.float32)
+   print("Matrix:", matrix)
+   print("Matrix shape:", matrix.shape)
+   print("Matrix dtype:", matrix.dtype)
+   print("-" * 20)
+
+   # 全零张量
+   zeros_tensor = tf.zeros((3, 2))
+   print("Zeros Tensor:", zeros_tensor)
+   print("-" * 20)
+
+   # 随机张量
+   random_tensor = tf.random.normal((2, 2), mean=0.0, stddev=1.0)
+   print("Random Tensor:", random_tensor)
+   print("-" * 20)
+   ```
+2. **执行张量操作：**
+
+   - 使用上面创建的`matrix`和`random_tensor`（如果需要，请确保它们形状兼容或创建新的张量），执行逐元素加法和乘法。
+   - 对`matrix`和`random_tensor`进行矩阵乘法（如有必要，调整形状，例如将`random_tensor`的形状设置为`(2,1)`）。使用`tf.matmul()`。
+   - 访问`matrix`中第一行、第二列的元素。
+   - 提取`matrix`的第一行。
+
+   ```python
+   # 为矩阵乘法示例调整 random_tensor 的形状
+   random_tensor_reshaped = tf.random.normal((2, 1), mean=0.0, stddev=1.0)
+   print("Original Matrix:\n", matrix.numpy())
+   print("Reshaped Random Tensor:\n", random_tensor_reshaped.numpy())
+   print("-" * 20)
+
+   # 逐元素操作（要求形状兼容）
+   # 让我们创建另一个与 'matrix' 兼容的矩阵
+   matrix2 = tf.constant([[5, 6], [7, 8]], dtype=tf.float32)
+   addition_result = tf.add(matrix, matrix2)
+   multiplication_result = tf.multiply(matrix, matrix2)
+   print("Element-wise Addition:\n", addition_result.numpy())
+   print("Element-wise Multiplication:\n", multiplication_result.numpy())
+   print("-" * 20)
+
+   # 矩阵乘法
+   matmul_result = tf.matmul(matrix, random_tensor_reshaped)
+   print("Matrix Multiplication Result:\n", matmul_result.numpy())
+   print("-" * 20)
+
+   # 索引和切片
+   element = matrix[0, 1] # 第一行（索引 0），第二列（索引 1）
+   print("Element at [0, 1]:", element.numpy())
+
+   first_row = matrix[0, :] # 第一行，所有列
+   print("First row:", first_row.numpy())
+   print("-" * 20)
+   ```
+
+### 练习 2：使用变量
+
+变量用于保存模型在训练过程中学习到的参数 (parameter)（例如权重 (weight)和偏置 (bias)）。本练习将展示它们的创建和可变性。
+
+1. **创建和修改变量：**
+
+   - 创建一个用值`5.0`初始化的`tf.Variable`。将其命名为`my_variable`。
+   - 打印其初始值。
+   - 使用`.assign()`方法将其值更改为`10.0`。打印更新后的值。
+   - 尝试使用`tf.add()`和`.assign_add()`向变量添加`2.0`。观察其差异。
+
+   ```python
+   # 创建一个变量
+   my_variable = tf.Variable(5.0, name="my_variable", dtype=tf.float32)
+   print("Initial Variable Value:", my_variable.numpy())
+   print("-" * 20)
+
+   # 使用 assign() 修改
+   my_variable.assign(10.0)
+   print("Value after assign(10.0):", my_variable.numpy())
+   print("-" * 20)
+
+   # 使用 tf.add（不原地修改）
+   result_add = tf.add(my_variable, 2.0)
+   print("Result of tf.add(my_variable, 2.0):", result_add.numpy())
+   print("Variable value after tf.add (unchanged):", my_variable.numpy())
+   print("-" * 20)
+
+   # 使用 assign_add（原地修改）
+   my_variable.assign_add(2.0)
+   print("Value after assign_add(2.0):", my_variable.numpy())
+   print("-" * 20)
+   ```
+
+   注意`tf.add`如何创建一个新张量，而`assign_add`直接修改变量。这种原地修改对于在训练期间更新模型权重非常重要。
+
+### 练习 3：使用 GradientTape 计算梯度
+
+自动微分是训练神经网络 (neural network)的动力。`tf.GradientTape`允许您跟踪操作并自动计算梯度。
+
+1. **简单函数的梯度：**
+
+   - 定义函数 $y = x^3$。
+   - 为 $x$ 选择一个值，例如 $x = 2.0$。确保 $x$ 是一个浮点`dtype`的`tf.constant`或`tf.Variable`。
+   - 使用`tf.GradientTape`计算 $x = 2.0$ 时的梯度 $\frac{dy}{dx}$。预期的解析结果是 $3x^2 = 3(2^2) = 12$。
+
+   ```python
+   x = tf.constant(2.0, dtype=tf.float32)
+
+   with tf.GradientTape() as tape:
+       # 重要提示：监控输入张量 'x'
+       tape.watch(x)
+       # 定义函数 y = x^3
+       y = x * x * x # 或者 tf.pow(x, 3)
+
+   # 计算 y 相对于 x 的梯度
+   dy_dx = tape.gradient(y, x)
+
+   print(f"Function: y = x^3")
+   print(f"At x = {x.numpy()}")
+   print(f"Computed gradient dy/dx: {dy_dx.numpy()}") # 应该接近 12.0
+   print("-" * 20)
+   ```
+2. **多变量函数的梯度：**
+
+   - 考虑一个简单的线性操作 $z = w \cdot x + b$。
+   - 将`w`、`x`和`b`初始化为`tf.Variable`（如果`x`表示输入数据，则可以将其设为`tf.constant`）。例如：$w = 3.0$， $x = 4.0$， $b = 1.0$。
+   - 使用`tf.GradientTape`计算梯度 $\frac{\partial z}{\partial w}$、$\frac{\partial z}{\partial x}$和$\frac{\partial z}{\partial b}$。
+   - 验证结果：$\frac{\partial z}{\partial w} = x = 4.0$，$\frac{\partial z}{\partial x} = w = 3.0$，$\frac{\partial z}{\partial b} = 1.0$。
+
+   ```python
+   w = tf.Variable(3.0, dtype=tf.float32)
+   x = tf.constant(4.0, dtype=tf.float32) # 输入数据，通常是常量
+   b = tf.Variable(1.0, dtype=tf.float32)
+
+   with tf.GradientTape(persistent=True) as tape:
+       # 注意：Tape 会自动监控可训练的变量 (w, b)
+       # 如果 x 是一个张量并且我们需要其梯度，仍然需要 tape.watch(x)
+       # tape.watch(x) # 如果 x 是 tf.constant 且你需要它的梯度，请取消注释
+       z = w * x + b
+
+   # 计算梯度
+   dz_dw = tape.gradient(z, w)
+   dz_dx = tape.gradient(z, x) # 如果 x 未被监控且不是变量，则为 None
+   dz_db = tape.gradient(z, b)
+
+   # 如果 persistent=True，最好在使用完 tape 后将其删除
+   del tape
+
+   print(f"Function: z = w * x + b")
+   print(f"w = {w.numpy()}, x = {x.numpy()}, b = {b.numpy()}")
+   print(f"Computed gradient dz/dw: {dz_dw.numpy()}") # 应该为 4.0
+   print(f"Computed gradient dz/dx: {dz_dx}") # 相对于未监控常量的梯度为 None
+   # 如果你需要 x 的梯度，请确保 x 被监控或将其设为 tf.Variable
+
+   # 让我们重新运行并明确监控 x 以获取 dz_dx
+   with tf.GradientTape(persistent=True) as tape:
+       tape.watch(x) # 明确监控常量张量 x
+       z = w * x + b
+   dz_dx = tape.gradient(z, x)
+   del tape
+   print(f"Computed gradient dz/dx (after watching x): {dz_dx.numpy()}") # 应该为 3.0
+
+   print(f"Computed gradient dz/db: {dz_db.numpy()}") # 应该为 1.0
+   print("-" * 20)
+   ```
+
+   请注意，默认情况下，`tf.GradientTape`只跟踪涉及`tf.Variable`的操作。要计算相对于`tf.constant`的梯度，您需要使用`tape.watch()`。此外，在一次调用`.gradient()`后，tape 会自动被消耗。如果您需要在同一个 tape 上多次调用`.gradient()`，请使用`persistent=True`。
+
+### 练习 4：简单损失的梯度
+
+本练习模拟了优化一个非常简单的模型的一个步骤。我们将计算一个简单损失函数 (loss function)相对于模型参数 (parameter)的梯度。
+
+1. **设置：**
+
+   - 定义输入 `x_true = tf.constant([1.0, 2.0, 3.0], dtype=tf.float32)`
+   - 定义目标输出 `y_true = tf.constant([2.0, 4.0, 6.0], dtype=tf.float32)`（请注意 $y = 2x$）
+   - 初始化参数 `w = tf.Variable(1.0, dtype=tf.float32)` 和 `b = tf.Variable(0.0, dtype=tf.float32)`。我们的目标是学习到 $w=2$ 和 $b=0$。
+2. **计算损失和梯度：**
+
+   - 在 `tf.GradientTape` 上下文 (context)中：
+     - 计算预测输出：$y_{pred} = w \cdot x_{true} + b$。
+     - 计算均方误差（MSE）损失：$Loss = \frac{1}{N} \sum (y_{pred} - y_{true})^2$。使用`tf.reduce_mean(tf.square(y_pred - y_true))`。
+   - 计算`Loss`相对于`w`和`b`的梯度。
+
+   ```python
+   x_true = tf.constant([1.0, 2.0, 3.0], dtype=tf.float32)
+   y_true = tf.constant([2.0, 4.0, 6.0], dtype=tf.float32) # 目标：y = 2x
+
+   # 初始参数猜测
+   w = tf.Variable(1.0, dtype=tf.float32)
+   b = tf.Variable(0.0, dtype=tf.float32)
+
+   with tf.GradientTape() as tape:
+       # 根据当前的 w 和 b 预测 y
+       y_pred = w * x_true + b
+
+       # 计算均方误差损失
+       loss = tf.reduce_mean(tf.square(y_pred - y_true))
+
+   # 计算损失相对于 w 和 b 的梯度
+   grad_w, grad_b = tape.gradient(loss, [w, b])
+
+   print(f"Input x: {x_true.numpy()}")
+   print(f"Target y: {y_true.numpy()}")
+   print(f"Initial w: {w.numpy()}, Initial b: {b.numpy()}")
+   print(f"Predicted y_pred: {y_pred.numpy()}")
+   print(f"Initial Loss (MSE): {loss.numpy()}")
+   print(f"Gradient dLoss/dw: {grad_w.numpy()}")
+   print(f"Gradient dLoss/db: {grad_b.numpy()}")
+   print("-" * 20)
+
+   # 可选：执行一步梯度下降
+   learning_rate = 0.1
+   w.assign_sub(learning_rate * grad_w) # w = w - learning_rate * grad_w
+   b.assign_sub(learning_rate * grad_b) # b = b - learning_rate * grad_b
+
+   print(f"Updated w after one step: {w.numpy()}")
+   print(f"Updated b after one step: {b.numpy()}")
+   ```
+
+   这些梯度（`grad_w`，`grad_b`）告诉您如何调整`w`和`b`以减少损失。梯度下降 (gradient descent)等优化算法迭代地使用这些梯度来找到最佳参数值。您可以看到，在一次简单的更新步骤后，`w`更接近2，`b`更接近0。
+
+这些练习涵盖了TensorFlow中张量操作和梯度计算的基本机制。练习了这些操作后，您会更好地理解Keras如何运用这些基础知识来构建和训练复杂的机器学习 (machine learning)模型，我们将在后续章节中介绍这些模型。
+
+## 参考资料
+
+- [TensorFlow Core APIs: Tensors, Variables, and Automatic Differentiation](https://www.tensorflow.org/guide/basics) — TensorFlow Team (2023)
+  TensorFlow官方指南，提供了关于创建和操作张量、使用变量以及通过GradientTape理解自动微分的基础信息。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本全面的教材，建立了线性代数（张量）、微积分和优化的理论基础，这些是机器学习中张量操作和梯度计算的基础。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本带有代码示例的实践指南，以清晰易懂的方式展示了TensorFlow核心组件（包括张量、变量和自动微分）的使用（第4版涵盖TensorFlow 2）。

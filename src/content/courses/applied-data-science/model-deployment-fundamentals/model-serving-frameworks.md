@@ -1,0 +1,60 @@
+---
+course: "applied-data-science"
+chapter: "model-deployment-fundamentals"
+lesson: "model-serving-frameworks"
+sourceId: 1906
+sourceUrl: "https://apxml.com/zh/courses/applied-data-science/chapter-5-model-deployment-fundamentals/model-serving-frameworks"
+title: "模型服务框架简介"
+description: "用于机器学习模型服务的思想和工具概述"
+order: 2
+plots: []
+sourceHash: "cce359f751c2b86fb5f56e6eb8839195b2db364a9fbf28dd3ee9721238097121"
+sourceCorrections: []
+---
+
+你已经成功训练并保存了一个机器学习 (machine learning)模型。然后呢？一个保存在磁盘上的模型文件本身并没有多大用处。为了对新数据进行预测，特别是为应用程序或其他服务提供预测，你需要一种方法来*提供*这个模型。这意味着通过网络提供其预测功能，通常是通过应用程序编程接口（API）实现。
+
+模型服务是将训练好的模型部署起来，以便其他系统可以向其发送数据并接收预测结果的过程。可以把它想象成让你的模型成为一个可调用的函数，只不过这个函数可以远程访问。
+
+## 为什么使用框架？
+
+从技术上讲，你可以用 Python 编写一个原始的网络服务器，用于监听传入连接、解析请求、加载模型、进行预测和发送响应。但是，这会涉及到许多底层细节的处理：管理网络套接字、解析 HTTP 请求、处理并发连接、序列化/反序列化数据，以及将请求路由到正确的业务逻辑。这既繁琐又容易出错。
+
+这正是模型服务框架，特别是为此目的调整的 Web 框架的作用所在。它们提供结构并处理样板式的网络和请求处理代码，让你能专注于机器学习 (machine learning)特有的部分：加载模型和定义预测逻辑。
+
+## 用于模型服务的 Web 框架
+
+对于许多常见情况，标准的 Python Web 框架是创建简单模型服务 API 的出色工具。它们充当网络（接收请求）和你的 Python 代码（加载模型，进行预测）之间的桥梁。两个常用的选择是：
+
+1. **Flask：** 一个轻量级“微框架”。它以其简单性和最小化的核心而闻名，使其易于上手。你可以按需添加组件（如数据库集成或身份验证）。它的简单性通常非常适合不需要复杂 Web 应用程序功能的直接预测 API。
+2. **FastAPI：** 一个现代、高性能的 Web 框架。它使用 Python 类型提示进行自动数据验证、序列化以及交互式 API 文档（使用 OpenAPI/Swagger 标准）。它基于 Starlette（用于 Web 处理）和 Pydantic（用于数据验证）构建，提供异步请求处理（`async`/`await`），在高负载下与 Flask 等传统同步框架相比，可能实现更高的吞吐量 (throughput)。其内置的文档生成功能是 API 可用性的一个明显优势。
+
+尽管 Flask 对于非常基础的第一个 API 来说可能更简单，但 FastAPI 由于其类型安全、异步能力和自动文档功能，通常能为面向生产的服务提供更好的开发体验和性能特点。
+
+> 一个使用 Web 框架构建的模型服务 API 的典型请求流程。
+
+## 专用服务平台
+
+具体到机器学习 (machine learning)模型服务，有一些为大规模应用设计的专用工具：
+
+- **TensorFlow Serving：** 面向 TensorFlow 模型的高性能服务系统。针对生产环境进行了优化，处理模型版本管理，并与 TensorFlow 生态系统良好集成。
+- **TorchServe：** 由 PyTorch 开发，为 PyTorch 模型提供类似功能，包括模型版本管理、监控指标以及 REST/gRPC 端点。
+- **NVIDIA Triton Inference Server：** 一个开源的推理 (inference)服务器，支持来自多种框架（TensorFlow、PyTorch、ONNX、TensorRT 等）的模型，并在 CPU 和 GPU 上高效运行。常用于高吞吐量 (throughput)、低延迟的场景。
+- **云服务提供商解决方案：** 像 Google AI Platform Prediction、Amazon SageMaker Endpoints 和 Azure Machine Learning Managed Endpoints 这样的服务提供托管基础设施，用于部署和扩展模型。
+
+这些专用工具通常提供诸如请求自动批处理、优化硬件利用（特别是 GPU）、内置监控和强大的版本管理等功能，这些在部署复杂性增加时变得越来越重要。
+
+对于本课程，我们将侧重于使用 Flask 或 FastAPI 等常见 Python Web 框架，因为它们能让你清楚地理解创建预测 API 所涉及的基本思想。它们在许多常见用途中在简单性和功能之间取得了良好的平衡，并可在需要时作为转向更专业平台前的稳固根基。下一节将引导你使用这些框架之一构建你的第一个预测 API。
+
+## 参考资料
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) — Sebastián Ramírez (2024)
+  FastAPI Web 框架的官方文档，详细介绍了其构建带自动验证和文档的高性能 API 的功能。
+- [Flask Documentation](https://flask.palletsprojects.com/en/latest/) — Pallets (2024)
+  Flask 微框架的官方文档，提供开发简单且可扩展的 Web 应用程序和 API 的指南。
+- [TensorFlow Serving](https://www.tensorflow.org/serving) — Google (2021)
+  Publisher: Google
+  TensorFlow Serving 的官方文档和资源，一个用于在生产环境中部署机器学习模型的强大服务系统。
+- [Building Machine Learning Powered Applications: Going from Idea to Product](https://www.oreilly.com/library/view/building-machine-learning/9781492045115/) — Emmanuel Ameisen (2020)
+  Publisher: O'Reilly Media; Pages: 257
+  一份关于构建和部署机器学习应用的端到端流程的实用指南。

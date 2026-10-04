@@ -1,0 +1,177 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "advanced-prompting-techniques"
+lesson: "prompt-management-and-versioning"
+sourceId: 7755
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-2-advanced-prompting-techniques/prompt-management-and-versioning"
+title: "管理和版本化提示"
+description: "学习组织、管理和版本控制提示的最佳实践，以构建可维护的应用程序。"
+order: 3
+plots: []
+sourceHash: "cc14c728ca63dd6660d1ca384daed745edabe58ac333784d2ab35e9ef4039875"
+sourceCorrections: []
+---
+
+随着你构建更精巧的应用程序，你很快就会发现提示并非静态字符串。它们是需要像代码库其他部分一样进行测试、改进和管理的动态资源。将多行提示字符串直接嵌入 (embedding)应用程序逻辑中，可能导致我们所谓的“提示代码混乱”，这会使你的代码难以阅读、维护和提升。
+
+在团队环境中，这个问题会变得更突出。提示工程 (prompt engineering)师可能需要更新提示的措辞，产品经理可能想测试一套新的指令，而开发人员则需要在不引入错误的情况下整合这些更改。对于构建可扩展和可靠的LLM应用程序而言，对提示进行系统性管理和版本控制是必不可少的。
+
+### 提示管理的好处
+
+将提示作为第一等资产进行管理，带来多项明显优势：
+
+- **可维护性：** 集中管理提示使其易于查找、更新和审阅。在一个地方进行更改，无需翻查应用程序代码。
+- **协作：** 它实现了关注点清晰分离。提示工程 (prompt engineering)师可以专注于优化提示，而开发人员则专注于使用这些提示的应用程序逻辑。
+- **实验性：** 版本控制让你能够有条理地追踪更改，并通过A/B测试比较不同提示变体的性能。
+- **可复现性：** 通过将你的应用程序锁定到特定提示版本，你可以确保一致的行为和可靠的输出。如果新版本导致问题，你可以轻松回滚到之前已知良好的版本。
+
+### 一种结构化提示方法
+
+迈向更好管理的第一步，是将每个提示不仅视为一个字符串，而是一个带有相关元数据的版本化对象。这其中包含提示的模板、其目的以及与之关联的任何性能指标。
+
+你可以创建并注册提示的不同版本。例如，我们定义两个用于代码审查提示的版本。版本1.0简单直接，而版本2.0则更具结构性，旨在引导LLM的输出。
+
+```python
+from kerb.prompt import create_version, register_prompt
+
+# 版本 1.0: 简单直接的方法
+v1 = create_version(
+    name="code_reviewer",
+    version="1.0",
+    template="""审查这段代码并提供反馈：
+
+{{code}}
+
+关注错误和改进。""",
+    description="直接简洁的代码审查提示。",
+    metadata={"tokens_avg": 50, "response_quality": 0.75}
+)
+
+# 版本 2.0: 更具结构性，附带具体指导
+v2 = create_version(
+    name="code_reviewer",
+    version="2.0",
+    template="""你是一位专业的代码审查员。分析以下代码：
+
+{{code}}
+
+提供以下方面的反馈：
+1. 代码正确性和错误
+2. 性能优化
+3. 最佳实践和风格
+4. 安全注意事项
+
+以清晰的章节格式化你的回复。""",
+    description="带有明确指导的结构化代码审查。",
+    metadata={"tokens_avg": 120, "response_quality": 0.85}
+)
+
+# 注册这两个版本以供后续使用
+register_prompt(v1)
+register_prompt(v2)
+```
+
+这里，每个提示都由一个 `name`（“code\_reviewer”）和一个 `version` 字符串识别。`metadata` 字典是一项有用的功能，用于追踪性能。你可以将平均token使用量、延迟、用户反馈分数或评估结果等指标直接存储在生成它们的提示版本中。
+
+### 检索和使用版本化提示
+
+提示注册后，你可以在应用程序的任何地方，通过其名称和版本号来检索特定版本。这使提示的内容与应用程序逻辑分离。
+
+以下代码检索 `code_reviewer` 提示的2.0版本，并用一段代码片段渲染它，为LLM调用做好准备。
+
+```python
+from kerb.prompt import get_prompt
+
+# 检索 "code_reviewer" 提示的2.0版本
+prompt_v2 = get_prompt("code_reviewer", "2.0")
+
+code_sample = "def add(x, y):\n    return x + y * 2"
+
+# 使用代码渲染提示模板
+rendered_prompt = prompt_v2.render({"code": code_sample})
+
+print(rendered_prompt)
+```
+
+这种方法使你的代码更整洁、更具适应性。要切换到不同的提示版本，你只需更改 `get_prompt` 调用中的版本字符串，而无需触及周围的应用程序逻辑。
+
+### 检查和比较版本
+
+随着你的提示库不断增长，你将需要工具来检查可用内容。你可以列出给定提示名称的所有注册版本。
+
+```python
+from kerb.prompt import list_versions
+
+versions = list_versions("code_reviewer")
+print(f"'code_reviewer' 的可用版本: {versions}")
+# 预期输出: 'code_reviewer' 的可用版本: ['1.0', '2.0']
+```
+
+这对于构建内部仪表盘或验证工具很有用，可让你的团队查看所有可用的提示变体。
+
+要分析版本之间的差异，你可以使用 `compare_versions` 函数。它提供每个版本的模板、描述和元数据的概览，这对于调试或决定使用哪个版本很有帮助。
+
+```python
+from kerb.prompt import compare_versions
+
+comparison = compare_versions("code_reviewer")
+# 输出是一个字典，详细说明了每个版本的属性。
+# 例如，要查看版本 1.0 的描述：
+print(comparison['versions']['1.0']['description'])
+```
+
+### 生产环境中版本选择的策略
+
+硬编码版本号并非总是实用，尤其当你希望动态测试或部署新提示时。一种更直接的方法是根据既定策略选择版本。
+
+> 提示的生命周期，从起草和注册到测试、分析，以及最终在生产环境中的部署。
+
+`select_version` 函数支持多种编程选择策略：
+
+- **`random` (随机)：** 随机选择一个版本。这是A/B测试的依据，让你可以在不同的提示版本之间分发用户请求，以比较它们在实际运行中的表现。
+- **`latest` (最新)：** 选择最近注册的版本。这在开发设置中很有用，你总是希望使用最新的提示。
+- **`best_performing` (最佳表现)：** 选择在指定元数据指标上得分最高的版本。这让你能够根据自己的评估，自动部署已被证明效果最好的提示。
+
+以下是你如何在实际中运用这些策略的例子。
+
+```python
+from kerb.prompt import select_version
+
+# 对于 A/B 测试，为每个请求随机选择一个版本
+selected_for_ab_test = select_version("code_reviewer", strategy="random")
+print(f"A/B 测试: 使用版本 {selected_for_ab_test.version}")
+
+# 在开发设置中，总是使用最新版本
+latest_version = select_version("code_reviewer", strategy="latest")
+print(f"开发: 使用最新版本 {latest_version.version}")
+
+# 对于生产环境，选择 'response_quality' 最高的版本
+best_version = select_version(
+    "code_reviewer", 
+    strategy="best_performing",
+    metric="response_quality"
+)
+print(f"生产: 使用最佳版本 {best_version.version} (质量: {best_version.metadata['response_quality']})")
+```
+
+通过将元数据与选择策略结合，你可以构建一个自动推广最佳表现提示的系统，从而形成一个高效的反馈循环以实现不断优化。
+
+### 提示管理的最佳实践
+
+当你将提示管理集成到工作流程中时，请考虑以下最佳实践：
+
+1. **集中管理提示：** 将提示存储在专用位置，例如版本控制的配置文件目录（如YAML或JSON），而不是分散在你的代码库中。
+2. **使用语义化版本控制：** 为你的提示采用 `major.minor.patch`（例如 `2.1.0`）之类的版本控制方案。主要版本用于破坏性更改，次要版本用于新功能或显著改进，补丁版本用于小调整和错误修复。
+3. **将性能与版本关联：** 持续记录每次LLM调用使用了哪个提示版本。这让你能够将提示更改与应用程序性能、成本和质量的变化关联起来。
+4. **将提示视为代码：** 你的提示应作为版本控制系统（如Git）的一部分。更改应像应用程序代码一样，经过同样的审阅、测试和部署。
+
+## 参考资料
+
+- [Best practices for prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2023)
+  这份来自领先LLM提供商的官方指南提供了设计有效提示的实用建议，强调了结构化方法和管理对于质量与一致性的必要性。
+- [LLMOps: The Operationalization of Large Language Models](https://www.databricks.com/blog/llm-ops-operationalization-large-language-models) — Mike Tung, Sameer Singh, Juntian Zhan, Zhaofeng Li, Tianxiang Li (2023)
+  Publisher: Databricks
+  该资源定义了LLMOps，强调了管理LLM应用程序整个生命周期（包括提示等组件）的重要性，涵盖版本控制、测试和部署。访问日期：2023年10月26日。
+- [Generative AI with Transformers: Build Intelligent Apps, Tools, and Chatbots Using LLMs](https://www.oreilly.com/library/view/generative-ai-with/9781098135310/) — Leonie Monigatti, Thomas Wolf, Lewis Tunstall, Leandro von Werra, Nazneen Rajani, Alessandro Sciarra (2023)
+  Publisher: O'Reilly Media
+  本书提供了构建LLM应用程序的实用信息，包括提示工程方法和管理组件以构建稳健系统。

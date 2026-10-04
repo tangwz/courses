@@ -1,0 +1,111 @@
+---
+course: "getting-started-with-kubernetes"
+chapter: "kubernetes-fundamentals"
+lesson: "declarative-vs-imperative-management"
+sourceId: 7299
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-kubernetes/chapter-1-kubernetes-fundamentals/declarative-vs-imperative-management"
+title: "声明式与指令式管理"
+description: "比较管理 Kubernetes 对象的两种方法，并了解使用 YAML 清单的声明式模型的优势。"
+order: 5
+plots: []
+sourceHash: "18caf8e7d0772f669cd223c1b428626b6a285a7ed6dfc4e116b176261e0f7295"
+sourceCorrections: []
+---
+
+在管理 Kubernetes 时，您可以使用 `kubectl` 向 Kubernetes API 服务器传达您的意图。这些意图的表达遵循两种不同的管理模型：指令式和声明式。虽然两种模型都可以使用，但了解它们之间的区别对于高效且可靠地管理应用程序非常有用。
+
+### 指令式方法：一系列命令
+
+指令式模型就像给出直接的、分步的指令。您确切地告诉 Kubernetes *做什么* 以及 *什么时候做*。如果您想创建一个资源，就运行一个创建命令。如果您想对其进行扩缩容，就运行一个扩缩容命令。
+
+例如，要启动一个 Nginx 容器，您可能会运行：
+
+```shell
+# 创建一个名为 'nginx-web' 的 Deployment，使用 nginx 镜像
+kubectl create deployment nginx-web --image=nginx
+```
+
+该命令指示 API 服务器创建一个 Deployment 对象。稍后，如果您决定需要三个该应用程序的实例来实现冗余，您将发出另一个命令：
+
+```shell
+# 将 'nginx-web' Deployment 的副本数扩容至 3
+kubectl scale deployment nginx-web --replicas=3
+```
+
+**指令式模型的特点：**
+
+- **以动作位导向：** 命令对应于特定的操作，如 `create`（创建）、`scale`（扩缩容）、`expose`（暴露服务）或 `delete`（删除）。
+- **适用于一次性任务：** 对于集群内的快速操作、测试或调试，它既快速又直接。
+- **缺乏单一事实来源：** 应用程序的状态仅存在于运行中的集群内。没有文件可以查看到完整的、预期的配置。这使得一致地重建相同设置或审查更改变得困难。
+
+指令式方法对于学习和尝试很有帮助，但在生产系统中很快就会变得难以管理。它会导致“配置漂移”，即集群的运行状态会逐渐偏离您最初的设定，且没有关于如何变成现状的审计历史。
+
+### 声明式方法：定义期望状态
+
+声明式模型将重点从“如何做”转向“做什么”。您不再告诉 Kubernetes 要执行的一系列步骤，而是提供一个通常由 YAML 编写的清单文件（manifest），其中描述了您希望达到的 *最终状态*。
+
+您在 `.yaml` 文件中定义应用程序的所有特征：要使用的容器镜像、副本数量、要暴露的端口以及任何其他配置。然后，您指示 Kubernetes 使集群的状态与文件中描述的状态相匹配。
+
+以下是同一个 Nginx 应用程序的简单 Deployment 清单：
+
+```yaml
+# nginx-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+```
+
+要应用此期望状态，您只需使用一条命令：
+
+```shell
+kubectl apply -f nginx-deployment.yaml
+```
+
+当 Kubernetes 接收到此清单时，其控制平面组件会努力使当前状态与您的期望状态保持一致。
+
+- 如果 `nginx-web` Deployment 不存在，Kubernetes 会创建它并带有三个副本。
+- 如果它已经存在但只有一个副本，Kubernetes 会将其扩容到三个。
+- 如果它已经存在且已有三个副本，Kubernetes 则不执行任何操作，因为期望状态已与实际状态相符。
+
+如果您稍后需要将容器镜像更改为新版本，只需更新 YAML 文件中的 `image` 字段并再次运行 `kubectl apply -f nginx-deployment.yaml`。Kubernetes 将智能地执行滚动更新以实现新的期望状态。
+
+> 指令式工作流包含一系列直接命令，而声明式工作流侧重于在清单文件中定义期望状态，并让 Kubernetes 控制器调谐集群以与之匹配。
+
+### 为什么声明式是标准做法
+
+对于 Kubernetes 的任何正式使用，声明式模型都是推荐的方法。它的优点对于构建可靠的系统至关重要：
+
+- **基础设施的版本控制：** 您可以将 YAML 清单存储在 Git 仓库中。这种做法通常被称为 GitOps，它为您提供了应用程序配置每次更改的完整、可审计的历史记录。您可以查看谁在何时以及为什么要更改什么。
+- **可重现性：** 通过应用同一组清单，您可以可靠地在任何集群中重建整个应用程序栈。这对于灾难恢复、测试和创建新环境非常有用。
+- **可预测性：** `kubectl apply` 命令是幂等的，这意味着您可以对同一个文件重复运行它，结果都是一样的。Kubernetes 会计算期望状态与当前状态之间的差异，并仅执行必要的动作。这使得通过 CI/CD 流水线实现的自动化变得安全且可预测。
+
+在整个课程中，我们几乎只专注于声明式模型。虽然我们可能会使用指令式命令进行查看和调试，但所有应用程序定义都将通过 YAML 清单完成。这种做法为在 Kubernetes 上管理复杂的、生产级的应用程序奠定了基础。
+
+## 参考资料
+
+- [Managing Kubernetes Objects](https://kubernetes.io/docs/concepts/overview/working-with-objects/) — The Kubernetes Authors (2024)
+  解释了 Kubernetes 资源交互的基本方法，并包含了命令式和声明式两种模式的背景介绍。
+- [Declarative Management of Kubernetes Objects Using Configuration Files](https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/#declarative-object-configuration) — The Kubernetes Authors (2024)
+  详细介绍了管理 Kubernetes 对象的推荐声明式方法，侧重于清单文件和 kubectl apply 命令。
+- [Kubernetes Up and Running: Dive into the Future of Infrastructure](https://www.oreilly.com/library/view/kubernetes-up-and/9781492046520/) — Kelsey Hightower, Brendan Burns, and Joe Beda (2019)
+  Publisher: O'Reilly Media
+  一本涵盖 Kubernetes 的综合性书籍，讨论了声明式与命令式管理的原理和实际应用。
+- [GitOps: A New Way to Deliver Software](https://medium.com/weaveworks/what-is-gitops-really-fcd5c15e5a95) — Alexis Richardson (2017)
+  Journal: Weaveworks Blog; Publisher: Weaveworks
+  介绍了 GitOps，这是一种基于声明式基础设施和版本控制的方法论，本节中将其作为一个重要优势提出。

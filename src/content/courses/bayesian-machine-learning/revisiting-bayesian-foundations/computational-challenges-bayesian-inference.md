@@ -1,0 +1,75 @@
+---
+course: "bayesian-machine-learning"
+chapter: "revisiting-bayesian-foundations"
+lesson: "computational-challenges-bayesian-inference"
+sourceId: 3522
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-1-revisiting-bayesian-foundations/computational-challenges-bayesian-inference"
+title: "贝叶斯推断中的计算难题"
+description: "识别应用贝叶斯方法时常见的计算障碍，如难以处理的积分。"
+order: 5
+plots: []
+sourceHash: "45bf6d25f259c7857a824e61614b88aa0bf27cf71a30824f0c72ebcab0ea0aaa"
+sourceCorrections: []
+---
+
+随着我们将贝叶斯方法应用于复杂的机器学习 (machine learning)问题，我们不可避免地遇到重大的计算障碍。尽管贝叶斯定理的精妙之处提供了一个更新信念的清晰体系，但其实际操作常遇到困难，主要原因在于需要在可能高维的参数 (parameter)空间上进行积分的计算或处理。
+
+### 难以处理的归一化 (normalization)常数
+
+最主要的计算难题在于计算贝叶斯定理的分母，即模型证据或边际似然：
+
+
+$$
+P(\mathcal{D}) = \int P(\mathcal{D} | \theta) P(\theta) d\theta
+$$
+
+
+此项表示观测到数据 $\mathcal{D}$ 的概率，对所有可能的参数 (parameter)值 $\theta$ 进行积分，并由它们的先验概率 $P(\theta)$ 加权。为何此积分常出现问题？
+
+1. **高维度：** 在现代机器学习 (machine learning)中，模型常包含数千甚至数百万个参数 ($\theta$)。在这种高维空间 (high-dimensional space)中评估积分，计算量非常大。标准的数值积分方法（如求积法）随维度增长而效率低下，很快变得不可行。想象一下，仅对几十个参数尝试创建网格来评估函数。网格点的数量呈指数级增长，使此方法毫无用处。
+2. **复杂的被积函数：** 似然 $P(\mathcal{D} | \theta)$ 和先验 $P(\theta)$ 的乘积可能导致在`参数空间`上形成一个形状复杂、非标准的函数。此积分很少有闭合形式的解析解，尤其是在处理非共轭先验或来源于神经网络 (neural network)或复杂图模型等精细似然函数时。
+
+证据 $P(\mathcal{D})$ 对模型比较（计算贝叶斯因子）和获取归一化后验分布 $P(\theta | \mathcal{D})$ 是不可或缺的。其难以计算的特性意味着我们通常无法计算精确的后验分布本身。
+
+### 后验分布的特点
+
+即使我们避开归一化 (normalization)常数，转而关注未归一化的后验，$P(\theta | \mathcal{D}) \propto P(\mathcal{D} | \theta) P(\theta)$，处理它也带来其自身的难题：
+
+1. **复杂的几何形态：** 高维后验分布可表现出复杂的结构。它们可能是多峰的（有多个峰值），参数 (parameter)间可能存在强相关性（形成山脊或拉长的形状），或集中在参数空间中特定、不明显的区域。标准优化方法可能只找到一个峰（如最大后验估计），无法捕捉后验中的全部不确定性。
+2. **概括的困难：** 从后验中得出有意义的概括，如可信区间、均值或方差，需要积分。例如，后验均值为 $E[\theta | \mathcal{D}] = \int \theta P(\theta | \mathcal{D}) d\theta$。如果 $P(\theta | \mathcal{D})$ 仅在常数因子内已知，或者即使有了归一化后验，积分本身也难以处理，计算这些概括就变得困难。基于采样的方法或近似法变得必要。
+
+### 非共轭性
+
+在贝叶斯统计入门中，常使用共轭先验。先验 $P(\theta)$ 若使产生的后验 $P(\theta | \mathcal{D})$ 与先验属于同一分布族，则称其与似然 $P(\mathcal{D} | \theta)$ 共轭。例如，Beta 先验与二项似然共轭，从而得到 Beta 后验。共轭性提供了分析可处理性，这意味着后验常能以闭合形式导出，大大简化了计算。
+
+"然而，共轭性施加的限制对于复杂模型来说可能过于严格。我们常需要更灵活的先验或来源于复杂模型（如深度网络）的似然，这些情况下共轭性不成立。使用非共轭先验通常会导致证据的积分难以处理，并可能产生复杂的、非标准的后验分布，这些分布无法直接进行简便分析或采样。"
+
+### 大型数据集和模型复杂度
+
+评估似然项 $P(\mathcal{D} | \theta)$ 涉及计算给定特定参数 (parameter) $\theta$ 下整个数据集 $\mathcal{D}$ 的概率。假设独立性，这通常是一个乘积：$P(\mathcal{D} | \theta) = \prod_{i=1}^N P(d_i | \theta)$。
+
+对于非常大的数据集（大 $N$），计算此乘积的计算量会很大，尤其是当计算单个数据点 $d_i$ 的 $P(d_i | \theta)$ 本身已很耗时时（例如，涉及大型神经网络 (neural network)的前向传播）。需要在参数空间上重复评估似然（或其梯度）的推断方法可能会变得极其缓慢，需要为可伸缩性设计的专用算法。
+
+### 近似的必要性
+
+这些计算难题共同促使了**近似推断技术**的开发和使用。由于计算精确的后验分布常因难以处理的积分、高维度或计算成本而不可行，我们便采用近似它的方法。接下来的章节将介绍现代贝叶斯机器学习 (machine learning)中使用的两大类高级近似方法：
+
+1. **马尔可夫链蒙特卡洛（MCMC）：** 这些方法构建一个马尔可夫链，其平稳分布是所需的后验 $P(\theta | \mathcal{D})$。通过模拟此链，我们可以从后验中生成样本，从而能够近似积分并概括分布，而无需计算证据项 $P(\mathcal{D})$。（第2章会讲到）
+2. **变分推断（VI）：** 此方法将推断重新定义为优化问题。我们假定一个更简单、易处理的分布族（变分族），并找到该族中与真实后验“最接近”（常通过KL散度衡量）的成员。这提供了后验的解析近似。（第3章会讲到）
+
+理解这些计算障碍，能让人更好地明白MCMC和VI等技术为何是高级贝叶斯机器学习实践者所必备的工具。它们为将贝叶斯推断原则应用于现代AI应用中常见的复杂高维问题提供了途径。
+
+## 参考资料
+
+- [Bayesian Data Analysis](https://www.crcpress.com/Bayesian-Data-Analysis/Gelman-Carlin-Stern-Dunson-Vehtari-Rubin/p/book/9781439840955) — Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari, and Donald B. Rubin (2013)
+  Publisher: Chapman & Hall; DOI: [10.1201/b16018](https://doi.org/10.1201/b16018)
+  一本关于贝叶斯推断的综合教材，内容涵盖基础概念、计算挑战以及近似推断方法的介绍。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/) — Christopher Bishop (2006)
+  Publisher: Springer; DOI: [10.1007/978-0-387-45528-0](https://doi.org/10.1007/978-0-387-45528-0)
+  一本经典的机器学习教材，解释了贝叶斯推断、其在高维空间中的计算问题以及近似技术的介绍。
+- [Variational Inference: A Review for Statisticians](https://doi.org/10.1080/01621459.2017.1285773) — David M. Blei, Alp Kucukelbir, and Jon D. McAuliffe (2017)
+  Journal: Journal of the American Statistical Association; Volume: 112; Pages: 859-877; DOI: [10.1080/01621459.2017.1285773](https://doi.org/10.1080/01621459.2017.1285773)
+  一篇关于变分推断的基础性综述论文，详细阐述了其原理以及解决难解贝叶斯推断问题的用途。
+- [Monte Carlo Statistical Methods](https://link.springer.com/book/10.1007/978-1-4757-4145-2) — Christian P. Robert, George Casella (2004)
+  Publisher: Springer; DOI: [10.1007/978-1-4757-4145-2](https://doi.org/10.1007/978-1-4757-4145-2)
+  一本关于蒙特卡洛方法的标准参考文献，提供了马尔可夫链蒙特卡洛（MCMC）的理论背景及其在复杂模型中的实际应用。

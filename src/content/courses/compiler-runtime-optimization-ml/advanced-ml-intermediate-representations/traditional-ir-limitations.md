@@ -1,0 +1,65 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "advanced-ml-intermediate-representations"
+lesson: "traditional-ir-limitations"
+sourceId: 4448
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-2-advanced-ml-intermediate-representations/traditional-ir-limitations"
+title: "传统编译器IR的局限性"
+description: "分析为何标准IR（如LLVM IR）不足以支持高级ML优化。"
+order: 1
+plots: []
+sourceHash: "859a89ea6a8c77776c2f4d5a62f8172318b4c57227d323f683bcf4c8046c7326"
+sourceCorrections: []
+---
+
+通用编译器几十年来一直依赖LLVM IR、Java字节码或GCC的GIMPLE等中间表示（IR）。这些IR经过精心设计，用于优化用C++、Java或Fortran等语言编写的传统软件。它们擅长表示标量操作、指针运算、复杂控制流和函数调用。然而，当面对机器学习 (machine learning)工作负载的独特之处时，这些成熟的IR显现出明显的局限。核心问题在于，ML优化所需的抽象与传统IR所处的层次之间存在根本性的不匹配。
+
+下面我们来看具体不足之处：
+
+### 高级语义信息的丢失
+
+ML模型通常表示为计算图，其中节点代表卷积、矩阵乘法、池化或激活函数 (activation function)等高级操作，对多维张量进行处理。传统编译器IR在低得多的层次上操作，通常将计算表示为包含标量指令（或者最多是向量 (vector)指令）的基本块的控制流图（CFG）。
+
+考虑一个简单的序列，例如卷积 -> ReLU -> 池化。在ML框架的图表示中，这是明确的。
+
+> 常见ML操作序列的高级表示。
+
+当过早地降低到LLVM IR等传统IR时，这种结构就会消失。`Conv2D`操作变成实现卷积算法的复杂循环嵌套。`ReLU`可能变成带条件赋值的循环，而`MaxPool`则是另一组循环。IR主要看到的是一系列加载、存储、浮点乘法、加法和比较操作。
+
+> 高度简化地展示了高级操作在降低到传统的、侧重于标量的IR后可能呈现的样子。原始的图结构和操作符语义被模糊了。
+
+这种高级语义的立即丢失是有害的。操作符融合（如将`Conv2D`和`ReLU`组合成一个高效的核）等优化变得极其困难。编译器需要复杂的循环分析和模式匹配，才能从大量低级指令中尝试重建原始的高级意图，这项任务既复杂又常常失败。
+
+### 张量操作和类型表示不足
+
+ML围绕对张量（即多维数组）的操作进行。传统IR通常缺乏对张量类型的一流支持。表示张量通常需要单独管理指针和明确的维度信息。更重要的是，对这些张量的操作（如`matmul`或`conv2d`）在IR中不是原始操作。它们必须立即分解为循环和标量算术。这阻碍了编译器推断张量操作本身的属性。例如，知道一个操作是矩阵乘法允许应用专门的库调用（如BLAS）或硬件指令（如Tensor Core操作），但如果IR只看到循环，这些信息就会丢失。
+
+### 数据布局处理能力有限
+
+张量数据在内存中的物理布局（例如，图像的NCHW与NHWC）显著影响性能，尤其是在GPU或专用加速器等硬件上。优化布局通常涉及在操作之间转换数据，或根据硬件特点选择布局。传统IR通常不提供将数据布局作为与张量类型或操作关联的一流概念来表示或操作的机制。布局转换，如果可能的话，通常需要对低级循环结构进行复杂重写，使得自动布局优化变得极其困难。
+
+### 异构硬件的抽象鸿沟
+
+现代ML工作负载运行在多种多样的硬件上：带有向量 (vector)单元的多核CPU、具有复杂内存层级和并行执行模型的GPU，以及TPU、NPU或FPGA等专用加速器，每种都有独特的指令集和内存架构。尽管LLVM等传统IR有针对CPU和GPU的后端，但IR本身可能不是最合适的抽象层。例如，表示TPU上脉动阵列的计算所需的抽象，与表示GPU上SIMT架构的代码所需的抽象不同。传统的、较低层次的IR可能过早地强制做出决策，或者缺乏将计算有效映射到这些多样的硬件目标而不损失优化潜力所需的构造。
+
+### 表达领域特定优化的困难
+
+ML编译器优化通常涉及针对该领域的特定技术，例如基于算子数学属性的代数简化（如将`transpose(transpose(A))`简化为`A`），或利用稀疏性等属性。传统IR是为通用代码设计的，缺乏在适当层次轻松表示或应用这些领域特定规则的结构或语义。实现此类优化需要对低级代码序列进行复杂的模式匹配，阻碍了ML特定编译器pass的开发和效果。
+
+### 全局优化面临的挑战
+
+优化整个ML模型需要计算图的全局视图。这允许进行静态内存规划（预先为整个图执行分配内存）或识别大规模并行机会等优化。当模型立即降低到传统IR的CFG表示时，这种全局图结构被碎片化，使得这种高级的、图范围的分析和转换变得更加难以执行。
+
+这些局限性共同表明，虽然传统编译器IR是通用软件的强大工具，但它们在优化复杂、高级ML模型的需求面前存在阻抗不匹配。保留高级语义、明确处理张量操作和布局、有效地针对多样的硬件以及促进领域特定的图优化等需求，推动了专门的、多层次中间表示的开发和采用，我们接下来会讲解，从MLIR开始。
+
+## 参考资料
+
+- [The LLVM Compiler Infrastructure](https://doi.org/10.1109/CGO.2004.1281665) — Chris Lattner and Vikram Adve (2004)
+  Journal: CGO '04: Proceedings of the 2nd Annual IEEE/ACM International Symposium on Code Generation and Optimization; Publisher: IEEE Computer Society; Pages: 60-75; DOI: [10.1109/CGO.2004.1281665](https://doi.org/10.1109/CGO.2004.1281665)
+  介绍了LLVM IR的设计与动机，这是一种广泛使用的通用IR，是衡量传统IR的标准。
+- [MLIR: A Compiler Infrastructure for the End of Moore's Law](https://dl.acm.org/doi/10.1145/3441776.3448268) — Chris Lattner, Jacques Pienaar, River Riddle, Albert Cohen, Alan Mycroft, Oleksandr Zinenko, Nicolas Vasilache, and Ryan Lee (2021)
+  Journal: CGO '21: Proceedings of the 2021 International Symposium on Code Generation and Optimization; Publisher: Association for Computing Machinery (ACM); Pages: 60-75; DOI: [10.1145/3441776.3448268](https://doi.org/10.1145/3441776.3448268)
+  介绍了MLIR，阐述其多层次、可扩展的设计如何旨在克服传统IR在机器学习等领域专用应用中的局限性。
+- [TVM: An Automated End-to-End Optimizing Compiler for Deep Learning](https://www.usenix.org/conference/osdi18/presentation/chen) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18); Publisher: USENIX Association; Pages: 578-594
+  介绍了TVM，一个深度学习编译器，它解决了本节中讨论的许多挑战，例如张量操作、异构硬件以及优化所需的高级语义信息。

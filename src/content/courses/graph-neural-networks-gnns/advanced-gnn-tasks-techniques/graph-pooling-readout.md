@@ -1,0 +1,125 @@
+---
+course: "graph-neural-networks-gnns"
+chapter: "advanced-gnn-tasks-techniques"
+lesson: "graph-pooling-readout"
+sourceId: 2738
+sourceUrl: "https://apxml.com/zh/courses/graph-neural-networks-gnns/chapter-4-advanced-gnn-tasks-techniques/graph-pooling-readout"
+title: "图池化与读出函数"
+description: "分析各种图级别池化机制（例如DiffPool、SortPool）和用于图分类的读出函数。"
+order: 6
+plots: []
+sourceHash: "22db58aaf57e217272dfb2a04e3c37810b4837f03b7381b877f669d0f47e89a2"
+sourceCorrections: []
+---
+
+图神经网络 (neural network)（GNNs）可用于处理各种类型的图任务。对于许多问题，目标不仅仅是生成节点表示($h_v$)，还需要进行*图级别*的预测。例如，预测分子的毒性（分子表示为图）或将社交网络图分类为良性或与恶意活动相关，这些都需要为整个图提供一个单一的、固定大小的向量 (vector)表示($h_G$)。将节点级别的信息聚合成图级别概要的这一步骤由**图池化**和**读出函数**处理。
+
+主要难题是设计**排列不变**的聚合函数。由于图表示中节点（例如邻接列表或特征矩阵）的排序是任意的，因此无论节点如何排序，生成的图级别嵌入 (embedding)$h_G$都必须保持不变。读出通常指生成$h_G$的最终聚合步骤，而池化有时指GNN架构内部使图变得粗化的中间步骤。
+
+## 简单读出函数
+
+最直接的方法是将简单的、排列不变的聚合函数直接应用于GNN层生成的最终节点嵌入 (embedding)集$\{h_v \mid v \in V\}$。常见选项包括：
+
+- **求和：** $h_G = \sum_{v \in V} h_v$
+- **平均池化：** $h_G = \frac{1}{|V|} \sum_{v \in V} h_v$
+- **最大池化：** $h_G = \max_{v \in V} h_v$ (按元素取最大值)
+
+这些函数计算成本低且满足排列不变性。然而，它们可能导致较多的信息丢失：
+
+- **求和与平均池化：** 聚合全局信息，但可能掩盖单个节点贡献的细节。平均池化会丢失关于图大小($|V|$)的信息，而求和对它敏感。
+- **最大池化：** 捕捉到节点间最强的特征信号，但忽略了其他节点特征的分布和大小。
+
+对于许多简单的图分类任务，这些基本读出函数的效果出乎意料的好，特别是与强大的GNN节点嵌入结合使用时。然而，对于需要对细微结构差异或层级模式敏感的更复杂任务，通常需要更复杂的方法。
+
+## 高级池化策略
+
+为了获取更丰富的图结构并学习更具区分性的图表示，若干高级池化技术已被提出。这些技术通常涉及学习池化机制本身或更明确地加入结构信息。
+
+### 层级池化 (DiffPool)
+
+可微分池化 (DiffPool) 引入了一种可学习的层级池化方法。DiffPool 层不是在最后进行一次全局聚合，而是在每一步学习对节点进行聚类，从而有效地对图进行粗化。
+
+DiffPool 层通常使用两个GNN：
+
+1. **嵌入 (embedding)GNN：** 计算第 $l$ 层的节点嵌入 $Z^{(l)}$。
+2. **聚类GNN：** 计算聚类分配矩阵 $S^{(l)} \in \mathbb{R}^{n_l \times n_{l+1}}$，其中 $n_l$ 是第 $l$ 层的节点（或聚类）数量，$n_{l+1}$ 是下一层的聚类数量。 $S^{(l)}_{ij}$ 表示第 $l$ 层的节点 $i$ 属于第 $l+1$ 层的聚类 $j$ 的概率。
+
+然后对图进行粗化处理：
+
+- **新邻接矩阵：** $A^{(l+1)} = (S^{(l)})^T A^{(l)} S^{(l)}$
+- **新嵌入：** $Z^{(l+1)} = (S^{(l)})^T Z^{(l)}$
+
+这个过程可以堆叠，使模型能够在不同粒度级别上学习图表示。
+
+> 可微分池化 (DiffPool) 示意图。原始图（第L层）中的节点通过一个学习得到的分配矩阵被软分配到聚类中，构成一个粗化的图表示（第L+1层）。GNN操作随后可以应用于这个粗化的图。
+
+DiffPool 可以获取复杂的拓扑结构，但引入了很大的计算开销，并且由于其双层优化特性（同时学习嵌入和聚类分配）而训练起来有难度。通常在损失函数 (loss function)中加入熵正则化 (regularization)，以促使产生多样的聚类分配。
+
+### 全局注意力池化
+
+注意力机制 (attention mechanism)在序列建模中表现出色，可以用于图池化。与简单的平均或最大化不同，注意力机制在聚合过程中为节点分配不同的重要性权重 (weight)。
+
+例如，一个简单的基于注意力的读出函数可以为每个节点 $v$ 计算注意力得分 $a_v$：
+
+
+$$
+a_v = \text{softmax}(\text{得分}(h_v, q))
+$$
+
+
+其中 $q$ 是一个可学习的全局上下文 (context)向量 (vector)，$\text{得分}$ 是一个兼容性函数（例如点积或小型MLP）。图嵌入 (embedding)是加权和：
+
+
+$$
+h_G = \sum_{v \in V} a_v h_v
+$$
+
+
+存在更复杂的形式，例如 **Set2Set**，它使用基于LSTM的机制迭代地优化全局图表示，同时关注节点嵌入，保证排列不变性。基于注意力的方法提供了灵活性，但增加了模型参数 (parameter)和复杂性。
+
+### Top-K与SAG池化
+
+这些方法通过选择一部分重要节点而非聚类来执行池化。
+
+- **Top-K池化：** 学习一个投影向量 (vector) $p$ 并计算每个节点 $i$ 的得分 $s_i = h_i p / \|p\|$。然后它选择得分最高的 $\lceil k N \rceil$ 个节点（其中 $k \in (0, 1]$ 是一个比例，$N$ 是节点数量）。图通过保留选定节点及其派生边进行降采样。节点特征通常由其得分进行调整：$h'_i = s_i h_i$。
+- **自注意力 (self-attention)图池化 (SAGPool)：** 类似于Top-K，但使用GNN层（例如GCN）来计算节点选择的注意力得分，使选择过程基于节点特征和局部结构而具有上下文 (context)感知能力。
+
+这些方法的计算量比DiffPool小，并在中间层创建更稀疏、更小的图。然而，仅选择节点的一个子集可能会丢弃相关信息。
+
+### SortPool
+
+SortPool 在聚合之前对节点施加顺序。它首先根据统一的结构特性对节点嵌入 (embedding)进行排序。一个常用方法是使用节点根据Weisfeiler-Lehman测试（在第1章中讨论）分配的颜色来确定其字典序，这提供了一个规范的排序。
+
+在对 $N$ 个节点嵌入（每个维度为 $d$）进行排序以获得矩阵 $X_{\text{排序后}} \in \mathbb{R}^{N \times d}$ 后，该矩阵将被截断或填充到固定大小 $k$。然后，将序列处理中常见的标准1D卷积层和全连接层沿节点维度应用，以生成最终的图嵌入。
+
+SortPool 在确立统一的节点顺序后使用CNN进行特征提取。其主要局限是对规范排序算法的要求以及由于固定大小 $k$ 导致的信息丢失。
+
+## 选择合适的池化/读出方法
+
+最佳选择很大程度上取决于具体任务、图的属性和计算资源：
+
+- **简易性与性能：** 对于基线模型或较简单的任务，平均/最大/求和池化通常足够。对于复杂图分类基准任务的最优性能，层级或基于注意力的方法（如DiffPool或注意力读出）可能不可或缺。
+- **图大小：** DiffPool 对于非常大的图来说计算密集。Top-K/SAGPool或简单读出更具可扩展性。
+- **结构重要性：** 如果认为层级结构重要（例如社交网络中的社区结构，分子中的功能组），DiffPool是一个有力的选择。如果特定重要节点决定图的属性，注意力或最大池化可能表现良好。
+- **实现：** 简单池化函数在PyTorch Geometric和DGL等库中易于使用。DiffPool等高级方法通常需要更细致的实现和超参数 (parameter) (hyperparameter)调整。
+
+## 整合到GNN架构中
+
+池化层（如DiffPool、Top-K、SAGPool）通常与GNN层交错使用，以逐渐粗化图并学习不同尺度的表示。读出函数（求和、平均、最大、注意力、Set2Set）通常在最终GNN层*之后*应用，以生成最终的图级别嵌入 (embedding)$h_G$，然后将其输入到最终的分类器或回归头（例如MLP）中。
+
+理解并选择合适的图池化和读出函数是设计有效的GNN以完成图级别预测任务的必要步骤。这些技术连接了以节点为中心的消息传递与许多重要应用所需的图级别信息之间的差异。下一章将提供使用常用库实现这些高级GNN组件的实践指导。
+
+## 参考资料
+
+- [Hierarchical Graph Representation Learning with Differentiable Pooling](https://arxiv.org/abs/1806.08804) — Zhitao Ying, Jiaxuan You, Christopher Morris, Xiang Ren, William L. Hamilton, Jure Leskovec (2018)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Publisher: NeurIPS; Volume: 31; Pages: 4800-4810; DOI: [10.48550/arXiv.1806.08804](https://doi.org/10.48550/arXiv.1806.08804)
+  介绍了用于分层图粗化的可微分池化（DiffPool），这是一种学习型池化方法。
+- [Self-Attention Graph Pooling](https://proceedings.mlr.press/v97/lee19h/lee19h.pdf) — Junhyun Lee, Inyeop Lee, Jaewoo Kang (2019)
+  Journal: Proceedings of Machine Learning Research (PMLR) - International Conference on Machine Learning (ICML); Publisher: PMLR; Volume: 97; Pages: 3734-3743; DOI: [10.48550/arXiv.1904.08082](https://doi.org/10.48550/arXiv.1904.08082)
+  提出了自注意力图池化（SAGPool），该方法利用GNN学习节点选择的注意力分数。
+- [An End-to-End Deep Learning Architecture for Graph Classification](https://doi.org/10.1609/aaai.v32i1.11782) — Muhan Zhang, Zhicheng Cui, Marion Neumann, Yixin Chen (2018)
+  Journal: Proceedings of the AAAI Conference on Artificial Intelligence; Publisher: AAAI Press; Volume: 32(1); DOI: [10.1609/aaai.v32i1.11782](https://doi.org/10.1609/aaai.v32i1.11782)
+  提出了SortPool，这是一种在应用卷积层之前根据规范顺序对节点嵌入进行排序的池化方法。
+- [Order Matters: Sequence to Sequence for Sets](https://openreview.net/forum?id=rJ_yN9sgl) — Oriol Vinyals, Samy Bengio, Manjunath Kudlur (2017)
+  Journal: International Conference on Learning Representations (ICLR)
+  介绍了Set2Set机制，这是一种用于基于注意力的图读出函数的通用技术，能够生成置换不变的表示。

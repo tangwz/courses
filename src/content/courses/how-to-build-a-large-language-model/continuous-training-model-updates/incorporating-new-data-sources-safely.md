@@ -1,0 +1,196 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "continuous-training-model-updates"
+lesson: "incorporating-new-data-sources-safely"
+sourceId: 6110
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-30-continuous-training-model-updates/incorporating-new-data-sources-safely"
+title: "安全地整合新数据源"
+description: "用于将新数据集整合到现有流程中，同时监测模型性能退步的方法。"
+order: 4
+plots: []
+sourceHash: "730b6a3f8d5995550a48d056549b13f5c267ec354e6617bfd7cb8db4d8794fa7"
+sourceCorrections: []
+---
+
+将新数据源整合到现有的大语言模型 (LLM)训练流程中，对于保持模型最新、扩展其知识范围以及纠正部署后发现的偏差或知识空白，是必不可少的。然而，这个过程并非没有风险。简单地添加新数据可能会引入噪声、有害内容，或导致模型遗忘之前学到的信息（灾难性遗忘）。需要一种系统而审慎的方法来安全有效地整合新数据。
+
+### 审查新数据源
+
+在引入任何新数据集之前，它必须经过严格审查，类似于第7章中描述的初始数据预处理流程。在持续训练期间，风险可能更高，因为模型质量的退步可能会影响正在运行的应用程序。
+
+1. **质量筛选：** 应用与初始预训练 (pre-training)时相同（或更严格）的质量启发式方法。这包括移除样板文本，根据长度或复杂度指标进行筛选，以及可能使用基于分类器的方法来移除低质量文本。目的是确保新数据达到既定的质量标准。
+2. **去重：** 进行近似重复和精确重复检测，不仅在新数据集内部，还要与现有训练语料库进行比对。添加冗余信息会浪费计算资源，且学习收益甚微。MinHash（第7章介绍过）等方法仍然适用。
+3. **内容安全与偏见分析：** 仔细检查新数据是否存在潜在的毒性、偏见和个人身份信息（PII）。自动化工具可以帮助标记 (token)有问题的内容，但有针对性的人工审查或抽样可能是必要的，特别是当数据源新颖或已知存在噪声时。考虑新数据对模型对齐 (alignment)（第25章和第26章）可能带来的影响。
+4. **主题与语言验证：** 确保数据与模型更新预期的语言和主题保持一致。使用语言识别工具（第7章）并分析新数据的主题分布。不匹配的数据可能会意外地扭曲模型的能力。
+5. **许可与来源：** 重新验证与新数据源相关的法律权限和许可条款。确保符合版权和使用限制，就像最初数据收集时一样（第6章）。
+
+### 数据整合策略
+
+一旦新数据源通过审查，可以采用几种策略将其整合到持续训练流程中。
+
+1. **简单混合与重采样：** 最直接的方法是将清理过的新数据添加到现有训练池中，然后继续训练，从组合数据集中进行重采样。这需要仔细考虑*混合比例*或*源权重 (weight)*（第9章）。对新数据赋予过多权重会加速遗忘，而过少权重可能导致从新数据中学习效率低下。最佳比例通常取决于新数据相对于现有语料库的大小和相关性。
+2. **数据复习（重放）：** 为了明确对抗灾难性遗忘，一种常用技术是*复习*或*重放*。训练时不是单独使用新数据或简单混合，而是每个训练批次都由新数据和*旧*数据的抽样子集组合构建。这迫使模型在学习新信息的同时回顾旧知识。每个批次中旧数据与新数据的比例成为一个重要的超参数 (parameter) (hyperparameter)。从旧数据中抽样可以是均匀的，也可以基于更复杂的方法，尽管均匀抽样通常在规模化实现时既有效又更简单。
+3. **课程学习：** 逐步引入新数据。这可能涉及从新数据源的低抽样权重开始，并随时间逐步增加（退火策略，参见第9章）。或者，如果新数据代表一个显著不同的主题范围，可以安排课程，首先用旧数据巩固通用知识，然后重点关注新主题范围。
+
+> 一个简化的流程图，展示了经过审查的旧数据源和新数据源如何通过采样器组合，然后输入到持续训练流程中。复习涉及从现有语料库中进行采样。
+
+### 整合过程中的监控
+
+当使用新数据源进行训练时，仔细监控是必不可少的。
+
+1. **训练动态：** 密切跟踪训练损失、梯度范数和激活统计数据（第24章）。突然的峰值或不稳定可能表明新数据质量存在问题，或学习过程适应不良。如果可能，请关注来自不同数据源的损失贡献。
+2. **验证性能：** 定期在多个验证集上评估模型：
+   - 反映*原始*数据分布的验证集，用于检测灾难性遗忘。
+   - 反映*新*数据分布的验证集，用于衡量适应情况。
+   - 可能还有针对与新数据相关的特定能力或安全问题的验证集。
+3. **下游任务评估：** 定期对下游任务（第22章）进行评估。在重要基准上的性能退步是一个明确的信号，表明整合可能正在造成损害。零样本或少样本评估可以提供快速反馈。
+
+### 在PyTorch中实现数据混合
+
+管理多个数据源通常涉及在PyTorch中创建自定义的 `Dataset` 或 `Sampler`。下面是一个使用 `torch.utils.data.ConcatDataset` 和 `WeightedRandomSampler` 进行简单混合并进行源加权的示例。
+
+```python
+import torch
+from torch.utils.data import (Dataset, ConcatDataset, DataLoader,
+                              WeightedRandomSampler)
+
+# Assume OldDataset and NewDataset are PyTorch Dataset instances
+# loaded with pre-processed, tokenized data paths or objects.
+# 假设 OldDataset 和 NewDataset 是 PyTorch Dataset 实例，
+# 它们加载了预处理、分词后的数据路径或对象。
+# old_data_paths = [...] # 旧数据文件/分片的路径
+# new_data_paths = [...] # 新数据文件/分片的路径
+
+# class YourCustomDataset(Dataset):
+#     def __init__(self, data_paths):
+#         self.data_paths = data_paths
+#         # Initialize logic to load/access data items
+#         # 初始化加载/访问数据项的逻辑
+#         # self.index = self._build_index() # 示例：将索引映射到文件/偏移量
+#
+#     def __len__(self):
+#         # Return total number of samples
+#         # 返回样本总数
+#         # return len(self.index)
+#         pass # 占位符
+#
+#     def __getitem__(self, idx):
+#         # Load and return tokenized sample corresponding to idx
+#         # 加载并返回与 idx 对应的分词样本
+#         # sample = self._load_sample(self.index[idx])
+#         # return sample
+#         pass # 占位符
+
+# Replace with actual dataset implementations
+# 替换为实际的数据集实现
+class PlaceholderDataset(Dataset):
+    def __init__(self, num_samples):
+        self.num_samples = num_samples
+    def __len__(self):
+        return self.num_samples
+    def __getitem__(self, idx):
+        # Simulate loading data
+        # 模拟加载数据
+        return {
+            "input_ids": torch.randint(0, 50000, (1024,)),
+            "labels": torch.randint(0, 50000, (1024,))
+        }
+
+old_dataset = PlaceholderDataset(num_samples=1_000_000)
+new_dataset = PlaceholderDataset(num_samples=200_000)
+
+# Combine datasets
+# 组合数据集
+combined_dataset = ConcatDataset([old_dataset, new_dataset])
+
+# Define sampling weights - e.g., sample new data more frequently
+# than its size ratio
+# 定义采样权重——例如，以高于其大小比例的频率采样新数据
+# Let's aim for new data to be ~30% of each batch,
+# despite being <20% of total size.
+# 我们的目标是让新数据在每个批次中约占30%，
+# 尽管它占总大小的比例不到20%。
+old_data_weight = 0.7 / len(old_dataset)
+new_data_weight = 0.3 / len(new_dataset)
+
+sample_weights = torch.cat([
+    torch.full((len(old_dataset),), old_data_weight),
+    torch.full((len(new_dataset),), new_data_weight)
+])
+
+# Use WeightedRandomSampler
+# 使用 WeightedRandomSampler
+# 'replacement=True' is typical for large datasets to avoid iterating
+# through all samples once per epoch.
+# 对于大型数据集，'replacement=True' 是常见的做法，以避免每个 epoch 遍历所有样本一次。
+# 'num_samples' defines the effective size of an epoch.
+# 'num_samples' 定义了一个 epoch 的有效大小。
+# Define how many samples constitute an "epoch" for scheduling purposes
+# 定义多少样本构成一个“epoch”用于调度目的
+effective_epoch_size = 500_000
+sampler = WeightedRandomSampler(
+    sample_weights,
+    num_samples=effective_epoch_size,
+    replacement=True
+)
+
+# Create DataLoader
+# 创建 DataLoader
+# Adjust batch_size, num_workers etc. based on hardware and
+# distributed setup
+# 根据硬件和分布式设置调整 batch_size、num_workers 等
+batch_size = 8
+data_loader = DataLoader(
+    combined_dataset,
+    sampler=sampler,
+    batch_size=batch_size,
+    num_workers=4
+)
+
+# Training loop using the data_loader
+# 使用 data_loader 的训练循环
+# for batch in data_loader:
+#     # Perform forward pass, backward pass, optimizer step
+#     # 执行前向传播、反向传播、优化器步骤
+#     # input_ids = batch['input_ids'].to(device)
+#     # labels = batch['labels'].to(device)
+#     # ... model training step ...
+#     # ... 模型训练步骤 ...
+#     pass # 占位符
+
+print(f"Combined dataset size: {len(combined_dataset)}") # 组合数据集大小
+print(f"Sampler using {len(sample_weights)} weights, sampling " # 采样器使用
+      f"{effective_epoch_size} indices per epoch.") # 权重，每个 epoch 采样
+# Example: First few weights reflect the lower probability for old data samples
+# 示例：前几个权重反映了旧数据样本的较低概率
+print(f"Sample weights (first 5): {sample_weights[:5]}") # 采样权重（前5个）
+# Example: Weights towards the end reflect the higher probability
+# for new data samples
+# 示例：末尾的权重反映了新数据样本的较高概率
+print(f"Sample weights (last 5): {sample_weights[-5:]}") # 采样权重（后5个）
+```
+
+> PyTorch 设置示例，组合了两个数据集并使用 `WeightedRandomSampler` 在训练期间控制混合比例。这种方法实现了简单的源加权混合。实现复习需要更复杂的采样器或数据集逻辑，以便在每个批次中明确地从旧数据源和新数据源中获取样本。
+
+### 处理整合问题
+
+如果监控发现引入新数据后出现显著的性能退步或训练不稳定等问题：
+
+1. **暂停并分析：** 停止持续训练过程。仔细分析问题数据源和模型的失效模式。审查过程是否不足？是否是新数据的某个特定部分导致了问题？
+2. **调整策略：** 修改整合方法。这可能意味着：
+   - 降低新数据的采样权重 (weight)。
+   - 增加复习数据的比例。
+   - 更严格地筛选新数据源。
+   - 调整学习率或其他优化器超参数 (parameter) (hyperparameter)（第17章）。
+3. **回滚：** 在严重情况下，可能需要放弃最近的训练进度，并回滚到引入问题数据之前的检查点。这强调了检查点（第19章）和版本化策略（本章稍后介绍）的重要性。
+
+引入新数据源是模型演进的有力工具，但它需要一种仔细、有条理的方法。严格的审查、策略性整合、持续监控以及调整或回滚的准备，都是在动态环境中安全更新大语言模型 (LLM)的必要组成部分。
+
+## 参考资料
+
+- [The Pile: An 800GB Dataset of Diverse Text for Language Modeling](https://arxiv.org/abs/2101.00027) — Leo Gao, Stella Biderman, Sid Black, Laurence Golding, Travis Hoppe, Charles Foster, Jason Phang, Horace He, Anish Thite, Noa Nabeshima, Shawn Presser, Connor Leahy (2020)
+  Journal: arXiv preprint arXiv:2101.00027; DOI: [10.48550/arXiv.2101.00027](https://doi.org/10.48550/arXiv.2101.00027)
+  描述了用于构建大型语言模型预训练数据集的广泛数据整理、过滤和去重流程。
+- [On the Dangers of Stochastic Parrots: Can Language Models Be Too Big? 🦜](https://dl.acm.org/doi/10.1145/3442188.3445922) — Bender, Emily M. and Gebru, Timnit and McMillan-Major, Angelina and Shmitchell, Shmargaret (2021)
+  Journal: FAccT '21: Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency; Publisher: Association for Computing Machinery; Pages: 610–623; DOI: [10.1145/3442188.3445922](https://doi.org/10.1145/3442188.3445922)
+  提出了关于大型语言模型偏见、伦理影响和环境成本的担忧，特别关注数据来源和社会影响。

@@ -1,0 +1,79 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "building-simple-rnns"
+lesson: "handling-input-output-shapes"
+sourceId: 2545
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-3-building-simple-rnns/handling-input-output-shapes"
+title: "处理输入与输出形状"
+description: "讲解 RNN 层预期的输入（批次、时间步、特征）和输出形状。"
+order: 4
+plots: []
+sourceHash: "6151ac1b0a6a24c1be16ef5529f2945cadd2f6435c18839ee01ba6bbd35f5eb5"
+sourceCorrections: []
+---
+
+在深度学习 (deep learning)框架中使用循环神经网络 (neural network) (RNN)时，常见的一个错误来源是提供张量形状不正确的数据。RNN 层旨在处理序列，它们期望输入数据采用特定的 3D 格式。正确处理这一点对构建和训练模型非常重要。
+
+让我们分析一下大多数 RNN 层（如 `SimpleRNN`、`LSTM` 或 `GRU`）在 TensorFlow/Keras 和 PyTorch（使用 `batch_first=True` 时）等框架中预期的典型输入形状。标准输入是一个 3D 张量，维度为：
+
+`(batch_size, time_steps, features)`
+
+### 理解输入张量的维度
+
+1. **`batch_size`**：此维度表示您在一次前向/反向传播 (backpropagation)中同时处理的独立序列的数量。分批训练是深度学习 (deep learning)中提高计算效率和梯度稳定性的标准做法。例如，如果您一次处理 128 个不同的文本评论，您的 `batch_size` 将是 128。如果您要处理单个序列进行预测，`batch_size` 将是 1。
+2. **`time_steps`**（序列长度）：这是批次中每个序列的长度。对于文本数据，它可能是填充或截断后句子中的单词（或字符）数量。对于时间序列数据，它可能是特定时间窗口内的观测值数量。尤其重要的是，在单个批次中，所有序列通常需要具有*相同*的长度。像填充这样的技术用于实现这种统一长度，我们将在第 8 章中讨论。如果您的序列有 50 个时间步，此维度将是 50。
+3. **`features`**（输入维度）：此维度指定序列中*每个*时间步可用的特征数量。
+
+   - 对于简单的单变量时间序列（例如预测单个股票价格），这可能是 1。
+   - 对于多变量时间序列（例如，包含温度、湿度、压力的天气数据），这将是测量的变量数量（例如，3）。
+   - 对于已转换为词嵌入 (embedding)的文本数据（稍后讨论的一种常见技术），这将是嵌入向量 (vector)的维度（例如，100、300）。
+
+可以将输入张量视为矩阵的集合（`batch_size`），其中每个矩阵具有 `time_steps` 行和 `features` 列。
+
+这是一个小图示，展示了 2 个序列批次的输入张量结构，每个序列有 3 个时间步和 4 个特征：
+
+> 一个形状为 (2, 3, 4) 的 RNN 输入张量表示，显示两个序列，每个序列有三个时间步和每个时间步四个特征。
+
+### 理解 RNN 层输出形状
+
+RNN 层输出的张量形状取决于一个配置参数 (parameter)，通常在 Keras/TensorFlow 中称为 `return_sequences`，或在 PyTorch 中通过您使用输出的方式隐式决定。设 $N$ 为 `batch_size`，$T$ 为 `time_steps`，$F$ 为输入 `features` 的数量，而 $H$ 为创建 RNN 层时指定的隐藏单元（或神经元）数量。
+
+1. **返回完整序列的输出**：如果您将层配置为返回每个时间步的隐藏状态（例如，`return_sequences=True`），输出张量形状将是：
+   `(batch_size, time_steps, hidden_units)` 或 $(N, T, H)$
+
+   这在以下情况是必需的：
+
+   - 堆叠多个 RNN 层（下一个 RNN 层需要前一个的完整序列输出）。
+   - 应用作用于每个时间步输出的操作（例如，Keras 中 Dense 层周围的 `TimeDistributed` 包装器，或某些类型的注意力机制 (attention mechanism)）。
+   - 执行序列到序列任务，其中每个输入时间步都需要一个输出。
+2. **仅返回最终输出**：如果您将层配置为仅返回*最后*一个时间步的隐藏状态（例如，`return_sequences=False`，Keras 中的默认设置），输出张量形状将是：
+   `(batch_size, hidden_units)` 或 $(N, H)$
+
+   这通常在以下情况使用：
+
+   - RNN 层是模型中的最后一个循环层。
+   - 您需要整个序列的单个向量 (vector)表示，以输入到后续的 Dense 层进行分类或回归（例如，句子的情感分析）。
+
+`hidden_units` ($H$) 的数量是您在定义 RNN 层时选择的一个超参数 (hyperparameter)。它决定了内部隐藏状态的维度，从而也决定了输出向量的维度。
+
+### 实际考虑事项
+
+- **框架默认设置**：请务必查阅您特定深度学习 (deep learning)框架（TensorFlow、PyTorch 等）的文档。虽然 `(batch_size, time_steps, features)` 输入惯例很常见，但输出形状 (`return_sequences`) 和批次维度放置 (`batch_first`) 的默认设置可能有所不同。例如，PyTorch 的 `RNN` 层默认 `batch_first=False`，预期 `(time_steps, batch_size, features)`，除非您指定 `batch_first=True`。Keras 层通常默认输入 `(batch_size, time_steps, features)`，输出 `return_sequences=False`。
+- **数据准备**：确保您的数据加载和预处理管道（在第 8 章中介绍）正确地将原始序列数据整形为这些 3D 张量，包括通过填充或其他方法处理可变长度。
+- **调试**：形状不匹配是常见错误。当遇到运行时错误时，请仔细打印并检查输入张量的 `.shape` 属性以及 RNN 层预期的输入形状。
+
+理解并正确管理这些张量形状是实现 RNN 的实际必要条件。当您在后续章节中构建模型时，请记住这种 `(batch_size, time_steps, features)` 的输入结构，并注意您是需要完整序列的输出还是仅需要循环层的最终输出。
+
+## 参考资料
+
+- [Keras RNN layers: a guide](https://www.tensorflow.org/guide/keras/rnn) — Scott Zhu, Francois Chollet (2023)
+  Publisher: TensorFlow
+  提供 Keras RNN 层输入输出形状、`return_sequences` 参数及其他配置细节的说明。
+- [RNN - PyTorch 2.3 documentation](https://pytorch.org/docs/stable/generated/torch.nn.RNN.html) — PyTorch Developers (2024)
+  详细说明 PyTorch 循环层输入输出张量形状和 `batch_first` 参数的作用。
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python-second-edition) — François Chollet (2021)
+  Publisher: Manning Publications
+  提供使用 Keras 和 TensorFlow 实现循环神经网络的实用指南，包括输入输出张量形状的管理。
+- [Stanford CS224n: Natural Language Processing with Deep Learning](http://cs224n.stanford.edu/) — Diyi Yang, Tatsunori Hashimoto (2025)
+  Publisher: Stanford University
+  课程讲义和资料，涵盖循环神经网络架构和实践数据处理，包括序列建模的张量维度。

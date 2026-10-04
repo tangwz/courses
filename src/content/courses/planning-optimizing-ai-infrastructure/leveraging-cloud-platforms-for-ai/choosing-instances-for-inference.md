@@ -1,0 +1,87 @@
+---
+course: "planning-optimizing-ai-infrastructure"
+chapter: "leveraging-cloud-platforms-for-ai"
+lesson: "choosing-instances-for-inference"
+sourceId: 6999
+sourceUrl: "https://apxml.com/zh/courses/planning-optimizing-ai-infrastructure/chapter-3-leveraging-cloud-platforms-for-ai/choosing-instances-for-inference"
+title: "选择用于推理和服务的实例"
+description: "识别用于部署模型推理的经济实惠实例类型，包括CPU、GPU和专用硬件。"
+order: 4
+plots: []
+sourceHash: "2bafaafc4cd61ef41d05b930e66b25e268a779058f5ee2e58afa552bdf0962b8"
+sourceCorrections: []
+---
+
+在为要求严格、注重吞吐量 (throughput)的模型训练任务选择实例之后，重心转向服务。为推理 (inference)选择合适的实例是一种不同的优化问题。训练通常是临时的、高成本的批处理作业，而推理则通常是全天候服务，其中低延迟和每次预测的成本是主要衡量标准。在此处的任何错误计算不仅会浪费单个作业的预算；还会持续增加运营成本。
+
+推理服务的主要目标是尽可能快且便宜地返回预测。这带来了不同的硬件考量。一个擅长训练的强大多GPU实例，在处理单个实时请求时可能既浪费又慢。
+
+### CPU实例：经济实惠的常规选择
+
+对于许多模型，尤其是大型语言模型（LLM）或生成式图像领域之外的模型，CPU实例是用于服务的最实用且经济高效的选择。这包括来自Scikit-learn和XGBoost等库的传统机器学习 (machine learning)模型，以及较小的深度学习 (deep learning)模型。
+
+CPU擅长处理独立的低延迟请求。由于每个推理 (inference)请求通常是独立处理的，GPU的庞大并行能力可能未被充分利用，使其成为一种昂贵且闲置的资源。
+
+**在以下情况选择CPU实例：**
+
+- **延迟要求非常高且无法进行批处理：** 如果您的应用程序需要对每个传入请求立即响应，CPU可以直接处理，无需将数据传输到GPU的额外开销。
+- **流量为低到中等：** 如果您每秒预期只有少量请求，单个CPU核心通常可以应付。通过添加更多CPU实例进行横向扩展是简单且经济的。
+- **模型计算量不大：** 决策树、线性模型和较小的神经网络 (neural network)没有足够的并行操作来充分利用GPU，这使得CPU成为更具效率的选择。
+
+云服务提供商提供多种基于CPU的虚拟机。通用实例（如AWS的`m5`系列或GCP的`e2`系列）提供CPU和内存的均衡组合，是一个不错的起始选择。如果分析显示您的模型受CPU限制，计算优化型实例（如AWS的`c5`系列或GCP的`c2`系列）能在相同内存量下提供更强大的核心。
+
+### GPU实例：适用于高吞吐量 (throughput)和大型模型
+
+当您的应用程序服务大型复杂的深度学习 (deep learning)模型或处理大量并发请求时，GPU变得很有必要。有效使用GPU进行推理 (inference)的核心在于最大化其利用率。一次只处理一个请求的GPU效率不高。目标是将多个传入请求批量处理，同时进行，以发挥GPU的并行架构优势。
+
+这种策略将问题从延迟限制型转变为吞吐量限制型。虽然单个请求的延迟可能会因等待批次填充而略微增加，但每秒的总推理次数（以及每次推理的成本）将显著提升。
+
+云服务提供商现在提供专门为推理设计的GPU，这些GPU比顶级训练GPU更经济：
+
+- **NVIDIA T4：** 一种流行且多功能的推理加速器，为深度学习模型提供了性能与成本的良好平衡。它被广泛提供（例如，AWS `g4dn`实例，带T4的GCP `n1-standard`）。
+- **NVIDIA L4：** T4的新一代继任者，为更广泛的AI工作负载（包括视频和生成式AI）提供更高的性能。
+- **NVIDIA A10G：** 比T4更强大的选择，适用于更大的模型或更高的吞吐量需求（例如，AWS `g5`实例）。
+
+是否使用GPU取决于您实施批处理策略的能力。这可以在您的应用程序逻辑中完成，或者使用像NVIDIA Triton Inference Server这样的专用模型服务框架，它能自动处理请求批处理。
+
+> 选择推理实例的决策流程。此过程需要评估模型大小、流量和延迟要求，以确定最合适的硬件。
+
+### 专用推理 (inference)加速器 (ASICs)
+
+对于运营规模非常大的组织，云服务提供商提供定制设计的专用集成电路（ASICs），其唯一目的是：高效、低成本的模型推理。
+
+- **AWS Inferentia：** 这些芯片由亚马逊设计，旨在提供高吞吐量 (throughput)和每次推理的低成本。使用它们需要使用AWS Neuron SDK编译您的模型，该SDK会对其进行优化以在Inferentia硬件上运行。像`inf1`和`inf2`这样的实例在大规模推理方面通常比同等GPU实例显著便宜。
+- **Google Cloud TPUs：** 尽管以训练闻名，谷歌也提供TPU（例如v4和v5e），这些TPU对于推理非常高效，特别是对于大型模型。与Inferentia类似，这条路径需要模型转换步骤才能在硬件上运行。
+
+使用这些ASIC的权衡是灵活性。它们支持特定的模型架构和操作集，并且所需的编译步骤会增加工程开销。然而，对于稳定、高容量的工作负载，成本节约可能非常可观。
+
+### 适当规模、自动扩缩和无服务器选项
+
+选择实例类型只是第一步。为了有效管理成本，您必须使您的预置容量与实际需求相匹配。
+
+- **自动扩缩：** 推理 (inference)流量很少是恒定的。它可能在业务高峰期达到峰值，并在夜间下降。配置自动扩缩组以根据CPU利用率或未完成请求的数量等指标自动添加或删除实例。这确保您只为您所需的容量付费。
+- **模型优化：** 降低服务成本最有效的方法是使模型本身更高效。模型量化 (quantization)（使用`INT8`而不是`FP32`精度）和剪枝等技术（在第五章中介绍）可以显著减小模型大小并加速推理速度，使您能够使用更小、更便宜的实例。
+- **无服务器推理：** 对于不频繁或流量高度不可预测的工作负载，考虑使用AWS Lambda、Google Cloud Run或Azure Functions等无服务器平台。这些服务可以运行容器镜像，让您无需管理任何底层服务器即可部署模型。您只需为每次调用消耗的计算时间付费，这对于低流量应用程序而言可以非常经济高效。
+
+最终的决定是性能、成本和工程投入之间的平衡。一个简单的基于CPU的部署易于管理，而高度优化的基于ASIC的解决方案需要更专业的工作，但在规模化时能提供最低的成本。
+
+| 实例类别 | 最适合 | 主要考量 | 云服务示例 |
+| --- | --- | --- | --- |
+| **CPU (通用型)** | 低到中等流量、对延迟敏感的应用程序、传统机器学习 (machine learning)模型。 | 简单性及低闲置成本。 | AWS `m` 系列, GCP `e2`/`n2`, Azure `DSv4` |
+| **GPU (推理优化型)** | 高吞吐量 (throughput)、大型深度学习 (deep learning)模型、可批处理请求。 | 吞吐量和性能。 | AWS `g4dn`/`g5` (T4/A10G), GCP `n1` 带 T4/L4 |
+| **专用ASIC** | 超高容量、稳定工作负载，以实现最高成本效益。 | 规模化时每次推理成本最低。 | AWS `inf` 系列 (Inferentia), GCP TPU 实例 |
+| **无服务器计算** | 不频繁或高度不可预测的流量。 | 按用量付费，无闲置成本。 | AWS Lambda, Google Cloud Run, Azure Functions |
+
+## 参考资料
+
+- [Designing Machine Learning Systems](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  一本全面的指南，涵盖机器学习系统的整个生命周期，包括模型服务的架构设计、硬件选择和优化技术。
+- [NVIDIA Triton Inference Server Documentation](https://developer.nvidia.com/triton-inference-server) — NVIDIA Corporation (2023)
+  Publisher: NVIDIA Corporation
+  NVIDIA开源推理服务软件的官方文档，详细介绍了如何在各种硬件上部署和优化模型，包括GPU批处理策略。
+- [AWS Inferentia and AWS Neuron SDK Documentation](https://aws.amazon.com/machine-learning/inferentia/) — Amazon Web Services (2023)
+  官方资源，解释AWS Inferentia加速器、其架构以及如何使用AWS Neuron SDK编译和部署模型，以实现大规模低成本推理。
+- [Designing and deploying a machine learning prediction service](https://cloud.google.com/architecture/ml-prediction-service-design) — Google Cloud (2023)
+  Publisher: Google Cloud
+  一份来自Google Cloud的架构指南，提供了构建可扩展且可靠的机器学习预测服务的注意事项和最佳实践，涵盖了各种部署选项和硬件选择。

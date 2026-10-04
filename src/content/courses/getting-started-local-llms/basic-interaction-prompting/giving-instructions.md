@@ -1,0 +1,156 @@
+---
+course: "getting-started-local-llms"
+chapter: "basic-interaction-prompting"
+lesson: "giving-instructions"
+sourceId: 4279
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-5-basic-interaction-prompting/giving-instructions"
+title: "给出指令"
+description: "提示LLM执行总结或改写文本等简单任务。"
+order: 3
+plots: []
+sourceHash: "85d30cf3232fccf3b82ac78601f9ed39232ae16c3e50d2ecbdb9faea69379c98"
+sourceCorrections: []
+---
+
+本地大型语言模型（LLM）可以回答直接的问题。LLM 的主要能力之一是遵循具体指令，以您提供的文本或指定的议题来执行任务。这意味着您能告诉模型*要做什么*，而不仅仅是询问*是什么*。
+
+把它想象成给一个乐于助人的助手下达命令。您需要清楚地说明希望模型执行什么操作。这涉及围绕指令来构建您的提示。
+
+一个典型的指令提示通常包含：
+
+1. **明确的动作：** 以描述任务的动词开头。常见的动词包括“总结”、“翻译”、“重写”、“列出”、“解释”、“生成”或“提取”。
+2. **目标：** 指明该动作应用于的文本或主题。
+3. **可选的限制（有时）：** 您通常可以添加有关您希望输出的格式或样式的细节，例如“用一句话”、“使用要点列表”或“以通俗的方式”。
+
+让我们来看一些常见示例：
+
+### 总结
+
+如果您有一段长文本 (long context)需要主要内容，您可以指示大型语言模型对其进行总结。
+
+**示例提示：**
+
+```
+Summarize the following paragraph into a single sentence:
+
+Large Language Models are complex artificial intelligence systems trained on immense amounts of text data. They learn patterns, grammar, and facts from this data, allowing them to understand prompts and generate human-like text in response. Running them locally offers benefits like privacy and offline use, but requires sufficient hardware resources like RAM and sometimes a GPU.
+```
+
+**可能的LLM输出：**
+
+```
+Large Language Models are AI systems trained on massive datasets that generate human-like text, offering local use benefits like privacy at the cost of hardware requirements.
+```
+
+您可以调整指令，例如，要求以要点列表的形式总结，而不是用一句话。
+
+### 翻译
+
+许多大型语言模型具有多语言能力。您可以指示它们在不同语言之间翻译文本。
+
+**示例提示：**
+
+```
+Translate the following English sentence to Spanish: "Hello, how are you today?"
+```
+
+**可能的LLM输出：**
+
+```
+Hola, ¿cómo estás hoy?
+```
+
+### 重写和改述
+
+您可以要求模型更改一段文本的语气、风格或复杂程度。
+
+**示例提示1（更改语气）：**
+
+```
+Rewrite this sentence to sound more professional: "We gotta fix the bugs before the customer sees them."
+```
+
+**可能的LLM输出：**
+
+```
+It is necessary to address the software defects prior to customer review.
+```
+
+**示例提示2（简化）：**
+
+```
+Explain the concept of 'RAM' in simple terms, like you're talking to someone who doesn't know computers well.
+```
+
+**可能的LLM输出：**
+
+```
+把内存（RAM）想象成你电脑的临时工作区。当你打开一个程序时，电脑会把当前需要的信息放到内存中，这样它就能非常快速地访问。更多的内存就像拥有一个更大的书桌，让你能同时处理更多事情而不会变慢。当你关闭电脑时，它会忘记所有东西，这与硬盘等长期存储设备不同。
+```
+
+### 列出信息
+
+您可以指示模型提取并列出特定类型的信息。
+
+**示例提示：**
+
+```
+List the three main hardware components discussed for running local LLMs.
+```
+
+**可能的LLM输出：**
+
+```
+1. CPU (Central Processing Unit)
+2. RAM (Random Access Memory)
+3. GPU (Graphics Processing Unit) / VRAM (Video RAM)
+```
+
+### 简单的代码生成
+
+一些模型甚至能根据指令生成简单的代码片段。它们能处理的质量和复杂程度在很大程度上取决于您正在使用的具体模型（如第3章所述）。
+
+**示例提示：**
+
+```
+Write a basic Python function called 'add' that takes two numbers as input and returns their sum.
+```
+
+**可能的LLM输出：**
+
+```python
+def add(number1, number2):
+  """
+  此函数接受两个数字作为输入，并返回它们的和。
+  """
+  return number1 + number2
+```
+
+### 清晰的重要性
+
+您的指令是否有效通常取决于您表达的清晰程度。模糊的指令可能导致意想不到或无用的结果。
+
+思考一下区别：
+
+- **不那么清楚：** `告诉我关于Python编程语言的信息。` （这可能导致关于历史、功能、安装步骤或任何其他方面的内容）。
+- **更清楚：** `列出Python编程语言的三个常见用途。`
+- **同样清楚：** `解释一下是什么让Python成为初学者的热门选择。`
+
+尝试用不同的方式来表达您的指令。使用强有力的动作动词，并尽可能具体地说明输入文本和期望的输出。不同的模型可能对略微不同的措辞有更好的反应，因此尝试不同的说法是学习如何更好地与它们互动的一部分。
+
+请记住，即使指令清晰，大型语言模型也并非完美。它们可能会误解复杂的请求，或者无法准确遵循多部分指令，特别是对于较小的模型或非常长的提示。目前，请专注于这些基本的单步指令。掌握这些是进行更高级互动的前提。随着您的使用进展，您将学习处理更复杂任务的技巧，这通常与模型如何记住对话的先前部分有关，我们将在讨论上下文 (context)窗口时接着讲到。
+
+## 参考资料
+
+- [Scaling Instruction-Finetuned Language Models](https://arxiv.org/abs/2210.11416) — Hyung Won Chung, Le Hou, Shayne Longpre, Barret Zoph, Yi Tay, William Fedus, Yunxuan Li, Xuezhi Wang, Mostafa Dehghani, Siddhartha Brahma, Albert Webson, Shixiang Shane Gu, Zhuyun Dai, Mirac Suzgun, Xinyun Chen, Aakanksha Chowdhery, Alex Castro-Ros, Marie Pellat, Kevin Robinson, Dasha Valter, Sharan Narang, Gaurav Mishra, Adams Yu, Vincent Zhao, Yanping Huang, Andrew Dai, Hongkun Yu, Slav Petrov, Ed H. Chi, Jeff Dean, Jacob Devlin, Adam Roberts, Denny Zhou, Quoc V. Le, Jason Wei (2022)
+  Journal: arXiv preprint arXiv:2210.11416; DOI: [10.48550/arXiv.2210.11416](https://doi.org/10.48550/arXiv.2210.11416)
+  本文介绍了 FLAN 方法，展示了指令微调如何显著增强 LLM 泛化到新任务和遵循不同指令的能力。
+- [Prompt engineering guide](https://platform.openai.com/docs/guides/prompt-engineering/) — OpenAI (2023)
+  Publisher: OpenAI
+  一份官方指南，提供了关于有效提示工程的实用建议和策略，包括清晰的指令制定、任务定义和输出格式化。
+- [Practical Prompt Engineering: A Comprehensive Guide to Interacting with Large Language Models](https://www.wiley.com/en-us/Practical+Prompt+Engineering-p-9781119985223) — Hady W. Lau, Wei-Meng Lee, Kenneth C. Lee (2023)
+  Publisher: Wiley
+  这本书提供了关于为 LLM 制作有效提示的指南，涵盖了针对不同任务的各种技术和策略，与给出指令的主题直接相关。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems 33 (NeurIPS 2020); Publisher: NeurIPS; Volume: 33; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  这篇论文展示了大型语言模型强大的上下文学习能力，表明它们只需在提示中提供少量示例或清晰指令即可执行新任务。

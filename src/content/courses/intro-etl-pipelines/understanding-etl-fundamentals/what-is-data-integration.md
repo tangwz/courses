@@ -1,0 +1,59 @@
+---
+course: "intro-etl-pipelines"
+chapter: "understanding-etl-fundamentals"
+lesson: "what-is-data-integration"
+sourceId: 5483
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-1-understanding-etl-fundamentals/what-is-data-integration"
+title: "什么是数据整合？"
+description: "定义数据整合，并说明其在结合来自不同数据源的数据方面的重要性。"
+order: 1
+plots: []
+sourceHash: "c8f3fb8ef1c9a51bb0c16bbe35dbc134bca1e8314e519e24e8f74d5bbee568b6"
+sourceCorrections: []
+---
+
+设想一下现今一个典型的组织。数据并非整齐地存储在一个地方。相反，它经常分散在不同的系统中：
+
+- 销售交易可能存在于关系型数据库中。
+- 市场营销活动的结果可能在电子表格或云应用中。
+- 网站用户互动记录可能存储在网络服务器的文件中。
+- 客户支持工单可能在独立的客服系统中进行管理。
+
+每个系统都包含有价值的信息，但孤立地看待它们会提供不完整的情况。如果销售数据与支持数据分离，您如何能理解完整的客户生命周期？如果营销活动数据未与实际销售关联，您又如何能分析营销活动的成效？
+
+这就是**数据整合**的作用。其根本目的在于，数据整合是将来自不同来源的数据结合起来，为用户提供这些数据的统一视图的过程。它是关于打破数据孤岛，并以一致且有意义的方式将信息汇集起来。
+
+> 来自各种不同来源的数据通过整合过程结合起来，以创建一个单一、连贯的视图。
+
+### 为什么数据整合很重要？
+
+组织整合数据有以下几个重要原因：
+
+1. **全面分析：** 结合数据能带来更全面、更准确的分析。例如，将营销支出与销售数据关联起来，有助于衡量营销活动的投资回报率（ROI）。
+2. **改进决策：** 统一的视图为决策者提供完整信息，从而做出更明智的决定。了解所有仓库的库存水平，并结合销售趋势，有助于优化库存管理。
+3. **运营效率：** 整合后的数据可以简化运营。客户服务代表能够查看客户的购买历史记录*和*支持工单，从而提供更快、更有效的支持。
+4. **报告一致性：** 确保不同部门生成的报告基于相同的信息，从而避免差异。
+
+### 整合的挑战
+
+将数据汇集起来并非总是简单。数据通常存在于：
+
+- **不同格式：** 关系型数据库、平面文件（如CSV）、来自API的JSON或XML、电子表格。
+- **不同位置：** 本地服务器、各种云平台、第三方应用程序。
+- **不一致的表示方式：** 日期在一个系统中可能存储为 `MM/DD/YYYY`，在另一个系统中可能存储为 `YYYY-MM-DD`。国家名称可能是“USA”、“United States”或“U.S.A.”。缺失值可能以不同方式表示（或根本不表示）。
+
+要有效地整合数据，需要解决这些不一致之处，并将数据转换为适合分析或存储在目标系统（如数据仓库）中的标准格式。
+
+数据整合是更宏大的目标，而 ETL（抽取、转换、加载）是实现这一目标的主要过程集合之一。在接下来的章节中，我们将详细阐述“抽取”、“转换”和“加载”在此处的具体含义。
+
+## 参考资料
+
+- [Fundamentals of Data Engineering](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/) — Joe Reis and Matt Housley (2022)
+  Publisher: O'Reilly Media
+  本书提供了数据工程实践的现代视角，包括对数据集成策略、工具和现代数据平台中架构模式的必要讨论。
+- [Principles of Data Integration](https://www.oreilly.com/library/view/principles-of-data/9780123914798/) — AnHai Doan, Alon Y. Halevy, and Zachary G. Ives (2012)
+  Publisher: Morgan Kaufmann; Pages: 520
+  一本权威的学术著作，从计算机科学的角度提供了数据集成的理论框架，涵盖了其模型、系统和挑战。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  尽管范围广泛，但本书深入理解构建可靠数据系统的基本原理和挑战，包括如何管理分布式源之间的数据一致性和集成。

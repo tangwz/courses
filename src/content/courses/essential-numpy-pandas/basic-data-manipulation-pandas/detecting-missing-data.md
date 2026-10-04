@@ -1,0 +1,190 @@
+---
+course: "essential-numpy-pandas"
+chapter: "basic-data-manipulation-pandas"
+lesson: "detecting-missing-data"
+sourceId: 1802
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-8-basic-data-manipulation-pandas/detecting-missing-data"
+title: "识别缺失数据"
+description: "使用 isnull() 和 notnull() 等方法识别 Series 和 DataFrames 中的缺失值 (NaN)。"
+order: 1
+plots: []
+sourceHash: "1a597c558d5e8ca31e1ae9850bee08b46289983ec117ad02c7a32455ea36c837"
+sourceCorrections: []
+---
+
+数据集很少是完整的。它们常有空缺，以缺失值表示。在分析数据或训练模型之前，你需要了解这些空缺的位置及可能有多大范围。Pandas 提供了直接的工具来发现缺失数据，传统上用特殊浮点值 $NaN$（非数字）来标记 (token)。Python 的 `None` 对象在 Pandas 对象中也视为缺失数据。
+
+### 使用 `isnull()` 和 `notnull()` 识别缺失值
+
+Pandas 提供了两种主要方法来识别缺失值：
+
+1. `isnull()`: 返回一个与原对象（Series 或 DataFrame）大小相同的布尔对象，其中 `True` 表示缺失值（$NaN$ 或 `None`），`False` 表示非缺失值。
+2. `notnull()`: 与 `isnull()` 相反。它对非缺失值返回 `True`，对缺失值返回 `False`。
+
+我们来看看这些方法的实际运用。首先，我们需要导入 pandas 和 numpy。
+
+```python
+import pandas as pd
+import numpy as np
+```
+
+现在，我们创建一个简单的 Pandas Series，其中包含一些由 `np.nan` 表示的缺失数据：
+
+```python
+# 创建一个包含缺失值的 Series
+data_series = pd.Series([1, np.nan, 3.5, np.nan, 7])
+print("原始 Series:")
+print(data_series)
+```
+
+```text
+原始 Series:
+0    1.0
+1    NaN
+2    3.5
+3    NaN
+4    7.0
+dtype: float64
+```
+
+现在，我们可以使用 `isnull()` 创建一个布尔掩码来识别 $NaN$ 值的位置：
+
+```python
+# 识别缺失值
+missing_mask = data_series.isnull()
+print("\nisnull() 生成的布尔掩码:")
+print(missing_mask)
+```
+
+```text
+isnull() 生成的布尔掩码:
+0    False
+1     True
+2    False
+3     True
+4    False
+dtype: bool
+```
+
+可以看到，生成的 Series 在索引 1 和 3 处包含 `True`，这与原始 `data_series` 中的 $NaN$ 值相对应。
+
+反过来，`notnull()` 识别非缺失值：
+
+```python
+# 识别非缺失值
+not_missing_mask = data_series.notnull()
+print("\nnotnull() 生成的布尔掩码:")
+print(not_missing_mask)
+```
+
+```text
+notnull() 生成的布尔掩码:
+0     True
+1    False
+2     True
+3    False
+4     True
+dtype: bool
+```
+
+这会在数据存在的地方返回 `True`，在数据缺失的地方返回 `False`。
+
+*(注意：你可能还会遇到别名 `isna()`（对应 `isnull()`）和 `notna()`（对应 `notnull()`）。它们执行完全相同的功能。)*
+
+### 识别 DataFrames 中的缺失值
+
+这些方法在 DataFrames 上的作用相似，但它们返回的是一个布尔 DataFrame 而非 Series。
+
+我们来创建一个包含缺失值的 DataFrame：
+
+```python
+# 创建一个包含缺失值的 DataFrame
+data = {'col_a': [1, 2, np.nan, 4, 5],
+        'col_b': [np.nan, 7, 8, np.nan, 10],
+        'col_c': [11, 12, 13, 14, 15],
+        'col_d': ['apple', 'banana', 'orange', np.nan, 'grape']}
+df = pd.DataFrame(data)
+
+print("原始 DataFrame:")
+print(df)
+```
+
+```text
+原始 DataFrame:
+   col_a  col_b  col_c     col_d
+0    1.0    NaN     11     apple
+1    2.0    7.0     12    banana
+2    NaN    8.0     13    orange
+3    4.0    NaN     14       NaN
+4    5.0   10.0     15     grape
+```
+
+将 `isnull()` 应用于此 DataFrame 会得到：
+
+```python
+# 识别 DataFrame 中的缺失值
+missing_df_mask = df.isnull()
+print("\nisnull() 生成的布尔 DataFrame 掩码:")
+print(missing_df_mask)
+```
+
+```text
+isnull() 生成的布尔 DataFrame 掩码:
+   col_a  col_b  col_c  col_d
+0  False   True  False  False
+1  False  False  False  False
+2   True  False  False  False
+3  False   True  False   True
+4  False  False  False  False
+```
+
+这个布尔 DataFrame 直接映射了原始 `df` 中缺失值的位置。
+
+### 计数缺失值
+
+虽然看到缺失值的确切位置有用，但你经常需要一个概况。总共有多少缺失值，或者每列有多少？通过对 `isnull()` 的结果求和，你可以轻松做到这一点，因为在数值上下文 (context)中，`True` 被视为 1，`False` 被视为 0。
+
+要计算每列中的缺失值数量：
+
+```python
+# 计算每列的缺失值数量
+missing_counts_per_column = df.isnull().sum()
+print("\n每列的缺失值数量:")
+print(missing_counts_per_column)
+```
+
+```text
+每列的缺失值数量:
+col_a    1
+col_b    2
+col_c    0
+col_d    1
+dtype: int64
+```
+
+这是一个非常常见的操作。它快速告诉你 `col_a` 有一个缺失值，`col_b` 有两个，`col_c` 没有，`col_d` 有一个。
+
+要获取整个 DataFrame 中缺失值的总数，你可以对结果求和两次：
+
+```python
+# 计算 DataFrame 中的总缺失值数量
+total_missing_count = df.isnull().sum().sum()
+print(f"\nDataFrame 中缺失值的总数: {total_missing_count}")
+```
+
+```text
+DataFrame 中缺失值的总数: 4
+```
+
+识别数据缺失的位置和数量是数据清洗过程中首要的步骤。一旦你使用 `isnull()` 和 `sum()` 等方法识别了这些空缺，你就可以着手决定如何处理它们，这也是接下来几节的重点。
+
+## 参考资料
+
+- [Working with missing data](https://pandas.pydata.org/docs/user_guide/missing_data.html) — pandas development team (2023)
+  解释了Pandas识别和计算缺失值的基本函数，包括`isnull()`、`notnull()`、`isna()`、`notna()`及其与`sum()`结合使用。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  全面介绍了Pandas中缺失数据的处理，详细阐述了检测、计数以及各种填充策略。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://books.google.com/books?id=0gDCEAAAQBAJ) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  提供了数据预处理的实用见解，包括在模型训练前识别和处理缺失值的重要性。

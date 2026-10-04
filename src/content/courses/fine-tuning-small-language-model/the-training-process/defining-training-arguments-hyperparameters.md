@@ -1,0 +1,70 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "the-training-process"
+lesson: "defining-training-arguments-hyperparameters"
+sourceId: 8517
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-5-the-training-process/defining-training-arguments-hyperparameters"
+title: "定义训练参数与超参数"
+description: "设置批次大小、累积步数和轮次以控制训练循环。"
+order: 1
+plots: []
+sourceHash: "fefa0218eacc809598ab3b8296dc5a1b45aae02898e5fe6e30176cccdf2f1345"
+sourceCorrections: []
+---
+
+执行训练循环让模型能够从指令数据集中学习。控制这一过程需要定义训练参数 (parameter)。Hugging Face Transformers 库中的 `TrainingArguments` 类充当了训练循环的中央控制面板，决定了模型如何处理数据、更新权重 (weight)以及使用硬件资源。
+
+在微调 (fine-tuning)小语言模型时，最直接的限制是 GPU 显存 (VRAM)。`per_device_train_batch_size` 参数决定了模型在单次正向和反向传播 (backpropagation)中同时处理的样本数量。如果此值设置过高，会遇到显存溢出 (OOM) 错误。如果设置过低，优化过程会变得不稳定，且训练时间会显著增加。
+
+为了平衡这一矛盾，我们使用梯度累积。`gradient_accumulation_steps` 参数允许你在执行权重更新之前，通过在多个较小的批次上累积梯度来模拟更大的批次大小。
+
+有效批次大小的计算公式如下：
+
+$\text{有效批次大小} = \text{单设备批次大小} \times \text{累积步数} \times \text{GPU 数量}$
+
+这里，$\text{有效批次大小}$ 表示最终的批次规模，$\text{单设备批次大小}$ 是每个设备处理的批次，$\text{累积步数}$ 是累积次数，$\text{GPU 数量}$ 是活跃 GPU 的总数。如果你的硬件只能处理大小为 2 的微批次，但你希望在单 GPU 上获得大小为 16 的有效批次以保证学习稳定，那么你应该将累积步数设置为 8。
+
+> 梯度累积过程：在单次权重更新前，汇总来自多个微批次的反向传播结果。
+
+训练运行的时长由 `num_train_epochs` 或 `max_steps` 控制。一个 epoch（轮次）代表对整个训练数据集完成一次完整的遍历。对于适应特定任务的小语言模型，通常 1 到 3 个轮次就足够了。训练轮次过多可能会导致模型死记硬背训练数据，而不是学习通用模式。或者，你可以使用 `max_steps` 来限制训练，它会覆盖轮次计数，并在达到特定的优化步数后停止训练。
+
+选择合适的优化器对参数高效微调期间的显存管理非常。`optim` 参数通常设置为 `paged_adamw_32bit` 或 `paged_adamw_8bit`。分页优化器利用现代 GPU 的统一内存特性，在显存接近饱和时将优化器状态移动到 CPU 内存中。这种分页机制可以防止在内存突然激增时发生崩溃。
+
+此外，混合精度训练可以大幅减少显存消耗并提高计算速度。你可以通过设置 `fp16=True` 或 `bf16=True` 来启用此功能。如果你的硬件支持，强烈建议使用 `bf16` (Bfloat16)。Bfloat16 保持了与标准 32 位浮点数相同的动态范围。这防止了语言模型在梯度计算过程中有时会遇到的标准 16 位浮点数欠幅或溢出的问题。
+
+以下是这些参数在代码中的组织方式：
+
+```python
+from transformers import TrainingArguments
+
+training_args = TrainingArguments(
+    output_dir="./slm-finetuned-model",
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
+    num_train_epochs=3,
+    optim="paged_adamw_32bit",
+    bf16=True,
+    logging_steps=10,
+    save_strategy="epoch",
+    learning_rate=2e-4,
+    max_grad_norm=0.3
+)
+```
+
+在此配置中，`learning_rate`（学习率）定义了优化器的初始步长。正确设置此值需要权衡。`2e-4` 是低秩自适应 (LoRA) 的标准值，因为与全量微调相比，较小的参数子集通常需要更大的学习率。
+
+`max_grad_norm` 参数是一项保护措施。如果梯度的组合范数超过指定阈值（本例中为 0.3），它会通过裁剪梯度来防止梯度爆炸。最后，`logging_steps` 决定了损失指标打印到控制台的频率，而 `save_strategy` 定义了模型检查点写入磁盘的时机。按轮次保存检查点可以确保如果模型在运行后期开始过拟合 (overfitting)，你仍有可用的备选权重。
+
+## 参考资料
+
+- [Transformers Documentation: TrainingArguments](https://huggingface.co/docs/transformers/v4.48.3/en/main_classes/trainer#transformers.TrainingArguments) — Hugging Face (2024)
+  TrainingArguments 类的官方技术文档，涵盖了硬件分配和优化相关的所有参数设置。
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://papers.nips.cc/paper_files/paper/2023/hash/1f898d2730623d6118433d7110e53a33-Abstract-Conference.html) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: Advances in Neural Information Processing Systems; Volume: 36; Pages: 10088-10115; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了分页优化器（Paged Optimizers）以及内存高效微调方法的原始研究论文。
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2022)
+  Journal: International Conference on Learning Representations; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  LoRA 技术的奠基性论文，为文中提到的学习率设置和参数效率提供了理论背景。
+- [Mixed Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  关于使用 fp16 和 bf16 等低精度格式以减少训练期间内存消耗的技术说明。

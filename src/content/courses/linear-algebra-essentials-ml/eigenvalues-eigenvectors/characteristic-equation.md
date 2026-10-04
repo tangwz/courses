@@ -1,0 +1,91 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "eigenvalues-eigenvectors"
+lesson: "characteristic-equation"
+sourceId: 1514
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-5-eigenvalues-eigenvectors/characteristic-equation"
+title: "特征方程"
+description: "推导并使用特征方程（det(A - \\u03bbI) = 0）来求特征值。"
+order: 3
+plots: []
+sourceHash: "a63c828c5df437517307fbb2c9bcb5132819abc3eef112d1b3c9e51beb075fd1"
+sourceCorrections: []
+---
+
+我们已确定特征值($\lambda$)和特征向量 (vector)($x$)满足基本关系$Ax = \lambda x$。这个方程说明，当矩阵$A$变换向量$x$时，结果只是原始向量$x$按因子$\lambda$进行缩放。特征向量的方向保持不变。
+
+我们现在的目标是找到一种系统方法来确定给定方阵$A$的$\lambda$的可能取值。我们可以从重新整理特征方程开始：
+
+$Ax = \lambda x$
+
+从两边减去$\lambda x$：
+
+$Ax - \lambda x = 0$
+
+其中$0$代表零向量。为了提取向量$x$作为公因子，我们需要将$\lambda x$表示为矩阵-向量积。我们可以使用与$A$相同大小的单位矩阵$I$来做到这一点。回想一下，$Ix = x$。因此，$\lambda x = \lambda I x$。将其代入我们的方程，得到：
+
+$Ax - \lambda I x = 0$
+
+现在我们可以提取向量$x$作为公因子：
+
+$(A - \lambda I)x = 0$
+
+这个方程很重要。它是一个$Mx = 0$形式的齐次线性方程组，其中矩阵$M$是$(A - \lambda I)$。我们寻找的是特征值$\lambda$，这些标量使得此方程对$x$有*非零*解（因为特征向量根据定义不能是零向量）。
+
+回顾求解线性方程组。如果矩阵$M$可逆，齐次系统$Mx = 0$只有平凡解（$x = 0$）。反之，当且仅当矩阵$M$是*奇异的*（不可逆的）时，它才具有非平凡解（这正是我们特征向量所需的）。
+
+将其应用于我们的特征值问题，矩阵$M = (A - \lambda I)$必须是奇异的，以便存在非零特征向量$x$。
+
+我们如何判断一个矩阵是否奇异？矩阵的一个基本性质是，一个方阵奇异当且仅当其行列式为零。
+
+因此，为了找到特征值$\lambda$，我们必须找到使矩阵$(A - \lambda I)$奇异的$\lambda$值。这直接得出以下条件：
+
+$det(A - \lambda I) = 0$
+
+这个方程称为矩阵$A$的**特征方程**。
+
+当您计算行列式$det(A - \lambda I)$时，您会发现它会得到一个关于变量$\lambda$的多项式。这个多项式被称为**特征多项式**。这个多项式的次数等于方阵$A$的维度。特征多项式的根正是矩阵$A$的特征值。
+
+### 示例：求2x2矩阵的特征值
+
+让我们找出一个一般的2x2矩阵的特征方程：
+
+$A = \begin{bmatrix} a & b \\ c & d \end{bmatrix}$
+
+首先，构成矩阵$(A - \lambda I)$：
+
+$A - \lambda I = \begin{bmatrix} a & b \\ c & d \end{bmatrix} - \lambda \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = \begin{bmatrix} a - \lambda & b \\ c & d - \lambda \end{bmatrix}$
+
+接下来，计算这个矩阵的行列式：
+
+$det(A - \lambda I) = (a - \lambda)(d - \lambda) - (b)(c)$
+
+最后，将行列式设为零，得到特征方程：
+
+$(a - \lambda)(d - \lambda) - bc = 0$
+
+展开后得到：
+
+$ad - a\lambda - d\lambda + \lambda^2 - bc = 0$
+
+$\lambda^2 - (a + d)\lambda + (ad - bc) = 0$
+
+请注意，$(a+d)$是矩阵A的迹（对角线元素之和），记作$tr(A)$，而$(ad-bc)$是A的行列式，记作$det(A)$。所以，对于2x2矩阵，特征方程总是：
+
+$\lambda^2 - tr(A)\lambda + det(A) = 0$
+
+这是一个关于$\lambda$的二次方程。求解这个方程（例如使用二次公式）将得到2x2矩阵$A$的特征值。对于$n \times n$矩阵，您会得到一个$n$次多项式，求其根即可得到$n$个特征值（它们可能是实数或复数，并且不一定都相同）。
+
+尽管求解特征方程是寻找特征值的标准理论方法，但对于大型矩阵，数值求解高次多项式的根可能具有挑战性且容易不稳定。在实践中，像NumPy这样的计算库会使用更复杂和稳定的迭代算法（通常基于QR分解等矩阵分解）来寻找特征值和特征向量 (vector)，尤其是在机器学习 (machine learning)中遇到的大型矩阵。然而，理解特征方程为这些算法所实现的功能提供了必要的理论基础。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/~gs/) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press; Pages: 291-300
+  一本基础性教科书，全面介绍了线性代数，包括特征值、特征向量以及特征方程的推导和应用（第6章，第6.1节）。
+- [Eigenvalues and Eigenvectors (Lecture 21)](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/pages/lecture-videos/eigenvalues-and-eigenvectors/) — Gilbert Strang (2011)
+  Journal: MIT OpenCourseWare 18.06SC Linear Algebra, Fall 2011
+  来自麻省理工学院备受推崇的课程讲义，提供视频讲座和笔记，清晰地解释了特征值、特征向量和特征方程的概念。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; Pages: 73-77
+  一本专为机器学习实践者设计的教科书，提供了必要的数学基础，其中包含专门讨论特征值、特征向量和特征方程的章节（第3章，第3.5节）。

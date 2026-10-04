@@ -1,0 +1,142 @@
+---
+course: "monitoring-managing-ml-models-production"
+chapter: "automated-retraining-updates"
+lesson: "automated-model-validation"
+sourceId: 3292
+sourceUrl: "https://apxml.com/zh/courses/monitoring-managing-ml-models-production/chapter-4-automated-retraining-updates/automated-model-validation"
+title: "候选模型的自动化验证"
+description: "构建自动化流程，以便在部署前严格验证新再训练的模型。"
+order: 3
+plots: ["plots/3292-0.json"]
+sourceHash: "786e1470450486de171c0a238697668d4a1e5da7e5f511d7327722d7fd690618"
+sourceCorrections: []
+---
+
+一旦自动化再训练过程被触发，仅仅生成一个新的模型产物不足以进行部署。新训练的模型，即“候选模型”，可能无意中学习到虚假关联，在重要数据片段上表现下降，引入了意外偏差，或者根本未能比当前运行的“生产模型”更好地泛化。因此，在考虑提升任何候选模型之前，严格的自动化验证阶段是必需的质量关卡。
+
+这种验证过程不仅仅是开发期间对静态测试集进行的简单检查。它需要在自动化管道中可靠运行，使用类生产数据将候选模型与相关基准进行比较，并强制执行预定义的质量标准。
+
+### 定义验证范围和策略
+
+自动化验证应涵盖模型质量的多个维度：
+
+1. **整体预测表现：** 候选模型在主要性能指标上是否相比当前生产模型表现出统计上显著的改进（或至少没有下降）？应评估与特定任务相关的指标，如AUC、F1分数、精确率、召回率、MAE或RMSE。
+2. **分段表现：** 候选模型是否在重要数据切片或分段上保持或提升表现？模型可能整体表现良好，但在高价值客户分段或需要特别关注的区域表现不佳。验证必须检查此类回退。
+3. **公平性和偏差：** 再训练过程是否引入或放大了偏差？尤其是在受监管的场景或面向用户的应用中，使用相关公平性指标（例如，人口学均等差异、均衡赔率差异）对预定义的敏感属性进行自动化检查是必要的。
+4. **模型稳定性和鲁棒性：** 模型是否在预期输入范围内产生合理的输出？它是否能妥善处理边缘情况？预测分布与生产模型相比是否有意想不到的显著差异？基本的输入验证以及潜在地比较预测分布可以作为此项的一部分。
+5. **基础设施兼容性：** 模型产物是否能在目标服务环境中正确加载？它是否在测试条件下满足延迟和吞吐量 (throughput)要求？这些通常在验证阶段被视为“冒烟测试”。
+
+### 选择验证数据
+
+自动化验证的数据选择非常重要。常见策略包括：
+
+- **保留验证集：** 在初始训练期间预留的一个有代表性的数据集，在生产模型或候选模型的各自训练阶段都未曾见过。尽管是标准做法，但此集合可能随时间变得陈旧，无法反映当前的生产数据动态。
+- **近期生产数据：** 使用近期生产数据窗口（例如，过去N天或几周）可以高度相关地评估候选模型在当前流量上的表现。必须注意确保在适用的情况下，此数据本身并未在*增量*再训练过程中大量使用，以避免乐观偏差。此数据通常需要仔细采样或筛选。
+- **挑战者数据集：** 经过筛选的数据集，代表已知的难题、历史故障点或模型必须正确处理的特定业务场景。
+
+通常会使用组合方法：在保留集或近期生产数据集上评估整体指标，并辅以对特定挑战者数据集和从近期生产流量中提取的重要数据切片的检查。
+
+### 确立验收标准
+
+验证主要是关于将候选模型与一个或多个基准（通常是当前生产模型，有时是固定基线）进行比较，并决定它是否满足提升标准。这些标准应该是定量的，并在验证运行*之前*定义。例如：
+
+- **性能提升：** 候选模型的主要指标 ($m_{candidate}$) 必须超过生产模型的指标 ($m_{production}$) 预定义裕度 $\epsilon$：
+  $m_{候选} > m_{生产} + \epsilon$
+  裕度 $\epsilon$ 有助于保证改进是显著的，而不仅仅是随机波动。统计显著性测试（例如，使用验证集预测的自举法或置换测试）可以提供更严格的确认。
+- **不下降约束：** 在重要分段 ($s_i$) 上的性能不能下降低于某个容忍度 $\delta_i$：
+  $m_{候选}(s_i) \geq m_{生产}(s_i) - \delta_i$
+- **公平性阈值：** 公平性指标 ($f_{candidate}$) 必须保持在可接受的边界 $\tau$ 内：
+  $f_{候选} \leq \tau$
+- **延迟 SLO：** 测试负载下的平均预测延迟 ($L_{candidate}$) 必须满足服务水平目标 $L_{SLO}$：
+  $L_{候选} \leq L_{SLO}$
+
+在自动化再训练流程启动后，仅仅生成新的模型制品不足以进行部署。新训练的模型，即“候选模型”，可能无意中学习到虚假关联，在重要数据段上表现下降，引入了意外偏差，或者未能比当前运行的“生产模型”更好地泛化。因此，在任何候选模型被考虑晋升之前，一个系统性的自动化验证阶段是必要的质量关卡。
+
+### 在MLOps管道中的实现
+
+自动化验证应作为再训练和部署管道中的一个独立步骤实施，通常在成功再训练之后、任何生产部署过程开始之前进行。
+
+> 工作流程展示了自动化验证作为再训练后和部署前的关卡。
+
+此步骤通常包括：
+
+1. **加载模型：** 获取候选模型产物和当前生产模型产物（例如，来自MLflow或Vertex AI模型注册表等模型注册中心）。
+2. **获取验证数据：** 访问预定义的验证数据集（例如，来自数据湖、特征存储或数据库）。
+3. **生成预测：** 在验证数据上运行两个模型以获取它们的预测。
+4. **计算指标：** 计算两个模型的所有相关性能、公平性以及潜在的稳定性指标。
+5. **比较与决策：** 对照预定义的验收标准检查计算出的指标。
+6. **记录结果：** 存储详细的验证结果，包括指标、比较结果以及通过/失败决定，通常会存回模型注册表或实验跟踪系统。
+
+下图显示了在验证集上，候选模型与生产模型在不同性能指标上的比较。
+
+
+
+![候选模型与生产模型验证比较](plots/3292-0.json)
+
+
+
+> 候选模型与生产模型在重要验证指标上的比较。在此示例中，候选模型提升了整体AUC、分段A F1、公平性和延迟，但在分段B F1上略有下降。接受与否取决于每个指标的预定义阈值。
+
+MLflow等工具允许将自定义验证逻辑与模型产物打包，或使用Kubeflow Pipelines或其他编排器中的组件定义独立的管道步骤。编写可重用且封装此逻辑的验证函数或服务，可以提升不同模型和项目间的一致性。
+
+考虑一个简化版的Python函数签名，用以说明核心逻辑：
+
+```python
+def run_automated_validation(
+    candidate_model_uri: str,
+    production_model_uri: str,
+    validation_data_path: str,
+    acceptance_criteria: dict,
+    segment_definitions: dict = None,
+    fairness_config: dict = None
+) -> tuple[bool, dict]:
+    """
+    对候选模型对照生产模型进行自动化验证。
+
+    Args:
+        candidate_model_uri: 候选模型产物的标识符。
+        production_model_uri: 生产模型产物的标识符。
+        validation_data_path: 验证数据集的路径。
+        acceptance_criteria: 定义验证通过阈值的字典
+                             （例如，{'min_auc_improvement': 0.01, 'max_segment_f1_drop': 0.05}）。
+        segment_definitions: 可选字典，定义用于评估的数据分段。
+        fairness_config: 可选字典，定义公平性检查（敏感特征、指标）。
+
+    Returns:
+        一个元组，包含：
+        - bool: 如果验证通过则为 True，否则为 False。
+        - dict: 详细的验证结果（两个模型的指标，每个标准的通过/失败状态）。
+    """
+    # 1. 加载模型
+    # 2. 加载验证数据
+    # 3. 为两个模型生成预测
+    # 4. 计算整体性能指标
+    # 5. 计算分段性能指标（如果提供了 segment_definitions）
+    # 6. 计算公平性指标（如果提供了 fairness_config）
+    # 7. 对照 acceptance_criteria 比较指标
+    # 8. 编译详细结果字典
+    # 9. 确定整体通过/失败状态
+
+    passed = False # 占位符
+    results = {} # 占位符
+    # ... 实现 ...
+
+    return passed, results
+```
+
+自动化验证将模型再训练从潜在有风险的手动更新转变为受控的、数据驱动的过程。通过在候选模型投入生产之前，系统地对照清晰的定量标准对其进行评估，团队可以大幅提升其部署机器学习 (machine learning)系统的可靠性和安全性，保证更新真正改善性能并符合业务和道德要求。
+
+## 参考资料
+
+- [Introducing MLOps: How to go from Model to Production](https://www.oreilly.com/library/view/introducing-mlops/9781492083291/) — Mark Treveil, Nicolas Omont, Aurélien Géron, Vincent Warmerdam, Artem Gorodetsky, Deepak Agarwal, Antoine de Mathelin, Clemens Mewald, Michel Pelletier, Mike Tung, Alexey Grishchenko, Adam Kelliher (2020)
+  Publisher: O'Reilly Media
+  本书全面介绍了 MLOps 生命周期，其中包含关于自动化模型验证、机器学习持续集成以及在生产环境中可靠部署模型的章节。
+- [MLOps: Continuous delivery and automation pipelines in machine learning](https://cloud.google.com/solutions/machine-learning/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Evgeniia Tokarchuk, Haryo F. Handoyo, Robert M. Lee, Stephen W. White, Valliappa Lakshmanan (2021)
+  Publisher: Google Cloud
+  这份 Google Cloud 白皮书概述了 MLOps 的最佳实践，侧重于持续交付、管道内的自动化模型验证以及生产环境中管理 ML 模型的运营方面。
+- [Fairness and Machine Learning: Limitations and Opportunities](https://fairmlbook.org/) — Solon Barocas, Moritz Hardt, Arvind Narayanan (2023)
+  Publisher: MIT Press
+  一本详细探讨机器学习中公平性的在线学术书籍，涵盖了公平性的各种定义、相关指标以及识别和减轻 ML 系统中算法偏见的方法。
+- [Reliable Machine Learning: Applying SRE Principles to ML in Production](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFTbm7UpsUTAhHAtmBHkH1-X03ooT90_xNxVBIyJeJTMJAV-Vrwq3qYyu-q-zuJ7txPEN_PEpiNcj36CjG1tlfc6C0WDNdsnagt2HpSMBCle9sg_o-s7pcwM3Y-HjY8y43ysfTG4vcvdmHbV-fUIefP7LUGur91fm-F6pfSOy5WFLpk3-9biUbNSHB85jfJlsSgAdVoAJv-2A==) — Cathy Chen, Niall Richard Murphy, Kranti Parisa, D. Sculley, Todd Underwood (2022)
+  Publisher: O'Reilly Media
+  本书探讨了站点可靠性工程 (SRE) 原则如何应用于机器学习，涵盖了稳健测试、持续模型验证以及为生产环境构建弹性 ML 系统等方面。

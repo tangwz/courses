@@ -1,0 +1,96 @@
+---
+course: "introduction-to-mlops"
+chapter: "the-machine-learning-lifecycle"
+lesson: "model-training-experimentation"
+sourceId: 7192
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-2-the-machine-learning-lifecycle/model-training-experimentation"
+title: "模型训练与实验"
+description: "了解训练机器学习模型的过程，并追踪实验以寻找性能最佳的版本。"
+order: 3
+plots: ["plots/7192-0.json"]
+sourceHash: "a19fe73b23314a6984c2d67eab85cd72cda6715c74e77fddd615f93bff7c961d"
+sourceCorrections: []
+---
+
+模型训练是使用准备好的干净数据来教导机器学习 (machine learning)模型的过程，使算法能够学会进行预测或决策。训练很少是单一、直接的动作。它是一个反复实验的循环，通过尝试不同的方法来为特定问题找到最有效的模型。这种训练与系统化实验的结合是机器学习生命周期中的核心活动。
+
+### 模型训练的机理
+
+从本质上讲，模型训练是一个优化问题。你为机器学习 (machine learning)算法提供训练数据，它尝试寻找将输入特征映射到输出标签的内部模式。这种“学习”由**损失函数 (loss function)**引导，该函数根据模型预测的不准确程度计算惩罚分数。训练过程的目标是调整模型的内部变量（称为**参数 (parameter)**），使损失尽可能低。
+
+例如，考虑一个预测房价的简单线性回归模型。模型的公式为 $y = mx + b$，其中：
+
+- $x$ 是输入特征（例如，建筑面积）。
+- $y$ 是预测输出（价格）。
+- $m$（斜率）和 $b$（截距）是模型的参数。
+
+在训练期间，算法会接收许多具有已知价格的房屋示例。它反复调整 $m$ 和 $b$ 以最小化损失函数，例如均方误差 (MSE)，该函数衡量预测价格与实际价格之间的平均平方差。
+
+
+$$
+\text{均方误差} = \frac{1}{n}\sum_{i=1}^{n}(\text{实际价格}_i - \text{预测价格}_i)^2
+$$
+
+
+当算法找到使训练数据损失达到最低的参数值时，训练过程即告完成。
+
+### 从训练到实验
+
+如果训练只是为了最小化损失函数 (loss function)，你可能会奇怪为什么它不是一个全自动的、一步到位的过程。原因是在训练开始之前，机器学习 (machine learning)从业者必须做出几个定义模型*如何*学习的选择。这些选择不是从数据中学习到的，而是由你配置的设置。这些设置被称为**超参数 (parameter) (hyperparameter)**。
+
+超参数的例子包括：
+
+- 神经网络 (neural network)中的**学习率**，它控制模型参数在每一步调整的幅度。
+- 随机森林算法中的**树的数量**。
+- **算法本身的选择**（例如，针对分类任务使用逻辑回归还是支持向量 (vector)机）。
+
+略有不同的超参数值或不同的特征选择可能导致模型性能产生很大差异。系统地尝试算法、特征和超参数的各种组合以找到性能最佳的模型的过程称为**实验**。
+
+### 实验追踪的必要性
+
+如果没有结构化的流程，实验很快就会变得杂乱无章。你可能会发现自己拥有几十个 Jupyter notebook，以及名称令人困惑的模型文件（如 `model_final_v3.pkl`），并且没有明确记录哪些参数 (parameter)或数据版本产生了最好的结果。这使得重新复现工作或自信地选择模型进行部署变得不可能。
+
+MLOps 引入了一个解决方案：**实验追踪**。这是一种系统地记录训练运行所有组成部分的实践。对于每一次实验，你应该记录：
+
+1. **代码版本：** 用于训练的代码的具体 Git 提交哈希值。
+2. **数据版本：** 数据集版本的标识符，确保你准确知道模型是在什么数据上训练的。
+3. **超参数 (hyperparameter)：** 该次运行使用的完整超参数集。
+4. **性能指标：** 产生的评估指标，如准确率、F1 分数或均方误差 (MSE)。
+5. **模型产物：** 保存的模型文件路径以及任何其他输出文件。
+
+通过追踪这些组件，每次训练运行都变成了一个自包含的、可复现的实验。
+
+> 实验是其输入（代码、数据、参数）和输出（指标、模型产物）的集合。
+
+### 实际的实验工作流
+
+典型的实验工作流遵循明确的科学方法。你不是随机更改设置，而是形成假设并进行测试。
+
+1. **建立基准：** 使用简单的模型和默认设置运行初始实验，以建立基准性能指标。
+2. **形成假设：** 提出明确的假设。例如，“在我的随机森林中使用 100 棵树而不是 50 棵，将在不明显增加预测时间的情况下提高准确率。”
+3. **运行并记录实验：** 使用更改后的超参数 (parameter) (hyperparameter)执行新的训练运行。确保你的训练脚本自动将所有要求的组件记录到实验追踪系统中。
+4. **比较结果：** 将新实验的指标与基准和其他先前的运行进行分析。视觉对比通常是查看假设是否正确的最有效方式。
+
+
+
+![各实验模型准确率对比](plots/7192-0.json)
+
+
+
+> 比较不同实验运行的性能指标有助于识别表现最好的模型。在这种情况下，将树的数量从 50 增加到 100 带来了不错的提升，而增加到 150 带来的收益微乎其微。
+
+一旦确定了符合性能标准的模型，你就可以将其“晋升”到生命周期的下一个阶段：在预留测试集上进行正式评估和验证。这种结构化的方法将模型开发从一种混乱的技艺转变为规范的工程实践，这是构建可靠且自动化的机器学习 (machine learning)系统的基础。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  对机器学习基础知识，包括损失函数、优化算法和模型训练中参数调整进行了详细说明。
+- [Introducing MLOps: How to go from Model to Production](https://www.oreilly.com/library/view/introducing-mlops/9781492083283/) — Mark Treveil, Nicolas Omont, Aurélien Madou, Dmitry Goldenberg, Panos Angelino, Anurag Bhardwaj, and Clemens Mewald (2020)
+  Publisher: O'Reilly Media
+  提供了MLOps生命周期的全面介绍，其中包含系统实验和模型追踪的章节。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFC5cg0vQ9S-ZhttzIc41YbvHglsLnG9eCS2cg5c-r9js7QSiZVLCKah_W-TtmPuQh8seofZW5Igp1HgcievzjZ49TMkkhQ4c4-9hF--eWd9nt1HKMhZQS0klrbMx13xRcpuK14c97Jq2XNtbfTYNKr-RMYL7Q6RTvspUFGi7OmAyZVok3XNid7) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用指南，使用流行的机器学习框架说明了模型训练、超参数调优和实验工作流程的设置。
+- [MLflow Documentation](https://mlflow.org/docs/latest/index.html) — Databricks (2024)
+  这是一个开源平台的官方资源，详细说明了如何在MLOps实践中实施实验追踪、日志记录和模型管理。

@@ -1,0 +1,112 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "advanced-dimension-handling"
+lesson: "role-playing-dimensions"
+sourceId: 7983
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-3-advanced-dimension-handling/role-playing-dimensions"
+title: "角色扮演维度"
+description: "为多种情境使用单一维度。"
+order: 5
+plots: []
+sourceHash: "ae1aa377f0732694d4cae57780abf5a483e467a2185bd38ff45903e8c749a0a5"
+sourceCorrections: []
+---
+
+数据仓库经常遇到这样一种情况：单个维度表必须支持同一事实表中的多个外键。这种情况在业务流程中自然发生。考虑一个标准的运输工作流程。`Fact_Orders` 表中的一行很可能包含 `order_date_key`、`ship_date_key`，或许还有 `delivery_date_key`。
+
+如果你不加修改地遵循基本的星型模式设计，你可能会倾向于创建三个独立的物理维度表：`Dim_Order_Date`、`Dim_Ship_Date` 和 `Dim_Delivery_Date`。这种方法效率不高。它使日期数据的存储需求增加两倍，并增加了维护开销。如果你需要向日历添加一个新属性，例如财年周计算，你必须在三个不同的地方更新它。
+
+解决这个架构难题的方法是**角色扮演维度**。这种模式允许单个物理维度表在逻辑上充当多个不同的维度。该维度的每个实例都相对于事实表扮演特定的“角色”。
+
+### 单一物理数据源
+
+在角色扮演场景中，数据在物理上只存在一次，但在逻辑上被多次引用。最常见的实现是日期维度。你的数据库包含一个名为 `Dim_Date` 的单一表，存储着日、月、季度和年等属性。
+
+当查询需要根据订单日期进行分析时，`Dim_Date` 表扮演“订单日期维度”的角色。当同一个查询或另一个查询需要根据发货日期进行分析时，`Dim_Date` 表则转而扮演“发货日期维度”的角色。
+
+这种模式确保了一致性。无论你是分析订单下达时间还是发货时间，“2024年第一季度”的定义都保持不变，因为两个逻辑视图的属性都源自相同的物理记录。
+
+### 关系可视化
+
+为了理解这在模式中如何运行，想象事实表位于中心。虽然与磁盘上的物理存储只有一次连接，但逻辑模型（暴露给你的 SQL 查询或 BI 工具的模型）会感知到围绕事实表的多个不同表。
+
+> 单一物理维度表向事实表投影多个逻辑视图，允许在不同的外键上同时进行连接。
+
+### 通过 SQL 别名实现
+
+实现角色扮演维度不需要特殊的数据库功能；它是通过使用表别名的标准 SQL 连接来实现的。别名为表在查询期间分配一个临时名称，允许数据库引擎将单个表视为多个不同的实体。
+
+考虑一个查询，你想要统计在一月份下达但二月份发货的订单数量。你必须将 `Fact_Orders` 表与 `Dim_Date` 表连接两次。
+
+```sql
+SELECT 
+    ord_date.calendar_month AS order_month,
+    shp_date.calendar_month AS ship_month,
+    COUNT(f.order_id) AS total_orders
+FROM fact_orders f
+-- 第一次连接：“订单日期”角色
+JOIN dim_date ord_date 
+    ON f.order_date_key = ord_date.date_key
+-- 第二次连接：“发货日期”角色
+JOIN dim_date shp_date 
+    ON f.ship_date_key = shp_date.date_key
+WHERE 
+    ord_date.month_name = 'January'
+    AND shp_date.month_name = 'February'
+GROUP BY 
+    ord_date.calendar_month, 
+    shp_date.calendar_month;
+```
+
+在这个例子中，`ord_date` 和 `shp_date` 就是扮演的角色。数据库引擎将 `dim_date` 中的必要页面一次性加载到内存中（利用缓冲区缓存），但在逻辑上独立处理连接条件。
+
+### 其他常见的角色扮演场景
+
+虽然日期维度是这种模式最常见的候选，但其他实体也经常需要角色扮演来处理不同情境。
+
+#### 地理与物流
+
+在航班分析系统中，`Fact_Flights` 表通常会包含 `origin_airport_id` 和 `destination_airport_id`。这两个外键都指向一个 `Dim_Airport` 表。为始发机场和目的机场创建单独的表会复制数据并使航线分析复杂化。通过使用角色扮演维度，你可以将 `Dim_Airport` 别名为 `Origin_Airport` 和 `Dest_Airport`。
+
+#### 组织层级
+
+在人力资源数据或销售佣金跟踪中，`Fact_Sales` 表可能包含 `employee_id`（进行销售的人员）和 `manager_id`（批准销售的人员）。如果员工和经理都存在于同一个 `Dim_Employee` 表中，角色扮演允许你将事实表与员工维度连接两次：一次是为了获取销售人员的详细信息，另一次是为了获取经理的详细信息。
+
+### 在 BI 工具中处理歧义
+
+当你从原始 SQL 转向 Tableau、PowerBI 或 Looker 等商业智能 (BI) 工具时，角色扮演维度需要明确处理。大多数 BI 工具不会自动允许同一两张表之间存在两个活动关系，因为它会在模型路径中产生歧义。
+
+为了在 BI 环境中解决这个问题，你通常采用以下两种策略之一：
+
+1. **逻辑别名：** 你将 `Dim_Date` 表多次导入 BI 语义层，并将其重命名为“订单日期”和“发货日期”。该工具将它们视为独立的表，在后台自动生成别名 SQL。
+2. **用户定义视图：** 你创建充当物理表包装器的数据库视图（SQL 视图）。
+
+   $V_{订单} = \sigma_{order\_logic}(Dim_{date})$
+
+   例如：
+
+   ```sql
+   CREATE VIEW view_dim_发货日期 AS
+   SELECT 
+       date_key AS ship_date_key,
+       calendar_date AS ship_date,
+       month_name AS ship_month
+   FROM dim_date;
+   ```
+
+   使用视图对于最终用户来说通常更整洁，因为你可以重命名列（例如，`calendar_date` 变为 `ship_date`）。这可以避免用户将名为“年份”的字段拖到报表上时，困惑它指的是订单年份还是发货年份。
+
+### 角色扮演维度与可切换维度
+
+区分**角色扮演维度**和有时被称为**可切换维度**是很重要的。
+
+- **角色扮演：** 所有角色在同一个查询中同时活跃（例如，“显示第一季度下达且第二季度发货的订单”）。
+- **可切换：** 维度根据用户选择而改变，但每次只有一个活跃（例如，“按日期显示收入”，用户通过切换过滤器来定义“日期”是指订单日期还是发货日期）。
+
+角色扮演允许在事实表的同一行中比较两种不同的状态（已订购与已发货）。这种能力对于衡量周期时间、滞后时间和履行效率十分必要。
+
+## 参考资料
+
+- [Data Warehouse Design: Modern Principles and Best Practices](https://books.google.com/books/about/Data_Warehouse_Design_Modern_Principles.html?id=oT_0DwAAQBAJ) — Matteo Golfarelli, Stefano Rizzi (2009)
+  Publisher: McGraw Hill; DOI: [10.1007/978-3-540-74966-5](https://doi.org/10.1007/978-3-540-74966-5)
+  提供了一种基于原则和正式的数据仓库设计方法，包括角色扮演维度等构造的理论基础和建模技术。

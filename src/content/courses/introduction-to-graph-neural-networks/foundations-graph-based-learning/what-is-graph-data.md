@@ -1,0 +1,76 @@
+---
+course: "introduction-to-graph-neural-networks"
+chapter: "foundations-graph-based-learning"
+lesson: "what-is-graph-data"
+sourceId: 7612
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-graph-neural-networks/chapter-1-foundations-graph-based-learning/what-is-graph-data"
+title: "什么是图数据？"
+description: "讲解图数据及其组成部分（节点、边、特征），以及它在多个领域广泛存在的原因。"
+order: 1
+plots: []
+sourceHash: "b42e09e46df5c4f4732a098792667045311c777b6aa75323f072dc6e425c69aa"
+sourceCorrections: []
+---
+
+从本质上讲，图是一种用于表示对象之间关系的结构。以社交网络为例，人是其中的对象，而他们之间的友谊则是关系。或者考虑一个分子，原子是对象，化学键则是关系。这种由对象和连接构成的结构是许多复杂系统的骨架，从交通网络到蛋白质相互作用图谱皆是如此。
+
+在数学定义上，图 $G$ 被定义为一个二元组 $G = (V, E)$，其中 $V$ 是**顶点**（通常称为**节点**）的集合，$E$ 是表示节点对之间连接的**边**的集合。
+
+### 图的组成部分
+
+让我们拆解一下在处理图数据时会遇到的主要组成部分。
+
+#### 节点与边
+
+**节点**是图中基本的实体。在社交网络图中，一个节点代表一个人。在网页图中，一个节点可以是一个单独的网页。
+
+**边**是节点之间的连接。两个节点之间的边表示它们之间存在某种形式的关系。对于社交网络，边可能意味着两人是朋友。对于网页图，边可以表示从一个页面指向另一个页面的超链接。
+
+> 一个包含五个节点（A, B, C, D, E）和四条连接边的简单图。
+
+#### 特征与属性
+
+对于机器学习 (machine learning)应用，仅靠图的结构通常是不够的。我们会用数据来丰富这个结构，这些数据被称为**特征**或**属性**。
+
+- **节点特征：** 这些是附加在每个节点上的属性。如果节点代表社交网络中的用户，其特征可能包括年龄、居住城市或个人简介。在科研论文引用网络中，节点特征可以是论文摘要的词向量 (vector)。这些数据通常为每个节点表示为一个向量。
+- **边特征：** 这些是描述连接本身的属性。对于道路网络图，边特征可以是两个路口（节点）之间的距离或平均行驶时间。对于“友谊”边，它可能是结交日期。
+- **全局特征：** 这些是描述整个图的属性。对于代表分子的图，全局特征可以是其整体的水溶性。
+
+### 常见的图类型
+
+并非所有图都是一样的。它们的性质各不相同，理解这些区别对于建立正确的模型非常有用。
+
+#### 有向图与无向图
+
+在**无向图**中，边是双向的。如果节点 A 与节点 B 相连，那么 B 也与 A 相连。Facebook 的好友关系就是一个例子，这种关系是相互的。
+
+在**有向图**中，边具有方向。从节点 A 到节点 B 的连接并不意味着从 B 到 A 也有连接。想想 Twitter，你可以“关注”某人，而对方不必回关。这些有向边通常用箭头表示。
+
+> 无向关系是相互的，而有向关系具有特定的起点和终点。
+
+#### 加权图与无权图
+
+在**无权图**中，所有边都被同等对待。它们的存在仅仅表示一种连接。相比之下，**加权图**为每条边分配一个数值权重 (weight)，用以表示连接的强度或成本。例如，在航线图中，边权重可以代表两个城市之间的飞行距离或票价。
+
+#### 同构图与异构图
+
+**同构图**是指所有节点和边都属于同一种类型的图。Cora 引用网络是一个常见的基准数据集，它是同构的：所有节点都是研究论文，所有边都是引用关系。
+
+**异构图**包含不同类型的节点或边。以电子商务平台为例：你可能有“用户”、“商品”和“品牌”节点。边也可以是不同的类型，例如“用户-购买-商品”、“用户-评分-商品”以及“品牌-生产-商品”。这些图代表了更复杂的系统，需要专门的 GNN 架构来处理。
+
+理解图的这些基本性质是应用机器学习 (machine learning)的第一步。节点、边和特征构成的这种结构正是我们表示互连数据的方式，为我们在后续章节中构建专门的模型做好了准备。
+
+## 参考资料
+
+- [Graph Theory](https://doi.org/10.1007/978-3-662-53622-3) — Reinhard Diestel (2017)
+  Publisher: Springer-Verlag; Volume: 173; Pages: 428; DOI: [10.1007/978-3-662-53622-3](https://doi.org/10.1007/978-3-662-53622-3)
+  一本经典且权威的教科书，对图论进行了正式的阐述，包括图、节点、边以及各种图属性的定义。
+- [Graph Representation Learning](https://doi.org/10.2200/S01045ED1V01Y202009AIM046) — William L. Hamilton (2020)
+  Journal: Synthesis Lectures on Artificial Intelligence and Machine Learning; Publisher: Morgan & Claypool Publishers; Volume: Vol. 14, No. 3; Pages: 1-159; DOI: [10.2200/S01045ED1V01Y202009AIM046](https://doi.org/10.2200/S01045ED1V01Y202009AIM046)
+  了解图数据结构以及如何为机器学习任务表示图数据的重要资源，涵盖节点、边和全局特征，以及不同类型的图。
+- [Graph Neural Networks: A Review of Methods and Applications](https://doi.org/10.1016/j.aiopen.2021.05.001) — Jie Zhou, Ganqu Cui, Zhengyu Chen, Ming Ding, Shuai Sun, Xuan Wang, and Lifang He (2021)
+  Journal: AI Open; Publisher: Elsevier; Volume: 1; Pages: 57-71; DOI: [10.1016/j.aiopen.2021.05.001](https://doi.org/10.1016/j.aiopen.2021.05.001)
+  一篇被广泛引用的综述文章，介绍了图神经网络，从基础的图定义及其与机器学习应用的关联开始。
+- [Geometric Deep Learning: Grids, Groups, Graphs, Geodesics, and Gauges](https://geometricdeeplearning.com/) — Michael M. Bronstein, Joan Bruna, Taco Cohen, and Petar Veličković (2021)
+  Publisher: MIT Press
+  一本关于几何深度学习的综合性教科书，其中包含图数据的详细描述、其属性以及其作为非欧几里得域深度学习基础结构的作用。

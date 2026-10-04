@@ -1,0 +1,67 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "optimization-with-derivatives"
+lesson: "gradient-descent-intro"
+sourceId: 2278
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-3-optimization-with-derivatives/gradient-descent-intro"
+title: "梯度下降简介"
+description: "从原理上介绍梯度下降作为一种迭代优化算法。"
+order: 5
+plots: []
+sourceHash: "35271a538c31d8d143fe4cf8bb3f36491d0713cccca9e30faf3ffee0f5539755"
+sourceCorrections: []
+---
+
+找到成本函数的最小值点是训练机器学习 (machine learning)模型的一个主要目标。函数的导数指示了其在任意给定点的斜率或变化率。将导数设为零（$f'(x) = 0$）可以帮助解析地找到可能的最小值点，特别是对于简单函数。
+
+但是，当成本函数很复杂时，例如涉及数百万个参数 (parameter)（这在深度学习 (deep learning)中很常见），会发生什么呢？直接求解 $f'(x) = 0$ 可能在计算上不可行，甚至不可能。我们需要一种迭代方法，一种可以系统地找到最小值而无需求解复杂方程的方法。这时，**梯度下降 (gradient descent)**就派上用场了。
+
+可以这样想：想象你站在一个雾蒙蒙的山坡上，想走到山谷的最低点。你看不到整个地面，但你能感觉到脚下的坡度。最直接的策略是什么？
+
+1. 检查你当前所在位置的坡度陡峭程度和方向。
+2. 沿着最陡峭的方向向下迈一小步。
+3. 重复这个过程：检查新位置的坡度，再向下迈一步。
+
+通过重复这些步骤，你会逐渐走向谷底。
+
+梯度下降就是这个过程的数学等价物。我们在山坡上的“位置”是函数输入变量（或多个变量，我们稍后会看到）的当前值。我们“感觉到”的“坡度”由导数（或其多变量等价物，即梯度）给出。“向下迈一步”意味着在与斜率相反的方向上调整输入变量。
+
+让我们考虑一个简单的成本函数 $J(w)$，其中 $w$ 代表我们希望优化的一个参数（比如线性模型 $y=mx+b$ 中的斜率 $m$）。
+
+- 我们从 $w$ 的初始猜测值开始。
+- 我们计算该点成本函数的导数 $J'(w)$。这会告诉我们斜率。
+- 如果 $J'(w)$ 是正值，函数在该点是增加的。要“下坡”，我们需要减小 $w$。
+- 如果 $J'(w)$ 是负值，函数在该点是减小的。要“下坡”，我们需要增大 $w$。
+
+我们可以看到一个规律：我们总是希望 $w$ 沿着与导数符号 *相反* 的方向移动。我们可以通过一个简单的更新规则实现这一点：
+
+
+$$
+w_{new} = w_{old} - \alpha \cdot J'(w_{old})
+$$
+
+
+这里：
+
+- $w_{new}$ 是我们参数的更新值。
+- $w_{old}$ 是当前值。
+- $J'(w_{old})$ 是在当前值 $w_{old}$ 处计算的导数（斜率）。
+- $\alpha$（alpha）是一个小的正数，称为**学习率**。它控制我们迈出步子的大小。我们稍后会更详细地讨论这一点，但目前可以将其视为确保我们的步子足够小，以避免越过最小值。
+
+如果 $J'(w_{old})$ 是正值（斜率向上），减去 $\alpha \cdot J'(w_{old})$ 会使 $w_{new}$ 小于 $w_{old}$，从而向左移动（下坡）。如果 $J'(w_{old})$ 是负值（斜率向下），减去一个负值意味着我们 *加上* $\alpha \cdot |J'(w_{old})|$，从而使 $w_{new}$ 大于 $w_{old}$，向右移动（也是下坡）。这个更新规则会自动处理方向！
+
+我们迭代地重复这个更新步骤。每一步，我们都会计算新位置的新斜率，并再向下迈一步。当我们越来越接近最小值时，斜率 $J'(w)$ 会越来越接近零，这意味着步子变得越来越小。当步子变得非常微小，表明我们可能已收敛到最小值点附近时，我们通常会停止这个过程。
+
+梯度下降是一种基本的优化算法，在机器学习中被广泛使用，用于调整模型参数和最小化成本函数，从而提高模型在训练数据上的表现。它不能保证找到绝对的 *全局* 最小值（它可能会停留在局部最小值，一个不是整体最低点的“小坑”），但在实践中，它在许多机器学习问题中表现非常出色。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  这本基础教材介绍了优化算法，包括梯度下降及其变体的详细解释，尤其是在深度学习背景下。
+- [Lecture Notes: Gradient Descent](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFtiFm7xfZCM1LmtwGP1N3CIAtRYDkE7QZ9RAoX4Bepuq_eMnAubL-KBB0tWjw5Aq5FDD4KbYFis9pBu9yckWtScvYCFvF8CuQiqGrGOSIw94cLhbJfQw6t8ceRVQnwNhd0Ftw=) — Andrew Ng, Tengyu Ma (2023)
+  Publisher: Stanford University; Pages: 14-16
+  这些广泛引用的斯坦福大学机器学习课程讲义对梯度下降这一优化算法提供了清晰简洁的解释。
+- [Numerical Optimization](https://link.springer.com/book/10.1007/978-0-387-40065-9) — Jorge Nocedal and Stephen J. Wright (2006)
+  Publisher: Springer; DOI: [10.1007/978-0-387-40065-9](https://doi.org/10.1007/978-0-387-40065-9)
+  这本优化方法教材对梯度下降进行了严谨的数学处理，讨论了其理论基础、收敛性质和各种形式。

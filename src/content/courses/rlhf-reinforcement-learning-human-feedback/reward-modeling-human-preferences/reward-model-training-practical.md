@@ -1,0 +1,208 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "reward-modeling-human-preferences"
+lesson: "reward-model-training-practical"
+sourceId: 5136
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-3-reward-modeling-human-preferences/reward-model-training-practical"
+title: "动手实践：训练奖励模型"
+description: "实现并训练一个奖励模型，使用一个示例偏好数据集。"
+order: 8
+plots: ["plots/5136-0.json"]
+sourceHash: "babaae05f3e48cfcd06fe81af054294af9d0a2d774b0cba856d25b65ee19c7e3"
+sourceCorrections: []
+---
+
+通过人类偏好数据训练奖励模型（RM）是奖励建模的一个实际应用。训练过程使用Hugging Face的`Transformers`和`TRL`（Transformer强化学习 (reinforcement learning)）等常用库，使实施变得简单直接。目标是构建一个模型，它接收一个提示和一个回应，然后输出一个标量分数，表示人类可能偏好该回应的程度。
+
+### 准备工作：数据与工具
+
+编写代码前，请确保你的环境已配置好PyTorch或TensorFlow、`Transformers`库、`Datasets`和`TRL`。
+
+```bash
+pip install torch transformers datasets trl accelerate bitsandbytes
+```
+
+*(如果你使用TensorFlow，请将`torch`替换为`tensorflow`，尽管`TRL`目前对PyTorch的支持更好。)*
+
+我们将使用一个围绕成对偏好构建的数据集。一个典型的条目包括：
+
+- 一个`prompt`（提示）。
+- 一个`chosen`（选择的）回应（人类偏好的那个）。
+- 一个`rejected`（拒绝的）回应（人类不偏好的那个）。
+
+Anthropic的HH-RLHF数据集或Hugging Face Hub上可用的子集（例如`trl-internal-testing/hh-rlhf-trl-style`）都遵循这种结构。对于本示例，我们假设已将此类数据集加载到Hugging Face `Dataset`对象中。
+
+```python
+from datasets import load_dataset
+
+# 加载一个示例数据集（请替换为你的实际数据集）
+# 本示例使用一小部分子集进行演示
+dataset = load_dataset("trl-internal-testing/hh-rlhf-trl-style", split="train[:1%]")
+
+# 查看结构
+print(dataset[0])
+# 预期输出结构：{'prompt': '...', 'chosen': '...', 'rejected': '...'}
+```
+
+### 奖励模型架构
+
+奖励模型通常使用预训练 (pre-training)语言模型主干（例如`distilbert-base-uncased`、`roberta-base`，或根据你的需求和资源使用更大的模型）和一个回归头。这个头通常是在基础模型的输出之上添加的一个单层线性层。它将输入序列（提示 + 回应）的最终隐藏状态表示映射到一个标量值——即奖励分数。
+
+> 示意图展示了奖励模型架构。输入提示和回应由预训练语言模型主干处理，然后一个线性头输出单个标量奖励分数。
+
+### 为模型准备数据
+
+奖励模型需要*在提示的上下文 (context)中*处理`chosen`和`rejected`两种回应。我们将输入格式化为`提示 + 回应`并进行分词 (tokenization)。由于模型一次处理一对（`chosen`，`rejected`）以计算损失，我们对于每个示例都需要对这两种变体进行分词。
+
+`TRL`库提供了简化此过程的实用工具，但让我们理解其核心思想。我们需要一个函数，它接收一个数据条目，并返回`chosen`路径和`rejected`路径的词元 (token)化版本。
+
+```python
+from transformers import AutoTokenizer
+import torch
+
+# 为你的奖励模型选择一个基础模型
+model_name = "distilbert-base-uncased" # 使用一个小型模型进行演示
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# 确保填充词元已设置，如果尚未设置
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+def preprocess_function(examples):
+    # 对 (提示 + chosen回应) 和 (提示 + rejected回应) 对进行分词
+    tokenized_chosen = tokenizer(
+        examples['prompt'] + examples['chosen'],
+        truncation=True,
+        padding="max_length", # 如果使用动态填充，则使用 'longest'
+        max_length=512        # 根据需要调整 max_length
+    )
+    tokenized_rejected = tokenizer(
+        examples['prompt'] + examples['rejected'],
+        truncation=True,
+        padding="max_length", # Or 'longest'
+        max_length=512
+    )
+
+    # RewardTrainer 期望名为 'input_ids_chosen'、'attention_mask_chosen' 等列
+    features = {}
+    features['input_ids_chosen'] = tokenized_chosen['input_ids']
+    features['attention_mask_chosen'] = tokenized_chosen['attention_mask']
+    features['input_ids_rejected'] = tokenized_rejected['input_ids']
+    features['attention_mask_rejected'] = tokenized_rejected['attention_mask']
+    return features
+
+# 应用预处理
+# 使用 remove_columns 以仅保留 RewardTrainer 所需的数据
+tokenized_dataset = dataset.map(
+    preprocess_function,
+    batched=True,
+    remove_columns=dataset.column_names
+)
+
+print("Sample tokenized features:", tokenized_dataset[0].keys())
+# 预期：dict_keys(['input_ids_chosen', 'attention_mask_chosen', 'input_ids_rejected', 'attention_mask_rejected'])
+```
+
+### 使用TRL的RewardTrainer训练
+
+`TRL`库提供了一个方便的`RewardTrainer`类，它类似于标准的`Transformers` `Trainer`，但专门为使用成对偏好损失的奖励模型训练而设计。
+
+1. **加载模型：** 加载一个适合序列分类的预训练 (pre-training)模型，并指定`num_labels=1`用于标量奖励输出。
+2. **配置训练参数 (parameter)：** 使用`TrainingArguments`定义学习率、批大小、训练轮次等超参数 (hyperparameter)。
+3. **实例化RewardTrainer：** 传入模型、分词 (tokenization)器 (tokenizer)、训练参数和准备好的数据集。
+4. **训练：** 调用`train()`方法。
+
+```python
+from transformers import AutoModelForSequenceClassification, TrainingArguments
+from trl import RewardTrainer, RewardConfig
+
+# 1. 加载模型
+# 使用 AutoModelForSequenceClassification，因为奖励模型的头部类似于分类头部
+model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1)
+
+# 如果有GPU可用，可选地将模型移至GPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# 2. 配置训练参数（RewardConfig 继承自 TrainingArguments）
+# 使用 RewardConfig 进行特定的奖励模型设置，尽管 TrainingArguments 也能工作。
+training_args = RewardConfig(
+    output_dir="./reward_model_output",
+    num_train_epochs=1,              # 根据数据集大小和收敛情况调整训练轮次
+    per_device_train_batch_size=4,   # 根据GPU内存调整
+    gradient_accumulation_steps=1,
+    learning_rate=2e-5,
+    report_to="none",                # 为简化起见，禁用 wandb/tensorboard 报告
+    remove_unused_columns=False,     # 已在预处理中处理
+    evaluation_strategy="no",        # 如果需要，添加评估数据集和策略
+    save_strategy="epoch",
+    logging_steps=10,                # 每10步记录一次训练损失
+    max_length=512,                  # 重要：必须与预处理的 max_length 匹配
+)
+
+# 3. 实例化 RewardTrainer
+trainer = RewardTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    args=training_args,
+    train_dataset=tokenized_dataset,
+    # 如果有评估数据集，请在此处传入
+    # peft_config=None, # 可选：在此处配置 PEFT，如 LoRA
+)
+
+# 4. 训练模型
+print("开始训练奖励模型...")
+train_results = trainer.train()
+print("训练完成。")
+
+# 保存最终模型
+trainer.save_model("./reward_model_final")
+tokenizer.save_pretrained("./reward_model_final")
+print("模型和分词器已保存到 ./reward_model_final")
+```
+
+### 理解损失函数 (loss function)
+
+在底层，`RewardTrainer`实现了前面讨论的损失函数。对于批次中的每一对：
+
+1. 它计算`chosen`回应的奖励分数：$r_{\text{选择}} = RM(\text{提示}, \text{选择})$。
+2. 它计算`rejected`回应的奖励分数：$r_{\text{拒绝}} = RM(\text{提示}, \text{拒绝})$。
+3. 它使用从Bradley-Terry模型导出的对数sigmoid公式计算损失：
+   $\mathcal{L}_{\text{对}} = -\log(\sigma(r_{\text{选择}} - r_{\text{拒绝}}))$
+4. 最终损失是批次中的平均值。这个损失函数鼓励模型为`chosen`回应分配比`rejected`回应更高的分数。
+
+### 评估奖励模型
+
+尽管为简洁起见，我们在示例中跳过了评估，但它很重要。一个常用的指标是**准确率**：给定一个保留的偏好对集合`(prompt, chosen, rejected)`，训练后的奖励模型多久能正确地给`chosen`回应打出更高的分数？
+
+$\text{准确率} = \frac{1}{|\text{评估集}|} \sum_{(\text{提示}, c, r) \in \text{评估集}} \mathbb{I}[RM(\text{提示}, c) > RM(\text{提示}, r)]$
+
+其中 $\mathbb{I}[\cdot]$ 是指示函数（如果为真则为1，否则为0）。
+
+你可以通过使用相同的`preprocess_function`创建一个`eval_dataset`，将其传递给`RewardTrainer`，并在`TrainingArguments`中设置`evaluation_strategy`来实现这一点。训练器随后会在训练期间报告准确率。
+
+监控训练损失和评估准确率。损失应该降低，准确率应该提升。
+
+
+
+![奖励模型训练进度（示意）](plots/5136-0.json)
+
+
+
+> 示意图显示了奖励模型训练期间训练损失的降低和评估准确率的提升。
+
+### 后续步骤
+
+你现在已经有一个训练好的奖励模型并保存到磁盘。该模型包含了从你的数据集中学习到的人类偏好。它已准备好作为RLHF流程下一阶段的目标函数：使用强化学习 (reinforcement learning)（具体来说，在我们的例子中是PPO）微调 (fine-tuning)语言模型策略。奖励模型生成的分数将引导策略模型生成更符合人类期望的回应。
+
+## 参考资料
+
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862) — Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort, Deep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion, Tom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatfield-Dodds, Danny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt, Neel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark, Sam McCandlish, Chris Olah, Ben Mann, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2204.05862; DOI: [10.48550/arXiv.2204.05862](https://doi.org/10.48550/arXiv.2204.05862)
+  描述了使用人类偏好训练奖励模型的架构和过程，包括HH-RLHF数据集结构和成对偏好损失函数的细节。
+- [Training Language Models to Follow Instructions with Human Feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: Advances in Neural Information Processing Systems 35 (NeurIPS 2022); Volume: 35; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  一篇里程碑式的论文，介绍了RLHF范式以微调大型语言模型，详细说明了从人类偏好比较中训练奖励模型作为其核心组件。
+- [TRL Library Documentation - Reward Modeling](https://huggingface.co/docs/trl/main/en/reward_modeling) — Hugging Face (2024)
+  Publisher: Hugging Face
+  Hugging Face TRL库的官方文档，提供了训练奖励模型的实用指南和API参考，包括`RewardTrainer`和`RewardConfig`。

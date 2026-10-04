@@ -1,0 +1,59 @@
+---
+course: "intro-normalizing-flows"
+chapter: "mathematics-invertible-transformations"
+lesson: "computing-jacobian-determinants"
+sourceId: 8255
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-1-mathematics-invertible-transformations/computing-jacobian-determinants"
+title: "计算雅可比行列式"
+description: "计算雅可比行列式以评估数学变换过程中的体积变化。"
+order: 3
+plots: []
+sourceHash: "a1c65597da6dfa5e516ab87aa7769a48bcb96de2234984ed033457b8d9c2788f"
+sourceCorrections: []
+---
+
+将简单概率分布映射到更复杂的分布依赖于变量替换定理。该方程的核心组成部分是雅可比行列式（Jacobian determinant）。当一个可逆函数 $f$ 作用于随机变量 $z$ 生成 $x = f(z)$ 时，概率密度不仅会发生移动，还会发生缩放。雅可比行列式准确地衡量了在这种变换过程中，空间的体积扩张或收缩了多少。
+
+对于多维数据（例如图像或标记 (token)序列），变量 $z$ 是一个大小为 $N$ 的向量 (vector)。函数 $f$ 输出另一个相同大小的向量 $x$。雅可比矩阵（记作 $J$）包含了函数 $f$ 对输入向量 $z$ 的所有偏导数。
+
+
+$$
+J = \frac{\partial x}{\partial z} = \begin{bmatrix} \frac{\partial x_1}{\partial z_1} & \cdots & \frac{\partial x_1}{\partial z_N} \\ \vdots & \ddots & \vdots \\ \frac{\partial x_N}{\partial z_1} & \cdots & \frac{\partial x_N}{\partial z_N} \end{bmatrix}
+$$
+
+
+该矩阵中的每个元素代表了特定输入维度 $z_j$ 的微小变化如何影响特定的输出维度 $x_i$。
+
+该矩阵的行列式 $\det(J)$ 量化 (quantization)了所有维度上的总体体积变化。例如，以一个简单的 2D 缩放变换为例，其中 $x_1 = 2z_1$ 且 $x_2 = 3z_2$。雅可比矩阵是一个对角矩阵，对角线上分别是 2 和 3。其行列式为 $2 \times 3 = 6$。由于该变换将空间体积扩大了 6 倍，为了确保总概率之和仍为 1，概率密度必须相应地缩小到原来的 1/6。我们取行列式的绝对值 $\left| \det(J) \right|$，因为即便变换翻转了空间方向，体积缩放比例始终是正值。
+
+在构建机器学习 (machine learning)模型时，将许多微小的概率或行列式相乘会导致数值下溢。为了保持数值稳定性，我们几乎总是计算对数行列式（log-determinant）。利用标准的对数性质，对数密度方程可以简化为加法运算：
+
+
+$$
+\log p(x) = \log p(z) + \log \left| \det \frac{\partial x}{\partial z} \right|
+$$
+
+
+计算一个通用 $N \times N$ 矩阵的行列式效率极低，其时间复杂度为 $O(N^3)$。对于图像或音频等 $N$ 轻松达到数万的高维数据，计算稠密雅可比行列式在计算成本上是不可接受的。
+
+为了使密度估计具有实用性，规范化流限制了其使用的数学函数。流架构经过专门设计，使其雅可比矩阵呈三角形，这意味着矩阵的下半部分或上半部分完全由零组成。
+
+> 雅可比矩阵的结构以及流模型中三角形设计的计算优势。
+
+三角矩阵的行列式仅仅是其对角线元素的乘积。这一数学性质允许我们在计算体积变化时完全忽略非对角线上的偏导数。
+
+
+$$
+\det(J) = \prod_{i=1}^N \frac{\partial x_i}{\partial z_i}
+$$
+
+
+通过将此性质与对数相结合，我们可以将对数行列式计算为对数对角线元素的总和。这种优化将行列式计算的时间复杂度从 $O(N^3)$ 降低到 $O(N)$，使得规范化流能够扩展到高维数据集。
+
+
+$$
+\log \left| \det(J) \right| = \sum_{i=1}^N \log \left| \frac{\partial x_i}{\partial z_i} \right|
+$$
+
+
+理解如何高效计算这些行列式决定了我们如何设计流模型的内部层。我们需要既具有强大表达能力，又能保证雅可比矩阵为三角形的变换。在接下来的部分中，我们将利用这些数学基础，在正向传递过程中评估准确的概率密度，并在反向传递过程中生成新数据。

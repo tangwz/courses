@@ -1,0 +1,127 @@
+---
+course: "introduction-autoencoders-feature-learning"
+chapter: "building-basic-autoencoder"
+lesson: "configuring-model-training"
+sourceId: 6433
+sourceUrl: "https://apxml.com/zh/courses/introduction-autoencoders-feature-learning/chapter-5-building-basic-autoencoder/configuring-model-training"
+title: "配置模型以进行训练"
+description: "了解如何通过选择优化器和损失函数来编译 Keras 自编码器模型。"
+order: 6
+plots: []
+sourceHash: "e292142c9979c123a5b006d52ed589cfea4d646c83ab8e9ab32b59b459b898c9"
+sourceCorrections: []
+---
+
+自编码器架构确定后，即编码器和解码器的层已堆叠完成，下一步就是为学习过程做准备。这种准备在 Keras 中通过一个被称为模型\*\*“编译”\*\*的重要步骤来完成。你可以将编译视为给模型指定指令：它应该努力实现什么（损失函数 (loss function)），它应该如何实现（优化器），以及你希望如何衡量其进展（评估指标）。
+
+你将使用 `model.compile()` 方法，向其提供这三项重要信息。下面的图表展示了这些组件如何适应模型配置阶段。
+
+> 此图表显示，在定义模型的层之后，你通过指定优化器、损失函数和可选评估指标来编译它。这使模型为训练做好准备。
+
+我们来查看这些组件中的每一个。
+
+### 选择损失函数 (loss function)：衡量重建误差
+
+**损失函数**（也称为成本函数或目标函数）是训练任何神经网络 (neural network)的根本。它量化 (quantization)了模型输出与实际目标“偏离”的程度。在训练期间，模型试图最小化这个损失值。
+
+对于自编码器，目标是尽可能准确地重建输入。因此，自编码器的输出 $\\hat{x}$ 应该与原始输入 $x$ 非常相似。因此，损失函数衡量 $x$ 和 $\\hat{x}$ 之间的差异，或者说“重建误差”。
+
+#### 均方误差 (MSE)
+
+对于自编码器，特别是处理图像数据或其他连续值时，一个非常常用且有效的损失函数是**均方误差（MSE）**。如本章引言中提到，MSE 的计算方式如下：
+
+$L(x, \hat{x}) = \frac{1}{N} \sum_{i=1}^{N} (x_i - \hat{x}_i)^2$
+
+我们来分解一下：
+
+- $x\_i$: 表示你的原始输入中的一个值（例如，图像中单个像素的强度）。
+- $\\hat{x}\_i$: 表示自编码器重建输出中的对应值。
+- $(x\_i - \\hat{x}\_i)^2$: 差异被平方。这有两个作用：它确保结果始终为正，并且它比小差异更严厉地惩罚较大的差异。
+- $\\sum\_{i=1}^{N}$: 对输入中的所有 $N$ 个值进行这些平方差的求和。
+- $\\frac{1}{N}$: 除以 $N$ 以得到平均值。
+
+因此，MSE 给你原始输入和重建输出之间的平均平方差。较低的 MSE 意味着重建结果更接近原始数据。在 Keras 中，你可以使用字符串标识符 `'mean_squared_error'` 或简单地 `'mse'` 来指定 MSE。
+
+#### 二元交叉熵 (BCE)
+
+另一个流行选择，特别是当你的输入数据归一化 (normalization)到 [0, 1] 范围（就像 MNIST 数字通常那样）并且你的解码器的最后一层使用 `sigmoid` 激活函数 (activation function)时，是**二元交叉熵（BCE）**。
+
+BCE 通常用于比较概率分布。在使用 sigmoid 输出的自编码器背景下，你可以将输入 $x$ 中的每个像素值（它必须是 0 或 1，或在 0 到 1 之间缩放）视为目标概率，并将重建 $\\hat{x}$ 中的每个对应像素视为模型的预测概率。
+
+对于 $N$ 个独立值（例如，像素）的 BCE 公式是：
+
+$L(x, \hat{x}) = - \frac{1}{N} \sum_{i=1}^{N} (x_i \log(\hat{x}_i) + (1-x_i) \log(1-\hat{x}_i))$
+
+这个公式的作用是，如果模型非常自信但错了，它就会严厉惩罚模型。在 Keras 中，BCE 是使用 `'binary_crossentropy'` 指定的。
+
+**如何选择？** 对于你的第一个自编码器，MSE 和 BCE 都能很好地工作。MSE 通常是像素强度差异的更直接衡量方式，是一个很好的起点。
+
+### 选择优化器：引导学习过程
+
+一旦你有了衡量误差的方法（损失函数 (loss function)），你就需要一个机制来调整自编码器的内部参数 (parameter)（其权重 (weight)和偏差）以减少这个误差。这就是**优化器**的任务。
+
+可以将学习过程视为试图找到山谷的底部，其中底部表示可能的最低损失。优化器就像你的向导，决定前进方向和每一步的大小。
+
+#### Adam 优化器
+
+**Adam (Adaptive Moment Estimation) 优化器**是深度学习 (deep learning)中一个非常流行且通常是很好的默认选择。它独立调整每个参数的学习率，并且通常收敛迅速。对于初学者来说，Adam 通常开箱即用，效果良好，无需过多调整。在 Keras 中，你可以使用字符串 `'adam'`。
+
+#### 随机梯度下降 (gradient descent) (SGD)
+
+**SGD** 是一个更基本的优化器。它的原理更简单：它计算损失函数相对于模型参数的梯度，针对一小批量数据，并沿着梯度的反方向更新参数。虽然有效，但 SGD 有时可能比 Adam 收敛速度较慢，并且可能需要更仔细地调整其参数。在 Keras 中，它是 `'sgd'`。
+
+**学习率**
+大多数优化器的一个重要参数是**学习率**。它决定了优化器在更新模型权重时所迈步子的大小。如果学习率过大，优化器可能会“越过”最佳解决方案；如果学习率过小，训练会极其缓慢。像 Adam 这样的优化器具有自适应学习率，这有助于应对这种情况。
+
+### 指定评估指标：监测性能
+
+虽然损失函数 (loss function)是优化器积极努力最小化的对象，但**评估指标**用于监测模型在训练和评估期间的性能。它们为你提供了一种方式来理解你的模型表现如何。
+
+通常，损失函数本身就是一个很好的跟踪指标。你还可以指定其他评估指标。例如，**平均绝对误差 (MAE)** 是衡量重建误差的另一种方式：
+$\text{平均绝对误差} = \frac{1}{N} \sum_{i=1}^{N} |x_i - \hat{x}_i|$
+MAE 计算输入和输出之间的平均绝对差。与 MSE 不同，它对差异不进行平方，因此对非常大的异常误差不那么敏感。在 Keras 中，你以字符串列表的形式提供评估指标，例如，`metrics=['mse', 'mae']`。
+
+### 整合所有：`compile()` 调用
+
+既然你了解了损失函数 (loss function)、优化器和评估指标，你就可以将它们整合在 `model.compile()` 调用中。这个调用配置模型以进行训练。
+
+以下是你通常在 Keras 中编译一个简单自编码器模型的方式：
+
+```python
+import os
+os.environ["KERAS_BACKEND"] = "torch"
+import keras
+
+# 假设 'autoencoder_model' 是你构建的 Keras Sequential 模型
+# 例如，如果你的输入数据（以及输出数据）归一化到 0 和 1 之间
+
+# 选项 1：使用均方误差（一个常见选择）
+autoencoder_model.compile(optimizer='adam',
+                          loss='mean_squared_error',
+                          metrics=['mse', 'mae'])
+
+# 选项 2：使用二元交叉熵
+# （如果输出层使用 sigmoid 且输入在 0-1 之间，则效果好）
+# autoencoder_model.compile(optimizer='adam',
+#                           loss='binary_crossentropy',
+#                           metrics=['mse', 'mae']) # 你仍然可以监测 MSE/MAE
+```
+
+在这个例子中：
+
+- `optimizer='adam'`: 我们在告诉 Keras 使用 Adam 优化器及其默认设置。
+- `loss='mean_squared_error'`: 我们在指定模型应该努力最小化输入和重建输出之间的均方误差。（或者在备选方案中选择 `'binary_crossentropy'`）。
+- `metrics=['mse', 'mae']`: 我们在要求 Keras 在训练和评估期间跟踪 MSE 和 MAE，以便我们查看这些值。
+
+一旦这个 `compile()` 步骤完成，你的自编码器模型就完全配置好并准备好进入下一个阶段：向其馈送数据并启动训练过程，你将在“执行训练过程”一节中了解这一点。
+
+## 参考资料
+
+- [tf.keras.Model.compile](https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile) — TensorFlow Developers (2024)
+  Keras中`compile`方法的官方文档，详细说明了如何通过指定优化器、损失函数和评估指标来配置模型进行训练。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本深度学习教科书，全面解释了损失函数（如MSE、交叉熵）和优化算法（如SGD、Adam的原理）等模型训练的基本概念。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍Adam优化器的原始研究论文，Adam是一种被广泛采用的深度神经网络训练优化算法，以其高效和自适应学习率能力而著称。

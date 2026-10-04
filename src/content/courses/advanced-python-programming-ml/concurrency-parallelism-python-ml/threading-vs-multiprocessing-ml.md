@@ -1,0 +1,98 @@
+---
+course: "advanced-python-programming-ml"
+chapter: "concurrency-parallelism-python-ml"
+lesson: "threading-vs-multiprocessing-ml"
+sourceId: 2343
+sourceUrl: "https://apxml.com/zh/courses/advanced-python-programming-ml/chapter-5-concurrency-parallelism-python-ml/threading-vs-multiprocessing-ml"
+title: "机器学习任务中的多线程与多进程"
+description: "比较Python的threading和multiprocessing模块，并为不同的机器学习工作负载（I/O密集型与CPU密集型）选择适合的方法。"
+order: 1
+plots: []
+sourceHash: "964e0c234b6fc05141929fb9eb72437d6e6c38b745875de366570846e68f4b37"
+sourceCorrections: []
+---
+
+在Python中处理计算密集型机器学习 (machine learning)工作流时，了解如何管理并发操作对性能提升非常重要。Python提供了两种主要的内置并发机制：`threading`（多线程）和`multiprocessing`（多进程）。选择哪种机制很大程度上取决于您需要加速的任务性质以及Python全局解释器锁（GIL）施加的限制。
+
+### 理解全局解释器锁（GIL）
+
+在比较线程和进程之前，有必要掌握GIL的原理，尤其是在CPython（最常见的Python实现）环境下。GIL是一个互斥锁（mutual exclusion lock），用于保护对Python对象的访问，即使在多核处理器上，它也阻止多个线程在单个进程内同时执行Python字节码。
+
+这意味着，尽管线程可以并发运行，但在任何给定时刻，只有一个线程可以持有GIL并执行Python字节码。然而，GIL通常在I/O操作期间（例如从文件读取、等待网络响应）或与某些明确释放GIL的C扩展交互时被释放。
+
+### 多线程（`threading`模块）
+
+线程是轻量级执行单元，在同一进程内运行。它们共享相同的内存空间，这简化了线程间的数据共享，但也引入了与数据完整性相关的潜在复杂问题（竞态条件）。
+
+- **工作方式：** `threading`模块允许您在Python程序中创建多个线程。操作系统会调度这些线程，但由于CPython中的GIL，无法在多个CPU核心上实现Python字节码的真正并行执行。
+- **优势：**
+
+  - **开销较低：** 创建和管理线程通常比创建进程的开销小。
+  - **数据共享简便：** 由于线程共享内存，它们之间的数据传递直接明了（但需要仔细的同步）。
+  - **适用于I/O密集型任务：** 当线程执行I/O操作（例如，下载数据、查询数据库、写入磁盘）时，它通常会释放GIL。这允许其他线程运行，从而在I/O密集型应用中带来性能有明显提升。想象一下同时获取多个数据文件；一个线程等待下载时，另一个线程可以开始自己的请求。
+- **劣势：**
+
+  - **GIL对CPU密集型任务的限制：** 对于主要是计算型的任务（例如，使用纯Python代码进行复杂的数值计算，或不释放GIL的大量Pandas操作），多线程在CPython中提供的是并发而不是真正的并行。多个线程将争夺GIL，甚至可能因为锁的开销而导致执行速度比单线程方法更慢。
+  - **同步的复杂性：** 共享内存需要显式同步机制（如锁、信号量、事件）来防止竞态条件，即多个线程可能尝试同时修改相同数据，从而导致不可预测的结果。
+- **机器学习 (machine learning)应用场景：**
+
+  - 从多个来源（文件、数据库、API）获取数据批次。
+  - 运行涉及大量I/O的预处理步骤（例如，读取图像文件）。
+  - 在模型服务API中处理并发请求（其中大部分时间可能花费在等待网络I/O上）。
+  - 在训练期间执行日志记录或监控等后台任务。
+
+### 多进程（`multiprocessing`模块）
+
+进程是独立的执行单元，拥有自己的内存空间和自己的Python解释器实例。
+
+- **工作方式：** `multiprocessing`模块创建新的进程，每个进程都能够并行运行代码，从而有效地绕过GIL对CPU密集型任务的限制。每个进程都有自己的GIL。
+- **优势：**
+
+  - **CPU密集型任务的真正并行：** 由于每个进程都有自己的内存和解释器（以及GIL），`multiprocessing`允许Python代码充分利用多个CPU核心进行计算密集型操作。
+  - **隔离性：** 独立的内存空间意味着进程不会直接干扰彼此的数据，从而降低了多线程应用中常见的某些类型错误的风险（尽管通信会增加其自身的复杂性）。
+- **劣势：**
+
+  - **开销较高：** 创建和管理进程比线程更占用资源（内存消耗更高，启动时间更长）。
+  - **数据共享复杂：** 进程间通信和数据共享需要显式进程间通信（IPC）机制，如队列、管道或共享内存段，这些机制的实现可能比线程中的直接内存访问更慢、更复杂。用于IPC的数据序列化/反序列化会增加开销。
+- **机器学习 (machine learning)应用场景：**
+
+  - 在大数据集上并行执行计算量大的特征工程步骤。
+  - 并行训练多个模型（例如，在超参数 (parameter) (hyperparameter)优化网格搜索或交叉验证期间）。
+  - 运行集成方法，其中基本估计器可以独立训练。
+  - 特定算法所需的大规模模拟或数值计算。
+  - 执行CPU密集型数据预处理或数据增强任务。
+
+### 多线程与多进程的选择
+
+该选择归结为您机器学习 (machine learning)任务中瓶颈的性质：
+
+1. **I/O密集型任务：** 如果您的代码大部分时间都在等待外部操作（网络、磁盘、数据库），`threading`通常是更好的选择。它以较低的开销提供并发性，并且GIL很可能在等待期间被释放，从而允许其他线程继续执行。
+2. **CPU密集型任务：** 如果您的代码受CPU速度限制，并且主要使用Python字节码（或未有效释放GIL的库）进行密集计算，则需要`multiprocessing`来实现真正的并行并利用多核。这在数值计算、复杂数据转换和模型训练阶段很常见。
+
+下图说明了线程和进程在考虑GIL的情况下如何处理任务的差异：
+
+> CPython中多线程与多进程的比较。线程在单一进程内共享内存并争夺同一个GIL，使其适用于I/O密集型任务。进程拥有独立的内存和解释器（每个都有自己的GIL），从而为CPU密集型任务实现真正的并行执行，但通信需要显式IPC。
+
+**总结表：**
+
+| 特性 | `threading` | `multiprocessing` |
+| --- | --- | --- |
+| **执行方式** | 并发 | 并行 |
+| **GIL影响** | 每个进程只有一个GIL，限制CPU并行 | 每个进程有自己的GIL；绕过限制 |
+| **内存空间** | 共享 | 独立 |
+| **适用任务** | I/O密集型任务 | CPU密集型任务 |
+| **开销** | 低 | 高 |
+| **数据共享** | 简便（但需要同步） | 复杂（需要IPC） |
+| **CPU利用率** | 受GIL限制对Python代码而言 | 可充分利用多核 |
+
+选择正确的并发模型是优化Python机器学习应用的重要一步。后续章节将详细说明如何使用`multiprocessing`、更高级的`concurrent.futures`抽象以及`asyncio`来实现专门的异步编程模式。
+
+## 参考资料
+
+- [\`threading\` - Thread-based parallelism](https://docs.python.org/3/library/threading.html) — Python (2024)
+  Python 内置线程并发模块的官方文档，详细介绍了其功能和用法。
+- [\`multiprocessing\` - Process-based parallelism](https://docs.python.org/3/library/multiprocessing.html) — Python Software Foundation (2024)
+  Python 内置进程并行模块的官方文档，概述了其功能和实现。
+- [Fluent Python, 2nd Edition: Clear, Concise, and Effective Programming](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056345/) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 18: Concurrency with asyncio; Chapter 19: Concurrency Models in Python
+  一本备受推崇的书籍，其中包含关于 Python 并发的大量章节，涵盖了线程和多进程，以及 GIL 的实际影响。

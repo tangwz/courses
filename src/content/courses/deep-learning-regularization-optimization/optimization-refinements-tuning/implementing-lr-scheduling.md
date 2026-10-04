@@ -1,0 +1,239 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "optimization-refinements-tuning"
+lesson: "implementing-lr-scheduling"
+sourceId: 5007
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-7-optimization-refinements-tuning/implementing-lr-scheduling"
+title: "实施学习率调度"
+description: "展示如何在深度学习框架中实施学习率调度。"
+order: 10
+plots: ["plots/5007-0.json", "plots/5007-1.json", "plots/5007-2.json"]
+sourceHash: "34dd50bedc729b70fb5a9216d36019a53469168162ee6a48735e51780c050561"
+sourceCorrections: []
+---
+
+调整训练期间的学习率能够增强深度学习 (deep learning)模型优化效果。实际实施学习率调度方法通常会用到PyTorch等常用深度学习框架。
+
+大多数深度学习库都提供了便捷的方式，可以直接将学习率调度器关联到优化器。通常的工作流程包括：
+
+1. 使用初始学习率初始化优化器（例如SGD、Adam）。
+2. 初始化调度器，并将其与优化器关联，然后指定调度策略的参数 (parameter)。
+3. 在训练循环中的适当位置（通常在每个epoch之后，但有时在每个批次之后）调用调度器的`step()`方法。
+
+接下来我们考察如何实施前面讨论的一些常见调度方法。
+
+### 使用PyTorch学习率调度器
+
+PyTorch的`torch.optim.lr_scheduler`模块中提供了多种内置学习率调度器。我们将演示几个常用的。
+
+首先，假设您已定义好模型和优化器，例如：
+
+```python
+import torch
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR, ExponentialLR, CosineAnnealingLR
+
+# 假设'model'是您定义的神经网络
+# 初始学习率
+initial_lr = 0.01
+
+# 初始化优化器（例如Adam）
+optimizer = optim.Adam(model.parameters(), lr=initial_lr)
+
+# 接下来我们将定义调度器...
+```
+
+现在，我们关联不同的调度器。
+
+#### 步进衰减（`StepLR`）
+
+步进衰减会在每经过`step_size`个epoch后，将学习率乘以一个因子（`gamma`）进行降低。
+
+```python
+# 定义StepLR调度器
+# 每step_size=10个epoch将学习率衰减gamma=0.1
+scheduler_step = StepLR(optimizer, step_size=10, gamma=0.1)
+
+# 在训练循环中的用法示例（简化）：
+# num_epochs = 50
+# for epoch in range(num_epochs):
+#     # --- 训练阶段 ---
+#     # model.train()
+#     # 遍历数据加载器中的每个批次：
+#     #     optimizer.zero_grad()
+#     #     outputs = model(batch.features)
+#     #     loss = compute_loss(outputs, batch.labels)
+#     #     loss.backward()
+#     #     optimizer.step()
+#     # --- 训练阶段结束 ---
+#
+#     # 在每个epoch后更新学习率
+#     scheduler_step.step()
+#
+#     current_lr = optimizer.param_groups[0]['lr']
+#     print(f"Epoch {epoch+1}: Current LR = {current_lr:.6f}")
+```
+
+该调度器将在epoch 1-10期间保持学习率为$0.01$，然后在epoch 11-20期间将其降至$0.001$，接着在epoch 21-30期间降至$0.0001$，依此类推。
+
+
+
+![StepLR调度（步长=10，衰减因子=0.1）](plots/5007-0.json)
+
+
+
+> StepLR学习率在50个epoch内的衰减情况，初始学习率为0.01，步长为10，衰减因子为0.1。Y轴为对数刻度。
+
+#### 指数衰减（`ExponentialLR`）
+
+指数衰减在*每个*epoch之后，将学习率乘以一个因子（`gamma`）。
+
+```python
+# 定义ExponentialLR调度器
+# 每个epoch将学习率衰减gamma=0.95
+scheduler_exp = ExponentialLR(optimizer, gamma=0.95)
+
+# 在训练循环中的用法示例（简化）：
+# num_epochs = 50
+# for epoch in range(num_epochs):
+#     # --- 训练阶段（同上）---
+#
+#     # 在每个epoch后更新学习率
+#     scheduler_exp.step()
+#
+#     current_lr = optimizer.param_groups[0]['lr']
+#     print(f"Epoch {epoch+1}: Current LR = {current_lr:.6f}")
+```
+
+在这里，学习率与步进衰减相比下降得更平滑：$0.01$， $0.01 \times 0.95$， $0.01 \times 0.95^2$，依此类推。
+
+
+
+![ExponentialLR调度（衰减因子=0.95）](plots/5007-1.json)
+
+
+
+> ExponentialLR学习率在50个epoch内的衰减情况，初始学习率为0.01，衰减因子为0.95。
+
+#### 余弦退火（`CosineAnnealingLR`）
+
+余弦退火会按照余弦曲线逐渐降低学习率，通常在指定的epoch数量（`T_max`）内达到最小值（`eta_min`）。它还可以选择性地重新开始退火周期。
+
+```python
+# 定义CosineAnnealingLR调度器
+# 在T_max=50个epoch内进行退火，最小学习率eta_min=0
+scheduler_cos = CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
+
+# 在训练循环中的用法示例（简化）：
+# num_epochs = 50
+# for epoch in range(num_epochs):
+#     # --- 训练阶段（同上）---
+#
+#     # 在每个epoch后更新学习率
+#     scheduler_cos.step()
+#
+#     current_lr = optimizer.param_groups[0]['lr']
+#     print(f"Epoch {epoch+1}: Current LR = {current_lr:.6f}")
+```
+
+该调度器会在`T_max`个epoch内，将学习率从初始值平滑地降低到`eta_min`。
+
+
+
+![CosineAnnealingLR调度（最大周期=50，最小学习率=0）](plots/5007-2.json)
+
+
+
+> CosineAnnealingLR学习率在50个epoch内的衰减情况，初始学习率为0.01，最大周期为50，最小学习率为0。
+
+### 实施热身阶段
+
+学习率热身，即学习率在最初的几个epoch或步进中从很低的值开始线性或非线性增加，本身通常不是一个独立的内置调度器类。它常与另一种衰减调度方案结合使用。
+
+您可以手动实现热身阶段，或使用Hugging Face的`transformers`等库提供的工具函数/类。一个在`warmup_epochs`内进行线性热身的简单方法是：
+
+```python
+# 手动热身（在训练循环内）
+initial_lr = 0.01
+warmup_epochs = 5
+num_epochs = 50
+# 假设scheduler_main是另一个调度器，如CosineAnnealingLR，在热身阶段结束后启动
+
+for epoch in range(num_epochs):
+    if epoch < warmup_epochs:
+        # 将学习率从0线性增加到initial_lr
+        lr = initial_lr * (epoch + 1) / warmup_epochs
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+    elif epoch == warmup_epochs:
+         # 确保热身结束后学习率正好是initial_lr
+         for param_group in optimizer.param_groups:
+            param_group['lr'] = initial_lr
+         # 如果需要，可以在此处初始化主调度器，或让它直接接管
+         # scheduler_main = CosineAnnealingLR(optimizer, T_max=num_epochs - warmup_epochs, eta_min=0)
+    else:
+        # 热身完成后应用主调度器
+        # scheduler_main.step() # 调用主调度器的step方法
+        pass # 如果主调度器已提前初始化，此为占位符
+
+    # --- 训练阶段 ---
+
+    current_lr = optimizer.param_groups[0]['lr']
+    print(f"Epoch {epoch+1}: Current LR = {current_lr:.6f}")
+```
+
+> 注意：PyTorch 1.10+引入了`SequentialLR`和`ChainedScheduler`，它们提供了更便捷的方式来组合调度器，例如热身阶段后接衰减。
+
+### 集成到训练循环中
+
+重要的一点是在正确的时间调用`scheduler.step()`。大多数调度器，如`StepLR`、`ExponentialLR`和`CosineAnnealingLR`，都设计为每个epoch调用一次，通常是在该epoch的验证循环之后。
+
+```python
+# 基于epoch的调度器标准训练循环结构
+
+# 初始化优化器和调度器
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+scheduler = StepLR(optimizer, step_size=10, gamma=0.1) # 示例
+
+num_epochs = 50
+for epoch in range(num_epochs):
+    # --- 训练阶段 ---
+    model.train()
+    for inputs, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step() # 根据当前梯度更新权重
+
+    # --- 验证阶段（可选）---
+    # model.eval()
+    # ... 验证逻辑 ...
+
+    # --- 学习率更新 ---
+    # 在该epoch的训练和验证步骤*之后*更新学习率
+    scheduler.step()
+
+    # 记录学习率（可选）
+    current_lr = optimizer.param_groups[0]['lr']
+    print(f"Epoch {epoch+1} finished. New LR for next epoch: {current_lr:.6f}")
+```
+
+**重要事项：** 始终在`optimizer.step()`*之后*调用`scheduler.step()`。这个顺序很重要，尤其是在某些框架或自定义设置中，它们之间有更复杂的关联。对于设计为每批次步进的调度器（较不常见，但有可能），`scheduler.step()`的调用应在批次循环内部。请查阅您所用特定调度器的文档。
+
+通过实施学习率调度，您可以更好地控制优化过程，这通常会带来更快的收敛速度和更好的最终模型表现，相较于使用固定学习率而言。尝试不同的调度方案及其参数 (parameter)是深度学习 (deep learning)模型调整中的一个常规部分。
+
+## 参考资料
+
+- [\`torch.optim.lr_scheduler\` Documentation](https://pytorch.org/docs/stable/optim.html#learning-rate-schedulers) — PyTorch Developers (2025)
+  Publisher: PyTorch Foundation
+  PyTorch 学习率调度器的官方文档，提供了内置策略（如 StepLR、ExponentialLR 和 CosineAnnealingLR）的详细用法和参数。
+- [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Ilya Loshchilov and Frank Hutter (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1608.03983](https://doi.org/10.48550/arXiv.1608.03983)
+  介绍了余弦退火学习率调度策略，该策略用于快速收敛和提高泛化能力，并在 `CosineAnnealingLR` 中得到应用。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本涵盖深度学习概念的基础教科书，其中包括关于优化算法和超参数调整的综合部分，构成了学习率调度理论基础。
+- [Dive into Deep Learning](https://d2l.ai/) — Aston Zhang, Zack C. Lipton, Mu Li, and Alex Smola (2024)
+  Publisher: Cambridge University Press
+  一本交互式开源书籍，为深度学习技术提供了实用的实现和理论解释，包括各种学习率调度策略的详细讨论和代码示例。

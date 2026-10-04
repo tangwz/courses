@@ -1,0 +1,172 @@
+---
+course: "data-versioning-experiment-tracking"
+chapter: "integrating-dvc-mlflow"
+lesson: "connecting-data-versions-experiments"
+sourceId: 4093
+sourceUrl: "https://apxml.com/zh/courses/data-versioning-experiment-tracking/chapter-4-integrating-dvc-mlflow/connecting-data-versions-experiments"
+title: "关联数据版本与实验"
+description: "将特定数据版本（由DVC追踪）与实验运行（由MLflow追踪）关联起来的方法。"
+order: 1
+plots: []
+sourceHash: "a7c566f8fa3c5e8eab6df29f391143381cb4ac7c2a04ae55018d64f0514f4030"
+sourceCorrections: []
+---
+
+在机器学习 (machine learning)工作流中，使用DVC管理与Git代码配套的数据版本和使用MLflow追踪实验详情是常见实践。为实现真正的可复现性，建立DVC管理的数据版本与特定MLflow实验运行之间的清晰关联非常必要。设想一下，几周后你需要调试一个产生了意想不到结果的模型，或者想要精确复现表现最佳运行的条件。如果没有这种清晰关联，这些任务将变得困难重重，甚至不可能完成。
+
+主要挑战在于将MLflow运行（存在于MLflow追踪服务器或后端文件中）与数据的特定状态（由Git历史中追踪的`.dvc`文件定义）关联起来。我们需要一种系统性的方法来在实验执行时记录这种关联。
+
+### 关联数据版本与实验的方法
+
+有几种方法可以建立这种连接，从简单的手动步骤到更自动化的、整合到训练脚本中的方法。
+
+#### 1. 手动标签或参数 (parameter)记录
+
+最基本的方法是在使用MLflow记录实验时手动记录数据版本信息。你可以：
+
+- **记录Git提交哈希：** 在运行实验之前，确保相关的`.dvc`文件已提交。然后，找到当前的Git提交哈希值（`git rev-parse HEAD`）并将其作为参数或标签记录到MLflow运行中。
+- **记录数据版本标签：** 如果你使用Git标签（例如，`git tag v1.0-data`）来标记 (token)重要数据版本，你可以将此标签名称记录到MLflow。
+- **记录DVC文件哈希：** 你可以手动检查`.dvc`文件（`md5`或`etag`字段）中对应数据集的哈希值并记录它。
+
+虽然简单，但手动记录容易出错。忘记记录信息、记录错误的哈希值，或者工作目录中有未提交的更改都可能轻易地破坏连接并损害可复现性。因此，为了可靠的工作流程，通常更倾向于自动化方法。
+
+#### 2. 自动化Git提交哈希记录
+
+一种更好的方法是在训练脚本执行时自动捕获仓库的Git提交哈希值并将其记录到MLflow。由于你的`.dvc`文件由Git追踪，提交哈希值可以作为指向这些文件特定版本的指针，间接关联到数据版本。
+
+你可以在Python训练脚本中通过使用`gitpython`等库或直接调用Git命令来实现这一点：
+
+```python
+import mlflow
+import subprocess
+import os
+
+# 获取当前Git提交哈希值的函数
+def get_git_commit_hash():
+    try:
+        # 确保我们在一个Git仓库中
+        if subprocess.call(['git', 'rev-parse', '--is-inside-work-tree'], \
+                           stdout=subprocess.DEVNULL, \
+                           stderr=subprocess.DEVNULL) != 0:
+            print("Not inside a Git repository. Cannot log commit hash.")
+            return None
+
+        # 检查未提交的更改
+        status_output = subprocess.check_output(['git', 'status', '--porcelain']).decode().strip()
+        if status_output:
+            print("Warning: Uncommitted changes detected. Logging commit hash of HEAD.")
+            # （可选）你可以选择失败或记录一个表示“脏”状态的特定标签
+
+        commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
+        return commit_hash
+    except Exception as e:
+        print(f"Could not get Git commit hash: {e}")
+        return None
+
+# MLflow运行示例
+with mlflow.start_run() as run:
+    print(f"MLflow Run ID: {run.info.run_id}")
+
+    # 记录参数、指标等
+    mlflow.log_param("learning_rate", 0.01)
+    # ... 训练代码 ...
+    mlflow.log_metric("accuracy", 0.95)
+
+    # 自动记录Git提交哈希值
+    git_commit = get_git_commit_hash()
+    if git_commit:
+        mlflow.set_tag("git_commit", git_commit) 
+        # 或者作为参数记录：mlflow.log_param("git_commit", git_commit)
+        print(f"Logged Git commit: {git_commit}")
+
+    # 记录模型等工件
+    # mlflow.sklearn.log_model(...) 
+```
+
+在此示例中，`get_git_commit_hash`函数获取当前的提交哈希值。我们使用`mlflow.set_tag`将其作为与运行关联的标签存储起来（标签通常用于元数据，而参数常用于超参数 (hyperparameter)）。这会自动将实验运行与运行开始时你的代码库状态*以及*你的DVC指针（`.dvc`文件）关联起来。我们还添加了对未提交更改的检查，因为从“脏”的Git状态运行实验会使可复现性变得复杂。
+
+#### 3. 记录特定DVC元数据
+
+虽然Git提交哈希提供了间接关联，但你可能希望记录与数据本身更直接相关的信息。如果涉及多个数据集，或者你想要一个更明确的指针，这会很有用。
+
+- **记录`.dvc`文件哈希：** 你可以直接从相关`.dvc`文件中提取数据哈希值。此哈希值唯一标识由该特定文件版本追踪的数据内容。你可能需要解析`.dvc`文件（通常是YAML格式）或使用DVC命令。
+
+```python
+import mlflow
+import subprocess
+import yaml # 需要安装PyYAML：pip install pyyaml
+import os
+
+# 从.dvc文件获取哈希值的函数
+def get_dvc_file_hash(dvc_file_path):
+    try:
+        if not os.path.exists(dvc_file_path):
+            print(f"DVC file not found: {dvc_file_path}")
+            return None
+
+        with open(dvc_file_path, 'r') as f:
+            dvc_content = yaml.safe_load(f)
+
+        # DVC哈希通常在'outs' -> 第一个项 -> 'md5' 或 'hash'下
+        if 'outs' in dvc_content and len(dvc_content['outs']) > 0:
+             # 检查常见的哈希键（'md5', 'etag', 'hash'）
+             hash_key = next((k for k in ['md5', 'hash', 'etag'] if k in dvc_content['outs'][0]), None)
+             if hash_key:
+                 return dvc_content['outs'][0][hash_key]
+
+        print(f"Could not extract hash from {dvc_file_path}")
+        return None
+
+    except Exception as e:
+        print(f"Error reading DVC file {dvc_file_path}: {e}")
+        return None
+
+# --- 在你的MLflow运行上下文中 ---
+with mlflow.start_run() as run:
+    # ... 其他记录 ...
+
+    # 记录主数据集的.dvc文件的哈希值
+    data_dvc_file = "data/processed_data.dvc" 
+    data_hash = get_dvc_file_hash(data_dvc_file)
+    if data_hash:
+        mlflow.log_param("data_version_hash", data_hash)
+        print(f"Logged data hash from {data_dvc_file}: {data_hash}")
+
+    # 同时记录Git提交以表示代码版本
+    git_commit = get_git_commit_hash() # 假设来自上一个示例的函数
+    if git_commit:
+       mlflow.set_tag("git_commit", git_commit)
+```
+
+这种方法记录了`data/processed_data.dvc`中定义的数据输出的特定内容哈希值。同时记录Git提交（用于代码和DVC文件版本）和特定数据哈希值提供了互补信息。
+
+下图说明了这些组件如何关联：
+
+> 该图显示了MLflow运行如何同时记录Git提交哈希值（关联到代码和`.dvc`文件状态）以及可选地从`.dvc`文件获取的特定数据哈希值，从而将实验直接关联到通过DVC存储的版本化数据。
+
+### 实现可复现性
+
+通过持续记录Git提交哈希值以及可能的特定数据哈希值，你可以在MLflow中的实验结果与Git和DVC管理的代码和数据的确切状态之间建立可追溯的关联。
+
+要复现特定实验运行：
+
+1. **识别运行：** 在MLflow UI中找到感兴趣的运行。
+2. **获取标识符：** 记录已记录的`git_commit`标签和任何特定的`data_version_hash`参数 (parameter)。
+3. **检出代码：** 使用`git checkout <commit_hash>`来恢复与实验对应的仓库状态（代码和`.dvc`文件）。
+4. **获取数据：** 运行`dvc pull`以下载与该提交中存在的`.dvc`文件关联的数据文件。如果你记录了特定的`data_version_hash`，可以再次检查所拉取的`.dvc`文件中的哈希值是否与记录的值匹配。
+5. **重新运行：** 再次执行训练脚本。假设外部依赖项（库、适用的随机种子）也得到管理，你应该能够接近地复现原始环境和结果。
+
+建立这种关联是构建真正可复现机器学习 (machine learning)工作流程的重要一步。它确保你总能将结果追溯到生成它们的精确代码和数据。在以下章节中，我们将研究如何使用DVC管道进一步规范化这些步骤。
+
+## 参考资料
+
+- [Data Version Control (DVC) Documentation](https://dvc.org/doc) — Iterative, Inc. (2024)
+  DVC的官方指南，解释了数据版本控制概念、`.dvc`文件以及如何将数据链接到Git提交。
+- [MLflow Documentation](https://www.mlflow.org/docs/latest/index.html) — The MLflow Project (2024)
+  MLflow的官方指南，涵盖了实验跟踪、记录参数、指标以及运行标签。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready AI](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  关于MLOps实践的综合书籍，包括确保机器学习系统设计可重现性的方法。
+- [Pro Git](https://git-scm.com/book/en/v2) — Scott Chacon and Ben Straub (2014)
+  Publisher: Apress
+  Git的权威在线指南，解释了版本控制、提交哈希和仓库操作。

@@ -1,0 +1,84 @@
+---
+course: "model-interpretability-explainability"
+chapter: "shap-additive-explanations"
+lesson: "shap-summary-dependence-plots"
+sourceId: 4084
+sourceUrl: "https://apxml.com/zh/courses/model-interpretability-explainability/chapter-3-shap-additive-explanations/shap-summary-dependence-plots"
+title: "解读SHAP图：概览图与依赖图"
+description: "了解SHAP概览图以判断全局特征重要性，以及依赖图以判断特征联动关系。"
+order: 7
+plots: ["plots/4084-0.json", "plots/4084-1.json"]
+sourceHash: "6163194726a08a1f631dc7096b830e3157f792384ff6b37910ba47a877ae5e4e"
+sourceCorrections: []
+---
+
+单个SHAP值（常通过力图展示）对单个预测提供说明。然而，我们经常需要一个更广阔的视角来了解特征如何整体影响模型。SHAP提供了强大的可视化工具，能够汇集多实例的信息，帮助我们把握全局特征重要性与关联。为此，概览图（Summary Plot）和依赖图（Dependence Plot）是两个基础的图形。
+
+## SHAP概览图
+
+SHAP概览图提供了一个简洁的视图，显示了特征重要性以及特征效应对整个数据集（或代表性样本）的分布。它有助于回答诸如：“哪些特征整体上最重要？”以及“特征的高值或低值倾向于增加或减少模型的预测吗？”
+
+**结构与解读**
+
+一个典型的概览图显示以下内容：
+
+1. **特征：** 每个特征都在Y轴上垂直列出。
+2. **特征重要性：** 特征按其全局重要性排序，全局重要性通常计算为所有实例的平均绝对SHAP值。最重要的特征位于顶部。
+3. **SHAP值（影响）：** X轴代表特征的SHAP值。右侧的点表示正向影响（使预测值变高），而左侧的点表示负向影响（使预测值变低）。
+4. **实例表示：** 图上的每个点对应数据集中特定特征和特定实例的SHAP值。
+5. **特征值着色：** 点根据该实例的特征原始值进行着色。通常，颜色范围（例如，蓝色到红色）表示特征值从低到高。
+
+通过观察每个特征点的分布和着色，您可以推断出：
+
+- **整体重要性：** 列表中位置越高的特征，对模型输出的大小平均影响越大。
+- **影响方向：** 水平分布显示了影响的范围。如果某个特征的点主要在右侧，则它通常会增加预测值；如果主要在左侧，则会减少预测值。
+- **值关联：** 颜色渐变显示了特征值与其影响的关系。例如，如果高值（红色点）始终在右侧（正SHAP值），而低值（蓝色点）在左侧（负SHAP值），则表示特征与模型输出之间存在正相关。颜色重叠可能表明更复杂的关联或联动。
+
+
+
+![SHAP概览图示例](plots/4084-0.json)
+
+
+
+> SHAP概览图的一个简化示例。“年龄”似乎最重要，年龄越大（偏红点）通常具有正SHAP值。“收入”显示出类似趋势，但总体影响较小。“教育”影响最小，从这个视图看，其值与影响之间的关联不太明确。
+
+## SHAP依赖图
+
+概览图提供了一个总览，而SHAP依赖图则允许更细致地查看单个特征在整个数据集上的效应。它有助于可视化特征值与其对应SHAP值之间的关联，显示潜在的非线性关系和联动效应。
+
+**结构与解读**
+
+一个依赖图通常显示：
+
+1. **特征值：** X轴代表所选特征的实际值。
+2. **SHAP值（影响）：** Y轴代表每个实例中该特征的SHAP值。
+3. **实例表示：** 每个点对应数据集中一个实例。
+4. **联动着色（可选但推荐）：** 点可以根据*第二个*特征的值进行着色。SHAP库通常会自动选择与主要绘制特征似乎具有最强联动效应的特征。
+
+解读依赖图需要关注以下几点：
+
+- **主效应趋势：** 点的整体垂直趋势显示了随着特征值增加，SHAP值（对预测的影响）如何变化。这可以显示线性或非线性关联。
+- **垂直离散度：** 如果X轴上相似特征值的点显示出明显的垂直分散，则表明其他特征正在影响主要特征的作用。这表示存在联动效应。
+- **联动效应（带颜色）：** 当点按第二个特征着色时，垂直轴上颜色的明显模式或分离强烈暗示存在联动。例如，如果联动特征的高值（例如，红色点）在X轴上主要特征的*相同*值下，始终比低值（例如，蓝色点）具有更高的SHAP值，则表明存在正向联动。
+
+
+
+![年龄的SHAP依赖图（按收入着色）](plots/4084-1.json)
+
+
+
+> “年龄”特征的SHAP依赖图示例，点按“收入”着色。上升趋势表明，年龄越大通常会对预测产生更高的正向影响。如果对于给定年龄，偏红点（收入较高）在Y轴上始终高于偏蓝点（收入较低），则表示存在联动，其中年龄的正向影响被较高的收入放大。
+
+## 综合分析
+
+概览图和依赖图协同作用，可提供对特征效应的全面了解。概览图找出哪些特征值得进一步细致观察，而依赖图则显示其影响的准确性质，包括非线性和联动。这些可视化图可以更全面地描述模型的行为，有助于模型验证、调试和结果交流。生成这些图通常很简单，只需使用SHAP Python库中提供的`shap.summary_plot()`和`shap.dependence_plot()`等函数，我们将在实现部分介绍这些内容。
+
+## 参考资料
+
+- [A Unified Approach to Interpreting Model Predictions](https://proceedings.neurips.cc/paper_files/paper/2017/file/8a20a8621978632d76c43dfd28b67767-Paper.pdf) — Scott M. Lundberg and Su-In Lee (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 4765-4774; DOI: [10.5555/3295222.3295230](https://doi.org/10.5555/3295222.3295230)
+  这篇基础性论文介绍了SHAP（Shapley加性解释）值，建立了模型可解释性的理论框架，包括汇总图和依赖图的理论基础。
+- [SHAP (SHapley Additive exPlanations) Documentation](https://shap.readthedocs.io/en/latest/) — Scott M. Lundberg and SHAP contributors (2024)
+  SHAP Python库的官方文档，提供了生成汇总图和依赖图的实用细节和API参考。
+- [Interpretable Machine Learning: A Guide for Making Black Box Models Explainable](https://christophm.github.io/interpretable-ml-book/) — Christoph Molnar (2024)
+  一本关于模型可解释性的综合性书籍，其中专门的章节详细解释了SHAP值以及汇总图和依赖图等可视化方法。

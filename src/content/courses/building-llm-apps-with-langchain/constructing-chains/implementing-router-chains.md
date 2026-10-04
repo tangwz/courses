@@ -1,0 +1,208 @@
+---
+course: "building-llm-apps-with-langchain"
+chapter: "constructing-chains"
+lesson: "implementing-router-chains"
+sourceId: 7420
+sourceUrl: "https://apxml.com/zh/courses/building-llm-apps-with-langchain/chapter-3-constructing-chains/implementing-router-chains"
+title: "使用路由器链实现条件逻辑"
+description: "了解如何使用路由器链，根据输入或大型语言模型 (LLM) 的决策动态选择工作流程中的下一步。"
+order: 4
+plots: []
+sourceHash: "fa3071e6f41ce3218dd1941c04d4102ab95ebfbc64761866ff6ca8e54e2dbcae"
+sourceCorrections: []
+---
+
+应用程序通常需要动态行为，而不是执行预定义、线性的步骤序列。举例来说，设想一个旨在回答学术问题的系统。关于量子力学的问题，与关于罗马帝国的问题，需要不同的上下文 (context)和语气。如果都通过相同的通用提示和模型处理，将产生次优结果。因此，需要一种机制来智能地将输入路由到最适合的处理路径。
+
+这正是路由工作流程旨在解决的问题。它为您的工作流程引入条件逻辑，允许应用程序根据输入选择多条可能路径中的一条。路由器不再是 $g(f(\text{Input}))$ 这样的固定序列，而是实现了一种条件结构，类似于编程中的 if-else 语句。大型语言模型 (LLM) 被用作决策引擎来引导执行流程。
+
+### 路由器链的架构
+
+路由工作流程由两个主要组成部分构成：
+
+1. **路由链**：这是一条负责分析初始输入并决定将其发送到哪个目标的链。此链的提示会指示大型语言模型 (LLM) 对输入进行分类，并返回相应目标类别的名称。
+2. **目标链**：这是一组链，每条链都为特定任务设计。对于我们的学术助手示例，我们可能有 `physics_chain`、`history_chain` 和 `math_chain`。路由器根据其分析选择其中一条来执行。
+
+整个过程如下进行：用户的输入首先传递给路由链。路由链的大型语言模型 (LLM) 输出一个目标名称。系统随后使用此名称从其集合中查找对应的目标链，并使用原始输入执行它。
+
+> 输入首先由路由大型语言模型 (LLM) 进行评估，该模型选择几条专用目标链中的一条来生成最终输出。
+
+### 构建多提示路由器
+
+我们来构建一个路由工作流程的实用示例，该流程将问题发送给不同的专家：物理学家、数学家和历史学家。
+
+首先，我们为目标链定义提示。每个提示都引导大型语言模型 (LLM) 采用特定的角色。
+
+```python
+import os
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+# 假设您的环境中已设置 OPENAI_API_KEY
+# os.environ["OPENAI_API_KEY"] = "your-api-key"
+
+llm = ChatOpenAI(temperature=0, model="gpt-4o")
+
+physics_template = """你是一位非常聪明的物理学教授。
+你擅长以简洁易懂的方式回答物理问题。
+当你不知道一个问题的答案时，你会承认不知道。
+
+这是一个问题：
+{input}"""
+
+math_template = """你是一位非常出色的数学家。你擅长回答数学问题。
+你之所以如此出色，是因为你能够将难题分解成其组成部分，
+回答这些组成部分，然后将它们组合起来回答更广泛的问题。
+
+这是一个问题：
+{input}"""
+
+history_template = """你是一位非常出色的历史学家。你对历史有着丰富的知识和卓越的记忆力。
+你尤其擅长通过讲故事的方式回答问题。
+
+这是一个问题：
+{input}"""
+
+prompt_infos = [
+    {
+        "name": "physics",
+        "description": "适合回答物理问题",
+        "prompt_template": physics_template,
+    },
+    {
+        "name": "math",
+        "description": "适合回答数学问题",
+        "prompt_template": math_template,
+    },
+    {
+        "name": "history",
+        "description": "适合回答历史问题",
+        "prompt_template": history_template,
+    },
+]
+```
+
+接下来，我们使用管道 `|` 语法创建目标链。每条链由一个提示、大型语言模型 (LLM) 和一个输出解析器组成。
+
+```python
+destination_chains = {}
+for p_info in prompt_infos:
+    name = p_info["name"]
+    prompt_template = p_info["prompt_template"]
+    prompt = PromptTemplate.from_template(template=prompt_template)
+    chain = prompt | llm | StrOutputParser()
+    destination_chains[name] = chain
+```
+
+现在是核心路由逻辑。我们定义一个提示，指示大型语言模型 (LLM) 充当分类器。它应该只输出最符合输入的类别名称。
+
+```python
+destinations = [f"{p['name']}: {p['description']}" for p in prompt_infos]
+destinations_str = "\n".join(destinations)
+
+router_template = """根据以下用户输入，将其分类为关于 {options} 中的一项。
+
+选择描述：
+{destinations}
+
+返回所选项的名称，仅此而已。
+
+输入：
+{input}
+"""
+
+router_prompt = PromptTemplate.from_template(router_template)
+router_prompt = router_prompt.partial(destinations=destinations_str, options=", ".join([p['name'] for p in prompt_infos]))
+
+router_chain = router_prompt | llm | StrOutputParser()
+```
+
+最后，我们使用 `RunnableLambda` 组装所有部分。我们定义一个 `route` 函数，它接收路由器链的输出（类别名称），并返回相应的目标链。
+
+```python
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+
+def route(info):
+    # 路由链的输出通过 info["destination"] 传递到此处
+    destination = info["destination"].strip().lower()
+    
+    # 从字典中选择链
+    if destination in destination_chains:
+        return destination_chains[destination]
+    else:
+        # 如果目前不明确，则回退到物理链
+        return destination_chains["physics"]
+
+# 我们构建完整的链：
+# 1. 运行路由器并传递输入
+# 2. 使用 route 函数选择下一条链
+chain = {
+    "destination": router_chain,
+    "input": RunnablePassthrough()
+} | RunnableLambda(route)
+```
+
+我们用几个不同的输入来测试一下。
+
+```python
+# 用物理问题进行测试
+response_physics = chain.invoke("What is the formula for gravitational potential energy?")
+print(f"物理响应: {response_physics}")
+
+# 用历史问题进行测试
+response_history = chain.invoke("When was the Battle of Hastings?")
+print(f"历史响应: {response_history}")
+```
+
+当你运行物理问题时，路由器正确识别出 `physics` 类别，并由专门的物理提示生成输出：
+
+```text
+物理响应: 行星表面附近引力势能 (U) 的公式是：
+U = mgh
+其中：
+- m 是物体的质量。
+- g 是重力加速度。
+- h 是物体相对于参考点的高度。
+```
+
+同样，历史问题也被正确地路由到历史链。这种动态路由使得应用程序能够使用专用提示，显著提升其响应的质量和相关性。
+
+### 处理默认情况
+
+一个设计良好的系统必须妥善处理歧义。如果用户提出的问题不完全符合任何预定义类别，例如“数学史是什么？”路由器可能难以做出明确选择。
+
+为了解决这个问题，我们可以定义一条默认链，并更新我们的路由逻辑，使其在路由器的输出与已知目标不匹配时回退到该链。
+
+以下是如何在我们的示例中添加默认链：
+
+```python
+# 创建一个通用链作为回退
+default_prompt = PromptTemplate.from_template("{input}")
+default_chain = default_prompt | llm | StrOutputParser()
+
+def route(info):
+    destination = info["destination"].strip().lower()
+    # 使用 .get() 方法提供默认回退
+    return destination_chains.get(destination, default_chain)
+
+# 使用更新后的路由逻辑重新初始化完整链
+chain = {
+    "destination": router_chain,
+    "input": RunnablePassthrough()
+} | RunnableLambda(route)
+```
+
+加入此功能后，路由器无法确定分类（或输出未知类别）的任何输入都将由 `default_chain` 处理，从而使应用程序更加一致。这种模式提供了一种有效的方法，通过超越简单的线性序列并整合条件式、逻辑驱动的工作流程，来构建更精巧、更智能的应用程序。
+
+## 参考资料
+
+- [Router Chains](https://python.langchain.com/docs/modules/chains/router/) — LangChain (2024)
+  Publisher: LangChain
+  提供LangChain路由器链功能的官方解释和实现细节。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了一种通用的范式，用于大型语言模型生成推理轨迹和任务特定动作，这与路由器LLM决定特定动作（执行目标链）的概念类似。
+- [Toolformer: Language Models That Can Use Tools](https://arxiv.org/abs/2302.04761) — Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom (2023)
+  Journal: arXiv preprint arXiv:2302.04761; DOI: [10.48550/arXiv.2302.04761](https://doi.org/10.48550/arXiv.2302.04761)
+  探讨语言模型如何被训练以使用外部工具，这是一个更广泛的概念，它包含路由器链选择和调用专门处理路径的功能。

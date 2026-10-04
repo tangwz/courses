@@ -1,0 +1,179 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "vectors-in-machine-learning"
+lesson: "dot-product-projections"
+sourceId: 1451
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-1-vectors-in-machine-learning/dot-product-projections"
+title: "点积与投影"
+description: "学习点积计算及其在测量相似度和向量投影中的用途。"
+order: 4
+plots: []
+sourceHash: "ca369a5faff719d62c9138b1394200574cc861ef42593d03903e76c48c504560"
+sourceCorrections: []
+---
+
+虽然向量 (vector)加法、减法和标量乘法改变了向量的位置或尺度，但**点积**（也称作标量积或内积）提供了一种“乘法”方式，将两个向量相乘，得到一个单一的标量。这个标量描述了两个向量方向之间的关联，使其成为测量相似度以及理解特征空间中几何关联的重要方法。
+
+### 定义与计算
+
+对于$\mathbb{R}^n$中的两个向量 (vector)$a = [a_1, a_2, ..., a_n]$和$b = [b_1, b_2, ..., b_n]$，它们的点积，表示为$a \cdot b$或$a^T b$，通过对应元素相乘并求和得到：
+
+$a \cdot b = \sum_{i=1}^{n} a_i b_i = a_1 b_1 + a_2 b_2 + \dots + a_n b_n$
+
+结果总是一个标量，而非向量。
+
+**例子：**
+设 $a = [1, 2, 3]$ 且 $b = [-2, 0, 4]$。
+它们的点积为：
+$a \cdot b = (1 \times -2) + (2 \times 0) + (3 \times 4) = -2 + 0 + 12 = 10$
+
+在Python中使用NumPy，可以通过`numpy.dot`函数、NumPy数组的`dot`方法或`@`运算符（Python 3.5+）有效计算点积。
+
+```python
+import numpy as np
+
+a = np.array([1, 2, 3])
+b = np.array([-2, 0, 4])
+
+# 方法 1: np.dot()
+dot_product_1 = np.dot(a, b)
+
+# 方法 2: .dot() 方法
+dot_product_2 = a.dot(b)
+
+# 方法 3: @ 运算符
+dot_product_3 = a @ b
+
+print(f"使用 np.dot 的点积: {dot_product_1}")
+print(f"使用 .dot 方法的点积: {dot_product_2}")
+print(f"使用 @ 运算符的点积: {dot_product_3}")
+# 预期输出：所有方法均为 10
+```
+
+### 几何解释：向量 (vector)间的夹角
+
+点积有一个强大的几何解释，它与两个向量（当它们首尾相接时）之间的夹角$\theta$相关：
+
+$a \cdot b = ||a||_2 ||b||_2 \cos(\theta)$
+
+这里，$||a||_2$和$||b||_2$是向量$a$和$b$的欧几里得 ($L_2$) 范数（模长）。此公式将代数计算（$\sum a_i b_i$）与几何（长度和向量间的夹角）联系起来。
+
+我们可以重新排列此公式来求夹角：
+
+$\cos(\theta) = \frac{a \cdot b}{||a||_2 ||b||_2}$
+$\theta = \arccos\left(\frac{a \cdot b}{||a||_2 ||b||_2}\right)$
+
+点积的符号描述了夹角$\theta$：
+
+- **$a \cdot b > 0$**: $\cos(\theta) > 0$，所以$0^\circ \le \theta < 90^\circ$（锐角）。向量大致指向相同方向。
+- **$a \cdot b = 0$**: $\cos(\theta) = 0$，所以$\theta = 90^\circ$。向量是**正交的**（垂直的）。正交性是线性代数和机器学习 (machine learning)中的一个重要性质，常表示独立性或分离。
+- **$a \cdot b < 0$**: $\cos(\theta) < 0$，所以$90^\circ < \theta \le 180^\circ$（钝角）。向量大致指向相反方向。
+
+### 测量相似度：余弦相似度
+
+几何解释直接引出了机器学习 (machine learning)中向量 (vector)间相似度的一个常用度量：**余弦相似度**。它测量了两个非零向量间夹角的余弦值。
+
+$\text{余弦相似度}(a, b) = \cos(\theta) = \frac{a \cdot b}{||a||_2 ||b||_2}$
+
+余弦相似度的取值范围是 -1 到 1：
+
+- **1:** 向量指向完全相同的方向（最大相似度）。
+- **0:** 向量正交（无方向相似度）。
+- **-1:** 向量指向相反方向（方向上的最大不相似度）。
+
+这种度量广泛应用于自然语言处理（NLP）等领域，以比较文档嵌入 (embedding)或词向量，以及在推荐系统中查找相似用户或物品，因为它侧重于向量的朝向（方向）而非其模长。例如，两篇讨论相同主题的文档，它们的向量表示可能指向相似方向，即便其中一篇文档比另一篇长得多（向量模长更大）。
+
+```python
+import numpy as np
+
+# 例子：文档向量（例如，词频）
+doc1 = np.array([2, 1, 0, 3]) # 词 A, B, C, D 的计数
+doc2 = np.array([4, 2, 1, 6]) # 相似主题，更长的文档
+doc3 = np.array([0, 0, 5, 1]) # 不同主题
+
+def cosine_similarity(vec1, vec2):
+  dot_prod = vec1 @ vec2
+  norm1 = np.linalg.norm(vec1) # 默认是 L2 范数
+  norm2 = np.linalg.norm(vec2)
+  if norm1 == 0 or norm2 == 0:
+    return 0 # 如果向量为零，避免除以零
+  return dot_prod / (norm1 * norm2)
+
+sim_1_2 = cosine_similarity(doc1, doc2)
+sim_1_3 = cosine_similarity(doc1, doc3)
+
+print(f"doc1 和 doc2 之间的相似度: {sim_1_2:.4f}") # 应该接近 1
+print(f"doc1 和 doc3 之间的相似度: {sim_1_3:.4f}") # 应该低得多
+# 预期输出（约）：
+# doc1 和 doc2 之间的相似度: 0.9990
+# doc1 和 doc3 之间的相似度: 0.1705
+```
+
+### 向量 (vector)投影
+
+点积的另一个主要用途是计算一个向量在另一个向量上的**投影**。想象将光源垂直照射到向量$b$上；向量$a$在包含$b$的线上投下的影子就是$a$在$b$上的向量投影。这个投影描述了向量$a$在向量$b$方向上的“量”。
+
+> 向量$a$在向量$b$上的投影。紫色虚线向量`proj_b(a)`是向量$a$沿向量$b$方向的分量。
+
+有两个相关量：
+
+1. **标量投影：** 这是向量投影的*长度*。它是“影子”的带符号模长。从三角学 ($||a||_2 \cos(\theta)$) 和点积公式 ($a \cdot b = ||a||_2 ||b||_2 \cos(\theta)$) 中，我们得到：
+   $\text{向量 } a \text{ 在 } b \text{ 上的标量投影} = ||a||_2 \cos(\theta) = \frac{a \cdot b}{||b||_2}$
+   符号指示投影方向与$b$方向相同（+）或相反（-）。
+2. **向量投影：** 这是表示投影的实际*向量*。为了得到这个向量，我们将标量投影（长度）乘以$b$方向的单位向量。$b$方向上的单位向量是$\frac{b}{||b||_2}$。
+   $\text{proj}_b(a) = (\text{标量投影}) \times (\text{向量 } b \text{ 的单位向量})$
+   $\text{proj}_b(a) = \left( \frac{a \cdot b}{||b||_2} \right) \frac{b}{||b||_2} = \frac{a \cdot b}{||b||_2^2} b$
+   由于$||b||_2^2 = b \cdot b$，一个常用的替代形式是：
+   $\text{proj}_b(a) = \left( \frac{a \cdot b}{b \cdot b} \right) b$
+
+投影在需要将向量分解为分量的算法中非常有用，例如用于生成正交基的Gram-Schmidt正交化过程，并且它们被隐式应用于像主成分分析（PCA）这样的降维方法中，其中数据被投影到方差较大的方向上。
+
+**计算例子：**
+设 $a = [2, 3]$ 且 $b = [4, 0]$。
+$a \cdot b = (2)(4) + (3)(0) = 8$
+$b \cdot b = (4)(4) + (0)(0) = 16$
+$||b||_2 = \sqrt{16} = 4$
+
+向量$a$在$b$上的标量投影 $= \frac{a \cdot b}{||b||_2} = \frac{8}{4} = 2$。
+向量$a$在$b$上的向量投影 $= \left( \frac{a \cdot b}{b \cdot b} \right) b = \left( \frac{8}{16} \right) [4, 0] = \frac{1}{2} [4, 0] = [2, 0]$。
+
+这直观上讲得通：向量 $a=[2, 3]$ 在 x 轴方向上（即 $b=[4, 0]$ 的方向）有一个长度为 2 的分量。
+
+```python
+import numpy as np
+
+a = np.array([2, 3])
+b = np.array([4, 0])
+
+# 标量投影
+scalar_proj = (a @ b) / np.linalg.norm(b)
+
+# 向量投影
+vector_proj = ( (a @ b) / (b @ b) ) * b
+# 使用标量投影计算向量投影的替代方法：
+# unit_b = b / np.linalg.norm(b)
+# vector_proj_alt = scalar_proj * unit_b
+
+print(f"向量 a: {a}")
+print(f"向量 b: {b}")
+print(f"向量 a 在 b 上的标量投影: {scalar_proj:.4f}")
+print(f"向量 a 在 b 上的向量投影: {vector_proj}")
+# 预期输出：
+# 向量 a 在 b 上的标量投影: 2.0000
+# 向量 a 在 b 上的向量投影: [2. 0.]
+```
+
+点积和投影是非常实用的方法。它们使我们能够从简单的向量运算转向分析向量间的几何关联、测量相似度以及将向量分解为有特定意义的分量，所有这些都是在机器学习 (machine learning)中处理数据时的常见操作。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 2, "Linear Algebra"
+  第2章介绍了基础线性代数概念，包括向量运算、点积和投影，这些内容是专门为机器学习应用而设计的。
+- [Linear Algebra (Course 18.06SC)](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: Massachusetts Institute of Technology (MIT OpenCourseWare)
+  麻省理工学院的开放课程提供了视频讲座和课程材料，解释了线性代数中的点积、投影及其几何意义。
+- [numpy.dot](https://numpy.org/doc/stable/reference/generated/numpy.dot.html) — NumPy Developers (2024)
+  NumPy点积函数的官方文档，提供了其用法、参数和高效数值计算示例的详细信息。
+- [numpy.linalg.norm](https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html) — NumPy Developers (2024)
+  NumPy范数函数的官方文档，说明了如何计算各种向量和矩阵范数，这对于余弦相似度和投影计算至关重要。

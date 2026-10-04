@@ -1,0 +1,150 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "training-large-scale-moes"
+lesson: "practice-distributed-moe-training"
+sourceId: 7065
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-3-training-large-scale-moes/practice-distributed-moe-training"
+title: "实践：配置分布式训练作业"
+description: "一份关于如何使用并行库设置和配置大型MoE模型的分布式训练作业的实用指南。"
+order: 7
+plots: ["plots/7065-0.json", "plots/7065-1.json"]
+sourceHash: "cbc187fde83b7cbedc9c175278d8b9cf63f268249e129235457d3e766efad9e5"
+sourceCorrections: []
+---
+
+将本章中的并行策略和优化准则应用于实际，需要将它们转化为训练框架的配置。本节最后详细介绍如何设置大型混合专家模型的分布式训练作业。我们将侧重于您需要调整的那些重要配置参数 (parameter)，并使用接受配置文件的训练脚本。
+
+一个MoE模型在一个由两个节点组成的集群上训练，每个节点配备八个GPU，总计16个GPU。将采用混合并行策略来有效扩展训练过程。
+
+### 定义并行策略
+
+对于大型MoE模型，单一的并行技术很少足够。我们必须将它们结合起来以解决不同的系统瓶颈。一种常见且行之有效的方法是结合数据并行（DP）和专家并行（EP）。
+
+- **专家并行 (EP)：** 每个MoE层的专家分片到一组GPU上。如果我们有64个专家，专家并行大小为8，那么该组中的8个GPU，每个都保存8个独特的专家。
+- **数据并行 (DP)：** 整个模型（包括所有分片专家）被复制。每个副本处理不同的数据批次。
+
+对于我们的16-GPU设置，一个合理的配置是专家并行大小为8，数据并行大小为2。
+
+- `专家并行大小 (EP) = 8`
+- `数据并行大小 (DP) = 2`
+- `GPU总数 = EP * DP = 8 * 2 = 16`
+
+这意味着我们将有两个模型的数据并行副本。在每个副本中，专家分片到8个GPU上。这种设置有用，因为它允许专家处理所需的全局通信（all-to-all）在单个节点内发生（单个节点通常具有像NVLink这样的高速互连），而较慢的节点间通信仅用于同步两个数据并行副本之间的梯度。
+
+> 混合并行设置图，包含2个数据并行副本和专家并行大小为8。专家在每个节点内分片，梯度在节点间同步。
+
+### 配置MoE超参数 (parameter) (hyperparameter)
+
+定义了并行策略后，我们现在来看MoE特有的超参数。这些设置直接影响计算效率、内存使用和模型性能之间的权衡。
+
+#### 容量因子
+
+容量因子是最重要的MoE超参数之一。它决定了分配给每个专家处理令牌的缓冲区大小。每个专家理想的、完全平衡的令牌数量是 `(batch_size * sequence_length) / num_experts`。容量因子是此理想值的乘数。
+
+
+$$
+\text{专家容量} = \text{容量因子} \times \frac{\text{批次中令牌数}}{\text{专家数量}}
+$$
+
+
+`capacity_factor`为1.0意味着缓冲区大小正好是理想分布的大小。然而，路由器的分配从不完美，因此一些专家将被分配更多的令牌。大于1.0的因子提供一个缓冲区来处理这种不平衡。
+
+- **低容量因子（例如，1.25）：** 减少内存使用和与填充相关的计算，因为专家缓冲区较小。风险是如果专家的缓冲区溢出，更多的令牌将被“丢弃”，这会损害模型质量。
+- **高容量因子（例如，2.0）：** 最大程度减少丢弃的令牌数量，确保大多数专家计算有助于最终输出。代价是增加GPU内存分配，并可能在填充令牌上浪费计算。
+
+选择正确的值需要实验。一种常见做法是使用诸如1.25或1.5的值，并在早期训练阶段监控丢弃令牌的百分比。如果丢弃令牌率持续高于1-2%，您应该考虑增加容量因子。
+
+
+
+![容量因子权衡](plots/7065-0.json)
+
+
+
+> 容量因子、丢弃令牌百分比和所需GPU内存之间的关系。增加因子会减少令牌丢失，但代价是更高的内存消耗。
+
+#### 负载均衡和路由器损失
+
+正如本章前面所讨论的，辅助损失对于MoE训练的稳定是必需的。它们的权重 (weight)是您必须配置的超参数。
+
+- `load_balance_loss_coeff`：这个系数调整辅助损失的比例，该损失促使门控网络将令牌均匀地分配到所有专家。一个典型的起始值在`0.01`的范围内。如果您发现少数专家持续过载而其他专家闲置，您可能需要增加此值。
+- `router_z_loss_coeff`：这个系数调整损失项的比例，该损失项惩罚门控网络中较大的逻辑值。它作为一种正则化 (regularization)器来提高数值稳定性。像`0.001`这样的小值通常是一个不错的起点。
+
+### 训练配置示例
+
+让我们将这些元素汇集到一个配置文件中。以下是用于我们16-GPU作业的训练脚本可能使用的Python字典或JSON文件的示例。
+
+```python
+# moe_训练配置.py
+
+config = {
+    # 模型架构
+    "model": {
+        "num_layers": 32,
+        "hidden_size": 4096,
+        "num_attention_heads": 32,
+        "moe_layer_frequency": 2,  # 每2个Transformer块使用一个MoE层
+        "moe": {
+            "num_experts": 64,
+            "num_experts_per_tok": 2, # Top-2门控
+        }
+    },
+
+    # 训练设置
+    "training": {
+        "batch_size_per_gpu": 4,
+        "sequence_length": 2048,
+        "optimizer": "AdamW",
+        "learning_rate": 1e-4,
+        "precision": "bfloat16", # 使用BFloat16以节省内存并提高速度
+    },
+
+    # 分布式训练配置
+    "distributed": {
+        "data_parallel_size": 2,
+        "expert_parallel_size": 8,
+        "tensor_parallel_size": 1, # 此示例中无张量并行
+    },
+
+    # MoE特有优化参数
+    "moe_optimization": {
+        # 将容量因子设置为理想负载的25%以上
+        "capacity_factor": 1.25,
+
+        # 负载均衡辅助损失的系数
+        "load_balance_loss_coeff": 0.01,
+
+        # 路由器逻辑正则化损失的系数
+        "router_z_loss_coeff": 0.001,
+    }
+}
+```
+
+### 启动和监控作业
+
+配置定义好后，您可以使用`torchrun`等工具或`deepspeed`等框架特定启动器来启动分布式作业。
+
+工作不只是启动。监控训练运行与初始设置同样重要。请密切关注这些指标，这些指标通常由高级训练框架记录：
+
+1. **丢弃令牌百分比：** 如前所述，这是您调整`capacity_factor`的主要指标。在每个训练步骤中记录此值。
+2. **专家利用率：** 此指标显示有多少令牌被路由到每个专家。平衡良好的模型将显示令牌在所有专家之间相对平坦的分布。如果分布高度偏斜，这表明专家崩溃或负载均衡不佳，建议增加`load_balance_loss_coeff`。
+
+
+
+![专家利用率监控](plots/7065-1.json)
+
+
+
+> 专家之间令牌分布的比较。糟糕的均衡显示少数专家占据主导地位，而良好的均衡，通过更高的负载均衡损失系数获得，导致更均匀的分布。
+
+3. **损失曲线：** 分别监控总损失、主交叉熵损失和辅助损失。注意辅助损失的突然尖峰或不稳定，这可能表明路由器存在问题，可以通过调整`router_z_loss_coeff`来解决。
+
+通过有条不紊地定义配置并仔细监控重要指标，您可以成功地完成这些强大稀疏模型的训练。
+
+## 参考资料
+
+- [Sparsely-Gated Mixture-of-Experts Layers](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: arXiv preprint arXiv:1701.06538; DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  本文介绍了混合专家层，并概述了专家负载平衡方法，与本节中讨论的辅助损失直接相关。
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://arxiv.org/abs/2101.03961) — William Fedus, Barret Zoph, Noam Shazeer (2021)
+  Journal: Journal of Machine Learning Research; DOI: [10.48550/arXiv.2101.03961](https://doi.org/10.48550/arXiv.2101.03961)
+  这项工作展示了混合专家模型的规模化训练，并处理了训练中的考量，包括辅助损失（如Z-loss）和容量在令牌路由管理中的作用。

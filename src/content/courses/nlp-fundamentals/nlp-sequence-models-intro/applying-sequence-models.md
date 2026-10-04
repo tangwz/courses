@@ -1,0 +1,88 @@
+---
+course: "nlp-fundamentals"
+chapter: "nlp-sequence-models-intro"
+lesson: "applying-sequence-models"
+sourceId: 2508
+sourceUrl: "https://apxml.com/zh/courses/nlp-fundamentals/chapter-5-nlp-sequence-models-intro/applying-sequence-models"
+title: "将序列模型应用于文本"
+description: "概述如何使用RNN、LSTM或GRU处理诸如情感分析或词性标注等任务。"
+order: 6
+plots: []
+sourceHash: "b0d2479bd09fc6287f6065adb5f332eb2c4553e99655cedec5032f0fc8d6d6aa"
+sourceCorrections: []
+---
+
+循环神经网络 (neural network)（RNN）、长短期记忆（LSTM）网络和门控循环单元（GRU）是一类序列模型。这些模型实际应用于基于文本的任务。与TF-IDF或词袋等将文本视为无序词项集合的方法不同，序列模型逐词处理，保持一个内部状态或“记忆”，其记录了之前步骤的信息。这种处理有序数据的固有能力使它们适用于多种自然语言处理问题，在这些问题中，语境和词序都很重要。
+
+### 准备用于序列模型的文本
+
+在将文本输入到RNN、LSTM或GRU之前，需要将其转换为网络可以理解的数字格式。这通常涉及两个主要步骤：
+
+1. **分词 (tokenization)：** 文本被分解成单个词元 (token)（通常是单词，但有时是子词 (subword)或字符）。这个过程应该与生成词嵌入 (embedding)的方式（如果使用）保持一致。
+2. **数值转换：** 每个词元被映射到一个数值表示。虽然可以使用独热编码，但这会导致非常高维和稀疏的向量 (vector)。一种更常见且有效的方法是使用**词嵌入**。
+   - 首先，词汇表 (vocabulary)中的每个独特词元都被分配一个整数索引。
+   - 然后，使用一个嵌入层（或预训练 (pre-training)的嵌入查找）将每个整数索引转换为一个密集、低维的向量（例如，100、300维度）。这些向量通常使用Word2Vec或GloVe等方法学习（如第4章所述），或与序列模型同时训练，它们能够捕捉词语之间的语义关系。
+
+结果是，一个输入句子变成了一串稠密向量，其中每个向量对应序列中的一个词元。例如，句子“Review this product”可能被分词为`["Review", "this", "product"]`，映射到索引`[15, 8, 120]`，然后由嵌入层转换为包含三个向量的序列：`[vector_15, vector_8, vector_120]`。这个向量序列随后被输入到序列模型中，每个时间步一个向量。
+
+### 常见的自然语言处理任务和相应架构
+
+序列模型可以通过改变输入处理和输出生成方式来适应不同的自然语言处理任务。以下是一些常见的模式：
+
+#### 多对一架构
+
+在这种配置中，模型读取整个输入序列，并在处理完最终输入步骤后产生一个单独的输出。最终的隐藏状态（或有时是所有隐藏状态的聚合，如最大池化或平均池化）通常被输入到一个带有适当激活函数 (activation function)（例如，用于二元分类的Sigmoid，用于多类分类的Softmax）的稠密层中，以产生最终预测。
+
+- **应用：**
+  - **情感分析：** 根据整个文本将评论、推文或句子分类为积极、消极或中性。
+  - **文本分类：** 将文档分配给一个或多个预定义类别（例如，主题分类、垃圾邮件检测）。
+
+> 多对一架构：序列模型逐步处理输入，最终状态用于单个分类输出。
+
+#### 多对多（同步）架构
+
+在这里，模型处理输入序列并在*每个*时间步生成一个输出。输出序列的长度通常与输入序列相同。每个时间步$t$的隐藏状态用于预测该特定步骤的输出$y_t$，通常通过在每个步骤独立应用的共享稠密层实现。
+
+- **应用：**
+  - **词性标注（POS Tagging）：** 为句子中的每个词分配一个语法标签（名词、动词、形容词等）。
+  - **命名实体识别（NER）：** 针对每个词元 (token)，识别和分类文本中的命名实体（如人名、组织、地点）。
+
+> 多对多（同步）架构：每个输入时间步都产生一个输出，常用于标注任务。
+
+#### 多对多（编码器-解码器）架构
+
+这种架构是为序列到序列（seq2seq）任务设计的，其中输入和输出序列可以具有不同长度。它包含两个主要组件：
+
+1. **编码器：** 一个RNN（或LSTM/GRU）处理整个输入序列，并将其信息压缩成一个固定大小的上下文 (context)向量 (vector)（通常是最终隐藏状态或隐藏状态的组合）。
+2. **解码器：** 另一个RNN（或LSTM/GRU）将编码器传来的上下文向量作为其初始状态，并逐步生成输出序列。在每个步骤中，它根据上下文向量和已生成词元预测下一个词元。
+
+- **应用：**
+  - **机器翻译：** 将一个句子从一种语言翻译成另一种语言。
+  - **文本摘要：** 生成较长文档的简洁摘要。
+  - **问答系统：** 根据给定的上下文段落和问题生成答案。
+
+虽然基本的编码器-解码器结构很有效，但更高级的版本通常包含注意力机制 (attention mechanism)，这使得解码器在生成每个输出词元时能够选择性地关注输入序列的不同部分。这在处理较长序列时能大幅提高性能。
+
+### 实际应用考量
+
+- **单元选择：** 尽管简单的RNN演示了核心理念，但LSTMs和GRUs在实践中更常见，因为它们能够处理长距离依赖并减轻梯度消失问题。GRUs比LSTMs略简单（参数 (parameter)更少），且通常表现相当，使其成为一个很好的替代方案。
+- **填充：** 由于序列模型通常为了效率而批量处理数据，且批次中的序列长度常常不同，因此有必要用一个特殊的填充词元 (token)填充较短的序列（通常并使用掩码），以便批次中的所有序列长度一致。模型应配置为在计算过程中忽略这些填充词元。
+- **双向性：** 对于情感分析或命名实体识别等任务，来自后续词语的信息可能与来自先前词语的信息同样重要。**双向RNNs/LSTMs/GRUs**使用两个独立的隐藏层，以正向和反向处理输入序列。来自两个方向的输出通常在每个时间步进行拼接，从而为每个词语提供更丰富的语境表示。
+- **堆叠层：** 就像前馈网络一样，RNN层可以堆叠（深层RNN），以学习更复杂的序列表示。一个RNN层的输出序列成为下一层的输入序列。
+
+序列模型代表了从基于频率的文本分析向承认语言有序特性的方法的一个根本性转变。通过逐步处理文本并保持内部状态，RNN、LSTM和GRU为解决需要理解文本内部语境和依赖关系的复杂自然语言处理任务奠定了基础。下一节将通过构建一个简单的序列模型来提供一个实践练习，以巩固这些认识。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  对深度学习进行了全面介绍，包含对循环神经网络、LSTM和GRU的详细解释。
+- [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781) — Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean (2013)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1301.3781](https://doi.org/10.48550/arXiv.1301.3781)
+  介绍了Word2Vec模型（CBOW和Skip-gram），用于学习词嵌入，这对于为序列模型准备文本至关重要。
+- [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215) — Ilya Sutskever, Oriol Vinyals, Quoc V. Le (2014)
+  Journal: Advances in Neural Information Processing Systems (NIPS); Volume: 27; DOI: [10.48550/arXiv.1409.3215](https://doi.org/10.48550/arXiv.1409.3215)
+  提出了使用LSTM的编码器-解码器架构，用于将输入序列映射到长度可能不同的输出序列，适用于机器翻译及其他seq2seq任务。
+- [CS224n: Natural Language Processing with Deep Learning](https://cs224n.stanford.edu/) — Diyi Yang, Tatsunori Hashimoto (2023)
+  Publisher: Stanford University
+  提供讲义、作业和视频，涵盖本节讨论的序列模型、词嵌入和各种自然语言处理应用。

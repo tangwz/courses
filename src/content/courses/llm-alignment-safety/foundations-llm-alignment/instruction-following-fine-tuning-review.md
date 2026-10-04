@@ -1,0 +1,89 @@
+---
+course: "llm-alignment-safety"
+chapter: "foundations-llm-alignment"
+lesson: "instruction-following-fine-tuning-review"
+sourceId: 3107
+sourceUrl: "https://apxml.com/zh/courses/llm-alignment-safety/chapter-1-foundations-llm-alignment/instruction-following-fine-tuning-review"
+title: "指令遵循与微调回顾"
+description: "简要回顾指令遵循机制，作为对齐的依据。"
+order: 3
+plots: []
+sourceHash: "23cf55bdb3af606286df0d3bf60050c34a4b8d6fa724a22b512027ccda217d5c"
+sourceCorrections: []
+---
+
+大型语言模型（LLM）的对齐 (alignment)理念及其行为相关的挑战是核心。指令遵循和有监督微调 (fine-tuning)（SFT）是引导LLM行为的常见基础方法。这些初步步骤对理解LLM如何受控具有主要作用，并为后续的高级方法提供基础。
+
+原始的预训练 (pre-training)大型语言模型通常基于海量的非结构化文本语料库，针对下一个词元 (token)预测进行优化。它们的目标通常是最大化模型对训练数据的似然，这通常通过最小化交叉熵损失实现：
+
+
+$$
+L_{\text{预训练}}(\theta) = - \sum_{i} \log P(x_i | x_{<i}; \theta)
+$$
+
+
+其中$\theta$代表模型参数 (parameter)，$x_i$是预训练语料库中的词元。这个过程使模型具备广泛的语言知识和生成能力，但不具备特定的指令遵循能力或固有的安全准则遵守性。它们从数据中学习语法、事实和推理 (inference)模式，但除了合理的文本补全之外，没有具体目标。
+
+### 指令微调 (fine-tuning)（IFT）
+
+为了让预训练 (pre-training)模型更有用且更易控制，指令微调（IFT）是一种标准做法。这是一个有监督学习 (supervised learning)阶段，模型在该阶段通过包含指令提示和预期回复的数据集进行进一步训练。
+
+数据集$D_{\text{IFT}}$采用结构化示例的形式：
+
+
+$$
+D_{\text{IFT}} = \{ (\text{提示}_k, \text{补全}_k) \}_{k=1}^N
+$$
+
+
+示例包括：
+
+- （`提示`：“将以下句子翻译成西班牙语：'今天天气很好。'”，`补全`：“El clima está agradable hoy。”）
+- （`提示`：“总结本段的主要观点：[段落文本]”，`补全`：“[简洁摘要]”）
+- （`提示`：“编写Python代码来反转字符串。”，`补全`：`def reverse_string(s):\n return s[::-1]`）
+
+IFT期间的优化目标是调整模型参数 (parameter)$\theta$（从$\theta_{\text{预训练}}$开始），以最小化在给定`提示`的情况下生成目标`补全`词元 (token)的负对数似然：
+
+
+$$
+L_{\text{IFT}}(\theta) = - \sum_{k=1}^N \sum_{j=1}^{|c_k|} \log P(c_{k,j} | \text{提示}_k, c_{k,<j}; \theta)
+$$
+
+
+这里，$c_k = (c_{k,1}, ..., c_{k, |c_k|})$是所需`补全_k`的词元序列。本质上，模型学习到：“当你看到像$\text{提示}_k$这样的输入时，产生像$\text{补全}_k$这样的输出。”
+
+> 指令微调（IFT）的基本流程，使用提示-补全对调整预训练模型。
+
+指令微调教会模型交互的*格式*（即理解指令并提供相关回答），并使其具备微调数据中体现的特定能力。
+
+### 概述有监督微调 (fine-tuning)（SFT）
+
+指令微调（IFT）是一种特定类型的有监督微调（SFT）。更一般地，SFT涉及使用任何输入-输出对$(x, y)$数据集来调整预训练 (pre-training)模型，并最小化在目标输出$y$上计算的损失函数 (loss function)（如交叉熵）。除了指令遵循之外，SFT还可用于：
+
+- **专业范围调整：** 在专业语料库（例如，医学文献、法律文件）上进行微调，以提高在该专业范围内的性能和术语使用准确性。
+- **风格适应：** 在具有特定风格（例如，正式、对话式）的文本上进行微调，以引导模型的输出语调。
+- **简单行为修改：** 基于展示预期行为的示例进行训练，例如拒绝某些类型的请求（尽管这通常通过更高级的对齐 (alignment)方法处理得更好）。
+
+### 在对齐 (alignment)中的作用与局限
+
+指令微调 (fine-tuning)和有监督微调是走向实现**外部对齐**的基本步骤。它们通过优化使模型模仿所提供的示例，从而直接塑造模型的可见行为。如果微调数据集包含有益、诚实和无害的示例，模型就会学会产生相似的输出。
+
+然而，仅依赖SFT/IFT进行对齐存在明显局限，这促使了后续讨论的高级方法：
+
+1. **数据质量与覆盖范围：** 对齐质量完全取决于SFT数据集。创建一个全面覆盖所有期望行为、细节和安全约束的数据集极具挑战且成本高昂。数据中的任何遗漏、偏见或不一致之处都可能被模型学到。
+2. **数据生成的可扩展性：** 生成高质量、多样化的指令遵循或行为数据需要大量的人力投入和专业知识。
+3. **处理细节与偏好：** 有监督微调难以处理那些难以用单一“正确”补全来体现的目标。评估有用性、无害性、创造性或遵守复杂道德原则通常涉及比较多个可能的输出，这并不是标准的有监督微调设置。
+4. **规避目标：** 有监督微调损失($L_{\text{IFT}}$)是真正预期目标($R_{\text{intended}}$)（例如“普遍有用且无害”）的代理($R_{\text{proxy}}$)。模型可能会找到最小化$L_{\text{IFT}}$的方法，而未能真正满足$R_{\text{intended}}$。例如，它可能学会过度谨慎的拒绝，这根据有监督微调数据最大限度地降低了生成不良内容的风险，但也降低了实用性。如果这些模式在微调数据中未得到充分惩罚，它可能会生成表面上符合预期格式但事实不准确或有细微误导性的输出。
+
+总而言之，指令微调和有监督微调是强大的工具，能够使大型语言模型遵循指令并采用特定知识或风格。它们构成了更高级对齐方法（如RLHF）通常构建的根基。然而，它们在处理偏好、确保可靠性以及防止规避目标方面的局限性，使得本课程中讨论的方法成为必需。它们主要解决模型应根据示例输出*什么*，而非直接优化预期行为的根本*原则*。
+
+## 参考资料
+
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  这篇开创性论文介绍了InstructGPT模型，详细阐述了监督微调（SFT）阶段作为使大型语言模型与人类偏好对齐的初始步骤。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: arXiv; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  这篇基础性论文介绍了GPT-3，详细阐述了大型语言模型用于下一词元预测的预训练方法，这为后续的微调技术奠定了基础。
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3) — Daniel Jurafsky, James H. Martin (2025)
+  这本全面的教科书提供了自然语言处理的基础知识，包括与语言模型微调相关的监督学习技术的解释。指第4版公开草稿。

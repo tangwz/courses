@@ -1,0 +1,84 @@
+---
+course: "quantized-llm-deployment"
+chapter: "addressing-advanced-challenges"
+lesson: "hardware-constraints-kernel-availability"
+sourceId: 4672
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-5-addressing-advanced-challenges/hardware-constraints-kernel-availability"
+title: "硬件限制与内核支持"
+description: "了解硬件对低位算术运算和专用内核的支持与限制。"
+order: 4
+plots: ["plots/4672-0.json"]
+sourceHash: "b4a2025298fd0f57582d3c2113abc4347393a206b1d7ebfa7616f22265550ba0"
+sourceCorrections: []
+---
+
+量化 (quantization)技术有望大幅减小模型规模，并可能提升运行速度，但这些好处并非自动实现。它们在很大程度上取决于底层硬件的能力以及是否有优化的软件程序（即计算内核）来高效执行低精度运算。如果处理器无法快速执行这些数据类型的算术运算，那么简单地用更少的比特表示权重 (weight)和激活值是不够的。理解硬件限制、内核支持与量化大型语言模型（LLM）实际性能之间的关联是必要的。
+
+### 硬件对低位运算的本地支持
+
+现代处理器，特别是GPU和TPU等专用加速器，通常包含专门的硬件单元，旨在加速特定数值格式的计算。例如，从图灵架构开始的英伟达GPU引入了Tensor Core，能够加速涉及FP16和INT8等格式的混合精度矩阵乘法。安培和霍珀等更新架构已将这种支持扩展到INT4甚至更稀疏的运算。类似地，现代CPU也常配备指令集扩展（如AVX-512 VNNI），用于加速INT8计算。
+
+然而，对超低精度格式（低于4比特）或NF4（NormalFloat 4）等不常见格式的支持，通常并非硬件算术逻辑单元（ALU）的本地能力。在这些格式下执行运算可能需要通过一系列更标准的指令进行模拟，这会抵消甚至逆转预期的性能提升。
+
+因此，一个主要限制是你的目标硬件是否拥有对你打算使用的特定量化 (quantization)数据类型的本地指令。在具有专用INT4 Tensor Core支持的GPU上使用INT4量化，很可能带来显著的速度提升。在缺乏这种支持的硬件上尝试相同操作，可能导致计算效率低下，甚至比使用FP16或INT8更慢，如果引入了大量的软件开销用于打包、解包和模拟。
+
+### 优化计算内核的重要性
+
+即使有本地硬件支持，也只有当软件能有效使用这些硬件功能时，才能达到峰值性能。这就是优化计算内核发挥作用的地方。内核是底层、硬件专用的代码程序，旨在以最高效率执行矩阵乘法（GEMM）、向量 (vector)加法或归一化 (normalization)等基本运算，适用于特定数据类型和布局。
+
+对于FP32和FP16等标准格式，经过多年发展，已经有了高度优化的内核库（例如，英伟达GPU的cuBLAS，英特尔CPU的MKL）。然而，对于量化 (quantization)格式，特别是那些非对称的或涉及不寻常数据表示的格式（如NF4或GPTQ、AWQ等方法中使用的自定义块结构），标准库通常缺少相应的优化内核。
+
+开发这些内核并非易事，需要计算机架构、编译器设计和特定量化方案方面的扎实知识。`bitsandbytes`、英伟达的`cutlass`等库以及TensorRT-LLM等框架投入大量精力创建自定义内核，这些内核能够：
+
+- 高效加载和解包低位数据。
+- 使用专用硬件指令（例如，用于整数点积的`dp4a`、`dp2a`，Tensor Core运算）。
+- 优化内存访问模式以最大限度地使用带宽。
+- 将多个运算合并以减少开销。
+
+没有这些专用内核，量化的理论优势便无法实现。INT4模型可能占用更少内存，但如果矩阵乘法仍通过反量化到FP16/FP32并使用标准内核运行，预期的推理 (inference)速度提升就不会出现。更糟的是，反量化的开销可能会拖慢速度。
+
+### 内核支持与框架兼容性
+
+特定量化 (quantization)技术（例如GPTQ、AWQ、基础INT4）在特定硬件上的实际用途，通常归结为推理 (inference)框架或库是否为该组合提供了所需的优化内核。
+
+- **框架依赖性：** TensorRT-LLM、vLLM、TGI和ONNX Runtime等部署框架都包含各自优化的内核集。它们对特定量化方案（如AWQ、GPTQ、smoothquant）和硬件（特定GPU代次）的支持程度各不相同。例如，TensorRT-LLM针对英伟达GPU进行了高度优化，并为受支持的量化格式提供了出色的性能，但其适用范围限于该生态系统。
+- **库支持：** `bitsandbytes`等库提供低位基础内核（例如，用于NF4、INT8），这些内核可以集成到Hugging Face Transformers等更高级别的框架中。然而，它们的性能可能与TensorRT-LLM等专用推理引擎中专门调优的内核有所不同。
+- **碎片化：** 这导致了碎片化局面，即某个量化模型在使用某个框架在某个GPU上表现良好，但在另一个框架或不同硬件（即使是同一供应商的）上则表现不佳或根本无法运行。你可能会发现，研究中发表的先进量化方法在你偏好的部署框架中尚未获得优化内核的支持。
+
+下方的图表说明了性能提升如何高度依赖于内核支持。虽然理论上较低精度能提供更高的吞吐量 (throughput)，但这只有在优化内核有效使用硬件时才能实现。
+
+
+
+![LLM 推理吞吐量与精度](plots/4672-0.json)
+
+
+
+> 不同精度的相对推理吞吐量。请注意，在没有优化内核的情况下，INT4性能如何显著下降，甚至可能低于INT8，尽管其比特宽度更小。
+
+### 处理硬件和内核限制
+
+成功部署量化 (quantization)大型语言模型（LLM）需要认真考量这些硬件和软件依赖：
+
+1. **确定目标硬件：** 明确你部署硬件的具体规格（GPU型号和计算能力、CPU型号和支持的指令集）。
+2. **查阅框架文档：** 查看你所选推理 (inference)服务器或库（TensorRT-LLM、vLLM、TGI、ONNX Runtime等）的文档。检查哪些量化格式（INT8、INT4、GPTQ、AWQ等）被明确支持并为你的目标硬件进行了优化。
+3. **优先选择受支持的方案：** 优先考虑在你所选框架和硬件环境中具有完善文档和优化内核支持的量化方法。虽然可以尝试更新或不那么常见的方案，但要为潜在的性能限制或需要自定义内核开发做好准备。
+4. **验证内核实现：** 确保框架在计算前并非简单地反量化回更高精度格式。寻找真实低位内核执行的证据。英伟达的Nsight Systems等工具可以帮助分析GPU执行并识别正在使用的内核。
+5. **严谨基准测试：** 理论性能估计不足够。始终在目标硬件上使用实际工作负载，直接对量化模型的延迟、吞吐量 (throughput)和内存使用进行基准测试。与基线模型（FP16/BF16）和其他量化选项进行比较。
+6. **考虑混合精度：** 如果模型的某些部分（例如，对量化敏感的特定层或缺乏内核支持的运算）受到不成比例的影响，可以研究混合精度方法，即只对模型的部分进行激进量化。
+
+理解硬件指令集所施加的限制以及优化内核的支持情况，对于实现大型语言模型（LLM）量化的实际优势非常重要。选择量化策略时，不仅要评估理论上的压缩和精度权衡，还要考量在预定部署平台上可达到的实际性能。
+
+## 参考资料
+
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: NeurIPS; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了NF4量化（一种超低精度格式），并展示了通过bitsandbytes库实现的效率，直接涉及对新颖格式的内核优化。
+- [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323) — Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh (2022)
+  Journal: ICLR 2023; DOI: [10.48550/arXiv.2210.17323](https://doi.org/10.48550/arXiv.2210.17323)
+  提出了一种广泛使用的训练后量化方法，其实际性能取决于目标硬件上是否支持优化的低位内核。
+- [NVIDIA TensorRT Documentation](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA
+  NVIDIA高性能深度学习推理优化器的官方文档，详细说明了如何利用硬件并为各种数据类型和量化方案提供优化内核。
+- [CUTLASS: CUDA Templates for Linear Algebra Subroutines](https://github.com/NVIDIA/cutlass) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA Corporation
+  提供高度优化的C++内核，支持各种数据类型，包括低精度格式，对利用NVIDIA Tensor Cores等硬件加速器至关重要。

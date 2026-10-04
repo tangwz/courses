@@ -1,0 +1,82 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-infrastructure-data-management"
+lesson: "managing-large-datasets"
+sourceId: 3122
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-2-llm-infrastructure-data-management/managing-large-datasets"
+title: "管理PB级数据集"
+description: "实施用于存储、访问和处理LLM训练中使用的海量数据集的策略。"
+order: 3
+plots: []
+sourceHash: "d3179e8d2a18c107ceedfff23ade44352c3eb22358559e328b87454f8dfc70d9"
+sourceCorrections: []
+---
+
+训练现代大型语言模型通常需要处理的数据集，其衡量单位不是千兆字节（$GB$）或万亿字节（$TB$），而是拍字节（$PB$）。一拍字节等于$10^{15}$字节，相当于数千亿页文本。管理如此规模的数据集需要专门的存储系统、访问模式和管理策略，这些都远超传统数据处理技术。
+
+如此庞大的数据量带来了直接的难题：
+
+- **存储基础设施：** 如何以可靠且经济的方式实际存储PB级数据？
+- **数据传输：** 如何将这些数据高效地传输到用于训练的数千个GPU/TPU核心（$N_{GPU}$），同时避免产生难以克服的瓶颈？
+- **访问模式：** 训练过程如何足够快地读取和处理这些数据，以确保昂贵的加速器得到充分使用？
+- **组织与编目：** 在处理数十亿或数万亿个独立数据点（文档、图像等）时，如何追踪数据存在的位置、来源及其特征？
+
+接下来，我们来看解决这些难题的有效方法。
+
+### 选择合适的存储基础
+
+没有单一的存储方案能够满足PB级数据的所有需求。通常需要采用分层方法，根据访问频率、性能要求和成本来结合不同的技术。
+
+1. **对象存储（例如：AWS S3、Google Cloud Storage、Azure Blob Storage）：** 这通常是原始大规模数据集的主要存储库。
+
+   - **优点：** 几乎无限的扩展性、高持久性、每GB成本相对较低（尤其是在归档层）、简单的API访问。
+   - **缺点：** 相比文件系统延迟更高，单连接吞吐量 (throughput)可能较低（并行访问非常重要），频繁访问或跨区域数据传输可能导致成本上升。
+   - **使用场景：** 存储初始海量语料库、不常访问的归档数据、备份。数据通常在活跃训练前经过预处理并移至更快的存储层。不同的存储类别（例如：S3 Standard、S3 Infrequent Access、S3 Glacier）可以根据访问模式进行成本优化。
+2. **分布式文件系统（例如：HDFS、CephFS、Lustre、GPFS、WekaIO）：** 这些系统将数据呈现为一个单一的分层命名空间，可供许多节点访问。
+
+   - **优点：** 比对象存储具有更高的吞吐量和更低的延迟，更适合来自多个计算节点的并发读写，POSIX兼容性（对于某些系统）简化了与现有工具的集成。
+   - **缺点：** 比对象存储更复杂的设置和管理，通常每GB成本更高，扩展性可能受到具体系统和配置的实际限制。
+   - **使用场景：** 存储活跃使用的训练数据，特别是在本地或高性能计算（HPC）环境中，这些环境可以从计算节点获得直接、高带宽的访问。通常用作由对象存储提供数据的高性能缓存层。
+3. **数据湖和湖仓：** 尽管它们不是存储硬件，但这些架构模式在对象存储等系统中存储的原始数据之上提供了结构。像Apache Iceberg、Delta Lake或Hudi这样的技术在底层存储之上增加了事务能力、模式演进和元数据管理，有助于更好地组织和查询，即使是半结构化的LLM训练数据。
+
+最佳选择通常涉及使用对象存储作为主要、经济实惠的存储，并部署分布式文件系统或大型快速缓存层，使其靠近计算集群，用于在训练周期中当前正在处理的数据。
+
+> 数据流架构通常涉及将数据从经济高效的对象存储暂存到计算集群可访问的高性能缓存层或分布式文件系统。
+
+### 高性能数据访问策略
+
+存储数据只是成功的一半；在训练期间高效访问数据对于防止GPU空闲非常重要。存储与计算之间的网络带宽以及数据读取/解码的效率成为主要考量。
+
+- **并行化是必需的：** 在实际的训练时间内，顺序读取PB级数据是不可能的。数据加载必须高度并行化。这包括：
+  - **数据分片：** 将数据集分割成许多更小的文件或“分片”（数千甚至数百万个）。每个分片可以独立读取。
+  - **分布式数据加载器：** 使用为分布式环境设计的数据加载库（例如PyTorch的`DistributedSampler` + `DataLoader`、带分片选项的`tf.data`、NVIDIA DALI、WebDataset）。这些框架协调哪个计算节点读取哪个分片，通常会为即将到来的批次预取数据。
+- **数据本地性和缓存：** 在网络中移动数据很慢。提高本地性的策略包括：
+  - **计算节点附加存储：** 在计算节点本身使用高速本地存储（如NVMe SSD）来缓存正在活跃使用的分片。
+  - **分布式缓存系统：** 使用位于主存储和计算之间的专用缓存基础设施（例如使用Alluxio等系统）。
+- **优化的文件格式：** 数据存储的格式显着影响读取速度。虽然原始文本文件简单，但在大规模处理时效率可能低下。考虑以下格式：
+  - **TFRecord (TensorFlow)：** 一种二进制格式，存储协议缓冲区消息序列，对TensorFlow管道高效。
+  - **WebDataset (PyTorch)：** 将数据存储在标准TAR归档文件中，允许顺序读取和轻松洗牌/分片，适合直接从对象存储流式传输数据。
+  - **自定义二进制格式：** 将分词 (tokenization)后的序列或其他预处理数据打包成紧凑的二进制文件可以最大化读取吞吐量 (throughput)。Apache Arrow或Parquet对于相关的元数据可能有用。
+- **数据流式传输：** 不必在开始前下载整个数据集子集，而是根据需要流式传输数据分片。这与对象存储和WebDataset等库配合良好。
+
+### 大规模元数据管理
+
+在处理数十亿或数万亿个数据项时，管理元数据（源URL、时间戳、文档边界、质量评分等）变得复杂。简单的文件名不足以满足需求。
+
+- **清单文件：** 使用大型索引文件（例如JSONL、CSV、Parquet文件）来列出所有数据分片/文件及其关联的元数据。
+- **数据库：** 使用数据库（SQL或NoSQL）对元数据进行编目，允许在训练开始前对数据集进行更复杂的查询和筛选。这在为不同的微调 (fine-tuning)任务选择特定数据子集时特别有用。
+- **数据湖目录：** 当使用Iceberg或Delta Lake等格式时，利用数据湖框架的内置目录功能（Hive Metastore、AWS Glue Data Catalog）。
+
+有效管理PB级数据集是成功训练大型模型的根本。这需要仔细考虑存储层、使用并行和缓存的高吞吐量 (throughput)访问模式、优化的数据格式以及健全的元数据管理。忽视这些方面可能导致严重的训练瓶颈、硬件利用率不足和运营成本增加。
+
+## 参考资料
+
+- [The Google File System](https://static.googleusercontent.com/media/research.google.com/en//archive/gfs-sosp2003.pdf) — Sanjay Ghemawat, Howard Gobioff, Shun-Tak Leung (2003)
+  Journal: Proceedings of the nineteenth ACM symposium on Operating systems principles; Pages: 29-43; DOI: [10.1145/945445.945451](https://doi.org/10.1145/945445.945451)
+  描述了Google文件系统的设计和实现，该系统是一种基础的分布式文件系统架构，影响了HDFS等许多现代PB级存储解决方案。
+- [WebDataset: A High-Performance I/O Format for Large-scale Deep Learning](https://arxiv.org/pdf/2106.01429) — Kyle K. Kayastha, Brant C. Faircloth, Andreas K. Foerster, Benjamin S. Glick, Brian K. Stewart, Jan Schlüter (2021)
+  Journal: arXiv preprint arXiv:2106.01429
+  详细介绍了WebDataset，这是一种高效的数据格式和加载库，旨在直接从对象存储流式传输大规模深度学习数据集，解决了优化文件格式和数据流的问题。
+- [Data Management for Machine Learning: A Survey](https://dl.acm.org/doi/10.1145/3547192) — Jens Dittrich, Stefanie Scherzinger, Felix Naumann, Kai-Uwe Sattler, Volker Markl (2022)
+  Journal: ACM Computing Surveys; Publisher: ACM; Volume: 55; Pages: 1-37; DOI: [10.1145/3547192](https://doi.org/10.1145/3547192)
+  全面概述了机器学习中的数据管理挑战和解决方案，涵盖从数据摄取和存储到特征工程和元数据等各个方面，与MLOps中管理大型数据集高度相关。

@@ -1,0 +1,143 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "implementing-transformer-from-scratch"
+lesson: "implementing-position-wise-feed-forward"
+sourceId: 5998
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-10-implementing-transformer-from-scratch/implementing-position-wise-feed-forward"
+title: "实现位置感知前馈网络"
+description: "实现 Transformer 模块中的 FFN 组件。"
+order: 4
+plots: []
+sourceHash: "9cbba07745155394a3e4fed7a6e0f34951b3253f4bbeb20b0cc44bb41c87826c"
+sourceCorrections: []
+---
+
+位置感知前馈网络 (FFN) 是每个 Transformer 模块中的一个组件。这个网络在序列的每个位置独立且相同地应用。尽管自注意力 (self-attention)层允许标记 (token)之间相互作用，FFN 则是单独处理每个标记的表示，为模型提供额外的非线性变换能力。
+
+可以将其看作是在注意力层完成上下文 (context)混合之后，增加进一步的计算深度。它帮助模型为每个位置从注意力输出中提取的特征学习更复杂的函数。
+
+### 前馈网络的结构
+
+FFN 通常是一个简单的两层全连接网络。对于特定位置的输入表示 $x$，其变换定义为：
+
+
+$$
+\text{FFN}(x) = \text{Linear}_2(\text{Activation}(\text{Linear}_1(x))) + x
+$$
+
+
+等一下，上面的等式包含残差连接。让我们先拆解核心 FFN 部分。最常见的结构包含：
+
+1. 一个线性变换，将维度从 $d_{model}$ 扩展到内部维度，该内部维度通常记作 $d_{ff}$。
+2. 一个逐元素应用的非线性激活函数 (activation function)。原始 Transformer 论文中使用了 ReLU，但其他激活函数如 GeLU（高斯误差线性单元）或 SwiGLU 在现代大型语言模型中已变得流行。我们将在第 11 章讨论这些替代方法。为了本次实现简单起见，我们将使用 ReLU。
+3. 第二个线性变换，将维度从 $d_{ff}$ 投射回 $d_{model}$。
+
+FFN 操作本身的公式（在模块结构中处理的残差连接之前）是：
+
+
+$$
+\text{FFN}(x) = \max(0, xW_1 + b_1)W_2 + b_2
+$$
+
+
+这里：
+
+- $x$ 是特定位置的输入向量 (vector)（前一层的输出，通常是多头注意力 (multi-head attention)后接层归一化 (normalization)）。
+- $W_1$ 和 $b_1$ 是第一个线性层的权重 (weight)矩阵和偏置 (bias)（输出维度为 $d_{ff}$）。
+- $W_2$ 和 $b_2$ 是第二个线性层的权重矩阵和偏置（输出维度为 $d_{model}$）。
+- $\max(0, \cdot)$ 表示 ReLU 激活函数。
+
+内部维度 $d_{ff}$ 通常大于 $d_{model}$。一个常见的选择是 $d_{ff} = 4 \times d_{model}$，正如原始论文“Attention Is All You Need”中使用的那样。这种扩展使得模型在投射回原始模型维度之前，能够学习到更丰富的表示。
+
+### PyTorch 实现
+
+让我们将这个 FFN 组件实现为一个 PyTorch `nn.Module`。我们将包含 Dropout，它通常在 FFN 中的第二个线性层之后应用，或作为残差连接步骤的一部分。
+
+```python
+import torch
+import torch.nn as nn
+
+class PositionWiseFeedForward(nn.Module):
+    """实现位置感知前馈网络（FFN）模块。"""
+    def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
+        """
+        初始化 PositionWiseFeedForward 模块。
+
+        参数:
+            d_model (int): 输入和输出特征的维度。
+            d_ff (int): 内部层的维度。
+            dropout (float): Dropout 概率。默认值为 0.1。
+        """
+        super().__init__()
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.activation = nn.ReLU()
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        FFN 模块的前向传播。
+
+        参数:
+            x (torch.Tensor): 形状为 (batch_size, seq_len, d_model) 的输入张量。
+
+        返回:
+            torch.Tensor: 形状为 (batch_size, seq_len, d_model) 的输出张量。
+        """
+        # 应用第一个线性层，然后是激活函数，接着是 Dropout，最后是第二个线性层
+        # x 形状: (batch_size, seq_len, d_model)
+        x = self.linear1(x)      # -> (batch_size, seq_len, d_ff)
+        x = self.activation(x)   # -> (batch_size, seq_len, d_ff)
+        # Dropout 有时可以放在激活函数之后或第二个线性层之后
+        # 我们在这里将其放在第二个线性层之后，与一些实践保持一致。
+        x = self.linear2(x)      # -> (batch_size, seq_len, d_model)
+        x = self.dropout(x)      # -> (batch_size, seq_len, d_model)
+        return x
+```
+
+让我们使用一些示例维度来测试这个模块：
+
+```python
+# 示例用法:
+d_model = 512  # 模型维度
+d_ff = 2048    # 内部维度（通常为 4 * d_model）
+dropout_rate = 0.1
+batch_size = 4
+seq_len = 10
+
+# 创建一个示例输入张量
+input_tensor = torch.randn(batch_size, seq_len, d_model)
+
+# 实例化 FFN 层
+ffn_layer = PositionWiseFeedForward(d_model, d_ff, dropout_rate)
+
+# 将输入通过 FFN 层
+output_tensor = ffn_layer(input_tensor)
+
+print(f"输入形状: {input_tensor.shape}")
+print(f"输出形状: {output_tensor.shape}")
+
+# 验证输出维度与 d_model 匹配
+assert output_tensor.shape == (batch_size, seq_len, d_model)
+```
+
+这段代码定义了 `PositionWiseFeedForward` 类。`__init__` 方法设置了两个线性层（`self.linear1`、`self.linear2`）、ReLU 激活函数 (activation function)（`self.activation`）和 Dropout 层（`self.dropout`）。`forward` 方法定义了计算流程：输入 $x$ 经过第一个线性层，然后是 ReLU 激活，接着是第二个线性层，最后是 Dropout。
+
+请注意，`linear1`、`activation` 和 `linear2` 这些操作在每个序列位置的表示上是独立应用的。这些层在一次前向传播中在不同位置共享权重 (weight)，但位置 `i` 的计算不直接依赖于 *这个* FFN 模块中位置 `j` 的计算（与注意力机制 (attention mechanism)不同）。
+
+这个 FFN 模块是一个基本构成单元，我们将在后续章节将其整合到更大的编码器和解码器层中。它的作用是提供非线性处理能力，这种能力在多头注意力 (multi-head attention)子层完成上下文 (context)聚合之后，在所有序列位置上均匀应用。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Pages: 5998-6008; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇基础性论文介绍了Transformer架构，详细阐述了其中位置感知前馈网络的结构和作用，包括常见的d_ff = 4 * d_model参数设置。
+- [PyTorch \`torch.nn\` module documentation](https://pytorch.org/docs/stable/nn.html) — PyTorch Development Team (2024)
+  Publisher: PyTorch Foundation
+  提供神经网络模块（如`nn.Linear`、`nn.ReLU`和`nn.Dropout`）的官方文档，这些模块是使用PyTorch实现FFN的基础。
+- [Gaussian Error Linear Units (GELUs)](https://arxiv.org/abs/1606.08415) — Dan Hendrycks and Kevin Gimpel (2016)
+  Journal: arXiv; DOI: [10.48550/arXiv.1606.08415](https://doi.org/10.48550/arXiv.1606.08415)
+  介绍了高斯误差线性单元 (GELU) 激活函数，该函数被提及为现代大型语言模型中ReLU的流行替代品，提供了更好的性能。
+- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — Noam Shazeer (2020)
+  DOI: [10.48550/arXiv.2002.05202](https://doi.org/10.48550/arXiv.2002.05202)
+  本文探讨了多种门控线性单元（GLU）变体，包括SwiGLU，并证明了它们在改进Transformer模型性能方面相对于传统ReLU激活函数的有效性。

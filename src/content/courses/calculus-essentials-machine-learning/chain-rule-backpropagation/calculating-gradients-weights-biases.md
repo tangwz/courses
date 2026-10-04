@@ -1,0 +1,160 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "chain-rule-backpropagation"
+lesson: "calculating-gradients-weights-biases"
+sourceId: 1419
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-5-chain-rule-backpropagation/calculating-gradients-weights-biases"
+title: "计算权重和偏置的梯度"
+description: "说明反向传播如何计算损失函数对网络参数（权重和偏置）的梯度。"
+order: 5
+plots: []
+sourceHash: "195e916ed4eadddbca2bd8848ac4c65fa4b23bb82ab41980ac7a3724c4ce82f0"
+sourceCorrections: []
+---
+
+反向传播 (backpropagation)本质上是链式法则系统地反向应用于网络层。此过程的最终目的是弄清每个权重 (weight)和偏置 (bias)的微小变化如何影响整体损失函数 (loss function) $L$。这些由梯度 $\frac{\partial L}{\partial W}$ 和 $\frac{\partial L}{\partial b}$ 得到的信息，正是梯度下降 (gradient descent)更新参数 (parameter)并改进模型所需。
+
+我们把视角放在网络中的某个特定层，例如第 $l$ 层。在前向传播过程中，该层接收来自前一层的激活值 $a^{[l-1]}$ (如果 $l=1$，则是输入特征)，并通过两个步骤计算其自身的输出激活值 $a^{[l]}$:
+
+1. **预激活值：** $z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$
+2. **激活：** $a^{[l]} = g^{[l]}(z^{[l]})$
+
+这里，$W^{[l]}$ 和 $b^{[l]}$ 分别是第 $l$ 层的权重矩阵和偏置向量 (vector)，$g^{[l]}$ 是其激活函数 (activation function)。
+
+反向传播算法逐层进行，从最后一层开始，向输入层移动。当我们在反向传播中到达第 $l$ 层时，我们假设已经计算出 $\frac{\partial L}{\partial a^{[l]}}$，即损失函数对*该*层输出激活值的梯度。我们目前的任务是使用此信息计算：
+
+1. $\frac{\partial L}{\partial W^{[l]}}$: 损失函数对第 $l$ 层权重的梯度。
+2. $\frac{\partial L}{\partial b^{[l]}}$: 损失函数对第 $l$ 层偏置的梯度。
+3. $\frac{\partial L}{\partial a^{[l-1]}}$: 损失函数对第 $l$ 层*输入*激活值的梯度。这用于继续对第 $l-1$ 层进行反向传播。
+
+我们来看看链式法则如何帮助我们计算这些量。
+
+### 计算对预激活值 ($z^{[l]}$) 的梯度
+
+首先，我们需要损失函数 (loss function)对预激活值 $z^{[l]}$ 的梯度。由于 $L$ 取决于 $a^{[l]}$，而 $a^{[l]}$ 通过激活函数 (activation function) $g^{[l]}$ 直接取决于 $z^{[l]}$，我们应用链式法则：
+
+
+$$
+\frac{\partial L}{\partial z^{[l]}} = \frac{\partial L}{\partial a^{[l]}} \frac{\partial a^{[l]}}{\partial z^{[l]}}
+$$
+
+
+回想一下，$a^{[l]} = g^{[l]}(z^{[l]})$。因此，第二项仅仅是激活函数的导数，$g'^{[l]}(z^{[l]})$。
+
+
+$$
+\frac{\partial L}{\partial z^{[l]}} = \frac{\partial L}{\partial a^{[l]}} g'^{[l]}(z^{[l]})
+$$
+
+
+这个梯度 $\frac{\partial L}{\partial z^{[l]}}$ 表示损失函数相对于第 $l$ 层激活函数计算之前的*线性组合*的变化情况。它是一个重要的中间值，通常表示为 $\delta^{[l]}$，或在代码中表示为 `dZ[l]`。它基本上通过激活函数的导数将误差信号向后传递。
+
+### 计算权重 (weight) ($W^{[l]}$) 和偏置 (bias) ($b^{[l]}$) 的梯度
+
+现在我们有了 $\frac{\partial L}{\partial z^{[l]}}$，我们可以计算参数 (parameter) $W^{[l]}$ 和 $b^{[l]}$ 的梯度。请记住 $z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$。
+
+**对于权重 ($W^{[l]}$):** 损失函数 (loss function) $L$ 取决于 $z^{[l]}$，而 $z^{[l]}$ 又取决于 $W^{[l]}$。应用链式法则：
+
+
+$$
+\frac{\partial L}{\partial W^{[l]}} = \frac{\partial L}{\partial z^{[l]}} \frac{\partial z^{[l]}}{\partial W^{[l]}}
+$$
+
+
+我们需要 $z^{[l]}$ 对 $W^{[l]}$ 的偏导数。从 $z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$ 来看，导数 $\frac{\partial z^{[l]}}{\partial W^{[l]}}$ 结果是 $a^{[l-1]}$（具体来说，在矩阵表示中是其转置，这是由于矩阵微积分的规则）。直观来说，$z^{[l]}$ 随 $W^{[l]}$ 变化多少，取决于它所乘的输入激活值 $a^{[l-1]}$。
+
+因此，权重的梯度是：
+
+
+$$
+\frac{\partial L}{\partial W^{[l]}} = \frac{\partial L}{\partial z^{[l]}} (a^{[l-1]})^T
+$$
+
+
+在采用向量 (vector)化操作的实现中（处理批次中的多个样本，表示为 $m$），这通常计算为：
+
+
+$$
+dW^{[l]} = \frac{1}{m} dZ^{[l]} (A^{[l-1]})^T
+$$
+
+
+$dZ^{[l]}$ 表示 $\frac{\partial L}{\partial Z^{[l]}}$（$\frac{\partial L}{\partial z^{[l]}}$ 的矩阵形式），$A^{[l-1]}$ 包含批次中所有样本来自前一层的激活值，而 $dW^{[l]}$ 是计算得到的权重梯度矩阵。因子 $\frac{1}{m}$ 对批次中的梯度进行平均。
+
+**对于偏置 ($b^{[l]}$):** 类似地，$L$ 取决于 $z^{[l]}$，而 $z^{[l]}$ 又取决于 $b^{[l]}$。
+
+
+$$
+\frac{\partial L}{\partial b^{[l]}} = \frac{\partial L}{\partial z^{[l]}} \frac{\partial z^{[l]}}{\partial b^{[l]}}
+$$
+
+
+导数 $\frac{\partial z^{[l]}}{\partial b^{[l]}}$ 简单地是 1，因为当 $b^{[l]}$ 变化时，$z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$ 变化量完全相同（保持其他变量不变）。
+
+
+$$
+\frac{\partial L}{\partial b^{[l]}} = \frac{\partial L}{\partial z^{[l]}} \cdot 1 = \frac{\partial L}{\partial z^{[l]}}
+$$
+
+
+所以，偏置的梯度就是对预激活值 $z^{[l]}$ 的梯度。当处理批次数据时，梯度 $dZ^{[l]}$ 通常会具有与（第 $l$ 层神经元数量，样本数量 $m$）相对应的维度。偏置 $b^{[l]}$ 通常是一个应用于所有样本的向量。因此，梯度 $db^{[l]}$ 是通过在批次维度上对 $dZ^{[l]}$ 求和（或平均）来计算的：
+
+
+$$
+db^{[l]} = \frac{1}{m} \sum_{i=1}^{m} (dZ^{[l]})^{(i)}
+$$
+
+
+其中 $(dZ^{[l]})^{(i)}$ 表示 $dZ^{[l]}$ 矩阵的第 $i$ 列（样本）。
+
+### 计算前一层的激活值 ($a^{[l-1]}$) 的梯度
+
+最后，为了继续反向传播 (backpropagation)，我们需要计算 $\frac{\partial L}{\partial a^{[l-1]}}$。这说明了第 $l-1$ 层的输出激活值如何影响整体损失。我们再次使用链式法则，注意到 $L$ 取决于 $z^{[l]}$，而 $z^{[l]}$ 又取决于 $a^{[l-1]}$。
+
+
+$$
+\frac{\partial L}{\partial a^{[l-1]}} = \frac{\partial L}{\partial z^{[l]}} \frac{\partial z^{[l]}}{\partial a^{[l-1]}}
+$$
+
+
+从 $z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$ 来看，导数 $\frac{\partial z^{[l]}}{\partial a^{[l-1]}}$ 是权重 (weight)矩阵 $W^{[l]}$（具体来说，根据矩阵微积分规则是其转置）。直观来说，$a^{[l-1]}$ 对 $z^{[l]}$ 的影响由它所乘的权重 $W^{[l]}$ 决定。
+
+
+$$
+\frac{\partial L}{\partial a^{[l-1]}} = (W^{[l]})^T \frac{\partial L}{\partial z^{[l]}}
+$$
+
+
+向量 (vector)化形式为：
+
+
+$$
+dA^{[l-1]} = (W^{[l]})^T dZ^{[l]}
+$$
+
+
+当处理第 $l-1$ 层时，这个 $dA^{[l-1]}$ 成为反向传播*下一步*的输入梯度 $\frac{\partial L}{\partial a^{[l-1]}}$。
+
+### 第 $l$ 层梯度计算总结
+
+在第 $l$ 层的反向传播 (backpropagation)过程中，假设我们有 $dA^{[l]} = \frac{\partial L}{\partial A^{[l]}}$，我们计算：
+
+1. $dZ^{[l]} = dA^{[l]} * g'^{[l]}(Z^{[l]})$ （逐元素乘法）
+2. $dW^{[l]} = \frac{1}{m} dZ^{[l]} (A^{[l-1]})^T$
+3. $db^{[l]} = \frac{1}{m} \text{np.sum}(dZ^{[l]}, \text{axis=1, keepdims=True})$ （使用类似 NumPy 的符号表示对样本求和）
+4. $dA^{[l-1]} = (W^{[l]})^T dZ^{[l]}$
+
+这个计算出的 $dA^{[l-1]}$ 随后向后传递给第 $l-1$ 层，该过程重复进行，直到我们到达输入层。链式法则的这种系统应用使我们能够有效地找到网络中所有权重 (weight)和偏置 (bias)的梯度。下图演示了单个层的这种流程。
+
+> 第 $l$ 层的梯度计算流程，展示向量 (vector)化操作。反向传播利用传入的梯度 $dA^{[l]}$ 计算 $dZ^{[l]}$，随后可以计算参数 (parameter)梯度 $dW^{[l]}$ 和 $db^{[l]}$（黄色）以及前一层所需的梯度 $dA^{[l-1]}$（红色）。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 6: Deep Feedforward Networks
+  一本基础教材，全面解释深度前馈网络中反向传播的数学原理和概念。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html) — Michael Nielsen (2019)
+  Publisher: Determination Press; Pages: Chapter 2: How the backpropagation algorithm works
+  一本在线书籍，提供反向传播算法非常清晰、循序渐进的推导，适合初学者。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Optimization: Stochastic Gradient Descent, Backpropagation, and more](http://cs231n.github.io/optimization-2/) — Andrej Karpathy, Fei-Fei Li, Justin Johnson, and Serena Yeung (2023)
+  来自斯坦福大学知名课程的讲义，详细说明了深度学习中反向传播的实际考量和向量化计算。

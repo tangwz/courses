@@ -1,0 +1,297 @@
+---
+course: "langchain-production-llm"
+chapter: "advanced-langchain-architecture"
+lesson: "custom-core-components"
+sourceId: 3848
+sourceUrl: "https://apxml.com/zh/courses/langchain-production-llm/chapter-1-advanced-langchain-architecture/custom-core-components"
+title: "定制核心组件：大语言模型、提示词、解析器"
+description: "学习如何扩展或替换 LangChain 的标准组件，例如大语言模型包装器、提示词模板和输出解析器。"
+order: 3
+plots: []
+sourceHash: "911c39909e15e6734b984929e2ec50b9c89c5e842af5a4eb61a74a3a38dcdb10"
+sourceCorrections: []
+---
+
+LangChain 提供了丰富的预构建组件集，用于与大语言模型 (LLM)（LLMs）交互、构建提示词 (prompt)和解析输出，但生产环境常有独特需求，要求扩展或替换这些标准实现。该框架的模块化设计基于明确定义的接口构建，允许开发者在需要的地方精确注入自定义逻辑。定制核心构建块，如LLM包装器、提示词模板和输出解析器，可以调整LangChain的行为以适应特定的模型交互、复杂的输入格式和非标准输出结构。掌握这些定制对于构建专门且高效的LLM应用很有用。
+
+### 定制 LLM 和 ChatModel 包装器
+
+LangChain 中的标准 LLM 和 ChatModel 包装器处理与各类模型提供商（OpenAI、Anthropic、Cohere、Hugging Face 模型等）的通信。但您可能因以下几个原因需要自定义包装器：
+
+- **不支持的模型：** 与 LangChain 不直接支持的 LLM 提供商或自托管模型进行连接。
+- **特定API参数 (parameter)：** 需要传递自定义头部信息、使用标准包装器不支持的特定推理 (inference)参数，或实现独特的身份验证方案。
+- **自定义日志/监控：** 添加针对您的基础设施的详细请求、响应、token计数或延迟日志。
+- **模型特定错误处理：** 根据特定模型的行为实现定制的重试逻辑或错误处理。
+- **请求/响应修改：** 在提示词 (prompt)传递回 LangChain 框架之前进行预处理，或在模型响应传递回 LangChain 框架之前进行后处理（例如，注入安全前缀、过滤输出）。
+
+创建自定义 LLM 包装器，您通常继承自 `langchain_core.language_models.llms.LLM` 并实现 `_call` 方法用于同步执行，以及 `_acall` 用于异步执行。对于聊天模型，继承自 `langchain_core.language_models.chat_models.BaseChatModel` 并实现 `_generate` 和 `_agenerate`。
+
+一个很有用的方法是 `_generate`，它接受一个消息列表和可选的 `stop` 序列，对它们进行处理，并返回一个包含 `ChatGeneration` 对象的 `ChatResult`。您还需要实现 `_llm_type` 属性来识别您的自定义模型。
+
+我们通过一个例子来说明自定义聊天模型包装器，它为每个用户消息添加一个简单前缀并记录交互时长。
+
+```python
+import time
+from typing import Any, List, Optional
+
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+
+# 假设我们有一个要包装的现有聊天模型实例
+# from langchain_openai import ChatOpenAI
+# underlying_chat_model = ChatOpenAI()
+
+class CustomLoggedChatWrapper(BaseChatModel):
+    """
+    一个为用户消息添加前缀并记录交互时间的包装器。
+    """
+    underlying_model: BaseChatModel # 实际要调用的模型
+
+    @property
+    def _llm_type(self) -> str:
+        return "custom_logged_chat_wrapper"
+
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+
+        start_time = time.time()
+
+        # 修改消息（示例：为 HumanMessage 添加前缀）
+        processed_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                processed_messages.append(
+                    HumanMessage(content=f"[User Inquiry] {msg.content}", additional_kwargs=msg.additional_kwargs)
+                )
+            else:
+                 processed_messages.append(msg)
+
+        # 调用底层模型
+        # 在实际场景中，您会适当地传递回调和关键字参数
+        result = self.underlying_model._generate(processed_messages, stop=stop, run_manager=run_manager, **kwargs) 
+
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"Custom Wrapper: Interaction took {duration:.2f} seconds.")
+
+        # 返回前可能修改结果
+        # 例如，如果 result.llm_output 中有 token 使用情况，则记录下来
+
+        return result
+
+    # 类似地实现 _agenerate 以支持异步
+    async def _agenerate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        # 异步实现将使用 underlying_model._agenerate
+        # 以及异步时间跟踪/日志记录
+        # （为简洁起见，省略实现）
+        pass
+
+# 使用示例（假设 underlying_chat_model 已定义）
+# custom_llm = CustomLoggedChatWrapper(underlying_model=underlying_chat_model)
+# response = custom_llm.invoke([HumanMessage(content="Tell me about LangChain.")])
+# print(response)
+```
+
+这个例子展示了如何包装现有模型、修改输入（`processed_messages`）、调用底层模型的生成方法并添加自定义逻辑（计时）。对于完全不支持的模型的包装器，将涉及在 `_generate` 中进行直接 API 调用并手动构建 `ChatResult`。请记得实现异步对应方法（`_agenerate`、`_acall`），以便与 `ainvoke` 等异步 LangChain 功能兼容。
+
+### 定制提示词 (prompt)模板
+
+LangChain 的 `PromptTemplate` 和 `ChatPromptTemplate` 为输入格式化提供了灵活性，但有时您需要更精细的逻辑：
+
+- **条件格式化：** 根据输入变量包含或排除提示词的部分内容。
+- **动态指令：** 根据当前上下文 (context)或任务复杂度即时生成指令或示例。
+- **复杂输入结构：** 处理非简单键值对的输入，可能涉及需要特定格式的嵌套对象或列表。
+- **集成外部状态：** 将来自外部源（如数据库或配置文件）的信息直接纳入提示词逻辑。
+
+您可以通过继承 `langchain_core.prompts.BasePromptTemplate` 或 `langchain_core.prompts.BaseChatPromptTemplate` 来创建自定义提示词模板。主要实现的方法是 `format_prompt`（应返回 `PromptValue`），或对于更简单的模板，只需 `format`（返回格式化字符串）。对于聊天模板，您将实现 `format_messages`。
+
+考虑一个场景，我们想要一个聊天提示词模板，它添加一个系统消息来概述预期的输出格式，仅当用户的查询表明需要结构化数据时（例如，包含“list”或“table”字样）。
+
+```python
+from typing import Any, Dict, List
+
+from langchain_core.prompts import BaseChatPromptTemplate
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
+
+class DynamicStructureChatPrompt(BaseChatPromptTemplate, BaseModel):
+    """
+    一个聊天提示词模板，它根据条件添加关于结构化输出的系统消息。
+    """
+    # 如果需要，使用 Pydantic 字段定义输入变量
+    input_variables: List[str] = Field(default=["user_query"])
+
+    def format_messages(self, **kwargs: Any) -> List[BaseMessage]:
+        user_query = kwargs["user_query"]
+        messages: List[BaseMessage] = []
+
+        # 系统消息的条件逻辑
+        if "list" in user_query.lower() or "table" in user_query.lower():
+            messages.append(
+                SystemMessage(content="Please provide the output as a structured list or table.")
+            )
+        else:
+             messages.append(
+                SystemMessage(content="You are a helpful assistant.")
+             )
+
+        messages.append(HumanMessage(content=user_query))
+
+        # 可能根据其他关键字参数或逻辑添加更多消息
+
+        return messages
+
+    def _prompt_type(self) -> str:
+        return "dynamic-structure-chat-prompt"
+
+# 使用示例：
+dynamic_prompt = DynamicStructureChatPrompt()
+
+query1 = "Summarize the benefits of LCEL."
+messages1 = dynamic_prompt.format_messages(user_query=query1)
+# messages1 将是 [SystemMessage(...有用的助手...), HumanMessage(...总结...)]
+
+query2 = "Give me a list of vector stores supported by LangChain."
+messages2 = dynamic_prompt.format_messages(user_query=query2)
+# messages2 将是 [SystemMessage(...结构化列表/表格...), HumanMessage(...给我一个列表...)]
+
+# print(messages1)
+# print(messages2)
+```
+
+这个 `DynamicStructureChatPrompt` 检查 `user_query` 输入变量以决定包含哪个系统消息。这使得基于输入性质的自适应提示成为可能，可能更有效地引导LLM。
+
+### 定制输出解析器
+
+输出解析器负责将LLM的原始字符串或消息输出进行转换，转换为更结构化的格式（如字典、Pydantic对象或自定义领域对象）。尽管 LangChain 提供了常见格式（JSON、CSV、Pydantic 模型、结构化函数/工具调用）的解析器，但在以下情况需要自定义解析器：
+
+- **处理不规则格式：** LLM 生成的输出不严格遵循 JSON 或其他标准结构，需要灵活的解析逻辑（例如，使用正则表达式、宽松解析）。
+- **提取特定信息：** 您需要从一个更大的非结构化或半结构化文本块中提取特定信息，该文本块由 LLM 生成。
+- **实现复杂验证：** 输出需要比标准 Pydantic 模型更高级的验证逻辑。
+- **尝试纠正/重试：** 解析器需要识别解析失败，并可能触发纠正循环（例如，用错误信息重新提示LLM）。
+- **专有格式：** 处理您的应用程序定义的领域特定或非标准输出结构。
+
+创建自定义输出解析器，继承自 `langchain_core.output_parsers.BaseOutputParser`。主要实现的方法是 `parse`，它接受LLM的输出字符串（或通过 `parse_result` 接受 `Generation` 对象）并返回所需的结构化数据。您也可以实现 `get_format_instructions` 为LLM提供关于如何格式化其输出的指导。
+
+设想一个场景，LLM 有时返回一个人的姓名和年龄，但格式各异（例如，“Name: Alice, Age: 30”、“Bob is 25 years old”、“Age: 40 Name: Carol”）。我们可以使用正则表达式创建一个解析器。
+
+```python
+import re
+from typing import Dict, Any
+from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.exceptions import OutputParserException
+
+class RegexNameAgeParser(BaseOutputParser[Dict[str, Any]]):
+    """
+    使用正则表达式解析文本以提取姓名和年龄，
+    处理各种不同的格式。
+    """
+
+    def parse(self, text: str) -> Dict[str, Any]:
+        """解析输出文本以提取姓名和年龄。"""
+        name_match = re.search(r"(?:Name:\s*|)(\b[A-Z][a-z]+)\b", text, re.IGNORECASE)
+        age_match = re.search(r"(?:Age:\s*|is\s*|)(\d+)\s*(?:years old|)", text, re.IGNORECASE)
+
+        if name_match and age_match:
+            name = name_match.group(1)
+            age = int(age_match.group(1))
+            return {"name": name, "age": age}
+        else:
+            # 处理解析失败的情况
+            # 选项 1：抛出异常
+            raise OutputParserException(
+                f"Could not parse Name and Age from output: {text}"
+            )
+            # 选项 2：返回默认/错误结构
+            # return {"name": None, "age": None, "error": "Parsing failed"}
+
+    def get_format_instructions(self) -> str:
+        """为LLM提供关于所需格式的指令。"""
+        # 虽然这个解析器很灵活，但提供指令仍然有所帮助。
+        return "Please provide the name and age. For example: 'Name: John, Age: 35'"
+
+    @property
+    def _type(self) -> str:
+        return "regex_name_age_parser"
+
+# 使用示例：
+parser = RegexNameAgeParser()
+output1 = "The user is Alice, Age: 30."
+output2 = "Bob is 25 years old."
+output3 = "Age: 40 Name: Carol"
+output4 = "David's information is not available."
+
+try:
+    parsed1 = parser.parse(output1) # {"name": "Alice", "age": 30}
+    parsed2 = parser.parse(output2) # {"name": "Bob", "age": 25}
+    parsed3 = parser.parse(output3) # {"name": "Carol", "age": 40}
+    # print(parsed1, parsed2, parsed3)
+    parsed4 = parser.parse(output4) 
+except OutputParserException as e:
+    print(e) # 打印 output4 的异常消息
+
+# print(parser.get_format_instructions())
+```
+
+这个解析器使用 `re.search` 来查找指示姓名和年龄的模式，展示了对LLM输出变化的适应能力。它还通过 `OutputParserException` 包含错误处理，并提供格式指令。
+
+### 集成自定义组件
+
+LangChain 设计的灵活性，尤其是 LangChain 表达式语言 (LCEL)，在于符合基本接口的自定义组件可以与标准组件集成。您可以像内置组件一样将它们连接起来。
+
+```python
+# 假设 custom_prompt、custom_llm 和 custom_parser 已实例化
+# custom_prompt: DynamicStructureChatPrompt 的一个实例
+# custom_llm: CustomLoggedChatWrapper 的一个实例（包装了一个真实模型）
+# custom_parser: RegexNameAgeParser 的一个实例
+
+# 您可以将自定义组件链接在一起：
+# chain = custom_prompt | custom_llm | custom_parser 
+
+# 或者混合标准组件和自定义组件：
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+# standard_llm = ChatOpenAI(model="gpt-3.5-turbo")
+# standard_parser = StrOutputParser()
+
+# 混合示例：自定义提示词、标准 LLM、自定义解析器
+# mixed_chain_1 = custom_prompt | standard_llm | custom_parser
+
+# 混合示例：标准提示词、自定义 LLM、标准解析器
+# standard_prompt = ChatPromptTemplate.from_messages([
+#     ("system", "您是一个有用的助手。"),
+#     ("human", "{问题}")
+# ])
+# mixed_chain_2 = standard_prompt | custom_llm | standard_parser 
+
+# result = mixed_chain_1.invoke({"user_query": "Provide details for Eve, Age: 22."})
+# print(result) # 可能输出: {'name': 'Eve', 'age': 22} 
+```
+
+这种组合性让您能精确地针对LLM交互逻辑中需要定制的部分，而无需重写整个链。从标准组件开始，并随着具体需求的出现逐步引入自定义组件。请记住，充分的测试是必不可少的，特别是对于处理可能不可预测的LLM输出的自定义输出解析器。通过利用自定义组件，您可以获得构建精密、可靠和生产就绪的 LangChain 应用程序所需的精细控制。
+
+## 参考资料
+
+- [Custom LLM](https://python.langchain.com/docs/how_to/custom_llm) — LangChain Team (2024)
+  Publisher: LangChain
+  官方文档，详细介绍了如何在LangChain中创建自定义LLM封装器，包括同步和异步`_call`方法的实现，并提及了自定义聊天模型实现。
+- [Custom Output Parser](https://python.langchain.com/docs/how_to/custom_output_parser) — LangChain Team (2024)
+  官方文档，解释了如何通过继承`BaseOutputParser`实现自定义输出解析器，包括`parse`方法和提供格式说明。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: arXiv preprint arXiv:2210.03629; DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了一种结合推理和行动的LLM代理通用框架，展示了复杂的交互模式，这些模式常需要自定义提示工程和强大的输出解析。

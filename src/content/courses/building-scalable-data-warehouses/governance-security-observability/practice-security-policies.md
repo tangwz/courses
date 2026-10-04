@@ -1,0 +1,191 @@
+---
+course: "building-scalable-data-warehouses"
+chapter: "governance-security-observability"
+lesson: "practice-security-policies"
+sourceId: 8045
+sourceUrl: "https://apxml.com/zh/courses/building-scalable-data-warehouses/chapter-5-governance-security-observability/practice-security-policies"
+title: "动手实践：配置安全策略"
+description: "将 RBAC 角色和行级安全策略应用于样本数据集。"
+order: 5
+plots: []
+sourceHash: "8104dd8c9b7a4f648a2bc184c8b790b1d627fb65d30e9a8fafed05207fc9812f"
+sourceCorrections: []
+---
+
+实现安全控制需要将治理要求转换为数据库对象。生产级的海量并行处理 (MPP) 环境很少按用户管理权限。相反，您构建了一个由继承权限和数据驱动策略组成的系统，该系统会随着组织的扩展而调整。
+
+在此练习中，我们将保护一个包含金融交易的敏感数据集。我们将实施一个三层安全架构：
+
+1. **分层 RBAC**，用于管理功能访问。
+2. **动态数据脱敏**，根据角色混淆敏感列。
+3. **行级安全 (RLS)**，根据地理权限筛选数据行。
+
+### 建立角色层级
+
+随着用户数量的增加，扁平的角色结构变得难以管理。我们采用分层模型，其中更高级别的功能角色从低级别的访问角色继承权限。这种策略，通常被称为功能角色组合，使得审计跟踪更清晰，并简化了授权管理。
+
+考虑一个包含两种用户类型的场景：**金融分析师**，他们需要对交易数据进行读取访问，但不应看到个人身份信息 (PII)；以及**合规官**，他们需要对所有数据字段拥有完全可见性。
+
+我们首先定义持有数据库对象明确权限的访问角色。
+
+```sql
+-- 创建基础访问角色
+CREATE ROLE role_access_finance_read;
+GRANT USAGE ON DATABASE fin_db TO ROLE role_access_finance_read;
+GRANT USAGE ON SCHEMA fin_db.transactions TO ROLE role_access_finance_read;
+GRANT SELECT ON TABLE fin_db.transactions.ledger TO ROLE role_access_finance_read;
+```
+
+接下来，我们创建功能角色并将其映射到访问角色。这种分离使我们无需修改功能用户分配，即可替换底层数据库权限。
+
+```sql
+-- 创建功能角色
+CREATE ROLE functional_analyst;
+CREATE ROLE functional_compliance;
+
+-- 授予继承
+GRANT ROLE role_access_finance_read TO ROLE functional_analyst;
+GRANT ROLE role_access_finance_read TO ROLE functional_compliance;
+```
+
+下图展示了继承结构。功能角色（顶部）从对象访问角色（中间）继承权限，对象访问角色持有对数据库对象的直接授权（底部）。
+
+> 角色继承的层级结构，将功能要求与对象级别权限分离。
+
+### 实施动态数据脱敏
+
+列级安全确保敏感字段对未经授权的用户保持混淆，同时对特权角色保持清晰。我们使用动态数据脱敏 (DDM) 在查询时修改数据，而不更改底层存储。
+
+我们将为 `account_number` 列创建脱敏策略。分析师应只看到最后四位数字，而合规官则看到完整数字。
+
+脱敏逻辑可以数学表示为函数 $M(v, r)$，其中 $v$ 是值，$r$ 是用户角色：
+
+
+$$
+M(v, r) = 
+\begin{cases} 
+v & \text{如果 } r \in \{\text{合规官}\} \\
+\text{concat('****', right(v, 4))} & \text{否则}
+\end{cases}
+$$
+
+
+以下是标准云数据仓库的 SQL 实现：
+
+```sql
+CREATE OR REPLACE MASKING POLICY mask_account_number AS (val string) 
+RETURNS string ->
+    CASE
+        WHEN CURRENT_ROLE() IN ('FUNCTIONAL_COMPLIANCE') THEN val
+        ELSE '****' || RIGHT(val, 4)
+    END;
+
+-- 将策略应用于列
+ALTER TABLE fin_db.transactions.ledger 
+MODIFY COLUMN account_number 
+SET MASKING POLICY mask_account_number;
+```
+
+当具有 `FUNCTIONAL_ANALYST` 角色的用户查询表时，数据库引擎会拦截执行计划，并将此 `CASE` 语句注入到投影子句中。这确保了原始数据永远不会离开存储层。
+
+### 配置行级安全 (RLS)
+
+脱敏处理列，而 RLS 处理横向筛选。我们经常需要根据数据属性（如区域或部门）限制访问。将这些规则硬编码到视图中（例如 `v_ledger_us`、`v_ledger_eu`）会产生技术债务和模式膨胀。
+
+一种可扩展的第三级方法是使用映射表（权限表）和行访问策略。这使得安全逻辑可以由数据驱动，而不是由代码驱动。
+
+首先，创建一个将角色映射到允许值的权限表。
+
+```sql
+CREATE TABLE security.entitlements (
+    role_name VARCHAR,
+    region_code VARCHAR
+);
+
+-- 填充权限
+INSERT INTO security.entitlements (role_name, region_code) VALUES 
+('FUNCTIONAL_ANALYST_US', 'US'),
+('FUNCTIONAL_ANALYST_EU', 'EU'),
+('FUNCTIONAL_COMPLIANCE', 'ALL');
+```
+
+接下来，我们定义行访问策略。如果当前用户的角色与权限表中对应于数据区域的行匹配，则策略评估为 `TRUE`。
+
+筛选逻辑表示，对于返回数据集 $R$ 的查询，当且仅当满足以下条件时，行 $r \in R$ 才会被包含：
+
+
+$$
+\exists e \in E : (e_{role} = \text{当前角色}) \land (e_{region} = r_{region} \lor e_{region} = \text{'ALL'})
+$$
+
+
+其中 $E$ 是权限集。
+
+```sql
+CREATE OR REPLACE ROW ACCESS POLICY region_policy 
+AS (region_val varchar) RETURNS BOOLEAN ->
+    EXISTS (
+        SELECT 1 FROM security.entitlements
+        WHERE role_name = CURRENT_ROLE()
+          AND (region_code = region_val OR region_code = 'ALL')
+    );
+
+-- 将策略应用于表
+ALTER TABLE fin_db.transactions.ledger
+ADD ROW ACCESS POLICY region_policy ON (region_code);
+```
+
+此配置强制查询优化器对账本上的每个查询执行与权限表的半连接操作。
+
+### 验证安全模型
+
+应用脱敏和行级策略后，必须验证其行为。验证应测试正向情况（授予访问）和负向情况（拒绝访问/脱敏）。
+
+我们使用 `EXECUTE AS`（或等效的会话上下文 (context)切换）来模拟不同的用户画像。
+
+```sql
+-- 以美国分析师身份测试
+USE ROLE functional_analyst_us;
+SELECT region_code, account_number, amount 
+FROM fin_db.transactions.ledger;
+```
+
+**美国分析师的预期输出：**
+
+1. **行：** 只返回 `region_code = 'US'` 的行。
+2. **列：** `account_number` 显示为 `****1234`。
+
+```sql
+-- 以合规官身份测试
+USE ROLE functional_compliance;
+SELECT region_code, account_number, amount 
+FROM fin_db.transactions.ledger;
+```
+
+**合规官的预期输出：**
+
+1. **行：** 返回所有区域的行。
+2. **列：** `account_number` 完全可见。
+
+下图演示了在这些策略下执行查询时的数据流。查询引擎在从存储中检索微分区之前，会根据元数据层评估请求。
+
+> 策略评估的顺序，在数据检索前强制执行 RLS，在数据呈现前进行脱敏。
+
+### 性能
+
+应用这些策略会引入开销。RLS 策略为每个查询添加了一个连接操作。为减轻性能下降，可以采取以下措施：
+
+1. **按策略列聚簇：** 确保表按 RLS 策略中使用的列（例如 `region_code`）进行聚簇。这使得引擎即使在应用策略的情况下也能有效修剪分区。
+2. **实体化权限：** 如果权限表很大，查询性能可能会受到影响。保持权限表小巧并大量缓存。
+3. **可记忆函数：** 在高级设置中，您可以将权限查找封装在一个可记忆函数中，以防止在同一会话内重复扫描映射表。
+
+通过结合分层 RBAC、动态脱敏和表驱动的 RLS，您可以确保数据仓库在设计上是安全的，并在基础设施层面透明地强制执行治理规则。
+
+## 参考资料
+
+- [About Masking Policies](https://docs.snowflake.com/en/user-guide/security-column-ddm-intro.html) — Snowflake (2024)
+  Publisher: Snowflake
+  官方文档详细介绍了动态数据脱敏的实现和配置，这是现代数据仓库中列级安全的核心组成部分，与实践练习相符。
+- [About Row Access Policies](https://docs.snowflake.com/en/user-guide/understanding-row-access-policies) — Snowflake (2024)
+  Publisher: Snowflake
+  官方文档解释了如何通过行访问策略实现行级安全，包括使用授权表进行数据驱动的访问控制，直接支持 RLS 练习。

@@ -1,0 +1,64 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "calculus-action-optimization"
+lesson: "optimization-process-overview"
+sourceId: 2316
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-5-calculus-action-optimization/optimization-process-overview"
+title: "整合：优化过程"
+description: "总结导数如何助力寻找最优模型参数的迭代过程。"
+order: 7
+plots: []
+sourceHash: "a3d625ee1797cc65467f56bcddca2ddabec1835cc19c752e545fe18d4a6293c5"
+sourceCorrections: []
+---
+
+模型优化的完整过程包括定义一个模型，例如简单线性回归（$y = mx + b$）；使用成本函数（如均方误差）衡量其误差；以及计算梯度（成本函数对参数 (parameter) $m$ 和 $b$ 的偏导数）。这里概述了使用这些微积分工具来优化模型——也就是训练它的完整方法论。
+
+其主要思想是迭代改进。我们从参数 $m$ 和 $b$ 的一些初始猜测值开始。这些初始猜测值很可能无法生成一条很好地拟合我们数据的直线，这意味着成本函数将有一个相对较高的值。我们的目标是系统地调整 $m$ 和 $b$ 以降低这个成本。
+
+这就是梯度下降 (gradient descent)发挥作用的地方。可以将成本函数想象成定义了一个表面，也许就像一座山，其中水平维度代表 $m$ 和 $b$ 的值，垂直维度代表成本（即误差）。我们的目标是找到最低点。
+
+下面是分步优化过程：
+
+1. **初始化参数：** 从 $m$ 和 $b$ 的初始值开始。这些可以是零、随机小数值，或任何其他初始猜测。我们将初始值记为 $m_0$ 和 $b_0$。
+2. **计算梯度：** 在当前参数值 ($m_i$, $b_i$) 处，计算成本函数 $J(m, b)$ 的梯度。这涉及计算我们讨论过的偏导数：
+
+   - $\frac{\partial J}{\partial m}$ （成本随 $m$ 变化的程度）
+   - $\frac{\partial J}{\partial b}$ （成本随 $b$ 变化的程度）
+     梯度向量 (vector) $\nabla J = \left[ \frac{\partial J}{\partial m}, \frac{\partial J}{\partial b} \right]$ 指向从当前点 ($m_i$, $b_i$) 成本增长最陡峭的方向。
+3. **更新参数：** 我们希望沿着梯度的*反方向*移动以*降低*成本。我们使用以下规则更新参数：
+
+   
+   $$
+   m_{i+1} = m_i - \alpha \frac{\partial J}{\partial m}
+   $$
+   
+   
+   $$
+   b_{i+1} = b_i - \alpha \frac{\partial J}{\partial b}
+   $$
+   
+
+   这里，$\alpha$ 是**学习率**。它是一个小的正值（如 0.01, 0.001），控制我们下坡方向迈出的步长。选择一个合适的学习率很要紧：如果过大，我们可能会越过最小值；如果过小，过程可能耗时过长。减法运算确保我们*下坡*移动。
+4. **重复：** 返回第 2 步，使用新更新的参数 ($m_{i+1}$, $b_{i+1}$) 计算下一个梯度。重复此过程（计算梯度、更新参数），直到达到预设的迭代次数，或者成本函数不再明显下降，或者 $m$ 和 $b$ 的变化变得非常小。这种状态通常被称为**收敛**。
+
+这个迭代循环构成了梯度下降优化算法的核心。微积分，特别是计算偏导数以找到梯度，提供了成本函数“坡度”的必要信息，指引我们走向最小误差。
+
+> 梯度下降优化循环：初始化参数，计算成本函数的梯度，使用梯度和学习率更新参数，并重复直到收敛。
+
+通过重复应用这些步骤，我们逐步调整 $m$ 和 $b$，使我们的线性回归直线越来越好地拟合数据，从而最小化成本函数。这说明了导数和梯度这些基本内容如何应用于训练甚至简单的机器学习 (machine learning)模型。尽管我们以线性回归为例，但这种使用梯度来最小化成本函数的相同基础过程对于训练许多复杂的机器学习算法来说，都非常重要。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍了优化算法，包括梯度下降、其数学原理以及机器学习的实际考虑。
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2013)
+  Publisher: Springer
+  涵盖线性回归模型及其拟合所用的基本优化技术，从统计学习的角度阐述了该过程。
+- [CS229 Lecture Notes: Supervised Learning, Linear Regression](http://cs229.stanford.edu/notes/cs229-notes1.pdf) — Andrew Ng (2018)
+  Journal: Stanford University CS229 Lecture Notes
+  介绍了线性回归并详细解释了梯度下降算法，包括成本函数、偏导数和参数更新，是机器学习基础课程的一部分。
+- [Numerical Optimization](https://doi.org/10.1007/978-0-387-40065-5) — Jorge Nocedal and Stephen J. Wright (2006)
+  Publisher: Springer; Pages: 664; DOI: [10.1007/978-0-387-40065-5](https://doi.org/10.1007/978-0-387-40065-5)
+  严谨地论述了优化算法，包括梯度下降方法的理论基础和实际考虑。

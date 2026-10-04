@@ -1,0 +1,137 @@
+---
+course: "python-for-beginners"
+chapter: "python-basics-variables-data-types-operators"
+lesson: "python-boolean-type"
+sourceId: 2268
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-2-python-basics-variables-data-types-operators/python-boolean-type"
+title: "基本数据类型：布尔值"
+description: "了解 Python 中的布尔数据类型，表示逻辑上的 True 和 False 值。"
+order: 4
+plots: []
+sourceHash: "48b9cb5505184af83a462fb18d16684d704c99e88cbdeb89130210384ae38418"
+sourceCorrections: []
+---
+
+Python 能够处理多种类型的数据，包括数字（例如 `42` 和 `3.14`）和文本（例如 `"Hello, Python"`）。然而，程序常常需要表示更简单的状况，例如某个事物是真还是假、某个条件是否满足或是否存在特定状态。为此，Python 提供了布尔数据类型。
+
+## 布尔类型：True 和 False
+
+布尔类型以发明布尔代数的乔治·布尔命名，在编程逻辑中起着重要作用。它只有两个可能的值：
+
+- `True`
+- `False`
+
+请注意大小写。`True` 和 `False` 是 Python 中的保留关键字，表示这些特定的布尔值。你不能使用 `true` 或 `false`（小写）。
+
+你可以像为数字或字符串赋值一样，将这些值赋给变量：
+
+```python
+is_learning = True
+is_finished = False
+
+print(is_learning)
+print(is_finished)
+```
+
+运行此代码将输出：
+
+```text
+True
+False
+```
+
+这些变量 `is_learning` 和 `is_finished` 现在持有布尔值。它们在你的程序中充当简单的标记 (token)或开关。
+
+## 比较产生的布尔值
+
+虽然你可以直接赋值 `True` 或 `False`，但布尔值通常是比较运算的结果。当你使用比较运算符（我们之前讨论过）如 `==`（等于）、`!=`（不等于）、`>`（大于）、`<`（小于）、`>=`（大于等于）或 `<=`（小于等于）时，结果总是一个布尔值。
+
+看这些例子：
+
+```python
+age = 20
+is_adult = age >= 18  # 年龄是否大于或等于18？
+print(is_adult)      # 输出：True
+
+temperature = 15.5
+is_cold = temperature < 10.0 # 温度是否小于10.0？
+print(is_cold)       # 输出：False
+
+name = "Alice"
+is_bob = name == "Bob" # 名字是否等于"Bob"？
+print(is_bob)          # 输出：False
+```
+
+在每种情况中，赋值运算符 (`=`) 右侧的表达式会首先被求值。比较产生 `True` 或 `False`，然后该结果被存储在变量中。比较与布尔结果之间的这种直接联系是程序行为控制的依据。
+
+## 布尔值与逻辑运算
+
+布尔值是 Python 中决策制定的基本组成部分。它们与逻辑运算符（`and`、`or`、`not`）广泛结合使用，以组合多个条件。例如，你可能想检查用户是否*既*已登录*又*拥有管理员权限。
+
+```python
+logged_in = True
+is_admin = False
+
+# 'and' 要求两边都为 True，结果才为 True
+can_access_admin_panel = logged_in and is_admin
+print(can_access_admin_panel) # 输出：False
+
+# 'or' 要求至少一边为 True，结果才为 True
+can_view_content = logged_in or is_admin
+print(can_view_content)       # 输出：True
+
+# 'not' 反转布尔值
+is_guest = not logged_in
+print(is_guest)               # 输出：False
+```
+
+我们将在本章后面更仔细地查看逻辑运算符。它们是构建更复杂条件的必备工具，在通过 `if` 语句（在下一章中介绍）控制程序流程时，你将频繁使用它们。
+
+## 真值：当其他类型表现得像布尔值时
+
+Python 有一个实用的思想，常被称为“真值”。在需要布尔值的上下文 (context)（例如 `if` 语句，你很快就会学到）中，Python 可以将*其他*类型的值评估为“真值”（表现得像 `True`）或“假值”（表现得像 `False`）。
+
+以下值在 Python 中被认为是**假值**：
+
+- 布尔值 `False` 本身。
+- 特殊值 `None`（表示值的缺失）。
+- 任何数字类型的零（`0`、`0.0`）。
+- 任何空序列或集合：
+  - 空字符串：`""`
+  - 空列表：`[]`
+  - 空元组：`()`
+  - 空字典：`{}`
+  - 空集合：`set()`
+
+\*\*Python 中几乎所有其他值都被认为是真值。\*\*这包括非零数字、非空字符串、包含元素的列表等等。
+
+为什么这很有用？它允许进行简洁的检查。例如，与其使用 `len(my_list) > 0` 来检查列表 `my_list` 是否有超过零个元素，你通常可以直接写 `if my_list:`，因为非空列表是真值，而空列表是假值。
+
+```python
+items = []
+if items: # items 为空，所以它是假值
+    print("列表中有元素。")
+else:
+    print("列表为空。") # 这将被打印
+
+user_name = "Charlie"
+if user_name: # user_name 不为空，所以它是真值
+    print(f"你好，{user_name}！") # 这将被打印
+else:
+    print("用户名缺失。")
+
+count = 0
+if count: # count 为 0，所以它是假值
+    print("计数为正数。")
+else:
+    print("计数为零。") # 这将被打印
+```
+
+虽然 `True` 和 `False` 是显式的布尔值，但理解真值有助于解释 Python 如何在条件逻辑中做出判断。这种隐式的布尔评估使得 Python 代码通常更具可读性和紧凑性。
+
+布尔值简单但很重要。它们使程序能够表示状态（`True`/`False`），通过比较和逻辑运算符评估条件，并最终做出决策，构成编程逻辑的中心部分。在构建根据输入或内部状态做出不同反应的程序时，你会发现自己会持续使用它们。
+
+## 参考资料
+
+- [Built-in Types (Boolean Values and Truth Value Testing)](https://docs.python.org/3/library/stdtypes.html) — Python Software Foundation (2023)
+  Python官方文档，对布尔值（`True`/`False`）、其特性以及Python中各种数据类型的“真值测试”（truthiness）规则提供了权威解释。

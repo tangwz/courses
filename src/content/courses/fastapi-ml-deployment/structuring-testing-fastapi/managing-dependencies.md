@@ -1,0 +1,134 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "structuring-testing-fastapi"
+lesson: "managing-dependencies"
+sourceId: 5298
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-4-structuring-testing-fastapi/managing-dependencies"
+title: "管理依赖项"
+description: "使用需求文件（`requirements.txt`）或Poetry等工具管理项目依赖项。"
+order: 3
+plots: []
+sourceHash: "59df7b0d1b9b639ccdf96c26b5dd2a0f4e2595ce5b4304036879761176ba680f"
+sourceCorrections: []
+---
+
+随着您的FastAPI应用，特别是那些用于提供机器学习 (machine learning)模型的应用，不断发展，它们必然会依赖越来越多的外部Python包。这些包包括FastAPI本身、Uvicorn、Pydantic、您选择的机器学习库（如scikit-learn、TensorFlow或PyTorch）、数据处理工具（如Pandas或NumPy），以及可能许多其他工具。有效管理这些依赖项对于创建可复现、稳定且易于维护的应用必不可少。如果没有明确的管理，您可能会遇到版本冲突、意外的行为变化，以及在协作或部署服务时遇到困难。
+
+### 为什么依赖管理很重要
+
+想象一下，您在自己的机器上使用最新版本的`scikit-learn`开发机器学习 (machine learning)API。一切运行完美。但一位同事尝试设置项目时，却安装了旧版本，导致您使用的某个函数不可用而出现错误。更糟的是，应用虽然运行，但由于库算法的细微变化，产生了不同的预测结果。当部署到生产环境时，服务器可能又安装了另一个版本，从而导致故障或不一致。
+
+妥善的依赖管理通过以下方式解决这些问题：
+
+1. **可复现性：** 确保任何参与项目工作的人员，或应用部署到的任何环境，都使用所有必需包的完全相同版本。这保证了行为的一致性。
+2. **避免冲突：** 不同的库可能依赖相同子依赖项的不同版本。明确的管理有助于及早发现并解决这些潜在冲突。
+3. **简化设置：** 为开发人员或部署系统提供清晰、自动化的方式来安装所有必需的包。
+4. **跟踪需求：** 维护一份准确记录您的应用运行所需的所有内容的记录。
+
+### 使用`requirements.txt`
+
+在Python项目中管理依赖项最常见且直接的方法是使用`requirements.txt`文件。这个纯文本文件列出了所需的包，通常每行一个，并经常附带特定的版本约束。
+
+**创建`requirements.txt`**
+
+虽然您可以手动创建此文件，但它通常是根据项目中当前虚拟环境中安装的包生成的。在使用`pip`安装了必需的包（`fastapi`、`uvicorn`、`scikit-learn`、`joblib`等）之后，您可以冻结当前状态：
+
+```bash
+pip freeze > requirements.txt
+```
+
+此命令会捕获所有已安装的包，包括您直接依赖项的依赖项，并将它们固定到其确切版本。生成的`requirements.txt`可能如下所示：
+
+```
+fastapi==0.104.1
+uvicorn[standard]==0.23.2
+pydantic==2.4.2
+scikit-learn==1.3.2
+joblib==1.3.2
+numpy==1.26.1
+# ... 其他依赖项
+```
+
+**从`requirements.txt`安装**
+
+要在新机器或部署管道中设置项目环境，您可以使用`pip`安装文件中列出的包：
+
+```bash
+pip install -r requirements.txt
+```
+
+这确保了文件中指定的精确版本被安装，从而重现预期的环境。
+
+**版本说明符**
+
+`pip freeze`命令使用精确版本固定（`==`）。这通常推荐用于应用部署，以确保最大的稳定性和可复现性。但是，也存在其他说明符：
+
+- `package_name>=1.0`：安装版本1.0或更高。请谨慎使用，因为主要版本更新可能会引入破坏性更改。
+- `package_name<2.0`：安装版本低于2.0的任何版本。
+- `package_name~=1.1`：兼容发布。安装版本1.1或任何后续的补丁版本（例如1.1.1、1.1.2），但不包括1.2或2.0。这允许进行错误修复，同时最大限度地降低引入破坏性更改的风险。这对于库开发很有用，但对于应用部署来说通常过于宽松。
+
+对于机器学习 (machine learning)应用，底层库的细微变化可能会影响模型预测，因此在生产环境中，在`requirements.txt`中固定精确版本（`==`）通常是最安全的方法。
+
+### 使用Poetry进行现代依赖管理
+
+尽管`pip`和`requirements.txt`功能实用，但像Poetry这样更现代的工具为依赖项和项目管理提供了更集成的方案。
+
+Poetry使用`pyproject.toml`文件来定义项目元数据、依赖项、开发依赖项以及构建系统信息。
+
+**Poetry的特性：**
+
+1. **依赖解决：** Poetry采用先进的依赖解析器，通常在查找所有必需包及其子依赖项的兼容版本方面表现更好，最大限度地减少冲突。
+2. **锁定文件（`poetry.lock`）：** 当您添加依赖项（`poetry add package_name`）或安装它们（`poetry install`）时，Poetry会生成一个`poetry.lock`文件。此文件记录了*所有*已安装包（包括子依赖项）的精确版本，确保在不同环境之间真正可复现的构建。这比`pip freeze`更可靠，因为它反映的是解析后的依赖树，而不仅仅是顶层安装的包。
+3. **虚拟环境管理：** Poetry会自动为您的项目创建和管理虚拟环境，简化了设置。
+4. **项目构建与发布：** 它包含用于构建Python包并将其发布到PyPI等仓库的工具。
+
+**`pyproject.toml`示例片段：**
+
+```toml
+[tool.poetry]
+name = "ml-api"
+version = "0.1.0"
+description = "用于ML模型预测的FastAPI服务"
+authors = ["您的姓名 <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.23.2"}
+scikit-learn = "^1.3.2"
+joblib = "^1.3.2"
+pydantic = "^2.4.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+httpx = "^0.25.1" # 用于TestClient
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+```
+
+要安装此处定义的依赖项，您可以运行：
+
+```bash
+poetry install
+```
+
+这会读取`pyproject.toml`，解析依赖项，将其安装到虚拟环境中，并创建/更新`poetry.lock`。
+
+选择`pip/requirements.txt`还是Poetry通常取决于项目复杂度和团队偏好。对于寻求更严格依赖控制和集成工具的大型项目或团队，Poetry提供了显著的优势。对于更简单的应用，`pip`和`requirements.txt`仍然是一个可行且广为人知的选择。
+
+无论选择何种工具，主动管理您的依赖项是构建可靠且易于维护的FastAPI应用不可或缺的一部分，尤其是在机器学习 (machine learning)模型部署中，一致性非常重要。这种做法为本章和本课程后面讨论的测试和部署策略奠定了良好根基。
+
+## 参考资料
+
+- [pip documentation](https://pip.pypa.io/en/stable/) — The pip developers (2024)
+  pip使用的权威来源，包括需求文件和版本说明符。
+- [Poetry Documentation](https://python-poetry.org/docs/) — The Poetry developers (2024)
+  Poetry功能的官方指南，涵盖依赖管理、锁定文件和项目设置。
+- [Managing application dependencies](https://packaging.python.org/en/latest/guides/managing-application-dependencies/) — The Python Packaging Authority (PyPA) (2025)
+  Publisher: The Python Packaging Authority (PyPA)
+  提供处理Python项目依赖的最佳实践和工具概述。
+- [Introducing MLOps: How to Go from Experimentation to On-Demand Delivery in ML](https://www.oreilly.com/library/view/introducing-mlops/9781492069241/) — Mark Treveil, Nicolas Omont, Olivier Grisel, Aurélien Géron, Clément Stenac, Erwan Le Cudennec, Loïc Simon, Louis Bertin, Michael Lehning, Michel Lutz, Nicolas Metais, Olivier Philippe, and Paul Bertrand (2020)
+  Publisher: O'Reilly Media
+  在MLOps工作流中，探讨了可复现环境和依赖管理对模型行为一致性的重要性。

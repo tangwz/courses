@@ -1,0 +1,146 @@
+---
+course: "introduction-to-llm-fine-tuning"
+chapter: "data-preparation-for-fine-tuning"
+lesson: "tokenization-for-fine-tuning"
+sourceId: 7272
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-llm-fine-tuning/chapter-2-data-preparation-for-fine-tuning/tokenization-for-fine-tuning"
+title: "用于微调的分词"
+description: "了解分词策略以及如何处理特殊分词、填充和截断以便进行微调。"
+order: 5
+plots: ["plots/7272-0.json"]
+sourceHash: "52d30d1973aa813ea0e0409cf4cc4cb16470c065ad434c7493d0b523cbc0c211"
+sourceCorrections: []
+---
+
+数据集结构化和清理完成后，最后的准备步骤是将文本转换为模型可以处理的数值表示。这一过程称为分词 (tokenization)，它不仅仅是将句子拆分成单词。它是一种精确的转换，必须与模型的原始训练完美匹配，确保模型正确理解您精心准备的语法和语义。
+
+使用与基础模型预训练 (pre-training)时完全相同的分词器 (tokenizer)，是微调 (fine-tuning)中的一条基本规则。Hugging Face Hub等平台上的每个模型都附带其对应的分词器配置。例如，将BERT分词器应用于Llama模型，使用不同的分词器将导致词汇不匹配，并导致模型性能不佳，因为模型会错误地理解输入的分词ID。
+
+您可以使用`transformers`库轻松加载任何给定模型的正确分词器。
+
+```python
+from transformers import AutoTokenizer
+
+# 加载与特定模型关联的分词器
+# 将 "meta-llama/Llama-2-7b-hf" 替换为您选择的基础模型
+# 注意：某些模型可能需要身份验证或访问权限。
+# 对于一个普遍可用的示例，您可以使用 "gpt2"。
+
+model_checkpoint = "gpt2"
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+```
+
+### 使用特殊分词 (tokenization)结构化输入
+
+预训练 (pre-training)模型依赖一组特殊分词来理解输入的结构。这些分词不属于自然语言，但充当分隔符或信号。尽管它们的确切形式因模型而异，但其功能通常是一致的：
+
+- **序列分隔符**：像`<s>`（序列开始）和`</s>`（序列结束）这样的分词标记 (token)着完整文本输入的开始和结束。
+- **填充分词**：`[PAD]`分词用于使批次中的所有序列长度相同，这是在GPU上高效处理的必要条件。
+- **未知分词**：`[UNK]`分词是模型词汇表 (vocabulary)中不存在的任何单词的占位符。
+
+微调 (fine-tuning)时，您通常需要将多个文本字段组合成一个格式化的字符串，使用这些特殊分词或其他模型特定的标记来区分不同部分。对于遵循指令的模型，您可能会使用`### Instruction:`和`### Response:`等标签来格式化您的数据。这种模板化必须在整个数据集上保持一致。
+
+让我们查看GPT-2分词器 (tokenizer)的特殊分词。请注意，一些模型，如GPT-2，可能没有默认的填充分词，因此我们通常为此目的分配一个，通常是序列结束分词。
+
+```python
+# GPT-2 没有默认的填充分词
+# 我们可以将其设置为序列结束分词
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+print("序列结束分词:", tokenizer.eos_token)
+print("填充分词:", tokenizer.pad_token)
+```
+
+下图显示了从原始文本到模型可用、已分词输入的流程。
+
+> 分词流程从原始数据开始，将其格式化为提示词 (prompt)，并使用模型的分词器生成数值张量。
+
+### 填充、截断和注意力掩码
+
+模型以批次方式处理数据以提高效率，这要求批次中的每个输入序列具有相同的长度。如果您的数据条目长度不同，您必须在分词 (tokenization)期间应用两种标准技术：
+
+- **截断**：长度超过模型最大上下文 (context)窗口（例如，Llama 2为4096个分词）的序列会被缩短以适应。超过此限制的任何信息都会丢失，因此务必确保您的格式化提示词 (prompt)不会经常超出此长度。
+- **填充**：较短的序列会用`[PAD]`分词填充，直到它们与批次中最长序列的长度匹配。
+
+当您填充序列时，您还必须告诉模型在自注意力 (self-attention)计算期间忽略填充分词。这是通过**注意力掩码**完成的，它是一个与输入ID形状相同的二进制张量。`1`表示模型应关注的实际分词，而`0`表示应忽略的填充分词。
+
+幸运的是，Hugging Face分词器 (tokenizer)会自动处理所有这些。当您在文本列表上调用分词器时，您可以通过简单的参数 (parameter)启用这些功能。
+
+
+
+![输入ID和注意力掩码可视化](plots/7272-0.json)
+
+
+
+> 分词批次的图示。在注意力掩码（右侧）中，蓝色（1）表示实际分词，灰色（0）表示模型将忽略的填充分词。请注意，较短的第一个序列在左侧进行了填充。
+
+对于仅解码器模型（如GPT和Llama系列），左侧填充（`padding_side='left'`）是标准做法。这确保了原始的、未填充的分词位于序列的末尾，这对于模型在生成过程中的因果注意力机制 (attention mechanism)有益。
+
+### 一个实用的分词 (tokenization)函数
+
+让我们将所有内容整合起来，使用一个Python函数来准备一批示例。该函数首先使用提示模板格式化每个示例，然后对整个批次进行分词，应用填充和截断。
+
+```python
+from transformers import AutoTokenizer
+
+# 在此示例中，我们使用GPT-2并设置填充分词
+model_checkpoint = "gpt2"
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+tokenizer.pad_token = tokenizer.eos_token
+
+def create_prompt_and_tokenize(examples):
+    """
+    接受一批示例，为每个示例创建格式化提示词，
+    并对其进行分词。
+    """
+    # 使用列表推导式格式化每个示例。
+    # 这假设每个“示例”都是一个包含“instruction”和“response”键的字典。
+    formatted_prompts = [
+        f"Instruction: {ex['instruction']}\nResponse: {ex['response']}"
+        for ex in examples
+    ]
+
+    # 对批次中的格式化提示词进行分词。
+    tokenized_batch = tokenizer(
+        formatted_prompts,
+        padding="longest",      # 填充到最长序列的长度。
+        truncation=True,        # 截断过长的序列。
+        max_length=256,         # 设置最大长度以保持一致性。
+        return_tensors="pt"     # 返回PyTorch张量。
+    )
+    return tokenized_batch
+
+# 用于演示函数的虚拟数据集
+dummy_dataset = [
+    {"instruction": "What is the capital of Italy?", "response": "The capital of Italy is Rome."},
+    {"instruction": "Summarize this text.", "response": "This is a summary."}
+]
+
+# 将函数应用于数据集
+tokenized_output = create_prompt_and_tokenize(dummy_dataset)
+
+# 查看输出
+print(tokenized_output.keys())
+# 预期输出: dict_keys(['input_ids', 'attention_mask'])
+
+print("\n输入ID的形状:", tokenized_output['input_ids'].shape)
+# 预期输出: 输入ID的形状: torch.Size([2, 21])
+```
+
+这个函数是我们数据准备流程的最后一个组成部分。它可以应用于整个数据集对象（例如，Hugging Face `Dataset`）使用`.map()`方法，高效地为训练阶段准备所有数据。有了一个正确分词的数据集，您现在就可以开始微调 (fine-tuning)过程了。
+
+## 参考资料
+
+- [Preprocessing data: Tokenization](https://huggingface.co/docs/transformers/main/en/preprocessing) — Hugging Face (2023)
+  Publisher: Hugging Face
+  Hugging Face Transformers库中关于tokenization的官方指南，详细介绍了特殊token、填充和截断等概念。
+- [Neural Machine Translation of Rare Words with Subword Units](https://aclanthology.org/P16-1162/) — Rico Sennrich, Barry Haddow, Alexandra Birch (2016)
+  Journal: Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Pages: 1715-1725; DOI: [10.18653/v1/P16-1162](https://doi.org/10.18653/v1/P16-1162)
+  介绍了字节对编码（BPE），这是一种构成许多大型语言模型基础的子词分词算法。
+- [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) — Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, and Ilya Sutskever (2019)
+  Publisher: OpenAI
+  介绍GPT-2的论文，其中概述了该模型的架构及其使用的BPE分词方法。
+- [Natural Language Processing with Transformers: Building Innovative Applications with Hugging Face](https://www.oreilly.com/library/view/natural-language-processing/9781098132431/) — Lewis Tunstall, Leandro von Werra, and Mario Šafranko (2022)
+  Publisher: O'Reilly Media
+  一本实用资源，涵盖了使用Hugging Face生态系统进行数据准备、分词和微调的内容。

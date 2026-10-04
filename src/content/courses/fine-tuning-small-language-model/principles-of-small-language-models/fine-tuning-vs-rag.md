@@ -1,0 +1,52 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "principles-of-small-language-models"
+lesson: "fine-tuning-vs-rag"
+sourceId: 8498
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-1-principles-of-small-language-models/fine-tuning-vs-rag"
+title: "微调与检索增强生成"
+description: "对比直接微调模型与使用检索增强生成获取专门知识的差异。"
+order: 2
+plots: []
+sourceHash: "81a1a9c1cfcc33c965274cb7c5f07c1ffe27769911d68964b1a85d5eb2f71a64"
+sourceCorrections: []
+---
+
+当你部署一个预训练 (pre-training)的小语言模型时，很快就会发现它缺乏关于私有数据或特定任务的专门知识。为了填补这一空白，工程师通常依赖两种主要方法：微调（Fine-Tuning）和检索增强生成（RAG）。在投入计算资源进行训练之前，必须理清这两种方法的差异。
+
+检索增强生成将语言模型视为推理 (inference)引擎，而非事实数据库。当用户提交查询时，系统首先搜索外部数据库（通常是向量 (vector)库）以寻找相关文档。这些文档会被附加到用户提示词 (prompt)中。随后，小语言模型完全基于这些注入的上下文 (context)来生成答案。
+
+我们可以将 RAG 中的提示词构建表示为一个简单的函数：
+
+$P_{\text{最终}} = P_{\text{用户}} + \text{检索}(D, \text{嵌入}(P_{\text{用户}}))$
+
+这里，$P_{\text{最终}}$ 是发送给模型的提示词，$P_{\text{用户}}$ 是原始查询，$D$ 代表外部文档库。模型不会学习新的参数 (parameter)，其权重 (weight)保持不变。这使得 RAG 在信息更新频繁的场景（如新闻汇总或客户支持文档）中表现出色。如果某个事实发生了变化，你只需要更新数据库即可。
+
+微调则采用了完全不同的方式。微调不是在推理阶段提供上下文，而是修改模型本身的内部结构。通过让网络处理特定的“指令-回答”对并计算损失，利用梯度下降 (gradient descent)算法来更新模型权重。
+
+权重的更新改变了模型词表生成的概率分布。如果你专门针对法律合同训练模型，那么生成法律术语的概率就会增加。知识和风格模式直接嵌入 (embedding)到了参数之中。
+
+> 在推理阶段提供上下文与在训练阶段改变模型权重之间的架构差异。
+
+为了做出合理的架构决策，你必须评估首要目标。RAG 是知识注入的最佳选择。如果你正在构建一个用于回答庞大员工手册相关问题的系统，RAG 是合适的方案。小语言模型不需要背诵手册，只需在运行时阅读提供给它的特定段落。
+
+微调则是行为调整的最佳选择。如果你希望小语言模型读取自然语言查询并输出有效的 SQL 字符串，微调的效果会更好。模型会学习语法、表结构以及预期的格式规范。由于这些行为已经固化在模型中，你可以节省提示词占用的空间，不需要在每次用户请求时都提供 SQL 语法示例。
+
+例如，从运行成本来看：RAG 会带来延迟，因为系统在生成文本前必须查询数据库。微调虽然需要前期的训练计算成本，但由于提示词更短且无需调用外部数据库，推理速度通常更快。
+
+你也可以结合这两种技术。先进 AI 系统中常见的一种模式是：先微调一个小语言模型使其遵循特定的输出格式，然后使用 RAG 向其提供填充该格式所需的具体事实。这种混合方案能发挥两者的长处，同时规避各自的短板。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems; Volume: 33; Pages: 9459-9475; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍 RAG 框架的开创性研究论文，为预训练模型与外部检索机制的结合提供了理论基础。
+- [Training language models to follow instructions with human feedback](https://proceedings.neurips.cc/paper_files/paper/2022/hash/b1efde53be364a73914f58805a001731-Abstract-Conference.html) — Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul F. Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: Advances in Neural Information Processing Systems; Volume: 35; Pages: 27730-27744; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  指令微调的主要来源，解释了如何通过更新模型权重来使其遵循特定的任务格式和行为模式。
+- [RA-DIT: Retrieval-Augmented Dual Instruction Tuning](https://arxiv.org/abs/2310.01352) — Xi Victoria Lin, Xilun Chen, Mingda Chen, Weijia Shi, Maria Lomeli, Richard James, Omer Levy, Scott Wen-tau Yih, Ves Stoyanov, Luke Zettlemoyer (2023)
+  Journal: arXiv; DOI: [10.48550/arXiv.2310.01352](https://doi.org/10.48550/arXiv.2310.01352)
+  关于混合方法的近现代研究，结合了微调和 RAG 技术以提升模型在专业领域的表现。
+- [Generative AI on AWS: Building Context-Aware Multimodal Reasoning Applications](https://www.oreilly.com/library/view/generative-ai-on/9781098159214/) — Chris Fregly, Antje Barth, Shelbee Eigenbrode (2023)
+  Publisher: O'Reilly Media; Pages: 150-185
+  一本实用指南，详细说明了 RAG 与微调之间的权衡，包括实现策略和架构考量。

@@ -1,0 +1,135 @@
+---
+course: "deep-learning-fundamentals-keras"
+chapter: "training-deep-neural-networks"
+lesson: "compilation-step"
+sourceId: 4906
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-fundamentals-keras/chapter-3-training-deep-neural-networks/compilation-step"
+title: "编译步骤"
+description: "学习如何编译 Keras 模型，指定优化器、损失函数和评估指标。"
+order: 1
+plots: []
+sourceHash: "493bba2d69848ee858d021621f875d6d0e57122734aa7b2218eac39d24b344db"
+sourceCorrections: []
+---
+
+Keras 模型在从数据中学习之前，需要为其训练过程进行配置。这一重要配置发生在*编译步骤*中，通过 `model.compile()` 方法调用。可以将编译看作是为即将到来的学习任务收集所需的工具和指令。它此时不涉及任何权重 (weight)调整，而是建立了这些调整将如何发生的框架。
+
+具体来说，`compile()` 要求您定义三个重要参数 (parameter)：
+
+1. **优化器 (Optimizer)：** 它决定了模型权重如何根据所见数据进行更新。
+2. **损失函数 (Loss Function)：** 它衡量了模型预测与训练期间实际目标值相比的*错误程度*。优化器的目标是使该值最小化。
+3. **评估指标 (Metrics)：** 这些用于*监测*模型在训练和测试期间的表现。损失函数指导学习过程，而评估指标则提供人类可理解的成功衡量标准，例如准确率。
+
+我们来查看每个组成部分。
+
+### 选择优化器
+
+优化器实现了梯度下降 (gradient descent)算法的一种特定变体。它的作用是迭代调整网络的权重 (weight)（和偏置 (bias)），使其朝着最有效降低损失函数 (loss function)的方向。Keras 提供了多种内置优化器，每种在计算更新和管理学习率方面都有略微不同的策略。
+
+一些常见的选择包括：
+
+- `'sgd'`: 随机梯度下降，常伴有动量。一种基础的优化器。
+- `'rmsprop'`: 均方根传播，在许多情况下都很有效。
+- `'adam'`: 自适应矩估计，通常是一个很好的默认选择，因为它具备自适应学习率能力和整体稳健性。它结合了 RMSprop 和动量的思想。
+
+您可以使用其字符串标识符（如 `'adam'`）来指定优化器以使用默认参数 (parameter)，或者，如果需要自定义学习率等参数，可以通过从 `keras.optimizers` 实例化一个优化器类来指定。
+
+```python
+import keras
+
+# 使用字符串标识符（默认参数）
+# model.compile(optimizer='adam', ...)
+
+# 使用自定义学习率的优化器实例
+custom_optimizer = keras.optimizers.Adam(learning_rate=0.001)
+# model.compile(optimizer=custom_optimizer, ...)
+```
+
+优化器及其参数的选择，特别是学习率，会大大影响训练速度和最终的模型表现。虽然 `'adam'` 经常是一个起始点，但尝试其他优化器有时能为特定问题带来更好的结果。
+
+### 选择损失函数 (loss function)
+
+损失函数（或目标函数）量化 (quantization)了模型预测与真实目标值之间的差异。整个训练过程都围绕着最小化此函数进行。合适的损失函数很大程度上取决于您正在解决的问题类型：
+
+- **二分类 (Binary Classification)：** （两个互斥类别，例如，垃圾邮件/非垃圾邮件）。使用 `binary_crossentropy`。模型的最终层通常应包含一个神经元，并采用 sigmoid 激活函数 (activation function) ($output \in [0, 1]$)。
+- **多分类（独热编码标签）(Multi-class Classification (One-Hot Encoded Labels))：** （多于两个互斥类别，例如，分类数字 0-9，其中标签形如 `[0, 0, 1, 0, ..., 0]`）。使用 `categorical_crossentropy`。最终层通常有 $N$ 个神经元（其中 $N$ 是类别数），并采用 softmax 激活函数。
+- **多分类（整数标签）(Multi-class Classification (Integer Labels))：** （与上述相同，但标签是整数，如 `2`，而非独热向量 (vector)）。使用 `sparse_categorical_crossentropy`。这在数学上等同于 `categorical_crossentropy`，但避免了手动将整数标签转换为独热格式的需要。最终层设置相同（N 个神经元，softmax）。
+- **回归 (Regression)：** （预测连续值，例如房价）。常见的选择包括 `mean_squared_error`（MSE，计算平均平方差：$L = \frac{1}{n}\sum_{i=1}^{n}(y_{真实}^{(i)} - y_{预测}^{(i)})^2$）或 `mean_absolute_error`（MAE，计算平均绝对差：$L = \frac{1}{n}\sum_{i=1}^{n}|y_{真实}^{(i)} - y_{预测}^{(i)}|$）。最终层通常包含一个神经元，并采用线性激活函数。
+
+您可以使用其字符串标识符来指定损失函数：
+
+```python
+# 适用于二分类
+# model.compile(..., loss='binary_crossentropy', ...)
+
+# 适用于独热编码标签的多分类
+# model.compile(..., loss='categorical_crossentropy', ...)
+
+# 适用于回归任务
+# model.compile(..., loss='mean_squared_error', ...)
+```
+
+选择正确的损失函数是根本。例如，对分类任务使用回归损失将导致荒谬的结果，因为该函数并非旨在衡量该问题所需的错误类型。
+
+### 指定评估指标
+
+虽然优化器致力于最小化损失函数 (loss function)，但损失值本身（例如，原始交叉熵或均方误差）可能并非衡量性能最直观的方式。这就是评估指标发挥作用的地方。评估指标在训练和评估期间被计算和报告，但*不*用于优化器更新权重 (weight)。
+
+常见的评估指标包括：
+
+- `'accuracy'`: 计算正确预测的比例。在分类任务中非常常见。
+- `'precision'`: 适用于分类，衡量阳性预测的准确性。
+- `'recall'`: 适用于分类，衡量有多少实际阳性案例被正确识别。
+- `'auc'`: ROC 曲线下面积，二分类的另一个常见评估指标。
+- `'mse'`、`'mae'`: 常用于回归任务的评估指标（既可以是损失，也可以是评估指标）。
+
+您可以将评估指标作为字符串列表或 `keras.metrics` 对象提供。
+
+```python
+# 适用于分类，常监测准确率
+# model.compile(..., metrics=['accuracy'])
+
+# 适用于回归，可能在 MSE 损失之外监测 MAE
+# model.compile(loss='mean_squared_error', metrics=['mae'])
+
+# 监测多个评估指标
+# model.compile(..., metrics=['accuracy', keras.metrics.AUC()])
+```
+
+监测合适的评估指标能让您从实际角度更清楚地了解模型学习任务的进展。
+
+### 综合运用
+
+以下是您可能如何编译一个为多分类设计的模型，使用 Adam 优化器、稀疏分类交叉熵损失（假定为整数标签）并追踪准确率：
+
+```python
+import keras
+from keras import layers
+
+# 假设 'model' 是一个已定义的 Keras 模型（Sequential 或 Functional）
+# model = keras.Sequential([...]) 或 model = keras.Model(...)
+
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+print("模型编译成功！")
+```
+
+这个单一的 `compile()` 调用配置了模型，包含用于权重 (weight)更新的所选算法（Adam）、要最小化的目标函数（稀疏分类交叉熵），以及要追踪的性能衡量标准（准确率）。
+
+> 编译步骤通过指定优化器、损失函数 (loss function)和评估指标来配置已定义的模型架构，使其准备好使用 `fit` 方法进行训练阶段。
+
+模型编译完成后，它就明白如何处理数据、评估其预测，并调整其内部参数 (parameter)。接下来的步骤，在后续章节中介绍，是实际将数据输入模型，并使用 `fit()` 方法开始训练循环。
+
+## 参考资料
+
+- [Keras: Model.compile() method](https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile) — Keras Team (2024)
+  Publisher: Google
+  Keras中`compile()`方法的官方API文档，详细说明了优化器、损失函数和评估指标的参数。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2014)
+  Journal: International Conference for Learning Representations (ICLR) 2015; DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍Adam优化器的原始研究论文，Adam是一种广泛应用于训练深度神经网络的自适应学习率算法。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础性教科书，全面涵盖深度学习原理，包括对优化算法、损失函数和性能评估指标的详细讨论。

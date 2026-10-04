@@ -1,0 +1,90 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "reward-modeling-human-preferences"
+lesson: "preference-dataset-formats"
+sourceId: 5121
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-3-reward-modeling-human-preferences/preference-dataset-formats"
+title: "偏好数据集的格式与结构"
+description: "了解存储人类偏好数据的常见结构。"
+order: 3
+plots: []
+sourceHash: "85512e198a72af5e835f37e4b0c76fa22a76232fccdf83f11cae80a0305442bc"
+sourceCorrections: []
+---
+
+为了更好地使用前面讨论的基于偏好的方法来训练奖励模型，我们需要一种统一的方式来组织人类反馈数据。目标是表示成对比较的结果，说明对于给定的输入提示，哪个回复是更受偏好的。
+
+奖励模型数据的基本单位通常包含一个三元组：输入提示 ($x$)，被认为更好或“选择的”回复 ($y_w$)，以及被认为更差或“拒绝的”回复 ($y_l$)。这种结构直接用于基于Bradley-Terry模型或类似比较框架的损失函数 (loss function)。
+
+### 常见的偏好数据集结构
+
+1. **成对比较元组**: 这是最普遍的格式。每个数据点都明确表示一个单独的比较判断。
+
+   - **结构**: `(提示, 被选回复, 被拒回复)`
+   - **记录示例**: `("解释RLHF。", "RLHF使用人类反馈来训练奖励模型...", "RLHF是关于强化学习的。")`
+   - **用例**: 这种格式直接对应奖励模型的训练目标，即模型在给定`提示`的情况下，会学习给`被选回复`分配比`被拒回复`更高的分数。
+2. **排序列表（可转换为成对）**: 有时，标注者可能会对为同一提示生成的多个回复进行排序（例如，最佳 > 良好 > 一般 > 差）。
+
+   - **结构**: `(提示, [排序回复1, 排序回复2, ..., 排序回复n])`，其中顺序表示偏好（1是最佳）。
+   - **转换**: 一个包含 $n$ 个回复的排序列表可以分解为 $\binom{n}{2}$ 个成对比较。例如，排名 `[A, B, C]`（其中A是最佳）意味着成对的 `(A, B)`、`(A, C)` 和 `(B, C)`。
+   - **考虑事项**: 尽管更丰富，但对多个项进行排序可能比简单的成对选择对标注者的认知要求更高。这种分解假定偏好具有传递性。
+3. **分组偏好**: 数据集可能会将与单个提示相关的所有比较进行分组。
+
+   - **结构**: 一个字典或对象，其中键是`提示`，值是`(被选回复, 被拒回复)`对的列表。
+   - **优点**: 这便于分析，并确保对一个提示的所有比较都可以一起处理。
+
+### 示例：Anthropic HH-RLHF 数据集结构
+
+Anthropic的“有用且无害的人类反馈强化学习 (reinforcement learning)”（HH-RLHF）是一个被广泛提及的数据集。它主要采用成对比较格式。每个条目包含：
+
+- 一个`提示`（通常是对话的开头）。
+- 一个`被选`完成（人类标注者偏好的回复）。
+- 一个`被拒`完成（未被偏好的回复）。
+
+这种清晰的结构使得应用标准奖励模型损失函数 (loss function)变得直接。
+
+### 数据表示示例
+
+这里是一个简化图，说明成对偏好记录中的核心关系：
+
+> 单个偏好数据点将一个提示与两个回复关联起来，明确指出偏好（`被选`）和非偏好（`被拒`）的选项。
+
+### 表格表示
+
+为了处理，这些偏好常被组织成表格或结构化文件（如JSON Lines或CSV）。
+
+| 提示 | 被选回复 | 被拒回复 |
+| --- | --- | --- |
+| "总结光合作用的过程。" | "植物利用阳光、水和二氧化碳来制造..." | "光合作用是植物制造食物的方式。" |
+| "写一首关于猫的短诗。" | "轻柔的爪子轻踏，\n胡须轻颤..." | "猫咪毛茸茸，\n它们很喜欢睡觉。" |
+| "解释KL散度的原理。" | "KL散度衡量的是...之间的差异" | "它是用于分布的数学内容。" |
+
+### 元数据与考量
+
+除了核心三元组，实际数据集常包含元数据：
+
+- **标注者ID**: 用于跟踪标注者的一致性或潜在偏差。
+- **时间戳**: 标注完成的时间。
+- **标注任务ID**: 与具体的指令或批次关联。
+- **理由（可选）**: 有时标注者会为他们的选择提供自由文本理由，这对于分析可能很有用，但通常不直接用于标准RM训练。
+- **偏好程度（可选）**: 某些数据收集界面允许标注者指定偏好的*程度*（例如，稍微好一点，好得多）。这可以为加权损失函数 (loss function)提供信息，但会增加复杂性。
+
+### 为奖励模型准备数据
+
+训练奖励模型时，`提示`和每个`回复`（`被选`和`被拒`）通常会被连接并分词 (tokenization)。例如，用于给被选回复打分的奖励模型输入可能看起来像 `[tokenizer.bos_token] + tokenize(prompt) + tokenize(chosen_response) + [tokenizer.eos_token]`。模型经过训练，为这种组合序列输出一个标量分数。`（提示，被选回复）`对与`（提示，被拒回复）`对的分数差异接着用于损失计算，如本章引言中的公式所示：
+
+$\text{损失} = -\log(\sigma(RM(x, y_w) - RM(x, y_l)))$
+
+了解这些数据格式对于正确准备偏好数据集并实现RLHF流程中的奖励模型阶段非常重要。格式的选择会影响数据收集界面、存储以及在数据输入奖励模型训练循环之前的预处理步骤。
+
+## 参考资料
+
+- [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: Advances in Neural Information Processing Systems 35 (NeurIPS 2022); DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  描述了人类反馈的实际应用，包括收集用于训练奖励模型的成对偏好，直接使用了文中讨论的数据结构。
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862) — Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort, Deep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion, Tom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatfield-Dodds, Danny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt, Neel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark, Sam McCandlish, Chris Olah, Ben Mann, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2204.05862; DOI: [10.48550/arXiv.2204.05862](https://doi.org/10.48550/arXiv.2204.05862)
+  介绍了Anthropic HH-RLHF数据集，提供了一个以成对比较形式组织的大规模偏好数据集的具体示例。
+- [Rank analysis of incomplete block designs: I. The method of paired comparisons applied to incomplete blocks](http://www.jstor.org/stable/2334029) — Ralph Allan Bradley and Milton E. Terry (1952)
+  Journal: Biometrika; Publisher: Biometrika Trust; Volume: 39; Pages: 324-345; DOI: [10.1093/biomet/39.3-4.324](https://doi.org/10.1093/biomet/39.3-4.324)
+  介绍Bradley-Terry模型的开创性论文，为使用成对人类偏好训练奖励模型奠定了统计学基础。

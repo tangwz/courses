@@ -1,0 +1,135 @@
+---
+course: "speech-recognition-synthesis-asr-tts"
+chapter: "advanced-acoustic-modeling-asr"
+lesson: "attention-encoder-decoder-asr"
+sourceId: 3126
+sourceUrl: "https://apxml.com/zh/courses/speech-recognition-synthesis-asr-tts/chapter-2-advanced-acoustic-modeling-asr/attention-encoder-decoder-asr"
+title: "注意力机制的编码器-解码器模型"
+description: "为ASR实现包含多种注意力机制的序列到序列模型。"
+order: 3
+plots: []
+sourceHash: "793b6b855d9fb210ec316996e4e3507771dd5e8087e17d99052578416469ada5"
+sourceCorrections: []
+---
+
+尽管连接时序分类 (CTC) 提供了一种巧妙的方式来处理变长音频输入，且在训练时无需显式对齐 (alignment)，但它作出了一个强条件独立性假设：在给定输入音频的情况下，每个时间步的预测独立于其他预测。这会限制它表示输出文本序列内部固有依赖的能力。
+
+序列到序列 (Seq2Seq) 模型，特别是那些增强了注意力机制 (attention mechanism)的模型，提供了一种直接解决这一限制的替代方法。这些模型最初在机器翻译中得到推广，并被证实对ASR（自动语音识别）非常有效，它们直接将声学特征输入序列 $X = (x_1, ..., x_T)$ 映射到字符或音素输出序列 $Y = (y_1, ..., y_U)$。
+
+### 编码器-解码器框架
+
+本质上，一个用于ASR的基于注意力机制 (attention mechanism)的Seq2Seq模型由两个主要部分构成：一个编码器和一个解码器，它们通过注意力机制连接。
+
+> ASR中基于注意力机制的编码器-解码器模型的基本架构。编码器处理输入音频特征，注意力机制根据编码器输出和当前解码器状态计算上下文 (context)向量 (vector)，解码器逐个生成输出序列中的词元 (token)。
+
+1. **编码器：** 该部分处理整个声学特征输入序列 ($x_1, ..., x_T$)。通常，它通过使用循环神经网络 (neural network) (RNN)（如LSTM或GRU，常为双向以捕捉过去和未来帧的上下文）或甚至堆叠卷积层后接RNN来实现。编码器的作用是将输入特征转换为一系列更高层的表示，通常称为隐藏状态或注释 ($h_1, ..., h_T$)。每个 $h_t$ 理想情况下总结了输入音频中时间步 $t$ 周围的相关信息。
+
+   
+   $$
+   h_t = \text{编码器}(x_1, ..., x_T)_t
+   $$
+   
+2. **解码器：** 该部分逐个生成输出文本序列 ($y_1, ..., y_U$)。它通常是一个自回归 (autoregressive)循环神经网络（LSTM/GRU）。在每个输出步 $u$，解码器接收前一个生成的词元 $y_{u-1}$ 及其自身的前一个隐藏状态 $s_{u-1}$ 作为输入。非常重要地，它还接收一个上下文向量 $c_u$，这个向量由注意力机制提供。基于这些输入，它更新其隐藏状态 $s_u$ 并预测词汇表 (vocabulary)（例如，字符、子词 (subword)）中下一个输出词元 $y_u$ 的概率分布。
+
+   
+   $$
+   s_u = \text{解码器RNN}(s_{u-1}, y_{u-1}, c_u)
+   $$
+   
+   
+   $$
+   P(y_u | y_{<u}, X) = \text{softmax}(\text{输出层}(s_u, c_u))
+   $$
+   
+
+### 注意力机制 (attention mechanism)：关注相关音频
+
+早期Seq2Seq模型的定长上下文 (context)向量 (vector)限制（编码器将整个输入总结成一个单一向量）对于语音等长序列来说是一个问题。注意力机制通过允许解码器在生成每个输出词元 (token) $y_u$ 时动态地关注*整个*编码输入序列 ($h_1, ..., h_T$) 的不同部分来解决这一问题。
+
+在每个解码器步 $u$，注意力机制计算一个上下文向量 $c_u$，作为编码器隐藏状态 $h_t$ 的加权和：
+
+
+$$
+c_u = \sum_{t=1}^{T} \alpha_{ut} h_t
+$$
+
+
+权重 (weight) $\alpha_{ut}$ 被称为注意力权重。它们决定了解码器在预测输出词元 $y_u$ 时，应如何“关注”编码器状态 $h_t$。这些权重是根据当前解码器状态 $s_{u-1}$（作为“查询”）与每个编码器隐藏状态 $h_t$（作为“键”）之间的相似度或对齐 (alignment)度计算的。
+
+1. **计算对齐分数：** 一个对齐模型 $e_{ut}$ 评估时间 $t$ 附近的输入与位置 $u$ 的输出匹配的程度。一个常见选择是加性注意力（Bahdanau风格）：
+
+   
+   $$
+   e_{ut} = v_a^T \tanh(W_a s_{u-1} + V_a h_t + b_a)
+   $$
+   
+
+   在这里，$v_a$, $W_a$, $V_a$ 和 $b_a$ 是注意力机制的可学习权重矩阵和偏置 (bias)。另一个普遍采用的选择是点积注意力（Luong风格），如果维度匹配，其计算复杂度更低：
+
+   
+   $$
+   e_{ut} = s_{u-1}^T W_a h_t
+   $$
+   
+
+   或者如果维度允许直接点积，也可以简单地表示为 $e_{ut} = s_{u-1}^T h_t$。
+2. **将分数归一化 (normalization)为权重：** 分数 $e_{ut}$ 使用softmax函数在所有输入时间步上进行归一化，以获得注意力权重 $\alpha_{ut}$。这些权重的和为1。
+
+   
+   $$
+   \alpha_{ut} = \frac{\exp(e_{ut})}{\sum_{k=1}^{T} \exp(e_{uk})}
+   $$
+   
+3. **计算上下文向量：** 上下文向量 $c_u$ 按照前面所示的加权和计算。该向量提供了与生成输出词元 $y_u$ 特别相关的输入音频摘要。
+
+这种动态加权使得模型在预测字符 'c' 时，可以关注对应音素 /k/ 的音频片段；接着将关注点转移到 'a' 对应的 /\u00e6/ 片段；最后在转录单词 "cat" 时，转移到 't' 对应的 /t/ 片段。
+
+### 训练与推理 (inference)
+
+**训练：** 基于注意力机制 (attention mechanism)的模型通常采用最大似然估计进行端到端训练。目标是在给定输入音频的情况下，最大化正确输出序列的概率。损失函数 (loss function)通常是每个解码器步的交叉熵损失之和或平均值：
+
+
+$$
+\mathcal{L} = - \sum_{u=1}^{U} \log P(y_u^* | y_{<u}^*, X)
+$$
+
+
+其中 $y^*$ 是真实序列。在训练期间，通常使用一种称为**教师强制**的技术。它不是将解码器自身在前一步的预测 ($y_{u-1}$) 作为当前步的输入，而是提供真实词元 (token) ($y_{u-1}^*$)。这稳定了训练并加速了收敛，尽管它可能导致训练和推理条件之间出现不匹配（称为曝光偏差）。
+
+**推理（解码）：** 在测试时生成输出序列需要逐个生成词元。由于真实值不可用，解码器使用自己先前预测的词元作为下一步的输入。找到最有可能的序列 $Y$ 需要在可能的输出序列空间中进行搜索。
+
+- **贪婪搜索：** 在每个步 $u$，简单地根据模型的输出分布选择概率最高的词元 $y_u$。这种方法速度快但通常不是最优的。
+- **束搜索：** 一种更有效的方法是束搜索。它在每一步维护固定数量（$k$，即束宽）最有可能的部分假设（序列）。对于每个假设，它考察可能的下一个词元，计算扩展序列的概率，并只保留整体上最好的 $k$ 个序列用于下一步。这比贪婪搜索考察了搜索空间中更大的部分，通常会产生更好的结果，但代价是计算量增加。
+
+### 优点与缺点
+
+**优点：**
+
+- **灵活性：** 能表示音频与文本之间复杂、非单调的对齐 (alignment)。
+- **上下文 (context)建模：** 通过自回归 (autoregressive)解码器显式地表示输出序列中的依赖关系。
+- **端到端训练：** 联合学习所有组件，可能带来更好的整体优化。
+- **先进性能：** 在许多ASR基准测试中取得了优异的结果。
+
+**缺点：**
+
+- **计算成本：** 注意力计算增加了额外开销，特别是对于长序列。
+- **顺序推理 (inference)：** 解码器的自回归性质意味着推理无法在输出词元 (token)上并行化，这使得它对于实时应用来说比CTC等非自回归模型更慢。
+- **对齐问题：** 有时可能无法学习到有意义的对齐，尤其是在数据有限或序列非常长的情况下。注意力机制 (attention mechanism)可能关注范围过广或过窄，或者失去跟踪。
+- **曝光偏差：** 训练期间的教师强制与推理期间的自回归生成之间的差异可能导致性能下降。
+
+基于注意力机制的编码器-解码器模型代表了声学建模中的重要一步，它从具有强独立性假设的逐帧分类转向生成基于整个输入历史和音频输入相关部分的输出序列。尽管后续架构，如RNN转导器（将在下一部分讨论）和Transformer，提供了改进，特别是对于流式处理和并行化，但理解注意力机制是现代ASR的基本。
+
+## 参考资料
+
+- [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215) — Ilya Sutskever, Oriol Vinyals, Quoc V. Le (2014)
+  Journal: Advances in Neural Information Processing Systems (NIPS 2014); Pages: 3104-3112; DOI: [https://doi.org/10.48550/arXiv.1409.3215](https://doi.org/10.48550/arXiv.1409.3215)
+  介绍了神经网络中序列到序列学习的基础框架。
+- [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473) — Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio (2014)
+  Journal: International Conference on Learning Representations (ICLR 2015); DOI: [10.48550/arXiv.1409.0473](https://doi.org/10.48550/arXiv.1409.0473)
+  介绍了加性注意力机制，该机制使解码器能够关注输入序列的特定部分。
+- [Effective Approaches to Attention-based Neural Machine Translation](https://arxiv.org/abs/1508.04025) — Minh-Thang Luong, Hieu Pham, Christopher D. Manning (2015)
+  Journal: Conference on Empirical Methods in Natural Language Processing (EMNLP 2015); Pages: 1412-1421; DOI: [10.48550/arXiv.1508.04025](https://doi.org/10.48550/arXiv.1508.04025)
+  探讨了不同的注意力机制，包括全局和局部方法，并引入了点积注意力。
+- [Listen, Attend and Spell: A Neural Network for Large Vocabulary Conversational Speech Recognition](https://doi.org/10.1109/ICASSP.2016.7471900) — William Chan, Navdeep Jaitly, Quoc V. Le, Oriol Vinyals (2016)
+  Journal: 2016 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP); Publisher: IEEE; Pages: 6245-6249; DOI: [10.1109/ICASSP.2016.7471900](https://doi.org/10.1109/ICASSP.2016.7471900)
+  成功将基于注意力的编码器-解码器模型应用于大词汇量语音识别的里程碑式论文。

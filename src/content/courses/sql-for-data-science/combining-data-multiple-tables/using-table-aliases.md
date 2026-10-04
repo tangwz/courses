@@ -1,0 +1,163 @@
+---
+course: "sql-for-data-science"
+chapter: "combining-data-multiple-tables"
+lesson: "using-table-aliases"
+sourceId: 1637
+sourceUrl: "https://apxml.com/zh/courses/sql-for-data-science/chapter-5-combining-data-multiple-tables/using-table-aliases"
+title: "使用表的别名"
+description: "通过使用表别名来简化复杂的连接查询并避免歧义。"
+order: 6
+plots: []
+sourceHash: "c2fadbcd5ffe7132369e6173713dade9ca5256fc3acb2639446bd6e31344b4ec"
+sourceCorrections: []
+---
+
+将多个表的数据组合起来使用 `JOIN` 操作，特别是 `INNER JOIN`，是 SQL 中进行数据分析的一项基本技术。当你开始使用连接时，尤其是在连接多个表或处理具有相同列名的表时，你的查询可能会变得很长，并且可能令人困惑。这时表别名就派上用场了。
+
+### 什么是表别名？
+
+表别名是你为特定 SQL 查询中的表分配的一个临时、较短的名称。你可以把它想象成表的昵称，它仅在单次查询执行期间存在。查询结束后，该别名即消失。
+
+分配别名的语法很简单。你通常在 `FROM` 或 `JOIN` 子句中的表名后指定它，通常使用 `AS` 关键字：
+
+```sql
+FROM
+    your_long_table_name AS alias
+```
+
+或者，在许多 SQL 系统中，`AS` 关键字是可选的：
+
+```sql
+FROM
+    your_long_table_name alias
+```
+
+虽然 `AS` 关键字通常是可选的，但明确使用它可以使你的查询更清晰，并更容易让其他人（以及未来的自己）理解，尤其是在你初学时。
+
+### 为什么要使用表别名？
+
+主要有两个原因说明了表别名为何如此有用，尤其是在表连接的情形下：
+
+1. **简洁性和可读性：** 如果你的表名很长或具有描述性（例如 `customer_demographic_information` 或 `product_inventory_levels`），在 `SELECT` 列表、`WHERE` 子句和 `ON` 条件中反复输入这些完整名称会使查询冗长且难以阅读。分配简短的别名（例如 `cdi` 或 `pil`）会大大简化查询。
+2. **消除歧义：** 这是一个非常重要的原因。通常，不同的表可能包含同名的列。例如，`customers` 表和 `orders` 表都可能有一个名为 `id` 的列（一个用于客户 ID，一个用于订单 ID），或者一个共享的列名，如 `date_created`。当你连接这些表并尝试使用 `id` 进行选择或过滤时，数据库如何知道你指的是 *哪个* 表的 `id` 列？这会导致“列名不明确”的错误。表别名可以很好地解决这个问题。通过在列名前加上表别名和点号（`.`），你可以精确地告诉数据库你指的是哪个表的列（例如，`c.id` 与 `o.id`）。
+
+在执行“自连接”时，别名也非常必要，即表与自身连接，但这一个较高级的话题，此处不作详细介绍。只需知道别名是使自连接成为可能的机制。
+
+### 语法和示例
+
+让我们用熟悉的 `orders` 表和 `customers` 表来举例说明。
+
+想象一下这些简化的表结构：
+
+- `customers` 表：
+  - `customer_id` (主键)
+  - `customer_name`
+  - `city`
+- `orders` 表：
+  - `order_id` (主键)
+  - `customer_id` (引用 `customers.customer_id` 的外键)
+  - `order_date`
+  - `amount`
+
+现在，让我们编写一个查询来获取订单 ID、订单日期以及对应的客户名称。
+
+**不使用别名：**
+
+```sql
+SELECT
+    orders.order_id,
+    orders.order_date,
+    customers.customer_name
+FROM
+    orders
+INNER JOIN
+    customers ON orders.customer_id = customers.customer_id;
+```
+
+这样写没有问题。但是，请注意我们必须重复输入 `orders.` 和 `customers.`。
+
+**使用别名：**
+
+现在，让我们使用别名（`o` 代表 `orders`，`c` 代表 `customers`）：
+
+```sql
+SELECT
+    o.order_id,       -- 使用别名 'o' 来指定表
+    o.order_date,
+    c.customer_name   -- 使用别名 'c' 来指定表
+FROM
+    orders AS o      -- 为 orders 表指定别名 'o'
+INNER JOIN
+    customers AS c   -- 为 customers 表指定别名 'c'
+    ON o.customer_id = c.customer_id; -- 在连接条件中使用别名
+```
+
+看到查询变得多么简洁了吗？`SELECT` 列表和 `ON` 子句更加紧凑。如果两个表都有一个名为 `id` 的列，我们*就必须*使用 `o.id` 和 `c.id` 这样的别名来告诉 SQL 我们指的是哪个列。使用 `o.customer_id = c.customer_id` 是明确的，并且消除了任何潜在的混淆，尽管在此特定情况下，列名是唯一的（`customer_id`）。
+
+请记住，你也可以省略 `AS` 关键字：
+
+```sql
+SELECT
+    o.order_id,
+    o.order_date,
+    c.customer_name
+FROM
+    orders o       -- 没有使用 'AS' 指定别名
+INNER JOIN
+    customers c    -- 没有使用 'AS' 指定别名
+    ON o.customer_id = c.customer_id;
+```
+
+这两种使用别名的版本都达到了相同的结果。为了更好的可读性，通常建议使用 `AS`。
+
+### 连接多个表时使用别名
+
+当你的查询涉及连接三个或更多表时，别名的优势会更加明显。想象一下，添加 `order_details` 和 `products` 表以查找每个客户订单中包含哪些产品。
+
+- `order_details` 表：
+  - `order_detail_id`
+  - `order_id` (引用 `orders.order_id` 的外键)
+  - `product_id` (引用 `products.product_id` 的外键)
+  - `quantity`
+- `products` 表：
+  - `product_id` (主键)
+  - `product_name`
+  - `price`
+
+使用别名来获取客户名称、订单日期和产品名称的查询可能如下所示：
+
+```sql
+SELECT
+    c.customer_name,
+    o.order_date,
+    p.product_name
+FROM
+    customers AS c
+INNER JOIN
+    orders AS o ON c.customer_id = o.customer_id
+INNER JOIN
+    order_details AS od ON o.order_id = od.order_id
+INNER JOIN
+    products AS p ON od.product_id = p.product_id;
+```
+
+不使用别名（`customers.customer_name`、`orders.order_date`、`products.product_name`、`customers.customer_id = orders.customer_id` 等），这个查询将明显更长，也更难理解。别名 `c`、`o`、`od` 和 `p` 使其更易于管理。
+
+### 总结
+
+使用表别名是一种简单的方法，在编写清晰高效的 SQL 查询方面具有显著优势，尤其是在组合来自多个表的数据时：
+
+- **目的：** 在查询中为表分配简短、临时的名称。
+- **好处：** 提高可读性，缩短查询文本，并在表共享列名时解决歧义。
+- **语法：** `FROM table_name AS alias` 或 `FROM table_name alias`。
+- **使用：** 一旦定义了别名，就可以在整个查询（`SELECT`、`WHERE`、`ON`、`ORDER BY` 等）中使用 `alias.column_name` 来引用该表的列。
+
+养成在连接表时使用表别名的习惯。选择简短、直观的别名（例如表名的首字母或简单缩写），并始终如一地使用它们。这种做法将使你的 SQL 代码更易于编写、阅读和维护。
+
+## 参考资料
+
+- [PostgreSQL 16.2 Documentation: 7.2. Table Expressions](https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-FROM) — The PostgreSQL Global Development Group (2024)
+  PostgreSQL官方文档，解释表表达式，包括`FROM`和`JOIN`子句中表别名的语法和作用。
+- [Learning SQL: Master the Art of Database Interaction](https://www.oreilly.com/library/view/learning-sql-3rd/9781492057604/) — Alan Beaulieu (2020)
+  Publisher: O'Reilly Media; Pages: 380
+  一本权威的SQL教材，透彻地解释了基本的SQL概念，包括在复杂查询中使用表别名以提高清晰度和消除歧义。

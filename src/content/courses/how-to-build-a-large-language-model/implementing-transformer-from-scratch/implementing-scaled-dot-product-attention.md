@@ -1,0 +1,167 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "implementing-transformer-from-scratch"
+lesson: "implementing-scaled-dot-product-attention"
+sourceId: 5996
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-10-implementing-transformer-from-scratch/implementing-scaled-dot-product-attention"
+title: "实现缩放点积注意力"
+description: "编写核心自注意力机制的代码。"
+order: 2
+plots: []
+sourceHash: "25717683b788495b3dd6b063344703a162f77437aeff2cdae36f62b261c8e244"
+sourceCorrections: []
+---
+
+缩放点积注意力是 Transformer 注意力机制 (attention mechanism)的基本组成部分。这种机制允许模型在处理特定元素时，衡量输入序列不同部分的重要性。它不依赖循环，而是根据从输入中获得的查询、键和值之间的相互作用来计算注意力分数。
+
+缩放点积注意力的核心计算定义为：
+
+
+$$
+\text{注意力}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
+
+
+让我们分析一下组成部分和实现步骤：
+
+1. **查询 (Q)、键 (K)、值 (V) 矩阵：** 这些矩阵通常是输入嵌入 (embedding)的投影。对于给定的输入序列元素（表示为一个向量 (vector)），我们生成：
+
+   - 一个 `查询` 向量：表示当前元素正在寻找信息。
+   - 一个 `键` 向量：表示提供信息的元素，用于计算与查询的兼容性。
+   - 一个 `值` 向量：表示提供信息的元素的实际内容。
+     如果我们有一个序列批次，$Q$、$K$ 和 $V$ 变为矩阵，其中每行对应序列中的一个元素。它们的维度通常为 $[batch\_size, seq\_len, d_{model}]$；对于单个注意力头进行投影后，$Q$ 和 $K$ 的维度为 $[batch\_size, seq\_len, d_k]$，而 $V$ 的维度为 $[batch\_size, seq\_len, d_v]$。通常，$d_k = d_v$。
+2. **计算点积 ($QK^T$)：** 第一步是计算查询矩阵 $Q$ 和键矩阵 $K^T$ 的转置之间的点积。此操作计算每个查询应关注每个键的程度。更高的点积表示查询和键之间具有更高的相关性或兼容性。结果矩阵通常称为 `分数` 或 `能量`，其维度为 $[batch\_size, seq\_len_q, seq\_len_k]$，其中 $seq\_len_q$ 是查询的序列长度，$seq\_len_k$ 是键的序列长度（在自注意力 (self-attention)中它们通常是相同的）。
+3. **缩放 ($\frac{...}{\sqrt{d_k}}$)：** 然后，通过除以键向量维度 $d_k$ 的平方根来缩放分数。这种缩放对于稳定训练过程很重要。没有它，对于较大的 $d_k$ 值，点积的幅度可能会变得非常大。softmax 函数的输入过大可能导致梯度极小，从而使学习变得困难。缩放确保 softmax 输入的方差保持合理。
+4. **应用掩码（可选）：** 在许多情况下，我们需要阻止关注某些位置。这通过在 softmax 步骤*之前*进行掩码来实现。
+
+   - **填充掩码：** 如果输入序列在批次内被填充到相同长度，我们不希望模型关注这些填充标记 (token)。掩码识别填充位置（通常用 `True` 或 `1`）。我们会在这些位置的分数上添加一个大的负数（如 -1e9 或负无穷）。
+   - **前瞻掩码：** 在解码器的自注意力层中，一个标记应该只关注之前的位置和自身，而不是未来的位置。这种掩码通过掩盖未来的位置来实现这一点。
+     掩码确保随后的 softmax 操作为被掩盖的位置分配接近零的概率。
+5. **应用 Softmax：** softmax 函数按行应用于缩放（并可能被掩盖）后的分数。这会将分数转换为概率分布，其中每个值表示一个查询分配给一个键的注意力权重 (weight)。每个查询的权重总和为 1。结果矩阵通常称为 `注意力权重`，其维度为 $[batch\_size, seq\_len_q, seq\_len_k]$。
+6. **乘以值 ($...V$)：** 最后，注意力权重矩阵乘以值矩阵 $V$。这一步计算值向量的加权和，其中权重由注意力概率决定。获得更高注意力权重的元素对输出的贡献更大。缩放点积注意力层的输出维度为 $[batch\_size, seq\_len_q, d_v]$。
+
+### PyTorch 实现
+
+让我们将这些步骤转换为 PyTorch 函数。我们假设输入 `query`、`key` 和 `value` 是 3D 张量，表示序列批次，可能已经为特定的注意力头进行了投影。
+
+```python
+import torch
+import torch.nn.functional as F
+import math
+
+def scaled_dot_product_attention(
+    query: torch.Tensor,
+    torch.Tensor,
+    value: torch.Tensor,
+    mask: torch.Tensor | None = None
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    计算缩放点积注意力。
+
+    参数：
+        query: 查询张量；形状为 (batch_size, num_heads, seq_len_q, d_k)
+               或 (batch_size, seq_len_q, d_k) (如果为单头)。
+        key: 键张量；形状为 (batch_size, num_heads, seq_len_k, d_k)
+             或 (batch_size, seq_len_k, d_k) (如果为单头)。
+        value: 值张量；形状为 (batch_size, num_heads, seq_len_v, d_v)
+               或 (batch_size, seq_len_v, d_v) (如果为单头)。
+               注意：seq_len_k 和 seq_len_v 必须相同。
+        mask: 可选的掩码张量；形状应可广播到
+              (batch_size, num_heads, seq_len_q, seq_len_k)。
+              `True` 或 `1` 的位置将被掩盖（设为 -inf）。
+
+    返回：
+        包含以下内容的元组：
+        - output：注意力输出张量；
+                  形状为 (batch_size, num_heads, seq_len_q, d_v)
+                  或 (batch_size, seq_len_q, d_v) (如果为单头)。
+        - attention_weights：注意力权重张量；
+                             形状为 (batch_size, num_heads, seq_len_q, seq_len_k)
+                             或 (batch_size, seq_len_q, seq_len_k) (如果为单头)。
+    """
+    # 确保维度与矩阵乘法兼容
+    # K 需要形状 (..., d_k, seq_len_k) 才能与 Q (..., seq_len_q, d_k) 进行矩阵乘法
+    # 结果形状: (..., seq_len_q, seq_len_k)
+    d_k = query.size(-1)
+    scores = (torch.matmul(query, key.transpose(-2, -1))
+              / math.sqrt(d_k))
+
+    # 如果提供了掩码，则应用掩码（将掩盖位置设为一个大的负值）
+    if mask is not None:
+        # 确保掩码具有兼容的维度或可以广播
+        # 常见掩码形状：(batch_size, 1, 1, seq_len_k) 用于填充掩码
+        #                    (batch_size, 1, seq_len_q, seq_len_k) 用于组合掩码
+        # 我们添加一个大的负值，而不是直接使用布尔掩码
+        # 以确保与各种 PyTorch 版本和操作兼容。
+        # 当掩码为 True（或 1）时，我们希望用 -inf 替换分数。
+        scores = scores.masked_fill(mask == True, float('-inf'))
+        # 或者使用一个大的负数，如 -1e9
+
+    # 应用 softmax 以获得注意力概率
+    # Softmax 应用于最后一个维度 (seq_len_k)
+    attention_weights = F.softmax(scores, dim=-1)
+
+    # 检查 softmax 后可能出现的 NaN，这可能发生在某一行中所有分数都为 -inf 的情况下
+    # 这可能表明掩码或输入数据存在问题
+    if torch.isnan(attention_weights).any():
+        print("警告：在注意力权重中检测到 NaN。 "
+              "请检查掩码或输入数据。")
+        # （可选）处理 NaN，例如，将其设为 0，
+        # 尽管这可能会隐藏潜在问题。
+        # attention_weights = torch.nan_to_num(attention_weights)
+
+    # 权重乘以值
+    # 结果形状: (..., seq_len_q, d_v)
+    output = torch.matmul(attention_weights, value)
+
+    return output, attention_weights
+
+# 示例用法（为简单起见，假设为单头）
+batch_size = 2
+seq_len_q = 5 # 查询序列长度
+seq_len_k = 7 # 键/值序列长度
+d_k = 64      # 键/查询的维度
+d_v = 128     # 值的维度
+
+# 虚拟张量
+query_tensor = torch.randn(batch_size, seq_len_q, d_k)
+key_tensor = torch.randn(batch_size, seq_len_k, d_k)
+value_tensor = torch.randn(batch_size, seq_len_k, d_v) # seq_len_k == seq_len_v
+
+# 填充掩码示例（掩盖键/值序列的最后两个元素）
+padding_mask = torch.zeros(batch_size, 1, seq_len_k, dtype=torch.bool)
+padding_mask[:, :, -2:] = True # 掩盖位置 5 和 6
+
+# 计算注意力
+output_tensor, attention_weights_tensor = scaled_dot_product_attention(
+    query_tensor,
+    key_tensor,
+    value_tensor,
+    mask=padding_mask
+)
+
+print("输出形状:", output_tensor.shape) # 预期：[2, 5, 128]
+print("注意力权重形状:", attention_weights_tensor.shape) # 预期：[2, 5, 7]
+
+print("批次 0 中第一个查询的注意力权重 "
+      "(最后两个键已被掩盖)：")
+print(attention_weights_tensor[0, 0, :])
+```
+
+此函数封装了核心逻辑。请注意，掩码需要应用在 softmax *之前*。使用一个大的负数配合 `masked_fill` 有效地阻止了被掩盖的位置在 softmax 归一化 (normalization)后对加权和做出贡献。该函数返回最终的加权输出和注意力权重 (weight)本身，这有助于分析或可视化（正如我们将在第 23 章中看到的）。
+
+这个基本组成部分现在将在多头注意力 (multi-head attention)机制 (attention mechanism)中使用，我们接下来将实现它。多头注意力将并行地多次运行此缩放点积注意力，并使用查询、键和值的不同学习到的投影。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  提出Transformer架构和Scaled Dot-Product Attention机制的开创性论文。
+- [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention.html) — Alexander Rush (2018)
+  一份广泛引用的PyTorch实现和Transformer模型的详细说明，包含Scaled Dot-Product Attention。
+- [Dive into Deep Learning](https://d2l.ai/chapter_attention-mechanisms/attention-scoring-functions.html) — Aston Zhang, Zack C. Lipton, Mu Li, Alex Smola (2021)
+  Publisher: Cambridge University Press
+  一本权威的交互式深度学习书籍，全面介绍注意力机制和Transformer架构，并提供可执行代码。
+- [MultiheadAttention](https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html) — PyTorch Authors (2024)
+  Publisher: PyTorch Foundation
+  PyTorch官方MultiheadAttention模块的文档，它内部使用Scaled Dot-Product Attention，提供了其在实际应用和参数方面的说明。

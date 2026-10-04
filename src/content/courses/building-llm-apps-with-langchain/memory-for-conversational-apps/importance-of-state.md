@@ -1,0 +1,84 @@
+---
+course: "building-llm-apps-with-langchain"
+chapter: "memory-for-conversational-apps"
+lesson: "importance-of-state"
+sourceId: 7422
+sourceUrl: "https://apxml.com/zh/courses/building-llm-apps-with-langchain/chapter-4-memory-for-conversational-apps/importance-of-state"
+title: "会话中状态的意义"
+description: "了解记忆功能为何是构建需记住过去交互的应用的必需部分。"
+order: 1
+plots: []
+sourceHash: "1ef305ccb31cb878038b1c1373c4661fa79853f65a6a8f917b28800c91206211"
+sourceCorrections: []
+---
+
+大型语言模型本质上是强大的文本补全引擎，但它们以单次事务的形式运行。LLM本身不具备对过往交互的记忆。如果你问它“法国的首都在哪里？”，然后追问“它有多少人口？”，模型并不知道“它”指代的是巴黎。每次查询都被视为一个全新的、独立事件，与之前的所有查询毫无关联。这种无状态的特性在构建需要持续对话的应用（例如聊天机器人、虚拟助手或任何需要从一系列交流中获取背景信息的系统）时，是一个很大的难题。
+
+### 无状态的难题
+
+设想一场对话，你必须在每句话中重新介绍每个话题和每个人。这会效率低下且不自然。这正是直接与LLM API交互时的默认体验。模型在一次调用中处理你提供的输入并返回一个输出。它不会保留该次调用中的任何信息，以供后续使用。
+
+我们用一个简单的交流来说明。
+
+**回合 1:**
+
+- **用户:** “我叫Alex，是一名软件开发人员。”
+- **LLM:** “你好Alex！很高兴认识你。今天我能为你做什么？”
+
+**回合 2 (在无状态系统中):**
+
+- **用户:** “我叫什么名字？”
+- **LLM:** “很抱歉，我不知道你的名字。我是一个大型语言模型，无法获取个人信息。”
+
+模型之所以出错，是因为第一回合的背景信息丢失了。第二次API调用完全独立于第一次，只包含文本“我叫什么名字？”。对模型而言，这个问题显得莫名其妙。
+
+下图显示了无状态交互与有状态交互之间的区别。在无状态配置中，每个用户查询都是一个独立的、不相关的调用。在有状态应用中，一个记忆部分在调用之间保存了背景信息，使得对话能够保持一致。
+
+> 在无状态交互中，每个查询都是孤立的。在有状态交互中，应用的一个部分处理记忆，为LLM提供来自前几回合的所需背景信息。
+
+### 人工处理方式及其不足
+
+解决此问题最直接的办法是手动管理状态。你可以将对话历史保存到一个列表中，并在每次API调用时发送完整的历史。这反映了现代聊天模型如何期望接收一个消息列表（用户、助手、系统），而不是一个单一字符串。
+
+```python
+# 简化版的人工状态管理方式
+
+conversation_history = []
+
+def get_llm_response(user_query):
+    # 将新的用户消息添加到历史记录中
+    conversation_history.append({"role": "user", "content": user_query})
+    
+    # 使用完整背景信息调用LLM（伪代码）
+    # response_obj = chat_model.invoke(conversation_history)
+    response_text = "Your name is Alex." # 模拟回应
+    
+    # 将模型的回应添加到历史记录中
+    conversation_history.append({"role": "assistant", "content": response_text})
+    
+    return response_text
+
+# 第一回合
+get_llm_response("My name is Alex and I'm a software developer.")
+
+# 第二回合
+# 历史记录现在包含了第一次交流
+print(get_llm_response("What's my name?"))
+# 预期输出：Your name is Alex.
+```
+
+尽管这对短对话有效，但随着对话的进行，它会带来两个显著的难题：
+
+1. **背景窗口限制：** 每个语言模型都有一个最大的背景窗口，这是它在一次请求中可以处理的令牌（词语和词语的一部分）总数。如果对话历史变得太长，它将超出此限制，从而导致API错误。
+2. **成本和延迟增加：** 大多数LLM提供商根据输入和输出中的令牌数量收费。通过在每个回合中发送完整的历史，你是在反复支付处理相同信息的费用。这也会增加处理时间，导致用户体验到更高的延迟。
+
+这正是LangChain记忆工具解决的问题。它们提供了一个统一的接口，用于保存、获取和管理对话历史。你无需手动构建消息列表和跟踪令牌，而可以把这些部分集成到你的应用中，以自动处理状态管理。接下来的部分将说明如何实现不同的记忆策略，以构建好用的对话应用。
+
+## 参考资料
+
+- [Attention Is All You Need](https://doi.org/10.48550/arXiv.1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: arXiv; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇基础论文介绍了Transformer架构，该架构是现代大型语言模型的基础，并解释了它们为何本质上处理固定大小的输入，从而在没有显式记忆机制的情况下导致无状态交互模型。
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: NeurIPS 2020; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  这篇论文介绍了检索增强生成（RAG）方法，通过从知识库中检索相关信息来增强大型语言模型的输入，从而扩展其对事实性回忆的有效“记忆”，超越了即时对话的限制，解决了上下文窗口限制的问题。

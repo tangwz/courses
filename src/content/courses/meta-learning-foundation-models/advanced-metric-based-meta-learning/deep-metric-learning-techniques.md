@@ -1,0 +1,88 @@
+---
+course: "meta-learning-foundation-models"
+chapter: "advanced-metric-based-meta-learning"
+lesson: "deep-metric-learning-techniques"
+sourceId: 4331
+sourceUrl: "https://apxml.com/zh/courses/meta-learning-foundation-models/chapter-3-advanced-metric-based-meta-learning/deep-metric-learning-techniques"
+title: "深度度量学习方法"
+description: "对比损失、三元组损失及其他与元学习相关的深度度量学习目标的概述。"
+order: 4
+plots: []
+sourceHash: "7ae9c535d4d98c74da2ee6639bea77f2e37aa0ff5cd0650fb827489e1a6a135d"
+sourceCorrections: []
+---
+
+基于度量的元学习方法旨在学习一个嵌入 (embedding)函数 $f_\phi$，将输入映射到一个表示空间，在该空间中，可以使用简单的距离度量对新的少样本任务进行分类。像原型网络这样的算法的有效性完全取决于此嵌入空间的质量。深度度量学习提供在元训练阶段训练 $f_\phi$ 以实现这种所需结构的方法和目标函数。
+
+主要思想是明确优化嵌入函数 $\phi$，使同一类别数据点的嵌入相互靠近，而不同类别数据点的嵌入相互远离。这与标准分类损失（如交叉熵）不同，后者主要侧重于分离类别边界，而不一定在嵌入空间中强制执行紧密的类内聚类或大的类间间隔。
+
+### 对比损失
+
+一种基本方法是使用对比损失。这种损失作用于示例对 $(x_1, x_2)$。如果这对属于同一类别（$y=1$），损失会促使它们的嵌入 (embedding) $f_\phi(x_1)$ 和 $f_\phi(x_2)$ 靠近。如果它们属于不同类别（$y=0$），损失会推远它们的嵌入，但仅当它们比预设间隔 $m$ 更近时才进行推远。
+
+一个示例对的公式通常是：
+
+
+$$
+\mathcal{L}_{contrastive}(x_1, x_2, y) = y \cdot d(f_\phi(x_1), f_\phi(x_2))^2 + (1-y) \cdot \max(0, m - d(f_\phi(x_1), f_\phi(x_2)))^2
+$$
+
+
+在这里，$d(\cdot, \cdot)$ 表示一个距离函数，通常是欧几里得距离，而 $m > 0$ 是间隔超参数 (parameter) (hyperparameter)。间隔确保负样本对仅在其距离小于 $m$ 时才对损失有贡献，从而避免模型花费精力将已经良好分离的样本对推得更远。
+
+尽管简单，对比损失需要仔细采样样本对。随机采样样本对常常导致许多无信息量的样本对（例如，非常不相似的负样本对或非常相似的正样本对），从而减缓收敛速度。挖掘“难”或“半难”样本对（即难以正确分类的样本对）的策略通常是必需的，但会增加其复杂性。
+
+### 三元组损失
+
+三元组损失通过考虑三元组示例中的相对距离来解决对比损失的一些限制：一个锚点（$a$），一个正样本（$p$，与锚点属于同一类别），以及一个负样本（$n$，与锚点属于不同类别）。目标是确保锚点到正样本的距离小于它到负样本的距离，同样至少要有一个间隔 $m$。
+
+损失函数 (loss function)定义为：
+
+
+$$
+\mathcal{L}_{triplet}(a, p, n) = \max(0, d(f_\phi(a), f_\phi(p))^2 - d(f_\phi(a), f_\phi(n))^2 + m)
+$$
+
+
+如果到负样本的距离 $d(f_\phi(a), f_\phi(n))^2$ 已经比到正样本的距离 $d(f_\phi(a), f_\phi(p))^2$ 大了间隔 $m$，则损失为零。否则，损失会惩罚模型，将负样本推得更远和/或将正样本拉近锚点。
+
+> 一个三元组由一个锚点、一个正样本（同一类别）和一个负样本（不同类别）组成。损失促使锚点与正样本之间的距离比锚点与负样本之间的距离小一个间隔 $m$。违反此间隔的负样本（如 N2）会产生损失。
+
+类似于对比损失，三元组损失的性能在很大程度上取决于选择三元组的策略。随机选择的三元组通常过于“简单”（负样本已经很远），导致损失为零和学习缓慢。有效训练通常依赖于**三元组挖掘**：
+
+- **困难负样本挖掘：** 选择负样本 $n$，使其在给定锚点 $a$ 和正样本 $p$ 的情况下，使 $d(f_\phi(a), f_\phi(n))^2$ 最小。
+- **半困难负样本挖掘：** 选择负样本 $n$，使其与锚点的距离比正样本更远，但仍在间隔内：$d(f_\phi(a), f_\phi(p))^2 < d(f_\phi(a), f_\phi(n))^2 < d(f_\phi(a), f_\phi(p))^2 + m$。这通常比纯粹的困难负样本提供更稳定的训练。
+
+在线挖掘（在每个小批量中选择三元组）为提高效率是很常见的做法。
+
+### 其他度量学习目标
+
+除了这两种，还存在其他损失，它们通常设计用于使用比简单对或三元组更多的信息：
+
+- **N对损失：** 为每个锚点使用一个正样本和 $N-1$ 个负样本，促使锚点与正样本的相似性同时大于它与所有负样本的相似性。
+- **提升结构损失：** 考虑批量中所有正负样本对，以构建更复杂的损失函数 (loss function)。
+- **基于角度/余弦的损失（例如，ArcFace、CosFace、SphereFace）：** 在人脸识别中特别常用，它们修改 softmax 损失以直接优化超球面上的角度间隔，通常产生高度区分性的嵌入 (embedding)，当处理归一化 (normalization)的基础模型嵌入时尤为适用。
+
+### 在基础模型元学习中的作用
+
+在基础模型的元学习背景下，这些深度度量学习损失通常在**元训练**阶段使用。基础模型（或其一部分）作为嵌入 (embedding)函数 $f_\phi$ 的骨干。由各种任务组成的元训练数据集用于通过这些损失之一来优化 $\phi$。目标是预训练 (pre-training) $f_\phi$，使其产生的嵌入在本质上结构良好，适用于后续的少样本分类。在**元测试**阶段遇到新任务（支持集）时，可以预先计算支持示例的嵌入 $f_\phi(x)$ 并直接使用（例如，计算原型），然后使用简单的距离计算与查询嵌入进行比较。
+
+针对基础模型的高维嵌入调整这些方法需要仔细考虑：
+
+- **归一化 (normalization)：** 输出嵌入 $f_\phi(x)$ 的L2归一化几乎总是在计算距离（欧几里得或余弦）之前应用。这会将嵌入映射到超球面上，减轻与向量 (vector)大小相关的问题，并将优化重点放在角度分离上。
+- **计算成本：** 在从基础模型嵌入获得的大批量中计算三元组或成对挖掘的成对距离可能计算密集（对于朴素的三元组挖掘为 $O(B^2 d)$ 或 $O(B^3 d)$，其中 $B$ 是批量大小，$d$ 是嵌入维度）。高效的批量处理、采样和优化的距离计算很重要。
+- **间隔选择：** 最优间隔 $m$ 可能与嵌入的维度和分布相互影响。
+
+通过在元训练期间使用对比或三元组损失等目标优化嵌入函数 $f_\phi$，基于度量的元学习方法使基础模型能够生成表示，在该表示中，即使每个类别只有非常少的示例，新类别也可以基于距离有效区分。
+
+## 参考资料
+
+- [Dimensionality Reduction by Learning an Invariant Mapping](https://doi.org/10.1109/CVPR.2006.100) — Raia Hadsell, Sumit Chopra, Yann LeCun (2006)
+  Journal: 2006 IEEE Computer Society Conference; Publisher: IEEE; Pages: 1735-1742; DOI: [10.1109/CVPR.2006.100](https://doi.org/10.1109/CVPR.2006.100)
+  介绍了用于学习相似性度量的对比损失函数，是深度度量学习的成果。
+- [FaceNet: A Unified Embedding for Face Recognition and Clustering](https://doi.org/10.1109/CVPR.2015.7298682) — Florian Schroff, Dmitry Kalenichenko, James Philbin (2015)
+  Journal: 2015 IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 815-823; DOI: [10.1109/CVPR.2015.7298682](https://doi.org/10.1109/CVPR.2015.7298682)
+  推广了三元组损失和在线三元组挖掘策略，用于学习面部嵌入。
+- [Prototypical Networks for Few-Shot Learning](https://www.cs.toronto.edu/~rsassel/publications/prototypical_networks.pdf) — Jake Snell, Kevin Swersky, Richard S. Zemel (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); Publisher: Neural Information Processing Systems Foundation, Inc. (NeurIPS); Volume: 30; Pages: 4077-4087
+  提出了一种基于度量的元学习算法（原型网络），使用学习到的嵌入，直接适用于本节内容。

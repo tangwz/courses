@@ -1,0 +1,118 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "preparing-sequence-data"
+lesson: "masking-padded-values"
+sourceId: 2622
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-8-preparing-sequence-data/masking-padded-values"
+title: "填充值的掩码处理"
+description: "解释掩码处理的想法，以指示RNN层忽略填充的时间步。"
+order: 7
+plots: ["plots/2622-0.json"]
+sourceHash: "734990030ff6acd157084da5e3e27d84e2480982a3e5214a8c56689feb1428c1"
+sourceCorrections: []
+---
+
+填充（padding）有助于从不同长度的序列创建大小一致的批次，这对于高效的批处理至关重要。然而，这种技术会将人工值（通常是零）引入到数据中。如果这些填充后的序列直接输入到RNN中，网络会像处理真实数据一样处理这些人工步骤。这可能导致隐藏状态计算不准确，并且重要地是，损失计算发生偏差，最终妨碍模型有效学习的能力。
+
+考虑一下RNN的工作方式：它在每个时间步根据当前输入和前一个隐藏状态更新其隐藏状态。如果某个时间步的输入只是填充，我们不希望该人工值影响承载关于*实际*序列信息的隐藏状态。同样，在计算损失时（例如，将模型在每个步骤的预测与目标进行比较），我们应该只考虑与真实数据对应的时间步，而不是填充的时间步。
+
+这时就需要引入掩码处理（masking）。掩码处理是一种技术，用于通知模型哪些时间步包含实际数据，哪些包含应被忽略的填充。它作为一个信号，允许层和损失函数 (loss function)跳过计算或不考虑与填充步骤相关的输出。
+
+### 掩码处理的工作原理
+
+通常，掩码处理涉及创建一个单独的布尔张量，即“掩码”，它与输入序列数据具有相同的形状（或兼容的维度）。这个掩码对于包含真实数据的时间步为`True`（或1），对于填充的时间步为`False`（或0）。
+
+考虑一个由两个序列组成的批次，它们使用值0填充到长度为5：
+
+- 序列1（原始：`[10, 25, 5]`）：填充后 `[10, 25, 5, 0, 0]`
+- 序列2（原始：`[7, 32, 18, 9, 12]`）：填充后 `[7, 32, 18, 9, 12]`
+
+假设0是填充值，对应的掩码将如下所示：
+
+```
+[[ True,  True,  True, False, False],
+ [ True,  True,  True,  True,  True]]
+```
+
+或以数字表示：
+
+```
+[[ 1.,  1.,  1.,  0.,  0.],
+ [ 1.,  1.,  1.,  1.,  1.]]
+```
+
+这个掩码告诉处理层或损失函数 (loss function)：“对于第一个序列，只关注前三个步骤。对于第二个序列，关注所有五个步骤。”
+
+### 框架中的掩码实现
+
+深度学习 (deep learning)框架提供了处理掩码的机制，通常是半自动的：
+
+1. **带`mask_zero=True`的Embedding层：** 在TensorFlow/Keras等框架中，一种常用方法是将`Embedding`层用作模型的第一层。该层将整数编码的标记 (token)转换为密集向量 (vector) (dense vector)。通过设置参数 (parameter)`mask_zero=True`（或等效参数），您告诉嵌入 (embedding)层输入值`0`是特殊的；它表示填充。嵌入层随后不仅会输出嵌入的序列，还会计算并向下传播相应的掩码。支持掩码的后续层（如LSTM、GRU、Bidirectional包装器）可以自动接收此掩码，并用它来跳过填充步骤的计算。
+
+   ```python
+   # Example (TensorFlow/Keras)
+   model.add(tf.keras.layers.Embedding(input_dim=vocab_size,
+                                       output_dim=embedding_dim,
+                                       mask_zero=True)) # 自动为填充值0创建掩码
+   model.add(tf.keras.layers.LSTM(units=64)) # 这个LSTM层将接收并使用掩码
+   ```
+2. **显式掩码层：** 框架还提供了专用的掩码层（例如，`tf.keras.layers.Masking`）。您可以将此层插入到您的输入层或嵌入层之后。它根据您定义的特定值作为填充指示符来显式创建掩码。
+
+   ```python
+   # Example (TensorFlow/Keras)
+   model.add(tf.keras.layers.Masking(mask_value=0.0)) # 指定要进行掩码处理的填充值
+   model.add(tf.keras.layers.LSTM(units=64)) # 这个LSTM层将使用该掩码
+   ```
+
+   如果您的填充值不是0，或者您的输入不是直接来自支持`mask_zero`的嵌入层，这会很有用。
+3. **损失计算中的手动掩码处理：** 即使循环层在内部处理状态传播的掩码，您也经常需要确保损失函数 (loss function)也忽略填充的步骤。这在序列到序列任务中尤为重要，因为损失可能在每个输出时间步进行计算。框架的损失函数有时内置支持掩码，或者您可能需要手动应用掩码。本质上，这包括：
+
+   - 计算每个时间步的原始损失。
+   - 将原始损失与掩码进行元素乘法（转换为浮点数，例如，真实数据为1.0，填充数据为0.0）。这有效地将填充步骤的损失归零。
+   - 仅对非填充步骤的损失进行平均。
+
+# Example of manual loss masking
+
+````
+# loss_values shape: (batch_size, time_steps)
+# mask shape: (batch_size, time_steps), dtype=float32 (1.0 for real, 0.0 for pad)
+
+masked_loss = loss_values * mask
+# 计算每个序列的损失总和，除以实际序列长度（掩码之和）
+mean_loss_per_sequence = tf.reduce_sum(masked_loss, axis=1) / tf.reduce_sum(mask, axis=1)
+# 在批次上求平均
+batch_loss = tf.reduce_mean(mean_loss_per_sequence)
+```
+````
+
+### 掩码的可视化
+
+下面的热力图可视化了我们示例批次的掩码。白色单元格表示真实数据（掩码值为1），而深色单元格表示应被忽略的填充（掩码值为0）。
+
+
+
+![序列掩码 (1=真实数据, 0=填充)](plots/2622-0.json)
+
+
+
+> 针对填充到长度为5的两个序列批次的掩码表示。序列1有3个真实步骤，序列2有5个。
+
+### 其重要性
+
+未能对填充值进行掩码处理，意味着您的RNN会处理无意义的数据点，可能损害其内部状态。更要指出的是，如果损失计算包含填充的步骤，反向传播 (backpropagation)期间计算的梯度将受到这些人工步骤上的误差影响。这会显著减慢训练速度，导致模型性能不佳，并阻碍模型准确学习序列数据中的真实模式。
+
+务必确保填充得到正确处理，无论是通过`Embedding(mask_zero=True)`等层的自动掩码生成和传播，还是通过显式`Masking`层，并验证您的损失计算是否适当地忽略了填充时间步的贡献。查阅所选框架和层的文档，以理解其特定的掩码行为和要求。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本深度学习的著作，为循环神经网络和变长序列数据的处理挑战提供了理论基础。
+- [tf.keras.layers.Embedding](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Embedding) — TensorFlow Team (2024)
+  官方文档，详细介绍了 `Embedding` 层，包括 `mask_zero` 参数，用于从填充值0自动生成掩码。
+- [tf.keras.layers.Masking](https://www.tensorflow.org/api_docs/python/tf/keras/layers/Masking) — TensorFlow Team (2024)
+  Publisher: Google
+  官方文档，介绍了 `Masking` 层，它根据指定的填充值显式创建掩码。
+- [Masking and padding with Keras](https://www.tensorflow.org/guide/keras/masking_and_padding) — Scott Zhu, Francois Chollet (2023)
+  Publisher: TensorFlow
+  Keras指南，解释了填充和掩码的工作原理、它们在层中的传播以及在损失计算中的应用。

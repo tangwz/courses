@@ -1,0 +1,78 @@
+---
+course: "introduction-to-machine-learning"
+chapter: "supervised-learning-classification"
+lesson: "introduction-k-nearest-neighbors"
+sourceId: 1496
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-machine-learning/chapter-4-supervised-learning-classification/introduction-k-nearest-neighbors"
+title: "K-近邻算法（KNN）介绍"
+description: "介绍简单直观的K-近邻算法用于分类。"
+order: 5
+plots: []
+sourceHash: "811437cf4052619cdfaac9cd25d68915d8af9b3c00ba118da26583fff6b33344"
+sourceCorrections: []
+---
+
+逻辑回归是一种学习特定边界来区分不同类别的算法。K-近邻算法（KNN）提供了一种截然不同的分类方法。
+
+KNN通常是学生们接触到的首批分类算法之一，因为其核心思路非常直接且易懂。与逻辑回归不同，逻辑回归在独立的训练阶段试图从数据中学习一个通用规则（决策边界），而KNN则采取了不同的方式。它被称为**基于实例的**或**惰性学习**算法。
+
+### “惰性学习”意味着什么？
+
+“惰性”听起来可能有些负面，但在这种情况下，它仅仅表示KNN不会事先构建一个显式模型。它没有像线性回归或逻辑回归那样在训练期间被优化的方程。相反，KNN本质上是记住整个训练数据集。所有主要计算都发生在*预测时*。当您想对一个*新的*、未见过的数据点进行分类时，KNN会查看现有、已标记 (token)的数据点（训练集），并找出与新点最相似或“最近”的那些点。
+
+### “邻里守望”原理
+
+KNN背后的基本思路很简单：**一个数据点很可能属于与其最近邻点相同的类别。**
+
+设想您有一个数据点的散点图，每个点各属于两个类别中的一个，比如圆形和方形。现在，您在图上引入一个未标记 (token)的新点（我们称之为'X'）。您会如何判断X是圆形还是方形呢？KNN建议您查看训练数据中在图中与X最接近的'K'个点。
+
+- 如果'K'个最近点中的大多数是圆形，KNN就预测X是圆形。
+- 如果'K'个最近点中的大多数是方形，KNN就预测X是方形。
+
+K-近邻算法中的'K'是您选择的一个参数 (parameter)。它代表您考虑的邻居数量。如果您选择$K=1$，算法只查看单个最近的邻居。如果您选择$K=5$，它会查看五个最近的邻居并在它们之间进行多数表决。
+
+> KNN预测过程的基本流程。新点的类别由其K个最近的训练数据邻居中的多数类别决定。
+
+### 定义“接近度”：距离度量
+
+为了找到“最近”的邻居，KNN需要一种方法来衡量*特征空间*中数据点之间的距离。特征空间是一个多维空间，每个维度都代表您数据的一个特征（如身高、宽度、温度等）。
+
+衡量这种距离最常用的方法是使用**欧几里得距离**。如果您还记得几何课中用于计算2D平面上两点$(x_1, y_1)$和$(x_2, y_2)$之间距离的公式，那就是欧几里得距离：
+
+
+$$
+\text{距离} = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}
+$$
+
+
+这个公式很容易扩展到更多维度（更多特征）。如果您在$n$维特征空间中有两个点$P = (p_1, p_2, ..., p_n)$和$Q = (q_1, q_2, ..., q_n)$，那么欧几里得距离是：
+
+
+$$
+\text{距离}(P, Q) = \sqrt{(q_1 - p_1)^2 + (q_2 - p_2)^2 + ... + (q_n - p_n)^2}
+$$
+
+
+这本质上是您的特征所定义的空间中两点之间的直线距离。虽然欧几里得距离很常用，但根据数据的特点和问题的类型，也可以使用其他距离度量（如曼哈顿距离或闵可夫斯基距离）。距离度量的选择会影响结果。
+
+### KNN与逻辑回归：快速比较
+
+- **学习策略：** 逻辑回归是*急切学习器*，因为它在独立的训练阶段构建泛化模型。KNN是*惰性学习器*，因为它将主要计算（查找邻居）推迟到请求预测时进行。
+- **模型表示：** 逻辑回归产生一个定义决策边界的显式数学函数。KNN则将整个训练数据集本身作为其隐式模型。它没有学习到单一、简洁的模型方程。
+- **决策边界形状：** 逻辑回归通常创建线性或平滑、连续的决策边界。KNN的决策边界由训练数据点的位置隐式形成，并且可能高度不规则且对局部敏感。
+
+KNN因其简单性以及在不对数据分布作强假设的情况下也能表现良好而吸引人。然而，其性能可能对'K'的选择、所使用的距离度量以及特征的缩放（因为距离计算受每个维度值范围的影响）很敏感。我们还需要考虑计算成本，因为将一个新点与*所有*训练点进行比较对于非常大的数据集来说可能要求很高。
+
+在下一节中，我们将查看KNN如何进行预测的逐步过程，并讨论选择'K'和为该算法准备数据的重要考虑因素。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2021)
+  Publisher: Springer
+  提供统计学习的易懂介绍，包含对KNN及其机制的清晰说明，并与其他分类算法进行比较。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2023)
+  Publisher: O'Reilly Media
+  一本机器学习实践指南，提供KNN等算法的实战示例和直观解释，侧重于使用流行库进行实现。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本全面且严谨的统计学习著作，涵盖KNN及其他分类算法的理论基础。

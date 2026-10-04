@@ -1,0 +1,58 @@
+---
+course: "python-llm-workflows"
+chapter: "building-rag-systems"
+lesson: "vector-stores-embeddings-overview"
+sourceId: 5185
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-7-building-rag-systems/vector-stores-embeddings-overview"
+title: "向量数据库和嵌入技术概述"
+description: "向量嵌入和向量数据库在语义搜索中的介绍。"
+order: 3
+plots: []
+sourceHash: "e53e1ab4f2c5ad0fb508980c07a6b4611ca512fa3aae48d6f4d932aae312fe1a"
+sourceCorrections: []
+---
+
+为了在检索增强生成 (RAG) 系统中有效使用大型语言模型 (LLM) 的外部知识，我们需要一种方法，能够高效地从数据源中查找与用户查询最相关的信息片段。简单地通过关键词扫描数百万份文档，既不能扩展，也无法有效理解其含义。这就是嵌入 (embedding)技术和向量 (vector)数据库成为不可或缺的组成部分的原因。它们使我们能够根据数据的语义含义来表示数据，并快速进行搜索。
+
+### 什么是嵌入 (embedding)技术？
+
+从根本上说，嵌入是将一段数据（在我们的语境中通常是文本）表示为向量 (vector)（一串数字）的数值形式。这些向量由专门的机器学习 (machine learning)模型生成，称为嵌入模型（例如 OpenAI、Cohere 提供的模型，或通过 Hugging Face 的 `sentence-transformers` 等库获得的开源模型）。
+
+这些嵌入的一个重要特性是，它们捕捉了原始文本的*语义含义*或*语境*。含义相似的文本，其嵌入向量在高维空间 (high-dimensional space)中在数学上会彼此“接近”。例如，“如何安装 Python？”的嵌入向量应该比“最佳苹果派食谱”的向量更接近“Python 设置步骤”的向量。
+
+可以将其想象成在宽广的多维地图上为每段文本分配坐标。相似的理念会在这个地图的特定区域聚集在一起。嵌入模型扮演制图师的角色，将文本转换为这些地图坐标（向量）。这些向量的维度可以从数百到数千不等，具体取决于所使用的模型。
+
+### 为什么需要向量 (vector)数据库？
+
+一旦我们将文本数据（通常会分割成可管理的块）转换为嵌入 (embedding)向量，我们就需要一个地方来存储它们，更重要的是，还需要一种高效搜索它们的方法。这就是向量数据库的作用，它也被称为向量数据库。
+
+传统数据库（如 SQL 或 NoSQL 数据库）通常针对精确匹配、基于预定义字段的筛选或标量值的范围查询进行优化。它们并非天生就适用于处理跨越数百万或数十亿高维向量的查询，例如“找到与此查询向量含义最接近的向量”。
+
+向量数据库是为此任务专门构建的。它们采用专门的索引算法，通常基于近似最近邻 (ANN) 搜索技术。ANN 算法不将查询向量与数据库中的每个向量进行比较（这会耗费大量计算资源且速度慢），而是使用巧妙的数据结构和搜索策略，快速找到*很可能*是最接近的邻居的向量，以牺牲完美精度来换取显著的速度提升。常见的 ANN 索引类型包括 HNSW（分层可导航小世界图）和 IVF（倒排文件索引）。
+
+### RAG中的流程
+
+以下是嵌入 (embedding)技术和向量 (vector)数据库如何融入 RAG 工作流检索部分的说明：
+
+1. **索引：** 您的源文档（例如 PDF、文本文件、网页）被加载并通常分割成较小的块。每个块都被送入嵌入模型以生成其对应的向量嵌入。此嵌入，连同对原始文本块的引用（以及可能的其他元数据），都被存储在向量数据库中。向量数据库在这些嵌入之上构建索引（通常是 ANN 索引）以实现快速搜索。
+2. **查询：** 当用户提交查询时，该查询文本使用与索引文档时*相同*的嵌入模型转换为嵌入向量。
+3. **搜索：** 向量数据库接收查询嵌入，并使用其索引（例如 ANN 索引）高效查找其中存储的 `$k$` 个最相似的文档块嵌入。“相似度”通常通过向量空间中的数学距离度量来衡量，例如余弦相似度或欧几里得距离（$L_2$ 距离）。
+4. **检索：** 向量数据库返回在搜索步骤中找到的最接近嵌入对应的原始文本块（或其标识符）。
+5. **增强：** 这些根据语义相似度被认为与用户查询最相关的检索到的文本块，随后与原始查询结合，并作为上下文 (context)传递给 LLM。
+
+这个流程让 LLM 能够生成一个基于从您的数据源检索到的具体信息、有据可循的回应，而不是仅仅依赖其内部预训练 (pre-training)的知识。
+
+> 图示 RAG 系统中索引和查询阶段的数据流，强调了嵌入模型和向量数据库的作用。
+
+流行的向量数据库选择范围从 FAISS 和 ScaNN 等内存库（通常通过 LlamaIndex 或 LangChain 等库集成）到 Chroma、Weaviate、Pinecone、Qdrant 和 Milvus 等独立数据库。最合适的选择取决于数据集的大小、所需的查询速度、部署环境（本地或云端）和预算等因素。同样，嵌入模型可以通过 API（OpenAI、Cohere）访问，或使用 Hugging Face 等来源的模型在本地运行。
+
+理解嵌入技术和向量数据库是构建高效 RAG 系统的根本。它们提供了连接用户查询与您希望 LLM 借助的外部大量信息的机制。
+
+## 参考资料
+
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410.pdf) — Nils Reimers, Iryna Gurevych (2019)
+  Journal: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing (EMNLP); Pages: 3973-3983; DOI: [10.18653/v1/D19-1410](https://doi.org/10.18653/v1/D19-1410)
+  介绍了Sentence-BERT，一种BERT的变体，用于生成具有语义意义的句子嵌入，适用于相似性比较，与章节中关于捕获语义意义的讨论相呼应。
+- [Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs](https://ieeexplore.ieee.org/document/8118082) — Yu. A. Malkov, D. A. Yashunin (2018)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 40; Pages: 2163-2175; DOI: [10.1109/TPAMI.2017.2735168](https://doi.org/10.1109/TPAMI.2017.2735168)
+  描述了分层可导航小世界（HNSW）算法，这是一种高效且广泛采用的近似最近邻（ANN）搜索方法，被许多向量存储使用。

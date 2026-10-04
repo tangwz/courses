@@ -1,0 +1,83 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "foundations-analytical-architecture"
+lesson: "operational-vs-analytical-workloads"
+sourceId: 7969
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-1-foundations-analytical-architecture/operational-vs-analytical-workloads"
+title: "操作型与分析型工作负载"
+description: "比较操作型和分析型数据库工作负载。"
+order: 1
+plots: ["plots/7969-0.json"]
+sourceHash: "c67a2b130dedf1222284dfd87558fc73fd8490a944a9798357b42517b1833cb0"
+sourceCorrections: []
+---
+
+数据系统通常服务于两种对立的需求：应用用户和业务分析师。了解这两种角色之间机制上的差异，是构建一个有力的数据库平台的第一步。软件工程师优化单次请求的速度，而数据工程师则优化聚合数百万条记录的效率。这些不同的使用模式划定了在线事务处理 (OLTP) 和在线分析处理 (OLAP) 之间的界限。
+
+### 操作型工作负载 (OLTP) 的运作机制
+
+操作型数据库充当应用程序的持久状态。当用户更新其送货地址或将商品添加到购物车时，数据库会执行事务。这些交互的特点是目标明确。应用程序通常知道需要修改的记录的唯一标识符 (主键)。
+
+在 OLTP 环境中，系统优先考虑高并发和数据完整性。数千名用户可能会同时尝试写入数据。为处理此情况，数据库引擎严重依赖索引来定位特定行，而无需扫描底层存储文件。此处的主要成功指标是延迟，以毫秒计。
+
+OLTP 中的访问模式常被描述为“随机 I/O”。磁盘磁头（或闪存控制器）跳到特定位置以检索小数据包。由于写入量大，这些系统通常采用高度规范化的模式（通常是第三范式）来避免数据重复。在高写入环境中的重复会增加异常的风险，并迫使数据库为一个逻辑更改更新多个位置。
+
+### 分析型工作负载 (OLAP) 的运作机制
+
+分析型工作负载的规模不同。一个业务问题，例如“过去五年按区域划分的平均订单价值是多少？”需要数据库访问销售历史中几乎所有记录。与 OLTP 查询的狙击手般精确性不同，OLAP 查询的功能如同撒网捕鱼。
+
+分析系统优先考虑吞吐量 (throughput)而非延迟。目标不是在2毫秒内返回一行，而是在2秒内处理1亿行。为实现此目标，OLAP 系统尽量减少存储介质上的“寻道”次数，并最大化顺序读取速度。
+
+下图说明了这些系统在处理数据请求方式上的结构性差异。
+
+> 系统的架构流程差异显著。OLTP 依赖索引寻道实现精确，而 OLAP 依赖顺序扫描处理大量数据。
+
+### 输入/输出的成本
+
+为了了解为什么一个数据库难以同时满足两种目的，我们可以查看输入/输出 (I/O) 的成本。执行数据库操作所需的时间可以粗略地建模为寻道时间（查找数据）和传输时间（读取数据）的总和。
+
+设 $T_{总计}$ 为总时间，$N_{寻道}$ 为随机寻道次数，$t_{寻道}$ 为每次寻道的平均延迟，$V_{数据}$ 为数据量，$R_{传输}$ 为传输速率。
+
+$T_{总计} \approx (N_{寻道} \times t_{寻道}) + \frac{V_{数据}}{R_{传输}}$
+
+在 OLTP 工作负载中，$V_{数据}$ 可以忽略不计（通常只有几千字节），因此性能主要由 $N_{寻道}$ 决定。架构必须最小化寻道延迟。
+
+在 OLAP 工作负载中，$V_{数据}$ 量很大（千兆字节或兆兆字节）。即使 $t_{寻道}$ 为零，传输时间也占主导地位。因此，分析架构优化带宽 ($R_{传输}$) 和数据压缩，以有效减少 $V_{数据}$。
+
+### 资源争用与“嘈杂邻居”
+
+早期数据架构中常犯的错误是直接在生产 OLTP 数据库（通常是只读副本）上运行分析查询。虽然这适用于小型数据集，但不可避免地会导致资源争用。
+
+当分析查询执行时，它会消耗大量 CPU 周期进行聚合，并占用 I/O 带宽来读取历史数据。在面向行的操作型数据库中，读取大型表通常会用历史数据淹没缓冲池（内存缓存），驱逐用户事务所需的“热”活跃数据。这会导致营销报告生成会减慢活跃客户结账流程的现象。
+
+这种资源争用决定了物理分离的必要性。数据工程涉及从写入优化的 OLTP 环境中提取数据，并将其加载到读取优化的 OLAP 环境中。这种分离允许分析师执行繁重的连接和聚合操作，而不影响应用程序的运行完整性。
+
+下图比较了这两种工作负载类型在四个不同维度上的运行特征。
+
+
+
+![工作负载特征比较](plots/7969-0.json)
+
+
+
+> OLTP 系统最大化并发性和写入频率，而 OLAP 系统最大化每次查询的数据量和复杂性。
+
+### 查询模式与 ACID 特性
+
+另一个定义特征是事务管理方法。OLTP 系统严格遵守 ACID（原子性、一致性、隔离性、持久性）特性。如果银行事务进行到一半失败，则整个操作必须回滚以确保资金不丢失。
+
+分析型工作负载通常会放宽这些限制。虽然数据一致性仍然需要，但分析师很少需要“精确到秒”的准确性。一份上午10:00生成的报告通常不需要包含上午9:59:59发生的事务。这种对数据新鲜度延迟的容忍（常被称为数据滞后）使得分析系统能够以大批量而非单个写入的方式摄取数据。这种批量摄取对于我们将在本章后续部分查看的列式存储格式效率更高。
+
+理解这种二分法可以确保您不会强行让为一种模式设计的工具执行另一种模式的工作。将事务型数据库用于分析会导致报告缓慢和超时。将分析型数据仓库用于事务会导致数据损坏和并发瓶颈。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFRjshI3_llfw-JYGKAtP8cXe5iO6v6KYFDTZzWV6pxICncE-3GMlbEB7V8uDMnnfLE_Y0NZOCeTLCl99o9LwQ9p3eebB4Wc_suHhgOyMGFy7khuj4iZkWtE0Tl5ueyApy12ftcuDDzeRwwdasExw1_WaMixrlpNOiIlu7pYlWGvZI1xzoGKfOOH5ddSWfx8v2qDsw4) — Ralph Kimball, Margy Ross (2013)
+  Publisher: Wiley
+  一本标准参考书，阐述了分析系统与操作数据库在架构差异和设计考量上的区别。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://dataintensive.net/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media; Pages: Chapter 3, "Storage and Retrieval"
+  全面介绍了各种数据库存储引擎，包括它们如何针对OLTP式事务写入和OLAP式分析读取进行优化。
+- [C-Store: A Column-Oriented DBMS](https://www.vldb.org/conf/2005/papers/p553-stonebraker.pdf) — Michael Stonebraker, Daniel Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Alex Rasin, Edward Schooner, and Stanley Zdonik (2005)
+  Journal: Proceedings of the 31st International Conference on Very Large Data Bases (VLDB); Pages: 553-564
+  一篇开创性论文，介绍了列式数据库系统的概念和优势，这是高效OLAP工作负载的基础。

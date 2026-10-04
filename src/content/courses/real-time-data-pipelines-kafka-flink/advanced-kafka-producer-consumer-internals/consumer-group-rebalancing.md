@@ -1,0 +1,124 @@
+---
+course: "real-time-data-pipelines-kafka-flink"
+chapter: "advanced-kafka-producer-consumer-internals"
+lesson: "consumer-group-rebalancing"
+sourceId: 8097
+sourceUrl: "https://apxml.com/zh/courses/real-time-data-pipelines-kafka-flink/chapter-2-advanced-kafka-producer-consumer-internals/consumer-group-rebalancing"
+title: "消费者组再平衡协议"
+description: "了解急切再平衡与协作再平衡协议，以减少消费者停机时间。"
+order: 4
+plots: ["plots/8097-0.json"]
+sourceHash: "54624a71936b208ce02a732d98485bf846782b34ad100f226ee93d9382b52338"
+sourceCorrections: []
+---
+
+动态群组管理允许 Kafka 消费者水平扩展并自动从故障中恢复。然而，这种灵活性带来了一种称为再平衡的机制，即分区所有权从一个消费者转移到另一个消费者的过程。了解再平衡的具体运作方式对于避免高吞吐量 (throughput)环境中严重的延迟高峰和消费者不稳定很重要。一个未经优化的再平衡协议可能触发一个“停止”事件，导致所有消费停止，积压迅速增加。
+
+### 群组协调器和成员状态
+
+消费者组的协调由一个特定的代理节点管理，该节点称为群组协调器。该协调器负责维护活跃成员列表，并在成员资格变化时触发再平衡。这种交互依赖于消费者客户端内的两个不同线程：
+
+1. **处理线程**：执行 `poll()` 循环，获取记录并处理它们。它必须在 `max.poll.interval.ms` 内调用 `poll()`，以表明消费者正在运行并有进展。
+2. **心跳线程**：在后台运行，并向协调器发送周期性心跳（由 `heartbeat.interval.ms` 定义）。这表明网络连接正常。
+
+如果消费者未能在 `session.timeout.ms` 内发送心跳，或处理线程未能在 `max.poll.interval.ms` 内调用 `poll()`，协调器会将该消费者标记 (token)为已停止并触发再平衡。
+
+### 急切再平衡协议
+
+过去，Kafka 使用急切再平衡协议。在此模型中，当再平衡开始时，组中的每个消费者必须停止获取数据并撤销对*所有*已分配分区的拥有权。这种方式优先考虑简易性而非可用性。
+
+该过程包括以下阶段：
+
+1. **加入组阶段**：消费者发送 `JoinGroup` 请求。协调器强制所有其他消费者重新加入。此时，所有消费者停止处理。
+2. **同步组阶段**：协调器选择一个消费者作为“群组领导者”。领导者接收所有成员的列表，并在本地执行配置的分区分配策略。然后，它通过 `SyncGroup` 请求将分配结果发送回协调器。
+3. **分配**：协调器将相应的分配结果分发给每个成员。消费者仅在收到新分区后才恢复处理。
+
+该协议具有中断性。即使单个消费者重启，或主题中添加新分区，组中的每个消费者都会暂停。在处理大量数据流的大型群组中，这种暂停可能持续数秒到数分钟，这取决于分区数量和分配策略的复杂程度。
+
+> 急切再平衡序列强制完全撤销分配，在任何新分配分发之前，造成全局消费暂停。
+
+### 协作再平衡协议
+
+为了减轻与急切再平衡相关的停机时间，引入了协作再平衡协议（增量协作再平衡）。该协议允许消费者在再平衡期间保留其当前已分配的分区，仅撤销那些必须移动到其他消费者的分区。
+
+该机制需要两个再平衡周期才能完成，但在整个过程中保持可用性。
+
+**第一个周期：**
+
+1. 协调器触发再平衡。
+2. 消费者发送 `JoinGroup` 请求，但包含其当前分配。
+3. 群组领导者计算目标分配。它识别需要移动哪些分区以实现平衡。
+4. 领导者不是立即移动它们，而是简单地从当前所有者那里撤销那些将被分配给不同消费者的分区。
+5. 消费者继续处理未被撤销的分区。
+
+**第二个周期：**
+
+1. 由于分区已被撤销，已分配集合与目标集合不匹配，从而立即触发第二次再平衡。
+2. 被撤销的分区现在是“孤立的”（未分配）。
+3. 领导者将这些孤立的分区分配给它们的新所有者。
+4. 群组稳定下来。
+
+这里的优点很明显。如果你有一个包含 100 个消费者的组，其中一个重启，其他 99 个消费者会继续处理它们的分区而不中断。对于组中的大多数成员来说，“停止”暂停被取消了。
+
+要启用此功能，你必须在消费者配置中选择一个兼容的分区分配策略：
+
+```properties
+partition.assignment.strategy=org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+```
+
+### 吞吐量 (throughput)比较
+
+急切和协作协议之间在吞吐量稳定性方面的差异在滚动重启或扩缩容事件期间很明显。急切协议会导致处理速率出现大幅下降，而协作协议只会导致轻微的、通常可以忽略不计的下降。
+
+
+
+![吞吐量影响：急切再平衡 vs 协作再平衡](plots/8097-0.json)
+
+
+
+> 该图表显示了急切再平衡（红色）导致的吞吐量下降，与协作再平衡（蓝绿色）在群组成员资格变化期间的持续处理形成对比。
+
+### 静态群组员资格
+
+在 Kubernetes 等容器化环境中，消费者常因临时问题或部署而重启。标准再平衡会将重启的 Pod 视为一个新成员离开和一个新成员加入，从而触发两次再平衡事件。
+
+静态群组员资格通过持久化成员身份来避免这种情况。通过将 `group.instance.id` 配置为唯一值（例如 Pod 名称），消费者注册为静态成员。
+
+当静态成员断开连接时，协调器不会立即触发再平衡。相反，它会等待 `session.timeout.ms`。如果成员在此时间窗内使用相同的 `group.instance.id` 重新连接，它会重新获取其先前的分区分配，而不会触发任何再平衡。这对于预期会重启且重启时间短的滚动升级非常有效。
+
+### 再平衡的数学考量
+
+在调整超时配置时，必须权衡故障的检测时间与误报的成本。
+
+如果 $T_{process}$ 是处理一批记录所需的时间，$T_{poll}$ 是配置的 `max.poll.interval.ms`，那么稳定的条件是：
+
+$T_{process} < T_{poll}$
+
+如果你的处理逻辑涉及大量计算或可能阻塞的外部 API 调用，$T_{process}$ 可能会超过 $T_{poll}$。这会导致消费者离开组，触发再平衡。任务完成后，消费者会尝试重新加入，再次触发再平衡。这种循环，被称为**再平衡风暴**，可能使消费者组陷入停滞。
+
+为了避免这种情况，将处理与轮询循环解耦，或显著增加 `max.poll.interval.ms`，同时保持 `session.timeout.ms` 较低，以便快速检测硬崩溃。
+
+### 分配器选择标准
+
+选择正确的分配器会影响数据局部性和再平衡成本：
+
+- **RangeAssignor**：默认分配器。如果不同主题拥有相同数量的分区，它会将这些分区分配到一起。对主题连接有用，但如果分区数量不同可能导致不平衡。
+- **RoundRobinAssignor**：将分区均匀地分配给所有成员。它最大化资源使用率，但忽略数据局部性。
+- **StickyAssignor**：在再平衡期间尝试最小化分区移动，同时保持平衡。它默认是急切的。
+- **CooperativeStickyAssignor**：生产流处理的首选。它结合了 StickyAssignor 的最小移动特性和协作协议的非阻塞特点。
+
+对于需要精确控制数据放置的高级管道（例如，确保特定键落在特定消费者上以进行本地缓存），你可能需要直接实现 `ConsumerPartitionAssignor` 接口，尽管内置的 `CooperativeStickyAssignor` 能满足大多数高规模系统的需求。
+
+## 参考资料
+
+- [Apache Kafka Documentation - Consumer Configs](https://kafka.apache.org/documentation/#consumerconfigs) — Apache Kafka (2024)
+  提供Apache Kafka消费者配置的官方文档，包括max.poll.interval.ms、session.timeout.ms、heartbeat.interval.ms、group.instance.id和partition.assignment.strategy等参数，这些参数是再平衡行为的核心。
+- [KIP-345: Incremental Cooperative Rebalance Protocol](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=103328848) — Jason Gustafson, Matthias J. Sax (2018)
+  Journal: Apache Kafka Improvement Proposal (KIP); Publisher: Apache Software Foundation
+  介绍和详细说明增量协作式再平衡协议的原始设计提案，阐述其动机、设计原则和操作机制。
+- [Introducing Apache Kafka’s Incremental Cooperative Rebalance](https://www.confluent.io/blog/incremental-cooperative-rebalance-apache-kafka/) — Jason Gustafson (2019)
+  Publisher: Confluent
+  提供对协作式再平衡协议的清晰说明，补充了KIP的实际背景和用户优势。
+- [Kafka: The Definitive Guide](https://www.oreilly.com/library/view/kafka-the-definitive/9781492043072/) — Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty (2021)
+  Publisher: O'Reilly Media
+  提供Apache Kafka的广泛概述，包括消费者组、再平衡协议（主动式和协作式）以及各种分区分配策略的说明。

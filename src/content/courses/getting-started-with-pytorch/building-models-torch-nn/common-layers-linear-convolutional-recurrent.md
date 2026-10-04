@@ -1,0 +1,158 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "building-models-torch-nn"
+lesson: "common-layers-linear-convolutional-recurrent"
+sourceId: 2155
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-4-building-models-torch-nn/common-layers-linear-convolutional-recurrent"
+title: "常见层：线性、卷积、循环"
+description: "介绍 PyTorch 的重要层，如 `nn.Linear`、`nn.Conv2d` 和 `nn.RNN`。"
+order: 3
+plots: []
+sourceHash: "e08e3ee12598a805ed2df839e3a8310a2543131888d25a046869c54b3d3cd474"
+sourceCorrections: []
+---
+
+PyTorch 提供神经网络 (neural network)模型的基本构成单元，即层。`torch.nn` 包提供了多种预构建层，它们执行神经网络中常见的操作。这些层将可学习参数 (parameter)（权重 (weight)和偏置 (bias)）和操作本身都包含在内。这里将介绍三种主要类型：线性层、卷积层和循环层。
+
+### 线性层 (`nn.Linear`)
+
+神经网络 (neural network)层最基本的类型是**线性**层，也称为全连接层或密集层。它对输入数据进行线性变换。如果输入张量的形状为 $(*, H_{in})$，其中 $*$ 代表任意数量的前导维度（如批大小），$H_{in}$ 是输入特征的数量，那么 `nn.Linear` 层会将其转换为形状为 $(*, H_{out})$ 的输出张量，其中 $H_{out}$ 是为该层指定的输出特征数量。
+
+在数学上，此操作表示为 $y = x W^T + b$，其中：
+
+- $x$ 是输入
+- $W$ 是权重 (weight)矩阵
+- $b$ 是偏置 (bias)向量 (vector)
+- $y$ 是输出
+
+您可以通过指定输入特征和输出特征的数量来创建线性层。
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例：输入特征大小为 20，输出特征大小为 30
+linear_layer = nn.Linear(in_features=20, out_features=30)
+
+# 创建一个示例输入张量（批大小 64，20 个特征）
+input_tensor = torch.randn(64, 20)
+
+# 将输入通过该层
+output_tensor = linear_layer(input_tensor)
+
+print(f"Input shape: {input_tensor.shape}")
+print(f"Output shape: {output_tensor.shape}")
+# 预期输出：
+# Input shape: torch.Size([64, 20])
+# Output shape: torch.Size([64, 30])
+
+# 检查层的参数（自动创建）
+print(f"\nWeight shape: {linear_layer.weight.shape}")
+print(f"Bias shape: {linear_layer.bias.shape}")
+# 预期输出：
+# Weight shape: torch.Size([30, 20])
+# Bias shape: torch.Size([30])
+```
+
+线性层是许多架构中的基本组成部分，包括简单的多层感知机（MLP），并且在像 CNN 和 RNN 这样更复杂的模型中，它们通常作为最终的分类或回归头部。
+
+### 卷积层 (`nn.Conv2d`)
+
+卷积层是现代计算机视觉模型的核心。与对扁平特征向量 (vector)进行操作的线性层不同，卷积层设计用于处理网格状数据（如图像），并保留空间关系。用于二维数据（如图像）的主要层是 `nn.Conv2d`。
+
+它的工作原理是通过在输入空间维度（高和宽）上滑动小型滤波器（卷积核）。对于滤波器的每个位置，它计算滤波器权重 (weight)与滤波器下输入图像块的点积，从而在输出特征图中生成一个元素。这个过程有助于检测边缘、角点和纹理等空间模式。
+
+`nn.Conv2d` 的主要参数 (parameter)包括：
+
+- `in_channels`：输入图像中的通道数量（例如，RGB 图像为 3）。
+- `out_channels`：要应用的滤波器数量。每个滤波器生成一个输出通道（特征图）。
+- `kernel_size`：滤波器的大小（高，宽）。可以是单个整数用于方形卷积核，或一个元组 `(H, W)`。
+- `stride` (可选，默认 1)：滤波器在每一步移动的像素数。
+- `padding` (可选，默认 0)：添加到输入边界的零填充量。
+
+```python
+# 示例：处理一批 16 张图像，3 通道（RGB），32x32 像素
+# 应用 6 个滤波器（输出通道），每个大小为 5x5
+conv_layer = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5)
+
+# 创建一个示例输入张量（批大小，通道，高，宽）
+# PyTorch 通常期望通道优先的格式 (N, C, H, W)
+input_image_batch = torch.randn(16, 3, 32, 32)
+
+# 将输入通过卷积层
+output_feature_maps = conv_layer(input_image_batch)
+
+print(f"Input shape: {input_image_batch.shape}")
+print(f"Output shape: {output_feature_maps.shape}")
+# 没有填充/步幅时，输出大小会减小：32 - 5 + 1 = 28
+# 预期输出：
+# Input shape: torch.Size([16, 3, 32, 32])
+# Output shape: torch.Size([16, 6, 28, 28])
+
+# 检查参数
+print(f"\nWeight (filter) shape: {conv_layer.weight.shape}") # (输出通道，输入通道，卷积核高，卷积核宽)
+print(f"Bias shape: {conv_layer.bias.shape}") # (输出通道)
+# 预期输出：
+# Weight (filter) shape: torch.Size([6, 3, 5, 5])
+# Bias shape: torch.Size([6])
+```
+
+`nn.Conv2d` 及其变体（`nn.Conv1d`、`nn.Conv3d`）对涉及空间层次的任务是不可或缺的，主要用于图像和视频分析，但有时也应用于序列数据。我们将在第 7 章更详细地了解如何构建 CNN。
+
+### 循环层 (`nn.RNN`)
+
+循环神经网络 (neural network)（RNN）设计用于处理序列数据，其中元素的顺序很重要。示例包括文本、时间序列数据或音频信号。RNN 层的核心思想是维护一个隐藏状态，该状态捕捉序列中先前元素的信息，并影响当前元素的处理。
+
+PyTorch 中基本的 `nn.RNN` 层逐步处理输入序列。在每一步 $t$，它接收输入 $x_t$ 和前一个隐藏状态 $h_{t-1}$，以计算输出 $o_t$（可选，通常只使用最终隐藏状态）和新的隐藏状态 $h_t$。
+
+`nn.RNN` 的主要参数 (parameter)：
+
+- `input_size`：每个时间步输入中的特征数量。
+- `hidden_size`：隐藏状态中的特征数量。
+- `num_layers` (可选，默认 1)：堆叠 RNN 层的数量。
+- `batch_first` (可选，默认 False)：如果为 True，输入和输出张量将以 `(batch, seq_len, features)` 形式提供，而不是默认的 `(seq_len, batch, features)`。
+
+```python
+# 示例：处理一批 10 个序列，每个序列长 20 步，每步有 5 个特征。
+# 使用大小为 30 的隐藏状态。
+# 设置 batch_first=True 以便更方便地处理数据。
+rnn_layer = nn.RNN(input_size=5, hidden_size=30, batch_first=True)
+
+# 创建一个示例输入张量（批，序列长度，输入特征）
+input_sequence_batch = torch.randn(10, 20, 5)
+
+# 初始化隐藏状态（层数，批，隐藏状态大小）
+# 如果未提供，默认为零。
+initial_hidden_state = torch.randn(1, 10, 30) # 层数=1
+
+# 将输入序列和初始隐藏状态通过 RNN
+# 输出包含所有时间步的输出
+# final_hidden_state 包含最后一个时间步的隐藏状态
+output_sequence, final_hidden_state = rnn_layer(input_sequence_batch, initial_hidden_state)
+
+print(f"Input shape: {input_sequence_batch.shape}")
+print(f"Initial hidden state shape: {initial_hidden_state.shape}")
+print(f"Output sequence shape: {output_sequence.shape}") # (批，序列长度，隐藏状态大小)
+print(f"Final hidden state shape: {final_hidden_state.shape}") # (层数，批，隐藏状态大小)
+# 预期输出：
+# Input shape: torch.Size([10, 20, 5])
+# Initial hidden state shape: torch.Size([1, 10, 30])
+# Output sequence shape: torch.Size([10, 20, 30])
+# Final hidden state shape: torch.Size([1, 10, 30])
+```
+
+虽然 `nn.RNN` 展示了基本思想，但简单的 RNN 通常因梯度消失而难以处理长序列。在实际应用中，通常更偏好 `nn.LSTM`（长短期记忆）和 `nn.GRU`（门控循环单元 (GRU)）等更高级的循环层，因为它们包含门控机制，能更好地管理长距离依赖中的信息流。这些将在第 7 章再次提及。
+
+这三种层类型（线性层、卷积层、循环层）代表了针对不同数据和任务的基本操作。`torch.nn` 提供了这些层以及许多其他层（如池化层、归一化 (normalization)层、dropout 层），它们可以在 `nn.Module` 子类中组合起来，以构建复杂的深度学习 (deep learning)模型。在接下来的部分中，我们将看到如何将这些层与非线性激活函数 (activation function)结合，并定义使用损失函数 (loss function)和优化器训练它们的标准。
+
+## 参考资料
+
+- [\`torch.nn\` - PyTorch Documentation](https://pytorch.org/docs/stable/nn.html) — PyTorch Core Team (2024)
+  Publisher: PyTorch Foundation
+  PyTorch神经网络模块的官方文档，详细介绍了其各种层和功能。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  涵盖神经网络理论基础的综合教材，包括线性层、卷积层和循环层。
+- [Gradient-Based Learning Applied to Document Recognition](https://doi.org/10.1109/5.726791) — Yann LeCun, Léon Bottou, Yoshua Bengio, and Patrick Haffner (1998)
+  Journal: Proceedings of the IEEE; Publisher: IEEE; Volume: 86; Pages: 2278-2324; DOI: [10.1109/5.726791](https://doi.org/10.1109/5.726791)
+  介绍卷积神经网络（特别是LeNet-5）的奠基性论文，为现代CNN奠定了基础。

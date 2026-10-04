@@ -1,0 +1,297 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "data-visualization-matplotlib-seaborn"
+lesson: "matplotlib-customization"
+sourceId: 2176
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-4-data-visualization-matplotlib-seaborn/matplotlib-customization"
+title: "图表自定义"
+description: "学习通过添加标签、标题、图例、更改颜色和应用样式来定制图表。"
+order: 3
+plots: []
+sourceHash: "b01b244faf8d0f792a4e2ca30621d48d867ee1511d2c1e4d42a4d548267c0148"
+sourceCorrections: []
+---
+
+调整 Matplotlib 图表的外观，可以使其更清晰、信息量更大、视觉上更具吸引力。默认设置是功能性的，但自定义功能允许精确控制数据信息的呈现方式。调整标题、标签、颜色和图例等元素，有助于观众快速准确地理解可视化内容。改进 Matplotlib 图表的常用方法在此详细介绍。
+
+### 添加标题和坐标轴标签
+
+没有标签的图表通常没有意义。至少，你应该为图表提供一个标题，并为 x 轴和 y 轴提供标签，以解释图表所代表的内容以及轴测量的是什么。
+
+你可以使用 `matplotlib.pyplot` 中的 `title()`、`xlabel()` 和 `ylabel()` 函数（通常导入为 `plt`）来添加这些。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例数据
+x = np.linspace(0, 10, 100)
+y1 = np.sin(x)
+y2 = np.cos(x)
+
+plt.figure(figsize=(8, 4)) # 控制图表大小
+plt.plot(x, y1)
+plt.plot(x, y2)
+
+# 添加标题和标签
+plt.title("正弦波和余弦波")
+plt.xlabel("X轴值")
+plt.ylabel("Y轴值")
+
+plt.show()
+```
+
+这些简单的添加会立即使图表变得易于理解。你还可以自定义这些文本元素的字体大小和其他属性，例如：`plt.title("正弦波和余弦波", fontsize=14)`。
+
+### 添加图例
+
+在同一坐标轴上绘制多个数据集时，图例对于区分它们非常重要。要创建图例，首先需要为每个 `plot()` 调用添加一个 `label` 参数 (parameter)。然后，调用 `plt.legend()` 来显示图例框。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y1 = np.sin(x)
+y2 = np.cos(x)
+
+plt.figure(figsize=(8, 4))
+
+# 为图例添加标签
+plt.plot(x, y1, label="正弦波")
+plt.plot(x, y2, label="余弦波")
+
+plt.title("带有图例的正弦波和余弦波")
+plt.xlabel("X轴值")
+plt.ylabel("Y轴值")
+
+# 显示图例
+plt.legend()
+
+plt.show()
+```
+
+Matplotlib 会自动找到图例的合适位置，但你可以使用 `loc` 参数指定位置（例如，`plt.legend(loc='upper right')`）。常见位置包括 'best'、'upper right'（右上）、'upper left'（左上）、'lower left'（左下）、'lower right'（右下）、'right'（右侧）、'center left'（中左）、'center right'（中右）、'lower center'（中下）、'upper center'（中上）和 'center'（居中）。
+
+### 控制颜色、线条样式和标记 (token)
+
+通过指定颜色、线条样式和标记类型，你可以显著改变绘制的线条和点的外观。
+
+- **颜色：** 可以通过几种方式指定：
+  - 短颜色代码（例如，'r' 代表红色，'g' 代表绿色，'b' 代表蓝色，'k' 代表黑色）。
+  - 完整颜色名称（例如，'red' 红色，'green' 绿色，'blue' 蓝色，'black' 黑色，'cyan' 青色，'magenta' 品红色，'yellow' 黄色）。
+  - 十六进制颜色代码（例如，'#FF5733'）。
+  - RGB 或 RGBA 元组（例如，`(0.1, 0.2, 0.5)` 或 `(0.1, 0.2, 0.5, 0.7)` 用于透明度）。
+- **线条样式：** 控制线条本身的外观。常见样式包括：
+  - `'-'` 或 `'solid'`（默认）
+  - `'--'` 或 `'dashed'`（虚线）
+  - `':'` 或 `'dotted'`（点线）
+  - `'-.'` 或 `'dashdot'`（点划线）
+  - `'None'` 或 `' '`（无线条）
+- **标记：** 指定在每个数据点放置的符号。对于散点图或区分点较少的线条很有用。例如：
+  - `'o'`（圆形）
+  - `'.'`（点）
+  - `','`（像素）
+  - `'s'`（方形）
+  - `'+'`（加号）
+  - `'x'`（叉号）
+  - `'^'`（向上三角形）
+  - `'*'`（星形）
+
+这些通常可以组合在一个格式字符串中（例如，`'r--o'` 表示带有圆形标记的红色虚线），或者使用 `color=`、`linestyle=` 和 `marker=` 等关键字参数 (parameter)指定。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 20) # 点数较少，可清晰看到标记
+y1 = np.sin(x)
+y2 = np.cos(x)
+y3 = y1 * y2
+
+plt.figure(figsize=(10, 5))
+
+# 使用颜色、线条样式和标记自定义图表
+plt.plot(x, y1, color='blue', linestyle='--', marker='o', label='正弦波（虚线，圆形）')
+plt.plot(x, y2, color='#f03e3e', linestyle=':', marker='s', label='余弦波（点线，方形，红色）') # 使用十六进制颜色
+plt.plot(x, y3, 'g-.^', label='乘积（点划线，三角形，绿色）') # 使用格式字符串
+
+plt.title("自定义图表样式")
+plt.xlabel("X轴")
+plt.ylabel("Y轴")
+plt.legend(loc='lower left')
+
+plt.show()
+```
+
+尝试这些选项可以帮助你创建视觉上独特且信息丰富的图表。
+
+### 设置坐标轴范围和刻度
+
+Matplotlib 会根据你的数据自动确定 x 轴和 y 轴的范围。但是，你可能希望设置特定的范围，也许是为了关注某个特定区域或在多个图表之间保持一致性。为此，请使用 `plt.xlim()` 和 `plt.ylim()`。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y)
+
+# 设置坐标轴范围
+plt.xlim(-1, 11)
+plt.ylim(-1.5, 1.5)
+
+plt.title("带有自定义坐标轴范围的正弦波")
+plt.xlabel("X轴（扩展范围）")
+plt.ylabel("Y轴（扩展范围）")
+
+plt.show()
+```
+
+你还可以使用 `plt.xticks()` 和 `plt.yticks()` 控制坐标轴刻度的位置和标签。这对于突出显示特定值或提高可读性很有用。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 2 * np.pi, 100)
+y = np.sin(x)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y)
+
+# 为X轴设置自定义刻度位置和标签
+tick_locations = [0, np.pi / 2, np.pi, 3 * np.pi / 2, 2 * np.pi]
+tick_labels = ['0', 'π/2', 'π', '3π/2', '2π']
+plt.xticks(tick_locations, tick_labels)
+
+# 为Y轴设置自定义刻度位置
+plt.yticks([-1, 0, 1])
+
+plt.title("带有自定义刻度的正弦波")
+plt.xlabel("角度（弧度）")
+plt.ylabel("正弦值")
+
+plt.show()
+```
+
+### 添加文本和标注
+
+有时，你需要直接在绘图区域上添加文本，以标记 (token)特定特征或提供额外上下文 (context)。`plt.text()` 函数在图表内的指定坐标处放置文本。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = x**2
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y)
+
+# 在坐标 (x=2, y=20) 处添加文本
+plt.text(2, 20, "这里有一个有趣的点", fontsize=10, color='red')
+
+plt.title("带文本标注的图表")
+plt.xlabel("X值")
+plt.ylabel("X的平方")
+
+plt.show()
+```
+
+对于指出特定数据点，`plt.annotate()` 通常更合适。它允许你添加文本，并附带一个从文本指向特定坐标的箭头。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y)
+
+# 标注第一个峰值
+peak_x = np.pi / 2
+peak_y = np.sin(peak_x)
+plt.annotate('第一个峰值',
+             xy=(peak_x, peak_y), # 要标注的点
+             xytext=(peak_x + 1, peak_y + 0.5), # 文本位置
+             arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=8))
+
+plt.title("带标注和箭头的图表")
+plt.xlabel("X值")
+plt.ylabel("正弦值")
+plt.ylim(-1.5, 2) # 调整Y轴范围为标注留出空间
+
+plt.show()
+```
+
+### 使用网格线
+
+网格线可以使图表上的值更易于读取，特别是对于精确比较。你可以通过 `plt.grid(True)` 启用它们。你还可以自定义它们的外观（例如，`linestyle`、`color`、`alpha`）。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = np.linspace(0, 10, 50)
+y = np.log(x + 1)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y, marker='.')
+
+# 添加网格线
+plt.grid(True, linestyle='--', alpha=0.6) # 虚线，略透明的网格
+
+plt.title("带网格的对数图")
+plt.xlabel("X值")
+plt.ylabel("log(X + 1)")
+
+plt.show()
+```
+
+### 应用样式
+
+Matplotlib 包含几种预定义样式，可以通过一个命令改变图表的整体外观（颜色、字体、背景等）。你可以使用 `print(plt.style.available)` 列出可用样式，并使用 `plt.style.use('style_name')` 应用其中一个。这是快速实现专业或特定美观效果（例如模仿 ggplot2 或 FiveThirtyEight 的图表）的方法。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 在绘图前应用样式
+plt.style.use('seaborn-v0_8-darkgrid') # 示例样式
+
+x = np.linspace(0, 10, 100)
+y1 = np.sin(x)
+y2 = np.cos(x)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y1, label="正弦")
+plt.plot(x, y2, label="余弦")
+
+plt.title("使用 'seaborn-v0_8-darkgrid' 样式的图表")
+plt.xlabel("X轴")
+plt.ylabel("Y轴")
+plt.legend()
+
+plt.show()
+
+# 如果后续图表需要，记得重置样式
+# plt.style.use('default')
+```
+
+通过结合这些自定义方法，你可以将基本图表转换为清晰、引人注目且可用于发布的定制化可视化内容，以适应你的特定数据和受众。请记住，有效的自定义能够提升清晰度；避免添加会使图表混乱或偏离主要信息的元素。
+
+## 参考资料
+
+- [Customizing Matplotlib](https://matplotlib.org/stable/tutorials/introductory/customizing.html) — Matplotlib Development Team (2024)
+  Matplotlib官方教程，提供关于自定义各种绘图元素（包括标题、标签、图例、颜色和样式）的全面指导。
+- [Python Data Science Handbook: Essential Tools for Working with Data](https://jakevdp.github.io/PythonDataScienceHandbook/04.00-introduction-to-matplotlib.html) — Jake VanderPlas (2016)
+  Publisher: O'Reilly Media; Pages: Chapter 4: Visualization with Matplotlib
+  一本基础性书籍，提供了Matplotlib定制技术的详细解释和实用示例，非常适合数据科学家。
+- [Customizing the aesthetics of your plots](https://seaborn.pydata.org/tutorial/aesthetics.html) — Michael Waskom and the Seaborn Development Team (2024)
+  Seaborn关于如何利用其样式功能（与Matplotlib集成）的官方指南，用于快速提升图表的美观度。

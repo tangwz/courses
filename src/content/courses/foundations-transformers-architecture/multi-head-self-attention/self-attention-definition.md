@@ -1,0 +1,62 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "multi-head-self-attention"
+lesson: "self-attention-definition"
+sourceId: 1950
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-3-multi-head-self-attention/self-attention-definition"
+title: "自注意力：查询、键、值源于同一来源"
+description: "定义自注意力，指输入序列中的元素关注同一序列中的其他元素。"
+order: 1
+plots: []
+sourceHash: "da11ee4c6c3d6ac48951d4849b5a1ce1d114e0f5d682f1bdefae3ae678029f37"
+sourceCorrections: []
+---
+
+上一章我们介绍了通用注意力机制 (attention mechanism)，它是一种将查询和一组键值对映射到输出的强大技术。回顾其核心思想：输出是值的加权和，其中分配给每个值的权重 (weight)是通过查询与对应键之间的兼容性函数（如缩放点积）计算得出的。
+
+现在，我们着重介绍这种机制的一种专门应用，称为**自注意力 (self-attention)**。自注意力定义上的特点是查询、键和值都源于*同一*源序列。自注意力并非关联两个不同序列（如传统编解码器注意力中那样），而是允许一个序列内部的不同位置之间产生关联。此过程使得模型在编码特定词时，能够衡量序列中其他词的重要性，直接捕获序列内部的依赖关系。
+
+考虑用矩阵 $X$ 表示的输入序列，它的每行对应一个词元 (token)嵌入 (embedding)（可能与位置信息结合，我们将在第四章讨论）。为计算自注意力，我们首先将输入 $X$ 投影到三种不同的表示形式：查询 ($Q$)、键 ($K$) 和值 ($V$)。这通常通过学习到的线性变换（权重矩阵 $W_Q$、$W_K$ 和 $W_V$）来实现：
+
+
+$$
+Q = X W_Q
+$$
+
+
+$$
+K = X W_K
+$$
+
+
+$$
+V = X W_V
+$$
+
+
+这里，$W_Q$、$W_K$ 和 $W_V$ 是训练期间学习到的参数 (parameter)矩阵。这些矩阵的维度允许模型将输入嵌入投影到适合计算注意力得分和加权值的空间中。
+
+一旦我们有了 $Q$、$K$ 和 $V$，注意力得分将使用之前介绍的缩放点积注意力机制计算：
+
+
+$$
+\text{注意力}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
+
+
+其中 $d_k$ 是向量 (vector)的维度。核心点依然是：$Q$、$K$ 和 $V$ 都源自相同的输入 $X$。此操作的输出是一个新的序列表示，其中每个位置的向量是原始序列中所有位置的值向量的加权组合，基于查询-键的相似性。
+
+> 查询、键和值从同一输入序列 $X$ 经过不同线性投影得到，随后进行缩放点积注意力计算。
+
+例如，在处理句子“The animal didn't cross the street because it was too tired”（动物没有过马路因为它太累了）时，自注意力机制使模型能够了解“it”（它）指的是“animal”（动物）而非“street”（街道）。与“it”关联的查询会强烈关注与“animal”和“street”关联的键，但兼容性函数（通过 $W_Q$ 和 $W_K$ 学习）与 softmax 结合后，会给与“animal”关联的值分配更高的权重。
+
+尽管自注意力在捕获序列内部关系方面很有效，但依赖单一的投影集合（$W_Q, W_K, W_V$）可能会迫使注意力机制对可能冲突或不同类型的关系进行平均处理。例如，它可能难以仅通过一次注意力计算就同时关注句法依赖性和语义相似性。这一局限性促使了多头注意力（Multi-Head Attention）的出现，在多头注意力中，我们使用不同的学习投影并行地执行多次自注意力计算。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008; DOI: [10.5555/3295222.3295349](https://doi.org/10.5555/3295222.3295349)
+  这篇基础论文介绍了Transformer架构和自注意力机制，详细说明了查询、键和值如何从单个输入序列中导出。
+- [Dive into Deep Learning](https://d2l.ai/chapter_attention-mechanisms/attention-scoring-functions.html) — Aston Zhang, Zack C. Lipton, Mu Li, and Alex J. Smola (2023)
+  Publisher: Cambridge University Press
+  以易于理解的教科书形式，详细阐述了注意力机制，包括自注意力及其数学公式。

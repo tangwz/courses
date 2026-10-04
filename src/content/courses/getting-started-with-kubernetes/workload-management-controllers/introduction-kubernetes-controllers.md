@@ -1,0 +1,45 @@
+---
+course: "getting-started-with-kubernetes"
+chapter: "workload-management-controllers"
+lesson: "introduction-kubernetes-controllers"
+sourceId: 7309
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-kubernetes/chapter-3-workload-management-controllers/introduction-kubernetes-controllers"
+title: "Kubernetes 控制器简介"
+description: "了解 Kubernetes 控制器的角色，以及它们如何维护集群的期望状态并自动执行运维任务。"
+order: 1
+plots: []
+sourceHash: "7193ed093db14927e40d1e93cf12791c702d948fb3a99fc9bf5cc4b100f64046"
+sourceCorrections: []
+---
+
+单个 Pod 是一个临时单元。如果它运行所在的节点发生故障，该 Pod 就会丢失，它所提供的应用也会随之停止运行。为了构建具有弹性的系统，我们需要一种能够主动维护应用可用性的机制，而不需要持续的人工干预。
+
+这就是 Kubernetes 控制器发挥作用的地方。控制器是一个后台进程，它监控集群的状态，并努力将当前状态转变为期望状态。你可以把它想象成集群资源的自动恒温器。你设定好期望的温度（你想要的状态），恒温器就会持续运行以维持该温度，根据需要开启或关闭加热装置。
+
+### 调解循环 (Reconciliation Loop)
+
+每个控制器的核心都是一个被称为**调解循环**或控制循环的过程。这并不是一段单一的代码，而是一种管理控制器运行方式的设计模式。这个循环不断地执行一系列简单但有效的操作：
+
+1. **观察 (Observe)**：控制器连接到 Kubernetes API Server，获取它所管理的资源的当前状态。例如，管理 Pod 的控制器会询问：“目前有多少个标签为 `app=my-api` 的 Pod 在运行？”
+2. **比较 (Compare)**：它将观察到的当前状态与你在清单文件中定义的期望状态进行对比。如果你的清单指定了 `replicas: 3`，但控制器只观察到两个正在运行的 Pod，那么就存在不一致。
+3. **行动 (Act)**：如果当前状态与期望状态不符，控制器会通过 API Server 采取纠正措施。在上面的例子中，它会向 API Server 发送请求，创建一个新 Pod 以满足 `replicas: 3` 的要求。反之，如果它观察到四个 Pod，则会终止其中一个。
+
+这个循环无限期地运行，确保即使 Pod 被终止或节点发生故障，控制器也能检测到偏差并进行修正。
+
+> 控制器的调解循环。它通过 API 服务器持续观察集群状态，将其与存储在 etcd 中的期望状态进行比较，并采取行动缩小差距。
+
+这个控制循环是驱动 Kubernetes 声明式模型的引擎。当你使用 YAML 清单执行 `kubectl apply` 时，你并不是在发布直接指令。相反，你是在更新 `etcd` 中的期望状态记录。控制器会注意到这一变化，并负责使集群的实际状态符合你的声明。
+
+Kubernetes 是由一系列这类控制器构建而成的。`kube-controller-manager` 是核心控制平面的组件，它运行着其中的许多控制器，例如节点控制器（处理节点故障）和 ServiceAccount 控制器。为了管理应用工作负载，我们主要与 ReplicaSet、Deployment、StatefulSet 和 DaemonSet 等控制器进行交互。在本章中，我们将重点关注无状态应用中最常用的两个控制器：ReplicaSet 和 Deployment。
+
+我们将从 ReplicaSet 开始，它提供了一个直观且直接的控制器功能示例：确保始终有稳定数量的 Pod 在运行。
+
+## 参考资料
+
+- [Kubernetes Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) — Kubernetes Authors (2024)
+  官方文档提供了Kubernetes控制器的基础概述，解释了它们的目的、协调循环以及它们如何维护集群的期望状态。
+- [Control Plane Components: kube-controller-manager](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/) — Kubernetes Authors (2025)
+  这部分官方文档详细介绍了kube-controller-manager，这是一个运行各种核心控制器的主要组件，负责集群范围的状态管理。
+- [Kubernetes: Up & Running](https://www.oreilly.com/library/view/kubernetes-up-and/9781098110192/) — Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson (2022)
+  Publisher: O'Reilly Media
+  这本由Kubernetes创建者撰写的权威书籍全面阐述了Kubernetes架构，包括控制器、声明式模型和协调过程。

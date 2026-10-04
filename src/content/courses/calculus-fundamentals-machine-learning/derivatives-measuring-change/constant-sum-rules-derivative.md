@@ -1,0 +1,143 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "derivatives-measuring-change"
+lesson: "constant-sum-rules-derivative"
+sourceId: 2259
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-2-derivatives-measuring-change/constant-sum-rules-derivative"
+title: "导数计算：常数与和"
+description: "学习如何对常数和函数之和求导。"
+order: 5
+plots: ["plots/2259-0.json"]
+sourceHash: "63dca6aaf0f3310502b731d6a173b10b12ab4b6d780a20c0c1e0a296939f0901"
+sourceCorrections: []
+---
+
+幂法则可用于求像 $f(x) = x^n$ 这类函数的导数。然而，如何求更简单的函数，比如 $f(x) = 5$ 的导数呢？或者由项组合而成的函数，比如 $f(x) = x^2 + x$ 的导数呢？
+
+我们需要更多规则来处理这些情况。幸运的是，这些规则很直观，它们直接源于导数作为变化率或切线斜率的思想。在本节中，我们将介绍如何求常数函数以及函数和（或差）的导数。
+
+### 常数的导数：无变化即零斜率
+
+让我们从最简单的函数类型开始：常数函数。请看以下函数：
+
+$f(x) = 5$
+
+无论您给它任何输入值 $x$，这个函数总是输出值 5。它的图像是什么样子？它是一条通过 y 轴上 5 的水平线。
+
+
+
+![f(x) = 5 的图像](plots/2259-0.json)
+
+
+
+> 常数函数 $f(x)=c$ 的图像是一条水平线。
+
+请记住，导数表示函数图像的切线斜率。水平线的斜率是多少？是零。这条线既不上升也不下降；它的变化率处处为零。
+
+这给我们带来了第一条规则：
+
+**常数法则：** 如果 $c$ 是一个常数，那么函数 $f(x) = c$ 的导数为零。
+
+使用导数记号：
+
+If $f(x) = c$, then $f'(x) = 0$.
+
+或者，使用莱布尼茨记号：
+
+$\frac{d}{dx}(c) = 0$
+
+这在道理上是讲得通的：如果一个量从不变化（它是常数），那么它的变化率为零。
+
+**示例：**
+
+- 如果 $f(x) = 100$，那么 $f'(x) = 0$。
+- 如果 $y = -3.14$，那么 $\frac{dy}{dx} = 0$。
+- $\frac{d}{dx}(2) = 0$。
+
+### 函数的组合：和差法则
+
+现在，如果我们有一个由更简单函数相加或相减形成的函数呢？例如，请看：
+
+$h(x) = x^2 + x$
+
+我们知道如何求 $x^2$ 的导数（根据幂法则，它是 $2x$），以及 $x$ 的导数（它表示 $x^1$，所以根据幂法则，它的导数是 $1x^0 = 1$）。相加操作如何影响导数呢？
+
+微积分提供了一个直接的规则：函数和的导数就是它们各自导数的和。这同样适用于差。
+
+**和法则：** 如果 $h(x) = f(x) + g(x)$，那么 $h'(x) = f'(x) + g'(x)$。
+
+用莱布尼茨记号表示：
+
+$\frac{d}{dx}[f(x) + g(x)] = \frac{d}{dx}f(x) + \frac{d}{dx}g(x)$
+
+**差法则：** 如果 $h(x) = f(x) - g(x)$，那么 $h'(x) = f'(x) - g'(x)$。
+
+用莱布尼茨记号表示：
+
+$\frac{d}{dx}[f(x) - g(x)] = \frac{d}{dx}f(x) - \frac{d}{dx}g(x)$
+
+基本上，您可以逐项对函数求导。
+
+让我们将此应用于我们的示例 $h(x) = x^2 + x$：
+
+1. 求第一项 $x^2$ 的导数。根据幂法则，$\frac{d}{dx}(x^2) = 2x$。
+2. 求第二项 $x$ 的导数。根据幂法则，$\frac{d}{dx}(x) = 1$。
+3. 将结果相加：$h'(x) = 2x + 1$。
+
+### 处理常数倍数
+
+像 $f(x) = 3x^2$ 这样的函数呢？这里，$x^2$ 乘以一个常数 3。对此也有一个简单规则。常数因子在求导时只需“跟随”即可。
+
+**常数乘法法则：** 如果 $h(x) = c \cdot f(x)$，其中 $c$ 是一个常数，那么 $h'(x) = c \cdot f'(x)$。
+
+用莱布尼茨记号表示：
+
+$\frac{d}{dx}[c \cdot f(x)] = c \cdot \frac{d}{dx}f(x)$
+
+因此，对于 $f(x) = 3x^2$：
+
+1. 识别常数倍数：$c=3$。
+2. 识别被乘函数：$f(x) = x^2$。
+3. 求该函数的导数：$\frac{d}{dx}(x^2) = 2x$。
+4. 将结果乘以该常数：$f'(x) = 3 \cdot (2x) = 6x$。
+
+### 综合运用
+
+现在我们可以结合常数法则、和差法则、常数乘法法则和幂法则来对任何多项式函数求导。多项式就是各项之和，其中每项都是一个常数乘以 $x$ 的非负整数次幂（比如 $5x^3 - 2x + 7$）。
+
+让我们求 $p(x) = 4x^3 - 5x^2 + x - 2$ 的导数。
+
+我们可以逐项求导：
+
+1. **项 1：** $4x^3$
+   - $x^3$ 的导数是 $3x^2$。
+   - 应用常数乘法法则：$\frac{d}{dx}(4x^3) = 4 \cdot (3x^2) = 12x^2$。
+2. **项 2：** $-5x^2$
+   - $x^2$ 的导数是 $2x$。
+   - 应用常数乘法法则：$\frac{d}{dx}(-5x^2) = -5 \cdot (2x) = -10x$。
+3. **项 3：** $+x$（或 $+1x^1$）
+   - $x^1$ 的导数是 $1x^0 = 1$。
+   - 应用常数乘法法则（此处可选）：$\frac{d}{dx}(1x) = 1 \cdot (1) = 1$。
+4. **项 4：** $-2$
+   - 这是一个常数。
+   - 应用常数法则：$\frac{d}{dx}(-2) = 0$。
+
+现在，使用和差法则合并各项的导数：
+
+$p'(x) = 12x^2 - 10x + 1 - 0$
+
+$p'(x) = 12x^2 - 10x + 1$
+
+有了这些法则（常数法则、常数乘法法则、和差法则和幂法则），您现在拥有了求任何多项式函数导数的工具。它们构成了微分的基本工具集，我们将在研究如何优化函数（机器学习 (machine learning)模型训练中的一项核心任务）时大量使用它们。
+
+## 参考资料
+
+- [Calculus: Early Transcendentals](https://www.cengage.com/c/calculus-early-transcendentals-8th-edition-stewart/9781285741550/) — James Stewart (2015)
+  Publisher: Cengage Learning
+  一本广泛用于微积分入门的教材，详细解释了常数法则、和法则和常数乘法法则等基本微分规则。
+- [Thomas' Calculus](https://www.vitalsource.com/products/thomas-calculus-14th-edition-joel-r-hass-christopher-e-heil-maurice-d-v9780134654881) — Joel R. Hass, Christopher E. Heil, Maurice D. Weir (2018)
+  Publisher: Pearson
+  一本标准的微积分教材，对导数定义以及常数和函数和的导数等基本规则进行了全面介绍。
+- [Single Variable Calculus](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/) — Prof. David Jerison, Arthur Mattuck (2010)
+  Publisher: MIT OpenCourseWare
+  提供免费的课程材料，包括讲座和习题集，用于对微分规则的打下基础。

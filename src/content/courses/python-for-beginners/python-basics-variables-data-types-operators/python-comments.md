@@ -1,0 +1,93 @@
+---
+course: "python-for-beginners"
+chapter: "python-basics-variables-data-types-operators"
+lesson: "python-comments"
+sourceId: 2284
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-2-python-basics-variables-data-types-operators/python-comments"
+title: "为你的代码添加注释"
+description: "理解代码中注释的重要性以及如何在Python中有效编写它们。"
+order: 10
+plots: []
+sourceHash: "d4eec10e7555300bca9c87d3148c417a60498e838bebd6a17ebe992a5ea45feb"
+sourceCorrections: []
+---
+
+Python 脚本可能包含多个变量、复杂的计算或处理用户输入的步骤。这些因素可能会使代码难以理解。在这种情况下，保持对代码每个部分功能的清晰了解非常有帮助。编写能运行的代码是一方面；编写你和别人以后能理解的代码则是一种独特的能力。注释正是为此服务。
+
+注释是你代码中的标注，Python 在执行时会忽略它们。它们唯一的目的是向代码的阅读者解释代码。把它们想象成你留给自己或协作者的笔记，用来说明一段代码的目的、逻辑或假设。
+
+### 为什么使用注释？
+
+- **可读性：** 好的注释能让你的代码一目了然。当你休息后重新查看代码，或其他人需要处理它时，注释能提供背景信息。
+- **维护：** 当你需要修复错误或添加新功能时，理解现有代码是第一步。注释能大大加快这个过程。
+- **协作：** 如果你是在团队中工作，注释对于向同事传达意图和逻辑非常重要。
+- **解释复杂性：** 有时，代码以某种方式编写的原因并非一目了然。注释可以解释复杂的逻辑、具体的选择或变通方案。
+
+### 在 Python 中编写注释
+
+在 Python 中，一行中紧随井号 (`#`) 的任何内容都被视为注释，并被解释器忽略。
+
+```python
+# 这是一个整行注释。它说明了下面代码的总体目的。
+principal = 1000  # 这是一个行内注释。它说明了这个特定的变量。
+rate = 0.05       # 年利率
+years = 3         # 投资年限
+
+# 计算简单利息
+interest = principal * rate * years
+
+# 打印结果（我们稍后会了解更多关于格式化打印的内容）
+print("The calculated simple interest is:")
+print(interest)
+```
+
+在这个例子中：
+
+- 第一行注释说明了总体目标。
+- 在 `principal`、`rate` 和 `years` 之后的注释说明了每个变量代表什么。行内注释对于简短的说明很有用。
+- 计算之前的注释说明了正在使用的公式。
+- `print` 之前的注释说明了接下来的几行代码将做什么。
+
+### 好的注释有什么特点？
+
+尽管添加注释是好的，但编写有效的注释更好。以下是一些指导原则：
+
+1. **解释“为什么”，而不仅仅是“是什么”：** 避免只重复代码明显在做什么的注释。
+
+   - *作用较小：* `# 将 5 赋值给 x`   
+     `x = 5`
+   - *更有用：* `# 设置最大重试次数`   
+     `max_retries = 5`
+2. **保持注释最新：** 如果你更改了代码，请确保更新相应的注释。过时的注释比没有注释更具误导性。
+3. **保持简洁：** 清晰地编写，避免不必要的行话或过长的解释。直奔主题。
+4. **为复杂部分添加注释：** 如果一段逻辑很复杂，涉及多个步骤，或依赖于特定假设，请添加注释以引导读者。
+5. **（通常）使用完整的句子：** 尽管行内注释可以是简短的短语，但解释更大代码块的注释通常使用完整的句子会更好。
+
+### 注释掉代码
+
+注释也经常用于临时禁用代码行，这通常在调试期间进行。如果你怀疑某一行或某段代码正在引起问题，你可以通过在每行开头添加一个 `#` 来“注释掉”它。这可以阻止 Python 执行它，而无需你完全删除代码。
+
+```python
+# --- 原始代码 ---
+# print("Starting calculation...")
+# result = complex_calculation(data)
+# print("Calculation complete.")
+
+# --- 为测试注释掉一行的代码 ---
+print("Starting calculation...")
+# result = complex_calculation(data) # 暂时禁用此行
+print("Skipping calculation for now.")
+# print("Calculation complete.")
+```
+
+添加注释是一种简单但有效的方法。随着你编写更多 Python 代码，加入清晰简洁的注释将使你的程序在管理、调试和共享方面变得明显更容易。养成边写代码边添加注释的习惯；这比几周或几个月后试图回忆你的思考过程要容易得多。
+
+## 参考资料
+
+- [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0008/) — Guido van Rossum, Barry Warsaw, and Alyssa Coghlan (2001)
+  提供编写清晰、可读的Python代码的官方指南，包括注释和代码文档的约定。
+- [Clean Code: A Handbook of Agile Software Craftsmanship](https://www.pearson.com/us/higher-education/program/Martin-Clean-Code-A-Handbook-of-Agile-Software-Craftsmanship-1st-edition/PGM228499.html) — Robert C. Martin (2008)
+  Publisher: Prentice Hall
+  讨论编写简洁、可维护代码的原则，重点强调有效的注释实践，解释何时以及如何审慎使用注释。
+- [The Python Tutorial](https://docs.python.org/3/tutorial/introduction.html) — Python Software Foundation (2024)
+  介绍基本的Python语法，包括注释的简单用法，适用于初学者。

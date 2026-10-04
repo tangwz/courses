@@ -1,0 +1,227 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "extrinsic-evaluation-downstream-tasks"
+lesson: "fine-tuning-procedures-evaluation"
+sourceId: 6062
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-22-extrinsic-evaluation-downstream-tasks/fine-tuning-procedures-evaluation"
+title: "评估时的微调步骤"
+description: "描述预训练LLM适应特定任务的标准流程。"
+order: 3
+plots: []
+sourceHash: "644c504b9370236ff7bca4e04678206ee8f7d6321a57d66fb0886b567e34ce9c"
+sourceCorrections: []
+---
+
+为了有效地评估预训练 (pre-training)大语言模型（LLM）在下游任务上的表现，我们通常需要根据目标任务的特定格式和目标对其进行一些调整。这个过程称为微调 (fine-tuning)。虽然零样本或少样本评估（稍后讨论）测试模型固有的泛化能力，但微调使模型能够从标注数据中学习任务特定模式，通常能获得更高表现，并更清晰地呈现预训练模型在该任务上的潜在作用。
+
+微调使用预训练期间学到的强大表征，并使用相对少量任务特定的标注数据进行调整。核心观点是预训练模型已经理解语言结构、语义和语境；微调只是教它如何将这些知识应用于新的问题形式。
+
+### 通用微调 (fine-tuning)流程
+
+对用于评估下游任务的LLM进行微调的标准流程包含以下步骤：
+
+1. **加载预训练 (pre-training)模型：** 从预训练LLM的权重 (weight)开始。这可以是您自己训练的模型，也可以是公开可用的检查点（例如，来自Hugging Face Hub）。
+2. **调整模型架构：** 通过添加任务特定的“头部”来修改模型。该头部通常是一个或多个小型神经网络 (neural network)层，放置在预训练模型的核心结构（例如Transformer块）之上。此头部的类型完全取决于下游任务。
+3. **准备任务数据集：** 获取下游任务的标注数据集。这涉及根据模型和任务头部的要求格式化输入数据，并使用模型预训练期间使用的*相同分词 (tokenization)器 (tokenizer)*对文本进行分词。
+4. **定义目标：** 选择适合任务的损失函数 (loss function)（例如，分类的交叉熵损失，回归的均方误差）。
+5. **训练：** 运行训练循环，更新整个模型或仅更新新添加的头部以及预训练模型的顶层权重。使用适合的优化器（如AdamW）和学习率调度。训练通常仅在任务数据集上运行几个周期。
+6. **评估：** 使用与下游任务相关的指标（例如，准确率、F1分数、ROUGE、BLEU）在保留测试集上衡量表现。
+
+流程图如下：
+
+> 预训练LLM的核心层为新添加的任务特定头部提供输入表征。该头部进行预测，然后使用任务特定的损失函数与任务数据集中的标签进行比较。此损失产生的梯度会更新头部的权重，通常也会更新部分或全部预训练层的权重。
+
+### 任务特定头部和数据格式化
+
+调整步骤主要涉及添加正确的头部和适当的数据格式化。我们来看看常见例子：
+
+#### 文本分类
+
+- **目标：** 为一段文本分配类别标签（例如，情感分析、主题分类）。
+- **头部：** 通常是一个线性层，它获取指定token（如BERT风格模型中的`[CLS]` token，或因果模型中的最后一个token）的最终隐藏状态，并将其投射到输出类别的数量。在线性层之前通常会添加一个dropout层用于正则化 (regularization)。
+- **输入格式：** 对于BERT等模型，输入通常格式化为`[CLS] text_sequence [SEP]`。对于因果模型（如GPT），输入可能只是`text_sequence`，并使用最后一个token的表征。
+- **损失：** 交叉熵损失是多类别分类的标准选择。
+
+```python
+import torch
+import torch.nn as nn
+from transformers import ( # Example using Hugging Face Transformers
+    AutoModel, AutoTokenizer
+)
+
+# 加载预训练模型（例如BERT）
+model_name = "bert-base-uncased"
+pretrained_model = AutoModel.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+# 定义分类头部
+num_labels = 3 # 示例：积极、消极、中性情感
+hidden_size = pretrained_model.config.hidden_size
+classification_head = nn.Sequential(
+    nn.Dropout(0.1),
+    nn.Linear(hidden_size, num_labels)
+)
+
+# 示例输入处理
+text = "This is an example sentence."
+inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+
+# 前向传播（简化）
+# 从预训练模型获取隐藏状态
+outputs = pretrained_model(**inputs)
+# 使用[CLS] token（第一个token）的表征
+cls_representation = outputs.last_hidden_state[:, 0, :]
+# 经过分类头部
+logits = classification_head(cls_representation)
+
+# 'logits'现在包含每个类别的原始分数
+# 训练期间使用这些logits和目标标签应用交叉熵损失
+```
+
+#### 抽取式问答 (QA)
+
+- **目标：** 在给定的上下文 (context)段落中找到回答特定问题的文本片段（例如，SQuAD基准）。
+- **头部：** 通常包含两个线性层。一个预测上下文中每个token作为答案片段*起始*的概率，另一个预测每个token作为答案片段*结束*的概率。
+- **输入格式：** 通常将问题和上下文结合起来，并用特殊token分隔：`[CLS] question_text [SEP] context_text [SEP]`。
+- **损失：** 交叉熵损失分别计算起始和结束位置。模型被训练来预测上下文中正确的起始和结束token索引。在推理 (inference)时，需要进行后处理以找到最可能且有效的片段（结束索引需大于或等于起始索引）。
+
+```python
+# (接续之前的导入)
+
+# 定义问答头部
+qa_head = nn.Linear(hidden_size, 2)
+# 输出：每个token的start_logit, end_logit
+
+# 示例输入处理
+question = "What is the capital of Malaysia?"
+context = "Malaysia is a Southeast Asian country. Kuala Lumpur is its capital and largest city."
+inputs = tokenizer(
+    question,
+    context,
+    return_tensors="pt",
+    padding=True,
+    truncation=True
+)
+
+# 前向传播（简化）
+outputs = pretrained_model(**inputs)
+sequence_output = outputs.last_hidden_state
+# 形状：(批量大小, 序列长度, 隐藏维度)
+
+# 将序列输出通过问答头部
+logits = qa_head(sequence_output) # 形状：(批量大小, 序列长度, 2)
+start_logits, end_logits = logits.split(1, dim=-1)
+start_logits = start_logits.squeeze(-1) # 形状：(批量大小, 序列长度)
+end_logits = end_logits.squeeze(-1)    # 形状：(批量大小, 序列长度)
+
+# 'start_logits'和'end_logits'包含起始/结束位置的分数
+# 训练期间使用这些以及目标起始/结束索引应用交叉熵损失
+# during training
+```
+
+#### 序列到序列任务
+
+- **目标：** 根据输入序列生成文本序列（例如，摘要、翻译、对话生成）。
+- **头部：** 对于编码器-解码器模型（如T5、BART），预训练 (pre-training)的解码器已作为生成头部。对于仅解码器模型（如GPT），标准语言建模头部（预测下一个token）直接用于生成。微调 (fine-tuning)调整模型，使其根据特定输入格式生成输出（例如，在输入文本前添加“summarize: ”这样的前缀）。
+- **输入格式：** 根据任务而异。对于摘要：`input_article`。对于翻译：`translate English to French: input_english_sentence`。目标序列在训练期间用作标签。
+- **损失：** 交叉熵损失，计算生成序列token与目标序列的比较（训练期间通常使用教师强制，即模型会看到真实的前一个token）。
+
+### 微调 (fine-tuning)的训练考量
+
+微调涉及训练，但与预训练 (pre-training)相比有一些差异：
+
+- **学习率：** 通常使用显著更小的学习率（例如，$1e-5$到$5e-5$）。预训练模型的权重 (weight)已经良好初始化，因此大幅更新可能破坏已学到的表征。
+- **优化器：** AdamW因其有效性和对权重衰减的处理能力，仍然是常见选择。
+- **批量大小：** 常受限于GPU内存，特别是对于较大模型。有效批量大小有时可通过梯度累积来增加。
+- **周期数：** 微调通常只需要少量周期（通常1-5个）。在较小的特定数据集上训练过长时间可能导致过拟合 (overfitting)并降低模型的通用能力。
+- **学习率调度：** 带有短暂热身期（例如，在训练步骤的前6-10%进行热身）的线性衰减调度通常有效。
+- **权重衰减：** 作为正则化 (regularization)技术应用，类似于预训练。
+- **冻结层：** 有时，最初只训练任务特定头部和预训练模型的顶层几层，保持底层冻结。这可以节省计算并防止灾难性遗忘，尽管如果数据充足，全面微调（更新所有参数 (parameter)）通常会带来最佳表现。
+
+### 简化微调 (fine-tuning)循环示例（PyTorch）
+
+```python
+import torch
+from torch.optim import AdamW
+from torch.utils.data import DataLoader, Dataset
+from transformers import get_linear_schedule_with_warmup
+
+# 假设'model'包含预训练骨干和任务特定头部
+# 假设'train_dataset'是一个PyTorch数据集，生成格式化、
+# 分词后的输入和标签
+# 假设'loss_fn'是适合的损失函数（例如nn.CrossEntropyLoss）
+
+learning_rate = 3e-5
+num_epochs = 3
+batch_size = 16
+warmup_steps = 100
+total_training_steps = len(train_dataset) * num_epochs // batch_size # 近似值
+
+optimizer = AdamW(model.parameters(), lr=learning_rate)
+scheduler = get_linear_schedule_with_warmup(optimizer,
+                                           num_warmup_steps=warmup_steps,
+                                           num_training_steps=total_training_steps)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+model.train()
+
+for epoch in range(num_epochs):
+    for batch in train_dataloader:
+        # 将批次数据移动到设备
+        input_ids = batch['input_ids'].to(device)
+        attention_mask = batch['attention_mask'].to(device)
+        labels = batch['labels'].to(device) # 假设标签是批次的一部分
+
+        # 清除之前的梯度
+        optimizer.zero_grad()
+
+        # 前向传播 - 获取模型预测（logits）
+        # 获取logits的确切方法取决于模型和头部结构
+        # 对于分类：logits = model(
+        #     input_ids=input_ids, attention_mask=attention_mask).logits
+        # 对于问答：outputs = model(...); start_logits, end_logits =
+        #     outputs.start_logits, outputs.end_logits
+        # 这需要根据具体的模型包装器和任务进行调整
+        outputs = model(input_ids=input_ids,
+                        attention_mask=attention_mask)
+        logits = outputs.logits # 根据实际模型输出结构调整
+
+        # 计算损失
+        # 损失计算取决于任务（例如，logits与标签的形状）
+        # 对于分类：loss = loss_fn(
+        #     logits.view(-1, num_labels), labels.view(-1))
+        # 对于问答：loss = (loss_fn(start_logits, start_positions) +
+        #                  loss_fn(end_logits, end_positions)) / 2
+        loss = loss_fn(logits, labels) # 根据特定任务损失需求调整
+
+        # 反向传播
+        loss.backward()
+
+        # 更新权重
+        optimizer.step()
+        scheduler.step()
+
+    print(f"周期 {epoch + 1} 完成。上一个批次的损失：{loss.item()}")
+
+# 训练后，使用任务特定指标在测试集上进行评估
+```
+
+### 评估指标
+
+重要的是，微调 (fine-tuning)后，模型使用下游任务特有的指标进行评估。对于分类，这可能是准确率或F1分数。对于问答，精确匹配（EM）和预测答案token的F1分数是常见的。对于摘要，ROUGE分数（ROUGE-1、ROUGE-2、ROUGE-L）是标准指标，衡量与参考摘要的重叠度。对于翻译，BLEU分数常被使用。这些外部指标直接衡量模型在其所适应任务上的表现，补充了来自困惑度等内部指标的信息。
+
+微调是评估和调整LLM的有效方法。尽管它需要标注数据和计算资源（虽然远少于预训练 (pre-training)），但它使我们能够评估预训练模型所学知识如何有效地迁移以解决特定实际问题。通过微调获得的结果通常代表着该特定任务中潜在的预训练模型具有的强劲表现基准。
+
+## 参考资料
+
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova (2018)
+  Journal: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Pages: 4171-4186; DOI: [10.48550/arXiv.1810.04805](https://doi.org/10.48550/arXiv.1810.04805)
+  介绍了BERT模型以及针对自然语言处理任务的预训练和微调方法，其中包含与本节内容相关的示例。
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了Transformer架构，它是本节讨论的各种大型语言模型的核心组成部分。
+- [Hugging Face Transformers Documentation](https://huggingface.co/docs/transformers/index) — Hugging Face (2024)
+  Publisher: Hugging Face
+  Hugging Face Transformers库的官方文档，为微调过程的实现提供了实用指南。

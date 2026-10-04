@@ -1,0 +1,115 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-deployment-serving-optimization"
+lesson: "advanced-llm-deployment-patterns"
+sourceId: 3178
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-4-llm-deployment-serving-optimization/advanced-llm-deployment-patterns"
+title: "高级部署模式 (金丝雀发布, A/B 测试)"
+description: "为大型语言模型实施金丝雀发布、A/B 测试（用于提示语或模型）和影子部署。"
+order: 6
+plots: []
+sourceHash: "7a53aef86eaf33b105b9e12a02364d96a1f5f252564f8654b77b4cc8d48164e2"
+sourceCorrections: []
+---
+
+将大型语言模型的新版本直接部署到生产环境存在显著风险。与传统软件中可能导致可预测故障的错误不同，大型语言模型的问题可能表现为不易察觉的性能下降、延迟增加、意外生成成本或输出质量的不理想变化（如偏差增加或幻觉 (hallucination)率提高）。标准部署方法通常不足。高级部署模式提供了管理这些风险的机制，允许在完全应用于生产环境之前进行可控的发布、比较和验证。这些策略对于在实际环境中负责任且有效地迭代大型语言模型非常重要。
+
+### 大型语言模型的金丝雀发布
+
+金丝雀发布是指将生产流量的一小部分、可控比例引向新模型版本（即“金丝雀”），而大部分流量仍继续使用稳定、当前版本。这种做法限制了新版本出现未预料问题时的潜在影响范围。
+
+**为何使用金丝雀发布进行大型语言模型部署？**
+
+- **风险降低：** 首先在小部分用户群体中发现性能退化（延迟、吞吐量 (throughput)）、成本异常（更高代币使用量）或输出质量的微小变化。
+- **验证：** 在实际生产负载和流量模式下测试新模型，仿真通常无法完美再现这些情况。
+- **建立信心：** 根据观察到的指标，随着对金丝雀版本稳定性与性能信心的增加，逐步提高其流量占比。
+
+**实施细节：**
+
+部署新版大型语言模型至生产环境风险巨大。与传统软件中bug可能导致可预测故障不同，LLM的问题表现为细微的性能下降、延迟增加、意外的生成成本，或输出质量的不良变化（如偏见或幻觉 (hallucination)率升高）。标准部署方法往往不足。高级部署模式提供了管理这些风险的机制，允许在完全生产暴露前进行受控发布、比较和验证。这些策略对于在实时环境中负责任且有效地迭代LLM十分必要。
+
+- **运营指标：** 推理 (inference)延迟（p50, p90, p99）、吞吐量、错误率、GPU/TPU 利用率、内存占用。
+- **成本指标：** 每个请求生成的代币数、每次推理的总计算成本。
+- **质量指标：** 任务专属评估分数、语义漂移指标、问题输出率（毒性、偏见、检测到的幻觉）、用户反馈分数（如果可用）。
+
+如果金丝雀版本表现不佳，未达到预设标准，流量会立即回切到稳定版本。如果它表现良好，流量百分比可以逐步提升，直到100%的流量由新版本提供服务，届时新版本将成为稳定版本。
+
+> 金丝雀发布将一小部分用户流量（例如5%）路由到新模型版本，而大部分流量仍保留在稳定版本，从而在全面发布前进行严密监控。
+
+### 大型语言模型的 A/B 测试
+
+A/B 测试（或多变量测试）涉及同时将两个或更多变体部署到不同的用户群，并根据特定指标比较它们的表现。与主要侧重于安全性和稳定性的金丝雀发布不同，A/B 测试是为了比较和优化而设计的。
+
+**大型语言模型运营中的常见 A/B 测试：**
+
+- **模型比较：** 评估新的基础模型版本、不同微调 (fine-tuning)模型或使用不同数据集训练的模型，与当前生产模型进行对比。
+- **提示语优化：** 测试不同的提示语模板或指令，查看哪种能为特定任务带来更好的结果。
+- **配置调整：** 比较不同的推理 (inference)参数 (parameter)（例如，温度、top\_k）、量化 (quantization)级别（例如，FP16 对比 INT8）或服务基础设施设置（例如，不同 GPU 类型、批处理策略）。
+- **RAG 系统组件：** 在检索增强生成 (RAG)系统中测试不同的检索器模型、重排器或向量 (vector)数据库配置。
+
+**指标与分析：**
+
+指标的选择在很大程度上取决于 A/B 测试的目标。例如：
+
+- **任务成功率：** 大型语言模型变体成功完成预期任务的频率如何？
+- **用户参与度/满意度：** 点击率、会话时长、明确的用户评分、反馈的情感分析。
+- **输出质量：** 人工评估分数、相关性、连贯性、安全性（毒性、偏见）的自动化指标。
+- **运营成本：** 每次响应的平均代币数、每次成功任务完成的计算成本。
+- **性能：** 延迟、吞吐量 (throughput)。
+
+有必要进行统计分析，以确定观察到的变体之间差异是否具有统计学意义，抑或仅仅是偶然造成的。这通常涉及根据收集到的指标数据计算 p 值和置信区间。
+
+> A/B 测试将流量分配给两个或更多变体（例如，不同模型或提示语），允许根据预设指标和统计分析进行直接比较。
+
+### 影子部署（暗发布）
+
+在影子部署中，新模型版本与生产版本并行运行，接收实时生产流量的副本（即“影子”流量）。然而，它的响应不会返回给用户。取而代之的是，影子模型的输出和性能指标会被记录下来并离线分析。
+
+**大型语言模型部署的优势：**
+
+- **零用户影响：** 在完整的生产负载条件下测试新模型，对用户体验没有任何风险。
+- **性能基准测试：** 使用相同的流量模式，精确比较影子模型与生产模型的延迟、吞吐量 (throughput)和资源消耗（GPU、内存）。
+- **输出比较（附带说明）：** 记录影子模型与生产模型的输出并进行比较。对于生成式模型，直接比较复杂，但这可以辅助发现主要退化、输出长度或风格的变化，或故障模式。
+- **成本预测：** 在新模型版本服务实际流量之前，获取其运营成本的实际预估。
+- **金丝雀发布前验证：** 将影子模式作为启动金丝雀发布前的最终验证步骤，提升金丝雀版本不会立即失败的信心。
+
+**实施考量：**
+
+设置流量镜像需要基础设施的支持，通常在负载均衡器、API 网关或应用层面进行。存储和分析可能大量影子模型输出和指标需要适当的日志记录和数据处理管线。有效比较生成式输出可能涉及采样、使用其他模型进行评估，或离线应用特定质量指标。
+
+> 在影子部署中，新模型版本接收镜像生产流量，但不会向用户提供响应。其表现和输出会被记录下来，用于离线分析。
+
+### 策略结合
+
+这些模式并非互斥，常按顺序使用。一个常见的工作流程可能是：
+
+1. **影子部署：** 在负载下测试新模型的性能和稳定性，且不对用户造成影响。
+2. **金丝雀发布：** 从少量流量（例如1-5%）开始，严密监控。
+3. **逐步发布：** 根据积极的监控结果，逐渐增加新版本的流量（例如10%、25%、50%、100%）。
+4. **A/B 测试（可选）：** 如果比较明显不同的方案（例如，两种不同的微调 (fine-tuning)方法），可在通过金丝雀或影子测试确认初始稳定性后进行 A/B 测试。
+
+### 运营考量
+
+与简单部署相比，实施这些高级模式会带来额外的复杂性：
+
+- **基础设施：** 需要更精密的负载均衡、流量路由和功能标志能力。
+- **监控：** 全面、实时的运营和大型语言模型专属指标监控对于在发布期间做出明智决策非常重要。强烈推荐基于指标阈值的自动化警报。
+- **成本：** 同时运行多个模型版本（即使是暂时的）会增加计算成本。这对于资源密集型大型语言模型尤为明显。测试成本必须与部署缺陷模型的风险相权衡。
+- **自动化：** 自动化部署、流量切换、监控和回滚流程对于大规模高效可靠地管理这些模式非常重要。
+
+通过采纳金丝雀发布、A/B 测试和影子部署，团队可以显著降低在生产环境中更新大型语言模型的相关风险。这些策略能够支持数据驱动的决策，促进迭代改进，最终带来更可靠、更高效的由大型语言模型驱动的应用。
+
+## 参考资料
+
+- [Site Reliability Engineering: How Google Runs Production Systems](https://sre.google/sre-book/table-of-contents/) — Niall Murphy, Betsy Beyer, Chris Jones, Jennifer Petoff (2017)
+  Publisher: O'Reilly Media, Inc.
+  关于运行大规模系统的基础文本，包含发布工程、金丝雀部署和事件管理的详细讨论，适用于高级大模型部署。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  提供关于构建、部署和维护机器学习系统的全面指导，包含在 MLOps 背景下与模型服务、A/B 测试和持续交付相关的章节。
+- [Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  一篇介绍 HELM (大模型综合评估) 的研究论文，这是一个评估大模型在不同场景和指标下的框架，为在生产部署中监测大模型质量提供了重要见解。
+- [MLOps: Continuous delivery and automation for machine learning](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-for-machine-learning) — Google Cloud (2024)
+  Publisher: Google Cloud
+  来自 Google Cloud 的指南，概述 MLOps 原则，包含自动化模型部署、测试和监控策略，与实现大模型高级部署模式有直接关系。

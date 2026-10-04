@@ -1,0 +1,86 @@
+---
+course: "introduction-to-mlops"
+chapter: "the-machine-learning-lifecycle"
+lesson: "monitoring-models-production"
+sourceId: 7201
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-2-the-machine-learning-lifecycle/monitoring-models-production"
+title: "生产环境中的模型监控"
+description: "了解监控已部署模型以应对性能下降、数据偏移和其他运行问题的重要意义。"
+order: 6
+plots: ["plots/7201-0.json"]
+sourceHash: "51f8132c26db18351ff6f5fad3c536aa230c62c76ac94a41cae1fc0386f71fd1"
+sourceCorrections: []
+---
+
+将机器学习 (machine learning)模型部署到生产环境是一个里程碑，但这远非最后一步。部署后的模型不是一段静态的软件，它是一个与多变环境交互的动态系统。其性能会随着时间的推移而下降。在部署后系统地跟踪模型的表现和性能的做法被称为监控。这一流程能够让你及时发现模型是否已偏离预期目标。
+
+### 为什么模型会在生产环境中失效
+
+模型上线后，它会开始接触从未见过的数据。随着时间的推移，这些新数据的性质可能与模型训练时的数据产生偏差，导致预测准确性下降。这种性能衰减通常有两个主要原因：数据偏移（Data Drift）和概念偏移（Concept Drift）。
+
+#### 数据偏移
+
+数据偏移发生在输入特征的统计属性随时间变化时。模型本身可能仍然有效，但它接收到的数据不再符合其在训练期间学习到的模式。假设有一个利用房屋面积和卧室数量等特征来预测房地产价格的模型。如果突如其来的经济转变导致利率飙升，房价分布和买家行为将发生剧烈变化。该模型是在不同的经济环境下训练的，因此很难做出准确的预测。此时，底层数据已经发生了“偏移”。
+
+> 训练期间的特征分布与生产环境中的分布对比。这种变化表明存在数据偏移，可能会降低模型性能。
+
+#### 概念偏移
+
+概念偏移是一个更隐蔽但同样有害的问题。当输入特征与目标变量之间的关系发生变化时，就会发生这种情况。输入的统计属性可能保持不变，但它们所代表的含义已经改变。
+
+例如，一个预测客户流失的模型可能会学到：缺乏支持工单是客户满意、不会流失的标志。然而，如果公司推出了一个非常高效的自助服务帮助门户，此时缺乏支持工单意味着客户在成功地自行解决问题，而底层的满意度或忠诚度（即满意客户的“概念”）与流失之间的关系并未改变。但“支持工单数量”这一特征的含义已经演变。
+
+在很多情况下，模型会同时受到数据偏移和概念偏移的影响。这种性能的逐渐衰退通常被称为**模型陈旧**。监控是我们检测这一现象的主要手段。
+
+### 监控对象：指标分类
+
+有效的监控涉及跟踪两类不同但相关的指标：系统的运行状况和模型预测的质量。
+
+#### 1. 运行指标
+
+这些指标关注承载模型的软件应用的健康状况和稳定性。它们与监控传统 Web 服务时关注的指标类似。
+
+- **延迟：** 模型返回预测结果需要多长时间？延迟突然增加可能表明底层基础设施有问题或模型效率低下。
+- **吞吐量 (throughput)：** 模型每秒或每分钟处理多少个请求？这有助于容量规划和检测异常流量模式。
+- **错误率：** 由于软件漏洞、超时或其他系统级问题导致请求失败的比例是多少？这是服务可靠性的直接体现。
+- **资源占用：** 模型服务消耗了多少 CPU、内存和磁盘空间？资源占用的激增往往是系统崩溃的前兆。
+
+#### 2. 模型性能指标
+
+这些指标衡量机器学习 (machine learning)模型输出的质量和可靠性。它们是 MLOps 特有的，对于维持对系统的信任非常关键。
+
+- **预测准确率：** 这是最直接的性能衡量方式。它涉及将模型的预测结果与实际结果（“地面真值”）进行比较。对于分类模型，你可能会跟踪准确率、精确率和召回率。对于回归模型，你会监控平均绝对误差 (MAE) 或均方根误差 (RMSE) 等指标。获取地面真值有时会有延迟，这使得其他代理指标变得很有意义。
+- **数据和预测分布：** 当无法立即获得地面真值时，可以通过跟踪输入特征和模型输出预测的统计分布来监控偏移。例如，如果你的模型通常只有 1% 的时间预测为“欺诈”，却突然开始在 50% 的时间里预测为“欺诈”，这是一个明显的异常信号，即使你还不知道真实的结果。
+
+
+
+![模型准确率随时间变化图](plots/7201-0.json)
+
+
+
+> 监控仪表板显示模型准确率随时间下降。当性能跌破预设阈值时会触发告警，提示需要进行调查。
+
+### 落地监控实践
+
+监控系统建立在日志记录、可视化和告警的基础之上。
+
+1. **记录所有日志：** 运行模型的系统必须记录每个进入的请求，包括输入特征和模型的预测结果。这些数据是所有监控活动的基础素材。
+2. **通过仪表板可视化：** 日志数据被输入到监控工具中以生成仪表板。这些仪表板提供了各项指标的直观视图，方便工程师和数据科学家查看模型的健康状况和长期表现。
+3. **异常告警：** 手动检查仪表板是不可持续的。监控系统包含自动告警功能。你可以配置规则，在指标超过临界阈值时发送通知（通过邮件、Slack 或其他服务）。例如，如果 `延迟 > 500ms` 持续超过五分钟，或 `准确率 < 90%`，则触发告警。
+
+监控完善了初始开发周期的闭环。它提供的发现不仅用于修复故障系统，还是模型改进的主要触发点。当监控检测到明显的偏移或性能下降时，这清楚地表明当前模型已过时。这些信息直接进入生命周期的下一个也是最后一个阶段：创建反馈回路以重新训练并部署更新后的模型。
+
+## 参考资料
+
+- [Machine Learning Engineering](https://www.oreilly.com/library/view/machine-learning-engineering/9781492062752/) — Andriy Burkov, Stefan Loy, Nicolas Linder (2020)
+  Publisher: O'Reilly Media
+  涵盖完整的机器学习生命周期，其中有专门章节介绍生产环境中的模型部署、监控和维护。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  讨论了生产机器学习系统的设计和实现，包括监控模型性能和运行状况的重要方面。
+- [A Survey on Concept Drift Adaption](https://dl.acm.org/doi/10.1145/2523813) — João Gama, Indrė Žliobaitė, Albert Bifet, Myra Spiliopoulou, Paul Vanhoof (2014)
+  Journal: ACM Computing Surveys (CSUR); Publisher: Association for Computing Machinery; Volume: 46; Pages: 1-37; DOI: [10.1145/2523813](https://doi.org/10.1145/2523813)
+  综述了数据流中适应概念漂移的技术和方法，这是模型陈旧的核心问题。
+- [MLOps: Continuous delivery and automation pipelines in machine learning](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Dale Markowitz, Boris Tetiyevsky, Michael N. Wudka (2023)
+  Publisher: Google Cloud
+  一份官方指南，描述了 MLOps 的原则，包括持续监控及其在生产机器学习系统中的重要性。

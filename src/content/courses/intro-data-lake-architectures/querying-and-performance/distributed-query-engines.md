@@ -1,0 +1,100 @@
+---
+course: "intro-data-lake-architectures"
+chapter: "querying-and-performance"
+lesson: "distributed-query-engines"
+sourceId: 8016
+sourceUrl: "https://apxml.com/zh/courses/intro-data-lake-architectures/chapter-5-querying-and-performance/distributed-query-engines"
+title: "分布式查询引擎"
+description: "MPP 引擎架构概述，用于在不移动数据的情况下查询数据湖。"
+order: 1
+plots: []
+sourceHash: "0bbad65dbd696b3a0cbc4e5e1efeaf22b74cbffa47f30aa0fda834111d445d28"
+sourceCorrections: []
+---
+
+现代数据湖依赖于计算与存储的分离。虽然这种架构降低了存储成本并提高了扩展性，但它在处理引擎和数据持久化层之间引入了物理隔离。与传统关系型数据库管理系统 (RDBMS) 中引擎直接本地访问底层存储介质不同，数据湖查询引擎必须通过网络从对象存储服务（如 Amazon S3、Azure Data Lake Storage 或 Google Cloud Storage）获取数据。
+
+为弥合此差距并提供交互式性能，我们采用构建在大规模并行处理 (MPP) 架构上的分布式 SQL 引擎。现代数据技术栈中最常见的例子是 Trino（前身为 PrestoSQL）、Apache Spark SQL 和 Apache Hive LLAP。这些系统通过将工作分发到服务器集群来处理PB级数据，使您能够运行标准 ANSI SQL 查询。
+
+### 大规模并行处理架构
+
+在 MPP 系统中，处理工作负载由许多独立节点分担。这些节点不共享内存或磁盘空间（一种“无共享”架构）。它们仅通过网络进行通信和数据交换。
+
+该架构通常由两种主要节点类型组成：
+
+1. **协调器（或驱动程序）：** 此节点充当集群的大脑。它接收客户端的 SQL 查询，解析查询，优化执行计划，并管理任务向工作节点的分配。它通常不处理数据本身。
+2. **工作器（或执行器）：** 这些节点是处理能力的来源。它们直接连接对象存储，读取数据文件，并执行实际的计算（过滤、聚合、连接）。
+
+当查询被提交时，协调器将查询分解为阶段。这些阶段进一步划分为任务，任务并行处理。
+
+以下图表描绘了 Trino 等典型分布式查询引擎中的控制流和数据流。
+
+> 协调器管理查询计划并分配任务给工作器，工作器直接与存储层交互。
+
+### 分布式查询的生命周期
+
+了解 SQL 语句如何变为分布式操作对性能调优很重要。如果查询缓慢，瓶颈通常在这个生命周期的一个特定阶段。
+
+#### 1. 解析与分析
+
+当协调器收到 SQL 语句时，它首先检查语法。然后，它查询**元数据目录**（例如 Hive Metastore 或 AWS Glue）以验证表和列是否存在，以及用户是否拥有所需权限。在此阶段，查询是一个抽象语法树。
+
+#### 2. 逻辑规划与优化
+
+引擎将语法树转换为逻辑计划。这是**基于成本的优化器 (CBO)** 工作的地方。CBO 评估执行查询的不同方式。例如，如果您要将一个小型“产品类别”表与一个大型“销售”表连接，CBO 会决定是将小表广播到所有节点，还是对大表进行混洗。
+
+优化器使用统计数据（行数、列的不同值、最小值/最大值）来估算操作成本。如果您的元数据目录中缺少这些统计数据，引擎可能会选择一个低效的计划，导致性能缓慢。
+
+#### 3. 物理规划与调度
+
+逻辑计划被转换为由阶段组成的物理计划。
+
+- **源阶段：** 从数据湖读取数据。
+- **计算阶段：** 在内存中聚合或过滤数据。
+- **汇聚阶段：** 将结果写回或返回给客户端。
+
+协调器将这些阶段分解为**分片**。分片是一个并行单位。在数据湖的背景下，一个分片通常对应于对象存储中文件内的特定字节范围。
+
+#### 4. 执行与数据混洗
+
+工作器执行分配的分片。如果查询是简单的 `SELECT * FROM table WHERE id = 1`，则操作是“极其并行”的。每个工作器扫描其分配的文件，过滤行，并返回匹配项。
+
+然而，如果查询包含 `GROUP BY` 或 `JOIN`，数据必须在工作器之间移动。这个过程称为**混洗**。
+
+例如，要按 `region_id` 统计销售额，所有属于 `region_id=1` 的行必须汇聚到同一个工作节点才能计数。由于原始文件很可能随机分散，工作器实质上通过集群网络交换数据。
+
+$T_{\text{总计}} \approx \frac{V_{\text{数据}}}{N_{\text{工作器}}} + T_{\text{网络混洗}} + T_{\text{延迟}}$
+
+在数据湖架构中，$T_{\text{延迟}}$（列出文件并与 S3 建立 HTTP 连接）和 $T_{\text{网络混洗}}$ 常常主导执行时间。
+
+### 内存中与溢出到磁盘的引擎
+
+尽管大多数分布式引擎共享上述架构，但它们在处理内存限制方面有所不同。
+
+**交互式引擎（例如 Trino, Presto）：**
+这些引擎旨在提高速度。它们试图将所有中间数据保存在内存中。如果查询需要的内存超过集群可用内存（例如，大规模哈希连接），查询将因“内存不足”（OOM）错误而失败。这使它们非常适合即席分析和仪表盘制作，但对大型 ETL 作业的弹性较差。
+
+**批处理引擎（例如 Apache Spark）：**
+Spark 旨在实现弹性和吞吐量 (throughput)。如果在大型连接或排序过程中内存耗尽，Spark 会将数据“溢出”到工作节点的本地磁盘。查询将继续运行，尽管速度较慢，而不是失败。这使得 Spark 成为第3章中所述大型数据工程管道和摄取作业的首选。
+
+### 引擎优化
+
+由于引擎通过网络与存储通信，减少传输的数据量是最有效的优化方法。
+
+1. **谓词下推：** 引擎将过滤条件（`WHERE` 子句）下推到尽可能低的级别。如果使用 Parquet 等格式，工作器可以检查文件尾部统计信息，如果数据范围不符合过滤器，则完全跳过该文件。
+2. **列裁剪：** 由于大多数数据湖格式是列式存储，引擎仅请求 SQL 查询中显式选择的列的特定字节范围。`SELECT *` 的成本显著高于 `SELECT id, value`，因为它迫使工作器从对象存储中读取并传输每一列。
+
+了解到查询引擎是一个编排网络请求和内存缓冲区的分布式系统，您可以编写与引擎优势相符的 SQL，特别是通过尽早过滤和只选择必要的列。
+
+## 参考资料
+
+- [Trino Documentation](https://trino.io/docs/current/) — The Trino Community (2024)
+  Trino 分布式 SQL 查询引擎的官方文档，详细介绍了其架构、查询生命周期和优化技术。
+- [Apache Spark SQL, DataFrames and Datasets Guide](https://spark.apache.org/docs/latest/sql-programming-guide.html) — The Apache Software Foundation (2024)
+  Apache Spark SQL 的官方指南，涵盖其分布式执行模型、使用 Catalyst 进行查询优化以及处理内存和磁盘溢出的机制。
+- [Query Processing in the Age of Data Lakes](http://www.vldb.org/pvldb/vol12/p1827-zukowski.pdf) — Marcin Zukowski, Matt Fuller, Martin Traverso, David Philippi (2019)
+  Journal: Proceedings of the VLDB Endowment (PVLDB); Publisher: VLDB Endowment; Volume: 12; Pages: 1827-1838; DOI: [10.14778/3352063.3352079](https://doi.org/10.14778/3352063.3352079)
+  本文讨论了在数据湖上运行的分布式 SQL 查询引擎所面临的挑战和设计考量，包括对象存储和计算与存储分离。
+- [Presto: The Definitive Guide: A Guide to the SQL Query Engine for All Your Data](https://www.abebooks.com/9781492044277/Presto-Definitive-Guide-SQL-Scale-149204427X/plp) — Matt Fuller, Manfred Moser, Martin Traverso (2020)
+  Publisher: O'Reilly Media
+  一本全面指南，涵盖 Presto (现为 Trino) 的架构、实现和使用，侧重于其大规模并行处理能力和数据湖集成。

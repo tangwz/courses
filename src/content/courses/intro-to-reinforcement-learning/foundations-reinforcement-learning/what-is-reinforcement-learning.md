@@ -1,0 +1,46 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "foundations-reinforcement-learning"
+lesson: "what-is-reinforcement-learning"
+sourceId: 1549
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-1-foundations-reinforcement-learning/what-is-reinforcement-learning"
+title: "什么是强化学习？"
+description: "清晰说明强化学习的模式以及它与其他机器学习类型的区别。"
+order: 1
+plots: []
+sourceHash: "2c9b1607c5b1f2d44d59ef4734035e4a8eaf4f2716331666832510d5e7c4ef5c"
+sourceCorrections: []
+---
+
+设想您正在学习一项新技能，比如骑自行车或玩视频游戏。您不会一开始就拿到一本详细的说明手册，告诉您在所有可能的情形下如何精确地移动肌肉或按下按钮。相反，您会亲自尝试。有时您成功了，会感到成就感（一个积极信号）；有时您摇晃或摔倒（一个消极信号）。随着时间的推移，通过这种尝试、犯错和反馈的过程，您会找到有效的方法并逐步提高。
+
+强化学习 (reinforcement learning)（RL）是一种机器学习 (machine learning)类型，人工*智能体*通过与*环境*互动来学习做决策。智能体在该环境中执行*动作*，并相应地收到*奖励*（或惩罚）形式的反馈以及关于环境当前*状态*的信息。智能体的主要目标并非简单地获得最高的即时奖励，而是学习一种被称为*策略*的方法，以使长期累积的总奖励达到最大。
+
+这种互动形成了一个持续的循环：
+
+> 强化学习的基本互动循环。智能体选择一个动作，环境以新状态和奖励作为回应，然后该循环重复。
+
+与其他主要的机器学习方法不同，强化学习不依赖预先存在的带标签数据集。我们来阐明它有哪些区别：
+
+### 强化学习 (reinforcement learning)与监督学习 (supervised learning)
+
+在监督学习（SL）中，算法从数据集中学习，其中每个示例都包含一个输入和一个对应的“正确”输出或标签。目标是学习一个映射函数，能够预测新的、未曾见过的输入的输出。以图像分类为例，算法会获得图像（输入）及其类别（标签）。反馈是*指导性的*；它准确地告诉算法正确答案应该是什么。
+
+在强化学习中，没有明确的标签告诉智能体在给定状态下应该采取的唯一最佳动作。反馈是*评估性的*；奖励信号仅指示在那个状态下所采取的动作*效果如何*，而不是该动作是否是最佳的可能动作，或者最佳动作应该是什么。智能体必须通过尝试和运用其过往经验来找到有效的动作。此外，强化学习中的决策通常是序列化的，这意味着现在采取的动作会影响未来的状态和奖励，这引入了一个时间维度，而这个时间维度通常并非标准监督学习问题的核心。
+
+### 强化学习 (reinforcement learning)与无监督学习 (supervised learning) (unsupervised learning)
+
+无监督学习（UL）旨在发现无标签数据中的模式、结构或关系。聚类（将相似数据点分组）或降维（简化数据）等技术都属于此类别。其目标通常与理解数据本身的结构有关。
+
+强化学习，虽然也可能处理无标签状态，但它有一个清晰的、外部定义的目标：使累积奖励最大化。它主要关注的不是发现状态数据中的潜在结构（尽管这可能是有效表示状态的一部分），而是学习一种行为策略（即策略）以达到其目标。奖励信号提供了在标准无监督学习中不存在的指引。
+
+简而言之，强化学习提供了一个正式的框架，用于通过互动和反馈学习面向目标的行为。它处理涉及不确定性下序列决策的问题，其中动作的后果可能不是即时的，这使得它非常适合人工智能中的一类独特且重要的难题，从游戏、机器人到资源管理和推荐系统。接下来的部分将介绍此框架的各个组成部分，从智能体和环境开始。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  强化学习领域的权威教科书，全面且易于理解地介绍了其基本概念、算法及理论基础。
+- [Deep Reinforcement Learning: An Overview](https://arxiv.org/abs/1701.07274) — Yuxi Li (2017)
+  Journal: arXiv preprint arXiv:1701.07274; DOI: [10.48550/arXiv.1701.07274](https://doi.org/10.48550/arXiv.1701.07274)
+  一篇全面的学术综述，在讨论强化学习与深度学习的结合之前，介绍了强化学习的基本概念，提供了扎实的理论基础。

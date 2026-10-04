@@ -1,0 +1,188 @@
+---
+course: "getting-started-julia-programming"
+chapter: "modules-packages-project-organization"
+lesson: "importing-exporting-module-content"
+sourceId: 6803
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-6-modules-packages-project-organization/importing-exporting-module-content"
+title: "模块内容的导入与导出"
+description: "学习如何使用 `import` 和 `export` 控制模块内函数和变量的可见性与访问。"
+order: 2
+plots: []
+sourceHash: "a15efd3a0217b203821cb4cf7bac43224890a22e6fd8aee2ce145e0d2136a8e3"
+sourceCorrections: []
+---
+
+当代码被组织到模块中时，管理程序其他部分，甚至其他程序，如何访问这些模块中定义的函数、类型和变量变得至关重要。Julia 提供了三个主要关键字：`export`、`using` 和 `import` 来管理这种可见性和访问权限。理解它们对于构建更大、更易维护的 Julia 应用程序非常重要。
+
+### 使用 `export` 使模块内容可用
+
+默认情况下，模块中定义的所有内容都是该模块私有的。这意味着你不能仅仅通过名称就在主脚本或另一个模块中直接使用模块中的函数或变量。若要使模块中的特定项可供外部使用，你需要使用 `export` 关键字。
+
+可以将 `export` 视为声明模块的公共接口。你列出希望可供访问的函数、变量、类型，甚至其他模块的名称。
+
+以下是如何在模块内部使用 `export`：
+
+```julia
+# 文件：StringUtilities.jl
+module StringUtilities
+
+export capitalize_string, count_occurrences
+
+# 此函数将是公共 API 的一部分
+function capitalize_string(s::String)
+    return uppercasefirst(s)
+end
+
+# 此变量也将是公共的
+DEFAULT_GREETING = "Hello"
+
+# 此函数也是公共的
+function count_occurrences(text::String, pattern::String)
+    return count(pattern, text)
+end
+
+# 此函数是模块内部的，未导出
+function internal_helper_function()
+    println("这是一个内部辅助函数，不供外部直接使用。")
+end
+
+end # module StringUtilities
+```
+
+在这个 `StringUtilities` 模块中，`capitalize_string` 和 `count_occurrences` 被明确导出。`DEFAULT_GREETING` 在此示例中未导出，`internal_helper_function` 也未导出，这使其成为一个内部实现细节。如果希望 `DEFAULT_GREETING` 变为公共的，我们会将其添加到 `export` 列表中：`export capitalize_string, count_occurrences, DEFAULT_GREETING`。
+
+### 访问模块内容：`using` 和 `import`
+
+既然 `StringUtilities` 已经导出了一些成员，我们如何在另一个脚本或 Julia REPL 中使用它们呢？这就是 `using` 和 `import` 发挥作用的地方。
+
+#### `using` 关键字
+
+`using ModuleName` 语句将 `ModuleName` 中所有导出的名称引入当前作用域。这意味着你可以直接使用导出的函数或变量的名称来调用它们，而无需在前面加上模块名称。
+
+假设 `StringUtilities.jl` 位于 Julia 可以找到它的位置（例如，同一目录，或者你使用了 `include("StringUtilities.jl")`）：
+
+```julia
+# main_script.jl
+include("StringUtilities.jl") # 使模块定义可用
+
+using .StringUtilities # 点表示当前作用域中的模块或子模块
+
+s = "julia programming"
+capitalized = capitalize_string(s) # 可直接访问
+println(capitalized) # 输出：Julia programming
+
+occurrences = count_occurrences(s, "a") # 可直接访问
+println("Found 'a' $occurrences times.") # 输出：Found 'a' 2 times.
+
+# DEFAULT_GREETING 未导出，因此这会引起错误：
+# println(DEFAULT_GREETING) # 错误：UndefinedVarError: DEFAULT_GREETING 未定义
+
+# internal_helper_function 未导出，因此这也会引起错误：
+# internal_helper_function() # 错误：UndefinedVarError: internal_helper_function 未定义
+```
+
+**何时使用 `using`**：
+当你计划使用模块中的许多函数，并且它们的名称不太可能与当前作用域中已有的名称冲突时，`using` 非常方便。例如，`using Plots` 很常见，因为你会使用许多绘图函数。
+
+一个潜在的缺点是“命名空间污染”。如果你的当前作用域中已经有一个名为 `capitalize_string` 的函数，并且你 `using StringUtilities`，Julia 将发出警告，并且新导入的 `capitalize_string` 将替换现有函数，用于后续调用。
+
+#### `import` 关键字
+
+`import` 关键字提供了对哪些名称以及如何引入作用域的更多控制。
+
+1. **`import ModuleName`**：
+   此形式*只将模块名称本身*引入当前作用域。要访问模块的任何成员（无论是否导出），你都必须使用模块名称后跟一个点 (`.`) 来限定它们。
+
+   ```julia
+   # main_script_import.jl
+   include("StringUtilities.jl")
+
+   import .StringUtilities
+
+   s = "julia programming"
+   # 导出的函数必须使用限定名称：
+   capitalized = StringUtilities.capitalize_string(s)
+   println(capitalized) # 输出：Julia programming
+
+   occurrences = StringUtilities.count_occurrences(s, "a")
+   println("Found 'a' $occurrences times.") # 输出：Found 'a' 2 times.
+
+   # 即使是非导出名称，如果你限定它们，也可以访问：
+   # StringUtilities.internal_helper_function() # 这会调用内部函数
+   # 注意：对于外部模块，通常不鼓励访问非导出成员
+   # 因为它们被视为可能更改的内部实现细节。
+   ```
+
+   **何时使用 `import ModuleName`**：这是避免名称冲突的最安全选择。它能非常清楚地表明每个函数或变量的来源。在大型项目或使用通用名称的模块时，通常更倾向于使用此方法。
+2. **`import ModuleName: name1, name2, ...`**：
+   此形式允许你选择性地将 `ModuleName` 中的特定名称引入当前作用域。然后可以直接使用这些名称，就像使用 `using` 一样。与 `using` 的主要区别在于，你明确列出所需内容。如果需要，例如进行测试或特定集成时，也可以使用此方法将非导出名称引入作用域。
+
+   ```julia
+   # main_script_import_specific.jl
+   include("StringUtilities.jl")
+
+   import .StringUtilities: capitalize_string # 只将 capitalize_string 引入作用域
+
+   s = "julia programming"
+   capitalized = capitalize_string(s) # 可直接访问
+   println(capitalized) # 输出：Julia programming
+
+   # count_occurrences 未直接导入，因此需要限定：
+   # occurrences = count_occurrences(s, "a") # 错误：UndefinedVarError: count_occurrences 未定义
+   # 如果模块本身已知（例如，通过之前的 `import .StringUtilities` 或隐式方式），则可以通过模块访问它：
+   occurrences = StringUtilities.count_occurrences(s, "a")
+   println("Found 'a' $occurrences times.") # 输出：Found 'a' 2 times.
+   ```
+
+   如果你只执行了 `import .StringUtilities: capitalize_string`，那么 `StringUtilities` 本身不会作为名称引入作用域。如果你想直接使用 `capitalize_string` *并且*能够使用 `StringUtilities.count_occurrences`，你可以这样做：
+
+   ```julia
+   import .StringUtilities # 使 StringUtilities.name 可访问
+   import .StringUtilities: capitalize_string # 使 capitalize_string 可直接访问
+   ```
+
+   或者，更常见的是，如果你只需要直接使用几个名称：
+
+   ```julia
+   import .StringUtilities: capitalize_string, count_occurrences
+   # 现在两者都可直接访问。
+   ```
+
+   **何时使用 `import ModuleName: name1, name2`**：这是便利性和明确性之间的良好平衡。你能够直接访问常用名称，同时避免引入所有内容。这也是为扩展另一个模块的函数（添加新方法）做准备的标准方式，这是一个更深入的话题。
+
+### 限定名称：显式路径
+
+无论你使用的是 `using` 还是 `import`，你*始终*可以使用其完全限定名称来引用模块的导出成员：`ModuleName.memberName`。如果模块是子模块，则为 `ParentModule.SubModule.memberName`。
+
+这特别有用：
+
+- 如果两个你 `using` 的模块导出相同的名称，可以解决名称歧义。
+- 使代码非常清楚地表明函数或变量的来源。
+- 访问模块的非导出成员（尽管如前所述，对于外部模块应谨慎操作）。
+
+例如，如果你有 `using ModuleA` 和 `using ModuleB`，并且两者都导出了函数 `foo()`，你将收到警告。要调用 `ModuleA` 的版本，你需要写 `ModuleA.foo()`。
+
+### 导入与导出可视化
+
+下图说明了模块定义中的 `export` 如何与 `using` 和 `import` 语句协同工作以控制模块成员的访问。
+
+> 模块定义中的 `export` 如何与 `using` 和 `import` 语句协同工作以控制模块成员的访问。
+
+### 选择你的策略
+
+- **对于快速脚本或当使用标准库模块（例如 `LinearAlgebra`、`Dates`）中的许多项时：** 为方便起见，`using ModuleName` 通常是合适的。
+- **在编写可复用模块或大型应用程序时，或者当名称冲突是一个问题时：** `import ModuleName`（并使用 `ModuleName.func` 这样的限定名称）更安全、更清晰。
+- **当你需要频繁使用模块中少数特定项，但并非所有项，或者想要扩展函数时：** `import ModuleName: name1, name2` 提供了一个良好的平衡。
+
+通过掌握 `export`、`using` 和 `import`，你可以精确控制代码结构及其组件的交互方式，这对于编写清晰、可维护和可扩展的 Julia 程序非常重要。当你开始使用外部包时，你会发现这些机制被广泛应用。
+
+## 参考资料
+
+- [Modules](https://docs.julialang.org/en/v1/manual/modules/) — The Julia Language (2024)
+  官方文档提供了Julia模块系统的权威描述，包括`export`、`using`和`import`关键字及其在代码组织中的作用。
+- [Think Julia: How to Think Like a Computer Scientist](https://benlauwens.github.io/ThinkJulia.jl/latest/book.html) — Ben Lauwens and Allen B. Downey (2019)
+  Publisher: O'Reilly Media
+  一本面向Julia编程初学者的入门书籍，其中有专门的章节（第8章）说明了模块的创建以及`export`、`using`和`import`的用法。
+- [Julia High Performance](https://www.packtpub.com/product/julia-high-performance-second-edition/9781788629053) — Bogumił Kamiński, Paweł Rokita (2018)
+  Publisher: Packt Publishing
+  本书涵盖了Julia编程的更高阶方面，包括关于使用模块和包组织代码的章节，为这些功能如何支持可扩展和高性能应用程序提供了背景。

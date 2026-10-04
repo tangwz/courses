@@ -1,0 +1,131 @@
+---
+course: "julia-deep-learning"
+chapter: "intro-flux-jl"
+lesson: "defining-simple-nn-layers-flux"
+sourceId: 6881
+sourceUrl: "https://apxml.com/zh/courses/julia-deep-learning/chapter-2-intro-flux-jl/defining-simple-nn-layers-flux"
+title: "定义简单的神经网络层"
+description: "学习在 Flux.jl 框架中定义和使用常用神经网络层，例如 Dense 层。"
+order: 3
+plots: []
+sourceHash: "d44d007106648c242141dc400b07800f0c87e12455d134b1eeb9d886d629fc5b"
+sourceCorrections: []
+---
+
+神经网络 (neural network)层是 Flux.jl 中基本的计算单元，它们作为转换器处理输入数据并将其传递到网络的后续部分。每个层执行特定的操作，通过组合这些层，我们构建复杂的深度学习 (deep learning)模型。我们将侧重于定义和使用最常见和基本的类型之一：简单、全连接层，在 Flux.jl 中称为 `Dense`。
+
+### `Dense` 层：全连接转换
+
+`Dense` 层，在其他框架中常被称为全连接层或线性层，是许多神经网络 (neural network)结构中的核心组成部分。它连接每个输入神经元到每个输出神经元。每个连接都有一个相关联的权重 (weight)，并且每个输出神经元通常都有一个相关联的偏置 (bias)项。
+
+从数学上看，`Dense` 层对其输入 $x$ 执行仿射变换：
+
+
+$$
+y = \sigma(Wx + b)
+$$
+
+
+这里，$W$ 表示权重矩阵，$b$ 是偏置向量 (vector)，$x$ 是输入。函数 $\sigma$ (sigma) 是一个激活函数 (activation function)，它为模型引入非线性。我们将在下一节中详细介绍激活函数。目前，请理解 `Dense` 层可以包含激活函数，也可以直接输出 $Wx + b$ 的原始结果。
+
+在 Flux.jl 中，您可以通过指定 `Dense` 层接受的输入特征数量和它产生的输出特征数量来创建它。您也可以直接提供一个激活函数。
+
+```julia
+using Flux
+
+# 一个 Dense 层，它接受 10 个输入特征并产生 5 个输出特征。
+# 未指定激活函数，因此默认为恒等函数（即，σ(x) = x）。
+layer_linear = Dense(10, 5)
+
+# 一个 Dense 层，具有 10 个输入特征、5 个输出特征和 ReLU 激活。
+layer_with_relu = Dense(10, 5, relu)
+```
+
+`Dense` 的第一个参数 (parameter)是输入维度（输入数据的特征数量），第二个是输出维度（此层将输出的特征数量）。可选的第三个参数是激活函数。如果省略，Flux.jl 会使用 `identity`，这意味着该层执行纯线性变换：$y = Wx + b$。
+
+### 将层应用于数据
+
+Flux.jl 的层是可调用对象。这意味着您可以将一个层应用于输入数据，就像层本身是一个函数一样。
+
+让我们看看如何通过 `layer_linear` 传递数据：
+
+```julia
+# 创建一些随机输入数据。
+# 假设一个批次包含 3 个样本，每个样本有 10 个特征。
+# Flux 通常期望数据以 (features, batch_size) 列的形式组织。
+input_data = rand(Float32, 10, 3) # 10 个特征，3 个样本
+
+# 将输入数据通过层
+output_data = layer_linear(input_data)
+
+println("输入数据维度：", size(input_data))
+println("输出数据维度：", size(output_data))
+```
+
+这将产生：
+
+```
+Input data dimensions: (10, 3)
+Output data dimensions: (5, 3)
+```
+
+如预期，`Dense(10, 5)` 层将我们的输入数据从每个样本 10 个特征转换到每个样本 5 个特征，同时保留了批次大小为 3。
+
+### 内部工作原理：权重 (weight)与偏置 (bias)
+
+当您创建 `Dense` 层时，Flux.jl 会自动初始化其权重 ($W$) 和偏置 ($b$)。默认情况下，权重使用 Glorot 均匀分布（也称为 Xavier 均匀初始化）进行初始化，这是一种有助于训练稳定性的常见做法。偏置通常初始化为零。
+
+这些权重和偏置是层的可学习参数 (parameter)。在训练过程中，优化器会调整这些参数以最小化模型的误差。
+
+您可以使用 `Flux.params` 查看层（或整个模型）的参数：
+
+```julia
+# 获取 layer_linear 的参数
+parameters = Flux.params(layer_linear)
+
+println("参数数组数量：", length(parameters)) # 应为 2 个（权重和偏置）
+
+# 查看权重和偏置的维度
+# 第一个参数通常是权重矩阵 W，第二个是偏置向量 b
+W = parameters[1]
+b = parameters[2]
+
+println("权重矩阵 (W) 维度：", size(W)) # （输出特征，输入特征）-> (5, 10)
+println("偏置向量 (b) 维度：", size(b))   # （输出特征，1）-> (5, 1)
+```
+
+权重矩阵 $W$ 的维度将是 `(out_features, in_features)`，偏置向量 (vector) $b$ 的维度将是 `(out_features, 1)`。这些参数内部存储在 `Dense` 层结构中，并由 Flux 的自动微分系统 Zygote.jl 自动跟踪，这对于基于梯度的优化很重要。
+
+### `Dense` 层的可视化
+
+`Dense` 层的操作可以可视化为一组输入节点与一组输出节点的完全连接。每个连接都有一个权重 (weight)，并且每个输出节点都有一个偏置 (bias)并应用一个激活函数 (activation function)。
+
+> 每个输入神经元 $x_i$ 都连接到每个输出神经元 $y_j$。输出 $y_j$ 通过对所有输入进行加权求和、添加偏置 $b_j$，然后应用激活函数 $\sigma$ 来计算。
+
+### 为什么称之为“简单”层？
+
+我们称 `Dense` 层为“简单”主要是因为它们直接的全连接结构。它们均匀处理所有输入特征，不假设输入数据有任何特定结构，例如空间局部性（用于图像）或序列顺序（用于时间序列或文本）。
+
+Flux.jl 提供一系列丰富的层，为更具体的数据类型和任务量身定制：
+
+- **卷积层** (`Conv`) 用于处理网格状数据，如图像。
+- **循环层** (`RNN`, `LSTM`, `GRU`) 用于处理序列数据。
+- **池化层** (`MaxPool`, `MeanPool`) 通常与卷积层结合使用。
+
+这些更专业的层也是基本的构建块，但 `Dense` 层是一个很好的起点，并经常在更大、更复杂的结构中用作组成部分，通常作为最终的分类或回归阶段。
+
+理解如何定义、使用和查看 `Dense` 层为您提供了扎实的入门知识。在接下来的几节中，我们将更详细地了解激活函数 (activation function)，并学习如何使用 `Chain` 将多个层组合成一个连贯的模型。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 6
+  为神经网络层，包括全连接层、权重、偏置和激活函数，提供了全面的理论和数学基础。
+- [Layers and Models](https://fluxml.ai/Flux.jl/stable/layers/) — The Flux.jl Contributors (2025)
+  Publisher: Flux.jl Documentation
+  Flux.jl的官方文档，详细介绍了`Dense`层的构造器、参数和行为，是其实现方式的权威指南。
+- [Understanding the difficulty of training deep feedforward neural networks](http://www.jmlr.org/proceedings/papers/v9/glorot10a.html) — Xavier Glorot, Yoshua Bengio (2010)
+  Journal: Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics (AISTATS 2010); Publisher: JMLR.org; Volume: 9; Pages: 249-256
+  这篇开创性论文提出了Glorot（Xavier）神经网络权重初始化策略，Flux.jl中`Dense`层的默认设置即采用此策略。
+- [Neural Networks: The Basics](https://cs231n.github.io/neural-networks-1/) — Andrej Karpathy, Justin Johnson, and Serena Yeung (2023)
+  对神经网络的基本概念进行了清晰易懂的介绍，包括全连接层的结构和运作方式、权重和偏置。

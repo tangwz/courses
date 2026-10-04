@@ -1,0 +1,194 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "preparing-sequence-data"
+lesson: "preprocessing-time-series-data"
+sourceId: 2626
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-8-preparing-sequence-data/preprocessing-time-series-data"
+title: "时间序列数据预处理"
+description: "介绍时间序列数据的具体预处理步骤，例如归一化和窗口化。"
+order: 9
+plots: []
+sourceHash: "804d3001c24be52292bb947108ccbbd8615c42f30094e27ffe7bb7abb79e4ec5"
+sourceCorrections: []
+---
+
+文本数据需要分词 (tokenization)和嵌入 (embedding)，而时间序列数据在使用循环神经网络 (neural network)（RNN）前，也有其特有的预处理要求。时间序列通常由在连续时间点上获取的测量值构成，每个步骤可能记录多个变量。与神经网络中使用的其他数据类型一样，数值稳定性和一致的特征表示是必需的。此外，我们需要将时间序列的连续数据流构造为适合RNN输入的离散序列。
+
+本节介绍时间序列数据的两个主要预处理步骤：归一化 (normalization)和窗口化。我们还将简要谈及特征处理和潜在的缺失值问题。
+
+## 归一化 (normalization)和缩放
+
+神经网络 (neural network)（包括RNN）在输入特征处于相似尺度时，通常训练效果更好。时间序列数据的特征值可能存在明显不同的范围（例如，摄氏温度与帕斯卡大气压）。大的输入值可能导致大的梯度，潜在地引起训练不稳定（梯度爆炸），而非常小的值可能会减慢学习速度。
+
+两种常见的缩放技术是最小-最大缩放和标准化：
+
+### 最小-最大缩放
+
+此方法将数据缩放到固定范围，通常是[0, 1]或[-1, 1]。缩放到[0, 1]的公式是：
+
+
+$$
+X_{缩放} = \frac{X - X_{最小值}}{X_{最大值} - X_{最小值}}
+$$
+
+
+其中，$X_{最小值}$和$X_{最大值}$是**训练数据集**中该特征的最小值和最大值。
+
+- **优点**：保证数据落在特定范围内，这对于某些激活函数 (activation function)（如sigmoid函数，尽管在现代RNN单元如LSTM/GRU中较少见，它们通常使用tanh）可能很有益处。
+- **缺点**：对异常值高度敏感。训练集中的单个极端值可能会将其余数据压缩到一个非常小的范围。未来数据的确切最小值/最大值可能无法提前得知。
+
+### 标准化（Z-分数归一化 (normalization)）
+
+此方法将数据缩放，使其均值为0，标准差为1。公式为：
+
+
+$$
+X_{缩放} = \frac{X - \mu}{\sigma}
+$$
+
+
+其中，$\mu$是**训练数据集**中该特征的均值，$\sigma$是标准差。
+
+- **优点**：与最小-最大缩放相比，对异常值不那么敏感。将数据集中在零附近。这是一种非常普遍且通常有效的选择。
+- **缺点**：不保证缩放后的数据具有固定范围。
+
+### 重要考量：拟合缩放器
+
+时间序列（以及大多数其他机器学习 (machine learning)数据）预处理中的一个重要之处在于，您必须**仅在训练数据上拟合缩放器（计算$\mu$、$\sigma$、$X_{最小值}$、$X_{最大值}$）**。然后，您使用这个*已拟合*的缩放器来转换训练集、验证集和测试集。如果在包括验证或测试数据在内的整个数据集上拟合缩放器，会导致未来或未见数据的信息泄露到训练过程中，从而得出过于乐观的性能评估。
+
+```python
+# 使用scikit-learn的Python示例
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
+# 假设train_data, validation_data, test_data是NumPy数组
+# 在窗口化之前的形状可能为 (样本数量, 特征数量)
+
+scaler = StandardScaler()
+
+# 仅在训练数据上拟合
+scaler.fit(train_data)
+
+# 将*相同*的已拟合缩放器应用于所有数据集
+train_scaled = scaler.transform(train_data)
+validation_scaled = scaler.transform(validation_data)
+test_scaled = scaler.transform(test_data)
+
+# 稍后，当对新数据进行预测时，使用相同的缩放器：
+# new_data_scaled = scaler.transform(new_data)
+
+# 如有需要，将预测结果还原到原始尺度：
+# predictions_original_scale = scaler.inverse_transform(predictions_scaled)
+```
+
+## 窗口化：创建输入/输出序列
+
+RNN按序列处理数据。对于典型的时间序列预测任务，我们不会将整个历史数据作为一个序列输入。相反，我们使用“滑动窗口”方法来生成多个较小的输入序列及其对应的目标值。
+
+假设您有一个单变量时间序列（每个时间步一个测量值）：`[10, 20, 30, 40, 50, 60, 70, 80]`。
+
+我们需要决定：
+
+1. **输入窗口大小（回溯期）**：模型应使用多少个过去时间步作为输入特征来做出预测（$N_{in}$）。
+2. **输出范围**：我们希望预测未来多少个时间步（$N_{out}$）。为简单起见，我们先从预测单个下一个时间步开始（$N_{out}=1$）。
+
+我们选择输入窗口大小 $N_{in} = 3$ 和输出范围 $N_{out} = 1$。我们将此窗口在数据上滑动：
+
+- **样本1**：输入 `[10, 20, 30]` -> 目标 `[40]`
+- **样本2**：输入 `[20, 30, 40]` -> 目标 `[50]`
+- **样本3**：输入 `[30, 40, 50]` -> 目标 `[60]`
+- **样本4**：输入 `[40, 50, 60]` -> 目标 `[70]`
+- **样本5**：输入 `[50, 60, 70]` -> 目标 `[80]`
+
+每个“输入 -> 目标”对都成为一个用于训练或评估的样本。输入部分将构成我们RNN输入张量的`时间步`维度。
+
+### 窗口化任务类型
+
+- **多对一**：这是上面的示例。使用多个过去步（`N_{in}`）来预测单个未来步（`N_{out}=1`）。常用于简单预测。RNN通常处理输入序列，然后将一个全连接层应用于最终隐藏状态以生成输出预测。
+- **多对多（单个输出序列）**：多个过去步（`N_{in}`）预测多个未来步（`N_{out} > 1`）。例如，使用3个过去步预测接下来的2个步。
+  - 样本：输入 `[10, 20, 30]` -> 目标 `[40, 50]`
+  - 这通常要求RNN输出一个序列（例如，在Keras/TensorFlow中为中间层设置`return_sequences=True`，或使用特定的解码器结构）。
+- **多对多（对齐 (alignment)输入/输出）**：每个输入时间步都映射到一个输出时间步。这在纯预测中较不常见，但在序列标注等任务中出现。
+
+选择完全取决于您要解决的问题。对于预测，多对一（预测下一步）和多对多（预测多个未来步）是常见的模式。
+
+### 窗口化实现
+
+这通常通过基本的数组操作完成，例如使用NumPy切片或专用库函数（如TensorFlow中的`tf.keras.utils.timeseries_dataset_from_array`）。
+
+```python
+# 用于窗口化（多对一）的Python函数
+def create_windows(data, input_width, label_width, shift):
+    """
+    为时间序列预测创建窗口化数据。
+    参数：
+        data: 时间序列数据（NumPy数组，通常是2D：时间 x 特征）。
+        input_width: 输入窗口中的时间步数。
+        label_width: 输出标签窗口中的时间步数（对于简单的下一步预测通常为1）。
+        shift: 输入窗口末尾与标签窗口开始之间的偏移量。
+               对于预测紧随输入窗口的下一个步，shift=label_width。
+    返回：
+        inputs: 输入窗口的列表或数组。
+        labels: 相应标签的列表或数组。
+    """
+    inputs = []
+    labels = []
+    total_window_size = input_width + shift
+    end_index = len(data) - total_window_size + 1
+
+    for i in range(end_index):
+        input_slice = data[i : i + input_width]
+        label_start_index = i + input_width + shift - label_width
+        label_slice = data[label_start_index : label_start_index + label_width]
+        inputs.append(input_slice)
+        labels.append(label_slice)
+
+    return np.array(inputs), np.array(labels)
+
+# 示例用法：
+# 假设'scaled_data'是我们预处理后的时间序列（例如，形状为 [1000, 1] 或 [1000, num_features]）
+INPUT_WIDTH = 24  # 使用过去24小时的数据
+LABEL_WIDTH = 1   # 预测未来1小时
+SHIFT = 1         # 预测紧随输入窗口的下一步
+
+inputs, labels = create_windows(scaled_data, INPUT_WIDTH, LABEL_WIDTH, SHIFT)
+
+# 结果形状（近似值，取决于总数据长度）：
+# inputs.shape -> (样本数量, INPUT_WIDTH, 特征数量) 例如，(976, 24, 1)
+# labels.shape -> (样本数量, LABEL_WIDTH, 特征数量) 例如，(976, 1, 1)
+# 如果label_width为1，通常标签会被压缩：(样本数量, 特征数量)
+```
+
+现在这个`inputs`数组的形状是 `(样本数量, 时间步长, 特征数量)`，这正是RNN层所期望的（在分组为批次之后）。
+
+## 时间戳和特征处理
+
+- **时间戳**：如果您的时间序列非常规律（例如，每小时准时测量），时间戳本身可能不需要作为直接输入，因为序列顺序就暗示了时间的进展。但是，如果时间信息被认为有用（例如，季节性、星期几、一天中的时间效应），您可以从时间戳中提取特征（例如，小时的正弦/余弦变换，周末的二进制标志），并将其作为附加输入特征与测量值一起包含。
+- **多变量数据**：如果每个时间步都有多个测量值（例如，温度、湿度、压力），这些自然地构成了输入张量中的`特征`维度。确保所有特征都经过适当缩放（通常使用相同的方法，如标准化，并对训练数据中的每个特征独立进行拟合）。窗口化过程保持不变，但窗口中的每个时间步都将包含多个特征值。
+
+## 处理缺失数据
+
+"时间序列常常包含缺失值。常见策略包括:"
+
+- **前向填充（ffill）**：用最后一个观察到的值替换缺失值。如果样本频率高且值不突然变化，则此方法效果好。
+- **后向填充（bfill）**：用下一个观察到的值替换缺失值。
+- **插值**：根据周围点估算缺失值（例如，线性插值）。
+- **均值/中位数填充**：用该特征的均值或中位数（从训练集计算）替换缺失值。由于其忽略时间动态，此方法对时间序列通常效果较差。
+
+通常最好在缩放和窗口化*之前*处理缺失值，尽管具体选择取决于数据的性质和缺失的程度。如果使用填充，请记住这也为您的数据引入了假设。遮蔽（在文本填充部分已介绍）有时可以适应缺失步，但标准RNN层可能不支持，除非进行自定义实现或使用特定框架功能。
+
+通过应用归一化 (normalization)和窗口化，您可以将原始时间序列测量值转换为结构化、缩放后的序列，这些序列可用于训练LSTMs和GRUs等高效的循环模型。请记住，在训练、验证和测试数据集中一致地应用这些步骤，并且始终仅从训练部分获取缩放参数 (parameter)和填充统计数据。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  为神经网络提供了全面的理论基础，包括关于输入归一化以实现稳定高效训练的讨论，与“归一化和缩放”部分相关。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125965/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  提供了数据预处理的实用示例和最佳实践，包括缩放技术和为深度学习模型准备时间序列数据，与“归一化和窗口化”的实现保持一致。
+- [Forecasting: Principles and Practice](https://otexts.com/fpp3/) — Rob J Hyndman and George Athanasopoulos (2021)
+  Publisher: OTexts
+  一本备受推崇的时间序列分析和预测资源，涵盖数据特性、缺失值处理以及任何时间序列建模基础的通用准备策略。
+- [3.3. Preprocessing data - scikit-learn 1.3.2 documentation](https://scikit-learn.org/stable/modules/preprocessing.html) — scikit-learn developers (2023)
+  官方文档提供了各种预处理转换器的详细解释和示例，包括StandardScaler和MinMaxScaler，强调了在训练集和测试集上正确使用的方法。

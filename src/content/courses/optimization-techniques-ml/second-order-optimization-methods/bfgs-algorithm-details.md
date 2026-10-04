@@ -1,0 +1,108 @@
+---
+course: "optimization-techniques-ml"
+chapter: "second-order-optimization-methods"
+lesson: "bfgs-algorithm-details"
+sourceId: 1250
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-2-second-order-optimization-methods/bfgs-algorithm-details"
+title: "BFGS算法详解"
+description: "Broyden–Fletcher–Goldfarb–Shanno (BFGS) 更新公式与算法的详细说明。"
+order: 5
+plots: []
+sourceHash: "3d39bb0f0e50c8c2fed1ce0a2a35a95240ed078dd9c2ed7a279b742900ce6839"
+sourceCorrections: []
+---
+
+Broyden–Fletcher–Goldfarb–Shanno (BFGS) 算法是一种非常有效且应用广泛的优化技术，属于拟牛顿法。这类方法通过近似海森矩阵来改进优化过程。与牛顿法不同，牛顿法需要在每一步计算并求逆真实的海森矩阵 $\nabla^2 f(x)$，BFGS 仅利用一阶梯度信息，逐步构建对逆海森矩阵 $H_k$ 的近似。这避免了计算真实海森矩阵所带来的巨大计算量。
+
+### 主要思想：逆海森矩阵的近似
+
+牛顿法中的更新方向为 $p_k = -[\nabla^2 f(x_k)]^{-1} \nabla f(x_k)$。BFGS 的目标是用一个计算和更新成本较低的矩阵 $H_k$ 来替代成本高昂的逆海森项 $[\nabla^2 f(x_k)]^{-1}$。搜索方向因此变为：
+
+
+$$
+p_k = -H_k \nabla f(x_k)
+$$
+
+
+主要难点在于如何在每次迭代中将 $H_k$ 更新为 $H_{k+1}$，使其能有效反映曲率信息，与真实的逆海森矩阵相似。
+
+### 割线方程
+
+拟牛顿法，包括BFGS，通常受限于**割线方程**。这个方程关联了梯度 $\nabla f$ 的变化与参数 (parameter)向量 (vector) $x$ 的变化。设 $s_k = x_{k+1} - x_k$ 为所采取的步长， $y_k = \nabla f(x_{k+1}) - \nabla f(x_k)$ 为梯度的变化。一个二阶泰勒展开式引出了以下关系：
+
+
+$$
+\nabla f(x_{k+1}) - \nabla f(x_k) \approx \nabla^2 f(x_{k+1}) (x_{k+1} - x_k)
+$$
+
+
+重新排列后得到 $\nabla^2 f(x_{k+1}) s_k \approx y_k$。如果我们将步长 $k+1$ 处的海森近似记为 $B_{k+1}$（近似 $\nabla^2 f(x_{k+1})$），则割线方程要求 $B_{k+1} s_k = y_k$。相应地，对于逆海森近似 $H_{k+1} = B_{k+1}^{-1}$，割线方程变为：
+
+
+$$
+H_{k+1} y_k = s_k
+$$
+
+
+这个条件保证了更新后的近似 $H_{k+1}$ 正确地将观察到的梯度变化 $y_k$ 与所采取的步长 $s_k$ 关联起来。
+
+### BFGS更新公式
+
+BFGS算法为逆海森近似 $H_k$ 提供了一个特定的二阶更新规则。给定当前的近似 $H_k$、步长 $s_k$ 和梯度差 $y_k$，下一个近似 $H_{k+1}$ 的计算方式如下：
+
+
+$$
+H_{k+1} = \left(I - \frac{s_k y_k^T}{y_k^T s_k}\right) H_k \left(I - \frac{y_k s_k^T}{y_k^T s_k}\right) + \frac{s_k s_k^T}{y_k^T s_k}
+$$
+
+
+我们来分析这个公式：
+
+1. **输入：** 它使用前一个逆海森近似 $H_k$、步长向量 (vector) $s_k$ 和梯度差向量 $y_k$。
+2. **曲率条件：** 更新要求 $y_k^T s_k > 0$。这个条件与函数沿搜索方向的曲率有关。如果初始的 $H_0$ 是正定的，并且使用了合适的线搜索（满足Wolfe条件），它能确保更新保持 $H_k$ 的正定性。$H_k$ 的正定性保证了搜索方向 $p_k = -H_k \nabla f(x_k)$ 是一个下降方向。
+3. **二阶更新：** 更新通过添加两个对称的一阶矩阵来修改 $H_k$。
+4. **性质：** 结果 $H_{k+1}$ 是对称的，并满足割线方程 ($H_{k+1} y_k = s_k$)。
+
+尽管该公式看起来复杂，但其结构旨在将 $(s_k, y_k)$ 对中包含的新曲率信息融合进来，同时最大程度地减少对其他方向上前一个近似 $H_k$ 的干扰。
+
+### BFGS算法步骤
+
+BFGS优化的迭代过程通常如下：
+
+1. **初始化：** 选择一个起始点 $x_0$。初始化逆海森近似 $H_0$。一个常见选择是单位矩阵 $H_0 = I$。设置迭代计数器 $k=0$。
+2. **计算搜索方向：** 计算下降方向 $p_k = -H_k \nabla f(x_k)$。
+3. **线搜索：** 沿方向 $p_k$ 找到一个合适的步长 $\alpha_k > 0$。这通常通过一个满足Wolfe条件的线搜索算法完成，这有助于保证稳定性并保持海森近似的正定性。常见选择包括回溯线搜索。
+4. **更新位置：** 更新参数 (parameter)向量 (vector)：$x_{k+1} = x_k + \alpha_k p_k$。
+5. **检查收敛：** 评估终止标准（例如，$\|\nabla f(x_{k+1})\| < \epsilon$，达到最大迭代次数， $x$ 或函数值变化很小）。如果收敛，则停止。
+6. **计算更新向量：** 定义 $s_k = x_{k+1} - x_k = \alpha_k p_k$ 和 $y_k = \nabla f(x_{k+1}) - \nabla f(x_k)$。
+7. **检查曲率条件：** 如果 $y_k^T s_k > 0$：
+   - **更新逆海森：** 使用上面显示的BFGS更新公式计算 $H_{k+1}$。
+8. **否则（曲率条件失败）：** 跳过更新（保持 $H_{k+1} = H_k$）或采用不同策略处理这种情况。如果使用了合适的线搜索，这种情况很少发生。
+9. **递增并循环：** 设置 $k = k + 1$ 并返回步骤2。
+
+> 一个图示，描绘了BFGS优化算法中包含的迭代步骤。
+
+### 优点与缺点
+
+**优点：**
+
+- **无需计算/求逆海森：** 与其他拟牛顿法一样，BFGS 避免了对 $n \times n$ 海森矩阵的直接计算、存储和求逆。它仅需要梯度计算。
+- **快速收敛：** BFGS 在接近最小值时通常表现出超线性收敛速度（快于线性，慢于二次方），这使得它在许多问题上比梯度下降 (gradient descent)等一阶方法快得多。
+- **鲁棒性：** 它通常被认为是解决平滑、无约束问题最有效的通用优化算法之一。
+
+**缺点：**
+
+- **内存成本：** BFGS 的主要不足之处在于需要存储和更新稠密的 $n \times n$ 逆海森近似 $H_k$。对于机器学习 (machine learning)中常见的高维问题（其中参数 (parameter)数量 $n$ 可以是数百万或数十亿），由于内存需求 ($O(n^2)$)，存储此矩阵变得不可行。
+- **每次迭代的计算成本：** 虽然比牛顿法便宜，但更新 $H_k$ 涉及矩阵-向量 (vector)和外积运算，每次迭代的计算成本为 $O(n^2)$。计算搜索方向 $p_k = -H_k \nabla f(x_k)$ 也需要 $O(n^2)$ 次运算。对于非常大的 $n$，这仍然可能成本过高。
+- **线搜索要求：** BFGS 依赖于相当准确的线搜索（通常满足Wolfe条件）来保证收敛并保持 $H_k$ 的正定性。
+
+高维情况下稠密 $H_k$ 矩阵所带来的巨大内存和计算成本直接促使了有限内存BFGS (L-BFGS) 的发展，我们将在下一节讨论它。L-BFGS 保留了BFGS 的许多优点，同时大幅降低了内存占用。
+
+## 参考资料
+
+- [Conditioning of quasi-Newton methods for function minimization](https://doi.org/10.1090/S0025-5718-1970-0274531-X) — David F. Shanno (1970)
+  Journal: Mathematics of Computation; Volume: 24; Pages: 647-656; DOI: [10.1090/S0025-5718-1970-0274531-X](https://doi.org/10.1090/S0025-5718-1970-0274531-X)
+  介绍BFGS更新公式的原始论文之一，对该方法的发展很重要。
+- [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf) — Stephen Boyd and Lieven Vandenberghe (2004)
+  Publisher: Cambridge University Press
+  优化领域的一本基础教材，对机器学习尤其适用。涵盖了凸优化并讨论了拟牛顿方法。

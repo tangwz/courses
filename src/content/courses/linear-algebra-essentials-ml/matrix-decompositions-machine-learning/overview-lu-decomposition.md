@@ -1,0 +1,88 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "matrix-decompositions-machine-learning"
+lesson: "overview-lu-decomposition"
+sourceId: 1536
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-6-matrix-decompositions-machine-learning/overview-lu-decomposition"
+title: "LU 分解概述"
+description: "简要介绍 LU 分解（A = LU）及其在线性系统求解中的应用。"
+order: 7
+plots: []
+sourceHash: "b30cd63d36313eb6ed62d5377f920086cf02392703a6b2d67af44a90aa7ddc54"
+sourceCorrections: []
+---
+
+尽管奇异值分解（SVD）提供了一种对任意矩阵进行分析的有效方法，但LU 分解提供了一种不同且高效的分解方法，专为方阵和求解线性系统设计。它是一种常用算法，在数值软件中常常在幕后运行。
+
+LU 分解将一个方阵 $A$ 分解为两个矩阵的乘积：一个下三角矩阵 $L$ 和一个上三角矩阵 $U$。
+
+$A = LU$
+
+这里：
+
+- $L$ 是一个**下三角矩阵**。这意味着主对角线*上方*的所有元素都为零。通常，$L$ 的主对角线元素被设置为 1（这种特定形式称为 Doolittle 分解）。
+  
+  $$
+  L = \begin{bmatrix}
+  1 & 0 & 0 & \dots & 0 \\
+  l_{21} & 1 & 0 & \dots & 0 \\
+  l_{31} & l_{32} & 1 & \dots & 0 \\
+  \vdots & \vdots & \vdots & \ddots & \vdots \\
+  l_{n1} & l_{n2} & l_{n3} & \dots & 1
+  \end{bmatrix}
+  $$
+  
+- $U$ 是一个**上三角矩阵**。这意味着主对角线*下方*的所有元素都为零。
+  
+  $$
+  U = \begin{bmatrix}
+  u_{11} & u_{12} & u_{13} & \dots & u_{1n} \\
+  0 & u_{22} & u_{23} & \dots & u_{2n} \\
+  0 & 0 & u_{33} & \dots & u_{3n} \\
+  \vdots & \vdots & \vdots & \ddots & \vdots \\
+  0 & 0 & 0 & \dots & u_{nn}
+  \end{bmatrix}
+  $$
+  
+
+### 为什么将 A 分解为 L 和 U？
+
+LU 分解的主要优点在于求解形式为 $Ax = b$ 的线性方程组。如果我们能将 $A$ 写成 $LU$，则原方程变为：
+
+$LUx = b$
+
+求解这个方程可能看似增加了复杂性，但它实际上通过将其分解为两个更简单的步骤来简化过程：
+
+1. **求解 $Ly = b$ 以得到 $y$**：定义一个中间向量 (vector) $y = Ux$。由于 $L$ 是下三角矩阵，我们可以使用一种称为**前向代入法**的方法，从 $y_1$ 到 $y_n$ 依次求解 $y$ 的元素。这计算成本很低。
+2. **求解 $Ux = y$ 以得到 $x$**：现在我们有了 $y$，我们求解原始的未知向量 $x$。由于 $U$ 是上三角矩阵，我们可以使用**后向代入法**，从 $x_n$ 到 $x_1$ 依次求解 $x$ 的元素。这计算成本也很低。
+
+> LU 分解将求解 $Ax=b$ 的问题转换为涉及三角矩阵的两个顺序求解过程，使用前向和后向代入法会快得多。
+
+如果您需要为*相同*的矩阵 $A$ 但*多个不同*的向量 $b$ 求解 $Ax = b$，这个两步过程尤其高效。您只需对 $A$ 进行一次计算量较大的 LU 分解，然后对每个新的 $b$ 重复执行快速的前向和后向代入步骤。
+
+### 存在性与变体
+
+LU 分解并非适用于所有方阵。例如，如果在分解过程中（这与高斯消元法有关）枢轴位置出现零，则基本算法会失效。
+
+在实际应用中，LU 分解通常会进行**主元选择**（pivoting）。这包括在分解过程中交换矩阵 $A$ 的行，以确保数值稳定性，并避免除以小主元或零主元。行交换可以用**置换矩阵** $P$ 来表示。由此得到的分解通常表示为：
+
+$PA = LU$
+
+其中 $P$ 是一个重新排列 $A$ 的行的矩阵。求解 $Ax=b$ 随后变为求解 $PAx = Pb$，其过程类似：先使用前向代入法求解 $Ly = Pb$，然后使用后向代入法求解 $Ux = y$。大多数数值计算库都实现了带主元选择的 LU 分解。
+
+尽管与 SVD 或特征分解相比，LU 分解在高级机器学习 (machine learning)模型设计中不那么直接可见，但 LU 分解是数值线性代学中一个基础工具。它常在库（如 NumPy 和 SciPy）的底层使用，用于求解各种优化问题和机器学习算法中中间计算产生的线性系统，例如在线性回归中求解正规方程。了解其原理有助于认识这些底层求解器的效率。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/linearalgebra) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  广泛使用的线性代数教材，包含对LU分解、其计算过程及前向/后向代换的详细阐述。
+- [Numerical Linear Algebra](https://epubs.siam.org/doi/book/10.1137/1.9780898719574) — Lloyd N. Trefethen and David Bau III (1997)
+  Publisher: Society for Industrial and Applied Mathematics (SIAM); Pages: XII + 361; DOI: [10.1137/1.9780898719574](https://doi.org/10.1137/1.9780898719574)
+  数值线性代数的标准教材，严谨地阐述了LU分解、其稳定性、主元策略和计算考量。
+- [scipy.linalg.lu](https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.lu.html) — The SciPy community (2024)
+  Publisher: SciPy Project
+  SciPy LU分解函数的官方文档，提供实际使用细节、参数以及包含主元法的实现说明。
+- [18.06 Linear Algebra, Fall 2011](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  一门关于LU分解、高斯消元法和线性方程组求解的综合性在线课程，包含视频讲座和详细讲义。

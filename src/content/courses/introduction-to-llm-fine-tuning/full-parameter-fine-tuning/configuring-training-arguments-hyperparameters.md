@@ -1,0 +1,126 @@
+---
+course: "introduction-to-llm-fine-tuning"
+chapter: "full-parameter-fine-tuning"
+lesson: "configuring-training-arguments-hyperparameters"
+sourceId: 7277
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-llm-fine-tuning/chapter-3-full-parameter-fine-tuning/configuring-training-arguments-hyperparameters"
+title: "配置训练参数及超参数"
+description: "关于如何设置学习率、批处理大小、训练轮次以及其他主要超参数以实现有效训练的指南。"
+order: 4
+plots: ["plots/7277-0.json"]
+sourceHash: "3807fe8b3774c10ebddbb9d95f8d798d9937fc9e0a8567a434d291a5dbf1d5f2"
+sourceCorrections: []
+---
+
+微调 (fine-tuning)模型不仅仅是输入数据；它关乎精确地引导其学习过程。您选择的超参数 (parameter) (hyperparameter)是指导优化的控制项，它们直接影响模型权重 (weight) $\theta$ 在每一步中的更新方式。选对数值通常决定了模型是成为表现优秀的专业模型，还是无法收敛或泛化能力差的模型。这些设置决定了训练运行的速度、稳定性和最终成功。
+
+在Hugging Face的`transformers`库中，这些设置被方便地整合到`TrainingArguments`类中。让我们来看看进行全参数微调时，您需要配置的那些最有影响力的参数。
+
+### 学习率
+
+学习率，在梯度下降 (gradient descent)方程中表示为 $\eta$，可能是影响最大的超参数 (parameter) (hyperparameter)。它决定了模型为最小化损失函数 (loss function)而采取的步长。
+
+- **较高的学习率** 可能导致训练不稳定，损失值会不规律地大幅波动甚至发散。模型可能跳过最优权重 (weight)配置。
+- **较低的学习率** 可能使训练速度过慢，需要更多训练轮次才能达到良好解。它也有陷入局部最小值的风险。
+
+对于大型语言模型，较小的学习率几乎总是正确的选择。由于预训练 (pre-training)模型已经过高度优化，激进的更新可能会破坏其权重中存储的有益知识。全参数微调 (fine-tuning)的常见起始学习率在 $1e-5$ 到 $5e-5$ 之间。
+
+> 示例说明不同学习率如何影响损失函数达到最小值。最优学习率可有效收敛，而低学习率则收敛缓慢，高学习率则可能不稳定。
+
+### 学习率调度器
+
+相较于使用固定的学习率，采用学习率调度器是常规做法，它在训练期间调整 $\eta$ 的值。一种普遍采用的策略是**线性预热后衰减**。
+
+- **预热（Warmup）：** 在最初的几百或几千步 (`warmup_steps`) 中，学习率从0逐渐增加到其目标值。这可以避免模型在刚开始适应新数据时出现大的、破坏性的更新，有助于稳定训练过程。
+- **衰减（Decay）：** 预热阶段结束后，学习率会逐渐降低，通常是线性或遵循余弦曲线。这使得模型在接近最优解时能进行更精细、更准确的调整。
+
+
+
+![学习率调度：预热与衰减](plots/7277-0.json)
+
+
+
+> 一个典型的学习率调度方案，在最初的1000步进行线性预热，随后在剩余训练中线性衰减。
+
+### 批处理大小
+
+批处理大小（`per_device_train_batch_size`）决定了在模型权重 (weight)更新前处理多少数据样本。该参数 (parameter)直接影响内存使用和训练动态。
+
+- **较大的批处理大小：** 需要更多GPU内存，但能提供更准确的梯度估计，这可能带来更稳定、更快的收敛。
+- **较小的批处理大小：** 内存占用较少，但从少量样本计算出的梯度“噪声”较大，可能导致训练稳定性下降。
+
+全参数微调 (fine-tuning)对内存要求高，常迫使您使用较小的批处理大小（例如1、2或4）。如果您的GPU内存无法支持期望的批处理大小，可以使用**梯度累积**。通过将`gradient_accumulation_steps`设置为4或8等值，您可以指示训练器计算多个小批次的梯度，并在累积梯度后才执行权重更新。这实际上模拟了更大的批处理大小，而没有相应的内存开销。有效批处理大小变为 `per_device_train_batch_size * gradient_accumulation_steps`。
+
+### 训练轮次
+
+一个训练轮次（`num_train_epochs`）表示对整个训练数据集的一次完整遍历。训练轮次数量控制模型接受的总训练量。
+
+- **训练轮次过少** 会导致模型训练不足，未能从数据中学到足够信息（欠拟合 (underfitting)）。
+- **训练轮次过多** 可能导致模型记忆训练数据，损害其对新的、未见过样本的泛化能力（过拟合 (overfitting)）。
+
+对于高质量数据集上的指令微调 (fine-tuning)，通常只训练几个轮次，通常在1到3之间。目标是让模型适应，而非从头开始教导。您将在下一节中通过监测验证损失来学习诊断过拟合。
+
+### 权重 (weight)衰减
+
+权重衰减（`weight_decay`）是一种正则化 (regularization)技术，有助于防止过拟合 (overfitting)。它对损失函数 (loss function)中的大权重值施加少量惩罚。这鼓励模型使用更小、分布更均匀的权重，这有助于提升其泛化能力。权重衰减的常见值为0.01。
+
+### `TrainingArguments`示例配置
+
+以下是如何在Python脚本中使用`transformers`库中的`TrainingArguments`类配置这些超参数 (parameter) (hyperparameter)。该对象作为`Trainer`的中央配置中心。
+
+```python
+from transformers import TrainingArguments
+
+# 全参数微调运行的配置
+training_args = TrainingArguments(
+    # 模型检查点保存的输出目录
+    output_dir="./results",
+
+    # --- 核心训练超参数 ---
+    # 遍历训练数据的完整轮次数量
+    num_train_epochs=3,
+    
+    # 每个GPU的训练批处理大小
+    per_device_train_batch_size=2,
+    
+    # 在8步内累积梯度，以模拟更大的批处理大小
+    gradient_accumulation_steps=8, 
+
+    # --- 优化器和调度器超参数 ---
+    # AdamW优化器的初始学习率
+    learning_rate=2e-5,
+    
+    # 防止过拟合的正则化
+    weight_decay=0.01,
+    
+    # 线性预热阶段的步数
+    warmup_steps=500,
+
+    # --- 日志记录和保存 ---
+    # 保存模型检查点的频率
+    save_strategy="epoch",
+    
+    # 记录训练指标的频率
+    logging_steps=50
+)
+
+# 这个 `training_args` 对象随后会被传递给 Trainer
+# 以及模型、数据集和分词器。
+```
+
+找到最优的超参数集合是一个迭代过程。良好的做法是，从针对您所选模型架构和任务已被证明表现良好的值开始。在此基础上，您可以一次尝试一个参数，使用验证集来衡量您的更改效果。这种系统的方法对于成功地使预训练 (pre-training)模型适应您的特定需求至关重要。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础性教材，涵盖深度学习优化原理，包括梯度下降、学习率、批量大小影响以及权重衰减等正则化技术。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2014)
+  Journal: International Conference for Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，这是一种广泛使用的自适应学习率优化算法，在深度学习训练中常与学习率调度器和权重衰减结合使用。
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (2018)
+  Journal: arXiv preprint arXiv:1810.04805; DOI: [10.48550/arXiv.1810.04805](https://doi.org/10.48550/arXiv.1810.04805)
+  介绍了BERT模型及其训练方法，其中包含线性学习率预热后接线性衰减的应用，这是预训练和微调大型语言模型的常用策略。
+- [transformers.TrainingArguments](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments) — Hugging Face (2024)
+  Publisher: Hugging Face
+  Hugging Face `transformers`库中`TrainingArguments`类的官方文档，详细说明了微调模型的配置选项。

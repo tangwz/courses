@@ -1,0 +1,128 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "identifying-mitigating-training-instabilities"
+lesson: "common-symptoms-instability"
+sourceId: 6071
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-24-identifying-mitigating-training-instabilities/common-symptoms-instability"
+title: "不稳定性常见表现"
+description: "识别如 NaN 损失、性能突然下降或指标波动等迹象。"
+order: 1
+plots: ["plots/6071-0.json", "plots/6071-1.json"]
+sourceHash: "ab2a66413b23dc0be9e0ce9599e1335b6dfb74950e10e27cb9de0c588c7f8000"
+sourceCorrections: []
+---
+
+识别训练早期不稳定性表现对于避免计算资源浪费，并确保大型语言模型成功开发是基础。虽然监控将在下一节讨论，但了解这些常见*症状*能帮助你快速判断训练过程何时偏离了正常轨道。这些症状通常体现在训练过程中你追踪的主要指标上，尤其是损失函数 (loss function)和梯度统计数据。
+
+### NaN 损失
+
+最明确的灾难性故障迹象可能就是损失计算中出现 `NaN` (非数字) 值。
+
+
+$$
+\text{损失} = \text{NaN}
+$$
+
+
+损失为 `NaN` 通常会立即停止训练过程，因为后续的梯度计算和权重 (weight)更新在数学上变得未定义。这通常表明存在严重的数值问题，例如：
+
+1. **数值溢出：** 操作结果超出了当前浮点格式（例如 FP16、BF16，甚至在极端条件下的 FP32）所能表示的最大值。这可能发生在矩阵乘法或激活函数 (activation function)内部。
+2. **数值下溢：** 操作结果小于（更接近零）最小可表示正值。虽然直接导致 NaN 的可能性较小，但在中间步骤的下溢有时会导致除以零等问题情况。
+3. **无效操作：** 诸如计算零或负数的对数 (`log(0)`)、计算负数的平方根或除以零等数学操作。这些可能由于特定数据点或不稳定的中间激活值而发生。
+
+在训练循环早期检测 `NaN` 很重要。你可以在损失计算后直接添加检查。
+
+```python
+# 在训练循环内（PyTorch 示例）
+outputs = model(inputs)
+loss = loss_function(outputs, targets)
+
+# 检查损失是否为 NaN 或无穷大
+if not torch.isfinite(loss):
+    print(f"检测到不稳定的损失: {loss.item()}。停止训练。")
+    # 在此处添加保存状态、记录详细信息和终止的逻辑
+    break
+
+# 仅当损失有效时才进行反向传播
+loss.backward()
+# ... 优化器步骤等。
+```
+
+### 损失尖峰
+
+与 `NaN` 损失相比，它并非立即致命，但仍然是一个严重的警告信号，即损失值突然急剧增加，通常被称为“损失尖峰”。损失可能会在后续步骤中部分或完全恢复，或者该尖峰可能预示着完全的发散。
+
+
+
+![带有尖峰的损失曲线](plots/6071-0.json)
+
+
+
+> 典型的损失曲线，显示在第500次迭代附近出现突然尖峰，之后部分恢复。
+
+损失尖峰可能由以下几个因素引起：
+
+1. **有问题的数据批次：** 单个批次包含损坏数据、异常值或与数据集中其余部分显著不同的样本，可能导致模型产生高度不正确的预测，从而在该步骤产生很大的损失值。
+2. **学习率：** 过高的学习率可能导致优化器越过最优值，导致暂时性不稳定。
+3. **梯度问题：** 即使没有变成 `NaN`，梯度也可能暂时性地爆炸，导致大的、破坏稳定性的权重 (weight)更新。这在使用 Adam 等自适应优化器时尤其相关。
+
+虽然单个、孤立的尖峰可能不会完全破坏训练，但频繁的尖峰表明存在需要解决的潜在不稳定性。
+
+### 发散损失
+
+与临时尖峰不同，发散损失是指损失值在多次迭代或多个周期中持续呈上升趋势。这表明模型的性能持续下降，优化过程正在远离而不是趋向于一个好的解决方案。
+
+
+
+![收敛与发散损失对比](plots/6071-1.json)
+
+
+
+> 健康的收敛损失曲线与表示训练失败的发散损失曲线的比较。
+
+发散通常指向更根本的问题：
+
+1. **学习率过高：** 最常见的原因。优化器持续越过最小值点。
+2. **梯度问题：** 梯度计算或缩放中存在持续性问题。
+3. **初始化：** 糟糕的权重 (weight)初始化可能使模型处于梯度持续“上坡”的区域。
+4. **架构缺陷：** 模型组件或归一化 (normalization)层实现不正确。
+5. **数据问题：** 训练数据集中存在的系统性问题。
+
+### 波动损失或指标
+
+另一个症状是当损失值或验证集上的困惑度或准确率等其他评估指标显著波动，而没有显示出明确的改进趋势时。这些值可能在步骤或周期之间上下跳动，从未稳定地下降（对于损失）或上升（对于准确率）。
+
+这种波动通常表明：
+
+1. **学习率过高：** 学习率可能过高，导致优化器重复跨越一个“谷底”，而不是稳定在底部。
+2. **批次间差异：** 数据批次的构成或难度差异大，可能导致性能指标波动。
+3. **正则化 (regularization)不足：** 缺乏适当的正则化可能使模型拟合单个批次中的噪声，导致性能不稳定。
+
+### 潜在梯度问题：爆炸与消失
+
+虽然不总是直接表现为 NaN 损失或尖峰等主要症状，但极端的梯度大小通常是根本原因。
+
+- **梯度爆炸：** 发生在梯度的大小 (
+  $$
+  ||
+  abla L||
+  $$
+  ) 变得过大时。这会导致大的权重 (weight)更新，可能破坏网络稳定性，通常表现为 `NaN` 或损失尖峰。监控梯度范数对于检测这一点很重要。
+- **梯度消失：** 发生在梯度变得极其小，接近零时。这会减慢或停止学习，尤其是在更深层中，因为权重更新变得微不足道。虽然它主要导致停滞而不是突然不稳定，但网络某些部分的严重消失可能间接导致数值问题。
+
+识别这些常见症状是重要的第一步。后续章节将提供关于如何有效监控训练指标的指导，以便及早发现这些迹象并诊断不稳定性或其根本原因。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  本书提供了神经网络训练的基础知识，包括数值稳定性、优化以及梯度消失/爆炸等问题。
+- [On the difficulty of training recurrent neural networks](https://proceedings.mlr.press/v28/pascanu13.pdf) — Razvan Pascanu, Tomas Mikolov, and Yoshua Bengio (2013)
+  Journal: International Conference on Machine Learning (ICML); Publisher: PMLR; Volume: 28; Pages: 1310-1318; DOI: [10.55982/pascanu13](https://doi.org/10.55982/pascanu13)
+  本文介绍了梯度消失/爆炸问题，并提出了梯度裁剪作为解决方案，该方法被广泛用于防止训练不稳定。
+- [Mixed-Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, and Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  本文介绍了混合精度训练技术，对于大型模型中管理数值稳定性并防止NaN损失至关重要。
+- [Automatic Mixed Precision (AMP)](https://pytorch.org/docs/stable/amp.html) — PyTorch Developers (Accessed 2024)
+  Publisher: PyTorch Documentation
+  提供了在PyTorch中使用混合精度的官方指南和实践，涵盖了梯度缩放以防止数值问题和NaN损失。

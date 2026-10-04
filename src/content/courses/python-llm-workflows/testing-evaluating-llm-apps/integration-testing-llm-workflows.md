@@ -1,0 +1,122 @@
+---
+course: "python-llm-workflows"
+chapter: "testing-evaluating-llm-apps"
+lesson: "integration-testing-llm-workflows"
+sourceId: 5213
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-9-testing-evaluating-llm-apps/integration-testing-llm-workflows"
+title: "集成测试流程"
+description: "测试LLM工作流程中不同组件之间交互的策略。"
+order: 3
+plots: []
+sourceHash: "70695915e7dbd3fdd50b81a497df79d6f98b340ab4f49a85c8e7bf6afed7b59a"
+sourceCorrections: []
+---
+
+单元测试有助于独立验证提示模板或输出解析器等单个组件，但它们不能保证这些部分能正常地*协同工作*。集成测试侧重于验证LLM工作流程中不同部分之间的交互和数据流动。为了整体应用可靠性，高度依赖操作序列（例如LangChain中的链或RAG管道）的系统必须确保组件之间的顺利交接。
+
+设想一个典型的RAG工作流程：
+
+1. **用户查询：** 接收输入。
+2. **检索：** 根据查询从向量 (vector)存储中获取相关文档。
+3. **提示构建：** 使用查询和检索到的文档动态创建提示。
+4. **LLM调用：** 构建好的提示被发送到LLM。
+5. **响应生成：** LLM根据提示生成响应。
+6. **输出解析（可选）：** 原始的LLM响应可能会被解析成结构化格式。
+
+单元测试可能会检查检索步骤是否针对已知查询返回*一些*文档，或者提示模板是否正确格式化输入变量。然而，集成测试会检查更大范围的片段，例如：检索器获取的文档是否在发送给LLM的提示中被正确使用？LLM生成的最终响应是否准确反映了检索到的文档信息，并且在需要时是否被正确解析？
+
+### 集成测试对LLM应用重要的原因
+
+- **接口不匹配：** 确保一个组件（例如，检索器）的输出格式与下一个组件（例如，提示模板）的预期输入格式相符。
+- **错误传播：** 检查错误在组件间传递时如何处理。检索过程中出现的错误是正常停止工作流程，还是导致下游出现意外故障？
+- **上下文 (context)处理：** 确认上下文（如检索到的文档或对话历史）在工作流程各阶段中被正确传递和使用。
+- **非确定性影响：** 尽管单个LLM调用是非确定性的，但集成测试可以检查整个工作流程的*结构*是否按预期运行，即使具体文本有所不同。例如，摘要链是否总能产生输出，即使措辞发生变化？
+
+### LLM工作流程集成测试的策略
+
+1. **端到端流程测试：**
+
+   - 定义具有特定输入（例如，用户查询）的测试用例。
+   - 从输入到最终输出运行整个工作流程。
+   - 断言最终输出的条件。由于精确的文本匹配通常不实际，因此侧重于：
+     - **结构正确性：** 输出是否符合预期架构（例如，有效的JSON，特定字段是否存在）？
+     - **信息存在性：** RAG响应是否包含明确来源于预期检索上下文 (context)的信息？摘要是否包含源文本的主要观点？
+     - **约束遵守：** 输出是否遵守了长度限制或语气指示等约束？
+     - **无幻觉 (hallucination)（在可行的情况下）：** 对于RAG，验证输出不与所提供的上下文矛盾。
+2. **模拟外部依赖：**
+
+   - LLM API调用可能很慢、成本高昂，并会引入变数。对于许多集成测试，你可以*模拟*LLM的交互。
+   - 用一个返回预定义、一致响应的模拟对象替换实际的API调用。这使你能够在不涉及调用真实API的不确定性和成本的情况下，测试周围的逻辑（例如，提示构建、输出解析）。
+   - 同样，你也可以模拟向量 (vector)存储或其他外部工具（例如代理使用的搜索API）。
+   - Python的`unittest.mock`库常用于此。
+
+   ```python
+   # 使用 pytest 和 unittest.mock 的示例
+   from unittest.mock import patch
+   import pytest
+
+   # 假设 'my_llm_workflow' 包含要测试的链/代理
+   # 假设该链内部使用名为 'llm' 的 LLM 对象
+   from my_llm_workflow import create_rag_chain 
+
+   @pytest.fixture
+   def mock_llm():
+       # 创建一个模拟 LLM 对象，模拟其行为
+       class MockLLM:
+           def invoke(self, prompt_input):
+               # 根据输入结构或内容模拟响应
+               if "summarize" in prompt_input.lower():
+                    return "这是一个预定义的摘要。"
+               return "这是一个通用的预定义响应。"
+       return MockLLM()
+
+   @pytest.fixture
+   def mock_retriever():
+        # 创建一个模拟检索器
+        class MockRetriever:
+            def get_relevant_documents(self, query):
+                # 返回固定文档用于测试
+                return [{"page_content": "文档片段1。"}, {"page_content": "相关事实2。"}]
+        return MockRetriever()
+
+   # 在测试期间打补丁（patch）实际的 LLM 和 Retriever 实例
+   @patch('my_llm_workflow.llm', new_callable=mock_llm)
+   @patch('my_llm_workflow.retriever', new_callable=mock_retriever)
+   def test_rag_chain_integration(mock_retriever_instance, mock_llm_instance, mock_llm, mock_retriever):
+       # 我们传入模拟实例是为了清晰，尽管打补丁会在测试范围内全局替换它们
+       rag_chain = create_rag_chain(llm=mock_llm, retriever=mock_retriever) 
+
+       query = "告诉我有关主题X的文档内容。"
+       result = rag_chain.invoke({"query": query})
+
+       # 断言侧重于基于模拟的结构或预期内容
+       assert isinstance(result, str)
+       assert "predefined response" in result # 检查模拟 LLM 的输出
+       # 更高级：检查发送给模拟 LLM 的提示是否包含来自 mock_retriever 的文本
+       # （如果模拟已为此设置，则需要检查 mock_llm_instance 的调用）
+   ```
+3. **测试特定交互点：**
+
+   - 除了端到端测试，你还可以测试仅两三个组件之间的交互。例如，测试从检索器 -> 提示模板 -> 格式化提示字符串的流程。
+   - 这有助于将故障隔离到整个工作流程中的特定接口。
+   > 图表显示了一个集成测试，侧重于检索器和提示模板的交互，生成格式化提示，不涉及LLM或解析器。
+
+### 设计集成测试用例
+
+- **识别路径：** 侧重于工作流程中最常见和最重要的路径。
+- **边缘情况：** 考虑可能对组件交互造成压力的输入：空的检索文档、不匹配任何内容的查询、解析器可能难以处理的LLM响应（例如，格式错误的JSON、意外内容）。
+- **变化输入：** 使用少量但多样化的输入集来检查不同情况。
+- **黄金数据集：** 对于某些应用，你可能拥有一个包含输入和输出预期*属性*（不一定是精确输出）的“黄金数据集”。对照此数据集进行测试，以监控回归。
+
+集成测试充当单元测试与完整端到端评估之间的桥梁。通过验证组件如何协同工作，并可能使用模拟来控制变数，你可以在评估最终生成输出的质量之前，对LLM工作流程的结构完整性和预期行为获得信心。
+
+## 参考资料
+
+- [\`unittest.mock\` - mock object library](https://docs.python.org/3/library/unittest.mock.html) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  Python 标准库 `unittest.mock` 的官方文档，对于理解如何在集成测试中有效模拟外部依赖非常重要。
+- [pytest documentation](https://docs.pytest.org/en/stable/) — pytest development team (2024)
+  pytest 框架的官方指南，涵盖了其编写可靠和可扩展测试的功能，包括夹具和模拟集成。
+- [Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  本文提出了一个评估语言模型的综合框架，涵盖了不同的场景和指标，为在集成测试中考虑 LLM 输出的特性以保证质量和可靠性提供了见解。

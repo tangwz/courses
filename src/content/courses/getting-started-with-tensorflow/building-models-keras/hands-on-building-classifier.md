@@ -1,0 +1,179 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "building-models-keras"
+lesson: "hands-on-building-classifier"
+sourceId: 1724
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-3-building-models-keras/hands-on-building-classifier"
+title: "动手实践：构建分类器"
+description: "练习使用 Sequential 和 Functional 两种 Keras API 构建简单的图像分类器。"
+order: 7
+plots: []
+sourceHash: "eaf9263d874c9046fce4261375e576579553b8752d20ea7fefa2f4a7bef9071c"
+sourceCorrections: []
+---
+
+一个简单的图像分类器使用 Keras Sequential 和 Functional 两种 API 构建，从而巩固了对如何将层组装成可用模型架构的理解。构建过程中将使用 Fashion MNIST 数据集，这是一个常用的基准数据集，包含 70,000 张 28x28 像素的灰度图像，属于 10 种不同服装类别。核心目标是纯粹构建模型架构；编译、训练和评估将在下一章中讲解。
+
+### 设置和数据准备
+
+首先，我们需要导入 TensorFlow 和所需的 Keras 组件。我们还将直接使用 Keras 数据集模块加载 Fashion MNIST 数据集。
+
+```python
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import numpy as np
+import matplotlib.pyplot as plt
+
+print(f"Using TensorFlow version: {tf.__version__}")
+
+# 加载 Fashion MNIST 数据集
+(x_train, y_train), (x_test, y_test) = keras.datasets.fashion_mnist.load_data()
+
+# 显示数据集基本信息
+print(f"x_train shape: {x_train.shape}") # (60000, 28, 28)
+print(f"y_train shape: {y_train.shape}") # (60000,)
+print(f"Number of training samples: {x_train.shape[0]}")
+print(f"Number of test samples: {x_test.shape[0]}")
+print(f"Number of classes: {len(np.unique(y_train))}") # 10 个类别
+```
+
+该数据集包含 60,000 张训练图像和 10,000 张测试图像。每张图像都是 28x28 像素的灰度图像。标签（`y_train`、`y_test`）是 0 到 9 的整数，代表 10 种服装类别。
+
+在将数据输入神经网络 (neural network)之前，对其进行预处理是标准做法。对于图像数据，这通常包括：
+
+1. **归一化 (normalization)：** 将像素值从 [0, 255] 范围缩放到 [0, 1]。这有助于优化算法更有效地收敛。
+2. **重塑（如有必要）：** 根据输入层类型，我们可能需要重塑数据。对于标准的 Dense 层，我们需要将 28x28 图像展平为 784 像素的 1D 向量 (vector)。
+
+```python
+# 将像素值归一化到 0 到 1 之间
+x_train = x_train.astype("float32") / 255.0
+x_test = x_test.astype("float32") / 255.0
+
+# 定义类别名称（可选，用于可视化）
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+# 让我们可视化一些图像
+plt.figure(figsize=(10,10))
+for i in range(25):
+    plt.subplot(5,5,i+1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(x_train[i], cmap=plt.cm.binary)
+    plt.xlabel(class_names[y_train[i]])
+plt.show()
+```
+
+> Fashion MNIST 训练集中的样本图像及其对应标签。
+
+### 使用 Sequential API 构建分类器
+
+Sequential API 非常适合层呈简单线性堆叠的模型。我们的第一个分类器将遵循以下模式：
+
+1. **Flatten 层：** 将 2D 图像格式（28x28 像素）转换为 1D 数组（784 像素）。这为全连接层准备了数据。
+2. **Dense 层（隐藏层）：** 一个全连接层，包含 128 个单元，并使用 ReLU 激活函数 (activation function)。该层从展平的输入中学习中间表示。
+3. **Dense 层（输出层）：** 一个全连接层，包含 10 个单元（每个类别一个），并使用 Softmax 激活函数。Softmax 将原始输出分数（logits）转换为每个类别的概率，确保它们的和为 1。
+
+```python
+# 定义输入形状（不包括批大小）
+input_shape = (28, 28)
+num_classes = 10
+
+# 使用 Sequential API 构建模型
+sequential_model = keras.Sequential(
+    [
+        keras.Input(shape=input_shape, name="Input_Layer"), # 推荐使用显式输入层
+        layers.Flatten(name="Flatten_Layer"),
+        layers.Dense(128, activation="relu", name="Hidden_Layer_1"),
+        layers.Dense(num_classes, activation="softmax", name="Output_Layer"),
+    ],
+    name="FashionMNIST_Sequential_Classifier"
+)
+
+# 显示模型架构
+print("Sequential 模型概述：")
+sequential_model.summary()
+```
+
+`model.summary()` 输出提供了层、其输出形状和可训练参数 (parameter)数量的简洁概述。请注意 `Flatten` 层如何将形状从 `(None, 28, 28)` 改变为 `(None, 784)`，以及随后的 `Dense` 层如何处理这个 1D 向量 (vector)。形状中的 `None` 代表批大小，它可以变化。
+
+### 使用 Functional API 构建分类器
+
+现在，让我们使用 Functional API 构建完全相同的架构。尽管对于这种简单的线性模型来说有点大材小用，但它展示了另一种语法，对于更复杂的设计（例如，多输入/输出或共享层模型）是必不可少的。
+
+核心思想是定义一个输入张量，然后将层作为函数调用，在它们之间传递张量。
+
+````python
+# 定义输入张量
+inputs = keras.Input(shape=input_shape, name="Input_Tensor")
+
+# 链式连接各层
+x = layers.Flatten(name="Flatten_Layer")(inputs)
+x = layers.Dense(128, activation="relu", name="Hidden_Layer_1")(x)
+outputs = layers.Dense(num_classes, activation="softmax", name="Output_Layer")(x)
+
+# 创建 Model 实例
+functional_model = keras.Model(inputs=inputs, outputs=outputs, name="FashionMNIST_Functional_Classifier")
+
+# 显示模型架构
+print("\nFunctional 模型概述：")
+functional_model.summary()
+
+# 可选：使用 Keras 工具可视化模型结构
+# （需要安装 pydot 和 graphviz：pip install pydot graphviz）
+try:
+    keras.utils.plot_model(functional_model, "functional_model_diagram.png", show_shapes=True)
+    print("\n模型图已保存为 functional_model_diagram.png")
+    # 为保持一致性，显示 Graphviz DOT 格式的图表
+    # 注意：这只是说明性的；plot_model 生成的是图像文件。
+# 我们可以用 Graphviz 表示结构：
+    print("\n模型结构 (Graphviz DOT)：")
+    dot_string = f"""
+    digraph G {{
+      rankdir=TB;
+      node [shape=box, style=filled, fillcolor="#a5d8ff"];
+      Input [label="输入\nshape=(None, 28, 28)"];
+      Flatten [label="展平\nshape=(None, 784)"];
+      Hidden1 [label="Dense (ReLU)\n单元=128\nshape=(None, 128)"];
+      Output [label="Dense (Softmax)\n单元={num_classes}\nshape=(None, {num_classes})"];
+      Input -> Flatten [label=" "];
+      Flatten -> Hidden1 [label=" "];
+      Hidden1 -> Output [label=" "];
+    }}
+    """
+    # 实际的 Graphviz 渲染取决于环境
+# 在此处为了显示目的，打印 DOT 字符串来表示它。
+    # 嵌入示例：
+    # ```graphviz
+    # digraph G {{ rankdir=TB; node [shape=box, style=filled, fillcolor="#a5d8ff"]; Input [label="Input\nshape=(None, 28, 28)"]; Flatten [label="Flatten\nshape=(None, 784)"]; Hidden1 [label="Dense (ReLU)\nunits=128\nshape=(None, 128)"]; Output [label="Dense (Softmax)\nunits=10\nshape=(None, 10)"]; Input -> Flatten; Flatten -> Hidden1; Hidden1 -> Output;}}
+    # ```
+    # print(dot_string) # 打印原始 DOT 字符串以供参考
+    # 一个简单的 Graphviz DOT 表示：
+    print("```graphviz")
+    print('digraph G { rankdir=TB; node [shape=box, style="filled", fillcolor="#a5d8ff"]; Input [label="输入\\nshape=(None, 28, 28)"]; Flatten [label="展平\\nshape=(None, 784)"]; Hidden1 [label="Dense (ReLU)\\n单元=128\\nshape=(None, 128)", fillcolor="#74c0fc"]; Output [label="Dense (Softmax)\\n单元=10\\nshape=(None, 10)", fillcolor="#4dabf7"]; Input -> Flatten; Flatten -> Hidden1; Hidden1 -> Output;}')
+    print("```")
+
+except ImportError:
+    print("\n请安装 pydot 和 graphviz 以可视化模型（'pip install pydot graphviz'）。")
+````
+
+> Functional API 模型结构的图表。输入数据从上到下流经各层。
+
+正如你所见，Functional API 模型的 `model.summary()` 输出与 Sequential API 模型相同。两种方法都得到了相同的架构和参数 (parameter)数量。Functional API 只是提供了一种更灵活的方式来定义层之间的连接。
+
+我们现在已成功使用两种主要的 Keras API 定义了简单图像分类器的架构。你已经了解了如何堆叠层，并理解了 Flatten、Dense 以及 ReLU 和 Softmax 等激活函数 (activation function)在此处的作用。下一步（将在第 4 章中介绍）是使用损失函数 (loss function)和优化器编译这些模型，在 Fashion MNIST 数据集上训练它们，并评估它们的性能。
+
+## 参考资料
+
+- [Keras Sequential model](https://keras.io/api/models/sequential/) — Keras team (2024)
+  Keras Sequential API的官方文档，提供了使用该API构建神经网络的详细指南，涵盖层堆叠和基本模型构建。
+- [Keras Functional API](https://keras.io/guides/functional_api/) — Keras team (2023)
+  Keras Functional API的官方指南，解释了如何创建灵活、非线性的模型架构，并附有实际示例。
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python-second-edition) — François Chollet (2021)
+  Publisher: Manning Publications
+  Keras创建者撰写的综合性教材（第2版），提供了构建和训练深度学习模型的实践示例和理论背景，包括Fashion MNIST示例。
+- [Fashion-MNIST: a Novel Image Dataset for Benchmarking Machine Learning Algorithms](https://arxiv.org/abs/1708.07747) — Han Xiao, Kashif Rasul, and Roland Vollgraf (2017)
+  Journal: arXiv preprint arXiv:1708.07747; DOI: [10.48550/arXiv.1708.07747](https://doi.org/10.48550/arXiv.1708.07747)
+  介绍Fashion MNIST数据集的原始学术论文，详细说明了其特征、收集方法及其作为图像分类任务基准的作用。

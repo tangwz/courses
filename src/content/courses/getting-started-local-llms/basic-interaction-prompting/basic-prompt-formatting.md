@@ -1,0 +1,73 @@
+---
+course: "getting-started-local-llms"
+chapter: "basic-interaction-prompting"
+lesson: "basic-prompt-formatting"
+sourceId: 4284
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-5-basic-interaction-prompting/basic-prompt-formatting"
+title: "提示词排版基础建议"
+description: "使LLM回复更清晰有效的建议，例如使用清晰语言和分隔符。"
+order: 5
+plots: []
+sourceHash: "ba4142f828d97cd08d4f7d0af168d3e0017bfb3093bf432355572f063fbe4718"
+sourceCorrections: []
+---
+
+与本地LLM交互时，主要通过提问和给出基本指示。尽管简单地输入你的要求通常能奏效，但稍加注意提示词 (prompt)的排版方式，能明显提高你获得回复的清晰度和一致性。这就像给出更明确的指引；更明确的指引通常会带来更好的结果。
+
+这里有一些直接的建议，能帮你有效排版提示词：
+
+### 保持清晰直接
+
+最根本的建议是，尽可能清晰直接地说明你的要求。LLM不像人类那样理解暗示或言外之意。避免模糊不清。
+
+- **不够清晰:** "给我讲讲那位法国历史人物。" (哪一位？哪些方面？)
+- **更清晰:** "提供拿破仑·波拿巴的简要生平，侧重其主要军事行动。"
+
+使用简单、常用语言。尽管LLM经过大量文本训练，但使用过于复杂的词汇或专业术语可能不总能产生最佳效果，特别是对于较小的本地模型。
+
+### 使用排版来安排你的提示词 (prompt)
+
+当你的提示词包含多个部分时，例如提供背景信息再提问，使用简单的排版可以帮助LLM理解你请求的结构。
+
+- **换行:** 使用换行符分隔提示词的不同部分。这通常是提高你和模型可读性的最简单方法。
+
+  ```text
+  Context: The quick brown fox jumps over the lazy dog.
+  Instruction: Rewrite the sentence above in the past tense.
+  ```
+- **简单标签:** 使用清晰的标签，如“背景:”、“指示:”、“问题:”、“文本:”来指定不同部分。
+- **项目符号或编号列表:** 如果你要询问多项内容或提供多条信息，列表会非常有效。
+
+  ```text
+  Summarize the following points about running LLMs locally:
+  *   Privacy benefits
+  *   Potential cost savings
+  *   Offline access capability
+  *   Hardware requirements
+  ```
+
+### 将相关信息放在一起
+
+尝试将相关信息集中在提示词 (prompt)中。如果你是在提问前提供背景信息，请先放置背景，然后直接跟随问题。这有助于模型逻辑地处理信息。
+
+### 注意长度
+
+记住上下文 (context)窗口的含义，它是模型的短期记忆。尽管排版有助于整理提示词 (prompt)，但过长或复杂的提示词仍可能考验模型跟踪所有信息的能力。从简单开始，逐步增加复杂性。如果提示词变得非常长，可以考虑将任务分解成更小的步骤或多次互动。
+
+### 尝试并改进
+
+不同的LLM可能对相同的排版有略微不同的回应。对一个模型完美有效的方法，对另一个模型可能效果不佳。不要害怕尝试！
+
+- 尝试用几种不同的方式表达你的请求。
+- 调整你使用的分隔符或标签。
+- 看看添加一个结尾指令，如“提供以下摘要：”是否会改变输出。
+
+提示词 (prompt)的排版并非关于复杂的规则。它是关于清晰的沟通。通过使用换行、标签和清晰语言等简单结构，你可以更有效地引导你的本地LLM，并获得更有用和可预测的结果。随着你持续与模型互动，你会逐渐更好地掌握哪种排版最适合你的特定需求和你使用的模型。
+
+## 参考资料
+
+- [Prompt Engineering Guide](https://learnprompting.org/) — The LearnPrompting Team (2025)
+  一份全面的在线指南，涵盖了基本的提示工程技术和实际应用。
+- [Prompt engineering guide](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2024)
+  Publisher: OpenAI
+  OpenAI 官方文档，提供了设计有效提示词以引导大型语言模型产出所需内容的最佳实践。

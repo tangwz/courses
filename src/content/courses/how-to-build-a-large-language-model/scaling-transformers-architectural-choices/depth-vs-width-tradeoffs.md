@@ -1,0 +1,131 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "scaling-transformers-architectural-choices"
+lesson: "depth-vs-width-tradeoffs"
+sourceId: 6002
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-11-scaling-transformers-architectural-choices/depth-vs-width-tradeoffs"
+title: "深度与宽度取舍"
+description: "分析增加模型深度（层数）与宽度（隐藏尺寸）的影响。"
+order: 2
+plots: ["plots/6002-0.json"]
+sourceHash: "727b376619f064ecf6417cfc3e1fe12106aba2021c16d1695fb530ae4b20284a"
+sourceCorrections: []
+---
+
+在扩展Transformer模型时，可以调整的两个主要架构方面是其深度（层数）和宽度（隐藏表示与前馈网络的尺寸）。扩展法则表明，仅仅增加总参数 (parameter)量并不能说明全部。这些参数在深度和宽度之间的分配，很大程度上影响着模型的行为、训练动态和计算效率。没有一个普遍的最优比例；最佳选择通常取决于具体的任务、数据集、可用计算资源以及所需的推理 (inference)特点。
+
+下面我们来审视这项取舍中涉及的因素。
+
+### 增加模型深度（更多层）
+
+添加更多层（增加编码器或解码器块的数量 $N$），能使模型学习输入数据更复杂、分层级的表示。每层都在前一层执行的转换基础上进行构建，从而实现一个更深的处理管道。
+
+- **潜在优势：**
+
+  - **分层特征学习：** 更深的模型可能更适合捕捉语言中复杂组合结构，其中特征是逐层构建的。
+  - **参数 (parameter)效率（可能）：** 对于某些任务，与较浅、较宽的模型相比，在更深、更窄的模型中可能需要更少的总参数才能达到某个性能水平，尽管并非总是如此。
+- **潜在缺点：**
+
+  - **优化挑战：** 非常深的神经网络 (neural network)由于潜在的梯度消失或梯度爆炸，可能更难训练，尽管残差连接和层归一化 (normalization)（特别是稍后讨论的Pre-LN）等技术很大程度上缓解了这些问题。
+  - **顺序计算：** 前向和反向传播 (backpropagation)涉及顺序处理每层。增加深度会直接增加这个顺序路径的长度，与增加宽度相比，这可能会减慢训练迭代速度，前提是存在并行硬件。
+  - **更长的训练时间：** 即使每次迭代没有慢很多，更深的模型也可能需要更多的训练步骤或周期才能有效收敛。
+
+### 增加模型宽度（更大维度）
+
+增加宽度通常涉及扩大核心嵌入 (embedding)维度（$d_{model}$），并且通常会按比例增加位置前馈网络中的中间维度（$d_{ff}$，通常设置为 $4 \times d_{model}$）。
+
+- **潜在优势：**
+
+  - **每层容量增加：** 每层有更大的容量来学习复杂转换，并在其表示中存储信息。
+  - **并行性：** 在较宽的层内进行的计算（例如，FFN中的大型矩阵乘法）通常可以在单个加速器（GPU/TPU）内的计算单元之间更有效地并行化。
+  - **可能更快的收敛速度（每步）：** 较宽的模型有时在训练步骤方面可能更快地学习某些模式，尽管每一步需要更长时间并使用更多内存。
+- **潜在缺点：**
+
+  - **内存占用：** 模型内存需求，特别是训练期间的激活，随宽度显著增加。前馈层通常主导参数 (parameter)数量和内存使用，随 $d_{model}$ 呈二次方增长（因为 $d_{ff}$ 通常与 $d_{model}$ 成比例）。注意力机制 (attention mechanism)也随 $d_{model}$ 扩展。这会很快成为瓶颈，即使对于中等宽度，也需要更先进的分布式训练策略（如张量并行）。
+  - **计算成本：** 每层的计算成本，尤其是在FFN中（$O(d_{model} \times d_{ff}) \approx O(d_{model}^2)$），随宽度大幅增加。自注意力 (self-attention)机制中的计算也随 $d_{model}$ 扩展。
+  - **注意力复杂度：** 虽然自注意力的二次方复杂度主要与序列长度（$n$）相关，但常数因子涉及 $d_{model}$（$O(n^2 \cdot d_{model})$），因此宽度也增加了这方面的成本。
+
+### 寻找平衡：来自扩展法则的认识
+
+对扩展法则的实证研究，例如 Kaplan 等人 (2020) 的工作，表明在固定计算预算下，为了达到最佳性能，模型大小、数据集大小和训练计算应根据幂律同步扩展。在扩展模型大小时，研究显示，同时增加深度和宽度比仅仅大幅扩展一个维度能带来更好的结果。
+
+例如，像 GPT-3 这样的架构使用较多层数（例如96）*和* 较大的隐藏维度尺寸（例如12288）。精确的比例通常会随着模型的增长而演变；比较 GPT-2 和 GPT-3 显示，深度和宽度都有增加，但并非一定成比例。
+
+The decision often comes down to:
+
+1. **计算预算：** 更宽的模型对内存容量和每层计算要求更高，可能需要更复杂的并行技术（张量并行）。更深的模型则对顺序计算时间要求更高。
+2. **推理 (inference)延迟：** 更深的模型由于其顺序性可能导致更高的延迟，而更宽的模型则可能由于每层的计算需求而导致更高的延迟。
+3. **训练稳定性：** 尽管存在稳定深层模型的技术，但过深的深度有时仍可能带来难题。
+4. **任务要求：** 某些任务可能本质上更受益于分层处理（深度），而另一些任务可能更受益于每一步的更宽表示（宽度）。
+
+### 示例：在PyTorch中配置深度和宽度
+
+在使用PyTorch这样的框架时，深度和宽度通常在模型初始化期间由特定参数 (parameter)控制。考虑 `nn.TransformerEncoder`：
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例参数
+vocab_size = 30000
+d_model = 512      # 模型宽度（嵌入维度）
+nhead = 8          # 注意力头数量（与宽度相关）
+num_encoder_layers = 6 # 模型深度
+dim_feedforward = 2048 # FFN中间层的宽度
+dropout = 0.1
+
+# 输入嵌入
+embedding = nn.Embedding(vocab_size, d_model)
+
+# Transformer 编码器层定义
+encoder_layer = nn.TransformerEncoderLayer(
+    d_model=d_model,
+    nhead=nhead,
+    dim_feedforward=dim_feedforward,
+    dropout=dropout,
+    batch_first=True  # 为了清晰，使用 batch_first=True
+)
+
+# 堆叠层以创建深度
+transformer_encoder = nn.TransformerEncoder(
+    encoder_layer=encoder_layer,
+    num_layers=num_encoder_layers
+)
+
+# 示例用法（需要位置编码、遮罩等）
+# src = torch.randint(0, vocab_size, (32, 100)) # 批次大小 x 序列长度
+# embedded_src = embedding(src)
+# # ... 添加位置编码 ...
+# output = transformer_encoder(embedded_src) # 通过编码器堆栈
+# print(output.shape) # torch.Size([32, 100, 512])
+```
+
+在此代码片段中：
+
+- `num_encoder_layers` 直接控制**深度**。
+- `d_model`、`nhead` 和 `dim_feedforward` 控制**宽度**。
+
+对这些值进行实验对于扩展Transformer模型非常重要。您可以比较一个 `num_encoder_layers=12, d_model=768` 的模型与一个 `num_encoder_layers=24, d_model=512` 的模型，同时保持总参数量或计算成本大致相当，以便通过实验理解这些取舍。
+
+### 可视化取舍
+
+考虑两个参数 (parameter)量大致相似但架构不同的模型：
+
+- **模型 A（深而窄）：** 较多层，较小的隐藏尺寸。
+- **模型 B（浅而宽）：** 较少层，较大的隐藏尺寸。
+
+
+
+![深度与宽度取舍（固定参数）](plots/6002-0.json)
+
+
+
+> 此图表说明，与参数量相似但较浅、较宽的模型（B）相比，一个更深、更窄的模型（A）可能每层内存需求更低，但顺序计算路径更长，而模型 B 则表现出相反的趋势。
+
+总而言之，在深度和宽度之间做出选择是一种权衡。虽然更深的模型提供了进行复杂分层学习的可能性，但它们可能增加顺序计算时间并带来优化难题。更宽的模型每层提供更大的容量，并且可能在内部更好地并行化，但每层会带来显著更高的内存和计算成本。现代大型模型通常会同时扩展这两个维度，这受到扩展法则研究的实证结果指导，并受限于可用的硬件和训练基础设施。通常需要仔细实验才能找到最适合您特定目标的配置。
+
+## 参考资料
+
+- [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361) — Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei (2020)
+  Journal: arXiv preprint arXiv:2001.08361; DOI: [10.48550/arXiv.2001.08361](https://doi.org/10.48550/arXiv.2001.08361)
+  这篇基础论文通过实证研究模型性能如何随模型大小、数据集大小和训练计算量而扩展，为平衡深度和宽度提供了直接相关的见解。

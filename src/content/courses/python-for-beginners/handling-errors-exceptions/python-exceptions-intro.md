@@ -1,0 +1,110 @@
+---
+course: "python-for-beginners"
+chapter: "handling-errors-exceptions"
+lesson: "python-exceptions-intro"
+sourceId: 2381
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-9-handling-errors-exceptions/python-exceptions-intro"
+title: "异常介绍"
+description: "了解什么是异常，以及Python如何在程序运行时发出错误信号。"
+order: 2
+plots: []
+sourceHash: "aecc874be5c95253823b29ae2049193d9b2d2672e7e24cb10e2720cd4ce11c25"
+sourceCorrections: []
+---
+
+即使是精心编写的程序，运行时也可能遇到问题。有些错误，称为语法错误，在程序开始执行前就会被Python捕获。这些通常是拼写错误或代码结构不正确，例如忘记冒号或括号不匹配。Python会立即停止并告知你这些问题。
+
+然而，还有另一类错误只在程序运行时发生。设想一下，要求程序用零除一个数，或者尝试打开一个电脑上不存在的文件。这些情况没有违反Python的语法规则，所以程序会开始运行，但它们代表了在执行过程中发生的不可能或出乎意料的操作。
+
+这些运行时错误在Python中被称为**异常**。异常是在执行过程中检测到的一个事件，它会中断程序指令的正常流程。可以将其理解为Python遇到了一个无法按照标准指令处理的情况，并发出信号表明发生了异常事件。
+
+### 语法错误与异常
+
+区分语法错误和异常很重要：
+
+- **语法错误：** 在执行开始*前*被捕获。它们会完全阻止程序运行。Python会标识出语法问题的所在。
+
+  ```python
+  # 语法错误示例（缺少冒号）
+  age = 30
+  if age > 18 # 这里缺少冒号！
+      print("Adult")
+  ```
+
+  运行这段代码会在任何事情发生前导致 `SyntaxError`。
+- **异常：** 在执行*期间*发生。程序开始运行，但遇到了障碍。
+
+  ```python
+  # 异常示例 (ZeroDivisionError)
+  numerator = 10
+  denominator = 0
+  result = numerator / denominator # 问题在这里执行期间发生
+  print(result)
+  print("计算完成。") # 这一行永远不会被执行到
+  ```
+
+  这段代码语法正确。它开始运行，但当它尝试执行 `10 / 0` 除法运算时，Python检测到不可能的操作并引发一个异常。
+
+### 异常何时发生？
+
+异常可能由多种情况引起，包括：
+
+- **数学上不可能的操作：** 例如除以零 (`ZeroDivisionError`)。
+- **类型不匹配：** 尝试对不兼容的数据类型执行操作，例如直接将数字添加到字符串 (`TypeError`)。
+
+  ```python
+  # 类型错误示例
+  count = 5
+  message = "Apples: " + count # 不能直接将字符串和整数相加
+  ```
+- **无效索引：** 尝试使用超出有效范围的索引访问列表或元组中的元素 (`IndexError`)。
+
+  ```python
+  # 索引错误示例
+  my_list = [10, 20, 30]
+  print(my_list[3]) # 索引 3 超出范围（有效索引为 0, 1, 2）
+  ```
+- **资源缺失：** 尝试打开一个不存在的文件 (`FileNotFoundError`)。
+- **无效输入：** 当用户输入与所需类型不匹配时，尝试将用户输入转换为特定类型（如整数）（例如，当要求输入数字时，用户输入“hello”） (`ValueError`)。
+
+### 引发和处理异常
+
+当Python检测到运行时错误时，它会**引发**一个异常。这意味着它会创建一个*异常对象*，包含有关错误的信息（例如其类型和发生位置），并在该点停止正常的执行流程。
+
+不同类型的错误会引发不同类型的异常（例如，`ZeroDivisionError`、`TypeError`、`FileNotFoundError`）。了解异常的类型有助于理解哪里出了问题。
+
+如果引发了异常，而你的代码中没有包含特定的处理指令，程序就会立即终止。Python通常会打印一条称为**回溯信息**（或堆栈跟踪）的消息。回溯信息显示了导致错误的函数调用序列以及所引发的异常类型。
+
+再次考虑除以零的例子：
+
+```python
+numerator = 10
+denominator = 0
+result = numerator / denominator
+print(result)
+```
+
+运行这段代码可能会产生类似于这样的输出（细节可能略有不同）：
+
+```text
+Traceback (most recent call last):
+  File "my_script.py", line 3, in <module>
+    result = numerator / denominator
+ZeroDivisionError: division by zero
+```
+
+这份回溯信息告知我们：
+
+1. 错误发生在 `my_script.py` 文件的第3行。
+2. 导致错误的代码行是 `result = numerator / denominator`。
+3. 错误的具体类型是 `ZeroDivisionError`。
+
+虽然回溯信息对开发者调试很有用，但你不会希望最终用户看到它们，也不希望程序就此崩溃。因此，学习如何处理异常非常重要。通过预见潜在的错误并编写代码来捕获这些异常，你可以防止程序崩溃，向用户提供有用的消息，或者尝试优雅地从错误中恢复。接下来的部分将准确展示如何使用Python的 `try`、`except`、`else` 和 `finally` 语句来实现这一点。
+
+## 参考资料
+
+- [Errors and Exceptions](https://docs.python.org/3/tutorial/errors.html) — Guido van Rossum and the Python Development Team (2024)
+  Python官方教程章节，提供语法错误、运行时异常及其基本区别的基础解释，以及内置异常类型的概述。
+- [Python Crash Course, 3rd Edition](https://nostarch.com/products/python-crash-course-3rd-edition) — Eric Matthes (2023)
+  Publisher: No Starch Press; Pages: 552
+  一本适合初学者的书籍，专门用一章来讲解理解和处理错误与异常，为新程序员提供了清晰的解释和实用示例。

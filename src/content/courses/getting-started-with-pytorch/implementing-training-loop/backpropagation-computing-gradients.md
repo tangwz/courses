@@ -1,0 +1,76 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "implementing-training-loop"
+lesson: "backpropagation-computing-gradients"
+sourceId: 2195
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-6-implementing-training-loop/backpropagation-computing-gradients"
+title: "反向传播：计算梯度"
+description: "执行反向传播以计算损失相对于模型参数的梯度。"
+order: 6
+plots: []
+sourceHash: "05c35e3f7f8128fe79b97ba07b6e5954f5e95175adfa88dd54476a7f976f5524"
+sourceCorrections: []
+---
+
+您已经成功计算出损失，它衡量了模型预测与实际目标值之间的偏离程度。接下来一个重要步骤是了解 *如何* 调整模型参数 (parameter)（权重 (weight)和偏置 (bias)）以减小此损失。这就是反向传播 (backpropagation)发挥作用的地方。
+
+PyTorch 使用 `.backward()` 方法执行反向传播。当此方法在损失张量上调用时，模型参数的梯度便被计算出来。
+
+```python
+# 假设 'loss' 是您的损失函数产生的标量输出
+loss.backward()
+```
+
+调用 `loss.backward()` 会触发 PyTorch 的自动微分引擎 Autograd。回忆一下第 3 章，PyTorch 如何在正向传播过程中执行运算时动态构建计算图？此图记录了从输入数据和模型参数到最终损失值的运算序列。
+
+`backward()` 调用会启动对此图的 *逆向* 遍历，从损失张量本身开始。利用微积分链式法则，Autograd 高效地计算图中每个 `requires_grad` 属性设为 `True` 的张量相对于损失的梯度。
+
+具体来说，对于模型中参与了损失计算的每个参数 $\theta$（例如 `nn.Linear` 或 `nn.Conv2d` 层中的权重和偏置），`loss.backward()` 会计算偏导数：
+
+
+$$
+\frac{\partial L}{\partial \theta}
+$$
+
+
+这个梯度 $\frac{\partial L}{\partial \theta}$ 代表了损失 $L$ 对参数 $\theta$ 微小变化的敏感度。它说明了 $\theta$ 为减小损失所需变化的方向和大小。
+
+这些计算出的梯度会存放在哪里？PyTorch 会直接将其存储在对应参数张量的 `.grad` 属性中。
+
+```python
+# 示例：反向传播后访问线性层权重的梯度
+# model = nn.Linear(10, 1)
+# ... (正向传播和损失计算) ...
+# loss.backward()
+
+# 现在您可以检查梯度
+print(model.weight.grad)
+print(model.bias.grad)
+```
+
+在调用 `loss.backward()` 后，您通常会在模型参数的 `.grad` 属性中发现非 `None` 值。计算图中的中间张量的梯度通常不保留以节省内存，尽管如果调试或高级技术需要，可以修改此行为。通过 `nn.Module` 定义的模型参数被认为是图中的“叶”节点，它们的梯度会被保留。
+
+> 正向传播构建计算图（实线）。调用 `loss.backward()` 启动反向传播（虚线），从损失开始计算梯度，并将它们存储在 `W` 和 `B` 等张量的 `.grad` 属性中。
+
+### 梯度累加
+
+一个需要理解的重要行为是 PyTorch 会 *累加* 梯度。当您调用 `loss.backward()` 时，新计算出的梯度会 **添加** 到参数 (parameter)的 `.grad` 属性中已有的值上。它们不会覆盖之前的值。
+
+这种累加是设计意图，且在特定情况下有用，例如模拟更大的批量大小或训练循环神经网络 (neural network) (RNN)。然而，在每次处理一个批量的标准训练循环中，您通常只想根据当前批量计算梯度。如果您不清除上次迭代的梯度，就会累积多个批量的梯度，从而导致参数更新不正确。
+
+正因如此，如本章引言中所述并将在后面详细说明，您必须在每个训练迭代开始时，通常在正向传播 *之前* 或恰好在调用 `loss.backward()` 之前，显式地将梯度归零。执行此操作的标准方法涉及优化器，即使用 `optimizer.zero_grad()`。
+
+在梯度计算完成并存储在参数的 `.grad` 属性中之后，下一步便是使用这些梯度更新模型的参数，这由优化器的 `step()` 方法处理。
+
+## 参考资料
+
+- [Automatic differentiation package - torch.autograd](https://pytorch.org/docs/stable/autograd.html) — PyTorch team (2024)
+  PyTorch官方文档，涵盖了其自动微分引擎（Autograd）、计算图以及`loss.backward()`方法的机制。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapters 6 and 8.6
+  一本内容全面的教科书，详细阐述了反向传播和自动微分的理论基础，包括链式法则。
+- [Learning representations by back-propagating errors](https://www.nature.com/articles/323533a0) — David E. Rumelhart, Geoffrey E. Hinton, and Ronald J. Williams (1986)
+  Journal: Nature; Publisher: Springer Nature; Volume: 323; Pages: 533-536; DOI: [10.1038/323533a0](https://doi.org/10.1038/323533a0)
+  介绍用于训练多层神经网络的反向传播算法的奠基性学术论文。
+- [CS231n: Deep Learning for Computer Vision. Backpropagation, Intuitions](https://cs231n.github.io/optimization-2/) — Stanford University CS231n course staff (2024)
+  斯坦福大学CS231n课程讲义，提供了反向传播算法及其与计算图关系的直观和视觉化解释。

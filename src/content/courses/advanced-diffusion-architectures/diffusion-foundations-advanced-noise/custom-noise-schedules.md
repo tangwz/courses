@@ -1,0 +1,100 @@
+---
+course: "advanced-diffusion-architectures"
+chapter: "diffusion-foundations-advanced-noise"
+lesson: "custom-noise-schedules"
+sourceId: 5373
+sourceUrl: "https://apxml.com/zh/courses/advanced-diffusion-architectures/chapter-1-diffusion-foundations-advanced-noise/custom-noise-schedules"
+title: "设计定制噪声调度"
+description: "创建特定于应用的噪声调度以获得更好性能的方法。"
+order: 5
+plots: ["plots/5373-0.json"]
+sourceHash: "0f4866f03a148e4be21bd2eed1d0d38a558266a79ab432ecae93b0984aec3cba"
+sourceCorrections: []
+---
+
+虽然线性调度和余弦调度等标准噪声调度提供了良好的起点并被广泛使用，但它们可能并非所有数据集或生成任务的最佳选择。鉴于我们已讨论过这些固定调度的局限性，接下来的合理步骤是思考如何设计*定制*的噪声调度，以适应特定需求。目标是在正向过程中控制噪声添加的速度，从而影响模型学习到的逆向去噪过程。
+
+正向过程的方差调度通常用$\beta_t$表示时间步$t=1, ..., T$，它规定了整个扩散过程。从$\beta_t$可以推导出$\alpha_t = 1 - \beta_t$以及累积乘积$\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$。$\beta_t$值的选择直接影响初始数据$x_0$中的信息被遮蔽的速度。添加噪声过快的调度可能在早期就破坏精细细节，使得模型更难恢复它们。相反，添加噪声过慢的调度可能需要非常大的时间步数$T$，或者在信号已然微弱的后期阶段导致学习效率低下。
+
+设计定制调度通常涉及为$\beta_t$定义一个函数或序列，使其偏离标准的线性或余弦形式。
+
+### 定制调度的原因
+
+为何要不拘泥于既有调度？
+
+1. **数据集特点：** 具有特定结构的数据集（例如，以精细纹理为主的图像与大片平滑区域）可能从在不同时间步添加噪声的调度中获益。
+2. **任务特定性：** 某些任务，如图像修复或图像编辑，可能需要相比无条件生成，在早期扩散步骤中更仔细地保持信息。
+3. **样本质量侧重：** 可以设计定制调度来提高样本质量的特定方面，例如减少模糊或增强细节保真度，这可能通过将模型的学习能力集中在特定噪声级别范围来实现。
+4. **效率：** 定制调度可能允许在更少的扩散时间步($T$)下达到相近或更好的结果。
+
+### 噪声调度设计方法
+
+除了依靠线性或余弦等预定义公式，我们还可以使用其他函数形式或规则来定义$\beta_t$：
+
+1. **多项式调度：** 推广线性调度$\beta_t \propto t$或余弦调度。我们可以使用高阶多项式来定义$\beta_t$，例如：
+
+   
+   $$
+   \beta_t = c_1 \left(\frac{t}{T}\right)^p + c_0
+   $$
+   
+
+   本式中 $p$ 是多项式次数，$c_1, c_0$ 是常数，它们的选择旨在确保$\beta_t$保持在期望的范围内（例如，$10^{-4}$到$0.02$）并保持单调性。调整$p$可以使噪声添加率呈现不同的曲率。
+2. **分段调度：** 在$t$的不同区间上为$\beta_t$定义不同的函数。例如，一个调度可以在前$T/2$个步骤中是线性的，然后对于剩余步骤过渡到类似余弦的衰减。这允许在扩散过程的不同阶段对噪声添加进行精细控制。
+3. **基于信噪比（SNR）的设计：** 一种更有原则的方法是根据每个时间步$t$的期望信噪比（SNR）来设计调度。信噪比定义为：
+
+   
+   $$
+   \text{SNR}(t) = \frac{\mathbb{E}[ ( \sqrt{\bar{\alpha}_t} x_0 )^2 ]}{\mathbb{E}[ ( \sqrt{1 - \bar{\alpha}_t} \epsilon )^2 ]} = \frac{\bar{\alpha}_t \mathbb{E}[x_0^2]}{(1 - \bar{\alpha}_t) \mathbb{E}[\epsilon^2]}
+   $$
+   
+
+   假设归一化 (normalization)后$\mathbb{E}[x_0^2] \approx 1$且$\mathbb{E}[\epsilon^2] = 1$，则$\text{SNR}(t) \approx \frac{\bar{\alpha}_t}{1 - \bar{\alpha}_t}$。我们可以反向操作：定义一个目标SNR($t$)函数（例如，指数衰减），然后导出所需的$\bar{\alpha}_t$，随后是$\beta_t$。这直接将调度设计与每一步中剩余的信息量联系起来。例如，确保信噪比平滑下降可能带来更稳定的训练。
+4. **对数调度：** 调度也可以在对数空间中定义，通常侧重于对数信噪比。这可以对动态特性提供更好的控制，尤其是在处理非常小或非常大的$\bar{\alpha}_t$值时。
+
+### 调度差异可视化
+
+我们来比较在$T=1000$个时间步下，不同调度类型的累积噪声水平，由$\sqrt{1-\bar{\alpha}_t}$表示（这表明噪声对信号的主导程度）。值越高意味着噪声越多。
+
+
+
+![不同调度的噪声水平（sqrt(1 - áµₜ)）比较](plots/5373-0.json)
+
+
+
+> 本图比较了噪声在线性、余弦和定制（类二次）调度下积累的速度。与余弦调度在早期更快地添加噪声相比，定制调度最初缓慢添加噪声，随后加速。
+
+### 实现考量
+
+在实现定制调度时，您通常需要预计算$t=1, ..., T$的$\beta_t$、$\alpha_t$和$\bar{\alpha}_t$值。这些值随后被存储并用于训练（给定$x_0$采样$x_t$）和推断（去噪步骤）。
+
+步骤包括：
+
+1. **定义$\beta_t$：** 在$t \in [1, T]$的范围内为$\beta_t$选择一个函数或序列。确保$\beta_t$值合理（例如，小、正，并且普遍非递减，尽管并非总是要求严格单调性）。起始值和结束值（$\beta_1$，$\beta_T$）对接近纯数据和纯噪声时的行为有显著影响。
+2. **计算导出值：** 计算$\alpha_t = 1 - \beta_t$和$\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$。同时预计算其他常用值，如$\sqrt{\bar{\alpha}_t}$、$\sqrt{1 - \bar{\alpha}_t}$，以及去噪步骤中使用的项（这取决于特定的参数 (parameter)化，例如涉及$\tilde{\beta}_t = \frac{1-\bar{\alpha}_{t-1}}{1-\bar{\alpha}_t}\beta_t$）。
+3. **集成应用：** 在扩散模型的训练循环和采样过程中使用这些预计算值。
+
+### 评估与权衡
+
+评估定制噪声调度需要进行经验测试。使用新调度训练您的扩散模型并比较：
+
+- **训练动态：** 损失是否平稳收敛？是否存在不稳定性？
+- **样本质量：** 使用FID（Fréchet Inception Distance）、IS（Inception Score）等指标或特定领域指标评估生成的样本。定性评估也同样重要。
+- **采样速度：** 定制调度是否允许在使用DDIM等采样器时，以更少的推断步骤($N < T$)获得良好结果？
+
+设计定制调度通常是一个迭代过程，包括提出调度、训练、评估和改进。调度设计的复杂性与潜在收益之间存在权衡。虽然标准调度通常表现良好，但精心设计的定制调度可以为特定应用提供显著优势，或提升样本质量的上限。这种认识有助于我们研究那些不仅是设计出来、更是*学习而来*的调度，我们将在下一节中进行介绍。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEzINaShTNJJaioEPv6s9zJ6a8xtPJlueMuKK5lPmO7kog4tzbsXRtrQacZCcgy_TG0JPSiVHx2zmON-4LA_u4QVB79pyspsIiTH3gxYQ1LSuP7-CnAizkxGQBf0UZJfA8vabsZLWw3kqsGVWrbYAH9yUC7i61nDgCpsMgMV3GPLjDDUr3_3R35V4szbZtbr8CoIwiXPeR3sA==) — Jonathan Ho, Ajay N. Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Publisher: Curran Associates, Inc.; Volume: 33; Pages: 6840-6851; DOI: [10.55919/neurips-2020-00101](https://doi.org/10.55919/neurips-2020-00101)
+  这篇基础论文介绍了去噪扩散概率模型及其正向/逆向过程，包括最初的线性噪声调度。它对于理解噪声调度的基本原理很重要。
+- [Improved Denoising Diffusion Probabilistic Models](https://proceedings.mlr.press/v139/nichol21a.html) — Alexander Quinn Nichol, Prafulla Dhariwal (2021)
+  Journal: Proceedings of the 38th International Conference on Machine Learning; Publisher: PMLR; Volume: 139; Pages: 8162-8171; DOI: [10.1109/ICCV48922.2021.00971](https://doi.org/10.1109/ICCV48922.2021.00971)
+  这篇论文引入了余弦噪声调度，作为线性调度的改进，直接解决了探索不同噪声调度设计的必要性。
+- [Score-Based Generative Modeling through Stochastic Differential Equations](https://arxiv.org/abs/2011.13456) — Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, Ben Poole (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2011.13456](https://doi.org/10.48550/arXiv.2011.13456)
+  这篇论文提出了一个使用随机微分方程的基于分数的生成模型的统一框架，提供了噪声调度的连续时间视角及其与信噪比（SNR）的关联，信噪比是原理性调度设计的关键概念。
+- [Elucidating the Design Space of Diffusion-Based Generative Models](https://doi.org/10.55919/neurips-2022-ed1209b0) — Tero Karras, Miika Aittala, Samuli Laine, Erik Härkönen, Janne Hellsten, Jaakko Lehtinen, Timo Aila (2022)
+  Journal: Advances in Neural Information Processing Systems; Volume: 35; Pages: 26565-26577; DOI: [10.55919/neurips-2022-ed1209b0](https://doi.org/10.55919/neurips-2022-ed1209b0)
+  这篇论文系统地分析了扩散模型的多种设计选择，包括噪声调度（sigma调度）的具体参数化和设计，以及它们对样本质量和训练效率的影响。它为创建有效调度提供了具体指导。

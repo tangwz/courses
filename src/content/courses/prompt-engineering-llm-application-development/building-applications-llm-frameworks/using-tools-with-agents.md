@@ -1,0 +1,132 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "building-applications-llm-frameworks"
+lesson: "using-tools-with-agents"
+sourceId: 3052
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-5-building-applications-llm-frameworks/using-tools-with-agents"
+title: "智能体工具的使用"
+description: "将外部工具（如搜索引擎或计算器）集成到智能体工作流程中。"
+order: 6
+plots: []
+sourceHash: "1dedb998cf326c673a5c6ee5f72462bac3968f0ff8e0f653c1d305c34d8a65a0"
+sourceCorrections: []
+---
+
+智能体提供推理 (inference)能力，让大型语言模型（LLM）能决定一系列动作，但它们通常需要一些方式与外部环境交互，或执行超出纯文本生成的任务。这时，工具便发挥作用。可以将工具视为智能体能用来收集信息或执行特定操作的专业器具，大幅扩展了其应用范围和功能。
+
+### 智能体工具是什么？
+
+在LangChain这类LLM框架的背景下，工具本质上是智能体可以调用的函数或服务。这些工具封装了特定功能，例如：
+
+- **获取实时信息：** 使用搜索引擎工具查找LLM训练截止日期后才出现的即时新闻或数据。
+- **执行精确计算：** 使用计算器或数学引擎进行需要精确数值结果的任务。
+- **与外部系统交互：** 查询数据库，调用外部API（如天气或股票信息），或读写文件。
+- **运行代码：** 使用Python的读取-求值-打印循环（REPL）来运行代码片段，以进行复杂逻辑或数据处理。
+
+通过为智能体提供一套精心选择的工具，您可以使其具备能力克服LLM本身的固有限制，使其回答基于外部数据或动作。
+
+### 智能体-工具交互循环
+
+智能体究竟如何决定使用工具并整合其输出？这个过程通常遵循一个迭代循环，常基于像ReAct（推理 (inference)与行动）这样的模式：
+
+1. **任务分析：** 智能体接收用户请求或一个目标。
+2. **推理（思考）：** LLM作为智能体的“大脑”，分析任务。它判断是能直接回答，还是需要外部信息或计算。如果需要外部帮助，它决定哪种可用工具最合适。
+3. **行动（工具选择与输入）：** 智能体识别要使用的具体工具（例如 `web_search`），并为该工具制定所需的输入（例如搜索查询 `current weather in London`）。
+4. **执行：** 框架用生成的输入调用所选工具。
+5. **观察（工具输出）：** 工具执行其功能（例如调用天气API）并返回结果（例如 `7 摄氏度，多云`）。
+6. **整合与下一步：** 智能体接收此观察结果。LLM将这些新信息整合到其推理过程中。然后它可能：
+   - 生成对用户的最终响应。
+   - 决定它需要使用另一个工具（或用不同的输入再次使用同一个工具）。
+   - 根据综合信息继续推理。
+
+这个循环持续到智能体判断它有足够的信息来完成最初的请求。
+
+> 智能体推理循环。LLM决定是进行内部推理，使用工具采取行动，还是生成最终响应。
+
+### 定义和集成工具
+
+像LangChain这样的框架提供了定义和管理工具的便捷方式。工具通常表示为一个对象或函数，它至少具有：
+
+- 一个**名称：** 工具的独特标识符（例如 `calculator`、`web_search`）。
+- 一个**描述：** 这极其重要。智能体的LLM使用这种自然语言描述来理解工具的功能、何时使用它以及期望何种输入。编写清晰且信息丰富的描述对于智能体的可靠运行必不可少。
+- **执行逻辑：** 执行工具功能的实际代码。
+
+这里是一个使用LangChain的Python `@tool` 装饰器定义一个简单计算器工具的例子：
+
+```python
+# 假设已导入必要的LangChain模块
+from langchain.tools import tool
+
+@tool
+def simple_calculator(expression: str) -> str:
+    """
+    使用此工具来计算简单的算术表达式。
+    输入应为一个有效的数学表达式字符串（例如 '2 + 2'、'10 * (4 / 2)'）。
+    只处理基本的加、减、乘、除运算符和括号。
+    """
+    try:
+        # 警告：对不可信的输入使用 eval() 可能不安全。
+        # 在生产环境中，请使用更安全的解析库，如 numexpr 或 ast.literal_eval。
+        result = eval(expression)
+        return str(result)
+    except Exception as e:
+        return f"计算表达式出错：{str(e)}"
+
+# 示例用法（在智能体上下文之外）
+# print(simple_calculator.name) # -> simple_calculator
+# print(simple_calculator.description) # -> 文档字符串内容
+# print(simple_calculator.run("5 * (3 + 1)")) # -> 20
+```
+
+请注意，文档字符串充当了工具的描述。一个好的描述能有效引导LLM。例如，该描述明确说明了何时使用该工具（“计算简单的算术表达式”）、期望的输入格式（“有效的数学表达式字符串”）以及示例。
+
+一旦定义，您在智能体初始化时会向它提供这些工具对象的一个列表。当LLM需要在提示中决定一个行动时，框架会处理向其呈现这些工具（特别是它们的名称和描述）的逻辑。
+
+```python
+# LangChain智能体与工具的初始化
+from langchain_openai import ChatOpenAI
+# 假设 'web_search_tool' 是另一个已定义的工具实例
+# from langchain.agents import AgentExecutor, create_react_agent # (示例导入)
+# from langchain import hub # (示例导入)
+
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
+tools = [simple_calculator, web_search_tool] # 可用工具列表
+
+# 示例：使用预定义的ReAct提示模板
+# react_prompt = hub.pull("hwchase17/react")
+
+# agent = create_react_agent(llm, tools, react_prompt)
+# agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# result = agent_executor.invoke({"input": "What is the result of 99 divided by 3, and what's the weather in Paris?"})
+```
+
+在此设置中，当智能体接收到输入时，底层LLM将看到 `simple_calculator` 和 `web_search_tool` 的描述，并凭借其推理 (inference)能力来判断调用哪个工具（或按顺序调用多个工具）并提供适当的输入，以回答组合问题。
+
+### 常见工具类型及注意事项
+
+智能体可以配备多种多样的工具：
+
+- **搜索：** 集成Google Search、Tavily、SerpAPI、DuckDuckGo Search等API。
+- **计算：** 简单计算器，Wolfram Alpha集成。
+- **代码运行：** Python REPL，Bash终端（使用时务必非常谨慎）。
+- **数据库访问：** 用于构建和执行SQL查询或与NoSQL数据库交互的工具。
+- **API交互：** 封装任何内部或外部API（例如Jira、GitHub、特定公司知识库）的自定义工具。
+- **文件系统：** 用于读写或列出文件的工具（同样，谨慎使用）。
+
+纳入工具时，请记住这些要点：
+
+- **描述质量：** 这点很重要。LLM完全依赖于名称和描述来正确选择和使用工具。请使它们明确且信息丰富。清楚指定输入要求。
+- **工具专一性：** 如果您有多个相似的工具（例如，不同的搜索API），请确保其描述明确区分其用例。
+- **输入解析：** LLM生成工具的*输入*。请确保您的工具的执行逻辑能处理期望的输入格式，或添加解析/验证步骤。有时，LLM可能会以略微不同于期望的方式格式化输入。
+- **错误处理：** 工具可能会失败（API不可用、无效输入、计算错误）。在工具的代码中实现错误处理，并向智能体返回有用的错误信息，以便它知道该行动失败了。
+- **安全风险：** 授予智能体访问执行代码（如Python REPL或shell访问）或与敏感系统（数据库、内部API、文件系统）交互的工具，具有重大的安全影响。始终限制权限，严格验证输入，并避免暴露过于强大的工具，除非绝对必要且已妥善保护。
+- **成本与延迟：** 调用外部API或执行复杂计算会产生费用，并增加智能体响应时间。考虑为频繁使用的工具调用实现缓存机制，或优化工具使用模式。
+
+工具将智能体从纯粹的推理 (inference)者转变为能够与不同来源交互并获取信息的主动参与者。通过仔细选择、设计和集成工具，您可以构建更强大、更可靠的LLM应用。本章后面的动手实践将指导您构建一个使用特定工具的智能体。
+
+## 参考资料
+
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了 ReAct 框架，用于结合推理和行动步骤，使大型语言模型代理能够与环境和工具进行交互。这篇论文是理解代理-工具交互循环的基础。

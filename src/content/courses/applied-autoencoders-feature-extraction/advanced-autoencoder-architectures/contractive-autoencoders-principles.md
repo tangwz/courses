@@ -1,0 +1,111 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "advanced-autoencoder-architectures"
+lesson: "contractive-autoencoders-principles"
+sourceId: 6468
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-4-advanced-autoencoder-architectures/contractive-autoencoders-principles"
+title: "紧缩自编码器：原理与正则化"
+description: "紧缩自编码器及其学习对微小输入变化具有鲁棒性特征的机制介绍。"
+order: 5
+plots: []
+sourceHash: "052e461e75144037e66bc2b82665e591dbb89629168edd49bdf4d7b8acd922f9"
+sourceCorrections: []
+---
+
+紧缩自编码器（CAE）通过一种独特的方法实现稳健的特征学习，该方法修改学习目标，而不是显式地改变输入数据。与依赖于通过损坏输入进行训练的方法不同，CAE鼓励编码器学习一个*紧缩*的映射。这意味着输入数据中的微小变化应导致学习到的特征表示中更小，或者至少没有明显增大的变化。这种机制有助于自编码器优先处理主要信息，并减少对输入中次要、不相关波动的敏感度。
+
+主要理念是使学习到的特征（隐藏层的激活值）相对于输入保持稳定。如果输入样本$x$中的微小变化导致其编码表示$h = f(x)$发生很大变化，则该表示被认为是不稳定的。CAE旨在惩罚这种不稳定性。
+
+### 紧缩原理
+
+假设你有一个数据点$x$。如果你对$x$进行微小扰动得到$x + \delta x$，紧缩自编码器会确保隐藏表示中对应的变化，$f(x + \delta x) - f(x)$，很小。本质上，编码器学习在训练样本附近“紧缩”输入空间。
+
+这通过向自编码器的标准重建损失中添加一个特定的正则化 (regularization)项来实现。这个正则化项惩罚学习到的特征对输入的敏感度。数学上，这种敏感度由编码器隐藏层激活值$h$相对于输入$x$的**雅可比矩阵**来体现。
+
+令$h(x) = [h_1(x), h_2(x), \dots, h_m(x)]$为输入$x = [x_1, x_2, \dots, x_n]$在隐藏层中的激活向量 (vector)。雅可比矩阵$J_h(x)$是一个$m \times n$矩阵，其中每个元素$(J_h(x))_{kj}$是第$k$个隐藏单元的激活值$h_k(x)$对第$j$个输入特征$x_j$的偏导数：
+
+
+$$
+(J_h(x))_{kj} = \frac{\partial h_k(x)}{\partial x_j}
+$$
+
+
+这个矩阵表明了每个隐藏单元的激活值如何响应每个输入特征的无穷小变化。为了使特征稳固，我们希望这些导数很小。
+
+### 紧缩正则化 (regularization)项
+
+CAE在损失函数 (loss function)中添加了一个惩罚项，该项与所有这些偏导数的平方和成比例。这等同于雅可比矩阵的平方**Frobenius范数**，表示为$||J_h(x)||_F^2$。矩阵的Frobenius范数是通过取其元素平方和的平方根得到的。因此，它的平方就是其元素平方的和：
+
+
+$$
+||J_h(x)||_F^2 = \sum_{k=1}^{m} \sum_{j=1}^{n} \left( \frac{\partial h_k(x)}{\partial x_j} \right)^2
+$$
+
+
+紧缩自编码器的总损失函数因此变为：
+
+
+$$
+L_{CAE}(x, x') = L_{reconstruction}(x, x') + \lambda ||J_h(x)||_F^2
+$$
+
+
+其中：
+
+- $L_{reconstruction}(x, x')$是原始输入$x$与重建输入$x' = g(f(x))$之间的常规重建损失（例如，均方误差或二元交叉熵）。
+- $\lambda$（lambda）是一个超参数 (parameter) (hyperparameter)，它控制紧缩惩罚的强度。更大的$\lambda$对大导数施加更强的惩罚，促使编码器学习更紧缩的映射。
+
+下图描绘了CAE损失函数的组成部分。
+
+> 紧缩自编码器的损失函数平衡了两个目标：精确重建输入，以及编码特征对输入变化的低敏感度。超参数$\lambda$决定了这两个目标之间的权衡。
+
+### 直观理解：学习不变特征
+
+为什么这个惩罚项有用？通过促使导数$\frac{\partial h_k(x)}{\partial x_j}$变小，CAE学习到对输入中的微小扰动具有鲁棒性的特征。如果输入数据位于高维输入空间中的低维流形上或附近，CAE会尝试学习主要捕捉*沿*该流形变化的特征，同时对*正交于*流形的变化不敏感（紧缩）。与流形正交的方向通常代表噪声或不相关变化。
+
+这意味着编码器学习“忽略”那些不改变输入根本属性的微小变化。例如，在一张手写数字图像中，由于噪声引起的像素强度微小变化或位置的微小移动，可能与该数字的真实流形正交。CAE会尝试使其特征表示对这些变化不那么敏感。
+
+### 紧缩自编码器的优点
+
+1. **特征学习**：主要优点是提取对微小输入变化或噪声更具韧性的特征。
+2. **改进的泛化能力**：通过关注稳定、底层的模式，与标准自编码器相比，CAE通常能更好地泛化到未见数据。
+3. **流形学习关联**：CAE隐式地试图学习数据流形的局部结构。紧缩惩罚有助于识别数据点周围低方差的方向。
+
+### 实现注意事项
+
+- **计算雅可比矩阵**：计算雅可比矩阵及其Frobenius范数可能看起来困难。然而，TensorFlow和PyTorch等现代深度学习 (deep learning)框架提供了自动微分功能，可以计算此惩罚项所需的梯度。
+- **调整$\lambda$**：正则化 (regularization)系数$\lambda$是一个重要超参数 (parameter) (hyperparameter)。如果$\lambda$太小，紧缩效果将微不足道。如果太大，重建质量可能会严重受损，因为模型优先考虑紧缩而非精确表示。这个参数通常需要通过交叉验证进行仔细调整。
+- **激活函数 (activation function)**：CAE通常在隐藏层使用平滑激活函数，例如sigmoid或tanh，因为它们的导数定义良好且有界，这有助于控制雅可比元素的大小。
+
+### 与去噪自编码器的比较
+
+紧缩自编码器和去噪自编码器都旨在学习特征。
+
+- \*\*去噪自编码器（DAE）\*\*通过明确损坏输入（例如，添加噪声、遮蔽部分）并训练模型重建原始干净输入来获得鲁棒性。模型学习如何消除损坏。
+- \*\*紧缩自编码器（CAE）\*\*通过在损失函数 (loss function)中添加分析性惩罚来实现鲁棒性，该惩罚直接阻止学习到的特征在输入发生微小变化时发生大的变化。
+
+DAE通常更易于实现，因为它们不需要显式计算雅可比矩阵（框架处理带噪声数据的重建损失梯度）。另一方面，CAE提供了一种更直接的方式来控制学习表示的敏感度。两者之间的选择取决于具体数据集、预期噪声或变化的性质以及计算考量。
+
+### 何时考虑紧缩自编码器
+
+当符合以下情况时，CAE可能是一个不错的选择：
+
+- 你需要特征对输入数据中的微小局部扰动具有明确的鲁棒性。
+- 你怀疑数据位于低维流形上，并希望捕捉其局部几何属性。
+- 你正在处理的数据集，其中这种分析性惩罚可能优于DAE的随机损坏。
+
+然而，雅可比惩罚的计算成本可能高于DAE，特别是对于非常高维的输入或大型隐藏层。与所有自编码器变体一样，通常需要通过实验来确定给定问题的最佳方法。
+
+通过惩罚编码器输出的敏感度，紧缩自编码器提供了一种学习有意义特征的机制，为你的特征提取工具集增添了新的工具。它们促使模型识别和表示输入数据最稳定和必要的方面。
+
+## 参考资料
+
+- [Contractive Auto-Encoders: Explicit Invariance Through Penalty at the Cost of Saturation](https://www.jmlr.org/papers/volume15/rifai11a/rifai11a.pdf) — Salah Rifai, Pascal Vincent, Xavier Muller, Xavier Glorot, Yoshua Bengio (2011)
+  Journal: Proceedings of the 28th International Conference on Machine Learning (ICML); Publisher: JMLR Workshop and Conference Proceedings (JMLR: W&CP); Volume: 15; Pages: 839-846; DOI: [10.5555/3042079.3042168](https://doi.org/10.5555/3042079.3042168)
+  介绍收缩自编码器及其数学基础的原始论文。
+- [Extracting and Composing Robust Features with Denoising Autoencoders](http://www.jmlr.org/papers/volume11/vincent10a/vincent10a.pdf) — Pascal Vincent, Hugo Larochelle, Isabelle Lajoie, Yoshua Bengio, and Pierre-Antoine Manzagol (2010)
+  Journal: Journal of Machine Learning Research; Publisher: Journal of Machine Learning Research; Volume: 11; Pages: 3371-3408; DOI: [10.5555/1953048.1953089](https://doi.org/10.5555/1953048.1953089)
+  正式介绍了降噪自编码器，本节将其与收缩自编码器进行了比较。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本涵盖自编码器（包括收缩和降噪变体）以及正则化一般原则的权威教科书。

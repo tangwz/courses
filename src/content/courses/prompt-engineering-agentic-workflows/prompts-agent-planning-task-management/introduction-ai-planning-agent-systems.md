@@ -1,0 +1,46 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "prompts-agent-planning-task-management"
+lesson: "introduction-ai-planning-agent-systems"
+sourceId: 6733
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-4-prompts-agent-planning-task-management/introduction-ai-planning-agent-systems"
+title: "智能体系统中AI规划概述"
+description: "了解AI规划的要点及其与创建自主智能体系统的关联性。"
+order: 1
+plots: []
+sourceHash: "201e4e3694e31a933b0c0b90509f84efabab2915bdbaab078a26d9b43729d63c"
+sourceCorrections: []
+---
+
+为有效处理复杂、多步骤的目标，AI智能体需要做的不仅仅是对即时输入做出反应。它们必须具备预判、制定策略和规划行动序列的能力。这种前瞻性和系统性方法通过**AI规划**来实现。智能体系统中的规划，特别是在基于大型语言模型（LLM）构建的系统中，是指智能体确定行动方案以从初始状态过渡到期望目标状态的过程。这比简单的指令执行有了显著提升；它赋予了智能体在达成目标方面一定程度的自主性。
+
+AI智能体规划的重要性不言而喻。设想一个智能体，任务是组织完整的旅行行程，包括航班、住宿和活动，同时要遵守预算和特定偏好。一个纯粹的反应型智能体将会遇到困难，很可能在海量的独立查询和工具使用中迷失，缺乏连贯的策略。然而，一个规划型智能体可以把这个大目标分解成可管理的子目标（例如，查找航班，然后预订酒店，再研究活动），考虑依赖关系（例如，在预订酒店前预订特定日期的航班），并且在计划某一部分出现问题时进行调整。规划使智能体能够处理不确定性，高效管理资源（例如API调用限制或计算开销），并最终实现更精细的成果。
+
+那么，我们如何让一个主要用于生成文本的LLM进行这种规划呢？这就是提示工程 (prompt engineering)发挥核心作用的地方。尽管LLM本身不像传统AI系统那样具备经典的“规划算法”，但我们可以通过精心构建的提示来引导其推理 (inference)能力，以模拟规划过程。您的提示将用于：
+
+1. **明确定义总体目标**：成功是什么样子的？
+2. **提供必要的背景信息**：这包括限制条件、偏好、可用工具以及关于当前情况的相关信息。
+3. **指导智能体如何进行规划**：这可能涉及要求它“逐步思考”、“创建任务列表”或“考虑可能的障碍”。
+4. **指定期望的规划输出格式**：结构化的规划对于智能体（以及您，开发者）来说更容易遵循和管理。
+
+实质上，您正在使用提示来引导LLM的生成能力，以产生连贯且可执行的计划。智能体的“规划模块”，通常是一个响应这些专门提示的LLM，它接收一个高层次的目标并制定一个结构化的操作序列。
+
+> 此图说明了大致流程，其中已定义的目标由智能体的规划能力处理，这种能力受提示工程引导，以生成可执行的计划，该计划随后指导任务执行。
+
+从提示智能体的角度来看，规划问题的核心要素通常包括理解或定义：
+
+- **初始状态**：智能体当前可用的情况或信息。
+- **目标状态**：期望的结果，在提示中清晰表达。
+- **可用行动或工具**：智能体可以执行的操作集，LLM需要了解这些以便将其纳入规划。
+- **规划本身**：智能体设计的所选行动或子任务序列。
+
+在本章中，我们将审视特定的提示工程技术，以影响此规划活动的每个阶段。您将学习如何精心制作提示，帮助智能体明确和优化目标，将复杂问题分解为更直接的步骤，有效整合限制，甚至在情况变化时进行迭代再规划。了解AI规划的这些根本要点是构建更强大、更自主的智能体系统的第一步。后续章节将提供实用的策略和示例，通过精确的提示设计来达成这些结果。
+
+## 参考资料
+
+- [Artificial Intelligence: A Modern Approach](https://aima.cs.berkeley.edu/) — Stuart Russell and Peter Norvig (2020)
+  Publisher: Pearson
+  这本经典教科书提供了AI规划算法、代理架构和问题解决策略的基础知识，对于理解代理规划的理论基础至关重要。
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903) — Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 35; Pages: 24824-24837; DOI: [10.48550/arXiv.2201.11903](https://doi.org/10.48550/arXiv.2201.11903)
+  这篇开创性论文介绍了“思维链”提示方法，旨在引导大型语言模型进行多步骤推理，这与指导LLM制定结构化计划直接相关。

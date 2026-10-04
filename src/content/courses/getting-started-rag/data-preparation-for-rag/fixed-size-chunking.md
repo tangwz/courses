@@ -1,0 +1,116 @@
+---
+course: "getting-started-rag"
+chapter: "data-preparation-for-rag"
+lesson: "fixed-size-chunking"
+sourceId: 3647
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-3-data-preparation-for-rag/fixed-size-chunking"
+title: "固定大小分块策略"
+description: "讨论基于字符或token数量的简单分块方法，并考虑重叠。"
+order: 3
+plots: []
+sourceHash: "39cf266730ca60c6db7c2d3c9b3e320b03dd8b3721151d3923f669f98d541cf2"
+sourceCorrections: []
+---
+
+大型文档对高效检索和大型语言模型（LLM）有限的上下文 (context)窗口都带来挑战。分块将这些文档分解成更小、易处理的部分。最直接的方法是固定大小分块，即我们纯粹根据长度分割文本，为求简单而忽略实际内容结构。
+
+这种策略有两种主要形式：基于字符的分割和基于token的分割。
+
+### 基于字符的分割
+
+这是最简单的方法。您可以定义一个分块大小，例如1000个字符，然后直接将文档文本每1000个字符进行分割。
+
+**示例：**
+如果您的文本是“The quick brown fox jumps over the lazy dog.”，分块大小是20个字符：
+
+- 分块1：“The quick brown fox ”
+- 分块2：“jumps over the lazy ”
+- 分块3：“dog.”
+
+**优点：**
+
+- \*\*易于实现：\*\*所需代码量少，通常只需基本的字符串操作。
+- \*\*语言无关：\*\*不依赖于特定的语言分词 (tokenization)规则。
+
+**缺点：**
+
+- \*\*语义盲点：\*\*它常会将单词或句子一分为二，可能破坏分块边界处的含义。这会使嵌入 (embedding)模型更难捕捉被分割句子或短语的完整上下文 (context)。
+
+### 基于token的分割
+
+一种更常用且通常更受青睐的固定大小方法，更符合LLM处理信息的方式：按token数量分割。Token是语言模型处理的文本基本单位（词、子词 (subword)、标点符号）。
+
+为此，您需要一个分词 (tokenization)器 (tokenizer)，通常是与嵌入 (embedding)模型或您计划使用的最终LLM相关联的分词器。您需要指定一个以token数量为单位的分块大小（例如，512个token）。文本首先被分词，然后分割成包含所需token数量的分块。
+
+**示例：**
+使用分词器，“The quick brown fox jumps over the lazy dog.”可能会变成`[The] [quick] [brown] [fox] [jumps] [over] [the] [lazy] [dog] [.]`这样的token。如果分块大小是5个token：
+
+- 分块1的token：`[The] [quick] [brown] [fox] [jumps]` -> 文本：“The quick brown fox jumps”
+- 分块2的token：`[over] [the] [lazy] [dog] [.]` -> 文本：“over the lazy dog.”
+
+**优点：**
+
+- \*\*模型匹配度：\*\*分块大小直接关联到LLM衡量文本长度的方式，使其更易于管理上下文 (context)窗口限制。
+- \*\*保留词汇完整性：\*\*与基于字符的分割相比，不太可能在词语中间进行分割。
+
+**缺点：**
+
+- \*\*对分词器的依赖：\*\*需要选择并使用特定的分词器。不同的分词器对相同文本会生成不同的token数量。
+- \*\*计算量：\*\*由于有分词步骤，计算量比简单的字符计数略大。
+- \*\*仍可能出现语义中断：\*\*虽然单词通常不会被分割，但句子或逻辑上的想法仍可能在token边界处随意截断。
+
+### 重叠的重要性
+
+无论您是按字符还是按token分割，简单地将文本分成连续、不重叠的分块都可能会有问题。想象一个句子描述一个特定想法，它从一个分块的末尾附近开始，并在下一个分块的开头结束。与该想法相关的查询可能只与其中一个分块高度匹配，可能遗漏完整上下文 (context)。
+
+为了解决这个问题，我们引入了**分块重叠**。这意味着连续的分块在它们的边界处共享一些内容。例如，如果您的分块大小是512个token，您可以指定50个token的重叠量。分块1将包含token 1-512，分块2将包含token 463-974（从分块1末尾前50个token开始的512个token），分块3将包含token 925-1436，依此类推。
+
+```
+原文: [----- 部分A -----][----- 部分B -----][----- 部分C -----][----- 部分D -----]
+
+无重叠分块 (分块大小 = 2个部分):
+分块1: [----- 部分A -----][----- 部分B -----]
+分块2:                                              [----- 部分C -----][----- 部分D -----]
+*风险: 跨越B结尾和C开头的信息可能丢失。*
+
+有重叠分块 (分块大小 = 2个部分, 重叠 = 1个部分):
+分块1: [----- 部分A -----][----- 部分B -----]
+分块2:                        [----- 部分B -----][----- 部分C -----]
+分块3:                                               [----- 部分C -----][----- 部分D -----]
+*益处: 跨越B和C的信息完全包含在分块2中。*
+```
+
+重叠有助于确保跨分块边界的语义上下文至少在一个分块中得到保留，增加了检索针对给定查询找到所有相关信息的可能性。
+
+### 选择分块大小和重叠量
+
+选择合适的`chunk_size`和`chunk_overlap`与其说是科学，不如说是艺术，常需要通过尝试确定。请考虑以下因素：
+
+- **分块大小：**
+  - *过小：* 可能无法捕捉到足够的周围上下文 (context)，导致嵌入 (embedding)模型难以理解含义，或LLM难以生成全面的回答。检索可能变得过于细致。
+  - *过大：* 当检索到多个分块时，会增加超出LLM上下文窗口的风险。可能稀释分块中的具体信息，使检索的准确性降低。更大的分块也意味着嵌入和相似性搜索的计算量会增加。常见的token大小范围是256到1024，但这很大程度上取决于数据和下游LLM。
+- **重叠量大小：**
+  - *过小：* 可能不足以有效保留跨边界的上下文。
+  - *过大：* 会增加数据冗余，导致更多的存储使用，并可能增加检索时的计算量（因为更多分块可能显得相关）。一个常见的起始参考点是分块大小的10-20%。
+
+理想值取决于您的具体文档（平均句子长度、段落结构）、所用的嵌入模型（其合适的输入长度）以及LLM的上下文窗口大小。您可能需要测试不同的组合，并评估对检索质量的影响（在第6章中讲解）。
+
+### 实现说明
+
+大多数RAG框架和库（如LangChain或LlamaIndex）提供了便利的功能，支持带有重叠的固定大小分块，同时处理字符和token分割。当使用token分割时，请确保使用与您所选嵌入 (embedding)模型匹配的分词 (tokenization)器 (tokenizer)来配置分割器。
+
+虽然它简单且常作为起始点表现良好，但固定大小分块从根本上忽略了文档的自然结构（段落、部分、标题）。这一局限促使我们考量更复杂的、内容感知的分块方法，我们将在接下来进行讨论。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://proceedings.neurips.cc/paper_files/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 33; Pages: 9459-9474
+  确立了检索增强生成（RAG）的核心架构，该架构要求对文档进行有效的文档预处理（如分块）以实现高效检索。
+- [Natural Language Processing with Transformers](https://www.oreilly.com/library/view/natural-language-processing/9781098132439/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media; Pages: 406
+  对包括BPE和WordPiece在内的分词技术进行了全面解释，这对于理解LLM中的基于token的分块至关重要。
+- [LangChain Text Splitters Documentation](https://python.langchain.com/docs/how_to/text_splitters/) — Harrison Chase (2023)
+  记录了各种文本分割策略，包括流行的RAG框架中实现的带重叠的固定大小分块。
+- [Retrieval-Augmented Generation for Large Language Models: A Survey](https://arxiv.org/abs/2312.10997) — Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang (2024)
+  Journal: arXiv preprint arXiv:2312.10997; DOI: [10.48550/arXiv.2312.10997](https://doi.org/10.48550/arXiv.2312.10997)
+  介绍了检索增强生成（RAG）方法的概述，通常讨论预处理步骤如分块及其对检索和生成的影响。

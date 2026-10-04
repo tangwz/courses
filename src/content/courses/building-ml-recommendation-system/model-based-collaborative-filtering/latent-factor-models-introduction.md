@@ -1,0 +1,56 @@
+---
+course: "building-ml-recommendation-system"
+chapter: "model-based-collaborative-filtering"
+lesson: "latent-factor-models-introduction"
+sourceId: 7470
+sourceUrl: "https://apxml.com/zh/courses/building-ml-recommendation-system/chapter-4-model-based-collaborative-filtering/latent-factor-models-introduction"
+title: "从近邻方法到隐因子模型"
+description: "了解从基于近邻的方法向更高级的基于模型的方法（如矩阵分解）的转变。"
+order: 1
+plots: []
+sourceHash: "92ad45d75d77dbd8aede80040c38a9e032925e620e4e14d3ca6c790c134771d4"
+sourceCorrections: []
+---
+
+基于近邻的协同过滤是一种直观的方法，通过寻找具有相似评分历史的用户或物品来生成推荐。这种方法通常被认为是基于内存的，它直接处理用户-物品交互矩阵，通过识别“邻居”来预测用户的偏好。虽然这些方法行之有效，但随着数据集规模变大且变得稀疏，它们的表现可能会下降。例如，在数百万用户或物品中计算相似度会消耗大量计算资源。此外，如果两个物品从未被共同评分过，就无法确定它们的相似度，这是稀疏数据集中的常见问题。
+
+为了应对这些挑战，我们现在将注意力转向基于模型的协同过滤。这些方法不在预测时依赖整个数据集，而是使用交互数据来训练一个更紧凑的模型，从而学习用户口味的内在模式。训练好的模型随后可以高效地进行预测，而无需再次扫描所有的用户-物品交互。
+
+最主流的一类基于模型的技术是围绕发现**隐因子**展开的。这些是隐藏的特征，有助于解释观察到的评分。对于电影数据集，这些因子可能代表“科幻”或“喜剧”等类型，某位导演的存在，或者更抽象的属性，如“成长故事”或“激烈动作”。重点在于我们不需要预先指定这些因子；模型会从评分数据的模式中自动学习它们。
+
+其核心思想是将用户和物品都表示在一个共享的低维隐空间中。
+
+- 每个**用户**由一个向量 (vector)表示，该向量衡量他们对每个隐因子的喜爱程度。例如，一个用户的向量可能表示对“科幻”有强烈的偏好，而对“喜剧”兴趣不大。
+- 每个**物品**也由一个向量表示，该向量衡量它在多大程度上体现了这些相同的因子。一部电影的向量会显示它在“科幻”方面得分很高，而在“喜剧”方面得分较低。
+
+推荐是通过在这个隐空间中比较用户向量和物品向量来完成的。如果向量对齐 (alignment)良好，意味着用户喜欢该物品所具备的因子，模型就会预测一个高分。这种预测通常计算为两个向量的点积。这种方法允许模型进行泛化。它可以向一位热爱科幻的用户推荐一部科幻电影，即使该用户以前从未给同一位导演或同一批演员的电影评过分。
+
+> 基于近邻的方法依赖于直接的、可观察的连接（左），而隐因子模型将用户和物品映射到共享的特征空间来推断偏好（右）。
+
+这就引出了**矩阵分解**，这是揭示这些隐因子的主要技术。正如本章导言中所述，矩阵分解将大型且稀疏的用户-物品交互矩阵 ($R$) 分解为两个较小的稠密矩阵：用户-因子矩阵 ($P$) 和物品-因子矩阵 ($Q$)。来自 $P$ 的用户向量与来自 $Q$ 的物品向量的点积得到了预测评分 $\hat{r}_{ui}$。
+
+
+$$
+\hat{r}_{ui} = p_u \cdot q_i
+$$
+
+
+通过学习这些因子矩阵，我们创建了用户偏好和物品属性的一种强大且紧凑的表示方式。这种基于模型的方法相比近邻方法有几个优点：
+
+- **更好地处理稀疏性：** 它可以估算所有用户-物品对的评分，而不只是那些有重叠交互数据的项。
+- **更高的扩展性：** 一旦模型训练完成，进行预测的速度极快，因为它只需要进行点积计算，而不需要遍历邻居。
+- **紧凑的表示：** 我们不需要存储庞大且稀疏的用户-物品矩阵，只需要两个较小的因子矩阵，这在内存效率上要高得多。
+
+在接下来的部分中，我们将了解矩阵分解的运作机制，从其最著名的算法之一——奇异值分解 (SVD) 开始。
+
+## 参考资料
+
+- [Matrix Factorization Techniques for Recommender Systems](https://doi.org/10.1109/MC.2009.263) — Yehuda Koren, Robert M. Bell, Chris Volinsky (2009)
+  Journal: Computer; Publisher: IEEE; Volume: 42(8); Pages: 30-37; DOI: [10.1109/MC.2009.263](https://doi.org/10.1109/MC.2009.263)
+  这篇开创性论文介绍并详细阐述了各种矩阵分解技术，包括基于SVD的方法，这些技术成为了现代推荐系统的基础。
+- [Recommender Systems Handbook](https://link.springer.com/book/10.1007/978-1-4899-7637-6) — Francesco Ricci, Lior Rokach, and Bracha Shapira (2015)
+  Publisher: Springer; DOI: [10.1007/978-1-4899-7637-6](https://doi.org/10.1007/978-1-4899-7637-6)
+  一本全面性的教科书，深入覆盖了所有主要的推荐系统技术，并设有专门的协同过滤和矩阵分解章节。
+- [Application of Dimensionality Reduction in Recommender Systems - A Case Study](https://dl.acm.org/doi/10.1145/347090.347101) — Badrul M. Sarwar, George Karypis, Joseph A. Konstan, John T. Riedl (2000)
+  Journal: Proceedings of the WebKDD 2000 Workshop at the ACM-SIGKDD Conference on Knowledge Discovery in Databases; Publisher: ACM; Pages: 82-90; DOI: [10.1145/347090.347101](https://doi.org/10.1145/347090.347101)
+  最早的重要工作之一，展示了如何利用奇异值分解（SVD）进行协同过滤，以解决稀疏性和可伸缩性问题。

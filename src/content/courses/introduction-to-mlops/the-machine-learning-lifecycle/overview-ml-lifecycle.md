@@ -1,0 +1,64 @@
+---
+course: "introduction-to-mlops"
+chapter: "the-machine-learning-lifecycle"
+lesson: "overview-ml-lifecycle"
+sourceId: 7186
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-2-the-machine-learning-lifecycle/overview-ml-lifecycle"
+title: "端到端机器学习生命周期概览"
+description: "全面了解完整的机器学习生命周期，以及各阶段如何连接形成持续的过程。"
+order: 1
+plots: []
+sourceHash: "4d4a227f08c1639639579269d14b26efd6f28b2d616f234978cb26f4e5a59caf"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)生命周期是一个结构化、重复迭代的过程，它为项目从最初的构思到完全运行并受监控的系统提供了路线图。虽然它通常被呈现为一系列步骤，但在实践中，它是一个持续的循环，后期阶段的反馈会为前期阶段提供参考并进行优化。这种循环特性使得机器学习系统能够随时间推移不断适应和改进。
+
+理解这个生命周期是实施有效 MLOps 的第一步。每个阶段在自动化、版本控制和协作方面都面临着独特的挑战和机会。让我们来看看这些相互关联阶段的整体视图。
+
+> 端到端机器学习生命周期，展示了从数据准备到监控的流程，以及实现持续改进的反馈环。
+
+### 机器学习 (machine learning)生命周期的各个阶段
+
+虽然具体细节因项目而异，但生命周期通常由以下主要阶段组成。
+
+#### 1. 数据摄取与准备
+
+这是任何机器学习项目的起点。它涉及从数据库、文件或流平台等各种来源收集原始数据。数据一旦被收集，很少能直接使用。准备阶段（也称为预处理）包括清洗数据（处理缺失值、纠正错误）、转换数据（标准化或缩放特征）以及进行特征工程，从而为模型创建更有价值的新输入。这个阶段通常是整个生命周期中最耗时的部分。
+
+#### 2. 模型训练与实验
+
+有了准备好的数据，接下来的阶段就是训练模型。这是一个不断实验的迭代过程。数据科学家和机器学习工程师可能会尝试多种算法，调整称为超参数 (parameter) (hyperparameter)的模型配置，并跟踪每次实验的表现。目标是找到数据、特征和模型设置的最佳组合，以产生最准确、可靠的结果。得当的 MLOps 实践能确保每次实验都可追踪且可复现，因此你始终清楚特定模型是如何创建的。
+
+#### 3. 模型评估与验证
+
+训练完模型后，必须对其性能进行全面评估。这需要使用一组独立的数据，即测试集，它是模型在训练期间未曾接触过的数据。评估不只是查看简单的准确率。它涉及分析不同的指标（如精确率、召回率或均方误差），以了解模型的优缺点。这一阶段在模型进入部署前，确认其是否符合业务目标，以及是否公平、稳定且无偏见。
+
+#### 4. 模型部署
+
+模型只有在部署后才能产生价值，这意味着要让用户或其他系统能够调用它来进行预测。有几种部署策略。例如，可以将模型包装在 API 中进行实时（在线）预测，或者用于定时任务对大量数据进行批量预测。这个阶段涉及将模型、代码及其所有依赖项打包成可部署的产物，通常使用 Docker 容器等工具。
+
+#### 5. 监控与维护
+
+部署并不是过程的终点。模型上线后，必须对其进行持续监控。监控主要涵盖两个方面：
+
+- **运行健康状况：** 服务是否正常运行？响应速度是否够快？
+- **模型表现：** 模型的预测准确性是否随时间下降？
+
+性能下降可能是由于“数据漂移”（输入数据的统计属性发生变化）或“概念漂移”（模型学到的底层关系不再成立）等现象引起的。
+
+#### 6. 反馈环
+
+从监控中获得的分析结果使生命周期成为一个真正的闭环。当监控检测到性能下降时，它应该触发告警或自动化流程。这个反馈环开启了生命周期的新一轮迭代，通常从收集新数据和重新训练模型开始。这种持续训练 (CT) 过程确保了机器学习系统能够适应新模式并长期保持有效，实现了 MLOps 的核心承诺。
+
+## 参考资料
+
+- [Engineering MLOps: An End-to-End Guide to Design, Implement and Manage Production-Ready Machine Learning Systems](https://www.packtpub.com/product/engineering-mlops/9781800562882) — Emmanuel Raj, Larysa Visengeriyeva, Michael Nguyen, and David S. Chou (2021)
+  Publisher: Packt Publishing
+  一本全面涵盖MLOps框架内ML生命周期各个阶段的著作，从数据到监控。
+- [MLOps: Continuous Delivery and Automation for Machine Learning on Google Cloud](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Google Cloud (2022)
+  Journal: Google Cloud Whitepaper; Publisher: Google Cloud
+  一份权威白皮书，详细介绍了谷歌对MLOps的看法，侧重于ML生命周期中的自动化和持续实践。
+- [Practical MLOps: How to Take Machine Learning Models from Prototype to Production](https://www.oreilly.com/library/view/practical-mlops/9781098103014/) — Noah Gift, Alfredo Deza (2021)
+  Publisher: O'Reilly Media
+  一份实践指南，逐步讲解ML生命周期每个阶段的实现，用于构建和管理生产机器学习系统。

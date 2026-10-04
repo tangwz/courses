@@ -1,0 +1,144 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "combining-techniques-practical"
+lesson: "monitoring-training-metrics"
+sourceId: 5011
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-8-combining-techniques-practical/monitoring-training-metrics"
+title: "训练监控：损失曲线与指标"
+description: "使用损失曲线和相关性能指标进行训练监控的良好做法。"
+order: 3
+plots: ["plots/5011-0.json"]
+sourceHash: "baecc3c396b6ccfd75663608dd21623910f785a72efd5941c2437a155d9f013b"
+sourceCorrections: []
+---
+
+训练深度学习 (deep learning)模型，特别是那些结合了多种正则化 (regularization)和优化方法的模型，并非“一劳永逸”的过程。在训练期间进行细致的监控非常重要，这样才能了解模型学习效果如何，诊断出潜在问题如过拟合 (overfitting)或欠拟合 (underfitting)，并针对调整超参数 (parameter) (hyperparameter)或模型架构做出明智决定。若无监控，你形同盲飞。
+
+监控的主要工具是损失曲线和性能指标，这些都在训练集和验证集上均进行追踪。让我们来看看如何有效地使用它们。
+
+### 追踪损失：训练集与验证集
+
+损失函数 (loss function)量化 (quantization)了模型预测与真实目标之间的偏差。在训练期间，优化器的目标是最小化训练数据上的这种损失。然而，仅最小化训练损失并不能保证对未见过数据有好的泛化能力。因此，我们也会监控独立验证集上的损失。
+
+通常，在每个训练周期结束时，你会计算并记录整个训练数据集和整个验证数据集上的平均损失。将这两个损失值按训练周期绘制出来，就得到了**损失曲线**。
+
+以下是损失曲线中不同模式可能表明的情况：
+
+1. **良好拟合：** 训练损失和验证损失都稳定下降并收敛到低值。两条曲线之间的差距保持很小。这表明模型学习有效且泛化良好。
+2. **过拟合 (overfitting)：** 训练损失持续下降，而验证损失趋于平坦或开始增加。训练损失和验证损失曲线之间出现越来越大的差距。这是一个典型标志，表明模型正在记住训练数据，包括其噪声，并且未能泛化。之前讨论的正则化 (regularization)方法（L1/L2、Dropout等）正是为了对抗这种情况而设计的。
+3. **欠拟合 (underfitting)：** 训练损失和验证损失都保持高位或下降非常缓慢并在高位停滞。这表明模型缺乏学习数据中潜在模式的能力。潜在的解决办法包括增加模型复杂度（更多层/神经元）、延长训练时间，或选择更合适的优化器或学习率。
+4. **高不稳定性/噪声：** 两条曲线都可能显示大幅波动，特别是训练损失。这可能是由于学习率过高、批量大小相对于数据集噪声过小，或数据预处理存在问题。自适应优化器如Adam或RMSprop，或使用学习率调度器，有时能帮助稳定训练。
+
+
+
+![损失曲线示例](plots/5011-0.json)
+
+
+
+> 典型的损失曲线显示训练损失持续下降。良好拟合表现为验证损失紧密跟随训练损失。当验证损失开始增加而训练损失持续下降时，表明出现过拟合。
+
+观察这些曲线有助于你决定你选择的正则化强度是否合适（例如，如果过拟合发生得快，你可能需要更强的正则化），或者你的优化器是否需要调整（例如，收敛缓慢可能需要尝试不同的优化器或学习率调度）。
+
+### 追踪性能指标
+
+尽管损失函数 (loss function)指导优化过程，但它可能无法直接反映最终的性能目标。例如，在分类任务中，你更关心准确率、精确率或召回率，而不是原始的交叉熵损失值。同样，对于回归任务，平均绝对误差（MAE）可能比均方误差（MSE）更易于理解，即使MSE用于训练。
+
+因此，这是一个标准做法，除了损失之外，还会追踪相关的性能指标，同样也是针对训练集和验证集。
+
+- **训练指标：** 表明模型对正在训练的数据的拟合程度。
+- **验证指标：** 提供模型在未见过数据上表现的估计。这通常是模型选择和超参数 (parameter) (hyperparameter)调整最重要的指标。
+
+如果你的验证准确率趋于平稳而验证损失略微增加，这根据你的目标可能仍然可以接受，但值得查看一下。有时，模型在验证集上对其错误预测变得*更自信*，从而增加了损失，而正确分类的实际数量（准确率）保持稳定。
+
+### 将监控整合到工作流程中
+
+大多数深度学习 (deep learning)框架都提供了在训练期间轻松计算和记录这些值的方法。常见方法包括：
+
+1. **手动记录：** 在每个训练周期（或设定步数）后，计算训练和验证阶段的损失和指标，并打印或保存到文件。
+2. **回调：** Keras (TensorFlow) 等框架或 PyTorch Lightning 等库提供了回调系统，可以自动在训练期间的指定点处理记录。
+3. **实验追踪工具：** TensorBoard（通常与TensorFlow和PyTorch集成）或Weights & Biases等工具提供了专用界面，用于记录值、可视化曲线、比较实验和管理训练成果。对于任何重要的项目，都强烈推荐使用这些工具。
+
+这里是一个 PyTorch 代码片段，展示了记录通常发生的位置：
+
+```python
+import torch
+# 假设模型、train_loader、val_loader、optimizer、criterion 已定义
+
+num_epochs = 50
+train_losses, val_losses = [], []
+train_accuracies, val_accuracies = [], [] # 示例指标
+
+for epoch in range(num_epochs):
+    # --- 训练阶段 ---
+    model.train() # 设置模型为训练模式（激活 Dropout 等）
+    running_loss = 0.0
+    correct_train = 0
+    total_train = 0
+    for i, data in enumerate(train_loader):
+        inputs, labels = data
+        # 假设输入/标签已移至正确设备
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        _, predicted = torch.max(outputs.data, 1)
+        total_train += labels.size(0)
+        correct_train += (predicted == labels).sum().item()
+
+    epoch_train_loss = running_loss / len(train_loader)
+    epoch_train_acc = 100 * correct_train / total_train
+    train_losses.append(epoch_train_loss)
+    train_accuracies.append(epoch_train_acc)
+
+    # --- 验证阶段 ---
+    model.eval() # 设置模型为评估模式（禁用 Dropout，为 BN 使用运行统计数据）
+    running_val_loss = 0.0
+    correct_val = 0
+    total_val = 0
+    with torch.no_grad(): # 禁用梯度计算
+        for data in val_loader:
+            inputs, labels = data
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_val_loss += loss.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total_val += labels.size(0)
+            correct_val += (predicted == labels).sum().item()
+
+    epoch_val_loss = running_val_loss / len(val_loader)
+    epoch_val_acc = 100 * correct_val / total_val
+    val_losses.append(epoch_val_loss)
+    val_accuracies.append(epoch_val_acc)
+
+    # --- 记录 ---
+    print(f'Epoch {epoch+1}/{num_epochs} | '\
+          f'Train Loss: {epoch_train_loss:.4f} | Train Acc: {epoch_train_acc:.2f}% | '\
+          f'Val Loss: {epoch_val_loss:.4f} | Val Acc: {epoch_val_acc:.2f}%')
+
+    # 通常情况下，你会将这些值记录到 TensorBoard 或 W&B，而不仅仅是打印出来
+    # logger.add_scalar('Loss/train', epoch_train_loss, epoch)
+    # logger.add_scalar('Loss/validation', epoch_val_loss, epoch)
+    # logger.add_scalar('Accuracy/train', epoch_train_acc, epoch)
+    # logger.add_scalar('Accuracy/validation', epoch_val_acc, epoch)
+
+# End of training loop
+```
+
+监控损失曲线和相关的性能指标并非只是被动活动。这是一个积极的反馈循环，它为你在正则化 (regularization)强度、学习率、优化算法、模型架构以及何时停止训练（我们将在早停法中看到）等方面的选择提供信息。通过仔细观察这些信号，你可以引导模型实现更好的泛化，并构建更有效的深度学习方案。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本内容全面的深度学习理论基础教材，涵盖优化、正则化和模型评估，这些内容有助于理解损失曲线和指标。
+- [CS231n: Convolutional Neural Networks for Visual Recognition, Lecture Notes](http://cs231n.stanford.edu/2023/index.html) — Fei-Fei Li, Yunzhu Li, Ruohan Gao (2023)
+  Publisher: Stanford University
+  讲义提供了训练神经网络的实践建议，诊断过拟合和欠拟合等常见问题，以及使用损失曲线和验证指标进行监控的作用。
+- [Training a classifier (PyTorch tutorial)](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html) — PyTorch Documentation (2024)
+  PyTorch官方教程展示了标准的训练循环，说明了如何计算和跟踪训练集与验证集的损失和准确度。
+- [TensorBoard: Scalar Dashboard](https://www.tensorflow.org/tensorboard/scalars) — TensorFlow Documentation (2024)
+  Publisher: TensorFlow
+  TensorBoard标量仪表盘的官方文档，解释了如何记录和可视化损失和指标等标量值随时间的变化，这对于训练监控是必要的。

@@ -1,0 +1,141 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "building-rag-systems"
+lesson: "implementing-search-methods"
+sourceId: 7775
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-6-building-rag-systems/implementing-search-methods"
+title: "采用不同的搜索方法"
+description: "了解检索模块中除基础语义搜索外的各类搜索方法。"
+order: 3
+plots: []
+sourceHash: "6f551d7acd4a663325db9401ad68c129c5ad115a7a578531609de757776daf62"
+sourceCorrections: []
+---
+
+检索增强生成（RAG）系统的成效在很大程度上取决于其检索环节的质量。仅仅找出包含用户精确关键词的文档通常不够。要构建一个系统，需要使用能够领会用户意图并找到最贴切信息的搜索方法，无论匹配是基于精确术语还是深层含义。`retrieval` 模块提供了多种搜索方法以应对不同情况。
+
+### 关键词搜索
+
+关键词搜索，又称稀疏检索，是最常见的搜索方式。它通过将查询中的词语与文档集中的词语进行匹配来工作。此方法很善于找出包含特定已知标识符、技术术语或精确短语的文档。它速度快，并且不需要生成嵌入 (embedding)的额外计算负担。
+
+`keyword_search` 函数应用了类似 BM25 的算法，根据词频和逆文档频率为文档打分。这意味着它优先展示查询词语出现频繁的文档，同时对较稀有、更独特的词语赋予更高的权重 (weight)。
+
+想象一下您正在搜索一组技术文章的情景。
+
+```python
+from kerb.retrieval import Document, keyword_search
+
+documents = [
+    Document(
+        id="doc1",
+        content="Asynchronous programming in Python allows for concurrent execution using async/await."
+    ),
+    Document(
+        id="doc2",
+        content="JavaScript is an event-driven language that also supports asynchronous operations."
+    ),
+    Document(
+        id="doc3",
+        content="REST APIs provide a standardized way for applications to communicate over HTTP."
+    )
+]
+
+query = "python async"
+results = keyword_search(query, documents, top_k=2)
+
+print("关键词搜索结果:")
+for result in results:
+    print(f"  Rank {result.rank}: {result.document.id} (Score: {result.score:.3f})")
+```
+
+在此情景中，`doc1` 会排名最高，因为它同时包含“python”和“async”。关键词搜索对于带有独特或技术术语的查询很实用，像是查找某个函数名、错误信息或行业专用缩写词。
+
+但是，它的主要局限是不能识别同义词或意图。一个查询如“让我的应用同时处理很多用户”很可能找不到关于“并发执行”的文档，因为词汇没有重叠。这就是语义搜索变得有用的地方。
+
+### 语义搜索
+
+语义搜索，或称密集检索，从关键词匹配转向找出在*意思*上与查询相似的文档。它通过将查询和文档都表示为称为嵌入 (embedding)的数字向量 (vector)来达到此目的。搜索随后成为一个数学上的问题：在高维空间 (high-dimensional space)中找到与查询向量距离最近的文档向量。
+
+这种做法很有效，因为它能识别同义词、转述以及查询的深层意图。例如，它会正确地分辨出“构建可扩展的Web服务”与关于“异步编程”和“REST API”的文档在语义上近似，即使精确的关键词不一致。
+
+要进行语义搜索，您首先要为文档和查询生成嵌入。
+
+```python
+from kerb.retrieval import semantic_search
+from kerb.embedding import embed, embed_batch
+
+# 上一个例子中的文档
+doc_texts = [doc.content for doc in documents]
+doc_embeddings = embed_batch(doc_texts)
+
+query = "building scalable web services"
+query_embedding = embed(query)
+
+results = semantic_search(
+    query_embedding=query_embedding,
+    documents=documents,
+    document_embeddings=doc_embeddings,
+    top_k=2
+)
+
+print("\n语义搜索结果:")
+for result in results:
+    print(f"  Rank {result.rank}: {result.document.id} (Similarity: {result.score:.3f})")
+```
+
+语义搜索很适合处理自然语言提问和较宽泛主题的查找，这时用户可能不了解源文档中使用的确切词汇。它的主要不足是有时会漏掉包含精确但生僻关键词的文档，如果整体的语义意思不完全一致的话。此外，它需要首先为所有文档生成嵌入。
+
+### 混合搜索
+
+为了兼顾两者的优点，您可以采用混合搜索。这种方法将关键词搜索和语义搜索的结果加以组合，发挥词语匹配的准确性和语义相似性的更全面的识别能力。
+
+`hybrid_search` 函数会同时进行这两种搜索，然后将结果合并。您可以通过调整 `keyword_weight` 和 `semantic_weight` 参数 (parameter)来掌控每种搜索方法的影响。`keyword_weight` 值较高时更侧重精确匹配，而 `semantic_weight` 值较高时则更注重意思关联。
+
+```python
+from kerb.retrieval import hybrid_search
+
+query = "async python patterns"
+query_embedding = embed(query)
+
+# 一种均衡的做法
+results = hybrid_search(
+    query=query,
+    query_embedding=query_embedding,
+    documents=documents,
+    document_embeddings=doc_embeddings,
+    keyword_weight=0.5,
+    semantic_weight=0.5,
+    top_k=2
+)
+
+print("\n混合搜索结果:")
+for result in results:
+    print(f"  Rank {result.rank}: {result.document.id} (Score: {result.score:.3f})")
+```
+
+混合搜索通常是RAG系统最管用的办法，因为它能很好地应对多种查询类型。对于“async python patterns”这样的查询，它既能找到包含精确词语“async”的文档，也能找出讨论相关想法如“并发执行”的文档，从而为大型语言模型提供更周全的背景信息。
+
+### 选择合适的方法
+
+最合用的搜索策略取决于您的文档和预期的查询类型。一个好的开始是使用混合搜索，因为它适用范围最广。但是，认识每种方法的长处有助于您调整系统以达到最佳表现。
+
+| 情形 | 建议方法 | 依据 |
+| --- | --- | --- |
+| 用户搜索精确的错误信息 | 关键词 | 查询包含必须精确匹配的特定字面文本。 |
+| 用户提出宽泛、开放式问题 | 语义 | 查询的意图和意思比使用的确切词语更关键。 |
+| 用户搜索技术文档 | 混合 | 查询可能包含特定技术术语（关键词），但也可能涉及更宽泛的应用（语义）。 |
+| 用户查找某个代码片段 | 侧重关键词的混合 | 语法和函数名有其价值，但周边背景也需考虑。 |
+
+通过采用合适的搜索策略，您可以保证传递给大型语言模型的背景信息尽可能贴切和全面，从而直接提升RAG系统回复的质量和准确度。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://proceedings.neurips.cc/paper_files/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 33; Pages: 9459-9474; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍了RAG架构，结合预训练的参数化和非参数化记忆进行生成任务。
+- [Dense Passage Retrieval for Open-Domain Question Answering](https://aclanthology.org/2020.emnlp-main.550.pdf) — Vladimir Karpukhin, Barlas Oğuz, Sewon Min, Patrick Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, Wen-tau Yih (2020)
+  Journal: Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP); DOI: [10.18653/v1/2020.emnlp-main.550](https://doi.org/10.18653/v1/2020.emnlp-main.550)
+  介绍了密集段落检索（DPR），一种训练密集编码器以表示段落和查询进行语义搜索的方法。
+- [Reciprocal Rank Fusion (RRF)](https://dl.acm.org/doi/10.1145/1571941.1572114) — Gordon V. Cormack, Charles L. A. Clarke, Stefan Büttcher (2009)
+  Journal: Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval; Publisher: Association for Computing Machinery; Pages: 758-759; DOI: [10.1145/1571941.1572114](https://doi.org/10.1145/1571941.1572114)
+  介绍了倒数排名融合，一种结合来自不同检索系统的排名列表的简单而有效的方法。

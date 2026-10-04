@@ -1,0 +1,137 @@
+---
+course: "distributed-training-pytorch-fsdp"
+chapter: "multi-node-scaling-nccl-tuning"
+lesson: "initializing-multi-node-process-groups"
+sourceId: 7898
+sourceUrl: "https://apxml.com/zh/courses/distributed-training-pytorch-fsdp/chapter-4-multi-node-scaling-nccl-tuning/initializing-multi-node-process-groups"
+title: "初始化多节点进程组"
+description: "配置 TCP 和 InfiniBand 后端以实现稳定的多节点分布式初始化。"
+order: 1
+plots: ["plots/7898-0.json"]
+sourceHash: "c4d66bdec77ae29355d9d7c946b65cb3a224979d16a2804e7406165b52ae844f"
+sourceCorrections: []
+---
+
+从单机切换到多节点集群会增加架构难度，优化重点从纯粹计算转向网络拓扑和通信原语。尽管通信使用了高带宽NVLink桥接（常超过600 GB/s），但节点间流量通过网络结构，其带宽通常通过InfiniBand或以太网 (RoCE) 下降到100-400 Gb/s。在此环境中初始化进程组，要求对通信后端进行准确配置并精确处理设备放置，以避免非统一内存访问 (NUMA) 瓶颈。
+
+### NCCL后端和传输层
+
+对于基于GPU的分布式训练，NVIDIA集合通信库 (NCCL) 是公认标准。尽管PyTorch支持 `gloo` 和 `mpi`，但FSDP需要NCCL中特有的集合优化来高效处理分片参数 (parameter)同步。
+
+NCCL通过找到GPU之间最有效的路径来运行。它在集群中构建环形或树形拓扑结构。初始化阶段决定了哪些网络接口可用于此通信。您必须明确指示NCCL使用正确的网络接口卡 (NIC)，尤其是在具有多个接口的集群中（例如，`eth0` 上的管理网络和 `ib0` 上的高速结构）。
+
+未能隔离接口常常会导致NCCL尝试通过慢速TCP以太网连接建立环，而非预期的告诉结构。使用环境变量来控制此行为：
+
+- `NCCL_SOCKET_IFNAME`：明确筛选NCCL可用于套接字通信的接口。
+- `NCCL_IB_DISABLE`：明确控制是否使用InfiniBand verbs。
+- `NCCL_P2P_DISABLE`：管理PCIe上的点对点传输。
+
+> 该架构将用于张量通信的高带宽数据平面（橙色）与用于初始握手的低带宽控制平面（虚线）分开。
+
+### 确定性渲染和环境变量
+
+PyTorch 依赖于多节点设置的环境变量初始化方法。这种方法假设集群调度器（如 Slurm 或 Kubernetes）在 Python 脚本执行前，会填充每个容器或节点的 shell 环境中的特定变量。
+
+四个必需变量是：
+
+1. `MASTER_ADDR`：秩为0的节点的IP地址或主机名。
+2. `MASTER_PORT`：主节点上用于TCP存储的开放端口。
+3. `WORLD_SIZE`：全局参与作业的进程（GPU）总数。
+4. `RANK`：当前进程的全局索引（0到 `WORLD_SIZE - 1`）。
+
+在 FSDP 中，区分 `RANK` 和 `LOCAL_RANK` 是必需的。`RANK` 指的是全局标识符，而 `LOCAL_RANK` 指的是特定物理机器上 GPU 的索引（通常为 0 到 7）。
+
+以下代码片段展示了一个初始化例程，它明确地将进程绑定到一个设备。若未执行 `set_device`，节点上的所有进程将默认为 CUDA 设备 0，从而导致内存争用并立即崩溃。
+
+```python
+import os
+import torch
+import torch.distributed as dist
+
+def setup_distributed_environment():
+    # 调度器注入的标准环境变量
+    rank = int(os.environ["RANK"])
+    local_rank = int(os.environ["LOCAL_RANK"])
+    world_size = int(os.environ["WORLD_SIZE"])
+
+    # 明确为当前进程设置设备
+    torch.cuda.set_device(local_rank)
+
+    # 初始化进程组
+    # 注意：对于FSDP在GPU上，'nccl'是唯一可行的后端
+    dist.init_process_group(
+        backend="nccl",
+        init_method="env://",
+        world_size=world_size,
+        rank=rank,
+        # 超时设置对于初始化可能错开的大型集群非常必要
+        timeout=torch.distributed.default_pg_timeout
+    )
+    
+    return rank, local_rank, world_size
+
+def cleanup():
+    dist.destroy_process_group()
+```
+
+### 处理NUMA亲和性和PCIe拓扑
+
+在多节点集群中，仅仅让GPU能够通信不足以实现高性能。您必须确保与网络结构通信的GPU物理上接近其使用的网卡。
+
+现代服务器节点（例如 NVIDIA HGX H100）通常是双路系统。GPU 0-3 可能连接到 CPU Socket 0，而 GPU 4-7 连接到 CPU Socket 1。如果 GPU 0 尝试通过连接到 Socket 1 的 NIC 发送数据，则数据必须经过 CPU 之间的 UPI/QPI 互连。这种传输增加了延迟并降低了有效带宽，造成了拖后腿效应，从而减慢了整个 FSDP 集合操作。
+
+忽略 NUMA 拓扑的影响会造成性能损失，这种损失随着模型大小的增加而增大，因为通信量会增加。
+
+
+
+![NUMA 亲和性对 NCCL AllGather 带宽的影响](plots/7898-0.json)
+
+
+
+> 当 PCIe 路径跨越 CPU 插槽时，会发生带宽下降。正确的亲和性配置可确保最大吞吐量 (throughput)。
+
+为了解决这个问题，精密的启动器将进程绑定到与本地 GPU 的 NUMA 节点相关的特定 CPU 核心上。尽管 `torchrun` 等工具会自动处理其中一些情况，但在自定义集群环境中，明确的控制通常需要使用 `numactl` 等工具或查看 `/sys/class/net/<interface>/device/numa_node` 来将网卡与 GPU 匹配。
+
+### 超时管理和TCP存储限制
+
+初始化阶段在 `MASTER_ADDR` 上使用 TCP 存储来交换汇合信息。在此阶段，每个工作节点连接到主节点。在节点数超过 64 的集群中，这个单一的联系点可能会成为瓶颈，或者如果集群网络拥堵，连接可能会超时。
+
+此外，如果使用 `torch.compile` 或在模型分片期间进行大量内存分配，FSDP 初始化会涉及大量的编译开销。如果秩 0 准备就绪所需的时间超过默认超时，其他秩将以 `Watchdog` 错误终止。
+
+对于大型集群上的生产训练运行，建议在创建组时显著增加超时时间：
+
+```python
+from datetime import timedelta
+
+dist.init_process_group(
+    backend="nccl",
+    # 将超时时间增加到 60 分钟，以应对大型模型初始化
+    timeout=timedelta(minutes=60)
+)
+```
+
+### 验证网络结构
+
+一旦 `init_process_group` 返回，逻辑组便存在，但物理连接的稳定性尚未得到验证。为确保所有节点健康且能够通信，一种常见做法是在设置后立即运行一个小的张量操作。
+
+集合屏障很有用，但归约操作更优，因为它会锻炼数据平面。
+
+```python
+def verify_mesh(local_rank):
+    # 在特定设备上创建一个测试张量
+    tensor = torch.ones(1).to(local_rank)
+    
+    # 执行 AllReduce 操作
+    # 如果此操作挂起，则表明 IB 结构上存在防火墙或路由问题
+    dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
+    
+    # 验证结果与 world_size 匹配
+    world_size = dist.get_world_size()
+    if tensor.item() == world_size:
+        if dist.get_rank() == 0:
+            print(f"网络结构已验证。全局大小: {world_size}")
+    else:
+        raise RuntimeError("NCCL AllReduce 返回了不正确的结果")
+```
+
+此验证步骤可防止训练循环在损坏的网络结构上启动，节省了浪费的 GPU 周期。如果此步骤失败，请通过在环境变量中设置 `NCCL_DEBUG=INFO` 来检查 NCCL 调试日志，以追踪导致分区问题的特定秩或套接字。

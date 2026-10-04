@@ -1,0 +1,137 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "data-validation-pydantic"
+lesson: "request-body-validation"
+sourceId: 5253
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-2-data-validation-pydantic/request-body-validation"
+title: "请求体数据校验"
+description: "使用 Pydantic 模型来处理 FastAPI 中接收到的请求体数据的校验。"
+order: 3
+plots: []
+sourceHash: "2e543e5e3104a7154cd7bd59e9cb06e4063f58eeafcebe0f3ea9abb141ef08d0"
+sourceCorrections: []
+---
+
+校验接收到的数据在构建可靠的 API 时是基本要求，特别是那些为机器学习 (machine learning)模型提供服务的 API。您需要确保数据结构和类型与您的模型预期一致，然后才能尝试任何处理或预测。FastAPI 通过与 Pydantic 模型集成，使这项工作变得简单。
+
+当您定义一个路径操作（例如 POST 或 PUT 请求处理器），它需要在请求体中接收数据时，您可以声明一个函数参数 (parameter)，其类型提示指向您的 Pydantic 模型。FastAPI 依据此类型提示来自行处理请求体数据校验。
+
+考虑一个场景：您的 API 端点需要接收特定特征以完成预测任务。您可以定义一个 Pydantic 模型来表示预期的结构：
+
+```python
+# main.py
+from fastapi import FastAPI
+from pydantic import BaseModel, Field
+from typing import Optional # 对于可选字段，使用 Optional 或 | None
+
+app = FastAPI()
+
+class ModelInput(BaseModel):
+    feature_alpha: float
+    feature_beta: int = Field(gt=0, description="Beta feature must be positive")
+    category: str
+    optional_param: Optional[float] = None # Or use: float | None = None
+
+@app.post("/process_data/")
+async def process_data_endpoint(input_data: ModelInput):
+    """
+    根据 ModelInput 模式接收并处理数据。
+    """
+    # 如果代码执行到这里，input_data 肯定是一个有效的
+    # ModelInput 实例。FastAPI 已经处理了数据校验。
+    print(f"Received valid data: {input_data.dict()}")
+
+    # 直接访问校验过的数据字段：
+    result = input_data.feature_alpha * input_data.feature_beta
+
+    # 您可以继续使用这些校验过的数据，例如用于机器学习推断
+    return {"status": "success", "processed_result": result, "received_data": input_data}
+```
+
+在这个例子中，`process_data_endpoint` 函数预期一个名为 `input_data` 的参数，其类型提示是 `ModelInput`。当一个请求以 POST 方法访问 `/process_data/` 端点时，FastAPI 会自行执行以下操作：
+
+1. **读取请求体：** FastAPI 读取请求体的原始字节。
+2. **解析 JSON：** 它假定请求体包含 JSON 数据，并将其解析为 Python 字典。
+3. **用 Pydantic 校验：** 它接收解析后的字典，并尝试使用这些数据创建一个 `ModelInput` Pydantic 模型实例。此步骤会执行模型中定义的所有校验检查：
+   - 检查所需字段（`feature_alpha`、`feature_beta`、`category`）是否存在。
+   - 检查数据类型是否与标注（`float`、`int`、`str`）匹配。
+   - 应用任何其他约束（例如 `feature_beta` 的 `gt=0`）。
+4. **注入校验过的数据：** 如果校验成功，FastAPI 会创建一个用请求数据填充的 `ModelInput` 实例，并将其作为 `input_data` 参数传递给您的路径操作函数。您的函数代码随后可以安心使用此对象，因为它符合已定义的模式。
+5. **处理校验错误：** 如果解析失败，或者数据不符合 `ModelInput` 模式（例如，缺少必要字段、类型不正确，或者违反了 `feature_beta > 0` 等约束），FastAPI 会立即停止处理请求。它会生成并返回一个带有 HTTP 状态码 `422 Unprocessable Entity` 的 JSON 响应。此响应包含有关校验错误的详细信息，准确指出哪些字段有问题以及原因。
+
+### 示例：有效请求
+
+如果您向 `/process_data/` 发送一个 POST 请求，请求体 JSON 如下：
+
+```json
+{
+  "feature_alpha": 10.5,
+  "feature_beta": 5,
+  "category": "A",
+  "optional_param": 99.9
+}
+```
+
+FastAPI 将针对 `ModelInput` 模型成功校验此请求。您的 `process_data_endpoint` 函数将执行，接收一个 `ModelInput` 实例，并且客户端将收到一个类似于 `200 OK` 的响应：
+
+```json
+{
+  "status": "success",
+  "processed_result": 52.5,
+  "received_data": {
+    "feature_alpha": 10.5,
+    "feature_beta": 5,
+    "category": "A",
+    "optional_param": 99.9
+  }
+}
+```
+
+### 示例：无效请求
+
+现在，考虑发送一个带有无效请求体的 POST 请求：
+
+```json
+{
+  "feature_alpha": "not-a-float",
+  "category": "B"
+}
+```
+
+这个载荷无效，原因有二：`feature_alpha` 是字符串而不是浮点数，以及所需的 `feature_beta` 字段缺失。FastAPI 会捕获这些错误，并返回一个 `422 Unprocessable Entity` 响应，如下所示：
+
+```json
+{
+  "detail": [
+    {
+      "loc": [
+        "body",
+        "feature_alpha"
+      ],
+      "msg": "值不是有效的浮点数",
+      "type": "type_error.float"
+    },\n    {
+      "loc": [
+        "body",
+        "feature_beta"
+      ],
+      "msg": "字段必填",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+请注意，错误响应清楚地指明了请求体中每次校验失败的位置（`loc`）和原因（`msg`、`type`）。这种即时且详细的反馈对于 API 客户端在开发和调试过程中非常有帮助。
+
+通过简单地使用 Pydantic 模型作为请求体参数 (parameter)的类型提示，您可以获得便捷的、声明式的数据校验，并附带清晰的错误报告，这大大减少了样板代码，并提高了 API 端点的可靠性。这确保了到达您的应用逻辑（以及可能到达您的机器学习 (machine learning)模型）的数据结构和类型是正确的。此外，FastAPI 会使用这些 Pydantic 模型来直接生成 API 文档（如 Swagger UI）的模式，使您的 API 在预期请求格式方面能够自我说明。
+
+## 参考资料
+
+- [FastAPI Documentation - Request Body](https://fastapi.tiangolo.com/tutorial/body/) — Sebastián Ramírez (2024)
+  FastAPI 官方指南，介绍如何使用 Pydantic 模型定义和验证请求体，涵盖本节演示的概念。
+- [Pydantic Documentation - Models](https://docs.pydantic.dev/latest/usage/models/) — Samuel Colvin and Pydantic Contributors (2024)
+  Pydantic 模型的官方文档，解释其数据定义、验证和序列化功能，FastAPI 集成这些功能用于请求体验证。
+- [Practical FastAPI: A developer's guide to building production-ready API services with Python](https://www.packtpub.com/product/practical-fastapi-a-developers-guide-to-building-production-ready-api-services-with-python/9781803248383) — J. D. Durr (2023)
+  Publisher: Packt Publishing
+  使用 FastAPI 开发 API 的实用指南，其中包含关于使用 Pydantic 进行数据验证和处理请求体的具体讨论和示例。

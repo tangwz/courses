@@ -1,0 +1,123 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "environment-and-library-setup"
+lesson: "hands-on-practical-configuring-training-script"
+sourceId: 8511
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-3-environment-and-library-setup/hands-on-practical-configuring-training-script"
+title: "动手实践：配置训练脚本"
+description: "编写一个集成 PyTorch、Transformers 和 Accelerate 的基础 Python 脚本。"
+order: 5
+plots: []
+sourceHash: "f701eaf9a766f4557e5ac87b6b1fd90e605abd8152adec9b5b5a95f5f4eda2f9"
+sourceCorrections: []
+---
+
+配置基础训练脚本是微调 (fine-tuning)过程的第一步。该脚本作为模型训练的骨架，整合了用于张量运算的 PyTorch、用于模型管理的 Hugging Face Transformers 库，以及用于自动处理设备分配的 Accelerate。
+
+### 导入必要的库
+
+首先创建一个名为 `train.py` 的新 Python 文件。第一段代码将导入加载模型、处理数据和管理硬件所需的特定模块。
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from datasets import load_dataset
+from accelerate import Accelerator
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+```
+
+`AutoModelForCausalLM` 类专门用于文本生成任务，即模型预测序列中的下一个 token。`Accelerator` 类将管理 PyTorch 代码与底层 CUDA 硬件之间的交互。
+
+### 使用 Accelerate 实现硬件抽象
+
+手动管理硬件设备分配需要为每个张量和模型实例添加 `.to('cuda')` 或 `.to('cpu')`。随着代码量的增加，这种方式会变得难以维护。Accelerate 库简化了这一操作，它能自动检测硬件设置并在后台处理张量的分布。
+
+```python
+accelerator = Accelerator()
+device = accelerator.device
+```
+
+通过在脚本早期初始化 `Accelerator` 对象，你就为后续所有的内存分配建立了一个统一的控制器。
+
+### 加载分词 (tokenization)器 (tokenizer)和模型
+
+接下来，必须将预训练 (pre-training)的小语言模型及其对应的分词器加载到内存中。在本练习中，假设你使用的是一个参数 (parameter)量约为 5 亿的轻量级模型。
+
+```python
+model_id = "Qwen/Qwen2.5-0.5B"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(model_id)
+```
+
+请注意检查 `pad_token` 的条件。许多基座模型在训练时没有专门的填充 token。在使用批处理数据进行微调 (fine-tuning)时，较短的序列必须进行填充，以匹配批次中最长序列的长度。复用序列结束 token (`eos_token`) 是一种常见且有效的做法，可以防止矩阵运算期间出错。
+
+### 准备数据集和 DataLoader
+
+之前你已经学习了如何将数据格式化为指令-回答对。现在，你将加载这些格式化后的数据并为训练循环做准备。脚本需要一个 `DataLoader` 来按固定的批次大小遍历数据集。
+
+```python
+dataset = load_dataset("json", data_files="formatted_data.jsonl", split="train")
+
+def tokenize_function(examples):
+    return tokenizer(
+        examples["text"],
+        truncation=True,
+        padding="max_length",
+        max_length=256
+    )
+
+tokenized_dataset = dataset.map(tokenize_function, batched=True)
+tokenized_dataset.set_format("torch")
+
+batch_size = 4
+dataloader = DataLoader(tokenized_dataset, batch_size=batch_size, shuffle=True)
+```
+
+批次大小直接影响完成一个训练轮次（epoch）所需的总更新步数。你可以使用以下公式计算总训练步数：
+
+$S = \frac{E \times N}{B}$
+
+这里，$S$ 表示总训练步数，$E$ 是训练轮次，$N$ 是数据集中的样本总数，$B$ 是批次大小。较小的批次大小占用更少的显存 (VRAM)，但会增加每个轮次的参数 (parameter)更新总次数。
+
+### 初始化优化器并封装组件
+
+优化器决定了如何根据计算出的梯度来更新模型权重 (weight)。`AdamW` 优化器是训练 Transformer 架构的常用选择，因为它能有效地处理权重衰减。
+
+```python
+learning_rate = 5e-5
+optimizer = AdamW(model.parameters(), lr=learning_rate)
+```
+
+设置脚本的最后一步是将模型、优化器和数据加载器传递给 accelerator 的 prepare 方法。
+
+```python
+model, optimizer, dataloader = accelerator.prepare(
+    model, optimizer, dataloader
+)
+```
+
+该方法会检查你的环境，将 PyTorch 模块封装在专门的类中，并确保所有数据批次和模型参数 (parameter)在训练期间自动移动到 GPU。
+
+> 在执行微调 (fine-tuning)循环之前初始化训练脚本组件的流水线。
+
+现在你的脚本已经具备了高效进行本地训练的结构。数据已妥善分批，硬件实现了动态管理，模型也已加载至内存。在微调过程的后续阶段，你将通过注入参数高效适配器来修改此基座模型，从而进一步降低内存消耗。
+
+## 参考资料
+
+- [Hugging Face Accelerate: Training and Inference at Scale Made Simple](https://github.com/huggingface/accelerate) — Sylvain Gugger, Lysandre Debut, Thomas Wolf, Philipp Schmid, Zachary Mueller, Sourab Mangrulkar, Marc Sun, Benjamin Bossan (2022)
+  Journal: Hugging Face Documentation
+  Accelerate 库的官方文档，介绍了 Accelerator 类及其硬件抽象的设计理念。
+- [Decoupled Weight Decay Regularization](https://openreview.net/forum?id=Bkg6RiCqY7) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  AdamW 优化器的原始研究论文，解释了为什么在 Transformer 模型中它优于标准的 Adam 优化器。
+- [Natural Language Processing with Transformers](https://www.oreilly.com/library/view/natural-language-processing/9781098136780/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media; Pages: 27-60
+  Hugging Face 生态系统的全面指南，特别涵盖了分词和模型加载的内容。
+- [Qwen2.5 Technical Report](https://arxiv.org/abs/2412.15115) — Qwen Team (2024)
+  Journal: arXiv preprint; DOI: [10.48550/arXiv.2412.15115](https://doi.org/10.48550/arXiv.2412.15115)
+  关于 Qwen2.5 模型家族的技术细节，包括本节中使用的 0.5B 参数版本的架构信息。

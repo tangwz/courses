@@ -1,0 +1,145 @@
+---
+course: "python-for-beginners"
+chapter: "interacting-with-files"
+lesson: "python-reading-files"
+sourceId: 2344
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-6-interacting-with-files/python-reading-files"
+title: "从文件中读取数据"
+description: "了解在 Python 中从文本文件读取内容的不同方法，例如读取整个文件、逐行读取或一次性读取所有行。"
+order: 3
+plots: []
+sourceHash: "5889af0daa8da6c5664cc6ba271968596840a8689bd1e506b0c51ac012d8f2c6"
+sourceCorrections: []
+---
+
+从文件中读取数据是 Python 编程中常见的任务。在打开文件之后，通常使用 `open()` 函数以读取模式 `('r')`，重点就转移到提取其中存储的信息。Python 提供了几种方便的方式来从文件对象中读取数据。您选择的方法通常取决于您是需要一次性获取全部内容，还是逐行处理文件，或是读取特定数量的数据。
+
+回想一下上一节的内容，打开文件的最佳做法是使用 `with` 语句，即使发生错误，它也会自动处理文件的关闭。我们将在示例中采用这种方法。
+
+```python
+# 假设我们有一个名为 'greet.txt' 的文件，其内容如下：
+# Hello, Python learner!
+# Start file handling.
+# Enjoy reading files.
+```
+
+### 使用 `read()` 读取整个文件内容
+
+获取文件全部内容最简单的方法是使用 `read()` 方法。当不带任何参数 (parameter)调用时，它会从当前位置读取到文件末尾，并将全部内容作为单个字符串返回。
+
+```python
+# 示例：读取 greet.txt 的全部内容
+try:
+    with open('greet.txt', 'r') as file:
+        content = file.read()
+        print("--- 文件内容 (使用 read()) ---")
+        print(content)
+        print("--- 内容结束 ---")
+except FileNotFoundError:
+    print("错误：未找到 greet.txt。")
+```
+
+执行此代码将打印 `greet.txt` 中的完整文本。请注意，输出与文件中显示的内容完全一致，包括导致文本在打印时跨多行的换行符。
+
+**需要注意的问题：** 在处理非常大的文件时，使用 `read()` 要谨慎。因为它将整个文件内容作为单个字符串加载到内存中，这会占用大量内存资源，如果文件特别大（千兆字节或更多），甚至可能导致程序崩溃。
+
+您还可以为 `read(size)` 提供一个可选的整数参数，以指定要读取的最大字节数（对于默认编码的文本文件，即字符数）。如果您只需要文件的一部分或想分块处理文件，这会很有用。
+
+```python
+# 示例：只读取前 10 个字节
+try:
+    with open('greet.txt', 'r') as file:
+        partial_content = file.read(10)
+        print("--- 前 10 个字节 ---")
+        print(partial_content)
+        print("--- 部分内容结束 ---")
+except FileNotFoundError:
+    print("错误：未找到 greet.txt。")
+```
+
+### 使用 `readline()` 逐行读取
+
+如果您需要逐行处理文件，`readline()` 方法会很有帮助。每次调用 `readline()` 时，它会从当前位置读取文件中的一个完整行，直到并包括表示行尾的换行符 (`\n`)。如果它到达文件末尾且没有更多行，它会返回一个空字符串 (`''`)。
+
+```python
+# 示例：使用 readline() 逐行读取
+try:
+    with open('greet.txt', 'r') as file:
+        print("--- 使用 readline() 读取行 ---")
+        line1 = file.readline()
+        print(f"行 1: {line1}", end='') # end='' 阻止额外的换行
+
+        line2 = file.readline()
+        print(f"行 2: {line2}", end='')
+
+        line3 = file.readline()
+        print(f"行 3: {line3}", end='')
+
+        # 在最后一行之后再次调用
+        end_of_file = file.readline()
+        print(f"文件结束检查: '{end_of_file}' (空字符串表示文件结束)")
+        print("--- 行读取完成 ---")
+except FileNotFoundError:
+    print("错误：未找到 greet.txt。")
+```
+
+请注意 `end=''` 在 `print` 函数中。这会阻止 `print` 添加它自己的换行符，因为 `readline()` 已经包含了文件本身的换行符。如果您只需要一次处理一行，那么对于大文件而言，使用 `readline()` 比 `read()` 更节省内存。
+
+### 使用 `readlines()` 将所有行读取到列表中
+
+`readlines()` 方法从文件的当前位置读取所有剩余行，并将它们作为字符串列表返回。列表中的每个字符串都对应文件中的一行，并且像 `readline()` 一样，包含末尾的换行符 (`\n`)。
+
+```python
+# 示例：将所有行读取到列表中
+try:
+    with open('greet.txt', 'r') as file:
+        lines_list = file.readlines()
+        print("--- 使用 readlines() 读取行 ---")
+        print(f"结果类型: {type(lines_list)}")
+        print(f"行数: {len(lines_list)}")
+        print("列表内容:")
+        print(lines_list) 
+
+        # 访问单行的示例
+        if len(lines_list) > 0:
+            print(f"列表中的第一行: {lines_list[0]}", end='') 
+        print("--- 行读取完成 ---")
+
+except FileNotFoundError:
+    print("错误：未找到 greet.txt。")
+```
+
+此方法将整个文件读取到内存中，类似于 `read()`，但将其组织成一个行列表。如果您需要随机访问不同的行，这会很方便，但对于非常大的文件，它与 `read()` 存在相同的内存问题。
+
+### 推荐方法：直接迭代文件对象
+
+最符合 Python 风格且最节省内存的逐行读取文件的方式是使用 `for` 循环直接迭代文件对象。Python 在后台高效地处理读取行的细节，每次只加载一行（或一小部分缓冲区）到内存中。这是处理文件，特别是大文件时，首选的方法。
+
+```python
+# 示例：直接迭代文件对象
+try:
+    with open('greet.txt', 'r') as file:
+        print("--- 直接迭代文件对象 ---")
+        line_number = 1
+        for line in file:
+            # 在此处处理每一行
+            # 通常有用的是去除空白符/换行符
+            processed_line = line.strip() 
+            print(f"行 {line_number}: '{processed_line}'")
+            line_number += 1
+        print("--- 迭代完成 ---")
+except FileNotFoundError:
+    print("错误：未找到 greet.txt。")
+```
+
+这种方法结合了可读性和效率。在循环内部，`line` 变量保存从文件中读取的当前行，包括换行符。在处理行的实际内容之前，在循环中使用像 `strip()` 或 `rstrip()` 这样的字符串方法来删除前导/尾随空白符（包括换行符）是非常常见的做法。
+
+选择适合的方法取决于您的具体需求：`read()` 用于获取全部内容（适用于小文件），`readline()` 用于手动逐行读取，`readlines()` 用于将所有行作为列表获取（适用于小文件），以及直接迭代用于最常见和高效的逐行处理。
+
+## 参考资料
+
+- [Input and Output](https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files) — Python Software Foundation (2024)
+  此官方文档解释了文件对象、带有各种模式的 `open()` 函数，以及读取文件内容的不同方法，包括高效的迭代。
+- [Fluent Python, 2nd Edition](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056340/) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media
+  提供了关于Python式文件处理、用于健壮I/O的上下文管理器以及文件系统操作的详细内容，适合寻求更深层次理解的读者。

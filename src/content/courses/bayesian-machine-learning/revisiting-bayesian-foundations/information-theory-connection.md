@@ -1,0 +1,108 @@
+---
+course: "bayesian-machine-learning"
+chapter: "revisiting-bayesian-foundations"
+lesson: "information-theory-connection"
+sourceId: 3519
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-1-revisiting-bayesian-foundations/information-theory-connection"
+title: "信息论与贝叶斯推断的关联：熵与KL散度"
+description: "将贝叶斯推断的思想与熵和KL散度等信息论度量联系起来。"
+order: 4
+plots: ["plots/3519-0.json"]
+sourceHash: "7e620dd1e8e4e70ad4b04d5cffbe204901550df804b3a044bad4940000965042"
+sourceCorrections: []
+---
+
+信息论提供了一个有效的视角，用于观察和量化 (quantization)贝叶斯推断的各个方面。贝叶斯学习主要在于根据新数据更新我们的信念（由概率分布表示）。信息论提供了工具，用于度量这些信念中固有的不确定性以及不同信念状态之间的“距离”或散度。熵和Kullback-Leibler（KL）散度是两个主要概念。
+
+## 香农熵：量化 (quantization)不确定性
+
+香农熵度量随机变量可能结果中固有的“信息”、“意外”或“不确定性”的平均水平。对于具有概率质量函数$p(x)$的离散随机变量$X$，熵$H(X)$定义为：
+
+
+$$
+H(X) = - \sum_{x \in \mathcal{X}} p(x) \log p(x)
+$$
+
+
+对于具有概率密度函数$p(x)$的连续随机变量$X$，微分熵为：
+
+
+$$
+H(X) = - \int_{-\infty}^{\infty} p(x) \log p(x) dx
+$$
+
+
+对数的底决定了单位（以2为底得到比特，以$e$为底得到纳特）。熵值越高表示对$X$的结果不确定性越大。分布在单个值附近尖锐集中的熵值较低，而在广泛范围内均匀分布的熵值较高。
+
+在贝叶斯建模中：
+
+- **先验不确定性：** 先验分布$P(\theta)$的熵量化了我们在观测到任何数据之前对参数 (parameter)$\theta$的初始不确定性。宽泛的、无信息的先验通常具有更高的熵。最大熵原则有时用于选择编码最少假设的先验。
+- **后验不确定性：** 后验分布$P(\theta | \mathcal{D})$的熵量化了我们在观测数据$\mathcal{D}$之后剩余的不确定性。成功的学习理想情况下应带来比先验更低的后验熵，这表明数据减少了我们对$\theta$的不确定性。
+
+## Kullback-Leibler（KL）散度：度量分布之间的差异
+
+熵度量单个分布的不确定性，而KL散度则量化 (quantization)一个概率分布$P$与第二个参考概率分布$Q$之间的差异。它通常被解释为使用$Q$来近似$P$时丢失的信息，或是$P$相对于$Q$的相对熵。
+
+对于离散分布$P(x)$和$Q(x)$：
+
+
+$$
+D_{KL}(P || Q) = \sum_{x \in \mathcal{X}} p(x) \log \frac{p(x)}{q(x)}
+$$
+
+
+对于连续分布$p(x)$和$q(x)$：
+
+
+$$
+D_{KL}(p || q) = \int_{-\infty}^{\infty} p(x) \log \frac{p(x)}{q(x)} dx
+$$
+
+
+KL散度的重要性质：
+
+1. **非负性：** $D_{KL}(P || Q) \ge 0$，当且仅当$P = Q$时取等号。
+2. **非对称性：** 通常情况下，$D_{KL}(P || Q) \neq D_{KL}(Q || P)$。这意味着它并非真正的距离度量，而是一种有方向的散度。选择哪个分布在前是重要的。
+
+这种非对称性具有重要意义。最小化$D_{KL}(P || Q)$会促使$Q$在$P$非零的地方也非零（它试图覆盖$P$）。最小化$D_{KL}(Q || P)$会促使$Q$在$P$为零的地方也为零（它试图被$P$包含）。
+
+
+
+![两个正态分布之间的KL散度](plots/3519-0.json)
+
+
+
+> KL散度$D_{KL}(P || Q)$量化了分布P（蓝色）与分布Q（粉色）之间的差异。它度量了当真实分布是P时使用Q的低效性。请注意其非对称性，$D_{KL}(P || Q)$将产生与$D_{KL}(Q || P)$不同的值。
+
+## 在贝叶斯推断中的作用
+
+当处理前面提到的计算难题，特别是难以处理的后验分布$P(\theta | \mathcal{D})$时，信息论与贝叶斯方法之间的关联变得尤为明显。
+
+**变分推断（VI）：** 这是KL散度的一个主要应用场景。变分推断将贝叶斯推断重构为一个优化问题。我们寻求一个来自易于处理的分布族（例如，高斯分布）的近似$Q(\theta)$，使其“最接近”真实的、通常难以处理的后验$P(\theta | \mathcal{D})$。“最接近”通常使用KL散度来度量。具体而言，变分推断旨在最小化$D_{KL}(Q(\theta) || P(\theta | \mathcal{D}))$。直接最小化它仍然很困难，因为它涉及到未知的后验。然而，最小化此KL散度等价于最大化一个称为证据下界（ELBO）的量：
+
+
+$$
+\text{ELBO}(Q) = \mathbb{E}_{Q}[\log P(\mathcal{D}, \theta)] - \mathbb{E}_{Q}[\log Q(\theta)]
+$$
+
+
+最大化ELBO会使$Q(\theta)$在KL意义上接近真实的后验$P(\theta | \mathcal{D})$。我们将在第3章讨论变分推断方法时详细讨论这种关系。
+
+**模型比较与选择：** 虽然正式的贝叶斯模型比较通常依赖于边际似然$P(\mathcal{D})$或贝叶斯因子，但诸如AIC（赤池信息准则）和DIC（偏差信息准则）等信息准则与KL散度有关联。它们提供了估计模型预期样本外预测准确性的方法，暗含了对模型拟合与复杂度之间平衡的考量，这些思想与信息增益和分布散度相关。
+
+总而言之，熵提供了一种量化 (quantization)我们贝叶斯模型先验和后验中不确定性的方法。KL散度提供了一个比较概率分布的基本工具，它构成了诸如变分推断等近似方法的数学基础，这些方法对于将贝叶斯方法应用于后验精确计算不可行的复杂、高维问题是不可或缺的。因此，理解这些信息论度量不仅仅是理论练习；它对于实现和解释许多高级贝叶斯方法是基础。
+
+## 参考资料
+
+- [Elements of Information Theory](https://www.wiley.com/en-us/Elements+of+Information+Theory%2C+2nd+Edition-p-9780471241959) — Thomas M. Cover and Joy A. Thomas (2006)
+  Publisher: Wiley-Interscience; DOI: [10.1002/047174882X](https://doi.org/10.1002/047174882X)
+  信息论的经典教材，详细介绍了熵和KL散度。
+- [Information Theory, Inference, and Learning Algorithms](https://www.inference.org.uk/itprnn/book.html) — David J. C. MacKay (2003)
+  Publisher: Cambridge University Press
+  将信息论、贝叶斯推断和学习算法联系起来的参考资料。
+- [Pattern Recognition and Machine Learning](https://www.springer.com/gp/book/9780387310732) — Christopher M. Bishop (2006)
+  Publisher: Springer
+  广受认可的机器学习教材，其中包含关于贝叶斯方法、信息论和变分推断的精彩部分。
+- [Variational Inference: A Review for Statisticians](https://www.tandfonline.com/doi/full/10.1080/01621459.2017.1285773) — David M. Blei, Alp Kucukelbir, Jon D. McAuliffe (2017)
+  Journal: Journal of the American Statistical Association; Publisher: Taylor & Francis; Volume: 112; Pages: 859-877; DOI: [10.1080/01621459.2017.1285773](https://doi.org/10.1080/01621459.2017.1285773)
+  一篇评论文章，概述了变分推断，这是KL散度在贝叶斯机器学习中的一个重要应用。

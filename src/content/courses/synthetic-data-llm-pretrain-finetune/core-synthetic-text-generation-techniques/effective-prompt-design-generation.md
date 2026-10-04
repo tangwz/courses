@@ -1,0 +1,233 @@
+---
+course: "synthetic-data-llm-pretrain-finetune"
+chapter: "core-synthetic-text-generation-techniques"
+lesson: "effective-prompt-design-generation"
+sourceId: 6124
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-llm-pretrain-finetune/chapter-2-core-synthetic-text-generation-techniques/effective-prompt-design-generation"
+title: "通过高效的提示词设计引导生成"
+description: "掌握提示词工程技巧，以控制LLM的输出，实现有目的的合成数据生成。"
+order: 5
+plots: []
+sourceHash: "4d5ffa5a284a23d595b367978bb85a0aa96e7f22a7704b19cd0da0ff0170342e"
+sourceCorrections: []
+---
+
+在使用大型语言模型（LLM）生成合成数据时，您提供给模型的指令极其重要。这些指令，统称为“提示词 (prompt)”，是您指导LLM输出的主要手段。高效的提示词设计，能将随机生成的文本与适用于训练其他模型的高质量、有目的的合成数据区分开来。可以将提示词看作是对一个非常聪明但严格按字面意思理解的助手的精心提问。您的提问越好，助手的回复就越好。
+
+本节将研究如何构建能有效引导LLM生成您所需合成文本的提示词。您将了解一个好的提示词的构成要素、影响LLM生成过程的方法，以及为获得理想成果而迭代改进提示词的特点。
+
+## 高效提示词 (prompt)的要素
+
+一个结构良好的提示词通常包含多个协同作用以引导LLM的要素。虽然并非所有提示词都需要每个要素，但了解它们将帮助您为合成数据生成设计更有效的指令。
+
+- **任务定义 (Task Definition)：** 这是核心指令。它清楚说明您希望LLM做什么。例如，“生成产品评论”，“写三个关于光合作用的问题”，或“总结以下文本。”
+- **背景 (Context)：** 提供背景信息有助于LLM理解它应考虑的领域或具体情况。例如，如果生成产品评论，背景可能是“针对一款新发布的智能手表。”
+- **限制和规定 (Constraints and Specifications)：** 这些是LLM应遵循的规则或指导原则。这可以包括期望长度（“大约50字”）、语气（“正式且客观”）、风格（“像新闻报道一样”）、要包含或排除的特定信息，或输出格式（“以JSON对象形式”）。
+- **示例（Few-Shot Learning）：** 在提示词中直接包含一个或多个期望输出的示例，是引导LLM的一种非常有效的方式。这被称为少样本提示（few-shot prompting）或上下文 (context)学习（in-context learning）。LLM从您的示例中学习模式、风格和格式。
+
+以下图表说明这些要素如何共同构成一个全面的提示词：
+
+> 此图表展示了LLM提示词的典型构成块。周全地组合这些要素可以增加您对生成输出的控制。
+
+## 引导LLM生成的策略
+
+有几种策略可以大幅提升合成生成文本的质量和相关性。
+
+### 清晰性和具体性
+
+模糊的提示词 (prompt)会导致模糊或不可预测的输出。您的指令越精确明确，LLM就越能满足您的要求。
+
+- **直接：** 使用清晰、直接的语言。
+- **避免行话，除非其属于期望的输出范围：** 如果您想获取特定专业的数据，使用其术语是恰当的。否则，请坚持使用通用语言。
+- **分解复杂请求：** 如果您需要多方面的数据，可以考虑分阶段使用更简单的提示词来生成，或者设计一个非常详细的单一提示词。例如，与其提示“生成一个包含人物弧光和惊喜结局的故事”，您不如先提示生成人物描述，然后是情节大纲，最后是完整叙述，或者将这些要求仔细地融入一个详细的提示词中。
+
+### 角色提示
+
+为LLM分配一个角色或身份可以深刻影响其生成文本的风格、语气乃至信息的类型。
+
+例如：
+
+- `“您是一名乐于助人的客服助理。一位客户正在询问退款事宜。生成一个礼貌且富有同理心的回复。”`
+- `“扮演一位古罗马历史学家。为高中生提供一段关于布匿战争的简短说明。”`
+
+在生成合成数据时，角色提示可以帮助创建模仿特定用户类型、专家观点或角色声音的文本，从而为您的数据集增加多样性和真实感。
+
+### 指令风格
+
+您措辞指令的方式很重要。LLM对直接命令反应良好。
+
+- **祈使动词：** 以“生成”、“写入”、“列出”、“总结”、“解释”、“翻译”等动词开头提示词 (prompt)。
+- **问题形式：** 有时，将您的请求措辞为问题可以产生良好结果，特别是当您尝试生成问答对时。
+
+### 零样本与少样本提示
+
+这些术语描述您是否在提示词 (prompt)本身中提供示例。
+
+- **零样本提示 (Zero-Shot Prompting)：** 您要求LLM执行任务，而不提供任何明确的期望输出示例。模型完全依赖其预先存在的知识和对指令的理解。
+
+  - *示例（零样本）：*
+
+    ```text
+    为一款无线耳机生成一篇积极的产品评论。
+    ```
+
+  这适用于期望输出格式简单或标准的快速生成任务。然而，对于更受控的合成数据，它的可靠性可能较低。
+- **少样本提示（Few-Shot Prompting）（上下文 (context)学习）：** 您在提示词中直接包含少量（通常1到5个）输入-输出示例。LLM从这些示例中学习期望的模式、风格和格式。这是一种用于合成数据生成的非常有效的方法。
+
+  - *示例（用于情感分类数据的少样本）：*
+
+    ```text
+    将以下句子的情感分类为积极、消极或中性。
+
+    句子：我爱这款新手机，太棒了！
+    情感：积极
+
+    句子：这部电影真是无聊透顶，而且太长了。
+    情感：消极
+
+    句子：今天天气温和。
+    情感：中性
+
+    句子：这是我几个月来喝过最好的咖啡。
+    情感：
+    ```
+
+    （LLM预计将用“积极”完成最后一行）
+
+  对于合成数据生成，少样本提示对于以下任务特别有用：
+
+  - 生成特定JSON或CSV结构的数据。
+  - 创建指令-响应对。
+  - 确保风格或语气一致。
+  - 生成代码或特定应用语言的示例。
+
+您的少样本示例的质量和相关性非常重要。它们应准确反映您希望LLM生成的数据类型。
+
+## 提示词 (prompt)设计的迭代特点
+
+很少能一次就设计出完美的提示词。提示词设计通常是一个试错、观察和改进的迭代过程。
+
+1. **起草初始提示词：** 根据讨论的原则做出最佳猜测。
+2. **生成输出：** 通过您选择的LLM运行提示词。
+3. **评估结果：** 输出是否满足您的要求？它准确吗？格式正确吗？足够多样吗？
+4. **改进提示词：** 根据评估结果，修改您的提示词。这可能涉及：
+   - 使指令更具体。
+   - 添加或更改少样本示例。
+   - 调整限制（例如，长度、语气）。
+   - 尝试不同的措辞或角色分配。
+   - 将任务分解为更小的子提示词。
+5. **重复：** 继续这个循环，直到在生成的合成数据中达到期望的质量和一致性。
+
+以下图表勾勒了此迭代循环：
+
+> 迭代改进是提示词设计中的标准做法。预计需要试验和调整您的提示词以获得理想结果。
+
+## 控制数据集的输出结构
+
+在为LLM预训练 (pre-training)或微调 (fine-tuning)生成合成数据时，输出的结构通常与其内容同样重要。您可能需要JSONL格式、CSV格式的数据，或者像“问题：[问题]\n回答：[回答]”这样的特定文本结构。
+
+控制输出结构的有效方法包括：
+
+- **在提示词 (prompt)中明确说明格式：**
+
+  ```text
+  生成三个产品名称及其类别示例。
+  将每个示例以JSON对象形式输出，键为“product_name”和“category”。
+  ```
+- **使用展示结构的少样本示例：** 这通常是最可靠的方法。
+
+  ```text
+  生成关于基础化学的问答对。遵循此格式：
+
+  问：水的化学符号是什么？
+  答：H2O
+
+  问：地球大气中最丰富的气体是什么？
+  答：氮气
+
+  问：[您的提问在此]
+  答：[您的回答在此]
+  ```
+
+  当您提供结构化示例时，LLM在后续生成中更可能遵循该结构。对于大型数据集生成，您通常会提供模式的起始部分，并让LLM生成多个实例。
+
+## 合成数据任务提示词 (prompt)示例
+
+让我们看几个生成不同类型合成数据的有针对性示例。
+
+### 1. 为特定主题生成多样化问题
+
+**目标：** 创建一组关于可再生能源的问题，类型多样（是什么、为什么、如何）。
+
+**提示词 (prompt)：**
+
+```text
+您是一名课程开发者。生成5个关于可再生能源的不同问题。
+至少包含一个“是什么”问题、一个“为什么”问题和一个“如何”问题。
+确保这些问题适合高中生。
+
+示例格式：
+1. 什么是太阳能？
+```
+
+### 2. 制作指令-响应对
+
+**目标：** 为指令微调 (fine-tuning)生成数据，让LLM学会遵循指令并提供适当的响应。
+
+**提示词 (prompt)（少样本）：**
+
+```text
+生成一条指令和一个相应的准确响应。
+
+指令：用简单的语言解释重力的原理。
+响应：重力是使物体相互吸引的力。这就是为什么当你放下物体时它们会落到地上，以及为什么行星会围绕恒星运行的原因。
+
+指令：列出规律运动的三个好处。
+响应：规律运动可以通过增强肌肉和心血管系统来改善身体健康，提升情绪和减轻压力，并提高能量水平。
+
+指令：用一句话总结《罗密欧与朱丽叶》的情节。
+响应：
+```
+
+（LLM将为最后一条指令完成响应。）
+
+### 3. 生成具有特定人物设定和风格的文本
+
+**目标：** 创建具有特定语气和目标受众的合成客户评论。
+
+**提示词 (prompt)：**
+
+```text
+扮演一个二十岁出头的科技爱好者。为一款名为“Nova X1”的新虚构智能手机写一篇简短而充满激情的评论。
+Mention its sleek design and amazing camera. The review should be informal and use one or two popular slang terms appropriately.
+长度：2-3句话。
+```
+
+这些示例说明了如何组合任务定义、背景、限制以及有时是示例，从而能有效引导LLM输出以进行合成数据创建。
+
+## 关于提示词 (prompt)管理的几句话
+
+随着您为各种合成数据需求开发更多提示词，管理它们变得重要。请考虑：
+
+- **版本控制：** 在改进提示词时，保存其不同版本。这有助于追踪有效的方法，并在更改无益时回溯。
+- **模板化：** 对于那些共享通用结构但在具体细节（如主题或关键词）上有所不同的提示词，使用模板系统（即使是Python中简单的字符串格式化）会非常有帮助。这使您能够程序化地生成许多提示词变体。
+- **文档化：** 简要记录每个提示词的用途、其设计所针对的LLM（如果特定于模型），以及关于其表现的任何观察。
+
+## 展望未来
+
+掌握提示词 (prompt)设计是一项实用技能，能极大地增强您使用LLM生成高质量合成数据的能力。这里讨论的原则和策略提供了一个良好的开端。在即将进行的实践环节“使用LLM API生成文本”中，您将有机会直接应用这些技术，并体验提示词工程对LLM输出的影响。这份实践经验将非常宝贵，因为它能帮助您学习如何针对特定的预训练 (pre-training)和微调 (fine-tuning)目标定制LLM生成。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Publisher: NeurIPS; Volume: 33; Pages: 1877-1901; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  这篇基础论文介绍了少样本学习的概念，展示了大型语言模型如何通过在提示中查看少量示例来执行新任务，这是提示设计的关键方法。
+- [Pre-train, Prompt, and Predict: A Systematic Survey of Prompt Engineering](https://dl.acm.org/doi/10.1145/3607340) — Pengfei Liu, Weizhe Yuan, Jinlan Fu, Zhengbao Jiang, Hiroaki Hayashi, Graham Neubig (2023)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery (ACM); Volume: 56; Pages: 149:1–149:46; DOI: [10.1145/3607340](https://doi.org/10.1145/3607340)
+  一项系统性调查，组织并分析了各种提示工程技术，为有效引导LLM生成提供了对不同方法的广泛理解。
+- [A Survey of Prompting Methods in Large Language Models](https://arxiv.org/pdf/2303.12608) — Bailin Wang, Ruoxi Sun, Shaohan Huang, Furu Wei, Li Dong, Badr Youbi, Heng Ji (2023)
+  Journal: arXiv preprint arXiv:2303.12608; DOI: [10.48550/arXiv.2303.12608](https://doi.org/10.48550/arXiv.2303.12608)
+  本文回顾了不同的提示方法，讨论了它们的组成部分和策略，以提高大型语言模型在各种任务中的表现。
+- [OpenAI Prompt engineering guide](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2024)
+  Publisher: OpenAI
+  这是来自领先LLM开发者的官方实用指南，提供了设计有效提示以控制LLM输出的最佳实践和常见策略。

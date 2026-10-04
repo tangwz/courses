@@ -1,0 +1,111 @@
+---
+course: "optimization-techniques-ml"
+chapter: "deep-learning-optimization-challenges"
+lesson: "normalization-optimization-impact"
+sourceId: 1306
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-6-deep-learning-optimization-challenges/normalization-optimization-impact"
+title: "规范化方法与优化"
+description: "批规范化和层规范化等方法如何影响并辅助优化。"
+order: 3
+plots: []
+sourceHash: "0afd2b964fa7185e1d79877e67fe3259ba4530981b98e0f5d3bbbc88909a3c21"
+sourceCorrections: []
+---
+
+训练深度神经网络 (neural network)通常需要应对高度复杂且非凸的损失函数 (loss function)。优化过程中常常会遇到鞍点、平坦区、梯度消失/爆炸以及对初始化敏感等问题。造成这些问题的一个主要原因是**内部协变量偏移 (ICS)** 现象。
+
+### 理解内部协变量偏移
+
+训练期间，随着网络前层参数 (parameter)通过梯度下降 (gradient descent)进行更新，后续层的输入分布会持续改变。以层 $L$ 为例，其输入激活值取决于所有前置层的参数。随着这些参数在每个优化步骤中改变，层 $L$ 输入的统计分布（均值、方差等）会发生偏移。这使得层 $L$ 必须不断适应新的输入分布，从而减缓训练速度，并使优化器更难找到一个好的最小值。这就像试图学习一个输入定义域不断移动的函数。
+
+规范化方法旨在缓解此问题，通过稳定层输入（激活值）的分布，从而为优化器创造一个更稳定的学习环境。深度学习 (deep learning)中有两种主要方法：批规范化和层规范化。
+
+### 批规范化 (BatchNorm)
+
+由 Ioffe 和 Szegedy 于 2015 年提出，批规范化（BatchNorm）通过在训练期间对每个小批量内的激活值进行规范化来解决 ICS 问题。对于给定层，BatchNorm 独立地计算每个特征维度上小批量实例中激活值的经验均值 $\mu_B$ 和方差 $\sigma_B^2$。
+
+对于小批量 $B = \{x^{(1)}, ..., x^{(m)}\}$ 中的激活值 $x^{(k)}$，规范化过程包括：
+
+1. **计算小批量均值：**
+   $\mu_B = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}$
+2. **计算小批量方差：**
+   $\sigma_B^2 = \frac{1}{m} \sum_{i=1}^{m} (x^{(i)} - \mu_B)^2$
+3. **规范化：**
+   $\hat{x}^{(i)} = \frac{x^{(i)} - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}$
+   其中 $\epsilon$ 是一个为数值稳定性添加的小常数（例如，$10^{-5}$）。
+4. **缩放与平移：**
+   $y^{(i)} = \gamma \hat{x}^{(i)} + \beta$
+
+在这里，$\gamma$（缩放）和 $\beta$（平移）是每个特征维度特有的可学习参数 (parameter)。这些参数使得网络能够学习规范化激活值的最佳缩放和均值，恢复严格规范化到零均值和单位方差可能丧失的表示能力。它们与其他网络参数一同通过反向传播 (backpropagation)进行更新。
+
+> 训练期间，批规范化层内单个特征的计算流程。均值和方差是在小批量上计算的。
+
+**BatchNorm 如何辅助优化：**
+
+- **减少 ICS：** 通过标准化后续层的输入，BatchNorm 显著稳定了学习动态。各层接收到的输入分布更一致，使学习变得更容易。
+- **更平滑的优化曲面：** 研究表明 BatchNorm 通过减少损失和梯度的利普希茨常数来帮助平滑损失曲面。这使优化变得更容易，减少陷入尖锐局部最小值或剧烈波动的可能性，并可能缓解鞍点和平坦区的问题。
+- **更高的学习率：** 稳定后的激活值和可能更平滑的损失曲面通常允许使用比未规范化网络显著更高的学习率，从而实现更快收敛而不发散。
+- **正则化 (regularization)效果：** 使用小批量统计数据（根据所选样本，批次间略有不同）引入的噪声充当随机正则化器，有时减少了对 Dropout 等其他方法的需求。
+- **减少初始化敏感度：** 采用 BatchNorm 的网络通常对权重 (weight)初始化方法的选择不那么敏感，尽管良好的初始化实践仍然有益。
+
+**推理 (inference)时的 BatchNorm：** 在推理期间，对于给定输入，我们需要确定性输出。我们无法计算批次统计数据。相反，在训练期间会估计总体统计数据（均值和方差），通常使用小批量均值和方差的指数移动平均。然后，在推理期间，这些固定的总体估计值将用于规范化步骤（$\hat{x}^{(i)} = (x^{(i)} - \mu_{pop}) / \sqrt{\sigma_{pop}^2 + \epsilon}$）。大多数深度学习 (deep learning)框架会自动处理这种区别。
+
+BatchNorm 的一个重要考虑因素是其对小批量大小的依赖。如果批次大小过小（例如，小于 8-16），性能可能会下降，因为小批量统计数据会变得嘈杂，并且对真实总体统计数据的代表性估计不足。这在内存受限或训练非常大的模型时可能会成为问题。
+
+### 层规范化 (LayerNorm)
+
+层规范化（LayerNorm）由 Ba、Kiros 和 Hinton 提出，提供了一种独立于批次大小的方法。LayerNorm 不在批次维度上进行规范化，而是计算**单个数据点在同一层内所有隐藏单元（特征）上的**均值和方差。
+
+对于层中具有 $H$ 个特征的单个输入数据点 $x$（一个实例的激活值向量 (vector)），LayerNorm 计算：
+
+1. **计算层均值（每实例）：**
+   $\mu = \frac{1}{H} \sum_{j=1}^{H} x_j$
+2. **计算层方差（每实例）：**
+   $\sigma^2 = \frac{1}{H} \sum_{j=1}^{H} (x_j - \mu)^2$
+3. **规范化：**
+   $\hat{x}_j = \frac{x_j - \mu}{\sqrt{\sigma^2 + \epsilon}}$
+4. **缩放与平移：**
+   $y_j = \gamma_j \hat{x}_j + \beta_j$
+
+同样，$\gamma$ 和 $\beta$ 是可学习的缩放和平移参数 (parameter)。与 BatchNorm 通常按特征（或在 CNN 中按通道）设置不同，LayerNorm 通常使用逐元素的 $\gamma_j$ 和 $\beta_j$，这意味着每个特征 $j$ 都有其自己的缩放和平移参数。它们也通过反向传播 (backpropagation)学习。
+
+**LayerNorm 对比 BatchNorm：**
+
+- **批次大小独立性：** LayerNorm 的计算仅取决于当前输入实例的特征，这使其即使在小批量大小为 1 时也有效。这对于循环神经网络 (neural network) (RNN) 和 Transformer 来说是一个主要优点，因为在这些网络中序列长度可能不同，难以进行一致的批处理，并且在内存限制迫使使用小批次大小的情况下也很有利。
+- **规范化范围：** BatchNorm 在批次维度上*按特征*规范化；LayerNorm 在特征维度上*按实例*规范化。这意味着 LayerNorm 假设给定实例在层内所有特征都应类似地缩放，而 BatchNorm 假设给定特征在批次中不同实例间应具有相似的统计数据。
+- **应用场景：** BatchNorm 在卷积神经网络 (CNN) 中仍然非常有效且常被选用，在这些网络中，特征维度通常对应有意义的通道，其统计数据值得在批次中保留。LayerNorm 是 Transformer 中的标准选择，并且在 RNN 和 LSTM 中通常表现良好。
+- **推理 (inference)：** LayerNorm 在训练和推理期间行为相同，因为它的计算不依赖于批次统计数据或总体估计值。
+
+### 对优化动态的影响
+
+规范化方法从根本上改变了优化问题，通过对网络进行重参数 (parameter)化。通过限制激活值的均值和方差，它们有效地引导优化器前往参数空间中学习更稳定的区域。
+
+- **梯度稳定性：** 规范化有助于防止激活值在通过连续层传播时变得异常大或小。这直接对抗了梯度消失和梯度爆炸问题，确保用于更新前层的重要梯度信息在反向传播 (backpropagation)期间得到保留。
+- **改善条件数：** 从优化角度来看，规范化可以视为一种预处理形式。通过标准化各层输入，它有助于使损失函数 (loss function)更适合基于梯度的优化。想象损失函数的等高线：规范化可以将高度椭圆、狭窄的山谷（对梯度下降 (gradient descent)来说很困难）转化为更球形、圆润的碗状，使优化器能够更直接、快速地下降。
+- **与优化器的配合：** Adam 或 RMSprop 等自适应优化器根据梯度矩的估计值调整学习率。规范化通过提供更稳定的激活和梯度统计数据，可以带来更可靠的矩估计。这种配合使得自适应优化器能更有效地运作，通常带来更快、更稳定的收敛。
+
+尽管规范化层在正向和反向传播期间会引入少量计算开销，但它们对训练稳定性、收敛速度和超参数 (hyperparameter)鲁棒性的显著影响，使其在设计和训练深度神经网络 (neural network)时通常是一个必不可少的组成部分。它们并不能消除所有优化难题，特别是那些源于深度学习 (deep learning)损失曲面复杂非凸几何形状的难题，但它们提供了一种管理网络内部动态的强大机制，使整体优化过程显著更易处理和可靠。
+
+### 其他规范化变体
+
+尽管 BatchNorm 和 LayerNorm 是最广泛采用的方法，其他方法以不同的规范化范围瞄准类似目标：
+
+- **实例规范化 (InstanceNorm)：** 可以看作是在卷积层中对每个通道应用 LayerNorm。它独立地对每个通道和批次中的每个实例在空间维度（高度和宽度）上进行规范化。它在风格迁移任务中取得了特定成功，因为这些任务需要针对实例的对比度规范化。
+- **组规范化 (GroupNorm)：** 介于 InstanceNorm 和 LayerNorm 之间的一种方法。它将通道分成预定义组，并为每个实例在每个组内计算空间维度*和*通道上的规范化统计数据（均值和方差）。它像 LayerNorm 和 InstanceNorm 一样独立于批次大小，但在 BatchNorm 因小批量大小而不可行时，它在 CNN 中通常比 LayerNorm 表现更好。
+
+这些规范化方法的选择通常取决于特定架构（CNN、RNN、Transformer）和任务的经验表现。然而，其基本原理保持不变：控制网络内部激活的统计数据以稳定学习并加速优化过程。
+
+## 参考资料
+
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://proceedings.mlr.press/v37/ioffe15.pdf) — Sergey Ioffe, Christian Szegedy (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 37; Pages: 448-456; DOI: [10.5555/3045118.3045167](https://doi.org/10.5555/3045118.3045167)
+  介绍了批量归一化，一种减少内部协变量偏移并加速深度网络训练的技术。
+- [Layer Normalization](https://arxiv.org/abs/1607.06450) — Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton (2016)
+  Journal: arXiv preprint arXiv:1607.06450; DOI: [10.48550/arXiv.1607.06450](https://doi.org/10.48550/arXiv.1607.06450)
+  提出了层归一化，一种独立于批量大小的批量归一化替代方案。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 8: Optimization for Training Deep Models
+  提供了深度学习基础的全面论述，涵盖优化挑战和归一化技术。
+- [Group Normalization](https://link.springer.com/article/10.1007/s11263-019-01198-w) — Yuxin Wu, Kaiming He (2019)
+  Journal: International Journal of Computer Vision (IJCV); Publisher: Springer US; Volume: 128; Pages: 748-761; DOI: [10.1007/s11263-019-01198-w](https://doi.org/10.1007/s11263-019-01198-w)
+  提出了组归一化，作为批量大小较小时批量归化不可行情况下卷积神经网络的有效替代方案。

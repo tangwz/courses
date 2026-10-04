@@ -1,0 +1,100 @@
+---
+course: "deploying-diffusion-models-scale"
+chapter: "monitoring-maintaining-deployed-models"
+lesson: "logging-tracing-diffusion"
+sourceId: 5460
+sourceUrl: "https://apxml.com/zh/courses/deploying-diffusion-models-scale/chapter-5-monitoring-maintaining-deployed-models/logging-tracing-diffusion"
+title: "设置日志和追踪"
+description: "实施结构化日志和分布式追踪，用于排查问题和性能分析。"
+order: 2
+plots: []
+sourceHash: "2c516f0b762a66ea5e9662242fd56c79f7fe80b23501bbf3fe4b544db45fbce5"
+sourceCorrections: []
+---
+
+有效的监控需要弄清楚发生了*什么*以及*为什么*。处理服务扩散模型的复杂分布式系统时，简单的日志文件是不够的。你需要系统性的方法来记录事件（日志记录）并追踪请求在不同组件间的流转（追踪）。这些是排查错误、找出性能瓶颈并了解部署操作状况的必要工具。
+
+### 实现结构化日志
+
+传统的文本日志机器难以可靠地解析。结构化日志，通常采用 JSON 格式，提供了一致的结构，方便日志聚合平台（如 ELK stack、Splunk、Datadog 或云原生服务）进行自动化处理、查询和分析。
+
+对于扩散模型推理 (inference)服务，请考虑在请求生命周期的不同阶段记录以下信息：
+
+- **请求标识符：** 在入口点（例如 API 网关）生成的唯一 `request_id` 非常重要。该 ID 应在整个系统传播。如果适用，包含用户或客户端 ID 以追踪使用模式或排查特定用户问题。
+- **时间戳：** 为每个重要事件（请求接收、排队、开始处理、推理完成、响应发送）记录精确的时间戳（ISO 8601 格式带时区）。
+- **服务/组件信息：** 识别日志消息的来源（例如 `api-server`、`inference-worker-gpu-1`、`result-storage-service`）。包含已部署代码或模型的版本信息。
+- **请求参数 (parameter)：** 记录输入提示词 (prompt)、反向提示词、采样器选择、推理步数、CFG 比例、种子和任何其他相关参数。*重要提示:* 在提示词中记录潜在敏感信息时要格外小心。如有必要，实施掩码或过滤机制以遵守隐私规定。
+- **模型信息：** 记录用于生成内容的特定模型检查点或版本。
+- **性能指标：** 记录重要操作的时间：队列等待时间、模型加载时间（如果动态）、单个采样器步长持续时间（可能采样）、总推理时间 $t_{infer}$、数据上传/下载时间，以及总请求处理时间 $t_{total}$。
+- **资源利用：** 捕获推理期间的峰值 GPU 内存使用量等指标 $M_{gpu}$。
+- **输出细节：** 记录生成输出的元数据，例如图像尺寸、格式或存储位置（例如对象存储路径）。不要记录图像数据本身。
+- **状态和错误：** 清楚地表明成功或失败。对于错误，记录错误类型、描述性消息以及（如果可用）堆栈追踪。
+
+**结构化日志条目示例 (JSON):**
+
+```json
+{
+  "timestamp": "2023-10-27T10:30:15.123Z",
+  "level": "INFO",
+  "service": "inference-worker",
+  "instance_id": "worker-gpu-az1-3",
+  "request_id": "req_abc123xyz789",
+  "trace_id": "trace_def456uvw012",
+  "event": "inference_complete",
+  "model_id": "stable-diffusion-xl-v1.0",
+  "prompt_hash": "a1b2c3d4e5f6...",
+  "sampler": "DDIM",
+  "steps": 50,
+  "cfg_scale": 7.5,
+  "seed": 12345,
+  "inference_time_ms": 15240,
+  "peak_gpu_memory_mb": 8192,
+  "output_location": "s3://my-diffusion-output/req_abc123xyz789/image.png",
+  "status": "success"
+}
+```
+
+*注意:* `prompt_hash` 用于代替原始提示文本，以保护隐私并保持简洁。`trace_id` 将此日志与分布式追踪关联起来。
+
+### 启用分布式追踪
+
+扩散模型推理 (inference)通常涉及多个服务：一个 API 网关接收请求，一个队列缓冲请求，一个推理工作器处理请求（可能涉及多个 GPU 操作和数据获取），另一个服务可能会存储结果或发送通知。了解端到端延迟并找出瓶颈需要分布式追踪。
+
+分布式追踪跟踪请求流经这些不同服务的过程。重要方面包括：
+
+1. **追踪：** 代表单个请求在系统中的路径。由唯一的 `trace_id` 标识。
+2. **Span：** 代表追踪中的一个工作单元或操作（例如，处理 API 请求、在队列中等待、在工作器上执行推理）。每个 span 都有唯一的 `span_id` 和持续时间。span 之间存在父子关系，在根 span（初始请求）下形成树状结构。
+3. **上下文 (context)传播：** `trace_id` 和当前 `span_id`（作为下一步的父 ID）必须随着请求在服务之间移动而传递。这通常通过 HTTP 头（如 W3C Trace Context 头 `traceparent`、`tracestate`）或消息队列元数据完成。
+
+**埋点：** 为了启用追踪，你需要对应用程序代码进行埋点。库和代理，通常基于 OpenTelemetry 标准，与 Web 框架（FastAPI、Flask）、RPC 框架（gRPC）、队列客户端（Celery、Pika）和其他组件集成，以自动创建 span 并传播上下文。你通常会初始化一个追踪器提供者，配置它将追踪数据导出到后端系统，例如 Jaeger、Zipkin、Tempo，或云提供商服务（AWS X-Ray、Google Cloud Trace、Azure Monitor Application Insights）。
+
+**追踪可视化：** 追踪后端提供可视化功能，显示追踪中 span 的时间线，便于查看时间花费在哪里。
+
+> 图像生成请求的追踪中 span 的简化图示。请注意，推理工作器 span (C) 包含模型加载 (C.1) 和采样循环 (C.2) 的嵌套 span。队列中漫长的等待时间 (Span B) 和推理持续时间 (Span C) 立即可见。
+
+### 日志与追踪集成
+
+真正的优势来自日志与追踪的集成。通过在结构化日志中包含 `trace_id` 和 `span_id`，你可以轻松地将与特定操作或请求相关的日志消息关联到所有相关服务。调查日志消息中报告的错误时，你可以使用 `trace_id` 来获取完整的分布式追踪，提供错误发生前后的背景信息。同样，分析慢追踪时，你可以使用 `trace_id` 过滤日志，以找到该特定请求期间记录的详细信息和性能指标。
+
+### 扩散模型的考量
+
+- **日志冗余：** 扩散模型在采样期间会执行许多步骤。记录每个步骤可能会产生过多的日志量并影响性能。考虑只记录采样循环的开始和结束，或者采样步骤日志（例如，每 N 步记录一次详细信息，或只记录超过时间阈值的步骤）。
+- **追踪粒度：** 同样，为每个采样器步骤创建 span 可能粒度过细。你可以选择为整个采样过程设置一个 span，可能在该 span 内添加事件或属性以标记 (token)进度或特定子步骤的时间。
+- **异步操作：** 追踪异步任务（请求队列常见）需要仔细的上下文 (context)传播，以确保当工作器接收任务时追踪连续性得以保持。OpenTelemetry 库通常为常用框架处理此问题。
+- **性能开销：** 虽然必要，但日志记录和追踪会带来一定的开销。使用异步日志库并为追踪配置采样（特别是在高吞吐量 (throughput)系统中），以尽量减少性能影响。在开发/测试阶段开始收集所有信息，并根据观察到的开销和监控需求在生产环境中调整采样率。
+
+通过实施结构化日志和分布式追踪，你将拥有必要的工具，可以有效地诊断问题、优化性能，并确保扩散模型部署在扩展时的运行状况。
+
+## 参考资料
+
+- [OpenTelemetry Documentation](https://opentelemetry.io/docs/) — The OpenTelemetry Authors (2025)
+  OpenTelemetry 标准的官方文档，对在现代应用中实施分布式追踪和可观测性来说很重要。
+- [Site Reliability Engineering: How Google Runs Production Systems](https://sre.google/sre-book/table-of-contents/) — Niall Richard Murphy, Betsy Beyer, Chris Jones, Jennifer Petoff (2017)
+  Publisher: O'Reilly Media
+  一本关于运行大规模分布式系统的书籍，包含关于监控、日志和追踪原则的章节，以实现卓越的运维。
+- [Best practices for logging](https://cloud.google.com/logging/docs/audit/best-practices) — Google Cloud Documentation Authors (2024)
+  Publisher: Google Cloud
+  为云原生和分布式环境中进行有效的结构化日志记录提供了实践建议和指导。
+- [Designing Machine Learning Systems: An Introduction to the Field of MLOps](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  涵盖了 MLOps 的各个方面，包括部署机器学习模型的监控和维护策略，与课程背景相符。

@@ -1,0 +1,105 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "advanced-dimension-handling"
+lesson: "slowly-changing-dimensions-type-2"
+sourceId: 7981
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-3-advanced-dimension-handling/slowly-changing-dimensions-type-2"
+title: "慢变维度 类型 2"
+description: "使用 SCD 类型 2 跟踪历史变化。"
+order: 3
+plots: []
+sourceHash: "12793e80caa6e4617949c258f546842c3618690aecc10d2d4ebcce055023c21a"
+sourceCorrections: []
+---
+
+当历史数据很重要时，数据更新的管理方法往往不足。虽然覆盖数据（类型 1）能确保维度表反映当前状态，但这会破坏准确历史报告所需的背景信息。如果销售代表从北部区域调到南部区域，类型 1 更新会追溯性地将他们过去的所有销售额都移到南部。这会扭曲区域业绩指标。为了保持准确的历史记录，我们采用慢变维度类型 2 (SCD 类型 2) 策略。
+
+### 使用行版本控制保留历史
+
+SCD 类型 2 是数据仓库中跟踪历史数据最常用的方法。当属性变化时，此方法不会覆盖现有记录，而是保留旧记录并插入一条新记录来表示新的状态。
+
+此方法依赖于行版本控制。源系统中的一个实体，例如一个特定客户或产品，将在维度表中占据多行。每行代表该实体历史中的一个特定时间段。为了有效管理这些时间段，架构需要三个特定的元数据列：
+
+1. **生效开始日期**：此行中属性值生效的时间戳。
+2. **生效结束日期**：这些值停止生效的时间戳。对于当前行，此值通常设为 `NULL` 或一个较远的未来日期（例如 9999-12-31）。
+3. **当前标志**：一个布尔型或整型指标（1 或 0），用于快速识别当前有效的记录。
+
+引入版本控制使得**代理键**成为必需。自然键（例如 `employee_id`）在维度表中不再是唯一的，因为同一员工会多次出现。代理键作为表的主键，为该员工的每个版本创建唯一标识符。
+
+### 过程可视化
+
+考虑一个客户搬迁位置的场景。在操作系统中，地址会直接更新。在使用 SCD 类型 2 的维度模型中，此过程涉及使旧记录失效并创建新的活动记录。
+
+> SCD 类型 2 更新期间维度行的变化。原始记录（代理键 101）通过更新其结束日期而关闭，并插入一条新记录（代理键 102）以表示新的区域。
+
+### 历史数据分区逻辑
+
+在 ETL（抽取、转换、加载）过程中，实现 SCD 类型 2 需要精细的逻辑。当新数据到达时，系统会将传入属性与维度表中的当前版本进行比较。
+
+如果检测到变化，同一事务中会发生两个不同的操作：
+
+1. **使旧记录失效**：系统找到自然键匹配且 `is_current` 标志为真的行。它将 `effective_end_date` 更新为当前时间戳，并将 `is_current` 设为 false。
+2. **插入新记录**：插入一个带新代理键的新行。`effective_start_date` 设为当前时间戳，`effective_end_date` 设为一个高值逻辑（例如 `9999-12-31`），并将 `is_current` 设为 true。
+
+从数学上看，对于查询时间 $t$ 的任何查询，如果满足以下条件，则维度行是有效的：
+
+$t_{start} \le t < t_{end}$
+
+其中，当前活动行的 $t_{end}$ 被认为是无限的。这种逻辑确保在时间的任何特定微秒点，维度只有一个版本是有效的。
+
+### 对事实表的影响
+
+SCD 类型 2 模式的优势在于它与事实表的交互方式。当发生事务（例如销售或登录事件）时，ETL 过程会查询维度表，以找到*在该特定时刻*有效的代理键。
+
+例如，如果销售事务发生在**6 月 1 日**，它会链接到代理键 101（区域：东部）。如果事务发生在**7 月 1 日**，它会链接到代理键 102（区域：西部）。
+
+一旦在事实表中建立此链接，数据分析师就不再需要处理日期带来的复杂性。分析师只需通过代理键将事实表与维度表连接起来。
+
+```sql
+SELECT 
+    d.region,
+    SUM(f.sales_amount) as total_revenue
+FROM fact_sales f
+JOIN dim_customer d ON f.customer_sk = d.customer_sk
+GROUP BY d.region;
+```
+
+在此查询中，数据库会自动将收入归因于正确的历史区域。客户居住在东部时产生的销售额归入“东部”，搬迁后产生的销售额归入“西部”。报告层不需要复杂的 `WHERE` 子句或日期计算。
+
+### 存储与性能
+
+SCD 类型 2 为历史分析提供了最高的数据精度，但也带来了存储和处理成本。
+
+1. **表增长**：维度表会随着每次变更而增长。对大型维度（每天有数百万客户更改资料）的频繁变更会导致表迅速膨胀，降低扫描性能。
+2. **属性选择**：您必须有选择地决定哪些属性会触发类型 2 变更。如果您使用类型 2 跟踪像 `last_login_time` 或 `age` 这样快速变化的属性，那么每天会为每个用户生成一个新行。这些属性更适合类型 1 更新（覆盖）或将其移至单独的事实表。
+
+### 架构定义示例
+
+一个完善的 SCD 类型 2 表定义通常如下面的 SQL 结构所示。请注意，此处使用索引来优化当前活动记录的查找，这是 ETL 处理过程中最常见的操作。
+
+```sql
+CREATE TABLE dim_product (
+    product_sk INT PRIMARY KEY,          -- 代理键
+    product_id VARCHAR(50),              -- 自然键
+    product_name VARCHAR(255),
+    category VARCHAR(100),
+    price DECIMAL(10, 2),
+    -- SCD 类型 2 元数据
+    effective_from TIMESTAMP NOT NULL,
+    effective_to TIMESTAMP DEFAULT '9999-12-31',
+    is_current BOOLEAN DEFAULT TRUE
+);
+
+-- 用于 ETL 查找性能的索引
+CREATE INDEX idx_product_lookup 
+ON dim_product (product_id) 
+WHERE is_current = TRUE;
+```
+
+这种设计创建了一个历史数据不可更改的系统。一旦记录关闭，它就作为过去的一个永久快照，允许进行“当时状态”报告，即完全按照数据在过去某个时间点的样子进行分析。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling, 3rd Edition](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball and Margy Ross (2013)
+  Publisher: John Wiley & Sons
+  这部开创性著作确立了维度建模的原则，并提供了关于缓慢变化维度的全面指导，是数据仓库从业者的重要参考。

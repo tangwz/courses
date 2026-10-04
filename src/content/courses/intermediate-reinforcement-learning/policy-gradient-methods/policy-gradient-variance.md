@@ -1,0 +1,64 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "policy-gradient-methods"
+lesson: "policy-gradient-variance"
+sourceId: 5145
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-4-policy-gradient-methods/policy-gradient-variance"
+title: "理解策略梯度中的方差"
+description: "为什么REINFORCE可能出现高方差且收敛缓慢。"
+order: 5
+plots: ["plots/5145-0.json"]
+sourceHash: "0e6ffe498be4116bbb92815158e33e1e1e4ac6ff4ce17c2f7200cafb653e6a0e"
+sourceCorrections: []
+---
+
+REINFORCE算法是一种直接优化策略参数 (parameter)$\theta$的方法，它基于期望回报的梯度。其核心思想是增加导致更高回报的动作的概率，并降低导致较低回报的动作的概率。在REINFORCE最简单的蒙特卡洛版本中，用于单个轨迹的梯度估计与以下内容成比例：
+
+
+$$
+\sum_{t=0}^{T-1} G_t \nabla_\theta \log \pi(A_t|S_t; \theta)
+$$
+
+
+这里，$G_t = \sum_{k=t+1}^T \gamma^{k-t-1} R_k$ 是从状态$S_t$开始并在该特定回合中采取动作$A_t$后获得的总折扣回报。尽管这个估计是无偏的（意味着它的期望值是真实梯度$\nabla_\theta J(\theta)$），但它常面临一个明显的实际问题：高方差。
+
+### 高方差的问题
+
+方差指一个随机变量偏离其期望值的程度。在REINFORCE中，梯度估计 $G_t \nabla_\theta \log \pi(A_t|S_t; \theta)$ 可能从一个回合（甚至一个时间步）到下一个回合大幅变化。
+
+为什么会这样？它直接源于蒙特卡洛回报 $G_t$ 的使用。
+
+1. **对完整轨迹的依赖：** $G_t$ 依赖于在单个特定回合中，时间步 $t$ 之后收到的 *整个序列* 的奖励。RL环境通常具有随机性，这意味着在相同状态下采取相同动作可能导致不同的后续状态和奖励。此外，代理的策略本身也可能是随机的。
+2. **对随机性的敏感性：** 回合后期的一些幸运或不幸结果（高或低奖励）可以剧烈改变 $G_t$ 的值。这意味着即使在状态 $S_t$ 中采取的动作 $A_t$ 平均而言通常较好，单个不幸的轨迹也可能产生非常低的 $G_t$，从而错误地指示算法降低该动作的概率。反之，一个通常较差的动作可能偶然被一系列幸运事件跟随，从而导致高 $G_t$ 和错误的更新信号。
+
+想象一下代理正在学习玩游戏。游戏早期采取的动作可能策略上是合理的，但如果代理后来不幸地遇到随机事件，产生的 $G_t$ 可能非常低甚至为负。REINFORCE的更新就会根据与动作本身在很大程度上无关的结果来惩罚这个最初的好动作。
+
+### 高方差的后果
+
+梯度估计中的高方差对学习过程有若干负面影响：
+
+- **收敛缓慢：** 因为单个梯度估计的噪声很大，学习过程需要大量样本（回合）来平均消除这些噪声并找出真实的潜在梯度方向。这会使训练非常缓慢，尤其是在复杂环境中。
+- **不稳定：** 参数 (parameter)更新 $\Delta \theta$ 可能从一次迭代到下一次迭代剧烈波动。学习过程可能显得不稳定，性能上下跳动而非稳定提升。选择合适的学习率 $\alpha$ 变得困难。较大的 $\alpha$ 可能因大的、有噪声的更新而导致参数发散，而很小的 $\alpha$ 则会加剧收敛缓慢的问题。
+
+想象一下，试图通过基于有噪声的斜率测量值来采取步骤，从而找到山谷底部（代表最优策略参数）。每次测量都可能将你指向截然不同的方向。只有通过平均多次有噪声的测量，才能可靠地感知到实际的下坡方向。REINFORCE面临着类似的挑战。
+
+
+
+![梯度估计方差影响](plots/5145-0.json)
+
+
+
+> 高方差估计围绕真实梯度方向大幅波动，使学习不稳定。低方差估计提供更一致的信号，从而带来更平滑的收敛。
+
+核心问题在于，由 $G_t$ 决定的更新步长的大小是有噪声的。我们将得分函数 $\nabla_\theta \log \pi(A_t|S_t; \theta)$（它告诉我们应该朝着哪个方向微调 (fine-tuning)参数以使动作 $A_t$ 更有可能或更不可能发生）乘以一个可能不可靠的估计，这个估计是关于该动作在特定轨迹中长期而言实际有多好。
+
+这个方差问题是基本的策略梯度方法的一个主要难题。幸运的是，有办法缓解它。下一节将介绍一种常见且有效的方法：使用基线来降低方差，同时保持梯度估计的无偏性。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本经典且全面的强化学习教材，详细解释了策略梯度方法，包括REINFORCE算法、其无偏性、高方差问题以及使用基线进行方差减少的方法。第二版。
+- [Policy gradient methods for reinforcement learning with function approximation](https://neurips.cc/paper/1999/file/44917772718e00192e59e51c865de018-Paper.pdf) — Richard S. Sutton, David McAllester, Satinder Singh, Yishay Mansour (1999)
+  Journal: Advances in Neural Information Processing Systems 12; Publisher: MIT Press; Volume: 12; Pages: 1050-1056
+  这篇有影响力的论文形式化了策略梯度定理，并讨论了高方差问题，阐述了如何通过减去基线来减少方差而不引入偏差。它为文中提到的方差减少技术提供了理论背景。

@@ -1,0 +1,138 @@
+---
+course: "quantized-llm-deployment"
+chapter: "performance-evaluation-quantized-llms"
+lesson: "assessing-memory-consumption"
+sourceId: 4634
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-3-performance-evaluation-quantized-llms/assessing-memory-consumption"
+title: "评估内存占用（磁盘和运行时）"
+description: "测量模型在磁盘上大小缩减和峰值运行时内存占用的方法。"
+order: 3
+plots: ["plots/4634-0.json"]
+sourceHash: "a0cc3322387773790b8c58959d1e8d5f8cbb8d3a8af0a0d88d072951279b7814"
+sourceCorrections: []
+---
+
+量化 (quantization)大型语言模型的一个重要原因是可以大幅节省内存。内存占用减少使得模型能够适应内存较少的硬件（如消费级GPU或边缘设备），允许在推理 (inference)时使用更大的批处理量，或有助于在现有基础设施上部署更大、能力更强的模型。评估这种内存减少需要从两个不同方面进行考量：模型文件在磁盘上所需的存储空间和运行时操作中占用的动态内存。
+
+### 测量磁盘大小缩减
+
+量化 (quantization)最直接的好处是模型文件大小的减小。当您将模型参数 (parameter)（主要是权重 (weight)）从高精度格式（如32位浮点数（FP32）或16位浮点数（FP16））转换为低精度格式（如8位整数（INT8）或4位整数（INT4））时，每个参数所需的存储位数更少。
+
+理论上的减少易于计算。例如，将一个FP16模型（每个参数16位）量化为INT4（每个参数4位），理想情况下应能使文件大小减少约75%。
+
+
+$$
+\text{缩减因子} = 1 - \frac{\text{量化位数}}{\text{原始位数}}
+$$
+
+
+$$
+\text{示例 (FP16 到 INT4): 缩减} = 1 - \frac{4}{16} = 0.75 \text{ 或 } 75\%
+$$
+
+
+实际中，您通过比较原始模型和量化模型的文件大小来测量这一点。标准的操作系统命令或简单的脚本即可。
+
+```bash
+# 在Linux/macOS上检查文件大小
+ls -lh model_fp16.safetensors
+ls -lh model_int4.safetensors
+```
+
+```python
+import os
+
+fp16_path = "path/to/model_fp16.safetensors"
+int4_path = "path/to/model_int4.safetensors"
+
+fp16_size_bytes = os.path.getsize(fp16_path)
+int4_size_bytes = os.path.getsize(int4_path)
+
+reduction_percentage = (1 - int4_size_bytes / fp16_size_bytes) * 100
+
+print(f"FP16 模型大小: {fp16_size_bytes / (1024**3):.2f} GB")
+print(f"INT4 模型大小: {int4_size_bytes / (1024**3):.2f} GB")
+print(f"磁盘大小缩减: {reduction_percentage:.2f}%")
+```
+
+请注意，实际缩减可能与理论值略有偏差。原因包括：
+
+- **元数据：** 模型文件包含元数据（配置、量化尺度/零点），这会增加额外开销。
+- **未量化参数：** 模型某些部分（例如，嵌入 (embedding)层、最终层）可能有意保留为更高精度以保持准确性，这会略微降低整体压缩率。
+- **量化方案开销：** 某些量化格式（例如GPTQ或AWQ与组大小配合使用的格式）会存储额外的缩放因子，对文件大小略有贡献。像`.gguf`或`.safetensors`等常用格式能高效存储量化权重，但确切大小取决于所使用的特定量化方法和参数。
+
+
+
+![模型大小理论缩减与位宽对比](plots/4634-0.json)
+
+
+
+> 常见量化位宽下，模型大小相对于基准FP16模型的比例。
+
+### 评估运行时内存占用
+
+尽管磁盘大小缩减很重要，但推理 (inference)执行期间消耗的内存（运行时内存）通常是更重要的因素，特别是在GPU等内存受限的硬件上。测量这方面更为复杂，因为它包含多个组成部分：
+
+1. **模型权重 (weight)：** 这是量化 (quantization)带来的最直接节省。将INT4权重加载到GPU内存所需的显存 (VRAM)比加载FP16权重约少75%。这通常是运行时内存减少的最大因素。
+2. **激活值：** 这些是前向传播过程中计算的中间结果。根据推理框架和量化策略，激活值可能以量化格式存储，也可能不存储。通常，涉及低位宽权重的计算仍然会产生更高精度的中间激活值（例如FP16甚至FP32），然后可能为后续层再次量化。量化激活值可以带来进一步的内存节省，但通常对保持准确性带来更大挑战。
+3. **键值（KV）缓存：** 在自回归 (autoregressive)生成中，KV缓存存储先前生成令牌的中间注意力状态。其大小随批处理量、序列长度和模型维度而变化。KV缓存使用的数据类型（通常是FP16或FP8）显著影响内存占用，尤其对于长上下文 (context)长度。虽然缓存本身可能不总是使用与权重相同的低位宽格式，但优化推理引擎通常采用FP8 KV缓存等技术，这补充了权重量化以实现整体内存减少。
+4. **框架和工作空间开销：** 推理库（如PyTorch、TensorFlow、TensorRT-LLM、vLLM）需要内存用于自身操作、CUDA上下文、中间缓冲区（工作空间），以及在并非所有步骤都有优化核可用时，可能用于反量化操作。这种开销不容忽视。
+
+#### 测量工具和方法
+
+- **NVIDIA GPU：**
+
+  - `nvidia-smi`：提供GPU内存使用情况的快照。适用于快速检查。
+  - `pynvml`库（NVML的Python绑定）：允许在脚本中以编程方式查询内存使用情况。
+  - PyTorch：`torch.cuda.memory_allocated()`报告PyTorch当前分配的张量内存，而`torch.cuda.max_memory_allocated()`跟踪执行期间的峰值张量分配。`torch.cuda.memory_reserved()`和`torch.cuda.max_memory_reserved()`报告PyTorch缓存分配器管理的总内存，由于内存碎片和缓存，这通常高于仅分配的张量内存。
+
+  ```python
+  import torch
+  # 假设模型已加载到GPU
+  # ... 执行推理 ...
+  peak_allocated_gb = torch.cuda.max_memory_allocated() / (1024**3)
+  peak_reserved_gb = torch.cuda.max_memory_reserved() / (1024**3)
+  print(f"峰值张量内存分配: {peak_allocated_gb:.2f} GB")
+  print(f"PyTorch峰值保留内存: {peak_reserved_gb:.2f} GB")
+  ```
+- **CPU内存：** `top`、`htop`（Linux/macOS）或任务管理器（Windows）等标准操作系统工具可以监控进程内存。Python的`psutil`库提供编程访问接口。
+
+  ```python
+  import psutil
+  import os
+  process = psutil.Process(os.getpid())
+  mem_info = process.memory_info()
+  print(f"RSS 内存: {mem_info.rss / (1024**2):.2f} MB") # 驻留内存大小
+  ```
+- **性能分析工具：** 部署框架内的专门工具和功能（例如TensorRT profiler、vLLM监控端点）通常提供更细致的内存使用模式视图，包括工作空间大小和激活值内存。
+
+#### 基准测试运行时内存
+
+为了进行准确评估，请在实际推理负载下测量峰值内存使用情况。推荐做法是：
+
+1. 将模型加载到目标设备（GPU/CPU）上。
+2. 对代表性任务运行推理，改变以下参数 (parameter)：
+   - 批处理量
+   - 输入序列长度
+   - 输出序列长度（针对生成任务）
+3. 使用上述工具记录这些运行期间的峰值内存使用率。
+4. 在相同条件下，将量化模型的峰值内存使用情况与原始高精度模型进行比较。
+
+测量*峰值*使用情况很重要，因为这决定了实际的硬件需求。请注意，内存使用量在模型加载期间、首次推理通过（由于核编译或初始化）以及生成期间KV缓存增长时，会显著波动。
+
+通过仔细测量磁盘和运行时内存占用，您可以清楚地了解量化带来的效率提升。这些数据，结合本章其他地方讨论的延迟、吞吐量 (throughput)和准确性评估，提供做出决策所需的全面理解，以确定量化模型是否满足您的部署要求。请记住，产生最小内存占用但最激进的量化，如果过度损害准确性或与优化运行时核的兼容性，可能并非总是最佳选择。
+
+## 参考资料
+
+- [LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale](https://arxiv.org/abs/2208.07339) — Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer (2022)
+  Journal: NeurIPS 2022; DOI: [10.48550/arXiv.2208.07339](https://doi.org/10.48550/arXiv.2208.07339)
+  本文介绍了一种广泛采用的针对大型语言模型的8位量化方法，在保持性能的同时减少了内存占用。
+- [CUDA semantics](https://pytorch.org/docs/stable/cuda.html#memory-management) — PyTorch Documentation Team (2016)
+  Publisher: PyTorch
+  PyTorch官方CUDA内存管理函数文档，包含本节中直接引用的`memory_allocated`和`memory_reserved`。
+- [NVIDIA System Management Interface (nvidia-smi)](https://developer.nvidia.com/nvidia-smi) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA
+  用于`nvidia-smi`命令行工具的官方资源，本节讨论了该工具用于监控GPU内存使用。
+- [Quantization - Hugging Face Transformers](https://huggingface.co/docs/transformers/main/en/quantization) — Hugging Face (2024)
+  Publisher: Hugging Face
+  提供部署大型语言模型时使用的各种量化技术（包括8位和4位）的实践指南和实现，影响磁盘和运行时内存。

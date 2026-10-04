@@ -1,0 +1,73 @@
+---
+course: "meta-learning-foundation-models"
+chapter: "meta-learning-foundations-revisited"
+lesson: "meta-learning-foundation-model-challenges"
+sourceId: 4301
+sourceUrl: "https://apxml.com/zh/courses/meta-learning-foundation-models/chapter-1-meta-learning-foundations-revisited/meta-learning-foundation-model-challenges"
+title: "元学习应用于基础模型的挑战"
+description: "讨论大型模型的规模、计算成本、数据要求和稳定性问题。"
+order: 3
+plots: ["plots/4301-0.json"]
+sourceHash: "d4cccb9856709a47ada63def999a22263dab4555aa1f85ac71395653f7c75cb5"
+sourceCorrections: []
+---
+
+虽然元学习的原理为少样本适应提供了一个有吸引力的框架，但将这些技术直接用于大型基础模型会带来一系列显著的难题。与传统元学习研究中常用的小型模型相比，LLM和视觉Transformer等模型的庞大规模和复杂性从根本上改变了运作方式。
+
+### 计算成本和内存需求
+
+基础模型在极高维度的参数 (parameter)空间中运行，通常包含数十亿参数。这种规模对许多元学习算法立即造成了计算上的困难。
+
+- **大规模梯度计算：** 元学习通常涉及根据一个或多个内循环适应步骤后的表现来优化元参数。计算元梯度 $\nabla_{\theta} L_{\text{元}}$ 需要通过这些内循环更新进行反向传播 (backpropagation)。对于一个拥有参数 $\theta$ 的模型，即使执行一个内梯度步骤 $\theta' = \theta - \alpha \nabla_{\theta} L_{\text{任务}}$，然后计算元梯度，所涉及的操作量也会随参数数量的增加而增长。当 $\theta$ 代表数十亿参数时，这会变得计算量巨大。
+- **二阶导数：** MAML等算法在理论上依赖二阶导数（Hessian）以达到最佳性能。由于基础模型的内存和计算复杂度呈平方级 ($O(|\theta|^2)$)，计算完整的Hessian矩阵几乎行不通。虽然存在FOMAML等一阶近似方法，但这表示计算可行性与理论性能保证之间的一种取舍。
+- **内循环迭代：** 元学习过程在元训练期间涉及遍历多个任务。对于每个任务，模型在支持集 $S_i$ 上执行一次或多次梯度更新。这种内循环计算，在数千或数百万个任务中重复，与标准的单任务微调 (fine-tuning)相比，大大增加了整体计算负担。为这些步骤的反向传播保持计算图所需的内存，特别是对于保留二阶信息的算法，通常会超出当前硬件加速器的容量。
+
+> 计算图对比。元学习涉及嵌套优化（内循环适应和外循环元更新），这增加了复杂性。
+
+### 元训练数据要求
+
+高效的元学习取决于在反映目标应用的任务分布上进行训练。获取或生成这些任务对基础模型而言构成特殊的困难。
+
+- **任务多样性和数量：** 为学习一种多用途的适应策略或初始化，元训练阶段需要接触到多种任务。为基础模型元学习专门构建一个大型、多样化的任务数据集通常并非易事且耗费资源。“任务”本身的定义可以很广泛（例如，不同的分类问题、文本生成风格、指令类型），并且保证充分的覆盖范围也很有难度。
+- **数据规模：** 虽然少样本适应依赖于每个任务的少量数据（$S_i$、$Q_i$），但在数千或数百万个任务上进行元训练仍然需要大量总数据。收集和整理这些数据可能是一个主要的阻碍。
+- **任务表示：** 以一种与基础模型的输入/输出格式兼容，并能被元学习算法有效处理的方式来定义任务，需要仔细权衡，特别是对于复杂的多模态 (multimodal)或结构化任务。
+
+### 优化稳定性与超参数 (parameter) (hyperparameter)敏感性
+
+元学习中的优化过程，特别是元参数的外循环优化，会带来稳定性问题。
+
+- **复杂优化：** 元目标函数 $L_{\text{元}} = \sum_{i} L_{Q_i}(\theta'_i)$ 用于衡量适应后在查询集上的表现，与标准监督训练目标相比，它通常表现出更复杂且可能病态的结构。这会使寻找最佳元参数变得困难，导致收敛缓慢或非最佳解。
+- **梯度问题：** 元学习梯度的嵌套特性，特别是在通过多个内步进行反向传播 (backpropagation)时，会加剧梯度消失或梯度爆炸等问题，这需要仔细的初始化、归一化 (normalization)方法，以及可能的梯度裁剪。
+- **超参数调优：** 元学习算法会引入额外的超参数，例如元学习率、内循环学习率以及内循环步数。这些参数经常相互作用且非常敏感，特别是在大型模型背景下。有效地调优它们需要大量的实验，进一步增加了计算成本。
+
+
+
+![损失曲面](plots/4301-0.json)
+
+
+
+> 图像显示了更平滑的标准损失（蓝色）与可能更复杂、不平坦的元损失（橙色）的对比，后者优化起来可能更具难度。
+
+### 架构和适应性限制
+
+基础模型自身的特性对元学习的应用方式施加了限制。
+
+- **固定架构：** 基础模型通常在使用时其预训练 (pre-training)架构基本保持不变。需要进行大量架构更改或学习架构本身的元学习方法，通常与运用强大的预训练表示的目标不符。
+- **参数 (parameter)干扰：** 元学习旨在寻找一套适用于多种任务的初始参数集（或适应策略）。如果任务分布极其不同，优化过程可能导致参数干扰，即提升某个任务子集的性能会降低另一个任务子集的性能。基础模型的庞大容量或许能在一定程度上减轻这个问题，但这仍然值得关注。在任务泛化和专业化潜力之间找到平衡是件不容易的事。
+
+应对这些难题是成功将元学习应用于基础模型的少样本适应的关键所在。后续章节将介绍旨在缓解这些问题的具体算法和方法，包括高效的梯度近似、专门的适应模块以及实现规模化的策略。
+
+## 参考资料
+
+- [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](http://proceedings.mlr.press/v70/finn17a/finn17a.pdf) — Chelsea Finn, Pieter Abbeel, Sergey Levine (2017)
+  Journal: International Conference on Machine Learning (ICML); Publisher: Proceedings of Machine Learning Research (PMLR); Volume: 70; Pages: 1126-1135; DOI: [10.5555/3305890.3306019](https://doi.org/10.5555/3305890.3306019)
+  介绍了模型无关元学习 (MAML)，这一基础算法的计算要求和优化需求凸显了将元学习应用于大型模型的困难。
+- [A Survey of Meta-Learning for Few-Shot Learning](https://www.sciencedirect.com/science/article/pii/S0925231221008061) — Haoqian Wu, Yanzhao Xie, Yunong Wu, Jianqiang Wang (2021)
+  Journal: Neurocomputing; Publisher: Elsevier; Volume: 461; Pages: 227-241; DOI: [10.1016/j.neucom.2021.08.067](https://doi.org/10.1016/j.neucom.2021.08.067)
+  提供了元学习的概述，讨论了各种算法及其挑战，包括与基础模型相关的可扩展性和优化问题。
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/pdf/2106.09685.pdf) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了低秩适应 (LoRA)，这是一种参数高效的微调方法，解决了在适应大型基础模型时的计算和内存挑战，为元学习的内循环提供了实用方案。
+- [On the Optimization of Deep Learning Models for Few-Shot Learning](https://arxiv.org/pdf/1909.02271.pdf) — Maithra Raghu, Shreya Chaudhuri, Maël Obé, J. P. Lewis, Jonathon Shlens, Chelsea Finn (2020)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1909.02271](https://doi.org/10.48550/arXiv.1909.02271)
+  研究了少样本学习模型的优化环境和问题，提供了在扩展这些方法时遇到的稳定性和超参数敏感性问题的见解。

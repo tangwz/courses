@@ -1,0 +1,72 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "introduction-sequential-data"
+lesson: "characteristics-sequence-data"
+sourceId: 2513
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-1-introduction-sequential-data/characteristics-sequence-data"
+title: "序列数据的特点"
+description: "讨论序列中的时间关联性、长度可变性和顺序重要性等特性。"
+order: 2
+plots: ["plots/2513-0.json"]
+sourceHash: "f33c17e4779e54ccd430597ef0794ab0d7ac88a32211854579e34906fd87b6c9"
+sourceCorrections: []
+---
+
+序列数据展现出独特属性，这些属性使其有别于简单机器学习 (machine learning)模型中常假定的独立数据点。这些独有特性要求特殊处理，理解它们对于认识到循环神经网络 (neural network) (RNN) 等架构的必要性和有效性具有主要作用。
+
+### 顺序的重要性
+
+也许序列数据最主要的特点是元素**顺序**有重要影响。不同于描述房屋的特征集合（其中您列出平方英尺、卧室数量和位置的顺序不会改变房屋本身），改变序列中的顺序通常会极大改变其含义或所代表的模式。
+
+思考以下两句话：
+
+1. "The cat chased the mouse."
+2. "The mouse chased the cat."
+
+词语相同，但顺序传达出完全不同的情况。同样，打乱股票每日价格会使数据变得无用，无法预测未来走势，因为时间上的演进关系丢失了。标准前馈神经网络 (neural network)在处理输入时不考虑它们在序列中的位置，因此天生难以处理这一特性。它们缺少理解的机制，即 $t$ 时刻的输入应结合 $t-1$、$t-2$ 等时刻的输入来理解。
+
+### 时间上的关联性
+
+与顺序密切相关的一个特点是**时间上的关联性**。这意味着序列中的元素通常相互关联或依赖于它们之前（有时也包括之后）的元素。这些关联的强度和范围有很大不同。
+
+- **短期关联：** 在语言中，相邻词之间的语法一致性（如“the cat *sits*”）是一种短期关联。当前词强烈依赖于紧接前一个词。
+- **长期关联：** 思考这句话：“The report on machine learning trends, which was published last month after extensive research across multiple industries, **highlights** the growing adoption of sequence models.” 动词“highlights”依赖于主语“report”，而主语在句中出现得早得多。捕捉此类长期关联是一个重要的难题。在时刻 $t$ 预测或理解一个元素所需的信息可能在许多步之前就已经出现。
+
+简单RNN，如我们稍后将看到，难以在很长的序列上保持信息，这个问题常被称为梯度消失问题。这种学习长期关联的困难促使了LSTM和GRU等更先进架构的发展。
+
+这是一个展现时间关联性的时间序列简单示意图。任何给定点的值似乎与其之前的值有关联。
+
+
+
+![时间序列示意图](plots/2513-0.json)
+
+
+
+> 一个序列，其中每个点的值似乎受到前一个点的影响。
+
+### 长度可变
+
+不同于每个样本通常具有固定数量特征（例如表格中的列）的结构化数据集，序列通常具有**可变长度**。句子可长可短，时间序列测量可能覆盖不同时长，音频片段长度不一。
+
+这给机器学习 (machine learning)模型带来了实际挑战，尤其是在批量处理数据时。标准深度学习 (deep learning)框架通常期望批次内的输入张量形状一致。如果您有长度分别为5、10和7的序列，如何有效地将它们组合起来，以便在GPU上进行并行处理？
+
+解决此问题常用的方法有：
+
+- **填充：** 较短的序列用特殊的“填充”值（通常为零）进行扩充，直到它们达到批次中最长序列的长度。
+- **掩码：** 模型被告知输入中哪些部分是实际数据，哪些是填充，确保填充值不会不当地影响计算（尤其是在训练期间）。
+
+我们将在第8章讨论数据准备时详细介绍这些方法。
+
+顺序的重要性、时间关联性和长度可变性这三个特点是理解序列数据的核心所在。它们要求模型能够逐步处理输入，在各个时间步之间保持记忆（状态），并妥善处理不同的序列长度。这为在下一章引入循环神经网络 (neural network) (RNN)做好了充分准备。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 10: Sequence Modeling: Recurrent and Recursive Networks
+  这本基础教科书全面地提供了关于循环神经网络和序列建模原理的理论背景，解释了序列数据的特点以及它们对传统模型带来的挑战。
+- [Long Short-Term Memory](https://doi.org/10.1162/neco.1997.9.8.1735) — Sepp Hochreiter, Jürgen Schmidhuber (1997)
+  Journal: Neural Computation; Publisher: The MIT Press; Volume: 9; Pages: 1735-1780; DOI: [10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735)
+  这篇开创性论文介绍了长短期记忆 (LSTM) 网络，直接解决了序列数据中学习长程时间依赖性的难题，这是本节中提到的一个关键问题。
+- [Neural Networks and Deep Learning](https://link.springer.com/book/10.1007/978-3-319-94463-0) — Charu C. Aggarwal (2018)
+  Publisher: Springer; Pages: Chapters 7 and 8: Recurrent Neural Networks; DOI: [10.1007/978-3-319-94463-0](https://doi.org/10.1007/978-3-319-94463-0)
+  这本教科书详细阐述了循环神经网络，包括它们的结构、如何处理序列数据以及长程依赖等挑战，是对基础内容的补充。

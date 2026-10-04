@@ -1,0 +1,131 @@
+---
+course: "basics-ml-deployment"
+chapter: "preparing-model-deployment"
+lesson: "saving-preprocessing-steps"
+sourceId: 3970
+sourceUrl: "https://apxml.com/zh/courses/basics-ml-deployment/chapter-2-preparing-model-deployment/saving-preprocessing-steps"
+title: "保存预处理步骤"
+description: "了解如何与模型一起保存数据缩放器、编码器或管道。"
+order: 6
+plots: []
+sourceHash: "d45f84c8a5259b3ef4c9b6c590e2cd3279fdeca9c817b5095200b862f9c1cd68"
+sourceCorrections: []
+---
+
+当训练机器学习 (machine learning)模型时，通常会先进行一些数据准备步骤。这可能包括处理缺失值、对数值特征进行缩放或对类别特征进行编码。你的模型根据这些转换后的数据学习模式。
+
+思考一下，当你使用这个训练好的模型对新的、未见过的数据进行预测时会发生什么。这些新数据将以其原始格式呈现。如果你将这些原始数据直接输入模型，结果很可能毫无意义或非常不准确。为什么？因为模型期望的数据与其训练时转换过的数据完全一致。
+
+因此，仅仅保存训练好的模型对象本身是不够的。你还需要保存你在训练期间应用的预处理步骤的*状态*。这可确保你在将任何新数据输入模型进行预测之前，能够使用完全相同的参数 (parameter)（例如，缩放器学习的均值和标准差，或编码器学习的类别）应用完全相同的转换。
+
+### 保持一致性是必需的
+
+训练机器学习 (machine learning)模型时，通常会先执行多项数据准备步骤。这些步骤可能包括处理缺失值、对数值特征进行缩放，或者对分类特征进行编码。模型是根据这些转换后的数据来学习模式的。
+
+现在，有一个新的预测请求到来，需要预测一栋面积为1500平方英尺的房屋。
+
+- **错误做法：** 将`1500`直接输入模型。模型是根据缩放后的值训练的（例如，1500平方英尺的缩放等价物可能是0.5），它会将`1500`解释为一个非常大、异常的值，从而导致房价预测结果严重不准确。
+- **正确做法：** 加载你在训练期间使用的*同一个*`StandardScaler`对象。对新值（`1500`）使用其`transform`方法，以获得正确缩放后的值（例如，`0.5`）。将这个缩放后的值输入模型。
+
+同样的原理也适用于独热编码等其他预处理步骤。如果你在训练期间使用了`OneHotEncoder`，那么在预测时也必须使用*相同的已拟合编码器*。这可确保新数据被转换为相同的二元列集，正确处理已知类别，并根据编码器在训练期间的配置方式处理任何以前未见过的类别。
+
+### 保存预处理对象
+
+幸运的是，我们讨论过的用于保存模型的工具，`pickle`和`joblib`，同样适用于保存这些预处理对象。像scikit-learn中的`StandardScaler`、`MinMaxScaler`、`OneHotEncoder`或`LabelEncoder`这样的对象都是Python对象，它们的状态（学习到的参数 (parameter)）可以在拟合训练数据后被序列化。
+
+这是一个使用scikit-learn和`joblib`的例子：
+
+```python
+# 假设 'X_train' 是你的训练数据
+from sklearn.preprocessing import StandardScaler
+import joblib
+
+# 1. 初始化缩放器
+scaler = StandardScaler()
+
+# 2. 将缩放器拟合到训练数据（它学习均值和标准差）
+scaler.fit(X_train)
+
+# 3. 保存拟合好的缩放器对象
+joblib.dump(scaler, 'scaler.joblib')
+
+# --- 之后，用于预测 ---
+
+# 加载保存的缩放器
+loaded_scaler = joblib.load('scaler.joblib')
+
+# 假设 'X_new' 是新的原始数据
+# 应用*完全相同*的转换
+X_new_scaled = loaded_scaler.transform(X_new)
+
+# 现在 X_new_scaled 已准备好输入模型
+# （假设模型也已单独保存和加载）
+```
+
+你会遵循类似的过程来保存你训练好的模型对象。你保存拟合好的缩放器和拟合好的模型，然后在需要进行预测时加载两者。
+
+### 使用Scikit-learn管道以获得便利
+
+管理多个独立文件（一个用于缩放器，一个用于编码器，一个用于模型等）可能会变得繁琐且容易出错。你是否保存了正确版本的缩放器与正确版本的模型呢？
+
+一种更简洁的做法是使用Scikit-learn的`Pipeline`对象。管道将多个步骤（如预处理和建模）串联成一个对象。当你`fit`管道时，它会在训练数据上按顺序拟合所有步骤。当你使用管道进行`predict`时，它会自动将所有拟合好的转换按正确顺序应用到输入数据，然后将其传递给最终估计器（你的模型）进行预测。
+
+```python
+# 假设 'X_train'、'y_train' 是你的训练数据和标签
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+import joblib
+
+# 1. 定义管道中的步骤
+#    ('scaler', StandardScaler()) 是一个元组：('名称', 对象)
+#    ('classifier', LogisticRegression()) 是最终估计器
+steps = [
+    ('scaler', StandardScaler()),
+    ('classifier', LogisticRegression())
+]
+
+# 2. 创建管道
+pipeline = Pipeline(steps)
+
+# 3. 拟合整个管道
+#    这将首先在 X_train 上拟合缩放器，然后转换 X_train，
+#    最后在转换后的 X_train 上拟合 LogisticRegression 模型。
+pipeline.fit(X_train, y_train)
+
+# 4. 保存*整个*拟合好的管道对象
+joblib.dump(pipeline, 'full_pipeline.joblib')
+
+# --- 之后，用于预测 ---
+
+# 加载单个管道对象
+loaded_pipeline = joblib.load('full_pipeline.joblib')
+
+# 假设 'X_new' 是新的原始数据
+# 直接使用管道进行预测
+# 它使用拟合好的缩放器自动缩放 X_new，
+# 然后使用拟合好的模型进行预测。
+predictions = loaded_pipeline.predict(X_new)
+```
+
+这里是一个简单的数据流可视化，展示数据在预测期间如何通过此管道：
+
+> 使用已加载的scikit-learn管道进行预测时的数据流，该管道包含一个缩放器和一个模型。
+
+使用管道显著简化了部署过程：
+
+1. **封装：** 将预处理和建模打包成一个单元。
+2. **一致性：** 确保在训练和预测期间以相同的顺序应用相同的步骤。
+3. **简洁性：** 你只需保存和加载一个管道对象，而不是管理多个文件。
+
+在准备模型进行部署时，始终考虑如何处理相关的预处理步骤。保存单个拟合好的预处理器是可行的，但使用管道通常是一种更清晰、更可靠的策略，尤其当你的建模过程变得更复杂时。
+
+## 参考资料
+
+- [Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) — scikit-learn developers (2023)
+  解释了各种数据转换器以及对一致预处理至关重要的 `fit` 和 `transform` 方法。
+- [Pipeline and composite estimators](https://scikit-learn.org/stable/modules/compose.html#pipeline-and-composite-estimators) — scikit-learn developers (2023)
+  详细说明了如何将多个处理步骤和模型链接成一个对象，确保训练和推理工作流的一致性。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning-systems/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  为构建稳健的机器学习系统提供了指导，包括数据管道管理和模型部署策略，以实现预测一致性。

@@ -1,0 +1,66 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "reward-modeling-human-preferences"
+lesson: "learning-from-preferences"
+sourceId: 5116
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-3-reward-modeling-human-preferences/learning-from-preferences"
+title: "偏好学习的思路"
+description: "使用成对比较推断奖励信号的理论依据。"
+order: 1
+plots: []
+sourceHash: "881b82da35a0f88504db4e7b4f5b8b6dddff2299e2061472c8a87d6f452f7bf1"
+sourceCorrections: []
+---
+
+监督微调 (fine-tuning)使模型模仿示例，但它并未明确地告知模型，根据人类价值观，哪种回复更优。为了培养这种质量意识，我们需要另一种方式。RLHF不要求人类给出生成文本的绝对分数（这可能困难、不一致且主观），而是依赖一种更直接的反馈形式：成对比较。
+
+人类通常更擅长说明偏好两个选项中的哪一个，而非给每个选项分配精确的数值分数。设想一下评审文章、艺术品，甚至是简单的选择。说“A比B好”通常比自信且一致地给A打8.5分、给B打6.2分要容易。偏好学习就运用了人类的这项能力。
+
+### 潜在设想：偏好暗示分数
+
+核心想法是，在给定相同提示的情况下，人类对成对回复的偏好，间接显露出一个潜在的奖励函数。如果人类在给定提示 $x$ 下，持续偏好回复 $y_1$ 而非 $y_2$，这表明 $y_1$ 具有比 $y_2$ 更多的期望品质（如有用性、无害性、准确性等）。我们假定存在一个潜在的标量函数，即奖励模型 ($RM$)，表示为 $RM(x, y)$，它赋予一个反映这些期望品质的分数。偏好 $y_1 \succ y_2$（读作“$y_1$ 优于 $y_2$”）表明 $RM(x, y_1) > RM(x, y_2)$。
+
+我们的目标是训练一个模型，通常是基于与待微调 (fine-tuning)语言模型相同架构的神经网络 (neural network)，以近似这个潜在奖励函数。这个 $RM$ 以提示和回复作为输入，输出一个标量值，代表预测的人类偏好分数。
+
+### 从偏好到概率
+
+我们如何仅使用比较数据来训练这样的模型？我们以概率方式构建学习问题。诸如布拉德利-特里模型（或其变体）等模型，为成对比较和潜在分数之间提供了数学联系。如章概述中所述，我们将人类在给定提示 $x$ 下偏好回复 $y_1$ 而非 $y_2$ 的概率，建模为两个回复各自奖励模型分数之差的函数：
+
+
+$$
+P(y_1 \succ y_2 | x) = \sigma(RM(x, y_1) - RM(x, y_2))
+$$
+
+
+此处，$\sigma$ 是 Sigmoid 函数，$\sigma(z) = 1 / (1 + e^{-z})$。
+
+让我们细致分析此公式：
+
+1. **分数差异：** $RM(x, y_1) - RM(x, y_2)$ 计算两个回复的预测分数之间的差异。较大的正差异意味着模型预测对 $y_1$ 的偏好更强。
+2. **Sigmoid 函数：** Sigmoid 函数将这个差异（范围从 $-\infty$ 到 $+\infty$）映射到0到1之间的概率。
+   - 如果 $RM(x, y_1)$ 大幅高于 $RM(x, y_2)$，差异将是较大的正值，因此 $\sigma(\text{差异})$ 趋近于1。这意味着模型预测 $y_1$ 被偏好的概率很高。
+   - 如果 $RM(x, y_2)$ 大幅高于 $RM(x, y_1)$，差异将是较大的负值，因此 $\sigma(\text{差异})$ 趋近于0。这意味着模型预测 $y_1$ 被偏好的概率很低（或等价地， $y_2$ 被偏好的概率很高）。
+   - 如果分数相等，差异为0，且 $\sigma(0) = 0.5$，表明无差异或偏好可能性相同。
+
+这种概率化的构建方式，使得我们可以使用标准的机器学习 (machine learning)技术，特别是二元交叉熵损失，来训练 $RM$。训练数据由元组 $(x, y_1, y_2)$ 构成，其中 $y_1$ 是根据人类标注者偏好的（“获胜”）回复，而 $y_2$ 是不被偏好的（“失败”）回复。模型会学习调整其参数 (parameter)，以便在给定提示下，为获胜回复赋予更高的分数，为失败回复赋予更低的分数。
+
+> 图示说明了提示和两个回复如何产生人类偏好标签，该标签作为训练奖励模型的目标。奖励模型处理这两个回复以预测分数、它们之间的差异，并最终得出其中一个被偏好的概率。
+
+### 基于偏好学习的优点
+
+偏好学习相比于直接指定或回归到绝对奖励分数，具有多项优点：
+
+1. **人类评判的稳定性：** 如前所述，对人类而言，比较性判断通常比分配绝对分数更稳定、更一致，特别是对于像生成文本质量这样复杂、多方面的标准。
+2. **数据效率：** 尽管收集偏好仍需大量人力，但有时它比获取替代方式所需的详细反馈或完善的示例数据更有效。
+3. **隐式归一化 (normalization)：** 比较的性质自动处理了不同评估者评分量表上的差异。无论一个评估者给回复打6-8分，而另一个打3-5分，都没有他们能否一致同意 *哪一个* 回复更好那么重要。模型学习的是相对顺序。
+
+通过训练模型预测这些成对偏好，我们创建了一个反映复杂人类判断的奖励信号。这个习得的 $RM$ 成为目标函数，语言模型随后将使用PPO等强化学习 (reinforcement learning)技术对其进行优化，引导它生成更符合人类预期的回复。接下来的章节将考察收集这些偏好数据以及训练奖励模型本身的实践方法。
+
+## 参考资料
+
+- [Deep Reinforcement Learning from Human Preferences](https://arxiv.org/abs/1706.03741) — Paul Christiano, Jan Leike, Tom B. Brown, Miljan Martic, Shane Legg, Dario Amodei (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 30; Pages: 4295-4304; DOI: [10.48550/arXiv.1706.03741](https://doi.org/10.48550/arXiv.1706.03741)
+  一篇关于从人类成对比较中学习奖励函数用于深度强化学习任务的开创性论文。
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347) — John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov (2017)
+  Journal: arXiv preprint arXiv:1707.06347; DOI: [10.48550/arXiv.1707.06347](https://doi.org/10.48550/arXiv.1707.06347)
+  介绍了近端策略优化（PPO）算法，这是RLHF强化学习步骤中常用的方法。

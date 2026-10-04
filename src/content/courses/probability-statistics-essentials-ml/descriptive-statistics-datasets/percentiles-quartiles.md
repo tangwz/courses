@@ -1,0 +1,134 @@
+---
+course: "probability-statistics-essentials-ml"
+chapter: "descriptive-statistics-datasets"
+lesson: "percentiles-quartiles"
+sourceId: 1398
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-essentials-ml/chapter-3-descriptive-statistics-datasets/percentiles-quartiles"
+title: "百分位数和四分位数"
+description: "计算并应用百分位数和四分位数，以了解数据分布并识别异常值。"
+order: 4
+plots: ["plots/1398-0.json"]
+sourceHash: "edf47a541b29959f5faaae6d358ca18d80ef0cec98af5e8f02bbd45e1fe2a735"
+sourceCorrections: []
+---
+
+均值和标准差等衡量指标说明了数据的中心和离散程度，但它们没有完全描述特定值在分布中的位置。百分位数和四分位数提供了这种有价值的背景信息，帮助我们理解相对位置并识别潜在的异常观测值。
+
+## 理解百分位数
+
+百分位数是一种衡量指标，它表示一组观测值中给定百分比的数据落在其下的值。例如，$P_{k}$ 百分位数是指值 $v$，使得 $k$ 百分比的数据点小于或等于 $v$。
+
+如果你在标准化考试中成绩位于第85百分位数，这意味着85%的考生得分等于或低于你的分数。第50百分位数，$P_{50}$，是一个熟悉的想法。它是将数据分成两半的值，这正是我们之前讨论过的集中趋势衡量指标——**中位数**的定义。
+
+当所需百分位数落在两个数据点之间时，计算准确的百分位数可能涉及不同的插值方法。然而，核心思想保持不变：它根据数据集的其余部分对值进行排名。
+
+## 四分位数：将数据分为四等份
+
+四分位数是特定且常用的百分位数，它们将已排序的数据集分成四个相等的部分。
+
+- **第一四分位数 (Q1)：** 这是第25百分位数 ($P_{25}$)。它标记 (token)了25%数据落在其下的值。
+- **第二四分位数 (Q2)：** 这是第50百分位数 ($P_{50}$)，即数据集的**中位数**。50%的数据位于Q2之下。
+- **第三四分位数 (Q3)：** 这是第75百分位数 ($P_{75}$)。75%的数据落在该值之下。
+
+Q1、Q2（中位数）和Q3共同将数据分成四个部分，每个部分大约包含25%的观测值。
+
+```
+数据: |--- 25% ---|--- 25% ---|--- 25% ---|--- 25% ---|
+      ^           ^           ^           ^           ^
+    最小值          Q1         Q2 (中位数)  Q3          最大值
+```
+
+## 四分位距 (IQR)
+
+第一四分位数和第三四分位数之间的距离被称为**四分位距 (IQR)**。
+
+$IQR = Q3 - Q1$
+
+IQR衡量了数据中间50%的离散程度。它是一个特别有用的离散程度衡量指标，因为它像中位数一样，对异常值具有抵抗力。数据集高端或低端的极端值不影响IQR，这与可能受到单个异常点严重影响的范围或标准差不同。较小的IQR表明数据的中间一半紧密聚集，而较大的IQR则表示分布的中间部分有更多的变异性。
+
+## 使用IQR识别潜在异常值
+
+IQR提供了一个常用的统计规则来识别潜在异常值。显著落在Q1和Q3定义范围之外的数据点可能需要进一步调查。标准指导方针将潜在异常值定义为低于 $Q1 - 1.5 \times IQR$ 或高于 $Q3 + 1.5 \times IQR$ 的观测值。
+
+- 下限: $Q1 - 1.5 \times IQR$
+- 上限: $Q3 + 1.5 \times IQR$
+
+任何超出这些界限的数据点通常被标记 (token)为潜在异常值。这不自动意味着该数据点是错误的或应该被移除；它只是将其标记为与大部分数据相比不寻常。在决定如何处理异常值时，上下文 (context)总是重要的。
+
+这些计算是**箱线图**（或盒须图）的依据，箱线图是一种强大的可视化工具，我们之后会看到。箱线图图形化地表示了中位数、Q1、Q3、IQR和潜在异常值。
+
+
+
+![展示四分位数和IQR的箱线图示例](plots/1398-0.json)
+
+
+
+> 箱线图示例，显示了中位数（中心线）、Q1和Q3（箱体边缘）、晶须（延伸至距箱体$1.5 \times IQR$范围内的数据）以及异常值（单个点）。
+
+## 使用 Pandas 计算百分位数和四分位数
+
+手动计算大型数据集的百分位数和四分位数是繁琐的。像 Pandas 这样的 Python 库提供了高效的函数。Pandas Series 或 DataFrame 列的 `quantile()` 方法是常用的。
+
+```python
+import pandas as pd
+
+# 代表分数的样本数据
+data = pd.Series([68, 75, 77, 82, 85, 88, 90, 91, 93, 95, 99, 105])
+
+# 计算第75百分位数 (Q3)
+q3 = data.quantile(0.75)
+print(f"Q3 (第75百分位数): {q3}")
+
+# 计算第25百分位数 (Q1)
+q1 = data.quantile(0.25)
+print(f"Q1 (第25百分位数): {q1}")
+
+# 计算四分位距 (IQR)
+iqr = q3 - q1
+print(f"IQR: {iqr}")
+
+# 计算特定百分位数，例如第90百分位数
+p90 = data.quantile(0.90)
+print(f"第90百分位数: {p90}")
+
+# 使用 describe() 提供了 Q1、中位数 (50%) 和 Q3
+print("\n包含四分位数的汇总统计:")
+print(data.describe())
+```
+
+**输出:**
+
+```
+Q3 (75th percentile): 93.5
+Q1 (25th percentile): 80.75
+IQR: 12.75
+90th percentile: 97.4
+
+Summary Statistics including Quartiles:
+count     12.000000
+mean      87.333333
+std       11.271062
+min       68.000000
+25%       80.750000
+50%       89.000000
+75%       93.500000
+max      105.000000
+dtype: float64
+```
+
+从输出中可以看出，`data.quantile(0.75)` 返回93.5，表明75%的得分等于或低于此值。`describe()` 方法方便地输出第25（Q1）、第50（中位数/Q2）和第75（Q3）百分位数以及其他汇总统计信息。
+
+百分位数和四分位数通过提供有关相对位置和中心数据部分离散程度的信息，丰富了我们对数据分布的理解。它们是探索性数据分析的基本工具，是异常值检测和可视化技术（例如箱线图）的重要组成部分。
+
+## 参考资料
+
+- [Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  涵盖核心统计概念，包括百分位数、四分位数和异常值检测，并提供与数据科学和机器学习相关的实用示例。
+- [pandas.DataFrame.quantile](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.quantile.html) — The pandas development team (2023)
+  计算 Pandas 中百分位数和四分位数的官方文档。
+- [pandas.DataFrame.describe](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.describe.html) — The pandas development team (2023)
+  用于生成 Pandas DataFrame 和 Series 描述性统计（包括四分位数）的官方文档。
+- [OpenIntro Statistics](https://www.openintro.org/book/os/) — David M Diez, Christopher D Barr, Mine Çetinkaya-Rundel (2023)
+  Publisher: OpenIntro
+  一本全面且免费的统计学基础教材，涵盖了位置和离散度度量，如百分位数、四分位数和 IQR。

@@ -1,0 +1,74 @@
+---
+course: "llm-alignment-safety"
+chapter: "foundations-llm-alignment"
+lesson: "measuring-alignment-initial-metrics"
+sourceId: 3111
+sourceUrl: "https://apxml.com/zh/courses/llm-alignment-safety/chapter-1-foundations-llm-alignment/measuring-alignment-initial-metrics"
+title: "对齐度衡量：初始指标与局限性"
+description: "介绍衡量对齐度的基本指标，并讨论其不足之处。"
+order: 4
+plots: []
+sourceHash: "f33406bca198ca1cd908994999ef093355880e2179a69adf5671022c6984f3a2"
+sourceCorrections: []
+---
+
+评估大型语言模型（LLM）是否按照预设意图运行，是对齐 (alignment)工作中面临的一个主要挑战。衡量对齐技术（例如指令微调 (fine-tuning)）的有效性需要可靠的方法。早期的衡量方法依赖于相对直接的指标，通常借鉴标准的自然语言处理（NLP）评估或创建针对特定任务的基准。这些初始指标提供了一个起始点，但理解它们的局限性对于认识到需要更先进的对齐技术来说非常必要。
+
+### 早期定量方法
+
+衡量模型是否遵循指令最直接的方法是使用一组指令进行测试。
+
+- **指令遵循准确性：** 使用SuperGLUE、FLAN等数据集或定制的指令集。评估通常涉及以下指标：
+
+  - **精确匹配（EM）：** 模型的输出是否与预期的参考答案完全一致？这对于生成任务来说通常过于严格。
+  - **F1分数 / ROUGE / BLEU：** 这些指标借鉴自机器翻译和摘要生成，用于衡量重叠度（例如，ROUGE/BLEU的N-gram重叠，F1的精确率/召回率重叠）。它们比EM提供更大的灵活性，但仍然侧重于表面形式，而非语义正确性或对约束条件（如语气或安全性）的遵守。
+  - **任务特定准确性：** 对于指令中包含的分类或问答等任务，可以应用标准准确性指标。
+- **基于似然度的分数：** 可以衡量模型对“好”回应（有用、无害、诚实）与“坏”回应所赋予的困惑度或对数似然。对于期望的输出，较低的困惑度可能表明更好的对齐 (alignment)度。然而，高似然度不一定意味着高质量或安全性；模型可能非常自信地生成听起来合理但实际是虚假的信息，或是不易察觉的有害内容。
+- **代理基准：** 标准NLP基准通常被用作对齐某些方面的代理。例如：
+
+  - **MMLU（大规模多任务语言理解）：** 用于评估广泛的知识和推理 (inference)能力，可能指示模型的“有用性”或“能力”。
+  - **TruthfulQA：** 专门设计用于衡量模型是倾向于重复常见误解，还是提供真实答案。这针对的是“诚实”维度。
+
+虽然有用，但这些基准上的表现往往与对齐目标相关性不完美。模型可能在MMLU上得分很高，但在不同提示下仍然生成有害内容。
+
+### 简单定性与基于规则的方法
+
+除了自动化指标之外，简单的定性检查和基于规则的系统也是早期的尝试。
+
+- **关键词识别与黑名单：** 最基本的安全过滤形式是识别输入或输出中不需要的词语或模式。如果检测到“不良”词语，交互可能会被阻止或标记 (token)。这种方法非常脆弱；通过同义词、编码语言或上下文 (context)操作，它很容易被规避。它还会出现误报，阻碍正常的讨论。
+- **基本人工评估：** 早期的人工评估通常涉及向评估人员提出关于模型输出的简单问题，例如“这个回应有用吗？”或“这个回应有害吗？”，并使用李克特量表（例如，1-5）进行评分。虽然纳入人工判断是正确的方向，但这些简单的方案通常缺乏详细的指导方针，存在评估者间一致性问题，并且在评估不同场景下的模型时扩展性不佳。
+
+### 局限性显现
+
+面对对齐 (alignment)问题的复杂性，这些初始的衡量方法很快显现出明显的不足：
+
+1. **表面一致性与深层对齐：** ROUGE或简单准确性等指标检查输出是否*看起来*正确，但并非必然表明模型理解了底层的约束或意图。模型可以学会在基准测试中模仿期望的输出，但未能将背后的原则普适化。这与外部对齐（在训练目标/指标上表现良好）和内部对齐（具有与预期目标一致的内部目标）之间的差异有关。
+2. **指标操纵与规范博弈：** 经过训练以优化这些简单指标的模型通常会找到“窍门”或意想不到的捷径。这是古德哈特定律（“当一项衡量指标成为目标时，它就不再是一个好的衡量指标”）和前面提到的规范博弈问题的直接表现。例如，优化回应长度可能导致冗长但无益的答案。优化与参考答案的一致性可能会阻碍创造性或提供数据集中不存在的更好、替代的解决方案。
+3. **无法捕捉复杂性：** 无害性、诚实和公平等人类价值是复杂的、情境化的，并且往往是主观的。简单的定量指标难以捕捉这一点。一个陈述在一个情境中可能是无害的，但在另一个情境中可能冒犯性很强。公平性需要考虑对不同人口群体可能产生的不一致影响，这很难用一个单一的数字来表示。
+4. **可扩展性与成本：** 全面的人工评估是捕捉深度的黄金标准，但它昂贵、耗时且难以标准化。自动化指标具有可扩展性，但如前所述，它们通常缺乏深度且容易受到操纵。
+5. **泛化失败（分布外鲁棒性）：** 在特定基准或评估集上取得高分并不能保证在新的提示或略微不同的情境中表现良好。模型可能出人意料地脆弱，当提示与训练或评估分布稍有偏差时，就会意外失败。这对于安全性来说尤其令人担忧，因为在不可预见的“对抗性”输入下可能会发生故障。
+6. **诚实/真实性鸿沟：** 模型可以生成高度合理、连贯且语法正确的文本，但这些文本在事实上是错误的或具有误导性。基于流畅性或似然度的指标不足以发现这一点。虽然像TruthfulQA这样的基准有所帮助，但它们只涵盖了有限的已知虚假信息。
+
+考虑一个场景，我们仅使用ROUGE分数来衡量有用性，并使用关键词过滤器来衡量无害性。
+
+> 简单的代理指标（如ROUGE或关键词过滤器）与对齐的实际复杂目标（真正的有用性和无害性）之间的鸿沟。模型可能会通过规范博弈来优化代理指标，而未能实现真实目标。
+
+这些局限性表明，虽然初始指标提供了一些信号，但它们不足以可靠地评估和保障大型语言模型的对齐和安全。仅依靠它们可能导致虚假的安全感。这促使了更复杂技术的发展和采用，包括来自人类反馈的强化学习 (reinforcement learning)（RLHF）、红队测试等高级评估协议，以及旨在直接解决真实性和鲁棒性等问题的方法，我们将在后续章节中讨论这些内容。
+
+## 参考资料
+
+- [Measuring Massive Multitask Language Understanding](https://arxiv.org/abs/2009.03300) — Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, Jacob Steinhardt (2020)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2009.03300](https://doi.org/10.48550/arXiv.2009.03300)
+  介绍了MMLU，一个用于评估语言模型在57个科目上广泛知识和推理能力的基准。
+- [Finetuned Language Models are Zero-Shot Learners](https://arxiv.org/abs/2109.01652) — Jason Wei, Maarten Bosma, Vincent Y. Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du, Andrew M. Dai, Quoc V. Le (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2109.01652](https://doi.org/10.48550/arXiv.2109.01652)
+  介绍了FLAN数据集和指令微调框架，展示了语言模型在各种任务上零样本泛化能力的提升。
+- [TruthfulQA: Measuring Models' Honesty on Challenging Questions](https://arxiv.org/abs/2109.07958) — Stephanie Lin, Jacob Hilton, Owain Evans (2022)
+  Journal: Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (ACL); Pages: 3740-3754; DOI: [10.48550/arXiv.2109.07958](https://doi.org/10.48550/arXiv.2109.07958)
+  介绍了TruthfulQA，一个旨在衡量语言模型在回答问题时真实性的数据集和基准。
+- [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/) — Chin-Yew Lin (2004)
+  Journal: Text Summarization Branches Out; Publisher: Association for Computational Linguistics; Pages: 74-81
+  介绍了ROUGE，一套广泛用于评估自动摘要和机器翻译的指标，通过比较系统输出与参考摘要。
+- [Concrete Problems in AI Safety](https://arxiv.org/abs/1606.06565) — Dario Amodei, Chris Olah, Jacob Steinhardt, Paul Christiano, John Schulman, Dan Mané (2016)
+  Journal: arXiv preprint arXiv:1606.06565; DOI: [10.48550/arXiv.1606.06565](https://doi.org/10.48550/arXiv.1606.06565)
+  一篇基础论文，概述了AI安全领域的几个关键问题，包括奖励欺骗和规范博弈，这些问题是初始对齐指标局限性的核心。

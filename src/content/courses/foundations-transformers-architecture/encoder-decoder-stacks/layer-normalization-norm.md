@@ -1,0 +1,83 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "encoder-decoder-stacks"
+lesson: "layer-normalization-norm"
+sourceId: 2022
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-5-encoder-decoder-stacks/layer-normalization-norm"
+title: "层归一化"
+description: "层归一化（前置层归一化与后置层归一化变体）的作用和位置，以稳定训练过程。"
+order: 8
+plots: []
+sourceHash: "6198e8dc70146a2fe013d13cecd7758d9ae6ff30d0103b1629769efdbdbe270d"
+sourceCorrections: []
+---
+
+在构建包含大量编码器或解码器层的Transformer模型时，确保训练的稳定性和效率成为一个重要难题。网络中流动的激活值在不同层和训练步中可能呈现出差异很大的分布，这种现象有时与内部协变量偏移有关。此外，深层网络容易出现梯度消失或梯度爆炸问题，阻碍有效的学习。层归一化 (normalization)（LayerNorm）是集成到Transformer架构中的一项技术，专门用于缓解这些问题。
+
+与在批次维度上进行归一化的批归一化不同，层归一化独立地作用于每个数据样本（即批次中的每个序列），并在特征维度（即嵌入 (embedding)维度 $d_{model}$）上进行归一化。这使得它特别适合序列数据，因为在序列数据中批次统计信息可能代表性不足，或可变序列长度使得批归一化变得复杂。
+
+### 层归一化 (normalization)如何工作
+
+对于表示层内序列中特定位置激活值的给定输入向量 (vector) $x$（通常维度为 $d_{model}$），层归一化首先计算其元素的均值 ($\mu$) 和方差 ($\sigma^2$):
+
+
+$$
+\mu = \frac{1}{d_{model}} \sum_{i=1}^{d_{model}} x_i
+$$
+
+
+$$
+\sigma^2 = \frac{1}{d_{model}} \sum_{i=1}^{d_{model}} (x_i - \mu)^2
+$$
+
+
+接下来，它使用这些均值和方差对输入向量 $x$ 进行归一化，并加入一个小的 epsilon ($\epsilon$，例如 $10^{-5}$) 以保证数值稳定性:
+
+
+$$
+\hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}
+$$
+
+
+最后，归一化后的输出 $\hat{x}$ 通过两个可学习的参数 (parameter)向量进行缩放和偏移：一个增益（或缩放）参数 $\gamma$ 和一个偏差（或偏移）参数 $\beta$，两者维度均为 $d_{model}$。这些参数在训练过程中与模型的其他权重 (weight)一同学习。它们使得网络能够自适应地确定归一化激活值的最佳缩放比例和位置，如果需要，甚至可能恢复原始激活值（当 $\gamma = \sqrt{\sigma^2 + \epsilon}$， $\beta = \mu$ 时）。
+
+
+$$
+y_i = \gamma_i \hat{x}_i + \beta_i
+$$
+
+
+整个操作 ($LayerNorm(x) = y$) 标准化了后续子层（如多头注意力 (multi-head attention)或前馈网络）的输入，有助于稳定隐藏状态的动态并改善梯度流动。
+
+### 位置：前置层归一化 (normalization)与后置层归一化
+
+原始的Transformer论文（《Attention Is All You Need》）将层归一化放在残差连接*之后*，这种配置现在称为后置层归一化 (Post-LN):
+
+$output = LayerNorm(x + Sublayer(x))$
+
+这里，$x$ 是子层的输入（例如多头注意力 (multi-head attention)或前馈网络），而 $Sublayer(x)$ 是该子层的输出。
+
+> 后置层归一化Transformer子层中的数据流。归一化在残差相加之后进行。
+
+虽然有效，但后置层归一化有时会导致训练困难，尤其是在非常深的模型中，因为每个块的输出在传递给下一个块之前未进行归一化。梯度可能难以有效地通过未归一化的残差流反向传播 (backpropagation)。
+
+近期更多的实现通常倾向于前置层归一化 (Pre-LN)，其中层归一化应用于子层*之前*，在残差连接的主分支内：
+
+$output = x + Sublayer(LayerNorm(x))$
+
+> 前置层归一化Transformer子层中的数据流。归一化在子层转换之前对输入进行。
+
+前置层归一化倾向于稳定训练，通常允许使用更高的学习率，并减少对复杂学习率预热策略的需求（尽管预热仍普遍使用）。梯度通过归一化后的激活值流动得更直接，残差路径保持“干净”。大多数现代大型语言模型采用前置层归一化结构。
+
+无论位置如何，层归一化在每个编码器和解码器层内应用两次：一次在自注意力 (self-attention)机制 (attention mechanism)之前（前置层归一化）或之后（后置层归一化），另一次在位置前馈网络之前或之后。在解码器中，与编码器-解码器交叉注意力机制相关的还有一个层归一化。
+
+总之，层归一化是一个重要组成部分，它与残差连接配合使用，使得深层Transformer堆栈的训练成为可能。通过独立地稳定每个序列位置的激活分布，它使优化过程更平稳，并为这些强大模型的成功做出重要贡献。
+
+## 参考资料
+
+- [Layer Normalization](https://arxiv.org/pdf/1607.06450.pdf) — Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton (2016)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 29; DOI: [10.5555/3045607.3045657](https://doi.org/10.5555/3045607.3045657)
+  介绍了层归一化方法，旨在稳定深度神经网络（特别是循环神经网络）中的隐藏状态动态并加速训练。
+- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — Ruibin Xiong, Yunchang Yang, Di He, Kai Zheng, Shuxin Zheng, Chen Xing, Huishuai Zhang, Yanyan Lan, Liwei Wang, Tie-Yan Liu (2020)
+  Journal: ICML 2020; DOI: [10.48550/arXiv.2002.04745](https://doi.org/10.48550/arXiv.2002.04745)
+  对Transformer中层归一化（Pre-LN与Post-LN）的放置进行了全面分析，证明了Pre-LN在训练稳定性方面的优势。

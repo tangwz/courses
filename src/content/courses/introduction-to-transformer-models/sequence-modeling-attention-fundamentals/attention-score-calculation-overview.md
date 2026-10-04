@@ -1,0 +1,43 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "sequence-modeling-attention-fundamentals"
+lesson: "attention-score-calculation-overview"
+sourceId: 2964
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-1-sequence-modeling-attention-fundamentals/attention-score-calculation-overview"
+title: "注意力分数计算：一个宏观视角"
+description: "解释基于查询、键和值向量的注意力分数计算的总体过程。"
+order: 5
+plots: []
+sourceHash: "f8417fe6dffea666bdf139c096230130acc525cd10f749347a266607ef4a1bad"
+sourceCorrections: []
+---
+
+让我们从注意力这个*想法*转向它实际如何开始运作，至少从宏观角度来看是这样。我们知道注意力旨在让模型在生成输出时关注输入序列的特定部分。但模型如何决定对于给定步骤*哪些*部分是重要的呢？这便是注意力分数计算发挥作用的地方。
+
+想象你在翻译一个句子。当在目标语言中生成特定词时，你可能需要回头看源句子中的特定词。注意力将这种直觉形式化。它计算一组*注意力分数*，这些分数量化 (quantization)了每个输入元素与当前处理步骤的相关性。
+
+为此，我们引入三个重要想法，它们表示为从输入嵌入 (embedding)派生的向量 (vector)（我们稍后会具体介绍这些是如何派生的）：
+
+1. **查询 (Q)：** 可以将查询向量视为表示当前的关注点或问题。例如，在序列到序列模型的解码器中，查询可能表示试图预测下一个词的状态。它在问：“鉴于我当前的状态，输入序列的哪些部分现在最相关？”
+2. **键 (K)：** 输入序列中的每个元素都有一个关联的键向量。可以将键视为该输入元素内容的一种标签或标识符，用于与查询进行匹配。查询将与所有键进行比较。
+3. **值 (V)：** 每个输入元素也有一个值向量。该向量表示该输入元素的实际内容或含义。一旦我们知道每个输入元素*有多相关*（通过比较 Q 和 K），值向量就会提供我们实际将使用的信息。
+
+过程通常如下展开：
+
+1. **计算相似度分数：** 模型将查询向量（表示当前关注点）与输入序列中*每个*元素的向量进行比较。这种比较会为每个输入元素生成一个原始的*相似度分数*。计算这种相似度的常用方法是使用查询向量与每个键向量的点积。分数越高，表示查询的需求与输入元素的描述之间越相关。
+2. **将分数归一化 (normalization)为权重 (weight)：** 这些原始相似度分数需要被归一化，以便它们表示重要性分布。通常，对分数应用 softmax 函数。softmax 函数将分数转换为总和为 1 的概率。这些结果值称为*注意力权重*。注意力权重越高的输入元素，被认为对当前查询越重要。
+
+> 该图显示了流程：查询与多个键进行比较以生成相似度分数，这些分数随后通过（例如 Softmax）归一化为注意力权重。
+
+这些注意力权重是该阶段的核心输出。它们根据当前查询，准确地告诉模型对输入序列中的每个元素应该给予多少“注意力”或专注。在下一节中，我们将了解如何将这些权重与值向量结合使用，以创建一个单一的、信息丰富的上下文 (context)向量。这种机制提供了一种动态灵活的方式来处理序列中的依赖关系，弥补了简单 RNN 方法中固定上下文向量的主要局限性。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Pages: 5998-6008; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构和自注意力机制的基础论文，提供了Query、Key和Value相互作用及其在注意力分数计算中作用的原始描述。
+- [The Annotated Transformer](http://nlp.seas.harvard.edu/2018/04/03/attention.html) — Alexander Rush (2018)
+  一个广受认可的交互式指南，通过在PyTorch中实现Transformer架构来解释其工作原理，对Query、Key和Value注意力机制及其分数计算提供了清晰的解释。
+- [Transformer Models: An Introduction](https://www.oreilly.com/library/view/transformer-models/9781098132921/) — Llion Jones, Ashish Vaswani, Noam Shazeer, Jakob Uszkoreit, and Illia Polosukhin (2023)
+  Publisher: O'Reilly Media
+  由部分Transformer模型原作者撰写的权威书籍，对Transformer模型，包括注意力机制及其评分过程，提供了全面且更新的介绍。

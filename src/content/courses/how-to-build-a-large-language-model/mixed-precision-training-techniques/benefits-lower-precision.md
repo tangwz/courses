@@ -1,0 +1,84 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "mixed-precision-training-techniques"
+lesson: "benefits-lower-precision"
+sourceId: 6050
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-20-mixed-precision-training-techniques/benefits-lower-precision"
+title: "低精度的好处（速度、内存）"
+description: "讨论FP16/BF16如何借助硬件加速（Tensor Cores）并减少内存占用。"
+order: 2
+plots: ["plots/6050-0.json"]
+sourceHash: "0eb5a01e339409fa1695eadd441a462749465710771963cce0b13b91751f1312"
+sourceCorrections: []
+---
+
+从标准32位精度($FP32$)过渡到16位浮点数($FP16$)或bfloat16($BF16$)等低精度格式，带来显著优势，主要体现在减少内存消耗和提高计算吞吐量 (throughput)。这些优势在训练大型语言模型时尤其显著，资源限制常常是主要瓶颈。
+
+### 内存减少
+
+使用16位格式最直接的优势在于内存需求的大幅降低。$FP16$和$BF16$都使用16位来表示一个数字，正好是标准单精度浮点数($FP32$)所用32位的一半。这种内存减半适用于训练过程中的几个主要组成部分：
+
+1. **模型参数 (parameter)：** 神经网络 (neural network)的权重 (weight)和偏置 (bias)。对于具有数十亿参数的模型，这直接意味着节省了数千兆字节的GPU内存。
+2. **梯度：** 在反向传播 (backpropagation)过程中，为每个参数计算的梯度与参数本身具有相同的维度。以16位格式存储这些梯度，可将其内存占用量减半。
+3. **优化器状态：** Adam或AdamW等优化器会为每个参数维护状态，例如动量和方差估计。对于Adam/AdamW，这通常涉及为每个参数存储两个额外的值。对这些状态使用16位格式（在适用且数值安全的情况下）会进一步减少内存用量。
+4. **激活值：** 正向传播过程中计算的层中间输出通常需要为反向传播存储起来。以$FP16$或$BF16$存储这些激活值可以大幅减少所需内存，特别是对于具有大型激活张量或长序列的模型。
+
+考虑一个以$FP32$与$FP16$存储的单个参数：
+
+```python
+import torch
+
+# 一个FP32的单个参数值
+param_fp32 = torch.tensor(3.14159, dtype=torch.float32)
+size_fp32 = param_fp32.element_size()
+print(f"FP32 Parameter Size: {size_fp32} bytes") # 输出：4字节
+
+# 相同的参数值可能以FP16存储
+# 注意：实际转换可能会损失精度
+param_fp16 = param_fp32.to(torch.float16)
+size_fp16 = param_fp16.element_size()
+print(f"FP16 Parameter Size: {size_fp16} bytes") # 输出：2字节
+
+# 或者以BF16存储
+param_bf16 = param_fp32.to(torch.bfloat16)
+size_bf16 = param_bf16.element_size()
+print(f"BF16 Parameter Size: {size_bf16} bytes") # 输出：2字节
+```
+
+对于一个拥有100亿参数的模型，仅将参数从$FP32$转换为16位格式，就能节省大约 $10 \times 10^9 \times (4 - 2) = 20$ 吉字节的内存。如果再考虑梯度和优化器状态（它们所需的内存可以是参数的两倍或三倍），总节省量会更加可观。
+
+这种内存减少让开发者能够：
+
+- 在相同的硬件配置上训练显著更大的模型。
+- 增加训练批次大小，可能提高训练稳定性和吞吐量 (throughput)。
+- 减少所需的模型并行程度，简化分布式训练设置。
+
+
+
+![相对内存使用量：FP32 vs. 16位格式](plots/6050-0.json)
+
+
+
+> 主要训练组件的相对内存消耗，比较了使用$FP32$与$FP16$或$BF16$的情况。Adam/AdamW的优化器状态通常需要参数本身两倍的内存。
+
+### 计算速度提升
+
+较低精度通常意味着更快的计算，特别是在配备专用处理单元的现代硬件加速器（如GPU和TPU）上。
+
+1. **硬件加速：** NVIDIA GPU具有Tensor Cores，Google TPU则有矩阵乘法单元（MXU），两者都旨在利用混合精度高速执行矩阵乘法。例如，Tensor Cores可以比标准CUDA核心上的等效$FP32$操作更快地执行$FP16 \times FP16 \rightarrow FP32$乘积累加操作。在Transformer层（注意力和前馈网络内部）中，使用$FP16$或$BF16$执行大部分耗时的矩阵乘法，直接利用了这种硬件加速，从而显著提高了训练吞吐量 (throughput)（以FLOPS，即每秒浮点运算次数衡量）。
+2. **数据移动减少：** 在不同内存级别之间移动数据（例如，从GPU的高带宽内存（HBM）到其计算核心）通常是瓶颈。由于16位值只占用32位值一半的空间，在给定内存带宽下，相同时间内可以传输两倍数量的数字。这种数据移动的减少进一步促进了整体速度提升，因为等待数据到达计算单元的时间减少了。
+
+实际的速度提升很大程度上取决于具体的模型架构、所用硬件以及软件实现的效率（例如，借助支持Tensor Core的cuDNN等库）。然而，对于大型Transformer模型，在兼容硬件上有效使用混合精度训练与纯$FP32$训练相比，通常可以观察到1.5倍到3倍甚至更高的速度提升。
+
+总之，$FP16$或$BF16$的采用提供了一个有吸引力的权衡：通过接受数值精度上潜在的（且通常可控的）降低，我们获得了内存使用量的大幅减少和计算速度的显著提高。这使得混合精度训练成为扩展语言模型规模和加速开发周期的重要技术。
+
+## 参考资料
+
+- [Mixed Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  这篇基础论文介绍了使用混合精度（主要是FP16）训练深度神经网络的技术，展示了显著的速度提升和内存节省。
+- [Automatic Mixed Precision (AMP)](https://pytorch.org/docs/stable/amp.html) — PyTorch Documentation (2025)
+  Publisher: PyTorch Foundation
+  官方文档，解释了如何在PyTorch中使用自动混合精度，涵盖了内存和速度优化的实际实现细节和最佳实践。
+- [NVIDIA Deep Learning Performance Guide](https://docs.nvidia.com/deeplearning/performance/index.html) — NVIDIA Corporation (2023)
+  本指南提供了在NVIDIA GPU上优化深度学习性能的建议和解释，包括混合精度和Tensor Cores的作用。

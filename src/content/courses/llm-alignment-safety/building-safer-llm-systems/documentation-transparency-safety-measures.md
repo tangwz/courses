@@ -1,0 +1,96 @@
+---
+course: "llm-alignment-safety"
+chapter: "building-safer-llm-systems"
+lesson: "documentation-transparency-safety-measures"
+sourceId: 3245
+sourceUrl: "https://apxml.com/zh/courses/llm-alignment-safety/chapter-7-building-safer-llm-systems/documentation-transparency-safety-measures"
+title: "安全措施的文档与透明度"
+description: "记录安全措施和保持透明度的重要性。"
+order: 7
+plots: []
+sourceHash: "5679d81010f033a1f4c87ec4bf1915725e51d385578f8b7c127963b35dbea922"
+sourceCorrections: []
+---
+
+构建可靠的LLM系统涉及实施特定的算法或防护机制。这要求一种系统性方法，即安全措施不仅要被实施，还要被细致地记录并透明地传达。将文档和透明度视为安全架构本身的组成部分，而非事后补充。它们为问责制、持续改进以及与用户和利益相关者建立信任提供了根本。
+
+### 安全措施记录的意义
+
+详尽的文档在LLM系统的整个生命周期中具有多项必要功能：
+
+- **可审计性和可重现性：** 详细记录使得内部团队、审计人员或监管机构能够确切地了解实施了哪些安全措施、为何选择它们以及如何配置它们。这对于验证合规性以及重现结果或调查工作是不可或缺的。
+- **团队协作与知识传递：** 随着系统的演进和团队成员的变动，文档确保了关于安全配置、过往决策和理由的知识不会丢失。它使新团队成员能够迅速了解系统的安全状况。
+- **高效的事件响应：** 当发生安全故障时（例如，模型尽管有防护机制但仍生成有害内容），清晰地记录现有安全机制（防护规则、过滤阈值、监控警报）是诊断和补救的起点。没有它，事件响应将变得明显更慢且效果不佳。
+- **促进持续改进：** 记录在案的评估、红队测试结果和事件事后分析提供了历史记录，可为未来的安全改进提供依据。团队可以追踪不同措施随时间推移的有效性，并做出数据驱动的改进决策。
+- **法规遵循：** 监管机构日益要求提供安全测试、风险缓解和持续监控的证据。全面的文档提供了这些证据。
+
+### 记录内容：安全清单
+
+有效的安全文档应全面，涵盖系统及其开发过程的多个方面。可以考虑记录以下内容：
+
+- **对齐 (alignment)目标与安全原则：** 清楚地阐明预期行为以及系统旨在遵循的特定安全原则（例如，无害性、诚实性、有用性）。如果使用像宪法AI这样的框架，请记录宪法本身及其原则的理由。
+- **用于安全的训练和微调 (fine-tuning)数据：** 详细说明专门用于安全对齐的数据集（例如，用于RLHF/DPO的偏好数据，用于对安全响应进行监督微调的数据）。包括数据源、收集方法、过滤标准以及这些数据集中任何已知的局限或偏差的信息。
+- **奖励模型细节（如适用）：** 记录RLHF或类似过程中使用的任何奖励模型的架构、训练数据、损失函数 (loss function)和评估指标。注明为优先考虑安全信号而进行的任何特定调整。
+- **防护机制规范：** 提供所有输入和输出防护机制的精确定义。这包括：
+  - 它们检测到的特定条件或模式（例如，正则表达式、分类器输出、关键词列表）。
+  - 触发时采取的行动（例如，阻止输入、修改输出、记录事件、升级至人工审核员）。
+  - 配置参数 (parameter)（例如，分类器的阈值）。
+  - 防护逻辑的版本历史。
+- **内容审核政策与集成：** 如果使用外部工具或内部分类器进行内容审核，请记录被过滤的类别（例如，仇恨言论、个人身份信息、暴力），使用的阈值，以及该工具如何与LLM管道结合（例如，预处理输入、后处理输出）。
+- **评估协议与结果：** 维护所有已执行的安全评估记录：
+  - 自动化基准测试结果（例如，TruthfulQA、ToxiGen、HELM安全场景的分数）。
+  - 人工评估协议和匿名、汇总的结果。
+  - 红队测试方法、使用的特定提示或策略、发现以及为应对这些发现而实施的缓解措施。
+  - 偏见与公平性评估结果。
+  - 针对分布变化或攻击的稳定性测试结果。
+- **监控程序：** 记录生产环境中用于监控安全的指标（例如，防护触发率、异常检测分数、用户报告率）。定义警报条件和相关的响应程序。
+- **事件响应计划：** 概述处理安全事件的分步过程，包括检测、遏制、清除、恢复和事后分析。列出负责的个人或团队。
+- **模型/系统卡片：** 创建模型功能、局限性、训练数据、评估结果和预期用途的简洁摘要，特别强调安全考量。这些卡片可作为适合更广泛受众的更高层次概览。
+
+### 透明度：有效传达安全信息
+
+虽然详细的内部文档是根本，但透明度涉及将安全措施的相关方面传达给外部受众。这有助于建立信任，并允许用户和利益相关者做出明智的决定。然而，透明度是一种平衡行为。
+
+**层次与受众：**
+
+- **内部团队：** 需要访问最详细的文档，用于开发、操作和审计。
+- **用户：** 需要清晰、易懂的信息，说明系统如何设计以确保安全、其局限性以及他们的数据可能如何使用（例如，用于监控）。这通常通过UI元素、服务条款或高层次描述来呈现。
+- **监管机构和审计人员：** 可能需要访问详细文档和评估证据的特定子集，以验证合规性。
+- **研究人员：** 可以从已发表的论文、技术报告或模型卡中获益，这些资料分享了安全技术、评估结果和局限性的见解，从而共同推动该领域的发展。
+
+**透明度机制：**
+
+- **模型卡/系统卡：** 像模型卡这样的标准化格式提供了一种结构化的方式来传达重要信息。
+- **公开报告：** 定期发布的安全或透明度报告，总结评估结果、事件趋势和改进措施。
+- **API文档：** 对于通过API使用您的LLM的开发人员，请记录安全功能、潜在故障模式以及与安全相关的用法指南。
+- **用户界面（UI）元素：** 直接告知用户安全过滤器（例如，“我无法生成此类内容”）或提供报告不安全输出的机制。
+
+> 内部详细文档如何流向为不同受众（用户、监管机构、研究人员）量身定制的各种外部透明度产物。
+
+**透明度面临的挑战：**
+
+- **知识产权：** 分享过多关于专有技术或数据集的细节可能具有商业敏感性。
+- **安全风险：** 如果不谨慎传达，泄露特定的防护机制实现细节或红队测试中发现的漏洞可能会潜在地帮助攻击者。
+- **保持准确性：** 随着系统演进，文档和透明度报告必须保持更新，这需要持续的努力。
+- **复杂性：** 将复杂的技术安全措施转化为非专业受众可理解的语言是一项挑战。
+
+### 版本控制与维护
+
+安全文档并非一次性任务。随着模型重新训练、防护机制更新、新评估运行和事件发生，文档必须进行版本控制和维护。建立明确的流程，规定由谁负责更新文档以及如何追踪变更。将文档“视作代码”并将其与系统代码一同存储在版本控制系统中，可能是一种有效的做法。
+
+通过将文档和透明度嵌入 (embedding)到您的开发和操作流程中，您可以创建一个更负责、可审计且最终值得信任的LLM系统。这表明了一种超越技术实施的安全承诺，有助于培养用户、开发者和更广泛社区的信心。
+
+## 参考资料
+
+- [Model Cards for Model Reporting: Enabling Accountable AI Development](https://doi.org/10.1145/3287560.3287596) — Margaret Mitchell, Simone Wu, Andrew Zaldivar, Parker Barnes, Lucy Vasserman, Ben Hutchinson, Elena Spitzer, Inioluwa Deborah Raji, Timnit Gebru (2019)
+  Journal: Proceedings of the Conference on Fairness, Accountability, and Transparency; Publisher: ACM; Pages: 220-229; DOI: [10.1145/3287560.3287596](https://doi.org/10.1145/3287560.3287596)
+  提出“模型卡片”概念的奠基性论文，提供了一种结构化方法来记录AI模型特征、性能和伦理考量，以提高透明度和问责制。
+- [Artificial Intelligence Risk Management Framework (AI RMF 1.0)](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf) — National Institute of Standards and Technology (NIST) (2023)
+  Publisher: U.S. Department of Commerce
+  阐述了管理AI对个人、组织和社会风险的自愿性指南框架，通过文档强调治理、透明度和问责制。
+- [System Cards: Documentation for Complex AI Systems](https://dl.acm.org/doi/10.1145/3531146.3534575) — Maithra Raghu, El Mehdi Faiq, Emily Dinan, Kevin Clark, Alex Hanna, Jamell Dacon, Christina Greer, Joelle Evans, Brian Clinton, Irshad Bhat, Joshua Buyco, Maura Grossman, Kristen Johnson, Michael R. Smith, Jason C. Smith, Eric D. Smith, Ankur Taly, Mahima Suresh, Andrew Zaldivar (2022)
+  Journal: Proceedings of the 2022 ACM Conference on Fairness, Accountability, and Transparency (FAccT '22); Publisher: ACM; Pages: 959-971; DOI: [10.1145/3531146.3534575](https://doi.org/10.1145/3531146.3534575)
+  提出“系统卡片”概念，扩展了模型卡片，为复杂AI系统的设计、开发和部署提供文档框架，对大型语言模型及其防护措施至关重要。
+- [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073) — Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell, Jackson Kernion, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, Cameron McKinnon, Carol Chen, Catherine Olsson, Christopher Olah, Danny Hernandez, Dawn Drain, Deep Ganguli, Dustin Li, Eli Tran-Johnson, Ethan Perez, Jamie Kerr, Jared Mueller, Jeffrey Ladish, Joshua Landau, Kamal Ndousse, Kamile Lukosuite, Liane Lovitt, Michael Sellitto, Nelson Elhage, Nicholas Schiefer, Noemi Mercado, Nova DasSarma, Robert Lasenby, Robin Larson, Sam Ringer, Scott Johnston, Shauna Kravec, Sheer El Showk, Stanislav Fort, Tamera Lanham, Timothy Telleen-Lawton, Tom Conerly, Tom Henighan, Tristan Hume, Samuel R. Bowman, Zac Hatfield-Dodds, Ben Mann, Dario Amodei, Nicholas Joseph, Sam McCandlish, Tom Brown, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2212.08073; DOI: [10.48550/arXiv.2212.08073](https://doi.org/10.48550/arXiv.2212.08073)
+  描述了通过文档化和应用一套原则（即“宪法”）来使大型语言模型与人类价值观对齐的方法，与记录对齐目标直接相关。

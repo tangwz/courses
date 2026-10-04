@@ -1,0 +1,63 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "foundations-representation-learning"
+lesson: "unsupervised-learning-principles-review"
+sourceId: 2791
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-1-foundations-representation-learning/unsupervised-learning-principles-review"
+title: "无监督学习原理回顾"
+description: "概述无监督机器学习算法的主要思想和目标。"
+order: 1
+plots: []
+sourceHash: "30c344a006472a190302266ad42e927526ba37a080e97b9abe8c020558868c81"
+sourceCorrections: []
+---
+
+无监督学习 (supervised learning) (unsupervised learning)构成了许多表征学习方法（包括自编码器）得以建立的根基。与依赖有标签数据（输入-输出对）训练模型进行预测或分类的监督学习不同，无监督学习算法处理的数据集只包含输入特征 $X$，而没有对应的目标变量 $y$。它的主要目标是找出数据本身固有的结构、模式或关联。
+
+### 无监督学习 (supervised learning) (unsupervised learning)的核心目标
+
+总体目标是对数据的底层结构或分布进行建模。这可以通过以下几种方式体现：
+
+1. **聚类：** 识别不同的数据点群组或簇，使得同一簇内的点彼此间比与其他簇的点更相似。K-Means 或 DBSCAN 等算法属于此类。虽然这不是本课程的主要关注点，但聚类是一项基本的无监督任务。
+2. **降维：** 在保留原始数据有意义属性的同时，将数据从高维空间 (high-dimensional space)转换到低维空间。这与表征学习高度相关，因为这个低维空间 *就是* 学到的表征。其方法从主成分分析（PCA）等线性方法到包括自编码器在内的复杂非线性方法都有。
+3. **密度估计：** 明确建模数据 $p(x)$ 的概率分布函数。这有助于理解数据如何分布，并可用于异常检测等任务。
+4. **生成模型：** 训练一个能够生成与原始数据分布相似的新数据样本的模型。变分自编码器（VAEs）（将在本课程后续章节中讨论）是生成式无监督模型的一个强有力示例。
+
+> 无监督学习算法处理无标签输入数据，以找出底层模式（例如簇或流形），从而得到一个结构化的表征。
+
+### 无监督学习 (supervised learning) (unsupervised learning)对自编码器为何重要
+
+自编码器本质上是无监督神经网络 (neural network)。它们通过尝试复现其输入来学习。核心组成部分包括一个将输入 $x$ 映射到潜在表征 $z$ 的 *编码器*，以及一个从 $z$ 重建输入 $\hat{x}$ 的 *解码器*。模型的训练目标是最小化 *重建损失*，这通常是 $x$ 和 $\hat{x}$ 之间的差异，例如均方误差：
+
+
+$$
+L(x, \hat{x}) = ||x - \hat{x}||^2
+$$
+
+
+由于网络仅用输入数据 $x$ 进行训练，而没有关联的标签 $y$，它完全遵循无监督方法运行。其中重要的部分是 *瓶颈* 层，在这里，潜在表征 $z$ 的维度通常低于输入 $x$。这迫使编码器学习一个压缩表征，该表征能捕获数据分布中最重要的变异和结构，以便解码器进行准确重建。这种压缩和重建过程是一种自监督学习 (self-supervised learning)形式，它是无监督学习的一个子集，其监督信号源自数据本身。
+
+### 与表征学习的关联
+
+自编码器学到的潜在表征 $z$ *就是* 学到的表征。这个表征的质量决定了自编码器执行其主要任务（重建）的效果，以及 $z$ 对于分类、生成或异常检测等下游任务的有用程度。因此，有效的无监督学习 (supervised learning) (unsupervised learning)旨在找到具有以下特点的表征：
+
+- **紧凑：** 维度低于原始输入。
+- **信息丰富：** 保留原始数据的核心信息。
+- **有结构：** 捕获数据中有意义的关联和变异（例如，分离变异因素）。
+
+"正如章引言中提到的，像PCA这样的传统线性方法进行无监督降维。然而，它们假定数据位于或接近线性子空间。许多数据集，例如图像或自然语言，呈现出复杂的非线性结构（流形）。基于深度学习 (deep learning)的无监督方法，如自编码器，具有更大的灵活性，能够学习这些复杂的非线性表征。理解无监督学习的基本原理、从无标签数据中学习、识别结构以及找到信息丰富表征的目标，为领会我们在本课程中将审查的各种自编码器架构的设计和功能提供了必要的背景。"
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  在深度学习背景下，全面介绍了无监督学习、表示学习和自编码器。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/) — Christopher M. Bishop (2006)
+  Publisher: Springer
+  介绍了经典的无监督学习方法，包括聚类和主成分分析，以提供基础理解。
+- [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114) — Diederik P Kingma, Max Welling (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1312.6114](https://doi.org/10.48550/arXiv.1312.6114)
+  介绍了变分自编码器（VAE），这是内容中提及的一种重要的生成式无监督模型。
+- [Representation Learning: A Review and New Perspectives](https://doi.org/10.1109/TPAMI.2013.50) — Yoshua Bengio, Aaron Courville, and Pascal Vincent (2013)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 35; Pages: 1798-1828; DOI: [10.1109/TPAMI.2013.50](https://doi.org/10.1109/TPAMI.2013.50)
+  综述了表示学习、其目标以及与无监督技术的关联，提供了广泛的学术视角。

@@ -1,0 +1,154 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "data-visualization-matplotlib-seaborn"
+lesson: "matplotlib-subplots"
+sourceId: 2178
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-4-data-visualization-matplotlib-seaborn/matplotlib-subplots"
+title: "使用子图"
+description: "创建包含多个图（子图）的图形，这些图以网格形式排列，用于比较性可视化。"
+order: 4
+plots: []
+sourceHash: "4bd6073448bdcb2216fbbf5b27d6ba8b45d54a74392462a877e2dfb76080c91d"
+sourceCorrections: []
+---
+
+数据分析常常需要比较数据的不同视图或将多个相关的图表一起显示。虽然为每个图表创建独立的图形是可行的，但通常更有效的方法是将它们安排在同一个图形中。Matplotlib 提供了一个强大的机制，可以通过子图实现这一点。这种方法可以直接进行视觉比较，并生成更规整、更全面的可视化内容。
+
+### `plt.subplots()` 方法
+
+创建包含多个子图的图形的推荐方法是使用 `plt.subplots()` 函数（注意末尾的 's'）。此函数同时创建一个图形和一个子图（坐标轴）网格，并返回这两个对象。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 创建一些示例数据
+x = np.linspace(0, 2 * np.pi, 100)
+y_sin = np.sin(x)
+y_cos = np.cos(x)
+y_tan = np.tan(x)
+random_data = np.random.randn(1000)
+
+# 创建一个图形和一个 2x2 的子图网格
+# fig 是整个图形窗口
+# axes 是一个包含各个子图（Axes）对象的二维 NumPy 数组
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
+
+print(axes.shape)
+# 输出: (2, 2)
+
+# axes[0, 0] 指的是第一行、第一列的子图
+# axes[0, 1] 指的是第一行、第二列的子图
+# 等等。
+```
+
+`plt.subplots()` 接受多个参数 (parameter)，最常用的是 `nrows` 和 `ncols`，用于指定网格尺寸。`figsize` 参数控制图形的整体尺寸（单位为英寸）。主要之处在于它返回两个对象：
+
+1. `fig`: 一个 `matplotlib.figure.Figure` 对象，表示绘制所有内容的整个窗口或页面。
+2. `axes`: 一个 `matplotlib.axes._axes.Axes` 对象的数组（通常是 NumPy 数组）。每个 `Axes` 对象表示网格中的一个子图，并拥有自己的绘图方法。
+
+如果您创建单行或单列的子图（例如 `plt.subplots(3, 1)` 或 `plt.subplots(1, 3)`），那么 `axes` 将是一个一维 NumPy 数组。
+
+### 在单独的坐标轴上绘图
+
+一旦您有了 `axes` 数组，就可以通过直接在相应的 `Axes` 对象上调用绘图方法，而不是使用全局 `plt` 函数（如 `plt.plot()`、`plt.hist()` 等），来在特定子图上绘制数据。您可以使用标准的数组索引访问各个 `Axes` 对象。
+
+```python
+# 在左上角子图（索引 [0, 0]）上绘图
+axes[0, 0].plot(x, y_sin, color='#4263eb')
+axes[0, 0].set_title('正弦波')
+axes[0, 0].set_xlabel('弧度')
+axes[0, 0].set_ylabel('值')
+axes[0, 0].grid(True, linestyle='--', alpha=0.6)
+
+# 在右上角子图（索引 [0, 1]）上绘图
+axes[0, 1].plot(x, y_cos, color='#12b886')
+axes[0, 1].set_title('余弦波')
+axes[0, 1].set_xlabel('弧度')
+# 如果坐标轴共享或上下文清晰，我们可以在这里省略 y 轴标签
+
+# 在左下角子图（索引 [1, 0]）上绘图
+axes[1, 0].scatter(x, y_sin + np.random.normal(0, 0.1, 100), color='#f06595', alpha=0.6, s=10) # 散点图
+axes[1, 0].set_title('含噪声正弦散点图')
+axes[1, 0].set_xlabel('弧度')
+axes[1, 0].set_ylabel('值')
+
+# 在右下角子图（索引 [1, 1]）上绘图
+axes[1, 1].hist(random_data, bins=30, color='#fd7e14', alpha=0.7)
+axes[1, 1].set_title('随机数据直方图')
+axes[1, 1].set_xlabel('值')
+axes[1, 1].set_ylabel('频率')
+
+# 显示包含所有子图的图形
+plt.show() # 此命令通常在 Jupyter 等交互式环境之外需要
+```
+
+请注意，像 `plot()`、`set_title()`、`set_xlabel()`、`set_ylabel()` 和 `grid()` 等方法是如何在特定的 `axes` 对象（例如 `axes[0, 0].plot(...)`）上调用的。这种面向对象的方法使您能够精确控制每个子图。
+
+### 共享坐标轴
+
+在比较图表时，让它们共享相同的 x 轴或 y 轴限制和刻度通常是有益的。这使得直接比较变得更加容易。`plt.subplots()` 为此提供了方便的参数 (parameter)：`sharex` 和 `sharey`。
+
+设置 `sharex=True` 意味着所有子图将共享相同的 x 轴。在一个图表的 x 轴上缩放或平移会影响所有其他图表。同样，`sharey=True` 会关联 y 轴。您还可以将它们设置为 `'col'` 或 `'row'`，以便分别仅在同一列或同一行内共享坐标轴。
+
+```python
+# 创建一个 2x1 的网格，其中子图共享 x 轴
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 6), sharex=True)
+
+axes[0].plot(x, y_sin, color='#7048e8')
+axes[0].set_title('正弦波')
+axes[0].set_ylabel('值')
+axes[0].grid(True, linestyle='--', alpha=0.6)
+
+axes[1].plot(x, y_cos, color='#0ca678')
+axes[1].set_title('余弦波')
+axes[1].set_xlabel('弧度')
+axes[1].set_ylabel('值')
+axes[1].grid(True, linestyle='--', alpha=0.6)
+
+# 注意，由于坐标轴是共享的，只有底部图表需要 x 轴标签。
+# Matplotlib 会自动隐藏顶部图表上的 x 轴刻度标签。
+
+plt.show()
+```
+
+当坐标轴共享时，Matplotlib 通常足够智能，会自动隐藏多余的刻度标签（例如上面示例中顶部图表上的 x 轴标签），从而使外观更整洁。
+
+### 调整布局
+
+有时，不同子图的标题、标签或刻度标签可能会重叠，导致图形难以阅读。Matplotlib 提供了一个简单的函数来自动调整子图参数 (parameter)，以实现紧凑布局。
+
+```python
+# 沿用之前的 2x2 示例：
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))
+
+axes[0, 0].plot(x, y_sin, color='#4263eb')
+axes[0, 0].set_title('正弦波')
+# ... 像之前一样添加其他图表和标签 ...
+axes[0, 1].plot(x, y_cos, color='#12b886')
+axes[0, 1].set_title('余弦波')
+axes[1, 0].scatter(x, y_sin + np.random.normal(0, 0.1, 100), color='#f06595', alpha=0.6, s=10)
+axes[1, 0].set_title('含噪声正弦散点图')
+axes[1, 1].hist(random_data, bins=30, color='#fd7e14', alpha=0.7)
+axes[1, 1].set_title('随机数据直方图')
+
+# 在绘图和设置标签/标题之后调用 tight_layout()
+plt.tight_layout()
+
+plt.show()
+```
+
+在所有绘图命令之后调用 `plt.tight_layout()`（或 `fig.tight_layout()`）通常可以通过调整子图之间的间距来解决大多数重叠问题。如需对间距进行更精细的控制，可以查看 `plt.subplots_adjust()` 函数，尽管 `tight_layout()` 对于许多常见情况已足够。
+
+使用子图是数据分析和机器学习 (machine learning)中创建信息丰富的仪表盘和比较性可视化内容的基础。通过熟练掌握 `plt.subplots()` 函数和使用 `Axes` 对象的面向对象绘图方法，您可以更好地控制复杂图形的布局和外观。
+
+## 参考资料
+
+- [matplotlib.pyplot.subplots](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html) — Matplotlib Development Team (2024)
+  plt.subplots函数的官方API参考文档，详细说明其参数和用于创建多个子图的用法。
+- [Figures and Axes Tutorial](https://matplotlib.org/stable/users/explain/figures/anatomy.html) — Matplotlib Development Team (2024)
+  Publisher: Matplotlib Development Team
+  解释Matplotlib中Figure和Axes对象区别的教程，这是使用子图进行面向对象绘图的核心。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本广受好评的书籍，其中包含有关Matplotlib的实用章节，展示了其在数据可视化背景下的应用。

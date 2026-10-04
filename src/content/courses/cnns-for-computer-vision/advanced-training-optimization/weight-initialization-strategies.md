@@ -1,0 +1,134 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "advanced-training-optimization"
+lesson: "weight-initialization-strategies"
+sourceId: 2542
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-2-advanced-training-optimization/weight-initialization-strategies"
+title: "深度网络的权重初始化策略"
+description: "考察有助于高效训练超深度神经网络的不同权重初始化技术。"
+order: 5
+plots: ["plots/2542-0.json"]
+sourceHash: "616dfcc88534f48fc0f39542008ac2ebf1cf7184a3fcf2f9180a6281356dba28"
+sourceCorrections: []
+---
+
+随着我们构建更深的神经网络 (neural network)，给网络权重 (weight)赋予初始值这项看似简单的任务变得格外重要。不良的初始化会显著减慢训练速度，甚至完全阻碍网络学习。这是因为激活值和梯度的尺度在通过各层传播时可能呈指数级增长或收缩，分别导致梯度爆炸或梯度消失。恰当的权重初始化旨在通过设定初始权重，以维持信号传播并促进稳定的梯度流动，从而减轻这些问题。
+
+### 问题：激活值和梯度消失与爆炸
+
+想象一个输入信号通过多层。在每一层中，激活值是根据前一层输出的加权和计算的，然后应用激活函数 (activation function)。如果权重 (weight)一直过小，激活值的方差将层层指数级下降，最终变得微不足道。这就是**激活值消失**问题。反向传播 (backpropagation)过程中计算的梯度也会消失，这意味着靠前的层的权重学习速度极慢，甚至完全不学习。
+
+相反，如果权重一直过大，激活值的方差可能指数级增长，导致数值巨大。这可能导致数值溢出问题，并在反向传播期间引发**梯度爆炸**问题，此时梯度变得非常大，导致更新不稳定和发散。
+
+一个简单的线性网络，经过 $L$ 层后，其输出方差大致与每层权重方差的乘积成比例。如果权重方差持续偏离1，输出方差将要么消失要么爆炸。非线性激活函数会使情况复杂化，但主要问题不变。
+
+> 信号传播的示意图。良好的初始化有助于在网络层中保持信号方差。
+
+### Xavier (Glorot) 初始化
+
+由 Glorot 和 Bengio 于 2010 年提出，Xavier 初始化旨在使激活值和梯度的方差在各层之间大致相等，前提是使用线性或对称饱和激活函数 (activation function)，例如 `tanh` 或 `sigmoid`。
+
+其主要思想是根据给定层的输入 ($n_{in}$) 和输出 ($n_{out}$) 单元数量来调整权重 (weight)。
+
+- **对于均匀分布**：权重从 $U[-limit, limit]$ 中采样，其中
+  $limit = \sqrt{\frac{6}{n_{in} + n_{out}}}$
+- **对于正态分布**：权重从 $\mathcal{N}(0, \sigma^2)$ 中采样，其中
+  $\sigma^2 = \frac{2}{n_{in} + n_{out}}$
+
+该策略平衡了前向传播期间的信号方差和反向传播 (backpropagation)期间的梯度方差。这对于使用对称激活函数训练深度网络是一个显著的改进。
+
+### He (Kaiming) 初始化
+
+尽管 Xavier 初始化适用于 `tanh` 和 `sigmoid`，但它对于修正线性单元 (ReLU) 及其变体 (Leaky ReLU, PReLU) 而言并不那么理想。ReLU 将所有负输入设为零，这与对称函数对方差统计数据的影响不同。
+
+He 初始化由 He 等人于 2015 年提出，专门考虑了 ReLU 的特性。由于 ReLU 有效地消除了约一半的激活值（负数部分），因此方差需要相应调整。He 初始化仅根据输入单元数量 ($n_{in}$) 来调整权重 (weight)，以在前向传播中保持方差。
+
+- **对于均匀分布**：权重从 $U[-limit, limit]$ 中采样，其中
+  $limit = \sqrt{\frac{6}{n_{in}}}$
+- **对于正态分布**：权重从 $\mathcal{N}(0, \sigma^2)$ 中采样，其中
+  $\sigma^2 = \frac{2}{n_{in}}$
+
+这种方法有助于防止通过由 ReLU 单元组成的层时方差下降过快，使其成为主要使用 ReLU 或其变体的现代深度 CNN 的标准选择。
+
+
+
+![初始化中的方差缩放因子](plots/2542-0.json)
+
+
+
+> 比较 He 和 Xavier 正态初始化中使用的标准差 ($\sigma$)，其中 Xavier 假设 $n_{out} = n_{in}$。He 初始化使用更大的初始权重，以补偿 ReLU 对方差的影响。
+
+### 实际实施和偏置 (bias)初始化
+
+大多数深度学习 (deep learning)框架都易于使用这些初始化器。
+
+**PyTorch 示例：**
+
+```python
+import torch
+import torch.nn as nn
+
+# 使用 He 初始化对 Conv2d 层进行示例
+conv_layer = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3)
+nn.init.kaiming_normal_(conv_layer.weight, mode='fan_in', nonlinearity='relu')
+
+# 使用 Xavier 初始化对 Linear 层进行示例
+linear_layer = nn.Linear(in_features=512, out_features=256)
+nn.init.xavier_uniform_(linear_layer.weight)
+
+# 偏置初始化（常见做法：设为零）
+if conv_layer.bias is not None:
+    nn.init.constant_(conv_layer.bias, 0)
+if linear_layer.bias is not None:
+    nn.init.constant_(linear_layer.bias, 0)
+```
+
+**TensorFlow/Keras 示例：**
+
+```python
+import tensorflow as tf
+from tensorflow.keras import layers
+
+# 使用 He 初始化对 Conv2D 层进行示例（Conv2D/Dense 层使用 ReLU 时的默认值）
+conv_layer = layers.Conv2D(
+    filters=128,
+    kernel_size=3,
+    activation='relu', # 在 Keras 中，ReLU 默认暗示使用 HeNormal
+    kernel_initializer=tf.keras.initializers.HeNormal(),
+    bias_initializer='zeros' # 默认偏置初始化器
+)
+
+# 使用 Glorot (Xavier) 初始化对 Dense 层进行示例
+dense_layer = layers.Dense(
+    units=256,
+    activation='tanh', # Tanh 激活函数通常与 Glorot 配合良好
+    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+    bias_initializer='zeros'
+)
+```
+
+请注意 PyTorch `kaiming_normal_` 中的 `mode` 参数 (parameter)（或 `fan_in` 与 `fan_out` 的选择）。`fan_in` 对应于标准的 He 初始化 ($n_{in}$)，而 `fan_out` ($n_{out}$) 有时也会使用。对于 ReLU 的前向传播稳定性，通常更推荐 `fan_in`。Keras 通常会根据层类型和激活函数 (activation function)选择合适的默认初始化器。
+
+关于**偏置初始化**，最常见的做法是将偏置设为零。这通常是安全有效的。有时，特别是对于 ReLU 单元，建议将偏置初始化为小的正数常数（例如 0.01 或 0.1），以确保 ReLU 最初能够激活，但在恰当的权重 (weight)初始化和批归一化 (normalization)等技术下，零初始化通常足够。
+
+### 总结
+
+选择恰当的权重 (weight)初始化策略是成功训练深度神经网络 (neural network)的基本步骤。虽然简单的初始化可能适用于浅层网络，但深度架构需要 Xavier/Glorot（用于对称激活）或 He/Kaiming（用于基于 ReLU 的激活）等方法来维持信号方差并防止梯度问题。现代框架使得实施这些策略变得直接，显著提高了稳定高效训练的可能性。请记住选择与网络主要激活函数 (activation function)匹配的初始化器。
+
+## 参考资料
+
+- [Understanding the difficulty of training deep feedforward neural networks](https://proceedings.mlr.press/v9/glorot10a.html) — Xavier Glorot, Yoshua Bengio (2010)
+  Journal: Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics (AISTATS); Publisher: JMLR.org; Volume: 9; Pages: 249-256
+  介绍了Xavier初始化，用于在采用对称激活函数的深度网络中实现稳定的信号传播。
+- [Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification](https://arxiv.org/pdf/1502.01852.pdf) — Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2015)
+  Journal: Proceedings of the IEEE International Conference on Computer Vision (ICCV); Pages: 1026-1034; DOI: [10.1109/ICCV.2015.122](https://doi.org/10.1109/ICCV.2015.122)
+  提出了He初始化，专为使用ReLU的深度网络设计，以有效管理方差。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本涵盖深度学习基础的教科书，其中包含关于权重初始化和梯度问题的讨论。
+- [torch.nn.init](https://pytorch.org/docs/stable/nn.init.html) — PyTorch Contributors (2022)
+  Publisher: PyTorch Foundation
+  PyTorch官方初始化方法文档，包括`kaiming_normal_`和`xavier_uniform_`，并附带使用示例。
+- [Keras initializers API](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwGZYD2cIqX0eGCsrcvebSkvdCHkwx4CAYTNownHVbaoVE5Iuy4UD-EdrZOABrRo7QBh6rsZIaHmtjTxvoSqHDnuiB5aCusIn060Xw8eszWtCmbblduCl406A8QqvjqDlaljg=) — TensorFlow Authors (2024)
+  Publisher: TensorFlow
+  Keras官方文档，详细介绍了框架中可用的权重初始化器，如`HeNormal`和`GlorotUniform`。

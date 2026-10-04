@@ -1,0 +1,203 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "efficient-moe-inference"
+lesson: "moe-batching-strategies"
+sourceId: 7068
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-4-efficient-moe-inference/moe-batching-strategies"
+title: "稀疏激活的批处理策略"
+description: "了解专门的批处理和令牌调度策略，这些策略旨在处理MoE推理过程中的稀疏激活模式。"
+order: 3
+plots: ["plots/7068-0.json"]
+sourceHash: "d78b1131f9a3a894d77ac83676d0f9a76eb33722308be454f3072d2d0a8ea3bd"
+sourceCorrections: []
+---
+
+现代GPU加速深度学习 (deep learning)的根本在于对连续输入数据块进行统一的批处理操作。但在专家混合模型（MoE）中，这种方式不再适用。在推理 (inference)时，门控网络会将单个批次内的令牌路由到不同的专家。这种稀疏激活模式意味着一个连续的输入批次会被分散到多个独立的计算路径上，使得进行一次大型矩阵乘法变得不可行。
+
+这种行为常被称为“汇聚-散布”问题，是MoE推理中计算效率不高的主要原因。如果处理不当，它会导致一系列小型、低效的矩阵操作，从而无法充分利用GPU的并行处理能力，并大幅增加延迟。解决方法不是放弃批处理，而是通过动态令牌分组和分派来适应工作负载的稀疏特性。
+
+### 令牌分派流程
+
+核心策略是将令牌到专家的分配从稀疏、不规则的内存访问模式转变为一系列密集、规则的计算。这通过在门控网络做出路由决定后，根据令牌指定的专家对其进行批内排序和重新分组来实现。
+
+该过程分为几个不同步骤：
+
+1. **门控与路由：** 对于接收到的令牌批次，门控网络会计算其逻辑值并为每个令牌确定目标专家。
+2. **分组与置换：** 系统不会立即将令牌发送给专家，而是首先确定整个批次的专家分配。然后，它会创建一个置换映射来重新排列令牌，将所有分配给专家1的令牌归为一组，专家2的令牌归为一组，以此类推。这会为每个活跃专家创建密集的“微批次”。
+3. **分派与计算：** 每个密集的微批次被分派给相应的专家。由于专家现在接收到连续的令牌块，它可以利用一次高效的矩阵乘法来执行其计算（例如，前馈网络）。
+4. **反排序：** 每个专家的输出表示必须返回到令牌序列中的原始位置。初始置换映射的逆操作用于将结果散布回新的张量中，该张量保留了原始令牌顺序。
+
+下图说明了这一流程。一个初始令牌批次被路由、排序到特定专家组、处理，然后重新组装。
+
+> 令牌分派流程。令牌被路由、置换成专家特定组、进行密集计算，然后反向置换回其原始序列顺序。
+
+### 处理负载不均衡与容量问题
+
+此过程中的一个主要难点是负载不均衡。路由决定是动态的，因此对于任何给定批次，一些专家可能被分配许多令牌，而另一些则很少或没有。这会产生大小不一的微批次。
+
+
+
+![单个批次中令牌在专家间的分布](plots/7068-0.json)
+
+
+
+> 一个示例，显示单个推理 (inference)批次中八个专家之间的令牌负载不均衡。专家4和专家8未激活，而专家5负载较重。
+
+为了管理这种不均衡并维持规则的计算结构，系统通常采用填充。所有专家的微批次都会被填充到统一的大小，通常由全局批次中最大微批次的大小决定。虽然这会引入一些填充元素的计算浪费，但它简化了执行图，并且通常比处理许多不同大小的操作能带来更高的整体吞吐量 (throughput)。
+
+训练阶段的`capacity_factor`在此处再次变得重要。在推理过程中，如果路由到某个专家的令牌数量超过其定义的容量（batch\_size / num\_experts \* capacity\_factor），多余的令牌通常会被“丢弃”。它们的表示将通过MoE层而不发生改变，相当于由残差连接处理。这是一个直接的权衡：较低的容量节省内存和计算，但如果丢弃的令牌过多，则可能导致质量下降。对于生产系统，这个值必须根据观察到的令牌分布和延迟要求进行调整。
+
+### 使用自定义核函数的进阶调度
+
+汇聚-计算-散布流程虽然有效，但会引入数据移动和GPU上多次核函数启动的额外开销。置换和反向置换步骤需要读取和写入整个批次的令牌数据，这可能成为性能瓶颈。
+
+对于高度优化的推理 (inference)服务器，这些操作可以使用Triton等框架或直接编写CUDA代码，融合到一个自定义GPU核函数中。融合核函数可以代替独立的步骤，做到：
+
+1. 从原始、未排序的批次中读取一个令牌。
+2. 识别其目标专家。
+3. 加载该特定专家的权重 (weight)。
+4. 执行计算。
+5. 将结果直接写入最终输出张量中的正确位置。
+
+这种方法最大程度地减少了GPU内存与其计算核心之间的数据移动，大幅降低了分派逻辑的开销。
+
+这是一个代码示例，展示了融合核函数可能实现的功能。在JAX中，它非常简单：
+
+```python
+# 融合令牌分派核函数的代码
+@triton.jit
+def fused_moe_kernel(tokens_in, tokens_out, router_indices, expert_weights):
+    # 获取此核函数实例的唯一ID
+    token_id = tl.program_id(0)
+
+    # 1. 读取令牌分配的专家索引
+    expert_idx = router_indices[token_id]
+
+    # 2. 加载输入令牌数据
+    input_data = tokens_in[token_id, :]
+
+    # 3. 加载相应的专家权重
+    # 这是一种简化；实际中这很复杂
+    w1 = expert_weights[expert_idx, 0, :, :]
+    w2 = expert_weights[expert_idx, 1, :, :]
+    
+    # 4. 执行专家计算
+    hidden = tl.dot(input_data, w1)
+    hidden = tl.nn.relu(hidden)
+    output_data = tl.dot(hidden, w2)
+
+    # 5. 将结果写入正确的输出位置
+    tokens_out[token_id, :] = output_data
+```
+
+在PyTorch中：
+
+```python
+import torch
+
+# 等效的PyTorch代码片段，说明“汇聚-散布”问题
+# 这不是一个融合核函数，而是展示了标准的
+# （且效率较低的）实现令牌分派逻辑的方式
+# 未使用自定义核函数融合。
+
+def pytorch_moe_dispatch(tokens_in, router_indices, experts_list):
+    """
+    在PyTorch中模拟MoE分派，不使用自定义核函数融合。
+    这展示了汇聚-散布方法，其效率低于
+    融合核函数。
+
+    参数:
+        tokens_in (torch.Tensor): 输入令牌，形状为 (num_tokens, hidden_dim)。
+        router_indices (torch.Tensor): 每个令牌的专家分配的1D张量，
+                                       形状为 (num_tokens,)。
+        experts_list (list of torch.nn.Module): 专家模块列表，
+                                                 其中 expert[i] 是一个前馈网络。
+
+    返回:
+        torch.Tensor: 输出令牌，按原始顺序排列，形状为 (num_tokens, hidden_dim)。
+    """
+    num_tokens, hidden_dim = tokens_in.shape
+    num_experts = len(experts_list)
+
+    # 初始化一个列表来保存每个专家的输出
+    expert_outputs = [torch.zeros_like(tokens_in) for _ in range(num_experts)]
+    
+    # 初始化一个掩码来跟踪路由到每个专家的令牌
+    expert_masks = [router_indices == i for i in range(num_experts)]
+
+    # 1. 汇聚并分派给专家
+    # 这涉及遍历专家并汇聚相关令牌
+    for i in range(num_experts):
+        mask = expert_masks[i]
+        
+        # 选择分配给当前专家的令牌 (汇聚)
+        # 这会创建一个非连续张量，可能效率低下
+        tokens_for_expert = tokens_in[mask]
+        
+        if tokens_for_expert.numel() > 0: # 仅当有令牌时才处理
+            # 执行专家计算 (例如，前馈网络)
+            processed_tokens = experts_list[i](tokens_for_expert)
+            
+            # 将处理后的令牌存储回 expert_outputs 结构中
+            # 这是“散布”逻辑的一部分，但在每个专家的处理内部
+            # 我们在此使用一个占位符表示专家内部的散布操作
+            expert_outputs[i][mask] = processed_tokens
+            
+    # 2. 合并所有专家的输出并反排序
+    # 在这里求和实际上“反排序”了，因为每个专家的输出
+    # 由于掩码，已经放置在正确的原始令牌索引处。
+    # 在更明确的反排序场景中，你会使用 torch.index_put_
+    # 或类似基于置换图的方法。
+    final_output = torch.sum(torch.stack(expert_outputs), dim=0)
+
+    return final_output
+
+# 示例用法 (仅作说明 - 不是一个没有专家模块的完整可运行示例)
+if __name__ == '__main__':
+    # 定义一些虚拟输入令牌和路由器索引
+    batch_size = 6
+    hidden_dim = 128
+    num_experts = 4
+
+    # 虚拟输入令牌
+    dummy_tokens_in = torch.randn(batch_size, hidden_dim)
+    
+    # 虚拟路由器分配 (例如，来自门控网络)
+    # 每个令牌分配给一个专家 (0 到 num_experts-1)
+    dummy_router_indices = torch.randint(0, num_experts, (batch_size,))
+
+    # 虚拟专家模块 (用于演示的简单线性层)
+    class DummyExpert(torch.nn.Module):
+        def __init__(self, hidden_dim):
+            super().__init__()
+            self.linear1 = torch.nn.Linear(hidden_dim, hidden_dim * 2)
+            self.relu = torch.nn.ReLU()
+            self.linear2 = torch.nn.Linear(hidden_dim * 2, hidden_dim)
+
+        def forward(self, x):
+            return self.linear2(self.relu(self.linear1(x)))
+
+    dummy_experts = [DummyExpert(hidden_dim) for _ in range(num_experts)]
+
+    print("PyTorch MoE 分派模拟 (展示汇聚-散布理念):")
+    print(f"输入令牌形状: {dummy_tokens_in.shape}")
+    print(f"路由器索引: {dummy_router_indices.tolist()}")
+
+    # 执行模拟的MoE分派
+    output_tokens = pytorch_moe_dispatch(dummy_tokens_in, dummy_router_indices, dummy_experts)
+    
+    print(f"输出令牌形状: {output_tokens.shape}")
+    print("\n注意: 此PyTorch代码展示了汇聚-散布操作，")
+    print("这通常涉及显式索引和每个专家的循环，")
+    print("与Triton示例中的融合核函数相比，效率较低。")
+    print("高度优化的PyTorch MoE实现通常依赖自定义CUDA扩展")
+    print("或专门库 (例如 fairseq 的 MoE, Megatron-LM) 来达到类似融合的性能。")
+```
+
+尽管实现自定义核函数需要专业知识，但它代表了最小化MoE推理延迟的先进技术。对于大多数应用程序来说，使用 `vLLM` 或 `DeepSpeed-Inference` 等内置这些技术的优化库，提供了一条实现高性能服务的实用途径，而无需手动开发核函数。归根结底，高效的批处理策略不是可选的改进，而是将MoE模型投入生产的根本要求。
+
+## 参考资料
+
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了MoE基础架构和稀疏激活模式，这些模式要求特定的批处理策略。

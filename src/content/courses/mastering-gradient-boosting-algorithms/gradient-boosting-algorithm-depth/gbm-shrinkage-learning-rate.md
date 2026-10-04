@@ -1,0 +1,87 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "gradient-boosting-algorithm-depth"
+lesson: "gbm-shrinkage-learning-rate"
+sourceId: 1941
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-2-gradient-boosting-algorithm-depth/gbm-shrinkage-learning-rate"
+title: "收缩（学习率）的作用"
+description: "理解学习率的影响和重要性。"
+order: 5
+plots: ["plots/1941-0.json"]
+sourceHash: "1f0d03fa46a0737af454488f3b6baad342a5eec0807acc4077fbc348f5018d21"
+sourceCorrections: []
+---
+
+梯度提升算法在加性框架内运行，它按顺序构建模型，在每个步骤中添加一个基本学习器（通常是决策树）来纠正现有集成模型所犯的错误。第 $m$ 步的更新规则通常表述为：
+
+
+$$
+F_m(x) = F_{m-1}(x) + h_m(x)
+$$
+
+
+这里，$F_{m-1}(x)$ 是在前面 $m-1$ 步中构建的模型集成，$h_m(x)$ 是一个新的基本学习器，训练它来拟合损失函数 (loss function)相对于 $F_{m-1}(x)$ 的负梯度（伪残差）。
+
+虽然这看起来很简单，但在每个步骤中添加新训练的树 $h_m(x)$ 的完整预测可能过于激进。如果一棵树完美拟合当前的伪残差，它可能会过度拟合该阶段存在的特定错误，这可能损害模型对未见数据进行泛化的能力。此时，**收缩**（也称为**学习率**）就发挥作用了。
+
+收缩引入了一个缩放因子，通常用 $\eta$ (eta) 或有时用 $\nu$ (nu) 表示，它减少了添加到集成模型中每棵新树的贡献。修改后的更新规则变为：
+
+
+$$
+F_m(x) = F_{m-1}(x) + \eta h_m(x)
+$$
+
+
+其中 $0 < \eta \le 1$。
+
+### 收缩的正则化 (regularization)作用
+
+收缩的主要目的是**正则化**。通过减少每棵树的影响（$\eta < 1$），我们减缓了学习过程。收缩不是让一棵树根据当前伪残差进行大的修正，而是强制模型在函数空间中迈出更小的步长，以使损失最小化。
+
+考虑以下含义：
+
+1. **方差减小：** 每棵树对最终预测的影响较小。这使得整体模型对用于任何单棵树的特定训练数据不那么敏感，从而减小了方差并提升了泛化能力。
+2. **所需树的数量增加：** 由于每棵树的贡献较小，通常需要更多的树（提升迭代次数，`n_estimators`）才能在训练数据上达到与没有收缩的模型（$\eta = 1$）相似的性能水平。
+3. **泛化能力提升（通常）：** 较慢的学习过程使后续树能够更渐进地完善预测。这通常可以防止模型过快地收敛到过度拟合训练数据的解决方案，从而在未见过的验证或测试数据上获得更好的性能。
+
+可以将其看作梯度下降 (gradient descent)优化。GBM 中的学习率 $\eta$ 的作用类似于数值优化算法中的步长。较小的步长需要更多的迭代才能达到最小值，但可以帮助避免越过最优解点，并且可能找到一个更好、更稳定的最小值，尤其是在复杂的损失函数 (loss function)场景中。
+
+### 权衡：学习率与估计器数量
+
+学习率（$\eta$）与提升迭代次数（$M$ 或 `n_estimators`）之间存在固有的权衡。
+
+- 一个**非常小**的 $\eta$（例如 0.01）需要**大**的 $M$（例如数千次）才能充分拟合数据。训练时间更长，但生成的模型可能泛化能力更好。
+- 一个**较大**的 $\eta$（例如 0.5 或 1.0）需要**较少**的迭代次数 $M$（例如数十次或数百次）。训练速度更快，但过拟合 (overfitting)的风险会显著增加，尤其是在未仔细管理其他正则化 (regularization)方法（如树深度约束）的情况下。
+
+以下图表展示了这一观念。学习率较低时，训练误差和验证误差都会下降得更慢，但与学习率较高的情况相比，验证误差通常会达到更低的最小值或更晚开始增加（表明过拟合的出现）。
+
+
+
+![学习率对误差曲线的影响](plots/1941-0.json)
+
+
+
+> 不同学习率下误差曲线的比较。较小的学习率（例如 0.1）收敛较慢，但在过拟合发生前，与较大的学习率（例如 0.5）相比，可能实现更好的泛化（更低的验证误差）。最优估计器数量差异很大。
+
+### 实际考量
+
+- **典型值：** 学习率通常设定在 $[0.01, 0.3]$ 范围内。一个常见的起始点是 0.1。
+- **调优：** 学习率是 GBM 最重要的超参数 (parameter) (hyperparameter)之一，通常与 `n_estimators` 协同调优。常用网格搜索、随机搜索或贝叶斯优化等技术，通常通过交叉验证来评估性能。早期停止经常被用来为给定的学习率找到最优迭代次数。
+- **与其他参数的相互作用：** 收缩与其他正则化 (regularization)参数相互作用。例如，较小的学习率可能允许略深一些的树（`max_depth`）或不那么激进的子采样（`subsample`），而不会立即过拟合 (overfitting)，因为每棵潜在更复杂树的影响都被减弱了。
+
+总而言之，收缩是一种简单而高效的梯度提升模型正则化技术。通过缩小每棵新加入树的贡献，它能防止单棵树主导预测，促使模型利用更多的提升轮次来实现更精细的拟合，并显著提升模型对新数据的泛化能力。在学习率和估计器数量之间找到合适的平衡是构建高性能 GBM 的基本组成部分。
+
+## 参考资料
+
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: Ann. Statist.; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  本文介绍了梯度提升机算法及其公式，包括收缩参数。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; Pages: 353-372
+  这本教材全面介绍了梯度提升，并解释了收缩作为一种正则化方法。
+- [scikit-learn: Gradient Boosting](https://scikit-learn.org/stable/modules/ensemble.html#gradient-tree-boosting) — scikit-learn developers (2024)
+  Publisher: scikit-learn project
+  官方文档，说明了梯度提升的实现和`learning_rate`参数。
+- [XGBoost: A Scalable Tree Boosting System](https://doi.org/10.1145/2939672.2939785) — Tianqi Chen, Carlos Guestrin (2016)
+  Journal: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining; Publisher: ACM; Pages: 785–794; DOI: [10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+  本文在XGBoost算法背景下，讨论了包括收缩（学习率）在内的正则化技术。

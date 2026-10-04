@@ -1,0 +1,107 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "advanced-quantum-data-encoding"
+lesson: "quantum-feature-map-foundations"
+sourceId: 1040
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-2-advanced-quantum-data-encoding/quantum-feature-map-foundations"
+title: "量子特征映射的数学原理"
+description: "量子特征映射的严格数学论述，将经典数据映射至希尔伯特空间。"
+order: 1
+plots: []
+sourceHash: "878a1f1330c4c43d051b0234924a90258efd0de9528d3fff407b4ee11a92b7a4"
+sourceCorrections: []
+---
+
+将经典数据转化为量子力学语言是量子机器学习 (machine learning)的必要首要步骤。这一转化通过**量子特征映射**得以形式化，这些函数将经典数据点嵌入 (embedding)到希尔伯特空间内的量子态中。理解这些映射的数学结构对于设计高效的QML算法非常重要。
+
+### 定义量子特征映射
+
+我们考虑一个经典数据集，其中每个数据点 $x$ 属于某个数据空间 $\mathcal{X}$。通常，$\mathcal{X}$ 是 $\mathbb{R}^d$ 的子集，表示 $d$ 维特征向量 (vector)。量子特征映射，记作 $\phi$，是将每个经典数据点 $x \in \mathcal{X}$ 映射到希尔伯特空间 $\mathcal{H}$ 中的量子态 $|\phi(x)\rangle$ 的函数：
+
+
+$$
+\phi: \mathcal{X} \to \mathcal{H}
+$$
+
+
+通常，希尔伯特空间 $\mathcal{H}$ 是 $n$ 个量子比特的状态空间，因此 $\mathcal{H} \cong (\mathbb{C}^2)^{\otimes n}$，其维度为 $2^n$。态 $|\phi(x)\rangle$ 通常被称为*量子特征态*。
+
+在实践中，这种映射通常通过参数 (parameter)化量子电路实现，由酉算子 $U_\phi(x)$ 表示。这个酉算子作用于一个固定的初始态，通常是全零态 $|0\rangle^{\otimes n}$：
+
+
+$$
+|\phi(x)\rangle = U_\phi(x) |0\rangle^{\otimes n}
+$$
+
+
+这里，酉算子 $U_\phi(x)$ 的结构取决于经典输入数据 $x$。 $x$ 的分量控制电路 $U_\phi(x)$ 中量子门的参数。例如，$x$ 的分量可以决定单量子比特门的旋转角度或多量子比特相互作用的强度。
+
+### 量子特征空间的几何结构
+
+特征映射 $\phi$ 有效地将经典数据空间 $\mathcal{X}$ 嵌入 (embedding)到高维量子态空间 $\mathcal{H}$ 中。量子特征态 $\{|\phi(x)\rangle\}_{x \in \mathcal{X}}$ 之间的排列和关系定义了*量子特征空间*的几何结构。这种几何结构对QML算法的性能有重要影响。
+
+A主要方式来量化 (quantization)两个特征态 $|\phi(x)\rangle$ 和 $|\phi(x')\rangle$ 之间关系是通过它们的内积 $\langle \phi(x') | \phi(x) \rangle$。该内积的模平方，
+
+
+$$
+K(x, x') = |\langle \phi(x') | \phi(x) \rangle|^2
+$$
+
+
+具有特殊意义。它对应于当系统处于态 $|\phi(x)\rangle$ 时测量到态 $|\phi(x')\rangle$ 的概率（反之亦然）。这个量也定义了一个正半定核函数 $K(x, x')$，被称为*量子核*。该核有效地衡量了量子特征空间中数据点 $x$ 和 $x'$ 之间的相似度。我们将在第3章详细探讨量子核。目前，需要理解的是特征映射 $\phi$ 的数学结构直接决定了最终的核 $K$。
+
+### 量子特征映射的性质
+
+量子特征映射有以下几个性质：
+
+1. **高维度：** 希尔伯特空间 $\mathcal{H}$ 的维度随量子比特数 $n$ 呈指数增长。这种指数级的能力使得特征映射可以潜在地在高维空间 (high-dimensional space)中表示经典数据，这对于在原始空间中无法线性分离的数据寻找复杂模式或进行分离可能是有利的。
+2. **非线性：** 量子演化，特别是涉及由输入数据 $x$ 控制的多量子比特纠缠门时，自然会引入非线性依赖关系。量子态 $|\phi(x)\rangle$ 通常是 $x$ 的高度非线性函数。这种固有的非线性对于许多机器学习 (machine learning)任务非常重要。
+3. **纠缠：** 特征映射可以根据 $U_\phi(x)$ 的结构在量子比特之间产生纠缠。纠缠可以在特征态中产生复杂关联，这些关联可能难以用经典方法捕获。特征映射生成纠缠的能力通常与其表示能力相关联。
+
+### 实例：ZZ特征映射
+
+一个常见的实例是ZZ特征映射。对于输入数据 $x \in \mathbb{R}^d$ 和一个 $n$ 量子比特系统（通常 $n=d$），一种流行形式是：
+
+
+$$
+U_\phi(x) = U_{\text{ent}} H^{\otimes n} U_P(x) H^{\otimes n}
+$$
+
+
+各部分说明：
+
+- $H^{\otimes n}$ 对每个量子比特应用一个哈达玛门，生成初始叠加态。
+- $U_P(x) = \exp\left(i \sum_{j=1}^n x_j Z_j\right)$ 将输入向量 (vector) $x$ 的分量 $x_j$ 转化为每个量子比特 $j$ 围绕Z轴的旋转。$Z_j$ 是作用于量子比特 $j$ 的泡利-Z算子。
+- $U_{\text{ent}} = \exp\left(i \sum_{j, k \text{ connected}} \phi(x_j, x_k) Z_j Z_k\right)$ 基于连接的量子比特对之间的相互作用引入纠缠。函数 $\phi(x_j, x_k)$ 取决于输入特征 $x_j$ 和 $x_k$。一个普遍选择是 $\phi(x_j, x_k) = (\pi - x_j)(\pi - x_k)$。
+
+该电路应用了多层依赖于 $x$ 的单量子比特旋转门，并穿插纠缠门。$U_P(x)$ 和 $U_{\text{ent}}$ 的精确形式可以有所不同。例如，该电路可以重复多次（$L$ 层）以增加复杂性：
+
+
+$$
+U_\phi(x) = \left( U_{\text{ent}} U_P(x) H^{\otimes n} \right)^L |0\rangle^{\otimes n}
+$$
+
+
+这是一个两量子比特ZZ特征映射的电路图，其中一层（$L=1$）且相互作用为 $\phi(x_1, x_2) = (\pi - x_1)(\pi - x_2)$：
+
+> 一个2量子比特ZZ特征映射电路。输入数据 $x=(x_1, x_2)$ 控制RZ门的旋转角度和ZZ相互作用项的强度（通过CNOT和RZ门实现）。$H$ 代表哈达玛门。
+
+这个实例体现了经典数据 $x$ 如何直接参数 (parameter)化酉演化 $U_\phi(x)$，从而为每个输入 $x$ 构成一个特定的量子态 $|\phi(x)\rangle$。
+
+### 从纯态到密度矩阵
+
+虽然我们通常讨论特征映射生成纯态 $|\phi(x)\rangle$，但该框架可以扩展，将经典数据映射到由密度矩阵 $\rho(x)$ 表示的混合态。这可能在考虑态制备 $U_\phi(x)$ 过程中的噪声效应时发生，或者如果编码策略本身旨在产生混合态。参考第1章的形式化内容，特征映射变为 $\phi: \mathcal{X} \to \mathcal{D}(\mathcal{H})$，其中 $\mathcal{D}(\mathcal{H})$ 是 $\mathcal{H}$ 上的密度算子空间。核的定义也可以通过使用希尔伯特-施密特内积或保真度等度量来适应密度矩阵。
+
+总之，量子特征映射的数学原理在于定义一个从经典数据空间 $\mathcal{X}$ 到量子希尔伯特空间 $\mathcal{H}$ 的映射 $\phi$，通常通过依赖于数据的酉算子 $U_\phi(x)$ 实现。此映射将经典数据嵌入 (embedding)到高维量子态空间中，定义了一种以内积（核）为特征的几何结构。该映射的性质，如其非线性和纠缠能力，由 $U_\phi(x)$ 的结构决定，并且对QML模型的潜在优势非常重要。后续章节将在此基础上进一步介绍特定类型的特征映射以及分析其能力的方法。
+
+## 参考资料
+
+- [Supervised learning with quantum-enhanced feature spaces](https://www.nature.com/articles/s41586-019-0980-2) — Vojtech Havlíček, Antonio D. Córcoles, Kristan Temme, Aram W. Harrow, Abhinav Kandala, Jerry M. Chow, Jay M. Gambetta (2019)
+  Journal: Nature; Volume: 567; Pages: 209-212; DOI: [10.1038/s41586-019-0980-2](https://doi.org/10.1038/s41586-019-0980-2)
+  这篇基础论文介绍了量子增强特征空间的概念，展示了量子电路如何将经典数据嵌入高维希尔伯特空间进行机器学习，并包含一个具体的量子特征映射示例。
+- [Supervised Learning with Quantum Computers](https://link.springer.com/book/10.1007/978-3-319-96424-9) — Maria Schuld, Francesco Petruccione (2018)
+  Publisher: Springer; DOI: [10.1007/978-3-319-96424-9](https://doi.org/10.1007/978-3-319-96424-9)
+  一本全面的学术教材，为量子机器学习提供了数学基础，包括量子特征映射的解释、其构建方式以及在量子核方法中的应用。
+- [ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) — Qiskit contributors (2024)
+  Publisher: IBM
+  Qiskit中ZZFeatureMap的官方文档，提供了其实现、参数和在构建数据编码量子电路中的具体信息，与文中的示例相关。

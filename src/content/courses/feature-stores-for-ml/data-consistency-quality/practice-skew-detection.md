@@ -1,0 +1,172 @@
+---
+course: "feature-stores-for-ml"
+chapter: "data-consistency-quality"
+lesson: "practice-skew-detection"
+sourceId: 3391
+sourceUrl: "https://apxml.com/zh/courses/feature-stores-for-ml/chapter-3-data-consistency-quality/practice-skew-detection"
+title: "实践：实现偏差检测"
+description: "在特征数据上设置并运行数据验证和偏差检测机制。"
+order: 7
+plots: ["plots/3391-0.json", "plots/3391-1.json"]
+sourceHash: "5c6fc01a10b4b6592246c43a039f78189c4f6f88e192c29d9a1a86eea3901dca"
+sourceCorrections: []
+---
+
+本动手练习着重于应用技术，以检测模型训练（离线）时使用的特征值数据集与在线服务时观察到的特征值数据集之间可能存在的偏差。检测此类差异，即 $P_{训练}(X) \ne P_{服务}(X)$，对维持生产环境中模型性能很重要。我们将使用 Pandas、NumPy 和 SciPy 等 Python 库进行统计比较，并使用 Plotly 进行可视化。
+
+### 场景设置
+
+假设我们从两个来源记录了特征数据：
+
+1. **训练数据集特征：** 通过批处理生成，用于训练模型的特征。我们将其命名为 `training_features_df`。
+2. **服务日志特征：** 在特定时期进行预测之前，从在线系统记录的特征。我们将其命名为 `serving_features_df`。
+
+我们的目标是比较这两个数据集中特定特征的分布，以识别潜在的偏差。
+
+### 生成示例数据
+
+首先，让我们使用 Pandas 和 NumPy 模拟这两个数据集。我们将创建两个特征：`user_age`（数值型）和 `product_category`（类别型）。我们将在两个数据框之间引入 `user_age` 和 `product_category` 分布的微小差异。
+
+```python
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+# 模拟训练数据特征
+np.random.seed(42)
+training_data = {
+    'user_age': np.random.normal(loc=35, scale=10, size=1000).astype(int),
+    'product_category': np.random.choice(['Electronics', 'Clothing', 'Home Goods', 'Books'],
+                                         size=1000, p=[0.4, 0.3, 0.2, 0.1])
+}
+training_features_df = pd.DataFrame(training_data)
+training_features_df['user_age'] = training_features_df['user_age'].clip(lower=18) # 确保年龄符合实际
+
+# 模拟服务日志特征（含偏差）
+serving_data = {
+    'user_age': np.random.normal(loc=40, scale=12, size=500).astype(int), # 不同的均值和标准差
+    'product_category': np.random.choice(['Electronics', 'Clothing', 'Home Goods', 'Books'],
+                                         size=500, p=[0.35, 0.25, 0.25, 0.15]) # 不同的类别分布
+}
+serving_features_df = pd.DataFrame(serving_data)
+serving_features_df['user_age'] = serving_features_df['user_age'].clip(lower=18)
+
+print("训练特征样本：")
+print(training_features_df.head())
+print("\n服务特征样本：")
+print(serving_features_df.head())
+
+print("\n训练数据描述：")
+print(training_features_df.describe(include='all'))
+print("\n服务数据描述：")
+print(serving_features_df.describe(include='all'))
+```
+
+运行此代码会生成两个不同的数据框。描述性统计信息已暗示存在差异，特别是在平均年龄和主要产品类别的频率方面。
+
+### 比较数值特征分布
+
+对于像 `user_age` 这样的数值特征，比较分布的常用方法是双样本 Kolmogorov-Smirnov (KS) 检验。KS 检验是非参数 (parameter)的，它检查两个样本是否来自相同的底层连续分布。它量化 (quantization)了两个样本的经验累积分布函数 (ECDF) 之间的最大距离。
+
+KS 检验的零假设 ($H_0$) 是两个样本来自同一分布。较小的 p 值（通常 < 0.05）提示拒绝 $H_0$，表明分布之间存在统计学上的显著差异。
+
+```python
+# 提取数值特征列
+train_age = training_features_df['user_age']
+serve_age = serving_features_df['user_age']
+
+# 执行双样本 KS 检验
+ks_statistic, p_value = stats.ks_2samp(train_age, serve_age)
+
+print(f"user_age 的 KS 检验：")
+print(f"  KS 统计量: {ks_statistic:.4f}")
+print(f"  P 值: {p_value:.4f}")
+
+if p_value < 0.05:
+    print("  结果：检测到显著差异（拒绝 H0）。存在潜在偏差。")
+else:
+    print("  结果：未检测到显著差异（未能拒绝 H0）。")
+```
+
+输出很可能显示一个非常小的 p 值，证实了我们模拟的训练和服务数据集之间 `user_age` 分布的统计学显著差异。
+
+让我们使用直方图来可视化这种差异。
+
+
+
+![用户年龄分布：训练 vs. 服务](plots/3391-0.json)
+
+
+
+> 用户年龄分布的比较，显示服务数据中年龄向更高龄段偏移，与训练数据相比。
+
+### 比较类别特征分布
+
+对于像 `product_category` 这样的类别特征，我们可以使用卡方 ($\chi^2$) 独立性检验。此检验有助于确定数据集来源（训练 vs. 服务）与类别分布之间是否存在显著关联。
+
+首先，我们需要创建一个列联表（交叉表），显示两个数据集中每个类别的计数。
+
+```python
+# 创建带有来源标识符的组合数据框
+training_features_df['source'] = 'Training'
+serving_features_df['source'] = 'Serving'
+combined_df = pd.concat([training_features_df, serving_features_df], ignore_index=True)
+
+# 创建列联表
+contingency_table = pd.crosstab(combined_df['product_category'], combined_df['source'])
+
+print("product_category 的列联表：")
+print(contingency_table)
+
+# 执行卡方检验
+chi2_stat, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+
+print(f"\nproduct_category 的卡方检验：")
+print(f"  卡方统计量: {chi2_stat:.4f}")
+print(f"  P 值: {p_value:.4f}")
+print(f"  自由度: {dof}")
+
+if p_value < 0.05:
+    print("  结果：检测到显著差异（拒绝 H0）。存在潜在偏差。")
+else:
+    print("  结果：未检测到显著差异（未能拒绝 H0）。")
+```
+
+同样，较小的 p 值表明 `product_category` 的分布在训练数据集和服务数据集之间存在显著差异。
+
+让我们可视化比例。
+
+
+
+![产品类别比例：训练 vs. 服务](plots/3391-1.json)
+
+
+
+> 产品类别比例的比较，强调了训练数据和服务数据之间相对频率的差异。
+
+### 解释与行动
+
+在此次实践中，我们模拟了已知偏差的数据，并使用统计检验（数值特征使用 KS 检验，类别特征使用卡方检验）来检测这些差异。可视化帮助证实了偏差的性质。
+
+在 MLOps 流程中，这些步骤将自动化执行：
+
+1. **数据收集：** 抽样近期服务日志并获取相应的训练数据特征统计信息（如果可行，则获取完整数据集）。
+2. **比较：** 对相关特征运行统计检验。
+3. **设置阈值：** 将检验统计量或 p 值与预设阈值进行比较。这些阈值很重要且特定于领域。统计学上的显著差异（小的 p 值）在实际中可能不总是显著的。您可以直接在 KS 统计量上设置阈值，或者要求 p 值低于更严格的显著性水平（例如 0.01）。
+4. **警报/行动：** 如果阈值被突破，触发警报以进行调查。行动可能包括使用更新的数据重新训练模型、调查上游数据管道问题，或调整特征工程逻辑。
+
+此实践提供了一个基本框架。更复杂的做法包括随时间跟踪多个分布指标，使用漂移检测算法（如漂移检测方法 - DDM，或 Page Hinkley），以及使用专门的数据验证库（`great_expectations`、`pandera`、`evidently.ai`、`deepchecks`），这些库提供了更结构化的方式来定义期望并检测违规，包括偏差。这些工具通常提供更丰富的可视化效果和 MLOps 工作流集成。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  一本全面涵盖机器学习系统全生命周期的书籍，包括生产环境中数据验证、监控以及数据和概念漂移检测等关键方面。
+- [A Survey on Concept Drift Adaptation](https://dl.acm.org/doi/10.1145/2523813) — João Gama, Indrė Žliobaitė, Albert Bifet, Myra Spiliopoulou, Paul Vanhoof (2014)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery; Volume: 46; Pages: 46:1-46:37; DOI: [10.1145/2523813](https://doi.org/10.1145/2523813)
+  一项基础性综述，全面概述了概念漂移适应方法，这与数据倾斜紧密相关，对维持模型长期性能至关重要。
+- [Data Drift Detection: A Survey](https://link.springer.com/article/10.1007/s40558-020-00331-5) — Basma S. El-Ansary, Basma El-Ansary & Ibraheem Moussa (2020)
+  Journal: Journal of Big Data; Publisher: Springer; Volume: 7; Pages: 1-28; DOI: [10.1007/s40558-020-00331-5](https://doi.org/10.1007/s40558-020-00331-5)
+  关于各种数据漂移检测方法的最新综述，包括本节中使用的统计方法，对识别训练和 serving 数据分布差异非常相关。
+- [Evidently AI Documentation](https://docs.evidentlyai.com/) — Evidently AI team (2023)
+  一个广泛使用的开源库的官方文档，提供一套完整的数据和模型质量监控工具，包括在 MLOps 管道中检测数据漂移和数据完整性问题。

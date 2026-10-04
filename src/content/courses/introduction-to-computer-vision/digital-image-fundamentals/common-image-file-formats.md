@@ -1,0 +1,80 @@
+---
+course: "introduction-to-computer-vision"
+chapter: "digital-image-fundamentals"
+lesson: "common-image-file-formats"
+sourceId: 1240
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-computer-vision/chapter-2-digital-image-fundamentals/common-image-file-formats"
+title: "常见图像文件格式"
+description: "JPEG、PNG、BMP等常用图像文件格式及其特点概述。"
+order: 4
+plots: []
+sourceHash: "9f24367b40ded3781d3bb49c0d33b4f99145feeaf238026fd02169c3f6f7bf25"
+sourceCorrections: []
+---
+
+既然我们已经了解了图像是如何表示为像素网格的，每个像素都有颜色数值，那么我们来思考一下，如何在计算机上将这些图像保存为文件。如果仅仅存储每张图像的原始像素值，文件会很快变得非常大，特别是对于高分辨率照片。这就是图像文件格式的作用所在。
+
+图像文件格式定义了一种标准方式来组织和存储像素数据，以及其他相关信息（例如图像尺寸和色彩空间）。区分这些格式的一个重要方面是它们如何处理**压缩**。压缩技术旨在减小文件大小，使图像更易于存储和通过网络传输。这里有两种主要的压缩类型：
+
+1. **无损压缩：** 在不丢弃任何图像信息的情况下减小文件大小。当您打开无损压缩文件时，它会*完全*按原始方式重建。这就像把衣服整齐地打包到手提箱里；解开时所有东西都还在。
+2. **有损压缩：** 通过选择性地丢弃人眼可能不易察觉的一些图像信息，大幅减小文件大小。这意味着重建后的图像与原始图像不完全相同，尽管它通常看起来非常相似。这更像是概括一本长书；你获得了主要内容，但一些细节会丢失。
+
+我们来看看一些最常见的文件格式：
+
+### JPEG（或JPG）
+
+- **代表：** 联合图像专家组
+- **压缩：** 有损
+- **最适合：** 照片、具有数百万种颜色和复杂渐变（如日落或肖像）的图像。
+
+JPEG可以说是摄影图像最流行的格式。它的主要优势在于能够实现非常高的压缩比，从而生成适合网页和共享的小文件。这是通过有损压缩实现的。保存JPEG时，通常会指定一个“质量”设置（通常是0到100之间的一个数字）。较低的质量设置意味着更高的压缩、更小的文件大小，但会丢弃更多信息，可能导致可见的失真，称为“伪影”，尤其是在锐利边缘或文本周围。较高的质量设置会保留更多细节，但会生成更大的文件。JPEG通常不支持透明度。
+
+### PNG
+
+- **代表：** 便携式网络图形
+- **压缩：** 无损
+- **最适合：** 网络图形、标志、图标、插图、带有文本的图像，以及任何需要透明度或必须保留精确细节的图像。
+
+PNG被开发为GIF等旧格式的一种更具能力且无专利的替代品。它使用无损压缩，这意味着保存文件时不会丢失任何图像数据。这使得它非常适合需要锐利线条、清晰文本和精确颜色的图形。与JPEG不同，PNG支持**Alpha通道**，允许不同程度的透明度。这就是为什么标志或图标常使用PNG，以便它们可以清晰地叠加到不同背景上。缺点是，对于复杂的摄影图像，PNG文件通常比同等质量的JPEG文件大得多。
+
+### GIF
+
+- **代表：** 图形交换格式
+- **压缩：** 无损（但颜色调色板有限）
+- **最适合：** 简单动画、颜色受限的非常简单图形（如基本标志或图表）。
+
+GIF是一种较旧的格式，主要以其存储短循环动画的能力而闻名。它使用无损压缩，但有一个主要限制：每帧只支持最多256种不同颜色。这使得它不适合照片，照片通常包含数千或数百万种颜色（用GIF渲染它们通常会导致分带或斑点外观）。它支持基本透明度（像素要么完全透明，要么完全不透明，不像PNG那样支持部分透明）。虽然仍用于动画，但由于更好的压缩和功能，PNG通常更受静态图像（颜色受限）的青睐。
+
+### BMP
+
+- **代表：** 位图
+- **压缩：** 通常无（或简单无损）
+- **最适合：** 文件大小不重要且需要简单性的存档用途。
+
+BMP是一种简单、较旧的格式，通常与Windows相关联。它通常直接存储像素数据，几乎不进行压缩。这导致其文件大小与JPEG或PNG等格式相比非常大。因为它未压缩（或使用非常基本的无损压缩），所以它保留了精确的原始图像数据。然而，由于文件大且缺乏高级功能，它在今天不常用于网络分发或一般图像共享。
+
+### 选择合适的格式
+
+选择合适的文件格式取决于图像内容和您的需求：
+
+- 对于文件大小是重要考量的**照片**（例如在网站上），**JPEG**通常是最佳选择，它能在质量和大小之间取得平衡。
+- 对于具有锐利线条、文本、标志或透明度的**图形**，**PNG**因其无损特性和Alpha通道支持而更受青睐。
+- 对于**简单动画**，**GIF**仍然是一个常用选项，尽管有更新的格式存在。
+- **BMP**很少是最佳选择，除非您有特定原因需要未压缩的简单格式。
+
+了解这些格式有助于您更好地认识在计算机视觉任务中将加载的数据。不同的格式存储像素数据的方式不同，所使用的压缩方式有时会影响可用于分析的信息。对于大多数入门工作，您会经常加载JPEG或PNG文件，并将其转换为我们之前讨论过的标准数值数组表示形式。
+
+## 参考资料
+
+- [Digital Image Processing](https://www.pearson.com/us/higher-education/product/Gonzalez-Digital-Image-Processing-4th-Edition/9780133356724.html) — Rafael C. Gonzalez and Richard E. Woods (2016)
+  Publisher: Pearson
+  一本图像处理的基础教材，涵盖图像表示、文件格式和压缩技术。
+- [Computer Vision: Algorithms and Applications](https://szeliski.org/Book/) — Richard Szeliski (2022)
+  Publisher: Springer
+  从计算机视觉角度概述图像基础和数据结构。
+- [Portable Network Graphics (PNG) Specification (Second Edition)](https://www.w3.org/TR/PNG/) — Chris Blume, Pierre-Anthony Lemieux, Chris Lilley, Chris Needham, Leonard Rosenthol, Chris Arley Seeger, Simon Thompson, Cosmin Truta (2025)
+  Publisher: W3C
+  PNG格式的官方规范，包括其无损压缩和Alpha通道支持。
+- [The JPEG Still Image Data Compression Standard](http://www.amazon.com/JPEG-Compression-Standard-Multimedia-Standards/dp/0442012721) — William B. Pennebaker, Joan L. Mitchell (1992)
+  Publisher: Van Nostrand Reinhold
+  详细介绍JPEG压缩算法及其规范的参考资料。

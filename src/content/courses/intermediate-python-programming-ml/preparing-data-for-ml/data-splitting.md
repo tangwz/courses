@@ -1,0 +1,116 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "preparing-data-for-ml"
+lesson: "data-splitting"
+sourceId: 2204
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-5-preparing-data-for-ml/data-splitting"
+title: "将数据划分为训练集和测试集"
+description: "学习如何使用 Scikit-learn 将数据集正确划分为训练和测试子集。"
+order: 5
+plots: []
+sourceHash: "0644cab99516f8651ba8f966253e93f9b143dca8609cdf7f83271a9dd4eba379"
+sourceCorrections: []
+---
+
+在清洗并可能进行了特征工程之后，训练任何机器学习 (machine learning)模型前，一个重要步骤是划分数据。为什么不能直接用所有数据来训练模型呢？构建机器学习模型的主要目的是让它在*新的、未见过*的数据上表现良好。如果我们在完全相同的数据上训练和评估模型，就无法实际得知它在未接触过的数据上的泛化能力。
+
+### 问题：评估泛化能力
+
+想象一下，你只用期末考试的精确问题和答案来复习。你可能会完美地记住答案并获得100分，但这不代表你真正掌握了根本原理，或者能回答同一主题的不同问题。同样，机器学习 (machine learning)模型可以“记住”训练数据，包括其噪声和特定模式。这种现象称为**过拟合 (overfitting)**。过拟合模型在训练过的数据上表现极好，但在遇到新数据时会表现糟糕。
+
+为了诚实评估模型在实际中的表现，我们需要一种模拟遇到未见过数据的方法。这通过将数据集划分为至少两个不同的子集来实现：
+
+1. **训练集：** 数据的这个子集用于实际训练模型。模型根据这些数据学习模式、关系并调整其内部参数 (parameter)。
+2. **测试集（或保留集）：** 这个子集在整个训练过程中保持独立。它充当“未见过”的数据，用于评估模型训练完成后的最终性能。在测试集上评估能估算出模型的泛化能力。
+
+### 使用 Scikit-learn 实现数据划分
+
+Scikit-learn 的 `model_selection` 模块中的 `train_test_split` 函数是 Python 中执行数据划分最常见的方法。该函数是一个多功能工具，能够有效地处理数组或矩阵的洗牌和划分。
+
+假设你的特征（模型的输入变量）在一个名为 `X` 的 Pandas DataFrame 或 NumPy 数组中，而你的目标变量（你想要预测的内容）在一个名为 `y` 的 Pandas Series 或 NumPy 数组中。
+
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# 假设 'X' 包含你的特征，'y' 包含目标变量
+# 示例:
+# X = dataframe[['feature1', 'feature2', 'feature3']]
+# y = dataframe['target_label']
+
+# 将数据划分为训练集和测试集
+# test_size=0.2 表示 20% 的数据将用于测试集
+# random_state 保证可重现性 - 使用相同的数字将始终
+# 生成相同的划分。
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+print(f"Shape of X_train: {X_train.shape}")
+print(f"Shape of X_test: {X_test.shape}")
+print(f"Shape of y_train: {y_train.shape}")
+print(f"Shape of y_test: {y_test.shape}")
+```
+
+**`train_test_split` 的参数 (parameter)：**
+
+- `*arrays`: 要划分的数组序列（特征 `X`、目标 `y`）。它们在第一个轴上（即样本数量）必须具有相同的长度。
+- `test_size`: 指定用于测试划分的数据集比例。它可以是介于 0.0 和 1.0 之间的浮点数（表示比例）或整数（表示测试样本的绝对数量）。如果也指定了 `train_size`，`test_size` 通常会被推断出来。常见值为 0.2、0.25 或 0.3。
+- `train_size`: 类似于 `test_size`，但指定训练集的比例或数量。如果为 `None`，则设置为 `test_size` 的补数。
+- `random_state`: 控制在应用划分之前对数据进行的洗牌操作。传入一个整数可确保每次运行代码时划分结果都相同，这对于可重现性很重要。如果为 `None`，则每次划分结果都不同。
+- `shuffle`: 一个布尔值，指示是否在划分之前洗牌数据。默认情况下为 `True`，通常建议这样做，除非你有特定原因不这样做（例如时间序列数据，其中顺序很重要）。洗牌有助于确保训练集和测试集能够代表整体数据分布，特别是当原始数据以某种方式排序时。
+- `stratify`: 这对于分类问题特别有用。如果你的目标变量 `y` 代表类别，设置 `stratify=y` 可确保每个类别的值在训练集和测试集中的比例与原始数据集中大致相同。这在处理类别不平衡的数据集时非常重要，其中一个类别可能比其他类别稀少得多。如果没有分层，随机划分可能会导致测试集中稀有类别的实例非常少甚至为零。
+
+### 分层划分示例
+
+想象一个分类任务，其中 80% 的数据属于类别 A，20% 属于类别 B。简单的随机划分可能意外地将类别 B 的 90% 实例放入测试集。这将使训练集代表性不足，并可能导致测试集评估产生误导。分层可以避免这种情况。
+
+```python
+# 示例：假设 'y' 包含分类问题的类别标签
+X_train_strat, X_test_strat, y_train_strat, y_test_strat = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y  # 确保类别比例得以保持
+)
+
+# 你可以验证这些比例（例如，使用 pandas 的 value_counts()）
+print("原始类别分布:")
+print(y.value_counts(normalize=True))
+
+print("\n训练集类别分布:")
+print(y_train_strat.value_counts(normalize=True))
+
+print("\n测试集类别分布:")
+print(y_test_strat.value_counts(normalize=True))
+```
+
+### 何时划分：避免数据泄露
+
+一个常见问题是，在划分数据*之前*应用数据转换（如使用 `StandardScaler` 对特征进行缩放或使用均值填充缺失值）。如果你使用*整个*数据集计算均值或标准差，然后用这些值来缩放训练集和测试集，那么测试集的信息就会隐式地“泄露”到训练过程中。模型通过这些计算出的参数 (parameter)，有效地提前窥视了测试数据的分布。
+
+**正确的做法通常是：**
+
+1. 首先将数据**划分**为训练集和测试集。
+2. **只**在**训练数据** (`X_train`) 上**拟合**任何转换器（如缩放器、缺失值填充器、编码器）。这涉及仅从训练数据中学习参数（例如均值、标准差）。
+3. 使用*已拟合的*转换器**转换\*\*\*\*训练数据** (`X_train`) 和**测试数据** (`X_test`)。
+
+“这确保了在预处理的参数学习阶段，测试集保持完全未被看到，模拟了将从过去数据中学到的转换应用于新的传入数据的情况。Scikit-learn 的管道（Pipelines），你将在本章后面遇到，旨在帮助正确方便地管理这个工作流程。”
+
+**例外：时间序列数据**
+值得注意的是，对于时间相关数据（时间序列），随机洗牌和划分通常是不合适的。你通常希望在较旧的数据上训练，并在较新的数据上测试，以模拟预测未来值。针对这些情况，存在特定的时间序列交叉验证方法。
+
+正确划分数据是可靠评估机器学习 (machine learning)模型的重要做法。使用 `train_test_split` 并配合 `random_state` 和 `stratify` 等合适参数，提供了一种为开发和评估模型创建所需训练集和测试集的方法。
+
+## 参考资料
+
+- [sklearn.model_selection.train_test_split](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html) — Scikit-learn developers (2023)
+  train_test_split 函数的官方文档，详细说明其参数和用法。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本关于使用 Python 和 Scikit-learn 进行数据拆分、过拟合和模型泛化的实践指南。
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2021)
+  Publisher: Springer
+  解释了用于模型评估和泛化的数据拆分背后的统计原理。
+- [Pipelining: chaining estimators](https://scikit-learn.org/stable/modules/compose.html#pipeline) — Scikit-learn developers (2023)
+  描述了 Scikit-learn Pipeline 如何在预处理和模型训练中避免数据泄露。

@@ -1,0 +1,265 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "serving-llms-at-scale"
+lesson: "monitoring-serving-performance-cost"
+sourceId: 6106
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-29-serving-llms-at-scale/monitoring-serving-performance-cost"
+title: "监控服务性能和成本"
+description: "跟踪延迟、吞吐量、资源利用率和成本等指标。"
+order: 5
+plots: []
+sourceHash: "d9c61171ebd52ee1514d512c6a8bd517451ac7cc5b4e352910601aa5b6c03e0c"
+sourceCorrections: []
+---
+
+部署大型语言模型是一项重要的工程成就，但一旦 API 端点上线，工作并未结束。持续监控服务基础设施对于确保可靠性、性能和成本效益非常重要。若无细致的监控，您将面临性能下降、意外中断和成本上涨的风险，所有这些都可能对用户体验和运营预算造成负面影响。有效监控 LLM 服务系统所需的方法和指标将得到阐述。
+
+### LLM 服务的性能指标 (KPIs)
+
+监控 LLM 需要跟踪标准 Web 服务指标以及生成模型特有的指标。以下是需要关注的主要方面：
+
+#### 延迟
+
+延迟衡量处理请求所需的时间。对于 LLM，尤其在自回归 (autoregressive)生成期间，延迟可以是多方面的：
+
+1. **时间到首个令牌 (TTFT)：** 从接收请求到生成首个输出令牌所耗费的时间。这对于用户期望即时反馈的交互式应用非常重要。
+2. **每个输出令牌的时间 (TPOT)：** 在生成首个令牌后，每个后续令牌的平均生成时间。这表示模型的生成速度。
+3. **端到端延迟：** 从接收请求到发送完整响应的总时间。这反映了用户感知的总延迟。
+
+较低的 TTFT 和 TPOT 通常是相互冲突的目标。批处理等优化措施可能会略微增加 TTFT，但能提高整体吞吐量 (throughput)和 TPOT。衡量这些指标需要对服务代码进行性能监控部署。
+
+```python
+# 示例：请求处理程序中的基本延迟测量
+import time
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+def handle_request(prompt):
+    request_start_time = time.monotonic()
+
+    # --- 模型处理 ---
+    # (简化：假设模型逐个生成令牌)
+    first_token_time = None
+    output_tokens = 0
+    # 实际模型生成循环的占位符
+    for token in model.generate(prompt): # 替换为实际的生成调用
+        if first_token_time is None:
+            first_token_time = time.monotonic()
+        output_tokens += 1
+        # yield token # 如果是流式响应
+        pass # 模拟令牌生成延迟
+        time.sleep(0.05) # 模拟每个令牌的生成时间
+    # --- 模型处理结束 ---
+
+    request_end_time = time.monotonic()
+
+    if first_token_time:
+        ttft = (first_token_time - request_start_time) * 1000 # milliseconds
+        e2e_latency = (request_end_time - request_start_time) * 1000
+        # milliseconds
+        if output_tokens > 1:
+             tpot = (request_end_time - first_token_time) / \
+                    (output_tokens - 1) * 1000 # ms/token
+        else:
+             tpot = 0 # 或根据情况处理
+
+        logging.info(
+            f"请求已处理：TTFT={ttft:.2f}ms, "
+            f"TPOT={tpot:.2f}ms/令牌, "
+            f"端到端延迟={e2e_latency:.2f}ms, "
+            f"令牌数={output_tokens}"
+        )
+    else:
+        # 处理未生成令牌的情况（例如，错误）
+        e2e_latency = (request_end_time - request_start_time) * 1000
+        logging.warning(
+            f"请求已处理但未生成令牌："
+            f"端到端延迟={e2e_latency:.2f}ms"
+        )
+
+    return "Generated response" # 占位符
+
+# 假设 'model' 是您加载的 LLM 接口
+# handle_request("翻译成法语：Hello world.")
+```
+
+#### 吞吐量
+
+吞吐量衡量服务系统的容量，通常表示为：
+
+1. **每秒请求数 (RPS)：** 系统每秒可处理的独立请求数量。
+2. **每秒令牌数 (TPS)：** 每秒所有并发请求生成的输出令牌总数。这通常是对于 LLM 更具意义的指标，因为请求复杂度（输出长度）差异很大。
+
+吞吐量受批处理大小、模型架构、硬件加速（GPU 类型）以及 KV 缓存或 FlashAttention 等推理 (inference)优化措施的影响。监控吞吐量有助于容量规划和识别瓶颈。
+
+#### 资源利用率
+
+LLM 是资源密集型应用。监控硬件利用率对于效率和稳定性非常重要：
+
+1. **GPU 利用率：** GPU 计算单元处于活动状态的时间百分比。高利用率通常是好的，表示高效使用了昂贵的硬件，但持续达到 100% 可能预示着瓶颈。
+2. **GPU 显存 (VRAM)利用率：** 使用的 GPU 高带宽内存 (HBM) 量。这通常是批处理大小或容纳大型模型的限制因素。GPU 显存耗尽会导致内存不足 (OOM) 错误，从而引发请求失败。
+3. **CPU 利用率：** 虽然推理受 GPU 限制，但 CPU 处理预处理/后处理、网络 I/O 和编排。高 CPU 使用率仍然可能成为系统的瓶颈。
+4. **系统内存 (RAM) 利用率：** 主机上的 RAM 使用量。
+5. **网络带宽：** 数据传输速率，对于加载模型、接收请求和发送响应非常重要。
+
+诸如 `nvidia-smi` (针对 NVIDIA GPU) 或平台特定的监控代理 (例如用于 GPU 的 Prometheus Node Exporter 和 DCGM Exporter) 等工具常用于收集这些指标。
+
+#### 错误率
+
+跟踪失败请求的频率（例如，HTTP 5xx 服务器错误、超时错误、OOM 错误）是可靠性的基本要求。错误率上升通常表示模型服务器、基础设施或特定类型的有问题输入提示存在潜在问题。
+
+### 监控成本
+
+服务大型模型，尤其是在 GPU 或 TPU 等高端加速器上，可能成本高昂。有效的成本监控包括：
+
+1. **基础设施成本：** 跟踪计算实例（虚拟机、GPU）、存储（用于模型权重 (weight)）和网络出站流量的每小时/每日/每月成本。云服务提供商提供详细的账单仪表板和 API（例如 AWS Cost Explorer、Google Cloud Billing Reports）。对资源进行适当标记 (token)有助于将成本归因于特定模型或环境。
+2. **单位成本：** 计算每生成一千个令牌的成本或每个请求的成本等指标。这需要将基础设施成本与使用指标（吞吐量 (throughput)、令牌计数）关联起来。
+   
+   $$
+   \text{每千令牌成本} = \frac{\text{总基础设施成本}}{\text{总生成令牌数}} \times 1000
+   $$
+   
+   监控此效率指标有助于了解部署的经济可行性以及优化工作的效果。突然增加可能表示扩展效率低下或资源配置问题。
+
+### 系统健康和依赖
+
+监控服务系统的整体健康状况是必要的：
+
+- **健康检查：** 为 Kubernetes 等容器编排器实现活跃度探测（服务是否正在运行？）和就绪度探测（服务是否已准备好接收流量？）。
+- **资源限制：** 监控磁盘空间、文件描述符和其他系统级资源以防止耗尽。
+- **依赖健康：** 如果 LLM 服务依赖于外部数据库、缓存层或其他微服务，它们的健康和性能也必须作为端到端系统的一部分进行监控。
+
+### 监控工具和技术
+
+监控堆栈通常结合多种工具：
+
+1. **日志记录：** 在您的服务应用中实现结构化日志记录。不要使用纯文本消息，而是将事件记录为包含相关元数据（请求 ID、用户 ID、延迟指标、输入/输出令牌计数、错误）的 JSON 对象。这使得日志易于解析和搜索。
+
+   ```python
+   # 示例：结构化日志记录
+   import logging
+   import json
+   import uuid
+
+   class JsonFormatter(logging.Formatter):
+       def format(self, record):
+           log_record = {
+               "时间戳": self.formatTime(record, self.datefmt),
+               "级别": record.levelname,
+               "消息": record.getMessage(),
+               "请求ID": getattr(record, "request_id", "N/A"),
+               # 从日志记录的 args 中添加其他相关字段
+               **(record.args if isinstance(record.args, dict) else {})
+           }
+           return json.dumps(log_record)
+
+   # 配置日志记录器
+   logger = logging.getLogger('LLMServer')
+   logger.setLevel(logging.INFO)
+   handler = logging.StreamHandler()
+   handler.setFormatter(JsonFormatter())
+   logger.addHandler(handler)
+
+   # 请求处理程序中的示例用法
+   request_id = str(uuid.uuid4())
+   logger.info("正在处理请求", extra={"请求ID": request_id, "提示长度": 15})
+   # ... 处理中 ...
+   try:
+       # ... 调用模型 ...
+       logger.info("请求成功", extra={
+           "请求ID": request_id,
+           "TTFT_毫秒": 55.2,
+           "TPOT_毫秒": 10.1,
+           "令牌数": 120
+       })
+   except Exception as e:
+       logger.error(
+           "请求失败",
+           extra={"请求ID": request_id, "错误": str(e)},
+           exc_info=True
+       )
+   ```
+2. **指标收集：** 使用 Prometheus 等时序数据库存储从导出器抓取的指标。常见的导出器包括：
+
+   - `node-exporter`：系统级指标（CPU、RAM、磁盘、网络）。
+   - `dcgm-exporter`：详细的 NVIDIA GPU 指标（利用率、内存、温度、功耗）。
+   - 自定义应用指标：使用客户端库（例如 Python 的 `prometheus_client`）直接从您的服务代码中公开应用级指标（延迟分布、吞吐量 (throughput)、令牌计数、缓存命中率）。
+3. **分布式追踪：** 对于涉及多个微服务（例如 API 网关、预处理服务、模型推理 (inference)服务器）的复杂服务堆栈，Jaeger 或 Zipkin 等分布式追踪工具，通常通过 OpenTelemetry 集成，有助于可视化请求在服务间的整个生命周期。这对于确定分布式系统中的延迟瓶颈非常宝贵。
+
+# 示例：基本的 OpenTelemetry 追踪 Span
+
+````
+# （需要安装 opentelemetry-api、opentelemetry-sdk 和 exporters）
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+
+# 配置 OpenTelemetry（通常在应用启动时完成一次）
+provider = TracerProvider()
+processor = BatchSpanProcessor(ConsoleSpanExporter()) # 或导出到 Jaeger 等
+provider.add_span_processor(processor)
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)
+
+# 在处理请求一部分的函数中
+def process_sub_task(data):
+    with tracer.start_as_current_span("处理子任务") as span:
+        span.set_attribute("数据大小", len(data))
+        # ... 执行处理 ...
+        result = data + "_processed"
+        span.set_attribute("结果大小", len(result))
+        return result
+
+# 在主请求处理程序中
+def handle_llm_request(prompt):
+    with tracer.start_as_current_span("处理LLM请求") as span:
+        span.set_attribute("提示长度", len(prompt))
+        # 调用可能也会创建 span 的其他函数
+        processed_data = process_sub_task(prompt)
+        # ... 调用模型 ...
+        span.set_attribute("响应长度", 100) # 示例值
+        return "response"
+
+# handle_llm_request("一些输入")
+```
+````
+
+4. **可视化和仪表板：** 使用 Grafana、Kibana（用于日志）或云服务提供商仪表板等工具创建重要指标的可视化。仪表板提供系统健康状况和性能趋势的概览。
+
+````
+```plotly
+{"layout": {"title": "P95 端到端延迟（过去一小时）", "xaxis": {"title": "时间"}, "yaxis": {"title": "延迟 (ms)", "range": [100, 500]}, "margin": {"l": 40, "r": 20, "t": 40, "b": 30}}, "data": [{"x": ["10:00", "10:15", "10:30", "10:45", "11:00"], "y": [210, 235, 220, 250, 240], "type": "scatter", "mode": "lines+markers", "name": "P95 延迟", "marker": {"color": "#228be6"}}]}
+```
+
+> P95 延迟跟踪 95% 请求完成时间所处的阈值，突出显示用户遇到的最差性能。
+````
+
+5. **告警：** 使用 Prometheus Alertmanager 或云服务提供商服务（例如 AWS CloudWatch Alarms）等工具，根据指标阈值配置告警规则。重要的告警可能包括：
+\* 高 P99 延迟（> N 毫秒）。
+\* 低吞吐量（< M 令牌/秒）。
+\* 高错误率（> X%）。
+\* 高 GPU 显存 (VRAM)利用率（> 95%）。
+\* 根据预测即将发生的成本超支。
+
+### LLM 特有的监控细节
+
+考虑以下标准指标：
+
+- **输出质量监控：** 这很难完全自动化。然而，您可以跟踪代理指标，例如平均输出长度、每个请求的令牌使用量或特定关键词出现次数。实施用户反馈机制（例如点赞/点踩）并监控这些评分可以提供有关感知质量随时间变化的宝贵信号。
+- **KV 缓存性能：** 如果使用键值缓存（第 28 章），监控其命中率和内存使用情况。低命中率可能表明缓存配置不理想或请求模式从缓存中受益不大。
+
+有效的监控并非一次性设置。它需要持续关注。定期审查仪表板，根据观察到的性能调整告警阈值，并随着模型、流量模式和基础设施的变化完善您的监控策略。全面的监控提供了在高规模下可靠、高效且经济地运行 LLM 服务所需的可见性。
+
+## 参考资料
+
+- [Site Reliability Engineering: How Google Runs Production Systems](https://sre.google/sre-book/table-of-contents/) — Betsy Beyer, Chris Jones, Jennifer Petoff, and Niall Richard Murphy (2017)
+  Publisher: O'Reilly Media
+  关于SRE实践的指南，包含分布式系统的监控、告警和系统健康管理。
+- [Prometheus Documentation](https://prometheus.io/docs/) — The Prometheus Authors (2024)
+  开源监控系统的官方文档，说明了指标收集、查询和告警。
+- [OpenTelemetry Documentation](https://opentelemetry.io/docs/) — The OpenTelemetry Authors (2025)
+  可观测性框架的官方文档，详细介绍了云应用的分布式追踪、指标和日志。

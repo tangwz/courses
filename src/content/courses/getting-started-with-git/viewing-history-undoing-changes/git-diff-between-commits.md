@@ -1,0 +1,108 @@
+---
+course: "getting-started-with-git"
+chapter: "viewing-history-undoing-changes"
+lesson: "git-diff-between-commits"
+sourceId: 1005
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-git/chapter-3-viewing-history-undoing-changes/git-diff-between-commits"
+title: "查看提交之间的更改"
+description: "使用 `git diff` 和特定的提交标识符来比较项目历史中的不同快照。"
+order: 2
+plots: []
+sourceHash: "da35401cef96067750b54f0cb915e7919dcc51747e81a05cb29ee181daa88b60"
+sourceCorrections: []
+---
+
+`git diff` 命令是检查 Git 仓库中更改的强大工具。它在比较项目历史中的不同时间点时特别有效。通过提供特定的提交标识符，您可以准确查看任意两个快照之间发生了哪些变化。这种能力对于了解某个功能是如何演进的、查找何时引入了某个错误，或审查协作者所做的更改都非常有帮助。
+
+### 识别提交
+
+在比较提交之前，您需要一种引用它们的方式。Git 中的每个提交都有一个名为 SHA-1 散列（或简称“散列”）的唯一标识符。它是一个长串十六进制字符（例如 `f7b1d2a4e9c3...`）。您通常在使用 `git log` 命令时会看到这些散列。
+
+```bash
+$ git log --oneline
+a8e3c4d (HEAD -> main) Add usage instructions to README
+f7b1d2a Fix typo in introduction
+9c3a1b0 Initial project setup
+```
+
+您通常不需要完整的散列。只要您提供足够的字符使其唯一，Git 就足以确定您指的是哪个提交，通常只需前 7 个字符就足够了（例如 `f7b1d2a`）。
+
+Git 还提供了方便的方式来引用相对于当前状态的提交（`HEAD` 代表当前检出的提交）：
+
+- `HEAD`：当前分支上最新的提交。
+- `HEAD~1` 或 `HEAD~`：`HEAD` **之前**的提交（它的父提交）。
+- `HEAD~2`：`HEAD` 之前两个步骤的提交（它的祖父提交），依此类推。
+- 分支名称：您可以使用分支名称（例如 `main` 或 `feature-branch`）来引用该分支上最新的提交。
+
+### 比较两个特定提交
+
+查看历史中两个时间点之间差异最直接的方式是向 `git diff` 提供两个提交标识符：
+
+```bash
+git diff <提交1> <提交2>
+```
+
+此命令显示将项目在 `<提交1>` 时的状态转换为 `<提交2>` 时的状态所需的更改。
+
+让我们使用我们的示例历史：
+
+> 一个包含三个提交的简单线性历史。
+
+要查看从初始设置 (`9c3a1b0`) 到最终提交 (`a8e3c4d`) 之间引入的所有更改，您可以运行：
+
+```bash
+git diff 9c3a1b0 a8e3c4d
+```
+
+或者，使用短散列：
+
+```bash
+git diff 9c3a1b0..a8e3c4d # 这里的 .. 语法是等效的
+```
+
+输出将显示一个组合差异，表示相对于起点 `9c3a1b0`，在提交 `f7b1d2a` 和 `a8e3c4d` 中进行的所有修改、添加和删除。
+
+### 比较提交与当前状态
+
+有时您希望将较旧的提交与当前工作目录（包括任何未暂存的更改）进行比较。您可以通过只提供一个提交标识符来做到这一点：
+
+```bash
+git diff <提交>
+```
+
+例如，要查看当前文件与修复拼写错误的提交 (`f7b1d2a`) 有何不同：
+
+```bash
+git diff f7b1d2a
+```
+
+这有助于查看您当前的工作与特定历史点已偏离了多远。
+
+### 比较与上一个提交
+
+一个非常常见的任务是查看**上一个**提交中更改了什么。您可以使用相对引用来实现这一点：
+
+```bash
+git diff HEAD~1 HEAD
+```
+
+此命令专门比较当前提交的父提交 (`HEAD~1`) 与当前提交 (`HEAD`)，只显示最近一次提交引入的更改。
+
+### 理解输出格式
+
+请记住，`git diff` 的输出使用特定格式：
+
+- 以 `-` 开头的行表示从第一个文件/提交中删除的内容。
+- 以 `+` 开头的行表示在第二个文件/提交中添加的内容。
+- 没有前缀的行是上下文 (context)行，用于帮助定位更改。
+- 诸如 `diff --git a/file.txt b/file.txt` 之类的标题行表示正在比较哪些文件。
+- `--- a/file.txt` 和 `+++ b/file.txt` 指定了比较中的“之前”和“之后”的文件。
+
+能够比较不同提交是理解项目历史的根本。它让您能够准确找出更改、审查特定的开发步骤，并获得关于代码库如何随时间演进的见解。请使用 `git diff` 和 `git log` 配合不同的提交标识符进行尝试，以便自如地查看项目的历史。
+
+## 参考资料
+
+- [git-diff](https://git-scm.com/docs/git-diff) — Git Community (2023)
+  Git 变更比较的全面指南，详细说明了语法、选项和输出格式。
+- [git-log](https://git-scm.com/docs/git-log) — Git Community (2023)
+  查看提交历史和使用各种引用标识提交的官方文档。

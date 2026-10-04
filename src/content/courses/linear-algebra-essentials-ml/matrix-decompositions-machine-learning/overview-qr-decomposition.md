@@ -1,0 +1,99 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "matrix-decompositions-machine-learning"
+lesson: "overview-qr-decomposition"
+sourceId: 1539
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-6-matrix-decompositions-machine-learning/overview-qr-decomposition"
+title: "QR分解概览"
+description: "简要介绍QR分解（A = QR）及其应用，例如在最小二乘法中的应用。"
+order: 8
+plots: []
+sourceHash: "786910e6ec364fcaa54d99926321baa35f02bc091b2113cd57e39fe1a0b16315"
+sourceCorrections: []
+---
+
+QR分解是一种非常有用的矩阵分解方法，类似于SVD和LU分解。对于一个$m \times n$矩阵$A$（通常$m \ge n$且列线性无关），QR分解会找到两个特定的矩阵$Q$和$R$，使得：
+
+$A = QR$
+
+其中，$Q$是一个$m \times n$的正交标准列矩阵，而$R$是一个$n \times n$的上三角矩阵。让我们更仔细地看看这些组成部分。
+
+### 正交矩阵 Q
+
+矩阵$Q$具有一个特殊性质：它的列构成一个正交标准集。回顾第四章，这意味着两点：
+
+1. 每个列向量 (vector)的欧几里得范数（长度）为1（$||\mathbf{q}_i||_2 = 1$）。
+2. 任意两个不同的列向量彼此正交（它们的点积为零，$\mathbf{q}_i \cdot \mathbf{q}_j = \mathbf{q}_i^T \mathbf{q}_j = 0$ (当 $i \neq j$)）。
+
+综合这些，我们可以使用矩阵乘法简洁地陈述正交标准列矩阵$Q$的定义性质：
+
+$Q^T Q = I$
+
+其中$I$是$n \times n$的单位矩阵。
+
+满足此条件的矩阵被称为**正交矩阵**。（严格来说，如果$Q$是方阵，$Q^T Q = I$也意味着$Q Q^T = I$，使得$Q^T$成为$Q$的逆，即$Q^T = Q^{-1}$）。
+
+正交矩阵的一个重要几何意义是，通过$Q$（或$Q^T$）进行乘法运算会保持长度和角度不变。正交矩阵表示的变换是刚性运动，例如旋转或反射。在QR分解中，$Q$的列构成了原始矩阵$A$的列空间的规范正交基。这个过程类似于格拉姆-施密特过程，它接受一组线性无关向量（$A$的列）并产生一个跨越相同空间的正交标准集（$Q$）。
+
+### 上三角矩阵 R
+
+矩阵$R$是一个$n \times n$的上三角矩阵。这意味着主对角线以下的所有元素都为零：
+
+
+$$
+R = \begin{pmatrix}
+r_{11} & r_{12} & \cdots & r_{1n} \\
+0 & r_{22} & \cdots & r_{2n} \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 & \cdots & r_{nn}
+\end{pmatrix}
+$$
+
+
+矩阵$R$基本上编码了矩阵$A$的原始列与$Q$中的正交标准基向量 (vector)之间的关系。具体而言，$A$的每个列$\mathbf{a}_j$都可以表示为$Q$的前$j$个列的线性组合，其系数来自$R$的第$j$列。
+
+$R$的上三角结构在计算上具有优势，尤其是在求解线性方程组时，我们将在后面看到这一点。
+
+> QR分解将矩阵A分解为一个正交矩阵Q（其列是正交标准向量）和一个上三角矩阵R。
+
+### 最小二乘问题中的应用
+
+QR分解最重要的应用之一是求解线性最小二乘问题。回顾一下，这些问题经常出现在机器学习 (machine learning)中拟合模型时，例如线性回归，我们希望找到一个向量 (vector)$\mathbf{x}$，使$A\mathbf{x}$与目标向量$\mathbf{b}$之间的差异最小化，即最小化$||A\mathbf{x} - \mathbf{b}||_2^2$。
+
+标准方法涉及求解正规方程组：
+
+$A^T A \mathbf{x} = A^T \mathbf{b}$
+
+然而，计算$A^T A$有时可能导致数值稳定性问题，特别是当$A$的列接近线性相关时。矩阵$A^T A$可能会变成病态（条件数很大），使解对小误差敏感。
+
+QR分解提供了一种数值更稳定的替代方案。如果我们将$A = QR$代入原始的最小二乘目标函数（或者对于存在解的系统，直接代入$A\mathbf{x} = \mathbf{b}$），我们得到：
+
+$QR\mathbf{x} = \mathbf{b}$
+
+现在，两边乘以$Q^T$：
+
+$Q^T Q R \mathbf{x} = Q^T \mathbf{b}$
+
+由于$Q^T Q = I$，这完美地简化为：
+
+$R \mathbf{x} = Q^T \mathbf{b}$
+
+这为我们提供了一个带有上三角矩阵$R$的线性方程组。这样的系统非常容易且数值稳定地使用一个称为**回代**的过程来求解。我们首先求解$\mathbf{x}$的最后一个分量，然后将该值代回倒数第二个方程以求解下一个分量，依此类推，向上回溯。
+
+由于此方法避免形成$A^T A$，它通常比直接使用正规方程组具有更好的数值特性，使其成为许多数值计算库中的首选方法。
+
+### QR分解的计算
+
+尽管QR分解的原理可以通过格拉姆-施密特过程来理解，但实际实现通常使用数值更稳定的算法，如豪斯霍尔德变换或吉文斯旋转。这些方法迭代地构建$Q$和$R$。幸运的是，您很少需要自己实现这些算法；像NumPy和SciPy这样的数值计算库提供了高效且可靠的函数来计算QR分解，我们将在实践部分使用它们。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/linearalgebra) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  涵盖QR分解、正交矩阵、Gram-Schmidt过程以及最小二乘应用的基础概念。
+- [Matrix Computations](https://www.press.jhu.edu/books/title/10419/matrix-computations) — Gene H. Golub and Charles F. Van Loan (2013)
+  Publisher: Johns Hopkins University Press; DOI: [10.1137/1.9781421407944](https://doi.org/10.1137/1.9781421407944)
+  数值线性代数的权威教材，详细阐述了QR分解的Householder反射和Givens旋转算法及其数值稳定性。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, and Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; DOI: [10.1017/9781108679989](https://doi.org/10.1017/9781108679989)
+  为QR分解提供了机器学习背景，从实践角度解释了其在解决最小二乘问题中的作用和优势。

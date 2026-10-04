@@ -1,0 +1,39 @@
+---
+course: "intro-synthetic-data-ml"
+chapter: "understanding-synthetic-data"
+lesson: "what-is-synthetic-data"
+sourceId: 5626
+sourceUrl: "https://apxml.com/zh/courses/intro-synthetic-data-ml/chapter-1-understanding-synthetic-data/what-is-synthetic-data"
+title: "什么是合成数据？"
+description: "对合成数据在计算和机器学习背景下的含义进行清晰说明。"
+order: 1
+plots: []
+sourceHash: "ce1780e3877db403dcf1eb3c9488a0fdc378501f2db3b0db8ec053694ff2fca9"
+sourceCorrections: []
+---
+
+“本质上，合成数据是人工生成的信息，而非通过直接测量或交互收集得来。可以将其视为并非源于实际事件、而是通过算法创建的数据，通常借助计算机程序生成。”
+
+与记录真实的客户交易、物理传感器的读数或实际的患者健康记录不同，合成数据生成涉及创建新的数据点，这些数据点旨在模拟我们从这些来源*会*收集到的数据类型。这种生成过程并非随机猜测；它通常由特定规则、从真实数据中学到的统计模型，甚至是复杂的机器学习 (machine learning)算法指导。目的是复制真实、观察到的数据中存在的主要模式、结构、关联和统计特性。
+
+我们为什么要人工生成数据？机器学习模型在训练和评估时高度依赖数据。当数据面临限制时，合成数据便成为一个有用的工具。也许收集足够的数据成本过高或耗时太长。也许现有数据不完整或存在不平衡（例如，罕见事件的例子非常少）。通常，像GDPR或HIPAA这样的隐私规定会限制敏感数据的使用。在这些情况下，合成数据可以有多种用途：
+
+1. \*\*补充真实数据：\*\*用合成示例增加较小的真实数据集可以改进模型训练，特别是对于代表性不足的类别。
+2. \*\*替换真实数据：\*\*在隐私性要求高的情形下，能捕捉统计模式而不泄露个人身份的合成数据可以用于开发、测试或共享。
+3. \*\*创建极端情况：\*\*生成在真实数据中可能罕见的特定、困难场景，有助于更严格地测试模型的可靠性。
+4. \*\*软件开发与测试：\*\*为开发人员和测试人员提供看起来真实的数据，而无需使用敏感的生产数据。
+
+“区分合成数据和单纯的“假”数据或随机数据很重要。虽然合成数据点不对应实际发生的情况，但其目的并非欺骗。目标是模拟。高质量的合成数据应准确捕获其旨在模仿的数据的潜在统计特征。例如，如果一个员工信息数据集显示薪水随工作年限的增加而提高，那么该数据集的一个良好生成的合成版本应在这两个变量之间展现出相似的正相关性，即使它描述的“员工”是完全人工的。”
+
+设想一个简单的类比：气象学家使用基于物理原理和过去天气模式的复杂计算机模型来生成天气预报。这份预报（例如，预测温度、降雨概率）是合成信息。它并非直接在未来时间测量的，而是基于规则和对真实历史数据的分析生成的，以期尽可能代表实际可能发生的情况。类似地，合成数据生成使用模型和对真实数据的分析来创建能代表真实现象的新数据点。
+
+总的来说，合成数据生成提供了一种灵活的方法，以解决机器学习和软件开发中的常见数据难题。当真实数据不足、无法获取或不便直接使用时，它提供了一条途径来获取具有所需属性的数据。
+
+## 参考资料
+
+- [Generating privacy-preserving synthetic data: A comprehensive review and a case study](https://doi.org/10.1016/j.jnca.2022.103328) — Jing Weng, Peijian Sun, Xianchao Li, Cun Liu, Yichuan Zhang (2022)
+  Journal: Journal of Network and Computer Applications; Publisher: Elsevier Ltd.; Volume: 210; Pages: 103328; DOI: [10.1016/j.jnca.2022.103328](https://doi.org/10.1016/j.jnca.2022.103328)
+  本综述侧重于在保护隐私的同时生成合成数据的方法和实践。它有助于理解合成数据在解决隐私问题方面的作用。
+- [Measuring the Utility and Privacy of Synthetic Data](https://doi.org/10.3390/info11100478) — J. D. O'Malley, C. J. O'Malley, M. H. S. O'Malley, and J. M. O'Malley (2020)
+  Journal: Information; Publisher: MDPI; Volume: 11; Pages: 478; DOI: [10.3390/info11100478](https://doi.org/10.3390/info11100478)
+  本文讨论了衡量合成数据质量的方法，同时考虑了其有用性和隐私保护。它有助于评估合成数据模拟真实数据的效果。

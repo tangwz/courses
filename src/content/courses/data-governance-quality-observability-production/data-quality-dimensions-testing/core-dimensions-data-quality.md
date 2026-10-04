@@ -1,0 +1,119 @@
+---
+course: "data-governance-quality-observability-production"
+chapter: "data-quality-dimensions-testing"
+lesson: "core-dimensions-data-quality"
+sourceId: 8082
+sourceUrl: "https://apxml.com/zh/courses/data-governance-quality-observability-production/chapter-2-data-quality-dimensions-testing/core-dimensions-data-quality"
+title: "数据质量的主要维度"
+description: "准确性、完整性、一致性和有效性的技术概览。"
+order: 1
+plots: ["plots/8082-0.json"]
+sourceHash: "5041b7e811665dc7b450347b07738a008cd12d1b21f4d12a93fbf98ce9b597c8"
+sourceCorrections: []
+---
+
+数据质量常被误解为主观的“好坏”评判标准。在生产工程中，质量必须是可量化 (quantization)的。我们将质量分解为不同的技术维度，以便将对“劣质数据”的模糊抱怨转化为可执行的工程任务。这种分解使我们能够对数据集的各个方面应用特定的测试策略和断言逻辑。
+
+数据工程中我们关注的四个主要维度是：**准确性**、**完整性**、**一致性**和**有效性**。每个维度都处理数据生命周期中的一种特定故障模式，并需要在 Python 或 SQL 中采用不同的实现方式。
+
+### 准确性
+
+准确性衡量数据正确描述真实对象或事件的程度。在工程学中，准确性是正确值与总值的比率。
+
+$准确性 = \frac{\sum_{i=1}^{n} I(x_i = 真实值)}{n}$
+
+其中 $I$ 是一个指示函数，如果值与真实值匹配则返回 1，否则返回 0。
+
+准确性测试很难，因为“真实值”通常在系统之外。但是，我们可以通过**引用验证**和**范围约束**来近似准确性。
+
+例如，如果温度传感器报告标准服务器机房的温度为 5000°C，那么该数据在技术上是一个有效整数（有效性），但几乎可以确定是不准确的。我们通过基于领域知识断言合理范围来发现此问题。
+
+**示例：基于范围的 SQL 准确性断言**
+
+```sql
+SELECT 
+    COUNT(*) as inaccurate_records
+FROM server_logs
+WHERE cpu_temperature_celsius < 10 
+   OR cpu_temperature_celsius > 100;
+```
+
+虽然这不能保证确切温度是正确的，但它会过滤掉物理上不可能的值，从而增加数据集的准确性可能性。
+
+### 完整性
+
+完整性常被简化为“检查空值”，但它涵盖的内容更多。它衡量所有必需数据是否都存在。这体现在两个方面：
+
+1. **属性完整性：** 特定字段是否已填充？（例如，每个用户都有电子邮件地址吗？）
+2. **记录完整性：** 数据总量是否符合预期？（例如，我们是否收到了所有每小时日志？）
+
+缺失数据会给下游机器学习 (machine learning)模型带来偏差，并破坏报告中的聚合逻辑。
+
+> 基于完整性检查的数据路由可防止稀疏记录污染数据仓库。
+
+为了在无人为干预的情况下测试记录完整性，我们通常会将行计数与历史平均值进行比较。如果管道通常每小时处理 10,000 行，但下降到 500 行，则表示完整性故障，即使这 500 行格式完美。
+
+### 一致性
+
+一致性确保数据值互不矛盾，无论是在同一记录中还是在不同数据集之间。这是逻辑和关系得到遵守的体现。
+
+内部一致性检查验证单行中的字段是否合理。例如，`start_date` 必须始终小于或等于 `end_date`。
+
+$t_{start} \leq t_{end}$
+
+跨系统一致性（引用完整性）在分布式系统中更难管理。它确认点击流日志中的 `user_id` 是否与用户表中的有效 `user_id` 对应。在关系数据库中，外键强制执行此规则。在数据湖中，我们必须编写断言来检查孤立记录。
+
+**示例：Python 中的内部一致性检查**
+
+```python
+def check_timestamp_consistency(df):
+    # 返回事件序列不可能的行
+    inconsistent = df[df['event_end'] < df['event_start']]
+    return len(inconsistent) == 0
+```
+
+### 有效性
+
+有效性纯粹是关于语法和格式的。与准确性（询问“这是真的吗？”）不同，有效性询问“这符合规则吗？”。一个电话号码可以是有效的（格式正确），但不准确（号码错误）。
+
+有效性检查很大程度上依赖于模式强制执行和正则表达式（Regex）。常见的有效性约束包括：
+
+- **数据类型：** 确保在预期整数的地方没有传递字符串。
+- **格式模式：** 验证电子邮件匹配 `^[\w\.-]+@[\w\.-]+\.\w+$`。
+- **允许值：** 确保 `status` 列只包含“ACTIVE”、“INACTIVE”或“PENDING”。
+
+自动化有效性测试是摄取管道的第一道防线。如果数据不符合模式定义，应立即拒绝，以防止在 Parquet 或 Avro 等下游格式中造成序列化错误。
+
+
+
+![各维度数据质量故障频率](plots/8082-0.json)
+
+
+
+> 有效性故障通常最常见，但最容易通过编程捕获；而准确性故障较少发生，但更难发现。
+
+### 各维度之间的关联
+
+这些维度并非相互排斥。一个数据点可能同时在多个维度上出现问题。但是，区分它们有助于进行根本原因分析。
+
+1. 如果格式错误，则属于**有效性**问题（检查生产者的序列化）。
+2. 如果格式正确但字段为空，则属于**完整性**问题（检查上游 API 响应）。
+3. 如果数据存在但与其他数据矛盾，则属于**一致性**问题（检查同步逻辑）。
+4. 如果数据看起来完美但事实错误，则属于**准确性**问题（检查传感器或输入源）。
+
+通过将故障归入这些维度，工程师可以编写有针对性的单元测试，提供清晰的错误消息，从而大幅减少调试生产管道所需的时间。
+
+## 参考资料
+
+- [Beyond Accuracy: What Data Quality Means to Data Consumers](https://www.tandfonline.com/doi/abs/10.1080/07421222.1996.11518099) — Richard Y. Wang, Diane M. Strong (1996)
+  Journal: Journal of Management Information Systems; Publisher: Taylor & Francis; Volume: 12; Pages: 5-33; DOI: [10.1080/07421222.1996.11518099](https://doi.org/10.1080/07421222.1996.11518099)
+  这篇基础论文定义了数据质量的多个维度，超越了简单的准确性，这对于本节关于分解质量的论点至关重要。
+- [The DAMA Guide to the Data Management Body of Knowledge (DMBOK2)](https://www.dama.org/cpages/dmbok) — DAMA International (2024)
+  Publisher: Technics Publications, LLC
+  作为一项更广泛的数据管理标准，它提供了数据质量维度的全面框架和定义。
+- [Executing Data Quality Projects: Ten Steps to Quality Data and Trusted Information](https://www.oreilly.com/library/view/executing-data-quality/9780128180150/) — Danette McGilvray (2021)
+  Publisher: Academic Press
+  提供了管理和改进数据质量的实用方法，与本节侧重于工程任务的观点一致。
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108424/) — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media
+  涵盖了现代数据工程管道中数据质量、验证和测试的实践方面，包括讨论的维度。

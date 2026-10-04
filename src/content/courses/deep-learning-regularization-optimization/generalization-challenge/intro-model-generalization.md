@@ -1,0 +1,53 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "generalization-challenge"
+lesson: "intro-model-generalization"
+sourceId: 4868
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-1-generalization-challenge/intro-model-generalization"
+title: "模型泛化介绍"
+description: "定义模型泛化及其在机器学习应用中的重要作用。"
+order: 1
+plots: ["plots/4868-0.json"]
+sourceHash: "1adeee015c26b5fdd81d7284d731accbb48a7122861625761ed17a060f99a705"
+sourceCorrections: []
+---
+
+你已经训练了一个神经网络 (neural network)，它在你用于训练的数据上取得了令人满意的准确度，可能甚至达到了99%。这很不错，但这只是故事的一半。衡量模型成功与否的最终标准不是它记住训练数据的能力；而是在它之前未遇到过的*新的*、*未见过*的数据上表现如何。这种在新输入上表现良好的能力被称为**泛化**。
+
+想象一下构建一个垃圾邮件过滤器。如果它只学习识别训练中使用的确切垃圾邮件，那么它将无法应对垃圾邮件制造者不断制造的新变体。类似地，预测房价的模型需要对不在其原始数据集中的房屋有效，而医疗诊断系统必须对新患者准确。大多数机器学习 (machine learning)应用（特别是深度学习 (deep learning)）的主要目标是构建能够有效泛化的模型。
+
+我们可以认为我们关注的数据（例如，所有可能的猫狗图像，所有潜在的垃圾邮件）来自某个底层、未知的**数据分布**。我们的训练数据集只是从这个分布中抽取的一个有限样本。我们的目标是训练一个模型，它能学习这个分布的真实底层模式，而不仅仅是我们有限训练样本中存在的特定怪癖或噪声。
+
+### 训练误差与泛化误差
+
+模型训练期间，模型在训练数据本身上的表现通常会被监测。损失函数 (loss function)（如交叉熵或均方误差）是常用的衡量工具，它量化 (quantization)了模型预测与训练集中真实标签之间的距离。训练集上的平均损失被称为**训练误差**，$E_{train}$。
+
+但最小化 $E_{train}$ 并非我们的主要目标。我们真正想要最小化的是**泛化误差**（也称为**测试误差**），$E_{gen}$，它是模型在从同一底层数据分布中抽取的新数据点上的预期误差。
+
+在实践中，我们无法直接衡量真实的泛化误差，因为我们无法获得完整的数据分布。相反，我们通过在一个单独的数据集上评估训练好的模型来*估计*它，这个数据集被称为**测试集**（或有时是**验证集**）。这个数据集包含模型在训练期间从未见过的例子。模型在这个保留集上的表现为我们提供了其泛化能力的近似值。
+
+### 泛化差距
+
+理想情况下，模型在测试集上的表现应与其在训练集上的表现接近。然而，特别是对于拥有大量参数 (parameter)的复杂深度学习 (deep learning)模型，通常会看到明显的差异。模型可能在训练误差上表现非常低，但在测试集上表现差很多。训练误差和测试误差之间的这种差异有时被称为**泛化差距**。
+
+
+
+![训练损失对比验证损失](plots/4868-0.json)
+
+
+
+> 训练期间的常见模式。训练损失持续下降，而验证损失最初下降，随后开始上升，这表明模型开始对训练数据过拟合 (overfitting)，其泛化性能正在下降。
+
+理解这个差距为何出现以及如何减小它，对于构建有效的深度学习模型非常重要。当模型未能很好地泛化时，它通常属于两种情况之一：欠拟合 (underfitting)或过拟合。这些情况，以及诊断和解决它们的方法，构成了本课程的核心内容。我们将讲授的技术，即正则化 (regularization)和优化方法，专门旨在提升模型从训练数据泛化到未见过样本的能力。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 5: Machine Learning Basics
+  一本重要的教材，提供了机器学习基础的概述，包括深度学习中的泛化、过拟合和欠拟合。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; Pages: 2nd edition; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本统计学习理论的经典教材，论述了模型评估、选择和偏差-方差权衡，这些对理解泛化很重要。
+- [CS229: Machine Learning Lecture Notes, Part I - Supervised Learning](https://cs229.stanford.edu/main_notes.pdf) — Andrew Ng, Tengyu Ma (2023)
+  Publisher: Stanford University; Pages: Chapter 8, Section 8.1
+  一份来自著名机器学习课程的讲义，涵盖泛化、偏差-方差权衡和模型选择的基础知识。

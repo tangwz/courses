@@ -1,0 +1,93 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "advanced-exploration-strategies"
+lesson: "random-network-distillation"
+sourceId: 3425
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-4-advanced-exploration-strategies/random-network-distillation"
+title: "状态新颖性：随机网络蒸馏 (RND)"
+description: "使用固定随机网络的预测误差作为内在奖励信号，用于寻觅新颖状态。"
+order: 7
+plots: []
+sourceHash: "62fce730c76b3072c2aa55d16954f446b123ef2d8110c1605fa3a088c2f83ab3"
+sourceCorrections: []
+---
+
+尽管像内在好奇心驱动 (ICM) 这样的方法以预测环境*动态*的误差为依据来产生内在奖励，但它们有时会受到环境中固有随机或难以预测但对寻找新事物不一定有益的方面所干扰（即“嘈杂电视问题”）。随机网络蒸馏 (RND) 提供了一种替代方法，纯粹基于状态的新颖性来产生内在奖励，从而避免了预测环境动态的需求。
+
+RND 的核心思想巧妙：通过检查一个在已访问状态上训练过的神经网络 (neural network)，预测同一状态的*固定随机初始化*目标网络的输出的准确度，来衡量一个状态的熟悉程度。
+
+### RND机制
+
+RND 使用两个神经网络 (neural network)来处理观察到的状态 $s_t$:
+
+1. **目标网络 ($f$):** 该网络在训练开始时随机初始化，其参数 (parameter) $\theta_f$ 在整个学习过程中保持**不变**。它以状态 $s_t$ 作为输入，并生成特征嵌入 (embedding) $f(s_t; \theta_f)$。可以将其视为状态空间的一个固定随机投影。
+2. **预测网络 ($\hat{f}$):** 该网络与智能体的策略同步训练。其目的是预测智能体遇到的状态的目标网络输出。它以 $s_t$ 作为输入，并输出 $\hat{f}(s_t; \theta_{\hat{f}})$，其中 $\theta_{\hat{f}}$ 是正在学习的参数。
+
+预测网络 $\hat{f}$ 通过最小化其预测与目标网络输出之间的均方误差 (MSE) 进行训练，使用智能体访问过的状态：
+
+
+$$
+L(\theta_{\hat{f}}) = \mathbb{E}_{s \sim D} \left[ || \hat{f}(s; \theta_{\hat{f}}) - f(s; \theta_f) ||^2 \right]
+$$
+
+
+其中 $D$ 代表智能体访问过的状态分布。
+
+> RND架构使用一个训练过的预测网络来近似给定状态的固定随机目标网络的输出。预测误差作为内在奖励。
+
+### 计算内在奖励
+
+RND 在时间步 $t$ 产生的内在奖励 $r_t^i$ 简单来说就是预测网络对当前状态 $s_t$ 的预测误差（通常是平方误差）：
+
+
+$$
+r_t^i = || \hat{f}(s_t; \theta_{\hat{f}}) - f(s_t; \theta_f) ||^2
+$$
+
+
+其道理显而易见:
+
+- **新颖状态:** 当智能体遇到一个不常出现的状态 $s_t$ 时，预测网络 $\hat{f}$ 将可能对固定目标 $f(s_t)$ 做出较差的预测。这导致较大的预测误差，从而产生较高的内在奖励 $r_t^i$。这种高奖励促使智能体进一步对这种新颖状态及类似状态进行调查。
+- **熟悉状态:** 当智能体重复访问某个特定状态或状态空间区域时，预测网络 $\hat{f}$ 在这些状态上得到训练，并且更擅长预测目标网络对它们的输出。预测误差减小，导致内在奖励降低。这种奖励的减少自然地引导智能体离开已充分探查的区域，转向环境中可能更有价值、尚未探查的部分。
+
+这个过程将已访问状态的知识“蒸馏”到预测网络中，而误差充当了新颖性的信号。
+
+### 归一化 (normalization)与奖励组合
+
+原始预测误差根据状态、网络架构和训练阶段的不同，其规模可能显著变化。将内在奖励归一化以稳定学习是常见做法。一种典型方法是将原始误差除以迄今为止遇到的内在奖励的标准差的运行估计值。
+
+用于训练强化学习 (reinforcement learning)智能体的最终奖励信号（例如，使用PPO或A2C）通常是来自环境的外在奖励 $r_t^e$ 与归一化内在奖励 $r_t^i$ 的加权和：
+
+
+$$
+r_t = r_t^e + \beta r_t^i
+$$
+
+
+超参数 (parameter) (hyperparameter) $\beta$ 控制着额外奖励相对于任务奖励的影响力。
+
+### RND的优势
+
+1. **对随机性的鲁棒性:** 由于目标 $f(s_t)$ 仅依赖于当前状态 $s_t$ 和固定参数 (parameter) $\theta_f$，RND 固有地对环境动态中不可预测的元素不那么敏感，相比于那些试图预测*下一*状态或行动后果的方法。它纯粹关注状态的新颖性。
+2. **简洁与稳定性:** RND 避免了学习环境的逆向或正向动态模型的复杂性。目标网络是固定的，使得预测任务可能比预测环境动态更稳定，因为如果环境包含其他智能体或复杂的非平稳性，环境动态本身可能会发生变化。
+3. **高效寻觅:** RND 在富有挑战性的寻觅任务中表现出强大的性能，特别是那些外在奖励稀疏、内在激励对引导智能体非常重要的任务。
+
+### 考量因素
+
+尽管有效，RND 在实施过程中有一些方面需要考量：
+
+- **网络架构:** 预测网络和目标网络的架构选择会影响性能。更深或更复杂的目标网络可能会为每个状态提供更独特的特征，但同时也可能更难预测。
+- **初始化:** 目标网络的随机初始化很重要。不同的初始化会导致不同的随机投影，并可能影响学习动态。
+- **归一化 (normalization):** 对内在奖励进行适当的归一化对于稳定训练很重要。所用的方法（例如，运行均值/标准差）和缩放因子 $\beta$ 都是需要调整的超参数 (parameter) (hyperparameter)。
+- **计算成本:** RND 在每一步中增加了两个网络（预测器和目标）的前向计算以及训练预测网络的后向计算。
+
+总而言之，随机网络蒸馏提供了一种实用且有效的机制，用于基于状态新颖性生成额外寻觅奖励。通过训练一个网络来预测固定随机网络在已经历状态上的输出，RND 为不熟悉的状态生成高内在奖励，有效地推动在复杂环境中的寻觅活动，尤其是在预测环境动态可能不可靠或过于复杂的情况下。
+
+## 参考资料
+
+- [Curiosity-driven Exploration by Self-supervised Prediction](https://arxiv.org/abs/1705.05363) — Deepak Pathak, Pulkit Agrawal, Alexei A. Efros, Trevor Darrell (2017)
+  Journal: International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1705.05363](https://doi.org/10.48550/arXiv.1705.05363)
+  介绍了内在好奇心动机（ICM），一种利用环境动力学自监督预测生成内在奖励的基础方法。
+- [A Review on Intrinsic Motivation in Reinforcement Learning](https://www.mdpi.com/1424-8220/21/18/6088) — Li Meng, Huixin Tian, Junshan Zhang (2021)
+  Journal: Sensors; Publisher: MDPI; Volume: 21; Pages: 6088; DOI: [10.3390/s21186088](https://doi.org/10.3390/s21186088)
+  提供了强化学习中内在动机技术的全面调查，为RND及其在各种探索策略中的作用提供了更广阔的背景。

@@ -1,0 +1,41 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "multi-head-self-attention"
+lesson: "single-attention-head-limitations"
+sourceId: 1952
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-3-multi-head-self-attention/single-attention-head-limitations"
+title: "单一注意力头的局限性"
+description: "为何单一注意力机制可能难以应对多样化的关联模式。"
+order: 2
+plots: []
+sourceHash: "b223a84333e9ad5dbc0df1adfa7474dc9934b1e797cd6f00d98aeab90d6db898"
+sourceCorrections: []
+---
+
+自注意力 (self-attention)机制 (attention mechanism)通过让查询、键和值（$Q, K, V$）源自同一输入序列，使模型能够衡量不同token的相对重要性。然而，每个位置依赖于*单一*注意力计算会带来显著的制约。
+
+设想缩放点积注意力函数对于特定查询（代表一个token）的输出。它是值向量 (vector)的加权和，其中权重 (weight)由查询与所有键的匹配度决定。此过程为序列中每个位置生成一个单一的上下文 (context)向量。
+
+主要制约出现是因为这种单一注意力机制必须学习仅使用一套注意力权重来编码多种类型的关系和特征。考虑哪些信息可能是相关的：
+
+1. **句法关联：** 当前token在结构上与其它token如何关联（例如，主谓一致）？
+2. **语义相似性：** 哪些其它token具有相关含义？
+3. **位置信息：** 哪些token在附近，或处于特定的相对位置？
+4. **指代关系：** 哪些其它token指代同一实体？
+
+单一注意力头被迫将这些可能不同的关联信号平均成一个表示。例如，强烈关注一个句法上关联的动词可能需要降低对一个语义相似但句法上相距较远的名词的关注。这种平均化效应会造成信息瓶颈，可能阻止模型同时获取不同的、细致的模式。如果模型学习了一个尝试满足所有需求的“平均”注意力模式，它在获取任何特定模式时都可能表现不佳。
+
+此外，将输入嵌入 (embedding)转换为单一$Q, K, V$空间的初始线性投影也可能具有限制性。模型学习一套单一的投影矩阵（$W^Q, W^K, W^V$）。这种单一转换可能将输入投影到一个子空间，该子空间会突出某些特征，但会掩盖其他特征。这限制了模型查看输入嵌入中不同表示子空间的能力，而这些子空间中不同类型的关系可能更易于辨识。
+
+设想处理这个句子：“该模型架构，其依赖于注意力机制，表现良好。” 对于token“architecture”，一个单一注意力头可能需要同时确定它与“model”（修饰语）以及“performs”（执行动作的主语）之间的关系。学习到的注意力权重将代表了这些不同关联需求之间的折衷。
+
+单一注意力计算的这种固有局限促使人们发展出一种更精巧的方法：多头注意力 (multi-head attention)。通过并行进行多次注意力计算，并使用不同的学习到的线性投影，模型能够共同关注来自不同表示子空间的信息，获取更丰富的特征和关系集合，而无需将它们强行通过一个单一瓶颈。我们将在下一节审视这一机制。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  该论文介绍了Transformer架构和多头注意力机制，解释了其允许模型同时关注不同信息的目的。
+- [Analyzing Multi-Head Self-Attention: Specialized Heads Do The Heavy Lifting](https://aclanthology.org/P19-1051/) — Hu, Minghao, Peng, Yuxing, Huang, Zhen, Li, Dongsheng, Lv, Yiwei (2019)
+  Journal: Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics; Publisher: Association for Computational Linguistics; Pages: 537–546; DOI: [10.18653/v1/P19-1051](https://doi.org/10.18653/v1/P19-1051)
+  这项研究通过实证表明，不同的注意力头专门捕获不同类型的语言依赖关系（例如句法、共指），为单头注意力的局限性提供了证据。

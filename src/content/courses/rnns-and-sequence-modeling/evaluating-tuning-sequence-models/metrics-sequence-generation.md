@@ -1,0 +1,93 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "evaluating-tuning-sequence-models"
+lesson: "metrics-sequence-generation"
+sourceId: 2647
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-10-evaluating-tuning-sequence-models/metrics-sequence-generation"
+title: "序列生成模型的评估指标"
+description: "介绍常用于评估序列生成模型（例如，语言模型）的困惑度等指标。"
+order: 3
+plots: []
+sourceHash: "8477b931004f71c3e1a9f52f7fb9af1be32610d4c011488ec7186f725e436de5"
+sourceCorrections: []
+---
+
+评估序列生成模型，例如用于文本生成、机器翻译或音乐创作的模型，与分类或回归任务相比，具有独特的难点。与预测单一类别标签或数值不同，生成的序列通常没有唯一的“正确”答案。一个好故事可以用多种方式书写，一个句子也可以用不同的措辞正确翻译。因此，像准确率或均方误差这样的指标通常不适用。
+
+相反，评估侧重于考察流畅性、连贯性、与提示的相关性（如果适用），以及模型捕捉其训练数据统计规律的程度。虽然人工判断通常是衡量整体质量的最佳方式，但它耗时且昂贵。因此，我们依赖自动化指标，并认识到它们的局限性，以此来指导模型的开发和比较。
+
+### 困惑度：衡量预测不确定性
+
+概率序列模型，特别是语言模型，最常见的内部评估指标之一是**困惑度（Perplexity, PPL）**。它量化 (quantization)了概率模型预测样本的优劣。直观地讲，困惑度衡量了模型在遇到测试集序列时的“意外程度”。较低的困惑度分数表明模型对其观察到的序列赋予了更高的概率，表明它更有效地学习了数据中的基本模式。
+
+困惑度直接源自交叉熵损失，交叉熵损失通常在训练期间被最小化。对于一个词元 (token)序列 $W = w_1, w_2, ..., w_N$，根据模型 $P$，交叉熵 $H(W)$ 是每个词元的平均负对数似然：
+
+
+$$
+H(W) = -\frac{1}{N} \sum_{i=1}^{N} \log_2 P(w_i | w_1, ..., w_{i-1})
+$$
+
+
+这里，$P(w_i | w_1, ..., w_{i-1})$ 表示模型在给定前一个词元的情况下，分配给第 $i$ 个词元 $w_i$ 的概率。困惑度则定义为2的交叉熵次方：
+
+
+$$
+\text{PPL}(W) = 2^{H(W)} = \left( \prod_{i=1}^{N} \frac{1}{P(w_i | w_1, ..., w_{i-1})} \right)^{1/N}
+$$
+
+
+**理解困惑度：**
+
+你可以将困惑度视为模型的*有效分支系数*。如果一个语言模型在测试集上的困惑度为50，这意味着，平均而言，模型在预测下一个词时，其困惑或“难以抉择”的程度，就如同它在每一步都需要从50个可能的词中均匀且独立地选择一样。一个在每一步都为正确的下一个词分配概率1的完美模型，其困惑度将是 $2^0 = 1$。值越低越好。
+
+**实际用途：**
+
+- **监控训练：** 验证困惑度通常在训练期间被追踪。下降趋势表明模型正在更好地学习数据分布。
+- **模型比较：** 困惑度允许比较不同的模型，*前提是它们使用相同的词汇和分词 (tokenization)方式*。在相同测试集上取得较低困惑度的模型，通常被认为在建模该数据统计特性方面表现更好。
+
+**局限性：**
+
+- **敏感性：** 困惑度对词汇量、分词方法和预处理步骤高度敏感。只有当这些因素在所有评估中相同时，比较困惑度分数才有意义。
+- **质量关联：** 尽管较低的困惑度通常与更好的*预测*性能相关，但它不保证在人工判断方面能实现更高*质量*的生成。如果训练数据统计反映了这一点，模型可能会通过偏爱常见但平淡或重复的短语，甚至语法上正确的无意义内容，来实现低困惑度。它不直接衡量连贯性、创造性或事实准确性。
+- **词汇表 (vocabulary)外词：** 处理未知词汇显著影响困惑度计算。不同的策略（例如，映射到`<UNK>`词元）会影响结果。
+
+尽管存在局限性，困惑度仍然是评估生成序列模型基本预测能力的标准化且计算高效的指标，特别是在开发期间和进行初步模型比较时。
+
+### 其他常用指标（取决于任务）
+
+虽然困惑度衡量的是内部模型拟合程度，但其他指标通过将输出序列与一个或多个参考序列进行比较，来评估*输出*序列的质量。这些指标在特定任务中很常见：
+
+- **BLEU（双语评估替补）：** 广泛用于机器翻译。它衡量生成序列中n-gram（n个连续项的序列）与参考序列相比的精确度。分数越高表明重叠越多。它会惩罚过短的序列。
+- **ROUGE（面向召回的摘要评估替补）：** 文本摘要中常用。它衡量n-gram的召回率，关注参考序列中的n-gram是否出现在生成序列中。存在多种变体（ROUGE-N、ROUGE-L、ROUGE-S）。
+- **METEOR（带有显式排序的翻译评估指标）：** 机器翻译中BLEU的替代品，考虑同义词（使用WordNet）和词干提取，旨在与人工判断有更好的相关性。
+- **词错误率（WER）：** 主要用于自动语音识别（ASR）。它计算将生成序列转换为参考序列所需的最小替换、删除和插入次数，并按参考长度归一化 (normalization)。分数越低越好。
+
+这些指标需要高质量的参考序列，但它们不总是可用或易于定义，特别是对于更具创造性的任务。它们捕捉相似性的不同方面（精确度、召回率、语义重叠），并常常相互补充。
+
+### 人工评估的不可或缺作用
+
+归根结底，对于许多生成任务，特别是涉及创造性或复杂指令的任务，自动化指标力有不逮。生成的故事是否合理？对话是否引人入胜？翻译在上下文 (context)中是否流畅准确？这类问题最好由人工来回答。
+
+人工评估方法包括：
+
+- **评分量表：** 要求评估者基于流畅性、连贯性、相关性、趣味性等量表对生成的序列进行评分。
+- **成对比较：** 向评估者展示来自两个不同模型的输出结果，并要求他们选择表现更好的一个。
+- **任务成功率：** 对于面向目标的生成（例如，生成代码、回答问题），评估输出是否满足任务要求。
+
+虽然资源密集，但人工评估提供了对真实生成质量最可靠的评估，应尽可能地纳入，特别是在最终模型选择或报告基准结果时。
+
+在实际操作中，评估序列生成模型涉及使用适合该任务的自动化指标组合（如语言模型的困惑度，翻译/摘要的BLEU/ROUGE），并结合有针对性的人工评估，以获得对模型性能的全面理解。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  一本基础性教材，涵盖了自然语言处理中的语言模型、困惑度以及通用评估技术。
+- [BLEU: a Method for Automatic Evaluation of Machine Translation](https://aclanthology.org/P02-1040/) — Kishore Papineni, Salim Roukos, Todd Ward, Wei-Jing Zhu (2002)
+  Journal: Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics; Publisher: Association for Computational Linguistics; Pages: 311–318; DOI: [10.3115/1073083.1073135](https://doi.org/10.3115/1073083.1073135)
+  介绍了BLEU的原始论文，这是一种广泛采用的机器翻译自动评估指标。
+- [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/) — Chin-Yew Lin (2004)
+  Journal: Text Summarization Branches Out; Publisher: Association for Computational Linguistics; Pages: 74-81; DOI: [10.3115/1621378.1621389](https://doi.org/10.3115/1621378.1621389)
+  介绍了ROUGE指标，这是一个用于评估自动生成摘要质量的成熟工具。
+- [METEOR: An Automatic Metric for MT Evaluation with Improved Correlation with Human Judgments](https://aclanthology.org/W05-0909/) — Satanjeev Banerjee, Alon Lavie (2005)
+  Journal: Proceedings of the ACL Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization; Publisher: Association for Computational Linguistics; Pages: 65-72
+  描述了METEOR，这是一种机器翻译评估指标，旨在比BLEU更好地与人类判断相关联。

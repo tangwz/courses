@@ -1,0 +1,305 @@
+---
+course: "adversarial-machine-learning"
+chapter: "advanced-evasion-attacks"
+lesson: "implementing-evasion-attacks-practical"
+sourceId: 4136
+sourceUrl: "https://apxml.com/zh/courses/adversarial-machine-learning/chapter-2-advanced-evasion-attacks/implementing-evasion-attacks-practical"
+title: "实现规避攻击：动手实践"
+description: "使用机器学习安全库，实践实现PGD和C&W等高级规避攻击。"
+order: 7
+plots: []
+sourceHash: "5456c9ff93e3874690fbb8e33b08a444882ed6f41677987404d59eca5440f9cf"
+sourceCorrections: []
+---
+
+这一实践指导展示了如何实现两种重要的规避攻击：投影梯度下降 (gradient descent)（PGD）和Carlini & Wagner（C&W）。这些动手实现利用对抗鲁棒性工具箱（ART）库，这是一个旨在评估机器学习 (machine learning)模型安全性的流行Python框架。ART为攻击和防御提供了便捷的抽象，并与PyTorch和TensorFlow等常见的深度学习 (deep learning)框架良好集成。
+
+通过这些示例的学习，您将更好地理解这些攻击如何生成对抗样本，以及它们的参数 (parameter)如何影响最终结果。我们假设您已设置好Python环境，并安装了PyTorch（或TensorFlow）和ART。
+
+### 环境配置
+
+首先，请确保您已安装所需的库。在本例中，我们将使用ART和PyTorch。您可以使用pip进行安装：
+
+```bash
+pip install adversarial-robustness-toolbox[pytorch] torch torchvision
+```
+
+我们还需要一个训练好的模型和一些数据。为简化起见，我们使用在MNIST数据集上预训练 (pre-training)的简单卷积神经网络 (neural network)（CNN）。您通常会加载自己训练好的模型，但ART为常见数据集和基本模型提供了实用工具，这有助于进行试验。
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import numpy as np
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+
+# 定义一个简单的CNN模型（示例）
+class SimpleMNISTCNN(nn.Module):
+    def __init__(self):
+        super(SimpleMNISTCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(7*7*64, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        x = x.view(-1, 7*7*64)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        # ART分类器需要输出logit值
+        return x
+
+# 加载MNIST数据
+transform = transforms.Compose([transforms.ToTensor()])
+test_dataset = datasets.MNIST('./data', train=False, download=True, transform=transform)
+test_loader = DataLoader(test_dataset, batch_size=100, shuffle=False)
+
+# --- 重要提示 ---
+# 对于本次实践，假设'model'是SimpleMNISTCNN的一个预训练实例
+# 并且设置为评估模式: model.eval()
+# 例如：
+# model = SimpleMNISTCNN()
+# model.load_state_dict(torch.load('path/to/your/trained_mnist_cnn.pth'))
+# model.eval()
+# device = torch.device("cuda" if torch.cuda_is_available() else "cpu")
+# model.to(device)
+#
+# 您需要将此处替换为加载您实际训练好的模型。
+# 为演示目的，我们将假设'model'存在。
+# 让我们创建一个占位模型（未训练）仅用于代码结构。
+# !!! 请将其替换为实际训练模型的加载代码 !!!
+model = SimpleMNISTCNN()
+model.eval()
+device = torch.device("cpu") # 在此示例结构中使用CPU
+model.to(device)
+# !!! 占位符结束 !!!
+
+# 定义损失函数和优化器（ART分类器封装器需要）
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# 获取一批测试数据
+data_iter = iter(test_loader)
+x_test_batch, y_test_batch = next(data_iter)
+x_test_batch, y_test_batch = x_test_batch.to(device), y_test_batch.to(device)
+
+# 转换为numpy以供ART使用（一些ART函数更偏好numpy）
+x_test_np = x_test_batch.cpu().numpy()
+y_test_np = y_test_batch.cpu().numpy() # 保持为整数标签
+```
+
+### 使用ART封装模型
+
+ART要求将您的原生模型（PyTorch、TensorFlow等）封装在ART分类器对象中。此封装器为攻击和防御提供了一个标准化的API。
+
+```python
+from art.estimators.classification import PyTorchClassifier
+
+# 使用ART的PyTorchClassifier封装PyTorch模型
+classifier = PyTorchClassifier(
+    model=model,
+    loss=criterion,
+    optimizer=optimizer, # 优化器对于推理攻击可能不是必需的，但这是一个好习惯
+    input_shape=(1, 28, 28), # MNIST图像形状（通道、高、宽）
+    nb_classes=10,         # MNIST中的类别数量
+    clip_values=(0.0, 1.0) # 输入数据范围（MNIST张量通常在[0, 1]之间）
+)
+```
+
+现在，`classifier`已准备好与ART的攻击实现配合使用。
+
+### 实现投影梯度下降 (gradient descent)（PGD）
+
+PGD是FGSM的一种迭代扩展。它沿梯度方向执行多个小步骤，每步之后将结果投影回允许的扰动空间（$L_p$球）。这通常比单步方法能找到更有效的对抗样本。
+
+PGD的重要参数 (parameter)：
+
+- `norm`：用于约束扰动的$L_p$范数（例如，$L_\infty$使用`np.inf`，$L_2$使用`2`）。$L_\infty$常用于图像，限制每个像素的最大变化。
+- `eps`：最大扰动幅度 $\epsilon$。控制攻击的“强度”。
+- `eps_step`：每次迭代的步长。应小于`eps`。
+- `max_iter`：迭代次数。更多迭代可以找到更好的样本，但耗时更长。
+- `targeted`：如果为`True`，则尝试使模型预测特定目标类别。如果为`False`（默认），则尝试导致任意错误分类。
+
+我们来实现$L_\infty$ PGD攻击：
+
+```python
+from art.attacks.evasion import ProjectedGradientDescent
+
+# 配置PGD攻击
+pgd_attack = ProjectedGradientDescent(
+    estimator=classifier,
+    norm=np.inf,        # 使用L-无限范数
+    eps=0.1,            # 最大扰动（epsilon）- 根据模型/数据进行调整
+    eps_step=0.01,      # 每次迭代的步长
+    max_iter=40,        # 迭代次数
+    targeted=False,     # 无目标攻击
+    num_random_init=1,  # 使用随机初始化以增加攻击的有效性
+    batch_size=100
+)
+
+# 为测试批次生成对抗样本
+print("正在生成PGD对抗样本...")
+x_test_adv_pgd = pgd_attack.generate(x=x_test_np)
+print("PGD生成完成。")
+
+# 在原始样本和对抗样本上评估模型
+predictions_clean = classifier.predict(x_test_np)
+accuracy_clean = np.sum(np.argmax(predictions_clean, axis=1) == y_test_np) / len(y_test_np)
+print(f"在原始样本上的准确率: {accuracy_clean * 100:.2f}%")
+
+predictions_pgd = classifier.predict(x_test_adv_pgd)
+accuracy_pgd = np.sum(np.argmax(predictions_pgd, axis=1) == y_test_np) / len(y_test_np)
+print(f"在PGD对抗样本上的准确率 (eps={pgd_attack.eps:.2f}): {accuracy_pgd * 100:.2f}%")
+
+# 计算平均L-无限失真
+avg_linf_distortion_pgd = np.mean(np.max(np.abs(x_test_adv_pgd - x_test_np), axis=(1, 2, 3)))
+print(f"平均L-无限失真（PGD）: {avg_linf_distortion_pgd:.4f}")
+```
+
+与原始样本相比，您应该观察到对抗样本上的准确率显著下降，前提是您的模型没有专门训练以对抗PGD。平均$L_\infty$失真应接近指定的`eps`值。
+
+### 实现Carlini & Wagner (C&W) L2攻击
+
+C&W攻击是基于优化的，它将对抗样本的寻找视为一个约束优化问题。$L_2$版本在寻找$L_2$距离小的扰动方面特别有效，这意味着变化的整体幅度被最小化，与相似成功率下的$L_\infty$攻击相比，通常会产生视觉上不那么明显/可察觉的扰动。
+
+C&W $L_2$的参数 (parameter)：
+
+- `confidence`：控制错误类别的logit值与其它类别最大logit值之间的所需间隙。值越高，攻击越强，但可能增加失真。
+- `learning_rate`：优化过程的学习率。
+- `binary_search_steps`：寻找失真与分类损失之间最优折衷常数的步数。
+- `max_iter`：每个二分搜索步骤内优化的最大迭代次数。
+- `batch_size`：分批处理样本。
+
+我们来实现C&W $L_2$攻击：
+
+```python
+from art.attacks.evasion import CarliniL2Method
+
+# 配置C&W L2攻击
+# 注意：C&W可能计算成本很高，特别是在迭代/步数很多的情况下。
+# 如有需要，可减少max_iter或binary_search_steps以加快执行速度。
+cw_attack = CarliniL2Method(
+    classifier=classifier,
+    confidence=0.0,         # 最小置信度间隙
+    learning_rate=0.01,     # 优化器学习率
+    binary_search_steps=5,  # 二分搜索步数
+    max_iter=10,            # 每个二分搜索步骤的最大迭代次数
+    batch_size=100,
+    targeted=False          # 无目标攻击
+)
+
+# 生成对抗样本
+print("正在生成C&W L2对抗样本...")
+# 警告：这可能很慢！为方便试验，请考虑在x_test_np的较小子集上运行。
+# x_test_adv_cw = cw_attack.generate(x=x_test_np[:10]) # 示例：使用前10个样本
+x_test_adv_cw = cw_attack.generate(x=x_test_np)
+print("C&W L2生成完成。")
+
+# 在C&W样本上评估模型
+# 如果您使用了上面的子集，请仅在该子集和相应的y_test_np上进行评估
+# y_test_subset = y_test_np[:10]
+# accuracy_cw = np.sum(np.argmax(classifier.predict(x_test_adv_cw), axis=1) == y_test_subset) / len(y_test_subset)
+
+predictions_cw = classifier.predict(x_test_adv_cw)
+accuracy_cw = np.sum(np.argmax(predictions_cw, axis=1) == y_test_np) / len(y_test_np)
+print(f"在C&W L2对抗样本上的准确率: {accuracy_cw * 100:.2f}%")
+
+# 计算平均L2失真
+avg_l2_distortion_cw = np.mean(np.linalg.norm((x_test_adv_cw - x_test_np).reshape(len(x_test_np), -1), axis=1))
+print(f"平均L2失真（C&W）: {avg_l2_distortion_cw:.4f}")
+```
+
+通常，C&W $L_2$在达到较高攻击成功率（低准确率）的同时，能够保持较低的平均$L_2$失真，这与PGD在相似成功率下可能达到的效果不同，尽管也存在受$L_2$范数约束的PGD。其中的权衡点在于计算成本；C&W比PGD慢得多。
+
+### 扰动可视化
+
+将原始图像、对抗版本以及扰动本身进行可视化是很有帮助的。
+
+```python
+import matplotlib.pyplot as plt
+
+# 选择一个示例索引（例如，第一个）
+idx = 0
+
+# 确保数据格式适合matplotlib (H, W) 或 (H, W, C)
+# 压缩MNIST的通道维度
+original_image = x_test_np[idx].squeeze()
+adv_image_pgd = x_test_adv_pgd[idx].squeeze()
+adv_image_cw = x_test_adv_cw[idx].squeeze()
+
+perturbation_pgd = adv_image_pgd - original_image
+perturbation_cw = adv_image_cw - original_image
+
+# 获取此特定示例的模型预测
+pred_orig_probs = F.softmax(torch.tensor(predictions_clean[idx:idx+1]), dim=1).detach().numpy().flatten()
+pred_pgd_probs = F.softmax(torch.tensor(predictions_pgd[idx:idx+1]), dim=1).detach().numpy().flatten()
+pred_cw_probs = F.softmax(torch.tensor(predictions_cw[idx:idx+1]), dim=1).detach().numpy().flatten()
+
+pred_orig_label = np.argmax(pred_orig_probs)
+pred_pgd_label = np.argmax(pred_pgd_probs)
+pred_cw_label = np.argmax(pred_cw_probs)
+
+true_label = y_test_np[idx]
+
+# 绘图
+fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+
+# 第1行: PGD
+axes[0, 0].imshow(original_image, cmap='gray')
+axes[0, 0].set_title(f"原始图像\n真实: {true_label}, 预测: {pred_orig_label}\n置信度: {pred_orig_probs[pred_orig_label]:.2f}")
+axes[0, 0].axis('off')
+
+# 增强扰动可视化效果
+# 将颜色图中心设为零，并使用发散映射
+pert_vis_pgd = axes[0, 1].imshow(perturbation_pgd, cmap='coolwarm', vmin=-pgd_attack.eps, vmax=pgd_attack.eps)
+axes[0, 1].set_title(f"PGD扰动 ($L_\infty={np.max(np.abs(perturbation_pgd)):.3f}$)\n(视觉缩放)")
+axes[0, 1].axis('off')
+fig.colorbar(pert_vis_pgd, ax=axes[0, 1], shrink=0.7)
+
+axes[0, 2].imshow(adv_image_pgd, cmap='gray')
+axes[0, 2].set_title(f"PGD对抗样本\n预测: {pred_pgd_label}\n置信度: {pred_pgd_probs[pred_pgd_label]:.2f}")
+axes[0, 2].axis('off')
+
+# 第2行: C&W L2
+axes[1, 0].imshow(original_image, cmap='gray')
+axes[1, 0].set_title(f"原始图像\n真实: {true_label}, 预测: {pred_orig_label}\n置信度: {pred_orig_probs[pred_orig_label]:.2f}")
+axes[1, 0].axis('off')
+
+# 计算特定C&W扰动的L2范数
+l2_pert_cw = np.linalg.norm(perturbation_cw.flatten())
+pert_vis_cw = axes[1, 1].imshow(perturbation_cw, cmap='coolwarm', vmin=-np.abs(perturbation_cw).max(), vmax=np.abs(perturbation_cw).max())
+axes[1, 1].set_title(f"C&W扰动 ($L_2={l2_pert_cw:.3f}$)\n(视觉缩放)")
+axes[1, 1].axis('off')
+fig.colorbar(pert_vis_cw, ax=axes[1, 1], shrink=0.7)
+
+axes[1, 2].imshow(adv_image_cw, cmap='gray')
+axes[1, 2].set_title(f"C&W L2对抗样本\n预测: {pred_cw_label}\n置信度: {pred_cw_probs[pred_cw_label]:.2f}")
+axes[1, 2].axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+
+观察对抗样本在人眼看来与原始图像非常相似，但模型的预测却发生了明显变化。请注意PGD ($L_\infty$) 和 C&W ($L_2$) 扰动之间的结构和幅度差异。PGD通常会在许多像素上用满 $\epsilon$ 预算，而C&W $L_2$可能会产生更平滑、更分散的变化。
+
+### 试验和后续步骤
+
+本次实践为实现规避攻击提供了一个起点。请考虑以下后续步骤：
+
+1. **更改参数 (parameter)：** 试验PGD的不同`eps`、`eps_step`、`max_iter`，以及C&W的`confidence`、`learning_rate`、`max_iter`、`binary_search_steps`。观察这些如何影响攻击成功率和失真（$L_\infty$, $L_2$）。
+2. **不同范数：** 实现`norm=2`的PGD，并将其结果（准确率、L2失真）与PGD $L_\infty$和C&W $L_2$进行比较。
+3. **有目标攻击：** 修改攻击，使其`targeted=True`。您将需要提供目标标签（例如，`y_target = (y_test_np + 1) % 10`）。分析有目标攻击是否更难或更容易生成。
+4. **其他攻击：** 试验ART中提供的其他规避攻击，例如FGSM（`FastGradientMethod`）、基本迭代方法（BIM - 本质上是`num_random_init=0`的PGD）、DeepFool（`DeepFool`），或基于决策的攻击，如边界攻击（`BoundaryAttack`）。
+5. **不同模型/数据集：** 将这些攻击应用于更复杂的模型（例如ResNets）和数据集（例如CIFAR-10）。请注意，`eps`等参数可能需要根据数据集和输入归一化 (normalization)进行显著调整。
+
+通过实现和试验这些基础攻击，您将获得对构建对抗样本机制的实践理解，这对于理解攻击能力以及构建防御的挑战都非常重要。
+
+## 参考资料
+
+- [Towards Deep Learning Models Resistant to Adversarial Attacks](https://arxiv.org/abs/1706.06083) — Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, Adrian Vladu (2017)
+  Journal: International Conference on Learning Representations (ICLR'18); DOI: [10.48550/arXiv.1706.06083](https://doi.org/10.48550/arXiv.1706.06083)
+  这篇基础论文介绍了投影梯度下降（PGD）攻击，这是一种生成对抗样本的高效迭代方法，并讨论了对抗训练作为一种鲁棒防御机制。

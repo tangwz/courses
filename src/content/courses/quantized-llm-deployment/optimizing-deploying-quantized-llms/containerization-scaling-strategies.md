@@ -1,0 +1,133 @@
+---
+course: "quantized-llm-deployment"
+chapter: "optimizing-deploying-quantized-llms"
+lesson: "containerization-scaling-strategies"
+sourceId: 4660
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-4-optimizing-deploying-quantized-llms/containerization-scaling-strategies"
+title: "容器化与扩展策略"
+description: "使用容器（Docker）打包量化大型语言模型部署和扩展策略的良好实践。"
+order: 7
+plots: []
+sourceHash: "0575ac4d1fd7279c140c8a317da95b068fc157a5b001f4eb9b53c304d2636432"
+sourceCorrections: []
+---
+
+为部署准备优化后的量化 (quantization)大型语言模型，需要一致地打包应用，并设计策略以高效处理不同负载。容器化和扩展是在生产环境中实现可靠且高性能大型语言模型服务的**基本实践**。
+
+### 用容器打包
+
+容器化技术，主要是Docker，提供了一种标准化的方式，将你的量化 (quantization)大型语言模型推理 (inference)服务器、其依赖项、模型权重 (weight)以及任何必要的配置打包到一个单一、可移植的单元：一个容器镜像。这种方式为部署像大型语言模型推理服务这样复杂的应用提供了多个好处：
+
+1. **环境一致性**：容器封装所有依赖项（系统库、Python包、CUDA工具包版本、量化库（如`bitsandbytes`）或框架（如TensorRT-LLM）使用的专用内核）。这通过确保在开发、测试和生产中运行完全相同的环境，无论底层宿主系统如何，从而消除了“在我的机器上能跑”的问题。
+2. **隔离性**：容器在隔离环境中运行，避免了在同一宿主上运行的不同应用或相同应用的不同版本之间的冲突。
+3. **可移植性**：在一台机器上构建的容器镜像可以在任何其他机器或云环境上运行，只要有兼容的容器运行时（如Docker Engine）和必要的硬件（例如GPU）。
+4. **简化部署**：容器编排平台**使用**这些镜像来系统地管理部署、扩展和更新。
+
+#### 为量化大型语言模型推理创建Dockerfile
+
+`Dockerfile`提供构建容器镜像的指令。对于量化大型语言模型服务，一个典型的`Dockerfile`可能包括：
+
+- **起始镜像选择**：从包含必要驱动和库的起始镜像开始，通常是与你的量化库和推理服务器要求相符的官方NVIDIA CUDA镜像（`nvidia/cuda:<version>-cudnn<version>-runtime-ubuntu<version>`）。
+- **依赖项安装**：使用包管理器，如`apt`（用于系统库）和`pip`（用于Python包），安装推理服务器（例如vLLM、TGI）、量化库（`transformers`、`auto-gptq`、`bitsandbytes`）以及其他所需工具。明确版本以确保兼容性。
+- **复制工件**：将你的应用代码（推理服务器设置脚本）、配置文件，以及最重要的是量化模型权重复制到镜像中。注意，将大型模型权重直接包含在镜像中可能导致镜像尺寸非常大；替代策略包括挂载卷或使用初始化容器在运行时下载模型。
+- **设置入口点/命令**：指定从镜像启动容器时运行推理服务器的命令，确保它加载量化模型并监听特定端口的请求。
+- **暴露端口**：声明推理服务器将监听的网络端口（例如，HTTP的80端口）。
+
+这是一个使用预量化模型的推理服务器的例子：
+
+```dockerfile
+# 使用合适的NVIDIA CUDA基础镜像
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+
+# 设置工作目录
+WORKDIR /app
+
+# 如果需要，安装系统依赖项
+# RUN apt-get update && apt-get install -y --no-install-recommends some-package && rm -rf /var/lib/apt/lists/*
+
+# 如果Python和pip未安装，则安装它们，然后安装Python依赖项
+RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制应用代码和量化模型工件
+# 考虑挂载大型模型而非直接复制
+COPY ./inference_server.py .
+COPY ./quantized_model_repository /app/quantized_model_repository
+
+# 暴露服务器将运行的端口
+EXPOSE 8000
+
+# 运行推理服务器的命令
+CMD ["python3", "inference_server.py", "--model-path", "/app/quantized_model_repository", "--port", "8000"]
+```
+
+构建并将此镜像推送到容器注册表（如Docker Hub、AWS ECR、Google Artifact Registry）使其可用于部署。
+
+### 推理 (inference)服务的扩展策略
+
+大型语言模型推理，即使经过量化 (quantization)，仍然是资源密集型的。你的推理服务器的单个实例可能无法处理生产负载或满足延迟要求。扩展策略确保你的服务能够有效处理波动的请求量。
+
+#### 横向扩展
+
+这是无状态Web服务最常见的方法，包括许多大型语言模型推理服务器。它涉及在负载均衡器后面运行你的应用的多个相同实例（容器）。负载均衡器将传入请求分发到可用实例。
+
+- **优势**：增加吞吐量 (throughput)，提高容错性（如果一个实例出现故障，其他实例可以接管）。
+- **实现**：像Kubernetes这样的容器编排平台擅长管理容器化应用的副本。你定义所需的副本数量，编排器会确保它们正在运行，并将它们分布在可用节点上。
+- **量化影响**：因为量化模型需要更少的内存（特别是GPU显存 (VRAM)）并且每个请求可能需要更少的计算，你通常可以在单个硬件节点（例如多GPU服务器）上放置更多实例，或者使用更小/更便宜的节点，相比于部署未量化模型，这使横向扩展更具成本效益。
+
+> 典型的横向扩展设置，在该设置中负载均衡器将请求分发到容器化量化大型语言模型推理服务的多个实例。
+
+#### 纵向扩展
+
+这涉及增加分配给应用单个实例的资源，例如，使用具有更强大CPU、更多RAM或更强大/多个GPU的机器。
+
+- **优势**：有时相比于许多小型实例可以简化部署管理。如果单个请求需要比小型实例更多资源，则可能需要。
+- **限制**：纵向扩展存在物理限制。它通常变得不成比例地昂贵。高可用性需要冗余，这通常会回归到至少需要两个（纵向扩展的）实例。
+- **量化影响**：量化主要有助于避免对极端纵向扩展的需求，因为它首先减少了每个实例的资源需求。
+
+#### 自动扩展
+
+自动扩展不是维持固定数量的实例（静态横向扩展），而是根据实时需求自动调整运行实例的数量。这通常通过使用以下指标实现：
+
+- CPU或GPU利用率
+- 请求队列长度
+- 平均响应延迟
+- **实现**：像Kubernetes这样的编排器提供了像水平Pod自动扩展器（HPA）这样的机制。你定义目标指标阈值（例如，“将平均GPU利用率保持在70%以下”），HPA会自动在指定的最小和最大限制内增加或减少容器副本的数量。
+- **优势**：成本效益（只在高峰期支付所需资源），对负载峰值的响应能力。
+- **挑战**：需要仔细调整扩展指标和阈值，以避免不稳定（过快地扩大和缩小）或对负载变化响应迟缓。冷启动（新实例初始化和加载模型所需的时间）可能影响扩展事件期间的响应能力。
+
+### 编排平台
+
+手动管理容器生命周期、网络、存储和扩展是复杂的。容器编排平台自动化这些任务。Kubernetes是事实上的标准。
+
+- **Kubernetes 要点**：
+  - **Pods**：可部署的最小单元，通常包含一个应用容器（你的大型语言模型推理 (inference)服务器）。
+  - **Deployments**：管理无状态应用，定义所需状态（例如，镜像版本、副本数量）并处理滚动更新或回滚。
+  - **Services**：为一组Pod提供稳定的IP地址和DNS名称，充当内部负载均衡器。
+  - **HorizontalPodAutoscaler (HPA)**：根据观测到的指标自动扩展部署中的Pod数量。
+  - **Nodes**：运行容器的工作机器（虚拟机或物理服务器）。
+
+使用Kubernetes允许你声明所需的部署配置，平台会维护该状态，自动处理故障和扩展。
+
+### 量化 (quantization)模型的具体考量
+
+- **资源请求与限制**：在Kubernetes中定义部署时，准确指定每个容器实例所需的CPU、内存和GPU资源。量化显著降低了这些需求，影响Kubernetes如何将Pod调度到节点上。
+- **冷启动和模型加载**：大型量化模型加载到GPU内存中仍需时间。自动扩展期间缓解冷启动延迟的策略包括：
+  - 保持最小数量的实例运行（“预热池”）。
+  - 如果模型未烘焙到镜像中，则使用更快的网络附加存储来存放模型。
+  - 优化推理 (inference)服务器代码中的模型加载过程。
+- **硬件亲和性与调度**：量化模型可能依赖于针对特定GPU架构（例如最新NVIDIA GPU上的Tensor Cores）优化的内核。使用Kubernetes特性，如`nodeSelector`或`nodeAffinity`，以确保你的推理Pod调度到具有兼容硬件的节点上，从而实现最佳性能。Taints和tolerations也可以为推理工作负载保留特定节点（如高端GPU节点）。
+
+通过将使用Docker等工具进行容器化，与由Kubernetes等编排器管理的智能扩展策略结合起来，你可以为量化大型语言模型构建弹性、高性能且成本效益高的部署系统，确保它们在生产环境中可靠地提供价值。下一节将讨论监控这些已部署的服务以保持性能和健康。
+
+## 参考资料
+
+- [Docker Documentation](https://docs.docker.com/) — Docker Inc. (2024)
+  理解Docker、创建Dockerfile、构建镜像和管理容器的官方综合资源，是应用程序打包的基础。
+- [Kubernetes Documentation](https://kubernetes.io/docs/) — The Kubernetes Authors (2024)
+  Publisher: Cloud Native Computing Foundation (CNCF)
+  使用Kubernetes部署、管理和扩展容器化应用程序的权威指南，涵盖Pod、Deployment、Service和Horizontal Pod Autoscaler等概念。
+- [Kubernetes Up and Running: Dive into the Future of Infrastructure](https://www.oreilly.com/library/view/kubernetes-up-and/9781098110208/) — Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson (2022)
+  Publisher: O'Reilly Media
+  一本基础书籍，提供Kubernetes架构、部署模式和生产环境中扩展应用程序的操作最佳实践的整体理解。

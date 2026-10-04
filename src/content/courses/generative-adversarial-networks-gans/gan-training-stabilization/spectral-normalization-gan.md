@@ -1,0 +1,113 @@
+---
+course: "generative-adversarial-networks-gans"
+chapter: "gan-training-stabilization"
+lesson: "spectral-normalization-gan"
+sourceId: 2699
+sourceUrl: "https://apxml.com/zh/courses/generative-adversarial-networks-gans/chapter-3-gan-training-stabilization/spectral-normalization-gan"
+title: "谱范数归一化"
+description: "运用谱范数归一化以使判别器训练稳定。"
+order: 6
+plots: []
+sourceHash: "f760d8445ef57a38376cc17b85d24f40bae2a59dc729eab8d6d7b646b3d974d8"
+sourceCorrections: []
+---
+
+实现稳定的GAN训练，通常取决于对判别器行为的控制，特别是其梯度特性。尽管像带有权重 (weight)裁剪的Wasserstein损失（WGAN）或梯度惩罚（WGAN-GP）这样的方法旨在强制执行稳定散度估计所需的Lipschitz约束，但它们各自面临一些问题。权重裁剪通过将权重限制在较小范围来影响判别器的学习能力，而梯度惩罚则增加了计算负担并引入了其自身的超参数 (parameter) (hyperparameter)。
+
+谱范数归一化 (normalization)（SN）提供了一种替代且巧妙的方法，通过直接控制判别器各层的Lipschitz常数来使其稳定。这是一种权重归一化技术，通过限制每层权重矩阵的谱范数来规范网络。
+
+### 理解谱范数
+
+回想一下，函数的Lipschitz常数衡量其最大“陡峭度”。对于线性函数 $f(\mathbf{x}) = W\mathbf{x}$，其Lipschitz常数由权重 (weight)矩阵 $W$ 的*谱范数*给出，记作 $\sigma(W)$。
+
+谱范数 $\sigma(W)$ 定义为矩阵 $W$ 的最大奇异值。从直观上看，它表示线性变换 $W$ 可以拉伸或缩放任何输入向量 (vector) $\mathbf{x}$ 的最大倍数：
+
+
+$$
+\sigma(W) = \max_{\mathbf{x} \neq \mathbf{0}} \frac{\| W\mathbf{x} \|_2}{\| \mathbf{x} \|_2} = \max_{\| \mathbf{x} \|_2 = 1} \| W\mathbf{x} \|_2
+$$
+
+
+这里，$\| \cdot \|_2$ 表示欧几里得范数（L2范数）。
+
+对于包含非线性激活函数 (activation function) $\phi$（例如判别器中常见的LeakyReLU）的神经网络 (neural network)层，如 $f(\mathbf{x}) = \phi(W\mathbf{x})$，如果激活函数 $\phi$ 本身是1-Lipschitz的（这意味着它不会增加距离，这对于ReLU、LeakyReLU、tanh等都是如此），那么整个层的Lipschitz常数就受限于权重矩阵的谱范数： $Lip(f) \le \sigma(W)$。
+
+鉴于深度神经网络是多层组合而成，控制每层权重矩阵的谱范数有助于控制整个判别器网络的Lipschitz常数。如果每层 $f_i$ 具有Lipschitz常数 $L_i$，则复合函数 $F = f_n \circ \dots \circ f_1$ 的Lipschitz常数受限于乘积 $\prod_i L_i$。通过确保每个 $\sigma(W_i)$ 得到控制，我们能避免整体Lipschitz常数变得过大。
+
+### 谱范数归一化 (normalization)的工作方式
+
+谱范数归一化直接且巧妙地强制执行这一约束。对于判别器中的每个权重 (weight)矩阵 $W$（通常在卷积层或线性层中），SN在前向传播过程中用归一化版本 $W_{SN}$ 替换 $W$：
+
+
+$$
+W_{SN} = \frac{W}{\sigma(W)}
+$$
+
+
+通过将权重矩阵 $W$ 除以其谱范数 $\sigma(W)$，得到的矩阵 $W_{SN}$ 保证具有正好为1的谱范数：
+
+
+$$
+\sigma(W_{SN}) = \sigma\left(\frac{W}{\sigma(W)}\right) = \frac{1}{\sigma(W)} \sigma(W) = 1
+$$
+
+
+这确保了每个层，作为一个线性变换，是1-Lipschitz的。这种简单的修改有效稳定了判别器，避免其梯度变得过大，这是GAN训练中不稳定的常见原因。
+
+> 单个权重矩阵 $W$ 的谱范数归一化过程。谱范数 $\sigma(W)$ 通常使用幂迭代法进行估计，原始矩阵会除以该范数，以生成在层的前向传播中使用的归一化矩阵 $W_{SN}$。
+
+### 通过幂迭代进行高效估计
+
+在每个训练步骤中计算每个权重 (weight)矩阵的完整奇异值分解（SVD）来寻找最大奇异值 $\sigma(W)$ 将会非常昂贵。幸运的是，$\sigma(W)$ 可以使用*幂迭代*方法高效地估计。
+
+幂迭代是一种算法，用于寻找矩阵的主导特征向量 (vector)（对应于最大特征值）。由于 $W$ 的奇异值平方是 $W^T W$ 的特征值，幂迭代可以用来寻找最大奇异值 $\sigma(W)$。
+
+过程大致如下：
+
+1. 初始化一个随机向量 $\mathbf{u}$（通常形状与层的输出维度匹配）。
+2. 迭代更新 $\mathbf{u}$ 并估计 $\mathbf{v}$：
+   $\mathbf{v} \leftarrow W^T \mathbf{u}$
+   $\mathbf{v} \leftarrow \frac{\mathbf{v}}{\|\mathbf{v}\|_2}$
+   $\mathbf{u} \leftarrow W \mathbf{v}$
+   $\mathbf{u} \leftarrow \frac{\mathbf{u}}{\|\mathbf{u}\|_2}$
+3. 谱范数近似为 $\sigma(W) \approx \mathbf{u}^T W \mathbf{v}$（或者通常是简化近似，例如 $W \mathbf{v}$ 步骤后的 $\|\mathbf{u}\|_2$，或归一化 (normalization) $\mathbf{u}$ 之前的 $\|W\mathbf{v}\|_2$）。
+
+在实际应用中，每个训练步骤只执行*一次*幂迭代通常足以提供足够的正则化 (regularization)以稳定GAN训练。这使得SN与计算插值样本上的梯度惩罚（WGAN-GP）相比，计算量较小。向量 $\mathbf{u}$ 和 $\mathbf{v}$ 通常作为持久缓冲区保留在层实现中。
+
+### 优点与比较
+
+谱范数归一化 (normalization)因以下几个原因而广受欢迎：
+
+1. **有效稳定：** 它直接强制执行与Lipschitz常数相关的约束，从而使训练过程比标准GAN甚至带有权重 (weight)裁剪的WGAN更稳定。这有助于避免判别器中梯度爆炸。
+2. **计算效率高：** 幂迭代比完整的SVD快得多，并且通常比WGAN-GP增加更少的计算负担，后者需要额外的正向和反向传播 (backpropagation)来计算惩罚项。
+3. **超参数 (parameter) (hyperparameter)更少：** 与WGAN-GP（需要调整惩罚系数 $\lambda$）或WGAN裁剪（需要裁剪阈值 $c$）不同，SN不引入需要仔细调整的新超参数。
+4. **避免WGAN裁剪问题：** 它不受与权重裁剪相关的容量限制或梯度病态问题的影响。
+5. **适用性广：** 尽管其灵感来自WGAN背后的理论，但SN常被用作各种GAN架构和损失函数 (loss function)的一种通用稳定技术，即使在不严格目标是近似Wasserstein距离时也能改善性能。
+
+与WGAN-GP相比，SN对权重“全局地”强制执行Lipschitz约束，而WGAN-GP则将其局部集中在真实和虚假分布之间的样本附近。这种区别意味着SN有时可能对判别器的容量稍有限制，但其简单性、效率和有效性常使其成为更优选择，尤其是在BigGAN这样要求稳定性的较大模型中。
+
+### 实现方面的考虑
+
+实现谱范数归一化 (normalization)需要修改判别器中相关层（通常是 `Conv2d`、`Linear`、`ConvTranspose2d`）的前向传播。大多数现代深度学习 (deep learning)框架提供了方便的封装器或内置选项：
+
+- `PyTorch：`torch.nn.utils.spectral\_norm(module)\` 将SN应用于给定模块。
+- `TensorFlow：`tfa.layers.SpectralNormalization(layer)\` 封装Keras层。
+
+应用SN通常涉及使用框架提供的谱范数归一化工具，对判别器的每个卷积层和线性层进行封装。这确保了前向计算中使用的权重 (weight)始终是归一化版本 $W_{SN}$。原始权重 $W$ 仍是可训练参数 (parameter)，由优化器更新，但其有效作用通过归一化得到控制。
+
+通过结合谱范数归一化，您将获得一个强力工具来减轻常见的GAN训练不稳定性，从而可以训练更复杂、更高分辨率的生成模型。
+
+## 参考资料
+
+- [Improved Training of Wasserstein GANs](https://arxiv.org/abs/1704.00028) — Ishaan Gulrajani, Faruk Ahmed, Martin Arjovsky, Vincent Dumoulin, Aaron Courville (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.1704.00028](https://doi.org/10.48550/arXiv.1704.00028)
+  介绍梯度惩罚（WGAN-GP）以强制执行 Lipschitz 约束，为谱归一化提供了一个重要的替代方案和比较点。
+- [Wasserstein GAN](https://arxiv.org/abs/1701.07875) — Martin Arjovsky, Soumith Chintala, Léon Bottou (2017)
+  Journal: International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1701.07875](https://doi.org/10.48550/arXiv.1701.07875)
+  提出 Wasserstein GAN 并强调 Lipschitz 连续性对稳定 GAN 训练的重要性，为谱归一化等方法奠定基础的原始论文。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本全面的教科书，涵盖线性代数、奇异值分解和深度学习的基础概念，为谱范数和 GANs 提供理论背景。
+- [torch.nn.utils.spectral_norm](https://pytorch.org/docs/stable/generated/torch.nn.utils.spectral_norm.html) — PyTorch Authors (2023)
+  Publisher: PyTorch Foundation
+  PyTorch 官方的谱归一化文档，详细说明其在深度学习模型中的用法和集成。

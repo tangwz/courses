@@ -1,0 +1,166 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "data-preparation-for-retrieval"
+lesson: "data-loading-fundamentals"
+sourceId: 7763
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-4-data-preparation-for-retrieval/data-loading-fundamentals"
+title: "数据加载基本原理"
+description: "了解任何RAG管道中的第一步：将数据加载为可用格式。"
+order: 1
+plots: []
+sourceHash: "dd6d0edc9bbb9d1cb678ecd6b34fbe45962ededee3759caf6cdb3a2497bf048a"
+sourceCorrections: []
+---
+
+高质量的知识库对于有效的检索增强生成（RAG）系统来说必不可少。在大型语言模型（LLM）回答关于数据的问题之前，必须对这些数据进行收集、标准化和结构化。数据加载或摄取是指将来自不同来源的原始信息转换为一致的格式，以便管道的后续阶段进行处理。
+
+您的源材料可能以多种形式存在：纯文本文件、结构化Markdown文档、网页、PDF，甚至数据库中的记录。加载阶段的目标是读取这些不同类型的信息，并以统一的方式呈现它们。
+
+### Document作为标准容器
+
+为了处理这种多样性，我们使用了一种标准化的数据结构：`Document` 对象。您可以将其视为一个容器，它不仅包含文本内容，还包含有关其来源和特征的相关元数据。这种结构确保无论数据来自何处，我们的RAG管道都知道如何处理它。
+
+一个`Document` 对象通常包含：
+
+- **内容**：文档的实际文本。
+- **元数据**：一个包含附加信息的字典，例如源文件、作者、创建日期或任何其他相关细节。
+- **ID**：文档的唯一标识符。
+
+在处理不源自文件的数据（例如数据库记录或API响应）时，您可以通过编程方式创建`Document`。
+
+```python
+from kerb.document import Document, DocumentFormat
+
+# 从API响应创建Document对象
+api_response_content = "This document was created programmatically for LLM processing."
+
+custom_doc = Document(
+    content=api_response_content,
+    metadata={
+        "source": "llm_generation",
+        "timestamp": "2025-10-14",
+        "model": "gpt-4",
+        "purpose": "rag_corpus"
+    },
+    format=DocumentFormat.TXT,
+    id="doc_001"
+)
+
+print(f"Document ID: {custom_doc.id}")
+print(f"Content: {custom_doc.content}")
+```
+
+这种即时创建文档的能力对于构建可从多个来源更新的动态知识库非常有用。
+
+### 从文件加载数据
+
+最常见的起点是文件集合。`load_document` 函数提供了一种直接的方式来摄取基于文件的内容。它根据文件扩展名自动检测文件格式并使用合适的加载器，简化了处理包含混合文件类型目录的过程。
+
+假设您有一个简单的文本文件 `guide.txt`：
+
+```text
+This is a sample document for LLM processing.
+It contains multiple lines of text.
+LLMs can use this content for various tasks.
+```
+
+您可以通过单个函数调用加载它：
+
+```python
+from kerb.document import load_document
+
+# 假设 'guide.txt' 在当前目录中
+doc = load_document("guide.txt")
+
+print(f"Loaded format: {doc.format.value}")
+print(f"Content length: {len(doc.content)} characters")
+print(f"Metadata: {doc.metadata}")
+```
+
+生成的 `doc` 对象现在包含了文件的内容，以及像源路径这样的元数据，为管道中的下一步做好了准备。
+
+### 提取丰富元数据
+
+虽然文本内容是主要的，但元数据对于构建高级RAG系统很有价值。它允许您筛选搜索结果、验证信息，并在LLM的最终响应中提供来源归属。某些文件格式，如Markdown，有既定的元数据约定，可以自动提取。
+
+以一个带有YAML frontmatter块的Markdown文件 `article.md` 为例：
+
+```markdown
+---
+title: Sample Document
+author: AI Assistant
+tags: [example, llm, rag]
+---
+
+# Sample Document
+
+This document demonstrates markdown loading.
+```
+
+`load_markdown` 函数（`load_document` 会用于 `.md` 文件）会自动解析此frontmatter并将其放入 `metadata` 属性中。
+
+```python
+from kerb.document import load_markdown
+
+# 假设已使用上述内容创建 'article.md'
+md_doc = load_markdown("article.md")
+
+print(f"Frontmatter: {md_doc.metadata.get('frontmatter', {})}")
+print(f"Title: {md_doc.metadata.get('frontmatter', {}).get('title')}")
+```
+
+这种自动提取有助于构建一个更丰富、更易于查询的知识库，无需额外的人工操作。
+
+### 处理结构化数据源
+
+并非所有数据都是非结构化文本。您可能拥有JSON或CSV文件中的结构化数据，希望您的LLM能够对其进行推理 (inference)。加载这些格式时，加载器会将结构化内容转换为人类可读的文本表示形式供LLM使用，同时在元数据中保留原始数据结构。
+
+对于JSON文件 `product.json`：
+
+```json
+{
+  "product": "AI Assistant",
+  "features": ["NLP", "RAG", "Embeddings"]
+}
+```
+
+加载它会按如下方式转换数据：
+
+```python
+from kerb.document import load_json
+
+json_doc = load_json("product.json")
+
+# 'content' 是供LLM使用的字符串表示
+print("### 文本内容 ###")
+print(json_doc.content)
+
+# 'metadata' 包含原始解析结构
+print("\n### 解析后的元数据 ###")
+print(json_doc.metadata.get('parsed_content', {}))
+```
+
+这种方法为LLM提供了可处理的文本，同时使原始结构化数据可供应用程序的其他部分使用，例如筛选或数据验证。
+
+### 准备来自复杂源的数据
+
+加载干净的文本文件很简单，但实际场景中的数据通常很混乱。网页中充满了HTML标签、导航栏和广告。PDF在文本提取过程中可能会引入不自然的换行符、页眉和页脚。
+
+尽管该工具包为这些来源提供了加载器，但提取的原始文本通常需要专门的清理步骤。这就是为什么本章的最后一部分——预处理——变得有意义的地方。初始加载只侧重于一件事：从源文件中获取原始文本和结构。后续步骤将对其进行改进。
+
+在加载阶段之后，您的所有信息，无论其原始格式如何，都将标准化为 `Document` 对象。您现在拥有了一个内容和元数据的一致集合，为构建RAG系统中的后续必要的步骤：文本分块和预处理，奠定了坚实根基。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS 2020); DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  描述了原始RAG架构，强调了检索知识库的作用及其对知识访问的影响。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  一本全面的教材，涵盖了文档表示、索引和检索方法，是构建搜索和RAG系统的基础。
+- [Documents](https://python.langchain.com/docs/) — LangChain (2024)
+  Publisher: LangChain
+  官方文档解释了`Document`对象结构及其在LLM应用数据管道中的作用。
+- [Retrieval-Augmented Generation (RAG) on Google Cloud](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBM3hqcZkEZLKaZhQjWQ0IIZ1te9aIlvrbgWLD3GK2AkkT5lqhLwp7f390kkoYTK4h2WUkl_SeeGUAomlUrLwkni61BG-ChrK2jbkOXKCICdg_BXtS0KlfTe_uSfWjxLx3Gc6tMV9u2J0VfPlxctg8qMLUtgGdK0GwD-Y=) — Google Cloud (2024)
+  Publisher: Google Cloud
+  一份官方指南，解释了RAG架构，包括在云平台上进行初始数据摄取和知识库创建的过程。

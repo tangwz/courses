@@ -1,0 +1,152 @@
+---
+course: "data-structures-algorithms-ml"
+chapter: "algorithmic-strategies-ml"
+lesson: "iterative-optimization-ml"
+sourceId: 5354
+sourceUrl: "https://apxml.com/zh/courses/data-structures-algorithms-ml/chapter-6-algorithmic-strategies-ml/iterative-optimization-ml"
+title: "迭代优化算法"
+description: "从算法策略的角度看待迭代优化方法，如梯度下降及其变体。"
+order: 5
+plots: ["plots/5354-0.json"]
+sourceHash: "ecb71c357b17084f30396ea550e71ca3b13177dc7201a5b0f5735c36089b8000"
+sourceCorrections: []
+---
+
+许多机器学习 (machine learning)模型，特别是那些涉及复杂关系或大型数据集的模型，无法直接用封闭形式的数学方程求解。相反，我们依赖迭代方法来寻找模型的最优参数 (parameter)。这些方法从一个初始估计开始，逐步调整，直到达到满意的解。这种方法是迭代优化算法的基本思想，是机器学习中一种重要的算法策略。
+
+可以把模型训练想象成在迷雾中下山。你看不到底部（最优解），但能感受脚下的坡度（成本函数的梯度）。你沿着最陡峭的下坡方向迈一步，再次检查坡度，然后重复。迭代优化算法将此过程形式化。
+
+## 主要迭代过程
+
+迭代优化算法的核心步骤如下：
+
+1. **初始化：** 从模型参数 (parameter)（权重 (weight)、偏置 (bias)等）的初始估计开始。这可以是随机值、零，或者基于某种启发式方法。
+2. **评估：** 使用预定义的**成本函数**（也称损失函数 (loss function)或目标函数）计算当前参数的表现。此函数量化 (quantization)了与当前参数相关的误差或“成本”。
+3. **更新：** 调整参数，使其朝向成本降低的方向。此调整的幅度和方向由具体算法决定。
+4. **迭代：** 重复步骤2和3，直到满足**停止准则**。这可能是达到最大迭代次数，成本降低到某个阈值以下，或者参数变化变得非常小。
+
+## 梯度下降 (gradient descent)：机器学习 (machine learning)优化中常用的方法
+
+\*\*梯度下降（GD）\*\*是机器学习中最常用的迭代优化算法。它对训练线性模型、逻辑回归和神经网络 (neural network)尤为重要。
+
+梯度下降的主要思想是沿着成本函数相对于参数 (parameter)的梯度的相反方向更新参数。梯度，表示为$\nabla J(\theta)$，指向成本函数$J(\theta)$的*最陡峭上升*方向。通过沿着*负*梯度方向移动，我们的目标是使成本下降最快。
+
+梯度下降中单个参数$\theta_j$的更新规则是：
+
+
+$$
+\theta_j := \theta_j - \alpha \frac{\partial}{\partial \theta_j} J(\theta)
+$$
+
+
+其中：
+
+- $\theta_j$ 是我们正在更新的第$j$个参数。
+- $\alpha$ (alpha) 是**学习率**，一个控制每次迭代步长大小的超参数 (hyperparameter)。
+- $\frac{\partial}{\partial \theta_j} J(\theta)$ 是成本函数 $J$ 对参数 $\theta_j$ 的偏导数。这个部分告诉我们成本函数沿着该特定参数轴的斜率。
+- 所有偏导数的集合构成了梯度向量 (vector) $\nabla J(\theta)$。
+
+每次迭代中，所有参数 $\theta$ 都同时进行此更新。
+
+## 下降过程的可视化
+
+想象成本函数为一个曲面，其中水平轴代表参数 (parameter)值，垂直轴代表成本。梯度下降 (gradient descent)从曲面上的某个点开始，并迭代地沿着“下坡”方向移动，趋向一个最低点（希望是全局最低点）。
+
+```plotly
+{"data":[{"x":[0,1,2,3,4,5,6,7,8,9,10],"y":[100,81,64,49,36,25,16,9,4,1,0],"type":"scatter","mode":"lines+markers","name":"成本函数","line":{"color":"#339af0"},"marker":{"color":"#1c7ed6"}},{"x":[0,1,2,3,4,5,6,7,8,9,10],"y":[100,81,64,49,36,25,16,9,4,1,0],"type":"scatter","mode":"markers","marker":{"size":[12,11,10,9,8,7,6,5,4,3,2],"color":"#f03e3e"},"name":"梯度下降步长"}],"layout":{"title":"梯度下降进度","xaxis":{"title":"参数值"},{"yaxis":{"title":"成本"},"showlegend":false,"margin": {"l": 50, "r": 20, "t": 40, "b": 40}}}
+```
+
+> 成本函数（蓝线）和梯度下降所走的步长（红色标记 (token)，大小表示步数），它们正向最小成本移动。
+
+## 迭代优化中的组成部分
+
+对于梯度下降 (gradient descent)等迭代方法的成功和效率，以下几个方面非常重要：
+
+- **成本函数：** 此函数定义了优化目标。它必须准确反映预期结果（例如，最小化预测误差）。常见例子包括回归中的均方误差（MSE）和分类中的交叉熵损失。成本函数曲面的形状（例如，凸面与非凸面）显著影响优化过程。
+- **梯度计算：** 计算梯度$\nabla J(\theta)$是一种核心操作。对于简单模型，可以使用微积分进行解析计算。对于深度神经网络 (neural network)等复杂模型，自动微分库（如TensorFlow和PyTorch中提供）能高效计算梯度。计算梯度的计算成本通常很大程度上取决于数据集大小和模型复杂性。像NumPy数组这样的高效数据结构对这些向量 (vector)/矩阵操作来说必不可少。
+- **学习率 ($\alpha$)：** 选择合适的学习率非常重要。
+  - *过小：* 收敛速度会非常慢。
+  - *过大：* 算法可能会越过最小值，剧烈震荡，甚至发散（成本增加）。
+    找到一个好的学习率通常需要通过实验或使用自适应学习率方法。
+
+
+
+![学习率对收敛的影响](plots/5354-0.json)
+
+
+
+> 不同学习率下成本与迭代次数的关系。学习率过小会导致收敛缓慢，合适的学习率能高效收敛，而学习率过高则可能导致发散。
+
+- **停止准则：** 决定何时停止迭代可避免不必要的计算和潜在的过拟合 (overfitting)。常见准则包括：
+  - 达到最大迭代次数。
+  - 迭代间成本函数的变化量低于一个很小的阈值。
+  - 梯度向量的范数（大小）低于一个阈值（表示我们接近一个平坦区域，很可能是一个最小值）。
+
+## 梯度下降 (gradient descent)的变体
+
+尽管基本思想相同，但梯度下降存在不同形式，主要区别在于每步计算梯度时使用的数据量：
+
+1. **批量梯度下降（BGD）：** 每次迭代使用*全部*训练数据集计算梯度。
+
+   - *优点：* 提供准确的梯度估计，（对于凸函数）导致平滑、直接地收敛到最小值。
+   - *缺点：* 对于大型数据集来说计算成本非常高且速度慢，因为每次参数 (parameter)更新都需要处理所有数据。需要将整个数据集加载到内存中。
+2. **随机梯度下降（SGD）：** 每次迭代仅使用*一个*随机选择的训练样本计算梯度。
+
+   - *优点：* 更新速度快得多，每次迭代的计算成本较低。可以处理不适合内存的数据集。嘈杂的更新有助于逃离浅层局部最小值。
+   - *缺点：* 更新非常嘈杂，导致收敛路径波动。可能永远无法精确收敛到最小值，而是在其附近震荡。通常需要仔细调整学习率，并可能需要学习率调度（随时间减小 $\alpha$）。
+3. **小批量梯度下降：** 每次迭代使用一小批随机选择的训练样本（例如，32、64、128个样本）计算梯度。
+
+   - *优点：* 在BGD和SGD之间取得平衡。与SGD相比降低了噪声，从而实现更稳定的收敛。计算效率高于BGD。允许向量 (vector)化实现（利用NumPy等库提供的高效矩阵运算），在实践中通常比BGD和SGD的训练速度更快。
+   - *缺点：* 引入了一个额外的超参数 (hyperparameter)（批量大小）。与BGD相比，收敛性仍然有些嘈杂。
+
+小批量梯度下降是实践中最常用的变体，特别是用于训练深度学习 (deep learning)模型。Adam、RMSprop和Adagrad等更高级的优化器在这些思想上发展，通常加入自适应学习率或动量来提升收敛速度和稳定性。
+
+## 迭代的策略作用
+
+从算法策略的角度看待优化，有助于我们理解机器学习 (machine learning)中某些方法被使用的*原因*。与计算直接解的算法（如求解普通最小二乘法的矩阵逆）不同，迭代方法提供了一种实用的方式来解决复杂问题，尤其在以下情况：
+
+- 解析解难以获得或不存在（例如，优化深度神经网络 (neural network)）。
+- 数据集过大，无法直接计算并全部加载到内存中。
+
+迭代策略使我们能够增量地逼近一个解，从而使大规模机器学习成为可能。理解不同变体（如BGD、SGD与小批量）之间的权衡涉及分析它们每次迭代的计算复杂度、内存需求和收敛特性——这些都是算法分析的重要方面。底层数据结构（如用于批量处理的NumPy数组）的效率也是这些迭代算法整体性能的一个重要因素。
+
+以下是迭代优化循环的简化结构：
+
+```python
+# 迭代优化（例如，小批量梯度下降）的简化伪代码
+
+parameters = initialize_parameters()
+learning_rate = 0.01
+num_iterations = 1000
+batch_size = 32
+
+for i in range(num_iterations):
+  # 获取随机小批量数据
+  mini_batch = sample_data(data, batch_size)
+
+  # 根据成本函数和小批量数据计算梯度
+  gradient = calculate_gradient(parameters, mini_batch)
+
+  # 使用梯度和学习率更新参数
+  parameters = parameters - learning_rate * gradient
+
+  # 可选：定期评估成本，检查停止准则，调整学习率等。
+  if (i + 1) % 100 == 0:
+    cost = calculate_cost(parameters, data) # 通常在完整数据或验证集上进行评估
+    print(f"Iteration {i+1}, Cost: {cost}")
+    # if stopping_criterion_met(gradient, cost_change): break
+```
+
+总之，迭代优化算法，特别是梯度下降 (gradient descent)及其变体，是机器学习实践者工具包中不可或缺的工具。它们代表了一种有效的算法策略，通过在成本函数指导下逐步优化参数 (parameter)，来寻找复杂问题的解。认识到这种策略有助于理解模型训练过程、诊断收敛问题，并把握不同优化选择中涉及的计算权衡。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/contents/optimization.html) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 8
+  第8章“深度模型训练优化”对深度学习背景下的迭代优化、梯度下降及其变体进行了详细阐述。
+- [Numerical Optimization](https://www.springer.com/gp/book/9780387303031) — Jorge Nocedal and Stephen J. Wright (2006)
+  Publisher: Springer; DOI: [10.1007/978-0-387-40065-5](https://doi.org/10.1007/978-0-387-40065-5)
+  一本经典且全面的教科书，涵盖了数值优化、包括各种形式的梯度下降和相关方法的数学基础和算法。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，一种广泛使用的自适应学习率算法，它建立在随机梯度下降的原理之上。

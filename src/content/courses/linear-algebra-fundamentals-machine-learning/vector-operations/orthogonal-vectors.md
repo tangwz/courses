@@ -1,0 +1,149 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "vector-operations"
+lesson: "orthogonal-vectors"
+sourceId: 7812
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-2-vector-operations/orthogonal-vectors"
+title: "正交向量"
+description: "了解向量中的正交性（垂直性）及其通过点积进行检验的方法。"
+order: 5
+plots: ["plots/7812-0.json"]
+sourceHash: "5cd8fa1d7b21f54c91523383783fb7059601e4a31ae297d9c7342b77f16f5b21"
+sourceCorrections: []
+---
+
+在上一节中，我们看到点积提供了一种方法来了解两个向量 (vector)之间的夹角。当这个夹角恰好是 90 度时，会出现一个特殊且非常有用的情况。这一特性是机器学习 (machine learning)和数据分析许多方面的核心。
+
+如果两个非零向量相互垂直，则称它们为**正交**。在线性代数中，检验正交性的方法简单直接：它们的点积为零。
+
+
+$$
+v \cdot w = 0
+$$
+
+
+如果你计算两个向量的点积，结果为 0，你就知道它们是正交的。从几何角度看，这意味着它们指向相互成直角的方向。你可以将它们想象成首尾相接时形成一个完美的“L”形。
+
+
+
+![Interactive chart](plots/7812-0.json)
+
+
+
+> 向量 $v$ 和 $w$ 是正交的，因为它们的点积是 $(2 \times -3) + (3 \times 2) = -6 + 6 = 0$。
+
+这一关系是点积几何定义的直接结果：$v \cdot w = \|v\| \|w\| \cos(\theta)$。如果两个向量都具有非零长度（$\|v\| > 0$ 和 $\|w\| > 0$），则它们的点积为零的唯一情况是 $\cos(\theta) = 0$。当夹角 $\theta$ 为 90° 时，余弦函数为零，这证实了向量相互垂直。
+
+### 正交性为何有价值
+
+在机器学习 (machine learning)中，正交性是一个理想特性。当特征向量 (vector)正交时，这意味着它们是线性独立的。简单来说，它们表示相互独立、不冗余的数据。例如，如果我们要分析住房数据，表示“建筑面积”的向量和表示“卧室数量”的向量是相关的。它们不是正交的。然而，像主成分分析 (PCA) 这样的方法通过寻找一组新的正交向量来表示数据中最主要的信息，这可以简化模型并提升其性能。
+
+### 使用 NumPy 检验正交性
+
+我们可以方便地使用 NumPy 的 `dot()` 函数在 Python 中检验正交性。让我们定义图中所示的两个向量 (vector)，并计算它们的点积。
+
+```python
+import numpy as np
+
+# 定义两个正交向量
+v = np.array([2, 3])
+w = np.array([-3, 2])
+
+# 计算点积
+dot_product = np.dot(v, w)
+
+print(f"向量 v: {v}")
+print(f"向量 w: {w}")
+print(f"v 和 w 的点积: {dot_product}")
+```
+
+**输出：**
+
+```
+向量 v: [2 3]
+向量 w: [-3  2]
+v 和 w 的点积: 0
+```
+
+正如预期的那样，结果为 0，证实了 `v` 和 `w` 是正交的。
+
+现在我们尝试使用两个非正交向量。
+
+```python
+# 定义两个非正交向量
+p = np.array([1, 5])
+q = np.array([2, 4])
+
+# 计算点积
+dot_product_pq = np.dot(p, q)
+
+print(f"向量 p: {p}")
+print(f"向量 q: {q}")
+print(f"p 和 q 的点积: {dot_product_pq}")
+```
+
+**输出：**
+
+```
+向量 p: [1 5]
+向量 q: [2 4]
+p 和 q 的点积: 22
+```
+
+结果是 22，一个非零值，这表明这些向量不垂直。
+
+### 关于浮点精度的一个说明
+
+在使用计算机时，涉及浮点数（带小数的数字）的计算有时可能会出现微小的精度误差。你可能会遇到这样一种情况：两个向量 (vector)应该是正交的，但它们的点积结果却是一个非常小的数字，例如 `1.4e-16`，而不是精确的 `0`。
+
+这是正常现象，发生的原因是计算机存储这些数字的方式。因此，通过测试结果是否精确为零来检验正交性是一种不建议的做法。
+
+```python
+# 一个向量及其正交对应物
+a = np.array([1/3, 2/3])
+b = np.array([-2, 1])
+
+dot_product_ab = np.dot(a, b)
+print(f"点积: {dot_product_ab}")
+
+# 此检验可能会失败！
+is_orthogonal = (dot_product_ab == 0)
+print(f"它们正交吗？(直接检验): {is_orthogonal}")
+```
+
+**输出：**
+
+```
+点积: -2.220446049250313e-16
+它们正交吗？(直接检验): False
+```
+
+正确的方法是检验点积是否在一个小容差范围内*接近*零。NumPy 为此提供了 `np.isclose()` 函数。
+
+```python
+# 检验正交性的正确方法
+is_orthogonal_close = np.isclose(dot_product_ab, 0)
+
+print(f"它们正交吗？(使用 np.isclose): {is_orthogonal_close}")
+```
+
+**输出：**
+
+```
+它们正交吗？(使用 np.isclose): True
+```
+
+使用 `np.isclose()` 可以让你的代码在应对浮点运算的局限性时更加可靠。这种做法将帮你避免在机器学习 (machine learning)项目中出现意外情况。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://www.wellesleycambridge.com/pages/introduction-to-linear-algebra-5th-edition) — Gilbert Strang (2016)
+  Publisher: Wellesley-Cambridge Press
+  这本教材是理解线性代数基本概念（包括向量点积和正交性定义）的标准参考书。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; Pages: Chapter 2
+  为机器学习提供了数学基础，解释了线性代数概念（如正交性）如何在主成分分析（PCA）等算法中应用。
+- [numpy.dot](https://numpy.org/doc/stable/reference/generated/numpy.dot.html) — NumPy Developers (2023)
+  NumPy `dot`函数的官方文档，对于在Python中进行向量和矩阵的点积计算至关重要。
+- [numpy.isclose](https://numpy.org/doc/stable/reference/generated/numpy.isclose.html) — NumPy Developers (2023)
+  官方文档，详细说明了如何比较浮点数的近似相等性，这是进行数值稳定性检查（如浮点数结果的正交性）的推荐做法。

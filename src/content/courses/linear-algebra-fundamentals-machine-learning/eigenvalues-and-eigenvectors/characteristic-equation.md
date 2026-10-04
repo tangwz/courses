@@ -1,0 +1,118 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "eigenvalues-and-eigenvectors"
+lesson: "characteristic-equation"
+sourceId: 7830
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-5-eigenvalues-and-eigenvectors/characteristic-equation"
+title: "特征方程"
+description: "了解用于确定矩阵特征值的公式。"
+order: 4
+plots: []
+sourceHash: "381d3dc59b1eda7b1bcc6c2c89e34e4600adb70644c256a51c44ca1b63697bf9"
+sourceCorrections: []
+---
+
+我们已经明确，对于一个特征向量 (vector) $v$，变换 $A$ 仅通过其对应的特征值 $\lambda$ 对其进行缩放。这种关系由方程 $Av = \lambda v$ 表述。虽然此方程完美描绘了特征值和特征向量的性质，但它并未直接指明如何针对给定矩阵 $A$ 来求取它们。为此，我们需要一种代数方法，该方法始于重新整理这个基本方程。
+
+我们的目标是求出使此方程对某个非零向量 $v$ 成立的 $\lambda$ 值（即特征值）。我们首先将所有项移至方程的一侧：
+
+$Av - \lambda v = 0$
+
+乍看之下，我们似乎可以将向量 $v$ 提取出来，但这里有一个小障碍。在项 $Av$ 中，$v$ 与矩阵 $A$ 相乘，而在 $\lambda v$ 中，它与标量 $\lambda$ 相乘。我们不能从矩阵中减去一个标量。为了解决这个问题，我们可以使用单位矩阵 $I$。回想一下，将任意向量 $v$ 乘以单位矩阵 $I$ 会使其保持不变，因此 $v = Iv$。我们可以将其代入我们的方程：
+
+$Av - \lambda(Iv) = 0$
+
+现在，两项都涉及矩阵与向量 $v$ 相乘，这使得我们能够将 $v$ 提取出来：
+
+$(A - \lambda I)v = 0$
+
+这个单一的方程提供了很多信息。它告诉我们，当我们将向量 $v$ 乘以矩阵 $(A - \lambda I)$ 时，结果是零向量。
+
+### 求取非平凡解
+
+方程 $(A - \lambda I)v = 0$ 的一个显而易见的解是 *平凡解*，即 $v$ 是零向量 (vector)。然而，特征向量的定义要求它是一个**非零**向量。毕竟，零向量的方向未定义，所以其方向在变换下保持不变的说法并没有太大用处。
+
+这意味着我们正在寻找一个满足此方程的非零向量 $v$。形如 $Mx = 0$ 的线性方程组仅当矩阵 $M$ **奇异**时才存在非零解 $x$。奇异矩阵是没有逆矩阵的矩阵。检查方阵是否奇异的一种便捷方法是计算其行列式。如果行列式为零，则该矩阵是奇异的。
+
+将此应用于我们的情况，要使方程 $(A - \lambda I)v = 0$ 存在非零解 $v$，矩阵 $(A - \lambda I)$ 必须是奇异的。这直接引出了我们所需的条件：
+
+$\det(A - \lambda I) = 0$
+
+此方程被称为矩阵 $A$ 的**特征方程**。
+
+> 从初始特征值定义推导特征方程的过程。
+
+### 示例：计算特征值
+
+我们来为一个简单的 2x2 矩阵求取特征值，以看特征方程如何运用。假设我们有矩阵 $A$：
+
+
+$$
+A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}
+$$
+
+
+**步骤 1：构建矩阵 $(A - \lambda I)$**
+
+首先，我们从 $A$ 中减去 $\lambda I$：
+
+
+$$
+A - \lambda I = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix} - \lambda \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} = \begin{pmatrix} 2-\lambda & 1 \\ 1 & 2-\lambda \end{pmatrix}
+$$
+
+
+**步骤 2：计算行列式并将其设为零**
+
+接下来，我们求此新矩阵的行列式。对于一个 2x2 矩阵 $\begin{pmatrix} a & b \\ c & d \end{pmatrix}$，其行列式为 $ad - bc$。
+
+
+$$
+\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = 0
+$$
+
+
+**步骤 3：求解特征方程以求取 $\lambda$**
+
+展开此方程会得到一个关于 $\lambda$ 的多项式，此多项式被称为**特征多项式**。
+
+
+$$
+(4 - 4\lambda + \lambda^2) - 1 = 0
+$$
+
+
+$$
+\lambda^2 - 4\lambda + 3 = 0
+$$
+
+
+我们可以通过因式分解来求解这个二次方程：
+
+
+$$
+(\lambda - 3)(\lambda - 1) = 0
+$$
+
+
+这为我们提供了 $\lambda$ 的两个解。这些解即为矩阵 $A$ 的特征值：
+
+
+$$
+\lambda_1 = 3, \quad \lambda_2 = 1
+$$
+
+
+通过求解特征方程，我们成功求得了矩阵 $A$ 的特征值。这些是矩阵 $A$ 定义的线性变换的两个特殊缩放因子。下一步（我们将在稍后讲解）是将这些特征值中的每一个代回方程 $(A - \lambda I)v = 0$，以求取它们对应的特征向量 (vector)。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  一本广受认可的教材，全面涵盖特征值、特征向量和特征方程，并注重概念理解。（第6版）
+- [18.06SC Linear Algebra](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  由Gilbert Strang主讲的开放式在线课程，提供视频讲座和讲义，全面且易于理解地解释了特征方程及其推导。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; Pages: 68-71; DOI: [10.1017/9781108679901](https://doi.org/10.1017/9781108679901)
+  这本教材弥合了基础线性代数与机器学习中特定应用之间的鸿沟，将特征值和特征向量作为重要工具进行介绍。第68-71页专门介绍了特征值和特征向量。

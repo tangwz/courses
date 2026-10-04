@@ -1,0 +1,240 @@
+---
+course: "python-for-beginners"
+chapter: "controlling-program-flow"
+lesson: "python-nested-control-structures"
+sourceId: 2303
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-3-controlling-program-flow/python-nested-control-structures"
+title: "嵌套控制结构"
+description: "了解如何将控制结构（循环和条件语句）彼此嵌套，以完成更复杂的逻辑。"
+order: 6
+plots: []
+sourceHash: "25d0453d9c16d6ae220e8cbb7008d9ac2bd7ab6960b333cb20f08ce825e7fb45"
+sourceCorrections: []
+---
+
+程序可以使用 `if`、`elif` 和 `else` 条件性地执行代码，并使用 `while` 和 `for` 循环重复执行操作。将这些结构组合起来能发挥更大的能力。控制流语句可以放置在其他控制流语句的*内部*。这种技术称为**嵌套**，它允许程序构建更复杂的逻辑。
+
+设想你需要在一个操作之前检查多个条件，或者你需要对另一个重复中处理的每个项目执行重复任务。嵌套使这成为可能。
+
+### 嵌套条件语句
+
+你可以将 `if`、`elif` 或 `else` 语句放置在另一个 `if`、`elif` 或 `else` 块的内部。这允许你只在满足主要条件时才检查次要条件。
+
+考虑一个需要检查某人是否符合特定折扣条件的情形：他们必须是学生*并且*拥有有效的身份证件。
+
+```python
+is_student = True
+has_valid_id = False
+age = 20
+
+print("正在检查折扣资格...")
+
+if age < 25: # 外部条件：年龄检查
+    print("年龄要求符合。")
+    if is_student: # 内部条件 1：学生身份
+        print("学生身份确认。")
+        if has_valid_id: # 内部条件 2：身份证件检查
+            print("有效身份证件确认。")
+            print("恭喜！您符合折扣条件。")
+        else: # 内部 else（属于身份证件检查）
+            print("未找到有效身份证件。不适用折扣。")
+    else: # 内部 else（属于学生身份检查）
+        print("不是学生。不适用折扣。")
+else: # 外部 else（属于年龄检查）
+    print("年龄要求不符合。不适用折扣。")
+
+print("资格检查完成。")
+```
+
+请注意缩进。内部的 `if`/`else` 块比外部的 `if`/`else` 块缩进更多。Python 使用这种缩进来判断哪些语句属于哪个块。只有当前面的外部条件 (`age < 25`) 评估为 `True` 时，才会执行内部检查（学生身份、有效身份证件）。
+
+### 嵌套循环
+
+循环也可以嵌套。一个常见的用途是遍历多维数据结构（如网格或表格），或者处理来自不同序列的项目组合。
+
+#### 嵌套 `for` 循环
+
+假设你想为一个小的 3x2 网格打印所有可能的坐标对 (x, y)，（其中 x 从 0 到 2，y 从 0 到 1）。
+
+```python
+print("正在生成网格坐标：")
+
+# 外部循环遍历 x 值
+for x in range(3): # x 将是 0, 1, 2
+    # 内部循环为每个 x 遍历 y 值
+    for y in range(2): # y 将是 0, 1
+        print(f"  ({x}, {y})") # 打印坐标对
+
+print("坐标生成完成。")
+```
+
+**输出：**
+
+```
+Generating grid coordinates:
+  (0, 0)
+  (0, 1)
+  (1, 0)
+  (1, 1)
+  (2, 0)
+  (2, 1)
+Coordinate generation finished.
+```
+
+执行过程如下：
+
+1. 外部循环从 `x = 0` 开始。
+2. 内部循环在 `x = 0` 时完全运行。它首先迭代 `y = 0`，然后是 `y = 1`，打印 `(0, 0)` 和 `(0, 1)`。
+3. 内部循环在 `x = 0` 时结束。
+4. 外部循环进入下一次迭代，将 `x` 设置为 `1`。
+5. 内部循环在 `x = 1` 时再次完全运行。它首先迭代 `y = 0`，然后是 `y = 1`，打印 `(1, 0)` 和 `(1, 1)`。
+6. 内部循环在 `x = 1` 时结束。
+7. 外部循环继续，将 `x` 设置为 `2`。
+8. 内部循环在 `x = 2` 时最后一次完全运行，打印 `(2, 0)` 和 `(2, 1)`。
+9. 两个循环都已完成。
+
+内部循环会为外部循环的*每一次迭代*完成其所有迭代。
+
+#### 嵌套 `while` 循环
+
+你也可以嵌套 `while` 循环，但这需要仔细管理循环条件以避免无限循环。
+
+```python
+outer_count = 0
+print("外部循环开始...")
+while outer_count < 2:
+    print(f"外部循环迭代 {outer_count}")
+    inner_count = 0
+    # 内部循环在 inner_count < 3 时运行
+    while inner_count < 3:
+        print(f"  内部循环迭代 {inner_count}")
+        inner_count += 1 # 重要：更新内部循环变量
+    outer_count += 1 # 重要：更新外部循环变量
+print("外部循环完成。")
+```
+
+**输出：**
+
+```
+Outer loop starting...
+Outer loop iteration 0
+  Inner loop iteration 0
+  Inner loop iteration 1
+  Inner loop iteration 2
+Outer loop iteration 1
+  Inner loop iteration 0
+  Inner loop iteration 1
+  Inner loop iteration 2
+Outer loop finished.
+```
+
+与嵌套 `for` 循环一样，内部 `while` 循环会在外部 `while` 循环的每次迭代中运行直到完成。确保*两个*循环的条件最终都会变为 `False`。
+
+### 结合循环与条件语句
+
+最常见的模式之一是将条件语句嵌套在循环内部，反之亦然。
+
+#### 循环内部的 `if` 语句
+
+这非常普遍。你遍历一个序列，并且只在满足某个项目的特定条件时才执行操作。
+
+示例：只打印列表中偶数。
+
+```python
+numbers = [11, 22, 37, 44, 58, 61, 76]
+print("找到的偶数：")
+
+for num in numbers:
+    # 检查列表中每个数字的条件
+    if num % 2 == 0: # 数字是否能被 2 整除？
+        print(f"  {num}")
+
+print("搜索完成。")
+```
+
+**输出：**
+
+```
+Even numbers found:
+  22
+  44
+  58
+  76
+Search complete.
+```
+
+`for` 循环遍历 `numbers` 列表中的每个 `num`。在循环内部，`if` 语句检查当前的 `num` 是否为偶数。只有当条件 `num % 2 == 0` 为真时，`print()` 语句才会执行。
+
+#### `if` 语句内部的循环
+
+你可能希望只在某个条件为真时才执行循环。
+
+示例：如果列表不为空，打印其内容。
+
+```python
+data = ["apple", "banana", "cherry"]
+# data = [] # 尝试取消注释此行以查看区别
+
+if data: # 检查列表是否不为空（非空列表类似 True）
+    print("正在处理数据项：")
+    for item in data:
+        print(f"  - {item}")
+else:
+    print("没有数据项可处理。")
+```
+
+**输出（使用原始 `data` 列表）：**
+
+```
+Processing data items:
+  - apple
+  - banana
+  - cherry
+```
+
+**输出（如果 `data = []` 被取消注释）：**
+
+```
+No data items to process.
+```
+
+在这里，`for` 循环嵌套在 `if` 块内部。它只在初始的 `if data:` 检查通过（表示列表不为空）时运行。
+
+### 缩进的重要性
+
+请记住，Python 使用缩进来定义代码块。对于嵌套结构，正确的缩进绝对必要。每层嵌套都需要额外的缩进（通常是 4 个空格）。不正确的缩进将导致 `IndentationError` 错误，或者更糟的是，代码能运行但产生错误的结果，因为逻辑未按你的意图解析。
+
+```python
+# 正确缩进
+for i in range(2):
+    print(f"Outer {i}")
+    if i == 0:
+        print("  内部检查 i=0") # 在 if 下缩进
+    for j in range(2):
+        print(f"    内部循环 {j}") # 在内部 for 下缩进
+
+# 不正确缩进（可能导致错误或错误逻辑）
+# for i in range(2):
+# print(f"外部 {i}") # 错误：需要缩进块
+# if i == 0:
+# print("  内部检查 i=0")
+# for j in range(2):
+# print(f"    内部循环 {j}") # 错误或范围不正确
+```
+
+### 保持嵌套的可读性
+
+虽然嵌套很有用，但深度嵌套的结构（例如，一个循环内套一个循环，一个 `if` 内套另一个循环）会变得非常难以阅读和理解。通常，尝试将嵌套限制在两到三层。如果你发现需要更深的嵌套，请考虑是否可以将逻辑分解为更小、独立的函数（你将在第 5 章中学习到）。
+
+嵌套控制结构允许你通过组合简单的 `if`、`while` 和 `for` 语句来创建复杂的程序流程。掌握嵌套并密切注意缩进是编写高效 Python 代码的重要步骤。
+
+## 参考资料
+
+- [The Python Tutorial - 4. More Control Flow Tools](https://docs.python.org/3/tutorial/controlflow.html) — Guido van Rossum and the Python Development Team (2024)
+  提供了Python中`if`、`for`和`while`语句的官方基础解释，这些语句构成了嵌套结构的基础。
+- [Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming](https://nostarch.com/python-crash-course-3rd-edition/) — Eric Matthes (2022)
+  Publisher: No Starch Press
+  一本优秀的编程初学者实践指南，涵盖了条件语句和循环，包括自然引出嵌套的例子。
+- [Introduction to Computer Science and Programming in Python (MIT 6.0001SC)](https://ocw.mit.edu/courses/6-0001sc-introduction-to-computer-science-and-programming-in-python-fall-2016/) — Ana Bell, Eric Grimson, and John Guttag (2016)
+  Publisher: MIT OpenCourseWare
+  提供了来自一门备受推崇的入门编程课程的结构化讲义和习题集，涵盖了控制流和嵌套结构。

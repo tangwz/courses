@@ -1,0 +1,68 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "rlhf-foundations-alignment"
+lesson: "sft-limitations"
+sourceId: 5085
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-1-rlhf-foundations-alignment/sft-limitations"
+title: "监督微调的局限性"
+description: "分析仅靠 SFT 实现细致对齐的不足之处。"
+order: 2
+plots: []
+sourceHash: "de33cf46dd6c7875d44bd28e73be3d135b43e75658e236ac5692f6165c820a1e"
+sourceCorrections: []
+---
+
+监督微调 (fine-tuning) (SFT) 通常是使预训练 (pre-training)的大型语言模型 (LLM) 达到预期行为的第一步。通过在高质量的提示-响应对（示范）数据集上训练模型，SFT 教会模型遵循指令、采用特定风格或执行示例中所示的任务。它对于传授基础能力以及使模型与可以清晰展示“正确”输出的明确、定义清晰的任务保持一致非常有效。
+
+然而，仅依靠 SFT 来实现与人类意图和价值观的全面匹配会遇到显著的局限。这些不足是采用人类反馈强化学习 (reinforcement learning) (RLHF) 的主要原因。
+
+### 示范的可扩展性和覆盖范围
+
+创建一个涵盖人类期望的广泛范围和细致程度的高质量 SFT 数据集，是一项巨大的挑战。考虑潜在用户提示的庞大空间以及回复中所需的细微差别：
+
+- **成本和精力：** 为每个可想象的场景，包括极端情况和复杂的推理 (inference)任务，生成理想的人工编写的响应，成本过高且耗时。
+- **庞大的输入空间：** LLM 可以通过无数种方式得到提示。一个 SFT 数据集，无论多大，都只能代表这个空间的一小部分。模型可能在其训练数据相似的输入上表现良好，但在分布外提示或熟悉提示的微小变体上可能会出现意想不到的失败。
+- **隐含知识：** 期望行为的许多方面（例如，常识，避免不易察觉的社会偏见）很难仅通过明确的示范完全捕捉。SFT 可能教会模型在特定情况下*说什么*，但不能教会其根本的*为什么*。
+
+将 SFT 视为通过示例教授语法和词汇规则。虽然必不可少，但它不会自动教会一个人如何在新的情境中撰写有见地的分析、引人入胜的叙述或符合道德的论证。这需要一种不同类型的学习信号。
+
+### 客观定义“好坏”的难度
+
+对于许多对齐 (alignment)目标而言，为 SFT 指定一个单一、完美的“黄金标准”响应，即使不是不可能，也很困难：
+
+- **主观性：** 什么构成“最佳”响应通常取决于语境、个人用户偏好或文化规范。简洁的回答比详细的更好吗？谨慎的语气比自信的语气更可取吗？SFT 强制进行选择，可能导致模型满足一部分用户，但不满足另一部分用户。
+- **多重目标：** 期望的 LLM 行为通常涉及平衡多个有时相互冲突的目标：有用、无害、诚实、引人入胜、简洁等。制作一个能够完美优化所有这些因素的单一 SFT 示范是困难的。
+- **比较的简易性：** 人类通常发现比较两个输出并表明偏好（例如，“响应 A 比响应 B 更有用”）比从零开始编写响应 A 要容易得多。SFT 无法直接使用这种比较偏好信号，而这种信号对于复杂任务来说通常更丰富且更容易获取。
+
+例如，要求 LLM“向一个 5 岁的孩子解释深度学习 (deep learning)”可能会产生几个合理、有创意但不同的响应。SFT 通常会将模型训练为一个特定示例，而基于偏好的方法则可以学习使*任何*此类解释变得好的*特质*（简洁性、类比使用、准确性）。
+
+> SFT 中使用的数据信号与 RLHF 中心的偏好数据比较。SFT 依赖于绝对示例，而 RLHF 从相对比较中学习。
+
+### 指定复杂或隐含的目标
+
+“行为无害”、“诚实”或“避免生成错误信息”等对齐 (alignment)目标，众所周知仅通过 SFT 示范难以全面指定。
+
+- **抽象原则：** 无害性不仅是避免明确的有害内容；它还涉及不易察觉的方面，如避免有害的刻板印象、优雅地拒绝危险指令，以及不提供可能造成间接伤害的误导信息。通过输入-输出对展示所有这些抽象原则的各个方面是不切实际的。
+- **负面限制：** 定义模型*不应该*做什么通常更容易。虽然 SFT 可以包含拒绝的示例，但它难以将拒绝的根本*原因*泛化到新的有害提示上。
+- **表面模仿：** 模型可能从 SFT 数据中学习表面模式，而没有内化预期原则。例如，它可能会学习使用模糊语言（“似乎……”），因为此类短语出现在“诚实”的示例中，但却不恰当地应用，无法在需要时真正诚实或承认不确定性。
+
+### 过拟合 (overfitting)和泛化能力丧失
+
+在特定数据集上进行密集 SFT 可能会导致模型对这些示范中包含的风格、语气和特定知识产生过拟合。
+
+- **模式崩溃：** 模型可能会失去部分原始生成能力或创造力，倾向于生成与 SFT 示例非常相似的输出，即使在需要变体时也是如此。
+- **脆弱性：** 虽然在 SFT 期间看到的任务上表现良好，但当模型面临略有不同的任务或措辞时，其效果可能会下降或表现不佳。
+
+这些局限性表明，虽然 SFT 是基础适应的宝贵工具，但它不足以实现高级 LLM 与人类开放式交互所需的深刻、可靠和可泛化的对齐 (alignment)。引入更广泛、更具可扩展性的人类偏好信号的需求，促使转向 RLHF 等方法，这些方法借助比较反馈来指导模型趋向更理想的行为。接下来的章节将详细介绍如何在一个强化学习 (reinforcement learning)框架内收集、建模和使用这种偏好信号。
+
+## 参考资料
+
+- [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: arXiv preprint arXiv:2203.02155; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  介绍了通过RLHF对齐的InstructGPT模型，并详细说明了SFT为何不足以实现通用指令遵循和对齐。
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862) — Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort, Deep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion, Tom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatfield-Dodds, Danny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt, Neel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark, Sam McCandlish, Chris Olah, Ben Mann, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2204.05862; DOI: [10.48550/arXiv.2204.05862](https://doi.org/10.48550/arXiv.2204.05862)
+  展示了RLHF在使LLM与人类对有用性和无害性的偏好对齐方面的有效性，说明了SFT单独无法满足复杂目标的原因。
+- [Learning to summarize with human feedback](https://arxiv.org/abs/2009.01325) — Nisan Stiennon, Long Ouyang, Jeff Wu, Daniel M. Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul Christiano (2020)
+  Journal: Advances in Neural Information Processing Systems; Volume: 33; Pages: 7773-7784; DOI: [10.48550/arXiv.2009.01325](https://doi.org/10.48550/arXiv.2009.01325)
+  RLHF在文本生成方面的初步应用之一，展示了其学习主观奖励函数的能力，而SFT因缺乏单一的“正确”输出而面临挑战。

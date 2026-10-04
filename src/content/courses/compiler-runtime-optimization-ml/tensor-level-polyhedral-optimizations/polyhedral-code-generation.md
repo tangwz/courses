@@ -1,0 +1,100 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "tensor-level-polyhedral-optimizations"
+lesson: "polyhedral-code-generation"
+sourceId: 4502
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-4-tensor-level-polyhedral-optimizations/polyhedral-code-generation"
+title: "多面体调度下的代码生成"
+description: "了解优化的循环结构如何从多面体调度派生而来（例如，使用CLooG、ISL）。"
+order: 5
+plots: []
+sourceHash: "9b7ad79940f5bf29c8c611241bf13acc9a6a2fe5fae4ba70be7e206ef23348a3"
+sourceCorrections: []
+---
+
+在多面体模型中应用复杂的调度变换后，我们得到一个优化执行顺序的抽象表示。这种表示常以调度函数或更结构化的调度树形式编码，记录了所需的循环置换、分块、倾斜或融合。然而，这种抽象形式不能直接作为硬件代码执行。下一个主要步骤是代码生成：将这个优化过的调度转换回可编译和运行的具体的、命令式的循环嵌套。
+
+### 从抽象调度到具体循环
+
+代码生成在多面体框架中的主要任务是依照调度确定的顺序，合成遍历迭代域中点的循环。代码生成将多面体和仿射函数的数学表示转换为C、CUDA或其他目标语言，实现从抽象数学范围到具体硬件代码的转换。
+
+此过程中涉及的构成部分包括：
+
+1. **调度树：** 简单的调度可用将迭代向量 (vector)映射到时间向量的仿射函数来表示，而涉及分块、融合或序列的复杂变换常会形成*调度树*。调度树提供执行顺序的分层表示。树中的每个节点可以代表一个循环、一系列操作、一组并发任务（带状节点）或条件（过滤节点）。遍历调度树决定了生成代码的结构。
+2. **扫描变换后的域：** 代码生成实际上是依据调度树界定的结构，“扫描”变换后的迭代域（原始域可能已被调度修改）中的迭代点。在此扫描过程中遇到的每个整数点，需执行相应的原始语句实例。
+3. **推导循环边界：** 随着调度树的遍历，代码生成器需要确定每个合成循环的边界。这包含将迭代域多面体（可能与调度树中过滤节点给定的约束相交）投影到与当前循环级别相符的维度上。诸如参数 (parameter)整数规划（PIP）或傅里叶-莫茨金消元法等算法常被多面体库用于计算这些边界，这些边界可能取决于外部循环变量或符号参数。
+4. **生成语句实例：** 在调度树遍历生成的最内层循环中，实际的语句代码必须被发出。生成的循环迭代器与调度维度一致。为了以恰当的数据访问方式调用恰当的原始语句实例，生成器必须将当前调度迭代器映射回原始域迭代器（使用调度变换的逆操作），并将其代入原始语句的表达式和数组访问函数。
+
+### 常用工具：ISL和CLooG
+
+这个复杂的流程通常由专业库处理。两个广为人知的实例是：
+
+- **整数集库（ISL）：** 一个强大的C语言库，用于处理由整数线性不等式界定的集合和关系。ISL提供了必要的数据结构（集合、映射、调度树）和操作（投影、交集、调度算法），用于在多面体模型中表示和变换循环嵌套。
+- **CLooG（块状循环生成器）：** 一个专门设计用于从多面体表示（通常由ISL作为输入提供，包括域集合和调度树）生成C/C++代码（或其他类似的命令式语言）的工具。CLooG处理根据调度扫描迭代域以及生成所需循环边界和防护条件的复杂事务。
+
+像MLIR这样的现代编译器框架常直接集成多面体功能，或在内部使用ISL等库。它们可能有自己根据内部表示定制的代码生成机制，但依据相同的基础原理。
+
+### 示例：分块矩阵乘法的代码生成
+
+我们再看矩阵乘法的例子：$C = A \times B$。原始循环嵌套如下：
+
+```c
+for (int i = 0; i < N; ++i)
+  for (int j = 0; j < N; ++j)
+    for (int k = 0; k < N; ++k)
+      S: C[i][j] += A[i][k] * B[k][j];
+```
+
+假设我们对所有三个循环（$i, j, k$）应用分块，分块大小为$T$。多面体调度器会计算出一个新调度，通常在内部表示为一个调度树。这个树会记录分块循环（$i_{tile}, j_{tile}, k_{tile}$）以及每个分块内点循环（$i, j, k$）的嵌套关系。
+
+像CLooG这样的代码生成器接收原始域 $D = \{ S[i, j, k] : 0 \le i, j, k < N \}$ 以及表示分块变换的调度树。它随后合成出类似以下结构的代码：
+
+```c
+// 分块矩阵乘法生成的代码（分块大小为 T）
+for (int c0 = 0; c0 <= (N - 1) / T; ++c0) { // i_tile 循环
+  for (int c1 = 0; c1 <= (N - 1) / T; ++c1) { // j_tile 循环
+    for (int c2 = 0; c2 <= (N - 1) / T; ++c2) { // k_tile 循环
+      // 内部循环在分块边界内迭代
+      for (int c3 = T * c0; c3 <= min(N - 1, T * c0 + T - 1); ++c3) { // i 循环
+        for (int c4 = T * c1; c4 <= min(N - 1, T * c1 + T - 1); ++c4) { // j 循环
+          for (int c5 = T * c2; c5 <= min(N - 1, T * c2 + T - 1); ++c5) { // k 循环
+            // 语句 S，使用映射到 (i, j, k) 的原始迭代器 (c3, c4, c5)
+            C[c3][c4] += A[c3][c5] * B[c5][c4];
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+观察生成器如何创建与调度维度一致的循环（此处标记 (token)为 `c0` 至 `c5`）。内部循环（`c3, c4, c5`）的边界是依据外部分块循环迭代器（`c0, c1, c2`）和原始问题大小 $N$ 确定的。`min` 函数处理边缘处的局部块。最内层循环体包含原始语句，使用从调度派生的迭代器。
+
+一个简化后的调度树结构，用于此分块执行，可能如下所示：
+
+> 分块矩阵乘法的调度树。外部的带代表分块循环，内部的带代表在每个分块内迭代的循环，最终包含语句的运行。
+
+### 挑战和考量
+
+尽管功能强劲，但从多面体调度生成代码并非没有挑战：
+
+- **边界的复杂性：** 推导出的循环边界可能变得复杂的表达式，包含 `min`、`max`、`floor` 和模运算，特别对于非矩形域或精巧的调度。保证正确性并简化这些边界是重要的。
+- **代码大小：** 生成的代码，特别是带有复杂条件或参数 (parameter)化分块的防护时，有时可能明显比原始手写循环更大，更难阅读。
+- **控制流：** 为包含条件语句（过滤节点）的多面体表示生成代码增加了复杂性。
+- **目标感知：** 基本的多面体代码生成产生与目标无关的循环结构。将这些结构有效映射到特定硬件（例如，生成带有显式线程/块映射和在GPU分块内同步的`__syncthreads()`调用的CUDA核），在初始循环生成后，需要进一步的目标特定降级阶段。
+
+尽管存在这些难题，从高级数学描述自动生成优化循环嵌套的能力是多面体编译的一个基础构成。它使得编译器能够有序地实施复杂的循环变换，如分块、融合和并行化，这些变换对于在现代硬件上执行机器学习 (machine learning)工作负载中的张量计算以获得出色表现不可或缺。生成代码随后作为后续编译器阶段的输入，比如向量 (vector)化和硬件特定指令生成。
+
+## 参考资料
+
+- [Code generation from polyhedral representations for an affine transformation of statement instances](https://dl.acm.org/doi/10.1145/1029864.1029879) — Claude Bastoul (2004)
+  Journal: Proceedings of the 13th International Conference on Parallel Architecture and Compilation Techniques (PACT '04); Publisher: ACM; Volume: 39; Pages: 111-120; DOI: [10.1145/1029864.1029879](https://doi.org/10.1145/1029864.1029879)
+  这篇基础性论文介绍了CLooG代码生成器从多面体调度合成命令式循环嵌套所使用的原理和算法。
+- [isl: An integer set library for the polyhedral model](https://doi.org/10.1007/978-3-642-15582-6_49) — Sven Verdoolaege (2010)
+  Journal: Mathematical Software – ICMS 2010, Lecture Notes in Computer Science; Publisher: Springer; Volume: 6327; Pages: 299-302; DOI: [10.1007/978-3-642-15582-6_49](https://doi.org/10.1007/978-3-642-15582-6_49)
+  描述了整数集库（ISL）的设计和功能，这是一个用于操作多面体集合和映射的基础库，对多面体编译（包括调度表示）很重要。
+- [Polyhedral compilation: Current research and future challenges](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.411.3323&rep=rep1&type=pdf) — Tobias Grosser, Sven Verdoolaege, Claude Bastoul (2014)
+  Journal: ACM SIGPLAN Notices; Publisher: ACM; Volume: 49; Pages: 21-30; DOI: [10.1145/2633857.2633863](https://doi.org/10.1145/2633857.2633863)
+  这是一篇全面的综述文章，提供了多面体编译的广阔概览，涵盖其模型、调度技术、代码生成和挑战。
+- [The Integer Set Library (ISL) Official Website](http://libisl.sourceforge.io/) — Sven Verdoolaege (2023)
+  ISL的官方网站和文档，它是表示和转换多面体域及调度以进行编译器优化的核心。

@@ -1,0 +1,172 @@
+---
+course: "python-llm-workflows"
+chapter: "data-handling-llamaindex-basics"
+lesson: "practice-llamaindex-indexing-querying"
+sourceId: 5180
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-6-data-handling-llamaindex-basics/practice-llamaindex-indexing-querying"
+title: "动手实践：文档索引与查询"
+description: "关于使用 LlamaIndex 加载、索引和查询文档的实践环节。"
+order: 6
+plots: []
+sourceHash: "f122e1d33177377438222e198a8690bcf8fbb53ff8a0f7add40dab8979c193aa"
+sourceCorrections: []
+---
+
+LlamaIndex 通过加载、索引和提供查询接口来帮助 LLM 应用程序连接外部数据。现在，我们将通过一个具体的例子来演示如何索引文本文档并从中获取信息。
+
+本实践练习假设您已设置好可用的 Python 环境（如第 2 章所述），并已安装所需的 LlamaIndex 库。如果您尚未安装，请安装 `llama-index` 和一个基础 LLM 集成，例如 `llama-index-llms-openai`：
+
+```bash
+pip install llama-index llama-index-llms-openai python-dotenv
+```
+
+您还需要一个来自 OpenAI 等 LLM 提供商的 API 密钥。请记住使用环境变量（例如，在 `.env` 文件中）安全地设置此密钥，如第 2 章所述。
+
+```text
+OPENAI_API_KEY="sk-..."
+```
+
+### 1. 准备数据
+
+首先，我们创建一些简单的文本文件作为数据源。在您的项目文件夹中创建一个名为 `data` 的目录。在此 `data` 目录中，创建两个文本文件：
+
+**文件 1: `data/llm_features.txt`**
+
+```text
+大语言模型 (LLM) 具备多项显著能力。
+它们擅长自然语言理解，能够处理和解读人类文本。
+生成是另一项核心优势，使它们能够生成连贯且符合上下文的文本。
+LLM 还能有效执行语言间的翻译和长文档的总结。
+一些高级模型在推理和问题解决方面表现出新的能力。
+```
+
+**文件 2: `data/rag_systems.txt`**
+
+```text
+检索增强生成 (RAG) 通过整合外部知识来提升 LLM 性能。
+其主要思想是在生成响应之前，从指定数据集中获取相关信息。
+此过程有助于将 LLM 的输出建立在事实数据之上，从而减少幻觉。
+RAG 系统通常包含一个检索器组件（常使用向量搜索）和一个生成器组件（即 LLM）。
+构建有效的 RAG 需要仔细考虑数据索引和检索策略。
+```
+
+### 2. 加载文档
+
+数据文件准备就绪后，我们可以使用 LlamaIndex 的 `SimpleDirectoryReader` 来加载它们。该读取器会自动检测指定目录中的文件并解析其内容。
+
+```python
+import os
+from dotenv import load_dotenv
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.llms.openai import OpenAI # 或您偏好的 LLM
+
+# 加载环境变量（用于 API 密钥）
+load_dotenv()
+
+# 配置 LLM - 确保您的环境中已设置 OPENAI_API_KEY
+# 您可以根据需要调整模型和温度
+# Settings.llm = OpenAI(model="gpt-3.5-turbo", temperature=0.1)
+# 注意：根据 LlamaIndex 最新版本，通常更好的是在需要时显式传递
+# LLM，或者如果偏好全局配置。
+
+print("正在加载文档...")
+# 将 SimpleDirectoryReader 指向包含我们文本文件的目录
+documents = SimpleDirectoryReader("./data").load_data()
+print(f"已加载 {len(documents)} 个文档。")
+
+# （可选）检查已加载的文档
+# print(documents[0].get_content()[:100] + "...") # 打印第一个文档的开头
+```
+
+执行此代码会将 `llm_features.txt` 和 `rag_systems.txt` 中的文本内容加载到 `Document` 对象列表中。每个 `Document` 对象都包含文本内容和相关的元数据。
+
+### 3. 索引文档
+
+文档加载完成后，下一步是对它们进行索引。索引将原始文本转换为针对快速检索优化的结构。问答中最常见的索引类型是 `VectorStoreIndex`，它会为您的文本块创建向量 (vector)嵌入 (embedding)。
+
+```python
+print("正在创建索引...")
+# 从已加载的文档创建 VectorStoreIndex
+# 此过程涉及将文档分块，生成嵌入，
+# 并将它们存储在向量存储中（默认是内存中存储）。
+index = VectorStoreIndex.from_documents(documents)
+print("索引创建成功。")
+```
+
+在后台，LlamaIndex 执行以下几个步骤：
+
+1. **分块：** 将文档分解成更小的文本段（节点）。
+2. **嵌入：** 使用嵌入模型（通常与您选择的 LLM 或单独的模型配合使用）将每个文本块转换为数值向量表示。这些向量能捕捉文本的语义。
+3. **存储：** 将这些向量及其对应的文本块存储在向量存储中。默认情况下，LlamaIndex 使用简单的内存存储，但这可以配置为使用持久性存储，例如 Chroma、FAISS、Pinecone 等（我们将在 RAG 章中提及）。
+
+### 4. 查询索引
+
+索引构建完成后，我们现在可以提出与文档内容相关的问题。LlamaIndex 为此提供了一个 `query_engine` 接口。
+
+```python
+print("正在设置查询引擎...")
+# 从索引创建查询引擎
+query_engine = index.as_query_engine()
+print("查询引擎已就绪。")
+
+# 定义您的查询
+query_text = "RAG 系统背后的主要思想是什么？"
+print(f"\n正在查询: {query_text}")
+
+# 执行查询
+response = query_engine.query(query_text)
+
+# 打印响应
+print("\n响应:")
+print(response)
+
+# 您还可以检查用于响应的源节点
+# print("\n源节点:")
+# for node in response.source_nodes:
+#     print(f"节点 ID: {node.node_id}, 分数: {node.score:.4f}")
+#     print(f"内容: {node.get_content()[:150]}...") # 打印源文本片段
+```
+
+当您运行查询时：
+
+1. `query_engine` 接收您的查询文本 (`query_text`)。
+2. 它使用索引时使用的相同嵌入 (embedding)模型将查询转换为嵌入向量 (vector)。
+3. 它在 `VectorStoreIndex` 中查找向量与查询向量最相似的文本块（节点）。这是“检索”步骤。
+4. 检索到的文本块以及原始查询会传递给 LLM。
+5. LLM 根据检索到的上下文 (context)和查询合成答案。这是“生成”步骤。
+
+`response` 对象包含 LLM 生成的答案。您还可以访问 `response.source_nodes` 以查看从原始文档中检索了哪些特定的文本块并用于生成答案。这有助于理解响应的依据和进行调试。
+
+让我们尝试另一个查询：
+
+```python
+query_text_2 = "提到了 LLM 的哪些能力？"
+print(f"\n正在查询: {query_text_2}")
+response_2 = query_engine.query(query_text_2)
+print("\n响应:")
+print(response_2)
+```
+
+这个查询主要会从 `llm_features.txt` 文档中获取信息，这显示了索引将查询路由到相关源材料的能力。
+
+### 流程总结
+
+下图概述了我们刚刚实现的，基本的索引和查询工作流程。
+
+> 基础 LlamaIndex 工作流程：文档被加载并处理成索引，然后通过查询引擎进行查询，该引擎在用 LLM 生成响应之前会检索相关上下文 (context)。
+
+这个动手示例展现了使用 LlamaIndex 的基本循环：加载数据、创建可搜索的索引，然后查询该索引以获得与上下文相关的答案。随着您构建更复杂的应用程序，您将了解不同的加载器、索引类型、检索器和查询引擎配置，但这种主要模式始终是核心。
+
+## 参考资料
+
+- [LlamaIndex Documentation: Core Concepts - Indexing](https://docs.llamaindex.ai/en/stable/module_guides/concepts/indexing.html) — LlamaIndex Contributors (2024)
+  详细解释了LlamaIndex中使用的索引过程、节点分块、嵌入以及各种索引类型。
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍了检索增强生成（RAG）框架，该框架将信息检索与预训练语言模型相结合，以增强问答能力。
+- [Dense Passage Retrieval for Open-Domain Question Answering](https://arxiv.org/abs/2004.04906) — Vladimir Karpukhin, Barlas Oğuz, Sewon Min, Patrick Lewis, Ledell Wu, Sergey Edunov, Danqi Chen, Wen-tau Yih (2020)
+  Journal: Conference on Empirical Methods in Natural Language Processing (EMNLP); Pages: 871-886; DOI: [10.48550/arXiv.2004.04906](https://doi.org/10.48550/arXiv.2004.04906)
+  描述了如何使用嵌入有效训练密集检索器，用于信息检索，与RAG系统中的索引和查询步骤直接相关。
+- [A Survey of Large Language Models](https://arxiv.org/abs/2303.18223) — Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen (2023)
+  DOI: [10.48550/arXiv.2303.18223](https://doi.org/10.48550/arXiv.2303.18223)
+  提供了关于大型语言模型的进展、架构、训练和应用的全面概述，为LLM工作流中的生成器组件提供了背景信息。

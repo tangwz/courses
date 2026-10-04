@@ -1,0 +1,205 @@
+---
+course: "introduction-to-speech-recognition"
+chapter: "processing-audio-signals"
+lesson: "practical-visualizing-processing-audio"
+sourceId: 7099
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-speech-recognition/chapter-2-processing-audio-signals/practical-visualizing-processing-audio"
+title: "动手实践：音频文件可视化与处理"
+description: "一个动手实践环节，您将使用 Python 加载、可视化并将音频文件处理成特征。"
+order: 8
+plots: ["plots/7099-0.json", "plots/7099-1.json", "plots/7099-2.json"]
+sourceHash: "96af0fda23dc311861c260babb0eb2b4ae785f02af0570c0e962eb243d745e9e"
+sourceCorrections: []
+---
+
+音频信号处理是语音识别的基础。将原始音频转换为机器可读特征是主要步骤。这包括使用流行的 Python 库来加载音频文件，显示其属性，并提取梅尔频率倒谱系数 (MFCC)。
+
+这次动手练习将巩固您对音频处理流程的理解。您将看到几行代码如何执行复杂的转换，将声波转化为声学模型下一个阶段所需的结构化数据。
+
+### 环境准备
+
+在处理音频之前，我们需要合适的工具。我们将主要使用 `librosa`，这是一个强大的 Python 音频和音乐分析包。对于可视化，我们将使用 `matplotlib`。
+
+如果您的环境中没有安装这些库，可以使用 pip 将它们添加到您的 Python 环境中：
+
+```bash
+pip install librosa matplotlib
+```
+
+环境准备就绪后，我们首先加载一个音频文件。
+
+### 加载和检查音频文件
+
+任何音频处理任务的第一步都是将音频数据加载到内存中。`librosa` 库使这项工作变得简单直接。`librosa.load()` 函数读取音频文件并返回两个重要内容：作为时间序列的音频信号和采样率。
+
+- **时间序列：** 一个 NumPy 浮点数数组，表示波形在每个时间点的振幅。
+- **采样率：** 每秒音频样本数（以赫兹测量）。
+
+让我们看看实际操作。创建一个 Python 脚本并添加以下代码。您可以使用任何现有的 `.wav` 或 `.mp3` 文件。在这个例子中，我们假设有一个名为 `speech_sample.wav` 的文件。
+
+```python
+import librosa
+
+# 定义音频文件的路径
+audio_file_path = 'speech_sample.wav'
+
+# 加载音频文件
+# librosa 默认自动重采样到 22050 Hz
+# y 是音频时间序列，sr 是采样率
+y, sr = librosa.load(audio_file_path)
+
+print(f"音频时间序列（前 10 个样本）：{y[:10]}")
+print(f"采样率：{sr} Hz")
+print(f"总样本数：{len(y)}")
+print(f"音频时长：{len(y) / sr:.2f} 秒")
+```
+
+输出会显示原始振幅值、`librosa` 使用的采样率以及音频的总长度。这简单的一步已经将一个声音文件转换成了程序可以处理的数值格式。
+
+### 波形可视化
+
+一串原始数字不太直观。理解音频信号的更好方式是将其可视化。正如我们所学，波形图绘制了音频信号随时间变化的振幅。这为我们提供了声音响度和能量的视觉表示。
+
+我们可以使用 `matplotlib` 和 `librosa.display` 来创建清晰的图表。
+
+```python
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 加载音频文件
+audio_file_path = 'speech_sample.wav'
+y, sr = librosa.load(audio_file_path)
+
+# 为绘图创建时间轴
+time = np.arange(0, len(y)) / sr
+
+# 绘制波形图
+plt.figure(figsize=(12, 4))
+librosa.display.waveshow(y, sr=sr, color='#4263eb')
+plt.title('音频波形图')
+plt.xlabel('时间 (秒)')
+plt.ylabel('振幅')
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+```
+
+运行这段代码将生成一个图表，显示音频振幅的升降，清楚地显示语音存在的位置和停顿的位置。
+
+
+
+![音频波形图](plots/7099-0.json)
+
+
+
+> 显示音频信号在短时间内振幅波动的波形图。
+
+### 创建和可视化频谱图
+
+虽然波形图很有用，但它没有显示信号的频率成分。频谱图正是通过显示在每个时间点存在哪些频率来做到这一点。它是语音处理中最重要的可视化方法之一。
+
+要创建频谱图，我们首先需要计算信号的短时傅里叶变换 (STFT)。STFT 将信号分解成短的、重叠的帧，并计算每个帧的频率谱。`librosa` 为此提供了一个函数。
+
+```python
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 加载音频文件
+audio_file_path = 'speech_sample.wav'
+y, sr = librosa.load(audio_file_path)
+
+# 计算短时傅里叶变换 (STFT)
+D = librosa.stft(y)
+
+# 将振幅频谱图转换为分贝 (dB) 刻度
+S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+
+# 绘制频谱图
+plt.figure(figsize=(12, 5))
+librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='log', cmap='viridis')
+plt.colorbar(format='%+2.0f dB', label='强度 (dB)')
+plt.title('对数频率频谱图')
+plt.xlabel('时间 (秒)')
+plt.ylabel('频率 (赫兹)')
+plt.tight_layout()
+plt.show()
+```
+
+结果图在 x 轴上显示时间，y 轴上显示频率（通常是对数刻度以更好地表示人类听觉），并用颜色表示每个时间点每个频率的强度。颜色越亮表示能量越高。您通常可以看到与语音中音节共振峰对应的水平条带。
+
+
+
+![频谱图](plots/7099-1.json)
+
+
+
+> 显示不同频率区间随时间变化的强度的频谱图。更亮的区域表示该频率的能量更高。
+
+### 提取梅尔频率倒谱系数 (MFCC)
+
+最后，我们来到本章的主要目标：特征提取。现在我们将计算 MFCC，这是许多传统语音识别系统中使用的标准特征。提醒一下，MFCC 是频谱包络的紧凑表示，旨在捕获语音中语音学上重要的特征。
+
+`librosa.feature.mfcc()` 函数为我们完成了所有繁重的工作。它以音频时间序列和采样率为输入，并执行所有步骤：分帧、加窗、FFT、梅尔滤波器组应用和离散余弦变换 (DCT)。
+
+```python
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+
+# 加载音频文件
+audio_file_path = 'speech_sample.wav'
+y, sr = librosa.load(audio_file_path)
+
+# 从音频信号计算 MFCC
+# 默认计算 20 个 MFCC
+mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+
+print(f"MFCC 矩阵的形状：{mfccs.shape}")
+
+# 可视化 MFCC
+plt.figure(figsize=(12, 5))
+librosa.display.specshow(mfccs, sr=sr, x_axis='time', cmap='coolwarm')
+plt.colorbar(label='MFCC 系数')
+plt.title('MFCC')
+plt.xlabel('时间 (秒)')
+plt.ylabel('MFCC')
+plt.tight_layout()
+plt.show()
+```
+
+当您运行这段代码时，`print(mfccs.shape)` 将输出类似 `(13, 216)` 的结果。这意味着我们有一个包含 13 行（每行对应一个 MFCC 系数）和 216 列（每列对应一个时间帧）的矩阵。这个矩阵是我们音频文件的最终特征表示。它包含语音内容的主要信息，并去除了噪声和其他不相关细节。
+
+这正是声学模型用来识别出所说的声音的数据。
+
+
+
+![梅尔频率倒谱系数 (MFCC)](plots/7099-2.json)
+
+
+
+> MFCC 矩阵的可视化。每列是一个短时间帧的特征向量 (vector)，每行是一个特定的 MFCC 系数。
+
+### 总结与下一步
+
+在此实践环节中，您已成功编写 Python 代码，完成了整个音频预处理流程。您从一个标准音频文件开始，并：
+
+1. 将其加载到数值数组中。
+2. 可视化其波形和频谱图以检查其属性。
+3. 计算了 MFCC，创建了特征矩阵。
+
+您已将非结构化的声波转换为高度结构化、信息丰富的数据格式。此特征矩阵已准备好输入到机器学习 (machine learning)模型中。在下一章中，我们将了解 ASR 流程中的第一个主要模型：**声学模型**，它学习将这些特征映射到语音的基本单位。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  这是一本涵盖语音处理基础知识的综合性教材的在线草稿，包括信号分析和MFCC等特征提取。
+- [librosa: Audio and music analysis in Python](https://conference.scipy.org/proceedings/scipy2015/mcfee.html) — Brian McFee, Colin Raffel, Dawen Liang, Daniel PW Ellis, Matt McVicar, Eric Battenberg, Oriol Nieto (2015)
+  Journal: Proceedings of the 14th Python in Science Conference; Pages: 18-25; DOI: [10.25080/majora-7b9e6e87-00c](https://doi.org/10.25080/majora-7b9e6e87-00c)
+  `librosa` Python库的官方文档，提供了音频分析和特征提取的实用指南及API参考。
+- [Digital Signal Processing: Principles, Algorithms, and Applications](https://books.google.com/books/about/Digital_Signal_Processing_Principles_Algo.html?id=z1JkPQAACAAJ) — John G. Proakis and Dimitris G. Manolakis (2007)
+  Publisher: Pearson Prentice Hall
+  一本数字信号处理的理论基础标准教材，对于理解采样、傅里叶变换和频谱分析等概念具有重要意义。

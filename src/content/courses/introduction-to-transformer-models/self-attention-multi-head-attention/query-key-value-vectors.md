@@ -1,0 +1,55 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "self-attention-multi-head-attention"
+lesson: "query-key-value-vectors"
+sourceId: 2972
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-2-self-attention-multi-head-attention/query-key-value-vectors"
+title: "自注意力机制中的查询、键和值向量"
+description: "阐述从输入嵌入生成查询（Q）、键（K）和值（V）向量的过程及其作用。"
+order: 2
+plots: []
+sourceHash: "05eab6b25e10a04c33e54d4a99bedcc83611f83e8cceb05874708a2bcc422221"
+sourceCorrections: []
+---
+
+在自注意力 (self-attention)机制 (attention mechanism)中，目标是让输入序列中的每个词在其特定语境下，判断与其他所有词（包括自身）的相关性。为完成此比较和后续的信息加权，我们把每个输入词的嵌入 (embedding)转变为三种不同的表示：查询、键和值向量 (vector)。
+
+在自注意力机制中，输入序列中的每个词，例如“thinking machine”，最初都由一个嵌入向量表示。词语“thinking”的嵌入表示为 $x_1$，而“machine”的嵌入表示为 $x_2$。这些向量捕获了词语初始的、与语境无关的含义。
+
+进行自注意力计算时，我们不直接比较这些嵌入。取而代之的是，我们使用在训练期间学到的三个不同的权重 (weight)矩阵，将每个嵌入 $x_i$ 投影到三个独立的向量空间。这些矩阵通常表示为 $W^Q$、$W^K$ 和 $W^V$。
+
+具体来说，对于序列中的每个输入嵌入 $x_i$，我们计算：
+
+1. **查询**向量：$q_i = x_i W^Q$
+2. **键**向量：$k_i = x_i W^K$
+3. **值**向量：$v_i = x_i W^V$
+
+此过程为输入序列中的每个词生成一组独特的查询、键和值向量。这些派生向量的维度（键和查询为 $d_k$，值为 $d_v$）通常可能小于原始嵌入维度（$d_{model}$）。要求查询和键向量的维度（$d_k$）必须一致，以便它们能够通过点积进行比较。
+
+我们可以将单个输入词元 (token)的此转换过程可视化：
+
+> 从单个输入嵌入（$x_i$）使用学习到的权重矩阵（$W^Q, W^K, W^V$）推导出查询（q）、键（k）和值（v）向量。
+
+为理解这些向量的作用，可以设想一个搜索数据库的类比：
+
+- **查询 (Q)**：表示当前词的角度，提出“哪些信息与我相关？”对于特定词 $i$，其查询向量 $q_i$ 用于探测所有其他词。
+- **键 (K)**：表示一个词所承载信息的“标签”或标识符。每个词 $j$ 都有一个键向量 $k_j$。查询 $q_i$ 会与所有键 $k_j$ 进行比较，以计算注意力分数，这表明了词 $j$ 对词 $i$ 的相关程度。
+- **值 (V)**：表示一个词的实际内容或含义。每个词 $j$ 也有一个值向量 $v_j$。一旦查询 $q_i$ 和键 $k_j$ 之间的注意力分数被计算出来，它将用于对相应的**值**向量 $v_j$ 进行加权。
+
+本质上，查询向量 $q_i$ 和键向量 $k_j$ 之间的交互决定了从词 $i$ 到词 $j$ 的*连接强度*或*注意力权重*。值向量 $v_j$ 则提供从词 $j$ 传回词 $i$ 的*信息*，并由该注意力权重进行缩放。
+
+一个重要的方面是，权重矩阵 $W^Q$、$W^K$ 和 $W^V$ 是在模型训练过程中学习到的参数 (parameter)。它们最初是随机的，但通过反向传播 (backpropagation)进行调整，使得模型能学习到将输入嵌入投影到这些Q、K、V空间的最有效方式，以应对当前任务（例如机器翻译、文本摘要）。这个学习过程使得模型能够理解输入序列中复杂的关联和依赖。
+
+在为每个词生成了这些查询、键和值向量之后，我们现在可以计算实际的注意力分数了。下一节会详细说明**点积缩放注意力**机制如何使用这些向量来计算精确的注意力权重，这些权重定义了信息在序列中的词之间如何流动。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.55919/nips.2017.00078](https://doi.org/10.55919/nips.2017.00078)
+  这篇奠基性论文介绍了Transformer架构和自注意力机制，并定义了查询、键和值的概念。
+- [CS224N: Natural Language Processing with Deep Learning - Lecture 10: Transformers and Pretraining](https://web.stanford.edu/class/cs224n/materials/cs224n-2023-lecture10-transformers.pdf) — Danqi Chen, John Hewitt, Christopher Manning (2023)
+  Publisher: Stanford University
+  提供了对自注意力以及Transformer模型中查询、键和值向量作用的教育性解释。
+- [Natural Language Processing with Transformers](https://www.oreilly.com/library/view/natural-language-processing/9781098132439/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media
+  一本实用指南，解释了作为Transformer模型一部分的QKV机制及其在自然语言处理中的应用。

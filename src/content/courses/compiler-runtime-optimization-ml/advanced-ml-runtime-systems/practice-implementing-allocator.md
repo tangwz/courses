@@ -1,0 +1,225 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "advanced-ml-runtime-systems"
+lesson: "practice-implementing-allocator"
+sourceId: 4558
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-6-advanced-ml-runtime-systems/practice-implementing-allocator"
+title: "动手实践：实现一个简单的分配器"
+description: "练习实现一个基于竞技场（arena）的简单内存分配器，用于张量存储。"
+order: 8
+plots: []
+sourceHash: "32738fdc0da629ff56dd0da7d03c9820581fc0dc3751c9150d095d8e6c162e7d"
+sourceCorrections: []
+---
+
+高效的内存管理是高性能机器学习 (machine learning)运行时系统的基础。张量，特别是中间激活张量，会占用大量内存。标准的通用分配器（如 `malloc`）可能会引入额外开销（元数据存储、碎片化、较慢的分配/内存清除），这在机器学习推理 (inference)的密集分配模式下会变得明显。
+
+专用运行时中一种常用策略是使用**竞技场分配器**，也称为**碰撞式分配器**。其核心思路很简单：预先分配一大块连续内存（即竞技场），然后通过简单地将指针在该块内向前移动来满足分配请求。内存清除通常通过将指针重置回竞技场起始位置来实现，从而有效地同时清除其中分配的所有内存。这种方法特别适合于许多临时张量一起创建和销毁的单次推理执行等情况。
+
+下面我们用 C++ 实现一个基础的竞技场分配器，以说明其原理。
+
+### 竞技场分配器原理
+
+设想竞技场是一个预留的大块内存区域。我们维护一个指针，最初指向该区域的起始位置。当分配请求到来时，我们检查是否有足够的剩余空间，然后将指针按请求的大小（加上任何必要的对齐 (alignment)填充）向前调整，并返回原始指针位置。
+
+> 竞技场分配器的演变过程。分配操作会使预分配缓冲区内的偏移指针递增。重置操作将偏移量移回零。
+
+### 基础 C++ 实现
+
+"我们将创建一个简单的 `ArenaAllocator` 类。为求简洁，本例省略了线程安全性，并使用了基础 C++ 特性。在实际使用中，你可能会使用平台特定的 API 进行对齐 (alignment)内存分配，并可能需要加入锁机制以支持多线程使用。"
+
+```cpp
+#include <cstddef> // for std::size_t, std::byte
+#include <cstdint> // for std::uintptr_t
+#include <memory>  // for std::unique_ptr
+#include <stdexcept> // for std::runtime_error, std::bad_alloc
+#include <vector>
+#include <numeric> // for std::lcm
+
+// 辅助函数，用于对齐指针
+inline void* align_pointer(void* ptr, std::size_t alignment) {
+    if (alignment == 0) {
+        return ptr; // 不需要对齐
+    }
+    std::uintptr_t int_ptr = reinterpret_cast<std::uintptr_t>(ptr);
+    std::size_t remainder = int_ptr % alignment;
+    if (remainder != 0) {
+        int_ptr += (alignment - remainder);
+    }
+    return reinterpret_cast<void*>(int_ptr);
+}
+
+class ArenaAllocator {
+public:
+    // 构造函数：分配竞技场缓冲区
+    explicit ArenaAllocator(std::size_t size_bytes)
+        : buffer_size_(size_bytes), current_offset_(0) {
+        // 分配原始内存。在生产环境中，请考虑对齐分配。
+        raw_buffer_ = std::make_unique<std::byte[]>(buffer_size_);
+        if (!raw_buffer_) {
+            throw std::bad_alloc();
+        }
+        start_ptr_ = raw_buffer_.get();
+        current_ptr_ = start_ptr_;
+        // std::cout << "竞技场已分配: " << buffer_size_ << " 字节，起始地址: " << start_ptr_ << std::endl;
+    }
+
+    // 禁用拷贝构造函数和赋值运算符
+    ArenaAllocator(const ArenaAllocator&) = delete;
+    ArenaAllocator& operator=(const ArenaAllocator&) = delete;
+
+    // 从竞技场分配内存
+    void* allocate(std::size_t size_bytes, std::size_t alignment = alignof(std::max_align_t)) {
+        if (size_bytes == 0) {
+            return nullptr; // 零大小分配的标准行为
+        }
+
+        // 确保对齐大小是 2 的幂
+        if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
+             throw std::invalid_argument("Alignment must be a power of 2");
+        }
+
+        // 计算对齐后的指针
+        void* aligned_ptr = align_pointer(current_ptr_, alignment);
+        std::size_t alignment_padding = reinterpret_cast<std::byte*>(aligned_ptr) - reinterpret_cast<std::byte*>(current_ptr_);
+
+        // 计算所需总大小（包括对齐填充）
+        std::size_t total_size_needed = alignment_padding + size_bytes;
+
+        // 检查是否有足够空间
+        if (current_offset_ + total_size_needed > buffer_size_) {
+             // std::cerr << "竞技场分配失败: 请求 " << size_bytes
+             //           << " (总计 " << total_size_needed << "), 可用 "
+             //           << (buffer_size_ - current_offset_) << std::endl;
+            throw std::bad_alloc(); // 空间不足
+        }
+
+        // 通过移动指针/偏移量“分配”内存
+        void* result_ptr = aligned_ptr;
+        current_ptr_ = reinterpret_cast<std::byte*>(aligned_ptr) + size_bytes;
+        current_offset_ += total_size_needed;
+
+        // std::cout << "已分配 " << size_bytes << " 字节 (对齐到 " << alignment << "). "
+        //           << "偏移量: " << current_offset_ << "/" << buffer_size_ << std::endl;
+
+        return result_ptr;
+    }
+
+    // 重置竞技场，从而有效地清除其中所有内存
+    void reset() {
+        current_offset_ = 0;
+        current_ptr_ = start_ptr_;
+        // std::cout << "竞技场已重置。" << std::endl;
+    }
+
+    // 获取剩余空闲空间（近似值，未考虑未来的对齐需求）
+    std::size_t get_free_space() const {
+        return buffer_size_ - current_offset_;
+    }
+
+    // 获取竞技场总大小
+    std::size_size_t get_total_size() const {
+        return buffer_size_;
+    }
+
+private:
+    std::unique_ptr<std::byte[]> raw_buffer_; // 拥有内存
+    void* start_ptr_;       // 可用缓冲区的起始
+    void* current_ptr_;     // 当前分配位置
+    std::size_t buffer_size_;   // 缓冲区的总大小
+    std::size_t current_offset_; // 从起始位置的当前偏移量（包含填充在内的总使用量）
+};
+```
+
+### 分配器的使用
+
+下面说明如何在简化的推理 (inference)情境中使用此分配器：
+
+```cpp
+#include <iostream>
+#include <vector>
+
+// 虚拟张量类（请替换为实际张量实现）
+struct Tensor {
+    void* data;
+    std::size_t size;
+    // ... 其他元数据
+};
+
+int main() {
+    const std::size_t ARENA_SIZE = 1024 * 1024; // 1 MiB 竞技场
+    ArenaAllocator allocator(ARENA_SIZE);
+
+    try {
+        std::cout << "Initial free space: " << allocator.get_free_space() << std::endl;
+
+        // 模拟为不同层分配张量
+        Tensor activation1;
+        activation1.size = 256 * 1024; // 256 KiB
+        activation1.data = allocator.allocate(activation1.size, 64); // 请求 64 字节对齐
+        std::cout << "Allocated Tensor 1 (" << activation1.size << " bytes). Free space: " << allocator.get_free_space() << std::endl;
+
+        Tensor weights1;
+        weights1.size = 128 * 1024; // 128 KiB
+        weights1.data = allocator.allocate(weights1.size, 32); // 请求 32 字节对齐
+        std::cout << "Allocated Tensor 2 (" << weights1.size << " bytes). Free space: " << allocator.get_free_space() << std::endl;
+
+        Tensor activation2;
+        activation2.size = 512 * 1024; // 512 KiB
+        activation2.data = allocator.allocate(activation2.size); // 默认对齐
+        std::cout << "Allocated Tensor 3 (" << activation2.size << " bytes). Free space: " << allocator.get_free_space() << std::endl;
+
+        // 模拟推理运行结束
+        std::cout << "Inference complete. Resetting arena." << std::endl;
+        allocator.reset();
+        std::cout << "Free space after reset: " << allocator.get_free_space() << std::endl;
+
+        // 可以重用竞技场进行下一次推理
+        Tensor next_run_tensor;
+        next_run_tensor.size = 100 * 1024;
+        next_run_tensor.data = allocator.allocate(next_run_tensor.size);
+        std::cout << "Allocated tensor for next run. Free space: " << allocator.get_free_space() << std::endl;
+
+    } catch (const std::bad_alloc& e) {
+        std::cerr << "Allocation failed: Out of memory in arena." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "An error occurred: " << e.what() << std::endl;
+    }
+
+    return 0;
+}
+```
+
+### 讨论与权衡
+
+**优点：**
+
+1. **速度：** 分配速度非常快，通常只是指针算术和边界检查。内存清除（`reset`）瞬间完成 ($O(1)$)，无论分配数量多少。
+2. **减少碎片化：** 由于内存是连续分配的，竞技场内部消除了外部碎片化。内部碎片化仍可能因对齐 (alignment)填充而产生。
+3. **局部性：** 连续分配相关张量（如连续层中的激活值）可能提升缓存局部性，尽管这很大程度上取决于访问模式。
+
+**缺点：**
+
+1. **固定大小：** 竞技场具有固定大小。如果一次推理 (inference)运行所需的内存超过竞技场提供的大小，分配将失败。预先确定所需大小（内存规划）非常重要。
+2. **无单独内存清除：** 内存只能通过重置竞技场一次性全部清除。这使得它不适合生命周期长的对象或生命周期差异很大、需要单独管理的对象。
+3. **潜在浪费：** 如果某个阶段的内存峰值使用远高于其他阶段，但竞技场需要容纳该峰值，内存可能会被不必要地长时间占用。即使在高水位线之后只有一小部分被积极使用，整个竞技场缓冲区也会被占用。
+
+**扩展：**
+
+- **线程安全：** 添加互斥量或使用线程局部竞技场。
+- **多个竞技场：** 对不同类型的分配使用不同的竞技场（例如，持久化权重 (weight)与瞬态激活值）。
+- **回退分配器：** 如果竞技场空间不足，可能回退到标准分配器（尽管这会使内存清除复杂化）。
+- **扩容：** 如果需要，实现扩容逻辑（重新分配并复制），尽管这会抵消部分性能优势。
+
+这个动手实践示例提供了对竞技场分配的基础理解。尽管简单，这种模式却出乎意料的有效，并构成了许多高性能机器学习 (machine learning)运行时系统中内存管理的基础，尤其是在单次模型执行等特定范围内分配/内存清除模式可预测的场景。在此基础上，运行时通常会采用更精密的静态分析（内存规划）来确定最佳竞技场大小和分配策略。
+
+## 参考资料
+
+- [CS107: Computer Organization and Systems - Memory Allocators (Lecture Notes)](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFvXWp9sqIHSbtXl3rP8KTE2u52AjAb2OV69AtMk5T9wwnEwfuiEYYxKBfQV_NjBOBweIT9tHJJ5cjZAHk0HuBItB5_tJ9eAuJy6p0Io6hEZ3axByOVRUqk2ZwZa6RctUhcXGZneGW0NfNQ8lO-VIXvK_1-no5HvQ4Y4z0-e48e0LBYppuT-WbwNX99gERtIg==) — Jerry Cain, Lisa Yan, Nick Troccoli, Julie Zelenski, Marty Stepp, Cynthia Lee, Chris Gregg (2019)
+  Publisher: Stanford University
+  知名大学课程的讲义，由 Jerry Cain 撰写，讨论了各种内存分配器的设计和实现，包括碰撞分配器及其操作原理。
+- [Apache TVM Documentation](https://tvm.apache.org/docs/) — The Apache TVM Project Developers (2024)
+  Publisher: The Apache Software Foundation
+  高性能机器学习编译器的官方文档，提供了关于机器学习运行时中张量高级内存规划和分配策略的信息。
+- [C++ named requirement: Allocator](https://en.cppreference.com/w/cpp/named_req/Allocator) — cppreference.com contributors (2024)
+  详细解释了在 C++ 中实现自定义内存分配器的要求和接口，对于将竞技场分配器等专用分配器与标准库容器集成至关重要。

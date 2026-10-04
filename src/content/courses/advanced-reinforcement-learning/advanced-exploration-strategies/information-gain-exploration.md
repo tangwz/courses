@@ -1,0 +1,82 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "advanced-exploration-strategies"
+lesson: "information-gain-exploration"
+sourceId: 3429
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-4-advanced-exploration-strategies/information-gain-exploration"
+title: "信息增益在行动引导中的应用"
+description: "基于最大化环境动态信息增益的行动引导策略。"
+order: 8
+plots: []
+sourceHash: "4e6f3ebd3ec91448fa4d495c55958ba80593ce5d6aa32b236d267818f38bf745"
+sourceCorrections: []
+---
+
+虽然基于计数的行为引导方法鼓励访问新颖状态，好奇心方法则根据预测误差奖励意外情况，但基于*信息增益*的行动策略采取了更直接的方式。它们旨在量化 (quantization)并最大化代理对环境动态不确定性的减少。其核心思想是激励那些预期能产出关于环境如何运作最多信息的行动。
+
+### 信息最大化原理
+
+设想一个代理正在学习环境模型，具体来说是状态转移概率 $P(s' | s, a)$ 和潜在的奖励函数 $R(s, a, s')$。最初，这个模型是不确定的。在特定状态下，某些行动可能会带来能明显改进代理理解的结果，而另一些可能仅证实代理已知的内容。信息增益方法将这种直觉形式化，通过根据行动预期能减少代理内部模型不确定性的程度来奖励行动。
+
+从数学角度来看，这通常使用信息论中的思想来构建。设 $\theta$ 代表代理环境动态模型的参数 (parameter)。代理维持对这些参数的信念或分布 $p(\theta)$。在状态 $s$ 采取行动 $a$ 并观察到下一个状态 $s'$ 和奖励 $r$（统称为结果 $o = (s', r)$）之后，代理将其信念更新为后验分布 $p(\theta | s, a, o)$。
+
+从此次转移中获得的信息可以用信念分布的熵减少量来衡量：
+
+
+$$
+\text{信息增益} = H(p(\theta | s, a)) - H(p(\theta | s, a, o))
+$$
+
+
+其中 $H(p)$ 表示分布 $p$ 的熵。由于在采取行动之前结果 $o$ 是未知的，代理通常会采取行动来最大化所有可能结果上的*预期*信息增益：
+
+
+$$
+\text{预期信息增益} = H(p(\theta | s, a)) - \mathbb{E}_{o \sim P(o|s,a)}[H(p(\theta | s, a, o))]
+$$
+
+
+这个量也称为模型参数 $\theta$ 和结果 $o$ 之间的*互信息*，以状态-行动对 $(s, a)$ 为条件： $I(\theta; O | s, a)$。
+
+### 信息增益行动方法的实现
+
+实现信息增益行动方法通常涉及以下组成部分：
+
+1. **概率环境模型：** 代理需要学习并维护一个明确表示不确定性的环境动态模型。贝叶斯方法在此处非常适合。例如，贝叶斯神经网络 (neural network)可用于近似转移函数 $P(s' | s, a)$，其中网络权重 (weight)具有分布而非点估计。集成方法，即在不同数据子集上训练多个模型，也可以提供模型不确定性的近似。
+2. **信息增益的估计：** 计算精确的信息增益或互信息可能在计算上具有挑战性，特别是对于深度神经网络等复杂模型。实际实现通常依赖于近似方法：
+
+   - **变分方法：** 像变分信息最大化引导行动（VIME）这样的技术使用变分推断来近似互信息项。
+   - **集成模型分歧：** 如果使用集成模型，给定 $(s, a)$，它们对下一个状态 $s'$ 的预测分歧可以作为不确定性和潜在信息增益的替代指标。导致集成模型中预测方差较大的行动受到青睐。
+   - **贝叶斯主动学习方法：** 与贝叶斯优化和主动学习建立联系，其中查询（行动）被选择以最大化关于底层函数（环境动态）的信息。
+3. **内部奖励：** 估计的信息增益被用作内部奖励加成，$r_{int} = \beta \cdot I(\theta; O | s, a)$，其中 $\beta$ 是一个缩放因子。这个加成被添加到来自环境的外部奖励中：$r_{total} = r_{ext} + r_{int}$。然后，代理使用标准强化学习 (reinforcement learning)算法（如PPO或DQN）优化其策略，以最大化这些总奖励的折扣和。
+
+> 结合了信息增益的代理交互循环。代理使用其概率模型来估计潜在行动的预期信息增益，选择一个平衡外部奖励和这种内部加成的行动，观察结果，并更新其模型信念。
+
+### 与其他方法的比较
+
+- **对比基于计数的方法：** 基于计数的方法通过假设访问较少的状态/转移更不确定来隐含地追踪新颖性/不确定性。信息增益通过量化 (quantization)所学模型中不确定性的减少量来明确这一点。当新颖性与可学习性不完全相关时（例如，在状态新颖但动态简单/随机的随机“噪声电视”环境中），信息增益可能更有效。
+- **对比预测误差方法（ICM/RND）：** 像ICM这样的好奇心方法使用前向动态模型的预测误差作为奖励。RND则使用针对固定随机网络的预测误差。虽然与意外情况相关，但这不一定等同于最大化关于*代理自身模型参数 (parameter)*的信息增益。一个代理可能会对某个结果感到意外（高预测误差），但如果根据其当前最佳模型，该结果仅仅是随机噪声，则获得的有用信息很少。信息增益专门侧重于减少模型不确定性。
+- **对比参数噪声：** 参数噪声直接将噪声注入策略参数以驱动行为引导。信息增益是基于对*环境*的不确定性来引导行动，而非策略本身，这提供了一个与理解相关的、更具指向性的行动信号。
+
+### 挑战与考量
+
+- **计算成本：** 维护和查询概率模型（特别是贝叶斯神经网络 (neural network)或大型集成模型）以及估计信息论量可能比简单的行为引导策略的计算密集度显著更高。
+- **模型质量：** 其有效性取决于所学环境模型的质量和表示能力。如果模型类别选择不当或未能捕捉真实动态，信息增益信号可能会产生误导。
+- **近似精度：** 实际实现依赖于互信息或模型不确定性的近似。这些近似的质量直接影响行为引导性能。
+
+信息增益提供了一种有原则的方式，通过侧重于减少模型不确定性来驱动行为引导。尽管计算要求较高，但它为复杂环境中定向的行为引导提供了一种精密机制，在这些环境中，理解底层动态对于找到最优策略非常重要。这代表着从仅仅鼓励新颖性向积极寻求关于环境运作方式知识的转变。
+
+## 参考资料
+
+- [Variational Information Maximizing Exploration](https://proceedings.neurips.cc/paper_files/paper/2016/file/418f25bfa17c802b80bc549e63a15993-Paper.pdf) — Rein Houthooft, Xi Chen, Yan Duan, John Schulman, Filip De Turck, Pieter Abbeel (2016)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 29; Pages: 1109-1117; DOI: [10.48550/arXiv.1605.09674](https://doi.org/10.48550/arXiv.1605.09674)
+  介绍了变分信息最大化探索（VIME），一种深度强化学习方法，通过变分推断直接最大化关于环境动态模型的信息增益，用于探索。
+- [Deep Exploration via Bootstrapped DQN](https://proceedings.neurips.cc/paper/2016/hash/53e873d63e9565fe65e60d2e82b87d65-Abstract.html) — Ian Osband, Charles Blundell, Alexander Pritzel, Benjamin Van Roy (2016)
+  Journal: Advances in Neural Information Processing Systems 29; Publisher: Neural Information Processing Systems; Pages: 4026-4034
+  描述了通过引导式DQN进行的深度探索，这是一种利用价值函数集成表示模型不确定性并指导探索的策略，作为信息增益的近似方法。
+- [Bayesian Reinforcement Learning: A Survey](https://www.nowpublishers.com/article/Details/MAL-049) — Mohammad Ghavamzadeh, Shie Mannor, Joelle Pineau, and Aviv Tamar (2015)
+  Journal: Foundations and Trends in Machine Learning; Publisher: Now Publishers; Volume: 8; Pages: 359-483; DOI: [10.1561/2200000049](https://doi.org/10.1561/2200000049)
+  全面回顾了贝叶斯强化学习，解释了概率模型和信念分布如何用于处理不确定性，这是信息增益探索的核心要素。
+- [PILCO: A Model-Based Reinforcement Learning Architecture for Fast and Robust Policy Search](https://proceedings.mlr.press/v15/deisenroth11a/deisenroth11a.pdf) — Marc Peter Deisenroth and Carl Edward Rasmussen (2011)
+  Journal: Proceedings of the 28th International Conference on Machine Learning (ICML); Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 15; Pages: 465-472; DOI: [10.5592/mlr.2011.v15.deisenroth11a](https://doi.org/10.5592/mlr.2011.v15.deisenroth11a)
+  介绍了PILCO，一种基于模型的强化学习算法，使用高斯过程维护概率动态模型。该方法跟踪模型不确定性，通过关注理解不足的区域来指导有效探索，并辅助鲁棒的策略优化。

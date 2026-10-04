@@ -1,0 +1,57 @@
+---
+course: "getting-started-with-gradient-boosting-algorithms"
+chapter: "ensemble-learning-and-boosting-foundations"
+lesson: "what-are-ensemble-methods"
+sourceId: 7572
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-gradient-boosting-algorithms/chapter-1-ensemble-learning-and-boosting-foundations/what-are-ensemble-methods"
+title: "什么是集成方法？"
+description: "对集成方法的清晰说明，这是一种结合多个基模型以生成一个最佳预测模型的机器学习技术。"
+order: 1
+plots: []
+sourceHash: "8c76bb0779fa572ac5343f6e1c51f929166b0a16fe8928c6417e3a220e280de4"
+sourceCorrections: []
+---
+
+任何单个机器学习 (machine learning)模型，无论调整得多么好，都有其局限性。一个决策树可能对训练数据过拟合 (overfitting)，捕获的是噪声而非实际信号。一个线性模型可能过于简单，无法处理复杂模式。集成方法的主要思路是，通过结合多个独立模型的预测，而不是只依赖一个模型，可以获得更好的性能。
+
+这种做法常与“群体智慧”相提并论。如果你向一个人询问估算，他们的答案可能与真实值相去甚远。但如果你向一个庞大而多样化的群体询问并平均他们的答案，结果通常会很准确。在机器学习中，**集成方法**是一种创建并结合多个模型（称为*基学习器*）以生成单一、统一预测的技术。由此产生的集成模型常常比其任何单个组成部分都更准确。
+
+> 集成方法的一般结构，其中来自多个基模型的预测被结合起来，形成一个最终的、更可靠的预测。
+
+构成集成模型的模型被称为**基学习器**或*基估计器*。虽然理论上可以使用任何类型的模型，但一种常见做法，也是我们将关注的，是使用决策树。这些基学习器通常被限制为简单或“弱”的，例如，通过限制它们的深度。这些弱学习器的集合随后可以组合成一个强大的集成模型。
+
+### 集成模型为何有效？
+
+集成方法的有效性在于它们能提升模型的泛化能力。它们主要通过减少预测误差来做到这一点，这可以分解为三个主要优点。
+
+#### 准确性提升
+
+通过结合多个模型的“投票”或预测，集成模型可以平滑掉任何单个模型所做的错误预测。对于分类任务，这可能涉及多数投票：如果五个模型中有三个预测“类别 A”，两个预测“类别 B”，则集成模型的最终预测是“类别 A”。对于回归，预测通常取平均值。这种聚合过程有助于抵消随机误差，从而得到更准确的最终结果。
+
+#### 鲁棒性增加
+
+集成模型对训练数据的具体特点敏感度较低。如果你稍微改变训练集，单个决策树可能会发生显著变化。然而，集成模型往往更稳定。由于它依赖于许多不同模型的共识，数据中的微小变化不太可能显著改变最终预测。这使得模型在应用于新的、未见过的数据时更加可靠。
+
+#### 更好地管理偏差-方差权衡
+
+集成模型的强大之处在于它们能有效地管理偏差-方差权衡。不同的集成策略以不同方式处理这种权衡：
+
+- **方差降低：** 有些方法在数据的不同子集上训练多个独立模型并平均它们的预测。这种平均过程降低了模型的方差，使其更不容易过拟合 (overfitting)。
+- **偏差降低：** 其他方法则按顺序构建模型，其中每个新模型都经过训练以纠正前一个模型的误差。这个过程系统地降低了整体模型的偏差。
+
+集成模型主要通过两种策略构建：Bagging 和 Boosting。Bagging 是降低方差的一个典型示例，而 Boosting 擅长降低偏差。理解这两种策略之间的区别，对于为特定问题选择和构建合适的集成模型是重要的。
+
+## 参考资料
+
+- [Bagging predictors](http://dx.doi.org/10.1007/BF00058655) — Leo Breiman (1996)
+  Journal: Machine Learning; Publisher: Kluwer Academic Publishers; Volume: 24; Pages: 123-140; DOI: [10.1007/BF00058655](https://doi.org/10.1007/BF00058655)
+  介绍自举聚合（bagging）作为一种集成方法的奠基性论文，展示了其在降低方差和提高准确性方面的效果。
+- [A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting](https://doi.org/10.1006/jcss.1997.1504) — Yoav Freund and Robert E. Schapire (1997)
+  Journal: Journal of Computer and System Sciences; Publisher: Academic Press; Volume: 55; Pages: 119-139; DOI: [10.1006/jcss.1997.1504](https://doi.org/10.1006/jcss.1997.1504)
+  介绍AdaBoost的原始学术论文，这是一种通过关注错分类实例来顺序构建模型以减少偏差的提升算法。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本全面的教科书，从统计角度阐述了集成方法，包括对bagging、boosting和偏差-方差权衡的讨论。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/) — Christopher M. Bishop (2006)
+  Publisher: Springer
+  一本经典教科书，提供了机器学习的概率和统计处理，涵盖了集成方法及其基本原理。

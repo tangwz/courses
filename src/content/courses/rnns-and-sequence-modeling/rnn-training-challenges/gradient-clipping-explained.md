@@ -1,0 +1,74 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "rnn-training-challenges"
+lesson: "gradient-clipping-explained"
+sourceId: 2558
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-4-rnn-training-challenges/gradient-clipping-explained"
+title: "梯度裁剪解析"
+description: "描述梯度裁剪作为一种对抗梯度爆炸的技巧。"
+order: 4
+plots: []
+sourceHash: "5cb28978e7d11177d4cfdc3c757aeb8d6d2ffdb94646b4bc11c4720c99312c6d"
+sourceCorrections: []
+---
+
+RNN中的时间反向传播 (backpropagation)（BPTT）过程涉及多个时间步的梯度相乘。当这些梯度持续大于1.0时，它们的乘积会呈指数级增长，导致**梯度爆炸问题**。这会导致训练期间网络权重 (weight)的更新过大，引起数值不稳定，并可能使模型发散（损失变为NaN或无穷大）。设想一下尝试下坡，但步子迈得太大以至于完全越过了谷底；梯度爆炸也会引起类似的优化混乱。
+
+梯度裁剪是一种直接且有效的方法，专门用于应对这种不稳定情况。它并不能阻止梯度一开始变得很大，但它会在这些大梯度用于更新模型权重*之前*进行干预。
+
+### 梯度裁剪如何起作用
+
+核心思想很简单：对梯度的幅度（范数）施加一个最大限值。在训练期间，在计算批次中所有参数 (parameter)的梯度后，但在通过优化器（如SGD或Adam）应用权重 (weight)更新*之前*，我们会检查梯度向量 (vector)的总体大小。
+
+1. **计算全局范数**：计算模型中所有可训练参数的整个梯度向量的范数。通常使用L2范数：
+
+   
+   $$
+   ||g|| = \sqrt{\sum_{i} g_i^2}
+   $$
+   
+
+   $g$ 代表包含所有单独参数梯度 $g_i$ 的向量。这个范数给出了一个单一的标量值，表示当前更新步骤中梯度的总体幅度。
+2. **与阈值比较**：将这个计算出的范数 $||g||$ 与预定义的超参数 (hyperparameter)，即 `阈值` $c$ 进行比较。
+3. **必要时重新缩放**：
+
+   - 如果 $||g|| \le c$，梯度在可接受范围内，不采取任何操作。原始梯度用于权重更新。
+   - 如果 $||g|| > c$，梯度被认为过大（“爆炸”）。它们随后被重新缩放，使其范数恰好等于阈值 $c$。这种重新缩放是乘法进行的，保留了梯度向量的*方向*但减小了其*幅度*：
+     
+     $$
+     g \leftarrow \frac{c}{||g||} g
+     $$
+     
+
+   这确保了更新步长被限制，防止优化过程采取过大的步骤。
+
+以下图表说明了这一思想在简化的2D梯度空间中。
+
+> 如果梯度向量的范数超过阈值 `c`（落在虚线圆圈之外），它将沿着其原始方向按比例缩小，直到其范数等于 `c`（位于圆圈边界上）。圆圈内的梯度不受影响。
+
+### 阈值的选择
+
+裁剪阈值 $c$ 是一个超参数 (parameter) (hyperparameter)，通常需要调整。
+
+- **过高**：裁剪很少发生，这种方法将无法有效阻止超大梯度引起的不稳定。
+- **过低**：裁剪会频繁发生，可能减缓收敛速度，因为它会减少训练早期或在处理复杂损失平面时所需的大步幅的幅度。
+
+阈值的常见值通常在1.0到5.0之间，但最佳值取决于具体的模型、数据集和损失函数 (loss function)的规模。在训练期间（裁剪前）监测梯度范数可以为选择一个合理的起始点提供参考。许多深度学习 (deep learning)框架提供工具用于记录梯度范数。
+
+### 作用与局限
+
+梯度裁剪是一种标准且通常必要的方法，在训练RNN时，特别是在涉及可能长序列的任务中训练LSTMs和GRUs（我们稍后会介绍）时。它直接处理梯度爆炸问题，从而使训练更稳定可靠。
+
+然而，重要的是要记住，梯度裁剪**不能**解决梯度消失问题。它只处理梯度变得过大的情况，而不是过小。其他方法，例如使用门控架构（LSTMs/GRUs）或仔细的权重 (weight)初始化，需要用来解决梯度消失问题并提升长距离依赖关系的学习。梯度裁剪是一个重要的稳定工具，但它不是解决所有RNN训练难题的完整方案。
+
+## 参考资料
+
+- [On the difficulty of training Recurrent Neural Networks](http://proceedings.mlr.press/v28/pascanu13.pdf) — Razvan Pascanu, Tomas Mikolov, Yoshua Bengio (2013)
+  Journal: Proceedings of the 30th International Conference on Machine Learning (ICML 2013); Pages: 1310-1318; DOI: [10.1109/ICML.2013.88](https://doi.org/10.1109/ICML.2013.88)
+  介绍了RNN中的梯度爆炸和梯度消失问题，并提出梯度剪裁作为缓解梯度爆炸的方法。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  对循环神经网络、其训练挑战以及包括梯度剪裁在内的优化技术进行了全面解释。第8章和第10章尤其相关。
+- [Sequence to Sequence Learning with Neural Networks](https://papers.nips.cc/paper_files/paper/2014/file/a14ac55a4f27472c5d14ee3f2c5ce1b4-Paper.pdf) — Ilya Sutskever, Oriol Vinyals, Quoc V. Le (2014)
+  Journal: Advances in Neural Information Processing Systems 27; Publisher: NeurIPS; Pages: 3104-3112; DOI: [10.48550/arXiv.1409.3215](https://doi.org/10.48550/arXiv.1409.3215)
+  一篇具有里程碑意义的论文，展示了梯度剪裁在循环神经网络序列到序列模型中的实际效用。

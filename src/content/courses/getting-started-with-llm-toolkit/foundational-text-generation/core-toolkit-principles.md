@@ -1,0 +1,113 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "foundational-text-generation"
+lesson: "core-toolkit-principles"
+sourceId: 7749
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-1-foundational-text-generation/core-toolkit-principles"
+title: "工具包的原则"
+description: "了解Kerb LLM工具包的设计理念和主要组成部分。"
+order: 2
+plots: []
+sourceHash: "4e59c491146383293490377039055d18551b9594f1f7b41937906fe55303c8f6"
+sourceCorrections: []
+---
+
+使用大型语言模型构建应用程序不仅仅是向API发送文本字符串。您需要管理不同的提供商API，编写有效的提示，处理各种数据格式，并安排复杂的工作流程。Kerb工具包旨在为这一过程带来结构和简便性。它的架构遵循几个主要原则，这些原则使构建、测试和维护LLM应用程序更有效率。
+
+### 生成功能的统一界面
+
+LLM生态系统中一个主要难题是API的多样性。OpenAI、Anthropic和Google都有各自的SDK、数据格式和认证方式。在不同提供商的模型之间切换可能需要大量代码修改，这使得测试和生产上的灵活性变得困难。
+
+该工具包通过统一的生成界面解决此问题。`generate()` 函数作为与任何支持的LLM交互的单一、一致的入口点。您指定提供商和模型，工具包会在后台处理特定于提供商的实现细节。此设计使您的应用程序可移植，并允许您以最少的代码修改切换模型。
+
+例如，使用OpenAI的`GPT-4o-mini`生成文本与使用Anthropic的`Claude-3.5-Haiku`生成文本看起来几乎一样。
+
+```python
+from kerb.generation import generate, ModelName, LLMProvider
+
+# 使用OpenAI生成文本
+response_openai = generate(
+    "What is the difference between a list and a tuple in Python?",
+    model=ModelName.GPT_4O_MINI,
+    provider=LLMProvider.OPENAI
+)
+
+# 使用相同接口通过Anthropic生成文本
+response_anthropic = generate(
+    "What is the difference between a list and a tuple in Python?",
+    model=ModelName.CLAUDE_35_HAIKU,
+    provider=LLMProvider.ANTHROPIC
+)
+
+print(f"OpenAI 响应: {response_openai.content[:70]}...")
+print(f"Anthropic 响应: {response_anthropic.content[:70]}...")
+```
+
+这种抽象让您能够专注于应用程序的逻辑，而不是每个提供商API的具体细节。在整个文档中，您将使用这个统一的接口来完成所有文本生成任务。
+
+### 模块化和可组合性
+
+现代LLM应用程序通常是复杂系统，由多个专业组件构成。例如，一个检索增强生成（RAG）系统需要用于加载文档、将其切分为块、创建嵌入 (embedding)、获取相关信息以及最终生成回复的组件。
+
+该工具包被组织成独立、集中的模块，这些模块与上述逻辑组件相对应。这种模块化设计使您能够仅使用所需部分并将其组合以构建复杂的应用程序。
+
+> 工具包的模块可以组合起来，构建RAG系统和自主代理等复杂工作流程。
+
+每个模块都有特定的职责：
+
+- **`document` & `chunk`**: 加载、预处理和分拆文本数据。
+- **`embedding`**: 创建文本的数值表示以进行语义搜索。
+- **`retrieval`**: 从知识库中找到相关信息。
+- **`prompt`**: 通过模板构造和管理动态提示。
+- **`generation`**: 通过统一接口与LLM交互。
+- **`memory`**: 在对话式应用程序中保持状态。
+- **`agent`**: 构建能够推理 (inference)和使用工具的自主代理。
+
+这种关注点分离使您的代码更清晰、更易于测试和维护。您可以替换分块策略或嵌入模型，而无需更改应用程序的其余部分。
+
+### 配置驱动设计
+
+将模型名称、API密钥和生成参数 (parameter)直接硬编码到应用程序逻辑中会导致代码僵化且不安全。该工具包提倡配置驱动的方法，其中这些设置与应用程序代码分开管理。
+
+`config` 模块提供了一个 `ConfigManager`，它集中管理所有配置。这使您能够以结构化的方式定义模型、设置提供商详细信息和管理API密钥，通常是通过从环境变量安全地加载它们。
+
+```python
+from kerb.config import ConfigManager, ModelConfig
+from kerb.config.enums import ProviderType
+
+# 初始化配置管理器
+config = ConfigManager()
+
+# 定义模型配置
+gpt4_config = ModelConfig(
+    name="gpt-4o-mini",
+    provider=ProviderType.OPENAI,
+    api_key_env_var="OPENAI_API_KEY", # 从环境中安全加载密钥
+    max_tokens=4096,
+    temperature=0.7
+)
+
+# 将模型添加到中心配置
+config.add_model(gpt4_config)
+
+# 稍后在您的应用程序中，您可以获取此配置
+retrieved_config = config.get_model("gpt-4o-mini")
+print(f"已为 {retrieved_config.name} 加载配置，温度为 {retrieved_config.temperature}")
+```
+
+通过将配置与逻辑分离，您可以轻松地在开发和生产环境之间切换，无需更改代码即可更新模型参数，并使敏感凭据远离您的源代码管理。我们将在下一节中应用这一原则，届时我们将设置第一个LLM提供商。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  本文介绍了检索增强生成（RAG），这是一种构建高级LLM应用的核心架构，与模块化原则相符。
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442) — Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein (2023)
+  Journal: arXiv preprint arXiv:2304.03442; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  本文详细介绍了生成式智能体的概念，这是一类在模块化原则中提及的LLM应用，展示了LLM编排。
+- [Prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2023)
+  Publisher: OpenAI Documentation
+  提供了设计提示词的指导和策略，这是LLM应用开发中的核心组成部分，并由Kerb工具包的`prompt`模块涵盖。
+- [Concepts](https://python.langchain.com/docs/concepts) — LangChain (2024)
+  Publisher: LangChain Documentation
+  解释了使用模块化组件和抽象构建LLM应用的概念，这与Kerb工具包讨论的统一接口和可组合性原则相关。

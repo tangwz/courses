@@ -1,0 +1,75 @@
+---
+course: "deploying-diffusion-models-scale"
+chapter: "advanced-deployment-techniques"
+lesson: "advanced-cost-optimization"
+sourceId: 5477
+sourceUrl: "https://apxml.com/zh/courses/deploying-diffusion-models-scale/chapter-6-advanced-deployment-techniques/advanced-cost-optimization"
+title: "高级成本优化策略"
+description: "使用竞价实例、优化实例类型和智能自动扩缩容等方法。"
+order: 3
+plots: ["plots/5477-0.json"]
+sourceHash: "fd7ca4863faf46184f777ca7fc425ae02e6c22993bb12601abb17a9a32e520e5"
+sourceCorrections: []
+---
+
+虽然优化扩散模型本身的推理 (inference)速度能带来显著的效率提升，但在大规模部署时，要实现成本效益，需要运用高阶的基础设施层策略。基本的成本驱动因素，如GPU计算时间、实例运行时间、存储和数据传输，在高吞吐量 (throughput)生成型工作负载下会迅速增长。管理和降低这些运营费用的复杂方法在此处详细说明。
+
+### 利用可抢占实例（竞价实例）
+
+降低计算成本最有效的方法之一是使用可抢占式虚拟机，它们在AWS中通常称为Spot Instances，GCP中称为Spot VMs，Azure中称为Spot Virtual Machines。这些实例能够以比按需实例低得多的价格使用云端的空闲计算资源，通常可节省70-90%的费用。
+
+然而，这种折扣附带一个条件：如果云服务商需要这些资源用于按需工作负载，它可以不经太多通知（通常为30秒到2分钟）就回收这些实例。将竞价实例有效地用于扩散模型推理 (inference)，这取决于您的系统是否设计为具有容错性，此主题将在“处理GPU故障和竞价实例中断”一节中进一步阐述。
+
+使用竞价实例进行扩散模型推理时的考量因素包括：
+
+1. **工作负载适用性：** 推理任务，特别是通过队列管理的异步任务，通常非常适合竞价实例。如果一个实例在任务执行中被抢占，请求通常可以重新排队，并由另一个可用实例接收处理，对用户影响极小，尽管该特定请求的延迟会增加。
+2. **无状态工作器：** 推理工作器理想情况下应是无状态的。模型权重 (weight)可以在启动时从共享存储（如S3、GCS或Azure Blob Storage）加载，或从模型注册中心获取。这可确保实例抢占不会导致大量状态丢失。
+3. **多样化：** 仅仅依靠单一可用区中的一种竞价实例类型，会增加同时抢占导致容量受影响的风险。请在同一区域内，将实例请求分散到多种实例类型（不同大小或具有类似GPU能力的系列）和多个可用区。云服务商通常提供工具或功能（如AWS EC2 Fleet或Spot Fleet、GCP Managed Instance Groups with Spot VMs）来自动管理这种多样化。
+4. **优雅关机：** 实现能够检测抢占通知的处理程序。这些处理程序应尝试在通知期内平稳完成任何正在进行的推理步骤（如果可行），必要时检查点状态（尽管理想情况下工作器是无状态的），并向负载均衡器或编排器发送信号，停止向该实例发送新请求。
+5. **混合实例：** 将竞价实例与一小部分按需或预留实例结合使用。这可提供一个保证可用性的基线容量，同时通过竞价实例最大化处理峰值负载的成本节省。Kubernetes节点池或自动扩缩组可以配置为混合实例类型。
+
+
+
+![计算成本对比：按需实例与竞价实例](plots/5477-0.json)
+
+
+
+> 成本预估对比图，显示了使用竞价实例与按需定价相比，在GPU计算时间上可能实现的节省。实际节省金额会因实例类型、区域和市场情况而异。
+
+### 智能实例选择和合理配置
+
+简单选择最便宜的可用GPU实例并非总是最具成本效益的方法。每美元性能才是需要优化的衡量标准。
+
+1. **GPU代系和类型：** 较新的GPU代系（例如NVIDIA Ampere或Hopper架构）通常比旧代系（例如Pascal或Volta）提供显著更优的性能和能效。尽管它们的按需价格可能更高，但其吞吐量 (throughput)的增加可能带来每生成图像的总体成本降低。评估针对您的扩散模型和采样器在不同GPU类型（例如A10G、A100、H100、L4）上的性能基准。考虑内存带宽、Tensor Core能力和可用显存 (VRAM)等因素。
+2. **CPU和RAM的合理配置：** 扩散模型是GPU密集型任务，但它们仍需要足够的CPU和RAM用于数据加载、预处理/后处理以及管理推理 (inference)过程。相对于GPU瓶颈过度配置CPU或RAM会增加成本，却无法提高性能。使用监控工具（第五章中有所介绍）来确定负载下的实际CPU和RAM利用率，并选择能提供良好平衡的实例。有时，为计算优化的实例（具有高GPU与CPU/RAM比率）会更经济。
+3. **基准测试：** 持续地在您的云服务商提供的不同实例类型上，对您的特定模型和推理代码进行基准测试。云服务商的产品和定价频繁变动。六个月前最优的选择今天可能不再适用。
+
+### 高级自动扩缩容策略
+
+基于平均CPU或GPU利用率的基本自动扩缩容，对于扩散模型而言可能效率不高，因为单个推理 (inference)请求持续时间较长，且流量模式可能具有突发性。
+
+1. **基于队列的扩缩容：** 一种更有效的方法是根据推理请求队列的深度进行扩缩容。例如，在Kubernetes中，使用来自消息队列的自定义指标（例如RabbitMQ队列深度、SQS ApproximateNumberOfMessagesVisible）来配置Horizontal Pod Autoscaler (HPA)。当队列长度超过阈值时进行扩容，当其下降时进行缩容。这直接将扩缩容与待处理工作挂钩。
+2. **每工作器请求数扩缩容：** 定义每个工作器Pod/实例的目标并发请求数。使用自定义指标来跟踪每个工作器的活跃请求数，并扩缩工作器的数量以维持此目标。这比简单的利用率指标更能适应变化的请求复杂性或持续时间。
+3. **预测性自动扩缩容：** 如果您的工作负载具有可预测的模式（例如，在某些时段或日期流量较高），请考虑使用云服务商提供的预测性自动扩缩容功能或实现自定义逻辑。这可以在预期需求之前略微预置容量，从而降低用户等待新实例启动所经历的延迟。
+4. **计划性扩缩容：** 对于高度可预测的峰值（例如，计划的产品发布），使用计划性扩缩容操作预先扩容容量，以确保有充足的资源可用。
+
+### 策略性地利用预留实例和节省计划
+
+虽然竞价实例提供最大幅度的折扣，但它们缺乏保障。对于基线、可预测的工作负载，预留实例（RIs）或节省计划（SPs）通过承诺一定的使用量（通常为1年或3年），可在按需价格基础上提供显著折扣（通常为30-60%）。
+
+一种常见策略是：使用RIs或SPs覆盖绝对最低所需容量（您的24/7基线负载），以实现该部分的成本最大节省；使用额外的RIs/SPs或按需实例处理高于基线的可预测变化；并使用由自动扩缩器管理的竞价实例来处理不可预测的突发和峰值负载。这种分层方法平衡了成本节省与可用性保障。
+
+大规模扩散模型部署的成本优化是一个持续进行的过程，需要仔细考量实例类型、定价模型和工作负载特性。通过结合竞价实例、智能实例选择、高级自动扩缩容以及策略性地使用RIs/SPs等承诺方式，您可以显著降低在生产环境中运行生成式AI模型的运营开销。请记住，监控对于指导这些策略并验证其成效非常重要。
+
+## 参考资料
+
+- [What are EC2 Spot Instances?](https://aws.amazon.com/ec2/spot/) — Amazon Web Services (2024)
+  官方文档，说明了 Amazon EC2 Spot Instances 在云部署中的优势、用法和注意事项。
+- [NVIDIA A100 Tensor Core GPU Architecture](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/nvidia-ampere-architecture-whitepaper.pdf) — NVIDIA Corporation (2020)
+  Publisher: NVIDIA Corporation
+  一份技术白皮书，详细介绍了 NVIDIA A100 GPU 的架构，并解释了提升扩散模型等 AI 工作负载性能的特性。
+- [What is Amazon EC2 Auto Scaling?](https://docs.aws.amazon.com/autoscaling/ec2/userguide/what-is-amazon-ec2-auto-scaling.html) — Amazon Web Services (2024)
+  官方文档，涵盖了 EC2 Auto Scaling 的功能和方法，包括使用自定义指标进行动态扩展的配置。
+- [Savings Plans](https://aws.amazon.com/savingsplans/) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  AWS Savings Plans 的官方概述，详细说明了其结构以及如何通过承诺提供计算使用折扣。

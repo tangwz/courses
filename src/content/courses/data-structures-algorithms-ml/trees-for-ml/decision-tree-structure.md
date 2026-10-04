@@ -1,0 +1,92 @@
+---
+course: "data-structures-algorithms-ml"
+chapter: "trees-for-ml"
+lesson: "decision-tree-structure"
+sourceId: 5260
+sourceUrl: "https://apxml.com/zh/courses/data-structures-algorithms-ml/chapter-2-trees-for-ml/decision-tree-structure"
+title: "决策树：结构与算法"
+description: "关联树数据结构与决策树分类器和回归器的构建及运作。"
+order: 4
+plots: []
+sourceHash: "7bed7078d5da73310fc6c77abc32c45811c3360dcbbaa174b1ff5308f0e59bca"
+sourceCorrections: []
+---
+
+虽然二叉搜索树（Binary Search Trees）擅长根据固有顺序组织数据以进行高效查找，但机器学习 (machine learning)中的树状结构通常服务于不同的目的：进行预测。决策树是一种主要的监督学习 (supervised learning)算法，它使用树状结构来模拟决策及其可能的结果。决策树不是像二叉搜索树那样直接存储数据点，而是表示一系列关于数据点特征的问题或检验，以得出预测。
+
+### 决策树的结构
+
+想象一个流程图，其中每个步骤都针对您的数据提出一个问题。这基本就是决策树所代表的。它包含：
+
+- **根节点：** 树的起点，代表整个数据集。它根据第一次检验的结果分叉。
+- **内部节点（决策节点）：** 每个内部节点都代表对特定特征的检验。对于数值特征，该检验通常是阈值比较（例如，`feature_X <= 5.0`）。对于类别特征，它可能检查相等性或是否属于某组类别（例如，`feature_Y == 'category_A'`）。
+- **分支（边）：** 从内部节点发出的每个分支对应检验的一个结果（例如，阈值分割的`True`或`False`，或类别分割的特定类别）。这些分支指向下一个节点。
+- **叶节点（终端节点）：** 这些节点代表最终的结果或预测。在分类任务中，叶节点通常包含到达该节点的所有训练样本的多数类别。在回归任务中，它通常包含样本的平均目标值。
+
+新的数据点通过从根节点开始，并根据数据点特征值在每个内部节点的检验结果沿着树向下遍历，直到到达叶节点，从而被分类或预测。
+
+> 一个简单的决策树，用于根据天气情况预测是否打网球。内部节点检验特征，分支表示结果，叶节点给出预测。
+
+### 构建决策树：递归划分
+
+决策树通常使用递归算法构建，该算法旨在将数据划分成相对于目标变量尽可能“纯净”的子集。其主要思想是重复选择最佳特征和分割点（阈值或类别），以最大限度地分离类别或减少目标值的方差。
+
+CART（分类和回归树）和ID3（迭代二分器3）等常见算法实现了这种递归划分。该过程包含：
+
+1. **开始**时，根节点包含整个数据集。
+2. **评估分割点：** 对于每个特征，评估所有可能的分割点。对于数值特征，这通常涉及对唯一值进行排序并检验它们之间的阈值。对于类别特征，可以检验不同的类别分组。
+3. **选择最佳分割点：** 选择导致最大“信息增益”或最大“不纯度”降低的特征和分割点。不纯度度量量化 (quantization)了节点内目标值的混合程度。
+
+   - **基尼不纯度：** CART中常用。对于包含 $C$ 个类别的节点，其中 $p_i$ 是属于类别 $i$ 的样本比例，基尼不纯度为：
+     
+     $$
+     基尼 = 1 - \sum_{i=1}^{C} p_i^2
+     $$
+     
+     基尼得分为0表示完美纯净（所有样本属于一个类别），而最高分（对于两个类别接近0.5，对于更多类别更高）表示最大不纯度（类别均匀混合）。
+   - **熵：** 常用在ID3和C4.5中。它衡量节点内的无序或不确定性程度：
+     
+     $$
+     熵 = - \sum_{i=1}^{C} p_i \log_2(p_i)
+     $$
+     
+     其中 $p_i$ 是类别 $i$ 的样本比例。对于纯节点，熵为0；当类别均匀分布时，熵达到最大值。根据约定，$0 \log_2 0 = 0$。
+
+   **信息增益** 计算为父节点不纯度与分割后子节点加权平均不纯度之间的差值：
+
+   
+   $$
+   信息增益 = 不纯度_{父节点} - \sum_{j \in children} \frac{N_j}{N} 不纯度_{子节点_j}
+   $$
+   
+
+   其中 $N$ 是父节点处的样本总数，$N_j$ 是子节点 $j$ 中的样本数量。选择使此增益最大化的分割点。对于回归树，通常使用方差减少而不是不纯度度量。
+4. **创建子节点：** 根据选定的特征和阈值分割数据集，创建新的子节点。
+5. **递归：** 对每个新创建的子节点重复步骤2-4。
+6. **停止条件：** 当满足预设条件时，分支的递归停止：
+
+   - 节点纯净（所有样本属于同一类别或具有非常相似的目标值）。
+   - 达到最大树深度。
+   - 节点中的样本数量低于最小阈值。
+   - 找不到可以显著改善不纯度的分割点。
+     该节点随后成为叶节点。
+
+### 结构与预测的关联
+
+树状结构直接表示学到的决策逻辑。遍历树反映了根据特征值应用一系列条件检查的过程。这种分层划分使得决策树能够近似特征空间中复杂、非线性的决策边界。
+
+虽然简单且易于理解，但单个决策树很容易过拟合 (overfitting)训练数据，捕获到噪声而非潜在信号。它们也可能不稳定，这意味着训练数据中的微小变化可能导致显著不同的树状结构。这些局限性通常通过使用集成方法来解决，例如随机森林和梯度提升树（在下一节讨论），这些方法结合了多个决策树以提高鲁棒性和预测性能。在研究这些更高级的集成技术之前，了解单个决策树的核心结构和构建算法是必要的。
+
+## 参考资料
+
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://link.springer.com/book/10.1007/978-0-387-84858-7) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本全面而权威的教材，涵盖了包括决策树（CART算法、Gini和熵等不纯度度量）在内的许多机器学习算法的统计基础。
+- [Classification and Regression Trees](https://doi.org/10.1201/9781315139470) — Leo Breiman, Jerome H. Friedman, Richard A. Olshen, Charles J. Stone (1984)
+  Publisher: Chapman and Hall/CRC; Pages: 368; DOI: [https://doi.org/10.1201/9781315139470](https://doi.org/10.1201/9781315139470)
+  引入分类与回归树（CART）算法的开创性著作，详细阐述了其结构、分裂准则和递归分区过程。
+- [Machine Learning](http://www.cs.cmu.edu/~tomm/mlbook.html) — Tom M. Mitchell (1997)
+  Publisher: McGraw-Hill; Pages: 414
+  一本经典的教材，对决策树学习提供了清晰易懂的介绍，包括ID3算法以及熵和信息增益等概念。
+- [CS229: Machine Learning Lecture Notes](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGSf6NuhEpeI0aSc6VUsBG0hXqtZb5x0YuhR-K01nKYLumQRZpGSLZbOwUeXVxjd1tlEKU67ShVWxEoYBYc6BnmZ7v6TIJZ0D-UFVhuRBSqaxph8EtP6x1GCBCvna42wouncZtO) — Andrew Ng, Tengyu Ma (2023)
+  知名大学课程的讲义，提供了机器学习基本概念的简洁清晰解释，包括决策树、不纯度度量和递归分区。

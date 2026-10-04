@@ -1,0 +1,59 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "classic-autoencoder-architecture"
+lesson: "encoder-network-design"
+sourceId: 2806
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-2-classic-autoencoder-architecture/encoder-network-design"
+title: "编码器网络设计"
+description: "了解编码器如何将高维输入数据映射到低维潜在空间。"
+order: 1
+plots: []
+sourceHash: "ddab2d244413e971cea9b6b2176db8148364f89ef1b779ebb99e5a2aa9426110"
+sourceCorrections: []
+---
+
+编码器构成自编码器架构的前半部分。它的主要作用是将高维输入数据（表示为 $x$）转换为紧凑的低维表示，通常称为潜在编码或潜在变量（表示为 $z$）。这个过程本质上是压缩，目的是捕获数据中最突出的特征或潜在的变异因素，同时丢弃噪声或冗余信息。可以将其视为对输入进行有效归纳。
+
+在数学上，我们可以将编码器表示为一个函数 $f$。该函数将输入空间 $\mathcal{X}$ 映射到潜在空间 $\mathcal{Z}$：
+$z = f(x)$
+通常，潜在空间的维度远小于输入空间的维度，即 $\text{dim}(z) \ll \text{dim}(x)$。这种降维操作使得网络必须学习一种压缩表示。
+
+### 编码器的架构选择
+
+编码器网络的具体架构在很大程度上取决于其需要处理的输入数据类型。
+
+1. **全连接网络 (MLP)**: 对于本质上是向量 (vector)或表格形式的输入数据（例如传感器特征向量、用户配置文件或扁平化图像），标准多层感知器 (MLP) 通常足够。编码器通常由一系列全连接（密集）层组成。后续的每个层通常比前一个层拥有更少的神经元，逐步降低维度，直到最终层输出潜在编码 $z$。
+
+   > 典型的基于 MLP 的编码器结构，展示了层数逐渐减小，最终得到潜在表示 $z$。
+2. **卷积神经网络 (neural network) (CNN)**: 当处理网格状数据，特别是图像时，卷积神经网络 (CNN) 是编码器的优先选择。CNN 能有效借助空间层级和参数 (parameter)共享。编码器通常由一系列卷积层组成，其后常跟池化层（如最大池化）。卷积层提取空间特征，而池化层则降低空间维度（高度和宽度）。随着空间维度减小，特征通道数（深度）通常会增加，将信息集中到更密集的特征表示中，然后可能被展平并通过全连接层，以生成最终的潜在编码 $z$。
+
+### 设计考量
+
+设计一个有效的编码器需要考虑几个因素：
+
+- **层数与层的大小**: 更深层的编码器（更多层）可能能够建模更复杂的转换，但会增加过拟合 (overfitting)的风险和计算成本。每层的大小（神经元或滤波器的数量）决定了该处理阶段的容量。常见策略是向瓶颈层方向逐步减小大小。
+- **激活函数 (activation function)**: 非线性激活函数对于编码器通过简单的线性投影学习复杂映射非常重要。常见选择包括：
+  - **ReLU（修正线性单元）**: $g(a) = \max(0, a)$。计算高效且应用广泛，但可能出现“ReLU死亡”问题。
+  - **Leaky ReLU（渗漏修正线性单元）**: $g(a) = \max(\alpha a, a)$，其中 $\alpha$ 很小（例如 0.01）。解决了 ReLU 死亡问题。
+  - **Sigmoid**: $g(a) = 1 / (1 + e^{-a})$。将输出压缩到 (0, 1) 范围，如果潜在编码需要有界或进行概率解释，常用于最后一层（尽管在基本 AE 中不如 VAE 中常见）。可能出现梯度消失问题。
+  - **Tanh（双曲正切）**: $g(a) = (e^a - e^{-a}) / (e^a + e^{-a})$。将输出压缩到 (-1, 1) 范围。也容易受到梯度消失的影响。
+    选择通常取决于实际表现以及数据和后续层（如解码器）的具体特征。ReLU 及其变体是隐藏层的常见起始选择。
+- **归一化 (normalization)**: 批量归一化等技术有时可以插入层之间，以稳定训练、加速收敛，并通过归一化每个小批量中的激活值来提供一定的正则化 (regularization)效果。
+
+### 编码器的输出：潜在表示
+
+编码器网络的最终输出是向量 (vector) $z$。该向量存在于潜在空间中，作为输入 $x$ 的压缩归纳。它包含了自编码器认为对重建重要的学习特征。然后，这个潜在编码 $z$ 会直接传递给解码器网络，解码器将尝试仅凭这些压缩信息来重建原始输入 $\hat{x}$。整个自编码器的效能取决于编码器学习到的表示质量。
+
+在实践中，实现编码器需要使用 TensorFlow/Keras 或 PyTorch 等深度学习 (deep learning)框架的 API 定义一系列层。例如，在 Keras 中，一个简单的 MLP 编码器可以使用顺序堆叠的 `tf.keras.layers.Dense` 层来定义。接下来的章节将阐述瓶颈层本身以及相应解码器网络的设计。
+
+## 参考资料
+
+- [Reducing the Dimensionality of Data with Neural Networks](https://doi.org/10.1126/science.1127647) — Geoffrey E. Hinton and Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  这篇基础论文介绍了深度自编码器，它们对于降维以及理解编码器在学习高效数据表示中的作用至关重要。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本标准教材，详细介绍了深度学习的核心概念，包括各种网络架构（MLP、CNN）、激活函数和训练正则化，这些都直接适用于编码器网络的设计。
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe and Christian Szegedy (2015)
+  Journal: arXiv preprint arXiv:1502.03167; DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  这篇论文介绍了批量归一化，这是一种广泛采用的技术，有助于稳定和加速深度神经网络的训练，是稳健编码器设计的常见补充。

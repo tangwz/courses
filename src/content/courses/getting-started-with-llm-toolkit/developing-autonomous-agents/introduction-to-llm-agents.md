@@ -1,0 +1,132 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "developing-autonomous-agents"
+lesson: "introduction-to-llm-agents"
+sourceId: 7782
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-8-developing-autonomous-agents/introduction-to-llm-agents"
+title: "大型语言模型智能体简介"
+description: "了解大型语言模型智能体是什么，以及使其能够自主运行的组成部分。"
+order: 1
+plots: []
+sourceHash: "279ba19aa7815ad8ff13a342de8d036941bd8d08e6ac99b47926f18489b82f9c"
+sourceCorrections: []
+---
+
+大型语言模型（LLM）经常用于直接的单次任务，例如根据给定语境生成文本或回答问题。构建能够更自主地完成目标的系统，可以扩展这些能力。自主智能体使用大型语言模型作为推理 (inference)引擎来确定一系列步骤，通常会与外部工具交互以收集信息或执行操作。这个过程可以表示为一个思考、行动和观察的循环。
+
+在本章中，您将学习使用 `agent` 模块构建这些智能体。我们将首先介绍 ReAct（推理与行动）模式，这是一种构建智能体行为的常见框架。接着，您将实现一个 ReAct 智能体，并学习如何为其配备工具，例如搜索功能或一个简单的计算器，以增强其能力。核心循环可以简化为以下顺序：
+
+
+$$
+\text{目标} \rightarrow \text{思考} \rightarrow \text{行动} \rightarrow \text{观察} \rightarrow \dots
+$$
+
+
+接下来，我们将介绍另一种架构，即计划与执行智能体。最后，我们将讨论构建多智能体协作解决较复杂问题的系统的原则。本章结束时，您将能够构建能够分解问题、使用工具找到方案并代表您执行操作的智能体。
+
+### 智能体的组成部分
+
+本质上，自主智能体是一个通过反复做出决策和采取行动来达成目标的系统。大型语言模型充当“大脑”，而智能体则是让这个大脑能够在环境中感知、推理 (inference)和行动的完整体系。这个体系由几个基本组成部分构成：
+
+- **推理引擎（大型语言模型）：** 主要决策者。给定一个目标和当前的观察结果，大型语言模型会生成一个关于下一步行动的“思考”。这个思考过程涉及分析情况、规划下一步以及决定是否需要更多信息。
+- **工具：** 这些是智能体可以执行的功能，用于与外部环境交互。工具克服了大型语言模型的固有局限性，例如其知识截止日期或无法执行精确计算。工具可以是搜索引擎API、计算器、数据库查询功能，或任何执行特定操作的其他功能。
+- **编排循环：** 这是连接推理引擎及其工具的过程。智能体在一个持续的循环中运行：它思考问题，采取行动（通常通过调用工具），观察该行动的结果，然后将该观察结果反馈回其思考过程，以决定下一步。
+
+下图展示了这个基本循环。智能体持续此循环，直到它认为已获得足够信息来提供最终答案。
+
+> 智能体循环持续运行，直到大型语言模型认为已圆满达成目标并可提供最终答案。
+
+### 构建您的第一个智能体
+
+`agent` 模块提供了构建这些自主系统所需的组成部分。主要构建块是 `Agent` 类，它负责编排推理 (inference)循环。这种方法的一个常见且有效的实现是 `ReActAgent`，我们将用它来入门。
+
+让我们创建一个简单的智能体。对于这个首个例子，我们将使用一个模拟大型语言模型函数来模仿推理引擎的输出。在实际应用中，这将是对OpenAI或Anthropic等大型语言模型提供商的调用。
+
+```python
+from kerb.agent.patterns import ReActAgent
+
+def simple_llm(prompt: str) -> str:
+    """一个用于演示的模拟大型语言模型函数。"""
+    # 在实际应用中，这将调用一个大型语言模型API。
+    # 这个模拟函数提供一个ReAct风格的响应。
+    if "weather" in prompt.lower():
+        return "思考: 我需要提供天气信息。\n最终答案: 天气晴朗，气温72°F。"
+    else:
+        return f"思考: 我将处理此请求。\n最终答案: 我已处理您的请求。"
+
+# 创建一个ReAct智能体，它是基础Agent的具体实现
+agent = ReActAgent(
+    name="BasicAgent",
+    llm_func=simple_llm,
+    max_iterations=5
+)
+
+# 运行智能体并设定目标
+goal = "今天天气怎么样？"
+result = agent.run(goal)
+
+# 结果对象包含最终输出和执行详情
+print(f"状态: {result.status.value}")
+print(f"输出: {result.output}")
+
+# 您还可以检查智能体所采取的步骤
+if result.steps:
+    print("\n执行步骤:")
+    for i, step in enumerate(result.steps, 1):
+        if step.thought:
+            print(f"  步骤 {i} 思考: {step.thought}")
+```
+
+在此示例中，我们实例化了一个 `ReActAgent`，并将 `simple_llm` 作为推理引擎。当我们调用 `agent.run(goal)` 时，智能体开始其循环。它将目标传递给 `llm_func`，该函数返回一个包含思考和最终答案的字符串。智能体体系解析此输出，并在看到“Final Answer”时结束运行。`AgentResult` 对象让我们可以获取最终 `output` 和推理过程中采取的 `steps` 列表。
+
+### 为智能体配备工具
+
+智能体的真正效能来自于其使用工具的能力。没有工具，大型语言模型将局限于其预训练 (pre-training)的知识。工具使智能体能够获取实时信息、执行计算、与数据库交互或调用外部API。
+
+您可以通过使用 `Tool` 类封装一个Python函数来定义工具。起决定作用的参数 (parameter)是 `description`，因为大型语言模型使用此文本来判断哪个工具适合给定任务。一个好的描述会清晰简洁地说明工具的功能及其输入。
+
+以下是如何创建一个简单的计算器工具。
+
+```python
+from kerb.agent import Tool
+
+def calculate(expression: str) -> str:
+    """一个用于计算数学表达式的计算器工具。"""
+    try:
+        # 使用安全评估进行基本数学运算
+        result = eval(expression, {"__builtins__": {}}, {})
+        return f"结果: {result}"
+    except Exception as e:
+        return f"错误: {str(e)}"
+
+# 从函数创建工具
+calc_tool = Tool(
+    name="calculate",
+    description="执行数学计算，例如加法、减法、乘法和除法。",
+    func=calculate,
+    parameters={
+        "expression": {
+            "type": "string",
+            "description": "要计算的数学表达式（例如，'15 * 7'）。"
+        }
+    }
+)
+```
+
+一旦定义，您在初始化时向智能体提供工具列表。智能体的底层提示会自动更新，以包含可用工具的名称和描述，指导大型语言模型如何使用它们。
+
+当大型语言模型决定使用工具时，它会输出一个特定格式，指明工具名称和要传递的参数。智能体体系会拦截此输出，执行相应的Python函数，并将函数的返回值作为“观察”反馈给大型语言模型。这使得大型语言模型能够将新信息纳入其下一步思考。
+
+掌握了这些基本要素，即推理 (inference)循环、智能体及其工具之后，我们现在可以研究编排智能体行为的特定模式。下一节将详细介绍最常见且有效的模式之一：ReAct。
+
+## 参考资料
+
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2022)
+  Journal: arXiv preprint; DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了ReAct框架，这是一种结合推理（思考）和行动（行动）步骤的常见LLM代理模式，是本章的核心内容。
+- [Toolformer: Language Models That Can Use Tools](https://arxiv.org/abs/2302.04761) — Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom (2023)
+  Journal: arXiv; DOI: [10.48550/arXiv.2302.04761](https://doi.org/10.48550/arXiv.2302.04761)
+  探讨了语言模型如何通过API调用使用外部工具，这对于赋予代理超出其固有知识的能力至关重要。
+- [A Survey on Large Language Model based Autonomous Agents](https://arxiv.org/abs/2309.07864) — Zhiheng Xi, Wenxiang Chen, Xin Guo, Wei He, Yiwen Ding, Boyang Hong, Ming Zhang, Junzhe Wang, Senjie Jin, Enyu Zhou, Rui Zheng, Xiaoran Fan, Xiao Wang, Limao Xiong, Yuhao Zhou, Weiran Wang, Changhao Jiang, Yicheng Zou, Xiangyang Liu, Zhangyue Yin, Shihan Dou, Rongxiang Weng, Wensen Cheng, Qi Zhang, Wenjuan Qin, Yongyan Zheng, Xipeng Qiu, Xuanjing Huang, Tao Gui (2023)
+  Journal: arXiv preprint; DOI: [10.48550/arXiv.2309.07864](https://doi.org/10.48550/arXiv.2309.07864)
+  全面概述了基于LLM的自主代理，涵盖了ReAct和计划执行等架构、组件以及协作，为本章提供了广泛的背景信息。

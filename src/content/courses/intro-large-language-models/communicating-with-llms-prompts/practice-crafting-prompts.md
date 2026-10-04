@@ -1,0 +1,133 @@
+---
+course: "intro-large-language-models"
+chapter: "communicating-with-llms-prompts"
+lesson: "practice-crafting-prompts"
+sourceId: 3712
+sourceUrl: "https://apxml.com/zh/courses/intro-large-language-models/chapter-3-communicating-with-llms-prompts/practice-crafting-prompts"
+title: "练习：编写你的第一个提示"
+description: "编写简单提示和查看LLM回复的动手练习环节。"
+order: 7
+plots: []
+sourceHash: "a687a0ff9361223f2650759f426068a5957fb08d5ea299c8663eedaf2dc2c052"
+sourceCorrections: []
+---
+
+理解提示的**基本原理**、清晰的指令和提供示例的方法，是与大型语言模型（LLM）有效交互的基础。这里有动手练习，帮助你编写你的第一个提示并查看结果。
+
+对于这些练习，你需要使用LLM。你可以使用第5章（“使用预训练 (pre-training)LLM”）将更详细介绍的网页界面或基本API方法。许多免费和付费服务都提供简单的聊天式界面，非常适合上手。目前无需担心找到“最合适”的LLM；目标是练习提示的*方法*。
+
+请记住，即使使用相同的提示，LLM有时也可能产生意料之外或略有差异的输出。请侧重回复的大致结构和意图，而不是逐字逐句的精确复制。
+
+### 开始：你的首次交互
+
+让我们从最基本的交互方式开始：提出直接问题或给出简单指令。
+
+**练习1：简单提问**
+
+1. 打开你选定的LLM界面。
+2. 在输入区域，输入以下提示：
+
+   ```
+   What is the main function of a CPU in a computer?
+   ```
+3. 提交提示并查看回复。
+
+*预期结果:* LLM应提供对CPU作用的简明解释，可能会提到执行指令或进行计算。注意直接问题通常会得到直接答案。
+
+**练习2：简单指令**
+
+1. 清除之前的交互或开始新的交互。
+2. 输入以下提示：
+
+   ```
+   List three primary colors.
+   ```
+3. 提交提示并检查输出。
+
+*预期结果:* 模型应输出包含红、黄、蓝的列表。这展示了遵循简单指令的能力。它是以编号列表、项目符号列表还是仅以逗号分隔的文本格式呈现的？除非明确指定，否则格式可能会有所不同。
+
+### 给出更明确的指令
+
+如前所述，清晰很重要。让我们尝试完善一条指令。
+
+**练习3：指定格式**
+
+1. 使用练习2中的指令，但修改它以要求特定格式。
+2. 输入以下提示：
+
+   ```
+   List the three primary colors as a numbered list.
+   ```
+3. 提交并与练习2的输出进行比较。
+
+*预期结果:* 这次，LLM更有可能以编号点的形式显示颜色（例如，1. Red, 2. Yellow, 3. Blue）。这显示了添加具体限制如何影响回复的结构。
+
+### 基本生成和长度控制
+
+LLM擅长生成文本。让我们尝试一个简单的创意任务并尝试控制输出长度。
+
+**练习4：短句生成**
+
+1. 开始新的交互。
+2. 输入以下提示：
+
+   ```
+   Write one sentence describing a rainy day.
+   ```
+3. 提交提示。
+
+*预期结果:* 模型应生成一句与雨有关的句子，可能提到声音、景象或感受。
+
+**练习5：扩展生成**
+
+1. 现在，我们要求更多一些细节。
+2. 输入以下提示：
+
+   ```
+   Write three sentences describing a rainy day.
+   ```
+3. 提交并与练习4的输出长度进行比较。
+
+*预期结果:* 模型应生成一个短段落，大约三句话长，关于一个下雨天。虽然LLM不总是严格遵守确切的句子数量，但明确要求一个数字通常能有效引导输出长度。
+
+### 少样本提示简介
+
+提供示例可以很好地引导模型，特别是对于模型可能无法立即理解的特定格式或任务。
+
+**练习6：简单类比（少样本）**
+
+1. 假设你想让LLM完成类比。你可以先提供一个示例。
+2. 输入以下提示，包括示例：
+
+   ```
+   完成类比：
+   Dog is to bark as cat is to meow.
+   Tree is to leaf as flower is to petal.
+   Sun is to day as moon is to 
+   ```
+3. 提交提示。
+
+*预期结果:* 通过识别模式（事物：相关部分/属性），LLM会被引导正确完成最后的类比，可能会输出“night”。这展示了一个简单示例（或两个）如何为所需任务设定背景。
+
+### 反思与实验
+
+完成这些练习，但不要止步于此。尝试稍微修改提示：
+
+- 改变主题（例如，提问关于行星而不是颜色）。
+- 重新措辞指令（例如，“告诉我关于……”与“解释……”）。
+- 要求不同的输出格式（例如，“使用项目符号”，“写成一个段落”）。
+- 尝试稍微更复杂的少样本示例。
+
+观察这些变化如何影响LLM的回复。留意模型何时很好地遵循了你的指令，以及何时它似乎误解或忽略了提示的部分内容。这种实验对于培养有效的提示技能非常重要。你正在学习如何通过你提供的文本将你的意图传达给模型。继续练习！
+
+## 参考资料
+
+- [Prompt engineering](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH3zqXESYi_wYSKjOculJZjLEzrg6j4R4DGVKhVJKVC4tiYpoAauQ1ypZguWwbWUGg6fJMF9s8HEtIGLwsUGzsNean5Ie2QWGYmsZGGe8YEwMwrtsfK3EDzbGT7VIt7tazWUyG8I-ek4MHo5tszSpEC7Hw6PE_5qo9B98Vet08f3j2TJcsEYa4x0u8KBNxQHD6X4x_JgTBo6YdZy6w8XoEb) — OpenAI (2024)
+  Publisher: OpenAI
+  提供创建提示的实用建议和推荐做法，涵盖指令清晰度、具体性以及提供示例等主题。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  一篇重要论文，介绍了上下文学习和少样本提示，展示了大型语言模型如何通过提示中少量示例来学习任务。
+- [Prompt Engineering for Developers](https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/) — Isa Fulford and Andrew Ng (2023)
+  Publisher: DeepLearning.AI
+  一门在线课程，为构建有效提示提供实用指导和方法，包含清晰指令和迭代优化等原则。

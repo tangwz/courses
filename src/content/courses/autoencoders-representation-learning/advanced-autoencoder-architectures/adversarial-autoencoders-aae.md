@@ -1,0 +1,93 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "advanced-autoencoder-architectures"
+lesson: "adversarial-autoencoders-aae"
+sourceId: 2876
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-5-advanced-autoencoder-architectures/adversarial-autoencoders-aae"
+title: "对抗性自编码器（AAEs）"
+description: "将自编码器与对抗训练结合，以塑造潜在分布。"
+order: 3
+plots: []
+sourceHash: "668b3634249bffbc40ca80e805f045418697a00931e904e6a426ad22351dd591"
+sourceCorrections: []
+---
+
+虽然变分自编码器（VAEs）提供了一种严谨的概率方法，用于学习平滑、有结构的潜在空间，适用于生成任务，但它们通常依赖于优化证据下界（ELBO），其中包含一个KL散度项。该项促使学习到的潜在分布（聚合后验）与预定义的先验分布（通常是标准高斯分布）相匹配。计算此KL散度通常要求先验分布和后验分布具有特定形式（如高斯分布），以便进行解析计算。
+
+对抗性自编码器（AAEs）由 Makhzani 等人于2015年提出，提供了一种塑造潜在空间分布的替代方法。AAEs 不使用KL散度，而是运用对抗训练的强大能力，借鉴了生成对抗网络 (GAN)（GANs）的思路。核心思路是训练一个单独的判别器网络，以区分来自期望先验分布的样本和自编码器编码器生成的潜在编码。编码器不仅要训练生成能良好重构的编码，还要“欺骗”判别器，从而迫使编码样本的分布与目标先验分布相匹配。
+
+### AAE架构与训练
+
+一个AAE由两个主要部分组成：
+
+1. **自编码器**: 它包含一个编码器网络 $Q_{\phi}(z|x)$，将输入 $x$ 映射到潜在编码 $z$，以及一个解码器网络 $P_{\theta}(x|z)$，从潜在编码 $z$ 重构输入 $\hat{x}$。编码器定义了聚合后验分布 $q(z) = \int q(z|x) p_{data}(x) dx$，其中 $p_{data}(x)$ 是真实数据分布。
+2. **判别器**: 一个判别器网络 $D_{\psi}(z)$，其训练目的是区分从所选先验分布 $p(z)$（例如，高斯分布、高斯混合分布、流形上的均匀分布）中抽取的样本 $z$ 和编码器生成的潜在编码 $q(z)$。
+
+> 对抗性自编码器（AAE）的架构。它将一个标准的自编码器（编码器 $Q_{\phi}$，解码器 $P_{\theta}$）与对抗性框架相结合，自编码器最小化重构损失，而对抗性框架中的判别器 $D_{\psi}$ 强制潜在编码 $z$ 的聚合后验 $q(z)$ 与目标先验分布 $p(z)$ 相匹配。训练在重构更新和对抗性更新之间交替进行。
+
+训练过程包括两个阶段，通常在每个训练批次中交替执行：
+
+1. **重构阶段**: 在此阶段，自编码器（包括编码器 $Q_{\phi}$ 和解码器 $P_{\theta}$）被训练以最小化原始输入 $x$ 与其重构 $\hat{x}$ 之间的重构误差。判别器不参与此阶段。损失函数 (loss function)通常对实值数据使用均方误差（MSE），对二进制数据使用二元交叉熵（BCE）：
+
+   
+   $$
+   L_{recon} = \mathbb{E}_{x \sim p_{data}(x)} [ \text{loss}(x, P_{\theta}(Q_{\phi}(x))) ]
+   $$
+   
+
+   梯度是根据自编码器参数 (parameter) $\phi$ 和 $\theta$ 计算的。
+2. **正则化 (regularization)阶段（对抗训练）**: 此阶段旨在使聚合后验分布 $q(z)$ 与先验分布 $p(z)$ 匹配。它包括两个步骤，类似于GAN的训练：
+
+   - **判别器训练**: 判别器 $D_{\psi}$ 被训练以区分从先验分布 $p(z)$ 中抽取的“真实”样本和编码器使用来自数据分布 $p_{data}(x)$ 的输入 $x$ 生成的“虚假”样本 $z_{fake} = Q_{\phi}(x)$。在此步骤中，编码器的参数 $\phi$ 保持固定。判别器的目标是最大化正确分类真实和虚假样本的概率，通常表述为最小化二元交叉熵损失：
+     
+     $$
+     L_{D} = -\mathbb{E}_{z \sim p(z)}[\log D_{\psi}(z)] - \mathbb{E}_{x \sim p_{data}(x)}[\log(1 - D_{\psi}(Q_{\phi}(x)))]
+     $$
+     
+     梯度仅根据判别器参数 $\psi$ 计算。
+   - **编码器（生成器）训练**: 编码器 $Q_{\phi}$ 被训练以生成潜在编码 $z_{fake} = Q_{\phi}(x)$，这些编码能够欺骗判别器，使其将其分类为来自先验 $p(z)$ 的样本。在此步骤中，判别器的参数 $\psi$ 保持固定。编码器的目标是最大化判别器对虚假样本的误差，通常表述为最小化：
+     
+     $$
+     L_{G} = -\mathbb{E}_{x \sim p_{data}(x)}[\log D_{\psi}(Q_{\phi}(x))]
+     $$
+     
+     梯度仅根据编码器参数 $\phi$ 计算。
+
+这两个阶段（重构和正则化）交替迭代直到收敛。对抗训练强制编码器将输入数据点 $x$ 映射到潜在编码 $z$，使得它们的整体分布 $q(z)$ 与期望的先验分布 $p(z)$ 相匹配，同时重构阶段确保这些编码仍保留足够信息以重构原始输入。
+
+### 优点与缺点
+
+**优点：**
+
+- **先验分布的灵活性**: AAEs的一个显著优点是选择先验分布 $p(z)$ 的灵活性。与VAEs不同，VAEs中的KL散度项通常将实际选择限制为高斯分布，而AAEs原则上可以匹配任何可以从中抽取样本的先验分布。这使得在潜在空间上施加更复杂的结构成为可能（例如，高斯混合分布、流形上的分布）。
+- **潜在更清晰的样本**: 通过引入对抗训练，AAEs可能会继承GANs的一些特点，可能生成比VAEs更清晰的样本，VAEs有时因重构损失项和高斯假设而出现模糊问题。
+- **无需显式KL散度**: 避免了计算KL散度的需要，对于复杂的后验或先验分布，KL散度可能难以处理或需要近似。
+
+**缺点：**
+
+- **训练不稳定性**: AAEs继承了GANs中常见的训练稳定性挑战。可能出现诸如模式坍塌（编码器将许多不同输入映射到潜在空间的一个小区域）或平衡生成器（编码器）和判别器训练的困难等问题。通常需要仔细调整超参数 (parameter) (hyperparameter)、选择合适的架构以及可能采用稳定化技术。
+- **复杂度**: 训练涉及优化三个网络（编码器、解码器、判别器），使用两个不同的损失函数 (loss function)和交替更新，这使得实现和调试可能比标准自编码器或VAEs更复杂。
+
+### 应用
+
+AAEs 已在与VAEs和GANs类似的应用中取得进展：
+
+- **生成模型**: 通过从先验 $p(z)$ 采样并将它们通过解码器 $P_{\theta}$，生成新的数据样本。
+- **表示学习**: 学习有意义的潜在表示 $z$，这些表示捕获数据的语义特征。
+- **半监督分类**: 判别器可以扩展以执行分类任务。
+- **解耦**: 通过仔细选择先验 $p(z)$ 或修改对抗训练，AAEs 可以用来促进解耦表示，其中潜在空间的不同维度对应于数据中独立的变异因素。
+- **数据可视化与操作**: 与VAEs类似，学习到的潜在空间可以进行可视化和操作（例如，插值、属性修改）。
+
+总而言之，对抗性自编码器为学习有结构的潜在表示提供了VAEs的一个引人注目的替代方案。通过用对抗训练方案取代KL散度正则化 (regularization)，它们在根据任意先验分布塑造潜在空间方面提供了更大的灵活性，尽管这可能以增加训练复杂度和从GANs继承的不稳定性为代价。它们是自编码器和对抗性思想在先进生成模型中的一个巧妙结合。
+
+## 参考资料
+
+- [Generative Adversarial Networks](https://arxiv.org/abs/1406.2661) — Ian J. Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, and Yoshua Bengio (2014)
+  Journal: Advances in Neural Information Processing Systems (NIPS); Volume: 27; DOI: [10.48550/arXiv.1406.2661](https://doi.org/10.48550/arXiv.1406.2661)
+  这篇开创性论文介绍了生成对抗网络 (GANs)，为 AAEs 中采用的对抗训练机制提供了理论基础。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于深度学习的综合性教材，涵盖了自编码器、变分自编码器和生成对抗网络等基础概念，这些对于理解 AAEs 至关重要。
+- [Generative Deep Learning: Teaching Machines to Paint, Write, Compose, and Play](https://www.oreilly.com/library/view/generative-deep-learning/9781492041931/) — David Foster (2019)
+  Publisher: O'Reilly Media
+  一本关于生成模型的实用指南，详细解释并实现了变分自编码器 (VAEs)、生成对抗网络 (GANs) 和对抗式自编码器 (AAEs)。

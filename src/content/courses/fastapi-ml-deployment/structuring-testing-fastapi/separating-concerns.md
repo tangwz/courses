@@ -1,0 +1,97 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "structuring-testing-fastapi"
+lesson: "separating-concerns"
+sourceId: 5296
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-4-structuring-testing-fastapi/separating-concerns"
+title: "关注点分离"
+description: "关于分离 API 逻辑、业务逻辑（模型推理）和数据模型的最佳实践。"
+order: 2
+plots: []
+sourceHash: "2bfed978e35ffcd1bc3022f9e16bfe4084e287f688e289a851832e92e71f5f42"
+sourceCorrections: []
+---
+
+对相关端点进行分组是应用程序组织的一个步骤，通常可以通过 `APIRouter` 等工具实现。然而，为了实现真正可维护和可测试的代码，开发人员还必须考虑如何组织这些端点*内部*以及*支持*它们的逻辑。这时，关注点分离 (Separation of Concerns, SoC) 原则变得非常重要。SoC 主张将应用程序拆分为不同的部分，每个部分负责一项特定的职责。
+
+在服务机器学习 (machine learning)模型的 FastAPI 应用程序中，应用 SoC 通常意味着将代码库划分为逻辑层：
+
+1. **API 层（表现/路由）：** 此层负责处理 HTTP 请求和响应。它的职责包括：
+
+   - 定义路径操作（`@router.post`、`@router.get` 等）。
+   - 接收传入请求并解析路径参数 (parameter)、查询参数和请求体。
+   - 使用 Pydantic 模型（来自数据层）进行自动数据验证和序列化。
+   - 调用业务逻辑层中适当的函数或方法来执行实际工作。
+   - 将业务逻辑层的结果格式化为 HTTP 响应，可能使用响应模型。
+   - 处理 HTTP 特有的错误并返回相应的状态码。
+   - 此逻辑通常位于 `routers/` 目录中的文件中（如前一节所述）。
+2. **业务逻辑层（服务/领域层）：** 此层封装了应用程序的核心功能，独立于其通过 API 公开的方式。对于 ML API，这涉及：
+
+   - 实现模型所需的数据预处理逻辑。
+   - 加载机器学习模型（通常在应用程序启动期间或通过依赖注入管理）。
+   - 执行模型推理 (inference)（`model.predict()`）。
+   - 对模型的输出执行任何必要的后处理。
+   - 包含任何其他应用程序特定的规则或工作流程。
+   - 此逻辑应位于独立的 Python 模块中，通常放在 `services/` 或 `core_logic/` 等专用目录中。这些模块理想情况下不应了解 FastAPI 或 HTTP 的具体细节。
+3. **数据层（模型/Schema）：** 此层定义了应用程序处理的数据的结构和验证规则。
+
+   - 包含用于验证 API 层中请求体和格式化响应的 Pydantic 模型。
+   - 还可能包括业务逻辑层使用的内部数据结构。
+   - 这些模型通常分组在 `schemas.py` 等文件中或 `models/` 目录中（与包含序列化 ML 模型文件的目录不同）。
+
+### 实际结构示例
+
+考虑一个遵循 SoC 的典型项目布局：
+
+```
+your_ml_api/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI 应用程序创建，包含路由
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   └── inference.py        # API 层：模型推理路由
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── prediction.py       # 业务逻辑层：预测服务
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── prediction.py       # 数据层：Pydantic 输入/输出模型
+│   ├── core/                   # 可选：共享组件
+│   │   ├── __init__.py
+│   │   └── model_loader.py     # 加载 ML 模型的逻辑
+│   └── ml_models/              # 序列化模型文件的目录
+│       └── sentiment_model.joblib
+├── tests/
+│   └── ...                     # 应用程序测试
+└── requirements.txt
+```
+
+在此结构中：
+
+- `app/routers/inference.py` 处理 HTTP POST 预测请求。它使用来自 `app/schemas/prediction.py` 的 Pydantic 模型验证输入，并调用 `app/services/prediction.py` 中的函数或方法。
+- `app/services/prediction.py` 包含 `predict_sentiment` 函数（或类）。它接收验证过的数据，可能执行预处理，使用已加载的模型（可能从 `app/core/model_loader.py` 获取）进行预测，执行后处理，并返回结果。它不了解 HTTP 请求或 FastAPI 装饰器。
+- `app/schemas/prediction.py` 定义了 `PredictionInput` 和 `PredictionOutput` Pydantic 模型。
+
+### 分离的优点
+
+遵循这种分离方式带来很多优势：
+
+- **提升可维护性：** API 的更改（例如，更改端点路径）不需要修改核心预测逻辑。反之，更新预测逻辑（例如，添加预处理步骤）也无需更改 HTTP 处理代码，只要服务函数的签名保持兼容即可。
+- **增强可测试性：** 您可以独立于 API 层测试业务逻辑层（`services/prediction.py`）。您可以编写单元测试，直接使用各种输入调用预测函数，而无需使用 `TestClient` 模拟 HTTP 请求。同样，API 层可以通过模拟其调用的业务逻辑层进行测试。
+- **提高复用性：** 业务逻辑层可以潜在地在其他场景中复用，例如命令行工具或不同类型的应用程序接口，因为它与 Web 框架解耦了。
+- **更清晰的代码库：** 开发人员可以轻松找到特定类型的逻辑，使导航和调试更简单。
+
+FastAPI 的依赖注入系统（我们稍后会提到）通过允许您清晰地将服务类实例或其他依赖（如加载的模型）提供给 API 路由函数，从而进一步促进了这种分离，避免了它们之间的紧密耦合。
+
+> 图示一个请求在 FastAPI ML 应用程序中通过分离层的工作流程。客户端只与 API 层交互，API 层负责协调对业务逻辑层和数据层的调用。
+
+## 参考资料
+
+- [FastAPI Documentation: Bigger Applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) — Sebastián Ramírez (2024)
+  解释了如何使用 APIRouter 和其他技术来构建大型 FastAPI 项目，符合关注点分离原则，以实现更好的组织结构。在线文档。
+- [Pydantic Documentation: Models](https://docs.pydantic.dev/latest/concepts/models/) — Samuel Colvin (2024)
+  详细介绍了 Pydantic 模型在数据验证、序列化和定义数据模式方面的创建和使用，这些是数据层的核心。在线文档。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFNy7_Zv2EWaaVq_ribn524YxQi_wUuVwF0DFj_X2nue_aoFTpXN-0bUbVcIKWyy4ZbJRCAJVvxi6YV_sLjbRfAQHyKiFmOI7xzs71uA_-FGA9zsif3XrqjItWdi_82JidFBB2ZvLgMU1sc0QkYWZx1SIs1qXWVZNkhcM70GE-qtncwUo8ykzDKRtTOUFbF6CmjQVp5sETU) — Chip Huyen (2022)
+  Publisher: O'Reilly Media; Pages: 367
+  讨论了构建健壮机器学习系统的架构考量，包括部署、测试和维护的代码结构，与本节的机器学习上下文相关。

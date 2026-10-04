@@ -1,0 +1,235 @@
+---
+course: "time-series-analysis-forecasting"
+chapter: "intro-time-series-data"
+lesson: "shifting-lagging-rolling"
+sourceId: 3348
+sourceUrl: "https://apxml.com/zh/courses/time-series-analysis-forecasting/chapter-1-intro-time-series-data/shifting-lagging-rolling"
+title: "时间位移、滞后与滚动窗口"
+description: "了解时间位移、计算滞后值以及对时间序列数据应用滚动窗口计算的技巧。"
+order: 4
+plots: ["plots/3348-0.json"]
+sourceHash: "39c0d2e682efe5badb0b6df13cd5a5c96d3c666e49f22ae3d667e5be3595266d"
+sourceCorrections: []
+---
+
+将时间序列数据加载到Pandas后，我们常常需要根据其时间结构进行处理。标准操作可能无法反映数据中固有的时间关联。这里介绍Pandas中的主要技巧，用于时间点位移、计算数据间差值以及在移动窗口上应用计算。这些操作是特征工程和为时间序列建模准备数据的主要环节。
+
+### 时间位移：使用 `.shift()`
+
+最常用的操作之一是在时间上将整个序列向前或向后平移。这对于将观察值与其前一个或后一个值进行比较很有用。Pandas为此提供了 `.shift()` 方法。
+
+设想您有一个每日股票价格序列。将数据平移1个单位（`.shift(1)`）会将每个数据点在索引中*向前*移动一步，有效地将 $y_t$ 与 $y_{t-1}$ 对齐 (alignment)。这被称为数据**滞后**。相反地，平移-1个单位（`.shift(-1)`）会将数据*向后*移动一步，将 $y_t$ 与 $y_{t+1}$ 对齐。这有时被称为数据**超前**。
+
+让我们实际操作一下。首先创建一个简单的时间序列：
+
+```python
+import pandas as pd
+import numpy as np
+
+# 创建一个示例时间序列
+dates = pd.date_range(start='2023-01-01', periods=6, freq='M') # 使用月末频率
+data = pd.Series([10, 12, 15, 13, 16, 18], index=dates, name='Value')
+
+print("原始序列：")
+print(data)
+
+# 向前平移1个周期（滞后）
+shifted_forward = data.shift(1)
+print("\n向前平移（滞后1个单位）：")
+print(shifted_forward)
+
+# 向后平移1个周期（超前）
+shifted_backward = data.shift(-1)
+print("\n向后平移（超前1个单位）：")
+print(shifted_backward)
+```
+
+**Output:**
+
+```
+Original Series:
+2023-01-31    10
+2023-02-28    12
+2023-03-31    15
+2023-04-30    13
+2023-05-31    16
+2023-06-30    18
+Freq: M, Name: Value, dtype: int64
+
+Shifted Forward (Lagged by 1):
+2023-01-31     NaN
+2023-02-28    10.0
+2023-03-31    12.0
+2023-04-30    15.0
+2023-05-31    13.0
+2023-06-30    16.0
+Freq: M, Name: Value, dtype: float64
+
+Shifted Backward (Lead by 1):
+2023-01-31    12.0
+2023-02-28    15.0
+2023-03-31    13.0
+2023-04-30    16.0
+2023-05-31    18.0
+2023-06-30     NaN
+Freq: M, Name: Value, dtype: float64
+```
+
+请注意在平移序列的开头或结尾引入的 `NaN`（非数字）值。这是因为向前平移时，第一个观察值没有前一个值；向后平移时，最后一个观察值没有后续值。如何处理这些缺失值，是根据具体分析需要考虑的重要事项。
+
+滞后（正向平移）在预测中尤其重要。许多模型尝试基于先前的值（$y_{t-1}, y_{t-2}$等）预测下一个值（$y_t$）。创建目标变量的滞后版本是为这些模型生成特征的常用方法。
+
+### 计算差值：使用 `.diff()`
+
+另一个常见需求是计算连续观察值之间的差值。这种操作，称为**差分**，有助于通过去除趋势或水平变化来稳定时间序列的均值。它突出显示周期间的变化，而不是绝对值。我们将在第2章看到它对于实现平稳性的作用。
+
+Pandas为此提供了 `.diff()` 方法。默认情况下，它计算一个元素与其紧接前一个元素之间的差值（$y_t - y_{t-1}$）。
+
+```python
+# 计算一阶差分
+first_difference = data.diff()
+print("\n一阶差分 (data - data.shift(1))：")
+print(first_difference)
+
+# 计算2个周期的差分
+second_period_difference = data.diff(periods=2)
+print("\n2个周期的差分 (data - data.shift(2))：")
+print(second_period_difference)
+```
+
+**Output:**
+
+```
+First Difference (data - data.shift(1)):
+2023-01-31    NaN
+2023-02-28    2.0
+2023-03-31    3.0
+2023-04-30   -2.0
+2023-05-31    3.0
+2023-06-30    2.0
+Freq: M, Name: Value, dtype: float64
+
+Difference over 2 periods (data - data.shift(2)):
+2023-01-31    NaN
+2023-02-28    NaN
+2023-03-31    5.0
+2023-04-30    1.0
+2023-05-31    1.0
+2023-06-30    5.0
+Freq: M, Name: Value, dtype: float64
+```
+
+同样，在无法计算差值的地方（序列的开头）会出现 `NaN` 值。请注意，`data.diff(1)` 等同于 `data - data.shift(1)`。您可以在 `.diff()` 中指定 `periods` 参数 (parameter)来计算更长间隔的差值。
+
+### 滚动窗口计算：使用 `.rolling()`
+
+时间位移和差分比较的是特定时间点。然而，我们通常希望了解某个*时间段*内的趋势或行为。滚动窗口计算允许我们在定义大小的滑动窗口上计算统计量（如均值、标准差、总和）。
+
+这通常用于：
+
+- **平滑处理：** 计算滚动均值可以平滑短期波动并突出长期趋势。
+- **波动性测量：** 计算滚动标准差可以显示波动性增加或减少的时期。
+- **特征工程：** 滚动统计量可以作为预测模型的输入特征。
+
+Pandas 中的 `.rolling()` 方法创建一个滚动窗口对象。您指定 `window` 大小（每个窗口中包含的观察值数量）。然后您链接一个聚合方法（如 `.mean()`、`.std()`、`.sum()`、`.min()`、`.max()`）来计算每个窗口所需的统计量。
+
+```python
+# 计算3周期滚动均值
+rolling_mean = data.rolling(window=3).mean()
+print("\n3周期滚动均值：")
+print(rolling_mean)
+
+# 计算2周期滚动标准差
+rolling_std = data.rolling(window=2).std()
+print("\n2周期滚动标准差：")
+print(rolling_std)
+```
+
+**Output:**
+
+```
+3-Period Rolling Mean:
+2023-01-31          NaN
+2023-02-28          NaN
+2023-03-31    12.333333
+2023-04-30    13.333333
+2023-05-31    14.666667
+2023-06-30    15.666667
+Freq: M, Name: Value, dtype: float64
+
+2-Period Rolling Standard Deviation:
+2023-01-31         NaN
+2023-02-28    1.414214
+2023-03-31    2.121320
+2023-04-30    1.414214
+2023-05-31    2.121320
+2023-06-30    1.414214
+Freq: M, Name: Value, dtype: float64
+```
+
+每个窗口的结果通常与窗口的*末尾*对齐 (alignment)。对于大小为 `n` 的窗口，结果的前 `n-1` 个值将是 `NaN`，因为没有足够的前置数据点来填充窗口。
+
+将原始序列与其滚动均值一起可视化，通常可以提供对潜在趋势的有用认识。
+
+
+
+![原始数据与3周期滚动均值对比](plots/3348-0.json)
+
+
+
+> 原始月度数据与其3周期滚动均值对比。滚动均值提供了序列发展更平滑的表示。
+
+### 扩展窗口：使用 `.expanding()`
+
+一个相关想法是**扩展窗口**。与固定大小的滚动窗口不同，扩展窗口包含从序列开始到当前点的所有数据。它对于计算累积统计量很有用。
+
+`.expanding()` 方法的工作方式与 `.rolling()` 类似，但通常您只需指定 `min_periods`（通常设置为1），而不是固定的窗口大小。
+
+```python
+# 计算累积和
+expanding_sum = data.expanding(min_periods=1).sum()
+print("\n扩展和（累积和）：")
+print(expanding_sum)
+
+# 计算扩展均值（累积平均值）
+expanding_mean = data.expanding(min_periods=1).mean()
+print("\n扩展均值（累积平均值）：")
+print(expanding_mean)
+```
+
+**Output:**
+
+```
+Expanding Sum (Cumulative Sum):
+2023-01-31    10.0
+2023-02-28    22.0
+2023-03-31    37.0
+2023-04-30    50.0
+2023-05-31    66.0
+2023-06-30    84.0
+Freq: M, Name: Value, dtype: float64
+
+Expanding Mean (Cumulative Average):
+2023-01-31    10.000000
+2023-02-28    11.000000
+2023-03-31    12.333333
+2023-04-30    12.500000
+2023-05-31    13.200000
+2023-06-30    14.000000
+Freq: M, Name: Value, dtype: float64
+```
+
+这些 Pandas 函数 `.shift()`、`.diff()`、`.rolling()` 和 `.expanding()` 提供了一套强大的工具，用于根据时间序列数据的时间关联进行处理。掌握它们对于数据清洗、创建有用的特征以及为我们接下来要介绍的可视化和建模技巧准备序列非常重要。
+
+## 参考资料
+
+- [Time series / date functionality](https://pandas.pydata.org/docs/user_guide/timeseries.html) — The Pandas Development Team (2024)
+  Pandas官方时间序列功能指南，涵盖数据移动和差分等操作。
+- [Windowing & rolling operations](https://pandas.pydata.org/docs/user_guide/window.html) — The Pandas Development Team (2024)
+  Pandas官方窗口和滚动操作指南，用于时间序列分析。
+- [Forecasting: Principles and Practice (3rd ed.)](https://otexts.com/fpp3/) — Rob J Hyndman and George Athanasopoulos (2021)
+  Publisher: OTexts
+  一本全面的开放获取教科书，涵盖时间序列预测的统计方法，包括滞后、差分和移动平均的理论基础。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104030/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  Pandas创建者的权威指南，详细介绍了实用的数据操作技术，包括与时间序列相关的部分。

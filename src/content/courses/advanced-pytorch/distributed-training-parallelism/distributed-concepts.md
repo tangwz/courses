@@ -1,0 +1,64 @@
+---
+course: "advanced-pytorch"
+chapter: "distributed-training-parallelism"
+lesson: "distributed-concepts"
+sourceId: 2759
+sourceUrl: "https://apxml.com/zh/courses/advanced-pytorch/chapter-5-distributed-training-parallelism/distributed-concepts"
+title: "分布式计算基本原理"
+description: "分布式系统相关术语概览，与训练大型模型有关（节点、秩、集体通信）。"
+order: 1
+plots: []
+sourceHash: "376963240b9e79fca8b67f1cde3049425bd2ea116870819f3ad18e20b50cc2e3"
+sourceCorrections: []
+---
+
+训练当前的深度学习 (deep learning)模型面临着重大的计算障碍。拥有数十亿参数 (parameter)的模型可能无法在单个加速器的内存中容纳，而在一台机器上处理数TB数据可能使训练时间从数天延长到数周甚至数月。分布式计算提供了一条出路，它能够汇集多台机器（或单台机器）上的多个设备（如GPU）的资源，以解决这些大规模问题。在实施诸如 `DistributedDataParallel` (DDP) 或完全分片数据并行 (FSDP) 等特定的PyTorch策略之前，掌握这些分布式配置中使用的基本术语和通信模式非常必要。
+
+### 分布式训练中的核心术语
+
+在讨论分布式训练时，一些术语经常出现。理解它们的准确含义对于配置和调试分布式任务很重要。
+
+- **节点 (Node)：** 指您的配置中的一台独立计算机器。这可以是机架中的物理服务器，也可以是云中的虚拟机实例。一个节点通常包含一个或多个处理单元（CPU、GPU）。
+- **进程 / 工作器 (Process / Worker)：** 运行在节点上的Python训练脚本的一个独立实例。在典型的基于GPU的训练中，通常为每个GPU启动一个进程，以最大限度地发挥硬件效能。这些进程并行执行，需要协调。
+- **秩 (Rank)：** 分配给参与分布式计算的每个进程的唯一整数标识符。秩通常从0到 $N-1$ 变化，其中 $N$ 是所涉及的进程总数。按照惯例，秩为0的进程通常承担特殊职责，例如日志记录或保存检查点，但这并非严格要求。
+- **大小 (Size)：** 在分布式训练任务中配合工作的进程总数 $N$。如果您在4个节点上进行训练，每个节点有8个GPU，并且每个GPU运行一个进程，则总大小为 $4 \times 8 = 32$。
+- **进程组 (Process Group)：** 所有进程的一个已定义子集（即组）。默认情况下，所有进程都属于一个组。但是，PyTorch允许创建子组，这对于更复杂的并行方案（如混合数据并行和模型并行）很有用，因为在这些方案中，不同类型的工作器集合之间可能会发生不同类型的通信。
+- **后端 (Backend)：** 促进进程间消息传递的底层通信库。PyTorch的 `torch.distributed` 包支持多种后端：
+  - **NCCL (NVIDIA Collective Communications Library)：** 针对NVIDIA硬件上基于GPU训练的首选后端。它对GPU间通信进行了高度优化，无论是在节点内部（使用NVLink）还是跨节点（使用InfiniBand或以太网等网络接口）。
+  - **Gloo：** 一个平台无关的后端，适用于基于CPU的通信，以及在NCCL可能不佳或不可用的不同节点类型或网络设置中GPU之间的通信。它也支持GPU，但对于GPU集合通信通常比NCCL慢。
+  - **MPI (消息传递接口)：** 高性能计算通信的标准。如果您的集群环境已配置为MPI，则可以使用它，但NCCL或Gloo在PyTorch生态系统中更常见。
+
+### 集体通信操作
+
+分布式训练高度依赖集体通信操作，其中多个进程同时同步并交换数据。这些是构建DDP等高级策略的底层原语。`torch.distributed` 提供了这些操作的函数：
+
+- **广播 (`torch.distributed.broadcast`)**：将一个张量从一个指定的进程（`src` 秩）发送到组中的所有其他进程。这通常在训练开始时使用，以确保所有工作器都以完全相同的初始模型参数 (parameter)开始。
+- **归约 (`torch.distributed.reduce`)**：从组中所有进程收集张量，应用指定的归约操作（如 `SUM`、`AVG`、`MAX`、`MIN`），并将结果存储在单个目标进程（`dst` 秩）上。
+- **All-Reduce (`torch.distributed.all_reduce`)**：与归约类似，但归约操作的最终结果会分发回组中的*所有*进程。这是DDP的核心，每个工作器独立计算的梯度会在所有工作器之间求平均，确保模型在各处得到一致的更新。
+- **分散 (`torch.distributed.scatter`)**：从单个源进程（`src`）获取一个张量列表，并将列表中的一个张量分发给组中的每个进程（包括自身）。列表中的第 $i$ 个张量会发送给秩为 $i$ 的进程。
+- **收集 (`torch.distributed.gather`)**：分散的逆操作。每个进程将其张量发送到指定的目的进程（`dst`），后者将它们收集成一个按秩排序的张量列表。
+- **All-Gather (`torch.distributed.all_gather`)**：与收集类似，但组中的每个进程都会收到所有其他进程的连接张量列表。当每个工作器都需要从所有其他工作器那里获得完整的计算结果时很有用，例如并行计算的嵌入 (embedding)。
+- **归约分散 (`torch.distributed.reduce_scatter`)**：对所有进程上的一组输入张量执行元素级归约（类似于All-Reduce），然后分散归约后的结果，使每个进程接收到最终归约张量的一部分。在某些情况下，这可能比单独的归约和分散操作更有效。
+
+将这些操作可视化有助于理解。考虑一个在4进程设置中对梯度求和的简单All-Reduce操作：
+
+> 每个进程计算其局部梯度 ($G_i$)。在All-Reduce步骤中，这些梯度在所有进程之间进行通信并求和。最终求和的梯度随后在每个进程上可用，为优化器步骤做好准备。
+
+### 将原理与训练策略联系起来
+
+这些基本原理直接对应本章后面讨论的分布式训练技术：
+
+- **数据并行 (DDP)：** 大量依赖 `All-Reduce` 来平均不同数据批次在工作器上计算的梯度。`广播` 最初用于同步模型权重 (weight)。
+- **模型/流水线并行：** 涉及更有针对性的点对点通信（使用 `send`/`recv` 原语，此处未详细说明但属于 `torch.distributed` 的一部分）或在持有模型不同部分或处理不同微批次的特定秩之间进行特定的集体操作，如 `分散` 和 `收集`。
+- **完全分片数据并行 (FSDP)：** 使用 `All-Gather` 的组合来重建层内前向/后向传播的完整参数 (parameter)，以及 `归约分散` 来平均梯度并有效地将它们分片回工作器。
+
+理解这些构成要素——节点、进程、秩、后端和集体通信模式——为在PyTorch中有效实施和排除分布式训练工作流提供了坚实的根本。在建立了这些术语后，我们可以继续检查PyTorch如何为不同的并行化策略安排这些元素。
+
+## 参考资料
+
+- [\`torch.distributed\` (Distributed communication)](https://pytorch.org/docs/stable/distributed.html) — PyTorch Team (2025)
+  Publisher: PyTorch Foundation
+  PyTorch分布式模块的官方文档，详细介绍了后端、集合操作和通信原语。
+- [NVIDIA Collective Communications Library (NCCL) documentation](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/index.html) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA Corporation
+  深入解释了NCCL，这是用于多GPU和多节点通信的高性能库。

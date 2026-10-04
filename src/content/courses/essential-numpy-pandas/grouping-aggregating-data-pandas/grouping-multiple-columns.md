@@ -1,0 +1,151 @@
+---
+course: "essential-numpy-pandas"
+chapter: "grouping-aggregating-data-pandas"
+lesson: "grouping-multiple-columns"
+sourceId: 1822
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-9-grouping-aggregating-data-pandas/grouping-multiple-columns"
+title: "按多列分组"
+description: "根据多列中的值创建分层分组。"
+order: 5
+plots: []
+sourceHash: "f4d1c788f3131d774fa659ac1ff9f93eb9a499d17f91b509c54657782caf54f3"
+sourceCorrections: []
+---
+
+数据分析常常需要根据类别的组合而不是单一类别来划分数据。例如，您可能希望计算的平均销售额不仅按区域划分，还要按每个区域*内*的产品划分。Pandas 的 `groupby()` 方法通过允许您同时按多列进行分组，使这变得简单易行。
+
+### 为什么要按多列分组？
+
+按单列分组可以提供宽泛类别的汇总。按多列分组则可以进行更详细、分层的分析。它有助于回答以下问题：
+
+- 每个月*和*每个城市的平均降雨量是多少？
+- 在每个具体商店\*中，每种产品销售了多少单位？
+- 在每个学校内\*，*每个年级*的学生取得的最高分数是多少？
+
+这种多级分组相比单级聚合提供了更细致的见解。
+
+### 语法
+
+要按多列分组，您只需向 `groupby()` 方法传递一个列名列表，而不是单个字符串。
+
+让我们设置一个示例 DataFrame 来进行说明：
+
+```python
+import pandas as pd
+import numpy as np
+
+# 示例销售数据
+data = {'Region': ['North', 'South', 'North', 'South', 'North', 'South', 'North', 'South'],
+        'Product': ['A', 'A', 'B', 'B', 'A', 'A', 'B', 'B'],
+        'Sales': [100, 150, 200, 50, 120, 180, 210, 80],
+        'Quantity': [10, 15, 20, 5, 12, 18, 21, 8]}
+df_sales = pd.DataFrame(data)
+
+print(df_sales)
+```
+
+输出：
+
+```
+  Region Product  Sales  Quantity
+0  North       A    100        10
+1  South       A    150        15
+2  North       B    200        20
+3  South       B     50         5
+4  North       A    120        12
+5  South       A    180        18
+6  North       B    210        21
+7  South       B     80         8
+```
+
+现在，让我们同时按“Region”和“Product”分组，并计算每个组合的总销售额：
+
+```python
+# 按“Region”和“Product”分组
+grouped_multi = df_sales.groupby(['Region', 'Product'])
+
+# 计算每个组的总销售额
+total_sales_multi = grouped_multi['Sales'].sum()
+
+print(total_sales_multi)
+```
+
+输出：
+
+```
+Region  Product
+North   A          220
+        B          410
+South   A          330
+        B          130
+Name: Sales, dtype: int64
+```
+
+### 理解结果：MultiIndex
+
+请注意聚合结果 (`total_sales_multi`)。索引不再是简单的标签列表。相反，它有两层：“Region”和“Product”。这在 Pandas 中被称为 `MultiIndex`（或分层索引）。它代表了分组列的独特组合。
+
+`df_sales.groupby(['Region', 'Product'])` 创建的 `GroupBy` 对象根据独有的对（'North', 'A'），（'North', 'B'），（'South', 'A'）和（'South', 'B'）来划分原始 DataFrame。然后，对这些划分中每个“Sales”列应用 `sum()` 聚合。
+
+### 聚合多列或使用多个函数
+
+就像单列分组一样，您可以在按多列分组时对多列应用聚合，或使用多个聚合函数。
+
+例如，让我们找出每个区域-产品组合的总销售额和平均数量：
+
+```python
+# 对不同列应用不同的聚合
+agg_results = grouped_multi.agg(
+    Total_Sales=('Sales', 'sum'),
+    Average_Quantity=('Quantity', 'mean')
+)
+
+print(agg_results)
+```
+
+输出：
+
+```
+                Total_Sales  Average_Quantity
+Region Product
+North  A                220              11.0
+       B                410              20.5
+South  A                330              16.5
+       B                130               6.5
+```
+
+结果是一个 DataFrame，其索引是 `MultiIndex`（“Region”，“Product”），列则代表指定聚合的结果（“Total\_Sales”，“Average\_Quantity”）。
+
+您也可以对同一列应用多个聚合函数：
+
+```python
+# 对“Sales”列应用多个聚合
+sales_stats = grouped_multi['Sales'].agg(['sum', 'mean', 'count'])
+
+print(sales_stats)
+```
+
+输出：
+
+```
+                sum   mean  count
+Region Product
+North  A        220  110.0      2
+       B        410  205.0      2
+South  A        330  165.0      2
+       B        130   65.0      2
+```
+
+这提供了每个独特（“Region”，“Product”）对的销售额的总和、平均值和计数。
+
+按多列分组是一种有效方法，用于进行详细的类别分析，允许您根据多种因素组合来汇总数据。生成的 `MultiIndex` 结构能有效表示这些分层分组。
+
+## 参考资料
+
+- [Pandas User Guide: GroupBy: split-apply-combine](https://pandas.pydata.org/docs/user_guide/groupby.html) — The pandas development team (2024)
+  官方文档，提供了关于 groupby 操作的全面指南，包括多列分组和使用各种聚合函数的示例。
+- [Pandas User Guide: MultiIndex / Advanced Indexing](https://pandas.pydata.org/docs/user_guide/advanced.html) — The pandas development team (2024)
+  官方文档的这一部分描述了 MultiIndex 对象，它是按多列分组时产生的索引结构。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  由 Pandas 创建者撰写的基础书籍，提供了数据处理的详细解释和示例，包括多键分组和分层索引的深入讨论。

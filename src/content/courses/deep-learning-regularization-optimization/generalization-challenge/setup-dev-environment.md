@@ -1,0 +1,118 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "generalization-challenge"
+lesson: "setup-dev-environment"
+sourceId: 4886
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-1-generalization-challenge/setup-dev-environment"
+title: "配置开发环境"
+description: "关于为课程实践配置所需工具和库的指南。"
+order: 7
+plots: []
+sourceHash: "4b64e9580541d27cfce23f7339840493b8db52f66217aa595023cb9e0a684bb8"
+sourceCorrections: []
+---
+
+要有效学习泛化和过拟合 (overfitting)，以及模型正则化 (regularization)和优化中用到的方法，你需要一个稳定且可用的 Python 环境。通过此配置，你将能够运行代码示例，尝试不同的正则化和优化方法，并完成动手实践环节。
+
+我们建议使用最新版本的 Python，理想情况下是 Python 3.8 或更高版本。管理依赖项对于实现结果可复现性很重要，我们建议使用 Conda（特别是 Miniconda 或 Anaconda）或 Python 内置的 `venv` 模块结合 `pip`。
+
+### 核心库
+
+我们主要依赖的库有：
+
+1. **PyTorch：** 我们的主要深度学习 (deep learning)框架。它提供了构建、训练和评估神经网络 (neural network)所需的工具，包括正则化 (regularization)层和优化算法的实现。
+2. **NumPy：** Python 中用于数值计算的基本包。PyTorch 与 NumPy 集成良好，我们将用它进行各种数据操作。
+3. **Matplotlib（可选 Seaborn）：** 用于绘制和可视化数据，如学习曲线、权重 (weight)分布和模型预测，这对于诊断模型行为非常重要。
+4. **Scikit-learn：** 可用于数据分割、性能指标以及可能的简单基线模型等辅助工具。
+
+### 使用 Conda 安装
+
+如果你使用 Conda，可以创建一个专用环境并安装所需包。打开你的终端或 Anaconda Prompt，然后运行：
+
+```bash
+# 创建一个新环境（例如，命名为 'dl-regopt'），使用 Python 3.9
+conda create -n dl-regopt python=3.9
+
+# 激活环境
+conda activate dl-regopt
+
+# 安装 PyTorch, torchvision, torchaudio (如果需要，请根据你的操作系统/CUDA 版本进行调整)
+# 请访问 PyTorch 官方网站 (pytorch.org) 获取最新的安装命令
+# Linux/macOS 上仅支持 CPU 的示例：
+conda install pytorch torchvision torchaudio cpuonly -c pytorch
+
+# 安装其他库
+conda install numpy matplotlib scikit-learn seaborn jupyterlab
+```
+
+*注意：* 对于 GPU 支持（强烈建议以加快训练速度），请访问 PyTorch 官方网站 (<https://pytorch.org/>)，并根据你的操作系统和 CUDA 版本选择合适的安装命令。
+
+### 使用 pip 和 venv 安装
+
+如果你更喜欢使用 `pip` 结合虚拟环境：
+
+```bash
+# 为你的项目创建一个目录（如果尚未创建）
+mkdir deeplearning-course
+cd deeplearning-course
+
+# 创建一个虚拟环境（例如，命名为 '.venv'）
+python -m venv .venv
+
+# 激活环境
+# 在 macOS/Linux 上：
+source .venv/bin/activate
+# 在 Windows 上：
+# .\.venv\Scripts\activate
+
+# 升级 pip
+python -m pip install --upgrade pip
+
+# 安装 PyTorch (如果需要，请根据你的操作系统/CUDA 版本进行调整)
+# 请访问 PyTorch 官方网站 (pytorch.org) 获取最新的安装命令
+# 仅支持 CPU 的示例：
+pip install torch torchvision torchaudio
+
+# 安装其他库
+pip install numpy matplotlib scikit-learn seaborn jupyterlab
+```
+
+### 验证安装
+
+安装完成后，你可以快速验证核心组件是否正常工作。启动 Python 解释器或 Jupyter Notebook，并尝试导入库：
+
+```python
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+import sklearn
+
+print(f"PyTorch 版本: {torch.__version__}")
+print(f"NumPy 版本: {np.__version__}")
+print(f"Scikit-learn 版本: {sklearn.__version__}")
+
+# 检查 PyTorch 是否支持 CUDA (GPU)
+if torch.cuda.is_available():
+    print(f"CUDA 可用: {torch.cuda.is_available()}")
+    print(f"CUDA 版本: {torch.version.cuda}")
+    print(f"设备名称: {torch.cuda.get_device_name(0)}")
+else:
+    print("CUDA 不可用。正在 CPU 上运行。")
+
+# 测试一个简单的 PyTorch 张量操作
+x = torch.rand(5, 3)
+print("\nPyTorch 张量示例：")
+print(x)
+```
+
+如果这些命令执行无误，并显示版本和张量输出，那么你的环境就已准备就绪。你现在拥有了跟进实践示例所需的工具，从可视化过拟合 (overfitting)的影响开始。拥有这样一个稳定的配置，可以确保在你研究不同方法来改进模型泛化能力时，代码能按预期运行。
+
+## 参考资料
+
+- [PyTorch Installation Guide](https://pytorch.org/get-started/locally/) — PyTorch Team (2024)
+  提供在不同操作系统和配置（CPU/GPU）上安装 PyTorch、torchvision 和 torchaudio 的全面说明。
+- [Managing environments with Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) — conda documentation (2024)
+  Publisher: Conda
+  创建、激活和管理 Conda 环境以及安装包的官方指南。
+- [\`venv\` - Creation of virtual environments](https://docs.python.org/3/library/venv.html) — Python Documentation Team (2024)
+  解释如何使用内置 `venv` 模块创建和管理独立的 Python 环境。

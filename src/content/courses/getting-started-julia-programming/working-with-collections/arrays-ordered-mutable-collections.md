@@ -1,0 +1,245 @@
+---
+course: "getting-started-julia-programming"
+chapter: "working-with-collections"
+lesson: "arrays-ordered-mutable-collections"
+sourceId: 6786
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-4-working-with-collections/arrays-ordered-mutable-collections"
+title: "数组：有序、可变集合"
+description: "学习如何创建、初始化、访问元素和修改数组，Julia的主要可变集合。"
+order: 2
+plots: []
+sourceHash: "b326e2669879ce78f46451572d2e80cb30c94294b33258c9135dbd3b13e8c0bf"
+sourceCorrections: []
+---
+
+数组是Julia中存储和管理有序项目列表的基本方式。可以将数组视为一系列编号的容器，每个容器都可以容纳一条数据，只要知道容器的编号，就可以访问或更改其内容。因为数组按特定顺序保存项目并允许更改其内容，所以它们对于各种编程任务都非常有用，例如存储学生姓名列表或管理图像中的像素数据。一维数组在Julia中通常称为`Vector`。
+
+### 创建数组
+
+在Julia中创建数组有几种方法。最直接的方法是列出您希望在数组中的元素，用逗号分隔，并用方括号`[]`括起来。
+
+```julia
+# 整数数组
+scores = [90, 85, 92, 78, 95]
+
+# 字符串数组
+names = ["Alice", "Bob", "Charlie"]
+
+# 数组也可以保存混合数据类型
+mixed_data = [10, "Julia", 3.14, true]
+```
+
+当您创建像上面`mixed_data`那样包含混合数据类型的数组时，Julia会将其设为`Any`类型的数组，这意味着它可以保存任何类型的值。虽然这很灵活，但如果您的数组存储相同类型的元素，通常会更高效和清晰。您可以在创建数组时指定其类型：
+
+```julia
+# 专门用于64位浮点数的数组
+temperatures = Float64[23.5, 24.1, 22.8]
+
+# 专门用于整数的数组
+quantities = Int[10, 20, 5]
+```
+
+您还可以创建一个空数组，以后可能需要用数据填充它：
+
+```julia
+# 可以保存任何类型的空数组 (Vector{Any})
+empty_list = []
+
+# 旨在保存字符串的空数组
+empty_strings = String[]
+```
+
+Julia还提供函数来创建带有初始占位符值的数组：
+
+- `zeros(T, n)` 创建一个长度为`n`的数组，填充类型为`T`的零。如果省略`T`，则默认为`Float64`。
+- `ones(T, n)` 创建一个长度为`n`的数组，填充类型为`T`的壹。如果省略`T`，则默认为`Float64`。
+- `fill(value, n)` 创建一个长度为`n`的数组，填充`value`。
+
+```julia
+initial_zeros = zeros(3)         # [0.0, 0.0, 0.0]
+initial_ones_int = ones(Int, 4)  # [1, 1, 1, 1]
+default_values = fill("pending", 2) # ["待处理", "待处理"]
+```
+
+### 理解索引：基于1的索引
+
+要操作数组中的元素，您需要知道它们的位置，即*索引*。Julia（以及其他一些科学计算语言）的一个重要特点是数组是**基于1的索引**。这意味着第一个元素位于索引1，第二个元素位于索引2，依此类推。如果您使用过像Python或C++这样使用基于0索引的语言，这可能会有所不同。
+
+考虑我们的`scores`数组：`[90, 85, 92, 78, 95]`
+
+- 值`90`位于索引1。
+- 值`85`位于索引2。
+- ...而`95`位于索引5。
+
+> `scores`数组及其基于1的索引和对应值。
+
+### 访问元素
+
+您可以通过在数组名称后使用方括号指定索引来检索数组中的元素。
+
+```julia
+scores = [90, 85, 92, 78, 95]
+
+first_score = scores[1]   # 访问第一个元素：90
+third_score = scores[3]   # 访问第三个元素：92
+
+println("第一个分数是：", first_score)
+println("第三个分数是：", third_score)
+```
+
+Julia提供了一个方便的关键字`end`来引用数组的最后一个索引。当您不知道数组的确切长度或想访问靠近末尾的元素时，这很有用。
+
+```julia
+last_score = scores[end]      # 访问最后一个元素：95
+second_to_last = scores[end-1] # 访问倒数第二个元素：78
+
+println("最后一个分数：", last_score)
+println("倒数第二个分数：", second_to_last)
+```
+
+如果您尝试访问超出数组有效范围的索引（例如，索引0，或大于数组长度的索引），Julia将抛出`BoundsError`。
+
+**数组切片**
+您还可以提取数组的一部分，称为*切片*。切片会创建一个新数组，其中包含指定范围的元素。您可以使用`start_index:end_index`语法定义切片。
+
+```julia
+scores = [90, 85, 92, 78, 95, 88, 70]
+
+# 获取从索引2到索引4的元素
+middle_scores = scores[2:4]  # 结果：[85, 92, 78]
+println("中间分数：", middle_scores)
+
+# 获取从索引3到末尾的元素
+scores_from_third = scores[3:end] # 结果：[92, 78, 95, 88, 70]
+println("从第三个开始的分数：", scores_from_third)
+
+# 获取前三个元素
+first_three = scores[1:3] # 结果：[90, 85, 92]
+println("前三个分数：", first_three)
+```
+
+请记住，切片会创建数组该部分的*副本*，而不是对原始数组的视图（默认情况下）。修改切片不会影响原始数组。
+
+### 修改数组：可变性的作用
+
+Julia中的数组是*可变的*，这意味着您可以在创建它们之后更改其内容。您可以更改单个元素、添加新元素或删除现有元素。
+
+**更改元素**
+要更改特定索引处的元素，请为其赋值：
+
+```julia
+tasks = ["Write report", "Send emails", "Meeting at 3 PM"]
+println("原始任务：", tasks)
+
+# 更新第一个任务
+tasks[1] = "Finalize report"
+println("更新后的任务：", tasks) # Output: ["Finalize report", "Send emails", "Meeting at 3 PM"]
+
+# 更改最后一个任务
+tasks[end] = "Team meeting at 3 PM"
+println("进一步更新的任务：", tasks) # Output: ["Finalize report", "Send emails", "Team meeting at 3 PM"]
+```
+
+**添加元素**
+Julia提供了几个函数来向数组添加元素。Julia中许多修改其参数 (parameter)的函数名称都以感叹号（`!`）结尾。这是一个约定，旨在提醒您该函数将直接更改其某个输入。
+
+- `push!(array, item)`: 将`item`添加到`array`的末尾。
+- `append!(array, collection)`: 将`collection`中的所有元素添加到`array`的末尾。
+
+```julia
+numbers = [10, 20, 30]
+println("初始数字：", numbers)
+
+push!(numbers, 40)
+println("push!后：", numbers) # Output: [10, 20, 30, 40]
+
+new_items = [50, 60]
+append!(numbers, new_items)
+println("append!后：", numbers) # Output: [10, 20, 30, 40, 50, 60]
+```
+
+**删除元素**
+同样，也有用于删除元素的函数：
+
+- `pop!(array)`: 从`array`中删除最后一个元素并返回它。
+- `popfirst!(array)`: 从`array`中删除第一个元素并返回它。
+- `splice!(array, index_or_range, [replacement_values...])`: 删除`index_or_range`处的元素，并可选地插入`replacement_values`。如果没有提供替换值，则只删除。
+
+```julia
+items = ["A", "B", "C", "D", "E"]
+println("原始项目：", items)
+
+last_item = pop!(items)
+println("删除的最后一个项目：", last_item) # Output: "E"
+println("pop!后的项目：", items)    # Output: ["A", "B", "C", "D"]
+
+first_item = popfirst!(items)
+println("删除的第一个项目：", first_item) # Output: "A"
+println("popfirst!后的项目：", items) # Output: ["B", "C", "D"]
+
+# 删除索引2处的元素 ("C")
+removed_middle = splice!(items, 2)
+println("删除的中间项目：", removed_middle) # Output: "C" (as a single-element array in some contexts, or just the element)
+println("splice!后的项目：", items) # Output: ["B", "D"]
+```
+
+注意：`splice!` 将删除的元素作为数组返回。
+
+### 有用的数组函数和属性
+
+Julia提供了许多内置函数来有效地操作数组：
+
+- `length(array)`: 返回数组中的元素数量。
+
+  ```julia
+  my_list = [5, 10, 15, 20]
+  println("my_list 的长度：", length(my_list)) # Output: 4
+  ```
+- `isempty(array)`: 如果数组没有元素，则返回`true`，否则返回`false`。
+
+  ```julia
+  empty_arr = []
+  println("empty_arr 为空吗？", isempty(empty_arr)) # Output: true
+  println("my_list 为空吗？", isempty(my_list))   # Output: false
+  ```
+- `eltype(array)`: 返回数组旨在保存的元素的类型。
+
+  ```julia
+  int_array = [1, 2, 3]
+  println("int_array 的元素类型：", eltype(int_array)) # Output: Int64 (or Int32 depending on system)
+
+  any_array = [1, "hello", 3.0]
+  println("any_array 的元素类型：", eltype(any_array)) # Output: Any
+  ```
+- `size(array)`: 返回一个包含数组维度的元组。对于向量 (vector)（一维数组），它是一个1元组 `(长度,)`。
+
+  ```julia
+  vector_example = [10, 20, 30, 40]
+  println("vector_example 的大小：", size(vector_example)) # Output: (4,)
+  ```
+- `in(item, array)` 或 `item ∈ array`: 检查`item`是否存在于`array`中。
+
+  ```julia
+  fruits = ["apple", "banana", "cherry"]
+  println("'banana' 在 fruits 中吗？", "banana" in fruits) # Output: true
+  println("'orange' 在 fruits 中吗？", "orange" ∈ fruits) # Output: false (您可以输入 ∈ 作为 \in TAB)
+  ```
+
+### 关于数组类型的一个说明
+
+如前所述，Julia数组是有类型的。当您创建`[1, 2, 3]`时，Julia会将其推断为`Vector{Int}`（在大多数系统上更具体地说是`Vector{Int64}`）。如果您创建`[1.0, 2.5, 3.1]`，它将变为`Vector{Float64}`。如果您混合类型，如`[1, "two", 3.0]`，Julia会使用`Vector{Any}`。
+
+使用特定类型的数组（如`Vector{Int}`）通常比`Vector{Any}`具有更好的性能，因为当Julia确切知道数组保存何种数据时，它可以进行更多优化。然而，当您确实需要在同一个集合中存储不同类型的项目时，`Vector{Any}`提供了灵活性。
+
+数组是Julia中数据操作的根本。它们的有序性和可变性使其适用于许多任务。随着您的学习，您会遇到多维数组（矩阵等）和更高级的数组操作，但这种创建、访问和修改一维数组（向量 (vector)）的基本方式将对您非常有帮助。
+
+## 参考资料
+
+- [Multi-dimensional Arrays](https://docs.julialang.org/en/v1/manual/arrays/) — The Julia Language (2024)
+  Julia数组功能的官方文档，涵盖向量和多维数组的创建、索引和修改。
+- [Think Julia: How to Think Like a Computer Scientist](https://benlauwens.github.io/ThinkJulia.jl/latest/book.html) — Ben Lauwens, Allen B. Downey (2019)
+  Publisher: O'Reilly Media
+  一本介绍性教材，提供学习Julia的结构化方法，其中包含关于数组和集合的专门章节。
+- [Types](https://docs.julialang.org/en/v1/manual/types/) — The Julia Language (2024)
+  Publisher: The Julia Language
+  解释Julia类型系统的官方文档，它是类型化数组（例如 `Vector{Int}` 与 `Vector{Any}`）行为和性能特点的基础。

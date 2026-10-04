@@ -1,0 +1,104 @@
+---
+course: "bayesian-machine-learning"
+chapter: "variational-inference-techniques"
+lesson: "optimization-as-inference-vi"
+sourceId: 3555
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-3-variational-inference-techniques/optimization-as-inference-vi"
+title: "优化即推断：变分推断的观点"
+description: "使用变分方法将贝叶斯推断构建为优化问题。"
+order: 1
+plots: []
+sourceHash: "1aa628de2b02bc84ed98692dbbaaf7098b9adb3f80d07ef36726635c0cfd5247"
+sourceCorrections: []
+---
+
+直接计算贝叶斯模型中的后验分布$p(\mathbf{z}|\mathbf{x})$常常因为难以处理的证据项$p(\mathbf{x}) = \int p(\mathbf{x}, \mathbf{z}) d\mathbf{z}$而受阻。虽然MCMC方法提供了一种强大的基于模拟的方法，通过生成样本来近似后验分布，但它们可能需要大量的计算资源和时间，尤其是在处理大数据集或高维参数 (parameter)空间时。
+
+变分推断（VI）提供了一种完全不同的方法。VI不从后验分布中模拟样本，而是将推断问题转换为优化问题。核心思想是针对潜在变量$\mathbf{z}$，选择一个概率分布族$\mathcal{Q}$，其中每个分布$q(\mathbf{z}) \in \mathcal{Q}$都设计为易于处理（例如易于计算期望、密度等）。随后，我们在这个分布族中寻找一个特定的分布$q^*(\mathbf{z})$，使其“最接近”真实但难以处理的后验分布$p(\mathbf{z}|\mathbf{x})$。
+
+### 度量接近程度：KL散度
+
+我们如何量化 (quantization)近似分布$q(\mathbf{z})$与真实后验分布$p(\mathbf{z}|\mathbf{x})$之间的“接近程度”？VI中标准的度量是库尔巴克-莱布勒（KL）散度，记作$KL(q || p)$。对于我们特定的情况，其定义如下：
+
+
+$$
+KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x})) = \int q(\mathbf{z}) \log \frac{q(\mathbf{z})}{p(\mathbf{z}|\mathbf{x})} d\mathbf{z}
+$$
+
+
+KL散度总是非负的（$KL(q || p) \ge 0$），并且当且仅当$q(\mathbf{z})$和$p(\mathbf{z}|\mathbf{x})$几乎处处相等时，KL散度为零。最小化此KL散度意味着在选定的分布族$\mathcal{Q}$中找到最能匹配真实后验分布的$q(\mathbf{z})$。
+
+### 挑战与方案：引入ELBO
+
+初看起来，最小化$KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x}))$似乎并未解决我们最初的问题。直接计算KL散度仍然需要计算真实后验分布$p(\mathbf{z}|\mathbf{x})$，而这又涉及到难以处理的证据项$p(\mathbf{x})$。
+
+然而，我们可以对KL散度的定义进行代数重排。让我们使用条件概率的定义$p(\mathbf{z}|\mathbf{x}) = \frac{p(\mathbf{x}, \mathbf{z})}{p(\mathbf{x})}$展开对数内部的项：
+
+
+$$
+KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x})) = \int q(\mathbf{z}) \log \frac{q(\mathbf{z}) p(\mathbf{x})}{p(\mathbf{x}, \mathbf{z})} d\mathbf{z}
+$$
+
+
+我们可以分离对数中的各项：
+
+
+$$
+KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x})) = \int q(\mathbf{z}) \log q(\mathbf{z}) d\mathbf{z} - \int q(\mathbf{z}) \log p(\mathbf{x}, \mathbf{z}) d\mathbf{z} + \int q(\mathbf{z}) \log p(\mathbf{x}) d\mathbf{z}
+$$
+
+
+识别这些积分是关于$q(\mathbf{z})$的期望，并注意到$\log p(\mathbf{x})$是相对于$\mathbf{z}$的常数（因此$\int q(\mathbf{z}) \log p(\mathbf{x}) d\mathbf{z} = \log p(\mathbf{x}) \int q(\mathbf{z}) d\mathbf{z} = \log p(\mathbf{x})$），我们得到：
+
+
+$$
+KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x})) = \mathbb{E}_{q(\mathbf{z})} [\log q(\mathbf{z})] - \mathbb{E}_{q(\mathbf{z})} [\log p(\mathbf{x}, \mathbf{z})] + \log p(\mathbf{x})
+$$
+
+
+重新排列这个方程，我们得到一个重要的关系：
+
+
+$$
+\log p(\mathbf{x}) = \underbrace{\mathbb{E}_{q(\mathbf{z})} [\log p(\mathbf{x}, \mathbf{z})] - \mathbb{E}_{q(\mathbf{z})} [\log q(\mathbf{z})]}_{\mathcal{L}(q)} + KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x}))
+$$
+
+
+标记 (token)为$\mathcal{L}(q)$的项被称为**证据下界（ELBO）**。由于KL散度总是非负的（$KL(q || p) \ge 0$），这个方程说明ELBO总是小于或等于模型证据的对数：
+
+
+$$
+\log p(\mathbf{x}) \ge \mathcal{L}(q)
+$$
+
+
+这种关系是变分推断的根本。
+
+### 将ELBO最大化作为推断策略
+
+考虑方程$\log p(\mathbf{x}) = \mathcal{L}(q) + KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x}))。左侧的$\log p(\mathbf{x})$是我们模型在给定数据下的对数证据。对于一个固定的模型和数据集，这个值是常数，与我们选择的$q(\mathbf{z})$无关。因此，关于$q(\mathbf{z})$最大化ELBO$\mathcal{L}(q)$，必然等同于最小化KL散度$KL(q(\mathbf{z}) || p(\mathbf{z}|\mathbf{x}))\$。
+
+重要的一点是，ELBO，$\mathcal{L}(q) = \mathbb{E}_{q(\mathbf{z})} [\log p(\mathbf{x}, \mathbf{z})] - \mathbb{E}_{q(\mathbf{z})} [\log q(\mathbf{z})]$，*不*直接依赖于难以处理的证据$p(\mathbf{x})$或真实后验分布$p(\mathbf{z}|\mathbf{x})$。它只依赖于联合分布$p(\mathbf{x}, \mathbf{z})$（通常由我们的模型规范定义）以及我们的近似分布$q(\mathbf{z})$。
+
+这将推断问题转换为一个优化问题：即在选定的分布族$\mathcal{Q}$中找到使ELBO最大化的分布$q^*(\mathbf{z})$。所得的$q^*(\mathbf{z})$即作为真实后验分布$p(\mathbf{z}|\mathbf{x})$的近似。
+
+> 变分推断在易于处理的分布族$\mathcal{Q}$中寻找使证据下界（ELBO）最大化的分布$q^*(\mathbf{z})$。这种最大化等同于最小化$q^*(\mathbf{z})$与真实后验分布$p(\mathbf{z}|\mathbf{x})$之间的KL散度。
+
+当前实际的难点在于：
+
+1. 选择一个适当的分布族$\mathcal{Q}$，使其兼顾易处理性和灵活性。
+2. 研发执行所需优化以最大化$\mathcal{L}(q)$的算法。
+
+以下章节将研究$\mathcal{Q}$的常见选择，例如平均场近似，并介绍旨在高效最大化ELBO的算法，如坐标上升变分推断（CAVI）和随机变分推断（SVI）。
+
+## 参考资料
+
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/uploads/prod/2006/01/Bishop-PRML-2006-08-17.pdf) — Christopher M. Bishop (2006)
+  Publisher: Springer; Pages: Chapter 10
+  一本经典且全面的教材，提供了变分推断的基础介绍，包括ELBO的推导和平均场近似。
+- [Variational Inference: A Review for Statisticians](https://www.tandfonline.com/doi/full/10.1080/01621459.2017.1285773) — David M. Blei, Alp Kucukelbir, and Jon D. McAuliffe (2017)
+  Journal: Journal of the American Statistical Association; Publisher: Taylor & Francis Online; Volume: 112; Pages: 859-877; DOI: [10.1080/01621459.2017.1285773](https://doi.org/10.1080/01621459.2017.1285773)
+  这篇综述文章提供了变分推断易于理解且全面的概览，将其视为一个优化问题，并讨论了其应用和现代发展。
+- [Probabilistic Machine Learning: Advanced Topics](http://probml.github.io/book2) — Kevin Patrick Murphy (2023)
+  Publisher: MIT Press
+  一本现代、全面的教材，深入探讨了变分推断，涵盖了从基础知识到高级算法和应用。

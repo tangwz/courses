@@ -1,0 +1,76 @@
+---
+course: "lora-peft-efficient-llm-training"
+chapter: "peft-methodologies-survey"
+lesson: "peft-memory-compute-footprints"
+sourceId: 4140
+sourceUrl: "https://apxml.com/zh/courses/lora-peft-efficient-llm-training/chapter-3-peft-methodologies-survey/peft-memory-compute-footprints"
+title: "内存与计算开销"
+description: "比较各种PEFT技术在训练和推理过程中的内存使用和计算开销。"
+order: 6
+plots: ["plots/4140-0.json"]
+sourceHash: "48bacc597c99914ec6e1f3d9ec187462fe77887de921c1e79da5103921f5131e"
+sourceCorrections: []
+---
+
+尽管Adapter Tuning、Prefix Tuning和Prompt Tuning都提供了高效微调 (fine-tuning)的途径，但它们对资源的需求却差异很大。了解训练和推理 (inference)过程中内存使用与计算要求的这些差异，对于根据您的特定硬件限制和应用需求选择合适的PEFT方法非常重要。这些方法，包括LoRA（在第2章中讨论），将与完全微调的基准进行比较。
+
+### 训练阶段开销
+
+在训练期间，主要的资源消耗者是：
+
+1. **模型权重 (weight)：** 基础大型语言模型的参数 (parameter)以及任何新引入的参数（如适配器或LoRA矩阵）。
+2. **激活值：** 前向传播过程中保存的中间结果，用于反向传播 (backpropagation)中的梯度计算。其大小取决于批次大小、序列长度和模型架构。
+3. **梯度：** 在反向传播过程中为每个可训练参数计算。
+4. **优化器状态：** 优化器为每个可训练参数维护的信息（例如，Adam/AdamW中的动量、方差估计）。这通常会消耗大量内存，通常是可训练参数本身大小的2倍或更多，具体取决于优化器（例如，AdamW存储动量和方差）。
+
+我们来看看不同的PEFT方法表现如何：
+
+- **完全微调 (fine-tuning)：** 这作为我们的最高基准。所有模型参数都需要梯度和优化器状态，导致很高的内存需求，对于大型模型来说通常会超过数百GB。计算涉及所有层的完整前向和反向传播。
+- **LoRA：** 通过冻结基础模型大幅减少内存需求。只有低秩矩阵$A$和$B$需要梯度和优化器状态。可训练参数的数量通常很小（例如，每个适配的线性层为$2 \times d \times r$，其中$d$是隐藏维度，$r$是秩）。激活内存与基础模型的前向传播在完全微调中相似。计算开销来自前向传播中的额外矩阵乘法（$B \times A$）和相应的梯度计算。内存节省主要源于需要梯度和优化器状态的参数数量减少。
+- **Adapter Tuning：** 与LoRA相似，基础模型被冻结。内存被适配器参数、它们的梯度和优化器状态消耗。适配器瓶颈维度决定了可训练参数的数量。如果瓶颈维度较小，内存使用量较低，通常与LoRA相当或略多，具体取决于配置和插入的适配器数量。计算涉及激活值通过小型适配器模块，为前向和反向传播增加少量开销。
+- **Prefix Tuning：** 引入可训练的前缀向量 (vector)。基础模型保持冻结。前缀参数、它们的梯度和优化器状态需要内存。参数数量取决于前缀长度和模型的隐藏维度。这通常导致非常低的内存占用，通常低于适配器或LoRA。计算开销极小，主要与注意力计算期间处理前缀相关。
+- **Prompt Tuning / P-Tuning：** 这些方法在PEFT技术中具有最小的内存占用。只有软提示嵌入 (embedding)被训练。可训练参数的数量极小，导致与基础模型大小相比，梯度和优化器状态的内存开销可忽略不计。训练期间的计算开销也极小。
+
+### 推理 (inference)阶段开销
+
+在推理期间，梯度和优化器状态被丢弃。重点转向：
+
+1. **模型权重 (weight)存储：** 存储微调 (fine-tuning)后的模型组件需要多少磁盘空间。
+2. **推理延迟：** 处理单个输入序列所需的时间，受PEFT方法引入的任何额外计算的影响。
+
+以下是推理比较：
+
+- **完全微调：** 需要存储整个修改后的模型，其大小与原始基础模型相同。推理延迟是微调模型架构的基准速度。
+- **LoRA：** 提供灵活性。LoRA矩阵（$A$和$B$）可以与原始基础模型权重（$W_0$）离线合并，生成新的权重矩阵$W = W_0 + BA$。在这种合并状态下，存储与完全微调相同，推理延迟与基础模型*相同*（无额外开销）。或者，基础模型和LoRA权重可以保持分离。这需要存储原始基础模型加上小的$A$和$B$矩阵（存储开销极低）。然而，推理需要即时计算LoRA更新（$BAx$），增加一个与秩$r$和适配层数成比例的小延迟开销。
+- **Adapter Tuning：** 需要存储原始基础模型加上适配器模块的权重。由于适配器很小，存储开销极小。推理需要激活值通过适配器层，引入与基础模型相比的少量固定延迟开销。
+- **Prefix Tuning：** 需要存储基础模型加上学习到的前缀向量 (vector)。存储开销非常低。推理涉及预置前缀，这通常会增加可忽略不计的延迟。
+- **Prompt Tuning / P-Tuning：** 需要存储基础模型加上学习到的提示嵌入 (embedding)。存储开销极低。推理延迟与基础模型几乎相同，因为它只涉及处理略微修改的输入表示。
+
+### 比较总结
+
+PEFT方法之间的选择通常涉及权衡参数 (parameter)效率、内存使用、计算成本以及对模型性能的潜在影响（稍后讨论）。Prompt Tuning最为轻量，而LoRA和适配器则提供了中间方案，由于更直接地修改了内部模型计算，可能具有更好的表示能力。
+
+
+
+![PEFT方法的相对资源开销](plots/4140-0.json)
+
+
+
+> 各种微调 (fine-tuning)策略的资源需求相对比较。请注意，“LoRA (合并)”指的是存储组合后的权重 (weight)，而“LoRA (分离)”指的是独立存储基础模型和LoRA矩阵。成本为说明性的相对排名。
+
+了解这些开销有助于规划实验和部署。如果您的主要限制是训练内存，Prompt Tuning或Prefix Tuning可能很有吸引力。如果推理 (inference)延迟非常重要，并且您可以承担一次性合并成本，那么合并后的LoRA与基础模型相同。如果您需要针对单个基础模型进行灵活、低存储部署的多个任务专用适配，那么分离的LoRA权重、适配器、前缀或提示都是极佳的选择。像QLoRA（在下一章中讨论）这样的技术通过量化 (quantization)基础模型本身，可以进一步减少内存开销，尤其是在训练期间。
+
+## 参考资料
+
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: arXiv; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了LoRA方法，通过向Transformer层注入可训练的低秩矩阵来适应预训练模型，大幅减少了可训练参数数量和内存占用。
+- [Parameter-Efficient Transfer Learning for NLP](http://proceedings.mlr.press/v97/houlsby19a/houlsby19a.pdf) — Neil Houlsby, Andrei Giurgiu, Stanislau Padolski, Quentin de Latour, Max Vladutu, Albert Verga, Quincy Hatcliff, Jason Riesa, Anna Schiff, Shauna Horn, Melvin Johnson, George Dahl, Orhan Firat (2019)
+  Journal: Proceedings of the 36th International Conference on Machine Learning (ICML); Volume: 97; Pages: 2790-2799
+  提出了适配器模块，即插入在Transformer层之间的小型神经网络层，实现了通过少量额外参数进行高效微调。
+- [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://aclanthology.org/2021.acl-long.353/) — Xiang Lisa Li, Percy Liang (2021)
+  Journal: Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing; Publisher: Association for Computational Linguistics; Volume: Volume 1: Long Papers; Pages: 4582-4597; DOI: [10.18653/v1/2021.acl-long.353](https://doi.org/10.18653/v1/2021.acl-long.353)
+  介绍了前缀微调，在每个Transformer层的输入中添加一小段可训练向量（前缀），冻结基础模型并减少了可训练参数。
+- [The Power of Scale for Parameter-Efficient Prompt Tuning](https://aclanthology.org/2021.emnlp-main.243/) — Brian Lester, Rami Al-Rfou, Noah Constant (2021)
+  Journal: Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing (EMNLP); Publisher: Association for Computational Linguistics; Pages: 3045-3059; DOI: [10.18653/v1/2021.emnlp-main.243](https://doi.org/10.18653/v1/2021.emnlp-main.243)
+  讨论了提示微调，仅优化一小组可训练的token（软提示），在大型模型上以最小参数开销达到与完全微调相当的性能。

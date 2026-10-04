@@ -1,0 +1,95 @@
+---
+course: "vector-databases-semantic-search"
+chapter: "building-semantic-search-systems"
+lesson: "evaluating-semantic-search-relevance"
+sourceId: 3576
+sourceUrl: "https://apxml.com/zh/courses/vector-databases-semantic-search/chapter-4-building-semantic-search-systems/evaluating-semantic-search-relevance"
+title: "评估语义搜索相关性"
+description: "NDCG、MAP 和 Recall@K 等衡量指标，用于评估搜索结果的质量。"
+order: 7
+plots: ["plots/3576-0.json"]
+sourceHash: "9d2e88163171107063f12103a1b68200346e845700161185de57f217d4201ee3"
+sourceCorrections: []
+---
+
+一个语义搜索流程通常包括多个阶段：数据摄取、生成有意义的嵌入 (embedding)、使用 ANN 算法建立高效索引以及处理用户查询。一旦这样的系统建成，一个主要问题便会浮现：它是否真正有效？系统返回的结果有多大相关性？仅仅构建系统是不足够的；全面的评估对于理解其表现、比较不同配置以及证明其价值是不可或缺的。与传统关键词搜索相比，评估语义搜索带来了独特挑战，这主要是因为相关性本身与含义和意图相关联，而这些可能更具主观性。
+
+衡量搜索系统有效性通常涉及将系统输出（排序后的结果列表）与针对特定查询的一组已知“真实”相关文档进行比较。虽然完美的真实数据通常难以获得，特别是对于语义查询，但我们可以采用几种为此任务调整过的标准信息检索指标。这些指标主要关注系统生成的*排名*的质量。
+
+### 核心排名评估指标
+
+我们来看看一些最常用的、直接适用于语义搜索的、用于评估排序检索系统的指标：
+
+1. **精确度@K：** 这个指标回答了这个问题：“在返回的前 K 个文档中，有多少是真正相关的？”它的计算方法是：在前 K 个位置检索到的相关文档数量除以 K。
+
+   $Precision@K = \frac{\text{前 K 个相关文档数量}}{K}$
+
+   精确度@K 易于理解和计算。如果 K=10，并且前 10 个结果中有 7 个是相关的，那么精确度@10 就是 0.7。然而，它不考虑该查询*存在*的相关文档总数，也不关心前 K 个相关文档的*顺序*。一个在排名 1-5 返回 5 个相关文档的系统，其精确度@10 与在排名 6-10 返回的系统相同。
+2. **召回率@K：** 这个指标解决了另一个问题：“在所有存在的相关文档中，系统在前 K 个结果中找到了多少？”它的计算方法是：在前 K 个位置检索到的相关文档数量除以整个数据集中该查询*总共*的相关文档数量。
+
+   $Recall@K = \frac{\text{前 K 个相关文档数量}}{\text{相关文档总数}}$
+
+   召回率@K 有助于了解系统是否能够找到大部分相关信息。然而，与精确度@K 类似，它忽略了前 K 个结果内部的*排名*。获得高召回率有时可能以牺牲低精确度为代价（在检索相关文档的同时，也检索了许多不相关的文档）。
+3. **平均精确度均值 (MAP)：** MAP 提供了一个单一数值指标，该指标同时考虑了精确度和召回率，并且对相关文档的排名顺序敏感。当您有多个查询需要评估时，它特别有用。要理解 MAP，我们首先需要针对单个查询的平均精确度 (AP)：
+
+   - 计算在检索到*相关*文档的每个位置 $k$ 上的精确度。
+   - 将这些精确度值对该查询的总相关文档数量进行平均。
+
+   单个查询的 AP 公式是：
+   $AP = \frac{\sum_{k=1}^{N} (P(k) \times rel(k))}{\text{相关文档总数}}$
+   这里，$N$ 是检索到的文档总数，$P(k)$ 是在排名 $k$ 时的精确度，$rel(k)$ 是一个指示函数（如果排名 $k$ 的文档相关，则为 1，否则为 0）。
+
+   MAP 只是您的评估集中所有查询的平均精确度分数的均值。更高的 MAP 表明整体排名表现更好，奖励那些在排序列表早期检索到相关文档的系统。
+4. **归一化 (normalization)折损累积增益 (NDCG)：** NDCG 可以说是评估排名质量最复杂且应用最广泛的指标，尤其是在相关性不仅仅是二元（相关/不相关）而是具有不同程度（例如，高度相关、有些相关、不相关）时。它包含两个主要思想：
+
+   - **累积增益 (CG)：** 相关文档是有价值的。前 K 个文档的相关性分数之和就是累积增益。
+   - **折损增益 (DCG)：** 列表下方找到的相关文档不如顶部找到的有用。DCG 根据排名位置应用对数惩罚。排名 $i$ 的文档的增益会被折损。DCG@K 的标准公式是：
+     $DCG@K = \sum_{i=1}^{K} \frac{rel_i}{\log_2(i+1)}$
+     这里，$rel_i$ 是排名 $i$ 的文档的数值相关性分数（例如，0=不相关，1=相关，2=高度相关）。
+   - **归一化增益 (NDCG)：** DCG 分数会根据查询和相关文档数量而变化。为了使不同查询之间的分数可比较，我们通过理想折损累积增益 (IDCG) 来归一化 DCG。IDCG@K 表示最大可能的 DCG@K 分数，当文档按相关性完美排序时即可获得此分数。
+     $NDCG@K = \frac{DCG@K}{IDCG@K}$
+     NDCG@K 值范围从 0.0 到 1.0，其中 1.0 代表理想排名。它有效地评估了系统排名与完美排名的接近程度，同时考虑了相关性级别和位置折损。
+
+### 获取真实相关性判断
+
+这些指标非常依赖于相关性判断（真实数据）。获取这些可能具有挑战性：
+
+- **人工标注：** 这通常被认为是黄金标准。人工标注员审查查询-文档对并分配相关性标签（二元或分级）。这需要明确的指导方针，可能耗时，并且可能昂贵，特别是对于大型数据集或复杂领域。
+- **现有测试集：** MS MARCO、TREC 集合或其他特定领域的标准化数据集通常附带查询和预定义的相关性判断。使用这些可以与已发布的结果进行直接比较，但可能无法完美反映您特定应用的领域或用户需求。
+- **隐式反馈：** 在在线系统中，用户交互，例如点击、停留时间、添加到购物车操作或任务完成，可以作为相关性的代理信号。虽然对于在线调优（例如 A/B 测试）有价值，但这些信号是嘈杂且对实际相关性的间接衡量。例如，仅靠点击率（CTR）可能具有误导性。
+
+### 评估的实际考量
+
+评估您的语义搜索系统时：
+
+- **选择合适的指标：** 根据您的优先级选择指标。如果只关注最靠前的结果，精确度@1 可能就足够了。如果您需要在一个合理列表大小内找到大部分相关项，召回率@K 就很重要。对于整体排名质量，特别是在分级相关性下，NDCG 通常更受青睐。MAP 是二元相关性的一个可靠选择，它强调尽早检索到相关项。
+- **定义您的评估集：** 使用一组具有代表性的查询和文档，以反映您系统的预期使用模式。一个小型或有偏差的评估集可能导致误导性结论。
+- **统计显著性：** 在比较两种系统变体（例如，不同的嵌入 (embedding)模型或索引参数 (parameter)）时，请确保观察到的指标差异具有统计显著性，而不仅仅是由于查询集中的偶然变化。如有需要，运行适当的统计测试。
+- **混合搜索评估：** 如果您正在实施混合搜索，请决定是单独评估语义和关键词组件，还是使用标准指标评估最终的混合排名。了解每个组件的贡献有助于调整混合策略。
+
+我们来看一个简化场景，比较单个查询上三种系统配置的 NDCG@5，其中相关性是分级的（0=不相关，1=一般，2=好，3=完美）。假设理想排名产生的 IDCG@5 为 6.86。
+
+
+
+![不同系统配置的 NDCG@5 比较](plots/3576-0.json)
+
+
+
+> 三种语义搜索系统配置的 NDCG@5 分数比较。配置 B 在此特定查询集上显示出最佳性能。
+
+评估语义搜索相关性不仅仅是学术练习；它是迭代开发过程的重要组成部分。通过使用适当的指标和精心策划的评估集，您可以量化 (quantization)您系统的性能，发现改进的空间，并最终构建能够有效连接用户与他们真正需要的信息的搜索应用程序，这些信息基于含义而非仅仅是关键词。
+
+## 参考资料
+
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  一本信息检索理论的经典教材，详细介绍了排名评估指标。
+- [Cumulated gain-based evaluation of IR techniques](https://doi.org/10.1145/582415.582418) — Kalervo Järvelin and Jaana Kekäläinen (2002)
+  Journal: ACM Transactions on Information Systems (ACM TOIS); Publisher: ACM; Volume: 20; Pages: 422-446; DOI: [10.1145/582415.582418](https://doi.org/10.1145/582415.582418)
+  介绍并详细阐述了归一化折现累积增益 (NDCG) 指标，这是评估分级相关性排名检索系统的标准。
+- [MS MARCO: A Human Generated MAchine Reading COmprehension Dataset](https://arxiv.org/abs/1611.09268) — Payal Bajaj, Daniel Campos, Nick Craswell, Li Deng, Jianfeng Gao, Xiaodong Liu, Rangan Majumder, Andrew McNamara, Bhaskar Mitra, Tri Nguyen, Mir Rosenberg, Xia Song, Alina Stoica, Saurabh Tiwary, Tong Wang (2016)
+  Journal: Proceedings of the Neural Information Processing Systems (NIPS) Workshop on Conversational AI; DOI: [10.48550/arXiv.1611.09268](https://doi.org/10.48550/arXiv.1611.09268)
+  描述了MS MARCO数据集，这是一个大规模集合，广泛用于训练和评估信息检索及阅读理解系统，包含相关性判断。
+- [Neural Information Retrieval: A Review](https://www.nowpublishers.com/article/Details/INR-072) — Sean MacAvaney, Daniel Cohen, Nazir Nayal, and Andrew Yates (2020)
+  Journal: Foundations and Trends® in Information Retrieval; Publisher: now publishers; Volume: 14; Pages: 1-105; DOI: [10.1561/1500000072](https://doi.org/10.1561/1500000072)
+  提供了现代神经信息检索的全面概述，涵盖了这些系统特有的评估实践和问题。

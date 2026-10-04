@@ -1,0 +1,176 @@
+---
+course: "intro-synthetic-data-ml"
+chapter: "intro-synthetic-image-data"
+lesson: "practice-generate-simple-images"
+sourceId: 5691
+sourceUrl: "https://apxml.com/zh/courses/intro-synthetic-data-ml/chapter-4-intro-synthetic-image-data/practice-generate-simple-images"
+title: "动手实践：生成简单的合成图像"
+description: "实践环节，包含创建基本的合成图像，例如添加噪声或简单形状。"
+order: 7
+plots: []
+sourceHash: "e1c7917b0ccf4d6f2b0084f2720b4d301e60739fd4f6eb5b4417a27b15f16f3d"
+sourceCorrections: []
+---
+
+生成合成图像时会使用Python和几个标准库。NumPy用于数值运算，是处理像素数据所必需的。Pillow（Python图像库PIL的一个分支）用于图像处理任务，例如创建、保存和修改图像。
+
+### 设置您的环境
+
+在开始生成图像之前，您需要确保已安装所需的工具。如果您的Python已配置好，通常可以使用Python的包安装器pip来安装这些库。打开您的终端或命令行界面并运行：
+
+```bash
+pip install numpy Pillow
+```
+
+此命令会下载并安装NumPy和Pillow，使它们可以在您的Python脚本中使用。
+
+### 示例1：创建带有简单形状的图像
+
+图像，特别是数字图像，本质上是像素网格。我们可以使用多维数组表示这些网格。对于彩色图像，这通常是一个三维数组：`(height, width, color_channels)`。颜色通道通常代表红、绿、蓝（RGB）值，每个通道的取值范围通常为0到255。
+
+我们来创建一个小而简单的图像：一个100x100像素的黑色背景，中央有一个50x50的红色正方形。
+
+```python
+import numpy as np
+from PIL import Image
+
+# 定义图像尺寸
+height = 100
+width = 100
+channels = 3 # RGB
+
+# 使用NumPy全零数组创建黑色背景
+# 数据类型'uint8'是8位像素值（0-255）的标准类型
+image_array = np.zeros((height, width, channels), dtype=np.uint8)
+
+# 定义红色正方形的坐标
+# 左上角 (y1, x1) 和右下角 (y2, x2)
+y1, x1 = 25, 25
+y2, x2 = 75, 75
+
+# 定义红色 (R=255, G=0, B=0)
+red_color = [255, 0, 0]
+
+# 用红色填充正方形区域
+# 切片格式为 [起始行:结束行, 起始列:结束列]
+image_array[y1:y2, x1:x2] = red_color
+
+# 将NumPy数组转换为Pillow图像对象
+img = Image.fromarray(image_array, 'RGB')
+
+# 将图像保存到文件
+img.save('simple_square.png')
+
+# 可选：显示图像（行为可能取决于您的环境）
+# img.show()
+
+print("已生成图像 'simple_square.png'")
+```
+
+运行此脚本后，您会在同一目录下找到一个名为 `simple_square.png` 的文件。它将包含我们定义的带有红色正方形的黑色图像。这显示了编程如何直接控制像素值以生成特定的视觉模式。
+
+### 示例2：为图像添加噪声
+
+添加随机噪声是图像处理中的常用技术，通常用于模拟传感器缺陷或作为数据增强的基本形式。我们来使用刚刚创建的红色正方形图像，并添加一些简单的“椒盐”噪声。这种噪声会随机引入白色（盐）和黑色（椒）像素。
+
+```python
+import numpy as np
+from PIL import Image
+import random
+
+# 加载之前创建的图像
+try:
+    img = Image.open('simple_square.png')
+    image_array = np.array(img)
+except FileNotFoundError:
+    print("错误：未找到 'simple_square.png'。请先运行示例1。")
+    exit()
+
+# 定义噪声量（受影响像素的比例）
+noise_amount = 0.05 # 影响5%的像素
+
+# 获取图像尺寸
+height, width, channels = image_array.shape
+
+# 创建一个副本进行修改
+noisy_image_array = image_array.copy()
+
+# 添加盐噪声（白色像素）
+num_salt = int(noise_amount * height * width * 0.5)
+for _ in range(num_salt):
+    # 选择一个随机像素位置
+    y = random.randint(0, height - 1)
+    x = random.randint(0, width - 1)
+    # 将像素设为白色
+    noisy_image_array[y, x] = [255, 255, 255]
+
+# 添加椒噪声（黑色像素）
+num_pepper = int(noise_amount * height * width * 0.5)
+for _ in range(num_pepper):
+    # 选择一个随机像素位置
+    y = random.randint(0, height - 1)
+    x = random.randint(0, width - 1)
+    # 将像素设为黑色
+    noisy_image_array[y, x] = [0, 0, 0]
+
+# 将修改后的NumPy数组转换回Pillow图像对象
+noisy_img = Image.fromarray(noisy_image_array, 'RGB')
+
+# 保存带噪声的图像
+noisy_img.save('noisy_square.png')
+
+# noisy_img.show()
+
+print("已生成带噪声的图像 'noisy_square.png'")
+```
+
+此脚本加载 `simple_square.png`，根据 `noise_amount` 计算要更改的像素数量，然后随机选择像素，一半设为白色，一半设为黑色。结果保存为 `noisy_square.png`，显示原始图像上布满了随机点。这模拟了一个简单的损坏过程，并生成了原始图像的一个略有不同的版本。
+
+### 示例3：基本图像增强——旋转
+
+图像增强是指对现有图像应用变换，以创建略有修改的版本。这会增加数据集的多样性。虽然有时用于真实数据，但相同的技术也可以生成合成变体。我们来旋转一下原始的正方形图像。
+
+```python
+import numpy as np
+from PIL import Image
+
+# 加载原始图像
+try:
+    img = Image.open('simple_square.png')
+except FileNotFoundError:
+    print("错误：未找到 'simple_square.png'。请先运行示例1。")
+    exit()
+
+# 定义旋转角度
+angle = 45 # 度
+
+# 使用Pillow的rotate函数旋转图像
+# 'expand=True' 允许图像画布扩展以适应旋转后的图像
+rotated_img = img.rotate(angle, expand=True)
+
+# 保存旋转后的图像
+rotated_img.save('rotated_square.png')
+
+# rotated_img.show()
+
+print("已生成旋转后的图像 'rotated_square.png'")
+```
+
+这里，我们使用了Pillow的内置 `rotate` 方法。`expand=True` 参数 (parameter)很有用，因为将正方形图像旋转45度会使其变得更宽更高；`expand=True` 会调整图像边界，避免裁剪角部。输出文件 `rotated_square.png` 显示了我们的红色正方形倾斜了45度。
+
+### 总结
+
+在此次实践中，您使用基本技术生成了简单的合成图像：
+
+1. **直接像素操作：** 通过在NumPy数组中定义像素值来从头创建图像。
+2. **添加噪声：** 通过引入随机像素变化来修改现有图像。
+3. **基本增强：** 应用几何变换（如旋转）来生成变体。
+
+这些方法是根本性的。创建看起来真正逼真和多样的图像通常需要更复杂的方法，例如前面提到的渲染技术或高级机器学习 (machine learning)模型，如生成对抗网络（GAN）或扩散模型，这些模型超出了本入门课程的范围。然而，了解这些基本组成部分，为理解合成图像生成的过程和挑战提供了一个好的起点。
+
+## 参考资料
+
+- [NumPy User Guide](https://numpy.org/doc/stable/user/index.html) — The NumPy Developers (2023)
+  NumPy官方指南，对于理解Python中像素数据处理所需的数值数组操作非常重要。
+- [Pillow Documentation](https://pillow.readthedocs.io/en/stable/) — Jeffrey A. Clark and Contributors (2025)
+  Pillow（PIL分支）的官方文档，提供了在Python中创建、处理和保存图像的详细信息。

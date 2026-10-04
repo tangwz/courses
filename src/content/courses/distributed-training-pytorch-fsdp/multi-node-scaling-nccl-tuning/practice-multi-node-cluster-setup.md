@@ -1,0 +1,139 @@
+---
+course: "distributed-training-pytorch-fsdp"
+chapter: "multi-node-scaling-nccl-tuning"
+lesson: "practice-multi-node-cluster-setup"
+sourceId: 7902
+sourceUrl: "https://apxml.com/zh/courses/distributed-training-pytorch-fsdp/chapter-4-multi-node-scaling-nccl-tuning/practice-multi-node-cluster-setup"
+title: "实践：多节点集群配置"
+description: "动手实践，模拟多节点环境并配置网络传输层。"
+order: 5
+plots: ["plots/7902-0.json"]
+sourceHash: "0dd346472e8421ab65d2063e1217becdd7245d46d021b261c9480c272eba471f"
+sourceCorrections: []
+---
+
+为FSDP配置多节点集群需要作业调度器、容器运行时和PyTorch分布式后端之间的精确协作。与硬件拓扑结构固定且保证高带宽NVLink桥接的单节点实验不同，多节点环境会引入可变的网络延迟和潜在的接口不匹配问题。本文详细说明了初始化逻辑、网络接口选择和混合分片配置的实际实现，所有这些对于充分利用集群带宽都是非常必要的。
+
+### 环境配置与节点发现
+
+任何分布式训练作业的根本是发现机制。集群中的每个进程都必须就 `MASTER_ADDR` 和 `MASTER_PORT` 达成一致，以进行初始握手。即便硬编码IP地址适用于静态配置，动态集群环境（如Kubernetes或Slurm）也需要通过程序进行地址解析。
+
+我们使用 `torchrun`（支持弹性的启动器），而不是已弃用的 `torch.distributed.launch`。 `torchrun` 会自动管理 `RANK` 和 `WORLD_SIZE` 环境变量，但您必须明确定义集合点。
+
+在Slurm环境中，必须从主机列表中提取主节点的地址。以下shell脚本模式显示了如何在执行训练脚本之前稳定地设置这些变量。
+
+```bash
+#!/bin/bash
+# SBATCH --nodes=4
+# SBATCH --gpus-per-node=8
+
+# 提取主节点主机名
+master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_ADDR=$master_addr
+export MASTER_PORT=29500
+
+# 设置NCCL的网络接口
+# 必要：确保这与您的高速互连（例如InfiniBand）匹配
+# 常见接口：ib0, bond0, eth0
+export NCCL_SOCKET_IFNAME=ib0
+
+# 启用详细日志记录，以在首次运行时验证拓扑
+export NCCL_DEBUG=INFO
+
+# 根据SLURM变量计算大小
+export WORLD_SIZE=$(($SLURM_NNODES * $SLURM_GPUS_ON_NODE))
+
+srun torchrun \
+    --nnodes=$SLURM_NNODES \
+    --nproc_per_node=$SLURM_GPUS_ON_NODE \
+    --rdzv_id=$SLURM_JOB_ID \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
+    train_fsdp.py
+```
+
+变量 `NCCL_SOCKET_IFNAME` 通常是性能显著下降的原因。如果未设置，NCCL可能会绑定到慢速管理接口（以太网），而不是高速InfiniBand或RoCE网络。务必在计算节点上使用 `ifconfig` 或 `ip addr` 检查接口名称。
+
+### 使用NCCL进行拓扑验证
+
+作业启动后，第一个需要诊断的瓶颈是通信拓扑。NCCL会尝试在GPU之间建立环形或树形结构以实现最大带宽。在多节点配置中，这涉及CPU和NIC之间QPI/UPI路径的传输。
+
+当 `NCCL_DEBUG=INFO` 激活时，标准输出会包含初始化日志。您应该查找指示“Ring 0 via NET/IB”的行。如果您看到“NET/Socket”，则表示您的流量正在通过CPU插槽而不是GPUDirect RDMA路由，这会显著增加延迟。
+
+下图说明了在多节点FSDP中决定性能的数据路径差异。
+
+> 优化的目标是确保节点间流量使用GPUDirect的互联路径，绕过系统内存。
+
+### 实施混合分片 (HSDP)
+
+对于节点间带宽较慢的集群，将模型完全分片到所有全局GPU上（FSDP标准行为）可能会导致通信阻塞计算。混合分片数据并行（HSDP）通过创建层次结构来解决此问题：参数 (parameter)在一个节点内（或一小组节点内）进行分片，并在这些组之间进行复制。
+
+这需要在PyTorch中构建一个 `DeviceMesh`。2D网格使我们能够为复制和分片定义不同的进程组。
+
+```python
+import torch
+import torch.distributed as dist
+from torch.distributed.device_mesh import init_device_mesh
+from torch.distributed.fsdp import ShardingStrategy
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
+def setup_hybrid_fsdp(model, local_rank):
+    # 初始化全局进程组
+    dist.init_process_group(backend="nccl")
+
+    # 假设4个节点，每个节点8个GPU = 总共32个GPU
+    # 我们希望在节点内进行分片（8个GPU），并在节点间进行复制（4个副本）
+    # mesh_shape = (复制组大小, 分片组大小)
+    mesh_shape = (dist.get_world_size() // 8, 8) 
+
+    # 维度名称有助于识别策略
+    device_mesh = init_device_mesh("cuda", mesh_shape, mesh_dim_names=("dp", "fsdp"))
+
+    # 初始化FSDP时，传入device_mesh并指定HYBRID_SHARD
+    # 注意：HYBRID_SHARD会自动映射到网格维度
+    sharded_model = FSDP(
+        model,
+        device_mesh=device_mesh,
+        sharding_strategy=ShardingStrategy.HYBRID_SHARD,
+        device_id=local_rank,
+        use_orig_params=True
+    )
+
+    return sharded_model
+```
+
+在此配置中，`AllGather` 操作（前向传播重建参数所需）仅在单个节点的8个GPU内发生，使用了高带宽NVLink。梯度同步（ `ReduceScatter` ）发生在“dp”维度（4个节点）之间。这显著减少了通过较慢的以太网或InfiniBand网络传输的流量。
+
+### 吞吐量 (throughput)验证
+
+在开始完整的训练运行之前，验证通信开销在可接受范围内是极其必要的。我们通过跟踪“模型FLOPs利用率”（MFU）或简单的每秒token数来衡量这一点，随着节点数量的增加。
+
+理想情况下，从1个节点扩展到4个节点应该会产生接近线性的吞吐量增长。如果曲线变平，则网络是瓶颈，表明需要HSDP或更好的NCCL调优。
+
+
+
+![扩展效率：带宽受限集群上的FSDP与HSDP对比](plots/7902-0.json)
+
+
+
+> 吞吐量扩展对比。随着节点数量的增加，标准FSDP（红色）由于网络上的AllGather开销而偏离线性扩展。HSDP（蓝色）通过保持参数 (parameter)重建在本地进行，从而保持了更好的效率。
+
+为了获得这些指标，请在训练循环中加入测量代码，以计算处理的token数量并除以步长时间。不要将前几步的数据计入平均值，因为惰性初始化和CUDA缓存通常会使早期测量结果产生偏差。
+
+### 处理初始化超时
+
+大型模型（700亿+参数 (parameter)）在初始 `dist.barrier()` 或模型广播阶段会产生显著延迟。默认的NCCL超时通常设置为30分钟，这通常足够，但PyTorch分布式初始化可能会更快超时（默认1800秒）。
+
+对于加载大量检查点的多节点集群，请在初始化期间明确增加超时时长，以防止过早失败：
+
+```python
+from datetime import timedelta
+
+dist.init_process_group(
+    backend="nccl",
+    init_method="env://",
+    timeout=timedelta(minutes=60) # 为加载大型模型延长了时间
+)
+```
+
+这种调整为所有节点同时尝试从共享文件系统读取分片数据时的慢速I/O操作提供了必要的缓冲。

@@ -1,0 +1,94 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "training-large-scale-moes"
+lesson: "expert-parallelism-distributed-training"
+sourceId: 7059
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-3-training-large-scale-moes/expert-parallelism-distributed-training"
+title: "分布式训练中的专家并行"
+description: "了解如何运用专家并行将专家分散到多个设备上，以进行大规模模型训练。"
+order: 1
+plots: []
+sourceHash: "bfbc19a67ab3a78fceaded4185db9abe9d201363983ccbe18a13ffa656009bdc"
+sourceCorrections: []
+---
+
+标准数据并行通过在每个设备上处理不同数据批次，可以有效地扩展多个设备的训练，但这要求模型的完整副本驻留在每个设备上。对于拥有数千亿甚至数万亿参数 (parameter)的专家混合模型来说，这是不可行的；完整参数集的内存需求远远超出任何单个加速器的容量。
+
+对于Mixture of Experts模型，由于其参数量非常大，标准数据并行训练方法会遇到内存限制，因为它要求每个设备存储模型的完整副本，这往往超出单个加速器的容量。专家并行是一种专门的分布式训练技术，旨在应对这类内存难题。专家并行不是复制整个模型，而是将专家分片到可用设备上。每个设备只拥有一部分总专家，而模型的非MoE部分（如自注意力 (self-attention)块和门控网络）仍保持复制。
+
+### All-to-All 通信模式
+
+专家并行的一个显著特点是它依赖于一种名为`All-to-All`的通信集合。当一个令牌需要由位于不同设备上的专家处理时，它必须通过网络进行物理发送。这在每个MoE层内分两阶段进行。
+
+1. **令牌分派（第一次 All-to-All）：** 每个设备上复制的门控网络为其本地批次令牌确定专家分配后，会发生一次全局数据洗牌。每个设备将其令牌发送到拥有其指定专家的特定设备。
+2. **结果聚合（第二次 All-to-All）：** 远程专家处理完其指定令牌后，生成的输出表示会发送回其原始源设备。
+
+此过程确保每个令牌都由正确的专家处理，无论该专家位于何处，并且令牌表示会返回其原始序列顺序，以继续前向传播。
+
+下图显示了数据在两个设备（GPU）间的流动，每个设备拥有一组不同的专家。
+
+> 专家并行中的数据流。本地令牌通过第一次`All-to-All`通信步骤（红色）路由到其他设备上的专家。处理后，结果通过第二次`All-to-All`步骤（蓝色）返回到其原始设备。
+
+### 性能影响和权衡
+
+专家并行巧妙地解决了内存问题，使得模型能够扩展到数万亿参数 (parameter)。然而，这项优势伴随着显著的通信开销。`All-to-All`操作是分布式计算中带宽消耗最大的集合操作之一，因为每个设备必须同时与其他所有设备通信。
+
+此操作的性能受限于设备间的互连带宽（例如，节点内GPU的NVLink，或多节点设置的网络结构）。洗牌的总数据量与令牌数量、它们的隐藏维度以及每个令牌被路由到的专家数量（Top-k路由中的 $k$）成比例。
+
+这带来一个重要的权衡：
+
+- **内存节省：** 可以存储更大的模型。
+- **通信成本：** 训练吞吐量 (throughput)现在对网络带宽很敏感，而不仅仅是对计算（FLOPs）能力敏感。
+
+在实践中，这意味着简单地增加更多设备并不能保证线性加速。`All-to-All`洗牌的效率成为总训练时间中的一个主要影响因素。
+
+### 代码实现
+
+虽然底层逻辑复杂，但为大规模训练设计的现代深度学习 (deep learning)框架抽象掉了大部分难度。DeepSpeed或`fairscale`等库提供了自动处理专家分片和通信的模块。
+
+下面是分布式MoE层内部发生情况的简化伪代码表示。
+
+```python
+# 单设备上专家并行前向传播的伪代码
+
+# 非MoE层照常处理
+x = self_attention(input_tokens)
+
+# 门控网络在所有设备上复制
+# 它计算其本地令牌的分配
+gate_logits = gating_network(x)
+local_assignments = top_k_router(gate_logits)
+
+# 第一次 All-to-All：将令牌洗牌到拥有目标专家的设备。
+# 框架处理底层通信。
+# 每个设备接收一批旨在供其本地专家处理的令牌。
+shuffled_tokens = all_to_all_dispatch(x, local_assignments)
+
+# 使用本地专家子集处理接收到的令牌。
+# 这些专家只存在于此设备上。
+processed_shuffled_tokens = local_experts(shuffled_tokens)
+
+# 第二次 All-to-All：将处理过的令牌洗牌回其原始设备。
+# 这恢复了原始令牌顺序。
+output_tokens = all_to_all_combine(processed_shuffled_tokens, local_assignments)
+
+# 模型的其余部分继续进行
+...
+```
+
+这种模型分片策略是训练真正大规模MoE模型的根本。然而，它很少单独使用。为获得最高效率，专家并行几乎总是与其他并行技术结合使用，我们将在下一节讨论该主题。
+
+## 参考资料
+
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: arXiv preprint arXiv:1701.06538; DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了稀疏门控混合专家层，是MoE模型及其大规模应用的基础性工作。
+- [GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding](https://arxiv.org/abs/2006.16668) — Dmitry Lepikhin, HyoukJoong Lee, Yuanzhong Xu, Dehao Chen, Orhan Firat, Yanping Huang, Maxim Krikun, Noam Shazeer, Zhifeng Chen (2020)
+  Journal: arXiv preprint arXiv:2006.16668; DOI: [10.48550/arXiv.2006.16668](https://doi.org/10.48550/arXiv.2006.16668)
+  描述了一种自动将大型模型（包括专家）分片到多个设备上的系统，并详细介绍了专家并行所需的all-to-all通信模式。
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://jmlr.org/papers/v23/21-0998.html) — William Fedus, Barret Zoph, Noam Shazeer (2022)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR; Volume: 23(120); Pages: 1-39; DOI: [10.5555/3545945.3546197](https://doi.org/10.5555/3545945.3546197)
+  介绍了Switch Transformer，展示了MoE模型通过分布式训练策略（包括专家并行）扩展到万亿参数的实际能力。
+- [Mixture of Experts (MoE) Layer](https://www.deepspeed.ai/tutorials/mixture-of-experts/) — DeepSpeed Team (2024)
+  Publisher: Microsoft
+  DeepSpeed关于实现混合专家层的官方文档，涵盖了该框架在MoE模型分布式训练中的方法。

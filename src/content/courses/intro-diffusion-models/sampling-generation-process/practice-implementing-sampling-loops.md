@@ -1,0 +1,258 @@
+---
+course: "intro-diffusion-models"
+chapter: "sampling-generation-process"
+lesson: "practice-implementing-sampling-loops"
+sourceId: 5433
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-5-sampling-generation-process/practice-implementing-sampling-loops"
+title: "动手实践：实现采样循环"
+description: "实现DDPM和DDIM两种采样过程的代码示例。"
+order: 7
+plots: []
+sourceHash: "5a5890ec3e0cf1170b9ec22203e517ec179f080d8a64f7aea77837e8a3db0eb4"
+sourceCorrections: []
+---
+
+DDPM和DDIM采样理论描述了逆向过程，它从纯噪声 $x_T$ 开始，通过迭代去噪来工作。其实现涉及执行这些逐步去噪的循环。
+
+我们假设您有一个已训练好的噪声预测模型（通常是U-Net），我们将其称为 `model`。该模型接收含噪声的输入 $x_t$ 和时间步 $t$，并输出预测噪声 $\epsilon_\theta(x_t, t)$。我们还假设您已预先计算好噪声调度变量：$\beta_t$、$\alpha_t = 1 - \beta_t$ 和 $\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$。这些变量通常存储在张量中。
+
+### 实现DDPM采样循环
+
+DDPM采样过程遵循第3章中定义的逆向马尔可夫链。从 $x_T \sim \mathcal{N}(0, \mathbf{I})$ 开始，我们对 $t = T, T-1, ..., 1$ 迭代地从 $p_\theta(x_{t-1} | x_t)$ 采样 $x_{t-1}$。
+
+回顾去噪步骤的核心方程：
+
+
+$$
+x_{t-1} = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon_\theta(x_t, t) \right) + \sigma_t z
+$$
+
+
+其中 $z \sim \mathcal{N}(0, \mathbf{I})$ 是每步添加的新噪声，$\sigma_t^2$ 是逆向转移的方差，通常设置为 $\beta_t$ 或 $\tilde{\beta}_t = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} \beta_t$。使用 $\tilde{\beta}_t$ 很常见。
+
+以下是使用PyTorch约定的一种Python实现结构：
+
+```python
+import torch
+
+def ddpm_sampler(model, n_steps, shape, device, betas, alphas, alphas_cumprod):
+    """
+    使用DDPM算法生成样本。
+
+    参数:
+        model: 已训练的噪声预测模型 (U-Net)。
+        n_steps (int): 扩散总步数 (T)。
+        shape: 期望输出张量的形状（例如，[批量大小, 通道数, 高, 宽]）。
+        device: 进行计算的设备（例如，'cuda' 或 'cpu'）。
+        betas (torch.Tensor): 噪声调度中的beta值张量。
+        alphas (torch.Tensor): alpha值张量 (1 - beta)。
+        alphas_cumprod (torch.Tensor): alpha值的累积乘积张量。
+
+    返回:
+        torch.Tensor: 生成的样本 (x_0)。
+    """
+    # 1. 从随机噪声 x_T 开始
+    xt = torch.randn(shape, device=device)
+
+    # 预计算所需的调度变量
+    sqrt_alphas = torch.sqrt(alphas).to(device)
+    sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod).to(device)
+
+    # 计算后验方差（使用 \tilde{\beta}_t）
+    alphas_cumprod_prev = torch.cat([torch.tensor([1.0], device=device), alphas_cumprod[:-1]])
+    posterior_variance = betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
+    # 避免 t=0 时除以零，尽管我们在 t=1 停止
+    posterior_variance[0] = betas[0] * (1.0 - 1.0) / (1.0 - alphas_cumprod[0]) if alphas_cumprod[0] != 1 else torch.tensor(0.0)
+    sqrt_posterior_variance = torch.sqrt(posterior_variance).to(device)
+
+    # 2. 迭代去噪，针对 t = T, T-1, ..., 1
+    for t in reversed(range(n_steps)):
+        # 为模型准备时间步张量
+        # 模型通常期望形状为 [批量大小]
+        time_tensor = torch.full((shape[0],), t, dtype=torch.long, device=device)
+
+        # 使用模型预测噪声
+        with torch.no_grad(): # 采样期间无需跟踪梯度
+            predicted_noise = model(xt, time_tensor)
+
+        # 计算逆向分布 p(x_{t-1} | x_t) 的均值
+        alpha_t = alphas[t] # 获取标量 alpha_t
+        sqrt_alpha_t = sqrt_alphas[t] # 获取标量 sqrt_alpha_t
+        sqrt_one_minus_alpha_cumprod_t = sqrt_one_minus_alphas_cumprod[t] # 获取标量项
+
+        # 均值方程：(1/sqrt(alpha_t)) * (xt - ( (1-alpha_t) / sqrt(1-alpha_bar_t) ) * eps_theta)
+        mean = (1 / sqrt_alpha_t) * (xt - ((1 - alpha_t) / sqrt_one_minus_alpha_cumprod_t) * predicted_noise)
+
+        # 获取方差项 \sigma_t
+        variance = sqrt_posterior_variance[t]
+
+        # 如果 t > 0，则从 N(0, I) 采样 z
+        z = torch.randn_like(xt) if t > 0 else torch.zeros_like(xt) # 在最后一步 (t=0) 不添加噪声
+
+        # 计算 x_{t-1}
+        xt = mean + variance * z # 注意：方差已包含平方根
+
+        # 可选：如果生成图像，钳制像素值，例如 xt.clamp_(-1., 1.)
+
+    # 3. 返回最终去噪样本 x_0
+    return xt
+
+# --- 使用示例（假设模型和调度变量已定义）---
+# T = 1000
+# image_shape = [1, 3, 64, 64] # 批量大小为1，3个通道，64x64像素
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# generated_image = ddpm_sampler(unet_model, T, image_shape, device, betas_tensor, alphas_tensor, alphas_cumprod_tensor)
+```
+
+此实现的重要方面：
+
+- **初始化**：从纯高斯噪声 `xt` 开始。
+- **循环**：从 `n_steps - 1` 向下迭代至 `0`。
+- **模型预测**：调用 `model` 获取 `predicted_noise`。请记住使用 `torch.no_grad()` 来提高效率。
+- **均值计算**：实现 $p_\theta(x_{t-1} | x_t)$ 均值的公式。请注意张量形状和索引。
+- **噪声添加**：采样 `z` 并按 `variance` 项 ($\sigma_t$) 进行缩放后添加。请注意，在从 $x_1$ 预测 $x_0$ 的最后一步不添加噪声。
+- **更新**：将 `xt` 更新为新计算的 `x_{t-1}` 以进行下一次迭代。
+
+### 实现DDIM采样循环
+
+DDIM通过定义非马尔可夫生成过程，提供了一种更快的采样替代方案。它允许我们跳过步骤，并使用参数 (parameter) $\eta$（eta）来控制确定性（$\eta=0$）和随机性（$\eta=1$）之间的平衡。当 $\eta=1$ 时，它近似DDPM。当 $\eta=0$ 时，该过程在给定 $x_t$ 的情况下变为确定性的。
+
+DDIM的更新规则是：
+
+
+$$
+x_{t-1} = \sqrt{\bar{\alpha}_{t-1}} \hat{x}_0 + \sqrt{1 - \bar{\alpha}_{t-1} - \sigma_t^2} \cdot \epsilon_\theta(x_t, t) + \sigma_t z
+$$
+
+
+其中 $\hat{x}_0$ 是预测的干净样本：
+
+
+$$
+\hat{x}_0 = \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \epsilon_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}
+$$
+
+
+标准差 $\sigma_t$ 由 $\eta$ 控制：
+
+
+$$
+\sigma_t^2 = \eta \tilde{\beta}_t = \eta \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} (1 - \frac{\bar{\alpha}_t}{\bar{\alpha}_{t-1}})
+$$
+
+
+请注意，如果 $\eta=0$，则 $\sigma_t = 0$，最后一项消失，使过程变为确定性。DDIM还允许使用时间步的子序列（例如，每10步跳过一次）以实现更快的生成。
+
+以下是DDIM的一种Python实现结构：
+
+```python
+import torch
+import numpy as np
+
+def ddim_sampler(model, n_inference_steps, shape, device, alphas_cumprod, eta=0.0):
+    """
+    使用DDIM算法生成样本。
+
+    参数:
+        model: 已训练的噪声预测模型 (U-Net)。
+        n_inference_steps (int): 推理时的去噪步数（可以少于 T）。
+        shape: 期望输出张量的形状。
+        device: 进行计算的设备。
+        alphas_cumprod (torch.Tensor): 来自完整调度（T步）的alpha值累积乘积张量。
+        eta (float): 控制随机性（0.0 = 确定性，1.0 = 类似DDPM）。
+
+    返回:
+        torch.Tensor: 生成的样本 (x_0)。
+    """
+    # 1. 确定用于推理的时间步
+    n_train_steps = len(alphas_cumprod)
+    # 示例：使用 n_inference_steps 个等距时间步从 [0, T-1]
+    # 可能存在更复杂的间距策略。
+    inference_timesteps = np.linspace(0, n_train_steps - 1, n_inference_steps, dtype=int)
+    inference_timesteps_tensor = torch.from_numpy(inference_timesteps).long().to(device)
+
+    # 2. 从随机噪声 x_T 开始（对应于我们推理序列中的最后一个时间步）
+    xt = torch.randn(shape, device=device)
+
+    # 在设备上预计算所需的调度变量
+    sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod).to(device)
+    sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod).to(device)
+
+    # 3. 使用推理时间步迭代去噪
+    for i, t in enumerate(reversed(inference_timesteps_tensor)):
+        # 获取前一个时间步索引，处理 t=0 的边界情况
+        t_prev_idx = max(0, len(inference_timesteps_tensor) - 1 - (i + 1))
+        t_prev = inference_timesteps_tensor[t_prev_idx] if i < len(inference_timesteps_tensor) - 1 else torch.tensor(-1, device=device) # -1 表示到 x_0 的步骤
+
+        # 为模型准备时间步张量
+        time_tensor = torch.full((shape[0],), t, dtype=torch.long, device=device)
+
+        # 使用模型预测噪声
+        with torch.no_grad():
+            predicted_noise = model(xt, time_tensor)
+
+        # 获取当前和前一个时间步的 alpha_cumprod 项
+        alpha_cumprod_t = alphas_cumprod[t]
+        alpha_cumprod_t_prev = alphas_cumprod[t_prev] if t_prev >= 0 else torch.tensor(1.0, device=device) # t=0 时的 alpha_cumprod 为 1
+
+        # 计算预测的原始样本 (x_0_hat)
+        # 公式：(xt - sqrt(1 - alpha_cumprod_t) * predicted_noise) / sqrt(alpha_cumprod_t)
+        sqrt_alpha_cumprod_t = sqrt_alphas_cumprod[t]
+        sqrt_one_minus_alpha_cumprod_t = sqrt_one_minus_alphas_cumprod[t]
+        x0_pred = (xt - sqrt_one_minus_alpha_cumprod_t * predicted_noise) / sqrt_alpha_cumprod_t
+
+        # 计算 xt-1 的系数
+        # 指向 x_t 的方向
+        dir_xt = torch.sqrt(1.0 - alpha_cumprod_t_prev - (eta**2 * (1.0 - alpha_cumprod_t_prev) / (1.0 - alpha_cumprod_t) * (1.0 - alpha_cumprod_t / alpha_cumprod_t_prev))) * predicted_noise
+        # 简化：sqrt(1.0 - alpha_cumprod_t_prev - sigma_t^2) * predicted_noise
+
+        # 计算 sigma_t
+        variance = 0.0
+        if eta > 0:
+            # 计算 sigma_t^2 = eta^2 * \tilde{beta}_t
+            beta_t = 1.0 - (alpha_cumprod_t / alpha_cumprod_t_prev) if t_prev >= 0 and alpha_cumprod_t_prev != 0 else 0.0 # 该区间的近似beta
+            term1 = (1.0 - alpha_cumprod_t_prev) / (1.0 - alpha_cumprod_t) if (1.0 - alpha_cumprod_t) != 0 else 0.0
+            variance = eta * torch.sqrt(term1 * beta_t)
+
+        # 采样随机噪声 z
+        z = torch.randn_like(xt) if eta > 0 else torch.zeros_like(xt)
+
+        # 计算 x_{t-1}
+        # 公式：sqrt(alpha_cumprod_t_prev) * x0_pred + dir_xt + variance * z
+        sqrt_alpha_cumprod_t_prev = torch.sqrt(alpha_cumprod_t_prev)
+        xt = sqrt_alpha_cumprod_t_prev * x0_pred + dir_xt + variance * z
+
+        # 可选：钳制
+        # xt.clamp_(-1., 1.)
+
+    # 4. 返回最终样本 x_0
+    return xt
+
+# --- 使用示例 ---
+# inference_steps = 50 # 远少于 T=1000
+# eta_value = 0.0 # 确定性采样
+# generated_image_ddim = ddim_sampler(unet_model, inference_steps, image_shape, device, alphas_cumprod_tensor, eta=eta_value)
+```
+
+DDIM实现的主要不同点：
+
+- **时间步选择**：我们从原始的 `n_train_steps` 中选择 `n_inference_steps` 的一个子集。
+- **`eta` 参数**：控制添加的噪声量。`eta=0` 使过程确定性。
+- **更新规则**：$x_{t-1}$ 的计算方式不同，它首先明确计算预测的 $x_0$。
+- **跳过步骤**：循环遍历所选的 `inference_timesteps`，可能比DDPM中的单步跳跃更大。
+
+> DDPM和DDIM采样步骤序列的比较。DDIM通常使用更少、更大的步骤。
+
+这些代码结构提供了一个基础。您需要将它们与您特定的模型加载、数据处理以及与模型训练相对应的预计算噪声调度结合使用。在DDIM中，通过试验 `n_inference_steps` 和 `eta`，您可以了解之前讨论过的速度与质量之间的权衡。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  这篇开创性论文介绍了去噪扩散概率模型，详细阐述了前向和反向扩散过程以及本节中实现的采样算法。
+- [Denoising Diffusion Implicit Models](https://arxiv.org/abs/2010.02502) — Jiaming Song, Chenlin Meng, Stefano Ermon (2021)
+  Journal: ICLR 2021; DOI: [10.48550/arXiv.2010.02502](https://doi.org/10.48550/arXiv.2010.02502)
+  本文介绍了去噪扩散隐式模型，提供了一种非马尔可夫采样过程，与DDPM相比，可以实现更快、确定性的生成，本节对此进行了讨论和实现。
+- [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://doi.org/10.1007/978-3-319-24574-4_28) — Olaf Ronneberger, Philipp Fischer, Thomas Brox (2015)
+  Journal: Medical Image Computing and Computer-Assisted Intervention – MICCAI 2015; Publisher: Springer, Cham; Volume: 9351; Pages: 234-241; DOI: [10.1007/978-3-319-24574-4_28](https://doi.org/10.1007/978-3-319-24574-4_28)
+  U-Net架构虽然最初用于图像分割，但由于其能够处理不同尺度的空间信息，被广泛用作扩散模型中的噪声预测模型。

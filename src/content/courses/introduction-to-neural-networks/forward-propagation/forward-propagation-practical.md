@@ -1,0 +1,194 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "forward-propagation"
+lesson: "forward-propagation-practical"
+sourceId: 1959
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-3-forward-propagation/forward-propagation-practical"
+title: "动手实践：实现前向传播"
+description: "使用 Python/NumPy 实现一个简单神经网络的前向计算。"
+order: 6
+plots: []
+sourceHash: "a5a3d2f6fecbf66a017bdf12e9391946825436aa1a07a2f960654d1a7233adfe"
+sourceCorrections: []
+---
+
+我们将使用 Python 和 NumPy 来实现一个小型前馈神经网络 (neural network)的前向传播步骤。这个例子将巩固你对输入数据如何通过网络产生输出的理解。
+
+### 场景：一个简单的两层网络
+
+设想一个为二元分类任务设计的网络。它接收2个输入特征，有一个包含3个神经元的隐藏层（使用 ReLU 激活函数 (activation function)），以及一个输出神经元（使用 Sigmoid 激活函数来产生一个介于0和1之间的概率）。
+
+这是我们简单网络的图示：
+
+> 网络架构：2个输入神经元，3个隐藏神经元（带 ReLU 激活），1个输出神经元（带 Sigmoid 激活）。
+
+### 设置：库和参数 (parameter)
+
+首先，我们需要 NumPy 进行数值计算。我们还将定义网络参数（权重 (weight)和偏置 (bias)）和一些样本输入数据。为了可重现性，我们将使用固定的权重和偏置值。在实际训练场景中，这些会随机初始化，然后通过学习获得。
+
+```python
+import numpy as np
+
+# --- 激活函数 ---
+def sigmoid(z):
+    """计算 sigmoid 激活。"""
+    return 1 / (1 + np.exp(-z))
+
+def relu(z):
+    """计算 ReLU 激活。"""
+    return np.maximum(0, z)
+
+# --- 网络参数 ---
+# 连接输入层到隐藏层的权重（形状：特征数 x 隐藏层神经元数）
+W1 = np.array([[ 0.5, -0.2,  0.8],
+               [-0.3,  0.7, -0.1]]) # (2x3)
+
+# 隐藏层偏置（形状：1 x 隐藏层神经元数）
+b1 = np.array([[0.1, -0.4, 0.2]]) # (1x3)
+
+# 连接隐藏层到输出层的权重（形状：隐藏层神经元数 x 输出层神经元数）
+W2 = np.array([[ 0.6],
+               [-0.4],
+               [ 0.9]]) # (3x1)
+
+# 输出层偏置（形状：1 x 输出层神经元数）
+b2 = np.array([[-0.1]]) # (1x1)
+
+# --- 样本输入数据 ---
+# 一个包含2个特征的单数据点（形状：1 x 特征数）
+X = np.array([[0.8, 0.2]]) # (1x2)
+
+print("输入 X (1x2):\n", X)
+print("\n权重 W1 (2x3):\n", W1)
+print("偏置 b1 (1x3):\n", b1)
+print("\n权重 W2 (3x1):\n", W2)
+print("偏置 b2 (1x1):\n", b2)
+```
+
+### 步骤 1：计算隐藏层输入（线性变换）
+
+我们计算隐藏层的输入加偏置 (bias)的加权和。使用矩阵乘法，这表示为 $Z_1 = X \cdot W_1 + b_1$。
+
+- $X$ 的形状为 (1, 2)
+- $W_1$ 的形状为 (2, 3)
+- $X \cdot W_1$ 的形状将为 (1, 3)
+- $b_1$ 的形状为 (1, 3)（NumPy 在此处正确处理广播）
+
+```python
+# 计算隐藏层的线性组合
+Z1 = np.dot(X, W1) + b1
+
+print("X 的形状:", X.shape)
+print("W1 的形状:", W1.shape)
+print("b1 的形状:", b1.shape)
+print("\n线性组合 Z1 (X * W1 + b1) (1x3):\n", Z1)
+print("Z1 的形状:", Z1.shape)
+```
+
+结果 $Z_1$ 包含了隐藏层中每个神经元激活函数 (activation function)的输入值。
+
+### 步骤 2：对隐藏层应用激活函数 (activation function)
+
+现在，我们将 ReLU 激活函数逐元素地应用于 $Z_1$，以获得隐藏层的输出 $A_1 = \text{ReLU}(Z_1)$。
+
+```python
+# 应用 ReLU 激活函数
+A1 = relu(Z1)
+
+print("隐藏层激活 A1 = ReLU(Z1) (1x3):\n", A1)
+print("A1 的形状:", A1.shape)
+```
+
+$A_1$ 代表了隐藏层神经元的输出信号。请注意， $Z_1$ 中的任何负值都已被0替换。
+
+### 步骤 3：计算输出层输入（线性变换）
+
+接下来，我们计算输出层的加权和，使用隐藏层的激活值 ($A_1$) 作为输入：$Z_2 = A_1 \cdot W_2 + b_2$。
+
+- $A_1$ 的形状为 (1, 3)
+- $W_2$ 的形状为 (3, 1)
+- $A_1 \cdot W_2$ 的形状将为 (1, 1)
+- $b_2$ 的形状为 (1, 1)
+
+```python
+# 计算输出层的线性组合
+Z2 = np.dot(A1, W2) + b2
+
+print("A1 的形状:", A1.shape)
+print("W2 的形状:", W2.shape)
+print("b2 的形状:", b2.shape)
+print("\n线性组合 Z2 (A1 * W2 + b2) (1x1):\n", Z2)
+print("Z2 的形状:", Z2.shape)
+```
+
+$Z_2$ 是输出层最终激活函数 (activation function)的输入。
+
+### 步骤 4：对输出层应用激活函数 (activation function)
+
+最后，我们将 Sigmoid 激活函数应用于 $Z_2$，以获得网络的最终输出（预测）：$A_2 = \text{Sigmoid}(Z_2)$。
+
+```python
+# 应用 Sigmoid 激活函数
+A2 = sigmoid(Z2)
+
+print("输出层激活（预测） A2 = Sigmoid(Z2) (1x1):\n", A2)
+print("A2 的形状:", A2.shape)
+```
+
+值 $A_2$ 是网络对输入 $X$ 的预测。由于我们使用了 Sigmoid 函数，这个值介于0和1之间，通常在分类任务中被解释为概率。对于我们特定的输入 `[[0.8, 0.2]]` 以及定义的权重 (weight)/偏置 (bias)，网络预测值大约为 `0.58`。
+
+### 将前向传播封装到一个函数中
+
+我们可以将这些步骤封装到一个可重用函数中：
+
+```python
+def forward_propagation(X, W1, b1, W2, b2):
+    """
+    对一个2层网络执行前向传播。
+
+    参数：
+        X (np.array): 输入数据（批量大小 x 特征数量）。
+        W1 (np.array): 从输入层到隐藏层的权重（特征数量 x 隐藏层神经元数量）。
+        b1 (np.array): 隐藏层偏置（1 x 隐藏层神经元数量）。
+        W2 (np.array): 从隐藏层到输出层的权重（隐藏层神经元数量 x 输出层神经元数量）。
+        b2 (np.array): 输出层偏置（1 x 输出层神经元数量）。
+
+    返回：
+        tuple: (A1, A2)，其中 A1 是隐藏层激活，A2 是输出预测。
+    """
+    # 隐藏层
+    Z1 = np.dot(X, W1) + b1
+    A1 = relu(Z1)
+
+    # 输出层
+    Z2 = np.dot(A1, W2) + b2
+    A2 = sigmoid(Z2)
+
+    return A1, A2
+
+# --- 使用我们的数据测试函数 ---
+hidden_output, final_prediction = forward_propagation(X, W1, b1, W2, b2)
+
+print("\n--- 使用 forward_propagation 函数 ---")
+print("输入 X:\n", X)
+print("隐藏层输出 (A1):\n", hidden_output)
+print("最终预测 (A2):\n", final_prediction)
+```
+
+这个函数执行完整的前向计算。在训练过程中，这个输出 ($A_2$) 将会使用损失函数 (loss function)与真实标签进行比较，并且这个差异会指导反向传播 (backpropagation)过程来更新 $W_1$、$b_1$、$W_2$ 和 $b_2$。
+
+你现在已经成功实现了前向传播机制，计算了神经网络 (neural network)如何根据给定的输入和一组参数 (parameter)生成预测。这是理解网络如何运作和学习的基本组成部分。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础性教材，涵盖深度学习的数学和概念方面，包括前馈网络和激活函数。
+- [Deep Learning Specialization](https://www.coursera.org/specializations/deep-learning) — Andrew Ng, Younes Bensouda Mourri, Kian Katanforoosh (2017)
+  Publisher: Coursera / DeepLearning.AI
+  一系列热门在线课程，提供从头开始实现神经网络的实践指导，包括使用 NumPy 进行前向传播。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael Nielsen (2019)
+  Publisher: Determination Press
+  一本互动式在线书籍，以易于理解的方式介绍神经网络，详细阐述了前向传播和反向传播，并附有示例。
+- [NumPy Documentation](https://numpy.org/doc/stable/) — NumPy Developers (2024)
+  NumPy 库的官方文档，对于理解神经网络实现中使用的数组操作至关重要。

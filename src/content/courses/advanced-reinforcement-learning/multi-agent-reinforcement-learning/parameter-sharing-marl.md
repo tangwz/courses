@@ -1,0 +1,69 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "multi-agent-reinforcement-learning"
+lesson: "parameter-sharing-marl"
+sourceId: 3474
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-6-multi-agent-reinforcement-learning/parameter-sharing-marl"
+title: "参数共享方法"
+description: "在同类智能体之间使用共享网络参数以提升学习效率。"
+order: 6
+plots: []
+sourceHash: "d2917781b75c02e6eaa376e374077c68627f38c3901b34c5f8da6ab654fa8d4e"
+sourceCorrections: []
+---
+
+将多智能体系统中的每个智能体视为完全独立的学习者（例如使用独立Q学习或IDDPG）是一种直接的做法。然而，这种方法面临着不小的困难，特别是非平稳性问题。当多个智能体同时学习时，环境对每个智能体来说都发生了变化，从而使学习过程不稳定。此外，为数量可能很多的智能体训练单独的模型，计算成本高昂且数据效率低下，特别是如果智能体之间存在相似性。
+
+参数 (parameter)共享提供了一种实用的办法来缓解其中一些问题，尤其适用于涉及*同类*智能体的情况，即智能体拥有相似的目标、观测空间和动作空间，或者彼此可以互换。核心思想很简单：与为每个智能体训练完全独立的模型（策略网络、值网络或两者）不同，我们训练一个*单一*模型，其参数由多个智能体甚至所有智能体共享。
+
+> 独立学习者（每个拥有各自的模型参数 ($\theta_i$)）与参数共享（多个智能体使用一套单一的模型参数 ($\theta$)）之间的比较图示。
+
+### 参数 (parameter)共享的运作方式
+
+实际操作中，在训练期间，从多个智能体收集到的经验（状态转移、动作、奖励）用于更新单一的共享模型。例如，如果对智能体 $i$ 使用共享策略网络 $\pi_{\theta}(a_i | o_i)$，共享参数 $\theta$ 的梯度更新通常会根据所有共享这些参数的智能体的经验来聚合计算出的梯度。
+
+
+$$
+\nabla_{\theta} J(\theta) \approx \frac{1}{N} \sum_{i=1}^{N} \nabla_{\theta} J_i(\theta)
+$$
+
+
+这里，$J_i(\theta)$ 是使用智能体 $i$ 的数据计算出的目标函数（例如，策略梯度目标），而 $N$ 是共享参数 $\theta$ 的智能体数量。每个智能体仍然接收其各自的观测 $o_i$，并根据其特定观测条件下的共享策略选择其各自的动作 $a_i$。同样地，如果共享Q网络 $Q_{\theta}(o_i, a_i)$，更新将基于所有参与智能体的转移数据。
+
+### 参数 (parameter)共享的优点
+
+1. **样本效率的提升**：由于来自多个智能体的数据有助于训练单一模型，与训练独立模型相比，该模型可能学习得更快，并需要更少的总体经验。每个梯度步都包含来自不同智能体多样交互的信息。
+2. **计算成本的降低**：训练和存储一个模型通常比管理大量独立模型所需的资源更少，尤其当智能体数量增加时。
+3. **更好的泛化能力**：共享模型可能学习到适用于不同智能体的更具泛化性的特征和行为，特别是如果智能体遇到略有不同的情况但遵循相同基本原则时。
+4. **可扩展性**：它简化了向大量同类智能体扩展的过程，而无需线性增加所需训练模型的数量。
+
+### 考量与局限
+
+尽管有其吸引力，但参数 (parameter)共享并非万能方案。其有效性取决于特定假设：
+
+- **智能体同类性**：最重要的假设是，智能体必须足够相似，使得单一策略或值函数表示对所有智能体都有效。如果智能体的能力、观测空间、动作空间或目标存在显著差异，强迫它们共享参数会严重阻碍性能。想象一下，强迫足球中的守门员和前锋使用完全相同的策略网络；这很可能不会奏效。
+- **专业化能力的损失**：从定义上讲，参数共享会阻止智能体发展出在特定情况下可能最优的高度专业化的个体行为。由此产生的策略是共享参数的智能体之间的一种平均或折衷。
+- **输入差异化**：即使共享参数，如果智能体的身份或特定上下文 (context)很重要，网络也需要一种方式来区分不同的智能体。通常，智能体独特的观测 $o_i$ 就足够了。在某些情况下，可以提供独特的智能体ID作为共享网络的额外输入，使其能够根据特定智能体调整输出。
+
+### 变体与延伸
+
+- **部分参数 (parameter)共享**：与其共享整个网络，不如共享特定的层（例如，用于特征提取的早期层），而后续层仍保持智能体特有，从而在效率和专业化之间取得平衡。
+- **基于角色的参数共享**：在具有不同智能体角色（例如，防守者和攻击者）的情况下，同一角色内的智能体可以共享参数，而不同角色则拥有各自独立的共享模型。
+
+参数共享常用于集中式训练与分散式执行（CTDE）框架中，我们将在后续讨论此框架。在集中式训练期间，可以使用聚合数据高效地更新共享参数。在分散式执行期间，每个智能体只需加载一份训练好的共享模型副本，根据其局部观测做出决策。
+这项技术在多智能体强化学习 (reinforcement learning)（MARL）中是个有价值的手段，尤其适用于涉及同类智能体团队的合作任务，例如协调机器人群体或管理即时战略游戏中的单位。然而，在应用此方法之前，务必考量智能体同类性的程度。
+
+## 参考资料
+
+- [Multi-Agent Reinforcement Learning: A Review of Algorithms and Applications](https://doi.org/10.1561/2200000083) — Kaiqing Zhang, Zhuoran Yang, Tamer Başar (2019)
+  Journal: Foundations and Trends in Machine Learning; Publisher: Now Publishers; Volume: 12; Pages: 1-280; DOI: [10.1561/2200000083](https://doi.org/10.1561/2200000083)
+  这篇综合性综述涵盖了各种MARL算法，包括独立学习器、CTDE，并讨论了参数共享作为一种常见技术，特别适用于同质智能体。
+- [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://proceedings.neurips.cc/paper_files/paper/2017/file/68a9750337a418a086b95d3264024976-Paper.pdf) — Ryan Lowe, Yi Wu, Aviv Tamar, Jean Harb, Pieter Abbeel, Igor Mordatch (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 30; Pages: 6379-6390; DOI: [10.5591/978-1-57783-000-8-124](https://doi.org/10.5591/978-1-57783-000-8-124)
+  这篇有影响力的论文介绍了MADDPG（一种CTDE框架），并强调了独立学习的非平稳性问题，为理解为何需要参数共享等解决方案提供了背景。虽然不完全是关于参数共享，但它是一个可以在CTDE范式内将参数共享自然应用于同质智能体的突出架构。
+- [Parameter Sharing with Role-Based Networks for Multi-Agent Reinforcement Learning](https://acl.mit.edu/wp-content/uploads/2019/07/AAAI2019_RoleBasedNetworks.pdf) — Arash Omidshafiei, Jason Ma, Michael A. Hutter, Shariq Iqbal, Jonathan P. How (2019)
+  Journal: Proceedings of the AAAI Conference on Artificial Intelligence; Publisher: Association for the Advancement of Artificial Intelligence (AAAI); Volume: 33; Pages: 4546-4554; DOI: [10.1609/aaai.v33i01.33014546](https://doi.org/10.1609/aaai.v33i01.33014546)
+  这篇论文专门探讨了参数共享的变体，如基于角色的共享和部分共享，与内容中的“变体和扩展”部分直接对应。
+- [Deep Reinforcement Learning Hands-On: Apply modern RL methods, with deep Q-networks, actor-critic models, and Beyond](https://www.packtpub.com/product/deep-reinforcement-learning-hands-on-second-edition/9781838826994) — Maxim Lapan (2020)
+  Publisher: Packt Publishing; Pages: 826
+  这本实用指南提供了各种深度MARL技术的实现和讨论，包括参数共享，对于寻求具体示例和实用建议的读者很有价值。

@@ -1,0 +1,115 @@
+---
+course: "llm-model-sizes-hardware"
+chapter: "model-size-hardware-connection"
+lesson: "data-types-precision"
+sourceId: 4220
+sourceUrl: "https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-3-model-size-hardware-connection/data-types-precision"
+title: "数据类型与精度 (FP16, INT8)"
+description: "介绍数据精度（如FP16、INT8）如何影响模型在内存中的大小。"
+order: 2
+plots: ["plots/4220-0.json"]
+sourceHash: "a01103771ccd8075d67784d416e22a90ccd17dfcc690449df1157a7e5ae52181"
+sourceCorrections: []
+---
+
+组成一个LLM的数百万或数十亿参数 (parameter)需要加载到计算机内存中才能运行。具体来说，为了在推理 (inference)过程中进行快速处理，这些参数最好存在于GPU的专用内存，即VRAM中。但每个参数*实际*占用多少内存呢？答案取决于其**数据类型**和**精度**。
+
+可以将数据类型想象成计算机内部存储数字的容器。就像你的厨房里有不同大小的容器来存放不同量的食物一样，计算机使用不同大小的数字容器来存储数字。容器的大小决定了数字的**精度**，本质上是它能表示多少细节。
+
+### 标准精度：浮点32 (FP32)
+
+传统上，许多机器学习 (machine learning)模型，包括早期的LLM，都使用一种名为**浮点32**的数据类型进行训练，通常缩写为**FP32**。以FP32格式存储的每个参数 (parameter)占用32位内存。
+
+由于一个字节有8位，一个FP32参数占用：
+
+
+$$
+32 \text{ 位} / 8 \text{ 位/字节} = 4 \text{ 字节}
+$$
+
+
+这听起来可能不多，但请记住，LLM有*数十亿*参数。让我们考虑一个相对较小的70亿参数模型（通常写作7B）。要使用FP32存储其参数，内存需求是：
+
+
+$$
+7,000,000,000 \text{ 参数} \times 4 \text{ 字节/参数} = 28,000,000,000 \text{ 字节}
+$$
+
+
+那是280亿字节，相当于28千兆字节（GB）的内存，主要是VRAM，仅仅用于模型权重 (weight)！这是一个很大的量，强调了为什么运行更大的模型需要大量硬件。
+
+### 减少内存使用：浮点16 (FP16)
+
+为了让LLM更易于使用和高效，开发者经常使用较低精度的数据类型。其中非常常见的一种是**浮点16 (FP16)**，有时被称为“半精度”。顾名思义，每个FP16参数 (parameter)仅使用16位。
+
+计算每个参数的内存：
+
+
+$$
+16 \text{ 位} / 8 \text{ 位/字节} = 2 \text{ 字节}
+$$
+
+
+现在，我们使用FP16重新计算70亿参数模型所需的内存：
+
+
+$$
+7,000,000,000 \text{ 参数} \times 2 \text{ 字节/参数} = 14,000,000,000 \text{ 字节}
+$$
+
+
+这是14 GB。通过从FP32切换到FP16，我们将模型参数所需的内存*减少了一半*！这产生了巨大的影响。这意味着您可能能够在具有16 GB VRAM的GPU上运行该模型，而FP32版本将需要具有超过28 GB VRAM的GPU。
+
+使用一半的精度会损害模型性能吗？有时精度会略有下降，但对于许多任务，特别是推理 (inference)（运行模型），差异通常可以忽略不计，使得FP16成为部署LLM的流行选择。
+
+### 进一步减少：整数8 (INT8)
+
+我们可以使用整数数据类型，如**整数8 (INT8)**，来进一步减少内存使用。一个INT8参数 (parameter)仅使用8位。
+
+每个参数的内存：
+
+
+$$
+8 \text{ 位} / 8 \text{ 位/字节} = 1 \text{ 字节}
+$$
+
+
+对于我们的70亿参数示例模型，内存需求变为：
+
+
+$$
+7,000,000,000 \text{ 参数} \times 1 \text{ 字节/参数} = 7,000,000,000 \text{ 字节}
+$$
+
+
+那仅是7 GB！这是FP16内存的一半，是原始FP32需求的四分之一。使用INT8使得更大的模型可以在更一般的硬件上运行。
+
+然而，仅用8位表示参数会显著降低其范围和精度，与浮点类型相比。如果处理不当，这可能导致模型精度出现更明显的下降。通常需要量化 (quantization)感知训练或复杂的转换方法来最小化这种精度损失。
+
+### 影响的可视化
+
+数据类型的选择直接影响所需的VRAM。让我们将使用这些不同精度存储70亿参数 (parameter)模型的估算内存需求可视化：
+
+
+
+![70亿参数模型VRAM估算：不同精度对比](plots/4220-0.json)
+
+
+
+> 仅用于存储70亿参数LLM的模型参数所需VRAM估算，根据使用的数据类型精度。
+
+如图所示，从FP32转向FP16使内存占用减少一半，而转向INT8则再次减少一半。这种减少是使得LLM能在消费级GPU上运行或在资源受限环境中优化其性能的重要因素。
+
+在实际应用中，FP16已成为LLM推理 (inference)的非常常见标准，因为它在内存节省、现代GPU上的速度提升以及对输出质量影响最小方面达到了很好的平衡。INT8也越来越多地被使用，特别是在内存或速度要求严格时，通常涉及我们接下来将介绍的一个过程：量化 (quantization)。理解这些数据类型是估算您所需硬件的第一步。
+
+## 参考资料
+
+- [Mixed-Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  解释了在深度神经网络训练中结合使用FP16和FP32的方法，以减少内存并提高速度。
+- [Precision for Deep Learning: From FP32 to INT8](https://developer.nvidia.com/blog/precision-for-deep-learning-from-fp32-to-int8/) — Alexey Shcherbakov (2021)
+  Publisher: NVIDIA Developer Blog
+  提供了深度学习中不同数值精度的实用概述，及其对NVIDIA GPU上性能和内存的影响。
+- [Deep Learning (Chapter 4: Numerical Computation)](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 83-100
+  提供了数值计算的基础知识，包括浮点运算及其在深度学习中的考虑。

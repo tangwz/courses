@@ -1,0 +1,87 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-neural-networks-architectures-training"
+lesson: "hybrid-quantum-classical-nn"
+sourceId: 1067
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-5-quantum-neural-networks-architectures-training/hybrid-quantum-classical-nn"
+title: "混合量子-经典神经网络结构"
+description: "设计和训练结合了经典神经网络组件与量子层的混合模型。"
+order: 5
+plots: []
+sourceHash: "706b21569ffa6f724d3c63f39410e821a73a679cd19810e004a3d44df87c8ecf"
+sourceCorrections: []
+---
+
+尽管纯量子神经网络 (neural network)结构，如 QCNNs 和 QCBMs，提供了有趣的可能性，但在当前和近期量子硬件上进行实际实现仍面临重大挑战，主要原因是噪声、有限的量子比特数量和连接限制。此外，经典深度学习 (deep learning)已在多个方面取得显著成就，发展出高度优化的架构和训练过程。混合量子-经典神经网络旨在结合两者的优势：运用强大的经典深度学习框架来执行特征提取或后处理等任务，同时有策略地加入量子层（以参数 (parameter)化量子电路，PQCs 的形式实现），以期解决量子计算可能提供优势的特定子问题。
+
+核心思想是将 PQC 视为一个更大计算图中的专用层，该计算图可以包含标准经典神经网络层。这使得模型更具灵活性，并可能更强大，尤其是在噪声中等规模量子 (NISQ) 时代。
+
+### 将量子电路整合为神经网络 (neural network)层
+
+回顾第四章，PQC 接收经典输入数据（如第二章所述，编码成量子态），应用一系列参数 (parameter)化量子门 $U(\theta, x)$，并产生测量结果。我们可以将整个过程，即编码、参数化演化和测量，视为一个更大网络中的一个单独的层或块。
+
+令 $x$ 为输入数据（可能是前一个经典层的输出）。
+
+1. **编码:** 经典数据 $x$ 被编码成量子态 $|\psi_{in}(x)\rangle = E(x)|0\rangle^{\otimes n}$，其中 $E(x)$ 是一个编码电路。
+2. **参数化处理:** 应用一个带有可训练参数 $\theta$ 的PQC $U(\theta)$: $|\psi_{out}(x, \theta)\rangle = U(\theta)|\psi_{in}(x)\rangle$。
+3. **测量:** 测量一个可观测值 $M$，得到一个期望值 $\langle M \rangle_{x, \theta} = \langle \psi_{out}(x, \theta)| M |\psi_{out}(x, \theta) \rangle$。这个期望值（或一组来自不同测量的期望值）成为量子层的经典输出。
+
+这个经典输出 $\langle M \rangle_{x, \theta}$ 随后可以馈入后续经典层（例如，全连接层、激活函数 (activation function)）以进行进一步处理，例如分类或回归。
+
+### 常见架构模式
+
+已出现几种模式用于整合量子和经典组件：
+
+1. **量子层作为分类器头部:** 经典层执行初始特征提取（例如，使用卷积层处理图像数据），结果特征向量 (vector)被传递给一个量子层 (PQC)，该量子层执行最终的分类或决策任务。量子层的输出可能是一个经过 sigmoid 函数的单一期望值，用于二分类，或者多个经过 softmax 函数的期望值，用于多分类。
+2. **量子层作为特征提取器:** 量子层被放置在网络的较早位置。原始或经过最少处理的数据被编码到量子层中，测量结果作为学习到的特征，这些特征随后由后续经典层处理。这种方法假设量子层可能提取出复杂的相关性或特征，这些是经典层在原始数据空间中无法获得的。
+3. **序列处理:** 经典网络预处理输入，其输出被编码到量子电路中，PQC 执行一些转换，获得测量结果，这些结果随后由另一个经典网络进行后处理。
+
+这是一个简单混合模型的可视化，其中量子层嵌入 (embedding)在经典层中：
+
+> 一个典型的混合架构。经典层处理输入数据，将特征 (x') 传递给编码电路。参数 (parameter)化量子电路 (PQC) 处理量子态，随后进行测量。经典测量结果 () 随后被馈入后续经典层以生成最终输出。
+
+### 训练混合模型
+
+训练混合网络涉及优化经典参数 (parameter)（经典层中的权重 (weight)和偏置 (bias)）以及量子参数（PQC 中的门旋转角度 $\theta$）。一种常见方法是使用梯度下降 (gradient descent)进行端到端训练，其中所有参数的梯度同时计算。
+
+1. **经典梯度计算:** 对于网络的经典部分，使用标准反向传播 (backpropagation)计算梯度。
+2. **量子梯度计算:** 对于 PQC 中的参数 $\theta$，需要计算期望值 $\langle M \rangle_{x, \theta}$ 相对于 $\theta$ 的梯度。如第四章所述，可以使用参数位移法则或有限差分等方法。这些方法通常需要多次执行修改后的量子电路版本。
+3. **跨界链式法则:** 链式法则用于组合跨量子-经典边界的梯度。如果量子层输出 $\langle M \rangle$ 被馈入一个带有函数 $f$ 和参数 $w$ 的经典层，则相对于量子参数 $\theta_i$ 的梯度包含 $\frac{\partial f}{\partial \langle M \rangle} \frac{\partial \langle M \rangle}{\partial \theta_i}$。类似地，相对于前一个经典层输出 $x'$ 的梯度包含 $\frac{\partial \langle M \rangle}{\partial x'} \frac{\partial x'}{\partial w_j}$ (尽管计算 $\frac{\partial \langle M \rangle}{\partial x'}$ 可能会因编码方式而复杂)。
+
+现代 QML 库，如 PennyLane、TensorFlow Quantum 和 Qiskit Machine Learning，提供工具自动化这种混合梯度计算，将量子梯度方法与经典自动微分框架（如 PyTorch、TensorFlow、JAX）整合。
+
+**训练中的挑战：**
+
+- **梯度方差:** 量子梯度估计通常涉及从测量中进行统计采样，引入方差，可能减缓或破坏训练稳定性。
+- **贫瘠高原:** 如前所述，深度 PQC 或某些架构选择可能导致梯度消失，阻碍优化。这个问题在混合模型中可能持续存在。
+- **计算成本:** 评估量子层及其梯度需要运行量子电路，在模拟器上计算成本可能很高，在实际硬件上则受限于排队时间和噪声。
+- **优化算法:** Adam 或 SGD 等标准优化器可能需要调整，或者专用优化器（如第四章中介绍的量子自然梯度）可能对量子部分有益。
+
+### 优点与考量
+
+**潜在优势：**
+
+- **发挥经典优势:** 运用成熟的经典架构用于它们擅长的任务（例如，处理大型输入、标准特征提取）。
+- **NISQ 可行性:** 允许加入小型量子电路，这些电路在当前硬件上更易于管理，并将其纳入更大的计算工作流程中。
+- **量子计算的潜在优势:** 有策略地放置量子计算，使其在可能提供独特优势的地方发挥作用（例如，在处理高维希尔伯特空间进行特征表示时）。
+
+**设计考量：**
+
+- **量子层放置位置:** PQC 应放置在架构的何处？该选择会影响量子组件处理的信息类型。
+- **量子层大小:** PQC 应该有多少量子比特和参数 (parameter)？这涉及表达能力、可训练性（贫瘠高原）和硬件限制之间的权衡。
+- **经典-量子接口:** 信息如何在经典和量子部分之间传递？编码策略 $E(x)$ 和测量 $M$ 的选择是重要的设计考量。
+- **资源分配:** 训练需要经典计算资源以及量子资源（模拟器或硬件）。
+
+混合模型代表一种务实的方法，以研究量子机器学习 (machine learning)的近期能力。它们使研究人员和实践者能够将量子处理单元整合到现有机器学习流程中，提供一个试验平台，用于理解量子计算何处能提供实际益处，同时依靠经典方法的可靠性来完成任务的其他部分。随着量子硬件和 QML 算法的成熟，这些混合系统的设计和应用将持续发展。
+
+## 参考资料
+
+- [Circuit-centric quantum classifiers](https://doi.org/10.1103/PhysRevA.101.032308) — Maria Schuld, Alex Bocharov, Krysta Svore, and Nathan Wiebe (2020)
+  Journal: Physical Review A; Publisher: American Physical Society; Volume: 101; Pages: 032308; DOI: [10.1103/PhysRevA.101.032308](https://doi.org/10.1103/PhysRevA.101.032308)
+  一篇基础论文，介绍了作为分类器的参数化量子电路，常用于混合架构。
+- [Supervised learning with quantum-enhanced feature spaces](https://doi.org/10.1038/s41586-019-0980-2) — Vojtěch Havlíček, Antonio D. Córcoles, Kristan Temme, Aram W. Harrow, Abhinav Kandala, Jerry M. Chow, and Jay M. Gambetta (2019)
+  Journal: Nature; Volume: 567; Pages: 209-212; DOI: [10.1038/s41586-019-0980-2](https://doi.org/10.1038/s41586-019-0980-2)
+  介绍了用于监督学习的量子特征映射概念，与混合模型中的编码和特征提取方面相关。
+- [Barren plateaus in quantum neural networks](https://www.nature.com/articles/s41467-018-05305-2) — Jarrod R. McClean, Sergio Boixo, Vadim N. Smelyanskiy, Ryan Babbush, and Hartmut Neven (2018)
+  Journal: Nature Communications; Publisher: Springer Nature; Volume: 9; Pages: 2913; DOI: [10.1038/s41467-018-05305-2](https://doi.org/10.1038/s41467-018-05305-2)
+  一篇里程碑式的论文，识别了贫瘠高原问题，这是量子机器学习中训练深度参数化量子电路的一个重要挑战。

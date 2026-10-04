@@ -1,0 +1,127 @@
+---
+course: "multi-agent-llm-systems-design-implementation"
+chapter: "agent-communication-coordination"
+lesson: "structuring-agent-communications"
+sourceId: 6663
+sourceUrl: "https://apxml.com/zh/courses/multi-agent-llm-systems-design-implementation/chapter-3-agent-communication-coordination/structuring-agent-communications"
+title: "代理通信中的信息结构"
+description: "关于设计代理间消息内容和结构的优选做法。"
+order: 2
+plots: []
+sourceHash: "f89928ca556278d060943a58f52a2bb8f707c516c6f21598bd149b76f44decfd"
+sourceCorrections: []
+---
+
+代理之间的高效通信，特别是那些由大型语言模型驱动的代理，不仅依赖于所选择的传输协议，更主要取决于所交换信息的内容和结构。LLM可能擅长理解自然语言，但在多代理系统中，通信中的模糊性可能导致连锁错误、处理效率低下以及目标无法达成。设计消息结构能够增强LLM代理理解的清晰度、效率和可靠性，相关方法将被阐述。
+
+### LLM代理消息设计的主要原则
+
+当代理通信时，特别是当LLM参与解释或生成消息时，有几项原则指导其信息设计：
+
+1. **清晰性和明确性**：每条消息必须有一个清晰、单一的解读。对于LLM代理，这意味着构建消息时，意图和数据易于分辨。避免口语化表达或可能被误解的语言，除非系统专门设计用于处理此类带有语境的交互。推荐使用明确的命令和定义良好的数据字段。
+2. **简洁性**：LLM具有输入令牌限制，处理大量文本会增加延迟和成本。消息应在传递所有必要信息的同时尽可能简洁。这通常涉及使用代码、标识符或结构化数据，而不是冗长的自然语言来表达每一条信息。
+3. **完整性**：尽管简洁性很重要，但消息必须包含接收代理执行任务或做出决策所需的所有信息。数据缺失可能导致后续请求，增加通信开销或产生错误操作。在简洁性和完整性之间找到恰当的平衡是消息设计的一个重要方面。
+4. **上下文 (context)完整性**：代理，尤其是LLM，通常在一个更大的对话或任务语境中运作。消息应携带标识符（例如，`session_id`、`task_id`、`thread_id`），以便接收者将当前消息置于正在进行的交互中。这有助于LLM保持连贯性并访问相关记忆或历史数据。
+5. **可操作性**：消息应清晰地指示对接收者的期望。是信息请求、执行操作的指令、通知，还是对先前查询的回复？明确定义消息意图有助于接收代理将消息路由到正确的内部逻辑或LLM提示。
+
+### 常见消息结构和格式
+
+虽然可以使用纯文本，但由于其易于解析且具有模式强制能力，结构化数据格式通常更受青睐用于代理间通信。
+
+\*\*JSON（JavaScript对象表示法）\*\*是一个普遍的选择，因为它易于人类阅读、机器解析和在各种编程语言中的广泛支持。它特别适合基于LLM的系统，因为可以有效提示LLM生成和解释JSON结构化文本。
+
+请看这个用于向LLM代理分配任务的JSON消息示例：
+
+```json
+{
+  "message_id": "msg_f4a12c",
+  "timestamp": "2024-08-15T14:22:05Z",
+  "sender_agent_id": "orchestrator_main",
+  "recipient_agent_id": "data_analysis_agent_03",
+  "conversation_id": "conv_77b_alpha",
+  "task_id": "task_901_beta",
+  "intent": "PERFORM_DATA_ANALYSIS",
+  "payload": {
+    "data_source_uri": "s3://company-data-lake/raw_sales/2024_q2.csv",
+    "analysis_type": "trend_identification",
+    "parameters": {
+      "time_period": "quarterly",
+      "comparison_metric": "YoY_growth"
+    },
+    "output_requirements": "Generate a concise summary (max 200 words) and a list of important percentage changes. Return as JSON.",
+    "priority": 1
+  },
+  "metadata": {
+    "reply_to_topic": "results_data_analysis_agent_03"
+  }
+}
+```
+
+在此结构中：
+
+- **头部字段** (`message_id`、`timestamp`、`sender_agent_id`、`recipient_agent_id`)：提供必要的路由和追踪信息。
+- **上下文 (context)标识符** (`conversation_id`、`task_id`)：将消息与更广范围的工作流程关联。
+- **意图** (`PERFORM_DATA_ANALYSIS`)：清晰地阐明消息的目的。这可以是一个预定义意图集中的字符串。
+- **负载**：包含实际数据和指令。请注意 `output_requirements` 如何向LLM代理提供具体指令。结构化的 `parameters` 使代理易于提取所需内容。
+- **元数据** (`reply_to_topic`、`priority`)：可以指导响应的路由或任务执行顺序。
+
+**其他格式**：
+
+- **XML（可扩展标记 (token)语言）**：尽管与JSON相比，XML在新服务间通信中较不常见，但在某些企业系统中仍在使用。其冗长性可能成为LLM令牌限制的一个缺点。
+- **Protocol Buffers (Protobuf)** 或 **Apache Avro**：这些是二进制序列化格式，提供高性能和严格的模式强制。它们非常适合高吞吐量 (throughput)系统或网络带宽是主要考虑因素的情况。虽然LLM不直接解析二进制格式，但代理的代码会将Protobuf/Avro消息反序列化为内部对象，然后将相关部分（通常转换为文本或类似JSON的结构）传递给LLM。
+
+下表展示了一个良好结构的代理间消息中常见的组成部分。
+
+| 组成部分组 | 典型要素与目的 |
+| --- | --- |
+| **信封/头部** | 消息ID、发送者ID、接收者ID、时间戳。 *确保路由、唯一性和可审计性。* |
+| **意图说明** | 一个清晰的动词或标准化代码，定义消息的目的。（例如，查询数据库、执行功能、通知事件） *指导代理的内部处理。* |
+| **上下文标识符** | 任务ID、会话ID、对话ID、线程ID。 *将消息与正在进行的处理或历史关联起来。* |
+| **负载/主体** | 主要数据或指令。通常是结构化的（例如，JSON对象）。 可能包含用于操作的具体参数 (parameter)或用于LLM处理的自然语言。 *提供代理的“内容”和“方式”。* |
+| **响应/错误处理** | 状态码、错误消息、回复的关联ID。 *促进双向通信。* |
+
+> 良好结构的代理间消息的组成部分。这些方面的清晰性对于LLM代理的有效协作非常重要。
+
+### 模式定义与验证
+
+无论选择何种格式，为消息定义模式都是一项强烈推荐的做法。模式正式描述了消息的结构：预期包含哪些字段、它们的数据类型以及它们是强制性还是可选的。
+
+- 对于JSON，**JSON Schema** 是一个被广泛采用的标准。
+- 对于Protobuf或Avro，模式是其定义语言的组成部分。
+
+使用模式的益处：
+
+1. **一致性**：确保所有代理以相同的格式发送和接收消息。
+2. **验证**：允许自动验证传入和传出的消息，及早发现错误。
+3. **文档**：模式可作为消息结构的清晰文档。
+4. **代码生成**：一些模式工具可以生成用于消息处理的样板代码。
+5. **LLM指导**：对于LLM代理，模式（或其描述）可以作为提示的一部分，引导LLM生成符合所需结构的响应。这显著提高了LLM生成结构化数据的可靠性。
+
+### 为LLM代理理解设计负载
+
+当LLM代理是接收方时，负载设计需要特别注意：
+
+- **负载中的明确指令**：如果LLM需要根据消息执行特定任务，请在负载中嵌入 (embedding)清晰、直接的指令。例如，除了发送原始数据，还可以包含一个字段，如 `"instruction": "为非技术受众总结以下文本。"`
+- **数据与指令分离**：通常有独立的字段用于原始数据和关于该数据的指令会很有用。这有助于LLM区分要处理的内容和关于如何处理的元指令。
+- **格式偏好**：如果LLM代理预期生成特定格式的响应（例如，JSON、Markdown、项目符号列表），请在消息负载中明确指定此要求。示例：`"requested_output_format": "json_array_of_strings"`。
+- **提供示例（通过消息进行少样本提示）**：对于复杂的任务或期望的输出格式，你可以在消息负载中包含少量示例（样本）来指导LLM的响应生成。这是通过通信渠道传递少样本提示的一种应用。
+- **令牌经济性**：在设计负载时要留意LLM的令牌限制。如果传递大型文档，请考虑传递引用（例如，URI、文档ID），代理可以使用工具通过这些引用检索内容，而不是将整个文档嵌入到消息中。
+
+### 语义一致性：共享理解
+
+除了语法结构之外，语义一致性对于可靠的多代理系统很重要。这意味着代理应该对消息中使用的术语和构想有共同的理解。例如，如果一个代理发送一条带有 `status: "completed"` 的消息，所有其他代理都应该以相同的方式理解“已完成”。
+
+在复杂系统中，这可能涉及：
+
+- **受控词汇**：为某些字段（例如，意图、状态码）使用预定义术语集。
+- **共享本体（高级）**：对于高度复杂的系统，正式的本体可以定义构想和关系，确保由不同团队开发或使用不同底层LLM的代理在解释信息时有一个共同的依据。虽然完整的本体方法是一项重大的工作，但即使是更简单、文档完善的消息字段数据字典，也能大大减少误解。
+
+通过精心构建代理之间交换的信息，您可以奠定坚实的基础，进行更复杂的交互，如共享认知、协商和协作解决问题，这些将在后续章节中审视。清晰、明确和可操作的消息是构建有效多代理LLM系统的依据。
+
+## 参考资料
+
+- [FIPA Communicative Act Library Specification](http://www.fipa.org/specs/fipa00037/SC00037J.html) — Foundation for Intelligent Physical Agents (FIPA) (2001)
+  定义代理通信标准通信行为和消息结构的规范文件。
+- [The JSON Data Interchange Format](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6wsbIvXA8s0az_mIFBjIKDYZKWAhyhMRmKLQby3kS5yuCOM2ca0tHSOTBbzgQcY9Y_wOLhoNAFmcZhXvjvmC6UHPLsjD4ZB5ACz7YE3cD-MoeaTigvSLYD6P_a8aBC_D0BGzE24tZp3VP1wa3VWF3FMbvoMxK80r3jeg1V0KXHFHjg0uKlHg=) — ECMA International (2017)
+  Journal: ECMA-404
+  JSON的官方标准，因其可读性和易于解析而被用于代理间通信。

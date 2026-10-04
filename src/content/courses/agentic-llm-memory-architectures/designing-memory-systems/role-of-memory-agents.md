@@ -1,0 +1,39 @@
+---
+course: "agentic-llm-memory-architectures"
+chapter: "designing-memory-systems"
+lesson: "role-of-memory-agents"
+sourceId: 4461
+sourceUrl: "https://apxml.com/zh/courses/agentic-llm-memory-architectures/chapter-3-designing-memory-systems/role-of-memory-agents"
+title: "记忆在智能体系统中的作用"
+description: "了解记忆为何对于状态保持、学习和长周期任务是必要的。"
+order: 1
+plots: []
+sourceHash: "2bc75553a32ef7017d03f998af000f20caec844577ac89d6f430451a276533bb"
+sourceCorrections: []
+---
+
+大型语言模型，从根本上说，是强大的无状态函数近似器。在给定其上下文 (context)窗口$L_{context}$内的输入提示后，它们会生成补全。然而，真正的智能体行为需要的不仅仅是被动生成。智能体需要持久性，即保持上下文、从交互中学习以及对长时间收集的信息进行推理 (inference)的能力，这常常超出固定的$L_{context}$。在此记忆变得必不可少。没有记忆，LLM智能体在每次交互周期后基本上都会被重置，遭受一种永久性失忆。
+
+记忆有助于实现多种基本目标，将LLM从一个高级的文本补全引擎提升为一个能处理复杂任务的自主智能体：
+
+1. **保持状态和连贯性：** 记忆最直接的功能是提供连续性。对于参与多轮对话或执行多步骤计划的智能体，它必须记住之前的用户输入、自身生成的响应、中间结论以及任务的状态。这使得智能体能够理解后续问题、跟踪目标进度，并避免重复或询问已提供的信息。稍后讨论的短期记忆机制，通过保留即时对话或执行历史直接处理这个问题。
+2. **支持学习和适应：** 智能体系统不应只遵循指令；它们应随时间改进。记忆为这种适应提供了支撑。通过存储过去交互记录、成功和失败的行动、用户反馈以及推断出的偏好，智能体可以优化其策略。例如，记住哪些工具对特定查询类型产生了有用结果，或回忆用户的偏好沟通方式，可以使智能体行为个性化，并通过经验变得更有效。这些存储的经验充当了智能体可以隐式或显式学习的个性化数据集。
+3. **支持长周期规划和推理：** 许多重要任务无法在一个推理步骤内解决，或完全放入$L_{context}$中。例如规划一个复杂项目、进行详细研究，或管理一个长期过程。智能体需要分解目标、生成中间步骤、执行行动、存储结果，并可能回溯或修改计划。记忆充当持久的工作空间，在此过程中，总体目标、演变中的计划、中间发现和遇到的障碍都得以存储和访问。像“思想之树”（Tree of Thoughts）这样的架构高度依赖记忆来管理分支。
+4. **扩展上下文限制之外的知识：** 大型语言模型在预训练 (pre-training)期间获得了广泛的通用知识，但这些知识是静态的，且缺乏特定、最新或私有信息。记忆系统，尤其是使用向量 (vector)数据库等检索机制的长期记忆，使智能体能够获取并整合来自外部知识源的相关信息（例如，技术文档、个人笔记、企业数据库、实时新闻流）。这种检索增强生成（RAG）模式，整合到智能体的推理循环中，有效地将智能体的知识库扩展到$L_{context}$及其预训练权重 (weight)之外，使其响应和行动基于特定、及时信息。
+5. **促成个性化：** 有效的智能体常常需要根据个体用户定制交互。记忆允许智能体存储用户档案、过往交互摘要、明确的偏好和推断出的兴趣。这实现了个性化推荐、根据用户典型工作流程定制的任务处理，以及通常更有帮助和吸引力的用户体验。
+
+本质上，记忆将LLM智能体从一个受限于即时输入上下文的系统，转变为一个能随时间连贯运作、从历史中学习、访问相关外部知识并追求复杂长期目标的系统。设计有效的记忆系统包括选择合适的结构（短期缓冲区、向量存储、图数据库）、实现高效的检索和更新机制，并将记忆访问整合到智能体的推理和行动周期中。后续章节将审视用于构建这些必要记忆组件的具体技术和架构。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://doi.org/10.55917/cb.v33-728) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 33; Pages: 9459-9474; DOI: [10.55917/cb.v33-728](https://doi.org/10.55917/cb.v33-728)
+  介绍了检索增强生成（RAG），这是一种代理访问外部知识，使其知识库不再受预训练权重和上下文窗口大小限制的技术。
+- [Tree of Thoughts: Deliberate Problem Solving with Large Language Models](https://arxiv.org/abs/2305.10601) — Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, Karthik Narasimhan (2023)
+  Journal: NeurIPS 2023; DOI: [10.48550/arXiv.2305.10601](https://doi.org/10.48550/arXiv.2305.10601)
+  提出了思维树（Tree of Thoughts）框架，展示了代理如何利用记忆管理复杂的推理路径、探索多种可能性并回溯以进行长期规划。
+- [A Survey of Large Language Model Based Autonomous Agents](https://arxiv.org/abs/2308.11432) — Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, Ji-Rong Wen (2023)
+  Journal: arXiv preprint arXiv:2308.11432; DOI: [10.48550/arXiv.2308.11432](https://doi.org/10.48550/arXiv.2308.11432)
+  提供了关于基于大语言模型的自主代理的全面概述，涵盖了作为维持状态、实现学习和支持复杂任务核心组件的记忆系统。
+- [LangChain Documentation: Memory](https://python.langchain.com/docs/modules/memory/) — LangChain (2024)
+  官方文档提供了各种记忆类型及其在代理框架中实现的实践示例和解释，有助于构建记忆系统。

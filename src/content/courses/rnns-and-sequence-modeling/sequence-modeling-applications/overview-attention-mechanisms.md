@@ -1,0 +1,48 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "sequence-modeling-applications"
+lesson: "overview-attention-mechanisms"
+sourceId: 2643
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-9-sequence-modeling-applications/overview-attention-mechanisms"
+title: "注意力机制概览"
+description: "简要介绍注意力机制增强序列模型的理念。"
+order: 8
+plots: []
+sourceHash: "4794c95d4b1109174815f2f7e8ea4cc9316b2eaab5ae20d6f3701ea26910028b"
+sourceCorrections: []
+---
+
+标准循环神经网络 (neural network) (RNN)，尤其是编码器-解码器结构中的LSTMs和GRUs，在许多序列建模任务中表现良好，但它们在处理非常长的序列时面临问题。基本的编码器-解码器架构将整个输入序列压缩成一个固定大小的向量 (vector)，通常称为上下文 (context)向量或“思想向量”。这个向量必须表示整个输入的含义。对于长输入，期望单个向量捕获所有必要信息成为一个重要的瓶颈，可能导致序列早期部分的细节丢失。
+
+注意力机制 (attention mechanism)提供了一种方法来克服这一限制。解码器不再仅仅依赖编码器的最终隐藏状态，而是被允许在生成输出的每一步“关注”整个输入序列的不同部分。试想人类如何翻译句子。你不会仅仅读完整个句子一次，完美记住其含义，然后写出翻译。相反，你在生成目标翻译的对应部分时，通常会回过头来关注源句子中的特定词语或短语。注意力机制为神经网络带来了类似的能力。
+
+### 注意力机制 (attention mechanism)如何工作：概览
+
+在生成输出的每一步（例如，预测翻译中的下一个词），注意力机制执行以下一般步骤：
+
+1. **比较解码器状态与编码器状态：** 解码器当前的隐藏状态与编码器为输入序列生成的所有隐藏状态进行比较。这种比较生成一组“注意力分数”，表示每个输入词（由其编码器隐藏状态表示）与当前输出步骤的关联程度。
+2. **计算注意力权重 (weight)：** 这些分数通常会经过一个`softmax`函数。这会将分数转换为总和为1的概率（注意力权重）。特定输入隐藏状态的权重越高，表示其对当前输出预测越重要。
+3. **计算上下文 (context)向量 (vector)：** 使用注意力权重计算编码器隐藏状态的加权和。这会创建一个动态上下文向量，专门为当前的解码步骤定制。这个上下文向量不是一个固定的单一向量，而是着重于当前与输入序列最相关联的部分。
+4. **生成输出：** 解码器使用这个动态计算的上下文向量，连同其自身的隐藏状态，来生成当前时间步的输出（例如，下一个词）。
+
+> 该图示意了注意力机制的一般流程。时间 $t$ 的解码器状态 ($s_t$) 与所有编码器隐藏状态 ($h_1, ..., h_n$) 产生联系，以计算注意力权重。这些权重用于创建一个上下文向量，该向量与 $s_t$ 一起，有助于生成该步骤的输出。
+
+### 注意力机制 (attention mechanism)的优势
+
+- **改善长序列性能：** 通过让模型关注输入的相关部分，注意力机制显著缓解了固定大小上下文 (context)向量 (vector)的信息瓶颈。这带来了更好的性能，特别是在涉及机器翻译或文档摘要等长输入序列的任务上。
+- **更好的对齐 (alignment)：** 注意力有助于模型学习输入和输出序列之间的软对齐。例如，在翻译中，它可以学习哪些源词与每个生成的 H目标词的对应关联最强。
+- **可解释性：** 注意力权重 (weight)本身可以被可视化。绘制权重图可让你看到模型在生成输出的特定部分时关注了输入序列的哪些部分。这为模型的决策过程提供了有价值的洞察。
+
+注意力机制并非RNNs、LSTMs或GRUs的替代品。相反，它们通常与这些循环架构结合，尤其是在编码器-解码器框架（通常称为带注意力的序列到序列模型）内，以增强其处理复杂序列建模任务的能力。虽然我们在此仅提供简要介绍，但理解动态关注相关输入部分的核心思想，对许多现代序列处理系统而言非常重要。
+
+## 参考资料
+
+- [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473) — Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio (2014)
+  Journal: International Conference on Learning Representations (ICLR 2015) (arXiv preprint); DOI: [10.48550/arXiv.1409.0473](https://doi.org/10.48550/arXiv.1409.0473)
+  介绍了神经机器翻译中序列到序列模型的原始注意力机制，解决了固定大小上下文向量的局限性。
+- [Effective Approaches to Attention-based Neural Machine Translation](https://arxiv.org/abs/1508.04025) — Minh-Thang Luong, Hieu Pham, and Christopher D. Manning (2015)
+  Journal: Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing; Pages: 1412-1421; DOI: [10.48550/arXiv.1508.04025](https://doi.org/10.48550/arXiv.1508.04025)
+  研究并比较了多种注意力机制，包括全局和局部注意力，以及不同的评分函数，在先前研究的基础上进一步发展。
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了Transformer架构，该架构完全依赖于注意力机制（自注意力）并取代了循环层，成为现代自然语言处理深度学习的核心组成部分。

@@ -1,0 +1,111 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-neural-networks-architectures-training"
+lesson: "training-qnn-challenges"
+sourceId: 1068
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-5-quantum-neural-networks-architectures-training/training-qnn-challenges"
+title: "量子神经网络训练的难点与方法"
+description: "讨论训练QNN时遇到的独特难题，包括优化和梯度估算。"
+order: 6
+plots: []
+sourceHash: "9029395c56a07cd3ee3d0dcf0d1c19222e6744a5ae7000182ca9dd63bc8110fc"
+sourceCorrections: []
+---
+
+我们所研究的参数 (parameter)化量子电路（PQC）构成的量子神经网络 (neural network)（QNN）的训练，带来了一组不同于经典深度学习 (deep learning)的独特难题，同时量子背景也放大了某些常见的困难。虽然QCBM、QCNN和混合模型等架构有潜力，但成功优化其参数需要应对一个受量子测量统计、电路深度、硬件噪声和量子态空间基本几何形状影响的复杂情况。
+
+### 优化任务
+
+核心上，训练一个QNN涉及为其底层PQC $U(\theta)$ 寻找最佳参数 (parameter) $\theta$，以最小化代价函数 $C(\theta)$。此代价函数通常根据在PQC准备的量子态上测量的某个可观测物 $M$ 的期望值定义，可能以输入数据 $x$ 为条件：
+
+
+$$
+C(\theta) = \mathbb{E}_{x \sim \mathcal{D}} [L(\langle \psi_{out}(\theta, x) | M | \psi_{out}(\theta, x) \rangle, y)]
+$$
+
+
+其中 $|\psi_{out}(\theta, x)\rangle = U(\theta)|\psi_{in}(x)\rangle$ 是输出态（通常包含数据编码 $|\psi_{in}(x)\rangle$），$L$ 是一个经典损失函数 (loss function)（如均方误差或交叉熵），$y$ 是与 $x$ 相关的目标标签。优化过程通常通过基于梯度的办法迭代进行：
+
+
+$$
+\theta_{k+1} = \theta_k - \eta \nabla_{\theta} C(\theta_k)
+$$
+
+
+其中 $\eta$ 是学习率。然而，在量子领域有效执行这个简单的更新规则面临诸多难题。
+
+### 梯度估算难点
+
+计算梯度 $\nabla_{\theta} C(\theta)$ 是一个主要障碍。
+
+1. **统计噪声：** 与经典神经网络 (neural network)中通过反向传播 (backpropagation)确定性计算梯度不同，VQAs和QNNs中的梯度通常依赖于从量子电路测量中估算期望值。由于量子测量是概率性的，我们只能通过对有限次测量（‘shots’）结果求平均来获得 $\langle M \rangle$ 的估算值。这会给代价函数评估以及随后的梯度估算引入统计或‘shots’噪声。shots不足会导致梯度估算噪声大，阻碍优化器收敛。所需的shots数量与所需精度的平方成反比，增加了大量额外开销。
+2. **参数 (parameter)平移规则：** 一种计算PQC期望值解析梯度的常用方法是参数平移规则。对于门 $G(\theta_j) = \exp(-i \frac{\theta_j}{2} P_j)$，其中 $P_j^2 = I$，梯度分量为：
+
+   
+   $$
+   \frac{\partial \langle M \rangle}{\partial \theta_j} = \frac{1}{2} \left[ \langle M \rangle(\theta_j + \frac{\pi}{2}) - \langle M \rangle(\theta_j - \frac{\pi}{2}) \right]
+   $$
+   
+
+   这需要为*每个*参数 $\theta_j$ 额外进行两次期望值估算。对于参数量多的QNN，这很快变得计算成本高昂。此外，该规则只直接适用于特定门形式；分解复杂或硬件原生门会增加电路深度或需要更复杂的平移规则，进一步增加了额外开销并可能放大误差。
+3. **有限差分法：** 使用有限差分近似梯度是可行的，但通常不太受青睐。它需要仔细调整步长 $\epsilon$，且极易受到shots噪声和硬件噪声的影响，通常产生比参数平移法准确度低的结果。
+
+### 优化：贫瘠高原与局部最小值
+
+即使有准确的梯度，优化本身也带来显著问题。
+
+1. **非凸性：** 与经典深度学习 (deep learning)一样，QNN的代价函数通常是非凸的，这意味着标准梯度下降 (gradient descent)容易陷入不理想的局部最小值，而不是找到全局最小值。
+2. **贫瘠高原：** 一个更严重的问题，在QML中尤为突出，是贫瘠高原现象。这指的是参数 (parameter)空间中梯度随量子比特数 $n$ 指数衰减的区域。如果优化器在这样的高原中初始化或漫游其中，训练将基本停滞，因为梯度基本不提供方向信息。
+
+   - **原因：** 贫瘠高原与多个因素有关，包括：
+
+     - **深层电路：** 形成近似2-设计的随机PQC，导致梯度方差随 $n$ 指数衰减。
+     - **全局代价函数：** 涉及对许多或所有量子比特进行测量的代价函数（例如，使用保真度比较输出态与目标态），比局部代价函数（只测量少数量子比特）更容易出现贫瘠高原。
+     - **纠缠：** PQC生成的高水平纠缠可能促成导致高原的随机化效应。
+     - **噪声：** 某些噪声模型也可能引起或加剧贫瘠高原。
+   - **可视化：** 想象一片广阔、近乎平坦的区域，除了可能非常接近解的位置，其他地方的斜率几乎为零。
+
+> QNN优化区域的视图，凸显了通向全局最小值的理想高梯度区域，以及梯度极小、可能困住优化器或将其引至局部最小值的贫瘠高原。
+
+### 硬件噪声的影响
+
+在当前的噪声中等规模量子（NISQ）设备上运行QNN训练增加了另一层复杂性。
+
+1. **不准确的评估：** 退相干、门错误和读出错误会破坏量子态和测量结果。这导致代价函数 $C(\theta)$ 及其梯度 $\nabla_{\theta} C(\theta)$ 的估算不准确，即使在无限shots的情况下也是如此。噪声本质上会使优化器所依赖的量产生偏差并增加方差。
+2. **扭曲的地形：** 硬件噪声可以有效地平滑或扭曲优化地形，可能隐藏尖锐特征或甚至改变最小值的地点。基于受噪声破坏的信息进行操作的优化器可能会收敛到次优参数 (parameter)，这些参数在理想模拟器或未来容错硬件上表现不佳。
+
+### QNN训练的方法
+
+鉴于这些难题，目前采用或正在研究以下几种方法：
+
+1. **高级优化器：**
+
+   - **经典方法：** 标准梯度下降 (gradient descent)通常表现不佳。Adam、RMSprop或Adagrad等使用自适应学习率和动量的方法，有时能更有效地应对噪声和非凸地形。BFGS等二阶方法在最小值附近收敛更快，但需要Hessian信息（或近似值），这比梯度更难可靠地估算。随机投影梯度下降（SPSA）是一种无梯度方法，对高维参数 (parameter)空间有效，每一步只需要两次代价函数评估，与参数数量无关，但它通常收敛较慢。
+   - **量子自然梯度（QNG）：** 这种方法根据量子态空间本身的几何形状调整梯度方向，由量子Fisher信息矩阵（或Fubini-Study度量张量 $g$）表示。更新规则变为 $\theta_{k+1} = \theta_k - \eta g^{-1} \nabla_{\theta} C(\theta_k)$。QNG可能避免虚假局部最小值，并遵循更直接的路径达到最优，有时能逃脱标准梯度消失的高原。然而，估算和逆转度量张量 $g$ 增加了显著的计算开销。
+2. **贫瘠高原缓解：**
+
+   - **浅层Ansätze：** 使用深度有限的PQC可以减少形成近似2-设计的可能性。硬件高效的Ansätze通常属于这一类别。
+   - **问题启发式Ansätze：** 基于问题的对称性或性质设计PQC结构，可能得到更易于训练的模型。
+   - **局部代价函数：** 根据只测量少数量子比特来定义代价函数可以避免贫瘠高原，尽管这可能不总是与所需的学习任务一致。
+   - **参数初始化：** 巧妙的初始化策略可能从一开始就将优化器置于高原之外。将参数初始化接近零通常有帮助。
+   - **逐层训练：** 逐层训练QNN，在训练后续层时冻结先前的层，有时能将优化分解为更容易处理的子问题。
+   - **参数关联：** 在PQC中引入参数间的关联，有时可以避免导致高原的条件。
+3. **噪声管理：**
+
+   - **误差缓解：** 零噪声外推（ZNE）、概率误差消除（PEC）或Clifford数据回归（CDR）等技术可以*在*优化循环中应用。通过在零噪声限制下估算期望值或梯度，它们为优化器提供更准确的信息，改善收敛性和最终性能，尽管代价是增加电路执行次数。
+   - **噪声感知优化器：** 一些研究关注专门为处理噪声而设计的优化器，也许通过根据噪声水平调整学习率，或将噪声模型纳入优化过程。
+4. **混合架构：** 如前所述，利用经典神经网络 (neural network)处理计算的大部分（例如，预处理、后处理，甚至主模型的一部分）可以减轻量子部分的负担。这可能减少PQC所需的量子比特数、电路深度或参数，从而间接缓解梯度、高原和噪声问题。
+
+有效训练QNN需要多方面的方法。它通常涉及仔细协同设计PQC ansatz、代价函数、优化算法，以及可能的噪声缓解策略，并根据具体问题和可用的量子硬件进行定制。没有单一普遍的最佳方法，经验测试和启发式选择仍然是常见做法。统计噪声、贫瘠高原、硬件噪声与优化算法效率之间的关系是当代QML研究中的一个核心主题。
+
+## 参考资料
+
+- [Barren plateaus in quantum neural networks](https://www.nature.com/articles/s41467-018-07090-4) — Jarrod R. McClean, Sergio Boixo, Vadim N. Smelyanskiy, Ryan Babbush, Hartmut Neven (2018)
+  Journal: Nature Communications; Volume: 9; Pages: 1-6; DOI: [10.1038/s41467-018-07090-4](https://doi.org/10.1038/s41467-018-07090-4)
+  这篇基础论文识别并分析了量子神经网络中的贫瘠高原现象，解释了梯度如何随量子比特数量呈指数级消失，从而阻碍训练。
+- [Variational Quantum Algorithms](https://www.nature.com/articles/s42254-021-00348-9) — M. Cerezo, Andrew Arrasmith, Ryan Babbush, Simon C. Benjamin, Suguru Endo, Keisuke Fujii, Jarrod R. McClean, Kosuke Mitarai, Xiao Yuan, Lukasz Cincio, Patrick J. Coles (2021)
+  Journal: Nature Reviews Physics; Publisher: Springer Nature; Volume: 3; Pages: 625-645; DOI: [10.1038/s42254-021-00348-9](https://doi.org/10.1038/s42254-021-00348-9)
+  这篇全面的综述文章涵盖了变分量子算法（VQA）的理论基础和实际挑战，包括优化前景、贫瘠高原、梯度估计技术以及量子自然梯度等高级优化器。
+- [Noise-induced barren plateaus in variational quantum algorithms](https://doi.org/10.1038/s41467-021-27045-6) — Samson Wang, Enrico Fontana, M. Cerezo, Kunal Sharma, Akira Sone, Lukasz Cincio, Patrick J. Coles (2021)
+  Journal: Nature Communications; Publisher: Nature Publishing Group; Volume: 12; Pages: 6961; DOI: [10.1038/s41467-021-27045-6](https://doi.org/10.1038/s41467-021-27045-6)
+  这篇论文展示了各种噪声模型如何诱发或加剧贫瘠高原现象，严重阻碍了NISQ设备上变分量子算法的训练。

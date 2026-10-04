@@ -1,0 +1,219 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "regularized-autoencoders"
+lesson: "implementing-dae-hands-on"
+sourceId: 2837
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-3-regularized-autoencoders/implementing-dae-hands-on"
+title: "实施去噪自编码器：动手实践"
+description: "去噪自编码器在强适应性特征学习中的实际实现。"
+order: 6
+plots: ["plots/2837-0.json"]
+sourceHash: "91bebc01ea26f58532e30c9d96c91e6c64dee34c32539714ae91c95ae2553458"
+sourceCorrections: []
+---
+
+去噪自编码器（DAE）的训练目标不仅是重构其输入，而且是从*受损*输入中重构出*清晰*版本。此过程促使编码器捕获更多特征，学习潜在的数据结构，而不是简单地记忆训练样本或对微小输入变化变得敏感。
+
+在此动手实践部分，我们将使用TensorFlow和Keras实现一个DAE，以对常用MNIST数据集中的图像进行去噪。我们假设您已安装TensorFlow并拥有可用的Python环境。
+
+### 1. 设置与数据加载
+
+首先，我们导入所需库并加载MNIST数据集。我们将像素值归一化 (normalization)到0和1之间。在此示例中，我们将使用一个简单的前馈神经网络 (neural network)，因此我们还将展平图像。
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# 加载MNIST数据集
+(x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
+
+# 将像素值归一化到[0, 1]并展平图像
+image_size = 28 * 28
+x_train = x_train.astype('float32') / 255.
+x_test = x_test.astype('float32') / 255.
+x_train = x_train.reshape((len(x_train), image_size))
+x_test = x_test.reshape((len(x_test), image_size))
+
+print(f"x_train 形状: {x_train.shape}")
+print(f"x_test 形状: {x_test.shape}")
+```
+
+### 2. 引入噪声
+
+DAE的核心思路是在含噪数据上训练。现在，我们通过添加高斯噪声来创建MNIST图像的含噪版本。噪声量是您可以调整的超参数 (parameter) (hyperparameter)；这里，我们将使用适中水平的噪声。
+
+```python
+# 定义噪声因子
+noise_factor = 0.4 # 调整此值以控制噪声水平
+
+# 向训练和测试数据添加高斯噪声
+x_train_noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape)
+x_test_noisy = x_test + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_test.shape)
+
+# 将值裁剪到0和1之间
+x_train_noisy = np.clip(x_train_noisy, 0., 1.)
+x_test_noisy = np.clip(x_test_noisy, 0., 1.)
+
+# 可视化部分含噪图像
+n = 10
+plt.figure(figsize=(20, 4))
+for i in range(n):
+    # 显示原始图像
+    ax = plt.subplot(2, n, i + 1)
+    plt.imshow(x_test[i].reshape(28, 28))
+    plt.title("Original")
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # 显示含噪版本
+    ax = plt.subplot(2, n, i + 1 + n)
+    plt.imshow(x_test_noisy[i].reshape(28, 28))
+    plt.title("Noisy")
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+plt.show()
+```
+
+您应该看到顶行是原始数字，底部是其对应的含噪版本。我们的DAE将学习将底行图像映射回顶行图像。
+
+### 3. 构建去噪自编码器模型
+
+我们将构建一个包含全连接（Dense）层的简单DAE。编码器会将784像素的输入压缩到一个更小的潜在维度（例如64），解码器将尝试从该潜在表示中重构原始的784像素。
+
+```python
+# 潜在维度
+latent_dim = 64
+
+# 输入层
+input_img = keras.Input(shape=(image_size,))
+
+# 编码器
+encoded = layers.Dense(256, activation='relu')(input_img)
+encoded = layers.Dense(128, activation='relu')(encoded)
+encoded = layers.Dense(latent_dim, activation='relu', name='encoder_output')(encoded) # 瓶颈层
+
+# 解码器
+decoded = layers.Dense(128, activation='relu')(encoded)
+decoded = layers.Dense(256, activation='relu')(decoded)
+decoded = layers.Dense(image_size, activation='sigmoid')(decoded) # 输出层与输入形状匹配
+
+# 定义自编码器模型
+autoencoder = keras.Model(input_img, decoded, name='denoising_autoencoder')
+
+# 可选地，如果需要，单独定义编码器模型
+encoder = keras.Model(input_img, encoded, name='encoder')
+
+# 显示模型摘要
+autoencoder.summary()
+```
+
+这是架构的简化视图：
+
+> 一个简单的去噪自编码器结构，其中编码器将输入映射到较低维度的潜在空间，解码器从潜在空间重构输入。
+
+### 4. 模型编译与训练
+
+我们使用Adam优化器和二进制交叉熵损失来编译模型。这里选择二进制交叉熵是合适的，因为像素值在0到1之间归一化 (normalization)，可以被视为概率。DAE的主要步骤是指定用于训练的`x`（输入）和`y`（目标）：
+
+- 输入 (`x`): `x_train_noisy`
+- 目标 (`y`): `x_train`（原始、清晰的图像）
+
+```python
+# 编译模型
+autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+
+# 训练模型
+epochs = 50
+batch_size = 128
+
+history = autoencoder.fit(x_train_noisy, x_train, # 使用含噪输入，清晰目标
+                          epochs=epochs,
+                          batch_size=batch_size,
+                          shuffle=True,
+                          validation_data=(x_test_noisy, x_test)) # 在含噪测试集上验证 -> 清晰测试集
+```
+
+### 5. 评估去噪性能
+
+训练完成后，我们可以使用训练好的`autoencoder`从含噪测试集中预测（重构）清晰图像。现在来可视化结果。
+
+```python
+# 绘制训练和验证损失值
+plt.figure(figsize=(10, 5))
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model loss')
+plt.ylabel('Loss (Binary Crossentropy)')
+plt.xlabel('Epoch')
+plt.legend(loc='upper right')
+plt.grid(True)
+plt.show()
+
+# 使用训练好的自编码器对测试图像进行去噪
+decoded_imgs = autoencoder.predict(x_test_noisy)
+
+# 可视化原始、含噪和去噪后的图像
+n = 10
+plt.figure(figsize=(20, 6))
+for i in range(n):
+    # 显示原始图像
+    ax = plt.subplot(3, n, i + 1)
+    plt.imshow(x_test[i].reshape(28, 28))
+    plt.title("Original")
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # 显示含噪图像
+    ax = plt.subplot(3, n, i + 1 + n)
+    plt.imshow(x_test_noisy[i].reshape(28, 28))
+    plt.title("Noisy")
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # 显示重构（去噪）图像
+    ax = plt.subplot(3, n, i + 1 + 2 * n)
+    plt.imshow(decoded_imgs[i].reshape(28, 28))
+    plt.title("Denoised")
+    plt.gray()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+plt.tight_layout()
+plt.show()
+```
+
+您应该看到，底行的重构图像明显比中间行的含噪输入更清晰，并且与顶行的原始图像非常相似。这表明DAE能习得捕获数字主旨并忽略噪声的表示。
+
+
+
+![DAE训练与验证损失](plots/2837-0.json)
+
+
+
+> 示例图显示了去噪自编码器在训练周期中训练和验证损失的下降。两种损失都下降并收敛，表明训练成功。
+
+### 讨论与后续步骤
+
+此实现提供了一个去噪自编码器的基础框架。对于进一步的研习，请思考以下几点：
+
+- **噪声类型与水平**：尝试不同类型的噪声（例如，椒盐噪声、Dropout）和不同的噪声因子。DAE的性能如何变化？
+- **架构**：对于图像数据，卷积自编码器（使用`Conv2D`和`Conv2DTranspose`层）通常表现明显更好，因为它们遵守图像的空间结构。尝试修改此代码以使用卷积层。
+- **潜在维度**：改变`latent_dim`的大小。较小的维度会强制更多压缩，但可能丢失信息，而较大的维度可能在正则化 (regularization)方面的效果较差。
+- **损失函数 (loss function)**：如果像素值以不同方式归一化 (normalization)（例如，[-1, 1]或均值中心化），则均方误差（`mse`）可能是比`binary_crossentropy`更合适的损失函数。
+
+通过此示例，您获得了实现去噪自编码器的实践经验，这是一种习得对输入数据中的噪声和变化具有强适应性特征的有价值方法。这种适应性常是下游任务（例如对所学表示执行的分类或聚类）的理想特性。
+
+## 参考资料
+
+- [Extracting and Composing Robust Features with Denoising Autoencoders](https://dl.acm.org/doi/10.1145/1390674.1390740) — Pascal Vincent, Hugo Larochelle, Yoshua Bengio, Pierre-Antoine Manzagol (2008)
+  Journal: Proceedings of the 25th International Conference on Machine learning; Publisher: ACM; Pages: 1096-1103; DOI: [10.1145/1390674.1390740](https://doi.org/10.1145/1390674.1390740)
+  这项开创性工作介绍了去噪自编码器，阐述了其理论基础和正则化优势。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  第14章详细介绍了自编码器，包括去噪自编码器，提供了全面的理论背景。

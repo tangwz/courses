@@ -1,0 +1,120 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "identifying-mitigating-training-instabilities"
+lesson: "impact-architectural-choices-stability"
+sourceId: 6076
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-24-identifying-mitigating-training-instabilities/impact-architectural-choices-stability"
+title: "架构选择对稳定性的影响"
+description: "讨论像预归一化（Pre-LN）与后归一化（Post-LN）这样的选择如何影响训练稳定性。"
+order: 6
+plots: []
+sourceHash: "a808e21e81ab8f195b8f19343d9a0a059a73a8daf7616f5acafd4b661fd50d0e"
+sourceCorrections: []
+---
+
+尽管细致的监控和调试技术对于应对大型模型训练中的波动必不可少，但Transformer模型的架构本身对其固有的稳定性起着重要的作用。早期做出的设计选择，可以使模型更易于顺利训练，也可以在模型深度和规模增加时，导致损失值骤增等不稳定现象更容易出现。了解这些架构影响，能让你做出明智的决定，从而促进更可靠的收敛。
+
+### 归一化 (normalization)层的位置：预归一化（Pre-LN）与后归一化（Post-LN）
+
+最具争议且影响较大的架构变体之一，是Transformer块中层归一化（`LayerNorm`）层相对于残差连接的放置位置。
+
+- **后归一化（Post-LN，原版Transformer）：** 在原始论文“Attention Is All You Need”描述的架构中，层归一化在残差连接将子层（自注意力 (self-attention)或前馈网络）的输入和输出求和后应用。
+  
+  $$
+  \text{输出} = \text{LayerNorm}(x + \text{SubLayer}(x))
+  $$
+  
+- **预归一化（Pre-LN）：** 另一种做法是在子层之前应用层归一化，直接作用于残差分支的输入。
+  
+  $$
+  \text{输出} = x + \text{SubLayer}(\text{LayerNorm}(x))
+  $$
+  
+
+> 后归一化与预归一化块结构的比较。
+
+主要区别在于反向传播 (backpropagation)时梯度如何流动。在后归一化架构中，通过残差连接回流的梯度不会经过该块相关的层归一化操作。随着模型变深，这可能导致梯度爆炸，因为残差块的输出量级可能逐层无限制地增长。预归一化通过在输入进入子层变换前进行归一化来解决这个问题。这通常会产生更稳定的梯度，并允许训练更深的网络，对学习率设置不那么敏感，并且可能缩短热身期。尽管后归一化在训练成功时有时能获得略好的表现，但由于其更好的稳定性特点，预归一化通常被认为是大型模型更稳定的选择。
+
+### 激活函数 (activation function)：ReLU之后
+
+前馈网络（FFN）层中激活函数的选择也影响训练动态。尽管ReLU在早期深度学习 (deep learning)模型中是标准选择，但现代Transformer通常使用更平滑的激活函数：
+
+- **GeLU（高斯误差线性单元）：** GeLU根据输入的值来加权，而不是像ReLU那样仅通过符号来门控。它提供了一个更平滑、非单调的激活曲线。
+- **SwiGLU（Swish门控线性单元）：** SwiGLU的变体将Swish（一种平滑的自门控激活）与门控机制结合，通常会拆分FFN的中间维度，对一部分应用Swish并将其乘以另一部分。这会引入更多参数 (parameter)，但通常会带来更好的性能和稳定性。
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleFFN(nn.Module):
+    def __init__(self, d_model, d_ff, activation_type='gelu'):
+        super().__init__()
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.linear2 = nn.Linear(d_ff, d_model)
+
+        if activation_type == 'relu':
+            self.activation = nn.ReLU()
+        elif activation_type == 'gelu':
+            self.activation = nn.GELU()
+        # 注意：一个适当的SwiGLU实现通常涉及调整维度
+# 和门控，这里只是一个占位符。
+        elif activation_type == 'swish_like': # Swish/SiLU思路的占位符
+            self.activation = nn.SiLU()
+        else:
+            raise ValueError("Unsupported activation type")
+
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.activation(x)
+        x = self.linear2(x)
+        return x
+
+# 使用示例
+d_model = 512
+d_ff = 2048
+ffn_gelu = SimpleFFN(d_model, d_ff, activation_type='gelu')
+input_tensor = torch.randn(32, 128, d_model) # 批次大小, 序列长度, 维度
+output = ffn_gelu(input_tensor)
+print("Output shape:", output.shape)
+# 输出形状：torch.Size([32, 128, 512])
+```
+
+像GeLU和SwiGLU这样更平滑的激活函数通常会带来更平滑的损失曲面和更稳定的梯度流，特别是与ReLU相比，在非常深的神经网络 (neural network)中更是如此。SwiGLU中的门控机制可能进一步帮助调节信息流并防止激活值爆炸。尽管其具体影响可能不那么明显，选择一个现代激活函数通常是提升整体训练稳定性的一个因素。
+
+### 初始化策略的相互作用
+
+如第12章所述，适当的权重 (weight)初始化非常重要。然而，架构选择会改变初始化操作的*环境*。
+
+- **预归一化 (normalization)（Pre-LN）与后归一化（Post-LN）：** 与后归一化相比，预归一化架构对初始化尺度通常不那么敏感。因为在预归一化中，每个子层的输入都被归一化，所以由于初始权重尺度不当导致激活值或梯度在层间累积而爆炸的风险降低了。后归一化通常需要更仔细地调整初始化方差，并且可能需要针对不同层类型采用特定的初始化方案（例如，残差连接层采用较小的方差）。
+- **激活函数 (activation function)：** 激活函数的选择会影响推荐的初始化方案（例如，ReLU使用Kaiming初始化，GeLU/SwiGLU可能需要调整方案）。确保初始化与激活函数的特性相符有助于在网络层中保持方差的稳定性。
+
+### 注意力机制 (attention mechanism)的细节
+
+即使在标准的缩放点积注意力机制中，细节也很重要：
+
+- **缩放因子（$1/\sqrt{d_k}$）：** 这种缩放不只是一个优化；它对稳定性非常重要。如果没有它，对于较大的键维度 $d_k$ 值，点积 $QK^T$ 会变得非常大。softmax函数接收大的输入会导致分布极端尖锐和梯度消失，从而使训练停滞。确保正确实现这种缩放是根本的。
+- **替代注意力：** 更先进的注意力机制（如第11章或第13章中讨论的，例如相对位置编码 (positional encoding)或稀疏注意力）可能会以某种方式修改计算，从而不明显地影响稳定性。例如，旋转位置编码（RoPE）在点积之前直接修改查询和键，这与标准的加性偏置 (bias)相比，可能与初始化或精度有不同的相互影响。
+
+### 嵌入 (embedding)层和输出层
+
+- **大词汇量：** 具有非常大的嵌入表（输入嵌入或输出投影层）的模型有时会看到与不常见标记 (token)相关的大梯度，如果梯度裁剪未能管理好，可能会导致损失值骤增。
+- **权重 (weight)绑定：** 将输入嵌入权重与最终输出投影权重绑定是一种常见的减少参数 (parameter)的做法。虽然通常有益，但这表示同一个权重矩阵会同时被来自初始嵌入查找和最终预测损失的梯度更新，这有时会使优化动态变得复杂。在使用权重绑定时，可能需要特定的初始化策略。
+- **输出层初始化：** 通常建议将最终输出投影层（将最后一个隐藏状态映射到logits）的初始化方差设置得比其他层小。这有助于防止大的初始预测值，这些值可能导致高的初始损失和潜在的不稳定性。
+
+总之，架构决策并非与训练稳定性无关。归一化 (normalization)层的位置、激活函数 (activation function)的选择、与初始化的相互影响，甚至注意力机制 (attention mechanism)内部的细节，都对整体训练动态有所贡献。尽管预归一化（Pre-LN）和像GeLU/SwiGLU这样的激活函数通常被现代大型模型青睐以提高稳定性，但了解这些关联能让你在问题出现时更好地诊断它们，并做出明智的设计选择，从一开始就构建出更易于训练的LLM。持续监控仍然非常重要，以便在训练过程中观察这些选择的实际效果。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  提出Transformer架构的奠基性论文，内容包括Post-LN和缩放点积注意力。
+- [On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745) — Ruibin Xiong, Yunchang Yang, Di He, Kai Zheng, Shuxin Zheng, Chen Xing, Huishuai Zhang, Yanyan Lan, Liwei Wang, Tie-Yan Liu (2020)
+  Journal: ICML 2020; Volume: 119; Pages: 10640-10649; DOI: [10.48550/arXiv.2002.04745](https://doi.org/10.48550/arXiv.2002.04745)
+  分析Transformer中层归一化（Layer Normalization）位置（Pre-LN与Post-LN）对训练稳定性和梯度流的影响。
+- [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) — Noam Shazeer (2020)
+  Journal: arXiv preprint arXiv:2002.05202; DOI: [10.48550/arXiv.2002.05202](https://doi.org/10.48550/arXiv.2002.05202)
+  介绍SwiGLU和其他门控线性单元变体，展示它们在Transformer中提高性能和训练特性。
+- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — Jianlin Su, Yu Lu, Shengfeng Pan, Ahmed Murtadha, Bo Wen, Yunfeng Liu (2021)
+  Journal: arXiv preprint arXiv:2104.09864; DOI: [10.48550/arXiv.2104.09864](https://doi.org/10.48550/arXiv.2104.09864)
+  介绍旋转位置嵌入（RoPE），一种将相对位置信息集成到自注意力机制中的方法。

@@ -1,0 +1,70 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "neural-network-foundations"
+lesson: "artificial-neurons"
+sourceId: 1911
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-1-neural-network-foundations/artificial-neurons"
+title: "从生物神经元到人工神经元"
+description: "理解人工神经元作为计算单元的原理。"
+order: 1
+plots: []
+sourceHash: "aa25e64a83ed3670a6dea33364972b1df2578c7c70c867e52ce2a4cb6f643831"
+sourceCorrections: []
+---
+
+神经网络 (neural network)从生物大脑处理信息的方式中获得很大启发。虽然最终目的并非完全复制大脑，但了解大脑的基本计算单元——神经元，为构建人工学习系统提供了一个有益的起点。
+
+### 生物学启发
+
+生物神经元是一种特化细胞，设计用于信息处理与传输。从宏观层面看，其工作方式如下：
+
+1. **接收信号：** 树突作用如同输入线，通过称为突触的连接接收来自其他神经元的电化学信号。
+2. **整合信号：** 细胞体（或称胞体）整合这些传入信号。每个传入信号的强度可能不同（受突触影响）。
+3. **产生输出：** 如果胞体内的组合信号强度超过特定阈值，神经元便会“发放”信号，沿其轴突发送电脉冲。
+4. **传输信号：** 轴突作用如同输出线，将脉冲从细胞体传出。在其末端，轴突分支并与其他神经元的树突形成突触，将信号传递下去。
+
+> 生物神经元中信息流的简化视图。
+
+这种接收加权输入、整合并根据阈值产生输出的生物过程，为人工神经元提供了核心类比。
+
+### 人工神经元：数学模型
+
+人工神经元（其早期形式有时被称为感知器）是一个数学函数，被构想为生物神经元的简化模型。它接收多个输入信号，进行处理，并产生单个输出信号。其主要组成部分如下：
+
+1. **输入（$x_1, x_2, ..., x_n$）：** 这些是输入到神经元的数值。它们可以是图像中的像素值、数据集中的特征（如年龄或收入），或来自前一层神经元的输出。
+2. **权重 (weight)（$w_1, w_2, ..., w_n$）：** 每个输入 $x_i$ 都与一个权重 $w_i$ 相关联。权重表示该特定输入连接的强度或重要性。更大的绝对权重意味着相应的输入对神经元的输出有更大的影响。这些权重是网络在训练过程中“学习”的主要参数 (parameter)。
+3. **偏置 (bias)（$b$）：** 这是一个额外的、可学习的参数，与神经元本身相关联，不连接到任何特定输入。偏置作用如同一个偏移量，使得神经元更容易或更难被激活（产生非零输出）。可以将其想象成调整激活阈值。如果没有偏置，神经元的加权和必须通过原点，从而限制了其灵活性。
+4. **求和函数：** 神经元计算其输入的加权和，并加上偏置。这通常表示为 $z$：
+
+   
+   $$
+   z = (w_1 x_1 + w_2 x_2 + \dots + w_n x_n) + b = \left( \sum_{i=1}^{n} w_i x_i \right) + b
+   $$
+   
+
+   此计算结果 $z$ 表示输入的线性组合。
+5. **激活函数 (activation function)（$f$）：** 求和结果 $z$ 随后通过一个激活函数 $f$。此函数为模型引入非线性，使神经网络 (neural network)能够学习数据中复杂的关联，这是简单线性模型无法做到的。神经元的最终输出（通常表示为 $a$）是：
+
+   
+   $$
+   a = f(z) = f\left( \left( \sum_{i=1}^{n} w_i x_i \right) + b \right)
+   $$
+   
+
+   我们将在本章后续部分介绍 Sigmoid、Tanh 和 ReLU 等具体激活函数。现在，只需理解其作用是将线性求和 $z$ 转换为神经元的最终输出 $a$。
+
+> 单个人工神经元的结构。输入（$x_i$）与权重（$w_i$）相乘，并与偏置（$b$）一起求和以产生 $z$，然后通过激活函数 $f$ 生成输出 $a$。
+
+与生物对应物相比，尽管其高度简化，但这个人工神经元模型捕捉了整合加权输入并根据结果产生输出的主要思想。它是一个基本的计算单元。通过将许多此类单元分层连接，我们可以构建强大的神经网络，能够学习复杂的模式，这也是本课程其余部分的主题。
+
+## 参考资料
+
+- [Neuroscience: Exploring the Brain](https://www.jblearning.com/neuroscience-exploring-the-brain-9781284286878) — Mark F. Bear, Barry W. Connors, Michael A. Paradiso (2016)
+  Publisher: Jones & Bartlett Learning
+  全面介绍了生物神经元的结构和功能，作为人工神经元灵感的。
+- [The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain](https://psycnet.apa.org/record/1959-00109-001) — Frank Rosenblatt (1958)
+  Journal: Psychological Review; Publisher: American Psychological Association; Volume: 65; Pages: 386-408; DOI: [10.1037/h0042519](https://doi.org/10.1037/h0042519)
+  这篇开创性论文介绍了感知器，这是最早的人工神经元数学模型。
+- [Deep Learning](http://www.deeplearningbook.org) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  解释了人工神经元的数学公式以及它们作为深度神经网络构建块的作用。

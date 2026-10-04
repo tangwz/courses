@@ -1,0 +1,150 @@
+---
+course: "getting-started-model-context-protocol"
+chapter: "defining-resources-and-prompts"
+lesson: "structuring-prompts"
+sourceId: 7847
+sourceUrl: "https://apxml.com/zh/courses/getting-started-model-context-protocol/chapter-2-defining-resources-and-prompts/structuring-prompts"
+title: "构建提示"
+description: "定义可复用的提示模板以引导LLM交互。"
+order: 5
+plots: []
+sourceHash: "8aa2134a0beae10f2716fac16b750758ac36f14da55394e9d2b950ddf17c81aa"
+sourceCorrections: []
+---
+
+资源为应用程序提供原始数据背景，而提示则定义了与这些数据交互的标准操作流程。模型上下文 (context)协议（MCP）中的提示作为一个可复用的模板，指导大型语言模型（LLM）执行特定任务。通过在服务器端构建提示，可以减轻用户进行提示工程 (prompt engineering)的负担，并确保与您提供的工具和资源进行一致且高质量的交互。
+
+### 提示在MCP中的作用
+
+在典型的聊天界面中，用户手动输入指令，例如“检查此代码中的错误”或“总结最近五条数据库记录”。这种方法非常依赖用户准确地措辞请求以获得最佳输出。MCP通过将提示视为可执行的基本要素来改变这种状况。
+
+当服务器提供一个提示时，它会给出一个结构化定义，包含提示的名称、描述和参数 (parameter)列表。客户端（如Claude桌面应用或IDE）获取此列表，并将这些提示作为可用命令显示，通常可以通过UI元素或斜杠命令访问。选中后，客户端会从用户那里收集必要的参数，并向服务器发送请求。服务器随后处理这些参数，并返回一系列消息，其中可能包含来自资源的内嵌背景信息，随时可以发送给LLM。
+
+这种架构将*意图*（用户想做什么）与*背景信息构建*（提示如何组成）分离开来。
+
+> 提示查询和执行的通信流程显示了服务器如何控制模板逻辑，而客户端则处理用户界面。
+
+### 定义提示基本要素
+
+要实现一个提示，您必须定义其结构以及填充它的逻辑。MCP SDK通过使用装饰器将函数注册为提示处理器来简化此过程。提示定义的核心组成部分包含：
+
+1. **名称：** 唯一标识符（例如，`review-code`）。
+2. **描述：** 提示功能的人类可读说明。这一点十分有用，因为它有助于客户端UI和用户理解提示的用途。
+3. **参数 (parameter)：** 生成提示所需的输入参数列表。它们在您的模板中充当变量。
+
+设想一个场景，我们想创建一个提示来帮助用户调试错误日志。我们需要一个用于错误消息的参数，以及一个可选的日志级别参数。
+
+下面的Python示例展示了如何使用MCP服务器实例来定义此功能：
+
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("日志助手")
+
+@mcp.prompt()
+def analyze_error(error_message: str, context_level: str = "brief"):
+    """
+    分析错误消息并建议可能的修复方案。
+    
+    参数：
+        error_message：来自日志的原始错误文本。
+        context_level：分析的深度（简要或详细）。
+    """
+    instruction = f"分析以下{context_level}错误：{error_message}"
+    
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": instruction
+            }
+        }
+    ]
+```
+
+在此实现中，服务器会自动检查函数签名，以生成参数所需的JSON Schema。当客户端调用`analyze_error`时，该函数会执行并返回一个消息对象列表。
+
+### 消息结构和角色
+
+提示处理器的返回值是一个消息列表。这种格式与大多数LLM API使用的聊天历史结构相同。每条消息都包含一个`role`（通常是`user`或`assistant`）和`content`。
+
+尽管简单的文本内容很常见，但MCP提示的价值在于能够将文本与其他内容类型混合使用。`content`字段可以是简单的文本字符串，也可以是包含图像数据或内嵌资源的更复杂对象。
+
+使用`user`角色可以让您模拟用户输入一个精心设计的指令。另外，您可以使用`assistant`角色来“预填充”模型的响应，这是一种“预填充”技术，可以有效引导LLM遵循特定的输出格式。
+
+### 在提示中内嵌资源
+
+MCP提示最重要的功能之一是能够直接在提示背景中验证和内嵌资源。这连接了静态数据（资源）与主动指令（提示）之间的区别。
+
+提示可以接受文件路径作为参数 (parameter)，然后利用内部资源逻辑读取该文件，并将其内容注入发送给LLM的消息中，而不是要求用户将文件内容复制粘贴到聊天中。
+
+这种结合确保LLM接收到的数据与服务器意图完全一致，避免了手动复制粘贴可能导致的截断或格式错误。
+
+> 提示的内部逻辑通常涉及在构建最终消息内容之前验证参数并获取内部资源。
+
+以下是如何实现一个读取特定文件资源并请求LLM对其进行总结的提示：
+
+```python
+from mcp.types import TextContent, EmbeddedResource
+
+@mcp.prompt()
+def summarize_file(filepath: str):
+    """总结一个独立文件的内容。"""
+    
+    # 在实际实现中，您会在这里读取文件内容
+    # 或者调用一个处理资源读取的内部函数。
+    file_content = read_internal_file(filepath) 
+    
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "resource",
+                "resource": {
+                    "uri": f"file:///{filepath}",
+                    "mimeType": "text/plain",
+                    "text": file_content
+                }
+            }
+        },
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": "请提供上述文件的简明总结。"
+            }
+        }
+    ]
+```
+
+在此示例中，客户端接收到一个结构化对象，表明一个资源是对话历史的一部分。LLM会看到与URI关联的文件内容，紧接着是总结它的指令。
+
+### 参数 (parameter)验证和查询
+
+当客户端连接到您的服务器时，它会执行握手并请求服务器的功能。如果您的服务器支持提示，客户端将发出`prompts/list`请求。
+
+服务器会回复一个定义可用提示的JSON结构。务必确保您的参数名称具有描述性且您的文档字符串清晰。MCP SDK使用这些文档字符串来填充发送给客户端的描述字段。如果您的Python函数中某个参数被声明为`int`或`bool`类型，SDK会将其转换为相应的JSON Schema类型约束。
+
+例如，如果您定义一个参数`lines: int`，客户端就知道要强制执行数值输入。这种类型安全性降低了提示逻辑尝试处理输入时发生运行时错误的可能性。
+
+### MCP中提示工程 (prompt engineering)的最佳实践
+
+在构建提示时，请考虑以下准则以最大化可靠性和可用性：
+
+1. **单一意图：** 具体提示通常比通用提示表现更好。不要使用单一的“帮助”提示，而是为“调试”、“解释”和“重构”创建不同的提示。
+2. **背景窗口管理：** 请留意您内嵌资源的大小。尽管MCP处理传输，但接收LLM仍有背景窗口限制。
+3. **清晰的角色定义：** 使用`system`角色（如果特定LLM实现和客户端支持）或`user`角色，以清晰区分指令和数据。
+4. **无状态性：** 提示通常应该是无状态的。它们接收参数 (parameter)并返回消息。避免依赖在不同提示执行请求之间持续存在的服务器端变量，因为客户端可能维护自己的对话状态。
+
+遵循这些结构，您可以确保您的MCP服务器不仅是一个被动的数据存储，还是一个智能伙伴，引导用户成功地与您的数据交互。
+
+## 参考资料
+
+- [Prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2024)
+  提供设计有效提示的实用指南和策略，涵盖优化大型语言模型输出和交互模式的技术。
+- [Function calling](https://platform.openai.com/docs/guides/function-calling) — OpenAI (2024)
+  解释如何将大型语言模型与外部工具和API集成，详细说明了定义可调用函数和解析模型结构化参数的过程。
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11470) — Donghao Xu, Zhezhang Ding, Xu He, Huijing Zhao, Mathieu Moze, François Aioun, Franck Guillemard (2020)
+  Journal: arXiv preprint arXiv:2005.11470; DOI: [10.48550/arXiv.2005.11470](https://doi.org/10.48550/arXiv.2005.11470)
+  介绍了检索增强生成（RAG）框架，展示了如何通过结合外部知识库来增强大型语言模型，从而提高事实一致性并减少幻觉。

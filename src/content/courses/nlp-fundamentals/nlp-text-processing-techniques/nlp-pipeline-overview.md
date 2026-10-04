@@ -1,0 +1,47 @@
+---
+course: "nlp-fundamentals"
+chapter: "nlp-text-processing-techniques"
+lesson: "nlp-pipeline-overview"
+sourceId: 2474
+sourceUrl: "https://apxml.com/zh/courses/nlp-fundamentals/chapter-1-nlp-text-processing-techniques/nlp-pipeline-overview"
+title: "自然语言处理流程"
+description: "审视处理NLP任务文本数据的标准步骤。"
+order: 1
+plots: []
+sourceHash: "3ddfbe6f4ece2be205d2416483d1c8b6ef016b32854cfbae5dcfae231cff2b5c"
+sourceCorrections: []
+---
+
+原始文本很少能直接用于机器学习 (machine learning)算法输入。它通常是非结构化的、不一致的，并且包含与基本含义或任务无关的成分。为弥补这一不足，采用一系列标准化步骤，即自然语言处理（NLP）流程。这可以将其想象成文本的流水线，原始材料从一端进入，经过多种转换，然后以适合分析或模型训练的结构化数值数据形式出现。
+
+尽管具体组成部分会因应用和文本性质而异，典型的流程包含几个核心阶段，侧重于文本的清理、组织和表示。
+
+> NLP流程中常见的步骤顺序，将原始文本转换为适合建模的特征。
+
+让我们简要了解这些初始处理阶段的目的，这些阶段是本章的重点：
+
+1. **文本清理与标准化：** 这个初始阶段处理的是移除或修改那些增加干扰但无重要意义的元素。这可以包括移除HTML标签、去除特殊字符或标点（或选择性处理）、将文本转换为统一大小写（例如，小写），以及扩展缩写词。目标是标准化文本并减少表面变化。
+2. **分词 (tokenization)：** 文本被分解成更小的单位，称为词元 (token)。通常，词元对应单词，但它们也可以是字符、子词 (subword)（单词的一部分），甚至是句子，这取决于任务和所选方法。这一步很基本，因为大多数后续处理都在这些词元上进行。我们将在本章后面讲解不同的分词策略，包括BPE等子词方法。
+3. **停用词移除：** 诸如“the”、“a”、“is”、“in”之类的常见词，它们频繁出现但对分类或主题建模等任务通常意义不大，会被过滤掉。尽管看起来简单，但决定哪些词是“停用词”可能需要特定领域的考量，需要自定义而非仅仅使用标准列表。
+4. **词干提取与词形还原：** 这些技术旨在将单词还原为它们的原始形式或词根。例如，“running”、“runs”和“ran”都可能被还原为“run”。词干提取通常使用启发式规则截去前缀或后缀，速度快，但有时可能导致非词典单词。词形还原使用词汇和形态分析来返回单词的实际词典形式（词元），这通常更准确，但计算量更大。两者之间的选择取决于下游任务的具体要求。
+
+理解该流程是一个框架，而非每个项目都必须完全遵循的固定顺序，这点很重要。
+
+- **顺序影响结果：** 操作顺序会影响结果。例如，在分词前将文本转换为小写，可以避免“Word”和“word”被视为不同的词元。在处理“don't”之类的缩写词前移除标点，可能会引起问题。
+- **任务依赖：** 并非所有步骤都适用于每项任务。例如，停用词移除可能对语言建模有害，因为在语言建模中功能词是重要的语境。词干提取对于需要精细意义的任务可能过于激进。
+- **迭代常见：** 构建一个有效的流程通常需要反复试验。您可以尝试不同的技术、调整参数 (parameter)，甚至根据数据分析和初始模型性能添加自定义步骤。
+
+在这些预处理步骤之后，清理和结构化后的词元通常通过**特征提取**方法（如词袋模型、TF-IDF或词嵌入 (embedding)，将在第2章和第4章介绍）转换为数值表示。这些数值特征随后作为**建模或分析**的输入，机器学习算法将在其中用于分类等任务（第3章），或应用序列模型（第5章）。
+
+本章主要关注最初的预处理阶段。在接下来的部分中，我们将考查高级分词，详细比较词干提取和词形还原，讨论噪声处理和停用词自定义的策略，并在实际预处理流程中应用这些技术。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky, James H. Martin (2025)
+  Publisher: Pearson
+  一本综合性的自然语言处理教科书，涵盖了基本的预处理步骤（分词、词干提取、词形还原、停用词）和整体流程。
+- [Natural Language Processing with Python](https://www.nltk.org/book/) — Steven Bird, Ewan Klein, and Edward Loper (2009)
+  Publisher: O'Reilly Media
+  使用NLTK库提供了分词、词干提取、词形还原和停用词去除的实际示例和实现，适合初学者。
+- [spaCy Documentation: Processing Pipelines](https://spacy.io/usage/processing-pipelines) — Explosion (2024)
+  官方文档解释了spaCy的处理流程，包括分词、语言学标注和自定义组件，提供了关于自然语言处理工作流的现代视角。

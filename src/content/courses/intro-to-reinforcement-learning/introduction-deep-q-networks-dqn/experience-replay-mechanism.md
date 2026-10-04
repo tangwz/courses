@@ -1,0 +1,98 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "introduction-deep-q-networks-dqn"
+lesson: "experience-replay-mechanism"
+sourceId: 1660
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-7-introduction-deep-q-networks-dqn/experience-replay-mechanism"
+title: "经验回放机制"
+description: "说明如何存储和采样过去的经验（经验回放）以提高稳定性。"
+order: 3
+plots: []
+sourceHash: "337b459b674de821e7ea12d28c48d30232f1fff5a091284d0edade7ad82cc293"
+sourceCorrections: []
+---
+
+直接使用连续样本 $(s_t, a_t, r_{t+1}, s_{t+1}), (s_{t+1}, a_{t+1}, r_{t+2}, s_{t+2}), \dots$ 来训练一个深度神经网络 (neural network)近似器 $Q(s, a; \theta)$ 会带来重大问题。神经网络通常假设训练数据点是独立同分布的 (IID)。然而，在强化学习 (reinforcement learning)中：
+
+1. **相关样本：** 一个回合中连续的经验高度相关。状态 $s_{t+1}$ 直接依赖于 $s_t$ 和 $a_t$。在相关样本序列上进行训练可能导致网络收敛到不佳的局部最优值，或导致学习到的参数 (parameter) $\theta$ 出现不稳定的振荡。想象一下，如果只看相邻帧来从视频中学习；你可能会对移动缓慢的物体过拟合 (overfitting)，或遗漏整体背景信息。
+2. **非平稳目标：** Q学习更新中使用的目标值，通常是 $r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a'; \theta)$，会随着网络参数 $\theta$ 本身的更新而变化。这就像尝试击中一个移动的目标。这种非平稳性使得收敛变得困难。
+
+为解决这些问题，深度Q网络采用了一种称为**经验回放**的技术。
+
+### 经验回放的工作原理
+
+核心思想简单而有效：代理不会立即使用最新的经验进行训练，而是将其经验存储在一个大型内存缓冲区中，通常称为回放缓冲区或回放内存。一个“经验”或“转换”通常以元组形式存储： $(s_t, a_t, r_{t+1}, s_{t+1})$。
+
+回放缓冲区通常具有固定的容量（例如，存储最近的100万个转换）。当新的经验到来时，它们会被添加到缓冲区中，如果缓冲区已满，则可能覆盖最旧的经验。
+
+在学习阶段，算法不是使用最新的转换，而是从回放缓冲区中随机抽取一个*小批量*的转换。然后使用这些随机抽取的转换对Q网络的参数 (parameter) $\theta$ 进行梯度下降 (gradient descent)更新。
+
+> 此流程图显示了代理交互、将转换存储在回放缓冲区中，以及从缓冲区采样以更新DQN的独立学习过程。
+
+### 经验回放的优点
+
+1. **打破相关性：** 通过从缓冲区随机采样，可以打破连续经验之间的时间相关性。每个小批量都包含来自不同时间、可能不同轨迹的多种经验组合，这更好地接近了稳定随机梯度下降 (gradient descent)所需的IID假设。
+2. **数据效率：** 每个经验可以多次用于训练更新。这在强化学习 (reinforcement learning)中尤其有益，因为收集经验可能成本高昂或耗时。经验不再是使用一次后就丢弃，而是保留在缓冲区中，并对多次参数 (parameter)更新做出贡献。
+3. **平滑学习：** 通过对许多之前的状态和转换进行平均（通过小批量采样），可以平滑学习过程，减少振荡并使训练更加稳定。
+
+### 实现考量
+
+- **缓冲区大小：** 回放缓冲区的大小是一个超参数 (parameter) (hyperparameter)。更大的缓冲区存储更多不同类型的经验，但需要更多内存。较小的缓冲区可能无法有效打破相关性，或者可能很快忘记过去有用的经验。
+- **采样策略：** 虽然均匀随机采样很常见，但也存在更先进的技术，例如优先经验回放 (PER)。PER更频繁地采样导致更大TD误差的转换，使训练侧重于代理学习最少的经验。
+- **数据结构：** 循环缓冲区（例如Python的`collections.deque`，带有`maxlen`参数）常用于高效实现，便于添加新经验和移除旧经验。
+
+这里是一个Python代码片段，说明了存储和采样：
+
+```python
+import random
+from collections import deque, namedtuple
+
+# 定义转换的结构
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'next_state', 'reward'))
+
+class ReplayMemory:
+    def __init__(self, capacity):
+        # 使用 deque 作为固定大小的循环缓冲区
+        self.memory = deque([], maxlen=capacity)
+
+    def push(self, *args):
+        """保存一个转换"""
+        self.memory.append(Transition(*args))
+
+    def sample(self, batch_size):
+        """采样一个随机批次的转换"""
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
+# --- 用法 ---
+# 初始化缓冲区
+memory = ReplayMemory(10000) # 容量为10,000
+
+# 在交互循环中：
+# state, action, next_state, reward = get_experience_from_env(...)
+# memory.push(state, action, next_state, reward)
+
+# 在学习步骤中（如果缓冲区有足够样本）：
+# if len(memory) > BATCH_SIZE:
+#     transitions = memory.sample(BATCH_SIZE)
+#     # 解包批次：
+#     # batch = Transition(*zip(*transitions))
+#     # 使用此批次执行梯度更新...
+```
+
+经验回放是一项基本技术，它对DQN的成功贡献很大，使其能够有效地从像素等高维输入中学习。它很好地解决了强化学习 (reinforcement learning)训练流程中由相关数据引起的核心不稳定问题。下一节将介绍另一项重要技术——固定Q目标，该技术解决了非平稳目标值的问题。
+
+## 参考资料
+
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis (2015)
+  Journal: Nature; Volume: 518; Pages: 529-533; DOI: [10.1038/nature14236](https://doi.org/10.1038/nature14236)
+  这篇原始论文介绍了深度Q网络（DQN），并详细说明了经验回放机制及其在稳定训练中的作用。
+- [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952) — Tom Schaul, John Quan, Ioannis Antonoglou, and David Silver (2016)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1511.05952](https://doi.org/10.48550/arXiv.1511.05952)
+  本文介绍了优先经验回放，这是一种通过优先处理具有较高时序差分误差的经验来改进均匀采样的高级采样策略。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本强化学习的教科书，提供了Q学习、深度Q网络及其所解决问题的详细说明，包括经验回放的必要性。

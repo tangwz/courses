@@ -1,0 +1,85 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "variational-autoencoders-generative"
+lesson: "probabilistic-encoders-decoders"
+sourceId: 2848
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-4-variational-autoencoders-generative/probabilistic-encoders-decoders"
+title: "概率编码器与解码器"
+description: "介绍将数据编码为分布以及从采样的潜在变量解码的方法。"
+order: 2
+plots: []
+sourceHash: "a4a4248e0db22bbf3cd20128019172de61edf1f99ac5baf0777c1a1894a165be"
+sourceCorrections: []
+---
+
+标准自编码器虽然擅长重建，但在生成新数据方面表现不足。其确定性特点常导致潜在空间不够连续或结构化，难以进行有效采样。生成真实样本需要从将输入 $x$ 映射到潜在空间中的单点 $z$ 并返回到单一重建 $x'$ 的方式中转变。
+
+变分自编码器为编码和解码过程引入了概率视角，为高效的生成模型构建奠定了基础。我们不再使用确定性映射，而是处理概率分布。
+
+### 概率编码器：将输入映射到潜在分布
+
+在标准自编码器中，编码器 $f$ 将输入 $x$ 直接映射到潜在编码 $z = f(x)$。相比之下，VAE 编码器不输出单个点 $z$。相反，它输出以输入 $x$ 为条件的潜在空间上概率分布的参数 (parameter)。这个分布，表示为 $q_\phi(z|x)$，代表了我们对可能生成输入 $x$ 的潜在编码 $z$ 的看法。编码器网络的参数用 $\phi$ 表示。
+
+通常，$q_\phi(z|x)$ 被选定为具有对角协方差矩阵的多元高斯分布。这简化了计算，并在实践中运行良好。因此，对于给定的输入 $x$，编码器网络（由 $\phi$ 参数化）输出两个向量 (vector)：
+
+1. 均值向量，$\mu_\phi(x)$。
+2. 方差向量，$\sigma^2_\phi(x)$（通常，网络输出对数方差 $\log \sigma^2_\phi(x)$，以提高数值稳定性）。
+
+近似后验分布为：
+
+
+$$
+q_\phi(z|x) = \mathcal{N}(z | \mu_\phi(x), \text{对角}(\sigma^2_\phi(x)))
+$$
+
+
+这里，$\mathcal{N}(z | \mu, \Sigma)$ 表示针对 $z$ 的高斯分布，其均值为 $\mu$，协方差为 $\Sigma$。使用对角协方差矩阵意味着在给定输入 $x$ 的情况下，我们假定潜在变量 $z$ 的各维度之间条件独立。
+
+这种概率编码为何重要？
+
+- **捕捉不确定性：** 它承认对于给定输入 $x$，可能存在多个合理的潜在表示 $z$。
+- **正则化 (regularization)：** 正如我们稍后在讨论 VAE 目标函数 (ELBO) 时将看到的，这种概率编码允许我们通过鼓励 $q_\phi(z|x)$ 接近选定的先验分布 $p(z)$（通常是标准高斯分布 $\mathcal{N}(0, I)$）来正则化潜在空间。这促使编码器高效且连续地使用潜在空间，使其适合采样。
+- **采样：** 在训练期间，我们不是将固定的 $z$ 传递给解码器，而是从分布 $q_\phi(z|x)$ 中*采样* $z$。这需要一种特殊的技巧（重参数化技巧，稍后会介绍）来允许梯度反向传播 (backpropagation)。
+
+### 概率解码器：从潜在编码生成数据
+
+与编码器类似，VAE 解码器也采用概率视角。标准解码器 $g$ 接收潜在编码 $z$ 并输出单一重建 $x' = g(z)$。VAE 解码器由 $\theta$ 参数 (parameter)化，接收一个潜在变量 $z$（在训练期间从 $q_\phi(z|x)$ 采样，或为了生成从先验 $p(z)$ 采样），并输出数据空间 $x$ 上概率分布的参数。这个分布表示为 $p_\theta(x|z)$。它代表了在给定潜在编码 $z$ 的情况下观察到数据 $x$ 的可能性。
+
+分布 $p_\theta(x|z)$ 的选择取决于数据 $x$ 的特性：
+
+- **连续数据（例如，归一化 (normalization)图像像素）：** 一个常见选择是多元高斯分布。解码器网络可能输出均值 $\mu_\theta(z)$，而协方差可以假定为固定（例如，$\sigma^2 I$，其中 $\sigma^2$ 是一个超参数 (hyperparameter)或学习得到）或也由网络输出。
+
+  
+  $$
+  p_\theta(x|z) = \mathcal{N}(x | \mu_\theta(z), \sigma^2 I)
+  $$
+  
+
+  在此假定下最大化对数似然 $\log p_\theta(x|z)$ 对应于最小化输入 $x$ 与生成均值 $\mu_\theta(z)$ 之间的均方误差 (MSE)，相差一个常数因子。
+- **二进制数据（例如，黑白图像）：** 一个常见选择是独立伯努利分布的乘积。解码器网络输出一个概率向量 (vector) $p_\theta(z)$，其中每个元素表示 $x$ 对应维度为 1 的概率。
+
+  
+  $$
+  p_\theta(x|z) = \prod_{i=1}^{D} p_{\theta, i}(z)^{x_i} (1 - p_{\theta, i}(z))^{1-x_i}
+  $$
+  
+
+  其中 $D$ 是 $x$ 的维度。在这种情况下最大化对数似然 $\log p_\theta(x|z)$ 对应于最小化输入 $x$ 与输出概率 $p_\theta(z)$ 之间的二元交叉熵 (BCE) 损失。
+
+这种概率解码器提供了一种有原则的方式来定义重建质量。我们不再仅仅最小化距离度量，而是旨在最大化解码器生成的分布下原始数据 $x$ 的似然，给定潜在编码 $z$。这与 VAE 的整体概率框架及其目标函数的推导自然契合。
+
+> 变分自编码器的简化流程图，突出显示了编码器 ($q_\phi(z|x)$) 和解码器 ($p_\theta(x|z)$) 的概率特性。编码器将输入 $x$ 映射到潜在分布的参数，从中采样 $z$。解码器将 $z$ 映射到输出分布的参数，以此对数据的似然性进行建模。
+
+通过概率化定义编码器和解码器，VAE 建立了与潜在变量模型的正式关联，并使得能够推导出一个有良好原则的目标函数——证据下界 (ELBO)，它平衡了数据重建与潜在空间正则化 (regularization)。这种结构有助于 VAE 学习适合生成新数据的潜在空间。我们将在后续章节中查看完整模型视角和 ELBO 的推导。
+
+## 参考资料
+
+- [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114) — Diederik P Kingma, Max Welling (2013)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1312.6114](https://doi.org/10.48550/arXiv.1312.6114)
+  本文介绍了变分自编码器，提出了其用于生成建模的概率编码器和解码器框架。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 488-494
+  这本教科书全面介绍了深度学习，其中一个章节详细阐述了变分自编码器及其概率组成部分。
+- [Variational Autoencoders (VAEs)](https://deepgenerativemodels.github.io/vae/) — Aditya Grover (2018)
+  Journal: CS236: Deep Generative Models Course Notes; Publisher: Stanford University
+  斯坦福大学的课程材料，对变分自编码器提供了结构化的解释，涵盖了概率编码和解码。

@@ -1,0 +1,97 @@
+---
+course: "feature-stores-for-ml"
+chapter: "data-consistency-quality"
+lesson: "advanced-data-validation"
+sourceId: 3382
+sourceUrl: "https://apxml.com/zh/courses/feature-stores-for-ml/chapter-3-data-consistency-quality/advanced-data-validation"
+title: "高级数据验证方法"
+description: "在特征摄取过程中实施精细的数据验证规则和异常检测。"
+order: 3
+plots: ["plots/3382-0.json"]
+sourceHash: "8aa93db52cc604884c487f99fabf990f6ae9a25ccd2f057f5d444e512e791749"
+sourceCorrections: []
+---
+
+基础数据验证（检查空值、正确数据类型、基本范围）是十分重要的，但在大规模运行并服务于重要模型的高级特征存储，则需要更精细的方法。简单的检查通常无法发现细微的数据质量问题，这些问题可能显著降低模型性能，或导致训练-服务偏差。本节考察直接集成到特征存储生命周期中的高级验证方法，从简单断言到包含统计属性、复杂关系和业务规则的全面验证。
+
+### 集成验证到特征管道中
+
+有效的验证不是一次性检查；它是一个持续过程，集成到特征管道的多个环节。在数据摄取期间、转换之后、甚至在服务之前实施验证步骤，可确保特征整个处理过程中的数据完整性。
+
+> 典型特征管道中的验证点。摄取或转换后阶段的失败可能触发警报或隔离程序。
+
+### 模式验证与演变
+
+高级方法能妥善处理模式演变：
+
+- **严格模式执行：** 拒绝任何与定义模式（特征名称、类型、顺序）不完全匹配的数据。这简单但脆弱。
+- **模式演变容忍：** 允许特定预定义更改，例如添加新的可空列或扩展数据类型（例如，`int` 到 `bigint`）。这需要对模式进行仔细管理和版本控制。
+- **模式检测与推断：** 自动从传入数据批次推断模式。虽然便捷，但这需要监控以捕获意外或不希望的更改。验证规则可以应用于推断出的模式。
+
+Apache Avro 或 Protobuf 等工具可用于定义和管理模式，有助于序列化和反序列化过程，同时本身就提供模式验证能力。
+
+### 统计属性验证
+
+这里是验证从单个数据点转向数据集或特征分布特征的地方。这对于发现漂移和防止偏差尤为重要。
+
+- **分布检查：** 将传入特征数据的统计分布与已知基准（例如，训练期间或近期生产窗口中看到的分布）进行比较。
+
+  - **方法：** 使用统计检验，如 Kolmogorov-Smirnov (KS) 检验、人口稳定性指数 (PSI) 或 Wasserstein 距离来量化 (quantization)分布差异。更简单的检查可能包括比较直方图或汇总统计数据（均值、中位数、方差、分位数）。
+  - **示例：** 使用 KS 检验阈值，验证新一批数据中 `transaction_amount` 的分布与过去 24 小时相比没有显著偏移。低于特定显著性水平（例如，$p < 0.05$）的 p 值可能表明存在问题偏移。
+
+  
+  
+  ![分布比较 (参考值 vs. 当前值)](plots/3382-0.json)
+  
+  
+
+  > 比较特征值在参考期和当前批次之间的概率密度直方图，以目视检查分布偏移。统计检验为这些偏移提供了量化指标。
+- **基数检查：** 验证分类特征的唯一值数量。基数的意外变化（例如，出现新类别或现有类别消失）可能表明上游数据问题或概念漂移。
+- **缺失值阈值：** 为每个特征设置可接受的缺失值（NaN 或空值）百分比。超过这些阈值可以触发警报。
+- **范围与界限：** 定义预期的最小值和最大值，可能基于历史数据百分位数（例如，第 1 和第 99 百分位数），而非硬编码限制，这使验证更具适应性。
+
+### 跨特征验证与一致性
+
+有些数据错误只有在检查特征*之间*的关系时才会显现。
+
+- **相关性分析：** 监控重要数值特征之间的相关矩阵。相关性模式的突然变化可能指示底层数据问题或关系偏移，这可能影响模型预测。
+- **条件约束：** 根据多个特征的值实施规则。例如：
+  - `如果 country == 'USA' 那么 zip_code 必须符合美国格式`
+  - `如果 age < 18 那么 is_eligible_for_loan 必须为 false`
+  - `end_timestamp 必须 >= start_timestamp`
+- **一致性检查：** 确保相关特征在逻辑上一致。例如，如果一个特征代表总计数，而其他特征代表子类别，则它们的总和应与总数匹配。
+
+### 业务逻辑与基于规则的验证
+
+将领域特定知识和业务规则直接嵌入 (embedding)到验证过程中。这需要数据科学家、工程师和领域专家之间的密切协作。
+
+- **规则引擎：** 使用规则引擎（例如 Drools 或自定义的基于 Python 的逻辑）来定义和执行超出简单统计检查的复杂验证逻辑。
+- **查找集验证：** 根据已知、精选的允许值集合验证分类特征（例如，确保 `product_category` 属于业务维护的官方列表）。
+- **异常检测：** 使用基本异常检测模型（例如 Isolation Forest, One-Class SVM）作为验证步骤的一部分，以标记 (token)那些根据历史模式统计上不太可能的数据点或批次。
+
+### 实施与自动化
+
+实施这些高级方法需要仔细考虑：
+
+- **库：** 运用数据验证库，如 `Great Expectations`、`Pandera` 或 `Deequ`（用于 Spark），它们提供用于定义、执行和记录数据验证规则的框架。
+- **集成：** 将验证步骤直接嵌入 (embedding)到数据处理管道中（例如，Spark 作业、Airflow DAG、Kubeflow Pipelines）。验证失败理想情况下应中止管道或将问题数据路由以供调查。
+- **配置：** 将验证规则作为代码或配置文件进行管理，以支持版本控制、协作和更简便的更新。
+- **性能：** 注意验证的计算成本，特别是对于大型数据集或复杂统计检验。如有必要，可以对分布检查进行数据采样，或者对历史数据较少地运行验证。
+- **警报：** 将验证结果连接到监控和警报系统（例如 PagerDuty、Slack），以及时通知相关团队数据质量问题。
+
+通过采用这些高级验证方法，您可以从被动的数据清洗转向主动的数据质量保障，从而建立对特征存储的信任，并防止细微的数据问题损坏模型并影响业务成果。这是维护数据一致性的一个重要组成部分，正如本章在减轻偏差和确保可靠特征数据方面的重点所强调的那样。
+
+## 参考资料
+
+- [Machine Learning Design Patterns](https://books.google.com/books/about/Machine_Learning_Design_Patterns.html?id=z1IHEAAAQBAJ) — Valliappa Lakshmanan, Sara Robinson, Michael Munn (2020)
+  Publisher: O'Reilly Media; Pages: 400
+  构建机器学习系统的实用指南，包含MLOps背景下的特征商店和数据验证策略章节。
+- [Deequ: A Library for Quality Constraints for ML](https://dl.acm.org/doi/10.1145/3318464.3386131) — Krisztian Balog, Sebastian Michels, Tamas Seipp, Stephan Klinger, Felix Biessmann, Peter Schafhalter (2020)
+  Journal: Proceedings of the ACM Conference on Management of Data (SIGMOD); Publisher: ACM; Pages: 3495–3502; DOI: [10.1145/3318464.3386131](https://doi.org/10.1145/3318464.3386131)
+  介绍了Deequ，一个来自亚马逊的开源库，用于在机器学习管道中使用统计方法定义和验证数据质量约束。
+- [A Survey on Concept Drift Adaption](https://ieeexplore.ieee.org/document/9483324) — Jawad Sajjad, Zahid Halim, Abdul Qayyum Khan, Shahzad Aslam, Muhammad Bilal (2021)
+  Journal: IEEE Access; Publisher: IEEE; Volume: 9; Pages: 84821-84841; DOI: [10.1109/ACCESS.2021.3090885](https://doi.org/10.1109/ACCESS.2021.3090885)
+  对概念漂移检测和处理技术的全面回顾，这对于统计特性验证和维持模型性能非常重要。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  讨论模式演变、Avro和Protobuf等数据编码格式以及分布式系统中数据一致性基础的文本。

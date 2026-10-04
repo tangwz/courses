@@ -1,0 +1,160 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "application-safety-and-reliability"
+lesson: "using-mocks-for-testing"
+sourceId: 7796
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-10-application-safety-and-reliability/using-mocks-for-testing"
+title: "使用模拟对象进行确定性测试"
+description: "使用 `testing` 模块模拟LLM API调用，实现快速且确定性的单元测试。"
+order: 5
+plots: []
+sourceHash: "65379886c1dbc497aacd8e9d604c01609436e4fc62f117392ae485beb989f2d2"
+sourceCorrections: []
+---
+
+构建可靠的LLM应用时，主要的难题之一在于模型本身的非确定性。相同的提示在后续运行中可能产生略微不同的输出，这使得传统的单元测试变得困难。标准测试依赖可预测、可重复的结果来检查代码是否按预期工作。此外，运行进行实时API调用的测试既慢又昂贵，并且依赖于外部服务。
+
+为了解决此问题，您可以使用模拟对象来模拟LLM的行为。模拟对象在您的测试环境中用可预测的替代品替换真实的LLM客户端。这使您能够编写快速、确定且免费的单元测试，检查您的应用逻辑，而无需实际调用API。
+
+`testing` 模块提供了专为此目的设计的 `MockLLM` 类。它允许您配置预定义响应，并查看您的应用如何与LLM交互。
+
+### 使用固定响应进行测试
+
+使用模拟对象最简单的方式是让它在每次调用时都返回相同的固定响应。这对于测试应用中的某个特定行为很有用。为此，您需要使用字符串响应配置 `MockLLM`，并将其行为设置为 `MockBehavior.FIXED`。
+
+首先，我们定义一个简单的函数，它接受一个LLM客户端并用它来总结文本。将您的函数设计为接受LLM客户端作为参数 (parameter)（这种做法被称为依赖注入），是使它们可测试的原因。
+
+```python
+def summarize_text(llm, text_to_summarize: str) -> str:
+    """使用提供的LLM客户端总结文本。"""
+    prompt = f"Please summarize the following text concisely:\n\n{text_to_summarize}"
+    response = llm.generate(prompt)
+    return response.content
+```
+
+现在，我们可以使用 `MockLLM` 实例来测试此函数。我们将配置它以返回可预测的摘要，从而允许我们检查函数输出，而无需进行真实的API调用。
+
+```python
+from kerb.testing import MockLLM, MockBehavior
+
+# 配置一个带有固定响应的模拟LLM
+mock_llm = MockLLM(
+    responses="This is the expected summary.",
+    behavior=MockBehavior.FIXED
+)
+
+# 使用模拟对象调用我们的函数
+article_text = "A long article about artificial intelligence..."
+summary = summarize_text(mock_llm, article_text)
+
+print(f"生成的摘要: {summary}")
+
+# 断言函数返回了模拟对象的响应
+assert summary == "This is the expected summary."
+
+# 确认模拟对象已被调用
+mock_llm.assert_called()
+print("断言通过：模拟LLM按预期被调用。")
+```
+
+只要 `summarize_text` 函数正确调用 `generate` 方法并返回其内容，此测试就能即时运行，不产生任何成本，并且将始终通过。
+
+### 模拟对话流程
+
+对于聊天机器人等应用，您需要测试多轮对话，其中LLM的响应会随着每一轮而改变。您可以使用 `MockBehavior.SEQUENTIAL` 来模拟此情况，它提供一个响应列表，模拟对象会按顺序返回这些响应。
+
+我们来定义一个分类情感的函数，并使用一系列模拟响应对其进行测试。
+
+```python
+def classify_sentiment(llm, text_to_classify: str) -> str:
+    """使用提供的LLM分类文本情感。"""
+    prompt = f"Classify the sentiment: {text_to_classify}"
+    response = llm.generate(prompt)
+    return response.content
+
+# 配置一个带有响应序列的模拟对象
+mock_llm_sequential = MockLLM(
+    responses=["Positive", "Negative", "Neutral"],
+    behavior=MockBehavior.SEQUENTIAL
+)
+
+# 测试一系列输入
+inputs = ["I love this!", "This is terrible.", "It is okay."]
+for text in inputs:
+    sentiment = classify_sentiment(mock_llm_sequential, text)
+    print(f"'{text}' -> {sentiment}")
+
+# 模拟对象将被调用三次
+print(f"总调用次数: {mock_llm_sequential.call_count}")
+```
+
+每次 `classify_sentiment` 调用 `generate` 方法时，模拟对象都会提供列表中的下一个响应，让您能够测试应用如何处理一系列交互。
+
+### 使用模式匹配检查提示
+
+有时，您需要测试的逻辑涉及根据用户输入生成不同的提示。例如，您的应用可能将用户的请求路由到不同的提示模板。您可以使用 `MockBehavior.PATTERN` 来测试此逻辑。此模式使用一个字典，其中键是正则表达式模式，值是对应的响应。
+
+```python
+# 配置一个带有基于模式的响应的模拟对象
+mock_llm_pattern = MockLLM(
+    responses={
+        r"summarize": "This is a summary.",
+        r"translate.*spanish": "Hola.",
+        r"classify": "Positive",
+    },
+    behavior=MockBehavior.PATTERN,
+    default_response="请求未理解。"
+)
+
+# 测试不同的提示
+summary_prompt = "summarize this text"
+translation_prompt = "translate to spanish: hello"
+unknown_prompt = "tell me a joke"
+
+print(f"'{summary_prompt}' -> '{mock_llm_pattern.generate(summary_prompt).content}'")
+print(f"'{translation_prompt}' -> '{mock_llm_pattern.generate(translation_prompt).content}'")
+print(f"'{unknown_prompt}' -> '{mock_llm_pattern.generate(unknown_prompt).content}'")
+```
+
+这使您能够确认您的应用正在构建正确的提示，而无需真实的LLM来解释它们。
+
+### 检查LLM交互
+
+除了检查应用的最终输出，您可能还需要确认它与LLM交互的具体方式。`MockLLM` 实例会跟踪对其进行的每一次调用，包括提示和其他参数 (parameter)。
+
+您可以通过 `call_count` 和 `call_history` 属性获取此信息。
+
+```python
+mock_llm = MockLLM(responses="Test response", behavior=MockBehavior.FIXED)
+
+summarize_text(mock_llm, "Text to summarize.")
+classify_sentiment(mock_llm, "Text to classify.")
+
+print(f"总调用次数: {mock_llm.call_count}")
+
+# 检查最后一次调用
+last_call = mock_llm.get_last_call()
+print(f"最后发送的提示: {last_call['prompt']}")
+```
+
+这对于检查复杂的提示工程 (prompt engineering)逻辑尤其有用。您可以使用 `assert_called_with()` 来检查发送给模拟对象的任何提示中是否包含特定子字符串。
+
+```python
+# 承接上一个示例...
+try:
+    # 检查提示是否包含单词 "classify"
+    mock_llm.assert_called_with("classify")
+    print("断言通过：提示中包含单词 'classify'。")
+except AssertionError as e:
+    print(f"断言失败: {e}")
+```
+
+通过使用模拟对象，您可以为您的LLM应用建立一个综合且健全的测试套件。这种做法将您的应用逻辑与LLM的非确定性和外部特性隔离开来，让您能够更自信、更快速地进行开发。请记住在每次测试之间使用 `mock_llm.reset()` 方法重置模拟对象，以确保每个测试都是独立的。
+
+## 参考资料
+
+- [\`unittest.mock\` - mock object library](https://docs.python.org/3.12/library/unittest.mock.html) — Python Software Foundation (2024)
+  Python标准库中用于创建mock对象的官方文档，详细介绍了如何模拟依赖项以进行测试。
+- [Python Testing with pytest: Develop Faster with Confident Code](https://pragprog.com/titles/bopytest2/python-testing-with-pytest-second-edition/) — Brian Okken (2022)
+  Publisher: The Pragmatic Programmers
+  一本关于Python测试实践的指南，解释了mock对象、测试替身和如何有效组织测试。

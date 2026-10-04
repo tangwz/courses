@@ -1,0 +1,50 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "weight-regularization"
+lesson: "weight-regularization-intuition"
+sourceId: 4894
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-2-weight-regularization/weight-regularization-intuition"
+title: "权重正则化背后的理念"
+description: "说明通过惩罚大权重来简化模型的基本想法。"
+order: 1
+plots: []
+sourceHash: "754d81984a1ce5541035101f244c6f952d5b15b42c4b01ffd7f006769e7c8d5a"
+sourceCorrections: []
+---
+
+在上一章中，我们看到深度学习 (deep learning)模型有时会*过度*学习训练数据。它们不仅记住数据中的基本模式，还会记住训练样本中的噪声和特定细节。这种现象被称为过拟合 (overfitting)，会导致模型遇到新的、未见过的数据时表现不佳。我们需要一些方法来促使模型学习更普遍的模式。
+
+权重 (weight)正则化 (regularization)提供了一种直接的策略来对抗过拟合，通过控制模型的复杂度。核心想法很直观：更简单的模型通常泛化能力更好。但是，我们如何衡量神经网络 (neural network)的“复杂度”，以及如何促使它“简化”呢？
+
+衡量模型复杂度的一个常见方法是考察其权重的量级。一个具有非常大权重的网络可能会模拟高度复杂的函数。如果连接两个神经元的权重很大，第一个神经元激活值的一个小变化可能导致第二个神经元激活值发生显著变化。这种敏感性使得网络能够创建复杂的决策边界，从而完美地分离训练数据，但这些边界可能对训练集（包括其噪声）过度拟合。
+
+考虑一个试图拟合含噪声数据点的网络。一个复杂的模型（通常与较大的权重相关）可能会剧烈地“摆动”以穿过每个训练点，从而捕获噪声。一个更简单的模型（通过更小的权重促成）可能会产生更平滑的拟合，捕获整体趋势但忽略部分噪声。这种更平滑、更简单的函数通常更接近真实的潜在模式，因此对新数据具有更好的泛化能力。
+
+权重正则化技术通过修改模型在训练期间优化的目标函数来发挥作用。我们不是仅仅根据预测误差（如均方误差或交叉熵）来最小化损失，而是增加一个额外的项，称为*正则化惩罚项*。此惩罚项是根据网络权重的量级计算的。
+
+修改后的目标函数如下所示：
+
+总损失 = 原始损失（数据拟合）+ $\lambda \times$ 正则化惩罚项（权重大小）
+
+其中：
+
+- **原始损失** 衡量模型预测与训练数据中实际目标值匹配的程度。
+- **正则化惩罚项** 是网络权重的一个函数。它随权重增大而增大。
+- $\lambda$（lambda）是一个超参数 (parameter) (hyperparameter)，用于控制正则化的强度。较大的 $\lambda$ 会对大权重施加更强的惩罚，促使模型得到更简单的解决方案。当 $\lambda$ 为 0 时，不应用正则化。
+
+在训练过程中，优化算法（如梯度下降 (gradient descent)）试图最小化这个*总损失*。这意味着它必须找到一个平衡点：它需要合理地拟合训练数据（以保持原始损失较低），同时还要保持权重较小（以保持正则化惩罚项较低）。通过添加此惩罚项，我们明确地阻止优化器选择具有过大权重的解决方案，即使这些解决方案可以完美拟合训练数据。
+
+其效果是使学习过程偏向于以较小权重值为特征的更简单模型。这就像奥卡姆剃刀原则的一种形式：在同样能很好地解释数据的相互竞争的假设（模型）中，更简单的那个更受欢迎。
+
+有不同的方法来定义惩罚项中权重的“大小”。两种最常见的方法是 L2 正则化（惩罚权重平方和）和 L1 正则化（惩罚权重绝对值和）。这些方法具有独特的数学特性和实际效果，我们将在后续章节中介绍。然而，理解这个核心想法很重要：我们通过惩罚大权重来降低模型复杂度并提高泛化能力。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教材，涵盖深度学习的理论和实践，包括对过拟合、泛化和各种正则化技术的全面讨论。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  统计学习的经典参考文献，为岭回归和Lasso回归等概念提供了详细的基础，它们是L2和L1权重正则化的基础。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Lecture Notes on Regularization](https://cs231n.github.io/neural-networks-2/#reg) — Stanford University (2023)
+  斯坦福大学一门备受推崇的课程讲义，在神经网络背景下提供了对正则化技术（包括L1/L2）易于理解的解释。

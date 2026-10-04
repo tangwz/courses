@@ -1,0 +1,107 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "foundational-optimizers"
+lesson: "sgd-momentum"
+sourceId: 4981
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-5-foundational-optimizers/sgd-momentum"
+title: "带动量的随机梯度下降：加速收敛"
+description: "介绍动量法作为加速SGD收敛和抑制震荡的方法。"
+order: 6
+plots: ["plots/4981-0.json"]
+sourceHash: "50e44803eb45ef7658acdd995570ff3bcbb7c9858b1dd05a3ddc4d39f90c5f2a"
+sourceCorrections: []
+---
+
+尽管随机梯度下降 (gradient descent)（SGD）在计算上优于批量梯度下降，但它的更新可能噪声大，且收敛速度慢，尤其是在狭长山谷或沟壑中。设想损失曲面如起伏地形。普通SGD仅根据当前点的梯度迈步，这可能导致当坡度在不同方向迅速变化时，产生不规则的之字形移动。这在狭窄的沟壑中尤其容易出现问题，因为梯度陡峭地指向山谷两岸，但沿着谷底方向却很平缓。SGD可能在狭窄轴上反复来回摆动，沿着谷底向最小值移动得非常缓慢。
+
+为了解决这个问题，我们可以引入动量思想，借鉴物理学原理。想象一个球滚下山坡。它不仅仅是根据当前位置的坡度移动；它还拥有从之前运动中积累的动量。这种动量帮助它平滑路径，越过小障碍，并在持续的斜坡上更快地加速。
+
+带动量的SGD将类似思想应用于参数 (parameter)更新。不只使用当前梯度来更新参数，我们维护一个“速度”向量 (vector)，它本质上是过去梯度的指数衰减移动平均值。这个速度项代表了参数更新所累积的“动量”。
+
+### 动量的工作方式
+
+在每一步 $t$，我们更新速度 $v_t$，然后使用这个速度更新参数 (parameter) $\theta_t$。过程如下所示：
+
+1. **计算当前小批量梯度：** $\nabla J(\theta_{t-1})$
+2. **更新速度：** 新的速度 $v_t$ 是先前速度 $v_{t-1}$（按因子 $\beta$ 衰减）和当前梯度（按学习率 $\eta$ 缩放）的组合。
+   
+   $$
+   v_t = \beta v_{t-1} + \eta \nabla J(\theta_{t-1})
+   $$
+   
+3. **更新参数：** 参数通过沿着当前速度的方向移动来更新。
+   
+   $$
+   \theta_t = \theta_{t-1} - v_t
+   $$
+   
+
+此处：
+
+- $\theta$ 表示模型参数。
+- $v$ 是速度向量 (vector)，通常初始化为零。
+- $\beta$ 是动量系数，一个通常介于0到1之间的超参数 (hyperparameter)（常设为0.9）。它控制着过去梯度对当前更新的影响程度。更高的 $\beta$ 值表示过去梯度贡献更多。
+- $\eta$ 是学习率。
+- $\nabla J(\theta_{t-1})$ 是损失函数 (loss function) $J$ 对参数 $\theta$ 的梯度，使用上一步 $t-1$ 的参数计算得出。
+
+### 动量的优点
+
+引入动量带来了几点好处：
+
+- **加速收敛：** 在梯度始终指向同一方向的区域（例如沿着沟壑底部），速度项会累积，从而导致更大的步长和更快地接近最小值。
+- **抑制震荡：** 当梯度来回震荡时（例如穿过狭窄的沟壑），动量项会平均这些相反的梯度。正负分量会倾向于抵消，减少之字形行为，并使更新保持在整体下坡方向上。
+- **优化行进：** 累积的速度可以帮助优化器越过小的局部最小值或像鞍点这样的平坦区域，在这些区域，普通SGD可能因为接近零的梯度而停滞。
+
+思考在典型损失沟壑中，SGD与带动量的SGD所采取路径的区别：
+
+
+
+![优化器在等高线图上的路径](plots/4981-0.json)
+
+
+
+> SGD（红色）和带动量的SGD（蓝色）在损失曲面上的优化路径比较。动量法采用更直接的路径趋向最小值，避免了标准SGD中出现的震荡。
+
+### 动量超参数 (parameter) (hyperparameter) ($\beta$)
+
+动量系数 $\beta$ 决定了优化器的“记忆力”。
+
+- 如果 $\beta = 0$，更新规则就退化为标准SGD（速度仅取决于当前梯度）。
+- 随着 $\beta$ 接近1，过去梯度被赋予更大的权重 (weight)，导致更新更平滑，并可能加速更快，但如果学习率过高，也会增加越过最小值的风险。
+
+$\beta$ 的常见起始值是0.9或有时是0.99。与学习率 $\eta$ 类似，$\beta$ 的最优值取决于具体问题，通常需要通过实验来调整。重要的是要记住 $\beta$ 和 $\eta$ 之间存在互相影响，因此调整其中一个可能需要调整另一个。
+
+### 实现
+
+大多数深度学习 (deep learning)框架都提供了带动量的SGD的简单实现。例如，在PyTorch中，你可以在创建SGD优化器实例时，通过简单地指定 `momentum` 参数 (parameter)来启用动量：
+
+```python
+import torch.optim as optim
+
+# 假设 'model_parameters' 包含你的网络参数
+# 设置学习率和动量系数
+learning_rate = 0.01
+momentum_beta = 0.9
+
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum_beta)
+
+# --- 在你的训练循环中 ---
+# optimizer.zero_grad()
+# # 前向传播，计算损失
+# loss = criterion(outputs, labels)
+# # 反向传播
+# loss.backward()
+# # 更新权重
+# optimizer.step()
+```
+
+通过根据过去梯度积累速度，带动量的SGD相对于普通SGD提供了明显的改进，通常能带来更快的收敛和更稳定的训练，尤其适用于深度学习中遇到的复杂非凸损失曲面。它为许多后续更高级的优化算法提供了依据。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 283-370
+  为深度学习中的优化算法（包括带动量的SGD）提供了全面的理论基础和详细解释。
+- [SGD - torch.optim](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html) — PyTorch Developers (2024)
+  Journal: PyTorch Documentation
+  PyTorch中随机梯度下降优化器的官方文档，详细说明了其参数（包括动量系数）和实际使用方法。

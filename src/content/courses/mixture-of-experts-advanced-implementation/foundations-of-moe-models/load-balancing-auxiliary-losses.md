@@ -1,0 +1,78 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "foundations-of-moe-models"
+lesson: "load-balancing-auxiliary-losses"
+sourceId: 7048
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/load-balancing-auxiliary-losses"
+title: "负载均衡和辅助损失"
+description: "了解在训练期间用于促使所有专家之间负载均衡分布的辅助损失函数。"
+order: 5
+plots: ["plots/7048-0.json"]
+sourceHash: "4ad64438872d1c3ed8b33451757ef99317b5af75fee37ff72a94b8830374058f"
+sourceCorrections: []
+---
+
+专家混合模型 (MoE) 采用门控网络进行动态路由。这种设计，尽管是其运作的核心，但也带来一个训练中的一大难题：严重的负载不均衡问题。如果模型没有得到适当激励，门控网络可能会学着将过多的令牌路由到少数受青睐的专家。这种行为损害了 MoE 的核心思想，因为它导致模型大部分能力未被充分使用，并造成训练不稳定。
+
+为解决这个问题，MoE 模型引入了一个*辅助损失函数 (loss function)*，专门用于促使令牌在所有可用专家之间均衡分布。这个损失会在训练期间被添加到主要任务损失（例如，语言模型的交叉熵）中，以指导路由器做出更公平的决策。
+
+### 偏好对待的问题
+
+设想一下，在训练初期，一个门控网络发现一两个专家在处理某些常见令牌方面略胜一筹。通过反向传播 (backpropagation)，路由器的权重 (weight)会更新，从而更加偏向这些专家。这会形成一个反馈循环：受青睐的专家获得更多训练数据，变得更加专业和高效，因此被选择的频率也更高。
+
+这种现象，通常被称为**专家坍塌**，会带来两个主要负面影响：
+
+1. **训练不足的专家：** 被忽视的专家很少或根本没有收到令牌。它们的权重很少更新，也从未学到任何有用的专业技能。它们变成了“死”参数 (parameter)，对模型的性能没有任何贡献。
+2. **能力使用效率低下：** 模型可能拥有大量参数，但如果其中只有一小部分参数是活跃的，那么实际模型能力会小得多。你为此支付了大型模型的内存成本，却没有获得计算和性能上的益处。
+
+下图说明了少数专家占主导的不均衡状态与期望的均衡状态之间的区别。
+
+
+
+![专家负载分布](plots/7048-0.json)
+
+
+
+> 不均衡负载会将计算集中在少数专家上，导致坍塌。辅助损失促使路由器实现均衡负载，确保所有专家都得到使用。
+
+### 负载均衡损失的公式
+
+目标是建立一个损失项，以惩罚路由器不均衡的行为。最常见的方法，最初在稀疏门控 MoE 论文中提出，是根据批次中令牌和路由器概率的分布计算一个值。
+
+对于一批令牌，我们来定义两个量，假定专家总数为 $N$：
+
+1. **每个专家的令牌占比 ($f_i$)：** 这衡量了批次中有多少令牌被发送到专家 $i$。如果你的批次中有 $B$ 个令牌并使用 top-1 门控，这简单来说就是路由到专家 $i$ 的令牌数量，除以 $B$。
+2. **每个专家的平均路由器概率 ($P_i$)：** 这是路由器在批次中为所有令牌分配给专家 $i$ 的平均概率（或门控得分）。它代表了路由器赋予一个专家的“重要性”，无论该专家最终是否被选中。
+
+辅助损失 $L_{aux}$ 随后被计算为这两个向量 (vector)的点积，并乘以专家数量 $N$：
+
+
+$$
+L_{aux} = N \cdot \sum_{i=1}^{N} f_i \cdot P_i
+$$
+
+
+为最小化这个损失，模型必须阻止任何单个专家 $i$ 同时具有高令牌占比 $f_i$ 和高平均概率 $P_i$。当乘积 $f_i \cdot P_i$ 较小且均匀分布时，损失最低，这发生在负载在所有专家之间均衡时。
+
+### 最终损失函数 (loss function)
+
+这个辅助损失随后与主要任务损失（例如 $L_{task}$）结合，形成用于反向传播 (backpropagation)的最终损失函数：
+
+
+$$
+L_{total} = L_{task} + \alpha \cdot L_{aux}
+$$
+
+
+超参数 (parameter) (hyperparameter) $\alpha$ (alpha)，通常被称为 `load_balance_loss_coef`，是一个小的标量值，用于控制均衡激励的强度。
+
+- 如果 $\alpha$ 过小，均衡力将过于微弱，无法阻止专家坍塌。
+- 如果 $\alpha$ 过大，模型可能会优先追求完美的负载均衡，从而牺牲其在主要任务上的表现，导致整体准确性差。
+
+寻找适合 $\alpha$ 的值是 MoE 模型超参数调整过程中的一个标准环节。一个常见的起始值在 `0.01` 左右。这种简单而有效的方法几乎是所有 MoE 训练流程中的一个标准组成部分，它作为必要的调节器，使这些大型稀疏模型能够得到有效训练。
+
+## 参考资料
+
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://www.jmlr.org/papers/v23/21-0998.html) — William Fedus, Barret Zoph, Noam Shazeer (2022)
+  Journal: Journal of Machine Learning Research (JMLR); Volume: 23; Pages: 1-39; DOI: [10.5555/3545946.3546001](https://doi.org/10.5555/3545946.3546001)
+  这项有影响力的工作描述了Switch Transformer架构，展示了辅助负载平衡损失在大型MoE模型中的实际应用和持续重要性。

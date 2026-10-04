@@ -1,0 +1,74 @@
+---
+course: "intro-diffusion-models"
+chapter: "reverse-diffusion-process"
+lesson: "predicting-noise-component"
+sourceId: 5398
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-3-reverse-diffusion-process/predicting-noise-component"
+title: "预测噪声分量"
+description: "将网络的任务表述为预测在时间步 t 添加的噪声。"
+order: 4
+plots: []
+sourceHash: "eebc4af552992baa7580fdbd8ebefe6394803c131578383687c13b63be1e9e51"
+sourceCorrections: []
+---
+
+如我们所确认，直接计算真实的逆向概率 $p(x_{t-1}|x_t)$ 通常是不可解的。我们的做法是使用参数 (parameter)化分布来近似这种逆向转移，通常是高斯分布，通过神经网络 (neural network)学习得到：$p_\theta(x_{t-1}|x_t)$。网络需要估计这种高斯分布的参数，具体而言是其均值 $\mu_\theta(x_t, t)$ 和方差 $\Sigma_\theta(x_t, t)$。
+
+虽然网络*可以*被训练来直接预测均值 $\mu_\theta(x_t, t)$ 或者去噪后的样本 $x_{t-1}$，但另一种方法在实践中已被证明非常有效：**预测噪声分量** $\epsilon$，即在正向过程中于时间步 $t$ 添加的噪声。
+
+我们来看看这为何有用。回顾一下正向过程中从 $x_0$ 直接采样得到 $x_t$ 的闭式表达式：
+
+
+$$
+x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon
+$$
+
+
+这里，$\epsilon$ 是一个标准高斯噪声样本，$\bar{\alpha}_t$ 则来源于噪声调度。此方程关联了原始数据 $x_0$、带噪声版本 $x_t$ 以及为达到该状态而添加的噪声 $\epsilon$。
+
+如果我们的神经网络（我们称之为 $\epsilon_\theta$）能够根据带噪声的输入 $x_t$ 和时间步 $t$ 准确预测噪声 $\epsilon$，我们就可以利用这个预测值 $\epsilon_\theta(x_t, t)$ 来辅助我们对前一状态 $x_{t-1}$ 的估计。
+
+预测噪声如何帮助估计逆向步骤 $p_\theta(x_{t-1}|x_t)$ 的均值 $\mu_\theta(x_t, t)$ 呢？最初的去噪扩散概率模型（DDPM）论文指出，逆向转移 $p(x_{t-1}|x_t, x_0)$ 的均值可以表示为：
+
+
+$$
+\tilde{\mu}_t(x_t, x_0) = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon \right)
+$$
+
+
+其中 $\alpha_t = \bar{\alpha}_t / \bar{\alpha}_{t-1}$。请注意，此表达式依赖于原始数据 $x_0$（通过 $\epsilon$），而我们在生成过程中是无法获得的。
+
+然而，如果我们知道 $x_t$ 和 $\epsilon$，我们可以重新排列第一个方程，得到 $x_0$ 的一个估计值：
+
+
+$$
+x_0 \approx \hat{x}_0 = \frac{1}{\sqrt{\bar{\alpha}_t}}(x_t - \sqrt{1 - \bar{\alpha}_t} \epsilon_\theta(x_t, t))
+$$
+
+
+通过将网络的噪声预测值 $\epsilon_\theta(x_t, t)$ 替换 $\epsilon$ 代入 $\tilde{\mu}_t$ 的方程中，我们得到了近似逆向转移 $p_\theta(x_{t-1}|x_t)$ 的均值表达式：
+
+
+$$
+\mu_\theta(x_t, t) = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon_\theta(x_t, t) \right)
+$$
+
+
+这建立了一个直接的联系：如果我们的网络 $\epsilon_\theta(x_t, t)$ 成功预测了在步骤 $t$ 添加的噪声，我们就可以计算去噪步骤 $x_t \rightarrow x_{t-1}$ 所需的均值。方差 $\Sigma_\theta(x_t, t)$ 通常被固定为与正向过程方差相关的值，或者有时也会被学习，但预测噪声主要用于确定均值。
+
+### 为什么要预测噪声？
+
+通过预测噪声来参数 (parameter)化逆向过程有几个益处：
+
+1. **更简单的学习目标：** 噪声 $\epsilon$ 通常是从一个简单分布（例如标准高斯分布）中提取的。与直接预测数据 $x_0$ 或 $x_{t-1}$ 的复杂结构相比，预测这种噪声对神经网络 (neural network)来说可能是一个更容易的任务，尤其是在高噪声水平（$t$ 值较大）时。
+2. **与损失函数 (loss function)的一致性：** 正如我们将在下一章中看到的，扩散模型的训练目标通常简化为正向过程中添加的真实噪声 $\epsilon$ 与网络预测噪声 $\epsilon_\theta(x_t, t)$ 之间的均方误差损失。训练网络直接输出 $\epsilon_\theta$ 使网络输出与此常用损失函数完全一致，可能带来更稳定的训练。
+3. **实践中的成效：** 这种噪声预测的设定在许多高性能扩散模型的成功中起到了核心作用，特别是在图像生成方面。
+
+因此，标准做法是训练一个神经网络 $\epsilon_\theta$，它接收带噪声的数据 $x_t$ 和时间步 $t$ 作为输入，并输出用于从 $x_0$ 生成 $x_t$ 的噪声 $\epsilon$ 的预测值。这个预测的噪声 $\epsilon_\theta(x_t, t)$ 随后使我们能够计算近似逆向分布 $p_\theta(x_{t-1}|x_t)$ 的参数（特别是均值），从而实现逐步生成过程。
+
+> 神经网络 $\epsilon_\theta$ 接收当前的带噪声样本 $x_t$ 和时间步 $t$ 作为输入。它的目标是预测最有可能添加到原始数据中以产生 $x_t$ 的噪声 $\epsilon_\theta$。这个预测是用于指导逆向去噪步骤的核心组成部分。
+
+## 参考资料
+
+- [What are Diffusion Models?](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/) — Lilian Weng (2021)
+  这篇来自知名研究员的全面博客文章对扩散模型提供了清晰且深入的教程，详细介绍了正向和逆向过程，并明确解释了DDPM框架中噪声预测的作用和优点。

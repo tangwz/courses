@@ -1,0 +1,172 @@
+---
+course: "building-ml-recommendation-system"
+chapter: "constructing-a-hybrid-recommendation-system"
+lesson: "practice-weighted-hybrid-recommender"
+sourceId: 7491
+sourceUrl: "https://apxml.com/zh/courses/building-ml-recommendation-system/chapter-6-constructing-a-hybrid-recommendation-system/practice-weighted-hybrid-recommender"
+title: "动手实践：加权混合电影推荐系统"
+description: "一个加权混合推荐系统的完整实现，结合了基于内容过滤和协同过滤的预测结果。"
+order: 7
+plots: []
+sourceHash: "91469a1ee509304340ef78f3ed298c20bbacc2b39d43bda94a03d87ee7eeda88"
+sourceCorrections: []
+---
+
+加权混合推荐系统将基于内容的过滤和协同过滤模型的输出结合在一起。通过整合这些不同的推荐信号，可以创建一个更加平衡且有效的系统。本节练习将演示如何构建这样一个加权混合推荐系统。
+
+我们的目标是通过计算两个不同模型评分的加权和，为每部电影生成一个最终的推荐分数。我们将实现的公式如下：
+
+
+$$
+\text{评分}_{混合} = \alpha \cdot \text{评分}_{内容} + (1-\alpha) \cdot \text{评分}_{协同}
+$$
+
+
+在这里，$\alpha$ 是一个可以调节的参数 (parameter)，让我们能够控制每个推荐器的影响力。较高的 $\alpha$ 值会赋予基于内容的建议更多权重 (weight)，而较低的 $\alpha$ 值则倾向于协同过滤的结果。
+
+### 环境搭建
+
+首先，我们加载所需的库并准备数据。在本次练习中，我们假设你已经为特定用户生成并保存了两组预测结果：一组来自基于内容的模型（例如对电影剧情使用 TF-IDF），另一组来自基于模型的协同过滤（如 SVD）。
+
+假设这些预测存储在 pandas DataFrame 中。每个 DataFrame 至少应包含两列：`movieId`（电影 ID）和 `score`（评分）。
+
+```python
+import pandas as pd
+import numpy as np
+
+# 加载之前模型预计算的评分
+# 在实际应用中，这些评分通常是实时生成或从数据库中提取的。
+
+# 来自基于内容模型（例如余弦相似度）的示例评分
+content_data = {'movieId': [101, 102, 103, 104, 105],
+                'title': ['Action Movie A', 'Sci-Fi Epic', 'Action Movie B', 'Thriller X', 'Drama Y'],
+                'score': [0.95, 0.88, 0.76, 0.65, 0.21]}
+content_df = pd.DataFrame(content_data)
+
+# 来自协同过滤模型（例如 SVD 预测评分）的示例评分
+collab_data = {'movieId': [101, 103, 106, 107, 102],
+               'title': ['Action Movie A', 'Action Movie B', 'Comedy Z', 'Romance Q', 'Sci-Fi Epic'],
+               'score': [4.8, 4.5, 4.2, 3.9, 3.5]}
+collab_df = pd.DataFrame(collab_data)
+
+print("基于内容的推荐：")
+print(content_df)
+print("\n协同过滤推荐：")
+print(collab_df)
+```
+
+注意，这些评分的尺度不同。基于内容的评分是 0 到 1 之间的相似度值，而协同过滤的评分是预测的星级，范围可能是 1 到 5。直接将它们相加会给协同过滤赋予不公平的权重 (weight)。因此，我们的首要任务是将其归一化 (normalization)。
+
+### 第 1 步：归一化 (normalization)推荐评分
+
+为了公平地组合不同模型的评分，必须将它们放在同一尺度上。一种常用的技术是离差标准化（min-max normalization），它将数值缩放到特定范围，通常是 [0, 1]。
+
+离差标准化的公式为：
+
+
+$$
+\text{评分}_{归一化} = \frac{x - min(x)}{max(x) - min(x)}
+$$
+
+
+我们将对两个 DataFrame 的评分列应用此公式。
+
+```python
+# 对基于内容的评分进行离差标准化
+content_min = content_df['score'].min()
+content_max = content_df['score'].max()
+content_df['norm_score'] = (content_df['score'] - content_min) / (content_max - content_min)
+
+# 对协同过滤的评分进行离差标准化
+collab_min = collab_df['score'].min()
+collab_max = collab_df['score'].max()
+collab_df['norm_score'] = (collab_df['score'] - collab_min) / (collab_max - collab_min)
+
+print("归一化后的基于内容评分：")
+print(content_df[['movieId', 'title', 'norm_score']])
+print("\n归一化后的协同过滤评分：")
+print(collab_df[['movieId', 'title', 'norm_score']])
+```
+
+现在两组评分都已缩放到 0 和 1 之间，我们可以继续进行合并。
+
+### 第 2 步：通过加权和组合评分
+
+接下来，我们将两组推荐结果合并为一个 DataFrame。我们需要处理仅出现在其中一个列表中的项目。外连接（outer join）非常适合这种情况，因为它保留了两个列表中的所有电影。我们将缺失的评分填充为 0，假设如果模型没有推荐某个项目，那么该模型对该项目的评分实际上就是零。
+
+```python
+# 根据 movieId 和 title 合并两个 dataframe
+hybrid_df = pd.merge(content_df[['movieId', 'title', 'norm_score']],
+                     collab_df[['movieId', 'title', 'norm_score']],
+                     on=['movieId', 'title'],
+                     how='outer')
+
+# 重命名评分列以使其更清晰
+hybrid_df.rename(columns={'norm_score_x': 'content_score', 'norm_score_y': 'collab_score'}, inplace=True)
+
+# 用 0 填充缺失值
+hybrid_df.fillna(0, inplace=True)
+
+print("合并并清洗后的 DataFrame：")
+print(hybrid_df)
+```
+
+现在可以应用加权混合公式了。我们先选择 `alpha` 为 0.5，给予两个模型相同的权重 (weight)。
+
+```python
+# 定义权重 alpha
+alpha = 0.5
+
+# 计算混合评分
+hybrid_df['hybrid_score'] = (alpha * hybrid_df['content_score']) + ((1 - alpha) * hybrid_df['collab_score'])
+
+# 根据新的混合评分对推荐结果进行排序
+hybrid_df_sorted = hybrid_df.sort_values(by='hybrid_score', ascending=False)
+
+print("\n混合推荐结果 (alpha = 0.5)：")
+print(hybrid_df_sorted)
+```
+
+下图说明了混合过程的流程。来自两个独立模型的评分经过归一化 (normalization)，然后使用加权公式组合，生成最终统一的推荐列表。
+
+> 创建加权混合推荐系统的过程。
+
+### 第 3 步：分析混合结果
+
+让我们来看看排序列表中前 5 名的推荐：
+
+1. **Action Movie A (movieId 101)**：这部电影在两个原始模型中评分都是最高，因此自然排在混合列表的首位。
+2. **Action Movie B (movieId 103)**：这部电影在内容模型中排名较低，但在协同模型中排名很高。混合方法赋予了它很大的提升，使其位居第二。
+3. **Sci-Fi Epic (movieId 102)**：这部电影在内容模型中表现强劲，但在协同模型中较弱。它的最终排名是两者的平衡结果。
+4. **Comedy Z (movieId 106)**：这是一个有趣的案例。内容模型给它的分数为 0（未进入排名前列），但协同过滤给它的评价很高。混合模型将该项目呈现出来，增加了纯基于内容系统可能会错过的多样性。
+5. **Thriller X (movieId 104)**：由内容过滤推荐，但未被协同过滤推荐。它依然出现在列表中，但其位置由于另一个模型的零分而受到了抑制。
+
+这个混合列表是一个很有吸引力的组合。它保留了两个模型都认可的稳妥推荐，同时也引入了一个模型发现而另一个模型错过的项目。通过引入协同信号，这有助于缓解基于内容系统的过度专业化（“信息茧房”）问题。
+
+### 调节 Alpha 参数 (parameter)
+
+选择 `alpha=0.5` 是随机的。在生产系统中，这个值应该仔细调节。如何找到最佳的 `alpha`？你可以将其视为超参数 (hyperparameter)，并使用验证集进行优化。
+
+具体流程如下：
+
+1. 保留一部分用户与物品的交互数据作为验证集。
+2. 遍历一系列 `alpha` 值（例如从 0.0 到 1.0，步长为 0.1）。
+3. 针对每个 `alpha` 值，为验证集中的用户生成混合推荐。
+4. 使用 NDCG 或 MAP 等离线指标衡量性能（如第 5 章所述）。
+5. 选择在验证指标上表现最好的 `alpha` 值。
+
+这种基于数据的方法可以确保内容信号与协同信号之间的平衡针对你的具体数据集和用户群进行了优化。
+
+通过完成这个实践练习，你已经成功构建了一个混合推荐系统。你学会了如何归一化 (normalization)来自不同模型的评分，使用加权公式组合它们，并分析生成的推荐结果。这种技术是构建更具韧性且准确的推荐器的强大方法，能够克服单一算法的局限性。
+
+## 参考资料
+
+- [Hybrid Recommender Systems: Survey and Experiments](https://doi.org/10.1023/A:1021240730564) — Robin Burke (2002)
+  Journal: User Modeling and User-Adapted Interaction; Publisher: Kluwer Academic Publishers; Volume: 12; Pages: 331-370; DOI: [10.1023/A:1021240730564](https://doi.org/10.1023/A%3A1021240730564)
+  一篇关于混合推荐系统的基础性综述论文，详细介绍了包括加权方法在内的各种混合策略及其优势。
+- [Recommender Systems Handbook](https://doi.org/10.1007/978-1-0716-2486-4) — Francesco Ricci, Lior Rokach, Bracha Shapira (2022)
+  Publisher: Springer; DOI: [10.1007/978-1-0716-2486-4](https://doi.org/10.1007/978-1-0716-2486-4)
+  一本全面的教材，涵盖了基于内容的推荐、协同过滤、各种混合模型、分数归一化和评估指标。
+- [Toward the next generation of recommender systems: a survey of the state-of-the-art and possible extensions](https://doi.org/10.1109/TKDE.2005.99) — Gediminas Adomavicius, Alexander Tuzhilin (2005)
+  Journal: IEEE Transactions on Knowledge and Data Engineering; Publisher: IEEE; Volume: 17; Pages: 734-749; DOI: [10.1109/TKDE.2005.99](https://doi.org/10.1109/TKDE.2005.99)
+  一篇被广泛引用的综述论文，探讨了推荐系统的挑战和未来方向，其中包括对混合方法的讨论，以应对单一方法的局限性。

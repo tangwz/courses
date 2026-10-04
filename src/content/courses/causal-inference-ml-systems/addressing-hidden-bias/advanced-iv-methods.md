@@ -1,0 +1,134 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "addressing-hidden-bias"
+lesson: "advanced-iv-methods"
+sourceId: 4370
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-4-addressing-hidden-bias/advanced-iv-methods"
+title: "进阶工具变量（IV）方法"
+description: "超越基础工具变量：处理弱工具变量、多工具变量，并实现现代工具变量估计量。"
+order: 1
+plots: []
+sourceHash: "67d80e5abfa9f8b4197544dbea9aebd31abc5a9676c118800db7ef2f2a182647"
+sourceCorrections: []
+---
+
+工具变量（IV）提供了一种在存在未观测混杂时估计因果效应的有效方法，这在机器学习 (machine learning)系统中是一种常见情形。其核心在于找到一个变量 $Z$，即工具变量，它需满足以下三个条件：
+
+1. **相关性：** 工具变量 $Z$ 必须与干预 $T$ 相关联。形式上，$Cov(Z, T) \neq 0$。若无此条件，$Z$ 无法提供关于 $T$ 的任何信息。
+2. **排他性约束：** 工具变量 $Z$ *仅*通过其对干预 $T$ 的影响来影响结果 $Y$。不应存在从 $Z$ 到 $Y$ 的直接路径，同时 $Z$ 也不应通过未观测混杂因子 $U$ 来影响 $Y$。
+3. **独立性（或可忽略性）：** 工具变量 $Z$ 必须独立于未观测混杂因子 $U$。即 $Z \perp U$。除了可能通过 $T$ 之外，$Z$ 不应与 $Y$ 共享任何共同原因。
+
+下图展示了这种结构。$U$ 表示影响 $T$ 和 $Y$ 的未观测混杂因子。$Z$ 提供了一个独立于 $U$ 的 $T$ 的变异源，使我们能够分离出 $T$ 对 $Y$ 的因果效应。
+
+> 工具变量的结构。工具变量 $Z$ 影响干预 $T$，而干预 $T$ 又影响结果 $Y$。未观测混杂因子 $U$ 同时影响 $T$ 和 $Y$。重要地，$Z$ 独立于 $U$，并且仅通过 $T$ 影响 $Y$。
+
+尽管基本的工具变量想法（通常使用两阶段最小二乘法（2SLS）实现）是基础的，但实际应用中经常遇到需要更进阶技术的复杂情况。我们将讨论常见问题和现代方法。
+
+### 处理弱工具变量
+
+当工具变量 $Z$ 仅与干预 $T$ 弱相关时，就会出现一个重要问题。这违反了相关性假设，尽管技术上 $Cov(Z, T)$ 可能非零但非常小。
+
+**弱工具变量会带来什么影响？**
+
+- **估计偏差：** 标准工具变量估计量（如 2SLS）在有限样本中变得有偏，甚至可能比有偏的 OLS 估计表现更差。随着工具变量强度的减弱，偏差会趋近于 OLS 的偏差。
+- **估计不精确：** 工具变量估计量的方差显著增加，导致置信区间宽泛，结论不可靠。
+- **推断不正确：** 2SLS 计算的标准误差不一致，导致假设检验和置信区间不可靠。估计量的分布可能远离正态分布，即使在中等规模的样本中也是如此。
+
+**诊断弱工具变量：**
+
+在 2SLS 的背景下，工具变量的强度通常通过第一阶段回归（将 $T$ 对 $Z$ 和任何观测协变量 $X$ 进行回归）的 F 统计量来评估。一个常见的经验法则表明，F 统计量低于 10 表示可能是弱工具变量，需要谨慎或采用其他方法。然而，该阈值依赖于具体情况，应仔细解读，尤其是在有多个工具变量时。
+
+**对抗弱工具变量的有效方法：**
+
+当怀疑存在弱工具变量时，应避免使用标准 2SLS 或对其进行补充。考虑以下替代方案，它们通常在专门的计量经济学软件包中找到：
+
+- **有限信息最大似然法（LIML）：** 在弱工具变量情况下，通常表现出比 2SLS 更好的有限样本特性，尽管它可能对模型设定错误更敏感。
+- **条件似然比（CLR）检验/置信区间：** 在存在弱工具变量的情况下，相比于基于 2SLS 的标准 Wald 检验，它提供更可靠的推断（假设检验和置信区间）。
+- **Anderson-Rubin（AR）检验：** 一种用于检验干预效应显著性的方法，在弱工具变量情况下也可靠。
+
+尽管详细研究这些计量经济学估计量超出了本课程的范围，但请注意它们的存在及其重要性，尤其是在诊断性检验表明工具变量存在弱点时。
+
+### 处理多工具变量
+
+有时，你可能获得大量潜在工具变量，这可能源自交互项或高维特征。尽管使用更多工具变量看起来有助于增强第一阶段的强度，但相对于样本量使用“过多”工具变量会带来问题：
+
+- **第一阶段的过拟合 (overfitting)：** 类似于标准预测任务中的过拟合，使用许多工具变量可能导致第一阶段模型（从 $Z$ 预测 $T$）过度拟合样本数据中的噪声。
+- **有限样本偏差：** 2SLS 估计量的偏差随着所用工具变量数量的增加而增加。使用许多工具变量可能导致显著偏差，即使工具变量单独来看相当强。
+- **无效性放大：** 如果许多工具变量中的一些轻微违反排他性或独立性假设（使其“无效”），那么与使用更小集合的有效工具变量相比，使用所有这些工具变量可能会放大偏差。
+
+**处理多工具变量的策略：**
+
+- **正则化 (regularization)：** Lasso（L1 正则化）或 Ridge（L2 正则化）等技术可以应用于 2SLS 的第一阶段回归。这有助于选择最相关的工具变量或缩小不那么相关变量的系数，从而减轻过拟合并减少有限样本偏差。在工具变量数量 $k$ 相对于样本量 $n$ 较大时，此方法特别有用。
+- **工具变量选择：** 基于理论依据或预先检验（尽管预先检验本身存在推断挑战）仔细选择一部分工具变量，可能比盲目包含所有可用备选项更有效。
+- **降维：** 主成分分析（PCA）等技术可以应用于工具变量集合，以生成更少数量的成分用于第一阶段。然而，解读所生成的成分并确保它们仍然满足工具变量假设可能会很困难。
+
+### 处理复杂关系的现代工具变量估计量
+
+"传统的工具变量方法（如 2SLS）通常假设线性关系。然而，数据中工具变量、干预、协变量和结果之间的联系通常是非线性和异质的。现代机器学习 (machine learning)技术已融入工具变量框架来解决这个问题。"
+
+#### 深度工具变量（Deep IV）
+
+深度工具变量（Deep IV）使用神经网络 (neural network)灵活地对工具变量框架内的关系进行建模，特别适用于高维协变量和复杂的非线性关系。它采用了两阶段方法：
+
+1. **第一阶段（干预模型）：** 训练一个神经网络来建模给定工具变量 $Z$ 和观测协变量 $X$ 的干预 $T$ 的条件分布，即 $P(T | Z, X)$。这通常涉及对分布参数 (parameter)的建模（例如，如果假设是高斯分布，则建模均值和方差）。
+2. **第二阶段（结果模型）：** 训练第二个神经网络，使用观测协变量 $X$ 和从第一阶段预测的干预分布中抽取的*样本*来预测结果 $Y$。该阶段本质上是通过整合工具变量引起的 $T$ 中的变异来估计 $E[Y | T, X]$。
+
+**优点：**
+
+- 捕捉 $Z, X, T,$ 和 $Y$ 之间复杂的非线性关系。
+- 可以处理高维的 $X$ 和潜在的 $Z$。
+- 允许估计异质干预效应（即 $T$ 的效应如何随 $X$ 变化）。
+
+**注意事项：**
+
+- 需要大量数据集以有效训练深度神经网络。
+- 优化可能具有挑战性（例如，架构选择、超参数 (hyperparameter)、局部最小值问题）。
+- 与线性工具变量方法相比，所得模型的解释性可能较差。
+
+#### 核工具变量（KIV）
+
+核工具变量（KIV）提供了另一种处理非线性的非参数方法，运用机器学习中核方法的优势。它旨在在再生核希尔伯特空间（RKHS）中估计因果效应函数。
+
+**核心观点：**
+
+KIV 将工具变量估计问题视为通过核均值嵌入 (embedding)来解决条件矩约束系统。它本质上是在 RKHS 中找到一个函数 $g(t, x) \approx E[Y | T=t, X=x]$，该函数满足工具变量矩条件，通常涉及 Tikhonov 正则化 (regularization)以确保稳定的解决方案。
+
+**优点：**
+
+- 提供了一种非参数方法来估计潜在复杂的因果效应函数。
+- 在数据生成过程和所选核的特定假设下提供理论保证。
+- 将工具变量估计与机器学习中已有的核方法联系起来。
+
+**注意事项：**
+
+- 计算成本可能很高，根据所选的核方法，其随样本量的扩展性可能不佳（例如，可能涉及对大型 Gram 矩阵的操作）。
+- 需要仔细选择核和正则化参数。
+- 与深度工具变量类似，模型解释性可能不那么直接，不如线性工具变量方法。
+
+### 实现说明
+
+实现这些进阶方法通常需要专门的库或构建自定义解决方案。
+
+- **EconML**（ALICE 项目的一部分）等库提供了几种现代因果推断估计量的实现，包括深度工具变量的变体以及可以结合工具变量原理的双重机器学习 (machine learning)相关方法。
+- 对于深度工具变量，可以使用 **TensorFlow** 或 **PyTorch** 等标准深度学习 (deep learning)框架来构建两阶段神经网络 (neural network)模型。
+- 核工具变量的实现可能利用了例如 **Scikit-learn** 等库的核计算功能，尽管在标准机器学习软件包中，专用实现较不常见。
+
+进阶工具变量方法在面对未观测混杂时提供了不可或缺的工具，特别是在现代机器学习问题中常见的复杂、高维环境中。然而，它们的应用需要仔细考虑基本假设、严谨的诊断（例如检验弱工具变量），以及对模型复杂性、计算成本和解释性之间权衡的认识。在你的特定应用场景中，始终尽可能优先验证核心工具变量假设（相关性、排他性、独立性）。
+
+## 参考资料
+
+- [Mostly Harmless Econometrics: An Empiricist's Companion](https://doi.org/10.1515/9781400829828) — Joshua D. Angrist and Jörn-Steffen Pischke (2009)
+  Publisher: Princeton University Press; DOI: [10.1515/9781400829828](https://doi.org/10.1515/9781400829828)
+  对工具变量进行了全面而易懂的介绍，涵盖了核心假设、二阶段最小二乘法以及弱工具变量的挑战。
+- [Testing for Weak Instruments in Linear IV Regression](https://www.researchgate.net/publication/237248147_Testing_for_Weak_Instruments_in_Linear_IV_Regression) — James H. Stock, Motohiro Yogo (2005)
+  Journal: Advances in Economics and Econometrics: Theory and Applications, Ninth World Congress; Publisher: Cambridge University Press; Volume: 3; Pages: 80-108; DOI: [10.1017/CBO9780511614741.006](https://doi.org/10.1017/CBO9780511614741.006)
+  介绍了广泛使用的弱工具变量诊断测试和临界值，包括F统计量经验法则。
+- [Deep IV: A Flexible Approach to Counterfactual Prediction](https://proceedings.mlr.press/v48/hartford16.html) — Jonathan Hartford, Greg Lewis, and Victor Zeng (2016)
+  Journal: Proceedings of the 33rd International Conference on Machine Learning (ICML); Publisher: Proceedings of Machine Learning Research (PMLR); Volume: 48; Pages: 1870-1878; DOI: [10.5598/v48/hartford16](https://doi.org/10.5598/v48/hartford16)
+  介绍了一种基于神经网络的工具变量方法，用于估计复杂非线性环境中的异质治疗效果。
+- [Lasso Instrumental Variable Estimation](https://onlinelibrary.wiley.com/doi/10.3982/ECTA9351) — Alexandre Belloni, Victor Chernozhukov, and Christian Hansen (2012)
+  Journal: Econometrica; Publisher: Wiley-Blackwell; Volume: 80; Pages: 1403-1440; DOI: [10.3982/ECTA9351](https://doi.org/10.3982/ECTA9351)
+  提出了一种工具变量估计方法，该方法在第一阶段使用Lasso正则化，以有效处理高维工具变量。
+- [Double Machine Learning for Causal and Treatment Effect Estimation](https://onlinelibrary.wiley.com/doi/10.3982/ECTA14829) — Victor Chernozhukov, Denis Chetverikov, Mert Demirer, Esther Duflo, Christian Hansen, and Whitney Newey (2018)
+  Journal: Econometrica; Publisher: Wiley; Volume: 86; Pages: 2367-2425; DOI: [10.3982/ECTA14829](https://doi.org/10.3982/ECTA14829)
+  提出了一个稳健、通用的框架，将机器学习方法集成到因果推断中，包括工具变量的应用，处理非线性和高维问题。

@@ -1,0 +1,58 @@
+---
+course: "intro-diffusion-models"
+chapter: "model-architecture-training"
+lesson: "training-algorithm"
+sourceId: 5413
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-4-model-architecture-training/training-algorithm"
+title: "训练算法"
+description: "训练扩散模型的逐步过程。"
+order: 5
+plots: []
+sourceHash: "e0acf513b6a3ed467ef20eb3c254760e632aadaeb5d59519f2f2525720ebb940"
+sourceCorrections: []
+---
+
+本文概述了用于训练噪声预测网络$\epsilon_\theta(x_t, t)$的算法。该训练过程涉及U-Net架构、时间步信息整合以及用于预测噪声的简化损失函数 (loss function)。
+
+目标是训练网络$\epsilon_\theta$，使其在给定含噪输入$x_t$及其对应时间步$t$的情况下，能准确预测最初添加到干净输入$x_0$中以生成$x_t$的噪声$\epsilon$。我们通过重复采样数据点和时间步、计算损失并更新网络参数 (parameter)$\theta$，来使用随机梯度下降 (gradient descent)（或Adam等变体）达成此目标。
+
+以下是训练循环的分解，通常按数据批次进行：
+
+1. **采样一个干净数据点：** 从你的训练数据集$q(x_0)$中获取一个例子$x_0$。在实际操作中，你将采样一个数据点的迷你批次。为简单起见，我们先考虑一个数据点。
+2. **采样一个时间步：** 从范围$\{1, 2, ..., T\}$中均匀随机选择一个时间步$t$，其中$T$是前向过程中定义的扩散总步数。这确保网络能够学习在所有噪声水平下去噪。
+3. **采样噪声：** 从标准高斯分布中抽取一个噪声样本$\epsilon$：$\epsilon \sim \mathcal{N}(0, \mathbf{I})$。这是网络将尝试预测的“真实”噪声。
+4. **计算含噪样本$x_t$：** 使用采样的$x_0$、$t$和$\epsilon$，通过从前向过程推导出的闭式方程计算相应的含噪版本$x_t$：
+   
+   $$
+   x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon
+   $$
+   
+   请记住，$\bar{\alpha}_t$是基于预定义噪声调度$\beta_t$，从时间步$t$起的$(1 - \beta_i)$的累积乘积。
+5. **使用网络预测噪声：** 将含噪样本$x_t$和时间步$t$（通常经过编码，例如使用正弦嵌入 (embedding)）通过U-Net模型$\epsilon_\theta$，以获得预测噪声：$\epsilon_\theta(x_t, t)$。
+6. **计算损失：** 使用所选损失函数计算实际噪声$\epsilon$（在步骤3中采样）与预测噪声$\epsilon_\theta(x_t, t)$之间的差。如前所述，这通常是均方误差（MSE）：
+   
+   $$
+   L = ||\epsilon - \epsilon_\theta(x_t, t)||^2
+   $$
+   
+   当使用迷你批次时，此损失在批次中的所有样本上进行平均。
+7. **计算梯度：** 计算此损失$L$相对于网络参数$\theta$的梯度：$\nabla_\theta L$。
+8. **更新网络参数：** 使用优化算法（如Adam）和计算出的梯度更新参数$\theta$。例如：$\theta \leftarrow \theta - \eta \nabla_\theta L$，其中$\eta$是学习率。
+
+整个序列（步骤1-8）组成一个训练步骤。此过程在数据集上重复许多迭代或周期，直到模型的损失收敛并且它能很好地学习预测在不同时间步添加的噪声。
+
+> 此图说明了噪声预测网络单次训练迭代中的核心步骤。
+
+通过迭代这些步骤，U-Net逐步学习从含噪图像和时间步到噪声分量本身的复杂映射，为生成过程中使用的逆向扩散（去噪）过程构建了基础。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://proceedings.neurips.cc/paper/2020/file/4c5bcfec8584af0d967f1ab10179ca4b-Paper.pdf) — Jonathan Ho, Augustin Saharia, William Chan, Chitwan Saharia, Jay Whang, Alex Ratner, Ruoxin Sang, Kevin Lin, Lihong Li, Jie Ren, Zhifeng Chen, Harrison Edwards, Andrew Brock, Prafulla Dhariwal, Alex Nichol, Heewon Kim, Fan Li, Yuval Alaluf, R. Tyler Mazaika, Sasha Sheng, Xiaoqing Ellen Tan, Adam Harley, Brian Li, Yang Song, Mohammad Norouzi, Tim Salimans, Alex Shmakov, Peter Henderson, Han Zhang, Irwan Bello, Ming-Hsuan Yang, Andrew Ng, Ian Goodfellow, Pieter Abbeel, and Durk Kingma (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 33; Pages: 6840-6851; DOI: [10.5591/978-1-57788-756-3-6840](https://doi.org/10.5591/978-1-57788-756-3-6840)
+  这篇基础论文介绍了去噪扩散概率模型（DDPM），并详细阐述了本节中概述的噪声预测网络的训练算法。
+- [Denoising Diffusion Probabilistic Models (DDPM) Conceptual Guide](https://huggingface.co/docs/diffusers/conceptual/ddpm) — Hugging Face (2024)
+  Publisher: Hugging Face
+  这篇概念指南提供了去噪扩散概率模型（DDPM）训练循环的易懂解释，清晰地说明了本节讨论的算法，有助于实际理解。
+- [High-Resolution Image Synthesis with Latent Diffusion Models](https://openaccess.thecvf.com/content/CVPR2022/papers/Rombach_High-Resolution_Image_Synthesis_with_Latent_Diffusion_Models_CVPR_2022_paper.pdf) — Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Björn Ommer (2022)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 10684-10695; DOI: [10.1109/CVPR52688.2022.01042](https://doi.org/10.1109/CVPR52688.2022.01042)
+  这篇论文通过将核心DDPM训练范式应用于潜在空间，展示了其可扩展性和有效性，显著推动了使用扩散模型进行高分辨率图像生成。

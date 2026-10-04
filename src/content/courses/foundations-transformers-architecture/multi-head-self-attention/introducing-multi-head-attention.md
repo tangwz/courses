@@ -1,0 +1,42 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "multi-head-self-attention"
+lesson: "introducing-multi-head-attention"
+sourceId: 1954
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-3-multi-head-self-attention/introducing-multi-head-attention"
+title: "引入多头注意力"
+description: "描述了使用多个并行注意力层或“注意力头”的思想。"
+order: 3
+plots: []
+sourceHash: "1cdec23d9e3ee489172fb67003946dcbb013d34ed18e4a3cad477c4b38a6f342"
+sourceCorrections: []
+---
+
+如前所述，自注意力 (self-attention)提供了一种将序列中不同位置关联起来的有效机制。然而，应用单一的缩放点积注意力函数可能会像一个瓶颈。它迫使模型将可能多种不同类型的关系或依赖平均成一个单一的加权表示。设想一个句子，对其的理解需要同时追踪句法结构（如主谓一致）和语义（如词语相似性）。单一的注意力函数可能难以同时有效地捕捉这两个方面，可能会将它们模糊地混合在一起。
+
+这一局限促使我们使用**多头注意力 (multi-head attention)**。其核心思想简单而巧妙：我们不是只计算一次注意力，而是并行执行多次注意力计算。每次并行计算被称为一个**注意力头**。
+
+可以将其想象为对相同输入拥有多个视角。如果你正在分析一个复杂系统，你可能会咨询来自不同领域的专家。每位专家（注意力头）带来一个独特观点，侧重于系统（表示子空间）的不同方面。多头注意力机制 (attention mechanism)的运行方式与之类似。
+
+每个注意力头执行相同的核心缩放点积注意力计算。然而，它们并非都基于直接来源于输入序列嵌入 (embedding)的相同查询 ($Q$)、键 ($K$) 和值 ($V$) 矩阵进行运算。相反，在每个头的注意力计算之前，$Q$、$K$ 和 $V$ 矩阵会经历独立的、每个头特有的线性变换（投影）。这意味着每个注意力头学会将输入投影到一个子空间中，该子空间可能更适合捕捉特定类型的关系。
+
+为什么这样做有益？
+
+- **关注不同子空间：** 它允许模型一同处理来自不同位置、不同表示子空间的信息。例如，一个头可能学会侧重于短期依赖，另一个侧重于语义关联 (semantic relationship)，还有一个侧重于位置信息。
+- **捕捉多类模式：** 通过并行操作不同的学习投影，这些注意力头可以共同捕捉比单一注意力头单独处理更丰富的特征和关系。
+- **稳定注意力：** 单一注意力机制中固有的平均效应有时可能是有害的。多头注意力允许不同的头进行专业化，它们的输出稍后会组合，从而提供一个更灵活且通常更稳定的学习过程。
+
+本质上，多头注意力让模型对输入序列进行多次“审视”，每次都通过一个不同的学习视角（线性投影）进行聚焦。这种并行处理使得模型能够对数据中复杂的关联有更全面的理解。接下来的部分将详细解释这些线性投影在每个头中如何运作，以及它们的并行输出最终如何整合。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: NeurIPS; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer模型并定义多头注意力作为其核心组件的原始论文。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  详细解释了Transformer架构中的多头注意力，包括其原理和工作方式。请参阅关于Transformer的章节。
+- [torch.nn.MultiheadAttention](https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html) — PyTorch Development Team (2024)
+  Publisher: PyTorch Foundation
+  PyTorch多头注意力模块的官方文档，展示其参数和使用方法。
+- [Transformers and Large Language Models (CS224N Lecture Notes)](http://web.stanford.edu/class/cs224n/) — Christopher Manning, Abigail See, John Hewitt, Misha Smelyanskiy, and others (2023)
+  斯坦福CS224N课程材料，提供Transformer架构的学术解释，其中包含多头注意力的部分。

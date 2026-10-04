@@ -1,0 +1,134 @@
+---
+course: "monitoring-managing-ml-models-production"
+chapter: "scalable-monitoring-infrastructure"
+lesson: "time-series-databases-monitoring"
+sourceId: 3305
+sourceUrl: "https://apxml.com/zh/courses/monitoring-managing-ml-models-production/chapter-5-scalable-monitoring-infrastructure/time-series-databases-monitoring"
+title: "时序数据库在监控指标中的应用"
+description: "运用时序数据库（如Prometheus、InfluxDB）高效存储和查询监控指标。"
+order: 2
+plots: []
+sourceHash: "b1ffdba82afacd690cca82a9ca409add08b2f928a813ac3e24be9c965a1340f2"
+sourceCorrections: []
+---
+
+对生产中的机器学习 (machine learning)模型进行监控会产生持续不断的时间戳数据流：预测延迟、吞吐量 (throughput)、输入特征的漂移分数、标注样本的准确性、资源利用率等等。高效地存储、查询和分析这些时间数据，对于了解模型随时间推移的表现和运行状况非常重要。虽然标准关系型数据库或通用NoSQL存储*可以*保存这些数据，但它们通常并未针对时序工作负载的特点进行优化，尤其是在生产ML系统中面临的数据量级下。
+
+传统数据库在处理监控流中常见的高写入量时可能面临困难。在特定时间范围内查询数据是监控中的常见操作，随着表数据量的增加，这种操作也可能变得效率低下。在这种情况下，时序数据库（TSDB）提供了一种专门且非常高效的方案。
+
+## 什么是时序数据库？
+
+时序数据库（TSDB）是一种专门用于处理按时间索引、排序和查询的数据点的数据库系统。它们从头开始构建，旨在高效摄取、存储、压缩和查询大量带有时间戳的数据。可以把它想象成CPU利用率、温度读数、股票价格，或者就我们的情况而言，是模型表现指标和漂移度量。
+
+使TSDB适用于ML监控的主要特点包括：
+
+1. **以时间为中心的数据模型：** 数据基本上是围绕时间来组织的。每个数据点通常包含一个指标名称、一个精确的时间戳、一个值（即测量值）以及可选的标签（提供元数据或维度信息的键值对）。
+2. **高写入吞吐量 (throughput)：** TSDB针对每秒摄取数百万个数据点进行了优化，能够处理来自众多模型实例或监控任务的持续指标流。
+3. **高效的基于时间查询：** 它们提供优化的函数和索引策略，用于在特定时间窗口内查询数据，随时间聚合数据（例如，计算平均值、最大值、百分位数），以及根据标签进行过滤。
+4. **数据压缩：** 专门为时序数据设计的复杂压缩算法（如delta-of-delta编码或Gorilla TS P）可显著减少存储需求。
+5. **数据生命周期管理：** 自动管理数据保留（例如，删除超过30天的原始数据）和降采样（例如，将1秒分辨率的数据聚合为1分钟平均值以进行长期存储）的内置功能非常普遍。
+
+## 将TSDB用于ML监控指标
+
+我们来看看这些特点如何直接应用于ML模型的监控。假设你正在监控一个欺诈检测模型。你可能想要追踪以下指标：
+
+- `prediction_latency_ms`：模型返回预测结果所需的时间。
+- `input_feature_drift_score`：表示特定输入特征（例如“交易金额”）漂移程度的分数。
+- `prediction_confidence_avg`：模型预测的平均置信度分数。
+- `true_positive_rate_hourly`：根据反馈数据每小时计算的真阳性率。
+
+在TSDB中，一个表示延迟的数据点可能如下所示：
+
+- **指标名称：** `prediction_latency_ms`
+- **时间戳：** `2023-10-27T10:15:32.123Z`
+- **值：** `157.5`
+- **标签：** `{"model_version": "v2.1", "deployment_env": "production", "region": "us-east-1", "instance_id": "i-0abcd1234efgh5678"}`
+
+标签功能非常丰富。它们让你能够灵活地对指标进行细分和组合。例如，你可以轻松查询：
+
+- 过去6小时内，`us-east-1`区域中`model_version`为“v2.1”的`prediction_latency_ms`平均值。
+- 昨天所有生产实例中，特征`transaction_amount`的`input_feature_drift_score`最大值。
+- 比较`model_version`“v2.0”和“v2.1”之间的`prediction_confidence_avg`。
+
+高写入性能确保即使模型每秒处理数千个请求，监控系统也能跟上记录每个请求延迟的速度，而不会成为瓶颈。高效的查询功能使得仪表盘加载迅速，警报能够及时评估。降采样和保留策略可防止监控数据存储成本失控，同时仍能以合适的粒度保留有用的历史趋势。
+
+> 指标从来源经过时序数据库流向仪表盘和告警系统等不同消费者。
+
+## 常见的TSDB选项
+
+有几种常见的TSDB可用，每种都有其优势和生态系统：
+
+- **Prometheus：** 一个开源的监控系统和TSDB，被广泛使用，尤其是在Kubernetes环境中。它主要采用*拉取*模型，Prometheus从被监控服务暴露的端点收集指标。它拥有功能强大的查询语言（PromQL），并与Alertmanager本地集成以进行告警，与Grafana集成以进行可视化。
+- **InfluxDB：** 另一个流行的开源TSDB，通常采用*推送*模型，应用程序直接向其发送指标。它具备高性能、多种查询语言（InfluxQL和较新的Flux），以及灵活的标签系统。商业云和企业版本也已推出。
+- **TimescaleDB：** PostgreSQL的开源扩展，直接为关系型数据库添加了时序功能。这使得你可以使用标准SQL查询时序数据，并轻松地将其与PostgreSQL数据库中的其他关系型数据进行联接。如果你已经大量使用PostgreSQL，它提供了一个不错的权衡。
+- **OpenTSDB：** 构建于Apache HBase或Google Cloud Bigtable之上，OpenTSDB专为超大规模设计，但与Prometheus或InfluxDB相比，其操作复杂性可能更高。
+
+选择通常取决于你现有的基础设施（例如，Kubernetes更倾向于Prometheus）、偏好的数据摄取模型（推 vs. 拉）、查询语言偏好以及扩展性需求。
+
+## 存储漂移分数的示例
+
+假设你的漂移检测过程计算了最近生产数据窗口中“交易金额”特征分布与训练数据分布之间的Kolmogorov-Smirnov (KS) 统计量。你希望每小时存储这个分数。
+
+**使用 InfluxDB Line Protocol (推送)：**
+你的漂移检测脚本可以向 InfluxDB 发送一个HTTP POST请求，其正文如下：
+
+```
+drift_metrics,model_name=fraud_detector_v3,feature=transaction_amount,metric=ks_statistic value=0.18 1678886400000000000
+```
+
+这表明：
+
+- 度量值名称：`drift_metrics`
+- 标签：`model_name=fraud_detector_v3`、`feature=transaction_amount`、`metric=ks_statistic`
+- 字段（值）：`value=0.18`
+- 时间戳：`1678886400000000000`（2023年3月15日12:00:00 UTC的Unix纳秒时间戳）
+
+**使用 Prometheus 暴露格式 (拉取)：**
+你的漂移检测服务会暴露一个端点（`/metrics`），Prometheus会定期从中抓取指标。其内容可能包括：
+
+```
+# HELP feature_drift_score 特定输入特征的漂移分数。
+# TYPE feature_drift_score gauge
+feature_drift_score{model_name="fraud_detector_v3",feature="transaction_amount",metric="ks_statistic"} 0.18
+```
+
+**查询数据（使用类SQL语法的示例）：**
+要获取过去一天内此特征的每小时KS统计量，你可以运行类似以下查询：
+
+```sql
+SELECT MEAN("value")
+FROM "drift_metrics"
+WHERE
+  time > now() - 1d AND
+  "model_name" = 'fraud_detector_v3' AND
+  "feature" = 'transaction_amount' AND
+  "metric" = 'ks_statistic'
+GROUP BY time(1h)
+```
+
+此查询检索过去一天内指定标签的平均值（尽管在这种情况下，我们可能每小时存储一个值，因此`MEAN`可能只返回该值），并按1小时间隔分组。
+
+## 考量因素
+
+虽然功能强大，但TSDB也带来了一些考量因素：
+
+- **基数：** 指标名称和标签值的独特组合数量称为基数。非常高的基数（数百万或数十亿个独特序列）会使某些TSDB面临压力，从而影响性能和内存使用。谨慎设计标签非常必要。例如，避免直接使用唯一的用户ID或请求ID作为标签。
+- **推 vs. 拉：** Prometheus的拉取模型简化了服务发现，但要求服务暴露指标端点，并且对于短生命周期的任务可能更难使用。InfluxDB的推送模型提供了灵活性，但要求应用程序知道数据库端点并处理潜在的连接问题。
+- **运维开销：** 自行托管TSDB需要进行设置、配置、扩展和维护。托管云服务可以减轻这一负担，但会产生费用。
+- **查询语言：** 可能需要学习特定的TSDB查询语言（如PromQL或Flux），尽管TimescaleDB等选项可以使用标准SQL。
+
+总之，时序数据库为存储和分析ML监控系统生成的指标提供了专门构建、高效且可扩展的支撑。通过运用其优化的数据模型、摄取能力和查询引擎，你可以构建响应迅速的仪表盘、实用的告警，并随着时间推移更好地理解模型表现，从而确保拥有在生产环境中高效管理模型所需的工具。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG6R4TaxEvEjwim3tRTw0bFlWQH3iVxsabsq2418HLBODQf-hhkf3wacY6GdIzAtIixGqTwEkHrs4yC3IgZKoCAA1xAGUOnWT518ejEgubvhkSaEz3rlP6vF4JbGDof1C-PDmYhF2rYZxVZI7VfRjZLJkKj1RTEAd8kBDL_0DmwXg-duQcXxp9qj0_UYZUH09NvzUE3ym62ug0RwOboeqpw) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  提供数据系统的基本理解，包括适用于时间序列数据的数据模型和存储原理的讨论。
+- [Prometheus Documentation](https://prometheus.io/docs/) — The Prometheus Authors (2023)
+  Publisher: Cloud Native Computing Foundation
+  涵盖 Prometheus 架构、数据模型、查询语言 (PromQL) 和操作指南的官方文档。
+- [InfluxDB Documentation](https://docs.influxdata.com/) — The InfluxData Team (2025)
+  Publisher: InfluxData, Inc.
+  解释 InfluxDB 数据模型、行协议、查询语言 (InfluxQL, Flux) 和存储机制的官方文档。
+- [TimescaleDB Documentation](https://docs.timescale.com/) — The Timescale Team (2023)
+  TimescaleDB 的官方文档，详细说明其作为 PostgreSQL 扩展在时间序列数据管理和 SQL 集成方面的能力。

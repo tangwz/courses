@@ -1,0 +1,90 @@
+---
+course: "getting-started-with-scikit-learn"
+chapter: "model-selection-evaluation"
+lesson: "overfitting-underfitting"
+sourceId: 1889
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-scikit-learn/chapter-5-model-selection-evaluation/overfitting-underfitting"
+title: "过拟合与欠拟合问题"
+description: "弄清模型过拟合与欠拟合的原理及其影响。"
+order: 1
+plots: ["plots/1889-0.json", "plots/1889-1.json", "plots/1889-2.json"]
+sourceHash: "dd1615d513424dfff2353ea6af6e24be851760506215d9373c691508e19fa853"
+sourceCorrections: []
+---
+
+当我们训练机器学习 (machine learning)模型时，最终目的不仅是让模型在我们用于训练的数据上表现良好。我们希望模型能够泛化，即它应该对训练期间未遇到过的、新的、未见过的数据做出准确预测。然而，实现这种平衡可能很困难。有两个常见难题阻碍我们：欠拟合 (underfitting)和过拟合 (overfitting)。弄清这些问题对于评估和选择有效的模型非常重要。
+
+### 欠拟合 (underfitting)：模型过于简单
+
+想象一下，试图通过一组明显呈曲线的数据点绘制一条直线。这条直线过于简单，无法捕捉到数据中固有的模式。这就是**欠拟合**的本质。
+
+“欠拟合模型未能捕捉到输入特征与目标变量之间重要的关联，即使是在训练数据中也是如此。它通常表现为**高偏差**。偏差是指通过一个简单得多的模型来近似一个可能复杂的问题时所引入的误差。”
+
+**欠拟合的特点：**
+
+- **在训练数据上表现不佳：** 模型甚至无法有效表示用于训练的数据。
+- **在测试数据（未见过的数据）上表现不佳：** 由于它没有学习到固有的模式，因此在新数据上表现自然也很差。
+
+欠拟合通常发生在所选模型对于数据来说不够复杂（例如，对高度非线性数据使用线性回归），或者模型训练时间不够长时。
+
+
+
+![欠拟合：模型过于简单](plots/1889-0.json)
+
+
+
+> 欠拟合的线性模型未能捕捉到数据中的二次关系，导致在训练点和潜在测试点上均出现高误差。
+
+### 过拟合 (overfitting)：模型学得过多
+
+现在，考虑相反的情况。想象一下，绘制一条线，它完美地穿过每一个训练数据点，包括任何随机噪声或异常值。这个模型在训练数据上看起来很完美，但它实际上是记住了这些数据，而不是学习了普遍固有的趋势。这就是**过拟合**。
+
+过拟合模型对训练数据学得*太*好了。它不仅捕捉了固有的模式，还捕捉了训练集中特有的噪声和随机波动。这些模型通常表现为**高方差**。方差是指，如果我们在不同的训练数据集上训练模型，模型学到的函数会改变多少。一个高方差模型对它所看到的特定训练数据过于敏感。
+
+**过拟合的特点：**
+
+- **在训练数据上表现出色：** 模型非常贴合训练样本，可能达到近乎完美的得分。
+- **在测试数据（未见过的数据）上表现不佳：** 模型未能泛化，因为它从训练集中学到的噪声和特定模式在新数据中不存在。
+
+过拟合通常发生在模型相对于训练数据的数量和噪声而言过于复杂（例如，对于相对简单的关系使用非常高阶的多项式），或者在有噪声的数据上训练时间过长时。
+
+
+
+![过拟合：模型过于复杂](plots/1889-1.json)
+
+
+
+> 过拟合模型过于紧密地跟随有噪声的训练数据点。虽然它在*这些*特定点上的误差很低，但它很可能与真正的固有趋势（可能更接近之前所示的二次曲线）明显偏离，并且在新数据上表现不佳。
+
+### 偏差-方差权衡
+
+欠拟合 (underfitting)（高偏差）和过拟合 (overfitting)（高方差）代表了模型复杂度的两个极端。它们之间存在一种根本的矛盾：
+
+- 增加模型复杂度往往会降低偏差但增加方差。
+- 降低模型复杂度往往会增加偏差但降低方差。
+
+我们的目标通常是找到一个理想点，即一种模型复杂度，它能在偏差和方差之间取得良好的平衡，从而在未见过的数据上获得最佳表现。这种思想被称为**偏差-方差权衡**。
+
+
+
+![偏差-方差权衡](plots/1889-2.json)
+
+
+
+> 随着模型复杂度的增加，偏差通常会降低，而方差会增加。总误差（偏差、方差和不可避免误差的组合）通常呈U形，表示存在一个最佳复杂度级别，能使泛化误差最小化。
+
+认识到过拟合和欠拟合的潜在可能，是构建良好泛化模型的第一步。仅凭模型在训练数据上的表现进行评估会给出误导性的结果，特别是当模型容易过拟合时。接下来讨论的方法，例如训练集-测试集分割和交叉验证，就是专门为了估算模型在未见过的数据上的表现，并帮助我们有效应对偏差-方差权衡而设计的。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning with Applications in Python](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani, Jonathan Taylor (2023)
+  Publisher: Springer
+  以易懂的方式介绍了机器学习概念，包括欠拟合、过拟合和偏差-方差权衡的详细解释。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  对统计学习方法进行了严谨的阐述，全面涵盖了偏差-方差分解。
+- [CS229 Lecture Notes: Supervised Learning, Generative Learning Algorithms](https://github.com/mxc19912008/Andrew-Ng-Machine-Learning-Notes/blob/master/cs229-notes2.pdf) — Andrew Ng (2018)
+  Publisher: Stanford University
+  这些来自广受认可的机器学习课程讲义涵盖了偏差、方差和模型选择等基本概念。
+- [Cross-validation: evaluating estimator performance](https://scikit-learn.org/stable/modules/cross_validation.html) — scikit-learn developers (2024)
+  官方文档，解释如何在scikit-learn中使用交叉验证来评估模型性能并避免过拟合。

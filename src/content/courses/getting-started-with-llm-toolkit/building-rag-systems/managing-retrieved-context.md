@@ -1,0 +1,135 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "building-rag-systems"
+lesson: "managing-retrieved-context"
+sourceId: 7777
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-6-building-rag-systems/managing-retrieved-context"
+title: "生成时检索内容的管理"
+description: "学习如何格式化和呈现检索到的上下文给大型语言模型（LLM），以获得最佳答案。"
+order: 5
+plots: []
+sourceHash: "55654088e20893e12c3ee2d137e495c0028544745a0b7937d4bfd58b83ee7e9e"
+sourceCorrections: []
+---
+
+在构建检索增强生成（RAG）系统时，为大型语言模型（LLM）准备检索到的信息是一个核心环节。这不仅仅是文本的简单拼接；它包括管理令牌限制、清晰地格式化内容，以及构建信息以引导模型生成最佳回复。有效准备这些信息是RAG系统输出质量的一个主要影响因素。
+
+### 令牌限制带来的挑战
+
+大型语言模型在一个固定的上下文 (context)窗口内运行，这限制了它们一次可以处理的令牌数量。系统提示、用户查询和检索文档的总大小不得超出此限制。即使将文档拆分为较小的块，检索到的上下文也可能轻易累积到数千个令牌，因此在发送给模型之前，有必要缩减其大小。
+
+`retrieval` 模块提供了 `compress_context` 函数，协助你将检索结果缩减至指定的令牌预算内。
+
+```python
+from kerb.retrieval import compress_context
+
+# 假设 'results' 是搜索函数返回的 SearchResult 对象列表
+# 而 'query' 是用户的搜索查询。
+
+# 压缩结果以适应大约 2000 个令牌的限制
+compressed_results = compress_context(
+    query=query,
+    results=results,
+    max_tokens=2000
+)
+```
+
+`compress_context` 函数通过 `strategy` 参数 (parameter)提供了几种压缩方法，让你能够控制速度和信息保留之间的权衡：
+
+- `"top_k"` (默认): 这是最简单的策略。它保留在 `max_tokens` 限制内排名最高的搜索结果，并丢弃其余部分。当你的初始排名可靠时，这种方法快速且有效。
+- `"summarize"`: 此策略使用大型语言模型（LLM）为每个过长的文档块生成一个简洁的摘要。它的计算量更大，但可以从较长的文档中保留主要信息。
+- `"filter"`: 此方法会删除与原始查询相关性较低的句子或文档部分，有效过滤掉噪音，同时保留最相关的信息。
+- `"truncate"`: 一种直接的方法，简单地在达到一定数量的字符或令牌后截断每个文档块。
+
+对于大多数应用，从 `"top_k"` 策略开始，能在性能和简洁性之间取得良好平衡。
+
+### 为大型语言模型提示格式化结果
+
+当你获得一个压缩或过滤后的 `SearchResult` 对象列表后，需要将它们转换为一个大型语言模型（LLM）可以处理的单一字符串。此字符串作为最终提示的“上下文 (context)”部分，其结构会严重影响生成答案的质量。
+
+`results_to_context` 函数专为此任务设计。它接收一个搜索结果列表，并将其格式化成一个干净、可读的字符串，适用于大型语言模型（LLM）提示。
+
+```python
+from kerb.retrieval import results_to_context
+
+# 'compressed_results' 是上一步的输出
+context_string = results_to_context(
+    results=compressed_results,
+    separator='\n\n---\n\n',
+    include_source=True
+)
+
+# 现在，构建用于大型语言模型（LLM）的最终提示
+query = "How does async programming work in Python?"
+
+prompt = f"""Answer the question based on the provided context.
+
+Context:
+{context_string}
+
+Question: {query}
+
+Answer:"""
+
+print(prompt[:500] + "...")
+```
+
+该函数提供了两个用于自定义的参数 (parameter)：
+
+- `separator`: 用于分隔每个文档内容的字符串。清晰的分隔符协助模型区分不同的来源。
+- `include_source`: 当为 `True` 时，它会包含文档的 ID（来自 `doc.id`）及其内容。这对于溯源很有用，因为它允许大型语言模型（LLM）引用哪个文档在回复中提供了特定信息。
+
+### 生产就绪的工作流程
+
+在生产 RAG 系统中，上下文 (context)管理是一个多步骤过程。通常，你会先过滤和重新排序文档，然后再进行压缩和格式化，以确保将最高质量的信息发送给大型语言模型（LLM）。
+
+参考示例中的 `RAGPipeline` 类在其 `get_context` 方法中演示了一个有效的工作流程。操作顺序如下：
+
+1. **检索**: 获取初始的、更大规模的候选文档集合（例如，`top_k=12`）。
+2. **过滤**: 使用 `filter_results` 移除低质量或不相关的结果。这可能包括设置最低相关性分数或对相似的块进行去重。
+3. **多样化 (可选)**: 使用 `diversify_results` 来确保上下文覆盖查询的不同方面并减少冗余。
+4. **压缩**: 应用 `compress_context` 缩减过滤后的结果，以适应最终的令牌预算。
+5. **格式化**: 使用 `results_to_context` 为大型语言模型（LLM）提示创建最终字符串。
+
+以下是该序列在实践中是如何实现的，摘自 `05_rag_pipeline.py` 示例：
+
+```python
+from kerb.retrieval import (
+    filter_results,
+    diversify_results,
+    compress_context,
+    results_to_context
+)
+
+# 假设 'results' 是包含 12 个 SearchResult 对象的列表
+query = "What are the differences between REST and GraphQL APIs?"
+
+# 1. 按质量过滤
+filtered = filter_results(
+    results,
+    min_score=0.2,
+    dedup_threshold=0.9
+)
+
+# 2. 应用多样化以减少冗余
+diversified = diversify_results(filtered, max_results=8, diversity_factor=0.4)
+
+# 3. 压缩以适应上下文窗口
+compressed = compress_context(query, diversified, max_tokens=2000)
+
+# 4. 为大型语言模型（LLM）提示进行格式化
+final_context = results_to_context(compressed)
+
+print(final_context[:500] + "...")
+```
+
+这种结构化方法确保提供给大型语言模型（LLM）的上下文不只是一堆随机检索的文本，而是一组经过精心整理的、高质量、相关且大小适宜的信息。对检索到的上下文进行适当管理，与检索本身对于实现准确且有用的 RAG 回复同样不可或缺。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: NeurIPS 2020; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍了RAG框架，将检索与文本生成结合，为外部知识库如何增强大型语言模型（LLM）的响应奠定了基础。
+- [Lost in the Middle: How Language Models Use Long Contexts](https://arxiv.org/abs/2307.03172) — Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua, Fabio Petroni, Percy Liang (2023)
+  Journal: Transactions of the Association for Computational Linguistics (TACL); DOI: [10.48550/arXiv.2307.03172](https://doi.org/10.48550/arXiv.2307.03172)
+  探讨了信息在LLM上下文窗口中的位置如何影响其事实检索能力，强调了上下文压缩和有效放置的需求。

@@ -1,0 +1,154 @@
+---
+course: "applied-speech-recognition"
+chapter: "evaluating-deploying-asr-systems"
+lesson: "practice-evaluating-and-building-demo"
+sourceId: 7163
+sourceUrl: "https://apxml.com/zh/courses/applied-speech-recognition/chapter-6-evaluating-deploying-asr-systems/practice-evaluating-and-building-demo"
+title: "实践：评估和构建演示应用"
+description: "一个最后的实践环节，用于计算您训练模型的WER并将其打包成一个可共享的网络应用。"
+order: 7
+plots: ["plots/7163-0.json"]
+sourceHash: "43e40a453f9130b26bafc8e2065338a54f725bbc21bf921c768e448929aa3fdb"
+sourceCorrections: []
+---
+
+这个实践环节演示了ASR系统评估的原理应用和构建简单应用的工具使用。目标是构建一个完整的语音识别项目。这包括计算一组预测的词错误率（WER），以定量衡量性能。随后，使用Gradio库为语音识别模型构建一个功能性、交互式的网络演示。
+
+### 使用词错误率衡量模型表现
+
+在部署模型之前，清晰地定量了解其准确性很重要。正如我们讨论过的，词错误率（WER）是衡量此方面的行业标准。我们来使用一个专为此任务设计的Python库计算它。
+
+首先，您需要安装`jiwer`库，这是一个用于计算WER和其他语音转文本指标的常用工具。
+
+```bash
+pip install jiwer
+```
+
+安装后，我们可以使用它将一组真值转录与一组由我们模型生成的假设（预测）进行比较。对于本例，假设我们已在测试集上运行了模型并将结果保存到两个列表中。
+
+```python
+import jiwer
+
+# 测试集中的真值句子
+ground_truth = [
+    "the quick brown fox jumps over the lazy dog",
+    "this is a sample transcription",
+    "speech recognition can be challenging"
+]
+
+# ASR模型生成的预测
+predictions = [
+    "the quick brown fox jumped over the lazy dog", # 1 次替换
+    "this a sample transcription",                 # 1 次删除
+    "speech recognition can be challenging to do"  # 2 次插入
+]
+
+# 计算WER及其他指标
+measures = jiwer.compute_measures(ground_truth, predictions)
+
+print(f"Word Error Rate (WER): {measures['wer']:.2f}")
+print(f"Substitutions: {measures['substitutions']}")
+print(f"Deletions: {measures['deletions']}")
+print(f"Insertions: {measures['insertions']}")
+```
+
+运行此代码将产生以下输出，为您提供清晰的错误分类。
+
+```
+Word Error Rate (WER): 0.21
+Substitutions: 1
+Deletions: 1
+Insertions: 2
+```
+
+词错误率是使用我们之前看到的公式计算的：
+
+
+$$
+\text{WER} = \frac{S + D + I}{N} = \frac{1 + 1 + 2}{19} \approx 0.21
+$$
+
+
+这里，$S=1$（“jumps” -> “jumped”），$D=1$（“is”），$I=2$（“to”，“do”），以及参考文本中的总词数$N$是$9+5+5=19$。
+
+错误分类通常与最终WER分数同样有参考价值。大量替换错误可能指向声学歧义，而大量插入或删除错误可能表明语言模型或CTC解码器表现存在问题。
+
+
+
+![按类型划分的错误分析](plots/7163-0.json)
+
+
+
+> 构成总体的词错误率的每种错误类型（替换、删除和插入）的数量。
+
+### 使用 Gradio 构建演示应用
+
+计算指标很重要，但实时演示提供了一种与模型交互和展示模型的方式。我们将使用Gradio库，用很少的代码为我们的ASR模型创建一个简单的网络界面。
+
+首先，请确保您已安装Gradio。您还需要一个用于推理 (inference)的库，例如`transformers`。
+
+```bash
+pip install gradio transformers
+```
+
+接下来，我们将构建我们的应用。该过程遵循一个简单的模式：
+
+1. 使用Hugging Face `pipeline`加载预训练 (pre-training)ASR模型。
+2. 定义一个Python函数，该函数接收音频输入并返回转录文本。
+3. 将此函数和所需的输入/输出类型传递给Gradio `Interface`。
+
+下图显示了此工作流程。用户与Gradio用户界面交互，该界面捕获音频。此音频被传递给我们的Python函数，该函数使用模型进行推理。生成的文本随后被发送回用户界面进行显示。
+
+> 数据从用户音频输入通过Gradio界面流向ASR模型，并作为转录文本返回给用户。
+
+以下是创建和启动应用的完整代码。我们将使用来自Hugging Face Hub的预训练模型`openai/whisper-tiny`，它体积小巧且非常适合演示用途。
+
+```python
+import gradio as gr
+from transformers import pipeline
+
+# 1. 从Hugging Face加载ASR管道
+# 这将在首次运行时下载模型
+asr_pipeline = pipeline("automatic-speech-recognition", model="openai/whisper-tiny")
+
+# 2. 定义推理函数
+def transcribe_audio(audio):
+    """
+    接收音频文件路径（来自 Gradio 输入）并返回转录文本。
+    Gradio 会自动处理音频数据格式。
+    """
+    if audio is None:
+        return "未录制音频。请录制您的声音。"
+
+    # 管道返回一个字典；我们从中提取文本。
+    result = asr_pipeline(audio)
+    return result['text']
+
+# 3. 创建并启动 Gradio 界面
+demo = gr.Interface(
+    fn=transcribe_audio,
+    inputs=gr.Audio(source="microphone", type="filepath"),
+    outputs=gr.Textbox(label="转录"),
+    title="应用语音识别演示",
+    description="从麦克风录制音频，查看 ASR 模型的实时转录。"
+)
+
+# 启动应用！一个本地网络服务器的链接将被打印出来。
+demo.launch()
+```
+
+当您运行此Python脚本时，Gradio将启动一个本地网络服务器并打印一个URL（例如，`http://127.0.0.1:7860`）。在浏览器中打开此链接以查看您的ASR应用实时运行。您可以授予浏览器麦克风访问权限，录制一小段音频，并查看模型的转录结果出现在输出框中。
+
+寥寥数行代码，您就成功构建并部署了一个功能性的语音转文本应用。这标志着ASR项目主要工作流程的完成，涵盖了从数据处理、模型训练到最终评估和部署的各个环节。您现在具备了构建、测试和演示现代语音识别系统的基础技能。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky, James H. Martin (2025)
+  在一部广受认可的教材中，详细解释了包括词错率（WER）在内的自动语音识别（ASR）评估指标。
+- [jiwer: Compute Word Error Rate (WER) and other Automatic Speech Recognition (ASR) metrics - Documentation](https://jitsi.github.io/jiwer) — Nik Vaessen (2024)
+  `jiwer` Python 库的官方文档，提供了计算 ASR 性能指标的用法示例和技术规范。
+- [Transformers Library - Documentation](https://huggingface.co/docs/transformers/index) — Hugging Face team (2024)
+  Hugging Face Transformers 库的官方文档，提供了使用预训练模型和 `pipeline` API 执行 ASR 等任务的详细指南。
+- [Robust Speech Recognition via Large-Scale Weak Supervision](https://arxiv.org/abs/2212.04356) — Alec Radford, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, and Ilya Sutskever (2022)
+  Journal: arXiv preprint arXiv:2212.04356; DOI: [10.48550/arXiv.2212.04356](https://doi.org/10.48550/arXiv.2212.04356)
+  介绍了 Whisper 模型，这是一个在大型多样化数据集上训练的多任务语音识别模型，因其出色的性能被用于演示应用程序中。

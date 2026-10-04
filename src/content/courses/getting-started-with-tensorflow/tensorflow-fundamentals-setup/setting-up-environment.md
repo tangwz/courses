@@ -1,0 +1,121 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "tensorflow-fundamentals-setup"
+lesson: "setting-up-environment"
+sourceId: 1675
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-1-tensorflow-fundamentals-setup/setting-up-environment"
+title: "配置开发环境"
+description: "安装 TensorFlow 和配置系统的指南 (pip, conda)。"
+order: 2
+plots: []
+sourceHash: "157fc8fdd86afd539f6cbdd0972551ed1ed4a67b8cc0c8236e6ff8dffd243810"
+sourceCorrections: []
+---
+
+在安装 TensorFlow 之前，强烈建议创建一个独立的 Python 环境。这可以避免不同项目所需的包依赖冲突。实现此目的的两个常用工具是 `venv`（Python 内置）和 `conda`（Anaconda/Miniconda 发行版的一部分）。使用这些工具能确保 TensorFlow 及其特定依赖项不会影响你系统上的其他 Python 项目。
+
+### 使用虚拟环境 (`venv`)
+
+`venv` 是 Python 用于创建轻量级虚拟环境的标准工具。如果你主要使用 `pip` 进行包管理，`venv` 通常足够了。
+
+1. **创建虚拟环境：**
+   在终端中进入项目目录，运行：
+
+   ```bash
+   python -m venv tf_env
+   ```
+
+   这会创建一个名为 `tf_env` 的目录（你可以选择任何名称），目录里有 Python 解释器的副本以及安装库的位置。
+2. **激活环境：**
+
+   - 在 macOS 和 Linux 上：
+
+     ```bash
+     source tf_env/bin/activate
+     ```
+   - 在 Windows 上：
+
+     ```bash
+     .\tf_env\Scripts\activate
+     ```
+
+   你的终端提示符会改变，表明虚拟环境已激活（例如，`(tf_env) $`）。现在，安装的任何包都将放在此独立环境中。
+
+### 使用 Conda 环境
+
+Conda 既是包管理器也是环境管理器。如果你处理数据科学库或需要管理非 Python 依赖项（如用于 GPU 支持的 CUDA 工具包），它特别有用。如果你没有 Conda，可以通过 Anaconda 或更小的 Miniconda 来安装。
+
+1. **创建 Conda 环境：**
+   打开终端并运行：
+
+   ```bash
+   conda create --name tf_env python=3.9
+   ```
+
+   将 `tf_env` 替换为你想要的环境名称，并指定一个 Python 版本（例如，3.9、3.10、3.11 通常受最新 TensorFlow 版本支持；请查看 TensorFlow 官方文档以了解当前兼容性）。Conda 会提示你确认要安装的包。
+2. **激活环境：**
+
+   ```bash
+   conda activate tf_env
+   ```
+
+   你的终端提示符会改变，显示当前激活的环境名称（例如，`(tf_env) $`）。
+
+### 安装 TensorFlow
+
+一旦你选择的环境（`venv` 或 `conda`）已激活，你就可以安装 TensorFlow 了。
+
+**使用 `pip`（在激活的 `venv` 或 `conda` 环境中）：**
+
+标准的 TensorFlow 包支持 CPU 和 GPU 执行（在安装了必要驱动的兼容硬件上）。
+
+```bash
+pip install tensorflow
+```
+
+此命令会下载并安装 Python Package Index (PyPI) 上可用的最新稳定版 TensorFlow。如果你有兼容的 NVIDIA GPU 和所需的 NVIDIA 软件（CUDA 工具包和 cuDNN 库），TensorFlow 通常会自动使用 GPU。我们会在下一节讨论 GPU 配置的细节。
+
+如果你遇到问题或需要特定版本，可以指定它：
+
+```bash
+pip install tensorflow==2.15.0 # 示例：安装版本 2.15.0
+```
+
+**使用 `conda`（在激活的 `conda` 环境中）：**
+
+使用 `conda` 安装 TensorFlow，特别是用于 GPU 时，有时可以简化 CUDA 依赖项的管理。通常建议从 `conda-forge` 频道安装，以获取最新包。
+
+- 对于仅限 CPU 的版本：
+
+  ```bash
+  conda install -c conda-forge tensorflow
+  ```
+- 对于启用 GPU 的版本：
+  Conda 会尝试在安装 TensorFlow 的同时安装必要的 CUDA 工具包组件。具体命令可能因 TensorFlow 和 CUDA 版本而略有不同，但通常涉及指定与 GPU 相关的包。一种常见做法是：
+
+  ```bash
+  conda install -c conda-forge tensorflow-gpu # 或特定版本，检查 conda-forge 列表
+  ```
+
+  另外，从 `conda-forge` 安装基本的 `tensorflow` 包，如果检测到兼容的硬件驱动，它可能会像 `pip` 那样自动引入 GPU 依赖项。
+
+  ```bash
+  conda install -c conda-forge tensorflow
+  ```
+
+  此外，成功启用 GPU 支持不只涉及 TensorFlow 包的安装。驱动和工具包的兼容性很重要，具体内容在“CPU 与 GPU 的考量”部分有详细说明。
+
+选择 `pip` 还是 `conda` 通常取决于个人偏好和项目要求。`venv` + `pip` 对 Python 来说是轻量级且标准的方式，而 `conda` 则能更好地管理复杂依赖项，这在科学计算和管理 GPU 库时尤其常见。
+
+在已激活的环境中安装好 TensorFlow 后，下一步是验证安装并检查 TensorFlow 是否可以识别你的硬件，这将在下一节中介绍。
+
+## 参考资料
+
+- [venv - Creation of virtual environments](https://docs.python.org/3/library/venv.html) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  Python `venv` 模块的官方文档，详细说明了如何创建和管理独立的 Python 环境。
+- [Managing environments - Conda documentation](https://docs.conda.io/en/latest/user-guide/tasks/manage-environments.html) — Anaconda, Inc. (2024)
+  Conda 的官方文档，解释了如何为不同项目创建、激活和管理独立的 Conda 环境。
+- [Install TensorFlow](https://www.tensorflow.org/install) — TensorFlow Authors (2025)
+  Publisher: Google Developers
+  TensorFlow 的官方安装指南，涵盖 `pip` 和 `conda` 方法、CPU 和 GPU 设置注意事项以及常见的安装问题。

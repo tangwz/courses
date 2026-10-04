@@ -1,0 +1,147 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "neural-network-foundations"
+lesson: "activation-functions"
+sourceId: 1917
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-1-neural-network-foundations/activation-functions"
+title: "激活函数：引入非线性"
+description: "了解常用激活函数（Sigmoid、Tanh、ReLU）及其作用。"
+order: 3
+plots: ["plots/1917-0.json"]
+sourceHash: "1de317dce4050c5e273737d3cf7c749474595b00ac5a92ca236ebfc0d413056e"
+sourceCorrections: []
+---
+
+人工神经元通过权重 (weight)组合其输入并添加偏置 (bias)来生成一个值，通常表示为 $z$：
+
+
+$$
+z = (\sum_{i} w_i x_i) + b
+$$
+
+
+这个计算，即向量 (vector)表示的 $z = \mathbf{w} \cdot \mathbf{x} + b$，是一个线性变换。如果我们只是简单地堆叠进行这种线性计算的神经元层，整个网络将仍然只能学习线性关系。为什么？因为一系列线性变换总能在数学上简化为单个等效的线性变换。如果我们的网络函数是 $f(x) = W_2 (W_1 x + b_1) + b_2$，这会简化为 $f(x) = (W_2 W_1) x + (W_2 b_1 + b_2)$，这只是另一个线性函数 $f(x) = W' x + b'$。
+
+为了学习数据中复杂的非线性模式（例如识别图像、理解语言或预测复杂趋势），神经网络 (neural network)需要一种引入非线性的方式。这正是**激活函数 (activation function)**的作用。
+
+### 激活函数 (activation function)的作用
+
+一个激活函数，通常表示为 $f(z)$ 或 $\sigma(z)$ 或 $g(z)$，是一个应用于神经元内部线性变换输出 $z$ 的函数。结果 $a = f(z)$ 被称为神经元的*激活值*或输出。
+
+
+$$
+a = f( (\sum_{i} w_i x_i) + b )
+$$
+
+
+这个函数接受加权求和并加上偏置 (bias)的输入 ($z$) 并对其进行转换，通常以非线性方式。通过在每层线性计算后应用这个非线性函数，网络获得了模拟输入和输出之间更复杂关系的能力。正是这种非线性的引入，使得深度网络能够近似高度复杂的函数。
+
+### 常用激活函数 (activation function)
+
+已经开发出多种激活函数，每种都有其自身的特点、优点和缺点。让我们看一些在隐藏层和输出层中最常用的函数。
+
+#### Sigmoid
+
+Sigmoid 函数，也称为逻辑函数，在历史上曾非常流行。它将输入值压缩到0到1的范围。
+
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+
+**特点：**
+
+- **输出范围：** (0, 1)。这使其适用于二分类问题的输出层，其中输出可以被解释为概率。
+- **形状：** 平滑的“S”形曲线。
+- **非线性：** 明确引入非线性。
+
+**缺点：**
+
+- **梯度消失：** 对于非常高或非常低的 $z$ 值，Sigmoid 函数的斜率（梯度）会变得非常接近零。在反向传播 (backpropagation)过程中（我们稍后会讲到），这些微小的梯度会使网络很难有效地更新权重 (weight)，尤其是在深度网络中。这被称为梯度消失问题。
+- **非零中心：** 输出始终为正（介于0和1之间）。与零中心激活函数相比，这有时会减慢学习速度。
+
+#### Tanh (双曲正切)
+
+双曲正切函数，即 Tanh，在数学上与 Sigmoid 相关，但将输入压缩到-1到1的范围。
+
+
+$$
+\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}} = 2 \sigma(2z) - 1
+$$
+
+
+**特点：**
+
+- **输出范围：** (-1, 1)。
+- **形状：** 也是一个“S”形曲线，类似于 Sigmoid。
+- **零中心：** 其输出以零为中心。这一特性通常有助于在训练期间加速收敛，与 Sigmoid 相比，使得 Tanh 通常在隐藏层中比 Sigmoid 更受青睐。
+
+**缺点：**
+
+- **梯度消失：** 与 Sigmoid 一样，当输入 $z$ 变得非常大（正或负）时，Tanh 也面临梯度消失问题。
+
+#### ReLU (修正线性单元)
+
+ReLU 是目前隐藏层中最广泛使用的激活函数之一，尤其是在深度学习 (deep learning)中。它计算简单且有效。
+
+
+$$
+ReLU(z) = \max(0, z)
+$$
+
+
+**特点：**
+
+- **输出范围：** [0, $\infty$)。
+- **形状：** 对于所有负输入，它为零；对于正输入，它线性增长。
+- **计算效率：** 计算速度非常快（只需简单的阈值检查）。
+- **减轻梯度消失：** 对于正输入 ($z > 0$)，梯度是常数 (1)，这有助于在反向传播期间梯度更好地流动，与 Sigmoid 或 Tanh 相比。
+
+**缺点：**
+
+- **ReLU 死亡问题：** 如果一个神经元的输入 $z$ 在训练期间持续为负，它将始终输出 0。因此，流经该神经元的梯度也将为零，并且其权重将永远不会更新。该神经元基本上“死亡”并停止为网络的学习做出贡献。
+- **非零中心：** 类似于 Sigmoid，输出并非零中心。
+
+#### 视觉比较
+
+以下图表显示了 Sigmoid、Tanh 和 ReLU 函数的形状和输出范围。
+
+
+
+![常用激活函数](plots/1917-0.json)
+
+
+
+> Sigmoid（蓝色，0到1）、Tanh（紫色，-1到1）和 ReLU（橙色，0到 $\infty$）激活函数的对比。请注意 Sigmoid 和 Tanh 的饱和点处梯度趋近于零，而 ReLU 对正输入保持恒定梯度。
+
+#### 其他变体
+
+研究人员提出了变体来解决这些主要函数的缺点。例如，**Leaky ReLU** 对负输入引入了一个小的非零斜率 ($\max(0.01z, z)$)，以解决 ReLU 死亡问题。其他流行选择包括 ELU (指数线性单元) 和 Swish。然而，由于其在许多场景中的简洁性和有效性，ReLU 仍然是隐藏层的有力默认选择。
+
+### 激活函数 (activation function)的使用方式
+
+在一个典型的神经网络 (neural network)层中，激活函数被*逐元素*应用于线性变换 ($z = Wx + b$) 产生的向量 (vector)或矩阵。如果一个层有10个神经元，线性变换会产生10个值 ($z_1, z_2, ..., z_{10}$)。然后，激活函数会单独应用于这些值中的每一个，以产生该层的最终输出激活值 ($a_1 = f(z_1), a_2 = f(z_2), ..., a_{10} = f(z_{10})$)。这些激活值随后作为下一层的输入。
+
+### 激活函数 (activation function)的选择
+
+激活函数的选择可以显著影响网络性能。这里有一些一般性指导原则，尽管通常需要进行实验：
+
+- **隐藏层：** ReLU 是一个常用且通常有效的起点。如果遇到神经元死亡问题，可以尝试 Leaky ReLU 或其他变体，如 ELU。Tanh 有时会使用，但目前不如 ReLU 流行。Sigmoid 通常在隐藏层中避免使用，因为它有缺点。
+- **输出层：** 选择在很大程度上取决于任务：
+  - **二分类：** Sigmoid 通常用于输出 0 到 1 之间的概率。
+  - **多分类：** Softmax（Sigmoid 在多类别上的推广）是标准选择。它输出跨类别的概率分布。
+  - **回归：** 通常，输出层不使用激活函数（或使用线性激活函数，$f(z)=z$），允许网络输出任何范围的值。
+
+总而言之，激活函数是神经网络 (neural network)的构成部分。通过在每个神经元的线性计算之后引入非线性，它们赋予网络从数据中学习复杂模式和函数的能力，远远超出了简单线性模型的能力。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍激活函数及其理论基础、常见类型以及在深度网络中的作用。
+- [Deep Sparse Rectifier Networks](http://proceedings.mlr.press/v15/glorot11a/glorot11a.pdf) — Xavier Glorot, Antoine Bordes, and Yoshua Bengio (2011)
+  Journal: Proceedings of the Fourteenth International Conference on Artificial Intelligence and Statistics (AISTATS); Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 15; Pages: 315-323
+  引入并推广整流线性单元（ReLU）并展示其优势的基础论文。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Neural Networks Part 2: Setting up the Data and the Weights](https://cs231n.github.io/neural-networks-2/) — Andrej Karpathy, Justin Johnson, and Fei-Fei Li (2023)
+  优秀的在线讲义，提供了对激活函数、其特性和实际考量的易于理解但详细的解释。

@@ -1,0 +1,83 @@
+---
+course: "intro-diffusion-models"
+chapter: "reverse-diffusion-process"
+lesson: "approximating-reverse-transition"
+sourceId: 5392
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-3-reverse-diffusion-process/approximating-reverse-transition"
+title: "逼近逆向转移"
+description: "为什么真实的逆向转移难以处理以及我们如何逼近它。"
+order: 2
+plots: []
+sourceHash: "b80118b707e679aa7dd4ac864d8ec3ecfbc0a1d8df53d3400e976ad36021bd10"
+sourceCorrections: []
+---
+
+在扩散模型中，正向过程是一个逐步向数据添加噪声的固定步骤。然而，生成式AI的目标是逆转此过程：从纯噪声 $x_T \sim \mathcal{N}(0, \mathbf{I})$ 开始，我们希望依次采样 $x_{T-1}$，然后是 $x_{T-2}$，依此类推，直到得到一个看起来像是来自我们原始数据分布的干净样本 $x_0$。实现这一目标需要计算逆向转移概率 $p(x_{t-1}|x_t)$。
+
+如果我们能够精确计算 $p(x_{t-1}|x_t)$，我们就可以迭代地从中采样以生成数据。然而，直接计算此分布构成一项重大挑战。为什么？因为转移*回*到噪声较少的状态 $x_{t-1}$ 的概率不仅取决于当前的噪声状态 $x_t$，还隐含地取决于所有可能的起始数据点 $q(x_0)$ 的*整个分布*。在数学上，评估 $p(x_{t-1}|x_t)$ 涉及对所有可能的初始数据点 $x_0$ 进行边际化：
+
+
+$$
+p(x_{t-1}|x_t) = \int p(x_{t-1}|x_t, x_0) q(x_0|x_t) dx_0
+$$
+
+
+项 $q(x_0|x_t)$ 表示给定噪声版本 $x_t$ 的特定起始数据点 $x_0$ 的概率。计算这需要了解（未知）真实数据分布 $q(x_0)$，并涉及复杂的积分，这使得真实的逆向概率 $p(x_{t-1}|x_t)$ 对于复杂数据集难以计算。
+
+### 可处理的条件逆向分布
+
+有趣的是，如果我们*知道*导致 $x_t$ 的起始点 $x_0$，情况就会有所不同。逆向条件概率 $p(x_{t-1}|x_t, x_0)$ *是*可处理的。使用贝叶斯定理以及在正向过程中添加的高斯噪声 $q(x_t|x_{t-1})$ 的性质（由噪声调度 $\beta_t$ 定义），我们可以证明这个分布也是一个高斯分布：
+
+
+$$
+p(x_{t-1}|x_t, x_0) = \mathcal{N}(x_{t-1}; \tilde{\mu}_t(x_t, x_0), \tilde{\beta}_t \mathbf{I})
+$$
+
+
+在此，$\mathcal{N}(x; \mu, \sigma^2 \mathbf{I})$ 表示均值为 $\mu$ 和对角协方差为 $\sigma^2 \mathbf{I}$ 的高斯分布。方差 $\tilde{\beta}_t$ 和均值 $\tilde{\mu}_t(x_t, x_0)$ 仅取决于已知的正向过程噪声调度参数 (parameter)（$\beta_t$ 或等价地 $\alpha_t = 1 - \beta_t$ 和 $\bar{\alpha}_t = \prod_{s=1}^t \alpha_s$）以及 $x_t$ 和 $x_0$ 的特定值。具体来说：
+
+
+$$
+\tilde{\beta}_t = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} \beta_t
+$$
+
+
+$$
+\tilde{\mu}_t(x_t, x_0) = \frac{\sqrt{\bar{\alpha}_{t-1}} \beta_t}{1 - \bar{\alpha}_t} x_0 + \frac{\sqrt{\alpha_t} (1 - \bar{\alpha}_{t-1})}{1 - \bar{\alpha}_t} x_t
+$$
+
+
+这些方程告诉我们，如果我们知道与噪声图像 $x_t$ 对应的原始图像 $x_0$，我们就可以精确计算它来自的噪声略少的图像 $x_{t-1}$ 的分布。
+
+### 逼近的需求
+
+但问题在于：在实际生成过程（采样）中，我们*没有* $x_0$。我们的目标正是从纯噪声 $x_T$ 开始生成 $x_0$。知道 $x_0$ 将使目的落空。
+
+由于真实的逆向转移 $p(x_{t-1}|x_t)$ 难以处理，且条件逆向转移 $p(x_{t-1}|x_t, x_0)$ 需要未知 $x_0$，我们需要一个替代方法。解决方法是使用一个学习模型来**逼近**真实的逆向转移。
+
+我们引入一个参数 (parameter)化分布，通常是一个神经网络 (neural network)，记作 $p_\theta(x_{t-1}|x_t)$，以逼近难以处理的真实后验 $p(x_{t-1}|x_t)$。该网络的参数 $\theta$ 将从数据中学习。
+
+> 显示难以处理的真实逆向转移、可处理的条件逆向转移（需要 $x_0$）以及使用神经网络学习得到的逼近 $p_\theta(x_{t-1}|x_t)$ 之间关系的图。
+
+这个神经网络将当前的噪声状态 $x_t$ 和当前时间步 $t$ 作为输入，并输出逼近逆向分布 $p_\theta(x_{t-1}|x_t)$ 的参数。由于可处理的条件逆向分布 $p(x_{t-1}|x_t, x_0)$ 是高斯分布，因此将我们的逼近 $p_\theta(x_{t-1}|x_t)$ 也建模为高斯分布是方便且效果好的：
+
+
+$$
+p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
+$$
+
+
+在此，$\mu_\theta(x_t, t)$ 是均值，$\Sigma_\theta(x_t, t)$ 是协方差矩阵，两者都由神经网络 $\theta$ 预测。因此，网络的任务是学习函数 $\mu_\theta$ 和 $\Sigma_\theta$，以准确预测给定 $x_t$ 的 $x_{t-1}$ 分布的参数。
+
+在许多成功的扩散模型中，例如原始的去噪扩散概率模型（DDPM），协方差矩阵 $\Sigma_\theta(x_t, t)$ 不被直接学习。相反，它通常被固定为一个与正向过程方差相关的值，例如 $\Sigma_\theta(x_t, t) = \tilde{\beta}_t \mathbf{I}$ 或 $\Sigma_\theta(x_t, t) = \beta_t \mathbf{I}$。这大大简化了学习问题：神经网络只需要学习逆向转移的均值 $\mu_\theta(x_t, t)$。
+
+下一步是理解我们如何参数化这个神经网络，具体来说，它如何预测均值 $\mu_\theta(x_t, t)$，以及我们如何训练它以有效逆转扩散过程。正如我们将看到的，一种常见且效果好的方法是训练网络以预测在时间步 $t$ 添加的*噪声*。
+
+## 参考资料
+
+- [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/abs/1503.03585) — Jascha Sohl-Dickstein, Eric A. Weiss, Niru Maheswaranathan, Surya Ganguli (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); Pages: 2252-2261; DOI: [10.48550/arXiv.1503.03585](https://doi.org/10.48550/arXiv.1503.03585)
+  介绍了扩散概率模型，为前向和反向扩散过程奠定了数学基础。
+- [Score-Based Generative Modeling through Stochastic Differential Equations](https://arxiv.org/abs/2011.13456) — Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, Ben Poole (2020)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2011.13456](https://doi.org/10.48550/arXiv.2011.13456)
+  统一了基于分数的生成模型与扩散模型，为通过随机微分方程理解反向过程提供了一个理论框架。

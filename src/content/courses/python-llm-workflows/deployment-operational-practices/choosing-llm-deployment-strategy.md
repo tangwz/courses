@@ -1,0 +1,131 @@
+---
+course: "python-llm-workflows"
+chapter: "deployment-operational-practices"
+lesson: "choosing-llm-deployment-strategy"
+sourceId: 5221
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-10-deployment-operational-practices/choosing-llm-deployment-strategy"
+title: "选择部署策略"
+description: "不同部署选项概述：无服务器、虚拟机、平台即服务。"
+order: 3
+plots: []
+sourceHash: "0c5ef37d9b566f1f1526e81f96848bd02064f915f52ae4f8cd2682e0ac6e548b"
+sourceCorrections: []
+---
+
+部署LLM应用需要决定它将*在哪里*以及*如何*运行，这一步骤通常在应用打包（通常在容器中）之后进行。选择正确的部署策略对于确保您的应用可用、可伸缩、可靠且具有成本效益十分重要。没有一个唯一的“最佳”方式；最合适的选择很大程度上取决于您的应用需求、团队能力以及运维要求。
+
+我们来看一下您在Python LLM应用中可能考虑的常见部署模式。
+
+### 虚拟机 (VMs)
+
+虚拟机提供一个完整的操作系统环境，运行在共享或专用的物理硬件上。例如Amazon EC2、Google Compute Engine或Azure Virtual Machines等服务。
+
+- **优点：**
+  - **完全控制权：** 您拥有根权限，可以完全控制操作系统、依赖项和配置。
+  - **灵活性：** 适用于几乎所有工作负载，包括有状态应用、长时间运行的进程（如模型微调 (fine-tuning)或批处理），以及需要特定硬件（如高性能GPU）的应用。
+  - **成熟技术：** 被广泛理解，拥有丰富的文档和工具。
+- **缺点：**
+  - **手动管理：** 您需要负责操作系统补丁、安全更新、软件安装和配置。
+  - **伸缩性：** 伸缩通常需要手动干预或配置自动伸缩组，这增加了复杂性。
+  - **资源利用率：** 只要VM在运行，即使您的应用没有主动处理请求，您也需要付费，这对于偶发性工作负载来说效率不高。
+
+VMs通常是一个不错的起点，特别是对于开发、测试，或具有可预测负载或需要其他平台不易满足的特定硬件的应用。
+
+### 容器编排平台
+
+如果您已使用Docker（如前所述）将应用容器化，那么Kubernetes (K8s) 或Docker Swarm等平台可以大规模管理这些容器。它们负责处理跨机器集群（节点）的容器化应用的部署、伸缩、负载均衡和健康监测。
+
+- **优点：**
+  - **伸缩性与弹性：** 具有出色的能力，可根据负载进行自动伸缩和自我修复（替换失败的容器）。
+  - **可移植性：** Kubernetes可在所有主要云提供商上使用，并可本地部署，在不同环境间提供一致性。
+  - **资源使用效率：** 与每个VM运行一个应用相比，能更好地将资源封装到节点上。
+- **缺点：**
+  - **复杂性：** 尤其是Kubernetes，学习曲线陡峭，运维开销较大。管理集群需要专业知识。
+  - **资源开销：** 控制平面和代理程序会占用集群节点上的资源。
+
+容器编排非常适合需要高可用性和动态伸缩的生产应用，特别是如果您的团队拥有相关专业知识，或使用托管的Kubernetes服务（如EKS、GKE、AKS）来抽象部分底层复杂性。
+
+### 平台即服务 (PaaS)
+
+PaaS提供商提供一个环境，您只需部署代码，平台就负责处理底层基础设施、操作系统、补丁以及通常的伸缩。例子包括Heroku、Google App Engine、Azure App Service和AWS Elastic Beanstalk。
+
+- **优点：**
+  - **简化部署：** 通常只需推送代码仓库；平台负责构建和部署应用。
+  - **托管基础设施：** 显著减少运维负担。
+  - **集成服务：** 易于与其他平台服务（如数据库和缓存）集成。
+- **缺点：**
+  - **控制较少：** 您对底层操作系统拥有有限或没有访问权限。
+  - **潜在锁定：** 从特定PaaS提供商迁移可能更具挑战性。
+  - **平台限制：** 可能对后台进程、硬件选择（有限的GPU选项）或特定语言/框架版本有限制。
+
+PaaS是Web应用和API（包括许多LLM驱动的后端）的不错选择，尤其是在开发速度和减少运维开销是优先事项时。请检查特定PaaS提供商关于可能长时间运行的LLM推理 (inference)的执行时间和资源可用性方面的限制。
+
+### 无服务器函数 (函数即服务 - FaaS)
+
+无服务器平台允许您以函数形式部署代码，这些函数响应事件（如HTTP请求）而执行。您无需管理任何服务器。例子包括AWS Lambda、Google Cloud Functions和Azure Functions。
+
+- **优点：**
+  - **按使用付费：** 您只需为函数运行时消耗的执行时间和资源付费。对于流量可变或较低的应用来说，成本效益很高。
+  - **自动伸缩：** 平台根据传入请求自动处理伸缩。
+  - **事件驱动：** 天生适合事件驱动的架构。
+- **缺点：**
+  - **无状态：** 函数通常是无状态的，意味着它们在调用之间不保留信息。状态必须在外部管理（例如，在数据库或缓存中）。
+  - **执行限制：** 平台对执行持续时间、内存和部署包大小施加限制。这对于大型模型或非常长的推理 (inference)时间可能是一个挑战。
+  - **冷启动：** 当函数最近未被调用时（即“冷启动”），可能会增加延迟。这对于对延迟敏感的LLM应用来说可能无法接受。
+  - **GPU访问：** GPU支持通常有限或不可用。
+
+FaaS非常适合LLM工作流中的特定任务：执行快速推理的简单API端点、处理由事件触发的异步任务（例如，处理上传文档以供RAG），或充当不同服务之间的连接器。复杂、有状态的RAG管道或需要大型模型的应用可能难以应对FaaS的限制。
+
+### 托管模型服务平台
+
+云提供商和专业公司提供专门用于部署和提供机器学习 (machine learning)模型（包括LLM）的平台。例子包括AWS SageMaker Endpoints、Google Vertex AI Endpoints、Azure Machine Learning Endpoints，以及Hugging Face Inference Endpoints或Anyscale Endpoints等第三方服务。
+
+- **优点：**
+  - **为推理 (inference)优化：** 旨在处理模型加载、高效推理以及ML工作负载的伸缩。通常支持GPU。
+  - **简化部署：** 提供专为部署ML模型量身定制的工具和SDK。
+  - **托管伸缩与监测：** 包含自动伸缩和模型性能监测功能。
+- **缺点：**
+  - **成本：** 可能比通用计算更昂贵，特别是如果利用率不高。
+  - **平台特定：** 通常与特定的云提供商或供应商生态系统绑定。
+  - **抽象程度：** 可能会抽象掉复杂、定制化且涉及多个步骤的LLM工作流所需的细节。
+
+当主要目标是通过API端点提供LLM进行推理时，这些平台是很好的选择，特别是如果您需要优化性能、GPU加速和托管伸缩，而无需自行构建基础设施。
+
+### 影响选择的因素
+
+在这些选项之间做出选择涉及平衡多个因素：
+
+1. **伸缩需求：**
+   - *低/可变流量：* FaaS成本效益很高。PaaS也可能运行良好。
+   - *高/持续流量：* Kubernetes、托管端点或配置良好的VMs/PaaS更适合。
+2. **性能要求：**
+   - *低延迟：* VMs、Kubernetes或托管端点通常提供最可预测的性能，避免FaaS冷启动。
+   - *GPU加速：* 通常需要VMs、Kubernetes（带GPU节点）或专业的托管端点。仔细检查PaaS/FaaS的GPU可用性。
+3. **工作流复杂性：**
+   - *简单推理 (inference)API：* FaaS、PaaS或托管端点可能就足够了。
+   - *复杂链/代理/RAG：* VMs或Kubernetes为多步骤流程、自定义依赖项和状态管理（例如，与应用一起运行向量 (vector)数据库）提供更大的灵活性。
+4. **成本预算：**
+   - *最大程度降低闲置成本：* FaaS是理想选择。
+   - *可预测成本：* 预留VMs或PaaS/Kubernetes/托管端点上的承诺使用可以提供可预测的定价。密切监测使用情况。
+5. **团队专业知识与运维承受能力：**
+   - *高专业知识/承受能力：* VMs或自管理Kubernetes提供最大的控制权。
+   - *较低专业知识/承受能力：* PaaS、FaaS或托管服务（Kubernetes、端点）显著降低运维负担。
+6. **状态管理：**
+   - *无状态：* FaaS天然契合。
+   - *有状态：* VMs、Kubernetes Pods（带持久卷）或PaaS实例通常更容易在其中管理状态。
+
+> 一个基于应用需求选择部署策略的决策指南。根据您对问题的回答跟随箭头。
+
+最终，选择往往涉及权衡。在开发和早期阶段，您可以从PaaS或VMs等更简单的方法开始，随着应用伸缩和成熟，可能会迁移到Kubernetes或托管端点。仔细评估这些因素与您的应用特点和团队情况，以做出明智的决定。
+
+## 参考资料
+
+- [Kubernetes Documentation](https://kubernetes.io/docs/) — The Kubernetes Project (2024)
+  Publisher: Cloud Native Computing Foundation (CNCF)
+  关于理解和实施容器编排的权威资源，涵盖部署、扩展和管理。
+- [Serverless Architectures on AWS: With Lambda, Step Functions, Aurora, and More](https://www.manning.com/books/serverless-architectures-on-aws-second-edition) — Peter Sbarski, Yan Cui, Ajay Nair (2022)
+  Publisher: Manning Publications
+  介绍了构建无服务器应用程序的方法，详细说明了函数即服务和事件驱动模式。
+- [Machine Learning Engineering](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQED-LM61a3Ieu75RIgCnXO6qrgYcIAd1Jn2_H4EEqTSbBkaafYVVq1mOmzz-Mn1h_s-n3aYjkHeNU1IoXO6gsFXtCREcEO56q8pbecTJQ==) — Andriy Burkov (2020)
+  Publisher: True Positive Inc.; Pages: 310
+  涵盖了构建和部署机器学习系统的实践方面，从模型开发到生产环境中的模型服务。

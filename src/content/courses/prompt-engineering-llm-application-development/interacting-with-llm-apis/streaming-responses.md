@@ -1,0 +1,105 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "interacting-with-llm-apis"
+lesson: "streaming-responses"
+sourceId: 3039
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-4-interacting-with-llm-apis/streaming-responses"
+title: "流式响应"
+description: "在应用程序中实现流式传输，以生成实时响应。"
+order: 7
+plots: []
+sourceHash: "57448e469d8f3be138b3f822e3005d76ad5bccec9d350234a2ab151796abf98e"
+sourceCorrections: []
+---
+
+与大型语言模型（LLM）API交互时，默认行为通常是同步的：您的应用程序发送包含提示的请求，然后等待模型生成*完整*的响应后才接收它。对于简短、快速的回答，这种方式完全足够。但是，对于涉及长文本 (long context)生成、复杂推理 (inference)或像聊天机器人这样的交互式应用程序，这种等待时间可能导致用户体验迟缓。用户可能会看到几秒钟的加载指示器，不确定应用程序是否正在运行。
+
+流式传输为此延迟问题提供了一个办法。API不会等待完整响应，而是模型一生成文本就将其以较小的部分或“块”的形式发回。这样，您的应用程序可以增量显示响应，显著提升感知的响应速度。想象一个聊天机器人逐字打出回答，而不是停顿后再突然显示一大段文本。
+
+### 流式传输的工作方式
+
+当您请求流式响应时，您的应用程序与大型语言模型API服务器之间的连接在初始请求后会保持开放。然后，随着大型语言模型生成输出，服务器通过这个开放连接将数据块推送到您的应用程序。这通常使用服务器发送事件（SSE）等技术实现，服务器会持续向客户端发送事件。
+
+> 标准API交互（等待完整响应）与流式传输（分块接收响应）的比较。
+
+大多数主要的大型语言模型提供商都支持流式传输。通常，启用它需要在您的API请求中设置一个特定参数 (parameter)，比如`stream=True`。请查阅您所用大型语言模型API的文档，以获取确切的参数名称和使用方法。
+
+### 在Python中处理流式数据
+
+当您使用提供商的Python库（如`openai`或`anthropic`）启用流式传输进行API调用时，返回值通常会改变。您不会获得一个包含完整文本的单个响应对象，而是会收到一个迭代器或生成器。然后，您可以循环遍历此迭代器，以处理到达的每个数据块。
+
+从流中接收到的每个数据块通常是一个小型数据结构（通常是JSON对象），包含有关该生成片段的信息。确切的结构因API而异，但常见元素包括：
+
+- **内容增量：** 此数据块中实际新生成的文本片段。
+- **令牌信息：** 有时包含该数据块的令牌ID或计数。
+- **结束原因：** 指示流为何结束的信号（例如，成功完成的'stop'，达到`max_tokens`时的'length'）。这可能只出现在最后一个数据块中。
+- **元数据：** 其他信息，例如事件类型或数据块索引。
+
+这是一个Python代码片段，展示了您如何处理流：
+
+```python
+# 注意：这是伪代码。
+# 具体库的使用方法（例如，OpenAI，Anthropic）会略有不同。
+
+# 假设 'client' 是一个已初始化的API客户端
+# 假设 'prompt_messages' 是输入提示的结构
+try:
+    # 进行API调用，启用流式传输
+    stream = client.chat.completions.create(
+        model="llm-model-name",
+        messages=prompt_messages,
+        stream=True  # 启用流式传输
+    )
+
+    full_response = ""
+    print("LLM 响应: ", end="")
+
+    # 遍历流生成器
+    for chunk in stream:
+        # 检查数据块是否包含内容
+        # 获取内容的具体路径因API/库而异（例如，chunk.choices[0].delta.content）
+        content_delta = getattr(getattr(getattr(chunk.choices[0], 'delta', None), 'content', None), None)
+
+        if content_delta is not None:
+            # 立即将数据块内容打印到控制台
+            print(content_delta, end="", flush=True) 
+            
+            # 将数据块内容追加到 full_response 以构建完整响应
+            full_response += content_delta
+
+    print("\n--- 流式传输结束 ---")
+    # 现在 'full_response' 包含完整的生成文本
+
+except Exception as e:
+    print(f"\n发生错误: {e}")
+```
+
+在此示例中：
+
+1. 我们使用`stream=True`进行API调用。
+2. 我们遍历`stream`对象，它会生成`chunk`对象。
+3. 在循环内部，我们从数据块中获取实际的文本部分（`content_delta`）。特定的路径（`chunk.choices[0].delta.content`）在与OpenAI兼容的API中很常见，但请查阅您所用库的文档。
+4. 我们立即打印`content_delta`以模拟实时显示（使用`end=""`和`flush=True`）。
+5. 我们还会将其追加到`full_response`中，以便在流式传输结束后重构完整消息。
+
+### 优势与考量
+
+流式传输的主要优势是由于感知延迟降低而带来的**用户体验提升**。用户能立即看到活动，这对交互式应用程序来说很重要。它还允许您处理任意长度的响应，而不会出现一次性缓冲整个输出所带来的内存问题。
+
+然而，在客户端实现流式传输会增加一些复杂性：
+
+- **状态管理：** 您的应用程序需要将可能来自许多小数据块的内容组装成最终消息。
+- **数据块解析：** 您需要从每个数据块的结构中正确提取相关信息（例如文本内容）。
+- **错误处理：** 错误可能在流式传输过程中发生。您的代码需要妥善处理这些错误，可能会停止流处理并通知用户。
+- **UI更新：** 在Web应用程序中，您需要机制（例如使用SSE或WebSockets的JavaScript）来增量更新用户界面，因为数据块会从您的后端服务器到达，而后端服务器正在处理来自大型语言模型API的流。
+
+虽然大型语言模型框架（将在下一章讨论）通常提供有用的抽象来简化流处理，但在直接使用大型语言模型API时，理解遍历数据块和提取内容的底层过程是很重要的。流式传输是构建响应迅速且吸引人的AI应用程序的有效技术。
+
+## 参考资料
+
+- [Chat Completions API - Streaming](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGBV0T_DaiUUYS1ErDjzxHZaEdrfAWrGtA_SaWlf9YGonElRk16vTUtlftXj2yJdsH-0co_FRRGMRXqLWL4JJfX48MyIs9A9wj411TLqz3g9lm1SrYR4AsS) — OpenAI (2024)
+  Publisher: OpenAI
+  解释如何在OpenAI API中启用和使用流式响应，包括块结构和示例代码。
+- [Streaming responses](https://docs.anthropic.com/claude/reference/streaming) — Anthropic (2024)
+  Publisher: Anthropic
+  详细说明了从Anthropic Claude API接收增量数据的机制，涵盖了事件类型和处理。

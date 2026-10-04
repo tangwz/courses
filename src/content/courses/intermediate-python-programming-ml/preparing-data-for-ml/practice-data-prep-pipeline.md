@@ -1,0 +1,227 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "preparing-data-for-ml"
+lesson: "practice-data-prep-pipeline"
+sourceId: 2210
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-5-preparing-data-for-ml/practice-data-prep-pipeline"
+title: "实践：构建数据准备管道"
+description: "应用多种数据准备技术，为示例数据集构建Scikit-learn管道。"
+order: 8
+plots: []
+sourceHash: "faa7c09eed98bba946d56dfc73f68c38af96192947d2c4b45cfa00969351d031"
+sourceCorrections: []
+---
+
+将构建一个实用的数据准备管道。此管道会处理一个示例数据集，并应用诸如填充缺失值、数据缩放和编码等常见的预处理步骤。这些步骤随后被整合到一个可重用的Scikit-learn `Pipeline`中。这种方法确保了一致性，并避免了训练集和测试集之间的数据泄露。
+
+### 准备工作：数据集与目标
+
+假设我们有一个包含房屋信息的数据集，目标是预测房屋价格。我们的数据集可能包含的特征有面积（平方英尺）、卧室数量、位置（分类）和房龄。它可能也包含缺失值。
+
+让我们创建一个小型、有代表性的Pandas DataFrame来工作：
+
+```python
+import pandas as pd
+import numpy as np
+
+# 示例房屋数据
+data = {
+    'SquareFeet': [1500, 2100, 1800, np.nan, 2500, 1200, 1900],
+    'Bedrooms': [3, 4, 3, 3, 5, 2, np.nan],
+    'Location': ['Urban', 'Suburban', 'Urban', 'Rural', 'Suburban', 'Rural', 'Urban'],
+    'Age': [5, 10, 8, 25, 1, 15, 7],
+    'Price': [300000, 450000, 350000, 180000, 550000, 200000, 380000]
+}
+df = pd.DataFrame(data)
+
+print("原始DataFrame：")
+print(df)
+
+# 分离特征(X)和目标(y)
+X = df.drop('Price', axis=1)
+y = df['Price']
+```
+
+我们的`X` DataFrame看起来像这样：
+
+```
+   SquareFeet  Bedrooms  Location  Age
+0      1500.0       3.0     Urban    5
+1      2100.0       4.0  Suburban   10
+2      1800.0       3.0     Urban    8
+3         NaN       3.0     Rural   25
+4      2500.0       5.0  Suburban    1
+5      1200.0       2.0     Rural   15
+6      1900.0       NaN     Urban    7
+```
+
+请注意`SquareFeet`和`Bedrooms`中的缺失值（`NaN`），以及分类特征`Location`。
+
+### 步骤1：划分数据
+
+在进行任何预处理之前，我们必须将数据划分为训练集和测试集。这样做可以防止测试集的信息无意中影响从训练集学习到的预处理步骤（数据泄露）。
+
+```python
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42 # 使用random_state以确保结果可重现
+)
+
+print("\n训练集特征形状:", X_train.shape)
+print("测试集特征形状:", X_test.shape)
+```
+
+### 步骤2：定义不同列类型的预处理步骤
+
+我们需要对数值列和分类列采用不同的策略：
+
+- **数值列（`SquareFeet`、`Bedrooms`、`Age`）：**
+  1. 填充缺失值（例如，使用中位数）。
+  2. 对特征进行缩放（例如，使用`StandardScaler`）。
+- **分类列（`Location`）：**
+  1. 填充缺失值（如果有，例如，使用最常见的值）。
+  2. 应用独热编码。
+
+Scikit-learn的`Pipeline`和`ColumnTransformer`是实现这一点的理想工具。`Pipeline`按顺序连接步骤，而`ColumnTransformer`对不同列应用不同的转换。
+
+```python
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
+# 识别数值列和分类列
+numerical_features = ['SquareFeet', 'Bedrooms', 'Age']
+categorical_features = ['Location']
+
+# 为数值特征创建预处理管道
+# 步骤1: 使用中位数填充缺失值
+# 步骤2: 缩放数值特征
+numerical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())
+])
+
+# 为分类特征创建预处理管道
+# 步骤1: 使用最常见的值填充缺失值（如果有）
+# 步骤2: 应用独热编码，忽略转换过程中遇到的未知类别
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+])
+```
+
+### 步骤3：使用ColumnTransformer组合预处理步骤
+
+现在，我们使用`ColumnTransformer`将正确的管道应用于相应的列。
+
+```python
+# 使用ColumnTransformer创建预处理器对象
+# 将numerical_transformer应用于numerical_features
+# 将categorical_transformer应用于categorical_features
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ],
+    remainder='passthrough' # 保留其他列（如果有）——此处不需要但这是一个好习惯
+)
+
+print("\n预处理器结构：")
+print(preprocessor)
+```
+
+这个`preprocessor`对象封装了所有数据准备逻辑。它知道哪些列是数值型的，哪些是分类型的，以及应用于每组的步骤顺序（填充，然后缩放/编码）。
+
+### 步骤4：构建完整管道（可选：包含模型）
+
+虽然本章侧重于数据准备，但您通常会将实际的机器学习 (machine learning)模型包含在同一个管道中。这确保了整个工作流程（从原始数据到预测）得到简化。让我们添加一个占位符模型（例如，线性回归）进行说明。
+
+```python
+from sklearn.linear_model import LinearRegression
+
+# 创建包含预处理器和模型的完整管道
+# 步骤1: 应用预处理器
+# 步骤2: 训练线性回归模型
+full_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', LinearRegression()) # 示例模型
+])
+
+print("\n完整管道结构：")
+print(full_pipeline)
+```
+
+### 步骤5：将管道应用于数据
+
+现在，见证其作用。我们可以在训练数据上`fit`整个管道。Scikit-learn会正确处理每个步骤的应用：
+
+1. `numerical_transformer`中的`SimpleImputer`（中位数）*仅*在训练数据的数值列上进行拟合，以学习中位数。
+2. `StandardScaler`*仅*在已填充缺失值的训练数据的数值列上进行拟合，以学习均值和标准差。
+3. `categorical_transformer`中的`SimpleImputer`（最常见值）*仅*在训练数据的分类列上进行拟合。
+4. `OneHotEncoder`*仅*在已填充缺失值的训练数据的分类列上进行拟合，以学习独特的类别。
+5. 最后，（可选的）`LinearRegression`模型使用完全转换后的训练数据进行训练。
+
+```python
+# 将管道拟合到训练数据
+# 这将应用填充、缩放、编码和模型训练
+full_pipeline.fit(X_train, y_train)
+
+print("\n管道在训练数据上成功拟合.")
+
+# 现在，您可以使用已拟合的管道转换测试数据
+# 并进行预测
+X_test_processed = full_pipeline.named_steps['preprocessor'].transform(X_test)
+print("\n处理后的测试特征形状:", X_test_processed.shape)
+print("处理后的测试数据示例（第一行）:\n", X_test_processed[0])
+
+# 对测试集进行预测
+predictions = full_pipeline.predict(X_test)
+print("\n测试数据上的预测:", predictions)
+```
+
+请注意，当我们对测试数据（`X_test`）调用`transform`（或`predict`）时，管道使用*仅*从训练数据（`X_train`）学到的参数 (parameter)（中位数、均值、标准差、类别）。这正是我们希望实现的，以防止数据泄露并获得模型性能的可靠评估。
+
+输出的`X_test_processed`是一个NumPy数组，其中缺失值已被填充，数值特征已缩放，分类特征已独热编码。它已准备好直接馈送给机器学习 (machine learning)模型。
+
+### 可视化管道结构
+
+我们可以使用Graphviz来可视化`preprocessor`或`full_pipeline`的结构。
+
+```python
+from sklearn import set_config
+
+# 设置 display='diagram' 以启用图形表示
+set_config(display='diagram')
+
+# 显示预处理器管道
+print("\n预处理器图：")
+display(preprocessor) # 在Jupyter环境中，这会显示图表
+
+# 显示完整管道
+print("\n完整管道图：")
+display(full_pipeline) # 显示预处理器 + 回归器
+
+# 如果需要，将显示设置回默认
+# set_config(display='text')
+```
+
+如果您处于支持富文本显示的环境（如Jupyter），您将看到交互式图表。以下是使用Graphviz语法的静态表示：
+
+> 数据准备步骤的结构，使用ColumnTransformer组合，并可选地包含在完整模型管道中。数值特征经过填充和缩放，而分类特征则进行填充和独热编码。
+
+本实践练习演示了如何使用Scikit-learn的`Pipeline`和`ColumnTransformer`构建数据准备工作流程。通过为不同数据类型定义独立的步骤，并将它们封装在一个单一对象中，您可以创建更易于管理、重用，并且不易出现数据泄露等错误的代码。这是任何机器学习 (machine learning)实践者的一项基本技能。
+
+## 参考资料
+
+- [Pipelines and composite estimators](https://scikit-learn.org/stable/modules/compose.html) — Scikit-learn developers (2023)
+  官方指南，解释如何使用 Pipeline 和 ColumnTransformer 链接多个估计器并对不同的列子集应用转换。
+- [Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) — Scikit-learn developers (2023)
+  提供 Scikit-learn 支持的各种数据预处理技术的详细信息，包括缺失值处理、特征缩放和编码。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://learning.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用书籍，展示如何使用 Scikit-learn 为机器学习项目进行数据准备、特征工程和管道构建。
+- [Applied Predictive Modeling](https://link.springer.com/book/10.1007/978-1-4614-6849-3) — Max Kuhn and Kjell Johnson (2013)
+  Publisher: Springer; DOI: [10.1007/978-1-4614-6849-3](https://doi.org/10.1007/978-1-4614-6849-3)
+  提供关于预测建模中数据预处理、特征选择和模型训练策略的全面论述。

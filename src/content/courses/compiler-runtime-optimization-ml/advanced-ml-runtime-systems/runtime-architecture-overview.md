@@ -1,0 +1,78 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "advanced-ml-runtime-systems"
+lesson: "runtime-architecture-overview"
+sourceId: 4540
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-6-advanced-ml-runtime-systems/runtime-architecture-overview"
+title: "运行时架构概览"
+description: "考察机器学习运行时的组成部分：执行引擎、内存管理器、设备管理器、性能分析器。"
+order: 1
+plots: []
+sourceHash: "454e5fe5f29f5e15fd530999c6209ca70f3558d11d4e48a7f94356a645812e9f"
+sourceCorrections: []
+---
+
+编译过程将高级模型表示转换为优化的、特定硬件的指令或核心代码后，运行时系统变得举足轻重。它是执行环境，负责协调已编译工件的部署，管理资源，与硬件交互，并最终执行模型的计算。进阶的机器学习 (machine learning)运行时远不止一个简单的加载器；它是一个复杂的软件，旨在应对大型神经网络 (neural network)在多样且通常异构的硬件平台上的特殊要求。
+
+机器学习运行时其核心作用是连接编译器生成的静态优化代码与动态执行的现实。它必须高效管理状态、数据传输和计算调度，通常在严格的性能限制下进行。理解这些运行时的架构蓝图，对了解性能如何实现以及潜在瓶颈所在十分有益。
+
+### 机器学习 (machine learning)运行时的组成部分
+
+尽管特定实现如TensorFlow Lite Runtime、ONNX Runtime、TensorRT、TVM Runtime或IREE之间存在显著差异，但大多数先进的机器学习运行时都包含一组共同的逻辑组成部分，每个部分都有明确的职责：
+
+1. **执行引擎：** 这是核心协调器。它接收编译后的模型表示（通常是操作的有向无环图，即DAG，或核心函数调用的线性序列），并推动其执行。其职责包括：
+
+   - 解释编译后的模型结构。
+   - 管理操作间的依赖关系，确保正确的执行顺序。
+   - 通过设备管理器和核心函数分发器，将单个核心函数计算分发给合适的硬件设备。
+   - 处理控制流构造（条件语句、循环），如果它们尚未被编译器完全展开或专门化。
+2. **内存管理器：** 机器学习模型处理大型张量，使得内存管理成为影响性能的重要因素。运行时的内存管理器负责：
+
+   - 为输入张量、输出张量和中间激活分配和释放内存缓冲区。
+   - 通过静态内存规划（根据图提前计算缓冲区需求）、缓冲区共享或别名（重用非干扰张量的内存区域）以及工作区分配（为核心函数提供临时暂存空间）等技术优化内存使用。
+   - 管理不同物理内存空间（例如，主机CPU RAM、GPU VRAM、加速器片上SRAM）的内存。这通常涉及促进高效的数据传输。
+   - 采用竞技场分配器或子分配器等专用分配器，以最大程度地减少相对于标准系统分配器（`malloc`/`free`）的开销。
+3. **设备管理器：** 现代机器学习工作负载常在异构系统上运行。设备管理器抽象了与不同硬件加速器交互的细节。其任务包括：
+
+   - 发现可用的硬件设备（CPU、特定GPU、自定义加速器）。
+   - 管理设备上下文 (context)和资源（例如，CUDA上下文、OpenCL命令队列）。
+   - 提供接口供执行引擎将任务调度到特定设备。
+   - 处理设备特定的初始化和配置。
+4. **核心函数分发器/函数注册表：** 编译器为特定硬件上的特定操作生成优化的代码片段（核心函数）。运行时需要一种机制来正确调用这些核心函数。此组件通常包含：
+
+   - 一个注册表，将操作类型（例如，`Conv2D`、`MatMul`）、数据类型（例如，`float32`、`int8`）和目标设备映射到相应的已编译核心函数指针或句柄。
+   - 为执行引擎提供接口，用于查找并启动图中给定操作节点的合适核心函数，并传递正确的输入/输出张量和属性。
+   - 支持集成外部提供的核心函数，例如来自供应商库（cuDNN, oneDNN）或用户定义的自定义操作。
+5. **异步执行与调度：** 为了最大化硬件利用率和隐藏延迟，运行时系统高度依赖异步操作。这涉及：
+
+   - 管理用于计算和数据传输的异步任务队列或流（例如，CUDA流）。
+   - 调度任务以使加速器上的计算与主机和设备内存之间的数据传输重叠。
+   - 正确处理同步点以维持数据依赖。更先进的调度器可能会为异构环境实施复杂的策略，动态决定操作的最佳放置位置。
+6. **性能分析接口：** 为实现性能分析（如第9章所述），运行时系统通常包含检测点或API。这些允许外部分析工具收集关于核心函数执行、内存分配和数据传输的详细时间与资源使用信息，并将其与原始模型操作关联起来。
+
+### 架构间的交互
+
+这些组件并非独立运行。执行引擎推动整个过程，向内存管理器请求缓冲区，指示设备管理器（通过核心函数分发器）使用这些缓冲区在特定设备上启动核心函数，并利用异步机制管理依赖关系。
+
+> 先进机器学习 (machine learning)运行时系统的高层架构图，展现了核心组成部分及其与已编译模型、硬件和外部要素的主要交互。
+
+这种模块化架构使得不同的运行时实现能够在特定方面进行创新或专门化。例如，一个运行时可能擅长复杂的异构调度，而另一个可能侧重于最小内存占用或超低延迟的核心函数分发。因此，这些组件之间的接口是重要的设计考量，可实现灵活性和可维护性。
+
+与传统软件运行时（如Java虚拟机或C++运行时库）相比，机器学习运行时具有独特的专门性。它们处理表示为张量操作的批量并行计算，管理更大、结构更严谨的数据分配，并通过更低层的接口直接面向更广泛的专用硬件加速器。
+
+理解此架构构成十分重要，有助于我们后续考察这些组件内的具体挑战和高级技术，首先从处理执行期间动态张量形状的复杂性开始。
+
+## 参考资料
+
+- [TVM: An Automated End-to-End Optimizing Compiler for Deep Learning](https://www.usenix.org/conference/osdi18/presentation/chen) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18); Publisher: USENIX Association; Pages: 578-594
+  描述了一个端到端深度学习编译和运行时栈，阐释了编译器与运行时在异构硬件上的相互作用。
+- [ONNX Runtime Overview](https://www.youtube.com/watch?v=s1R3f_jJqgE) — Yue-Sheng Liu (2024)
+  Publisher: ONNX Runtime
+  官方文档，提供了广泛使用的ML推理运行时的架构概述，详细介绍了其组件及其相互作用。
+- [IREE Compiler and Runtime Architecture](https://iree.dev/) — IREE Team (2024)
+  Publisher: LF AI & Data Foundation
+  详细介绍了来自知名开源项目的现代多目标ML编译器和运行时系统的设计原则和组件文档。
+- [Deep Learning Systems: Algorithms, Compilers, and Processors for Efficient Intelligence](https://books.google.com/books/about/Deep_Learning_Systems.html?id=o6rZDwAAQBAJ) — E. Elsen, H. F. Ding, C. J. Ding, S. Gupta, D. K. Kim, V. J. Lee, J. R. Li, D. C. Nellans, S. V. Smith (2020)
+  Publisher: Cambridge University Press
+  全面介绍了深度学习系统，其中包含关于运行时架构、内存管理和执行引擎的相关章节。

@@ -1,0 +1,329 @@
+---
+course: "julia-deep-learning"
+chapter: "training-evaluating-dl-models"
+lesson: "hands-on-training-finetuning-model"
+sourceId: 6921
+sourceUrl: "https://apxml.com/zh/courses/julia-deep-learning/chapter-4-training-evaluating-dl-models/hands-on-training-finetuning-model"
+title: "动手实践：模型训练与调优"
+description: "一次关于训练深度学习模型的全面实践会话，内容涵盖评估、正则化和超参数调整。"
+order: 9
+plots: ["plots/6921-0.json"]
+sourceHash: "684a5904ed9a7d9a107c3464fa856add42a61309dcf3ce70a0afe19ef5db7087"
+sourceCorrections: []
+---
+
+既然您已扎实掌握如何构建训练循环、评估模型以及应用正则化 (regularization)等技术，现在是时候将所有这些环节综合起来了。本次动手实践将引导您完成神经网络 (neural network)的训练、性能评估以及后续的调优以取得更佳效果。我们将模拟一个常见的工作流程，着重体现模型开发的迭代特性。
+
+本次练习中，我们将使用一个合成数据集来解决二元分类问题。这使我们能够专注于训练和调优的机制，而无需纠结于复杂的数据加载或预处理。
+
+### 准备阶段：数据与初始模型
+
+环境设置包括数据生成。所需的库有用于深度学习 (deep learning)的 `Flux`、用于数据处理的 `MLUtils`、用于可视化的 `Plots` (或您偏好的绘图库)，以及用于可复现性的 `Random`。
+
+```julia
+using Flux
+using MLUtils: DataLoader, unsqueeze
+using Random
+using Printf
+using Statistics: mean
+
+# 用于可复现性
+Random.seed!(123)
+
+# 为二元分类生成合成数据集
+function generate_data(n_samples=200)
+    # 类别 0：中心在 (-1, -1) 附近
+    X1 = randn(Float32, 2, n_samples ÷ 2) .- 1.0f0
+    Y1 = zeros(Int, n_samples ÷ 2)
+
+    # 类别 1：中心在 (1, 1) 附近
+    X2 = randn(Float32, 2, n_samples ÷ 2) .+ 1.0f0
+    Y2 = ones(Int, n_samples ÷ 2)
+
+    X = hcat(X1, X2)
+    Y = vcat(Y1, Y2)
+
+    # 打乱数据
+    indices = shuffle(1:n_samples)
+    X = X[:, indices]
+    Y = Y[indices]
+
+    # 重塑 Y 以适应 Flux 的二元交叉熵 (期望 1xN)
+    return X, unsqueeze(Float32.(Y), 1)
+end
+
+X_train, Y_train = generate_data(400)
+X_test, Y_test = generate_data(100)
+
+# 创建数据加载器
+batch_size = 32
+train_loader = DataLoader((X_train, Y_train), batchsize=batch_size, shuffle=true)
+test_loader = DataLoader((X_test, Y_test), batchsize=batch_size)
+```
+
+现在，让我们为分类任务定义一个简单的多层感知机 (MLP)。
+
+```julia
+input_dim = 2
+hidden_dim = 10
+output_dim = 1 # 用于二元分类的单一输出（带 Sigmoid）
+
+model_v1 = Chain(
+    Dense(input_dim, hidden_dim, relu),
+    Dense(hidden_dim, output_dim) # Sigmoid 将通过 logitbinarycrossentropy 应用
+)
+
+# 损失函数和优化器
+loss_fn(x, y) = Flux.logitbinarycrossentropy(model_v1(x), y)
+optimizer = Adam(0.01) # 初始学习率
+
+# 要训练的参数
+params = Flux.params(model_v1)
+```
+
+这里，`logitbinarycrossentropy` 适用，因为它在内部应用 Sigmoid，并且比带有单独 `sigmoid` 层的 `binarycrossentropy` 在数值上更稳定。
+
+### 初次训练运行
+
+让我们实现一个基本的训练循环，并训练 `model_v1`。
+
+```julia
+function accuracy(model, data_loader)
+    correct = 0
+    total = 0
+    for (x, y) in data_loader
+        # 对模型输出应用 Sigmoid 以获得概率
+        y_hat_prob = sigmoid.(model(x)) 
+        # 将概率转换为二元预测 (0 或 1)
+        y_hat = ifelse.(y_hat_prob .> 0.5f0, 1.0f0, 0.0f0)
+        correct += sum(y_hat .== y)
+        total += length(y)
+    end
+    return correct / total
+end
+
+epochs = 20
+history_v1 = Dict("loss" => Float64[], "accuracy" => Float64[])
+
+println("正在训练 model_v1...")
+for epoch in 1:epochs
+    epoch_loss = 0.0
+    for (x_batch, y_batch) in train_loader
+        # 计算损失和梯度
+        batch_loss, grads = Flux.withgradient(params) do
+            loss_fn(x_batch, y_batch)
+        end
+        # 更新参数
+        Flux.update!(optimizer, params, grads)
+        epoch_loss += batch_loss * size(x_batch, 2) # 按批次大小加权
+    end
+    avg_epoch_loss = epoch_loss / size(X_train, 2)
+
+    # 计算训练集上的准确率以进行监控
+    train_acc = accuracy(model_v1, train_loader)
+
+    push!(history_v1["loss"], avg_epoch_loss)
+    push!(history_v1["accuracy"], train_acc)
+
+    @printf "Epoch %2d: Loss = %.4f, Train Accuracy = %.2f%%\n" epoch avg_epoch_loss (train_acc * 100)
+end
+
+# 在测试集上评估
+test_acc_v1 = accuracy(model_v1, test_loader)
+println("最终测试准确率 (model_v1): $(test_acc_v1 * 100)%")
+```
+
+运行之后，您可能会看到一个相当不错的准确率，但或许仍有提升空间。我们假设 `model_v1` 达到了大约 90-95% 的测试准确率。训练损失应下降，准确率应随着训练轮数增加。
+
+### 添加正则化 (regularization)：Dropout
+
+一个常见问题是过拟合 (overfitting)，即模型在训练数据上表现良好，但在未见过的测试数据上表现不佳。正则化技术有助于应对此问题。让我们向模型添加 `Dropout`。
+
+```julia
+model_v2 = Chain(
+    Dense(input_dim, hidden_dim, relu),
+    Dropout(0.3), # 在第一个隐藏层之后添加 Dropout
+    Dense(hidden_dim, output_dim)
+)
+
+loss_fn_v2(x, y) = Flux.logitbinarycrossentropy(model_v2(x), y)
+optimizer_v2 = Adam(0.01) # 重置优化器或使用新的优化器
+params_v2 = Flux.params(model_v2)
+
+history_v2 = Dict("loss" => Float64[], "accuracy" => Float64[])
+
+println("\n正在训练带有 Dropout 的 model_v2...")
+for epoch in 1:epochs # 相同的训练轮数用于比较
+    epoch_loss = 0.0
+    # 重要：为 Dropout 将模型设置为训练模式
+    Flux.trainmode!(model_v2) 
+    for (x_batch, y_batch) in train_loader
+        batch_loss, grads = Flux.withgradient(params_v2) do
+            loss_fn_v2(x_batch, y_batch)
+        end
+        Flux.update!(optimizer_v2, params_v2, grads)
+        epoch_loss += batch_loss * size(x_batch, 2)
+    end
+    avg_epoch_loss = epoch_loss / size(X_train, 2)
+
+    # 重要：为评估将模型设置为测试模式
+    Flux.testmode!(model_v2) 
+    train_acc = accuracy(model_v2, train_loader)
+
+    push!(history_v2["loss"], avg_epoch_loss)
+    push!(history_v2["accuracy"], train_acc)
+
+    @printf "Epoch %2d: Loss = %.4f, Train Accuracy = %.2f%%\n" epoch avg_epoch_loss (train_acc * 100)
+end
+
+Flux.testmode!(model_v2) # 确保模型处于测试模式以进行最终评估
+test_acc_v2 = accuracy(model_v2, test_loader)
+println("最终测试准确率 (带有 Dropout 的 model_v2): $(test_acc_v2 * 100)%")
+```
+
+当使用 `Dropout` 或 `BatchNorm` 等层时，在训练模式 (`Flux.trainmode!`) 和测试模式 (`Flux.testmode!`) 之间切换模型非常重要。Dropout 仅在训练期间活跃。对于我们简单的这个数据集，Dropout 可能不会显示出显著提升，如果模型一开始就没有严重过拟合，甚至可能略微降低性能。然而，在更复杂的数据集上，它是一个有价值的工具。
+
+### 超参数 (parameter) (hyperparameter)调优：调整学习率
+
+学习率是最重要的超参数之一。过高的学习率可能导致优化器越过最小值，而过低的学习率可能导致收敛非常缓慢或陷入次优局部最小值。
+
+让我们用 `model_v1`（非 Dropout 版本，以便更清晰地比较仅学习率的效果）尝试不同的学习率。
+
+```julia
+# 如果您想保留旧模型，可以重新初始化 model_v1 或创建新实例
+model_v3 = Chain(
+    Dense(input_dim, hidden_dim, relu),
+    Dense(hidden_dim, output_dim)
+)
+
+loss_fn_v3(x, y) = Flux.logitbinarycrossentropy(model_v3(x), y)
+# 尝试较小的学习率
+optimizer_v3 = Adam(0.001) 
+params_v3 = Flux.params(model_v3)
+
+history_v3 = Dict("loss" => Float64[], "accuracy" => Float64[])
+
+println("\n正在训练学习率为 0.001 的 model_v3...")
+for epoch in 1:epochs # 使用相同的训练轮数
+    epoch_loss = 0.0
+    for (x_batch, y_batch) in train_loader
+        batch_loss, grads = Flux.withgradient(params_v3) do
+            loss_fn_v3(x_batch, y_batch)
+        end
+        Flux.update!(optimizer_v3, params_v3, grads)
+        epoch_loss += batch_loss * size(x_batch, 2)
+    end
+    avg_epoch_loss = epoch_loss / size(X_train, 2)
+
+    train_acc = accuracy(model_v3, train_loader)
+
+    push!(history_v3["loss"], avg_epoch_loss)
+    push!(history_v3["accuracy"], train_acc)
+
+    @printf "Epoch %2d: Loss = %.4f, Train Accuracy = %.2f%%\n" epoch avg_epoch_loss (train_acc * 100)
+end
+
+test_acc_v3 = accuracy(model_v3, test_loader)
+println("最终测试准确率 (带有学习率 0.001 的 model_v3): $(test_acc_v3 * 100)%")
+```
+
+比较 `test_acc_v3` 与 `test_acc_v1`。较小的学习率是有帮助、有碍还是影响不大？有时较小的学习率需要更多训练轮数才能收敛。尝试不同值的这个过程是超参数调优的核心所在。更系统的方法包括网格搜索、随机搜索或贝叶斯优化，这些超出了本次初始实践的范围，但它们都建立在这个试错的根基之上。
+
+### 使用回调进行训练监控
+
+回调可以简化您的训练循环并增加强大的功能，例如记录指标、保存模型或实现早停。Flux 没有像某些 Python 框架那样全面的直接内置回调系统，但您可以轻松实现类似逻辑。例如，`Flux.Optimise.run!` 接受一个回调。
+
+让我们在手动循环中演示一个简单的自定义日志回调。对于更复杂的场景，您可以使用 `Flux.Optimise.run!` 或扩展 Flux 以提供回调功能的库。
+
+以下是您如何集成一个简单日志操作的示例：
+
+```julia
+# ... (模型、损失、优化器、参数如前所述定义) ...
+# 示例：再次训练 model_v1，但带有一个明确的回调式操作
+
+println("\n正在训练带有简单回调式操作的 model_v1...")
+for epoch in 1:epochs
+    # 在训练轮开始时的回调操作
+    # println("开始第 $epoch 轮...") 
+
+    Flux.train!(loss_fn, params, train_loader, optimizer) # 为简洁起见使用 Flux.train!
+
+    # 在训练轮结束时的回调操作
+    current_loss = mean(loss_fn(x, y) for (x,y) in train_loader) # 近似值
+    current_acc = accuracy(model_v1, train_loader)
+    @printf "Epoch %2d: Loss = %.4f, Train Accuracy = %.2f%%\n" epoch current_loss (current_acc * 100)
+
+    # 示例：早停 (非常基础)
+    # if current_loss < 0.05 break end 
+end
+```
+
+`Flux.train!` 简化了训练循环中的批次迭代部分。更复杂的回调，例如用于保存最佳模型或动态调整学习率（学习率调度）的回调，可以集成到此循环结构中。
+
+### 可视化训练进程
+
+可视化损失和准确率等指标在训练轮数上的变化，对于理解模型行为非常宝贵。让我们使用绘图库的占位符来绘制我们某个模型的训练损失。如果您已安装 `Plots.jl` 和一个后端 (例如 `GR` 或 `PlotlyJS`)，您可以调整此代码。
+
+
+
+![训练损失随训练轮数变化 (示例数据)](plots/6921-0.json)
+
+
+
+> `model_v1` 运行的训练损失曲线。递减趋势表明模型正在学习。
+
+要使用 `Plots.jl` 和您实际的 `history_v1["loss"]` 数据生成此图表：
+
+```julia
+# 假设 Plots.jl 已安装且您拥有一个后端
+# using Plots
+# plotly() # 或您偏好的后端
+
+# plot(1:epochs, history_v1["loss"], label="模型 v1 训练损失",
+#      xlabel="训练轮数", ylabel="损失", title="训练损失随训练轮数变化",
+#      linewidth=2, marker=:circle)
+# 您也可以类似地绘制准确率：
+# plot!(1:epochs, history_v1["accuracy"], label="模型 v1 训练准确率", seriestype=:line)
+```
+
+观察这些图表有助于诊断问题。平坦的损失曲线可能表明学习率过小或梯度存在问题。损失增加可能意味着学习率过高。如果训练准确率很高但测试准确率很低，则表明模型过拟合 (overfitting)。
+
+### 调优与迭代
+
+“调优”广义上指对模型或训练过程进行调整以提升性能的过程。这可以包括：
+
+- **调整超参数 (parameter) (hyperparameter)：** 就像我们对学习率所做的那样。其他可选项包括批次大小、层数、每层神经元数量，或优化器类型（例如，尝试 `RMSProp` 而不是 `Adam`）。
+- **修改模型架构：** 添加或移除层，更改激活函数 (activation function)。
+- **更改正则化 (regularization)：** 调整 Dropout 比率，添加或调整权重 (weight)衰减。
+- **数据增强：** 如果适用，人为增加训练数据的多样性。
+- **迁移学习 (transfer learning)：** 使用预训练 (pre-training)模型并使其适应您的特定任务（将在后续章节中更详细地讲解）。
+
+我们通过添加 Dropout 和更改学习率所采取的步骤都是调优的形式。理想情况下，每次更改都应系统地评估。通常，您会每次只改变一个方面，以理解其影响。
+
+### 本次实践练习总结
+
+本次会话中，您已完成：
+
+1. 设置了一个合成数据集和一个基本的 Flux 模型。
+2. 实现了一个训练循环并训练了模型的初始版本。
+3. 评估了模型的准确率。
+4. 引入 `Dropout` 作为一种正则化 (regularization)技术并观察了其效果，同时牢记 `trainmode!` 和 `testmode!` 的用法。
+5. 尝试了不同的学习率，这是超参数 (parameter) (hyperparameter)调优的一个常见步骤。
+6. 简要了解了如何集成回调式操作以进行日志记录。
+7. 思考了如何可视化损失等训练指标。
+
+这种训练、评估和改进的迭代循环是应用深度学习 (deep learning)的核心所在。每个数据集和问题都会呈现独特的挑战，但这里介绍的训练和调优的基本技术为使用 Julia 和 Flux.jl 构建有效模型提供了坚实的起点。请记住，耐心和系统性实验是您在此过程中的最佳盟友。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍了深度学习基础，包括神经网络训练、优化算法、正则化技术和超参数调整。
+- [Flux.jl Documentation](https://fluxml.ai/Flux.jl/stable/) — The Flux.jl Community (2025)
+  Flux.jl 深度学习库的官方文档，提供在 Julia 中构建模型、训练和使用实用工具的实践指南。
+- [Dropout: A Simple Way to Prevent Overfitting Neural Networks](http://jmlr.org/papers/v15/srivastava14a.html) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR; Volume: 15; Pages: 1929-1958
+  介绍了 Dropout，一种广泛用于通过在训练期间随机丢弃单元来减轻神经网络过拟合的正则化技术。
+- [Random Search for Hyper-Parameter Optimization](http://jmlr.org/papers/v13/bergstra12a.html) — James Bergstra and Yoshua Bengio (2012)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR; Volume: 13; Pages: 281-305
+  提出随机搜索作为超参数优化的一种高效策略，尤其在高维空间中，其性能常优于网格搜索。

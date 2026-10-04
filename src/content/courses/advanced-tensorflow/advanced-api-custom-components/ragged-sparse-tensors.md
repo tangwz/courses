@@ -1,0 +1,183 @@
+---
+course: "advanced-tensorflow"
+chapter: "advanced-api-custom-components"
+lesson: "ragged-sparse-tensors"
+sourceId: 2884
+sourceUrl: "https://apxml.com/zh/courses/advanced-tensorflow/chapter-4-advanced-api-custom-components/ragged-sparse-tensors"
+title: "处理参差张量和稀疏张量"
+description: "使用参差张量和稀疏张量高效处理变长序列和稀疏数据。"
+order: 6
+plots: []
+sourceHash: "6991a04842ca6c9a48c09724347d1b73dd8dbc46feb2da32a891a4f39788e7b4"
+sourceCorrections: []
+---
+
+"虽然 `tf.Tensor` 为 TensorFlow 中的数值计算提供了基础，将数据表示为密集的多维数组，但并非所有数据都能很好地适配这种矩形结构。机器学习 (machine learning)通常涉及处理长度不一的序列（例如文本分析中的句子）或大多数值为零的数据集（例如独热编码后的高维分类特征）。对于这些情况，TensorFlow 提供了专门的张量类型：`tf.RaggedTensor` 和 `tf.SparseTensor`。理解如何使用这些张量对于构建需要高效处理不规则或稀疏数据的自定义组件来说很重要。"
+
+### 使用参差张量处理变长数据
+
+`tf.RaggedTensor` 是一种具有一个或多个*参差维度*的张量，其切片可能具有不同长度。可以想象成一批句子，其中每个句子包含不同数量的词语；或者用户点击流，其中每个用户有不同数量的交互。
+
+**使用情况：**
+
+- **自然语言处理：** 表示具有可变词数的句子、段落或文档批次。
+- **时间序列分析：** 处理每个样本观察数量不同的序列。
+- **图数据：** 表示节点特征或邻居，其中节点的度数不同。
+
+**创建参差张量：**
+
+可以直接创建参差张量，或从 Python 列表转换。
+
+```python
+import tensorflow as tf
+
+# 使用 tf.ragged.constant 直接创建
+sentences = tf.ragged.constant([
+    ["Hello", "world"],
+    ["TensorFlow", "is", "powerful"],
+    ["Ragged", "tensors", "handle", "variable", "sequences"]
+])
+print(sentences)
+
+# 从行拆分（定义展平值中每行的结束位置）
+values = tf.constant(["a", "b", "c", "d", "e"])
+row_splits = tf.constant([0, 2, 2, 5], dtype=tf.int64) # 行长度：2, 0, 3
+ragged_from_splits = tf.RaggedTensor.from_row_splits(values=values, row_splits=row_splits)
+print(ragged_from_splits)
+```
+
+`row_splits` 向量 (vector)指示展平的 `values` 张量中每行的起始和结束索引。对于 `[0, 2, 2, 5]`，第0行对应于 `values[0:2]`，第1行对应于 `values[2:2]` (空)，第2行对应于 `values[2:5]`。
+
+**参差张量上的操作：**
+
+许多标准 TensorFlow 操作可以直接与 `tf.RaggedTensor` 一起使用，并在适当情况下保持参差结构。
+
+```python
+# 逐元素操作
+print(tf.strings.length(sentences))
+
+# 归约操作（可以在参差维度上操作）
+print(tf.reduce_mean(tf.cast(tf.strings.length(sentences), tf.float32), axis=1))
+
+# 映射函数
+ragged_lengths = tf.map_fn(tf.shape, sentences, dtype=tf.TensorSpec(shape=(1,), dtype=tf.int32))
+print(ragged_lengths) # 注意：tf.shape 给出每个内部张量的形状
+```
+
+请记住，参差张量上的操作可能涉及与密集张量不同的底层实现，可能影响性能。始终对代码的关键部分进行性能分析。
+
+**与 Keras 的集成：**
+
+Keras 层通常直接接受参差张量，特别是当使用 `tf.keras.Input(type_spec=tf.RaggedTensorSpec(...))` 时，或者当层本身处理可变序列时（例如 `tf.keras.layers.Embedding` 或 `tf.keras.layers.LSTM`）。
+
+```python
+# Keras 模型输入规范示例
+ragged_input = tf.keras.Input(shape=(None,), dtype=tf.string, ragged=True)
+
+# 嵌入层直接处理参差输入
+embedding_layer = tf.keras.layers.Embedding(input_dim=1000, output_dim=16)
+embedded_output = embedding_layer(ragged_input) # 输出是参差的
+
+# LSTM 层也可以处理参差序列
+lstm_layer = tf.keras.layers.LSTM(32)
+lstm_output = lstm_layer(embedded_output) # 输出是密集的（最后一个时间步）
+
+model = tf.keras.Model(inputs=ragged_input, outputs=lstm_output)
+# model.summary() # 摘要反映了参差特性
+```
+
+**转换：**
+
+可以使用 `to_tensor()` 将参差张量转换为密集张量，这需要指定一个默认填充值。请谨慎操作，因为如果序列长度差异很大，这会显著增加内存使用。您也可以将它们转换为 `tf.SparseTensor`。
+
+```python
+dense_tensor = sentences.to_tensor(default_value="[PAD]")
+print(dense_tensor)
+
+sparse_tensor = sentences.to_sparse()
+print(sparse_tensor)
+```
+
+### 使用稀疏张量高效表示数据
+
+`tf.SparseTensor` 通过仅存储非零值及其对应索引来表示张量。当张量中绝大多数元素为零时，这种方式内存效率极高。
+
+**使用情况：**
+
+- **高维分类特征：** 表示词汇量很大时独热或多热编码后的数据。
+- **图邻接矩阵：** 在大多数节点不连接的大图中存储连接。
+- **推荐系统：** 用户-物品交互矩阵通常非常稀疏。
+
+**创建稀疏张量：**
+
+稀疏张量由三个部分定义：
+
+1. `indices`：形状为 `[N, rank]` 的二维张量，其中 `N` 是非零值的数量，`rank` 是张量的秩。每行指定一个非零值的坐标。
+2. `values`：形状为 `[N]` 的一维张量，包含与 `indices` 中每行对应的非零值。
+3. `dense_shape`：一个一维张量（元组或列表），指定等效密集张量的完整形状。
+
+```python
+# 表示一个 3x4 矩阵，非零值位于 (0,1), (1,2), (2,0)
+indices = tf.constant([[0, 1], [1, 2], [2, 0]], dtype=tf.int64)
+values = tf.constant([1.0, 2.5, -0.5], dtype=tf.float32)
+dense_shape = tf.constant([3, 4], dtype=tf.int64)
+
+sparse_matrix = tf.SparseTensor(indices=indices, values=values, dense_shape=dense_shape)
+print(sparse_matrix)
+```
+
+> 密集张量及其稀疏表示的比较。稀疏版本仅存储高亮的非零值及其位置。
+
+**稀疏张量上的操作：**
+
+TensorFlow 在 `tf.sparse` 模块中提供了一组专门用于稀疏张量的操作。标准操作通常不直接支持稀疏输入。
+
+```python
+# 转换为密集张量（谨慎使用，可能导致内存爆炸）
+dense_matrix = tf.sparse.to_dense(sparse_matrix)
+print("密集张量:\n", dense_matrix)
+
+# 稀疏张量特定操作
+sparse_sum = tf.sparse.reduce_sum(sparse_matrix, axis=1) # 每行非零元素的和
+print("稀疏和 (axis=1):", sparse_sum)
+
+# 稀疏矩阵乘法
+dense_vector = tf.constant([[1.0], [2.0], [3.0], [4.0]], dtype=tf.float32)
+result = tf.sparse.sparse_dense_matmul(sparse_matrix, dense_vector)
+print("稀疏-密集矩阵乘法结果:\n", result)
+```
+
+**与 Keras 的集成：**
+
+在 Keras 模型中处理稀疏张量通常需要特定方法。
+
+- `tf.keras.layers.Embedding` 在正确配置后有时可以直接接受 `tf.SparseTensor`，从而高效处理稀疏分类输入。
+- 对于密集层（`tf.keras.layers.Dense`），您通常需要首先在输入管道或自定义层中，使用 `tf.sparse.to_dense` 将稀疏张量转换为密集张量，同时注意内存限制。
+- 或者，可以设计自定义层来直接在 `tf.SparseTensor` 的 `indices` 和 `values` 组件上执行操作。
+
+**转换：**
+
+如所示，`tf.sparse.to_dense` 转换为密集张量。您也可以使用 `tf.sparse.to_ragged` 转换为参差张量，如果稀疏模式对应于可变序列长度，这会很有用。
+
+### 选择合适的工具
+
+- 当您的数据在维度*长度*上具有固有的可变性时，例如每个示例中的序列或列表，请使用 `tf.RaggedTensor`。它直接表示这种可变结构。
+- 当您的数据*大部分为零*时，无论维度是否具有可变长度，请使用 `tf.SparseTensor`。它是一种用于存储和特定计算的*效率格式*。
+
+有时，数据可能既参差又稀疏（例如，独热编码项目的变长序列）。选择取决于哪种特性更显著以及您需要执行哪些操作。
+
+"使用参差张量和稀疏张量提供了处理 TensorFlow 中各种数据结构所需的灵活性。将它们纳入自定义层、模型和输入管道中，能够构建更高效、更强大的机器学习 (machine learning)系统，解决纯密集表示的局限性。"
+
+## 参考资料
+
+- [Ragged Tensors](https://www.tensorflow.org/guide/ragged_tensors) — TensorFlow Authors (2024)
+  Publisher: TensorFlow
+  关于`tf.RaggedTensor`的官方指南，介绍其概念、创建、操作及使用场景。
+- [Sparse Tensors](https://www.tensorflow.org/guide/sparse_tensor) — TensorFlow Authors (2023)
+  关于`tf.SparseTensor`的官方指南，详细说明其结构、创建方法和稀疏特定操作。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEQQqE0LNo_2Ll2xTNh8chg4iUjoQc8vZcWS3Gu4mTBg0FAXGpvY7Xwlq4LL-NvDlBPzYMOKRCQjqvXi0Dozrd-BcoUnM-7JndIn-kxdo1Ljfw-f5qzCAa_j8z7pY8IMbW8uVso1puQPX8lB7pm7OFMA41NerhoIWMITQ9EexeRf10Nmq4jBCM7KwEKy7vBEPpQ4742TWUTbVwBOKg3g1-n2yOCgK4QQKjb6JqWstY-cF5CfF4hPCnDrFCAoSzv3YP7tMhCJl6YyNODkt0B1ynu5Exp8ksnably3xDJ81mpSSJ0Ks_8tK6VnrQhxWBrDf-uzDZ8wUMJTInEJcNOLQARn5FOTnbIGflibLgTgN5mWH_E5bShnE4rcDNenMomOPC4FmGdSuze3wyfX_d9PZ4MGNOOdg_GSReSozVjcfhu6pFh7thRKVd_rv72a3X6pEGDu8Rr-2azTXu_FZ_sm7KtpWaboMKDi8S13wxBoDyoEoIVV9Q7Vjur-AzHBBLl5h07jLN) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本覆盖TensorFlow的综合书籍，包含高级张量类型及其在各种模型中的应用实践演示。
+- [Efficiently representing and manipulating irregular data with Ragged Tensors in TensorFlow](https://ai.googleblog.com/2018/06/efficiently-representing-and.html) — Mark Neumann, Daniel Smilkov (2018)
+  Journal: Google AI Blog; Publisher: Google
+  一篇来自Google AI的介绍性博文，解释了Ragged Tensors的动机和基本用法，提供了其设计的背景信息。

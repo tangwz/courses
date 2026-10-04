@@ -1,0 +1,348 @@
+---
+course: "synthetic-data-llm-pretrain-finetune"
+chapter: "core-synthetic-text-generation-techniques"
+lesson: "algorithmic-rule-based-text-creation"
+sourceId: 6120
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-llm-pretrain-finetune/chapter-2-core-synthetic-text-generation-techniques/algorithmic-rule-based-text-creation"
+title: "算法与规则驱动的文本生成"
+description: "介绍使用预定义规则和算法生成合成文本的方法。"
+order: 1
+plots: []
+sourceHash: "dc6a90411487a353170e1523ead9e569803e4b2f30aae42c3d9a2b1eca81f602"
+sourceCorrections: []
+---
+
+算法和基于规则的系统代表了程序化文本生成的一些早期方法。虽然新型机器学习 (machine learning)技术，特别是涉及大型语言模型（LLM）的技术，因其生成更流畅、多样化文本的能力而备受关注，但这些基本方法仍然具有其价值。它们在需要高度控制、可预测性或处理高度结构化数据的情形下特别有用。这些系统基于明确定义的规则、语法或过程逻辑运作，而非像统计模型那样从数据中学习模式。
+
+### 基于模板的生成
+
+算法文本生成中最直接的方法之一是基于模板的生成。该技术涉及使用固定的句式结构，其特定部分，即“槽位”，可以填充不同的单词或短语。
+
+模板本质上是一个带有占位符的字符串。这些槽位会从预定义的词汇列表或生成每个槽位合适内容的函数中填充。
+
+例如，考虑生成简单的产品更新通知：
+"新功能：`[FeatureName]` 现已可用！用户现在可以 `[Benefit]`。"
+
+这里，`[FeatureName]` 和 `[Benefit]` 是槽位。你可能有对应的列表：
+
+- `FeatureName_options = ["高级搜索", "暗模式", "协作工具"]`
+- `Benefit_options_for_Advanced_Search = ["更快地找到信息", "使用复杂查询运算符"]`
+- `Benefit_options_for_Dark_Mode = ["在低光下减少眼睛疲劳", "享受新的视觉主题"]`
+
+**Python 示例：简单模板填充**
+
+我们来看一个 Python 代码片段，它展示了如何填充这类模板：
+
+```python
+import random
+
+templates = [
+    "The {adjective} {noun} {verb} the {object}.",
+    "A {noun} often {verb} when it's {adjective}.",
+    "Did you see the {adjective} {noun} near the {object}?"
+]
+
+word_lists = {
+    "adjective": ["敏捷的", "懒惰的", "困倦的", "吵闹的", "饥饿的"],
+    "noun": ["狐狸", "狗", "猫", "兔子", "鸟"],
+    "verb": ["跳跃", "奔跑", "睡觉", "吃", "追逐"],
+    "object": ["木头", "栅栏", "河流", "树", "房子"]
+}
+
+def fill_template(template, lists):
+    output = template
+    # 遍历一份副本以在需要时进行安全修改
+    # 或确保所有占位符都由列表覆盖。
+    # 此简单版本假定直接替换。
+    processed_slots = set() 
+    for slot_key in lists.keys(): # 遍历列表中实际存在的槽位
+        placeholder = "{" + slot_key + "}"
+        if placeholder in output:
+            # 在此简单循环中，只填充占位符的第一次出现
+            # 更复杂的逻辑可以以不同方式处理多个相同占位符
+            output = output.replace(placeholder, random.choice(lists[slot_key]), 1)
+            processed_slots.add(slot_key)
+
+    # 简单检查是否有 {slot_name} 形式的占位符残留
+    # 这不保证如果不在 word_lists 中，所有*预期*的槽位都已被填充
+    if "{" in output and "}" in output and any("{" + s + "}" in output for s in word_lists.keys() if s not in processed_slots):
+        # 这种情况意味着模板中存在占位符，但不在 word_lists 中
+        # 或未被处理。对于应用程序，需要错误处理或默认值。
+        # 对于本示例，我们将继续，但在实际应用中，你会记录此情况。
+        pass # 或者打印警告，或者引发错误
+    return output
+
+# 生成一些句子
+for _ in range(3):
+    chosen_template = random.choice(templates)
+    print(fill_template(chosen_template, word_lists))
+```
+
+运行此代码可能会产生如下输出：
+
+```
+困倦的狐狸跳过木头。
+一只狗饿的时候经常吃东西。
+你看到栅栏附近那只敏捷的猫了吗？
+```
+
+**优点：**
+
+- **简单易行：** 这些系统易于理解、实现和调试。
+- **可控性：** 你可以对输出结构和词汇保持明确控制。
+- **可预测性：** 通过模板和词汇列表，可能的输出范围有明确定义。
+- **应用场景：** 非常适合生成结构化文本，例如天气预报（“今天预报：`[状况]`，最高气温 `[温度]`°C。”）、简单警报或格式化信函的组成部分。
+
+**缺点：**
+
+- **多样性有限：** 即使每个槽位有多个选项，输出也可能很快变得重复。
+- **流畅性问题：** 如果模板设计不周，生成的文本可能听起来生硬或不自然。
+- **扩展性挑战：** 管理大量模板和词汇列表以完成复杂生成任务会变得繁琐。
+- **上下文 (context)不敏感：** 槽位通常独立填充，往往不考虑更广泛的语义连贯性或已填充槽位之间的依赖关系。
+
+### 基于语法的生成
+
+基于语法的系统通过定义正式语法来规定句子如何构建，从而采用更结构化的方法。上下文 (context)无关文法（CFG）常用于此目的。
+
+一个CFG由以下部分组成：
+
+1. 一组**终结符**：这些是实际将出现在生成文本中的单词或标记 (token)（例如，“cat”、“runs”、“the”）。
+2. 一组**非终结符**：这些代表可以扩展的抽象语法类别或短语（例如，`S` 代表句子，`NP` 代表名词短语，`VP` 代表动词短语）。
+3. 一组**产生式规则**：这些规则定义了非终结符如何被重写为终结符和/或其他非终结符的序列。例如，规则 `S -> NP VP` 表明一个句子可以由一个名词短语后跟一个动词短语构成。
+4. 一个**开始符号**：这是一个特殊的非终结符（通常是`S`），生成过程由此开始。
+
+文本生成涉及从开始符号开始，并重复应用产生式规则来扩展非终结符，直到序列中只剩下终结符。
+
+**CFG 产生式规则示例：**
+
+```
+S   -> NP VP
+NP  -> Det N | Det Adj N
+VP  -> V | V NP | V Adv
+Det -> "the" | "a" | "another"
+N   -> "猫" | "狗" | "老鼠" | "球"
+Adj -> "大" | "小" | "红色的"
+V   -> "追逐" | "吃" | "看见" | "玩弄"
+Adv -> "快速地" | "开心地"
+```
+
+使用这些规则，系统可以生成以下句子：
+
+- “the cat chased the mouse”（通过 S -> NP VP -> Det N VP -> “the” N VP -> “the” “cat” VP -> “the” “cat” V NP -> ... -> “the cat chased the mouse” 推导而来）
+- “a big dog saw another ball quickly”
+
+**使用 NLTK 的 Python 示例**
+CFG 解析器和生成器的完整实现可能相当复杂。幸运的是，像 NLTK（自然语言工具包）这样的 Python 库提供了处理 CFG 的工具。下面是一个示意性代码，展示了如何使用 NLTK 定义和使用 CFG，假设 NLTK 已安装（`pip install nltk`）。
+
+```python
+import nltk
+from nltk import CFG
+# 对于从CFG随机生成句子，我们可能需要自定义递归函数
+# 或者如果其特性符合我们对随机性的需求，则可以谨慎使用 nltk.parse.generate。
+import random
+
+# 定义一个简单的CFG字符串
+grammar_rules = """
+  S -> NP VP
+  NP -> Det N | Det Adj N PP | Det Adj N
+  VP -> V | V NP | V PP | V NP PP
+  PP -> P NP
+  P -> 'with' | 'on' | 'under' | 'near'
+  Det -> 'the' | 'a' | 'one' | 'some'
+  N -> '猫' | '狗' | '老鼠' | '球' | '垫子' | '桌子' | '公园'
+  Adj -> '大' | '小' | '红色的' | '毛茸茸的' | '敏捷的'
+  V -> '追逐' | '看见' | '玩' | '睡觉' | '吃' | '找到'
+"""
+# 从字符串定义创建CFG对象
+cfg_grammar = CFG.fromstring(grammar_rules)
+
+# 从CFG随机生成句子的函数
+def generate_random_sentence_from_cfg(grammar, symbol=None):
+    if symbol is None:
+        symbol = grammar.start() # 获取开始符号（例如，S）
+    
+    if isinstance(symbol, str): # 终结符（一个词）
+        return [symbol]
+    
+    # 非终结符：随机选择其一个产生式
+    productions = grammar.productions(lhs=symbol)
+    if not productions:
+        # 如果语法是良好形成的，理想情况下不应出现此情况
+        # 并且所有非终结符都可以扩展为终结符。
+        return ["<error_empty_production>"] 
+        
+    chosen_production = random.choice(productions)
+    
+    sentence_parts = []
+    for sym_in_rhs in chosen_production.rhs(): # 对于所选规则右侧的每个符号
+        sentence_parts.extend(generate_random_sentence_from_cfg(grammar, sym_in_rhs))
+    return sentence_parts
+
+print("使用CFG和随机扩展生成的句子：")
+for _ in range(3): # 生成3个随机句子
+    sentence_tokens = generate_random_sentence_from_cfg(cfg_grammar)
+    print(' '.join(sentence_tokens))
+```
+
+运行此代码可能会产生各种输出，例如：
+
+```
+使用CFG和随机扩展生成的句子：
+a fluffy dog played with a ball
+the red mouse slept under one big table
+some cat found the small park
+```
+
+请注意，这些句子的质量和连贯性很大程度上取决于语法设计。如果不仔细约束，更复杂的语法可以产生更精致但也可能更荒谬的输出。
+
+**优点：**
+
+- **语法正确性：** 可以生成符合定义语法的语法有效句子。
+- **复杂性增加：** 相比简单模板，允许生成更复杂的句子结构。
+- **领域特定性：** 适用于在语言规则明确且可编码的专业领域生成文本（例如，某些类型的医疗报告、法律文件条款或软件日志）。
+
+**缺点：**
+
+- **语义连贯性：** 尽管语法正确，但生成的句子可能缺乏意义或听起来荒谬（经典示例是“无色的绿色思想猛烈地睡觉”，这在语法上没有问题，但语义上异常）。
+- **人工投入：** 设计全面有效的语法是一项重要且需要深厚语言知识的专家驱动任务。
+- **刚性：** 语法可能无法覆盖所有所需的语言变体或边缘情况，从而使系统缺乏灵活性。
+- **自然度：** 生成的文本仍可能听起来人工或生硬，缺乏人类语言的自然流畅性。
+
+### 马尔可夫链文本生成
+
+尽管马尔可夫链文本生成通常被归类为一种非常基础的统计方法，但它也可以被看作是一种算法方法。在这里，生成下一个词的“规则”基于从语料库中提取的词语（或字符）之间的转移概率。
+
+文本生成的马尔可夫链模型仅根据前面 $n$ 个词预测序列中的下一个词。这被称为 $n$ 元模型。
+
+- 在**二元模型**（$n=2$）中，下一个词的选择仅取决于紧接前一个词。
+- 在**三元模型**（$n=3$）中，它取决于前面两个词。
+
+**工作原理：**
+
+1. **训练（模型构建）：**
+   - 分析现有文本语料库。
+   - 对于每个 $n$ 元语法（例如，对于二元语法，每对连续的词 $(w_{i-1}, w_i)$），计算序列后出现下一个词 $w_k$ 的概率。例如，对于二元模型，你将计算 $P(w_k | w_{i-1})$。这是通过计数发生的：$P(w_k | w_{i-1}) = \text{计数}(w_{i-1}, w_k) / \text{计数}(w_{i-1})$。
+2. **生成：**
+   - 从一个初始词或 $n-1$ 个词的序列（“种子”或“上下文 (context)”）开始。
+   - 为了生成下一个词，查看生成的最后 $n-1$ 个词（这是你当前的上下文）。
+   - 从训练期间学到的、可以跟随此上下文的词汇概率分布中采样来选择下一个词。例如，如果当前词是“the”，并且模型学到“cat”跟随“the”的概率是40%，“dog”是30%，“sky”是5%，那么下一个词就基于这些概率选择。
+   - 将所选词附加到序列中，更新上下文，并重复直到达到所需长度或生成句末标记 (token)。
+
+**图：文本的二元马尔可夫链**
+
+> 一个简化的马尔可夫链，说明可能的词语转移及其相关概率（P）。文本生成从“开始”状态开始，并根据这些概率沿着路径进行，直到达到“结束”状态。
+
+**Python 示意：简单二元文本生成器**
+
+```python
+import random
+from collections import defaultdict, Counter
+
+# 示例文本语料库（非常小，用于演示）
+corpus_text = "the cat sat on the mat the dog ran on the grass the cat ran too the dog sat by the mat"
+words = corpus_text.lower().split() # 标准化为小写
+
+# 构建二元概率模型
+# bigram_model 存储：当前词 -> Counter(下一个词: 频率)
+bigram_model = defaultdict(Counter)
+for i in range(len(words) - 1):
+    current_word = words[i]
+    next_word = words[i+1]
+    bigram_model[current_word][next_word] += 1
+
+def generate_markov_text(start_word, num_words=10, model=bigram_model):
+    start_word = start_word.lower()
+    if start_word not in model:
+        # 如果提供的起始词不可用，尝试一个随机起始词
+        if not model: return "模型为空。"
+        start_word = random.choice(list(model.keys()))
+        # return "起始词不在语料库模型中。"
+    
+    current_word = start_word
+    sentence = [current_word]
+    
+    for _ in range(num_words - 1):
+        if current_word not in model or not model[current_word]:
+            break # 当前词没有已知的下一个词
+        
+        # 获取可能的下一个词及其频率
+        next_word_options = model[current_word]
+        
+        # 将频率转换为列表以用于 random.choices（加权随机选择）
+        population = list(next_word_options.keys())
+        weights = list(next_word_options.values())
+        
+        if not population: # 应由 'not model[current_word]' 捕获
+            break
+
+        next_word = random.choices(population, weights=weights, k=1)[0]
+        sentence.append(next_word)
+        current_word = next_word
+        
+        # 简单结束条件（可选）
+        if next_word == "mat" and random.random() < 0.3: # 任意停止条件
+            break
+            
+    return ' '.join(sentence)
+
+# 生成文本
+print(f"生成 1: {generate_markov_text('the', 7)}")
+print(f"生成 2: {generate_markov_text('cat', 5)}")
+print(f"生成 3 (随机起始): {generate_markov_text('unknown_word', 8)}") # 将选择一个随机起始词
+```
+
+运行此代码可能会产生如下输出：
+
+```
+生成 1: the cat sat on the mat the
+生成 2: cat ran on the grass
+生成 3 (随机起始): dog sat by the mat the cat sat
+```
+
+（注意：确切输出会因随机选择而异。）
+
+**优点：**
+
+- **易于实现：** 底层逻辑相对简单，实现所需代码量最少。
+- **捕捉局部风格：** 可以模仿训练语料库中的局部统计特性，例如常见的词语共现。
+- **少量数据驱动：** 从文本中学习模式，不像纯粹的确定性规则系统。
+
+**缺点：**
+
+- **缺乏连贯性：** 生成的文本通常缺乏长程连贯性和全局意义。句子可能漫无目的且变得荒谬，尤其随着长度增加。
+- **重复性：** 如果训练语料库很小或存在强烈偏见，模型容易陷入循环或重复生成常见短语。
+- **上下文有限：** $n$ 元窗口（考虑的先前词数量）通常很小（例如，二元模型中 $n=2$，三元模型中 $n=3$）。这意味着模型无法捕捉相距较远的词之间的依赖关系或关联。大幅增加 $n$ 会导致数据稀疏问题：许多 $n$ 元语法未在训练语料库中出现，从而使概率估计不可靠。
+
+### 何时使用算法和基于规则的系统
+
+尽管与现代神经网络 (neural network)模型相比存在局限性，但这些基本技术在特定情形下仍然有用：
+
+- **高度结构化数据：** 非常适合从数据库条目生成报告（例如，“第三季度`[地区]`的销售额增长了`[百分比]`%。”）。
+- **可控输出：** 当对词汇和结构进行精确控制十分必要，且创造性或语言多样性不是主要目标时适用。
+- **测试数据生成：** 有效地创建多样化但语法受限的输入，用于测试NLP解析器或其他语言处理组件。
+- **简单聊天机器人响应：** 可用于基本、可预测的交互，其中少量响应模式就足够。
+- **数据增强（特定情况）：** 如果你有一个非常小的数据集，并且需要生成更多遵循高度特定、易于定义语法模式的示例。
+- **资源受限环境：** 与大型神经网络模型相比，这些方法的计算成本较低，使它们在计算资源有限时可行。
+- **教育目的：** 它们为理解文本生成的基本问题提供一个好的起点。
+
+### 局限与未来方向
+
+算法和基于规则的系统主要缺点源于它们缺乏深层语义理解以及过度依赖人工制作的规则或简单的局部统计。它们通常难以应对：
+
+- **精微之处：** 捕捉人类语言固有的丰富性、模糊性和复杂性。
+- **创造性和新颖性：** 生成真正原创、令人惊喜或超出预定义模式的文本。
+- **适应性：** 将其修改以适应新领域、风格或语言通常需要大量重做规则或语法。
+- **复杂性扩展：** 随着生成文本所需复杂性和自然度的增加，设计、实现和维护规则或语法的努力变得难以承受。
+
+这些局限性正是推动更复杂技术发展的原因，尤其是基于机器学习 (machine learning)，以及最近的大型语言模型。随着我们继续本章和本课程的学习，我们将研究旨在通过直接从大量数据中学习复杂模式来克服这些挑战的方法。这使得生成更流畅、连贯和符合上下文 (context)的合成文本成为可能。然而，了解这些早期的算法和基于规则的方法提供了一个有价值的参考点。它指出了更高级方法旨在解决的具体问题，并且这些基本技术对于某些明确定义的任务仍然是实用的选择，其优势与需求相符。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  这本综合教材涵盖了上下文无关文法、n-gram语言模型以及与规则文本创建相关的自然语言处理基础理论。
+- [Building Natural Language Generation Systems](https://www.cambridge.org/core/books/building-natural-language-generation-systems/F57E88A110821B2F7E41C7C118B82B5A) — Ehud Reiter, Robert Dale (2000)
+  Publisher: Cambridge University Press; Pages: 248
+  这是一本关于自然语言生成的经典书籍，详细介绍了包括基于模板和基于语法在内的传统文本创建方法。
+- [Natural Language Processing with Python - Analyzing Text with the Natural Language Toolkit](https://www.nltk.org/book/) — Steven Bird, Ewan Klein, and Edward Loper (2009)
+  Publisher: O'Reilly Media
+  NLTK的官方配套书籍，提供了使用Python实现基于语法和统计的自然语言处理技术的实际示例和解释，与本节内容吻合。

@@ -1,0 +1,186 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "boosting-hyperparameter-optimization"
+lesson: "grid-random-search-boosting"
+sourceId: 2053
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-8-boosting-hyperparameter-optimization/grid-random-search-boosting"
+title: "系统化调优：网格搜索与随机搜索"
+description: "应用传统的超参数搜索方法。"
+order: 3
+plots: ["plots/2053-0.json"]
+sourceHash: "9fe9e136fce04394a153e602455e6c137a38682ce55fab326e40bfc52ff07918"
+sourceCorrections: []
+---
+
+在确认了梯度提升模型对其超参数 (parameter) (hyperparameter)的敏感性后，我们现在转向系统地检查可能配置的基本方法：网格搜索和随机搜索。尽管存在更高级的技术，但这些方法提供了坚实的起点，并且是机器学习 (machine learning)实践者工具箱中有用的工具。它们比手动、临时调整有显著提升。
+
+### 网格搜索
+
+网格搜索可能是超参数 (parameter) (hyperparameter)调优最直观的方法。核心思想简单明了：
+
+1. **定义搜索空间：** 对于每个要调优的超参数，指定一个您想评估的离散值集合。例如，您可以测试 `learning_rate` 的值 `[0.01, 0.1, 0.2]`，`max_depth` 的值 `[3, 5, 7]`，以及 `n_estimators` 的值 `[100, 200]`。
+2. **创建网格：** “网格”是所有这些集合的笛卡尔积——指定超参数值的每种可能的组合。在我们的示例中，网格将包含 $3 \times 3 \times 2 = 18$ 个独特的超参数组合。
+3. **评估每个组合：** 使用交叉验证，对网格中定义的每个组合训练并评估模型。
+4. **选择最佳：** 根据您选择的评估指标（例如，AUC、LogLoss、RMSE），选择在交叉验证折叠中产生最佳平均性能的组合。
+
+**使用Scikit-learn实现**
+
+Scikit-learn 的 `GridSearchCV` 提供了一种便捷的方法来实现这一点。您将参数网格定义为一个字典，其中键是参数名称，值是要尝试的设置列表。
+
+```python
+import xgboost as xgb
+from sklearn.model_selection import GridSearchCV
+from sklearn.datasets import make_classification
+
+# 示例数据
+X, y = make_classification(n_samples=1000, n_features=20, random_state=42)
+
+# 定义XGBoost模型
+xgb_model = xgb.XGBClassifier(objective='binary:logistic', eval_metric='logloss', use_label_encoder=False, random_state=42)
+
+# 定义参数网格
+param_grid = {
+    'learning_rate': [0.05, 0.1, 0.2],
+    'max_depth': [3, 5, 7],
+    'n_estimators': [100, 200],
+    'subsample': [0.7, 0.9] # 示例添加另一个参数
+}
+
+# 设置GridSearchCV
+# cv=5 表示5折交叉验证
+# n_jobs=-1 使用所有可用的CPU核心
+# scoring='roc_auc' 定义评估指标
+grid_search = GridSearchCV(estimator=xgb_model,
+                           param_grid=param_grid,
+                           scoring='roc_auc',
+                           cv=5,
+                           n_jobs=-1,
+                           verbose=1) # verbose > 0 显示进度
+
+# 拟合GridSearchCV
+grid_search.fit(X, y)
+
+# 最佳参数和分数
+print(f"找到的最佳参数: {grid_search.best_params_}")
+print(f"最佳AUC分数: {grid_search.best_score_:.4f}")
+
+# 获取最佳估计器
+best_xgb_model = grid_search.best_estimator_
+```
+
+**优点：**
+
+- **详尽性：** 在指定的网格内，它保证找到最佳组合。
+- **简单性：** 易于理解和实现。
+
+**缺点：**
+
+- **计算成本：** 组合数量随超参数数量和每个参数测试值的数量呈指数增长。对于大型搜索空间，这很快变得计算上不可行。如果您有 $k$ 个超参数，并且每个测试 $m$ 个值，则需要训练 $m^k$ 个模型（乘以交叉验证折叠的数量）。
+- **网格分辨率：** 最优值可能位于您网格中指定点之间。使网格更精细会大幅增加计算成本。
+
+### 随机搜索
+
+随机搜索提供了一种更节省资源的替代方案。它不尝试每种单一组合，而是从指定的统计分布中采样固定数量的参数 (parameter)设置。
+
+1. **定义搜索分布：** 对于每个超参数 (hyperparameter)，定义一个范围或分布来采样值。对于 `learning_rate` 或 `subsample` 等连续参数，您可以使用均匀或对数均匀分布。对于 `max_depth` 等离散参数，您将提供整数列表或范围。
+2. **设置预算：** 指定要采样的参数组合总数（例如，`n_iter = 50`）。
+3. **采样和评估：** 从定义的分布/范围中随机选择 `n_iter` 个组合。使用交叉验证评估每个采样组合。
+4. **选择最佳：** 选择在交叉验证期间平均表现最佳的组合。
+
+**使用Scikit-learn实现**
+
+Scikit-learn 的 `RandomizedSearchCV` 工作方式与 `GridSearchCV` 相似，但您为要随机化的参数定义分布，而不是固定列表。
+
+```python
+import xgboost as xgb
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.datasets import make_classification
+from scipy.stats import uniform, randint
+
+# 示例数据
+X, y = make_classification(n_samples=1000, n_features=20, random_state=42)
+
+# 定义XGBoost模型
+xgb_model = xgb.XGBClassifier(objective='binary:logistic', eval_metric='logloss', use_label_encoder=False, random_state=42)
+
+# 定义参数分布
+# 使用 scipy.stats 中的分布
+param_dist = {
+    'learning_rate': uniform(0.01, 0.2), # 从 [0.01, 0.01 + 0.2) 中均匀采样
+    'max_depth': randint(3, 10), # 从 [3, 4, ..., 9] 中均匀采样整数
+    'n_estimators': randint(100, 500),
+    'subsample': uniform(0.6, 0.4), # 从 [0.6, 0.6 + 0.4) = [0.6, 1.0) 中均匀采样
+    'colsample_bytree': uniform(0.5, 0.5) # 从 [0.5, 1.0) 中均匀采样
+}
+
+# 设置RandomizedSearchCV
+# n_iter=50 表示采样50种不同的组合
+random_search = RandomizedSearchCV(estimator=xgb_model,
+                                   param_distributions=param_dist,
+                                   n_iter=50, # 采样的参数设置数量
+                                   scoring='roc_auc',
+                                   cv=5,
+                                   n_jobs=-1,
+                                   verbose=1,
+                                   random_state=42) # 用于结果复现
+
+# 拟合RandomizedSearchCV
+random_search.fit(X, y)
+
+# 最佳参数和分数
+print(f"找到的最佳参数: {random_search.best_params_}")
+print(f"最佳AUC分数: {random_search.best_score_:.4f}")
+
+# 获取最佳估计器
+best_xgb_model_random = random_search.best_estimator_
+```
+
+**优点：**
+
+- **效率：** 比网格搜索计算效率高得多，尤其是在超参数数量较多时。您可以通过 `n_iter` 控制预算。
+- **有效性：** 通常比网格搜索更快地找到非常好的（如果不是绝对最佳的）超参数组合。当只有少数超参数显著影响性能时尤其如此，因为随机搜索更有可能为这些重要参数采样多样化的值。
+- **灵活性：** 使用统计分布轻松处理连续参数。
+
+**缺点：**
+
+- **随机性：** 由于其随机性，不保证在搜索空间内找到最佳组合。再次运行它可能会产生略有不同的结果（除非 `random_state` 固定）。
+- **依赖预算：** 性能取决于选择足够的迭代次数 (`n_iter`)。迭代次数过少可能导致次优结果。
+
+### 可视化搜索空间探索
+
+考虑调优两个超参数 (parameter) (hyperparameter)，`learning_rate`（对数尺度）和 `max_depth`。网格搜索在预定义网格上评估点，而随机搜索在定义的边界内随机采样点。
+
+
+
+![网格搜索与随机搜索的探索](plots/2053-0.json)
+
+
+
+> 2D可视化，比较网格搜索如何评估固定点与随机搜索如何在参数空间边界内随机采样点。
+
+### 实际考虑
+
+- **交叉验证：** `GridSearchCV` 和 `RandomizedSearchCV` 都依赖交叉验证（由 `cv` 参数 (parameter)控制）来为每个参数组合提供性能估计，从而在调优过程本身中减轻对特定训练-测试分割过拟合 (overfitting)的风险。
+- **定义搜索空间：**
+  - **学习率 (`learning_rate`)：** 通常受益于对数均匀分布（例如，在0.001到0.3之间采样），因为其影响是乘性的。
+  - **估计器数量 (`n_estimators`)：** 整数范围（例如，100到1000）。请记住，这与学习率和早停有很强的关联。如果有效使用早停，调整 `n_estimators` 通常不那么重要。
+  - **树深度 (`max_depth`)：** 整数范围（例如，3到10）。更深的树可以模拟更复杂的相互作用，但会增加过拟合风险和训练时间。
+  - **子采样 (`subsample`, `colsample_bytree`, `colsample_bylevel`等)：** 例如，在0.5到1.0之间的均匀分布。这些控制用于构建每棵树的数据或特征的比例。
+  - **正则化 (regularization) (`lambda`, `alpha`)：** 通常从对数均匀分布中采样（例如，1e-3到10）。
+- **计算预算：** 对于随机搜索，`n_iter` 很重要。从一个合理的数量（例如，20-50）开始，如果资源允许并且仍然观察到性能提升，则增加。对于网格搜索，限制每个参数的离散点数量以保持总组合数量可控。
+
+网格搜索和随机搜索提供了基本、系统的方法来调优超参数 (hyperparameter)。它们建立了基线，并且通常足以在默认设置之上获得显著的性能提升。然而，对于具有许多超参数的复杂模型，它们的效率限制促使使用更高级的技术，如贝叶斯优化，它根据过往结果智能地在搜索空间中移动。接下来我们将研究这些高级方法。
+
+## 参考资料
+
+- [scikit-learn: Hyper-parameter estimators](https://scikit-learn.org/stable/modules/grid_search.html) — scikit-learn developers (2023)
+  Publisher: scikit-learn project
+  scikit-learn官方文档，详细解释了scikit-learn库中Grid Search和Randomized Search的使用方法和示例。
+- [Randomized Search for Hyper-Parameter Optimization](https://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf) — James Bergstra and Yoshua Bengio (2012)
+  Journal: Journal of Machine Learning Research; Publisher: Microtome Publishing, LLC; Volume: 13; Pages: 281-305; DOI: [10.5555/2202321.2202353](https://doi.org/10.5555/2202321.2202353)
+  这篇基础学术论文介绍了随机搜索超参数优化方法，并详细评估了其相对于网格搜索的效率。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125969/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的机器学习指南，涵盖了超参数调优（如网格搜索和随机搜索）等基础技术，并提供了scikit-learn实现。
+- [XGBoost Parameters](https://xgboost.readthedocs.io/en/stable/parameter.html) — XGBoost Contributors (2023)
+  XGBoost的官方文档，详细说明了可配置参数，这些参数可使用网格搜索和随机搜索等方法进行调优。

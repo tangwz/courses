@@ -1,0 +1,51 @@
+---
+course: "optimization-techniques-ml"
+chapter: "distributed-ml-optimization"
+lesson: "distributed-training-motivation"
+sourceId: 1290
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-5-distributed-ml-optimization/distributed-training-motivation"
+title: "分布式训练的动机"
+description: "了解大型模型和数据集对分布式优化的需求。"
+order: 1
+plots: []
+sourceHash: "ddf5378f269aafd7b2d132542bed2dd343d3e9099245f94bb124b8bdd5819af2"
+sourceCorrections: []
+---
+
+训练机器学习 (machine learning)模型的基本前提是根据数据迭代调整参数 (parameter)。对于较简单的模型和较小的数据集，这个过程可以很好地适应单台机器的计算资源，通常是一台配备一个或多个GPU的强大服务器。然而，机器学习的快速发展，尤其是在深度学习 (deep learning)、自然语言处理和计算机视觉等方面，已使模型复杂度和数据量远超单个系统的处理能力。这产生了重大瓶颈，使得分布式训练不仅有利，而且常常是必需的。
+
+让我们考察促使转向分布式优化策略的主要推动因素：
+
+### 庞大的模型规模
+
+现代机器学习 (machine learning)模型，特别是深度神经网络 (neural network)，可以包含数十亿甚至数万亿参数 (parameter)。例如，大型语言模型（LLM）或用于高分辨率图像生成的复杂架构。
+
+- **内存限制：** 存储模型参数本身，以及前向和反向传播 (backpropagation)（梯度计算）所需的中间激活值，可以轻易超出单个CPU的可用RAM，或者更严重的是，超出单个GPU的专用内存（显存 (VRAM)）。即使是市面上可用的最大型GPU，其内存限制（例如48GB、80GB）与最先进模型数百GB或TB级的需求相比也相形见绌。尝试将此类模型加载到单个设备上是根本不可能的。
+- **梯度累积：** 梯度累积等技术可以通过在执行权重 (weight)更新前顺序处理较小的批次来部分缓解内存问题。然而，这会增加训练时间，并且如果仅模型参数就超出设备内存，它并不能解决根本问题。
+
+### 庞大的数据集
+
+许多机器学习 (machine learning)模型，特别是深度学习 (deep learning)模型的有效性，与它们训练所用的数据量成正比。实际使用的数据集现在通常达到TB甚至PB级别。
+
+- **存储和I/O瓶颈：** 在单台机器上加载和预处理如此庞大的数据量会变得慢得令人无法接受。磁盘I/O速度和数据传输速率成为主要限制因素，导致计算单元（CPU/GPU）缺乏数据，从而造成资源利用效率低下。即使使用NVMe SSD等高速存储，巨大的数据量也可能使单个节点的“数据管道”不堪重负。
+- **周期时间：** 如果在单台机器上顺序处理，完成遍历整个数据集一次（一个周期）所需的时间可以从数小时延 (latency)长到数天或数周。这使得实验、超参数 (parameter) (hyperparameter)调整和实现收敛的速度慢得不切实际。
+
+> 单台机器的资源（内存、I/O、计算能力）常常无法满足大型模型和数据集的需求，造成重要瓶颈。
+
+### 无法接受的训练时间
+
+大型模型和大型数据集的结合直接导致庞大的计算工作量。训练涉及对可能数万亿数据点进行重复的前向传播（推理 (inference)）、损失计算和反向传播 (backpropagation)（梯度计算）。
+
+- **计算成本：** 每个训练步骤都需要大量的浮点运算（FLOPs）。即使使用GPU或TPU等强大加速器，在单台机器上对大型模型和数据集顺序执行这些计算，也会导致实际训练时间过长，不适用于实际开发周期。研究和部署需要更快的迭代。
+- **并行性作为解决方案：** 分布式训练使我们能够并行化计算。通过在多个工作器（CPU或GPU，可能跨多台机器）之间划分数据、模型或两者，我们可以显著减少处理数据和计算更新所需的时间，从而大幅缩短整体训练时间。
+
+本质上，推动分布式优化的动力源于克服单个计算节点的物理限制。任何一台机器的内存容量、数据处理能力和原始处理能力都是有限的。分配工作负载是扩展机器学习 (machine learning)训练以满足现代应用和研究前沿需求的主要机制。本章的后续章节将考察为有效管理这种分布而开发的架构和算法。
+
+## 参考资料
+
+- [Dive into Deep Learning](https://d2l.ai/) — Aston Zhang, Zack C. Lipton, Mu Li, and Alex Smola (2024)
+  Publisher: Cambridge University Press
+  这本开源书籍提供了深度学习的实践指导，间接涵盖了现代大型模型和数据集对分布式训练的计算需求。
+- [Distributed communication package - torch.distributed](https://pytorch.org/docs/stable/distributed.html) — PyTorch Documentation (2024)
+  Publisher: PyTorch Foundation
+  这份官方文档介绍了PyTorch中分布式训练的核心概念，反映了业界对模型和数据规模扩展挑战的应对。

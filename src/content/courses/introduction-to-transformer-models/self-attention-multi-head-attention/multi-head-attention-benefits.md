@@ -1,0 +1,58 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "self-attention-multi-head-attention"
+lesson: "multi-head-attention-benefits"
+sourceId: 2985
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-2-self-attention-multi-head-attention/multi-head-attention-benefits"
+title: "多头注意力机制的优势"
+description: "讨论多个注意力头如何使模型关注不同的表示子空间。"
+order: 7
+plots: []
+sourceHash: "657e31dfe2bcaca69ab6029bb378b30b80f44da526b682d72c20a65c43bf3a2f"
+sourceCorrections: []
+---
+
+多头注意力 (multi-head attention)（MHA）通过并行运行多个缩放点积注意力来处理信息。这种设计与使用单一、更大的注意力机制 (attention mechanism)相比，提供了显著的优势。其优势主要在于MHA使得模型能够同时从不同角度处理信息。
+
+### 关注不同表示子空间
+
+多头注意力 (multi-head attention)（MHA）的主要思路是，将原始的查询（$Q$）、键（$K$）和值（$V$）矩阵投影到每个头（$h$）的较低维空间中，这使得每个头能够学习不同类型的关联，或关注序列的不同方面。
+
+回顾一下，对于每个头 $i$，我们计算：
+
+$\text{头}_i = \text{注意力}(QW^Q_i, KW^K_i, VW^V_i)$
+
+这里，$W^Q_i$、$W^K_i$ 和 $W^V_i$ 是头 $i$ 独有的、经过学习的权重 (weight)矩阵。这些矩阵将全维度的 $Q, K, V$ 向量 (vector)投影到该头特有的子空间中。因为这些投影矩阵在训练过程中独立学习，所以每个头都能形成自己的专业功能。
+
+举例来说，考虑句子：“The tired cat slept on the warm mat.”（疲倦的猫睡在温暖的垫子上。）
+一个注意力头可能会学习投影，帮助其关注句法关联，比如将“cat”（主语）与“slept”（谓语）关联起来。另一个头可能会捕获更长距离的语义关联 (semantic relationship)，将“tired”与“slept”关联。第三个头则可能关注位置接近性，给予相邻词语较高的权重。
+
+> 并行注意力头处理投影到不同子空间的输入嵌入 (embedding)，在结果合并前捕捉不同的关联。
+
+这种关注不同“表示子空间”的能力意味着模型不必将冲突的注意力需求平均到单一的权重集合中。相反，它可以使用专门的头来处理不同任务。
+
+### 整合多方面信息
+
+每个头计算其注意力输出后，结果会被拼接：
+
+$\text{多头}(Q, K, V) = \text{拼接}(\text{头}_1, ..., \text{头}_h)W^O$
+
+这种拼接将所有专门的头的输出结合起来。由权重 (weight)矩阵 $W^O$ 学习到的最终线性投影，随后将这些丰富、多方面的信息整合成一个单一的输出张量。这个投影层学习如何最佳地结合从不同头收集到的信息。
+
+### 增强模型表达能力
+
+使用多个头，每个头都在较低维度的投影上运行，相比于使用单一的全维度注意力头，这不一定会显著增加总计算量（假设维度选择得当，例如 $d_{k,\text{头}} = d_k / h$）。然而，它提供了一种更具表达力的方式来捕捉序列内部的复杂关联。这丰富了模型理解词语之间关联的能力，从而在下游任务中带来更好的表现。
+
+本质上，多头注意力 (multi-head attention)为模型提供了一种机制，使其能够同时从多个视角看待输入序列，汇集这些视角，并对序列不同部分之间的关联做出更明智的判断。这种并行、多视角的处理是Transformer模型取得成功的一个重要因素。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构和多头注意力机制的开创性论文，阐述了其设计理念以及从不同表征子空间处理信息的原理。
+- [Dive into Deep Learning](https://d2l.ai/chapter_attention-mechanisms/multi-head-attention.html) — Aston Zhang, Zachary C. Lipton, Mu Li, and Alex Smola (2024)
+  Publisher: Cambridge University Press
+  一份开源的教育资源，清晰深入地解释了多头注意力机制，强调其在模型中同时关注输入不同方面的作用。
+- [Natural Language Processing with Transformers: Building Language Models with Hugging Face](https://www.oreilly.com/library/view/natural-language-processing/9781098132439/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media
+  一本提供Transformer实用见解的综合书籍，其中包括对多头注意力机制架构的详细教学讨论，以及其多视角处理序列关系的优势。

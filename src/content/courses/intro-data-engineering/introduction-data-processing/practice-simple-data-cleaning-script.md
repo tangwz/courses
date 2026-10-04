@@ -1,0 +1,172 @@
+---
+course: "intro-data-engineering"
+chapter: "introduction-data-processing"
+lesson: "practice-simple-data-cleaning-script"
+sourceId: 5588
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-5-introduction-data-processing/practice-simple-data-cleaning-script"
+title: "实践：简单数据清洗脚本"
+description: "应用基本数据清洗方法，使用简单脚本。"
+order: 7
+plots: []
+sourceHash: "3ad743bd60f52f8673768b75e8827981d41e7d3a9cb9b15f88a126543ba472ff"
+sourceCorrections: []
+---
+
+数据清洗是确保数据处理和分析结果可靠的前提。原始数据常常杂乱、不完整或不一致。一个简单例子将演示如何使用Python（数据工程中一种常用语言）和Pandas库（非常适合数据操作）进行基本的数据清洗操作。
+
+即使您之前没有大量使用过Python或Pandas，也无需担心。我们将保持代码简洁，并解释每个步骤。这里的目的是理解清洗的*过程*，而不是一夜之间成为Python专家。
+
+### 场景：清洗客户联系信息
+
+假设我们有一小部分从不同来源收集的客户联系信息。数据通常不会完全统一。我们的任务是稍微整理一下这些数据。
+
+这是我们的原始样本数据：
+
+| 姓名 | 电子邮件 | 电话 | 加入日期 | 城市 |
+| --- | --- | --- | --- | --- |
+| Alice Smith | [alice.smith@example.com](mailto:alice.smith@example.com) | 555-123-4567 | 2023-01-15 | New York |
+| Bob Johnson | [BOB.J@EXAMPLE.COM](mailto:BOB.J@EXAMPLE.COM) | 555-987-6543 | 2023/02/20 | Los Angeles |
+| Charlie Brown | [charlie@sample.org](mailto:charlie@sample.org) | (555) 555-1212 | Mar 05, 2023 |  |
+| Diana Prince | [diana.prince@example.net](mailto:diana.prince@example.net) | nan | 2023-04-10 | San Francisco |
+| Eve Adams | [eve.adams@sample.net](mailto:eve.adams@sample.net) | 555.888.9999 | 2023/05/18 | new york |
+
+即使在这个小数据集中，我们也能发现一些问题：
+
+1. **缺失值：** 戴安娜·普林斯没有电话号码（`nan`通常表示缺失数据），而查理·布朗则缺少城市信息。
+2. **格式不一致：** 电子邮件地址有不同的字母大小写（鲍勃·约翰逊）。电话号码使用不同的分隔符（`-`、`()`、`.`）。日期有不同的格式（`YYYY-MM-DD`、`YYYY/MM/DD`、`Mon DD, YYYY`）。城市名称大小写不一致（'New York' 对 'new york'）。
+
+让我们编写一个简单脚本来处理部分问题。
+
+### 设置
+
+首先，您通常会将这些数据加载到一个便于操作的结构中。在Python中，我们使用Pandas DataFrame。假设我们已将上面的表格加载到一个名为`df`的DataFrame中。
+
+```python
+# 假设 'df' 是一个包含上述数据的 Pandas DataFrame
+# 您通常会从文件（例如 CSV）加载这些数据
+# 例如：
+# import pandas as pd
+# df = pd.read_csv('your_data.csv') # 或其他来源
+
+# 为了清晰起见，我们来表示数据（您无需运行这部分代码）
+data = {'Name': ['Alice Smith', 'Bob Johnson', 'Charlie Brown', 'Diana Prince', 'Eve Adams'],
+        'Email': ['alice.smith@example.com', 'BOB.J@EXAMPLE.COM', 'charlie@sample.org', 'diana.prince@example.net', 'eve.adams@sample.net'],
+        'Phone': ['555-123-4567', '555-987-6543', '(555) 555-1212', None, '555.888.9999'], # 使用 None 表示缺失
+        'Joined Date': ['2023-01-15', '2023/02/20', 'Mar 05, 2023', '2023-04-10', '2023/05/18'],
+        'City': ['New York', 'Los Angeles', None, 'San Francisco', 'new york'] # 使用 None 表示缺失
+       }
+# 在实际脚本中，您会创建 DataFrame：
+# df = pd.DataFrame(data)
+# print("原始数据：")
+# print(df)
+```
+
+### 步骤 1：标准化电子邮件地址
+
+电子邮件中不一致的字母大小写可能导致查找唯一用户时出现问题。一个简单的解决方法是将它们全部转换为小写。
+
+```python
+# 将 'Email' 列转换为小写
+df['Email'] = df['Email'].str.lower()
+
+# print("\n电子邮件大小写标准化后的数据：")
+# print(df['Email'])
+```
+
+现在，`BOB.J@EXAMPLE.COM` 变成了 `bob.j@example.com`。
+
+### 步骤 2：处理缺失电话号码
+
+我们发现戴安娜·普林斯缺少电话号码。如何处理取决于具体要求。我们可以删除该行，尝试查找缺失的号码，或者用占位符填充。为简单起见，这里我们用一个标准占位符，如“未提供”来填充。
+
+```python
+# 填充 'Phone' 列中的缺失值（None 或 NaN）
+df['Phone'] = df['Phone'].fillna('Not Provided')
+
+# print("\n处理缺失电话号码后的数据：")
+# print(df['Phone'])
+```
+
+戴安娜的电话号码条目现在将是“未提供”。
+
+### 步骤 3：标准化城市名称
+
+类似于电子邮件，城市名称的字母大小写也不一致。让我们将它们标准化为首字母大写（例如，“New York”）。我们还需要处理查理·布朗缺失的城市信息。让我们用“未知”来填充。
+
+```python
+# 首先填充缺失的城市名称
+df['City'] = df['City'].fillna('Unknown')
+
+# 将 'City' 列转换为首字母大写
+df['City'] = df['City'].str.title()
+
+# print("\n城市名称标准化后的数据：")
+# print(df['City'])
+```
+
+现在“new york”变成了“New York”，查理缺失的城市变成了“Unknown”。
+
+### 步骤 4：标准化电话号码格式（基本示例）
+
+电话号码格式化比较复杂。完整的解决方案涉及复杂的模式匹配（正则表达式）。对于这个基本练习，我们只删除常见的 If分隔符，如`-`、`()`、和`.`。这不完美，但它是迈向标准化的第一步。
+
+```python
+# 从电话号码中删除常见分隔符
+# 这里使用链式 .str.replace() 调用
+df['Phone'] = df['Phone'].str.replace('-', '', regex=False)\
+                         .str.replace('(', '', regex=False)\
+                         .str.replace(')', '', regex=False)\
+                         .str.replace('.', '', regex=False)\
+                         .str.replace(' ', '', regex=False)
+
+# print("\n电话格式标准化后的数据：")
+# print(df['Phone'])
+```
+
+现在`555-123-4567`变为`5551234567`，`(555) 555-1212`变为`5555551212`，以此类推。“Not Provided”保持不变。
+
+### 步骤 5：标准化日期格式
+
+日期格式也多种多样。Pandas为此提供了强大的工具。我们可以尝试自动推断并将“加入日期”列转换为标准日期时间格式。
+
+```python
+# 将“加入日期”转换为日期时间对象，并推断格式
+# errors='coerce' 参数会将无法解析的日期转换为 NaT（非时间）
+df['Joined Date'] = pd.to_datetime(df['Joined Date'], errors='coerce')
+
+# 可选：转换回 YYYY-MM-DD 等标准字符串格式
+df['Joined Date'] = df['Joined Date'].dt.strftime('%Y-%m-%d')
+
+# print("\n日期格式标准化后的数据：")
+# print(df['Joined Date'])
+```
+
+所有日期现在都应采用`YYYY-MM-DD`格式。如果日期无法解析，它可能会根据后续处理显示为`NaT`或`None`，这表明可能存在另一个数据质量问题需要处理。
+
+### 最终清洗后的数据（脚本结果）
+
+运行这些步骤后，我们的DataFrame `df` 将如下所示：
+
+| 姓名 | 电子邮件 | 电话 | 加入日期 | 城市 |
+| --- | --- | --- | --- | --- |
+| Alice Smith | [alice.smith@example.com](mailto:alice.smith@example.com) | 5551234567 | 2023-01-15 | New York |
+| Bob Johnson | [bob.j@example.com](mailto:bob.j@example.com) | 5559876543 | 2023-02-20 | Los Angeles |
+| Charlie Brown | [charlie@sample.org](mailto:charlie@sample.org) | 5555551212 | 2023-03-05 | Unknown |
+| Diana Prince | [diana.prince@example.net](mailto:diana.prince@example.net) | Not Provided | 2023-04-10 | San Francisco |
+| Eve Adams | [eve.adams@sample.net](mailto:eve.adams@sample.net) | 5558889999 | 2023-05-18 | New York |
+
+### 清洗步骤总结
+
+这里有一个小图表，说明了我们执行的清洗操作类型：
+
+> 此图表展示了从原始、杂乱的数据经过多个清洗步骤（标准化大小写、填充缺失值、统一格式），最终得到一个更一致的数据集，可用于处理。
+
+“这个练习仅展示了几种基本的数据清洗技术。数据通常需要更复杂的方法，包括异常值检测、更复杂的验证规则，以及可能使用外部数据源进行补充或纠正。然而，基本原理保持不变：识别不一致和错误，并应用转换以提高数据质量，使其适合可靠的批量或流处理。”
+
+## 参考资料
+
+- [pandas documentation](https://pandas.pydata.org/docs/) — The pandas development team (2025)
+  Pandas库的官方综合资源，涵盖与数据操作和清洗相关的所有函数、数据结构和示例。
+- [Python for Data Analysis: Data Wrangling with Pandas, NumPy, and Jupyter](https://learning.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  Pandas创建者所著的权威指南，提供了Python中数据操作、清洗和准备技术的广泛内容。

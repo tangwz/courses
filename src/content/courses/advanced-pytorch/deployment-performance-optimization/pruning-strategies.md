@@ -1,0 +1,144 @@
+---
+course: "advanced-pytorch"
+chapter: "deployment-performance-optimization"
+lesson: "pruning-strategies"
+sourceId: 2737
+sourceUrl: "https://apxml.com/zh/courses/advanced-pytorch/chapter-4-deployment-performance-optimization/pruning-strategies"
+title: "模型剪枝策略"
+description: "实现结构化和无结构剪枝技术，以减小模型尺寸和计算量。"
+order: 3
+plots: ["plots/2737-0.json"]
+sourceHash: "44f152ac7ae09c3ca5c827e8b42baf9e645eed4e327d20c848f499466cf736e7"
+sourceCorrections: []
+---
+
+为了使模型部署高效，模型剪枝提供了一种直接的方法，通过移除对模型性能贡献最小的参数 (parameter)来降低复杂度。像量化 (quantization)这样的技术降低了参数的精度，而剪枝则将它们完全移除，从而带来更小的模型尺寸和更快的推理 (inference)速度。
+
+其核心思路源于这样一个发现：许多大型神经网络 (neural network)存在明显的过参数化问题。它们包含冗余的权重 (weight)，甚至可以移除整个结构元素（如神经元或通道），且对精度影响很小，尤其是在微调 (fine-tuning)阶段之后。这与像“彩票假说”这样的观点相符，该假说认为，密集网络包含更小的子网络，这些子网络在独立训练时能够达到相似的性能。剪枝旨在找出并分离这些高效的子网络。
+
+### 无结构剪枝与结构化剪枝
+
+剪枝技术通常分为两大类：
+
+1. **无结构剪枝：** 指根据特定标准（通常是权重 (weight)的大小）从网络中移除单个权重。值接近零的权重被认为影响力较小，并被精确地设置为零。这会创建稀疏权重矩阵。
+
+   - **优点：** 经过微调 (fine-tuning)后，可以在精度损失很小的情况下达到非常高的稀疏度（例如90%或更高）。
+   - **缺点：** 生成的稀疏矩阵在使用传统的密集矩阵乘法库（如cuBLAS）的标准硬件（CPU、GPU）上，通常不能直接转化为实际运行时间上的加速。要获得明显的加速，通常需要专门的硬件加速器或为稀疏计算优化的软件库（例如`torch.sparse`）。模型尺寸的减小程度显著，这对于存储和内存带宽有利。
+2. **结构化剪枝：** 这种方法不是移除单个权重，而是移除整个结构组件，例如卷积层中的滤波器或通道，或者全连接层中的神经元。
+
+   - **优点：** 产生更小的*密集*模型。剩余的结构规整，可以被标准硬件和库高效执行，通常会直接带来推理 (inference)加速和更少的内存使用，而无需专门支持。
+   - **缺点：** 相较于无结构剪枝，在精度开始明显下降之前，通常只能达到较低的稀疏度。确定要移除哪些结构需要仔细考虑依赖关系（例如，移除一个通道会影响使用该通道的后续层）。
+
+无结构剪枝和结构化剪枝的选择，取决于主要的优化目标（最大压缩率还是标准硬件上的直接加速）以及可用的推理基础设施。
+
+### 剪枝过程
+
+应用剪枝的常见工作流程包含以下步骤：
+
+1. **训练模型：** 从一个完全训练好的密集模型开始。
+2. **选择剪枝策略：** 决定采用无结构剪枝还是结构化剪枝，移除的标准（例如，大小），以及目标稀疏度或要移除的具体结构。
+3. **执行剪枝：** 找出并移除（或遮蔽）选定的参数 (parameter)或结构。
+4. **微调 (fine-tuning)：** 对剪枝后的模型进行数个周期的再训练，通常使用较低的学习率。这一步骤对于恢复剪枝过程中损失的精度非常重要，它让剩余的权重 (weight)得以调整。
+5. **(可选) 迭代进行：** 重复步骤3和4，逐渐提高稀疏度。迭代剪枝通常比一次性移除大量权重（一次性剪枝）能带来更好的结果，因为它给网络提供了更多调整的机会。
+
+### 剪枝标准
+
+我们如何判断哪些权重 (weight)或结构“不那么重要”？存在以下几种标准：
+
+- **基于大小的剪枝：** 最简单也是最广泛使用的方法。绝对值最小的权重被剪枝。对于结构化剪枝，通常使用结构内（如滤波器或通道）权重的$L_n$范数（例如$L_1$或$L_2$）。范数最低的结构被移除。尽管这种方法简单，但基于大小的剪枝效果出人意料地好。
+- **基于梯度的剪枝：** 使用梯度信息，可能与权重大小结合，来估计重要性。像SynFlow这样的方法试图在训练早期甚至训练开始前就找出重要的连接。
+- **基于敏感度的剪枝：** 衡量移除特定权重或结构对损失函数 (loss function)的影响。由于这需要评估移除许多不同元素的效果，因此通常计算成本更高。
+
+### 使用`torch.nn.utils.prune`实现剪枝
+
+PyTorch提供了一个便捷的工具模块`torch.nn.utils.prune`，用于实现各种剪枝技术。它的工作原理是为指定的模块参数 (parameter)（`weight`或`bias`）添加一个`weight_mask`缓冲区。在前向传播过程中，原始权重 (weight)张量与此掩码进行逐元素相乘，从而有效地将剪枝后的权重归零，而最初不修改原始的`weight`张量本身。这有助于逐步剪枝和微调 (fine-tuning)。
+
+我们来看一个使用基于大小剪枝的基本示例：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.utils.prune as prune
+
+# 示例层
+layer = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3)
+
+# --- 无结构剪枝 ---
+# 剪枝该层中L1范数最小的30%权重（全局）
+prune.l1_unstructured(layer, name="weight", amount=0.3)
+
+# 掩码现已附着。你可以查看它：
+print(hasattr(layer, 'weight_mask'))
+# 输出: True
+print(layer.weight_mask)
+# 输出: (一个由0和1组成的张量，约有30%的元素是0)
+
+# 原始权重仍然存在，但在前向传播时被掩蔽
+print(layer.weight) # 显示原始权重
+
+# 查看计算中使用的剪枝后权重：
+print(layer.weight * layer.weight_mask) # 显示被掩蔽的权重
+
+
+# --- 结构化剪枝（示例：剪枝通道） ---
+# 为结构化示例创建一个新层
+structured_layer = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3)
+
+# 剪枝25%的通道（dim=0对应输出通道）
+# 使用每个通道滤波器中权重的L2范数
+prune.ln_structured(structured_layer, name="weight", amount=0.25, n=2, dim=0)
+
+print(hasattr(structured_layer, 'weight_mask'))
+# 输出: True
+# 注意掩码结构：整个通道（dim=0）都被归零了
+print(structured_layer.weight_mask[0:5, 0, 0, 0]) # 检查前5个滤波器的掩码
+
+
+# --- 使剪枝永久化 ---
+# 微调后，你可能希望移除掩码并永久性地将参数归零
+# 这可以减少开销，并使模型准备好部署。
+# 对于无结构示例：
+prune.remove(layer, 'weight')
+print(hasattr(layer, 'weight_mask'))
+# 输出: False
+# 现在layer.weight直接包含零值
+print(torch.sum(layer.weight == 0)) # 计算归零的权重数量
+```
+
+在典型的训练循环中，你会在开始微调阶段之前应用剪枝函数（例如`prune.l1_unstructured`）。在微调期间，梯度将只流经未被掩蔽的权重，使它们能够调整。掩码本身不参与训练。微调完成后，调用`prune.remove`会将掩码直接应用于权重张量并移除掩码缓冲区及其关联的前向预钩子，从而使稀疏性永久化。
+
+### 权衡与考量
+
+剪枝在模型压缩/速度与精度之间引入了一种权衡。
+
+
+
+![精度与稀疏度的权衡](plots/2737-0.json)
+
+
+
+> 通过剪枝实现的模型稀疏度与微调 (fine-tuning)后的验证精度之间的典型关系。精度通常在初始阶段保持稳定，但在更高的稀疏度水平下下降得更快。
+
+考量方面包括：
+
+- **目标稀疏度：** 模型能承受多少剪枝？这在很大程度上取决于模型架构、数据集和特定任务。需要进行经验性评估。
+- **微调：** 对恢复精度不可或缺。需要仔细选择学习率和周期数。由于活跃参数 (parameter)较少，微调剪枝后的模型每个周期可能花费更少的时间，但可能需要足够的周期才能收敛。
+- **硬件加速：** 无结构剪枝从能高效处理稀疏张量的硬件或软件中获益匪盛。结构化剪枝在标准硬件上提供更直接的优势。
+- **技术结合：** 剪枝可以与其他优化方法（如量化 (quantization)）有效结合，以实现更大的模型压缩和效率提升。
+
+模型剪枝是一种有效技术，用于减小深度学习 (deep learning)模型的计算开销。通过仔细移除不那么重要的参数，无论是单个移除还是结构性移除，并对生成的网络进行微调，你可以创建更小、可能更快的模型，适用于资源受限环境下的部署。`torch.nn.utils.prune`模块提供了灵活的工具，用于在你的PyTorch工作流程中实现各种剪枝策略。
+
+## 参考资料
+
+- [Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding](https://arxiv.org/abs/1510.00149) — Song Han, Huizi Mao, and William J. Dally (2016)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1510.00149](https://doi.org/10.48550/arXiv.1510.00149)
+  提出了一种广泛采用的模型压缩三阶段流程，首先通过基于幅度的剪枝来移除冗余连接。
+- [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Subnetworks](https://arxiv.org/abs/1803.03635) — Jonathan Frankle and Michael Carbin (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1803.03635](https://doi.org/10.48550/arXiv.1803.03635)
+  提出密集神经网络包含稀疏子网络，这些子网络在从头开始训练时可以达到类似的准确性。
+- [Learning Efficient Convolutional Networks through Network Slimming](https://arxiv.org/abs/1708.06519) — Zhuang Liu, Jianguo Li, Zhiqiang Shen, Gao Huang, Shoumeng Yan, Changshui Zhang (2017)
+  Journal: IEEE International Conference on Computer Vision (ICCV); DOI: [10.48550/arXiv.1708.06519](https://doi.org/10.48550/arXiv.1708.06519)
+  一种结构化剪枝方法，通过对缩放因子引入稀疏性惩罚来剪枝通道。
+- [\`torch.nn.utils.prune\` documentation](https://pytorch.org/docs/stable/generated/torch.nn.utils.prune.random_unstructured.html) — PyTorch Developers (2024)
+  Publisher: PyTorch
+  PyTorch官方文档，介绍用于对神经网络层应用各种剪枝技术的模块。

@@ -1,0 +1,149 @@
+---
+course: "python-llm-workflows"
+chapter: "interacting-llm-apis-python"
+lesson: "rate-limiting-cost-management"
+sourceId: 5129
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-3-interacting-llm-apis-python/rate-limiting-cost-management"
+title: "速率限制与成本管理要点"
+description: "处理API速率限制和监控使用成本的策略。"
+order: 6
+plots: ["plots/5129-0.json"]
+sourceHash: "2289c999d126788a8fe0d4540fa2f89e06e127de43fde271569458f89c4258ae"
+sourceCorrections: []
+---
+
+成功调用LLM API不仅仅是技术层面。应用程序必须在API提供者设定的限制内运行，这些限制主要涉及使用频率（速率限制）和财务成本。忽视这些方面可能导致应用程序故障、意外费用和性能不稳定。在使用Python与LLM API交互时，理解并管理这些操作事项非常重要。
+
+## 理解与遵守速率限制
+
+API提供者设置速率限制，以确保公平使用、为所有用户维持服务稳定并防止滥用。这些限制约束了您在特定时间段内可以发送到API的请求数量或数据量（通常以令牌衡量）。
+
+常见的速率限制类型包括：
+
+- **每分钟请求数 (RPM) / 每秒请求数 (RPS)：** 限制您每分钟或每秒可以发出的API调用总数。
+- **每分钟令牌数 (TPM)：** 限制API每分钟处理的令牌总数（输入提示令牌 + 生成的输出令牌）。这种方式越来越普遍，因为它能更好地反映计算负荷。
+- **并发请求数：** 限制您的应用程序可以同时进行的API请求数量。
+
+### 了解您的限制
+
+第一步是了解您需要遵守的限制。这些信息通常在以下地方找到：
+
+1. **API文档：** 提供方的官方文档是主要信息来源。请查找关于“速率限制”、“使用限制”或“API参考”的章节。
+2. **API响应头：** 某些API在HTTP响应头中返回当前的速率限制信息。常见的头包括 `X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset` 或类似变体。您可以在Python代码中发出请求后检查这些头。
+
+### 在Python中处理速率限制
+
+当您的应用程序超出速率限制时，API通常会返回HTTP错误状态码，最常见的是 `429 Too Many Requests`。您的代码需要预判并妥善处理这种情况。
+
+**1. 错误检查：** 始终检查API响应的状态码。
+
+```python
+import requests
+import time
+import os
+
+API_URL = "YOUR_LLM_API_ENDPOINT"
+API_KEY = os.getenv("LLM_API_KEY") # 假设密钥在环境变量中
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+data = {"prompt": "Tell me a short story.", "max_tokens": 50}
+
+try:
+    response = requests.post(API_URL, headers=headers, json=data)
+
+    # 检查速率限制错误
+    if response.status_code == 429:
+        print("超出速率限制。等待后重试...")
+        # 在此处实现重试逻辑（见下文）
+    elif response.status_code == 200:
+        print("API调用成功：")
+        print(response.json())
+    else:
+        print(f"API错误：{response.status_code}")
+        print(response.text) # 记录或打印错误详情
+
+except requests.exceptions.RequestException as e:
+    print(f"网络或请求错误：{e}")
+```
+
+**2. 带退避的重试机制：** 如果达到速率限制，立即重试很可能再次失败。一种常见策略是等待一段时间再重试，通常在连续失败后增加等待时间。这被称为退避策略。
+
+- **简单暂停：** 等待固定时间。
+
+  ```python
+  if response.status_code == 429:
+      print("超出速率限制。等待10秒...")
+      time.sleep(10)
+      # 后面将是重试请求的代码
+  ```
+- **指数退避：** 每次失败后以指数方式增加等待时间（例如，等待1秒，然后2秒，4秒，8秒...）。这种方法通常很有效。像 `tenacity` 这样的库可以简化实现复杂的重试逻辑，包括指数退避和抖动（在等待时间中增加随机性，以避免多个实例同步重试）。
+
+**3. 客户端限流：** 除了仅仅对 `429` 错误作出反应外，您还可以主动限制应用程序发送请求的速率，以保持在已知限制以下。这可能涉及使用队列、时间戳或应用程序内用于速率限制的库。
+
+## 管理API成本
+
+大多数强大的LLM API都不是免费的。理解定价模型并监控您的使用情况，对于避免意外开销非常必要。
+
+### 常见成本模型
+
+提供方通常根据以下方式收费：
+
+- **处理的令牌数：** 最常见的模型。费用根据输入提示中的令牌数加上响应中生成的令牌数计算。输入和输出令牌可能费用不同。
+- **模型级别：** 功能更强的模型（如GPT-4）通常比功能较弱的模型（如GPT-3.5-turbo）每令牌费用更高。
+- **按请求付费：** 某些API除了令牌费用外，可能还有少量按请求收取的固定费用。
+- **微调 (fine-tuning)/专用实例：** 使用自定义微调模型或专用计算资源通常涉及单独的设置和持续的托管费用。
+
+请务必查阅提供方的**定价页面**，了解您打算使用的具体模型。费用差异可能很大。
+
+
+
+![LLM API 成本比较（每百万令牌）](plots/5129-0.json)
+
+
+
+> 两个模型的示例成本结构。请注意价格的显著差异，特别是对于更高级的“Omega”模型及其输出令牌。
+
+### 成本估算与监控
+
+**1. 令牌计数：** 在发送请求之前，您通常可以使用与目标模型兼容的分词 (tokenization)库来估算输入令牌的数量。对于OpenAI模型，常用 `tiktoken` 库。
+
+```python
+import tiktoken
+
+# 适用于 gpt-3.5-turbo 或 gpt-4 等模型的示例
+encoding = tiktoken.get_encoding("cl100k_base")
+
+prompt = "Translate this English text to French: Hello, world!"
+tokens = encoding.encode(prompt)
+num_tokens = len(tokens)
+
+print(f"估算的输入令牌数：{num_tokens}")
+# 估算的输入令牌数：11
+```
+
+请记住，预先精确估算输出令牌数量很困难，因为它取决于模型的生成。您可以在API调用中设置 `max_tokens` 参数 (parameter)来限制输出长度和成本。
+
+**2. 提供方控制面板：** 所有主要的LLM提供方都提供基于网络的控制面板，您可以在其中近乎实时地追踪API使用情况和相关费用。请定期查看这些控制面板。
+
+**3. 应用程序日志：** 在应用程序内部实现日志记录，以记录每次API调用的详情：时间戳、使用的模型、输入令牌、输出令牌以及根据提供方定价计算的成本。这有助于细致分析您的成本来源。
+
+### 成本优化策略
+
+- **选择最适合且成本最低的模型：** 如果较便宜的模型能充分完成任务，就不要默认使用功能最强大（也最昂贵）的模型。通过尝试来找到合适的平衡点。
+- **优化提示词 (prompt)：** 简短、清晰的提示词消耗更少的输入令牌。优化您的提示词，使其在有效的同时保持简洁。避免不必要的冗长。
+- **限制输出长度：** 使用像 `max_tokens` 这样的参数 (parameter)，以防止出现意外过长且昂贵的响应，特别是对于接受简短输出的任务。
+- **实现缓存：** 如果您的应用程序频繁收到相同的提示，请缓存响应。存储首次API调用的结果，并直接服务于后续的相同请求，避免重复的API费用。可以使用简单的基于字典的缓存或像Redis这样的方案。
+- **批量请求（如果支持）：** 某些API允许在单个请求中发送多个提示，这可能比许多单独的请求效率略高，尽管令牌费用通常仍适用于总数量。请查阅API文档。
+- **设置预算提醒/限制：** 利用API供应商或您的云平台提供的功能，设置支出限制或在使用量接近特定成本阈值时接收提醒。
+
+有效管理速率限制和成本不仅仅是为了避免错误和高额账单。它是构建可靠、可扩展和可持续应用程序的一个重要方面，这些应用程序能够负责任地运用LLM的能力。从一开始就将检查、重试、监控和优化技术整合到您的Python工作流程中，将大大减少后续的麻烦。
+
+## 参考资料
+
+- [Rate limits guide](https://platform.openai.com/docs/guides/rate-limits/) — OpenAI (2024)
+  Publisher: OpenAI
+  官方文档，涵盖API速率限制和策略，是管理LLM API使用约束和了解定价模型的主要资源。
+- [tenacity: Retrying done right](https://tenacity.readthedocs.io/en/latest/) — Raymond Spacey and other contributors (2024)
+  Python `tenacity`库的文档，简化了指数退避和抖动重试机制的实现，以实现弹性API交互，如本节所述。
+- [tiktoken: A fast BPE tokenizer for use with OpenAI's models](https://github.com/openai/tiktoken) — OpenAI (2024)
+  `tiktoken`的官方仓库和文档，这是一个用于高效计算提示中token数量的Python库，对于估算和管理LLM API成本至关重要。

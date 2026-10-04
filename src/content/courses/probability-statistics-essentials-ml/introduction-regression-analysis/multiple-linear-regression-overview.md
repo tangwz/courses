@@ -1,0 +1,85 @@
+---
+course: "probability-statistics-essentials-ml"
+chapter: "introduction-regression-analysis"
+lesson: "multiple-linear-regression-overview"
+sourceId: 1443
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-essentials-ml/chapter-6-introduction-regression-analysis/multiple-linear-regression-overview"
+title: "多元线性回归概述"
+description: "将简单线性回归的思想扩展到包含多个预测变量的模型。"
+order: 6
+plots: []
+sourceHash: "e44474856c27c4eaa960eb47346ca0a0c475bc2b409780f94b6419a2f245dcf2"
+sourceCorrections: []
+---
+
+“虽然简单线性回归帮助我们理解单个预测变量与响应之间的关系，但许多现象同时受到多种因素的影响。例如，预测房价可能需要考虑的不仅是房屋面积，还有卧室数量、位置、房龄等等。多元线性回归将我们学过的思想用于处理这些有多个预测变量的情况。”
+
+### 多元线性回归模型
+
+多元线性回归是一种线性回归模型，它通过扩展简单线性回归方程，纳入多个预测变量来处理复杂现象。如果我们有 $p$ 个预测变量 $x_1, x_2, ..., x_p$，多元线性回归模型定义如下：
+
+
+$$
+y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + ... + \beta_p x_p + \epsilon
+$$
+
+
+我们来分解一下这些组成部分：
+
+- $y$: 因变量或响应变量（我们想要预测的值）。
+- $x_1, x_2, ..., x_p$: 自变量或预测变量（用于预测的因素）。
+- $\beta_0$: 截距，表示当所有预测变量都为零时 $y$ 的期望值。
+- $\beta_1, \beta_2, ..., \beta_p$: 与每个预测变量相关的回归系数。
+- $\epsilon$: 误差项，表示 $y$ 中未被预测变量解释的变化部分（残差）。它包含了噪声和未建模的因素。
+
+该模型表示预测变量与响应变量之间的线性关系。简单线性回归描述一条直线，而有两个预测变量的多元线性回归描述一个平面，当预测变量多于两个时，则描述高维空间 (high-dimensional space)中的一个超平面。
+
+> 多元线性回归模型通过估计系数 ($\beta_1, ..., \beta_p$) 和截距 ($\beta_0$)，将多个预测变量 ($x_1, x_2, ..., x_p$) 与单个响应变量 ($y$) 关联起来。
+
+### 系数解释
+
+多元回归中系数的解释需要仔细考量。每个系数 $\beta_j$ 表示当对应预测变量 $x_j$ 增加一个单位时，响应变量 $y$ 的期望变化，*前提是模型中的所有其他预测变量保持不变*。
+
+这种“保持其他变量不变”的方面很重要。多元回归模型 $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \epsilon$ 中 $\beta_1$ 的值可能与简单线性回归 $y = \beta_0 + \beta_1 x_1 + \epsilon$ 中 $x_1$ 的系数不同。这是因为多元回归系数考虑了 $x_2$ 对 $y$ 的影响，从而独立出了 $x_1$ 的独特贡献。
+
+### 估计与评估
+
+就像在简单线性回归中一样，系数 ($\beta_0, \beta_1, ..., \beta_p$) 通常使用最小二乘法进行估计。目标保持不变：找到使观测值 ($y_i$) 与模型预测值 ($\hat{y}_i$) 之间的平方差之和最小化的系数。虽然数学计算涉及矩阵代数（尤其当 $p > 1$ 时），但原理是相同的。幸好，Scikit-learn 和 Statsmodels 等库为我们处理了这些计算。
+
+模型评估也使用常用的指标：
+
+- **均方误差 (MSE)：** 衡量观测值与预测值之间的平均平方差。值越低越好。
+- **R平方 ($R^2$)：** 表示响应变量 $y$ 中可以由预测变量 $x_1, ..., x_p$ 预测的方差比例。值越高通常越好（越接近1）。
+
+然而，$R^2$ 在多元回归背景下有一个局限：当你向模型中添加更多预测变量时，它总是增加或保持不变，即使这些预测变量是不相关的。这可能产生误导。
+
+为此，我们经常使用**调整R平方**。该指标通过惩罚不显著改善模型拟合的额外预测变量的加入来修正 $R^2$。调整R平方在比较预测变量数量不同的模型时，提供更公平的评估。它仅当添加的变量对模型的改进超出偶然性预期时才会增加。
+
+### 假设与挑战
+
+简单线性回归的基本假设通常也适用于多元线性回归：
+
+1. **线性：** 预测变量与响应变量之间的关系是线性的。
+2. **独立性：** 误差 ($\epsilon$) 相互独立。
+3. **同方差性：** 误差在预测变量的所有水平上具有恒定方差。
+4. **正态性：** 误差呈正态分布。
+
+此外，多元回归引入了一个新的潜在问题：
+
+5. **无完美多重共线性：** 预测变量之间不应存在完全线性关系。高度多重共线性（预测变量之间存在强线性关系）可能导致系数估计不稳定且难以准确解释。我们希望预测变量提供独立的信息。
+
+构建好用的多元回归模型通常涉及选择最相关的预测变量（特征选择）、检查预测变量之间的相互作用（其中一个预测变量的效果取决于另一个的水平），以及验证模型假设。
+
+本概述为应用这些思想奠定了基础。实际中，您将使用软件工具来拟合这些模型，解释它们的输出，并发现和处理潜在问题，从而能够从数据中构建更全面的预测模型。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — James, Gareth and Witten, Daniela and Hastie, Trevor and Tibshirani, Robert (2013)
+  Publisher: Springer
+  一本非常易读的著作，全面涵盖了多元线性回归，包括模型建立、系数解释、估计、评估指标和假设，适合连接统计学和机器学习的读者。
+- [sklearn.linear_model.LinearRegression](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html) — Scikit-learn Developers (2024)
+  Journal: Scikit-learn Documentation
+  Scikit-learn 的 LinearRegression 模型的官方文档，提供了在 Python 中拟合多元线性回归模型的实际实现细节和用法。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Hastie, Trevor and Tibshirani, Robert and Friedman, Jerome (2009)
+  Publisher: Springer; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本更高级的教科书，为统计学习方法提供了严谨的理论和数学基础，包括对线性回归模型及其扩展的详细论述。

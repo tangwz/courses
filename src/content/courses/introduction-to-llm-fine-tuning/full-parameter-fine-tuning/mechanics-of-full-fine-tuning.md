@@ -1,0 +1,67 @@
+---
+course: "introduction-to-llm-fine-tuning"
+chapter: "full-parameter-fine-tuning"
+lesson: "mechanics-of-full-fine-tuning"
+sourceId: 7274
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-llm-fine-tuning/chapter-3-full-parameter-fine-tuning/mechanics-of-full-fine-tuning"
+title: "全参数微调的工作原理"
+description: "解释全参数微调如何工作，即在训练期间更新所有模型权重。"
+order: 1
+plots: []
+sourceHash: "ac190e0ff443fb2dada260fec0d0b17ae7a79f279a3dd469ab1e61f8263bb3ef"
+sourceCorrections: []
+---
+
+全参数 (parameter)微调 (fine-tuning)调整预训练 (pre-training)模型的全部权重 (weight)。与那些冻结模型大部分、只训练一小部分参数的方法不同，这种方式将每个权重都视为可训练的。这意味着模型在大规模预训练期间编码的知识会直接调整，以适应您专用数据集中的模式。
+
+这个过程是一个迭代循环，由监督学习 (supervised learning)的原理驱动。在每一步，模型都会从其在您的数据上的错误中学习，并且这种学习会通过整个网络反向传播 (backpropagation)。我们来把这个循环分解成它的基本阶段。
+
+### 微调 (fine-tuning)循环
+
+全参数 (parameter)微调的核心是一个重复循环，它处理数据批次以逐步改进模型。这个循环包含四个主要阶段：前向传播、损失计算、反向传播 (backpropagation)和参数更新。
+
+1. **前向传播**：一批训练样本被输入模型。模型通过其许多层处理此输入，从嵌入 (embedding)层到最终输出层，以生成预测。对于文本生成任务，此预测是关于下一个token在整个词汇表 (vocabulary)上的概率分布。
+2. **损失计算**：模型的预测与您数据集中的实际目标进行比较。损失函数 (loss function)量化 (quantization)了预测输出与真实标签之间的差异，即“误差”。对于语言建模，这通常是交叉熵损失，它衡量模型预测的概率分布与序列中实际下一个token的匹配程度。高损失值表明预测不佳，而低损失值表明预测良好。
+3. **反向传播**：这是学习信号生成的地方。损失值用于计算模型中每个参数的梯度。反向传播是一种有效计算这些梯度的算法，它从最后一层开始，反向遍历整个网络。梯度 $\nabla L(\theta)$ 指示每个参数应该调整的方向，以便最快地降低损失。在全参数微调中，此计算是针对所有参数执行的，从注意力机制 (attention mechanism)到前馈网络权重 (weight)。
+4. **参数更新**：优化器接收计算出的梯度，并使用它们更新模型的参数。这是根据前面介绍的梯度下降 (gradient descent)公式执行更改的步骤。在学习率的引导下，优化器沿着与梯度相反的方向迈出一小步，将模型权重推向在训练数据上产生更少错误的状态。
+
+整个循环重复多次迭代或周期，逐步使模型行为专门化。下图展示了单个训练步骤的流程。
+
+> 单个训练步骤的微调循环。数据前向流动以计算损失，损失信号反向流动以计算梯度，优化器使用这些梯度更新模型中的每个参数。
+
+### 优化器的作用
+
+尽管基本梯度下降 (gradient descent)公式 $\theta_{new} = \theta_{old} - \eta \cdot \nabla L(\theta_{old})$ 描述了更新，但现代训练流程使用更高级的优化器。基于 Transformer 模型最常见的选择是 **AdamW** 优化器。
+
+AdamW 是 Adam (自适应矩估计) 优化器的扩展。它通过以下方式改进了标准梯度下降：
+
+- **为每个独立参数 (parameter)保持自适应学习率**。需要更大更新的参数会得到更多调整，而其他参数则调整得更精细。
+- **引入动量**，这有助于加速训练并越过局部最小值。
+- **实施解耦权重 (weight)衰减**，这是一种正则化 (regularization)技术，通过惩罚大权重来帮助防止过拟合 (overfitting)。这是 AdamW 相对于 Adam 的主要改进，并且在训练大型模型时特别有效。
+
+优化器不仅负责应用更新。它还需要大量内存来存储其内部状态，例如每个参数的过去梯度的移动平均值。当您微调 (fine-tuning)一个拥有数十亿参数的模型时，优化器的内存占用会成为一个严肃的实际考量。
+
+### 全参数 (parameter)更新的影响
+
+更新每个参数会带来两个您必须应对的重大影响。
+
+首先，它**计算开销大**。为数十亿参数计算梯度并存储每个参数的优化器状态需要大量 GPU 内存 (VRAM)。这就是为什么在没有高端、数据中心级硬件的情况下，对 Llama 3 70B 或 GPT-4 等大型模型进行全参数微调 (fine-tuning)通常不切实际。
+
+其次，它带来**灾难性遗忘**的风险。由于模型中的每个权重 (weight)都可能发生变化，模型可能会失去在预训练 (pre-training)期间获得的一些通用知识。如果您的微调数据集过小或过窄，模型可能会过度专业化，并在该特定领域之外的任务上表现不佳。平衡专业化与通用能力的保持是全参数微调中的一个主要挑战。
+
+理解这些机制是有效实施该技术的第一步。接下来的章节将解决由这些机制带来的实际挑战，从内存管理到配置训练过程以获得最佳结果。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本全面的教材，涵盖了神经网络、反向传播、损失函数和优化器等基础概念，对于理解微调机制至关重要。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了自适应矩估计 (Adam) 优化器，这是本节讨论的 AdamW 优化器的基础算法。
+- [Decoupled Weight Decay Regularization](https://doi.org/10.48550/arXiv.1711.05101) — Ilya Loshchilov and Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  提出了 AdamW，Adam 的增强版，它将权重衰减与自适应学习率解耦，有助于有效训练大型模型。
+- [CS224n: Natural Language Processing with Deep Learning - Course Materials](http://web.stanford.edu/class/cs224n/) — Stanford University (2023)
+  Publisher: Stanford University
+  提供关于用于NLP的深度学习基础的优质课程材料，包括反向传播、优化器和与LLM微调相关的训练循环。

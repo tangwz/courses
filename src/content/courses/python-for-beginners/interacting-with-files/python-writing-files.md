@@ -1,0 +1,154 @@
+---
+course: "python-for-beginners"
+chapter: "interacting-with-files"
+lesson: "python-writing-files"
+sourceId: 2346
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-6-interacting-with-files/python-writing-files"
+title: "将数据写入文件"
+description: "学习如何将字符串和其他数据写入文件，覆盖现有内容或创建新文件。"
+order: 4
+plots: []
+sourceHash: "c70610702a10c7cf44ee22877cbf5f7348c0285b13deea75b47536e9d6cbba9c"
+sourceCorrections: []
+---
+
+Python 允许您将数据写入文件。这项功能对于保存程序输出、存储用户生成的内容或创建配置文件非常重要。
+
+### 以写入模式打开文件
+
+要写入文件，您需要以允许写入的模式打开它。主要的写入模式是 `'w'`。您将其与 `open()` 函数一起使用，就像用于读取的 `'r'` 一样：
+
+```python
+# 以写入模式打开 'output.txt'
+# 如果 'output.txt' 存在，其内容将被擦除！
+# 如果它不存在，则会创建它。
+file_object = open('output.txt', 'w')
+# ... 执行写入操作 ...
+file_object.close() # 记得关闭
+```
+
+**重要提示：** 以 `'w'` 模式打开文件有一个值得注意的副作用。如果文件已存在，其全部内容将立即被擦除。如果文件不存在，Python 会为您创建它。使用 `'w'` 模式时务必非常小心，以避免意外数据丢失。
+
+与读取文件一样，建议使用 `with` 语句来处理文件，因为它即使在发生错误时也能自动关闭文件：
+
+```python
+# 推荐方式：使用 'with' 语句
+with open('output.txt', 'w') as f:
+    # 'f' 是我们的文件对象，已准备好写入
+    pass # 我们会在这里添加写入操作
+# 退出 'with' 块时，文件会自动关闭
+```
+
+### 使用 `write()` 方法
+
+一旦文件以写入模式（或稍后讨论的追加模式）打开，您就可以使用文件对象的 `write()` 方法将字符串数据写入其中。此方法接受一个字符串参数 (parameter)，并将其写入文件中当前所在位置。
+
+让我们将一个简单的句子写入名为 `greeting.txt` 的文件：
+
+```python
+# 定义我们要写入的文本
+message = "Hello from Python!\n" # 注意换行符 \n
+
+try:
+    # 使用 'with' 以写入模式打开文件
+    with open('greeting.txt', 'w') as f:
+        f.write(message) # 将字符串写入文件
+    print("成功写入 greeting.txt")
+
+    # 可选：通过重新读取文件来验证
+    with open('greeting.txt', 'r') as f:
+        content = f.read()
+        print("文件内容：")
+        print(content)
+
+except IOError as e:
+    print(f"发生错误：{e}")
+```
+
+如果您运行此代码，它将：
+
+1. 在您的脚本所在目录中创建（或覆盖）一个名为 `greeting.txt` 的文件。
+2. 将字符串 `"Hello from Python!\n"` 写入该文件。
+3. 打印一条成功消息。
+4. （可选部分）再次以读取模式打开文件并打印其内容，以确认写入操作。
+
+请注意 `message` 字符串末尾的 `\n`。这是换行符。`write()` 方法在写入字符串后不会自动添加换行符。如果您希望后续写入的内容出现在新行上，则必须在要写入的字符串中明确包含 `\n`。
+
+### 写入多行
+
+如果您需要写入多行文本，有以下几种选择：
+
+1. **多次调用 `write()`：** 为每行调用 `write()`，确保每个字符串以 `\n` 结尾。
+
+   ```python
+   lines_to_write = [
+       "第一行。\n",
+       "第二行。\n",
+       "第三行。\n"
+   ]
+
+   try:
+       with open('multiple_lines.txt', 'w') as f:
+           for line in lines_to_write:
+               f.write(line) # 写入每一行，包括其换行符
+       print("成功写入多行。")
+   except IOError as e:
+       print(f"发生错误：{e}")
+   ```
+
+   这将创建 `multiple_lines.txt`，其中列表中的每个字符串都单独占一行。
+2. **使用 `writelines()`：** 此方法接受一个字符串列表（或任何可迭代对象），并将每个字符串写入文件。与 `write()` 一样，它不会自动添加换行符；如果需要，您的字符串必须已经包含它们。
+
+   ```python
+   lines_to_write = [
+       "报告标题\n",
+       "--------------\n",
+       "数据点 1: 值 A\n",
+       "数据点 2: 值 B\n"
+   ]
+
+   try:
+       with open('report.txt', 'w') as f:
+           f.writelines(lines_to_write) # 写入列表中所有字符串
+       print("成功使用 writelines() 写入报告。")
+   except IOError as e:
+       print(f"发生错误：{e}")
+   ```
+
+   这与循环方法达到了相同的结果，但对于已经包含换行符的字符串列表来说，它可能稍微更简洁。
+
+### 写入非字符串数据
+
+`write()` 方法严格要求一个字符串参数 (parameter)。如果您有其他类型的数据，例如数字（整数或浮点数），则在写入之前必须使用 `str()` 将它们转换为字符串。
+
+```python
+item = "小部件"
+quantity = 15
+price = 29.95
+total_cost = quantity * price
+
+try:
+    with open('order_summary.txt', 'w') as f:
+        f.write("订单摘要\n")
+        f.write("=============\n")
+        f.write("项目: " + item + "\n")
+        f.write("数量: " + str(quantity) + "\n") # 将整数转换为字符串
+        f.write("每件价格: $" + str(price) + "\n") # 将浮点数转换为字符串
+        f.write("总成本: $" + str(total_cost) + "\n") # 将浮点数转换为字符串
+    print("成功写入订单摘要。")
+except IOError as e:
+    print(f"发生错误：{e}")
+```
+
+在此示例中，`quantity`、`price` 和 `total_cost` 都是数值类型。我们使用 `str()` 将它们转换为字符串，以便它们可以与其他字符串连接，并使用 `f.write()` 写入文件。
+
+请记住，写入文件是一种常见操作。始终使用 `with` 语句以确保文件得到正确处理，并留意 `'w'` 模式覆盖现有文件的行为。在下一节中，我们将介绍如何在不擦除文件原有内容的情况下向其添加数据。
+
+## 参考资料
+
+- [Reading and Writing Files; open() Built-in Function](https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  Python文件I/O操作的官方文档，包括文件模式、`write()`和`writelines()`等方法，以及用于文件处理的`with`语句。此资源提供了Python中文件写入工作的权威规范。
+- [6.0001 Introduction to Computer Science and Programming in Python](https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/) — Ana Bell, Eric Grimson, John Guttag (2016)
+  Publisher: Massachusetts Institute of Technology
+  麻省理工学院开放课程的一门计算机科学入门课程，其讲义和作业涵盖Python中的文件I/O，为学习这些操作提供了结构化的学术背景。

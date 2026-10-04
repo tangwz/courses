@@ -1,0 +1,56 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "attention-mechanism-core-concepts"
+lesson: "dot-product-attention-math"
+sourceId: 1937
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-2-attention-mechanism-core-concepts/dot-product-attention-math"
+title: "点积注意力机制的数学形式"
+description: "点积注意力计算的详尽数学解析。"
+order: 3
+plots: []
+sourceHash: "8e43ab4fc11fe069aa1b0b3f918232f6ae1845128a12b1f638e200007eb121e7"
+sourceCorrections: []
+---
+
+点积注意力是一种常用的注意力机制 (attention mechanism)，它以查询 ($Q$)、键 ($K$) 和值 ($V$) 为核心。其主要计算步骤是：注意力会计算一系列分数，这些分数反映了每个查询与每个键之间的关联度或匹配度。这些分数随后用于生成值的加权和，使得模型能够根据查询-键关系，侧重于值所携带的最重要数据。
+
+“点积”这个名称直接来源于这些匹配分数的计算方式。对于给定的查询向量 (vector) $q$ 和一组向量 $K = \{k_1, k_2, ..., k_m\}$， $q$ 与特定向量 $k_j$ 之间的分数就是它们的点积：
+
+$分数(q, k_j) = q \cdot k_j = q^T k_j$
+
+通俗地说，点积体现了两个向量之间的对齐 (alignment)程度或相似性。如果查询向量 $q$ 与键向量 $k_j$ 高度相似（指向相似的方向），它们的点积会很大。反之，如果它们不相似或正交，点积会很小或为零。
+
+在实际应用中，我们不会逐一计算这些分数。深度学习 (deep learning)框架善于并行处理，尤其是矩阵乘法。我们通常使用查询、键和值的矩阵进行操作：
+
+- $Q$: 一个包含 $n$ 个查询向量的矩阵，每个向量的维度为 $d_k$。形状：$[n \times d_k]$。
+- $K$: 一个包含 $m$ 个向量的矩阵，每个向量的维度也为 $d_k$。形状：$[m \times d_k]$。
+- $V$: 一个包含 $m$ 个值向量的矩阵，每个向量的维度为 $d_v$。形状：$[m \times d_v]$。
+
+请注意，查询和键向量必须具有相同的维度 ($d_k$) 才能进行点积计算。值向量可以具有不同的维度 ($d_v$)。
+
+为了同时计算所有查询分数，我们对查询矩阵 $Q$ 和矩阵 $K^T$ 的转置进行矩阵乘法：
+
+$\text{分数} = Q K^T$
+
+我们来看看这些矩阵的尺寸：将 $Q$ ($[n \times d_k]$) 乘以 $K^T$ ($[d_k \times m]$) 会得到一个形状为 $[n \times m]$ 的分数矩阵。这个分数矩阵中的每个元素 $(i, j)$ 代表了第 $i$ 个查询 ($Q_i$) 和第 $j$ 个键 ($K_j$) 之间的点积，这体现了它们的匹配程度。
+
+> 矩阵乘法 $QK^T$ 计算了查询向量（Q 的行）与键向量（$K^T$ 的列）之间所有的成对点积。
+
+这些原始分数 ($QK^T$) 代表了点积注意力机制中主要的匹配度指标。然而，它们尚未准备好用作值的权重 (weight)。点积的取值区间可能非常大，这可能在训练期间引出问题，尤其是在梯度方面。另外，我们需要将这些分数转换为一个概率分布，使得每个查询的分数之和为1，这反映了该查询应如何分配对每个值的关注度。
+
+接下来的步骤，即对这些分数进行缩放并应用softmax函数，将解决这些情况，并将原始点积分数转化为实际可用的注意力权重。我们将在后续章节中考察这些步骤。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇论文介绍了Transformer架构和缩放点积注意力机制，是本文讨论内容的基础。
+- [Dive into Deep Learning](https://d2l.ai/chapter_attention-mechanisms/attention-scoring-functions.html) — Aston Zhang, Zack C. Lipton, Mu Li, Alex J. Smola (2024)
+  Publisher: Cambridge University Press
+  一本开源互动式深度学习书籍，详细解释了注意力评分函数和点积注意力的数学公式。
+- [CS224n: Natural Language Processing with Deep Learning - Lecture 10: Transformers and Pretrained Language Models](https://web.stanford.edu/class/cs224n/readings/cs224n-self-attention-transformers-2023_draft.pdf) — John Hewitt (2023)
+  Publisher: Stanford University (CS224N Course Staff); Pages: 1-14
+  斯坦福大学的课程讲义，提供了Transformer架构和注意力机制数学方面的学术概述。
+- [Speech and Language Processing (3rd edition draft)](https://web.stanford.edu/~jurafsky/slp3/ed3book_aug242025.pdf) — Daniel Jurafsky, James H. Martin (2025)
+  Pages: Chapter 9
+  一本关于自然语言处理的权威教科书，在其专门章节中对注意力机制和Transformer模型进行了严谨的数学处理。

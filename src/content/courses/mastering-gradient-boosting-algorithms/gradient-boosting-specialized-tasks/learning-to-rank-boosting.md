@@ -1,0 +1,71 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "gradient-boosting-specialized-tasks"
+lesson: "learning-to-rank-boosting"
+sourceId: 2066
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-9-gradient-boosting-specialized-tasks/learning-to-rank-boosting"
+title: "使用梯度提升的排序学习"
+description: "将提升算法用于排序问题（例如，XGBoost/LightGBM中的LambdaMART理念）。"
+order: 1
+plots: []
+sourceHash: "da2b4e6ed22b145f0be226fe27028c65b6cf49d04c0e10b6b2f1bffbaa3a0f10"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)任务通常涉及分类（分配标签）或回归（预测连续值）。排序学习（LTR）着眼于一个独特的目标：根据项目相对于特定查询或上下文 (context)的关联性、偏好或重要性，**对**一组项目**进行排序**。这种方法在搜索引擎结果页面、产品推荐和文档检索等应用中是基本的。
+
+梯度提升机（GBM）已被证明在LTR任务中非常有效。它们能够使用决策树集成来建模复杂、非线性的关系和特征交互，这使得它们很适合捕捉决定相对关联性的细微模式。此外，梯度提升框架提供了一种原则性的方法来优化排序质量，即使评估指标本身不可微分或难以直接优化。
+
+### 排序指标的难点
+
+典型的LTR评估指标，例如归一化 (normalization)折现累积增益（NDCG）、平均准确率（MAP）或平均倒数排名（MRR），衡量的是*整个排序列表*的质量。与准确率或均方误差（MSE）等更简单的指标不同，这些排序指标依赖于项目的相对顺序，并且通常是分段常数或不可微分的。这使得使用标准梯度下降 (gradient descent)进行直接优化变得困难。
+
+例如，NDCG@k 评估排序列表中前 $k$ 个项目的质量，同时考虑项目的关联度等级和它们的位置。交换列表中靠后位置的两个项目可能完全不会改变NDCG@k，这会导致标准损失函数 (loss function)的梯度为零，即使这种交换提高了整体排序。
+
+### 梯度提升在LTR中的方法
+
+GBM通过优化替代损失函数 (loss function)来处理这个难点，这些函数*隐式地*提高了目标排序指标。主要方法分为三类：
+
+1. **逐点方法：** 这种最简单的方法独立处理每个项目（例如文档）。它实际上将LTR重新定义为回归或分类问题。您可以根据每个项目相对于查询的特征，预测其关联性得分（回归）或关联性类别（分类）。最终排序是通过根据这些预测分数对项目进行排序获得的。
+
+   - **局限性：** 它在*训练期间*完全忽略了项目的相对顺序。模型没有明确学到对于给定查询，项目A排名高于项目B是更优的选择。使用MSE或LogLoss等标准损失函数。虽然简单，但与直接考虑项目对或列表的方法相比，这通常会产生次优的排序性能。
+2. **成对方法：** 这可以说是GBM在LTR中最常见和成功的方法。成对方法不是单独评估项目，而是关注同一查询上下文 (context)中项目*对*的相对顺序。目标是学习一个评分函数 $f(q, d)$，使得对于给定查询 $q$，如果文档 $d_i$ 比文档 $d_j$ 更具关联性，那么 $f(q, d_i) > f(q, d_j)$。
+
+   - 训练数据是从每个查询 $q$ 的成对 $(d_i, d_j)$ 构建的。如果已知 $d_i$ 比 $d_j$ 更具关联性，则此对构成相对排序的正训练实例。
+   - 模型通常优化基于分数差 $f(q, d_i) - f(q, d_j)$ 的损失函数。常见的选择是将逻辑损失（类似于逻辑回归）应用于此差值，旨在最大化正确排序对的分数之间的裕度。
+
+> 成对LTR的视角：模型学习一个评分函数，使得对于给定查询，更关联的文档（文档 A）获得比不那么关联的文档（文档 B）更高的分数。
+
+```
+*   **LambdaRank和LambdaMART：** 成对LTR的一个重要进展是LambdaRank技术。LambdaRank不是使用标准的成对损失梯度，而是计算“Lambda梯度”。这些梯度通过交换对 $(d_i, d_j)$ 将导致的目标排序指标（如NDCG）的变化来缩放。这巧妙地将关于全局列表结构和特定排序指标的信息注入到成对优化过程中。交换会显著影响指标的对（例如，将一个高度关联的项目移到列表中不关联项目之上）会接收到更大的梯度。LambdaMART将LambdaRank梯度与MART（多重加性回归树，即梯度提升）算法结合。许多现代LTR的GBM实现（如XGBoost和LightGBM中）都基于LambdaMART。
+```
+
+3. **逐列表方法：** 这些方法试图直接优化为查询定义的整个项目列表上的损失函数。它们尝试捕捉排序列表中所有项目之间复杂的相互依赖关系，并直接近似目标排序指标。例子包括ListNet、ListMLE，以及在LambdaMART原理基础上构建但更明确考虑完整列表结构的变化。虽然理论上吸引人，但它们在计算上可能更耗时，并且实现起来更复杂。通常，调整得当的LambdaMART（技术上是带有Lambda梯度的成对方法，但行为上是逐列表的）提供了一个强大的实际基准。
+
+### 提升库中的实际实现
+
+现代梯度提升库为LTR提供内置支持，主要侧重于成对/LambdaMART方法。
+
+- **数据准备：** LTR需要按查询分组的数据。每行通常包含查询-项目对的特征、关联性标签/分数以及查询标识符（QID）。库需要此QID来了解哪些项目属于同一列表，以便进行成对比较或逐列表评估。输入数据通常需要按QID排序。
+- **目标函数：**
+  - **XGBoost：** 提供诸如 `rank:pairwise`（使用LambdaRank原理）、`rank:ndcg` 和 `rank:map` 等目标。这些直接优化排序质量。
+  - **LightGBM：** 提供 `lambdarank` 作为其主要的LTR目标，这是LambdaMART的高效实现。它还需要一个 `group` 参数 (parameter)来指定数据集中每个查询的文档数量。
+  - **CatBoost：** 也支持LTR任务，具有 `PairLogit`、`YetiRank`（一种基于有序提升的逐列表方法）等目标，并且需要分组信息。
+- **评估：** 在训练和评估期间，您必须使用针对排序的指标。库通常允许指定诸如 `ndcg@k` 或 `map@k` 等评估指标。交叉验证需要遵守查询组（Group K-Fold）。
+
+将梯度提升用于LTR涉及了解排序问题，选择合适的成对或逐列表目标函数（通常基于LambdaMART），正确格式化带有查询组的数据，并使用相关的排序指标进行评估。XGBoost、LightGBM和CatBoost能够高效实现这些复杂的排序目标，使它们成为搜索和推荐任务的强大工具。本章后面的实践环节将演示如何使用其中一个库实现LTR任务。
+
+## 参考资料
+
+- [Learning to Rank with Nonsmooth Cost Functions](https://neurips.cc/paper/2006/hash/8d697f4874c8e794939fb5f261972746-Paper.pdf) — Christopher J. C. Burges, Robert Ragno, Quoc V. Le (2006)
+  Journal: Advances in Neural Information Processing Systems 19; Publisher: The MIT Press; Volume: 19; Pages: 395-402; DOI: [10.7551/mitpress/7503.003.0029](https://doi.org/10.7551/mitpress/7503.003.0029)
+  介绍了LambdaRank，一种根据排名指标变化计算梯度的成对学习排名算法。
+- [From RankNet to LambdaRank to LambdaMART: An Overview](https://www.microsoft.com/en-us/research/publication/from-ranknet-to-lambdarank-to-lambdamart-an-overview/) — Chris J.C. Burges (2010)
+  Journal: Microsoft Research Technical Report MSR-TR-2010-82; Publisher: Microsoft Research
+  概述了从RankNet到LambdaRank再到LambdaMART的演变，详细阐述了其梯度提升公式。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/information-retrieval-book.html) — Christopher D. Manning, Prabhakar Raghavan, Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  信息检索领域的标准教科书。第15章涵盖了包括点式、对式和列表式方法在内的各种学习排名技术。
+- [Learning to Rank (LTR) in LightGBM](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRanker.html) — LightGBM Contributors (2024)
+  Publisher: LightGBM Documentation
+  LightGBM中学习排名功能的官方文档，包含具体参数和数据格式化信息。

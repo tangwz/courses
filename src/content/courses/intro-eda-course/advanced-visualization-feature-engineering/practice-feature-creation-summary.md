@@ -1,0 +1,209 @@
+---
+course: "intro-eda-course"
+chapter: "advanced-visualization-feature-engineering"
+lesson: "practice-feature-creation-summary"
+sourceId: 1206
+sourceUrl: "https://apxml.com/zh/courses/intro-eda-course/chapter-5-advanced-visualization-feature-engineering/practice-feature-creation-summary"
+title: "实践操作：特征创建与归纳"
+description: "根据之前的分析应用特征创建技术，并练习归纳EDA结果。"
+order: 9
+plots: []
+sourceHash: "50d9448e85848eb9c1537edfdd02831df102062a9fed543dc0df9c7e32d4f906"
+sourceCorrections: []
+---
+
+高级可视化方法以及特征工程、缩放和编码的原理在实践中得到应用。这些技术应用于一个示例数据集，演示数据分析的观察结果如何直接指导新特征的生成，以及如何为可能的模型构建准备数据。此过程包括介绍如何有效归纳EDA结果。
+
+首先，请确保已导入所需库。我们将主要使用Pandas进行数据操作，Scikit-learn进行数据变换。
+
+```python
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, OneHotEncoder, PolynomialFeatures
+from sklearn.model_selection import train_test_split # 尽管不严格属于EDA，但常与EDA结合使用
+
+# 我们来创建一个示例DataFrame用于操作
+# 假设这个DataFrame是加载和初步清理（第2章）后的结果
+data = {
+    'Age': [25, 45, 30, 55, 22, 38, 60, 29, 41, 50],
+    'Salary': [50000, 80000, 60000, 110000, 45000, 75000, 120000, 58000, 78000, 95000],
+    'Department': ['HR', 'IT', 'Sales', 'IT', 'Sales', 'HR', 'IT', 'Sales', 'HR', 'IT'],
+    'Experience': [2, 20, 5, 30, 1, 15, 35, 4, 18, 25],
+    'JoinDate': pd.to_datetime(['2021-03-15', '2003-07-20', '2018-11-01', '1993-05-10', '2022-01-30', '2008-09-12', '1988-02-28', '2019-06-05', '2005-10-22', '1998-04-18'])
+}
+df = pd.DataFrame(data)
+
+print("原始DataFrame:")
+print(df.head())
+print("\nDataFrame信息:")
+df.info()
+```
+
+### 根据EDA观察结果创建新特征
+
+我们之前的分析（单变量和双变量）可能提示了某些值得明确作为新特征捕获的关系或特点。
+
+**1. 交互特征**
+
+如果散点图或相关性分析（第4章）提示两个变量的组合效应明显，我们可以创建一个交互项。例如，对于年长且经验更丰富的员工，'Salary'（薪资）的潜力可能增长更快。一个简单的交互项可以是'Age'和'Experience'的乘积。
+
+```python
+df['Age_Experience_Interaction'] = df['Age'] * df['Experience']
+print("\n带有年龄-经验交互特征的DataFrame:")
+print(df[['Age', 'Experience', 'Age_Experience_Interaction']].head())
+```
+
+**2. 多项式特征**
+
+如果散点图等可视化图表显示特征与目标（或另一个特征）之间存在曲线关系，多项式特征可能有助于表示这种非线性关系。让我们为'Age'和'Experience'创建平方项。虽然Scikit-learn的`PolynomialFeatures`功能强大，但我们可以直接用Pandas创建简单的多项式项。
+
+```python
+df['Age_Squared'] = df['Age']**2
+df['Experience_Squared'] = df['Experience']**2
+print("\n带有平方特征的DataFrame:")
+print(df[['Age', 'Age_Squared', 'Experience', 'Experience_Squared']].head())
+```
+
+另外，使用Scikit-learn的`PolynomialFeatures`对于系统地生成组合和更高次项很有用。
+
+```python
+# 使用PolynomialFeatures的例子（可选，常用于建模流程）
+poly = PolynomialFeatures(degree=2, include_bias=False, interaction_only=False)
+# 选择要转换的数值列
+numerical_cols = ['Age', 'Experience']
+poly_features = poly.fit_transform(df[numerical_cols])
+# 获取新多项式特征的名称
+poly_feature_names = poly.get_feature_names_out(numerical_cols)
+# 用这些新特征创建一个DataFrame
+df_poly = pd.DataFrame(poly_features, columns=poly_feature_names, index=df.index)
+
+# 您可以将其合并回来，注意避免重复列（原始的Age, Experience）
+# df = pd.concat([df, df_poly.drop(columns=numerical_cols)], axis=1) # 示例合并策略
+print("\nScikit-learn生成的多项式特征（2次）:")
+print(df_poly.head())
+```
+
+**3. 数值数据分箱**
+
+直方图（第3章）可能显示数值特征内的不同组。将'Age'（年龄）划分为'Young'（年轻）、'Mid-career'（职业中期）、'Senior'（资深）等类别，有时能提供更多信息，或更适合某些模型。
+
+```python
+# 定义年龄分箱和标签
+age_bins = [0, 30, 50, df['Age'].max()] # 分箱：(0, 30], (30, 50], (50, max]
+age_labels = ['Young', 'Mid-career', 'Senior']
+
+df['Age_Group'] = pd.cut(df['Age'], bins=age_bins, labels=age_labels, right=True)
+print("\n带有年龄组的DataFrame:")
+print(df[['Age', 'Age_Group']].head())
+# 检查每个新类别的计数
+print("\n各年龄组计数:")
+print(df['Age_Group'].value_counts())
+```
+
+**4. 从日期时间特征中提取信息**
+
+日期时间列通常包含有价值的信息，但其原始格式无法直接使用。我们可以提取年份、月份、星期几等。
+
+```python
+df['Join_Year'] = df['JoinDate'].dt.year
+df['Join_Month'] = df['JoinDate'].dt.month
+df['Join_DayOfWeek'] = df['JoinDate'].dt.dayofweek # 星期一=0, 星期日=6
+
+print("\n带有提取日期特征的DataFrame:")
+print(df[['JoinDate', 'Join_Year', 'Join_Month', 'Join_DayOfWeek']].head())
+```
+
+### 应用数据变换
+
+创建特征后，或者有时作为准备现有特征的一部分，我们通常需要对它们进行变换。
+
+**1. 缩放数值特征**
+
+当数值特征处于相似尺度时，许多机器学习 (machine learning)算法表现更佳。`StandardScaler`将特征标准化为零均值和单位方差 ($z = (x - \mu) / \sigma$)，而`MinMaxScaler`将特征缩放到固定范围，通常是 [0, 1] ($x_{scaled} = (x - min(x)) / (max(x) - min(x))$)。
+
+让我们对'Salary'和'Age\_Experience\_Interaction'应用`StandardScaler`。
+
+```python
+scaler_std = StandardScaler()
+# 选择要缩放的列
+cols_to_scale = ['Salary', 'Age_Experience_Interaction']
+# 拟合并转换数据
+# 注意：在实际应用中，在训练数据上拟合，然后转换训练和测试数据
+df[cols_to_scale + '_StdScaled'] = scaler_std.fit_transform(df[cols_to_scale])
+
+print("\n带有标准缩放特征的DataFrame:")
+print(df[['Salary', 'Salary_StdScaled', 'Age_Experience_Interaction', 'Age_Experience_Interaction_StdScaled']].head())
+```
+
+现在，让我们对'Experience'应用`MinMaxScaler`。
+
+```python
+scaler_minmax = MinMaxScaler()
+df['Experience_MinMaxScaled'] = scaler_minmax.fit_transform(df[['Experience']])
+
+print("\n带有MinMax缩放特征的DataFrame:")
+print(df[['Experience', 'Experience_MinMaxScaled']].head())
+```
+
+**2. 编码分类特征**
+
+机器学习模型需要数值输入。我们需要将'Department'和我们新创建的'Age\_Group'等分类特征转换为数值格式。独热编码是一种常用技术，为每个类别创建新的二元（0或1）列。
+
+```python
+# 使用Pandas的get_dummies（对于直接DataFrame操作更简单）
+df = pd.get_dummies(df, columns=['Department', 'Age_Group'], prefix=['Dept', 'AgeGrp'], drop_first=False)
+# 如果模型需要，drop_first=True可用于避免多重共线性
+
+print("\n独热编码后的DataFrame:")
+# 显示相关列——原始列会被get_dummies丢弃
+print(df.filter(regex='Dept_|AgeGrp_').head())
+print("\n最终DataFrame列:")
+print(df.columns)
+```
+
+*注意：* 尽管`pd.get_dummies`在EDA期间很方便，但在机器学习流程中，通常更推荐使用Scikit-learn的`OneHotEncoder`，特别是在处理训练集和测试集划分时，因为它能够处理仅在测试集中出现的类别（如果配置），并与其他Scikit-learn转换器顺畅配合。
+
+### 归纳和报告EDA结果
+
+EDA的最后一步并非在分析结束后就停止；它是关于归纳并传达您的发现。一份好的EDA归纳清晰地概述了数据的特点、质量、发现的关系以及创建的任何特征。
+
+**EDA归纳的结构：**
+
+1. **引言：** 说明分析目标（例如，了解客户人口统计信息、找出销售驱动因素、为客户流失预测准备数据）。提及数据来源。
+2. **数据描述与清洗：** 简要描述数据集（行数、列数、特征的普遍含义）。详细说明遇到的主要数据质量问题（缺失值、重复项、异常值）以及如何处理它们（例如，“'Income'（收入）中15%的缺失值使用中位数填充”，“移除了55个重复条目”）。
+3. **单变量分析重点：** 归纳单个变量的重要特点。
+   - 提及分布（例如，“年龄大致呈正态分布”，“收入严重右偏”）。
+   - 报告重要数值特征的集中趋势和离散程度。
+   - 显示重要分类特征的频数或比例。
+   - 注意识别出的任何明显异常值，以及如何处理或为何保留它们。
+4. **双变量与多变量分析重点：** 侧重于发现的最重要的关系。
+   - 报告强相关性（例如，“发现'Study Time'（学习时间）与'Exam Score'（考试分数）之间存在强正相关（r=0.85）”）。使用热力图归纳许多相关性。
+   - 描述数值变量与分类变量之间的关系（例如，“'IT'部门的平均'Salary'（薪资）明显高于'Sales'（销售）部门，如箱线图所示”）。
+   - 突出比较分类变量的结果（例如，“交叉制表显示'IT'部门中'Senior'（资深）员工的比例更高”）。
+   - 引用具体图表（散点图、分组条形图、对图）来说明这些关系。
+5. **特征工程：** 解释创建的任何新特征，并根据分析说明创建的*原因*（例如，“创建了'Age\_Group'分箱，因为'Age'（年龄）和'Purchase Frequency'（购买频率）之间的关系似乎是非线性的”，“提取了'Join\_Month'（入职月份），因为怀疑存在季节性”）。提及应用的任何变换（缩放、编码）及其目的。
+6. **结论与后续步骤：** 归纳主要收获。重申与最初目标相关的发现。提出可能的后续步骤，例如具体的建模方法、需要进一步数据收集的方面，或需要更正式检验的假设。
+
+**总结原则：**
+
+- **选择性：** 侧重于最重要和可操作的观察结果。不要描述每一个图表或统计数据。
+- **清楚简洁：** 使用直白的语言。尽可能避免行话，如果需要则进行解释。
+- **可视化：** 将重要的可视化图表直接嵌入 (embedding)您的报告或总结文档中。图表通常比单纯的文字更有效地传达信息。
+- **与目标关联：** 在原始分析目标的背景下构建您的发现。
+- **记录假设：** 记录在清洗或特征工程期间做出的任何假设。
+
+这个实践练习演示了数据分析循环如何持续进行。观察结果引向特征创建，这可能促使进一步的分析或变换，最终形成一个结构化归纳，归纳数据集的要点，并为后续建模或决策提供支持。
+
+## 参考资料
+
+- [Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) — scikit-learn developers (2023)
+  官方文档，详细介绍了各种数据预处理技术，包括缩放、编码和多项式特征生成，与实践中使用的技术一致。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本涵盖机器学习概念的全面实用指南，包括特征工程、数据缩放和编码，以及使用Scikit-learn的大量Python代码示例。
+- [Feature Engineering for Machine Learning: Principles and Techniques for Building Powerful Prediction Models](https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/) — Alice Zheng and Amanda Casari (2018)
+  Publisher: O'Reilly Media
+  一本专注于特征工程技术和原理的书籍，提供了从原始数据创建有效特征的方法。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104030/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: 582
+  使用Pandas进行数据操作和分析的权威指南，对于数据清洗、转换和新特征创建等任务至关重要。

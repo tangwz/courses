@@ -1,0 +1,62 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "eigenvalues-eigenvectors"
+lesson: "definition-eigenvalues-eigenvectors"
+sourceId: 1511
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-5-eigenvalues-eigenvectors/definition-eigenvalues-eigenvectors"
+title: "特征值和特征向量的定义"
+description: "定义特征值和特征向量（Ax = \\u03bbx），并理解其要点。"
+order: 1
+plots: []
+sourceHash: "05a25e8b468331e2fa183f1a5b07f2ec0bd238ce338a5c4c4c3552ee2cfc6336"
+sourceCorrections: []
+---
+
+在之前的章节中，我们学习了矩阵如何表示线性变换，通过旋转、缩放或剪切来改变向量 (vector)。现在，我们关注这些变换的一个引人之处：有些向量在特定矩阵变换后，方向不会改变。它们可能会变长、变短，甚至反向，但仍与原来的直线保持对齐 (alignment)。这些特殊向量及其相关的缩放因子是矩阵本身的固有性质。
+
+对于一个给定的大小为 $n \times n$ 的方阵 $A$，我们寻找满足以下方程的非零向量 $x$ 和标量 $\lambda$：
+
+$Ax = \lambda x$
+
+这个方程是事情的核心所在。我们来分解一下它的组成部分：
+
+- $A$：一个 $n \times n$ 的方阵。它表示我们正在分析的线性变换。特征值和特征向量是为方阵定义的，因为变换将 $\mathbb{R}^n$ 中的向量映射回 $\mathbb{R}^n$，使得输出 $Ax$ 可能与输入 $x$ 平行。
+- $x$：$\mathbb{R}^n$ 中的一个非零向量。这被称为矩阵 $A$ 的**特征向量**。它是方向在变换 $A$ 下保持不变（可能方向相反）的向量。我们要求 $x$ 非零，因为如果 $x$ 是零向量，则方程 $A0 = \lambda 0$ 对任何 $\lambda$ 值都成立（$0=0$）。这种平凡的情况不会告诉我们关于矩阵 $A$ 或其固有方向的任何具体信息。
+- $\lambda$：一个标量（实数或复数）。这被称为与特征向量 $x$ 相关联的**特征值**。它表示特征向量 $x$ 在经过 $A$ 变换时被缩放的因子。
+  - 如果 $\lambda > 1$，特征向量被拉伸。
+  - 如果 $0 < \lambda < 1$，特征向量被收缩。
+  - 如果 $\lambda < 0$，特征向量的方向被反转，其大小按 $|\lambda|$ 缩放。
+  - 如果 $\lambda = 1$，特征向量在变换后保持不变。
+  - 如果 $\lambda = 0$，特征向量被映射到零向量（这意味着它位于 $A$ 的零空间中）。
+
+简单来说，将矩阵 $A$ 作用于其特征向量 $x$ 的效果，与仅将 $x$ 乘以特征值 $\lambda$ 的效果相同。矩阵乘法 $Ax$ 得到的向量与原始向量 $x$ 平行。
+
+“eigen” 一词源于德语，意为“自己的”或“特有的”。特征值和特征向量确实是矩阵 $A$ 固有的属性，显示了它所表示的变换的本质。
+
+一个特征值 $\lambda$ 及其对应的特征向量 $x$ 构成一个**特征对** $(\lambda, x)$。一个矩阵可以有多个不同的特征值，每个特征值可以与一个或多个线性无关的特征向量相关联。但是，一个单独的非零特征向量 $x$ 仅对应一个特征值。
+
+考虑一个简单例子。设 $A$ 是单位矩阵 $I = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$。将 $A$ 作用于任何向量 $x = \begin{pmatrix} x_1 \\ x_2 \end{pmatrix}$ 得到：
+
+$Ax = Ix = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = 1x$
+
+在这里，$Ax = 1x$。这符合 $Ax = \lambda x$ 的定义，其中 $\lambda = 1$。这意味着对于单位矩阵，*每个*非零向量都是特征值为 1 的特征向量。这在几何上是合理的：单位变换不会改变任何向量。
+
+现在考虑一个缩放矩阵 $B = \begin{pmatrix} 3 & 0 \\ 0 & 3 \end{pmatrix}$。将 $B$ 作用于任何向量 $x$：
+
+$Bx = \begin{pmatrix} 3 & 0 \\ 0 & 3 \end{pmatrix} \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = \begin{pmatrix} 3x_1 \\ 3x_2 \end{pmatrix} = 3 \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = 3x$
+
+在这种情况下，$Bx = 3x$。同样，每个非零向量都是特征向量，但这次的特征值是 $\lambda = 3$。该变换将每个向量均匀缩放 3 倍，同时保持所有方向不变。
+
+这些例子都很直接。对于大多数矩阵，只有特定的方向（特征向量）得以保留，找到它们需要更系统的方法。接下来的章节将研究特征向量的几何含义，并介绍计算特征值和特征向量的常用方法，从特征方程开始。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHmqmzpE5wlWlXDb-SoqvJ30T7Yi0Dq9VDEa2Bc5G2oIxCoyNvdMbaCVWcwt8nMJ--Mh45YTuuxprI7OYUTWurmdazUNaLg6nFtqIeAz-DfMxB0dX6QwLQghVw2gUNYhVoePS3_mruidTGDvSr5F5e6a04OXeUl) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press; Pages: 440
+  这本基础教材对线性代数概念提供了清晰直观的理解，并对特征值和特征向量进行了详细阐述。
+- [Introduction to Applied Linear Algebra - Vectors, Matrices, and Least Squares](https://vmlsbook.stanford.edu/) — Stephen Boyd, Lieven Vandenberghe (2018)
+  Publisher: Cambridge University Press
+  这本教材侧重于工程和数据科学相关的线性代数概念，从实践角度讨论特征值和特征向量。
+- [18.06SC Linear Algebra](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  本课程提供关于线性代数的全面视频讲座和讲义，包含特征值和特征向量的详细解释。

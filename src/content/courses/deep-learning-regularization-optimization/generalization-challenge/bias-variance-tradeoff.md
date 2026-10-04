@@ -1,0 +1,84 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "generalization-challenge"
+lesson: "bias-variance-tradeoff"
+sourceId: 4874
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-1-generalization-challenge/bias-variance-tradeoff"
+title: "深度学习中的偏差-方差权衡"
+description: "具体讨论深度学习模型中的偏差-方差权衡。"
+order: 3
+plots: ["plots/4874-0.json"]
+sourceHash: "206be793c84a8a746beef70a18fae6e022b7e21447ef76b2aba0ee2a27ef55b3"
+sourceCorrections: []
+---
+
+在前面的章节中，我们讨论了模型泛化以及欠拟合 (underfitting)和过拟合 (overfitting)的常见问题。当模型过于简单，无法捕获数据中的潜在模式时，就会发生欠拟合，导致在训练数据和未见过的数据上性能不佳。过拟合发生于模型对训练数据学习得太好，包括其噪声和特有特性，从而在训练集上表现出色，但在新数据上表现不佳。偏差-方差权衡提供了一个有价值的框架，用于了解模型复杂度与这些泛化误差之间的关系。
+
+设想你正在用飞镖瞄准靶心。
+
+- **偏差** 就像你瞄准时的一个系统性误差。如果你总是把飞镖投到靶心左上方，那么你就有高偏差。无论你的投掷多么密集，它们都会系统性地偏离目标。在机器学习 (machine learning)中，高偏差意味着模型对数据做出了强烈的、可能不正确的假设。它未能捕获输入和输出之间的真实关系，导致欠拟合。简单模型，如应用于高度非线性数据的线性回归，常表现出高偏差。
+- **方差** 就像你投掷飞镖的分散程度。如果你的飞镖落在靶盘各处，即使平均而言围绕靶心，你也有高方差。你的投掷对你的姿势或出手方式的微小变化非常敏感。在机器学习中，高方差意味着模型对它接触到的特定训练数据过于敏感。它学习到波动，包括噪声，这些波动无法泛化。复杂模型，如拥有许多参数 (parameter)的深度神经网络 (neural network)，易于出现高方差，导致过拟合。
+
+### 权衡解释
+
+偏差和方差之间存在固有的张力。
+
+- 提高模型复杂度通常会降低偏差。一个更灵活的模型可以更好地拟合训练数据中复杂的模式，减少系统性误差。
+- 然而，提高模型复杂度通常会增加方差。一个更灵活的模型也更容易拟合特定训练集中的噪声，使其更不稳定，并在不同数据上表现不佳。
+
+相反地，简化模型会增加偏差但降低方差。这种关系就是“权衡”：仅以模型复杂度作为调节手段，同时最小化这两种误差来源是具有挑战性的。
+
+### 预测误差的分解
+
+我们可以将模型对于给定输入点 $x$ 的预期预测误差视为分解为三部分：
+
+
+$$
+预期误差(x) = (\text{偏差}[\hat{f}(x)])^2 + \text{方差}[\hat{f}(x)] + \text{不可约误差}
+$$
+
+
+让我们逐一分析：
+
+1. **平方偏差 ($(\text{偏差}[\hat{f}(x)])^2$)**: 平均而言，衡量模型的预测与真实潜在函数 $f(x)$ 之间的距离。它反映了模型简化假设所引入的误差。
+2. **方差 ($\text{方差}[\hat{f}(x)]$)**: 衡量如果我们在从相同分布中抽取的不同训练集上多次重新训练模型时，模型对于给定点 $x$ 的预测的变异性。它反映了模型对特定训练数据的敏感度。
+3. **不可约误差 ($\sigma^2$)**: 代表数据本身固有的噪声。无论模型多好，这种误差都无法减少。它是预期误差的下界。
+
+我们训练的目标是找到一个能够平衡偏差和方差的模型复杂度，从而最小化总预期误差（主要是平方偏差和方差之和，因为我们无法控制不可约误差）。
+
+### 权衡的可视化
+
+模型复杂度、偏差、方差和总体误差之间的关系通常按如下方式进行可视化：
+
+
+
+![偏差-方差权衡与模型复杂度](plots/4874-0.json)
+
+
+
+> 该图示意了模型复杂度提高通常会降低偏差但增加方差。总预期误差（常通过验证误差近似）最初会随着偏差下降而降低，但随后会随着方差开始占据主导而增加。最佳复杂度平衡了这两个组成部分。
+
+### 深度学习 (deep learning)中的偏差和方差
+
+深度神经网络 (neural network)通常是高度灵活的模型，拥有数百万甚至数十亿个参数 (parameter)。这意味着它们通常具备达到非常低偏差的能力。它们可以近似极其复杂的函数。因此，在使用深度学习模型时，主要挑战常常转向控制方差和防止过拟合 (overfitting)。
+
+尽管传统观点认为测试误差会随着复杂度增加呈现清晰的U形曲线，但深度学习模型的行为有时可能更为复杂。然而，基本原理仍然具有指导意义：
+
+- **欠拟合 (underfitting) (高偏差):** 如果你的深度网络即使在训练数据上也表现不佳，它可能缺乏能力（例如，层数/神经元太少）或者训练时间不足。这表明存在偏差问题。
+- **过拟合 (高方差):** 如果你的网络获得了非常低的训练误差，但验证/测试误差很高，则很可能是过拟合。模型对训练数据细节过于敏感。这表明存在方差问题。
+
+本课程中讨论的技术，如正则化 (regularization)（L1/L2、Dropout、批量归一化 (normalization)）和优化策略，主要旨在帮助管理这种权衡，主要通过控制模型的有效复杂度和降低方差而不显著增加偏差来实现。了解偏差-方差权衡有助于我们诊断模型性能问题并选择合适的方法来提高泛化能力。
+
+## 参考资料
+
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本经典教材，深入讲解了统计学习中的偏差-方差权衡。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于深度学习的权威教材，涵盖了深度神经网络中的偏差-方差权衡、泛化和正则化。
+- [Reconciling modern machine learning practice and the bias-variance tradeoff](https://doi.org/10.1073/pnas.1903072116) — Mikhail Belkin, Daniel Hsu, Siyuan Ma, and S. V. N. Vishwanathan (2019)
+  Journal: Proceedings of the National Academy of Sciences; Volume: 116; Pages: 15849-15854; DOI: [10.1073/pnas.1903072116](https://doi.org/10.1073/pnas.1903072116)
+  一篇研究论文，探讨了偏差-方差权衡在过度参数化深度学习模型中的应用，介绍了双下降现象。
+- [CS229 Lecture Notes - Supervised Learning](http://cs229.stanford.edu/notes/cs229-notes1.pdf) — Andrew Ng (2018)
+  一门广受欢迎的机器学习课程的讲义，清晰地解释了偏差-方差权衡。

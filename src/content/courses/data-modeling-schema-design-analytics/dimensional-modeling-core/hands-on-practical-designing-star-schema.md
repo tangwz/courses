@@ -1,0 +1,147 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "dimensional-modeling-core"
+lesson: "hands-on-practical-designing-star-schema"
+sourceId: 7978
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-2-dimensional-modeling-core/hands-on-practical-designing-star-schema"
+title: "动手实践：设计星型模型"
+description: "从原始交易数据构建星型模型。"
+order: 6
+plots: []
+sourceHash: "e007e85e0912eaf7e9a85f130cb64cce4aaae3404bffe3e4db012edb0c690270"
+sourceCorrections: []
+---
+
+将电商平台的原始交易日志重构为星型模型，需要使用事实表、维度表的理念，并确定其粒度。这一过程将写优化格式转变为读优化结构，以满足分析报告的需求。
+
+### 场景：原始电商数据
+
+设想您正在处理一个来自虚构零售商 *CloudMart* 的数据集。源系统将交易记录在一个单一的宽日志表或一组规范化的操作表中。为便于说明，请看一个表示交易原始状态的扁平化提取数据：
+
+| 交易ID | 时间戳 | 客户ID | 客户名称 | 产品ID | 产品类别 | 数量 | 单价 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| TXN-1001 | 2023-10-01 14:30:00 | C-502 | Alice Smith | P-99 | Electronics | 1 | 1200.00 |
+| TXN-1001 | 2023-10-01 14:30:00 | C-502 | Alice Smith | P-12 | Accessories | 2 | 25.00 |
+| TXN-1002 | 2023-10-01 15:15:00 | C-881 | Bob Jones | P-45 | Home | 1 | 55.00 |
+
+这种格式不利于分析。如果 `Alice Smith` 改名或 `Electronics` 被重命名，您可能需要更新数百万条历史记录。此外，计算总收入需要扫描文本列，而这些列对于计算并无必要。
+
+### 步骤 1：定义粒度
+
+在绘制表之前，我们必须定义粒度。查看数据可知，一笔交易（`TXN-1001`）被分成多行，因为爱丽丝购买了一台笔记本电脑和一只鼠标。
+
+我们事实表的粒度将是**每笔交易的每个明细项一行**。
+
+如果我们将粒度定义为“每订单一行”，则在不使用复杂数组或丢失细节的情况下，很难存储不同的产品ID和数量。通过选择明细项粒度，我们保证了指标的可加性。
+
+### 步骤 2：维度建模
+
+我们将交易日志中的上下文 (context)（文本和描述性属性）提取出来，并将其整理成维度表。根据我们的原始数据，可以明确三个主要维度：**产品**、**客户**和**时间**。
+
+#### 产品维度（`dim_product`）
+
+我们提取 `product_id`、`product_name`（推断得到）和 `product_category`。在生产环境中，我们会在此处添加内部SKU号和品牌数据。
+
+#### 客户维度（`dim_customer`）
+
+我们提取 `customer_id` 和 `customer_name`。我们也会在此处添加地址、客户细分和电子邮件属性。
+
+#### 日期维度（`dim_date`）
+
+尽管原始数据包含时间戳，但分析常需要按财季、星期几或节假日状态进行分组。通过代理键（例如 `20231001`）连接的专用日期维度是一种常见方法。
+
+### 步骤 3：设计事实表
+
+事实表 `fact_sales` 包含指向我们维度表的外键以及数值度量。
+
+**外键：**
+
+- `product_key`
+- `customer_key`
+- `date_key`
+
+**度量：**
+
+- `quantity`：购买的商品数量。
+- `extended_sales_amount`：该明细项的总收入。
+
+我们在数据写入时使用以下公式计算收入指标：
+
+$收入 = 数量 \times 单价$
+
+存储计算出的 `extended_sales_amount` 简化了后续查询，避免了每次聚合时进行乘法运算。
+
+### 逻辑模式
+
+以下图表呈现了我们的目标星型模型。请注意，中心事实表仅包含键和数字，而周围的维度表则存放描述性文本。
+
+> CloudMart 销售模式的结构图，其中中心事实表连接着三个周围的维度表。
+
+### 使用 SQL 实现
+
+为实现此设计，我们使用数据定义语言（DDL）创建表。以下例子采用与多数云数据仓库通用的SQL语法。
+
+首先，我们创建维度表。请留意 `product_key` 的应用。这是一个**代理键**，它是一个自增整数或哈希值，作为我们数据仓库内部的主键，与源系统中使用的 `product_id` 不同。我们将在下一章详细说明代理键的核心作用。
+
+```sql
+CREATE TABLE dim_product (
+    product_key INT PRIMARY KEY,
+    product_id_natural VARCHAR(50),
+    product_name VARCHAR(255),
+    category VARCHAR(100),
+    current_price DECIMAL(10, 2)
+);
+
+CREATE TABLE dim_customer (
+    customer_key INT PRIMARY KEY,
+    customer_id_natural VARCHAR(50),
+    full_name VARCHAR(100),
+    segment VARCHAR(50)
+);
+```
+
+接着，我们创建事实表。这里的列严格来说是数字键或数字度量，`transaction_id` 除外，它通常作为“退化维度”保留，用于审计。
+
+```sql
+CREATE TABLE fact_sales (
+    sales_key INT PRIMARY KEY,
+    date_key INT NOT NULL,       -- 连接到 dim_date
+    customer_key INT NOT NULL,   -- 连接到 dim_customer
+    product_key INT NOT NULL,    -- 连接到 dim_product
+    transaction_id VARCHAR(50),
+    quantity INT,
+    unit_price DECIMAL(10, 2),
+    extended_sales_amount DECIMAL(12, 2),
+    FOREIGN KEY (date_key) REFERENCES dim_date(date_key),
+    FOREIGN KEY (customer_key) REFERENCES dim_customer(customer_key),
+    FOREIGN KEY (product_key) REFERENCES dim_product(product_key)
+);
+```
+
+### 分析优势
+
+一旦数据载入此结构，查询会比原始日志格式明显更简单、更快。
+
+要按类别分析收入，数据库引擎只需扫描较小的 `dim_product` 表，并将其与 `fact_sales` 中对应的列进行关联。如果客户姓名或交易时间戳不属于查询内容，则无需读取它们。
+
+```sql
+SELECT 
+    p.category,
+    SUM(f.extended_sales_amount) as total_revenue
+FROM 
+    fact_sales f
+JOIN 
+    dim_product p ON f.product_key = p.product_key
+GROUP BY 
+    p.category
+ORDER BY 
+    total_revenue DESC;
+```
+
+通过这样整理数据，我们将度量（收入）与上下文 (context)（类别）分离开来。这种分离使数据库能够非常有效地压缩数据，因为事实表中的列值（整数）是重复且可预测的。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball and Margy Ross (2013)
+  Publisher: Wiley
+  这本书是维度建模的权威指南，涵盖星型模式、事实、维度以及设计数据仓库以进行分析报告的实践方面。

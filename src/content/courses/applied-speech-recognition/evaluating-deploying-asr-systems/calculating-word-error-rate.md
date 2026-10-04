@@ -1,0 +1,121 @@
+---
+course: "applied-speech-recognition"
+chapter: "evaluating-deploying-asr-systems"
+lesson: "calculating-word-error-rate"
+sourceId: 7158
+sourceUrl: "https://apxml.com/zh/courses/applied-speech-recognition/chapter-6-evaluating-deploying-asr-systems/calculating-word-error-rate"
+title: "计算词错率"
+description: "详细说明如何计算词错率，包括替换、删除和插入错误。"
+order: 2
+plots: []
+sourceHash: "daaf662bc5d9e2fa5904443f9814f213604d5705d866fc8a5921adc15ab53247"
+sourceCorrections: []
+---
+
+词错率（WER）的计算公式虽然简单明了，但确定替换错误数（$S$）、删除错误数（$D$）和插入错误数（$I$）的过程需要一种精确的方法。你不能简单地计算单词差异，而是必须找到将模型输出（假设文本）转换为正确文本（参考文本）所需的最少编辑次数。这是一个典型的序列对齐 (alignment)问题，可以通过计算莱文斯坦距离的算法来解决。
+
+### ASR中的莱文斯坦距离
+
+莱文斯坦距离衡量两个序列之间的差异。在我们的例子中，这些序列是参考文本和假设文本中的单词。该距离定义为将一个序列转换为另一个序列所需的最少单词编辑次数。这些编辑就是我们计算词错率所需的三种错误类型：
+
+- **替换 (S)：** 将一个词替换为另一个词。
+- **删除 (D)：** 删除一个不应存在的词。
+- **插入 (I)：** 添加一个遗漏的词。
+
+一种算法（通常基于动态规划）能找到两个词序列之间的最佳对齐 (alignment)，从而使这三种错误的总数达到最低。让我们通过一个例子来阐明这一点。
+
+假设我们的参考文本和假设文本如下：
+
+- **参考文本：** `the quick brown fox`
+- **假设文本：** `the fast brown fox jumped`
+
+为获得 $S$、$D$ 和 $I$ 的值，我们对它们进行对齐，以使编辑距离最小化：
+
+> 对齐过程将假设文本中的词语映射到参考文本，以识别错误。在此例中，“quick”被“fast”替换，“jumped”被插入。
+
+根据这种对齐方式，我们可以计算错误数：
+
+- **替换 (S)：** 1（模型将`quick`转录为`fast`）。
+- **删除 (D)：** 0（模型没有遗漏参考文本中的任何词）。
+- **插入 (I)：** 1（模型添加了词`jumped`）。
+
+参考文本中的词语总数（$N$）为4。现在我们可以计算词错率：
+
+
+$$
+\text{词错率} = \frac{S + D + I}{N} = \frac{1 + 0 + 1}{4} = \frac{2}{4} = 0.5
+$$
+
+
+这表明词错率为50%。
+
+### 关于词错率值的说明
+
+需注意，词错率可能超过1.0，即100%。当错误总数大于参考文本中的词数时，就会发生这种情况。如果模型产生的输出明显长于参考文本，导致大量插入，就可能出现此情形。例如，如果参考文本是`start recording`（$N=2$），而假设文本是`start recording start recording start recording`，则词错率为`(0S + 0D + 4I) / 2 = 2.0`，即200%。
+
+### 使用`jiwer`在Python中计算词错率
+
+手动实现对齐 (alignment)算法没有必要，因为有成熟的库可以为您处理。`jiwer`库是用于此目的的一种常用且高效的工具。
+
+首先，您需要安装它：
+
+```bash
+pip install jiwer
+```
+
+接着，您可以使用其`compute_measures`函数来获取错误的全面细分以及最终的词错率分数。该函数接受参考文本和假设文本字符串作为输入，并返回一个包含所有相关指标的字典。
+
+```python
+import jiwer
+
+# 真实文本
+reference = "the quick brown fox"
+
+# ASR模型的输出
+hypothesis = "the fast brown fox jumped"
+
+# 计算所有指标
+error_report = jiwer.compute_measures(reference, hypothesis)
+
+# 提取各项组成
+wer = error_report['wer']
+substitutions = error_report['substitutions']
+deletions = error_report['deletions']
+insertions = error_report['insertions']
+hits = error_report['hits'] # 正确转录的词语
+
+print(f"Reference:  '{reference}'")
+print(f"Hypothesis: '{hypothesis}'\n")
+
+print(f"Word Error Rate (WER): {wer:.2%}")
+print(f"Substitutions: {substitutions}")
+print(f"Deletions: {deletions}")
+print(f"Insertions: {insertions}")
+print(f"Correct Words (Hits): {hits}")
+```
+
+运行此代码将产生以下输出，与我们的手动计算结果相符：
+
+```
+参考文本：  'the quick brown fox'
+假设文本： 'the fast brown fox jumped'
+
+词错率 (WER)： 50.00%
+替换： 1
+删除： 0
+插入： 1
+正确词语 (命中)： 3
+```
+
+使用`jiwer`这样的库可确保您的计算结果一致、准确，并遵循标准对齐算法。在评估模型时，通常会在整个测试数据集上计算平均词错率，而不仅仅是单个句子，以获得系统整体性能的可靠衡量标准。
+
+## 参考资料
+
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University Online (Draft of 3rd Edition)
+  语音与语言处理领域的权威教材，详细介绍了ASR评估、词错误率（WER）和莱文斯坦距离算法。
+- [Introduction to Algorithms](https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition) — Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein (2022)
+  Publisher: MIT Press
+  标准算法教材，提供了动态规划和编辑距离算法的全面理论背景，这些算法是序列比对的基础。
+- [jiwer: Python package for computing the Word Error Rate (WER)](https://github.com/jitsi/jiwer) — Max de Groot and contributors (2024)
+  jiwer Python库的官方GitHub存储库，提供了用于准确计算词错误率（WER）的工具。

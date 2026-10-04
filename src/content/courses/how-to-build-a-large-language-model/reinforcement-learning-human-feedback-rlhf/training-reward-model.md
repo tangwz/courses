@@ -1,0 +1,157 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "reinforcement-learning-human-feedback-rlhf"
+lesson: "training-reward-model"
+sourceId: 6085
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-26-reinforcement-learning-human-feedback-rlhf/training-reward-model"
+title: "训练奖励模型 (RM)"
+description: "训练模型，使其根据标注的比较数据预测人类偏好评分。"
+order: 3
+plots: []
+sourceHash: "c5950d7cce1286782543a1754a43d3a404df64e123ab9288a4c6702ce910f093"
+sourceCorrections: []
+---
+
+训练奖励模型 (RM) 是强化学习 (reinforcement learning)与人类反馈 (RLHF) 的一个核心过程，它利用人类偏好数据。这些数据通常以成对比较的形式出现，包含一个提示、一个选择的回答和一个拒绝的回答。奖励模型 (RM) 的作用是学习一个函数，将提示和可能的回答映射为一个标量值。这个值表示该回答与给定提示下人类偏好的一致程度。这个学得的奖励函数随后将作为指导信号，用于使用强化学习对语言模型进行微调 (fine-tuning)。
+
+### 奖励模型架构
+
+奖励模型的架构通常与正在对其进行校准的基础语言模型密切相关。一种常见做法是直接使用经过监督微调 (fine-tuning) (SFT) 的模型，并修改其最终层。RM 的头部不再预测下一个词元 (token)的分布，而是被调整为输出一个单一的标量值。
+
+具体而言，RM 的输入是提示 ($x$) 和候选回答 ($y$) 的拼接。这个组合序列由 Transformer 架构处理。序列中最后一个词元（通常是序列结束词元）对应的隐藏状态随后通过一个线性层（奖励头部）来生成标量奖励分数。
+
+以 SFT 模型作为 RM 的基础具有显著益处：
+
+1. **初始化：** RM 从已通过 SFT 适应目标领域和风格的权重 (weight)开始。
+2. **理解能力：** 模型本身就理解与任务相关的语言生成和结构特性。
+3. **效率：** 它避免了从头开始训练一个完全独立的模型，可能节省计算资源。
+
+令 $r_\theta(x, y)$ 表示参数 (parameter)为 $\theta$ 的 RM 对提示 $x$ 和回答 $y$ 输出的标量奖励。
+
+### 训练目标与损失函数 (loss function)
+
+RM 是在收集到的偏好数据集 $D = \{(x^{(i)}, y_c^{(i)}, y_r^{(i)})\}_{i=1}^N$ 上训练的，其中 $y_c$ 是人类偏好的回答（被选择的），$y_r$ 是对提示 $x$ 而言被认为较不偏好的回答（被拒绝的）。训练目标是使 RM 对同一提示下被选择的回答赋予比被拒绝的回答更高的分数：
+
+
+$$
+r_\theta(x, y_c) > r_\theta(x, y_r)
+$$
+
+
+这通常被视为一个回答对的二分类问题。一种常见的方法是调整 Bradley-Terry 模型，该模型对 $y_c$ 比 $y_r$ 更受偏好的概率进行建模。这个概率可以通过它们的奖励分数之差经过逻辑 S 型函数 $\sigma(z) = 1 / (1 + e^{-z})$ 来建模：
+
+
+$$
+P(y_c \succ y_r | x) = \sigma(r_\theta(x, y_c) - r_\theta(x, y_r))
+$$
+
+
+RM 通过最小化数据集 $D$ 中人类偏好的负对数似然来训练。损失函数如下：
+
+
+$$
+\mathcal{L}(\theta) = - \mathbb{E}_{(x, y_c, y_r) \sim D} \left[ \log \left( \sigma(r_\theta(x, y_c) - r_\theta(x, y_r)) \right) \right]
+$$
+
+
+这个损失函数促使差值 $r_\theta(x, y_c) - r_\theta(x, y_r)$ 变得大且为正，从而有效地最大化根据人类标注正确分类偏好回答的概率。有时可以添加一个边际项，但这种基本形式被广泛使用。
+
+### 训练过程
+
+训练期间，每个数据点 $(x, y_c, y_r)$ 需要对 RM 进行两次前向传播：一次是提示与选择的回答 ($x \oplus y_c$) 拼接，另一次是提示与拒绝的回答 ($x \oplus y_r$) 拼接。
+
+1. **输入准备：** 将提示 $x$ 与选择的回答 $y_c$ 和拒绝的回答 $y_r$ 拼接。确保适当的词元 (token)化和注意力掩码，将提示和回答在每次传播中作为一个单一序列处理。
+2. **前向传播：** 计算标量奖励 $r_c = r_\theta(x, y_c)$ 和 $r_r = r_\theta(x, y_r)$。
+3. **损失计算：** 使用上述公式计算成对排序损失。
+4. **优化：** 计算损失相对于 RM 参数 (parameter) $\theta$ 的梯度，并使用 AdamW 等优化器更新参数。
+
+以下是一个简化的 PyTorch 代码片段，说明了训练步骤中的损失计算：
+
+```python
+import torch
+import torch.nn.functional as F
+
+# 假设 'reward_model' 是你的 RM 实例（例如，带有标量头部的 Transformer）
+# 假设 'tokenizer' 是你的分词器实例
+# 假设 'batch' 包含 (提示, 选择的回答, 拒绝的回答) 字符串的元组
+
+def compute_rm_loss(reward_model, tokenizer, batch):
+    """计算一批偏好数据的成对排序损失。"""
+
+    prompts, chosen_responses, rejected_responses = batch
+
+    # 对选择的回答进行词元化和输入准备
+    chosen_inputs = tokenizer(
+        [p + c for p, c in zip(prompts, chosen_responses)],
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=1024 # Example max length
+    )
+    # 将张量移动到正确的设备
+    chosen_inputs = {
+        k: v.to(reward_model.device) for k, v in chosen_inputs.items()
+    }
+
+    # 对拒绝的回答进行词元化和输入准备
+    rejected_inputs = tokenizer(
+        [p + r for p, r in zip(prompts, rejected_responses)],
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=1024 # Example max length
+    )
+    rejected_inputs = {
+        k: v.to(reward_model.device) for k, v in rejected_inputs.items()
+    }
+
+    # 从模型获取奖励分数
+    # reward_model 的前向传播应为每个序列返回一个标量分数
+    chosen_rewards = reward_model(**chosen_inputs).rewards
+    # 假设模型输出具有 .rewards 属性
+    rejected_rewards = reward_model(**rejected_inputs).rewards
+
+    # 计算损失
+    # 损失 = -log(sigmoid(选择的奖励 - 拒绝的奖励))
+    loss = -F.logsigmoid(
+        chosen_rewards - rejected_rewards
+    ).mean()
+
+    return loss
+
+# --- 在你的训练循环中 ---
+# optimizer.zero_grad()
+# loss = compute_rm_loss(reward_model,
+#                        tokenizer, batch_data)
+# loss.backward()
+# optimizer.step()
+```
+
+### 评估
+
+在 RL 阶段使用 RM 之前，评估其性能是很重要的。主要衡量标准是在保留偏好对集上的**准确率**。这衡量了 RM 正确预测人类偏好回答 ($r_c > r_r$) 的频率。准确率通常在 65% 到 80% 之间，具体取决于任务难度、数据质量和模型容量。
+
+> 使用偏好数据和成对排序损失训练奖励模型的基本流程。
+
+除了准确率，定性分析也很有用。检查 RM 与人类判断强烈一致或不一致的案例，可以显示模型中的偏差或不足。检查奖励分数是否与回答长度、连贯性或实用性等其他易于理解的质量指标相关联也很有帮助，尽管这些关联可能很弱。
+
+### 挑战与注意事项
+
+- **校准：** 奖励的绝对值通常不直接具有意义或校准良好。训练目标只侧重于 $r_c - r_r$ 的差值。在 RL 训练期间对奖励分数进行归一化 (normalization)（例如白化）是一种常见做法。
+- **过拟合 (overfitting)：** RM 可能会过拟合训练数据中的特定偏好，潜在地学习到标注过程中存在的虚假关联或偏差。正则化 (regularization)和使用足够多样化的数据集是很重要的。
+- **数据质量依赖：** RM 的质量根本上受到人类偏好数据质量和一致性的限制。有噪声或有偏差的标注将导致次优的 RM。
+- **可扩展性：** 训练 RM 需要大量计算，与微调 (fine-tuning)基础 LLM 本身相当。
+
+成功训练奖励模型是 RLHF 流程中的重要一步。一个训练良好的 RM 提供了必要的信号，以在后续强化学习 (reinforcement learning)阶段指导 LLM，使其生成更符合人类期望特性（如有用性、诚实性和无害性）的输出。
+
+## 参考资料
+
+- [Training language models to follow instructions with human feedback](https://openreview.net/forum?id=TG8KACxEON) — Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Gray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 35; Pages: 27735-27756; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  这篇论文介绍了InstructGPT模型和RLHF流程，详细阐述了奖励模型架构、训练目标及其在使大型语言模型与人类指令对齐方面的作用。
+- [Learning to summarize with human feedback](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8WlTqJ1WdAkTP8gOt39K1jimITFu8w_idP8iVscMC86peGrNXTNDz0db2tHtPg0VfLSObhlMIaFv3J7wNUTfFLb3hdxSWAf75ukib65HJMjhBvnk7npxTC7mHSaCFixyAAsbt-rLFSszCyLywetTY4HQW_EdAfA20NOwaCjl1N7IiRrMOcPLbHdsLETHpvdTcSegaFXqH) — Nisan Stiennon, Long Ouyang, Jeffrey Wu, Daniel Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul F Christiano (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates; Volume: 33; Pages: 3008-3021
+  这是RLHF在文本生成领域最早的杰出应用之一，展示了如何通过人类偏好训练奖励模型来指导摘要模型。
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](https://arxiv.org/abs/2204.05862) — Yuntao Bai, Andy Jones, Kamal Ndousse, Amanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort, Deep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion, Tom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatfield-Dodds, Danny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt, Neel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark, Sam McCandlish, Chris Olah, Ben Mann, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2204.05862; DOI: [10.48550/arXiv.2204.05862](https://doi.org/10.48550/arXiv.2204.05862)
+  这项工作进一步探索了RLHF流程以对齐大型语言模型，侧重于有益性和无害性原则，并提供了关于奖励模型训练挑战的见解。

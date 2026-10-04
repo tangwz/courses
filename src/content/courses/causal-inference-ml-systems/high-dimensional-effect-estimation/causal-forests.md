@@ -1,0 +1,109 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "high-dimensional-effect-estimation"
+lesson: "causal-forests"
+sourceId: 4346
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-3-high-dimensional-effect-estimation/causal-forests"
+title: "因果森林与异质效应"
+description: "使用因果森林估计条件平均处理效应（CATE）并理解效应的异质性。"
+order: 2
+plots: ["plots/4346-0.json"]
+sourceHash: "d522a9b1802aaf432206656cbbbef34c6bf64bb158f00ccfb3d48160b689d66f"
+sourceCorrections: []
+---
+
+平均处理效应（ATE）分析，通常使用双重机器学习 (machine learning)等方法，提供了干预措施影响的总体层面视角。然而，这种影响在不同个体或子群体之间通常差异很大。例如，一项营销活动可能对某个客户群体非常有效，但对另一个群体则无效。估算这些变化的效应，即条件平均处理效应（CATE），$\tau(x) = E[Y(1) - Y(0) | X=x]$，对于个性化决策和改进干预措施非常重要。由Susan Athey和Guido Imbens开发的因果森林，专门为此任务扩展了强大的非参数 (parameter)随机森林算法。
+
+### 从预测森林到因果森林
+
+标准随机森林通常旨在最小化结果变量$Y$的预测误差。它们通过基于协变量$X$递归地划分数据来构建决策树，以创建使$Y$方差最小化的叶子节点。新点的预测是其叶子节点中训练样本的平均$Y$值。
+
+因果森林调整此过程，直接关注处理效应的异质性。它们不是为了最小化结果方差而划分节点，而是为了最大化所得子节点间处理效应的差异而划分节点。目的是分离出处理效应$\tau(x)$明显不同的子群体（由叶子节点代表）。
+
+### 核心思想：诚实估计与因果划分
+
+区分因果森林的两项主要创新是：
+
+1. **诚实估计：** 为了避免使用相同数据来构建树结构（选择划分点）和估计叶子节点内效应所带来的偏差，因果森林采用“诚实性”。训练数据通常被一分为二。一半用于确定最佳划分点并构建树结构。另一半（“估计集”）则*仅*用于估计已建立结构中每个最终叶子节点内的处理效应。这种分离可防止在树构建过程中对处理效应信号过度拟合。
+2. **因果划分准则：** 划分准则发生了根本性改变。在每个可能的划分点，算法评估该划分如何增加估计处理效应的异质性。一种常见的方法是，在潜在的左、右子节点内估计处理效应（为了计算效率，仅使用“划分集”数据的一小部分，通常包含局部回归或类似方法），并选择能最大化这些估计之间差异（例如，平方差）的划分点，该差异按样本进入每个节点的比例加权。该方法旨在找到能最佳区分高处理效应单位和低处理效应单位的划分点。
+
+### 算法机制
+
+因果森林的构建通常遵循以下步骤：
+
+1. **子抽样：** 对于森林中的每棵树，从原始数据中随机抽取一个子样本。
+2. **数据划分：** 将子样本划分为“划分集”和“估计集”。
+3. **树的生长（使用划分集）：**
+   - 使用划分集递归地划分特征空间$X$。
+   - 在每个节点，遍历特征和划分点。
+   - 选择能最大化衡量潜在子节点间处理效应异质性的准则的划分点。这通常涉及在节点内解决局部CATE估计问题以指导划分。
+   - 持续划分直到满足停止条件（例如，最小叶子大小）。
+4. **叶子节点估计（使用估计集）：**
+   - 对于步骤3中确定的最终树结构，将估计集沿着树向下传递。
+   - 在每个终端叶子节点$L$中，估计CATE $\hat{\tau}_L$。一种简单方法是使用落入叶子节点$L$的估计集中的单位的均值差异估计量：
+     
+     $$
+     \hat{\tau}_L = \frac{1}{| \{i \in L, T_i=1\} |} \sum_{i \in L, T_i=1} Y_i - \frac{1}{| \{i \in L, T_i=0\} |} \sum_{i \in L, T_i=0} Y_i
+     $$
+     
+   - 也可以使用更复杂的估计量，这些估计量涉及倾向分数加权或叶子节点内的结果回归调整。
+5. **预测：** 对于具有特征$x$的新观测，其CATE估计值$\hat{\tau}(x)$是森林中所有$x$落入叶子节点$L$的树的$\hat{\tau}_L$估计值的平均。
+
+### 广义随机森林（GRF）
+
+因果森林的底层原理已在广义随机森林（GRF）框架（Athey, Tibshirani, Wager, 2019）中得到推广。GRF提供了一种视角，即森林经过训练以根据目标单位$x$为每个训练单位$i$找到权重 (weight)$\alpha_i(x)$。这些权重反映了单位$i$在估计点$x$处所需量的相关程度。森林结构有效地定义了这些自适应最近邻。目标参数 (parameter)（如CATE）随后通过使用这些权重求解局部估计方程来估计。对于CATE，这通常涉及采用类似于双重机器学习 (machine learning)的正交化技术，使估计值更能抵抗由函数估计（倾向分数$e(x)=P(T=1|X=x)$和条件结果$m(x)=E[Y|X=x]$）引入的偏差。
+
+### 实现与注意事项
+
+诸如R语言的`grf`库和Python的`EconML`库（包含因果森林实现及相关方法）提供了具体实现。
+
+- **无混杂性：** 像其他基于调整观测混杂因素（包括DML和元学习器）的方法一样，因果森林的主要前提是无混杂性假设：$(Y(1), Y(0)) \perp T | X$。它们在假设所有相关混杂因素$X$已被测量并纳入模型的前提下估计CATE。
+- **超参数 (parameter) (hyperparameter)调优：** 重要参数包括树的数量、每次划分考虑的特征比例（`mtry`）、最小叶子大小（`min.node.size`），以及可能与诚实性和子抽样比例相关的参数。调优应旨在改进与CATE估计性能相关的指标（通常需要专门的验证方法，本章稍后将讨论）。
+- **变量重要性：** 因果森林可以提供变量重要性度量，表明哪些特征$X_k$在驱动处理效应异质性方面最具影响力。这与衡量预测结果$Y$重要性的标准变量重要性不同。
+- **计算成本：** 由于划分准则更复杂且有诚实性要求，构建因果森林比标准随机森林的计算强度更高。
+
+### 示例：异质性可视化
+
+假设我们已使用因果森林估计了CATE，并希望理解效应如何随特定客户特征（例如“过往参与度得分”）而变化。一张图表或许能展示这种异质性的特点。
+
+
+
+![估计的CATE与过往参与度得分的关系](plots/4346-0.json)
+
+
+
+> 此图显示了潜在的CATE估计值如何随客户的过往参与度得分而非线性变化。处理效果对于中等参与度（得分3-5）的客户似乎最为明显，而对于参与度非常低或非常高的客户则效果不佳，甚至略微负向。
+
+### 优点与缺点
+
+**优点：**
+
+- **非参数 (parameter)：** 自动呈现驱动异质性的复杂交互和非线性关系，无需预先指定。
+- **高维数据：** 能够处理包含许多协变量($X$)的数据集。
+- **诚实估计：** 相较于朴素方法，可提供偏差更小的CATE估计值。
+- **推断：** 其底层理论通常允许构建CATE估计值$\hat{\tau}(x)$的置信区间。
+- **异质性变量重要性：** 识别处理效应变化的驱动因素。
+
+**缺点：**
+
+- **计算密集：** 在非常大的数据集上训练可能很慢。
+- **可解释性：** 尽管单个$\hat{\tau}(x)$预测很明确，但树的集成本身是一个“黑箱”。理解CATE变化的*原因*需要查看变量重要性或绘制CATE与协变量的关系图。
+- **对调优的敏感性：** 性能可能很大程度上取决于超参数 (hyperparameter)选择。
+- **要求无混杂性：** 无法本质上解决未观测混杂问题。
+
+因果森林提供了一种强大的、数据驱动的方法，用于发现和量化 (quantization)处理效应差异，从而在复杂系统中实现更精细和有效的干预。它们代表着机器学习 (machine learning)原则的一项重要应用，专门为因果推断问题而设计。
+
+## 参考资料
+
+- [Recursive partitioning for heterogeneous causal effects](https://doi.org/10.1073/pnas.1510489113) — Susan Athey, Guido W. Imbens (2016)
+  Journal: Proceedings of the National Academy of Sciences; Publisher: National Academy of Sciences; Volume: 113; Pages: 7353-7360; DOI: [10.1073/pnas.1510489113](https://doi.org/10.1073/pnas.1510489113)
+  这篇基础论文介绍了因果森林算法，阐述了用于估计异质治疗效果的诚实估计和因果分裂准则的概念。
+- [Estimation and Inference of Heterogeneous Treatment Effects using Causal Forests](https://www.tandfonline.com/doi/full/10.1080/01621459.2017.1319835) — Stefan Wager, Susan Athey (2018)
+  Journal: Journal of the American Statistical Association; Publisher: Taylor & Francis; Volume: 113; Pages: 1229-1242; DOI: [10.1080/01621459.2017.1319835](https://doi.org/10.1080/01621459.2017.1319835)
+  这篇论文提供了因果森林的详细统计分析和渐近理论，包括构建CATE估计置信区间的方法。
+- [Generalized Random Forests](https://projecteuclid.org/journals/annals-of-statistics/volume-47/issue-3/Generalized-Random-Forests/10.1214/18-AOS1709.full) — Susan Athey, Julie Tibshirani, Stefan Wager (2019)
+  Journal: The Annals of Statistics; Volume: 47; Pages: 1148-1178; DOI: [10.1214/18-AOS1709](https://doi.org/10.1214/18-AOS1709)
+  这项工作提出了广义随机森林（GRF）框架，将因果森林扩展到更广泛的局部参数类别，并提供了估计和推断的理论性质。
+- [grf: Generalized Random Forests](https://cran.r-project.org/web/packages/grf/index.html) — Julie Tibshirani, Susan Athey, Erik Sverdrup, Stefan Wager (2024)
+  Publisher: CRAN; DOI: [10.32614/CRAN.package.grf](https://doi.org/10.32614/CRAN.package.grf)
+  广义随机森林（包括因果森林）的官方R包实现。它提供了应用这些方法和访问其功能的实用工具。

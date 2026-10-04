@@ -1,0 +1,379 @@
+---
+course: "multi-agent-llm-systems-design-implementation"
+chapter: "agent-reasoning-decision-making"
+lesson: "hands-on-collaborative-problem"
+sourceId: 6701
+sourceUrl: "https://apxml.com/zh/courses/multi-agent-llm-systems-design-implementation/chapter-5-agent-reasoning-decision-making/hands-on-collaborative-problem"
+title: "动手实践：实现一个协作问题处理任务"
+description: "一个动手实践项目，实现一个多智能体系统，协作解决一个明确问题。"
+order: 8
+plots: []
+sourceHash: "09278df8414104d41e36816fc27f6594ab4d64b5148ac5487774b949c3aab243"
+sourceCorrections: []
+---
+
+本动手实践将指导你实现一个旨在用于协作问题处理的多智能体系统。我们将组建一个由大型语言模型驱动的智能体小团队，负责规划公司团建活动。此场景要求具有不同专长的智能体共享信息，识别其方案中的潜在冲突，并致力于形成一个统一、连贯的计划。在此过程中，你将看到分布式知识和专项推理 (inference)如何结合起来解决单个智能体难以应对的问题的实际运用。
+
+本实践的核心在于展示智能体如何做到：
+
+1. 提供专项信息（例如，后勤、活动方案）。
+2. 由协调智能体评估其提交内容的兼容性。
+3. 根据反馈调整其贡献，模拟基本的协商或完善过程。
+4. 最终，将其各自的输入汇集为集体产出。
+
+这个实际示例建立在本章关于集体推理、分布式问题处理的讨论之上，并涉及智能体如何处理沟通的某些内容，尽管是以简化形式呈现。
+
+## 系统架构：活动规划团队
+
+我们的多智能体系统将由三个不同的智能体组成：
+
+1. **后勤智能体**：此智能体负责研究并提出适合团建活动的场地。它会考虑团队规模、预算、地点偏好和日期范围等因素。
+2. **活动智能体**：此智能体侧重于集思广益并提出有吸引力的团建活动。它会考虑活动目标、团队特征以及可能促进合作或提升士气的活动类型。
+3. **协调智能体**：此智能体充当协调者。它收集来自后勤和活动智能体的方案，使用大型语言模型分析其兼容性和潜在冲突，必要时请求修改，最终将输入整合为活动最终计划。
+
+交互流程在下方可视化显示：
+
+> 此图示意了协调智能体向后勤和活动智能体发起请求。方案被返回后，如果检测到不兼容，可能会经历一个调整循环，然后协调智能体再整合最终活动计划。
+
+## 前提条件与配置
+
+在我们开始之前，请确保你具备以下条件：
+
+- Python 3.8 或更高版本。
+- 可使用大型语言模型，例如OpenAI的模型。你将需要一个API密钥。本示例中，我们将使用 `openai` Python库。
+- 熟悉在Python中定义函数或类以及调用大型语言模型API。
+
+安装所需库：
+
+```bash
+pip install openai
+```
+
+配置你的API密钥，通常作为环境变量：
+
+```bash
+export OPENAI_API_KEY='your_api_key_here'
+```
+
+我们将定义一个辅助函数来与大型语言模型交互。本示例使用OpenAI的模型，但其原理适用于其他大型语言模型。
+
+```python
+import os
+import openai
+
+# 确保你的OpenAI API密钥已设置为环境变量
+# openai.api_key = os.getenv("OPENAI_API_KEY") # 已弃用
+# 使用新客户端:
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+def get_llm_response(prompt_text, model="gpt-3.5-turbo"):
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt_text}],
+            temperature=0.5, # 调整以平衡创造性和确定性
+            max_tokens=300
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error communicating with LLM: {e}")
+        return None
+```
+
+此辅助函数封装了API调用，使我们的智能体逻辑更清晰。请记住在生产系统中安全地处理API密钥并妥善处理异常。
+
+## 实现演练
+
+我们将实现每个智能体的核心逻辑，然后是协调过程。
+
+### Step 1: 定义单个智能体的能力
+
+每个智能体将由一个Python函数表示，该函数接收相关输入并使用大型语言模型生成其专项输出。
+
+**后勤智能体**
+
+此智能体基于所提供约束提出场地建议。
+
+```python
+def logistics_agent(team_size, budget, desired_location, event_duration):
+    prompt = f"""
+    你是一名企业活动规划的后勤专员。
+    你的任务是为团建活动提出两个不同的场地选择。
+
+    活动详情：
+    - 团队规模：{team_size} people
+    - 场地预算：${budget}
+    - 理想大致地点：{desired_location}
+    - 活动时长：{event_duration}
+
+    请提供：
+    1. 场地名称
+    2. 简要说明其适用性。
+    3. 预计总费用。
+    4. 任何显著特点或限制（例如，容量，特定设施）。
+
+    请为每个选项清晰地格式化你的回复。
+    """
+    print("\n--- 后勤智能体工作中... ---")
+    response = get_llm_response(prompt)
+    print("后勤智能体方案:\n", response)
+    return response
+```
+
+**活动智能体**
+
+此智能体提出团建活动建议，并与活动目标一致。
+
+```python
+def activity_agent(team_size, event_goals, team_profile):
+    prompt = f"""
+    你是一名企业团建活动的活动专员。
+    你的任务是为活动提出两个适合的不同活动。
+
+    活动背景：
+    - 团队规模：{team_size} people
+    - 主要活动目标：{event_goals}
+    - 团队画像：{team_profile} （例如，“软件工程师，资历混合”）
+
+    请为每项活动提供：
+    1. 活动名称
+    2. 活动简要说明。
+    3. 它如何与活动目标一致。
+    4. 预计时长和任何具体要求（例如，室外空间，特定材料）。
+
+    请为每个选项清晰地格式化你的回复。
+    """
+    print("\n--- 活动智能体工作中... ---")
+    response = get_llm_response(prompt)
+    print("活动智能体方案:\n", response)
+    return response
+```
+
+### Step 2: 设计沟通与协调逻辑（协调智能体）
+
+`CoordinatorAgent` 将管理工作流程，包括冲突识别和请求修订。
+
+```python
+def coordinator_agent_analyze_proposals(venue_proposal, activity_proposal):
+    prompt = f"""
+    你是一名活动规划协调员。
+    你已收到来自后勤智能体和活动智能体的方案。
+    你的任务是分析这些方案的兼容性和整体连贯性。
+
+    场地方案：
+    {venue_proposal}
+
+    活动方案：
+    {activity_proposal}
+
+    分析以下内容：
+    1. 兼容性：活动是否适合提议的场地类型？（例如，在仅限室内的场地进行户外活动）。
+    2. 预算：虽然详细的预算检查是独立的，但如果某项活动涉及典型场地预算不包含的显著额外费用（例如，不属于场地租赁范围的专用设备租金），请注明任何明显不匹配之处。
+    3. 整体一致性：这些方案是否与成功举办活动的目标一致？
+
+    如果存在显著不兼容之处，请明确说明并建议需要修订的内容（例如，“后勤智能体应寻找带有室外空间的场地”，或“活动智能体应提出室内活动”）。
+    如果方案普遍兼容，请说明“方案兼容。”
+    """
+    print("\n--- 协调智能体正在分析方案... ---")
+    analysis = get_llm_response(prompt)
+    print("协调智能体分析结果:\n", analysis)
+    return analysis
+
+def request_revision_logistics(original_proposal, feedback):
+    prompt = f"""
+    你是一名后勤专员。你之前的场地方案需要根据反馈进行修订。
+
+    你的原始方案：
+    {original_proposal}
+
+    反馈和修订请求：
+    {feedback}
+
+    请提供一个解决反馈的更新场地方案。如果你无法完全解决，请解释原因并提供最佳替代方案。
+    """
+    print("\n--- 协调智能体正在请求后勤智能体修订... ---")
+    revised_proposal = get_llm_response(prompt)
+    print("后勤智能体修订后的方案:\n", revised_proposal)
+    return revised_proposal
+
+def request_revision_activity(original_proposal, feedback):
+    prompt = f"""
+    你是一名活动专员。你之前的活动方案需要根据反馈进行修订。
+
+    你的原始方案：
+    {original_proposal}
+
+    反馈和修订请求：
+    {feedback}
+
+    请提供一个解决反馈的更新活动方案。如果你无法完全解决，请解释原因并提供最佳替代方案。
+    """
+    print("\n--- 协调智能体正在请求活动智能体修订... ---")
+    revised_proposal = get_llm_response(prompt)
+    print("活动智能体修订后的方案:\n", revised_proposal)
+    return revised_proposal
+```
+
+修订请求函数模拟了协调智能体将反馈发送回专员智能体。在更复杂的系统中，这将涉及到消息传递和状态更新。
+
+### Step 3: 整合最终计划
+
+一旦兼容（或修订后）的方案可用，协调智能体将它们整合。
+
+```python
+def coordinator_agent_synthesize_plan(final_venue_proposal, final_activity_proposal, event_details):
+    prompt = f"""
+    你是一名活动规划协调员。
+    你已确定场地和活动方案。请将这些整合为一个连贯的活动计划。
+
+    活动详情：
+    - 团队规模：{event_details['team_size']}
+    - 预算：${event_details['budget']}
+    - 地点：{event_details['location']}
+    - 时长：{event_details['duration']}
+    - 目标：{event_details['goals']}
+    - 团队画像：{event_details['profile']}
+
+    最终场地方案：
+    {final_venue_proposal}
+
+    最终活动方案：
+    {final_activity_proposal}
+
+    创建一个简洁、可操作的活动计划。包含：
+    - 活动标题（要有创意）
+    - 日期/时间（如果未指定，请使用占位符，例如“待定，下个月确认”）
+    - 场地详情（概述）
+    - 活动详情（概述）
+    - 一份简要的建议活动日程或流程。
+    - 任何重要备注或后续步骤。
+    """
+    print("\n--- 协调智能体正在整合最终计划... ---")
+    final_plan = get_llm_response(prompt)
+    print("\n================ 最终活动计划 ================\n")
+    print(final_plan)
+    return final_plan
+```
+
+## 运行场景并观察协作情况
+
+现在，让我们编排整个过程。我们将定义一些初始活动参数 (parameter)并运行智能体。
+
+```python
+def run_event_planning_scenario():
+    # 初始活动参数
+    event_details = {
+        "team_size": 30,
+        "budget": 2000, # 场地预算
+        "location": "City Center or easily accessible suburban area",
+        "duration": "Full Day",
+        "goals": "Improve team cohesion and problem-solving skills",
+        "profile": "Cross-functional project team (engineers, designers, product managers)"
+    }
+
+    # 1. 获取初始方案
+    venue_proposal = logistics_agent(
+        event_details["team_size"],
+        event_details["budget"],
+        event_details["location"],
+        event_details["duration"]
+    )
+    activity_proposal = activity_agent(
+        event_details["team_size"],
+        event_details["goals"],
+        event_details["profile"]
+    )
+
+    if not venue_proposal or not activity_proposal:
+        print("未能获取初始方案。正在退出。")
+        return
+
+    # 2. 协调智能体分析方案
+    max_revisions = 1 # 本示例为保持简单
+    revisions_done = 0
+    
+    current_venue_proposal = venue_proposal
+    current_activity_proposal = activity_proposal
+
+    while revisions_done < max_revisions:
+        analysis_result = coordinator_agent_analyze_proposals(current_venue_proposal, current_activity_proposal)
+        if not analysis_result:
+            print("未能获取分析结果。正在退出。")
+            return
+
+        if "Proposals are compatible." in analysis_result:
+            print("\n协调智能体认为方案兼容。")
+            break
+        else:
+            print(f"\n发现不兼容。尝试第 {revisions_done + 1}/{max_revisions} 次修订")
+            # 简化处理：假设如果存在问题，反馈同时针对两者，或使其更具针对性。
+            # 对于更完善的系统，会解析 analysis_result 以针对特定智能体。
+            # 在这里，我们将简单地要求两者根据一般反馈进行修订，如果它们不兼容。
+            # 更高级的协调智能体将解析分析结果以决定向谁请求修订。
+            
+            # 这是一种简化；实际系统会解析分析结果以生成有针对性的反馈。
+            # 在本示例中，我们假设分析结果包含可操作的反馈。
+            feedback_for_logistics = f"协调智能体分析结果表明，针对活动方案，你的场地方案可能存在问题。分析：{analysis_result}。请修订。"
+            current_venue_proposal = request_revision_logistics(current_venue_proposal, feedback_for_logistics)
+            if not current_venue_proposal:
+                print("后勤智能体修订失败。使用最后一次已知良好方案或退出。")
+                break # or handle error
+
+            feedback_for_activity = f"协调智能体分析结果表明，针对场地方案，你的活动方案可能存在问题。分析：{analysis_result}。请修订。"
+            current_activity_proposal = request_revision_activity(current_activity_proposal, feedback_for_activity)
+            if not current_activity_proposal:
+                print("活动智能体修订失败。使用最后一次已知良好方案或退出。")
+                break # or handle error
+            
+            revisions_done += 1
+            if revisions_done >= max_revisions:
+                 print("\n已达到最大修订次数。继续使用当前方案。")
+    
+    # 3. 整合最终计划
+    coordinator_agent_synthesize_plan(current_venue_proposal, current_activity_proposal, event_details)
+
+if __name__ == "__main__":
+    # 确保 OPENAI_API_KEY 已在你的环境中设置
+    if not os.getenv("OPENAI_API_KEY"):
+        print("错误：未设置 OPENAI_API_KEY 环境变量。")
+    else:
+        run_event_planning_scenario()
+```
+
+当你运行 `run_event_planning_scenario()` 时，观察输出：
+
+- 后勤和活动智能体的初始方案。
+- 协调智能体对这些方案的分析。
+- 如果识别出不兼容之处，观察（模拟的）修订请求以及随后的修订方案。请注意，大型语言模型有效“修订”的能力在很大程度上取决于反馈的清晰度和原始上下文 (context)。
+- 最终，整合的活动计划。
+
+此流程演示了一种基本的协作问题处理形式。智能体不仅仅是孤立地执行任务；它们的输出被整合并检查一致性，并且有一个（尽管是简化的）迭代调整机制。
+
+## 对协作问题处理的思考
+
+本动手实践，尽管每个智能体的“推理 (inference)”都使用了直接的大型语言模型调用，但它阐明了本章中讨论的多智能体协作问题处理的几个重要方面：
+
+- **任务分解**：复杂的活动规划问题被分解为由后勤和活动智能体处理的专项子任务。
+- **信息共享与汇总**：各个智能体的方案与协调智能体共享，协调智能体汇总了这些信息用于分析和整合。
+- **冲突检测与简易调整**：协调智能体在识别方案间潜在不一致方面发挥了作用。修订循环虽然基础，但模仿了协商或调整过程，其中智能体根据更广泛的系统需求或由另一智能体发现的限制调整其提交内容。
+- **分布式问题解决**：最终计划是多个智能体集体努力和信息的成果，协调以达成共同目标。没有单个智能体独自拥有所有信息或能力来制定该计划。
+
+**进一步思考与扩展：**
+
+- **复杂的通信方式**：在更复杂的系统中，智能体将使用定义明确的消息格式和通信协议（如第3章所述），而不是单一脚本内的直接函数调用和共享内存。
+- **高级协商**：这里的冲突处理是初步的。应用程序可能会涉及更复杂的协商策略，智能体可能会提出反建议，解释其限制，或使用效用函数评估取舍（参考“协商与共识技术”）。
+- **智能体状态与记忆**：这里的每个智能体在调用之间大体上是无状态的（除了提示中携带的隐含上下文 (context)）。持久记忆（第2章）将使智能体能够从过往交互中学习或维持更复杂的内部状态。
+- **动态任务分配**：协调智能体的角色是预定义的。更具适应性的系统可能会根据不断变化的问题状态动态分配任务，甚至派生新的智能体（参见第4章关于编排的内容）。
+- **信念-愿望-意图（BDI）联系**：尽管不是一个完整的BDI实现，但智能体表现出与BDI原则一致的行为。它们拥有“信念”（其专项知识和当前方案）、“愿望”（完成分配的任务，例如提出场地建议），以及“意图”（它们生成或修订的实际方案）。协调智能体帮助将这些个体意图统一到集体目标。
+
+本实践提供了一个基本示例。构建用于复杂问题处理的多智能体系统，通常涉及到应对确保可靠通信、管理状态、设计协调机制以及评估系统行为等方面的挑战。本课程中讨论的技术旨在使你能够应对这些挑战。
+
+## 参考资料
+
+- [AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation](https://arxiv.org/abs/2308.08155) — Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu, Beibin Li, Erkang Zhu, Li Jiang, Xiaoyun Zhang, Shaokun Zhang, Jiale Liu, Ahmed Hassan Awadallah, Ryen W White, Doug Burger, Chi Wang (2023)
+  Journal: arXiv preprint arXiv:2308.08155; DOI: [10.48550/arXiv.2308.08155](https://doi.org/10.48550/arXiv.2308.08155)
+  介绍了一个构建多智能体LLM系统的框架，为智能体对话和协作解决问题提供了实用方法。
+- [Multiagent Systems: A Modern Approach to Distributed Artificial Intelligence](https://mitpress.mit.edu/books/multiagent-systems) — Gerhard Weiss (1999)
+  Publisher: MIT Press
+  一本编辑文集，包含关于多智能体系统中分布式问题解决、协作和协调的基础章节。

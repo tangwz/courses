@@ -1,0 +1,137 @@
+---
+course: "data-governance-quality-observability-production"
+chapter: "automated-reliability-ci-pipelines"
+lesson: "implementing-quality-gates"
+sourceId: 8114
+sourceUrl: "https://apxml.com/zh/courses/data-governance-quality-observability-production/chapter-5-automated-reliability-ci-pipelines/implementing-quality-gates"
+title: "实施质量门"
+description: "配置CI管道门以在测试失败时阻止部署。"
+order: 2
+plots: ["plots/8114-0.json"]
+sourceHash: "bdd4615619919e659a6e0febb978420f705cbe015842c679c46e063902c4bb5b"
+sourceCorrections: []
+---
+
+尽管pre-commit钩子通过清理开发者本地机器上的代码作为第一道防线，但它们缺乏语境。本地环境很少能访问完整的生产依赖图或运行全面回归测试所需的计算资源。这就是服务器端质量门变得必要的原因。质量门是持续集成（CI）管道中的一个强制检查点，它在代码合并到主分支之前执行验证规则。
+
+在数据工程中，质量门与标准软件工程中的门不同。我们不仅测试代码逻辑，还测试该逻辑如何与数据结构交互。如果拉取请求修改了SQL转换，质量门必须确保该更改不会损坏历史数据、引入模式不匹配或在可接受的阈值内降低性能。
+
+### 数据质量门的架构
+
+一个可靠的数据CI管道将验证过程分为多个阶段。每个阶段都充当一个过滤器。如果某个阶段失败，管道会立即停止，并向工程师提供反馈。这避免了在后续步骤中浪费计算资源，并确保“主”分支保持可部署状态。
+
+该架构通常遵循从静态分析到集成测试的线性演进。
+
+> 数据工程CI管道的流程。系统强制执行既定的顺序，确保在运行昂贵的集成测试之前通过轻量级静态检查。
+
+### 门1：静态分析与治理合规
+
+第一个门在代码推送后立即运行。此阶段不需要连接到数据仓库。它侧重于代码库中定义的语法、安全性以及治理标准。
+
+尽管pre-commit钩子可能会捕获基本的SQL语法错误，但CI环境会强制执行明确的治理策略，这些策略在本地可能会被个别开发者绕过。例如，您可以实现一个检查，扫描所有`CREATE TABLE`语句，以确保它们包含数据所有权和分类所需的元数据标签。
+
+为实现此目的，我们通常使用将警告视为错误的linter配置。如果linter发现违规，该门将关闭。
+
+**策略检查示例：**
+您的治理策略可能规定每个通用SQL模型在其配置YAML中必须有一个描述。CI脚本会解析修改过的文件并验证此描述的存在。
+
+
+$$
+V_{合规性} = \begin{cases} 
+1 & \text{如果 } \forall \text{ 模型 } m, \text{ 具有描述}(m) \\
+0 & \text{否则}
+\end{cases}
+$$
+
+
+如果 $V_{合规性} = 0$，则管道失败。
+
+### 门2：通过单元测试进行逻辑验证
+
+一旦代码结构通过验证，管道就会进行逻辑验证。在数据管道中，单元测试验证特定的转换函数是否按预期运行。
+
+为了使此阶段快速且经济，我们不查询生产数据库。相反，我们使用模拟。我们提供固定的输入数据帧（例如，pandas DataFrames或静态SQL种子），并断言输出符合预期。
+
+考虑一个在转换中使用的Python函数`calculate_churn`。质量门使用Pytest等框架运行一系列测试。
+
+```python
+def test_calculate_churn_logic():
+    # 模拟用户历史的输入数据
+    input_data = [
+        {"user_id": 1, "last_login": "2023-01-01", "current_date": "2023-02-01"},
+        {"user_id": 2, "last_login": "2023-01-25", "current_date": "2023-02-01"}
+    ]
+    
+    # 基于业务逻辑的预期结果（例如，> 28天被视为流失）
+    expected = {1: True, 2: False}
+    
+    # 执行
+    results = calculate_churn(input_data)
+    
+    # 断言
+    assert results == expected, "流失逻辑在标准输入下失败"
+```
+
+如果此测试失败，则表明业务逻辑出现回归。CI系统捕获标准错误输出并将其发布回拉取请求界面。
+
+### 门3：集成和暂存检查
+
+最后一个也是资源消耗最大的门涉及数据库。数据工程逻辑在Python中通常是正确的，但当针对实际数据仓库SQL引擎执行时，由于方言差异或数据量问题而失败。
+
+我们在这里应用**写入-审计-发布 (WAP)** 模式。CI管道针对暂存模式或生产数据的临时克隆执行修改后的代码。
+
+1. **写入：** 管道运行转换，将输出写入一个以唯一CI作业ID命名的临时表（例如，`staging.fct_orders_ci_4920`）。
+2. **审计：** 管道针对此临时表运行数据质量测试。这些测试检查：
+   - **参照完整性：** 新表中的所有外键是否存在于上游维度中？
+   - **空值安全：** 关键列是否已填充？
+   - **数据量：** 行数是否相对于生产版本意外下降？
+
+验证逻辑可以表示为一组断言。设 $R_{生产}$ 为现有生产表的行数，$R_{暂存}$ 为新构建的行数。数据量检查可能会强制新构建在方差阈值 $\delta$ 内：
+
+
+$$
+| \frac{R_{暂存} - R_{生产}}{R_{生产}} | \le \delta
+$$
+
+
+如果审计阶段检测到问题，管道将失败，并且临时表将被删除。如果审计通过，代码将被标记 (token)为可安全合并。
+
+### 分析门的性能
+
+监控质量门的性能与质量门本身同样重要。如果CI管道需要45分钟才能运行，开发者会把更改打包成大型、有风险的批次，以避免等待时间。如果质量门不稳定（在没有代码更改的情况下间歇性失败），开发者将失去对系统的信任。
+
+您应该跟踪每个门的通过/失败率和持续时间。“静态分析”阶段的高失败率表明需要更好的本地工具。“暂存集成”阶段的高失败率通常指向开发和生产数据环境之间的差异。
+
+
+
+![CI门故障分布（过去30天）](plots/8114-0.json)
+
+
+
+> 按阶段分类的管道故障分布。语法故障的下降趋势表明本地开发实践的改善，而集成故障由于数据依赖的复杂程度通常保持一致。
+
+### 阻止策略
+
+门的实现通过配置仓库控制来最终确定。在GitHub或GitLab等系统中，您可以将特定的CI作业指定为“必需状态检查”。
+
+合并按钮被禁用，直到这些特定作业返回成功代码（退出代码0）。这可以防止仓促的工程师在中断或紧急期限内绕过安全检查。
+
+为了有效实现这一点：
+
+1. **快速失败：** 安排您的阶段顺序，以便最快的检查首先运行。如果代码有缩进错误，不要为集成测试配置Spark集群。
+2. **清晰的错误消息：** CI作业的输出必须精确指向导致故障的代码行或特定数据资产。
+3. **治理绕过：** 在极端紧急情况下（例如，修复P0生产中断），允许“打破常规”程序，由管理员可以覆盖质量门。此事件应触发自动审计日志条目，以便后续审查。
+
+通过机械地执行这些标准，我们消除了基本验证中的人为因素，使代码审查人员能够专注于架构和系统设计，而不是检查空值约束或语法错误。
+
+## 参考资料
+
+- [Data Quality: The Field Guide](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG5ZOqFbI6VjyJmkH0blioMoMXjsfZam77wixkFkZEJPa7q0VvEoBeX7DZqAzOqq-dI5Uq4yIIzuMs1CtWZyg67VA-aFkY2YryUOOrz21-EMw8khg-agpqv7T2D3uUKjGmsSotitqgpRKVSYXuM63yVpOE_lBF1r9R-0CLjkm0g4SWabsm9FQ==) — Thomas C. Redman (2001)
+  Publisher: Digital Press
+  一本开创性著作，详细阐述了管理和改进数据质量的基本概念和实践方法，是质量门中数据验证检查的理论基础。
+- [DataOps: A New Way to Deliver Value with Data](https://www.oreilly.com/library/view/dataops-a-new/9781492063064/) — Christopher Bergh, Michael Stonebraker, and David Loshin (2020)
+  Publisher: O'Reilly Media
+  本书将DevOps原则应用于数据领域，为自动化数据管道、确保数据质量和改善数据工程协作提供了实践指导，与本节内容直接相关。
+- [Testing and Data Quality in dbt](https://docs.getdbt.com/docs/testing-and-data-quality) — dbt Labs (2024)
+  Publisher: dbt Labs
+  dbt Labs 的官方文档，展示了在数据转换框架中实现数据质量测试、模式验证和自定义断言的实践策略，与第1门和第3门质量门高度相关。

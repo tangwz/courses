@@ -1,0 +1,182 @@
+---
+course: "adversarial-machine-learning"
+chapter: "evaluating-model-robustness"
+lesson: "benchmarking-tools-frameworks"
+sourceId: 4179
+sourceUrl: "https://apxml.com/zh/courses/adversarial-machine-learning/chapter-6-evaluating-model-robustness/benchmarking-tools-frameworks"
+title: "基准测试工具与框架"
+description: "介绍运行对抗性攻击与防御的常用库与框架。"
+order: 2
+plots: ["plots/4179-0.json"]
+sourceHash: "d946ceb8d62c868ae19a83d14e54f528212043df15544802e397a8bc49a01388"
+sourceCorrections: []
+---
+
+评估机器学习 (machine learning)模型的鲁棒性需要一致且可复现的方法。尽管你可以根据研究论文从头开始实现每种攻击和防御算法，但这既耗时又容易出现细微的实现错误，从而可能使结果失效。幸运的是，一些开源库和框架已经出现，旨在标准化这些任务，它们提供了经过充分测试的常用对抗技术和评估协议的实现。使用这些工具可确保你在评估模型或比较不同防御措施时，是在一个公平的环境中进行。
+
+这些框架作为一个共享的基础，使得研究人员和实践者能够：
+
+- **复现结果：** 运行已发表研究中使用的相同攻击实现。
+- **基准测试模型：** 使用标准化的攻击和指标，比较不同模型或防御策略的鲁棒性。
+- **开发新技术：** 在现有攻击或防御实现的基础上进行构建，而无需重复造轮子。
+- **易于集成：** 可与流行的机器学习库（如TensorFlow、PyTorch和Scikit-learn）协同工作。
+
+让我们看一下其中一些出色的对抗性机器学习框架。
+
+### CleverHans
+
+CleverHans是对抗性机器学习 (machine learning)领域的先驱库之一，最初由Google Brain、OpenAI和宾夕法尼亚州立大学的研究人员开发。它提供了各种对抗性攻击和一些防御机制的参考实现。
+
+**核心功能：**
+
+- **攻击实现：** 包括标准的基于梯度的攻击，如快速梯度符号方法（FGSM）、基本迭代方法（BIM）、投影梯度下降 (gradient descent)（PGD），以及基于优化的攻击，如Carlini & Wagner（C&W）。
+- **框架支持：** 主要支持TensorFlow、PyTorch和JAX。
+- **基准测试侧重：** 旨在帮助对模型抵御特定攻击的鲁棒性进行基准测试。
+
+使用CleverHans的典型工作流程可能包括加载训练好的模型，封装模型或定义与库的攻击结构兼容的函数，然后调用攻击函数来生成对抗性样本。
+
+```python
+# 示例：使用CleverHans进行PGD攻击
+# 假设'model'是您训练好的PyTorch/TensorFlow模型
+# 假设'x_test'和'y_test'是您的测试数据和标签
+
+from cleverhans.torch.attacks.projected_gradient_descent import projected_gradient_descent
+
+# 使用PGD生成对抗性样本
+x_adv = projected_gradient_descent(model_fn=model, x=x_test, eps=0.03,
+                                  eps_iter=0.01, nb_iter=10, norm=float('inf'),
+                                  targeted=False, y=y_test)
+
+# 评估模型在x_adv上的性能
+# ... 评估代码 ...
+```
+
+尽管具有影响力，但CleverHans的开发速度与一些其他框架相比有所放缓，但其实现仍是重要的参考。
+
+### 对抗性鲁棒性工具箱 (ART)
+
+对抗性鲁棒性工具箱 (ART) 是一个由IBM研究部门维护的全面Python库。它旨在实现框架无关性，并支持更广泛的安全威胁，而不仅仅是规避攻击。
+
+**核心功能：**
+
+- **广泛的攻击覆盖：** 包括规避攻击、投毒攻击、模型提取攻击（模型窃取）和推断攻击（成员推断、属性推断）。
+- **防御实现：** 提供各种防御机制，包括对抗训练、特征挤压、空间平滑等。
+- **框架无关性：** 支持多种机器学习 (machine learning)框架，包括TensorFlow (v1, v2, Keras)、PyTorch、Scikit-learn、XGBoost、LightGBM、CatBoost和MXNet。
+- **数据类型支持：** 处理各种数据类型，如图像、表格数据、音频和视频。
+- **模块化设计：** 允许轻松组合模型、攻击和防御。
+
+ART使用对原始模型的封装，以提供一致的API来应用攻击和防御。
+
+```python
+# 示例：使用ART进行FGSM攻击
+# 假设'model'是您训练好的PyTorch/TF/Scikit-learn模型
+# 假设'x_train'、'y_train'、'x_test'、'y_test'可用
+
+import art.attacks.evasion as evasion
+import art.estimators.classification as classification
+# 导入相应的框架分类器，例如PyTorchClassifier
+# from art.estimators.classification import PyTorchClassifier
+
+# 1. 封装模型
+# PyTorch示例：
+# classifier = PyTorchClassifier(model=model, loss=criterion,
+#                                input_shape=(1, 28, 28), nb_classes=10)
+
+# Scikit-learn示例：
+# classifier = SklearnClassifier(model=model)
+
+# 2. 实例化攻击
+attack = evasion.FastGradientMethod(estimator=classifier, eps=0.1)
+
+# 3. 生成对抗性样本
+x_test_adv = attack.generate(x=x_test)
+
+# 4. 评估分类器在对抗性样本上的表现
+predictions = classifier.predict(x_test_adv)
+# ... 计算准确率 ...
+```
+
+ART的广泛范围和积极开发使其成为进行全面安全性评估的流行选择。
+
+### Foolbox
+
+Foolbox是另一个备受推崇的库，主要侧重于提供可靠且易于使用的对抗性攻击实现，这使得它在*比较*不同攻击策略对抗给定模型的有效性方面尤为有用。
+
+**核心功能：**
+
+- **攻击侧重：** 精心挑选了基于梯度、基于分数和基于决策的攻击。
+- **易用性：** 设计有简洁的API，用于应用攻击和获取结果（例如最小扰动距离）。
+- **框架支持：** 原生支持PyTorch、TensorFlow和JAX。
+- **可靠性：** 强烈强调攻击实现的正确性和数值稳定性。
+
+```python
+# 示例：使用Foolbox进行PGD攻击
+# 假设'fmodel'是您使用Foolbox API封装的模型（例如PyTorchModel）
+# 假设'images'和'labels'是您的测试数据张量
+
+import foolbox as fb
+from foolbox.attacks import L2PGD
+
+# 实例化攻击
+attack = L2PGD()
+
+# 应用攻击
+# raw_advs, clipped_advs, success = attack(fmodel, images, labels, epsilons=[0.1, 0.3, 0.5])
+
+# 分析不同epsilon值的成功率或扰动大小
+# ... 分析代码 ...
+```
+
+当您的主要目标是使用各种攻击方法检查模型的脆弱性，并测量成功所需的扰动时，Foolbox表现出色。
+
+### 选择和使用基准测试框架
+
+框架的选择通常取决于您的具体需求：
+
+- **需要广泛的覆盖范围（攻击与防御、不同威胁类型）？** ART可能是一个不错的选择。
+- **需要参考实现，尤其是在TF/PyTorch/JAX中？** CleverHans仍然适用。
+- **需要轻松比较多种攻击类型和最小扰动分析？** Foolbox是一个有力的候选。
+- **主要处理文本数据？** 考虑使用TextAttack等特定领域的库。
+
+无论选择何种框架，使用它们进行基准测试都涉及一个标准流程：
+
+1. **设置：** 加载您的数据集（例如CIFAR-10、ImageNet）和要评估的模型。
+2. **集成：** 使用所选框架的API封装您的模型。
+3. **攻击配置：** 选择攻击（例如PGD、C&W）并配置其参数 (parameter)（例如扰动范数 $L_p$、最大扰动 $\epsilon$、迭代次数）。这些参数定义了攻击的强度和性质。
+4. **生成：** 使用框架根据配置的攻击为您的测试数据集生成对抗性样本。
+5. **评估：** 测量模型在生成的对抗性样本上的表现（例如准确率）。
+6. **报告：** 记录结果，清楚说明模型、数据集、所用框架、攻击类型以及所有攻击参数。
+
+这种标准化使得有意义的比较成为可能。例如，报告“模型A在CIFAR-10数据集上，针对ART PGD攻击（$\epsilon=8/255$，$L_\infty$范数，10次迭代，步长$\alpha=2/255$）实现了45%的准确率”比仅仅说“模型A对PGD具有鲁棒性”提供了更多信息。
+
+以下是一个简单的可视化图表，比较模型在干净数据和不同攻击下的准确率，这是基准测试的常见输出：
+
+
+
+![模型在攻击下的准确率](plots/4179-0.json)
+
+
+
+> 两种模型的准确率比较：模型A（标准训练）和模型B（对抗训练）在干净数据以及FGSM和PGD攻击（$L_\infty$，$\epsilon=0.03$）下的表现。对抗训练提高了鲁棒性，但略微降低了干净数据上的准确率。
+
+### 局限性与注意事项
+
+尽管价值巨大，但这些框架只是工具，不能替代理解。
+
+- **参数 (parameter)敏感性：** 攻击效果对$\epsilon$、迭代次数和步长等参数高度敏感。默认参数可能不足以评估强大的防御措施。
+- **自适应攻击：** 如下一节所述，评估定制防御需要设计*自适应攻击*，这些攻击专门针对防御机制。框架提供了构建块，但设计自适应策略需要洞察力。
+- **版本控制：** 框架会演变。请确保记录所用库的版本，以便复现。
+- **实现细节：** 同一攻击在不同框架实现之间可能存在细微差异。对于严谨的评估，有时需要进行交叉检查或参考原始论文。
+
+通过审慎地使用这些工具，你可以对机器学习 (machine learning)模型的安全性进行更严谨、可复现且信息更丰富的评估。它们提供了必要的基础设施，使我们能够从零星评估转向针对明确定义的对抗性威胁进行系统的基准测试。
+
+## 参考资料
+
+- [Adversarial Robustness Toolbox (ART) Documentation](https://adversarial-robustness-toolbox.readthedocs.io/en/latest/) — IBM Research (2024)
+  Publisher: IBM
+  ART的官方文档，这是一个用于跨多个机器学习框架评估和防御各种对抗性威胁的综合库。
+- [Foolbox Native Documentation](https://foolbox.readthedocs.io/en/stable/) — Jonas Rauber, Roland S. Zimmermann (2021)
+  Foolbox的官方文档，一个专注于深度学习模型对抗性攻击的Python库，强调易用性和可靠性。
+- [Towards Deep Learning Models Resistant to Adversarial Attacks](https://arxiv.org/abs/1706.06083) — Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, Adrian Vladu (2018)
+  Journal: ICLR'18; DOI: [10.48550/arXiv.1706.06083](https://doi.org/10.48550/arXiv.1706.06083)
+  引入了投影梯度下降（PGD）作为一种广泛接受的强基准攻击，并展示了模型对抗性训练方法。

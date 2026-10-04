@@ -1,0 +1,56 @@
+---
+course: "introduction-to-speech-recognition"
+chapter: "foundations-of-speech-recognition"
+lesson: "what-is-automatic-speech-recognition"
+sourceId: 7080
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-speech-recognition/chapter-1-foundations-of-speech-recognition/what-is-automatic-speech-recognition"
+title: "什么是自动语音识别（ASR）？"
+description: "对自动语音识别（ASR）的清晰定义，及其将口语转换为文本的主要功能。"
+order: 1
+plots: []
+sourceHash: "2cc3e66c76d8a35adaf4d24e0ec509498785631b93547e23d79db8fd0a17d6b5"
+sourceCorrections: []
+---
+
+本质上，自动语音识别（ASR）是一种让计算机理解并转录人类语音的技术。你每天都会接触ASR系统，无论是在手机上询问语音助手天气，听写短信，还是在视频通话中看到实时字幕。ASR系统的主要作用是将声学信号（即人说话的声音）转换为文本形式的词语序列。
+
+这个过程可以看作一个简单的流程：语音输入，文字输出。
+
+> 自动语音识别系统的基本流程。
+
+尽管目标简单，但实现起来却非常复杂。人类语音充满了多样性。我们每个人说话都有独特的口音、不同的语速和变化的语调。ASR系统必须足够强大以应对这种自然多样性。它还必须应对背景噪音、麦克风质量和说话人重叠等外部因素。
+
+### ASR的两个主要问题
+
+为了达成其目标，ASR系统需要解决两个主要问题：
+
+1. **声学问题：发出了什么声音？** 系统必须分析原始音频波形，并将其片段映射到语言的基本发音单元，即音素。例如，它需要识别“cat”这个词中的`/k/`、`/æ/`和`/t/`音。这是**声学模型**的作用。
+2. **语言问题：哪些词语构成了可能的句子？** 一旦系统有了可能的音素序列，它必须确定这些声音所代表的最可能的词语序列。这很有挑战性，因为许多词语和短语听起来很相似。例如，“recognize speech”听起来与“wreck a nice beach”非常相似。系统使用**语言模型**，该模型理解词语以特定顺序出现的概率，以选择最合理的选项。
+
+### ASR的应用场景
+
+ASR是一种奠定性技术，支撑着许多行业中的广泛应用：
+
+- **语音助手：** 亚马逊 Alexa、谷歌助手和苹果 Siri 等系统使用ASR来理解用户指令。
+- **听写与转录：** 将口语转换为文本的软件，用于文档、电子邮件或病历。
+- **车载系统：** 在驾驶时通过语音指令控制导航、音乐和拨打电话。
+- **辅助功能工具：** 为听力障碍者提供实时字幕。
+- **呼叫中心自动化：** 转录客户通话，用于分析、质量保证或支持自动化应答系统。
+
+### 语音技术中的ASR
+
+区分ASR与其他同样处理人类语音的相关技术会有所帮助。
+
+- **文本转语音（TTS）：** 这是ASR的逆过程。TTS系统将书面文本作为输入，生成可听的合成语音作为输出。
+- **说话人识别：** 这项技术侧重于识别*谁*在说话，而不是*说了什么*。它用于身份验证，比如“语音密码”。
+- **自然语言理解（NLU）：** NLU是ASR之后的下一步。语音转换为文本后，NLU系统旨在确定用户的意图或词语背后的含义。例如，ASR转录“What's the forecast for tomorrow?”后，NLU模型会判断出用户在询问天气信息。
+
+总而言之，自动语音识别是充当计算机耳朵的技术，它提供了将人类语音转换为结构化文本格式的第一个重要步骤。这种转换使得无数其他应用能够处理并根据我们的口语指令采取行动。在接下来的章节中，我们将了解这项技术是如何发展的，并细致分析使其运转的组成部分。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky, James H. Martin (2025)
+  这是自然语言处理和语音识别领域的权威教材，全面介绍了ASR原理，包括声学模型和语言模型。
+- [CS224S: Spoken Language Processing (Winter 2024)](https://web.stanford.edu/class/cs224s/) — Andrew Maas, Tolúláọpé Ogunremi (2025)
+  Publisher: Stanford University
+  提供结构化的课程材料，包括讲座和作业，对ASR基础知识（涵盖系统架构、声学建模和语言建模）提供实用而深入的理解。

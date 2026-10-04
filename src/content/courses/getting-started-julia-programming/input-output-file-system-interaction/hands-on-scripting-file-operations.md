@@ -1,0 +1,299 @@
+---
+course: "getting-started-julia-programming"
+chapter: "input-output-file-system-interaction"
+lesson: "hands-on-scripting-file-operations"
+sourceId: 6817
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-7-input-output-file-system-interaction/hands-on-scripting-file-operations"
+title: "实践：编写文件操作脚本"
+description: "通过实际练习，学习如何使用 Julia 从文件读取数据并将处理后的数据写回文件。"
+order: 8
+plots: []
+sourceHash: "051d7875fc3206231488d7c378cdfd84ccff8bfe88de92c617358580329253fa"
+sourceCorrections: []
+---
+
+以下练习将涉及编写脚本，这些脚本读取文件数据、进行简单处理并将结果写入新文件。这些实际范例演示了如何使 Julia 程序与文件系统交互。
+
+### 练习 1：读取和汇总数值数据
+
+在本练习中，您将编写一个 Julia 脚本来读取文本文件中的数字列表，计算它们的总和与平均值，然后显示这些结果。这项任务在数据分析的初步阶段很常见。
+
+**1. 准备您的数据文件**
+
+首先，在您保存 Julia 脚本的同一目录下创建一个名为 `student_scores.txt` 的文本文件。在此文件中填充以下分数，每个分数占一行：
+
+```text
+85
+92
+78
+95
+88
+70
+```
+
+**2. 编写 Julia 脚本**
+
+现在，创建一个 Julia 脚本（例如 `analyze_scores.jl`），包含以下代码：
+
+```julia
+# analyze_scores.jl
+
+function process_scores(filepath::String)
+    scores = Float64[] # 初始化一个空数组，用于存储浮点数形式的分数
+    total_sum = 0.0
+    num_scores = 0
+
+    try
+        open(filepath, "r") do file_stream
+            println("成功打开 $filepath 进行读取。")
+            for line in eachline(file_stream)
+                try
+                    score = parse(Float64, line) # 将字符串行转换为 Float64
+                    push!(scores, score)         # 将分数添加到数组中
+                    total_sum += score
+                    num_scores += 1
+                catch e
+                    println("警告：无法将 '$line' 解析为数字。已跳过。")
+                end
+            end
+        end # 文件在此处自动关闭
+
+        if num_scores > 0
+            average_score = total_sum / num_scores
+            println("\n--- 分数分析 ---")
+            println("读取的分数: $scores")
+            println("分数总和: $total_sum")
+            println("分数数量: $num_scores")
+            println("平均分数: $(round(average_score, digits=2))") # 显示平均值，四舍五入到小数点后两位
+        else
+            println("文件中未找到有效分数。")
+        end
+
+    catch e
+        println("处理文件 $filepath 时出错: $e")
+    end
+end
+
+# 定义数据文件路径
+data_file_path = "student_scores.txt"
+process_scores(data_file_path)
+```
+
+**3. 代码解析**
+
+- **`function process_scores(filepath::String)`**：定义了一个以文件路径为输入的函数。
+- **`scores = Float64[]`**：初始化一个空数组 `scores`，用于存放 `Float64` 类型的数字。
+- **`open(filepath, "r") do file_stream ... end`**：这是打开文件的建议方式。它接受文件路径和模式（`"r"` 表示读取）作为参数 (parameter)。`do file_stream` 代码块确保在代码块执行完毕时，即使发生错误，文件（`file_stream`）也会自动关闭。
+- **`for line in eachline(file_stream)`**：此循环遍历已打开文件中的每一行。
+- **`score = parse(Float64, line)`**：`parse` 函数尝试将 `line`（字符串）转换为 `Float64` 类型的数字。如果该行无法转换（例如，包含文本），它将抛出错误。
+- **`try ... catch e ... end` inside the loop**：这处理解析过程中可能出现的错误。如果一行不是有效数字，它会打印警告并跳过该行，从而允许脚本继续处理其他有效数字。
+- **`push!(scores, score)`**：将成功解析的 `score` 添加到 `scores` 数组的末尾。
+- 脚本随后计算总和与平均值并打印它们。`round(average_score, digits=2)` 函数用于美观地呈现平均值。
+- 外部的 `try ... catch e ... end` 代码块处理打开或读取文件本身时可能出现的错误，例如文件不存在的情况。
+
+**4. 运行和验证**
+
+将脚本保存为 `analyze_scores.jl`。打开 Julia REPL，导航到保存文件的目录，然后运行脚本：
+
+```julia
+include("analyze_scores.jl")
+```
+
+您应该会看到类似以下的输出：
+
+```
+Successfully opened student_scores.txt for reading.
+
+--- Score Analysis ---
+Scores read: [85.0, 92.0, 78.0, 95.0, 88.0, 70.0]
+Total sum of scores: 508.0
+Number of scores: 6
+Average score: 84.67
+```
+
+如果 `student_scores.txt` 中包含非数字行，您也会看到该行的警告消息。
+
+### 练习 2：转换文本数据并写入新文件
+
+本练习演示了从一个文件读取文本、进行简单转换（转换为大写），并将修改后的文本写入新文件。
+
+**1. 准备您的输入文件**
+
+创建一个名为 `meeting_notes.txt` 的文件，内容如下：
+
+```text
+Agenda: Project Phoenix Review
+Attendees: Alice, Bob, Charlie
+
+Discussion Points:
+- progress update
+- budget allocation
+- next milestones
+
+Action items to be finalized.
+```
+
+**2. 编写 Julia 脚本**
+
+创建一个 Julia 脚本，例如 `transform_text.jl`，包含以下代码：
+
+```julia
+# transform_text.jl
+
+function transform_and_save(input_filepath::String, output_filepath::String)
+    println("开始文本转换...")
+    line_count = 0
+
+    try
+        open(input_filepath, "r") do input_file
+            open(output_filepath, "w") do output_file # 以写入模式("w")打开输出文件
+                println("正在从 $input_filepath 读取并写入 $output_filepath")
+                for line in eachline(input_file)
+                    uppercase_line = uppercase(line) # 将行转换为大写
+                    write(output_file, uppercase_line * "\n") # 写入修改后的行，并添加换行符
+                    line_count += 1
+                end
+            end # output_file 自动关闭
+        end # input_file 自动关闭
+        println("转换完成。已处理 $line_count 行。")
+        println("输出已保存到 $output_filepath")
+    catch e
+        println("发生错误: $e")
+    end
+end
+
+input_file = "meeting_notes.txt"
+output_file = "processed_notes.txt"
+transform_and_save(input_file, output_file)
+```
+
+**3. 代码解析**
+
+- **`open(output_filepath, "w") do output_file`**：以写入模式（`"w"`）打开输出文件。如果文件不存在，则创建它。如果文件存在，则其内容将被覆盖。
+- **`uppercase_line = uppercase(line)`**：`uppercase()` 函数将字符串 `line` 中的所有字符转换为相应的大写形式。
+- **`write(output_file, uppercase_line * "\n")`**：将 `uppercase_line` 写入 `output_file`。我们添加 `"\n"` 是因为 `eachline` 通常会去除换行符，而 `write` 不像 `println` 那样自动添加。
+
+整体流程涉及从输入文件读取、处理内容，然后写入输出文件。这可以表示为：
+
+> 数据从输入文件流经转换脚本，然后到达输出文件。
+
+**4. 运行和验证**
+
+保存并从 Julia REPL 运行 `transform_text.jl`：
+
+```julia
+include("transform_text.jl")
+```
+
+脚本将打印消息，表示其进度：
+
+```
+Starting text transformation...
+Reading from meeting_notes.txt and writing to processed_notes.txt
+Transformation complete. Processed 7 lines.
+Output saved to processed_notes.txt
+```
+
+运行后，打开 `processed_notes.txt`。其内容应为：
+
+```text
+AGENDA: PROJECT PHOENIX REVIEW
+ATTENDEES: ALICE, BOB, CHARLIE
+
+DISCUSSION POINTS:
+- PROGRESS UPDATE
+- BUDGET ALLOCATION
+- NEXT MILESTONES
+
+ACTION ITEMS TO BE FINALIZED.
+```
+
+`meeting_notes.txt` 中的所有文本现在应均为大写。
+
+### 练习 3：维护一个简单的活动日志
+
+对于本练习，您将创建一个脚本，每次执行时都会向日志文件追加带时间戳的消息。这对于记录某些自动化任务或脚本的运行时间很有帮助。
+
+**1. 编写 Julia 脚本**
+
+创建一个 Julia 文件，例如 `log_activity.jl`，内容如下。该脚本使用 Julia 标准库中的 `Dates` 模块来获取当前日期和时间。
+
+```julia
+# log_activity.jl
+using Dates # 导入 Dates 模块以支持时间戳功能
+
+function append_to_log(log_filepath::String, message::String)
+    try
+        timestamp = Dates.format(now(), "yyyy-mm-dd HH:MM:SS") # 获取当前时间的格式化字符串
+        log_entry = "$timestamp : $message\n"                 # 创建日志条目
+
+        open(log_filepath, "a") do log_file # 以追加模式("a")打开日志文件
+            write(log_file, log_entry)
+        end # log_file 自动关闭
+
+        println("成功写入日志: $log_filepath")
+    catch e
+        println("写入日志 $log_filepath 时出错: $e")
+    end
+end
+
+log_file_path = "activity.log"
+activity_message = "Script execution started."
+append_to_log(log_file_path, activity_message)
+
+# 您可以添加另一条消息表示完成
+activity_message_done = "Script execution finished."
+append_to_log(log_file_path, activity_message_done)
+```
+
+**2. 代码解析**
+
+- **`using Dates`**：此行使 `Dates` 模块中的函数可用，例如 `now()` 和 `Dates.format()`。
+- **`timestamp = Dates.format(now(), "yyyy-mm-dd HH:MM:SS")`**：`now()` 获取当前日期和时间，`Dates.format()` 根据提供的格式将其转换为人类可读的字符串。
+- **`open(log_filepath, "a") do log_file`**：文件以追加模式（`"a"`）打开。如果文件存在，新数据将添加到末尾。如果不存在，则创建它。
+- **`write(log_file, log_entry)`**：将格式化的 `log_entry` 追加到文件中。
+
+**3. 运行和验证**
+
+保存 `log_activity.jl`。从 Julia REPL 运行它：
+
+```julia
+include("log_activity.jl")
+```
+
+输出：
+
+```
+Successfully wrote to log: activity.log
+Successfully wrote to log: activity.log
+```
+
+现在，检查 `activity.log` 的内容。它应该有两行新的内容，类似于这样（时间戳将反映您运行它的时间）：
+
+```text
+2023-10-27 10:30:05 : Script execution started.
+2023-10-27 10:30:05 : Script execution finished.
+```
+
+再运行几次脚本 `include("log_activity.jl")`。每次运行，都会有两条新的带时间戳的条目追加到 `activity.log` 中，显示了追加功能。例如，第二次运行后：
+
+```text
+2023-10-27 10:30:05 : Script execution started.
+2023-10-27 10:30:05 : Script execution finished.
+2023-10-27 10:32:15 : Script execution started.
+2023-10-27 10:32:15 : Script execution finished.
+```
+
+这些练习为在 Julia 中与文件交互打下了基础。您已经学会了读取数据、处理数据并将其写入文件，这些在许多编程任务中都很常见，从简单的工具到复杂的数据处理流程。随着您持续学习，您会发现这些技能必不可少。
+
+## 参考资料
+
+- [I/O and External Commands](https://docs.julialang.org/en/stable/manual/io-and-external-commands/) — The Julia Language Project (Current)
+  Publisher: The Julia Language Project
+  Julia官方文档的这一部分详细介绍了文件输入/输出操作、错误处理以及与文件系统的交互。
+- [Dates Module](https://docs.julialang.org/en/v1/stdlib/Dates/) — The Julia Language (Current)
+  Publisher: The Julia Language
+  Julia标准Dates模块的官方文档，涵盖了时间戳和日期操作所需的 `now()` 和 `format()` 等函数。
+- [Getting Started with Julia](https://www.packtpub.com/product/getting-started-with-julia-programming-language/9781783284795) — Ivo Balbaert (2015)
+  Publisher: Packt Publishing; Pages: 214
+  一本介绍性书籍，涵盖了Julia编程的基础概念，包括实用的文件输入/输出、数据解析和针对初学者的脚本编写技术。

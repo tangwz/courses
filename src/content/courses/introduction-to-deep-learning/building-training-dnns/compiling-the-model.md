@@ -1,0 +1,164 @@
+---
+course: "introduction-to-deep-learning"
+chapter: "building-training-dnns"
+lesson: "compiling-the-model"
+sourceId: 5057
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-deep-learning/chapter-5-building-training-dnns/compiling-the-model"
+title: "配置模型：损失函数与优化器选择"
+description: "通过指定损失函数、优化器和指标来配置模型以进行训练。"
+order: 6
+plots: []
+sourceHash: "a5ebbcf62071b555fd89b96bd848d2e0594f2deb7779ab9716f6af1c0c2ac4cf"
+sourceCorrections: []
+---
+
+为了训练深度神经网络 (neural network)模型，需要为其配置**损失函数 (loss function)**和**优化器**。这两个主要组成部分定义了模型的学习目标以及如何更新其参数 (parameter)以实现该目标。损失函数明确了模型应追求的目标，通常是最小化误差，而优化器则指导模型如何调整内部参数以达到该目标。像 PyTorch 这样的框架提供了方便的方式来指定这些选择。
+
+### 损失函数 (loss function)的选择：衡量误差
+
+正如你在第三章学到的，损失函数（也称为成本函数或准则）衡量模型预测与实际目标值之间的偏差。训练的目的是使这个值最小。损失函数的选择在很大程度上取决于你正在解决的问题类型：回归还是分类。
+
+#### 常见损失函数
+
+- **回归任务：** 预测连续值时（例如房屋价格或温度），常见选择包括：
+
+  - **均方误差 (MSE)：** 计算预测值与目标值之间平方差的平均值。它对大的误差有较强的惩罚。在 PyTorch 中，使用 `torch.nn.MSELoss`。
+
+  ```python
+  import torch.nn as nn
+
+  # 实例化 MSE 损失
+  loss_fn_mse = nn.MSELoss()
+  ```
+
+  由于平方运算，MSE 对异常值敏感。如果你的数据集包含明显的异常值，你可能需要考虑 MAE。
+
+  - **平均绝对误差 (MAE)：** 计算预测值与目标值之间绝对差的平均值。它比 MSE 对异常值不那么敏感。在 PyTorch 中，使用 `torch.nn.L1Loss` (L1 距离等同于 MAE)。
+
+  ```python
+  # 实例化 MAE 损失 (L1 损失)
+  loss_fn_mae = nn.L1Loss()
+  ```
+- **二分类任务：** 将输入分为两类之一时（例如，垃圾邮件/非垃圾邮件，猫/狗），二元交叉熵是标准选择。
+
+  - **二元交叉熵 (`BCELoss`)：** 衡量两个概率分布（预测概率和真实二元标签）之间的差异。它要求模型的输出是概率，通常通过对最后一层应用 Sigmoid 激活函数 (activation function)获得。
+
+  ```python
+  # 实例化 BCELoss (要求模型输出进行最终 Sigmoid 激活)
+  loss_fn_bce = nn.BCELoss()
+  ```
+
+  - **`BCEWithLogitsLoss`：** 这种方法通常比先使用 Sigmoid 层再使用 `BCELoss` 更受青睐。它将 Sigmoid 激活和 BCE 计算结合在一个单一的、数值上更稳定的函数中。它需要最后一层的原始输出分数（logits）。
+
+  ```python
+  # 实例化 BCEWithLogitsLoss (数值稳定，接受原始 logits)
+  loss_fn_bce_logits = nn.BCEWithLogitsLoss()
+  ```
+- **多分类任务：** 将输入分为三类或更多类别之一时（例如，MNIST 数字分类，多类别对象识别），使用分类交叉熵。
+
+  - **交叉熵损失 (`CrossEntropyLoss`)：** 在 PyTorch 中，`nn.CrossEntropyLoss` 方便地结合了 LogSoftmax 激活（将原始分数转换为对数概率）和负对数似然损失 (`NLLLoss`)。它需要网络最后一层的原始、未经归一化 (normalization)的分数（logits），以及作为类别索引（整数）的目标标签。
+
+  ```python
+  # 实例化 CrossEntropyLoss (结合 LogSoftmax 和 NLLLoss)
+  loss_fn_ce = nn.CrossEntropyLoss()
+  ```
+
+选择正确的损失函数是根本。将分类损失用于回归问题，反之亦然，将导致模型无法有效学习，因为被最小化的误差信号将与任务目标不符。
+
+### 优化器的选择：优化损失值
+
+一旦有了衡量误差的方式（损失函数 (loss function)），就需要一种机制来更新模型的权重 (weight)和偏差以减少误差。这就是优化器的作用。如第三章和第四章所述，优化器实现了梯度下降 (gradient descent)算法的变体，利用反向传播 (backpropagation)期间计算的梯度来迭代调整参数 (parameter)。
+
+#### 常见优化器
+
+- **随机梯度下降 (SGD)：** 经典的优化器。它根据单个数据点或小批量数据计算出的梯度来更新参数。它通常包含 `lr`（学习率）和 `momentum`（动量）等参数。动量有助于在相关方向上加速 SGD 并抑制震荡。
+
+  ```python
+  import torch.optim as optim
+
+  # 假设 'model' 是你定义的神经网络
+  # 优化器：带动量的 SGD
+  optimizer_sgd = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+  ```
+- **Adam (自适应矩估计)：** 一种非常流行且通常有效的优化器。它为每个参数单独调整学习率，使用梯度的一阶矩（均值）和二阶矩（非中心方差）的估计值。重要参数包括 `lr`、`betas`（矩估计的衰减率）和 `eps`（用于数值稳定性）。Adam 通常在默认设置下表现良好，但可能仍需要调整。
+
+  ```python
+  # 优化器：Adam
+  # 常用 betas=(0.9, 0.999), eps=1e-8
+  optimizer_adam = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-8)
+  ```
+- **RMSprop (均方根传播)：** 另一种自适应学习率优化器。像 Adam 一样，它使用平方梯度的移动平均，但在更新计算方式上有所不同。它在某些情况下表现良好，特别是对于循环神经网络 (neural network) (RNN)。参数包括 `lr`、`alpha`（平滑常数，类似于 Adam 中的 beta）和 `eps`。
+
+  ```python
+  # 优化器：RMSprop
+  optimizer_rmsprop = optim.RMSprop(model.parameters(), lr=0.01, alpha=0.99, eps=1e-8)
+  ```
+
+#### 选择建议
+
+- **Adam** 鉴于其自适应特性和对不同问题的普遍适用性，通常是一个很好的起点。其默认参数通常能提供合理的性能。
+- **带动量的 SGD** 在某些任务上，有时能比自适应优化器获得更好的泛化能力，但可能需要更仔细地调整学习率和动量值。
+- **RMSprop** 是另一个可靠的自适应选择，如果 Adam 没有带来令人满意的结果，值得一试。
+
+**学习率** (`lr`) 可以说是任何优化器最重要的超参数 (hyperparameter)。它控制着参数更新时的步长。设置过高可能导致优化过程发散，而设置过低则可能使训练极其缓慢或陷入次优的局部最小值。寻找一个好的学习率通常需要实验，我们将在第六章关于超参数调整的部分进一步讨论。
+
+### 定义评估指标
+
+损失函数 (loss function)通过提供梯度信号来引导训练过程，但从人类视角来看，它不总能最直观地衡量性能。例如，交叉熵值不易解释，而分类准确率（正确分类样本的百分比）则简单明了。
+
+因此，除了损失函数之外，你通常会在训练和评估期间跟踪一个或多个**评估指标**。这些指标更清楚地展示了模型在实际任务上的表现。示例包括：
+
+- **准确率：** 用于分类（二分类或多分类）。
+- **精确率、召回率、F1 分数：** 用于分类，特别是在处理不平衡数据集时。
+- **平均绝对误差 (MAE)、均方根误差 (RMSE)：** 用于回归，提供目标变量原始单位的误差。
+
+在像 Keras 这样的框架中，指标通常在 `compile` 步骤中与损失和优化器一起直接指定。在 PyTorch 中，指标计算通常在训练和验证循环中手动完成，通过将模型预测和真实标签传递给适当的指标函数（通常在 `torchmetrics` 或 `scikit-learn` 等库中提供）。这种分离强调了损失函数用于*优化*，而指标则用于*评估*和监控。
+
+### 代码实现
+
+以下是在 PyTorch 中定义模型架构 (`MySimpleNet`) 后，如何组合这些元素：
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# 假设 MySimpleNet 是一个为多分类任务定义的 nn.Module 类
+model = MySimpleNet(input_size=784, hidden_size=128, output_size=10)
+
+# 1. 选择损失函数 (准则)
+# 用于输出 logits 的多分类任务
+criterion = nn.CrossEntropyLoss()
+
+# 2. 选择优化器
+# 使用学习率为 0.001 的 Adam
+learning_rate = 0.001
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+# --- 准备训练 ---
+# 'model'、'criterion' 和 'optimizer' 现在已配置完毕。
+# 下一步（在后续部分讨论）包括将数据
+# 馈入模型、计算损失、执行反向传播、
+# 并在训练循环中使用优化器更新权重。
+# 准确率等评估指标也将在此循环中计算。
+
+print("模型配置成功！")
+print(f"损失函数: {criterion}")
+print(f"优化器: {optimizer}")
+```
+
+这个配置步骤实质上设定了学习规则。通过选择合适的损失函数 (loss function)和优化器，你为框架提供了必要的组件，使其能够根据你提供的数据有效训练神经网络 (neural network)。在此做出的选择对训练动态和模型最终性能有着直接而重大的影响。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  本书全面阐述了深度学习，详细解释了损失函数、各种优化算法（包括梯度下降及其变体）以及神经网络训练的理论基础。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/pdf/1412.6980.pdf) — Diederik P. Kingma and Jimmy Ba (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  这篇论文介绍了Adam优化器，详细阐述了其算法、自适应学习率机制以及实证评估。
+- PyTorch Official Documentation: Loss Functions and Optimizers [1](https://pytorch.org/docs/stable/nn.html#loss-functions) [2](https://pytorch.org/docs/stable/optim.html) — PyTorch Developers (2024)
+  PyTorch官方文档，涵盖了`nn`模块中各种损失函数以及`optim`模块中可用的优化算法及其参数。
+- [Optimization: Stochastic Gradient Descent](http://cs231n.github.io/optimization-1/) — Justin Johnson, Andrej Karpathy, and Fei-Fei Li (2023)
+  Journal: Stanford University CS231n Lecture Notes
+  斯坦福大学CS231n课程的讲义，清晰地解释了优化技术，包括不同类型的梯度下降、学习率调度、动量以及Adam和RMSprop等自适应优化器。

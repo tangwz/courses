@@ -1,0 +1,123 @@
+---
+course: "intro-llm-agents"
+chapter: "basic-agent-planning"
+lesson: "guiding-agent-reasoning-chain-of-thought"
+sourceId: 6597
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-5-basic-agent-planning/guiding-agent-reasoning-chain-of-thought"
+title: "用思维链引导智能体的推理"
+description: "了解思维链提示作为一种简单规划技术，以提高智能体的推理能力。"
+order: 2
+plots: []
+sourceHash: "875decc217e5efb030b024f7eb12e08622222051424dff37323a7e75aef9e1cc"
+sourceCorrections: []
+---
+
+当我们要求大语言模型 (LLM)执行任务时，特别是那些并非单一、直接查询的任务，我们通常希望了解它是如何得出结论或计划的。对于需要执行一系列行动的智能体来说，仅仅得到一个最终答案往往不够。想象一下，你正在构建一个智能体来帮助规划一次简单的旅行。如果它只说“去巴黎”，那帮助不大。你会想知道它的推理 (inference)：为什么是巴黎？规划涉及哪些步骤？在这种情况下，引导智能体的推理过程就显得有必要了。
+
+一种有效且出人意料的简单技术，可以提高大语言模型（进而提高我们智能体）的推理能力，这便是**思维链 (CoT) 提示**。主要思想是鼓励大语言模型不仅仅给出最终答案，而是“大声思考”或生成一系列导致该答案的中间推理步骤。这就像你的数学老师要求你“展示计算过程”而不仅仅写下答案一样。
+
+### 思维链的工作原理
+
+其核心是，CoT通过设计向大语言模型 (LLM)的提示词 (prompt)，明确要求它分解自己的思考过程。例如，与其直接向大语言模型提问并寄希望于最佳结果：
+
+**标准提示：**
+`"If a recipe calls for 2 cups of flour and I want to make half the recipe, how much flour do I need?"`
+
+**大语言模型（可能只给出答案）：**
+`"1 cup of flour."`
+
+虽然正确，但这没有展示推理 (inference)过程。使用CoT，你会鼓励大语言模型自己解释：
+
+**思维链提示：**
+`"If a recipe calls for 2 cups of flour and I want to make half the recipe, how much flour do I need? Explain your thinking step by step."`
+
+**大语言模型（使用CoT）：**
+\`"好的，我们来算一下：
+
+1. 原始配方需要2杯面粉。
+2. 我想制作一半（1/2）的食谱。
+3. 所以，我需要计算2杯面粉的一半。
+4. 2的一半是2乘以1/2，等于1。
+   因此，你需要1杯面粉。"\`
+
+这种中间的“思考过程”便是思维链。对于大语言模型智能体来说，这不仅仅是为了得到计算的正确答案。它关乎组织大语言模型的输出，使其能够用来引导一系列行动或决策。
+
+### 对大语言模型 (LLM)智能体的好处
+
+将CoT提示融入你的智能体设计会带来多种益处：
+
+1. **提高复杂任务的准确性：** 通过逐步思考，大语言模型通常更有可能为需要多步推理 (inference)的任务得出正确或更合理的结论。它们更不容易过早得出或得出错误的结论。
+2. **提高透明度：** 生成的思维链让你（开发者）甚至用户能够查看智能体为何提出某个计划或行动。这使得智能体的行为不那么像一个“黑箱”。
+3. **更易于调试：** 如果智能体出错，思维链可以提供有价值的线索，说明其推理在哪里出了问题。你可以检查中间步骤来找出错误所在。
+4. **简单规划的基础：** 思维序列通常可以直接转化为智能体的一系列行动。如果大语言模型推理说：“要整理我的电子邮件收件箱，我首先需要识别未读邮件，然后分类它们，接着归档或删除”，这些步骤就构成了一个基本计划。
+
+### 实际案例：规划任务
+
+假设你想让你的智能体列出简单任务的步骤，例如“研究一个用于演示的新主题”。
+
+**标准提示：**
+`"How should I research a new topic for a presentation?"`
+
+**大语言模型 (LLM)响应（可能过于简短或缺乏结构）：**
+`"Define scope, find sources, take notes, synthesize."`
+
+虽然这涵盖了基本内容，但对于可能需要协助每一步的智能体或需要更多指导的用户来说，它不够详细。
+
+**思维链提示：**
+`"I need to research a new topic for an upcoming presentation. Can you help me break down how to approach this effectively? Let's think step by step."`
+
+**大语言模型响应（使用CoT）：**
+\`"好的，让我们系统地处理你演示文稿的新主题研究：
+
+1. **界定范围和目标：** 首先，主题究竟是什么？你的演示文稿需要回答哪些具体问题或侧重哪些方面？了解这一点将防止你研究范围过大或过小。
+2. **初步头脑风暴和关键词生成：** 记下你已知或认为已知的内容。与此主题相关的主要关键词有哪些？这些对搜索会有帮助。
+3. **确定可靠的资料来源类型：** 你会去哪里查找信息？用于细致研究的学术期刊？用于时事的可信网站和新闻文章？用于基本知识的书籍？用于具体数据的行业报告？
+4. **进行搜索：** 在搜索引擎、图书馆数据库和其他相关平台上使用你的关键词。
+5. **评估资料来源：** 在你找到信息时，快速评估其可信度。作者是专家吗？出版物声誉好吗？信息是最新吗？
+6. **做详细笔记：** 不要只是复制粘贴。用自己的话总结信息。记下主要事实、数据、论点，并始终注明你的资料来源（在哪里找到的）。这有助于理解并避免剽窃。
+7. **整理你的发现：** 将相关笔记归类。你可以使用大纲、思维导图或数字笔记工具。寻找规律、关联和对比观点。
+8. **综合并发现不足：** 整合信息以形成连贯的理解。主要收获是什么？有哪些方面你还需要更多信息？
+9. **调整演示文稿的重点：** 根据你的研究，你可能需要根据所得信息调整演示文稿的范围或主要信息。
+
+这种详细分解提供了一个更清晰的‘计划’，能够引导研究过程。"\`
+
+### 将CoT融入智能体的逻辑
+
+你不需要复杂的算法就可以开始使用CoT。它主要在于**提示工程 (prompt engineering)**。当你的智能体需要弄清一个多步骤流程时，你可以指示大语言模型 (LLM)（作为智能体的“大脑”）使用如下短语来生成这些步骤：
+
+- “让我们一步一步思考。”
+- “把这个问题分解成更小的部分。”
+- “在给出答案之前，请解释你的推理 (inference)过程。”
+- “首先，……其次，……再次，……”（你甚至可以提供第一步的开头，以引导其格式）。
+
+智能体的控制循环（我们在上一章中讨论过）可以接收大语言模型的这种结构化输出。大语言模型生成的“思考”（即推理链）为智能体可能采取或建议的后续“行动”或行动序列提供信息。例如，如果大语言模型生成了一个像研究案例中那样的编号步骤列表，智能体可以被编程为向用户展示这些步骤，甚至协助启动第一步（例如，“您希望我从搜索与‘大语言模型智能体’相关的关键词开始吗？”）。
+
+### 一个简单的视觉类比
+
+想象你的智能体是一个旅行规划师（大语言模型 (LLM)是它的大脑），任务是规划一次周末旅行。
+
+- **不使用CoT：** 你问，“规划一次周末旅行。”智能体回答，“去海边。”不够详细。
+- **使用CoT：** 你问，“请为我规划一次周末旅行。请按顺序列出所有步骤，并解释每一步的思考。”智能体（通过大语言模型）随即提供了一个详细行程：“1. 确定预算和旅行日期，因为这会限制所有其他选择。2. 根据兴趣（例如，放松、冒险）和旅行时间选择目的地。我们考虑一个山区小屋。3. 预订住宿。4. 规划活动……”等等。
+
+这个详细计划（思维链）更具可操作性。
+
+> 该图示了用户请求如何通过智能体，使用大语言模型的思维链提示，以生成一个有推理 (inference)依据的计划。
+
+### 需要注意的事项
+
+尽管CoT是一种强大而直接的技术，但它并非所有规划和推理 (inference)难题的完整方案：
+
+- **它是一种启发式方法：** 它引导大语言模型 (LLM)进行更好的推理，但不保证正确性。大语言模型在其“思考”过程中仍可能犯错，尽管这些错误通常更容易发现。
+- **冗长性：** CoT的响应自然会更长。如果你对大语言模型调用有严格的token限制或需要非常简洁的输出，这可能会成为问题，但对于智能体规划而言，详细性通常是有益的。
+- **并非完整的规划：** CoT帮助大语言模型生成一系列想法或步骤。它不是一种复杂的规划算法，无法像专门的规划系统那样考虑多种替代方案、有效地从死胡同回溯（在没有进一步、更复杂的提示下），或动态适应复杂的意外情况。
+
+尽管有这些方面，思维链提示仍然是一个极好的起点，可以提升你的智能体处理需要多于一次性回答的任务的能力。它为更结构化的思考打下了基础，这是创建更强大智能体的重要方面。当我们继续学习，特别是讨论ReAct框架时，你将看到这种推理和行动交织的理念是如何基于这些基本提示策略的。
+
+## 参考资料
+
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHOyQPFjejPL-b9D012peqxbI-13SWDjjLeUyb1UFDyyu4HtQ8aVcJJDp0NNS9Ht1M__9Bz_bk76z18YUpqJZyt0YjYtQ1Lb-0iq1UyxNhGNoorzd1pvdo-tlM=) — Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc Le, Denny Zhou (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 35; Pages: 24824–24837; DOI: [10.48550/arXiv.2201.11903](https://doi.org/10.48550/arXiv.2201.11903)
+  这篇论文介绍了思维链提示，展示了它通过引导大型语言模型生成中间步骤来提高推理能力。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGMvLiH0z5S3vp3_tfvBvZp8PPsM4v7inkghdjjPpkbMjptSgnZ1GefUwmZy8DjTvdOtx-L6nxnWxIA8j0cpnTBXBzIZGwgAkswxWzmDmcZlfrqJXDtLHPS2_81pGw6V09MwsGE) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  本文介绍了ReAct框架，该框架将思维链推理与行动相结合，与大型语言模型代理的规划和执行直接相关。

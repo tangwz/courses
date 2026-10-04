@@ -1,0 +1,60 @@
+---
+course: "llm-model-sizes-hardware"
+chapter: "model-size-hardware-connection"
+lesson: "quantization-basics"
+sourceId: 4223
+sourceUrl: "https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-3-model-size-hardware-connection/quantization-basics"
+title: "量化简介"
+description: "量化的基本原理：减小模型大小以降低内存占用。"
+order: 3
+plots: []
+sourceHash: "4da0ef03daa292cfd686c176c9422730598b0c6ca9bc3cb1587498d2500e9986"
+sourceCorrections: []
+---
+
+模型参数 (parameter)所用的精度或数据类型，例如 $FP16$（每个参数16位），直接影响所需的内存量。尽管 $FP16$ 比旧的 $FP32$（32位）标准内存效率更高，但即使是 $FP16$ 模型也可能需要大量显存 (VRAM)，特别是对于拥有数十亿参数的模型。例如，一个70亿参数的 $FP16$ 模型仅参数本身就需要大约14GB显存，这超出了许多消费级GPU的能力范围。
+
+这种内存需求带来一个重要挑战：我们如何在显存有限的硬件上运行这些越来越大且功能强大的模型？解决这个问题的一种有效方法是**量化 (quantization)**。
+
+从本质上讲，量化是减少模型中每个数值（参数或权重 (weight)）所用比特数的过程。可以将其比作使用更少的小数点位来记录一个数字。例如，与其将 $\pi$ 存储为 3.14159265，你可能会将其近似为 3.14。你会失去一些精度，但表示方式更短、更简单。
+
+类似地，在LLM中，量化将参数从 $FP16$（16位）甚至 $FP32$（32位）等更高精度格式转换为更低精度格式，最常见的是 $INT8$（8位整数）甚至 $INT4$（4位整数）。
+
+> 量化减少了用于存储每个参数的比特数，从而缩小了模型在内存中的大小。
+
+### 量化 (quantization)的优势
+
+量化的主要优势是**内存占用减少**。
+如果你将模型从 $FP16$（16位）量化到 $INT8$（8位），你实际上可以将存储模型参数 (parameter)所需的显存 (VRAM)量减半。
+
+- 一个 $FP16$ 参数需要16位，即2字节。
+- 一个 $INT8$ 参数需要8位，即1字节。
+
+因此，我们那个在 $FP16$ 下需要大约14GB的70亿参数模型，在 $INT8$ 下仅需大约7GB。这带来了很大不同，有可能让模型能够适配之前无法运行的GPU。如果进一步量化到 $INT4$（4位，即每个参数半个字节），则需求将降至约3.5GB。
+
+另一个次要优势是**更快的推理 (inference)速度**。涉及低精度数字，尤其是 $INT8$ 这样的整数的计算，通常可以由CPU和GPU内的某些专用硬件单元更快地执行。这意味着模型可能会更快地生成响应，尽管使用量化的主要原因通常是减少内存。
+
+### 权衡：准确性
+
+量化 (quantization)听起来几乎完美无缺，那缺点是什么？主要权衡是模型准确性或性能的潜在**损失**。通过降低参数 (parameter)的精度，你本质上是在近似原始模型。这种近似有时会导致输出质量略有下降、响应细节减少，或在某些复杂任务上的能力下降。
+
+回想一下，将 $\pi$ 近似为 3.14 而不是 3.14159265。对于许多计算来说，3.14 完全足够。然而，对于高精度科学计算，这种细节的损失可能就会很重要。类似地，量化对LLM性能的影响各不相同。现代量化技术相当复杂，旨在尽量减少这种精度损失，通常可以在实现显著内存节省的同时，带来对于许多常见用例来说可能察觉不到的微小性能差异。然而，这是一个需要注意的因素。
+
+### 总结
+
+量化 (quantization)是一种有价值的方法，用于管理大型语言模型的硬件需求。通过用更少的比特（例如 $INT8$ 或 $INT4$ 而不是 $FP16$）表示模型参数 (parameter)，它显著减少了加载和运行模型所需的显存 (VRAM)。这使得更大的模型能够在性能较低的硬件上使用。尽管存在准确性可能略有下降的权衡，但量化是一种广泛使用的方法，用于优化LLM以进行推理 (inference)，尤其是在消费级设备上。了解这个原理有助于解释为什么你可能会看到同一基础模型有不同版本（如 $FP16$、$Q8_0$、Q4\_K\_M）可供下载。
+
+## 参考资料
+
+- [LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale](https://arxiv.org/abs/2208.07339) — Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer (2022)
+  Journal: NeurIPS 2022; DOI: [10.48550/arXiv.2208.07339](https://doi.org/10.48550/arXiv.2208.07339)
+  介绍了一种广泛采用的针对大型Transformer模型的8位量化方法，使其能够在消费级GPU上运行。
+- [GPTQ: Accurate Post-Training Quantization for Generative Pretrained Transformers](https://arxiv.org/abs/2210.17323) — Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh (2023)
+  Journal: International Conference on Learning Representations; DOI: [10.48550/arXiv.2210.17323](https://doi.org/10.48550/arXiv.2210.17323)
+  提出了一种针对大型语言模型进行4位精度训练后量化的技术，可将精度损失降至最低。
+- [QLoRA: Efficient Finetuning of Quantized LLMs on Consumer GPUs](https://arxiv.org/abs/2305.14314) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了一种利用4位量化实现大型语言模型高效微调的方法，展示了量化的实际应用价值。
+- [bitsandbytes Library Documentation](https://huggingface.co/docs/bitsandbytes/main/en/index) — Tim Dettmers and contributors (2024)
+  Publisher: bitsandbytes-foundation
+  PyTorch的Python库官方文档，提供8位和4位量化以及优化器，广泛用于内存高效的LLM部署。

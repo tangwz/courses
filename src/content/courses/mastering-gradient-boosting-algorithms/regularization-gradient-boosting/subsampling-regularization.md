@@ -1,0 +1,75 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "regularization-gradient-boosting"
+lesson: "subsampling-regularization"
+sourceId: 1965
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-3-regularization-gradient-boosting/subsampling-regularization"
+title: "数据抽样 (随机梯度提升)"
+description: "使用行抽样和列抽样来提升泛化能力。"
+order: 4
+plots: []
+sourceHash: "a2e9688bcaa7a5623ae98e45074da37ee22edcd145ce131b9ba749797fa98a41"
+sourceCorrections: []
+---
+
+梯度提升机由于其高度的灵活性，容易对训练数据过拟合 (overfitting)。缓解此问题的一个有效且常用方法是通过**数据抽样**在树构建过程中引入随机性，这种方法常被称为**随机梯度提升 (SGB)**。这种思路借鉴了Bagging（自助聚合）和随机梯度下降 (gradient descent)（SGD），其中通过数据抽样引入随机性可以提升模型的泛化能力和稳定性。
+
+随机梯度提升在每次提升迭代 $m$ 中，不是使用整个训练数据集来计算伪残差并拟合新的基学习器（树），而是仅使用一部分随机抽取（不放回）的训练样本。同样，它也可以抽样一部分特征。
+
+### 数据抽样为何有效：降低方差
+
+数据抽样的主要作用是降低方差。通过在数据和/或特征的略微不同子集上训练每棵树，我们降低了集成中树之间的关联性。每棵树对数据分布和前面树留下的误差模式（伪残差）都有一个略微不同的“视角”。这可以防止集成模型过度适应完整训练集中的噪声或特定模式。虽然每棵单独的树由于训练数据较少可能略显不足（偏差较高），但作为一个整体，集成模型具有更好的泛化能力，并在未见数据上表现更好。
+
+### 数据抽样的种类
+
+梯度提升中实现数据抽样主要有两种方式：
+
+1. **行抽样 (抽样比例)：**
+
+   - 这包括在拟合每棵新树之前，不放回地随机选择一部分训练数据实例（行）。
+   - 在Scikit-learn、XGBoost和LightGBM等库中，这通常由名为`subsample`或`bagging_fraction`的超参数 (parameter) (hyperparameter)控制。
+   - 典型值通常在0.5到0.8之间，意味着每棵树的拟合使用50%到80%的数据。
+   - 将`subsample`设置为1.0将恢复为使用所有数据点训练每棵树的标准梯度提升。
+   - 将其设置为低于1.0会引入随机性，有助于防止过拟合 (overfitting)，并能显著加快训练速度，尤其是在大型数据集上，因为每次迭代处理的数据量减少了。但设置过低可能导致欠拟合 (underfitting)或收敛速度变慢。
+2. **列抽样 (特征比例)：**
+
+   - 这包括在构建每棵树时，甚至在每个节点寻找最佳分裂时，选择随机一部分特征（列）来考虑。
+   - 常见超参数包括：
+     - `colsample_bytree`：每棵树构建时一次性抽样特征的比例。
+     - `colsample_bylevel`：树中每个新层级抽样特征的比例。
+     - `colsample_bynode` (XGBoost) 或 `feature_fraction_bynode` (LightGBM)：每个节点分裂时抽样特征的比例。
+   - 列抽样在高维数据集中特别有效，因为这些数据集中许多特征可能不相关或冗余。它防止模型过度依赖少数高预测性的特征。
+   - 与行抽样类似，它降低方差，并通过减少需要评估的特征分裂数量来加快训练过程。典型值也通常在0.5到1.0的范围。
+
+下图展示了行抽样和列抽样如何融入提升过程。
+
+> 随机梯度提升算法的流程图，展示了在每次提升迭代中如何融入行抽样和列抽样。
+
+### 与其他集成方法的关系
+
+SGB中使用的数据抽样方法与随机森林中的方法有相似之处。随机森林对行使用自助抽样（有放回抽样），并在每次分裂时随机选择特征。SGB通常对行使用不放回抽样，并为特征抽样提供了更灵活的选项（按树、按层级、按节点）。核心区别在于，提升算法是顺序构建树来纠正之前的错误，而随机森林是并行独立构建树。
+
+### 实际考量与调优
+
+行抽样和列抽样是有效的正则化 (regularization)工具，通常与收缩（学习率）和树复杂度限制（如`max_depth`、`min_child_weight`）结合使用。
+
+- **相互作用：** 较低的学习率通常需要更多的提升轮次（`n_estimators`），并可能与较低的数据抽样率配合良好。反之，较高的数据抽样率可能允许略高的学习率或更少的树。
+- **调优：** `subsample`、`colsample_bytree`等的最佳值高度依赖于数据。它们通常与学习率（`eta`或`learning_rate`）、树深度（`max_depth`）和提升轮次数量（`n_estimators`）等其他重要超参数 (parameter) (hyperparameter)一起通过交叉验证进行调优，并常通过提前停止来确定。网格搜索、随机搜索或贝叶斯优化（第8章介绍）等方法对于找到好的组合至关重要。
+- **计算成本：** 数据抽样通常会减少每次迭代的训练时间，特别是处理大量特征时的列抽样。总训练时间取决于抽样率与收敛所需的提升轮次数量之间的关系。
+
+总之，随机梯度提升通过行抽样和列抽样引入随机性，有效降低了最终集成模型的方差。这使得模型对特定的训练数据不那么敏感，提升了其对新的、未见示例的泛化能力。此外，它通常还带来了加快训练过程的好处。熟练运用和调优这些数据抽样参数是构建高精度梯度提升模型的重要一步。
+
+## 参考资料
+
+- [Stochastic Gradient Boosting](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFTdeT1qdjg65MIdMqwsZbBVVPWRcq0IrAEDy6yQ45fCEFdLxIfJqu7BCtConzrt2bfsnuS2buZzS7BSbLgcbvS7URzlAH1DOjqI07s6hPDsHFl2hK2cHLGNrW30zl87qBmYMgW2il-Ww==) — Jerome H. Friedman (1999)
+  Publisher: Stanford University
+  引入随机梯度提升的概念，通过将子采样集成到梯度提升框架中以提高泛化能力。
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: Annals of Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  介绍梯度提升机 (GBM) 框架的基础论文，为后续的子采样等正则化技术奠定基础。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://link.springer.com/book/10.1007/978-0-387-84858-7) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本涵盖多种机器学习算法的综合性教科书，其中专门章节提供了梯度提升及其正则化方法（包括子采样）的详细理论和实践方面。
+- [XGBoost: A Scalable Tree Boosting System](https://doi.org/10.1145/2939672.2939785) — Tianqi Chen and Carlos Guestrin (2016)
+  Journal: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining; Publisher: ACM; Pages: 785-794; DOI: [10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+  描述了 XGBoost（一个流行的梯度提升库）的设计和实现，包括其用于正则化和效率的行和列子采样的具体策略。

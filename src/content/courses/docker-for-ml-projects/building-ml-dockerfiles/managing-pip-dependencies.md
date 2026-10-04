@@ -1,0 +1,119 @@
+---
+course: "docker-for-ml-projects"
+chapter: "building-ml-dockerfiles"
+lesson: "managing-pip-dependencies"
+sourceId: 5252
+sourceUrl: "https://apxml.com/zh/courses/docker-for-ml-projects/chapter-2-building-ml-dockerfiles/managing-pip-dependencies"
+title: "管理 Python 依赖项 (pip)"
+description: "在 Docker 镜像中，使用 requirements.txt 和 pip 安装并管理 Python 包。"
+order: 3
+plots: []
+sourceHash: "f78848653711e9a0524f3bb150cedd1541a5c99816b1113237deb06fa4ee5b5e"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)项目通常依赖于一组特定的 Python 库，例如 Scikit-learn、Pandas、NumPy、TensorFlow 或 PyTorch，以及它们的精确版本。确保每个团队成员、测试环境和部署目标都使用完全相同的依赖项，是实现可复现性必不可少的。库版本中一个不大的差异就可能导致不明显的错误、模型行为改变或彻底失败。Docker 提供了一种将这些依赖项与应用程序代码一同打包的方法，而 `pip`（标准的 Python 包安装器）是 Dockerfile 中管理这些库的常用工具。
+
+### 直接安装包
+
+在 Docker 镜像中安装 Python 包最直接的方法是使用 `RUN` 指令结合 `pip install` 命令。
+
+```dockerfile
+# 示例：直接安装 scikit-learn
+FROM python:3.9-slim
+
+RUN pip install scikit-learn
+```
+
+这个命令指示 Docker 在镜像构建过程中执行 `pip install scikit-learn`。虽然对于一两个包来说很简单，但对于有多个依赖项的项目来说，这种方法很快就变得难以管理。它也没有明确定义所需的版本，可能导致每次构建镜像时安装的版本不同。
+
+### 使用 requirements.txt 文件实现可复现性
+
+一种更规范且可复现的方法是将项目的 Python 依赖项列在 `requirements.txt` 文件中。这是 Python 开发中的标准做法。
+
+一个典型的 `requirements.txt` 文件看起来是这样的：
+
+```text
+# requirements.txt
+pandas==2.0.3
+scikit-learn==1.3.0
+numpy>=1.24.0,<1.26.0
+matplotlib==3.7.2
+```
+
+**关于 `requirements.txt` 的建议：**
+
+1. **锁定版本：** 使用 `==` 来指定精确版本（例如，`pandas==2.0.3`）。这能确保每次都安装相同的版本，防止因库更新而产生意外变化。
+2. **谨慎使用版本范围：** 尽管可以使用灵活的版本范围（例如，`numpy>=1.24.0,<1.26.0`），但如果在两次构建之间发布了符合范围的新补丁版本，这会带来一点可变性风险。为了机器学习 (machine learning)中的最高可复现性，通常更推荐锁定精确版本。
+3. **包含传递性依赖项：** 考虑在干净的本地虚拟环境中安装了主要依赖项后，使用类似 `pip freeze > requirements.txt` 的工具。这能捕获 *所有* 包的精确版本，包括那些间接安装的，从而确保环境的完整快照。
+
+要在 Dockerfile 中使用这个文件，你需要先将其 `COPY` 到镜像上下文 (context)，然后使用 `-r` 标志运行 `pip install`：
+
+```dockerfile
+# 示例：使用 requirements.txt
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# 首先只复制 requirements 文件
+COPY requirements.txt .
+
+# 安装依赖项
+RUN pip install -r requirements.txt
+
+# 现在复制其余的应用程序代码
+COPY . .
+
+# 定义如何运行应用程序（示例）
+# CMD ["python", "train.py"]
+```
+
+### 善用 Docker 构建缓存
+
+Docker 分层构建镜像。Dockerfile 中的每条指令（如 `COPY`、`RUN`、`WORKDIR`）都会创建一个新层。如果与某个层相关的文件或命令自上次构建以来没有改变，Docker 会重用该缓存层，而不是重新构建。这能显著加快构建时间。
+
+请注意上一个示例中的顺序：
+
+1. `COPY requirements.txt .`
+2. `RUN pip install -r requirements.txt`
+3. `COPY . .`
+
+这种结构是有意为之的，它优化了缓存。安装依赖项（`pip install`）通常很耗时。通过*只*复制 `requirements.txt` 文件，并在复制其余应用程序代码*之前*安装依赖项，我们能确保只有当 `requirements.txt` 文件本身发生变化时，依赖项安装层才会被重新构建。频繁修改源代码（`COPY . .`）只会使从那一点开始的缓存失效，从而重用可能很大且构建速度较慢的依赖项层。
+
+如果你先复制了所有代码（`COPY . .`），然后运行 `pip install -r requirements.txt`，那么项目中*任何*文件的*任何*更改都会导致 Docker 重新运行耗时的 `pip install` 步骤，从而抵消了依赖项构建缓存的优势。
+
+### 使用 `--no-cache-dir` 减小镜像大小
+
+`pip` 安装包时，通常会缓存下载的 wheel 文件以供后续使用。虽然在本地有用，但这种缓存在 Docker 镜像中通常没有必要，而且会增加其最终大小。你可以使用 `--no-cache-dir` 标志来阻止这种缓存：
+
+```dockerfile
+# 示例：使用 --no-cache-dir
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+# 安装依赖项，不缓存下载文件
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# CMD ["python", "your_script.py"]
+```
+
+使用 `--no-cache-dir` 是创建更小生产镜像的常见做法，因为一旦镜像构建完成，中间缓存就不太可能被用到。
+
+通过结合 `requirements.txt` 来定义依赖项，仔细编排 `COPY` 和 `RUN` 指令以优化缓存，以及使用 `--no-cache-dir` 等标志来减小大小，你可以在 Dockerfile 中有效管理 Python 依赖项，为你的机器学习 (machine learning)项目创建精简、可复现且高效的环境。
+
+## 参考资料
+
+- [pip documentation](https://pip.pypa.io/) — The pip developers (2024)
+  pip的官方文档，涵盖安装、使用`requirements.txt`进行包管理以及`--no-cache-dir`等命令行选项。
+- [Best practices for writing Dockerfiles](https://docs.docker.com/develop/develop-images/dockerfile_bestpractices/) — Docker (2024)
+  提供创建高效且可维护Dockerfile的指南，包括优化构建缓存和减小镜像大小的策略。
+- [Python Packaging User Guide](https://packaging.python.org/en/latest/) — The Python Packaging Authority (2024)
+  Python项目打包和分发的权威指南，包括依赖管理和虚拟环境。
+- [Docker in Action](https://www.manning.com/books/docker-in-action-second-edition) — Jeff Nickoloff and Stephen Kuenzli (2019)
+  Publisher: Manning Publications
+  提供实用的Docker指南，涵盖Dockerfile构建、镜像优化和容器管理，对于构建稳健的机器学习环境很有帮助。

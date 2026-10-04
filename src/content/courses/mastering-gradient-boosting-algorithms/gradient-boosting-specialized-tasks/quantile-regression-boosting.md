@@ -1,0 +1,168 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "gradient-boosting-specialized-tasks"
+lesson: "quantile-regression-boosting"
+sourceId: 2074
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-9-gradient-boosting-specialized-tasks/quantile-regression-boosting"
+title: "使用梯度提升进行分位数回归"
+description: "使用梯度提升估计条件分位数。"
+order: 5
+plots: ["plots/2074-0.json", "plots/2074-1.json"]
+sourceHash: "34565b7dda6371164e1cbd72aca22e5ab0761692916ebf0dc276cb0b686ecdc9"
+sourceCorrections: []
+---
+
+标准回归方法，包括配置用于均值预测的梯度提升（例如，使用平方误差损失），侧重于估计目标变量的条件均值$E[Y|X]$。尽管有用，但这只提供了特征与目标之间关系的部分情况。理解目标的整个条件分布，或其特定部分（如尾部），在许多应用中更为重要。例如，在风险管理中，预测潜在损失的第95个百分位数比预测平均损失提供的信息更多。同样，在资源规划中，了解可能结果的范围（例如，第10个到第90个百分位数）有助于做出更明智的决定。
+
+分位数回归使我们能够对目标变量的条件分位数进行建模。我们不仅可以预测分布的中心，还可以预测数据中特定比例点位于其下方的点。例如，0.5分位数对应于中位数，0.25分位数对应于第一四分位数，0.9分位数对应于第90个百分位数。
+
+梯度提升框架可以有效地调整用于分位数回归，通过使用特定的损失函数 (loss function)：**分位数损失**，通常称为**弹子损失**。
+
+### 分位数损失函数 (loss function)
+
+对于给定的分位数水平 $\alpha \in (0, 1)$，分位数损失函数定义为：
+
+
+$$
+L_{\alpha}(y, \hat{y}) =
+\begin{cases}
+\alpha (y - \hat{y}) & \text{如果 } y - \hat{y} > 0 \\
+(1 - \alpha) (\hat{y} - y) & \text{如果 } y - \hat{y} \leq 0
+\end{cases}
+$$
+
+
+这里，$y$ 是真实值，$\hat{y}$ 是预测值。这个损失函数不对称地惩罚误差。
+
+- 如果预测值 $\hat{y}$ 低于真实值 $y$（低估，$y - \hat{y} > 0$），则损失为 $\alpha |y - \hat{y}|$。
+- 如果预测值 $\hat{y}$ 高于或等于真实值 $y$（高估，$y - \hat{y} \leq 0$），则损失为 $(1 - \alpha) |y - \hat{y}|$。
+
+当 $\alpha = 0.5$（中位数）时，惩罚为 $\frac{1}{2}|y - \hat{y}|$，这等同于最小化平均绝对误差（MAE），使中位数回归对异常值具有较强抵抗力。对于 $\alpha = 0.9$，低估会比高估受到更重的惩罚（权重 (weight)为0.9），这促使模型预测更高的值。相反，对于 $\alpha = 0.1$，高估会比低估受到更多的惩罚（权重为0.9）。
+
+
+
+![不同alpha值下的分位数（弹子）损失函数](plots/2074-0.json)
+
+
+
+> 弹子损失函数根据所选分位数 $\alpha$ 不对称地惩罚误差。对于 $\alpha=0.5$，它是对称的（缩放后的MAE）。对于 $\alpha=0.9$，低估会产生更大的惩罚。对于 $\alpha=0.1$，高估会产生更大的惩罚。
+
+### 梯度提升在分位数损失中的应用
+
+梯度提升的核心机制是顺序添加弱学习器（通常是树），这些学习器预测损失函数 (loss function)相对于前一次迭代预测值的负梯度（伪残差）。为了进行分位数回归，我们只需使用分位数损失 $L_{\alpha}$，而不是例如平方误差损失。
+
+分位数损失相对于预测值 $\hat{y}$ 的负梯度为：
+
+
+$$
+-\frac{\partial L_{\alpha}(y, \hat{y})}{\partial \hat{y}} =
+\begin{cases}
+\alpha & \text{如果 } y - \hat{y} > 0 \\
+-(1 - \alpha) & \text{如果 } y - \hat{y} \leq 0
+\end{cases}
+$$
+
+
+在每次提升迭代 $m$ 中，新的树 $h_m(x)$ 被训练以预测使用当前集成预测 $F_{m-1}(x)$ 计算的这些伪残差：
+
+
+$$
+r_{im} = - \left[ \frac{\partial L_{\alpha}(y_i, F(x_i))}{\partial F(x_i)} \right]_{F(x_i) = F_{m-1}(x_i)} =
+\begin{cases}
+\alpha & \text{如果 } y_i > F_{m-1}(x_i) \\
+-(1 - \alpha) & \text{如果 } y_i \leq F_{m-1}(x_i)
+\end{cases}
+$$
+
+
+请注意，伪残差是常数值（$\alpha$ 或 $-(1-\alpha)$），仅取决于误差 $y_i - F_{m-1}(x_i)$ 的符号。树在由分割定义的区域内拟合这些常数值，以划分数据，使未来的预测与所需的分位数对齐 (alignment)。
+
+### 在提升算法库中的实现
+
+主要的梯度提升算法库提供对分位数回归的内置支持。
+
+- **Scikit-learn：** `GradientBoostingRegressor` 通过将 `loss` 参数 (parameter)设置为 `'quantile'` 并通过 `alpha` 参数指定所需分位数来提供分位数损失。
+
+  ```python
+  from sklearn.ensemble import GradientBoostingRegressor
+
+  # 第90个百分位数的模型
+  gbr_q90 = GradientBoostingRegressor(loss='quantile', alpha=0.90, n_estimators=100)
+  # 第10个百分位数的模型
+  gbr_q10 = GradientBoostingRegressor(loss='quantile', alpha=0.10, n_estimators=100)
+  # 中位数（第50个百分位数）的模型
+  gbr_median = GradientBoostingRegressor(loss='quantile', alpha=0.50, n_estimators=100)
+
+  # gbr_q90.fit(X_train, y_train)
+  # gbr_q10.fit(X_train, y_train)
+  # gbr_median.fit(X_train, y_train)
+
+  # y_pred_q90 = gbr_q90.predict(X_test)
+  # y_pred_q10 = gbr_q10.predict(X_test)
+  # y_pred_median = gbr_median.predict(X_test)
+  ```
+- **LightGBM：** `LGBMRegressor` 通过将 `objective` 参数设置为 `'quantile'` 并指定 `alpha` 参数来支持分位数回归。
+
+  ```python
+  import lightgbm as lgb
+
+  # 第75个百分位数的模型
+  lgbm_q75 = lgb.LGBMRegressor(objective='quantile', alpha=0.75, n_estimators=100)
+  # lgbm_q75.fit(X_train, y_train)
+  # y_pred_q75 = lgbm_q75.predict(X_test)
+  ```
+- **XGBoost：** XGBoost 也支持分位数回归，通过将 `objective` 参数设置为 `'reg:quantileerror'`。然而，截至最近版本，XGBoost 主要在内部使用近似方法优化此目标，或者可能需要自定义目标函数来实现精确的分位数损失，特别是与LightGBM和Scikit-learn的直接支持相比。请查阅特定版本文档以获取最新方法。一种常见的方法是将分位数损失及其梯度（XGBoost 的一阶和二阶导数，即 Hessian 矩阵）作为自定义目标函数来实现。
+- **CatBoost：** CatBoost 支持分位数回归，通过将 `loss_function` 参数设置为 `'Quantile:alpha=...'`，例如 `'Quantile:alpha=0.8'`。
+
+  ```python
+  from catboost import CatBoostRegressor
+
+  # 第20个百分位数的模型
+  cat_q20 = CatBoostRegressor(loss_function='Quantile:alpha=0.2', iterations=100)
+  # cat_q20.fit(X_train, y_train)
+  # y_pred_q20 = cat_q20.predict(X_test)
+  ```
+
+**重要提示：** 为了预测多个分位数（例如，第10个、第50个和第90个百分位数），通常需要为每个所需分位数 $\alpha$ 训练一个独立的梯度提升模型。每个模型都最小化相应的分位数损失函数 (loss function)。
+
+### 示例：预测区间
+
+设想预测电力需求。尽管预测平均需求有用，但预测第10个和第90个百分位数可提供一个操作范围，帮助电网运营商为低需求和高需求情况做准备。
+
+
+
+![预测分位数与实际数据对比](plots/2074-1.json)
+
+
+
+> 示例显示了实际数据点以及为第10个百分位数（Q10）、中位数（Q50）和第90个百分位数（Q90）训练的三个独立梯度提升模型的预测结果。Q10和Q90之间的区间提供了80%的预测区间。
+
+### 优点与注意事项
+
+**优点：**
+
+- **分布情况：** 提供对条件分布更全面的认识。
+- **鲁棒性：** 中位数回归（$\alpha=0.5$）对目标变量中的异常值不那么敏感，类似于MAE。其他分位数对极端值的敏感度也可能低于基于平方误差的均值回归。
+- **灵活性：** 使用梯度提升（处理复杂的相互关系、特征重要性等）进行分位数估计。
+
+**注意事项：**
+
+- **多个模型：** 预测 $k$ 个不同分位数通常需要训练 $k$ 个独立的模型，这会增加计算成本和模型管理难度。
+- **分位数交叉：** 独立训练的模型预测出的分位数可能会交叉（例如，在某些实例中，预测的第90个百分位数可能低于预测的第80个百分位数）。尽管通常是小问题，但这在理论上是不一致的。存在解决此问题的方法，但会增加复杂性。
+- **调优：** 针对不同分位数的目标模型，超参数 (parameter) (hyperparameter)（学习率、树深度等）可能需要单独调优，因为最佳设置可能有所不同。
+
+总而言之，梯度提升通过最小化分位数（弹子）损失函数 (loss function)，为分位数回归提供了一种强大且灵活的方法。这扩展了这些算法的应用范围，适用于那些预测区间或条件分布特定部分的理解很重要的场景。通过为不同的 $\alpha$ 值训练独立的模型，您可以利用提升算法的优点来构建详细的分布预测。
+
+## 参考资料
+
+- [Regression Quantiles](http://links.jstor.org/sici?sici=0012-9682%28197801%2946%3A1%3C33%3ARQ%3E2.0.CO%3B2-J) — Roger Koenker and Gilbert Bassett Jr. (1978)
+  Journal: Econometrica: Journal of the Econometric Society; Publisher: The Econometric Society; Volume: 46; Pages: 33-50; DOI: [10.2307/1913643](https://doi.org/10.2307/1913643)
+  介绍分位数回归概念的原始论文，为条件分位数建模奠定了理论基础。
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://projecteuclid.org/journals/annals-of-statistics/volume-29/issue-5/Greedy-function-approximation-A-gradient-boosting-machine/10.1214/aos/1013203451.full) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  关于梯度提升机（GBM）的基础论文，详细阐述了最小化任意可微分损失函数的通用算法，这对于将GBM应用于分位数回归至关重要。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://hastie.su.domains/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  权威统计学习教材，包含梯度提升和多种损失函数的全面讨论，为分位数回归提供了背景。
+- [sklearn.ensemble.GradientBoostingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html) — Scikit-learn developers (2024)
+  Scikit-learn中GradientBoostingRegressor的官方文档，详细说明了'quantile'损失选项以用于实际实现。

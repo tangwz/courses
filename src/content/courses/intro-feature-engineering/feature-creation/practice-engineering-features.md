@@ -1,0 +1,274 @@
+---
+course: "intro-feature-engineering"
+chapter: "feature-creation"
+lesson: "practice-engineering-features"
+sourceId: 1389
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-5-feature-creation/practice-engineering-features"
+title: "动手实践：构建新特征"
+description: "使用 Pandas 和 Scikit-learn 构建交互特征、多项式特征和基于日期的特征。"
+order: 8
+plots: []
+sourceHash: "6d0d5f47345edba0d3f81849455708171e190816459a106fb360460dde93b006"
+sourceCorrections: []
+---
+
+要真正理解特征工程，实际应用非常重要。特征构建方法使用 Python、Pandas 和 Scikit-learn 实现。一个小型、有代表性的数据集演示交互特征、多项式特征、日期/时间信息提取和分箱。
+
+首先，让我们设置环境并创建一个示例 DataFrame。假设我们有一些关于在线订单的数据。
+
+```python
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import PolynomialFeatures, KBinsDiscretizer
+
+# 模拟在线订单的示例数据
+data = {
+    'OrderID': range(1, 11),
+    'OrderDate': pd.to_datetime(['2023-01-15 08:30', '2023-01-16 14:00', '2023-02-10 09:15',
+                              '2023-02-25 18:45', '2023-03-05 11:00', '2023-03-12 22:30',
+                              '2023-04-01 07:00', '2023-04-22 16:20', '2023-05-18 10:00',
+                              '2023-05-30 19:55']),
+    'ProductCategory': ['Electronics', 'Clothing', 'Groceries', 'Electronics', 'Books',
+                        'Clothing', 'Groceries', 'Books', 'Electronics', 'Clothing'],
+    'Quantity': [1, 2, 5, 1, 3, 1, 10, 2, 1, 4],
+    'UnitPrice': [1200, 50, 5, 800, 20, 75, 3, 15, 1500, 60],
+    'CustomerID': [101, 102, 103, 101, 104, 105, 103, 104, 101, 102]
+}
+df = pd.DataFrame(data)
+
+# 一个常见的首要步骤：创建“TotalPrice”特征
+df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
+
+print("包含 TotalPrice 的原始 DataFrame:")
+print(df.head())
+```
+
+我们最初的 DataFrame 如下所示（显示前 5 行）：
+
+```
+   OrderID           OrderDate ProductCategory  Quantity  UnitPrice  CustomerID  TotalPrice
+0        1 2023-01-15 08:30:00   Electronics         1       1200         101        1200
+1        2 2023-01-16 14:00:00      Clothing         2         50         102         100
+2        3 2023-02-10 09:15:00     Groceries         5          5         103          25
+3        4 2023-02-25 18:45:00   Electronics         1        800         101         800
+4        5 2023-03-05 11:00:00         Books         3         20         104          60
+```
+
+现在，让我们构建一些新特征。
+
+### 创建交互特征
+
+交互特征反映了两个或多个特征的组合作用。例如，`Quantity` 和 `UnitPrice` 的组合（我们已经计算为 `TotalPrice`）是否与它们各自的效果有不同的影响？尽管简单的乘法（如我们的 `TotalPrice` 计算）是一种基本交互，但 Scikit-learn 的 `PolynomialFeatures` 提供了一种系统化的方式来生成这些特征，特别是当您需要多个特征之间的交互时。
+
+让我们为 `Quantity` 和 `UnitPrice` 生成交互项。我们将 `interaction_only=True` 设置为仅获取乘积项（$Quantity \times UnitPrice$）以及原始特征。我们将 `include_bias=False` 设置为省略常数项（一列全为 1 的数据）。
+
+```python
+# 选择用于交互的特征
+interaction_cols = ['Quantity', 'UnitPrice']
+poly_interactions = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+
+# 拟合并转换数据
+interaction_features = poly_interactions.fit_transform(df[interaction_cols])
+
+# 获取特征名称以便清晰表示
+interaction_feature_names = poly_interactions.get_feature_names_out(interaction_cols)
+
+# 使用这些特征创建新的 DataFrame
+df_interactions = pd.DataFrame(interaction_features, columns=interaction_feature_names, index=df.index)
+
+print("
+交互特征 (Quantity, UnitPrice):")
+print(df_interactions.head())
+```
+
+Output:
+
+```
+交互特征 (Quantity, UnitPrice):
+   Quantity  UnitPrice  Quantity UnitPrice
+0       1.0     1200.0           1200.0
+1       2.0       50.0            100.0
+2       5.0        5.0             25.0
+3       1.0      800.0            800.0
+4       3.0       20.0             60.0
+```
+
+如您所见，`PolynomialFeatures` 生成了原始特征（`Quantity`、`UnitPrice`）及其交互项（`Quantity UnitPrice`）。注意，该交互项正是我们手动计算的 `TotalPrice`。当您有许多特征并希望系统地考察成对（或更高阶）的交互作用时，此工具会变得更具效用。
+
+### 生成多项式特征
+
+有时，特征与目标之间的关系并非线性。多项式特征使得模型能够捕捉曲线关系。让我们为 `Quantity` 和 `UnitPrice` 生成 2 次多项式特征。这将包含原始特征、它们的交互项以及它们的平方项（$Quantity^2$、$UnitPrice^2$）。
+
+```python
+# 选择用于多项式扩展的特征
+poly_cols = ['Quantity', 'UnitPrice']
+poly_expander = PolynomialFeatures(degree=2, include_bias=False)
+
+# 拟合并转换
+polynomial_features = poly_expander.fit_transform(df[poly_cols])
+
+# 获取特征名称
+polynomial_feature_names = poly_expander.get_feature_names_out(poly_cols)
+
+# 创建 DataFrame
+df_polynomial = pd.DataFrame(polynomial_features, columns=polynomial_feature_names, index=df.index)
+
+print("
+多项式特征 (Quantity, UnitPrice 的 2 次多项式):")
+print(df_polynomial.head())
+```
+
+Output:
+
+```
+多项式特征 (Quantity, UnitPrice 的 2 次多项式):
+   Quantity  UnitPrice  Quantity^2  Quantity UnitPrice  UnitPrice^2
+0       1.0     1200.0         1.0           1200.0    1440000.0
+1       2.0       50.0         4.0            100.0       2500.0
+2       5.0        5.0        25.0             25.0         25.0
+3       1.0      800.0         1.0            800.0     640000.0
+4       3.0       20.0         9.0             60.0        400.0
+```
+
+现在我们有了 `Quantity`、`UnitPrice`、$Quantity^2$、$Quantity \times UnitPrice$ 和 $UnitPrice^2$。这些新特征可以帮助线性模型拟合非线性关系。然而，请注意，更高次的特征可能导致大量特征和潜在的过拟合 (overfitting)。
+
+### 从日期/时间数据中提取特征
+
+日期和时间信息通常包含与趋势、季节性或特定事件相关的有价值的模式。Pandas 为日期时间列提供了方便的 `.dt` 访问器。让我们从 `OrderDate` 列中提取各种组成部分。
+
+```python
+# 确保 OrderDate 是 datetime 类型（已在设置中完成）
+# df['OrderDate'] = pd.to_datetime(df['OrderDate'])
+
+# 提取组成部分
+df['OrderYear'] = df['OrderDate'].dt.year
+df['OrderMonth'] = df['OrderDate'].dt.month
+df['OrderDay'] = df['OrderDate'].dt.day
+df['OrderDayOfWeek'] = df['OrderDate'].dt.dayofweek # 星期一=0, 星期日=6
+df['OrderHour'] = df['OrderDate'].dt.hour
+df['OrderIsWeekend'] = df['OrderDayOfWeek'].isin([5, 6]).astype(int) # 星期六或星期日
+
+print("
+包含提取日期/时间特征的 DataFrame:")
+# 显示相关列
+print(df[['OrderDate', 'OrderYear', 'OrderMonth', 'OrderDay', 'OrderDayOfWeek', 'OrderHour', 'OrderIsWeekend']].head())
+```
+
+Output:
+
+```
+包含提取日期/时间特征的 DataFrame:
+            OrderDate  OrderYear  OrderMonth  OrderDay  OrderDayOfWeek  OrderHour  OrderIsWeekend
+0 2023-01-15 08:30:00       2023           1        15               6          8               1
+1 2023-01-16 14:00:00       2023           1        16               0         14               0
+2 2023-02-10 09:15:00       2023           2        10               4          9               0
+3 2023-02-25 18:45:00       2023           2        25               5         18               1
+4 2023-03-05 11:00:00       2023           3         5               6         11               1
+```
+
+这些新特征（年份、月份、日期、星期几、小时、是否周末）现在是数值型的，可以显示出诸如“周末销量更高”或“第四季度电子产品购买量更大”等模式。
+
+### 数值特征分箱
+
+分箱（或离散化）通过将数值分组到区间（箱）中，将连续数值特征转换为分类特征。这有时可以通过捕捉非线性效应或简化关系来帮助模型。
+
+让我们使用 `pd.cut` 将 `UnitPrice` 特征分箱为“低”、“中”和“高”等价格范围类别。这会根据数值范围创建等宽的箱。
+
+```python
+# 使用 pd.cut 对 UnitPrice 进行分箱（等宽分箱）
+price_bins = [0, 100, 1000, df['UnitPrice'].max()] # 定义箱的边界
+price_labels = ['Low', 'Medium', 'High']           # 定义箱的标签
+df['PriceCategory_Cut'] = pd.cut(df['UnitPrice'], bins=price_bins, labels=price_labels, right=True, include_lowest=True)
+
+print("
+包含分箱 UnitPrice 的 DataFrame (pd.cut):")
+print(df[['UnitPrice', 'PriceCategory_Cut']].head())
+```
+
+Output:
+
+```
+包含分箱 UnitPrice 的 DataFrame (pd.cut):
+   UnitPrice PriceCategory_Cut
+0       1200              High
+1         50               Low
+2          5               Low
+3        800            Medium
+4         20               Low
+```
+
+此外，我们可以使用 `pd.qcut` 根据分位数（等频）创建箱。这确保了每个箱中大致有相同数量的观测值。让我们将 `Quantity` 分为 3 个分位数箱。
+
+```python
+# 使用 pd.qcut 对 Quantity 进行分箱（基于分位数的分箱）
+quantity_labels = ['Low Qty', 'Medium Qty', 'High Qty']
+df['QuantityCategory_QCut'] = pd.qcut(df['Quantity'], q=3, labels=quantity_labels, duplicates='drop')
+
+print("
+包含分箱 Quantity 的 DataFrame (pd.qcut):")
+print(df[['Quantity', 'QuantityCategory_QCut']].head())
+```
+
+Output:
+
+```
+包含分箱 Quantity 的 DataFrame (pd.qcut):
+   Quantity QuantityCategory_QCut
+0         1               Low Qty
+1         2            Medium Qty
+2         5             High Qty
+3         1               Low Qty
+4         3            Medium Qty
+```
+
+请记住，这些分箱后的特征现在是分类型的。在将它们输入到大多数机器学习 (machine learning)模型之前，您通常需要对其进行编码（例如，使用独热编码或有序编码，这些在第 3 章中已讲过）。
+
+为了集成到 Scikit-learn 流水线中，`KBinsDiscretizer` 提供了与 `pd.cut` 和 `pd.qcut` 类似的功能，但它在 Scikit-learn 的转换器 API 内。
+
+```python
+# 使用 KBinsDiscretizer 的示例（流水线的替代方案）
+# from sklearn.preprocessing import KBinsDiscretizer
+# kbins = KBinsDiscretizer(n_bins=3, encode='ordinal', strategy='uniform') # 'uniform' 类似于 cut, 'quantile' 类似于 qcut
+# df['PriceCategory_KBins'] = kbins.fit_transform(df[['UnitPrice']])
+# print("
+包含分箱 UnitPrice 的 DataFrame (KBinsDiscretizer):")
+# print(df[['UnitPrice', 'PriceCategory_KBins']].head())
+```
+
+### 整合新特征
+
+创建这些特征后，您通常会希望将它们组合到一个 DataFrame 中进行模型训练。您可以使用 `pd.concat` 实现这一点，或者像我们处理日期/时间特征和分箱特征那样，直接赋值新列。对于由 Scikit-learn 转换器（如 `PolynomialFeatures`）生成的特征，您通常会将生成的 NumPy 数组或 DataFrames 与原始数据连接起来（确保索引对齐 (alignment)）。
+
+现在我们的 DataFrame 包含了日期/时间特征和分箱特征：
+
+```python
+print("
+包含选定构建特征的最终 DataFrame:")
+print(df.head())
+```
+
+Output:
+
+```bash
+包含选定构建特征的最终 DataFrame:
+   OrderID           OrderDate ProductCategory  Quantity  UnitPrice  CustomerID  TotalPrice  OrderYear  OrderMonth  OrderDay  OrderDayOfWeek  OrderHour  OrderIsWeekend PriceCategory_Cut QuantityCategory_QCut
+0        1 2023-01-15 08:30:00   Electronics         1       1200         101        1200       2023           1        15               6          8               1              High               Low Qty
+1        2 2023-01-16 14:00:00      Clothing         2         50         102         100       2023           1        16               0         14               0               Low            Medium Qty
+2        3 2023-02-10 09:15:00     Groceries         5          5         103          25       2023           2        10               4          9               0               Low             High Qty
+3        4 2023-02-25 18:45:00   Electronics         1        800         101         800       2023           2        25               5         18               1            Medium               Low Qty
+4        5 2023-03-05 11:00:00         Books         3         20         104          60       2023           3         5               6         11               1               Low            Medium Qty
+```
+
+这个实践练习演示了如何使用 Pandas 和 Scikit-learn 将交互特征、多项式特征、日期/时间提取和分箱的理念转换为具体的代码。请记住，特征构建通常是迭代的。您可以尝试创建多个特征，评估它们对模型的影响（使用特征选择中讨论的技术），并根据结果和您对问题域的理解来改进您的特征集。
+
+## 参考资料
+
+- [Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists](https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/) — Alice Zheng and Amanda Casari (2018)
+  Publisher: O'Reilly Media
+  全面介绍了特征工程方法，包括交互项、多项式特征和日期/时间特征。
+- [sklearn.preprocessing.PolynomialFeatures](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PolynomialFeatures.html) — Scikit-learn Developers (2024)
+  Scikit-learn中生成多项式和交互特征的官方文档。
+- [Datetime properties (.dt)](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.dt.html) — Wes McKinney and the pandas development team (2024)
+  使用pandas的`.dt`访问器提取日期和时间组件的官方文档。
+- [sklearn.preprocessing.KBinsDiscretizer](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.KBinsDiscretizer.html) — Scikit-learn Developers (2024)
+  Scikit-learn中将连续特征离散化为分箱的官方文档。

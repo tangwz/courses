@@ -1,0 +1,143 @@
+---
+course: "llm-compression-acceleration"
+chapter: "knowledge-distillation-large-models"
+lesson: "distillation-objectives"
+sourceId: 4362
+sourceUrl: "https://apxml.com/zh/courses/llm-compression-acceleration/chapter-4-knowledge-distillation-large-models/distillation-objectives"
+title: "蒸馏目标"
+description: "研究不同蒸馏目标：软标签、中间表示、注意力转移、对比学习。"
+order: 2
+plots: []
+sourceHash: "5c559c3f51406428522e305fe884335be629ab4b3e91f3db8a511b9133c8a46e"
+sourceCorrections: []
+---
+
+知识蒸馏 (knowledge distillation)（KD）的主要问题在于准确界定要从教师模型传递给学生模型的是*何种*知识，以及*如何*衡量这种传递的成效。实现此目的的机制是**蒸馏目标**或损失函数 (loss function)。它量化 (quantization)了教师模型行为与学生模型行为之间的差异，以此引导学生模型的训练过程。尽管最初的KD方法主要侧重于匹配输出分布，但目前已发展出多种复杂的训练目标，以获取教师模型中包含的更丰富的信息。
+
+### 软目标：匹配输出分布
+
+最基本的KD目标由Hinton等人（2015）提出，它包含训练学生模型去模仿教师模型在类别或标记 (token)上的输出概率分布。简单匹配最终预测（硬标签）是不够的，因为教师模型的分布通常包含关于类别关系或标记可能性的细微信息——这些信息在转换为单一硬预测时就会丢失。
+
+为提取这些更丰富的信息，在应用于logits（即最终激活前的原始、未归一化 (normalization)输出）的softmax函数中引入了一个温度缩放参数 (parameter)$T$。
+
+
+$$
+\sigma(z_i, T) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
+$$
+
+
+这里，$z_i$ 是类别或标记$i$的logit。较高的温度（$T > 1$）会使概率分布更平滑，使得概率值彼此靠近，从而显示出教师模型分配给不同输出的相对相似性。当温度$T=1$时，则恢复为标准softmax。
+
+蒸馏损失$L_{KD}$通常是学生模型的平滑预测（$p_S = \sigma(z_S, T)$）与教师模型的平滑预测（$p_T = \sigma(z_T, T)$）之间的Kullback-Leibler（KL）散度：
+
+
+$$
+L_{KD} = T^2 \cdot D_{KL}(p_S || p_T) = T^2 \sum_i p_T(i) \log \frac{p_T(i)}{p_S(i)}
+$$
+
+
+$T^2$缩放因子很重要。因为平滑目标产生的梯度相对于硬目标产生的梯度按$1/T^2$缩放，所以将KD损失乘以$T^2$可以确保即使温度$T$发生变化，KD损失在训练期间的相对贡献也大致保持不变。
+
+这个目标鼓励学生模型不仅要预测正确的输出，还要理解教师模型*为何*这样预测，从而习得输出之间的关系。在实践中，这个$L_{KD}$通常与针对真实硬标签的标准监督损失（例如交叉熵$L_{CE}$）相结合，使用加权因子$\alpha$：
+
+
+$$
+L_{Total} = \alpha L_{CE}(y_{true}, \sigma(z_S, T=1)) + (1 - \alpha) L_{KD}(\sigma(z_S, T), \sigma(z_T, T))
+$$
+
+
+这确保了学生模型在从教师模型的软目标中受益的同时，仍能学习匹配真实标签。选择最佳温度$T$和权重 (weight)$\alpha$通常需要经验调整。
+
+### 中间表示匹配
+
+尽管匹配输出分布是有效的，但知识并非仅包含在最终层中。像LLM这样的深度网络的中间层会学习分层表示，这些表示捕获了语法、语义和上下文 (context)信息。蒸馏这种中间知识可以为学生模型提供更强的指导。
+
+这里的目标是最小化教师模型（$h_T^l$）和学生模型（$h_S^l$）中选定中间层的隐藏状态或激活之间的差异。为此常用的损失函数 (loss function)包含：
+
+- **均方误差（MSE）：** 直接最小化欧几里得距离。
+  
+  $$
+  L_{Intermediate}^{MSE} = \sum_{l \in L_{match}} || f_S(h_S^l) - f_T(h_T^l) ||_2^2
+  $$
+  
+- **余弦相似度损失：** 最大化余弦相似度，侧重于表示向量 (vector)之间的角度而非其大小。在大小可能显著不同时很有用。
+  
+  $$
+  L_{Intermediate}^{Cosine} = \sum_{l \in L_{match}} (1 - \cos(f_S(h_S^l), f_T(h_T^l)))
+  $$
+  
+
+这里，$L_{match}$是用于匹配的层索引集。函数$f_S$和$f_T$表示可选的转换层（例如线性投影），用于在学生模型和教师模型的层具有不同隐藏大小时对齐 (alignment)维度。
+
+中间匹配的考量包含：
+
+- **层选择：** 哪些层包含最有价值的可传递信息？早期层可能捕获基本特征，而更深的层则捕获更抽象的内容。匹配多个层是常见的做法。
+- **架构不匹配：** 如果学生模型的层数少于教师模型，则需要策略来将教师模型层映射到学生模型层（例如，将学生模型的最后一层与教师模型的最后一层匹配，或使用学习到的投影）。
+- **计算成本：** 计算这些损失会增加训练过程的开销，尤其是在匹配大型激活张量时。
+
+### 注意力转移
+
+对于基于Transformer的LLM，自注意力 (self-attention)机制 (attention mechanism)是一个界定性组件。注意力图表示了不同位置标记 (token)之间的加权关系，其编码了重要的结构和上下文 (context)信息。转移这种注意力知识可以帮助学生模型学习相似的关系模式。
+
+注意力转移（AT）目标最小化相应层中的注意力图（$A_T^l, A_S^l$）之间的差异：
+
+
+$$
+L_{Attention} = \sum_{l \in L_{match}} \frac{1}{N_h} \sum_{h=1}^{N_h} || A_{S,h}^l - A_{T,h}^l ||_F^2
+$$
+
+
+其中$N_h$是注意力头的数量，$|| \cdot ||_F^2$表示层$l$中头$h$的注意力矩阵之差的平方Frobenius范数（平方元素之和）。
+
+挑战包含：
+
+- **头部映射：** 如果学生模型和教师模型的注意力头数量不同，则需要映射策略（例如，平均教师模型的头部，使用学习到的投影）。
+- **计算开销：** 存储和比较注意力图会增加内存和计算需求。
+- **解释性：** 尽管注意力模式提供了信息，但与匹配隐藏状态相比，直接强制学生模型匹配这些模式可能过于严格。
+
+### 对比学习目标
+
+对比目标侧重于学习相似性和非相似性，而非直接逐元素（如MSE）或逐角度（如余弦）匹配表示。对比表示蒸馏（CRD）旨在训练学生模型，使其为相同输入（正例对）生成的表示接近教师模型的表示，但远离不同输入（负例对）的教师模型表示。
+
+总的来说，该损失鼓励$sim(z_S, z_T)$对于相同输入较高，而$sim(z_S, z_{T,neg})$应较低，其中$z_{T,neg}$是批次中或记忆库中其他输入的教师模型表示。典型的损失函数 (loss function)如InfoNCE可以被调整：
+
+
+$$
+L_{Contrastive} \propto -\log \frac{\exp(sim(f_S(h_S), f_T(h_T))/\tau)}{\sum_{h_{T,neg}} \exp(sim(f_S(h_S), f_T(h_{T,neg}))/\tau)}
+$$
+
+
+这里，$sim$是一个相似性函数（例如点积或余弦相似度），$\tau$是一个温度参数 (parameter)，用于控制负样本分布的锐度，求和是针对负教师模型表示进行的。$f_S$和$f_T$再次是可能的投影头部。
+
+对比目标在学习教师模型表示空间的潜在结构方面可以很强大，无需严格的逐元素对齐 (alignment)，这可能为学生模型提供更大的灵活性。
+
+### 组合蒸馏目标
+
+通常，最有效的蒸馏策略包含组合多个目标。不同的目标捕获了教师模型知识的互补方面。例如，可以将软目标匹配与中间特征匹配和注意力转移相结合：
+
+
+$$
+L_{Total} = \lambda_{KD} L_{KD} + \lambda_{Inter} L_{Intermediate} + \lambda_{Attn} L_{Attention} + \dots
+$$
+
+
+超参数 (parameter) (hyperparameter)$\lambda_i$控制每个目标的相对重要性。选择正确的组合并调整这些权重 (weight)是设计成功蒸馏流程的核心部分，通常需要根据具体任务、教师-学生模型架构配对和性能指标进行大量实验。
+
+> 教师模型和学生模型之间的知识传递点，显示了常见的蒸馏目标：匹配输出logits（$L_{KD}$）、中间隐藏状态（$L_{Intermediate}$）和注意力图（$L_{Attention}$）。
+
+选择合适的单一目标或目标组合，很大程度上取决于教师模型和学生模型的具体特点、可用数据、计算预算以及学生模型大小、速度和保真度之间所需的权衡。
+
+## 参考资料
+
+- [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531) — Geoffrey Hinton, Oriol Vinyals, Jeff Dean (2015)
+  Journal: arXiv preprint arXiv:1503.02531; DOI: [10.48550/arXiv.1503.02531](https://doi.org/10.48550/arXiv.1503.02531)
+  介绍了使用软目标和温度缩放进行知识蒸馏的基本方法。
+- [FitNets: Hints for Thin Deep Nets](https://arxiv.org/abs/1412.6550) — Adriana Romero, Nicolas Ballas, Samira Ebrahimi Kahou, Antoine Chassang, Carlo Gatta, Yoshua Bengio (2014)
+  Journal: arXiv preprint arXiv:1412.6550; DOI: [10.48550/arXiv.1412.6550](https://doi.org/10.48550/arXiv.1412.6550)
+  提出了基于特征图的知识蒸馏方法，这是中间表示匹配的重要方法。
+- [Paying More Attention to Attention: Improving the Performance of Convolutional Neural Networks via Attention Transfer](https://arxiv.org/abs/1612.03928) — Sergey Zagoruyko, Nikos Komodakis (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1612.03928](https://doi.org/10.48550/arXiv.1612.03928)
+  详细介绍了通过匹配注意力图进行知识蒸馏的注意力转移机制。
+- [Similarity-Preserving Knowledge Distillation](https://doi.org/10.1109/ICCV.2019.00145) — Frederick Tung, Kofi Osei Koyejo (2019)
+  Journal: Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV); Publisher: IEEE; Pages: 1365-1374; DOI: [10.1109/ICCV.2019.00145](https://doi.org/10.1109/ICCV.2019.00145)
+  提出了对比表示蒸馏 (CRD)，这是一种基于对比学习的知识迁移目标。

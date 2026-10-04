@@ -1,0 +1,103 @@
+---
+course: "getting-started-with-kubernetes"
+chapter: "networking-in-kubernetes"
+lesson: "service-discovery-within-cluster"
+sourceId: 7320
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-kubernetes/chapter-4-networking-in-kubernetes/service-discovery-within-cluster"
+title: "集群内的服务发现"
+description: "了解应用程序如何使用 DNS 在集群内发现其他服务并与之通信。"
+order: 5
+plots: []
+sourceHash: "be669beb76595728d01347f5fa989b9867b635662d4767cdf345bc6c184e15c9"
+sourceCorrections: []
+---
+
+Kubernetes Service 为一组 Pod 分配稳定的 IP 地址和端口。Service 建立后，集群内的应用程序需要一种可靠的方式找到它。在应用程序代码中硬编码 Service 的 ClusterIP 并非长久之计，因为如果 Service 被删除并重建，这些 IP 可能会发生变化。Kubernetes 为此提供了一种内置机制：集群内部 DNS 系统。
+
+### 集群 DNS 的作用
+
+默认情况下，Kubernetes 集群配置有内部 DNS 服务。该服务通常由 CoreDNS 实现，它会自动为集群中创建的每个新 Service 创建 DNS 记录。应用程序的 Pod 被配置为使用此内部 DNS 服务器进行名称解析，从而使它们能够仅通过名称来定位其他服务。
+
+Service 的标准 DNS 记录遵循一个可预测的模式：
+
+`<service-name>.<namespace-name>.svc.cluster.local`
+
+- **`service-name`**: 您在配置清单中为 Service 指定的名称。
+- **`namespace-name`**: Service 所在的命名空间。
+- **`svc.cluster.local`**: 可配置的集群域名后缀。
+
+例如，在 `production` 命名空间中名为 `api-gateway` 的 Service，其全限定域名 (FQDN) 为 `api-gateway.production.svc.cluster.local`。当应用程序解析此名称时，集群 DNS 会返回该 Service 的 `ClusterIP`。
+
+该系统的一个显著优点是，运行在同一个命名空间中的应用程序只需使用短名称 `service-name`。例如，`production` 命名空间中的 Pod 只需连接到 `http://api-gateway` 即可访问网关。DNS 解析器会自动在本地命名空间内搜索，从而简化了应用程序配置。
+
+下图展示了这一过程。客户端 Pod 需要与后端服务通信。它不需要知道后端 Pod 的具体 IP 地址，而是对 Service 名称执行 DNS 查询。
+
+> 客户端 Pod 通过内部集群 DNS 解析 `my-backend` Service 名称以获取其 ClusterIP。发送到该 IP 的流量随后由 kube-proxy 自动负载均衡到其中一个健康的后端 Pod。
+
+### Pod 如何使用集群 DNS
+
+这种集成是自动处理的。当 Pod 被调度到节点上时，kubelet 会配置其容器网络。此设置的一部分包括修改容器的 `/etc/resolv.conf` 文件。该文件告知操作系统的网络栈将 DNS 查询发送到何处。
+
+Pod 内部典型的 `/etc/resolv.conf` 如下所示：
+
+```
+nameserver 10.96.0.10
+search my-namespace.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+```
+
+让我们来分析一下：
+
+- **`nameserver 10.96.0.10`**: 这是集群 DNS 服务本身的 `ClusterIP`。来自此 Pod 的所有 DNS 查询都将发送到此地址。
+- **`search ...`**: 这定义了 DNS 搜索路径。当您尝试解析像 `api-gateway` 这样的短名称时，系统会按顺序尝试附加这些域名，直到找到匹配项。这就是为什么来自 `my-namespace` 命名空间的 Pod 对 `api-gateway` 的查询能成功解析为 `api-gateway.my-namespace.svc.cluster.local`。
+
+您可以通过在 Pod 内部运行 shell 并检查该文件来亲自验证：
+
+```bash
+# 启动一个临时的 busybox pod 作为客户端使用
+$ kubectl run dns-test --image=busybox:1.28 --restart=Never -it -- rm
+
+# 进入 pod 的 shell 后，检查 resolv.conf
+/ # cat /etc/resolv.conf
+nameserver 10.96.0.10
+search default.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+
+# 使用 nslookup 解析相同命名空间中的 kubernetes 服务
+/ # nslookup kubernetes.default
+Server:    10.96.0.10
+Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local
+
+Name:      kubernetes.default
+Address 1: 10.96.0.1
+```
+
+### 环境变量：一种较旧的方法
+
+在基于 DNS 的方法成为标准之前，Kubernetes 使用环境变量进行服务发现。当创建一个新 Pod 时，kubelet 会为集群中*已经存在*的每个 Service 注入一组环境变量。
+
+对于名为 `my-api` 且暴露端口 `8080` 的 Service，新 Pod 将看到如下变量：
+
+```
+MY_API_SERVICE_HOST=10.101.45.12
+MY_API_SERVICE_PORT=8080
+MY_API_PORT=tcp://10.101.45.12:8080
+MY_API_PORT_8080_TCP=tcp://10.101.45.12:8080
+MY_API_PORT_8080_TCP_PROTO=tcp
+MY_API_PORT_8080_TCP_PORT=8080
+MY_API_PORT_8080_TCP_ADDR=10.101.45.12
+```
+
+这种方法存在明显的顺序依赖性：Service 必须在任何需要连接到它的客户端 Pod 之前创建。如果您先创建客户端 Pod，然后再创建 Service，则客户端 Pod 将不会收到环境变量，从而无法找到该 Service。
+
+由于这个限制，使用内部集群 DNS 是推荐的、且更具灵活性的服务发现方式。它允许您的组件按任何顺序创建并动态地相互发现。
+
+## 参考资料
+
+- [DNS for Services and Pods](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) — Kubernetes Authors (2024)
+  官方文档，详细介绍了 Kubernetes 的内置 DNS 服务，包括 FQDN 和 Pod resolv.conf 配置如何用于服务发现。
+- [Services](https://kubernetes.io/docs/concepts/services-networking/service/) — Kubernetes Authors (2024)
+  官方文档，提供了 Kubernetes Service 的基础知识，包括其类型及其在抽象 Pod 网络访问中的作用。
+- [Kubernetes Up & Running: Dive into the Future of Infrastructure](http://oreilly.com/catalog/errata.csp?isbn=9781492046530) — Brendan Burns, Joe Beda, Kelsey Hightower (2019)
+  Publisher: O'Reilly Media
+  一本关于 Kubernetes 架构的书籍，其中包括有关 DNS 等服务发现机制的章节。

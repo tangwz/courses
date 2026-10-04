@@ -1,0 +1,86 @@
+---
+course: "planning-optimizing-ai-infrastructure"
+chapter: "leveraging-cloud-platforms-for-ai"
+lesson: "object-storage-services-for-datasets"
+sourceId: 7000
+sourceUrl: "https://apxml.com/zh/courses/planning-optimizing-ai-infrastructure/chapter-3-leveraging-cloud-platforms-for-ai/object-storage-services-for-datasets"
+title: "用于数据集的对象存储服务"
+description: "运用亚马逊 S3、谷歌云存储和 Azure Blob 存储等云对象存储服务，实现可扩展和持久的数据集管理。"
+order: 5
+plots: ["plots/7000-0.json"]
+sourceHash: "e2cba5b6ad68be716994fa16628407bd77dc852b9fea027ca7a95c80c6c067b9"
+sourceCorrections: []
+---
+
+当您的计算实例准备好开始训练任务时，它们首先会问：“数据在哪里？”与存储可能是直接连接磁盘或网络文件共享的本地系统不同，云环境更倾向于解耦架构。这种架构的核心即对象存储，它是存放机器学习 (machine learning)所需海量数据集的标准、高扩展性方案。
+
+对象存储与您笔记本电脑上的分层文件系统（如 NTFS 或 ext4）根本不同。它不以嵌套目录的形式组织文件，而是将数据作为在平面地址空间中称为*对象*的独立单元进行管理。每个对象包含三部分：
+
+1. **数据本身：** 这可以是任何内容，从图像文件到视频片段、CSV 文件，或序列化模型成果。
+2. **元数据：** 一组描述性键值标签，说明数据。例如，`content-type: image/jpeg` 或 `source: sensor-123`。
+3. **唯一标识符：** 一个全局唯一地址，用于通过 API（通常使用 GET 和 PUT 等 HTTP 方法）在网络上获取对象。
+
+可以将其想象成您数据的代客泊车服务。您交出数据（汽车），作为回报，会得到一张唯一的凭证（对象 ID）。您无需知道数据的确切物理位置，只需知道 ID 即可按需获取。这种抽象使得极大的规模和持久性成为可能。
+
+> 一张图表，显示账户、存储桶以及存储桶内多个对象之间的关系。
+
+### 主要的云对象存储服务
+
+每个主要云服务商都提供一个核心对象存储服务，构成其数据和 AI 产品的核心支持：
+
+- **亚马逊网络服务 (AWS)：** 简单存储服务 (S3)
+- **谷歌云平台 (GCP)：** 云存储 (GCS)
+- **微软 Azure：** Blob 存储
+
+虽然它们的基本原理几乎相同，但术语略有不同。
+
+| 特性 | AWS S3 | Google Cloud Storage | Azure Blob Storage |
+| --- | --- | --- | --- |
+| 存储容器 | 存储桶 | 存储桶 | 容器 |
+| 数据单位 | 对象 | 对象 | Blob (块 Blob) |
+| 唯一性范围 | 全局 (针对存储桶) | 全局 (针对存储桶) | 账户 (针对容器) |
+| 主要 SDK 接口 | Boto3 | google-cloud-storage | azure-storage-blob |
+
+这些服务具备高持久性，通常会在区域内跨多个物理数据中心复制您的数据，以防止硬件故障。这提供了一定程度的数据安全，是本地部署难以且成本高昂实现的。
+
+### 通过存储分层优化成本
+
+云对象存储的一大优势是能够通过存储分层只为所需付费。并非所有数据都需要即时、频繁访问。您可以通过根据数据的访问模式选择合适的存储类别来大幅降低成本。
+
+典型存储分层的细分如下：
+
+- **标准（热）分层：** 适用于频繁访问的数据。它提供最低延迟，但存储成本最高。这是您在模型开发过程中需要反复读取的活跃训练和验证数据集的适合分层。
+- **不频繁访问（IA）分层：** 针对不常访问但需要时仍需快速访问的数据进行优化。其每 GB 存储价格低于标准分层，但包含少量数据取回费用。此分层适用于较旧的数据集、模型检查点或偶尔分析所需的数据。
+- **归档（冷）分层：** 用于以尽可能低的存储成本进行长期数据归档。从此分层取回数据不是即时的；可能需要几分钟到数小时。它非常适合备份原始源数据或满足长期数据保留要求。
+
+
+
+![存储分层权衡：成本与取回时间](plots/7000-0.json)
+
+
+
+> 常见对象存储分层的相对成本与取回时间对比。
+
+大多数云服务商提供**生命周期策略**，这是您可以配置的自动化规则，用于对象在不同分层之间转换。例如，您可以设置规则，在 60 天后自动将数据从标准分层移动到不频繁访问分层，然后在一年后移动到归档分层。这可实现成本优化，无需人工干预。
+
+### 对象存储与 AI 工作负载的整合
+
+对象存储的真正优势在于它与 AI/ML 生态系统的直接集成。现代框架和库可以直接从 S3、GCS 或 Blob 存储等服务流式传输数据，无需先复制到计算实例的本地磁盘。
+
+- **组织结构：** 尽管对象存储是平面结构，但您可以使用对象键中的前缀来模拟目录。例如，将对象命名为 `s3://my-bucket/dataset-v1/train/image-001.jpg` 和 `s3://my-bucket/dataset-v1/test/image-555.jpg` 可提供用于组织和访问控制的逻辑结构。
+- **性能：** 由于单个 API 请求的开销，从对象存储读取数百万个微小文件可能效率低下。通常更好的做法是将数据整合为数量较少但文件更大的形式。**Apache Parquet**、**TFRecord** 或 **Petastorm** 等格式为此而设计，可实现大型数据集的高效并行读取。
+- **数据出口成本：** 一个重要的财务考量是数据出口。将数据*移入*对象存储几乎总是免费的。然而，将数据*移出*云服务商的网络，无论是传输到公共互联网还是另一个云，都会产生费用。在设计需要在不同环境间频繁传输数据的工作流程时，务必注意这一点。安全通过身份和访问管理 (IAM) 策略进行管理，这些策略授予特定用户或计算实例细粒度的读/写权限，确保您的数据集仅可由授权服务访问。
+
+## 参考资料
+
+- [Amazon S3 User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  Amazon S3 的官方文档，详细介绍了对象存储概念、存储类和生命周期策略等功能，以及它在云架构中的应用。
+- [Storage classes | Cloud Storage | Google Cloud](https://cloud.google.com/storage/docs/storage-classes) — Google Cloud (2024)
+  Publisher: Google Cloud
+  Google Cloud 的官方文档，详细介绍了各种云存储层级、访问模式和成本优化策略。
+- [Apache Parquet](https://parquet.apache.org/) — Apache Software Foundation (2024)
+  Apache Parquet 的官方网站，这是一种广泛用于高效数据处理和分析的列式存储格式，尤其适用于对象存储中的大数据集。
+- [Data Engineering with AWS: Build, manage, and optimize data pipelines using AWS services](https://www.oreilly.com/library/view/data-engineering-with/9781098102223/) — Malhotra, Vishaal and Arora, Vineet and Doshi, Rushi (2022)
+  Publisher: O'Reilly Media
+  一本关于使用 AWS 进行数据工程实践的书籍，详细介绍了 Amazon S3 在 AI 基础设施中存储和管理数据集的作用。

@@ -1,0 +1,143 @@
+---
+course: "getting-started-with-git"
+chapter: "branching-merging-basics"
+lesson: "handling-merge-conflicts"
+sourceId: 1020
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-git/chapter-4-branching-merging-basics/handling-merge-conflicts"
+title: "处理合并冲突"
+description: "了解什么是合并冲突、为什么会发生，以及手动解决它们的步骤。"
+order: 8
+plots: []
+sourceHash: "d00f7a2cdddd5e040dfe40e34bb2174834ef26bef781a8e33b6f864773690f30"
+sourceCorrections: []
+---
+
+Git 通常会自动合并不同的工作内容，但有时会遇到它无法确定合并修改的正确方式的情况。这发生在对两个待合并分支的*同一个文件*的*相同部分*进行修改时。Git 很智能，但它无法知道你的想法，无法判断哪个更改是正确的，也无法知道如何合并它们。这种情况称为**合并冲突**。
+
+不用担心，合并冲突是使用版本控制的常见部分，尤其是在协作环境中。当发生冲突时，Git 会给出清晰的提示，并提供帮助你解决的工具。
+
+### Git 如何指示冲突
+
+当你尝试合并（`git merge <branch-name>`）并且 Git 遇到冲突修改时，它会执行以下操作：
+
+1. **停止合并过程：** 合并会在中间暂停。你的工作目录会处于一种特殊的“正在合并”状态。
+2. **报告冲突：** Git 会在你的终端输出一条消息，指示哪些文件存在冲突。例如：
+
+   ```bash
+   Auto-merging index.html
+   CONFLICT (content): Merge conflict in index.html
+   Automatic merge failed; fix conflicts and then commit the result.
+   ```
+3. **标记 (token)冲突文件：** Git 会修改冲突文件的内容，精确显示重叠更改发生的位置。它使用特殊标记：`<<<<<<<`、`=======` 和 `>>>>>>>`。
+
+你始终可以通过运行 `git status` 来查看哪些文件当前存在冲突：
+
+```bash
+git status
+```
+
+输出会清晰列出“未合并路径”部分下的冲突文件：
+
+```
+On branch main
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+        both modified:   index.html
+
+no changes added to commit (use "git add" and/or "git commit -a")
+```
+
+### 理解冲突标记 (token)
+
+让我们查看一个冲突文件，比如 `index.html`。你会看到像这样的标记部分：
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Project</title>
+<<<<<<< HEAD
+  <link rel="stylesheet" href="style.css">
+=======
+  <link rel="stylesheet" href="styles/main.css">
+>>>>>>> feature-styling
+</head>
+<body>
+  <h1>Hi!</h1>
+  <p>This is the project landing page.</p>
+</body>
+</html>
+```
+
+下面是如何解释这些标记：
+
+- `<<<<<<< HEAD`：这标记了来自你的*当前*分支（你运行 `git merge` 时所在的分支，通常是 `main`）的冲突行的开始。`HEAD` 是 Git 指向当前分支最新提交的指针。
+- `=======`：这个分隔符分隔了冲突更改。在 `<<<<<<< HEAD` 和 `=======` 之间的所有内容是你的当前分支的版本。
+- `>>>>>>> feature-styling`：这标记了冲突行的结束。在 `=======` 和 `>>>>>>> feature-styling` 之间的所有内容是来自正在合并的*另一个*分支的版本（在此示例中是 `feature-styling`）。
+
+你的任务是编辑此部分，生成最终的正确版本并移除冲突标记。
+
+### 解决冲突：按步骤操作
+
+解决合并冲突包含以下步骤：
+
+1. **找出冲突文件：** 使用 `git status` 查看哪些文件需要处理。
+2. **打开冲突文件：** 在你的文本编辑器中打开该文件。
+3. **找到冲突标记 (token)：** 搜索 `<<<<<<<`。
+4. **编辑文件：** 决定保留哪个版本的代码，或者在必要时合并它们。手动编辑 `<<<<<<<` 和 `>>>>>>>` 标记之间的内容，直到它完全符合你想要的最终版本。
+5. **移除冲突标记：** 删除包含 `<<<<<<< HEAD`、`=======` 和 `>>>>>>> feature-styling` 的行。确保只留下你想要的代码。
+   *继续我们的例子，如果我们决定正确的路径是 `styles/main.css`，解决后的部分将如下所示：*
+
+   ```html
+   <!DOCTYPE html>
+   <html>
+   <head>
+     <title>My Project</title>
+     <link rel="stylesheet" href="styles/main.css">
+   </head>
+   <body>
+     <h1>Hi!</h1>
+     <p>This is the project landing page.</p>
+   </body>
+   </html>
+   ```
+6. **暂存已解决的文件：** 一旦你修复了文件并移除了标记，通过使用 `git add` 暂存文件来告诉 Git 冲突已解决：
+
+   ```bash
+   git add index.html
+   ```
+
+   对 `git status` 列出的所有冲突文件重复步骤 2-6。
+7. **完成合并：** 暂存所有已解决的文件后，`git status` 会显示所有冲突已解决，并且你已准备好提交。通过运行 `git commit` 完成合并。
+
+   ```bash
+   git commit
+   ```
+
+   Git 通常会预填充用于合并提交的提交消息（例如，“Merge branch 'feature-styling'”）。除非你需要添加关于冲突解决的特定细节，否则通常可以直接接受此默认消息。
+
+### 取消合并
+
+如果你进入合并操作，但决定你还没有准备好解决冲突，或者事情看起来太复杂，你可以安全地取消合并，并将你的项目恢复到你开始合并之前的状态。使用以下命令：
+
+```bash
+git merge --abort
+```
+
+此命令会清理合并状态并重置你的文件，有效地取消了合并尝试。
+
+处理合并冲突起初可能看起来令人生畏，但它是一项基本技能。通过了解这个过程和冲突标记 (token)的含义，你可以自信地整合项目中的不同工作内容。许多文本编辑器和专业的合并工具提供图形界面来帮助解决冲突，这在你获得更多经验后会很有帮助。
+
+## 参考资料
+
+- [Git Branching - Basic Branching and Merging](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging#_basic_merge_conflicts) — Scott Chacon and Ben Straub (2024)
+  官方文档，涵盖 Git 合并冲突的基本原理、表现形式和标准解决方法。
+- [Pro Git](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging) — Scott Chacon and Ben Straub (2014)
+  Publisher: Apress; Pages: Chapter 3
+  一本关于 Git 的综合指南，其中一章详细介绍了分支策略和合并冲突的解决。
+- [Resolving a merge conflict](https://www.atlassian.com/git/tutorials/using-branches/merge-conflicts) — Atlassian (2024)
+  一个实用的教程，通过清晰的示例解释合并冲突、其原因和逐步解决过程。

@@ -1,0 +1,148 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "distributed-training-strategies"
+lesson: "tensor-parallelism-tp"
+sourceId: 6023
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-15-distributed-training-strategies/tensor-parallelism-tp"
+title: "张量并行 (TP)"
+description: "解释单个层/张量如何在设备间拆分（层内并行）。"
+order: 3
+plots: []
+sourceHash: "51ebe5f5dcc21c9c36a6e2c686e50f653f054c9ccc38b231186e2530c2082f3b"
+sourceCorrections: []
+---
+
+数据并行（DP）通过复制模型和处理不同的数据块来有效使用多个设备，但这要求每个设备承载整个模型。对于规模很大的模型，即使是单个副本也可能超出单个加速器的内存容量。此外，模型中的一些操作，例如前馈网络或注意力机制 (attention mechanism)中的大型线性变换，可能成为计算瓶颈。在这种情况下，张量并行（TP），有时也称为层内模型并行，是必不可少的。
+
+张量并行不是分割数据或层序列，而是在特定操作*内部*，将实际张量（权重 (weight)、激活、梯度）拆分到多个设备上。这使得对这些大张量的计算能够并行进行，分散单个层的内存占用和计算负担。
+
+### 线性层的拆分
+
+张量并行最直接的应用是在大型线性层中，它们是Transformer中多层感知机（MLP）和注意力块的重要组成部分。假设一个线性变换 $Y = XA$，其中$X$是输入激活，$A$是权重 (weight)矩阵。我们可以将这种矩阵乘法并行化，例如在两个设备上，主要有两种方式：列并行和行并行。
+
+#### 列并行
+
+在列并行中，权重矩阵$A$垂直（沿其列）拆分到设备上。如果我们有两个设备，我们将$A$拆分为 $A = [A_1, A_2]$。输入$X$通常会被广播或提供给两个设备。每个设备随后计算一部分输出：
+
+- 设备1计算：$Y_1 = X A_1$
+- 设备2计算：$Y_2 = X A_2$
+
+最终输出$Y$通过沿列维度拼接结果获得：$Y = [Y_1, Y_2]$。
+
+> $Y = XA$ 的列并行。权重矩阵$A$被拆分为$A_1$和$A_2$。输入$X$在不同的GPU上与每个部分相乘。结果$Y_1$和$Y_2$被拼接起来形成最终输出$Y$。
+
+从数学角度看，前向传播涉及 $X A = X [A_1, A_2] = [X A_1, X A_2]$。反向传播 (backpropagation)需要计算相对于$X$和$A$的梯度。梯度 $\frac{\partial L}{\partial A}$ 是自然地划分的（$\frac{\partial L}{\partial A_1}$，$\frac{\partial L}{\partial A_2}$）。然而，计算梯度 $\frac{\partial L}{\partial X}$ 需要汇总来自两条路径的贡献：$\frac{\partial L}{\partial X} = \frac{\partial L}{\partial Y_1} A_1^T + \frac{\partial L}{\partial Y_2} A_2^T$。这种求和通常通过在持有$A_1$和$A_2$的设备之间使用all-reduce通信操作来完成。
+
+#### 行并行
+
+在行并行中，权重矩阵$A$水平（沿其行）拆分。对于两个设备，$A = \begin{bmatrix} A_1 \\ A_2 \end{bmatrix}$。输入$X$也被认为是沿其列划分的（通常因为它是前一个列并行层的输出）。为了在这种独立的视角下简化，我们假设输入$X$在两个设备上都可用。每个设备根据其权重切片计算部分结果：
+
+- 设备1计算：$Y_1 = X A_1$（注意：这个公式略有简化。实际上，$X$会被分区，例如$X=[X_1, X_2]$，设备1计算$X_1 A_1$，设备2计算$X_2 A_2$。我们将在后面展示与列并行结合使用的常见模式）。
+- 设备2计算：$Y_2 = X A_2$
+
+与列并行不同，最终输出$Y$是部分结果的*和*：$Y = Y_1 + Y_2$。
+
+> $Y = XA$ 的行并行。权重矩阵$A$被拆分为$A_1$和$A_2$（行方向）。部分结果$Y_1$和$Y_2$在不同的GPU上计算。一个all-reduce操作将这些结果求和以生成最终输出$Y$。
+
+从数学角度看，如果$X$被视为一个单独的块，$Y = X \begin{bmatrix} A_1 \\ A_2 \end{bmatrix}$并非标准的矩阵乘法表示。在这种情况下（例如，紧随一个列拆分层之后）的实际操作是$Y = X_1 A_1 + X_2 A_2$，其中$X=[X_1, X_2]$。前向传播需要all-reduce操作以在设备之间执行此求和。反向传播中$\frac{\partial L}{\partial X}$的计算涉及基于已分区$A$的分区梯度：$\frac{\partial L}{\partial X_1} = \frac{\partial L}{\partial Y} A_1^T$和$\frac{\partial L}{\partial X_2} = \frac{\partial L}{\partial Y} A_2^T$。梯度$\frac{\partial L}{\partial A}$直接在每个设备上为其对应的权重切片计算。
+
+### Transformer中的张量并行
+
+张量并行通常有策略地应用于Transformer块内部，以平衡计算并减少通信开销。Megatron-LM等框架推广的一种常见模式是在MLP块中结合了列并行和行并行，并对注意力机制 (attention mechanism)应用了类似的分区。
+
+**MLP块：** 标准的Transformer MLP块计算 $Y = \text{Activation}(XA)B + X$ （包含残差连接）。张量并行按以下方式应用：
+
+1. **第一线性层 ($XA$)：** 对矩阵$A$使用列并行。将$A$拆分为$A = [A_1, A_2]$。在各自设备上计算$Z_1 = XA_1$和$Z_2 = XA_2$。输出是$[Z_1, Z_2]$。此步骤在反向传播 (backpropagation)的梯度计算中涉及all-reduce，但如果$X$已在两个设备上可用，前向传播则不需要通信。
+2. **激活：** 将激活函数 (activation function)（例如，GeLU、SwiGLU）逐元素应用于分区输出：$G_1 = \text{Activation}(Z_1)$，$G_2 = \text{Activation}(Z_2)$。无需通信。
+3. **第二线性层 ($GB$)：** 对矩阵$B$使用行并行。将$B$拆分为$B = \begin{bmatrix} B_1 \\ B_2 \end{bmatrix}$。设备1计算$Y_1 = G_1 B_1$，设备2计算$Y_2 = G_2 B_2$。
+4. **求和：** 线性变换的最终输出是$Y = Y_1 + Y_2$。这个求和在前向传播中通过all-reduce操作执行。反向传播中的梯度计算对于输入$G_1, G_2$不需要all-reduce。
+
+这种组合巧妙地安排了并行，使得前向传播所需的通信（第二线性层后的all-reduce）和反向传播所需的通信（第一线性层后$\nabla X$的all-reduce）不会不必要地重叠，从而优化了流程。
+
+**注意力块：** 张量并行也可应用于自注意力 (self-attention)机制。
+
+1. **Q、K、V投影：** 用于将输入投影到查询（queries）、键（keys）和值（values）的权重 (weight)矩阵$W_Q$、$W_K$和$W_V$通常使用列并行进行拆分，类似于MLP的第一线性层。$Q = XW_Q$、$K = XW_K$、$V = XW_V$在设备之间并行计算，从而得到分区后的$Q = [Q_1, Q_2]$、$K = [K_1, K_2]$、$V = [V_1, V_2]$。
+2. **注意力分数计算：** 注意力分数$S = \text{softmax}(\frac{QK^T}{\sqrt{d_k}})$涉及分区Q和K张量之间的矩阵乘法。这需要细致的实现和通信（例如，根据具体的拆分策略可能需要all-gather操作）来在每个设备上计算完整的注意力矩阵或其必要部分。
+3. **值聚合：** 输出$O = SV$涉及将注意力分数$S$与分区的值张量$V$相乘。
+4. **输出投影：** 注意力块中的最终线性层（$O W_O$）通常使用行并行进行并行化，类似于MLP的第二线性层。这在前向传播中需要一个all-reduce来合并结果。
+
+注意力块内部的实现细节可能比较复杂，包含优化的核函数和通信模式，以高效处理序列长度和头维度。
+
+### 通信成本
+
+张量并行一个主要的缺点是与数据并行相比，它增加了通信开销。虽然数据并行通常每个训练步骤（对于梯度）涉及一次all-reduce，但张量并行在每个Transformer块的前向和反向传播 (backpropagation)*内部*引入了通信。
+
+- **列并行：** 在反向传播期间，需要通信（all-reduce）来计算关于输入$X$的梯度。
+- **行并行：** 在前向传播期间，需要通信（all-reduce）来求和输出。
+- **注意力：** 根据实现情况，可能涉及额外的通信，例如all-gather。
+
+这些通信操作（如all-reduce）涉及在所有参与张量并行组的设备之间同步和交换数据。交换的数据量取决于激活或梯度的大小。这种通信成本随张量并行组中设备数量的增加而变化，如果设备间互连带宽（例如NVLink、InfiniBand）相对于计算速度不足，可能成为性能瓶颈。
+
+### 优点与考虑
+
+- **支持更大模型：** 当模型层本身对于单个设备的内存而言过大时，张量并行是十分必要的。
+- **补充其他策略：** 它可以与数据并行（DP）和流水线并行（PP）结合，形成混合并行方法（例如，在流水线阶段内部使用TP，然后使用DP进行复制）。
+- **潜在的重叠：** 精心设计的实现可能会将通信与计算重叠，以隐藏延迟。
+
+然而，请注意以下几点：
+
+- **实现复杂度：** 需要细致的代码修改，或者依赖于NVIDIA的Megatron-LM或微软的DeepSpeed等专业库，这些库提供了Transformer中张量并行的优化实现。
+- **通信瓶颈：** 性能对计算集群的互连带宽和拓扑结构高度敏感。如果通信成为主导因素，将张量并行扩展到大量设备可能导致回报递减。
+
+这是一个PyTorch风格的代码片段，展示了为列并行拆分权重 (weight)矩阵的*思路*（这高度简化，省略了通信和梯度处理）：
+
+```python
+import torch
+import torch.nn as nn
+
+# 假设 world_size 是用于张量并行的 GPU 数量
+# 假设 rank 是当前 GPU 在张量并行组中的排名
+
+class ColumnParallelLinear(nn.Module):
+    def __init__(self, input_size, output_size, world_size, rank):
+        super().__init__()
+        self.input_size = input_size
+        # 每个 GPU 处理输出特征的一个切片
+        self.output_size_per_partition = output_size // world_size
+        self.world_size = world_size
+        self.rank = rank
+
+        # 只初始化当前 rank 对应的权重矩阵部分
+        self.weight = nn.Parameter(
+            torch.randn(self.output_size_per_partition, self.input_size)
+        )
+        # 偏置项也进行分区
+        self.bias = nn.Parameter(
+            torch.randn(self.output_size_per_partition)
+        )
+
+    def forward(self, x):
+        # 假设输入 x 在所有 GPU 上都可用（已广播或来自
+        # all-reduce 的结果）
+        # 矩阵乘法只在权重的本地分区上进行
+        # Output_partition = X * A_partition^T + b_partition
+        # 注意：PyTorch 线性层期望权重为
+        # (out_features, in_features)
+        output_partition = nn.functional.linear(x, self.weight, self.bias)
+
+        # 在实际实现中，如果下一层不是行并行，
+        # 这个 output_partition 需要在 GPU 之间进行收集。
+        # 对于 Megatron-LM 的 MLP 模式（列并行->行并行），
+        # 此处不需要前向通信。
+
+        # 反向传播通信（grad_X 的 all-reduce）由
+        # Megatron-LM 等库中的自定义自动梯度函数处理。
+
+        return output_partition # 只返回此 GPU 计算的切片
+```
+
+总结来说，张量并行是一种有效的技术，用于将单个大层的计算和内存分散到多个设备上。虽然它带来了较大的通信开销，但它常常是一个重要的构成部分，与数据并行和流水线并行一起，用于训练突破单加速器能力限制的先进大型语言模型。Megatron-LM和DeepSpeed等框架大大简化了复杂性，提供了优化的构建模块，以有效实现张量并行。
+
+## 参考资料
+
+- [DeepSpeed: System Optimizations for Large-Scale Model Training](https://dl.acm.org/doi/10.1145/3452044.3483742) — Jie Ren, Hao Li, Samyam Rajbhandari, Conglong Li, Di He, Zhicheng Cui, Xuanli Chen, Junchao Li, Sholto Scruton, Minjia Zhang (2021)
+  Journal: ACM SIGOPS Operating Systems Review; Publisher: ACM; Volume: 55; Pages: 164-177; DOI: [10.1145/3452044.3483742](https://doi.org/10.1145/3452044.3483742)
+  这篇论文介绍了DeepSpeed，一个提供优化分布式训练能力的综合框架，其中包含多种与张量并行相辅相成的模型并行形式。
+- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://doi.org/10.1109/SC45903.2020.00078) — Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, Yuxiong He (2020)
+  Journal: SC '20: Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis; Publisher: IEEE Computer Society; Pages: 1-16; DOI: [10.1109/SC45903.2020.00078](https://doi.org/10.1109/SC45903.2020.00078)
+  该论文主要关注优化器状态、梯度和参数的内存优化，ZeRO对于训练需要张量并行的大型模型至关重要。

@@ -1,0 +1,70 @@
+---
+course: "introduction-to-speech-recognition"
+chapter: "language-modeling"
+lesson: "what-is-a-language-model"
+sourceId: 7112
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-speech-recognition/chapter-4-language-modeling/what-is-a-language-model"
+title: "什么是语言模型？"
+description: "语言模型的定义及其功能：计算词语序列出现的概率。"
+order: 1
+plots: []
+sourceHash: "e7c98f4c9f3c1fe7cc3732395422046608129a423a215c7c1f246cfbf0d1cf8d"
+sourceCorrections: []
+---
+
+声学模型将音频信号转换为音素序列。尽管这是语音识别中很重要的一步，但它经常产生模糊的结果。一个听起来像“wreck a nice beach”的音频片段，在声学上与“recognize speech”几乎相同。如果单独运行，声学模型可能会认为这两种选项同样合理。为了生成准确的转写，系统需要一种方法来判断哪个词语序列更说得通。
+
+这就是语言模型发挥作用的地方。语言模型是一种统计工具，旨在回答一个单一而重要的问题：给定一个词语序列出现的概率是多少？它的作用是提供声学模型所缺少的语言背景。它充当语法和风格检查器，评估一个词串在特定语言中出现的可能性有多大。
+
+### 为句子分配概率
+
+形式上，语言模型计算词语序列 $W$ 的概率，表示为 $P(W)$。概率越高，意味着该序列越常见或语法越正确。
+
+让我们再看一遍我们的例子。一个在英文文本集合上训练的语言模型会分析这两个相互竞争的短语：
+
+1. $W_1 = \text{"recognize speech"}$
+2. $W_2 = \text{"wreck a nice beach"}$
+
+模型会计算每个短语的概率。根据其训练数据，它会发现短语“recognize speech”在日常语言和技术文档中远比“wreck a nice beach”常见。因此，它会给第一个序列赋予更高的概率。
+
+
+$$
+P(\text{"recognize speech"}) \gg P(\text{"wreck a nice beach"})
+$$
+
+
+这种概率为ASR系统提供了一个有力的信号。即使声学模型稍微倾向于“wreck a nice beach”的发音，语言模型对“recognize speech”的强烈倾向也会引导最终决定走向正确的转写。
+
+### 在ASR流水线中的作用
+
+语言模型并非单独工作。它与解码器内的声学模型相互配合，解码器是ASR流水线中进行最终决策的组件。解码器的目标是找到最能解释输入音频的词语序列。它通过结合每种可能转写的两种证据来实现这一点：
+
+1. **声学得分：** 音频中的声音与提议词语的音素匹配程度如何？（由声学模型提供）
+2. **语言得分：** 这个词语序列在目标语言中出现的可能性有多大？（由语言模型提供）
+
+解码器整合这两个分数，以得出最终假设。下图说明了这一过程。
+
+> 解码器结合声学模型和语言模型的得分，以确定最可能的转写。
+
+可以将声学模型想象成一个勤勉的转写员，准确地写下他们听到的内容；而语言模型则是一个编辑，审阅转写的连贯性。转写员可能不知道“wreck a nice beach”是不是一个常用短语，但编辑凭借其丰富的语言知识，可以立即将其标记 (token)为与替代选项相比不太可能。
+
+### 语言知识从何而来？
+
+语言模型通过在庞大的文本数据集（称为**文本语料库**，复数：corpora）上训练来学习这些概率。一个语料库可以包含来自书籍、新闻文章、网站、转录对话和其他来源的数十亿词语。通过处理这些数据，模型学习语言的统计模式，包括：
+
+- 哪些词最常见。
+- 哪些词倾向于跟随其他词（例如，“speech”比“wreck”更可能跟随“recognize”）。
+- 常见的语法结构和措辞。
+
+本质上，语言模型构建了语言的统计表示。这种表示使其能够为任何词语序列分配概率得分，为ASR系统提供所需的背景信息，以解决歧义并生成更准确、更像人类的转写。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  一本权威的教科书，涵盖统计语言建模、其在语音识别系统中的应用以及现代语言模型架构。
+- [Automatic Speech Recognition: A Deep Learning Approach](https://doi.org/10.1007/978-1-4939-2471-6) — Dong Yu and Li Deng (2014)
+  Publisher: Springer; DOI: [10.1007/978-1-4939-2471-6](https://doi.org/10.1007/978-1-4939-2471-6)
+  一本专门介绍自动语音识别系统架构和组件的书，包括语言模型在现代ASR流程中的作用。
+- [Recurrent Neural Network Based Language Model](https://www.isca-speech.org/archive/interspeech_2010/i10_1045.html) — Tomas Mikolov, Martin Karafiát, Lukáš Burget, Jan Cernocký, and Sanjeev Khudanpur (2010)
+  Journal: Proc. Interspeech; Pages: 1045-1048
+  一篇重要的早期论文，介绍了用于语言建模的循环神经网络，标志着从传统N-gram模型向新方法的转变。

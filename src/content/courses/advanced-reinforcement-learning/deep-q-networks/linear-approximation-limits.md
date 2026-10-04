@@ -1,0 +1,66 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "deep-q-networks"
+lesson: "linear-approximation-limits"
+sourceId: 3363
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-2-deep-q-networks/linear-approximation-limits"
+title: "线性函数近似的局限性"
+description: "讨论线性函数近似失效的情形以及对深度学习的需求出现的原因。"
+order: 1
+plots: []
+sourceHash: "8e67c5b8e59237fef0fdc3b37d9367744ff84b927c576933755e837cc95f7b92"
+sourceCorrections: []
+---
+
+函数近似使强化学习 (reinforcement learning)智能体能够处理表格方法不可行的庞大或连续状态和动作空间。在这种情况下，线性函数近似是一个重要的进展，它将值函数 $V(s)$ 或 Q 函数 $Q(s, a)$ 表示为特征的线性组合。
+
+
+$$
+Q(s, a; \theta) \approx \sum_{i=1}^d \theta_i \phi_i(s, a) = \theta^T \phi(s, a)
+$$
+
+
+这里，$\phi(s, a)$ 是从状态 $s$ 以及可能的动作 $a$ 推导出的特征向量 (vector)，而 $\theta$ 是我们想要学习的权重 (weight)向量。当我们可以定义一组能够捕捉预测值所需基本信息的特征 $\phi$，并且真实值函数确实在这些特征中接近线性时，这种方法效果相当好。例如，在中等大小的状态空间中使用瓦片编码或径向基函数。
+
+然而，线性函数近似的有效性主要取决于手工设计的特征 $\phi(s, a)$ 的质量。当处理高维原始感官输入的复杂问题时，这构成了一个主要障碍。设想直接从屏幕像素学习玩雅达利游戏所面临的困难，这是DeepMind推广的一项任务。状态 $s$ 是一幅图像（或一小段图像序列），由数千或数百万像素值组成。
+
+### 特征工程的难题
+
+您将如何从原始像素中手动设计一个特征向量 (vector) $\phi(s)$，使其能有效反映游戏情况以预测 Q 值？您可以尝试：
+
+- 检测玩家角色的位置。
+- 检测敌人或物体的位置和类型。
+- 计算剩余生命或分数。
+
+虽然对于较简单的游戏可能可行，但这个过程很快就会变得极其复杂且脆弱：
+
+1. **特定环境适用性：** 为一个游戏（例如，太空入侵者）设计的特征很可能不适用于另一个游戏（例如，Pong）。
+2. **复杂性：** 捕捉细微但重要的游戏状态（例如，多个物体的相对位置、轨迹或游戏特定规则）需要越来越精巧和大量的特征。
+3. **可扩展性：** 所需的工程投入是庞大的，并且难以很好地扩展到新的或更复杂的环境。目标通常是创建能够以最少先验任务知识进行学习的智能体。
+
+本质上，依赖手动特征工程将表示学习的负担从算法转移到了人类设计者。对于许多相关问题，特别是那些涉及感知（视觉、音频）的问题，这并不实用。
+
+### 有限的表示能力
+
+除了特征设计的难度之外，线性模型本身也存在根本的局限性。它们假设目标函数（Q值）是所提供特征的线性组合。这个假设在现实中通常不成立。
+
+- **非线性关系：** 处于特定状态的价值可能以非线性的方式取决于不同特征之间的**关联**。例如，敌人造成的危险可能非线性地取决于它的距离和类型。如果没有明确地设计交互特征（例如，$\phi_i(s) \times \phi_j(s)$），线性模型难以捕捉这种乘法或更复杂的关系，从而又回到了特征工程问题。
+- **无法捕捉层次结构：** 原始输入（如像素）包含层次结构（像素构成边缘，边缘构成对象，对象之间互相影响）。直接作用于像素或甚至作用于简单手工特征的线性模型，无法有效学习这些组合表示。
+
+> 对比线性近似（需要手动特征设计）与深度学习 (deep learning)（执行自动特征学习）在复杂状态空间中的应用。
+
+这些局限性促使需要更强大的函数近似器，它们能够自动从原始高维输入中学习相关特征，并捕获复杂的非线性关系。深度神经网络 (neural network)，特别是用于图像数据的卷积神经网络 (CNN) 和用于序列数据的循环神经网络 (RNN)，已在多种方面体现出表示学习的显著成功。
+
+通过使用带有权重 (weight) $\theta$ 的深度神经网络 $Q(s, a; \theta)$，我们用一种学习到的变换来代替手动特征工程步骤 $\phi(s, a)$。网络本身学习从输入状态 $s$ 中提取显著特征，并以非线性方式组合它们以产生 Q 值估计。这种直接从经验中学习表示的能力是在强化学习 (reinforcement learning)中采用深度学习的主要原因，从而促成了深度 Q 网络 (DQN) 及后续先进算法的发展。我们现在将看到 DQN 如何使用深度学习来克服线性方法的局限性。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  强化学习的奠基性教材，涵盖了函数逼近的原理，包括线性方法，以及它们在处理大型状态空间中的作用。
+- [Playing Atari with Deep Reinforcement Learning](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves, Ioannis Antonoglou, Daan Wierstra, and Martin Riedmiller (2013)
+  Journal: NIPS Deep Learning Workshop
+  介绍了深度Q网络（DQN），展示了深度神经网络如何从原始感官输入（Atari像素）中自动学习特征，从而克服了强化学习中手动设计特征的限制。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: The MIT Press
+  一本全面的深度学习教材，提供了深度神经网络在自动特征提取和建模复杂非线性关系方面有效的理论背景，这是克服强化学习中线性函数逼近限制的关键。

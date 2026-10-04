@@ -1,0 +1,275 @@
+---
+course: "optimization-techniques-ml"
+chapter: "deep-learning-optimization-challenges"
+lesson: "practice-tuning-dn-optimizers"
+sourceId: 1315
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-6-deep-learning-optimization-challenges/practice-tuning-dn-optimizers"
+title: "实践：深度网络优化器调优"
+description: "涉及深度神经网络训练中优化器选择与调整的实践练习。"
+order: 7
+plots: ["plots/1315-0.json", "plots/1315-1.json"]
+sourceHash: "1a9da7eba5c91fed2c0bea9fa9d42d98cc5f1e6680acfb0a1648742e703bad8b"
+sourceCorrections: []
+---
+
+好的，我们来将理论付诸实践。正如我们所讨论的，训练深度神经网络 (neural network)需要应对复杂、高维度的损失曲面，其间充满鞍点、高原和尖锐最小值等难题。优化器的选择及其超参数 (parameter) (hyperparameter)，结合归一化 (normalization)和适当的初始化等方法，对训练能否顺利有效收敛有重要影响。
+
+提供实践练习，以观察深度学习 (deep learning)训练中出现的行为和挑战，并培养在深度学习情境下调整优化器的直觉。我们将使用TensorFlow/Keras或PyTorch等常用框架以及CIFAR-10（或其子集）等标准数据集来具体说明。我们假设你拥有可用的环境，并熟悉所选框架中的基本模型定义和训练循环。
+
+### 实验设置
+
+首先，我们定义一个用于图像分类的简单卷积神经网络 (neural network)（CNN）。一个典型的小型CNN可能由几个带有ReLU激活的卷积层组成，然后是最大池化层，最后是一两个全连接层，连接到输出分类层（例如，用于CIFAR-10的softmax）。
+
+```python
+# 使用 TensorFlow/Keras 的示例
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# 假设 num_classes 已定义（例如，CIFAR-10 为 10）
+model = keras.Sequential(
+    [
+        keras.Input(shape=(32, 32, 3)), # CIFAR-10 的输入形状
+        layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Flatten(),
+        layers.Dropout(0.5), # 正则化
+        layers.Dense(num_classes, activation="softmax"),
+    ]
+)
+
+# 加载 CIFAR-10 数据 (x_train, y_train), (x_test, y_test)
+# 预处理数据（归一化像素值，对标签进行独热编码）
+# ... 数据加载和预处理代码 ...
+```
+
+我们还需要一个用于编译和训练模型的函数，以便于切换优化器和超参数 (parameter) (hyperparameter)。
+
+```python
+# 使用 TensorFlow/Keras 的示例
+def train_model(model, optimizer, x_train, y_train, validation_data, epochs=20, batch_size=64):
+    model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    history = model.fit(x_train, y_train,
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        validation_data=validation_data,
+                        verbose=0) # 设置 verbose=1 以查看每个 epoch 的进度
+    return history
+
+# 使用 PyTorch 的示例
+# import torch
+# import torch.optim as optim
+# import torch.nn as nn
+#
+# # 假设 model, train_loader, val_loader, criterion（例如 nn.CrossEntropyLoss）已定义
+# def train_model_pytorch(model, optimizer, train_loader, val_loader, criterion, epochs=20):
+#     train_losses, val_losses = [], []
+#     train_accs, val_accs = [], []
+#     # ... 典型的 PyTorch 训练循环 ...
+#     # for epoch in range(epochs):
+#         # model.train()
+#         # ... 训练步骤 ...
+#         # model.eval()
+#         # with torch.no_grad():
+#             # ... 验证步骤 ...
+#         # 存储指标（损失、准确率）以便绘图
+#     # return history_dict # 包含指标列表的字典
+```
+
+### 基线：标准SGD
+
+我们从随机梯度下降 (gradient descent)（SGD）开始，可以加上动量。正如第一章所述，SGD使用小批量中的带有噪声的梯度估计。尽管有效，但在复杂问题上它收敛可能较慢，尤其是在没有动量的情况下，或者可能会停留在次优区域。
+
+```python
+# Keras 示例
+sgd_optimizer_nomomentum = tf.keras.optimizers.SGD(learning_rate=0.01)
+sgd_optimizer_momentum = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+
+# 使用 SGD 训练（例如，带动量）
+# history_sgd = train_model(model, sgd_optimizer_momentum, ...)
+
+# PyTorch 示例
+# sgd_optimizer_nomomentum = optim.SGD(model.parameters(), lr=0.01)
+# sgd_optimizer_momentum = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+# history_sgd = train_model_pytorch(model, sgd_optimizer_momentum, ...)
+```
+
+使用SGD训练网络（尝试带动量和不带动量两种情况）。绘制训练和验证损失以及每个epoch的准确率。你可能会观察到相比自适应方法，收敛速度相对较慢，且在有限的epoch数内最终准确率可能不是最佳。曲线也可能相当嘈杂，反映了更新的随机性。
+
+### 自适应优化器比较：Adam 与 RMSprop
+
+现在，我们尝试第三章讨论的自适应学习率方法，例如RMSprop和Adam。这些方法根据过去梯度平方（RMSprop）或一阶和二阶矩（Adam）的移动平均值，维护每个参数 (parameter)的学习率。由于它们通常收敛速度快，因此常成为深度学习 (deep learning)任务的首选。
+
+```python
+# Keras 示例
+rmsprop_optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 默认学习率通常为 0.001
+adam_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)     # 默认学习率通常为 0.001
+
+# 使用 RMSprop 和 Adam 训练
+# model_rmsprop = build_model() # 重新初始化模型权重
+# history_rmsprop = train_model(model_rmsprop, rmsprop_optimizer, ...)
+# model_adam = build_model() # 重新初始化模型权重
+# history_adam = train_model(model_adam, adam_optimizer, ...)
+
+# PyTorch 示例
+# rmsprop_optimizer = optim.RMSprop(model.parameters(), lr=0.001)
+# adam_optimizer = optim.Adam(model.parameters(), lr=0.001)
+# history_rmsprop = train_model_pytorch(...) # 重新初始化模型
+# history_adam = train_model_pytorch(...) # 重新初始化模型
+```
+
+使用RMSprop和Adam，以及它们常用的默认学习率（通常为$10^{-3}$），训练*相同的架构*（每次重新初始化权重 (weight)）。在同一张图上绘制SGD（带动量）、RMSprop和Adam的训练/验证损失和准确率曲线进行比较。
+
+
+
+![优化器比较：训练损失](plots/1315-0.json)
+
+
+
+> 典型的SGD（带动量）、RMSprop和Adam在示例CNN任务上的训练损失曲线比较。自适应方法通常在初始阶段收敛更快。请注意Y轴的对数刻度，以更好地观察差异。
+
+你通常会观察到，与SGD相比，Adam和RMSprop在初始周期内收敛速度快得多。然而，请密切关注验证性能。有时，自适应方法可能很快收敛到一个尖锐的最小值，而其泛化能力略逊于SGD找到的最小值（尽管这取决于具体问题）。
+
+### 优化器超参数 (parameter) (hyperparameter)调整
+
+自适应优化器并非万能；其性能仍取决于超参数，主要是学习率（$\eta$）。我们来试验Adam的学习率。
+
+使用Adam以不同的学习率训练模型，例如：$\eta = 10^{-2}$、$\eta = 10^{-3}$（默认）和$\eta = 10^{-4}$。
+
+```python
+# Keras 示例
+adam_lr_high = tf.keras.optimizers.Adam(learning_rate=0.01)
+adam_lr_low = tf.keras.optimizers.Adam(learning_rate=0.0001)
+# history_adam_high = train_model(...) # 重新初始化模型
+# history_adam_low = train_model(...) # 重新初始化模型
+
+# PyTorch 示例
+# adam_lr_high = optim.Adam(model.parameters(), lr=0.01)
+# adam_lr_low = optim.Adam(model.parameters(), lr=0.0001)
+# history_adam_high = train_model_pytorch(...) # 重新初始化模型
+# history_adam_low = train_model_pytorch(...) # 重新初始化模型
+```
+
+绘制这些不同学习率的训练/验证损失曲线，并与默认情况进行比较。
+
+
+
+![Adam学习率的影响：验证损失](plots/1315-1.json)
+
+
+
+> 调整Adam优化器学习率的影响。学习率过高（$\eta=0.01$）可能导致发散或训练不稳定。学习率过低（$\eta=0.0001$）则收敛非常缓慢。默认值（$\eta=0.001$）通常是一个好的起始点。
+
+- **过高 ($\eta=10^{-2}$):** 损失可能剧烈震荡、下降非常缓慢，甚至增加。优化器步长过大，不断越过最小值。
+- **过低 ($\eta=10^{-4}$):** 收敛将非常缓慢。你最终可能达到一个好的解，但这需要更多的周期。
+- **适中 ($\eta=10^{-3}$):** 通常是一个好的起始点，平衡了收敛速度和稳定性。
+
+尽管Adam有其他超参数（$\beta_1, \beta_2, \epsilon$），但学习率几乎总是第一个也是最重要的调整项。你还可以采用**学习率调度**（第三章），例如每隔几个周期将学习率乘以一个因子（步长衰减）或使用余弦退火。这通常是有益的，尤其与SGD或Adam结合时，允许初始较大的步长和后续更精细的调整。
+
+```python
+# Keras 示例：使用调度器
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=0.001,
+    decay_steps=10000, # 根据数据集大小/批量大小调整
+    decay_rate=0.9)
+adam_optimizer_scheduled = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+# history_adam_scheduled = train_model(model, adam_optimizer_scheduled, ...)
+
+# PyTorch 示例：使用调度器
+# optimizer = optim.Adam(model.parameters(), lr=0.001)
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5) # 每 10 个周期将学习率减半
+# # 在训练循环中：
+# # optimizer.step()
+# # scheduler.step() # 在优化器步进后调用
+```
+
+### 与初始化和归一化 (normalization)的交互
+
+我们再看看本章前面提到的两个重要主题：初始化和归一化。它们与我们的优化器选择如何互动？
+
+1. **初始化：** 尝试使用Adam（$\eta=0.001$）训练你的网络，但采用较差的初始化策略（例如，将所有权重 (weight)初始化为零或非常小的随机数，而不使用He或Xavier/Glorot等适当的缩放方法）。你可能会观察到，无论使用何种优化器，网络都无法有效学习。梯度可能从一开始就消失或爆炸，或者对称性问题可能阻碍学习。将此与使用适当的He初始化（ReLU激活的标准方法）进行训练的情况进行比较。这凸显了即使是先进的优化器也难以轻易解决由不良初始化引起的基本问题。
+2. **批量归一化：** 现在，在你的网络架构中，将批量归一化层添加到卷积层（或全连接层，在激活之前）。
+
+   ```python
+   # 带批量归一化的 Keras 示例
+   model_bn = keras.Sequential(
+       [
+           keras.Input(shape=(32, 32, 3)),
+           layers.Conv2D(32, kernel_size=(3, 3)),
+           layers.BatchNormalization(), # 添加批量归一化
+           layers.Activation("relu"),
+           layers.MaxPooling2D(pool_size=(2, 2)),
+           # ... 其他带批量归一化的层 ...
+           layers.Flatten(),
+           layers.Dropout(0.5),
+           layers.Dense(num_classes, activation="softmax"),
+       ]
+   )
+   # history_adam_bn = train_model(model_bn, adam_optimizer, ...) # 使用相同的 Adam 配置
+   ```
+
+   使用相同的Adam优化器（$\eta=0.001$）训练这个修改后的网络。将其训练/验证曲线与没有批量归一化的原始网络进行比较。
+
+你应当会看到批量归一化通常会：
+
+- 显著加快收敛。
+- 使训练过程对学习率的选择不那么敏感（你甚至可能成功使用*更高*的学习率）。
+- 提供一些正则化 (regularization)效果。
+
+批量归一化通过稳定激活分布、平滑损失以及减少内部协变量偏移来提供帮助，从而使优化任务变得更容易。
+
+### 处理梯度：裁剪
+
+如果你遇到梯度爆炸（损失突然变为NaN或急剧上升），特别是在循环网络或非常深的架构中，梯度裁剪是一种有用的工具。大多数框架都提供了方便的实现方式。
+
+```python
+# Keras 示例：裁剪优化器梯度
+# 按全局范数裁剪
+adam_optimizer_clipped = tf.keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.0)
+# 或者按值裁剪
+# adam_optimizer_clipped = tf.keras.optimizers.Adam(learning_rate=0.001, clipvalue=0.5)
+# history_adam_clipped = train_model(model, adam_optimizer_clipped, ...)
+
+# PyTorch 示例：手动裁剪梯度
+# # 在训练循环中，在 loss.backward() 之后：
+# torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+# # 或者按值裁剪
+# # torch.nn.utils.clip_grad_value_(model.parameters(), clip_value=0.5)
+# optimizer.step()
+```
+
+通常在观察到不稳定时进行裁剪的试验。`clipnorm` 值大约 1.0 是一个常见的起始点。
+
+### 总结与进一步实验
+
+本次实践环节呈现了调整深度网络优化器的几个重要方面：
+
+- Adam和RMSprop等自适应方法通常比标准SGD提供更快的初始收敛，使其成为受欢迎的默认选项。
+- 学习率是任何优化器最重要的超参数 (parameter) (hyperparameter)。默认值是起始点，而非保证的最佳值。
+- 适当的权重 (weight)初始化和批量归一化 (normalization)等方法本身并非优化器特性，但它们显著简化了优化过程，常能实现更快、更稳定的收敛。
+- 学习率调度常用于通过在训练过程中降低学习率来提升最终性能。
+- 梯度裁剪是解决梯度爆炸的一种方法，在特定架构中尤其有用。
+
+**其他可尝试的思路：**
+
+- 比较Adam与其变体，如Nadam或AMSGrad（第三章）。
+- 实现不同的学习率调度（余弦退火、循环学习率）。
+- 尝试调整带动量的SGD和精心选择的学习率调度；它有时能在特定任务上取得比Adam更好的泛化效果，尽管通常需要更细致的调整。
+- 如果计算资源允许，可以使用更系统的超参数优化方法，如随机搜索或贝叶斯优化（第七章）。
+- 观察不同批量大小对优化器性能和噪声的影响（第四章）。
+
+深度学习 (deep learning)中的有效优化通常是一个经验过程。理解不同优化器和方法的原理，结合实践试验和仔细结果监控，对于成功训练复杂模型是必不可少的。
+
+## 参考资料
+
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma, Jimmy Ba (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，一种深度学习中常用的自适应学习率方法。
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe, Christian Szegedy (2015)
+  Journal: International Conference on Machine Learning (ICML); Pages: 448-456; DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  介绍了批量归一化（Batch Normalization），这项技术显著加速并稳定了深度神经网络的训练。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于深度学习的综合性教材，涵盖了优化算法、初始化策略和训练挑战。

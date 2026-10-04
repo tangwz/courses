@@ -1,0 +1,67 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "integrating-moe-into-architectures"
+lesson: "moe-architectural-variants"
+sourceId: 7077
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-5-integrating-moe-into-architectures/moe-architectural-variants"
+title: "架构变体及其特性"
+description: "对值得注意的MoE架构（例如GLaM和ST-MoE）及其独特的架构特性和贡献的介绍。"
+order: 5
+plots: []
+sourceHash: "e704fbfc4592156f429cd128b98ea4bf50e080a4fa4baffd6911b46c0b48f17f"
+sourceCorrections: []
+---
+
+用MoE层替代前馈网络（FFN）的原则是一种通用策略，由此产生了若干有影响力的架构。这些架构引入了特定的设计模式和改进。它们的变体在路由、层放置和优化方面展现了不同的方法，每种方法都有其独特的权衡。了解这些标志性模型，有助于规划构建高性能稀疏网络的设计空间。
+
+### ST-MoE：根本蓝图
+
+稀疏门控专家混合（ST-MoE）层在“极其庞大的神经网络 (neural network)”论文中提出，是大多数现代MoE模型都以此为根本架构构建的。它的设计引入了目前已成为标准做法的两个组成部分：
+
+1. **稀疏门控路由**：使用可训练的门控网络，为每个令牌选择前 $k$ 个专家。正是这种门控机制使模型“稀疏”，因为对于任何给定输入，只用到网络权重 (weight)的一部分。输出是所选专家输出的加权和。
+2. **辅助负载均衡损失**：添加到主要训练目标中的补充损失函数 (loss function)。正如第1章所讨论的，这种损失促使门控网络将令牌均匀地分配到所有可用专家，避免出现只有少数专家被持续选择而其他专家未被训练的情况。
+
+ST-MoE架构确立了在保持恒定计算成本的同时，训练拥有数千亿参数 (parameter)模型的可行性，为后续变体奠定了基础。
+
+### GLaM：扩展至万亿参数 (parameter)模型
+
+通用语言模型（GLaM）通过训练一个1.2万亿参数模型，展现了MoE令人印象深刻的扩展特性。相比之下，它每个令牌的计算量相当于一个密集的150亿参数模型，显现了之前讨论过的参数与FLOPs解耦的特点。
+
+GLaM的架构贡献在于其特定且有效的层放置策略。GLaM没有替换每个FFN层，而是在每*隔一个*Transformer块中用MoE层替换FFN。这种交替模式被证实是一种高效的配置。
+
+> 图示说明了GLaM架构中密集型FFN层和MoE FFN层的交替放置情况。
+
+GLaM使用了Top-2门控机制，这意味着每个令牌由路由器得分最高的两个专家处理。结果令人注目：GLaM在多项语言任务上显著优于1750亿参数的GPT-3，而训练所需能耗仅为三分之一。这表明通过稀疏性扩展模型规模可以带来单位计算量更高的性能表现。
+
+### Switch Transformers：简化以求速度
+
+Switch Transformer架构提出对MoE路由进行彻底简化，以最大化训练和推理 (inference)效率。Switch Transformer没有将令牌路由到前 $k$ 个专家，而是将每个令牌仅路由到*一个*专家（$k=1$）。这也被称为Switch路由或Top-1路由。
+
+此设计的主要原因是减少分布式训练设置中的通信开销。在标准的Top-k MoE中，每个令牌需要分派给多个专家，这些专家可能位于不同的硬件加速器上。这种全对全通信模式会造成瓶颈。通过将路由限制到单个专家，通信模式变得更加简单和快速。
+
+这种简化带来了显著的速度提升。Switch Transformer论文的作者报告说，在TPU上，其训练速度比具有同等计算预算的密集模型快7倍。权衡是表示能力可能下降，因为模型失去了结合多个专家输出的能力来处理单个令牌。然而，对于许多大规模应用来说，效率上的提升超过了这一局限。
+
+> Top-2 路由与 Switch (Top-1) 路由中令牌流的比较。Switch 路由通过将每个令牌发送给单个专家来简化计算。
+
+Switch Transformer还强调了训练稳定性，特别是在BFloat16等低精度格式下的重要性。作者引入了选择性精度转换和初始化门控网络权重 (weight)等技术，以确保大规模训练的稳定。
+
+### 架构特性总结
+
+这些架构变体代表了宽广设计空间中的一些点。它们之间的选择取决于项目的目标，例如最大化模型质量、最小化训练时间或简化部署。
+
+| 架构 | 路由策略 | 创新点 | 主要优点 |
+| --- | --- | --- | --- |
+| **ST-MoE** | 噪声Top-k | 引入了稀疏门控和负载均衡损失。 | 为大型稀疏模型奠定了基础。 |
+| **GLaM** | Top-2 | 通过特定层放置，将MoE扩展到万亿参数 (parameter)规模。 | 模型质量高，推理 (inference)成本更低。 |
+| **Switch Transformer** | Top-1 (Switch) | 将每个令牌的路由简化为单个专家。 | 减少了通信开销，提升了训练速度。 |
+
+在设计自己的MoE模型时，你可以借鉴这些模式。你可以为生产系统选择Switch路由的简洁性和速度，或者为以性能为主要目标的研究模型选择GLaM式Top-2路由的更高容量。本章末尾的动手实践将让你有机会直接实现这些想法。
+
+## 参考资料
+
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, and Jeff Dean (2017)
+  Journal: arXiv preprint arXiv:1701.06538; DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了稀疏门控专家混合层（ST-MoE）和辅助负载均衡损失，奠定了MoE模型的基础。
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://www.jmlr.org/papers/v23/21-0990/21-0990.pdf) — William Fedus, Barret Zoph, Noam Shazeer (2022)
+  Journal: Journal of Machine Learning Research; Publisher: Journal of Machine Learning Research; Volume: 23; Pages: 1-39
+  介绍了Switch Transformer架构，通过将路由简化为每个token一个专家来提高效率。

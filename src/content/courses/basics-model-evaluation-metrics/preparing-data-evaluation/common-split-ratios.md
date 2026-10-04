@@ -1,0 +1,76 @@
+---
+course: "basics-model-evaluation-metrics"
+chapter: "preparing-data-evaluation"
+lesson: "common-split-ratios"
+sourceId: 4029
+sourceUrl: "https://apxml.com/zh/courses/basics-model-evaluation-metrics/chapter-4-preparing-data-evaluation/common-split-ratios"
+title: "常用划分比例"
+description: "讨论用于划分数据的常用比例（例如，80/20，70/30）。"
+order: 5
+plots: ["plots/4029-0.json"]
+sourceHash: "1254a4733ff9de7ffb5bd81e2120247871977efed8f445770fb5470f12f33d36"
+sourceCorrections: []
+---
+
+你明白我们*为什么*需要将数据划分为训练集和测试集。训练集用于模型学习，而测试集则保留下来，用以观察模型在未见过的数据上的表现。这有助于我们评估模型在新、真实场景中的泛化能力。
+
+但是，训练集和测试集应该包含多少数据呢？没有一个适用于所有情况的万能数字，但有一些常见的惯例和指导原则可以提供一个好的起点。选择通常涉及权衡：
+
+1. **更多训练数据：** 能够让模型可能从数据中学习到更多模式和复杂性，这可能会带来表现更好的模型。然而，留给测试的数据会减少。
+2. **更多测试数据：** 能提供对模型在未见过数据上表现的更可靠评估。如果你的测试集非常小，你计算出的性能指标可能是由于运气好（或运气差！）而非模型能力的真实体现。
+
+让我们看看最常用的划分比例：
+
+### 80/20 划分
+
+这也许是最常见的起点。80%的数据用于训练模型，剩余的20%保留用于测试。
+
+- **为何流行：** 它为模型学习提供了大量数据，同时仍保留合理数量用于评估。对于许多中等规模数据集，20%通常足以提供相当稳定的性能评估。
+
+### 70/30 划分
+
+另一个广泛使用的比例是将70%的数据用于训练，30%用于测试。
+
+- **何时考虑：** 如果你想要对模型的泛化能力有稍微更可靠的评估，将测试集大小增加到30%会有帮助。如果你的数据集不是非常大，并且你希望确保测试集有足够的代表性，这可能是更好的选择。如果你的模型相对简单，不需要大量数据也能有效学习，这也是一个不错的选择。
+
+### 90/10 划分
+
+随着超大型数据集的出现（例如数百万或数十亿个样本），有时即使是10%的数据也足以为测试集提供可靠数据。
+
+- **何时考虑：** 如果你有大量数据，使用90%进行训练可以让模型从尽可能多的信息中学习。剩余的10%虽然比例较小，但仍可能代表数万或数十万个样本，这足以获得良好的性能评估。
+
+
+
+![常用的训练/测试划分比例](plots/4029-0.json)
+
+
+
+> 数据划分比例图示。蓝色部分表示用于训练模型的数据，橙色部分表示留作测试的数据。
+
+### 基于数据集大小的考量
+
+数据集中的总样本数量会很大程度上影响合适的划分比例：
+
+- **小型数据集：** 如果你的数据量非常有限（例如只有几百个样本），即使20%的测试集也可能太小而不可靠。在这种情况下，你可能倾向于70/30甚至60/40的划分，接受模型将没有足够的数据进行训练。另一种方法是，像交叉验证这样的方法（我们稍后会简要介绍）在此类情况下变得尤为重要。
+- **大型数据集：** 如前所述，数据充足时，你可以分配较小的比例（例如10%甚至更少）用于测试，因为测试样本的绝对数量仍然会很大。
+
+### 目标：具有代表性的数据集
+
+无论比例如何，主要目标是训练集和测试集都能对整体数据分布具有*代表性*。你希望完整数据集中存在的模式、变化和潜在挑战能在两个子集中得到体现。这就是为什么简单地取前80%的数据通常不是一个好主意，特别是如果数据具有某种固有顺序（如时间）。划分前随机打乱，这是我们接下来会讨论的，通常很必要。
+
+选择划分比例是一个实际决定。以80/20或70/30作为起点通常是合理的。在做出最终选择时，请考虑你的数据集大小以及你需要对测试结果有多大把握。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  为读者提供了数据拆分、常见比例及其在机器学习项目中的应用的实用介绍。
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2021)
+  Publisher: Springer
+  一本基础教材，解释了用于模型评估和选择的数据拆分背后的统计原因。
+- [Machine Learning Specialization, Course 1: Supervised Machine Learning: Regression and Classification](https://www.coursera.org/specializations/machine-learning-introduction) — Andrew Ng, Geoff Ladwig, Aarti Bagul, Eddy Shyu (2022)
+  Journal: Coursera course; Publisher: DeepLearning.AI
+  本课程涵盖了训练/测试集划分的基本概念及其在评估模型泛化能力方面的重要性。
+- [Applied Predictive Modeling](https://link.springer.com/book/10.1007/978-1-4614-6849-3) — Max Kuhn and Kjell Johnson (2013)
+  Publisher: Springer; DOI: [10.1007/978-1-4614-6849-3](https://doi.org/10.1007/978-1-4614-6849-3)
+  从应用角度讨论了各种数据拆分策略，包括数据集大小的考虑和代表性集合的重要性。

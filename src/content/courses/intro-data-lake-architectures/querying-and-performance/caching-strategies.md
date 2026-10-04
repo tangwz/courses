@@ -1,0 +1,108 @@
+---
+course: "intro-data-lake-architectures"
+chapter: "querying-and-performance"
+lesson: "caching-strategies"
+sourceId: 8019
+sourceUrl: "https://apxml.com/zh/courses/intro-data-lake-architectures/chapter-5-querying-and-performance/caching-strategies"
+title: "缓存策略"
+description: "实施SSD缓存和结果集缓存，以加快常用查询。"
+order: 4
+plots: ["plots/8019-0.json"]
+sourceHash: "242a4e3333779c389d7da0e19613766256ea84653e04154ea1bf6d4336859600"
+sourceCorrections: []
+---
+
+数据湖提供了将存储与计算资源分开扩展的灵活性。这种解耦可以降低成本并简化容量规划，但也带来了显著的性能瓶颈：网络延迟。传统数据库的存储引擎通常位于同一台物理机器或经过优化的低延迟专用存储区域网络（SAN）上。数据湖架构中的查询引擎必须通过网络连接从Amazon S3、Azure Blob Storage或Google Cloud Storage等对象存储服务获取数据。
+
+网络I/O通常是查询生命周期中最慢的操作。获取文件头以读取元数据或获取列块进行处理会产生数十到数百毫秒的延迟。当查询需要扫描数TB的数据时，这种延迟会累积，导致性能缓慢。缓存策略通过将常用数据存储在更靠近计算资源的位置来降低此开销，这实际上是用对象存储廉价但缓慢的容量换取本地内存或SSD昂贵但快速的性能。
+
+### 缓存层次
+
+分布式系统中的优化发生在多个层次。查询通常会先通过一个协调器节点，然后任务才被分配给工作节点。在此生命周期的每个阶段都存在缓存机会，针对不同类型的数据获取开销。
+
+#### 元数据缓存
+
+在查询引擎读取一行数据之前，它必须了解表结构。这需要与目录（例如Hive Metastore或AWS Glue）通信，以获取模式定义并列出分区位置。对于包含数千个分区的表，此元数据发现过程可能比实际的查询执行时间更长。
+
+元数据缓存将文件列表和分区映射存储在协调器节点的内存中。当用户执行重复查询时，引擎会跳过对对象存储的耗时列表操作，并立即使用缓存的文件映射生成查询计划。
+
+#### 数据缓存 (I/O缓存)
+
+这是分析中最常见的缓存形式。它解决了将原始数据文件（Parquet或Avro）从对象存储传输到工作节点的开销。当工作节点创建一个读取文件分区的任务时，它会首先检查其本地存储。
+
+如果数据不存在（缓存未命中），工作节点会从对象存储中拉取数据，并将其副本写入本地NVMe SSD或RAM。随后对同一文件分区的请求将直接从本地硬件提供。此技术能显著提高吞吐量 (throughput)，通常将I/O性能提升一个数量级。
+
+#### 结果集缓存
+
+元数据缓存和数据缓存优化了查询执行的*过程*，而结果集缓存则存储最终输出。这对于多个用户查看相同可视化的仪表板场景特别有效。引擎不再从原始文件重新计算聚合，而是从内存中提供预先计算的结果。这能将查询时间缩短到接近零，但需要严格的失效逻辑来确保用户不会看到过时信息。
+
+> 数据获取流程图，显示了工作节点如何优先使用本地SSD缓存，然后才回退到远程对象存储。
+
+### 有效访问时间
+
+为了衡量缓存的影响，工程师会关注有效访问时间（EAT）。此指标代表获取一个数据单元的平均时间，并根据数据在缓存中找到的概率（命中率）进行加权计算。
+
+EAT的计算公式是：
+
+$EAT = H \times T_{cache} + (1 - H) \times T_{remote}$
+
+其中：
+
+- $H$ 是命中率（缓存中找到请求的百分比，$0 \le H \le 1$）。
+- $T_{cache}$ 是本地缓存的延迟（例如，RAM 为 0.1 毫秒，SSD 为 5 毫秒）。
+- $T_{remote}$ 是对象存储的延迟（例如，100 毫秒）。
+
+即使是适度的命中率也能显著降低应用程序感知的总延迟。然而，当命中率接近100%时，系统实际上表现得就像数据在本地一样，完全掩盖了网络限制。
+
+
+
+![缓存命中率对查询延迟的影响](plots/8019-0.json)
+
+
+
+> 该图显示了延迟如何随着缓存命中率的提高而线性降低。
+
+### 管理缓存一致性
+
+分布式缓存中的主要难题之一是保持一致性。在数据湖中，文件是不可变的，但表不是。数据集可能会通过摄取作业添加新分区，或通过压缩作业将小文件重写为大文件而得到更新。
+
+如果工作节点上的缓存保留了对已被逻辑删除或覆盖的文件的引用，查询引擎可能会返回不正确的数据，或者因 `FileNotFoundException` 而失败。
+
+Apache Iceberg和Delta Lake等现代开放表格式通过快照隔离来解决此问题。
+
+1. **快照ID：** 每个读取操作都固定到表的特定快照ID。
+2. **不可变文件：** 数据文件从不原地修改。更新会创建一个新文件。
+3. **缓存验证：** 查询引擎使用唯一文件路径（通常包含UUID）作为缓存键。
+
+由于数据更改时文件路径也会改变，缓存便能有效进行自我管理。旧文件路径会逐渐停止使用，最终由替换策略淘汰，而新文件路径则会生成新的缓存条目。
+
+### 淘汰策略
+
+工作节点上的存储空间是有限的。当缓存满时，系统必须决定删除哪些数据以为新数据块腾出空间。淘汰策略的选择会影响缓存命中率和整体性能。
+
+- **最近最少使用 (LRU)：** 最常用的算法。它会追踪数据块上次访问的时间。当需要空间时，系统会丢弃最长时间未被使用的数据块。这假设如果数据最近被读取过，那么它很可能很快会再次被读取。
+- **最不常用 (LFU)：** 它会追踪数据块被访问的次数。访问次数少的数据块会首先被淘汰。这对于扫描某些分区是“热点”（经常被查询）而另一些分区很少被触及的表很有用。
+- **存活时间 (TTL)：** 数据会在设定的时间段后（例如24小时）自动删除。这是一种简单粗暴的方法，常用于元数据缓存，以确保目录最终能反映外部变化。
+
+### 实际中的缓存配置
+
+在部署Trino或Apache Spark等引擎时，由于硬件要求（配置SSD会增加基础设施成本），缓存并非总是默认启用。
+
+在 **Trino** 中，启用分层存储缓存需要配置 `hive.cache.enabled` 属性并定义缓存目录。Trino使用一个名为Rubix的库来管理文件系统和本地磁盘之间的交互。
+
+在 **Apache Spark** 中，缓存通常是明确的。数据工程师会在DataFrame上使用 `.cache()` 或 `.persist()` 方法。这会将数据加载到执行器的内存中。然而，商业平台（如Databricks）上的Spark最新版本实现了类似于上述透明I/O缓存的自动磁盘缓存，用户无需进行代码更改。
+
+经过适当调整的缓存策略能将解耦的数据湖从一个冷存储库转变为一个高性能分析引擎，能够服务交互式仪表板和迭代机器学习 (machine learning)工作负载。
+
+## 参考资料
+
+- [Computer Architecture: A Quantitative Approach](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqE3vavDdxSY9EwemQk97gO8iI1L_nICl6ydphedYiKBSHATLkdrGrCUkgjuRbrKIzxUOKMuSUdlJHG--lwEd_FIunz4WB1HmY-YXfHVVObbgO0X8MB2INQjDlLvvSrD-UC87Hclyu_75KrEQdgNl2T4gvqiYMYfzq4ioX5g==) — John L. Hennessy, David A. Patterson (2019)
+  Publisher: Morgan Kaufmann
+  本书全面介绍了缓存层次结构、有效访问时间等性能指标以及LRU和LFU等常见逐出策略。
+- [Trino Documentation: Hive connector caching](https://trino.io/docs/478/admin/properties-storage-cache.html) — The Trino Community (2024)
+  Publisher: The Trino Community
+  Trino Hive连接器I/O缓存配置和操作的官方文档，包括与Rubix集成的详细信息。
+- [Apache Spark Documentation: RDD Persistence](https://spark.apache.org/docs/latest/rdd-programming-guide.html#rdd-persistence) — The Apache Spark Project (2024)
+  官方文档解释了如何在Spark中显式缓存或持久化RDD和DataFrame，这是优化数据访问的基本技术。
+- [Apache Iceberg Specification](https://iceberg.apache.org/spec/) — The Apache Iceberg Project (2024)
+  Apache Iceberg的技术规范，详细介绍了其支持缓存一致性的快照隔离和不可变文件架构。

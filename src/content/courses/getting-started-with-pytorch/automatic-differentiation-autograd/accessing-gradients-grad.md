@@ -1,0 +1,81 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "automatic-differentiation-autograd"
+lesson: "accessing-gradients-grad"
+sourceId: 2138
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-3-automatic-differentiation-autograd/accessing-gradients-grad"
+title: "访问梯度（`.grad`）"
+description: "如何访问存储在张量 `.grad` 属性中的计算出的梯度。"
+order: 5
+plots: []
+sourceHash: "a729160b71dab278e69bdacbad0c2471505e4192495279786b03d95879c1ac6d"
+sourceCorrections: []
+---
+
+在计算标量张量（通常是损失）相对于计算图中其他张量的梯度时，PyTorch 使用 `backward()` 方法。此方法触发梯度计算，但它不会直接返回梯度。相反，PyTorch 会将计算出的梯度存储在张量自身的一个特殊属性中：即 `.grad` 属性。
+
+这个属性主要为计算图中的*叶*张量填充，即那些你通过设置 `requires_grad=True` 明确要求进行梯度跟踪的张量。请记住，叶张量通常是你直接创建的，例如模型参数 (parameter)或输入，而不是通过运算生成的中间张量。
+
+`.grad` 属性包含一个与它所属的原始张量形状相同的张量。`.grad` 张量中的每个元素表示标量（调用 `backward()` 的对象）相对于原始张量中对应元素的偏导数。如果 $L$ 是标量损失，$w$ 是一个张量参数，那么在调用 `L.backward()` 之后，属性 `w.grad` 将包含表示 $\frac{\partial L}{\partial w}$ 的张量。
+
+我们通过一个简单例子来说明这一点：
+
+```python
+import torch
+
+# 创建需要梯度的输入张量
+x = torch.tensor(2.0, requires_grad=True)
+w = torch.tensor(3.0, requires_grad=True)
+b = torch.tensor(1.0, requires_grad=True)
+
+# 定义一个简单的计算
+y = w * x + b  # y = 3.0 * 2.0 + 1.0 = 7.0
+
+# 计算梯度
+y.backward()
+
+# 访问存储在 .grad 属性中的梯度
+print(f"y 对 x 的梯度 (dy/dx): {x.grad}")
+print(f"y 对 w 的梯度 (dy/dw): {w.grad}")
+print(f"y 对 b 的梯度 (dy/db): {b.grad}")
+
+# 创建一个不需要梯度的张量
+z = torch.tensor(4.0, requires_grad=False)
+print(f"张量 z 的梯度 (requires_grad=False): {z.grad}")
+```
+
+**预期输出：**
+
+```
+y 对 x 的梯度 (dy/dx): 3.0
+y 对 w 的梯度 (dy/dw): 2.0
+y 对 b 的梯度 (dy/db): 1.0
+张量 z 的梯度 (requires_grad=False): None
+```
+
+在这个例子中：
+
+1. 我们定义了 `x`、`w` 和 `b`，并设置 `requires_grad=True`，将它们标记 (token)为我们想要梯度的叶节点。
+2. 我们执行了操作 $y = w * x + b$。PyTorch 在后台构建了一个计算图。
+3. 我们调用了 `y.backward()`。Autograd 从 `y` 开始向后遍历图以计算梯度。
+   - $\frac{\partial y}{\partial x} = w = 3.0$
+   - $\frac{\partial y}{\partial w} = x = 2.0$
+   - $\frac{\partial y}{\partial b} = 1 = 1.0$
+4. 计算出的梯度存储在 `x.grad`、`w.grad` 和 `b.grad` 中。访问这些属性会显示计算出的张量值。
+5. 张量 `z` 是在 `requires_grad=False` 的情况下创建的，因此它未参与 Autograd 跟踪的梯度计算，其 `.grad` 属性保持为 `None`。
+
+需要记住的是，梯度默认是累积的。如果你在不清除梯度的情况下，对图中可能不同的部分（或相同的部分）多次调用 `backward()`，新计算的梯度将被*添加*到 `.grad` 属性中已经存在的值上。这种行为是故意的，对于像跨小批量进行梯度累积这样的情况很有用，但在典型的训练循环中，你需要在每个反向传播 (backpropagation)步骤之前明确地将梯度清零。这通常通过 `optimizer.zero_grad()` 完成，我们将在构建训练循环时更详细地讨论它。
+
+目前，要点是，在 `loss.backward()` 之后，更新模型参数所需的梯度可以直接在这些参数张量的 `.grad` 属性中可用。
+
+## 参考资料
+
+- [Autograd mechanics](https://pytorch.org/docs/stable/notes/autograd.html) — PyTorch Contributors (2017)
+  Publisher: PyTorch Foundation
+  该官方指南权威地解释了 PyTorch 的自动微分引擎，详细说明了计算图、`requires_grad`、`backward()` 以及梯度如何存储在 `.grad` 属性中。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 6 & 8
+  提供了神经网络、反向传播以及梯度在优化深度学习模型中的作用的理论基础。
+- [Deep Learning for Coders with fastai & PyTorch: AI Applications Without a PhD](https://www.oreilly.com) — Jeremy Howard, Sylvain Gugger (2020)
+  Publisher: O'Reilly Media; Pages: Chapter 4: Under the Hood: Training a Digit Classifier
+  本书以实践和代码为中心的方法介绍深度学习，展示了 PyTorch 的自动微分系统如何促进模型训练中的梯度计算。

@@ -1,0 +1,58 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "intro-statistical-inference"
+lesson: "hypothesis-testing-idea"
+sourceId: 2467
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-5-intro-statistical-inference/hypothesis-testing-idea"
+title: "假设检验：基本思路"
+description: "了解假设检验的基本思路：提出并检验关于总体的断言。"
+order: 4
+plots: []
+sourceHash: "3443f7d891946686a5ab8d9e8e225c0d4dd40b68a10bdfd8c633b3894ebfa009"
+sourceCorrections: []
+---
+
+虽然点估计为我们提供了总体参数 (parameter)的单一最佳猜测，置信区间提供了一系列合理的值，但有时我们需要对关于总体的特定断言或假定作出更直接的判断。这就是**假设检验**的作用所在。它提供了一套正式的步骤，用于使用样本数据来在两种对立的关于总体特征的陈述之间作出选择。
+
+可以将其想象成法庭审判。有一个最初的假定（例如，“在被证明有罪前是无辜的”），我们称之为**零假设**。然后，证据（样本数据）被提出。根据该证据的强度，会作出一个判断：要么坚持最初的假定，要么拒绝它，转而支持另一个结论（**备择假设**）。统计学中的假设检验遵循类似的原理。
+
+核心思路是从关于总体的特定断言开始，这通常代表着默认状态、现状或“无影响”。例如：
+
+- 我们网络服务器的平均响应时间是200毫秒。
+- 一种新药与现有药物相比，对恢复时间没有影响。
+- 点击广告的用户比例是5%。
+
+这个最初的断言就是我们将要“接受检验”的。然后我们收集与此断言相关的样本数据。重要问题就变成了：
+
+> “如果最初的断言（零假设）确实为真，我们观察到像我们这样的样本数据（甚至更极端的数据）仅仅由于随机性而发生的可能性有多大？”
+
+如果我们的样本数据在最初断言为真的假定下看起来很典型或相当可能，我们就没有足够有力的证据来放弃该断言。我们“未能拒绝”零假设（类似于“无罪”判决；这不一定证明无罪，但证据不足以定罪）。
+
+然而，如果我们的样本数据在*最初断言为真*的假定下看起来非常不寻常或极不可能，那就会对该断言提出质疑。这表明最初的假定可能是错误的。在这种情况下，我们有统计上显著的证据来“拒绝”零假设，转而支持备择结论。
+
+让我们回顾一下网站重新设计的示例。假设旧网站设计的平均用户会话时长是3分钟。我们想检验新设计是否*增加了*这个时长。
+
+1. **断言（零假设）：** 新设计对平均会话时长*没有影响*，甚至可能减少了。正式来说，平均时长仍小于或等于3分钟。
+2. **备择方案（备择假设）：** 新设计*增加了*平均会话时长（即它大于3分钟）。
+3. **证据（样本数据）：** 我们针对一部分用户推出新设计，发现他们的平均会话时长是，比如，4.5分钟。
+4. **问题：** 如果新设计的*真实*平均会话时长实际上仍是3分钟（或更少），仅仅由于用户行为的随机变动，获得一个高达4.5分钟的样本平均值，这种可能性有多大？
+
+如果计算（我们很快会详细了解）表明，如果真实平均值仍是3分钟，获得4.5分钟的样本平均值是极不可能的，我们就会拒绝最初的“无影响”断言。我们会得出结论，证据支持新设计增加了会话时长这一想法。然而，如果即使真实平均值是3分钟（可能由于高变异性或小样本量），4.5分钟的样本平均值也是相当合理的，我们就没有足够的证据拒绝最初的断言。
+
+这是一个简化版的判断过程：
+
+> 假设检验的简化流程：提出断言，收集数据，评估如果断言为真，数据有多么令人意外，并作出判断。
+
+假设检验不*绝对确定地*证明任何事情。它关乎权衡证据并根据概率作出判断。它提供了一种结构化的方式来评估我们在样本数据中看到的模式是否足够有力，以得出在更大的总体中存在真实的影响或差异的结论，从而从单纯的描述或估计转向作出明智的判断。在接下来的章节中，我们将通过精确定义零假设和备择假设，并引入p值来帮助作出判断，从而将这些想法正式化。
+
+## 参考资料
+
+- [Probability & Statistics for Engineers & Scientists](https://www.pearson.com/us/higher-education/product/Walpole-Probability-Statistics-for-Engineers-Scientists-9th-Edition/9780137273546.html) — Ronald E. Walpole, Raymond H. Myers, Sharon L. Myers, Keying E. Ye (2017)
+  Publisher: Pearson
+  一本全面教材，对假设检验的原理和方法进行了基础性解释。（第9版）
+- [Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, and Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  介绍核心统计概念，包含假设检验，侧重数据科学应用。（第2版）
+- [Introduction to Probability and Statistics](https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-fall-2014/) — Jeremy Orloff, Jonathan Bloom, John Tsitsiklis, and Patrick Jaillet (2014)
+  Publisher: MIT OpenCourseWare
+  麻省理工学院课程资料，对统计推断和假设检验的基础知识进行了全面介绍。

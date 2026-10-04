@@ -1,0 +1,113 @@
+---
+course: "mixture-of-experts"
+chapter: "advanced-moe-architectures"
+lesson: "designing-gating-networks"
+sourceId: 4685
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts/chapter-2-advanced-moe-architectures/designing-gating-networks"
+title: "设计有效的门控网络"
+description: "设计路由器/门控机制的方法，包括top-k选择和噪声门。"
+order: 1
+plots: []
+sourceHash: "3f8522b4c455bc5e4a3489124a725c82c93da8332d4e10ed4148cc2d9c73e226"
+sourceCorrections: []
+---
+
+门控网络，通常称为路由器，是专家混合（MoE）层内部的决策部分。它决定每个输入令牌应由哪个或哪些专家处理。该网络的设计对于整个MoE模型的表现、专业化程度和效率是基本要素。无效的路由器可能导致专家专业化不足、计算不平衡以及模型质量不佳。设计有效门控网络的原则和常用方法将得到分析。
+
+### 门控网络的作用
+
+回顾第一章中基本的MoE公式。对于输入令牌表示 $x$，门控网络 $G$ 计算 $N$ 个可用专家上的分布。通常，这涉及一个简单的线性变换，接着是softmax激活：
+
+
+$$
+\text{对数几率} = W_g x
+$$
+
+
+$$
+P = \text{softmax}(\text{对数几率})
+$$
+
+
+其中，$W_g$是一个可训练的权重 (weight)矩阵，将输入维度映射到专家数量$N$，而$P$是一个概率向量 (vector)$P_i$，表示令牌$x$对专家$i$的倾向性。
+
+在一个稠密MoE中（其中每个令牌都由所有专家的加权组合处理），输出$y$将是：
+
+
+$$
+y = \sum_{i=1}^{N} P_i E_i(x)
+$$
+
+
+然而，稀疏MoE旨在提高计算效率，通过为每个令牌仅激活一小部分专家。这需要一种根据门控概率$P$选择专家的机制。
+
+### Top-k 路由
+
+稀疏MoE中选择专家最常用的策略是$top-k$路由。门控网络不使用所有专家，而是为每个令牌选择具有最高概率（或对数几率）的$k$个专家。通常，$k$是一个小整数，常为1或2。
+
+该过程如下进行：
+
+1. **计算分数：** 如上所述计算门控对数几率或概率$P$。
+2. **选择Top-k：** 找出$P$中对应$k$个最高值的索引$I = \{i_1, i_2, ..., i_k\}$。
+3. **重新归一化 (normalization)分数（可选但常见）：** 通常，所选top $k$专家的分数（概率）仅对所选专家进行softmax重新归一化。设$P_{sel}$是$P$中对应索引$I$的子向量 (vector)。重新归一化的权重 (weight)$P'$是：
+   
+   $$
+   P'_j = \frac{\exp(\text{对数几率}_{i_j})}{\sum_{l=1}^{k} \exp(\text{对数几率}_{i_l})} \quad \text{对于 } j=1...k
+   $$
+   
+4. **计算加权输出：** 令牌的最终输出是所选专家输出的加权和，使用（可能重新归一化后的）门控概率作为权重：
+   
+   $$
+   y = \sum_{j=1}^{k} P'_j E_{i_j}(x)
+   $$
+   
+
+将$k=1$设置为意味着每个令牌被路由到一个专家，最大化稀疏性，但可能限制模型结合专家知识的能力。使用$k=2$使令牌可以从两个专门的视角中获益，在稀疏性和表示能力之间提供平衡，尽管与$k=1$相比计算成本翻倍。$k$的选择是影响模型表现和计算负担的一个重要超参数 (parameter) (hyperparameter)。
+
+> 一张图示令牌的流程，通过top-k门控机制（$k=2$）。门控网络计算分数，top-k选择专家，它们的输出被组合。
+
+### 噪声Top-k门控
+
+MoE训练中常见的问题是*表示坍塌*或负载不均衡，即路由器总是将大多数令牌发送给少数几个专家，导致其他专家未被充分利用。这会阻碍专业化并浪费容量。
+
+一种鼓励尝试和改善负载均衡的方法，尤其是在训练早期，是**噪声top-k门控**。不再仅仅根据原始门控对数几率选择top $k$专家，而是在选择过程前添加噪声。一种标准做法是添加高斯噪声：
+
+
+$$
+\text{含噪声对数几率} = \text{对数几率} + \mathcal{N}(0, \sigma^2)
+$$
+
+
+其中$\mathcal{N}(0, \sigma^2)$表示从均值为零、方差为$\sigma^2$的高斯分布中采样的值。随后在这些`含噪声对数几率`上执行top-k选择。噪声方差$\sigma^2$通常实现为可训练参数 (parameter)或由调度器控制。
+
+添加的噪声为路由决策引入了随机性。它给得分较低的专家一个被选择的机会，促进尝试，并可能防止路由器过早地固定在次优的分配模式上。
+
+**数学细节：**
+
+如果$W_g$是门控权重 (weight)矩阵，$x$是输入令牌表示，则标准对数几率是$\text{对数几率} = W_g x$。对于噪声top-k，我们计算：
+
+
+$$
+\text{含噪声分数} = W_g x + \epsilon \cdot \text{softplus}(W_{noise} x)
+$$
+
+
+其中，$\epsilon \sim \mathcal{N}(0, 1)$是每个令牌采样的标准高斯噪声，$W_{noise}$是另一个可训练的权重矩阵，用于根据输入对噪声进行乘法缩放。softplus函数确保噪声缩放因子为正。随后使用这些`含噪声分数`进行top-k选择。用于加权专家输出的概率（前述中的$P'$)通常仍从所选专家的*原始*、非噪声对数几率中得出，以保持输出计算的稳定性。
+
+### 设计考量
+
+- **$k$的选择：** 如前所述，$k$（通常为1或2）在稀疏性和容量之间取得平衡。更大的$k$会增加计算量，但如果专家能有效专业化并且令牌能从多角度受益，则可能改善表现。
+- **路由器复杂度：** 尽管简单的线性层后接softmax很常见，但可以考虑更复杂的路由器架构（本章稍后会讨论），包括非线性和注意力机制 (attention mechanism)。然而，复杂度会增加计算开销和训练难度。
+- **噪声调度：** 如果使用噪声top-k，噪声量可能需要退火处理。训练早期的高噪声鼓励尝试，而后期较低的噪声则允许路由器稳定其学习到的分配。
+- **与负载均衡的相互作用：** 门控机制直接影响负载均衡。虽然噪声有帮助，但专门的辅助损失函数 (loss function)（第三章会讲到）几乎总是必要的，以明确促使训练期间专家使用均衡。门控网络的设计和负载均衡策略紧密关联。
+
+有效的门控网络设计需要仔细考量这些因素，在精确路由和专家专业化需求与计算限制和训练稳定性之间取得平衡。这里讨论的方法，特别是带有可选噪声的top-k路由，构成了大多数实际MoE实现的基础。
+
+## 参考资料
+
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  本文介绍了稀疏门控混合专家层，描述了专家路由和初始top-k选择机制的基本概念，这是本节的核心内容。
+- [GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding](https://arxiv.org/abs/2006.16668) — Dmitry Lepikhin, HyoukJoong Lee, Yuanzhong Xu, Dehao Chen, Orhan Firat, Yanping Huang, Maxim Krikun, Noam Shazeer, Zhifeng Chen (2020)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2006.16668](https://doi.org/10.48550/arXiv.2006.16668)
+  这项工作介绍了GShard架构，详细阐述了嘈杂top-k门控策略，以改善大型MoE模型中的专家负载平衡和训练稳定性，直接支持“嘈杂Top-k门控”小节。

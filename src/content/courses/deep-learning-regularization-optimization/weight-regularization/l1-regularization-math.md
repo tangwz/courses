@@ -1,0 +1,85 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "weight-regularization"
+lesson: "l1-regularization-math"
+sourceId: 4905
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-2-weight-regularization/l1-regularization-math"
+title: "L1 正则化：数学表述"
+description: "介绍L1正则化的数学公式及其梯度。"
+order: 5
+plots: ["plots/4905-0.json"]
+sourceHash: "753149d4b98179da6b47cb98190ea65bd39b9aea76129ce1194c0e6b0ee7fe56"
+sourceCorrections: []
+---
+
+L1正则化 (regularization)通过添加一个惩罚项来修改标准损失函数 (loss function)，该惩罚项与网络中所有权重 (weight)的*绝对*值之和成比例。
+
+回想一下，在训练过程中，我们的目标通常是最小化一个数据损失函数，我们称之为 $L_{data}(W)$，它衡量在给定当前权重 $W$ 的情况下，模型的预测与实际目标值匹配的程度。使用L1正则化时，我们在这个目标函数中添加一个新项：
+
+
+$$
+L_{total}(W) = L_{data}(W) + \lambda \sum_{i} |w_i|
+$$
+
+
+让我们分析这个新项：
+
+- $w_i$: 表示网络中（所有层上的）单个权重。
+- $\sum_{i} |w_i|$: 这是所有权重的绝对值之和。它也被称为权重向量 (vector)的 $L_1$ 范数，通常写为 $||W||_1$。
+- $\lambda$: 这是正则化强度超参数 (parameter) (hyperparameter)，其作用与L2正则化中使用的 $\lambda$ 相同。它是一个非负值（通常很小），用于控制L1惩罚项的影响。更高的 $\lambda$ 会施加更强的惩罚，促使模型更稀疏。如果 $\lambda = 0$，则恢复原始的未正则化损失函数。
+
+与L2正则化相比，主要区别在于使用了绝对值 $|w_i|$ 而不是平方值 $w_i^2$。这种看似微小的变化对优化过程有显著影响。
+
+### 对梯度下降 (gradient descent)的影响
+
+在反向传播 (backpropagation)过程中，我们需要计算总损失 $L_{total}$ 相对于每个权重 (weight) $w_j$ 的梯度以更新它。L1惩罚项相对于特定权重 $w_j$ 的梯度为：
+
+
+$$
+\frac{\partial}{\partial w_j} \left( \lambda \sum_{i} |w_i| \right) = \lambda \cdot \frac{\partial |w_j|}{\partial w_j}
+$$
+
+
+绝对值函数 $|x|$ 的导数是 $\text{sign}(x)$，即：
+
+- $+1$ 如果 $x > 0$
+- $-1$ 如果 $x < 0$
+- 在 $x = 0$ 处未定义
+
+因此，总损失的梯度变为：
+
+
+$$
+\frac{\partial L_{total}}{\partial w_j} = \frac{\partial L_{data}}{\partial w_j} + \lambda \cdot \text{sign}(w_j) \quad \text{对于 } w_j \neq 0
+$$
+
+
+这意味着L1惩罚项会向数据损失的梯度添加一个常数值（$\lambda$ 或 $-\lambda$），将权重推向零，无论权重的当前大小如何（只要它不为零）。这种恒定的推动力就是促使权重变为精确零的原因。将其与L2正则化 (regularization)进行比较，L2正则化中惩罚项对梯度的贡献（$\lambda \cdot 2w_j$）随着权重变小而减小，使其不太可能精确地达到零。
+
+### 零点不可微的处理
+
+当 $w_j = 0$ 时会发生什么？绝对值函数在这一点上不可微。在实践中，优化算法通过使用与*次梯度下降 (gradient descent)*或*近端梯度方法*相关的技术来处理这种情况。$|w_j|$ 在 $w_j=0$ 处的次梯度是区间 $[-1, 1]$。一种常见的实际方法是，如果权重 (weight)已经为零，则将L1项的梯度贡献简单地设置为零，或者在更新步骤中应用“软阈值”操作，这种操作会检查更新是否会越过零点，如果会，则将权重设置为零。大多数深度学习 (deep learning)框架的优化器在内部处理这个细节。
+
+核心要点是，L1惩罚项为非零权重提供了一个恒定的“推力”使其趋近于零，这使得它在生成许多权重变为精确零的稀疏模型方面非常有效。
+
+
+
+![L1 和 L2 惩罚函数比较](plots/4905-0.json)
+
+
+
+> L1惩罚项呈“V”字形，对非零权重施加恒定的梯度大小（斜率），无论其大小如何。L2惩罚项呈抛物线形，梯度随着权重接近零而减小。
+
+这种数学结构直接导致了前面讨论的稀疏性诱导特性。在接下来的部分中，我们将更直接地比较L1和L2，并查看如何在代码中实现它们。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 7
+  全面介绍了深度学习中的正则化技术，涵盖了L1正则化的数学公式、对模型权重的影响以及稀疏性。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; Pages: 71-76
+  提供了L1正则化（Lasso）的深入统计解释，详细阐述了其特性、稀疏性机制以及与L2正则化的比较。
+- [L2 Regularization, Dropout, L1 Regularization](https://cs231n.github.io/neural-networks-2/#reg) — Stanford University CS231n course staff (2023)
+  Publisher: Stanford University
+  这些讲义清晰直观地解释了L1正则化、其数学公式、梯度影响以及在实际深度学习中如何处理零点不可微问题。

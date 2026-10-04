@@ -1,0 +1,54 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "deep-q-networks-dqn"
+lesson: "function-approximation-intro"
+sourceId: 5096
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-2-deep-q-networks-dqn/function-approximation-intro"
+title: "函数近似的简介"
+description: "了解在处理大型状态空间时函数近似的需求。"
+order: 1
+plots: []
+sourceHash: "4c331adad25e3e2f9572c57ae67ebee79da10f188d55a17a63bb39d3c29a0686"
+sourceCorrections: []
+---
+
+Q学习和SARSA等传统方法依赖表格来存储每个状态或状态-动作对的价值估计（Q值）。当状态和动作的数量足够小、可管理时，例如在简单的网格环境或井字棋游戏中，这种方法效果很好。
+
+然而，许多有趣的问题具有庞大甚至无限的状态空间。请看以下情况：
+
+- **从像素玩Atari游戏：** 状态是屏幕上的原始像素数据。即使是低分辨率屏幕（例如84x84像素）和少量颜色，也可能产生远超宇宙中原子数量的可能状态。存储Q表是不可能的。
+- **机器人控制：** 机器人的状态可能涉及关节角度、速度、传感器读数（如激光雷达或摄像头输入），所有这些都可以是连续值。存在无限多的状态。
+- **金融建模：** 市场状态可能涉及大量连续指标，导致庞大的状态空间。
+
+在这些情况下，由于**维度灾难**，表格方法完全失效。我们面临两个主要难题：
+
+1. **内存：** 我们根本没有足够的内存来存储Q表。
+2. **学习时间与泛化能力：** 即使我们有足够的内存，代理也需要不切实际的时间来访问并学习哪怕是一小部分可能状态的值。此外，代理将无法**泛化**其知识。学习一个特定状态不会提供关于相似的、以前未见过状态的信息。如果屏幕像素略微改变，表格方法会将其视为一个全新的状态，需要单独学习。
+
+为了应对这些复杂的大规模问题，我们需要一种更具可扩展性的方法。我们不再为每个状态-动作对存储显式值，而是可以使用参数 (parameter)化函数来近似价值函数。这种技术被称为**函数近似**。
+
+其核心思想是使用一个函数，我们称之为$\hat{Q}(s, a; \theta)$，它将状态$s$（可能还有动作$a$）作为输入，并输出真实Q值$Q(s, a)$的*估计*。该函数有一组参数，记为$\theta$，我们将根据代理的经验对其进行学习和调整。
+
+> 比较表格查找与函数近似获取Q值的方法。函数近似使用参数化函数来估计值，从而实现可扩展性和泛化。
+
+函数近似带来了显著的优势：
+
+- **紧凑表示：** 我们无需存储可能数十亿或数万亿的Q值，只需存储函数的参数$\theta$。参数的数量通常远小于状态的数量。
+- **泛化能力：** 这可能是最重要的优点。如果函数近似器学习到良好的表示，它就可以根据未见过状态与已见过状态的相似性，为其估计合理的Q值。这使得代理能够在新的情况下做出明智的决策。
+- **处理连续空间：** 参数化函数，尤其是神经网络 (neural network)，可以自然地处理连续输入特征，使其适用于状态或动作空间连续且表格方法根本不可行的问题。
+
+各种类型的函数都可以作为近似器，包括线性函数、决策树和瓦片编码。然而，对于涉及图像或复杂状态表示等高维输入的复杂问题，**深度神经网络**已证明异常有效。它们学习分层特征和建模复杂非线性关系的能力，使其成为强大的Q函数近似器。
+
+在本章中，我们将专门侧重于使用深度神经网络来近似动作价值函数$Q(s, a)$。这种结合构成了深度Q网络（DQN）的根基，标志着从表格方法向前迈出的重要一步，并使强化学习 (reinforcement learning)能够处理远为复杂得多的任务。我们现在将介绍如何构建和训练这样的网络。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press; Pages: Chapters 9-11
+  一本经典且全面的教材，涵盖强化学习的理论基础，包括对函数逼近方法的详细介绍。
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis (2015)
+  Journal: Nature; Publisher: Springer Nature; Volume: 518; Pages: 529-533; DOI: [10.1038/nature14236](https://doi.org/10.1038/nature14236)
+  引入深度Q网络（DQN）的开创性论文，展示了使用深度强化学习和函数逼近在Atari游戏上达到人类水平的性能。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapters 6-8
+  一本权威教材，全面介绍了深度学习，包括神经网络的架构和训练，这对于理解DQN中的函数逼近至关重要。

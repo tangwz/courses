@@ -1,0 +1,74 @@
+---
+course: "vector-databases-semantic-search"
+chapter: "embeddings-vector-spaces-foundation"
+lesson: "dimensionality-reduction-introduction"
+sourceId: 3513
+sourceUrl: "https://apxml.com/zh/courses/vector-databases-semantic-search/chapter-1-embeddings-vector-spaces-foundation/dimensionality-reduction-introduction"
+title: "降维技术概述"
+description: "PCA和UMAP等向量维度缩减方法的概览。"
+order: 4
+plots: []
+sourceHash: "c888e4a0e7f6a1e13e2dca607e55035a4f37dad0ba8ac2326b48f388ed44b219"
+sourceCorrections: []
+---
+
+如前所述，嵌入 (embedding)模型通常会生成数百甚至数千个维度的向量 (vector)。尽管这些高维空间 (high-dimensional space)能够捕捉复杂关联，但它们也会带来一些难题，通常称为“维度灾难”。处理极高维度的数据可能导致：
+
+1. **计算成本增加：** 随着维度数量增加，计算向量间距离或相似度的计算量会变得更大。精确的最近邻搜索变得异常缓慢。
+2. **存储需求增加：** 存储数百万或数十亿个高维向量需要大量内存和硬盘空间。
+3. **数据稀疏化：** 在高维空间中，数据点往往变得稀疏，即它们彼此之间距离较远。这有时会使距离度量变得不那么有意义。
+4. **可能降低性能：** 对于某些算法，大量的维度可能引入噪声，从而可能妨碍后续任务的性能。
+
+降维技术提供了一种缓解这些问题的方法。其根本目的是将数据从高维空间转换为低维空间，同时尽可能保留原始数据中具有意义的特性。可以将其设想为在较少维度中创建原始数据的简洁概括或一个投影。
+
+> 降维将点从高维映射到低维的一个示例。
+
+我们希望保留哪些特性？这取决于所用技术和目标：
+
+### 常用降维技术
+
+尽管算法众多，但您会遇到的两种常见方法是主成分分析（PCA）和均匀流形逼近与投影（UMAP）。
+
+#### 主成分分析（PCA）
+
+PCA是一种线性技术，旨在数据中找到能捕获最大方差的方向（主成分）。设想旋转数据轴，使第一个新轴与最大散布方向对齐 (alignment)，第二个轴（与第一个轴正交）与次大散布方向对齐，依此类推。通过只保留前几个主成分，您可以在更少的维度中保留数据的大部分总体方差。当您关注的潜在结构与此方差相关时，它很有效。
+
+#### 均匀流形逼近与投影（UMAP）
+
+UMAP是一种非线性技术，特别擅长保留数据的*局部*结构和拓扑特性。它力求确保高维空间 (high-dimensional space)中距离近的点在低维映射中仍保持距离近。UMAP常用于高维嵌入 (embedding)的可视化（例如将其降至2D或3D以作图），因为它能够展示那些可能被PCA等仅侧重全局方差的技术所掩盖的簇和关联。
+
+### 优点与权衡
+
+应用降维技术可以带来多项益处：
+
+- **计算负荷减轻：** 维度减少意味着距离计算更快，并可能加快ANN索引查找。
+- **存储需求降低：** 缩减后的向量 (vector)需要更少的内存和磁盘空间。
+- **改善可视化效果：** 将数据降至2或3维可以直接进行可视化，有助于理解数据结构。
+- **噪声消除：** 有时，较低的维度可以滤除噪声并提高特定任务的性能。
+
+然而，存在固有的权衡：
+
+- **信息损失：** 压缩数据不可避免地会丢弃一些信息。技巧在于为您的特定任务丢弃*最不重要的*信息。如果过度缩减导致失去区分密切相关项的细微特征，则可能严重损害相似度搜索的质量。
+- **算法选择与调整：** 选择正确的技术（PCA、UMAP或其他）并调整其参数 (parameter)（例如目标维度数量），需要理解其前提和影响。
+
+### 与向量 (vector)数据库的关联
+
+尽管现代向量数据库及其相关联的ANN索引算法（如HNSW，我们将在第3章讨论）专门设计用于高效处理高维向量，但对降维的认识仍然很有价值。
+
+- 它可以用作向量索引前的预处理步骤，尤其是在存储或计算资源严重受限，或者原始维度过高（例如数万）的情况下。
+- 它经常用于*可视化*嵌入 (embedding)的结构或搜索结果。
+- 了解这些原则有助于您理解向量表示细节、存储和查询速度之间的固有权衡，即使是直接使用高维索引。
+
+在实际应用中，对于许多使用现代嵌入模型（通常维度为384、768或1024）的语义搜索任务，开发者通常直接索引全维度向量，依赖ANN算法的能力。然而，降维仍然是数据科学家工具集中的一项重要方法，尤其适用于分析、可视化或资源受限的环境。
+
+## 参考资料
+
+- [UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction](https://joss.theoj.org/papers/10.21105/joss.00861) — Leland McInnes, John Healy, Nathaniel Saul, Lukas Großberger (2018)
+  Journal: Journal of Open Source Software; Publisher: The Open Journal; Volume: 3; Pages: 861; DOI: [10.21105/joss.00861](https://doi.org/10.21105/joss.00861)
+  介绍统一流形近似与投影（UMAP）这一非线性降维技术的原始研究论文。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本广泛使用的教科书，全面阐述主成分分析（PCA）、“维度灾难”以及各种其他降维方法，提供了坚实的统计学基础。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/) — Christopher Bishop (2006)
+  Publisher: Springer
+  一本详细介绍主成分分析（PCA）及其他线性和非线性降维方法的综合性教科书，涵盖了其底层数学原理。

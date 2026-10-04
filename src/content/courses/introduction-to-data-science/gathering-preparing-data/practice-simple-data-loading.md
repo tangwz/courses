@@ -1,0 +1,121 @@
+---
+course: "introduction-to-data-science"
+chapter: "gathering-preparing-data"
+lesson: "practice-simple-data-loading"
+sourceId: 2140
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-data-science/chapter-4-gathering-preparing-data/practice-simple-data-loading"
+title: "动手实践：简单数据加载"
+description: "一个简单的实践活动，演示如何加载数据集并进行初步检查。"
+order: 7
+plots: []
+sourceHash: "07cab81747e48b58d623188662f7cea40e4d9b5c19c5f4a3cfb5484c5815ac50"
+sourceCorrections: []
+---
+
+让我们把理论付诸实践。你已经学过查找数据来源以及数据准备的重要性。现在，我们将逐步介绍实际加载数据集并初步查看它的基本步骤。可以把这看作是收到包裹后拆开包装盒——在开始使用前，你需要确认物品是否都在里面，并对内容有个大致的了解。
+
+### 准备阶段：数据集
+
+假设有一个以常见格式（如逗号分隔值（CSV）文件）存储的简单数据集。CSV文件是纯文本文件，数据按行组织，每行中的值用逗号分隔。假设文件名为`simple_sales.csv`，其中包含产品销售的基本信息。
+
+`simple_sales.csv`文件中的原始数据可能如下所示：
+
+```
+Product,Category,Price,QuantitySold
+Apple,Fruit,0.50,150
+Banana,Fruit,0.30,250
+Carrot,Vegetable,0.20,180
+Broccoli,Vegetable,1.50,90
+Orange,Fruit,0.60,120
+```
+
+这是一种典型的结构：
+
+- 第一行包含**标题**或**列名**（`Product`、`Category`、`Price`、`QuantitySold`）。
+- 每一后续行代表一条**记录**或**行**，对应一种产品。
+- 每行中的值由逗号分隔。
+
+### 步骤1：数据加载
+
+第一步是将这些数据“加载”或“导入”到您可能用于分析的任何环境中。这可能是一个电子表格程序（如Microsoft Excel或Google Sheets），或一个数据分析工具或库（如Python中的pandas，尽管我们在这里不使用具体的代码）。
+
+这个过程包括：
+
+1. **将工具指向文件：** 您通常会使用“打开”或“导入”命令并选择`simple_sales.csv`文件。
+2. **指定格式（如果需要）：** 通常，工具可以猜测它是CSV文件。有时您可能需要确认一些细节，比如分隔符（这里是逗号，即分隔值的字符）以及第一行是否包含标题。
+3. **执行：** 工具读取文件并在内部表示数据，通常是以表格形式。
+
+完成此步骤后，数据不再仅仅是文件中的文本；它已在您的分析环境中结构化，可以进行查看了。
+
+### 步骤2：初步查看 - 第一次查看
+
+数据加载后，紧接着的下一步是进行一些基本检查。这有助于确认数据是否正确加载，并让您初步了解其内容。
+
+#### 查看前几行（头部）
+
+大多数工具都提供查看数据集开头或“头部”的方式。这通常显示前5或10行。
+
+查看我们的`simple_sales`数据的头部会显示如下内容：
+
+| 产品 | 类别 | 价格 | 销售数量 |
+| --- | --- | --- | --- |
+| Apple | Fruit | 0.50 | 150 |
+| Banana | Fruit | 0.30 | 250 |
+| Carrot | Vegetable | 0.20 | 180 |
+| Broccoli | Vegetable | 1.50 | 90 |
+| Orange | Fruit | 0.60 | 120 |
+
+**为什么这样做？**
+
+- **验证加载：** 确认文件是否正确读取，并且看起来像一个表格。
+- **检查标题：** 确保列名正确导入。
+- **样本内容：** 立即了解每列中数据的类型。
+
+#### 检查维度
+
+了解数据集的大小很有用：它有多少行和多少列。对于我们的小例子：
+
+- **行数：** 5（不包括标题行）- 代表5种不同的产品。
+- **列数：** 4 - 代表每种产品测量的不同属性。
+
+**为什么这样做？**
+
+- **规模：** 了解您正在处理的数据量。它是小（像我们的例子）还是非常大？
+- **完整性：** 确认加载的数据是否符合预期（例如，如果您预期有1000行，但只看到50行，那么可能出了问题）。
+
+#### 检查列名和数据类型
+
+仔细查看列标题及其中的数据。
+
+- `Product`：包含文本字符串（产品名称）。这看起来是**定性**数据。
+- `Category`：包含文本字符串（产品类型）。也是**定性**数据。
+- `Price`：包含带小数的数字（货币值）。这是**定量**（具体来说，是连续）数据。
+- `QuantitySold`：包含整数（计数）。这是**定量**（具体来说，是离散）数据。
+
+**为什么这样做？**
+
+- **理解特征：** 明确每列代表什么。
+- **数据类型检查：** 确认工具是否正确解释了数据类型（例如，数字是否作为数字存储，还是错误地作为文本存储？）。不正确的数据类型会在后续分析中引起问题。有时，如果存在意外字符（如“\$”符号），一列数字可能会被作为文本导入。
+
+### 我们学到了什么
+
+通过执行这些简单的数据加载和查看步骤，我们已经：
+
+- 成功地将数据从文件导入到可用格式。
+- 验证了结构（行、列、标题）。
+- 对数据的内容和规模有了基本了解。
+- 识别了每列中数据的类型。
+
+这个实践步骤是数据准备的入口。加载并初步查看数据后，您现在能更好地进入本章讨论的下一阶段，例如处理缺失值（尽管我们的简单示例没有）或识别异常值，这些都是在进行任何有意义的分析之前有必要的。
+
+## 参考资料
+
+- [Python for Data Analysis: Data Wrangling with pandas, NumPy, and IPython](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  关于使用Python的pandas库进行数据加载、处理和初步检查的指南，其中概念直接适用于理解表格数据及其准备工作。
+- [Data Science for Business: What You Need to Know about Data Mining and Data-Analytic Thinking](https://www.oreilly.com/library/view/data-science-for/9781449361321/) — Foster Provost, Tom Fawcett (2013)
+  Publisher: O'Reilly Media; Pages: 408
+  为数据科学项目提供了坚实的理论基础，强调了数据理解、获取和各种数据类型特征的初始阶段，为正式分析做准备。
+- [Foundations of Data Science](https://www.cambridge.org/core/books/foundations-of-data-science/3141F16D8343D56D18C28D7B09F6047A) — Avrim Blum, John Hopcroft, and Ravindran Kannan (2020)
+  Publisher: Cambridge University Press; DOI: [10.1017/9781108755528](https://doi.org/10.1017/9781108755528)
+  提供数据科学的严谨学术介绍，涵盖数据表示、收集和在更广阔理论背景下初步处理的基本方面。

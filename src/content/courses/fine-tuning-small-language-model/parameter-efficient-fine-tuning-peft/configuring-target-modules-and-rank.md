@@ -1,0 +1,55 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "parameter-efficient-fine-tuning-peft"
+lesson: "configuring-target-modules-and-rank"
+sourceId: 8515
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-4-parameter-efficient-fine-tuning-peft/configuring-target-modules-and-rank"
+title: "配置目标模块与秩"
+description: "选择特定的 Transformer 块进行适配，并调节秩参数以获得最佳性能。"
+order: 4
+plots: ["plots/8515-0.json"]
+sourceHash: "0adbfa1606c3eea083649f3fcec10d0f76a7e9795b516113c275f5e60b482f84"
+sourceCorrections: []
+---
+
+低秩自适应（Low-Rank Adaptation）通过将权重 (weight)更新分解为两个较小的矩阵来减少参数 (parameter)数量。为了在实际操作中有效地应用这一技术，需要为训练过程配置两个主要设置。这包括确定这些小矩阵在神经网络 (neural network)中的具体连接位置（即目标模块），以及定义这些矩阵的大小（由秩参数决定）。
+
+目标模块代表模型架构中将接收可训练适配器的特定层。小语言模型通常由多个 Transformer 块堆叠而成。每个块由自注意力 (self-attention)机制 (attention mechanism)和前馈神经网络组成。自注意力机制通过几个不同的线性层执行操作，这些层通常被称为查询（query）、键（key）、值（value）和输出投影（output projection）矩阵。前馈网络同样包含线性层，通常标记 (token)为门控（gate）、升维（up）和降维（down）投影。
+
+过去由于显存 (VRAM)限制，从业者只能将适配器应用于注意力机制中的查询和值矩阵。现在的硬件优化和训练库使得针对注意力机制和前馈网络中的所有线性层变得可行。针对所有线性层可以提高模型处理复杂指令的能力，且不会大幅增加显存需求。
+
+> Transformer 块架构，LoRA 适配器连接到自注意力和前馈模块的线性投影层。
+
+确定目标模块后，需要设置秩参数（记为 $r$）。秩决定了低秩矩阵 $A$ 和 $B$ 的内部维度。如果原始预训练 (pre-training)权重矩阵 $W$ 的维度为 $d \times k$，那么适配器矩阵 $A$ 的维度将是 $d \times r$，矩阵 $B$ 的维度将是 $r \times k$。
+
+这一数学关系直接影响训练的参数量。对于输入维度为 $d = 4096$ 且输出维度为 $k = 4096$ 的线性层，标准的全权重更新需要 $4096 \times 4096$ 个参数，总计 16,777,216 个。如果配置秩为 $r = 8$, 则两个矩阵合计仅包含 $(4096 \times 8) + (8 \times 4096)$ 个参数。最终得到 65,536 个可训练参数，大幅降低了计算开销。
+
+选择合适的秩需要在性能与资源消耗之间取得平衡。对于文本分类或强制执行特定输出格式等任务，较低的秩（如 8 或 16）通常就足够了。对于需要复杂推理 (inference)或教模型学习全新语法的任务，建议使用较高的秩（如 32、64 或 128）。较高的秩会增加显存占用和每个训练步骤所需的时间。
+
+
+
+![秩与可训练参数量的关系](plots/8515-0.json)
+
+
+
+> 典型目标模块配置下，所选秩参数与可训练参数总数之间的预估关系。
+
+除了秩以外，配置还需要设置一个称为 alpha ($\alpha$) 的缩放因子。在正向传播过程中，低秩矩阵的输出会乘以 $\alpha / r$ 的比例。从输入 $x$ 计算隐藏状态 $h$ 的完整数学运算定义为：
+
+$h = Wx + \frac{\alpha}{r} ABx$
+
+这种缩放机制确保即使以后在实验中更改秩，权重更新的幅度也能保持一致。一种通用的做法是将 $\alpha$ 设置为 $r$ 的两倍，或者直接等于 $r$。如果配置使用 16 的秩，将 $\alpha$ 设置为 32 是一个可靠的初始基准。如果你将 $r$ 调整为 32，则应相应地将 $\alpha$ 调整为 64，这样就无需重新调整学习率。
+
+最后，为了减轻在特定数据集上的过拟合 (overfitting)，应为适配器层配置丢弃率（dropout rate）。LoRA dropout 在训练循环的每次正向传播中随机将一小部分适配器权重归零。标准取值通常在 0.05 到 0.1 之间。这会促使神经网络将学习分布到所有可用参数中，从而提高模型在推理时对未见提示词 (prompt)的泛化能力。
+
+## 参考资料
+
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: arXiv preprint; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍 LoRA 方法的原始研究论文，定义了秩参数和缩放因子。
+- [PEFT: State-of-the-art Parameter-Efficient Fine-Tuning methods](https://huggingface.co/docs/peft/index) — Sourab Mangrulkar, Sylvain Gugger, Lysandre Debut, Younes Belkada, Sayak Paul, Benjamin Bossan (2022)
+  Journal: Hugging Face Documentation
+  用于实现 LoRA 和配置目标模块的行业标准库官方文档。
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://neurips.cc/virtual/2023/poster/70275) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: Advances in Neural Information Processing Systems; Volume: 36; Pages: 10088-10115; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  提供了关于在 Transformer 架构中针对所有线性层进行调优有效性的实验证据。

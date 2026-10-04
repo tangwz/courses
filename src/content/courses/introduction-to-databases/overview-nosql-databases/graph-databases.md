@@ -1,0 +1,56 @@
+---
+course: "introduction-to-databases"
+chapter: "overview-nosql-databases"
+lesson: "graph-databases"
+sourceId: 1618
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-databases/chapter-4-overview-nosql-databases/graph-databases"
+title: "图数据库"
+description: "简要介绍图数据库，它专为具有复杂关系的数据设计。"
+order: 6
+plots: []
+sourceHash: "cfc591c7ccced488eced8e766d97084b6e5d49123875c885b2ad599d5105b1ac"
+sourceCorrections: []
+---
+
+文档数据库、键值数据库和列族数据库为各种数据结构提供了灵活性，而另一类 NoSQL 数据库则专门侧重于数据点*之间*的连接。想象一下尝试使用传统表格来绘制社交网络。您可能有一个 `Users` 表，以及一个链接用户 ID 的 `Friendships` 表。查找朋友很简单，但查找“朋友的朋友”需要将 `Friendships` 表自身连接，而查找“朋友的朋友的朋友”则随着网络的增长变得越来越复杂，并且可能变慢。这正是图数据库的优势所在。
+
+图数据库从一开始就被设计用于存储和遍历关系。图数据库的主要结构不是表格、行和列，而是：
+
+- **节点：** 它们代表实体或对象。可以把它们看作图表中的点或圆圈。例子包括人、产品、账户、地点或事件。
+- **边（或关系）：** 它们代表节点之间的连接。可以把它们看作连接点的线或箭头。边总是有方向的（即使它代表“友谊”这样的互惠关系），有一个类型（例如 `FRIENDS_WITH`、`WORKS_AT`、`LIKES`、`PURCHASED`），一个起始节点，以及一个结束节点。
+- **属性：** 节点和边都可以有属性，它们是键值对，用于存储关于实体或关系的额外信息。例如，一个 `Person` 节点可能拥有 `name` 和 `age` 等属性，而一个 `PURCHASED` 边可能拥有一个 `date` 属性。
+
+考虑一个简单的社交连接场景：
+
+> 一个简单的图，显示了通过友谊（边）连接起来的人（节点）以及他们与所喜欢的电影（节点）之间的连接（边）。
+
+在这个模型中，“Alice”、“Bob”、“Charlie”和“数据库介绍电影”是节点。连接“FRIENDS\_WITH”和“LIKES”是边。我们可以为人物节点添加 `age` 等属性，或者为 `LIKES` 边添加 `rating` 属性。
+
+这种模型的主要优势在查询关系时变得清晰。提出“查找所有与 Alice 的朋友有朋友关系的人”或“查找喜欢与 Bob 相同电影的人”这类问题，需要沿着边遍历图。图数据库针对这些类型的遍历进行了优化，使得这类查询通常比关系数据库中为类似任务所需的复杂多表 `JOIN` 操作更快，编写起来也更直观，尤其是在处理深度或复杂关系时。
+
+由于在处理连接方面的这种优势，图数据库常用于：
+
+- **社交网络：** 映射用户关系、群组成员和互动。
+- **推荐引擎：** 查找具有相似品味的用户，或根据相关物品或用户行为（“购买 X 的人也购买了 Y”）推荐产品。
+- **欺诈检测：** 识别潜在欺诈账户、交易或设备之间可能表明协同活动的连接模式。
+- **网络和 IT 运营：** 可视化和分析服务器、应用程序、网络设备和服务之间的依赖关系。
+- **知识图谱：** 表示复杂信息和关系，例如组织关于科学研究、公司结构或链接开放数据的信息。
+
+常见的图数据库系统包括 Neo4j、Amazon Neptune 和 ArangoDB（它支持包括图在内的多种数据模型）。
+
+总之，当数据中的关系和连接是主要关注点时，图数据库提供了一个强大的替代方案。它们提供了一种高效且自然的方式来建模和查询高度互联的信息，补充了可能更适合不同数据结构的其他数据库类型。
+
+## 参考资料
+
+- [Graph Databases, 3rd Edition: New Opportunities for Connected Data](https://www.oreilly.com/library/view/graph-databases-3rd/9781491930773/) — Ian Robinson, Jim Webber, and Emil Eifrem (2015)
+  Publisher: O'Reilly Media
+  介绍图数据库的基本概念、数据建模原则和实际应用，强调其在处理关系型数据方面的有效性。
+- [Graph Data Modeling Fundamentals](https://graphacademy.neo4j.com/courses/data-modeling-fundamentals/) — Neo4j GraphAcademy (2024)
+  Publisher: Neo4j
+  提供图数据模型设计的实用指导，涉及节点、关系和属性，与本节的概念解释直接相关。
+- [Graph Database Systems: State-of-the-Art and Research Challenges](https://dl.acm.org/doi/10.1145/3098555) — Sherif Sakr, Muhammad Intizar Ali, and Abdulrahman Al-Ali (2017)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery (ACM); Volume: 50; Pages: 1-43; DOI: [10.1145/3098555](https://doi.org/10.1145/3098555)
+  对图数据库系统进行了学术概述，包括其架构、查询语言以及该领域的挑战和未来方向。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449373320/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  包含专门的图数据模型章节，在系统设计背景下比较了它们与其他数据模型的优缺点。

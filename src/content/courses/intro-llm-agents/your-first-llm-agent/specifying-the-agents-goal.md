@@ -1,0 +1,90 @@
+---
+course: "intro-llm-agents"
+chapter: "your-first-llm-agent"
+lesson: "specifying-the-agents-goal"
+sourceId: 6570
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-3-your-first-llm-agent/specifying-the-agents-goal"
+title: "明确代理的目标"
+description: "如何为你的LLM代理清晰地定义一个直接的任务来完成。"
+order: 4
+plots: []
+sourceHash: "b99e3f3c6a52ec441e720ae24b15d1a69f09c8c0a1798911e2d33f30cf4f9b66"
+sourceCorrections: []
+---
+
+一旦你为代理设定了初始指令或其“人设”，正如“为代理指定任务指令”中所讨论的，下一步就是给它一个具体的工作。这项工作就是代理的**目标**。可以把初始指令看作是搭建舞台，而目标则是明确舞台上需要发生的“主要行动”。对于你的第一个代理，保持这个目标清晰简单，对其成功非常重要。
+
+## 为什么明确目标很重要
+
+一个明确的目标是代理的指南针。没有它，你的代理，即使核心是最好的LLM，可能也无法有效或可预测地执行任务。以下将说明一个明确目标如何确保代理的有效运作。
+
+1. **行动方向**：目标准确地告诉代理你期望的结果。如果你希望代理向列表中添加一个项目，那么“更新列表”这样的目标就过于模糊。像“将‘买面包’添加到待办事项列表”这样的目标提供了明确的指导。
+2. **专注**：一个具体的目标有助于LLM将其能力集中于当前的任务，而不是跑题或提供过于宽泛的回复。
+3. **可衡量性**：有了明确的目标，你可以更容易地判断代理是成功还是失败了。它是把“买面包”加到列表里了吗，还是做了别的事情？
+4. **初期阶段的简明性**：对于你的第一个代理，简单、明确的目标使其更容易构建、测试和调试。你会清楚地知道你的目的。
+
+## 目标与初始指令的区分
+
+区分代理的整体指令（通常是系统提示或初始设置的一部分）与给定任务的具体目标很有用。
+
+- **初始指令**通常定义代理的角色、个性、限制或一般操作模式。例如：“你是一个管理待办事项列表的有用助手。只回复更新后的列表或动作确认。”
+- **目标**是你希望代理*现在*以这些指令为背景来完成的具体任务。例如：“将‘完成项目报告’添加到待办事项列表。”
+
+指令提供了代理的“如何”和“是谁”，而目标提供了“做什么”。
+
+## 第一个代理的良好目标特点
+
+在你刚开始时，应设定符合以下特点的目标：
+
+- **具体且明确**：目标应精确说明需要完成什么。避免模糊的语言。与其说“处理我的任务”，不如说“读取今天所有到期的任务”是一个更好的目标。
+- **可实现**：目标应是你的基本代理，凭借其当前的LLM和（可能非常有限的）工具，能够实际完成的事情。不要让你的第一个简单代理去“规划多城市国际度假”。一个更可实现的目标可能是“为旧金山一日游建议三项活动”。
+- **原子性**：对于你的第一个代理，请侧重于单一、独立的任务。如果一个任务包含多个步骤，请将其分解，并一次给代理一个目标。例如，与其说“按优先级整理我的待办事项列表，然后通过电子邮件发送给我”，不如从“列出待办事项列表中的所有项目”开始。
+
+## 制定有效目标
+
+为代理定义目标就像下达一个非常清晰、直接的命令。这里有一些小建议：
+
+1. **以动词开头**：“添加”、“创建”、“列出”、“总结”、“查找”、“删除”。这能立即明确期望的动作。
+2. **明确对象和参数 (parameter)**：如果代理需要对某个事物进行操作或使用特定信息，请将其包含在内。
+   - 与其说：“添加一个任务。”
+   - 不如说：“将任务‘给植物浇水’添加到‘家庭’待办事项列表。”
+3. **考虑期望的输出或状态变化**：代理完成目标后，应该有什么不同？了解这一点有助于你有效措辞目标。
+
+## 示例：待办事项列表代理的目标
+
+本章稍后，你将构建一个待办事项列表管理代理。让我们考虑一下这种代理的一些具体、可实现和原子性的目标：
+
+- **添加项目**：“将‘下午5点前提交费用报告’添加到待办事项列表。”
+
+  - *这很具体*：它指明了待办事项的确切文本。
+  - *这可实现*：对于一个能操作列表的基本代理而言。
+  - *这具有原子性*：它是一个单一操作。
+- **查看项目**：“显示待办事项列表中的所有当前项目。”
+
+  - *具体*：明确要求显示所有项目。
+  - *可实现*：代理需要访问并呈现列表。
+  - *原子性*：一个检索和显示的操作。
+- **移除项目**：“从待办事项列表中移除‘打电话给水管工’。”
+
+  - *具体*：标识了要移除的确切项目。
+  - *可实现*：需要查找并删除一个项目。
+  - *原子性*：一个单一的删除操作。
+- **将项目标记 (token)为完成**（一个稍微复杂一些的状态变化，但仍可处理）：“将任务‘购买杂货’标记为已完成。”
+
+  - *具体*：针对特定任务和状态变化。
+  - *可实现*：涉及查找一个项目并更新其状态。
+  - *原子性*：对特定项目的一次更新操作。
+
+注意这些目标都是直接的命令。它们几乎没有留下误解的空间，这正是你在指导第一个LLM代理时所希望的。当你为代理定义目标时，总是问自己：“这是否非常清楚？它是一个单一的、可管理步骤吗？”如果答案是肯定的，那么你正在正确的方向上构建一个能按你意图行事的代理。这种清晰性将使后续对代理进行编码和测试的步骤更加直接。
+
+## 参考资料
+
+- [Artificial Intelligence: A Modern Approach](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFXYn3oTF8MixK6sI96mNgUblWkx4N-XmOLPmjFd6-ooOortW2vYSC3p1kVfAp1C3gEMYuviGiqnny1WpEZ-fdEMPkV92ryba0Yxue4J5tv-3fRpRYjk0A6UONjqy1gdE3dtUueMJmciLAxu69H8Y85geTKVXAXD40vsZb2ImpgSFQrqWKxyFklVVgQ) — Stuart Russell, Peter Norvig (2020)
+  Publisher: Pearson
+  一本关于人工智能的教科书，介绍了智能体设计，包括基于目标的智能体、理性智能体以及智能体如何感知、行动和规划以实现目标。该来源有助于理解智能体目标的理论背景。
+- [Training language models to follow instructions with human feedback](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH1g5TZpkno5jsxdm_rCmhmlEMa71eTLJoNhf6B1YL_P69NOS9YbUdgwOF4Jxr7STd0CTPhp0dsu0dUTjImStCtqPosUpJLBEOTDUlUH8QJWaIpFyHewwXoqXbeZXSVCpIjGAaw_RAyKfqtUnbv_ddFx8ugS3aaC0QVwYGFgtWbFEsighkL0NSI7ho-R78U57AtHTsrs0ONH4ZSW5YLVnaWyBRQ0MPkTE-TJw==) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Karthik Sloka, Alex Hilton, Michele Knight, Jacob Morrison, Aaron Shane, Geoffrey Chu, Brian Hechtman, Leike Bao, Anna Chen, Howard Gordon, Rui Han, Mark Chen, and Adam Roberts (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 35; Pages: 27735-27756; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  该论文介绍了InstructGPT，表明通过人类反馈对大型语言模型进行指令微调，可提高它们遵循特定指令和按预期执行任务的能力。这项工作强调了明确目标规范对于大型语言模型性能的实证重要性。
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHVSaEHiiUA4Bq-2p4O3Z6G3eR7PbA2lq4CsH9ptZDafVa9tjhlQUd7Xw2QzwVdyLZDr2mHaHPzJpMypQCiWjARlUBdDbZiMD4N6SnaPRViqWTpvC8ZJ3CIWzk=) — Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V Le, Denny Zhou (2022)
+  Journal: Advances in neural information processing systems; Volume: 35; Pages: 24824–24837; DOI: [10.48550/arXiv.2201.11902](https://doi.org/10.48550/arXiv.2201.11902)
+  这项研究展示了一种在提示中包含中间推理步骤（思维链）的技术，通过分解任务引导大型语言模型实现复杂的解决问题目标。它提供了一个实用的例子，说明提示中结构化的目标制定如何增强智能体的能力。

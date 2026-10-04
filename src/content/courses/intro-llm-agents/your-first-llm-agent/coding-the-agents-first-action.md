@@ -1,0 +1,183 @@
+---
+course: "intro-llm-agents"
+chapter: "your-first-llm-agent"
+lesson: "coding-the-agents-first-action"
+sourceId: 6573
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-3-your-first-llm-agent/coding-the-agents-first-action"
+title: "编写代理的第一个动作"
+description: "关于如何为你的代理实现一个基本动作的逐步说明。"
+order: 5
+plots: []
+sourceHash: "ef0ff0efed6a39fbf6640530864bd360b675cb3d9752a1e08a8d80724b033683"
+sourceCorrections: []
+---
+
+代理迈出第一个有意义的步骤，需要编写代码将其指令和初始目标转化为对大型语言模型（LLM）的请求。LLM随后处理这些信息并生成回应。对于一个简单的代理，LLM的这个回应本身就可以被认为是代理“动作”的结果。
+
+### LLM作为动作的引擎
+
+其核心在于，LLM代理依赖LLM来理解、推理 (inference)和生成文本。当我们谈论代理的“第一个动作”时，我们指的是以下过程：
+
+1. 制定一个清晰的提示，它结合了代理的通用指令和当前具体目标。
+2. 将此提示发送给LLM。
+3. 接收LLM的文本输出。
+
+这个输出可能是一个问题的直接答案、一条重新表述的指令、一个计划的一部分，或者，正如本章稍后会看到的，对“将某项添加到待办事项列表”这类任务的确认。LLM回应的特性取决于你如何设计提示。
+
+### 在Python中准备与LLM交互
+
+与大多数强大的LLM交互通常涉及向应用程序编程接口（API）发出请求。这就像向一个服务发送消息并获得回复。虽然具体情况会因LLM提供商（如OpenAI、Cohere或AI21 Labs，甚至是本地运行的模型）而异，但大体思路是一致的。
+
+为了我们的目的，我们将使用Python来演示这一点。我们将首先定义一个简单的函数来代表这种交互。在实际应用中，这个函数将包含向LLM的API端点发起HTTP请求、处理身份验证（通常使用API密钥）和解析回应的代码。在这个入门阶段，我们将创建一个该函数的*模拟*版本。这使我们能够专注于代理的逻辑，而无需立即设置API密钥或管理网络请求。
+
+让我们定义模拟LLM调用函数：
+
+```python
+def call_llm_mock(prompt_text):
+    """
+    一个模拟LLM API调用的简化函数。
+    在实际应用中，这会与真正的LLM服务进行交互。
+    """
+    print(f"\n[LLM Mock] Processing prompt snippet: \"{prompt_text[:120]}...\"") # 显示发送的提示的一部分
+
+    # 基于提示中关键词的示例回应
+    if "capital of france" in prompt_text.lower():
+        return "法国的首都是巴黎，当然！"
+    elif "add 'buy milk' to my to-do list" in prompt_text.lower():
+        return "好的，我已将“买牛奶”记到你的待办事项列表中了。"
+    elif "summarize the following text" in prompt_text.lower() and "llms are ai models" in prompt_text.lower():
+        return "LLM是能够理解和生成类人文本的高级AI模型。"
+    else:
+        # 如果没有特定关键词匹配，则返回通用回应
+        return "这是来自模拟LLM的通用回应。我理解了你的请求。"
+```
+
+这个`call_llm_mock`函数接收`prompt_text`作为输入，打印其中一部分以模拟发送，然后根据简单的关键词匹配返回一个预设字符串。这在初步开发时是一种有用的方法，因为它允许你测试代理的流程，而无需产生API费用或处理网络延迟。
+
+### 构造动作提示
+
+LLM的有效性在很大程度上取决于它接收到的提示的质量。正如在“为代理指示任务”和“明确代理目标”中讨论的，我们需要将通用`instructions`（定义代理的身份或整体行为）与具体`goal`（即时任务）结合起来。
+
+以下是如何在Python中使用f-string将它们结合起来：
+
+```python
+agent_instructions = "你是一个乐于助人的助手。你的职责是理解用户请求并提供清晰、简洁的答案或确认。"
+current_goal = "法国的首都是哪里？"
+
+# 将指令和目标结合成一个LLM的提示
+full_prompt = f"{agent_instructions}\n\n用户请求: {current_goal}\n\n助手回应:"
+```
+
+注意其结构：
+
+- `agent_instructions`为LLM设定上下文 (context)。
+- 像`\n\n用户请求:`这样的清晰分隔符有助于LLM区分用户的具体查询。
+- 以`\n\n助手回应:`结尾提示LLM生成后续部分，有效地扮演助手的角色。
+
+### 实现核心动作逻辑
+
+现在，让我们创建一个Python函数，封装代理的第一个动作：构造提示并获取LLM的（模拟）回应。
+
+```python
+def perform_agent_core_action(instructions, goal):
+    """
+    根据代理的指令和当前目标构造提示，
+    然后查询（模拟）LLM以获取回应。
+    这代表了代理主要的“思考”或“行动”步骤。
+    """
+    # 1. 结合指令和目标，形成一个全面的提示
+    full_prompt = f"{instructions}\n\n用户请求: {goal}\n\n助手回应:"
+
+    print(f"代理正在准备针对目标执行动作: \"{goal}\"")
+
+    # 2. 调用LLM（本例中使用我们的模拟函数）
+    llm_response = call_llm_mock(full_prompt)
+
+    return llm_response
+```
+
+`perform_agent_core_action`函数接收`instructions`和`goal`作为输入。它随后：
+
+1. 构造`full_prompt`。
+2. 打印一条消息，指示代理将要做什么（有助于观察）。
+3. 使用此提示调用我们的`call_llm_mock`函数。
+4. 返回`llm_response`。在当前这个简单设置中，此回应*就是*代理动作的结果。
+
+### 实际操作中的动作
+
+让我们将所有部分组合起来，看看我们的代理如何针对几个不同的目标执行它的第一个动作。
+
+```python
+# （假设call_llm_mock函数已在上方定义）
+# （假设perform_agent_core_action函数已在上方定义）
+
+# 定义代理的通用指令
+agent_instructions = "你是一个乐于助人的助手。你的职责是理解用户请求并提供清晰、简洁的答案或确认。"
+
+# --- 示例1：一个通用问题 ---
+goal_1 = "法国的首都是哪里？"
+print(f"\n--- 代理处理目标1：通用问题 ---")
+action_result_1 = perform_agent_core_action(agent_instructions, goal_1)
+print(f"代理的输出（来自LLM）: {action_result_1}")
+
+# --- 示例2：一个与待办事项列表相关的任务 ---
+# 这提前表明了我们本章项目将处理的任务类型
+goal_2 = "将“买牛奶”添加到我的待办事项列表。"
+print(f"\n--- 代理处理目标2：待办事项列表命令 ---")
+action_result_2 = perform_agent_core_action(agent_instructions, goal_2)
+print(f"代理的输出（来自LLM）: {action_result_2}")
+
+# --- 示例3：一个摘要任务 ---
+goal_3 = "总结以下文本：LLM是处理和生成文本的AI模型。"
+print(f"\n--- 代理处理目标3：摘要任务 ---")
+action_result_3 = perform_agent_core_action(agent_instructions, goal_3)
+print(f"代理的输出（来自LLM）: {action_result_3}")
+```
+
+如果你运行这段Python代码，你将看到类似以下的输出：
+
+```text
+--- 代理处理目标1：通用问题 ---
+代理正在准备针对目标执行动作: "法国的首都是哪里？"
+
+[LLM 模拟] 处理提示片段: "你是一个乐于助人的助手。你的职责是理解用户请求并提供清晰、简洁的答案或确认..."
+代理的输出（来自LLM）: 法国的首都是巴黎，当然！
+
+--- 代理处理目标2：待办事项列表命令 ---
+代理正在准备针对目标执行动作: "将“买牛奶”添加到我的待办事项列表。"
+
+[LLM 模拟] 处理提示片段: "你是一个乐于助人的助手。你的职责是理解用户请求并提供清晰、简洁的答案或确认..."
+代理的输出（来自LLM）: 好的，我已将“买牛奶”记到你的待办事项列表中了。
+
+--- 代理处理目标3：摘要任务 ---
+代理正在准备针对目标执行动作: "总结以下文本：LLM是处理和生成文本的AI模型。"
+
+[LLM 模拟] 处理提示片段: "你是一个乐于助人的助手。你的职责是理解用户请求并提供清晰、简洁的答案或确认..."
+代理的输出（来自LLM）: LLM是能够理解和生成类人文本的高级AI模型。
+```
+
+每一个“代理的输出（来自LLM）”都是代理第一个编写的动作的直接结果。它接收了指令和目标，使用（模拟）LLM处理它们，并生成了一个回应。
+
+### 这个“动作”的含义
+
+这个第一个动作很根本。代理已成功接收输入，使用LLM的模拟能力对其进行了“思考”，并生成了输出。目前，该输出只是我们打印的文本。然而，这是更复杂行为的构成要素。在更高级的代理中：
+
+- LLM的输出可能是使用特定工具（如计算器或搜索引擎）的决定。
+- 它可能是一个多部分计划中的一步。
+- 它可能是一段用于存储在记忆中的完善信息。
+
+对于我们将在本章末尾构建的待办事项列表代理，LLM对“添加‘买牛奶’”之类的命令（如`goal_2`所示）的回应将是第一步。代理“理解”了该命令，其动作是确认这种理解。随后的步骤将涉及实际管理待办事项列表的数据结构，我们将在后续内容中研究。
+
+你现在已经为你的LLM代理编写了第一个简单动作。这涉及协调信息与LLM之间的流动，这是代理开发中的一项基本技能。在下一节“执行和监控你的代理”中，我们将了解如何运行这段代码并更正式地观察其行为。
+
+## 参考资料
+
+- [A Survey on Large Language Model based Autonomous Agents](http://arxiv.org/abs/2308.11432) — Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, and Ji-Rong Wen (2023)
+  Journal: arXiv preprint
+  全面概述了基于LLM的智能体，包括其架构以及LLM如何作为其核心处理单元。
+- [Prompt Engineering Guide](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFFgg1o1shyhuDztf2kMktwWt3KCbTv0b4Jgr1Am6x_x9gowTTQQiR18Heje449UK4voffCglCli1EAOfvpLpaSuCZKAMhMCN1Jfh3Gx6aNxG7z7dG7IreZoO4-Oho9jlhEtKahvpMiZdYMrjqCU04KKWAATGI5ApR0-BRN6wJXllzRhPtTUcQv3f9_Rz6UBrex2v--9q8uM1o=) — OpenAI (2023)
+  Publisher: OpenAI
+  官方指南，详细介绍了与LLM交互时编写高效提示的最佳实践。
+- [OpenAI API Reference: Chat Completions](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHTfd_4dSsByZSGbqDH8DH5Albllqa6-4wzc42Af7aH0ziVp-27XiE4ARa6QSvSOhpUO4_XpfQE4OgcWronFNllI0zfsXlE5HMcxFkoY9ChqlO5MmDK9nK5afYWg-QDmAVxL181Y9v-iSj0K-2O) — OpenAI (2024)
+  Publisher: OpenAI
+  提供与OpenAI的LLM进行程序化交互的技术文档，包括发送提示和处理响应。

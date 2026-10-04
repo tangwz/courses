@@ -1,0 +1,306 @@
+---
+course: "introduction-to-deep-learning"
+chapter: "backpropagation-advanced-optimization"
+lesson: "practice-backpropagation-steps"
+sourceId: 5051
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-deep-learning/chapter-4-backpropagation-advanced-optimization/practice-backpropagation-steps"
+title: "动手实践：反向传播逐步解析"
+description: "手动计算小型神经网络的梯度，使用反向传播的步骤。"
+order: 9
+plots: []
+sourceHash: "2b75925c88dab2cef9c8feaba9aa041560f1abaacbb4749b0eaadd0927645816"
+sourceCorrections: []
+---
+
+让我们通过一个具体实例来演示反向传播 (backpropagation)算法。如前所述，训练神经网络 (neural network)需要调整其权重 (weight)和偏置 (bias)以最小化损失函数 (loss function)。反向传播提供了一种高效方法来计算损失函数相对于网络中每个参数 (parameter)的梯度，这正是梯度下降 (gradient descent)进行这些调整所必需的。
+
+我们将使用一个非常简单的网络：一个输入神经元、一个包含两个神经元的隐藏层和一个输出神经元。这个网络足够小，可以手动追踪所有计算。
+
+### 1. 网络设置与前向传播
+
+让我们定义我们的简单网络：
+
+- **输入：** $x = 0.5$
+- **隐藏层（2个神经元）：** Sigmoid 激活函数 (activation function)。
+- **输出层（1个神经元）：** Sigmoid 激活函数。
+- **权重 (weight)和偏置 (bias)（随机初始化）：**
+  - 输入到隐藏层： $w_{1} = 0.1$， $w_{2} = 0.2$
+  - 隐藏层偏置： $b_{h1} = 0.1$， $b_{h2} = 0.1$
+  - 隐藏层到输出层： $w_{3} = 0.3$， $w_{4} = 0.4$
+  - 输出层偏置： $b_{o} = 0.1$
+- **目标输出：** $y = 1.0$
+- **损失函数 (loss function)：** 均方误差 (MSE): $L = \frac{1}{2}(\hat{y} - y)^2$。（我们使用 $\frac{1}{2}$ 是为了方便，因为它的导数会抵消掉指数 2）。
+- **激活函数：** Sigmoid: $\sigma(z) = \frac{1}{1 + e^{-z}}$。它的导数是 $\sigma'(z) = \sigma(z)(1 - \sigma(z))$。
+
+让我们逐步执行前向传播计算：
+
+**a. 输入到隐藏层：**
+
+- 隐藏神经元 1 的加权和： $z_{h1} = w_1 \cdot x + b_{h1} = (0.1 \cdot 0.5) + 0.1 = 0.05 + 0.1 = 0.15$
+- 隐藏神经元 1 的激活值： $h_1 = \sigma(z_{h1}) = \sigma(0.15) \approx 0.5374$
+- 隐藏神经元 2 的加权和： $z_{h2} = w_2 \cdot x + b_{h2} = (0.2 \cdot 0.5) + 0.1 = 0.1 + 0.1 = 0.20$
+- 隐藏神经元 2 的激活值： $h_2 = \sigma(z_{h2}) = \sigma(0.20) \approx 0.5498$
+
+**b. 隐藏层到输出层：**
+
+- 输出神经元的加权和： $z_{o} = w_3 \cdot h_1 + w_4 \cdot h_2 + b_{o} = (0.3 \cdot 0.5374) + (0.4 \cdot 0.5498) + 0.1$
+  $z_{o} \approx 0.1612 + 0.2199 + 0.1 = 0.4811$
+- 最终预测（输出激活值）： $\hat{y} = \sigma(z_{o}) = \sigma(0.4811) \approx 0.6180$
+
+**c. 计算损失：**
+
+- 损失： $L = \frac{1}{2}(\hat{y} - y)^2 = \frac{1}{2}(0.6180 - 1.0)^2 = \frac{1}{2}(-0.3820)^2 \approx \frac{1}{2}(0.1459) \approx 0.0730$
+
+我们的网络目前预测值为 $0.6180$，这与目标值 $1.0$ 相差甚远，导致损失为 $0.0730$。现在，让我们使用反向传播 (backpropagation)来确定如何调整权重和偏置以减小此损失。
+
+### 2. 反向传播 (backpropagation)：计算梯度
+
+主要思路是利用微积分中的链式法则来计算每个权重 (weight) $w$ 的 $\frac{\partial L}{\partial w}$（偏置 (bias) $b$ 同理）。我们从末端（损失）开始，反向进行计算。
+
+**a. 输出层权重 ($w_3, w_4$) 和偏置 ($b_o$) 的梯度**
+
+我们需要 $\frac{\partial L}{\partial w_3}$、$\frac{\partial L}{\partial w_4}$ 和 $\frac{\partial L}{\partial b_o}$。让我们使用链式法则分解 $\frac{\partial L}{\partial w_3}$：
+
+
+$$
+\frac{\partial L}{\partial w_3} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \cdot \frac{\partial z_o}{\partial w_3}
+$$
+
+
+让我们计算每个部分：
+
+- **$\frac{\partial L}{\partial \hat{y}}$:** 损失相对于预测值的导数。
+  $L = \frac{1}{2}(\hat{y} - y)^2 \implies \frac{\partial L}{\partial \hat{y}} = (\hat{y} - y) = 0.6180 - 1.0 = -0.3820$
+- **$\frac{\partial \hat{y}}{\partial z_o}$:** 输出激活函数 (activation function)相对于其输入 ($z_o$) 的导数。由于 $\hat{y} = \sigma(z_o)$，导数是 $\sigma'(z_o) = \sigma(z_o)(1 - \sigma(z_o))$。
+  $\frac{\partial \hat{y}}{\partial z_o} = \hat{y}(1 - \hat{y}) = 0.6180 \cdot (1 - 0.6180) = 0.6180 \cdot 0.3820 \approx 0.2361$
+- **$\frac{\partial z_o}{\partial w_3}$:** 输出加权和相对于 $w_3$ 的导数。
+  $z_{o} = w_3 h_1 + w_4 h_2 + b_{o} \implies \frac{\partial z_o}{\partial w_3} = h_1 \approx 0.5374$
+
+现在，将它们组合起来：
+
+
+$$
+\frac{\partial L}{\partial w_3} = (-0.3820) \cdot (0.2361) \cdot (0.5374) \approx -0.0485
+$$
+
+
+$w_4$ 同理：唯一的区别是链式法则中的最后一项。
+
+
+$$
+\frac{\partial z_o}{\partial w_4} = h_2 \approx 0.5498
+$$
+
+
+$$
+\frac{\partial L}{\partial w_4} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \cdot \frac{\partial z_o}{\partial w_4} = (-0.3820) \cdot (0.2361) \cdot (0.5498) \approx -0.0496
+$$
+
+
+对于输出偏置 $b_o$：
+
+
+$$
+\frac{\partial z_o}{\partial b_o} = 1
+$$
+
+
+$$
+\frac{\partial L}{\partial b_o} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \cdot \frac{\partial z_o}{\partial b_o} = (-0.3820) \cdot (0.2361) \cdot (1) \approx -0.0902
+$$
+
+
+通常，前两项会合并为输出层的单个“delta”项：$\delta_o = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \approx -0.0902$。这样，梯度就简单地表示为 $\frac{\partial L}{\partial w_3} = \delta_o \cdot h_1$、$\frac{\partial L}{\partial w_4} = \delta_o \cdot h_2$ 和 $\frac{\partial L}{\partial b_o} = \delta_o$。
+
+**b. 隐藏层权重 ($w_1, w_2$) 和偏置 ($b_{h1}, b_{h2}$) 的梯度**
+
+现在我们需要将误差反向传播到隐藏层。我们需要 $\frac{\partial L}{\partial w_1}$、$\frac{\partial L}{\partial w_2}$、$\frac{\partial L}{\partial b_{h1}}$ 和 $\frac{\partial L}{\partial b_{h2}}$。让我们专注于 $w_1$。
+
+链式法则的路径更长：
+
+
+$$
+\frac{\partial L}{\partial w_1} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \cdot \frac{\partial z_o}{\partial h_1} \cdot \frac{\partial h_1}{\partial z_{h1}} \cdot \frac{\partial z_{h1}}{\partial w_1}
+$$
+
+
+我们可以重用 $\delta_o = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \approx -0.0902$。
+
+让我们计算新部分：
+
+- **$\frac{\partial z_o}{\partial h_1}$:** 输出加权和相对于*第一个*隐藏神经元激活的导数。
+  $z_{o} = w_3 h_1 + w_4 h_2 + b_{o} \implies \frac{\partial z_o}{\partial h_1} = w_3 = 0.3$
+- **$\frac{\partial h_1}{\partial z_{h1}}$:** 第一个隐藏神经元激活相对于其输入的导数。$h_1 = \sigma(z_{h1})$，因此导数是 $\sigma'(z_{h1}) = h_1(1 - h_1)$。
+  $\frac{\partial h_1}{\partial z_{h1}} = 0.5374 \cdot (1 - 0.5374) = 0.5374 \cdot 0.4626 \approx 0.2486$
+- **$\frac{\partial z_{h1}}{\partial w_1}$:** 第一个隐藏神经元加权和相对于 $w_1$ 的导数。
+  $z_{h1} = w_1 x + b_{h1} \implies \frac{\partial z_{h1}}{\partial w_1} = x = 0.5$
+
+现在，将所有项组合起来得到 $\frac{\partial L}{\partial w_1}$：
+
+
+$$
+\frac{\partial L}{\partial w_1} = (\delta_o) \cdot (\frac{\partial z_o}{\partial h_1}) \cdot (\frac{\partial h_1}{\partial z_{h1}}) \cdot (\frac{\partial z_{h1}}{\partial w_1})
+$$
+
+
+$$
+\frac{\partial L}{\partial w_1} = (-0.0902) \cdot (0.3) \cdot (0.2486) \cdot (0.5) \approx -0.00337
+$$
+
+
+$w_2$ 同理：误差贡献流经 $h_2$。
+
+
+$$
+\frac{\partial L}{\partial w_2} = \frac{\partial L}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial z_o} \cdot \frac{\partial z_o}{\partial h_2} \cdot \frac{\partial h_2}{\partial z_{h2}} \cdot \frac{\partial z_{h2}}{\partial w_2}
+$$
+
+
+- $\frac{\partial z_o}{\partial h_2} = w_4 = 0.4$
+- $\frac{\partial h_2}{\partial z_{h2}} = h_2(1 - h_2) = 0.5498 \cdot (1 - 0.5498) = 0.5498 \cdot 0.4502 \approx 0.2475$
+- $\frac{\partial z_{h2}}{\partial w_2} = x = 0.5$
+
+组合它们：
+
+
+$$
+\frac{\partial L}{\partial w_2} = (\delta_o) \cdot (\frac{\partial z_o}{\partial h_2}) \cdot (\frac{\partial h_2}{\partial z_{h2}}) \cdot (\frac{\partial z_{h2}}{\partial w_2})
+$$
+
+
+$$
+\frac{\partial L}{\partial w_2} = (-0.0902) \cdot (0.4) \cdot (0.2475) \cdot (0.5) \approx -0.00446
+$$
+
+
+对于隐藏层偏置 $b_{h1}$ 和 $b_{h2}$：链式法则的最后部分变为 $\frac{\partial z_{h1}}{\partial b_{h1}} = 1$ 和 $\frac{\partial z_{h2}}{\partial b_{h2}} = 1$。
+
+
+$$
+\frac{\partial L}{\partial b_{h1}} = (\delta_o) \cdot (\frac{\partial z_o}{\partial h_1}) \cdot (\frac{\partial h_1}{\partial z_{h1}}) \cdot (1)
+$$
+
+
+$$
+\frac{\partial L}{\partial b_{h1}} = (-0.0902) \cdot (0.3) \cdot (0.2486) \cdot (1) \approx -0.00673
+$$
+
+
+$$
+\frac{\partial L}{\partial b_{h2}} = (\delta_o) \cdot (\frac{\partial z_o}{\partial h_2}) \cdot (\frac{\partial h_2}{\partial z_{h2}}) \cdot (1)
+$$
+
+
+$$
+\frac{\partial L}{\partial b_{h2}} = (-0.0902) \cdot (0.4) \cdot (0.2475) \cdot (1) \approx -0.00891
+$$
+
+
+我们也可以为隐藏层定义 delta 项：$\delta_{h1} = \delta_o \cdot \frac{\partial z_o}{\partial h_1} \cdot \frac{\partial h_1}{\partial z_{h1}}$ 和 $\delta_{h2} = \delta_o \cdot \frac{\partial z_o}{\partial h_2} \cdot \frac{\partial h_2}{\partial z_{h2}}$。那么梯度就是 $\frac{\partial L}{\partial w_1} = \delta_{h1} \cdot x$、$\frac{\partial L}{\partial w_2} = \delta_{h2} \cdot x$、$\frac{\partial L}{\partial b_{h1}} = \delta_{h1}$ 和 $\frac{\partial L}{\partial b_{h2}} = \delta_{h2}$。
+
+### 3. 流程图示
+
+我们可以使用计算图来表示这些计算。节点代表值（输入、权重 (weight)、中间结果、损失），边代表操作。反向传播 (backpropagation)通过对其出边流入的梯度求和来计算每个节点的梯度。
+
+> 一个计算图，显示了我们简单网络的前向传播计算。反向传播通过从损失（L）开始反向遍历此图来计算梯度。实心箭头表示前向计算流；在反向传播期间，梯度沿这些路径的反方向流动。
+
+### 4. 权重 (weight)更新
+
+梯度计算完成后，我们可以使用梯度下降 (gradient descent)规则更新权重和偏置 (bias)。假设学习率 $\eta = 0.1$。
+
+- $w_1^{new} = w_1 - \eta \frac{\partial L}{\partial w_1} = 0.1 - (0.1 \cdot -0.00337) \approx 0.1003$
+- $w_2^{new} = w_2 - \eta \frac{\partial L}{\partial w_2} = 0.2 - (0.1 \cdot -0.00446) \approx 0.2004$
+- $b_{h1}^{new} = b_{h1} - \eta \frac{\partial L}{\partial b_{h1}} = 0.1 - (0.1 \cdot -0.00673) \approx 0.1007$
+- $b_{h2}^{new} = b_{h2} - \eta \frac{\partial L}{\partial b_{h2}} = 0.1 - (0.1 \cdot -0.00891) \approx 0.1009$
+- $w_3^{new} = w_3 - \eta \frac{\partial L}{\partial w_3} = 0.3 - (0.1 \cdot -0.0485) \approx 0.3049$
+- $w_4^{new} = w_4 - \eta \frac{\partial L}{\partial w_4} = 0.4 - (0.1 \cdot -0.0496) \approx 0.4050$
+- $b_o^{new} = b_o - \eta \frac{\partial L}{\partial b_o} = 0.1 - (0.1 \cdot -0.0902) \approx 0.1090$
+
+仅一步之后，参数 (parameter)已在预期能减少损失的方向上进行了微调 (fine-tuning)，以便在下一次使用相同输入的前向传播中降低损失。
+
+### 5. PyTorch 中的反向传播 (backpropagation)
+
+手动计算这些梯度具有指导意义，但对于大型网络来说很快就会变得不切实际。像 PyTorch 这样的深度学习 (deep learning)框架使用自动微分（autograd）来自动化此过程。以下是设置相同计算的方法：
+
+```python
+import torch
+
+# --- 设置 ---
+# 使用 FloatTensor 进行计算
+dtype = torch.float
+# 对于这个简单例子，使用 CPU
+device = torch.device("cpu")
+
+# 定义输入、目标和参数的张量
+# requires_grad=True 告诉 PyTorch 跟踪操作以进行梯度计算
+x = torch.tensor([[0.5]], device=device, dtype=dtype)
+y = torch.tensor([[1.0]], device=device, dtype=dtype)
+
+w1 = torch.tensor([[0.1]], device=device, dtype=dtype, requires_grad=True)
+w2 = torch.tensor([[0.2]], device=device, dtype=dtype, requires_grad=True)
+bh1 = torch.tensor([[0.1]], device=device, dtype=dtype, requires_grad=True)
+bh2 = torch.tensor([[0.1]], device=device, dtype=dtype, requires_grad=True)
+
+# 稍后将隐藏层权重和偏置组合用于矩阵乘法
+# 对于这个简单例子，我们像手动计算一样保持它们分离
+
+w3 = torch.tensor([[0.3]], device=device, dtype=dtype, requires_grad=True)
+w4 = torch.tensor([[0.4]], device=device, dtype=dtype, requires_grad=True)
+bo = torch.tensor([[0.1]], device=device, dtype=dtype, requires_grad=True)
+
+# --- 前向传播 ---
+z_h1 = x @ w1.t() + bh1 # 使用 @ 进行矩阵乘法（尽管这里是 1x1）
+h1 = torch.sigmoid(z_h1)
+
+z_h2 = x @ w2.t() + bh2
+h2 = torch.sigmoid(z_h2)
+
+# 组合隐藏层激活（形成隐藏层输出向量）
+# h_combined = torch.cat((h1, h2), dim=1) # 需要 w_ho 作为矩阵 [2,1]
+
+# 为了直接比较，手动计算 z_o
+z_o = h1 @ w3.t() + h2 @ w4.t() + bo
+y_hat = torch.sigmoid(z_o)
+
+# --- 损失计算 ---
+# 使用内置的 MSELoss 更好，但为了比较这里手动计算
+loss = 0.5 * (y_hat - y).pow(2)
+loss = loss.sum() # 通常对批次中的损失取平均，这里只是标量损失求和
+
+print(f"Input x: {x.item():.4f}")
+print(f"Target y: {y.item():.4f}")
+print(f"h1: {h1.item():.4f}, h2: {h2.item():.4f}")
+print(f"Prediction y_hat: {y_hat.item():.4f}")
+print(f"Loss: {loss.item():.4f}")
+
+# --- 反向传播（自动微分）---
+# 计算所有 requires_grad=True 的张量的梯度
+loss.backward()
+
+# --- 检查梯度 ---
+# 梯度存储在张量的 .grad 属性中
+print("\n--- Gradients ---")
+print(f"dL/dw1: {w1.grad.item():.5f} (Manual: -0.00337)")
+print(f"dL/dw2: {w2.grad.item():.5f} (Manual: -0.00446)")
+print(f"dL/dbh1: {bh1.grad.item():.5f} (Manual: -0.00673)")
+print(f"dL/dbh2: {bh2.grad.item():.5f} (Manual: -0.00891)")
+print(f"dL/dw3: {w3.grad.item():.5f} (Manual: -0.04850)") # 由于精度问题略有差异
+print(f"dL/dw4: {w4.grad.item():.5f} (Manual: -0.04957)") # 由于精度问题略有差异
+print(f"dL/dbo: {bo.grad.item():.5f} (Manual: -0.09019)") # 由于精度问题略有差异
+
+# 注意：手动计算使用了较少的小数位，导致微小差异。
+# PyTorch 使用更高精度。
+```
+
+这一实践演示了反向传播如何细致地应用链式法则，以找到每个权重 (weight)和偏置 (bias)对总损失的贡献。尽管框架处理实现细节，但理解这一流程对于诊断训练问题和设计有效的网络架构非常重要。这些计算出的梯度信息随后被馈送到优化算法（如 SGD、Adam 或 RMSprop，将在后续讨论）中，以迭代地改进模型。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本内容全面的教科书，对反向传播进行了数学严谨的论述，包括其理论基础及其在训练深度神经网络中的作用。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap2.html) — Michael Nielsen (2019)
+  Publisher: Determination Press; Pages: Chapter 2
+  一个在线资源，提供了清晰、直观、循序渐进的反向传播算法推导，有助于实践性理解。
+- [Autograd: automatic differentiation](https://pytorch.org/docs/stable/autograd.html) — PyTorch Core Team (2016)
+  PyTorch自动微分引擎的官方文档，解释了深度学习框架中如何高效计算梯度并提供了实际使用示例。

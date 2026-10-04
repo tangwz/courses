@@ -1,0 +1,245 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "nn-dimensionality-reduction-recap"
+lesson: "setting-up-deep-learning-environment"
+sourceId: 6443
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-1-nn-dimensionality-reduction-recap/setting-up-deep-learning-environment"
+title: "配置深度学习环境"
+description: "关于为深度学习任务设置带有 TensorFlow/Keras 或 PyTorch 的 Python 环境的指南。"
+order: 6
+plots: []
+sourceHash: "012405cd89cb49f37f7e1934c3de94c38e9c719479917789fecf8b04f937025a"
+sourceCorrections: []
+---
+
+构建自编码器以及运行主成分分析（PCA）等示例，都需要一个正确配置的 Python 环境。此设置将支持所有实践练习，让您能够进行代码实践并获得对自编码器的实际理解。
+
+一个管理得当的环境可确保您的项目具有正确的依赖项，并且您日后或在不同机器上也能重现结果。接下来，我们将逐步说明如何准备好您的深度学习 (deep learning)工作区。
+
+## Python：核心组成
+
+Python 是机器学习 (machine learning)和深度学习 (deep learning)的主导语言，因其丰富的库和简洁的语法而受到重视。本课程建议使用 Python 3.8 或更新版本。如果您尚未安装 Python，可以从 Python 官方网站 (python.org) 下载。
+
+## 包管理和虚拟环境
+
+管理 Python 包及其版本对于避免项目之间的冲突非常重要。虚拟环境是解决此问题的标准方法。
+
+### 为什么要使用虚拟环境？
+
+虚拟环境是一种独立的 Python 设置，让每个项目都能拥有自己的一套依赖项，独立于其他项目或系统范围的 Python 安装。这样做有益，原因如下：
+
+- **依赖项隔离**：不同项目可能需要同一库的不同版本。虚拟环境可避免这些版本之间发生冲突。
+- **可重现性**：您可以轻松与他人共享精确的依赖项列表（例如 `requirements.txt` 文件），或供您自己将来使用，确保环境能够被精确地重现。
+- **整洁性**：它使您的全局 Python 安装保持整洁，不包含项目特定的包。
+
+您有几个管理虚拟环境和包的常用选项：使用 `pip` 的 `venv`（Python 内置），或 `conda`。
+
+> 开发环境设置中典型层次的概览。
+
+### 使用 venv 和 pip
+
+`venv` 是 Python 内置的创建虚拟环境的工具。`pip` 是 Python 的标准包安装器。
+
+1. **创建虚拟环境**：
+   在您的终端中导航到项目目录并运行：
+
+   ```bash
+   python -m venv my_autoencoder_env
+   ```
+
+   将 `my_autoencoder_env` 替换为您偏好的环境名称。这会创建一个包含环境文件的目录。
+2. **激活环境**：
+
+   - 在 macOS 和 Linux 上：
+
+     ```bash
+     source my_autoencoder_env/bin/activate
+     ```
+   - 在 Windows 上：
+
+     ```bash
+     .\my_autoencoder_env\Scripts\activate
+     ```
+
+   您的终端提示符应更改以表示活动环境。
+3. **安装包**：
+   激活后，使用 `pip install <package_name>` 安装库。
+4. **停用环境**：
+   完成后，只需输入：
+
+   ```bash
+   deactivate
+   ```
+
+### 使用 Conda
+
+Conda 是一个开源包管理系统和环境管理系统，在数据科学界尤其受欢迎。它可以管理 Python 包以及非 Python 软件。如果您没有安装它，可以通过 Anaconda 或 Miniconda 安装。
+
+1. **创建 Conda 环境**：
+
+   ```bash
+   conda create --name my_autoencoder_env python=3.9
+   ```
+
+   将 `my_autoencoder_env` 替换为您选择的名称，并根据需要指定 Python 版本。
+2. **激活环境**：
+
+   ```bash
+   conda activate my_autoencoder_env
+   ```
+3. **安装包**：
+   在活动的 Conda 环境中，使用 `conda install <package_name>` 或 `pip install <package_name>`。Conda 对于 TensorFlow 或 PyTorch 等复杂包通常更受青睐，尤其是在涉及 GPU 支持时，因为它能管理 CUDA 工具包的依赖项。
+4. **停用环境**：
+
+   ```bash
+   conda deactivate
+   ```
+
+选择您最熟悉的方法。本节的其余部分将假设您已拥有一个激活的虚拟环境。
+
+## 深度学习 (deep learning)框架
+
+本课程将提供可适用于 TensorFlow（及其高级 Keras API）或 PyTorch 的示例和指导。两者都是功能强大且广泛使用的框架。
+
+### TensorFlow 和 Keras
+
+TensorFlow 是一个用于机器学习 (machine learning)的端到端开源平台。Keras 是一个用于构建和训练深度学习 (deep learning)模型的高级 API，已直接集成到 TensorFlow 中。
+
+要安装 TensorFlow（包含 Keras）：
+
+```bash
+pip install tensorflow
+```
+
+如果您有兼容的 NVIDIA GPU 并希望借助它进行更快的训练，您将需要安装 TensorFlow 的 GPU 版本，并确保您的 CUDA 驱动程序和 cuDNN 库已正确设置。此过程可能因您的系统而异，因此请查阅 TensorFlow 官方安装指南以获取详细说明。通常，对于最新版本，`pip install tensorflow[and-cuda]` 可能有效；对于旧版本，您可能需要为旧版本安装 `tensorflow-gpu`，但请始终查阅当前的官方文档。
+
+### PyTorch
+
+PyTorch 是另一个受欢迎的开源机器学习 (machine learning)库，以其灵活性和 Pythonic 风格而闻名。
+
+要安装 PyTorch，最好访问 PyTorch 官方网站 (pytorch.org) 并使用他们提供的命令生成器，因为它会根据您的操作系统、包管理器（pip 或 conda）和 CUDA 版本（如果需要 GPU 支持）定制命令。
+
+一个典型的 pip 命令可能如下所示（请务必在官方网站上验证）：
+
+```bash
+pip install torch torchvision torchaudio
+```
+
+与 TensorFlow 类似，PyTorch 的 GPU 加速需要兼容的 NVIDIA GPU 和正确的 CUDA 工具包版本。PyTorch 网站提供针对不同 CUDA 版本的特定安装命令。
+
+本课程中，自编码器的核心原理可以在不同框架之间迁移。您可以选择您更熟悉或希望学习的那个。
+
+## 必要的支持库
+
+其他几个 Python 库是机器学习 (machine learning)任务的标准配置：
+
+- **NumPy**：Python 中进行数值计算的基本包。它为大型多维数组和矩阵提供支持，以及一组对其进行操作的数学函数。
+
+  ```bash
+  pip install numpy
+  ```
+- **Pandas**：一个提供高性能、易于使用的数据结构（如 DataFrame）和数据分析工具的库。它非常适合处理表格数据。
+
+  ```bash
+  pip install pandas
+  ```
+- **Matplotlib**：一个用于在 Python 中创建静态、动画和交互式可视化的全面库。我们将用它来绘制损失曲线、查看图像重建和可视化潜在空间。
+
+  ```bash
+  pip install matplotlib
+  ```
+- **Seaborn**：在 Matplotlib 的基础上构建，Seaborn 提供了一个高级接口，用于绘制美观且信息丰富的统计图。
+
+  ```bash
+  pip install seaborn
+  ```
+- **Scikit-learn**：一个多功能的机器学习库，提供用于数据挖掘和数据分析的有效工具。我们将用它来处理如 PCA、数据预处理和模型评估等任务。
+
+  ```bash
+  pip install scikit-learn
+  ```
+
+## 整合所有内容：快速设置指南
+
+1. **安装 Python**：确保您的系统上已安装 Python 3.8+。
+2. **选择并创建虚拟环境**：
+   - 使用 `venv`：`python -m venv myenv`
+   - 使用 `conda`：`conda create -n myenv python=3.9`（根据需要调整 Python 版本）
+3. **激活您的环境**：
+   - `venv`：`source myenv/bin/activate`（Linux/macOS）或 `.\myenv\Scripts\activate`（Windows）
+   - `conda`：`conda activate myenv`
+4. **安装深度学习 (deep learning)框架**：
+   - TensorFlow：`pip install tensorflow`
+   - PyTorch：（使用 pytorch.org 上的命令，例如：`pip install torch torchvision torchaudio`）
+5. **安装支持库**：
+
+   ```bash
+   pip install numpy pandas matplotlib seaborn scikit-learn
+   ```
+
+   如果您使用 conda 并偏好用它来安装包：
+
+   ```bash
+   conda install numpy pandas matplotlib seaborn scikit-learn
+   ```
+
+   您通常可以通过一个命令安装多个包。
+
+## 验证您的安装
+
+安装这些库后，一个好的做法是验证它们是否在您的活动环境中正确安装并可访问。打开一个 Python 解释器或 Jupyter Notebook，然后尝试导入它们：
+
+```python
+import sys
+import tensorflow as tf # 或者 import torch
+import numpy as np
+import pandas as pd
+import sklearn
+import matplotlib
+
+print(f"Python version: {sys.version}") # Python 版本
+print(f"TensorFlow version: {tf.__version__}") # 或者 print(f"PyTorch 版本: {torch.__version__}")
+print(f"NumPy version: {np.__version__}") # NumPy 版本
+print(f"Pandas version: {pd.__version__}") # Pandas 版本
+print(f"Scikit-learn version: {sklearn.__version__}") # Scikit-learn 版本
+print(f"Matplotlib version: {matplotlib.__version__}") # Matplotlib 版本
+
+# 对于 TensorFlow，检查 GPU 可用性（可选）
+# print(f"Num GPUs Available: {len(tf.config.list_physical_devices('GPU'))}")
+
+# 对于 PyTorch，检查 GPU 可用性（可选）
+# if torch.cuda.is_available():
+#     print(f"PyTorch CUDA 可用。设备: {torch.cuda.get_device_name(0)}")
+# else:
+#     print("PyTorch CUDA 不可用。")
+```
+
+如果这些命令无错误运行，您的基本环境就绪。
+
+## 关于 IDE 和 Jupyter Notebook 的说明
+
+虽然您可以在任何文本编辑器中编写 Python 代码，但使用像 VS Code 或 PyCharm 这样的集成开发环境 (IDE) 可以通过代码自动完成、调试和版本控制集成等功能提高生产力。
+
+对于交互式开发和实践，尤其是在机器学习 (machine learning)中，强烈推荐使用 Jupyter Notebooks 或 JupyterLab。它们让您可以在单个文档中结合代码、文本、公式和可视化，非常适合迭代工作和共享结果。您可以使用以下命令安装 JupyterLab：
+
+```bash
+pip install jupyterlab
+```
+
+然后，在您的活动环境中，在终端中运行 `jupyter lab` 来启动它。
+
+环境设置好后，您现在已准备好进行本课程的实践练习，从下一节的主成分分析开始，然后继续构建您的第一个自编码器。此设置提供了将理论知识转化为实践技能的必要工具。
+
+## 参考资料
+
+- [Python.org](https://www.python.org/) — Python Software Foundation (2024)
+  Python的官方网站，提供下载、文档和社区支持。
+- [venv - Creation of virtual environments](https://docs.python.org/3/library/venv.html) — Python Software Foundation (2024)
+  Python官方文档，介绍用于创建隔离虚拟环境的内置模块。
+- [Conda: Package, Dependency & Environment Management](https://docs.conda.io/en/latest/) — Anaconda, Inc. (2024)
+  Conda的官方指南，一个用于多种语言的通用包和环境管理器。
+- [Install TensorFlow](https://www.tensorflow.org/install) — TensorFlow authors (2025)
+  Publisher: Google
+  TensorFlow安装的权威指南，详细说明了CPU和GPU的安装步骤。
+- [Start Locally | PyTorch](https://pytorch.org/get-started/locally/) — PyTorch authors (2024)
+  本地安装PyTorch的官方资源，提供针对不同系统配置的定制命令。

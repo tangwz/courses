@@ -1,0 +1,116 @@
+---
+course: "speech-recognition-synthesis-asr-tts"
+chapter: "modern-speech-processing-foundations"
+lesson: "deep-learning-sequence-architectures"
+sourceId: 3108
+sourceUrl: "https://apxml.com/zh/courses/speech-recognition-synthesis-asr-tts/chapter-1-modern-speech-processing-foundations/deep-learning-sequence-architectures"
+title: "序列的深度学习结构"
+description: "分析语音处理中的循环神经网络、长短期记忆网络、门控循环单元、注意力机制和Transformer。"
+order: 3
+plots: []
+sourceHash: "ef85b9b50e1bd6bca8c0d6a8505d12ba5a049085416e289341faca90d5d04f61"
+sourceCorrections: []
+---
+
+语音信号，无论是原始波形还是梅尔频谱等提取出的特征，都具有固有的序列属性。语音的含义随时间展开，理解或生成语音需要能有效捕捉时间依赖的模型，这些依赖常跨越较长的时间段。深度学习 (deep learning)为序列建模提供了强大的工具，构成了现代自动语音识别（ASR）和文本转语音（TTS）系统的核心。前馈网络虽然对分类有用，但其结构不具备处理变长序列和维持过往事件记忆的能力。专门用于处理序列数据的结构对高级语音处理非常重要。
+
+## 循环神经网络 (neural network)（RNN）
+
+循环神经网络（RNN）是首批专门为序列数据设计的深度学习 (deep learning)结构之一。RNN 的特点是其循环连接：给定时间步的输出不仅取决于该时间步的输入，还取决于网络从上一时间步的内部状态（或“记忆”）。这使得网络能够保留序列中过去元素的信息。
+
+考虑处理一系列音频特征向量 (vector) $x = (x_1, x_2, ..., x_T)$。在每个时间步 $t$，RNN 根据当前输入 $x_t$ 和前一个隐藏状态 $h_{t-1}$ 更新其隐藏状态 $h_t$。典型的公式是：
+
+
+$$
+h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)
+$$
+
+
+$W_{hh}$ 和 $W_{xh}$ 为权重 (weight)矩阵，$b_h$ 为偏置 (bias)向量，而 $\tanh$ 是一个常用的激活函数 (activation function)。然后可以根据隐藏状态计算时间步 $t$ 的输出 $y_t$：
+
+
+$$
+y_t = W_{hy} h_t + b_y
+$$
+
+> 一个简单 RNN 处理序列，随时间展开的图示。隐藏状态 $h_t$ 取决于当前输入 $x_t$ 和前一个隐藏状态 $h_{t-1}$。
+
+尽管简单，标准 RNN 在学习长距离依赖时存在困难。在时间反向传播 (backpropagation)（训练 RNN 的过程）期间，梯度可能消失（变得极小）或爆炸（变得极大），这使得模型难以学到序列中相距较远元素之间的联系。这对抗语音处理而言是一个重要限制，因为依赖关系可能跨越多个帧（例如，在 ASR 中理解上下文 (context)以消除歧义，或在 TTS 中保持一致的韵律）。
+
+## 门控 RNN 变体：LSTM 和 GRU
+
+为解决梯度消失问题并提高捕捉长期依赖的能力，门控 RNN 变体得到了发展。最具代表性的是长短期记忆网络（LSTM）和门控循环单元（GRU）。
+
+### 长短期记忆网络（LSTM）
+
+相比简单 RNN，LSTM 引入了更复杂的内部结构。它们在隐藏状态 ($h_t$) 旁边加入了一个专用的*单元状态* ($c_t$)。信息进出单元状态以及对其的更新，由三个主要*门*控制：
+
+1. **遗忘门：** 决定从单元状态中丢弃哪些信息。
+2. **输入门：** 决定将哪些新信息存入单元状态。
+3. **输出门：** 决定单元状态的哪一部分作为输出（与当前输入和前一个隐藏状态结合形成新的隐藏状态 $h_t$）。
+
+这些门本质上是小型神经网络 (neural network)（通常带有 sigmoid 或 tanh 激活函数 (activation function)），它们根据当前输入和前一状态学习选择性地通过、阻断或修改信息。这种门控机制使 LSTM 能够比简单 RNN 在更长的时间尺度上保持相关信息。
+
+> LSTM 单元图，突出显示单元状态 ($c_t$) 和调节信息流动的门（遗忘、输入、输出）。实际实现涉及具体的矩阵运算。
+
+### 门控循环单元（GRU）
+
+GRU 是 LSTM 的一种较新、稍简单的替代方案。它们也使用门控机制来控制信息流动，但只有两个门且没有独立的单元状态：
+
+1. **更新门：** 类似于 LSTM 中遗忘门和输入门的组合。它决定保留多少前一个隐藏状态的信息，以及采纳多少新的候选隐藏状态的信息。
+2. **重置门：** 决定在计算候选隐藏状态时忽略多少前一个隐藏状态的信息。
+
+GRU 在许多任务上（包括语音处理）通常与 LSTM 表现相当，同时由于其结构更简单，计算成本略低。在 Transformer 结构兴起之前，LSTM 和 GRU 都是 ASR 声学模型、语言模型以及 TTS 系统各种组件中的标准构成要素。
+
+## 注意力机制 (attention mechanism)
+
+尽管 LSTM 和 GRU 改进了对长序列的处理，但用它们构建的序列到序列（Seq2Seq）模型（常用于 ASR 和 TTS）通常依赖于将整个输入序列压缩成一个固定大小的上下文 (context)向量 (vector)。这个向量代表输入的“含义”，随后被传递给解码器以生成输出序列。这种固定大小的向量成为信息瓶颈，尤其对于语音中常见的长输入序列。
+
+注意力机制提供了一种克服此瓶颈的方法。解码器不再仅仅依赖单个上下文向量，而是在输出生成的每个步骤中，“关注”*整个*输入序列的不同部分。
+
+**工作方式：**
+
+1. 在每个解码步骤 $i$，解码器根据其当前状态和编码器的所有隐藏状态 ($h_1^{enc}, h_2^{enc}, ..., h_T^{enc}$)，计算一组*注意力权重 (weight)*或*对齐 (alignment)分数*。
+2. 这些权重表明每个输入时间步对于生成当前输出元素 $y_i$ 的相关程度。
+3. *上下文向量* ($c_i$) 作为编码器隐藏状态的加权和，利用注意力权重计算得出。
+4. 这个特定于当前解码步骤的上下文向量 $c_i$，随后与解码器的状态和前一个输出一起，用于预测当前输出 $y_i$。
+
+这使得解码器在生成输出序列时，能够动态地关注输入音频（对于 ASR）或输入文本（对于 TTS）中最相关的部分，显著提升了性能，尤其对于长语段和复杂的对齐。注意力机制成为 ASR 和 TTS 领域先进编解码器模型中的一个基本组成部分。
+
+## Transformer
+
+Transformer 结构最初为机器翻译而引入，通过表明循环并非严格必需，革新了序列建模。Transformer *完全*依赖注意力机制 (attention mechanism)，特别是*自注意力 (self-attention)机制*，来建模输入和输出序列内的依赖关系。
+
+**组成部分：**
+
+1. **自注意力：** 允许模型在计算每个元素的表示时，对*同一序列内*不同词语（或音频帧/音素）的重要性进行加权。它同时计算序列中所有元素对之间的关系。
+2. **多头注意力 (multi-head attention)：** 该机制不是只计算一次注意力，而是并行运行多次自注意力过程（“头”）。每个头学习序列内关系的不同方面。结果随后被拼接并进行线性变换。
+3. **位置编码 (positional encoding)：** 由于该结构不含循环或卷积，因此不具备固有顺序。位置编码（固定或学习到的向量 (vector)）被添加到输入嵌入 (embedding)中，以向模型提供序列中每个元素位置的信息。
+4. **前馈网络：** 每个注意力层之后是位置级前馈网络，独立应用于每个位置。
+5. **层归一化 (normalization)和残差连接：** 在整个网络中使用，以稳定训练并改善梯度流动。
+
+> 单个 Transformer 块的简化结构，显示了多头注意力和前馈网络层，每个层之后都有残差连接和层归一化。
+
+**优点：**
+
+- **并行性：** Transformer 层内的计算（特别是自注意力）可以大体并行执行，与在适当硬件（GPU/TPU）上的 RNN 相比，训练时间显著缩短。
+- **长距离依赖：** 自注意力允许直接建模序列中任意两个位置之间的依赖关系，无论其距离如何，这使其在捕捉对语音任务重要的长距离上下文 (context)方面非常有效。
+
+Transformer 及其变体（如 Conformer，它结合了 Transformer 和卷积）已成为先进 ASR 系统（例如，用于声学建模）和 TTS 系统（例如，用于声学特征预测的 Transformer TTS）中的主要结构。它们是后续章节中讨论的许多先进端到端模型的依据。
+
+理解这些序列结构，从 RNN 到强大的 Transformer，非常重要。它们提供了学习语音信号和文本序列中固有复杂时间模式的机制，使得能够开发出高性能和自然交互的复杂 ASR 和 TTS 系统。这些结构被整合到端到端 ASR 模型（第二章）和高级 TTS 模型（第四章）中的具体方式，将直接建立在这些原理之上。
+
+## 参考资料
+
+- [Long Short-Term Memory](https://doi.org/10.1162/neco.1997.9.8.1735) — Sepp Hochreiter, Jürgen Schmidhuber (1997)
+  Journal: Neural Computation; Publisher: The MIT Press; Volume: 9; Pages: 1735-1780; DOI: [10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735)
+  介绍了长短期记忆 (LSTM) 网络，这是一种循环神经网络架构，旨在通过克服梯度消失问题来学习长期依赖关系。
+- [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://aclanthology.org/D14-1179/) — Kyunghyun Cho, Bart van Merriënboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, and Yoshua Bengio (2014)
+  Journal: Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP); Publisher: Association for Computational Linguistics; Pages: 1724–1734; DOI: [10.3115/v1/D14-1179](https://doi.org/10.3115/v1/D14-1179)
+  介绍了门控循环单元 (GRU)，作为 LSTM 的简化替代方案，常用于序列建模的编码器-解码器框架中。
+- [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473) — Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1409.0473](https://doi.org/10.48550/arXiv.1409.0473)
+  介绍了序列到序列模型中的注意力机制，使解码器能够选择性地关注输入序列的相关部分。
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NeurIPS 2017); Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008; DOI: [10.55982/annips.2017.387](https://doi.org/10.55982/annips.2017.387)
+  介绍了 Transformer 架构，该架构完全依赖自注意力机制并消除了循环，从而在序列建模方面取得了重大进展。

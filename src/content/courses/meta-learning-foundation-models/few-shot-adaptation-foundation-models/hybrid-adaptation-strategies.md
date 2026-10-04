@@ -1,0 +1,80 @@
+---
+course: "meta-learning-foundation-models"
+chapter: "few-shot-adaptation-foundation-models"
+lesson: "hybrid-adaptation-strategies"
+sourceId: 4366
+sourceUrl: "https://apxml.com/zh/courses/meta-learning-foundation-models/chapter-5-few-shot-adaptation-foundation-models/hybrid-adaptation-strategies"
+title: "混合适应策略"
+description: "结合元学习和参数高效微调的要素。"
+order: 6
+plots: []
+sourceHash: "06b0293d2b0152d28254fb35c269974acf204bda86d712e4843c11c50ddf8c78"
+sourceCorrections: []
+---
+
+元学习算法被设计来学习快速适应方法。参数 (parameter)高效微调 (fine-tuning)（PEFT）技术经过优化，能够以最小的参数改动高效调整大型基础模型。尽管方法不同，但这些方法都有一个共同目标：有效进行少样本适应。这自然引出一个问题：我们能否将两种模式的优点结合起来？混合适应策略正尝试这样做，将PEFT机制的高效性与元学习提供的结构化适应框架相结合。
+
+核心出发点是采用元学习找到最佳初始化或学习过程的能力，同时受益于PEFT在实际适应步骤中减少的计算和内存占用。与其元学习如何更新数十亿参数，我们可以元学习如何高效更新PEFT方法定义的一小部分特定参数。
+
+### 混合方法
+
+结合元学习和PEFT可以通过几种方式实现，通常涉及对标准元学习循环进行修改：
+
+1. **元学习PEFT初始化：** 元学习过程学习PEFT参数 (parameter)（如LoRA矩阵 $A$ 和 $B$、适配器权重 (weight)或提示嵌入 (embedding)）的最佳*初始*状态。在元测试阶段，只有这些PEFT参数在新任务的支持集上进行微调 (fine-tuning)，从元学习得到的初始化状态开始。基础模型参数在此过程中保持冻结。
+2. **元学习内循环中的PEFT：** 基于优化的元学习算法，如MAML，包含一个内循环，在此循环中计算任务特定的更新。在混合方法中，此内循环更新仅限于修改PEFT参数。外循环随后根据这些受限更新聚合梯度，以改进初始PEFT参数或影响它们的基础模型参数。
+3. **元学习PEFT配置：** 一种更复杂的方法是使用元学习来优化PEFT方法本身的配置，例如确定LoRA的最佳秩，或为给定任务分布选择插入适配器的最佳层。
+
+### 示例：基于低秩适应的MAML（MAML-LoRA）
+
+让我们考虑将LoRA集成到MAML框架中。回顾一下，LoRA通过添加一个低秩更新来适应预训练 (pre-training)权重 (weight)矩阵 $W_0 \in \mathbb{R}^{d \times k}$：$W = W_0 + BA$，其中 $B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，并且秩 $r \ll \min(d, k)$。在适应过程中，只有 $A$ 和 $B$ 是可训练的。
+
+在MAML-LoRA设置中：
+
+- **初始化：** 我们从一个基础模型 $\theta_{FM}$ (冻结) 和选定层的初始LoRA矩阵 $A_0, B_0$ 开始。这些初始矩阵构成元参数 (parameter) $\phi = \{A_0, B_0\}$。
+- **内循环（任务适应）：** 对于具有支持集 $S_i$ 的特定任务 $\mathcal{T}_i$，我们对任务损失 $L_{\mathcal{T}_i}$ 执行一个或多个梯度下降 (gradient descent)步骤，从 $A_0, B_0$ 开始，*只*更新LoRA参数 $A, B$。
+  
+  $$
+  (A'_i, B'_i) = (A_0, B_0) - \alpha \nabla_{(A, B)} L_{S_i}(\theta_{FM}, A_0, B_0)
+  $$
+  
+  （这表示一步；可以采取多步）。基础模型参数 $\theta_{FM}$ 在此不参与梯度计算，大大减少了计算量。
+- **外循环（元更新）：** 元目标在查询集 $Q_i$ 上使用适应后的LoRA参数 $(A'_i, B'_i)$ 进行评估。梯度是相对于*初始*LoRA参数 $\phi = \{A_0, B_0\}$ 计算的，并用于更新它们。
+  
+  $$
+  \phi \leftarrow \phi - \beta \nabla_{\phi} \sum_{\mathcal{T}_i} L_{Q_i}(\theta_{FM}, A'_i, B'_i)
+  $$
+  
+  外循环学习一个初始化 $(A_0, B_0)$，该初始化允许仅使用LoRA更新在几个内循环步骤内进行有效适应。
+
+> MAML-LoRA的流程图。元训练学习最佳的初始LoRA参数。元测试通过在新任务的支持集上仅更新这些低秩矩阵来实现高效适应。
+
+### 其他混合组合
+
+类似集成也适用于其他方法：
+
+- **元学习 + 适配器：** 元学习适配器模块的初始权重 (weight)。内循环仅更新适配器权重。
+- **元学习 + 提示/前缀微调 (fine-tuning)：** 元学习初始提示或前缀嵌入 (embedding)。内循环针对特定任务微调这些嵌入。
+- **原型网络 + PEFT：** 使用通过PEFT方法（如LoRA或适配器，可能经过元学习）适应的基础模型来生成嵌入。然后，在此适应的嵌入空间中应用原型网络逻辑（计算质心并根据距离进行分类）。这使得嵌入函数本身可以通过PEFT对少样本任务分布进行轻微的专门化处理，然后再应用度量学习。
+
+### 权衡分析
+
+混合策略也带来一些考虑事项：
+
+- **计算成本：**
+
+  - *元训练：* 仍可能成本高昂，与标准元学习相似，特别是当外循环需要通过内循环步骤进行反向传播 (backpropagation)时（如二阶MAML）。然而，如果使用一阶近似或基础模型被冻结，由于内循环中梯度计算量较小，每一步的成本可能会降低。
+  - *元测试（适应）：* 比适应完整模型或运行完整MAML的内循环要便宜得多，因为更新仅限于少量PEFT参数 (parameter)。这通常是主要原因。
+  - *内存：* 相较于完整模型MAML，内循环的内存需求大幅减少，因为梯度和优化器状态仅需用于PEFT参数。
+- **性能：** 目标是获得与标准元学习相当或更优的性能，同时比完整微调 (fine-tuning)或完整元学习适应更高效。性能很大程度上取决于所选PEFT方法是否为任务提供了足够的表达能力，以及元学习算法能否有效优化PEFT参数。如果适应完整模型对任务分布有明显优势，它可能略低于完整模型元学习的性能，但通常能提供更好的效率/性能平衡。
+- **实现复杂性：** 实现混合方法需要仔细处理元学习框架（管理任务、支持/查询集、内/外循环）和PEFT机制（参数隔离、正确应用更新）。它结合了两种组成方法的复杂性。
+
+混合策略是用于少样本场景中适应大型基础模型的一种务实且通常高效的方法。通过结合元学习的结构化学习方式与参数高效微调的计算效率，它们提供了一种有吸引力的方式来平衡适应质量、速度和资源需求。随着基础模型持续变大，此类混合技术很可能成为高效模型定制越来越重要的工具。
+
+## 参考资料
+
+- [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400) — Chelsea Finn, Pieter Abbeel, Sergey Levine (2017)
+  Journal: Proceedings of the 34th International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1703.03400](https://doi.org/10.48550/arXiv.1703.03400)
+  介绍了模型无关元学习（MAML），这是一种基础的基于优化的元学习算法，是混合MAML-LoRA示例的核心。
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  提出了低秩适应（LoRA），一种重要的参数高效微调（PEFT）方法，在MAML-LoRA混合策略中明确使用。

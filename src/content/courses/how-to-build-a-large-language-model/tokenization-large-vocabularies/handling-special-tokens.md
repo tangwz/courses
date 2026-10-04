@@ -1,0 +1,142 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "tokenization-large-vocabularies"
+lesson: "handling-special-tokens"
+sourceId: 5972
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-5-tokenization-large-vocabularies/handling-special-tokens"
+title: "处理特殊分词"
+description: "讨论特殊分词（CLS、SEP、PAD、UNK、MASK）的使用与管理。"
+order: 5
+plots: []
+sourceHash: "1b13078869aec496671132cefaf83888159f48de7e0b36b7153498b54931ede8"
+sourceCorrections: []
+---
+
+虽然BPE或WordPiece之类的子词 (subword)分词 (tokenization)算法显著减少了词汇表 (vocabulary)外（OOV）词的问题并控制了词汇量，但它们本身不提供许多基于Transformer模型所需的结构信息。为了处理序列分类、句子对比较或仅仅是定义序列边界等任务，我们引入了专门的*特殊分词*。这些分词被视为独立的词汇项，通常在训练分词器 (tokenizer)或配置预训练 (pre-training)分词器时明确预留和添加。
+
+我们来了解最常见的特殊分词及其作用：
+
+### 填充分词 (tokenization)：`[PAD]`
+
+机器学习 (machine learning)模型通常以批次方式处理数据以提高效率。然而，批次内的序列长度常常不同。为形成深度学习 (deep learning)框架所需的矩形张量，较短的序列需要被填充到与批次中最长序列相同的长度。`[PAD]` 分词就是为此目的而设。
+
+例如：考虑对两个句子进行分词：“Hello world” 和 “Tokenization example”。
+如果分词为ID，它们可能看起来像 `[101, 7592, 2088, 102]` 和 `[101, 19204, 7404, 2742, 102]`。
+为了以最大长度6进行批处理，假设 `[PAD]` 的ID为0，则批次会是：
+
+```
+[[101, 7592, 2088,  102,    0,    0],
+ [101, 19204, 7404, 2742,  102,    0]]
+```
+
+模型在计算时忽略这些填充分词非常重要，特别是在注意力机制 (attention mechanism)中。这通过使用一个*注意力掩码*来实现，注意力掩码是一个二进制张量，表示哪些分词应该被关注（1）以及哪些应该被忽略（0）。对于上面的例子，掩码会是：
+
+```
+[[1, 1, 1, 1, 0, 0],
+ [1, 1, 1, 1, 1, 0]]
+```
+
+### 未知分词 (tokenization)：`[UNK]`
+
+即使使用子词 (subword)分词，也可能存在在分词器 (tokenizer)训练期间未曾遇到的稀有字符或字符序列（例如，错别字、不支持的符号、真正的新词），这些序列无法分解成已知子词。`[UNK]` 分词表示这些未知实体。尽管子词方法旨在最大程度减少 `[UNK]` 分词的出现频率，但有备用机制是必要的。推理 (inference)时 `[UNK]` 分词的高频率通常表明分词词汇表 (vocabulary)与输入数据分布之间存在不匹配，这可能会降低模型性能。
+
+### 分类分词 (tokenization)：`[CLS]`
+
+一些Transformer架构，特别是BERT，在每个输入序列前都加上一个特殊的 `[CLS]` 分词。与该分词对应的最终隐藏状态通常用作整个序列的聚合表示。此表示随后可以输入到分类器头部，用于情感分析或主题分类等序列级任务。尽管存在其他池化策略（例如，分词嵌入 (embedding)的平均池化），但使用 `[CLS]` 分词的输出是一种常见做法。
+
+### 分隔分词 (tokenization)：`[SEP]`
+
+为处理涉及多个文本片段的任务（例如，输入为 `[问题, 上下文]` 的问答，或输入为 `[前提, 假设]` 的自然语言推理 (inference)），会使用分隔分词 `[SEP]`。它明确标记 (token)了馈送给模型的单个输入序列中不同片段之间的边界。
+
+BERT在句子对任务中的输入格式示例：
+`[CLS] Sentence A tokens [SEP] Sentence B tokens [SEP]`
+
+请注意，有些模型可能只使用 `[SEP]` 一次，而另一些则可能在每个片段之后使用它，包括最后一个片段。
+
+### 掩码分词 (tokenization)：`[MASK]`
+
+此分词是掩码语言建模（MLM）预训练 (pre-training)目标特有的，该目标由BERT推广。在预训练期间，一部分输入分词会被随机替换为 `[MASK]` 分词。模型的任务是根据周围的上下文 (context)预测被掩码的原始分词。这使得模型能够学习到丰富的双向表示。除非任务明确涉及预测掩码范围，否则 `[MASK]` 分词通常不用于微调 (fine-tuning)或标准推理 (inference)。
+
+### 其他可能的分词 (tokenization)：`[BOS]`、`[EOS]`
+
+像GPT这样的自回归 (autoregressive)模型经常使用序列开始（`[BOS]` 或 `<s>`）和序列结束（`[EOS]` 或 `</s>`）分词。`[BOS]` 表示生成开始，而 `[EOS]` 表示序列完成。尽管它们在标记 (token)边界方面与 `[CLS]` 和 `[SEP]` 相似，但它们的主要作用是在每次生成一个分词的文本生成环境中。
+
+### 集成与使用
+
+特殊分词 (tokenization)被添加到分词器 (tokenizer)的词汇表 (vocabulary)中并分配唯一的ID，就像常规子词 (subword)分词一样。Hugging Face `transformers` 等库管理此过程。当您加载预训练 (pre-training)分词器时，它会附带其预训练期间使用的特殊分词配置。
+
+```python
+import torch
+from transformers import AutoTokenizer
+
+# 加载一个预训练的分词器 (例如BERT)
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+# 示例句子
+sentence1 = "This is sentence one."
+sentence2 = "This is another sentence."
+
+# 为“下一句预测”类型任务对句子进行分词
+encoded_input = tokenizer(
+    sentence1,
+    sentence2,
+    padding=True,
+    truncation=True,
+    return_tensors='pt'
+)
+
+print("分词ID：")
+print(encoded_input['input_ids'])
+
+print("\n注意力掩码：")
+print(encoded_input['attention_mask'])
+
+print("\n解码后的分词：")
+# 我们可以解码以查看添加的特殊分词
+print(
+    tokenizer.convert_ids_to_tokens(encoded_input['input_ids'][0])
+)
+
+# 直接访问特殊分词ID
+print(f"\n[CLS] ID: {tokenizer.cls_token_id}")
+print(f"[SEP] ID: {tokenizer.sep_token_id}")
+print(f"[PAD] ID: {tokenizer.pad_token_id}")
+print(f"[UNK] ID: {tokenizer.unk_token_id}")
+print(f"[MASK] ID: {tokenizer.mask_token_id}")
+```
+
+执行此代码将显示分词器如何自动在开头添加 `[CLS]`，在句子之间和末尾添加 `[SEP]`，并填充较短的序列（如果此特定非填充示例中需要填充的话，但在此处两个句子可能编码为相同长度，因此不需要）。`attention_mask` 正确地识别了非填充分词。
+
+```text
+分词ID：
+tensor([[  101,  2023,  2003,  6251,  2028,  1012,   102,  2023,  2003,  2178,
+          6251,  1012,   102]])
+
+注意力掩码：
+tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+
+解码后的分词：
+['[CLS]', 'this', 'is', 'sentence', 'one', '.', '[SEP]', 'this', 'is', 'another', 'sentence', '.', '[SEP]']
+
+[CLS] ID: 101
+[SEP] ID: 102
+[PAD] ID: 0
+[UNK] ID: 100
+[MASK] ID: 103
+```
+
+理解并正确管理这些特殊分词是根本。它们为模型正确解释各种预训练和下游任务的输入序列提供了必要的结构提示。特殊分词的具体集合及其使用模式通常取决于模型架构和其训练目标。请务必查阅您所用模型和分词器的文档。
+
+## 参考资料
+
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://doi.org/10.18653/v1/N19-1423) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (2019)
+  Journal: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Publisher: Association for Computational Linguistics; Volume: Volume 1; Pages: 4171-4186; DOI: [10.18653/v1/N19-1423](https://doi.org/10.18653/v1/N19-1423)
+  介绍了BERT模型及其预训练目标（掩码语言建模和下一句预测），解释了`[CLS]`、`[SEP]`和`[MASK]`标记的目的和用法。
+- [Tokenizers - Hugging Face documentation](https://huggingface.co/docs/tokenizers/) — Hugging Face (2024)
+  提供了关于如何构建、配置和使用分词器的全面文档，包括在Hugging Face生态系统中特殊标记的显式处理和管理。
+- [Neural Machine Translation of Rare Words with Subword Units](https://doi.org/10.18653/v1/P16-1162) — Rico Sennrich, Barry Haddow, and Alexandra Birch (2016)
+  Journal: Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Pages: 1715–1725; DOI: [10.18653/v1/P16-1162](https://doi.org/10.18653/v1/P16-1162)
+  介绍了用于子词分词的字节对编码（BPE），这是一种基础算法，它减少了OOV率并帮助管理词汇量，为特殊标记添加结构信息的必要性奠定了基础。
+- [Google's Neural Machine Translation System: Bridging the Gap between Human and Machine Translation](https://arxiv.org/abs/1609.08144) — Yonghui Wu, Mike Schuster, Zhifeng Chen, Quoc V. Le, Mohammad Norouzi, Wolfgang Macherey, Maxim Krikun, Yuan Cao, Qin Gao, Klaus Macherey, Jeff Klingner, Apurva Shah, Melvin Johnson, Xiaobing Liu, Łukasz Kaiser, Stephan Gouws, Yoshikiyo Kato, Taku Kudo, Hideto Kazawa, Keith Stevens, George Kurian, Nishant Patil, Wei Wang, Cliff Young, Jason Smith, Jason Riesa, Alex Rudnick, Oriol Vinyals, Greg Corrado, Macduff Hughes, Jeffrey Dean (2016)
+  Journal: arXiv preprint arXiv:1609.08144; DOI: [10.48550/arXiv.1609.08144](https://doi.org/10.48550/arXiv.1609.08144)
+  介绍了WordPiece分词，这是一种在BERT等模型中使用的替代子词分词方法，它与BPE互补，用于管理词汇和稀有词。

@@ -1,0 +1,135 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "scm-identification-strategies"
+lesson: "practice-identification-logic"
+sourceId: 4316
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-1-scm-identification-strategies/practice-identification-logic"
+title: "实践：应用识别逻辑"
+description: "将 do-演算和识别策略应用于有挑战性的因果问题。"
+order: 7
+plots: []
+sourceHash: "60eb1c36de8dd88d86b213c91d1b433371a5308891b9c4e773ba4c8c2cb41af5"
+sourceCorrections: []
+---
+
+实践中应用识别逻辑涉及使用结构因果模型 (SCMs)、有向无环图 (DAG) 等图示表示、do-演算规则以及各种识别策略。我们将着手应用这些方法，判断能否从观测数据中估计出所需的因果效应，即便在标准调整准则不足以实现时。识别先于估计；它告诉我们 *要估计什么*，前提是我们的因果模型是正确的。
+
+### 场景一：处理未观测混杂因素
+
+考虑以下有向无环图 (DAG) 所表示的因果结构。我们有变量 $W, X, M, Y$，其中 $X$ 是处理变量，$Y$ 是结果变量，$M$ 是中介变量，$W$ 是一个已观测的协变量。重要地是，假设存在一个未观测的共同原因 $U$ 同时影响 $X$ 和 $Y$。
+
+> 包含观测变量 W, X, M, Y 和未观测混杂因素 U 的因果图。
+
+我们的目标是识别 $X$ 对 $Y$ 的因果效应，由干预分布 $P(Y | do(X=x))$ 表示。
+
+**分析：**
+
+1. **后门准则：** 我们能否找到一组已观测变量 $Z$ 来阻断从 $X$ 到 $Y$ 的所有后门路径？后门路径有：
+
+   - $X \leftarrow W \to Y$ (通过条件化 $W$ 阻断)
+   - $X \leftarrow U \to Y$ (无法阻断，因为 $U$ 未被观测)
+     由于我们无法阻断涉及 $U$ 的路径，标准后门准则在此失效。
+2. **前门准则：** 我们能否找到一组已观测变量 $M$ 来截断所有从 $X$ 到 $Y$ 的有向路径，满足某些阻断条件，并且其效应 $P(M|do(X))$ 和 $P(Y|do(M))$ 是可识别的？
+
+   - $M$ 截断了有向路径 $X \to M \to Y$。
+   - 从 $X$ 到 $M$ 是否存在未被阻断的后门路径？没有。因此，$P(M|do(X=x)) = P(M|X=x)$ 是可识别的 (do-演算规则2，或者简单来说没有混杂)。
+   - 从 $M$ 到 $Y$ 的所有后门路径是否都被 $X$ 阻断？路径 $M \leftarrow X \leftarrow U \to Y$ 是开放的。路径 $M \leftarrow X \leftarrow W \to Y$ 也可能开放。我们需要阻断这些路径。条件化 $X$ 阻断了 $M \leftarrow X \leftarrow U \to Y$。条件化 $X$ 是否也阻断了 $M \leftarrow X \leftarrow W \to Y$？是的。因此，$P(Y|do(M=m)) = \sum_x P(Y|M=m, X=x) P(X=x|do(M=m))$。由于 $X$ 在 $G_{\bar{M}}$ 中不是 $M$ 的后代，我们可能认为 $P(X=x|do(M=m)) = P(X=x)$。然而，我们需要小心。前门准则要求从 $X$ 到 $M$ *没有未被阻断的后门路径*，这已经满足。它还要求 *从 $M$ 到 $Y$ 的所有后门路径都被 $X$ 阻断*。我们再检查一下：$M \leftarrow X \leftarrow W \to Y$。条件化 $X$ 阻断了这条路径。$M \leftarrow X \leftarrow U \to Y$。条件化 $X$ 阻断了这条路径。看起来条件是满足的。
+   - 因此，$P(Y|do(M=m)) = \sum_x P(Y|M=m, X=x) P(X=x)$。
+   - 应用前门公式：
+
+   
+   $$
+   P(Y|do(X=x)) = \sum_m P(M=m|do(X=x)) P(Y|do(M=m))
+   $$
+   
+   
+   $$
+   P(Y|do(X=x)) = \sum_m P(M=m|X=x) \left[ \sum_{x'} P(Y|M=m, X=x') P(X=x') \right]
+   $$
+   
+
+   这个表达式只涉及可以从观测数据中估计的概率。因此，在这种特定图中，效应 $P(Y|do(X=x))$ 可以通过前门准则识别。
+
+**要点：** 即使存在未观测的混杂因素 $U$，细致地应用前门调整等准则（或系统地应用 do-演算）也能实现识别。
+
+### 场景二：带反馈的识别
+
+考虑一个简化的系统，其中 $X$ 和 $Y$ 之间可能存在反馈，同时有一个已观测协变量 $Z$ 和一个未观测混杂因素 $U$。我们可能使用循环图来表示这种情况，尽管解释时需要谨慎（这通常暗示一个底层的时间过程或平衡状态）。
+
+> 包含 X 和 Y 之间反馈、已观测协变量 Z 和未观测混杂因素 U 的因果图。
+
+我们能否识别 $P(Y | do(X=x))$？
+
+**分析：**
+
+1. **难点：** 标准的基于 DAG 的准则（后门、前门）和基本的 do-演算规则主要针对无环图开发。循环引入了许多复杂性，包括干预定义和结构方程的唯一解可能存在问题。
+2. **Do-演算的应用（尝试）：** 我们尝试正式应用 do-演算。$P(Y | do(X=x))$ 涉及对 $X$ 进行干预。在被 $do(X=x)$ 修改的图中，我们移除所有指向 $X$ 的箭头。这打破了循环。修改后的图 $G_{\bar{X}}$ 看起来像：
+   > 经干预 do(X=x) 修改后的图，移除了指向 X 的入边。
+   > 在这个修改后的图 $G_{\bar{X}}$ 中，影响 $Y$ 的唯一因素（除了固定的 $X=x$）是 $U$。我们需要使用原始观测分布为 $P(Y | do(X=x))$ 找到一个表达式。路径 $X \to Y$ 依然存在。路径 $X \leftarrow Y$ 已消失。路径 $X \leftarrow U \to Y$ 在原始图中是相关的，但 $U \to X$ 的连接被干预切断了。然而，$U \to Y$ 的连接仍然存在。
+   > 我们能否对 $Z$ 进行条件化？在 $G_{\bar{X}}$ 中，$Z$ 与 $Y$ 不相连。在原始图中 $Z$ 是否阻断了任何后门路径？$X \leftarrow Z$。$X \leftarrow Y$。$X \leftarrow U \to Y$。$Z$ 没有阻断通过 $U$ 的路径。
+3. **不可识别性：** 在这种设定下，$P(Y | do(X=x))$ 通常*无法*仅从观测数据中识别。未观测的混杂因素 $U$ 同时影响 $X$（在原始图中）和 $Y$，并且涉及 $Y \to X$ 的循环使调整变得复杂。切断指向 $X$ 的入边仍然使混杂路径 $X \to Y \leftarrow U$ 通过 $U$ 对 $Y$ 的影响保持活跃。如果没有进一步的假设（例如，特定的函数形式、关于平衡的知识或工具变量），我们无法隔离 $X$ 对 $Y$ 的因果效应。
+
+**要点：** 循环，特别是与未观测混杂因素结合时，通常导致使用标准观测数据无法识别。可能需要高级技术或不同类型的数据（如干预数据或面板数据，将在后续章节讨论）。敏感性分析在这里变得尤为重要，以了解关于 $U$ 的假设如何影响结论。
+
+### 使用识别工具
+
+虽然手动应用 do-演算对于理解非常基本，但软件库可以自动化处理复杂图中的部分过程。像 Python 的 `DoWhy` 库这样的工具允许您定义因果图（通常使用 GML 或 DOT 格式）并指定因果查询（例如，识别 $P(Y | do(X=x))$）。
+
+```python
+import dowhy
+import dowhy.gcm as gcm
+
+# Define the graph from Scenario 1 (without U for simplicity here, or handle U)
+# 从场景一中定义图（为简单起见此处不含 U，或处理 U）
+# Using graphical model syntax (example) (使用图形模型语法（示例）)
+causal_graph = """
+digraph {
+  W -> X;
+  X -> M;
+  M -> Y;
+  W -> Y;
+  # U [label="Unobserved"]; # How U is handled depends on library features (U [label="未观测"]; # U 的处理方式取决于库的功能)
+  # U -> X; U -> Y;
+}
+"""
+
+# Assuming data is loaded into a pandas DataFrame `df`
+# 假设数据已加载到 pandas DataFrame `df` 中
+# Initialize the CausalModel
+# 初始化因果模型
+model = dowhy.CausalModel(
+    data=df, # Your observational data (您的观测数据)
+    treatment='X',
+    outcome='Y',
+    graph=causal_graph
+)
+
+# Attempt identification
+# 尝试识别
+identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+
+# Print the result
+# 打印结果
+print(identified_estimand)
+```
+
+运行这样的代码（如果库支持显式处理 $U$，可能需要进行调整）将尝试自动应用识别规则。对于场景一，它理想情况下应返回我们推导出的前门估计量。对于场景二，考虑到循环和隐含的混杂（如果 $U$ 可表示），它很可能会报告不可识别性。
+
+**注意：** 自动化工具是强大的辅助，但不能替代理解。它们依赖于输入图和假设的正确性。始终批判性地评估工具的输出，并理解为何返回特定估计量或为何识别失败。您对 do-演算和识别逻辑的掌握使您能够验证这些结果，并在工具处理复杂或非标准情况时进行排查。
+
+这些练习表明，识别是一个非常重要的推理 (inference)步骤。在为因果效应估计拟合任何机器学习 (machine learning)模型（如第3章所述）之前，您必须首先确定该效应是否可以从您的数据和假设中估计，以及什么统计量对应于您所寻求的因果效应。
+
+## 参考资料
+
+- [Causality: Models, Reasoning, and Inference](https://www.booksrun.com/buy/causality-models-reasoning-and-inference-9780521895606) — Judea Pearl (2009)
+  Publisher: Cambridge University Press
+  关于结构因果模型、有向无环图、do-演算和各种识别策略的基础文本。
+- [Causal diagrams for empirical research](https://doi.org/10.1093/biomet/82.4.669) — Judea Pearl (1995)
+  Journal: Biometrika; Publisher: Biometrika Trust; Volume: 82; Pages: 669-688; DOI: [10.1093/biomet/82.4.669](https://doi.org/10.1093/biomet/82.4.669)
+  一篇开创性论文，介绍了因果推断的图演算，包括do-算子和识别原理。
+- [DoWhy: A Python Package for Causal Inference](https://arxiv.org/abs/2011.04216) — Amit Sharma, Emre Kiciman (2020)
+  Journal: arXiv preprint arXiv:2011.04216; Pages: 5; DOI: [10.48550/arXiv.2011.04216](https://doi.org/10.48550/arXiv.2011.04216)
+  这篇论文介绍了 `DoWhy` 库，一个旨在帮助因果推断任务的 Python 包，包括因果图表示和估算量自动识别。
+- [Identification of Causal Effects in Recursive and Nonrecursive Models](https://www.jair.org/index.php/jair/article/view/10046) — Judea Pearl, Ilya Shpitser (2013)
+  Journal: Journal of Artificial Intelligence Research (JAIR); Publisher: Journal of Artificial Intelligence Research; Volume: 48; Pages: 23-74; DOI: [10.1613/jair.3926](https://doi.org/10.1613/jair.3926)
+  一份技术报告，讨论了因果效应识别的通用条件，将范围从无环模型扩展到非递归（循环）因果图。

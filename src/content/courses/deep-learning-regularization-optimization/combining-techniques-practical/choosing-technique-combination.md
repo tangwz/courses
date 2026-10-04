@@ -1,0 +1,84 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "combining-techniques-practical"
+lesson: "choosing-technique-combination"
+sourceId: 5015
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-8-combining-techniques-practical/choosing-technique-combination"
+title: "选择恰当的技术组合"
+description: "提供针对特定问题选择恰当方法组合的指导"
+order: 7
+plots: []
+sourceHash: "cba76717ec2a8bf5751f20441bfd606e57ee09d4ff5be59d6e29945cc36b3834"
+sourceCorrections: []
+---
+
+选择优化和正则化 (regularization)方法的恰当组合，更多是经验而非严谨科学，常常依据实验结果、经验和您问题的具体情况。没有哪种组合能保证在所有情况下都最佳。不过，我们可以根据常用做法和之前谈到的关联来建立一些实用准则和初始方向。
+
+### 从一个合理的初始配置开始
+
+不要盲目尝试所有技术，期望某种能奏效。相反，从一个标准、公认的配置开始，并逐步改进。
+
+1. **优化器选择：** 对于许多深度学习 (deep learning)任务，特别是计算机视觉和自然语言处理，从 **Adam** 或其变体 **AdamW**（带有解耦权重 (weight)衰减的Adam）这样的自适应优化器开始，是一个稳固的起点。Adam 通常能提供快速收敛。如果您遇到问题或怀疑Adam可能收敛到次优解，尝试 **带有动量的SGD**（可能结合学习率调度）是一个有益的替代方案，有时能获得更好的最终泛化性能，尽管可能需要更多调整。
+2. **归一化 (normalization)：** 如果您的网络架构包含卷积层（在视觉任务中常见）或网络深度相对较深，及早加入 **批归一化** (BN) 通常有好处。将其放置在线性/卷积层之后、非线性激活函数 (activation function)之前。对于RNN或Transformer处理的序列数据，**层归一化** (LN) 通常比BN更受青睐，因为它不依赖于批次统计信息。
+3. **权重衰减 (L2正则化 (regularization))：** 这是最常用且通常有效的正则化方法之一。使用Adam时，优先选择 **AdamW**，它能正确实现权重衰减，将其与自适应学习率机制解耦。如果使用SGD，直接将L2正则化添加到损失函数 (loss function)中，或通过优化器的 `weight_decay` 参数 (parameter)实现。从一个较小的值开始（例如 1e-4, 1e-5），并根据验证性能进行调整。
+
+许多现代架构的常见起始配置可能如下：
+
+- 优化器：AdamW
+- 归一化：批归一化（适用于CNN）或层归一化（适用于RNN/Transformer）
+- 正则化：权重衰减（通过AdamW）
+
+### 诊断与迭代
+
+有了初始配置后，训练模型并诊断其性能，可使用学习曲线（绘制训练和验证损失/指标随训练轮次的变化）。
+
+- **高偏差（欠拟合 (underfitting)）：** 如果训练和验证误差都高并趋于平稳，您的模型可能缺乏学习潜在模式的能力。在此情况下正则化 (regularization)可能作用不大。主要关注：
+  - 增加模型大小（更多层、更多神经元）。
+  - 延长训练时间。
+  - 如果正则化强度初始设置过高，则减小它。
+  - 尝试不同的优化器或调整学习率。
+  - 确保数据预处理正确。
+- **高方差（过拟合 (overfitting)）：** 如果训练误差低但验证误差显著更高（或开始增加），您的模型正在过拟合。这时就需要加入额外的正则化方法。
+
+> 一个基于模型性能诊断来选择和调整技术的通用流程。
+
+### 添加正则化 (regularization)层
+
+如果检测到过拟合 (overfitting)，考虑添加这些方法，通常一次添加一种，以评估其效果：
+
+1. **数据增强：** 如果适用于您的数据类型（特别是图像），数据增强通常是提高泛化能力最有效的方法之一。它通过人工扩展训练数据集，起到隐式正则化的作用。在您的流程早期实施它。
+2. **Dropout：** 添加Dropout层，通常在全连接层的激活函数 (activation function)之后。对于卷积层，存在专门的Dropout变体，但更常见的是将其应用于全连接头部。从一个适度的Dropout率（例如0.25到0.5）开始并进行调整。记住它与批归一化 (normalization)之间可能的影响；有时BN提供了足够的正则化，以至于Dropout提供的额外好处较少，或者如果调整不当甚至可能略微损害性能。如果同时使用两者，实验其放置位置（BN之前或之后）。
+3. **早停：** 监控验证损失，当其在预设的训练轮次（耐心值）内不再改善（或开始恶化）时停止训练。这是一种简单且计算开销小的正则化方式。
+4. **L1正则化 / 弹性网络：** 尽管L2（权重 (weight)衰减）更常见，但当您希望权重向量 (vector)稀疏（特征选择）时，L1会起作用。弹性网络提供了一种平衡。与L2、Dropout和BN相比，这些方法在深度学习 (deep learning)中作为主要正则化方法的频率通常较低。
+
+### 调整与优化
+
+引入新方法通常需要重新调整现有超参数 (parameter) (hyperparameter)：
+
+- **学习率：** 正则化 (regularization)方法有时能允许稍高的学习率。相反，某些优化器/正则化器组合可能需要较低的学习率以确保稳定性。学习率调度（步长衰减、余弦退火、预热）对于获得领先结果通常是必要的，特别是使用SGD+动量或训练大型模型（如Transformer）时。
+- **正则化强度：** L1/L2 (`lambda`) 或 Dropout (`p`) 的超参数需要调整。使用验证集性能来引导此调整（例如，通过随机搜索或对 `lambda` 进行对数尺度的网格搜索）。
+- **批次大小：** 尽管不是直接的正则化方法，但批次大小会影响优化器（特别是自适应优化器）以及批归一化 (normalization)的效果。较大的批次大小有时可能导致更尖锐的局部最小值，泛化能力较差；较小的批次大小会引入更多噪声，这可能具有正则化作用但会减慢收敛速度。批次大小与学习率之间通常存在关联（较大的批次可能允许更高的学习率）。
+
+### 特定问题考量
+
+- **计算机视觉 (CNN)：** AdamW/SGD+动量 + 批归一化 (normalization) + 权重 (weight)衰减 + 数据增强是一种非常常见且有效的组合。Dropout常用于最终的分类层。
+- **自然语言处理 (RNN/Transformer)：** AdamW + 层归一化 + Dropout + 权重衰减 + 学习率调度（带预热）是标准做法，尤其适用于Transformer。
+- **表格数据：** 方法多种多样。较简单的模型可能使用SGD+动量或Adam。所有正则化 (regularization)类型（L1/L2、Dropout、BN）都可以有效，具体取决于网络架构和数据特点。
+- **小型数据集：** 正则化非常重要。Dropout、积极的数据增强和权重衰减等方法通常是必要的。迁移学习 (transfer learning)（使用预训练 (pre-training)模型）也是一种强有力的方法。
+
+选择恰当的组合需要理解每种方法的作用，从合理的默认值开始，诊断模型行为，并根据经验结果在验证集上迭代添加或调整组件。不要害怕尝试并仔细记录您的结果。
+
+## 参考资料
+
+- [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  介绍AdamW，展示了将权重衰减与自适应学习率机制解耦对于提高正则化效果的重要性。
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe, Christian Szegedy (2015)
+  Journal: International Conference on Machine Learning (ICML); Pages: 448-456; DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  一篇关于批标准化的基础论文，批标准化是一种广泛用于稳定和加速深度神经网络训练的技术。
+- [Layer Normalization](https://arxiv.org/abs/1607.06450) — Jimmy Lei Ba, Jamie Ryan Kiros, Geoffrey E. Hinton (2016)
+  DOI: [10.48550/arXiv.1607.06450](https://doi.org/10.48550/arXiv.1607.06450)
+  介绍层标准化，一种批标准化的替代方案，因其与批大小无关而特别适用于循环神经网络和Transformer。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  一本内容全面的教科书，详细解释了深度学习优化算法、正则化技术和实用的训练方法。

@@ -1,0 +1,93 @@
+---
+course: "intro-to-multimodal-ai"
+chapter: "introductory-applications-multimodal-ai"
+lesson: "inputs-outputs-multimodal-applications"
+sourceId: 6537
+sourceUrl: "https://apxml.com/zh/courses/intro-to-multimodal-ai/chapter-5-introductory-applications-multimodal-ai/inputs-outputs-multimodal-applications"
+title: "多模态应用中的输入与输出"
+description: "Examine the typical inputs and outputs for various simple multimodal AI applications."
+order: 6
+plots: []
+sourceHash: "14039149433ed6cb8944d412880ea2cf4e4e1848a6ac183cbd371bce16a931c5"
+sourceCorrections: []
+---
+
+多模态 (multimodal)AI应用处理各种类型的数据作为输入，并生成多样化的输出。理解多模态系统需要考察这些数据交互。每个AI系统，无论是多模态还是非多模态，都会接收某种形式的数据（输入）来产生结果（输出）。对于多模态系统来说，一个主要特点通常是输入端、输出端或两端涉及的数据类型多样性。
+
+您可以将这个过程想象成一个复杂的厨房。食材（输入）可以是多种多样的，也许是一个视觉场景（图像）、一个口头提问（音频）和一条书面指令（文本）。最终的菜肴（输出）则取决于系统如何组合和转换这些不同食材，例如，将它们转化为一个伴随生成图像的口头回答。
+
+现在，让我们来分析本章前面讨论过的应用程序的输入和输出。
+
+### 1. 图像字幕生成系统
+
+这些系统旨在自动为给定图像生成文字描述。它们查看图像并用文字描述其中内容。
+
+- **输入：** 主要输入是**图像**。这是视觉模态的数据。
+- **输出：** 输出是**文本**，具体来说，是一个描述输入图像内容或上下文 (context)的句子或短语。这是文本模态的数据。
+
+> 图像（视觉数据）被输入到系统，然后生成文字字幕。
+
+### 2. 视觉问答 (VQA)
+
+VQA 系统比字幕生成更进一步。它们回答关于图像的自然语言问题。这意味着系统必须理解图像的视觉内容以及基于文本问题的语义。
+
+- **输入：** 这种系统接收两种类型的输入：
+  1. **图像**（视觉模态）。
+  2. 与图像相关的**文本问题**（文本模态），例如：“这辆车是什么颜色的？”或“这张照片里有多少人？”。
+- **输出：** 输出是**文本**，它是基于所提供图像对问题的回答。
+
+> VQA 系统处理图像和文本问题，以生成基于文本的答案。
+
+### 3. 文本到图像合成
+
+这个应用在某种程度上与图像字幕生成相反。您向系统提供文字描述，系统会尝试生成与该描述匹配的新图像。
+
+- **输入：** 主要输入是**文本**（文本模态），一个句子或一组关键词，描述所需的视觉场景，例如：“木桌上的红苹果”或“戴帽子的猫的印象派画作”。
+- **输出：** 输出是**图像**（视觉模态），由AI系统根据输入文本新创建的图像。
+
+### 4. 视觉线索增强的语音识别
+
+标准的自动语音识别 (ASR) 系统将口语音频转换为书面文本。然而，人类语音理解通常受益于视觉线索，如唇部运动，尤其是在嘈杂的环境中。多模态 (multimodal)语音识别结合了这一点。
+
+- **输入：**
+  1. **音频数据**（音频模态），即语音本身。
+  2. **视频数据**（视觉模态），通常侧重于说话者的脸部，特别是唇部运动。
+- **输出：** 输出是**文本**（文本模态），表示转录的语音。系统旨在通过使用来自音频和视觉流的信息来提高转录准确性。
+
+### 5. 多模态 (multimodal)情感分析
+
+情感分析旨在确定内容中表达的情感或观点。多模态情感分析通过考量来自各种来源的信息来增强这一点。
+
+- **输入：** 这些可以是多样的并可组合的，具体取决于应用：
+  - **文本数据**（例如，产品评论、社交媒体上的评论）。
+  - **音频数据**（例如，口头评论或客户服务电话中的语调、音高和语速）。
+  - **视频数据**（例如，视频博客或录制访谈中的面部表情、手势）。
+- **输出：** 输出通常是一个分类**标签**（如“积极”、“消极”、“中性”，或更细致的情绪，如“高兴”、“悲伤”、“愤怒”）或一个代表情感强度或极性的数值**分数**。这种输出通常是分类或数值型的。
+
+### 总结输入和输出
+
+为了更清楚地说明这一点，让我们看一下一个表格，总结我们讨论过的应用程序的输入和输出模态：
+
+| 应用 | 主要输入 | 输入模态 | 主要输出 | 输出模态 |
+| --- | --- | --- | --- | --- |
+| 图像字幕生成 | 图像 | 视觉 | 文字字幕 | 文本 |
+| 视觉问答 (VQA) | 图像、文本问题 | 视觉、文本 | 文字回答 | 文本 |
+| 文本到图像合成 | 文字描述或提示 | 文本 | 图像 | 视觉 |
+| 增强型语音识别 | 音频（语音）、视频（唇部运动） | 音频、视觉 | 转录文本 | 文本 |
+| 多模态 (multimodal)情感分析 | 文本、音频和/或视频内容 | 文本、音频、视觉 | 情感标签或分数 | 分类/数值型 |
+
+> 此表格展现了常见入门级多模态应用程序的数据类型流程。请注意，根据任务的不同，输入和输出如何使用不同的模态组合。
+
+理解这些输入和输出模式是使用多模态AI的一个基础步骤。当您遇到一个新的多模态AI应用时，首先要考量的问题之一是：“它接收什么类型的数据，以及产生什么类型的数据？”回答这个问题有助于阐明系统的目的、其操作流程以及设计中涉及的挑战。随着您继续学习，您会看到这些I/O模式以各种形式出现，通常以更复杂和组合的方式。
+
+## 参考资料
+
+- [Multimodal Machine Learning: A Survey and Taxonomy](https://doi.org/10.1109/TPAMI.2018.2798607) — Tadas Baltrušaitis, Chaitanya Ahuja, and Louis-Philippe Morency (2018)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 41; Pages: 423-443; DOI: [10.1109/TPAMI.2018.2798607](https://doi.org/10.1109/TPAMI.2018.2798607)
+  全面概述了多模态机器学习，对与理解多样化输入和输出相关的融合策略和应用进行了分类。
+- [Show, Attend and Tell: Neural Image Caption Generation with Visual Attention](https://arxiv.org/abs/1502.03044) — Kelvin Xu, Jimmy Ba, Ryan Kiros, Kyunghyun Cho, Aaron Courville, Ruslan Salakhutdinov, Richard Zemel, and Yoshua Bengio (2015)
+  Journal: International Conference on Machine Learning (ICML); Pages: 2048-2057; DOI: [10.48550/arXiv.1502.03044](https://doi.org/10.48550/arXiv.1502.03044)
+  提出了一个从图像生成文本描述的基础模型，展示了视觉输入到文本输出的实例。
+- [VQA: Visual Question Answering](https://doi.org/10.1109/ICCV.2015.279) — Stanislaw Antol, Aishwarya Agrawal, Jiasen Lu, Margaret Mitchell, Dhruv Batra, C. Lawrence Zitnick, and Devi Parikh (2015)
+  Journal: International Conference on Computer Vision (ICCV); Publisher: IEEE; Pages: 2425-2433; DOI: [10.1109/ICCV.2015.279](https://doi.org/10.1109/ICCV.2015.279)
+  介绍了视觉问答任务和数据集，展示了系统如何处理图像和文本输入以生成文本答案。

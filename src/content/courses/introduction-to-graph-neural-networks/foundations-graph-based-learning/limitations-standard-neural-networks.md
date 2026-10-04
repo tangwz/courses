@@ -1,0 +1,74 @@
+---
+course: "introduction-to-graph-neural-networks"
+chapter: "foundations-graph-based-learning"
+lesson: "limitations-standard-neural-networks"
+sourceId: 7613
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-graph-neural-networks/chapter-1-foundations-graph-based-learning/limitations-standard-neural-networks"
+title: "标准神经网络在图数据上的局限性"
+description: "了解 CNN 和 RNN 等常规神经网络不适合处理图结构数据的技术原因。"
+order: 2
+plots: []
+sourceHash: "d99736a8cbb9e3ea6b6e0b4b14ae51d8fb5822654c538543935b80f8c06925d3"
+sourceCorrections: []
+---
+
+多层感知机 (MLP)、卷积神经网络 (neural network) (CNN) 和循环神经网络 (RNN) 等标准深度学习 (deep learning)模型在处理图像、文本和表格数据方面表现优异。然而，当直接应用于图结构数据时，它们的核心架构假设就不再适用。图的特性带来了常规架构无法有效应对的挑战。
+
+### 变长大小与节点顺序问题
+
+以基础的 MLP（或全连接密集网络）为例。它的设计初衷是接收固定大小的特征向量 (vector)。这产生了一个直接的问题：图的规模并非固定。社交网络的用户可能从 1,000 人增加到 1,001 人，或者分子数据库中不同化合物包含的原子数量各不相同。对于一组节点和边数量不等的图，很难直接创建一个统一大小的输入向量。
+
+更为严重的是节点排序问题。图没有天然的顺序。下面的两张图表示的是完全相同的图结构，但节点的排列顺序不同。
+
+> 一个简单的有向图结构。
+
+如果我们用邻接矩阵来表示这个图，矩阵的具体形式完全取决于我们为节点选择的顺序。如果按照 `(A, B, C)` 排序，邻接矩阵 $A_1$ 为：
+
+
+$$
+A_1 = \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 0 & 0 & 0 \end{pmatrix}
+$$
+
+
+但是，如果我们选择 `(B, C, A)` 的顺序，就会得到一个完全不同的矩阵 $A_2$：
+
+
+$$
+A_2 = \begin{pmatrix} 0 & 1 & 0 \\ 0 & 0 & 0 \\ 1 & 0 & 0 \end{pmatrix}
+$$
+
+
+MLP 会将展平后的 $A_1$ 和 $A_2$ 视为完全不同的输入，无法识别出它们描述的是同一个对象。图模型必须具备**置换不变性**（用于图级任务）或**置换等变性**（用于节点级任务），这意味着其输出不应受到节点人为排序的影响。标准的 MLP 完全不具备这种属性。
+
+### 不规则邻域与网格结构
+
+卷积神经网络 (neural network) (CNN)已成为计算机视觉的标准，因为其设计利用了网格中像素的空间局部性。CNN 的核心操作是卷积，即一个小的可学习滤波器（或卷积核）在图像上滑动。这之所以有效，是因为每个像素的邻域都是规整、固定大小的网格（例如 3x3 或 5x5）。
+
+而图并不具备这种网格状的规整性。节点的局部邻域由其连接关系定义，且邻域大小差异很大。在引用网络中，一个节点的连接数可能只有两个，而一篇奠基性的论文可能与两千个节点相连。图中没有“上”、“下”、“左”、“右”的概念，也无法应用一个适用于每个节点的固定大小滤波器。
+
+> CNN 处理的规整网格状邻域（左）与图中节点的不规则、变长邻域（右）的对比。
+
+强行将图转换为网格格式会丢失定义其结构的准确关系信息，而这些信息往往正是我们希望模型学习的核心内容。
+
+### 缺乏序列结构
+
+循环神经网络 (neural network) (RNN)适用于顺序具有意义的序列，例如句子中的单词或时间序列中的事件。有人尝试通过“随机游走”生成节点序列，从而将 RNN 应用于图。然而，正如没有标准的节点排序一样，图中也没有标准的路径。
+
+从不同的节点开始游走，或者在交叉口选择不同的路径，都会产生完全不同的序列。将这些多样的序列输入 RNN 会导致对同一个图产生不一致的表示，使得模型难以学习到稳定且有意义的模式。
+
+总之，这些限制共同指向了一个核心问题：标准神经网络并非为了处理图拓扑中显式的关系结构而设计。MLP 通过展平操作忽略了结构，CNN 要求图所不具备的规整网格，而 RNN 强加了人为的序列顺序。为了有效地在图上进行机器学习 (machine learning)，我们需要一种能够直接在图上运行的新型模型，将节点及其连接作为计算的基本单元。这正是图神经网络的功能所在。
+
+## 参考资料
+
+- [The Graph Neural Network Model](https://ieeexplore.ieee.org/document/4688840) — Franco Scarselli, Marco Gori, Ah Chung Tsoi, Mohamed Kamel, Luca Sperduti (2009)
+  Journal: IEEE Transactions on Neural Networks; Publisher: IEEE; Volume: 20; Pages: 61-80; DOI: [10.1109/TNN.2008.2005605](https://doi.org/10.1109/TNN.2008.2005605)
+  提出了图神经网络最早的形式定义之一，通过讨论传统神经网络的局限性，明确阐述了能够处理图结构数据的模型的必要性。
+- [Geometric Deep Learning: Going Beyond Euclidean Data](https://doi.org/10.1109/MSP.2017.2693418) — Michael M. Bronstein, Joan Bruna, Yann LeCun, Arthur Szlam, Pierre Vandergheynst (2017)
+  Journal: IEEE Signal Processing Magazine; Publisher: IEEE; Volume: 34; Pages: 18-42; DOI: [10.1109/MSP.2017.2693418](https://doi.org/10.1109/MSP.2017.2693418)
+  介绍了几何深度学习的概念，提供了一个理论框架，强调了为什么为欧几里得数据设计的传统深度学习模型在图等非欧几里得结构上会失效。
+- [Graph Neural Networks: A Review of Methods and Applications](https://www.sciencedirect.com/science/article/pii/S2666651021000012) — Jie Zhou, Ganqu Cui, Shengding Hu, Zhengyan Zhang, Cheng Yang, Zhiyuan Liu, Lifeng Wang, Changcheng Li, Maosong Sun (2020)
+  Journal: AI Open; Publisher: KeAi Publishing; Volume: 1; Pages: 57-81; DOI: [10.1016/j.aiopen.2021.04.001](https://doi.org/10.1016/j.aiopen.2021.04.001)
+  一篇被广泛引用的综合性综述，提供了图神经网络的广泛概述，其中包括对传统深度学习模型难以处理图数据原因的清晰解释。
+- [Graph Neural Networks: Foundations, Frontiers, and Applications](https://link.springer.com/book/) — Lingfei Wu, Peng Cui, Jian Pei, Liang Zhao, Le Song (2022)
+  Publisher: Springer; DOI: [10.1007/978-3-031-01588-5](https://doi.org/10.1007/978-3-031-01588-5)
+  一本基础教材，详细阐述了图神经网络的原理，从将标准深度学习技术应用于图结构数据的固有挑战开始。

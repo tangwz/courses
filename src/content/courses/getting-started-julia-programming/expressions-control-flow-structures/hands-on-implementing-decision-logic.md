@@ -1,0 +1,349 @@
+---
+course: "getting-started-julia-programming"
+chapter: "expressions-control-flow-structures"
+lesson: "hands-on-implementing-decision-logic"
+sourceId: 6784
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-3-expressions-control-flow-structures/hands-on-implementing-decision-logic"
+title: "动手实践：实现决策逻辑"
+description: "动手练习，实现 Julia 中多种控制流结构，例如 if-else 和循环。"
+order: 9
+plots: []
+sourceHash: "616bc84c0f4b44cffcc5a31ee417e9fdf83ab6ad88cd6c5fef9db7e54ca60792"
+sourceCorrections: []
+---
+
+实现决策逻辑和循环机制是 Julia 编程中的主要要素。动手示例有助于巩固对这些概念的理解。通过完成实际练习，你将更自如地编写能够根据不同条件做出反应和自动化重复性任务的程序。
+
+### 示例 1：`if-elseif-else` 阶梯 - 检查数字符号
+
+决策在编程中是基本点。`if-elseif-else` 结构允许你的程序根据特定条件执行不同的代码块。让我们创建一个简单程序来判断一个数字是正数、负数还是零。
+
+**目的：**
+使用 `if-elseif-else` 语句对数字进行分类。
+
+**场景：**
+给定变量 `number`，我们想打印它是正数、负数还是零。
+
+**代码：**
+
+```julia
+function check_number_sign(number)
+    if number > 0
+        println("$number is positive.")
+    elseif number < 0
+        println("$number is negative.")
+    else
+        println("$number is zero.")
+    end
+end
+
+# Test cases
+check_number_sign(10)
+check_number_sign(-5)
+check_number_sign(0)
+```
+
+**其工作原理：**
+
+1. `check_number_sign` 函数接受一个参数 (parameter) `number`。
+2. `if number > 0` 条件首先被检查。如果为 `true`，则打印“是正数。”，并跳过 `elseif` 和 `else` 块的其余部分。
+3. 如果第一个条件为 `false`，则评估 `elseif number < 0` 条件。如果为 `true`，则打印“是负数。”，并跳过 `else` 块。
+4. 如果 `if` 和 `elseif` 两个条件都为 `false`，则执行 `else` 块内的代码，打印“是零。”。
+   这显示了 Julia 如何顺序评估条件。
+
+**预期输出：**
+
+```
+10 is positive.
+-5 is negative.
+0 is zero.
+```
+
+### 示例 2：`for` 循环 - 求数列和
+
+`for` 循环在你已知重复某个动作的次数时非常适合，例如迭代项的集合或一系列数字。
+
+**目的：**
+使用 `for` 循环计算给定范围内数字的总和。
+
+**场景：**
+计算从 1 到 10 的所有整数的总和。
+
+**代码：**
+
+```julia
+function sum_series(n)
+    total_sum = 0 # Initialize an accumulator variable
+    for i in 1:n
+        total_sum = total_sum + i # Add the current number to the sum
+    end
+    println("The sum of numbers from 1 to $n is $total_sum.")
+end
+
+# Calculate sum up to 10
+sum_series(10)
+
+# Calculate sum up to 5
+sum_series(5)
+```
+
+**其工作原理：**
+
+1. `sum_series` 函数接受一个整数 `n` 作为输入。
+2. `total_sum = 0` 初始化一个变量来存储累积和。这通常被称为累加器。
+3. `for i in 1:n` 开始一个循环。变量 `i` 将一次一个地取从 1 到 `n` 范围内的每个值（例如，1, 2, 3, ..., `n`）。
+4. 在循环内部，`total_sum = total_sum + i` 通过加上 `i` 的当前值来更新 `total_sum`。`+=` 运算符（`total_sum += i`）是这种写法的简写。
+5. 循环完成所有迭代后，最终的 `total_sum` 被打印出来。
+
+**预期输出：**
+
+```
+The sum of numbers from 1 to 10 is 55.
+The sum of numbers from 1 to 5 is 15.
+```
+
+### 示例 3：`while` 循环 - 倒计时
+
+`while` 循环用于当你想只要某个条件保持为真就重复一段代码时。迭代次数可能事先未知。
+
+**目的：**
+使用 `while` 循环执行倒计时。
+
+**场景：**
+创建一个从给定数字倒数到 1 的程序。
+
+**代码：**
+
+```julia
+function countdown(start_value)
+    println("Starting countdown from $start_value...")
+    current_value = start_value
+    while current_value > 0
+        println(current_value)
+        current_value = current_value - 1 # Decrement the counter
+    end
+    println("Blast off!")
+end
+
+# Perform a countdown from 3
+countdown(3)
+```
+
+**其工作原理：**
+
+1. `countdown` 函数接受 `start_value` 作为输入。
+2. `current_value = start_value` 初始化一个变量，该变量将随每次迭代而改变。
+3. `while current_value > 0` 设置循环的条件。只要 `current_value` 大于 0，循环内部的代码就会执行。
+4. 在循环内部，`println(current_value)` 打印当前数字。
+5. `current_value = current_value - 1` (或 `current_value -= 1`) 将 `current_value` 减 1。这一步很重要；没有它，条件 `current_value > 0` 将始终为真，导致无限循环。
+6. 一旦 `current_value` 变为 0，条件 `current_value > 0` 变为 `false`，循环终止。然后打印“Blast off!”消息。
+
+**预期输出：**
+
+```
+Starting countdown from 3...
+3
+2
+1
+Blast off!
+```
+
+### 示例 4：使用 `break`、`continue` 和逻辑运算符进行选择性处理
+
+有时，你需要对循环执行有更精细的控制。`continue` 会跳过当前迭代的其余部分并进入下一次迭代，而 `break` 则会完全退出循环。像 `&&` (AND) 这样的逻辑运算符允许你组合条件。
+
+**目的：**
+演示 `break`、`continue` 以及循环中逻辑运算符（`&&`）的使用。
+
+**场景：**
+遍历一个数字列表。我们想为正偶数打印特殊消息。负数应该被跳过。如果遇到零，处理应该停止，因为它可能表示数据结束标记 (token)。
+
+**代码：**
+
+```julia
+function process_numbers(data)
+    println("Processing data: $data")
+    for num in data
+        if num == 0
+            println("Zero encountered, stopping processing.")
+            break  # Exit the loop immediately
+        end
+
+        if num < 0
+            println("Skipping negative number: $num")
+            continue # Skip to the next iteration
+        end
+
+        # Check if the number is positive and even
+        if num > 0 && num % 2 == 0 # num % 2 == 0 checks for evenness
+            println("Found positive even number: $num")
+        elseif num > 0 # It's positive but odd
+            println("Found positive odd number: $num")
+        end
+        # Implicitly, we do nothing more for numbers not caught by these conditions
+        # if they weren't negative (skipped) or zero (stopped).
+    end
+    println("Finished processing.")
+end
+
+# Test data
+my_data = [2, 5, -3, 8, 0, 12, -1]
+process_numbers(my_data)
+```
+
+**其工作原理：**
+
+1. `process_numbers` 函数迭代 `data` 数组中的每个 `num`。
+2. `if num == 0`: 如果当前数字为零，则打印一条消息，`break` 会导致 `for` 循环立即终止。零之后的 `my_data` 中任何剩余的数字都不会被处理。
+3. `if num < 0`: 如果数字为负数，则打印一条消息，`continue` 会跳过当前 `num` 的循环内部的其余代码，直接移动到 `my_data` 中的下一个数字。
+4. `if num > 0 && num % 2 == 0`: 这个条件使用逻辑与运算符 `&&`。它检查 `num` 是否大于 0 并且 `num` 除以 2 的余数是否为 0（即 `num` 是偶数）。如果两者都为真，则打印相应的消息。模运算符 `%` 给出除法的余数。
+5. `elseif num > 0`: 如果数字是正数但不是偶数（这意味着它是奇数），则此块会处理它。
+6. 循环继续，直到所有项都被处理或执行了 `break` 语句。
+
+**预期输出：**
+
+```
+Processing data: [2, 5, -3, 8, 0, 12, -1]
+Found positive even number: 2
+Found positive odd number: 5
+Skipping negative number: -3
+Found positive even number: 8
+Zero encountered, stopping processing.
+Finished processing.
+```
+
+### 示例 5：三元运算符 - 快速状态检查
+
+三元运算符提供了一种紧凑的写法，用于编写简单的 `if-else` 语句，特别适用于赋值。其语法是 `condition ? value_if_true : value_if_false`。
+
+**目的：**
+使用三元运算符进行简洁的条件赋值。
+
+**场景：**
+根据分数给申请分配一个状态（“已批准”或“待审核”）。如果分数是 70 或以上，则是“已批准”；否则是“待审核”。
+
+**代码：**
+
+```julia
+function get_application_status(score)
+    status = score >= 70 ? "Approved" : "Pending Review"
+    println("Score: $score, Status: $status")
+end
+
+# Test cases
+get_application_status(85)
+get_application_status(60)
+```
+
+**其工作原理：**
+
+1. `get_application_status` 函数接受一个 `score`。
+2. `status = score >= 70 ? "Approved" : "Pending Review"`:
+   - `score >= 70` 是条件。
+   - 如果条件为 `true`，`status` 被赋值为“Approved”。
+   - 如果条件为 `false`，`status` 被赋值为“Pending Review”。
+3. 这一行代码达到了与更冗长的 `if-else` 块相同的效果：
+
+   ```julia
+   # if score >= 70
+   #     status = "Approved"
+   # else
+   #     status = "Pending Review"
+   # end
+   ```
+
+**预期输出：**
+
+```
+Score: 85, Status: Approved
+Score: 60, Status: Pending Review
+```
+
+### 综合应用：FizzBuzz 挑战
+
+FizzBuzz 问题是一个经典的编程任务，常用作面试题。它结合了循环和条件逻辑。
+
+**挑战：**
+编写一个 Julia 程序，打印从 1 到 30（包含）的数字。然而，对于三的倍数，打印“Fizz”而不是数字。对于五的倍数，打印“Buzz”。对于既是三的倍数又是五的倍数的数字，打印“FizzBuzz”。
+
+**提示：**
+
+- 你需要一个 `for` 循环来从 1 迭代到 30。
+- 在循环内部，使用 `if-elseif-else` 语句。
+- 模运算符 `%` 在这里会很有用（例如，`number % 3 == 0` 检查 `number` 是否是 3 的倍数）。
+- 小心你的条件顺序！检查既是三的倍数又是五的倍数（即 15 的倍数）应该优先。
+
+**解决方案：**
+
+```julia
+function fizzbuzz(limit)
+    for i in 1:limit
+        if i % 3 == 0 && i % 5 == 0  # or i % 15 == 0
+            println("FizzBuzz")
+        elseif i % 3 == 0
+            println("Fizz")
+        elseif i % 5 == 0
+            println("Buzz")
+        else
+            println(i)
+        end
+    end
+}
+
+# Run FizzBuzz up to 30
+println("Running FizzBuzz up to 30:")
+fizzbuzz(30)
+```
+
+**其工作原理：**
+
+1. `fizzbuzz` 函数从 `1` 迭代到 `limit`。
+2. `if i % 3 == 0 && i % 5 == 0`: 此条件检查 `i` 是否是 3 和 5 的倍数。这等同于检查 `i % 15 == 0`。优先检查这一点很重要，因为如果我们首先检查 3 的倍数，那么像 15 这样的数字就会打印“Fizz”，而其“FizzBuzz”条件将永远不会满足。
+3. `elseif i % 3 == 0`: 如果第一个条件为假，则检查 `i` 是否是 3 的倍数。
+4. `elseif i % 5 == 0`: 如果前两个条件都为假，则检查 `i` 是否是 5 的倍数。
+5. `else`: 如果上述条件都不为真，则打印数字 `i` 本身。
+
+**预期输出（部分）：**
+
+```
+Running FizzBuzz up to 30:
+1
+2
+Fizz
+4
+Buzz
+Fizz
+7
+8
+Fizz
+Buzz
+11
+Fizz
+13
+14
+FizzBuzz
+16
+...
+29
+FizzBuzz
+```
+
+### 继续实践
+
+为了继续提升你使用控制流结构的技能：
+
+1. **修改 `check_number_sign` 函数：** 增加一个检查，判断正数是偶数还是奇数。
+2. **增强 `sum_series` 函数：** 计算范围内仅偶数或仅奇数的总和。
+3. **创建一个请求用户输入的 `while` 循环：** 继续询问直到用户输入“quit”。（你可能需要提前查看第 7 章的 `readline()`，或者目前将其简化为非交互式条件）。
+4. **编写一个 `for` 循环来找到数组中的最大数字：** 初始化一个变量为第一个元素（或一个非常小的数字），如果找到更大的元素就更新它。
+5. **试着使用嵌套循环：** 尝试打印一个小型乘法表（例如，最多 5x5）。外层循环可以处理行，内层循环可以处理列。
+
+通过积极编码和实践这些基本的控制流结构，你正在为编写更复杂、更智能的 Julia 程序打下坚实的基础。这些工具对指导应用程序的逻辑和行为必不可少。
+
+## 参考资料
+
+- [Control Flow](https://docs.julialang.org/en/v1/manual/control-flow/) — The Julia Language (2023)
+  权威文档，详细说明Julia的if-elseif-else语句、for循环、while循环、break、continue以及三元运算符的语法和用法。
+- [Think Julia: How to Think Like a Computer Scientist](https://www.oreilly.com/library/view/think-julia/9781492045038/) — Ben Lauwens and Allen B. Downey (2019)
+  Publisher: O'Reilly Media; Pages: 295
+  一本介绍性教材，使用Julia教授编程基础和计算思维，包含条件执行和迭代的章节。

@@ -1,0 +1,165 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "eigenvalues-and-eigenvectors"
+lesson: "matrices-as-linear-transformations"
+sourceId: 7827
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-5-eigenvalues-and-eigenvectors/matrices-as-linear-transformations"
+title: "矩阵作为线性变换"
+description: "可视化矩阵如何通过缩放、旋转和剪切等操作来变换向量空间。"
+order: 1
+plots: ["plots/7827-0.json", "plots/7827-1.json"]
+sourceHash: "20fd4c9ec3c112343fdf2448212f3a6bbc341cffbe762b056164290900f2c3d4"
+sourceCorrections: []
+---
+
+迄今为止，我们主要将矩阵用作数据容器并对它们进行算术运算。现在，我们将审视矩阵的一个更具活力的作用：作为转换空间的函数。将矩阵视为一种操作或变换，对于理解其在机器学习 (machine learning)中的许多用途非常重要。
+
+矩阵-向量 (vector)乘法，例如 $Ax = b$，可以理解为矩阵 $A$ 作用于向量 $x$，从而产生一个新向量 $b$。矩阵 $A$ 作为一个函数，接收一个向量作为输入，并将其映射到一个新向量作为输出。
+
+> 矩阵作为一个函数，接收一个输入向量 `v` 并将其转换为一个输出向量 `Av`。
+
+这种变换并非随机的。它是一种 *线性* 变换，它有两个重要性质：原点 $(0,0)$ 保持不变，并且网格线保持平行且等距。本质上，矩阵可以拉伸、收缩、旋转或剪切整个坐标空间，但它不会使其弯曲或扭曲。
+
+### 矩阵如何定义变换
+
+要了解变换的作用，我们只需观察基向量 (vector)的变化情况。在标准的二维平面中，基向量是沿 x 轴的单位向量 $\hat{i}$ 和沿 y 轴的单位向量 $\hat{j}$。
+
+
+$$
+\hat{i} = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, \quad \hat{j} = \begin{bmatrix} 0 \\ 1 \end{bmatrix}
+$$
+
+
+任何 2x2 矩阵的列精确地告诉我们这些基向量在变换后的位置。对于矩阵 $A$：
+
+
+$$
+A = \begin{bmatrix} a & b \\ c & d \end{bmatrix}
+$$
+
+
+第一列 $\begin{bmatrix} a \\ c \end{bmatrix}$ 是 $\hat{i}$ 的新位置。第二列 $\begin{bmatrix} b \\ d \end{bmatrix}$ 是 $\hat{j}$ 的新位置。让我们看几个例子来使其明确。
+
+### 例子 1：缩放
+
+缩放变换沿轴线拉伸或收缩空间。考虑矩阵：
+
+
+$$
+S = \begin{bmatrix} 2 & 0 \\ 0 & 0.5 \end{bmatrix}
+$$
+
+
+在此，第一列表示基向量 (vector) $\hat{i}$ 变换为 $\begin{bmatrix} 2 \\ 0 \end{bmatrix}$。它沿 x 轴被拉伸到其原始长度的两倍。第二列表示 $\hat{j}$ 变换为 $\begin{bmatrix} 0 \\ 0.5 \end{bmatrix}$，沿 y 轴将其长度缩小一半。
+
+空间中任何其他向量都会相应地变换。例如，让我们看看向量 $v = \begin{bmatrix} 1 \\ 2 \end{bmatrix}$ 会发生什么：
+
+
+$$
+Sv = \begin{bmatrix} 2 & 0 \\ 0 & 0.5 \end{bmatrix} \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} (2 \cdot 1) + (0 \cdot 2) \\ (0 \cdot 1) + (0.5 \cdot 2) \end{bmatrix} = \begin{bmatrix} 2 \\ 1 \end{bmatrix}
+$$
+
+
+向量在水平方向被拉伸，在垂直方向被压缩，就像底层的网格一样。
+
+
+
+![Interactive chart](plots/7827-0.json)
+
+
+
+> 向量 $v$ 变换为 $Sv$，显示了沿 x 轴的拉伸和沿 y 轴的压缩。
+
+### 例子 2：旋转
+
+旋转变换使整个空间绕原点旋转。一个 90 度逆时针旋转矩阵是：
+
+
+$$
+R = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}
+$$
+
+
+观察这些列，我们看到 $\hat{i} = \begin{bmatrix} 1 \\ 0 \end{bmatrix}$ 移到 $\begin{bmatrix} 0 \\ 1 \end{bmatrix}$（$\hat{j}$ 的原始位置），而 $\hat{j} = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$ 移到 $\begin{bmatrix} -1 \\ 0 \end{bmatrix}$。
+
+让我们将此变换应用于我们的向量 (vector) $v = \begin{bmatrix} 1 \\ 2 \end{bmatrix}$：
+
+
+$$
+Rv = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix} \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} (0 \cdot 1) + (-1 \cdot 2) \\ (1 \cdot 1) + (0 \cdot 2) \end{bmatrix} = \begin{bmatrix} -2 \\ 1 \end{bmatrix}
+$$
+
+
+向量旋转了 90 度，长度没有改变。
+
+
+
+![Interactive chart](plots/7827-1.json)
+
+
+
+> 向量 $v$ 被矩阵 $R$ 逆时针旋转了 90 度。
+
+### 例子 3：剪切
+
+剪切变换使空间倾斜，就像推动一叠扑克牌的一层。一个水平剪切矩阵如下所示：
+
+
+$$
+H = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix}
+$$
+
+
+在此，基向量 (vector) $\hat{i}$ 保持在 $\begin{bmatrix} 1 \\ 0 \end{bmatrix}$，但 $\hat{j}$ 变换为 $\begin{bmatrix} 1 \\ 1 \end{bmatrix}$。这表示 y 轴向右倾斜。
+
+变换我们的向量 $v = \begin{bmatrix} 1 \\ 2 \end{bmatrix}$：
+
+
+$$
+Hv = \begin{bmatrix} 1 & 1 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} (1 \cdot 1) + (1 \cdot 2) \\ (0 \cdot 1) + (1 \cdot 2) \end{bmatrix} = \begin{bmatrix} 3 \\ 2 \end{bmatrix}
+$$
+
+
+向量的 y 坐标保持不变，但其 x 坐标向右移动的量等于其原始 y 坐标。
+
+### 在 NumPy 中进行变换
+
+我们可以使用 NumPy 在 Python 中轻松进行这些变换。让我们重现剪切变换。
+
+```python
+import numpy as np
+
+# 定义剪切矩阵 H
+H = np.array([
+    [1, 1],
+    [0, 1]
+])
+
+# 定义原始向量 v
+v = np.array([1, 2])
+
+# 使用 @ 运算符进行矩阵乘法来应用变换
+transformed_v = H @ v
+
+print(f"原始向量: {v}")
+print(f"剪切矩阵 H:\n{H}")
+print(f"变换后的向量 Hv: {transformed_v}")
+```
+
+运行此代码将产生预期输出：
+
+```
+Original vector: [1 2]
+Shear matrix H:
+[[1 1]
+ [0 1]]
+Transformed vector Hv: [3 2]
+```
+
+这种简单的操作是许多复杂算法的根本。通过将矩阵视为变换，我们可以对数据发生的情况有更深刻的认识。这种观点使我们能够提出本章的核心问题：在变换过程中，是否有任何向量 (vector)能够保持其方向，仅改变长度？这些特殊的、仅被缩放的向量，就是我们接下来将正式定义的特征向量。
+
+## 参考资料
+
+- [MIT 18.06SC Linear Algebra, Fall 2011](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  这门免费在线课程提供视频讲座，直观地解释线性变换和矩阵运算，是对教材学习的极佳补充。

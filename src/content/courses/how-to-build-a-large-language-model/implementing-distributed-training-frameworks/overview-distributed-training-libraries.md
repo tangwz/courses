@@ -1,0 +1,94 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "implementing-distributed-training-frameworks"
+lesson: "overview-distributed-training-libraries"
+sourceId: 6027
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-16-implementing-distributed-training-frameworks/overview-distributed-training-libraries"
+title: "分布式训练库概述"
+description: "介绍基于 PyTorch/TensorFlow 构建的分布式训练库。"
+order: 1
+plots: []
+sourceHash: "c0125817c4907642b6c12a2c9e9883056a87c974d3d24bfd24ea4216b485bd9b"
+sourceCorrections: []
+---
+
+分布式训练的基本策略，例如数据并行、张量并行和流水线并行，对于处理大型模型至关重要。然而，在数百甚至数千个处理单元上手动实现和协调这些策略是一个严峻的工程难题。PyTorch 等标准深度学习 (deep learning)框架提供了基本构建块（例如 `torch.distributed`），但要协调复杂的混合并行策略、高效管理通信以及优化数十亿参数 (parameter)模型的内存使用，则需要更专业的工具。
+
+这就是专用分布式训练库派上用场的地方。这些库基于 PyTorch 等框架提供的原始功能构建，提供更高级的抽象和为大规模模型训练优化的实现。它们旨在减少所需的样板代码和专门的工程工作，让您可以更专注于模型架构和训练过程。
+
+可以将这些库看作是为分配模型和数据提供了精密的引擎。您无需手动管理通信集合操作（如 `all_reduce`、`scatter`、`gather`），也无需弄清楚如何跨设备划分模型权重 (weight)和激活，这些库提供了 API 和配置选项来处理这些任务。
+
+### 分布式训练库
+
+为了应对大规模训练的挑战，一些库已经出现。本章我们将主要关注两个有影响力且被广泛采用的框架：DeepSpeed 和 Megatron-LM。不过，了解更广泛的体系也是有益的。
+
+- **PyTorch DistributedDataParallel (DDP)**: 这是 PyTorch 中用于数据并行的标准模块。它在每个 GPU 上复制模型，在每个 GPU 上处理不同的数据分片，并使用 `all_reduce` 等高效通信来同步梯度。尽管对于能放入单个 GPU 的模型有效，但它本身并不能解决单 GPU 无法容纳的超大型模型的内存限制，在这种情况下，即使单个副本的权重 (weight)、梯度和优化器状态也会超出设备内存。
+- **PyTorch FullyShardedDataParallel (FSDP)**: FSDP 直接集成到 PyTorch 中，提供与 DeepSpeed ZeRO 阶段 3 类似的功能。它将模型参数 (parameter)、梯度和优化器状态分片到数据并行工作器中，从而大幅降低每个 GPU 的峰值内存需求。它代表了 PyTorch 原生用于大型模型数据并行而非简单复制的解决方案。
+- **DeepSpeed**: DeepSpeed 由微软研究院开发，提供一套优化技术，主要用于高效、可扩展地训练大型模型，尤其是在内存使用方面。其最知名的功能是零冗余优化器 (ZeRO)，它将训练状态的不同组件（优化器状态、梯度、参数）划分到数据并行进程中。这使得训练单 GPU 无法容纳的超大型模型成为可能，即使仅使用数据并行。DeepSpeed 还集成了对流水线并行的支持，并集成了优化过的内核。它通常只需对现有 PyTorch 训练脚本进行最少的代码更改。
+
+  ```python
+  # 示例：初始化 DeepSpeed（详情在后续章节）
+  import deepspeed
+  import torch.nn as nn
+  from transformers import AutoModelForCausalLM # 示例模型
+
+  # 假设模型、优化器、数据加载器已定义
+  model = AutoModelForCausalLM.from_pretrained("gpt2")
+  # optimizer = ...
+  # train_dataloader = ...
+
+  # DeepSpeed 的配置字典
+  config_params = {
+      "train_batch_size": 16,
+      "gradient_accumulation_steps": 1,
+      "optimizer": {
+          "type": "AdamW",
+          "params": {
+              "lr": 1e-5
+          }
+      },
+      "fp16": {
+          "enabled": True
+      },
+      "zero_optimization": {
+          "stage": 2 # 示例：启用 ZeRO 阶段 2
+      }
+  }
+
+  # 初始化 DeepSpeed 引擎
+  model_engine, optimizer, _, _ = deepspeed.initialize(
+      model=model,
+      # model_parameters=model.parameters(), # 通常会自动推断
+      config_params=config_params
+      # optimizer=optimizer # 可在此处或配置中定义
+      # lr_scheduler=lr_scheduler # 可选
+  )
+
+  # 训练循环使用 model_engine
+  # for batch in train_dataloader:
+  #     loss = model_engine(batch)
+  #     model_engine.backward(loss)
+  #     model_engine.step()
+  ```
+- **Megatron-LM**: Megatron-LM 由 NVIDIA 开发，主要侧重于实现高计算吞吐量 (throughput)，主要通过张量并行（将单个层拆分到多个 GPU 上）和流水线并行（将层分阶段部署到多个 GPU 上）的高度优化实现。它通常需要根据其并行模式调整模型代码结构，但为特定类型的并行提供了先进的性能，尤其是在 NVIDIA 硬件上。
+- **Hugging Face Accelerate**: 该库充当一个更高级的抽象层，旨在简化 PyTorch 训练脚本在各种硬件设置（单个 GPU、多个 GPU、TPU）和分布式策略上的运行。它可以与 DeepSpeed 或 PyTorch FSDP 等底层库集成，提供一个统一的接口，以更少的代码修改来配置分布式训练。
+
+这些库的选择通常取决于项目的具体需求：模型大小、核心瓶颈（内存还是计算）、期望的并行策略（DP、TP、PP 或混合）、目标硬件以及所需的代码集成工作量。
+
+> 主要分布式训练库及其主要优化侧重的高级概述。HF Accelerate 充当统一层。
+
+DeepSpeed 和 Megatron-LM 虽然都功能强大，但解决问题的方式角度略有不同。DeepSpeed 擅长通过 ZeRO 减轻内存压力，使得训练超大型模型成为可能。Megatron-LM 为张量并行和流水线并行提供高度优化的内核，最大限度地提高计算速度。目前，人们正努力结合这些库的优势，例如将 DeepSpeed 的 ZeRO 与 Megatron-LM 的张量并行结合使用。
+
+以下章节将提供关于配置和使用 DeepSpeed 的 ZeRO 优化以及 Megatron-LM 的张量和流水线并行功能的实用指导，使您能够从理论理解转向功能性分布式训练设置。
+
+## 参考资料
+
+- [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](https://arxiv.org/abs/1909.08053) — Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, Bryan Catanzaro (2019)
+  Journal: arXiv preprint arXiv:1909.08053; DOI: [10.48550/arXiv.1909.08053](https://doi.org/10.48550/arXiv.1909.08053)
+  阐述了使用高度优化的张量并行和流水线并行策略训练大型语言模型的架构和优化技术。
+- [Fully Sharded Data Parallel (FSDP)](https://pytorch.org/docs/stable/fsdp.html) — PyTorch Contributors (2024)
+  Publisher: PyTorch
+  PyTorch官方文档，介绍了其原生完全分片数据并行（FSDP）实现，详细说明了其在内存高效大型模型训练中的使用。
+- [Hugging Face Accelerate Documentation](https://huggingface.co/docs/accelerate/index) — Hugging Face Inc. (2024)
+  Publisher: Hugging Face
+  Hugging Face Accelerate库的官方文档，提供了高级API，用于在各种分布式设置中运行PyTorch训练脚本。

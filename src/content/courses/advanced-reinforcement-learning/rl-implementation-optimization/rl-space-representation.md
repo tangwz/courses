@@ -1,0 +1,111 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "rl-implementation-optimization"
+lesson: "rl-space-representation"
+sourceId: 3497
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-8-rl-implementation-optimization/rl-space-representation"
+title: "动作空间与观测空间表示"
+description: "处理不同类型的动作空间（离散、连续、混合）和观测空间（图像、向量）。"
+order: 3
+plots: []
+sourceHash: "e2034aa30ed050d3d609344ac9a5b9baee628627eb0e5b122099be16bc44fbda"
+sourceCorrections: []
+---
+
+智能体如何感知其环境（观测空间）以及可以执行的动作集合（动作空间）是任何强化学习 (reinforcement learning)问题的基本方面。在我们的实现中构造和处理这些空间的方式直接影响智能体有效且高效学习的能力。正确表示这些空间是构建成功强化学习系统的重要一步。
+
+### 观测空间表示
+
+观测空间定义了智能体在每一步接收到的信息。这种信息的性质决定了对应的网络架构和预处理方法。
+
+#### 向量 (vector)观测
+
+这通常是最简单的形式，表示为数值的扁平向量。例子包括传感器读数、机器人中的关节角度或从游戏状态中提取的特征。
+
+- **表示方式：** 通常直接输入到全连接层（多层感知机，MLP）。
+- **预处理：** 强烈建议进行归一化 (normalization)或标准化。特征可以具有非常不同的尺度（例如，以米为单位的位置与以米/秒为单位的速度）。将输入缩放到零均值和单位方差，或将它们缩放到固定的范围，如 $[-1, 1]$ 或 $[0, 1]$，有助于稳定训练并防止幅度较大的特征在学习过程中占据主导地位。可以维护运行统计量（均值和标准差）并将其用于归一化，随着更多数据到来而更新它们，或者在有样本数据集时从中预先计算。
+
+#### 图像观测
+
+在游戏环境（如Atari）或涉及摄像头的机器人任务中常见，观测表示为像素矩阵。
+
+- **表示方式：** 卷积神经网络 (neural network)（CNN）是从图像中提取空间层次特征的标准选择。CNN卷积层的输出通常被展平，然后传递给全连接层进行策略或价值估计。
+- **预处理：** 几种标准技术可以提升性能和效率：
+  - **调整大小：** 减小图像尺寸（例如，到84x84）以降低计算负担。
+  - **灰度化：** 如果颜色信息不必要，将RGB图像转换为灰度图，将输入通道从3个减少到1个。
+  - **帧堆叠：** 将几个连续帧（例如，4帧）堆叠在一起作为单个观测。这使得智能体，即使使用像CNN这样的前馈网络，也能推断出速度和加速度等时间信息，这对于做出明智决策通常很重要。
+  - **归一化：** 像素值（通常为0-255）应该被归一化，通常通过除以255.0将其缩放到 $[0, 1]$ 范围。
+
+#### 序列观测
+
+当观测具有简单帧堆叠无法捕捉的时间依赖性时，如在自然语言处理任务或时间序列分析中，需要专门的架构。
+
+- **表示方式：** 循环神经网络（RNN）、长短期记忆网络（LSTM）或门控循环单元（GRU）常用于处理序列数据并维护内部状态。最近，Transformer架构在具有长距离依赖的强化学习 (reinforcement learning)任务中也展现出潜力。
+
+#### 多模态 (multimodal)观测
+
+有些任务提供来自多个来源的观测（例如，摄像头图像加上机器人关节角度，或游戏状态向量加上文本信息）。
+
+- **表示方式：** 需要设计能够适当处理每种模态的网络架构（例如，图像使用CNN，向量使用MLP），然后组合生成的特征表示（例如，通过拼接或更精巧的注意力机制 (attention mechanism)），最后再将其输入到最终的决策层。
+
+### 动作空间表示
+
+动作空间定义了智能体可以执行的动作集合。表示策略很大程度上取决于动作是离散、连续还是混合。
+
+#### 离散动作空间
+
+智能体从有限集合中选择一个动作（例如，`上`、`下`、`左`、`右`、`按钮A`）。
+
+- **表示方式：**
+  - **基于价值的方法（DQN）：** 网络为每个可能的动作输出一个Q值。动作选择（例如，epsilon-greedy）通常涉及选择Q值最高的动作。输出层有 $N$ 个神经元，其中 $N$ 是离散动作的数量。
+  - **策略梯度/Actor-Critic 方法（PPO, A2C）：** 网络（actor）为每个动作输出概率（或logits，即未经归一化 (normalization)的对数概率）。输出层有 $N$ 个神经元，通常后接一个softmax激活函数 (activation function)来生成用于采样的概率。动作选择涉及从该概率分布中采样。
+
+#### 连续动作空间
+
+智能体选择在特定边界内由实数值表示的动作（例如，转向角 $[-1, 1]$，电机扭矩 $[-5, 5]$）。动作通常形成一个向量 (vector)（例如，多个关节的扭矩）。
+
+- **表示方式：**
+  - **随机策略（PPO, SAC, A2C）：** Actor网络通常输出概率分布的参数 (parameter)。对于高斯分布（常见选择），网络为每个动作维度输出均值（$\mu$）和标准差（$\sigma$）。实际动作从该分布中采样，即 $a \sim \mathcal{N}(\mu(s), \sigma(s))$。标准差可以是状态相关的（由网络输出）或状态无关的（作为独立参数学习或固定）。
+  - **确定性策略（DDPG）：** Actor网络直接输出每个维度的动作值。探索通常在外部添加（例如，在训练期间向输出动作添加诸如奥恩斯坦-乌伦贝克或高斯噪声等噪音）。
+- **动作边界处理：** 连续动作通常有明确的限制。一种常见方法是让网络输出无界值，然后通过一个挤压函数（如双曲正切函数 $tanh$）处理它们，该函数将值映射到 $[-1, 1]$ 范围。结果可以再进行缩放和平移，以匹配环境的特定动作边界。例如，如果环境需要动作在 $[a_{min}, a_{max}]$ 范围内，则 $tanh$ 的输出 $a_{net}$ 可以被转换：
+  
+  $$
+  a_{env} = a_{min} + \frac{(a_{net} + 1)(a_{max} - a_{min})}{2}
+  $$
+  
+  使用 $tanh$ 在像Soft Actor-Critic（SAC）这样的算法中尤为重要，因为其数学上考虑了挤压函数引起的概率密度变化。
+- **归一化：** 类似于观测，在Actor-Critic方法中，在Critic训练期间归一化连续动作*目标*有时会有益处，尽管直接将归一化应用于策略输出需要仔细考虑。
+
+#### 混合和多离散动作空间
+
+更复杂的场景涉及组合：
+
+- **多离散：** 智能体需要同时从几个*独立*的离散集合中选择一个选项（例如，选择武器*并*选择移动方向）。通常通过为每个离散选择设置单独的输出头来处理。
+- **混合：** 智能体选择一个离散动作类型，并根据该类型选择连续参数（例如，选择“移动”动作，然后指定连续的速度和方向）。这些需要更复杂的网络架构和动作参数化，有时涉及条件输出或分层策略。
+
+> 网络输出结构取决于动作空间类型。离散空间通常使用单个输出头来输出概率或Q值，而连续空间可能输出分布参数或直接动作值。
+
+### 一般考虑
+
+- **环境库：** 像Gymnasium（原OpenAI Gym）这样的库提供了标准化方式来定义 `observation_space` 和 `action_space` 对象。这些对象包含空间的形状、数据类型（例如，`float32`、`uint8`）和边界（最小值/最大值）信息。利用这些标准可以简化实现并提升代码复用性。
+- **一致性：** 确保训练期间应用的预处理（例如，归一化 (normalization)、帧堆叠）在评估或部署时也能一致应用。
+- **归一化层：** 考虑在架构本身内部使用执行归一化的网络层（如 `LayerNorm` 或 `BatchNorm`），这有时比基于运行统计量的固定归一化适应性更强。
+
+仔细选择如何表示和预处理观测和动作不仅仅是低级别的实现细节；它是设计强化学习 (reinforcement learning)智能体使其能够从交互中有效学习的不可或缺的一部分。实验通常是找到最适合特定任务和算法的表示方法的必要手段。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  提供了关于状态、观测和动作的基本定义，并全面概述了经典和现代强化学习算法，包括对大规模空间函数逼近的讨论。
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Alex Graves, Ioannis Antonoglou, Daan Wierstra, and Martin Riedmiller (2015)
+  Journal: Nature; Volume: 518; Pages: 529-533; DOI: [10.1038/nature14236](https://doi.org/10.1038/nature14236)
+  介绍了深度Q网络（DQN），展示了卷积神经网络在图像观测中的应用、调整大小、灰度化和帧堆叠等预处理技术，并讨论了离散动作空间。
+- [Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor](https://arxiv.org/abs/1801.01290) — Tuomas Haarnoja, Aurick Zhou, Kristian Hartikainen, George Tucker, Sehoon Ha, Jie Tan, Vikash Kumar, Henry Zhu, Abhishek Gupta, Pieter Abbeel, and Sergey Levine (2018)
+  Journal: International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1801.01290](https://doi.org/10.48550/arXiv.1801.01290)
+  一种用于连续动作空间的重要算法，讨论了随机策略并详细阐述了使用`tanh`激活函数进行动作边界处理的方法，这是文中提到的一个主要实现细节。
+- [Decision Transformer: Reinforcement Learning via Sequence Modeling](https://arxiv.org/abs/2106.01345) — Lili Chen, Kevin Lu, Aravind Rajeswaran, Kimin Lee, Aditya Grover, Michael Laskin, Pieter Abbeel, Aravind Srinivas, Igor Mordatch (2021)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 34; Pages: 15038-15052; DOI: [10.48550/arXiv.2106.01345](https://doi.org/10.48550/arXiv.2106.01345)
+  介绍了决策Transformer架构，展示了如何将强化学习任务构建为序列建模问题，并利用Transformer网络处理时间依赖性。
+- [Gymnasium Documentation](https://gymnasium.farama.org/) — The Gymnasium Contributors (2024)
+  强化学习中标准化环境接口的官方文档，详细说明了`observation_space`和`action_space`对象。

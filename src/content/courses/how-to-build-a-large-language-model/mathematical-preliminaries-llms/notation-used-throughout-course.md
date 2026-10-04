@@ -1,0 +1,122 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "mathematical-preliminaries-llms"
+lesson: "notation-used-throughout-course"
+sourceId: 5956
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-2-mathematical-preliminaries-llms/notation-used-throughout-course"
+title: "本课程中使用的符号表示"
+description: "建立用于方程和算法的标准数学表示法。"
+order: 5
+plots: []
+sourceHash: "b760510d3144ce088a57c2e85c8bfd058bf6a481737b8d2caa7e1b6f388b43b5"
+sourceCorrections: []
+---
+
+为了更好地理解本课程内容，我们需要为涉及的数学对象和运算建立一个统一的符号表示。本节确立了各章中保持一致的符号。尽管我们尽可能遵守机器学习 (machine learning)和深度学习 (deep learning)文献中的标准约定，但本课程内的清晰度和一致性是首要考量。熟悉这些符号将有助于您理解描述模型架构、训练算法和评估指标的方程。
+
+### 一般数学约定
+
+- **标量：** 用小写斜体字母表示（例如 $a, x, \lambda, \eta$）。它们通常表示单个数值，例如学习率、正则化 (regularization)参数 (parameter)，或向量 (vector)/矩阵的单个元素。
+- **向量：** 用小写粗体字母表示（例如 $\mathbf{x}, \mathbf{y}, \mathbf{w}, \mathbf{b}$）。默认情况下，向量假定为列向量。我们将其维度记为 $\mathbf{x} \in \mathbb{R}^d$，表示一个包含 $d$ 个实数值元素的向量。$\mathbf{x}$ 的第 $i$ 个元素为 $x_i$。
+- **矩阵：** 用大写粗体字母表示（例如 $\mathbf{X}, \mathbf{Y}, \mathbf{W}$）。我们将其维度记为 $\mathbf{W} \in \mathbb{R}^{m \times n}$，表示一个包含 $m$ 行 $n$ 列的矩阵。第 $i$ 行第 $j$ 列的元素为 $W_{ij}$ 或 $w_{ij}$。单位矩阵用 $\mathbf{I}$ 表示。
+- **张量：** 高阶数组（秩 > 2）有时用大写花体字母表示（例如 $\mathcal{T}$），或者在上下文 (context)清晰表明维度时用大写粗体字母表示（例如一批矩阵）。维度会明确指定，例如 $\mathcal{T} \in \mathbb{R}^{d_1 \times d_2 \times \dots \times d_k}$。
+- **索引和求和：** 通常用 $i, j, k$ 来索引元素或维度。$t$ 经常用于表示序列中的特定位置或时间步。求和用 $\sum$ 表示。
+- **集合：** 用大写花体字母表示（例如数据集用 $\mathcal{D}$，词汇表 (vocabulary)用 $\mathcal{V}$）。集合 $\mathcal{S}$ 的大小或基数用 $|\mathcal{S}|$ 表示。
+- **函数：** 标准数学函数使用斜体小写字母（例如 $f(\cdot), g(\cdot)$）。激活函数 (activation function)通常用希腊字母表示（例如 Sigmoid 函数用 $\sigma(\cdot)$，ReLU 变体（如 GeLU）用 $\phi(\cdot)$）。$L(\cdot)$ 或 $J(\cdot)$ 通常表示损失函数 (loss function)或目标函数。
+- **导数和梯度：** 标量函数 $J$ 对向量 $\mathbf{w}$ 的梯度表示为 $\nabla_{\mathbf{w}} J(\mathbf{w})$，如果变量在上下文中明确，则简写为 $\nabla J$。偏导数写为 $\frac{\partial f}{\partial x}$。
+
+### 语言模型专用符号
+
+- **序列：** 长度为 $T$ 的输入序列通常表示为词元 (token)列表或元组 $(x_1, x_2, \dots, x_T)$ 或其对应的嵌入 (embedding)向量 (vector) $(\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_T)$。$T$ 表示序列长度。
+- **词汇表 (vocabulary)和分词 (tokenization)：** 唯一词元（单词、子词 (subword)）的集合是词汇表 $\mathcal{V}$。其大小为 $|\mathcal{V}|$。$x_t$ 通常表示位置 $t$ 处词元的整数索引。
+- **嵌入：**
+  - 词元嵌入矩阵：$\mathbf{E} \in \mathbb{R}^{|\mathcal{V}| \times d_{model}}$，其中 $d_{model}$ 是模型的隐藏维度。
+  - 词元索引 $i$ 的嵌入向量：$\mathbf{e}_i$，它是 $\mathbf{E}$ 的第 $i$ 行。
+  - 位置 $t$ 的位置编码 (positional encoding)向量：$\mathbf{p}_t \in \mathbb{R}^{d_{model}}$。
+  - 位置 $t$ 的输入表示：$\mathbf{z}_t = \mathbf{e}_t + \mathbf{p}_t$（或根据模型而异的变体）。
+- **Transformer 组成部分：**
+  - 序列的查询、键、值矩阵：$\mathbf{Q}, \mathbf{K}, \mathbf{V} \in \mathbb{R}^{T \times d_k}$（在单个注意力头内，或投影前为 $\mathbb{R}^{T \times d_{model}}$）。
+  - 相关联的权重 (weight)矩阵：$\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V \in \mathbb{R}^{d_{model} \times d_k}$（每个头）或 $\mathbb{R}^{d_{model} \times d_{model}}$（整体投影）。
+  - 注意力得分矩阵：$\mathbf{A} \in \mathbb{R}^{T \times T}$。
+  - 注意力输出：$Attention(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}})\mathbf{V}$。
+  - 第 $l$ 层的隐藏状态：$\mathbf{H}^{(l)} \in \mathbb{R}^{T \times d_{model}}$。输入嵌入通常是 $\mathbf{H}^{(0)}$。
+  - 前馈网络：FFN($\cdot$)。
+- **模型参数 (parameter)：** 所有可训练参数（权重和偏置 (bias)）的集合用 $\theta$ 表示。
+- **数据与训练：**
+  - 数据集：$\mathcal{D}$。
+  - 训练示例：$(\mathbf{x}, y)$，其中 $\mathbf{x}$ 是输入，$y$ 是目标。
+  - 数据批次：$\mathcal{B}$。批次大小 $B = |\mathcal{B}|$。
+  - 损失函数 (loss function)：$\mathcal{L}(\theta)$ 或 $J(\theta)$。单示例损失 $L(\hat{y}, y)$。
+- **概率：**
+  - 概率分布：$P(\cdot)$。
+  - 条件概率：$P(Y | X)$。
+  - 模型在给定上下文 (context) $\mathbf{c}$ 下对词元 $y$ 的预测概率：$P_{\theta}(y | \mathbf{c})$。
+- **超参数 (hyperparameter)：**
+  - 学习率：$\eta$。
+  - 层数：$L$。
+  - 模型隐藏维度：$d_{model}$。
+  - FFN 中间维度：$d_{ff}$。
+  - 注意力头数量：$h$。
+  - 每个头的维度：$d_k = d_{model} / h$。
+  - Dropout 概率：$p_{drop}$。
+  - 权重衰减系数：$\lambda$。
+
+### 代码对应关系 (PyTorch 示例)
+
+数学符号与 PyTorch 等框架中的张量运算直接对应。掌握这种对应关系有助于代码实现。
+
+- 一个向量 (vector) $\mathbf{x} \in \mathbb{R}^d$：
+
+  ```python
+  import torch
+  d = 128
+  x = torch.randn(d) # 通常是一个一维张量
+  # 或者显式地表示为一个列向量（二维张量）
+  x_col = torch.randn(d, 1)
+  print(f"向量形状: {x.shape}, 列向量形状: {x_col.shape}")
+  ```
+- 一个矩阵 $\mathbf{W} \in \mathbb{R}^{m \times n}$：
+
+  ```python
+  m, n = 64, 128
+  W = torch.randn(m, n) # 一个二维张量
+  print(f"矩阵形状: {W.shape}")
+  ```
+- 矩阵-向量乘法 $\mathbf{y} = \mathbf{W}\mathbf{x} + \mathbf{b}$，其中 $\mathbf{W} \in \mathbb{R}^{m \times n}$，$\mathbf{x} \in \mathbb{R}^n$，$\mathbf{b} \in \mathbb{R}^m$，$\mathbf{y} \in \mathbb{R}^m$：
+
+  ```python
+  # 假设 W 来自上方，并匹配 x, b
+  n = 128
+  m = 64
+  x = torch.randn(n)
+  b = torch.randn(m)
+  W = torch.randn(m, n)
+
+  # 使用 torch.matmul 或 @ 运算符
+  y = W @ x + b
+  # 替代方法：torch.nn.functional.linear
+  # import torch.nn.functional as F
+  # y_f = F.linear(x, W, b) # 注意：F.linear 有时隐式地需要 W^T，请查阅文档
+
+  print(f"输入 x 形状: {x.shape}")
+  print(f"权重 W 形状: {W.shape}")
+  print(f"偏置 b 形状: {b.shape}")
+  print(f"输出 y 形状: {y.shape}")
+  ```
+- 批处理：通常，第一个维度表示批次大小 $B$。例如，一个序列批次的形状可能是 $(B, T, d_{model})$。
+
+这些符号构成了我们后续讨论的根本。后续章节中引入的任何偏差或特定于上下文 (context)的符号都将在局部定义。在学习过程中请随时参考此部分。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本标准教材，在机器学习和深度学习的背景下建立了线性代数、微积分和概率的数学符号体系。
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了 Transformer 架构，并定义了其组件（如 Q、K、V 矩阵和自注意力机制）所使用的许多特定符号。
+- [PyTorch Tensors](https://pytorch.org/docs/stable/tensors.html) — PyTorch Authors (2024)
+  PyTorch 官方文档，解释了 PyTorch 张量、其创建、形状和基本操作，与理解数学符号到代码的映射直接相关。
+- [CS224n: Natural Language Processing with Deep Learning](http://web.stanford.edu/class/cs224n/) — Diyi Yang, Tatsunori Hashimoto (2025)
+  Publisher: Stanford University
+  一门领先的大学课程，始终如一地应用深度学习的标准符号，尤其是在自然语言处理和 Transformer 模型的背景下。

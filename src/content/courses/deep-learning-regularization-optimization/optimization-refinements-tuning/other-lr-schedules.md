@@ -1,0 +1,141 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "optimization-refinements-tuning"
+lesson: "other-lr-schedules"
+sourceId: 5002
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-7-optimization-refinements-tuning/other-lr-schedules"
+title: "指数衰减及其他调度方法"
+description: "介绍多种学习率调度方法，如指数衰减和余弦退火。"
+order: 5
+plots: ["plots/5002-0.json"]
+sourceHash: "c0b0e74d1f966932403d47be16936386e4309a80715d54ef9010a9daa1564cb9"
+sourceCorrections: []
+---
+
+步长衰减调度尽管提供了一种简单的学习率降低方式，但其突然下降有时会干扰训练过程。为了实现更平滑、更持续的调整，存在几种替代调度方法。其中两种被广泛采用的方法是指数衰减和余弦退火。
+
+### 指数衰减
+
+指数衰减能在训练过程中逐渐降低学习率。与离散的步长衰减不同，学习率会在一定数量的步数或周期后乘以一个小于1的固定衰减因子。
+
+指数衰减的公式可以表示为：
+
+\alpha\_t = \alpha\_0 \times \text{decay\_rate}^{(t / \text{decay\_steps})}
+
+其中：
+
+- $\alpha_t$ 是第 $t$ 步的学习率。
+- $\alpha_0$ 是初始学习率。
+- \text{decay\_rate} 是指数的底数，通常是一个介于0到1之间的值（例如0.95）。
+- $t$ 是当前的训练步数或周期数。
+- \text{decay\_steps} 控制衰减的应用频率（例如，每1000步或每个周期应用一次衰减）。
+
+其效果是学习率在初期下降较快，随后下降速度随时间减缓，与步长衰减相比，提供了更平滑的过渡。这种持续的降低有助于优化器更平稳地进入损失空间的区域。
+
+### 余弦退火
+
+余弦退火是另一种常用的调度方法，它按照余弦曲线的形状，循环地改变学习率。它从一个初始最大学习率（$\alpha_{max}$）开始，在指定周期数（$T$）内平滑地降低到最小学习率（$\alpha_{min}$，通常为0）。
+
+周期长度为 $T$ 的训练中，第 $t$ 个周期的学习率计算公式为：
+
+
+$$
+\alpha_t = \alpha_{min} + \frac{1}{2}(\alpha_{max} - \alpha_{min})\left(1 + \cos\left(\frac{t \pi}{T}\right)\right)
+$$
+
+
+余弦退火的特点是其先缓慢下降，然后在周期末期可能快速下降。这种调度方法之所以有效，是因为它在周期早期使用较高的学习率，花更多时间对参数 (parameter)空间进行试探，然后在后期用较低的学习率对解进行微调 (fine-tuning)。
+
+一种常见的变体是**带重启的余弦退火**（也称为带热启动的随机梯度下降 (gradient descent)或SGDR）。在这种方法中，余弦周期在训练过程中会重复多次。每次重启都包括将学习率重置回 $\alpha_{max}$，并可能增加后续周期的长度 $T$。这些重启可以帮助优化器摆脱较差的局部最小值，并可能找到更好、更广阔的最小值。
+
+### 其他调度方法
+
+还存在其他一些方法，尽管它们的使用频率可能较低：
+
+- **多项式衰减：** 学习率从 $\alpha_0$ 呈多项式降低至最终学习率。TensorFlow的默认衰减通常是多项式衰减的一种形式。
+- **逆时间衰减：** 使用类似 $\alpha_t = \alpha_0 / (1 + k \cdot t)$ 的公式降低学习率，其中 $k$ 是一个衰减参数 (parameter)。这提供了比指数衰减更慢的衰减。
+
+### 调度方法的比较
+
+调度器的选择取决于具体问题和期望的训练动态。
+
+- **步长衰减：** 简单，变化突然。如果下降点选择得当，效果可能不错。
+- **指数衰减：** 平滑，持续降低。适合逐渐优化。
+- **余弦退火：** 平滑，周期性降低。在周期早期对参数 (parameter)空间进行试探（用较高学习率），在周期后期进行利用（用较低学习率）时可以取得好的效果。重启增加了摆脱局部最小值的可能性。
+
+以下是这些调度方法的视觉比较：
+
+
+
+![学习率调度比较](plots/5002-0.json)
+
+
+
+> 这是对步长衰减（蓝色）、指数衰减（橙色）和一次余弦退火周期（绿色）在50个周期内的比较，初始学习率均为0.1。请注意，与步长衰减的急剧下降相比，指数衰减和余弦退火的学习率下降更为平滑。如果使用重启（在第25个周期后部分显示以作说明），余弦曲线会回到最大值。
+
+### 学习率调度的实现
+
+深度学习 (deep learning)框架为各种学习率调度器提供了内置支持。以下是在PyTorch中实现指数衰减或余弦退火的方法：
+
+```python
+import torch
+import torch.optim as optim
+from torch.optim.lr_scheduler import ExponentialLR, CosineAnnealingLR
+from torch.nn import Linear # 示例模型组件
+
+# 假设 'model' 是你的神经网络，并且 'optimizer' 已经定义
+# 例如：
+model = Linear(10, 2) # 一个简单的线性层
+optimizer = optim.Adam(model.parameters(), lr=0.1)
+
+# 选项 1：指数衰减
+# 每个周期将学习率衰减0.9倍
+scheduler_exp = ExponentialLR(optimizer, gamma=0.9)
+
+# 选项 2：余弦退火
+# 每个周期在25个周期内退火学习率
+scheduler_cos = CosineAnnealingLR(optimizer, T_max=25, eta_min=0.001) # eta_min 是最小学习率
+
+# --- 训练循环内部 ---
+num_epochs = 50
+for epoch in range(num_epochs):
+    # --- 一个周期的训练步骤 ---
+    # model.train()
+    # for data, target in train_loader:
+    #   optimizer.zero_grad()
+    #   output = model(data)
+    #   loss = criterion(output, target)
+    #   loss.backward()
+    #   optimizer.step()
+    # --- 训练步骤结束 ---
+
+    # 使用选择的调度器更新学习率
+    # 选择一个调度器启用：
+    # scheduler_exp.step()
+    scheduler_cos.step()
+
+    current_lr = optimizer.param_groups[0]['lr']
+    print(f"Epoch {epoch+1}, Current LR: {current_lr:.6f}")
+
+    # --- 验证步骤（可选） ---
+    # model.eval()
+    # ...
+```
+
+在这个例子中，在定义优化器后，我们创建一个调度器对象（可以是 `ExponentialLR` 或 `CosineAnnealingLR`）。在训练循环内部，每个周期完成后（即处理完该周期的所有批次后），我们调用 `scheduler.step()`。这会根据所选调度器更新 `optimizer` 中的学习率，以用于下一个周期。请记住，一次只使用一个调度器，除非有意组合它们，这需要更高级的配置。
+
+试验不同的学习率调度器及其参数 (parameter)是超参数 (hyperparameter)调优过程的重要组成部分，它可以让你微调 (fine-tuning)优化路径，以获得更好的收敛效果和模型性能。
+
+## 参考资料
+
+- [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Ilya Loshchilov and Frank Hutter (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1608.03983](https://doi.org/10.48550/arXiv.1608.03983)
+  介绍了带重启的余弦退火（SGDR）学习率调度策略，解释了其机制和性能优势。
+- [torch.optim.lr_scheduler](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate) — PyTorch Team (2025)
+  Publisher: PyTorch
+  PyTorch 学习率调度器的官方文档，包含 ExponentialLR 和 CosineAnnealingLR 等的用法示例。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础性教材，提供了各种优化策略的理论背景，包括学习率调度在其中的作用。
+- [Training Neural Networks, Part 2: Setting up the Data and the Loss, Learning Rates, Optimization](https://cs231n.github.io/neural-networks-3/) — Stanford University, CS231n Course Staff (2023)
+  斯坦福 CS231n 课程讲义，提供了学习率和不同调度方法的概念性概述。

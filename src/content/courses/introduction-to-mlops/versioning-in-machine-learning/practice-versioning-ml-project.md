@@ -1,0 +1,295 @@
+---
+course: "introduction-to-mlops"
+chapter: "versioning-in-machine-learning"
+lesson: "practice-versioning-ml-project"
+sourceId: 7223
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-3-versioning-in-machine-learning/practice-versioning-ml-project"
+title: "动手实践：为简单机器学习项目建立版本控制"
+description: "关于在简单机器学习项目中为代码、数据和模型设置版本控制的实用指南。"
+order: 6
+plots: []
+sourceHash: "051f0cabf5c46e5cf52b0b73bc31298f2e9a524938879afd21d2b596e086d69d"
+sourceCorrections: []
+---
+
+理论提供了蓝图，而动手实践则修筑了道路。对代码、数据和模型进行版本控制是实现可复现机器学习 (machine learning)的基础。你将从零开始构建一个具有版本管理功能的机器学习项目。
+
+我们将使用一个经典数据集、一个简单模型以及两个常用工具：用于代码管理的 **Git** 和用于数据与模型管理的 **DVC (Data Version Control)**。本次练习将引导你完成项目搭建、资产追踪、运行实验，以及随后如何通过“回溯时间”来复现之前的搜索结果。
+
+### 项目搭建与 Git 初始化
+
+首先，让我们为项目创建一个目录并规划标准结构。这种组织方式有助于保持机器学习 (machine learning)项目不同组件的整洁。
+
+1. 创建项目目录并进入：
+
+   ```bash
+   mkdir versioned-ml-project
+   cd versioned-ml-project
+   ```
+2. 为源代码、数据和模型创建子目录：
+
+   ```bash
+   mkdir src data models
+   ```
+3. 初始化 Git 仓库以开始追踪代码。
+
+   ```bash
+   git init
+   ```
+
+   你应该会看到类似 `Initialized empty Git repository in .../.git/` 的消息。
+4. 接下来，创建一个 `.gitignore` 文件。该文件告知 Git 应当忽略哪些文件或目录。我们不希望直接用 Git 追踪大型数据文件、模型产物或 Python 缓存文件。
+   创建一个名为 `.gitignore` 的文件，内容如下：
+
+   ```
+   # Python
+   __pycache__/
+   *.pyc
+
+   # 由 DVC 追踪的数据和模型
+   /data/*
+   !/data/.gitkeep
+   /models/*
+   !/models/.gitkeep
+
+   # DVC 缓存
+   .dvc/cache
+   ```
+
+   带有 `.gitkeep` 的 `!` 条目是一个常用技巧，用于让 Git 追踪原本为空的 `data` 和 `models` 目录。你可以通过 `touch data/.gitkeep models/.gitkeep` 创建这些空文件。
+
+### 第 1 步：代码版本控制
+
+我们要进行版本控制的第一个资产是源代码。让我们为模型训练编写一个简单的 Python 脚本。
+
+1. 创建一个 `requirements.txt` 文件来列出项目的依赖项。
+
+   ```text
+   pandas
+   scikit-learn
+   dvc
+   ```
+
+   使用 pip 安装这些依赖：`pip install -r requirements.txt`。
+2. 在 `src/train.py` 创建一个训练脚本。目前，它只是一个简单的占位符。
+
+   ```python
+   # src/train.py
+   import pandas as pd
+   from sklearn.model_selection import train_test_split
+   from sklearn.linear_model import LogisticRegression
+   from sklearn.metrics import accuracy_score
+   import pickle
+   import json
+
+   print("训练脚本已启动。")
+
+   # 在实际项目中，你会加载数据、训练并保存。
+   # 我们将在后续步骤中完善内容。
+
+   print("训练脚本已结束。")
+   ```
+3. 现在，让我们进行第一次提交，在 Git 中保存初始的项目结构和代码。
+
+   ```bash
+   git add .
+   git commit -m "初始项目结构和占位脚本"
+   ```
+
+### 第 2 步：使用 DVC 进行数据版本控制
+
+我们的模型需要数据。我们将使用鸢尾花（Iris）数据集的简化版本。由于数据集可能很大，我们将使用 DVC 而不是 Git 来追踪它。
+
+1. 创建一个名为 `data/iris.csv` 的文件，内容如下：
+
+   ```csv
+   sepal_length,sepal_width,petal_length,petal_width,species
+   5.1,3.5,1.4,0.2,setosa
+   4.9,3.0,1.4,0.2,setosa
+   ... (此处省略 140 行) ...
+   7.0,3.2,4.7,1.4,versicolor
+   6.4,3.2,4.5,1.5,versicolor
+   5.9,3.0,5.1,1.8,virginica
+   6.7,3.3,5.7,2.1,virginica
+   ```
+
+   > 你可以下载完整的 `iris.csv` 示例或使用自己的数据。对于本次练习，具体内容并不如文件版本控制的过程那么显要。
+2. 在项目仓库中初始化 DVC。
+
+   ```bash
+   dvc init
+   ```
+
+   此命令会创建一个 `.dvc` 目录，用于 DVC 存储配置和内部信息。它类似于 `.git` 目录。
+3. 现在，让 DVC 开始追踪我们的数据集。
+
+   ```bash
+   dvc add data/iris.csv
+   ```
+
+   此命令完成了两件事：
+
+   - 它将 `data/iris.csv` 复制到 DVC 的内部缓存（`.dvc/cache`）中。
+   - 它创建了一个名为 `data/iris.csv.dvc` 的小型“指针文件”。这个文本文件包含 DVC 查找正确版本数据所需的信息，包括其内容的 MD5 哈希值。
+4. 查看 `data/iris.csv.dvc` 的内容，你会看到类似以下的信息：
+
+   ```yaml
+   outs:
+   - md5: 234234abcfd2342342dd234234
+     size: 4551
+     path: iris.csv
+   ```
+
+   这个指针文件非常轻量，非常适合存放在 Git 中。让我们提交它。
+
+   ```bash
+   git add data/iris.csv.dvc .gitignore
+   git commit -m "使用 DVC 追踪 iris.csv"
+   ```
+
+此时，你的代码存放在 Git 中，而数据由 DVC 管理。两者之间的联系是 `.dvc` 文件，该文件也由 Git 追踪。
+
+> 该图展示了工具之间的交互方式。工作区文件提交到 Git。大文件添加到 DVC 缓存，其指针文件则提交到 Git。DVC 将缓存的文件推送到远程存储进行备份和协作。
+
+### 第 3 步：训练模型并进行版本控制
+
+现在让我们更新脚本以训练模型并保存输出。输出将包括两个文件：模型产物和包含性能指标的文件。
+
+1. 修改 `src/train.py` 以包含完整的训练逻辑。
+
+   ```python
+   # src/train.py
+   import pandas as pd
+   from sklearn.model_selection import train_test_split
+   from sklearn.linear_model import LogisticRegression
+   from sklearn.metrics import accuracy_score
+   import pickle
+   import json
+   import os
+
+   # 加载数据集
+   df = pd.read_csv('data/iris.csv')
+
+   # 准备数据
+   X = df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']]
+   y = df['species']
+   X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+   # 训练模型
+   model = LogisticRegression(solver='lbfgs', max_iter=200) # 简单超参数
+   model.fit(X_train, y_train)
+
+   # 评估模型
+   y_pred = model.predict(X_test)
+   accuracy = accuracy_score(y_test, y_pred)
+   print(f"模型准确率: {accuracy}")
+
+   # 保存模型和指标
+   os.makedirs('models', exist_ok=True)
+   with open('models/model.pkl', 'wb') as f:
+       pickle.dump(model, f)
+
+   with open('metrics.json', 'w') as f:
+       json.dump({'accuracy': accuracy}, f)
+   ```
+2. 在项目根目录下运行脚本。
+
+   ```bash
+   python src/train.py
+   ```
+
+   这会创建两个新文件：`models/model.pkl`（训练好的模型产物）和 `metrics.json`（包含准确率的文本文件）。
+3. 模型产物（`.pkl` 文件）是一个可能很大的二进制文件，因此我们将像处理数据一样，使用 DVC 来追踪它。指标文件较小且是文本格式，直接用 Git 追踪即可。
+
+   ```bash
+   dvc add models/model.pkl
+   ```
+4. 提交实验结果。这次提交现在将代码版本 (`train.py`)、模型指针 (`model.pkl.dvc`) 以及产生的指标 (`metrics.json`) 关联在了一起。
+
+   ```bash
+   git add src/train.py models/model.pkl.dvc metrics.json
+   git commit -m "训练初始逻辑回归模型"
+   ```
+
+现在你已经为第一次实验创建了一个完全可复现的快照。
+
+### 第 4 步：实验与结果复现
+
+当你开始进行更改时，该系统的优势就会显现。让我们通过更改模型超参数 (parameter) (hyperparameter)来运行一次新实验。
+
+1. 修改 `src/train.py`，使用不同的 `max_iter` 值。
+
+   ```python
+   # 在 src/train.py 中，修改这一行：
+   model = LogisticRegression(solver='lbfgs', max_iter=500) # 更改了 max_iter
+   ```
+2. 重新运行训练脚本。
+
+   ```bash
+   python src/train.py
+   ```
+
+   这会用新结果覆盖 `models/model.pkl` 和 `metrics.json`。你的准确率可能会有细微变化。
+3. 让我们为这次新实验建立版本。首先，将更新后的模型添加到 DVC。
+
+   ```bash
+   dvc add models/model.pkl
+   ```
+
+   DVC 非常智能，能够检测到 `models/model.pkl` 已更改，并相应地更新其指针文件。
+4. 将新结果提交到 Git。
+
+   ```bash
+   git add src/train.py models/model.pkl.dvc metrics.json
+   git commit -m "max_iter=500 的实验"
+   ```
+
+现在你的 Git 历史记录中完整记录了两次实验。但如果你需要找回训练的 *第一个* 模型该怎么办？
+
+这就是可复现性发挥作用的地方。
+
+1. 首先，找到初始模型训练提交的哈希值。
+
+   ```bash
+   git log --oneline
+   ```
+
+   你应该会看到类似这样的输出：
+
+   ```
+   a1b2c3d (HEAD -> master) Experiment with max_iter=500
+   e4f5g6h Train initial logistic regression model
+   ...
+   ```
+2. 让我们回到第一个模型的提交时刻。使用日志中的哈希值。
+
+   ```bash
+   git checkout e4f5g6h
+   ```
+
+   Git 会将 `src/train.py`、`metrics.json` 和 `models/model.pkl.dvc` 恢复到该提交时的状态。但是，你工作区中实际的 `models/model.pkl` 文件仍然是最新实验产生的那个。
+3. 这是最后一步。告知 DVC 根据当前 `.dvc` 指针文件中的信息同步你的工作区。
+
+   ```bash
+   dvc checkout
+   ```
+
+   DVC 发现 `models/model.pkl.dvc` 指向的是 *旧* 版本模型，于是从缓存中提取该版本，覆盖工作区中的文件。
+
+如果你检查 `src/train.py`、`metrics.json` 并使用 Python 加载 `models/model.pkl`，你会发现每个组件都已恢复到第一次实验时的确切状态。
+
+通过结合 Git 管理代码和 DVC 管理数据与模型，你构建了一个能够确保随时查看、验证和重建任何历史结果的系统。这种结构化的方法是构建可靠且专业的机器学习 (machine learning)系统的基石。
+
+## 参考资料
+
+- [Pro Git](https://git-scm.com/book/en/v2) — Scott Chacon and Ben Straub (2014)
+  Publisher: Apress
+  Git的全面指南，涵盖了有效进行代码版本控制的基础和高级概念。
+- [DVC Documentation](https://dvc.org/doc) — Iterative.ai (2024)
+  DVC（数据版本控制）的官方指南，用于在机器学习项目中追踪数据和模型。
+- [Practical MLOps: Operationalizing Machine Learning Models for Production](https://www.oreilly.com/library/view/practical-mlops/9781098103002/) — Noah Gift and Alfredo Deza (2021)
+  Publisher: O'Reilly Media
+  提供MLOps原则的实践指导，包括版本控制、可复现性和机器学习工作流管理的策略。
+- [Building Machine Learning Powered Applications: Going from Idea to Product](https://www.barnesandnoble.com/w/building-machine-learning-powered-applications-emmanuel-ameisen/1136450534) — Emmanuel Ameisen (2020)
+  Publisher: O'Reilly Media
+  讨论开发和部署机器学习应用程序的最佳实践，其中包含通过代码、数据和模型的适当版本控制来确保可复现性的信息。

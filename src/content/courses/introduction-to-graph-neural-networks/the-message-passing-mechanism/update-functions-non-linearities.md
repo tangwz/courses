@@ -1,0 +1,74 @@
+---
+course: "introduction-to-graph-neural-networks"
+chapter: "the-message-passing-mechanism"
+lesson: "update-functions-non-linearities"
+sourceId: 7622
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-graph-neural-networks/chapter-2-the-message-passing-mechanism/update-functions-non-linearities"
+title: "更新函数与非线性"
+description: "了解聚合消息如何与节点的当前表示合并，并通过 ReLU 等激活函数进行处理。"
+order: 4
+plots: []
+sourceHash: "64e6a2219b801ce1d946c9ffc58c3ddbc0ab2f28315599209cbeecc6a01b138e"
+sourceCorrections: []
+---
+
+图神经网络 (neural network) (GNN) 通过整合新信息来生成节点的更新表示，这些信息通常源自其邻居节点收集的消息，并与节点的当前状态相结合。这种整合过程分为两个部分：首先将收集到的消息与节点的当前状态合并，然后对其进行变换。这种更新机制确保了节点的新特征向量 (vector)既包含其自身的先验信息，也包含其局部邻域的集体特征。
+
+我们将节点 $v$ 的聚合消息向量表示为 $\mathbf{m}_{\mathcal{N}(v)}^{(l+1)}$。该向量是之前讨论过的 `AGGREGATE` 函数的输出。更新函数的任务是将此消息与节点在前一层的自身特征向量 $\mathbf{h}_v^{(l)}$ 相结合。
+
+### 合并自身特征与邻居消息
+
+合并这两个向量 (vector)的一种常用且有效的方法是先将它们拼接（concatenate），然后将结果通过一个标准的神经网络 (neural network)层。该层由一个线性变换（权重 (weight)矩阵）以及随后的非线性激活函数 (activation function)组成。
+
+在数学上，此更新操作可以写为：
+
+
+$$
+\mathbf{h}_v^{(l+1)} = \sigma \left( \mathbf{W}^{(l)} \cdot \text{拼接}(\mathbf{h}_v^{(l)}, \mathbf{m}_{\mathcal{N}(v)}^{(l+1)}) \right)
+$$
+
+
+让我们详细分析一下：
+
+1. **$\text{拼接}(\mathbf{h}_v^{(l)}, \mathbf{m}_{\mathcal{N}(v)}^{(l+1)})$**：节点的自身向量 $\mathbf{h}_v^{(l)}$ 与聚合消息向量 $\mathbf{m}_{\mathcal{N}(v)}^{(l+1)}$ 拼接在一起。如果两者的维度均为 $d$，则结果向量的维度为 $2d$。这明确地保留了来自两个来源的信息，而没有立即将它们混合。
+2. **$\mathbf{W}^{(l)}$**：这是第 $l$ 层的可学习权重矩阵。它起到了线性变换的作用，将拼接后的向量从当前维度（例如 $2d$）映射到下一层所需的输出维度（例如 $d'$）。模型在这里学习如何从合并的信息中提取最有价值的信号。
+3. **$\sigma$**：这是一个非线性激活函数，我们随后会讨论。
+
+下图展示了这一流程。节点的先前表示与聚合消息合并，经线性层处理，并通过激活函数以生成节点的新表示。
+
+> 单个节点的更新步骤。该过程将节点的现有特征向量与聚合消息合并，然后变换该合并向量以产生下一层的新表示。
+
+在图卷积网络 (GCN) 等架构中，另一种方法是在合并之前分别对自身向量和聚合消息应用独立的线性变换，通常使用加法进行合并。我们将在下一章研究那种具体的表达方式。对于通用的消息传递网络，拼接方法是一个强力且直观的起点。
+
+### 非线性的意义
+
+由 $\sigma$ 表示的激活函数 (activation function)是任何神经网络 (neural network)不可或缺的组成部分，GNN 也不例外。其目的是为模型引入非线性。
+
+如果省略激活函数，每个 GNN 层都将仅仅是一系列线性操作（通常为线性的聚合操作，随后是线性变换）。堆叠多个这样的层将毫无意义，因为一系列线性变换在数学上总能简化为单个更复杂的线性变换。模型的表达能力会受到严重限制，无法学习数据中的复杂模式。
+
+在现代深度学习 (deep learning)（包括 GNN）中，使用最广泛的激活函数是 **修正线性单元 (ReLU)**。其定义为：
+
+
+$$
+\text{ReLU}(x) = \max(0, x)
+$$
+
+
+ReLU 计算效率高且在实践中表现良好。它只需将特征向量 (vector)中的任何负值替换为零，通过选择性地“激活”某些特征，使网络能够模拟非线性关系。尽管还存在 `LeakyReLU`、`Sigmoid` 或 `Tanh` 等其他函数，但对于 GNN 的隐藏层来说，ReLU 是一个非常稳妥的默认选择。
+
+通过将聚合的邻域消息与节点自身状态结合，并应用非线性变换，GNN 层能为每个节点计算出更丰富、更高层次的表示。这种新表示同时捕捉了节点的个体属性及其在局部环境中的结构角色。
+
+## 参考资料
+
+- [Semi-Supervised Classification with Graph Convolutional Networks](https://doi.org/10.48550/arXiv.1609.02907) — Thomas N. Kipf and Max Welling (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1609.02907](https://doi.org/10.48550/arXiv.1609.02907)
+  这篇论文介绍了图卷积网络（GCNs），它采用了一种特定的更新函数，结合了独立的线性变换和求和，然后是非线性激活。章节中明确提到了这种替代方法，并说明了非线性如何融入图神经网络的更新过程。
+- [Inductive Representation Learning on Large Graphs](https://doi.org/10.48550/arXiv.1706.02216) — William L. Hamilton, Rex Ying, and Jure Leskovec (2017)
+  Journal: Advances in Neural Information Processing Systems (NIPS); DOI: [10.48550/arXiv.1706.02216](https://doi.org/10.48550/arXiv.1706.02216)
+  这篇论文介绍了GraphSAGE，这是一种重要的图神经网络架构，它采用了与章节中描述的通用拼接方法类似的更新机制，通常将聚合的消息与自身特征结合并应用非线性变换。
+- [Graph Representation Learning](https://www.morganclaypool.com/doi/abs/10.2200/S01045ED1V01Y202009AIM046) — William L. Hamilton (2020)
+  Journal: Synthesis Lectures on Artificial Intelligence and Machine Learning; Publisher: Morgan & Claypool Publishers; Volume: 14; Pages: 1-159; DOI: [10.2200/S01045ED1V01Y202009AIM046](https://doi.org/10.2200/S01045ED1V01Y202009AIM046)
+  这本教科书全面讲解了图神经网络的理论和实践，包括消息传递范式、聚合和更新函数，以及非线性在不同图神经网络架构中的作用。
+- [Graph Neural Networks: A Review of Methods and Applications](https://www.sciencedirect.com/science/article/pii/S266611312100001X) — Jie Zhou, Ganqu Cui, Zhengyan Li, Mingxuan Wang, Lei Wang (2021)
+  Journal: AI Open; Publisher: Elsevier; Volume: 2; Pages: 115-172; DOI: [10.1016/j.aiopen.2021.01.001](https://doi.org/10.1016/j.aiopen.2021.01.001)
+  这篇综述论文对各种图神经网络模型进行了分类和回顾，讨论了它们的消息传递机制，包括不同的聚合和更新函数设计，以及非线性变换在构建富有表达力的图神经网络层中的重要性。

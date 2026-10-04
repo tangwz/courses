@@ -1,0 +1,59 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "backpropagation-gradient-descent"
+lesson: "updating-weights-biases"
+sourceId: 1972
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-4-backpropagation-gradient-descent/updating-weights-biases"
+title: "更新权重和偏差"
+description: "应用计算出的梯度和学习率来调整网络参数。"
+order: 4
+plots: []
+sourceHash: "62d9cf1beebba2b2cc4189d231489204e23e8fde321200be2a9e613efe8d1698"
+sourceCorrections: []
+---
+
+为了优化神经网络 (neural network)，需要利用损失函数 (loss function)对于网络中每个权重 (weight)和偏差的梯度（即为所有参数 (parameter)计算出的 $\frac{\partial Loss}{\partial W}$ 和 $\frac{\partial Loss}{\partial b}$）。这些梯度，通常通过反向传播 (backpropagation)来确定，指明了损失函数 *增长* 最快的方向。由于目标是 *最小化* 损失，因此必须沿着各梯度 *相反* 的方向调整参数。
+
+这个调整过程是梯度下降 (gradient descent)的核心。对于网络中的每个权重（$W$）和偏差（$b$），我们根据其当前值、计算出的梯度以及一个称为学习率（$\eta$）的参数来更新其值。
+
+更新规则很简单：
+
+对于特定的权重 $W_{ij}$（连接某一层中的神经元 $i$ 到下一层中的神经元 $j$）：
+$W_{ij, 新} = W_{ij, 旧} - \eta \frac{\partial Loss}{\partial W_{ij, 旧}}$
+
+类似地，对于特定的偏差 $b_j$（神经元 $j$ 的）：
+$b_{j, 新} = b_{j, 旧} - \eta \frac{\partial Loss}{\partial b_{j, 旧}}$
+
+我们来分析一下这些公式：
+
+- $W_{ij, 旧}$ 和 $b_{j, 旧}$ 是更新前权重和偏差的当前值。
+- $W_{ij, 新}$ 和 $b_{j, 新}$ 是应用调整后的更新值。
+- $\frac{\partial Loss}{\partial W_{ij, 旧}}$ 和 $\frac{\partial Loss}{\partial b_{j, 旧}}$ 是反向传播期间计算出的梯度。它们表示当特定权重或偏差发生微小变化时，损失函数变化的程度。正梯度意味着增加参数会增加损失，而负梯度则意味着增加参数会减少损失。
+- $\eta$ (eta) 是学习率。这是一个小的正标量值（例如，0.01，0.001），用于控制我们沿梯度相反方向迈出的步长大小。选择合适的学习率对于训练成功很重要，我们将在下一节中进行更多讨论。
+
+这里的减号非常重要。如果梯度 $\frac{\partial Loss}{\partial W_{ij, 旧}}$ 为正（意味着增加 $W_{ij}$ 会增加损失），则更新规则会减去一个正值（$\eta \times \text{梯度}$），从而 *减小* $W_{ij}$。反之，如果梯度为负（意味着增加 $W_{ij}$ 会 *减少* 损失），则更新规则会减去一个负值，从而 *增加* $W_{ij}$。在这两种情况下，调整都会将参数值推向预期能降低总体损失的方向。
+
+### 向量 (vector)化更新
+
+在实际操作中，为每个参数 (parameter)单独执行这些更新会降低计算效率。深度学习 (deep learning)框架运用线性代数库（如 NumPy、TensorFlow 或 PyTorch）通过矩阵和向量运算来执行这些更新，同时将相同的逻辑应用于层内甚至整个网络中的所有权重 (weight)和偏差。
+
+如果我们把一层中的所有权重表示为一个矩阵 $W$，所有偏差表示为一个向量 $b$，并且它们对应的梯度分别表示为 $\nabla_W Loss$ 和 $\nabla_b Loss$，那么更新规则可以简洁地表达为：
+
+$W_{新} = W_{旧} - \eta \nabla_{W_{旧}} Loss$
+$b_{新} = b_{旧} - \eta \nabla_{b_{旧}} Loss$
+
+这里，$\nabla_{W_{旧}} Loss$ 是一个与 $W_{旧}$ 维度相同的矩阵，它的每个元素都是损失函数 (loss function)对相应权重的偏导数。类似地，$\nabla_{b_{旧}} Loss$ 是一个包含损失函数对每个偏差项的偏导数的向量。减法和标量乘法（$\eta$）都是按元素进行的。
+
+这个更新步骤通常在每批训练数据处理后（在小批量梯度下降 (gradient descent)中）或在整个数据集处理后（在批量梯度下降中）执行一次。这种迭代过程，包括计算预测（前向传播）、衡量误差（损失函数）、计算梯度（反向传播 (backpropagation)）和调整参数（权重/偏差更新），是神经网络 (neural network)的主要训练循环，逐步引导网络达到一个能最小化训练数据上预测误差的配置。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 8.3
+  全面介绍了深度学习，涵盖了梯度下降的数学基础及其在更新神经网络参数中的应用。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael A. Nielsen (2015)
+  Publisher: Determination Press; Pages: Chapter 2
+  一本易于理解的在线教材，解释了反向传播、梯度下降以及神经网络中权重和偏差的更新过程。
+- [Pattern Recognition and Machine Learning](https://link.springer.com/book/10.1007/978-0-387-45528-0) — Christopher M. Bishop (2006)
+  Publisher: Springer; Pages: Chapter 5; DOI: [10.1007/978-0-387-45528-0](https://doi.org/10.1007/978-0-387-45528-0)
+  一本经典教材，为机器学习算法提供了严谨的数学基础，包括用于优化模型参数的梯度下降原理。

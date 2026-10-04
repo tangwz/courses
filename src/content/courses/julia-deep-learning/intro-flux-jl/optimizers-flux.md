@@ -1,0 +1,164 @@
+---
+course: "julia-deep-learning"
+chapter: "intro-flux-jl"
+lesson: "optimizers-flux"
+sourceId: 6887
+sourceUrl: "https://apxml.com/zh/courses/julia-deep-learning/chapter-2-intro-flux-jl/optimizers-flux"
+title: "优化器：引导学习过程"
+description: "了解 Flux.jl 中用于在训练期间更新模型参数的各种优化算法（如 SGD, Adam）。"
+order: 6
+plots: []
+sourceHash: "702eec09400fed91739943a89c5bbdcdc4011d16f69989ca7747d8bb2c746f3e"
+sourceCorrections: []
+---
+
+一旦我们定义了神经网络 (neural network)结构并选择了合适的损失函数 (loss function)来衡量其误差，下一步就是实际训练模型。这个学习过程包括调整模型的参数 (parameter)（权重 (weight)和偏置 (bias)）以使计算出的损失最小化。优化器是执行这项重要任务的算法，有效地引导模型的学习过程。你可以把优化器看作是推动模型获得更好表现的引擎。它借助损失函数的信息智能地更新模型参数。
+
+### 优化的核心：梯度下降 (gradient descent)
+
+深度学习 (deep learning)中的大多数优化算法都基于梯度下降原理。核心思路很简单：要最小化一个函数（我们的损失函数 (loss function)），我们应该沿着其梯度的反方向迈步。梯度，你可能还记得，指向最陡峭的上升方向。因此，逆着它移动，我们就能趋近最小值。
+
+在模型学习过程中，参数 (parameter)更新的幅度由一个超参数 (hyperparameter)决定，该超参数称为**学习率**，通常用 $\eta$ (eta)表示。参数 $\theta$ 的基本更新规则如下：
+
+
+$$
+\theta_{new} = \theta_{old} - \eta \nabla_{\theta} L
+$$
+
+
+这里，$\nabla_{\theta} L$ 是损失函数 $L$ 相对于参数 $\theta$ 的梯度。
+
+- **学习率过小**会导致收敛非常缓慢；你的模型会学习，但可能耗时过长，不切实际。
+- **学习率过大**可能导致优化器越过最小值，造成震荡甚至发散，即损失反而增加。
+
+实际上，我们通常不是对整个数据集（这将是批量梯度下降）计算梯度，而是对称为小批量的数据子集计算。这种方法称为\*\*随机梯度下降（SGD）\*\*或小批量梯度下降，它在计算效率和稳定收敛之间提供了很好的平衡。
+
+Flux.jl 在其 `Flux.Optimise` 模块中提供了一系列预设的优化器，每种都有不同的参数调整策略。让我们看看几种常用优化器。
+
+### Flux.jl 中常用的优化器
+
+#### 1. 随机梯度下降 (gradient descent)（SGD）
+
+这是最基本的优化器。它为每个小批量实现基本的梯度下降更新规则。
+
+```julia
+using Flux
+
+# 学习率为 0.01
+opt_sgd = SGD(0.01)
+```
+
+**特点：**
+
+- **简单易懂：** 易于理解和实现。
+- **敏感性：** 对学习率的选择非常敏感。
+- **震荡：** 在达到最小值的过程中可能会显著震荡，尤其是在误差曲面的沟壑或曲率变化区域。
+- **局部最小值：** 有时会陷入局部最小值或鞍点，尽管在高维深度学习 (deep learning)问题中，鞍点通常比不良局部最小值更令人关注。
+
+#### 2. 动量
+
+动量优化器在 SGD 的基础上添加了一个“速度”分量。它累积一部分过去的梯度更新，并用它来影响当前的更新方向。这有助于减弱震荡并加速学习，尤其是在梯度方向一致的区域。想象一个球滚下山坡；它会积累动量，不容易卡在小坑里。
+
+更新涉及一个速度项 $v_t$：
+$v_t = \beta v_{t-1} + (1-\beta) \nabla_{\theta} L$ (或类似的包含 $\eta$ 的公式)
+$\theta_{new} = \theta_{old} - \eta v_t$ (如果 $\eta$ 不在 $v_t$ 中)
+这里，$\beta$ 是动量系数，通常为 0.9 左右。
+
+在 Flux.jl 中，你可以使用 `Momentum`：
+
+```julia
+# 学习率为 0.01，动量为 0.9
+opt_momentum = Momentum(0.01, 0.9)
+```
+
+通常，`Momentum` 会与 `SGD` 或其他优化器隐含地使用，或者作为增强 SGD 的独立选项。Flux 的 `Momentum` 构造函数接受学习率和动量系数（通常表示为 $\rho$ 或 $\beta$）。
+
+**特点：**
+
+- **收敛更快：** 通常比普通的 SGD 收敛更快。
+- **震荡减小：** 累积的动量有助于平滑更新路径。
+
+#### 3. Adam（自适应矩估计）
+
+Adam 是一种自适应学习率优化算法，已成为许多深度学习应用的非常普遍的默认选择。它通过跟踪过去梯度的指数衰减平均值（一阶矩，类似于动量）和过去平方梯度的指数衰减平均值（二阶矩，类似于 RMSProp）来为每个参数 (parameter)计算自适应学习率。
+
+```julia
+# 默认学习率为 0.001，默认 beta 值为 (0.9, 0.999)
+opt_adam = Adam()
+
+# 自定义学习率
+opt_adam_custom = Adam(0.0005)
+
+# 自定义学习率和 beta 值
+opt_adam_full_custom = Adam(0.001, (0.9, 0.999))
+```
+
+**特点：**
+
+- **自适应学习率：** 为每个参数单独调整学习率。这在处理稀疏梯度或需要不同更新幅度的参数时非常有效。
+- **通用表现良好：** 通常适用于各种问题，只需少量超参数 (hyperparameter)调整。
+- **结合多种思想：** 它有效结合了 AdaGrad（处理稀疏梯度）和 RMSProp（处理非平稳目标）等算法的优点。
+
+Flux.jl 还提供了其他优化器，例如 `RMSProp`、`AdaGrad`、`AdaMax` 和 `NAdam`，每种都有其特定的更新规则和特点。对于许多问题来说，`Adam` 是一个很好的起始选择。
+
+### 在训练循环中使用优化器
+
+要在 Flux 中使用优化器，首先需要指定它应该更新模型的哪些参数 (parameter)。`Flux.params()` 函数用于从模型或层中收集所有可训练的参数。
+
+假设你已经定义了一个 `model` 和一个 `loss_function`：
+
+```julia
+# model 和 loss_function 已定义
+ps = Flux.params(model)
+
+# 实例化一个优化器
+opt = Adam(0.001) # 使用 Adam，学习率为 0.001
+
+# 示例数据点 (x_batch, y_batch)
+# x_batch 是你的输入，y_batch 是目标输出
+
+# 在你的训练循环中：
+# 1. 计算梯度
+grads = gradient(() -> loss_function(model(x_batch), y_batch), ps)
+
+# 2. 使用优化器更新参数
+Flux.Optimise.update!(opt, ps, grads)
+```
+
+在这段代码中：
+
+1. `ps = Flux.params(model)` 从你的 `model` 中收集所有符合训练条件的参数（权重 (weight)、偏置 (bias)）。
+2. `opt = Adam(0.001)` 创建一个 Adam 优化器实例。
+3. `gradient(() -> loss_function(model(x_batch), y_batch), ps)` 计算损失相对于参数 `ps` 的梯度。这就是自动微分发挥作用的地方，我们将在下一节讨论它。
+4. `Flux.Optimise.update!(opt, ps, grads)` 使用计算出的 `grads` 应用优化器的更新规则来修改参数 `ps`。
+
+Flux 还提供了一个更高级的 `Flux.train!` 辅助函数，它封装了梯度计算和更新步骤，这可以简化你的训练循环代码。我们将在后面的章节中看到更多关于 `Flux.train!` 的内容。
+
+### 选择优化器和学习率
+
+选择最佳的优化器及其超参数 (parameter) (hyperparameter)，特别是学习率，会大幅影响训练速度和模型表现。
+
+- **Adam** 通常是一个很好的首选，因为它具有自适应特性和在默认设置下的表现良好。
+- **带动量的 SGD** 有时能取得更好的最终表现，但可能需要更仔细地调整学习率和动量系数。
+- **学习率**可以说是最重要的待调整超参数。
+  - 从常见的默认值开始（例如，Adam 为 0.001，SGD 为 0.01）。
+  - 如果损失下降非常缓慢，你的学习率可能太小。
+  - 如果损失剧烈震荡或增加（可能出现 NaN），你的学习率可能太高。
+  - 学习率调度（在训练期间逐渐降低学习率）等方法也很有益，将在第 4 章中介绍。
+
+下图抽象地展示了不同优化器如何在一个误差曲面上行进：
+
+> 不同的优化器采用不同的策略在误差曲面上行进，目标是高效地找到导致模型误差低的参数值。
+
+优化器是主力，它们根据模型看到的数据和犯的错误迭代地改进模型。它们依赖于精确的梯度来指导其更新。在下一节“Zygote.jl：Flux 中的自动微分”中，我们将研究 Flux.jl 如何在 Zygote.jl 的帮助下，高效地计算几乎任何 Julia 代码的这些必需梯度，构成训练过程的主干。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 8
+  提供各种优化算法的理论背景和实现细节，包括梯度下降、随机梯度下降和动量。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma, Jimmy Ba (2014)
+  Journal: 3rd International Conference for Learning Representations; DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器并详细说明了其基于梯度一阶矩和二阶矩的自适应学习率机制。
+- [Optimisers](https://fluxml.ai/Flux.jl/stable/training/optimisers/) — Flux.jl Documentation (2024)
+  Flux.jl框架中使用优化器的官方指南，描述了可用的算法及其API。

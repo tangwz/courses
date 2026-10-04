@@ -1,0 +1,118 @@
+---
+course: "advanced-diffusion-architectures"
+chapter: "advanced-sampling-optimization"
+lesson: "guided-sampling-refinements"
+sourceId: 5468
+sourceUrl: "https://apxml.com/zh/courses/advanced-diffusion-architectures/chapter-6-advanced-sampling-optimization/guided-sampling-refinements"
+title: "引导采样改进"
+description: "控制引导采样的先进技术，包括动态引导尺度。"
+order: 3
+plots: ["plots/5468-0.json"]
+sourceHash: "fd8d747e342372e9cf941dadf448a4e7851ea6347e9caf7175f8346447750cff"
+sourceCorrections: []
+---
+
+无分类器引导 (CFG)，已在第四章介绍，它提供了一种有效方法，可在无需单独分类器模型的情况下，将扩散采样过程引向所需条件（如文本提示）。通过在条件预测和无条件预测之间进行插值，CFG 允许通过引导尺度（通常表示为 $w$ 或 $\gamma$）来控制条件信号的强度。
+
+虽然有效，但在整个采样过程中使用*固定*引导尺度有时可能不是最优的。非常高的引导尺度，虽然可能提高提示的符合度，但可能导致生成样本出现过饱和、不自然的对比度或视觉伪影。相反，低尺度可能过多地忽略了条件。引导采样改进旨在缓解这些问题，并实现对生成过程的更精细控制。
+
+### 动态引导尺度
+
+动态引导并非在所有时间步 $t$ 都使用恒定引导尺度 $w$，而是在逆扩散过程中调整该尺度。直观思路是，最佳程度的引导可能因给定步骤图像中存在的结构或噪声量而异。
+
+例如，一种常见策略是在初始步骤（当图像主要是噪声时）采用更高的引导尺度，以强力确立条件特征，然后在后续步骤中随着细节的完善逐渐减小尺度。这有助于防止当图像结构已大致形成时，维持高引导所带来的过饱和问题。
+
+该调整可以基于时间步 $t$ 或噪声水平 $\sigma_t$。一个简单的调度方案可能在采样步骤中，将引导尺度从最大值 $w_{max}$ 线性或非线性地衰减到最小值 $w_{min}$。
+
+```python
+# 动态引导尺度伪代码
+def dynamic_cfg_prediction(model_output_cond, model_output_uncond, w_schedule, t):
+  """应用具有时变尺度的 CFG。"""
+  guidance_scale = w_schedule(t) # 获取当前时间步 t 的尺度
+  return model_output_uncond + guidance_scale * (model_output_cond - model_output_uncond)
+
+# 示例调度函数（线性衰减）
+def linear_decay_schedule(t, T, w_max, w_min):
+  """在 T 步内将引导从 w_max 线性衰减到 w_min。"""
+  progress = t / T
+  return w_max - (w_max - w_min) * progress
+
+# 在采样循环中：
+# noise_pred = dynamic_cfg_prediction(cond_pred, uncond_pred, my_schedule, current_t)
+```
+
+下面是固定引导尺度与简单线性衰减调度方案的对比可视化：
+
+
+
+![采样过程中的引导尺度](plots/5468-0.json)
+
+
+
+> 比较了固定引导尺度（例如 7.0）与在 50 个采样步骤中从 10.0 线性衰减到 2.0 的动态尺度。
+
+尝试不同的调度方案（例如余弦衰减、基于步骤的变化）可以在提示对齐 (alignment)和图像自然度之间产生不同的权衡。
+
+### 阈值处理技术
+
+另一种改进，在高引导尺度下特别有用，是**阈值处理**。高引导有时会将预测的 $x_0$（估计的清晰图像）推到典型数据范围（例如，归一化 (normalization)图像的 [-1, 1]）之外很远。当值在采样步骤后期被裁剪回有效范围时，这可能导致钳制伪影。
+
+阈值处理技术旨在*在使用*这些预测的 $x_0$ 值计算下一步的潜在 $x_{t-1}$ 之前对其进行校正。
+
+**静态阈值处理：** 一种简单的方法是将预测的 $x_0$ 值钳制到数据分布的固定百分位数范围。例如，如果 99% 的训练数据像素值落在 [-1.5, 1.5] 范围内，您可以在每个步骤将预测的 $x_0$ 钳制到此范围。
+
+**动态阈值处理：** 一种更复杂的方法是根据当前步骤中预测的 $x_0$ 的统计数据来调整阈值。由 Imagen 论文提出，动态阈值处理计算预测 $x_0$ 中绝对像素值的百分位数 $p$。如果此百分位数超过阈值 $s$（通常设置略高于 1.0，例如 1.2 到 1.5），则整个预测的 $x_0$ 将被重新缩放，以将该百分位数值降低到 $s$。
+
+```python
+# 动态阈值处理伪代码（简化版）
+def dynamic_thresholding(predicted_x0, percentile=0.99, threshold_scale=1.5):
+  """对预测的清晰图像应用动态阈值处理。"""
+  abs_pixels = abs(predicted_x0)
+  # 计算绝对像素值的指定百分位数
+  p_value = calculate_percentile(abs_pixels, percentile)
+
+  if p_value > threshold_scale:
+    # 如果百分位数超过阈值，则按比例缩小整个预测
+    scaling_factor = threshold_scale / p_value
+    predicted_x0 = predicted_x0 * scaling_factor
+    # 可选：如果采样器逻辑需要，缩放后钳制到 [-1, 1]
+    # predicted_x0 = clamp(predicted_x0, -1.0, 1.0)
+  
+  return predicted_x0
+
+# 在预测 x0 的采样步骤中使用：
+# 1. 获取条件和无条件模型输出（例如，预测噪声 eps）
+# 2. 计算 CFG 混合预测：eps_cfg = uncond_eps + w * (cond_eps - uncond_eps)
+# 3. 计算相应的预测 x0：pred_x0 = get_x0_from_noise(xt, eps_cfg, t)
+# 4. 应用阈值处理：pred_x0_thresholded = dynamic_thresholding(pred_x0)
+# 5. 使用 pred_x0_thresholded 计算下一个潜在 x_{t-1}（或要使用的噪声）
+```
+
+动态阈值处理有助于防止过饱和并保持图像保真度，即使在非常高的引导尺度下也是如此，从而在不严重降低图像质量的情况下实现更强的提示符合度。
+
+### 与采样器的交互
+
+这些引导改进通常与采样器的选择有关联。
+
+- 与 DDIM 等更简单的方法相比，DPM-Solver++ 或 UniPC 等**高阶求解器**可能对引导尺度的突然变化更敏感。通常更推荐平滑的动态引导调度。
+- **阈值处理**通常应用于预测的 $x_0$。内部使用 $x_0$ 预测的采样器比主要在 $\epsilon$ 预测上操作的采样器更直接地集成阈值处理（尽管转换始终是可能的）。
+- 这些改进的优势有时在使用特定采样器或在较低步数（每一步影响更大）时会更明显。
+
+### 实际益处
+
+实施动态引导和阈值处理可以带来：
+
+- **提高样本质量：** 减少伪影，降低饱和度，以及更自然的图像，尤其是在更高的引导强度下。
+- **更好的提示符合度：** 允许使用更高的有效引导尺度而不牺牲质量，从而使结果更紧密地匹配条件提示。
+- **更多控制：** 在整个生成过程中，对引导强度和样本保真度之间的权衡提供更细致的控制。
+
+实验很重要。最佳动态调度、阈值处理参数 (parameter)（$p$, $s$）及其组合通常取决于具体的模型架构、数据集、采样器和期望的输出特性。这些改进提供了有用的工具，可提升引导扩散采样的质量和可控性。
+
+## 参考资料
+
+- [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598) — Jonathan Ho, Tim Salimans (2022)
+  Journal: arXiv preprint arXiv:2207.12598; DOI: [10.48550/arXiv.2207.12598](https://doi.org/10.48550/arXiv.2207.12598)
+  介绍了分类器自由引导（CFG），一种通过插值条件和无条件预测来控制扩散模型的基本方法。
+- [Photorealistic Text-to-Image Diffusion Models with Deep Language Understanding](https://arxiv.org/abs/2205.11487) — Chitwan Saharia, William Chan, Saurabh Saxena, Lala Li, Jay Whang, Emily Denton, Seyed Kamyar Seyed Ghasemipour, Burcu Karagol Ayan, S. Sara Mahdavi, Rapha Gontijo Lopes, Tim Salimans, Jonathan Ho, David J Fleet, Mohammad Norouzi (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 35; DOI: [10.48550/arXiv.2205.11487](https://doi.org/10.48550/arXiv.2205.11487)
+  介绍了Imagen模型，并引入了动态阈值作为一种在高引导尺度下提高图像质量和提示一致性的技术。

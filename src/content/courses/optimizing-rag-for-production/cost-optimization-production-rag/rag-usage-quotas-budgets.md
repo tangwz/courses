@@ -1,0 +1,211 @@
+---
+course: "optimizing-rag-for-production"
+chapter: "cost-optimization-production-rag"
+lesson: "rag-usage-quotas-budgets"
+sourceId: 6228
+sourceUrl: "https://apxml.com/zh/courses/optimizing-rag-for-production/chapter-5-cost-optimization-production-rag/rag-usage-quotas-budgets"
+title: "实施使用限额和预算"
+description: "Set up and manage usage quotas and budget controls to prevent cost overruns in production RAG applications."
+order: 6
+plots: ["plots/6228-0.json"]
+sourceHash: "807deaee460acc4e59f4b713fcd8f18475f9419e048a2c468af6e4c6a4f9d4f1"
+sourceCorrections: [{"kind": "escaped-dollar-math", "line": 166}]
+---
+
+主动机制对于防止生产RAG系统中的预算超支必不可少。实施使用限额和预算将成本管理从被动分析转变为可控、可预测的流程。这些财务保障措施的建立和执行将被说明，确保RAG系统在其分配的财务限度内运行。
+
+## 配额和预算的理由
+
+如果没有明确的限制，RAG系统的运营成本，特别是那些与LLM API调用和可扩展计算资源相关的成本，可能会意外增加。当用户需求波动或查询模式欠佳时，这种情况尤其明显。配额和预算具有多项重要作用：
+
+- **防止成本失控：** 它们充当断路器，在由于不可预见的错误、滥用或使用量突然激增而导致支出失去控制之前，对其进行限制。
+- **执行财务纪律：** 明确定义的限制鼓励开发和运营团队更高效地设计和使用资源。
+- **可预测的支出：** 预算有助于更好地进行财务预测和分配，使RAG系统的运营支出更加透明和易于管理。
+- **资源分配：** 在多租户系统或部门部署中，配额可以确保公平使用，并促进准确的成本分摊。
+- **容量规划：** 根据配额监控使用情况可以为未来的容量规划和基础设施扩展决策提供依据。
+
+## RAG系统的配额和预算类型
+
+RAG中有效的成本控制需要在不同层级设置限制，与系统的主要成本组成部分相对应。
+
+### 1. LLM API 配额
+
+大多数LLM提供商（例如，OpenAI、Anthropic、Cohere以及基于云的LLM服务）允许您直接通过其平台设置使用限额或支出限制。这些通常包括：
+
+- **请求速率限制：** 每秒、每分钟或每小时允许的API调用次数。这有助于管理负载并防止滥用。
+- **令牌使用限制：** 在一定时期内（例如，每天、每月）可处理的最大令牌数（输入和输出）。这直接控制着一个主要的成本因素。
+- **支出上限：** 每个计费周期内API使用的硬性金额限制。
+
+例如，如果您使用Azure OpenAI，您可以按部署管理配额。对于OpenAI的原生API，使用层级和速率限制通常与您的组织账户级别挂钩，并可选择请求增加。
+
+### 2. 计算资源预算
+
+用于嵌入 (embedding)生成、重新排序、LLM推理 (inference)（如果自托管）和向量 (vector)数据库操作的计算资源显著增加了成本。云提供商提供工具：
+
+- **AWS：** AWS Budgets允许您设置自定义成本和使用预算，并在超出阈值时接收警报。
+- **Google Cloud：** Cloud Billing budgets提供类似的功能，可以通过Pub/Sub通知启用警报甚至编程操作。
+- **Azure：** Azure Cost Management and Billing包括创建预算和管理支出的工具。
+
+这些预算可以针对特定服务（例如，用于托管模型的EC2实例、托管Kubernetes服务）或带标签的资源进行设置，允许对RAG相关的计算支出进行细粒度控制。
+
+### 3. 向量 (vector)数据库限制
+
+根据您选择的向量数据库（例如，Pinecone、Weaviate、Milvus或托管云产品，如带有k-NN的Amazon OpenSearch Service），您会遇到各种限制，有些可配置，有些是服务层级固有的：
+
+- **存储大小：** 最大数据或索引大小。
+- **向量/记录数量：** 嵌入 (embedding)总数的限制。
+- **查询吞吐量 (throughput)：** 每秒读写操作数（OPS）。
+- **数据传输：** 入站和出站带宽。
+
+虽然其中一些是与定价层级相关的软限制，但了解它们对于预算预测很重要。对于自托管向量数据库，“预算”由您预置的底层计算和存储资源隐式定义。
+
+### 4. 应用层配额
+
+在平台级别控制之外，您可以在您的RAG应用程序逻辑中实施配额。这特别适用于：
+
+- **按用户/租户限制：** 在SaaS RAG应用程序中，您可能会提供不同订阅层级，具有不同的查询限制、索引文档数量或功能访问权限。
+- **内部部门控制：** 限制特定内部团队或项目的使用量。
+
+这些通常使用计数器（例如，在Redis或关系数据库中）实现，这些计数器跟踪API密钥、用户ID或租户ID的预定义限制下的使用情况。
+
+## 设置有效配额和预算的策略
+
+仅仅启用配额是不够的；必须仔细设置。
+
+- **建立基线：** 分析开发、预发布或早期生产阶段的历史使用数据。如果不存在数据，则根据预期查询量、平均文档复杂性（针对令牌计数）和处理要求进行保守估计。
+- **分层方法：** 对于面向用户的应用程序，考虑提供不同的层级（例如，免费版、基础版、专业版），具有逐步提高的配额和功能。这将成本与所交付的价值挂钩。
+- **软限制与硬限制：**
+  - **软限制：** 当使用量接近配额的某个百分比时（例如75%、90%），向管理员或用户触发警报。这允许在服务中断前进行主动干预。
+  - **硬限制：** 严格执行配额，可能通过暂时暂停服务、降低性能（例如，切换到更便宜、能力较弱的LLM）或在达到限制后拒绝新请求来实现。硬限制对于防止超支很重要，但必须明确告知用户。
+- **粒度：** 在最合适的层级定义配额。系统范围的配额是一个开始，但更细粒度的控制（按API密钥、按用户、按RAG管道内的微服务）提供更精细的管理。
+- **定期审查和调整：** 配额和预算不是一劳永逸的。定期审查使用模式、成本报告和业务需求。根据需要调整限制，以适应增长、提高效率或反映服务提供商的定价变化。预计需要迭代。
+
+以下图表说明了简单应用层硬性API调用配额的决策流程：
+
+> 在应用程序内执行使用配额的简化流程。如果使用量在限制内，则处理请求；否则，请求将被阻止，并发送可选通知。
+
+## 实施配额和预算系统
+
+实施方法从使用现成功能到构建自定义执行机制不等。
+
+### 采用平台功能
+
+始终从考察LLM API供应商和云服务提供商提供的配额和预算管理工具入手。这些通常最易于设置和集成：
+
+- **LLM提供商仪表板：** 直接配置API速率限制、令牌限制和支出上限。
+- **云计费控制台：** 设置预算（例如，AWS Budgets、Google Cloud Budgets、Azure Cost Management）。通过电子邮件、短信或Webhook集成（例如，Slack、PagerDuty）配置警报通知。
+
+### 自定义实施
+
+对于应用层配额或当平台功能不足时，可能需要自定义解决方案。
+
+- **速率限制器：** 在您的API网关或应用程序后端实施令牌桶或漏桶等算法，以控制请求速率。大多数编程语言都提供了相关库。
+
+  ```python
+  # 令牌桶的简化Python示例
+  import time
+
+  class TokenBucket:
+      def __init__(self, tokens, time_unit, fill_rate):
+          self.capacity = float(tokens)
+          self._tokens = float(tokens)
+          self.fill_rate = float(fill_rate) # tokens per time_unit
+          self.time_unit = float(time_unit) # seconds
+          self.last_check = time.monotonic()
+
+      def consume(self, tokens):
+          now = time.monotonic()
+          time_passed = now - self.last_check
+          self.last_check = now
+
+          self._tokens += time_passed * (self.fill_rate / self.time_unit)
+          if self._tokens > self.capacity:
+              self._tokens = self.capacity
+
+          if tokens <= self._tokens:
+              self._tokens -= tokens
+              return True
+          return False
+
+  # 示例：每分钟100个请求
+  # rate_limiter = TokenBucket(tokens=100, time_unit=60, fill_rate=100)
+  # if rate_limiter.consume(1):
+  #     # 处理请求
+  # else:
+  #     # 拒绝，请求过多
+  ```
+- **使用计数器：** 使用Redis等快速键值存储来跟踪与用户ID或API密钥关联的使用情况（例如，查询数量、处理的令牌）。原子地增加这些计数器并检查是否符合定义的限制。
+- **定时任务：** 运行定时任务，从日志或数据库中汇总使用情况，与预算进行比较，并触发警报或操作。
+
+### 预算警报系统
+
+警报是一个重要的组成部分。配置警报以在以下情况时通知相关方：
+
+- 实际支出接近预算的某个百分比时（例如50%、75%、90%）。
+- 预测支出预计在月底超出预算时。
+- 特定配额即将用尽时。
+
+此图表说明了在一个月内累计支出接近设定预算的情况，并带有警报阈值：
+
+
+
+![月度支出与带警报阈值的预算](plots/6228-0.json)
+
+
+
+> 根据月度预算跟踪累计支出，显示预算75%和90%的预定义警报阈值。早期预警允许采取纠正措施。
+
+## 示例：LLM API成本预算
+
+我们来看一个预计每天处理5,000个查询的RAG应用程序。
+
+- 每个查询的平均输入上下文 (context)（检索到的文档+查询）：3,000个令牌。
+- 每个查询的平均LLM生成输出：300个令牌。
+- LLM成本：
+  - 输入：每1,000个令牌\$0.001
+  - 输出：每1,000个令牌\$0.002
+
+每日令牌消耗：
+
+- 输入令牌：$5,000 \text{ 查询} \times 3,000 \text{ 令牌/查询} = 15,000,000 \text{ 令牌}$
+- 输出令牌：$5,000 \text{ 查询} \times 300 \text{ 令牌/查询} = 1,500,000 \text{ 令牌}$
+
+每日成本：
+
+- 输入成本：(15,000,000 / 1,000) \times \0.001 = $15.00$
+- 输出成本：(1,500,000 / 1,000) \times \0.002 = $3.00$
+- LLM API每日总成本：\15.00 + \$3.00 = \$18.00\$
+
+预计每月LLM API成本（假设30天）：
+$\text{月度成本} = \text{\textdollar}18.00/\text{天} \times 30 \text{ 天} = \text{\textdollar}540.00$
+
+基于此，您可以将每月LLM API预算设置为\$600（允许一定波动）并配置警报：
+
+- **警告警报：** 当支出达到\$450（预算的75%）时。
+- **严重警报：** 当支出达到\$540（预算的90%）时。
+
+如果这些警报被触发，您可以调查原因。是超出预期的正常使用量，导致令牌数量过多的低效提示工程 (prompt engineering)，还是检索组件发送过多上下文的问题？
+
+## 挑战与考虑
+
+- **用户体验影响：** 硬性配额虽然对成本控制有效，但如果意外达到限制，可能会对用户体验产生负面影响。明确告知使用限制、服务的优雅降级（如果可能）以及用户升级或请求增加的选项都很重要。
+- **多组件系统中的复杂性：** RAG系统涉及多个服务（检索器、向量 (vector)数据库、生成器、编排器）。汇总成本并对这些组件应用整体预算可能很复杂。在您的云提供商中一致地标记 (token)资源非常重要。
+- **平衡配额与自动扩展：** 如果您的系统是根据需求自动扩展的，过于严格的配额可能会阻止其处理正常的峰值负载。设置预算时应考虑预期的弹性，还应设置扩展限制，以防止失控的扩展耗尽预算。
+- **管理开销：** 管理细粒度配额和响应警报需要管理工作。尽可能自动化监控和响应过程。
+
+有效实施使用限额和预算不仅是一项技术任务，更是一项战略任务。它需要了解您系统的成本结构、预测使用模式，并将财务控制与业务目标对齐 (alignment)。这些机制如果运用得当，能提供重要的防御层，抵御不可预见的开销，从而显著提升生产RAG系统的财务可持续性。从监控这些限制下的使用情况中获得的认识，也直接支持了后续讨论的更广泛的成本异常检测和监控实践。
+
+## 参考资料
+
+- [What is AWS Budgets?](https://docs.aws.amazon.com/cost-management/latest/userguide/what-is-budgets.html) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  这份官方文档解释了如何在AWS中设置和管理成本与用量预算、警报和操作，直接支持计算资源预算管理。
+- [Rate limits and usage policies](https://help.openai.com/en/articles/6912803-what-are-the-best-practices-for-managing-my-rate-limits-in-the-api) — OpenAI (2023)
+  Publisher: OpenAI
+  详细介绍了OpenAI设定的各种用量限制、速率限制和支出上限，对于管理大型语言模型API成本至关重要。
+- [Budgets and alerts overview](https://cloud.google.com/billing/docs/how-to/create-edit-delete-budgets) — Google Cloud (2024)
+  Publisher: Google Cloud
+  解释了如何在Google Cloud中设置预算、阈值和警报，以有效管理和控制云支出。
+- [FinOps Framework](https://www.finops.org/framework/) — FinOps Foundation (2023)
+  Publisher: FinOps Foundation
+  提供了一个通过协作、工具和流程管理云成本的综合框架，为实施用量配额和预算提供了更广泛的背景。

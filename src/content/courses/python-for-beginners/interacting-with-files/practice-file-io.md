@@ -1,0 +1,248 @@
+---
+course: "python-for-beginners"
+chapter: "interacting-with-files"
+lesson: "practice-file-io"
+sourceId: 2352
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-6-interacting-with-files/practice-file-io"
+title: "动手实践：读写文本文件"
+description: "使用 Python 练习从现有文本文件读取数据并向新文本文件写入数据。"
+order: 8
+plots: []
+sourceHash: "be097dcaf222e568e3f526c7e2c2bd1b0a09f6c9daaddd3ff9c4374884174954"
+sourceCorrections: []
+---
+
+Python 允许程序与计算机上的文件进行交互，使其能够读取现有数据并保存新信息。一个实践练习将演示如何结合这些文件处理技能，从一个文件读取数据，修改其内容，并将结果写入另一个文件。
+
+我们将完成一项常见任务：管理一个存储在文本文件中的简单姓名列表。
+
+### 目标
+
+我们的目标是：
+
+1. 创建一个包含几个姓名的初始文本文件。
+2. 将这些姓名从文件中读取到我们的Python脚本中。
+3. 请求用户输入一个新姓名。
+4. 将这个新姓名添加到我们的列表中。
+5. 将更新后的姓名列表写入一个新的文本文件。
+
+这模拟了应用程序中常见的基本数据更新过程。
+
+### 步骤 1：创建初始姓名文件
+
+首先，我们编写一个简短的Python脚本来创建我们的起始文件 `names.txt`。这个文件将包含三个姓名，每个姓名占一行。
+
+```python
+# 定义初始姓名列表
+initial_names = ["Alice", "Bob", "Charlie"]
+
+# 指定文件名
+filename = "names.txt"
+
+# 使用写入模式（'w'）下的 'with open' 创建并写入文件
+try:
+    with open(filename, 'w') as file_object:
+        for name in initial_names:
+            file_object.write(name + "\n") # 在每个姓名后添加换行符
+    print(f"成功创建文件 {filename} 并写入初始姓名")
+except IOError:
+    print(f"错误：无法写入文件 {filename}")
+```
+
+**说明：**
+
+- 我们定义了一个列表 `initial_names`。
+- 我们使用 `with open(filename, 'w') as file_object:` 来打开 `names.txt`。模式 `'w'` 表示我们要写入文件。如果文件存在，它将被覆盖；如果不存在，它将被创建。`with` 语句确保文件在使用后自动关闭。
+- 我们遍历 `initial_names`。在循环内部，`file_object.write(name + "\n")` 写入每个姓名，并在其后添加一个换行符（`\n`）。换行符很重要，因为它确保文本文件中每个姓名都显示在新的一行。
+- 我们包含了一个基本的 `try...except` 块来捕获潜在的 `IOError`，如果文件因某种原因（如权限问题）无法写入。
+
+运行这个脚本。现在，你的脚本所在目录下应该有一个名为 `names.txt` 的文件，内容如下：
+
+```text
+Alice
+Bob
+Charlie
+```
+
+### 步骤 2：从文件读取姓名
+
+现在，我们来编写代码从 `names.txt` 读取姓名。
+
+```python
+# 指定要读取的文件名
+filename_to_read = "names.txt"
+names_from_file = [] # 初始化一个空列表来存储姓名
+
+try:
+    with open(filename_to_read, 'r') as file_object:
+        for line in file_object:
+            # 移除行首/行尾的空白字符（包括换行符）
+            clean_name = line.strip()
+            names_from_file.append(clean_name) # 将处理后的姓名添加到我们的列表中
+
+    print(f"成功从 {filename_to_read} 读取姓名：")
+    print(names_from_file)
+
+except FileNotFoundError:
+    print(f"错误：未找到文件 {filename_to_read}。")
+except IOError:
+    print(f"错误：无法从文件 {filename_to_read} 读取。")
+```
+
+**说明：**
+
+- 我们使用读取模式（`'r'`）打开 `names.txt`，这是未指定模式时的默认模式，但明确指定是个好习惯。
+- 我们直接遍历 `file_object`。在Python中，遍历文件对象会逐行读取文件。
+- 读取的每行都包含末尾的换行符（`\n`）。我们使用 `line.strip()` 来移除这个字符以及任何其他行首/行尾的空白字符。
+- 处理后的姓名被添加到我们的 `names_from_file` 列表中。
+- 我们包含 `try...except` 块来处理 `FileNotFoundError`（如果 `names.txt` 不存在）以及一般的 `IOError`。
+
+运行这部分代码应该会打印出列表 `['Alice', 'Bob', 'Charlie']`。
+
+### 步骤 3：获取用户输入
+
+接下来，我们提示用户输入一个要添加到列表中的新姓名。
+
+```python
+# 从用户获取一个新姓名
+new_name = input("请输入一个要添加的新姓名： ")
+```
+
+**说明：**
+
+- `input()` 函数会显示提示信息，并等待用户输入内容并按回车键。输入的内容会作为字符串存储在 `new_name` 变量中。
+
+### 步骤 4：添加新姓名
+
+现在，将从用户获取的 `new_name` 添加到我们在步骤 2 中填充的 `names_from_file` 列表中。
+
+```python
+# 将新姓名添加到列表（仅当列表成功读取时）
+if names_from_file: # 检查列表是否不为空（即读取成功）
+    names_from_file.append(new_name)
+    print(f"已添加 '{new_name}'。更新后的列表为：{names_from_file}")
+else:
+    print("无法添加姓名，因为初始列表未加载。")
+```
+
+**说明：**
+
+- 我们使用列表的 `.append()` 方法将 `new_name` 添加到 `names_from_file` 列表的末尾。
+- 我们添加了一个检查 `if names_from_file:`，以确保只有在列表在步骤 2 中成功加载时才尝试添加。
+
+### 步骤 5：将更新后的列表写入新文件
+
+最后，我们将整个修改后的 `names_from_file` 列表写入一个*新*文件 `updated_names.txt`。写入新文件通常比立即覆盖原始文件更安全。
+
+```python
+# 指定更新后列表的新文件名
+updated_filename = "updated_names.txt"
+
+# 将更新后的列表写入新文件（仅当存在姓名时）
+if names_from_file:
+    try:
+        with open(updated_filename, 'w') as file_object:
+            for name in names_from_file:
+                file_object.write(name + "\n") # 写入每个姓名并附带换行符
+        print(f"成功将更新后的姓名写入 {updated_filename}")
+    except IOError:
+        print(f"错误：无法写入文件 {updated_filename}")
+```
+
+**说明：**
+
+- 我们以写入模式（`'w'`）打开 `updated_names.txt`。如果文件不存在，这会创建文件；如果文件存在，则会覆盖它。
+- 我们遍历 `names_from_file` 列表（该列表现在包含了用户添加的姓名）。
+- 在循环内部，`file_object.write(name + "\n")` 将列表中的每个姓名写入文件，并在其后添加一个换行符。
+- 同样，`try...except` 块处理潜在的写入错误。
+
+### 验证
+
+运行所有步骤（或下面的完整脚本）后，检查你的目录。你应该看到：
+
+1. `names.txt`：包含原始的三个姓名。
+2. `updated_names.txt`：包含原始的三个姓名*加上*你输入的姓名。
+
+### 完整脚本
+
+这是将所有步骤组合在一起的完整脚本：
+
+```python
+# --- 配置 ---
+initial_filename = "names.txt"
+updated_filename = "updated_names.txt"
+initial_names_data = ["Alice", "Bob", "Charlie"]
+
+# --- 步骤 1：创建初始文件（可选，如果文件已存在则跳过）---
+try:
+    # 首先尝试读取，以避免文件存在时进行不必要的写入
+    with open(initial_filename, 'r') as f:
+        print(f"{initial_filename} 已存在。跳过创建。")
+except FileNotFoundError:
+    print(f"未找到 {initial_filename}。正在创建...")
+    try:
+        with open(initial_filename, 'w') as file_object:
+            for name in initial_names_data:
+                file_object.write(name + "\n")
+        print(f"成功创建 {initial_filename}")
+    except IOError:
+        print(f"错误：无法写入初始文件 {initial_filename}。正在退出。")
+        exit() # 如果无法创建所需文件，则退出
+
+# --- 步骤 2：从文件读取姓名 ---
+names_from_file = []
+try:
+    print(f"正在从 {initial_filename} 读取姓名...")
+    with open(initial_filename, 'r') as file_object:
+        for line in file_object:
+            clean_name = line.strip()
+            if clean_name: # 避免添加空行（如果有）
+                names_from_file.append(clean_name)
+    print(f"成功读取姓名：{names_from_file}")
+
+except FileNotFoundError:
+    print(f"错误：未找到文件 {initial_filename}。无法继续。")
+    exit() # 如果源文件不存在，则退出
+except IOError:
+    print(f"错误：无法从文件 {initial_filename} 读取。无法继续。")
+    exit() # 其他读取错误时退出
+
+# --- 步骤 3：获取用户输入 ---
+new_name = input("请输入一个要添加的新姓名： ")
+
+# --- 步骤 4：添加新姓名 ---
+# 基本验证：确保用户输入了内容
+if new_name.strip():
+    names_from_file.append(new_name.strip())
+    print(f"已添加 '{new_name.strip()}'。列表现在为：{names_from_file}")
+else:
+    print("未输入有效姓名。列表保持不变。")
+
+# --- 步骤 5：将更新后的列表写入新文件 ---
+print(f"正在将更新后的列表写入 {updated_filename}...")
+try:
+    with open(updated_filename, 'w') as file_object:
+        for name in names_from_file:
+            file_object.write(name + "\n")
+    print(f"成功将更新后的姓名写入 {updated_filename}")
+except IOError:
+    print(f"错误：无法写入文件 {updated_filename}")
+
+print("\n处理完成。请检查 names.txt 和 updated_names.txt。")
+```
+
+这个动手实践示例展示了读取数据、处理数据（这里是添加用户输入）以及写入结果的基本模式。你使用了 `open()` 函数、`with` 语句、文件模式（`'r'`、`'w'`）、`read()`（通过迭代隐式使用）、`write()`、`strip()` 以及基本的错误处理（`try...except`）。掌握这些操作对于构建与存储数据进行交互的应用程序来说是必不可少的。
+
+## 参考资料
+
+- [\`open()\` built-in function](https://docs.python.org/3/library/functions.html#open) — Python Software Foundation (2024)
+  Python 内置 `open()` 函数的官方文档，详细说明其参数和文件操作模式。
+- [Reading and Writing Files](https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  Python 官方教程中关于基础文件 I/O、文件对象和常见操作的章节。
+- [Python Crash Course, 2nd Edition: A Hands-On, Project-Based Introduction to Programming](https://github.com/ehmatthes/pcc_2e) — Eric Matthes (2019)
+  Publisher: No Starch Press
+  一本广泛推荐的 Python 初学者书籍，第 10 章提供了关于 Python 文件和异常的实用指南。
+- [Reading and Writing Files in Python](https://realpython.com/read-write-files-python/) — James Mertz (2023)
+  Publisher: Real Python
+  一篇全面的在线教程，提供了 Python 中读写文本文件的实用示例和解释。

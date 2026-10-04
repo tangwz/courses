@@ -1,0 +1,114 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "integrating-rlhf-pipeline"
+lesson: "scoring-responses-reward-model"
+sourceId: 5177
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-5-integrating-rlhf-pipeline/scoring-responses-reward-model"
+title: "使用奖励模型为回应评分"
+description: "使用训练好的奖励模型为生成文本赋予奖励信号。"
+order: 4
+plots: []
+sourceHash: "14959134f3299ac15545b5601ce58b61f7cdaf623ca60bb7c7980e63aee984bc"
+sourceCorrections: []
+---
+
+对当前策略模型生成的回应进行评分，是强化学习 (reinforcement learning) (RL) 循环中的一个主要过程。这项评估根据所学的人类偏好，判断这些回应的“好坏”程度。奖励模型 (RM)（在第三章中训练）执行这项评估，其输出提供了推动近端策略优化 (PPO) 更新所需的奖励信号。
+
+### 奖励模型的运作方式
+
+回想一下，奖励模型是根据回应对进行训练的，它学会为给定提示下人类偏好的回应赋予更高的标量分数。在强化学习 (reinforcement learning)阶段，我们使用这个学到的函数。对于策略模型生成的每个提示-回应对，奖励模型会接收提示和完整的生成回应作为输入，并输出一个单一的标量值。
+
+
+$$
+\text{分数} = R_{\phi}(\text{提示}, \text{回应})
+$$
+
+
+这里，$R_{\phi}$ 表示由 $\phi$ 参数 (parameter)化的奖励模型。这个 `分数` 根据奖励模型训练期间捕捉到的偏好，衡量了给定 `提示` 下 `回应` 的合意性。更高的分数表明回应预计更符合人类偏好。
+
+> 使用奖励模型获取奖励分数的数据流。
+
+### 将分数转换为PPO的奖励
+
+奖励模型生成的标量分数直接作为PPO算法的奖励信号。在PPO的标准RLHF配置中，目标函数旨在最大化这个奖励，同时使用KL散度项惩罚与初始监督微调 (fine-tuning) (SFT) 策略的较大偏离。PPO更新中使用的每token奖励通常包含这个奖励模型分数（应用于整个序列），并结合当前策略与参考SFT策略之间计算出的KL惩罚。
+
+主要想法是：
+
+
+$$
+\text{总奖励} = \text{奖励模型分数} - \beta \times \text{KL散度惩罚}
+$$
+
+
+这里 $\beta$ 是控制KL惩罚强度的系数。PPO算法随后使用这个总奖励（以及价值函数估计）来计算优势，并更新策略模型的参数 (parameter) ($\theta$)，以便将来生成从奖励模型获得更高分数的回应，同时不会过度偏离SFT模型的行为。
+
+### 实际考量：归一化 (normalization)和缩放
+
+奖励模型的原始分数有时可能具有在训练期间变化的任意范围或分布。将这些原始分数直接输入PPO可能导致不稳定或收敛缓慢。因此，在将奖励分数用于PPO更新计算之前，对每个批次内的分数进行归一化或标准化是一种常见做法。
+
+一种常用技术是**奖励白化**：减去批次均值并除以批次标准差。
+
+
+$$
+\text{归一化分数} = \frac{\text{分数} - \text{均值}(\text{批次分数})}{\text{标准差}(\text{批次分数}) + \epsilon}
+$$
+
+
+其中 $\epsilon$ 是用于数值稳定的小常数。这会将奖励集中在零附近，并将其缩放以使其在批次内具有单位方差，从而使PPO对奖励模型分数的绝对大小不那么敏感，并提升训练稳定性。根据具体的实现和观察到的行为，还可以应用其他缩放函数或截断。
+
+### 实现示例
+
+在实践中，使用像Hugging Face的 `transformers` 和 `trl` 这样的库时，评分涉及将生成的序列通过已加载的奖励模型。假设你拥有已分词 (tokenization)的提示和已生成的回应：
+
+```python
+# 假设：
+# - `reward_model`：已加载的奖励模型（例如，AutoModelForSequenceClassification）
+# - `tokenizer`：用于奖励模型的分词器
+# - `prompts`：提示字符串列表
+# - `responses`：策略生成的对应回应字符串列表
+# - `device`：计算设备（例如，'cuda'）
+
+# 1. 为奖励模型准备输入
+inputs = []
+for prompt, response in zip(prompts, responses):
+    # 根据具体奖励模型架构的要求格式化输入
+    # 通常将提示和回应结合起来，可能通过EOS标记分隔
+    text = prompt + response # 简化示例；具体格式取决于奖励模型训练
+    inputs.append(text)
+
+# 2. 对组合文本进行分词
+encoded_inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt').to(device)
+
+# 3. 从奖励模型获取分数（在评估模式下）
+with torch.no_grad(): # 确保不为奖励模型计算梯度
+    outputs = reward_model(**encoded_inputs)
+    # 原始分数通常是输出logits/张量的第一个元素
+    raw_scores = outputs.logits[:, 0].detach() # 单输出头示例
+
+# 4. (可选但推荐) 对每个批次的分数进行归一化
+mean_score = raw_scores.mean()
+std_score = raw_scores.std()
+normalized_scores = (raw_scores - mean_score) / (std_score + 1e-8) # 白化
+
+# `normalized_scores` 张量现在包含了PPO步骤的奖励
+# 形状: (batch_size,)
+```
+
+> 使用奖励模型为回应评分的简化Python代码示例。
+
+这个评分步骤在强化学习 (reinforcement learning)训练循环中重复执行，提供引导策略生成更符合奖励模型中编码的偏好输出所需的反馈信号。然而，请注意，奖励模型并非完美；它只是人类偏好的一种近似。策略可能学会抓住奖励模型中的弱点，导致“奖励作弊”，这个难题将在第6章和第7章中进一步讨论。
+
+## 参考资料
+
+- [Training Language Models to Follow Instructions with Human Feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: arXiv preprint arXiv:2203.02155; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  描述了完整的RLHF流程，包括奖励模型在为策略优化生成标量奖励信号和KL惩罚中的作用。
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347) — John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov (2017)
+  Journal: arXiv preprint arXiv:1707.06347; DOI: [10.48550/arXiv.1707.06347](https://doi.org/10.48550/arXiv.1707.06347)
+  介绍了PPO算法，该算法是讨论的用于最大化奖励的策略更新机制的核心。
+- [Deep Reinforcement Learning from Human Preferences](https://arxiv.org/abs/1706.03741) — Paul Christiano, Jan Leike, Tom B. Brown, Miljan Martic, Shane Legg, Dario Amodei (2017)
+  Journal: arXiv preprint arXiv:1706.03741; DOI: [10.48550/arXiv.1706.03741](https://doi.org/10.48550/arXiv.1706.03741)
+  描述了如何从人类偏好中训练奖励模型，为RM分数的来源提供了背景。
+- [TRL Documentation](https://huggingface.co/docs/trl/en/index) — Hugging Face (2024)
+  Publisher: Hugging Face
+  提供了实现RLHF的实用示例和文档，包括在`trl`框架中奖励模型如何用于PPO训练。

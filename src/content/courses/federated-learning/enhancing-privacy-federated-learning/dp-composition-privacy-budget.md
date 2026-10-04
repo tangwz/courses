@@ -1,0 +1,107 @@
+---
+course: "federated-learning"
+chapter: "enhancing-privacy-federated-learning"
+lesson: "dp-composition-privacy-budget"
+sourceId: 3553
+sourceUrl: "https://apxml.com/zh/courses/federated-learning/chapter-3-enhancing-privacy-federated-learning/dp-composition-privacy-budget"
+title: "组合定理与隐私预算管理"
+description: "分析隐私损失如何在多轮中累积（组合）以及如何管理整体隐私预算。"
+order: 3
+plots: ["plots/3553-0.json"]
+sourceHash: "b02be5f3dd2d0a75765e2531ce655c61113a1ba481f2f9ec23365036d5b4d1e4"
+sourceCorrections: []
+---
+
+在联邦学习的单轮中应用差分隐私机制（如添加噪声）为该特定交互提供了一个 $(\epsilon, \delta)$ 保证。然而，联邦学习通常涉及多轮通信，有时是数百甚至数千轮。每轮都可能泄露少量信息。此时出现了一个重要问题：这些多轮中，整体隐私损失是如何累积的？仅仅说明每轮的保证是不够的；我们需要明白整个训练过程中的总隐私成本。组合定理在此处变得非常重要。
+
+### 理解隐私损失累积
+
+设想重复查询一个数据库（或者在我们的场景中，重复接收来自客户端数据的带噪声聚合更新）使用差分隐私机制。每次查询都会带来一些隐私损失。组合定理为一系列此类查询或机制后的总隐私损失设定了上限。
+
+### 基本顺序组合
+
+分析组合效果最简单的方法是基本顺序组合。它表明，如果您应用 $k$ 个机制，而第 $i$ 个机制是 $(\epsilon_i, \delta_i)$-差分隐私的，那么所有 $k$ 个机制的序列是 $(\sum_{i=1}^k \epsilon_i, \sum_{i=1}^k \delta_i)$-差分隐私的。
+
+如果所有机制都相同，每次提供 $(\epsilon, \delta)$-差分隐私，那么在 $k$ 轮后，总隐私损失上限为 $(k\epsilon, k\delta)$。
+
+
+$$
+\epsilon_{总} \le k \epsilon_{轮}
+$$
+
+
+$$
+\delta_{总} \le k \delta_{轮}
+$$
+
+
+尽管简单且易于理解，这种线性累积通常会导致一个宽松的上限。在许多轮次（$k$ 较大）的典型联邦学习场景中，$k\epsilon$ 会迅速变得非常大，这表明整体隐私保证较弱，除非每轮的 $\epsilon_{轮}$ 设置得极小。然而，将 $\epsilon_{轮}$ 设置得过小通常需要添加过多噪声，从而显著降低模型效用。对于需要数百轮的实用联邦学习系统，基本组合通常过于悲观。
+
+### 高级组合
+
+幸运的是，在高级组合的框架下存在更紧密的上限。这些定理运用了隐私损失并非以最坏情况线性累加的特点，尤其是在 $\epsilon$ 参数 (parameter)方面。
+
+高级组合中的一个标准结果（通过分析矩会计法或使用如雷尼差分隐私等技术得出）表明对于一个由 $k$ 个机制组成的序列，每个机制都满足 $(\epsilon, \delta)$-差分隐私，那么组合机制对任意 $\delta'' > 0$ 满足 $(\epsilon', \delta')$-差分隐私，其关系如下：
+
+
+$$
+\epsilon' \approx \sqrt{2k \ln(1/\delta'')} \epsilon + k \epsilon (e^\epsilon - 1)
+$$
+
+
+$$
+\delta' = k\delta + \delta''
+$$
+
+
+我们来分析一下 $\epsilon'$ 的表达式：
+
+- 对于小 $\epsilon$ 值，主导项通常是第一项：$\sqrt{2k \ln(1/\delta'')} \epsilon$。注意其 $\sqrt{k}$ 的依赖关系。这表示总 $\epsilon'$ 随着轮次 $k$ 的增加呈现大致的次线性增长，而非像基本组合那样线性增长。
+- 第二项 $k \epsilon (e^\epsilon - 1)$ 捕捉了高阶效应。对于小的 $\epsilon$ 值，$e^\epsilon - 1 \approx \epsilon$，因此此项的表现类似于 $k\epsilon^2$。
+- $\delta''$ 是一个附加参数，表示隐私保证失败的小概率，除了累积的基准 $\delta$ 值 ($k\delta$) 之外。它通常选择为较小的值，例如小于 $1/N$，其中 $N$ 是数据集大小。
+
+这意味着一个重要的结果：高级组合允许隐私损失以更有利的方式累积，尤其是在 $\epsilon$ 参数方面。与基本组合相比，在相同的总预算 $\epsilon_{总}$ 下，我们可以承担更大的每轮 $\epsilon_{轮}$，从而可能带来更好的模型效用。
+
+
+
+![总Epsilon增长：基本组合与高级组合](plots/3553-0.json)
+
+
+
+> 比较在 $k$ 轮中，使用基本（线性）和高级（次线性）组合的总隐私损失 ($\epsilon$) 累积情况，假设高级计算中 $\epsilon_{轮}=0.1$、$\delta_{轮}=10^{-5}$ 和 $\delta''=10^{-6}$。高级组合在 $k$ 值较大时会得到明显更紧的上限。
+
+现代隐私核算方法，通常基于雷尼差分隐私（RDP），提供了在组合下精确追踪隐私损失的框架。RDP 使用不同的函数（RDP 曲线）来衡量隐私损失，其组合方式非常自然。像 Google 的 `dp-accounting` 这样的库实现了这些技术，使开发人员能够准确计算在多轮中运行的复杂算法（如 DP-FedAvg）的 $(\epsilon, \delta)$-差分隐私保证。
+
+### 隐私预算的管理
+
+整个联邦学习过程中可接受的总隐私损失被称为**隐私预算**，通常表示为 $(\epsilon_{总}, \delta_{总})$。该预算代表了我们愿意承受的最大累积隐私泄露。选择合适的 $\epsilon_{总}$ 和 $\delta_{总}$ 值很大程度上取决于数据的敏感度、应用场景以及任何法规要求（如 GDPR 或 HIPAA）。通常的做法是将 $\epsilon_{总}$ 控制在个位数（例如 1 到 10），并将 $\delta_{总}$ 设置得非常小（例如小于 $1/N_{客户端}$，其中 $N_{客户端}$ 是客户端数量）。
+
+一旦为例如 $T$ 轮通信设置了总预算 $(\epsilon_{总}, \delta_{总})$，任务就变为**预算分配**：即根据组合定理，决定每轮允许多少隐私损失 $(\epsilon_{轮}, \delta_{轮})$，以使总损失保持在预算内。
+
+存在几种策略：
+
+1. **均匀分配：** 最简单的方法是大致将预算平均分配到各轮。利用高级组合的直觉（$\epsilon \propto \sqrt{k}$），可以设置 $\epsilon_{轮} \approx \epsilon_{总} / \sqrt{T}$ 和 $\delta_{轮} = \delta_{总} / T$。这需要在训练前确定总轮次 $T$。
+2. **非均匀分配：** 在模型更新量较大且可能对收敛更有用的初始轮次，花更多预算（允许更大的 $\epsilon_{轮}$）可能更有益，而在微调 (fine-tuning)的后期轮次则花更少预算（更小的 $\epsilon_{轮}$）。这需要仔细的规划和分析。
+3. **自适应分配：** 每轮预算可以根据训练进度、收敛速度或其他运行时因素动态调整。这更为复杂，但可能更有效地优化隐私-效用权衡。
+
+### 实际考量
+
+- **核算工具：** 手动应用组合定理可能复杂且容易出错，特别是在涉及 RDP 等高级技术时。强烈建议使用专门的隐私核算库。这些库会接收每轮使用的差分隐私机制参数 (parameter)（例如，差分隐私随机梯度下降 (gradient descent)/差分隐私联邦平均中的噪声乘数 $\sigma$、裁剪范数 $C$、采样概率 $q$）以及轮次数量，并计算出最终的 $(\epsilon, \delta)$ 值。
+- **参数调优：** 添加的噪声（例如，相对于裁剪范数 $C$ 的噪声标准差 $\sigma$）、每轮隐私损失 $\epsilon_{轮}$ 和模型效用之间存在直接关系。噪声较低通常意味着更好的效用，但 $\epsilon_{轮}$ 较高，会更快地消耗预算。噪声较高提供更好的每轮隐私（较低的 $\epsilon_{轮}$），但可能会损害收敛性或最终准确性。在实现差分隐私联邦学习系统时，在遵守总隐私预算 $(\epsilon_{总}, \delta_{总})$ 的同时调整这些参数（$\sigma$、$C$、$T$、批量大小、学习率）是一个核心挑战。
+- **预算耗尽：** 一旦预设的隐私预算在 $T$ 轮后耗尽，训练过程必须停止发布差分隐私输出以保持保证。
+
+了解并正确应用组合定理对于构建在整个训练期间具有有意义、可量化 (quantization)隐私保证的联邦学习系统具有根本意义。高级组合和专门的核算工具对于在多轮联邦过程中实现实用的隐私-效用权衡是必不可少的。
+
+## 参考资料
+
+- [The Algorithmic Foundations of Differential Privacy](https://www.nowpublishers.com/article/Details/TCS-042) — Cynthia Dwork and Aaron Roth (2014)
+  Journal: Foundations and Trends® in Theoretical Computer Science; Publisher: Now Publishers; Volume: 9; Pages: 211-407; DOI: [10.1561/0400000042](https://doi.org/10.1561/0400000042)
+  一本基础教材，确立了差分隐私的原则，包括基本和高级组合定理。
+- [Deep Learning with Differential Privacy](https://doi.org/10.1145/2976749.2978318) — Martín Abadi, Andy Chu, Ian Goodfellow, H. Brendan McMahan, Ilya Mironov, Kunal Talwar, Li Zhang (2016)
+  Journal: Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications Security; Publisher: Association for Computing Machinery; Pages: 308-318; DOI: [10.1145/2976749.2978318](https://doi.org/10.1145/2976749.2978318)
+  引入了用于深度学习中更严格隐私组合界限的矩会计方法，与多轮联邦学习相关。
+- [Renyi Differential Privacy](https://doi.org/10.1145/3035918.3035925) — Ilya Mironov, Kunal Talwar, Li Zhang (2017)
+  Journal: Proceedings of the 36th ACM SIGMOD-SIGACT-SIGART Symposium on Principles of Database Systems; Publisher: ACM; Pages: 335-346; DOI: [10.1145/3035918.3035925](https://doi.org/10.1145/3035918.3035925)
+  提出了一种替代的隐私度量方法--Rényi差分隐私（RDP），它简化了组合下的隐私核算。
+- [Google's Differential Privacy Library](https://github.com/google/differential-privacy) — Google (2024)
+  一个开源库，提供差分隐私计算的实用工具，包括高级隐私核算，如本节内容所述。

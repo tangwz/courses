@@ -1,0 +1,76 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "scalable-data-feature-engineering"
+lesson: "managing-data-lakes-warehouses-ai"
+sourceId: 7021
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-5-scalable-data-feature-engineering/managing-data-lakes-warehouses-ai"
+title: "AI数据湖和数据仓储管理"
+description: "组织和管理大型数据存储库，以有力支持分析和机器学习工作负载。"
+order: 5
+plots: []
+sourceHash: "8799cdad26add498dc6cf8fd7ba44cf8291798a8ffc80c31f81e06598e82fe49"
+sourceCorrections: []
+---
+
+为了有效地转换AI应用所需的数据，一个结构良好、管理规范的基础必不可少。现代AI所需的数据量和类型繁多，从PB级图像到实时事件流，都要求有一个有效的存储和管理策略。数据湖和数据仓库正是在此背景下发挥作用。它们过去有所区别，但在AI应用中，它们的作用正趋于统一，促成了支持整个机器学习 (machine learning)生命周期的混合架构的出现。
+
+传统的数据湖是一个集中式存储库，允许你以任何规模存储所有结构化和非结构化数据。对于机器学习，其主要优势是“读时模式”。你可以摄取原始数据，如图像、日志或传感器读数，而无需将其强制转换为预定义的结构。这种灵活性对数据探索分析以及训练能直接从原始输入学习特征的深度学习 (deep learning)模型来说，很有帮助。
+
+相比之下，数据仓库优化用于快速查询和分析结构化、已筛选的数据。它采用“写时模式”方法，数据在加载前会进行清洗、转换和结构化。对于AI，数据仓库常用于存储精心准备的训练集、聚合特征或与模型性能相关的业务智能数据。
+
+### Lakehouse架构的兴起
+
+依赖两个独立的系统——用于原始数据的数据湖和用于结构化数据的数据仓库——通常会产生数据孤岛和操作复杂性。一种更现代的方法，尤其适用于AI，是**Lakehouse**架构。这种设计在数据湖的低成本、开放格式存储之上，直接实现数据仓库式的功能，例如事务和模式强制。
+
+这种统一方法通常通过一个多层数据精炼过程来实现，普遍称为“奖章架构”。
+
+> Lakehouse中的奖章架构。数据从原始源头流入，通过青铜、白银和黄金层逐步精炼，并从一个单一、统一的系统为多种工作负载提供服务。
+
+- **青铜层：** 这是来自源系统的原始数据着陆区。数据以其原始格式存储，几乎不进行转换，提供完整且可审计的历史档案。该层是重建下游表的可靠数据源。
+- **白银层：** 来自青铜层的数据经过清洗、验证、去重并规范化，形成更结构化的格式，通常使用Apache Parquet等列式存储。数据科学家和机器学习 (machine learning)工程师通常使用这一层进行模型训练，因为它代表了一个可靠、可查询的真实数据源。
+- **黄金层：** 白银层的数据会进一步聚合和转换成业务级表或项目特定特征集。该层针对分析和报告进行了优化，也是你可以为特征存储存储高价值特征的地方。
+
+这种分层方法可以避免数据湖变成难以管理的“数据沼泽”。每层都有明确的目的和质量标准。
+
+### 开放表格式：Lakehouse 的驱动力
+
+促成Lakehouse架构的技术是开放表格式。像**Apache Iceberg**、**Apache Hudi**和**Delta Lake**这样的格式，它们位于你的对象存储（如S3或GCS）和底层数据文件（如Parquet）之上。它们为你的数据湖带来了核心数据库功能：
+
+- **ACID事务：** 它们允许多个数据管道同时可靠地读写同一张表，而不会损坏数据。这对于摄取、ETL和训练作业可能同时运行的生产环境来说是必不可少的。
+- **时间旅行（数据版本管理）：** 你可以查询表在特定时间点存在的快照。此功能对于机器学习 (machine learning)的可重现性非常有帮助。如果你需要调试模型的预测，或使用最初训练时的准确数据重新训练它，你只需使用时间戳或版本号查询数据。这直接支持了之前用DVC等工具讨论的数据版本管理原则，但在整个湖的PB级规模上实现了这一点。
+- **模式演变：** 这些格式允许你安全地添加列、重命名字段或更改数据类型，而无需重写整个数据集或破坏下游管道。系统会随时间优雅地处理模式更改。
+
+例如，要使用Spark访问Delta Lake表中数据集的先前版本，代码很简单：
+
+```python
+# 读取最新版本的数据
+df = spark.read.format("delta").load("/path/to/my_table")
+
+# 读取版本3时的数据
+df_version3 = spark.read.format("delta").option("versionAsOf", 3).load("/path/to/my_table")
+
+# 或者读取特定时间点的数据
+df_historical = spark.read.format("delta").option("timestampAsOf", "2023-10-26T10:00:00.000Z").load("/path/to/my_table")
+```
+
+这种简单的API简化了大量复杂性，使大规模机器学习中的可重现数据访问成为现实。
+
+### 大规模存储库中的治理与发现
+
+如果团队无法找到、理解和信任其中的数据，那么一个拥有大量数据的存储库就毫无用处。Lakehouse环境中的治理围绕三个主要方面：
+
+1. **集中式元数据存储：** 像Hive Metastore或AWS Glue Data Catalog这样的元数据存储，充当所有数据集的中央模式注册表。它存储有关表模式、数据位置和分区的元数据。当像Spark或Presto这样的框架查询一个表时，它首先查询元数据存储以了解数据的结构和位置。这会将计算层与存储层解耦，并提供数据发现的单一入口。
+2. **统一访问控制：** 你必须能够定义细粒度的访问策略。例如，数据科学团队可能对白银表有只读访问权限，而数据工程团队有写入权限。财务团队应该只能查询不含个人身份信息（PII）的聚合黄金表。像Databricks Unity Catalog这样的现代Lakehouse平台提供了在整个系统范围内管理表、行和列级别的这些权限的工具。
+3. **数据血缘：** 随着数据从青铜层流向白银层再到黄金层，然后进入模型，追踪其完整路径是很重要的。自动化数据血缘工具可以解析查询日志和表元数据以创建依赖图。此图对于影响分析（例如：“如果我更改此列，哪些仪表板和模型会受影响？”）以及调试数据质量或模型性能问题非常有帮助。
+
+通过Lakehouse架构组织数据存储并实施强有力的治理，你将创建一个可扩展、可靠且可审计的基础。这个管理良好的存储库将成为你构建高吞吐量 (throughput)数据处理管道和一致特征存储的依据，这些是任何生产AI系统的核心组成。
+
+## 参考资料
+
+- [Delta Lake Documentation](https://delta.io/) — Delta Lake Project Contributors (2024)
+  官方信息，介绍了开源Delta Lake项目的能力，例如ACID事务、模式演变和时间旅行。
+- [Apache Iceberg Documentation](https://iceberg.apache.org/) — Apache Iceberg Project Contributors (2024)
+  官方信息，介绍了Apache Iceberg，这是一种在对象存储上提供可靠、高性能表功能的开放表格式。
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108269/) — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media; Pages: 447
+  该书提供了数据工程指南，涵盖数据湖、数据仓库和湖仓架构，以及数据治理。

@@ -1,0 +1,123 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "building-first-autoencoder-feature-extraction"
+lesson: "optimizer-selection-learning-rate"
+sourceId: 6459
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-3-building-first-autoencoder-feature-extraction/optimizer-selection-learning-rate"
+title: "优化器选择和学习率配置"
+description: "选择合适的优化器（如Adam、SGD）并配置训练自动编码器的学习率。"
+order: 6
+plots: ["plots/6459-0.json"]
+sourceHash: "c23cbb309e3da7176de728bf849708ffd2dbf62b598a0e34501eb89c71312973"
+sourceCorrections: []
+---
+
+在定义了自动编码器的架构并选择了合适的损失函数 (loss function)来量化 (quantization)重建误差之后，下一步重要步骤是选择优化算法并配置其学习率。优化器是推动学习过程的引擎。它迭代更新自动编码器的权重 (weight)，以最小化所选损失函数，引导模型学习数据的有效压缩表示。
+
+### 选择优化器
+
+优化器的作用是在复杂的高维损失曲面上找到方向，并找到一组能带来良好重建效果，并因此产生有用的特征的权重 (weight)。有多种优化器可用，每种都有其特点。对于自动编码器，两个常用且有效的选择是：
+
+1. **动量随机梯度下降 (gradient descent) (SGD) with Momentum:**
+   标准SGD根据一小批训练数据的损失函数 (loss function)梯度更新权重。虽然简单，但它收敛缓慢，可能陷入次优局部最小值，或在最优解附近震荡。
+   动量有助于加速SGD在相关方向上前进并抑制震荡。它将前一个更新向量 (vector)的一小部分 $\gamma$ 添加到当前的梯度步长中。更新规则是：
+   $v_t = \gamma v_{t-1} + \eta \nabla_{\theta} J(\theta)$ $\theta = \theta - v_t$
+   这里，$v_t$ 是时间 $t$ 时的更新向量，$\gamma$ 是动量系数（例如0.9），$\eta$ 是学习率，$\nabla_{\theta} J(\theta)$ 是损失函数 $J$ 对参数 (parameter) $\theta$ 的梯度。动量SGD是一个可靠的选择，尤其是在计算资源受限或自动编码器结构较简单的情况下。
+2. **Adam (自适应矩估计):**
+   Adam通常是深度学习 (deep learning)模型的首选优化器，包括自动编码器，这归因于其效率和在各种问题上的良好表现。它为每个参数独立调整学习率，利用梯度的第一和第二矩估计。
+   核心更新过程包括：
+
+   - 计算有偏一阶矩（均值）估计 $m_t$：
+     $m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$
+   - 计算有偏二阶矩（非中心方差）估计 $v_t$：
+     $v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$
+     其中 $g_t$ 是时间步 $t$ 的梯度，$\beta_1$（例如0.9）和 $\beta_2$（例如0.999）是这些矩估计的指数衰减率。
+   - 对这些估计进行偏差校正：
+     $\hat{m}_t = m_t / (1-\beta_1^t)$ $\hat{v}_t = v_t / (1-\beta_2^t)$
+   - 参数更新：
+     $\theta_{t+1} = \theta_t - \frac{\eta}{\sqrt{\hat{v}_t} + \epsilon} \hat{m}_t$
+     这里，$\eta$ 是学习率，$\epsilon$（例如 $10^{-8}$）是一个用于数值稳定的小常数。与SGD相比，Adam通常对初始学习率的调整要求较低。
+3. **RMSprop (均方根传播):**
+   RMSprop也为每个参数调整学习率。它将学习率除以平方梯度的指数衰减平均值。这有助于归一化 (normalization)梯度，并且对非平稳目标或噪声梯度有效。
+   更新规则包括：
+
+   - 累积平方梯度：
+     $E[g^2]_t = \rho E[g^2]_{t-1} + (1-\rho)g_t^2$
+     其中 $\rho$ 是衰减率（例如0.9）。
+   - 参数更新：
+     $\theta_{t+1} = \theta_t - \frac{\eta}{\sqrt{E[g^2]_t} + \epsilon} g_t$
+     RMSprop在实践中通常表现良好，可以是Adam的一个不错的替代方案。
+
+初次尝试时，Adam通常是一个不错的选择。其自适应特性通常能带来更快的收敛和良好的结果，使用默认超参数 (hyperparameter)设置即可。然而，对于特定数据集或架构，尝试使用动量SGD或RMSprop有时可以获得更好的性能。
+
+### 学习率配置
+
+可以说，学习率 ($\eta$) 是优化器最需要调整的超参数 (parameter) (hyperparameter)。它决定了每次权重 (weight)更新迭代中的步长。
+
+- **学习率过高** 可能导致优化器越过损失函数 (loss function)最小值，导致训练不稳定，损失剧烈波动甚至发散。
+- **学习率过低** 会导致收敛非常缓慢。优化器将采取微小步长，需要许多周期才能达到良好解决方案，并且可能更容易陷入浅层局部最小值。
+
+
+
+![学习率对损失的影响](plots/6459-0.json)
+
+
+
+> 学习率对训练损失的影响。选择得当的学习率（绿色）可带来稳定的收敛。学习率过高（红色）可能导致损失波动或发散。学习率过低（蓝色）会导致收敛非常缓慢。
+
+Adam的常用初始学习率为 $0.001$，SGD为 $0.01$。这些是良好的起点，但通常需要进行调整。
+
+#### 学习率调度
+
+训练过程中不使用固定学习率，通常有益的做法是随着训练的进行逐渐降低学习率。这使得在距离最优解较远时可以迈出更大的步子，而在后期采取更小、更精细的步长，以达到更好的最小值。这个过程被称为学习率退火或调度。常见的调度方法包括：
+
+- **步长衰减:** 每隔固定的周期数（epoch），将学习率按一定因子（例如0.1）降低。例如，从 $\eta=0.001$ 开始，50个周期后降至 $\eta=0.0001$，75个周期后降至 $\eta=0.00001$。
+- **指数衰减:** 学习率呈指数衰减：$lr = lr_0 \cdot e^{-kt}$，其中 $lr_0$ 是初始学习率，$k$ 是衰减率，$t$ 是迭代次数或周期数。
+- **ReduceLROnPlateau:** 这是一种自适应调度方法。您会监测一个指标，通常是验证损失。如果这个指标在一定数量的周期（耐心值）内没有改善，学习率就会按一个因子减小。这是一种非常实用且广泛使用的方法。PyTorch为此提供了 `torch.optim.lr_scheduler.ReduceLROnPlateau`。
+
+例如，在PyTorch中，您可以这样实现 `ReduceLROnPlateau`：
+
+```python
+# import torch.optim as optim
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+# optimizer = optim.Adam(model.parameters(), lr=0.001)
+# scheduler = ReduceLROnPlateau(
+#     optimizer,
+#     mode='min',        # 监测一个需要最小化的量（例如，验证损失）
+#     factor=0.2,        # 学习率将按此因子减少。new_lr = lr * factor
+#     patience=5,        # 在此周期数内没有改善后，学习率将减少。
+#     min_lr=0.00001,    # 学习率的下限。
+#     verbose=True       # 当学习率更新时打印消息
+# )
+
+# # 在您的训练循环中，验证步骤之后：
+# # scheduler.step(val_loss) # 将验证损失传递给调度器
+```
+
+此代码片段展示了如何配置调度器。它监测 `val_loss`，如果在5个周期内没有改善，则将学习率降低0.2倍，并设置一个最小学习率。
+
+### 实用建议
+
+- **从Adam开始:** 对于您的第一个自动编码器，Adam及其默认参数 (parameter)（例如，学习率 $\eta=0.001$，$\beta_1=0.9$，$\beta_2=0.999$）是一个有力的起点。它对初始学习率的选择通常不如SGD敏感。在PyTorch中，您只需初始化 `optimizer = torch.optim.Adam(model.parameters(), lr=0.001)`。
+- **监测训练过程:** 始终监测您的训练损失和验证损失。这对于发现与优化器和学习率相关的问题是必不可少的。如果损失下降非常缓慢，您的学习率可能过低。如果它不稳定或正在增加，则可能过高。
+- **尝试不同的学习率:** 如果训练进展不顺利，尝试调整学习率。通常测试的学习率范围从 $10^{-2}$ 到 $10^{-5}$。作为第一步，可以尝试将当前学习率减半或加倍。
+- **使用学习率调度:** 采用像 `ReduceLROnPlateau` 这样的学习率调度可以显著提高训练稳定性，并帮助您的模型在训练过程中无需手动调整学习率即可获得更好的性能。
+- **优化器参数:** 虽然Adam的默认 $\beta_1, \beta_2$ 或SGD的动量通常效果良好，但它们也可以进行调优。然而，首先关注学习率，因为它通常影响最大。
+
+选择合适的优化器和微调 (fine-tuning)学习率都是迭代过程。通过理解这些组件如何工作以及仔细观察自动编码器的训练动态，您可以有效地引导模型从数据中学习有意义的特征。下一节将讨论如何更详细地监测这个训练过程。
+
+## 参考资料
+
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR 2015); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，提供了其理论基础和实证评估。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  涵盖了深度学习的基本概念，包括带有动量的SGD、RMSprop和Adam等各种优化算法，以及学习率策略。
+- [An overview of gradient descent optimization algorithms](https://arxiv.org/abs/1609.04747) — Sebastian Ruder (2016)
+  Journal: arXiv preprint arXiv:1609.04747; DOI: [10.48550/arXiv.1609.04747](https://doi.org/10.48550/arXiv.1609.04747)
+  综述了各种梯度下降优化算法，解释了它们的机制、优点和挑战。
+- [torch.optim.lr_scheduler.ReduceLROnPlateau](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html) — PyTorch Development Team (2023)
+  Publisher: PyTorch Foundation
+  PyTorch官方文档，详细说明了`ReduceLROnPlateau`学习率调度器的参数和用法。

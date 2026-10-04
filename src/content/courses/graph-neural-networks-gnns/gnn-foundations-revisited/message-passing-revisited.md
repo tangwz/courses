@@ -1,0 +1,87 @@
+---
+course: "graph-neural-networks-gnns"
+chapter: "gnn-foundations-revisited"
+lesson: "message-passing-revisited"
+sourceId: 2658
+sourceUrl: "https://apxml.com/zh/courses/graph-neural-networks-gnns/chapter-1-gnn-foundations-revisited/message-passing-revisited"
+title: "消息传递框架再看"
+description: "分析广义消息传递框架及其对图神经网络表达能力的理论局限性。"
+order: 2
+plots: []
+sourceHash: "7bb2d0d700f92d290e80c745f96e7efa0270e5cf25ef16440b01424c1110a8af"
+sourceCorrections: []
+---
+
+大多数图神经网络 (neural network)的核心是消息传递原理。这种机制允许图中的节点迭代地聚合来自其局部邻域的信息，有效地让网络学习到同时包含节点特征和图拓扑的表示。虽然你可能从入门材料中了解过基本内容，但我们现在将更正式地审视广义消息传递框架，并讨论其固有的局限性，特别是关于表达能力方面。
+
+### 广义消息传递框架
+
+许多流行的图神经网络 (neural network)架构可以统一到一个共同的框架下。在这个框架中，每个节点 $v$ 在第 $k$ 层基于其自身状态和来自前一层 $k-1$ 的邻居节点 $\mathcal{N}(v)$ 的状态来更新其隐藏状态 $\mathbf{h}_v$。第 $k$ 层单个节点 $v$ 的更新过程通常由两个函数定义：`AGGREGATE` 和 `UPDATE`：
+
+
+$$
+\mathbf{h}_v^{(k)} = \text{更新}^{(k)} \left( \mathbf{h}_v^{(k-1)}, \text{聚合}^{(k)} \left( \{ \mathbf{h}_u^{(k-1)} : u \in \mathcal{N}(v) \} \right) \right)
+$$
+
+
+我们来分析一下这些组成部分：
+
+- $\mathbf{h}_v^{(k)} \in \mathbb{R}^{d_k}$: 节点 $v$ 在第 $k$ 层的特征向量 (vector)（或隐藏状态）。$d_k$ 是该层的维度。$\mathbf{h}_v^{(0)}$ 通常是初始节点特征向量。
+- $\mathcal{N}(v)$: 节点 $v$ 的邻居集合。存在变体，例如包含 $v$ 自身（添加自环）。
+- $\text{聚合}^{(k)}$: 这个函数结合了节点 $v$ 的邻居的特征向量。`AGGREGATE` 函数的一个重要要求是**排列不变性**。由于邻域中的节点没有自然的顺序，聚合函数无论邻居特征的处理顺序如何，都必须产生相同的输出。常见选择包括按元素求和、平均值或最大值操作。
+  - `SUM`: $\text{求和} = \sum_{u \in \mathcal{N}(v)} \mathbf{h}_u^{(k-1)}$
+  - `MEAN`: $\text{平均} = \frac{1}{|\mathcal{N}(v)|} \sum_{u \in \mathcal{N}(v)} \mathbf{h}_u^{(k-1)}$
+  - `MAX`: $\text{最大值} = \max_{u \in \mathcal{N}(v)} \{ \mathbf{h}_u^{(k-1)} \}$ (按元素最大值)
+- $\text{更新}^{(k)}$: 这个函数接受聚合后的邻域信息和节点自身的先前状态 $\mathbf{h}_v^{(k-1)}$，来计算节点的新状态 $\mathbf{h}_v^{(k)}$。此函数通常使用神经网络层实现，例如简单的线性变换后接非线性激活，或更复杂的函数，如多层感知机（MLPs）或循环神经网络（RNN）单元（如GRU）。
+
+不同的图神经网络模型通过对 `AGGREGATE` 和 `UPDATE` 的具体选择来实例化这个框架。例如：
+
+- **图卷积网络（GCN）：** 通常使用归一化 (normalization)求和（包含自环的平均聚合），然后进行线性变换和非线性激活。
+- **GraphSAGE：** 明确地对邻居进行采样，并允许使用各种聚合器（平均、最大池化、LSTM）。
+- **图同构网络（GIN）：** 使用求和聚合与多层感知机结合作为更新函数，这被证明在简单聚合器中具有最大的表达能力（我们接下来将讨论）。
+
+### 表达能力及其局限性
+
+尽管灵活，但此消息传递框架在区分不同图结构的能力上存在根本性的局限。图神经网络 (neural network)的**表达能力**是指它将非同构图（结构不同的图）映射到不同表示或输出的能力。理想情况下，一个有能力的图神经网络应该能够区分任何两个结构上不相同的图。
+
+我们如何衡量这一点？一个常用的衡量标准是图同构的**Weisfeiler-Lehman (WL) 测试**。具体来说，1-WL 测试（最简单的变体）为标准消息传递图神经网络的区分能力提供了一个上限。
+
+### 1-WL 测试
+
+1-WL 测试是一种迭代算法，其目的是判断两个图是否**非**同构。它通过为每个节点分配一个初始“颜色”（或标签）（通常基于节点度或初始特征），然后根据邻居的颜色迭代地细化这些颜色来工作：
+
+1. **初始化：** 为每个节点 $v$ 分配一个初始颜色 $c_v^{(0)}$。
+2. **迭代（$k=1, 2, ...$）：** 对于每个节点 $v$，将其邻居在上一轮迭代中的颜色收集到一个多重集合中：$M_v^{(k-1)} = \{ \{ c_u^{(k-1)} : u \in \mathcal{N}(v) \} \}$。
+3. **哈希：** 根据节点的先前颜色 $c_v^{(k-1)}$ 和邻居颜色的多重集合 $M_v^{(k-1)}$ 分配一个新的颜色 $c_v^{(k)}$。这通常通过哈希函数 $H$ 完成，该函数将唯一的对 $(c_v^{(k-1)}, M_v^{(k-1)})$ 映射到唯一的新颜色：$c_v^{(k)} = H(c_v^{(k-1)}, M_v^{(k-1)})$。
+4. **收敛：** 重复步骤 2 和 3，直到图中的颜色集合收敛（不再生成新的颜色）。
+5. **比较：** 如果两个图 G1 和 G2 的最终节点颜色的直方图（计数）相同，则 1-WL 测试认为它们可能同构。如果直方图在任何迭代中不同，则这些图明确是非同构的。
+
+### 关联：消息传递即 1-WL
+
+当比较消息传递框架和 1-WL 测试的更新步骤时，它们之间的关联变得清晰。图神经网络 (neural network)中的 `AGGREGATE` 函数有效地计算了邻居特征多重集合 $\{\mathbf{h}_u^{(k-1)} : u \in \mathcal{N}(v)\}$ 的表示。`UPDATE` 函数随后将此聚合信息与节点自身的先前状态 $\mathbf{h}_v^{(k-1)}$ 结合，以产生新的状态 $\mathbf{h}_v^{(k)}$。
+
+这个过程直接与 1-WL 测试的邻居颜色聚合（多重集合 $M_v^{(k-1)}$）以及随后与节点当前颜色 $c_v^{(k-1)}$ 的哈希处理并行，以生成新颜色 $c_v^{(k)}$。
+
+**Morris 等人 (2019) 和 Xu 等人 (2019) 正式证明的重要观点是，标准消息传递图神经网络（使用排列不变聚合器，如求和、平均、最大值）的表达能力不能超过 1-WL 测试。** 如果 `AGGREGATE` 和 `UPDATE` 函数是单射的（意味着它们将不同的输入映射到不同的输出，如同 1-WL 中的完美哈希函数），那么图神经网络就能达到与 1-WL 测试等同的最大表达能力（就像 GIN 所做的那样）。然而，它们无法超过它。
+
+### 1-WL 限制的影响
+
+这个理论上限意味着，任何 1-WL 测试无法区分的两种图结构，标准消息传递图神经网络 (neural network)也无法区分。1-WL 测试已知在某些类型的图上会失效，例如无法区分一些正则图（所有节点具有相同度数）。
+
+> 两个非同构图（一个 6 环和两个不相交的 3 环）的例子，如果初始节点特征一致，1-WL 测试以及标准消息传递图神经网络无法区分它们。两者都是 2-正则图。
+
+如果所有节点都以相同的初始特征向量 (vector) $\mathbf{h}^{(0)}$ 开始，经过一层消息传递后，两个图中的所有节点都将具有相同的表示（因为每个节点都有两个特征为 $\mathbf{h}^{(0)}$ 的邻居）。这种相同性会持续到后续层。因此，纯粹基于此框架的图神经网络无法在图分类等任务中区分这些结构。
+
+理解这一局限性很重要。它促使我们发展出更强大的图神经网络架构，这些架构常被称为“高阶”图神经网络或结合子图信息的模型，它们旨在克服基本消息传递和 1-WL 测试的限制。我们将在后续章节中审视一些先进的架构和技术。目前，认识到标准消息传递框架的限制，为理解这些更复杂的模型提供了扎实的根基。
+
+## 参考资料
+
+- [Relational Inductive Biases, Deep Learning, and Graph Networks](https://arxiv.org/abs/1806.01261) — Peter W. Battaglia, Jessica B. Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinicius Zambaldi, Mateusz Malinowski, Andrea Tacchetti, David Raposo, Adam Santoro, Ryan Faulkner, Caglar Gulcehre, Francis Song, Andrew Ballard, Justin Gilmer, George Dahl, Ashish Vaswani, Kelsey Allen, Charles Nash, Victoria Langston, Chris Dyer, Nicolas Heess, Daan Wierstra, Pushmeet Kohli, Matt Botvinick, Oriol Vinyals, Yujia Li, Razvan Pascanu, Thomas P. Lillicrap (2018)
+  Journal: arXiv preprint arXiv:1806.01261; DOI: [10.48550/arXiv.1806.01261](https://doi.org/10.48550/arXiv.1806.01261)
+  此论文定义了统一的“图网络”框架，涵盖了消息传递机制并形式化了其组成部分。
+- [How Powerful are Graph Neural Networks?](https://arxiv.org/abs/1810.00826) — Keyulu Xu, Weihua Hu, Jure Leskovec, Yoshua Bengio (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1810.00826](https://doi.org/10.48550/arXiv.1810.00826)
+  介绍了图同构网络（GIN），并正式将GNN的表达能力与1-Weisfeiler-Lehman测试关联起来。
+- [Weisfeiler and Lehman Go Neural: Higher-order Graph Neural Networks](https://ojs.aaai.org/index.php/AAAI/article/view/3990) — Christopher Morris, Martin Ritzert, Matthias Fey, Stefan Faber, Hongzhi Wen, William Hamilton, Laurent Schonsberg, Michiharu Akimoto, Martin Gütlein, Daniel Kuehn, Karsten Borgwardt (2019)
+  Journal: Proceedings of the AAAI Conference on Artificial Intelligence; Publisher: American Association for Artificial Intelligence (AAAI); Volume: 33; Pages: 3990-3997; DOI: [10.1609/aaai.v33i01.33013990](https://doi.org/10.1609/aaai.v33i01.33013990)
+  提供了一个理论框架，用于分析GNN在Weisfeiler-Lehman测试方面的表达能力，包括高阶变体。

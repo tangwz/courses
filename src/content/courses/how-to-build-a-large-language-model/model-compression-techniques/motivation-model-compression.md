@@ -1,0 +1,105 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "model-compression-techniques"
+lesson: "motivation-model-compression"
+sourceId: 6091
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-27-model-compression-techniques/motivation-model-compression"
+title: "模型压缩的动因"
+description: "谈论对更小模型的需要，以用于边缘设备部署或实现更快推理。"
+order: 1
+plots: ["plots/6091-0.json"]
+sourceHash: "8b5a9835f6e497e809f0829414c5fa7f947f585345bb297230be01182243eec2"
+sourceCorrections: []
+---
+
+“正如我们之前谈到的，成功训练大型语言模型常常会产生包含数十亿甚至数万亿参数 (parameter)的模型。虽然这些大模型展现出强大的能力，但其庞大的规模在从实验室或训练集群转向实际应用时，会带来不少实际困难。模型压缩的必要性直接源于这些挑战，主要集中在内存需求、推理 (inference)时的计算负担以及相关的运营成本。”
+
+### 内存瓶颈
+
+考虑一个拥有70亿参数 (parameter)的模型。如果每个参数都使用标准的32位浮点精度（$FP32$）存储，每个参数占用4字节，那么仅仅加载模型权重 (weight)所需的内存就非常可观：
+
+
+$$
+\text{内存占用} = \text{参数数量} \times \text{每参数字节数}
+$$
+
+
+$$
+\text{内存占用} = 7 \times 10^9 \text{ 参数} \times 4 \text{ 字节/参数} = 28 \times 10^9 \text{ 字节} = 28 \text{ GB}
+$$
+
+
+这个28 GB的计算仅考虑了模型权重本身。在推理 (inference)时，还需要额外的内存用于激活、临时计算以及键值（KV）缓存（我们将在第28章谈到它），尤其是在处理长序列或批量处理多个请求时。高端GPU通常配备24 GB、40 GB或80 GB的高带宽内存（HBM），但即使是这些对于最大的模型或有效提供多个模型副本也可能不足。需要这种高内存硬件会大幅增加部署成本，并限制模型可以在哪些类型的设备上运行。
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例：大型线性层维度
+hidden_dim = 4096
+intermediate_dim = 11008 # 在约70亿参数模型中很常见
+
+# 仅一个前馈块的线性层中的参数
+ffn_layer1 = nn.Linear(hidden_dim, intermediate_dim, bias=False)
+ffn_layer2 = nn.Linear(intermediate_dim, hidden_dim, bias=False)
+
+params_ffn1 = hidden_dim * intermediate_dim
+params_ffn2 = intermediate_dim * hidden_dim
+
+total_ffn_params = params_ffn1 + params_ffn2
+# 一个典型的约70亿参数模型有许多这样的层（约32个），外加注意力机制、嵌入层等...
+print(f"一个FFN块中的参数（约）：{total_ffn_params:,}")
+# 输出：一个FFN块中的参数（约）：90,177,536
+
+# 估算这些参数在FP32下的内存
+memory_ffn_gb = (total_ffn_params * 4) / (1024**3)
+print(f"一个FFN块所需的内存（FP32，约）：{memory_ffn_gb:.2f} GB")
+# 输出：一个FFN块所需的内存（FP32，约）：0.34 GB
+# 乘以层数（约32）-> 仅FFN权重就约10.8 GB！
+```
+
+这个简单的计算表明，内存需求增长得多么迅速，甚至还没有考虑注意力机制 (attention mechanism)和嵌入 (embedding)表。
+
+
+
+![模型内存占用估算 (FP32 权重)](plots/6091-0.json)
+
+
+
+> 估算不同模型大小在32位精度下仅存储模型权重所需的内存。
+
+### 推理 (inference)延迟和吞吐量 (throughput)
+
+除了内存，通过这些大型网络进行一次前向传播的计算成本也很高。自回归 (autoregressive)生成是大型语言模型生成文本的常见方式，它需要模型为每个生成的token顺序运行。尽管像KV缓存（第28章）这样的技术有所帮助，但每个token所需的矩阵乘法和其他操作数量之多，给延迟设定了下限。
+
+对于聊天机器人、编码助手或实时翻译等交互式应用，高延迟会导致糟糕的用户体验。即使是文档摘要等离线任务，缓慢的推理速度也会增加处理大型数据集所需的时间。此外，每个请求的高延迟会限制部署的总体吞吐量（每秒处理的请求数），需要更多的并行硬件实例来处理给定的负载，这又会推高成本。
+
+### 运营成本和可用性
+
+高内存需求和巨大的计算负担结合在一起，直接转化为更高的运营开支：
+
+1. **硬件成本：** 部署大型语言模型通常需要昂贵的高端GPU或专用加速器。扩展服务需要配置大量此类设备。
+2. **能耗：** 这些强大的硬件组件消耗大量电力，增加了运营成本，也引发了环境问题。
+3. **基础设施复杂性：** 管理用于推理 (inference)的专业硬件集群，会增加部署和维护流程的复杂性。
+
+这些因素设置了障碍，使得在某些情境下部署先进的大型语言模型变得困难或不可能：
+
+- **设备端部署：** 由于严格的内存、功耗和散热限制，直接在智能手机、笔记本电脑或嵌入 (embedding)式系统上运行模型通常不可行。模型压缩对于实现涉及大型语言模型的边缘AI应用很重要。
+- **资源受限环境：** 缺乏大规模云计算基础设施的研究人员、初创公司或组织可能会觉得部署大型模型过于昂贵。
+- **可扩展性：** 即使是大型组织，在经济高效地扩展推理基础设施以服务数百万用户时也面临挑战。更高效的模型可以减轻这种负担。
+
+模型压缩技术提供了一种缓解这些挑战的途径。通过减少内存占用和计算需求，我们可以：
+
+- 在成本较低、更容易获得的硬件上部署模型。
+- 降低推理延迟，提升交互式应用的用户体验。
+- 降低运营成本（硬件、能源）。
+- 使模型能够部署在资源受限的环境中，包括边缘设备。
+- 促进更广泛地使用强大的语言建模能力。
+
+接下来的章节将探讨实现这些目标的主要方法：量化 (quantization)、剪枝和知识蒸馏 (knowledge distillation)。每种技术都涉及权衡，通常是用一定程度的模型性能换取效率上的大幅提升。理解这些方法及其影响，对于任何负责将大型语言模型投入生产的工程师来说都很重要。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/pdf/2005.14165.pdf) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS Foundation; Volume: 33; Pages: 1877-1901; DOI: [10.55917/cb_issue.33.1877](https://doi.org/10.55917/cb_issue.33.1877)
+  介绍了GPT-3，一个拥有1750亿参数的模型，它代表了现代大型语言模型的巨大规模，凸显了模型压缩的必要性。

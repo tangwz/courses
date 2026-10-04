@@ -1,0 +1,122 @@
+---
+course: "applied-data-science"
+chapter: "practical-feature-engineering"
+lesson: "text-feature-creation"
+sourceId: 1859
+sourceUrl: "https://apxml.com/zh/courses/applied-data-science/chapter-2-practical-feature-engineering/text-feature-creation"
+title: "从文本数据生成特征"
+description: "介绍使用词袋模型和TF-IDF等方法从文本创建数值特征。"
+order: 3
+plots: []
+sourceHash: "ee217acc64af02904a7af38441d0625e832f2b5c7de41add6b4e85f5a5aaabe6"
+sourceCorrections: []
+---
+
+原始文本数据，如客户评论、文章或社交媒体帖子，包含大量信息。然而，机器学习 (machine learning)算法主要处理数值数据。将原始文本字符串直接输入大多数标准模型将不起作用。本节的任务是将非结构化文本转换为算法能够理解和学习的结构化数值格式。这个过程是一种特定类型的特征工程，通常称为文本向量 (vector)化。
+
+根据文本所含词语表示文本有两种主要方法：词袋模型（Bag-of-Words）和TF-IDF。
+
+### 词袋模型（BoW）
+
+词袋模型是一种简单而有效地以数值形式表示文本的方法。想象一下，将您的整个文档集合（语料库）中所有唯一的词放入一个“袋子”中。要表示特定文档，您只需计算袋子中每个词在该文档中出现的次数。词语的顺序和语法都被忽略了，因此有了“袋子”的比喻。
+
+**工作原理：**
+
+1. **分词 (tokenization)：** 将每个文档分解为单个词语或术语（标记 (token)）。这通常涉及将文本转换为小写并去除标点符号。
+2. **词汇构建：** 在数据集中所有文档中创建所有唯一标记的列表。此列表构成词汇表 (vocabulary)。
+3. **向量 (vector)创建：** 对于每个文档，创建一个向量，其中每个元素对应词汇表中的一个词。每个元素的值是该词在文档中出现的次数。
+
+**示例：**
+
+考虑以下两个简短文档：
+
+- 文档 1: "The cat sat on the mat."
+- 文档 2: "The dog chased the cat."
+
+1. **标记（小写，去除标点符号）：**
+   - 文档 1: `['the', 'cat', 'sat', 'on', 'the', 'mat']`
+   - 文档 2: `['the', 'dog', 'chased', 'the', 'cat']`
+2. **词汇表：** `['the', 'cat', 'sat', 'on', 'mat', 'dog', 'chased']` （注意：“the”出现多次，但在词汇表中只列出一次）。
+3. **向量：**
+   - 文档 1 向量: `[2, 1, 1, 1, 1, 0, 0]` （“the”、“cat”、“sat”、“on”、“mat”、“dog”、“chased”的计数）
+   - 文档 2 向量: `[2, 1, 0, 0, 0, 1, 1]`
+
+**实现：** 在Python中，`scikit-learn`库中的`CountVectorizer`类通常用于实现词袋模型方法。
+
+**局限性：**
+
+- **词汇表大小：** 可能导致非常大的向量（高维度），尤其是在大型和多样化的文本数据集上。
+- **稀疏性：** 每个文档向量中的大多数元素都将为零，需要高效的稀疏矩阵表示。
+- **忽略重要性：** 对所有词语一视同仁。“the”或“a”等常用词（通常称为停用词）可能会在计数中占主导地位，但没有增加太多意义。这些词通常在预处理期间被去除。
+- **忽略语境：** 词序和语义会丢失。如果停用词没有被仔细处理，“Man bites dog”和“Dog bites man”将具有相似的表示。
+
+### 词频-逆文档频率（TF-IDF）
+
+TF-IDF建立在词袋模型的思想之上，但增加了一种加权方案，以突出显示对特定文档在更大语料库中更重要或更有信息的词语。它会降低在许多文档中频繁出现的词语（如常用停用词）的权重 (weight)，并增加在特定文档中频繁出现但整体上稀有的词语的权重。
+
+TF-IDF是两个组成部分的乘积：
+
+1. **词频（TF）：** 衡量一个词在*特定文档*中出现的频率。它通常计算为该词在文档中的原始计数或标准化（例如，词计数除以文档中的总词数）。
+
+   - *直观理解：* 在文档中出现频率越高的词，越可能与该文档的主题相关。
+2. **逆文档频率（IDF）：** 衡量一个词在*整个语料库*中的重要性。它是根据文档总数除以包含该词的文档数的对数计算的。
+
+   
+   $$
+   \text{IDF}(t) = \log \left( \frac{\text{文档总数}}{\text{包含词语 } t \text{ 的文档数}} \right)
+   $$
+   
+
+   （注意：存在变体，通常在分母或分子上加1以防止除以零并平滑值）。
+
+   - *直观理解：* 在许多文档中出现的词语（如“the”、“is”）提供信息较少，因此IDF分数较低。只在少数文档中出现的词语更稀有，可能更具体，因此IDF分数较高。
+
+**词语 $t$ 在文档 $d$ 中的TF-IDF分数是：**
+
+
+$$
+\text{TF-IDF}(t, d) = \text{TF}(t, d) \times \text{IDF}(t)
+$$
+
+
+**实现：** `scikit-learn`中的`TfidfVectorizer`类直接从原始文本数据计算TF-IDF分数。它结合了分词 (tokenization)、计数（TF）和IDF计算。
+
+**相对于词袋模型的优势：**
+
+- 为对特定文档具有区分性的词语赋予更高的值。
+- 隐式处理一些停用词（常用词获得非常低的IDF分数）。
+- 与简单计数相比，通常在文本分类和信息检索等任务中表现更佳。
+
+**局限性：**
+
+- 仍然基于词袋模型假设，忽略词序和语境。
+- 仍然可能产生高维稀疏向量 (vector)。
+
+### 文本预处理的考量
+
+在应用词袋模型或TF-IDF之前，文本数据通常需要预处理步骤来提高生成特征的质量：
+
+- **小写转换：** 将所有文本转换为小写，以便将“Word”和“word”视为同一词语。
+- **去除标点符号：** 消除句号、逗号、感叹号等通常对这些模型不具有重要意义的字符。
+- **去除停用词：** 丢弃频繁出现但提供很少具体信息的常用词（例如：“and”、“the”、“is”、“in”）。scikit-learn和NLTK等库提供标准的停用词列表。
+- **词干提取/词形还原（可选）：** 将词语还原为其词根形式（例如：“running”->“run”，“studies”->“studi”）。词形还原通常更复杂，因为它旨在还原为实际的字典词（例如：“better”->“good”），而词干提取可能会产生非词语。这有助于整合相关术语。
+
+这些预处理步骤对于从文本创建有意义且高效的数值表示非常重要。
+
+### 在模型中使用文本特征
+
+`CountVectorizer`或`TfidfVectorizer`生成的向量 (vector)（通常以稀疏矩阵表示以提高效率）成为机器学习 (machine learning)模型的输入特征。每列代表词汇表 (vocabulary)中的一个唯一词，每行代表一个文档。然后，这些特征可以与您可能已为情感分析、主题分类或垃圾邮件检测等任务构建的其他数值或分类特征一起使用。
+
+虽然词袋模型和TF-IDF是强大的基本方法，但请记住，Word2Vec、GloVe等更先进的词嵌入 (embedding)方法可以捕获词语之间的语义关系。这些方法通常在专门的自然语言处理（NLP）背景下进行研究，但理解词袋模型和TF-IDF为在许多数据科学应用中处理文本数据提供了一个坚实的根基。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  详细介绍了词袋模型和TF-IDF等文本表示方法，以及必要的预处理技术。
+- [A vector space model for automatic indexing](https://doi.org/10.1145/361219.361220) — Gerard Salton, Anita Wong, and Chung-Shu Yang (1975)
+  Journal: Communications of the ACM; Publisher: Association for Computing Machinery (ACM); Volume: 18; Pages: 613-620; DOI: [10.1145/361219.361220](https://doi.org/10.1145/361219.361220)
+  介绍了向量空间模型，该模型是TF-IDF文本表示和信息检索的基础。
+- [sklearn.feature_extraction.text.CountVectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html) — scikit-learn developers (2023)
+  在Python中使用scikit-learn实现词袋模型的官方文档。
+- [sklearn.feature_extraction.text.TfidfVectorizer](https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html) — scikit-learn developers (2023)
+  在Python中使用scikit-learn实现TF-IDF模型的官方文档。

@@ -1,0 +1,99 @@
+---
+course: "speech-recognition-synthesis-asr-tts"
+chapter: "neural-vocoders-waveform-generation"
+lesson: "conditioning-neural-vocoders"
+sourceId: 3208
+sourceUrl: "https://apxml.com/zh/courses/speech-recognition-synthesis-asr-tts/chapter-5-neural-vocoders-waveform-generation/conditioning-neural-vocoders"
+title: "神经网络声码器的条件化"
+description: "有效条件化波形生成的技术，基于梅尔频谱图或其他特征。"
+order: 6
+plots: []
+sourceHash: "6806e7992812efdd5199352995d837d76ed5c4767ecc8d2d345fe4fb0de02ced"
+sourceCorrections: []
+---
+
+神经网络 (neural network)声码器是强大的生成模型，能够生成高保真音频波形。然而，若不加干预，它们只会生成统计上合理但无意义的音频，例如呓语或环境噪声。重要一步是 *引导* 或 *条件化* 声码器，使其合成由上游文本转语音（TTS）系统指定的特定语音内容。提供这种引导的方法，通常以梅尔频谱图等声学特征的形式，将进行探讨。
+
+### 条件信息的作用
+
+可以将未经条件化的声码器想象成一位能完美演奏任何音符但没有乐谱的天才音乐家。条件输入就像乐谱，提供生成所需输出的精确指令。在TTS情境下，上游声学模型（如Tacotron 2或FastSpeech 2）生成一个中间表示，最常见的是梅尔频谱图。这个梅尔频谱图编码音素序列、持续时间、音高轮廓、能量和频谱包络，这些都是定义目标发声所必需的。声码器的任务是接收此表示并将其渲染为可听波形。
+
+有效的条件化确保声码器合成的音频：
+
+1. **内容相符**：生成的语音听起来像预期的词语。
+2. **保留韵律**：声学特征中指定的节奏、音高和能量变化反映在输出波形中。
+3. **保持说话人身份**：如果声学特征包含说话人特定信息，声码器应合成相应声音的语音。
+
+因此，最终合成语音的质量高度依赖于声码器的生成能力，也高度依赖其接收到的条件特征的质量和丰富度。
+
+### 常用条件特征：梅尔频谱图
+
+现代神经网络 (neural network)声码器的主导条件特征是**梅尔频谱图**。它的流行源于以下几个因素：
+
+- **感知相关性**：梅尔标度近似人耳的非线性频率响应，强调人耳更敏感的频率。
+- **紧凑表示**：它提供了一种相对低维但信息丰富的概括，描述了语音信号随时间变化的频谱内容。
+- **标准输出**：大多数先进的TTS声学模型都被设计为生成梅尔频谱图作为其主要输出。
+
+用于条件化的典型梅尔频谱图可能具有80个频段（梅尔频带），帧跳跃为10-12.5毫秒。这意味着每秒语音，TTS模型向声码器提供大约80-100帧80维向量 (vector)。
+
+### 不同架构中的条件化机制
+
+注入条件信息的方法因声码器架构而异。
+
+#### 自回归 (autoregressive)模型（例如，WaveNet，WaveRNN）
+
+自回归模型逐个样本生成音频波形，其中每个样本 $x_t$ 依赖于之前的样本 $x_{<t}$ 和条件输入 $c$。主要难点在于条件特征（例如，每12.5毫秒一帧）和音频样本（例如，每1/22050秒或约0.045毫秒一采样）之间时间分辨率的显著差异。
+
+为了弥补这一差距，条件特征（梅尔频谱图帧）必须**上采样**以匹配音频采样率。这通常通过学习得到的上采样层实现，通常包含转置卷积（有时称为反卷积）或最近邻/线性插值，然后接卷积层。这些层学习将低时间分辨率特征扩展到对应的高分辨率音频样本。
+
+设 $c$ 为梅尔频谱图帧序列， $h = \text{上采样}(c)$ 为上采样特征，其时间分辨率与音频波形 $x$ 相同。样本 $x_t$ 的生成过程可表示为：
+
+
+$$
+p(x_t | x_1, ..., x_{t-1}, c) = f(x_1, ..., x_{t-1}, h_t)
+$$
+
+
+这里，$h_t$ 表示与时间步 $t$ 相关的上采样条件信息。实际上，函数 $f$ 由神经网络 (neural network)实现（例如，WaveNet中的扩张因果卷积），它将过去的音频样本和对应的上采样局部条件 $h_t$ 作为输入，以预测当前样本 $x_t$ 的分布。
+
+> 对梅尔频谱图 (`c`) 进行上采样以匹配音频采样率 (`h`)，用于在每个时间步 `t` 条件化自回归声码器。
+
+#### 流模型（例如，WaveGlow）
+
+流模型声码器通常使用归一化 (normalization)流将简单的噪声分布（例如，高斯分布）转换为目标音频分布。条件化通常是全局应用的。整个梅尔频谱图首先由条件化网络处理（有时包含LSTM或CNN）以提取相关特征。
+
+这些提取的特征随后用于参数 (parameter)化流内的变换，尤其是仿射耦合层。例如，仿射耦合层中的尺度和偏置 (bias)项可能会作为编码梅尔频谱图特征的函数来计算。这使得从噪声到音频的转换能够由梅尔频谱图中编码的特定内容引导。尽管主要条件化可能是全局的，但类似于自回归模型中的上采样技术仍可存在于网络架构中，以在内部处理时间分辨率不匹配的问题。
+
+#### 基于GAN的模型（例如，MelGAN，HiFi-GAN）
+
+在基于GAN的声码器中，生成器网络 ($G$) 直接将条件梅尔频谱图 $c$（可能还有一些随机噪声 $z$）映射到音频波形 $\hat{x}$： $\hat{x} = G(c, z)$。
+
+生成器架构专门设计用于处理上采样任务。它通常由一系列上采样块组成，通常使用转置卷积，其步长与每个阶段所需的上采样因子匹配。例如，如果梅尔频谱图的帧移大小为256个采样点（在22050 Hz下为11.6毫秒），生成器需要达到总时间上采样因子256。这可以通过步长为8、8、2、2（8 \* 8 \* 2 \* 2 = 256）的连续层来完成。这些块中的卷积层处理每个分辨率的特征。
+
+> 基于GAN的声码器生成器的简化结构，展示了输入梅尔频谱图的逐步上采样以生成全分辨率波形。判别器评估生成的波形，可能也以梅尔频谱图为条件。
+
+#### 扩散模型
+
+扩散模型通过迭代逆转加噪过程来生成数据。对于声码器，这意味着从高斯噪声开始，并在几个步骤中逐步去噪以生成干净的音频波形。条件化通常在每个去噪步骤中引入。
+
+梅尔频谱图 $c$ 通常被编码成一个嵌入 (embedding)。这个嵌入随后在每个步骤 $k$ 被并入去噪网络（通常是U-Net类架构）。这可以通过将嵌入与中间噪声音频表示 $x_k$ 连接起来完成，或者通过使用自适应层归一化（AdaLN）技术，其中归一化层的尺度和偏置参数是根据条件嵌入和当前噪声水平 $k$ 预测的。这确保了去噪过程朝向对应于 $c$ 的目标波形进行。
+
+### 条件化中的挑战
+
+- **上采样质量**：学习得到的上采样机制的有效性很重要。糟糕的上采样可能导致模糊或时间上模糊的音频伪影，即使声码器核心能力强。网络必须学习正确地将低分辨率控制信号插值到高采样率。
+- **条件特征的局限性**：“垃圾进，垃圾出”这句老话适用。如果上游TTS模型生成的输入梅尔频谱图不准确、缺乏细节（例如，过度平滑）或包含伪影，声码器通常无法解决这些问题。它会忠实地合成 *有缺陷的频谱图* 的高质量波形表示，导致次优语音。
+- **训练稳定性**：特别是在GAN中，确保训练稳定需要仔细平衡生成器和判别器，通常涉及特定的损失函数 (loss function)（如铰链损失、特征匹配损失、梅尔频谱图损失）和架构选择（如多尺度判别器）。
+
+总之，条件化是一种机制，通过它，神经网络 (neural network)声码器被引导合成由声学特征定义的特定语音内容。尽管梅尔频谱图是标准输入，但整合此信息的技术在不同架构中有所不同，主要涉及学习得到的上采样和特征注入策略，这些策略针对自回归 (autoregressive)、流式、GAN或扩散框架进行调整。这个条件化步骤的有效性是合成语音整体质量的一个重要因素。
+
+## 参考资料
+
+- [WaveNet: A Generative Model for Raw Audio](https://doi.org/10.21437/Interspeech.2016-169) — Aaron van den Oord, Sander Dieleman, Heiga Zen, Koray Kavukcuoglu, Oriol Vinyals, Alex Graves, Nal Kalchbrenner, Andrew Senior, Karen Simonyan, John Jumper, Zbigniew Wojna, Demis Hassabis, Augustin Degol, Karol Kurach (2016)
+  Journal: Proc. INTERSPEECH; Publisher: ISCA; Pages: 2679-2683; DOI: [10.21437/Interspeech.2016-169](https://doi.org/10.21437/Interspeech.2016-169)
+  奠基性论文，介绍了自回归神经声码器，详细阐述了用于高保真音频生成的扩张因果卷积。
+- [WaveGlow: A Flow-based Generative Network for Speech Synthesis](https://www.isca-speech.org/archive/interspeech_2019/pdfs/valle19_interspeech.pdf) — Rafael Valle, Kevin Stanton, Ryan Prenger, William S. Yorozu, Bryan Catanzaro (2019)
+  Journal: Proceedings of Interspeech; Publisher: ISCA (International Speech Communication Association); Pages: 2022-2026; DOI: [10.21437/Interspeech.2019-2022](https://doi.org/10.21437/Interspeech.2019-2022)
+  介绍了用于语音合成的基于流的生成网络，是使用归一化流的非自回归声码器的示例。
+- [HiFi-GAN: Generative Adversarial Networks for Efficient and High Fidelity Speech Synthesis](https://arxiv.org/abs/2010.05646) — Jungil Kong, Jaehyeon Kim, Jaekyoung Bae (2020)
+  Journal: Proc. NeurIPS; DOI: [10.48550/arXiv.2010.05646](https://doi.org/10.48550/arXiv.2010.05646)
+  提出了一种高效高保真的基于GAN的声码器，是实时语音合成领域中的领先模型。

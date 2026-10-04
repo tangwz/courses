@@ -1,0 +1,61 @@
+---
+course: "data-structures-algorithms-ml"
+chapter: "dsa-ml-foundations"
+lesson: "why-dsa-matter-ml"
+sourceId: 5226
+sourceUrl: "https://apxml.com/zh/courses/data-structures-algorithms-ml/chapter-1-dsa-ml-foundations/why-dsa-matter-ml"
+title: "数据结构对机器学习性能为何重要"
+description: "理解数据结构选择对机器学习算法速度和可扩展性的影响。"
+order: 1
+plots: ["plots/5226-0.json"]
+sourceHash: "7c62bd0652411ac3074a7e64fb309beb8dacafa60e334d00da8194d4f5fdb0d0"
+sourceCorrections: []
+---
+
+"机器学习 (machine learning)模型并非独立运行。它们会消耗大量数据，并在训练和预测期间进行复杂的计算。我们选择存储、组织和访问这些数据的方式，从根本上决定了模型训练的速度、所需的内存量，以及最终能否处理实际问题。正是在这一点上，数据结构和算法成为机器学习从业者不可或缺的工具。"
+
+假设您正在构建一个垃圾邮件分类器。您需要快速检查传入的电子邮件中是否包含某些词语（特征）。如果您将已知的垃圾邮件词语列表存储在一个简单的Python列表中，并对每封邮件中的每个词语进行顺序查找，那么随着词汇量和邮件数量的增加，这个过程将变得极其缓慢。查找列表所需的时间与其大小成比例，我们将其表示为 $O(n)$，其中 $n$是词语的数量。
+
+现在，考虑将这些垃圾邮件词语存储在哈希表（例如Python的字典或集合）中。在哈希表中查找一个词语通常平均只需常数时间，即 $O(1)$，无论词汇量有多大。这一个数据结构的选择就能将分类过程从不切实际的慢速变为几乎即时。
+
+这个原则贯穿机器学习的整个流程：
+
+- **数据加载和准备：** Pandas等库在内部使用复杂的数据结构（通常基于NumPy数组）来提供表格数据的快速索引、过滤和处理。使用优化程度较低的结构可能使这些重要步骤成为主要的性能瓶颈。
+- **特征工程：** 特征哈希等技术直接依赖哈希函数和哈希表来处理高维度、稀疏数据（在文本分析或推荐系统中很常见），而不会消耗过多内存。
+- **模型训练：** 训练算法的效率通常取决于数据结构的选择。决策树递归地划分数据，通过树结构使其操作高效。像K近邻这样的算法需要快速找到相似数据点的方法，通常使用专门的树（如KD树）或哈希（局部敏感哈希）。图神经网络 (neural network)在图数据结构上运行。即使是梯度下降 (gradient descent)等优化算法也受益于NumPy数组等结构提供的有效批量访问。
+- **模型推理 (inference)：** 对新数据进行预测需要快速，尤其是在生产系统中。正确的 数据结构 实现的有效查找、遍历和计算非常重要。
+
+我们来直观地看看查找时间的影响。考虑在一个数据集大小增加时，查找其中一个元素的情况。
+
+
+
+![查找时间 vs. 数据大小](plots/5226-0.json)
+
+
+
+> 比较列表中的顺序查找时间（$O(n)$）与哈希表中的平均查找时间（$O(1)$）。请注意时间轴上的对数刻度；随着元素数量的增加，差异变得显著得多。
+
+如图所示，具有线性时间复杂度（$O(n)$）的算法会随着输入大小（$n$）的增长而变得越来越慢。相比之下，具有常数时间复杂度（$O(1)$）的算法则保持快速。同样地，选择也会影响内存使用。一个密集矩阵可能需要 $O(n \times m)$的内存，而相同数据的稀疏表示可能只需要与非零元素数量成比例的内存，这通常要小得多。
+
+了解核心数据结构和算法的性能特点（时间复杂度和空间复杂度），您可以：
+
+1. **选择合适的工具：** 选择与您的机器学习问题规模和限制相符的数据结构和算法。
+2. **找出瓶颈：** 分析现有机器学习流程，找出由数据处理效率低下造成的性能限制。
+3. **构建可扩展系统：** 创建能够处理不断增长的数据量和复杂度的模型及工作流程。
+
+选择错误的数据结构可能导致模型训练需要数天而非数小时、要求过高的内存，或者无法及时提供预测。反之，基于性能特点的周到选择是高效且有效的机器学习工程的一个标志。在本课程中，我们将研究特定的数据结构和算法，将其特性直接与它们在机器学习任务中的应用和影响联系起来。
+
+## 参考资料
+
+- [Introduction to Algorithms](https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition) — Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein (2022)
+  Publisher: MIT Press
+  这本标准教材全面介绍了数据结构和算法，包括复杂度分析（O(n), O(1)）、哈希表、列表和树，这些都是理解机器学习性能的必要基础。
+- [Designing Machine Learning Systems](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  本书提供了构建机器学习系统的实用视角，强调了高效数据处理和算法选择如何影响实际机器学习应用中的系统性能、可伸缩性和资源需求。
+- [Feature Hashing for Large-scale Multitask Learning](https://arxiv.org/pdf/0902.2206.pdf) — Kilian Weinberger, Anirban Dasgupta, John Langford, Alex Smola, Josh Attenberg (2009)
+  Journal: Proceedings of the 26th International Conference on Machine Learning (ICML); Publisher: International Machine Learning Society (IMLS); Pages: 1113-1120; DOI: [10.48550/arXiv.0902.2206](https://doi.org/10.48550/arXiv.0902.2206)
+  这篇论文介绍了特征哈希，一种利用哈希函数将高维数据转换为低维表示的方法，文中直接引用了该方法用于高效的特征工程。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104030/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  本书由Pandas的创建者撰写，解释了Pandas等库如何利用高效的底层数据结构（基于NumPy数组）实现快速数据加载、准备和操作，这在文中得到了强调。

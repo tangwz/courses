@@ -1,0 +1,141 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "training-evaluating-models"
+lesson: "compiling-metrics"
+sourceId: 1734
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-4-training-evaluating-models/compiling-metrics"
+title: "编译模型：指标"
+description: "选择指标（例如，准确率、精度、召回率、MSE）以监控训练和评估。"
+order: 3
+plots: []
+sourceHash: "8fc8116e56698adcb8c537c9f81caf3d5380496f99e73e194b70cbd279dca8de"
+sourceCorrections: []
+---
+
+在通过 `model.compile()` 配置模型的学习过程时，需要指定损失函数 (loss function)、优化器，以及最终的指标。损失函数指导优化过程（它是优化器尝试最小化的目标），而指标则用于*监控*和*评估*模型在训练和测试期间的表现。它们不直接影响权重 (weight)更新，但能提供有关模型在其设计任务上实际表现的有用信息。可以把损失想象成登山者的向导（优化器），而指标则是测高仪和GPS读数，告诉您爬了多高以及是否正朝着山顶前进。
+
+在 `model.compile()` 中使用 `metrics` 参数 (parameter)指定指标，通常传入一个字符串列表（对应Keras内置指标）或指标类实例。
+
+```python
+import tensorflow as tf
+
+# 假设 'model' 是一个已定义的 Keras 模型
+
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy', tf.keras.metrics.Precision(name='prec'), 'mae'])
+```
+
+在此示例中，在训练和评估期间，Keras 不仅会计算并报告稀疏分类交叉熵损失，还会报告准确率、精度（特别命名为 'prec'）和平均绝对误差。
+
+### 选择合适的指标
+
+指标的选择很大程度上取决于您具体的机器学习 (machine learning)任务（例如，分类、回归）以及哪些性能方面最重要。
+
+#### 分类指标
+
+对于分类问题，目标是将输入归入预设类别，常用指标包括：
+
+- **准确率（`'accuracy'` 或 `tf.keras.metrics.Accuracy`）：** 这通常是最直观的指标。它衡量模型正确预测的比例。
+  
+  $$
+  \text{准确率} = \frac{\text{正确预测数量}}{\text{总预测数量}}
+  $$
+  
+  尽管简单，但准确率可能产生误导，特别是对于类别不平衡的数据集。例如，如果您的95%数据属于A类，5%属于B类，一个总是预测A类的模型将达到95%的准确率，但对于识别B类毫无用处。
+- **精度（`'precision'` 或 `tf.keras.metrics.Precision`）：** 衡量正向预测的准确性。在模型预测为正的所有实例中，实际为正的比例是多少？
+  
+  $$
+  \text{精度} = \frac{\text{真阳性}}{\text{真阳性} + \text{假阳性}}
+  $$
+  
+  当假阳性成本很高时（例如，将非垃圾邮件分类为垃圾邮件），高精度很重要。
+- **召回率（`'recall'` 或 `tf.keras.metrics.Recall`）：** 也称为敏感度或真阳性率。在所有实际为正的实例中，模型正确识别的比例是多少？
+  
+  $$
+  \text{召回率} = \frac{\text{真阳性}}{\text{真阳性} + \text{假阴性}}
+  $$
+  
+  当假阴性成本很高时（例如，未能检测到欺诈性交易），高召回率很重要。
+- **AUC（ROC曲线下面积）（`'auc'` 或 `tf.keras.metrics.AUC`）：** ROC曲线描绘了在不同分类阈值下真阳性率（召回率）与假阳性率的关系。AUC表示可分离的程度或度量；它说明了模型区分不同类别的能力。AUC为1.0表示一个完美的分类器，而AUC为0.5则表示性能不比随机猜测好。它在评估不平衡数据集上的二元分类器时尤为有用。
+- **分类准确率（`tf.keras.metrics.CategoricalAccuracy`）对比稀疏分类准确率（`tf.keras.metrics.SparseCategoricalAccuracy`）：** 类似于它们对应的损失函数 (loss function)，您根据真实标签的格式选择这些。如果您的标签是独热编码（例如，`[0, 1, 0]`），请使用 `CategoricalAccuracy`；如果它们是整数索引（例如，`1`），则使用 `SparseCategoricalAccuracy`。使用简单的字符串 `'accuracy'` 通常会根据所用的损失函数自动选择合适的，但明确指定可以更清晰。
+
+#### 回归指标
+
+对于回归问题，目标是预测一个连续值，常用指标包括：
+
+- **平均绝对误差（`'mae'` 或 `tf.keras.metrics.MeanAbsoluteError`）：** 计算真实值 ($y_i$) 与预测值 ($\hat{y}_i$) 之间绝对差的平均值。
+  
+  $$
+  MAE = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|
+  $$
+  
+  MAE 易于解释，因为它表示目标变量原始单位下的平均预测误差。它对异常值的敏感度低于MSE。
+- **均方误差（`'mse'` 或 `tf.keras.metrics.MeanSquaredError`）：** 计算真实值与预测值之间平方差的平均值。
+  
+  $$
+  MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+  $$
+  
+  由于平方运算，MSE 对较大误差的惩罚比对较小误差更重。它的单位是目标变量单位的平方，这使得直接解释更加困难。它通常用作损失函数，但也可以作为监控指标。
+- **均方根误差（`tf.keras.metrics.RootMeanSquaredError`）：** 这就是 MSE 的平方根。
+  
+  $$
+  RMSE = \sqrt{MSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2}
+  $$
+  
+  RMSE 的优点是与目标变量的单位相同，使其比 MSE 更易于解释，同时仍然对大误差进行显著惩罚。
+
+### 使用指标实例
+
+除了使用像 `'accuracy'` 这样的字符串标识符，您还可以直接从 `tf.keras.metrics` 实例化指标类。这提供了更大的灵活性，例如设置出现在日志和 TensorBoard 中的自定义名称，或配置特定的指标参数 (parameter)（如精度或召回率的阈值）。
+
+```python
+model.compile(optimizer='rmsprop',
+              loss='binary_crossentropy',
+              metrics=[
+                  tf.keras.metrics.BinaryAccuracy(name='acc'),
+                  tf.keras.metrics.Precision(name='precision', thresholds=0.6),
+                  tf.keras.metrics.Recall(name='recall', thresholds=0.6)
+              ])
+```
+
+这里，我们使用 `BinaryAccuracy`（适用于二元分类），并设置0.6的特定分类阈值来计算精度和召回率。
+
+### 自定义指标
+
+如果内置指标不满足您的特定评估需求，TensorFlow 允许您定义自己的自定义指标。自定义指标通常是一个 Python 函数，它接受 `y_true`（真实标签）和 `y_pred`（模型预测）作为参数 (parameter)，并返回一个表示指标值的标量张量。
+
+```python
+def my_custom_metric(y_true, y_pred):
+    # 示例：计算平方差，但只针对正向真实值
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+    mask = tf.cast(y_true > 0, tf.float32)
+    squared_diff = tf.square(y_true - y_pred) * mask
+    # 如果没有正向真实值，避免除以零
+    return tf.reduce_sum(squared_diff) / (tf.reduce_sum(mask) + 1e-7)
+
+# ... inside model definition ...
+
+model.compile(optimizer='adam',
+              loss='mse',
+              metrics=['mae', my_custom_metric]) # 直接传入函数
+```
+
+编译模型时，您可以直接将自定义指标函数（或自定义 `tf.keras.metrics.Metric` 子类的实例，用于有状态指标）传入 `metrics` 列表。
+
+选择和监控合适的指标是理解模型行为和性能的根本。`model.fit()` 和 `model.evaluate()` 期间报告的指标提供了所需的定量反馈，以便对模型架构、超参数 (hyperparameter)和数据处理策略进行迭代。
+
+## 参考资料
+
+- [tf.keras.metrics module](https://www.tensorflow.org/api_docs/python/tf/keras/metrics) — TensorFlow Developers (2024)
+  官方API文档，提供所有内置Keras指标的详细描述和使用示例，以及创建自定义指标的指南。
+- [tf.keras.Model.compile method](https://www.tensorflow.org/api_docs/python/tf/keras/Model#compile) — TensorFlow Developers (2024)
+  官方文档，解释如何配置Keras模型进行训练，特别是详细说明`metrics`参数及其在编译过程中的作用。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  基础教科书，提供模型评估、各种性能指标及其在深度学习语境中的重要性的理论讨论。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用指南，演示如何在TensorFlow和Keras框架中使用和选择合适的指标来评估机器学习模型，包含代码示例。

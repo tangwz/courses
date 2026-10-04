@@ -1,0 +1,163 @@
+---
+course: "getting-started-julia-programming"
+chapter: "input-output-file-system-interaction"
+lesson: "accepting-user-input"
+sourceId: 6812
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-7-input-output-file-system-interaction/accepting-user-input"
+title: "接受用户输入"
+description: "如何使用 `readline` 等函数通过控制台读取用户输入。"
+order: 3
+plots: []
+sourceHash: "4752b75f6974c186da9d73046e386a7b97f2fa09a8b19ea0b8ce8c173a134cbe"
+sourceCorrections: []
+---
+
+许多程序在运行时能够与用户交互，请求信息或指令时，会变得更加实用。使用 `print` 和 `println` 显示信息是程序通信的一个方面；另一方面是从用户那里获取输入。Julia 提供了直接的方法来读取输入到控制台的数据。
+
+### 使用 `readline` 读取一行文本
+
+Julia 中从控制台捕获用户输入的主要函数是 `readline()`。当你的程序遇到 `readline()` 时，它会暂停执行并等待用户在控制台中输入一些内容并按 Enter 键。用户在按 Enter 键之前输入的任何内容都将由该函数作为字符串返回。
+
+让我们尝试一个简单的例子。如果你在 Julia REPL 或作为脚本运行以下代码：
+
+```julia
+print("Please enter your name: ")
+name = readline()
+println("Hello, ", name, "!")
+```
+
+程序将首先显示 “Please enter your name: ”。然后，它会等待。如果你输入 “JuliaFan” 并按 Enter 键，变量 `name` 将存储字符串 `"JuliaFan"`。程序随后将输出：
+
+```
+Hello, JuliaFan!
+```
+
+注意 `readline()` 会捕获直到按 Enter 键为止的所有内容。换行符本身（来自按 Enter 键）通常不包含在返回的字符串中，这通常是你想要的结果。
+
+### 输入始终是字符串
+
+一个需要记住的非常重要的点是，无论用户输入什么，`readline()` 总是将输入作为 `String` 数据类型返回。如果用户输入 `42`，`readline()` 将返回字符串 `"42"`，而不是数字 42。
+
+如果你打算对输入执行数值运算，这会产生影响。请思考以下示例：
+
+```julia
+print("Enter the first number: ")
+num_str1 = readline()
+print("Enter the second number: ")
+num_str2 = readline()
+
+result = num_str1 + num_str2 # 这将是字符串连接！
+println("The 'sum' is: ", result)
+```
+
+如果你为第一个数字输入 `10`，为第二个数字输入 `20`，你可能会预期输出是 `The 'sum' is: 30`。然而，由于 `num_str1` 是 `"10"` 且 `num_str2` 是 `"20"`（两者都是字符串），`+` 运算符会执行字符串连接。实际输出将是：
+
+```
+The 'sum' is: 1020
+```
+
+这显然不是我们所期望的算术和。要将用户输入视为数字或任何其他数据类型，我们需要进行转换。
+
+### 使用 `parse` 将输入转换为其他类型
+
+Julia 提供了 `parse()` 函数，用于将字符串转换为另一种数据类型，例如整数或浮点数。一般语法是 `parse(TargetType, string_value)`。
+
+让我们修改前面的例子，以便正确计算总和：
+
+```julia
+print("Enter the first number: ")
+num_str1 = readline()
+num1 = parse(Int, num_str1) # 转换为整数
+
+print("Enter the second number: ")
+num_str2 = readline()
+num2 = parse(Int, num_str2) # 转换为整数
+
+result = num1 + num2
+println("The sum is: ", result)
+```
+
+现在，如果你输入 `10` 和 `20`，`num1` 将变为整数 `10`，`num2` 将变为整数 `20`。`+` 运算符将执行加法，你会正确看到：
+
+```
+The sum is: 30
+```
+
+同样，如果你预期十进制输入，可以将其解析为浮点数，通常是 `Float64`：
+
+```julia
+print("Enter a price: ")
+price_str = readline()
+price = parse(Float64, price_str)
+
+println("The price you entered is: \$", price)
+```
+
+如果用户输入 `19.99`，`price` 将是浮点数 `19.99`。
+
+#### 如果用户输入非数字文本怎么办？
+
+`parse()` 函数是严格的。如果它无法将字符串转换为指定类型（例如，当调用 `parse(Int, ...)` 时用户输入“hello”），它将引发错误，你的程序会停止。例如：
+
+```julia
+print("Enter your age: ")
+age_str = readline()
+age = parse(Int, age_str) # 如果输入不是有效的整数，此行将出错
+println("Next year, you will be ", age + 1)
+```
+
+如果你运行这段代码并输入 “twenty”，你会看到一个 `ArgumentError`。
+
+优雅地处理这种情况是错误处理的一个话题，我们将在第 8 章中更具体地讨论它。现在，请注意 `parse()` 要求输入字符串的格式是它可以转换的。
+
+一个稍微更宽容的函数是 `tryparse(TargetType, string_value)`。`tryparse` 不会引发错误，而是在成功转换时返回转换后的值，如果转换失败则返回 `nothing`。这个 `nothing` 值是一个特殊的 Julia 对象，表示没有值。你可以检查 `nothing` 来处理无效输入，而不会导致程序崩溃。
+
+```julia
+print("Enter your age (numeric): ")
+age_str = readline()
+age = tryparse(Int, age_str)
+
+if age === nothing
+    println("Invalid input. Please enter a number for age.")
+else
+    println("Next year, you will be ", age + 1)
+end
+```
+
+使用 `tryparse` 可以使你的交互式程序更加用户友好，因为它们能够从不正确的输入中恢复。
+
+### 组合提示和输入
+
+正如在示例中看到的，通常的做法是在 `readline()` 之前立即使用 `print()` 来显示提示，指导用户输入什么信息。这使得程序的交互更清晰。
+
+```julia
+# 示例：一个小型调查
+println("Start our mini-survey!")
+
+print("What is your favorite programming language? ")
+fav_lang = readline()
+
+print("How many years have you been programming (e.g., 0, 1, 5.5)? ")
+years_str = readline()
+years_programming = tryparse(Float64, years_str)
+
+if years_programming === nothing
+    println("Thank you for sharing about ", fav_lang, ". Your programming experience input was not recognized as a number.")
+else
+    println("Great! So you like ", fav_lang, " and have ", years_programming, " years of experience.")
+end
+```
+
+这个例子说明了：
+
+1. 打印一条消息。
+2. 提示输入字符串 (`fav_lang`) 并直接使用它。
+3. 提示输入数字 (`years_programming`)，尝试使用 `tryparse` 解析它，并根据转换结果提供不同的反馈。
+
+学习接受并正确处理用户输入是构建交互式应用程序的一项基本技能。借助 `readline()`、`parse()` 和 `tryparse()`，你拥有了使你的 Julia 程序能够与用户有效通信的工具。
+
+## 参考资料
+
+- [\`readline\` function](https://docs.julialang.org/en/v1/base/io/#Base.readline) — The Julia Language (2024)
+  Publisher: The Julia Language
+  提供从控制台读取一行文本的官方参考和使用细节。

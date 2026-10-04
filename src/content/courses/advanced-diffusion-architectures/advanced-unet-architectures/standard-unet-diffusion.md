@@ -1,0 +1,57 @@
+---
+course: "advanced-diffusion-architectures"
+chapter: "advanced-unet-architectures"
+lesson: "standard-unet-diffusion"
+sourceId: 5382
+sourceUrl: "https://apxml.com/zh/courses/advanced-diffusion-architectures/chapter-2-advanced-unet-architectures/standard-unet-diffusion"
+title: "扩散模型中的标准U-Net"
+description: "分析扩散模型中标准 U-Net 主干网络的作用和构成。"
+order: 1
+plots: []
+sourceHash: "17c7660b453931572f0d7172a85cec9fa17bb8a21da982a4ada99839aff2e807"
+sourceCorrections: []
+---
+
+U-Net 架构最初为生物医学图像分割而设计，因其在处理空间信息重要图像数据方面的效用，已成为扩散模型中的主要工具。在扩散模型的背景下，U-Net 通常作为核心神经网络 (neural network) $\epsilon_\theta$ 运行，用于预测在特定时间步 $t$ 添加到图像 $x_t$ 中的噪声。
+
+### U-Net 架构构成
+
+一个标准 U-Net 包含由瓶颈连接的两个主要路径：
+
+1. **编码器（收缩路径）：** 该路径遵循典型的卷积神经网络 (neural network) (CNN)结构。它逐渐降低输入图像的空间分辨率，同时增加特征通道的数量。每个阶段通常包含：
+
+   - 卷积层（通常是两个 3x3 卷积）。
+   - 激活函数 (activation function)（如 ReLU 或 SiLU/Swish）。
+   - 下采样操作（例如，2x2 最大池化或步幅卷积）。
+   - 编码器每个阶段的输出特征图会传递到下一个阶段，并通过跳跃连接横向传递给解码器。
+2. **瓶颈：** 这是连接编码器和解码器路径的最低分辨率层。它通常由处理高度压缩特征表示的卷积层组成。
+3. **解码器（扩展路径）：** 该路径对称地反映编码器。它逐渐增加空间分辨率，同时减少特征通道。每个阶段通常涉及：
+
+   - 上采样操作（例如，转置卷积或双线性/最近邻上采样后跟卷积），使空间维度翻倍。
+   - 通过跳跃连接将上采样特征图与编码器路径中相应的特征图进行拼接。这种拼接是 U-Net 的一个标志性特点。
+   - 卷积层（通常是两个 3x3 卷积），根据组合信息学习生成精确的输出。
+   - 激活函数。
+4. **跳跃连接：** 编码器和解码器在相同空间分辨率阶段之间的这些直接连接非常重要。它们使解码器能够获取编码器中可能在下采样过程中丢失的高分辨率特征。这对于扩散模型尤为重要，因为它们需要通过精确预测所有空间位置的噪声模式来生成精细细节。
+5. **最终输出层：** 最后一个卷积（通常是 1x1）将最后一个解码器阶段的特征通道映射到所需的输出形状，该形状通常与输入图像维度匹配（例如，RGB 图像噪声预测的 3 个通道）。
+
+### U-Net 在噪声预测中的作用
+
+在标准扩散设置中（如 DDPM），U-Net $\epsilon_\theta(x_t, t)$ 将噪声图像 $x_t$ 和当前时间步 $t$ 作为输入。它的目标是根据正向扩散过程的时间表，预测添加到原始干净图像 $x_0$ 中以生成 $x_t$ 的噪声 $\epsilon$。U-Net 的输出是一个张量，表示这种预测噪声，其空间维度和通道数与输入 $x_t$ 相同。
+
+> 扩散模型中常用 U-Net 架构的简化图。箭头表示数据流向，虚线表示跳跃连接，将编码器的特征与相应的解码器阶段拼接起来。`t` 表示时间步信息通常会加入，尽管具体机制将在后面详细说明。
+
+### 适用于扩散模型的原因
+
+U-Net 的结构因以下几个原因非常适合扩散模型中的噪声预测任务：
+
+- **多尺度处理：** 编码器在不同分辨率下捕获上下文 (context)信息，而解码器利用这些信息重建像素级别的预测。
+- **空间信息保持：** 跳跃连接确保早期层中的精细空间细节在上采样过程中可用，这对于生成高保真图像是必需的。
+- **输入/输出一致性：** 它自然处理相同空间维度的输入和输出，符合预测与输入噪声图像大小相同噪声的要求。
+
+尽管这种标准 U-Net 提供了坚实的基础，但在扩散模型中的性能和能力可以通过加入注意力机制 (attention mechanism)、完善时间步和条件信息的整合，以及采用架构变体以提高效率和稳定性来得到显著提升，正如我们将在接下来的章节中看到的那样。
+
+## 参考资料
+
+- [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597) — Olaf Ronneberger, Philipp Fischer, Thomas Brox (2015)
+  Journal: Medical Image Computing and Computer-Assisted Intervention – MICCAI 2015; Pages: 234-241; DOI: [10.48550/arXiv.1505.04597](https://doi.org/10.48550/arXiv.1505.04597)
+  介绍了原始U-Net架构，详细阐述了其编码器-解码器结构、跳跃连接及其在图像分割任务中的有效性。

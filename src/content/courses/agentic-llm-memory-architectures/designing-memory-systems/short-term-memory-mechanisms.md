@@ -1,0 +1,151 @@
+---
+course: "agentic-llm-memory-architectures"
+chapter: "designing-memory-systems"
+lesson: "short-term-memory-mechanisms"
+sourceId: 4464
+sourceUrl: "https://apxml.com/zh/courses/agentic-llm-memory-architectures/chapter-3-designing-memory-systems/short-term-memory-mechanisms"
+title: "短期记忆机制"
+description: "实现会话缓冲区、滑动窗口和令牌限制摘要。"
+order: 2
+plots: []
+sourceHash: "4f7a9e62cd8913698b060fdacf0415ddb9a6f0ecef292809b132c34bb555747a"
+sourceCorrections: []
+---
+
+虽然长期记忆架构应对了获取大量外部知识或回溯久远历史互动的难题，但在即时操作情境中维持一致的状态对于代理系统同样重要。LLM 上下文 (context)窗口的固有局限性，表示为 $L_{context}$，需要对策来有效管理近期信息的流动。这是短期记忆的范畴。
+
+短期记忆机制作为缓冲区，保存了最可能与代理的下一步推理 (inference)或动作相关的信息。如果没有此类机制，一个在多轮或多步骤操作中运行的代理将很快迷失其即时目标、先前行动或近期观察，使其无法完成复杂的序列任务。让我们考察所用的常见方法。
+
+### 会话缓冲区记忆
+
+最直接的方法是 `ConversationBufferMemory`。它简单地保存了在一个会话中交换的所有互动历史（用户输入、代理思考、工具输出、代理回应）。
+
+```python
+# 示例
+memory = []
+def add_to_memory(entry_type, content):
+  memory.append({"type": entry_type, "content": content})
+
+# 代理互动 第一轮
+add_to_memory("user_input", "What is the capital of France?")
+# ... LLM 处理中 ...
+add_to_memory("agent_thought", "The user asked for the capital of France. I know this.")
+add_to_memory("agent_response", "The capital of France is Paris.")
+
+# 代理互动 第二轮
+add_to_memory("user_input", "What is its population?")
+# ... LLM 处理中 ...
+# 要回答第二轮，LLM 需要第一轮的上下文。
+# 提示中包含“memory”的相关部分或全部。
+prompt_context = "\n".join([f"{m['type']}: {m['content']}" for m in memory])
+# ... LLM 根据 prompt_context 生成回应 ...
+```
+
+**优点：**
+
+- **高保真度：** 保留近期互动历史的所有细节。
+- **简单性：** 易于实现和理解。
+
+**缺点：**
+
+- **上下文 (context)长度：** 随着互动增长，迅速消耗可用的 $L_{context}$。对于非简单的互动或上下文窗口较小的模型，这通常难以维持。
+- **成本/延迟：** 处理日益增长的大型提示会产生更高的计算成本和延迟。
+
+此方法仅适用于非常短的互动，其中超出 $L_{context}$ 不是问题。
+
+### 窗口记忆（滑动窗口）
+
+为了管理上下文 (context)长度，`ConversationWindowBufferMemory` 仅保留最近的 $k$ 次互动或轮次。随着新的互动发生，最旧的互动将被丢弃以维持固定大小的窗口。
+
+```python
+# 示例：k=2 次互动（假设一次用户提问 + 一次代理回应 = 1 次互动）
+class WindowMemory:
+    def __init__(self, k=2):
+        self.k = k
+        self.buffer = [] # 存储 (user_input, agent_response) 或类似形式的元组
+
+    def add_interaction(self, user_input, agent_response):
+        self.buffer.append((user_input, agent_response))
+        if len(self.buffer) > self.k:
+            self.buffer.pop(0) # 移除最旧的互动
+
+    def get_context(self):
+        # 格式化缓冲区以便用于提示
+        context = ""
+        for user_q, agent_a in self.buffer:
+            context += f"User: {user_q}\nAgent: {agent_a}\n"
+        return context
+
+# 使用方法
+memory = WindowMemory(k=2)
+memory.add_interaction("What is the capital of France?", "Paris")
+memory.add_interaction("Population?", "Around 2.1 million")
+memory.add_interaction("Currency?", "Euro") # 最旧的（“法国”/“巴黎”）互动被丢弃
+
+print(memory.get_context())
+# 输出：
+# 用户: Population?
+# 代理: Around 2.1 million
+# 用户: Currency?
+# 代理: Euro
+```
+
+**优点：**
+
+- **有界上下文：** 保证记忆组件对提示大小的贡献保持固定。
+- **简单性：** 相对易于实现。
+
+**缺点：**
+
+- **信息丢失：** 较旧的信息，即使可能相关，一旦超出窗口就会永久丢失。这可能在较长的对话或任务中破坏上下文连贯性。
+
+当只有最新交流内容重要时，此方法很有用，但它难以处理需要引用互动中较早内容的任务。存在变体，例如令牌限制缓冲区，其在达到特定的令牌计数时截断历史记录的开头，而非严格计数互动次数。
+
+### 摘要缓冲区记忆
+
+更精巧的方法是 `ConversationSummaryBufferMemory`。此方法旨在保留整个互动历史中的信息，同时仍管理上下文 (context)长度。它通过定期使用 LLM 来创建对话旧部分的摘要来实现。
+
+该过程通常包含：
+
+1. 维护一个近期互动缓冲区（类似于会话缓冲区）。
+2. 当缓冲区变大时，选择较旧的互动。
+3. 使用 LLM 调用对这些选定的互动生成摘要。
+4. 在记忆中用生成的摘要替换原始互动。
+5. 保持最新互动以其原始形式存在。
+
+> 滑动窗口和摘要缓冲区机制在 7 次互动后的对比。滑动窗口完全丢弃较旧的互动，而摘要缓冲区将它们压缩成摘要，保留部分信息同时保持最新互动详细。
+
+**优点：**
+
+- **上下文保存：** 相比简单的缓冲区或窗口，能在更长的互动历史中保留信息。
+- **可控的上下文大小：** 通过用简洁摘要替换详细历史，使提示大小保持可管理。
+
+**缺点：**
+
+- **摘要成本/延迟：** 需要额外的 LLM 调用专门用于摘要，增加总成本和延迟。
+- **潜在信息丢失/扭曲：** 摘要过程本身可能丢失细节或引入不准确性，这取决于 LLM 的摘要质量。
+- **复杂性：** 实现和调整更复杂（例如，决定何时以及摘要什么内容）。
+
+此方法对于从事长期任务或扩展对话的代理很有用，其中保持从开始时的上下文连贯性很重要，但完整历史记录过大而无法容纳于 $L_{context}$。
+
+### 选择合适的机制
+
+最佳的短期记忆策略很大程度上取决于具体的应用：
+
+- **简短、无状态查询：** 简单的缓冲区记忆可能就足够了。
+- **仅依赖最新上下文 (context)的任务：** 窗口记忆提供效率。
+- **需要较远上下文的长时间对话或多步骤任务：** 摘要缓冲区记忆通常是必需的，尽管有其开销。
+
+实现这些机制通常涉及创建专用记忆类或使用 LangChain 或 LlamaIndex 等框架提供的抽象。核心思想仍然是管理存储互动历史的保真度与 LLM 上下文窗口 $L_{context}$、成本和延迟要求所施加的限制之间的权衡。有效处理这种权衡对于构建有效的有状态代理至关重要。
+
+## 参考资料
+
+- [Memory](https://python.langchain.com/docs/modules/memory/) — LangChain Inc. (2025)
+  Publisher: LangChain Inc.
+  LangChain内存模块的官方文档，提供了对话缓冲、窗口和摘要缓冲内存类型的实际实现和示例。
+- [Memory](https://docs.llamaindex.ai/en/stable/module_guides/managing_context/memory.html) — LlamaIndex (2024)
+  Publisher: LlamaIndex
+  LlamaIndex内存管理的官方文档，提供了管理LLM应用短期上下文的替代实现和见解。
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442) — Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein (2023)
+  Journal: arXiv preprint arXiv:2304.03442; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  介绍了一个多智能体框架，智能体使用详细的记忆流，包括“反思”机制来总结过去的经验，为复杂的短期和长期记忆集成提供了研究实例。

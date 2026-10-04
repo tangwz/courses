@@ -1,0 +1,70 @@
+---
+course: "lora-peft-efficient-llm-training"
+chapter: "fine-tuning-efficiency-foundations"
+lesson: "peft-taxonomy"
+sourceId: 4114
+sourceUrl: "https://apxml.com/zh/courses/lora-peft-efficient-llm-training/chapter-1-fine-tuning-efficiency-foundations/peft-taxonomy"
+title: "参数高效微调方法的分类"
+description: "介绍 PEFT 技术的不同类别：附加、选择性和重参数化方法。"
+order: 4
+plots: []
+sourceHash: "5592e5ba5cad901599b332766439ea0a9359779cab8d36ba20ebf9adec95dd47"
+sourceCorrections: []
+---
+
+在微调 (fine-tuning)大型语言模型时，修改每个参数 (parameter)会带来显著的计算障碍。参数高效微调（PEFT）方法提供了一系列旨在克服这些限制的技术，通过大幅减少可训练参数的数量（通常是数量级上的减少），同时保持或接近完全微调的性能。
+
+PEFT 并非单一的整体方法，而是包含多种不同的策略。理解这些策略有助于为特定任务、模型和资源限制选择合适的技术。我们可以将大多数 PEFT 方法大致分为三类：附加方法、选择性方法和重参数化方法。
+
+### 附加方法：注入新参数 (parameter)
+
+附加方法基于一个简单的原理：保持原始预训练 (pre-training)模型的权重 (weight)不变，并引入少量*新*的可训练参数。这些新参数以特定方式集成到模型架构中，以影响其在微调 (fine-tuning)过程中的行为。
+
+- **适配器微调：** 这是一种经典的附加方法。称为“适配器”的小型神经网络 (neural network)模块被插入到预训练模型的现有层*之间*（例如，Transformer 块中的多头注意力 (multi-head attention)子层和前馈子层之后）。只有这些适配器内部的参数会被训练。基础模型保持不变，这允许将不同的适配器（为不同任务训练的）插入到同一个基础模型中使用。
+- **前缀微调和提示微调：** 这些方法侧重于处理输入表示或激活。
+  - *前缀微调* 将一系列可训练的连续向量 (vector)（即“前缀”）添加到每个注意力层的输入之前。这些前缀在微调过程中作为任务特定的指令被学习。
+  - *提示微调* 是一种简化方法，其中可训练向量仅添加到初始输入嵌入 (embedding)序列中。像 P-Tuning 这样的变体进一步完善了这一思路。
+
+附加方法的主要优势在于预训练知识（冻结权重）与任务特定适应（新参数）之间的明确分离。这种模块化简化了多任务学习和部署，因为可以按需加载不同的适配器或前缀，而无需修改大型基础模型。
+
+### 选择性方法：微调 (fine-tuning)部分参数 (parameter)
+
+选择性方法采取更直接的方法，即仅解冻并微调原始预训练 (pre-training)模型参数中经过仔细选择的*一小部分*。其余参数保持冻结。
+
+示例包括：
+
+- 仅微调网络中的偏置 (bias)项。
+- 选择性地更新最后一层或对适应任务很重要的特定层。
+- 像 FishMask 或 Diff Pruning 这样更复杂的技术尝试识别并训练对目标任务很重要的子网络。
+
+尽管直观，选择性方法的有效性在很大程度上取决于识别出要微调的*正确*参数子集。这种识别可能不简单。虽然在训练过程中可能比完全微调的内存消耗少，但它们可能需要比附加方法或重参数化方法微调更多的参数才能达到相似的性能。此外，管理不同的任务适应需要存储修改后参数的单独副本或应用复杂的修补机制。
+
+### 重参数 (parameter)化方法：修改权重 (weight)更新
+
+重参数化方法修改了权重更新的表示或应用方式，而不是直接添加参数或选择子集。此类中最突出的技术使用低秩近似。
+
+- **低秩适应 (LoRA)：** LoRA 基于这样的假设：适应所需的权重变化（$\Delta W$）具有较低的“内在秩”。LoRA 不学习完整的 $\Delta W$ 矩阵，而是通过训练两个小得多的低秩矩阵 $B$ 和 $A$ 来近似它，使得 $\Delta W \approx BA$。原始权重矩阵 $W$ 保持冻结，前向传播计算 $h = (W + BA)x$。训练期间，仅更新 $B$ 和 $A$。这大幅度减少了可训练参数的数量，通常降至总数的不到0.1%。从数学上看，对于预训练 (pre-training)权重矩阵 $W_0 \in \mathbb{R}^{d \times k}$，更新表示为：
+  $W = W_0 + \Delta W = W_0 + BA$
+  其中 $B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，且秩 $r \ll \min(d, k)$。
+
+LoRA 在参数效率和性能之间实现了很好的平衡。低秩更新矩阵 $B$ 和 $A$ 非常紧凑。重要的是，一旦训练完成，更新 $BA$ 可以合并回原始权重中（$W = W_0 + BA$），与原始模型相比，消除了任何推理 (inference)延迟开销。这一特性对于部署场景尤其有吸引力。
+
+### 方法图示
+
+下图展示了这些 PEFT 方法家族的区别：
+
+> PEFT 方法家族概述。附加方法引入新模块。选择性方法微调 (fine-tuning)原始模型的部分。重参数 (parameter)化方法（如 LoRA）使用应用于冻结权重 (weight)（$W$）的低秩更新（$BA$）。
+
+理解这一分类提供了一个框架，以理解PEFT的多种方法。后续章节将对重要方法提供更详细的技术分析和实际实现细节，从详细研究 LoRA 开始。
+
+## 参考资料
+
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: arXiv preprint arXiv:2106.09685; Publisher: arXiv; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了低秩适应（LoRA），一种高效微调的重要重参数化方法。
+- [Parameter-Efficient Transfer Learning for NLP](http://proceedings.mlr.press/v97/houlsby19a/houlsby19a.pdf) — Neil Houlsby, Andrei Giurgiu, Stanislaw Swietojanski, Maciej G. Juszczak, Patrick H. Chen, Alireza Razavi, Gareth Griffiths, Anna W. Felbo, Hubert Simon, Marcin Mucha, Piotr Clark, Sebastian Hofmann (2019)
+  Journal: Proceedings of the 36th International Conference on Machine Learning (ICML); Publisher: PMLR; Volume: 97; Pages: 2790-2799; DOI: [10.5555/3305380.3305459](https://doi.org/10.5555/3305380.3305459)
+  提出了适配器微调，一种参数高效迁移学习的基础性添加方法。
+- [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://aclanthology.org/2021.acl-long.353/) — Xiang Lisa Li, Percy Liang (2021)
+  Journal: Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing; Publisher: Association for Computational Linguistics; Volume: Volume 1: Long Papers; Pages: 4582-4597; DOI: [10.18653/v1/2021.acl-long.353](https://doi.org/10.18653/v1/2021.acl-long.353)
+  介绍了前缀微调，一种将可训练连续向量预置到每个注意力层的添加方法。

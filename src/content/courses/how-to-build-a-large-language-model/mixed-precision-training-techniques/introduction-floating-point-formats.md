@@ -1,0 +1,150 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "mixed-precision-training-techniques"
+lesson: "introduction-floating-point-formats"
+sourceId: 6049
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-20-mixed-precision-training-techniques/introduction-floating-point-formats"
+title: "浮点数格式（FP32、FP16、BF16）简介"
+description: "阐述不同浮点数格式的范围和精度特性。"
+order: 1
+plots: []
+sourceHash: "75ad9ca128d22ff39902afe77d69fa5a872003344050de18f2cc04f01ab4f7d4"
+sourceCorrections: []
+---
+
+训练大型语言模型常会遇到计算瓶颈。标准的32位浮点数（$FP32$）虽然准确，但会消耗大量内存和计算资源。混合精度训练使用较低精度的格式，如16位浮点数（$FP16$）和bfloat16（$BF16$），以减轻这些问题。了解这些格式的特点是有效使用它们的第一步。
+
+浮点数是计算机用来模拟实数的方式。每种格式都使用固定数量的位，通常分为三部分：符号位（表示数字是正数还是负数）、指数（表示数字的量级或范围）和尾数（表示精度或有效数字）。这些格式之间的考量归结为它们如何在指数和尾数之间分配位。
+
+### FP32（单精度）
+
+IEEE 754标准单精度浮点格式，通常称为$FP32$，使用32位。这通常是深度学习 (deep learning)框架和科学计算中的默认格式。
+
+- **结构：** 1个符号位，8个指数位，23个尾数位。
+- **范围：** 8个指数位提供了宽泛的动态范围，大约从$10^{-38}$到$10^{38}$。这个范围通常足以在模型训练期间表示激活值和梯度，而不会频繁出现溢出（数字过大）或下溢（数字过小以至于无法准确表示，变为零）。
+- **精度：** 23个尾数位提供了高精度，大约能准确表示7位十进制数字。
+
+尽管$FP32$稳定，但它需要大量资源。每个参数 (parameter)需要4字节存储空间，且涉及$FP32$数字的计算耗费计算力 (compute)。对于拥有数十亿参数的模型来说，这很快成为一个瓶颈。
+
+```python
+import torch
+
+# 创建一个FP32张量（PyTorch默认）
+fp32_tensor = torch.tensor([1.0, 2.0, 3.0])
+print(f"数据类型: {fp32_tensor.dtype}")
+print(f"每个元素的内存占用（字节）: {fp32_tensor.element_size()}")
+
+# 输出:
+# 数据类型: torch.float32
+# 每个元素的内存占用（字节）: 4
+```
+
+### FP16（半精度）
+
+IEEE 754半精度格式，或称$FP16$，与$FP32$相比将位数减半，仅使用16位。
+
+- **结构：** 1个符号位，5个指数位，10个尾数位。
+- **优点：**
+  - *内存减少：* 每个数字仅使用2字节，与$FP32$相比，模型权重 (weight)、梯度和激活所需的内存减半。
+  - *速度提升：* 在配备有专用单元的硬件上，如NVIDIA的Tensor Cores，操作可以明显加快，这些单元以比$FP32$操作更高的吞吐量 (throughput)进行$FP16$矩阵乘法。
+- **缺点：**
+  - *范围受限：* $FP16$最主要的问题是其动态范围大幅减少，因为只有5个指数位（大约从$10^{-5}$到$65504$）。这使其容易出现溢出（梯度变为`Inf`）或下溢（小梯度变为零，停止学习）。
+  - *精度降低：* 尾数位减少意味着精度较低（大约3-4位十进制数字）。尽管这通常足够，但有时可能会阻碍精细操作或模型的收敛。
+
+范围受限需要谨慎处理，常需要梯度缩放等技术（我们将在本章稍后介绍）以将值保持在$FP16$可表示的范围内。
+
+```python
+import torch
+
+# 创建一个FP16张量
+fp16_tensor = torch.tensor([1.0, 2.0, 3.0]).half() # 或 .to(torch.float16)
+print(f"数据类型: {fp16_tensor.dtype}")
+print(f"每个元素的内存占用（字节）: {fp16_tensor.element_size()}")
+
+# 演示范围问题（下溢）
+small_val_fp32 = torch.tensor(1e-7, dtype=torch.float32)
+small_val_fp16 = small_val_fp32.half()
+print(f"FP32中的小值: {small_val_fp32}")
+print(f"FP16中的小值: {small_val_fp16}") # 可能变为 0.0
+
+# 输出:
+# 数据类型: torch.float16
+# 每个元素的内存占用（字节）: 2
+# FP32中的小值: 9.999999974752427e-08
+# FP16中的小值: 0.0
+```
+
+### BF16 (BFloat16)
+
+BFloat16，或称$BF16$，是谷歌大脑开发的另一种16位格式。与$FP16$相比，它提供了不同的考量。
+
+- **结构：** 1个符号位，8个指数位，7个尾数位。
+- **特点：** $BF16$保留了$FP32$的8个指数位。这使其拥有与$FP32$*相同的动态范围*，有效消除了$FP16$常遇到的溢出和下溢问题。
+- **考量：** 为了在16位中保持$FP32$的范围，$BF16$牺牲了尾数位，只剩下7位用于表示精度（$FP16$有10位，$FP32$有23位）。这导致了较低的精度（大约2-3位十进制数字）。
+- **优点：**
+  - *稳定性：* 宽泛的动态范围与$FP16$相比大大提升了训练稳定性，常常无需梯度缩放等技术。
+  - *内存减少：* 与$FP16$类似，它将内存使用量与$FP32$相比减半。
+  - *速度提升：* 可以在兼容硬件（TPUs、较新的NVIDIA GPU如Ampere和Hopper）上加速。
+
+$BF16$的较低精度通常被认为是深度学习 (deep learning)训练中可接受的，因为对于范围变化的稳定性通常比极高的精度更为重要。它已成为混合精度训练的热门选择，特别是对于大型模型。
+
+```python
+import torch
+
+# 检查BF16是否可用（需要特定的硬件/PyTorch版本）
+bf16_available = torch.cuda.is_bf16_supported()
+print(f"BF16可用: {bf16_available}")
+
+if bf16_available:
+    # 创建一个BF16张量
+    bf16_tensor = (torch.tensor([1.0, 2.0, 3.0])
+                   .bfloat16()) # 或 .to(torch.bfloat16)
+    print(f"数据类型: {bf16_tensor.dtype}")
+    print(
+        f"每个元素的内存占用（字节）: {bf16_tensor.element_size()}"
+    )
+
+    # 演示范围（比FP16更好地处理小值）
+    small_val_bf16 = small_val_fp32.bfloat16()
+    print(
+        f"BF16中的小值: {small_val_bf16}"
+    ) # 表示其量级，但精度较低
+
+    # 示例输出（如果支持BF16）:
+    # BF16可用: True
+    # 数据类型: torch.bfloat16
+    # 每个元素的内存占用（字节）: 2
+    # BF16中的小值: 9.9609375e-08
+else:
+    print("当前硬件/PyTorch版本不支持BF16。")
+```
+
+### 总结比较
+
+以下是主要特点的简要总结：
+
+| 特性 | FP32（单精度） | FP16（半精度） | BF16（BFloat16） |
+| --- | --- | --- | --- |
+| 总位数 | 32 | 16 | 16 |
+| 符号位 | 1 | 1 | 1 |
+| 指数位 | 8 | 5 | 8 |
+| 尾数位 | 23 | 10 | 7 |
+| 动态范围 | 宽 | 窄 | 宽（与FP32相同） |
+| 精度 | 高 | 中 | 低 |
+| 每个值的内存占用 | 4 字节 | 2 字节 | 2 字节 |
+| 稳定性风险 | 低 | 高（范围） | 低（精度） |
+| 硬件支持 | 普遍 | 广泛 | 较新加速器 |
+
+了解这些基本差异对于实施混合精度训练时做出明智决策非常重要。尽管$FP16$和$BF16$都提供了内存和潜在的速度优势，但它们不同的范围和精度特点会带来不同的稳定性考量和性能取舍，我们将在后续章节中讨论这些。
+
+## 参考资料
+
+- [Mixed Precision Training](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  介绍了使用FP16混合精度算术训练深度神经网络的原始方法，展示了其优势和稳定训练的策略。
+- [Automatic Mixed Precision for Deep Learning](https://pytorch.org/docs/stable/amp.html) — PyTorch Team (2025)
+  Publisher: PyTorch Foundation
+  PyTorch官方文档，详细介绍了如何实现自动混合精度 (AMP) 训练，包括对FP16和BF16的支持。
+- [FP16 vs. BF16: What To Know About Automatic Mixed Precision and Tensor Cores](https://developer.nvidia.com/blog/fp16-vs-bf16-what-to-know-about-automatic-mixed-precision-and-tensor-cores/) — Tarun Surti (2020)
+  Journal: NVIDIA Developer Blog
+  一篇来自NVIDIA的详细技术文章，比较了FP16和BF16格式，讨论了它们的硬件影响以及在混合精度训练中的实际应用。

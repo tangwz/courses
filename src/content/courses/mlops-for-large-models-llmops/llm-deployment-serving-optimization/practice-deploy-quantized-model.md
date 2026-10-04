@@ -1,0 +1,380 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-deployment-serving-optimization"
+lesson: "practice-deploy-quantized-model"
+sourceId: 3189
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-4-llm-deployment-serving-optimization/practice-deploy-quantized-model"
+title: "实践：部署量化模型"
+description: "动手实践量化一个较小型大型语言模型并将其部署到推理服务器。"
+order: 9
+plots: ["plots/3189-0.json"]
+sourceHash: "1f016694feefba2f781bc67d9175739f171c4b5dc686f8107fc60d1707011132"
+sourceCorrections: []
+---
+
+优化大型语言模型以供部署的策略主要包括量化 (quantization)等技术，这些技术旨在减小模型大小并加速推理 (inference)。此动手练习将指导您把训练后量化应用于一个较小的Transformer模型，并使用一个简单的Web服务器进行部署。虽然本次实践使用了一个可控的模型大小，但其工作流程说明了部署优化后大型语言模型所涉及的基本步骤。
+
+**准备工作：**
+
+在开始之前，请确保您已安装Python及所需库。您可以使用pip安装它们：
+
+```bash
+pip install torch transformers optimum[onnxruntime] fastapi uvicorn[standard] psutil
+```
+
+我们将使用Hugging Face的`transformers`库加载预训练 (pre-training)模型，`optimum`来处理ONNX转换和量化过程，`torch`作为后端，`fastapi`来创建简单的Web服务，`uvicorn`来运行服务器，以及`psutil`来检查内存使用情况（作为模型大小的替代指标）。
+
+### 步骤 1：加载基础模型
+
+“首先，我们加载一个标准的预训练 (pre-training)Transformer模型。我们将使用`distilbert-base-uncased`，它是BERT的一个更小、更快的版本，适合本次演示。在实际的LLMOps场景中，您会将其替换为自己的特定大型模型检查点。”
+
+```python
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import os
+import psutil
+
+# 定义模型名称和任务
+model_name = "distilbert-base-uncased-finetuned-sst-2-english"
+task = "text-classification" # Optimum导出ONNX需要任务类型
+
+# 加载分词器和模型
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model_fp32 = AutoModelForSequenceClassification.from_pretrained(model_name)
+
+# 获取模型在内存中的大小（近似值）的函数
+def get_model_size_mb(model):
+    mem_params = sum([param.nelement()*param.element_size() for param in model.parameters()])
+    mem_bufs = sum([buf.nelement()*buf.element_size() for buf in model.buffers()])
+    total_mem_bytes = mem_params + mem_bufs
+    return total_mem_bytes / (1024**2) # 将字节转换为兆字节
+
+# 获取原始FP32模型的大小
+model_fp32_size = get_model_size_mb(model_fp32)
+print(f"原始FP32模型大小: {model_fp32_size:.2f} MB")
+
+# 保存分词器，以便后续与量化模型一起使用
+tokenizer.save_pretrained("./model_fp32")
+model_fp32.save_pretrained("./model_fp32") # 保存FP32模型，如果后续需要直接比较
+
+# 可选：如果运行在受限环境中，清理内存
+# del model_fp32
+# torch.cuda.empty_cache() # 如果使用GPU
+```
+
+这段代码加载了分词 (tokenization)器 (tokenizer)和标准的浮点精度（FP32）模型。我们还定义了一个辅助函数来估算模型在内存中的大小。
+
+### 步骤 2：使用Optimum进行训练后量化 (quantization)
+
+现在，我们将使用`optimum`库，它简化了模型优化过程，包括通过ONNX Runtime进行量化。我们将把PyTorch模型转换为ONNX格式，然后应用动态量化到INT8。
+
+```python
+from optimum.onnxruntime import ORTQuantizer, ORTModelForSequenceClassification
+from optimum.onnxruntime.configuration import AutoQuantizationConfig
+
+# 定义输出目录
+onnx_fp32_path = "./onnx_fp32"
+onnx_int8_path = "./onnx_int8"
+os.makedirs(onnx_fp32_path, exist_ok=True)
+os.makedirs(onnx_int8_path, exist_ok=True)
+
+# 1. 将模型导出为ONNX FP32格式
+model_fp32_onnx = ORTModelForSequenceClassification.from_pretrained(model_name, export=True, task=task)
+model_fp32_onnx.save_pretrained(onnx_fp32_path)
+tokenizer.save_pretrained(onnx_fp32_path) # 将分词器与ONNX模型一起保存
+print(f"FP32 ONNX模型保存到: {onnx_fp32_path}")
+
+# 2. 从FP32 ONNX模型创建量化器
+quantizer = ORTQuantizer.from_pretrained(onnx_fp32_path, file_name="model.onnx")
+
+# 3. 定义量化配置（动态INT8）
+#    如果可用，AVX2或VNNI指令集通常在此处有益
+qconfig = AutoQuantizationConfig.avx2(is_static=False, per_channel=False) # 动态量化
+
+# 4. 应用量化
+quantizer.quantize(save_dir=onnx_int8_path, quantization_config=qconfig)
+print(f"INT8 ONNX模型保存到: {onnx_int8_path}")
+
+# 同时将分词器与量化模型一起保存
+tokenizer.save_pretrained(onnx_int8_path)
+
+# 可选：清理中间ONNX模型
+# del model_fp32_onnx
+# del quantizer
+# torch.cuda.empty_cache() # 如果使用GPU
+```
+
+此过程包含：
+
+1. 将原始PyTorch模型导出为FP32精度的ONNX格式。`optimum`处理此转换。
+2. 将导出的ONNX模型加载到`ORTQuantizer`对象中。
+3. 指定量化配置。我们选择适合AVX2 CPU指令集（现代处理器上常见）的动态INT8量化。动态量化在模型加载时对权重 (weight)应用量化，并在推理 (inference)时动态量化激活。
+4. 运行`quantize`方法，该方法应用配置并将INT8量化模型保存到指定目录。
+
+### 步骤 3：比较模型大小
+
+量化 (quantization)的一个主要好处是模型大小的减小。让我们比较一下FP32 ONNX模型和INT8量化ONNX模型的磁盘占用空间。
+
+```python
+import os
+
+def get_dir_size_mb(path='.'):
+    total = 0
+    with os.scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size_mb(entry.path)
+    return total / (1024**2) # 将字节转换为兆字节
+
+# 计算大小
+fp32_onnx_size = get_dir_size_mb(onnx_fp32_path)
+int8_onnx_size = get_dir_size_mb(onnx_int8_path)
+
+print(f"FP32 ONNX模型目录大小: {fp32_onnx_size:.2f} MB")
+print(f"INT8 ONNX模型目录大小: {int8_onnx_size:.2f} MB")
+print(f"大小减少: {(1 - int8_onnx_size / fp32_onnx_size) * 100:.2f}%")
+
+# Plotly图表数据
+size_data = {
+    "models": ["FP32 ONNX", "INT8 ONNX"],
+    "sizes_mb": [round(fp32_onnx_size, 2), round(int8_onnx_size, 2)]
+}
+```
+
+
+
+![模型大小比较（磁盘）](plots/3189-0.json)
+
+
+
+> FP32和INT8量化ONNX模型的近似磁盘大小比较。注意：确切大小可能因依赖项和文件结构而略有不同。
+
+您应该会观察到模型大小显著减小，从FP32到INT8通常接近4倍，因为每个参数 (parameter)现在只需要8位而不是32位。
+
+### 步骤 4：加载并测试量化 (quantization)模型（可选）
+
+在部署之前，让我们快速使用`optimum`加载量化模型，并运行一个示例推理 (inference)来验证其功能。
+
+```python
+from optimum.onnxruntime import ORTModelForSequenceClassification
+import time
+
+# 加载量化模型
+quantized_model = ORTModelForSequenceClassification.from_pretrained(onnx_int8_path)
+quantized_tokenizer = AutoTokenizer.from_pretrained(onnx_int8_path)
+
+# 示例文本
+text = "This movie was absolutely fantastic!"
+inputs = quantized_tokenizer(text, return_tensors="pt") # 默认期望PyTorch张量
+
+# 预热运行（可选，提高计时准确性）
+_ = quantized_model(**inputs)
+
+# 测量推理时间
+start_time = time.time()
+outputs = quantized_model(**inputs)
+end_time = time.time()
+
+# 处理输出
+logits = outputs.logits
+predicted_class_id = torch.argmax(logits, dim=1).item()
+prediction = quantized_model.config.id2label[predicted_class_id]
+
+print(f"输入文本: '{text}'")
+print(f"预测类别: {prediction} (ID: {predicted_class_id})")
+print(f"推理时间 (INT8 ONNX): {end_time - start_time:.4f} 秒")
+
+# 可选：与FP32 ONNX模型推理时间进行比较
+# try:
+#     fp32_model_onnx = ORTModelForSequenceClassification.from_pretrained(onnx_fp32_path)
+#     fp32_tokenizer = AutoTokenizer.from_pretrained(onnx_fp32_path)
+#     inputs_fp32 = fp32_tokenizer(text, return_tensors="pt")
+#     _ = fp32_model_onnx(**inputs_fp32) # 预热
+#     start_time_fp32 = time.time()
+#     outputs_fp32 = fp32_model_onnx(**inputs_fp32)
+#     end_time_fp32 = time.time()
+#     print(f"推理时间 (FP32 ONNX): {end_time_fp32 - start_time_fp32:.4f} 秒")
+# except Exception as e:
+#     print(f"无法运行FP32 ONNX比较: {e}")
+
+# 清理内存中的模型
+# del quantized_model
+# if 'fp32_model_onnx' in locals(): del fp32_model_onnx
+# torch.cuda.empty_cache() # 如果使用GPU
+```
+
+尽管性能提升在很大程度上取决于硬件（如AVX2/VNNI等CPU特性或GPU功能），但量化通常会因内存带宽需求降低以及整数单元上计算可能更快而带来更快的推理速度。训练后量化的精度影响也应在相关数据集上进行评估，尽管对于许多模型和任务，INT8量化能保持可接受的精度。
+
+### 步骤 5：使用FastAPI部署量化 (quantization)模型
+
+现在，让我们使用FastAPI创建一个简单的Web服务来提供我们的INT8量化模型。该服务器将加载模型和分词 (tokenization)器 (tokenizer)，通过HTTP请求接受文本输入，并返回分类预测。
+
+创建一个名为`serve_quantized.py`的文件：
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+from transformers import AutoTokenizer
+from optimum.onnxruntime import ORTModelForSequenceClassification
+import torch
+import time
+import os
+
+# 定义量化模型的路径
+MODEL_DIR = "./onnx_int8"
+
+# 检查模型目录是否存在
+if not os.path.exists(MODEL_DIR):
+    raise RuntimeError(f"Model directory not found: {MODEL_DIR}. Please run the quantization steps first.")
+
+# 在服务器启动时加载量化模型和分词器
+try:
+    print(f"正在从 {MODEL_DIR} 加载量化模型...")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+    model = ORTModelForSequenceClassification.from_pretrained(MODEL_DIR)
+    # 执行一次虚拟推理，以优化JIT编译等
+    _ = model(**tokenizer("warmup", return_tensors="pt"))
+    print("模型加载成功。")
+except Exception as e:
+    print(f"加载模型时出错: {e}")
+    # 可选地退出或适当地处理错误
+    raise RuntimeError("Failed to load the quantized model.") from e
+
+# 初始化FastAPI应用
+app = FastAPI(title="Quantized Model Serving API")
+
+# 定义请求体结构
+class InferenceRequest(BaseModel):
+    text: str
+
+# 定义响应体结构
+class InferenceResponse(BaseModel):
+    prediction: str
+    confidence: float
+    latency_ms: float
+
+@app.post("/predict", response_model=InferenceResponse)
+async def predict(request: InferenceRequest):
+    """
+    使用量化模型对输入文本执行推理。
+    """
+    start_time = time.time()
+
+    # 对输入文本进行分词
+    inputs = tokenizer(request.text, return_tensors="pt", truncation=True, max_length=512)
+
+    # 执行推理
+    with torch.no_grad(): # 确保不计算梯度
+        outputs = model(**inputs)
+
+    # 处理输出
+    logits = outputs.logits
+    probabilities = torch.softmax(logits, dim=1)
+    predicted_class_id = torch.argmax(probabilities, dim=1).item()
+    confidence = probabilities[0, predicted_class_id].item()
+    prediction_label = model.config.id2label[predicted_class_id]
+
+    end_time = time.time()
+    latency_ms = (end_time - start_time) * 1000
+
+    return InferenceResponse(
+        prediction=prediction_label,
+        confidence=round(confidence, 4),
+        latency_ms=round(latency_ms, 2)
+    )
+
+@app.get("/")
+async def root():
+    return {"message": "量化模型服务器正在运行。使用 POST /predict 进行预测。"}
+
+# 如果直接运行此脚本，启动Uvicorn服务器
+if __name__ == "__main__":
+    import uvicorn
+    # 确保在Docker或虚拟机内部运行时主机可访问
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+此脚本定义了：
+
+1. 加载逻辑：服务器启动时，它从`./onnx_int8`目录加载分词器和量化的`ORTModelForSequenceClassification`。
+2. API端点（`/predict`）：接受包含`{"text": "您的输入文本"}`的JSON POST请求。
+3. 推理 (inference)逻辑：对输入进行分词，使用加载的量化模型运行推理，计算概率，并确定预测标签。
+4. 响应：返回一个包含预测、置信度分数和处理延迟的JSON对象。
+
+### 步骤 6：运行并测试服务器
+
+现在，在您运行前面Python代码的相同目录，以及`onnx_int8`目录存在的同一位置，从您的终端运行FastAPI服务器：
+
+```bash
+python serve_quantized.py
+```
+
+Uvicorn将启动服务器，通常在`http://127.0.0.1:8000`上监听。
+
+您可以从另一个终端使用`curl`测试端点：
+
+```bash
+curl -X POST "http://127.0.0.1:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "This framework makes deployment so much easier!"}'
+```
+
+或者使用Python的`requests`库：
+
+```python
+import requests
+import json
+
+url = "http://127.0.0.1:8000/predict"
+payload = {"text": "Optimum and ONNX Runtime provide great optimizations."}
+headers = {"Content-Type": "application/json"}
+
+response = requests.post(url, data=json.dumps(payload), headers=headers)
+
+if response.status_code == 200:
+    print("请求成功！")
+    print(response.json())
+else:
+    print(f"请求失败，状态码: {response.status_code}")
+    print(response.text)
+
+payload = {"text": "I am not sure about this, it seems quite complicated."}
+response = requests.post(url, data=json.dumps(payload), headers=headers)
+if response.status_code == 200:
+    print("\n请求成功！")
+    print(response.json())
+else:
+    print(f"\n请求失败，状态码: {response.status_code}")
+    print(response.text)
+```
+
+您应该会收到包含情感分类（此模型为`POSITIVE`或`NEGATIVE`）、置信度分数以及预测所需时间的JSON响应。
+
+### 总结与后续步骤
+
+在本次实践中，您成功地使用Hugging Face `optimum`和ONNX Runtime对Transformer模型应用了训练后动态量化 (quantization)。您观察到模型大小的减小，并使用简单的FastAPI服务器部署了优化后的模型。
+
+本练习说明了核心工作流程：
+
+1. **优化：** 对训练好的模型应用量化（或剪枝、知识蒸馏 (knowledge distillation)）等技术。
+2. **打包：** 保存优化后的模型及其依赖项（如分词 (tokenization)器 (tokenizer)配置）。
+3. **服务：** 将优化后的模型加载到可通过API访问的推理 (inference)服务器中（可以是FastAPI这样的简单服务器，也可以是Triton/vLLM这样的专业服务器）。
+
+尽管我们为了简单起见使用了相对较小的模型和动态量化，但这些原理也适用于本章讨论的更大型模型和其他优化技术。对于生产环境中的大型语言模型部署，您通常会：
+
+- 使用更复杂的推理服务器（NVIDIA Triton、vLLM、TensorRT-LLM），这些服务器专为高吞吐量 (throughput)和低延迟的GPU推理设计。
+- 研究静态量化或量化感知训练（QAT），以获得可能更好的性能和精度，特别是在特定的硬件加速器上。
+- 使用容器（例如Docker）实现打包。
+- 将部署集成到CI/CD流水线中，并采用自动化测试和发布策略（金丝雀发布、蓝绿部署）。
+- 设置性能、成本和模型漂移的全面监控，这将在下一章中介绍。
+
+## 参考资料
+
+- [Hugging Face Optimum Documentation](https://huggingface.co/docs/optimum/index) — Hugging Face (2024)
+  提供使用Hugging Face工具优化Transformer模型的指南和API参考，包括ONNX导出和使用ONNX Runtime进行量化。
+- [ONNX Runtime Documentation](https://onnxruntime.ai/docs/) — Microsoft (2024)
+  ONNX Runtime的官方信息来源，一个与ONNX模型兼容的跨平台推理引擎，对于加速量化模型的执行至关重要。
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) — Sebastián Ramírez (2024)
+  FastAPI的官方文档，这是一个用于构建高性能API的Python Web框架，本节中使用它来部署优化后的模型。

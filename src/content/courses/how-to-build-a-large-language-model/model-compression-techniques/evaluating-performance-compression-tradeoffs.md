@@ -1,0 +1,149 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "model-compression-techniques"
+lesson: "evaluating-performance-compression-tradeoffs"
+sourceId: 6096
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-27-model-compression-techniques/evaluating-performance-compression-tradeoffs"
+title: "评估性能与压缩的权衡"
+description: "评估压缩技术对模型准确度和推理速度的影响。"
+order: 6
+plots: ["plots/6096-0.json"]
+sourceHash: "00594fd955d8920c7f312391fc3cffd429ebe08977c86c3797bf1d90117ead53"
+sourceCorrections: []
+---
+
+应用量化 (quantization)、剪枝或知识蒸馏 (knowledge distillation)等压缩方法会带来一个基本取舍：效率的提升（更小的尺寸、更快的推理 (inference)、更低的内存占用）通常会以模型性能的某种程度下降为代价。选择合适的压缩策略和配置需要细致的评估，以便为您的特定应用需求找到一个可接受的平衡点。本节提供关于如何系统地衡量和比较这些权衡的指导。
+
+## 定义评估维度
+
+为理解压缩的影响，我们需要沿着两个主要维度来衡量变化：模型性能和资源效率。
+
+### 性能指标
+
+性能指标的选择很大程度上取决于大语言模型 (LLM)的用途。评估与您部署场景最相关的指标是很重要的。
+
+- **内在指标：** 像**困惑度**（第21章有讨论）这样的指标衡量基础的语言建模能力。较低的困惑度通常表示模型与训练数据分布更契合。虽然在开发过程中有用，但困惑度的变化并不总是直接与特定下游应用的性能相关。压缩后困惑度显著增加通常是一个警告信号。
+  "\* **外在指标：** 评估在**下游任务**（第22章有提及）上的性能通常更能体现实用性。这包括微调 (fine-tuning)（如适用）或在零样本/少样本设置中使用压缩模型，用于GLUE、SuperGLUE等基准测试，或与您的应用相关的自定义任务（例如，摘要的ROUGE分数、问答的F1分数、分类准确率）。"
+- **对齐 (alignment)与安全指标：** 如果模型经过对齐调整（第25、26章），压缩可能会影响其有用性、诚实性或无害性。评估可能涉及特定的对齐基准或人工评估协议，以检查所需行为的退化或不希望行为的出现。
+
+### 效率指标
+
+压缩带来的效率提升应该在实际中衡量，在目标部署硬件和软件堆栈上进行。
+
+- **模型大小：** 这通常是最直接的指标，以兆字节（MB）或千兆字节（GB）衡量。它直接影响存储需求和下载时间。量化 (quantization)通常提供可预测的大小减小（例如，INT8相比FP32可将权重 (weight)大小减少约4倍）。剪枝的影响取决于达到的稀疏度。蒸馏在设计上会产生一个更小的模型。
+- **推理 (inference)延迟：** 衡量处理单个输入或生成单个令牌所需的时间（例如，每令牌毫秒数）。这对于交互式应用来说非常重要。延迟很大程度上取决于硬件（GPU、CPU、专用加速器）、批量大小、序列长度以及压缩技术的具体实现（例如，优化低精度内核的可用性）。
+- **吞吐量 (throughput)：** 衡量每单位时间处理的请求或令牌数量（例如，每秒令牌数）。对于同时服务许多用户的应用很重要。批处理策略显著影响吞吐量。
+- **内存占用：** 加载和运行模型所需的RAM或VRAM量。较低精度格式显著减少权重所需的内存。KV缓存（第28章）等技术也会影响生成过程中的运行时内存使用。
+
+## 建立基线
+
+在评估压缩模型之前，您必须建立一个可靠的基线。在目标硬件和评估数据集上衡量您原始、未压缩模型的性能和效率指标。此基线作为所有压缩版本进行比较的参考点。
+
+```python
+import torch
+import time
+from transformers import AutoModelForCausalLM, AutoTokenizer
+# 假设 evaluate_perplexity 和 evaluate_downstream_task 函数已存在
+# 假设 get_model_size_mb 和 measure_latency 函数已存在
+
+# --- 配置 ---
+model_id = "您的原始大语言模型检查点"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+eval_dataset = [...] # 您的评估数据集
+test_prompt = "从前"
+num_tokens_to_generate = 50
+
+# --- 加载原始模型 ---
+original_model = AutoModelForCausalLM.from_pretrained(model_id).to(device)
+original_model.eval()
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+# --- 基线评估 ---
+with torch.no_grad():
+    baseline_perplexity = evaluate_perplexity(
+        original_model, tokenizer, eval_dataset, device
+    )
+    baseline_downstream_score = evaluate_downstream_task(
+        original_model, tokenizer, ...
+    )
+    baseline_size_mb = get_model_size_mb(original_model)
+
+    # 衡量延迟（生成示例）
+    inputs = tokenizer(test_prompt, return_tensors="pt").to(device)
+    start_time = time.time()
+    _ = original_model.generate(**inputs, max_new_tokens=num_tokens_to_generate)
+    end_time = time.time()
+    baseline_latency_ms = (
+        (end_time - start_time) * 1000 / num_tokens_to_generate
+    ) # 大约每令牌毫秒数
+
+print(f"基线指标:")
+print(f"  困惑度: {baseline_perplexity:.2f}")
+print(f"  下游任务分数: {baseline_downstream_score:.4f}")
+print(f"  大小 (MB): {baseline_size_mb:.1f}")
+print(f"  延迟 (毫秒/令牌): {baseline_latency_ms:.1f}")
+
+# 存储这些基线值用于比较
+baseline_metrics = {
+    "perplexity": baseline_perplexity,
+    "downstream_score": baseline_downstream_score,
+    "size_mb": baseline_size_mb,
+    "latency_ms_per_token": baseline_latency_ms,
+}
+```
+
+## 比较压缩策略
+
+一旦有了基线，应用不同的压缩技术和配置，然后使用*相同*的指标和程序重新评估。
+
+- **量化 (quantization)：** 比较不同比特级别（例如，INT8、INT4）的训练后量化（PTQ）和量化感知训练（QAT）。PTQ更简单，但在较低比特宽度下可能会导致更大的性能下降。QAT需要更多精力（重新训练），但通常能更好地保持性能。评估目标硬件上的模型准确度和实际加速效果，因为理论加速如果没有优化内核并不总是能实现。
+- **剪枝：** 评估不同的稀疏度级别（例如，20%、40%、60%稀疏度）。比较非结构化剪枝（移除单个权重 (weight)）与结构化剪枝（移除整个神经元或注意力头）。虽然非结构化剪枝在给定准确度下降的情况下可能提供更高的压缩比，但结构化剪枝由于其规则性，通常在标准硬件上带来更实际的加速。衡量随稀疏度增加而产生的性能下降。
+- **知识蒸馏 (knowledge distillation)：** 训练不同大小或架构的学生模型。评估学生模型相对于原始基线和更大的教师模型的性能。权衡包括学生模型的训练成本与其最终大小、速度以及相对于基线的性能。
+
+## 可视化权衡
+
+散点图在可视化性能与效率之间的关系方面很有效。在一个轴上绘制性能指标（例如，下游任务准确率），在另一个轴上绘制效率指标（例如，延迟或模型大小）。每个点代表一个特定的压缩模型配置。
+
+
+
+![性能与延迟权衡](plots/6096-0.json)
+
+
+
+> 特定任务上的性能准确率与每生成令牌的平均延迟对比。每个点代表一个不同的模型版本（基线或压缩版本）。通常更偏好较低的延迟（左侧）和较高的准确率（上方）。
+
+这样的图表有助于识别“帕累托前沿”——这是一组模型，您无法在不牺牲另一个指标（例如，降低准确率）的情况下改进一个指标（例如，减少延迟）。位于此前沿的模型代表了所评估配置下最佳可达成的权衡。
+
+## 硬件和软件堆栈依赖性
+
+在用于部署的特定硬件和软件环境中进行效率评估（延迟、吞吐量 (throughput)、内存使用）是绝对必要的。
+
+- **硬件：** INT8量化 (quantization)等技术带来的加速效果很大程度上依赖于GPU或加速器对低精度计算的支持（例如，NVIDIA Tensor Cores）。在一代GPU上观察到的加速效果可能在另一代或在CPU/TPU上差异很大。同样，结构化剪枝的益处取决于硬件/库是否可以利用由此产生的稀疏性。
+- **软件：** 推理 (inference)框架（如PyTorch、ONNX Runtime、TensorRT、vLLM）及其配置起着重要作用。优化后的库通常为量化或稀疏操作提供专用内核。没有这些，压缩的理论益处可能不会转化为实际的延迟降低。
+
+"因此，衡量`毫秒/令牌`或`令牌/秒`需要模型在目标部署堆栈中运行。简单的FLOP计数或参数 (parameter)计数不足以作为速度的衡量标准。"
+
+## 做出决策
+
+很少有单一的“最佳”压缩模型。最佳选择由您的特定应用的约束和要求决定：
+
+- **延迟敏感型应用：** （例如，实时聊天机器人）可能会优先考虑低延迟，接受稍大一点的模型或轻微的性能下降。激进的量化 (quantization)（INT4）或适度的剪枝可能适用。
+- **资源受限环境：** （例如，移动或边缘设备）可能会优先考虑最小的模型大小和内存占用，可能容忍较低的准确率。量化和蒸馏通常是主要选择。
+- **高准确率要求：** （例如，科学分析、复杂推理 (inference)）可能只允许极小的性能下降，倾向于选择不那么激进的压缩方式，如INT8 QAT或非常轻微的剪枝，即使效率提升不明显。
+
+评估过程通常是迭代的。您可以尝试多种压缩技术和设置，使用上述方法衡量它们的影响，可视化权衡，并选择最符合您特定性能目标和资源预算的配置。始终与未压缩的基线进行比较，以了解每种压缩方法的相对成本和益处。
+
+## 参考资料
+
+- [LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale](https://arxiv.org/abs/2208.07339) — Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer (2022)
+  Journal: NeurIPS 2022; DOI: [10.48550/arXiv.2208.07339](https://doi.org/10.48550/arXiv.2208.07339)
+  讨论了大型语言模型的8位量化、其实现以及观察到的性能权衡。
+- [HELM: Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew A. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  介绍了一个评估语言模型的综合框架，涵盖广泛指标和场景，有助于系统性权衡分析。
+- [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531) — Geoffrey Hinton, Oriol Vinyals, Jeff Dean (2015)
+  Journal: arXiv preprint arXiv:1503.02531; DOI: [10.48550/arXiv.1503.02531](https://doi.org/10.48550/arXiv.1503.02531)
+  介绍了知识蒸馏的原始论文，这是一种从大型模型创建更小、更快模型的技术，与理解蒸馏权衡相关。
+- [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](https://arxiv.org/abs/1803.03635) — Jonathan Frankle, Michael Carbin (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1803.03635](https://doi.org/10.48550/arXiv.1803.03635)
+  提出了彩票假设，这是神经网络剪枝中的一个基础概念，对于理解剪枝模型的潜力和评估至关重要。

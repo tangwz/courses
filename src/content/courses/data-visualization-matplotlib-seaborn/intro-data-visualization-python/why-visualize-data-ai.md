@@ -1,0 +1,55 @@
+---
+course: "data-visualization-matplotlib-seaborn"
+chapter: "intro-data-visualization-python"
+lesson: "why-visualize-data-ai"
+sourceId: 1137
+sourceUrl: "https://apxml.com/zh/courses/data-visualization-matplotlib-seaborn/chapter-1-intro-data-visualization-python/why-visualize-data-ai"
+title: "为何要在人工智能和工程领域将数据可视化？"
+description: "了解在人工智能和工程环境中运用数据可视化的原因。"
+order: 2
+plots: []
+sourceHash: "1c438dd40439dcd382cc151d528014c406997bf22af302f325b5c68c40f33440"
+sourceCorrections: []
+---
+
+您已经了解，数据可视化是以图形方式呈现信息。但*为何*这种做法如此重要，尤其是在人工智能（AI）和工程等学科中？虽然电子表格和数字表格包含了原始事实，但它们常常掩盖数据所蕴含的信息。我们的大脑非常擅长快速处理视觉信息，这使得图表成为理解数据的有效工具。
+
+在人工智能和工程领域，您经常遇到大量、复杂的数据集。试想一下，仅仅通过查看数字的行和列，就想了解制造工厂中数千个传感器的行为，或是机器学习 (machine learning)模型中数百个特征之间的关联，这效率低下，而且常常难以做到。可视化将这些抽象数据转化为具体的形状和模式，让您可以轻松解读。
+
+以下是为何可视化在这些技术方面是一项非常重要的能力：
+
+1. **数据初步分析 (EDA)：** 在构建任何复杂模型或系统之前，您需要了解您的数据。可视化是数据初步分析的主要手段。
+
+   - **识别趋势和规律：** 折线图可以显示传感器读数或股票价格随时间的变化。散点图可以显示两个变量之间的潜在关联，例如发动机温度和燃油效率。
+   - **发现异常值和离群点：** 异常数据点在散点图或箱线图等图表中常常在视觉上很显眼。这些可能表示数据采集错误、设备故障或值得查看的特殊事件。
+   - **了解数据分布：** 直方图和密度图显示数据如何分布。它是对称的吗？偏斜吗？它有多个峰值吗？这为数据处理和建模的选择提供了根据。
+2. **模型评估与解读（尤其在人工智能中）：** 构建一个人工智能模型只是任务的一部分。您需要了解它的表现以及*为何*如此。
+
+   - **评估表现：** 在模型训练期间（学习曲线）绘制准确率或错误率等指标有助于诊断诸如过拟合 (overfitting)（模型对训练数据学习得太好，但在新数据上表现不佳）或欠拟合 (underfitting)（模型过于简单）等问题。
+   - **分析错误：** 将分类模型所犯的错误类型可视化（例如，使用混淆矩阵图）可以为改进提供方向。绘制回归模型中的预测误差（残差）有助于检验模型假设是否成立。
+   - **解读复杂模型：** 存在一些方法可以可视化深度神经网络 (neural network)等复杂模型如何做出决策，从而掌握其内部运行机制。
+3. **数据质量评估：** 清洁、可靠的数据是必不可少的。可视化提供了进行快速初步质量检查的方法。
+
+   - 图表可以突出显示缺失数据的模式。
+   - 分布中不寻常的形状可能表示数据录入错误或测量问题。
+4. **传达结果和见解：** 也许最重要的优点之一是沟通。与表格或一段文字相比，通过清晰的图表向同事、经理或客户解释来自复杂数据或模型的技术发现，效果要好得多。精心设计的可视化使主要信息即时且易于理解，有助于讨论和决策。
+
+思考从原始数据到可操作性认识的基本流程：
+
+> 该图表显示了原始数据如何通过绘图转化为可视化，然后通过解读获得认识和信息。
+
+综上所述，数据可视化不仅仅是创建美观的图形。它是审查数据、验证模型、发现问题以及有效传达复杂信息的一种基本方法。对于任何从事人工智能、数据科学或工程工作的人来说，培养扎实的可视化能力不仅有帮助，而且是理解这些学科中数据丰富环境的必不可少的能力。随着您在本课程中的学习，您将学会使用 Python 将原始数据转化为有价值的视觉呈现的实用技能。
+
+## 参考资料
+
+- [The Visual Display of Quantitative Information](https://www.edwardtufte.com/tufte/books_vdqi) — Edward R. Tufte (1983)
+  Publisher: Graphics Press
+  阐述清晰有效数据可视化原则的经典著作。
+- [Visualization Analysis and Design](https://www.cs.ubc.ca/~tmm/vadbook/) — Tamara Munzner (2014)
+  Publisher: CRC Press; DOI: [10.1201/b17511](https://doi.org/10.1201/b17511)
+  关于可视化理论、设计与分析的综合性教科书，涵盖理解复杂数据集的技术。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  使用 Pandas、NumPy 和 Matplotlib 进行数据操作、处理和可视化的实用 Python 指南。
+- [Interpretable Machine Learning: A Guide for Making Black Box Models Explainable](https://christophm.github.io/interpretable-ml-book/) — Christoph Molnar (2023)
+  探讨解释机器学习模型的方法，大量依赖可视化来理解模型行为和决策。

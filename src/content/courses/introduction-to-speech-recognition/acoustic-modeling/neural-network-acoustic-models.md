@@ -1,0 +1,55 @@
+---
+course: "introduction-to-speech-recognition"
+chapter: "acoustic-modeling"
+lesson: "neural-network-acoustic-models"
+sourceId: 7108
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-speech-recognition/chapter-3-acoustic-modeling/neural-network-acoustic-models"
+title: "基于神经网络的声学模型介绍"
+description: "简要介绍现代深度学习和神经网络如何取代了传统的高斯混合模型-隐马尔可夫模型系统。"
+order: 6
+plots: []
+sourceHash: "e33524d12160ca8fddf1b3b1a7408df3712659a48c2327826808e8e5453a0536"
+sourceCorrections: []
+---
+
+高斯混合模型（GMM）和隐马尔可夫模型（HMM）的结合多年来一直是语音识别的主力，但它们也存在一定的局限性。例如，GMM难以有效建模语音数据中高度复杂和非线性的模式。HMM对状态独立性的假设，对于人类语言的流畅性而言也可能过于严格。
+
+为应对这些挑战，研究人员转向了一种更有效的工具：神经网络 (neural network)。神经网络是一种计算系统，它学习识别数据中的模式。对于声学建模来说，这意味着它能够以比传统方法高得多的准确度，学习音频特征到音素之间的精密映射。
+
+### 混合模型的兴起
+
+第一个主要转变是\*\*混合深度神经网络 (neural network)-隐马尔可夫模型（DNN-HMM）\*\*的出现。在这种架构中，经典系统中的GMM组件被深度神经网络（DNN）取代，但HMM得以保留。
+
+其运作方式如下：
+
+1. **输入：** 与之前一样，模型接收一系列音频特征向量 (vector)，例如MFCC。
+2. **DNN处理：** 每个特征向量都被输入到DNN中。网络通过多个相互连接的节点层处理此输入。
+3. **输出：** DNN的输出层旨在为每个可能的音素生成概率。对于给定的音频帧，网络计算其对应于/s/、/t/、/a/等的可能性。这与GMM执行的任务相同，但DNN能够以更高的精度学习特征与音素之间的关系。
+4. **HMM序列化：** 由DNN生成的音素概率序列随后传递给HMM。HMM的作用不变。它使用这些概率来找出随时间变化的最可能音素序列，就像它处理来自GMM的概率一样。
+
+这种混合方法结合了DNN卓越的模式识别能力和HMM处理序列数据的经证实能力，从而显著降低了词错误率。
+
+> 传统GMM-HMM架构与混合DNN-HMM模型的比较图。DNN取代GMM，为HMM提供更准确的音素概率。
+
+### 现代端到端架构
+
+混合模型的成功仅仅是个开始。现代自动语音识别（ASR）系统已转向**端到端模型**，这进一步简化了流程。端到端系统不再为声学建模、发音和语言建模设置独立组件，而是使用单一的大型神经网络 (neural network)来学习从音频到文本的直接映射。
+
+此方面有两种重要的方案：
+
+- **连接时序分类（CTC）：** 基于CTC的模型被训练为直接从输入音频特征输出文本字符序列。它们巧妙地处理了语音中字符之间没有清晰边界的事实，自动学习将音频与转录文本对齐 (alignment)。
+- **注意力机制 (attention mechanism)模型：** 这些模型通常使用“编码器-解码器”结构，首先“听取”整个音频序列以创建高级表示（这是编码器的任务）。然后，解码器每次生成一个词或字符，同时“关注”音频中与所生成文本最相关的部分。
+
+这些端到端系统已成为领先语音识别的标准，因为它们通常能提供更高的准确度，并大幅简化训练和部署过程。在本课程的后续部分，当我们讨论声学模型时，你可以假定它们基于神经网络，因为这反映了该领域的当前情况。
+
+## 参考资料
+
+- [Deep Neural Networks for Acoustic Modeling in Speech Recognition](https://ieeexplore.ieee.org/document/6296526) — Geoffrey Hinton, Li Deng, Dong Yu, George Dahl, Abdel-rahman Mohamed, Navdeep Jaitly, Andrew Senior, Vincent Vanhoucke, Patrick Nguyen, Tara N. Sainath, Brian Kingsbury (2012)
+  Journal: IEEE Signal Processing Magazine; Publisher: IEEE; Volume: 29; Pages: 82-97; DOI: [10.1109/MSP.2012.2205597](https://doi.org/10.1109/MSP.2012.2205597)
+  这篇基础论文展示了在混合HMM-DNN语音识别系统中，用深度神经网络取代高斯混合模型进行声学建模的有效性。
+- [Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks](https://doi.org/10.1145/1143844.1143891) — Alex Graves, Santiago Fernández, Faustino Gomez, Jürgen Schmidhuber (2006)
+  Journal: Proceedings of the 23rd International Conference on Machine Learning; Publisher: ACM; Pages: 369-376; DOI: [10.1145/1143844.1143891](https://doi.org/10.1145/1143844.1143891)
+  介绍了连接时序分类（CTC），一种用于训练循环神经网络标注未分段序列数据的方法，在端到端语音识别中应用广泛。
+- [Listen, Attend and Spell: A Neural Network for Large Vocabulary Conversational Speech Recognition](https://ieeexplore.ieee.org/document/7472659) — William Chan, Navdeep Jaitly, Quoc V. Le, Oriol Vinyals (2016)
+  Journal: 2016 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP); Publisher: IEEE; Pages: 4960-4964; DOI: [10.1109/ICASSP.2016.7472659](https://doi.org/10.1109/ICASSP.2016.7472659)
+  介绍了“听、注意和拼写”（LAS）模型，这是端到端语音识别中基于注意力的编码器-解码器架构的一个早期且有影响力的例子。

@@ -1,0 +1,88 @@
+---
+course: "intro-to-multimodal-ai"
+chapter: "techniques-integrating-modalities"
+lesson: "shared-representations"
+sourceId: 6519
+sourceUrl: "https://apxml.com/zh/courses/intro-to-multimodal-ai/chapter-3-techniques-integrating-modalities/shared-representations"
+title: "共享表示：学习共同特征"
+description: "介绍学习联合或共享表示的方法，其中模态被映射到共同空间。"
+order: 5
+plots: []
+sourceHash: "22b4dbbaf0b515b2f9620f132643b93e6099e078b96371e70985603d415f584f"
+sourceCorrections: []
+---
+
+章引言说明，我们需要方法将来自不同模态的信息汇集起来。我们已经审视了融合策略，其中数据流被合并。现在，让我们考察另一种有力的方法：学习**共享表示**。
+
+想象一下，你正在设法让两个讲不同语言的人互相理解。你可以逐字翻译（这类似于直接合并信息流），或者你可以尝试让他们都理解一套共同的特征或符号。多模态 (multimodal)AI中的共享表示更类似于后者。
+
+主要的思路是将来自不同模态的数据，例如图像和一段文本，转换成一种通用格式或“空间”，以便它们可以直接进行比较。可以将其视为创建一种通用语言，图像和文本（或音频等）都可以被翻译成这种语言。如果一张图像和一个句子描述的是同一事物，那么它们翻译成这种通用语言后应该会非常相似。
+
+### 什么是共享表示？
+
+共享表示，有时被称为联合嵌入 (embedding)空间，是一个向量 (vector)空间，在其中，来自两种或更多不同模态的表示（或“嵌入”）可以共存并进行有意义的比较。
+
+假设我们有一张图像 $x_{\text{img}}$ 和一段描述该图像的文本标题 $x_{\text{txt}}$。目标是学习两个映射函数 $f_{\text{img}}(\cdot)$ 和 $f_{\text{txt}}(\cdot)$，使得：
+$z_{\text{img}} = f_{\text{img}}(x_{\text{img}})$
+$z_{\text{txt}} = f_{\text{txt}}(x_{\text{txt}})$
+在这里，$z_{\text{img}}$ 和 $z_{\text{txt}}$ 是在*同一个*高维空间 (high-dimensional space)中的向量（例如，两者都可能是300维向量）。“共享”部分表示，如果 $x_{\text{img}}$ 和 $x_{\text{txt}}$ 在语义上相关（例如，图像描绘了文本描述的内容），那么它们对应的向量 $z_{\text{img}}$ 和 $z_{\text{txt}}$ 在该空间中应该“靠近”彼此。
+
+### 为什么学习共享表示？
+
+创建这些共同空间对于多种情况是有益的：
+
+1. **跨模态比较和相似度**：一旦来自不同模态的数据处于同一空间，你就可以直接衡量它们的相似程度。例如，你可以计算图像向量 (vector)和文本向量之间的距离（例如，欧几里得距离）或相似度（例如，余弦相似度）。较小的距离或较高的相似度表明它们是相关的。
+2. **跨模态检索**：这是一个非常普遍的用途。
+   - **文本到图像检索**：给定一个文本查询（例如，“一只狗在接飞盘”），你可以将其转换为共享空间中的向量，然后寻找向量与该文本查询向量最接近的图像。
+   - **图像到文本检索**：反之，给定一张图像，你可以找到最能匹配它的文本描述。
+3. **数据对齐 (alignment)**：共享空间可以帮助对齐来自不同来源的数据。例如，将音频轨道中的口语单词与相应的文本转录对齐。
+4. **信息迁移**：有时，为一种模态学习一个好的表示可以帮助提升另一种模态的表示，尤其是如果它们之间存在强关联。
+
+### 共享表示如何学习？
+
+通常，共享表示是使用神经网络 (neural network)学习的。每种模态通常都会有自己的网络（或“编码器”），负责处理其特定类型的数据并将其转换为初始特征向量 (vector)。然后，这些特征向量被投影到共享嵌入 (embedding)空间中。
+
+训练过程中会发生“奇妙”的事情。模型通过来自不同模态的数据对（或三元组）进行训练。例如，它可能会被给予：
+
+- 一张图像及其正确的标题（一个正样本对）。
+- 同一张图像和一个不正确的标题（一个负样本对）。
+
+学习算法在**损失函数 (loss function)**的引导下，尝试调整网络参数 (parameter)，使得：
+
+- 正样本对的向量（例如，图像的 $z_{\text{img}}$ 和其正确标题的 $z_{\text{txt}}$）在共享空间中被拉得更近。
+- 负样本对的向量（例如，图像的 $z_{\text{img}}$ 和不相关标题的 $z_{\text{txt\_wrong}}$）则被推得更远。
+
+这个过程通常涉及对比学习或三元组损失等技术（尽管具体细节超出我们当前的范围），有效地“塑造”了共享空间，使得跨模态的语义相似性转化为向量空间中的接近性。
+
+以下是一张图表，说明了图像和文本的通用思路：
+
+> 来自不同模态（图像、文本）的数据由各自的编码器处理，并映射到一个共享语义空间中，其中它们的向量表示可以直接进行比较。
+
+例如，如果你有一张“一辆蓝色汽车停在红色消防栓旁”的图像，以及文本“一辆蓝色汽车在红色消防栓旁边”，那么它们在共享空间中的表示 $z_{\text{img}}$ 和 $z_{\text{txt}}$ 理想情况下会非常接近。如果文本是“一只猫睡在垫子上”，那么其向量 $z_{\text{txt\_other}}$ 应该远离 $z_{\text{img}}$。
+
+### 优点与难点
+
+共享表示学习是许多多模态 (multimodal)任务的一种有力技术，特别是涉及搜索、检索和比较的任务。
+
+**优点**：
+
+- **直接的跨模态互动**：使得直接比较和关联来自不同来源的信息成为可能。
+- **灵活性**：所学习到的表示通常可以用于各种下游任务。
+- **更好的理解**：通过将模态强制置于一个共同空间中，模型可以学习到更深刻的语义关系。
+
+**难点**：
+
+- **定义相似度**：确定“语义相似”的含义并将其编码到损失函数 (loss function)中可能很困难。
+- **空间对齐 (alignment)**：确保不同模态在共享空间中正确对齐，并确保空间本身结构良好（例如，不会将所有点坍缩到一个区域）是一个重要的技术难点。
+- **可扩展性**：训练这些模型通常需要大量的配对多模态数据。
+
+尽管早期或晚期融合等方法（我们之前讨论过）直接结合特征或决策，共享表示学习则侧重于为理解建立一个共同基础。这种方法提供了一种不同且通常非常有效的途径来整合来自多种模态的信息。接下来，我们将审视另一个相关的思路：协调表示。
+
+## 参考资料
+
+- [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) — Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, and Ilya Sutskever (2021)
+  Journal: Proceedings of the 38th International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.2103.00020](https://doi.org/10.48550/arXiv.2103.00020)
+  该论文介绍了CLIP模型，该模型通过在大型数据集上进行对比预训练，学习图像和文本的共享表示。它提供了共享表示的学习和应用方式的一个示例，尤其是在跨模态检索方面。
+- [FaceNet: A Unified Embedding for Face Recognition and Clustering](https://arxiv.org/abs/1503.03832) — Florian Schroff, Dmitry Kalenichenko, and James Philbin (2015)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 815-823; DOI: [10.1109/CVPR.2015.7298682](https://doi.org/10.1109/CVPR.2015.7298682)
+  该论文介绍了三元组损失函数，这是一种在共享空间中学习嵌入的核心技术，其中相似样本被拉近，不相似样本被推远。它与描述的学习机制直接相关。

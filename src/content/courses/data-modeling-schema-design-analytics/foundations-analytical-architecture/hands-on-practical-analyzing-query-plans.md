@@ -1,0 +1,113 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "foundations-analytical-architecture"
+lesson: "hands-on-practical-analyzing-query-plans"
+sourceId: 7972
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-1-foundations-analytical-architecture/hands-on-practical-analyzing-query-plans"
+title: "动手实践：剖析查询计划"
+description: "关于查询性能对比的实操练习。"
+order: 4
+plots: ["plots/7972-0.json"]
+sourceHash: "d30dda2fce6c5582f3f2f129aa78e64301d8ba67b082440bf8fb8c74ec1fff77"
+sourceCorrections: []
+---
+
+了解数据库如何运行您的SQL查询是诊断性能问题最有效的一种能力。SQL是一种声明式语言，您在其中定义*需要什么*，而数据库引擎决定*如何*获取它。这种操作方案被称为查询执行计划。
+
+在分析型任务中，好的计划与差的计划之间往往对应着查询在三秒内返回或三小时后返回的差异。我们将对比行式系统和列式系统如何处理同一聚合查询。这种对比强化了本章前面讨论的架构差异。
+
+### 场景说明
+
+设想一个零售数据集，其中包含一个有1000万条记录的 `sales` 表。该表的结构包含 `order_id` (整型), `customer_id` (整型), `product_id` (整型), `transaction_date` (日期型), `store_id` (整型) 和 `amount` (十进制)。
+
+我们想计算2023年的总收入。
+
+```sql
+SELECT SUM(amount) 
+FROM sales 
+WHERE transaction_date >= '2023-01-01' 
+  AND transaction_date <= '2023-12-31';
+```
+
+### 行式执行分析
+
+在传统的业务数据库中（例如使用标准存储引擎的PostgreSQL或MySQL），数据按行顺序存储在磁盘上。为运行上述查询，数据库引擎通常执行一次顺序扫描（全表扫描），如果\_没有\_索引完全符合谓词，或者选择性较低（表示许多行符合条件）时。
+
+引擎必须将包含完整行的数据页加载到内存中，以检查 `transaction_date`。即使我们的查询只要求 `transaction_date` 和 `amount`，系统也会将 `customer_id`、`product_id` 和 `store_id` 作为附带开销一并取回。
+
+考虑其I/O影响。如果平均行宽为100字节，且我们扫描1000万行：
+
+$读取数据量 = 10,000,000 \times 100 \text{ 字节} \approx 1 \text{ GB}$
+
+下图描绘了行式存储引擎中的访问路径。请注意引擎如何必须遍历整个行结构的宽度。
+
+> 行式存储扫描中的数据流要求在过滤前将不相关的列加载到内存中。
+
+在行式存储的典型 `EXPLAIN` 输出中，您可能会看到反映这种高I/O负载的成本估算：
+
+```text
+Seq Scan on sales  (cost=0.00..154321.00 rows=500000 width=6)
+  Filter: ((transaction_date >= '2023-01-01') AND (transaction_date <= '2023-12-31'))
+```
+
+此处的成本指标通常是一个复合单位，代表磁盘页面读取次数和CPU周期。在行式存储中，无论您实际请求了多少列，此成本都与表中列的总数和行的总数呈线性比例关系。
+
+### 列式执行分析
+
+分析型数据仓库（如Snowflake、BigQuery或Redshift）按列存储数据。当同一查询运行时，引擎会识别出只需要 `transaction_date` 和 `amount` 这两列。它会忽略包含 `customer_id`、`product_id` 和 `store_id` 的文件或数据块。
+
+此外，列式存储使用依赖于数据类型的压缩算法。日期类型虽然基数高，但格式可预测，因此可以高效压缩。整型和十进制类型压缩效果更佳。
+
+如果列数据以10:1的比例压缩，并且我们只读取2列（假设每列8字节）：
+
+$读取数据量 = 10,000,000 \times (8 + 8) \text{ 字节} = 160 \text{ MB}$
+
+经过压缩，实际磁盘I/O可能降至16-20 MB。这比行式方法的数据传输量要少几个数量级。
+
+此外，分析型引擎会使用**区域映射（Zone Maps）**或**最小/最大剪枝（Min/Max pruning）**。数据块的元数据通常会存储该块中列的最小值和最大值。如果一个数据块的元数据显示 `transaction_date` 范围是 `2021-01-01` 到 `2021-06-01`，那么引擎会完全跳过该数据块，因为它不可能包含2023年的值。
+
+> 列式执行会跳过不相关的数据块（剪枝），只读取必需的垂直切片。
+
+### 性能对比指标
+
+下面的图表显示了两种架构在此特定聚合查询的数据扫描需求方面的明显差异。
+
+
+
+![数据扫描量：OLTP 与 OLAP 架构对比](plots/7972-0.json)
+
+
+
+> 对一个1000万行数据集进行简单聚合查询时从磁盘读取的数据量。
+
+### 解析查询计划
+
+处理分析型数据库时，您应在查询计划中寻找特定迹象，以确认系统正在使用列式优化。
+
+1. **扫描的分区/微分区数**：此数值应远低于分区总数。如果“扫描的分区数”等于“总分区数”，则表示引擎执行了全扫描，未能使用元数据剪枝。
+2. **扫描字节数**：这是云数据仓库中最直观的度量指标。在行式系统中，向 `SELECT` 子句添加列很少会明显改变I/O成本（因为无论如何都会读取整行）。在列式存储中，添加列会线性增加I/O。
+3. **向量 (vector)化执行**：在计划步骤中寻找“向量化 (quantization)”或“批处理模式”等术语。这表明CPU正在一次性处理值数组（单指令多数据 - SIMD），而不是逐行迭代。
+
+### 优化机制概述
+
+架构的物理设计直接影响这些查询计划。在接下来的章节中，当我们谈到\*\*分区（Partitioning）**和**聚簇（Clustering）\*\*时，我们实质上是在磁盘上组织数据，以最大化此处演示的剪枝和扫描机制的效用。
+
+- **行式存储优化**：大量依赖辅助B-树索引来查找特定行（如同大海捞针）。
+- **列式存储优化**：依赖排序和元数据跳过大量数据块（如同跳过整捆干草）。
+
+通过读取查询计划，您可以确认您的数据模型是否成功使用了底层存储引擎。如果您设计了星型模式，但查询计划显示维度联接上进行了全表扫描且没有剪枝，则该模型需要进行物理调整。
+
+## 参考资料
+
+- [Database Management Systems](https://books.google.com/books/about/Database_Management_Systems.html?id=Yn_qAAAAMAAJ) — Raghu Ramakrishnan, Johannes Gehrke (2003)
+  Publisher: McGraw-Hill Education
+  本书全面解释了查询处理、优化和存储管理，包含与查询计划相关的概念。
+- [C-Store: A Column-Oriented DBMS](http://www.vldb2005.org/program/paper/thu/p553-stonebraker.pdf) — Michael Stonebraker, Daniel J. Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Amerson Lin, Samuel R. Madden, Elizabeth J. O'Neil, Patrick E. O'Neil, Alex Rasin, Nga Tran, and Stan B. Zdonik (2005)
+  Journal: Proceedings of the 31st International Conference on Very Large Data Bases (VLDB); Publisher: VLDB Endowment; Pages: 553-564; DOI: [10.14778/1066986.1067035](https://doi.org/10.14778/1066986.1067035)
+  这篇开创性论文介绍了面向列的数据库系统在分析工作负载中的设计原则和性能优势。
+- [Understanding Query Profile (Snowflake Documentation)](https://docs.snowflake.com/en/user-guide/admin-activities/query-history) — Snowflake Inc. (2025)
+  Publisher: Snowflake Inc.
+  该官方文档指导用户如何解读Snowflake查询计划，并识别特定于列式云原生架构的性能方面。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHo_a9wZqQ-tKCSLzBuDYbIrUZB4s4ZcXvWIySNpTXmmaYf_5RP-xYiWeRwoHAQTdt2wNyL7UQa7slFpOke3x5iy9uQUI0pTk3tnQqK59bhcpiHaERTILbrSUuI90ApzHpEDvM2S7tRaMebERSMP655a5QlFXrVfVc0IH3bweqWJCbe782srEA6vi9hYu0_csxvvHgdJPfvWixNAz_Ue4M=) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  本书讨论了不同的存储和索引策略，包括面向列的存储及其对查询性能的影响。

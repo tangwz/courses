@@ -1,0 +1,77 @@
+---
+course: "basics-ml-deployment"
+chapter: "getting-started-model-deployment"
+lesson: "deployment-challenges-intro"
+sourceId: 3952
+sourceUrl: "https://apxml.com/zh/courses/basics-ml-deployment/chapter-1-getting-started-model-deployment/deployment-challenges-intro"
+title: "模型部署中的挑战"
+description: "简要讨论部署机器学习模型时遇到的常见障碍。"
+order: 5
+plots: []
+sourceHash: "c6584b5219ee438498a817cb3eaa17f97019b64f5bbd3905c94bbcd5bd456c65"
+sourceCorrections: []
+---
+
+虽然部署机器学习 (machine learning)模型是创造价值的重要一步，但从本地机器上训练好的模型到生产环境中正常运行的应用，这条道路通常充满障碍。及早认识到这些常见困难，可以帮助您更有效地规划和准备。我们来看看您可能会遇到的一些典型挑战。
+
+### 环境不一致性
+
+最常见的问题之一源于开发环境（您训练模型的地方）和生产环境（模型运行的地方）之间的差异。您的笔记本电脑可能具有特定的操作系统、特定版本的Python库（如pandas、scikit-learn、numpy）和特定的硬件。生产服务器很可能在许多这些方面有所不同。
+
+这些不一致性可能导致令人沮丧的问题：在开发过程中完美运行的代码，在生产中可能会因为库版本不同或缺少操作系统依赖项而崩溃或产生错误结果。确保环境之间的一致性是部署准备的重要组成部分。
+
+### 依赖项管理
+
+与环境不一致性密切相关的是管理依赖项的难题。您的模型很可能依赖于特定版本的编程语言（例如，Python 3.9）、机器学习 (machine learning)库（例如，scikit-learn 1.1.0）、数据处理工具（例如，pandas 1.4.2）以及可能的Web框架（如Flask或Django）。
+
+为了使模型在部署时可靠地运行，所有这些依赖项，包括它们的确切版本，都必须在生产环境中正确安装。如果您使用某个版本的库训练了模型，而生产环境使用了另一个版本，库行为的细微变化可能导致错误或性能下降。准确跟踪和复现这些依赖项非常必要。
+
+### 可伸缩性和性能
+
+在训练和测试期间，您的模型可能一次只需要处理一个预测请求，或者处理少量数据批次。然而，在实际生产环境中，模型可能需要同时向许多用户提供预测服务，或快速处理大量数据。
+
+这要求部署设置具有*可伸缩性*，这意味着它可以在处理不断增加的负载时，不会导致性能显著下降。性能本身通常通过以下方面衡量：
+
+- **延迟：** 发送输入数据后，获得预测结果需要多长时间？实时应用程序通常需要低延迟。
+- **吞吐量 (throughput)：** 系统每秒可以处理多少个预测？处理大量请求的系统需要高吞吐量。
+
+设计一个在预期负载下能满足所需延迟和吞吐量目标的部署方案，可能是一项重要的工程任务。
+
+### 监控与维护
+
+部署不是一次性事件。一旦模型上线，它就需要持续的监控和维护。您需要回答以下问题：
+
+- 预测服务是否正常运行？
+- 它是否在可接受的时间限制内响应请求？
+- 预测结果是否仍然准确和相关？
+- 是否出现错误？
+
+"此外，模型遇到的数据会随时间变化，这种现象称为*数据漂移*。这可能导致模型性能下降，这种情形称为*模型衰减*或*模型过时*。监控这些问题并制定计划来重新训练和重新部署更新的模型是持续维护周期的一部分。"
+
+### 与现有系统集成
+
+您部署的机器学习 (machine learning)模型很少独立存在。它通常需要与您的其他软件系统、应用程序或业务流程集成。例如，推荐模型可能需要从数据库获取用户历史，从Web应用程序接收实时事件，并将其推荐结果发送回用户界面。
+
+使这些集成顺利运行，需要仔细设计接口（如API），并确保在大型系统的不同部分之间一致地处理数据格式。
+
+### 安全考量
+
+通过Web API公开模型会带来安全风险。您需要考虑如何验证请求（确保它们来自合法用户或应用程序）、授权操作（控制谁可以做什么），并保护模型及其使用的数据免受未经授权的访问或攻击。确保部署系统的安全性是生产部署中一个不容忽视的方面。
+
+### 成本管理
+
+运行部署所需的基础设施（服务器、数据库、监控工具）会产生费用。根据部署的规模和复杂程度，这些成本可能很高。选择合适的部署策略和基础设施，优化资源使用，以及监控开销，都是重要的实际考量。
+
+事先了解这些挑战有助于设定实际的预期。本课程的后续章节将介绍模型序列化、Flask等Web框架以及使用Docker进行容器化等技术和工具，它们有助于解决许多这些困难，并为成功的模型部署创造有利条件。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Approach for Production-Ready AI](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  这本书全面指导如何设计和构建用于生产的机器学习系统，涵盖数据管理、模型部署、监控、可扩展性以及MLOps实践。
+- [Hidden Technical Debt in Machine Learning Systems](http://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf) — D. Sculley, Gary Holt, Daniel Golovin, Eugene Davydov, Todd Phillips, Dietmar Ebner, Vinay Chaudhary, Michael Young, Jean-François Crespo, Dan Dennison (2015)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Publisher: Neural Information Processing Systems Foundation, Inc. (NeurIPS); Volume: 28; Pages: 2503-2511
+  这篇开创性论文强调了构建和维护生产机器学习系统的挑战，侧重于随时间累积的各种技术债务来源。
+- [MLOps: A Taxonomy of Challenges and Best Practices](https://ieeexplore.ieee.org/document/9944640) — David Kreuzer, Janek Belling, Matthias Neumüller, Oliver Niggl, and Andreas Bögl (2022)
+  Journal: IEEE Access; Publisher: IEEE; Volume: 10; Pages: 111394-111408; DOI: [10.1109/ACCESS.2022.3216391](https://doi.org/10.1109/ACCESS.2022.3216391)
+  这篇论文对MLOps的挑战和最佳实践提供了最新且系统的概述，提供了一个涵盖机器学习开发和部署操作方面的分类体系。

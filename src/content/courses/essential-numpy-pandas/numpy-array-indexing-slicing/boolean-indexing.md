@@ -1,0 +1,178 @@
+---
+course: "essential-numpy-pandas"
+chapter: "numpy-array-indexing-slicing"
+lesson: "boolean-indexing"
+sourceId: 1716
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-3-numpy-array-indexing-slicing/boolean-indexing"
+title: "布尔索引"
+description: "使用布尔数组根据条件筛选元素。"
+order: 4
+plots: ["plots/1716-0.json"]
+sourceHash: "ae9c8fd3def764112728e9de018da54a666c416320ed3d8a1b739fd58b9aafff"
+sourceCorrections: []
+---
+
+数组可以通过数字位置（例如 `array[2]`、`array[1, 3]`）或通过对数据范围进行切片（例如 `array[1:5]`）进行索引。然而，有时你需要根据数据的*值*或某些*条件*而不是其位置来选择数据。在这种情况下，布尔索引是一种强大的技术，它允许你使用 True/False 条件来筛选数组。
+
+### 创建布尔数组
+
+布尔索引的基础是布尔数组。你通常通过将比较运算符直接应用于 NumPy 数组来创建这些数组。NumPy 会逐元素执行比较，返回一个形状相同、填充了 `True` 或 `False` 值的新数组。
+
+我们来看一个例子：
+
+```python
+import numpy as np
+
+# 创建一个简单的一维数组
+data = np.array([1, 5, 2, 8, 3, 7, 4, 6])
+print(f"原始数组: {data}")
+
+# 应用一个条件
+is_greater_than_4 = data > 4
+print(f"布尔数组 (data > 4): {is_greater_than_4}")
+```
+
+执行这段代码会得到以下输出：
+
+```
+Original array: [1 5 2 8 3 7 4 6]
+Boolean array (data > 4): [False  True False  True False  True False  True]
+```
+
+请注意 `is_greater_than_4` 具有与 `data` 相同数量的元素。如果 `data` 中对应元素大于 4，则 `is_greater_than_4` 中的每个元素为 `True`，否则为 `False`。
+
+你可以使用任何标准比较运算符：`>`、`<`、`>=`、`<=`、`==` (等于) 和 `!=` (不等于)。
+
+### 使用布尔数组选择数据
+
+有了布尔数组后，你可以将其直接用作原始数组方括号 `[]` 内的索引。此操作会从原始数组中选择布尔数组中对应值为 `True` 的元素。
+
+```python
+# 使用布尔数组选择元素
+selected_data = data[is_greater_than_4]
+print(f"选定元素 (data > 4 时): {selected_data}")
+
+# 你也可以直接在方括号内应用条件
+selected_directly = data[data < 5]
+print(f"选定元素 (data < 5 时): {selected_directly}")
+```
+
+输出：
+
+```
+Selected elements (where data > 4): [5 8 7 6]
+Selected elements (where data < 5): [1 2 3 4]
+```
+
+结果是一个新的一维数组，只包含满足条件的元素。无论原始数组的维度如何，这都适用。
+
+我们用二维数组来试试：
+
+```python
+matrix = np.array([[1, 2, 3],
+                   [4, 5, 6],
+                   [7, 8, 9]])
+
+# 选择大于 5 的元素
+selected_matrix_elements = matrix[matrix > 5]
+print(f"\n原始二维数组:\n{matrix}")
+print(f"选定元素 (matrix > 5 时): {selected_matrix_elements}")
+```
+
+输出：
+
+```
+Original 2D array:
+[[1 2 3]
+ [4 5 6]
+ [7 8 9]]
+Selected elements (where matrix > 5): [6 7 8 9]
+```
+
+重要提示：请注意，即使将布尔索引应用于二维数组，结果通常也是一个包含所选元素的一维数组。NumPy 会将输出展平，因为 `True` 值可能分散在不同的行和列中，不一定形成一个矩形子数组。
+
+
+
+![布尔选择的可视化 (data > 4)](plots/1716-0.json)
+
+
+
+> 散点图显示了原始数据点（灰色）以及使用条件 `data > 4` 选择的点（蓝色）。
+
+### 组合多个条件
+
+你经常需要同时根据多个条件筛选数据。你可以使用逻辑运算符组合布尔数组：
+
+- `&` (逻辑与): 选择*两个*条件都为 `True` 的元素。
+- `|` (逻辑或): 选择*至少一个*条件为 `True` 的元素。
+- `~` (逻辑非): 反转布尔数组（将 `True` 变为 `False`，`False` 变为 `True`）。
+
+**重要提示：** 当使用 `&` 或 `|` 组合条件时，你**必须**在每个单独的条件周围使用括号 `()`。这是因为 Python 和 NumPy 中的运算符优先级规则。位运算符 `&` 和 `|` 的优先级高于比较运算符，如 `<` 或 `>`。如果没有括号，Python 可能会尝试评估类似 `data > 3 & data` 的表达式，这会导致错误或意料之外的结果。
+
+```python
+data = np.array([1, 5, 2, 8, 3, 7, 4, 6, 9, 0])
+
+# 条件 1: data > 3
+# 条件 2: data < 8
+selected_and = data[(data > 3) & (data < 8)]
+print(f"元素满足 (data > 3) 且 (data < 8): {selected_and}")
+
+# 条件 1: data 为偶数 (data % 2 == 0)
+# 条件 2: data > 5
+selected_or = data[(data % 2 == 0) | (data > 5)]
+print(f"元素满足 (data 为偶数) 或 (data > 5): {selected_or}")
+
+# 条件: data 不等于 5
+selected_not = data[~(data == 5)]
+print(f"元素满足 data 不等于 5: {selected_not}")
+```
+
+输出：
+
+```
+Elements where (data > 3) AND (data < 8): [5 7 4 6]
+Elements where (data is even) OR (data > 5): [2 8 7 4 6 9 0]
+Elements where data is NOT equal to 5: [1 2 8 3 7 4 6 9 0]
+```
+
+### 使用布尔索引修改数据
+
+布尔索引不仅用于选择；它对于修改符合特定条件的数组元素也非常有用。你可以在赋值操作的左侧使用布尔索引，来改变条件为 `True` 的所有元素的值。
+
+```python
+# 创建一个包含正数和负数的数组
+arr = np.array([1, -2, 3, -4, 5, -6])
+print(f"原始数组: {arr}")
+
+# 将所有负数替换为 0
+arr[arr < 0] = 0
+print(f"将负数替换为 0 后的数组: {arr}")
+
+# 将所有大于 3 的元素设置为特定值（例如 100）
+arr[arr > 3] = 100
+print(f"将大于 3 的元素设置为 100 后的数组: {arr}")
+```
+
+输出：
+
+```
+Original array: [ 1 -2  3 -4  5 -6]
+Array after replacing negatives with 0: [1 0 3 0 5 0]
+Array after setting elements > 3 to 100: [  1   0   3   0 100   0]
+```
+
+这种方法在数据清理和准备中很常见，例如，替换无效的传感器读数或限制异常值。
+
+布尔索引提供了一种灵活易读的方法，可以根据数据本身筛选和处理 NumPy 数组，是高效数据分析流程的重要组成部分。
+
+## 参考资料
+
+- [Indexing](https://numpy.org/doc/stable/user/basics.indexing.html) — NumPy Developers (2023)
+  Publisher: NumPy
+  提供NumPy各种索引方法（包括布尔索引）的官方详细说明，附带代码示例和高级考量。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本关于Python数据分析的权威教材，为NumPy特性（包括布尔索引）在数据操作方面的应用提供实用见解和详细内容。
+- [Guide to NumPy](https://numpy.org/learn/) — Travis E. Oliphant (2006)
+  Publisher: Trelgol Publishing; Pages: 261
+  由NumPy的原始创建者撰写，此书提供了对NumPy数组和操作（包括布尔索引等高级索引技术）的基本理解。

@@ -1,0 +1,71 @@
+---
+course: "intro-diffusion-models"
+chapter: "forward-diffusion-process"
+lesson: "math-formulation-per-step"
+sourceId: 5376
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-2-forward-diffusion-process/math-formulation-per-step"
+title: "每一步的数学表示"
+description: "推导在单个时间步 $t$ 添加噪声的公式。"
+order: 3
+plots: []
+sourceHash: "1773747ca4dc5dbfa4e6b199903a22cd305d9abb43ae5163f4dc4d97c01b8397"
+sourceCorrections: []
+---
+
+前向扩散过程在多个时间步上逐步为数据添加噪声，形成一个马尔可夫链。这里将阐述这个链中单一步骤的精确数学定义。具体来说，这包括了理解如何从时间步 $t-1$ 的状态 $x_{t-1}$ 演变为时间步 $t$ 的下一个状态 $x_t$。
+
+这个转变由条件概率分布 $q(x_t | x_{t-1})$ 定义。在像去噪扩散概率模型（DDPM）这样的标准扩散模型中，这种转变被建模为添加少量高斯噪声。每一步添加的噪声量由预先确定的*方差调度*控制，用 $\beta_t$ 表示，其中 $t$ 的取值范围从1到 $T$ (总扩散步数)。
+
+具体来说，分布 $q(x_t | x_{t-1})$ 被定义为一个高斯分布，其均值取决于前一个状态 $x_{t-1}$，其方差由 $\beta_t$ 给出：
+
+
+$$
+q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t} x_{t-1}, \beta_t I)
+$$
+
+
+让我们来分析这个公式：
+
+- $x_t$: 时间步 $t$ 的数据（例如，图像张量）。
+- $x_{t-1}$: 前一个时间步 $t-1$ 的数据。
+- $\beta_t$: 在步进 $t$ 添加的高斯噪声的方差。这是一个由方差调度决定的小的正数。典型值可能开始时非常小（例如，$10^{-4}$），并在步进中略微增加。
+- $I$: 单位矩阵。这很重要，因为 $x_t$ 通常是多维的（例如，图像中的像素）。噪声独立地添加到每个维度，具有相同的方差 $\beta_t$。
+- $\mathcal{N}(x; \mu, \Sigma)$: 这表示关于变量 $x$ 的高斯（正态）分布，均值为 $\mu$，协方差矩阵为 $\Sigma$。在我们的情况中，均值为 $\sqrt{1 - \beta_t} x_{t-1}$，协方差为 $\beta_t I$。
+
+这个公式表明 $x_t$ 围绕着 $x_{t-1}$ 的略微缩小版本（由 $\sqrt{1 - \beta_t}$ 缩放），并添加了由 $\beta_t$ 控制的噪声。因为 $\beta_t$ 很小，所以 $\sqrt{1 - \beta_t}$ 略小于1，这意味着来自 $x_{t-1}$ 的信号大部分被保留，但引入了噪声。
+
+为了方便，通常定义 $\alpha_t = 1 - \beta_t$。由于 $\beta_t$ 是小而正的，$\alpha_t$ 略小于1。使用这种表示法，公式变为：
+
+
+$$
+q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{\alpha_t} x_{t-1}, (1 - \alpha_t) I)
+$$
+
+
+这种形式强调了新状态 $x_t$ 是缩放后的前一个状态 $\sqrt{\alpha_t} x_{t-1}$ 和新添加的方差为 $1 - \alpha_t = \beta_t$ 的噪声的组合。
+
+我们可以使用重参数 (parameter)化技巧来表示从 $x_{t-1}$ 采样 $x_t$ 的过程。如果 $\epsilon_{t-1}$ 是从标准高斯分布 $\mathcal{N}(0, I)$ 中抽取的随机变量，那么我们可以将 $x_t$ 写为：
+
+
+$$
+x_t = \sqrt{\alpha_t} x_{t-1} + \sqrt{1 - \alpha_t} \epsilon_{t-1}
+$$
+
+
+其中，$\epsilon_{t-1} \sim \mathcal{N}(0, I)$。这种表述对于实现特别有用，因为它明确分离了确定性部分（缩放 $x_{t-1}$）和随机性部分（添加缩放后的标准高斯噪声）。
+
+值序列 $\beta_1, \beta_2, ..., \beta_T$（或等效地 $\alpha_1, \alpha_2, ..., \alpha_T$）构成了*噪声调度*。这个调度的选择是一个重要的设计决策，它影响着扩散过程和模型性能。我们将在下一节讨论不同的调度策略。
+
+目前，重要的结论是这个单步转移公式。它是整个前向扩散过程的基本组成部分，精确地定义了噪声如何增量地添加到马尔可夫链的每一步。理解这个公式对于掌握前向过程的性质以及逆向（去噪）过程如何在后续被公式化是必要的。
+
+让我们为一个从 $x_{t-1}$ 转变到 $x_t$ 的单个数据点（一维）进行可视化。
+
+> 图示单个步骤 $x_{t-1} \rightarrow x_t$。点 $x_{t-1}$ 被缩放至 $\sqrt{\alpha_t} x_{t-1}$，然后添加方差为 $\beta_t = 1 - \alpha_t$ 的高斯噪声，从而得到新状态 $x_t$。
+
+这种逐步添加受控噪声的方式确保了如果我们重复这个过程 $T$ 步，得到的 $x_T$ 将几乎纯噪声，有效地破坏了原始数据结构。下一节将讨论噪声调度中 $\beta_t$ 值如何选择，后续章节将说明我们如何推导一个公式，可以直接从 $x_0$ 跳到任意 $x_t$。
+
+## 参考资料
+
+- [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/abs/1503.03585) — Jascha Sohl-Dickstein, Eric A. Weiss, Niru Maheswaranathan, Surya Ganguli (2015)
+  Journal: International Conference on Machine Learning (ICML 2015); DOI: [10.48550/arXiv.1503.03585](https://doi.org/10.48550/arXiv.1503.03585)
+  这篇论文引入了原始的扩散概率模型，通过一系列马尔可夫跃迁为前向加噪过程奠定了基础，是DDPM的直接前身。

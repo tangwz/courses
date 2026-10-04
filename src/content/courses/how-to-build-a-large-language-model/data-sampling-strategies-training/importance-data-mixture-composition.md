@@ -1,0 +1,77 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "data-sampling-strategies-training"
+lesson: "importance-data-mixture-composition"
+sourceId: 5990
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-9-data-sampling-strategies-training/importance-data-mixture-composition"
+title: "数据配比的重要性"
+description: "讨论数据来源配比如何影响模型能力。"
+order: 1
+plots: ["plots/5990-0.json"]
+sourceHash: "ba08925d7b8b28903797161246111afb5eacc9ee23b814dee2d675ab9dbea3d9"
+sourceCorrections: []
+---
+
+大型语言模型的训练通常需要精心收集、清洗和准备的数PB文本数据。然而，如果不加结构地将所有这些数据投入训练过程，不太可能得到最佳结果。预训练 (pre-training)所用的具体数据源*组合*，通常被称为*数据配比*，显著影响模型的各项能力、所涵盖的知识范围，甚至其固有的偏见。这不仅仅是数据的总量；来自不同来源的*比例*影响深远。
+
+可以将预训练数据集视为模型的初级教育。就像人类的能力由学习经历塑造一样，大语言模型 (LLM)的能力由其所用数据塑造。一个主要在网络文本（如Common Crawl）上训练的模型将建立强大的通用语言理解能力和广泛的知识，但在专业方面可能缺乏有深度技能。反之，一个主要在源代码上训练的模型将擅长编程任务，但可能难以处理散文或会话互动。
+
+### 塑造模型能力
+
+不同数据源培养不同的技能：
+
+1. **网络文本（例如 Common Crawl, C4）：** 提供广泛的语言、主题和常识推理 (inference)覆盖。对通用会话能力和理解多种文本风格很重要。然而，质量可能差异很大，包含噪声、观点和错误信息。
+2. **书籍（例如 Project Gutenberg, Books3）：** 提供结构化的长篇文本，通常具有更高的语法质量和叙事连贯性。对于学习长距离依赖和更正式的语言风格很重要。
+3. **代码库（例如 GitHub）：** 教会模型编程语言、逻辑、结构和常见编码模式。直接影响编码辅助能力。
+4. **科学文献（例如 arXiv, PubMed Central）：** 传授技术方面的知识、复杂的推理和正式的科学写作风格。提升在专业问答和推理任务上的表现。
+5. **维基百科：** 提供广泛主题的百科全书式事实知识，通常以中立、信息丰富的风格撰写。有助于模型立足于事实信息。
+6. **对话数据（例如 论坛, 特定对话数据集）：** 教会会话流程、轮流发言和适合交互式应用的回复风格。
+
+配比决定了这些技能的平衡。例如，增加训练配比中的代码比例，可能提升模型在编码基准测试上的表现，但如果数据总量不变或代码数据替代了高质量散文，这可能会导致纯语言任务上的表现略有下降。
+
+设想一个万亿级token预训练 (pre-training)运行的两种可能配比：
+
+- **配比 A（侧重通用能力）：** 70% 网络文本, 10% 书籍, 5% 代码, 10% 维基百科, 5% 其他。
+- **配比 B（侧重代码能力）：** 40% 网络文本, 10% 书籍, 40% 代码, 5% 维基百科, 5% 其他。
+
+模型A可能更好地进行通用对话并拥有更广泛的知识。模型B在生成和理解代码方面几乎肯定更强，但与模型A相比，在创意写作或新闻文章总结方面可能不太擅长。
+
+
+
+![数据配比比例](plots/5990-0.json)
+
+
+
+> 两种数据配比的比较，强调通用知识（A）与编码能力（B）的异同。
+
+### 对偏见和安全的影响
+
+数据配比也是引入或减少社会偏见的主要途径。如果训练数据主要反映特定群体的观点、人口特征或语言模式，产生的模型很可能继承这些特点。例如，一个严重偏向西方文化的文本数据集可能会产生一个难以理解或生成反映其他文化背景的文本的模型。同样，如果某些数据源（如未过滤的网络文本）中存在有害或有毒语言，模型可能学会复制它。
+
+因此，精心策划和组成数据配比是负责任AI发展的重要部分。这不仅包括选择多样化的数据源，还要考虑过滤策略（第7章有所涉及），并可能调整配比，以降低已知含有较多问题内容的数据源的权重 (weight)。
+
+### 通用性与专业性的权衡
+
+设计数据配比需要权衡构建一个能力广泛的通用模型与一个高度专业的专家模型。
+
+- **多样化配比：** 在多种数据类型上训练有助于提升通用性。模型学习语言和推理 (inference)中常见的深层模式，使其能够适应许多后续任务，即使是那些与训练数据不同的任务（少样本或零样本学习 (zero-shot learning)）。但其在任一方面可能不如专业模型那样有深度。
+- **窄范围配比：** 将训练集中在特定方面（例如法律文件、医学文本）会产生在该方面具有深度知识和熟练程度的模型。这对抗专业应用很有价值，但会限制模型在其特定用途之外的适用性。如果排除了这些数据类型，它可能在常识推理或基本对话方面表现不佳。
+
+理想的配比通常取决于大语言模型 (LLM)的预期应用。旨在广泛应用的基座模型（如 GPT-3/4、Llama、Claude）通常使用高度多样化的配比，而专为特定行业设计的模型可能会采用更有针对性的构成。像“The Pile”这样的数据集明确以多样性为目标构建，结合了许多不同的文本源，以鼓励通用化。
+
+了解数据配比的深远影响是在训练期间策略性地选择数据的第一步。它允许您有意识地塑造模型的能力特征，平衡知识的广度与深度、专业技能，并减少潜在偏见，最终形成一个更有效、更可靠的大语言模型。以下章节将详细介绍实施这些采样策略的具体方法。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://proceedings.neurips.cc/paper/2020/file/1457c0d6bfcb4967418bfb8ac142f64a-Paper.pdf) — Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel Ziegler, Jeffrey Wu, Clemens Winter, Chris Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems 33 (NeurIPS 2020); Publisher: Neural Information Processing Systems Foundation, Inc. (NeurIPS); Volume: 33; Pages: 1877-1901; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  本文详细阐述了训练GPT-3所用的数据混合构成，包括来自Common Crawl、WebText、书籍和维基百科等不同来源的比例，并探讨了它们对模型性能的影响。
+- [The Pile: An 800GB Dataset of Diverse Text for Language Model Training](https://arxiv.org/pdf/2101.00027) — Leo Gao, Stella Biderman, Sid Black, Laurence Golding, Jean-Philippe Labonne, Joshua McCarty, Stefano Palmeri, Chris Pennacchio, Jason Phang, Anthony Rice, Eric Sheng, Andrea Singhal, Stephen Slater, Shawn Tabassum, Andy Tang, Anish Thite, Huu Tran, Sam Wang, Ben Wang, and Anna Zou (2021)
+  Journal: arXiv preprint arXiv:2101.00027; DOI: [10.48550/arXiv.2101.00027](https://doi.org/10.48550/arXiv.2101.00027)
+  本研究展示了一个大型且多样化的数据集，旨在通过结合22个不同的高质量来源，培养语言模型的泛化能力，从而展示了战略性数据混合构成。
+- [PaLM: Scaling Language Modeling with Pathways](https://arxiv.org/pdf/2204.02311) — Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, Maarten Bosma, Gaurav Mishra, Adam Roberts, Paul Barham, Hyung Won Chung, Charles Sutton, Sebastian Gehrmann, Parker Schuh, Kensen Shi, Sasha Tsvyashchenko, Julian Salazar, Marcianna Blanton, Yi Tay, Josh Adlam, Stephen Brody, Jeremy Robinson, Liam Donovan, David Luan, Noam Shazeer, Katherine Lee, Zhongtao Zheng, Quoc V. Le, Ed H. Chi, and Jeffrey Dean (2022)
+  Journal: arXiv preprint arXiv:2204.02311; DOI: [10.48550/arXiv.2204.02311](https://doi.org/10.48550/arXiv.2204.02311)
+  本文描述了PaLM高度多样化的训练数据集，包含来自网页、书籍和代码等不同领域文本，强调了数据混合在扩展语言模型中的作用。
+- [Llama 2: Open Foundation and Fine-Tuned Chat Models](https://arxiv.org/pdf/2307.09288) — Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal Bhargava, Shruti Bhosale, Dan Bikel, Lukas Blecher, Cristian Canton Ferrer, Moya Chen, Guillem Cucurull, David Esiobu, Jude F Harris, Liangsheng Hsu, Ishan Jain, Ahmed Khan, Yangkun Lin, Daouda Kebe, Marcin Korenkiewicz, Jenya Lee, Guillaume Lample, Rosy Liao, Mao Li, Eric Michael Smith, Rajneesh Kumar Singh, Utkarsh Singhal, Pararth Shah, Robert Stojnic, Andrew P. Williams, Eryk Wronkowicz, Binh Tang, Nicolas Usunier, Gabriel Synnaeve, Chloe Xu, Hu Xu, Zheng Yan, and Hongyu Zhong (2023)
+  Journal: arXiv preprint arXiv:2307.09288; DOI: [10.48550/arXiv.2307.09288](https://doi.org/10.48550/arXiv.2307.09288)
+  这项工作详细介绍了Llama 2的预训练数据构成，强调了数据质量、多样性和安全方面在开发现代大型语言模型中的相关性。

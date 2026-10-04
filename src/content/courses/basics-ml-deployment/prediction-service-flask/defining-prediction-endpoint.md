@@ -1,0 +1,95 @@
+---
+course: "basics-ml-deployment"
+chapter: "prediction-service-flask"
+lesson: "defining-prediction-endpoint"
+sourceId: 3989
+sourceUrl: "https://apxml.com/zh/courses/basics-ml-deployment/chapter-3-prediction-service-flask/defining-prediction-endpoint"
+title: "定义预测端点"
+description: "在 Flask 中设置特定的 URL 路由来处理传入的预测请求。"
+order: 6
+plots: []
+sourceHash: "2746459b70f171723c5e91c60b6938f6526d373d9b17c9210048d01ceb36df58"
+sourceCorrections: []
+---
+
+一个基本的 Flask 应用正在运行，其内存中已使用 `pickle` 或 `joblib` 等方法加载了训练好的机器学习 (machine learning)模型。那么，如何才能 *真正使用* 这个模型呢？另一个程序又该怎样向该应用发送数据并获得预测结果呢？
+
+这就是“**端点**”的作用所在。可以把你的 Flask 应用看作一个小型网络服务器。端点就像服务器上的一个特定地址或 URL 路径，专门用来处理某一类请求。当外部客户端（例如网页浏览器、移动应用或另一个后端服务）向该特定 URL 路径发送请求时，Flask 就会知道你的 Python 代码中哪一部分应该处理它。
+
+### 使用 `@app.route()` 将 URL 映射到函数
+
+Flask 通过一项名为“**装饰器**”的功能，使定义这些端点变得非常直接简单。具体来说，我们使用 `@app.route()` 装饰器。Python 中的装饰器是一种特殊的函数，用于修改或增强另一个函数。在 Flask 中，`@app.route()` 直接放在标准 Python 函数定义的上方。它的作用是告诉 Flask：“每当针对括号内指定的 URL 路径的 Web 请求到来时，就执行紧随其后定义的函数。”
+
+让我们来看具体例子。我们想创建一个专门处理预测请求的端点。为此，一个常用且具有描述性的 URL 路径是 `/predict`。这是你开始在 Flask 应用文件（通常命名为 `app.py` 或类似名称）中定义它的方式：
+
+```python
+# 假设 'app' 是你的 Flask 应用实例，已像这样创建：
+# from flask import Flask
+# app = Flask(__name__)
+
+# 同时假设 'model' 是你已加载的机器学习模型
+
+# 定义预测端点
+@app.route('/predict')
+def handle_prediction():
+    # 此函数最终将包含预测逻辑
+    # 目前，它只返回一个简单的文本消息
+    return "Prediction requests will be handled here."
+
+# （你的 app.run() 调用会放在其他地方，通常在文件末尾）
+```
+
+在这段代码中：
+
+1. `@app.route('/predict')`：这是装饰器。它向 Flask 注册 URL 路径 `/predict`。
+2. `def handle_prediction():`：这是当请求到达 `/predict` 时 Flask 将执行的普通 Python 函数。我们给了它一个描述性的名称，`handle_prediction`。
+3. `return "Prediction requests will be handled here."`：目前，此函数只返回一个基本字符串。稍后，我们将修改它来执行实际的预测。
+
+### 选择正确的 HTTP 方法：GET 与 POST
+
+Web 通信依赖于 **HTTP 方法**（也称为动词）来指示请求的预期操作。你最初会遇到的两种最常见方法是 `GET` 和 `POST`。
+
+- `GET`：主要用于获取数据。当你在浏览器的地址栏中输入 URL 时，通常就是在发出 `GET` 请求。数据通常直接在 URL 本身中传递（作为查询参数 (parameter)，例如 `?name=value`）。
+- `POST`：主要用于向服务器发送数据以创建或更新资源，或触发需要输入数据的过程。数据在请求的 *正文* 中发送，通常在 URL 中不可见。
+
+对于使用机器学习 (machine learning)模型进行预测，我们几乎总是需要发送输入数据（模型期望的特征）。这些输入数据有时可能很复杂或很大（例如图像数据或长文本 (long context)）。在 URL 中发送这些数据（就像 `GET` 可能做的那样）是不切实际的，而且通常有长度限制。因此，预测端点的标准做法是使用 `POST` 方法。客户端将在请求正文中发送输入特征，通常以 JSON 格式（我们将在下一节中介绍）。
+
+我们如何告诉 Flask 我们的 `/predict` 端点只响应 `POST` 请求呢？我们通过添加 `methods` 参数来修改 `@app.route()` 装饰器：
+
+```python
+from flask import Flask # 确保 Flask 已导入
+
+# 假设 app = Flask(__name__) 且模型已加载
+
+@app.route('/predict', methods=['POST']) # 指定此路由接受 POST 请求
+def predict(): # 函数名可以是任何东西，'predict' 是常用名称
+    # --- 占位逻辑 ---
+    # 1. 稍后我们将在此处添加代码以从 POST 请求中获取输入数据。
+    # 2. 稍后我们将在此处添加代码以使用 'model' 进行预测。
+    # 3. 稍后我们将在此处添加代码以格式化并返回预测结果。
+    # --- 占位逻辑结束 ---
+
+    # 目前，只需确认端点通过 POST 请求到达
+    return "Received a POST request on /predict"
+
+# （如果这是你的主脚本，请记住包含 app.run()）
+# if __name__ == '__main__':
+#     # 如果模型尚未全局加载，请先在此处加载你的模型
+#     # e.g., model = joblib.load('your_model.pkl')
+#     app.run(debug=True) # debug=True 在开发过程中很有用
+```
+
+现在，我们的 Flask 应用知道函数 `predict()` 只应在 `POST` 请求到达 `/predict` URL 路径时执行。如果有人尝试使用 `GET` 请求访问 `/predict`（例如，直接在浏览器中输入），Flask 通常会返回一个错误，指示该方法不被允许。
+
+你已经成功定义了预测请求进入应用所通过的特定“大门”（即使用 `POST` 方法的 `/predict`）。接下来的步骤是在 `predict()` 函数内部编写代码，以实际处理传入数据、使用模型并返回有意义的响应。
+
+## 参考资料
+
+- [Flask Documentation: Quickstart - Routing](https://flask.palletsprojects.com/en/latest/quickstart/#routing) — Pallets (2024)
+  Flask官方指南，介绍如何使用@app.route()装饰器定义URL路由并将其与Python函数关联。
+- [Building Machine Learning Powered Applications: Going from Idea to Product](https://www.oreilly.com/library/view/building-machine-learning/9781492045113/) — Emmanuel Ameisen (2020)
+  Publisher: O'Reilly Media
+  为部署机器学习模型提供实用指导，包括创建用于预测服务的API端点。
+- [Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (RFC 7231)](https://datatracker.ietf.org/doc/html/rfc7231) — R. Fielding, Ed., J. Reschke, Ed. (2014)
+  Journal: Internet Engineering Task Force (IETF); Publisher: IETF Trust
+  HTTP方法（如GET和POST）的权威规范，解释其语义和适用于Web通信的场景。

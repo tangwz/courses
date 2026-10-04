@@ -1,0 +1,155 @@
+---
+course: "probability-statistics-essentials-ml"
+chapter: "hypothesis-testing-model-evaluation"
+lesson: "practice-applying-t-tests"
+sourceId: 1437
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-essentials-ml/chapter-5-hypothesis-testing-model-evaluation/practice-applying-t-tests"
+title: "实践：将T检验应用于样本数据"
+description: "使用Python对样本数据进行T检验以比较组均值。"
+order: 8
+plots: ["plots/1437-0.json"]
+sourceHash: "c5a31e622f0ce685176827b2e37f56f14847b834d1741455410b940316270398"
+sourceCorrections: []
+---
+
+T检验是比较一个或两个组均值的常用工具，这是分析实验结果或模型性能指标时的一项常见工作。将使用Python的SciPy库对模拟数据进行单样本和双样本T检验。
+
+### 场景设置：处理时间和A/B测试
+
+设想机器学习 (machine learning)或数据分析中的两个常见场景：
+
+1. **单样本场景：** 我们开发了一种新的图像处理算法。我们知道标准算法处理每张图片平均需要150毫秒（ms）。我们将新算法运行在30张图片样本上，并想知道它的平均处理时间是否与150ms的标准基准有显著差异。
+2. **双样本场景：** 我们正在对一个网站进行A/B测试。A组用户看到原始设计，B组用户看到新设计。我们测量了每个组用户的会话持续时间（分钟）。我们想确定两种设计之间的平均会话持续时间是否存在统计学上的显著差异。
+
+### 生成样本数据
+
+让我们使用NumPy为这些场景模拟一些数据。对于单样本测试，我们将模拟30个处理时间。对于双样本测试，我们将模拟A组50个用户和B组55个用户的会话持续时间。
+
+```python
+import numpy as np
+from scipy import stats
+
+# 设置随机种子以保证可复现性
+np.random.seed(42)
+
+# --- 单样本场景数据 ---
+# 标准处理时间基准（H0下的总体均值）
+benchmark_time = 150
+# 新算法的样本数据（30张图片）
+# 假设我们的算法平均速度稍快，例如大约145毫秒
+sample_processing_times = np.random.normal(loc=145, scale=12, size=30)
+print(f"样本平均处理时间：{np.mean(sample_processing_times):.2f} 毫秒")
+
+# --- 双样本场景数据 ---
+# A组（原始设计）- 50个用户
+# 假设平均会话持续时间为5分钟，并有一些方差
+group_a_durations = np.random.normal(loc=5.0, scale=1.5, size=50)
+# B组（新设计）- 55个用户
+# 假设平均会话持续时间可能更高，例如5.8分钟
+group_b_durations = np.random.normal(loc=5.8, scale=1.7, size=55)
+print(f"A组平均持续时间：{np.mean(group_a_durations):.2f} 分钟")
+print(f"B组平均持续时间：{np.mean(group_b_durations):.2f} 分钟")
+```
+
+这种设置提供了可用于操作的真实数据。`np.random.normal`函数生成遵循正态分布的数据，其中指定了均值（`loc`）和标准差（`scale`）。
+
+### 应用单样本T检验
+
+对于第一个场景，我们想测试我们的样本均值是否与150毫秒的基准有显著差异。
+
+- **零假设 ($H_0$):** 新算法的真实平均处理时间等于150毫秒 ($\mu = 150$)。
+- **备择假设 ($H_1$):** 新算法的真实平均处理时间不同于150毫秒 ($\mu \neq 150$)。这是一个双尾检验。
+
+我们使用`scipy.stats.ttest_1samp`函数。它将样本数据和零假设下的总体均值作为参数 (parameter)。
+
+```python
+# 执行单样本T检验
+t_statistic_1samp, p_value_1samp = stats.ttest_1samp(
+    a=sample_processing_times,
+    popmean=benchmark_time
+)
+
+print(f"单样本T检验结果：")
+print(f"  T统计量：{t_statistic_1samp:.4f}")
+print(f"  P值：{p_value_1samp:.4f}")
+
+# 解释
+alpha = 0.05  # 显著性水平
+if p_value_1samp < alpha:
+    print(f"  结论：拒绝H0。平均处理时间（{np.mean(sample_processing_times):.2f} 毫秒）与{benchmark_time}毫秒存在显著差异（p={p_value_1samp:.4f}）。")
+else:
+    print(f"  结论：未能拒绝H0。没有足够证据表明平均处理时间与{benchmark_time}毫秒不同（p={p_value_1samp:.4f}）。")
+```
+
+**结果解读：**
+该函数返回计算出的T统计量和对应的p值。
+
+- **T统计量：** 衡量样本均值与假设总体均值相距多少个标准误差。绝对值越大，表明差异越大。
+- **P值：** 假设零假设为真，观察到样本均值与计算值一样极端（或更极端）的概率。
+
+如果p值小于我们选择的显著性水平$\alpha$（通常为0.05），我们拒绝零假设（$H_0$）。这表示观察到的差异具有统计学意义。否则，我们未能拒绝$H_0$。根据我们模拟的数据（均值约为145毫秒），我们很可能发现与150毫秒存在显著差异。
+
+### 应用双样本独立T检验
+
+现在，让我们来处理A/B测试场景。我们想比较两个独立组（A组和B组）的均值。
+
+- **零假设 ($H_0$):** A组的真实平均会话持续时间等于B组的真实平均会话持续时间 ($\mu_A = \mu_B$)。
+- **备择假设 ($H_1$):** 真实平均会话持续时间不同 ($\mu_A \neq \mu_B$)。这同样是一个双尾检验。
+
+我们使用`scipy.stats.ttest_ind`函数。它将两组数据作为输入。一个主要参数 (parameter)是`equal_var`。默认情况下，它设置为`False`，执行Welch的T检验，该检验不假设两组之间方差相等。这通常更安全，除非您有充分理由相信方差相等。
+
+```python
+# 执行双样本独立T检验（默认是Welch's T检验）
+t_statistic_ind, p_value_ind = stats.ttest_ind(
+    a=group_a_durations,
+    b=group_b_durations,
+    equal_var=False  # 执行Welch's T检验
+)
+
+print(f"\n双样本独立T检验结果：")
+print(f"  T统计量：{t_statistic_ind:.4f}")
+print(f"  P值：{p_value_ind:.4f}")
+
+# 解释
+alpha = 0.05  # 显著性水平
+if p_value_ind < alpha:
+    print(f"  结论：拒绝H0。A组（{np.mean(group_a_durations):.2f} 分钟）和B组（{np.mean(group_b_durations):.2f} 分钟）之间的平均会话持续时间存在统计学上的显著差异（p={p_value_ind:.4f}）。")
+else:
+    print(f"  结论：未能拒绝H0。没有足够证据表明各组之间的平均会话持续时间存在显著差异（p={p_value_ind:.4f}）。")
+```
+
+**A/B测试数据可视化**
+
+快速可视化可以帮助理解正在比较的数据。箱线图对于显示每个组的分布和集中趋势是有效的。
+
+
+
+![会话持续时间比较 (A/B测试)](plots/1437-0.json)
+
+
+
+> 箱线图显示了A组（原始设计）和B组（新设计）会话持续时间的分布。中心线是中位数，方框表示四分位距（IQR），而触须通常延伸到1.5倍的四分位距。
+
+**双样本结果解读：**
+与单样本测试类似，我们将p值与我们的显著性水平$\alpha$进行比较。如果$p < \alpha$，我们得出结论，A组和B组之间观察到的均值差异具有统计学意义。考虑到我们生成数据的方式（B组均值设为5.8，A组均值设为5.0），我们预期测试会识别出这种差异。
+
+### 注意事项
+
+- **假设：** T检验依赖于某些假设。对于单样本T检验，数据应近似服从正态分布，特别是对于小样本量（n < 30）。对于双样本独立T检验，两组都应近似服从正态分布，并且样本应是独立的。Welch的T检验放宽了等方差的假设。虽然T检验对于大样本量（由于中心极限定理）适度违反正态性有较好的适应性，但在分析中检查这些假设（例如，使用正态性检验或Q-Q图等可视化方法）是一个好的做法。
+- **配对T检验：** 如果两个样本相关（例如，测量*相同*受试者干预前后的数据），我们将使用配对T检验（`scipy.stats.ttest_rel`），它分析配对观测值之间的差异。
+- **效应量：** 显著的p值表示可能存在真实的差异，但没有说明这种差异的*有多大*或*实际有多重要*。计算效应量指标（如Cohen的d）通过量化 (quantization)差异的大小来补充p值。
+
+本实践部分演示了如何使用SciPy应用单样本和双样本T检验。这些测试是比较均值的基本工具，可以在从算法评估到A/B测试等场景中进行数据驱动的决策。请记住在假设和选定的显著性水平的背景下正确解释p值。
+
+## 参考资料
+
+- [scipy.stats.ttest_1samp](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_1samp.html) — SciPy Developers (2024)
+  Python 中执行单样本 t 检验的官方文档。
+- [scipy.stats.ttest_ind](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html) — SciPy Developers (2024)
+  Python 中执行独立双样本 t 检验的官方文档，包括 equal_var（Welch t 检验）等参数。
+- [Practical Statistics for Data Scientists: 50 Essential Concepts](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce and Andrew Bruce (2020)
+  Publisher: O'Reilly Media
+  一本面向数据科学家和机器学习工程师的实用指南，涵盖假设检验、t 检验、p 值和效应量。
+- [Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing](https://doi.org/10.1017/9781108653985) — Ron Kohavi, Diane Tang, and Ya Xu (2020)
+  Publisher: Cambridge University Press; DOI: [10.1017/9781108653985](https://doi.org/10.1017/9781108653985)
+  提供关于设计、实施和解释 A/B 测试的全面指导，与双样本场景高度相关。

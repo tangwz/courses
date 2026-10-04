@@ -1,0 +1,69 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "correcting-data-types"
+lesson: "common-data-types"
+sourceId: 4000
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-4-correcting-data-types/common-data-types"
+title: "数据集中的常见数据类型"
+description: "了解整数、浮点数、字符串、布尔值和日期/时间等基本数据类型。"
+order: 1
+plots: []
+sourceHash: "6015e83159f427da675327c8cb1a50d02309194c88aa3051c5caa430ffff2e1e"
+sourceCorrections: []
+---
+
+如本章引言所述，理解每列中存储的数据*类型*非常重要。计算机和软件工具需要这些信息才能正确执行操作。想象一下，如果价格以文本形式（如'\19.99\$'）而不是数字形式存储，您将无法计算平均价格；或者如果日期被视为普通文本字符串（如'Jan 1st'），您将难以按时间顺序排序事件。使用错误的数据类型可能导致错误、不正确的计算和误导性的结果。
+
+下面我们来看看处理数据集时最常见的数据类型：
+
+### 数值类型
+
+这些代表数值，对于数学计算必不可少。
+
+- **整数 (int):** 这些是整数，可以是正数或负数，没有小数点。可以想成计数、索引或离散数量。
+  - 示例: `10`, `-5`, `0`, `1024`
+- **浮点数 (float):** 这些代表实数，包括带小数点的数字。它们用于测量、百分比或任何需要超出整数精度的值。
+  - 示例: `3.14`, `-0.5`, `98.6`, `2.71828`
+
+您可以对数值类型执行加法、减法、乘法和除法等算术运算。如果$5 + 10$都是数值，它们的相加会如预期一样；但如果'5'存储为文本，该操作可能会失败或产生意想不到的结果，例如文本连接（'510'）。
+
+### 字符串类型 (str)
+
+字符串代表文本数据。它们是用引号（单引号 ' ' 或双引号 " "）括起来的字符序列。任何内容都可以表示为字符串，包括名称、地址、描述、代码，甚至是不打算用于计算的数字（如邮政编码或ID号）。
+
+- 示例: `'Hello World'`, `"Data Science"`, `'123 Main St'`, `"ID-9876"`, `'True'` (注意：是单词'True'，不是布尔值), `'2023-10-26'` (表示为文本的日期)
+
+虽然字符串可以包含数字，但它们被视为文本字符，而非数值。数学运算通常不直接以数值意义应用于字符串。
+
+### 布尔类型 (bool)
+
+布尔值代表真值，表示两种状态之一：真或假。它们在逻辑、比较和控制流中非常重要。
+
+- 值: `True`, `False`
+
+这些通常来自比较（例如，`price > 100`吗？）或代表二元状态（例如，`is_subscribed`，`email_verified`）。
+
+### 日期时间类型
+
+这些专门类型代表日期、时间或两者。以正确的日期时间格式存储日期和时间，可以进行按时间顺序排序、计算持续时间、提取组成部分（如年、月、日、小时）以及执行基于时间的分析。如果日期以字符串形式存储（'October 26, 2023', '26/10/2023'），那么不进行转换，这些操作就会变得困难得多甚至不可能。
+
+- 示例: `2023-10-26` (日期), `14:30:00` (时间), `2023-10-26 14:30:00` (日期时间)
+
+### 分类类型
+
+虽然有时最初表示为字符串，但分类数据代表属于固定、有限数量的类别或组的变量。示例包括用户评分（'低'、'中'、'高'）、产品类型（'电子产品'、'服装'、'杂货'）或调查响应（'同意'、'中立'、'不同意'）。识别这些有时可以优化存储和分析，尽管对于基本清理，处理它们通常涉及确保字符串表示的一致性。
+
+> 数据集中常见数据类型的一种分类。
+
+理解这些基本类型是第一步。在后续章节中，我们将了解如何检查数据集中当前的数据类型，更重要的是，如何将列转换为其正确类型，以确保您的数据已准备好进行可靠分析。
+
+## 参考资料
+
+- [Built-in Types](https://docs.python.org/3/library/stdtypes.html) — Python Documentation (2023)
+  提供Python核心数据类型的基础定义和行为。
+- [pandas User Guide: Data types (dtypes)](https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#dtypes) — pandas development team (2024)
+  Publisher: Pandas Project
+  解释pandas DataFrame中数据类型的处理方式，包括常见类型及其在数据分析中的实际应用。
+- [Python for Data Analysis: Data Wrangling with pandas, NumPy, and IPython](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  对pandas生态系统中的数据类型提供了实用介绍，对数据清洗和预处理至关重要。

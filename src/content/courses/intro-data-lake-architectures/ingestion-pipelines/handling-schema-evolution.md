@@ -1,0 +1,125 @@
+---
+course: "intro-data-lake-architectures"
+chapter: "ingestion-pipelines"
+lesson: "handling-schema-evolution"
+sourceId: 8007
+sourceUrl: "https://apxml.com/zh/courses/intro-data-lake-architectures/chapter-3-ingestion-pipelines/handling-schema-evolution"
+title: "处理模式演变"
+description: "管理添加、删除或重命名列而不破坏下游使用者的策略。"
+order: 3
+plots: []
+sourceHash: "a61c271fda92dacd12edb115fe6590bef9b7bcc48801555d73e26db527de5b26"
+sourceCorrections: []
+---
+
+数据管道在一个动态环境中运行，上游应用团队经常修改数据库结构以支持新的产品功能。这些修改包括添加字段、重命名列或更改数据类型。如果数据摄取管道假定模式是静态的，那么源结构中的任何偏差都可能导致作业失败或数据损坏。模式演变指的是数据湖系统能够随着时间推移适应数据结构变化，而无需完全重写现有数据的能力。
+
+在传统关系型数据库管理系统 (RDBMS) 中，模式更改通过 `ALTER TABLE` 等 DDL 命令来处理。数据库引擎同步管理元数据和物理存储。而在数据湖中，存储与计算和元数据是解耦的。你可能拥有数 TB 的历史数据，这些数据存储在具有模式版本 A 的不可变 Parquet 文件中，而传入数据则带有模式版本 B。这里的难点在于将这些版本统一到一张逻辑表中，以便查询引擎能够一致地读取。
+
+### 读时模式与写时模式
+
+早期的 Hadoop 架构大量依赖于**读时模式**。在这种模型中，数据以其原始格式写入，不进行验证。模式仅在查询数据时应用。尽管这确保了摄取不会因结构不匹配而失败，但它将处理错误的难度推到了查询层。如果列类型从整数更改为字符串，查询引擎可能会返回空值或抛出运行时错误。
+
+现代数据湖架构通常对银层和金层采用**写时模式**或**模式强制**。这种方法在写入存储之前，会根据定义的模式验证数据。如果数据不匹配，系统必须决定是拒绝该记录还是演变目标模式。
+
+### 模式变化的类型
+
+在设计摄取管道时，有必要根据变化对下游使用者造成的影响来对其进行分类。
+
+1. **新增变化（向后兼容）：** 添加新列通常是安全的。历史文件仅缺少此列。当查询引擎读取旧文件时，它会用 `NULL` 填充缺失值。这要求文件格式（如 Parquet）和查询引擎支持模式合并。
+2. **破坏性变化（中断性）：** 删除列或重命名字段可能会破坏引用该列的现有查询。在数据湖中，“删除”列通常表示它不再写入新文件，但数据仍保留在旧文件中。
+3. **类型变化（可能中断）：** 将列从 `int` 更改为 `long` 通常是安全的（向上转型）。将从 `string` 更改为 `int` 是不安全的，因为现有数据可能不符合新类型。
+
+### 使用开放表格式管理演变
+
+像 Parquet 这样的原始文件格式将模式存储在文件页脚中。但是，它们本身并不知道同一目录下*其他*文件的模式。像 Apache Iceberg 和 Delta Lake 这样的开放表格式引入了一个元数据层，它比原始文件更可靠地管理模式演变。
+
+#### 基于名称的解析与基于 ID 的解析
+
+在处理模式演变方面，一个主要区别在于列是如何识别的。
+
+**基于名称的解析**依赖于列名。如果你将列从 `user_id` 重命名为 `customer_id`，系统会将其解释为删除 `user_id` 并添加一个新列 `customer_id`，历史数据中的所有值均为 null。这在 Spark 和原始 Parquet 工作流中很常见。
+
+**基于 ID 的解析**为每个列分配一个唯一的整数 ID。Apache Iceberg 使用此方法。如果 `user_id` (ID: 1) 重命名为 `customer_id`，ID 仍为 1。元数据只更新显示名称。无论名称如何更改，底层数据都正确关联，从而允许安全重命名而无需重写文件。
+
+> 该图说明了查询引擎如何使用元数据目录来统一不同的文件版本。文件 A 缺少“region”列，而文件 B 包含该列。目录向用户呈现一个统一的模式。
+
+### 实现策略
+
+当使用 Apache Spark 等框架实现摄取作业时，你必须明确配置如何处理模式不匹配问题。
+
+#### 1. 自动模式合并
+
+在批处理中，你可以启用模式合并。当写入器在源数据帧中检测到目标中不存在的新列时，它会更新目标元数据以包含该新列。
+
+例如，在 Delta Lake 中，这通过 `mergeSchema` 选项进行控制：
+
+```python
+# 配置示例（伪代码）
+(source_dataframe.write
+  .format("delta")
+  .option("mergeSchema", "true")
+  .mode("append")
+  .save("/path/to/table"))
+```
+
+这允许新增变化自动传播。但是，它带来一个风险：如果上游系统不小心发送了垃圾列，你的数据湖表将充斥着数百个无用的列。
+
+#### 2. 流式处理中的模式演变
+
+流式管道带来一个独特的难题，因为它们持续运行。重启流以处理模式更改可能导致停机。
+
+一些引擎通过检查每个微批次的模式来支持流式处理中的模式演变。如果检测到兼容的更改（如新列），作业会更新元数据并继续。如果更改不兼容（如类型不匹配），流通常会失败以防止数据损坏。
+
+#### 3. 死信队列 (DLQ) 模式
+
+对于模式更改必须手动批准的要求高的环境，DLQ 模式是更好的选择。
+
+1. 摄取作业将传入模式与已注册的目录模式进行比较。
+2. 如果匹配，则写入数据。
+3. 如果不匹配，将失败的记录写入单独的“死信”位置（例如，特定的 S3 存储桶文件夹）。
+4. 提醒数据工程团队。
+5. 团队审查 DLQ。如果模式更改有效，他们会手动更改目标表并从 DLQ 回填数据。
+
+### 模式联合的数学表示
+
+当查询引擎读取跨越多个具有不同模式的分区的数据集时，它会执行模式联合操作。
+
+设 $S_t$ 为时间 $t$ 时表的模式。
+设 $S_{file}$ 为表中特定文件的模式。
+
+对于查询在文件集 $F = \{f_1, f_2, \dots, f_n\}$ 上有效，查询引擎会构建一个读取模式 $S_{读取}$，使得：
+
+$S_{读取} = \bigcup_{i=1}^{n} S_{f_i}$
+
+当读取特定文件 $f_i$ 时，对于 $S_{读取}$ 中的每个列 $c$：
+
+- 如果 $c \in S_{f_i}$，则返回文件中的值。
+- 如果 $c \notin S_{f_i}$，则返回 `NULL`。
+
+这种逻辑使得数据湖能够呈现一个连贯的数据视图，尽管底层存在物理碎片。
+
+### 处理分区列演变
+
+一个特殊情况是分区列的更改。如果一个表按 `date` 分区，而业务逻辑变为按 `date` 和 `region` 分区，这是一个显著的物理布局变化。
+
+大多数表格式不支持即时重写现有分区布局。标准方法包括：
+
+1. **演变：** 新数据使用新的分区方案写入。
+2. **元数据抽象：** 查询引擎足够智能，可以根据旧数据的旧方案和新数据的新方案来修剪文件。
+
+Apache Iceberg 在这方面表现出色，这得益于一个名为**隐藏分区**的功能。它允许分区转换（如分桶或截断）演变而无需重写表。查询执行的拆分规划阶段处理逻辑查询过滤器与物理分区布局之间的映射。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media; Pages: 616
+  第四章“数据编码与演进”讨论了分布式系统中的模式演进、向前和向后兼容性以及不同的数据格式。
+- [Apache Iceberg: A Table Format for Analytic Datasets](https://www.vldb.org/pvldb/vol13/p3046-blue.pdf) — Ryan Blue, Daniel Weeks, Parosh Jasani, Justin S. Johnson, Andrew Gallagher, Jason D. Reid, Brock Noland, Michael Yoder, Steven Hamm (2020)
+  Journal: Proceedings of the VLDB Endowment (PVLDB); Publisher: VLDB Endowment; Volume: 13; Pages: 3046-3059; DOI: [10.14778/3407914.3407920](https://doi.org/10.14778/3407914.3407920)
+  本文介绍了Apache Iceberg，详细阐述了其架构以及如何在大型数据湖中解决模式演进和隐藏分区等问题。
+- [Delta Lake: High-Performance ACID Table Storage for Big Data](https://www.vldb.org/pvldb/vol13/p3015-armbrust.pdf) — Michael Armbrust, Ali Ghodsi, Andrew Liu, Xiangrui Meng, Joseph Bradley, Burak Yavuz, Jeffrey H. Reback, Xiang Zhang, Evan Zhou (2020)
+  Journal: Proceedings of the VLDB Endowment (PVLDB); Publisher: VLDB Endowment; Volume: 13; Pages: 3015-3027; DOI: [10.14778/3400735.3400742](https://doi.org/10.14778/3400735.3400742)
+  介绍了Delta Lake，这是一个开源存储层，为数据湖带来了ACID事务和模式强制执行，有助于模式演进。
+- [Structured Streaming Programming Guide](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html) — The Apache Software Foundation (2024)
+  关于管理模式演进和处理流数据管道中不兼容变化的章节，提供了Apache Spark的实际实现细节。

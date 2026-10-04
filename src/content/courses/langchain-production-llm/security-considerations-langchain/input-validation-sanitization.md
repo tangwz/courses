@@ -1,0 +1,171 @@
+---
+course: "langchain-production-llm"
+chapter: "security-considerations-langchain"
+lesson: "input-validation-sanitization"
+sourceId: 3933
+sourceUrl: "https://apxml.com/zh/courses/langchain-production-llm/chapter-8-security-considerations-langchain/input-validation-sanitization"
+title: "输入验证与清洗"
+description: "在由大型语言模型或工具处理用户输入前，验证和清洗用户输入的方法。"
+order: 2
+plots: []
+sourceHash: "673718c776e081ff3a152f984688aa941f952b2a0b65936cfc416db8b46ae28e"
+sourceCorrections: []
+---
+
+LangChain 应用与外部环境（主要通过用户输入）之间的交互边界，是安全方面需要重点关注的一个区域。大型语言模型应用通常处理非结构化的自然语言，这本身不具备传统软件输入所要求的严格模式。这种灵活性虽然功能强大，但也为恶意行为者影响应用行为提供了渠道。所以，输入验证与清洗是减轻这些风险的基本做法，需在可能有害的数据抵达大型语言模型、工具或后端系统*之前*完成。
+
+与常规应用中验证通常侧重于数据类型和格式不同，大型语言模型环境下的验证还必须顾及*含义*内容及其可能以意料之外的方式影响语言模型或下游组件的能力。
+
+### 大型语言模型应用中输入验证的作用
+
+未能正确验证和清洗输入，可能引发大型语言模型应用独有的多种安全漏洞：
+
+1. **提示注入：** 这可以说是最主要的威胁。恶意输入可能包含旨在覆盖初始系统提示的指令，导致大型语言模型忽略其预期任务，泄露敏感配置信息，或执行攻击者指令的操作。验证可以帮助识别或阻止注入攻击中常见的模式。
+2. **不安全的工具参数 (parameter)：** 如果您的LangChain代理使用与外部系统（数据库、API、文件系统）交互的工具，未经验证的输入作为参数传递给这些工具，可能直接引发典型的漏洞，如SQL注入、跨站脚本（XSS）、服务器端请求伪造（SSRF）或远程代码执行（RCE）。清洗或严格验证工具输入是必要的。
+3. **数据外泄：** 精心设计的输入可能诱使大型语言模型泄露其可访问的敏感数据，这些数据可能来自其训练数据（在现代对齐 (alignment)技术下不那么常见），或者更重要的是，来自应用的环境（例如，检索到的文档、对话历史）。
+4. **拒绝服务 (DoS)：** 过长、复杂或资源密集型的输入可能使大型语言模型、相关工具或解析逻辑超载，导致成本过高或服务不可用。长度和复杂性检查是重要的预防措施。
+5. **偏见或有害内容生成：** 虽然通常通过模型对齐和输出过滤来处理，但输入验证可以作为初始检查，在提示被处理前阻止本身带有毒性、偏见或违反政策的提示。
+
+### 何处应用验证和清洗
+
+有效的输入验证需要识别所有外部数据进入系统的点，并*尽可能早地*进行检查。LangChain 应用中常见的集成点有：
+
+- **初始用户界面/API边界：** 用户输入（例如聊天消息、表单数据）进入应用的第一个点。
+- **在大型语言模型调用前：** 在将从模板和用户输入构建的最终提示发送给大型语言模型之前进行验证。
+- **在工具执行前：** 非常重要。在参数 (parameter)传递给任何工具的执行逻辑*之前*，对其进行验证和清洗。
+- **数据加载/检索：** 如果要摄取外部文档用于RAG，请考虑在加载和分块过程中验证或清洗内容，以防止数据源中的间接提示注入。
+
+以下图表展示了涉及代理的请求流中典型的输入验证点：
+
+> 此流程图显示，验证在接收到用户输入后立即应用，并在执行具有可能不安全参数的工具之前再次应用，这些参数来自用户输入或大型语言模型输出。
+
+### 验证与清洗的方法
+
+选择适合特定输入和潜在风险的方法。通常需要多种方法的结合：
+
+1. **类型检查：** 确保输入数据符合预期的Python类型（例如，`str`、`int`、`list`、`bool`）。这是一个基础但重要的检查，尤其适用于工具参数 (parameter)。
+2. **长度限制：** 限制字符串的最小和最大长度，或集合的大小。这可以防止过于冗长的输入，这些输入可能绕过其他检查或导致拒绝服务攻击。
+
+   ```python
+   MAX_INPUT_LENGTH = 1024
+
+   def validate_length(user_input: str):
+       if not (0 < len(user_input) <= MAX_INPUT_LENGTH):
+           raise ValueError(f"输入长度必须在1到{MAX_INPUT_LENGTH}个字符之间。")
+       return user_input
+   ```
+3. **格式和模式验证 (Pydantic)：** 对于结构化数据或需要特定格式（如电子邮件、网址）的输入，可使用Pydantic等库。Pydantic模型非常适合定义工具输入的预期模式，并提供自动验证。LangChain与Pydantic良好集成，可用于定义工具的`args_schema`。
+
+   ```python
+   from pydantic import BaseModel, Field, field_validator
+   import re
+
+   class SearchToolSchema(BaseModel):
+       query: str = Field(..., description="搜索查询", min_length=3, max_length=150)
+       max_results: int = Field(default=5, gt=0, le=20)
+
+       @field_validator('query')
+       @classmethod
+       def query_safety_check(cls, v: str) -> str:
+           # 示例：防止明显的命令式结构（根据需要调整正则表达式）
+           if re.search(r'[;&|`$()]', v):
+                raise ValueError("查询包含可能不安全的字符。")
+           # 示例：阻止特定关键词（谨慎使用，可能被绕过）
+           if "DROP TABLE" in v.upper():
+                raise ValueError("检测到可能有害的SQL关键词。")
+           return v.strip() # 同时执行基本清洗
+   ```
+4. **允许列表（白名单）：** 明确定义哪些*是*允许的（例如，特定字符、已知命令、枚举值）。这通常比阻止列表更安全，因为它会拒绝任何未明确允许的内容。
+5. **阻止列表（黑名单）：** 定义哪些*不*被允许（例如，特定关键词如`password`、`admin`、脚本标签`<script>`）。阻止列表出了名的难以维护，攻击者也很容易通过编码或混淆技术绕过。谨慎使用，作为辅助防御层。
+6. **正则表达式：** 有助于强制执行特定模式（例如，仅限字母数字、特定命令结构）或识别已知的恶意模式（但请注意阻止列表的局限性）。
+7. **清洗：** 修改输入以移除或中和可能有害的元素，而不是直接拒绝。谨慎使用，因为它可能改变输入的含义。
+   - **转义：** 将特殊字符转换为安全的等效形式（例如，HTML转义将`>`转为`&gt;`）。当输入可能在其他环境（网页、SQL查询）中渲染时，这非常必要。*始终优先使用SQL参数化查询而不是手动转义。*
+   - **去除/移除：** 删除不允许的字符或标签。例如，如果用户输入仅应为纯文本，则从中移除HTML标签。
+   - **标准化：** 将输入转换为规范形式（例如，小写、移除多余空格、Unicode标准化）。这有助于提高其他验证规则的有效性。
+
+### 在LangChain中实现验证
+
+您可以以多种方式将这些方法集成到您的LangChain应用中：
+
+- **直接在工具代码中：** 在自定义工具的`_run`或`_arun`方法中添加验证逻辑，或使用Pydantic的`args_schema`以在工具调用时实现自动验证。
+
+  ```python
+  from langchain_core.tools import BaseTool
+  from pydantic import BaseModel, Field
+  from typing import Type
+
+  # 使用Pydantic模式进行验证
+  class CalculatorInput(BaseModel):
+      expression: str = Field(..., description="要计算的数学表达式")
+      # 如果需要，可在此处添加更具体的验证器
+
+  class SafeCalculatorTool(BaseTool):
+      name: str = "safe_calculator"
+      description: str = "安全地计算数学表达式。"
+      args_schema: Type[BaseModel] = CalculatorInput
+
+      def _run(self, expression: str):
+          # 可以在此处进行与计算相关的进一步验证/清洗
+          # 例如，使用安全的计算库而非eval()
+          try:
+              # 使用更安全的替代方案，如asteval或numexpr
+              # 如果需要，进一步清洗，例如，限制允许的函数/变量
+              import numexpr
+              result = numexpr.evaluate(expression).item()
+              return result
+          except Exception as e:
+              return f"计算表达式出错: {e}"
+      # 如果需要，实现_arun用于异步
+  ```
+- **在LCEL中使用`RunnableLambda`：** 创建自定义验证或清洗函数，并将其包装为`RunnableLambda`组件，以将其插入LangChain表达语言（LCEL）链中。
+
+  ```python
+  from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+  from langchain_core.prompts import ChatPromptTemplate
+  from langchain_openai import ChatOpenAI
+
+  def validate_and_sanitize(input_data):
+      # 假设 input_data 是一个包含 user_query 的字典
+      query = input_data.get("user_query", "")
+      if len(query) > 500:
+           raise ValueError("查询超出最大长度500个字符。")
+      # 基本清洗
+      sanitized_query = query.strip()
+      # 在此处添加更多检查...
+      input_data["user_query"] = sanitized_query
+      return input_data # 传递可能已修改的数据
+
+  validation_step = RunnableLambda(validate_and_sanitize)
+  llm = ChatOpenAI(model="gpt-3.5-turbo") # 替换为你的大型语言模型
+  prompt = ChatPromptTemplate.from_template("Answer the user's question: {user_query}")
+
+  # 早期加入验证的链
+  chain = (
+      RunnablePassthrough() # 以输入字典开始
+      | validation_step
+      | prompt
+      | llm
+      # | output_parser ...
+  )
+
+  # 示例调用
+  try:
+      # result = chain.invoke({"user_query": " 告诉我关于LangChain。 "})
+      # result_long = chain.invoke({"user_query": "A" * 1000}) # 这将引发 ValueError
+      pass # 实际调用的占位符
+  except ValueError as e:
+      print(f"验证失败: {e}")
+  ```
+- **自定义链组件：** 对于涉及状态或多个步骤的更复杂的验证逻辑，可以实现自定义的`Runnable`类。
+
+输入验证与清洗并非万能药，但它构成了LangChain应用纵深防御安全策略中的重要组成部分。通过仔细审视潜在威胁并在重要的集成点应用恰当的检查，您可以大幅降低由大型语言模型驱动的系统的攻击面。请记住，要根据所涉数据和操作的具体情况及敏感程度来调整您的验证规则。
+
+## 参考资料
+
+- [OWASP Top 10 for Large Language Model Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — OWASP Foundation (2023)
+  Publisher: OWASP Foundation
+  关于LLM应用程序最关键安全风险的权威指南，对提示注入和不安全工具使用提供了重要见解。
+- [Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) — OWASP Foundation (2023)
+  提供了在各种应用场景中实施稳健输入验证的基本最佳实践和常见缺陷。
+- [Pydantic Documentation](https://docs.pydantic.dev/latest/) — Pydantic Development Team (2024)
+  使用Pydantic进行基于模式的数据验证的官方资料，对于为LLM工具定义稳健的接口特别重要。

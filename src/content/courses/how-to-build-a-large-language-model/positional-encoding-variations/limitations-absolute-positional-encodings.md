@@ -1,0 +1,123 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "positional-encoding-variations"
+lesson: "limitations-absolute-positional-encodings"
+sourceId: 6011
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-13-positional-encoding-variations/limitations-absolute-positional-encodings"
+title: "绝对位置编码的局限性"
+description: "讨论固定或学习得到的绝对位置表示可能存在的问题。"
+order: 1
+plots: ["plots/6011-0.json"]
+sourceHash: "d239061b23909a57a6f916bc33e236f55daaf65fd58e1d3c710196b6c14a65ba"
+sourceCorrections: []
+---
+
+标准Transformer架构依赖于向输入嵌入 (embedding)中加入位置信息，因为自注意力 (self-attention)机制 (attention mechanism)本身是置换不变的。两种最常见的方法是学习得到的绝对位置嵌入和固定正弦位置编码 (positional encoding)。尽管这些方法有效，但它们存在局限，尤其是在处理很长序列时，或者当词元 (token)之间精确的相对位置关系很重要时。理解这些不足之处为研究更先进的位置编码技术提供了理由。
+
+### 对未见过序列长度的外推
+
+当模型遇到比训练期间更长的序列时，会出现一个重要挑战。
+
+- **学习得到的绝对嵌入 (embedding)：** 如果模型用学习得到的位置嵌入进行训练，最大序列长度比如是512个词元 (token)，那么它根本没有为位置513及之后定义嵌入。在推断时将此类模型用于1024个词元的序列，通常会导致不可预测的行为或性能大幅下降，因为模型遇到了没有位置表示的输入。尽管存在诸如扩展学习嵌入的技术，但它们通常是启发式的，可能无法可靠地工作。
+- **正弦绝对编码：** 由数学函数（不同频率的正弦和余弦波）定义的固定正弦编码，理论上可以为任何位置生成编码。
+
+  
+  $$
+  PE_{(位置, 2i)} = \sin(位置 / 10000^{2i / d_{model}})
+  $$
+  
+  
+  $$
+  PE_{(位置, 2i+1)} = \cos(位置 / 10000^{2i / d_{model}})
+  $$
+  
+
+  这里，$pos$ 是位置，$i$ 是 $d_{model}$ 维嵌入中的维度索引。因为这是一个确定性函数，我们可以计算任何 $pos$ 的 $PE_{(pos, \cdot)}$。然而，实际问题依然存在。尽管在数学上已定义，模型本身可能没有学会在其训练分布之外很远距离或绝对位置上有效理解位置信息。正弦模式在非常大的位置上可能会变得不那么清晰或可能出现混叠，使得模型难以准确区分远距离的词元。模型的泛化能力依赖于从它*已经*见过的位置信息中学习模式，将这些模式外推到大得多的尺度上并不能得到保证。
+
+考虑在某个位置范围内两个维度的正弦值。尽管这些值是唯一的，但模型在比训练时更大的尺度上对这些模式的区分能力可能会下降。
+
+
+
+![正弦编码值（简化示例）](plots/6011-0.json)
+
+
+
+> 两个维度在递增位置上的正弦值示例。尽管在数学上是唯一的，泛化能力取决于模型能否在其训练数据的尺度上理解这些可能不明显的差异。
+
+### 相对位置的隐式表示
+
+自注意力 (self-attention)计算词元 (token)间的交互，基于它们的查询 ($Q$)、键 ($K$) 和值 ($V$) 表示。使用绝对位置编码 (positional encoding) ($P$) 时，这些表示通常是通过将位置编码添加到词元嵌入 (embedding) ($E$) 中形成的。对于位置 $i$ 和 $j$，注意力得分的计算涉及如下项：
+
+
+$$
+\text{得分}(i, j) \propto (E_i + P_i)^T W_Q^T W_K (E_j + P_j)
+$$
+
+
+这里，$W_Q$ 和 $W_K$ 是查询和键的权重 (weight)矩阵。注意绝对位置 $P_i$ 和 $P_j$ 影响得分，但相对位置 $i-j$ 没有被明确编码。模型必须*学习*理解 $P_i$ 和 $P_j$ 的组合，以了解词元 $i$ 和 $j$ 之间的相对距离和方向。尽管模型在一定程度上能够隐式地学习这一点，但这可能不是捕获严重依赖相对位置的关系（例如句法依赖或局部词语交互）最直接或最有效的方式。
+
+对于许多语言现象，两个词之间的关系更多地取决于它们之间的距离，而不是它们在序列中的绝对位置。例如，形容词和名词之间的语法关系通常取决于它们是相邻的或附近的，无论它们出现在长文档的开头还是中间。一种直接包含相对距离的编码，可能使注意力机制 (attention mechanism)更容易捕获这些局部依赖关系。
+
+考虑以下简化的类似PyTorch的伪代码，说明了添加了绝对编码的标准注意力是如何工作的：
+
+```python
+import torch
+import torch.nn.functional as F
+
+# 简化示例参数
+batch_size = 1
+seq_len = 5
+embed_dim = 8
+
+# 词元嵌入（随机）
+token_embed = torch.randn(batch_size, seq_len, embed_dim)
+
+# 绝对位置编码（例如，正弦或学习得到）
+pos_enc = torch.randn(batch_size, seq_len, embed_dim) # 简化替代
+
+# 输入嵌入
+input_embed = token_embed + pos_enc
+
+# 简化查询、投影（为清晰起见省略了线性层）
+# 实际上，Q = input_embed @ W_q, K = input_embed @ W_k
+query = input_embed # 形状: (批次, 序列长度, 嵌入维度)
+key = input_embed   # 形状: (批次, 序列长度, 嵌入维度)
+
+# 计算注意力得分
+# 点积注意力（简化）
+# 形状: (批次, 序列长度, 序列长度)
+attn_scores = torch.matmul(query, key.transpose(-2, -1))
+
+# 缩放得分
+scale_factor = torch.sqrt(torch.tensor(embed_dim, dtype=torch.float32))
+scaled_attn_scores = attn_scores / scale_factor
+
+# 应用softmax
+attn_weights = F.softmax(scaled_attn_scores, dim=-1)
+
+# attn_weights[b, i, j] 包含从位置 i 到位置 j 的注意力
+# 注意相对距离 (i-j) 并非计算的明确部分，
+# 它是从 (token_embed_i + pos_enc_i)
+# 和 (token_embed_j + pos_enc_j) 的交互中隐式获得的。
+print("注意力权重形状:", attn_weights.shape)
+```
+
+这种隐式处理要求模型分配能力，从绝对位置信号中解开相对位置关系。
+
+### 固定编码的不灵活性
+
+尽管正弦编码提供数学外推能力，但它们固定的性质意味着它们不适应训练数据或下游任务的特定特征。正弦形式对位置关系施加了特定的结构，这可能并非总是最佳的。学习得到的嵌入 (embedding)通过在训练期间进行适应提供更大的灵活性，但如前所述，它们在泛化到更长序列方面表现不佳。固定编码的外推能力与学习嵌入的适应性之间的这种权衡，突显了绝对位置方法的一个核心局限性。
+
+这些关于序列长度外推、隐式相对位置表示以及固定与学习之间权衡的局限性，促进了对替代位置编码 (positional encoding)方法的研究。以下章节将介绍诸如相对位置编码和旋转位置嵌入（RoPE）等技术，这些技术旨在通过将相对位置信息更直接地融入注意力机制 (attention mechanism)或修改位置信息的集成方式来解决这些不足。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008
+  介绍了Transformer架构及其最初的绝对正弦位置编码，本节讨论了其局限性。
+- [Self-Attention with Relative Position Representations](https://aclanthology.org/N18-1059.pdf) — Peter Shaw, Jakob Uszkoreit, Ashish Vaswani (2018)
+  Journal: Proceedings of the 2018 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Publisher: Association for Computational Linguistics; Volume: 1; Pages: 593-602; DOI: [10.18653/v1/N18-1059](https://doi.org/10.18653/v1/N18-1059)
+  提出了一种将相对位置信息显式编码到自注意力机制中的方法，解决了绝对位置编码的一个关键局限性。
+- [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/pdf/2104.09864) — Jianlin Su, Yu Lu, Sheng Wang, Huazhu Fu, Yongfeng Jiang, Bo Wen, Jianjun Li (2021)
+  Journal: arXiv preprint arXiv:2104.09864; Publisher: arXiv; DOI: [10.48550/arXiv.2104.09864](https://doi.org/10.48550/arXiv.2104.09864)
+  介绍了旋转位置嵌入（RoPE），一种解决了Transformer中序列长度外推和相对位置表示挑战的方法。

@@ -1,0 +1,70 @@
+---
+course: "intro-diffusion-models"
+chapter: "generative-modeling-fundamentals"
+lesson: "probabilistic-framework-intro"
+sourceId: 5368
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-1-generative-modeling-fundamentals/probabilistic-framework-intro"
+title: "概率框架概述"
+description: "确立扩散模型数据生成的整体概率视角。"
+order: 4
+plots: []
+sourceHash: "b10b8ae733adf535c4760c7b2ac45152ba7a9f1ea5d53de81897a2e4c34b08f4"
+sourceCorrections: []
+---
+
+在介绍了扩散模型的核心思想（即系统地添加噪声并学习逆转该过程）之后，现在我们将其置于更正式的概率背景下。这个框架有助于我们理解其数学基础，并为后续章节中讨论的训练目标和采样算法的推导做好准备。
+
+生成模型的目标是学习某些数据（例如图像）的潜在概率分布 $q(x_0)$。我们希望构建一个由 $\theta$ 参数 (parameter)化的模型，能够从近似分布 $p_\theta(x_0)$ 中生成新的样本 $x_0$。
+
+### 前向过程：马尔可夫链
+
+前向过程，即我们逐步添加噪声的过程，可以正式定义为一系列潜在变量 $x_1, x_2, ..., x_T$。我们从原始数据样本 $x_0 \sim q(x_0)$ 开始。每个后续步骤 $x_t$ 是通过对前一步 $x_{t-1}$ 应用一个固定噪声过程获得的。这个过程被定义为一个马尔可夫链，意味着 $x_t$ 仅取决于 $x_{t-1}$：
+
+
+$$
+q(x_{1:T} | x_0) = \prod_{t=1}^T q(x_t | x_{t-1})
+$$
+
+
+转移概率 $q(x_t | x_{t-1})$ 通常涉及添加少量高斯噪声，并根据预定义的时间表进行缩放。总步数 $T$ 通常很大（例如1000）。随着 $t$ 的增加，数据 $x_t$ 逐渐失去其原始结构，最终变得与纯噪声无法区分。根据设计，最终状态 $x_T$ 应该近似一个简单、易处理的分布，通常是标准高斯分布，$x_T \approx \mathcal{N}(0, I)$。这个前向过程是固定的，不涉及任何学习。
+
+> 前向过程逐步添加噪声，通过一个固定的马尔可夫链 $q$ 将数据 $x_0$ 转换为噪声 $x_T$。
+
+### 逆向过程：学习生成
+
+生成能力源于逆向过程。我们的目标是从噪声分布 $x_T \sim \mathcal{N}(0, I)$ 中取样开始，然后逆转加噪步骤，以获得一个看起来来自原始数据分布 $q(x_0)$ 的样本 $x_0$。这涉及学习逆向马尔可夫链的转移 $p_\theta(x_{t-1} | x_t)$：
+
+
+$$
+p_\theta(x_{0:T}) = p(x_T) \prod_{t=1}^T p_\theta(x_{t-1} | x_t)
+$$
+
+
+这里，$p(x_T)$ 是先验噪声分布（例如，$\mathcal{N}(0, I)$），而 $p_\theta(x_{t-1} | x_t)$ 代表学习到的去噪步骤，它由一个带有参数 (parameter) $\theta$ 的神经网络 (neural network)（通常是U-Net，我们稍后会看到）进行参数化。
+
+主要挑战在于，真实逆向概率 $q(x_{t-1} | x_t)$ 难以直接计算，因为它依赖于整个数据分布。然而，如果我们将它条件设定在原始数据点 $x_0$ 上，它就变得易处理。扩散模型巧妙地利用了这一观点。虽然在生成过程中我们不知道 $x_0$，但我们可以在训练期间使用它来制定一个易处理的目标。网络 $p_\theta(x_{t-1} | x_t)$ 经过训练以近似真实后验 $q(x_{t-1} | x_t, x_0)$。正如我们将在第3章中了解，这种近似通常简化为预测在步骤 $t$ 添加的噪声。
+
+> 逆向过程从噪声 $x_T$ 开始，学习使用参数化的马尔可夫链 $p_\theta$ 逐步去噪，从而生成数据 $x_0$。
+
+### 与生成模型目标的关系
+
+这种设置提供了一种结构化的方式，将复杂的数据分布 $q(x_0)$ 转换为简单的噪声分布 $p(x_T)$，然后通过一系列去噪步骤 $p_\theta(x_{t-1} | x_t)$ 隐式地学习逆向变换 $p_\theta(x_0 | x_T)$。中间状态 $x_1, ..., x_{T-1}$ 充当潜在变量，引导生成从纯噪声回到结构化数据。
+
+最终目标是训练参数 (parameter) $\theta$，使得通过从 $x_T \sim p(x_T)$ 开始运行完整的逆向过程所获得的分布 $p_\theta(x_0)$ 紧密匹配真实数据分布 $q(x_0)$。训练目标（我们将在第4章中详细查看）通常涉及最大化模型下观察到的数据 $x_0$ 的似然。这通常通过优化对数似然的下界（即ELBO）来实现，ELBO 方便地分解为与扩散过程每一步中预测噪声相关的项。
+
+这个概率视角为理解扩散模型如何运作、如何训练以及如何生成样本提供了基础。后续章节将介绍前向和逆向步骤的具体数学公式。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  介绍了去噪扩散概率模型（DDPM）框架，详细阐述了前向加噪和逆向去噪的马尔可夫链。
+- [Score-Based Generative Modeling through Stochastic Differential Equations](https://arxiv.org/abs/2011.13456) — Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, Ben Poole (2021)
+  Journal: International Conference on Learning Representations; DOI: [10.48550/arXiv.2011.13456](https://doi.org/10.48550/arXiv.2011.13456)
+  将去噪扩散概率模型（DDPM）和基于分数的生成模型通过随机微分方程统一在一个共同框架下。
+- [Generative Modeling by Estimating Gradients of the Data Distribution](https://arxiv.org/abs/1907.05600) — Yang Song, Stefano Ermon (2019)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.1907.05600](https://doi.org/10.48550/arXiv.1907.05600)
+  介绍了基于分数的生成建模，为构建在逆转固定噪声过程之上的生成模型提供了补充视角。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  第20章关于深度生成模型，提供了概率生成模型、变分推断和基于似然的训练的基本概念。

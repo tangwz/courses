@@ -1,0 +1,80 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "neural-network-foundations"
+lesson: "weights-and-biases"
+sourceId: 1914
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-1-neural-network-foundations/weights-and-biases"
+title: "权重和偏置：网络的参数"
+description: "了解权重和偏置如何影响神经元的输出和网络学习。"
+order: 2
+plots: []
+sourceHash: "d513594c51d07c9b83c25ad17429b0dda0405e3cbd08ae264eee135b5153d335"
+sourceCorrections: []
+---
+
+在确立了人工神经元的基本结构后，让我们关注赋予它学习能力的要素：它的参数 (parameter)。这些是网络中在训练过程中被修改的可调整部分。一个基本神经元中，两种主要的参数类型是权重 (weight)和偏置 (bias)。
+
+### 权重 (weight)：调节输入影响
+
+可以将权重理解为表示输入与神经元之间连接的*强度*或*影响作用*。连接到神经元的每个输入都有一个关联的权重（$w$）。当输入信号（$x$）到达时，它会乘以其对应的权重。绝对值较大的权重表示输入对神经元的输出有更强的作用（如果为正则为兴奋性，如果为负则为抑制性）。相反，接近零的权重表示输入影响很小。
+
+设想一个具有三个输入 $x_1$、$x_2$ 和 $x_3$ 的神经元。每个输入都将有自己的权重：$w_1$、$w_2$ 和 $w_3$。神经元计算的第一步涉及计算其输入的*加权和*：$w_1 x_1 + w_2 x_2 + w_3 x_3$。
+
+这些权重不是固定的；它们会用一些值（通常是小的随机数）进行初始化，然后根据网络产生的误差，在网络的训练阶段进行迭代调整。这种调整过程就是网络学习如何针对特定任务，对相关输入给予更多关注，而对不相关输入给予更少关注的方式。
+
+> 输入（$x_1, x_2, ...$）乘以它们的权重（$w_1, w_2, ...$）并求和（$\Sigma$）。偏置 (bias)（$b$）随后被加到这个和中。
+
+### 偏置 (bias)：调整激活阈值
+
+计算输入的加权和后，另一个参数 (parameter)会起作用：偏置（$b$）。偏置项被加到加权和中：$w_1 x_1 + w_2 x_2 + w_3 x_3 + b$。
+
+偏置有什么作用？可以将其视为调整神经元固有的激活倾向。它为和提供了一个常数偏移，独立于输入。正偏置使神经元更容易输出高值（更容易激活），而负偏置则使其更难。如果没有偏置项，神经元的加权和将不得不纯粹依靠输入和权重 (weight)来达到一定水平。偏置通过有效地移动激活函数 (activation function)的工作点，使网络更具适应性。可以想象它设定了一个活动基线水平。
+
+和权重一样，偏置是一个可学习的参数。每个神经元通常有自己的偏置值（尽管有时在特定架构中偏置会被省略或以不同方式处理）。它在训练期间与权重一起调整，以帮助网络更好地拟合数据。
+
+### 线性组合：$z$
+
+综上所述，在应用激活函数 (activation function)*之前*执行的计算是输入、权重 (weight)和偏置 (bias)的线性组合。这个值通常用 $z$ 表示，代表了神经元的原始激活潜力：
+
+
+$$
+z = (w_1 x_1 + w_2 x_2 + \dots + w_n x_n) + b
+$$
+
+
+对于一个有 $n$ 个输入的神经元，这可以用求和符号更紧凑地表示：
+
+
+$$
+z = \sum_{i=1}^{n} (w_i x_i) + b
+$$
+
+
+对于熟悉线性代数的人来说，这可以用向量 (vector)符号更有效地表示。如果 $\mathbf{w}$ 是权重向量 $[w_1, w_2, \dots, w_n]$，$\mathbf{x}$ 是输入向量 $[x_1, x_2, \dots, x_n]$，那么计算就变为点积加上偏置：
+
+
+$$
+z = \mathbf{w} \cdot \mathbf{x} + b
+$$
+
+
+这个值 $z$ 有时被称为*logit*、*预激活*或*网络输入*。它代表了神经元在经过非线性激活函数（我们将在下文讨论）*之前*的聚合输入信号。
+
+### 参数 (parameter)的重要性
+
+权重 (weight)和偏置 (bias)是存储神经网络 (neural network)中学习所得知识的核心构成。当我们谈论“训练”一个网络时，我们实质上是指为所有神经元中的所有权重和偏置寻找最佳值集合。这个优化过程旨在最小化网络预测与训练数据中实际目标值之间的差异。
+
+网络通常从这些参数的随机初始值开始。随后，通过反向传播 (backpropagation)和梯度下降 (gradient descent)等算法（在第四章中介绍），它根据产生的误差迭代调整权重和偏置。正向误差可能导致增加某些权重或偏置的调整，而负向误差则可能减少它们，引导网络获得更好的表现。
+
+现代深度学习 (deep learning)模型中这些参数的庞大数量（通常是数百万或数十亿）使得它们能够捕捉数据中极其复杂的模式和关系。理解权重和偏置各自的作用，是理解这些网络如何运作和学习的根本。下一步是了解计算值 $z$ 如何通过激活函数 (activation function)进行变换，以引入非线性并产生神经元的最终输出信号。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本标准教科书，介绍了深度学习的基本概念，包括神经网络的架构和参数（权重和偏差）。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/chap1.html) — Michael Nielsen (2019)
+  一本易于理解的在线书籍，从零开始构建神经网络概念，透彻解释了权重和偏差在神经元计算中的作用。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Neural Networks Part 1: Setting up the Architecture](https://cs231n.github.io/neural-networks-1/) — Andrej Karpathy and Justin Johnson (2023)
+  Publisher: Stanford University
+  一门备受推崇的大学课程的官方讲义，清晰地解释了基本神经元架构，包括权重和偏差。

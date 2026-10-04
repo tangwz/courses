@@ -1,0 +1,145 @@
+---
+course: "sql-for-data-science"
+chapter: "retrieving-data-select"
+lesson: "limiting-query-results"
+sourceId: 1570
+sourceUrl: "https://apxml.com/zh/courses/sql-for-data-science/chapter-2-retrieving-data-select/limiting-query-results"
+title: "限制查询结果"
+description: "使用LIMIT子句（或等效子句）来限制查询输出的行数。"
+order: 5
+plots: []
+sourceHash: "4661fb26f5e82e722030d83e5c6c9cb0d70d0686d436eadde64a9f268437c124"
+sourceCorrections: []
+---
+
+处理大型数据集时，通常您无需查看每一行就能了解数据的结构或检查查询是否返回了预期结果。获取数千甚至数百万行数据可能会很慢，并消耗不必要的资源，尤其是在数据分析的初步审阅阶段。这时，限制查询返回的行数就变得非常有用了。
+
+`LIMIT`是标准SQL中用于限制输出行数的子句。它通常放在`SELECT`语句的末尾。
+
+### `LIMIT` 子句
+
+基本语法很简单：
+
+```sql
+SELECT column1, column2, ...
+FROM table_name
+LIMIT number_of_rows;
+```
+
+这里，`number_of_rows`是一个整数，用于指定您希望查询返回的最大行数。
+
+假设我们有一个`products`表：
+
+| product\_id | product\_name | category | price |
+| --- | --- | --- | --- |
+| 1 | Laptop | Electronics | 1200.00 |
+| 2 | Keyboard | Electronics | 75.00 |
+| 3 | Mouse | Electronics | 25.00 |
+| 4 | T-Shirt | Apparel | 20.00 |
+| 5 | Coffee Mug | Home Goods | 15.00 |
+| 6 | Desk Lamp | Home Goods | 45.00 |
+
+如果您只想查看表中列出的前3个产品，也许只是为了快速查看一些示例，您可以这样写：
+
+```sql
+SELECT product_id, product_name, price
+FROM products
+LIMIT 3;
+```
+
+数据库将处理此查询并只返回它遇到的前三行（除非使用`ORDER BY`，否则顺序可能不被保证，我们将在接下来讨论此内容）：
+
+| product\_id | product\_name | price |
+| --- | --- | --- |
+| 1 | Laptop | 1200.00 |
+| 2 | Keyboard | 75.00 |
+| 3 | Mouse | 25.00 |
+
+### `LIMIT` 与 `ORDER BY` 的组合使用
+
+`LIMIT`的真正有用之处通常在于它与`ORDER BY`子句结合使用时（`ORDER BY`将在下一章介绍，但此处需要提及）。`ORDER BY`在应用`LIMIT`*之前*对结果进行排序。这使您能够根据特定条件找到例如“前N个”或“后N个”记录。
+
+例如，要找到3个最贵的产品：
+
+1. 我们首先按`price`以降序（`DESC`）排列所有产品。
+2. 然后，我们使用`LIMIT`从该排序列表中取出前3行。
+
+```sql
+SELECT product_id, product_name, price
+FROM products
+ORDER BY price DESC
+LIMIT 3;
+```
+
+此查询将返回：
+
+| product\_id | product\_name | price |
+| --- | --- | --- |
+| 1 | Laptop | 1200.00 |
+| 2 | Keyboard | 75.00 |
+| 6 | Desk Lamp | 45.00 |
+
+类似地，要找到2个最便宜的产品，您可以按升序（`ASC`，这是默认设置）排列，然后应用`LIMIT`：
+
+```sql
+SELECT product_id, product_name, price
+FROM products
+ORDER BY price ASC
+LIMIT 2;
+-- 或者简单地写 ORDER BY price LIMIT 2; 因为ASC是默认设置
+```
+
+结果：
+
+| product\_id | product\_name | price |
+| --- | --- | --- |
+| 5 | Coffee Mug | 15.00 |
+| 4 | T-Shirt | 20.00 |
+
+### 在数据科学中为何要限制结果？
+
+- **性能：** 获取更少的行更快，使用的内存也更少，无论是在数据库服务器上还是在您的分析机器上。
+- **预览数据：** 快速查看表或查询结果的前几行，以了解列名、数据类型和样本值。
+- **逻辑验证：** 在对完整数据集运行复杂查询之前，先用`LIMIT`进行测试，以确保逻辑按预期工作，而无需等待可能数百万的行。
+- **顶端/末端分析：** 与`ORDER BY`结合使用时，可以轻松找到最高或最低值、最新或最旧的条目等。
+
+### 数据库差异
+
+`LIMIT`很常见（在PostgreSQL、MySQL、SQLite中使用），但一些数据库系统使用不同的语法：
+
+- **SQL Server / MS Access：** 在`SELECT`子句*内*使用`TOP N`：
+
+  ```sql
+  SELECT TOP 3 product_id, product_name, price
+  FROM products;
+  ```
+- **Oracle（旧版本）：** 通常在`WHERE`子句中使用`ROWNUM`的条件（更复杂）：
+
+  ```sql
+  SELECT product_id, product_name, price
+  FROM products
+  WHERE ROWNUM <= 3;
+  ```
+- **Oracle（12c及更高版本）：** 引入了`FETCH FIRST N ROWS ONLY`：
+
+  ```sql
+  SELECT product_id, product_name, price
+  FROM products
+  ORDER BY product_id -- 通常需要 ORDER BY 来确保 FETCH 结果的一致性
+  FETCH FIRST 3 ROWS ONLY;
+  ```
+
+在本课程中，我们将主要使用标准的`LIMIT`语法，因为它被广泛采用且对初学者来说简单明了。
+
+使用`LIMIT`是高效地与数据库交互的基本方法，它让您能够对数据进行抽样并获取目标子集，而不会使您的系统过载或不必要地等待。在下一节中，您将实践编写结合使用别名和`LIMIT`子句的`SELECT`语句。
+
+## 参考资料
+
+- [SELECT](https://www.postgresql.org/docs/current/sql-select.html) — PostgreSQL Global Development Group (2023)
+  PostgreSQL官方文档，解释了`SELECT`语句，包括用于限制查询输出的标准`LIMIT`和`OFFSET`子句。
+- [Learning SQL: Master SQL Fundamentals (3rd Edition)](https://www.oreilly.com/library/view/learning-sql-3rd/9781492057631/) — Alan Beaulieu (2020)
+  Publisher: O'Reilly Media; Pages: 380
+  一本全面的SQL基础指南，详细解释了`SELECT`、`ORDER BY`和`LIMIT`子句，并提供了实用示例。
+- [SQL Language Reference - SELECT](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlrf/SELECT.html#GUID-CFA005CA-6FF1-497E-82C6-763435E60E9C) — Oracle Corporation (2023)
+  Publisher: Oracle Corporation
+  官方Oracle文档，详细说明了Oracle 12c中引入的`FETCH FIRST N ROWS ONLY`子句，用于高效限制查询结果。

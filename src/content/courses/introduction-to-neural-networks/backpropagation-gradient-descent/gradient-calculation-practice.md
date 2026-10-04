@@ -1,0 +1,122 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "backpropagation-gradient-descent"
+lesson: "gradient-calculation-practice"
+sourceId: 1980
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-4-backpropagation-gradient-descent/gradient-calculation-practice"
+title: "实践：手动计算梯度"
+description: "使用链式法则，为一个非常简单的网络手动计算梯度。"
+order: 7
+plots: []
+sourceHash: "1b1c69074dae4234e189da93d916e7a3508fe9e1ce67f0b1d35e0289ef9c472d"
+sourceCorrections: []
+---
+
+现在我们已经介绍了损失函数 (loss function)、梯度下降 (gradient descent)和反向传播 (backpropagation)算法的理念，接下来通过手动计算一个非常小的神经网络 (neural network)的梯度来巩固这些认识。这个练习有助于直观了解链式法则如何运作，以弄清每个参数 (parameter)如何影响总误差。
+
+考虑一个简单的网络，它有一个输入、一个隐藏神经元（使用Sigmoid激活函数 (activation function)）和一个输出神经元（也使用Sigmoid）。我们的目标是计算权重 (weight)（$w_1$， $w_2$）和偏置 (bias)（$b_1$， $b_2$）的变化如何影响单个训练样本的最终损失。
+
+> 一个包含一个输入、一个隐藏神经元和一个输出神经元的简单前馈网络。
+
+**网络设置**
+
+我们来定义组件和初始值：
+
+- **输入**：$x = 0.5$
+- **目标输出**：$y = 0.8$
+- **权重**：$w_1 = 0.2$， $w_2 = 0.9$
+- **偏置**：$b_1 = 0.1$， $b_2 = -0.3$
+- **激活函数**：Sigmoid，$\sigma(z) = \frac{1}{1 + e^{-z}}$。其导数为$\sigma'(z) = \sigma(z)(1 - \sigma(z))$。
+- **损失函数**：均方误差 (MSE)，$L = \frac{1}{2}(y - o)^2$。其对输出 $o$ 的导数为$\frac{\partial L}{\partial o} = o - y$。
+
+**1. 前向传播**
+
+首先，我们计算给定输入（$x$）和参数下网络的输出（$o$）。
+
+- **隐藏层预激活值 ($z_1$)**：
+  $z_1 = w_1 x + b_1 = (0.2 \times 0.5) + 0.1 = 0.1 + 0.1 = 0.2$
+- **隐藏层激活值 ($h$)**：
+  $h = \sigma(z_1) = \sigma(0.2) = \frac{1}{1 + e^{-0.2}} \approx \frac{1}{1 + 0.8187} \approx 0.5498$
+- **输出层预激活值 ($z_2$)**：
+  $z_2 = w_2 h + b_2 = (0.9 \times 0.5498) + (-0.3) \approx 0.4948 - 0.3 = 0.1948$
+- **输出层激活值 ($o$)**：
+  $o = \sigma(z_2) = \sigma(0.1948) = \frac{1}{1 + e^{-0.1948}} \approx \frac{1}{1 + 0.8230} \approx 0.5486$
+
+因此，网络的预测值为 $o \approx 0.5486$。
+
+**2. 损失计算**
+
+现在，使用MSE损失函数计算误差：
+
+$L = \frac{1}{2}(y - o)^2 = \frac{1}{2}(0.8 - 0.5486)^2 = \frac{1}{2}(0.2514)^2 \approx \frac{1}{2}(0.0632) \approx 0.0316$
+此样本的损失约为 $0.0316$。
+
+**3. 反向传播 (梯度计算)**
+
+我们的目标是求出梯度：$\frac{\partial L}{\partial w_2}$、$\frac{\partial L}{\partial b_2}$、$\frac{\partial L}{\partial w_1}$ 和 $\frac{\partial L}{\partial b_1}$。我们使用链式法则，从损失反向推导。
+
+- **损失对网络输出 ($o$) 的导数**：
+  $\frac{\partial L}{\partial o} = o - y \approx 0.5486 - 0.8 = -0.2514$
+- **输出层梯度 ($w_2, b_2$)**：
+  我们需要输出激活值 $o$ 对其预激活值 $z_2$ 的导数。
+  $\frac{\partial o}{\partial z_2} = \sigma'(z_2) = o (1 - o) \approx 0.5486 \times (1 - 0.5486) \approx 0.5486 \times 0.4514 \approx 0.2476$
+  现在，应用链式法则求出损失对 $z_2$ 的梯度：
+  $\frac{\partial L}{\partial z_2} = \frac{\partial L}{\partial o} \frac{\partial o}{\partial z_2} \approx (-0.2514) \times (0.2476) \approx -0.0622$
+  $w_2$ 和 $b_2$ 的梯度取决于 $z_2$ 相对于它们的变化方式：
+  $\frac{\partial z_2}{\partial w_2} = h \approx 0.5498$
+  $\frac{\partial z_2}{\partial b_2} = 1$
+  再次使用链式法则：
+  $\frac{\partial L}{\partial w_2} = \frac{\partial L}{\partial z_2} \frac{\partial z_2}{\partial w_2} \approx (-0.0622) \times (0.5498) \approx -0.0342$
+  $\frac{\partial L}{\partial b_2} = \frac{\partial L}{\partial z_2} \frac{\partial z_2}{\partial b_2} \approx (-0.0622) \times 1 = -0.0622$
+- **隐藏层梯度 ($w_1, b_1$)**：
+  我们需要将梯度进一步反向传播。首先，求出损失对隐藏激活值 $h$ 的梯度：
+  $\frac{\partial L}{\partial h} = \frac{\partial L}{\partial z_2} \frac{\partial z_2}{\partial h}$
+  我们需要$\frac{\partial z_2}{\partial h}$：
+  $\frac{\partial z_2}{\partial h} = w_2 = 0.9$
+  所以，
+  $\frac{\partial L}{\partial h} \approx (-0.0622) \times 0.9 = -0.0560$
+  接下来，我们需要隐藏激活值 $h$ 对其预激活值 $z_1$ 的导数：
+  $\frac{\partial h}{\partial z_1} = \sigma'(z_1) = h (1 - h) \approx 0.5498 \times (1 - 0.5498) \approx 0.5498 \times 0.4502 \approx 0.2475$
+  现在，应用链式法则求出损失对 $z_1$ 的梯度：
+  $\frac{\partial L}{\partial z_1} = \frac{\partial L}{\partial h} \frac{\partial h}{\partial z_1} \approx (-0.0560) \times (0.2475) \approx -0.0139$
+  最后，$w_1$ 和 $b_1$ 的梯度取决于 $z_1$ 相对于它们的变化方式：
+  $\frac{\partial z_1}{\partial w_1} = x = 0.5$
+  $\frac{\partial z_1}{\partial b_1} = 1$
+  最后一次使用链式法则：
+  $\frac{\partial L}{\partial w_1} = \frac{\partial L}{\partial z_1} \frac{\partial z_1}{\partial w_1} \approx (-0.0139) \times 0.5 = -0.0070$
+  $\frac{\partial L}{\partial b_1} = \frac{\partial L}{\partial z_1} \frac{\partial z_1}{\partial b_1} \approx (-0.0139) \times 1 = -0.0139$
+
+**梯度总结**
+
+我们手动计算了损失函数相对于每个参数的梯度：
+
+- $\frac{\partial L}{\partial w_2} \approx -0.0342$
+- $\frac{\partial L}{\partial b_2} \approx -0.0622$
+- $\frac{\partial L}{\partial w_1} \approx -0.0070$
+- $\frac{\partial L}{\partial b_1} \approx -0.0139$
+
+这些梯度表明每个参数需要改变的方向和大小，以减小损失。例如，像 $\frac{\partial L}{\partial w_2} \approx -0.0342$ 这样的负梯度表明，略微增加 $w_2$ 会减小损失（因为更新规则涉及减去梯度）。
+
+**下一步**
+
+在实际训练场景中，这些梯度将与选定的学习率（$\eta$）一起使用，通过梯度下降来更新参数：
+
+$w_{new} = w_{old} - \eta \frac{\partial L}{\partial w_{old}}$
+$b_{new} = b_{old} - \eta \frac{\partial L}{\partial b_{old}}$
+
+这种手动计算，虽然对于更大的网络会很繁琐，但清楚地展示了反向传播的机制，以及误差信号如何通过网络反向流动来指导参数更新。TensorFlow和PyTorch等框架自动化此过程，但理解其底层计算对于有效地构建模型和调试具有重要意义。
+
+## 参考资料
+
+- [Learning representations by back-propagating errors](https://doi.org/10.1038/323533a0) — David E. Rumelhart, Geoffrey E. Hinton, and Ronald J. Williams (1986)
+  Journal: Nature; Publisher: Springer Nature; Volume: 323; Pages: 533-536; DOI: [10.1038/323533a0](https://doi.org/10.1038/323533a0)
+  一篇介绍反向传播算法的开创性论文，该算法是训练神经网络的核心。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  对反向传播、损失函数和梯度下降等神经网络基本概念进行了全面的学术论述。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael Nielsen (2015)
+  Publisher: Determination Press
+  以通俗易懂的方式，提供了关于反向传播的详细解释、逐步数学推导和示例，适合初学者。
+- [Backpropagation, Intuitions](https://cs231n.github.io/optimization-2/) — Andrej Karpathy, Justin Johnson, and Fei-Fei Li (2023)
+  Journal: Stanford CS231n Course Notes
+  在神经网络训练的背景下，提供了反向传播算法的清晰推导和直观解释。

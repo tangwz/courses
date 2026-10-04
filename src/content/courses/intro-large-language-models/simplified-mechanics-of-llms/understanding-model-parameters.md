@@ -1,0 +1,66 @@
+---
+course: "intro-large-language-models"
+chapter: "simplified-mechanics-of-llms"
+lesson: "understanding-model-parameters"
+sourceId: 3693
+sourceUrl: "https://apxml.com/zh/courses/intro-large-language-models/chapter-2-simplified-mechanics-of-llms/understanding-model-parameters"
+title: "理解模型参数"
+description: "获取对模型参数是什么以及大型语言模型为何拥有如此多参数的基本认识。"
+order: 4
+plots: ["plots/3693-0.json"]
+sourceHash: "8808a9bdf24cdbd37004d0de3ce7b372d359bb04eb6f3db6decd494c6210f5b7"
+sourceCorrections: []
+---
+
+我们已经讨论了大型语言模型如何从海量的文本数据中学习。那么，模型在如此大量的训练过程中，究竟将它所获取的模式、语法规则、事实和风格特点存储在哪里呢？答案就是模型的**参数 (parameter)**。
+
+可以将参数看作是大型语言模型内部可调节的“旋钮”或配置设定。在训练期间，模型会处理输入文本并不断调整这些参数，以更好地完成其核心任务，通常是预测序列中的下一个词。这种调整过程就是模型“学习”的方式。
+
+你可能对简单数学模型中的参数比较熟悉。例如，在基本的线性回归中，我们尝试使用以下方程找到最适合数据的直线：
+
+
+$$
+y = mx + b
+$$
+
+
+这里，$m$ (斜率) 和 $b$ (截距) 就是参数。“拟合直线”的过程就是根据数据找到这两个参数的最佳值。
+
+大型语言模型遵循类似的原理，但规模要大得多。它们不像只有两个参数，而是拥有数百万、数十亿甚至数万亿个参数。参数的数量庞大，通常用 $P$ 表示，这是大型语言模型的一个显著特点，并且与其能力直接关联。
+
+### 为什么需要这么多参数 (parameter)？
+
+人类语言极其丰富和复杂。思考一下其中包含的一切：
+
+- **语法和句法:** 控制句子结构的规则。
+- **语义:** 词语和短语的含义。
+- **语境:** 含义如何根据周围文本变化。
+- **事实知识:** 信息。
+- **推理 (inference):** 推断的能力（即使有限）。
+- **风格和语气:** 表达思想的不同方式。
+
+为了捕捉从PB级文本数据中学习到的语言的这些多方面特征，模型需要海量的参数。每个参数都为模型学习到的语言的整体表示贡献一小部分。参数数量越多，通常能让模型具有更高的能力来记忆信息和学习训练数据中的复杂模式。这就是为什么训练数据集的大小与为之设计的模型参数数量之间通常存在关联——你需要一个大型模型（$P$）才能有效吸收大量数据中的信息。
+
+
+
+![大型语言模型参数量示例](plots/3693-0.json)
+
+
+
+> 不同规模大型语言模型的近似参数量。请注意，这里使用对数刻度是为了显示其悬殊的差异。
+
+训练阶段完成后，这些参数通常会被“冻结”，这意味着它们的值是固定的。当你向一个训练好的大型语言模型提供提示时，你的输入文本会通过模型的各个层进行处理。每一步进行的计算都取决于输入数据和这些已学习参数的固定值。输入与数十亿参数之间的关系，最终决定了模型生成的词语序列作为输出。
+
+这些参数并非只是庞大、无序的集合。它们在特定的网络结构中经过精心安排，使得模型能够高效地处理语言。支持现代大型语言模型的最重要结构之一是Transformer架构，我们将在下一节进行高层次的介绍。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教材，对深度学习进行了学术性介绍，涵盖了模型参数、学习算法和神经网络架构。对于理解LLM参数的理论基础非常重要。
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); Publisher: Curran Associates, Inc.; Pages: 5998-6008
+  引入Transformer架构的开创性论文，该架构是现代LLM的基础。它详细描述了数十亿参数所在的模型结构以及它们如何实现语言处理。
+- [CS224N: Natural Language Processing with Deep Learning](http://web.stanford.edu/class/cs224n/) — Diyi Yang, Tatsunori Hashimoto (2025)
+  Publisher: Stanford University
+  一门综合性大学课程，涵盖了应用于自然语言处理的深度学习基础知识，包括对模型参数、神经网络架构和Transformer模型的详细解释。提供了易于理解的教育背景。

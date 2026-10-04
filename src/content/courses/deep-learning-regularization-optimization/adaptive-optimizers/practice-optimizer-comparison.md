@@ -1,0 +1,235 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "adaptive-optimizers"
+lesson: "practice-optimizer-comparison"
+sourceId: 4997
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-6-adaptive-optimizers/practice-optimizer-comparison"
+title: "动手实践：优化器比较实验"
+description: "比较SGD、动量、RMSprop和Adam性能的实践课程。"
+order: 10
+plots: ["plots/4997-0.json", "plots/4997-1.json"]
+sourceHash: "1e2ed11c31808b840191dec13e00109c96616ea750cd08782d5bc38f3cb3c736"
+sourceCorrections: []
+---
+
+一个实验比较了自适应优化算法（如AdaGrad、RMSprop和Adam）与基本方法（如SGD和带动量的SGD）在实际使用中的表现。实践指南将指导你设置并运行一个实验，在一个常见任务上比较这些优化器，使你能够亲眼观察它们对训练速度和模型性能的影响。
+
+目的不仅是查看在特定问题上哪个优化器“胜出”，而是要明白它们不同的更新机制如何导致训练过程中可观察到的差异，例如收敛速度和稳定性。
+
+### 设置实验
+
+我们将使用一个简单任务：对MNIST数据集中的手写数字进行分类。该数据集足够复杂，可以突显不同优化器之间的差异，但又足够简单，可以快速训练。我们将为此任务使用一个基本的多层感知机（MLP）。
+
+首先，我们使用PyTorch定义神经网络 (neural network)架构：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleMLP(nn.Module):
+    def __init__(self, input_size=784, hidden_size=128, num_classes=10):
+        super(SimpleMLP, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x):
+        # 展平图像
+        x = x.view(x.size(0), -1)
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        # 这里没有softmax，因为CrossEntropyLoss需要原始的logits
+        return out
+
+# 定义输入大小（MNIST图像为28x28 = 784像素）
+input_size = 784
+hidden_size = 128
+num_classes = 10
+```
+
+接下来，我们需要加载MNIST数据集。我们将为此使用`torchvision`。我们还将为训练和验证创建数据加载器。
+
+```python
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+
+# 数据变换
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.1307,), (0.3081,)) # MNIST均值和标准差
+])
+
+# 加载MNIST数据集
+train_dataset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+val_dataset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+# 创建数据加载器
+batch_size = 64
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False)
+```
+
+我们将使用标准的交叉熵损失函数 (loss function)，适用于多类别分类。
+
+```python
+criterion = nn.CrossEntropyLoss()
+```
+
+### 设计比较
+
+我们的实验将涉及使用四种不同的优化器，在MNIST训练数据上训练我们`SimpleMLP`模型的相同实例：
+
+1. **SGD：** 基本随机梯度下降 (gradient descent)。
+2. **带动量的SGD：** 引入动量项的SGD。
+3. **RMSprop：** 一种使用梯度平方移动平均值的自适应学习率方法。
+4. **Adam：** 一种结合动量和RMSprop思想的自适应方法。
+
+对于每个优化器，我们将：
+
+- 初始化一个`SimpleMLP`模型的新实例，以确保公平的起始条件。
+- 使用相同的学习率（例如，\`lr=0.001）作为起始点。请注意，最佳学习率通常在不同优化器之间有所不同，但我们将在本次初步比较中使用一个通用学习率。
+- 训练模型固定数量的周期（例如，10个）。
+- 记录每个周期后的训练损失和验证准确度。
+
+### 实现：训练循环和优化器
+
+这是训练函数的概览。我们会将模型、数据加载器、损失函数 (loss function)和特定的优化器实例传递给此函数。
+
+```python
+import torch.optim as optim
+from collections import defaultdict
+
+def train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs=10):
+    """训练模型并返回损失和准确度历史。"""
+    history = defaultdict(list)
+    print(f"正在使用优化器训练: {optimizer.__class__.__name__}")
+
+    for epoch in range(num_epochs):
+        model.train() # 将模型设置为训练模式
+        running_loss = 0.0
+        for i, (images, labels) in enumerate(train_loader):
+            # 将参数梯度归零
+            optimizer.zero_grad()
+
+            # 前向传播
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            # 反向传播并优化
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        # 计算当前周期的平均训练损失
+        epoch_loss = running_loss / len(train_loader)
+        history['train_loss'].append(epoch_loss)
+
+        # 验证阶段
+        model.eval() # 将模型设置为评估模式
+        correct = 0
+        total = 0
+        val_loss = 0.0
+        with torch.no_grad():
+            for images, labels in val_loader:
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        epoch_acc = 100 * correct / total
+        avg_val_loss = val_loss / len(val_loader)
+        history['val_loss'].append(avg_val_loss)
+        history['val_accuracy'].append(epoch_acc)
+
+        print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {epoch_loss:.4f}, Val Loss: {avg_val_loss:.4f}, Val Accuracy: {epoch_acc:.2f}%')
+
+    print("-" * 30)
+    return history
+
+# --- 实验执行 ---
+num_epochs = 10
+learning_rate = 0.001
+momentum = 0.9 # 用于带动量的SGD
+
+optimizers_to_test = {
+    "SGD": lambda params: optim.SGD(params, lr=learning_rate),
+    "Momentum": lambda params: optim.SGD(params, lr=learning_rate, momentum=momentum),
+    "RMSprop": lambda params: optim.RMSprop(params, lr=learning_rate),
+    "Adam": lambda params: optim.Adam(params, lr=learning_rate)
+}
+
+results = {}
+
+for name, optimizer_lambda in optimizers_to_test.items():
+    # 为每个优化器初始化一个全新的模型
+    model = SimpleMLP(input_size, hidden_size, num_classes)
+    optimizer_instance = optimizer_lambda(model.parameters())
+    history = train_model(model, train_loader, val_loader, criterion, optimizer_instance, num_epochs=num_epochs)
+    results[name] = history
+
+# results 字典现在存储了每个优化器的训练/验证历史
+```
+
+### 结果与可视化
+
+运行训练循环后，`results`字典包含每个优化器每个周期的训练损失和验证准确度。让我们将这些结果可视化，以比较它们的表现。
+
+我们将绘制训练损失曲线和验证准确度曲线。
+
+
+
+![训练损失比较](plots/4997-0.json)
+
+
+
+> 比较不同优化器在10个周期内的训练损失曲线。
+
+
+
+![验证准确度比较](plots/4997-1.json)
+
+
+
+> 比较不同优化器在10个周期内的验证准确度曲线。
+
+### 分析与解读
+
+从图表（使用典型示例结果）中，我们可以看到一些模式：
+
+1. **收敛速度：** Adam和RMSprop通常显示出最快的初始收敛速度。与SGD甚至带动量的SGD相比，它们的训练损失在早期周期下降明显更快。这与自适应学习率有助于取得更积极的进展（尤其是在训练开始时）这一看法相符。
+2. **动量的优点：** 与普通SGD相比，带动量的SGD收敛更快，并且在固定周期内通常能达到更好的最终状态（更低的损失，更高的准确度）。动量项帮助它更有效地处理损失，克服小的局部最小值或平台，并在一致的梯度方向上加速。
+3. **自适应方法的性能：** 在本示例中，Adam和RMSprop都表现非常好，快速收敛到低损失和高验证准确度。Adam通常略有优势，得益于结合了动量（一阶矩）和自适应缩放（二阶矩）。
+4. **最终性能：** 虽然自适应方法收敛更快，但带动量的SGD如果经过仔细调整和更多训练时间，最终可能会赶上甚至略微超过它们。然而，Adam和RMSprop通常在较少调整的情况下提供出色的性能，使它们成为常用的默认选项。
+5. **稳定性：** 虽然这里没有明确测量，但自适应方法有时在不同学习率下比SGD更稳定，尽管它们并非不受差的超参数 (parameter) (hyperparameter)选择的影响。
+
+**重要注意事项：**
+
+- **超参数：** 结果高度依赖于所选择的学习率。不同的学习率可能有利于不同的优化器。自适应优化器通常对初始学习率的选择不如SGD敏感，但调整它仍然重要。其他超参数（SGD的动量因子，Adam/RMSprop的衰减率 $\beta_1, \beta_2$）也发挥作用。
+- **数据集和模型：** 优化器的相对性能会根据数据集的复杂性、网络的架构（例如，CNN、RNN）以及批量归一化 (normalization)等其他技术的使用情况而变化。
+- **泛化能力：** 训练集上更快的收敛并不总是能保证对未见过的数据有更好的泛化能力。密切关注验证指标。有时，像带动量的SGD这样的简单优化器，虽然速度较慢，但可能找到更平坦的最小值，从而更好地泛化，尤其是在有良好正则化 (regularization)的情况下。
+
+### 结论
+
+这次实践练习显现了常见优化算法之间的具体差异。Adam和RMSprop等自适应方法通常提供更快的收敛速度，使它们成为许多深度学习 (deep learning)任务的高效选项。带动量的SGD仍然是一个强劲的竞争者，特别是在仔细调整后，有时因其在某些情况下的潜在泛化优势而受到青睐。
+
+通过实验了解这些行为有助于你在为自己的深度学习项目选择和调整优化器时做出明智的决定。请记住，虽然像Adam这样的默认设置在许多情况下都表现良好，但比较其他选项有时可以为你的特定问题带来更好的结果。
+
+## 参考资料
+
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，这是一种广泛使用的自适应学习率算法，它结合了AdaGrad和RMSprop的特点。
+- [Adaptive Subgradient Methods for Online Learning and Stochastic Optimization](https://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf) — John Duchi, Elad Hazan, and Yoram Singer (2011)
+  Journal: Journal of Machine Learning Research; Volume: 12; Pages: 2121-2159
+  提出了AdaGrad，这是最早的自适应学习率算法之一，它根据过去的梯度调整学习率。
+- [Deep Learning (Chapter 8: Optimization for Training Deep Models)](https://www.deeplearningbook.org/contents/optimization.html) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 283-324
+  提供了深度学习优化算法的全面回顾，涵盖了SGD和Momentum等基础方法，以及RMSprop和Adam等自适应方法。
+- [\`torch.optim\` package - PyTorch documentation](https://pytorch.org/docs/stable/optim.html) — PyTorch Developers (2025)
+  PyTorch优化算法的官方文档，包括SGD、Momentum、RMSprop和Adam，用于实践实验。

@@ -1,0 +1,173 @@
+---
+course: "getting-started-julia-programming"
+chapter: "functions-creating-reusable-code"
+lesson: "writing-concise-anonymous-functions"
+sourceId: 6798
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-5-functions-creating-reusable-code/writing-concise-anonymous-functions"
+title: "编写简洁的匿名函数"
+description: "了解 Julia 中的匿名函数（lambda 函数），用于创建小型、一次性函数。"
+order: 6
+plots: []
+sourceHash: "04c603581a790d0ff0b48222899d84d669fd2a4cd59a505577c4b944096af579"
+sourceCorrections: []
+---
+
+有时，你需要一个函数来完成快速的一次性任务，例如作为参数 (parameter)传递给另一个函数。为这样的小任务定义一个完整的、具名的函数，感觉就像杀鸡用牛刀。这正是匿名函数（在某些其他编程语言中也称为lambda函数）的用武之地。它们允许你即时创建函数，而无需正式命名，从而使你的代码在这些特定情况下更加精简。
+
+### 什么是匿名函数？
+
+匿名函数正如其名称所示：没有名称的函数。它们通常在单行代码中定义和使用，使其成为你不想通过调用特定函数名在其他地方重复使用的简单操作的理想选择。可以把它们看作是创建小型、一次性函数的简写。
+
+在 Julia 中创建匿名函数的主要语法使用 `->` 操作符。这个操作符将函数的参数 (parameter)（在左侧）与其函数体（即要执行的表达式，在右侧）分隔开。
+
+`arguments -> body_expression`
+
+例如，要创建一个计算数字平方的函数，你可以这样写：
+`x -> x * x`
+
+这里，`x` 是参数，`x * x` 是求值的表达式。该表达式的结果会自动返回。
+
+你也可以通过将参数括在括号中来定义具有多个参数的匿名函数：
+`(a, b) -> a + b`
+
+这定义了一个匿名函数，它接受两个参数 `a` 和 `b`，并返回它们的和。
+
+虽然你*可以*将匿名函数赋值给变量，就像常规函数一样：
+
+```julia
+square = x -> x * x
+println(square(5)) # 输出: 25
+
+add = (a, b) -> a + b
+println(add(3, 4)) # 输出: 7
+```
+
+这样做从本质上使它们失去了些许“匿名性”，因为你已经给了它们一个名称（`square` 或 `add`）。匿名函数的真正作用最明显地体现在当它们在需要时直接使用，通常作为其他函数的参数，而无需单独赋值。
+
+### 匿名函数的优势：将函数作为参数 (parameter)传递
+
+匿名函数最常见和有效的一种用途是与*高阶函数*结合使用。高阶函数是指接受一个或多个函数作为参数，或返回一个函数作为结果，或两者兼而有之的函数。Julia 有许多内置的高阶函数，而匿名函数使得使用它们变得非常方便和易读。
+
+让我们看几个常见示例。
+
+#### 使用匿名函数与 `map`
+
+`map` 函数将给定函数应用于集合（如数组）的每个元素，并返回一个包含结果的新数组。
+
+假设你有一个数字数组，并且想要创建一个包含每个数字平方的新数组。如果不使用匿名函数，你可能需要先定义一个具名函数：
+
+```julia
+function compute_square(n)
+    return n * n
+end
+
+numbers = [1, 2, 3, 4, 5]
+squared_numbers = map(compute_square, numbers)
+println(squared_numbers) # 输出: [1, 4, 9, 16, 25]
+```
+
+这样可以很好地工作。然而，如果 `compute_square` 只用于这个单独的 `map` 操作，单独定义它可能会显得有些冗长。使用匿名函数，代码会变得更加紧凑：
+
+```julia
+numbers = [1, 2, 3, 4, 5]
+squared_numbers = map(x -> x * x, numbers)
+println(squared_numbers) # 输出: [1, 4, 9, 16, 25]
+```
+
+逻辑 `x -> x * x` 直接在 `map` 需要的地方定义，使得意图明确，代码更短。
+
+#### 使用匿名函数与 `filter`
+
+`filter` 函数会创建一个新集合，其中只包含原始集合中给定函数返回 `true` 的元素。
+
+假设你想要从一个数组中提取所有正数：
+
+```julia
+data = [-2, 0, 5, -1, 10, 3]
+positive_data = filter(n -> n > 0, data)
+println(positive_data) # 输出: [5, 10, 3]
+```
+
+这里，`n -> n > 0` 是一个匿名函数，它充当谓词（一个返回 `true` 或 `false` 的函数）。`filter` 使用此谓词来决定保留哪些元素。
+
+#### 使用 `by` 进行自定义 `sort`
+
+`sort` 函数可以接受一个 `by` 关键字参数，它指定一个函数在排序时进行比较之前应用于每个元素。这对于自定义排序标准很有用。
+
+例如，要按字符串长度从短到长排序：
+
+```julia
+words = ["julia", "is", "awesome", "and", "fast"]
+sorted_by_length = sort(words, by = s -> length(s))
+println(sorted_by_length) # 输出: ["is", "and", "fast", "julia", "awesome"]
+```
+
+匿名函数 `s -> length(s)` 提供每个字符串的长度，然后 `sort` 使用这些长度对原始字符串进行排序。
+
+### 多行匿名函数
+
+尽管匿名函数通常是为简洁而设计的单行函数，但如果你需要在匿名函数内部编写稍微复杂一点的逻辑，Julia 也支持多行语法。这使用了不带名称的 `function` 关键字，后跟参数 (parameter)、函数体和一个 `end` 块：
+
+```julia
+results = map(function(x)
+                 # 一个稍微复杂的操作
+                 doubled = x * 2
+                 incremented = doubled + 1
+                 return incremented
+              end,
+              [1, 2, 3])
+
+println(results) # 输出: [3, 5, 7]
+```
+
+这种形式在单个表达式不足以完成任务时很有用。然而，如果匿名函数变得如此复杂或需要多行，这通常表明定义一个常规的、具名函数可能更有利于可读性和潜在的复用。匿名函数的主要优势在于它们在简单任务上的简洁性。
+
+### 匿名函数可以记住其环境（闭包）
+
+Julia 中匿名函数的一个有趣特性是它们能够“捕获”或“记住”它们创建时所在环境中的变量。这被称为*闭包*。
+
+设想一个函数，它创建其他专门化的函数：
+
+```julia
+function create_multiplier(factor)
+    # 这个匿名函数使用了来自 create_multiplier 的 'factor'
+    return num -> num * factor
+end
+
+# 创建一个乘以3的函数
+multiply_by_3 = create_multiplier(3)
+# 创建一个乘以5的函数
+multiply_by_5 = create_multiplier(5)
+
+# 使用这些新函数
+println(multiply_by_3(10)) # 输出: 30
+println(multiply_by_5(10)) # 输出: 50
+```
+
+在这个例子中，`create_multiplier` 是一个高阶函数，因为它*返回*另一个函数（一个匿名函数）。匿名函数 `num -> num * factor` 使用了 `factor` 变量，该变量是其父函数 `create_multiplier` 的一个参数 (parameter)。
+
+即使在 `create_multiplier(3)` 运行结束后，并且其 `factor` 变量（即 3）似乎已消失，`multiply_by_3` 函数（即返回的匿名函数）仍然记得它的 `factor` 是 3。`multiply_by_5` 记住它的 `factor` 是 5 也是同理。匿名函数“闭合（捕获）”了 `factor` 变量。
+
+这个能力对于即时创建专门化的函数非常有用。尽管这有点高级，但了解这个特性是有益的。目前，你的主要精力可能会放在使用匿名函数与 `map`、`filter` 和 `sort` 等工具上。
+
+### 何时使用匿名函数（何时不使用）
+
+匿名函数是一个很棒的工具，但像任何工具一样，它们最适合特定情况。
+
+- **理想用途**：
+
+  - 简单的一次性操作，特别是当作为参数 (parameter)传递给 `map`、`filter` 或 `sort` 等高阶函数时。
+  - 使相关逻辑紧凑并靠近使用之处，提高局部可读性。
+  - 在某些编程模式中作为短小的回调函数或事件处理器（你可能会在更高级的主题中遇到）。
+- **考虑使用具名函数的情况**：
+
+  - 函数逻辑复杂或跨越多行。即使可以使用多行匿名语法，具名函数可能更清晰且更易于测试。
+  - 你需要在代码中的多个地方重复使用相同的函数逻辑。具名函数就是为此类复用而设计的。
+  - 函数需要文档（docstrings），因为匿名函数通常没有。如果逻辑不简单，具名函数更有利于清晰度和可维护性。
+
+匿名函数擅长使常见数据操作任务的代码更直接、更易读，减少了定义许多小型、独立的具名函数的必要。随着你更多地使用 Julia，你将对何时匿名函数是当前任务的完美、简洁选择形成直觉。
+
+## 参考资料
+
+- [Functions · The Julia Language](https://docs.julialang.org/en/v1/manual/functions/) — The Julia Language (2023)
+  提供关于 Julia 中函数定义的权威信息，包括匿名函数、高阶函数和闭包的语法和行为。

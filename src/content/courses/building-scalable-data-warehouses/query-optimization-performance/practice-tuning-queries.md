@@ -1,0 +1,107 @@
+---
+course: "building-scalable-data-warehouses"
+chapter: "query-optimization-performance"
+lesson: "practice-tuning-queries"
+sourceId: 8040
+sourceUrl: "https://apxml.com/zh/courses/building-scalable-data-warehouses/chapter-4-query-optimization-performance/practice-tuning-queries"
+title: "动手实践：优化高延迟查询"
+description: "重构低效查询并应用聚类以提升性能指标。"
+order: 5
+plots: ["plots/8040-0.json"]
+sourceHash: "c230375442a3a92ad390e0fd2fb9bb4eeb467056d428eef0e8a44f129e622cfa"
+sourceCorrections: []
+---
+
+优化通常在特定服务等级协议 (SLA) 被违反时开始。提供一个实践练习，分析分布式 SQL 引擎上一个高延迟查询。目标是从纯粹的逻辑视角认识查询，转变为对其执行的物理分析，并系统地减少变量 $V_{scan}$ (扫描量) 和 $V_{shuffle}$ (网络传输量)。
+
+我们将分析一个常见情况：一个聚合查询，针对一个名为 `fact_web_events` 的 50 TB 事实表和一个名为 `dim_users` 的 20 GB 维度表运行。当前执行时间约为 18 分钟。我们的目标是将其缩短至 60 秒以内。
+
+### 分析基线性能
+
+有问题的 SQL 语句尝试按地区计算每周活跃用户。
+
+```sql
+SELECT 
+    u.region,
+    COUNT(DISTINCT e.user_id) as unique_users
+FROM fact_web_events e
+JOIN dim_users u 
+    ON e.user_id = u.user_id
+WHERE e.event_timestamp >= DATEADD('day', -7, CURRENT_DATE())
+GROUP BY 1;
+```
+
+执行此查询后，查询配置文件显示两个明显的性能瓶颈。首先，`fact_web_events` 上的 `TableScan` 算子消耗了总时间的 70%。其次，`Join` 算子报告了大量的“数据溢出到本地存储”，这表明内存缓冲区不足以支持连接操作。
+
+以下图表描绘了执行 DAG (有向无环图)，其中被识别出的资源争用点用红色突出显示。
+
+> 执行计划突出显示资源争用。红色节点表示由于无效剪枝和内存溢出，物理执行偏离优化路径的位置。
+
+### 优化存储布局以进行剪枝
+
+配置文件显示 `TableScan` 读取了 50,000 个微分区中的 50,000 个。尽管 `WHERE` 子句过滤了最近 7 天的数据，但引擎扫描了全部历史数据。发生此情况是因为数据是根据到达时间或随机方式摄入的，这意味着“上周”的记录分散在每个微分区中。
+
+为解决此问题，我们必须使物理存储与查询模式保持一致。我们在 `event_timestamp` 上应用聚类键（或排序键，具体取决于平台）。
+
+```sql
+-- 语法因平台而异（Snowflake, Redshift, BigQuery）
+-- 应用聚类以对齐物理存储
+ALTER TABLE fact_web_events 
+CLUSTER BY (event_timestamp);
+```
+
+重新聚类表后，元数据服务会记录每个微分区的 `event_timestamp` 最小值/最大值。当查询再次运行时，引擎会将谓词与这些元数据头进行比较。它现在可以忽略包含早于 7 天数据的分区。
+
+如果数据集包含 5 年数据，而我们查询 1 周的数据，理论上，我们可以将 $V_{scan}$ 减少约 260 倍 ($5 \times 52$)。实际操作中，由于数据重叠，我们常看到扫描字节减少 95% 到 98%。
+
+### 修正连接策略
+
+第二个瓶颈是连接操作。配置文件显示引擎执行了**数据混洗连接**。因为 `fact_web_events` 数据量巨大，引擎尝试根据 `user_id` 的哈希值在网络上重新分发两张表。这导致了大规模的网络拥堵和当数据超出节点内存时的磁盘溢出。
+
+考虑到 `dim_users` 为 20 GB，它虽然不小，但可能足够小，可以放入中型集群的集体内存中。然而，如果维度表比事实表小得多，通常优选**广播连接**。在广播连接中，较小的表会被复制到所有节点，而大的事实表则保留在本地。
+
+如果优化器统计数据过时，引擎可能会高估 `dim_users` 的大小并默认采用数据混洗。我们强制更新统计数据或显式提示连接策略。
+
+```sql
+-- 分析表以更新优化器统计数据
+ANALYZE TABLE dim_users;
+ANALYZE TABLE fact_web_events;
+
+-- 验证连接策略的转变
+EXPLAIN
+SELECT /*+ BROADCAST(u) */ 
+    u.region,
+    COUNT(DISTINCT e.user_id)
+FROM fact_web_events e
+JOIN dim_users u 
+    ON e.user_id = u.user_id
+WHERE e.event_timestamp >= DATEADD('day', -7, CURRENT_DATE())
+GROUP BY 1;
+```
+
+通过广播 `dim_users`，我们消除了移动过滤后的 `fact_web_events` 数据的网络成本。连接操作现在在存储事实数据的每个节点上本地进行。
+
+### 结果验证
+
+应用聚类以实现分区剪枝和优化连接策略后，我们重新执行查询。改进情况可以通过三个主要指标衡量：执行时间、扫描数据量和溢出到远程磁盘的字节数。
+
+扫描数据量的减少直接与 I/O 节省相关。溢出的消除表明操作现在完全适应内存，极大地降低了延迟。
+
+
+
+![性能指标：基线 vs. 优化后](plots/8040-0.json)
+
+
+
+> 查询性能指标对比。注意 Y 轴上的对数刻度；扫描数据和溢出字节的减少推动了执行时间的指数级下降。
+
+此处展示的调优流程遵循 MPP 系统的一个可预测模式。首先，我们通过确保存储布局支持查询的过滤谓词 ($V_{scan}$) 来减少 I/O。其次，我们通过选择适当的连接策略 ($V_{shuffle}$) 来减少数据传输。通过系统地处理这些组成部分，我们将一个资源密集型查询转换为一个高效的操作。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  本书提供了分布式系统原理的全面概述，包括存储、索引和查询处理，与理解可扩展数据仓库中查询的物理执行相关。
+- [Understanding the Query Profile](https://docs.snowflake.com/en/user-guide/admin-monitoring/query-history) — Snowflake Documentation (2024)
+  Publisher: Snowflake
+  提供关于如何在现代分布式SQL引擎中解释查询执行计划、识别瓶颈以及理解TableScan、Join和Exchange等操作符的详细指导。

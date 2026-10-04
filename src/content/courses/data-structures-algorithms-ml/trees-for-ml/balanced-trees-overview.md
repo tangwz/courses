@@ -1,0 +1,54 @@
+---
+course: "data-structures-algorithms-ml"
+chapter: "trees-for-ml"
+lesson: "balanced-trees-overview"
+sourceId: 5257
+sourceUrl: "https://apxml.com/zh/courses/data-structures-algorithms-ml/chapter-2-trees-for-ml/balanced-trees-overview"
+title: "平衡树的重要性"
+description: "理解平衡树为何对于动态数据维持性能是必要的。"
+order: 3
+plots: []
+sourceHash: "7d364d7d6728c6871a8af48f77589dfe9a229420f3c3d324f1990a357a48fb8b"
+sourceCorrections: []
+---
+
+二叉搜索树（BST）对搜索、插入和删除等基本操作提供了 $O(\log n)$ 的平均时间复杂度。这种效率源于它们在每一步将搜索空间减半的能力，但这个优势依赖于一个重要假设：树保持相对平衡。
+
+当这个假设不成立时会发生什么？考虑按严格升序（例如1、2、3、4、5、6、7）将元素插入到二叉搜索树中。生成的树结构不会是茂密且平衡的；相反，它会退化成一个类似链表的结构。每个新节点都成为前一个节点的右子节点。
+
+> 通过按顺序插入键 [1, 2, 3, 4, 5, 6, 7] 形成的退化二叉搜索树。
+
+在这种最坏情况下，搜索元素7需要访问树中的每一个节点。树的高度变为节点数 $n$，搜索、插入和删除的时间复杂度会退化到 $O(n)$。这不比在一个未排序的列表中搜索更好！
+
+这表明树的高度与其操作效率之间有直接关联。平衡树旨在使其高度尽可能接近 $O(\log n)$，无论插入顺序如何。
+
+### 保持平衡：自平衡树
+
+为了解决标准BST中 $O(n)$ 最坏情况性能的可能性，发展出了各种**自平衡二叉搜索树**。这些结构在插入和删除过程中会自动调整其形状，以确保树保持相对平衡。
+
+它们通过特定的结构限制以及称为**旋转**的重构操作来实现这一点。当插入或删除违反了平衡标准（不同树类型之间略有差异）时，会局部执行旋转以重新排列节点并恢复平衡特性。
+
+常见的自平衡树类型包括：
+
+- **AVL 树：** 以其发明者（Adelson-Velsky 和 Landis）的名字命名，AVL 树通过确保任何节点的左右子树高度差至多为1来保持平衡。这种严格的条件确保了 $O(\log n)$ 的高度。
+- **红黑树：** 这些树使用节点着色（红色或黑色）以及一组管理这些颜色的规则，以确保从根节点到任何叶节点的最长路径不超过最短路径的两倍。这也保证了 $O(\log n)$ 的高度，尽管它们在实际中可能比AVL树的平衡程度略低，但通常因为所需的旋转次数较少而导致更快的插入和删除操作。Python的内置字典（3.6版本之前）以及C++和Java中许多标准库的有序映射实现通常使用红黑树。
+
+下图展示了同一组键 [1, 2, 3, 4, 5, 6, 7] 如何在平衡树（例如AVL树或红黑树，尽管没有展示具体的平衡逻辑）中构建。
+
+> 包含键 [1, 2, 3, 4, 5, 6, 7] 的平衡二叉搜索树。其高度远小于退化树。
+
+尽管AVL树和红黑树的内部机制涉及更复杂的实现细节（旋转、颜色翻转），但重要的是它们提供的保障：**搜索、插入和删除等操作在最坏情况下仍保持 $O(\log n)$ 的时间复杂度**。
+
+这种有保障的性能使得平衡树在需要对动态数据集进行可靠、高效的搜索和更新操作时不可或缺，避免了简单BST在遇到非随机插入模式时的性能问题。尽管决策树等机器学习 (machine learning)模型不直接依赖BST的平衡特性（它们的结构是由特征分割而非键顺序决定的），但了解树平衡的重要性对于理解用于索引、搜索或作为算法和库内部组成部分的数据结构的效率是必要的。
+
+## 参考资料
+
+- [Introduction to Algorithms](https://mitpress.mit.edu/books/introduction-algorithms-fourth-edition) — Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein (2022)
+  Publisher: MIT Press
+  这本经典教材全面涵盖了二叉搜索树、其不平衡时的性能问题，以及像红黑树这类自平衡结构的详细算法。
+- [An algorithm for the organization of information](https://www.scribd.com/document/267986068/AVL-Tree-Soviet-Math-Doklady) — G. M. Adelson-Velsky and E. M. Landis (1962)
+  Journal: Soviet Mathematics - Doklady; Publisher: Soviet Mathematics - Doklady; Volume: 3; Pages: 1259-1263
+  首次介绍AVL树的原始学术论文，AVL树是第一个自平衡二叉搜索树，概述了其基本结构和平衡机制。
+- [Data Structures and Algorithms in Python](https://www.wiley.com/en-us/Data+Structures+and+Algorithms+in+Python-p-9781118290279) — Michael T. Goodrich, Roberto Tamassia, and Michael H. Goldwasser (2013)
+  Publisher: John Wiley & Sons
+  清晰易懂地解释了二叉搜索树和各种自平衡树结构，包括AVL树和红黑树，并提供了实用实现见解。

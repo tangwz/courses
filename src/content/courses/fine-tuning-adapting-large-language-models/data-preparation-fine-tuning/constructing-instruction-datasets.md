@@ -1,0 +1,101 @@
+---
+course: "fine-tuning-adapting-large-language-models"
+chapter: "data-preparation-fine-tuning"
+lesson: "constructing-instruction-datasets"
+sourceId: 2974
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-adapting-large-language-models/chapter-2-data-preparation-fine-tuning/constructing-instruction-datasets"
+title: "指令数据集的获取与构建"
+description: "从不同来源创建高质量指令遵循数据集的方法。"
+order: 2
+plots: ["plots/2974-0.json"]
+sourceHash: "03ef67f8e9f5ad68e5b5acad33c6c6edbba13a62067746f7074141eb140555f4"
+sourceCorrections: []
+---
+
+遵循指令微调 (fine-tuning)的原则，下一步的实际操作是获取所需数据。您的微调模型的效果在很大程度上取决于所用指令数据集的质量、多样性和相关性。仅仅拥有大量数据是不够的；数据集必须引导模型实现所需的指令遵循行为。下面我们来看看获取和构建这些数据集的常用方法。
+
+### 获取指令数据
+
+寻找或生成合适的指令数据通常涉及以下一种或多种方法：
+
+1. **使用现有公开数据集：** 许多公开可用的数据集是专门为指令微调 (fine-tuning)创建或改编的。例如：
+
+   - **FLAN Collection (包含 T5, PaLM)：** 一个大型数据集集合，包含众多NLP任务，并重新格式化为指令模板。这些数据集显示了多任务指令微调的效力。
+   - **Alpaca 数据集：** 使用 OpenAI 的 `text-davinci-003` 通过 Self-Instruct 方法生成，起始于一小组人工编写的指令种子集。它包含大约 52,000 个指令-响应对。
+   - **Dolly 数据集 (`dolly-v2-12k`)：** 完全由 Databricks 员工创建，侧重于人工生成的指令-响应对，涵盖头脑风暴、分类和创意写作等多种能力。它强调质量和人工原创性。
+   - **OpenAssistant 对话数据集 (OASST)：** 一个大型众包数据集，包含多轮对话，包括根据质量评分的助手响应。它对训练面向聊天的模型很有价值。
+
+   使用公开数据集时，请考虑其来源（人工或合成）、许可、任务多样性、潜在偏见和整体质量。它们提供了一个有力的起点，但可能需要根据具体需求进行筛选或补充。
+2. **转换现有 NLP 数据集：** 许多标准 NLP 基准测试可以被重新利用为指令遵循格式。这通常涉及通过编程方式向现有输入-输出对添加指令短语。
+
+   - **问答（例如 SQuAD）：** 将 `(上下文, 问题)` -> `答案` 对转换为：
+     - 指令: "根据上下文 (context)，回答问题。"
+     - 输入: `上下文: [上下文]\n问题: [问题]`
+     - 输出: `[答案]`
+   - **摘要（例如 CNN/Daily Mail）：** 将 `文档` -> `摘要` 对转换为：
+     - 指令: "总结以下文章。"
+     - 输入: `[文档]`
+     - 输出: `[摘要]`
+   - **翻译（例如 WMT）：** 将 `源语句` -> `目标语句` 对转换为：
+     - 指令: "将以下句子从 [源语言] 翻译成 [目标语言]。"
+     - 输入: `[源语句]`
+     - 输出: `[目标语句]`
+
+   此方法在利用现有标注数据方面具有成本效益，但与人工生成的数据相比，可能导致指令不那么自然或多样。如果从简单模板通过编程生成，所产生的指令也可能重复。
+3. **人工标注：** 直接雇佣人工标注者来编写指令和相应的 E高质量响应，在质量和相关性方面提供了最大的潜力。这能够实现：
+
+   - 根据特定领域或期望的模型能力调整指令。
+   - 生成模型可能无法合成创建的富有创意和复杂的指令。
+   - 确保响应的事实准确性和期望的语气。
+
+人工标注通常是最昂贵和耗时的方法。它需要明确的指导方针、质量控制机制和对标注过程的细致管理。可扩展性也可能是一个挑战。诸如 Amazon SageMaker Ground Truth 或专业数据标注服务等平台可以促进此过程。
+
+4. **合成生成（Self-Instruct 方法）：** 这种技术使用一个强大的现有 LLM（通常称为“教师”模型）来生成新的指令数据，通常以一小组人工编写的示例为种子。一般过程包括：
+
+   - 向教师模型提供几个指令示例。
+   - 提示模型生成*新的*、多样化的指令。
+   - 提示模型为这些新指令生成相应的输入/输出对。
+   - 对生成的数据进行筛选，以确保质量、多样性和相关性。
+
+   Self-Instruct 方法因 Alpaca 数据集而普及，它允许在初始种子集和筛选后，以最少的人工投入快速生成大型数据集。然而，它也伴随着风险：
+
+   - **质量差异：** 生成的指令和响应可能毫无意义、不准确或质量低下。严格的筛选是必要的。
+   - **偏见放大：** 教师模型的偏见可能在生成的数据集中传播并可能被放大。
+   - **新颖性受限：** 生成的指令在风格或主题上可能与种子示例或教师模型的训练数据保持相近。
+
+   
+   
+   ![指令数据集获取方法比较](plots/2974-0.json)
+   
+   
+
+   > 指令数据集获取方法的相对比较。成本反映了初始资源投入。
+
+### 构建有效数据集的原则
+
+无论数据来源如何，构建一个有影响力的指令数据集都涉及多方面考量：
+
+- **指令多样性：** 目标是在任务（例如，生成、分类、提取、重写、摘要、聊天）、措辞（例如，“总结此内容”、“提供摘要”、“主要观点是什么？”）、复杂性（单步与多步指令）和领域（例如，技术写作、创意小说、编程）方面保持多样性。多样性鼓励模型泛化其指令遵循能力，而不是过度拟合特定模板。
+- **质量控制：** 这点很重要，特别是对于合成数据或转换后的数据集。实施筛选步骤：
+  - 删除过短/过长或无意义的指令。
+  - 丢弃响应不遵循指令或事实不正确（如果适用）的对。
+  - 检查是否有毒害性、偏见或有害内容。
+  - 验证指令的清晰度和无歧义性。
+  - 自动化筛选（例如，基于长度、关键词存在、困惑度分数）可以进行初步处理，但对样本进行人工审查对于确保高质量通常是不可或缺的。
+- **输入/输出结构：** 确保数据始终遵循预期的格式（指令、可选输入、响应）。这种结构将在关于监督微调 (fine-tuning) (SFT) 格式化的下一节中详细介绍。
+- **平衡数量与质量：** 虽然更大的数据集可能是有益的，但一个较小的、高质量、多样化的指令数据集通常比一个庞大、嘈杂的数据集产生更好的结果。首先侧重于质量，然后根据需要和可行性进行扩展。早期的指令微调实验显示，相对较小（数百到数千个）、精心策划的数据集就能带来显著的提升。
+- **伦理考量：** 注意数据来源。用于合成生成的公开数据集或网络数据可能包含社会偏见。在构建和筛选过程中，积极考虑潜在的危害和偏见。虽然完全去偏颇具有挑战性，但策展可以帮助减少明显有问题示例的包含。
+
+指令数据集的获取和构建是一个迭代过程。你可能会从一个公开数据集开始，用转换后的数据进行补充，并可能用少量高质量的人工标注数据进一步完善，以解决特定弱点或达成所需能力。目标是创建一个数据集，它能清晰地教会模型*如何*有效响应它将遇到的指令类型。
+
+## 参考资料
+
+- [Finetuned Language Models are Zero-Shot Learners](https://arxiv.org/abs/2109.01652) — Jason Wei, Maarten Bosma, Vincent Y. Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du, Andrew M. Dai, Quoc V. Le (2022)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2109.01652](https://doi.org/10.48550/arXiv.2109.01652)
+  介绍了指令调优的概念，并展示了其在多任务数据集（FLAN）上的有效性。
+- [Alpaca: A Strong Open-Source Instruction-Following Model](https://crfm.stanford.edu/2023/03/13/alpaca.html) — Rohan Taori, Ishaan Gulrajani, Tianyi Zhang, Yann Dubois, Xuechen Li, Carlos Guestrin, Percy Liang, Tatsunori B. Hashimoto (2023)
+  Publisher: Stanford CRFM
+  描述了Alpaca数据集，该数据集使用Self-Instruct方法生成，用于指令遵循模型。
+- [OpenAssistant Conversations - A New Dataset for Open-Source Instruction Tuning](https://arxiv.org/abs/2304.07327) — Andreas Köpf, Yannic Kilcher, Dimitri von Rütte, Sotiris Anagnostidis, Zhi-Rui Tam, Keith Stevens, Abdullah Barhoum, Nguyen Minh Duc, Oliver Stanley, Richárd Nagyfi, Shahul ES, Sameer Suri, David Glushkov, Arnav Dantuluri, Andrew Maguire, Christoph Schuhmann, Huu Nguyen, Alexander Mattick (2023)
+  Journal: NeurIPS 2023 Datasets and Benchmarks; DOI: [10.48550/arXiv.2304.07327](https://doi.org/10.48550/arXiv.2304.07327)
+  介绍了OpenAssistant Conversations数据集，这是一个大型众包数据集，用于多轮指令调优。

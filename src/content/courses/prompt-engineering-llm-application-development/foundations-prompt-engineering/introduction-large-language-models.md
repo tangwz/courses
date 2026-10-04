@@ -1,0 +1,57 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "foundations-prompt-engineering"
+lesson: "introduction-large-language-models"
+sourceId: 2954
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-1-foundations-prompt-engineering/introduction-large-language-models"
+title: "大型语言模型简介"
+description: "概述大型语言模型、其功能以及与应用开发相关的局限性。"
+order: 1
+plots: []
+sourceHash: "8cb62556f8207fbc9ed17ee279033f100133e41b513e3f2d85caef249d8cd68f"
+sourceCorrections: []
+---
+
+大型语言模型，常缩写为LLMs，代表着人工智能的一项重要进展，尤其在自然语言处理（NLP）方面。其核心是深度学习 (deep learning)模型，这些模型在海量的文本数据上进行训练，这些数据通常来源于互联网、书籍、代码库及其他文本资源。术语“大型”主要指两方面：用于训练的数据的庞大体量（数TB）和模型拥有的庞大参数 (parameter)数量（从数十亿到数万亿）。
+
+这些参数本质上是模型在训练过程中学到的变量，使其能够捕捉人类语言中的模式、语法结构、语义关系，甚至类推理 (inference)能力。多数现代LLM都基于Transformer架构，该架构在论文《Attention Is All You Need》中被提出。虽然对该架构的分析不在此节中详述，但主要的一点是，其设计允许模型在生成输出时，权衡输入序列中不同词语（或标记 (token)）的重要性，从而有效地处理文本中的长距离依赖关系。
+
+可以将LLM看作一个非常先进的文本补全引擎。给定一段输入文本序列（即“提示”），其核心运作方式是预测下一个最可能的词或标记，然后是再下一个，以此类推，从而生成连贯且上下文 (context)相关的文本。
+
+### 应用开发的核心功能
+
+这种预测能力转化为了一系列多样的技能，开发者可将其用于各类应用：
+
+- **文本生成：** 创建原创文本，从电子邮件、营销文案到诗歌、剧本，甚至代码片段。
+- **摘要：** 将长文档或文章精简为较短的摘要，同时保留主要内容。
+- **问答：** 根据训练数据中包含的知识或提示中提供的信息回答问题。
+- **翻译：** 将文本在不同语言间进行翻译。
+- **分类：** 根据内容对文本进行分类，如情感分析（正面、负面、中立）或主题识别。
+- **信息提取：** 从非结构化文本中识别并提取具体信息，如姓名、日期或重要实体。
+- **代码生成：** 根据自然语言描述生成各种编程语言的代码。
+
+交互模式直接明了：你提供一个输入提示，LLM生成一个文本回复。
+
+> 大型语言模型交互流程的简化示意。
+
+### 重要考量与局限性
+
+尽管LLM拥有令人印象深刻的能力，但在构建应用时理解它们的局限性非常重要：
+
+1. **知识时限：** LLM仅拥有截止到其训练数据收集时的知识。它们通常不了解在训练日期之后发生的事件、新发现或信息。
+2. **幻觉 (hallucination)：** 模型有时会生成听起来合理且自信，但事实不正确或无意义的文本。这种现象常被称为“幻觉”。
+3. **输入措辞敏感性：** 提示的措辞方式可以明显影响输出的质量和相关性。指令或上下文 (context)的微小变化可能导致截然不同的结果。这种敏感性是提示工程 (prompt engineering)如此重要的一个主要原因。
+4. **上下文窗口：** LLM对它们一次能处理的文本量（包括输入提示和生成输出）有有限的限制。这个限制被称为上下文窗口。较长的输入或对话可能会超出此限制，导致模型无法回顾之前的信息。
+5. **偏见：** 由于LLM从大量的由人类生成的文本中学习，它们可能会继承并延续这些数据中存在的与性别、种族、刻板印象或其他社会问题相关的偏见。
+6. **计算成本：** 训练和运行大型模型需要大量的计算资源，这意味着API使用成本和应用中可能出现的延迟。
+
+理解这些能力和局限性非常重要。LLM并非拥有完美记忆的数据库或不会犯错的推理 (inference)引擎。它们是强大的模式匹配和生成工具，其行为通过精心设计的输入来引导。本课程专注于提示工程，正是因为它提供了有效指导这些模型的方法，在发挥其优点同时减轻其缺点，从而构建有用且可靠的应用。你与LLM交互和控制它的主要工具就是你提供的提示。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了Transformer架构，这是大多数现代LLM的基础，以及自注意力机制的概念。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems 33 (NeurIPS 2020); DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，这是一个里程碑式的LLM，展示了其规模、涌现能力和少样本学习范式。

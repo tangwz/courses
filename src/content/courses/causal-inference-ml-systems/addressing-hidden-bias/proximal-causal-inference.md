@@ -1,0 +1,106 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "addressing-hidden-bias"
+lesson: "proximal-causal-inference"
+sourceId: 4385
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-4-addressing-hidden-bias/proximal-causal-inference"
+title: "近端因果推断原理"
+description: "理解近端因果推断的理论与应用，以便使用代理变量处理未观察到的混杂因素。"
+order: 6
+plots: []
+sourceHash: "deb18e304a5b5cd74ab2ca91a8ca59e99711ebce53ec1c2ea0273f0ad113adb8"
+sourceCorrections: []
+---
+
+未观察到的混杂因素 $U$ 的存在对估计因果效应 $P(Y|\text{do}(T=t))$ 构成了一个重要障碍。像工具变量 (IV) 这样的方法依赖于找到一个变量，它影响处理 $T$，但不直接影响结果 $Y$（除了通过 $T$），并且与 $U$ 无关。回归不连续性 (RDD) 和双重差分 (DiD) 利用特定的分配机制或数据结构。近端因果推断 (PCI) 在这些条件不满足但存在合适的“代理”变量时，提供了一种识别因果效应的替代途径。
+
+由 Miao, Geng 和 Tchetgen Tchetgen (2018) 提出，PCI 提供了一个框架来识别因果效应，即使当 $T$ 和 $Y$ 共享一个未观察到的共同原因 $U$ 时，前提是我们能观察到两个满足特定条件独立性质的代理变量 $W$ 和 $Z$。
+
+### 近端推断的逻辑
+
+核心思想是找到充当未观察到的混杂因素 $U$ 的不完美代表或代理的变量。具体来说，我们需要：
+
+1. 一个**处理代理** ($W$)：一个受 $U$（或相关因素）影响的变量，它影响处理 $T$，但在已知 $T$、$U$ 和任何观察到的混杂因素 $X$ 的情况下，不提供关于结果 $Y$ 的*额外*信息。
+2. 一个**结果代理** ($Z$)：一个受 $U$（或相关因素）影响的变量，它影响结果 $Y$，但在已知 $U$ 和 $X$ 的情况下，不提供关于处理 $T$ 的*额外*信息。
+
+重要的是，与 IV 中的工具不同，这些代理 $W$ 和 $Z$ *可以*受 $U$ 混淆。它们的用处在于它们如何将 $U$ 与观察到的变量 $T$ 和 $Y$ 联系起来。
+
+### 图形表示
+
+在最简单的 PCI 设置中（其中也存在观察到的混杂因素 $X$）所假设的关系可以使用有向无环图 (DAG) 可视化：
+
+> 一个有向无环图，说明了近端因果推断中的核心关系。未观察到的混杂因素 $U$ 影响处理 $T$、结果 $Y$ 以及代理 $W$ 和 $Z$。重要的是，$W$ 仅通过 $T$ 影响 $Y$（在考虑 $U$ 之后），并且 $Z$ 仅通过 $U$ 影响 $T$。观察到的混杂因素 $X$ 也可以影响 $T$ 和 $Y$。
+
+### 识别假设
+
+PCI 下的正式识别依赖于以下条件独立性假设，通常被称为“近端条件”或“桥接函数”假设（假设 $X$ 代表已调整的观察到的混杂因素）：
+
+1. **结果桥接（使用 Z）：** $Y \perp W \mid T, U, X$。
+   这意味着在给定处理 $T$、未观察到的混杂因素 $U$ 和观察到的混杂因素 $X$ 的情况下，处理代理 $W$ 与结果 $Y$ 独立。这表示 $W$ 与 $Y$ 的关联完全通过 $(T, U, X)$ 传递。
+2. **处理桥接（使用 W）：** $T \perp Z \mid U, X$。
+   这意味着在给定未观察到的混杂因素 $U$ 和观察到的混杂因素 $X$ 的情况下，结果代理 $Z$ 与处理 $T$ 独立。这表示 $Z$ 与 $T$ 的关联完全通过 $(U, X)$ 传递。
+
+这些假设基本表明 $W$ 是 $U$ 对 $T$ 影响的“充分代理”（在给定 $X$ 的条件下），并且 $Z$ 是 $U$ 对 $Y$ 影响的“充分代理”（在给定 $T, X$ 的条件下）。
+
+### 识别策略
+
+这些假设如何帮助识别 $P(Y|\text{do}(T=t), X=x)$？直观上，涉及代理变量的观察到的条件分布包含了足够的信息来重构未观察到的 $U$ 的影响。
+
+考虑给定处理 $T$、结果代理 $Z$ 和观察到的混杂因素 $X$ 的结果 $Y$ 的分布，表示为 $p(y|t, z, x)$。这可以通过对未观察到的 $U$ 进行边际化来表示：
+
+
+$$
+p(y|t, z, x) = \int p(y|t, u, z, x) p(u|t, z, x) du
+$$
+
+
+使用条件独立性假设（具体来说，$Y \perp W \mid T, U, X$ 在某些条件下意味着 $p(y|t,u,z,x) = p(y|t,u,x)$，类似地 $T \perp Z \mid U, X$ 有助于简化 $p(u|t, z, x)$），PCI 理论表明目标因果效应 $p(y|\text{do}(t), x) = \int p(y|t, u, x) p(u|x) du$ 可以通过解一个积分方程组来识别。
+
+具体而言，识别通常依赖于求解两个第一类 Fredholm 积分方程。令 $q(y|t,x) = p(y|\text{do}(t),x)$ 为目标量。该理论表明了如下关系：
+
+
+$$
+p(y|z, t, x) = \int K_1(z, u, t, x) p(y|t, u, x) du
+$$
+
+
+$$
+p(t|w, x) = \int K_2(w, u, x) p(t|u, x) du
+$$
+
+
+其中 $p(y|t, u, x)$ 和 $p(t|u, x)$ 就像未知函数，而 $K_1, K_2$ 是涉及 $U$ 分布的核。PCI 展示了如何在某些条件下使用观察到的分布 $p(y|z, t, x)$、$p(t|w, x)$ 和 $p(z|w, x)$ 来求解必要的组成部分，最终重构 $p(y|\text{do}(t), x)$。
+
+这种数学机制有效地将 $W$ 和 $Z$ 用作“桥梁”，在不直接观察 $U$ 的情况下，解释 $U$ 的混杂效应。
+
+### 与工具变量的比较
+
+将 PCI 与 IV 进行对比很有启发性：
+
+- **IV：** 要求一个工具 $I$，使得 $I \rightarrow T$，$I \not\rightarrow Y$（除了通过 $T$），且 $I \perp U$。工具必须与未观察到的混杂因素*独立*。
+- **PCI：** 要求代理 $W, Z$，使得 $U \rightarrow W \rightarrow T$ 和 $U \rightarrow Z \rightarrow Y$，满足条件独立性假设 $Y \perp W \mid T, U, X$ 和 $T \perp Z \mid U, X$。这些代理*依赖于*未观察到的混杂因素。
+
+PCI 本质上是用近端条件独立性假设来替代 IV 的外生性假设 ($I \perp U$)。这在难以找到真正外生工具的场景中可能具有优势，但可能存在满足桥接条件的与 $U$ 相关的变量。
+
+### 实际考量
+
+尽管理论上优雅，应用 PCI 带来实际挑战：
+
+- **寻找合适的代理：** 识别能够合理地满足条件独立性假设的变量 $W$ 和 $Z$ 是最大的障碍。这通常需要大量的领域知识。例如，可能包括：
+  - 在推荐系统中：$U$ 是用户意图，$T$ 是商品推荐，$Y$ 是购买。$W$ 可以是用户搜索历史（与意图相关，影响推荐），$Z$ 可以是花费在产品页面上的时间（与意图相关，影响购买）。
+  - 在医疗保健中：$U$ 是疾病严重程度，$T$ 是治疗选择，$Y$ 是结果。$W$ 可以是初步测试结果（与严重程度相关，指导治疗），$Z$ 可以是次要症状表现（与严重程度相关，影响结果）。
+- **估计：** 求解所得积分方程通常需要灵活的非参数 (parameter)或机器学习 (machine learning)方法，例如核方法、筛法估计或神经网络 (neural network)。开发稳定和高效的估计器是一个活跃的研究方向。可以查看像 `CausalPy` 这样的库或特定的研究实现以获取可能的工具。
+- **假设敏感性：** 识别的有效性完全取决于近端假设。由于 $U$ 未被观察到，这些假设无法直接从数据中验证。因此，进行敏感性分析，查看当假设在不同程度上被违反时结果如何变化，非常重要。
+
+### 结论
+
+近端因果推断在存在未观察到的混杂因素的情况下，为因果推断工具箱提供了一个有价值的补充。与 IV、RDD 或 DiD 相比，它在不同的假设下运行，依赖于合适代理变量 $W$ 和 $Z$ 的存在。尽管寻找此类代理并进行估计可能具有挑战性，PCI 为传统方法可能不适用的复杂系统中的因果效应识别提供了可能性。了解其原理使您作为一名专业的实践者，在机器学习 (machine learning)应用中面对隐藏偏倚时，能够考虑更广泛的策略。
+
+## 参考资料
+
+- [Identifying Causal Effects with Proxy Variables](https://academic.oup.com/biomet/article/105/4/987/4996929) — Wang Miao, Zhi Geng, Eric J. Tchetgen Tchetgen (2018)
+  Journal: Biometrika; Publisher: Oxford University Press; Volume: 105; Pages: 987-993; DOI: [10.1093/biomet/asy024](https://doi.org/10.1093/biomet/asy024)
+  首次介绍近端因果推断框架的原始论文。
+- [Proximal Causal Learning: A New Paradigm for Causal Inference in the Presence of Unmeasured Confounding](https://www.annualreviews.org/doi/10.1146/annurev-statistics-040220-104938) — Eric J. Tchetgen Tchetgen, Wei Miao (2021)
+  Journal: Annual Review of Statistics and Its Application; Publisher: Annual Reviews; Volume: 8; Pages: 301-322; DOI: [10.1146/annurev-statistics-040220-104938](https://doi.org/10.1146/annurev-statistics-040220-104938)
+  对近端因果推断的调查和扩展，包含近期进展。

@@ -1,0 +1,199 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "building-managing-large-scale-datasets"
+lesson: "data-indexing-efficient-retrieval"
+sourceId: 5987
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-8-building-managing-large-scale-datasets/data-indexing-efficient-retrieval"
+title: "数据索引用于高效检索"
+description: "索引数据集的方法，以实现快速查找或子集选择。"
+order: 3
+plots: ["plots/5987-0.json"]
+sourceHash: "5535acdd45418530bc000e0f50594e29cc692075102f9649da28fc26730e3195"
+sourceCorrections: []
+---
+
+当处理TB或PB级别的数据集时，这些数据集可能分散存储在分布式文件系统或对象存储中的数千个文件中，顺序扫描整个数据集以查找特定记录或子集会变得非常缓慢且成本高昂。想象一下，您可能只需要检索来自特定网站的文档，或者在预处理阶段被标记 (token)为高质量的文档；读取每一个字节的数据显然不切实际。这就是数据索引成为一种必不可少的技术，用于大规模数据的高效管理。
+
+在此背景下，索引的作用类似于关系数据库中的索引或书本末尾的索引。它是一种辅助数据结构，能够根据特定条件快速查找数据记录，无需彻底扫描主要数据源。对于LLM数据集，索引通常涉及创建从元数据属性或记录标识符到相应数据物理位置的映射。
+
+### 为什么索引对LLM数据集很重要
+
+有效的索引直接支持LLM开发生命周期中的多项重要操作：
+
+1. **有针对性的数据检索：** 您可能需要检查训练期间导致问题的特定示例，或者检索日志中提及的与唯一ID关联的所有文档。索引能让您快速定位（文件路径、字节偏移）这些特定记录的位置。
+2. **高效子集划分和过滤：** 预训练 (pre-training)通常涉及组合来自不同源（网页文本、代码、书籍）的数据。您可能希望训练一个模型版本，只使用代码数据，或者过滤掉在预处理期间（第7章）识别出的低于特定质量阈值的文档。基于`source`、`quality_score`或`language`等元数据构建的索引，能让您在不进行完整数据集扫描的情况下，识别出相关文件或记录。
+3. **促进复杂的采样策略：** 如第9章所讨论的，训练效果可能取决于数据源的组合。采样策略可能需要提高某些数据源的权重 (weight)，或根据文档属性实施课程学习。索引使得数据加载器能够高效地识别和检索符合这些复杂采样要求的批次。例如，如果您可以通过索引快速找到每个源的记录，那么检索一个由60%网页数据、30%书籍和10%代码组成的批次会简单得多。
+4. **数据集分析和查看：** 在训练之前或期间，您可能需要分析数据集的组成。诸如“有多少文档超过2048个token？”或“Common Crawl子集中的语言分布如何？”这类查询，如果长度或语言等元数据被索引，查询速度会显著加快。
+
+### 常见的索引策略
+
+可以采用多种策略，通常组合使用，取决于数据格式、存储系统和访问模式。
+
+#### 元数据索引
+
+这可能是最常用的方法。它涉及创建辅助文件或结构，将元数据值映射到拥有这些值的数据记录列表。
+
+- **结构：** 这可以简单到是序列化的Python字典、JSON文件，或者更结构化的格式，例如专门用于索引的Parquet文件。例如，您可能有一个将数据源映射到包含该源数据文件的索引：
+
+# 索引结构（例如，存储为JSON或pickle文件）
+
+````
+metadata_index = {
+    "common_crawl__file_ABC": {
+        "source": "Common Crawl",
+        "language": "en",
+        "quality_score": 0.85,
+        "token_count": 1500,
+        "location": {"file": "/path/to/data/part-001.parquet", "row_group": 5}
+    },
+    "book_corpus_xyz": {
+        "source": "Book Corpus",
+        "language": "en",
+        "quality_score": 0.95,
+        "token_count": 35000,
+        "location": {"file": "/path/to/data/part-099.parquet", "row_group": 12}
+    },
+    # ... 数百万或数十亿更多条目
+}
+
+# 使用示例：查找高质量的Common Crawl文档
+cc_high_quality_docs = []
+for doc_id, metadata in metadata_index.items():
+    if metadata["source"] == "Common Crawl" and metadata["quality_score"] > 0.9:
+        cc_high_quality_docs.append(doc_id) # 或者直接存储位置
+
+print(f"找到 {len(cc_high_quality_docs)} 个高质量的Common Crawl文档。")
+```
+````
+
+- **字段：** 常见的索引元数据字段包括文档ID、源数据集、语言、质量分数、文档长度（或token计数）以及主题分类（如果可用）。
+
+#### 偏移量索引
+
+当数据未以整齐的可按行寻址的格式存储时（例如单个文本文件或不可分割容器中的记录），偏移量索引变得重要。该索引存储大型文件中每个逻辑记录的精确起始字节位置和长度。
+
+- **结构：** 通常，这是一个列表或表格，其中每个条目包含 `(记录ID, 文件路径, 起始字节, 字节数)`。
+- **使用场景：** 允许在大型文件中直接查找（例如，文档串联的多千兆字节纯文本文件），以读取特定记录而无需读取前面的数据。这通常与元数据索引结合使用；元数据索引可能指向一个记录ID，偏移量索引则将该ID转换为文件位置和字节范围。
+
+> 一个偏移量索引，将记录ID映射到大型数据文件中其精确的字节位置（偏移量和长度）。
+
+#### 发挥数据格式的特点
+
+某些数据格式，例如Apache Parquet，在文件和行组级别内置了对元数据和索引的支持。Parquet在行组内存储列的统计信息（最小值/最大值）。查询引擎可以使用这些元数据来跳过读取整个行组，如果过滤条件不可能匹配该组内的数据（谓词下推）。虽然这不能完全取代所有用例中专门的记录级索引，但借助这些特点可以在数据加载期间显著加快基于索引列的过滤速度。
+
+### 实施考量
+
+- **粒度：** 索引每个单独的文档能提供最精细的控制，但会导致最大的索引大小。在文件或块级别进行索引则更粗略，但索引更小。选择取决于访问模式；对于单个文档的随机抽样，通常需要文档级索引。
+- **存储：** 索引可以与分布式文件系统中的数据文件一起存储，或由单独的元数据服务或数据库管理。将它们与数据一起存储简化了部署，但可能需要自定义加载逻辑。
+- **格式：** 简单的格式，如序列化的字典或JSON文件，易于创建，但在大规模情况下可能变得难以管理。使用高效的二进制格式如MessagePack，或将索引本身存储为可查询的格式（如Parquet），可以更具扩展性。数据库（SQL或NoSQL）提供了强大的查询能力，但增加了操作开销。
+- **创建：** 索引构建通常集成到数据预处理管道的最后阶段（第7章）。如果数据集非常庞大，这个过程本身可能非常耗费资源，并且可能需要分布式处理框架（如Spark或Dask）。
+- **一致性：** 对于静态预训练 (pre-training)数据集，索引只需构建一次。在涉及连续训练（第28章）和不断演进的数据集场景中，更新索引的策略变得重要。
+
+### 将索引与数据加载器结合
+
+训练期间，这些索引的主要使用者是数据加载器。在PyTorch等框架中，自定义的`Dataset`实现可以使用索引高效检索特定项目或实施复杂的采样。
+
+```python
+import torch
+from torch.utils.data import Dataset
+import pickle
+
+# 假设 'metadata_index.pkl' 映射文档ID
+# -> {'位置': {'文件': ..., '偏移量': ..., '长度': ...}, ...}
+# 假设 'doc_ids_for_epoch.pkl' 包含文档ID列表
+# 用于当前epoch/迭代，
+# 可能已根据源权重或其他标准预采样。
+
+class IndexedTextDataset(Dataset):
+    def __init__(self, index_path, doc_ids_path):
+        print(f"正在从 {index_path} 加载索引...")
+        with open(index_path, 'rb') as f:
+            self.metadata_index = pickle.load(f)
+        print(f"正在从 {doc_ids_path} 加载文档ID列表...")
+        with open(doc_ids_path, 'rb') as f:
+            self.doc_ids = pickle.load(f) # 此epoch的文档ID列表
+        print("索引和文档列表加载完毕。")
+
+    def __len__(self):
+        return len(self.doc_ids)
+
+    def __getitem__(self, idx):
+        # 获取当前索引对应的实际文档ID
+        doc_id = self.doc_ids[idx]
+
+        # 使用元数据索引查找文档位置
+        try:
+            metadata = self.metadata_index[doc_id]
+            location = metadata['location']
+            file_path = location['file']
+            offset = location['offset']
+            length = location['length']
+        except KeyError:
+            # 处理文档ID可能缺失的情况...
+            # （如果ID是从索引派生而来，理想情况不应发生）
+            print(f"警告：在索引中未找到文档ID {doc_id}。")
+            # 根据期望的行为，返回一个虚拟项或引发错误
+            return {"text": "", "doc_id": doc_id, "error": True}
+
+        # 打开特定文件并定位到正确位置
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                f.seek(offset)
+                text_content = f.read(length)
+            # 在这里，您通常会对 text_content 进行分词
+            # tokenized_output = tokenizer(text_content, ...)
+            # 为简单起见，我们只返回文本
+            return {"text": text_content, "doc_id": doc_id}
+        except Exception as e:
+            print(f"从 {file_path} 的偏移量 {offset} 读取文档 {doc_id} 时出错: {e}")
+            return {"text": "", "doc_id": doc_id, "error": True}
+
+# 使用方法：
+# index_file = '/path/to/metadata_with_offsets.pkl'
+# doc_ids_file = '/path/to/sampled_doc_ids_epoch_1.pkl'
+# dataset = IndexedTextDataset(index_path=index_file, doc_ids_path=doc_ids_file)
+
+# 通常通过准备 doc_ids_file 来实现随机打乱
+# data_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False)
+
+# # 迭代加载器的示例
+# for batch in data_loader:
+#     # 处理文档批次（例如，输入到模型）
+#     # print(batch['doc_id'], len(batch['text']))
+#     pass
+```
+
+这个示例展示了`Dataset`如何接收索引`idx`（从0到`len(self)-1`），将其映射到预采样的`doc_id`，在主索引中查找该`doc_id`的位置，然后从正确的文件在特定偏移量处执行有针对性的读取。这避免了扫描不相关的数据。
+
+### 权衡
+
+实施数据索引涉及权衡：
+
+- **存储成本：** 索引会消耗额外的存储空间，对于非常大的数据集和细粒度索引，可能会增加数千兆字节甚至数太字节。
+- **预处理时间：** 构建索引会增加初始数据准备阶段的计算时间。
+- **复杂性：** 设计、构建和维护索引系统增加了数据管道的复杂性，相比简单的顺序读取。
+
+然而，收益通常超过成本，特别是对于大规模LLM训练：
+
+- **查询性能：** 显著减少了访问特定记录或子集的时间。
+- **效率：** 通过只读取必要数据，降低了训练期间的I/O成本。
+- **灵活性：** 使得复杂的采样和过滤策略成为可能，这些策略在完整扫描下是不切实际的。
+
+
+
+![数据访问时间](plots/5987-0.json)
+
+
+
+> 比较有索引和无索引时数据访问操作所需的时间，突出了索引为有针对性检索和过滤提供的显著加速。请注意时间轴上的对数刻度。
+
+总之，数据索引是一种基础方法，用于管理LLM训练所需的海量数据集。它在存储PB级数据与高效访问训练、分析和评估所需的特定数据片段之间架起了一座桥梁，构成可扩展数据处理管道的一个重要组成部分。
+
+## 参考资料
+
+- [Apache Parquet](https://parquet.apache.org/) — The Apache Software Foundation (2024)
+  Publisher: The Apache Software Foundation
+  针对列式存储格式的官方文档，详细介绍了其结构和诸如谓词下推等特性，有助于在大规模数据集中高效检索数据。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://dataintensive.net/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  一本关于分布式系统、数据存储和处理的综合书籍，详细解释了索引结构、存储格式和查询优化技术，适用于大规模数据管理。

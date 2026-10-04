@@ -1,0 +1,64 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "intro-statistical-inference"
+lesson: "confidence-intervals-conceptual"
+sourceId: 2465
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-5-intro-statistical-inference/confidence-intervals-conceptual"
+title: "区间估计：置信区间"
+description: "了解置信区间，以及它们如何为总体参数提供一个区间估算。"
+order: 3
+plots: ["plots/2465-0.json"]
+sourceHash: "3e97ed90217875136dbe247531b44ae471f1ab94dfa930b82a2b2b558a274f5a"
+sourceCorrections: []
+---
+
+点估算，比如样本均值 $\bar{x}$，为我们提供一个单一数值，作为对未知总体参数 (parameter)（如总体均值 $\mu$）的最佳估算。例如，如果我们从人群样本中计算出平均身高为175厘米，那么这就是我们感兴趣的总体中*所有*人的平均身高的点估算。
+
+但是，这个单一数值有多可靠呢？如果选取不同的样本，我们很可能得到略有不同的样本均值，或许是173厘米或176厘米。点估算无法告知我们这种不确定性，也无法说明估算在不同样本之间可能有多少变动。这时就需要区间估算。
+
+区间估算并非只提供一个数值，它提供一个总体参数的*可能值范围*。这个范围被称为**置信区间**。
+
+### 什么是置信区间？
+
+置信区间是根据样本数据计算出的一个范围，该范围很可能包含未知总体参数 (parameter)的真实值。它由两个数值定义：一个下限和一个上限。例如，我们可能不是简单地说平均身高是175厘米，而是说我们“有95%的把握认为总体的真实平均身高在172厘米到178厘米之间。”
+
+这个区间 [172 厘米, 178 厘米] 就是置信区间。“95%”这部分是**置信水平**。
+
+### 置信水平的说明
+
+置信水平（通常是90%、95%或99%）表示我们对用于生成该区间的*方法*的信心程度。正确理解这一点很重要：
+
+- **正确说明：** 如果我们重复多次抽样过程，并为每个样本构建一个95%的置信区间，我们预期约有95%的这些区间会包含真实、固定（但未知）的总体参数 (parameter)。
+- **常见误解：** 这并*不*意味着*真实总体参数*有95%的概率落在*某个特定的计算区间*内。一旦我们从样本中计算出一个区间（例如172厘米到178厘米），真实的总体参数要么*在*那个特定范围内，要么*不在*。它不会跳进跳出。不确定性在于我们抽取的*特定样本*是否恰好给出了一个包含真实值的区间。
+
+把它想象成将套环套在一个固定的木桩（真实总体参数）上。置信水平说明你套环*方法*的成功率。如果你有95%的成功率，这意味着在多次尝试中，你的95%的套环将落在木桩周围。对于任何*一次*尝试（任何一个计算出的区间），套环要么套中木桩，要么没套中。
+
+
+
+![多个样本的95%置信区间视图](plots/2465-0.json)
+
+
+
+> 真实总体均值（红色虚线）是固定的但未知。每条垂直线表示从不同随机样本计算出的一个95%置信区间。大多数区间（灰色线）包含真实均值，但偶尔（如样本16）会因随机抽样变动而错过它。在95%置信水平下，我们预期约每20个区间中会有1个纯粹因偶然原因而错过真实值。
+
+### 什么影响置信区间的宽度？
+
+置信区间的宽度让我们了解估算的精确度。较窄的区间表示更精确的估算，而较宽的区间则表示更多的不确定性。有三个主要因素影响宽度：
+
+1. **置信水平：** 如果我们希望有更高的把握（例如99%而不是95%），我们需要“撒一张更大的网”以更确定地捕捉真实参数 (parameter)。因此，更高的置信水平会带来更宽的区间。
+2. **样本大小 ($n$)：** 随着我们收集更多数据（增加样本大小），我们的估算变得更可靠，不确定性也会减少。因此，更大的样本大小会带来更窄的区间。
+3. **数据变异性：** 如果数据点本身分散程度很高（标准差大），就更难准确确定总体参数。样本数据中更高的变异性会导致更宽的区间。
+
+置信区间比单独的点估算提供了更丰富的信息。它们为真实参数值提供了一个合理范围，并明确表达了与基于样本的估算相关的不确定性程度。这一认识对于理解统计学中的结果，以及评价基于样本数据训练或测试的机器学习 (machine learning)模型的性能指标的稳妥性，都非常重要。
+
+## 参考资料
+
+- [Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  将统计理论与数据科学和机器学习中的实践应用联系起来，包括置信区间的实际使用和解释。
+- [Introduction to Probability and Statistics](https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2014/) — Jeremy Orloff, Jonathan Bloom (2014)
+  Publisher: Massachusetts Institute of Technology: MIT OpenCourseWare
+  提供知名大学课程的讲义和资料，清晰地阐述置信区间的学术处理。
+- [Statistics Done Wrong: The Woefully Complete Guide](https://www.statisticsdonewrong.com/) — Alex Reinhart (2015)
+  Publisher: No Starch Press
+  探讨统计学中常见的误解，为正确解释置信区间提供了有价值的视角。

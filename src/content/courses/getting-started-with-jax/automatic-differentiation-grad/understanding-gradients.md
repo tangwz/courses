@@ -1,0 +1,99 @@
+---
+course: "getting-started-with-jax"
+chapter: "automatic-differentiation-grad"
+lesson: "understanding-gradients"
+sourceId: 1717
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-jax/chapter-3-automatic-differentiation-grad/understanding-gradients"
+title: "理解梯度"
+description: "简要回顾梯度及其在机器学习中的作用。"
+order: 1
+plots: ["plots/1717-0.json"]
+sourceHash: "a23bedad623b7a27e612799b0d774dff40ac7874cff2b334da2d8cf7e5397ca2"
+sourceCorrections: []
+---
+
+正如章节引言中提到的，梯度在许多计算分支中都很常用，尤其是在机器学习 (machine learning)里。训练模型通常需要通过迭代调整参数 (parameter)来优化一个函数（比如损失函数 (loss function)）。梯度指明了如何高效地进行这些调整。但梯度究竟是什么呢？
+
+### 什么是梯度？
+
+通俗地说，对于一个接受多个数值输入并产生单个数值输出（即标量函数）的函数，梯度是一个向量 (vector)，它指向函数在特定输入点上增长最快的方向。这个梯度向量的大小（长度）表明了增长的陡峭程度。
+
+思考一个只有一个输入变量的简单函数 $f(x)$。你可能在微积分中学过，它的导数，常写为 $f'(x)$ 或 $\frac{df}{dx}$，表示函数图上点 $x$ 处切线的斜率。它告诉你函数输出相对于输入的瞬时变化率。
+
+
+
+![函数 f(x) = x^2 及其在 x=2 处的切线](plots/1717-0.json)
+
+
+
+> 函数 $f(x) = x^2$ 和在 $x=2$ 处的切线。切线的斜率（4）就是该点处的导数（梯度）。
+
+现在，我们将其延伸到一个拥有多个输入变量的函数，比如 $f(x_1, x_2, ..., x_n)$。梯度推广了导数的思想。我们得到的不是一个单一的斜率，而是一个偏导数向量。偏导数 $\frac{∂f}{∂x_i}$ 衡量了当仅改变输入 $x_i$ 而保持所有其他输入（$x_j$ 且 $j \neq i$）不变时，函数 $f$ 如何变化。
+
+函数 $f$ 在点 $(x_1, ..., x_n)$ 处的梯度是包含其所有偏导数的向量：
+
+
+$$
+∇f(x_1, ..., x_n) = \left[ \frac{∂f}{∂x_1}, \frac{∂f}{∂x_2}, ..., \frac{∂f}{∂x_n} \right]
+$$
+
+
+符号 $∇$（nabla）常用于表示梯度算子。
+
+例如，思考函数 $f(x, y) = x^2 + \sin(y)$。
+对 $x$ 的偏导数是 $\frac{∂f}{∂x} = 2x$。
+对 $y$ 的偏导数是 $\frac{∂f}{∂y} = \cos(y)$。
+梯度向量是 $∇f(x, y) = [2x, \cos(y)]$。
+
+在点 $(x=1, y=0)$ 处，梯度为 $∇f(1, 0) = [2(1), \cos(0)] = [2, 1]$。这个向量 $[2, 1]$ 表明了从 $(1, 0)$ 开始函数 $f(x, y)$ 增长最快的方向。
+
+### 梯度为何对优化重要
+
+梯度的一个主要用途是函数最小化。设想你有一个“成本”或“损失”函数，它衡量了你的机器学习 (machine learning)模型表现有多差。你希望找到使这个成本尽可能小的模型参数 (parameter)。
+
+梯度 $∇f$ 指向 *最陡峭的上升* 方向。因此，负梯度 $-∇f$ 指向 *最陡峭的下降* 方向。
+
+这是**梯度下降 (gradient descent)**算法的核心原理：
+
+1. 从某个初始点（初始参数值）开始。
+2. 计算当前点成本函数的梯度。
+3. 沿着与梯度相反的方向（负梯度方向）迈出一小步。
+4. 重复步骤 2 和 3，直到函数值不再明显下降（收敛）。
+
+每一步都使函数更接近一个局部最小值。
+
+
+$$
+\text{新参数} = \text{旧参数} - \text{学习率} \times ∇f(\text{旧参数})
+$$
+
+
+这里，`learning_rate` 是一个小的正标量，它控制着步长。
+
+### 自动微分的必要性
+
+手动使用微积分规则计算梯度，就像我们为 $f(x, y) = x^2 + \sin(y)$ 所做的那样，对于简单函数是可行的。然而，机器学习 (machine learning)中遇到的函数（如深度神经网络 (neural network)）可能涉及数百万个参数 (parameter)和复杂的操作组合。手动推导梯度变得不切实际且极易出错。
+
+我们可以尝试**数值微分**，它通过在轻微扰动的点处评估函数来近似梯度（例如，使用 $\frac{f(x+h) - f(x)}{h}$ 的定义，其中 $h$ 很小）。然而，这种方法存在近似误差（由于 $h$ 的选择），并且计算成本可能很高，因为它对梯度的每个维度都需要多次函数评估。
+
+**符号微分**，由计算机代数系统执行，它操作数学表达式以找到精确的导数表达式。虽然精确，但它可能导致非常复杂且可能低效的表达式（“表达式膨胀”），特别是对于大型计算。
+
+这就是\*\*自动微分（AD）\*\*发挥作用的地方。AD 是一套技术，它通过在函数计算中对基本运算（加法、乘法、sin、cos 等）层面系统地应用微积分的链式法则，来高效地计算函数梯度的精确数值。它避免了数值微分的近似误差和符号微分可能产生的表达式膨胀问题。
+
+JAX 的 `grad` 转换建立在高度优化的 AD 实现之上，特别是**反向模式 AD**（在神经网络中也称为反向传播 (backpropagation)）。这种模式对于机器学习中常见的输入众多但映射到单个标量输出（如损失函数 (loss function)）的函数尤其高效。
+
+在接下来的章节中，我们将了解如何使用 `jax.grad`，以便将自动微分的优势运用到你自己的 Python 函数中。
+
+## 参考资料
+
+- [Calculus: Early Transcendentals](https://www.cengage.com/s/store/product/calculus-early-transcendentals-metric-version-8e--9781305267268) — James Stewart (2015)
+  Publisher: Cengage Learning
+  全面介绍了单变量和多变量微积分，包括导数、偏导数和梯度向量。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 800
+  描述了梯度下降作为训练机器学习模型的优化算法。
+- [Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation](https://doi.org/10.1137/1.9780898717761) — Andreas Griewank, Andrea Walther (2008)
+  Publisher: SIAM; DOI: [10.1137/1.9780898717761](https://doi.org/10.1137/1.9780898717761)
+  自动微分领域的标准著作，涵盖了其理论基础和实现，包括前向模式和反向模式。
+- [API Documentation: jax.grad](https://jax.readthedocs.io/en/latest/_autosummary/jax.grad.html) — JAX core contributors (2024)
+  JAX `grad`函数的官方文档，包含实际使用示例和其应用的详细信息。

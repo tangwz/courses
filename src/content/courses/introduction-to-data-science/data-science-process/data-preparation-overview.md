@@ -1,0 +1,51 @@
+---
+course: "introduction-to-data-science"
+chapter: "data-science-process"
+lesson: "data-preparation-overview"
+sourceId: 2112
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-data-science/chapter-3-data-science-process/data-preparation-overview"
+title: "数据准备概述"
+description: "分析前清理和整理数据所需步骤的简要说明。"
+order: 4
+plots: []
+sourceHash: "a8f029c09d1ab1d5dc1407c4047fe0e3ce68cc2727a744a21e3e122fb866f80e"
+sourceCorrections: []
+---
+
+你已经学习了如何定义问题和获取数据。但接下来会发生什么？数据在获取后就处于完全可用状态的情况非常少见，几乎闻所未闻。可以将其比作从市场购买原始食材。你不会立即将所有东西都扔进锅里。你需要洗菜，可能还要去皮、切块、量好分量。数据准备，通常被称为数据清理或数据整理，就是数据科学中的同等步骤。
+
+原始数据常带有各种问题，这些问题会显著影响在其基础上进行的任何分析或模型的质量和可靠性。如果你向分析中输入杂乱、不完整或不正确的数据，你将得到不可靠、误导性的结果。这常被概括为“垃圾进，垃圾出”。数据准备是将原始数据转换为干净、一致、适合数据分析和模型构建形式的重要过程。
+
+### 为什么数据准备是必要的？
+
+"数据经常是杂乱的。以下是你将遇到的一些常见问题:"
+
+- **缺失值：** 数据集中有些条目可能为空或标记 (token)为未知（常表示为`NaN`、`null`或只是空白）。许多分析技术和机器学习 (machine learning)算法无法直接处理缺失值。
+- **不正确或不一致的数据：** 拼写错误很常见（例如，“New York”与“New Yorkk”）。你可能会发现不可能的值（例如，人类年龄为300岁），或数据记录不一致（例如，同一列中同时包含摄氏度和华氏度，或州名有时缩写有时完整拼写）。
+- **格式问题：** 数据可能不适合分析的格式。数字可能以文本形式存储，日期可能以各种不一致的格式存在（`01/05/2023`、`Jan 5, 2023`、`2023-01-05`），或者分类数据可能需要编码。
+- **异常值：** 有些数据点可能与其他数据截然不同。这些可能是真实的极端值或错误。它们会严重扭曲统计计算和模型表现。
+- **不相关数据：** 数据集可能包含对于你试图回答的特定问题来说不需要的列或行。
+
+### 数据准备包含什么？
+
+数据准备不是一个单一的步骤，而是一系列旨在解决上述问题的活动。具体的步骤在很大程度上取决于数据和项目目标，但它们通常包括：
+
+1. **清理：** 这包含处理缺失值（例如，删除包含缺失数据的行，或使用统计方法填充它们），纠正错误，以及标准化格式（例如，确保所有州名使用相同的缩写）。
+2. **转换：** 这可能涉及更改数据类型（例如，将表示数字的文本转换为实际的数值类型），将数值数据归一化 (normalization)或缩放到一个共同的范围，或可能从现有特征中创建新特征（尽管这涉及特征工程，特征工程通常被认为是一个单独但相关的步骤）。
+3. **结构化：** 有时数据来自多个来源，需要组合或重塑为适合分析工具的表格形式。
+
+据报告，此阶段常占据数据科学家很大一部分时间，有时高达项目持续时间的80%。虽然这可能看起来很繁琐，但它是一个根本重要的步骤。没有仔细的数据准备，后续分析中得出的见解或模型做出的预测可能有缺陷或完全错误。
+
+数据准备是实现可靠数据分析的必要步骤。它确保输入到下一阶段——初步数据分析（EDA）和模型构建——的数据是可靠的，并能产生有意义的结果。用于收集和准备数据的实用技术会得到更仔细的查看。
+
+## 参考资料
+
+- [Data Mining: Concepts and Techniques](https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1) — Jiawei Han, Micheline Kamber, and Jian Pei (2011)
+  Publisher: Elsevier
+  一本关于数据挖掘的综合性教材，包含数据预处理技术、数据质量和原始数据挑战的详细章节。
+- [Data Science for Business: What You Need to Know about Data Mining and Data-Analytic Thinking](https://www.oreilly.com/library/view/data-science-for/9781449374273/) — Foster Provost, Tom Fawcett (2013)
+  Publisher: O'Reilly Media
+  提供数据科学的战略视角，强调数据准备在整个数据科学过程中创造商业价值的作用。
+- [Python for Data Analysis](https://wesmckinney.com/book) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: 582
+  一本使用Python进行数据操作和清洗的实用指南，展示了常见的数据问题以及有效的数据整理和转换技术。

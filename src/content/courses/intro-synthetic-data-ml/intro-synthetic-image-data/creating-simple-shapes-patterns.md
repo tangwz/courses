@@ -1,0 +1,68 @@
+---
+course: "intro-synthetic-data-ml"
+chapter: "intro-synthetic-image-data"
+lesson: "creating-simple-shapes-patterns"
+sourceId: 5681
+sourceUrl: "https://apxml.com/zh/courses/intro-synthetic-data-ml/chapter-4-intro-synthetic-image-data/creating-simple-shapes-patterns"
+title: "用简单形状和图案制作图像"
+description: "以编程方式生成包含基本几何形状或图案的图像的方法。"
+order: 3
+plots: ["plots/5681-0.json"]
+sourceHash: "fa032efe406dd64d81a20ed7ea9cbcb42204bf1ced5457e710c5a5e53bb49e78"
+sourceCorrections: []
+---
+
+像素和颜色通道（如$RGB$）等图像基础知识是理解如何从零开始*制作*简单图像的基础。以编程方式生成图像，即使是基础的，也是计算机视觉合成数据生成中一个重要的起步。我们无需仅依赖现有照片，可以设定规则和步骤来构建新的视觉数据。
+
+一种直接的方法是生成包含基本几何形状或重复图案的图像。可以将其想象成在数字格纸上绘图，您来决定每个方格（像素）的颜色。
+
+### 绘制基础形状
+
+要制作带形状的图像，通常会从一张空白数字画布开始，它本质上是一个像素网格，初始设定为背景色（如黑色或白色）。然后，您设定形状的参数 (parameter)并确定哪些像素位于其边界内。这些像素随后被赋予所需的图形颜色。
+
+- **矩形：** 矩形由其位置（例如，左上角的坐标）及其尺寸（宽度和高度）设定。坐标为 $(x, y)$ 的像素，若满足 $x_{start} \le x < x_{start} + width$ 和 $y_{start} \le y < y_{start} + height$ 的范围，则会被着色。
+- **圆形：** 圆形由其中心坐标 $(cx, cy)$ 及其半径 $r$ 设定。与中心距离小于或等于半径的像素（即满足 $\sqrt{(x-cx)^2 + (y-cy)^2} \le r$）会被着色。
+- **线条：** 线条可以由其起点和终点 $(x_1, y_1)$ 和 $(x_2, y_2)$ 设定。像布雷森汉姆直线算法这样的算法是有效确定哪些像素最接近这些点之间理想数学线的方法。
+
+对于每种形状，您设定其参数（位置、大小、半径）和颜色。软件随后会相应地修改图像数组中的像素值。
+
+### 生成图案
+
+除了单个形状，您还可以制作带有重复图案的图像，方法是根据每个像素的坐标应用一个简单规则。
+
+- **棋盘格：** 经典的例子是棋盘格。您可以遍历每个像素 $(x, y)$。如果 $(x // \text{方格尺寸} + y // \text{方格尺寸})$ 是偶数，则将像素着色为白色；否则，着色为黑色。这会生成指定大小的交替颜色方格。
+- **网格：** 您可以以固定间隔绘制水平和垂直线来生成网格图案。这涉及对 $x$ 是网格间距的倍数或 $y$ 是网格间距的倍数的像素进行着色。
+- **条纹：** 简单的水平或垂直条纹可以通过仅根据 $x$ 或 $y$ 坐标模某个条纹宽度来改变颜色而制作出来。
+
+这些方法依赖于直接应用于像素坐标的数学或逻辑规则，以决定它们的颜色。
+
+### 一个视觉示例
+
+设想制作一个很小的图像，例如10x10像素。我们可以决定在其中绘制一个简单的蓝色方形，背景为浅灰色。通过编程，我们将创建一个10x10的像素网格，初始全部为浅灰色。然后，我们会设定正方形的左上角（例如，坐标(3,3)）及其大小（例如，4x4像素）。坐标从$(3,3)$到$(6,6)$的像素随后将被设为蓝色。
+
+
+
+![Interactive chart](plots/5681-0.json)
+
+
+
+> 一个以编程方式生成的10x10像素图像。浅灰色像素（#e9ecef）表示背景（值1），蓝色像素（#4263eb）构成一个简单的方形（值2）。
+
+### 核心机制和工具
+
+其核心是，生成这些图像涉及操作多维数组（常使用Python中的NumPy等库），数组中的每个元素对应一个像素的颜色。对于尺寸为宽度$\times$高度的$RGB$图像，这可能是一个形状为（高度，宽度，3）的数组，其中最后一个维度存放每个像素的红色、绿色和蓝色值。
+
+虽然您可以直接操作这些像素数组，许多图像处理库（如Pillow或Scikit-image，我们会在第6章提及）提供更高级别的函数，例如`draw_rectangle`、`draw_circle`或`draw_line`。这些函数将逐像素计算抽象化，使在数字画布上放置形状和图案变得更容易。
+
+生成这些简单的几何图像是一个重要的起点。它显示了对图像制作的直接控制，并构成了生成更复杂场景的要素，这些场景可能组合多种形状、不同颜色并添加其他元素，对训练和测试计算机视觉模型很有用。
+
+## 参考资料
+
+- [Digital Image Processing](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG5HYTtpd6gVMh-4tsWwVO8SqLqW_en2hm0wGPTcswME0XhN1Jfbdz5kSR6J1H4SmlaOX_eCySglYZNddbJSRg9JVJI_0YNPUEdA2ZypAhXtD82E2K2N3CuH6WDL-ITHklY78B1GfL8hVCXnqPSb5Ks59nG7i0PyZlSwwF7wsVfB_SXoEHStIFX11Gl6V-HB5qVW0538VnDKmjM64XckWE=) — Rafael C. Gonzalez and Richard E. Woods (2018)
+  Publisher: Pearson
+  一本全面介绍数字图像处理基本原理的书，涵盖图像表示、RGB等色彩模型以及基本的几何变换。
+- [Fundamentals of Computer Graphics](http://www.cs.cornell.edu/~srm/fcg4/) — Peter Shirley, Steve Marschner, Michael Ashikhmin, Michael Gleicher, Naty Hoffman, Garrett Johnson, Tamara Munzner, Erik Reinhard, William B. Thompson, Peter Willemsen, Brian Wyvill (2016)
+  Publisher: CRC Press
+  本书提供了计算机图形学的坚实基础，包括栅格化算法的说明，这对于在像素网格上绘制线条、圆形和其他形状至关重要。
+- [Pillow (PIL Fork) Documentation: Handbook](https://pillow.readthedocs.io/en/stable/handbook/index.html) — Alex Clark and contributors (2024)
+  Pillow是广泛使用的Python图像处理库，其官方文档提供了操作图像像素和程序化绘制几何形状的实用指南。

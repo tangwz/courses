@@ -1,0 +1,130 @@
+---
+course: "introduction-to-neural-networks"
+chapter: "data-preparation-neural-networks"
+lesson: "categorical-data-encoding"
+sourceId: 1932
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-neural-networks/chapter-2-data-preparation-neural-networks/categorical-data-encoding"
+title: "处理分类数据：编码技术"
+description: "考察独热编码及其他表示分类特征的方法。"
+order: 3
+plots: []
+sourceHash: "8bdd456104482235ebbf49fa4e7fadec201a21e3d40344c61d337b5907e322ab"
+sourceCorrections: []
+---
+
+如前所述，神经网络 (neural network)需要数值输入。缩放处理现有数值特征，但我们常遇到并非天生数值的数据，特别是分类特征。比如产品类别（“电子产品”、“服装”、“食品杂货”）、用户群组（“新用户”、“回访用户”、“不活跃用户”）或颜色（“红”、“绿”、“蓝”）。直接将这些文本标签输入网络是不可行的。我们需要方法将这些类别转换为网络能理解的数值格式，同时避免意外引入误导信息。
+
+### 简单数值映射的问题
+
+一种简单的方法是为每个类别分配一个唯一的整数。例如，如果有一个“颜色”特征，包含“红”、“绿”、“蓝”等类别，可以这样进行映射：
+
+- 红: 0
+- 绿: 1
+- 蓝: 2
+
+然而，这会引入人为的顺序关系。网络可能将“蓝”（2）理解为“大于”“绿”（1），或者认为“红”和“蓝”之间的“距离”（2 - 0 = 2）是“红”和“绿”之间距离（1 - 0 = 1）的两倍。对于大多数分类特征（名义类别），这些数值关系没有意义，并可能干扰学习过程。网络可能根据这些任意的数值分配而非实际的类别差异来学习模式。
+
+### 独热编码：将类别表示为二元向量 (vector)
+
+一种处理神经网络 (neural network)中名义分类特征的有效且标准的方法是**独热编码（One-Hot Encoding）**。其思路是为原始特征中的每个独特类别创建一个新的二元特征（取值0或1）。
+
+对于每个数据点，对应其类别的列将赋值为1，而为该特征创建的所有其他列将赋值为0。
+
+再次以“颜色”为例，包含“红”、“绿”、“蓝”等类别。独热编码会将这一个特征转换为三个新的二元特征：“是\_红”、“是\_绿”、“是\_蓝”。
+
+- 一个值为“红”的观测变成 `[1, 0, 0]`
+- 一个值为“绿”的观测变成 `[0, 1, 0]`
+- 一个值为“蓝”的观测变成 `[0, 0, 1]`
+
+> 图示：一个分类值（“绿”）如何通过独热编码转换为二元向量。
+
+这种方法有显著优点：
+
+1. **无人为排序：** 二元表示不暗示类别之间的任何顺序或大小关系。
+2. **清晰表示：** 每个类别都有其独特的表示，网络易于理解。
+
+然而，独热编码也并非没有潜在缺点：
+
+1. **维度增加：** 如果一个分类特征有许多独特值（高基数），独热编码可以显著增加输入特征的数量。例如，大型数据集中的“邮政编码”特征可能导致数千个新列，使输入稀疏且计算要求更高。
+
+实际操作中，`pandas` 和 `scikit-learn` 等库使独热编码变得简单。
+
+```python
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+
+# 示例数据
+data = pd.DataFrame({'Color': ['Red', 'Green', 'Blue', 'Green']})
+
+# 使用 pandas get_dummies
+one_hot_pandas = pd.get_dummies(data['Color'], prefix='Color')
+print("Pandas get_dummies 输出:\n", one_hot_pandas)
+
+# 使用 scikit-learn OneHotEncoder
+# 编码器需要重塑数据
+encoder = OneHotEncoder(sparse_output=False) # 使用 sparse_output=False 以获得密集数组
+one_hot_sklearn = encoder.fit_transform(data[['Color']])
+print("\nScikit-learn OneHotEncoder 输出:\n", one_hot_sklearn)
+print("特征名称:", encoder.get_feature_names_out(['Color']))
+```
+
+> `pd.get_dummies` 通常方便进行快速检查，而 `sklearn.preprocessing.OneHotEncoder` 更适合标准机器学习 (machine learning)流程，尤其是在一致处理训练集和测试集时。
+
+### 标签编码：谨慎使用
+
+标签编码（Label Encoding）只是简单地为每个类别分配一个唯一的整数，如本节所述（例如，红=0，绿=1，蓝=2）。
+
+```python
+from sklearn.preprocessing import LabelEncoder
+
+# 示例数据
+data = pd.DataFrame({'Size': ['Small', 'Medium', 'Large', 'Medium']})
+
+# 使用 scikit-learn LabelEncoder
+label_encoder = LabelEncoder()
+data['Size_Encoded'] = label_encoder.fit_transform(data['Size'])
+
+print("标签编码输出:\n", data)
+print("编码类别:", label_encoder.classes_) # 显示映射
+```
+
+尽管简单，但**标签编码通常不推荐用于神经网络 (neural network)的输入特征**，因为它会创建人为的顺序关系。网络可能错误地认为“大”（例如编码为2）在数量上“多于”“小”（例如编码为0），从而线性影响预测。
+
+在特定情形下可以使用它，例如：
+
+- **有序特征：** 如果类别确实具有有意义的顺序（例如，“小”<“中”<“大”），标签编码*可能*捕捉到这一点。然而，它假设类别间的“距离”是均匀的（例如，距离（小，中）==距离（中，大）），这可能不真实。独热编码通常仍更安全。
+- **目标变量：** 对于分类问题，目标标签（'y'变量）通常进行标签编码（例如，A类为0，B类为1等）。这是可接受的，因为输出层和损失函数 (loss function)旨在处理这些离散的类别索引。
+- **基于树的模型：** 决策树和随机森林等算法有时可以直接处理标签编码特征，因为它们基于阈值分割数据，有效隔离类别。然而，本课程侧重于神经网络，其中独热编码是名义输入的优选。
+
+### 处理高基数特征
+
+当一个特征拥有成千上万，甚至数百万个独特类别（例如用户ID、产品SKU、特定地点）时会怎样？由于维度大幅增加，独热编码变得不切实际。这里有几种方法，尽管有些更进阶：
+
+1. **特征哈希（Hashing Trick）：** 此技术使用哈希函数将类别映射到固定、数量较少的输出特征。例如，你可能决定将所有类别映射到仅100个特征。
+   - **优点：** 无论独特类别数量多少，都能控制输出维度，无需构建类别字典（对流式数据有用）。
+   - **缺点：** 可能发生哈希冲突（不同类别映射到相同的输出特征），这会引入噪声。所得特征的可解释性较低。
+2. **分箱/分组：** 将稀有类别组合成一个“其他”类别，或根据领域知识对相似类别进行分组。这在应用独热编码之前减少了基数。
+3. **嵌入 (embedding)：** 这是一种功能强的方法，常用于神经网络 (neural network)内部。你不再将类别预处理为稀疏向量 (vector)，而是将每个类别表示为一个相对较小、密集的连续值向量，称为*嵌入*。网络在训练期间*学习*这些嵌入向量的最优值。这使得网络能在较低维度空间中找出类别间的复杂关系。嵌入层是处理高基数分类数据的网络（如自然语言处理或推荐系统）中的标准组件，在查看特定网络架构时会更详细地讨论。
+
+### 选择正确的编码策略
+
+- 对于**名义分类特征**（无固有顺序）且**基数低到中等**的情况，**独热编码**是神经网络 (neural network)输入的标准且通常首选的方法。
+- 对于**有序分类特征**（有固有顺序），你*可以使用***标签编码**，但请注意等间距假设。独热编码通常仍是稳妥的选择。
+- 对于**高基数特征**，请考虑**特征哈希**、**分箱/分组**，或在网络架构中**使用嵌入 (embedding)层**。
+- 对于分类中的**目标变量**，通常使用**标签编码**。
+
+理解数据以及每种编码方法的影响对有效地准备数据很重要。选择正确的方法确保网络收到有意义的数值表示，有助于更好的学习和模型表现。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的机器学习指南，涵盖数据预处理技术，包括分类特征编码，适用于机器学习和深度学习的入门学习，并使用常用库进行实践。
+- [sklearn.preprocessing.OneHotEncoder](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html) — scikit-learn developers (2024)
+  官方文档，解释了分类特征独热编码的原理和用法，包含使用scikit-learn库的实际示例。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教材，提供了深度学习的全面理论背景，包括对分布式表示（嵌入）及其在高维数据处理中的作用的讨论。
+- [Feature Hashing for Large Scale Multitask Learning](https://arxiv.org/pdf/0902.2206.pdf) — Kilian Q. Weinberger, Anirban Dasgupta, John Langford, Alex Smola, Tony Attwood (2009)
+  Journal: Proceedings of the 26th International Conference on Machine Learning (ICML); Publisher: ACM; Volume: 5; Pages: 1113-1120; DOI: [10.1145/1553374.1553516](https://doi.org/10.1145/1553374.1553516)
+  一篇开创性论文，介绍了特征哈希（哈希技巧）作为一种高效处理高维分类特征的技术，特别适用于大规模机器学习问题。

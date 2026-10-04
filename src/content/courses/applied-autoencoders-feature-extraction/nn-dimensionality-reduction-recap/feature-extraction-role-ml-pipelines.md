@@ -1,0 +1,57 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "nn-dimensionality-reduction-recap"
+lesson: "feature-extraction-role-ml-pipelines"
+sourceId: 6442
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-1-nn-dimensionality-reduction-recap/feature-extraction-role-ml-pipelines"
+title: "机器学习流程中特征提取的作用"
+description: "了解特征提取在构建有效机器学习流程中的重要性和影响。"
+order: 5
+plots: []
+sourceHash: "bcec2b4c0b2d5d68a61b4cf25389704e6da1c81b0b8ea85a3c429c4c13e2b3ef"
+sourceCorrections: []
+---
+
+高维数据会带来很大的挑战，这常被称为“维度灾难”。为解决这些挑战，多种维度降低的方法被广泛使用。特征提取是任何机器学习 (machine learning)（ML）项目中一项密切相关且不可或缺的工作。理解其在整个ML流程中的位置是主要关注点。
+
+原始数据，以其最初形态，通常未经机器学习算法优化。它可能包含不相关信息、冗余，或者结构不便于模型有效学习。特征提取是将这些原始数据转换为一组数值特征的过程，这些特征能更好地表示问题中的潜在模式，以供预测模型使用。目标是创建信息量大、区分度高、能带来更好模型性能、更简单模型和更快计算速度的特征。
+
+将特征提取与特征*选择*区分开来很有用。特征选择是指从*原始*特征中选择一个子集，并丢弃其余部分。相比之下，特征提取是从原始集合中创建*新*特征，通常通过组合或转换它们。这些新特征可以提供数据更简洁且更有效的表示。特征工程是一个更广义的术语，它包括特征提取和特征选择，以及基于专业知识的手动特征创建。在本课程中，我们的主要侧重将是特征提取，具体是使用自编码器来自动学习这些转换。
+
+### 特征提取为何重要
+
+有效的特征提取通常是ML项目成功的决定因素。以下是它扮演如此重要作用的原因：
+
+1. **提升模型性能**：模型从特征中学习。如果特征嘈杂、不相关或不能很好地表示问题，即使最精密的算法也会遇到困难。另一方面，设计良好的特征可以使数据中的模式更明显，从而让模型更有效地学习，并获得更高准确性或对未见数据有更好的泛化能力。
+2. **减少过拟合 (overfitting)**：当模型过于学习训练数据的噪声和特定特点时，就会发生过拟合，导致在新、未见数据上性能不佳。通过将数据转换为更相关且可能维度更低的特征集合，特征提取可以帮助降低模型复杂度并缓解过拟合。它促使模型关注信号而非噪声。
+3. **计算效率**：使用更少但信息量更大的特征集合，可以明显减少模型训练和推理 (inference)所需的计算资源。特征越少，意味着内存占用越低，处理时间越快，这在处理大型数据集或在资源受限环境中部署模型时尤其有益。
+4. **增强数据理解**：虽然自编码器等复杂模型提取的特征可能不像原始变量那样总是直接可解释，但特征提取过程通常涉及考察和了解数据结构。可视化提取的特征（如果可能）也可以提供对数据中关系的理解。
+5. **处理不同数据类型**：特征提取技术可以针对不同类型数据进行定制。例如，针对文本、图像或时间序列数据使用特定方法，将其转换为ML模型可以处理的合适数值表示。
+
+### 机器学习 (machine learning)流程中的特征提取
+
+特征提取并非孤立的步骤；它是典型机器学习工作流的组成部分。了解它所在的位置，可以帮助你认识它对后续阶段的影响。
+
+> 一个典型的机器学习流程，突出显示了特征提取阶段。反馈循环表明迭代优化。
+
+如图所示：
+
+- 在初步数据收集和预处理（包括清理缺失值和数值数据缩放等任务）之后，通常会进行特征提取。
+- 然后将新的工程特征输入到机器学习模型中进行训练。
+- 模型性能会被评估。如果结果不满意，你可能会重新审视特征提取步骤（或其他前置步骤），以优化特征、选择不同技术或调整参数 (parameter)。这种迭代过程在ML开发中很常见。
+
+你已经遇到过主成分分析（PCA），作为一种维度降低的线性方法，它是一种特征提取形式。PCA找到作为原始特征线性组合的主成分。虽然对许多数据集都有效，但PCA的线性特点在处理数据中复杂、非线性关系时会成为一种局限。
+
+自编码器是本课程的核心内容，它们正是在这里发挥作用的。自编码器是神经网络 (neural network)，它们学习强大、通常非线性的特征表示。它们通过学习重建输入数据，将其通过一个压缩的“瓶颈”层来实现这一点。此瓶颈层中的表示用作提取的特征。随着我们学习的推进，你将学会如何构建各种类型的自编码器，并使用它们为一系列机器学习任务提取有意义的特征，相比传统线性方法更为先进。准备你的深度学习 (deep learning)环境，这将在下一节讲到，是实现这些高级技术的第一步。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础性教科书，全面介绍了深度学习，涵盖了神经网络、表示学习以及包括自动编码器在内的无监督学习方法。
+- [Reducing the Dimensionality of Data with Neural Networks](https://pubmed.ncbi.nlm.nih.gov/16873662/) — Geoffrey E. Hinton and Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  这篇开创性论文介绍了深度自动编码器作为一种有效的非线性降维和无监督特征学习方法，对该领域产生了深远影响。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://link.springer.com/book/10.1007/978-0-387-84858-7) — Trevor Hastie, Robert Tibshirani, Jerome Friedman (2009)
+  Publisher: Springer; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  一本全面的统计学习参考书，涵盖了维度灾难、各种降维技术（例如PCA）以及机器学习管道的通用方法。第二版。

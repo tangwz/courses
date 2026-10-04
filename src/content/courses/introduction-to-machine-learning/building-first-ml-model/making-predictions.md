@@ -1,0 +1,93 @@
+---
+course: "introduction-to-machine-learning"
+chapter: "building-first-ml-model"
+lesson: "making-predictions"
+sourceId: 1540
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-machine-learning/chapter-7-building-first-ml-model/making-predictions"
+title: "进行预测"
+description: "Learn how to use your trained model to make predictions on new, unseen data."
+order: 5
+plots: []
+sourceHash: "94f78018d08af2fb9be0ac814df555e9ea6d32ffec60d49463d9018251836d3e"
+sourceCorrections: []
+---
+
+您已成功训练了您的机器学习 (machine learning)模型！它从训练数据中学到了模式。但衡量一个模型真正的标准，并非它对训练数据的熟悉程度；而是它在新数据、未见过的数据上的表现如何。这时就需要进行预测。毕竟，构建模型的目的通常是将其应用于结果未知的未来情况。
+
+### 使用已训练的模型进行预测
+
+模型一旦训练完成（在像 Scikit-learn 这样的库中通常使用 `fit()` 方法），它就会在内部存储学到的模式（作为参数 (parameter)）。为了得到预测结果，您通常会使用一个名为 `predict()` 的方法。这个方法接受新的输入数据（只有特征，没有标签），并使用学到的模式生成一个输出，即模型对每个输入样本的预测。
+
+假设您训练了一个线性回归模型，根据房屋面积预测房价。训练过程会通过您的训练数据点找到最佳直线（由斜率和截距定义）。现在，如果您有一栋已知面积（但未知价格）的新房，您可以将这个面积输入到已训练模型的 `predict()` 方法中。模型将使用其学到的直线方程（$y = mx + b$）来计算该面积（$x$）对应的预测价格（$y$）。
+
+### 准备输入数据
+
+一个非常重要的地方：您提供给 `predict()` 方法的新数据*必须*具有与模型训练数据完全相同的结构和预处理方式。这意味着：
+
+1. **相同特征：** 它必须包含模型所预期的相同特征（列）。
+2. **相同顺序：** 特征必须以相同的顺序排列。
+3. **相同预处理：** 如果您对训练特征进行了缩放（例如，使用标准化或归一化 (normalization)）或对分类特征进行了编码（例如，使用独热编码），您*必须*在进行预测之前对新数据应用完全相同的转换。请使用在训练数据上拟合的*相同缩放器或编码器对象*。
+
+未能正确准备输入数据是错误和荒谬预测的常见原因。模型只理解它从中学到的数据格式。
+
+### 使用 Scikit-learn 进行预测
+
+假设您有一个名为 `model` 的已训练模型对象（它可以是 `LinearRegression`、`LogisticRegression`、`KNeighborsClassifier` 等），并且您的新数据、未见过的数据（仅特征）存储在一个名为 `X_new` 的变量中。这个 `X_new` 应该格式正确（例如，一个带有正确列和缩放的 NumPy 数组或 pandas DataFrame）。
+
+进行预测通常很简单：
+
+```python
+# 假设 'model' 是您已训练的 Scikit-learn 模型
+# 假设 'X_new' 是您的新数据，已正确预处理
+
+predictions = model.predict(X_new)
+
+# 打印预测结果
+print(predictions)
+```
+
+`predictions` 变量现在将保存模型对 `X_new` 中每个样本的输出。
+
+### 理解输出
+
+`predictions` 中的值类型取决于您的模型所训练的问题类型：
+
+- **回归：** 如果 `model` 是一个回归模型（例如 `LinearRegression`），`predictions` 将包含连续的数值。例如，`[250000.50, 180000.75, 310000.00]` 可能是预测的房价。
+- **分类：** 如果 `model` 是一个分类模型（例如 `LogisticRegression` 或 `KNeighborsClassifier`），`predictions` 将包含预测的类别标签。例如，`['spam', 'not spam', 'spam']` 或 `[1, 0, 1]`（其中 1 可能代表 '垃圾邮件'，0 代表 '非垃圾邮件'）。
+
+#### 在分类中获取概率（可选但实用）
+
+对于许多分类算法，您可以获得比仅仅预测类别更详细的信息。您不再是问“模型预测哪个类别？”，而是问“模型为每个类别分配了多少概率？”这通常通过 `predict_proba()` 方法来完成。
+
+```python
+# 假设 'model' 是一个已训练的分类模型
+# 假设 'X_new' 是您的新数据，已正确预处理
+
+probabilities = model.predict_proba(X_new)
+
+# 打印概率
+print(probabilities)
+```
+
+如果您有两个类别（例如，0 和 1），`predict_proba()` 的输出对于三个输入样本可能如下所示：
+
+```
+[[0.1 0.9]  # 样本 1：类别 0 的概率为 10%，类别 1 的概率为 90%
+ [0.8 0.2]  # 样本 2：类别 0 的概率为 80%，类别 1 的概率为 20%
+ [0.4 0.6]] # 样本 3：类别 0 的概率为 40%，类别 1 的概率为 60%
+```
+
+每一行对应 `X_new` 中的一个样本。每一列对应一个类别（通常按排序顺序，例如类别 0 然后类别 1）。每行中的值总和为 1。标准的 `predict()` 方法通常只选择概率最高的类别。对于上面的样本 1，`predict()` 将输出类别 1（因为 0.9 > 0.1）。了解这些概率会很有用，特别是当您想了解模型的置信度或设置不同的决策阈值时。
+
+既然您知道了如何使用已训练的模型对新数据进行预测，下一个合乎逻辑的步骤就是弄清楚这些预测实际有多好。我们需要衡量模型表现的方法，这正是我们将在下一节关于评估中讨论的内容。
+
+## 参考资料
+
+- [Scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html) — scikit-learn developers (2023)
+  提供了使用Scikit-learn估计器的概述，详细介绍了`fit()`、`predict()`和`predict_proba()`等方法，以及为推理准备一致数据的指南。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的指南，展示了如何训练机器学习模型并将其应用于对新数据进行预测，其中强调了Scikit-learn和正确的数据处理。
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2021)
+  Publisher: Springer
+  一本基础教材，涵盖了统计学习方法，包括将模型拟合到数据并用于预测和推断的原理。

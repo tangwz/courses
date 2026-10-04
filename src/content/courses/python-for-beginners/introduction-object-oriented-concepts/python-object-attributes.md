@@ -1,0 +1,86 @@
+---
+course: "python-for-beginners"
+chapter: "introduction-object-oriented-concepts"
+lesson: "python-object-attributes"
+sourceId: 2372
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-8-introduction-object-oriented-concepts/python-object-attributes"
+title: "属性：在对象中存储数据"
+description: "了解如何定义和访问与对象关联的属性（变量），以存储其状态或数据。"
+order: 4
+plots: []
+sourceHash: "fe1e2afbc4b56b07c0c45ed84ab487cd8aa614101c17db6500c371267bceaa21"
+sourceCorrections: []
+---
+
+对象是编程中的基本构造，通过`class`关键字定义的蓝图来创建，并从中生成独立的实例。这些对象之所以有实际用途，在于它们能够存储各自独特的数据。例如，可以把对象视为一个具体的实体，如在线商店中的顾客。这个顾客对象需要存储与他们相关的信息，例如姓名、电子邮件地址、购买历史以及其他相关详细信息。这些存储在对象内部的数据被称为其**属性**。
+
+属性本质上是属于类特定实例的变量。它们表示该特定对象的状态或特点。
+
+### 分配属性
+
+你可以在对象创建*之后*，使用简单的点表示法为其添加属性。语法是 `object.attribute_name = value`。让我们回顾一下简单的`Dog`类例子：
+
+```python
+# 定义一个简单类（设计图）
+class Dog:
+    # 目前，这个类定义是空的
+    pass
+
+# 创建一个实例（一个实际的狗对象）
+my_dog = Dog()
+
+# 现在，让我们给这只特定的狗一些属性
+my_dog.name = "Fido"
+my_dog.breed = "German Shepherd"
+my_dog.age = 4
+
+# 创建另一个实例
+another_dog = Dog()
+another_dog.name = "Buddy"
+another_dog.breed = "Golden Retriever"
+another_dog.age = 2
+```
+
+在这段代码中：
+
+1. 我们定义了一个空的`Dog`类。它目前只是一个占位设计图。
+2. 我们创建了两个不同的`Dog`对象：`my_dog`和`another_dog`。
+3. 然后我们使用点表示法（`my_dog.name = "Fido"`）为*每个特定对象*的`name`、`breed`和`age`等属性赋值。
+
+请注意，`my_dog`和`another_dog`是根据同一个`Dog`类创建的独立对象。每一个对象都拥有自己的一套属性。设置`my_dog.name`完全不会影响`another_dog.name`。属性存储着每个独立实例特有的状态。
+
+### 访问属性
+
+属性一旦被赋值，你就可以使用相同的点表示法来访问它们的值：`object.attribute_name`。
+
+```python
+# 沿用前面的例子：
+
+# 访问 my_dog 的属性
+print(f"我的狗的名字是：{my_dog.name}")
+print(f"它的品种是：{my_dog.breed}")
+print(f"它 {my_dog.age} 岁了。")
+
+# 访问 another_dog 的属性
+print(f"\n我的另一只狗的名字是：{another_dog.name}")
+print(f"它的品种是：{another_dog.breed}")
+```
+
+这段代码展示了如何获取存储在每个`Dog`对象属性中的值。
+
+> 每个`Dog`对象（实例）都保留自己独立的一套属性值，即使它们都是从同一个`Dog`类设计图创建的。
+
+这样的属性也常被称为**实例变量**，因为它们是属于特定实例的变量。
+
+尽管这样直接赋值属性是可行的，但通常更规范的做法是在对象初次创建时就设置其初始属性。Python为此提供了一个特殊方法，`__init__`，我们将在下一节中介绍它。使用`__init__`能够确保从类创建的每个对象都带有一组已定义的初始属性。
+
+## 参考资料
+
+- [The Python Tutorial - 9. Classes](https://docs.python.org/3/tutorial/classes.html#class-and-instance-attributes) — Python Software Foundation (2024)
+  提供Python中类、实例以及属性（实例变量）工作方式的官方解释。
+- [Fluent Python: Clear, Concise, and Effective Programming](https://www.oreilly.com/library/view/fluent-python/9781492056355/) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media
+  一本全面的指南，涵盖Python的数据模型，包括如何在对象中管理和访问属性。
+- [Learning Python](https://www.oreilly.com/library/view/learning-python-5th/9781449355722/) — Mark Lutz (2013)
+  Publisher: O'Reilly Media
+  一本经典且全面的Python编程资源，解释了面向对象原则和实例属性的使用。

@@ -1,0 +1,58 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "importance-clean-data"
+lesson: "what-is-data-preprocessing"
+sourceId: 3944
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-1-importance-clean-data/what-is-data-preprocessing"
+title: "什么是数据预处理？"
+description: "了解数据预处理包含哪些内容以及它与数据清洗的关系。"
+order: 2
+plots: []
+sourceHash: "40bae4fad559cb34f3f83eb8fa5661871778bdca882c1d8f38d5954391c0b46b"
+sourceCorrections: []
+---
+
+数据清洗专门针对修正缺失值和重复项等错误，而**数据预处理**是一个更广泛的术语。可以将其看作是对原始数据进行的所有操作集合，目的是使其适合分析或训练机器学习 (machine learning)模型。数据清洗是数据预处理的重要组成部分，通常是第一步。
+
+想象一下你正在为一道菜准备食材。你不会直接把所有东西从购物袋里一股脑儿扔进锅里。你会先洗蔬菜（清洗），然后可能会将它们切成特定大小，量取分量，或者根据食谱说明将温度从摄氏度转换为华氏度。所有这些准备步骤，包括清洗，都属于食材准备的范畴。数据预处理就像厨房里的准备工作，只不过对象是数据。
+
+### 为何要进行数据预处理？
+
+原始数据很少能直接被分析工具或机器学习 (machine learning)算法有效使用。预处理旨在达成以下几个目标：
+
+1. **提升数据质量：** 这直接涉及前面讨论的清洗步骤——处理缺失项、去除重复数据以及修正不准确之处。高质量的数据能带来更可靠的分析和可信的结果。
+2. **确保兼容性：** 许多分析技术和算法对输入数据的格式有严格要求。例如，大多数机器学习算法只处理数值数据，因此基于文本的类别可能需要转换。日期可能需要分解为组成部分（年、月、日），或者数值数据可能需要缩放到一个共同的范围。
+3. **提升模型表现：** 将预处理过的数据输入到机器学习模型中通常会带来更好的表现。通过去除噪声并适当组织数据，可以帮助算法更有效地学习规律。这常被概括为“垃圾进，垃圾出”——质量差的输入数据会导致质量差的输出或预测结果。
+
+### 数据预处理的常见步骤
+
+数据预处理包含多种技术，其中许多与数据清洗重叠或包含数据清洗。一些常见步骤包括：
+
+- **清洗：** 识别并处理缺失值、重复记录以及可能错误的数据点。（将在后续章节中详细介绍）。
+- **转换：**
+  - **格式转换：** 更改数据类型（例如将表示数字的文本转换为实际的数字类型，或将字符串转换为日期对象）。（将在本课程后续部分介绍）。
+  - **缩放/标准化：** 调整数值特征的范围（例如，将值缩放到0到1之间）。这对于某些算法通常很重要。
+  - **编码：** 将分类数据（如“Red”、“Green”、“Blue”）转换为算法可以理解的数值表示。
+- **格式化：** 规范化文本（例如，将所有文本转换为小写，去除多余空格）并确保单位或表示的一致性。（基本格式化将在本课程后续部分介绍）。
+
+所需的具体步骤在很大程度上取决于数据集和预期的使用场景。
+
+### 预处理工作流程
+
+预处理并非总是严格按顺序进行的步骤。它通常是一个迭代过程，你需要检查数据，应用转换或清洗步骤，再次检查，然后或许调整你的方法。
+
+> 一个简化的视图，展示了数据如何从原始状态通过预处理变为可用于分析或建模的状态。
+
+在本课程中，我们将侧重于预处理中基本的清洗和格式化方面，为您提供处理常见数据质量问题所需的基本技能。理解这个更广泛的背景有助于体会这些初始步骤对于任何数据驱动项目的重要性。
+
+## 参考资料
+
+- [Data Mining: Concepts and Techniques](https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1) — Jiawei Han, Micheline Kamber, and Jian Pei (2011)
+  Publisher: Elsevier
+  一本广泛使用的教材，全面介绍了数据挖掘，其中包含专门章节，涵盖数据预处理的各个方面，包括清洗、集成、转换和规约。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本面向机器学习从业者的实用指南，详细解释了数据预处理的关键步骤，如特征缩放、类别编码和缺失值处理，并提供了代码示例。
+- [Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) — scikit-learn developers (2024)
+  Publisher: scikit-learn project
+  scikit-learn官方文档中关于数据预处理的部分，提供了为机器学习算法准备数据时使用的各种转换器和缩放器的技术解释和使用示例。

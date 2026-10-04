@@ -1,0 +1,88 @@
+---
+course: "introduction-quantum-computing"
+chapter: "single-qubit-gates-superposition"
+lesson: "concept-of-superposition"
+sourceId: 8152
+sourceUrl: "https://apxml.com/zh/courses/introduction-quantum-computing/chapter-3-single-qubit-gates-superposition/concept-of-superposition"
+title: "叠加态的概念"
+description: "基态线性组合的技术解析。"
+order: 1
+plots: ["plots/8152-0.json"]
+sourceHash: "d614bc292519cb91334654ca62314433f078abe8bde28e44a1184a3772030215"
+sourceCorrections: []
+---
+
+经典计算机基于二进制逻辑系统运行，其中一个比特必须处于两个不同状态之一：0 或 1。如果你测量经典电路板上的电压，你会发现它要么是高电平（代表 1），要么是低电平（代表 0）。两者之间不存在中间地带。
+
+在量子计算中，我们大大扩展了这种逻辑。量子比特（qubit）不局限于只能是 0 或 1。相反，它可以处于一种作为两者线性组合的状态。这种现象被称为叠加态（Superposition）。它允许量子算法以经典系统无法模拟的方式处理信息。你可以将其视为从确定的布尔值转变为概率向量 (vector)。
+
+### 状态的线性组合
+
+为了从数学上理解叠加态，我们使用前几章介绍的向量 (vector)表示法。我们将标准基态定义为：
+
+$|0\rangle = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, \quad |1\rangle = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$
+
+处于叠加态的量子比特由状态向量 $|\psi\rangle$ 表示，该向量是将这两个基向量相加，并乘以特定的系数。我们用以下等式表示这种关系：
+
+$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$
+
+在这个等式中，$\alpha$ (alpha) 和 $\beta$ (beta) 是复数，被称为概率振幅。这些振幅决定了该量子比特拥有多少“0 状态成分”和多少“1 状态成分”。
+
+下图展示了经典比特与处于叠加态的量子比特在结构上的区别。
+
+> 经典确定性状态与量子叠加态中的线性组合的比较。
+
+### 概率振幅与归一化 (normalization)
+
+数字 $\alpha$ 和 $\beta$ 并不是直接的概率，而是振幅。要找到在特定状态下测量到量子比特的概率，必须计算振幅的模平方。
+
+- 测量到 $|0\rangle$ 的概率是 $|\alpha|^2$。
+- 测量到 $|1\rangle$ 的概率是 $|\beta|^2$。
+
+由于测量必然会产生“某种”结果（不是 0 就是 1），系统的总概率必须等于 100%。这引出了归一化约束，这是所有有效量子状态的基本规则：
+
+$|\alpha|^2 + |\beta|^2 = 1$
+
+如果你遇到的状态向量 (vector)的模平方之和不等于 1，那么它就不能代表量子比特的有效物理状态。
+
+### 一个具体的例子
+
+让我们来看一个具体的、均匀分布的叠加态。如果一个量子比特处于被测量为 0 或 1 的概率相等的状态，其振幅通常设置为 $1/\sqrt{2}$。
+
+$|+\rangle = \frac{1}{\sqrt{2}}|0\rangle + \frac{1}{\sqrt{2}}|1\rangle$
+
+当我们对这个状态应用概率规则时：
+
+1. 计算 0 的概率：$| \frac{1}{\sqrt{2}} |^2 = \frac{1}{2} = 0.5$
+2. 计算 1 的概率：$| \frac{1}{\sqrt{2}} |^2 = \frac{1}{2} = 0.5$
+3. 检查总概率：$0.5 + 0.5 = 1.0$
+
+这个特定的状态通常记作 $|+\rangle$。在这种状态下，量子比特并不是在 0 和 1 之间快速切换。它处于一个稳定的、确定的量子状态，同时由两个基向量 (vector)组成。
+
+我们可以使用简单的分布图表来直观展示这些概率。
+
+
+
+![等概率叠加态的测量概率](plots/8152-0.json)
+
+
+
+> 测量处于 $|+\rangle$ 状态的量子比特时的概率分布。结果是等概率的。
+
+### 区分叠加态与不确定性
+
+对于工程师来说，区分叠加态与经典不确定性非常有用。在经典概率中，如果你抛出一枚硬币并用手盖住，硬币要么是正面，要么是反面；你只是还不知道结果。这属于信息的缺失。
+
+而在量子力学中，在测量之前，系统本身*就是*状态的向量 (vector)相加。量子比特拥有由 $\alpha$ 和 $\beta$ 定义的确定的信息，但该信息描述的是一种叠加，而不是隐藏的二进制值。对 0 或 1 的“选择”仅在测量的一瞬间发生。
+
+### Python 中的向量 (vector)表示
+
+在本章后续的代码实现中，我们将使用 NumPy 数组来表示这些状态。由于 $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$，其向量形式为：
+
+$\begin{bmatrix} \alpha \\ \beta \end{bmatrix}$
+
+对于上述等概率叠加的例子，向量为：
+
+$\begin{bmatrix} \frac{1}{\sqrt{2}} \\ \frac{1}{\sqrt{2}} \end{bmatrix} \approx \begin{bmatrix} 0.707 \\ 0.707 \end{bmatrix}$
+
+理解这种向量结构非常必要，因为量子门（我们用来操作量子比特的算子）是与这些向量相乘的矩阵。门操作本质上是改变 $\alpha$ 和 $\beta$ 的值，从而改变测量结果的概率。

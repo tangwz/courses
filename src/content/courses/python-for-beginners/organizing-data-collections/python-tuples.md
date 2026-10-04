@@ -1,0 +1,197 @@
+---
+course: "python-for-beginners"
+chapter: "organizing-data-collections"
+lesson: "python-tuples"
+sourceId: 2314
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-4-organizing-data-collections/python-tuples"
+title: "不可变序列：元组"
+description: "了解元组，Python的有序但不可变的序列类型，常用于固定项的集合。"
+order: 3
+plots: []
+sourceHash: "d925144116d10a0bc2c3bdcb3ade03a38da7152253e99e8f0dc3a9a472246a67"
+sourceCorrections: []
+---
+
+在学习了列表之后，列表是可修改的有序数据容器，我们现在关注另一种内置序列类型：元组。乍一看，元组与列表非常相似，但它们有一个重要区别：它们是**不可变的**。这意味着元组一旦创建，其内容就不能被修改、添加或删除。
+
+可以将元组视为一个固定项的序列。如果你有一组表示不变事物的值，比如一个点的坐标(x, y)或特定颜色的RGB值，元组通常比列表更适合。
+
+### 创建元组
+
+你使用括号`()`来创建元组，而不是列表使用的方括号`[]`。元组中的项用逗号分隔。
+
+```python
+# 一个空元组
+empty_tuple = ()
+print(empty_tuple)
+
+# 一个包含整数的元组
+coordinates = (10, 20)
+print(coordinates)
+
+# 一个包含混合数据类型的元组
+person_info = ("Alice", 30, "New York")
+print(person_info)
+
+# 如果上下文明确，括号有时可以省略
+another_tuple = 100, 200, 300
+print(another_tuple)
+print(type(another_tuple)) # 输出: <class 'tuple'>
+```
+
+**创建单项元组**
+
+创建只有一个项的元组需要一种特殊语法：你必须在项后面加上一个逗号。如果没有逗号，Python会将括号解释为标准的组合括号，而不是定义一个元组。
+
+```python
+# 这不是一个元组，它只是整数5
+not_a_tuple = (5)
+print(type(not_a_tuple)) # 输出: <class 'int'>
+
+# 这是一个单项元组
+single_item_tuple = (5,)
+print(type(single_item_tuple)) # 输出: <class 'tuple'>
+print(single_item_tuple)
+```
+
+这个尾随逗号明确告诉Python你打算创建一个元组，即使只有一个元素。
+
+### 访问元组元素
+
+访问元组中的元素与访问列表中的元素方法完全相同。你使用方括号`[]`和你想获取的元素的索引。请记住，索引从0开始。
+
+```python
+rgb_color = (255, 165, 0) # 橙色
+
+# 访问第一个元素（索引0）
+red_value = rgb_color[0]
+print(f"Red: {red_value}") # 输出: 红色: 255
+
+# 访问第三个元素（索引2）
+blue_value = rgb_color[2]
+print(f"Blue: {blue_value}") # 输出: 蓝色: 0
+```
+
+切片也与列表的操作方法相同，使你能够获取元组的子序列。
+
+```python
+weekdays = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+# 获取从索引1开始到（不包括）索引4的元素
+mid_week = weekdays[1:4]
+print(mid_week) # 输出: ('Tue', 'Wed', 'Thu')
+
+# 获取最后两个元素
+weekend = weekdays[-2:]
+print(weekend) # 输出: ('Sat', 'Sun')
+```
+
+### 不可变性：其主要特点
+
+这正是元组与列表的根本区别。元组一旦创建，就不能修改其元素。尝试为元组中某个索引赋值新值会导致`TypeError`。
+
+```python
+my_tuple = (10, 20, 30)
+print(my_tuple)
+
+# 让我们尝试修改索引1处的元素
+# 这将导致一个错误！
+# my_tuple[1] = 25 # 取消注释此行会导致TypeError
+
+# 同样，你不能添加或删除元素
+# 像append()、extend()、remove()、pop()这样的方法不适用于元组
+```
+
+这种不可变性可能看起来像一个限制，但它实际上是一个特性，提供了几个优点：
+
+1. **数据完整性：** 当你使用元组表示不应变动的数据时，你确保它在整个程序中保持不变。这可以防止意外修改。例子包括固定的坐标、配置设置或数据库记录。
+2. **字典键：** 字典要求其键是不可变的。由于元组是不可变的（前提是其所有元素也是不可变的，如数字或字符串），它们可以用作字典键。列表是可变的，因此不能。
+3. **性能：** Python可以对元组进行一些内部优化，因为它们的尺寸和内容是固定的。虽然通常可以忽略不计，但元组上的操作有时会比列表上的等效操作略快。
+
+```python
+# 使用元组作为字典键
+location_temps = {
+    (40.7128, -74.0060): 22,  # 纽约市坐标 -> 温度
+    (34.0522, -118.2437): 28, # 洛杉矶坐标 -> 温度
+}
+
+print(location_temps[(40.7128, -74.0060)]) # 输出: 22
+
+# 尝试使用列表作为键会导致TypeError
+# location_temps[[34.0522, -118.2437]] = 28 # 错误！
+```
+
+### 元组方法
+
+由于它们是不可变的，元组与列表相比内置方法很少。两个主要方法是：
+
+- `count(value)`: 返回`value`在元组中出现的次数。
+- `index(value)`: 返回`value`第一次出现的索引。如果未找到该值，则会引发`ValueError`。
+
+```python
+numbers = (1, 2, 5, 2, 8, 2, 10)
+
+# 计算数字2的出现次数
+count_of_2 = numbers.count(2)
+print(f"The number 2 appears {count_of_2} times.") # 输出: 数字2出现了3次。
+
+# 查找数字8第一次出现的索引
+index_of_8 = numbers.index(8)
+print(f"The number 8 first appears at index {index_of_8}.") # 输出: 数字8第一次出现在索引4。
+
+# 尝试查找元组中不存在的值会引发错误
+# index_of_99 = numbers.index(99) # 取消注释此行会导致ValueError
+```
+
+### 元组的打包与解包
+
+Python允许一种与元组相关的便捷语法，称为打包和解包。
+
+**打包：** 当你列出用逗号分隔的值而没有用括号包围时（通常），Python会自动将它们“打包”成一个元组。
+
+```python
+packed_data = "Max", 25, "Berlin" # 值被打包成一个元组
+print(packed_data)      # 输出: ('Max', 25, 'Berlin')
+print(type(packed_data)) # 输出: <class 'tuple'>
+```
+
+**解包：** 你可以在一个赋值语句中将元组的元素赋值给单个变量。左侧变量的数量必须与元组中元素的数量匹配。
+
+```python
+point = (15, 40)
+
+# 将元组解包到变量x和y中
+x, y = point
+
+print(f"x coordinate: {x}") # 输出: x坐标: 15
+print(f"y coordinate: {y}") # 输出: y坐标: 40
+
+# 这也适用于交换变量！
+a = 10
+b = 20
+a, b = b, a # 将(b, a)打包成一个元组，然后解包到a, b中
+print(f"a: {a}, b: {b}") # 输出: a: 20, b: 10
+```
+
+解包常用于遍历元组序列，或函数返回多个值时（这些值通常以元组形式返回）。
+
+### 列表与元组的选择
+
+那么，你何时应该使用列表，何时应该使用元组呢？
+
+- 当你的项集合可能需要变动时：添加、删除或修改元素，请使用**列表**。列表是可变的，并且具有灵活性。可以把它看作一个购物清单或用户列表。
+- 当你有一组表示固定实体且创建后不应变动的项时，请使用**元组**。元组是不可变的，并提供数据完整性。可以把它看作坐标、固定配置设置或RGB颜色值。
+
+理解元组的不可变特性很重要。尽管它们与列表共享索引和切片等序列行为，但其不可修改的特点使其适用于需要或要求不变性的不同编程情况。
+
+## 参考资料
+
+- [Built-in Types - Tuples](https://docs.python.org/3/library/stdtypes.html#tuples) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  Python元组类型的官方权威参考文献，详细介绍了其创建、不可变性、方法和一般用法。
+- [Fluent Python, 2nd Edition](https://www.vitalsource.com/products/fluent-python-clear-concise-and-effective-programming-luciano-ramalho-v9781492056300) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media; Pages: 1014
+  一本全面的书籍，对Python的数据模型提供了深入的理解，包括元组作为不可变序列的具体功能及其影响。
+- [Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming](https://nostarch.com/python-crash-course-3rd-edition/) — Eric Matthes (2022)
+  Publisher: No Starch Press
+  一本面向初学者的实用书籍，涵盖了Python的基础知识，包括对列表和元组及其区别的清晰解释。

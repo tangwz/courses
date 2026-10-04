@@ -1,0 +1,54 @@
+---
+course: "building-ml-recommendation-system"
+chapter: "foundations-of-recommendation-systems"
+lesson: "what-are-recommendation-systems"
+sourceId: 7448
+sourceUrl: "https://apxml.com/zh/courses/building-ml-recommendation-system/chapter-1-foundations-of-recommendation-systems/what-are-recommendation-systems"
+title: "什么是推荐系统？"
+description: "推荐系统及其在现代应用中功能的概述。"
+order: 1
+plots: []
+sourceHash: "9a6b38044dce246d44afed17bea693ad60a4b18c87e7481cdf91683d0aeafd3a"
+sourceCorrections: []
+---
+
+几乎每次你与现代数字平台互动时，无论是流媒体看电影、浏览电商网站，还是使用音乐服务，你都在与推荐系统打交道。这些系统是精密的决策过滤工具，旨在预测你的偏好，并向你展示你可能感兴趣或觉得有用的内容。它们的主要功能——特别是在处理海量内容和产品目录时——是缓解信息过载，为每个用户打造个性化的体验。
+
+从本质上讲，推荐系统是在预测用户会对某个项目给出的“评分”或“偏好”。这并不总是意味着 5 星评分。偏好也可以从用户行为中推断出来，例如看完整段视频、购买产品或在某篇文章上停留的时间。该系统的主要目标是从数百万个项目中筛选出符合个人口味的一小部分相关内容。
+
+### 推荐系统的运作原理
+
+推荐引擎基于两个主要信息源运行：用户数据和项目数据。它处理这些信息以学习模式和关联。例如，它可能会发现喜欢电影 A 的用户往往也喜欢电影 B，或者对具有特定属性（如电影类型或导演）的项目表现出兴趣的用户，可能会喜欢其他具有相似属性的项目。
+
+输出通常是一个排序列表，按用户感兴趣的可能性从高到低排列。这个过程形成了一个持续的反馈循环：用户与推荐内容互动，产生新数据，这些数据随后被用于改进未来的建议。
+
+> 推荐系统数据流的宏观视图。用户和项目数据输入引擎，引擎为用户生成排序列表，用户的交互则会产生新的反馈数据。
+
+### 商业影响
+
+从商业角度来看，推荐系统是提高用户参与度和收入的强大工具。
+
+- **对于电子商务：** 它们可以通过建议相关产品来增加销售额，从而提高转化率和平均订单金额。一个经典的例子是亚马逊的“购买了此商品的用户还购买了”功能。
+- **对于内容平台：** 它们通过推荐吸引人的内容（如 Netflix 上的电影或 YouTube 上的视频）来提高用户留存率。通过让用户在平台上停留更长时间，它们增加了广告机会或增强了订阅价值。
+- **对于社交媒体：** 它们整理个性化动态，展示相关的帖子和人际联系，使用户体验更具吸引力，并鼓励他们再次访问。
+
+### 两种主要的推荐任务
+
+推荐系统的输出通常可以通过以下两种方式之一来定义，理解这一区别对于构建和评估系统非常有用。
+
+1. **评分预测：** 该任务涉及预测用户可能给某个项目的具体评分。例如，系统可能会预测某个用户会给一部电影打 4.2 分（满分 5 分）。目标是使这种预测尽可能准确。
+2. **项目排序：** 这是更常见的任务，系统为用户生成前 N 个项目的有序列表。在这里，预测的准确评分不如项目的相对顺序那么紧要。主要目标是确保最相关的项目出现在列表顶部。
+
+在本课程中，我们将构建能够执行这两种任务的系统，并学习如何适当地评估每种任务。有了对这些系统功能的整体认识，我们现在可以查看用于构建它们的各种算法方法。
+
+## 参考资料
+
+- [Recommender Systems: An Introduction](https://www.cambridge.org/core/books/recommender-systems/33827F6F50074F9D1E614C8360F95146) — Dietmar Jannach, Markus Zanker, Alexander Felfernig, Gerhard Friedrich (2010)
+  Publisher: Cambridge University Press
+  本书全面介绍了推荐系统的原理、方法和评估，适合初学者使用。
+- [Matrix Factorization Techniques for Recommender Systems](https://ieeexplore.ieee.org/document/5283401) — Yehuda Koren, Robert Bell, Chris Volinsky (2009)
+  Journal: Computer; Publisher: IEEE Computer Society; Volume: 42; Pages: 30-37; DOI: [10.1109/MC.2009.263](https://doi.org/10.1109/MC.2009.263)
+  这篇论文介绍了矩阵分解方法，该方法已成为推荐系统的标准方法，讨论了它们在评分预测中的应用。
+- [Introduction to Recommender Systems (Specialization)](https://www.coursera.org/specializations/recommender-systems) — Joseph A Konstan, Michael D. Ekstrand (2024)
+  Publisher: University of Minnesota
+  该在线专业课程提供了推荐系统领域的入门介绍，涵盖了基本概念、类型和应用。

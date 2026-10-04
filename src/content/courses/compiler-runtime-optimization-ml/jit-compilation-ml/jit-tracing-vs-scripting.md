@@ -1,0 +1,135 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "jit-compilation-ml"
+lesson: "jit-tracing-vs-scripting"
+sourceId: 4562
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-7-jit-compilation-ml/jit-tracing-vs-scripting"
+title: "追踪与脚本方法"
+description: "比较基于追踪和基于脚本的JIT，以捕获模型代码。"
+order: 2
+plots: []
+sourceHash: "1614f288331c86e2b79c4dbe10dc5dc99cb20c9acfea9eab6890c44d286a2797"
+sourceCorrections: []
+---
+
+在采用即时编译（JIT）时，首要步骤是从高级Python代码中获取模型的计算图。这个获取到的图作为JIT编译器进行优化和代码生成的输入。在计算图获取阶段，主要有两种策略：**追踪**和**脚本**。每种方法都有其独特的优点和局限，影响着它们能很好地处理的模型类型以及随后可进行的优化。
+
+### 追踪：记录执行路径
+
+追踪的运作方式是使用示例输入执行模型函数，并记录在该次特定执行过程中对张量对象进行的操作序列。可以将其想象成一个专门记录机器学习 (machine learning)操作及其数据依赖的分析器。
+
+**工作方式：**
+
+1. 您向JIT系统提供模型函数（例如，`torch.nn.Module`的`forward`方法，或用`@tf.function`装饰的TensorFlow函数）。
+2. 您使用示例张量输入调用该函数（例如，`model(example_input)`）。
+3. JIT机制会拦截涉及张量的框架操作调用（如卷积、矩阵乘法、激活函数 (activation function)）。
+4. 它会构建一个图表示（通常是中间表示，如TorchScript IR、TensorFlow GraphDef或HLO），该表示精确反映了这些特定输入所执行的操作序列。
+
+**示例：**
+
+考虑一个简单的Python函数：
+
+```python
+def simple_op(a, b):
+  c = a + b
+  d = c * 2
+  return d
+```
+
+如果使用`a = tensor([1])`和`b = tensor([2])`进行追踪，追踪器会记录：
+
+- 操作：`add`（输入：`a`，`b`；输出：`c`）
+- 操作：`mul`（输入：`c`，常数`2`；输出：`d`）
+- 返回：`d`
+
+生成的图捕获了这种线性序列。
+
+**优点：**
+
+- **简便性：** 对现有Python代码应用追踪通常很直接，无需大量修改。如果代码以即时执行模式运行，则很可能可以进行追踪。
+- **Python兼容性：** 追踪自然地处理框架操作*之间*执行的任意Python代码，只要这些代码不影响图结构本身（例如，使用标准Python数据结构，打印值）。
+
+**缺点：**
+
+- **静态控制流：** 追踪在处理依赖于数据的控制流时存在根本性困难。如果模型包含Python的`if`、`for`或`while`语句，且条件或循环边界取决于张量值，则追踪只捕获追踪时使用的*特定*示例输入所经过的路径。生成的图将不包含其他分支，也无法通用地表示循环结构。
+
+  ```python
+  def conditional_op(x, threshold):
+    if x.sum() > threshold: # Data-dependent condition
+      return x * 2
+    else:
+      return x + 1
+  ```
+
+  使用满足条件的`x`追踪`conditional_op`会生成一个只包含`x * 2`路径的图。`x + 1`路径将完全缺失。
+- **输入依赖性：** 被追踪的图与追踪期间使用的输入的属性（如形状、数据类型）内在相关。虽然一些JIT系统随后可以处理有限的动态性，但初始追踪可能过于专门化。
+- **副作用：** 追踪可能无法正确捕获Python的副作用，或者可能以意想不到的方式将其固化到图中。
+
+### 脚本：解析源代码
+
+脚本采用一种不同的方法。它不执行代码，而是直接解析模型函数（或其子集）的Python源代码，并将其转换为图表示，其中包含控制流结构。
+
+**工作方式：**
+
+1. 通常，您需要明确标记 (token)要进行脚本化的函数（例如，在PyTorch中使用`@torch.jit.script`），或者使用脚本编译器可以理解的受限Python子集来编写函数。
+2. 脚本编译器解析函数的源代码，构建抽象语法树（AST）。
+3. 它分析AST，将Python构造（赋值、运算符、控制流）转换为其中间表示（IR）中相应的图节点和结构。
+
+**示例：**
+
+使用相同的`conditional_op`函数：
+
+```python
+@torch.jit.script # 示例装饰器
+def conditional_op(x, threshold):
+  # 脚本编译器解析此结构
+  if x.sum() > threshold:
+    result = x * 2
+  else:
+    result = x + 1
+  return result
+```
+
+脚本编译器分析`if/else`结构，并生成一个图，其中包含表示条件（`x.sum() > threshold`）的节点，以及`true`分支（`x * 2`）和`false`分支（`x + 1`），以及在运行时选择适当路径的控制流机制。
+
+> 脚本化`conditional_op`函数生成的图表示，清晰地展示了条件分支。
+
+**优点：**
+
+- **控制流处理：** 脚本化擅长捕获依赖于张量值的Python控制流（`if`、`for`、`while`），并将其直接在图中表示出来。
+- **输入独立性：** 生成的图表示函数的实际逻辑，独立于“编译”步骤中使用的任何特定输入值。
+- **清晰的图：** 提供对预期计算更完整的表示，可能允许在控制流路径上进行更高级的图级优化。
+
+**缺点：**
+
+- **语言子集：** 脚本编译器通常只支持完整Python语言的一个子集。您可能需要重构复杂的Python逻辑、列表推导或对不支持库的调用，以符合可脚本化的子集。
+- **代码修改：** 通常需要明确的注解（装饰器）或遵守特定的编码模式。它通常无法透明地处理任意的、未经修改的Python代码。
+- **更高的学习曲线：** 开发者需要理解脚本语言子集的限制和要求。调试脚本错误有时不如调试标准Python直观。
+
+### 追踪与脚本的选择
+
+追踪与脚本之间的选择通常取决于模型性质和开发流程：
+
+| 特点 | 追踪 | 脚本 |
+| --- | --- | --- |
+| **易用性** | 通常对现有Python代码更简单 | 需要代码调整/注解 |
+| **控制流** | 较差（只捕获一条路径） | 良好（明确捕获分支/循环） |
+| **Python功能** | 处理大多数操作之间的Python代码 | 限于语言子集 |
+| **输入依赖性** | 高（图与追踪输入相关联） | 低（图表示代码逻辑） |
+| **稳定性** | 如果控制流改变，可能脆弱 | 表示更可靠 |
+| **适用场景** | 简单模型、快速原型、静态图 | 具有数据依赖控制流的模型、部署 |
+
+现代JIT系统通常同时提供这两种选项。例如，PyTorch的TorchScript允许用户选择`@torch.jit.trace`或`@torch.jit.script`，甚至可以组合追踪和脚本化模块。TensorFlow的`@tf.function`主要采用追踪机制（“autograph”会隐式转换*一些*Python控制流，略微模糊了界限，但其核心捕获方式是基于追踪的）。
+
+了解观察执行路径（追踪）与解析代码逻辑（脚本）之间的主要区别，对于有效使用JIT编译器十分重要。追踪提供了便利，但限制了表达能力，尤其是在动态控制流方面。脚本化要求开发者投入更多精力来适应其限制，但能生成更完整的表示，可以处理复杂的程序结构，这有助于在JIT编译器中进行更全面的优化。
+
+## 参考资料
+
+- [Introduction to TorchScript](https://pytorch.org/docs/stable/jit.html) — PyTorch Documentation (2024)
+  PyTorch官方文档，解释了PyTorch中跟踪（`torch.jit.trace`）和脚本（`torch.jit.script`）两种方法，包括示例和用例。
+- [Better performance with tf.function](https://www.tensorflow.org/guide/function) — TensorFlow Documentation (2024)
+  Publisher: TensorFlow
+  官方指南，详细介绍了TensorFlow基于跟踪的图捕获机制（`tf.function`）及其通过AutoGraph对Python控制流的隐式处理。
+- [TVM: An Automatic End-to-End Optimizing Compiler for Deep Learning](https://www.usenix.org/conference/osdi18/presentation/chen) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18); Publisher: USENIX Association; Pages: 578-594; DOI: [10.5555/3342354.3342416](https://doi.org/10.5555/3342354.3342416)
+  为深度学习编译器和图中间表示（IR）的必要性提供了背景信息，这些是跟踪/脚本方法的输出，并讨论了优化中的挑战。

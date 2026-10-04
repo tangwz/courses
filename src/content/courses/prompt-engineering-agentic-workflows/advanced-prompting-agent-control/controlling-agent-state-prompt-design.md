@@ -1,0 +1,168 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "advanced-prompting-agent-control"
+lesson: "controlling-agent-state-prompt-design"
+sourceId: 6722
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-2-advanced-prompting-agent-control/controlling-agent-state-prompt-design"
+title: "通过提示词设计管理代理状态"
+description: "设计能够有效管理和更新代理在任务执行过程中内部状态的提示词。"
+order: 6
+plots: []
+sourceHash: "b7df683bec0168a93810f1b68b24d2d204f6780367406254a1c2dd95342b3a63"
+sourceCorrections: []
+---
+
+随着 AI 代理处理日益复杂的、多步骤任务，它们维持内部“状态”的能力变得不可或缺，即对当前进度、相关信息和操作环境的掌握。如果没有明确的状态感知，代理很容易迷失方向、重复步骤或无法有效整合新信息。提示词 (prompt)设计提供了明确引导和管理代理状态的方法，确保其能够以更高的准确性和可靠性处理复杂的流程。
+
+虽然 LLM 固有的对话属性提供了一种隐式状态追踪方式（其中交互历史构成上下文 (context)），但仅依靠这一点对于复杂的代理系统可能不够。上下文窗口是有限的，微小的状态变化可能在长时间交互中丢失。通过提示词工程进行显式状态管理提供了一种更结构化的方法。
+
+### 让代理状态显式化在提示词 (prompt)中
+
+主要思路是指定提示词中的特定部分来表示代理的当前状态。这使状态对您（设计者）和代理自身都可见。您可以指示代理读取此部分以了解其当前上下文 (context)，更重要的是，在执行操作或处理信息后更新此部分。
+
+考虑在您的提示词中加入一个专门的“状态块”。此块可以使用简单的键值对格式、JSON 或 XML，取决于您的代理最容易解析以及您的系统最方便管理的方式。
+
+这是一个简单的文本示例，用于规划旅行的代理：
+
+```text
+您的总目标是为用户规划一次多城市旅行。
+始终参考并更新您当前的操作状态。
+
+[AGENT_STATE]
+  current_task: "等待目的地输入"
+  destinations_confirmed: []
+  flights_booked: 0
+  hotels_booked: 0
+  budget_remaining: 5000
+  last_user_query: "无"
+  error_flag: false
+[/AGENT_STATE]
+
+用户: 我想规划一次去巴黎和罗马的旅行。
+```
+
+在这种结构中：
+
+- `[AGENT_STATE]` 块明确定义了可变变量。
+- 代理被指示参考并更新此状态。
+
+当代理处理用户的输入时，您的提示词应引导它不仅决定下一步操作，还要输出*新*状态。
+
+### 提示词 (prompt)实现状态更新
+
+为确保代理主动管理其状态，您的指示必须明确。例如，在代理执行操作后，您可以要求它输出一个修订后的 `[AGENT_STATE]` 块。
+
+假设代理已处理用户关于巴黎和罗马的请求。一个精心设计的提示词会引导代理进行内部思考，然后产生如下输出（这可能是包含面向用户响应的更大结构化输出的一部分）：
+
+**代理的内部处理（模拟）：**
+"用户提供了两个目的地。我需要将`current_task`更新为“确认目的地”，并将“巴黎”和“罗马”添加到`destinations_confirmed`。我还应记录用户的查询。"
+
+**代理的输出（包含状态更新）：**
+
+```text
+好的，巴黎和罗马听起来是很棒的目的地！在我们继续之前，我需要更新我的计划。
+
+[AGENT_STATE_UPDATE]
+  current_task: "等待航班偏好"
+  destinations_confirmed: ["巴黎", "罗马"]
+  flights_booked: 0
+  hotels_booked: 0
+  budget_remaining: 5000
+  last_user_query: "我想规划一次去巴黎和罗马的旅行。"
+  error_flag: false
+[/AGENT_STATE_UPDATE]
+
+为了找到最佳航班，您能告诉我您偏好的旅行日期吗？
+```
+
+您的控制系统会解析这个 `[AGENT_STATE_UPDATE]` 并用它来构建发送给代理的*下一个*提示词中的 `[AGENT_STATE]` 部分。这形成了一个循环，代理的状态被持续追踪并反馈到其操作环境中。
+
+### 为状态使用结构化数据
+
+对于更复杂的状态或与外部系统集成时，在提示词 (prompt)中使用 JSON 等结构化格式非常有用。
+
+**带有 JSON 状态的系统提示片段：**
+
+````text
+您是一个有用的 AI 助手。在 `agent_state` JSON 对象中管理您的状态。
+在每一轮之后，向用户提供您的响应和更新后的 `agent_state` JSON。
+
+Current State:
+```json
+{
+  "agent_state": {
+    "current_task": "收集需求",
+    "project_details": {
+      "name": null,
+      "deadline": null,
+      "requirements": []
+    },
+    "last_action_status": "成功"
+  }
+}
+````
+
+```
+用户: 我需要帮助设置一个名为“Alpha Launch”的新项目，下周五截止。它需要一个数据库和一个 Web 服务器。
+```
+
+代理随后会被提示生成一个响应和一个更新的 JSON 块：
+
+**代理的输出（用于状态的 JSON）：**
+
+```json
+{
+  "user_response": "明白了。我已记录项目‘Alpha Launch’，截止日期为下周五，需要一个数据库和一个 Web 服务器。您正在考虑哪种类型的数据库？",
+  "agent_state": {
+    "current_task": "澄清数据库类型",
+    "project_details": {
+      "name": "Alpha Launch",
+      "deadline": "下周五",
+      "requirements": ["数据库", "Web 服务器"]
+    },
+    "last_action_status": "成功"
+  }
+}
+```
+
+这种结构化方法简化了解析，并允许使用更复杂的状变量，包括嵌套对象和列表。
+
+### 引导状态转换的提示词 (prompt)
+
+代理状态不只是静态信息；它决定行为。您的提示词可以定义状态转换规则，有效地创建由 LLM 引导的有限状态机。
+
+例如：
+"如果 `[AGENT_STATE].current_task`是 `等待航班偏好`且用户提供了日期，则将`current_task`转换为`搜索航班`。
+如果 `[AGENT_STATE].current_task`是 `等待航班偏好`且用户提出了澄清问题，则更新`last_user_query`并保持在`等待航班偏好`。"
+
+这些条件指令，嵌入 (embedding)在主提示词或引导代理“操作系统”的元提示词中，帮助代理根据新信息或其操作结果决定其状态如何演变。
+
+下图显示了提示词如何管理研究代理的状态转换：
+
+> 此图展示了状态（例如，`空闲`、`已收到主题`）以及它们之间的转换。每个转换都由一个提示词引导，它指导代理采取何种行动以及根据结果如何更新其状态。
+
+### 优点与考量
+
+通过提示词 (prompt)设计明确管理代理状态具有以下几个优点：
+
+- **提高一致性：** 代理在长时间交互中能更好地维持上下文 (context)。
+- **增强控制：** 您可以更直接地影响代理在每一步的侧重点和行为。
+- **更易于调试：** 当代理行为异常时，其显式状态可以提供线索，指出其理解出错的地方。
+- **便于复杂逻辑：** 有助于构建能够遵循复杂计划并适应不断变化情况的代理。
+
+然而，也存在一些考量：
+
+- **提示词长度：** 包含详细状态信息可能会增加提示词大小，可能影响某些模型的性能或成本。信息精简技术（第五章介绍）在此处可能相关。
+- **复杂性：** 设计和管理状态表示及其更新逻辑会增加代理架构的复杂性。
+- **代理依从性：** 代理必须可靠地遵循指令来更新其状态。这通常需要谨慎的提示词措辞、少量示例，甚至进行微调 (fine-tuning)以提高依从性。
+
+虽然思维链 (CoT) 和思维树 (ToT) 提示词（在上一节讨论）有助于构建代理的内部推理 (inference)过程，但通过提示词进行显式状态管理，您可以在每一步对该推理的*上下文*和*记忆*进行更精细的控制。这是一种工作记忆形式，补充了长期记忆策略，我们将在稍后讨论。通过使状态成为提示词中一个明确的、可操作的部分，您使代理能够有效地执行更复杂的有状态操作。
+
+## 参考资料
+
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://doi.org/10.48550/arXiv.2304.03442) — Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein (2023)
+  Journal: arXiv preprint arXiv:2304.03442; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  提出了一种基于LLM的代理架构，用于维护和发展其经验的详细记忆，展示了复杂代理行为中显式记忆和状态的实现，这为简化的基于提示的状态的价值提供了信息。
+- [Large Language Model Agents: A Survey](https://arxiv.org/abs/2309.17242) — Lei Wang, Chen Ma, Xueyuan Huyan, Shiwen Ye, Lu Yao, Ke Zhan, Jiangjie Chen, Xu Chen, Huazheng Wang, Chujie Zheng, et al. (2023)
+  Journal: arXiv preprint arXiv:2309.17242
+  全面概述了LLM代理研究，包括对代理架构、推理、记忆和规划的讨论，为显式状态管理为何是构建可靠代理的关键组成部分提供了背景。

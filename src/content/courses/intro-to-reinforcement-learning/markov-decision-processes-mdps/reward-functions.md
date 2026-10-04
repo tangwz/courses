@@ -1,0 +1,54 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "markov-decision-processes-mdps"
+lesson: "reward-functions"
+sourceId: 1586
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-2-markov-decision-processes-mdps/reward-functions"
+title: "奖励函数"
+description: "说明奖励函数在马尔可夫决策过程中定义目标的作用。"
+order: 4
+plots: []
+sourceHash: "c4ed9fa7d4304864a6547b10fb4b38756ee55d3d167ff42912e512d43d55dc90"
+sourceCorrections: []
+---
+
+在确立了状态、动作以及环境动态（转移概率）的思想后，我们现在来看看在马尔可夫决策过程中定义*目标*的组成部分：**奖励函数**。
+
+可以将奖励函数视为我们向学习智能体传达目标的方式。在每次互动步骤中，当智能体在状态 $s_t$ 执行动作 $a_t$ 且环境转移到新状态 $s_{t+1}$ 后，环境会提供一个数值奖励信号 $r_{t+1}$。这个信号表明从任务目标来看，该特定转移是好是坏。
+
+正式地说，奖励函数 $R$ 明确了这种即时反馈。它可能根据奖励所依赖的信息呈现不同形式：
+
+1. **状态、动作和下一状态：** 最常见形式是 $R(s, a, s')$，其中奖励取决于起始状态 $s$、所采取的动作 $a$ 以及结果状态 $s'$。在状态 $s$ 采取动作 $a$ 的预期奖励可以表示为：
+   $r(s, a) = \mathbb{E}[R_{t+1} | S_t = s, A_t = a] = \sum_{s'} P(s'|s, a) R(s, a, s')$
+   这里，$R_{t+1}$ 是代表时间 $t+1$ 奖励的随机变量，而 $P(s'|s, a)$ 是我们之前讨论过的状态转移概率。
+2. **状态和动作：** 通常，奖励会被简化，只取决于状态 $s$ 和所采取的动作 $a$，表示为 $R(s, a)$。
+3. **仅状态：** 在某些情况下，特别是基于目标的任务中，奖励可能只取决于达到特定状态，表示为 $R(s')$。例如，达到目标状态获得大的正奖励，否则为零。
+
+奖励函数是强化学习 (reinforcement learning)的核心，因为它隐式地界定了智能体应努力达成的目标。智能体的目标不一定是最大化*即时*奖励 $r_{t+1}$，而是最大化随时间累积的奖励，我们之前将其定义为**回报** ($G_t$)。折现因子 $\gamma$ 在此发挥重要作用，它在计算回报时平衡了即时奖励与未来奖励的重要性。
+
+> 环境在智能体于状态 $s_t$ 采取动作 $a_t$ 后，会提供奖励 $r_{t+1}$ 以及下一状态 $s_{t+1}$。这个奖励信号是智能体学习合意策略的主要反馈。
+
+### 奖励函数设计
+
+明确奖励函数是一种**奖励工程**。这是我们将高层目标转化为智能体可用于学习的具体信号的方式。这并不总是直截了当的：
+
+- **稀疏奖励：** 在许多问题中，奖励在大多数步骤可能为零，只有在达到终止状态时才出现非零奖励（例如，赢得或输掉游戏）。由于反馈不频繁，稀疏奖励会使学习速度减慢。
+  - *示例：* 国际象棋：将军（将死）+1，被将军（将死）-1，其他所有移动为0。
+- **密集奖励：** 提供较小、更频繁的奖励可以更有效地引导智能体。然而，设计不当的密集奖励可能导致智能体出现意外行为，即智能体优化的是中间奖励而非真实目标。
+  - *示例：* 机器人走迷宫：到达目标+10，每走一步-0.1（鼓励寻找更短路径），撞墙-5。
+
+**奖励假设**是强化学习 (reinforcement learning)中的一个基本观点：它提出所有目标和意图都可以表示为所接收标量信号（奖励）累积和的期望值最大化。因此，正确设置奖励函数对于强化学习的成功极为重要。它必须准确反映任务的实际目标。如果奖励函数激励了与您真正期望不同的行为，智能体很可能会学会那种非预期的行为。
+
+在继续讨论智能体如何实际使用这些奖励（以及状态转移）来评估策略并找到最佳行为方式之前，理解奖励函数是十分必要的。奖励信号、环境动态与智能体策略之间的作用是马尔可夫决策过程中学习过程的中心。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press; Pages: Chapters 3 & 4
+  这是强化学习领域的权威教材，全面阐述了马尔可夫决策过程以及奖励函数在定义智能体目标方面的基础作用。
+- [CS234: Reinforcement Learning](https://cs234.stanford.edu/) — Emma Brunskill (2025)
+  Publisher: Stanford University
+  这门大学课程提供了结构化且最新的强化学习学术入门，包括对奖励函数等马尔可夫决策过程组成部分的清晰解释。
+- [Reward Shaping in Reinforcement Learning: A Survey](https://arxiv.org/pdf/2307.03746) — Yilin Weng and Yifei Li and Kaibing Zhang and Xinyi Chen and Lei Yu and Li Gu (2023)
+  Journal: arXiv preprint arXiv:2307.03746; DOI: [10.48550/arXiv.2307.03746](https://doi.org/10.48550/arXiv.2307.03746)
+  这篇综述讨论了设计有效奖励函数的技术，例如奖励整形，这对于缓解稀疏奖励等挑战并引导智能体行为非常有用。

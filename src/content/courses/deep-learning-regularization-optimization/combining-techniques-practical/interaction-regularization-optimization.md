@@ -1,0 +1,86 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "combining-techniques-practical"
+lesson: "interaction-regularization-optimization"
+sourceId: 5009
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-8-combining-techniques-practical/interaction-regularization-optimization"
+title: "正则化与优化之间的联动"
+description: "讨论正则化技术与优化算法如何产生联动。"
+order: 1
+plots: []
+sourceHash: "3b4ee42317af2f6a3bb674058bfc9f441e2eff1e4dbb1c2db8d18223d9588861"
+sourceCorrections: []
+---
+
+让我们考察正则化 (regularization)与优化工具集中的不同工具如何相互影响。如我们所见，正则化技术旨在提升模型泛化能力，主要是通过避免过拟合 (overfitting)；而优化算法则致力于在训练过程中通过最小化损失函数 (loss function)来高效地找到良好参数 (parameter)。然而，训练深度学习 (deep learning)模型的这两个方面并非相互独立；它们之间存在重要的联动。明白这些联动关系对于构建有效模型和解决训练问题很有帮助。
+
+### 关联：为何技术之间并非孤立
+
+可将训练过程视为在曲面（损失曲面）上行进以找到低点（良好模型参数 (parameter)）。优化算法决定我们*如何*在这一曲面上行进（所走路径、速度），而正则化 (regularization)技术则巧妙地*重塑*曲面本身或限制我们的移动，引导我们走向更宽广的谷底（更平坦的极小值点），这些通常对应着更好的泛化解。
+
+因为它们都影响达到最终参数的路径，所以它们的效果是相互关联的。选择特定的正则化器可能会使某些优化器效果更好或更差，并且优化器的选择也能影响需要多少正则化或应如何配置。
+
+### 权重 (weight)正则化 (regularization)与优化相遇
+
+L1和L2正则化根据模型权重的幅度向损失函数 (loss function)添加惩罚项。
+
+
+$$
+\text{总损失} = \text{原始损失}(\text{数据}, \text{权重}) + \lambda \times \text{正则化项}(\text{权重})
+$$
+
+
+这种添加直接改变了优化器在反向传播 (backpropagation)过程中使用的梯度。
+
+- **对梯度的影响：** 正则化项的梯度将权重推向零。对于L2正则化（权重衰减），惩罚项是$\frac{\lambda}{2} ||W||_2^2$，其梯度是$\lambda W$。这意味着权重更新包含一个减去权重本身一部分的项，因此得名“权重衰减”。对于L1正则化（$\lambda ||W||_1$），梯度贡献是$\lambda \cdot \text{sign}(W)$，鼓励稀疏性。
+- **与优化器的联动：**
+  - **SGD和动量：** 正则化梯度直接修改由SGD或动量计算的更新方向。L2衰减可以帮助引导这些较简单的优化器走向损失函数中更平滑、更平坦的区域，可能避免过拟合 (overfitting)的尖锐极小值点。
+  - **自适应优化器（Adam, RMSprop）：** 这些优化器为每个参数 (parameter)调整学习率。L2正则化如何与它们结合使用很重要。许多库实现（例如PyTorch中Adam的`weight_decay`参数）在自适应动量计算*之后*应用L2惩罚（通常称为“解耦权重衰减”）。这通常被认为比仅仅在Adam处理损失之前将L2梯度添加到损失中更有效。L1正则化由于其梯度在零点的不连续性，较少直接与Adam结合，尽管存在变体和相关方法。
+  - **调整$\lambda$和学习率：** 由$\lambda$控制的正则化强度直接影响梯度修改的幅度。较大的$\lambda$会显著改变更新步长。因此，当你调整正则化强度时，最优学习率通常会变化。与弱正则化或无正则化模型相比，更强的正则化有时会允许，甚至需要，使用不同的学习率。
+
+### Dropout对优化路径的影响
+
+Dropout在训练过程中通过以一定概率$p$临时将神经元激活设置为零来引入随机性。这不断改变优化器在每个小批量中看到的有效网络架构。
+
+- **噪声梯度：** 从优化角度来看，主要效果是Dropout使梯度估计更嘈杂。与不使用Dropout的训练相比，在一个小批量中计算的方向可能与下一个小批量的方向差异更大。
+- **优化器响应：**
+  - **自适应优化器：** 像Adam和RMSprop这样的算法，它们保持过去梯度（或平方梯度）的移动平均，倾向于相对良好地处理这种噪声。平均操作有助于平滑由Dropout引起的波动。
+  - **SGD/动量：** 标准SGD可能对这种噪声更敏感。动量通过对梯度方向随时间进行平均来提供帮助，从而减轻一些不稳定性。然而，你可能会发现，当将Dropout与SGD或动量结合使用时，相比自适应方法，需要较低的学习率以防止过度震荡。
+- **正则化 (regularization)方法：** 由于Dropout本身是一种强正则化器，它通常减少对强L1/L2正则化的需求。你可能会发现，当Dropout活跃时，较低的权重 (weight)衰减（$\lambda$）是最佳的。调整dropout率$p$和权重衰减$\lambda$时，通常应考虑它们的联合效应。
+
+### 批量归一化 (normalization)：为优化器重塑
+
+批量归一化（BN）为每个小批量标准化层输入，显著影响训练动态。
+
+- **更平滑的优化：** BN有助于减少内部协变量偏移，并且通常使损失更稳定。这意味着梯度更稳定和可预测，从而允许优化器采取更大、更自信的步长。
+- **更高的学习率：** 这是一个主要联动。BN通常使得可以使用显著更高的学习率，比没有它时可能达到的要高。这显著加速了收敛。像SGD与动量或Adam这样的优化器能变得更有效。
+- **对初始化的敏感度降低：** 由于BN归一化激活值，网络对权重 (weight)初始尺度的敏感度降低。尽管仍然建议使用良好的初始化（如He或Xavier），但BN使得训练因不良初始化而失败的可能性降低。
+- **隐式正则化 (regularization)：** 在训练期间使用小批量统计数据（均值和方差）而非总体统计数据所引入的噪声，赋予BN轻微的正则化效果。这可能意味着你可以减少Dropout或L2衰减等其他显式正则化器的强度。
+- **与其他技术的联动：** 将BN与Dropout一起使用需要一些注意（我们将在“结合Dropout和批量归一化”一节中讨论）。BN层相对于激活函数 (activation function)和其他层的放置也很重要。尽管BN稳定激活值，但L2正则化仍然作用于权重本身，并且它们经常有效地结合使用。
+
+### 找到合适的组合
+
+主要结论是这些技术是相互关联的。
+
+- 使用**批量归一化 (normalization)**通常允许使用**更高的学习率**，并且可能**减少对强Dropout或L2的需求**。
+- 应用**L2正则化 (regularization)**会改变梯度，与**Adam（通过`weight_decay`）或SGD等优化器**执行更新的方式产生联动。
+- 采用**Dropout**引入噪声，**自适应优化器**能很好地处理这种噪声，但可能需要**调低SGD/动量的学习率**并潜在地**降低L2强度**。
+
+这种相互依赖表明，调整超参数 (parameter) (hyperparameter)不仅仅是孤立地找到每个超参数的最佳值。你需要考虑它们的组合。改变优化器可能需要重新调整学习率和正则化参数。添加Dropout可能需要调整权重 (weight)衰减。这使得随机搜索或贝叶斯优化等超参数搜索策略特别有价值，因为它们考察参数组合，而不是一次只改变一个。
+
+明白这些关系有助于你形成直觉，从而理解为何某种技术组合可能效果良好，或为何模型的训练可能不稳定或缓慢。它指导你在设计、训练和调试深度学习 (deep learning)模型时做出更明智的选择。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于深度学习基础概念的综合性教科书，涵盖了正则化技术（L1、L2、Dropout、批量归一化）和优化算法，以及它们的理论基础和实践考量。
+- [Decoupled Weight Decay Regularization](https://doi.org/10.48550/arXiv.1711.05101) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  引入了“AdamW”，这是一种解耦的权重衰减公式，它将L2正则化与自适应学习率机制分离，显示出对Adam等自适应优化器的改进性能和泛化能力。
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe and Christian Szegedy (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); Volume: 37; Pages: 448-456; DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  介绍了批量归一化，展示了它如何稳定激活，允许更高的学习率，并降低对初始化的敏感性，从而加速训练。
+- [Dropout: A Simple Way to Prevent Overfitting Neural Networks](https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research (JMLR); Volume: 15; Pages: 1929-1958
+  这篇开创性论文介绍了Dropout，详细阐述了它作为一种正则化技术，通过在训练期间随机丢弃单元来防止过拟合的机制，并讨论了其优势。

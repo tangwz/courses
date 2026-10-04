@@ -1,0 +1,93 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "temporal-difference-learning"
+lesson: "td-0-prediction"
+sourceId: 1643
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-5-temporal-difference-learning/td-0-prediction"
+title: "TD(0) 预测：估计 Vπ"
+description: "Explain the simplest TD method, TD(0), for estimating state-value functions."
+order: 2
+plots: []
+sourceHash: "b84a6b545b10ec578c6f38fd0b098be12b83a8ba7ae8a63b29d8bc127aed257d"
+sourceCorrections: []
+---
+
+时序差分 (TD) 学习允许在每一步进行更新，而不是等待一个完整的回合结束。最简单的TD方法被称为TD(0)，或单步TD，它用于*预测问题*：估计给定策略 $\pi$ 的状态值函数 $V_\pi$。
+
+回想一下，蒙特卡洛方法是根据从状态 $S_t$ 开始的完整观测回报 $G_t$ 来更新状态 $S_t$ 的值估计 $V(S_t)$：
+
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha [G_t - V(S_t)]
+$$
+
+
+其中 $G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots$ 是直到回合终止的实际观测到的累计折扣奖励。计算 $G_t$ 需要等到回合结束。
+
+另一方面，TD(0) 在执行动作 $A_t$ 并收到奖励 $R_{t+1}$ 后，观察到从状态 $S_t$ 到状态 $S_{t+1}$ 的转移时，会立即进行更新。TD(0) 不使用完整的返回值 $G_t$，而是使用*估计的*返回值。这个估计是通过将即时奖励 $R_{t+1}$ 与下一状态 $V(S_{t+1})$ 的*当前值估计*结合起来形成的。这个估计的回报，$R_{t+1} + \gamma V(S_{t+1})$，被称为**TD目标**。
+
+TD(0) 对 $V(S_t)$ 的更新规则是：
+
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha [R_{t+1} + \gamma V(S_{t+1}) - V(S_t)]
+$$
+
+
+让我们逐项分析：
+
+- $V(S_t)$: 时间 $t$ 访问的状态的当前值估计。
+- $\alpha$: 学习率，一个小的正数，决定更新的步长。
+- $R_{t+1}$: 从 $S_t$ 转移后立即获得的奖励。
+- $\gamma$: 折扣因子，用于衡量未来奖励的重要性。
+- $V(S_{t+1})$: *下一*状态 $S_{t+1}$ 的当前值估计。
+- $R_{t+1} + \gamma V(S_{t+1})$: **TD目标**。这是重要部分。它是对从状态 $S_t$ 获得回报的估计。它使用实际的即时奖励 $R_{t+1}$，并依赖于现有值估计 $V(S_{t+1})$ 作为所有后续状态的值。
+- $[R_{t+1} + \gamma V(S_{t+1}) - V(S_t)]$: 这个项被称为**TD误差**，通常表示为 $\delta_t$。
+  
+  $$
+  \delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)
+  $$
+  
+  TD误差衡量的是 $S_t$ 的估计值（即TD目标）与当前值估计 $V(S_t)$ 之间的差异。它表示与当前估计相比，这次转移的结果有多“出乎意料”。
+
+更新规则可以使用TD误差更简洁地写出：
+
+
+$$
+V(S_t) \leftarrow V(S_t) + \alpha \delta_t
+$$
+
+
+这意味着我们根据TD误差所指示的方向调整当前值 $V(S_t)$。如果TD目标高于 $V(S_t)$，表示转移导致的结果（基于 $R_{t+1}$ 和 $V(S_{t+1})$）好于预期，我们就增加 $V(S_t)$。如果低于，我们就减少 $V(S_t)$。
+
+### 引导性质
+
+将TD(0)与蒙特卡洛方法区分开来的核心思想是**引导**（bootstrapping）。TD(0) 部分基于另一个已学到的估计值 $V(S_{t+1})$ 来更新其估计值 $V(S_t)$。它不等待最终结果 ($G_t$)，而是使用当前可用的未来估计作为替代。这使得TD(0)能够在线学习（每一步后更新）并从不完整的序列中学习，使其适用于回合可能永不结束的持续任务。
+
+### TD(0) 预测算法
+
+这是估计 $V_\pi \approx V$ 的算法总结：
+
+1. 为所有状态 $s$ 任意初始化 $V(s)$ (例如，$V(s) = 0$)。
+2. 对每个回合重复：
+   a. 初始化 $S$ (回合的第一个状态)。
+   b. 对回合的每一步重复：
+   i. 根据策略 $\pi$ 为状态 $S$ 选择动作 $A$。
+   ii. 执行动作 $A$，观察奖励 $R$ 和下一状态 $S'$。
+   iii. 计算TD误差：$\delta \leftarrow R + \gamma V(S') - V(S)$。
+   iv. 更新值函数：$V(S) \leftarrow V(S) + \alpha \delta$。
+   v. 更新状态：$S \leftarrow S'$。
+   c. 直到 $S$ 是一个终止状态。
+
+这个过程根据观测到的转移和奖励，迭代地调整值估计，最终在某些条件（如学习率 $\alpha$ 的适当衰减）下收敛到真实值函数 $V_\pi$。TD(0) 是更复杂的TD控制方法（如SARSA和Q学习）的起点，我们接下来会讨论它们。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press; Pages: Chapter 6, "Temporal-Difference Learning"
+  这是强化学习的权威教材，其中有一章详细解释了TD(0)。
+- [RL Course by David Silver - Lecture 4: Temporal Difference Learning](https://www.youtube.com/watch?v=P_J_wY7-Lns) — David Silver (2015)
+  这是一个广受好评的视频讲座，清晰地解释了时间差分学习，包括TD(0)。
+- [Learning to Predict by Methods of Temporal Differences](https://link.springer.com/article/10.1007/BF00115009) — Richard S. Sutton (1988)
+  Journal: Machine Learning; Publisher: Springer; Volume: 3; Pages: 9-44; DOI: [10.1007/BF00115009](https://doi.org/10.1007/BF00115009)
+  这篇原始论文介绍了时间差分（TD）学习，为TD(0)及其后续算法奠定了基础。

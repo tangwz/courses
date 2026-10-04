@@ -1,0 +1,82 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-monitoring-observability-maintenance"
+lesson: "detecting-llm-drift"
+sourceId: 3200
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-5-llm-monitoring-observability-maintenance/detecting-llm-drift"
+title: "检测大型语言模型中的数据与响应模式漂移"
+description: "应用方法来检测大型语言模型中输入数据分布和底层响应模式的变化。"
+order: 4
+plots: ["plots/3200-0.json"]
+sourceHash: "1f2fd2f714b7e2f292f0c0f5cb1d7e6710dacc677a953c067b1e428a8c8e35e5"
+sourceCorrections: []
+---
+
+与传统机器学习 (machine learning)模型类似，在生产环境中运行的大型语言模型也容易出现漂移。当模型在生产中遇到的数据统计特性与其训练或评估时的数据不同时，就会发生漂移。对于大型语言模型来说，这种不同可能以不显眼但有影响的方式出现，导致性能下降、成本增加，并可能产生不理想的输出。了解和检测漂移是大型语言模型维护的一个重要方面。
+
+我们通常将漂移分为两种主要类型：
+
+1. **数据漂移：** 输入数据分布的变化 ($P(\mathbf{x})$)。对于大型语言模型，这意味着它们接收到的提示或输入文本的特性发生了变化。
+2. **响应模式漂移：** 输入与期望输出之间关系的变化 ($P(y|\mathbf{x})$)。对于大型语言模型，这可能意味着在给定提示下，最优或期望的响应会随着时间变化，原因可能是外部因素或用户期望的演变。
+
+检测这些变化需要专门的方法，因为用于表格数据的标准方法通常不直接适用于文本的高维、非结构化特性。
+
+### 数据漂移检测
+
+大型语言模型输入中的数据漂移可能由于多种原因发生：用户随时间与模型的交互方式不同、向上游数据源提供提示的变化，或讨论主题的转移。以下是检测它的几种方法：
+
+1. **监测代理统计量：** 尽管分析文本的完整分布很复杂，但随着时间跟踪更简单的统计量可以提供有力的漂移指标。这些包括：
+
+   - **提示长度分布：** 平均长度、方差的变化，或异常长或短提示的出现。
+   - **词汇分析：** 跟踪特定词语或n-gram的频率。词汇表 (vocabulary)外 (OOV) 词语的突然增加或已知词语频率分布的明显变化可以预示漂移。
+   - **可读性分数：** 监测Flesch-Kincaid或Gunning雾度指数等指标可以表明输入复杂性或风格的变化。
+   - **主题建模：** 将潜在狄利克雷分配 (LDA) 或 BERTopic 等方法应用于批量的接收提示，并监测主题分布随时间的变化。主导主题的转变清楚地表明了数据漂移。
+2. **嵌入 (embedding)分布分析：** 一种更精细的方法涉及监测文本嵌入的分布。
+
+   - **生成嵌入：** 使用句子变换器模型或大型语言模型自身的嵌入层，将接收到的提示（或代表性样本）转换为固定大小的数值向量 (vector)。
+   - **分布比较：** 将最近的嵌入分布与参考分布（例如，来自训练/验证集或稳定运行期的数据）进行比较。适用于高维数据的统计测试，例如最大均值差异 (MMD) 或能量距离，可以量化 (quantization)分布之间的差异。另外，降维方法（PCA、UMAP、t-SNE）可以将嵌入投影到2D或3D空间，从而允许视觉检查或应用更简单的2D分布测试（如2D Kolmogorov-Smirnov）。
+   - **质心监测：** 跟踪嵌入在时间窗口内的质心（均值向量）。质心的明显移动表明分布发生了变化。
+
+   尽管有力，但基于嵌入的方法计算量更大，需要仔细选择嵌入模型和距离度量。
+3. **监测模型不确定性：** 一些模型提供置信分数或概率。在接收请求中，模型不确定性（较低置信度）的系统性增加可能表明模型遇到了不太熟悉的数据，这可能是由于漂移。
+
+
+
+![平均提示长度随时间监测](plots/3200-0.json)
+
+
+
+> 每周监测平均提示令牌数量。上升趋势超过预设阈值，触发潜在数据漂移警报，需要对用户输入性质的变化进行进一步调查。
+
+### 响应模式漂移检测
+
+响应模式漂移在大型语言模型中通常更难直接检测，因为‘模式’本身（从提示到理想响应的映射）是复杂的，并且可能没有明确定义。它经常通过其影响间接识别出来：
+
+1. **性能下降：** 这是最常见的信号。监测先前讨论过的重要大型语言模型输出质量指标（例如，有毒性分数、由另一个模型评估的相关性分数、幻觉 (hallucination)率、特定任务指标）。对相似类型输入的性能持续下降强烈表明期望输出特性已改变。
+2. **反馈模式变化：** 如果您整合用户反馈（例如，点赞/踩，明确纠正），反馈模式的转变可以表明响应模式漂移。例如，之前评价很高的响应可能开始收到负面反馈，表明用户期望已演变。
+3. **监测输出分布：** 类似于输入漂移，分析在特定输入类型条件下的*输出*嵌入 (embedding)或代理统计量（输出长度、情感、输出的主题分布），有时可以显示响应模式漂移。如果相同类型输入的输出性质明显变化，底层模式可能已转移。
+4. **使用更新模型的A/B测试：** 定期在最新数据（特别是包含最新反馈的数据）上微调 (fine-tuning)候选模型，并对生产模型进行A/B测试，可以明确测试响应模式漂移。如果更新后的模型根据预定义指标持续表现更好，这表明模式已漂移，并且生产模型已过时。
+
+### 实际考量
+
+- **抽样：** 监测每一个提示和响应可能不可行或成本过高，特别是对于高吞吐量 (throughput)系统。实施智能抽样策略（随机、基于用户类型或提示长度的分层抽样），以监测代表性的流量子集。
+- **窗口划分：** 漂移检测通常依赖于将最近的数据时间窗口（例如，最近一天或一周）与一个稳定的参考窗口（例如，部署后的第一个月或来自验证集的数据）进行比较。选择合适的窗口大小很重要；短窗口对噪声敏感，而长窗口对变化反应缓慢。自适应窗口技术（如 ADWIN）可以帮助动态调整窗口大小。
+- **阈值设置：** 为漂移检测指标设置合适的阈值不简单。过于敏感的阈值会导致频繁误报，而不敏感的阈值可能会遗漏真正的漂移。阈值通常需要根据对性能下降的容忍度以及重训练或干预的成本进行经验性调整。统计显著性检验会有帮助，但实际意义往往是决定因素。
+- **自动化：** 将漂移检测机制整合到您的 MLOps 管道中。检测到的漂移应触发调查警报，并可能自动化数据验证、模型重训练触发或启动 A/B 测试等流程。
+
+检测数据和响应模式漂移不是一次性设置，而是一个需要持续监测和适应的过程。通过结合代理指标、嵌入 (embedding)分析、性能跟踪和反馈循环，您可以获取大型语言模型运行环境如何变化的有价值信息，并采取主动措施来保持其有效性和可靠性。
+
+## 参考资料
+
+- [Uncovering Concept Drift in Transformer-Based Text Classifiers](https://aclanthology.org/2023.eacl-main.290/) — Mariam Al-Saad, Johannes Hötte, Robert M. Clark, and Daniel G. Preston (2023)
+  Journal: Proceedings of the 17th Conference of the European Chapter of the Association for Computational Linguistics; Publisher: Association for Computational Linguistics; Pages: 3994-4009; DOI: [10.18653/v1/2023.eacl-main.290](https://doi.org/10.18653/v1/2023.eacl-main.290)
+  专门讨论基于 Transformer 模型的漂移检测，包括分析嵌入空间变化的方法，对大型语言模型相关。
+- [A Kernel Two-Sample Test](https://www.jmlr.org/papers/v13/gretton12a.html) — Arthur Gretton, Karsten M. Borgwardt, Malte J. Rasch, Bernhard SchÃ¶lkopf, Alexander Smola (2012)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR; Volume: 13; Pages: 723−773
+  介绍最大均值差异 (MMD) 检验的基础论文，这是一个用于比较高维空间中分布的关键统计方法。
+- [MLOps for Large Language Models: From Development to Production](https://link.springer.com/book/10.1007/978-1-4842-9492-4) — Parul Singh and Gaurav Singhal (2023)
+  Publisher: Apress; DOI: [10.1007/978-1-4842-9492-4](https://doi.org/10.1007/978-1-4842-9492-4)
+  一份关于大型语言模型 MLOps 的实用指南，涵盖生产环境中的操作方面，包括监控和维护。
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410/) — Nils Reimers and Iryna Gurevych (2019)
+  Journal: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP); Publisher: Association for Computational Linguistics; Pages: 3982-3992; DOI: [10.18653/v1/D19-1410](https://doi.org/10.18653/v1/D19-1410)
+  介绍了 Sentence-BERT，一个广泛采用的用于生成高质量句子嵌入的模型，对于基于嵌入的大型语言模型漂移检测非常相关。

@@ -1,0 +1,143 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "physical-design-optimization"
+lesson: "hands-on-practical-optimization-tuning"
+sourceId: 7994
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-5-physical-design-optimization/hands-on-practical-optimization-tuning"
+title: "实践操作：优化调优"
+description: "应用分区和聚类以提升速度。"
+order: 5
+plots: ["plots/7994-0.json"]
+sourceHash: "1ee5dc54a13e06880f531e2896b0761f6823d2805195db4e9948a0e17b7705c5"
+sourceCorrections: []
+---
+
+优化将功能性模式转变为高性能生产系统。实现这一性能需要采用多种技术，包括分区、聚类和适当的数据类型。一个涉及高容量数据集的具体场景展示了这些技术的应用。目标是减少查询执行期间扫描的数据量，这直接与云数据仓库中更低的延迟和降低的计算成本相关。
+
+### 设定基线场景
+
+设想我们正在管理一个大型电商平台的点击流数据集。数据持续到达，并存储在一个名为 `raw_web_events` 的表中。该表包含跨越数年的历史数据，拥有数十亿行。分析师经常查询此表，以生成关于用户行为的每日报告。
+
+初始模式是一个标准的堆表，没有定义任何排序顺序或分区：
+
+```sql
+CREATE TABLE raw_web_events (
+    event_id        VARCHAR,
+    event_timestamp TIMESTAMP,
+    user_id         VARCHAR,
+    event_type      VARCHAR,
+    page_url        VARCHAR,
+    session_id      VARCHAR,
+    payload         VARIANT  -- Semi-structured JSON data
+);
+```
+
+当分析师运行一个查询，以统计某一天的特定错误事件时，数据库引擎必须扫描表中的每一行来识别匹配项。
+
+```sql
+SELECT count(*) 
+FROM raw_web_events
+WHERE event_timestamp >= '2023-11-01 00:00:00'
+  AND event_timestamp < '2023-11-02 00:00:00'
+  AND event_type = 'checkout_error';
+```
+
+在列式存储中，这会导致全表扫描。即使查询只用到0.1%的数据，引擎也会读取100%的存储块，因为它不清楚 `2023-11-01` 的记录在物理上位于何处。
+
+### 应用分区策略
+
+优化的第一步是限制搜索范围。由于大多数分析查询按时间过滤，按日期分区是最合理的策略。我们重新组织存储，以便数据根据事件日期在物理上被分成目录或段。
+
+我们创建一个新表 `optimized_web_events`，定义了以从 `event_timestamp` 派生的日期为分区键。
+
+```sql
+CREATE TABLE optimized_web_events (
+    ... columns ...
+)
+PARTITION BY DATE(event_timestamp);
+```
+
+当数据写入此表时，存储引擎为每一天创建不同的段。
+
+> 存储布局的对比。分区在物理上隔离数据，使引擎在查询执行期间能忽略不相关的分区。
+
+通过此更改，针对 `2023-11-01` 的前述查询会触发**分区修剪**。引擎确认只有 `2023-11-01` 的段包含相关行，并跳过所有其他日期的段。如果该表包含1000天的历史数据，此优化在理论上能减少扫描量1000倍。
+
+### 聚类以实现精细过滤
+
+分区解决了日期过滤问题，但我们的查询也按 `event_type = 'checkout_error'` 过滤。在 `2023-11-01` 分区内，行仍然是无序的。引擎必须读取整个分区以查找特定的错误事件。
+
+为了进一步优化，我们应用聚类 (在不同系统中也称为排序或Z序)。我们选择 `event_type` 作为聚类键，因为它是一个高基数字段，常用于等值过滤。
+
+```sql
+-- 语法因平台而异，此示例假定为通用聚类命令
+ALTER TABLE optimized_web_events 
+CLUSTER BY (event_type);
+```
+
+聚类将具有相同 `event_type` 的行放入相同的存储块 (微分区) 中。数据库维护元数据，记录每个块的 `event_type` 最小值和最大值。当查询执行时，引擎会检查这些元数据：
+
+1. **修剪分区：** 是 `2023-11-01` 分区吗？是的。保留。
+2. **修剪块：** 块 A 包含 `checkout_error` 吗？
+   - 块 A 最小值/最大值：`add_to_cart` - `browse`。(否，跳过)
+   - 块 B 最小值/最大值：`checkout_error` - `login`。(是，扫描)
+
+这减少了活动分区内的I/O。聚类的有效性受存储顺序与查询谓词之间关联程度的影响。
+
+### 管理半结构化数据
+
+我们的模式包含一个包含JSON数据的 `payload` 列。分析查询通常从这个对象中提取特定字段，这在运行时会消耗大量计算资源。
+
+**低效查询：**
+
+```sql
+SELECT payload:browser_type, count(*)
+FROM optimized_web_events
+GROUP BY 1;
+```
+
+为了优化，我们可以在数据摄入过程中将频繁访问的属性提升为专用列，有效实现提取的物化。这通常被称为模式“扁平化”。
+
+**优化模式方法：**
+
+```sql
+CREATE TABLE highly_optimized_events (
+    ...
+    browser_type VARCHAR,  -- 从 payload 中提取
+    device_os    VARCHAR,  -- 从 payload 中提取
+    payload      VARIANT   -- 剩余的稀疏数据
+) ...;
+```
+
+查询原生 `VARCHAR` 类型的 `browser_type` 列要快得多，比每次读取都解析一个JSON大对象要快。Parquet或ORC等列式格式能有效编码和压缩这些独特的列，使用行程编码 (RLE) 或字典编码。
+
+### 衡量影响
+
+分区、聚类和模式扁平化的结合带来了显著的性能改变。我们可以通过查看扫描数据量指标来量化 (quantization)这种提升。
+
+
+
+![按查询策略划分的扫描数据量 (对数刻度)](plots/7994-0.json)
+
+
+
+> 优化层对查询I/O的影响。请注意对数刻度；分区提供了首次大幅减少，而聚类则进一步精细化了选择。
+
+### 评估权衡
+
+优化并非没有代价。它会在数据摄入期间引入额外开销。
+
+1. **写入延迟：** 数据库在插入时必须对数据进行排序和组织，这会消耗比简单地将数据追加到堆中更多的计算资源。
+2. **维护：** 在某些系统中，聚类会随着新数据的添加或更新而逐渐退化，需要定期进行重新聚类的维护工作 (例如，`VACUUM` 或 `OPTIMIZE` 命令)。
+3. **倾斜：** 如果某个特定日期或事件类型的数据量远多于其他 (数据倾斜)，分区可能会变得不均匀，导致“拖尾”任务，即一个计算节点工作时间远长于其他节点。
+
+在实施这些设计时，您必须平衡读取性能需求与关于数据新鲜度和摄入成本的服务水平协议 (SLA)。对于批处理数据仓库，夜间加载期间用于组织数据的额外时间通常是值得的投入，以换取全天即席分析的速度提升。
+
+## 参考资料
+
+- [C-Store: A Column-oriented DBMS](http://www.vldb.org/archives/website/2005/program/paper/thu/p553-stonebraker.pdf) — Michael Stonebraker, Daniel J. Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Amerson Lin, Samuel Madden, Elizabeth J. O'Neil, Patrick E. O'Neil, Alex Rasin, Nga Tran, Stanley B. Zdonik (2005)
+  Journal: Proceedings of the 31st International Conference on Very Large Data Bases, Trondheim, Norway, August 30 - September 2, 2005; Publisher: ACM; Pages: 553-564
+  介绍列式数据库管理系统概念和架构的基础论文，有助于理解底层存储优化。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://martin.kleppmann.com/ddia/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  一本全面的书籍，涵盖数据存储、索引、分区和各种数据模型，为数据系统设计提供理论和实践指导。

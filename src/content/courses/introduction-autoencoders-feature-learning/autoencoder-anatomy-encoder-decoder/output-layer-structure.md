@@ -1,0 +1,85 @@
+---
+course: "introduction-autoencoders-feature-learning"
+chapter: "autoencoder-anatomy-encoder-decoder"
+lesson: "output-layer-structure"
+sourceId: 6410
+sourceUrl: "https://apxml.com/zh/courses/introduction-autoencoders-feature-learning/chapter-2-autoencoder-anatomy-encoder-decoder/output-layer-structure"
+title: "输出层的结构"
+description: "了解输出层的作用和结构，它负责生成重建数据。"
+order: 8
+plots: []
+sourceHash: "2918c989429cf51d123e5fbfbc29002a49cb8fbdecba14c6733333a646037ddc"
+sourceCorrections: []
+---
+
+自动编码器的解码器组件接收来自前置瓶颈层的压缩数据表示，通常表示为 $z$。它的作用是将这个紧凑的摘要转换回一个尽可能接近原始输入数据的格式。这个重要的重建过程最终在自动编码器的输出层完成，该层负责生成最终的重建数据。
+
+### 目标：重新生成输入
+
+输出层是解码器工作的最终成果。它在此处生成网络对原始输入数据的最佳推测，我们称之为重建数据，通常表示为 $X'$。可以把编码器看作是将复杂的绘图概括为少量重要指令（即瓶颈 $z$），而解码器，特别是其输出层，则尝试*仅*根据这些指令重新绘制原始图像。
+
+输出层的主要作用是生成与原始输入数据 $X$ 具有相同形状和格式的数据。如果您的输入是图像，输出层必须生成相同尺寸的图像。如果您的输入是一组数值特征，输出层必须生成相同数量的数值特征。
+
+### 匹配维度：输出层的大小
+
+输出层结构的一个重要方面是其大小，具体来说是它包含的神经元（或单元）数量。这个数量**必须与原始输入数据的维度相匹配**。
+
+例如：
+
+- 如果您正在处理MNIST手写数字图像，每张图像是28x28像素。展平后，这会成为一个包含 $28 \times 28 = 784$ 个值的输入向量 (vector)。因此，用于MNIST图像的自动编码器的输出层必须有784个神经元，每个神经元对应重建图像的一个像素。
+- 如果您的输入数据包含描述客户的50个特征，那么您的输出层必须有50个神经元。
+
+维度上的这种一一对应关系是根本性的，因为自动编码器通过将其输出 $X'$ 与原始输入 $X$ 直接比较进行训练。如果它们的形状不匹配，这样的比较将无法进行。
+
+下图展示了输出层在解码器中的位置以及它在生成重建数据中的作用。
+
+> 解码器最终在输出层生成重建数据 $X'$。$X'$ 的维度（例如，像素或特征的数量）必须与原始输入 $X$ 的维度相匹配。
+
+### 用于重建的激活函数 (activation function)
+
+与神经网络 (neural network)中的其他层一样，输出层通常对其输入的加权和（加上偏置 (bias)）应用激活函数。输出层激活函数的选择很重要，因为它决定了重建输出 $X'$ 中值的性质和范围。这个选择应该与输入数据的特点保持一致。
+
+- **Sigmoid 函数：** 如果您的输入数据归一化 (normalization)到0到1的范围（例如，灰度图像中的像素强度，其中0是黑色，1是白色），Sigmoid激活函数是一个常用选择。
+  Sigmoid 函数定义为：
+
+  
+  $$
+  \sigma(a) = \frac{1}{1 + e^{-a}}
+  $$
+  
+
+  它将任意输入值 $a$ 压缩到0到1之间的输出值。这使其适合重建自然落在此范围内的值的数据。例如，如果一个输入像素值为0.8，Sigmoid 函数有助于该像素的输出神经元生成接近0.8的值。
+- **线性函数（或无激活）：** 如果您的输入数据可以是任意实数值（正或负，没有特定上限或下限），或者如果它归一化到-1到1等不同范围，Sigmoid 不适用，则通常使用线性激活函数。线性激活函数意味着神经元的输出就是其输入的加权和加上偏置： $y = a$。实践中，这通常通过不指定激活函数来实现，因为直接使用了原始的和。
+- **Tanh（双曲正切）函数：** 如果您的输入数据归一化到-1到1的范围，`tanh` 函数是个不错的选择。它将值压缩到 (-1, 1) 的范围。
+
+  
+  $$
+  \text{tanh}(a) = \frac{e^a - e^{-a}}{e^a + e^{-a}}
+  $$
+  
+
+输出激活函数的选择受以下需求的引导：生成重建数据 $X'$，其值与原始输入 $X$ 处于相同的域中。这确保了 $X$ 和 $X'$ 之间的比较（使用损失函数 (loss function)，我们稍后讨论）是有意义的。
+
+### 最终输出：$X'$
+
+输出层神经元在经过所选激活函数 (activation function)后生成的值，构成了重建数据 $X'$。这个 $X'$ 是自动编码器在数据经过瓶颈压缩后，尝试重现原始输入 $X$ 的结果。$X'$ 越接近 $X$，自动编码器就越好地学到了数据中的主要信息。
+
+总之，输出层是一个重要组成部分，它：
+
+1. 确保重建数据 $X'$ 具有与原始输入 $X$ 相同的维度。
+2. 使用适当的激活函数（例如，Sigmoid 用于 [0,1] 范围的归一化 (normalization)数据，或线性函数用于无边界数据），将输出值缩放到正确范围。
+3. 提供最终的 $X'$，用于评估自动编码器执行重建任务的效果。
+
+了解输出层的结构和作用，以及编码器和瓶颈层，能让您对自动编码器的架构有一个全面的认识。接下来，我们将研究这些组件如何在学习过程中配合工作。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; DOI: [10.7551/mitpress/9780262035613.001.0001](https://doi.org/10.7551/mitpress/9780262035613.001.0001)
+  全面介绍了自编码器架构，包括解码器和输出层在重构中的作用，并详细讨论了神经网络中的激活函数。
+- [Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://books.google.com/books?id=f019EAAAQBAJ&dq=Hands-On+Machine+Learning+with+Scikit-Learn,+Keras+%26+TensorFlow:+Concepts,+Tools,+and+Techniques+to+Build+Intelligent+Systems+O%27Reilly+Media+Aur%C3%A9lien+G%C3%A9ron&hl=en&sa=X&ei=1cQ-Y9WvKY-p-saL5qgI&ved=0CAwQ6AFqFwoTCOjE-_y114wCFQAAAAAdAAAAABAC&source=gbs_book_other_versions_r&cad=5) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  为实现自编码器提供了实用指导，涵盖了输出层设计、输入/输出维度匹配以及在常用深度学习框架中选择合适的激活函数。
+- [Neural Networks and Deep Learning (Deep Learning Specialization, Course 1)](https://www.coursera.org/learn/neural-networks-deep-learning) — Andrew Ng (2023)
+  Publisher: Coursera / DeepLearning.AI
+  介绍了神经网络的基本概念，包括层结构、输出层设计以及与重构任务相关的各种激活函数的作用和选择。

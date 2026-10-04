@@ -1,0 +1,69 @@
+---
+course: "llm-constitutional-ai-rlaif"
+chapter: "scalable-alignment-problem"
+lesson: "ai-assisted-alignment-frameworks"
+sourceId: 4440
+sourceUrl: "https://apxml.com/zh/courses/llm-constitutional-ai-rlaif/chapter-1-scalable-alignment-problem/ai-assisted-alignment-frameworks"
+title: "AI辅助对齐的理论体系"
+description: "概述支撑CAI和RLAIF等技术的理论方法。"
+order: 5
+plots: []
+sourceHash: "ba26b5b8a8597b0567037a896e66bce4bcc6122ea6c46d566b436ec9e9753df9"
+sourceCorrections: []
+---
+
+直接人工监督在微调 (fine-tuning)（SFT）和偏好标注（RLHF）中存在固有的规模限制。这些限制要求我们考虑不同的理论方法。如果人工监督无法切实覆盖先进LLM的庞大输出空间，那么AI本身或许可以提供所需的指导。本方法引入了*AI辅助对齐 (alignment)*，其中AI系统在监督信号的生成或应用中发挥重要作用。
+
+这些方法不一定完全消除人工输入的需求；相反，它们旨在增强或完善人工指导，使对齐过程更具可扩展性，并可能更具一致性。两种主要的理论途径显现出来：
+
+### AI自我审视与修改
+
+这种方法将对齐 (alignment)视为一个迭代的自我提升过程，遵循一套预设的规则或原则（即“宪法”）。其核心思想是LLM或相关AI系统可以被提示或训练来：
+
+1. **审视：** 根据指定的原则评估给定输出，指出违规之处或不足。
+2. **修改：** 根据审视结果修改输出，使其更好地符合原则。
+
+从理论角度看，这将对齐问题转变为一种自动化的质量控制和完善方式。无需依靠人工仔细审查和修正输出，AI系统来完成这项功能。这可以被看作是生成一个合成的监督数据集，其中“标签”不仅是期望的输出，还包括根据原则得出的审视结果和修改后的输出。
+
+其理论支撑与以下方面相关：
+
+- **指令遵循：** 扩展模型遵循指令的能力，使其涵盖对抽象原则的遵从。
+- **自我监督：** 凭借模型自身能力（受宪法指导）生成训练信号。
+- **自动化规则执行：** 实施一种机制，以一致地应用预设的行为准则。
+
+这种方法直接解决了SFT的可扩展性问题，通过自动化生成高质量、符合原则的训练样本。宪法AI（CAI），将在第2章和第3章中详述，是这种理论方法的首要实际实现。
+
+### AI作为偏好预测器
+
+这种方法解决了RLHF中的瓶颈：即需要大量的人工偏好判断。其核心假设是，一个能力足够的AI模型（“AI标注器”或“偏好模型”）能够高准确度地学习预测不同LLM输出之间的人类偏好。
+
+人类不再需要对给定提示$x$的响应对（$y_1, y_2$）进行比较，以确定哪个更受青睐（$y_1 \succ y_2$或$y_2 \succ y_1$），而是由AI模型执行此比较。这个AI标注器本身可以在少量人工偏好数据上进行训练，或者可能由类似于自我审视方法的宪法指导。
+
+一旦训练完成，AI标注器生成偏好数据的速度和成本远超人类。这些合成偏好数据 $D_{AI} = \{(x, y_1, y_2, p_{AI})\}$（其中$p_{AI}$表示AI预测的偏好）随后用于训练奖励模型，类似于RLHF过程。对齐 (alignment)过程随后通过强化学习 (reinforcement learning)进行，优化LLM的策略$\pi$，以最大化该AI训练奖励模型所分配的预期奖励。
+
+> RLHF与AI辅助对齐方式（如RLAIF或CAI驱动的完善）中反馈生成流程的比较。AI辅助旨在替代或增强直接的人工标注步骤。
+
+其理论依据在于：
+
+- **迁移学习 (transfer learning)：** AI标注器将关于人类价值观的知识（从初始数据或原则中习得）迁移到大规模偏好生成任务中。
+- **统计近似：** AI标注器充当近似人类偏好分布的统计模型。
+- **可扩展性：** 大幅增加可用于训练奖励模型的偏好数据量。
+
+强化学习自AI反馈（RLAIF），将在第4章和第5章中介绍，直接建立在此理论方法之上。
+
+### 潜在假设与挑战
+
+两种方法都基于重要假设：
+
+1. **AI反馈的准确性：** 核心假设是AI生成的审视结果或偏好能准确反映预期原则或人类价值观。辅助AI中的错误或偏差在训练过程中可能被放大。
+2. **自举问题：** AI反馈的质量通常取决于生成它的AI的能力。我们如何确保初始辅助AI足够好，尤其是在处理复杂或精细的对齐 (alignment)目标时？
+3. **规范复杂度：** 定义有效的宪法或准确训练初始AI标注器仍然是一项不简单的工作，需要仔细的人工输入和验证。
+4. **对齐偏差的可能性：** AI反馈机制可能导致意想不到的后果，例如模型为辅助AI的独特之处而非预期的基本价值观进行优化（一种奖励作弊或规范博弈的形式）。
+
+尽管存在这些挑战，这些AI辅助方法代表了实现可扩展且可靠的LLM对齐最有前景的方向。它们将关注点从直接的、逐实例的人工标注转向设计、指导和验证能够大规模提供监督信号的AI系统。随后的章节将研究宪法AI和RLAIF的实际实现和具体内容，它们是从这些基本思想派生出的主要方法。
+
+## 参考资料
+
+- [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: arXiv preprint arXiv:2203.02155; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  这篇基础论文介绍了InstructGPT，展示了如何使用人类反馈强化学习（RLHF）使大型语言模型与人类意图对齐，并间接强调了AI辅助方法旨在解决的成本和可扩展性挑战。

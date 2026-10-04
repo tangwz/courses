@@ -1,0 +1,92 @@
+---
+course: "introduction-to-machine-learning"
+chapter: "supervised-learning-regression"
+lesson: "introduction-linear-regression"
+sourceId: 1478
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-machine-learning/chapter-3-supervised-learning-regression/introduction-linear-regression"
+title: "线性回归介绍"
+description: "介绍如何使用线性回归将直线拟合到数据的原理。"
+order: 2
+plots: ["plots/1478-0.json", "plots/1478-1.json"]
+sourceHash: "20ba54d0cfbde5bc4302b8b5386ad915a0263d1629345f2c8804fd4f0f2569be"
+sourceCorrections: []
+---
+
+你已经了解回归是为了预测一个连续的数值，比如房屋价格或身高。现在，我们来看看用于此目的的最基础算法之一：**线性回归**。
+
+假设你有一些数据点绘制在图表上。例如，你可能正在观察学生学习时长与他们在考试中获得分数之间的关系。你可能会注意到一个规律：通常，学习时间越长，分数越高。线性回归试图通过在数据点之间绘制一条直线来抓住这个规律。
+
+### 思路：寻找最佳直线
+
+线性回归主要假定输入变量（或多个变量）与输出变量之间的关系近似为线性。这意味着我们可以用一条直线来概括这种关系。
+
+考虑一个简单情况：有一个输入变量 $x$（例如学习时长）和一个要预测的输出变量 $y$（例如考试分数）。在这种情况下，可以使用直线方程来表示 $x$ 和 $y$ 之间的关系。
+
+$y = mx + b$
+
+在这个方程中：
+
+- $y$ 是我们想要预测的值（因变量）。
+- $x$ 是我们已知的输入值（自变量或特征）。
+- $m$ 是直线的斜率。它表明当 $x$ 增加一个单位时，$y$ 变化了多少。例如，如果 $m=5$，这表示根据我们的直线，每多学习一小时，分数就会增加5分。
+- $b$ 是y截距。它是 $x$ 为0时 $y$ 的值。在我们的例子中，它可能代表一个人完全不学习时的预期分数（尽管有时截距没有直接的解释，特别是当 $x=0$ 超出我们数据的范围时）。
+
+简单线性回归（简单指只有一个输入变量）的目标是找到 $m$ 和 $b$ 的特定值，使得到的直线“最能”拟合观测到的数据点。“最能拟合”是什么意思？直观来说，它意味着这条直线整体上最接近所有数据点。我们稍后讨论成本函数时会更精确地说明这一点。
+
+### 视觉化说明
+
+让我们通过视觉来理解。假设我们有以下显示经验年限（$x$）与薪资（$y$，单位：千美元）的数据：
+
+| 经验（年） | 薪资（千美元） |
+| --- | --- |
+| 1 | 45 |
+| 2 | 50 |
+| 3 | 60 |
+| 4 | 65 |
+| 5 | 75 |
+| 6 | 80 |
+
+我们可以绘制这些点：
+
+
+
+![经验与薪资](plots/1478-0.json)
+
+
+
+> 数据显示经验年限与薪资之间存在正向关系。
+
+线性回归旨在这些点中绘制一条最能代表潜在规律的直线。例如，这条直线可能看起来像这样（我们尚未计算出最精确的直线，这仅是说明）：
+
+
+
+![经验与薪资及潜在直线](plots/1478-1.json)
+
+
+
+> 相同的数据点，以及一条可能试图捕捉其规律的直线。
+
+一旦我们找到这条直线的最佳 $m$ 和 $b$ 值，就可以使用方程 $y = mx + b$ 进行预测。如果某人有3.5年经验，我们可以将 $x = 3.5$ 代入方程来预测他们的薪资（$y$）。
+
+### 为何从此开始？
+
+线性回归是机器学习 (machine learning)中一项基础算法，原因如下：
+
+1. **简单易懂：** 它相对容易理解和解释。输入与输出之间的关系由一个直接的线性方程表示。
+2. **根基：** 许多更复杂的算法都是线性回归的延伸或变体。理解它能提供坚实的基础。
+3. **高效：** 它的训练和预测计算成本较低。
+4. **常见应用：** 许多现象都表现出近似的线性关系，使其成为实际应用中一个有用的工具。
+
+尽管不适用于所有问题（特别是那些具有复杂、非线性模式的问题），线性回归通常是回归任务中一个很好的首选算法。在接下来的部分中，我们将了解该算法如何实际地从数据中“学习”到 $m$ 和 $b$ 的最佳值。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, and Rob Tibshirani (2013)
+  Publisher: Springer; Pages: Chapter 3
+  统计学习初学者的强烈推荐教材，清晰阐述了线性回归的基础知识。
+- [CS229 Lecture Notes: Linear Regression](http://cs229.stanford.edu/notes2022fall/main_notes.pdf) — Andrew Ng (2022)
+  Publisher: Stanford University
+  广受认可的机器学习课程讲义，涵盖了线性回归的数学和直观基础。
+- [Python Machine Learning: Machine Learning and Deep Learning with Python, Scikit-Learn, and TensorFlow 2](https://www.amazon.com/Python-Machine-Learning-scikit-learn-TensorFlow/dp/1789955750/) — Sebastian Raschka and Vahid Mirjalili (2019)
+  Publisher: Packt Publishing; Pages: Chapter 10
+  一本流行的机器学习实践指南，用Python提供了线性回归理论和应用的易懂解释。

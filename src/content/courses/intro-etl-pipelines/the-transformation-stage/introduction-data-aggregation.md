@@ -1,0 +1,79 @@
+---
+course: "intro-etl-pipelines"
+chapter: "the-transformation-stage"
+lesson: "introduction-data-aggregation"
+sourceId: 5546
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-3-the-transformation-stage/introduction-data-aggregation"
+title: "数据聚合简介"
+description: "了解通过聚合（例如，求和、计数）汇总数据的原理。"
+order: 8
+plots: ["plots/5546-0.json"]
+sourceHash: "ca195e4f21ad829b4a16a59784d4e0ff19c3ce9657274862ce60f769cfe11a0b"
+sourceCorrections: []
+---
+
+数据清洗和结构化之后，通常需要对其进行汇总。你可能不想查看每一笔交易或事件，而是希望获得更宏观的视图，例如每日总销售额或每个城市的注册用户数。这种汇总数据的过程称为**聚合**。
+
+聚合是指将具有相同属性值的行进行分组，然后对这些组进行计算，为每个组生成一个单一的汇总值。可以把它看作是将大量的详细信息浓缩成更容易理解的概要。
+
+### 为何要聚合数据？
+
+聚合是重要的转换步骤，原因如下：
+
+1. **减少数据量：** 汇总数据能显著减少需要存储和处理的行数，这有助于目标系统（如数据仓库）的性能提升和存储成本降低。
+2. **提供宏观视图：** 聚合数据使得发现趋势、模式和异常值变得更容易。例如，对于业务报告来说，了解月度*总*销售额通常比列出数千张单独的销售收据更有直接用途。
+3. **为分析和报告准备数据：** 仪表盘、商业智能工具和分析模型通常对汇总数据进行操作。聚合将原始数据转化为这些下游应用所需的格式。
+
+### 常用聚合函数
+
+虽然可以使用多种计算，但有些聚合函数在ETL过程中特别常用：
+
+- **COUNT()：** 计算每个组内的行数。适用于查找频率，例如每个客户的订单数量。
+- **SUM()：** 计算每个组中数值列的总和。常用于计算总收入、销售数量或成本。
+- **AVG() (平均值)：** 确定每个组中数值列的平均值。示例：每个区域的平均订单价值。
+- **MIN()：** 找出每个组中列的最小值。适用于识别最低价格、最早日期等。
+- **MAX()：** 找出每个组中列的最大值。有助于识别最高价格、最新日期、峰值使用量等。
+
+### 示例：汇总销售数据
+
+假设你提取的原始销售交易数据如下所示：
+
+| 交易ID | 产品 | 区域 | 销售金额 |
+| --- | --- | --- | --- |
+| 1 | Widget A | North | 100 |
+| 2 | Widget B | South | 150 |
+| 3 | Widget A | North | 120 |
+| 4 | Widget C | East | 80 |
+| 5 | Widget B | North | 90 |
+| 6 | Widget A | South | 110 |
+
+这些详细数据很有用，但目标分析系统可能只需要知道每个区域的总销售额。你可以通过聚合来实现这一点。
+
+你需要根据`Region`列对数据进行分组，并对每个组的`SalesAmount`列应用`SUM()`函数。这个转换过程将生成以下汇总表：
+
+| 区域 | 总销售额 |
+| --- | --- |
+| North | 310 |
+| South | 260 |
+| East | 80 |
+
+这个聚合表小得多，并且直接回答了“每个区域的总销售额是多少？”这个问题。
+
+
+
+![按区域划分的总销售额](plots/5546-0.json)
+
+
+
+> 每个区域的总销售额已聚合。
+
+数据聚合是一种高效的转换方法，用于将大型数据集提炼成有意义的摘要，为ETL过程中的有效分析和报告做准备。它是初步清洗和结构化之后进行的一项标准操作，旨在为数据最终去向进行塑形。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball, Margy Ross (2013)
+  Publisher: John Wiley & Sons
+  这本数据仓库和ETL的基础书籍解释了数据聚合如何对设计汇总事实表以及优化分析报告系统的性能至关重要。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  本书讨论了现代数据系统的架构，其中聚合是一种常见的数据处理和转换模式，用于提高性能并为各种应用提供洞察。

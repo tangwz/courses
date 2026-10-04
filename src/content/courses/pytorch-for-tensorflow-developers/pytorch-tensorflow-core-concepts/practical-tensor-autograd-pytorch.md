@@ -1,0 +1,530 @@
+---
+course: "pytorch-for-tensorflow-developers"
+chapter: "pytorch-tensorflow-core-concepts"
+lesson: "practical-tensor-autograd-pytorch"
+sourceId: 5743
+sourceUrl: "https://apxml.com/zh/courses/pytorch-for-tensorflow-developers/chapter-1-pytorch-tensorflow-core-concepts/practical-tensor-autograd-pytorch"
+title: "动手实践：张量操作与自动求导"
+description: "通过实际编码任务，运用您对PyTorch张量和自动微分的理解。"
+order: 8
+plots: []
+sourceHash: "35a340845ec238863affadf894da7295a8ae4553e5d09c27dfe29c0cff490b4f"
+sourceCorrections: []
+---
+
+说明TensorFlow静态图与PyTorch动态方式之间的概括性差异，并介绍`torch.Tensor`和`autograd`。常见的TensorFlow操作转换为PyTorch，并演示PyTorch如何处理自动微分。内容涵盖张量的创建、操作，以及使用`autograd`计算梯度。
+
+首先，请确保您已导入PyTorch。通常，您也需要NumPy，因为它在许多数据科学工作流程中是常用的搭配。
+
+```python
+import torch
+import numpy as np
+```
+
+### 张量操作：比较练习
+
+如果您是从TensorFlow过来的，您对张量这个理念已经熟悉了。PyTorch的`torch.Tensor`在很多方面会感觉与`tf.Tensor`非常相似，但存在一些语法和行为上的差异，特别是关于可变性以及操作的即时执行特性。
+
+#### 创建张量
+
+在PyTorch中创建张量很简单。您可以从Python列表或NumPy数组创建张量，也可以使用特定值进行初始化。
+
+- **从现有数据（Python列表或NumPy数组）创建：**
+
+  ```python
+  # Python 列表
+  data_list = [[1, 2], [3, 4]]
+  pt_tensor_from_list = torch.tensor(data_list, dtype=torch.float32)
+  print("From list:\n", pt_tensor_from_list)
+
+  # NumPy 数组
+  data_numpy = np.array([[5., 6.], [7., 8.]])
+  pt_tensor_from_numpy = torch.from_numpy(data_numpy) # 与NumPy数组共享内存
+  print("From NumPy array (shares memory):\n", pt_tensor_from_numpy)
+
+  # 要创建不共享内存的副本：
+  pt_tensor_copied_from_numpy = torch.tensor(data_numpy)
+  print("From NumPy array (copied):\n", pt_tensor_copied_from_numpy)
+  ```
+
+  这类似于TensorFlow中的`tf.constant(data_list)`或`tf.convert_to_tensor(data_numpy)`。主要区别在于`torch.from_numpy()`会创建一个与NumPy数组共享内存的张量（如果数组在CPU上），而`torch.tensor()`总是复制数据。
+- **使用特定值（零、一、随机数）创建张量：**
+
+  ```python
+  # 全零张量
+  zeros_tensor = torch.zeros(2, 3) # 形状 (2, 3)
+  print("Zeros tensor:\n", zeros_tensor)
+
+  # 全一张量
+  ones_tensor = torch.ones(2, 3, dtype=torch.int16) # 指定数据类型
+  print("Ones tensor:\n", ones_tensor)
+
+  # 随机张量（0到1之间的均匀分布）
+  rand_tensor = torch.rand(2, 3)
+  print("Random tensor (uniform):\n", rand_tensor)
+
+  # 随机张量（正态分布）
+  randn_tensor = torch.randn(2, 3)
+  print("Random tensor (normal):\n", randn_tensor)
+  ```
+
+  这些与`tf.zeros()`、`tf.ones()`、`tf.random.uniform()`和`tf.random.normal()`直接对应。您还可以使用`torch.zeros_like(existing_tensor)`或`torch.rand_like(existing_tensor)`来创建具有另一个张量属性（形状、数据类型、设备）的张量。
+
+#### 张量属性
+
+访问张量的形状、数据类型和设备等属性与TensorFlow非常相似。
+
+```python
+my_tensor = torch.rand(3, 4, device='cpu') # 明确指定在CPU上
+print(f"Shape: {my_tensor.shape}")       # 或 my_tensor.size()
+print(f"Data type: {my_tensor.dtype}")
+print(f"Device: {my_tensor.device}")
+```
+
+在PyTorch中，`tensor.size()`是`tensor.shape`的别名。
+
+#### 基本操作
+
+算术运算和矩阵乘法会感觉熟悉。
+
+- **逐元素操作：**
+
+  ```python
+  a = torch.tensor([[1., 2.], [3., 4.]])
+  b = torch.ones(2, 2) * 2
+
+  # 加法
+  print("Addition (a + b):\n", a + b)
+  print("Addition (torch.add(a, b)):\n", torch.add(a, b))
+
+  # 乘法（逐元素）
+  print("Multiplication (a * b):\n", a * b)
+  print("Multiplication (torch.mul(a, b)):\n", torch.mul(a, b))
+
+  # 原地操作（直接修改张量）
+  c = torch.tensor([[1.,1.],[1.,1.]])
+  c.add_(b) # 注意下划线表示原地操作
+  print("In-place addition (c.add_(b)):\n", c)
+  ```
+
+  PyTorch操作通常有一个以末尾下划线表示的原地版本（例如，`add_()`、`mul_()`）。这会直接修改张量，可以更节省内存，但需要小心，因为它可能会覆盖其他地方需要的数据。TensorFlow张量通常是不可变的，因此操作会创建新的张量。
+- **矩阵乘法：**
+
+  ```python
+  mat1 = torch.randn(2, 3)
+  mat2 = torch.randn(3, 4)
+
+  # 矩阵乘法
+  product = torch.matmul(mat1, mat2)
+  print("Matrix product (torch.matmul):\n", product)
+  # 或者，使用@运算符（Python 3.5+）
+  product_at = mat1 @ mat2
+  print("Matrix product (@ operator):\n", product_at)
+  ```
+
+  这在语法上与`tf.matmul()`和TensorFlow在使用即时执行张量时的`@`运算符相同。
+
+#### 索引、切片、拼接、修改
+
+PyTorch支持标准的NumPy风格的索引和切片，这功能强大。
+
+```python
+x = torch.arange(1, 10).reshape(3, 3)
+print("Original tensor x:\n", x)
+
+# 第一行
+print("First row: ", x[0, :])
+# 第二列
+print("Second column: ", x[:, 1])
+# 子张量
+print("Sub-tensor (x[1:, 1:]):\n", x[1:, 1:])
+
+# 条件索引（掩码）
+mask = x > 5
+print("Elements greater than 5:\n", x[mask])
+```
+
+张量拼接通过`torch.cat()`（连接）和`torch.stack()`完成。
+
+```python
+t1 = torch.zeros(2,3)
+t2 = torch.ones(2,3)
+
+# 沿维度0（行）拼接
+cat_dim0 = torch.cat((t1, t2), dim=0)
+print("Concatenated along dim 0 (rows):\n", cat_dim0)
+print("Shape:", cat_dim0.shape) # torch.Size([4, 3])
+
+# 沿维度1（列）拼接
+cat_dim1 = torch.cat((t1, t2), dim=1)
+print("Concatenated along dim 1 (columns):\n", cat_dim1)
+print("Shape:", cat_dim1.shape) # torch.Size([2, 6])
+
+# 堆叠（创建一个新维度）
+stacked_tensors = torch.stack((t1, t2), dim=0)
+print("Stacked along new dim 0:\n", stacked_tensors)
+print("Shape:", stacked_tensors.shape) # torch.Size([2, 2, 3])
+```
+
+这类似于`tf.concat()`和`tf.stack()`。
+
+#### 重塑张量
+
+改变张量形状是常见的操作。PyTorch提供了`view()`和`reshape()`。
+
+- `tensor.view()`：返回一个具有相同数据但不同形状的新张量。新形状必须与原始元素数量兼容。重要的一点是，`view()`只能作用于连续的张量，并且返回的张量与底层数据共享。如果张量不连续，您可能需要首先调用`.contiguous()`。
+- `tensor.reshape()`：这更灵活。如果可能，它会返回一个视图；如果无法创建视图（例如，张量不连续且新形状需要复制），它将创建一个副本。
+
+```python
+original = torch.arange(12.) # 创建一个一维张量：[0., 1., ..., 11.]
+print("Original:", original)
+
+# 使用 view
+view_tensor = original.view(3, 4)
+print("View (3,4):\n", view_tensor)
+# 修改 view_tensor 会影响 original，反之亦然，因为它们共享数据
+view_tensor[0,0] = 99.
+print("Original after modifying view:", original)
+
+# 使用 reshape（可能返回视图，也可能不返回）
+reshaped_tensor = original.reshape(2, 6)
+print("Reshaped (2,6):\n", reshaped_tensor)
+
+# 转置
+transposed_tensor = view_tensor.t() # 仅适用于二维张量
+print("Transposed (view_tensor.t()):\n", transposed_tensor)
+
+# 对于一般 N 维转置，请使用 permute
+permuted_tensor = view_tensor.permute(1, 0) # 交换维度0和1
+print("Permuted (view_tensor.permute(1,0)):\n", permuted_tensor)
+```
+
+TensorFlow的`tf.reshape()`类似于`torch.reshape()`。`tf.transpose()`类似于`torch.permute()`。
+
+#### NumPy 桥接
+
+PyTorch在CPU上的张量和NumPy数组可以共享其底层内存位置，因此一个中的变化会反映在另一个中。
+
+```python
+# PyTorch 张量到 NumPy 数组
+pt_tensor = torch.ones(5)
+numpy_array = pt_tensor.numpy()
+print("NumPy array from PyTorch tensor:\n", numpy_array)
+
+pt_tensor.add_(1) # 原地加法
+print("PyTorch tensor after add_:\n", pt_tensor)
+print("NumPy array after PyTorch tensor modified:\n", numpy_array) # NumPy 数组也变化了！
+
+# NumPy 数组到 PyTorch 张量
+np_array = np.array([1, 2, 3, 4, 5])
+torch_tensor_from_np = torch.from_numpy(np_array)
+print("PyTorch tensor from NumPy array:\n", torch_tensor_from_np)
+
+np.add(np_array, 1, out=np_array) # NumPy 中的原地加法
+print("NumPy array after modification:\n", np_array)
+print("PyTorch tensor after NumPy array modified:\n", torch_tensor_from_np) # PyTorch 张量也变化了！
+```
+
+这种紧密集成非常方便。如果张量在GPU上，`.numpy()`会首先将其复制到CPU。TensorFlow的`tf.Tensor`对象上的`.numpy()`方法为即时执行张量提供类似的功能，创建一个NumPy数组副本。
+
+#### 设备管理（CPU/GPU）
+
+在设备（如CPU和GPU）之间移动张量是基本操作。
+
+```python
+# 检查GPU是否可用
+if torch.cuda.is_available():
+    device = torch.device("cuda")          # 一个CUDA设备对象
+    cpu_device = torch.device("cpu")
+    print(f"Running on {device}")
+
+    # 在CPU上创建一个张量，然后移到GPU
+    tensor_cpu = torch.randn(2, 2)
+    print("Tensor on CPU:", tensor_cpu)
+    tensor_gpu = tensor_cpu.to(device)     # 或 tensor_cpu.cuda()
+    print("Tensor on GPU:", tensor_gpu)
+
+    # 直接在GPU上创建张量
+    tensor_direct_gpu = torch.randn(2, 2, device=device)
+    print("Tensor directly on GPU:", tensor_direct_gpu)
+
+    # 移回CPU
+    tensor_back_to_cpu = tensor_gpu.to(cpu_device) # 或 tensor_gpu.cpu()
+    print("Tensor back on CPU:", tensor_back_to_cpu)
+
+    # 注意：不同设备上的张量之间进行操作会引发错误。
+    # 例如，tensor_cpu + tensor_gpu 会失败。
+    # 它们必须在同一个设备上。
+    try:
+        result = tensor_cpu + tensor_gpu
+    except RuntimeError as e:
+        print(f"\nError trying to operate on tensors on different devices: {e}")
+
+else:
+    device = torch.device("cpu")
+    print("CUDA not available, running on CPU.")
+    tensor_cpu = torch.randn(2, 2) # 操作将默认为CPU
+```
+
+这类似于TensorFlow中使用`with tf.device('/GPU:0'):`来放置操作，或TensorFlow张量上的`tensor.gpu()`/`tensor.cpu()`方法（尽管`to()`方法是更现代的PyTorch方式）。PyTorch要求张量在同一设备上进行操作。
+
+#### 小练习 1：张量操作练习
+
+1. 创建一个3x4的张量`A`，填充0到10之间的均匀分布随机数。
+2. 创建一个4x2的张量`B`，填充整数值2。
+3. 计算矩阵乘积`C = A @ B`。
+4. `C`的形状是什么？打印它。
+5. 提取`C`的第二列。
+6. 如果GPU可用，将`C`移到GPU。打印其设备。然后将其移回CPU并再次打印其设备。
+
+*解决方案（请先自己尝试！）*
+
+```python
+# 1. 创建张量 A
+A = torch.rand(3, 4) * 10
+print("Tensor A:\n", A)
+
+# 2. 创建张量 B
+B = torch.full((4, 2), 2, dtype=torch.float32) # 确保 B 为浮点类型以便与 A 进行矩阵乘法
+print("Tensor B:\n", B)
+
+# 3. 计算 C = A @ B
+C = A @ B
+print("Tensor C (A @ B):\n", C)
+
+# 4. C 的形状
+print("Shape of C:", C.shape)
+
+# 5. 提取 C 的第二列
+second_column_C = C[:, 1]
+print("Second column of C:\n", second_column_C)
+
+# 6. 将 C 移到 GPU 再移回（如果可用）
+if torch.cuda.is_available():
+    gpu_device = torch.device("cuda")
+    cpu_device = torch.device("cpu")
+    print(f"Initial device of C: {C.device}")
+    C_gpu = C.to(gpu_device)
+    print(f"Device of C after moving to GPU: {C_gpu.device}")
+    C_cpu_again = C_gpu.to(cpu_device)
+    print(f"Device of C after moving back to CPU: {C_cpu_again.device}")
+else:
+    print("CUDA not available. Skipping GPU transfer part.")
+```
+
+### 使用 `autograd` 进行自动微分
+
+PyTorch的`autograd`包是自动微分的引擎。如果您熟悉TensorFlow的`tf.GradientTape`，您会发现`autograd`具有类似的作用，但它与PyTorch的即时执行特性自然契合。
+
+当张量的`requires_grad`属性设置为`True`时，`autograd`开始追踪其上的所有操作。当您完成计算后，可以在标量输出（通常是您的损失函数 (loss function)）上调用`.backward()`，`autograd`会自动计算该标量相对于所有`requires_grad=True`并对其有贡献的张量的梯度。
+
+#### `requires_grad` 属性
+
+默认情况下，您创建的张量不追踪梯度：
+
+```python
+x = torch.tensor([1.0, 2.0, 3.0])
+print(f"x.requires_grad: {x.requires_grad}") # 默认为 False
+```
+
+要启用梯度追踪，请在创建时或之后设置`requires_grad=True`：
+
+```python
+# 创建时
+w = torch.tensor([0.5, 0.1, -0.2], requires_grad=True)
+print(f"w.requires_grad: {w.requires_grad}")
+
+# 或原地修改（对于没有 grad_fn 的叶张量）
+x.requires_grad_(True)
+print(f"x.requires_grad after modification: {x.requires_grad}")
+```
+
+`torch.nn.Module`的参数 (parameter)（我们将在下一章看到）会自动将`requires_grad`设置为`True`。
+
+#### 计算梯度：`backward()` 和 `.grad`
+
+让我们看一个简单例子。假设我们有一个函数 $y = \sum_i (w_i \cdot x_i + b)^2$。我们想计算 $\frac{\partial y}{\partial w_i}$ 和 $\frac{\partial y}{\partial b}$。
+
+```python
+# 输入（叶节点，此示例中不需要梯度）
+x = torch.tensor([1.0, 2.0, 3.0])
+
+# 参数（我们希望计算这些的梯度）
+w = torch.tensor([0.5, 0.1, -0.2], requires_grad=True)
+b = torch.tensor(0.1, requires_grad=True)
+
+# 前向传播：操作被追踪
+z = w * x + b  # 逐元素乘法和加法
+y = z.pow(2).sum() # 平方并求和（y 是一个标量）
+
+print(f"y: {y.item()}")
+
+# 反向传播：计算梯度
+y.backward()
+
+# 梯度累积在张量的 .grad 属性中
+print(f"Gradients for w (dy/dw): {w.grad}")
+print(f"Gradient for b (dy/db): {b.grad}")
+
+# x 没有 .grad 属性，因为 requires_grad 为 False
+print(f"x.grad: {x.grad}") # 将为 None
+```
+
+在TensorFlow中，这类似于：
+
+```python
+# TensorFlow 等效代码
+# x_tf = tf.constant([1.0, 2.0, 3.0])
+# w_tf = tf.Variable([0.5, 0.1, -0.2])
+# b_tf = tf.Variable(0.1)
+#
+# with tf.GradientTape() as tape:
+#   z_tf = w_tf * x_tf + b_tf
+#   y_tf = tf.reduce_sum(tf.pow(z_tf, 2))
+#
+# dy_dw_tf, dy_db_tf = tape.gradient(y_tf, [w_tf, b_tf])
+# print(f"TF dy/dw: {dy_dw_tf}")
+# print(f"TF dy/db: {dy_db_tf}")
+```
+
+核心理念相同：定义一个计算，然后请求框架计算梯度。PyTorch的`backward()`在输出张量上调用，梯度会填充需要梯度的输入张量的`.grad`属性。
+
+#### 梯度累积
+
+一个需要注意的重要行为是：**梯度在PyTorch中是累积的**。如果您多次调用`backward()`，新的梯度会加到`.grad`属性中的现有值上。
+
+```python
+q = torch.tensor(2.0, requires_grad=True)
+out1 = q * q
+out1.backward() # 计算 d(out1)/dq = 2*q = 4.0
+print(f"q.grad after first backward: {q.grad}") # 张量(4.)
+
+out2 = q * q * q
+out2.backward() # 计算 d(out2)/dq = 3*q^2 = 12.0
+# 现在 q.grad 将是 4.0（来自之前）+ 12.0（来自当前）= 16.0
+print(f"q.grad after second backward (accumulated): {q.grad}")
+```
+
+这就是为什么在典型的训练循环中，您必须在每次调用`backward()`之前，使用`optimizer.zero_grad()`或手动使用`tensor.grad.zero_()`，显式地将梯度清零。
+
+```python
+# 手动清零梯度
+if q.grad is not None:
+    q.grad.zero_()
+print(f"q.grad after zeroing: {q.grad}")
+```
+
+#### 停止梯度追踪
+
+有时您希望执行操作而不让`autograd`追踪它们，例如在模型评估（推理 (inference)）期间或手动更新权重 (weight)时。
+
+- **`torch.no_grad()` 上下文 (context)管理器：**
+
+  ```python
+  print(f"w.requires_grad before no_grad: {w.requires_grad}") # True
+  with torch.no_grad():
+      print("Inside torch.no_grad():")
+      y_eval = (w * x + b).sum() # 这里的操作将不会被追踪
+      print(f"  y_eval.requires_grad: {y_eval.requires_grad}") # False
+      # w.requires_grad 仍然是 True，但在此块中对它进行的操作不会构建计算图
+      print(f"  w.requires_grad inside no_grad: {w.requires_grad}")
+  print(f"w.requires_grad after no_grad: {w.requires_grad}") # True
+  ```
+
+  在不需要梯度时，这对于加快计算速度和减少内存使用很有用。
+- **`tensor.detach()`：**
+  这会创建一个新张量，它共享相同的数据，但与计算历史分离。它将不需要梯度。
+
+  ```python
+  detached_w = w.detach()
+  print(f"detached_w.requires_grad: {detached_w.requires_grad}") # False
+  # 如果 w 是叶张量，修改 detached_w 会影响 w，
+  # 但对 detached_w 的操作不会影响 w.grad。
+  ```
+
+#### 小练习 2：自动求导练习
+
+考虑函数 $z = (a \cdot b) + \sin(c)$。
+
+1. 将 `a`、`b` 和 `c` 初始化为标量 `torch.Tensor`，值分别为 `a=2.0`、`b=3.0`、`c=0.0`（弧度）。确保它们都要求梯度。
+2. 计算`z`。
+3. 在`z`上调用`backward()`。
+4. 打印梯度 $\frac{\partial z}{\partial a}$、$\frac{\partial z}{\partial b}$ 和 $\frac{\partial z}{\partial c}$。
+5. 手动计算这些梯度应该是什么，并验证您的结果。
+   （提示：$\frac{d}{dx} \sin(x) = \cos(x)$）
+
+*解决方案（请先自己尝试！）*
+
+```python
+# 1. 初始化张量
+a = torch.tensor(2.0, requires_grad=True)
+b = torch.tensor(3.0, requires_grad=True)
+c = torch.tensor(0.0, requires_grad=True) # 0.0 弧度
+
+# 2. 计算 z
+z = (a * b) + torch.sin(c)
+print(f"z = {z.item()}")
+
+# 3. 调用 backward()
+z.backward()
+
+# 4. 打印梯度
+print(f"dz/da: {a.grad}")
+print(f"dz/db: {b.grad}")
+print(f"dz/dc: {c.grad}")
+
+# 5. 手动验证：
+# dz/da = b = 3.0
+# dz/db = a = 2.0
+# dz/dc = cos(c) = cos(0.0) = 1.0
+print("\nManual verification:")
+print(f"Expected dz/da: 3.0, Got: {a.grad.item()}")
+print(f"Expected dz/db: 2.0, Got: {b.grad.item()}")
+print(f"Expected dz/dc: cos(0) = 1.0, Got: {c.grad.item()}")
+```
+
+### 优化初探
+
+虽然我们将在第4章详细讨论`torch.optim`中的优化器，但`autograd`是其基础。这是一个非常基本的手动优化步骤：
+
+```python
+x_val = torch.tensor([2.0], requires_grad=True)
+y_target = torch.tensor([10.0])
+learning_rate = 0.1
+
+print(f"Initial x: {x_val.item()}")
+
+for i in range(5): # 执行 5 次优化步骤
+    # 定义一个简单模型和损失
+    y_pred = x_val * 3 + 1 # 我们的“模型”
+    loss = (y_pred - y_target)**2
+
+    # 清零之前的梯度（如果有）
+    if x_val.grad is not None:
+        x_val.grad.zero_()
+
+    # 计算损失相对于 x_val 的梯度
+    loss.backward()
+
+    # 使用梯度下降更新 x_val（手动步骤）
+    # 我们使用 torch.no_grad() 是因为这个更新不应该成为梯度追踪的一部分
+    with torch.no_grad():
+        x_val -= learning_rate * x_val.grad
+
+    print(f"Step {i+1}: x = {x_val.item():.4f}, loss = {loss.item():.4f}, grad = {x_val.grad.item():.4f}")
+```
+
+在这个循环中，我们计算损失，使用`loss.backward()`计算梯度，然后手动更新`x_val`以最小化损失的方向。`with torch.no_grad():`块确保权重 (weight)更新操作本身不被`autograd`追踪。这个简单循环说明了`torch.optim`将为我们自动完成的核心机制。
+
+本次实践操作应该能让您对PyTorch的张量操作及其自动求导系统有很好的体会。您已经了解了如何创建和操作张量，如何在设备间移动它们，以及更重要的是，如何计算梯度。当我们开始使用`torch.nn`构建模型时，这些基础技能将非常重要。
+
+## 参考资料
+
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html) — PyTorch Developers (2024)
+  提供对 `torch.Tensor` 操作、属性、设备管理以及 `autograd` 自动微分引擎的参考。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  第6章阐述了反向传播和计算图，这些是理解 `autograd` 的基础。
+- [Deep Learning with PyTorch](https://www.manning.com/books/deep-learning-with-pytorch) — Eli Stevens, Luca Antiga, and Thomas Viehmann (2020)
+  Publisher: Manning Publications
+  提供了PyTorch张量操作、`autograd` 和深度学习模型的实际示例和说明。

@@ -1,0 +1,108 @@
+---
+course: "intro-etl-pipelines"
+chapter: "building-simple-etl-pipelines"
+lesson: "hands-on-designing-pipeline"
+sourceId: 5595
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-5-building-simple-etl-pipelines/hands-on-designing-pipeline"
+title: "动手实践：设计一个简单的数据管道"
+description: "在纸上或使用简单的绘图工具设计一个基本的ETL数据管道。"
+order: 8
+plots: []
+sourceHash: "d823eded94e11a0988bba976c537a5a0b9cee00ddbcc033f22818f1eb64bb741"
+sourceCorrections: []
+---
+
+设计一个简单的ETL数据管道，需要理解E、T和L各个阶段，它们如何组成工作流，以及工具、调度和监控的基础知识。这里将应用这些概念来设计一个基本的ETL数据管道。不涉及编写代码或使用特定软件；主要目标是思考整个过程并勾勒出其结构，就像建筑师在施工开始前绘制蓝图一样。
+
+### 目标
+
+本次动手活动的目的是基于一个常见的业务场景，设计一个基本ETL数据管道的工作流程。我们将定义数据源、转换、目标和操作顺序。您可以在纸上、使用白板或简单的绘图工具完成此项任务。
+
+### 场景：每日销售报告整合
+
+想象您为一家小型在线零售商工作。每天，您都需要创建一份前一天销售的汇总报告。销售数据来自两个不同的地方：
+
+1. **在线订单：** 记录在每日生成的CSV文件（`online_sales.csv`）中。它包含`order_id`、`customer_email`、`product_sku`、`quantity`、`sale_amount`和`order_timestamp`（YYYY-MM-DD HH:MM:SS 格式）。
+2. **实体店自助服务亭订单：** 记录在数据库表（`kiosk_sales`）中。它包含列`transaction_id`、`customer_id`、`item_code`、`units_sold`、`total_price`和`sale_date`（MM/DD/YYYY 格式）。
+
+目标是创建一个名为`daily_consolidated_sales`的单一、整洁的数据集（可能是另一个CSV文件或数据库表），包含以下列：`sale_id`（销售的唯一标识符）、`source`（“在线”或“自助服务亭”）、`product_identifier`、`quantity_sold`、`revenue`和`sale_datetime`（标准化ISO 8601格式：YYYY-MM-DDTHH:MM:SS）。我们只需要*前一天*的销售数据。
+
+### 步骤1：明确需求与目标
+
+让我们分解需要完成的任务：
+
+- **源数据：** `online_sales.csv` 文件，`kiosk_sales` 数据库表。
+- **目标：** 一个新数据集（例如，`daily_consolidated_sales.csv` 或一个数据库表）。
+- **频率：** 流程需要每天运行。
+- **数据筛选：** 只包含前一天的记录。
+- **数据选取：** 从两个源中抽取相关列。
+- **转换：**
+  - 统一列名（`product_sku` 和 `item_code` 变为 `product_identifier`；`quantity` 和 `units_sold` 变为 `quantity_sold`；`sale_amount` 和 `total_price` 变为 `revenue`）。
+  - 统一日期/时间格式（`order_timestamp` 和 `sale_date` 变为 ISO 8601 格式的 `sale_datetime`）。
+  - 添加一个 `source` 列，指示“在线”或“自助服务亭”。
+  - 为最终数据集中的每条记录生成一个唯一的 `sale_id`。
+- **加载：** 将合并、转换后的数据加载到目标中，可能替换前一天的报告（全量加载策略）。
+
+### 步骤2：定义E、T、L阶段
+
+根据需求，让我们概述每个阶段内的具体行动：
+
+#### 抽取（E）
+
+- **任务E1：** 读取`online_sales.csv`文件。筛选`order_timestamp`对应前一天的记录。选取`order_id`、`product_sku`、`quantity`、`sale_amount`、`order_timestamp`。
+- **任务E2：** 连接数据库并查询`kiosk_sales`表。筛选`sale_date`对应前一天的记录。选取`transaction_id`、`item_code`、`units_sold`、`total_price`、`sale_date`。
+
+#### 转换（T）
+
+- **任务T1（在线数据）：**
+  - 重命名列：`product_sku` -> `product_identifier`，`quantity` -> `quantity_sold`，`sale_amount` -> `revenue`。
+  - 将`order_timestamp`转换为ISO 8601格式并重命名为`sale_datetime`。
+  - 添加一个新列`source`，值为“在线”。
+  - 使用`order_id`作为最终`sale_id`的基础（或生成新的唯一ID）。
+- **任务T2（自助服务亭数据）：**
+  - 重命名列：`item_code` -> `product_identifier`，`units_sold` -> `quantity_sold`，`total_price` -> `revenue`。
+  - 将`sale_date`（MM/DD/YYYY）转换为ISO 8601格式（YYYY-MM-DDTHH:MM:SS，如果时间不可用，可以假设为午夜）并重命名为`sale_datetime`。
+  - 添加一个新列`source`，值为“自助服务亭”。
+  - 使用`transaction_id`作为最终`sale_id`的基础（或生成新的唯一ID，确保在两个源之间唯一）。
+- **任务T3（合并与最终处理）：**
+  - 将任务T1和任务T2中转换后的数据合并（联合）成一个单一数据集。
+  - 确保`sale_id`在所有合并记录中是唯一的。如果使用源ID（`order_id`、`transaction_id`），为其添加前缀（例如，'ONL-' + `order_id`，'KSK-' + `transaction_id`）可能是一个简单的方法来确保唯一性。
+  - 执行任何最终数据质量检查（例如，检查重要字段中的空值）。
+
+#### 加载（L）
+
+- **任务L1：** 将最终合并和转换后的数据集写入目标系统（例如，覆盖`daily_consolidated_sales.csv`或清空并加载到`daily_consolidated_sales`数据库表中）。
+
+### 步骤3：绘制工作流程与依赖关系
+
+现在，让我们将流程可视化，并了解任务之间如何相互依赖。抽取任务（E1和E2）通常可以并行运行，因为它们从不同源获取数据。然而，所有转换任务（T1、T2）都依赖于各自抽取任务的完成。最终的合并步骤（T3）依赖于T1和T2都已完成。最后，加载任务（L1）只能在合并数据准备好后（T3完成）才能开始。
+
+> 一张图表，描绘了每日销售报告整合数据管道的工作流程。抽取任务E1和E2首先运行，可能并行执行。它们的输出分别进入转换任务T1和T2。任务T3合并T1和T2的结果。最后，任务L1将T3的结果加载到目标中，标志着流程的结束。
+
+### 步骤4：高层考量
+
+在设计时，请简要思考：
+
+- **工具：** 可视化ETL工具是否合适，或者简单的脚本（例如，使用Pandas等库的Python脚本）是否足够？对于这个简单情况，两者都可以。
+- **调度：** 这个数据管道需要每天运行。它将如何触发？（例如，使用Linux/macOS上的系统调度器如`cron`，Windows上的任务计划程序，或工作流编排工具）。
+- **监控/日志：** 如果`online_sales.csv`文件丢失了怎么办？或者数据库宕机了怎么办？基本日志应记录每个任务（E1、E2、T1、T2、T3、L1）的开始、结束以及遇到的任何错误。对于严重故障可能需要警报。
+- **错误处理：** 如果日期格式不正确，无法标准化怎么办？应该跳过该记录、标记 (token)该记录，还是应该停止数据管道？对于每日报告，最初记录错误并跳过问题记录可能是可以接受的。
+
+### 总结
+
+您现在已经在纸上（或屏幕上）设计了一个简单而完整的ETL数据管道。您明确了需求，将流程分解为抽取、转换和加载阶段，定义了每个阶段的具体任务，并绘制了工作流程依赖关系。这种结构化的思考过程对于构建可靠的数据管道非常重要，无论其复杂程度如何，也无论您最终使用何种工具进行实现。像这样勾勒数据管道有助于在开始构建之前澄清逻辑并识别潜在问题。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball and Margy Ross (2013)
+  Publisher: Wiley
+  涵盖数据仓库和ETL设计的核心概念，包括抽取、转换和加载过程、数据质量和架构考量的详细说明。
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/) — Joe Reis and Matt Housley and Jesse Anderson (2022)
+  Publisher: O'Reilly Media
+  提供现代数据工程实践的概述，包括管道设计、数据集成模式、数据质量以及调度、监控和错误处理等操作方面，与当前ETL管道构建密切相关。
+- [Apache Airflow Documentation: Core Concepts](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/index.html) — Apache Software Foundation (2024)
+  Publisher: Apache Software Foundation
+  涵盖工作流编排的基本概念，包括DAG、任务、调度和监控。虽然与Airflow关联，但这些原则在设计和管理数据管道方面具有普遍适用性。
+- [Data Quality and Governance for Business Intelligence](https://www.elsevier.com/books/measuring-data-quality-for-ongoing-improvement/sebastian-coleman/978-0-12-397033-6) — Laura Sebastian-Coleman (2013)
+  Publisher: Elsevier (Morgan Kaufmann)
+  讨论数据质量和治理在数据项目中的重要性，提供确保数据管道中数据准确性、一致性和可靠性的方法和策略，直接支持稳健的ETL。

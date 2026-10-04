@@ -1,0 +1,93 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "encoder-decoder-stacks"
+lesson: "encoder-decoder-cross-attention"
+sourceId: 2016
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-5-encoder-decoder-stacks/encoder-decoder-cross-attention"
+title: "编码器-解码器交叉注意力"
+description: "解码器如何关注编码器堆栈的输出（查询来自解码器，键/值来自编码器）。"
+order: 5
+plots: []
+sourceHash: "e4886e12699950214470dde4723a6cf8bb51ec0572f214098090eea8853d26cf"
+sourceCorrections: []
+---
+
+尽管掩码自注意力 (self-attention)机制 (attention mechanism)使解码器能够考虑其正在生成的序列中的先前令牌，但它无法直接获取从*输入*序列编码的信息。为弥补这一不足，并使解码器能够有选择地关注源信息的对应部分，Transformer架构在每个解码器层中引入了第二个注意力机制：**编码器-解码器交叉注意力**。
+
+与自注意力不同，自注意力中的查询（Q）、键（K）和值（V）都源自同一序列（无论是编码器中的输入序列还是解码器掩码自注意力中部分生成的输出序列），而交叉注意力则从不同来源获取其组成部分：
+
+1. **查询（Q）：** 这些向量 (vector)来自解码器中*前一个子层*的输出。具体来说，它们派生自残差连接和层归一化 (normalization)步骤后掩码自注意力层的输出。这些查询代表了解码器的当前状态以及生成下一个令牌所需的信息。
+2. **键（K）和值（V）：** 这些向量直接来自*编码器堆栈最后一层的输出*。编码器已处理整个输入序列，其输出表示包含关于源的上下文 (context)信息。从该表示派生的键和值使解码器能够“回顾”输入序列。
+
+这种结构使解码器在每一步都能够根据其当前上下文（到目前为止已生成的序列）提出查询，并将其与代表整个输入序列的键进行匹配。所得的注意力分数决定了在构建该步骤的解码器输出时，应给予编码器输出中对应值多少权重 (weight)。
+
+### 数学表述
+
+计算本身使用之前讨论的相同缩放点积注意力函数。然而，输入明确区分了来源：
+
+
+$$
+\text{注意力}(Q_{dec}, K_{enc}, V_{enc}) = \text{softmax}\left(\frac{Q_{dec} K_{enc}^T}{\sqrt{d_k}}\right) V_{enc}
+$$
+
+
+其中：
+
+- $Q_{dec}$ 表示从解码器前一个子层输出派生出的查询矩阵。
+- $K_{enc}$ 和 $V_{enc}$ 表示从编码器堆栈输出派生出的矩阵。
+- $d_k$ 是向量 (vector)的维度，用于缩放。
+
+softmax函数确保分配给编码器值向量的权重 (weight)之和为一，基于查询-键交互所决定的相关性，生成加权平均值。
+
+### 多头交叉注意力
+
+正如自注意力 (self-attention)一样，交叉注意力也受益于多个并行运行的注意力头。每个头对输入的$Q_{dec}$、$K_{enc}$和$V_{enc}$应用单独的线性投影，将它们映射到不同的表示子空间。
+
+
+$$
+\text{头}_i = \text{注意力}(Q_{dec}W_i^Q, K_{enc}W_i^K, V_{enc}W_i^V)
+$$
+
+
+其中 $W_i^Q$、$W_i^K$ 和 $W_i^V$ 是第 $i$ 个头的学习投影矩阵。
+
+这些独立头的输出随后被拼接起来，并通过一个最终的线性投影层，这与多头自注意力中的过程相同：
+
+
+$$
+\text{多头}(Q_{dec}, K_{enc}, V_{enc}) = \text{拼接}(\text{头}_1, ..., \text{头}_h) W^O
+$$
+
+
+使用多个头使解码器能够同时关注编码器输出中的信息，基于不同的标准或从不同的表示角度。例如，在翻译中，一个头可能专注于句法对齐 (alignment)，而另一个头则关注语义对应。
+
+### 作用与集成
+
+编码器-解码器交叉注意力主要作用是使解码器的生成过程依赖于输入序列的相关部分。没有它，解码器将只能通过初始解码器状态获取输入信息，缺少在生成过程中动态关注特定源令牌的能力。
+
+考虑将“The black cat”（输入）翻译为“Le chat noir”（输出）。
+
+1. 当生成“Le”时，解码器的掩码自注意力 (self-attention)查看序列起始令牌。它的交叉注意力可能会微弱地关注整个输入或专注于“The”。
+2. 当生成“chat”时，解码器的掩码自注意力查看“Le”。它的交叉注意力机制 (attention mechanism)，利用受“Le”影响的查询，应该强烈地关注编码器中“cat”的表示。
+3. 当生成“noir”时，掩码自注意力查看“Le chat”。交叉注意力现在应该强烈地关注编码器中“black”的表示。
+
+这种动态聚焦是Transformer在序列到序列任务中取得成功的核心。
+
+### 解码器层内的数据流
+
+交叉注意力机制 (attention mechanism)位于每个解码器层内的掩码自注意力 (self-attention)子层和逐位置前馈网络子层之间。与其它子层一样，残差连接和层归一化 (normalization)也应用在其周围。
+
+> 这是一个在Transformer解码器层内的编码器-解码器交叉注意力子层的数据流简化图。查询源自解码器的状态，而键和值来自编码器的最终输出。
+
+理解这种交叉注意力机制，对于掌握Transformer解码器如何有效使用输入序列的编码表示来引导输出序列的生成非常重要。它作为主要连接，将编码器对源序列的处理与解码器对目标序列的逐步生成联系起来。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇基础论文介绍了 Transformer 架构及其注意力机制，包括编码器-解码器交叉注意力机制的详细设计和数学公式。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Pages: Chapter 9
+  这本全面的教材对 Transformer 架构进行了清晰的解释，其中专门讨论了编码器-解码器注意力及其在序列到序列模型中的作用。
+- [CS224N: Natural Language Processing with Deep Learning - Lecture on Transformers](http://web.stanford.edu/class/cs224n/) — Diyi Yang, Tatsunori Hashimoto (2023)
+  本课程提供了一种教学方法来理解 Transformer 组件，其讲座和笔记详细介绍了整体架构中的编码器-解码器交叉注意力机制。

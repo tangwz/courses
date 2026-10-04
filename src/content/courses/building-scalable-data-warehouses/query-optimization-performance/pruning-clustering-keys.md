@@ -1,0 +1,100 @@
+---
+course: "building-scalable-data-warehouses"
+chapter: "query-optimization-performance"
+lesson: "pruning-clustering-keys"
+sourceId: 8037
+sourceUrl: "https://apxml.com/zh/courses/building-scalable-data-warehouses/chapter-4-query-optimization-performance/pruning-clustering-keys"
+title: "分区剪枝与聚簇键"
+description: "配置聚簇键以最大化分区剪枝效率。"
+order: 2
+plots: ["plots/8037-0.json"]
+sourceHash: "26f0017c65361c003df0045147bf6876552277b4d2915e7d19ee579c3992e381"
+sourceCorrections: []
+---
+
+在分布式环境中，降低查询延迟和成本最有效的方法是避免执行引擎读取与结果集无关的数据。尽管列式存储通过只读取所需属性来自然地最小化 I/O，但除非存储层另有指示，否则它们仍然会扫描这些列中的每一行。这种行为凸显了 $V_{scan}$ (扫描量) 与物理数据布局之间的核心关联。
+
+在现代 MPP 系统（如 Snowflake、BigQuery 或 Redshift）中，数据以不可变数据块的形式存储，通常称为微分区或片段。这些数据块包含头部元数据，其中详细记录了存储在其中的每列的最小值和最大值。当查询到达时，优化器会根据这些元数据评估 `WHERE` 子句。如果查询谓词中的值范围与分区的最小-最大值范围不重叠，引擎会完全跳过该分区。这个过程称为分区剪枝。
+
+### 基于元数据的剪枝机制
+
+在存储和计算分离的架构中，剪枝发生在查询执行到达计算节点之前。元数据服务对文件头部执行逻辑检查。
+
+考虑一个基于数字标识符的查询：`WHERE transaction_id = 505`。
+
+1. **分区 A** 的头部范围是：`[最小值: 100, 最大值: 400]`。值 505 落在此范围之外。分区 A 被剪枝。
+2. **分区 B** 的头部范围是：`[最小值: 500, 最大值: 800]`。值 505 落在此范围之内。分区 B 被安排进行扫描。
+
+此操作的效率完全视数据相对于过滤列的排序程度如何而定。如果 `transaction_id` 值在所有分区中随机分布（高熵），优化器通常会发现每个分区的范围都包含 505。因此，尽管存在过滤器，引擎仍会执行全表扫描。
+
+下面的图表展示了自然摄入布局与逻辑聚簇布局之间扫描需求的差异。
+
+> 针对非聚簇与聚簇数据存储的范围查询，分区扫描需求比较。
+
+### 聚簇键与存储布局
+
+数据自然地按摄入时间聚簇。如果 ETL 过程每天加载数据，针对 `event_date` 进行过滤的查询将高效执行，因为分区自然地按日期分隔。然而，访问模式通常偏离摄入顺序。常见情况是在按时间排序的表中按 `customer_id` 或 `region` 进行过滤。如果不进行干预，这会导致大量的扫描开销。
+
+为了使存储与查询模式一致，您必须定义 **聚簇键**。聚簇键强制数据库引擎将具有相似值的行共同放置到相同的微分区中。这将最小化该特定列的分区重叠深度。
+
+#### 聚簇键的选择策略
+
+选择正确的键需要分析列的基数和查询频率。
+
+1. **基数平衡：**
+
+   - **高基数（例如，UUID）：** 在基数极高的列上进行聚簇通常效率不高。它会将数据碎片化为过多的微小分区，或者需要昂贵的后台重新聚簇以在数据到达时保持顺序。
+   - **低基数（例如，布尔标志）：** 这些提供的剪枝能力不佳。知道一个分区包含 `true` 和 `false` 值并不能让优化器跳过它，除非该分区*只*包含其中一个。
+   - **理想候选：** 具有足够基数将数据划分为大块的列（例如，`date`、`region`、`category_id`）通常能提供最佳的投资回报。
+2. **复合键中的层次结构：**
+   定义多个聚簇键时，顺序决定了排序层次。定义为 `(Region, Date)` 的聚簇键会首先按 Region 物理排序数据，其次按 Date 排序。
+
+   - 谓词 `WHERE Region = 'East'` 非常有效。
+   - 谓词 `WHERE Date = '2023-01-01'` 效果较差，除非查询也按 Region 过滤。
+
+   引擎基本上在主排序组内执行线性扫描以查找次级值。因此，在聚簇定义中，最常用于等值过滤器的列应该放在首位。
+
+### 评估聚簇效率
+
+在应用聚簇之前，工程师必须量化 (quantization)当前存储布局的无序程度。Snowflake 提供了像 `SYSTEM$CLUSTERING_INFORMATION` 这样的系统函数，而 Redshift 和 BigQuery 则提供类似的元数据视图。
+
+主要分析指标是 **聚簇深度**。这个整数代表包含特定值数据的重叠微分区数量。
+
+- **深度 = 1：** 完美的聚簇。该值恰好存在于一个分区（或一个连续的集合）中。
+- **高深度：** 该值分散在许多分区中。
+
+假设有一个包含 100 个分区的表。如果一个特定的 `user_id` 出现在其中的 90 个分区中，聚簇深度实际上是 90。对该用户的查询需要读取 90% 的表。降低此深度可最小化 $I_{io}$ 操作。
+
+### 权衡与维护成本
+
+聚簇并非一次性操作；它是一个持续的状态维护过程。随着 DML 操作（插入、更新、删除）的发生，物理排序顺序会退化。数据库必须定期重组数据，这个过程通常被称为“重新聚簇”或“清理”。
+
+$总成本 = 存储成本 + 查询计算成本 + 维护计算成本$
+
+实施激进的聚簇会增加 $维护计算成本$。您应该只在查询计算成本降低幅度明显超过维护开销的表上应用聚簇键。
+
+小表（通常小于 1 TB）通常完全驻留在计算节点的 SSD 缓存中，或者足够小以至于扫描它们微不足道。在这些情况下，聚簇的维护成本会产生递减的回报。该技术专用于大型多 TB 事实表，在这些表中，线性扫描在计算上是不可接受的。
+
+下面的图表显示了表大小、查询选择性以及聚簇的必要性之间的关系。
+
+> 基于数据量和查询模式实施聚簇键的决策矩阵。
+
+
+
+![聚簇策略决策矩阵](plots/8037-0.json)
+
+
+
+在矩阵的绿色区域，查询针对海量数据集的非常特定子集（在 PB 级表上进行点查询），聚簇成为性能保持的主要机制。没有它，系统默认会扫描磁盘的很大一部分，导致不可预测的查询时长和资源争用。
+
+## 参考资料
+
+- [Introduction to clustered tables](https://cloud.google.com/bigquery/docs/clustered-tables) — Google Cloud Documentation (2024)
+  Publisher: Google Cloud
+  详细介绍Google BigQuery如何使用聚簇和分区优化查询性能的官方文档。
+- [Database Management Systems](https://books.google.com/books/about/Database_Management_Systems.html?id=zV3qNAAACAAJ) — Raghu Ramakrishnan and Johannes Gehrke (2015)
+  Publisher: McGraw-Hill Education
+  一本涵盖数据库查询优化、物理数据存储和索引技术等基本概念的标准教材。
+- [C-Store: A Column-Oriented DBMS](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHcFSuR5aFSUv7G52xWdBZnrOt2XHNRIKe3n-Iq4jHwjBMr9Z3mXSLY_BijpCfN-JrbxwJN_56jGwX26MR2wNGIfoiGf3D-tx6yfzW5n5qu5gr4sqz3dQI1QJ-lIpiNA1jtLQZIKFxXTnpoj5qwcTI4) — Mike Stonebraker, Daniel J. Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Amerson Lin, Sam Madden, Elizabeth O'Neil, Pat O'Neil, Alex Rasin, Nga Tran, Stan Zdonik (2005)
+  Journal: Proceedings of the 31st International Conference on Very Large Data Bases (VLDB); Publisher: VLDB Endowment; Pages: 553-564; DOI: [10.14778/1066914.1066967](https://doi.org/10.14778/1066914.1066967)
+  关于列式数据库系统的开创性研究论文，解释了影响现代MPP数据仓库的数据布局和查询处理原则。

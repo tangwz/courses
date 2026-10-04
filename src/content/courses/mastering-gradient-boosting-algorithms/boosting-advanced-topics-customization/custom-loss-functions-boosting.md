@@ -1,0 +1,251 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "boosting-advanced-topics-customization"
+lesson: "custom-loss-functions-boosting"
+sourceId: 2038
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-7-boosting-advanced-topics-customization/custom-loss-functions-boosting"
+title: "实现自定义损失函数"
+description: "在 XGBoost 和 LightGBM 中定义和使用自定义目标函数。"
+order: 5
+plots: []
+sourceHash: "c117913b7650969dd9b2b46fcc029ffee67170099ab3c84b59dec33063ecff3a"
+sourceCorrections: []
+---
+
+虽然均方误差（MSE）用于回归或对数损失（Log Loss）用于分类等标准损失函数 (loss function)对于许多问题都有效，但它们并不总是与特定应用的具体目标或特点完全吻合。有时，您真正关心的业务指标并未由这些标准函数直接表示。例如，在需求预测场景中，您可能希望对高估的惩罚比低估的惩罚更重，或者在分类任务中，对某些类型的错误赋予更大的权重 (weight)。XGBoost 和 LightGBM 等梯度提升框架提供了定义和优化您自己的自定义目标（损失）函数的灵活性。
+
+### 梯度和Hessian的作用
+
+回顾第2章，梯度提升通过顺序添加弱学习器（通常是树）来工作，这些学习器试图纠正之前集成模型的误差或残差。更正式地说，在每次提升迭代 $m$ 中，我们希望找到一个新的函数 $f_m(x)$ 来最小化总损失 $L$：
+
+
+$$
+F_m(x) = F_{m-1}(x) + \eta f_m(x)
+$$
+
+
+核心思想是通过将最优 $f_m(x)$ 拟合到损失函数 (loss function)相对于前一次预测 $F_{m-1}(x)$ 的负梯度来近似它。XGBoost 等现代提升库通过使用损失函数在每个实例 $i$ 的预测 $F_{m-1}(x_i)$ 周围的二阶泰勒展开来改进这一点：
+
+
+$$
+L(y_i, F_{m-1}(x_i) + f_m(x_i)) \approx L(y_i, F_{m-1}(x_i)) + g_i f_m(x_i) + \frac{1}{2} h_i f_m(x_i)^2
+$$
+
+
+这里定义：
+
+- $y_i$ 是实例 $i$ 的真实目标值。
+- $F_{m-1}(x_i)$ 是前一次迭代中集成模型对实例 $i$ 的预测值。
+- $g_i$ 是损失 $L$ 相对于预测 $F(x_i)$ 的一阶导数（梯度），在 $F_{m-1}(x_i)$ 处计算：
+  
+  $$
+  g_i = \left[ \frac{\partial L(y_i, F(x_i))}{\partial F(x_i)} \right]_{F(x_i) = F_{m-1}(x_i)}
+  $$
+  
+- $h_i$ 是损失 $L$ 相对于预测 $F(x_i)$ 的二阶导数（Hessian），在 $F_{m-1}(x_i)$ 处计算：
+  
+  $$
+  h_i = \left[ \frac{\partial^2 L(y_i, F(x_i))}{\partial F(x_i)^2} \right]_{F(x_i) = F_{m-1}(x_i)}
+  $$
+  
+
+要实现自定义损失函数，您无需提供损失函数 $L$ 本身。相反，您需要提供一个函数，它根据当前预测和真实标签，为每个数据点计算梯度 ($g_i$) 和 Hessian ($h_i$)。然后，提升算法在内部使用这些值，特别是在树构建过程中（具体来说，是在计算分裂增益时）。
+
+### 实现自定义目标函数
+
+XGBoost 和 LightGBM 都要求函数具有特定的签名来计算梯度和 Hessian。
+
+**通用签名：**
+
+该函数通常接受两个参数 (parameter)：
+
+1. `preds`: 包含模型当前预测值（所有 $i$ 的 $F_{m-1}(x_i)$）的数组。请注意，对于分类，这些通常是最终变换前的原始分数（例如，sigmoid 之前的 logits）。
+2. `dtrain` 或 `labels`: 包含真实标签（所有 $i$ 的 $y_i$）的对象或数组。在 XGBoost 中，这通常是一个 `DMatrix` 对象，可以从中获取标签。在 LightGBM 中，它可能是 `Dataset` 对象或仅仅是标签数组。
+
+该函数必须返回两个数组：
+
+1. `grad`: 包含每个实例的梯度 $g_i$ 的数组。
+2. `hess`: 包含每个实例的 Hessian $h_i$ 的数组。
+
+我们来看一个例子：实现一个用于回归的非对称均方误差损失，其中高估（预测值 > 真实标签）比低估受到更重的惩罚。
+
+**示例：非对称均方误差**
+
+我们来定义一个损失函数 (loss function)，其中高估的惩罚是低估的 $A$ 倍：
+
+
+$$
+L(y, \hat{y}) =\begin{cases}
+    (y - \hat{y})^2 & \text{如果 } \hat{y} \le y \\
+    A \cdot (y - \hat{y})^2 & \text{如果 } \hat{y} > y\end{cases}
+$$
+
+
+这里 $\hat{y}$ 代表模型的预测值（`preds`），$y$ 代表真实标签（`labels`）。我们假设 $A > 1$。
+
+现在，我们需要损失函数相对于预测值 $\hat{y}$ 的一阶和二阶导数：
+
+**梯度 ($g = \frac{\partial L}{\partial \hat{y}}$)：**
+
+
+$$
+g =\begin{cases}
+    \frac{\partial}{\partial \hat{y}} (y - \hat{y})^2 = 2(y - \hat{y})(-1) = 2(\hat{y} - y) & \text{如果 } \hat{y} \le y \\
+    \frac{\partial}{\partial \hat{y}} A(y - \hat{y})^2 = A \cdot 2(y - \hat{y})(-1) = 2A(\hat{y} - y) & \text{如果 } \hat{y} > y\end{cases}
+$$
+
+
+**Hessian ($h = \frac{\partial^2 L}{\partial \hat{y}^2}$)：**
+
+
+$$
+h =\begin{cases}
+    \frac{\partial}{\partial \hat{y}} 2(\hat{y} - y) = 2 & \text{如果 } \hat{y} \le y \\
+    \frac{\partial}{\partial \hat{y}} 2A(\hat{y} - y) = 2A & \text{如果 } \hat{y} > y\end{cases}
+$$
+
+
+现在我们可以编写 Python 函数：
+
+```python
+import numpy as np
+
+def asymmetric_mse_obj(preds, dtrain):
+    """非对称均方误差的自定义目标函数。"""
+    labels = dtrain.get_label() # 假设 dtrain 是一个 XGBoost DMatrix
+    residual = preds - labels
+    A = 1.5 # 示例：对高估施加1.5倍的惩罚
+
+    # 计算梯度
+    grad = np.where(preds <= labels, 2.0 * residual, 2.0 * A * residual)
+
+    # 计算Hessian
+    hess = np.where(preds <= labels, 2.0, 2.0 * A)
+
+    return grad, hess
+
+# --- 对于 LightGBM，签名可能略有不同 ---
+# 它通常直接接收标签而不是 Dataset 对象
+
+def asymmetric_mse_obj_lgb(labels, preds):
+    """非对称均方误差的自定义目标函数（LightGBM 风格）。"""
+    residual = preds - labels
+    A = 1.5 # 示例：对高估施加1.5倍的惩罚
+
+    # 计算梯度
+    grad = np.where(preds <= labels, 2.0 * residual, 2.0 * A * residual)
+
+    # 计算Hessian
+    hess = np.where(preds <= labels, 2.0, 2.0 * A)
+
+    return grad, hess
+```
+
+### 与提升库集成
+
+**XGBoost：**
+
+使用 `xgboost.train` 函数时，您通过 `obj` 参数 (parameter)传递自定义目标函数。您可能还希望有一个反映您目标的自定义评估指标（`feval`）。
+
+```python
+import xgboost as xgb
+
+# 假设 X_train, y_train 已准备好
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dvalid = xgb.DMatrix(X_valid, label=y_valid) # 可选，用于早停
+
+params = {
+    'eta': 0.1,
+    'max_depth': 3
+    # 其他参数...
+}
+
+# 如果需要，定义一个自定义评估指标（可选）
+def asymmetric_mse_eval(preds, dtrain):
+    labels = dtrain.get_label()
+    A = 1.5
+    errors = preds - labels
+    loss = np.where(preds <= labels, errors**2, A * (errors**2))
+    return 'asymMSE', np.mean(loss) # 返回指标名称和值
+
+num_boost_round = 100
+watchlist = [(dtrain, 'train'), (dvalid, 'eval')]
+
+# 使用自定义目标和可选的自定义评估进行训练
+bst = xgb.train(
+    params,
+    dtrain,
+    num_boost_round=num_boost_round,
+    obj=asymmetric_mse_obj,       # 传递目标函数
+    feval=asymmetric_mse_eval,    # 传递评估函数（可选）
+    evals=watchlist,              # 使用 evals 进行监控/早停
+    early_stopping_rounds=10,     # 可选的早停
+    maximize=False                # False，因为我们希望最小化 asymMSE
+)
+```
+
+如果使用 Scikit-learn 包装器（`XGBRegressor`、`XGBClassifier`），您通常可以在初始化时通过 `objective` 参数传递目标函数，尽管支持程度可能因目标函数的复杂性和 XGBoost 版本而异。查阅文档以获取具体信息。
+
+**LightGBM：**
+
+类似地，LightGBM 通过 `lightgbm.train` 或其 Scikit-learn 包装器中的 `fobj` 参数接受自定义目标函数。
+
+```python
+import lightgbm as lgb
+
+# 假设 X_train, y_train 已准备好
+lgb_train = lgb.Dataset(X_train, y_train)
+lgb_eval = lgb.Dataset(X_valid, y_valid, reference=lgb_train) # 可选
+
+params = {
+    'objective': None, # 重要：使用 fobj 时设为 None
+    'metric': 'None',  # 重要：使用 feval 时设为 None
+    'learning_rate': 0.1,
+    'num_leaves': 31
+    # 其他参数...
+}
+
+# 为 LightGBM 定义自定义评估指标（签名略有不同）
+def asymmetric_mse_eval_lgb(labels, preds):
+    A = 1.5
+    errors = preds - labels
+    loss = np.where(preds <= labels, errors**2, A * (errors**2))
+    # 返回指标名称、值以及是否越大越好
+    return 'asymMSE', np.mean(loss), False
+
+num_boost_round = 100
+
+# 使用自定义目标和评估进行训练
+gbm = lgb.train(
+    params,
+    lgb_train,
+    num_boost_round=num_boost_round,
+    valid_sets=lgb_eval,
+    fobj=asymmetric_mse_obj_lgb,   # 传递目标函数
+    feval=asymmetric_mse_eval_lgb, # 传递评估函数
+    callbacks=[lgb.early_stopping(10, verbose=True)] # 使用回调函数进行早停
+)
+```
+
+使用 LightGBM Scikit-learn API（`LGBMRegressor`、`LGBMClassifier`）时，您可以在初始化时将自定义目标函数可调用对象传递给 `objective` 参数。
+
+### 自定义目标函数的考量
+
+- **数学正确性：** 仔细核对您的导数计算。这里的错误将导致算法优化错误的目标，从而性能不佳。如果不确定，请使用简单案例进行测试或数值比较梯度。
+- **Hessian 值：** Hessian 代表损失的曲率。它必须是非负的，以确保优化问题在标准提升框架内定义良好（保证每一步最小化的目标是凸的）。严格正的 Hessian 通常更受青睐以保持稳定性。如果您的 Hessian 计算可能产生零或负值，算法可能会失效或变得不稳定。
+- **数值稳定性：** 避免导致梯度或 Hessian 中出现除以零或极大/极小数的计算，因为这可能在训练期间引起数值溢出或下溢问题。在某些情况下（例如，分母），您可能需要添加小的常数（epsilon）以稳定计算。
+- **分类目标函数：** 对于分类，请记住 `preds` 通常是在应用 sigmoid 或 softmax 变换*之前*的原始边际分数。您的梯度和 Hessian 计算必须相对于这些原始分数进行。例如，二元分类的标准对数损失目标函数 $L(y, p) = -[y \log(p) + (1-y)\log(1-p)]$，其中 $p = \text{sigmoid}(\hat{y}) = 1 / (1 + e^{-\hat{y}})$，要求相对于 $\hat{y}$ 而非 $p$ 计算导数。梯度是 $p - y$，Hessian 是 $p(1-p)$。
+- **与评估保持一致：** 确保您的自定义目标函数与您计划评估模型的方式在逻辑上保持一致。理想情况下，使用一个自定义评估指标（`feval`），它计算您定义的实际损失函数 (loss function)或您关心的主要业务指标。
+
+实现自定义损失函数提供了强大的功能，能够精确地将梯度提升模型适配到您问题的要求，从而优化真正重要的事情。
+
+## 参考资料
+
+- [XGBoost: A Scalable Tree Boosting System](https://api.semanticscholar.org/CorpusID:4650265) — Tianqi Chen and Carlos Guestrin (2016)
+  Journal: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining; Publisher: ACM; Pages: 785-794; DOI: [10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785)
+  本文介绍了XGBoost及其底层优化原理，包括使用二阶泰勒展开式优化通用可微分损失函数，这对于实现自定义目标函数至关重要。
+- [LightGBM: A Highly Efficient Gradient Boosting Decision Tree](http://papers.nips.cc/paper/6907-lightgbm-a-highly-efficient-gradient-boosting-decision-tree.pdf) — Guolin Ke, Qi Meng, Thomas Finley, Taifeng Wang, Wei Chen, Weidong Ma, Qiwei Ye, and Tie-Yan Liu (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); Publisher: Curran Associates, Inc.; Pages: 3146-3154
+  介绍了LightGBM算法及其设计选择，它支持基于梯度和Hessian信息高效训练自定义目标函数。
+- [Custom Objective and Evaluation Metric](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGVtHfMwOl2AUiF2IAFTjSCNyQgAz4_zOam_GQsdqgLpUhV-N7DAQewxLyegg6WcoywA-Row2wLwwdb-RnuFc-DRtkF6QvzeERWKzpd2AbW1u4GQOLvEaqw3cDyb694HP1go2iRnfZBcojDGIjxEypfham49L6GQT5LCNINkBBopciCQ==) — XGBoost Contributors (2024)
+  XGBoost官方文档，提供了在框架内定义和集成自定义目标函数及评估指标的实用指南和示例。

@@ -1,0 +1,84 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "dqn-improvements-variants"
+lesson: "prioritized-experience-replay-overview"
+sourceId: 5128
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-3-dqn-improvements-variants/prioritized-experience-replay-overview"
+title: "优先经验回放 (简要概述)"
+description: "简要介绍如何优先处理重要的转换可以加速学习。"
+order: 5
+plots: []
+sourceHash: "e269ff38bd7f596cf27f76420f574a4b26874091d0a8556898fc57a230ace697"
+sourceCorrections: []
+---
+
+经验回放是标准深度Q网络方法中常用的一种技术，用于打断连续样本之间的关联并重用过往经验。回放缓冲区存储转换 $(s, a, r, s')$，智能体从该缓冲区中*均匀*随机采样小批量，以进行Q网络更新。尽管有效，这种均匀采样将所有转换视为同等重要。然而，从直觉上看，有些经验可能比其他经验提供更多的学习机会。设想一个智能体遇到导致意外高回报或低回报的情境，或者其当前Q值预测偏差很大。这些“令人惊讶的”转换对于学习而言，似乎比预测已准确的常规转换更有价值。
+
+优先经验回放（PER）不再采用均匀采样。它不再随机选择转换，PER会*按比例*采样转换，根据它们的学习价值，通常通过其时序差分（TD）误差的绝对值来衡量。TD误差表示一个转换对网络来说有多么“意外”：
+
+
+$$
+\delta_t = r_t + \gamma \max_{a'} Q_{\text{目标}}(s_{t+1}, a') - Q(s_t, a_t)
+$$
+
+
+较大的TD误差绝对值，$|\delta_t|$，表明网络对状态-动作对 $(s_t, a_t)$ 的预测与观察到的回报和下一状态的估计值相比不准确。这些正是我们希望智能体关注的转换。
+
+### 分配优先级
+
+在PER中，回放缓冲区中的每个转换 $i$ 都被分配一个优先级 $p_i$。定义此优先级的一种常见方法是基于TD误差的绝对值：
+
+
+$$
+p_i = |\delta_i| + \epsilon
+$$
+
+
+这里，$\epsilon$ 是一个小的正数常量，用于确保TD误差为零的转换仍有非零的采样概率。
+
+转换 $i$ 的采样概率 $P(i)$ 则根据其优先级定义：
+
+
+$$
+P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}
+$$
+
+
+指数 $\alpha \ge 0$ 是一个超参数 (parameter) (hyperparameter)，控制优先级的程度。当 $\alpha = 0$ 时，我们恢复到原始的均匀采样策略（$P(i) = 1/N$，而 $N$ 是缓冲区大小）。随着 $\alpha$ 增大，采样会更倾向于TD误差高的转换。根据这些概率进行高效采样通常涉及专门的数据结构，如SumTrees。
+
+### 使用重要性采样纠正偏差
+
+根据优先级采样转换会引入偏差，因为更新不再反映经验的原始分布。TD误差高的转换在训练批次中被过度表示。为了抵消这种偏差，PER在计算采样转换的损失时使用重要性采样（IS）权重 (weight)。
+
+转换 $i$ 的IS权重 $w_i$ 用于纠正其非均匀采样概率 $P(i)$：
+
+
+$$
+w_i = \left( \frac{1}{N \cdot P(i)} \right)^\beta
+$$
+
+
+这里，$N$ 是回放缓冲区的大小。超参数 (parameter) (hyperparameter) $\beta \in [0, 1]$ 控制施加的校正量。当 $\beta = 1$ 时，它完全补偿非均匀概率；而当 $\beta = 0$ 时，则不施加任何校正。实际操作中，$\beta$ 通常在训练过程中从一个初始值（例如0.4）退火到1。
+
+这些权重随后被纳入损失函数 (loss function)，通常通过在梯度更新步骤中将TD误差 $\delta_i$ 乘以 $w_i$ 来实现。这确保了虽然我们更频繁地采样重要转换，但其更新的幅度会按比例减小，以防止对这些特定样本的过拟合 (overfitting)，并在期望中保持无偏估计。为了数值稳定性，权重通常通过除以小批量中最大权重来归一化 (normalization)：$w_i \leftarrow w_i / \max_j w_j$。
+
+### 实际考量
+
+- **优先级更新：** 当一个转换被采样并计算其用于损失计算的TD误差时，该TD误差随后被用于更新回放缓冲区中该转换的优先级。
+- **新转换：** 当新转换被添加到缓冲区时，它们通常被赋予最大优先级，以确保学习算法至少见到它们一次。
+
+### 总结
+
+优先经验回放是对DQN中使用的标准经验回放机制的改进。通过根据TD误差的绝对值采样转换，它将学习过程集中在最有信息量的经验上。尽管它通过优先级计算、非均匀采样和重要性采样权重 (weight)引入了一些复杂性，但与均匀采样相比，PER通常能显著提升学习速度和数据效率。它常与其他DQN改进方法（如双DQN和对偶网络）结合使用，以构建高效的强化学习 (reinforcement learning)智能体。
+
+## 参考资料
+
+- [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952) — Tom Schaul, John Quan, Ioannis Antonoglou, David Silver (2016)
+  Journal: ICLR; Pages: 1-12; DOI: [10.48550/arXiv.1511.05952](https://doi.org/10.48550/arXiv.1511.05952)
+  介绍了优先经验回放的原始公式，详细阐述了其理论和实现方法。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  提供了强化学习的权威论述，其中包含关于优先经验回放作为一种高级回放策略的专门章节（第7.5节）。
+- [CS234: Deep Reinforcement Learning, Lecture 7: DQN, Double DQN, Prioritized Experience Replay](https://www.youtube.com/watch?v=1F_E31Q_zP8) — Emma Brunskill (2019)
+  Publisher: Stanford University
+  提供了深度强化学习的学术讲座内容，包括关于高级DQN技术（如优先经验回放）的专门部分。

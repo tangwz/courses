@@ -1,0 +1,154 @@
+---
+course: "python-for-beginners"
+chapter: "reusing-code-modules-packages"
+lesson: "python-common-modules"
+sourceId: 2362
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-7-reusing-code-modules-packages/python-common-modules"
+title: "常用标准模块"
+description: "查看标准库中常用模块的示例，例如用于数学函数的 `math`，用于生成随机数的 `random`，以及用于日期/时间的 `datetime`。"
+order: 6
+plots: []
+sourceHash: "33d21814ca0a6af29c0d846e92bf49ffd044efb95bd8edeac6588ab21fe4604f"
+sourceCorrections: []
+---
+
+Python 拥有丰富的内置模块，这些模块被称为 **标准库**。可以把它想象成一个工具箱，里面装满了用于常见编程任务的预写代码。你无需从零开始编写所有内容，只需 `import` 这些模块，然后使用它们提供的函数和数据即可。这大大加快了开发速度，并且使用了经过 Python 社区充分测试的代码。
+
+我们来看一些标准库中常用的模块，以了解有哪些可用功能。
+
+### `math` 模块
+
+当你需要执行比基本算术（如加、减、乘、除）更高级的数学运算时，`math` 模块是你的首选资源。它提供对三角函数、对数函数、像圆周率这样的常量等的访问。
+
+要使用它，首先需要导入它：
+
+```python
+import math
+```
+
+导入后，你可以使用点表示法（`math.function_name` 或 `math.constant_name`）访问其函数和常量。
+
+以下是一些例子：
+
+```python
+import math
+
+# 计算 16 的平方根
+sqrt_16 = math.sqrt(16)
+print(f"16 的平方根是: {sqrt_16}") # 输出: 16 的平方根是: 4.0
+
+# 获取圆周率的值
+pi_value = math.pi
+print(f"圆周率的值大约是: {pi_value}") # 输出: 圆周率的值大约是: 3.141592653589793
+
+# 计算 2 的 3 次方
+power_result = math.pow(2, 3)
+print(f"2 的 3 次方是: {power_result}") # 输出: 2 的 3 次方是: 8.0
+
+# 将数字向上取整到最近的整数（上限）
+ceil_result = math.ceil(4.2)
+print(f"4.2 的上限是: {ceil_result}") # 输出: 4.2 的上限是: 5
+
+# 将数字向下取整到最近的整数（下限）
+floor_result = math.floor(4.9)
+print(f"4.9 的下限是: {floor_result}") # 输出: 4.9 的下限是: 4
+```
+
+`math` 模块包含更多函数。你可以在 Python 官方文档中查看它们。
+
+### `random` 模块
+
+`random` 模块用于生成伪随机数和进行随机选择。这在模拟、游戏、统计抽样以及任何需要不可预测性的情况中都很有用。“伪随机”是指这些数字看起来是随机的，但由确定性算法生成。
+
+像这样导入模块：
+
+```python
+import random
+```
+
+以下是一些常见用法：
+
+```python
+import random
+
+# 生成一个介于 0.0（包含）和 1.0（不包含）之间的随机浮点数
+random_float = random.random()
+print(f"介于 0.0 和 1.0 之间的随机浮点数: {random_float}")
+
+# 生成一个介于 1 和 10（包含）之间的随机整数
+random_int = random.randint(1, 10)
+print(f"介于 1 和 10 之间的随机整数: {random_int}")
+
+# 从列表中选择一个随机元素
+options = ['rock', 'paper', 'scissors']
+choice = random.choice(options)
+print(f"从 {options} 随机选择: {choice}")
+
+# 就地打乱列表（修改原始列表）
+deck = ['Ace', 'King', 'Queen', 'Jack']
+print(f"原始牌组: {deck}")
+random.shuffle(deck)
+print(f"洗牌后的牌组: {deck}")
+```
+
+### `datetime` 模块
+
+处理日期和时间是编程中的常见需求。`datetime` 模块提供用于操作日期、时间以及时间间隔的类。
+
+首先导入它：
+
+```python
+import datetime
+```
+
+我们来看一些基本操作：
+
+```python
+import datetime
+
+# 获取当前日期和时间
+now = datetime.datetime.now()
+print(f"当前日期和时间: {now}")
+
+# 只获取当前日期
+today = datetime.date.today()
+print(f"今天的日期: {today}")
+
+# 创建一个特定日期对象
+specific_date = datetime.date(2024, 7, 26)
+print(f"一个特定日期: {specific_date}")
+
+# 获取当前时间的组成部分
+current_hour = now.hour
+current_minute = now.minute
+print(f"当前时间: {current_hour}:{current_minute}")
+
+# 将日期格式化为字符串（例如，YYYY-MM-DD）
+formatted_date = now.strftime("%Y-%m-%d")
+print(f"格式化日期: {formatted_date}")
+
+# 格式化日期和时间（例如，月 日, 年 时:分:秒）
+formatted_datetime = now.strftime("%B %d, %Y %H:%M:%S")
+print(f"格式化日期和时间: {formatted_datetime}")
+```
+
+`strftime` 方法使用特殊代码（如 `%Y` 表示完整年份，`%m` 表示月份数字，`%d` 表示日期，`%H` 表示 24 小时制小时等）来控制日期和时间如何呈现为字符串。
+
+### 更多内容
+
+这三个模块（`math`、`random`、`datetime`）只是 Python 标准库所提供的广泛功能的一个概览。其他常用模块包括：
+
+- `os`：与操作系统交互（处理文件和目录、环境变量）。
+- `sys`：访问系统特定参数 (parameter)和函数（命令行参数、Python 解释器信息）。
+- `json`：编码和解码 JSON 数据。
+- `csv`：读取和写入 CSV 文件。
+
+当你遇到新的编程挑战时，记住检查标准库是否已提供帮助工具。你可以在 Python 官方文档的“Python 标准库”下找到完整列表和详细说明。学习有效运用这些模块是成为一名熟练 Python 程序员的重要一步。
+
+## 参考资料
+
+- [The Python Standard Library](https://docs.python.org/3/library/index.html) — Python Software Foundation (2024)
+  Python标准库中所有模块的官方最全面指南，包括math、random和datetime的详细信息。
+- [Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming](https://nostarch.com/python-crash-course-3rd-edition) — Eric Matthes (2022)
+  Publisher: No Starch Press
+  一本备受推崇的Python初学者书籍，通过实践项目涵盖Python基础知识，包括math、random和datetime等标准模块的实际应用。

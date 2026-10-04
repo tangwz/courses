@@ -1,0 +1,160 @@
+---
+course: "introduction-to-computer-vision"
+chapter: "basic-image-processing-techniques"
+lesson: "geometric-transformations-scaling"
+sourceId: 1256
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-computer-vision/chapter-3-basic-image-processing-techniques/geometric-transformations-scaling"
+title: "几何变换：缩放"
+description: "学习如何使用不同的缩放方式调整图像大小。"
+order: 5
+plots: []
+sourceHash: "810c1b3d8fde118dae93a17f36272249dbe55e831f924d55edda84206a35574f"
+sourceCorrections: []
+---
+
+在单独修改像素值（例如调整亮度）之外，我们通常需要改变像素自身的空间排列。这属于几何变换的类别，它改变的是图像的几何形状，而不仅仅是其亮度分布。最常用的几何变换之一是**缩放**，它简单来说就是调整图像的大小。
+
+您可能出于多种原因需要缩放图像：
+
+- 放大图像以查看细节（放大）。
+- 缩小图像，例如，创建缩略图或减少计算负荷。
+- 在将图像输入某些算法（特别是需要固定尺寸输入的机器学习 (machine learning)模型）之前，对图像尺寸进行标准化。
+
+### 理解缩放
+
+缩放会改变图像的尺寸：宽度和高度。我们可以均匀地缩放图像，这意味着我们以相同的比例改变宽度和高度，保留原始比例（长宽比）。或者，我们可以非均匀地缩放，以不同的比例改变宽度和高度，这将拉伸或压缩图像。
+
+缩放涉及创建一个具有所需尺寸的新图像网格，然后根据原始图像计算出新网格的像素值。
+
+- \*\*缩小：\*\*使图像变小。这涉及将原始图像中的多个像素映射到新图像（较小）中的可能单个像素。在此过程中信息通常会丢失。
+- \*\*放大：\*\*使图像变大。在这里，我们需要在扩大的网格中填充新的像素位置。由于原始图像没有这些确切新位置的信息，我们需要估计或*插值*这些值。
+
+### 插值的必要性
+
+假设您想将一个2x2像素的图像尺寸扩大一倍，变为一个4x4像素的图像。原始像素可以直接映射到新网格中的某些位置，但介于它们之间的像素呢？
+
+原始图像 (2x2)：
+
+```
+P1 P2
+P3 P4
+```
+
+新图像 (4x4)：
+
+```
+P1  ?  P2  ?
+ ?  ?   ?  ?
+P3  ?  P4  ?
+ ?  ?   ?  ?
+```
+
+问号表示我们需要确定像素值的位置。这种根据已知值估计新位置像素值的过程称为**插值**。插值方法会明显影响缩放图像的质量，特别是在放大时。
+
+### 常用插值方法
+
+有几种执行插值的方式。对于初学者来说，了解这两种是很好的开始：
+
+1. \*\*最近邻插值：\*\*这是最简单的方法。对于新图像网格中的每个位置，它会（根据位置）找到原始图像网格中最近的单个像素，并复制其值。
+
+   - \*\*优点：\*\*计算速度非常快。保留清晰边缘而不引入新颜色。
+   - \*\*缺点：\*\*可能导致块状或像素化外观，特别是在显著放大时，因为它实际上只是让原始像素变大。
+2. \*\*双线性插值：\*\*这种方法对于新网格中的每个点，会考虑原始图像中最近的4个邻居（一个2x2区域）。它将新像素的值计算为这四个邻居的加权平均值，其中权重 (weight)取决于到每个邻居的距离。
+
+   - \*\*优点：\*\*产生比最近邻方法更平滑的结果，减少块状感。它在速度和质量之间取得了良好的平衡，适用于许多常见任务。
+   - \*\*缺点：\*\*与最近邻方法相比，可能会轻微模糊清晰边缘。计算量比最近邻方法更大，但仍然相对较快。
+
+还有更高级的方法，例如**双三次插值**（它考虑4x4邻域）和**Lanczos插值**，它们可能提供更好的质量（通常比双线性插值结果更清晰），但计算时间也会增加。对于大多数入门目的而言，当需要平滑度时，双线性插值通常是首选。
+
+### 实际中的缩放（示例）
+
+大多数计算机视觉库都提供了方便处理缩放和插值的函数。例如，在Python中使用OpenCV这样的库时，您可能会使用`resize`函数。您通常需要提供：
+
+- 原始图像。
+- 所需的输出尺寸（可以是`(width, height)`元组）或缩放因子（`fx`表示宽度因子，`fy`表示高度因子）。
+- 要使用的插值方法（例如，指定`INTER_NEAREST`表示最近邻，`INTER_LINEAR`表示双线性，`INTER_CUBIC`表示双三次）。
+
+让我们来看一个使用OpenCV的Python示例：
+
+```python
+import cv2
+import numpy as np
+
+# 加载图像（将'path/to/your/image.png'替换为实际路径）
+# try:
+#     image = cv2.imread('path/to/your/image.png')
+#     if image is None:
+#         raise FileNotFoundError("Image not found or unable to load.")
+# except FileNotFoundError as e:
+#     print(e)
+#     # 如果加载失败，创建一张简单的模拟图像，用于演示
+#     print("正在使用模拟图像。")
+#     image = np.zeros((100, 150, 3), dtype=np.uint8) # 高度=100，宽度=150
+#     cv2.putText(image, 'Original', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+# 为了演示，我们直接创建一个示例图像
+image = np.zeros((100, 150, 3), dtype=np.uint8) # 高度=100，宽度=150
+cv2.rectangle(image, (20, 20), (70, 70), (255, 0, 0), -1) # 蓝色方块
+cv2.circle(image, (110, 50), 25, (0, 255, 0), -1) # 绿色圆形
+
+# 获取原始尺寸
+height, width = image.shape[:2]
+print(f"原始尺寸：宽度={width}，高度={height}")
+
+# --- 缩小（到一半尺寸）---
+# 指定精确的新尺寸
+new_width_down = width // 2
+new_height_down = height // 2
+# 缩小使用双线性插值（通常效果不错）
+downscaled_image = cv2.resize(image, (new_width_down, new_height_down),
+                              interpolation=cv2.INTER_LINEAR)
+print(f"缩小后的尺寸：宽度={downscaled_image.shape[1]}，高度={downscaled_image.shape[0]}")
+
+# --- 放大（到两倍尺寸）---
+# 指定缩放因子
+fx_up = 2.0 # 宽度放大2倍
+fy_up = 2.0 # 高度放大2倍
+
+# 使用最近邻插值放大
+upscaled_nearest = cv2.resize(image, None, fx=fx_up, fy=fy_up,
+                              interpolation=cv2.INTER_NEAREST)
+print(f"放大后（最近邻）尺寸：宽度={upscaled_nearest.shape[1]}，高度={upscaled_nearest.shape[0]}")
+
+# 使用双线性插值放大
+upscaled_linear = cv2.resize(image, None, fx=fx_up, fy=fy_up,
+                             interpolation=cv2.INTER_LINEAR)
+print(f"放大后（线性）尺寸：宽度={upscaled_linear.shape[1]}，高度={upscaled_linear.shape[0]}")
+
+# 显示结果（通常会使用cv2.imshow或matplotlib）
+# cv2.imshow('原始图像', image)
+# cv2.imshow('缩小后（线性）', downscaled_image)
+# cv2.imshow('放大后（最近邻）', upscaled_nearest)
+# cv2.imshow('放大后（线性）', upscaled_linear)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+# 或者保存结果：
+# cv2.imwrite('缩小后.png', downscaled_image)
+# cv2.imwrite('放大后_最近邻.png', upscaled_nearest)
+# cv2.imwrite('放大后_线性.png', upscaled_linear)
+```
+
+> 示例输出显示了原始图像、最近邻放大（块状）和双线性放大（更平滑）。请注意，最近邻插值会复制像素，而双线性插值会平均像素以创建中间值。
+
+### 长宽比考量
+
+图像的**长宽比**是其宽度与高度的比值（$width / height$）。缩放时，您通常希望保留原始长宽比，以避免图像内容失真。
+
+如果您知道所需的新宽度（`new_width`）并想计算相应的、能保持长宽比的高度（`new_height`）：
+$新高度 = \text{取整} \left( \frac{原始高度 \times 新宽度}{原始宽度} \right)$
+或者，如果您知道所需的新高度：
+$新宽度 = \text{取整} \left( \frac{原始宽度 \times 新高度}{原始高度} \right)$
+
+大多数库函数允许仅指定一个维度或使用缩放因子（`fx`、`fy`）。如果您为`fx`和`fy`提供相同的缩放因子，长宽比将保持不变。如果您提供特定的输出尺寸`(width, height)`，则需要负责在必要时确保它们保持所需的纵横比。
+
+缩放是调整图像尺寸的一项基本操作。了解其工作原理，特别是最近邻和双线性等插值方法的作用，使您能够为任务选择合适的方案，平衡速度和视觉质量。请记住，缩小会丢失信息，而放大则会估计新的像素值，可能引入块状或模糊等失真。
+
+## 参考资料
+
+- [Computer Vision: Algorithms and Applications](https://link.springer.com/book/10.1007/978-3-030-94266-2) — Richard Szeliski (2022)
+  Publisher: Springer; DOI: [10.1007/978-3-030-94266-2](https://doi.org/10.1007/978-3-030-94266-2)
+  全面介绍图像变换、重采样及多种插值方法，及其在计算机视觉中的应用。

@@ -1,0 +1,64 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "calculus-action-optimization"
+lesson: "recap-optimization-gd"
+sourceId: 2302
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-5-calculus-action-optimization/recap-optimization-gd"
+title: "回顾：优化目标与梯度下降"
+description: "简要回顾成本函数、最小化和梯度下降算法。"
+order: 1
+plots: []
+sourceHash: "6935ddd7e318d9ee26d94064868b9cc6272735216fd0c6ad7aeba96532d3512c"
+sourceCorrections: []
+---
+
+让我们花点时间梳理一下前面章节讨论过的概念。请记住，在许多机器学习 (machine learning)任务中，我们的主要目的是创建一个能够进行准确预测或分类的模型。但是，我们如何确定何为“准确”，又如何系统地改进模型以达到此目的呢？这正是优化在微积分的指导下发挥作用之处。
+
+### 目标：找到最佳模型参数 (parameter)
+
+机器学习 (machine learning)模型本质上通常可以表示为一个函数，它有输入（数据特征）和输出（预测）。这个函数也有决定其具体行为的内部*参数*或*权重 (weight)*。例如，对于 $y = mx + b$ 这样的简单线性模型，参数是斜率 $m$ 和 y 截距 $b$。 $m$ 和 $b$ 的不同值会产生不同的直线，从而产生不同的预测。
+
+我们的目标是找到这些参数（在我们简单的情况下是 $m$ 和 $b$）的特定值，使模型在我们的数据上表现最佳。“最佳”通常意味着最小化模型产生的误差。
+
+### 衡量性能：成本函数
+
+为了系统地找到最佳参数 (parameter)，我们首先需要一种方法来衡量模型当前表现的优劣。这就是**成本函数**（也称损失函数 (loss function)或目标函数）的作用。
+
+成本函数将模型的预测值与我们数据中的实际目标值进行比较，并计算出一个代表总误差或“成本”的单一数值。一个常见例子是均方误差（MSE），它计算预测值与实际值之间差异的平方的平均值。
+
+- **高成本：** 模型的预测值与实际值相去甚远。参数可能很差。
+- **低成本：** 模型的预测值接近实际值。参数表现更好。
+
+我们的优化目标变得明确：**找到最小化成本函数值的模型参数。**
+
+### 算法：梯度下降 (gradient descent)
+
+我们如何找到产生最小成本的参数 (parameter)值呢？我们可以尝试随机值，但这效率极低，尤其是当模型有许多参数时。一个更系统的方法是**梯度下降**。
+
+想象成本函数是一个带有山丘和山谷的地形。任何一点的高度代表了特定参数值组合下的成本。我们的目标是找到山谷中的最低点（一个最小值）。
+
+梯度下降是一种迭代算法，帮助我们“走”下这个成本的斜坡：
+
+1. **开始：** 从参数值的初始猜测开始。
+2. **计算方向：** 确定当前点最陡峭的*上升*方向。微积分告诉我们这个方向：它就是成本函数的**梯度**，$\nabla J$。请记住，梯度是一个向量 (vector)，它包含成本函数对每个参数的偏导数（例如，$\frac{\partial J}{\partial m}$ 和 $\frac{\partial J}{\partial b}$）。梯度指向山坡的上方。
+3. **迈出一步：** 沿着梯度的*反*方向（下坡）迈出一小步。这一步的大小由*学习率*控制。
+4. **重复：** 在新位置计算新的梯度，并再迈一步下坡。
+5. **停止：** 持续迭代直到成本足够低，或者步长变得非常小，这表明我们可能已经达到一个最小值。
+
+> 梯度下降算法的简化流程图。
+
+本质上，梯度（由偏导数构成）充当我们的指南针，始终指引我们上坡。通过持续向反方向移动，梯度下降引导我们走向成本函数的一个最小值点，从而找到使模型表现更好的参数值。
+
+既然我们已经回顾了优化目标和梯度下降过程，接下来让我们将这些思路应用于一个具体例子：优化一个简单的线性回归模型。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani (2013)
+  Publisher: Springer; DOI: [10.1007/978-1-4614-7138-7](https://doi.org/10.1007/978-1-4614-7138-7)
+  一本广泛使用的教材，清晰地解释了线性回归、成本函数（如MSE），以及通过优化模型参数来最小化误差的基本思想。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  这本权威教材详细阐述了优化算法，包括机器学习背景下的梯度下降机制、学习率和各种成本函数。
+- [Machine Learning Course Notes (CS229) - Linear Regression and Logistic Regression](https://github.com/mxc19912008/Andrew-Ng-Machine-Learning-Notes/blob/master/cs229-notes1.pdf) — Andrew Ng (2008)
+  Journal: Stanford University; Publisher: Stanford University
+  这份来自知名机器学习课程的讲义，简洁而有数学根据地解释了梯度下降、成本函数及其在机器学习中的应用。

@@ -1,0 +1,79 @@
+---
+course: "getting-started-rag"
+chapter: "rag-generation-augmentation"
+lesson: "managing-context-length"
+sourceId: 3655
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-4-rag-generation-augmentation/managing-context-length"
+title: "管理上下文长度限制"
+description: "处理将检索到的上下文适配到LLM最大输入标记限制的难题。"
+order: 4
+plots: []
+sourceHash: "91efde229449a8318512465b19703f4045e11cdbedf8fe3ea44408eedbb96574"
+sourceCorrections: []
+---
+
+大型语言模型（LLMs）尽管具备出色的能力，但其注意力范围是有限的，通常被称为**上下文 (context)窗口**。这个窗口代表着模型在处理输入和生成输出时，一次性可以考虑的最大文本量（以标记 (token)衡量，大致对应单词或单词的一部分）。这相当于模型的短期记忆。
+
+在标准的LLM交互中，这个限制适用于用户的提示和模型生成的响应。然而，在RAG系统中，我们特意在提示中加入*更多*信息：从我们的知识来源检索到的上下文片段。这立刻带来了一个难题：原始用户查询加上检索到的文本段落的总长度，可以轻松超出LLM的上下文窗口容量。
+
+想象一下，如果你试图把太多文档塞进一个小文件柜。你不是得把一些文档放在外面，就是得把一些文档剪掉一半，或者设法对其进行总结。同样，当增强型提示（查询 + 检索到的片段）对LLM来说太长时，我们需要方法来管理溢出。如果我们只是简单地发送一个超出限制的提示，模型可能会随意截断输入，忽略溢出部分，或者返回错误，从而导致不完整或不准确的回答。
+
+以下是RAG中管理上下文长度限制的常用方法：
+
+### 1. 截断
+
+最直接的方法就是简单截断。如果组合文本超出限制，就截掉最不相关的一部分。这通常意味着移除稍后检索到的片段（假设检索器返回的前几个片段最相关），或者截断最后一个包含的片段的末尾。
+
+- **优点：** 易于实现。
+- **缺点：** 如果重要细节位于被截断的部分，可能导致信息大量丢失。"最不相关"的定义可能不总是与简单排序一致。
+
+### 2. 选择性包含 / 重新排序
+
+除了仅仅根据初始检索得分选择前N个片段，你还可以采用更精细的选择过程。这可能包括：
+
+- **更严格的限制：** 只包含绝对的前K个片段，即使检索到更多，并确保K足够小以便适应。
+- **重新排序：** 使用一个辅助的、计算量可能更大的模型（一个“重排器”）来重新评估最初检索到的前N个片段的相关性，特别是在查询的上下文 (context)中。然后，选择重新排序后得分最高且能适应窗口的片段。
+- **以查询为中心的筛选：** 优先考虑那些与*用户查询*语义相似度最高，而非仅仅具有一般相关性的片段。
+- **优点：** 旨在保留最相关的信息，与简单截断相比，减少了截断重要上下文的可能性。
+- **缺点：** 可能会增加复杂性和延迟（特别是重新排序时）。仍然涉及丢弃可能有用的信息。
+
+### 3. 上下文 (context)摘要
+
+另一种方法是在将检索到的片段注入提示之前对其进行摘要。你可以使用另一个LLM调用（或一个专门的摘要模型）来创建一个检索到信息的简洁摘要，而不是插入多个完整的文本段落。这个摘要，连同原始查询，然后馈送给主生成器LLM。
+
+> 一个工作流程图，展示了检索到的片段如何在传递给生成器LLM之前进行摘要，以管理上下文长度。
+
+- **优点：** 能够将多个片段的信息浓缩到可用空间中。
+- **缺点：** 摘要本身可能丢失重要信息或细节。由于额外的摘要步骤，会增加延迟和成本。最终回答的质量在很大程度上取决于摘要的质量。
+
+### 4. 片段大小优化
+
+在数据准备阶段（第三章），文档如何分块在这里起到作用。使用较小的片段大小意味着每个单独的上下文 (context)片段更小，可能允许更多不同的片段适应窗口。然而，较小的片段自身可能缺乏足够的上下文。找到合适的片段大小通常需要反复尝试，并根据LLM的上下文限制和源文档的性质进行调整。
+
+- **优点：** 在数据准备阶段的预防措施。可以提高检索的粒度。
+- **缺点：** 需要仔细调整；过小的片段可能缺乏上下文，而过大的片段会加剧长度问题。
+
+### 考量与权衡
+
+选择正确的方法取决于几个因素：
+
+- **LLM的上下文 (context)窗口大小：** 较新的模型通常具有显著更大的上下文窗口，可能减轻这个问题的严重程度。然而，即使是大型窗口也可能被大量检索到的数据填满。
+- **延迟要求：** 更复杂的方法，如重新排序或摘要，会增加处理时间。
+- **信息敏感度：** 通过截断或摘要可能丢失细节是否可接受，还是保留精确的检索文本更重要？
+- **复杂性：** 简单截断比构建重新排序或摘要流程更容易实现。
+
+通常，可能会使用多种方法的组合。例如，检索比所需略多的片段，对其进行重新排序，然后截断重新排序列表中最不相关的片段，以适应上下文窗口。
+
+管理上下文长度是构建有效的RAG系统中的一个实际工程难题。它需要在为LLM提供全面上下文的愿望与模型架构的硬性限制之间取得平衡。反复尝试和评估（我们将在后面介绍）对于找到适合你特定使用场景的最佳方法是必不可少的。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://papers.nips.cc/paper/2020/file/6b49323023773113e634ceb957e3f283-Paper.pdf) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems 33; Publisher: NeurIPS; Volume: 33
+  介绍了检索增强生成（RAG）架构，这是将外部知识集成到大型语言模型中的基础，并强调了有效上下文管理的需求。
+- [ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction for Open-Domain Question Answering](https://dl.acm.org/doi/10.1145/3397271.3401075) — Omar Khattab, Matei Zaharia (2020)
+  Journal: Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval; Publisher: ACM; Pages: 39–48; DOI: [10.1145/3397271.3401075](https://doi.org/10.1145/3397271.3401075)
+  介绍了ColBERT，一个高效且有效的神经检索模型，可用作重排序器，以改善RAG系统相关段落的选择，从而管理所包含上下文的质量。
+- [Retrieval-Augmented Generation for Large Language Models: A Survey](https://arxiv.org/abs/2312.10997) — Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang (2023)
+  Journal: arXiv preprint arXiv:2312.10997; DOI: [10.48550/arXiv.2312.10997](https://doi.org/10.48550/arXiv.2312.10997)
+  一篇关于检索增强生成的全面综述，回顾了其演变、架构以及解决上下文长度限制和有效知识集成等挑战的各种方法。

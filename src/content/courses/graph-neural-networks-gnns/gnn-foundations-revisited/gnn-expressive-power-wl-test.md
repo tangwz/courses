@@ -1,0 +1,81 @@
+---
+course: "graph-neural-networks-gnns"
+chapter: "gnn-foundations-revisited"
+lesson: "gnn-expressive-power-wl-test"
+sourceId: 2667
+sourceUrl: "https://apxml.com/zh/courses/graph-neural-networks-gnns/chapter-1-gnn-foundations-revisited/gnn-expressive-power-wl-test"
+title: "表达能力与WL测试"
+description: "审视GNN表达能力与Weisfeiler-Lehman图同构测试之间的关系。"
+order: 5
+plots: []
+sourceHash: "d9eebe5d349ee4f1b6c63ad67654a1f6fcfc21fd8342583a2dc05c8dca991790"
+sourceCorrections: []
+---
+
+理解图神经网络 (neural network)的能力和局限性，需要评估它们的**表达能力**：即它们区分不同图结构和学习依赖这些结构函数的能力。图论中的一个基本问题是**图同构问题**：它判断两个图在结构上是否相同，即使它们的节点标签或绘制方式不同。虽然高效地解决图同构问题是一个长期未决的问题，但某些启发式方法为图相似性提供了有用的信息。与GNN高度相关的一种启发式方法是Weisfeiler-Lehman (WL)测试。
+
+### Weisfeiler-Lehman测试 (1-WL)
+
+在GNN文献中讨论最普遍的变体是1维Weisfeiler-Lehman测试 (1-WL)，也称为朴素顶点细化。它是一种迭代算法，用于根据局部邻域结构生成图的规范标签或签名。如果两个图在任何迭代后产生不同的签名，则它们肯定是非同构的。然而，如果它们产生相同的签名，它们*可能*是同构的，但不能保证（该测试是同构的必要条件但非充分条件）。
+
+1-WL测试的工作方式如下：
+
+1. **初始化 (迭代 $k=0$)：** 给每个节点 $v$ 分配一个初始标签（或颜色）$l_v^{(0)}$。通常，除非使用初始节点特征或度，否则所有节点都以相同的标签开始。
+2. **迭代细化 (迭代 $k \ge 1$)：** 对于每个节点 $v$，收集其邻居 $\mathcal{N}(v)$ 在上一迭代 $k-1$ 中的标签。形成这些标签的多重集：$S_v^{(k)} = \{ \{ l_u^{(k-1)} \mid u \in \mathcal{N}(v) \} \}$。
+3. **标签更新：** 通过哈希对 $(l_v^{(k-1)}, S_v^{(k)})$ 来为节点 $v$ 生成一个新标签 $l_v^{(k)}$。此哈希将节点自身的旧标签与其邻域的多重集签名结合。重要的一点是，具有相同旧标签和相同邻居标签多重集的节点会获得相同的新标签。
+4. **终止：** 重复步骤2和3，直到图中唯一标签的集合在迭代之间不再变化。最终的标签分布（或迭代过程中分布的序列）作为图的签名。
+
+考虑两个简单的图：
+
+> 两个图的初始状态（$k=0$）。所有节点都具有相同的初始标签（灰色）。
+
+在1-WL的一次迭代之后：
+
+- **图 G1：** 每个节点有两个邻居，都带有初始的灰色标签。多重集 $S_v^{(1)}$ 对于所有节点 $v$ 都是 {gray, gray}。哈希（gray, {gray, gray}）产生一个新标签，比如“蓝色”。G1中的所有节点都变为蓝色。
+- **图 G2：** 节点 `a2` 有一个灰色邻居 (`b2`)。它的 $S_{a2}^{(1)}$ 是 {gray}。节点 `b2` 有两个灰色邻居 (`a2`, `c2`)。它的 $S_{b2}^{(1)}$ 是 {gray, gray}。节点 `c2` 有一个灰色邻居 (`b2`)。它的 $S_{c2}^{(1)}$ 是 {gray}。
+  - 节点 `a2` 和 `c2` 哈希（gray, {gray}），得到新标签，比如“橙色”。
+  - 节点 `b2` 哈希（gray, {gray, gray}），得到新标签，比如“蓝色”。
+
+> 一次迭代（$k=1$）后的状态。G1有一种标签类型（蓝色），G2有两种（橙色、蓝色）。标签分布不同，因此1-WL区分了这些图。
+
+由于在 $k=1$ 后标签分布不同，1-WL测试得出结论，G1和G2是非同构的。
+
+### WL测试与消息传递GNN的关联
+
+现在，我们回顾一下之前介绍的消息传递框架：
+
+
+$$
+\mathbf{h}_v^{(k)} = \text{UPDATE}^{(k)} \left( \mathbf{h}_v^{(k-1)}, \text{AGGREGATE}^{(k)} \left( \{ \mathbf{h}_u^{(k-1)} : u \in \mathcal{N}(v) \} \right) \right)
+$$
+
+
+观察其相似之处：
+
+1. `AGGREGATE`函数从邻居收集信息，类似于WL测试中将邻居标签 $l_u^{(k-1)}$ 收集到多重集 $S_v^{(k)}$ 中。常见的聚合器，如求和、平均或最大值，对邻居特征的多重集 $\{\mathbf{h}_u^{(k-1)}\}$ 进行操作。
+2. `UPDATE`函数将聚合后的邻域信息与节点自身的旧状态 $\mathbf{h}_v^{(k-1)}$ 结合，类似于WL测试如何使用对 $(l_v^{(k-1)}, S_v^{(k)})$ 来计算新标签 $l_v^{(k)}$。
+
+这种结构相似性并非巧合。已经正式证明，消息传递GNN (MPNN) 的表达能力受到1-WL测试能力的**上限**限制。这意味着：
+
+- **如果两个图可以通过1-WL测试区分，一个设计得当的MPNN*可能*也能区分它们**，通过学习在图之间不同的节点表示。GNN的聚合和更新函数需要足够强大（例如，将不同多重集映射到不同输出的单射函数）。
+- **如果两个图不能通过1-WL测试区分，那么*没有*标准MPNN可以区分它们。** 无论具体的 `AGGREGATE` 和 `UPDATE` 函数如何（只要它们遵循消息传递框架）或层数多少，GNN为结构等效节点（根据1-WL）学习到的节点表示将在两个图中收敛到相同的值。
+
+### 局限性及影响
+
+1-WL测试以及标准MPNN无法区分某些图结构。一个典型例子是区分不同的**正则图**（所有节点具有相同度的图）。例如，1-WL测试无法区分6节点循环图（所有节点度为2）和两个不相连的3节点循环图（所有节点度也为2）。一个MPNN在足够多的层数后，会在这两种情况下为所有节点计算出相同的节点嵌入 (embedding)。
+
+> 示例图G3（6-循环）和G4（两个不相交的3-循环）。两者都是2-正则图。1-WL测试（以及标准MPNN）无法区分它们，会在两个图中为所有节点分配相同的最终标签/嵌入。
+
+这一局限性表明，标准GNN主要能有效捕获局部邻域结构，但在处理某些全局特性或区分根据1-WL细化过程局部相似的结构时则表现不佳。理解这种联系对于选择或设计GNN架构具有重要意义。如果某项任务需要区分超出1-WL测试能力的图结构，那么GCN或GraphSAGE等标准MPNN架构可能不足以应对。这促使了更强大GNN的开发，这些GNN通常受到高阶WL测试（$k$-WL）的启发，或者整合了图子结构计数或位置编码 (positional encoding)等机制，我们将在后续章节中审视这些机制。了解标准消息传递的理论上限有助于理解为何有时需要更先进的架构。
+
+## 参考资料
+
+- [How Powerful are Graph Neural Networks?](https://arxiv.org/abs/1810.00826) — Keyulu Xu, Weihua Hu, Jure Leskovec, Stefanie Jegelka (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1810.00826](https://doi.org/10.48550/arXiv.1810.00826)
+  正式确立了消息传递图神经网络区分图结构的能力与1-WL测试之间的理论关联。
+- [Graph Representation Learning Book (Draft)](https://www.cs.mcgill.ca/~wlh/grl_book/) — William L. Hamilton (2020)
+  Journal: Synthesis Lectures on Artificial Intelligence and Machine Learning; Publisher: Morgan and Claypool; Volume: 14; Pages: 1-159
+  一本在线草稿书，全面概述了图神经网络，包括关于图结构区分和WL测试的讨论。
+- [The Graph Isomorphism Problem](https://doi.org/10.1007/978-1-4612-0333-9) — Johannes Köbler, Uwe Schöning, Jacobo Torán (1993)
+  Publisher: Birkhäuser Basel; Pages: 119-140; DOI: [10.1007/978-1-4612-0333-9](https://doi.org/10.1007/978-1-4612-0333-9)
+  一篇图书章节，提供了图同构问题的理论概述及其复杂性。

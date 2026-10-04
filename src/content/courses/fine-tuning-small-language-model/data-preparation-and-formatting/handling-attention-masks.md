@@ -1,0 +1,104 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "data-preparation-and-formatting"
+lesson: "handling-attention-masks"
+sourceId: 8504
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-2-data-preparation-and-formatting/handling-attention-masks"
+title: "处理注意力掩码"
+description: "生成并应用注意力掩码，使模型在损失计算期间忽略填充标记。"
+order: 3
+plots: []
+sourceHash: "3345fbc4c9fe6a48d33af517ab9cf1d07f2814247885befef007672429f09110"
+sourceCorrections: []
+---
+
+为了确保批次维度统一而对序列进行填充（padding）时，我们会在数据中引入人造标记 (token)。神经网络 (neural network)只是盲目地处理矩阵。如果将带有填充的序列直接输入 Transformer，自注意力 (self-attention)机制 (attention mechanism)会将填充标记视为文本中有意义的部分。为了防止模型给空白部分分配数学上的权重 (weight)，我们使用注意力掩码（Attention Masks）。
+
+注意力掩码是一个二进制张量，其维度与输入 ID 完全匹配。它在注意力机制中起到过滤器的作用。在这个张量中，值为 1 表示模型应当关注的真实标记，值为 0 则表示模型应当完全忽略的填充标记。
+
+> 输入序列标记与其对应的二进制注意力掩码值的映射。
+
+### 掩码的数学原理
+
+要理解为什么注意力掩码必不可少，必须查看 Transformer 块内部的数学运算。自注意力 (self-attention)机制 (attention mechanism)通过计算分值来确定对输入序列其他部分的关注程度。该计算使用查询矩阵（$Q$）和键矩阵（$K$）。
+
+缩放点积注意力的公式定义为：
+
+$\text{注意力}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}} + M\right)V$
+
+在公式中，$M$ 代表注意力掩码。在模型架构内部，数据集中的二进制 0 和 1 会被转换为另一种格式参与计算。值为 1 的位置（真实标记 (token)）在矩阵 $M$ 中被分配为 $0$。值为 0 的位置（填充标记）则被分配为一个极大的负数，实际上趋近于 $-\infty$。
+
+当计算查询和键的点积时，矩阵 $M$ 会被加到结果中。对于填充位置，分值会变得无穷小。随后应用 softmax 函数将这些原始分值转换为概率。
+
+标准 softmax 函数为：
+
+$\text{softmax}(x_i) = \frac{e^{x_i}}{\sum_j e^{x_j}}$
+
+由于 $e^{-\infty}$ 趋近于 0，任何填充标记的注意力权重 (weight)都会变为 0。注意力掩码强制模型将 100% 的注意力分配在实际序列上，从而在自注意力计算中有效地删除了填充标记。
+
+### 实践中生成掩码
+
+现代自然语言处理库简化了手动创建掩码的过程。当初始化分词 (tokenization)器 (tokenizer)并传入一批文本时，它会自动生成分词后的整数以及对应的注意力掩码。
+
+以下是使用 Hugging Face 分词器生成注意力掩码的示例：
+
+```python
+from transformers import AutoTokenizer
+
+# 初始化分词器
+tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+tokenizer.pad_token = tokenizer.eos_token
+
+batch_sentences = [
+    "What is fine-tuning?",
+    "A short sentence."
+]
+
+# 编码输入
+encoded_inputs = tokenizer(
+    batch_sentences,
+    padding="max_length",
+    max_length=8,
+    return_tensors="pt"
+)
+
+print(encoded_inputs["attention_mask"])
+```
+
+该操作的输出将是一个包含该批次二进制掩码的 PyTorch 张量。第一个较长的句子在有效标记 (token)处全为 1，而较短的句子在为了达到最大长度 8 而填充的位置则显示为末尾的 0。
+
+### 损失计算中的标签掩码
+
+在监督式微调 (fine-tuning)期间，还需要进行第二次掩码操作。我们必须对目标标签进行掩码处理。虽然注意力掩码可以防止输入端关注填充内容，但模型仍会对序列中的每个标记 (token)位置输出预测。这包括对填充位置的预测。
+
+如果在损失计算中包含填充标记，模型将耗费计算时间学习如何预测填充标记。这会降低训练效率，并可能干扰最终的模型权重 (weight)。
+
+在 PyTorch 中，标准交叉熵损失函数 (loss function)被设计为忽略具有特定值的任何目标标签。默认情况下，该索引设置为 -100。在将批次传递给训练循环之前，我们必须创建标签的副本，并将所有填充标记索引替换为 -100。
+
+```python
+# 复制输入 ID 作为标签
+labels = encoded_inputs["input_ids"].clone()
+
+# 找到所有输入为填充标记的位置
+padding_condition = labels == tokenizer.pad_token_id
+
+# 在标签张量中将这些位置替换为 -100
+labels[padding_condition] = -100
+```
+
+通过对输入前向传播应用注意力掩码，并对目标标签应用 -100 掩码，我们可以确保模型严格学习数据集中提供的特定文本内容。填充的数据仅用于满足图形处理单元矩阵的维度要求。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; Pages: 5998–6008; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍 Transformer 架构以及缩放点积注意力机制数学实现的奠基性论文。
+- [Padding and truncation](https://huggingface.co/docs/transformers/pad_truncation) — Hugging Face Team (2024)
+  Journal: Hugging Face Transformers Documentation
+  官方文档解释了 Transformers 库如何处理可变序列长度并生成注意力掩码。
+- [CrossEntropyLoss](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) — PyTorch Contributors (2024)
+  Journal: PyTorch Documentation
+  微调中所用损失函数的技术文档，解释了为何使用索引 -100 来忽略特定标签。
+- [Natural Language Processing with Transformers](https://www.oreilly.com/library/view/natural-language-processing/9781098136780/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media; Pages: 27-35
+  关于 Hugging Face 生态系统的全面指南，提供了分词和数据整理器实际应用的详细信息。

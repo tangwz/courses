@@ -1,0 +1,182 @@
+---
+course: "introduction-to-speech-recognition"
+chapter: "building-your-first-speech-recognition-app"
+lesson: "transcribing-microphone-input"
+sourceId: 7146
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-speech-recognition/chapter-6-building-your-first-speech-recognition-app/transcribing-microphone-input"
+title: "实时获取并转录麦克风输入"
+description: "学习如何用Python访问麦克风并进行实时语音转文本。"
+order: 5
+plots: []
+sourceHash: "face6f2bdf1fe2717aaf633d7229543d7d2ae3e7ea3346ce3eb8ffb6d11a3cc7"
+sourceCorrections: []
+---
+
+虽然从文件中转录音频很有用，但许多语音识别应用需要与用户即时交互。这涉及直接从麦克风捕获音频并立即处理。从静态文件转向实时音频流会带来新的考量，例如管理麦克风资源、检测一个人何时开始和停止说话，以及处理背景噪音。
+
+学习如何编写一个Python脚本，通过麦克风监听声音，捕获言语，并将其近实时地转换为文本。
+
+### 麦克风作为音频源
+
+我们之前介绍的`SpeechRecognition`库可以与不同的音频源配合使用。在上一节中，你使用了音频文件作为源。现在，你将使用麦克风。为了访问麦克风，`SpeechRecognition`库依赖于另一个名为`PyAudio`的库。如果你按照设置说明进行操作，`PyAudio`应该已经安装在你的环境中。
+
+实时识别过程包括几个不同的步骤：
+
+1. 将麦克风作为音频源。
+2. 监听一个短语。该库足够智能，会等待停顿，然后才认为短语完成。
+3. 捕获说出的音频数据。
+4. 将这些捕获的数据发送到识别引擎。
+5. 处理转录的文本或发生的任何错误。
+
+下图说明了此工作流程。
+
+> 捕获和转录实时音频的过程，包括成功识别和处理错误的路径。
+
+### 你的第一个实时转录脚本
+
+我们来编写一个执行单次转录的程序。它会监听你说话，打印结果，然后退出。
+
+首先，我们需要导入库并创建`Recognizer`类的一个实例，就像之前一样。
+
+```python
+import speech_recognition as sr
+
+# 创建一个识别器实例
+r = sr.Recognizer()
+```
+
+接下来，我们访问麦克风。使用`with`语句是一种好的做法，它会在我们使用完毕后自动处理关闭麦克风资源。
+
+```python
+import speech_recognition as sr
+
+# 创建一个识别器实例
+r = sr.Recognizer()
+
+# 使用默认麦克风作为音频源
+with sr.Microphone() as source:
+    print("请说点什么！")
+    # 监听第一个短语并将其提取为音频数据
+    audio = r.listen(source)
+
+try:
+    # 使用Google语音识别来识别语音
+    text = r.recognize_google(audio)
+    print(f"你说的是: {text}")
+except sr.UnknownValueError:
+    # 当语音难以理解时会引发此错误
+    print("Google语音识别无法理解音频")
+except sr.RequestError as e:
+    # 当出现网络相关问题时会引发此错误
+    print(f"无法从Google语音识别服务请求结果; {e}")
+```
+
+当你运行这个脚本时，它会打印“请说点什么！”然后等待。`r.listen(source)`函数会主动监听麦克风。它会自动检测你何时开始说话和何时停止。一旦你停顿，它就会停止监听并将捕获的音频存储在`audio`变量中。
+
+`try...except`块对于处理两个常见问题很重要：
+
+- `sr.UnknownValueError`：如果识别器无法理解你的语音，就会出现此情况。也许声音太小，或者声音无法识别为单词。
+- `sr.RequestError`：如果连接到识别服务的API出现问题，就会发生这种情况，例如互联网连接缺失或服务本身的问题。
+
+### 处理背景噪音
+
+语音识别的一个重要难题是区分语音和环境噪音。嘈杂的环境，例如有风扇的房间或背景有人说话，可能会让识别器感到困惑。它可能会将噪音误认为是语音，或者难以分离说话者的声音。
+
+`Recognizer`类包含一个有用的方法`adjust_for_ambient_noise()`来缓解这个问题。此函数会短暂监听音频源（通常为一秒），以了解背景噪音的特征。然后它使用这些信息来设置一个合适的能量阈值，使其能更好地忽略噪音并检测实际语音。
+
+你应在打开麦克风源之后、开始监听语音之前调用此方法一次。
+
+我们来修改脚本以加入此改进。
+
+```python
+import speech_recognition as sr
+
+r = sr.Recognizer()
+
+with sr.Microphone() as source:
+    # 我们使用 adjust_for_ambient_noise 方法来处理噪音
+    print("正在校准环境噪音，请稍候...")
+    r.adjust_for_ambient_noise(source, duration=1)
+
+    print("请说点什么！")
+    audio = r.listen(source)
+
+try:
+    text = r.recognize_google(audio)
+    print(f"你说的是: {text}")
+except sr.UnknownValueError:
+    print("Google语音识别无法理解音频")
+except sr.RequestError as e:
+    print(f"无法请求结果; {e}")
+```
+
+通过添加`r.adjust_for_ambient_noise(source)`，应用程序在典型环境中变得更可靠。如果你在一个特别不稳定的环境中，可以调整`duration`参数 (parameter)，但默认值通常就足够了。
+
+### 创建一个持续监听循环
+
+我们当前的脚本在一次说话后就会停止。为了构建一个更具交互性的应用程序，例如最终练习中的语音命令工具，程序需要持续监听。我们可以通过将监听逻辑放入`while`循环来实现这一点。
+
+该循环将持续监听输入，尝试识别它，并打印结果。我们还可以添加一个特定的命令，例如“停止”，来中断循环并优雅地退出程序。
+
+以下是持续监听器的完整脚本：
+
+```python
+import speech_recognition as sr
+
+def main():
+    """
+    在循环中监听语音并进行转录。
+    """
+    r = sr.Recognizer()
+
+    with sr.Microphone() as source:
+        # 在开始时校准一次环境噪音
+        print("正在校准...")
+        r.adjust_for_ambient_noise(source, duration=1)
+        print("准备就绪，可以监听了。")
+
+        while True:
+            print("正在监听...")
+            try:
+                # 监听下一个短语
+                audio = r.listen(source)
+
+                # 识别语音
+                text = r.recognize_google(audio)
+                print(f"你说的是: {text}")
+
+                # 添加退出循环的条件
+                if "stop" in text.lower():
+                    print("正在退出程序。")
+                    break
+
+            except sr.UnknownValueError:
+                # 这不是错误，只是静音或难以理解的语音
+                # 我们可以简单地继续监听。
+                pass 
+            except sr.RequestError as e:
+                print(f"服务错误; {e}")
+                # 如果服务不可用，我们可能需要停止。
+                break
+
+if __name__ == "__main__":
+    main()
+```
+
+这种结构为交互式语音应用程序奠定了一个扎实的起点。程序首先校准房间的噪音水平。然后，它进入一个无限循环，监听、转录并打印文本。如果它无法理解音频（`UnknownValueError`），它会简单地忽略并再次监听。循环仅在出现网络错误或用户说出包含“停止”一词的短语时终止。
+
+你现在拥有构建能够响应实时语音输入的应用程序的工具，你将在本章的最后练习中将其付诸实践。
+
+## 参考资料
+
+- [SpeechRecognition Documentation](https://github.com/Uberi/speech_recognition) — Anthony Zhang (2023)
+  提供库API的详细信息，包括麦克风处理、识别方法和噪声调节，对实际应用至关重要。
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University
+  一本内容全面的教科书，涵盖了自动语音识别的理论基础和实践方面，包括音频处理和实时考虑因素。
+- [Digital Speech Processing: Fundamentals and Applications](https://www.pearson.com/us/higher-education/program/Rabiner-Theory-and-Applications-of-Digital-Speech-Processing-1st-Edition/PGM125674.html) — Lawrence Rabiner and Ronald W. Schafer (2011)
+  Publisher: Pearson
+  深入介绍语音信号处理技术，包括噪声抑制和特征提取方法，这些对真实环境中的鲁棒语音识别很重要。
+- [Hands-On Speech Recognition with Python](https://www.packtpub.com/product/hands-on-speech-recognition-with-python/9781789808389) — Michael F. S. Chen (2019)
+  Publisher: Packt Publishing
+  一本实践指南，演示如何使用Python构建语音识别应用，涵盖SpeechRecognition等库，并处理实时音频处理和噪声管理等实际问题。

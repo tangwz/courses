@@ -1,0 +1,66 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "gradient-descent-algorithms"
+lesson: "batch-gradient-descent"
+sourceId: 1393
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-4-gradient-descent-algorithms/batch-gradient-descent"
+title: "批梯度下降"
+description: "了解批梯度下降如何使用整个数据集计算梯度。"
+order: 4
+plots: []
+sourceHash: "7d6093f7a8eab9591313469a98b1138ad7a662bb6adfd830a42cb7a7c6d6cad9"
+sourceCorrections: []
+---
+
+梯度下降 (gradient descent)是一种基础的优化算法，它通过沿梯度 $\nabla J(\theta)$ 的相反方向移动来迭代调整参数 (parameter) $\theta$ 以最小化成本函数 $J(\theta)$。批梯度下降（Batch Gradient Descent, BGD）是该算法的第一个具体变体。“批次”这个名称指的是它的主要特点：在算法的每个步骤中，它将*整个*训练数据集作为一个批次进行处理。
+
+### 批梯度下降 (gradient descent)的工作方式
+
+假设你有一个包含 $m$ 个训练样本的数据集。要使用批梯度下降对参数 (parameter) $\theta$ 进行一次更新，你需要遵循以下步骤：
+
+1. **计算预测值：** 对于当前的参数值 $\theta$，计算模型对训练集中*每个*样本的预测值。
+2. **计算误差：** 确定每个训练样本的误差（预测值与实际目标值之间的差异）。
+3. **计算梯度：** 计算成本函数 $\nabla J(\theta)$ 的梯度。这一重要步骤涉及平均化来自*所有* $m$ 个训练样本对梯度的贡献。如果 $J_i(\theta)$ 表示与第 $i$ 个训练样本相关的成本，则总体梯度通常计算为：
+   $\nabla J(\theta) = \frac{1}{m} \sum_{i=1}^{m} \nabla J_i(\theta)$
+   该梯度表示当前参数在整个数据集上最陡峭上升的平均方向。
+4. **更新参数：** 通过沿着梯度下降方向迈一步来调整参数 $\theta$，步长由学习率 $\alpha$ 决定：
+   $\theta := \theta - \alpha \nabla J(\theta)$
+
+这个整个循环，即处理所有 $m$ 个样本以计算一个梯度并执行一次参数更新，构成一个迭代或一个*周期*（epoch）（尽管有时“周期”严格指数据的一次完整遍历，这与一次 BGD 迭代完全吻合）。算法重复这些步骤，直到满足某个收敛条件，例如成本函数的变化变得非常小，或达到最大迭代次数。
+
+> 批梯度下降中的单一步骤涉及在更新模型参数之前，基于整个训练数据集计算梯度。
+
+### 批梯度下降 (gradient descent)的特点
+
+**优点：**
+
+- **稳定收敛：** 因为梯度是在整个数据集上计算的，所以它能提供总体成本函数真实梯度的可靠估计。这通常会使得收敛路径更平滑地趋向最小值，尤其对于凸成本函数，在给定合适的学习率的情况下，它能保证找到全局最小值。与其他变体相比，其更新噪音较小。
+- **并行化：** 每个样本的梯度贡献 ($\nabla J_i(\theta)$) 的计算通常可以跨样本并行进行，从而在合适的硬件上加速梯度计算步骤。
+
+**缺点：**
+
+- **计算成本高：** 主要缺点是每次迭代的计算开销。在对参数 (parameter)进行一次更新之前，计算梯度需要处理*每一个训练样本*。这对于现代机器学习 (machine learning)中常见的超大数据集来说，速度极慢且资源消耗大。
+- **内存需求大：** 算法可能需要将整个数据集加载到内存中来计算梯度，这对于超出可用 RAM 的数据集来说可能不可行。
+- **不支持在线学习：** BGD 需要提前提供整个数据集，并且不能轻易地整合新到达的数据点（在线学习）。模型需要用增强后的数据集从头开始重新训练。
+
+### 何时使用批梯度下降 (gradient descent)
+
+尽管在大数据集上存在局限性，BGD 方法简单，并且在以下情况下可以有效：
+
+- 数据集足够小，可以轻松适应内存并在合理的时间范围内完成处理。
+- 倾向于平滑稳定的收敛路径，而非更快但可能噪音较大的更新。
+- 成本函数已知为凸函数，确保收敛到全局最小值。
+
+批梯度下降提供了梯度如何引导优化的基础性认识。然而，其计算需求为更具扩展性的替代方法铺平了道路，例如随机梯度下降和ミニ-批梯度下降，我们将在后续内容中探讨这些方法。这些方法以牺牲全批次梯度的稳定性来换取更快的更新。
+
+## 参考资料
+
+- [Pattern Recognition and Machine Learning](https://www.springer.com/gp/book/9780387310732) — Christopher M. Bishop (2006)
+  Publisher: Springer; Pages: 141; DOI: [10.1007/b139933](https://doi.org/10.1007/b139933)
+  在机器学习背景下，对包括梯度下降在内的优化方法提供了全面且数学严谨的解释。
+- [Deep Learning](https://www.deeplearningbook.org/contents/optimization.html) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 281-285
+  详细讨论了训练深度模型的优化算法，包括批量梯度下降的机制和特点。
+- [CS229 Lecture Notes: Linear Regression](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQET3t9VfmsH7HsrQQJDhciFOHGUNLOLH0oBSiWIAJaVk3DsP2YZFwNjWRXmFtPct4AHuW1ULYVJpjsLCbcVAmZ_QYcPjrPvs__cNZD8bFUS-3PdCtdLq42m0h7qra9MYB0obw==) — Andrew Ng, Tengyu Ma (2023)
+  Publisher: Stanford University; Pages: 5-10
+  一份广受认可的学术资源，清晰地介绍了梯度下降的基础知识，并展示了其在线性回归中的应用。

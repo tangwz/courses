@@ -1,0 +1,287 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "advanced-tensor-manipulations"
+lesson: "practice-tensor-manipulation"
+sourceId: 2124
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-2-advanced-tensor-manipulations/practice-tensor-manipulation"
+title: "练习：张量操作技巧"
+description: "张量的索引、形状改变、广播和设备放置的动手练习。"
+order: 7
+plots: []
+sourceHash: "d287e67b908634869bb336dc687f5a91315ab94b0799ab5b78de931577890fb8"
+sourceCorrections: []
+---
+
+练习张量操作技术，包括索引、形状改变、组合、广播、数据类型以及张量在不同设备间的移动。通过这些示例进行练习是巩固理解的最佳途径。请确保已导入PyTorch。
+
+```python
+import torch
+import numpy as np
+
+# 检查CUDA是否可用并设置设备
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"正在使用设备: {device}")
+```
+
+### 索引和切片练习
+
+索引和切片是访问和修改张量部分内容的基本操作。让我们尝试选择特定的数据点。
+
+**任务1：** 创建一个二维张量，并选择第二行第三列的元素。
+
+```python
+# 创建一个示例二维张量（3行，4列）
+data = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
+tensor_2d = torch.tensor(data)
+print("原始张量:\n", tensor_2d)
+
+# 选择行索引为1、列索引为2的元素
+element = tensor_2d[1, 2]
+print("\n在 [1, 2] 的元素:", element)
+print("值:", element.item()) # 使用 .item() 获取Python数值
+```
+
+**任务2：** 选择 `tensor_2d` 的整个第二行。
+
+```python
+# 选择索引为1的行
+row_1 = tensor_2d[1]
+print("\n第二行（索引1）:\n", row_1)
+
+# 使用切片的替代方法（选择第1行，所有列）
+row_1_alt = tensor_2d[1, :]
+print("\n第二行（替代方法）:\n", row_1_alt)
+```
+
+**任务3：** 选择 `tensor_2d` 的第三列。
+
+```python
+# 选择所有行，列索引为2
+col_2 = tensor_2d[:, 2]
+print("\n第三列（索引2）:\n", col_2)
+```
+
+**任务4：** 创建一个布尔掩码以选择 `tensor_2d` 中所有大于7的元素，然后使用该掩码提取这些元素。
+
+```python
+# 创建布尔掩码
+mask = tensor_2d > 7
+print("\n布尔掩码（张量 > 7）:\n", mask)
+
+# 应用掩码
+selected_elements = tensor_2d[mask]
+print("\n大于7的元素:\n", selected_elements)
+```
+
+这些练习说明了标准Python索引如何结合类似NumPy的切片和布尔掩码，以提供灵活的数据访问方式。
+
+### 形状改变与重排练习
+
+在不改变张量数据的情况下改变其形状是很常见的，尤其是在为不同神经网络 (neural network)层准备输入时。
+
+**任务1：** 创建一个包含12个元素的一维张量，并将其形状改为3x4的张量。
+
+```python
+tensor_1d = torch.arange(12) # 创建一个值从0到11的张量
+print("\n原始一维张量:", tensor_1d)
+
+# 使用 reshape() 改变形状
+reshaped_tensor = tensor_1d.reshape(3, 4)
+print("\n改变形状为3x4:\n", reshaped_tensor)
+
+# 使用 view() 改变形状 - 注意 view 适用于内存连续的张量
+# arange 创建的是连续张量，因此 view 在这里适用。
+view_tensor = tensor_1d.view(3, 4)
+print("\n视为3x4:\n", view_tensor)
+```
+
+请记住，`view` 要求张量在内存中是连续的，并共享底层数据。`reshape` 可能会返回一个副本或视图，具体取决于连续性。
+
+**任务2：** 给定 `reshaped_tensor`（3x4），使用 `permute` 交换其维度，得到一个4x3的张量。
+
+```python
+# 原始3x4张量
+print("\n原始3x4张量:\n", reshaped_tensor)
+
+# 交换维度0和1
+permuted_tensor = reshaped_tensor.permute(1, 0)
+print("\n置换为4x3:\n", permuted_tensor)
+print("原始形状:", reshaped_tensor.shape)
+print("置换后形状:", permuted_tensor.shape)
+```
+
+`permute` 在改变图像维度顺序等任务中有用（例如，从通道数 x 高度 x 宽度 变为 高度 x 宽度 x 通道数）。
+
+### 连接与拆分练习
+
+合并或拆分张量通常是必要的，尤其是在处理批次或不同特征集时。
+
+**任务1：** 创建两个2x3张量，并沿维度0（行）连接它们。
+
+```python
+tensor_a = torch.tensor([[1, 2, 3], [4, 5, 6]])
+tensor_b = torch.tensor([[7, 8, 9], [10, 11, 12]])
+print("\n张量A:\n", tensor_a)
+print("张量B:\n", tensor_b)
+
+# 沿维度0连接（堆叠行）
+concatenated_rows = torch.cat((tensor_a, tensor_b), dim=0)
+print("\n沿行连接（dim=0）:\n", concatenated_rows)
+print("形状:", concatenated_rows.shape) # 应该是 4x3
+```
+
+**任务2：** 沿维度1（列）连接 `tensor_a` 和 `tensor_b`。
+
+```python
+# 沿维度1连接（连接列）
+concatenated_cols = torch.cat((tensor_a, tensor_b), dim=1)
+print("\n沿列连接（dim=1）:\n", concatenated_cols)
+print("形状:", concatenated_cols.shape) # 应该是 2x6
+```
+
+**任务3：** 使用 `stack` 组合 `tensor_a` 和 `tensor_b`，形成一个形状为2x2x3的新张量。
+
+```python
+# 堆叠张量 - 创建一个新维度（默认 dim=0）
+stacked_tensor = torch.stack((tensor_a, tensor_b), dim=0)
+print("\n堆叠的张量（dim=0）:\n", stacked_tensor)
+print("形状:", stacked_tensor.shape) # 应该是 2x2x3
+
+# 沿维度1堆叠
+stacked_tensor_dim1 = torch.stack((tensor_a, tensor_b), dim=1)
+print("\n堆叠的张量（dim=1）:\n", stacked_tensor_dim1)
+print("形状:", stacked_tensor_dim1.shape) # 应该是 2x2x3
+```
+
+请注意 `stack` 如何添加一个新维度，而 `cat` 沿着现有维度连接。
+
+**任务4：** 创建一个6x4张量，并沿维度0将其拆分为三个等大小的部分。
+
+```python
+tensor_to_split = torch.arange(24).reshape(6, 4)
+print("\n待拆分张量（6x4）:\n", tensor_to_split)
+
+# 沿维度0拆分为3个部分
+chunks = torch.chunk(tensor_to_split, chunks=3, dim=0)
+print("\n拆分为3个部分:")
+for i, chunk in enumerate(chunks):
+    print(f"部分 {i}（形状 {chunk.shape}）:\n", chunk)
+```
+
+### 广播练习
+
+广播简化了不同形状张量之间的操作。
+
+**任务1：** 创建一个3x3张量和一个1x3张量（行向量 (vector)）。将它们相加。
+
+```python
+matrix = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+row_vector = torch.tensor([[10, 20, 30]]) # 形状 1x3
+print("\n矩阵（3x3）:\n", matrix)
+print("行向量（1x3）:\n", row_vector)
+
+# 广播加法: row_vector 被扩展以匹配 matrix 的形状
+result = matrix + row_vector
+print("\n矩阵 + 行向量（广播）:\n", result)
+```
+
+PyTorch 自动扩展了 `row_vector`（形状1x3）的行，使其形状变为3x3，从而允许与 `matrix` 进行逐元素相加。
+
+**任务2：** 创建一个3x3张量和一个3x1张量（列向量）。将它们相加。
+
+```python
+col_vector = torch.tensor([[100], [200], [300]]) # 形状 3x1
+print("\n矩阵（3x3）:\n", matrix)
+print("列向量（3x1）:\n", col_vector)
+
+# 广播加法: col_vector 被扩展以匹配 matrix 的形状
+result_col = matrix + col_vector
+print("\n矩阵 + 列向量（广播）:\n", result_col)
+```
+
+这里，`col_vector`（形状3x1）被广播到各列，以匹配 `matrix` 的3x3形状。
+
+### 数据类型练习
+
+管理数据类型对于内存效率和数值稳定性很重要。
+
+**任务1：** 创建一个整数张量并检查其 `dtype`。然后将其转换为浮点张量。
+
+```python
+int_tensor = torch.tensor([1, 2, 3, 4])
+print("\n整数张量:", int_tensor)
+print("数据类型:", int_tensor.dtype)
+
+# 转换为 float32
+float_tensor = int_tensor.to(torch.float32)
+# 替代方法: float_tensor = int_tensor.float()
+print("\n转换为浮点张量:", float_tensor)
+print("数据类型:", float_tensor.dtype)
+```
+
+**任务2：** 创建一个浮点张量并将其转换为整数张量。观察任何变化。
+
+```python
+float_tensor_orig = torch.tensor([1.1, 2.7, 3.5, 4.9])
+print("\n原始浮点张量:", float_tensor_orig)
+print("数据类型:", float_tensor_orig.dtype)
+
+# 转换为 int32
+int_tensor_cast = float_tensor_orig.to(torch.int32)
+# 替代方法: int_tensor_cast = float_tensor_orig.int()
+print("\n转换为整数张量:", int_tensor_cast)
+print("数据类型:", int_tensor_cast.dtype)
+```
+
+请注意，从浮点数转换为整数会截断小数部分。请注意可能的数据精度损失。
+
+### CPU 与 GPU 练习
+
+将张量移动到合适的设备（CPU或GPU）是必要的，以发挥硬件加速的优势。
+
+**任务1：** 创建一个张量并检查其默认设备。然后，将其移动到GPU（如果可用），再移回CPU。
+
+```python
+# 创建张量（除非另有说明，否则默认为CPU）
+cpu_tensor = torch.randn(2, 2)
+print(f"\n张量在CPU上: {cpu_tensor.device}\n", cpu_tensor)
+
+# 移动到配置的设备（如果可用则为GPU，否则为CPU）
+device_tensor = cpu_tensor.to(device)
+print(f"\n张量已移动到 {device_tensor.device}:
+", device_tensor)
+
+# 明确移回CPU
+cpu_tensor_again = device_tensor.to("cpu")
+print(f"\n张量已移回CPU: {cpu_tensor_again.device}
+", cpu_tensor_again)
+
+# 执行操作 - 需要张量在同一设备上
+if device_tensor.device != cpu_tensor.device:
+    print("\n在不同设备上的张量相加会导致错误。")
+    # 这会失败: cpu_tensor + device_tensor
+    # 正确方法:
+    result_on_device = device_tensor + device_tensor
+    print(f"在 {result_on_device.device} 上的操作结果:
+", result_on_device)
+else:
+    print("\n两个张量都在CPU上，相加没问题。")
+    result_on_cpu = cpu_tensor + cpu_tensor_again
+    print(f"在 {result_on_cpu.device} 上的操作结果:
+", result_on_cpu)
+```
+
+请记住，张量之间的操作通常要求它们在同一设备上进行。使用 `.to(device)` 显式移动张量是 PyTorch 代码中常见的做法，尤其是在为GPU训练准备数据和模型时。
+
+本次实践涵盖了操作张量的主要技巧。随着您构建更复杂的模型，熟练掌握索引、形状改变、组合张量、理解广播、管理数据类型以及控制设备放置将变得愈发重要。
+
+## 参考资料
+
+- [PyTorch Documentation: Tensors](https://pytorch.org/docs/stable/tensors.html) — PyTorch Contributors (2024)
+  Publisher: PyTorch Foundation
+  PyTorch张量操作、属性和设备管理的官方参考资料。
+- [PyTorch Tensors Tutorial](https://pytorch.org/tutorials/beginner/blitz/tensor_tutorial.html) — PyTorch Documentation (2024)
+  涵盖PyTorch张量创建和操作基础的官方教程。
+- [Deep Learning with PyTorch](https://www.manning.com/books/deep-learning-with-pytorch) — Eli Stevens, Luca Antiga, and Thomas Viehmann (2020)
+  Publisher: Manning Publications
+  提供PyTorch张量的全面指导，包括各种操作方法。

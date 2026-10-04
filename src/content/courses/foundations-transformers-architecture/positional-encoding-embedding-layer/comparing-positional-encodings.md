@@ -1,0 +1,77 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "positional-encoding-embedding-layer"
+lesson: "comparing-positional-encodings"
+sourceId: 1999
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-4-positional-encoding-embedding-layer/comparing-positional-encodings"
+title: "比较：正弦式与学习式嵌入"
+description: "Comparing the advantages and disadvantages of fixed sinusoidal vs learned positional encodings."
+order: 7
+plots: []
+sourceHash: "f6741f4b9077c0974fa39d3e0977a743d1ecd6b97a2803327f01b21a15e02628"
+sourceCorrections: []
+---
+
+在了解了使用固定三角函数注入序列顺序信息的正弦式位置编码 (positional encoding)方案后，我们现在转而关注另一种方法：学习式位置嵌入 (embedding)。这两种方法都旨在解决同一个问题——使置换不变的自注意力 (self-attention)机制 (attention mechanism)感知序列顺序——但它们具有不同的特点和权衡。理解这些差异对于为特定任务或模型架构选择合适的方法很重要。
+
+让我们从几个方面系统地比较这两种技术。
+
+### 参数 (parameter)效率与模型大小
+
+**正弦式位置编码 (positional encoding)：** 这种方法无参数。编码向量 (vector)通过预定义公式生成：
+$PE_{(pos, 2i)} = \sin(pos / 10000^{2i/d_{model}})$
+$PE_{(pos, 2i+1)} = \cos(pos / 10000^{2i/d_{model}})$
+这些值可以预先计算到最大预期序列长度并存储，也可以在正向传播时动态计算。无论哪种情况，它们都不会为模型增加任何可训练参数。这使得它们对于参数数量受限的模型很有吸引力。
+
+**学习式位置嵌入 (embedding)：** 这种方法将位置视为离散标记 (token)。会创建一个嵌入矩阵，通常大小为 $L_{max} \times d_{model}$，其中 $L_{max}$ 是模型设计用于处理的最大序列长度，$d_{model}$ 是嵌入维度（与标记嵌入维度匹配）。该矩阵中的每一行 $j$ 都是一个表示位置 $j$ 的可学习向量。在正向传播期间，根据位置索引查找相应的学习式位置嵌入向量，并将其添加到对应的标记嵌入中。这会为模型引入 $L_{max} \times d_{model}$ 个额外的可训练参数。对于具有非常大上下文 (context)窗口（大 $L_{max}$）或高维度（$d_{model}$）的模型，这可能表示模型大小和内存需求的显著增加。
+
+### 灵活性与归纳偏置 (bias)
+
+**正弦式位置编码 (positional encoding)：** 正弦编码的固定性质为模型引入了强的*归纳偏置*。三角函数固有地编码位置，有助于建模相对位置。由于 $\sin(\alpha+\beta)$ 和 $\cos(\alpha+\beta)$ 等三角恒等式，位置偏移 $k$ 的编码 $PE_{pos+k}$ 可以表示为 $PE_{pos}$ 的线性变换。这种结构可能使自注意力 (self-attention)机制 (attention mechanism)更容易学习基于相对偏移的关联，独立于绝对位置。然而，这种固定结构可能并非适用于所有任务或数据分布。
+
+**学习式位置嵌入 (embedding)：** 其可学习的特性提供了最大的灵活性。原则上，模型可以学习任何能最小化目标任务训练损失的位置表示。这使得模型能够根据数据的独特之处调整位置信息。然而，这种灵活性代价是较弱的归纳偏置。由于没有正弦函数的固有结构，模型必须完全从数据中学习位置关联，这可能需要更多数据或更长的训练时间，尤其是在捕捉复杂相对位置模式时。此外，还存在学习到的嵌入无法获得像正弦函数那样平滑或更具泛化性的表示的风险。
+
+### 外推到未见序列长度
+
+**正弦式位置编码 (positional encoding)：** 数学公式允许正弦编码生成任何位置索引的编码，即使是超出训练期间遇到的最大长度的位置。这表明在*外推*到更长序列方面具有潜在优势。尽管模型的注意力机制 (attention mechanism)本身并未在这些更长的交互上训练，但位置信号仍然定义明确。这种外推的实际效果可能有所不同，因为模型性能仍可能因分布偏移而在显著更长的序列上下降，但编码机制本身不会失效。
+
+**学习式位置嵌入 (embedding)：** 这种方法通常难以进行外推。由于嵌入只学习了截至 $L_{max}$ 的位置，模型对于 $L_{max}, L_{max}+1, \dots$ 等位置没有定义好的表示。在推理 (inference)时简单地延长序列将需要分配零向量 (vector)、重用现有向量，或采用嵌入插值或使用更长序列重新训练/微调 (fine-tuning)模型等更复杂的技术。当遇到长度超过 $L_{max}$ 的序列时，标准实现通常会失败或产生不可预测的结果。
+
+### 经验表现
+
+**正弦式位置编码 (positional encoding)：** 在最初的“Attention Is All You Need”Transformer中采用，它们在机器翻译任务上表现出色。它们通常提供一个可靠的基线，并在各种序列建模问题上表现良好。
+
+**学习式位置嵌入 (embedding)：** 被BERT和GPT系列等许多有影响力的模型采用。经验结果表明，学习式嵌入可以达到先进水平的性能，表明它们提供的灵活性允许模型在有足够数据和模型容量的情况下有效地捕获位置信息。
+
+在实践中，对于训练期间常见的序列长度，两种方法之间的性能差异通常很小。选择可能更多取决于参数 (parameter)预算、所需的外推能力或特定的架构选择（例如，后面会讨论的相对位置编码会改变这种比较）。
+
+### 实现复杂度
+
+两种方法在现代深度学习 (deep learning)框架中实现起来都相对简单。
+
+**正弦式：** 需要实现数学公式，通常涉及矩阵运算以提高效率。需要注意数值稳定性，并正确广播编码以匹配输入批次维度。
+
+**学习式：** 通常更简单，通常只需实例化一个嵌入 (embedding)层（例如，`torch.nn.Embedding` 或 `tf.keras.layers.Embedding`）并将其输出添加到标记 (token)嵌入中。
+
+### 总结表
+
+| 特性 | 正弦式位置编码 (positional encoding) | 学习式位置嵌入 (embedding) |
+| --- | --- | --- |
+| **参数 (parameter)** | 无 (固定函数) | 增加 $L_{max} \times d_{model}$ 个参数 |
+| **灵活性** | 较低 (固定结构) | 较高 (从数据中学习) |
+| **归纳偏置 (bias)** | 强 (鼓励相对定位) | 较弱 (必须从头学习位置关联) |
+| **外推能力** | 理论上可行，生成有效编码 | 较差，对未见位置需要特殊处理 |
+| **最大长度限制** | 由计算定义，而非参数 | 训练时基于 $L_{max}$ 的硬性约束 |
+| **数据需求** | 由于内置结构，潜在地对数据需求较少 | 可能需要更多数据来学习有效表示 |
+| **典型应用** | 原始Transformer | BERT, GPT系列 |
+| **实现** | 需要实现公式 | 通常涉及标准嵌入层 |
+
+### 结论
+
+正弦式和学习式位置嵌入 (embedding)之间的选择涉及归纳偏置 (bias)、参数 (parameter)效率、灵活性和外推能力之间的权衡。正弦式编码提供了一种无参数、结构化的方式来表示位置，在相对定位和外推方面具有良好的理论特性。学习式嵌入提供更大的灵活性，允许模型根据特定任务调整位置表示，但它们会增加参数，并且难以处理比训练期间遇到的序列更长的序列。最佳选择通常取决于模型的具体要求、数据规模和所需的序列长度处理能力。正如我们将在后续章节中看到的，相对位置编码 (positional encoding)等发展旨在结合结构化位置感知与依赖上下文 (context)表示的优势。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University; Pages: Chapter 8: Transformers
+  清晰解释了Transformer组件，包括对正弦和可学习位置编码的比较。

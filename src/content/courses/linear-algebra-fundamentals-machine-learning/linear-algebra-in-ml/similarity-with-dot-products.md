@@ -1,0 +1,116 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "linear-algebra-in-ml"
+lesson: "similarity-with-dot-products"
+sourceId: 7835
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-6-linear-algebra-in-ml/similarity-with-dot-products"
+title: "使用点积衡量相似度"
+description: "了解点积如何用于计算余弦相似度，这是一种常用的向量比较指标。"
+order: 4
+plots: []
+sourceHash: "3645829911d14f21c1209e1c5e4a4a49dba2c441bba20039e116d78d92a42973"
+sourceCorrections: []
+---
+
+在之前的章节中，我们把点积看作一个纯粹的机械运算。现在，我们将看到这种简单的计算如何提供一种有效方法来衡量两个向量 (vector)的“相似”程度，这项工作对搜索引擎、推荐系统和许多其他机器学习 (machine learning)应用都很关键。当我们把文档、电影或顾客偏好等项目表示为向量时，它们在空间中的指向具有重要意义。
+
+### 从代数到几何
+
+定义两个向量 (vector) $a$ 和 $b$ 的点积有两种方式。
+
+1. **代数定义：** 对应元素乘积的和。
+   
+   $$
+   a \cdot b = \sum_{i=1}^{n} a_i b_i
+   $$
+   
+2. **几何定义：** 它们长度的乘积与它们之间夹角的余弦值。
+   
+   $$
+   a \cdot b = \|a\| \|b\| \cos(\theta)
+   $$
+   
+
+几何定义包含了衡量相似度的奥秘。项 $\cos(\theta)$ 直接告诉我们两个向量之间的夹角 $\theta$。这个角度很好地表明了它们的方向相似度，而不受长度影响。
+
+我们来看看 $\cos(\theta)$ 的值表示什么：
+
+- 如果 $\cos(\theta) = 1$，则角度 $\theta$ 为 $0^\circ$。向量指向完全相同的方向。它们之间最相似。
+- 如果 $\cos(\theta) = 0$，则角度 $\theta$ 为 $90^\circ$。向量是正交的（垂直）。它们之间没有方向相似性。
+- 如果 $\cos(\theta) = -1$，则角度 $\theta$ 为 $180^\circ$。向量指向相反的方向。它们之间最不相似。
+
+这些极值之间的值代表不同程度的相似性。$0.8$ 的值表示比 $0.2$ 的值高得多的相似性。
+
+> 向量之间夹角的余弦值直接衡量了它们的方向一致性。
+
+### 余弦相似度
+
+为了单独考察这种方向衡量，我们可以重新排列几何公式来求出 $\cos(\theta)$。这给我们带来了**余弦相似度**公式，它是机器学习 (machine learning)中最常使用的相似度指标之一。
+
+
+$$
+\text{相似度} = \cos(\theta) = \frac{a \cdot b}{\|a\| \|b\|}
+$$
+
+
+这个公式计算点积，然后除以两个向量 (vector)的范数（它们的长度）的乘积。这种除法是一种归一化 (normalization)形式。它确保了结果值总是在 -1 和 1 之间，无论向量分量有多大。它实际上是在问：“忽略大小，这些向量在多大程度上指向同一方向？”
+
+这在自然语言处理（NLP）等学科中特别有用。假设你将两个文档表示为向量，其中每个元素对应一个词的计数。一个文档可能很长，另一个可能很短。它们的向量大小会非常不同，但如果它们是关于同一主题的，它们的向量在高维词语空间中将指向相似的方向。余弦相似度将反映这种主题相似性，同时忽略文档长度的差异。
+
+### 例子：寻找相似用户
+
+我们将其应用于一个简单的推荐系统问题。假设我们有三个用户对两种电影类型（科幻和喜剧）的评分数据。评分范围是 1 到 5。
+
+- **用户 A** 喜欢科幻，不喜欢喜剧： `[5, 1]`
+- **用户 B** 喜欢科幻，不喜欢喜剧： `[4, 1]`
+- **用户 C** 不喜欢科幻，喜欢喜剧： `[1, 5]`
+
+直观来看，用户 A 和用户 B 的品味相似，而用户 C 的品味与 A 和 B 都非常不同。我们用余弦相似度来验证这一点。我们可以使用 NumPy 在 Python 中创建一个简单函数来执行计算。
+
+```python
+import numpy as np
+
+# 用户对 [科幻, 喜剧] 的评分
+user_a = np.array([5, 1])
+user_b = np.array([4, 1])
+user_c = np.array([1, 5])
+
+# 计算余弦相似度的函数
+def cosine_similarity(v1, v2):
+    dot_product = np.dot(v1, v2)
+    norm_v1 = np.linalg.norm(v1)
+    norm_v2 = np.linalg.norm(v2)
+    return dot_product / (norm_v1 * norm_v2)
+
+# 计算相似度
+sim_ab = cosine_similarity(user_a, user_b)
+sim_ac = cosine_similarity(user_a, user_c)
+
+print(f"用户 A 与用户 B 之间的相似度: {sim_ab:.4f}")
+print(f"用户 A 与用户 C 之间的相似度: {sim_ac:.4f}")
+```
+
+运行此代码会产生以下输出：
+
+```
+Similarity between User A and User B: 0.9992
+Similarity between User A and User C: 0.3846
+```
+
+结果与我们的直觉完全一致。用户 A 和用户 B 之间的相似度分数非常接近 1，表明他们的偏好高度一致。相比之下，用户 A 和用户 C 之间的相似度要低得多，反映了他们不同的品味。推荐引擎可以利用这种逻辑向用户 B 推荐用户 A 喜欢的电影，但不会推荐给用户 C。
+
+这个简单的例子说明了点积这一核心线性代数运算如何成为比较数据点并在机器学习 (machine learning)系统中做出智能预测的实用工具。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2016)
+  Publisher: Wellesley-Cambridge Press
+  解释了向量、点积及其几何解释的基本概念，有助于理解余弦相似度。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/publication/pattern-recognition-and-machine-learning/) — Christopher M. Bishop (2006)
+  Publisher: Springer; DOI: [10.1007/b100721](https://doi.org/10.1007/b100721)
+  全面介绍了机器学习，包括在数据分析和模式识别背景下对距离和相似度度量的讨论。
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  深入解释了用于文本表示的向量空间模型，以及余弦相似度在自然语言处理中的应用。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本统计学习领域的经典著作，涵盖了机器学习算法中使用的各种相似度和距离度量。

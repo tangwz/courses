@@ -1,0 +1,118 @@
+---
+course: "speech-recognition-synthesis-asr-tts"
+chapter: "neural-vocoders-waveform-generation"
+lesson: "diffusion-models-vocoding"
+sourceId: 3204
+sourceUrl: "https://apxml.com/zh/courses/speech-recognition-synthesis-asr-tts/chapter-5-neural-vocoders-waveform-generation/diffusion-models-vocoding"
+title: "用于声码器的扩散模型"
+description: "介绍扩散概率模型在语音合成中的应用。"
+order: 5
+plots: []
+sourceHash: "0bd6984c99013672c68591d38500d968bd0a0e5d262d837da7d23a78494dca38"
+sourceCorrections: []
+---
+
+扩散模型是生成模型的一种强大类别，近期在生成高保真音频波形方面取得了显著成功，涵盖声码器任务。它们源于热力学，随后在图像生成中受到关注，其在音频合成中的应用为自回归 (autoregressive)、流基和基于GAN的方法提供了一种截然不同的选择。
+
+扩散模型背后的理念出人意料地简单：系统地破坏数据中的结构（即“正向过程”），然后学习如何逆转此过程以生成新数据（即“逆向过程”）。
+
+### 正向过程：逐步加噪
+
+设想一个干净的音频波形，$x_0$。正向扩散过程在一系列 $T$ 个离散时间步中，逐步向此波形添加少量高斯噪声。在每个步长 $t$ 中添加的噪声量由预设的方差时间表 $\beta_t$ 控制，其中 $t$ 的范围从 1 到 $T$。通常，$T$ 较大（例如 1000），且 $\beta_t$ 值较小，常随时间增加。
+
+此过程确定了一系列噪声逐渐增加的样本 $x_1, x_2, ..., x_T$。每个 $x_t$ 通过添加噪声从 $x_{t-1}$ 生成：
+$q(x_t | x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t} x_{t-1}, \beta_t I)$
+此处，$\mathcal{N}(x; \mu, \sigma^2 I)$ 表示一个高斯分布，其均值为 $\mu$，对角协方差为 $\sigma^2 I$。缩放因子 $\sqrt{1 - \beta_t}$ 确保总方差不会激增。
+
+一个有用的特性是，我们可以直接从原始的 $x_0$ 采样 $x_t$，而无需遍历所有中间步骤。如果我们定义 $\alpha_t = 1 - \beta_t$ 且 $\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$，那么：
+$q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) I)$
+随着 $t$ 趋近于 $T$，$\bar{\alpha}_T$ 趋近于零，这表示 $x_T$ 几乎丢失了关于原始 $x_0$ 的所有信息，并且近似于一个标准高斯分布，$x_T \approx \mathcal{N}(0, I)$。此正向过程是固定的，不涉及任何学习。
+
+### 逆向过程：学习去噪
+
+生成环节发生在逆向过程中。目标是学习一个模型，它能够逆转加噪步骤：从纯噪声 $x_T \sim \mathcal{N}(0, I)$ 开始，我们能否迭代去除噪声，最终获得一个干净的波形 $x_0$？
+
+这需要学习由神经网络 (neural network) $\theta$ 参数 (parameter)化的转移概率 $p_\theta(x_{t-1} | x_t)$。如果我们知道真实的后验 $q(x_{t-1} | x_t, x_0)$（在给定 $x_0$ 的条件下是可处理的高斯分布），我们理论上可以完美逆转此过程。然而，在生成时，我们没有 $x_0$。扩散模型使用神经网络来近似此逆向转移：
+$p_\theta(x_{t-1} | x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$
+神经网络 $\mu_\theta(x_t, t)$ 需要在给定含噪的 $x_t$ 和时间步 $t$ 的条件下，预测 $x_{t-1}$ 分布的均值。方差 $\Sigma_\theta(x_t, t)$ 通常保持固定或与正向过程方差 $\beta_t$ 相关。
+
+### 基于声学特征的条件设定
+
+对于声码器来说，我们不希望生成随机音频；我们希望生成与特定声学特征（通常是梅尔频谱图 $c$）对应的音频。因此，逆向过程必须以 $c$ 为条件：
+$p_\theta(x_{t-1} | x_t, c)$
+神经网络 (neural network)在条件信息 $c$ 的引导下学习执行去噪步骤 $x_t \rightarrow x_{t-1}$。此条件设定通常被纳入网络架构中，常采用与其他条件生成模型相似的技术：
+
+- 将 $c$（可能经过上采样）与 $x_t$ 拼接。
+- 通过 $c$ 调制网络中的中间特征图（例如，通过FiLM层或自适应组归一化 (normalization)）。
+- 在 $x_t$ 表示和 $c$ 之间采用交叉注意力机制 (attention mechanism)。
+
+$\mu_\theta$ 常用的网络架构是U-Net变体，类似于在图像生成中取得成功的那些，适用于一维音频信号。时间步 $t$ 也作为输入提供，通常通过正弦嵌入 (embedding)，使网络能够学习时间相关的去噪行为。
+
+### 模型训练
+
+替代直接参数 (parameter)化 $\mu_\theta(x_t, t, c)$ 的方法，通常更有效的是训练网络 $\epsilon_\theta(x_t, t, c)$ 来预测正向过程中从 $x_0$ 得到 $x_t$ 时所添加的噪声分量 $\epsilon$。回顾 $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon$，其中 $\epsilon \sim \mathcal{N}(0, I)$。
+
+训练目标简化为最小化真实噪声 $\epsilon$ 与预测噪声 $\epsilon_\theta$ 之间的均方误差，该误差在随机时间步 $t$、数据样本 $x_0$ 和噪声样本 $\epsilon$ 上进行平均：
+$L_{simple} = \mathbb{E}_{t \sim [1, T], x_0 \sim data, \epsilon \sim \mathcal{N}(0, I)} \left[ || \epsilon - \epsilon_\theta(\sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon, c, t) ||^2 \right]$
+此目标训练网络，使其能够在任何给定噪声水平 $t$ 下有效估计噪声，以声学特征 $c$ 为条件。
+
+### 推理 (inference)：生成音频
+
+音频生成始于从标准高斯分布 $\mathcal{N}(0, I)$ 采样 $x_T$。随后，学得的逆向过程被迭代应用于 $t = T, T-1, ..., 1$：
+
+1. 使用网络预测噪声：$\hat{\epsilon} = \epsilon_\theta(x_t, c, t)$。
+2. 估计 $p_\theta(x_{t-1} | x_t, c)$ 的均值 $\mu_\theta(x_t, t, c)$。这可以从预测噪声 $\hat{\epsilon}$ 中推导得出。一种常用公式为：
+   $\mu_\theta(x_t, t, c) = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{\beta_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon_\theta(x_t, c, t) \right)$
+3. 从预测分布中采样 $x_{t-1}$：
+   $x_{t-1} \sim \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t, c), \sigma_t^2 I)$
+   其中 $\sigma_t^2$ 是逆向步骤的方差（常根据 $\beta_t$ 设定，例如 $\sigma_t^2 = \beta_t$ 或相关值）。
+
+经过 $T$ 个步骤后，最终样本 $x_0$ 表示以 $c$ 为条件的生成音频波形。
+
+> 正向扩散过程向干净音频添加噪声，直至其变为纯噪声。学得的逆向过程从噪声开始，并迭代地去除它，在条件梅尔频谱图输入的引导下，合成目标音频波形。
+
+### 优点与缺点
+
+**优点：**
+
+- \*\*高音频质量：\*\*扩散声码器已呈现出最先进的性能，生成高度自然且无瑕疵的音频，通常可与自回归 (autoregressive)模型媲美或更优。
+- \*\*训练稳定：\*\*与GAN相比，基于分数匹配（噪声预测）的训练过程通常更稳定，且对超参数 (parameter) (hyperparameter)调整不那么敏感。
+- \*\*模型灵活性：\*\*该框架灵活，并与其他生成建模方法（例如基于分数的生成模型）相关联。
+
+**缺点：**
+
+- \*\*推理 (inference)速度慢：\*\*标准的迭代采样过程需要许多顺序步骤（等于 $T$，通常是数百或数千），这使得推理速度远慢于GAN或流基声码器等并行方法。这是实时应用的一个主要缺点。
+- \*\*计算成本高：\*\*训练和推理都可能计算成本高昂，因为其迭代性质和潜在的大型U-Net架构。
+
+### 加速扩散推理 (inference)
+
+采样速度慢是研究的一个主要方向。若干技术旨在减少推理时所需的去噪步骤数（$N < T$）：
+
+- \*\*去噪扩散隐式模型 (DDIM)：\*\*修改采样过程以采取更大的步长，大幅减少所需的迭代次数（例如，从1000次减少到50次或更少），通常对质量影响极小。
+- \*\*优化采样调度：\*\*设计非均匀时间步调度进行采样，将计算集中在去噪过程更重要的部分。
+- \*\*知识蒸馏 (knowledge distillation)：\*\*训练一个更快的模型（例如GAN或流基模型）来模拟预训练 (pre-training)扩散模型的输出分布。
+
+即使经过加速，扩散声码器通常仍比HiFi-GAN等最快的并行替代方案慢。
+
+### 与其他声码器的比较
+
+- \*\*对比自回归 (autoregressive)模型 (WaveNet)：\*\*扩散模型可获得相似或更佳的音频质量，但避免了严格的顺序生成，尽管其自身的迭代过程除非加速否则也慢。训练扩散模型可能更简单。
+- \*\*对比流基模型 (WaveGlow)：\*\*流基模型允许快速并行采样，但有时与最佳扩散模型相比，音频质量可能略低。扩散模型可能提供更高的质量，但以牺牲速度为代价。
+- \*\*对比GAN基模型 (HiFi-GAN)：\*\*GAN声码器提供非常快速的并行采样和高质量。扩散模型可以达到或超过此质量，但采样通常更慢。扩散训练通常被认为比GAN训练更稳定。
+
+扩散模型为声码器提供了一种吸引人的方法，以采样速度换取潜在更优的音频保真度和训练稳定性。随着研究继续加速其推理 (inference)，它们正成为生成高质量语音波形日益实际的选择。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/pdf/2006.11239.pdf) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems 33; Publisher: Curran Associates, Inc.; Volume: 33; Pages: 6840-6851; DOI: [10.5555/3455702.3455871](https://doi.org/10.5555/3455702.3455871)
+  这篇开创性论文介绍了去噪扩散概率模型（DDPM）框架，详细阐述了前向和逆向过程以及简化的训练目标，为扩散模型奠定了基础。
+- [Denoising Diffusion Implicit Models](https://arxiv.org/abs/2010.02502) — Jiaming Song, Chenlin Meng, Stefano Ermon (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2010.02502](https://doi.org/10.48550/arXiv.2010.02502)
+  这篇论文介绍了去噪扩散隐式模型（DDIM），提出了一种在保持生成质量的同时以更少步骤实现显著更快推理的方法，这对需要高效采样的应用是重要的贡献。
+- [DiffWave: A Versatile Diffusion Model for Audio Synthesis](https://openreview.net/forum?id=V2jT0jPj8_h) — Zhifeng Kong, Wei Ping, Kaiming Ren, Kexin Ren, and Qifeng Liu (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2009.09761](https://doi.org/10.48550/arXiv.2009.09761)
+  这项工作是首批成功将扩散模型应用于高保真音频波形生成的研究之一，通过将DDPM框架应用于一维音频信号，展示了其在声码器和通用音频合成方面的潜力。
+- [ProDiff: Progressive Fast Diffusion Model for High-Quality Text-to-Speech](https://arxiv.org/abs/2207.06389) — Rongjie Huang, Zhou Zhao, Huadai Liu, Jinglin Liu, Chenye Cui, Yi Ren (2022)
+  Journal: Proceedings of the 30th ACM International Conference on Multimedia; Publisher: ACM; DOI: [10.48550/arXiv.2207.05831](https://doi.org/10.48550/arXiv.2207.05831)
+  这项研究提出了ProDiff，这是一种高质量文本到语音的方法，它使用扩散模型作为声码器组件，并结合了加速推理的方法，解决了扩散模型在语音合成中的一个主要挑战。

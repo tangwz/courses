@@ -1,0 +1,76 @@
+---
+course: "introduction-to-machine-learning"
+chapter: "building-first-ml-model"
+lesson: "training-simple-model"
+sourceId: 1538
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-machine-learning/chapter-7-building-first-ml-model/training-simple-model"
+title: "训练一个简单模型"
+description: "演示使用库将模型训练（拟合）到数据的过程。"
+order: 4
+plots: []
+sourceHash: "70c240f314c6850c95a5c215321942501be89f85f98c75ee3ee42dbd1842605f"
+sourceCorrections: []
+---
+
+现在，让我们把准备好的数据和选定的算法结合起来。我们已经到了机器学习 (machine learning)工作流程中的核心一步：训练模型。这正是机器学习中“学习”真正发生的地方。
+
+可以把未经训练的模型想象成课前的学生。它有学习的*能力*，这种能力体现在算法的结构中（比如线性回归或K-近邻算法），但它对我们希望解决的具体问题还一无所知。训练是一个向模型展示用于训练的数据（`X_train`和`y_train`），并让算法找出输入特征和输出目标之间关系的过程。
+
+### `fit()` 方法：教导模型
+
+幸运的是，像Scikit-learn这样的流行机器学习 (machine learning)库提供了统一且直接的模型训练方式。您将使用的最常用方法叫做`fit()`。您可以把`fit()`理解为告诉模型的命令：“从这些数据中学习。”
+
+要使用Scikit-learn训练模型，您通常需要前面步骤中准备好的两个主要要素：
+
+1. **特征（X\_train）：** 这是您的训练数据，通常表示为一个2D数组或DataFrame，其中行是样本（例如，单个客户、房屋或图像），列是特征（例如，年龄、平方英尺、像素值）。这是模型将从中学习的输入。
+2. **目标变量（y\_train）：** 这是`X_train`中每个样本对应的“正确答案”。
+   - 对于**回归**，`y_train`将是一个包含连续数值的1D数组（例如，房价）。
+   - 对于**分类**，`y_train`将是一个包含类别标签的1D数组（例如，'垃圾邮件'/'非垃圾邮件'，0/1，'猫'/'狗'）。
+
+`fit()` 方法接收这两部分数据（`X_train`，`y_train`），并执行所选算法的学习过程。
+
+### `fit()` 内部发生什么？
+
+当您调用 `model.fit(X_train, y_train)` 时，算法就开始工作了。虽然具体情况取决于算法（例如，我们之前在线性回归中看到了梯度下降 (gradient descent)），但大致思路是一样的：
+
+- 算法查看特征（`X_train`）以及相关联的目标值（`y_train`）。
+- 它调整其内部参数 (parameter)。对于线性回归，这些是直线的斜率和截距（$y = mx + b$ 中的 $m$ 和 $b$）。对于其他模型，它们可能是不同类型的参数。
+- 目标通常是调整这些参数，使得模型在`X_train`上的预测尽可能接近实际的`y_train`值。“接近”的衡量方式取决于算法和问题（例如，在回归中最小化均方误差）。
+- 这个调整过程持续进行，直到算法找到一组能较好地表示训练数据中模式的参数。
+
+重要的结果是 `model` 对象本身被修改。在 `fit()` 完成后，该对象现在包含已学习的参数。它已经从一个通用算法蓝图转变为一个针对我们数据集的*训练有素的模型*。
+
+### 使用 Scikit-learn 进行实际训练
+
+让我们看看这在代码中有多简单。假设您已经：
+
+1. 导入了您选择的算法类（例如，`from sklearn.linear_model import LinearRegression` 或 `from sklearn.neighbors import KNeighborsClassifier`）。
+2. 创建了模型实例（例如，`model = LinearRegression()` 或 `model = KNeighborsClassifier(n_neighbors=3)`）。
+3. 准备了您的训练数据 `X_train` 和 `y_train`。
+
+训练模型只需一行代码：
+
+```python
+# X_train: 您准备的训练特征（例如，NumPy 数组或 Pandas DataFrame）
+# y_train: 您准备的训练目标变量（例如，NumPy 数组或 Pandas Series）
+# model: 您选择的算法实例（例如，LinearRegression, KNeighborsClassifier）
+
+# 训练模型
+model.fit(X_train, y_train)
+
+# 现在 'model' 对象已经训练完毕，并包含已学习的参数！
+print("模型训练完成。")
+```
+
+就是这样！`fit()` 方法处理所有底层计算。它本身通常不会返回任何有意义的值；相反，它直接修改 `model` 对象。这个训练过的 `model` 现在已准备好进行下一步：在新数据上进行预测并评估其学习效果。
+
+## 参考资料
+
+- [User Guide: Supervised learning](https://scikit-learn.org/stable/supervised_learning.html) — Scikit-learn Developers (2023)
+  官方文档，解释了监督学习估算器的通用API，包括`fit()`方法、其输入以及模型训练方式。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本经典参考书，为机器学习算法提供了严谨的统计和数学基础，解释了模型如何学习和拟合数据。
+- [Introduction to Machine Learning](https://mitpress.mit.edu/books/introduction-machine-learning-fourth-edition) — Ethem Alpaydın (2020)
+  Publisher: The MIT Press
+  全面概述了机器学习的基本原则，包括监督学习范式和模型训练的机制。

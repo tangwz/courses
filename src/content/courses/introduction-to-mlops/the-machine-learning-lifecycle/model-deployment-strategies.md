@@ -1,0 +1,73 @@
+---
+course: "introduction-to-mlops"
+chapter: "the-machine-learning-lifecycle"
+lesson: "model-deployment-strategies"
+sourceId: 7198
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-2-the-machine-learning-lifecycle/model-deployment-strategies"
+title: "模型部署策略"
+description: "介绍将机器学习模型部署到生产环境中的不同策略。"
+order: 5
+plots: []
+sourceHash: "815378e35c1a7ab14aef63c9a5aed163cb66c8c8b826a18a848b2b2f2e369ddf"
+sourceCorrections: []
+---
+
+当模型完成训练并经过验证后，它就具备了潜在的价值。然而，只有当模型的预测结果能够提供给用户或其他软件系统使用时，这种潜力才能转化为现实。这种从训练好的产出物转变为运行服务的转变被称为**模型部署**。在这个阶段，您的模型将走出实验室，开始在生产环境中履行其职责。
+
+选择合适的部署策略是一项重要的决策，这完全取决于应用程序的需求。需要考虑的首要问题是：**您的应用程序何时以及如何需要预测结果？** 答案将指引您选择常用的部署模式之一。
+
+### 离线预测：批量处理数据
+
+最简单的部署策略是离线预测（Batch Prediction），也称为离线评分。在这种方法中，模型一次性处理大量的数据观察值。这个过程通常按固定的时间表运行（例如每天一次），预测结果会存储在数据库或文件系统中以备后用。
+
+在以下情况下，您应该考虑使用离线预测策略：
+
+- **不需要实时预测。** 例如，计算每周销售预测或为每月营销活动进行客户细分。
+- **正在处理海量数据。** 一次性处理数 TB 的数据通常比逐个处理数据点更有效率。
+- **延迟不是主要考虑因素。** 为单个观察值生成预测所需的时间可能较长，因为作业针对的是吞吐量 (throughput)而非速度进行了优化。
+
+典型的离线预测工作流程包括一个定时任务，该任务从数据仓库等源头读取输入数据，将其输入模型，并将生成的预测结果写入目标表。
+
+> 离线预测系统的高层视图。定时任务批量处理数据并存储输出。
+
+### 在线预测：按需提供预测
+
+与离线方式不同，在线预测（Online Prediction）或实时服务会根据请求即时生成预测。模型被包装在 API 中并作为持久服务部署，通常位于负载均衡器之后，随时准备以极低的延迟响应传入的请求。
+
+这种策略对于需要立即反馈的应用程序非常有用。常见的使用案例包括：
+
+- 金融交易中的**欺诈检测**。
+- 用户浏览电子商务网站时的**产品推荐**。
+- 针对传入邮件的**垃圾邮件过滤**。
+
+在线服务架构通常比离线系统更复杂。它们需要可扩展的基础架构来处理请求流量，并且必须密切监控以确保高可用性和低延迟。模型通常通过 REST API 端点暴露，允许其他服务通过发送包含输入数据的简单 HTTP 请求来请求预测。
+
+> 在线预测系统实时响应单个请求。
+
+### 选择合适的路径
+
+下表总结了这两种主要策略之间的主要区别。
+
+| 特性 | 离线预测 | 在线预测 |
+| --- | --- | --- |
+| **数据** | 大型、静态数据集 | 单个或少量数据点 |
+| **触发方式** | 定时触发（如每小时、每天） | 按需触发（API 调用） |
+| **延迟** | 高（分钟到小时级） | 低（毫秒级） |
+| **吞吐量 (throughput)** | 高 | 低到高（可扩展） |
+| **使用场景** | 非交互式报告 | 交互式应用程序 |
+| **基础设施** | 较简单（如 cron 任务） | 较复杂（如 API 服务器） |
+
+在某些情况下，可能会使用混合方法。例如，电子商务网站可以利用离线任务在夜间为所有用户预先计算推荐，同时使用在线模型根据用户当前的会话进行实时调整。
+
+理解这些模式是设计高效 MLOps 工作流的基础。所选策略会直接影响模型的版本控制、测试、部署和监控方式，这些都是我们在本课程后续部分将要讨论的话题。
+
+## 参考资料
+
+- [Engineering MLOps: A Guide to System Design and Process Management for Machine Learning](https://www.oreilly.com/library/view/practical-mlops/9781098103002/) — Noah Gift, Alfredo Deza (2021)
+  Publisher: O'Reilly Media
+  提供MLOps系统设计和实施的实用指南，涵盖多种模型部署策略。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  提供设计和构建生产就绪ML系统的全面见解，其中包含模型服务和部署模式的专门章节。
+- [CS 329S: Machine Learning Systems Design](https://stanford-cs329s.github.io/) — Chip Huyen (2023)
+  提供涵盖机器学习系统设计和部署的讲义和作业，为模型服务提供实用考量。

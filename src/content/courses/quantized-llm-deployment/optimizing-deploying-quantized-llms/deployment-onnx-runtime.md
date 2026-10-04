@@ -1,0 +1,144 @@
+---
+course: "quantized-llm-deployment"
+chapter: "optimizing-deploying-quantized-llms"
+lesson: "deployment-onnx-runtime"
+sourceId: 4658
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-4-optimizing-deploying-quantized-llms/deployment-onnx-runtime"
+title: "使用ONNX Runtime进行部署"
+description: "使用ONNX Runtime转换和部署量化模型，实现跨平台推理。"
+order: 6
+plots: ["plots/4658-0.json"]
+sourceHash: "4e203f4903844414fa4a1c4aaa8cf190a54331a4e74e8f7ffa6ad37555b8e4e4"
+sourceCorrections: []
+---
+
+ONNX Runtime 为运行机器学习 (machine learning)模型（包括量化 (quantization)大型语言模型LLM）提供了一个多功能、跨平台的引擎。TGI和vLLM等框架是为提高吞吐量 (throughput)而优化的专业推理 (inference)服务器，而TensorRT-LLM则专门在NVIDIA GPU上提供最佳性能，ONNX Runtime则是一个更通用的方案。它允许您使用标准化格式ONNX（开放神经网络 (neural network)交换）在不同硬件环境（CPU、来自不同厂商的GPU、NPU）中一致地部署模型。这种标准化简化了部署流程，特别是在异构环境中。对于量化LLM，ONNX Runtime及其特定硬件的执行提供程序（EPs）可以在保持便携性的同时，相较于基础框架提供显著的性能提升。
+
+### 将量化 (quantization)模型转换为ONNX
+
+第一步是将您已量化的LLM转换为ONNX格式。此过程包括将模型的架构及其量化权重 (weight)（以及相关的量化参数 (parameter)，如比例因子和零点）转换为ONNX图定义。
+
+通常，您会从使用与PyTorch或TensorFlow集成的库（如`bitsandbytes`、`AutoGPTQ`或`AutoAWQ`）量化后的模型开始。转换可以按以下几种方式进行：
+
+1. **直接导出（例如，`torch.onnx.export`）**：对于PyTorch模型，可以使用标准 `torch.onnx.export` 函数。然而，导出复杂的LLM，特别是那些具有自定义量化操作或动态控制流的LLM，可能存在难度。您可能会遇到不支持的操作符或图跟踪限制的问题。确保低位权重和量化元数据在ONNX图中得到正确表示，需要仔细处理。
+2. **使用Hugging Face `optimum`**：这个库极大地简化了Hugging Face生态系统中模型的转换过程。`optimum`为导出Transformer模型（包括那些使用流行方法量化的模型）到ONNX提供了专用工具。它通常处理将量化方案（如GPTQ或AWQ）映射到相应ONNX表示的复杂情况，可能在必要时使用标准ONNX量化操作符或自定义配置。
+
+```bash
+# 使用optimum CLI的示例
+pip install optimum[onnxruntime]
+
+optimum-cli export onnx --model my-quantized-llm-checkpoint -t text-generation --device cuda --dtype O1 my_onnx_model/
+```
+
+> 上述命令演示了如何使用 `optimum` 导出模型。请参阅 `optimum` 文档，根据您的模型和量化类型查看具体命令。
+
+在转换过程中，量化细节（例如INT4权重、FP16比例因子）必须嵌入 (embedding)到`.onnx`文件中。这可能涉及：
+
+- 将低位权重存储在标准数据类型（如INT8）中，并在图中包含操作，以便在推理 (inference)时正确地反量化它们。
+- 使用标准ONNX量化操作符，如`QLinearMatMul`、`QuantizeLinear`和`DequantizeLinear`，这些操作符主要针对INT8量化。
+- 如果量化方案不受标准ONNX操作的直接支持，则可能需要依赖自定义操作符。
+
+ONNX Runtime也提供自己的训练后量化功能（在导出全精度模型*之后*应用量化），但为了使用GPTQ或AWQ等高级方法获得最佳准确度，通常建议*首先*使用专用库对模型进行量化，然后将*已量化*的模型导出到ONNX。
+
+### 优化ONNX图
+
+拥有`.onnx`文件后，ONNX Runtime可以进一步优化模型图，以实现更高效的执行。这些优化在您将模型加载到`InferenceSession`时应用，可包括：
+
+- **操作符融合**：将多个简单操作合并为一个更复杂的核（例如，将MatMul与BiasAdd融合）。
+- **常量折叠**：预先计算图中仅依赖常量输入的片段。
+- **布局优化**：重新排列数据布局（例如，NCHW与NHWC）以匹配硬件偏好。
+- **量化 (quantization)优化**：特别是对于量化模型，这可能涉及将DequantizeLinear -> MatMul -> QuantizeLinear等序列融合为单个量化操作。
+
+ONNX Runtime提供了不同的图优化级别（例如，基本、扩展、全部），您可以在创建推理 (inference)会话时进行配置。更高的优化级别可能在会话创建时花费更长时间，但可以带来更快的推理速度。
+
+### 使用执行提供程序（EPs）进行推理 (inference)
+
+ONNX Runtime在性能方面的核心优势在于其执行提供程序（EPs）。EPs是插件，允许ONNX Runtime使用特定硬件的加速库。当您创建`InferenceSession`时，您需要按偏好顺序指定EP列表。ONNX Runtime会将图中的节点分配给列表中第一个支持它们的EP。
+
+```python
+import onnxruntime as ort
+
+# 定义会话选项
+sess_options = ort.SessionOptions()
+
+# 示例：启用图优化
+sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+# 选择执行提供程序（按优先级顺序选择一个或多个）
+# providers = ['CPUExecutionProvider']
+providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] # 如果CUDA可用则使用，否则回退到CPU
+# providers = ['TensorRTExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'] # 首先尝试TensorRT
+
+# 加载模型并创建会话
+session = ort.InferenceSession("path/to/your_quantized_model.onnx",
+                               sess_options=sess_options,
+                               providers=providers)
+
+# 准备输入数据（假设典型的LLM输入示例）
+# input_ids = ... (token ID的numpy数组)
+# attention_mask = ... (注意力掩码的numpy数组)
+# inputs = {'input_ids': input_ids, 'attention_mask': attention_mask}
+
+# 运行推理
+# outputs = session.run(None, inputs) # None表示使用默认输出名称
+# logits = outputs[0] # 假设logits是第一个输出
+```
+
+对于量化 (quantization)LLM，重要的EPs包括：
+
+- **`CPUExecutionProvider`**：默认的EP，使用CPU特定的优化（如AVX指令）。量化模型的性能在很大程度上取决于CPU对低精度算术的支持。
+- **`CUDAExecutionProvider`**：使用NVIDIA的cuDNN和cuBLAS库进行GPU加速。它对标准INT8量化操作有良好支持，相较于CPU推理提供显著的加速。对低于INT8位宽类型的支持可能有限或通过仿真实现。
+- **`TensorRTExecutionProvider`**：与NVIDIA的TensorRT更紧密集成。它尝试将ONNX图的部分转换为优化的TensorRT引擎，可能比标准`CUDAExecutionProvider`提供更高的性能，特别是对于支持的层模式和精度（包括INT8）的模型。与高度自定义或特殊的低位量化方案的兼容性可能是一个问题。
+
+EP的选择对性能十分重要。将为GPU加速设计的量化模型在`CPUExecutionProvider`上运行，很可能会得到不理想的结果。反之，如果ONNX图中包含的量化操作符受支持，使用`TensorRTExecutionProvider`可以在兼容的NVIDIA硬件上提供显著的加速。
+
+
+
+![LLM推理延迟（越低越好）](plots/4658-0.json)
+
+
+
+> 相对推理延迟可能因模型、量化方法、硬件以及EP对特定操作的支持而显著不同。
+
+### ONNX中的低位量化 (quantization)处理
+
+虽然ONNX通过`QLinearMatMul`等操作符支持INT8量化，但处理更低位格式（例如INT4、NF4）会带来更多挑战：
+
+- **标准化**：ONNX内部目前没有普遍的标准化方案，用于直接在所有EP上表示和执行任意低于INT8位宽的操作。
+- **仿真**：通常，低位权重 (weight)（例如INT4）会被打包成标准数据类型（如INT8）以存储在ONNX文件中。在推理 (inference)过程中，专用操作（有时是通过`optimum`等库包含的自定义操作符）会解包这些权重，对其进行反量化（通常到FP16），然后使用标准FP16操作符执行计算。这种仿真允许便携性，但与原生低位计算相比会增加额外开销。
+- **EP支持**：通过CUDA或TensorRT等EP进行的硬件加速，取决于其底层库（cuDNN、TensorRT）是否为所使用的特定低位操作提供优化核。对INT4等格式的支持正在改善，但可能不是普遍可用或针对所有模型模式进行优化。
+
+Hugging Face `optimum` 等库在这里发挥着重要作用，它们尝试弥合高级量化技术与ONNX Runtime及其EPs能力之间的差距，通常提供打包/解包和仿真所需的逻辑。
+
+### 性能与权衡
+
+使用ONNX Runtime处理量化 (quantization)LLM需要进行权衡：
+
+- **便携性与最佳性能**：ONNX Runtime提供了出色的便携性。然而，为了在特定硬件（特别是NVIDIA GPU）上获得最大吞吐量 (throughput)或最低延迟，vLLM或自定义TensorRT-LLM构建等高度专业化的引擎可能会比ONNX Runtime表现更好，特别是如果它们实现了针对特定低位格式或注意力机制 (attention mechanism)优化的自定义核，而这些机制未被ONNX EPs完全加速。
+- **复杂性**：转换过程可能很复杂，特别是当涉及自定义操作或量化方案需要仿真时。调试ONNX图或EP执行中的问题可能存在难度。
+- **EP依赖性**：性能在很大程度上取决于所选的执行提供程序及其对模型中特定量化操作符的支持。例如，使用`TensorRTExecutionProvider`可以带来非常好的结果，但这会将部署与NVIDIA硬件和TensorRT兼容性绑定。
+
+### 何时使用ONNX Runtime
+
+在以下情况，ONNX Runtime是部署量化 (quantization)LLM的有力选择：
+
+- 您需要在不同硬件平台（CPU、不同GPU供应商、可能的边缘设备）上部署同一模型。
+- 部署格式的标准化是您MLOps流程中的优先事项。
+- 您希望通过CUDA或TensorRT等标准接口及其EPs，实现硬件加速，并且您的量化方案（例如INT8，或`optimum`导出良好支持的方案）兼容。
+- 现有EPs提供的加速满足您的性能要求，并且您更看重便携性，而非追求高度专业化、平台锁定的引擎所能提供的理论绝对最高性能。
+
+通过仔细转换您的量化模型并选择合适的执行提供程序，ONNX Runtime为在生产环境中部署高效LLM提供了强大而灵活的途径。
+
+## 参考资料
+
+- [ONNX Runtime Documentation](https://onnxruntime.ai/docs/) — Microsoft (2024)
+  Publisher: Microsoft
+  涵盖了ONNX Runtime的核心功能、执行提供程序和图优化。
+- [Optimum: Exporting models to ONNX](https://huggingface.co/docs/optimum/main/en/exporters/onnx/usage_guides/export_models) — Hugging Face (2024)
+  Publisher: Hugging Face
+  说明了如何使用Optimum库将Transformer模型（包括量化模型）导出为ONNX格式。
+- [Open Neural Network Exchange (ONNX) Specification](https://onnx.ai/onnx/) — ONNX Community (2024)
+  提供了ONNX格式的技术定义，包括其运算符和数据类型。
+- [NVIDIA TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA Corporation
+  描述了NVIDIA TensorRT，一个用于高性能深度学习推理的平台，与TensorRTExecutionProvider相关。

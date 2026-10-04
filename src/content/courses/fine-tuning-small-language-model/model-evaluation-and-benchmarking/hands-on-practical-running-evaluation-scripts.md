@@ -1,0 +1,133 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "model-evaluation-and-benchmarking"
+lesson: "hands-on-practical-running-evaluation-scripts"
+sourceId: 8526
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-6-model-evaluation-and-benchmarking/hands-on-practical-running-evaluation-scripts"
+title: "动手实践：运行评估脚本"
+description: "构建自动化评估脚本，针对预留数据集测试模型。"
+order: 5
+plots: ["plots/8526-0.json"]
+sourceHash: "5acda55b3cbb247258e3a3227e085a04dbd18a799b4915b5cb57a4f4a01a7236"
+sourceCorrections: []
+---
+
+要评估微调 (fine-tuning)后的小语言模型，自动化且可靠的方法必不可少。虽然人工测试对于抽样检查很有帮助，但针对预留数据集运行正式的评估脚本，可以确保基准测试的一致性和客观性。该脚本会计算 ROUGE 和困惑度 (Perplexity) 等自动指标，以直观的数值展示模型相对于基准模型的改进程度。
+
+### 准备评估环境
+
+为了构建自动化评估流程，你将使用 Hugging Face 生态系统中的 `evaluate` 库。该库为许多自然语言处理指标提供了标准化的、经过测试的实现。你还需要准备预留数据集。预留数据集是训练数据的一个子集，模型从未见过这些数据。针对这些未见数据进行评估是检测过拟合 (overfitting)的唯一可靠方式。
+
+> 自动化评估流程：通过推理 (inference)和指标计算处理预留数据集。
+
+首先，导入所需的模块，并加载微调 (fine-tuning)后的模型及其分词 (tokenization)器 (tokenizer)。你还需要从本地 JSON 文件加载预留数据集。
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import evaluate
+from datasets import load_dataset
+
+# 加载测试数据集
+dataset = load_dataset("json", data_files="test_holdout.json", split="train")
+
+# 加载模型和分词器
+model_path = "./fine-tuned-slm-lora"
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForCausalLM.from_pretrained(
+    model_path,
+    device_map="auto",
+    torch_dtype=torch.float16
+)
+
+# 加载评估指标
+rouge = evaluate.load("rouge")
+perplexity = evaluate.load("perplexity", module_type="metric")
+```
+
+### 计算 ROUGE 分数
+
+ROUGE 指标衡量生成文本与参考文本之间的重叠程度。为了计算该指标，脚本必须遍历预留数据集，将每个提示词 (prompt)传递给模型，并存储生成的输出。
+
+在处理大型数据集时，强烈建议使用批处理以防止内存溢出。为了清晰起见，本脚本将采用顺序迭代。我们将获取输出并去掉提示词部分的分词 (tokenization)，从而只保留生成的回答。
+
+```python
+predictions = []
+references = []
+
+for item in dataset:
+    prompt = item["prompt"]
+    expected_output = item["response"]
+
+    # 对输入提示词进行分词
+    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+    # 生成回答
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=50,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    # 解码文本，忽略原始提示词分词
+    input_length = inputs.input_ids.shape[1]
+    generated_text = tokenizer.decode(outputs[0][input_length:], skip_special_tokens=True)
+
+    predictions.append(generated_text.strip())
+    references.append(expected_output.strip())
+
+# 计算 ROUGE
+rouge_results = rouge.compute(predictions=predictions, references=references)
+print("ROUGE 结果:", rouge_results)
+```
+
+运行此段代码时，脚本会将生成的回答存入 `predictions` 列表，将预期的标准答案存入 `references` 列表。随后，`rouge.compute` 函数会计算两者的重叠度。
+
+### 计算困惑度
+
+计算困惑度需要不同的方法。困惑度不是比较生成的字符串与参考字符串，而是根据潜在的概率分布，衡量模型预测正确分词 (tokenization)序列的能力。提醒一下，困惑度的公式通过评估分词序列的负对数似然来实现：
+
+$PP(W) = \exp \left( -\frac{1}{N} \sum_{i=1}^{N} \log P(w_i | w_{<i}) \right)$
+
+要使用 `evaluate` 库进行计算，必须提供包含提示词 (prompt)和预期回答的完整文本序列。该指标会将这些序列传递给模型以计算对数概率。
+
+```python
+# 将提示词和回答组合成完整的序列
+full_texts = [f"{p} {r}" for p, r in zip(dataset["prompt"], dataset["response"])]
+
+ppl_results = perplexity.compute(
+    model_id=model_path,
+    add_start_token=False,
+    predictions=full_texts
+)
+print("平均困惑度:", ppl_results["mean_perplexity"])
+```
+
+### 解读评估指标
+
+评估脚本执行完毕后，你将得到 ROUGE 和困惑度的数值。较低的困惑度分数表明模型预测参考数据集时的信心更高。较高的 ROUGE 分数则表示生成文本与参考文本之间的重叠度更高。
+
+
+
+![评估指标基准测试](plots/8526-0.json)
+
+
+
+> 与基础模型相比，完成微调 (fine-tuning)过程后 ROUGE 指标的预期提升情况。
+
+通过保存这些脚本，你建立了一个可重复的基准。如果你决定调整训练超参数 (parameter) (hyperparameter)、更改 LoRA 秩 (rank) 配置或增加数据集大小，可以重新运行此脚本，以验证这些更改是否带来了可衡量的改进。
+
+## 参考资料
+
+- [Evaluate Documentation](https://huggingface.co/docs/evaluate/index) — Hugging Face (2024)
+  Hugging Face 官方文档，介绍了实操脚本中用于计算评估指标的库。
+- [ROUGE: A Package for Automatic Evaluation of Summaries](https://aclanthology.org/W04-1013/) — Chin-Yew Lin (2004)
+  Journal: Text Summarization Branches Out; Publisher: Association for Computational Linguistics; Pages: 74-81
+  介绍 ROUGE 指标套件的学术论文，该指标是自动评估文本生成质量的标准方法。
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky, James H. Martin (2026)
+  Publisher: Pearson; Pages: Chapter 3
+  教科书章节，解释了语言模型和困惑度（Perplexity）的数学基础（第三版草案）。
+- [A Survey on Evaluation of Large Language Models](https://doi.org/10.1145/3641289) — Yupeng Chang, Xu Wang, Jindong Wang, Yuan Wu, Linyi Yang, Kaijie Zhu, Hao Chen, Xiaoyuan Yi, Cunxiang Wang, Yidong Wang, Wei Ye, Yue Zhang, Yi Chang, Philip S. Yu, Qiang Yang, Xing Xie (2024)
+  Journal: ACM Transactions on Intelligent Systems and Technology; Publisher: ACM; Volume: 15; Pages: 1-45; DOI: [10.1145/3641289](https://doi.org/10.1145/3641289)
+  关于评估语言模型性能的方法论和基准测试的近期综述。

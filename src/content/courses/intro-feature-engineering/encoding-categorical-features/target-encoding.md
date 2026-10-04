@@ -1,0 +1,213 @@
+---
+course: "intro-feature-engineering"
+chapter: "encoding-categorical-features"
+lesson: "target-encoding"
+sourceId: 1332
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-3-encoding-categorical-features/target-encoding"
+title: "目标编码（均值编码）"
+description: "实现目标编码，使用目标变量对类别进行编码，并讨论正则化。"
+order: 6
+plots: []
+sourceHash: "b61cfcfef1ae3ab526350495173c2d321f129bfdc2bcd092136f8523de927275"
+sourceCorrections: []
+---
+
+独热编码对于类别较少的名义特征很有效，但当处理具有许多唯一值（高基数）的变量时，它可能导致高维特征空间。序数编码需要有意义的顺序，但这并非总是存在。目标编码，也称为均值编码，提供了一种替代方法，它直接使用目标变量的信息来为类别创建数值表示。
+
+### 主要思路
+
+目标编码的基本原理是用与该类别关联的目标变量的平均值来替换特征中的每个类别。
+
+- **对于回归问题：** 用该类别所有行对应的目标变量的均值来替换类别。
+- **对于二元分类问题：** 用该类别对应的目标变量（通常为0或1）的均值来替换类别。这个值有效地表示了给定该类别时正类（目标=1）的经验概率。
+- **对于多类分类问题：** 您可以通过分别计算每个类的目标平均概率、创建多个新特征或使用其他变体来调整此方法。通常，它以“一对多”的方式应用于每个类。
+
+考虑一个简单的二元分类数据集，其中包含一个类别特征 `City` 和一个二元目标 `Purchased`：
+
+| 城市 | 已购买 |
+| --- | --- |
+| 伦敦 | 1 |
+| 巴黎 | 0 |
+| 伦敦 | 0 |
+| 东京 | 1 |
+| 巴黎 | 1 |
+| 伦敦 | 1 |
+| 东京 | 0 |
+
+要计算 `City` 的目标编码：
+
+1. **按城市分组：** 根据 `City` 列中的唯一值对数据进行分组。
+2. **计算目标均值：** 对于每个城市，计算 `Purchased` 列的均值。
+   - 伦敦：均值(1, 0, 1) = 2/3 ≈ 0.67
+   - 巴黎：均值(0, 1) = 1/2 = 0.50
+   - 东京：均值(1, 0) = 1/2 = 0.50
+3. **映射值：** 用这些计算出的均值替换原始城市名称。
+
+编码后的特征如下所示：
+
+| 城市（编码后） | 已购买 |
+| --- | --- |
+| 0.67 | 1 |
+| 0.50 | 0 |
+| 0.67 | 0 |
+| 0.50 | 1 |
+| 0.50 | 1 |
+| 0.67 | 1 |
+| 0.50 | 0 |
+
+这个单一的数值特征现在包含了与每个城市相关的购买可能性信息，可能带来显著的预测能力，而不会大幅增加维度。
+
+### 风险：目标泄露与过拟合 (overfitting)
+
+目标编码看起来很有用，但如上所示地简单操作会带来一个重大风险：**目标泄露**。
+
+当您使用*同一行*的目标值来计算特定行的编码时，您就将目标信息泄露到了特征中。模型会学到一个直接关联：“当*特定行*的目标值为1时，编码值略高/略低。”这会导致训练期间出现过于乐观的性能，因为模型实际上获得了目标值的提示。然而，这种性能提升无法泛化到目标未知的新数据上，从而导致过拟合。
+
+想象一下对第一行（`伦敦`，`已购买`=1）的 `City` 进行编码。计算出的均值（0.67）就包含了那个 `已购买`=1 的值。
+
+### 减少目标泄露：平滑处理与交叉验证
+
+要安全有效地使用目标编码，您必须实施策略来预防或最小化目标泄露。
+
+#### 1. 平滑处理（正则化 (regularization)）
+
+样本量极少的类别可能导致均值估计不可靠。例如，如果某个城市只出现过一次并导致了购买，其目标编码将是1.0，这可能是一个极端且带有噪声的估计。平滑处理通过将该类别的均值与目标变量的整体全局均值进行混合来解决这个问题。
+
+一种常用的平滑技术使用以下公式：
+
+
+$$
+\text{平滑均值} = \frac{\text{计数} \times \text{类别均值} + m \times \text{全局均值}}{\text{计数} + m}
+$$
+
+
+其中：
+
+- `count` 是属于该类别的样本数量。
+- `category_mean` 是该类别的原始目标均值。
+- `global_mean` 是整个数据集的目标均值。
+- `m` 是平滑因子，一个超参数 (parameter) (hyperparameter)，用于决定平滑的“强度”。`m` 值越高，意味着样本量较小的类别的均值将被更强地拉向全局均值。
+
+直观上，对于 `count` 值较大的类别，该公式会更多地考虑 `category_mean`。而对于 `count` 值较小的类别，`global_mean` 会占据主导，从而提供一个更保守的估计。确定最佳 `m` 值通常需要进行交叉验证。
+
+#### 2. 交叉验证编码
+
+一种更可靠的方法是在交叉验证框架内计算编码。您不是在整个数据集上计算均值，而是在训练折叠上计算，并将其应用于相应的验证折叠。
+
+以下是使用 K-折交叉验证的典型工作流程：
+
+1. 将训练数据分成 K 个折叠。
+2. 对于每个折叠 `k`（作为临时验证集）：
+   - 使用来自*其他* K-1 个折叠（作为临时训练集）的数据计算每个类别的目标均值。在此计算过程中，如果需要，应用平滑处理。
+   - 使用这些计算出的均值，对折叠 `k` *内*的数据点进行类别特征编码。
+3. 将所有 K 个折叠的编码特征连接起来，以获得整个训练集的目标编码特征。
+4. 对于最终测试集（或新数据）的编码，使用*整个*原始训练集（可能带有平滑处理）计算目标均值，并应用这些均值。
+
+这种方法确保了任何给定数据点的编码是在*不使用*其自身目标值的情况下计算的，从而有效地防止了训练集评估中的直接泄露。
+
+```python
+import pandas as pd
+from sklearn.model_selection import KFold
+
+# 示例数据
+data = {'City': ['London', 'Paris', 'London', 'Tokyo', 'Paris', 'London', 'Tokyo', 'Rome', 'Rome'],
+        'Purchased': [1, 0, 0, 1, 1, 1, 0, 0, 1]}
+df = pd.DataFrame(data)
+target = 'Purchased'
+feature = 'City'
+
+# 全局均值，用于平滑和后续填充NA值
+global_mean = df[target].mean()
+# 平滑因子
+m = 1
+
+# 设置 K折交叉验证
+kf = KFold(n_splits=3, shuffle=True, random_state=42)
+df[f'{feature}_encoded'] = 0.0 # 初始化编码列
+
+# 应用交叉验证编码
+for train_index, val_index in kf.split(df):
+    df_train, df_val = df.iloc[train_index], df.iloc[val_index]
+
+    # 在折叠的训练部分计算平滑均值
+    means = df_train.groupby(feature)[target].agg(['count', 'mean'])
+    smoothed_means = (means['count'] * means['mean'] + m * global_mean) / (means['count'] + m)
+
+    # 将均值应用于折叠的验证部分
+    # 使用 .map() 并用全局均值填充验证集中可能出现的新类别
+    df.loc[val_index, f'{feature}_encoded'] = df_val[feature].map(smoothed_means).fillna(global_mean)
+
+print("带有交叉验证目标编码的原始DataFrame:")
+print(df)
+
+# 示例：编码新的数据点（使用完整训练集的均值）
+full_train_means = df.groupby(feature)[target].agg(['count', 'mean'])
+full_smoothed_means = (full_train_means['count'] * full_train_means['mean'] + m * global_mean) / (full_train_means['count'] + m)
+
+new_data = pd.DataFrame({'City': ['Paris', 'Berlin']}) # Berlin是未见过的新类别
+new_data[f'{feature}_encoded'] = new_data[feature].map(full_smoothed_means).fillna(global_mean)
+
+print("\n编码新数据:")
+print(new_data)
+```
+
+> 上述代码演示了带有平滑处理的 K-折目标编码。请注意每行的编码值是如何从其他折叠计算出的均值中得出的，以及如何使用全局均值处理未见过的类别（如 `Berlin`）。
+
+### 实施库
+
+虽然您可以像所示那样手动使用 Pandas 实现目标编码，但专业库通常提供优化后的实现，它们在内部处理平滑和交叉验证。`category_encoders` 库是一个受欢迎的选择：
+
+```python
+# 使用 category_encoders 的示例（需要安装：pip install category_encoders）
+# import category_encoders as ce
+
+# 假设 df_train 和 df_test 是您的训练集和测试集
+# target_encoder = ce.TargetEncoder(cols=[feature], smoothing=1.0) # 指定平滑因子
+
+# 在训练数据上拟合（计算均值）
+# target_encoder.fit(df_train[feature], df_train[target])
+
+# 转换训练和测试数据
+# df_train[f'{feature}_encoded'] = target_encoder.transform(df_train[feature])
+# df_test[f'{feature}_encoded'] = target_encoder.transform(df_test[feature])
+
+# 注意：category_encoders 的 TargetEncoder 会执行平滑处理，但可能不会默认实现
+# 严格的 K折交叉验证编码；请查阅文档了解交叉验证策略。
+# 为了严格防止信息泄露，通常更推荐手动实现 K折交叉验证或将其与 sklearn 管道集成。
+```
+
+### 优点与缺点
+
+**优点：**
+
+- **捕捉目标信息：** 直接建立类别与目标变量之间的关系。
+- **降维：** 通常每个原始类别特征只创建一个新特征，无论基数大小（与独热编码不同）。
+- **通常有效：** 可以带来良好的模型性能，特别是对于基于树的算法。
+
+**缺点：**
+
+- **容易过拟合 (overfitting)：** 如果不仔细实施（使用平滑和/或交叉验证），目标泄露的风险很高。
+- **对异常值敏感：** 均值计算可能对目标变量中的异常值敏感，特别是对于样本量较少的类别（平滑处理有助于缓解这一点）。
+- **复杂性：** 正确的实施需要仔细处理训练/验证拆分以及可能出现的未见类别。
+- **需要目标变量：** 无法在没有目标变量的情况下计算，限制了其在无监督情境中的使用。
+
+### 选择目标编码
+
+目标编码是一种很有用的方法，特别适用于：
+
+- 高基数的类别特征，独热编码变得不切实际的情况。
+- 类别与目标结果之间存在强烈预期关系的情境。
+- 以最大化预测准确性为主要目标的竞赛或场景（前提是仔细管理过拟合 (overfitting)）。
+
+始终在将数据拆分为训练集和测试集*之后*应用目标编码，并在您的训练流程中使用交叉验证编码和平滑等技术来构建可靠的模型。
+
+## 参考资料
+
+- [Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists](https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/) — Alice Zheng and Amanda Casari (2018)
+  Publisher: O'Reilly Media
+  详细解释了各种特征编码技术，包括目标编码、其实现以及对目标泄漏的讨论。
+- [TargetEncoder in category_encoders library documentation](https://contrib.scikit-learn.org/category_encoders/targetencoder.html) — Will McGinnis (2023)
+  category_encoders库中TargetEncoder类的官方文档，解释了其参数（如平滑）和用法。
+- [Applied Predictive Modeling](https://www.springer.com/gp/book/9781461468486) — Max Kuhn, Kjell Johnson (2013)
+  Publisher: Springer; DOI: [10.1007/978-1-4614-6849-3](https://doi.org/10.1007/978-1-4614-6849-3)
+  一本预测建模的基础教材，解释了重采样、交叉验证和稳健模型训练的原理，对于理解目标编码中的泄漏预防很重要。

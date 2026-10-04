@@ -1,0 +1,120 @@
+---
+course: "intro-diffusion-models"
+chapter: "forward-diffusion-process"
+lesson: "sampling-intermediate-steps"
+sourceId: 5378
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-2-forward-diffusion-process/sampling-intermediate-steps"
+title: "从中间步骤采样"
+description: "一个封闭形式的方程，可以直接从原始数据x_0采样得到含噪声版本x_t。"
+order: 4
+plots: ["plots/5378-0.json"]
+sourceHash: "745830be1167894281910c948fa1d9959f760aab636083f609c4ee468ef2a9d9"
+sourceCorrections: []
+---
+
+前向扩散过程是一个逐步马尔可夫链，在每个时间步$t$都会加入少量高斯噪声，由方差计划$\beta_t$控制。其转移定义为$q(x_t | x_{t-1})$。模拟这个过程从初始数据点$x_0$逐步获得含噪声样本$x_t$可能会在计算上非常昂贵，特别是当$T$很大时。幸运的是，存在一种更直接的方法。
+
+这种特定加噪过程的一个重要特性是，我们可以推导出一个封闭形式的方程，从而在任何时间步$t$直接从$x_0$采样得到$x_t$，而无需计算所有中间状态$x_1, x_2, ..., x_{t-1}$。这在扩散模型训练阶段特别有用。
+
+我们来推导这个关系。回顾一下单步转移：
+
+
+$$
+x_t = \sqrt{1 - \beta_t} x_{t-1} + \sqrt{\beta_t} \epsilon_{t-1} \quad \text{当} \quad \epsilon_{t-1} \sim \mathcal{N}(0, I)
+$$
+
+
+为方便起见，我们定义$\alpha_t = 1 - \beta_t$。该方程变为：
+
+
+$$
+x_t = \sqrt{\alpha_t} x_{t-1} + \sqrt{1 - \alpha_t} \epsilon_{t-1}
+$$
+
+
+现在，我们可以递归地展开此式。我们来看$x_{t-1}$用$x_{t-2}$表示的形式：
+
+
+$$
+x_{t-1} = \sqrt{\alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_{t-1}} \epsilon_{t-2}
+$$
+
+
+将此代入$x_t$的方程：
+
+
+$$
+\begin{align*}
+x_t &= \sqrt{\alpha_t} (\sqrt{\alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_{t-1}} \epsilon_{t-2}) + \sqrt{1 - \alpha_t} \epsilon_{t-1} \\
+&= \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{\alpha_t(1 - \alpha_{t-1})} \epsilon_{t-2} + \sqrt{1 - \alpha_t} \epsilon_{t-1}
+\end{align*}
+$$
+
+
+可以观察到一个规律。乘以$x_{t-2}$的项是$\alpha$值平方根的乘积。噪声项也在累积。我们可以借助高斯分布的一个性质：将两个独立的高斯变量相加，结果会得到另一个高斯变量。具体来说，如果$Z_1 \sim \mathcal{N}(0, \sigma_1^2 I)$和$Z_2 \sim \mathcal{N}(0, \sigma_2^2 I)$是独立的，那么$Z_1 + Z_2 \sim \mathcal{N}(0, (\sigma_1^2 + \sigma_2^2) I)$。
+
+在我们的展开式中，$\epsilon_{t-1}$和$\epsilon_{t-2}$是独立的标准高斯噪声（$\mathcal{N}(0, I)$）。组合噪声项$\sqrt{\alpha_t(1 - \alpha_{t-1})} \epsilon_{t-2} + \sqrt{1 - \alpha_t} \epsilon_{t-1}$也是高斯的。它的方差是$(\alpha_t(1 - \alpha_{t-1})) Var(\epsilon_{t-2}) + (1 - \alpha_t) Var(\epsilon_{t-1}) = \alpha_t(1 - \alpha_{t-1}) + (1 - \alpha_t) = \alpha_t - \alpha_t\alpha_{t-1} + 1 - \alpha_t = 1 - \alpha_t\alpha_{t-1}$。因此，我们可以将组合噪声项改写为$\sqrt{1 - \alpha_t \alpha_{t-1}} \bar{\epsilon}_{t-2}$，这里$\bar{\epsilon}_{t-2} \sim \mathcal{N}(0, I)$。
+
+这得到：
+
+
+$$
+x_t = \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_t \alpha_{t-1}} \bar{\epsilon}_{t-2}
+$$
+
+
+如果我们继续将此展开一直到$x_0$，我们引入累积乘积符号$\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$。一般形式变为：
+
+
+$$
+x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon \quad \text{当} \quad \epsilon \sim \mathcal{N}(0, I)
+$$
+
+
+这是扩散模型的基本方程。它告诉我们，任何含噪声版本$x_t$都可以直接从原始数据$x_0$获得，方法是将$x_0$按$\sqrt{\bar{\alpha}_t}$缩放，生成一个标准高斯噪声向量 (vector)$\epsilon$，再将其按$\sqrt{1 - \bar{\alpha}_t}$缩放，然后将这两个结果相加。
+
+等价地，我们可以说条件分布$q(x_t | x_0)$是一个高斯分布：
+
+
+$$
+q(x_t | x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) I)
+$$
+
+
+这个分布的均值是$\sqrt{\bar{\alpha}_t} x_0$，方差是$(1 - \bar{\alpha}_t) I$。
+
+由于$\alpha_t = 1 - \beta_t$，且$\beta_t$通常很小且为正，因此$\alpha_t$略小于1。累积乘积$\bar{\alpha}_t$（按照惯例）从$\bar{\alpha}_0 = 1$开始，并随着$t$增加到总步数$T$而单调递减趋近于0。因此，$\sqrt{\bar{\alpha}_t}$（“信号率”）从1减小到0，而$\sqrt{1 - \bar{\alpha}_t}$（“噪声率”）从0增加到1。这与我们的直觉一致：随着$t$增加，原始数据$x_0$的影响减弱，样本$x_t$越来越多地被噪声主导，当$\bar{\alpha}_T \approx 0$时，最终接近标准高斯分布$\mathcal{N}(0, I)$。
+
+
+
+![信号率和噪声率与时间步的关系](plots/5378-0.json)
+
+
+
+> 此图显示了信号率（$\sqrt{\bar{\alpha}_t}$）和噪声率（$\sqrt{1 - \bar{\alpha}_t}$）在使用从$\beta_1 = 10^{-4}$到$\beta_{1000} = 0.02$的线性方差计划时，在1000个时间步上的典型变化。随着$t$增加，原始数据的影响减小，而噪声的影响增加。
+
+### 对训练的意义
+
+这个封闭形式表达式$x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon$对高效训练扩散模型很重要。训练的目标是学习一个神经网络 (neural network)$\epsilon_\theta(x_t, t)$，使其能够预测被加入以得到$x_t$的噪声$\epsilon$。为此，我们需要训练样本，这些样本包含含噪声数据$x_t$以及用于生成它的相应噪声$\epsilon$。
+
+使用此公式，我们可以快速创建这些训练对：
+
+1. 从您的数据集中选择一个数据点$x_0$。
+2. 从$\{1, ..., T\}$中均匀地随机采样一个时间步$t$。
+3. 采样一个标准高斯噪声向量 (vector)$\epsilon \sim \mathcal{N}(0, I)$。
+4. 使用公式计算含噪声样本$x_t$: $x_t = \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon$。
+5. 将$(x_t, t)$作为输入提供给网络$\epsilon_\theta$，并训练它输出一个接近原始噪声$\epsilon$的预测$\epsilon_\theta(x_t, t)$（通常使用均方误差损失）。
+
+这种直接跳到任何时间步$t$的能力，使得训练批次的并行高效生成成为可能，这比为每个训练样本逐步模拟马尔可夫链要快得多。这种采样策略是我们将在第4章讨论的训练循环的一个组成部分。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 33; DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  这篇基础论文介绍了去噪扩散概率模型（DDPMs）的现代表述，并详细阐述了前向扩散过程，包括从x0直接采样的公式。
+- [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://doi.org/10.48550/arXiv.1503.03585) — Jascha Sohl-Dickstein, Eric A. Weiss, Niru Maheswaranathan, Surya Ganguli (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1503.03585](https://doi.org/10.48550/arXiv.1503.03585)
+  这篇原创论文引入了用于生成式AI的扩散模型概念，为前向和反向过程建立了框架。
+- [Diffusion Models: A Unified Perspective](https://arxiv.org/abs/2303.09503) — Jonathan Timcheck, Sumit Bam Shrestha, Daniel Ben Dayan Rubin, Adam Kupryjanow, Garrick Orchard, Lukasz Pindor, Timothy Shea, Mike Davies (2023)
+  Journal: arXiv preprint arXiv:2303.09503; DOI: [10.48550/arXiv.2303.09503](https://doi.org/10.48550/arXiv.2303.09503)
+  一份全面的综述，提供了对各种扩散模型的统一视角，包含前向过程及其数学基础的详细解释。

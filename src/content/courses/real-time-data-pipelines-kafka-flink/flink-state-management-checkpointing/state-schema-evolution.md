@@ -1,0 +1,121 @@
+---
+course: "real-time-data-pipelines-kafka-flink"
+chapter: "flink-state-management-checkpointing"
+lesson: "state-schema-evolution"
+sourceId: 8107
+sourceUrl: "https://apxml.com/zh/courses/real-time-data-pipelines-kafka-flink/chapter-3-flink-state-management-checkpointing/state-schema-evolution"
+title: "状态模式演变"
+description: "打理 protocol buffer 和 Avro 模式更改，同时不丢失现有应用状态。"
+order: 4
+plots: ["plots/8107-0.json"]
+sourceHash: "424d5a5d57f50f5ac9d93d4baed75a64d1f33fd8f2e6778d150d364269271a2e"
+sourceCorrections: []
+---
+
+长期运行的流处理应用不可避免地会遇到批处理流程很少遇到的难题：业务逻辑和数据结构在应用持续运行时发生变化。批处理流程可以简单地使用新代码重新处理原始输入数据。有状态流式架构中的“真实数据”通常保存在RocksDB或堆上存储的中间状态中。当部署新版本的Flink应用时，它必须能够读取由旧版本写入的二进制状态。如果状态对象的类定义发生改变，二进制数据可能不再匹配反序列化逻辑，这可能导致严重的故障。
+
+这种旧检查点与当前代码之间的互操作性通过状态模式演变来管理。Flink在用于写入数据的模式和用于读取数据的模式之间搭建了一座桥梁，但这座桥梁依赖于特定的序列化框架和严格的兼容性规则。
+
+### 序列化器快照的作用
+
+Flink不只在检查点中存储原始数据字节。除了状态值，Flink还会持久化用于写入该数据的序列化器的配置。这些元数据封装在 `TypeSerializerSnapshot` 中。当作业从保存点重启时，Flink会检查保存点中存储的 `TypeSerializerSnapshot` 与新应用代码中配置的 `TypeSerializer` 之间的兼容性。
+
+兼容性检查会产生以下几种结果之一：
+
+1. **直接兼容：** 二进制格式相同。无需迁移。
+2. **重新配置后兼容：** 如果配置正确（例如，更新了带有默认值的Avro模式），新的序列化器可以读取旧格式。
+3. **迁移后兼容：** 状态可以访问，但在继续处理前需要一次性转换到新格式。
+4. **不兼容：** 新的序列化器无法读取旧数据。作业无法启动。
+
+下图显示了Flink在重启操作期间为保证状态完整而执行的决策流程。
+
+> Flink作业重启期间执行的兼容性决策树。
+
+### POJO类型演变
+
+Flink的原生POJO序列化器支持一定程度的模式演变。与脆弱且高度依赖 `serialVersionUID` 的Java原生序列化不同，`PojoSerializer` 会检查类的结构。它支持：
+
+- **删除字段：** 如果旧状态中存在某个字段而新类中没有，Flink在反序列化期间会有效地跳过对应于该字段的字节。
+- **添加字段：** 如果新字段被添加到类中，Flink在读取旧状态时会使用该类型的默认值（例如，整数为 `0`，对象为 `null`）对其进行初始化。
+- **更改字段类型：** 这通常不受支持，会导致不兼容。
+
+为使这种演变生效，必须严格遵守POJO规则。类必须是公共的，具有公共的无参数 (parameter)构造函数，并且所有字段都必须是公共的或可通过标准getter和setter访问。如果Flink因为类不符合POJO规范而回退到通用 `Kryo` 序列化器，模式演变能力会显著降低，通常需要完全重置状态。
+
+### Avro和Protobuf演变
+
+对于管理数TB状态的生产环境，依赖隐式POJO演变是有风险的。使用Avro或Protobuf进行显式模式管理是状态演变的常用做法。这些格式将数据定义与Java类实现分离。
+
+在Flink中使用Avro时，`AvroSerializer` 可以通过借助Avro的内置解析逻辑来处理模式更改。这要求新模式与旧模式向后兼容。
+
+为确保在修改Avro模式时的向后兼容性：
+
+1. **添加字段：** 必须提供一个 `default` 值。当新的读取器遇到由旧写入器写入的记录（缺少该字段）时，它会使用默认值填充该字段。
+2. **删除字段：** 新的读取器会简单地忽略旧数据中存在的字段。
+3. **重命名字段：** 这通常被视为删除旧字段并添加一个带有默认值的新字段，在此过程中会丢失数据，除非别名配置正确。
+
+考虑一个用户档案状态对象。我们可以定义旧模式 $S_{old}$ 与新模式 $S_{new}$ 之间的关系。如果我们向 $S_{new}$ 添加一个字段 `email_verified`，对旧记录 $R_{old}$ 的反序列化过程可以表示为：
+
+
+$$
+R_{new} = \text{反序列化}(R_{old}, S_{new}) = \{ \text{字段}(R_{old}) \} \cup \{ \text{默认值}(\text{email\_verified}) \}
+$$
+
+
+如果 $S_{new}$ 的定义中缺少默认值，兼容性检查将失败，因为 $R_{new}$ 无法确定性地构建。
+
+### 使用TypeSerializerSnapshot进行自定义序列化
+
+对于复杂的自定义类型或使用高性能手动序列化时，必须实现 `TypeSerializerSnapshot` 接口。此接口作为模式版本控制的真实数据的来源。
+
+在实现自定义序列化器时，您需要定义一个快照类，它将序列化器的配置参数 (parameter)（而非数据）写入检查点。恢复时，会调用 `resolveSchemaCompatibility`。
+
+以下是您必须在 `resolveSchemaCompatibility` 中实现的逻辑流程：
+
+1. **读取参数：** 加载快照中存储的配置（例如，版本号、压缩标志）。
+2. **检查当前配置：** 将这些配置与当前序列化器的配置进行比较。
+3. **确定操作：** 如果没有变化，返回 `SchemaCompatibility.compatibleAsIs()`；如果格式不同但可转换，返回 `SchemaCompatibility.compatibleAfterMigration()`。
+
+如果返回 `compatibleAfterMigration()`，Flink将触发一个后台进程，将状态从旧格式重写为新格式。此过程使用*旧*序列化器读取每个键值对，并使用*新*序列化器将其写回。尽管这保证了正确性，但它会导致恢复时间变长，与状态大小成比例。
+
+### 用于不兼容更改的状态处理器API
+
+有些情况中模式分歧非常大，以至于标准演变规则无法解决差异。例如，将状态变量从 `List<String>` 更改为 `Map<String, Integer>`。在这些情况下，`TypeSerializer` 将报告不兼容，并且作业将拒绝启动。
+
+为处理此问题，您可以使用状态处理器API。这是一个离线工具，允许您将保存点作为数据集读取，使用标准Flink批处理操作符（Map、FlatMap）对其进行转换，并写入新的保存点。
+
+工作流程包括：
+
+1. 使用 `SavepointReader` 加载现有保存点。
+2. 将特定状态操作符数据读入 `DataSet`。
+3. 应用转换函数，将旧数据结构映射到新的POJO或Avro定义。
+4. 使用 `SavepointWriter` 写入带有更新状态的新保存点。
+
+这种方法有效地执行“状态上的ETL”，使得您可以执行任意复杂的迁移、清理或模式重构，而不会丢失流处理应用所需的历史背景。
+
+### 模式演变对性能的影响
+
+尽管模式演变提供了灵活性，但它会引入额外开销。使用Avro序列化器通常比使用专用POJO序列化器或自定义二进制序列化器慢，因为有模式解析和对象实例化的开销。
+
+下图比较了在状态密集型窗口操作中，使用不同序列化策略对吞吐量 (throughput)的相对影响。请注意，尽管Avro会带来序列化性能损失，但它为长期模式演变提供了很好的安全保障。
+
+
+
+![吞吐量与演变灵活性对比（标准化）](plots/8107-0.json)
+
+
+
+> 序列化吞吐量（条形图）与模式演变安全性（红色菱形）的比较。
+
+选择合适的策略需要平衡毫秒级延迟循环的原始性能需求与在数月或数年内更新应用的运维要求。对于大多数企业数据管道，Avro的开销是防止应用升级期间数据丢失的必要开销。
+
+## 参考资料
+
+- [State Schema Evolution](https://www.bookstack.cn/read/apache-flink-1.18/docs-datastream-fault-tolerance-state-schema-evolution.md) — The Apache Flink Community (2024)
+  Publisher: Apache Software Foundation
+  Flink状态模式演进的官方指南，涵盖序列化器快照、POJO规则、Avro集成和状态处理器API。
+- [Apache Avro Specification - Schema Resolution](https://avro.apache.org/docs/current/specification/#schema-resolution) — The Apache Avro Project (2023)
+  Publisher: The Apache Software Foundation
+  详细说明了Avro处理模式演进和兼容性的机制，这对于使用Avro序列化器的Flink应用程序至关重要。
+- [Stream Processing with Apache Flink: Fundamentals, StreamSQL, and Table API](https://www.oreilly.com/library/view/stream-processing-with/9781491974292/) — Fabian Hueske, Vasiliki Kalavri (2019)
+  Publisher: O'Reilly Media; Pages: 308
+  Flink的综合指南，其中包含状态管理和状态演进最佳实践的部分。

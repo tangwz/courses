@@ -1,0 +1,288 @@
+---
+course: "federated-learning"
+chapter: "federated-learning-system-design"
+lesson: "practice-fl-simulation-framework"
+sourceId: 3619
+sourceUrl: "https://apxml.com/zh/courses/federated-learning/chapter-6-federated-learning-system-design/practice-fl-simulation-framework"
+title: "实践：搭建基础联邦学习仿真"
+description: "动手实践使用TensorFlow Federated或Flower等框架来搭建并运行一个简单的联邦学习仿真。"
+order: 7
+plots: ["plots/3619-0.json"]
+sourceHash: "0c784b95a4b3754d7607820fb29671eb9d04c6ace128a4a7f3bf71566ea993c3"
+sourceCorrections: []
+---
+
+在了解了联邦学习系统的理论基础和架构考量之后，现在是将这些知识付诸实践的时候了。本节将指导您使用一个常用框架来搭建一个基本的联邦学习仿真。这个动手练习连接了之前讨论的那些构思，例如系统组成部分和框架作用，以及运行联邦学习过程所需的实际代码。
+
+Flower (flwr) 框架是实现联邦学习模拟的常用选择。它以其灵活性而著称，支持与TensorFlow和PyTorch等各种机器学习 (machine learning)库集成，并且其用于定义客户端和服务器逻辑的API相对直接。它抽象化了大部分低层通信处理，让您能专注于联邦学习策略和客户端机器学习任务。
+
+### 准备工作
+
+开始之前，请确保您已安装Python，以及Flower和一个深度学习 (deep learning)库。Flower可以使用pip安装。对于本示例，我们还需要TensorFlow（或PyTorch，请相应调整客户端代码）和NumPy。
+
+```bash
+pip install flwr[simulation] tensorflow numpy
+# 或者，如果使用PyTorch：
+# pip install flwr[simulation] torch torchvision numpy
+```
+
+我们假定您拥有一个可用的Python环境（推荐版本3.8或更高），并熟悉在您所选的深度学习框架中进行基本的机器学习 (machine learning)模型定义和训练。
+
+### 仿真场景：联邦MNIST训练
+
+我们的目标是仿真训练一个简单的卷积神经网络 (neural network) (CNN)，使其在分布于多个虚拟客户端上的MNIST数据集上进行训练。我们将实现：
+
+1. 一个封装本地模型训练和评估的Flower `NumPyClient`。
+2. 一个使用Flower的`start_simulation`函数和基本`FedAvg`策略的服务器。
+3. 一种在虚拟客户端集合中划分MNIST数据集的机制。
+
+为简化本次初始配置，我们假定采用IID（独立同分布）数据划分，其中每个客户端收到全局数据集的一个随机子集。处理非IID数据的方法已在第4章讲过，并可作为下一步纳入考虑。
+
+### 客户端实现 (`NumPyClient`)
+
+Flower的`NumPyClient`提供了一个便利的抽象。您实现接收并返回以NumPy数组列表形式表示的模型参数 (parameter)的方法，便于与TensorFlow或PyTorch等框架集成。
+
+首先，让我们使用TensorFlow Keras定义一个简单的CNN模型（如果使用PyTorch请相应调整）。
+
+```python
+import tensorflow as tf
+
+def create_simple_cnn():
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Conv2D(32, (5, 5), activation='relu', input_shape=(28, 28, 1)),
+        tf.keras.layers.MaxPooling2D((2, 2)),
+        tf.keras.layers.Conv2D(64, (5, 5), activation='relu'),
+        tf.keras.layers.MaxPooling2D((2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(10, activation='softmax')
+    ])
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
+
+# 假设MNIST数据 (x_train, y_train), (x_test, y_test) 已加载并预处理
+# (例如，已归一化，并重塑为 (样本数, 28, 28, 1))
+# 对于仿真，我们需要在客户端之间划分这些数据。
+# 假设存在一个函数 `load_partition(client_id, num_clients)` 
+# 该函数为客户端返回 (x_train_cid, y_train_cid), (x_test_cid, y_test_cid)。
+```
+
+现在，实现 `NumPyClient`：
+
+```python
+import flwr as fl
+import numpy as np
+# 假设 create_simple_cnn 和 load_partition 已如上定义
+
+class MNISTClient(fl.client.NumPyClient):
+    def __init__(self, client_id, num_clients):
+        self.client_id = client_id
+        self.num_clients = num_clients
+        self.model = create_simple_cnn()
+        # 加载此客户端的特定分区
+        (self.x_train, self.y_train), (self.x_test, self.y_test) = load_partition(
+            self.client_id, self.num_clients
+        )
+
+    def get_parameters(self, config):
+        # 以NumPy数组列表形式返回模型权重
+        return self.model.get_weights()
+
+    def set_parameters(self, parameters):
+        # 更新模型权重
+        self.model.set_weights(parameters)
+
+    def fit(self, parameters, config):
+        # 使用接收到的参数更新模型
+        self.set_parameters(parameters)
+        # 在本地数据上训练模型
+        # 如果需要，从 `config` 字典读取训练配置
+        local_epochs = config.get("local_epochs", 1)
+        batch_size = config.get("batch_size", 32)
+        history = self.model.fit(
+            self.x_train, self.y_train,
+            epochs=local_epochs, batch_size=batch_size, verbose=0 # 将 verbose 设置为2以获取详细日志
+        )
+        # 返回更新后的权重、训练样本数量以及可选指标
+        results = {
+            "loss": history.history["loss"][0],
+            "accuracy": history.history["accuracy"][0],
+        }
+        return self.get_parameters(config={}), len(self.x_train), results
+
+    def evaluate(self, parameters, config):
+        # 使用接收到的参数更新模型
+        self.set_parameters(parameters)
+        # 在本地测试数据上评估模型
+        loss, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
+        # 返回损失、评估样本数量以及指标
+        return loss, len(self.x_test), {"accuracy": accuracy}
+
+# 根据ID实例化客户端的函数
+def client_fn(cid: str) -> fl.client.Client:
+    # cid 是一个字符串，如果分区逻辑需要，请转换为整数
+    client_id = int(cid)
+    num_total_clients = 10 # 示例：池中客户端总数
+    return MNISTClient(client_id=client_id, num_clients=num_total_clients)
+```
+
+*注意*：`load_partition` 函数对于仿真数据异构性很重要。对于基本的IID设置，它可能只是简单地将打乱的MNIST数据集平均划分。对于非IID仿真（如第4章讨论的），它将实现更复杂的分区，例如根据数字标签分配数据。
+
+### 服务器实现 (`start_simulation`)
+
+服务器协调联邦学习过程。我们定义一个策略（如`FedAvg`），并使用`start_simulation`来运行该过程，结合我们的客户端函数。
+
+```python
+import flwr as fl
+
+# 定义聚合策略（例如，FedAvg）
+# 我们可以自定义FedAvg，例如，设置训练/评估所需的最少客户端数量
+strategy = fl.server.strategy.FedAvg(
+    fraction_fit=1.0,  # 抽取100%的可用客户端进行训练
+    min_fit_clients=5, # 联邦训练中等待的最少客户端数量
+    fraction_evaluate=0.5, # 抽取50%的可用客户端进行评估
+    min_evaluate_clients=3, # 联邦评估所需的最少客户端数量
+    min_available_clients=5, # 回合开始前可用的最少客户端数量
+    # 我们也可以传递函数来定制服务器端评估
+    # evaluate_fn=get_evaluate_fn(server_model), # 可选：在服务器上进行集中评估
+)
+
+# 客户端的服务器端配置函数（可选）
+def get_on_fit_config_fn():
+    def fit_config(server_round: int):
+        # 向客户端传递回合特定配置
+        config = {
+            "server_round": server_round,
+            "local_epochs": 2, # 示例：在本地训练2个周期
+            "batch_size": 32
+        }
+        return config
+    return fit_config
+
+# 启动仿真
+NUM_ROUNDS = 5
+TOTAL_CLIENTS = 10
+
+history = fl.simulation.start_simulation(
+    client_fn=client_fn,            # 创建客户端的函数
+    num_clients=TOTAL_CLIENTS,      # 可用客户端总数
+    config=fl.server.ServerConfig(num_rounds=NUM_ROUNDS), # 回合数
+    strategy=strategy,              # 聚合策略
+    client_resources={"num_cpus": 1, "num_gpus": 0.0}, # 每个客户端的资源（如果使用GPU请调整）
+    # 可选：提供fit/evaluate的配置函数
+    # on_fit_config_fn=get_on_fit_config_fn(),
+)
+
+# 'history' 对象包含仿真期间收集的指标
+print("仿真完成。")
+print("历史记录（分布式损失）：", history.losses_distributed)
+print("历史记录（分布式指标）：", history.metrics_distributed)
+# 如果服务器策略中提供了 evaluate_fn，则访问集中式指标
+# print("历史记录（集中式损失）：", history.losses_centralized)
+# print("历史记录（集中式指标）：", history.metrics_centralized)
+```
+
+### 数据加载与分区
+
+一个简单的IID分区函数 `load_partition` 可能如下所示：
+
+```python
+import numpy as np
+import tensorflow as tf
+
+def load_partition(client_id, num_clients):
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    # 预处理：归一化和重塑
+    x_train = x_train.astype("float32") / 255.0
+    x_test = x_test.astype("float32") / 255.0
+    x_train = np.expand_dims(x_train, -1)
+    x_test = np.expand_dims(x_test, -1)
+
+    # 简单IID分区：打乱并划分
+    # 如果需要，确保数据一致地打乱，或在此处打乱
+    # np.random.seed(42) # 为了重现性
+    # shuffle_indices = np.random.permutation(len(x_train))
+    # x_train, y_train = x_train[shuffle_indices], y_train[shuffle_indices]
+
+    partition_size_train = len(x_train) // num_clients
+    start_train = client_id * partition_size_train
+    end_train = start_train + partition_size_train
+    x_train_cid, y_train_cid = x_train[start_train:end_train], y_train[start_train:end_train]
+
+    partition_size_test = len(x_test) // num_clients
+    start_test = client_id * partition_size_test
+    end_test = start_test + partition_size_test
+    x_test_cid, y_test_cid = x_test[start_test:end_test], y_test[start_test:end_test]
+
+    return (x_train_cid, y_train_cid), (x_test_cid, y_test_cid)
+```
+
+"*重要*：这种分区方式是基础的。实际情况通常涉及远为复杂的非IID分布，在仿真设置时需要仔细处理（请参阅第4章）。"
+
+### 运行仿真
+
+要运行此仿真，请将客户端实现、服务器配置和数据加载逻辑保存到一个Python脚本中（例如，`run_simulation.py`）。然后从您的终端执行它：
+
+```bash
+python run_simulation.py
+```
+
+您应该会看到Flower的输出日志，显示每个联邦回合的开始和结束、客户端训练 (`fit`) 以及客户端评估 (`evaluate`)。服务器将根据 `FedAvg` 策略聚合结果。
+
+### 分析仿真结果
+
+`start_simulation` 返回的 `history` 对象包含有价值的信息。`history.losses_distributed` 将显示客户端在各回合评估阶段报告的平均损失。`history.metrics_distributed` 将包含聚合指标，例如准确率。
+
+您可以使用这些数据绘制学习进程：
+
+```python
+import matplotlib.pyplot as plt
+
+# 示例：绘制分布式评估准确率
+rounds = [r for r, _ in history.metrics_distributed["accuracy"]]
+accuracies = [acc for _, acc in history.metrics_distributed["accuracy"]]
+
+plt.figure(figsize=(8, 5))
+plt.plot(rounds, accuracies, marker='o', color='#228be6') # 蓝色
+plt.title("联邦评估准确率")
+plt.xlabel("联邦回合")
+plt.ylabel("准确率")
+plt.grid(True)
+plt.xticks(rounds)
+plt.ylim(0, 1) # 准确率范围从0到1
+plt.show()
+```
+
+让我们用Plotly图表来展示这种潜在结果，显示准确率在回合中提升的情况。
+
+
+
+![各回合联邦评估准确率](plots/3619-0.json)
+
+
+
+> 示例图显示了在联邦学习回合中，分布式评估准确率的典型提升。
+
+### 扩展仿真
+
+这个基本仿真是一个起点。运用Flower框架和前几章的构思，您可以扩展此设置以进行更高级的模拟：
+
+- **非IID数据**：实现更真实的数据分区方案（第4章）。
+- **高级聚合**：将`FedAvg`替换为`FedProx`或`SCAFFOLD`等策略（第2章）。Flower支持实现自定义策略。
+- **差分隐私**：将差分隐私机制集成到客户端的`fit`方法中，或使用隐私保护策略（第3章）。
+- **通信效率**：尝试模拟或包含技术（如量化 (quantization)）的策略（尽管直接实现可能需要更底层的框架访问或自定义序列化）（第5章）。
+- **系统异构性**：修改`client_resources`或在`fit`方法中仿真不同的计算时间（第4章）。
+
+本次实践练习展示了联邦学习框架如何简化仿真复杂分布式学习系统的过程，支持快速原型开发和评估本课程中涉及的高级技术。
+
+## 参考资料
+
+- [Communication-Efficient Learning of Deep Networks from Decentralized Data](https://proceedings.mlr.press/v54/mcmahan17a/mcmahan17a.pdf) — H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, Blaise Agüera y Arcas (2017)
+  Journal: Proceedings of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS); Publisher: Machine Learning Research (PMLR); Volume: 54; Pages: 1273-1282; DOI: [10.48550/arXiv.1602.05629](https://doi.org/10.48550/arXiv.1602.05629)
+  介绍了作为模拟中核心策略的联邦平均（FedAvg）算法。
+- [Flower: A Friendly Federated Learning Framework Documentation](https://flower.dev/docs/) — The Flower Team (2024)
+  提供了Flower框架的官方指南和API参考，是进行实践设置的主要工具。
+- [Flower: A Friendly Federated Learning Framework](https://proceedings.mlsys.org/paper_files/paper/2022/file/a87e5b153ac8591e0a96a0669b248a31-Paper-Flower-A_Friendly_Federated_Learning_Framework.pdf) — Christian Beutel, Taner Topal, Nicolas Wagner, Jian Li, Daniel J. Seidner, Pedro G. R. Frick, Stefan Haller, Jannis Kascourtis, Akis Konstas, Andrea Lattuada, Taner Özdemir, Yannick Schroecker, Filip Šaškin, Alexander Schillinger, K. R. M. N. Venkata, Martin Wistuba, Andreas Blacha, Alexander Böhm, Bernhard Diehl (2022)
+  Journal: Proceedings of Machine Learning Systems (MLSys); Publisher: MLSys; Pages: 23-38; DOI: [10.55919/mlsys.2022.01](https://doi.org/10.55919/mlsys.2022.01)
+  介绍了Flower框架的设计和架构，该框架简化了联邦学习系统开发。

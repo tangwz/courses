@@ -1,0 +1,218 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "advanced-prompting-techniques"
+lesson: "extracting-structured-data"
+sourceId: 7757
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-2-advanced-prompting-techniques/extracting-structured-data"
+title: "从大型语言模型输出中提取结构化数据"
+description: "学习指导大型语言模型生成结构化输出并使用解析模块进行提取的方法。"
+order: 5
+plots: []
+sourceHash: "13778601be7ee3aece31ea5159aeb1c23d3cd30e9bc84e25101c352ab1f85e9f"
+sourceCorrections: []
+---
+
+虽然生成自由格式文本有用，但许多应用需要可预测、机器可读的数据。例如，你可能需要从支持工单中获取用户详情、将客户反馈分类，或者从会议记录中获取待办事项列表。在这些情况下，仅仅收到一个简单的字符串是不够的；你需要像 JSON 这样的结构化数据。这里介绍一些方法，用于指导大型语言模型生成结构化输出，并将其可靠地解析为应用中可用的数据对象。
+
+这个过程包含两个主要步骤：首先，提示模型以所需格式生成响应；其次，解析其输出以应对不可避免的差异和不完美之处。
+
+### 指导大型语言模型生成 JSON
+
+获取结构化数据最直接的方式就是明确请求。你可以在提示中包含指令，指定你需要的确切 JSON 格式，包括键和值类型。
+
+为求更可靠的方法，许多现代大型语言模型支持专门的“JSON 模式”。这种模式限制模型只输出语法正确的 JSON，显著降低解析错误的可能。你可以使用 `GenerationConfig` 启用此功能。
+
+```python
+from kerb.generation import generate, GenerationConfig
+
+# 请求结构化数据的提示
+prompt = """
+Extract the user's name, email, and age from the following text and
+return it as a JSON object:
+
+'My name is Alice Johnson. I am 28 years old. My email is alice@example.com.'
+"""
+
+# 配置生成调用以强制输出 JSON
+json_config = GenerationConfig(
+    response_format={"type": "json_object"}
+)
+
+# 模型将被限制为只生成有效的 JSON
+response = generate(prompt, config=json_config)
+
+# 原始内容将是 JSON 字符串
+print(response.content)
+# {"name": "Alice Johnson", "email": "alice@example.com", "age": 28}
+```
+
+使用模型的 JSON 模式是首选方法，因为它能有力保证输出可解析。
+
+### 解析大型语言模型输出的挑战
+
+即使你指示大型语言模型返回 JSON，其输出也可能不可预测。模型可能：
+
+- 将 JSON 包裹在 Markdown 代码块中（例如，```` ```json ... ``` ````）。
+- 在 JSON 前后添加对话文本（例如，“当然，这是你请求的 JSON：...”）。
+- 生成略有格式错误的 JSON，例如添加一个多余的逗号。
+
+简单调用 `json.loads()` 对于生产环境来说通常过于脆弱。你的应用需要更具弹性的解析策略，以优雅地处理这些差异。
+
+### 可靠的 JSON 提取
+
+`parsing` 模块提供了专门用于从杂乱文本中查找和提取 JSON 的工具。`extract_json` 函数智能地扫描文本，识别出有效的 JSON 对象或数组，并进行解析。
+
+思考一个大型语言模型响应，其中包含对话文本和 JSON 代码块：
+
+````python
+from kerb.parsing import extract_json
+
+llm_output = """
+这是你请求的用户数据：
+
+```json
+{
+  "name": "Alice Johnson",
+  "email": "alice@example.com",
+  "age": 28,
+  "roles": ["developer", "team_lead"]
+}
+```
+
+这些数据是从用户数据库中提取的。
+"""
+
+result = extract_json(llm_output)
+
+if result.success:
+    print("成功提取数据：")
+    print(result.data)
+else:
+    print(f"提取 JSON 失败：{result.error}")
+````
+
+`extract_json` 函数自动识别 Markdown 块中的 JSON，忽略周围的文本。该函数返回一个 `ParseResult` 对象，其中包含已解析的数据、一个成功标志以及解析过程中遇到的任何警告。
+
+### 使用解析模式处理不完美的 JSON
+
+有时大型语言模型会生成几乎有效但又不完全有效的 JSON。例如，它可能缺少键的引号或包含多余的逗号。`parse_json` 函数可以通过 `ParseMode` 配置来处理这些情况。
+
+- `ParseMode.STRICT`：默认模式。要求 JSON 格式完美。
+- `ParseMode.LENIENT`：尝试修复常见语法错误，例如缺少引号和多余的逗号。
+- `ParseMode.BEST_EFFORT`：扫描文本以查找任何看起来像 JSON 对象的，并尝试解析它，即使它嵌入 (embedding)在其他文本中。
+
+以下是 `ParseMode.LENIENT` 如何自动更正格式错误的 JSON 字符串的示例：
+
+```python
+from kerb.parsing import parse_json, ParseMode
+
+# 缺少引号和包含多余逗号的格式错误 JSON
+malformed_json_string = """{
+    name: "Bob",
+    age: 35,
+    active: true,
+}"""
+
+result = parse_json(malformed_json_string, mode=ParseMode.LENIENT)
+
+if result.success:
+    print(f"解析成功：{result.success}")
+    print(f"数据已自动修复：{result.fixed}")
+    print("已解析数据：", result.data)
+```
+
+这种宽容性对于在大型语言模型之上构建可靠的应用很重要，因为它减少了由微小的格式问题导致的故障。
+
+### 使用 Pydantic 模型验证结构
+
+将 JSON 提取到 Python 字典是一个不错的开始，但对于更多应用，你会希望验证数据的结构和类型。Pydantic 是一个流行的数据验证库，你可以直接将大型语言模型的输出解析为 Pydantic 模型。
+
+首先，使用 Pydantic 的 `BaseModel` 定义你所需的数据结构。这为你的数据创建了一个清晰且经过验证的约定。
+
+```python
+from pydantic import BaseModel, Field, validator
+from typing import List
+
+class UserProfile(BaseModel):
+    """表示用户资料的模型。"""
+    name: str = Field(..., description="用户的全名")
+    email: str = Field(..., description="用户的电子邮件地址")
+    age: int = Field(..., ge=18, description="用户年龄，必须年满18岁或以上")
+    roles: List[str] = Field(default_factory=list, description="用户角色列表")
+
+    @validator('email')
+    def validate_email_format(cls, v):
+        if '@' not in v:
+            raise ValueError('电子邮件格式无效')
+        return v
+```
+
+模型定义好后，你可以在一个步骤中使用 `parse_to_pydantic` 解析并验证大型语言模型的 JSON 输出。
+
+````python
+from kerb.parsing import parse_to_pydantic
+
+llm_output = """
+```json
+{
+  "name": "Alice Johnson",
+  "email": "alice@example.com",
+  "age": 28,
+  "roles": ["developer", "team_lead"]
+}
+```
+"""
+
+result = parse_to_pydantic(llm_output, UserProfile)
+
+if result.success:
+    user_profile: UserProfile = result.data
+    print(f"成功解析 {user_profile.name} 的资料")
+    print(f"电子邮件: {user_profile.email}")
+    print(f"角色: {', '.join(user_profile.roles)}")
+else:
+    print(f"验证错误: {result.error}")
+````
+
+如果 JSON 缺少必填字段、包含不正确的数据类型，或者未能通过任何自定义验证器（例如我们的电子邮件格式检查），`parse_to_pydantic` 将返回一个带有描述性错误的失败结果。这确保你的应用只使用干净、经过验证的数据。
+
+### 形成闭环：为优化提示生成模式
+
+你可以通过向模型提供你期望的确切模式来提高结构化数据生成的可靠性。`pydantic_to_schema` 工具将 Pydantic 模型转换为 JSON Schema 定义，然后你可以将其包含在你的提示中。
+
+```python
+from kerb.prompt import render_template
+from kerb.parsing import pydantic_to_schema
+import json
+
+# 从我们的 Pydantic 模型生成 JSON Schema
+user_schema = pydantic_to_schema(UserProfile)
+
+# 创建包含模式的提示模板
+prompt_template = """
+从文本中提取用户信息，并根据以下 JSON Schema 进行格式化。
+只返回 JSON 对象。
+
+文本: '新的团队负责人是 Charlie，35 岁。他的电子邮件是 charlie@web.com。'
+
+模式:
+{{schema}}
+"""
+
+# 渲染最终提示
+final_prompt = render_template(
+    prompt_template,
+    {"schema": json.dumps(user_schema, indent=2)}
+)
+
+print(final_prompt)
+```
+
+这种工作流程形成了一个积极的反馈循环：你的 Pydantic 模型定义了数据约定，它的模式指导大型语言模型生成符合要求的输出，解析器根据同一模型验证最终结果。这种提示方法和解析的结合为你提供了构建可靠、数据驱动型应用所需的控制。
+
+## 参考资料
+
+- [Pydantic Documentation](https://docs.pydantic.dev/latest/) — Samuel Colvin and Pydantic Contributors (2023)
+  使用 Python 类型提示定义和验证数据结构的综合指南，对于健壮的结构化数据应用至关重要。
+- [OpenAI API Reference: JSON Mode](https://platform.openai.com/docs/guides/text-generation/json-mode) — OpenAI (2024)
+  关于在 OpenAI API 中使用 JSON 模式功能的官方指南，可确保 LLM 输出为有效 JSON，是结构化数据提取的关键技术。

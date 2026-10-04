@@ -1,0 +1,217 @@
+---
+course: "getting-started-with-scikit-learn"
+chapter: "supervised-learning-classification"
+lesson: "classification-evaluation-metrics"
+sourceId: 1874
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-scikit-learn/chapter-3-supervised-learning-classification/classification-evaluation-metrics"
+title: "分类评估指标"
+description: "了解常用指标：准确率、精确率、召回率、F1分数和混淆矩阵。"
+order: 7
+plots: ["plots/1874-0.json"]
+sourceHash: "2ac706639b0365e5a6eadc162e0b94bbfec941e3536e314b96c041223e765622"
+sourceCorrections: []
+---
+
+开发分类模型，例如使用逻辑回归、KNN 或 SVM 等算法，只是初始阶段；准确评估其性能不可或缺。理解模型在区分不同类别方面的实际表现非常有益。简单地衡量正确预测的百分比（准确率）可能无法全面反映情况，尤其是在处理某个类别远比其他类别更频繁的数据集（不平衡数据集）时。因此，一套更详细的指标是必要的，以全面理解模型的优点和缺点。
+
+### 混淆矩阵：评估的基础
+
+分类评估的根本是**混淆矩阵**。它是一个表格，通过比较预测类别标签与实际类别标签，总结了分类算法的表现。对于二元分类问题（两个类别，通常标记 (token)为正类和负类），该矩阵如下所示：
+
+- **真正例 (TP):** 被正确预测为正类的实例。
+- **真负例 (TN):** 被正确预测为负类的实例。
+- **假正例 (FP):** 被错误预测为正类的实例 (I型错误)。这些是模型误认为是正类的实际负类实例。
+- **假负例 (FN):** 被错误预测为负类的实例 (II型错误)。这些是模型遗漏的实际正类实例。
+
+布局如下：
+
+|  | 预测: 负类 | 预测: 正类 |
+| --- | --- | --- |
+| **实际: 负类** | TN | FP |
+| **实际: 正类** | FN | TP |
+
+您可以使用 `sklearn.metrics` 模块中的 `confusion_matrix` 函数在 Scikit-learn 中生成混淆矩阵。它接受真实标签和预测标签作为输入。
+
+```python
+# 样本数据（假设y_true和y_pred已存在）
+# y_true: 真实标签
+# y_pred: 模型预测的标签
+
+from sklearn.metrics import confusion_matrix
+import numpy as np
+
+# 示例:
+# 假设正类为1，负类为0
+y_true = np.array([1, 0, 1, 1, 0, 1, 0, 0, 1, 0])
+y_pred = np.array([1, 0, 1, 0, 0, 1, 1, 0, 1, 0]) # 模型犯了一些错误
+
+cm = confusion_matrix(y_true, y_pred)
+print(cm)
+# 输出可能如下所示:
+# [[4 1]  <- 真负例=4, 假正例=1
+#  [1 4]] <- 假负例=1, 真正例=4
+```
+
+将混淆矩阵可视化可以使其更容易理解。
+
+
+
+![Interactive chart](plots/1874-0.json)
+
+
+
+> 示例 `y_true` 和 `y_pred` 计算得出的混淆矩阵热图可视化。颜色表示每个单元格中的计数（真负例、假正例、假负例、真正例）。
+
+从混淆矩阵中，我们可以得到几个更具参考价值的指标。
+
+### 准确率
+
+准确率是最直接的指标。它衡量了总预测中正确预测的比例。
+
+
+$$
+\text{准确率} = \frac{\text{真正例} + \text{真负例}}{\text{真正例} + \text{真负例} + \text{假正例} + \text{假负例}}
+$$
+
+
+它回答了这个问题：“总的来说，分类器判断正确的频率是多少？”
+
+虽然易于理解，但准确率可能会产生误导，尤其是在不平衡数据集上。如果您的95%的数据属于负类，一个总是预测负类的模型将达到95%的准确率，但对于识别正类毫无用处。
+
+在 Scikit-learn 中，您可以使用 `accuracy_score` 计算准确率：
+
+```python
+from sklearn.metrics import accuracy_score
+
+acc = accuracy_score(y_true, y_pred)
+print(f"Accuracy: {acc:.4f}")
+# 示例输出: 准确率: 0.8000
+```
+
+### 精确率
+
+精确率关注对正类的预测。它衡量了在所有预测为正类的样本中，实际为正类的比例。
+
+
+$$
+\text{精确率} = \frac{\text{真正例}}{\text{真正例} + \text{假正例}}
+$$
+
+
+它回答了这个问题：“当模型预测一个实例是正类时，我们有多大把握它确实是正类？”
+
+高精确率表示模型的假正例率较低。这在假正例代价高昂或不希望出现的情况下很重要。示例包括：
+
+- **垃圾邮件检测：** 您不希望重要邮件（非垃圾邮件）被错误地归类为垃圾邮件（假正例）。对于“垃圾邮件”类别，高精确率是理想的。
+- **医疗诊断：** 假阳性诊断（预测有病但实际无病）可能导致不必要的压力、花费和治疗。
+
+使用 `precision_score` 计算精确率：
+
+```python
+from sklearn.metrics import precision_score
+
+# 如果您的正类不是1，请指定pos_label
+prec = precision_score(y_true, y_pred, pos_label=1)
+print(f"Precision: {prec:.4f}")
+# 示例输出: 精确率: 0.8000  (真正例=4, 假正例=1 -> 4 / (4+1) = 0.8)
+```
+
+### 召回率（灵敏度或真阳性率）
+
+召回率，也称为灵敏度或真阳性率，衡量了模型正确识别出的实际正类实例的比例。
+
+
+$$
+\text{召回率} = \frac{\text{真正例}}{\text{真正例} + \text{假负例}}
+$$
+
+
+它回答了这个问题：“在所有实际正类实例中，模型成功捕获了多少比例？”
+
+高召回率表示模型的假负例率较低。这在未能识别正类实例（假负例）的代价很高时很重要。示例包括：
+
+- **欺诈检测：** 遗漏欺诈交易（假负例）通常比将合法交易标记 (token)为需要审查（假正例）更糟糕。
+- **危重疾病筛查：** 未能在疾病存在时发现它（假负例）可能导致严重后果。
+
+使用 `recall_score` 计算召回率：
+
+```python
+from sklearn.metrics import recall_score
+
+# 如果您的正类不是1，请指定pos_label
+rec = recall_score(y_true, y_pred, pos_label=1)
+print(f"Recall: {rec:.4f}")
+# 示例输出: 召回率: 0.8000 (真正例=4, 假负例=1 -> 4 / (4+1) = 0.8)
+```
+
+### 精确率-召回率的权衡
+
+通常，精确率和召回率之间存在权衡。提高其中一个可能会降低另一个。例如，如果您将垃圾邮件过滤器设置得极其严格（以提高精确率并避免假正例），您最终可能会漏掉一些实际的垃圾邮件（增加假负例并降低召回率）。理解这种权衡关系对于根据特定问题的需求调整模型非常重要。
+
+### F1分数
+
+F1分数提供了一个单一指标，平衡了精确率和召回率。它是两者的调和平均值：
+
+
+$$
+\text{F1分数} = 2 \times \frac{\text{精确率} \times \text{召回率}}{\text{精确率} + \text{召回率}} = \frac{2 \times \text{真正例}}{2 \times \text{真正例} + \text{假正例} + \text{假负例}}
+$$
+
+
+调和平均值对较低的值给予更大的权重 (weight)。这意味着F1分数只有当精确率和召回率都高时才会高。当您需要在最小化假正例和假负例之间取得平衡时，它是一个很好的通用指标。
+
+使用 `f1_score` 计算F1分数：
+
+```python
+from sklearn.metrics import f1_score
+
+# 如果您的正类不是1，请指定pos_label
+f1 = f1_score(y_true, y_pred, pos_label=1)
+print(f"F1-Score: {f1:.4f}")
+# 示例输出: F1分数: 0.8000 (使用精确率=0.8, 召回率=0.8)
+```
+
+### 分类报告
+
+手动计算每个指标可能很繁琐。Scikit-learn 提供了一个方便的函数 `classification_report`，它计算数据集中每个类别的精确率、召回率、F1分数和支持度（每个类别的真实实例数量）。
+
+```python
+from sklearn.metrics import classification_report
+
+# 假设y_true和y_pred包含多个类别的标签
+# 或者像我们示例中那样只有二元类别
+report = classification_report(y_true, y_pred, target_names=['Negative (0)', 'Positive (1)'])
+print(report)
+```
+
+输出通常如下所示：
+
+```
+              精确率    召回率  f1分数   支持度
+
+负类 (0)       0.80      0.80      0.80         5
+正类 (1)       0.80      0.80      0.80         5
+
+    准确率                           0.80        10
+   宏平均       0.80      0.80      0.80        10
+加权平均       0.80      0.80      0.80        10
+```
+
+- 报告显示了每个类别的独立指标。
+- `支持度`表示`y_true`中每个类别的实际实例数量。
+- `准确率`是整体准确率。
+- `宏平均`独立计算每个类别的指标，然后取平均值（平等对待所有类别）。
+- `加权平均`计算每个类别的指标，但平均值根据每个类别的支持度进行加权（适用于不平衡数据集）。
+
+选择合适的评估指标很大程度上取决于您的分类任务的具体目标。是避免假正例（精确率）更重要，还是避免假负例（召回率）更重要？或者需要一个平衡（F1分数）？理解这些指标以及如何使用混淆矩阵和分类报告等工具来解读它们，对于构建有效的分类模型来说非常重要。
+
+## 参考资料
+
+- [3.3. Metrics and scoring: quantifying the quality of predictions](https://scikit-learn.org/stable/modules/model_evaluation.html) — scikit-learn developers (2023)
+  提供Scikit-learn中分类评估指标及其实现的官方文档和示例。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://learning.oreilly.com/library/view/hands-on-machine/9781098125964/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media; Pages: 80-95
+  提供使用Scikit-learn的分类模型及其评估指标的实用、注重代码的解释。
+- [Machine Learning Yearning](https://www.deeplearning.ai/machine-learning-yearning/) — Andrew Ng (2017)
+  Publisher: DeepLearning.AI
+  提供模型评估的实用指导，包括不同分类指标之间的权衡，作者是知名的机器学习教育家。

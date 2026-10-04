@@ -1,0 +1,206 @@
+---
+course: "evaluating-synthetic-data-quality"
+chapter: "advanced-statistical-fidelity"
+lesson: "information-theoretic-measures"
+sourceId: 5653
+sourceUrl: "https://apxml.com/zh/courses/evaluating-synthetic-data-quality/chapter-2-advanced-statistical-fidelity/information-theoretic-measures"
+title: "信息论度量"
+description: "使用互信息和基于熵的度量进行保真度评估。"
+order: 4
+plots: []
+sourceHash: "636bf636fa32c5d0c2afe4d732651bf48660322af3f1e485c94a1875137eabac"
+sourceCorrections: []
+---
+
+虽然比较边际分布和基本统计数据能初步评估数据保真度，但这些方法通常会忽略数据集中变量间多样的关联。信息论提供一个有力的数学框架，用于量化 (quantization)不确定性和依赖性，从而提供更精密的工具来比较真实数据集 ($D_{real}$) 和合成数据集 ($D_{synth}$) 的结构特征。
+
+信息论度量不只是让我们问“均值是否相似？”，而是帮助我们提出“合成数据是否包含相同的信息量？”或“合成数据中是否保持了变量间的关系？”这样的问题。
+
+### 熵：量化 (quantization)不确定性
+
+熵是衡量随机变量不确定性或随机性的基本度量。对于具有可能取值 $x_1, ..., x_k$ 和概率质量函数 $P(X)$ 的离散随机变量 $X$，香农熵 $H(X)$ 定义为：
+
+
+$$
+H(X) = - \sum_{i=1}^{k} P(x_i) \log_2 P(x_i)
+$$
+
+
+对数基数通常为2，以比特为单位衡量熵。熵值越高意味着不确定性越大或可预测性越低。
+
+在合成数据评估中：
+
+1. **边际熵比较：** 您可以计算 $D_{real}$ 和 $D_{synth}$ 中每个特征 $X_i$ 的熵。$H(X_{i, real})$ 与 $H(X_{i, synth})$ 之间存在显著差异表明合成数据生成过程改变了该特征固有的变异性或可预测性。对于连续变量，使用微分熵，这通常需要离散化（分箱）或核密度估计（KDE）等方法，然后进行数值积分，这会引入近似难题。
+2. **联合熵比较：** 更有效地，您可以估计两个数据集中特征子集（或者理想情况下，所有特征）的联合熵 $H(X_1, ..., X_n)$。这衡量了对一组变量进行综合考虑时所关联的总不确定性。联合熵的差异表明多变量系统的整体复杂性或随机性未能很好地捕获。然而，准确估计高维联合熵计算量大，并且会受到维度灾难的影响。
+
+### 互信息：量化 (quantization)共享信息
+
+互信息（MI）衡量通过观察一个随机变量所获得的关于另一个随机变量的信息量。它量化了两个变量之间的依赖性，比简单相关性更能全面捕获非线性关系。对于两个离散变量 $X$ 和 $Y$，互信息 $I(X; Y)$ 为：
+
+
+$$
+I(X; Y) = \sum_{x \in X} \sum_{y \in Y} P(x, y) \log_2 \left( \frac{P(x, y)}{P(x)P(y)} \right)
+$$
+
+
+它也可以用熵来表示：
+
+
+$$
+I(X; Y) = H(X) + H(Y) - H(X, Y)
+$$
+
+
+$I(X; Y)$ 始终非负，当且仅当 $X$ 和 $Y$ 独立时为零。MI值越高表示依赖性越强。
+
+**在评估中的应用：**
+统计保真度的一个重要方面是保持变量*之间*的关系。我们可以计算真实数据集和合成数据集中特征对 $(X_i, X_j)$ 的MI值：$I(X_{i, real}; X_{j, real})$ 对比 $I(X_{i, synth}; X_{j, synth})$。
+
+- 如果MI值在许多特征对之间持续相似，表明合成数据生成过程成功学习并复制了真实数据中存在的成对依赖关系。
+- 较大差异，特别是对于已知在真实数据中强关联的对，表示未能捕获重要的结构信息。
+
+计算MI通常需要估计联合和边际概率分布。对于连续数据，这通常涉及离散化或使用专用估计器，例如scikit-learn等库中基于k近邻（KNN）的方法（`sklearn.metrics.mutual_info_score` 用于离散数据，`sklearn.feature_selection.mutual_info_regression`/`mutual_info_classification` 使用KNN估计用于连续/混合类型数据）。
+
+```python
+import numpy as np
+from sklearn.metrics import mutual_info_score
+from sklearn.preprocessing import KBinsDiscretizer
+
+# 假设 real_data 和 synth_data 是 pandas DataFrames
+# 示例：比较“年龄”和“收入”之间的MI（假设它们是连续的）
+
+# 使用 mutual_info_score 对连续特征进行离散化以计算MI
+n_bins = 10 # 选择合适的分箱数量
+kbd = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='uniform', subsample=None)
+
+# 在真实数据上拟合，并转换真实和合成数据
+# 重要：仅在真实数据上拟合离散器
+real_data_discrete = kbd.fit_transform(real_data[['Age', 'Income']])
+synth_data_discrete = kbd.transform(synth_data[['Age', 'Income']])
+
+# 计算列联矩阵（mutual_info_score 所需）
+# 注意：mutual_info_score 需要标签，因此我们使用离散化后的值
+# 我们需要联合分布 P(x,y)，通常通过直方图/列联表估计
+
+def calculate_mi(data_col1, data_col2):
+    """ 计算两个离散列之间的MI """
+    contingency_matrix = np.histogram2d(data_col1, data_col2, bins=n_bins)[0]
+    # 如有必要，添加一个小的epsilon以避免log(0)，或进行适当处理
+    # mutual_info_score 在内部处理此问题
+    return mutual_info_score(None, None, contingency_matrix=contingency_matrix)
+
+mi_real = calculate_mi(real_data_discrete[:, 0], real_data_discrete[:, 1])
+mi_synth = calculate_mi(synth_data_discrete[:, 0], synth_data_discrete[:, 1])
+
+print(f"互信息 (真实数据, 年龄 vs 收入): {mi_real:.4f}")
+print(f"互信息 (合成数据, 年龄 vs 收入): {mi_synth:.4f}")
+print(f"MI差异: {abs(mi_real - mi_synth):.4f}")
+
+# 考虑对多个特征对执行此操作
+```
+
+> 代码片段演示了使用scikit-learn对真实和合成数据集中两个特征（'年龄'、'收入'）离散化后互信息的比较。
+
+### 散度度量：量化 (quantization)分布差异
+
+散度度量提供一种方法，用于量化两个概率分布 $P$（表示真实数据分布）和 $Q$（表示合成数据分布）之间的差异。
+
+1. **Kullback-Leibler (KL) 散度：** 衡量用 $Q$ 近似 $P$ 时信息损失了多少。对于离散分布：
+
+   
+   $$
+   D_{KL}(P||Q) = \sum_{x} P(x) \log_2 \left( \frac{P(x)}{Q(x)} \right)
+   $$
+   
+
+   $D_{KL}(P||Q) \ge 0$，当且仅当 $P=Q$ 时 $D_{KL}(P||Q) = 0$。
+
+   - **属性：** 不对称 ($D_{KL}(P||Q) \neq D_{KL}(Q||P)$)。如果 $P(x) > 0$ 而 $Q(x)=0$，则无定义。
+   - **用途：** 可以比较边际分布（$P(X_i)$ 对比 $Q(X_i)$），或者更重要的是，比较联合分布（$P(X_1,...,X_n)$ 对比 $Q(X_1,...,X_n)$）。KL散度越低表示保真度越好。
+2. **Jensen-Shannon (JS) 散度：** 一种从KL散度推导出的对称且有界的度量。
+
+   
+   $$
+   JSD(P||Q) = \frac{1}{2} D_{KL}(P||M) + \frac{1}{2} D_{KL}(Q||M)
+   $$
+   
+
+   其中 $M = \frac{1}{2}(P+Q)$ 是混合分布。
+
+   - **属性：** 对称 ($JSD(P||Q) = JSD(Q||P)$)。介于0和1之间（当使用对数基数2时）。如果 $P$ 和 $Q$ 定义在相同的支撑集上，则始终有定义。
+   - **用途：** 由于其对称性和有限范围，在比较分布时通常优于KL散度。JS散度接近0表示真实和合成分布之间高度相似，而接近1的值表示高散度。
+
+**实际计算：**
+计算高维联合分布的散度有难度。常见方法包括：
+
+- **离散化：** 对连续特征空间进行分箱，并将 $P$ 和 $Q$ 估计为直方图。分箱策略的选择显著影响结果。
+- **核密度估计（KDE）：** 估计平滑的概率密度函数 $p(x)$ 和 $q(x)$，并通过数值积分计算散度。需要仔细选择带宽。
+- **子空间评估：** 计算随机选择的低维边际（例如，特征对或三元组）的平均散度，作为完整联合分布差异的替代。
+
+诸如 `scipy.stats.entropy` 等库可以计算离散分布（表示为概率向量 (vector)）之间的KL散度。JS散度可以使用KL散度函数实现。
+
+```python
+from scipy.stats import entropy
+import numpy as np
+
+# 假设 p_real 和 q_synth 是 1D 概率分布（直方图）
+# 例如，来自 np.histogram(data_feature, bins=..., density=True)[0]
+# 确保它们总和为1，并且具有相同的分箱/支持域。添加小的 epsilon 以避免零。
+
+epsilon = 1e-10
+p_real = p_real + epsilon
+p_real /= np.sum(p_real)
+q_synth = q_synth + epsilon
+q_synth /= np.sum(q_synth)
+
+# KL 散度 (真实 || 合成)
+kl_div_pq = entropy(p_real, q_synth, base=2)
+
+# KL 散度 (合成 || 真实)
+kl_div_qp = entropy(q_synth, p_real, base=2)
+
+# JS 散度
+m = 0.5 * (p_real + q_synth)
+js_div = 0.5 * (entropy(p_real, m, base=2) + entropy(q_synth, m, base=2))
+
+print(f"KL 散度 (P||Q): {kl_div_pq:.4f}")
+print(f"KL 散度 (Q||P): {kl_div_qp:.4f}")
+print(f"JS 散度 (P||Q): {js_div:.4f}") # 应在0到1之间
+```
+
+> 使用SciPy对两个一维概率分布进行KL和JS散度的基本计算。需要仔细的预处理（归一化 (normalization)，处理零值）。
+
+### 总结与考量
+
+信息论度量提供一种基于理论的统计保真度评估方式：
+
+- **熵** 量化 (quantization)随机性和复杂性。
+- **互信息** 专门针对保持变量间依赖关系，包括非线性关系。
+- **KL和JS散度** 提供分布相似性的整体度量。
+
+**优点：**
+
+- 捕获复杂的依赖关系和分布形状。
+- 提供基于原则的定量分数。
+- JS散度对称且有界，有助于解释。
+
+**难题：**
+
+- 计算密集，特别是对于高维度和大数据集。
+- 对估计方法（离散化参数 (parameter)、KDE带宽）敏感。
+- 可靠地估计高维联合分布有难度（维度灾难）。
+
+尽管存在这些难题，但比较特征对之间的互信息，以及在低维边际（或仔细估计的联合分布）上使用JS散度，可以提供有价值的见解，了解合成数据复制真实数据统计结构的效果如何，显著补充了其他保真度评估技术。
+
+## 参考资料
+
+- [Elements of Information Theory](https://www.wiley.com/en-us/Elements+of+Information+Theory%2C+2nd+Edition-p-9780471241959) — Thomas M. Cover and Joy A. Thomas (2006)
+  Publisher: John Wiley & Sons; DOI: [10.1002/047174882X](https://doi.org/10.1002/047174882X)
+  信息论的标准教材，详细介绍了熵、互信息和散度等概念。
+- [sklearn.metrics.mutual_info_score](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mutual_info_score.html) — scikit-learn developers (2023)
+  用于计算离散标签或列联表之间互信息的官方文档，有助于比较数据中的依赖关系。
+- [scipy.stats.entropy](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.entropy.html) — SciPy developers (2023)
+  描述计算概率分布的香农熵和Kullback-Leibler散度的官方文档。
+- [Quantifying the statistical quality of synthetic data generated by deep learning models](https://doi.org/10.1609/aaai.v34i06.6727) — Lingjiao Zhang, Jiaqi Gao, Xiaoyong Liang, Jiawei Zhang, Yihao Feng, Kai Li, Jia Liu, Sanjeev R. Kulkarni (2020)
+  Journal: Proceedings of the AAAI Conference on Artificial Intelligence; Publisher: AAAI Press; Volume: 34; Pages: 10189-10196; DOI: [10.1609/aaai.v34i06.6727](https://doi.org/10.1609/aaai.v34i06.6727)
+  一篇研究论文，审视了评估合成数据统计质量的各种指标，包括信息论方法。

@@ -1,0 +1,225 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "implementing-transformer-from-scratch"
+lesson: "constructing-encoder-decoder-layers"
+sourceId: 5999
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-10-implementing-transformer-from-scratch/constructing-encoder-decoder-layers"
+title: "构建编码器层和解码器层"
+description: "将注意力层和FFN层与归一化及残差连接组合起来。"
+order: 5
+plots: []
+sourceHash: "acab114fa5b75ca5f8dfa5912ae87f68fbb5b17e70ec75409e308bde61e589be"
+sourceCorrections: []
+---
+
+多头注意力 (multi-head attention)机制 (attention mechanism)和位置前馈网络这两个主要组成部分可以组装成Transformer的标准构成单元：编码器层和解码器层。这些层不仅包含注意力子网络和前馈子网络，还包含了残差连接和层归一化 (normalization)，这些对于有效训练深度Transformer模型是必不可少的。
+
+## 编码器层
+
+编码器层处理输入序列，通过自注意力 (self-attention)和前馈网络细化其表示。每个编码器层包含两个主要的子层：
+
+1. **多头自注意力：** 允许输入序列中的每个位置关注所有位置（包括自身），以获取背景信息。
+2. **位置前馈网络 (FFN)：** 对每个位置的表示独立地应用相同的变换。
+
+重要地，在*每个*子层之后都会应用一个残差连接，接着是层归一化 (normalization)。这种结构有助于梯度流动并稳定激活，从而避免深度层堆叠中出现梯度消失或梯度爆炸等问题。
+
+单个编码器层的数据流可以如下所示：
+
+> Transformer编码器层内的数据流。虚线表示残差连接。
+
+让我们在PyTorch中实现它。我们假设 `MultiHeadAttention` 和 `PositionwiseFeedForward` 是基于前面章节的实现而定义好的类。
+
+```python
+import torch
+import torch.nn as nn
+import copy
+
+# 假设MultiHeadAttention和PositionwiseFeedForward类已在其他地方定义
+# from .attention import MultiHeadAttention
+# from .feed_forward import PositionwiseFeedForward
+
+class EncoderLayer(nn.Module):
+    """
+    表示Transformer编码器的一层。
+
+    它由一个多头自注意力机制，后接一个
+    位置全连接前馈网络组成。残差连接
+    和层归一化在每个子层之后应用。
+    """
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        dropout: float = 0.1
+    ):
+        """
+        参数：
+            d_model: 输入和输出的维度
+                     （嵌入维度）。
+            num_heads: 注意力头的数量。
+            d_ff: 前馈网络内部层的维度。
+            dropout: dropout比率。
+        """
+        super().__init__()
+        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout=dropout)
+        self.feed_forward = PositionwiseFeedForward(d_model, d_ff, dropout=dropout)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        """
+        将输入通过编码器层。
+
+        参数：
+            x: 层的输入张量 (batch_size, seq_len, d_model)。
+            mask: 自注意力机制的掩码（可选）。
+                  通常用于忽略填充标记。
+                  形状为 (batch_size, 1, seq_len) 或
+                  (batch_size, seq_len, seq_len)。
+
+        返回：
+            层的输出张量 (batch_size, seq_len, d_model)。
+        """
+        # 1. 多头自注意力
+        attn_output, _ = self.self_attn(query=x, key=x, value=x, mask=mask)
+        # 应用残差连接和层归一化
+        x = self.norm1(x + self.dropout(attn_output)) # Add -> Norm
+
+        # 2. 位置前馈网络
+        ff_output = self.feed_forward(x)
+        # 应用残差连接和层归一化
+        x = self.norm2(x + self.dropout(ff_output)) # Add -> Norm
+
+        return x
+```
+
+在 `forward` 方法中，请注意这种模式：输入 `x` 在经过层归一化 (`self.norm1` 或 `self.norm2`) 之前，会被添加到子层（经过dropout后）的输出。这是“加法与归一化”步骤，对于训练的稳定性很重要。如果需要，`mask` 参数 (parameter)会传递给自注意力层，以避免关注填充标记 (token)。
+
+## 解码器层
+
+解码器层与编码器层有相似之处，但增加了一个子层，用于处理来自编码器输出的信息。每个解码器层包含三个主要的子层：
+
+1. **带掩码的多头自注意力 (self-attention)：** 运作方式类似于编码器的自注意力，但增加了一个掩码，以避免位置关注后续位置。这确保了位置 $i$ 的预测只依赖于位置小于 $i$ 的已知输出，从而在生成过程中保持所需的自回归 (autoregressive)特性。
+2. **多头交叉注意力（编码器-解码器注意力）：** 这一层允许解码器输入序列中的每个位置关注*编码器输出序列*中的*所有*位置。查询来自解码器的带掩码自注意力输出，而键和值来自编码器堆栈的最终输出。这是解码器引入输入序列信息的方式。
+3. **位置前馈网络 (FFN)：** 结构上与编码器层中使用的相同。
+
+与编码器类似，这三个子层中的每一个都跟随一个残差连接和层归一化 (normalization)。
+
+以下是解码器层的数据流：
+
+> Transformer解码器层内的数据流。虚线表示残差连接。编码器输出（记忆）为交叉注意力子层提供键和值。
+
+现在，让我们在PyTorch中实现 `DecoderLayer`。
+
+```python
+import torch
+import torch.nn as nn
+import copy
+
+# 假设MultiHeadAttention和PositionwiseFeedForward类已在其他地方定义
+# from .attention import MultiHeadAttention
+# from .feed_forward import PositionwiseFeedForward
+
+class DecoderLayer(nn.Module):
+    """
+    表示Transformer解码器的一层。
+
+    它由带掩码的自注意力、交叉注意力（关注
+    编码器输出）和一个位置前馈网络组成。残差
+    连接和层归一化在每个子层之后应用。
+    """
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float = 0.1):
+        """
+        参数：
+            d_model: 输入和输出的维度。
+            num_heads: 注意力头的数量。
+            d_ff: 前馈网络内部层的维度。
+            dropout: dropout比率。
+        """
+        super().__init__()
+        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout=dropout)
+        self.cross_attn = MultiHeadAttention(d_model, num_heads, dropout=dropout)
+        self.feed_forward = PositionwiseFeedForward(d_model, d_ff, dropout=dropout)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.norm3 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self,
+                x: torch.Tensor,
+                memory: torch.Tensor,
+                src_mask: torch.Tensor | None = None,
+                tgt_mask: torch.Tensor | None = None) -> torch.Tensor:
+        """
+        将输入通过解码器层。
+
+        参数：
+            x: 解码器层的输入张量
+               (batch_size, tgt_seq_len, d_model)。
+            memory: 编码器堆栈的输出张量
+                    (batch_size, src_seq_len, d_model)。
+            src_mask: 交叉注意力（编码器-解码器注意力）层的掩码，用于忽略
+                      编码器输出中的填充标记（可选）。
+                      形状为 (batch_size, 1, src_seq_len)。
+            tgt_mask: 带掩码自注意力层的掩码，结合了
+                      前瞻掩码和目标填充掩码（可选）。
+                      形状为 (batch_size, tgt_seq_len, tgt_seq_len)。
+
+        返回：
+            层的输出张量
+            (batch_size, tgt_seq_len, d_model)。
+        """
+        # 1. 带掩码多头自注意力
+        # 目标掩码 (tgt_mask) 避免关注
+        # 未来位置。
+        self_attn_output, _ = self.self_attn(query=x,
+                                             x,
+                                             value=x,
+                                             mask=tgt_mask)
+        # 应用残差连接和层归一化
+        x = self.norm1(x + self.dropout(self_attn_output)) # Add -> Norm
+
+        # 2. 多头交叉注意力（编码器-解码器注意力）
+        # 查询来自解码器 (x)，键/值来自编码器
+        # 输出 (memory)。
+        # 源掩码 (src_mask) 避免关注
+        # 编码器输出中的填充。
+        cross_attn_output, _ = self.cross_attn(query=x,
+                                               key=memory,
+                                               value=memory,
+                                               mask=src_mask)
+        # 应用残差连接和层归一化
+        x = self.norm2(x + self.dropout(cross_attn_output)) # Add -> Norm
+
+        # 3. 位置前馈网络
+        ff_output = self.feed_forward(x)
+        # 应用残差连接和层归一化
+        x = self.norm3(x + self.dropout(ff_output)) # Add -> Norm
+
+        return x
+```
+
+`DecoderLayer` 实现中的要点：
+
+1. **带掩码自注意力：** `self_attn` 层接收 `tgt_mask`。这个掩码通常是填充掩码（如果目标序列有填充）和前瞻掩码（一个下三角矩阵）的组合，以确保因果关系。
+2. **交叉注意力：** `cross_attn` 层使用第一个加法与归一化块 (`x`) 的输出作为其 `query`。重要地，`key` 和 `value` 来自 `memory` 参数 (parameter)，它代表了编码器堆栈的最终输出。这里的 `src_mask` 用于忽略原始源序列（编码器输入）中的填充标记 (token)。
+3. **三个子层：** 请注意与三个子层对应的三个不同的“加法与归一化”步骤。
+
+定义了这些 `EncoderLayer` 和 `DecoderLayer` 类之后，我们就有了构建完整编码器和解码器堆栈所需的基本组成部分。这只需简单地创建这些层的多个副本，并将一层的输出作为下一层的输入。这种堆叠使得模型能够学习输入和目标序列越来越复杂的表示。我们将在下一节中组装这些堆栈。
+
+## 参考资料
+
+- [Attention Is All You Need](https://papers.neurips.cc/paper/7181-attention-is-all-you-need.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 30; Publisher: NeurIPS; Volume: 30; DOI: [10.5555/3295222.3295349](https://doi.org/10.5555/3295222.3295349)
+  介绍Transformer架构的奠基性论文，涵盖其编码器和解码器层、多头注意力机制、残差连接和层归一化。
+- [Layer Normalization](https://arxiv.org/abs/1607.06450) — Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E. Hinton (2016)
+  Journal: arXiv preprint arXiv:1607.06450; DOI: [10.48550/arXiv.1607.06450](https://doi.org/10.48550/arXiv.1607.06450)
+  介绍并解释了层归一化，这是Transformer层中用于稳定训练的技术。
+- [Speech and Language Processing (3rd ed. draft) - Chapter 10: Transformers and Pretrained Language Models](https://web.stanford.edu/~jurafsky/slp3/10.pdf) — Daniel Jurafsky and James H. Martin (2023)
+  一份全面的教育资源，解释了Transformer架构，包括编码器和解码器层、自注意力和交叉注意力的详细描述。

@@ -1,0 +1,119 @@
+---
+course: "llm-alignment-safety"
+chapter: "reinforcement-learning-human-feedback-rlhf"
+lesson: "reward-model-training"
+sourceId: 3125
+sourceUrl: "https://apxml.com/zh/courses/llm-alignment-safety/chapter-2-reinforcement-learning-human-feedback-rlhf/reward-model-training"
+title: "奖励模型训练：架构与损失函数"
+description: "查看用于训练奖励模型的架构和损失函数。"
+order: 3
+plots: []
+sourceHash: "101dda664e77c371eb46449d94cc6ee32710170f052a6d2c9ce199e1ac221032"
+sourceCorrections: []
+---
+
+训练奖励模型，$r_\theta(x, y)$，需要人类偏好数据，而该模型是强化学习 (reinforcement learning)从人类反馈 (RLHF) 的一个主要组成部分。这些数据通常以对的形式出现：$(x, y_w, y_l)$，其中 $y_w$ 表示对提示 $x$ 的偏好（“胜出”）响应，$y_l$ 表示被拒绝（“落败”）的响应。奖励模型的功能是学习这些人类偏好的标量表示，旨在满足每个观测到的偏好对 $r_\theta(x, y_w) > r_\theta(x, y_l)$。由此学到的奖励函数随后用于指引大型语言模型（LLM）策略的微调 (fine-tuning)。
+
+### 奖励模型架构
+
+奖励模型的架构是一个重要的设计决定。一种普遍且行之有效的方法是借助预训练 (pre-training)语言模型自身的能力。
+
+1. **基于大型语言模型的架构：** 最常用的策略是使用最终将被微调 (fine-tuning)的预训练大型语言模型（或同一系列中大小可能不同的模型）的权重 (weight)来初始化奖励模型。核心想法是调整这个预训练模型，使其预测偏好得分而非生成文本。
+
+   - **输入处理：** 提示 $x$ 和候选响应 $y$ 通常被连接成一个序列，常用特殊标记 (token)（例如 `prompt_text [SEP] response_text [EOS]`）分隔。
+   - **基础模型：** 这个连接后的序列会通过基础大型语言模型的变换器层。
+   - **奖励头部：** 不使用最后一层输出的对数几率用于词元 (token)预测，而是在大型语言模型最终的隐藏状态表示之上添加一个“头部”。通常，会提取对应于最后一个词元（例如 `[EOS]` 词元）的隐藏状态。这个向量 (vector)表示概括了整个输入序列（提示和响应），然后通过一个线性层，将其映射为一个标量值。这个标量输出代表预测的奖励 $r_\theta(x, y)$。
+   > 一种典型的奖励模型架构，使用预训练的大型语言模型作为基础，处理拼接后的提示和响应，并通过连接到最后一个词元隐藏状态的线性头部输出标量奖励。
+2. **初始化：** 从预训练权重开始，使奖励模型能从大型语言模型初始训练中学到的语言理解能力中获益。在奖励模型训练期间，可以选择微调基础大型语言模型的所有参数 (parameter)，或者冻结大部分基础层，只训练最后的层和奖励头部。微调整个模型可以带来更好的适应性，但计算成本更高，并有灾难性遗忘的风险。冻结大部分层速度更快，但可能会限制模型学习详细偏好的能力。
+3. **替代架构：** 尽管使用目标大型语言模型的架构是标准做法，但也存在替代方案。可以训练一个更小、独立的变换器模型，甚至使用不同类型的模型。然而，这些方法可能难以捕捉到准确判断大型基础模型生成输出质量所需的同等水平的细节。使用同一系列的模型通常可以确保架构兼容性并利用相关的预训练知识。
+
+### 成对排序损失函数 (loss function)
+
+给定偏好数据 $(x, y_w, y_l)$，奖励模型被训练成给 $y_w$ 分配比 $y_l$ 更高的分数。为此，标准的优化目标是基于Bradley-Terry模型的成对排序损失，该模型常用于对物品对之间的偏好进行建模。
+
+损失函数旨在最大化所选响应与被拒绝响应之间奖励差异与人类标注一致的概率。它通常被表示为偏好的负对数似然：
+
+
+$$
+\mathcal{L}(\theta) = -\mathbb{E}_{(x, y_w, y_l) \sim D} \left[ \log \sigma(r_\theta(x, y_w) - r_\theta(x, y_l)) \right]
+$$
+
+
+我们来分解这个公式：
+
+- $D$: 人类偏好数据集 $\{(x^{(i)}, y_w^{(i)}, y_l^{(i)})\}_{i=1}^N$。
+- $r_\theta(x, y)$: 模型参数 (parameter)为 $\theta$ 时，对提示 $x$ 和响应 $y$ 输出的标量奖励。
+- $r_\theta(x, y_w) - r_\theta(x, y_l)$: 偏好响应的预测奖励与被拒绝响应的预测奖励之间的差异。我们希望这个差异是正值。
+- $\sigma(z) = \frac{1}{1 + e^{-z}}$: Sigmoid函数。它将奖励差异压缩到 $(0, 1)$ 范围内。这个值 $\sigma(r_\theta(x, y_w) - r_\theta(x, y_l))$ 可以被认为是模型估计的 $y_w$ 比 $y_l$ 更受偏好的概率。
+- $\log(\cdot)$: 取对数将概率转换为对数概率（或对数似然）。最大化对数概率等同于最大化概率本身，但通常在数值上更稳定和方便。
+- $-\mathbb{E}[\cdot]$: 我们对数据集 $D$ 中所有偏好元组的负对数似然进行平均。最小化这个负对数似然等同于根据奖励模型最大化观测到的偏好的似然。
+
+在训练期间，对于批次中的每个三元组 $(x, y_w, y_l)$，奖励模型会执行两次前向传播：一次是针对 $(x, y_w)$ 以获得 $r_\theta(x, y_w)$，另一次是针对 $(x, y_l)$ 以获得 $r_\theta(x, y_l)$。损失是基于差异计算的，并通过反向传播 (backpropagation)更新模型参数 $\theta$。
+
+以下是使用PyTorch风格伪代码的训练步骤示意：
+
+```python
+import torch
+import torch.nn.functional as F
+
+# Assume:
+# reward_model: The model taking tokenized input_ids and attention_mask, returning a scalar.
+# tokenizer: The tokenizer corresponding to the reward_model base.
+# optimizer: An optimizer like AdamW.
+# dataloader: Provides batches of {'prompt': [...], 'chosen': [...], 'rejected': [...]}
+
+def train_reward_model_step(batch, reward_model, tokenizer, optimizer, device):
+    """对奖励模型执行单个训练步骤。"""
+
+    prompts = batch['prompt']
+    chosen_responses = batch['chosen']
+    rejected_responses = batch['rejected']
+
+    # 准备所选和被拒响应的输入
+    chosen_texts = [p + tokenizer.sep_token + r + tokenizer.eos_token for p, r in zip(prompts, chosen_responses)]
+    rejected_texts = [p + tokenizer.sep_token + r + tokenizer.eos_token for p, r in zip(prompts, rejected_responses)]
+
+    # 词元化（适当处理填充和截断）
+    chosen_encodings = tokenizer(chosen_texts, padding=True, truncation=True, return_tensors="pt").to(device)
+    rejected_encodings = tokenizer(rejected_texts, padding=True, truncation=True, return_tensors="pt").to(device)
+
+    # 前向传播以获得奖励
+    # 假设 reward_model 输出一个包含 'rewards' 张量的字典
+    rewards_chosen = reward_model(**chosen_encodings).rewards # 形状: (批次大小, 1)
+    rewards_rejected = reward_model(**rejected_encodings).rewards # 形状: (批次大小, 1)
+
+    # 如有必要，确保形状兼容，例如挤压最后一个维度
+    rewards_chosen = rewards_chosen.squeeze(-1) # 形状: (批次大小,)
+    rewards_rejected = rewards_rejected.squeeze(-1) # 形状: (批次大小,)
+
+    # 计算成对损失
+    # loss = -log(sigmoid(chosen_reward - rejected_reward))
+    loss = -F.logsigmoid(rewards_chosen - rewards_rejected).mean()
+
+    # 优化步骤
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    return loss.item()
+
+# --- 训练循环 ---
+# for epoch in range(num_epochs):
+#     for batch in dataloader:
+#         loss_val = train_reward_model_step(batch, reward_model, tokenizer, optimizer, device)
+#         # 记录 loss_val，处理检查点等。
+```
+
+这个训练过程会得到一个奖励模型 $r_\theta(x, y)$，它能够理想地体现人类对大型语言模型响应的有用性、诚实性和无害性方面的细致偏好。一旦经过充分训练和评估，这个模型就成为下一阶段的重要组成部分：使用PPO等强化学习 (reinforcement learning)算法微调 (fine-tuning)大型语言模型策略，$r_\theta(x, y)$ 充当奖励信号。
+
+## 参考资料
+
+- [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073) — Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell, Jackson Kernion, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, Cameron McKinnon, Carol Chen, Catherine Olsson, Christopher Olah, Danny Hernandez, Dawn Drain, Deep Ganguli, Dustin Li, Eli Tran-Johnson, Ethan Perez, Jamie Kerr, Jared Mueller, Jeffrey Ladish, Joshua Landau, Kamal Ndousse, Kamile Lukosuite, Liane Lovitt, Michael Sellitto, Nelson Elhage, Nicholas Schiefer, Noemi Mercado, Nova DasSarma, Robert Lasenby, Robin Larson, Sam Ringer, Scott Johnston, Shauna Kravec, Sheer El Showk, Stanislav Fort, Tamera Lanham, Timothy Telleen-Lawton, Tom Conerly, Tom Henighan, Tristan Hume, Samuel R. Bowman, Zac Hatfield-Dodds, Ben Mann, Dario Amodei, Nicholas Joseph, Sam McCandlish, Tom Brown, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2212.08073; DOI: [10.48550/arXiv.2212.08073](https://doi.org/10.48550/arXiv.2212.08073)
+  提出了一种利用人工智能反馈而非大量人工标注来对齐大型语言模型的替代方法，为安全和高级对齐目标下的奖励建模提供了见解。
+- [TRL (Transformers Reinforcement Learning) Library Documentation](https://huggingface.co/docs/trl/main/en/) — Hugging Face (2024)
+  Publisher: Hugging Face
+  提供了使用 `trl` 库实现奖励模型和 RLHF 流程的官方文档和实践指南，支持了本文讨论的架构和损失函数。
+- [Deep Reinforcement Learning from Human Preferences](https://arxiv.org/pdf/1706.03741) — Christiano, Paul F., Leike, Jan, Brown, Tom B., Martic, Miljan, Legg, Shane, and Amodei, Dario (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 30; Pages: 4299-4307; DOI: [10.48550/arXiv.1706.03741](https://doi.org/10.48550/arXiv.1706.03741)
+  一篇基础性论文，介绍了使用人类偏好训练深度强化学习智能体以学习奖励函数的概念，是现代语言模型 RLHF 应用的先驱。

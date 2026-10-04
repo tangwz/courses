@@ -1,0 +1,187 @@
+---
+course: "intro-llm-agents"
+chapter: "your-first-llm-agent"
+lesson: "preparing-workspace-agent-development"
+sourceId: 6566
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-3-your-first-llm-agent/preparing-workspace-agent-development"
+title: "为代理程序开发准备工作环境"
+description: "关于设置你的 Python 开发环境以构建大型语言模型代理程序的说明。"
+order: 1
+plots: []
+sourceHash: "4f244e338d591cd1642bf5b3163f83442f99b701ab7fba8d633734569579b0ca"
+sourceCorrections: []
+---
+
+在你让第一个大型语言模型代理程序运行起来之前，需要进行一些设置。一个组织良好的开发环境是你所有代理程序构建工作的前提。它能确保你的项目易于管理、可重复，并且手边有合适的工具。本节将引导你完成为代理程序开发准备电脑的必要步骤。
+
+## 必要软件：Python 和 pip
+
+Python 因其易用性、丰富的库和庞大的社区，成为机器学习 (machine learning)和人工智能开发（包括大型语言模型代理程序）的主流编程语言。所有示例都将使用 Python。
+
+### 为什么选择 Python？
+
+Python 清晰的语法使其相对容易学习，即使你是编程新手。对我们来说更重要的是，它拥有为与大型语言模型交互和构建人工智能应用而设计的丰富库生态系统。这意味着我们可以专注于代理程序的逻辑，而不是为常见任务编写底层代码。
+
+### 检查你的 Python 安装
+
+大多数现代操作系统（macOS 和 Linux）都预装了 Python。Windows 用户可能需要手动安装。我们建议使用 Python 3.8 或更高版本。
+
+要检查 Python 是否已安装及其版本，请打开终端（Windows 上是命令提示符或 PowerShell，macOS 和 Linux 上是终端）并输入：
+
+```bash
+python --version
+```
+
+或者，在某些系统上，你可能需要使用 `python3`：
+
+```bash
+python3 --version
+```
+
+如果 Python 已安装，你将看到类似 `Python 3.10.4` 的输出。如果出现错误，或者你的版本早于 3.8，你需要安装或更新 Python。请访问 Python 官方网站 (python.org) 获取下载说明。
+
+### 确保 pip 可用
+
+`pip` 是 Python 的包安装器。你将用它来安装你的代理程序所需的库。`pip` 通常随 Python 安装程序一起提供（3.4 及更高版本）。
+
+要检查 `pip` 是否可用，请运行：
+
+```bash
+pip --version
+```
+
+或者，如果你上面使用了 `python3`：
+
+```bash
+pip3 --version
+```
+
+如果未找到，你可能需要单独安装，或者确保你的 Python 安装脚本目录在系统的 PATH 中。请参考 Python 官方文档获取 `pip` 安装指南。
+
+## 选择你的代码编辑器
+
+你需要一个编写 Python 代码的地方。虽然简单的文本编辑器也能用，但集成开发环境 (IDE) 或好的代码编辑器可以通过语法高亮、代码补全和调试工具等功能让你的工作轻松很多。
+
+对于初学者，这里有一些流行且免费的选项：
+
+- **Visual Studio Code (VS Code)：** 一个非常流行、免费且功能强大的编辑器，通过扩展提供出色的 Python 支持。
+- **PyCharm Community Edition：** 专业 Python IDE 的免费版本，提供许多功能。
+- **Sublime Text：** 轻量级且快速的编辑器，可通过包扩展。
+- **IDLE：** Python 内置的基本编辑器，适用于非常简单的脚本。
+
+选择一个你用起来舒服的。许多在线教程和视频可以帮助你开始使用其中任何一个。
+
+## 隔离你的项目：虚拟环境
+
+当你处理不同的 Python 项目时，它们可能需要同一库的不同版本。全局安装所有内容可能导致冲突。虚拟环境通过为每个项目创建隔离空间来解决此问题，每个空间都有自己的 Python 解释器和一套安装的库。
+
+### 虚拟环境的重要性
+
+假设项目 A 需要某个库的 1.0 版，而项目 B 需要 2.0 版。如果你将这些库全局安装，其中一个项目可能会出问题。虚拟环境使每个项目的依赖项相互独立，从而避免此类问题。这是 Python 开发中的标准最佳实践。
+
+> 虚拟环境为每个 Python 项目创建了一个隔离空间，防止了库版本冲突。
+
+### 使用 `venv` 创建虚拟环境
+
+Python 附带一个名为 `venv` 的内置模块，用于创建虚拟环境。
+
+1. **导航到你的项目目录：** 打开终端并进入你想要创建代理程序项目的文件夹。如果该文件夹不存在，请先创建（例如，`mkdir my_first_agent` 然后 `cd my_first_agent`）。
+2. **创建虚拟环境：** 运行以下命令。我们将虚拟环境命名为 `myagent_env`，但你可以选择其他名称（常见惯例是 `venv` 或 `.venv`）。
+
+   ```bash
+   python -m venv myagent_env
+   ```
+
+   （如果你这样调用 Python 3，请使用 `python3`）。此命令会创建一个新目录（例如 `myagent_env`），其中包含 Python 解释器的副本以及安装库的位置。
+
+### 激活你的虚拟环境
+
+创建后，你需要“激活”该环境。激活会修改你的终端提示符以表明当前活跃的环境，并确保 `python` 和 `pip` 命令使用该环境的隔离设置。
+
+- **在 Windows 上（命令提示符）：**
+
+  ```bash
+  myagent_env\Scripts\activate.bat
+  ```
+- **在 Windows 上（PowerShell）：**
+
+  ```bash
+  myagent_env\Scripts\Activate.ps1
+  ```
+
+  （你可能需要调整执行策略：`Set-ExecutionPolicy Unrestricted -Scope Process`）
+- **在 macOS 和 Linux 上（bash/zsh）：**
+
+  ```bash
+  source myagent_env/bin/activate
+  ```
+
+激活后，你的终端提示符会改变，通常会以 `(myagent_env)` 为前缀。要停用，只需在终端中输入 `deactivate`。在处理项目之前，务必激活你的虚拟环境。
+
+## 为你的代理程序安装核心库
+
+虚拟环境激活后，你现在可以安装你的代理程序所需的 Python 库。我们将从两个库开始：
+
+1. **`openai`**：此库提供便捷访问 OpenAI 的大型语言模型（如 GPT-3.5 和 GPT-4）。我们将用它作为与强大的大型语言模型交互的起点。即使你以后尝试使用其他大型语言模型的代理程序，使用这种 SDK（软件开发工具包）的原理也会类似。
+2. **`python-dotenv`**：大型语言模型代理程序通常需要 API 密钥来访问服务。重要的是不要将这些密钥直接硬编码到你的脚本中。`python-dotenv` 通过从特殊的 `.env` 文件加载 API 密钥等敏感信息来帮助你管理它们。
+
+### 安装步骤
+
+确保你的虚拟环境已激活。然后，使用 `pip` 安装这些库：
+
+```bash
+pip install openai python-dotenv
+```
+
+此命令告诉 `pip` 将 `openai` 和 `python-dotenv` 包的最新版本及其依赖项下载并安装到你的活跃虚拟环境（`myagent_env`）中。你应该会看到表明安装成功的输出。
+
+## 组织你的项目文件
+
+组织得当大有裨益。对于你的第一个代理程序，一个简单的结构就足够了。在你创建虚拟环境的主文件夹内（例如 `my_first_agent`），你可能会有：
+
+- `myagent_env/`：虚拟环境目录（由 `venv` 创建）。
+- `agent.py`：这将是你编写代理程序代码的主 Python 文件。
+- `.env`：一个你存储 API 密钥的文件（我们将在下一节更详细地介绍）。**重要：** 此文件不应公开分享。
+
+> 你的大型语言模型代理程序项目推荐的简单目录结构。
+
+## 验证你的设置
+
+让我们快速检查一下，确保一切都按预期工作。
+
+1. 确保你的虚拟环境（`myagent_env`）仍然活跃。
+2. 在你的项目目录中创建一个名为 `verify_setup.py` 的新 Python 文件（例如 `my_first_agent/verify_setup.py`）。
+3. 在你的代码编辑器中打开 `verify_setup.py` 并添加以下行：
+
+   ```python
+   try:
+       import openai
+       import dotenv
+       print("成功导入了 'openai' 和 'dotenv' 库。")
+       print(f"OpenAI 库版本: {openai.__version__}")
+       print("你的开发环境似乎已准备就绪！")
+   except ImportError as e:
+       print(f"导入库时出错: {e}")
+       print("请确保你已激活虚拟环境并安装了所需的包（'pip install openai python-dotenv'）。")
+   ```
+4. 保存文件。
+5. 在你的终端中（仍在你的项目目录中且虚拟环境已激活），运行脚本：
+
+   ```bash
+   python verify_setup.py
+   ```
+
+如果一切设置正确，你应该会看到一条成功消息和 `openai` 库的版本。如果你看到 `ImportError`，请仔细检查你的虚拟环境是否活跃，并且你已使用 `pip` 成功安装了库。
+
+你的工作环境准备好后，你现在可以进入下一步：为你的第一个代理程序选择一个大型语言模型并学习如何与它交互。这种前期准备工作将在你开始构建和尝试时对你很有帮助。
+
+## 参考资料
+
+- [The Python 3 Tutorial](https://docs.python.org/3/) — Python Software Foundation (Current (as of 2024))
+  Python 编程语言的官方综合文档，涵盖安装、使用 pip 进行包管理以及使用 venv 创建虚拟环境。
+- [Python in Visual Studio Code](https://code.visualstudio.com/docs/python/python-tutorial) — Microsoft (Current (as of 2024))
+  Visual Studio Code 及其扩展在 Python 开发中的设置和使用官方指南。
+- [OpenAI Python API Library](https://platform.openai.com/docs/libraries/python-api) — OpenAI (Current (as of 2024))
+  OpenAI Python 客户端库的官方文档，提供有关如何与 OpenAI 大语言模型交互的信息。
+- [python-dotenv](https://pypi.org/project/python-dotenv/) — S. K. A. Kumar and contributors (2023)
+  python-dotenv 库的官方包仓库页面和文档，该库用于从 .env 文件加载环境变量。

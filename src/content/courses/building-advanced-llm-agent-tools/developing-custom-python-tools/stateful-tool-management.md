@@ -1,0 +1,215 @@
+---
+course: "building-advanced-llm-agent-tools"
+chapter: "developing-custom-python-tools"
+lesson: "stateful-tool-management"
+sourceId: 6557
+sourceUrl: "https://apxml.com/zh/courses/building-advanced-llm-agent-tools/chapter-2-developing-custom-python-tools/stateful-tool-management"
+title: "管理有状态工具中的状态和上下文"
+description: "了解构建有状态工具的方法，这些工具可以在与LLM代理的多次交互中保持上下文。"
+order: 2
+plots: []
+sourceHash: "30d3f37cf06a6d6ba6582e8463af8e24a0ff6f4bc2e722b7d52336cef39c6d33"
+sourceCorrections: []
+---
+
+有些工具只需一次独立操作即可完成任务，但许多精密的交互要求工具在多个步骤或调用中记住信息。这些被称为有状态工具，有效管理其状态对于构建更强大、更了解上下文 (context)的LLM代理不可或缺。与将每次调用都视为全新开始的无状态工具不同，有状态工具保持记忆或“状态”，使其能够建立在以前的交互基础之上，跟踪进度，或随时间积累信息。当LLM代理需要执行一系列相关操作或参与多轮对话（其中早期交流的上下文会影响后续交流）时，这种能力特别有用。
+
+### 为什么状态在LLM代理工具中很重要
+
+LLM代理通常通过对不同工具或同一工具进行多次系列调用来运行。例如，如果一个工具在执行其最终操作之前需要收集多条信息（如收集航班预订所需的所有详细信息），它必须有一种方法来暂时存储这些信息。状态管理提供了这一功能。
+
+考虑一个代理帮助用户规划项目的场景。该代理可能会使用一个“任务管理器”工具。
+
+1. 用户：“添加任务‘撰写引言’。”
+2. 用户：“将‘撰写引言’的截止日期设为下周五。”
+3. 用户：“将‘撰写引言’分配给爱丽丝。”
+
+为了使`task_manager`工具正确地将截止日期和负责人与“撰写引言”任务关联起来，它需要维护状态，具体来说，它需要记住当前正在管理哪些任务及其属性。
+
+### 在Python工具中实现状态
+
+Python提供了几种方法来管理自定义工具中的状态。选择通常取决于状态的复杂性、所需的生命周期以及是否需要共享或持久化。
+
+#### 1. 使用类实例实现内存中状态
+
+对于只需要在特定任务期间或在代理活动的单个“会话”内持久存在的状态，Python类是一个很好的选择。类的实例属性可以保存状态。每当LLM代理需要使用这个有状态工具时，它将与该工具类的实例进行交互。
+
+```python
+class ConversationSummarizer:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.conversation_history = []
+        self.key_points = set()
+        print(f"会话摘要工具已为用户 {self.user_id} 初始化")
+
+    def add_message(self, sender, text):
+        """将消息添加到会话历史记录中。"""
+        if not isinstance(sender, str) or not isinstance(text, str):
+            return "Error: Sender and text must be strings."
+        message = {"sender": sender, "text": text}
+        self.conversation_history.append(message)
+        # 提取潜在关键点（例如名词）的简单方法
+        # 在实际工具中，这会更复杂
+        for word in text.split():
+            if word.capitalize() == word and len(word) > 3: # 对专有名词的基本检查
+                self.key_points.add(word)
+        return f"Message from {sender} added. Conversation length: {len(self.conversation_history)} messages."
+
+    def get_summary(self):
+        """提供会话中关键点的摘要。"""
+        if not self.conversation_history:
+            return "No conversation history to summarize."
+        summary = f"Key points for user {self.user_id}: {', '.join(self.key_points) if self.key_points else 'None yet'}."
+        return summary
+
+    def clear_history(self):
+        """清除会话历史记录和关键点。"""
+        self.conversation_history = []
+        self.key_points = set()
+        return f"Conversation history cleared for user {self.user_id}."
+
+# 示例用法（代理可能如何编排）：
+# user_session_id = "user123"
+# summarizer_tool = ConversationSummarizer(user_session_id)
+
+# print(summarizer_tool.add_message("用户", "我需要预订下周飞往伦敦的航班。"))
+# print(summarizer_tool.add_message("代理", "好的，我可以帮忙。您考虑伦敦的哪些日期？"))
+# print(summarizer_tool.add_message("用户", "大约三月15日。"))
+# print(summarizer_tool.get_summary())
+# print(summarizer_tool.clear_history())
+```
+
+在此示例中，`conversation_history`和`key_points`是实例属性，用于存储特定`user_id`的会话状态。代理框架将负责实例化此类别（可能每个用户会话一次），并将调用路由到正确的实例。
+
+**优点：**
+
+- 易于为特定会话状态实现。
+- 状态被封装在工具的对象中。
+
+**注意事项：**
+
+- 当Python进程结束或对象实例被销毁时，状态会丢失，除非明确进行持久化。
+- 不适用于需要跨不同代理进程共享或无需额外方式长期持久存在的状态。
+
+#### 2. 使用外部状态存储实现持久化和共享
+
+当状态需要在一个代理会话结束后仍然存在，或在多个代理实例之间共享，或处理更大容量的数据时，您需要依赖外部存储方式。常见选项包括：
+
+- **文件：** 简单的文本文件、JSON文件或CSV文件可以存储状态。这适用于更简单的状态结构或当偏好轻量级解决方案时。通常需要序列化（例如，使用Python的`json`模块）。
+- **数据库：**
+  - **SQL数据库（例如SQLite、PostgreSQL、MySQL）：** 适用于具有明确关系的结构化状态。SQLite特别容易集成到Python应用程序中以实现本地持久化。
+  - **NoSQL数据库（例如MongoDB、Redis）：**
+    - MongoDB（文档存储）：对于半结构化或不断变化的状态数据具有灵活性。
+    - Redis（键值存储）：非常适合缓存和快速访问简单的状态变量，如会话数据或功能标志。
+- **云存储解决方案：** 像AWS S3、Google Cloud Storage或Azure Blob Storage这样的服务可以存储序列化状态对象，特别适用于大数据或分布式应用程序。
+
+外部存储的选择取决于数据结构、查询要求、可伸缩性需求和现有基础设施等因素。
+
+```python
+import json
+import os
+
+STATE_FILE_DIR = "tool_states" # 确保此目录存在
+
+class PersistentNotepadTool:
+    def __init__(self, session_id):
+        self.session_id = session_id
+        self.state_file_path = os.path.join(STATE_FILE_DIR, f"{self.session_id}_notepad.json")
+        self._load_state()
+
+    def _load_state(self):
+        """从JSON文件加载笔记。"""
+        try:
+            if not os.path.exists(STATE_FILE_DIR):
+                os.makedirs(STATE_FILE_DIR)
+            with open(self.state_file_path, 'r') as f:
+                self.notes = json.load(f)
+        except FileNotFoundError:
+            self.notes = [] # 如果状态文件不存在，则初始化为空列表
+        except json.JSONDecodeError:
+            print(f"警告：无法从 {self.state_file_path} 解码JSON。将从空笔记开始。")
+            self.notes = []
+
+    def _save_state(self):
+        """将笔记保存到JSON文件。"""
+        try:
+            if not os.path.exists(STATE_FILE_DIR):
+                os.makedirs(STATE_FILE_DIR)
+            with open(self.state_file_path, 'w') as f:
+                json.dump(self.notes, f, indent=4)
+        except IOError as e:
+            print(f"Error saving state for {self.session_id}: {e}")
+            # 可能抛出异常或向代理返回错误
+
+    def add_note(self, content):
+        """向持久化列表中添加笔记。"""
+        if not isinstance(content, str):
+            return "Error: Note content must be a string."
+        self.notes.append(content)
+        self._save_state()
+        return f"Note added. Total notes: {len(self.notes)}."
+
+    def view_notes(self):
+        """查看所有当前笔记。"""
+        if not self.notes:
+            return "No notes to display."
+        return "Current notes:\n" + "\n".join(f"- {note}" for note in self.notes)
+
+    def clear_notes(self):
+        """清除所有笔记。"""
+        self.notes = []
+        self._save_state()
+        return "All notes cleared."
+
+# 示例用法（模拟代理交互）：
+# notepad_for_user_A = PersistentNotepadTool("userA_session")
+# print(notepad_for_user_A.add_note("记得买牛奶"))
+# print(notepad_for_user_A.add_note("项目截止日期是周五"))
+# print(notepad_for_user_A.view_notes())
+
+# # 如果另一个进程或稍后的会话使用相同的session_id：
+# notepad_for_user_A_later = PersistentNotepadTool("userA_session")
+# print(notepad_for_user_A_later.view_notes()) # 应该显示之前添加的笔记
+# print(notepad_for_user_A_later.clear_notes())
+```
+
+在这个`PersistentNotepadTool`中，`notes`从与`session_id`对应的JSON文件加载并保存。这使得状态能够在工具的不同实例化之间保持不变，只要`session_id`保持一致。
+
+一个图表，说明使用有状态工具时的交互流程，可能带有外部存储：
+
+> 此图表显示LLM代理与有状态工具的交互。该工具管理其内部状态，并可选择与外部存储交互，以持久化或检索状态信息，然后将结果返回给代理。
+
+### 管理上下文 (context)和会话标识符
+
+为了使有状态工具正常运行，特别是在涉及多个用户或对话时，它们需要一种将状态与正确上下文关联起来的方法。这通常通过会话标识符来处理：
+
+- **会话ID传递：** 代理或管理代理的框架负责在每次调用期间生成唯一的会话ID（或用户ID、对话ID）并将其传递给工具。
+- **工具的职责：** 有状态工具随后使用此ID来检索、更新或存储相关状态。在我们的`PersistentNotepadTool`示例中，`session_id`用于命名状态文件。如果使用数据库，会话ID可能是主键或索引列。
+
+同样重要的是，LLM的提示应以某种方式构建，以指示交互的持续性。诸如“将此添加到我之前的列表”、“我们之前讨论过X什么？”或“继续执行之前的计划”之类的短语可以指导代理适当地使用有状态工具。提供给LLM的工具描述也应清楚表明其有状态性质以及如何在多轮中与之交互。
+
+### 有状态工具的设计考虑
+
+构建有状态工具时，请记住以下几点：
+
+- **状态初始化：** 如何为新会话或用户创建状态？是否存在默认状态？
+- **状态重置/清除：** 如果需要，提供一种方法来清除或重置状态（例如`ConversationSummarizer`中的`clear_history()`）。
+- **范围和生命周期：** 确定状态需要持久存在多长时间。仅会话状态比长期持久状态更简单。
+- **数据表示：** 为您的状态选择合适的数据结构（字典、列表、自定义对象）。如果使用外部存储，请确保它们是可序列化的。
+- **并发性：** 如果多个进程或线程可能同时访问/修改同一状态（例如，在为多个用户服务的Web应用程序中），您需要实现锁定方式或使用数据库/缓存提供的原子操作来防止竞态条件并确保数据完整性。这是一个更高级的主题，但对于生产系统很重要。
+- **错误处理：** 如果状态加载失败（例如，文件损坏、数据库不可用）会发生什么？工具应妥善处理此类错误，例如从默认空状态开始并记录错误。同样，保存状态也可能失败。
+
+有效管理状态和上下文 (context)可以将您的工具从简单的单次执行器转变为能够支持扩展、连贯交互的组件。随着您构建更复杂的代理，创建和管理有状态工具的能力将变得越来越有价值，使您的代理能够处理需要记忆和连续性的任务。关于工具选择和编排的下一章将在此基础上进行，展示代理如何选择和排序无状态和有状态工具以实现复杂目标。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://dataintensive.net/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media, Inc.
+  一本关于数据系统原理的综合指南，涵盖数据库（SQL、NoSQL）、数据模型、分布式系统和一致性，对于设计工具中健壮的外部状态管理很重要。
+- [The Python Tutorial: Classes](https://docs.python.org/3/tutorial/classes.html) — Python Software Foundation (2024)
+  官方文档解释了Python的面向对象特性，包括类和实例如何通过属性管理状态，这是内存中状态工具的基础。
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442) — Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein (2023)
+  Journal: arXiv; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  一篇研究论文，展示了由LLM驱动的智能体如何管理和使用长期记忆和上下文状态以进行连贯的多轮交互，与上下文感知的智能体密切相关。
+- [json - JSON encoder and decoder](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhuQs6JAbJqyj4MeU8SxOjp0mBRKnJPTj3qufgxbfLvb5zBUYvQTZSH1t3p76GGkXZrN9aK09n4FOgjuITyejfKOKPpFUPyMN7rd15b6nKoC9WtkvMk1AJ3XofmpSgZmuVUxu2zg==) — Python Software Foundation (2024)
+  Python官方文档中关于`json`模块的说明，该模块用于数据的序列化和反序列化，对于将Python对象持久化到文件或数据库存储至关重要。

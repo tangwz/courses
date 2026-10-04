@@ -1,0 +1,82 @@
+---
+course: "introduction-to-deep-learning"
+chapter: "neural-network-foundations"
+lesson: "perceptron-simplest-network"
+sourceId: 5021
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-deep-learning/chapter-1-neural-network-foundations/perceptron-simplest-network"
+title: "感知机：最简单的神经网络"
+description: "学习感知机的结构和功能，它是最早的人工神经网络。"
+order: 4
+plots: []
+sourceHash: "86cac49a36f804012ebc2bc7560f216ae3eaf5eff8ef4c9e48e93f1351550e11"
+sourceCorrections: []
+---
+
+感知机是人工神经元数学模型最早的实际实现。它由Frank Rosenblatt在1950年代后期提出，是最简单的前馈神经网络 (neural network)，通常包含一个或多个输出节点的单层。可以将其看作是一个基于证据做出判断的计算单元。
+
+### 结构与运作
+
+感知机接收多个输入，对这些输入施加权重 (weight)，将它们与偏置 (bias)项相加，然后使用一个简单的阶跃函数来判断是输出1还是0（有时根据约定输出+1和-1）。让我们分析一下它的组成部分：
+
+1. **输入 ($x_1, x_2, ..., x_n$):** 这些是表示被评估数据点的数值特征。尽管Rosenblatt最初的感知机常使用二进制输入，但该模型也适用于实数值输入。
+2. **权重 ($w_1, w_2, ..., w_n$):** 每个输入特征 $x_i$ 都有一个关联的权重 $w_i$。此权重表示该特定输入对最终判断的重要性或影响。正权重表示相应输入有助于激活感知机（输出1），而负权重则有助于使其不激活（输出0）。权重的绝对值表明了这种影响的强度。
+3. **偏置 ($b$):** 偏置是一个额外参数 (parameter)，类似于线性方程中的截距项。它为神经元提供一个可训练的基准激活，独立于输入。添加偏置会移动决策边界，使感知机能对不一定通过原点的数据集进行建模。从数学角度来看，将偏置看作对应于常数输入 $x_0 = 1$ 的权重 $w_0$ 通常很方便。
+4. **求和函数 ($\Sigma$):** 感知机计算的核心是其输入的加权和，加上偏置。这是一个线性组合：
+   
+   $$
+   z = w_1 x_1 + w_2 x_2 + ... + w_n x_n + b = \left( \sum_{i=1}^{n} w_i x_i \right) + b
+   $$
+   
+5. **激活函数 (activation function) ($\phi$):** 求和结果 $z$ 随后通过一个激活函数。经典的感知机使用一个简单的阶跃函数，通常是Heaviside阶跃函数：
+   
+   $$
+   \hat{y} = \phi(z) = \begin{cases} 1 & \text{如果 } z \geq 0 \\ 0 & \text{如果 } z < 0 \end{cases}
+   $$
+   
+   这里，$\hat{y}$（读作“y-hat”）表示感知机产生的输出或预测。如果加权和 $z$ 大于或等于零（这意味着它达到或超过了由偏置隐含设定的阈值，特别是 $-b$），感知机就会“激活”并输出1。否则，它输出0。这一特点使得感知机非常适合二元分类问题，其目标是将输入归入两个类别之一。
+
+### 感知机的可视化
+
+一个简单的图表有助于说明感知机内部的信息流动：
+
+> 单个感知机内部的信息流动。输入 $x_i$ 乘以权重 (weight) $w_i$。偏置 (bias) $b$ 被加到求和结果中。结果通过阶跃激活函数 (activation function) $\phi$ 产生二元输出 $\hat{y}$。
+
+### 几何解释
+
+从几何角度看，定义感知机输出切换点的方程，$z = \sum w_i x_i + b = 0$，表示一个决策边界。在二维输入空间 ($n=2$) 中，该方程定义一条直线 ($w_1 x_1 + w_2 x_2 + b = 0$)。在三维空间中，它定义一个平面，在更高维度中，它定义一个超平面。
+
+感知机的工作原理是找到一个超平面，将属于类别1的输入数据点与属于类别0的数据点分开。这种固有的线性特性意味着单个感知机只能成功分类*线性可分*的数据集，即存在这种分离超平面的数据集。
+
+### 感知机学习规则
+
+Rosenblatt不仅定义了其结构；他还提供了一个简单的算法来训练感知机，使其能够从数据中学习到合适的权重 (weight)和偏置 (bias)。感知机学习规则是一个迭代过程：
+
+1. 将权重 ($w_i$) 和偏置 ($b$) 初始化为小的随机值或零。
+2. 对于每个训练样本 $(\mathbf{x}, y)$，其中 $\mathbf{x}$ 是输入向量 (vector) $[x_1, ..., x_n]$， $y$ 是真实目标标签（0或1）：
+   a. 使用当前的权重和偏置计算感知机的输出 $\hat{y}$。
+   b. 将输出 $\hat{y}$ 与真实标签 $y$ 进行比较。
+   c. 如果预测不正确 ($y \neq \hat{y}$)，更新权重和偏置：
+   $w_i \leftarrow w_i + \alpha (y - \hat{y}) x_i \quad \text{对于所有 } i=1, ..., n$
+   $b \leftarrow b + \alpha (y - \hat{y})$
+   这里，$\alpha$ 是学习率，一个小的正常量（例如0.1或0.01），它控制更新的幅度。请注意，如果目标是1而输出是0（假阴性），则 $(y - \hat{y})$ 将为+1；如果目标是0而输出是1（假阳性），则为-1。
+   d. 如果预测正确 ($y = \hat{y}$)，则不对权重或偏置进行任何更改。
+3. 重复步骤2，多次迭代训练数据集（周期），直到感知机收敛（即在训练集上没有错误，或满足其他停止标准）。
+
+已经证明，如果训练数据是线性可分的，感知机学习算法保证会收敛并找到一组能够正确分类所有训练样本的权重和偏置。
+
+感知机是一个奠基模型，它表明简单的单元可以通过数据学习来执行分类任务。然而，其简单性也带来了限制，特别是它无法处理非线性可分问题，我们将在下一节中进行讨论。
+
+## 参考资料
+
+- [The Perceptron: A Probabilistic Model for Information Storage and Organization in the Brain](https://psycnet.apa.org/record/1959-00100-001) — Frank Rosenblatt (1958)
+  Journal: Psychological Review; Publisher: American Psychological Association; Volume: 65; Pages: 386-408; DOI: [10.1037/h0042519](https://doi.org/10.1037/h0042519)
+  首次提出感知器概念及其学习算法的原始论文。
+- [Perceptrons: An Introduction to Computational Geometry (Expanded Edition)](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG6vU9Vd33i8abAcPdBFmcRfrxckvVIIoV2kzUt0-LOrhxmz8WYSbooFy7oAAMhmlh7D5wxxHlujWPCkLPHWJAC_U2Uq71RlJSBttXwjdg4wLJpIixqgyAWRZZaj75nO_7fZXw73QNLspuQSp3KCYz0maFEVH5pgMewTYtAz71ZsKbQtWxezhXZOR-wKBjKV_86_pw9i7EKmrPCgDAm9yImLRp) — Marvin Minsky, Seymour A. Papert (1988)
+  Publisher: MIT Press
+  奠基性著作，分析了感知器的能力和局限性，特别是其无法解决非线性可分问题的能力。此扩展版包含更新内容。
+- [Pattern Recognition and Machine Learning](https://link.springer.com/book/9780387310732) — Christopher M. Bishop (2006)
+  Publisher: Springer; Pages: 738; DOI: [10.1007/b139360](https://doi.org/10.1007/b139360)
+  一本关于模式识别和机器学习数学基础的综合教材，清晰阐释了感知器模型。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael Nielsen (2015)
+  Publisher: Determination Press
+  一本在线免费书籍，对神经网络提供了清晰直观的介绍，其中包括感知器的详细解释。

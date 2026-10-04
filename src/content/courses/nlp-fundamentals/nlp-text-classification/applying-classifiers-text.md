@@ -1,0 +1,84 @@
+---
+course: "nlp-fundamentals"
+chapter: "nlp-text-classification"
+lesson: "applying-classifiers-text"
+sourceId: 2489
+sourceUrl: "https://apxml.com/zh/courses/nlp-fundamentals/chapter-3-nlp-text-classification/applying-classifiers-text"
+title: "将分类器应用于文本数据"
+description: "准备文本特征和训练分类模型的步骤。"
+order: 2
+plots: []
+sourceHash: "9bef7f2e0d2c43eeeee39f4f1407b16dec4b421ea511bd9eb013de6da2b97277"
+sourceCorrections: []
+---
+
+文本数据，以TF-IDF或N-gram计数等数值特征向量 (vector)形式表示，构成了应用监督机器学习 (machine learning)算法进行分类的基础。主要思路是训练一个模型，它学习一个映射函数 $f: X \to y$，此处的 $X$ 表示文本特征矩阵，$y$ 表示相应的预定义标签向量（例如，“垃圾邮件”/“非垃圾邮件”、“积极”/“消极”、“体育”/“政治”）。
+
+文本特征的高维且常稀疏的特性影响着分类算法的选择和使用。尽管存在多种算法，但朴素贝叶斯、逻辑回归和支持向量机（SVM）常是文本分类任务的有效起点。
+
+### 为分类器准备数据
+
+训练前，典型的机器学习 (machine learning)流程是：
+
+1. **特征矩阵 ($X$) 和标签向量 (vector) ($y$)**：确保您的数据被组织成一个特征矩阵，其中行对应文档，列对应特征（例如，特定词项的TF-IDF分数或N-gram）。您还需要每个文档对应的标签向量。
+2. **训练-测试集划分**：将数据集划分为训练集和测试集是基本的做法。模型从训练集学习模式，并在未见过的测试集上评估其性能，以估计它在新数据上的泛化能力。常见的划分比例是训练集占70-80%，测试集占20-30%。像Scikit-learn这样的库提供了处理此过程的函数（`train_test_split`），通常包括分层划分的选项，以确保在两个集合中都保持标签的比例，这对于不平衡数据集特别有用。
+
+> 准备数据和训练分类器的基本流程。
+
+### 应用常见算法
+
+让我们看看标准分类器如何与文本特征相互作用：
+
+- **朴素贝叶斯**：尤其是多项式朴素贝叶斯变体，常是文本分类的一个强有力基准。它对高维稀疏计数数据（例如词频或TF-IDF分数）效果良好，且计算效率高。它根据词语的存在来计算文档属于某个类别的概率，假设特征之间条件独立（“朴素”假设）。尽管有此简化，它在文本上常有出乎意料的好表现。伯努利朴素贝叶斯是另一种有时使用的变体，它侧重于词语的存在/缺失而非频率。
+- **逻辑回归**：这种线性模型也适用于高维稀疏数据。它使用逻辑函数来建模文档属于特定类别的概率。通常应用正则化 (regularization)技术（$L1$ 或 $L2$）来防止过拟合 (overfitting)，考虑到文本数据中常见的海量特征，这一点非常重要。逻辑回归常能提供良好的性能，并且其输出（概率）可以被解释。
+- **支持向量 (vector)机 (SVM)**：SVM旨在找到最佳超平面，以在特征空间中将属于不同类别的数据点最有效地分开。它们在高维空间 (high-dimensional space)中特别有效，因此适用于文本分类。对于文本，线性核（Scikit-learn中的LinearSVC）通常足够，并且比非线性核在计算上更高效。SVM关注最接近决策边界的数据点（支持向量），这使得它们对异常值有一定效果。
+
+### 训练和预测步骤
+
+一旦您有了划分好的数据（$X_{train}, y_{train}, X_{test}, y_{test}$）并选择了分类器，整个过程通常遵循以下步骤，使用像Scikit-learn这样的库：
+
+1. **实例化模型**：创建所选分类器类的实例。您可以在此阶段指定超参数 (parameter) (hyperparameter)（尽管调优稍后进行）。
+
+   ```python
+   from sklearn.naive_bayes import MultinomialNB
+   from sklearn.linear_model import LogisticRegression
+   from sklearn.svm import LinearSVC
+
+   # 实例化示例
+   nb_classifier = MultinomialNB()
+   logreg_classifier = LogisticRegression(solver='liblinear', random_state=42)
+   svm_classifier = LinearSVC(random_state=42)
+   ```
+2. **训练模型 (Fit)**：使用分类器对象的 `fit()` 方法，传入训练特征矩阵 ($X_{train}$) 和训练标签向量 (vector) ($y_{train}$)。在此步骤中，算法根据训练数据中的模式学习模型的参数。
+
+   ```python
+   # 训练每个模型
+   nb_classifier.fit(X_train, y_train)
+   logreg_classifier.fit(X_train, y_train)
+   svm_classifier.fit(X_train, y_train)
+   ```
+3. **进行预测**：使用*已训练*分类器对象的 `predict()` 方法，传入测试特征矩阵 ($X_{test}$)。模型将学习到的映射应用于这些未见数据，以生成预测标签 ($y_{pred}$)。
+
+   ```python
+   # 在测试集上生成预测结果
+   nb_predictions = nb_classifier.predict(X_test)
+   logreg_predictions = logreg_classifier.predict(X_test)
+   svm_predictions = svm_classifier.predict(X_test)
+   ```
+
+这些预测结果 ($y_{pred}$) 可以通过各种评估指标与实际标签 ($y_{test}$) 进行比较，这些我们将在下一节进行介绍。这一评估步骤对于了解分类器表现如何以及比较不同模型或超参数设置非常重要。请记住，所用的特征表示（例如TF-IDF配置、N-gram范围）对分类器性能有显著影响，使特征工程和模型选择成为文本分类过程中相互关联的部分。
+
+## 参考资料
+
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University (online draft)
+  自然语言处理的综合教科书，包含文本分类算法（如朴素贝叶斯和逻辑回归）的详细解释。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/html/htmledition/) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  一本关于信息检索的基础教科书，涵盖文本分类、特征工程和信息检索中使用的核心机器学习算法。
+- [Classification](https://scikit-learn.org/stable/modules/supervised_learning.html) — scikit-learn developers (2024)
+  Publisher: The scikit-learn project
+  Scikit-learn的官方文档，提供各种分类算法、数据拆分工具和实现示例的详细信息。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://books.google.com/books?id=xR-MEAAAQBAJ) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的指南，展示了如何使用Scikit-learn库应用机器学习算法，包括分类算法。

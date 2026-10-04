@@ -1,0 +1,199 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "advanced-exploration-strategies"
+lesson: "exploration-implementation-practice"
+sourceId: 3435
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-4-advanced-exploration-strategies/exploration-implementation-practice"
+title: "寻优策略实施实践"
+description: "在RL环境中动手实施和比较不同的高级寻优策略。"
+order: 10
+plots: ["plots/3435-0.json"]
+sourceHash: "ddd50a7410489fb1a393db4c48891c03423aefeb93214be1a97141441a43bf22"
+sourceCorrections: []
+---
+
+既然我们已经审视了几种高级寻优策略，现在是时候将理论付诸实践了。应用这些技术需要与现有强化学习 (reinforcement learning)算法仔细整合，并且通常涉及管理额外的模型组件和超参数 (parameter) (hyperparameter)。本节提供实用指导和示例，用于在常见强化学习框架中实施和比较高级寻优方法。我们将专注于阐明核心机制，而非提供详尽的、生产就绪的代码，旨在帮助您将这些思想应用于特定问题。
+
+理解示例需要熟悉标准的深度学习 (deep learning)库（如PyTorch或TensorFlow）和强化学习环境框架（如Gymnasium）。示例通常会与DQN或PPO等算法结合使用，因此建议您已掌握这些算法的基础知识。
+
+### 环境设置
+
+为了有效比较，在$\epsilon$-贪婪等基本方法难以奏效的环境中测试寻优策略会很有帮助。具有稀疏奖励或欺骗性局部最优的环境是极佳选择。示例包括：
+
+1. **自定义网格：** 设计一个网格，其中单一奖励位于远离起始位置之处，可能需要穿过“空”空间才能到达。
+2. **MountainCar：** 虽然简单，但达到目标需要持续、有方向的寻优以积累动量。稀疏奖励变体使其更具挑战。
+3. **蒙特祖玛的复仇 (Atari)：** 一个经典的基准测试，以其严峻的寻优难题而闻名。
+
+选择一个适合您所增强算法的环境（例如，适用于DQN的离散动作寻优，适用于PPO的连续或离散动作寻优）。
+
+### 实现基于计数的寻优
+
+基于计数的方法会为环境的外部奖励添加寻优奖励，鼓励访问不常出现的州/状态。该奖励通常形式为：
+
+
+$$
+r_{bonus}(s) = \frac{\beta}{\sqrt{N(s)}}
+$$
+
+
+$N(s)$ 是状态 $s$ 的访问次数，$\beta$ 是控制寻优强度的超参数 (parameter) (hyperparameter)。
+
+**整合步骤：**
+
+1. **状态表示与计数：**
+
+   - 对于离散状态空间（如小型网格世界），维护一个字典或哈希映射来存储每个状态 `s` 的计数。
+   - 对于连续或高维状态（如图像），直接计数是不可行的。你需要一种方法来离散化或聚类状态。一种常见的方法是使用密度模型或对神经网络 (neural network)从状态中提取的特征进行哈希处理（类似于RND中使用的技术，稍后会讨论）。为简单起见，这里假设状态空间是可管理的离散空间，或有一个合适的哈希函数 `hash(s)`。
+2. **计算奖励：**
+
+   - 在更新代理之前（例如，在Q学习更新之前或将转换存储到回放缓冲区之前），计算*下一个状态* $s'$ 的访问计数 $N(s')$。
+   - 计算奖励 $r_{bonus}(s') = \beta / \sqrt{N(s')}$。
+   - 更新计数：$N(s') \leftarrow N(s') + 1$。
+3. **修改奖励：**
+
+   - 用于学习的总奖励变为 $r_{total} = r_{extrinsic} + r_{bonus}(s')$。
+   - 在代理的学习更新中使用此 $r_{total}$（例如，在Q学习的贝尔曼目标中或计算PPO的优势时）。
+
+**伪代码片段（在Q学习/DQN步骤中）：**
+
+```python
+# 假设 'state_counts' 是一个跟踪 N(s) 的字典
+# 假设 'beta' 是寻优超参数
+
+# 在状态 's' 中采取动作 'a' 并观察到 'next_state'、'reward' 之后
+next_state_hash = hash(next_state)
+
+# 获取当前计数（如果是首次访问则初始化）
+count = state_counts.get(next_state_hash, 0)
+
+# 计算寻优奖励
+bonus = beta / math.sqrt(count + 1) # 加 1 以避免初始除以零
+
+# 更新下一个状态的计数
+state_counts[next_state_hash] = count + 1
+
+# 组合奖励
+total_reward = reward + bonus
+
+# 在Q更新中使用 total_reward 或将其存储在回放缓冲区中
+# target_q = total_reward + gamma * max_q_next_state
+# 将 (s, a, total_reward, next_state, done) 存储在缓冲区中
+```
+
+**注意事项：**
+
+- **超参数 $\beta$：** 这需要调优。更大的 $\beta$ 鼓励更多的寻优。其最优值取决于奖励规模和稀疏性。
+- **状态空间大小：** 直接计数仅适用于较小或有效离散化的状态空间。密度模型更通用，但增加了复杂度。
+
+### 实现内在好奇心模块 (ICM)
+
+ICM生成内在奖励，基于代理无法预测其行为后果。它鼓励代理在环境中不熟悉的部分进行查探，即动力学令人惊讶或理解不足的地方。
+
+**核心组件：**
+
+1. **特征编码网络 ($\phi$)：** 将原始状态 $s$ 映射到特征表示 $\phi(s)$。该网络是隐式训练的。
+2. **逆动力学模型 ($g$)：** 接收两个连续的状态特征，$\phi(s_t)$ 和 $\phi(s_{t+1})$，并预测它们之间采取的动作 $\hat{a}_t$：$\hat{a}_t = g(\phi(s_t), \phi(s_{t+1}))$。训练旨在最小化 $\hat{a}_t$ 和实际动作 $a_t$ 之间的差异（例如，对离散动作使用交叉熵损失）。这迫使 $\phi$ 学习与预测动作相关的特征。
+3. **正向动力学模型 ($f$)：** 接收特征状态 $\phi(s_t)$ 和动作 $a_t$ 来预测下一个特征状态 $\hat{\phi}(s_{t+1}) = f(\phi(s_t), a_t)$。训练旨在最小化预测误差：$L_F = ||\hat{\phi}(s_{t+1}) - \phi(s_{t+1})||^2$。
+
+**内在奖励：** 正向模型的预测误差作为内在奖励：
+
+
+$$
+r^i_t = \eta \cdot \frac{1}{2} ||\hat{\phi}(s_{t+1}) - \phi(s_{t+1})||^2
+$$
+
+
+其中 $\eta$ 是一个缩放超参数 (parameter) (hyperparameter)。
+
+**整合步骤（通常与PPO/A2C等演员-评论家算法结合）：**
+
+1. **定义网络：** 实现这三个神经网络 (neural network)（$\phi$，$g$，$f$）。$\phi$ 的输出维度是一个设计选择。
+2. **组合损失：** ICM 网络与主RL代理一起训练。总损失通常包括策略损失 ($L_{Policy}$)、价值损失 ($L_{Value}$)、逆模型损失 ($L_I$) 和正向模型损失 ($L_F$):
+   
+   $$
+   L_{total} = L_{Policy} + c_V L_{Value} + c_I L_I + c_F L_F
+   $$
+   
+   系数 $c_V, c_I, c_F$ 平衡这些目标。通常，$L_I$ 和 $L_F$ 会被加权。请注意，$L_F$ 的梯度不应反向传播 (backpropagation)到特征编码器 $\phi$ 中，以避免代理寻求轻易可预测的结果。只有 $L_I$ 训练 $\phi$。
+3. **计算内在奖励：** 在轨迹收集期间，将 $(s_t, a_t, s_{t+1})$ 通过ICM模块来计算 $r^i_t$。
+4. **修改总奖励：** 代理使用外部奖励和内在奖励的总和进行学习：$r_{total} = r_{extrinsic} + r^i_t$。此总奖励用于计算优势和价值目标。
+
+**伪代码片段（ICM计算在代理步骤中）：**
+
+```python
+# 假设 phi_net, inverse_net, forward_net 已定义
+# 假设 eta 是内在奖励的缩放因子
+
+# 观察到转换 (s_t, a_t, r_t, s_t+1) 后
+phi_t = phi_net(s_t)
+phi_t_plus_1 = phi_net(s_t_plus_1)
+
+# 正向模型预测（分离 phi_t 以阻止正向损失的梯度）
+predicted_phi_t_plus_1 = forward_net(phi_t.detach(), a_t)
+
+# 计算内在奖励（预测误差）
+intrinsic_reward = eta * 0.5 * mse_loss(predicted_phi_t_plus_1, phi_t_plus_1.detach())
+
+# 存储内在奖励、特征和动作，以供后续ICM训练
+# 存储 (s_t, a_t, r_t + intrinsic_reward, s_t+1, done) 用于RL代理训练
+
+# 在训练阶段：
+# 使用 phi_t, phi_t_plus_1, 和 a_t 计算逆向损失 L_I
+# 使用 predicted_phi_t_plus_1 和 phi_t_plus_1.detach() 计算正向损失 L_F
+# L_I 反向传播通过 inverse_net 和 phi_net
+# L_F 仅反向传播通过 forward_net
+```
+
+**注意事项：**
+
+- **复杂度：** ICM 增加了显著的模型复杂性和超参数（$\eta$、损失权重 (weight)、网络架构）。
+- **“噪声电视”问题：** ICM 可能会被环境中本质上不可预测但与主要任务无关的随机元素分散注意力。逆动力学模型通过将特征聚焦于可控方面来帮助缓解此问题，但这并非一个完美的方案。在这方面，RND 被认为更有效。
+
+### 比较寻优策略
+
+为了评估您已实施策略的有效性，请在您选定的挑战性环境中运行实验，将其与基线代理（例如，使用简单的$\epsilon$-贪婪或高斯噪声寻优的PPO或DQN）进行比较。
+
+**衡量指标：**
+
+- **学习曲线：** 绘制每个训练步/回合的平均累积外部奖励。这显示了整体性能和学习速度。
+- **达到阈值所需时间：** 测量达到特定性能水平（例如，持续解决任务）所需的步数或回合数。
+- **状态空间覆盖率（如果适用）：** 对于网格世界等环境，可视化每个代理访问的状态。高级策略应更彻底地覆盖空间。
+
+
+
+![寻优策略性能比较（稀疏奖励环境）](plots/3435-0.json)
+
+
+
+> 示例学习曲线，比较了基线 PPO 与基于计数和 ICM 的寻优策略在稀疏奖励任务中的表现。当寻优困难时，高级方法通常学习速度大幅加快。
+
+**分析：**
+
+- 高级策略在外部奖励方面是否学习得更快或达到了更高的最终性能？
+- 这些方法对其超参数 (parameter) (hyperparameter)（$\beta$，$\eta$ 等）的敏感程度如何？
+- 每种方法的计算开销（训练时间）是多少？如果状态哈希简单，基于计数的方法通常比ICM/RND更轻量。
+- 根据结果和环境特征，何时选择一种策略而非另一种？当新颖性与状态访问频率直接相关时，基于计数的方法效果良好。当代理需要理解环境动力学以获取奖励时，ICM 或 RND 等好奇心驱动方法可能更有效。
+
+### 进一步实践
+
+1. **实现随机网络蒸馏（RND）：** 比较 RND 的性能和特性与 ICM 和基于计数的方法。RND 通常表现出强大的性能，并且可能比 ICM 更有效。
+2. **参数 (parameter)空间噪声：** 实现参数噪声（例如，向策略网络层的权重 (weight)添加噪声），并将其与动作空间噪声（如添加到 DDPG/PPO 动作中的高斯噪声）和内在动机方法进行比较。
+3. **组合策略：** 尝试组合方法，例如，将内在奖励与基于价值方法的 $\epsilon$-贪婪结合使用。
+4. **使用库：** 查看现有强化学习 (reinforcement learning)库（Stable Baselines3、RLlib、Tianshou）中的实现。分析它们的代码结构以及它们如何处理寻优奖励或模块的集成。这可以为实现提供有用的见解。
+
+这种动手实践非常重要，有助于培养对不同寻优策略行为方式、它们的优缺点和实施要求的直觉。掌握这些技术能大幅扩大您可以有效解决的强化学习问题的范围。
+
+## 参考资料
+
+- [Exploration by Random Network Distillation](https://arxiv.org/abs/1810.12894) — Yuri Burda, Harrison Edwards, Amos Storkey, Oleg Klimov (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1810.12894](https://doi.org/10.48550/arXiv.1810.12894)
+  介绍了随机网络蒸馏（RND），一种使用随机初始化目标网络的预测误差进行探索的内在激励方法。
+- [Unifying Count-Based Exploration and Intrinsic Motivation](https://static.research.google.com/pubs/archive/64c330f612628679633e5c0107e335ee-Paper.pdf) — Marc G. Bellemare, Sriram Srinivasan, Georg Ostrovski, Tom Schaul, David Saxton, Rémi Munos (2016)
+  Journal: Advances in Neural Information Processing Systems 29; Publisher: NeurIPS; Volume: 29; Pages: 1471-1479
+  探讨了基于计数的探索和内在激励之间的联系，提出了用于高维状态空间的伪计数方法。
+- [Deep Reinforcement Learning Hands-On: Apply modern RL methods, with deep Q-networks, value iteration, policy gradients, TRPO, A2C, and more, using Python and TensorFlow 2](https://www.packtpub.com/product/deep-reinforcement-learning-hands-on-second-edition/9781838826994) — Maxim Lapan (2020)
+  Publisher: Packt Publishing; Pages: 826
+  使用Python和深度学习框架实现深度强化学习算法和探索策略的实践指南。
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  强化学习理论的全面介绍，包含基本的探索技术。

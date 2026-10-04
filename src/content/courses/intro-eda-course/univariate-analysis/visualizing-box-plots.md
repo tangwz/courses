@@ -1,0 +1,113 @@
+---
+course: "intro-eda-course"
+chapter: "univariate-analysis"
+lesson: "visualizing-box-plots"
+sourceId: 1158
+sourceUrl: "https://apxml.com/zh/courses/intro-eda-course/chapter-3-univariate-analysis/visualizing-box-plots"
+title: "数值变量的可视化：箱线图"
+description: "使用箱线图呈现汇总统计数据并识别数值数据中的潜在异常值。"
+order: 4
+plots: ["plots/1158-0.json"]
+sourceHash: "3f507fb2e8a4ccff55c0ca741a271788babf69b81be9559d269065ebd01be4fd"
+sourceCorrections: []
+---
+
+直方图能为我们提供频率分布的详细视图，而箱线图（也称为箱须图）则能简洁概括数值变量的分布情况，侧重于其集中趋势、离散程度和潜在异常值。它们在快速比较不同类别间的分布时特别有效，尽管此处我们将侧重于单变量情况，并基于之前讨论的集中趋势和离散程度的原则。
+
+箱线图展现了以下重要统计量：
+
+1. **中位数 (Q2)：** 箱体内的线表示数据的中位数或第50百分位数（$Q_2$）。一半的数据点低于此值，一半高于此值。
+2. **四分位距 (IQR)：** 箱体本身涵盖了从第一四分位数（Q1，第25百分位数）到第三四分位数（Q3，第75百分位数）的范围。因此，箱体的长度代表了IQR（$IQR = Q3 - Q1$），它衡量了数据中间50%的离散程度。更宽的箱体表明数据中心部分的变异性更大。
+3. **须线：** 从箱体延伸出的线（须线）表明数据的范围，不包括异常值。通常，须线延伸到箱体边缘 $1.5 \times IQR$ 范围内的最小值和最大值（即 $Q1 - 1.5 \times IQR$ 和 $Q3 + 1.5 \times IQR$）。此范围之外的点被视为潜在异常值。
+4. **异常值：** 绘制在须线之外的单个点被标记 (token)为潜在异常值。这种可视化识别是IQR规则的直接应用，我们将在后续作为异常值检测的统计方法进一步讨论。
+
+箱线图非常适合快速了解以下内容：
+
+- **中心位置：** 中位数所在的位置。
+- **离散程度：** 数据离散的程度（通过IQR和须线长度体现）。
+- **偏度：** 分布的不对称性。如果中位数更接近Q1，则分布可能右偏。如果更接近Q3，则可能左偏。类似地，不等长的须线也能表明尾部的偏度。
+- **异常值：** 异常远离数据主体的数据点。
+
+### 使用 Seaborn 创建箱线图
+
+Seaborn 提供了一个简单的函数 `sns.boxplot()` 来创建信息丰富的箱线图。它与 Pandas DataFrames 很好地集成。
+
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 示例 DataFrame（假设您已加载了一个，例如 'df'）
+# 让我们创建一些示例数据进行演示
+np.random.seed(42)
+data = {
+    'Age': np.random.normal(loc=40, scale=10, size=150).astype(int),
+    'Salary': np.random.lognormal(mean=np.log(50000), sigma=0.4, size=150)
+}
+# 引入一些异常值
+data['Salary'][10] = 180000
+data['Salary'][50] = 195000
+data['Age'][20] = 85
+df = pd.DataFrame(data)
+df['Age'] = df['Age'].clip(18, 85) # 确保年龄合理
+
+
+# 为 'Salary' 列创建箱线图
+plt.figure(figsize=(6, 4)) # 控制图表大小
+sns.boxplot(y=df['Salary'], color='#74c0fc') # 使用调色板中的蓝色
+plt.title('薪资分布')
+plt.ylabel('薪资')
+plt.grid(axis='y', linestyle='--', alpha=0.7) # 添加水平网格线
+plt.show()
+
+# 为 'Age' 列创建箱线图
+plt.figure(figsize=(6, 4))
+sns.boxplot(y=df['Age'], color='#69db7c') # 使用绿色
+plt.title('年龄分布')
+plt.ylabel('年龄')
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
+```
+
+执行此代码将生成 'Salary' 和 'Age' 列的箱线图。
+
+[Image 15](https://apxml.s3.amazonaws.com/content_images/section_1158_1.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=3f2dfe7d301e162fa07e5da8858d4283886ff535001491eb7f939c293e92d9e1)
+[Image 16](https://apxml.s3.amazonaws.com/content_images/section_1158_2.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAZQ3DPGY5OEILO6DN%2F20261002%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20261002T070817Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=85ac714aaa46c57b40653cd80c1eaa418a8434483209b141421f1def60cce73e)
+
+### 解读箱线图
+
+观察 'Salary' 列生成的图表：
+
+- 箱体内的线显示中位薪资。
+- 箱体显示中间50%的薪资落入的范围（Q1到Q3）。
+- 须线延伸覆盖大部分数据范围，通常在箱体边缘 $1.5 \times IQR$ 之内。
+- 单独绘制在上方须线之上的点代表潜在的高薪异常值。在我们的合成数据中，我们手动设置为180,000和195,000的值应显示为异常值。
+
+类似地，分析 'Age' 图表以理解其分布、中位数、离散程度和任何潜在异常值。
+
+这里是使用 Plotly 呈现 'Salary' 数据的示例：
+
+
+
+![薪资分布概览](plots/1158-0.json)
+
+
+
+> 箱线图概括了薪资分布，突出显示了中位数、IQR（箱体）、典型范围（须线）和潜在异常值（单个点）。
+
+箱线图提供了一种紧凑而有效的方式来掌握数值变量分布的基本特征，是单变量分析工具集中必不可少的一部分。它们基于IQR规则视觉上标记 (token)潜在异常值，补充了接下来讨论的统计方法。
+
+## 参考资料
+
+- [Exploratory Data Analysis](https://archive.org/details/exploratorydataa00tuke_0) — John W. Tukey (1977)
+  Publisher: Addison-Wesley; Pages: xvi, 688
+  介绍了探索性数据分析的原始概念和方法，包括盒图作为总结分布的统计图形的引入。
+- [Fundamentals of Data Visualization: A Primer on Making Informative and Compelling Figures](https://clauswilke.com/dataviz/) — Claus O. Wilke (2019)
+  Publisher: O'Reilly Media
+  一本关于创建有效数据可视化的综合指南，详细讨论了各种图表类型（包括盒图）和视觉传达原则。
+- [\`seaborn.boxplot\` - seaborn 0.13.2 documentation](https://seaborn.pydata.org/generated/seaborn.boxplot.html) — Michael Waskom and the Seaborn team (2024)
+  Seaborn `boxplot`函数的官方文档，提供了使用Python进行绘图的示例和详细参数说明。
+- [Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, and Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  涵盖了与数据科学相关的基本统计概念，包括描述性统计、如IQR的离散度度量以及异常值检测，并提供Python示例。第三版。

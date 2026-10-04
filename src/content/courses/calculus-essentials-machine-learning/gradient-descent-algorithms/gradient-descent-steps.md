@@ -1,0 +1,101 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "gradient-descent-algorithms"
+lesson: "gradient-descent-steps"
+sourceId: 1387
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-4-gradient-descent-algorithms/gradient-descent-steps"
+title: "梯度下降算法的步骤"
+description: "梯度下降更新规则及其组成部分的详细分析。"
+order: 2
+plots: []
+sourceHash: "7aba5b7fc24975ced99438be81001d9348d1733974ef08649f65d218b4813755"
+sourceCorrections: []
+---
+
+我们来剖析一下梯度下降 (gradient descent)算法的运作方式。在理解其直观思想之后，即通过使成本函数下降来找到最小值，我们现在将此迭代优化过程的步骤形式化。
+
+梯度下降算法的主要思想是重复调整模型参数 (parameter)（通常用向量 (vector) $heta$ 表示），使其朝着降低成本函数 $J(	heta)$ 的方向变动。由于梯度 $abla J(	heta)$ 指向*最陡峭的上升*方向，因此参数朝*相反*方向移动。
+
+### 更新规则
+
+在每次迭代中，梯度下降 (gradient descent)算法使用以下规则更新每个参数 (parameter) $\theta_j$（其中 $j$ 表示模型中的不同参数，例如权重 (weight)和偏置 (bias)）：
+
+
+$$
+\theta_j := \theta_j - \alpha \frac{\partial}{\partial \theta_j} J(\theta)
+$$
+
+
+我们来分析一下这个重要的更新步骤：
+
+1. **$\theta_j$**: 这是我们希望优化的第 $j$ 个参数的当前值。我们的目标是找到使总成本 $J(\theta)$ 最小化的所有 $\theta_j$ 的值。
+2. **$:=$**: 这表示赋值操作。$\theta_j$ 的值会用等号右侧计算出的结果进行更新。
+3. **$\alpha$**: 这是**学习率**，一个超参数 (hyperparameter)，它控制着每次迭代中我们迈出的步长大小。较小的 $\alpha$ 意味着较小的步长，这可能导致收敛速度变慢，但会提高稳定性。较大的 $\alpha$ 可以加快收敛速度，但有超出最小值或甚至发散的风险。我们将在下一节中更详细地分析学习率。
+4. **$\frac{\partial}{\partial \theta_j} J(\theta)$**: 这是成本函数 $J(\theta)$ 关于参数 $\theta_j$ 的**偏导数**。它表示在所有参数 $\theta$ 定义的当前点上，成本函数沿 $\theta_j$ 轴的斜率。这一项告诉我们，在保持所有其他参数不变的情况下，如果我们稍微改变 $\theta_j$，成本函数 $J$ 会改变多少。它是梯度向量 (vector) $\nabla J(\theta)$ 的一个组成部分。这个导数的符号表明，增加 $\theta_j$ 是会增加还是减少成本。通过减去 $\alpha$ 乘以这个导数，我们被推动到*降低*成本的方向。
+
+### 迭代过程
+
+梯度下降 (gradient descent)是一种迭代算法。它通常不会一步就找到最优参数 (parameter)。相反，它遵循以下一般阶段：
+
+1. **初始化**: 为参数 $\theta$ 设置初始估计值。这些值可以是零、小的随机值，或者来自预训练 (pre-training)模型的值。
+2. **迭代**: 重复以下步骤，直到满足停止条件（收敛）：
+   - **计算梯度**: 根据当前的参数值 $\theta$，计算 *所有* 参数 $j = 0, 1, ..., n$ 的偏导数项 $\frac{\partial}{\partial \theta_j} J(\theta)$。用于此计算的具体数据取决于梯度下降的具体变体（批量、随机或小批量），我们将在本章稍后讨论这些变体。
+   - **更新参数**: 同时对所有参数应用更新规则：
+     
+     $$
+     \theta_j := \theta_j - \alpha \frac{\partial}{\partial \theta_j} J(\theta) \quad \text{对于 } j = 0, 1, ..., n
+     $$
+     
+3. **收敛**: 当参数不再发生显著变化时停止，或者成本函数 $J(\theta)$ 的下降幅度变得非常小，或者梯度大小接近零，或者达到最大迭代次数。
+
+### 同步更新：注意事项
+
+单次迭代中所有参数 (parameter) $\theta_j$ 的更新必须*同时*进行，这很重要。这意味着您应该首先使用迭代开始时的*当前*参数值计算*所有* $j$ 的偏导数。只有在计算出所有这些梯度分量*之后*，才能更新 $\theta_0, \theta_1, ..., \theta_n$ 的值。
+
+考虑一个包含两个参数 $\theta_0$ 和 $\theta_1$ 的模型。一次迭代的正确更新过程如下所示：
+
+```
+# 使用当前的 theta0, theta1 计算梯度分量
+gradient_component_0 = compute_partial_derivative(J, theta0, theta1, wrt=theta0)
+gradient_component_1 = compute_partial_derivative(J, theta1, theta0, wrt=theta1)
+
+# 使用计算出的梯度计算新值
+temp0 = theta0 - alpha * gradient_component_0
+temp1 = theta1 - alpha * gradient_component_1
+
+# 同时更新参数
+theta0 = temp0
+theta1 = temp1
+```
+
+对于标准的梯度下降 (gradient descent)算法而言，如果先更新 $\theta_0$，然后立即在*同一*迭代中使用这个*新的* $\theta_0$ 来计算 $\theta_1$ 的梯度分量，这是不正确的。将更新值临时存储起来，或者使用向量 (vector)操作来确保同步应用。
+
+以下是核心算法的简洁伪代码表示：
+
+```pseudocode
+初始化参数 theta (例如，随机或置零)
+重复直到收敛 {
+  计算所有 j 的 gradient_components[j] = partial_derivative(J, theta, wrt=theta[j])
+  对于 j 从 0 到 n {
+    theta[j] = theta[j] - alpha * gradient_components[j]
+  }
+}
+返回 theta
+```
+
+这些步骤构成了梯度下降在成本曲面上运作的根基。然而，此过程的有效性和表现，在很大程度上取决于学习率 $\alpha$ 以及我们如何计算梯度等因素，我们将在接下来分析这些。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  为机器学习中的梯度下降作为一种基础优化算法提供了全面介绍。
+- [Pattern Recognition and Machine Learning](https://www.springer.com/gp/book/9780387310732) — Christopher M. Bishop (2006)
+  Publisher: Springer; DOI: [10.1007/978-0-387-45528-0](https://doi.org/10.1007/978-0-387-45528-0)
+  在统计模式识别的背景下，阐述了梯度下降的数学原理。
+- [Machine Learning Course](https://www.coursera.org/learn/machine-learning) — Andrew Ng (2012)
+  Publisher: Coursera / DeepLearning.AI / Stanford Online
+  一个易于理解的在线课程，通过清晰的例子和直观的解释阐述了梯度下降算法的步骤。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://books.google.com/books/about/Hands_On_Machine_Learning_with_Scikit_Le.html?id=z1hxEAAAQBAJ) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  提供梯度下降的实践解释，以直接的方式详细阐述其步骤和常见问题。

@@ -1,0 +1,166 @@
+---
+course: "large-scale-distributed-rag"
+chapter: "advanced-distributed-retrieval-strategies"
+lesson: "distributed-dense-retrieval-optimization"
+sourceId: 6171
+sourceUrl: "https://apxml.com/zh/courses/large-scale-distributed-rag/chapter-2-advanced-distributed-retrieval-strategies/distributed-dense-retrieval-optimization"
+title: "分布式稠密检索：实现与优化"
+description: "实现和优化分布式稠密检索系统，以在高规模 RAG 中获得高性能。"
+order: 2
+plots: []
+sourceHash: "0801fb4c90f99ab7966e9d0cfd3c5c8f44cf8d7af940cc4aa40d52f92625f25c"
+sourceCorrections: []
+---
+
+虽然通过分片、副本和高级索引来扩展向量 (vector)搜索的基本原则为处理海量数据集提供了根基，但实现和优化一个完整的分布式*稠密检索*系统会带来一系列独特的难题和考量。稠密检索依赖学习到的嵌入 (embedding)来捕获语义相似性，这要求对系统设计采取全面方法，并延伸到向量存储，涵盖嵌入模型部署、查询处理流程以及专门的优化方案。
+
+核心来说，分布式稠密检索有两个主要目标：满足不断增长的文档语料库的扩展性，以及高吞吐量 (throughput)以低延迟处理大量并发用户查询。这包括对数据（文档嵌入）和计算负载（嵌入生成和搜索）进行分区。
+
+### 分布式稠密检索的架构蓝图
+
+设计分布式稠密检索系统需要仔细考量其组件如何配合。主要的架构决定围绕着嵌入 (embedding)模型的部署、索引本身的分布以及查询处理的流程。
+
+#### 嵌入模型部署
+
+部署文档和查询嵌入模型的选择显著影响延迟、成本和可维护性：
+
+- **中心化嵌入服务：** 一个专门的微服务处理所有嵌入任务（包括文档的批处理和查询的实时处理）。
+  - *优点：* 解耦嵌入逻辑，允许嵌入资源独立扩展，简化模型更新。
+  - *优点：* 可以高效利用专门硬件（例如，GPU）。
+  - *缺点：* 为每个查询嵌入引入网络延迟；如果未适当扩展，可能会成为瓶颈。
+- **去中心化/协同部署嵌入：** 嵌入模型与查询处理节点一起部署，甚至部署在客户端应用程序内部。
+  - *优点：* 减少查询嵌入的网络延迟。
+  - *优点：* 对于小规模部署可能更简单。
+  - *缺点：* 跨分布式节点的模型管理和更新更复杂。
+  - *缺点：* 如果查询节点也处理嵌入，资源使用效率可能较低。
+
+对于大规模系统，混合方法通常是最佳的：使用可扩展的中心化流程进行文档批量嵌入（将在第4章中进一步讨论），并使用高度优化、副本化的服务进行实时查询嵌入。
+
+#### 索引分布与查询路由
+
+基于通用向量 (vector)搜索中讨论过的分片和副本策略，稠密检索系统实现一个分散-聚集模式：
+
+1. **查询嵌入：** 传入的查询通过嵌入模型转换为其向量表示。
+2. **查询路由/扇出：** 查询向量被分发到所有相关的索引分片。在完全分片的系统中，这通常指所有分片。如果分片按某些元数据或基于内容的分区组织，复杂的路由可能实现，但这增加了复杂性。
+3. **并行搜索：** 每个分片独立执行近似最近邻 (ANN) 搜索，以找到其最相似的前k个文档向量。
+4. **结果聚合：** 所有分片的结果由一个聚合节点收集。
+5. **全局重排序：** 聚合后的结果（通常多于最终期望的N个，例如，N \* 分片数量 \* 安全系数）根据其相似度分数进行重新排序，以生成最终的前N个结果。
+
+下图说明了典型的查询流程：
+
+"User Query" [shape=ellipse, fillcolor="#a5d8ff"];
+"Query Embedding Service" [fillcolor="#bac8ff"];
+"Query Router/Fan-out" [fillcolor="#91a7ff"];
+
+subgraph cluster\_shards {
+label="分布式索引分片";
+labeljust="l";
+style="filled";
+fontname="Arial";
+fontsize=10;
+color="#dee2e6";
+fillcolor="#f8f9fa";
+node [fillcolor="#d0bfff"];
+"Index Shard 1";
+"Index Shard 2";
+"Index Shard N";
+}
+
+"Result Aggregator & Re-ranker" [fillcolor="#748ffc"];
+"Top-N Results" [shape=ellipse, fillcolor="#a5d8ff"];
+
+"User Query" -> "Query Embedding Service" [label=" 嵌入"];
+"Query Embedding Service" -> "Query Router/Fan-out" [label=" 向量"];
+
+"Query Router/Fan-out" -> "Index Shard 1" [label=" 搜索"];
+"Query Router/Fan-out" -> "Index Shard 2" [label=" 搜索"];
+"Query Router/Fan-out" -> "Index Shard N" [label=" 搜索"];
+
+"Index Shard 1" -> "Result Aggregator & Re-ranker" [label=" 分片\_k 结果"];
+"Index Shard 2" -> "Result Aggregator & Re-ranker" [label=" 分片\_k 结果"];
+"Index Shard N" -> "Result Aggregator & Re-ranker" [label=" 分片\_k 结果"];
+
+"Result Aggregator & Re-ranker" -> "Top-N Results" [label=" 最终结果"];
+}
+
+````
+> 分布式稠密检索系统中典型的查询处理流程，展示了分散-聚集模式。
+
+### 分布式稠密检索的实现：方法与工具
+
+分布式稠密检索的实现可以从使用完全托管的服务，到使用开源组件构建自定义方案。
+
+*   **托管向量数据库：** Pinecone、Weaviate、Milvus（云）、Qdrant Cloud 和 Vertex AI Vector Search 等服务抽象化了分片、副本和分布式查询执行的大部分复杂性。你的主要操作包括配置索引、摄入嵌入和通过API查询。虽然方便，但理解它们的底层分布式特性有助于优化与它们的操作（例如，批处理策略、连接池）。
+*   **开源框架：**
+    *   **Apache Spark/Dask 与 Faiss：** 对于超大型数据集，Spark 或 Dask 可用于分布式构建 Faiss 索引。每个工作节点可以为数据的某个分区构建一个索引。部署这些分布式 Faiss 索引可能需要自定义部署层或与Ray Serve等系统集成。
+    *   **Ray：** Ray 是一个多功能的分布式 Python 框架。它可用于：
+        *   使用 Ray Tasks 或 Actors 分布式生成嵌入。
+        *   使用 Ray Serve 部署分片向量索引（例如 Faiss 分片），其中每个副本可以承载一个或多个分片。
+        *   将查询路由器和结果聚合器实现为 Ray Actors。
+    *   **专门的向量搜索引擎（自托管）：** Milvus、Weaviate 或 Qdrant 的开源版本可以部署在 Kubernetes 集群上，允许你管理分片和副本配置。这比完全托管的服务提供更多控制，但需要大量操作经验。
+*   **自定义实现：** 在具有独特硬件限制、极端性能要求或与专有系统深度集成需求的场景中，组织可能会选择定制解决方案。这通常涉及使用分布式计算的低级原语（例如，用于通信的 gRPC，自定义分片逻辑），可能是一项重大的工程工作。
+
+### 性能和效率优化方案
+
+优化分布式稠密检索系统是一项多方面的工作，针对延迟、吞吐量和成本。
+
+#### 1. 大规模 ANN 算法调整
+你的近似最近邻 (ANN) 算法（例如，HNSW、IVFADC、SCANN）的选择和参数在分布式环境中有着深远的影响：
+*   **分片级调整：** `ef_construction`、`ef_search` (HNSW) 或 `nprobe` (IVF) 等参数可以按分片调整，以适应分片间不同的数据密度或查询模式。
+*   **全局召回率与延迟：** 聚合前从每个分片检索到的结果数量（`k_shard`）直接影响最终召回率。更高的 `k_shard` 增加了找到真实全局前N个结果的机会，但同时也增加了节点间数据传输和聚合开销。必须仔细平衡这种权衡。
+*   **索引构建时间与查询延迟：** 一些 ANN 索引，特别是基于图的索引（如 HNSW），构建时间可能较长。分布式索引构建策略非常重要。对于基于 IVF 的索引，质心数量是一个影响构建时间和查询时间的重要参数。
+
+#### 2. 查询侧优化
+*   **智能查询缓存：** 不仅缓存最终结果，还缓存中间查询嵌入。这对于流行查询尤其有效。缓存淘汰策略（LRU、LFU）需要有效。
+*   **自适应检索（`k_shard` 调整）：** 根据系统负载、查询特性（例如，估计的歧义度）或类似查询的历史性能等因素动态调整 `k_shard`。
+*   **分片内查询并行化：** 如果分片本身非常大或托管在多核机器上，可以在单个分片内进一步并行化搜索。
+
+#### 3. 索引侧优化
+*   **动态分片扩展：** 根据 QPS、分片大小或 CPU/内存使用率实现索引分片的自动扩展。Kubernetes 水平 Pod 自动伸缩器 (HPA) 在此很有用。
+*   **数据共置：** 如果可能，尝试将语义相关的文档或经常一起访问的文档共置于同一分片内，以改善缓存局部性，尽管这在有效实现上可能很复杂。
+*   **优化索引结构和压缩：** 定期重建或压缩 ANN 索引（特别是对于易受更新影响而性能下降的算法，例如 HNSW 在频繁删除或不支持良好删除时），以保持搜索性能并减小存储占用。一些向量数据库提供自动化压缩功能。
+*   **分层索引：** 对于超大型数据集，可以考虑分层索引，其中较小、更快的索引（例如，内存中）处理大多数查询，而更大、基于磁盘的索引作为备用或用于较不频繁的查询。
+
+#### 4. 嵌入模型改进
+你的稠密检索模型的效率很重要：
+*   **模型蒸馏：** 训练更小、更快的学生模型，模仿更大、更准确的教师模型的行为。这可以显著减少查询嵌入延迟。
+*   **量化：** 将标量或乘积量化等技术应用于嵌入模型权重，甚至嵌入本身（例如，二进制代码），以减小模型大小、内存占用，并可能加速相似性计算。这通常涉及与准确性之间的权衡。
+*   **专门的推理引擎：** 使用优化过的推理运行时，例如 ONNX Runtime、TensorRT（用于 NVIDIA GPU）或 OpenVINO（用于 Intel CPU/iGPU），以部署嵌入模型。
+
+#### 5. 网络和通信效率
+*   **序列化：** 选择高效的序列化格式（例如，Apache Arrow、Protocol Buffers、FlatBuffers），用于在服务之间传输查询向量和结果集，以最小化网络开销。
+*   **批处理：** 在路由级别对查询进行批处理，然后再扇出到分片；并在摄入期间批量处理文档嵌入。这提高了嵌入模型和向量数据库的吞吐量。
+*   **压缩：** 对传输中的数据应用压缩，特别是对于来自分片的较大结果集。
+
+#### 6. 成本优化
+*   **实例规格选择：** 分析并选择合适的计算实例，用于查询嵌入、查询路由、索引分片和聚合。CPU优化实例可能适合一些 ANN 搜索，而 GPU 实例通常更适合嵌入生成。
+*   **竞价/可抢占实例：** 使用竞价实例（AWS）或可抢占式虚拟机（GCP）处理容错批处理工作负载，例如文档嵌入或索引构建，以显著降低成本。
+*   **自动伸缩：** 为所有组件实现自动伸缩，使资源分配与需求匹配，避免过度配置。
+
+考虑以下 Plotly 图表，说明了分布式稠密检索系统中 `k_shard`（每个分片的结果数量）与整体召回率和延迟之间的权衡。
+
+```plotly
+{"data": [{"x": [10, 20, 50, 100, 200], "y": [0.85, 0.90, 0.94, 0.96, 0.97], "type": "scatter", "mode": "lines+markers", "name": "召回率", "marker": {"color": "#228be6"}}, {"x": [10, 20, 50, 100, 200], "y": [30, 35, 45, 60, 90], "type": "scatter", "mode": "lines+markers", "name": "P95 延迟 (ms)", "yaxis": "y2", "marker": {"color": "#f03e3e"}}], "layout": {"title": {"text": "k_shard 对召回率和延迟的影响", "font": {"family": "Arial", "size": 16}}, "xaxis": {"title": "k_shard (每个分片检索到的结果)", "showgrid": true, "gridcolor": "#dee2e6"}, "yaxis": {"title": "召回率", "showgrid": true, "gridcolor": "#dee2e6", "range": [0.8, 1.0]}, "yaxis2": {"title": "P95 延迟 (ms)", "overlaying": "y", "side": "right", "showgrid": false, "rangemode": "tozero"}, "legend": {"x": 0.01, "y": 0.99, "bgcolor": "rgba(255,255,255,0.7)"}, "plot_bgcolor": "#f8f9fa", "paper_bgcolor": "white", "font": {"family": "Arial"}}}
+````
+
+> 此图表说明了分布式稠密检索中的常见权衡：增加从每个分片检索到的候选数量（`k_shard`）通常能改善整体召回率，但也会由于更大的数据传输和聚合开销而增加延迟。
+
+### 应对固有复杂性
+
+运行分布式稠密检索系统带来必须主动应对的难题：
+
+- **数据一致性：** 确保文档语料库的更新在所有分片间一致且及时传播可能很复杂。最终一致性是一种常用模式，但需要定义可接受的延迟。
+- **倾斜和热点：** 不均衡的数据分布或查询模式可能导致“热”分片成为性能瓶颈。可能需要重新平衡分片或动态为热分片分配更多资源的方案。
+- **故障恢复能力：** 系统必须对单个分片故障、嵌入 (embedding)服务中断或网络分区有韧性。副本、健康检查和自动化故障转移机制是必要的。
+- **操作开销：** 相比于单体系统，管理分布式系统本身涉及更多的监控、日志记录和部署复杂性。MLOps 实践变得必要。
+
+成功实现和优化分布式稠密检索是一个持续的实验、监控和完善过程。通过仔细考量这些架构模式、实现选择和优化手段，你可以构建稠密检索系统，以高性能和高效率提供相关结果，即使你的数据和查询量扩展到庞大规模。实现分片向量 (vector)索引的实际方面，作为此类系统的核心组件，将在本章后面的实践部分进行介绍。
+
+## 参考资料
+
+- [Milvus: A Purpose-Built Vector Data Management System](https://doi.org/10.14778/3476310.3476340) — Xiangyu Wang, Xiaofan Luan, Cong Fu, Hao Xu, Xiaomeng Zhang, Guotao Cheng, Mengya Yuan, Shaohua Wang, Shengjun Gong, Jianling Ding, Junbo Yang, Bo Yang, Renjie Huang, Jinrui Cao, Yigong Wang, Jianying Su, Fan Jia, Wei Li, Xiang Li, Xiaoyu Wang (2021)
+  Journal: Proceedings of the VLDB Endowment (PVLDB); Publisher: VLDB Endowment; Volume: 14; Pages: 3034–3047; DOI: [10.14778/3476310.3476340](https://doi.org/10.14778/3476310.3476340)
+  介绍了 Milvus 的架构和设计，这是一个开源的、云原生的向量数据库系统，专为可扩展的分布式相似性搜索而设计，与本节内容直接相关。
+- [DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter](https://arxiv.org/abs/1910.01108) — Victor Sanh, Lysandre Debut, Julien Chaumond, Thomas Wolf (2019)
+  Journal: Workshop on Energy Efficient Machine Learning and Cognitive Computing - NeurIPS 2019; DOI: [10.48550/arXiv.1910.01108](https://doi.org/10.48550/arXiv.1910.01108)
+  描述了一种将大型 Transformer 模型提炼成更小、更高效版本的方法，这是在分布式密集检索系统中降低延迟和成本的关键优化策略。

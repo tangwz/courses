@@ -1,0 +1,124 @@
+---
+course: "building-advanced-llm-agent-tools"
+chapter: "llm-tool-selection-orchestration"
+lesson: "agent-tool-selection"
+sourceId: 6571
+sourceUrl: "https://apxml.com/zh/courses/building-advanced-llm-agent-tools/chapter-3-llm-tool-selection-orchestration/agent-tool-selection"
+title: "智能体驱动的工具选择机制"
+description: "了解LLM智能体如何为给定任务或子任务选择合适工具的不同方式。"
+order: 1
+plots: []
+sourceHash: "2f38bdcbf792ad232d92250e7d0a86a401bd13ff1aedc6622d0eb83cbb39bef6"
+sourceCorrections: []
+---
+
+为了让LLM智能体有效使用其可用的工具，它首先需要一种机制来判断*哪个*工具适合当前任务或源自用户查询或更大目标的子任务。这个选择过程并非简单查找，它涉及LLM的推理 (inference)能力，并由提供的每个工具的信息引导。使LLM智能体做出这些重要决定的常见机制有所呈现。
+
+工具选择的核心是LLM理解用户输入意图并将其与可用工具的功能描述进行匹配的能力。正如第一章（“LLM智能体工具的根本”）中所述，您的工具描述的清晰度和准确性在此非常关键。LLM分析查询，并将其理解与工具描述进行比较，以找到最匹配的。
+
+### 上下文 (context)提示中的工具信息
+
+一种直接的工具选择方法是，在提示词 (prompt)中，将可用工具的信息直接提供给LLM，作为其上下文窗口的一部分。提示词通常包含用户查询以及工具列表，每个工具都包含名称、功能描述和接受的参数 (parameter)。
+
+考虑一个可使用天气工具和计算器的智能体。提示词的结构可能如下：
+
+```
+You are a helpful assistant. You have access to the following tools:
+[
+  {
+    "name": "get_current_weather",
+    "description": "获取给定城市的当前天气。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": { "type": "string", "description": "城市名称，例如：伦敦" }
+      },
+      "required": ["location"]
+    }
+  },
+  {
+    "name": "evaluate_expression",
+    "description": "计算数学表达式的结果。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "expression": { "type": "string", "description": "数学表达式，例如：“10 * 4 / 2”" }
+      },
+      "required": ["expression"]
+    }
+  }
+]
+
+User query: What is 5 plus 12?
+Assistant's tool choice:
+```
+
+LLM需要分析“User query”并填写“Assistant's tool choice”部分，理想情况下，输出应是结构化的，明确指定所选工具及其参数：
+
+```json
+{
+  "tool_name": "evaluate_expression",
+  "arguments": { "expression": "5 + 12" }
+}
+```
+
+为了提高LLM在此选择过程中的准确性，特别是在工具集或查询更复杂的情况下，可以采用**少量示例提示**。这需要将一些查询及其正确工具选择的示例直接添加到当前查询之前的提示词中。这些示例作为示范，指导LLM的推理 (inference)。
+
+### 函数调用与结构化输出模式
+
+许多现代LLM提供专门模式，通常称为“函数调用”或“工具调用”。这些模式旨在使工具集成更可靠、更明确。LLM不再生成需要您的应用代码解析的文本来识别工具调用，而是直接输出一个结构化对象（通常是JSON），明确表明其使用特定工具的意图，并提供所需参数 (parameter)。
+
+使用此功能时，您的应用通常会：
+
+1. 按照LLM提供商API规定的格式，定义可用工具，包括它们的名称、描述和参数Schema。
+2. 将用户查询和这些工具定义发送给LLM。
+3. 如果LLM判定某个工具适合，它将返回一个响应，指明要调用的工具以及使用的参数，并按预定义Schema格式化。
+4. 您的应用代码随后使用提供的参数执行识别出的工具。
+5. 工具执行的结果随后通过后续调用发送回LLM，使其能够继续对话或任务，此时LLM已了解工具的输出。
+
+这种方法减少了模糊性，并降低了从自然语言响应中解析工具调用的脆弱性。
+
+### ReAct模式：推理 (inference)与行动
+
+ReAct（推理与行动）模式为智能体迭代地选择和使用工具来完成目标提供了一个强大的框架。与其说是一种单一的选择机制，不如说是一个操作循环，指导智能体的行为，包括工具选择。该循环通常包括：
+
+1. **思考：** LLM分析当前目标、已收集的信息以及可用工具。它制定计划或下一步行动，通常会将其内部推理过程表述出来。例如：“用户想知道法国的首都在哪里以及那里的当前天气。我应该先找到首都，然后获取那个城市的天气。”
+2. **行动：** 根据其思考过程，LLM决定采取行动。此行动通常是对其可用工具之一的调用，并指定工具名称和所需参数 (parameter)。例如：`use_tool(search_web, query="法国首都")`。
+3. **观察：** 选定的工具由智能体的环境（您的代码）执行，并返回结果（例如：“巴黎”）或任何错误消息。此输出成为观察结果。
+4. **重复：** LLM接收此观察结果。它然后重新进入“思考”阶段，结合新信息来决定下一步行动。它可能会选择另一个工具，使用相同工具但参数不同，或者得出结论认为已获得足够信息来回答用户查询。
+
+下图说明了此迭代循环。
+
+> ReAct循环：LLM迭代地思考、行动（通常通过选择和使用工具）、观察结果，然后再次思考，直至达成目标。
+
+在ReAct框架中，工具选择是一个动态过程。LLM不断评估哪个工具（如果有的话）最适合推进其当前子目标，基于其不断演进的推理状态和先前行动的观察结果。
+
+### 用于工具选择的路由器架构
+
+当智能体可用工具数量众多，或者某些“工具”本身就是复杂的子智能体或链时，路由器架构会很有用。在这种设置中，最初的LLM调用充当“路由器”。其主要职责并非直接执行任务，而是确定哪个专业工具、子智能体或处理链最适合处理用户查询或当前子任务。
+
+路由器LLM通常会获得下游工具或链的高级描述。根据输入查询，它会选择最合适的路径。例如，像“巴黎天气如何？”这样的查询可能会被路由到`天气工具`，而“计算180的25%”则会路由到`计算器工具`或`数学处理链`。
+
+> 路由器LLM分析传入查询，并将其定向到一组选项中最适合的专业工具或处理链。
+
+这种方法通过分解决策过程来帮助管理复杂性，并且通过不要求单个LLM实例了解每个可能工具的微小细节（如果某些工具高度专业化），从而提高效率。
+
+### 影响选择准确性的因素
+
+任何智能体驱动的工具选择机制的有效性取决于几个因素：
+
+- **工具描述的质量和清晰度：** 如反复强调，LLM高度依赖工具的描述方式。模糊、模棱两可或不准确的描述会导致错误的工具选择。描述应清楚说明工具的功能、预期输入和产生输出。
+- **工具的独特性：** 如果多个工具的描述非常相似或功能重叠，LLM可能难以区分它们，或可能选择一个次优工具。确保每个工具都有明确定义的独特用途，或者在故意重叠时提供何时优先选择一个而非另一个的指导。
+- **LLM能力：** 不同的LLM拥有不同程度的推理 (inference)能力和指令遵循精度。更高级的模型在理解查询和做出适当工具选择方面通常表现出更好的性能。
+- **提示工程 (prompt engineering)：** 提供给LLM的整体指令，包括任何系统消息或少量示例，显著影响其行为和正确使用工具的倾向。
+- **处理无需工具的场景：** 同样重要的是，智能体能够识别何时*不需要*工具，并能利用自身知识库回答查询。选择机制应允许这种可能性。
+
+通过理解这些机制和考量，您可以为您的LLM智能体设计更有效的策略来选择正确的工具，这是协调它们完成复杂任务的第一步。接下来的章节将在此根本上继续讨论如何管理工具调用序列。
+
+## 参考资料
+
+- [Function calling](https://platform.openai.com/docs/guides/function-calling) — OpenAI (2023)
+  官方文档详细说明了如何使用OpenAI的函数调用功能进行结构化工具调用，这是代理驱动工具选择的常见机制。
+- [A Survey of Large Language Model Based Autonomous Agents](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFXcaEQQnv-lylp9hQpybbwx3w5ft-KdV7B28G9I09ae2Ksr5U8XTYE7CaSuEYG4JsyIE-g14U6JcAGsxTjT44_gJemV1X2a2-_fO1SIIpxQdNZ8v9mSUbMOUvuIxjtaIXgfq27x0M=) — Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang, Zhi-Yuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei, Ji-Rong Wen (2023)
+  Journal: Frontiers of Computer Science; DOI: [10.1007/s11704-024-40231-1](https://doi.org/10.1007/s11704-024-40231-1)
+  对基于LLM的自主代理进行了全面概述，包括对不同代理架构和与工具选择及编排相关的决策过程的讨论。

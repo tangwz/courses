@@ -1,0 +1,131 @@
+---
+course: "intro-data-engineering"
+chapter: "data-storage-fundamentals"
+lesson: "common-data-formats"
+sourceId: 5567
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-4-data-storage-fundamentals/common-data-formats"
+title: "常见数据格式"
+description: "了解常用的数据格式，例如CSV、JSON和Parquet。"
+order: 6
+plots: []
+sourceHash: "d7f5902d90923c355fc8b084d081ea14f74ba1f3538122f1b0e399e1a797599c"
+sourceCorrections: []
+---
+
+您已经了解了存储数据的不同位置，例如数据库、数据仓库和数据湖。但是，数据在这些存储系统中是如何实际组织起来的呢？您选择的格式可以极大地影响数据存储、读取、处理和分析的便捷性。接下来，我们来查看一些作为数据工程师会经常遇到的常见数据格式。
+
+### CSV (Comma-Separated Values)
+
+想象一个简单的电子表格。CSV文件基本就是这样。它是表格数据最直接且被广泛认可的格式之一。
+
+- **结构：** 文件中的每一行通常表示一行数据。在每行中，值（字段）由逗号分隔。第一行通常包含标题行，定义列的名称。
+- **示例：**
+
+  ```
+  UserID,Name,City,SignUpDate
+  101,Alice,New York,2023-01-15
+  102,Bob,London,2023-02-10
+  103,Charlie,New York,2023-03-20
+  ```
+- **优点：**
+
+  - **简单性：** 非常容易理解和创建。
+  - **人工可读：** 您可以在基本的文本编辑器中打开和阅读CSV文件。
+  - **广泛支持：** 几乎所有数据工具、电子表格程序（如Excel或Google Sheets）和编程语言都可以轻松处理CSV文件。
+- **缺点：**
+
+  - **无模式强制：** 格式本身不定义数据类型（`101`是数字还是文本？）。这种模糊性可能在处理过程中导致问题。
+  - **分隔符问题：** 如果某个值本身包含逗号（例如，“New York, NY”）怎么办？这需要使用引号或不同的分隔符（如制表符，创建TSV文件）进行仔细处理，但这并不总是一致的。
+  - **效率低下：** 对于非常大的数据集，CSV文件可能很庞大，并且与二进制格式相比读取速度较慢。
+- **使用场景：** 从数据库导出数据、共享简单数据集、初始数据加载步骤。
+
+### JSON (JavaScript Object Notation)
+
+JSON起源于JavaScript，但已成为Web上数据交换的通用标准。它特别适合表示无法整齐地放入简单行和列的数据。
+
+- **结构：** JSON使用人工可读的文本来传输数据对象，这些对象由属性-值对和数组数据类型组成。它使用花括号`{}`表示对象（键值对的集合，其中键是字符串，值可以是字符串、数字、布尔值、数组或其他对象），使用方括号`[]`表示数组（有序的值列表）。
+- **示例：**
+
+  ```json
+  [
+    {
+      "UserID": 101,
+      "Name": "Alice",
+      "City": "New York",
+      "SignUpDate": "2023-01-15",
+      "Preferences": {
+        "Theme": "Dark",
+        "Notifications": ["Email", "SMS"]
+      }
+    },
+    {
+      "UserID": 102,
+      "Name": "Bob",
+      "City": "London",
+      "SignUpDate": "2023-02-10",
+      "Preferences": {
+        "Theme": "Light",
+        "Notifications": ["Email"]
+      }
+    }
+  ]
+  ```
+- **优点：**
+
+  - **灵活性：** 轻松表示复杂的嵌套结构和列表，使其成为半结构化数据的理想选择。
+  - **人工可读：** 相对容易读写。
+  - **Web标准：** 许多API和Web服务的默认格式。被编程语言广泛支持。
+- **缺点：**
+
+  - **冗余：** 对于简单的表格数据，可能比CSV更冗余（占用更多空间），并且比二进制格式冗余得多。
+  - **解析开销：** 读取和处理JSON通常比简单格式或优化过的二进制格式需要更多的计算量。
+- **使用场景：** API响应、配置文件、在NoSQL数据库（如MongoDB）中存储文档类数据。
+
+### Parquet
+
+Apache Parquet完全是另一种类型。它是一种*列式*存储格式，针对效率和性能进行了优化，尤其是在大数据生态系统中。与CSV和JSON不同，它并非旨在直接供人阅读。
+
+- **结构：** Parquet不是逐行存储数据（像CSV和JSON那样），而是逐列存储数据。'UserID'列的所有值存储在一起，'Name'列的所有值存储在一起，依此类推。它还将模式（数据类型、列名）嵌入 (embedding)到文件本身中。
+- **为什么是列式？** 假设您只需要分析一个包含许多列的大型数据集中的“城市”列。
+
+  - 使用行式存储（CSV、JSON），您必须读取*每一行*并取出“城市”值，丢弃其余部分。
+  - 使用列式存储（Parquet），您可以直接访问并仅读取“城市”数据，完全跳过其他列。这对于分析查询来说速度快得多。
+
+> 行式存储与列式存储的数据布局比较。
+
+- **优点：**
+
+  - **效率：** 由于高效的压缩（相似数据类型可以很好地一起压缩）和编码方案，可显著节省存储空间。
+  - **性能：** 只涉及部分列的查询速度要快得多，因为需要从磁盘读取的数据更少。
+  - **模式演进：** 比简单格式更优雅地支持随时间添加、删除或修改列。
+  - **类型化：** 存储模式信息，避免CSV的模糊性。
+- **缺点：**
+
+  - **不可人工阅读：** 需要特定的工具或库（如Apache Spark、带有pyarrow/fastparquet的Pandas）才能读写。
+  - **写入复杂性：** 与简单地向CSV文件追加行相比，写入可能在计算上稍微更密集一些。
+- **使用场景：** 数据湖中数据存储的标准格式（通常存储在Amazon S3或Google Cloud Storage等对象存储中）、为数据仓库提供数据以及使用Apache Spark等框架进行高效处理。
+
+### Choosing the Right Format
+
+没有单一的“最佳”格式；选择取决于您的具体需求：
+
+- 对于快速导出、简单表格或人工可读性，**CSV**通常足够。
+- 对于Web API、配置或嵌套数据，**JSON**是标准。
+- 对于数据湖或数据仓库中性能和效率最重要的PB级数据存储和分析，**Parquet**（或ORC等类似列式格式）通常是首选。
+
+了解这些常见格式非常重要，因为作为数据工程师，您将不断地使用这些格式的数据，从源中提取、转换并加载到各种存储系统中。选择和使用合适的格式是构建高效数据管道的根本部分。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  提供对数据存储原理的全面理解，包括各种数据格式及其对数据系统架构的影响。
+- [The JavaScript Object Notation (JSON) Data Interchange Format](https://www.rfc-editor.org/rfc/rfc8259) — T. Bray (2017)
+  Journal: RFC 8259; Publisher: Internet Engineering Task Force (IETF)
+  定义JSON数据格式的官方规范，对于理解其结构和用法至关重要。
+- [Apache Parquet](https://parquet.apache.org/) — The Apache Parquet Project (2024)
+  Publisher: Apache Software Foundation
+  Apache Parquet的官方项目网站和文档，详细介绍了其列式存储和效率优势。
+- [Common Format and MIME Type for Comma-Separated Values (CSV) Files](https://www.rfc-editor.org/rfc/rfc4180) — Y. Shafranovich (2005)
+  Journal: RFC 4180; Publisher: The Internet Society; Pages: 1-6
+  一份广泛引用的关于逗号分隔值 (CSV) 文件格式的非正式规范。

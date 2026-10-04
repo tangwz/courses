@@ -1,0 +1,81 @@
+---
+course: "adversarial-machine-learning"
+chapter: "advanced-evasion-attacks"
+lesson: "transferability-adversarial-examples"
+sourceId: 4132
+sourceUrl: "https://apxml.com/zh/courses/adversarial-machine-learning/chapter-2-advanced-evasion-attacks/transferability-adversarial-examples"
+title: "对抗样本的可迁移性"
+description: "分析对抗样本在不同模型之间迁移的现象。"
+order: 5
+plots: ["plots/4132-0.json"]
+sourceHash: "690dfd2a82674483466f837544d41db4b0c0971a26dfe719113397251e6e9377"
+sourceCorrections: []
+---
+
+对抗样本的*可迁移性*是对抗机器学习 (machine learning)中一个引人入胜且具有实际价值的现象。这意味着一个为欺骗特定源模型 $f_S$ 而制作的对抗样本 $x_{adv}$，即使目标模型 $f_T$ 具有独特架构或独立训练（尽管通常基于相似数据分布），也常能成功欺骗不同的目标模型 $f_T$。
+
+设想您费心使用投影梯度下降 (gradient descent)（PGD）攻击，针对您本地训练的ResNet-50模型制作了一张对抗图像。可迁移性表明，同一图像可能也能欺骗他人部署的VGG-16或Inception-v3模型，而您无需对这些目标模型有任何具体信息。
+
+这一特性具有深远影响，尤其对**黑盒 (black box)攻击**而言。在黑盒环境中，攻击者对目标模型 $f_T$ 的信息有限。他们可能只能查询模型并观察其输出（标签或分数），而无法获取其架构、参数 (parameter)或梯度。可迁移性提供了一种可行的攻击途径：
+
+1. **训练替代模型：** 攻击者训练自己的本地模型，$f_S$（替代模型），尝试模仿目标模型 $f_T$ 的行为。这可以通过使用相关公共数据集或查询 $f_T$ 来生成合成训练集完成。
+2. **制作对抗样本：** 攻击者使用白盒方法（如本章前面讨论的PGD或C&W）来针对其替代模型 $f_S$ 生成对抗样本 $x_{adv}$。
+3. **攻击目标模型：** 攻击者将这些对抗样本 $x_{adv}$ 提交给黑盒目标模型 $f_T$。由于可迁移性，目标模型 $f_T$ 也很可能错误分类这些样本。
+
+> 借助可迁移性的黑盒攻击典型工作流程。攻击者针对本地替代模型制作样本，并将其用于对抗未知目标模型。
+
+### 为何对抗样本会迁移？
+
+可迁移性的确切原因仍是一个活跃的研究方向，但一些假设提供了有说服力的解释：
+
+- **共享决策边界：** 为相同任务（例如，分类猫狗）训练的不同模型，在输入空间中倾向于学习相似的决策边界，尤其对于对应典型输入的高概率区域。对抗样本常位于这些边界附近。将输入推过模型 $f_S$ 边界的扰动，也可能将其推过模型 $f_T$ 学习到的相似边界。
+- **共同特征表示：** 深度神经网络 (neural network)，特别是对于图像识别等任务，通常学习分层特征。低级特征（边缘、纹理）甚至某些高级特征在不同架构之间可能相当相似。利用这些共享特征中漏洞的扰动更可能迁移。
+- **输入空间几何：** 对抗样本可能存在于大的、连续的子空间中。如果 $f_S$ 和 $f_T$ 近似相同的底层函数，则 $f_S$ 的对抗区域可能与 $f_T$ 的对抗区域显著重叠。
+- **线性假设（与FGSM相关）：** 正如Goodfellow等人最初提出的，即使是高度非线性模型在局部也能表现出相当的线性。基于梯度的攻击利用这种局部线性。如果不同模型在数据点周围表现出相似的局部线性行为，则使用梯度信息生成的对抗样本可能迁移。
+
+### 影响可迁移强度的一些因素
+
+并非所有对抗样本都能同样良好地迁移。可迁移程度取决于一些因素：
+
+- **模型架构相似性：** 攻击在架构相似的模型之间（例如，VGG到VGG）迁移效果优于在差异极大的模型之间（例如，深度CNN到浅层决策树）。
+- **源/目标模型性能：** 在高准确率源模型上生成的攻击可能迁移效果更好。反之，准确率更高的目标模型自然对迁移样本的抵抗力更强。
+- **攻击方法：** PGD等迭代梯度攻击常表现出良好的可迁移性。C&W等基于优化的攻击有时可能*过度拟合*源模型的特定参数 (parameter)，与PGD相比，这可能降低其可迁移性，尽管它们可能找到针对源模型的高度有效样本。FGSM等单步攻击的迁移效果通常不如其迭代版本。
+- **扰动大小（$\epsilon$）：** 更大的扰动常导致更高的可迁移率，但它们也更容易被人眼察觉或被简单防御检测到。
+- **数据集和任务：** 可迁移性在图像分类任务中常见。其普遍性和强度在自然语言处理或表格数据等其他领域可能有所不同。
+
+
+
+![迁移攻击成功率（ImageNet模型）](plots/4132-0.json)
+
+
+
+> 使用PGD等强规避攻击，不同ImageNet分类模型之间的迁移成功率示例。实际比率很大程度上取决于具体的攻击参数、数据集和模型检查点。
+
+### 对评估防御的影响
+
+可迁移性的存在使防御机制的评估复杂化。一种看似对专门为被防御模型制作的白盒攻击有效的防御，仍可能受到来自其他未受防御模型的迁移攻击影响。
+
+因此，全面的鲁棒性评估应包括：
+
+1. **直接白盒攻击：** 假定充分了解被防御模型来生成攻击。
+2. **直接黑盒 (black box)攻击：** 模拟现实黑盒场景（基于分数、基于决策）。
+3. **迁移攻击：** 针对一个或多个标准、未受防御的模型（替代模型）生成攻击，并测试其对被防御模型的有效性。
+
+如果一种防御显著降低了来自标准模型的攻击的可迁移性，这表明该防御机制正在真正且有意义地改变模型的决策过程，而不仅仅是掩盖梯度（我们稍后会讨论）。
+
+理解可迁移性对于设计强大的黑盒攻击以及构建和验证机器学习 (machine learning)系统都非常重要。这表明保护模型不仅需要单独考虑其行为，还要考虑其在相同问题空间中与其他模型的关联。
+
+## 参考资料
+
+- [Explaining and Harnessing Adversarial Examples](https://arxiv.org/abs/1412.6572) — Ian J. Goodfellow, Jonathon Shlens, Christian Szegedy (2014)
+  Journal: arXiv preprint arXiv:1412.6572; DOI: [10.48550/arXiv.1412.6572](https://doi.org/10.48550/arXiv.1412.6572)
+  介绍了快速梯度符号法（FGSM）和线性假设，对抗性样本及其可转移性的早期解释。
+- [Practical Black-Box Attacks against Machine Learning Systems using Adversarial Examples](https://dl.acm.org/doi/10.1145/3052973.3053009) — Nicolas Papernot, Patrick McDaniel, Arushi Sinha, Z. Berkay Celik, Somesh Jha (2017)
+  Journal: Proceedings of the 2017 ACM on Asia Conference on Computer and Communications Security (AsiaCCS '17); Publisher: ACM; Pages: 506-519; DOI: [10.1145/3052973.3053009](https://doi.org/10.1145/3052973.3053009)
+  详细介绍了依赖于对抗性样本通过替代模型实现可转移性的黑盒攻击方法，这是章节中描述的核心方法。
+- [Ensemble Adversarial Training: Attacks and Defenses](https://arxiv.org/abs/1705.07204) — Florian Tramèr, Alexey Kurakin, Nicolas Papernot, Ian Goodfellow, Dan Boneh, Patrick McDaniel (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1705.07204](https://doi.org/10.48550/arXiv.1705.07204)
+  研究了对抗性样本的可转移性，尤其是在改进对抗性训练和评估防御机制方面。
+- [Adversarial Examples Are Not Bugs, They Are Features](https://arxiv.org/abs/1905.02175) — Andrew Ilyas, Shibani Santurkar, Dimitris Tsipras, Logan Engstrom, Brandon Tran, Aleksander Madry (2019)
+  Journal: Advances in Neural Information Processing Systems 32 (NeurIPS 2019); DOI: [10.48550/arXiv.1905.02175](https://doi.org/10.48550/arXiv.1905.02175)
+  通过将对抗性样本与模型学习到的非鲁棒但有预测性的特征联系起来，解释了其存在和可转移性。

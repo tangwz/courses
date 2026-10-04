@@ -1,0 +1,160 @@
+---
+course: "intro-feature-engineering"
+chapter: "feature-creation"
+lesson: "interaction-features"
+sourceId: 1366
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-5-feature-creation/interaction-features"
+title: "交互特征"
+description: "通过组合两个或多个现有特征（例如，乘积、和、差）来创建新特征。"
+order: 2
+plots: ["plots/1366-0.json", "plots/1366-1.json"]
+sourceHash: "c84c200a4dfb7f8955d51ecdd2836abf599d16301640c9cc9b93a3ce081889b0"
+sourceCorrections: []
+---
+
+有时，一个特征的预测能力并非一成不变；它会根据另一个特征的值而改变。例如，广告支出对销售的影响在节假日期间可能比一年中的其他时间强得多。同样，在医疗背景下，药物的效果可能取决于患者的年龄。模型，特别是线性模型，可能难以仅使用原始特征来捕捉这些组合效应。在这种情况下，交互特征就变得有用。
+
+交互特征是通过组合两个或更多现有特征而创建的新特征。目标是明确表示这些变量之间的组合效应或“交互”。创建交互特征最常见的方法是将原始特征的值相乘。
+
+### 捕捉组合效应
+
+考虑两个特征，$f_1$ 和 $f_2$。可以通过将它们相乘来创建一个交互特征 $f_{\text{交互}}$：
+
+$f_{\text{交互}} = f_1 \times f_2$
+
+这为何有用？我们来看一个简单的线性模型：
+
+$y = \beta_0 + \beta_1 f_1 + \beta_2 f_2$
+
+在这个模型中，$f_1$ 对目标 $y$ 的效应始终是 $\beta_1$，无论 $f_2$ 的值如何。同样，$f_2$ 的效应始终是 $\beta_2$。
+
+现在，我们来添加交互项：
+
+$y = \beta_0 + \beta_1 f_1 + \beta_2 f_2 + \beta_3 (f_1 \times f_2)$
+
+$f_1$ 的变化对 $y$ 的效应现在是 $\beta_1 + \beta_3 f_2$。注意到 $f_1$ 的效应不再是常数；它取决于 $f_2$ 的值。同样，$f_2$ 对 $y$ 的效应是 $\beta_2 + \beta_3 f_1$，取决于 $f_1$ 的值。交互项使模型能够学习一个特征与目标之间的关系如何基于另一个特征的水平而改变。
+
+虽然乘法是创建交互最常见的操作，但其他操作，如加法、减法或除法，有时也可能根据具体情况而有意义，尽管它们在标准交互项中使用的频率较低。
+
+### 使用 Pandas 实现
+
+在 Pandas 中，使用对 DataFrame 列的标准算术运算来创建基本交互特征是简单直接的。
+
+```python
+import pandas as pd
+
+# 示例 DataFrame
+data = {'feature_A': [1, 2, 3, 4, 5],
+        'feature_B': [10, 8, 6, 4, 2],
+        'target': [15, 21, 20, 19, 12]}
+df = pd.DataFrame(data)
+
+# 通过将 feature_A 和 feature_B 相乘来创建交互特征
+df['interaction_A_B'] = df['feature_A'] * df['feature_B']
+
+print(df)
+#    feature_A  feature_B  target  interaction_A_B
+# 0          1         10      15               10
+# 1          2          8      21               16
+# 2          3          6      20               18
+# 3          4          4      19               16
+# 4          5          2      12               10
+```
+
+这个新的 `interaction_A_B` 列现在可以在模型训练期间与原始特征一起使用。
+
+### 使用 Scikit-learn 实现
+
+Scikit-learn 的 `PolynomialFeatures` 转换器主要用于生成多项式项（我们将在稍后介绍），但它也可以专门用于创建交互特征。
+
+通过将 `interaction_only` 参数 (parameter)设置为 `True`，`PolynomialFeatures` 将仅生成指定 `degree` 内的特征组合乘积。如果 `degree=2`，它将计算所有特征对的乘积。如果 `degree=3`，它将计算所有特征对和三元组的乘积。
+
+```python
+import pandas as pd
+from sklearn.preprocessing import PolynomialFeatures
+
+# 示例 DataFrame
+data = {'feature_A': [1, 2, 3],
+        'feature_B': [10, 8, 6],
+        'feature_C': [0, 1, 0]}
+df = pd.DataFrame(data)
+
+# 初始化 PolynomialFeatures 以仅生成交互项（2 次）
+# include_bias=False 可防止添加全为一的列（截距）
+poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+
+# 拟合并转换数据
+interaction_features = poly.fit_transform(df[['feature_A', 'feature_B', 'feature_C']])
+
+# 获取新特征的名称
+feature_names = poly.get_feature_names_out(['feature_A', 'feature_B', 'feature_C'])
+
+# 创建包含新特征的 DataFrame
+df_interactions = pd.DataFrame(interaction_features, columns=feature_names)
+
+print(df_interactions)
+#    feature_A  feature_B  feature_C  feature_A feature_B  feature_A feature_C  feature_B feature_C
+# 0        1.0       10.0        0.0             10.0                0.0                0.0
+# 1        2.0        8.0        1.0             16.0                2.0                8.0
+# 2        3.0        6.0        0.0             18.0                0.0                0.0
+```
+
+注意到 `PolynomialFeatures` 输出原始特征以及交互项（例如，$f_A \times f_B$、$f_A \times f_C$、$f_B \times f_C$）。如果您只想要交互项本身，您将需要在转换后选择相应的列。如果 `interaction_only` 设置为 `False`（默认值），`PolynomialFeatures` 除了交互项之外，还会生成多项式项，如 $f_A^2$、$f_B^2$ 等。
+
+### 可视化示例
+
+设想一个分类问题，其中两个类别（蓝色圆圈和红色方块）仅使用特征 $f_1$ 和 $f_2$ 难以通过线性边界进行分离。
+
+
+
+![原始特征空间](plots/1366-0.json)
+
+
+
+> 数据点根据其原始特征 $f_1$ 和 $f_2$ 绘制。简单的线性边界难以有效分离这些类别。
+
+现在，我们来创建一个交互特征 $f_{\text{交互}} = f_1 \times f_2$。如果我们将 $f_1$ 与这个新的交互特征进行绘制，这些类别可能变得线性可分。
+
+
+
+![带交互的特征空间](plots/1366-1.json)
+
+
+
+> 数据点使用 $f_1$ 和交互项 $f_1 \times f_2$ 绘制。这些类别现在看起来更线性可分。
+
+这个可视化展示了交互项如何转换特征空间，可能使某些模型（特别是线性模型）更容易找到一个好的决策边界。
+
+### 重要考量
+
+尽管功能强大，但创建交互特征需要仔细考量：
+
+1. **维度：** 生成交互项，特别是许多特征之间或使用更高阶（例如，三向交互 $f_1 \times f_2 \times f_3$），可以显著增加数据集中特征的数量。这会减慢模型训练并增加过拟合 (overfitting)的风险（维度灾难）。
+2. **多重共线性：** 交互项与它们派生自的原始特征本身存在相关性。高多重共线性有时会使模型系数不稳定且难以解释，尽管像正则化 (regularization)这样的技术可以缓解这种情况。
+3. **过拟合：** 添加许多交互特征会赋予模型更大的灵活性，可能使其过于紧密地拟合训练数据中的噪声，导致在未见过的数据上表现不佳。特征选择或正则化技术（如 Lasso L1）变得重要，以选择有用的交互或惩罚复杂模型。
+4. **可解释性：** 虽然交互项使模型能够捕捉复杂的关系，但解释与交互项相关的系数（我们之前示例中的 $\beta_3$）的量值和符号，需要仔细思考组合效应如何影响目标。
+5. **特征缩放：** 如果原始特征具有显著不同的尺度，它们的乘积可能被具有较大幅度的特征所主导。通常建议在创建乘法交互项**之前**缩放特征（例如，使用 `StandardScaler` 或 `MinMaxScaler`）。
+
+### 何时使用它们
+
+在以下情况时，考虑创建交互特征：
+
+- 您有领域知识表明某些特征的组合效应很重要。
+- 您当前的模型（特别是线性模型）表现不佳，并且您怀疑存在涉及特征组合的非线性关系。
+- 您准备好通过正则化 (regularization)或特征选择等技术管理增加的维度。
+
+创建交互特征通常是一个迭代过程。您可能根据数据查看或领域知识提出某些交互的假设，使用它们构建模型，评估性能，并相应地完善您的特征集。它们代表了一种手动将非线性和组合效应注入特征集的方式，可能带来更准确和有洞察力的模型。
+
+## 参考资料
+
+- [sklearn.preprocessing.PolynomialFeatures](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PolynomialFeatures.html) — scikit-learn developers (2024)
+  描述`PolynomialFeatures`转换器功能和参数的官方文档，用于生成多项式和交互项。
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani (2013)
+  Publisher: Springer
+  一本基础教科书，清晰易懂地介绍了统计学习方法，包括线性模型中交互项的理论基础。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125965/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  使用Python和常用库实现机器学习概念的实用指南，包含特征工程（包括交互项）的示例。第三版。
+- [Feature Engineering for Machine Learning: Principles and Techniques for Data Scientists](https://www.oreilly.com/library/view/feature-engineering-for/9781491953235/) — Alice Zheng, Amanda Casari (2018)
+  Publisher: O'Reilly Media
+  一本关于特征工程技术和注意事项的专著，其中包含关于创建和使用交互特征的章节和讨论。

@@ -1,0 +1,212 @@
+---
+course: "adversarial-machine-learning"
+chapter: "evaluating-model-robustness"
+lesson: "setting-up-robustness-benchmarks-practical"
+sourceId: 4185
+sourceUrl: "https://apxml.com/zh/courses/adversarial-machine-learning/chapter-6-evaluating-model-robustness/setting-up-robustness-benchmarks-practical"
+title: "设置鲁棒性基准：实践操作"
+description: "练习使用评估框架对机器学习模型的鲁棒性进行基准测试。"
+order: 6
+plots: ["plots/4185-0.json"]
+sourceHash: "d382d0ab43348a7b7412630e72b5b4ba9f3c7c92c2886119eea00e089d4a5577"
+sourceCorrections: []
+---
+
+既然我们已经了解了指标、基准和自适应攻击的重要性，那么现在就动手实践，建立一个实用的鲁棒性基准吧。本节将引导你使用一个标准框架来评估模型抵御常见对抗攻击的能力。我们将侧重于过程，说明配置和运行此类评估所包含的主要步骤。
+
+### 选择你的工具包：评估框架
+
+有许多优秀的开源库简化了实施攻击、防御和评估的过程。常见的选择有：
+
+1. **对抗鲁棒性工具箱 (ART)**：一个全面的库，支持多种框架（TensorFlow、PyTorch、Keras、scikit-learn 等），提供了各种攻击、防御和评估指标。其广泛的支持使其成为一个多功能的选择。
+2. **CleverHans**：在此方面领先的库之一，主要侧重于对抗攻击和防御的基准测试，与研究界联系紧密。它与TensorFlow和PyTorch有集成。
+3. **Torchattacks**：一个专为PyTorch设计的库，提供了许多常见对抗攻击的清晰实现。
+
+在设置实践的鲁棒性基准时，可以借鉴ART等库提供的结构，因为它具有框架无关的特性和丰富的功能。无论选择哪个具体库，其中的核心步骤都是适用的。
+
+### 设置你的环境
+
+在开始之前，请确保你已安装了可用的Python环境以及你首选的深度学习 (deep learning)库（TensorFlow或PyTorch）。你还需要安装评估框架。例如，使用pip安装ART通常很简单：
+
+```bash
+pip install adversarial-robustness-toolbox
+```
+
+你可能需要额外的依赖项，这取决于你选择的深度学习后端（例如，`tensorflow` 或 `torch`）。请查阅具体框架的文档以获取详细的安装说明。
+
+### 定义基准测试的组成部分
+
+一个定义清晰的基准需要预先指定几个重要的组成部分。让我们概述一个典型场景：
+
+1. **被测模型**：我们需要一个已训练的模型。为了可复现性和比较，通常使用 `torchvision.models` 或 `tf.keras.applications` 等库中提供的标准预训练 (pre-training)模型。我们假设正在评估一个在CIFAR-10数据集上预训练的ResNet-18模型。
+2. **数据集**：我们将使用模型训练所用的数据集的标准测试集划分，在本例中是CIFAR-10测试集。在正确的数据集上评估对获取有意义的结果是根本的。
+3. **威胁模型**：我们需要定义攻击者的能力和目标。初始基准测试的常见设置是：
+
+   - **知识**：白盒。攻击者完全了解模型架构和参数 (parameter)。
+   - **目标**：无目标错误分类。攻击者旨在使模型预测 *任意* 错误的类别。
+   - **扰动约束**：我们将使用 $L_\infty$ 范数来限制扰动幅度。CIFAR-10的标准预算是 $\epsilon = 8/255$。这意味着任何单个像素值的改变不能超过8（在0-255范围内）。
+4. **攻击**：选择一组有代表性的攻击。对于一个基本基准测试，好的起点是：
+
+   - **快速梯度符号法 (FGSM)**：一种快速的单步攻击。
+   - **投影梯度下降 (gradient descent) (PGD)**：一种更强的迭代攻击，通常被认为是鲁棒性评估的标准基线（例如，PGD有10步，步长为 $\alpha = 2/255$）。
+5. **评估指标**：主要指标将是模型在每次攻击生成的对抗样本上的准确率。我们将把这与模型在原始、未受扰测试数据（原始准确率）上的准确率进行比较。
+
+### 实施评估流程
+
+使用ART这样的库，典型流程包含以下步骤：
+
+1. **加载数据和模型**：使用你选择的深度学习 (deep learning)框架（PyTorch或TensorFlow/Keras）加载CIFAR-10测试数据集和预训练 (pre-training)的ResNet-18模型。确保模型处于评估模式，并且预处理步骤（如归一化 (normalization)）得到正确应用。
+2. **封装模型**：对抗库通常要求将你的原生模型封装到其特定的分类器对象中。这种封装器标准化了应用攻击和防御的接口。对于ART，你将使用 `PyTorchClassifier` 或 `TensorFlowV2Classifier`。
+
+# 在PyTorch中使用ART的例子
+
+````
+import torch
+from art.estimators.classification import PyTorchClassifier
+import torchvision.models as models
+
+# 假设 'model' 是你加载的预训练ResNet-18模型
+# 假设 'criterion' 是你的损失函数 (例如, CrossEntropyLoss)
+# 假设 'optimizer' 已定义 (尽管推理时不需要)
+# 定义输入形状和类别数量
+input_shape = (3, 32, 32) # CIFAR-10
+nb_classes = 10
+
+# 定义预处理 (训练时使用的均值/标准差)
+mean = [0.4914, 0.4822, 0.4465]
+std = [0.2023, 0.1994, 0.2010]
+preprocessing = (mean, std)
+
+# 创建ART分类器封装器
+art_classifier = PyTorchClassifier(
+    model=model,
+    loss=criterion,
+    input_shape=input_shape,
+    nb_classes=nb_classes,
+    preprocessing=preprocessing, # 对于正确应用攻击很重要
+    clip_values=(0.0, 1.0) # 假设数据已缩放到 [0, 1]
+)
+```
+*重要提示*：为封装器提供正确的 `preprocessing` 和 `clip_values` 十分重要。攻击操作的是输入数据，框架需要知道如何处理归一化和数据范围。
+````
+
+3. **实例化攻击**：创建你所选攻击的实例，根据威胁模型中定义的参数 (parameter)配置它们。
+
+````
+```python
+# ART的使用例子
+from art.attacks.evasion import FastGradientMethod, ProjectedGradientDescent
+
+# FGSM 攻击实例
+fgsm_attack = FastGradientMethod(
+    estimator=art_classifier,
+    norm='inf', # 对应Linf范数
+    eps=8/255,
+    targeted=False
+)
+
+# PGD 攻击实例
+pgd_attack = ProjectedGradientDescent(
+    estimator=art_classifier,
+    norm='inf',
+    eps=8/255,
+    eps_step=2/255, # 步长 alpha
+    max_iter=10,   # 迭代次数
+    targeted=False,
+    verbose=False # 在生成过程中抑制进度条
+)
+
+attacks = {"FGSM": fgsm_attack, "PGD_10": pgd_attack}
+```
+````
+
+4. **运行评估循环**：遍历测试数据集（或者一个合理大小的子集以加快评估）。对于每一批原始图像：
+\* 评估模型在原始批次上的准确率。
+\* 对于每个已配置的攻击：
+\* 使用 `attack.generate(x=clean_batch)` 方法生成对抗样本。
+\* 评估模型在生成的对抗批次上的准确率。
+\* 汇总准确率得分。
+
+````
+```python
+````
+
+# 评估循环
+
+````
+# 假设 'test_loader' 提供 (图像, 标签) 批次
+
+clean_correct = 0
+adv_correct = {name: 0 for name in attacks.keys()}
+total = 0
+
+for images, labels in test_loader:
+    # 确保图像在正确的设备上 (CPU/GPU)
+    # 如有需要，格式化标签 (例如，转为独热编码)
+
+    # 评估原始准确率
+    clean_preds = art_classifier.predict(images)
+    clean_correct += (torch.argmax(clean_preds, dim=1) == labels).sum().item()
+
+    # 评估每个攻击下的对抗准确率
+    for name, attack in attacks.items():
+        adv_images = attack.generate(x=images, y=labels) # y有时有助于稳定非目标攻击
+        adv_preds = art_classifier.predict(adv_images)
+        adv_correct[name] += (torch.argmax(adv_preds, dim=1) == labels).sum().item()
+
+    total += labels.size(0)
+
+clean_accuracy = 100.0 * clean_correct / total
+adv_accuracy = {name: 100.0 * count / total for name, count in adv_correct.items()}
+
+print(f"Clean Accuracy: {clean_accuracy:.2f}%")
+for name, acc in adv_accuracy.items():
+    print(f"Accuracy under {name} (eps={8/255:.3f}): {acc:.2f}%")
+```
+````
+
+### 分析和报告结果
+
+循环的输出提供了核心结果：原始准确率与攻击下的准确率。
+
+- **原始准确率**：建立了模型的基本性能。
+- **对抗准确率**：表明在特定攻击和扰动预算（$L_\infty, \epsilon=8/255$）下的性能下降。准确率越低表明对该特定攻击的脆弱性越高。
+
+你可以将这些结果呈现在简单的表格或条形图中：
+
+
+
+![模型在攻击下的准确率 (CIFAR-10, ResNet-18)](plots/4185-0.json)
+
+
+
+> 模型在原始CIFAR-10测试图像上的准确率与由FGSM和PGD生成的对抗样本上的准确率（$L_\infty$，$\epsilon=8/255$）的比较。
+
+**结果说明**：上图清楚地显示，当模型面对对抗样本时，准确率显著下降，尤其是在更强的PGD攻击下。在PGD攻击下准确率为38.2%，这表明该模型在此特定威胁模型下存在相当大的脆弱性。
+
+**报告**：报告基准测试结果时，请始终清晰地说明：
+
+- 模型架构和数据集。
+- 所使用的确切攻击，包括所有参数 (parameter)（范数，$\epsilon$，迭代次数，步长）。
+- 所使用的评估框架（例如，ART版本1.x.y）。
+- 原始准确率以及每种攻击下的准确率。
+
+### 后续方向
+
+本次实践演练提供了一个建立基本鲁棒性基准的模板。在此基础上，你可以：
+
+- **扩展攻击集**：包含更多样化和更强大的攻击（例如，C&W、AutoAttack、基于分数攻击、基于决策攻击等，如适用）。
+- **改变威胁模型**：评估在不同范数（$L_2, L_0$）和扰动预算（$\epsilon$）下的鲁棒性。
+- **基准测试防御**：将相同的评估过程应用于结合了防御机制（如对抗训练）的模型，以量化 (quantization)它们的有效性。
+- **实施自适应攻击**：如前所述，设计专门用于绕过任何被评估防御的攻击，以便进行更严格的评估。
+
+系统性基准测试，使用标准化工具和清晰的报告，对理解机器学习 (machine learning)模型的真实安全性态势以及比较不同防御策略的有效性是根本的。
+
+## 参考资料
+
+- [Towards Deep Learning Models Resistant to Adversarial Attacks](https://arxiv.org/abs/1706.06083) — Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, Adrian Vladu (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1706.06083](https://doi.org/10.48550/arXiv.1706.06083)
+  介绍了投影梯度下降（PGD）攻击和对抗训练，为评估和提高模型鲁棒性建立了强大的基线。
+- [Adversarial Robustness Toolbox Documentation](https://adversarial-robustness-toolbox.readthedocs.io/en/latest/) — IBM (2024)
+  Publisher: IBM
+  ART的官方文档，提供了详细的安装指南、API参考和使用工具包的实践示例。

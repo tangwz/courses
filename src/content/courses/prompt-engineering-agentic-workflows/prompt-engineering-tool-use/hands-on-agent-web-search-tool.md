@@ -1,0 +1,336 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "prompt-engineering-tool-use"
+lesson: "hands-on-agent-web-search-tool"
+sourceId: 6732
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-3-prompt-engineering-tool-use/hands-on-agent-web-search-tool"
+title: "动手实践：指导代理使用网页搜索工具"
+description: "实现提示以指导AI代理使用网页搜索API查找和获取信息。"
+order: 8
+plots: []
+sourceHash: "4b7c207197a205bf97e05b81adb5c45fc18c109ec6a3d0ced9a6380ab6db4b4b"
+sourceCorrections: []
+---
+
+提示工程 (prompt engineering)允许AI代理与外部工具交互，显著扩大其能力范围。通过指导AI代理使用网页搜索工具来回答需要最新信息的问题，可以展示这一点。这个实际操作练习指导你完成提示的构建、代理交互的模拟以及信息流的管理。
+
+我们的目标是让AI代理回答问题：“ExampleCorp当前的市值是多少？”此信息是动态的，通常不属于大型语言模型的静态训练数据，因此网页搜索工具必不可少。
+
+### 准备工作：代理与工具
+
+设想我们有一个由大型语言模型驱动的AI代理。我们需要为其配备一个`web_search`工具。为了让代理有效使用此工具，我们必须在提示中清晰地定义它。
+
+**工具说明：**
+代理需要理解工具的功能、它预期什么输入以及它将提供什么输出。我们将以结构化方式向代理提供此信息。
+
+```
+你可使用以下工具：
+工具名称：web_search
+说明：使用此工具从互联网查找当前信息，例如股票价格、新闻或近期事件。
+输入：一个代表搜索查询的字符串。
+输出：一个包含搜索结果摘要的字符串。
+```
+
+接下来，我们需要指导代理如何请求使用此工具。一种常见方法是要求代理输出其思考过程（一个“想法”），然后是针对工具的结构化请求，通常采用JSON格式。如果代理认为无需工具即可回答，它应直接提供最终答案。
+
+**行动格式说明：**
+
+```
+当你需要使用工具时，请回复一个包含两个键的JSON对象：“thought” 和 “action”。
+“thought” 应包含一个字符串，解释你选择工具和查询的理由。
+“action” 应是一个包含 “tool_name” 和 “tool_input” 的对象。
+
+工具使用示例：
+{
+  "thought": "我需要查找伦敦的天气。我将使用 web_search 工具。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "weather in London"
+  }
+}
+
+如果你有足够的信息来回答用户的问题，请回复一个包含两个键的JSON对象：“thought” 和 “final_answer”。
+最终答案示例：
+{
+  "thought": "我已找到信息，现在可以回答问题了。",
+  "final_answer": "答案是..."
+}
+```
+
+### 构建初始提示
+
+现在，我们将这些元素与用户的问题结合，为我们的代理构成初始提示。
+
+```text
+你是一个乐于助人的AI助手。你的任务是准确回答用户问题。
+
+你可使用以下工具：
+工具名称：web_search
+说明：使用此工具从互联网查找当前信息，例如股票价格、新闻或近期事件。
+输入：一个代表搜索查询的字符串。
+输出：一个包含搜索结果摘要的字符串。
+
+当你需要使用工具时，请回复一个包含两个键的JSON对象：“thought” 和 “action”。
+“thought” 应包含一个字符串，解释你选择工具和查询的理由。
+“action” 应是一个包含 “tool_name” 和 “tool_input” 的对象。
+
+工具使用示例：
+{
+  "thought": "我需要查找伦敦的天气。我将使用 web_search 工具。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "weather in London"
+  }
+}
+
+如果你有足够的信息来回答用户的问题，请回复一个包含两个键的JSON对象：“thought” 和 “final_answer”。
+最终答案示例：
+{
+  "thought": "我已找到信息，现在可以回答问题了。",
+  "final_answer": "答案是..."
+}
+
+用户问题：ExampleCorp当前的市值是多少？
+```
+
+### 模拟代理的首次交互
+
+当此提示发送给大型语言模型时，我们预计它会识别出该问题需要外部的、当前数据，并决定使用`web_search`工具。
+
+**预期的LLM输出（代理行动）：**
+
+```json
+{
+  "thought": "用户询问 ExampleCorp 的当前市值。这是经常变化的财务数据，所以我应该使用 web_search 工具来获取最新信息。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "current market capitalization of ExampleCorp"
+  }
+}
+```
+
+在真实的代理系统中，你的代码将解析此JSON。它会识别`web_search`为工具，并将“current market capitalization of ExampleCorp”识别为输入。系统随后会执行此搜索（例如，通过调用搜索引擎API）。
+
+### 系统响应：执行工具与提供观察结果
+
+假设我们的`web_search`工具（或它调用的API）返回以下信息：
+
+**模拟工具输出（观察结果）：**
+`观察结果：根据今天的市场数据，ExampleCorp 的市值为 1500 亿美元。`
+
+此“观察结果”很重要。这是代理获得的新信息。现在，我们需要将其反馈给代理，以便它能形成最终答案。
+
+### 第二次交互：处理观察结果
+
+代理的下一个提示将包含原始指令、其先前行动的历史以及此新观察结果。
+
+```text
+你是一个乐于助人的AI助手。你的任务是准确回答用户问题。
+
+你可使用以下工具：
+工具名称：web_search
+说明：使用此工具从互联网查找当前信息，例如股票价格、新闻或近期事件。
+输入：一个代表搜索查询的字符串。
+输出：一个包含搜索结果摘要的字符串。
+
+当你需要使用工具时，请回复一个包含两个键的JSON对象：“thought” 和 “action”。
+“thought” 应包含一个字符串，解释你选择工具和查询的理由。
+“action” 应是一个包含 “tool_name” 和 “tool_input” 的对象。
+
+工具使用示例：
+{
+  "thought": "我需要查找伦敦的天气。我将使用 web_search 工具。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "weather in London"
+  }
+}
+
+如果你有足够的信息来回答用户的问题，请回复一个包含两个键的JSON对象：“thought” 和 “final_answer”。
+最终答案示例：
+{
+  "thought": "我已找到信息，现在可以回答问题了。",
+  "final_answer": "答案是..."
+}
+
+用户问题：ExampleCorp当前的市值是多少？
+
+你之前执行了以下行动：
+{
+  "thought": "用户询问 ExampleCorp 的当前市值。这是经常变化的财务数据，所以我应该使用 web_search 工具来获取最新信息。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "current market capitalization of ExampleCorp"
+  }
+}
+
+观察结果：根据今天的市场数据，ExampleCorp 的市值为 1500 亿美元。
+
+现在，请根据此观察结果提供你的回复。
+```
+
+**预期的LLM输出（代理最终答案）：**
+
+```json
+{
+  "thought": "web_search 工具返回了 ExampleCorp 的当前市值为 1500 亿美元。我现在已拥有回答用户问题所需的信息。",
+  "final_answer": "ExampleCorp 的当前市值为 1500 亿美元。"
+}
+```
+
+系统随后会解析此JSON，并将`final_answer`呈现给用户。
+
+### 一个示例Python代码片段
+
+为了帮助理解此过程，这里有一个简化的Python函数，展示了此类交互循环的可能结构。这并非完整的代理框架，但它演示了提示和响应的流程。
+
+```python
+# 假设存在 LLM 函数 `call_llm(prompt_text)`
+# 并且存在 `web_search_tool(query)` 函数。
+
+def execute_agent_step(current_prompt):
+    # 在实际场景中，这将调用 LLM API
+    # print("发送到 LLM:\n", current_prompt)
+    llm_response_str = call_llm(current_prompt) # 模拟的 LLM 调用
+    # print("LLM 响应:\n", llm_response_str)
+
+    # 在实际系统中，你会进行可靠的 JSON 解析
+    import json
+    try:
+        response_json = json.loads(llm_response_str)
+    except json.JSONDecodeError:
+        print("错误：LLM 未返回有效的 JSON。")
+        return {"error": "LLM 返回的 JSON 响应无效"}, None
+
+    if "action" in response_json:
+        tool_name = response_json["action"].get("tool_name")
+        tool_input = response_json["action"].get("tool_input")
+
+        if tool_name == "web_search":
+            # 模拟执行工具
+            observation = web_search_tool(tool_input)
+            print(f"工具已执行：{tool_name}，输入：'{tool_input}'，输出：'{observation}'")
+            return response_json, observation # 返回代理的行动和观察结果
+        else:
+            print(f"错误：未知工具 '{tool_name}'")
+            return response_json, f"错误：未知工具 '{tool_name}'"
+
+    elif "final_answer" in response_json:
+        print("最终答案：", response_json["final_answer"])
+        return response_json, None # 表示完成
+
+    else:
+        print("错误：LLM 响应不包含 'action' 或 'final_answer'。")
+        return response_json, "错误：LLM 响应格式错误。"
+
+# --- 示例用法（概述 - 替换为实际的 LLM 和工具调用）---
+
+# 实际 LLM 调用的占位符
+def call_llm(prompt_text):
+    # 这里你会集成实际的 LLM API（例如 OpenAI、Anthropic）
+    # 在此示例中，我们将根据提示内容模拟响应。
+    if "User Question: What is the current market capitalization of ExampleCorp?" in prompt_text and "Observation:" not in prompt_text:
+        return """
+        {
+          "thought": "The user is asking for the current market capitalization of ExampleCorp. This is financial data that changes frequently, so I should use the web_search tool to get the most up-to-date information.",
+          "action": {
+            "tool_name": "web_search",
+            "tool_input": "current market capitalization of ExampleCorp"
+          }
+        }
+        """
+    elif "Observation: According to market data from today, ExampleCorp has a market capitalization of $150 Billion." in prompt_text:
+        return """
+        {
+          "thought": "The web_search tool returned the current market capitalization of ExampleCorp as $150 Billion. I now have the information needed to answer the user's question.",
+          "final_answer": "The current market capitalization of ExampleCorp is $150 Billion."
+        }
+        """
+    return """{"thought": "I am unsure how to proceed.", "final_answer": "I cannot answer this question."}"""
+
+# 实际网页搜索工具的占位符
+def web_search_tool(query):
+    if query == "current market capitalization of ExampleCorp":
+        return "According to market data from today, ExampleCorp has a market capitalization of $150 Billion."
+    return "No information found for your query."
+
+# 初始提示构建（如前所述）
+initial_prompt = """你是一个乐于助人的AI助手。你的任务是准确回答用户问题。
+
+你可使用以下工具：
+工具名称：web_search
+说明：使用此工具从互联网查找当前信息，例如股票价格、新闻或近期事件。
+输入：一个代表搜索查询的字符串。
+输出：一个包含搜索结果摘要的字符串。
+
+当你需要使用工具时，请回复一个包含两个键的JSON对象：“thought” 和 “action”。
+“thought” 应包含一个字符串，解释你选择工具和查询的理由。
+“action” 应是一个包含 “tool_name” 和 “tool_input” 的对象。
+
+工具使用示例：
+{
+  "thought": "我需要查找伦敦的天气。我将使用 web_search 工具。",
+  "action": {
+    "tool_name": "web_search",
+    "tool_input": "weather in London"
+  }
+}
+
+如果你有足够的信息来回答用户的问题，请回复一个包含两个键的JSON对象：“thought” 和 “final_answer”。
+最终答案示例：
+{
+  "thought": "我已找到信息，现在可以回答问题了。",
+  "final_answer": "答案是..."
+}
+
+用户问题：ExampleCorp当前的市值是多少？
+"""
+
+# 代理第一步
+print("--- 代理交互：步骤 1 ---")
+agent_action_1, observation_1 = execute_agent_step(initial_prompt)
+
+if observation_1 and "final_answer" not in agent_action_1:
+    # 构建下一个提示，包括历史和观察结果
+    prompt_for_step_2 = f"""{initial_prompt.split("用户问题：")[0]}
+用户问题：ExampleCorp当前的市值是多少？
+
+你之前执行了以下行动：
+{json.dumps(agent_action_1, indent=2)}
+
+观察结果：{observation_1}
+
+现在，请根据此观察结果提供你的回复。
+"""
+    print("\n--- 代理交互：步骤 2 ---")
+    agent_action_2, _ = execute_agent_step(prompt_for_step_2)
+```
+
+这个代码片段演示了整个循环：代理（由`call_llm`模拟）接收一个提示，决定采取行动（或给出最终答案），系统（你的Python代码）处理该行动（例如，调用`web_search_tool`），然后根据结果为代理的下一步形成新提示。
+
+### 改进提示以提升效果
+
+虽然我们的示例可行，但实际场景通常需要更精确的提示：
+
+- \*\*改进查询措辞：\*\*如果代理生成不佳的搜索查询（例如，太宽泛或太狭窄），你可以在提示中添加指令，例如：“确保你的搜索查询具体且有针对性。如果查找数字，请包含‘价值’或‘金额’等词。”
+- \*\*处理模糊或缺失的信息：\*\*如果搜索工具返回“未找到信息”或模糊结果怎么办？你可以指导代理尝试重新措辞查询、分解问题，甚至告知用户它无法找到准确答案。例如：“如果首次搜索不成功，请尝试为你的查询使用不同措辞。如果多次尝试失败，请说明信息未能找到。”
+- \*\*工具执行中的错误处理：\*\*正如“通过提示处理工具执行期间的错误”中所讨论的，你可以提供关于如果工具返回错误消息而非有用数据时代理应如何反应的指导。
+
+### 本次练习的总结
+
+- \*\*工具描述的清晰度：\*\*代理有效使用工具的能力始于提示中对工具目的、输入和输出的清晰、简洁的描述。
+- \*\*结构化行动格式：\*\*为工具调用和最终答案定义一致的格式（如JSON）使你的系统更容易解析代理的响应并协调行动。
+- \*\*迭代交互：\*\*代理工具的使用通常是一个多步骤过程。代理思考、行动、观察，然后再次思考。你的提示设计必须支持这种对话循环，包含历史记录和新观察结果。
+- \*\*“思考”的重要性：\*\*鼓励代理在行动或最终答案之前输出其“思考”过程，这对于调试和理解其推理 (inference)过程很有价值。它也常能提升行动本身的质量。
+- \*\*开发中的模拟：\*\*正如我们所做的，模拟工具输出是一种有用的方法，可以在与实际API集成之前开发和测试你的提示。
+
+通过这个实际操作示例，你已在构建更强大的AI代理方面迈出了重要一步。记住，用于工具使用的提示工程 (prompt engineering)是一个迭代过程。测试你的提示，观察代理的行为，并完善你的指令以达成期望的结果。随着你集成更多工具并处理更复杂的任务，这些基本技术将对你很有帮助。
+
+## 参考资料
+
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2022)
+  Journal: arXiv preprint arXiv:2210.03629; DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了ReAct（推理与行动）框架，使语言模型能够将推理过程与特定任务行动相结合。本论文提出的思考-行动-观察循环是本节演示的智能体工作流程的核心。
+- [Tools (formerly Function calling)](https://platform.openai.com/docs/guides/function-calling) — OpenAI (2024)
+  Publisher: OpenAI
+  官方文档，解释了如何使语言模型能够定义和使用自定义工具，包括用于工具调用和响应处理的结构化输出。这与本节的实际操作示例直接相关。

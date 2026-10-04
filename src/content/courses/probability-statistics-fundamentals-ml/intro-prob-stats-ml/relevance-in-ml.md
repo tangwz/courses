@@ -1,0 +1,79 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "intro-prob-stats-ml"
+lesson: "relevance-in-ml"
+sourceId: 2396
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-1-intro-prob-stats-ml/relevance-in-ml"
+title: "机器学习中的相关性"
+description: "了解为何概率和统计学是构建和评估机器学习模型的基本工具。"
+order: 2
+plots: []
+sourceHash: "d5dd7dc64973d2ce650ad33b901db7a3c4d06f8e01d174d146154e9e15b6adee"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)的核心在于从数据中学习模式。但在此背景下，“学习”意味着什么？我们又如何处理数据和预测中固有的不确定性呢？这就是概率和统计学成为不可或缺的工具之处。它们提供了数学语言和方法，用于理解数据，构建能从中学习的模型，并评估这些模型的表现。
+
+可以这样理解：
+
+- **统计学** 帮助我们描述和理解输入到机器学习模型中的数据。数据是如何分布的？它的集中趋势是什么？它的离散程度如何？回答这些问题通常是任何机器学习项目的首要步骤。
+- **概率论** 让我们能够量化 (quantization)不确定性。当模型做出预测时，我们能有多大的把握？概率理论提供了构建模型的框架，这些模型可以处理随机性，并做出不只是“是”或“否”的预测，而是可以表示为可能性（例如，“这封邮件有80%的垃圾邮件可能性”）。
+
+## 为什么概率和统计学很重要？
+
+机器学习 (machine learning)工作流程的几乎每个阶段都依赖于概率和统计学中的理念：
+
+### 数据初步分析和理解
+
+在训练模型之前，你需要理解你的数据。描述性统计（我们将在第2章详细介绍）提供了平均值、中位数、标准差以及直方图等可视化工具，用于总结数据特征。这种初步分析有助于发现数据中的规律、异常值和潜在问题，从而指导你如何预处理数据和选择合适的模型。
+
+### 模型构建
+
+许多机器学习 (machine learning)算法直接源于概率原理。例如：
+
+- **朴素贝叶斯分类器** 使用贝叶斯定理（在第3章介绍）来计算给定特定特征下某个类别的概率。
+- **线性回归** 模型通常假设误差（预测值与实际值之间的差异）呈正态分布（这是我们在第4章将看到的概率分布中的一个理念）。
+  理解这些基本假设对于选择正确的模型和解释其结果很重要。
+
+### 模型评估
+
+你如何知道你训练的机器学习 (machine learning)模型是否确实有用？统计学提供了评估模型性能的指标和流程。
+
+- 准确率、精确率和召回率等指标都是统计测量值。
+- 假设检验（在第5章介绍）等技术有助于判断一个模型相较于另一个模型的性能提升是否具有统计学意义，或者仅仅是由于所用特定测试数据中的偶然性。这有助于你做出明智的决定，选择部署哪个模型。
+
+### 量化 (quantization)不确定性
+
+机器学习 (machine learning)模型很少提供绝对确定的预测。概率理论允许模型表达不确定性。例如，医疗诊断模型可能会输出患者患有某种疾病的概率，这比简单的二元预测能给医生提供更详细的信息。天气预报模型预测的是下雨的*概率*，而不是明确的“是”或“否”。处理和传达这种不确定性是负责任地应用机器学习的核心内容。
+
+### 抽样和推断
+
+通常，我们只有一部分数据样本，而不是我们感兴趣的完整总体（如“总体与样本”部分所述）。统计推断（第5章）提供了根据有限的样本数据得出关于更大总体的结论的方法。这对于理解一个在样本上训练的模型如何很好地推广到新的、未见过的数据非常重要。
+
+## 一个简单的类比：预测抛硬币
+
+假设你想构建一个“模型”来预测一枚硬币是否公平（有50%的几率出现正面）。
+
+1. **数据收集：** 你抛掷硬币100次（你的样本）。
+2. **描述性统计：** 你计算正面（例如55次）和反面（45次）的数量。你计算正面的样本比例（0.55）。
+3. **概率论：** 基本理论假设每次抛掷硬币出现正面的概率为 $p$。对于一枚公平的硬币，我们期望 $p = 0.5$。
+4. **统计推断：** 100次抛掷中出现55次正面，这是否提供了充分的证据表明这枚硬币是*不公平的*（即 $p$ 与0.5显著不同）？假设检验可以帮助回答这个问题。我们还可以根据我们的样本计算真实正面概率的置信区间。
+
+虽然这很简单，但它说明了我们如何使用观察到的数据（统计学）来对基本概率和过程进行推断，就像我们在更复杂的机器学习 (machine learning)场景中所做的那样。
+
+总之，概率和统计学不仅仅是旁支主题；它们与机器学习的理论和实践紧密结合。理解这些基础将使你具备能力，更好地掌握机器学习算法的工作原理、如何为它们准备数据，以及如何有效地解释和评估其结果。随着我们课程的推进，你将看到这些联系通过实际例子得到加强。
+
+## 参考资料
+
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, Jerome Friedman (2009)
+  Publisher: Springer
+  本书全面介绍了统计学习方法，概述了许多机器学习算法的统计和概率基础。
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/) — Christopher M. Bishop (2006)
+  Publisher: Springer
+  本书从统一的贝叶斯概率视角介绍机器学习，描述了各种模型和算法的统计学基础。
+- [Practical Statistics for Data Scientists: 50 Essential Concepts](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  本书将统计概念与数据科学和机器学习中的实际应用相连接，为数据探索和模型评估提供了核心见解。
+- [Probability and Statistics for Engineers and Scientists](https://www.pearson.com/us/higher-education/product/Walpole-Probability-and-Statistics-for-Engineers-and-Scientists-9th-Edition/9780134115856.html) — Ronald E. Walpole, Raymond H. Myers, Sharon L. Myers, Keying E. Ye (2021)
+  Publisher: Pearson
+  一本标准教科书，为概率论和统计推断提供了坚实的基础，对理解机器学习的数学基础至关重要。

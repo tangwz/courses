@@ -1,0 +1,87 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "autoencoder-core-concepts"
+lesson: "autoencoder-training-process"
+sourceId: 6451
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-2-autoencoder-core-concepts/autoencoder-training-process"
+title: "自动编码器的训练过程"
+description: "了解自动编码器如何使用反向传播和优化算法进行训练。"
+order: 7
+plots: []
+sourceHash: "a6e5052b8fd31c7f83fd90050b69f9d0cd07b53993930f50e31dbd7d894a42ce"
+sourceCorrections: []
+---
+
+自动编码器的训练过程核心在于让网络尽可能准确地重构其输入。如前所述，自动编码器包含一个用于压缩输入的编码器和一个用于重构输入的解码器。它的奥秘在于如何调整网络的内部参数 (parameter)、即权重 (weight)和偏置 (bias)，以便更好地完成此重构任务。这通过标准的神经网络 (neural network)训练方案实现，但其独特之处在于：它是一种无监督学习 (supervised learning) (unsupervised learning)的形式。
+
+### 自动编码器训练的无监督特性
+
+有监督学习 (supervised learning)涉及使用输入数据和相应的明确标签来训练模型。例如，在图像分类任务中，你会提供图像（输入）以及它们的类别，如“猫”或“狗”（标签）。然而，自动编码器不需要这类外部标签。相反，输入数据本身就作为目标。自动编码器会学习产生一个输出$\hat{x}$，使其尽可能接近原始输入$x$。由于目标直接源自输入数据，这被视为一种无监督学习 (unsupervised learning)任务。网络通过以受约束的方式学习恒等函数（$f(x) \approx x$），并强制通过瓶颈层，从而学习数据的表示。
+
+### 目标：最小化重构损失
+
+训练过程的核心是**损失函数 (loss function)**，它量化 (quantization)了重构输出$\hat{x}$与原始输入$x$之间的差异。训练的目标是最小化此重构误差。
+
+如本章前面所述，对于连续输入数据，例如图像中的像素强度（归一化 (normalization)到[0, 1]范围）或数据集中的数值特征，\*\*均方误差（MSE）\*\*是一个常见选项。它的计算方式如下：
+
+$MSE = \frac{1}{N} \sum_{i=1}^{N} (x_i - \hat{x}_i)^2$
+
+此处，$N$是数据点（或图像中的像素，或向量 (vector)中的特征）的数量，$x_i$是原始输入的单个元素，$\hat{x}_i$是重构输出的相应元素。
+
+如果你的输入数据是二值的（例如，黑白像素，其中值严格为0或1），或者如果解码器的输出层使用S型激活函数 (activation function)（它将输出压缩到[0, 1]范围，可解释为概率），那么\*\*二元交叉熵（BCE）\*\*通常是更合适的损失函数。对于单个数据点，它的定义如下：
+
+$BCE = - \sum_{i=1}^{D} [x_i \log(\hat{x}_i) + (1 - x_i) \log(1 - \hat{x}_i)]$
+
+其中$D$是输入向量的维度，$x_i$是真实输入的第$i$个元素，$\hat{x}_i$是重构输出的第$i$个元素（通常是S型激活的输出）。当模型自信地做出错误预测时（例如，当真实值为1时预测为0.1），此损失函数会对其进行严重惩罚。
+
+### 训练循环：迭代优化
+
+训练自动编码器涉及迭代地将数据馈送到网络中，并调整其权重 (weight)以减少重构损失。此过程通常使用优化算法，例如\*\*随机梯度下降 (gradient descent)（SGD）\*\*或其更高级的变体，如Adam、RMSprop或Adagrad。这些算法与反向传播 (backpropagation)算法一同，是深度学习 (deep learning)的主力。
+
+以下是单个训练步骤的分解：
+
+1. **前向传播**：
+
+   - 一批输入样本$x$被馈送到**编码器**。
+   - 编码器将$x$映射到**瓶颈层**中的压缩表示$z$。此$z$常被称为潜在代码或潜在变量。
+   - **解码器**将$z$作为输入，并尝试重构原始输入，产生$\hat{x}$。
+2. **损失计算**：
+
+   - 选定的重构损失函数 (loss function)（例如，MSE或BCE）用于计算原始输入$x$与重构输出$\hat{x}$之间的误差。
+3. **反向传播**：
+
+   - 学习的核心：前一步骤中计算的误差通过网络反向传播，从输出层到输入层。
+   - 在此反向传播过程中，计算损失函数相对于网络中每个权重和偏置 (bias)的梯度。此梯度表明每个参数 (parameter)的微小变化将如何影响总误差。
+4. **权重更新**：
+
+   - 优化器使用这些梯度来更新编码器和解码器的权重与偏置。更新沿着最小化损失的方向进行。这些更新的大小由一个称为**学习率**的参数控制。
+
+整个序列（前向传播、损失计算、反向传播和权重更新）会重复进行多个数据批次。当网络处理完整个训练数据集一次时，就完成了一个**周期（epoch）**。训练通常涉及运行多个周期。
+
+> 此图描绘了自动编码器的训练循环。输入数据流经编码器到达瓶颈层，然后通过解码器产生重构数据。通过比较输入和重构数据来计算损失，此损失通过反向传播和优化器用于更新网络的权重。
+
+### 训练考量
+
+几个因素影响训练过程：
+
+- **学习率**：一个重要的超参数 (parameter) (hyperparameter)。如果它太小，训练会非常慢。如果它太大，训练可能会发散或在最优解附近震荡而不收敛。
+- **批次大小**：模型更新前处理的样本数量。较小的批次大小会给梯度估计引入噪声，这有时有助于跳出局部最小值，但也可能使训练稳定性降低。较大的批次大小提供更准确的梯度估计，但需要更多内存。
+- **周期数量**：整个数据集通过网络的次数。周期太少，模型会欠拟合 (underfitting)（学习不足）。周期太多，模型可能会过拟合 (overfitting)，特别是当自动编码器能力过强时（例如，没有适当正则化 (regularization)的过完备自动编码器）。
+- **优化器选择**：不同的优化器（Adam、带动量的SGD、RMSprop）具有不同的特性，会影响收敛速度和最终模型的质量。Adam通常是一个不错的默认选择。
+- **网络架构**：编码器和解码器中的层数、每层的神经元数量和激活函数 (activation function)会很大程度上影响自动编码器能学到什么。
+
+通过这种迭代的重构和优化过程，自动编码器的编码器会学习将输入数据提炼成瓶颈层中高效的压缩表示。同时，解码器学习如何利用这种压缩形式并忠实地重构原始数据。我们通常对这种学习到的压缩表示感兴趣，用于特征提取，因为它理想情况下捕捉了数据中最突出、信息量最丰富的部分。下一节将更仔细地研究这些有意义的特征是如何找到的。
+
+## 参考资料
+
+- [Reducing the Dimensionality of Data with Neural Networks](https://pubmed.ncbi.nlm.nih.gov/16873662/) — Geoffrey E. Hinton, Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  这篇论文介绍了深度自动编码器，展示了它们学习高维数据紧凑、低维表示的能力，为后续许多自动编码器发展奠定了基础。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍了自动编码器、其训练机制、各种损失函数（MSE、交叉熵）、反向传播以及SGD和Adam等优化算法。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma, Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，该优化器因其在训练神经网络方面的效率和有效性而广泛应用于深度学习。
+- [CS231n: Convolutional Neural Networks for Visual Recognition](http://cs231n.stanford.edu/2023/) — Fei-Fei Li, Yunzhu Li, Ruohan Gao (2023)
+  提供了神经网络训练、反向传播、损失函数和优化算法的详细解释，这些都直接适用于自动编码器训练。

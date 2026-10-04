@@ -1,0 +1,197 @@
+---
+course: "essential-numpy-pandas"
+chapter: "loading-saving-data-pandas"
+lesson: "import-export-practice"
+sourceId: 1776
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-6-loading-saving-data-pandas/import-export-practice"
+title: "动手实践：数据集的导入与导出"
+description: "将数据从 CSV 和 Excel 文件加载到 DataFrames 中，进行少量修改，并保存结果。"
+order: 6
+plots: []
+sourceHash: "6f39f248e9298d0319e0e78775c7b6510ff88ee8049f195adc8f039b9032dafe"
+sourceCorrections: []
+---
+
+让我们将本章的理念付诸实践。我们将演练从文件读取数据、进行少量修改，然后保存结果的常见情况。这模拟了数据分析中常见的模式：加载、处理、保存。
+
+首先，请确保已导入 Pandas。通常，我们使用别名 `pd`。
+
+```python
+import pandas as pd
+print(f"Pandas version: {pd.__version__}")
+```
+
+### 准备示例数据文件
+
+对于这些练习，我们需要一些数据文件。假设我们有两个文件：
+
+1. `students.csv`：一个逗号分隔值文件。
+2. `grades.xlsx`：一个 Microsoft Excel 文件。
+
+如果您在本地运行此代码，可以自行创建这些文件。
+
+**创建 `students.csv`：**
+将以下文本保存到与您的脚本或笔记本位于同一目录下的 `students.csv` 文件中：
+
+```csv
+StudentID,Name,Major
+101,Alice,Physics
+102,Bob,Chemistry
+103,Charlie,Mathematics
+104,David,Physics
+```
+
+**创建 `grades.xlsx`：**
+您需要安装 `openpyxl` 等库（`pip install openpyxl`）才能处理 `.xlsx` 文件。创建一个名为 `grades.xlsx` 的 Excel 文件，并在名为 `Sheet1` 的工作表中放入以下数据：
+
+| 学生ID | 课程 | 分数 |
+| --- | --- | --- |
+| 101 | 力学 | 85 |
+| 102 | 有机化学 | 92 |
+| 101 | 电磁学 | 78 |
+| 103 | 微积分 | 95 |
+| 102 | 热力学 | 88 |
+| 104 | 力学 | 81 |
+
+### 从 CSV 读取数据
+
+现在，让我们使用 `pd.read_csv()` 将 `students.csv` 文件读取到 Pandas DataFrame 中。
+
+```python
+# 读取 CSV 文件
+students_df = pd.read_csv('students.csv')
+
+# 显示 DataFrame
+print("学生 DataFrame：")
+print(students_df)
+```
+
+您会注意到 Pandas 正确地将第一行识别为标题，并使用了默认的整数索引（0, 1, 2, 3）。
+
+如果我们的文件使用不同的分隔符（例如制表符）怎么办？或者，如果我们想让 `StudentID` 列作为 DataFrame 的索引怎么办？我们可以在 `read_csv` 中使用参数 (parameter)。
+
+```python
+# 示例：假设 StudentID 应作为索引进行读取
+students_df_indexed = pd.read_csv('students.csv', index_col='StudentID')
+
+print("\n带有 StudentID 作为索引的学生 DataFrame：")
+print(students_df_indexed)
+```
+
+设置 `index_col='StudentID'` 会指示 Pandas 将该列中的值用作 DataFrame 的行标签（即索引）。
+
+### 从 Excel 读取数据
+
+接下来，让我们使用 `pd.read_excel()` 从 `grades.xlsx` 文件加载数据。
+
+```python
+# 读取 Excel 文件（确保已安装 openpyxl 或其他引擎）
+try:
+    grades_df = pd.read_excel('grades.xlsx')
+    print("\n成绩 DataFrame（来自 Excel Sheet1）：")
+    print(grades_df)
+except ImportError:
+    print("\n请安装 'openpyxl' 以读取 Excel 文件：pip install openpyxl")
+except FileNotFoundError:
+    print("\n请确保 'grades.xlsx' 位于正确的目录中。")
+```
+
+默认情况下，`read_excel` 读取第一个工作表。如果我们的数据在不同的工作表上，例如“CourseGrades”，我们会这样指定：
+
+```python
+# 示例：读取特定工作表（如果存在）
+# grades_df_specific_sheet = pd.read_excel('grades.xlsx', sheet_name='CourseGrades')
+```
+
+您可以为 `sheet_name` 使用工作表名称（字符串）或其基于零的索引（整数）。
+
+### 简单修改
+
+让我们对已加载的 `grades_df` 添加一个新列。假设我们想要一个“Status”列，指示分数在 70 或以上为“Pass”（通过），否则为“Fail”（未通过）。我们可以使用布尔索引和赋值来实现这一点。
+
+```python
+# 在继续之前检查 grades_df 是否已成功加载
+if 'grades_df' in locals():
+    # 添加一个 'Status' 列，默认为 'Fail'
+    grades_df['Status'] = 'Fail'
+
+    # 当 Grade >= 70 时，将 'Status' 更新为 'Pass'
+    grades_df.loc[grades_df['Grade'] >= 70, 'Status'] = 'Pass'
+
+    print("\n已添加 Status 列的成绩 DataFrame：")
+    print(grades_df)
+else:
+    print("\n跳过修改，因为 grades_df 未加载。")
+```
+
+我们首先创建了该列并分配了一个默认值（'Fail'）。然后，我们使用带有布尔条件（`grades_df['Grade'] >= 70`）的 `.loc` 来选择分数达到及格标准的行，并仅将其“Status”值更新为“Pass”。
+
+### 将数据写入 CSV
+
+现在我们已经修改了 `grades_df`，让我们将其保存回一个新的 CSV 文件，名为 `processed_grades.csv`。
+
+一个常见的要求是*不*将 DataFrame 的索引（0, 1, 2...）写入文件，因为它通常不表示有意义的数据。我们为此使用 `index=False` 参数 (parameter)。
+
+```python
+# 在保存之前检查 grades_df 是否存在
+if 'grades_df' in locals():
+    # 将修改后的 DataFrame 保存为 CSV，不包含索引
+    grades_df.to_csv('processed_grades.csv', index=False)
+    print("\n已将修改后的成绩数据保存到 processed_grades.csv（不含索引）。")
+
+    # 您可以通过重新读取或打开文件来验证
+    # check_csv = pd.read_csv('processed_grades.csv')
+    # print("\n验证读取自 processed_grades.csv：")
+    # print(check_csv)
+else:
+    print("\n跳过 CSV 导出，因为 grades_df 不可用。")
+```
+
+如果您打开 `processed_grades.csv`，您会看到 `StudentID`、`Course`、`Grade` 和 `Status` 列，但没有默认的基于 0 的索引列。
+
+### 将数据写入 Excel
+
+同样，我们可以将修改后的 DataFrame 保存到 Excel 文件中。我们将其命名为 `processed_grades.xlsx`，并将数据放入名为“Final Grades”的工作表中。同样，我们通常会希望 `index=False`。
+
+```python
+# 在保存之前检查 grades_df 是否存在
+if 'grades_df' in locals():
+    try:
+        # 将修改后的 DataFrame 保存到 Excel，不包含索引，并指定工作表名称
+        grades_df.to_excel('processed_grades.xlsx', sheet_name='Final Grades', index=False)
+        print("\n已将修改后的成绩数据保存到 processed_grades.xlsx（工作表：“Final Grades”，不含索引）。")
+
+        # 验证（可选）
+        # check_excel = pd.read_excel('processed_grades.xlsx', sheet_name='Final Grades')
+        # print("\n验证读取自 processed_grades.xlsx：")
+        # print(check_excel)
+    except ImportError:
+        print("\n请安装 'openpyxl' 以写入 Excel 文件：pip install openpyxl")
+else:
+    print("\n跳过 Excel 导出，因为 grades_df 不可用。")
+```
+
+这会创建一个 Excel 文件，其中包含我们处理过的数据，并在指定的工作表中组织整齐。
+
+### 总结
+
+在此练习环节中，您使用了 Pandas 的基本输入输出函数：
+
+- `pd.read_csv()`：从文本文件加载数据，并了解 `index_col`。
+- `pd.read_excel()`：从电子表格加载数据，并了解 `sheet_name`。
+- `.to_csv()`：保存 DataFrame，强调使用 `index=False`。
+- `.to_excel()`：保存 DataFrame，使用 `index=False` 和 `sheet_name`。
+
+您还在读取和写入之间执行了一个简单的数据修改步骤，这体现了一个基本的数据处理流程。熟练掌握这些输入和输出操作对于将 Pandas 融入您的数据分析任务非常重要。
+
+## 参考资料
+
+- [Input/output tools (text, CSV, HDF5, ...)](https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html) — pandas development team (2023)
+  Pandas数据输入输出功能的通用指南，涵盖CSV、Excel及其他格式。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  Pandas创建者撰写的权威著作，对数据操作（包括数据加载和保存）提供了完整解释。
+- [pandas.read_csv](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html) — pandas development team (2023)
+  用于将CSV文件读取到DataFrame的API文档，解释了所有可用参数。
+- [pandas.read_excel](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html) — pandas development team (2023)
+  用于将Excel文件读取到DataFrame的API文档，包含特定工作表的选项。

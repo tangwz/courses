@@ -1,0 +1,36 @@
+---
+course: "llm-model-sizes-hardware"
+chapter: "llm-inference-vs-training"
+lesson: "focus-inference-needs"
+sourceId: 4246
+sourceUrl: "https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-4-llm-inference-vs-training/focus-inference-needs"
+title: "专注于推理需求"
+description: "重申大多数用户通过推理进行交互，为估算设置背景。"
+order: 5
+plots: []
+sourceHash: "8e3899909c715eae771ac817c178d3bcb57f018721ee08bffc693844f11fb9a2"
+sourceCorrections: []
+---
+
+使用大型语言模型（LLM）涉及两项主要活动：推理 (inference)和训练。训练是创建或显著修改模型的计算密集型过程，而推理则是使用预训练 (pre-training)模型生成文本、回答问题或执行其他语言任务的常见得多的任务。
+
+想想你如今通常如何与AI互动。你可能会使用聊天机器人、翻译服务或文本摘要工具。在几乎所有这些情况中，你都在执行*推理*。你正在向一个已经过训练的模型发送输入，而它会基于其已有知识生成一个输出。
+
+这两项活动的硬件需求大相径庭。训练LLM，特别是大型LLM，需要巨大的计算资源。它通常需要强大的GPU集群共同工作数天、数周甚至数月，同时还需要大量的系统内存和极快的存储。这通常是大型研究实验室和拥有专用基础设施的科技公司的范畴。
+
+推理虽然与传统软件相比仍然计算密集，但通常需要明显更少的硬件。主要需求是在GPU（或专用加速器）上有足够的显存 (VRAM)来容纳模型的参数 (parameter)，以及足够的计算能力来合理快速地处理输入并生成输出。系统内存和CPU速度也起辅助作用。这使得在更广泛的硬件上运行推理成为可能，从高端消费级GPU到基于云计算的实例，具体取决于模型大小。
+
+考虑本课程的目标：理解LLM大小及其与硬件需求的关系。对于绝大多数用户、将LLM集成到应用程序的开发者，或尝试使用现有模型的个人来说，实际问题是：“我需要什么硬件才能*运行*这个模型？”这个问题核心在于*推理*的需求。
+
+虽然微调 (fine-tuning)（一个对预训练模型进行较小调整的过程）比基本推理需要更多资源，但它通常仍然比从头训练要求低。然而，即使是微调也常常超出了许多个人用户易于获得的硬件能力。
+
+因此，在本课程的剩余部分，特别是当我们讨论估算硬件需求时，我们的主要关注点将是**推理**的需求。理解如何估算显存和考虑仅仅使用一个预训练LLM所需的计算能力，是大多数开始涉足这一领域的人最相关的技能。我们将在下一章介绍的估算技术旨在帮助你确定某个特定模型是否能在你可能拥有的硬件上有效运行，以执行文本生成或分析等任务。
+
+## 参考资料
+
+- [Inference](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFwQnocWTEFbjhNYStDaQ-0mDWMw3qUlcTamlxjpxQpZ7SfviRX30JypJkMgGw4Py_sfaubondQAl3xwMykLYWudfUYTsFkuhxkjloXpAf3gw4jotX0UGQ9mW_KI-54KayjNTTMeJ_vDgStz6ysxw9o3kVI6SHicSwPbjZ64vw9pCmZInvppBfV) — Hugging Face (2024)
+  Publisher: Hugging Face
+  此文档提供了使用Transformers库对各类LLM进行推理的实用指南和代码示例，内容包括硬件考量、优化技术和部署策略。
+- [Generative AI with Large Language Models](https://www.coursera.org/learn/generative-ai-with-llms) — DeepLearning.AI and Amazon Web Services (2024)
+  Publisher: Coursera
+  本在线课程概述了LLM，涵盖了其架构、训练、微调以及部署和推理的实践方面，包括硬件考量。

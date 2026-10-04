@@ -1,0 +1,60 @@
+---
+course: "llm-compression-acceleration"
+chapter: "parameter-efficient-fine-tuning-peft"
+lesson: "adapter-modules"
+sourceId: 4383
+sourceUrl: "https://apxml.com/zh/courses/llm-compression-acceleration/chapter-5-parameter-efficient-fine-tuning-peft/adapter-modules"
+title: "适配器模块"
+description: "了解适配器模块的设计变体（例如，Houlsby, Pfeiffer）和放置策略。"
+order: 2
+plots: []
+sourceHash: "5d7daed6ddb39d2cea78573587aed375c7d1ab1b0f9e7ed3c61b3d4727c4c8df"
+sourceCorrections: []
+---
+
+适配器模块提供了一种直接且易懂的参数 (parameter)高效微调 (fine-tuning)（PEFT）方法。它不是修改大型预训练 (pre-training)语言模型（LLM）的现有权重 (weight)，而是在模型架构*内部*引入少量新的、可训练的参数，同时保持原始LLM权重不变。此方法大幅减少了每个下游任务所需更新和存储的参数数量，解决了大型语言模型微调中常见的计算和存储难题。
+
+核心理念在于将小型神经网络 (neural network)模块（即适配器）注入到预训练transformer的层中。这些适配器通常采用瓶颈架构设计，以保持参数高效性。
+
+### 适配器架构
+
+一个标准的适配器模块由两个投影层和一个非线性层组成（非线性层夹在中间）。它接收transformer子层（如多头注意力 (multi-head attention)或前馈网络）的输出 $h$ 作为输入。
+
+1. **下投影：** 线性层将高维输入 $h \in \mathbb{R}^d$ 投影到更小的维度 $m$，其中 $m \ll d$。这个投影由权重 (weight)矩阵 $W_{down} \in \mathbb{R}^{d \times m}$ 表示。
+2. **非线性处理：** 逐元素应用非线性激活函数 (activation function) $\sigma$ (例如，ReLU, GeLU)。
+3. **上投影：** 另一个线性层使用权重矩阵 $W_{up} \in \mathbb{R}^{m \times d}$ 将结果再次投影回原始维度 $d$。此层通常初始化为接近零，以确保适配器在微调 (fine-tuning)开始时对预训练 (pre-training)模型的输出影响最小（与残差连接结合时类似于恒等变换）。
+4. **残差连接：** 适配器模块的输出被加回到原始输入 $h$。
+
+数学上，适配器层应用的变换可以表示为：
+
+
+$$
+h' = h + W_{up}(\sigma(h W_{down}))
+$$
+
+
+在微调过程中，只有适配器参数 (parameter)（$W_{down}$、$W_{up}$ 及相关偏置 (bias)）被训练，而原始LLM参数保持不变。瓶颈维度 $m$ 是一个重要的超参数 (hyperparameter)。更小的 $m$ 意味着可训练参数更少，但可能会限制适配器获取特定任务信息的能力。反之，更大的 $m$ 会增加容量，但会降低参数效率。典型的 $m$ 值比 $d$ 小好几个数量级。例如，如果 $d=4096$， $m$ 可能会选择在 64 到 256 之间。
+
+> 显示带有残差连接的适配器模块典型瓶颈架构的图示。
+
+### 放置策略
+
+适配器在transformer架构中的插入位置对其效果有显著影响。早期方案尝试了多种放置方式，形成了一些固定模式：
+
+1. **顺序适配器（Houlsby 等人，2019）：** 这种有影响力的设计将适配器顺序放置在每个transformer块内的多头注意力 (multi-head attention)子层和前馈网络（FFN）子层*之后*。在适配器输入*之前*通常会增加一个额外的层归一化 (normalization)。这确保了适配器在模型的整个深度中被一致地应用。
+2. **Pfeiffer 等人（2020）的变体：** 为提高效率和潜在性能，此变体仅将适配器放置在FFN子层*之后*，但在注意力机制 (attention mechanism)后的投影层之后保留了适配器。它通常在适配器周围包含一个特定的层归一化结构。
+3. **并行适配器：** 一些研究考虑将适配器与transformer子层并行放置，可能会以不同方式组合它们的输出。然而，顺序放置仍然更常见。
+
+放置方式的选择会影响信息流以及特定任务的适应性如何与预训练 (pre-training)表示交互。将适配器放置在注意力和FFN之后，可以修改transformer块的两个核心计算单元的输出。
+
+> 简化视图，比较transformer块内潜在的适配器放置方式（Houlsby 对比 Pfeiffer）。输入/输出表示与前/后块的连接。
+
+### 设计考量和权衡
+
+其他因素影响适配器性能：
+
+- **初始化：** 将 $W_{up}$ 初始化为接近零对于防止微调 (fine-tuning)开始时预训练 (pre-training)模型功能的干扰是很重要的。 $W_{down}$ 通常使用 Kaiming 或 Xavier 等标准方法进行初始化。
+- **参数 (parameter)效率与性能：** 主要的权衡点在于可训练参数数量（效率）与模型在下游任务上的表现之间。大幅减小 $m$ 会显著减少参数，但如果适配器容量不足，可能导致欠拟合 (underfitting)。通常需要通过经验评估来找到最优的 $m$ 值。
+- **推理 (inference)延迟：** 尽管适配器增加的参数相对较少，但它们为每个适配层引入了额外的计算步骤（两个线性层和一个非线性层）。这可能导致推理延迟相对于原始模型或LoRA等修改现有操作的方法有所增加。
+
+适配器在效率和有效性之间提供了不错的平衡。它们将特定任务的知识隔离到独立的模块中，通过切换适配器即可轻松地在任务之间切换，而不会影响基础LLM。这种模块化在多任务场景中是一个重要的优势。然而，推理延迟的潜在增加以及调整放置位置和瓶颈大小的需求是重要的考量因素。与完全微调相比，适配器显著降低了适应成本，同时在许多自然语言处理任务上通常能取得有竞争力的表现。

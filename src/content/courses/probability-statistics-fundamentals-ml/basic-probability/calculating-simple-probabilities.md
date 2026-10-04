@@ -1,0 +1,103 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "basic-probability"
+lesson: "calculating-simple-probabilities"
+sourceId: 2429
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-3-basic-probability/calculating-simple-probabilities"
+title: "计算简单概率"
+description: "学习计算简单事件概率的公式。"
+order: 2
+plots: []
+sourceHash: "165240dea8b97480d2883dbe0f14f76b93d4446f98b885e180645b0ffbc3042a"
+sourceCorrections: []
+---
+
+概率是一个数值衡量，它为在定义的样本空间($S$)内发生的事件($E$)的可能性赋予一个数值。此衡量量化 (quantization)了事件发生的可能性。
+
+对于许多基础情况，特别是涉及掷硬币或掷骰子等随机游戏的情况，我们假定样本空间中的所有单个结果都具有相同的可能性。一枚均匀的硬币出现正面或反面的可能性相同。一个标准、均匀的骰子出现1到6任何一面的可能性都相同。
+
+当结果可能性均等时，计算特定事件$E$的概率就很直接了。您计算构成事件$E$的结果数量，然后用其除以样本空间$S$中所有可能结果的总数。
+
+事件$E$的概率，记作$P(E)$，使用以下公式计算：
+
+
+$$
+P(E) = \frac{\text{事件 } E \text{ 的有利结果数量}}{\text{样本空间 } S \text{ 中所有可能结果的总数}}
+$$
+
+
+我们可以使用集合表示法更简洁地写出这一点，其中$|E|$表示事件$E$中元素（结果）的数量，而$|S|$表示样本空间$S$中元素的总数：
+
+
+$$
+P(E) = \frac{|E|}{|S|}
+$$
+
+
+### 例子：掷一个均匀的六面骰子
+
+我们来应用这一点。考虑掷一个均匀的六面骰子的实验。
+
+1. **确定样本空间 (S)：** 可能的结果是骰子的各个面。
+   $S = \{1, 2, 3, 4, 5, 6\}$。
+   所有可能结果的总数为 $|S| = 6$。
+2. **定义一个事件 (E)：** 假设我们对掷出偶数这一事件$E$感兴趣。
+   满足此事件的结果是 $E = \{2, 4, 6\}$。
+   事件$E$的有利结果数量为 $|E| = 3$。
+3. **计算概率：** 使用公式：
+
+   
+   $$
+   P(E) = \frac{|E|}{|S|} = \frac{3}{6} = \frac{1}{2}
+   $$
+   
+
+   因此，掷出偶数的概率是1/2或0.5或50%。
+
+我们再试一个事件：掷出大于4的数字的概率是多少？
+
+- 事件$F$：掷出大于4的数字。
+- 有利结果：$F = \{5, 6\}$。
+- 有利结果的数量：$|F| = 2$。
+- 总结果：$|S| = 6$。
+- 概率：$P(F) = \frac{|F|}{|S|} = \frac{2}{6} = \frac{1}{3}$。
+
+### 例子：掷一个均匀的硬币
+
+考虑一次掷一个均匀硬币的更简单实验。
+
+1. **样本空间 (S)：** $S = \{\text{正面}, \text{反面}\}$。总结果 $|S| = 2$。
+2. **事件 (H)：** 得到正面。$H = \{\text{正面}\}$。有利结果数量 $|H| = 1$。
+3. **计算概率：**
+   
+   $$
+   P(H) = \frac{|H|}{|S|} = \frac{1}{2}
+   $$
+   
+   得到正面的概率是1/2或0.5。
+
+### 简单概率的属性
+
+从公式$P(E) = |E|/|S|$中，我们可以看到几个重要的属性：
+
+1. **概率总是在0到1之间：** 有利结果的数量（$|E|$）不可能小于零，也不可能多于总结果的数量（$|S|$）。因此：
+
+   
+   $$
+   0 \le P(E) \le 1
+   $$
+   
+   - 概率为0表示事件不可能发生（例如，掷一个标准六面骰子掷出7：$P(\text{掷出7}) = 0/6 = 0$）。
+   - 概率为1表示事件必然发生（例如，掷一个标准六面骰子掷出小于10的数字：$P(\text{掷出 < 10}) = 6/6 = 1$）。
+2. **基于等可能结果：** 请记住，这个简单公式在很大程度上依赖于样本空间中所有单个结果都具有相同可能性的假设。如果您有一个加权骰子或不均匀的硬币，这种计算方法就不能直接适用，我们需要采用不同的方法，我们将在后面简要提及。
+
+这种通过计算有利结果相对于总结果数量来计算概率的方法构成了*古典概率*的依据，也是理解更复杂概率知识的一个起始点。
+
+## 参考资料
+
+- [Introduction to Probability](https://www.routledge.com/Introduction-to-Probability-Second-Edition/Blitzstein-Hwang/p/book/9781138369917) — Joseph K. Blitzstein and Jessica Hwang (2019)
+  Publisher: Chapman & Hall
+  涵盖概率基础，包括样本空间、事件和古典概率。
+- [Applied Statistics and Probability for Engineers](https://www.wiley.com/en-us/Applied+Statistics+and+Probability+for+Engineers%2C+7th+Edition-p-9781119400363) — Douglas C. Montgomery and George C. Runger (2018)
+  Publisher: Wiley
+  提供概率的应用视角，详细说明简单概率的计算方法。

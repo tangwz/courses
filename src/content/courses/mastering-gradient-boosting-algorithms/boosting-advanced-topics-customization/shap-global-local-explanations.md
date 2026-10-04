@@ -1,0 +1,91 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "boosting-advanced-topics-customization"
+lesson: "shap-global-local-explanations"
+sourceId: 2031
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-7-boosting-advanced-topics-customization/shap-global-local-explanations"
+title: "全局解释与局部解释"
+description: "使用SHAP来了解整体特征重要性及单个预测的解释。"
+order: 3
+plots: ["plots/2031-0.json"]
+sourceHash: "f054c35f5dcc21326b87faae5962288f19889e96fbb9fa0cb58c832d098de534"
+sourceCorrections: []
+---
+
+理解复杂的梯度提升模型的预测结果，对于建立信任和有效部署它们来说是必要的。SHAP（SHapley 加性解释）及其用于树集成模型的高效TreeSHAP变体，提供了一个统一且强大的框架来解释模型行为。这个框架支持*全局*和*局部*解释。区分这些不同层面的解释对于全面理解模型行为来说非常重要。
+
+### 全局模型解释：整体情况
+
+全局解释旨在描述训练好的模型在整个数据集上的整体行为。它们回答以下问题：
+
+- 平均而言，哪些特征对模型的预测影响最显著？
+- 特定特征与模型输出之间的一般关系是怎样的？
+
+使用SHAP实现全局可解释性最常见的方法是汇总数据集中所有实例（通常是验证集或测试集）中每个特征的SHAP值。一个标准的方法是计算每个特征 $j$ 的平均绝对SHAP值：
+
+
+$$
+\text{全局重要性}_j = \frac{1}{n} \sum_{i=1}^{n} |\phi_{ij}|
+$$
+
+
+这里，$n$ 是实例的数量，$\phi_{ij}$ 是实例 $i$ 的特征 $j$ 的SHAP值。具有更高平均绝对SHAP值的特征被认为总体上更具影响力。
+
+这种汇总的重要性比传统的特征重要性指标（如树模型中的增益或分裂计数）提供了更可靠的衡量标准，后者有时可能不一致。
+
+**全局重要性可视化**
+
+SHAP摘要图是一种有力的可视化方式，将特征重要性与特征效应结合起来。它绘制了每个样本中每个特征的SHAP值，通常使用颜色表示原始特征值（高/低）。这不仅显示了哪些特征重要，还显示了它们影响的分布和方向。
+
+
+
+![SHAP 全局特征重要性](plots/2031-0.json)
+
+
+
+> 显示不同特征平均绝对SHAP值的条形图。值越高表示对模型预测的总体影响越大。
+
+另一种有用的全局可视化方式是SHAP依赖图，它显示了随着单个特征值的变化，模型的输出如何变化，并可能根据相互作用的特征进行着色。
+
+### 局部模型解释：理解单个预测
+
+尽管全局解释提供了一个高层次的视角，局部解释侧重于理解模型*为何*对*单个*实例做出特定预测。它们回答以下问题：
+
+- 对于这个特定客户，他们的贷款申请为何被拒绝？
+- 对于这个用户，哪些因素对预测其高流失概率贡献最大？
+
+SHAP值本身是局部的。实例 $i$ 的特征 $j$ 的SHAP值 $\phi_{ij}$ 量化 (quantization)了该特征值如何将实例 $i$ 的预测结果从基准值（训练数据集上的平均预测值）推开的贡献。
+
+SHAP的核心方程通过该实例的SHAP值之和，将基准值 $E[f(X)]$（平均预测值）与特定实例 $x_i$ 的预测值 $f(x_i)$ 联系起来：
+
+
+$$
+f(x_i) = E[f(X)] + \sum_{j=1}^{M} \phi_{ij}
+$$
+
+
+其中 $M$ 是特征的数量。这种加性意味着我们可以直接看到每个特征相对于平均值对单个预测的正面或负面贡献。
+
+**局部解释可视化**
+
+围绕SHAP构建的工具通常提供诸如“力图”之类的可视化，用来说明局部解释。力图将SHAP值描绘为作用于基准值上的力。将预测推高的特征（正SHAP值）用一种颜色显示（例如，红色），而将预测推低的特征（负SHAP值）用另一种颜色显示（例如，蓝色）。特征块的大小对应于其SHAP值的大小。
+
+> 显示对单个预测有贡献的力图。特征将预测值推离基准值（平均预测值）。红色特征降低预测值，蓝色特征增加预测值。最终预测值是基准值与所有特征贡献（SHAP值）的总和。
+
+### 互补的视角
+
+全局和局部解释并非相互排斥；它们提供对模型行为的互补视角。
+
+- **全局解释**对于理解模型的主要驱动因素、比较不同模型以及指导特征工程工作很有价值。
+- **局部解释**对于调试意外预测、向利益相关者或客户解释决策、评估对个体的公平性以及建立对特定结果的信任不可或缺。
+
+通过配合使用TreeSHAP与XGBoost、LightGBM或CatBoost，你可以高效地计算这些SHAP值，并生成全局摘要和详细的局部细分，从而全面理解你的梯度提升模型。
+
+## 参考资料
+
+- [A Unified Approach to Interpreting Model Predictions](https://arxiv.org/abs/1705.07874) — Scott Lundberg, Su-In Lee (2017)
+  Journal: Advances in Neural Information Processing Systems; DOI: [10.48550/arXiv.1705.07874](https://doi.org/10.48550/arXiv.1705.07874)
+  介绍了原始的 SHAP 框架，它为局部和全局模型可解释性提供了一个统一理论。
+- [Interpretable Machine Learning: A Guide for Making Black Box Models Explainable](https://christophm.github.io/interpretable-ml-book/) — Christoph Molnar (2024)
+  Publisher: Online book
+  一本内容全面的在线书籍，详细介绍了各种可解释性方法，包括 SHAP，并解释了全局和局部视图以及可视化技术。

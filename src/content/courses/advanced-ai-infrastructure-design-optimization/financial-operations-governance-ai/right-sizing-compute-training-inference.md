@@ -1,0 +1,93 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "financial-operations-governance-ai"
+lesson: "right-sizing-compute-training-inference"
+sourceId: 7031
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-6-financial-operations-governance-ai/right-sizing-compute-training-inference"
+title: "为训练和推理合理配置计算资源"
+description: "监控利用率、选择最具成本效益的实例类型且不牺牲性能的方法。"
+order: 4
+plots: ["plots/7031-0.json"]
+sourceHash: "043265c1fc7dfe82c9abdb9822a19ef439e335081e4260956f920075e20c004f"
+sourceCorrections: []
+---
+
+选择合适的计算实例是您控制AI基础设施成本最有效的方式之一。过度配置是常见且耗费成本的习惯。出于谨慎，工程师可能请求一个配备8块A100 80GB GPU的顶级 `p4de.24xlarge` AWS实例，结果其训练任务只使用了15%的可用GPU显存 (VRAM)和30%的计算能力。这好比租用一艘货船只为运送一个包裹。反之，配置不足会导致任务失败、性能瓶颈以及数据科学家受挫，这同样会产生费用。
+
+合理配置是持续匹配工作负载需求与基础设施资源的过程，以最低成本获得最佳性能。这个过程并非一次性设置，而是分析、评估和调整的重复循环。训练任务的长时间、高资源消耗特性，以及推理 (inference)任务的低延迟、稳定需求，使得它们的合理配置目标和方法大不相同。
+
+### 模型训练的合理配置
+
+训练任务，特别是大型基础模型，其特点是持续时间长、资源消耗高。主要目标是在经济可行的情况下，成功并尽快完成训练运行，这直接影响我们 `EffectiveCost` 等式中的 `TotalSpend`。
+
+#### 配置前的性能分析
+
+不测量就无法优化。在合理配置之前，您必须了解工作负载的资源特征。这意味着要超越简单的观察，使用恰当的性能分析工具。尽管 `nvidia-smi` 对于快速快照很有用，但生产级别的性能分析需要时间序列数据。
+
+NVIDIA的Data Center GPU Manager (DCGM)是该领域的行业标准。它与Prometheus等工具集成，能够捕获训练任务整个期间的详细指标。
+
+使用DCGM监控的重要指标包括：
+
+- `DCGM_FI_DEV_GPU_UTIL`: 一个或多个内核在GPU上执行的时间百分比。低利用率通常表明存在I/O或CPU瓶颈。
+- `DCGM_FI_DEV_FB_USED`: 帧缓冲（VRAM）内存的使用量。这对于判断是否接近内存不足（OOM）错误或是否大量过度配置内存非常重要。
+- `DCGM_FI_DEV_MEM_COPY_UTIL`: 内存复制引擎活跃的时间百分比。高利用率可能表明CPU和GPU内存之间存在数据加载瓶颈。
+- `DCGM_FI_DEV_TENSOR_ACTIVE`: Tensor Cores活跃的时间百分比。这是衡量您深度学习 (deep learning)专用硬件使用效率的直接指标。
+
+性能分析中发现的一个常见不良模式是“扇贝状”GPU利用率图，它表示GPU频繁等待下一批数据。这表明不是需要更大的GPU，而是需要优化数据加载流程或使用具有更多核心的CPU。
+
+> 一个数据加载瓶颈示例，其中GPU空闲等待CPU准备下一批数据。性能分析表明，这会导致GPU平均利用率低下。
+
+#### 训练实例的策略
+
+掌握资源配置信息后，您可以做出明智的决策。
+
+1. **选择合适的实例系列：** 并非所有GPU都相同。对于内存需求高但计算需求适中的模型，配备NVIDIA A100 40GB GPU的实例可能比配备80GB GPU的实例更具性价比。反之，对于计算密集型任务，配备更强Tensor Cores的新一代GPU可能更快完成任务，即使每小时价格更高，也能降低总成本。务必分析工作负载的内存与计算比率，并将其与可用实例类型匹配。
+2. **使用多实例GPU (MIG)：** 对于开发、实验或训练较小模型，完整的A100或H100 GPU通常是过度的。NVIDIA MIG在Ampere及更新架构上可用，它允许将单个物理GPU划分为多达七个完全隔离、硬件支持的GPU实例。每个MIG实例都有自己专用的内存、缓存和计算核心。从Kubernetes的角度看，每个MIG实例都表现为一个独立的 `nvidia.com/gpu` 资源。这是一种提高利用率并将昂贵加速器在多个团队或任务之间共享的非常有效的方法，且不会产生性能干扰。
+3. **平衡数据并行与实例大小：** 考虑一个场景，您需要训练一个需要64GB VRAM的模型。您可以使用一块80GB A100 GPU。或者，使用PyTorch FSDP或DeepSpeed ZeRO等框架，您可以将模型参数 (parameter)分片到两块40GB A100 GPU，甚至四块16GB V100 GPU上。后一种方法每小时可能显著更便宜。权衡点是通信开销。您必须分析使用更小、更便宜实例带来的成本节省是否能弥补节点间网络通信增加带来的性能损失。
+4. **不要忽视主机CPU和RAM：** 强大的GPU可能会被性能不足的主机严重限制。如果您的数据加载流程涉及复杂的增强操作，您需要一个具有足够核心的CPU来持续为GPU提供数据。同样，如果您正在加载大型数据集，您需要足够的系统RAM以避免内存抖动。除了GPU指标外，还要监控CPU利用率和I/O等待时间，以获得完整视图。
+
+### 模型推理 (inference)的合理配置
+
+推理工作负载有一套不同的限制。训练优先完成任务，而推理优先在负载下保持持续性能，通常以延迟和吞吐量 (throughput)来衡量。这里的成本模型从按任务成本转向按推理成本。
+
+
+$$
+\text{每次推理成本} = \frac{\text{实例每小时成本}}{\text{每小时推理吞吐量}}
+$$
+
+
+目标是最小化此值，同时满足您对延迟的服务级别目标（SLO），例如p99延迟低于100ms。
+
+#### 负载测试以找到性能拐点
+
+推理合理配置的第一步是进行负载测试。使用Triton的 `perf_analyzer`、Locust或k6等工具，您可以模拟生产流量并测量已部署模型在不同实例类型上的表现。通过绘制吞吐量与延迟的图表，您可以找到性能曲线的“拐点”。这是负载进一步增加导致延迟急剧非线性上升的点，表明系统已饱和。
+
+
+
+![推理性能概况：延迟与吞吐量](plots/7031-0.json)
+
+
+
+> 性能“拐点”出现在约220次推理/秒处，此后延迟迅速超出100毫秒的服务级别目标。此饱和点定义了此实例类型上单个副本的最大有效吞吐量。
+
+#### 推理实例的策略
+
+1. **CPU可能是一个可行的选择：** 将所有模型部署到GPU上很有吸引力，但对于许多使用场景来说，这并不划算。小型模型或流量低、不频繁的服务通常可以在CPU实例上更便宜地提供服务。借助ONNX Runtime或OpenVINO等优化框架，CPU推理速度可能出人意料地快。盈亏平衡点是流量的函数。GPU可能快10倍，但每小时费用高20倍。如果流量较低，GPU将空闲，浪费金钱。务必测试纯CPU选项。
+2. **使用推理优化加速器：** 如果需要GPU，请选择为推理而设计的GPU。NVIDIA的T4和A10G GPU提供出色的整数性能（非常适合量化 (quantization)模型），并且在推理方面比A100等大型训练GPU具有更好的性价比。它们专门为高吞吐量、低延迟服务而设计。
+3. **通过模型共置最大化利用率：** 单个强大的GPU通常可以同时服务多个不同模型，这是一种被称为模型共置的技术。像NVIDIA Triton这样的高级推理服务器允许您将多个模型加载到同一GPU上，每个模型独立管理。这显著提高了昂贵GPU资产的 `ResourceUtilization`。技巧在于将具有不同资源配置的模型共同部署。例如，您可以将内存密集型NLP模型与计算密集型计算机视觉模型一起放置，以平衡GPU子系统上的负载。
+4. **将合理配置与自动扩缩相结合：** 合理配置决定了您构建块（实例）的“大小”，而自动扩缩决定了块的“数量”。Kubernetes水平Pod自动扩缩器（HPA）可以根据GPU利用率（通过DCGM）或每秒推理次数等实时指标配置来扩缩模型服务器副本的数量。这确保您在高峰流量期间进行扩容，同样重要的是，在空闲期间缩容到最少数量的副本（甚至为零），避免为未使用的容量付费。这种动态方法是成本效益高的推理服务方式。
+
+## 参考资料
+
+- [NVIDIA Data Center GPU Manager (DCGM) User Guide](https://docs.nvidia.com/datacenter/dcgm/latest/index.html) — NVIDIA Corporation (N.D.)
+  Publisher: NVIDIA Corporation
+  提供监控GPU指标的官方详细信息和使用说明，对正确调整规模至关重要。
+- [Multi-Instance GPU (MIG) User Guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html) — NVIDIA Corporation (N.D.)
+  Publisher: NVIDIA Developer Documentation
+  描述如何将GPU划分为隔离实例，以提高利用率和共享资源。
+- [NVIDIA Triton Inference Server](https://developer.nvidia.com/triton-inference-server) — NVIDIA Corporation (N.D.)
+  Publisher: NVIDIA Developer Documentation
+  Triton Inference Server的官方门户，涵盖perf_analyzer和模型协同放置等推理优化策略。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready AI](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  提供设计和优化生产就绪型ML系统的全面视角，包括基础设施和成本考虑。

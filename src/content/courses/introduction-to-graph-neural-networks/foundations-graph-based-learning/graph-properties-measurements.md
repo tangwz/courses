@@ -1,0 +1,90 @@
+---
+course: "introduction-to-graph-neural-networks"
+chapter: "foundations-graph-based-learning"
+lesson: "graph-properties-measurements"
+sourceId: 7616
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-graph-neural-networks/chapter-1-foundations-graph-based-learning/graph-properties-measurements"
+title: "图的属性与度量"
+description: "复习基础图论属性，如节点度、密度和中心性，这些属性在数据分析中非常有用。"
+order: 5
+plots: []
+sourceHash: "12cb25651fe3b5f9dbe2f347b0a2280bd940a7c7853221c6c54a9e89ea57fba1"
+sourceCorrections: []
+---
+
+在将图数据输入机器学习 (machine learning)模型之前，了解其基本特征是一个很好的习惯。就像我们会计算表格数据中某个特征的均值、中位数和标准差一样，我们也可以通过计算图的属性来获得其结构的量化 (quantization)摘要。这些度量指标有助于我们建立对数据的直观认识，并为建模决策提供依据。
+
+### 节点层级度量
+
+我们可以先从单个节点的角度来刻画图的特征。这些指标通常用于衡量节点在网络中的地位或作用。
+
+#### 节点度 (Node Degree)
+
+最基本的节点层级属性是它的**度**，即与之相连的边数。在社交网络中，一个用户的度就是其好友数量。对于无向图，节点 $i$ 的度（记作 $d(i)$）可以直接通过邻接矩阵 $A$ 计算得出：
+
+
+$$
+d(i) = \sum_{j=1}^{|V|} A_{ij}
+$$
+
+
+在**有向图**中，度的概念分为两部分：
+
+- **入度 (In-degree)**：指向该节点的边数。
+- **出度 (Out-degree)**：从该节点出发的边数。
+
+度数非常高的节点通常被称为“枢纽 (hubs)”，它们在网络信息流转中起着显著的作用。
+
+> 一个简单的图，其中节点 A 的度为 3，节点 D 的度为 2，节点 B、C 和 E 的度均为 1。
+
+#### 中心性度量 (Centrality Measures)
+
+虽然度衡量的是直接连接性，但**中心性**能从更深的角度反映节点在结构上的地位。衡量方式有以下几种：
+
+- **介数中心性 (Betweenness Centrality)**：衡量一个节点作为其他两节点间最短路径“桥梁”的频率。介数中心性高的节点对网络中元素的传递有很大影响。移除这类节点可能会导致图的某些部分断开连接。
+- **紧密中心性 (Closeness Centrality)**：衡量一个节点到图中所有其他可达节点的平均距离。紧密中心性高的节点能够高效地触达其他节点，是信息传播的良好起点。
+- **特征向量 (vector)中心性 (Eigenvector Centrality)**：这是一种衡量影响力的指标。它认为节点的地位由其邻居节点的地位决定。连接到许多高产枢纽节点的节点，其特征向量中心性会高于连接到许多低度数节点的节点。Google 的 PageRank 算法就是该度量指标的一种变体。
+
+> 节点 C 和 D 具有较高的介数中心性，因为它们是这两个节点群之间唯一的桥梁。
+
+### 图层级度量
+
+除了单个节点外，我们还可以计算描述整个图特征的属性。
+
+#### 图的大小与密度
+
+最基本的属性是节点总数 $|V|$ 和边总数 $|E|$。它们让我们对图的规模有初步的了解。
+
+根据这些指标，我们可以计算**图密度**，它衡量了图中实际存在的边数与可能存在的最大边数之比。对于无向图，公式为：
+
+
+$$
+\text{密度} = \frac{2|E|}{|V|(|V|-1)}
+$$
+
+
+密度接近 1.0 的图被认为是**稠密图**，而密度接近 0 的图则是**稀疏图**。从社交网络到分子结构，大多数图都是极度稀疏的。这种稀疏性是 GNN 库实现高效计算的一个重要特征。
+
+> 稀疏图（连接较少）与稠密图（节点间高度互连）的对比。
+
+#### 其他结构属性
+
+- **连通分量 (Connected Components)**：如果无向图中任意两个节点之间都存在路径，则该图是**连通的**。如果不连通，它就由多个连通分量组成，即互不相交的子图。识别这些分量很有用；例如，你可能会决定为每个分量训练一个单独的模型。
+- **平均路径长度 (Average Path Length)**：这是所有可达节点对之间最短路径距离的平均值。在大型稀疏图中，较小的平均路径长度是“小世界”网络的特征，这在许多社交和生物系统中都很常见。
+
+这些属性不仅用于描述性分析，还可以作为特征直接整合到机器学习 (machine learning)流程中。例如，节点的度或中心性分数可以作为 GNN 的输入特征，为模型提供有关其结构作用的明确信息。在下一节中，我们将学习如何使用流行的 Python 库来计算这些指标。
+
+## 参考资料
+
+- [Network Science](http://networksciencebook.com/) — Albert-László Barabási (2016)
+  Publisher: Cambridge University Press
+  全面涵盖图和网络的基本属性，包括各种中心性度量和结构特征。
+- [Graph Theory](http://diestel-graph-theory.com/) — Reinhard Diestel (2017)
+  Publisher: Springer; Volume: 173; Pages: 428
+  一本标准的学术教科书，为图论概念提供严谨的数学基础。
+- [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaASJ_6ZxSGTIbM5QDVgW3AtkZt8W3v1u5SmOoCsESwfFHiXQf0H4f1sKg650AVcBynOe5CEi46qi7BQTaU2nj1ebf8RbDndNz-GgJz0LSkcAD24IXnBxfE7RA8xUJnxxcDa3aZTsQwAOgit9Vh2QSsYpADyav0YSQHr2O) — Sergey Brin, Lawrence Page (1998)
+  Journal: Computer Networks and ISDN Systems; Publisher: Elsevier Science B.V.; Volume: 30; Pages: 107-117; DOI: [10.1016/S0169-7552(98)00110-X](https://doi.org/10.1016/S0169-7552%2898%2900110-X)
+  介绍了PageRank，这是一个利用特征向量中心性对网页进行排名的关键算法。
+- [A Comprehensive Survey on Graph Neural Networks](https://ieeexplore.ieee.org/document/8975347) — Zonghan Wu, Shirui Pan, Fengwen Chen, Guodong Long, Jing Jiang, and Chengqi Zhang (2020)
+  Journal: IEEE Transactions on Neural Networks and Learning Systems; Publisher: IEEE; Volume: 32; Pages: 4-24; DOI: [10.1109/TNNLS.2020.2974411](https://doi.org/10.1109/TNNLS.2020.2974411)
+  提供了图神经网络的广泛概述，将图属性在GNN架构和应用中的作用置于上下文中。

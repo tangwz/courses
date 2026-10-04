@@ -1,0 +1,206 @@
+---
+course: "monitoring-managing-ml-models-production"
+chapter: "granular-performance-monitoring"
+lesson: "practice-diagnosing-performance"
+sourceId: 3286
+sourceUrl: "https://apxml.com/zh/courses/monitoring-managing-ml-models-production/chapter-3-granular-performance-monitoring/practice-diagnosing-performance"
+title: "实践：借助可解释性诊断性能问题"
+description: "实践使用可解释性工具，以调查和诊断特定数据段上的模型性能下降。"
+order: 7
+plots: ["plots/3286-0.json"]
+sourceHash: "97b9362c2b9c26278d88e3d6960e63d373ea87bfd35170fc4eb9ae3f23ee75a5"
+sourceCorrections: []
+---
+
+让我们将理论付诸实践。你已经设置了监控，并在特定数据段中发现性能下降，比如某个特定人口统计群体的用户精确度降低，或者某个产品类别的召回率下滑。警报已触发，但*为何*会发生这种情况？此时，可解释性技术成为强大的诊断工具，帮助你从知道*哪里*出问题转向理解*为何*出问题。
+
+诊断机器学习 (machine learning)模型的性能下降问题时，通常会使用SHAP（Shapley加性解释）等技术。SHAP是一种广受欢迎的技术，用于解释个体预测和模型整体行为。在诊断这类问题时，需要一个训练好的模型构件，并访问包含特征和预测的生产日志数据。
+
+### 场景：调查召回率下降
+
+设想一个流失预测模型，监控发现最近与新推出的高级支持渠道互动过的客户，其召回率大幅下降。整体召回率可能保持稳定，但这个特定客户群表现不佳，这意味着我们未能识别出该群体中可能流失的客户。
+
+我们的目标是使用SHAP来了解哪些特征正在推动这个特定客户群的预测（正确或不正确），以及与过去或其它客户群相比，它们为何可能未能有效捕获流失信号。
+
+### 设置分析
+
+首先，我们需要收集相关数据并加载模型。
+
+1. **加载模型：** 加载生产模型构件。
+
+   ```python
+   import joblib
+   # 假设 'model.pkl' 是你的序列化模型文件
+   model = joblib.load('model.pkl')
+   ```
+2. **准备数据：** 我们需要针对显示性能下降的客户群的数据。
+
+   - `data_segment_issue`：一个Pandas DataFrame，包含在*召回率下降期间*使用高级支持渠道的客户的最新特征数据和真实标签。
+   - （可选但推荐）`data_segment_baseline`：一个类似的DataFrame，来自该客户群在召回率下降*之前*的时间段，用作比较的基线。
+   - `features`：模型使用的特征名称列表。
+
+   ```python
+   import pandas as pd
+
+   # 用于表示数据加载的占位函数
+   # 请替换为你的实际数据加载逻辑
+   def load_data_segment(period="issue"):
+       # 为高级支持客户群加载特征和真实标签 ('churn')
+       # 从指定时期加载（例如，'issue' 或 'baseline'）
+       print(f"正在加载高级支持客户群的数据：{period} 时期...")
+       # 示例结构：
+       data = pd.DataFrame({
+           'feature_A': [0.5, 0.1, 0.9] + ([0.6, 0.2] if period=="issue" else [0.4, 0.3]),
+           'feature_B': [10, 50, 20] + ([15, 45] if period=="issue" else [25, 35]),
+           'used_premium_support': [1, 1, 1, 1, 1], # 已过滤的客户群
+           'new_feature_X': [0, 1, 0] + ([1, 1] if period=="issue" else [0, 0]),
+           'churn': [0, 1, 0] + ([1, 0] if period=="issue" else [1, 1]) # 示例标签
+       })
+       # 确保此客户群数据中所有行的 'used_premium_support' 都为 1
+       data = data[data['used_premium_support'] == 1].drop(columns=['used_premium_support'])
+
+       # 确保列顺序与模型训练一致
+       all_features = ['feature_A', 'feature_B', 'new_feature_X'] # 示例特征列表
+       return data[all_features], data['churn']
+
+   features = ['feature_A', 'feature_B', 'new_feature_X'] # 定义特征列表
+   X_issue, y_issue = load_data_segment(period="issue")
+   X_baseline, y_baseline = load_data_segment(period="baseline") # 可选基线
+
+   # 选择背景数据的一个子集（可以来自训练或基线时期）
+   # 一个更小、具代表性的样本通常足够
+   X_background = X_baseline.sample(n=min(100, len(X_baseline)), random_state=42)
+   ```
+
+### 应用SHAP进行诊断
+
+现在，让我们使用`shap`库来计算和分析解释。
+
+1. **初始化解释器：** 我们创建一个适合我们模型类型的SHAP解释器。对于基于树的模型（如XGBoost、LightGBM、RandomForest），`shap.TreeExplainer`效率高。对于其他模型，`shap.KernelExplainer`更通用但速度较慢。`KernelExplainer`需要一个背景数据集来表示预期的特征分布。
+
+   ```python
+   import shap
+
+   # 使用 KernelExplainer 作为通用示例
+   # 对于树模型，shap.TreeExplainer(model) 可能更快
+   explainer = shap.KernelExplainer(model.predict_proba, X_background)
+
+   # 对于 TreeExplainer（如果适用）：
+   # explainer = shap.TreeExplainer(model)
+   ```
+
+   *注意：* 我们将`model.predict_proba`传递给`KernelExplainer`以获取概率输出的解释，这通常比最终的类别预测对诊断更有益。如果使用`TreeExplainer`并且它直接支持概率，请使用它；否则，解释可能针对边际输出。
+2. **计算SHAP值：** 为出现问题的客户数据段计算SHAP值。这告诉我们每个特征对每个实例的预测偏离平均预测的程度。
+
+   ```python
+   # 计算问题时期客户群的SHAP值
+   # 对于 KernelExplainer 和大型数据集，这可能需要时间
+   shap_values_issue = explainer.shap_values(X_issue)
+
+   # shap_values 输出结构取决于解释器和模型输出。
+   # 对于带有 predict_proba 的二分类，shap_values 可能是一个列表
+   # [类别0的shap值, 类别1的shap值]。
+   # 我们通常对正类别（churn=1）的SHAP值感兴趣。
+   # 假设索引 1 对应正类别（churn）。
+   shap_values_pos_class = shap_values_issue[1] if isinstance(shap_values_issue, list) else shap_values_issue
+
+   # 对于 TreeExplainer，输出可能直接是正类别或边际。
+   # 请查阅 SHAP 文档，了解你的特定模型/解释器。
+   ```
+
+### 分析SHAP解释
+
+现在，可视化并解读结果以找出问题所在。
+
+1. **全局重要性（汇总图）：** 观察*此客户群内*的整体特征重要性。重要性层级与基线或你的预期相比是否发生了变化？
+
+   ```python
+   # 生成汇总图（蜂群样式）
+   shap.summary_plot(shap_values_pos_class, X_issue, feature_names=features, show=False)
+   # 在实际场景中，你会使用 matplotlib 显示此图或将其集成到仪表板中
+   ```
+
+   让我们使用简化的 Plotly 图表结构来表示汇总图可能的样子。
+
+   
+   
+   ![SHAP汇总图（问题客户群 - 流失=1）](plots/3286-0.json)
+   
+   
+
+   > 示例SHAP汇总图，显示受影响的客户群。每个点代表一个特征和一个实例的Shapley值。x轴上的位置表示对预测流失的影响（值越高越倾向于流失）。颜色表示特征值（蓝色=低，红色=高）。特征顺序表示整体重要性。
+
+   *解读：* 在此示例中，`new_feature_X`变得非常重要。高值（红色）强烈地将预测推向流失（正SHAP），而低值（蓝色）则将其推离流失。将此与基线汇总图进行比较。`new_feature_X`之前的影响是否较小？`feature_A`或`feature_B`的特定值范围现在是否为此客户群呈现出不同的行为？
+2. **局部解释（力图 / 瀑布图）：** 检查单个实例，特别是假阴性（已流失但被预测为未流失的客户），因为我们的问题是召回率低。
+
+   ```python
+   # 查找问题客户群中的假阴性索引
+   predictions = model.predict(X_issue)
+   fn_indices = X_issue[(y_issue == 1) & (predictions == 0)].index
+
+   if not fn_indices.empty:
+       # 选择一个假阴性实例进行调查
+       idx_to_explain = fn_indices[0]
+       instance_loc = X_issue.index.get_loc(idx_to_explain)
+
+       # 为此实例生成力图（在notebooks/web中需要JS）
+       # shap.force_plot(explainer.expected_value[1], shap_values_pos_class[instance_loc,:], X_issue.iloc[instance_loc,:], feature_names=features, show=False)
+
+       # 生成瀑布图（不错的替代方案）
+       # shap.waterfall_plot(shap.Explanation(values=shap_values_pos_class[instance_loc,:],
+       #                                     base_values=explainer.expected_value[1],
+       #                                     data=X_issue.iloc[instance_loc,:].values,
+       #                                     feature_names=features), show=False)
+
+       print(f"\n正在分析假阴性实例索引：{idx_to_explain}")
+       print("特征贡献（预测流失=1的SHAP值）：")
+       # 在此直接显示值以便清晰：
+       contributions = pd.Series(shap_values_pos_class[instance_loc,:], index=features)
+       print(contributions.sort_values(ascending=False))
+       print(f"基准值（平均预测概率）：{explainer.expected_value[1]:.4f}") # 假设 expected_value 可用，且 [1] 对应正类别
+       print(f"最终预测概率：{explainer.expected_value[1] + contributions.sum():.4f}")
+
+   else:
+       print("\n在提供的样本中未找到可供分析的假阴性。")
+   ```
+
+   *解读：* 力图/瀑布图（或打印出的贡献）显示了哪些特征值*对于该特定客户*将预测推向或推离流失。对于假阴性，我们预期SHAP值之和加上基准值会低于分类阈值（例如0.5）。找出那些对预测流失产生最强烈*反向*影响的特征（负SHAP值）。`new_feature_X`是否对该客户产生了意想不到的负面影响，尽管他们实际已流失？`feature_A`的值通常可能表明流失风险，但在此处是否被抑制了影响？分析多个假阴性可以显示出规律。
+3. **依赖图：** 检查模型输出如何依赖于特定特征的值，可能根据交互特征进行着色。这有助于发现该客户群特有的非线性关系或交互效应。
+
+   ```python
+   # 示例：调查 'new_feature_X' 及其与 'feature_A' 的交互
+   shap.dependence_plot("new_feature_X", shap_values_pos_class, X_issue, interaction_index="feature_A", show=False)
+   ```
+
+   *解读：* 问题客户群的依赖图是否显示出与预期或基线数据中不同的模式？例如，也许当`feature_A`较低时，`new_feature_X = 1`的正面影响会显著减弱，特别是在此客户群中，从而导致错失流失预测。
+
+### 总结
+
+基于SHAP分析：
+
+- **重要性变化：** 如果特征重要性发生了剧烈变化（例如，`new_feature_X`占据主导），这可能指向概念漂移或与该新特征相关的问题（数据质量、编码）。
+- **异常局部解释：** 如果假阴性一致显示特定特征意外地将预测推离流失（例如，只有当`new_feature_X`存在时，低`feature_A`才具有异常强的负面影响），这表明模型未能正确学习此客户群的交互。
+- **不同依赖关系：** 依赖图的变化可以突出显示出现或改变的非线性效应或交互，这可能是由于该客户群内特征分布的数据漂移造成的。
+
+这些诊断性见解远比仅仅知道召回率下降更具操作性。它们可能表明：
+
+- 针对`new_feature_X`及相关特征进行有目的的数据质量检查。
+- 专门为高级支持客户群收集更多数据。
+- 进行特征工程以更好地捕获交互作用。
+- 使用更新的数据重新训练模型，可能对表现不佳的客户群进行样本加权。
+- 评估模型架构是否适合捕获新的动态。
+
+将SHAP等可解释性工具集成到你的监控和事件响应流程中，可提供重要的诊断功能，使模型在生产中出现性能偏差时能够更快、更有针对性地进行干预。
+
+## 参考资料
+
+- [A Unified Approach to Interpreting Model Predictions](http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.pdf) — Scott M. Lundberg, Su-In Lee (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 4765-4774; DOI: [10.5555/3295222.3295230](https://doi.org/10.5555/3295222.3295230)
+  介绍SHAP的开创性论文，详细阐述了其理论基础和模型可解释性的实际应用。
+- [SHAP (SHapley Additive exPlanations) Documentation](https://shap.readthedocs.io/en/latest/) — Scott M. Lundberg, et al. (2024)
+  SHAP Python库的官方文档，提供了安装说明、API细节和实践示例。
+- [Interpretable Machine Learning: A Guide for Making Black Box Models Explainable](https://christophm.github.io/interpretable-ml-book/) — Christoph Molnar (2023)
+  一本全面的在线书籍，涵盖了广泛的机器学习可解释性方法，包括关于SHAP的详细章节。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready AI](https://learning.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  对构建和管理生产中的ML系统提供了整体视角，其中包含专门针对模型性能监控和诊断的部分。

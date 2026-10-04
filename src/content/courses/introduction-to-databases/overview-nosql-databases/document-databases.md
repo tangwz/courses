@@ -1,0 +1,89 @@
+---
+course: "introduction-to-databases"
+chapter: "overview-nosql-databases"
+lesson: "document-databases"
+sourceId: 1611
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-databases/chapter-4-overview-nosql-databases/document-databases"
+title: "文档数据库"
+description: "了解文档数据库，数据以文档状结构（例如 JSON、BSON）存放。"
+order: 3
+plots: []
+sourceHash: "bbf38231538725f35993b6dca1bf36de2059baf96cb2e1f5fe6c0c8601b9f095"
+sourceCorrections: []
+---
+
+设想您正在处理无法整齐地放入关系型数据库的行和列中的数据。也许您正在构建一个产品目录，其中某些产品具有独特的属性（例如电视有“屏幕尺寸”而微波炉有“瓦数”），或者管理用户资料，用户可以选择提供不同的信息。将这种多变性强行纳入僵化的表结构会变得繁琐，通常需要许多空列或复杂的表关联。
+
+这时，**文档数据库**提供了一种不同的方案。这些数据库中的基本存储单元不是表、行和列，而是一个*文档*。
+
+可以将文档视为一个自包含的数据集合，通常以程序员熟悉的格式表示，例如 JSON (JavaScript Object Notation) 或 BSON (Binary JSON，由 MongoDB 等系统使用)。文档将相关信息聚合在一起，很像编程中的对象或复杂表单中的单个条目。
+
+### 文档的结构
+
+文档通常由字段-值对组成。字段就像标签或键，而值是相关联的数据。值可以是简单类型，如字符串、数字或布尔值，但它们也可以是更复杂的结构，如数组（列表）甚至嵌套文档（文档中的文档）。
+
+以下是一个用户文档在 JSON 格式下的简化示例：
+
+```json
+{
+  "userId": "user123",
+  "username": "alex",
+  "email": "alex@example.com",
+  "signupDate": "2023-10-26",
+  "interests": [ "hiking", "programming", "music" ],
+  "address": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "zip": "10001"
+  }
+}
+```
+
+注意，这个单一文档包含关于 'alex' 的各种信息。`interests` 字段保存了一个字符串列表（一个数组），而 `address` 字段包含另一个嵌套结构（一个嵌入 (embedding)式文档），拥有自己的字段。
+
+### 模式灵活：主要优点
+
+文档数据库的一个重要特点是它们的*模式灵活*。与关系型数据库中每行都必须符合预定义列结构不同，同一集合中的文档（一组文档，类似于表）不一定需要有完全相同的字段。
+
+例如，同一集合中的另一个用户文档可能如下所示：
+
+```json
+{
+  "userId": "user456",
+  "username": "charlie",
+  "email": "charlie@example.com",
+  "signupDate": "2023-11-15",
+  "preferredContact": "email",
+  "company": "Tech Corp"
+}
+```
+
+'charlie' 的第二个文档包含 `preferredContact` 和 `company` 字段，这些字段在 'alex' 的文档中没有。反之，它缺少 `interests` 和 `address` 字段。文档数据库自然地处理这种差异，无需为所有文档预定义所有可能的字段。
+
+> 对比文档集合结构与关系型表。请注意文档集合中的灵活度与关系型表中固定列（可能包含 NULL 值）的对比。
+
+这种灵活度使得文档数据库非常适合以下场景：
+
+- **演进中的应用：** 随着应用需求的变化，您可以向新文档添加新字段，而无需修改现有文档或执行复杂的数据库模式迁移。
+- **半结构化数据：** 处理项目中可能具有不同属性的数据，如产品目录、用户生成内容或传感器读数。
+- **存储对象：** 直接存储具有复杂内部结构的应用对象。
+
+### 示例与考量
+
+流行的文档数据库示例包括 MongoDB、Couchbase 和 ArangoDB。尽管它们提供灵活度，但需要记住，这种缺乏强制结构意味着在需要时，应用程序开发人员需要承担更多管理数据一致性的责任。查询有时可能比标准 SQL 更复杂，特别是对于跨多个文档的关联（尽管文档数据库通常支持将相关数据嵌入 (embedding)到单个文档中以缓解此问题）。
+
+总之，文档数据库在处理多样化、不断变化或半结构化数据时，为关系模型提供了一个强有力的替代方案，优先考虑灵活度以及与应用对象映射的便捷性，而非严格的模式强制。
+
+## 参考资料
+
+- [NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence](https://martinfowler.com/books/nosql.html) — Pramod J. Sadalage and Martin Fowler (2012)
+  Publisher: Addison-Wesley Professional
+  一本基础性书籍，概述了NoSQL数据库，包括文档数据库及其核心原理，如模式灵活性。
+- [MongoDB Manual - Documents](https://www.mongodb.com/docs/manual/core/document/) — MongoDB Documentation (2024)
+  官方文档，详细说明了MongoDB（一个领先的文档数据库示例）中文档的结构、特性和实际实现。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  全面比较了不同数据模型，包括关系型和文档数据库，讨论了它们的权衡、优势和应用场景。
+- [NoSQL Databases: A Survey and Taxonomy](https://www.sciencedirect.com/science/article/pii/S074373151830200X) — Eder J. S. de Macedo, José J. P. C. Rodrigues, Joel P. L. Silva, Tiago M. A. C. Silva (2019)
+  Journal: Journal of Parallel and Distributed Computing; Publisher: Elsevier; Volume: 131; Pages: 129-141; DOI: [10.1016/j.jpdc.2018.11.002](https://doi.org/10.1016/j.jpdc.2018.11.002)
+  提供各种NoSQL数据库类型的结构化概述和分类，包括文档数据库，解释其特性和应用。

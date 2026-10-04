@@ -1,0 +1,133 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "intro-prob-stats-ml"
+lesson: "practical-loading-inspecting-data"
+sourceId: 2406
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-1-intro-prob-stats-ml/practical-loading-inspecting-data"
+title: "动手实践：加载和查看数据"
+description: "练习使用Python (Pandas) 加载简单数据集并进行初步查看。"
+order: 6
+plots: []
+sourceHash: "73f3fdbc7f70fe7a48dd8d97b2253e86d2692c87da334af534dc44fb647aea9b"
+sourceCorrections: []
+---
+
+Python环境已配置完毕，并安装了Pandas和NumPy等基本库，现在是时候开始应用它们了。将数据加载到环境中，并初步检查其结构和内容，是任何数据分析项目中一项基本任务。这项准备工作对于后续分析必不可少。
+
+我们将使用Pandas库，它是Python中用于数据处理和分析的标准工具。你可以将Pandas看作是提供了一种高效的方式，让你的Python代码能够直接处理类似于电子表格或数据库表的数据结构。
+
+### 使用Pandas加载数据
+
+Pandas中最常见的数据结构是DataFrame。DataFrame本质上是一个带有标签轴（行和列）的二维表格。你可以从各种来源将数据加载到DataFrame中，包括CSV（逗号分隔值）文件、Excel电子表格、数据库等等。
+
+对于这个示例，我们假设有一个名为 `student_data.csv` 的简单数据集。该文件可能包含有关学生的信息，例如他们的测验分数和学习时长。
+
+首先，确保你已导入Pandas。如果你遵循了设置指南，你很可能使用常用别名 `pd` 导入了它：
+
+```python
+import pandas as pd
+```
+
+现在，我们可以使用 `read_csv()` 函数将CSV文件中的数据加载到Pandas DataFrame中。我们将生成的DataFrame存储在一个变量中，约定俗成地命名为 `df`：
+
+```python
+# 如果需要，请将 'student_data.csv' 替换为你的实际文件路径
+try:
+    df = pd.read_csv('student_data.csv')
+    print("数据加载成功！")
+except FileNotFoundError:
+    print("错误：未找到 'student_data.csv'。请确保文件位于正确的目录中。")
+    # 作为演示的备选方案，我们创建一个示例DataFrame
+    data = {'StudentID': [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
+            'Quiz1_Score': [8, 5, 10, 7, 4, 9, 6, 8, 7, 5],
+            'Study_Hours': [4, 2, 5, 3, 1, 5, 2.5, 4.5, 3, 1.5],
+            'Attended_Lecture': ['Yes', 'No', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes', 'No']}
+    df = pd.DataFrame(data)
+    print("已创建用于演示的示例DataFrame。")
+```
+
+如果文件加载正确，`df` 变量现在就包含了我们的数据集。如果未找到文件，示例代码会创建一个小型示例DataFrame，以便你仍然可以继续学习。
+
+### 查看DataFrame
+
+加载数据只是第一步。我们需要查看它以理解我们正在处理的数据。Pandas提供了几种有用方法用于此初步查看。
+
+#### 查看开头和结尾的行
+
+为了快速预览数据，你可以使用 `head()` 方法查看前几行，使用 `tail()` 查看最后几行。默认情况下，它们显示5行。
+
+```python
+# 显示前5行
+print("数据的前5行：")
+print(df.head())
+
+# 显示最后3行（你可以指定行数）
+print("\n数据的最后3行：")
+print(df.tail(3))
+```
+
+这有助于验证数据是否按预期加载，并让你了解列名及其包含的值类型。
+
+#### 检查维度
+
+数据集有多大？ `shape` 属性会显示行数和列数。
+
+```python
+# 获取维度（行数，列数）
+print("\nDataFrame的形状（行数，列数）：")
+print(df.shape)
+```
+
+输出将是一个元组，例如 `(10, 4)`，表示我们的示例数据中有10行和4列。了解大小对于理解数据规模很重要。
+
+#### 获取简洁的汇总信息
+
+`info()` 方法提供了一个DataFrame的汇总，包括索引数据类型、列数据类型、每列非空值的数量以及内存使用情况。这对于快速识别缺失数据以及检查Pandas是否正确解释了数据类型非常有用。
+
+```python
+# 获取DataFrame的简洁汇总
+print("\nDataFrame信息：")
+df.info()
+```
+
+请注意每列的 `Non-Null Count`（非空计数）。如果这个数字小于总行数（来自 `df.shape`），则表明存在缺失值。此外，请检查 `Dtype`（数据类型）列。它是否符合你对每列的预期（例如，数字的 `int64` 或 `float64`，文本或混合类型的 `object`）？我们 Gopher在本章前面讨论过数据类型，而 `info()` 有助于我们查看Pandas加载时是如何解释这些数据类型的。
+
+#### 列出列名
+
+如果你只想查看列名，可以使用 `columns` 属性。
+
+```python
+# 获取列名
+print("\n列名：")
+print(df.columns)
+```
+
+当你有很多列并希望快速列出时，这很方便。
+
+#### 检查数据类型
+
+你还可以使用 `dtypes` 属性只查看每列的数据类型。
+
+```python
+# 获取每列的数据类型
+print("\n数据类型：")
+print(df.dtypes)
+```
+
+这提供了数据类型的聚焦视图，补充了来自 `df.info()` 的信息。
+
+### 后续步骤
+
+在这个实践练习中，你学习了如何使用Pandas加载数据集并执行基本的数据查看任务：查看数据片段、检查维度、获取汇总信息以及检查列名和类型。这种初步查看是任何数据分析工作流程中的一个重要第一步。它有助于你了解数据的结构、大小和基本特征，然后你可以进行更详细的分析或机器学习 (machine learning)模型构建。
+
+在下一章中，我们将在 Gopher此基础上，查看描述性统计，它们提供工具来定量汇总数据集的主要特征。
+
+## 参考资料
+
+- [pandas.read_csv documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html) — The pandas development team (2024)
+  Pandas官方文档，用于从CSV文件加载数据到DataFrame。
+- [pandas documentation: DataFrame Basics](https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html) — The pandas development team (2024)
+  Pandas官方指南，用于DataFrame基本操作和属性，以便进行初步数据检查。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  使用Python、Pandas和NumPy进行数据处理与分析的标准参考书籍。(第三版)

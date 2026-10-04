@@ -1,0 +1,122 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "advanced-training-optimization"
+lesson: "learning-rate-schedules"
+sourceId: 2536
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-2-advanced-training-optimization/learning-rate-schedules"
+title: "学习率策略和周期性学习率"
+description: "实现并了解各种学习率策略，包括周期性学习率 (CLR)。"
+order: 2
+plots: ["plots/2536-0.json"]
+sourceHash: "ed8c11f054be7ce17c42e6e1228f3807395adc3ffdcc9ffadb51d2c94e16974d"
+sourceCorrections: []
+---
+
+设置学习率是训练深度神经网络 (neural network)时最重要的超参数 (parameter) (hyperparameter)选择之一。在整个训练过程中找到一个单一、最优、固定的学习率 $\eta$ 通常很困难。学习率过大可能导致优化过程震荡甚至发散，阻碍收敛。相反，学习率过小可能导致训练速度过慢，或者使优化器永久停滞在次优局部最小值或鞍点。
+
+学习率策略提供了一种在训练期间动态调整学习率的方法。通常的想法是，在训练初期使用相对较高的学习率以实现快速进展，然后随着训练的进行逐渐降低它。这使得优化器在训练的后期阶段可以更好地稳定到更优的最小值。
+
+### 常见学习率策略
+
+通常使用几种启发式方法和预定义函数来安排学习率。让我们看一下几个常用的：
+
+#### 步长衰减
+
+这可能是最简单的策略。学习率在固定数量的周期（或迭代）内保持不变，然后按特定因子减小。
+
+例如，您可能从 $\eta = 0.01$ 开始，训练 30 个周期，然后将其减小到 $\eta = 0.001$ 再训练 30 个周期，最后在剩余的训练中将其减小到 $\eta = 0.0001$。
+
+在数学上，如果 $\eta_0$ 是初始学习率，$\gamma$ 是衰减因子（例如 0.1），$S$ 是周期的步长，那么在周期 $e$ 的学习率 $\eta_e$ 可以定义为：
+
+
+$$
+\eta_e = \eta_0 \times \gamma^{\lfloor e / S \rfloor}
+$$
+
+
+虽然实现简单，但步长衰减需要仔细手动调整初始学习率、衰减因子和步长，这可能对数据集和模型结构很敏感。
+
+#### 指数衰减
+
+与离散步长不同，指数衰减在每个周期（甚至每次迭代）后连续降低学习率。在周期 $e$ 的学习率 $\eta_e$ 由以下给出：
+
+
+$$
+\eta_e = \eta_0 \times e^{-k \times e}
+$$
+
+
+这里，$\eta_0$ 是初始学习率，$k$ 是衰减率超参数 (parameter) (hyperparameter)。与步长衰减相比，这提供了更平滑的下降，但仍需要调整 $\eta_0$ 和 $k$。一个相关的方法是每个周期应用一个乘法因子 $\gamma < 1$：$\eta_e = \eta_0 \times \gamma^e$。
+
+#### 余弦退火
+
+余弦退火提供了一种更精密的衰减模式。学习率从初始值 $\eta_{max}$ 降低到最小值 $\eta_{min}$（通常为 0），在指定的周期数 $T_{max}$ 内遵循余弦曲线。在周期 $t$ 的学习率 $\eta_t$（$t$ 范围从 0 到 $T_{max}$）计算如下：
+
+
+$$
+\eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})(1 + \cos(\frac{t \pi}{T_{max}}))
+$$
+
+
+此策略开始时缓慢降低学习率，然后在中间加速降低，并再次在接近尾声时放慢。它常与“热重启”一起使用，其中策略会周期性重置（例如，将 $T_{max}$ 设置为总周期数的一部分并重复循环）。这使得优化器可能通过暂时再次提高学习率来脱离较差的局部最小值。
+
+### 周期性学习率 (CLR)
+
+由 Leslie N. Smith 提出的一种替代方法是，让学习率在下限 ($\text{base\_lr}$) 和上限 ($\text{max\_lr}$) 之间周期性地变化。CLR 建议，与单调递减学习率不同，周期性地增加学习率可以带来好处，例如帮助优化器更快地通过鞍点，并更有效地查看损失。
+
+#### CLR 如何运作
+
+在训练期间，学习率在 $\text{base\_lr}$ 和 $\text{max\_lr}$ 之间波动。有几种函数形式可以定义这种波动，“三角”策略较为常见：
+
+1. 一个周期包括两个阶段：一个阶段是学习率从 $\text{base\_lr}$ 线性增加到 $\text{max\_lr}$，另一个阶段是学习率线性减少回 $\text{base\_lr}$。
+2. 每个阶段通常需要相同数量的迭代，由 `stepsize` 超参数 (parameter) (hyperparameter)定义。一个完整的周期需要 $2 \times \text{stepsize}$ 次迭代。
+
+还存在其他周期形状，例如 `triangular2`（其中最大学习率在每个周期后减半）或在周期内使用指数衰减。
+
+#### 寻找最佳边界：LR 范围测试
+
+CLR 的一个显著优点是它提供了一种系统方法，可以使用“LR 范围测试”来找出 $\text{base\_lr}$ 和 $\text{max\_lr}$ 的合理值。这涉及运行模型几个周期，同时将学习率从一个非常小的值线性增加到一个较大的值，并记录每一步的损失。
+
+您通常会绘制损失与学习率的图表（对数刻度）。最佳的 $\text{base\_lr}$ 通常是损失开始下降时的值，而最佳的 $\text{max\_lr}$ 则是损失开始大幅增长或剧烈波动之前的值。
+
+#### “1cycle”策略
+
+一个流行的变体是“1cycle”策略，也由 Smith 提出。它使用一个单一周期，覆盖整个训练持续时间（或略短）。
+
+1. 在第一阶段（例如，45% 的迭代），它将学习率从 $\text{base\_lr}$（通常是 $\text{max\_lr}/10$）增加到 $\text{max\_lr}$。
+2. 在第二阶段（例如，另外 45% 的迭代），它将学习率从 $\text{max\_lr}$ 降回 $\text{base\_lr}$。
+3. 在最后阶段（例如，最后 10% 的迭代），它会继续将学习率衰减到远低于 $\text{base\_lr}$（有时是几个数量级），以使模型能够更稳定地达到一个最小值。
+
+该策略通常与周期性动量策略结合使用，动量随着学习率的增加而减小，反之亦然。1cycle 策略已被证明能快速取得良好效果，有时能实现超收敛（以比传统策略更少的周期达到高准确度）。
+
+### 策略可视化
+
+下图呈现了步长衰减、余弦退火和三角 CLR 策略在 100 个周期内的行为。
+
+
+
+![学习率策略比较](plots/2536-0.json)
+
+
+
+> 不同的学习率策略在训练周期内表现出独特的模式。步长衰减显示出突然的变化，余弦退火提供了一条平滑曲线，而周期性学习率在边界之间波动。（注意：Y 轴是对数刻度）。
+
+### 实际考量
+
+- **预热：** 特别是在使用大批量大小或某些架构（如 Transformer）时，直接以高学习率开始训练可能导致不稳定。一种常见做法是在最初的几个周期或迭代中采用“预热”阶段，在此期间，学习率从一个非常小的值（或零）逐渐增加到目标初始学习率（$\eta_0$ 或 $\text{max\_lr}$）。这使得模型的参数 (parameter)能够在初期温和地适应。
+- **策略选择：** 没有适用于所有任务的最佳单一策略。余弦退火和 CLR（特别是 1cycle 策略）通常是许多计算机视觉任务的有效起始点。步长衰减仍然是一个可行的选择，但可能需要更多手动调整。最佳选择取决于数据集复杂度、模型结构、批量大小和总训练预算（周期）。
+- **集成：** 大多数深度学习 (deep learning)框架（TensorFlow/Keras、PyTorch）为各种学习率策略器提供内置支持，使其易于与 Adam、AdamW 或 SGD 等优化器一同集成到您的训练循环中。您通常在定义优化器之后定义策略器，并在每个周期结束时（或有时是每次迭代结束时，取决于策略器）调用其 `step()` 方法。
+
+有效地安排学习率是一种有效方法，用于提升深度学习模型的收敛速度和最终性能。通过像针对 CLR 的 LR 范围测试这样的方法进行指导，尝试不同的策略及其超参数 (hyperparameter)，是优化过程的一个重要组成部分。
+
+## 参考资料
+
+- [Cyclical Learning Rates for Training Neural Networks](https://arxiv.org/abs/1506.01186) — Leslie N. Smith (2017)
+  Journal: Proceedings of the IEEE Winter Conference on Applications of Computer Vision (WACV); Publisher: IEEE; Pages: 890-898; DOI: [10.1109/WACV.2017.58](https://doi.org/10.1109/WACV.2017.58)
+  介绍了循环学习率（CLR）的概念以及用于确定学习率范围的LR Range Test。
+- [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Ilya Loshchilov, Frank Hutter (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1608.03983](https://doi.org/10.48550/arXiv.1608.03983)
+  提出了余弦退火学习率调度，通常与热启动结合使用。
+- [CS231n: Deep Learning for Computer Vision. Lecture Notes on Training Neural Networks, Part 2: Setting up the Learning Process](http://cs231n.github.io/neural-networks-3/) — Stanford CS231n Course Staff (2024)
+  Publisher: Stanford University
+  涵盖了深度学习背景下的各种学习率调度和优化技术。

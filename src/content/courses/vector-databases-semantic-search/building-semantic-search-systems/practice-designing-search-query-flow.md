@@ -1,0 +1,171 @@
+---
+course: "vector-databases-semantic-search"
+chapter: "building-semantic-search-systems"
+lesson: "practice-designing-search-query-flow"
+sourceId: 3579
+sourceUrl: "https://apxml.com/zh/courses/vector-databases-semantic-search/chapter-4-building-semantic-search-systems/practice-designing-search-query-flow"
+title: "动手实践：设计搜索查询流程"
+description: "概述并实现处理用户查询、搜索向量索引和返回结果的逻辑。"
+order: 8
+plots: []
+sourceHash: "108de976aaad593949de1a45863c91ce4768028ac9e5775336f879d4a1266e95"
+sourceCorrections: []
+---
+
+一个处理用户搜索请求的实用设计包含了查询嵌入 (embedding)、ANN 搜索、过滤和排序等概念。设计这种查询流程是构建有效语义搜索系统的根本。它概述了从原始用户查询到相关结果排序列表的步骤。
+
+### 搜索查询流程的构成
+
+其核心是，处理语义搜索查询涉及几个不同的阶段。我们将分解一个典型流程，同时记住，具体实现可能因所选工具和应用要求而异。
+
+> 处理语义搜索查询的典型流程，从用户输入开始，到格式化结果结束。包括元数据过滤和重新排序等可选步骤。
+
+让我们审视每个步骤：
+
+#### 1. 接收用户查询输入
+
+这是系统从用户那里接收搜索词、问题或短语的入口。它通常是原始文本。
+
+#### 2. 预处理查询
+
+在生成嵌入 (embedding)之前，通常有益于应用一些基本预处理，类似于数据索引期间可能已完成的操作：
+
+- **小写转换：** 将查询转换为小写以保持一致性。
+- **移除多余空格：** 去除开头/结尾的空格并合并多个空格。
+- **处理特殊字符：** 根据嵌入模型的训练和预期输入，决定是移除还是处理特殊字符。
+- **潜在的查询扩展/重写：** 在更高级的系统中，您可以扩展缩写或重写查询以提高清晰度，尽管这会增加复杂性。
+
+目标是将查询标准化为适合嵌入模型的格式。
+
+#### 3. 生成查询向量 (vector)
+
+这是应用语义搜索核心能力的地方。预处理后的查询文本被送入索引阶段使用的*相同*嵌入模型（或兼容模型，例如与文档编码器配对的专用查询编码器）。
+
+```python
+# Python 代码片段
+from sentence_transformers import SentenceTransformer
+
+# 假设已加载 'embedding_model'，例如 SentenceTransformer('all-MiniLM-L6-v2')
+query_text = "latest developments in sustainable energy"
+preprocessed_query = preprocess_function(query_text) # 应用第 2 点中的步骤
+
+# 生成向量
+query_vector = embedding_model.encode(preprocessed_query).tolist()
+
+# query_vector 现在是浮点数列表，例如 [0.12, -0.05, ..., 0.89]
+```
+
+输出是一个表示查询语义的稠密向量。
+
+#### 4. 在向量数据库中执行ANN搜索
+
+生成的查询向量被发送到向量数据库。核心操作是近似最近邻 (ANN) 搜索。此请求的重要参数 (parameter)通常包括：
+
+- **查询向量：** 上一步中生成的嵌入。
+- **前 K 个：** 要获取的最近邻居数 ($k$)。选择 $k$ 涉及权衡：较高的 $k$ 增加了召回潜力，但可能获取相关性较低的项目并增加延迟。一个常见的起始值通常在 10 到 100 之间。
+- **搜索参数（可选）：** 特定于 ANN 索引类型（例如，HNSW 的 `ef_search`，IVF 的 `nprobe`）的参数，用于在搜索过程中控制准确性/速度的权衡。这些在第 3 章中讨论过。
+- **元数据过滤（可选）：** 应用于与向量相关联的元数据的条件。这对于优化搜索结果非常有用。例如：
+  - `{ "year": { "$gte": 2023 } }` （查找 2023 年及以后的项目）
+  - `{ "category": "technology" }` （查找“技术”类别中的项目）
+
+向量数据库处理过滤的方式不同。有些支持*预过滤*（在 ANN 搜索之前进行过滤），如果过滤器显着减小了搜索空间，这种方式可以更快。而另一些则执行*后过滤*（过滤 $k$ 个 ANN 结果）。在这里了解您的数据库能力。
+
+```python
+# 使用数据库客户端的 Python 代码片段
+k = 20 # 要获取的结果数量
+search_params = {"ef_search": 128} # HNSW 参数示例
+metadata_filter = {"status": "published", "region": "EMEA"}
+
+# 向向量数据库发送请求
+# 'search' 方法的签名在不同数据库之间差异很大
+search_results = vector_db_client.search(
+    collection_name="articles",
+    query_vector=query_vector,
+    limit=k,
+    search_params=search_params,
+    filter=metadata_filter
+)
+# search_results 可能包含 ID、距离/分数以及可能的元数据
+# 例如，[{'id': 'doc456', 'score': 0.85}, {'id': 'doc123', 'score': 0.82}, ...]
+```
+
+#### 5. 获取候选文档/项目
+
+向量数据库返回一个候选项目列表，通常包括：
+
+- **ID：** 匹配文档或项目的唯一标识符。
+- **相似度分数或距离：** 指示每个结果向量与查询向量的接近程度的度量（例如，余弦相似度、欧几里得距离）。请注意，较高的分数通常表示余弦相似度更高，而较低的值表示距离度量相似度更高。
+- **元数据（可选）：** 一些数据库允许在向量搜索结果中同时获取相关元数据，这可以省去额外的查找步骤。
+
+如果文档的完整内容未存储在向量数据库中或未直接返回，您需要使用获取的 ID 从主数据存储（如关系数据库、文档存储或文件系统）中获取完整内容。
+
+#### 6. 对结果重新排序（可选）
+
+初始 ANN 搜索结果纯粹根据向量相似度进行排序。尽管通常有效，但通过添加重新排序步骤有时可以提高相关性。这涉及根据额外标准重新排序前 $N$ 个候选结果（其中 $N$ 可以是初始 $k$ 或更大的一组获取结果）：
+
+- **交叉编码器：** 使用计算成本更高但可能更准确的模型（如基于 Transformer 的交叉编码器），直接比较查询文本和候选文档文本以生成更精确的相关性分数。
+- **业务逻辑：** 根据新鲜度（新文档优先）、流行度（高浏览量项目优先）、来源可信度或个性化因素应用规则。
+- **混合评分：** 将向量搜索的语义相似度分数与单独计算的传统关键词分数（例如 BM25）结合起来。这有助于找到那些关键词匹配良好但语义分数可能略低的结果，反之亦然。我们在本章前面讨论过这种方法。
+
+重新排序会增加延迟，但可以显著提高结果的感知质量。
+
+```python
+# 重新排序步骤
+# 假设 'candidates' 是来自 vector_db_client.search 的列表
+# 假设 'fetch_full_content' 通过 ID 获取文档文本
+
+def apply_reranking(query_text, candidates):
+    reranked_results = []
+    for candidate in candidates:
+        doc_id = candidate['id']
+        initial_score = candidate['score']
+        doc_content = fetch_full_content(doc_id)
+
+        # 示例：使用交叉编码器
+        # rerank_score = cross_encoder_model.predict([(query_text, doc_content)])
+
+        # 示例：与新鲜度结合（需要元数据）
+        # publish_date = candidate['metadata']['publish_date']
+        # recency_boost = calculate_recency_boost(publish_date)
+        # final_score = initial_score * 0.7 + rerank_score * 0.3 # 组合分数
+        # final_score = initial_score * recency_boost # 根据新鲜度提升
+
+        # 为简单起见，我们暂时只使用初始分数
+        final_score = initial_score
+        reranked_results.append({'id': doc_id, 'final_score': final_score, 'content_snippet': doc_content[:200]}) # 添加片段
+
+    # 按新的 final_score 排序（相似度分数降序）
+    reranked_results.sort(key=lambda x: x['final_score'], reverse=True)
+    return reranked_results
+
+final_results = apply_reranking(query_text, search_results)
+```
+
+#### 7. 格式化并返回结果
+
+最后，准备好用于展示的排序结果列表。这通常包括：
+
+- 重新排序后选择前 $M$ 个结果（其中 $M \le k$）。
+- 包含用于显示的相关信息：标题、URL、文本片段、作者、日期等。
+- 确保格式与前端应用预期的一致（例如，JSON）。
+
+### 设计考量
+
+在设计查询流程时，请考虑以下几点：
+
+- **延迟：** 每一步都会增加时间。嵌入 (embedding)生成、ANN 搜索（特别是使用高 `ef_search` 或 `nprobe` 时）、获取完整文档以及复杂的重新排序都会造成延迟。监控端到端延迟并优化瓶颈。
+- **模型一致性：** 确保用于查询的嵌入模型与用于索引的模型兼容。未经仔细考虑使用不同的模型可能会导致结果不佳。
+- **过滤策略：** 根据您的数据库功能和过滤器的预期选择性，决定是使用预过滤还是后过滤。如果预过滤在昂贵的 ANN 查找*之前*显著缩小了搜索空间，它通常会更快。后过滤更简单，但会首先搜索完整的 ANN 索引。
+- **错误处理：** 实现错误处理。如果嵌入模型服务停机怎么办？如果向量 (vector)数据库超时怎么办？提供合理的备用方案或错误消息。
+- **可伸缩性：** 考虑随着数据量和查询负载的增加，每个步骤将如何伸缩。向量数据库搜索和可能的重新排序步骤通常是资源消耗最大的。
+
+这个实用设计提供了一个蓝图。在下一章中，我们将了解如何使用特定的向量数据库客户端和库来实现这些步骤，构建一个功能性的语义搜索应用。
+
+## 参考资料
+
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/html/htmledition/irbook.html) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  本书全面介绍传统信息检索概念，包括索引、查询处理和排名算法，它们构成了现代搜索系统的基础。
+- [Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs](https://doi.org/10.1109/TPAMI.2017.2762008) — Yu. A. Malkov and D. A. Yashunin (2017)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 40; Pages: 2192-2202; DOI: [10.1109/TPAMI.2017.2762008](https://doi.org/10.1109/TPAMI.2017.2762008)
+  这篇论文提出了HNSW算法，这是一种在向量数据库中进行近似最近邻（ANN）搜索的广泛使用且高效的方法，它是向量搜索步骤的核心。

@@ -1,0 +1,111 @@
+---
+course: "python-for-beginners"
+chapter: "building-blocks-functions"
+lesson: "python-docstrings"
+sourceId: 2336
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-5-building-blocks-functions/python-docstrings"
+title: "文档字符串：为函数编写文档"
+description: "了解如何编写文档字符串（docstrings），以说明您的函数的作用、它们的参数以及它们返回什么。"
+order: 6
+plots: []
+sourceHash: "669b69ace111754e760db4ee17725d378d3589ff8ead1e23d773b33ca6e79d73"
+sourceCorrections: []
+---
+
+当您开始编写更多函数，将代码组织成可复用代码块时，会很快发现仅仅有代码并不总是足够的。几周或几个月后，您如何记住某个函数的作用？其他人如何理解如何使用您的函数，而无需阅读每一行代码？答案在于文档，特别是使用*文档字符串*直接嵌入 (embedding)到代码中的文档。
+
+文档字符串是作为模块、函数、类或方法定义中的第一个语句出现的字符串字面量。它的作用是解释该对象的功能。Python 会自动将这些字符串关联到对象的 `__doc__` 属性，使其在运行时可访问。
+
+标准约定是使用三重引号（`"""文档字符串内容"""` 或 `'''文档字符串内容'''`），即使是单行文档字符串也是如此。这使得以后在需要时可以轻松扩展它们。
+
+```python
+def greet(name):
+    """打印一个简单的问候语。"""
+    print(f"Hello, {name}!")
+
+def calculate_rectangle_area(length, width):
+    """
+    计算矩形的面积。
+
+    此函数接收矩形的长度和宽度，并返回其计算出的面积。
+
+    参数：
+        length (float): 矩形的长度。
+        width (float): 矩形的宽度。
+
+    返回值：
+        float: 矩形的计算面积。
+    """
+    if length < 0 or width < 0:
+        # 我们稍后会学习如何引发错误，目前只需返回 None
+        print("错误：长度和宽度不能为负。")
+        return None
+    return length * width
+```
+
+### 为什么要编写文档字符串？
+
+编写好的文档字符串是编写整洁、易于维护的 Python 代码的一个基本方面。原因如下：
+
+1. **可读性：** 它们简要概述了函数的功能、参数 (parameter)和返回值。这使得任何人（包括您未来的自己）都可以快速理解函数的作用和使用方法，而无需解释实现细节。
+2. **可维护性：** 当您以后需要修改或修复函数时，清晰的文档字符串有助于您记住函数的预期行为和限制。
+3. **协作：** 如果您在团队中工作，文档字符串对于其他人正确理解和使用您的代码非常重要。
+4. **自动化文档工具：** 像 Sphinx 这样的工具可以自动解析您的文档字符串，以生成看起来专业的项目文档网站。
+5. **交互式帮助：** Python 的内置 `help()` 函数会使用文档字符串。如果在定义了上述函数后，在 Python 解释器中运行 `help(calculate_rectangle_area)`，您将看到格式化的文档字符串。
+
+### 如何编写好的文档字符串
+
+尽管您可以在那里放置任何字符串，但遵循约定会让您的文档字符串更有用。PEP 257 提供了编写好的文档字符串的指南。以下是其要点：
+
+- **位置：** 始终将文档字符串放置在 `def function_name(...):` 这一行的紧下方。
+- **引号：** 使用三重双引号 `""" """`。
+- **单行文档字符串：** 对于非常简单的函数，一行概述其作用通常就足够了。结束的三重引号 `"""` 应该在同一行。
+
+  ```python
+  def square(x):
+      """返回输入数字的平方。"""
+      return x * x
+  ```
+- **多行文档字符串：** 对于更复杂的函数，请使用多行格式：
+  - **总结行：** 以简短的总结行开始（类似于单行文档字符串）。此行应使用祈使句语气（例如，“计算...”、“转换...”）。它应简要说明函数的作用。
+  - **空行：** 在总结行之后留一个空行。
+  - **详细说明：** 如有必要，提供有关函数行为、使用的算法或副作用的更多细节。
+  - **参数 (parameter)（`Args:` 或 `Parameters:`）：** 在单独一行上列出每个参数，包括其名称、类型（可选但有帮助）和描述。
+  - **返回值（`Returns:`）：** 描述函数返回的值（包括类型）。如果函数没有明确返回任何内容（返回 `None`），您可以说明这一点或省略此部分。
+  - **引发的异常（`Raises:`）：** 如果函数旨在在特定条件下引发特定异常，请在此处列出。（我们稍后会详细介绍异常）。
+
+回顾前面的 `calculate_rectangle_area` 函数示例；它展现了一种标准的多行文档字符串格式。
+
+### 访问文档字符串
+
+Python 可以轻松访问与函数关联的文档字符串。
+
+1. **使用 `__doc__` 属性：** 每个函数对象都有一个特殊属性 `__doc__`，它保存其文档字符串。
+
+   ```python
+   print(calculate_rectangle_area.__doc__)
+   ```
+
+   这将打印原始文档字符串。
+2. **使用 `help()` 函数：** 更用户友好的方式是在交互式 Python 会话中使用内置的 `help()` 函数。
+
+   ```python
+   # 在 Python 控制台或 REPL 中
+   help(calculate_rectangle_area)
+   ```
+
+   此命令会很好地格式化并打印文档字符串，使其易于阅读。
+
+编写文档字符串最初可能看起来是额外的工作，但这是一项长期来看非常有益的投入。它使您的代码更专业、易于理解，也更易于维护和共享。养成为您创建的每个函数编写文档字符串的习惯。
+
+## 参考资料
+
+- [PEP 257 -- Docstring Conventions](https://peps.python.org/pep-0257/) — David Goodger, Guido van Rossum (2001)
+  Python docstring编写的官方风格指南，提供了详细的约定和示例，以实现有效的文档编写。
+- [The Python Tutorial - 3.4. Functions - Documentation Strings](https://docs.python.org/3/tutorial/controlflow.html#documentation-strings) — Guido van Rossum and the Python Development Team (2024)
+  官方Python教程中关于docstring的章节，解释了其作用以及如何使用内置的`help()`函数访问它们。
+- [Fluent Python: Clear, Concise, and Effective Programming](https://www.whsmith.co.uk/products/fluent-python--clear-concise-and-effective-programming/luciano-ramalho/paperback/9781492056355.html) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media; Pages: 1012
+  这本权威书籍讨论了如何编写符合Python习惯且文档完善的代码，包括实际的docstring实践。
+- [Sphinx Documentation - sphinx.ext.autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html) — The Sphinx Development Team (2024)
+  Sphinx的autodoc扩展的官方文档，展示了它如何解析和使用docstring来生成专业的项目文档。

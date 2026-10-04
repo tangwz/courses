@@ -1,0 +1,75 @@
+---
+course: "planning-optimizing-ai-infrastructure"
+chapter: "strategies-for-performance-optimization"
+lesson: "techniques-for-distributed-training"
+sourceId: 7024
+sourceUrl: "https://apxml.com/zh/courses/planning-optimizing-ai-infrastructure/chapter-5-strategies-for-performance-optimization/techniques-for-distributed-training"
+title: "分布式训练技术"
+description: "理解并比较分布式训练策略，包括数据并行和模型并行，以加速在多个GPU上的训练。"
+order: 2
+plots: []
+sourceHash: "7729eacf3ec22ba662cf0ffa80ee981b9edb775307a8eb82ea1791e30a748626"
+sourceCorrections: []
+---
+
+当单个GPU不再足以满足您的训练需求时，无论是数据集庞大，还是模型本身非常大，您都必须将训练任务扩展到多个处理器。这就是分布式训练的范畴。通过分担工作负载，您可以大幅缩短模型训练所需的时间，从数周缩短到数天，或从数天缩短到数小时。然而，这并非简单地增加更多硬件。高效的分布式训练需要有策略地划分工作并协调结果。
+
+分布式训练的主要挑战是通信。每当GPU需要同步时，它们都会花费时间彼此发送数据，而不是执行计算。您的目标是在最大化计算量的同时，最小化这种通信开销。实现此目标的两大主要策略是数据并行和模型并行。
+
+### 数据并行：一个模型，多个数据片段
+
+数据并行是分布式训练中最常见且通常最直接的策略。其核心思想很简单：您在每个可用GPU上复制整个模型，但为每个GPU提供输入数据的不同片段。这是一种在相同时间内处理更大批次数据的有效方法。
+
+使用数据并行执行单次训练步骤的过程通常遵循以下步骤：
+
+1. **复制：** 模型被复制到每个参与GPU的内存中。
+2. **分割：** 一个大型的“全局”数据批次被分割成更小的迷你批次。每个GPU接收一个迷你批次。
+3. **计算：** 每个GPU独立执行前向传播以生成预测，并执行反向传播 (backpropagation)以计算其局部迷你批次的梯度。此时，每个GPU根据其处理的数据拥有不同的梯度集。
+4. **同步：** 这是最重要的一步。所有GPU的梯度必须被聚合。一种称为**All-Reduce**操作的通信模式被用于汇总所有GPU的梯度，并将结果分发回每个GPU。平均后的梯度将用于更新模型的权重 (weight)。
+5. **更新：** 每个GPU使用平均后的梯度来更新其本地的模型权重副本。因为它们都从相同的权重开始并接收相同的平均梯度，所以模型副本在更新后保持一致。
+
+> 在数据并行中，模型在每个GPU上复制。一批数据被分割，每个GPU处理其部分。然后，在更新每个模型副本之前，聚合生成的梯度。
+
+数据并行的主要优点是它能够通过增加每秒处理的数据总量来加速训练。然而，其效果受限于GPU之间（例如，NVLink或PCIe）以及跨机器（网络）的通信带宽。它也不能解决模型过大无法放入单个GPU内存的问题，因为整个模型必须加载到每个设备上。
+
+### 模型并行：一个模型，跨多个GPU分割
+
+当您的模型非常庞大，拥有数十亿参数 (parameter)，以至于无法放入最大可用GPU的内存中时，会发生什么？这时模型并行就变得必要了。你不是复制模型，而是将模型本身分割到多个GPU上。
+
+可以将其看作一条装配线。每个GPU负责执行模型层中的一个特定子集。
+
+1. **划分：** 模型的层被划分并放置到不同的GPU上。例如，在一个24层的Transformer模型中，GPU 0可能持有第1-12层，而GPU 1可能持有第13-24层。
+2. **前向传播：** 一批数据被输入到GPU 0。它计算其层的激活值，并将结果传递给GPU 1。然后GPU 1计算其层并生成最终输出。
+3. **反向传播 (backpropagation)：** 过程反向。梯度在GPU 1上计算，并传回给GPU 0，然后GPU 0计算其自身层的梯度。
+
+> 在模型并行中，模型的层被分割到多个GPU上。数据在前向传播（激活值）期间顺序流经GPU，梯度在反向传播期间反向流动。
+
+这种简单方法的主要缺点是GPU利用率不足。当GPU 1工作时，GPU 0空闲，反之亦然。这通常被称为“流水线气泡”。更高级的技术，例如**流水线并行**（例如GPipe），通过将数据批次分割成更小的微批次并创建流水线来解决此问题，允许GPU同时处理不同的微批次以减少空闲时间。实现模型并行比数据并行复杂得多，并且通常仅在别无选择的情况下使用。
+
+### 做出选择：数据并行与模型并行
+
+在大多数情况下，选择很明确：
+
+- **如果你的模型能够放入单个GPU的内存中，则使用数据并行。** 这是在大数据集上加速训练的默认且最有效的方法。
+- **仅当你的模型对于单个GPU来说过大时，才使用模型并行。** 这是解决内存限制的方案，而不仅仅是为了速度。
+
+在一些极端情况，例如训练先进的大型语言模型（LLM）时，这些技术会被结合使用。**混合并行**可能会使用模型并行在单个服务器节点内将庞大模型分割到多个GPU上，然后使用数据并行将这种多GPU设置复制到许多不同的服务器节点上。
+
+### 分布式训练框架
+
+手动管理梯度同步和数据传输既复杂又容易出错。幸运的是，主流深度学习 (deep learning)框架提供了高级抽象来为您处理这些。
+
+- **PyTorch：** 主要工具是`torch.nn.parallel.DistributedDataParallel` (DDP)。你用DDP包装你的模型，它会自动处理数据分发、使用高效的All-Reduce算法聚合梯度，并保持模型副本同步。
+- **TensorFlow：** `tf.distribute.Strategy` API提供了灵活的分布式训练方式。对于一台或多台机器上的数据并行，`tf.distribute.MirroredStrategy`和`tf.distribute.MultiWorkerMirroredStrategy`是常见的选择。你定义策略，然后在策略范围内构建并编译模型，TensorFlow会处理分发逻辑。
+
+这些工具抽象掉了底层细节，允许您通过相对较少的代码更改，将单GPU训练脚本转换为分布式脚本。下一步是将这些策略付诸实践，我们将在实践实验中进行探讨。
+
+## 参考资料
+
+- [\`torch.nn.parallel.DistributedDataParallel\`](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html) — PyTorch Documentation (2023)
+  PyTorch数据并行分布式训练主要工具的官方文档，详细说明了其用法和机制。
+- [Distributed training with TensorFlow](https://www.tensorflow.org/guide/distributed_training) — TensorFlow Documentation (2023)
+  TensorFlow分布式训练策略的官方指南，包括用于数据并行的`MirroredStrategy`。
+- [GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism](https://papers.nips.cc/paper/2019/file/40d440875e5264b1263bb49646b9ec78-Paper.pdf) — Yanping Huang, Youlong Cheng, Ankur Bapna, Orhan Firat, Dehao Chen, Mia Xu Chen, HyoukJoong Lee, Jiquan Ngiam, Quoc V. Le, Yonghui Wu, Zhifeng Chen (2019)
+  Journal: Advances in Neural Information Processing Systems 32; Publisher: NeurIPS; Volume: 32; Pages: 103-112; DOI: [10.5555/3454288.3454378](https://doi.org/10.5555/3454288.3454378)
+  介绍了一种开创性的流水线并行技术，通过解决“流水线气泡”问题来优化大型模型的GPU利用率。

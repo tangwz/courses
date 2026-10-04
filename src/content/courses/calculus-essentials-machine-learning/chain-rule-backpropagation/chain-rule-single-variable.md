@@ -1,0 +1,110 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "chain-rule-backpropagation"
+lesson: "chain-rule-single-variable"
+sourceId: 1409
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-5-chain-rule-backpropagation/chain-rule-single-variable"
+title: "回顾单变量链式法则"
+description: "回顾单变量复合函数的链式法则。"
+order: 1
+plots: []
+sourceHash: "78dc7ac9d4fcea6a128d563d2b39a2519db851c3443756076940a4375fb7da0e"
+sourceCorrections: []
+---
+
+机器学习 (machine learning)模型，特别是神经网络 (neural network)，通常通过函数复合构建。设想一个简单过程：输入 $x$ 进入函数 $g$，产生输出 $u$。这个输出 $u$ 随后成为另一个函数 $f$ 的输入，得到最终结果 $y$。用数学表示，我们写作 $y = f(u)$，这里 $u = g(x)$，或者更简洁地写成 $y = h(x) = f(g(x))$。
+
+现在，假设我们想知道初始输入 $x$ 的微小变动如何影响最终输出 $y$。这需要求复合函数 $h(x)$ 对 $x$ 的导数，记作 $\frac{dy}{dx}$ 或 $h'(x)$。我们已经知道如何求 $\frac{df}{du}$（$f$ 随其直接输入 $u$ 的变化）和 $\frac{dg}{dx}$（$g$ 随其输入 $x$ 的变化）。链式法则提供了这种联系。
+
+单变量函数的链式法则指出，复合函数 $h(x) = f(g(x))$ 的导数是外部函数 $f$ 对其自变量的导数（在内部函数 $g(x)$ 处求值）与内部函数 $g$ 对 $x$ 的导数的乘积。
+
+使用莱布尼茨（Leibniz）记法，这通常有助于展现“链”式效应，我们写为：
+
+
+$$
+\frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx}
+$$
+
+
+或者，使用拉格朗日（Lagrange）记法：
+
+
+$$
+h'(x) = f'(g(x)) \cdot g'(x)
+$$
+
+
+让我们分解 $f'(g(x))$。它表示：
+
+1. 求外部函数 $f$ 对其输入变量的导数（我们称其为 $u$，即求 $f'(u)$）。
+2. 将内部函数 $g(x)$ 代回到 $f'(u)$ 的表达式中的 $u$ 的位置。
+
+接着，将此结果乘以内部函数 $g'(x)$ 的导数。
+
+### 例子 1: 多项式复合
+
+考虑函数 $h(x) = (x^2 + 5)^3$。这是一个函数复合。
+令内部函数为 $g(x) = u = x^2 + 5$。
+令外部函数为 $f(u) = y = u^3$。
+
+首先，求各个函数的导数：
+
+- 内部函数的导数: $\frac{du}{dx} = g'(x) = 2x$
+- 外部函数的导数: $\frac{dy}{du} = f'(u) = 3u^2$
+
+现在，应用链式法则： $\frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx}$。
+代入 $f'(u)$ 和 $g'(x)$：
+
+
+$$
+\frac{dy}{dx} = (3u^2) \cdot (2x)
+$$
+
+
+最后，将 $u$ 的表达式代回方程中，因为导数 $f'(u)$ 需要在内部函数的输出（$u = g(x)$）处求值：
+
+
+$$
+\frac{dy}{dx} = 3(x^2 + 5)^2 \cdot (2x) = 6x(x^2 + 5)^2
+$$
+
+
+### 例子 2: 指数函数
+
+让我们看 $h(x) = e^{3x}$。
+我们可以将其看作 $y = f(u) = e^u$ 且 $u = g(x) = 3x$。
+
+求各个导数：
+
+- $\frac{du}{dx} = g'(x) = 3$
+- $\frac{dy}{du} = f'(u) = e^u$ （$e^u$ 对 $u$ 的导数是 $e^u$）
+
+应用链式法则： $\frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx}$
+
+
+$$
+\frac{dy}{dx} = (e^u) \cdot (3)
+$$
+
+
+代入 $u = 3x$：
+
+
+$$
+\frac{dy}{dx} = e^{3x} \cdot 3 = 3e^{3x}
+$$
+
+
+这条规则很重要，因为它使得我们能够将复杂、嵌套函数的求导分解为易于处理的步骤。我们逐层计算变化率，将这些变化率相乘，得到总体变化率。这一确切原理，当扩展到多变量函数时，构成了神经网络 (neural network)中反向传播 (backpropagation)的核心机制，使得我们能够计算网络内部权重 (weight)变化如何影响最终输出或误差。我们接下来将讨论这种多变量的扩展。
+
+## 参考资料
+
+- [Mathematics for Machine Learning](https://mml-book.github.io/book/mml-book.pdf) — Marc Peter Deisenroth, A. Aldo Faisal, and Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; Pages: 80-82
+  为机器学习提供微积分基础，其中包含解释导数和链式法则的专门章节。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 199-206
+  深度学习的基础教材，解释了链式法则作为神经网络反向传播的数学基础的作用。
+- [18.01SC Single Variable Calculus](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/) — Massachusetts Institute of Technology (MIT) (2010)
+  Publisher: Massachusetts Institute of Technology
+  权威的单变量微积分在线课程，提供视频讲座、笔记和练习，详细讲解了链式法则。

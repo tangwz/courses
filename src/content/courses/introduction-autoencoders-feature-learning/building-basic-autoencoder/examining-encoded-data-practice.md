@@ -1,0 +1,147 @@
+---
+course: "introduction-autoencoders-feature-learning"
+chapter: "building-basic-autoencoder"
+lesson: "examining-encoded-data-practice"
+sourceId: 6437
+sourceUrl: "https://apxml.com/zh/courses/introduction-autoencoders-feature-learning/chapter-5-building-basic-autoencoder/examining-encoded-data-practice"
+title: "检查编码数据：实践"
+description: "实践检查自编码器瓶颈层生成的压缩数据（编码表示）。"
+order: 10
+plots: ["plots/6437-0.json", "plots/6437-1.json"]
+sourceHash: "976412fc0f9237d5dfcc0a955fba49827d1fec3b66e373baac8bb49790201af9"
+sourceCorrections: []
+---
+
+自编码器可以从MNIST数据集重建图像。虽然重建的图像展示了自编码器的能力，但理解底层的压缩表示同样重要。这就是“特征学习”方面真正得到体现的地方。自编码器的瓶颈层保存了这种压缩的，即“编码”版本的输入数据。
+
+在本节中，你将实践访问和检查这些编码表示。这将让你更直接地看到自编码器从数据中学到了什么。
+
+### 理解编码数据
+
+记住，自编码器有两个主要部分：编码器和解码器。
+
+1. **编码器**接收输入数据（例如MNIST数字图像），并将其压缩成小得多的数字集合。这种压缩版本存在于“瓶颈”层。
+2. **解码器**随后接收这种压缩表示，并尝试从中重建原始输入。
+
+编码器的输出，即在瓶颈处，就是我们所说的“编码数据”或“潜在表示”。它是输入的紧凑概括，捕获了网络在训练期间确定的最重要特征。对于一个$28 \times 28 = 784$像素的MNIST图像，瓶颈可能只有，比如，32个数字。这32个数字就是学习到的特征。
+
+### 访问编码表示：创建编码器模型
+
+你在前面章节中构建的`autoencoder`模型设计用于输出最终的重建图像。要从瓶颈层获取数据，我们需要创建一个新的、更简单的模型，它仅包含我们完整自编码器的编码器部分。
+
+在Keras中，这很简单。如果你在构建自编码器时为层命名了（这是一个好习惯！），你可以轻松获取任何层的输出。假设你的完整自编码器模型名为`autoencoder`，并且瓶颈层（你编码器的最后一层）名为`bottleneck_layer`。
+
+你可以这样定义一个新模型，我们称之为`encoder_model`，它接收与你的`autoencoder`相同的输入，但输出来自`bottleneck_layer`的激活：
+
+```python
+from tensorflow.keras.models import Model
+
+# 假设 'autoencoder' 是你已训练好的自编码器模型
+# 假设 'bottleneck_layer_name' 是你为瓶颈层命名的名称
+# 例如，如果你的瓶颈层定义为：
+# Dense(32, activation='relu', name='bottleneck_layer_name')
+
+# 创建编码器模型
+encoder_model = Model(inputs=autoencoder.input, 
+                      outputs=autoencoder.get_layer('bottleneck_layer_name').output) 
+```
+
+如果你没有为瓶颈层命名，你可能需要通过其索引或显式重建编码器部分来找到它。命名层会使这个过程清晰得多。例如，如果你的编码器部分是`Dense(784) -> Dense(128) -> Dense(64) -> Dense(32, name='bottleneck_layer_name')`，那么`bottleneck_layer_name`就是你使用的字符串。
+
+### 生成和检查编码数据
+
+一旦你有了`encoder_model`，你可以使用它的`predict`方法，就像使用任何其他Keras模型一样，来获取你的输入数据的编码表示。让我们用测试集中的一些图像（例如，如果你使用MNIST，就是`x_test`）来试试这个。
+
+```python
+# 让我们从测试集中抽取一些样本进行编码
+num_samples_to_encode = 5
+x_test_sample = x_test[:num_samples_to_encode]
+
+# 获取编码表示
+encoded_imgs = encoder_model.predict(x_test_sample)
+
+print("编码图像的形状：", encoded_imgs.shape)
+# 这将打印出类似 (5, 32) 的形状，如果你的瓶颈层有 32 个单元。
+```
+
+`encoded_imgs.shape`会告诉你两件事：你编码的样本数量以及瓶颈的维度（每个样本的学习特征数量）。
+
+现在，让我们看一下这些编码图像中一两个的实际值：
+
+```python
+print("\n第一张图像的编码表示：")
+print(encoded_imgs[0])
+```
+
+你会看到每张图像都对应一个数字数组。对于一个32维的瓶颈，你输入中的每张图像现在仅由32个浮点数表示。这些数字是自编码器学习到的“特征”。它们的具体含义可能很抽象，但它们表示了自编码器发现对重建原始图像有用的模式和特性。如果你的编码器使用了ReLU激活函数 (activation function)，这些值将是非负的。
+
+### 理解编码向量 (vector)的含义
+
+这些数字数组是自编码器学习到的核心。每个向量（例如，`encoded_imgs[0]`）都是低维“潜在空间”中的一个点。自编码器的目标是将相似输入映射到这个潜在空间中的邻近点，将不同输入映射到距离更远的点，以一种允许解码器重建它们的方式。
+
+我们人类无法直接可视化一个32维空间！然而，我们仍然可以获得一些理解：
+
+1. **比较向量**：如果你取两张不同的输入图像（比如一个MNIST数字'0'和一个数字'7'），它们的编码向量看起来应该不同。它们32维表示中的具体值会有所不同。正是这种差异使得解码器能够区分它们并正确重建它们。
+
+   让我们设想你有一个数字'0'和一个数字'7'的编码向量。你可以将这些向量绘制成条形图，以查看它们的特征激活值如何不同。对于这个例子，我们将使用一些占位数据来表示这些向量可能看起来的样子。假设`encoded_vector_digit_0`和`encoded_vector_digit_7`是NumPy数组，每个有32个值，它们是从`encoder_model.predict()`获得的。
+
+   ```python
+   # 示例：
+   # encoded_vector_digit_0 = encoder_model.predict(image_of_a_zero)[0]
+   # encoded_vector_digit_7 = encoder_model.predict(image_of_a_seven)[0]
+
+   # 为了演示，我们使用一些虚构数据：
+   # （在你的实际代码中，你将使用encoder_model.predict的真实输出）
+   example_encoded_0 = [0.0, 1.2, 0.0, 0.5, 2.1, 0.0, 0.0, 0.8, 1.5, 0.0, 0.2, 0.0, 2.5, 0.3, 0.0, 1.1,
+                        0.0, 0.0, 1.9, 0.0, 0.6, 0.0, 1.3, 0.0, 0.0, 2.2, 0.0, 0.9, 0.0, 0.0, 1.7, 0.0]
+   example_encoded_7 = [1.8, 0.0, 0.7, 0.0, 0.0, 1.2, 2.0, 0.0, 0.0, 0.5, 1.6, 0.0, 0.0, 2.3, 0.0, 0.1,
+                        1.4, 0.0, 0.0, 2.6, 0.0, 0.9, 0.0, 1.1, 0.0, 0.0, 1.0, 0.0, 2.4, 0.0, 0.0, 0.4]
+   feature_indices = list(range(len(example_encoded_0))) # 在此示例中应为32
+   ```
+
+   
+   
+   ![比较编码特征向量](plots/6437-0.json)
+   
+   
+
+   > 两种不同数字的编码向量比较。注意激活模式（条形的高度）如何不同，表明自编码器在其学习到的特征空间中明确地区分了它们。
+2. **可视化低维嵌入 (embedding)**：如果你将自编码器设计成一个非常小的瓶颈，比如只有2维，你可以在散点图上绘制这些2D点。每个点将代表一个输入图像，你可以根据它们的实际类别（例如，MNIST的数字标签）进行颜色编码。理想情况下，你会看到对应不同数字的点簇。
+
+   虽然你当前的自编码器可能有超过2个瓶颈维度，但以下是一个2D图，可以给你一个大致的概念：
+
+   
+   
+   ![二维潜在空间可视化](plots/6437-1.json)
+   
+   
+
+   > 2D潜在空间中的数据点散点图。不同的颜色/形状可以代表不同类别的输入数据（例如，不同的MNIST数字）。簇之间清晰的分离将表明自编码器很好地学习了区分这些类别。
+
+   即使你的瓶颈层有超过两个维度（例如32），t-SNE或UMAP等技术（更高级的主题）也可以用于将这些更高维的编码向量投影到2D或3D进行可视化。主要观点是，潜在空间中的结构（点的排列方式）反映了自编码器从你的数据中学到的相似点和差异点。
+
+### 这对特征学习意味着什么
+
+通过检查编码数据，你直接观察到自编码器学习到的特征。
+
+- 自编码器自动找到了一种方式，使用小得多的数字集合来表示复杂的输入数据（如图像）。
+- 这些数字，即特征，捕获了数据的重要特性，因为它们经过优化以允许解码器重建原始输入。
+- 不同的输入导致不同的编码向量 (vector)（如条形图比较中所示）这一事实是这种学习的证明。
+
+这种从原始数据中自动提取有用特征的过程是深度学习 (deep learning)的根基。虽然我们可能无法总是为每个学习到的特征分配一个简单易懂的标签（例如，“这个特征检测曲线”，“这个检测直线”），但它们的集体模式有效地编码了输入。
+
+这种构建自编码器、评估其重建结果以及现在检查其内部编码表示的动手实践经验，应该能巩固你对这些网络如何运作和学习的理解。在更高级的应用中，这些学习到的特征可以被提取出来，用于其他机器学习 (machine learning)任务，例如分类或异常检测，通常比单独使用原始数据带来更好的性能。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于自动编码器、表示学习和神经网络架构的综合性教科书。对于理解其理论基础很重要。
+- [Keras API Reference: Models (Model class)](https://keras.io/api/models/model/) — Keras Team (2024)
+  Keras模型API的官方文档，提供了创建和操作模型的实践指导，包括提取中间层输出。
+- [Reducing the Dimensionality of Data with Neural Networks](https://www.science.org/doi/10.1126/science.1127647) — Geoffrey E. Hinton and Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  一篇基础性论文，展示了深度自动编码器在降维和表示学习中的有效性，有助于重新激发对深度学习的兴趣。
+- [Visualizing Data using t-SNE](https://www.jmlr.org/papers/v9/vandermaaten08a.html) — Laurens van der Maaten and Geoffrey Hinton (2008)
+  Journal: Journal of Machine Learning Research; Publisher: Journal of Machine Learning Research; Volume: 9; Pages: 2579−2605
+  介绍了t-SNE（t分布随机邻居嵌入），一种将高维数据映射到2D或3D空间以进行可视化的常用方法。

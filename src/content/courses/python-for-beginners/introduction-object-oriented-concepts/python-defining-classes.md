@@ -1,0 +1,68 @@
+---
+course: "python-for-beginners"
+chapter: "introduction-object-oriented-concepts"
+lesson: "python-defining-classes"
+sourceId: 2368
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-8-introduction-object-oriented-concepts/python-defining-classes"
+title: "定义类"
+description: "学习如何在Python中使用`class`关键字定义新类的语法。"
+order: 2
+plots: []
+sourceHash: "c1a988a05953faabfecb4fed221a59f376d879f75f8e7c3b288dad8a87ec92fe"
+sourceCorrections: []
+---
+
+面向对象编程是一种将代码围绕“对象”组织起来的编程方式——这些对象是数据以及操作这些数据的功能的集合。创建这些对象的第一步是定义一个模板或蓝图，它规定了对象将包含什么样的数据以及可以执行哪些操作。在 Python 中，这个蓝图被称为一个**类**。
+
+可以将类比作建筑师的房屋蓝图。蓝图本身不是房子，但它包含了建造一栋（或多栋相同）房屋所需的所有规格。类似地，类定义不会直接创建对象，但它规定了所有由它创建的对象的结构和行为。
+
+在 Python 中定义类，我们使用 `class` 关键字，后跟我们希望给类取的名称，然后是一个冒号（`:`）。组成类定义的代码会缩进在 `class` 行下方，就像函数或控制流语句一样。
+
+Python 中的惯例是使用 `CamelCase`（驼峰命名法）来命名类，其中每个单词的首字母大写，并且没有下划线（例如，`MyClass`、`Dog`、`NetworkConnection`）。
+
+下面是类定义最基本的结构：
+
+```python
+class ClassName:
+    pass
+```
+
+我们来分析一下这个结构：
+
+- `class`: 这个关键字表示类定义的开始。
+- `ClassName`: 用您为类选择的实际名称替换此占位符（建议遵循驼峰命名法惯例）。
+- `:`: 冒号表示包含类体的缩进块的开始。
+- `pass`: 这是一个 Python 语句，它不执行任何操作。它用作一个占位符。由于 Python 要求在类定义中的冒号之后有一个缩进块（就像 `if`、`for`、`def` 等一样），当我们想定义类结构但尚未添加任何具体的属性或方法时，我们使用 `pass`。它满足了非空块的语法要求。
+
+例如，如果想在程序中为表示狗创建蓝图，可以从一个简单的类定义开始，如下所示：
+
+```python
+class Dog:
+    # 这是创建 Dog 对象的蓝图。
+    # 目前它是空的，但我们稍后会添加细节。
+    pass
+```
+
+执行这段代码不会打印任何内容，也不会创建任何实际的 `Dog` 对象。它所做的是创建一个名为 `Dog` 的新*类型*。我们已经定义了蓝图。
+
+在类定义内部（`pass` 语句目前所在的位置），我们稍后将添加：
+
+1. **属性**：与此类对象关联的变量，用于存储数据（例如狗的名字或品种）。
+2. **方法**：在类内部定义的功能，它规定了此类对象可以执行的行为或操作（例如狗吠叫或捡东西）。
+
+这些属性和方法构成了类定义的核心，充实了蓝图。目前，理解基本的 `class ClassName:` 语法以及 `pass` 作为占位符的作用是必不可少的第一步。
+
+类定义通常放置在 Python 文件（模块）的顶级，使其可在整个文件中使用，并可能导入到其他文件中。
+
+现在我们明白了如何使用 `class` 关键字来规划蓝图，下一步是了解如何实际地从该蓝图构建事物——也就是说，如何从我们的类定义创建单个对象（实例）。
+
+## 参考资料
+
+- [9. Classes (The Python Tutorial)](https://docs.python.org/3/tutorial/classes.html) — Guido van Rossum and the Python Development Team (2023)
+  Python 面向对象特性的官方指南，提供类定义的基本语法和概念。
+- [Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming](https://nostarch.com/python-crash-course-3rd-edition) — Eric Matthes (2022)
+  Publisher: No Starch Press; Pages: Chapter 9, Classes
+  一本出色的入门书籍，对 Python 中类的定义和使用提供了清晰的解释和实际示例。
+- [Learning Python, 5th Edition](https://www.oreilly.com/library/view/learning-python-5th/9781449355739/) — Mark Lutz (2013)
+  Publisher: O'Reilly Media; Pages: Chapter 24, Class Coding Basics
+  一本全面且权威的指南，涵盖 Python 的面向对象编程模型，包括对类定义的详细讨论。

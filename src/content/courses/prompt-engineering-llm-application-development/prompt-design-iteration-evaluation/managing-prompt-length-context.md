@@ -1,0 +1,94 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "prompt-design-iteration-evaluation"
+lesson: "managing-prompt-length-context"
+sourceId: 3001
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-3-prompt-design-iteration-evaluation/managing-prompt-length-context"
+title: "管理提示长度和上下文窗口"
+description: "应对LLM上下文窗口限制的策略。"
+order: 2
+plots: []
+sourceHash: "00afee83be2623002fc550696fe3160e8f6e4a95794c8708438d4a264b915280"
+sourceCorrections: []
+---
+
+在提示工程 (prompt engineering)中，一个主要的实际限制是模型的**上下文 (context)窗口**。它指的是大型语言模型（LLM）在任何给定时间可以处理的最大信息量，以token衡量。此限制包括您在输入提示中提供的所有内容以及生成的输出。可以将其视为模型的短期记忆。
+
+理解和管理这一限制对于构建可靠的应用非常重要。如果您的组合输入和期望输出超过模型的上下文窗口，API调用可能会失败，或者更糟糕的是，模型可能会静默地截断输入，导致上下文不完整，并可能产生无意义或不正确的回复。
+
+### Token：上下文 (context)的构成要素
+
+大型语言模型不直接处理原始文本。相反，它们将文本分解成更小的单元，称为**token**。一个token可以是一个词、一个词的一部分（子词 (subword)），甚至只是一个字符或标点符号。文本被分词 (tokenization)的确切方式取决于所使用的具体模型。对于英文文本，一个常见的经验法则，是一个token大致对应4个字符或约0.75个词，但这只是一个近似值。
+
+例如，短语“LLM context windows”可能被不同模型以不同方式分词，比如：`["LLM", "Ġcontext", "Ġwindows"]`（3个token）或 `["L", "LM", "Ġcontext", "Ġwindow", "s"]`（5个token）。值得记住的是，标点符号和空格也占用token。
+
+不同模型有不同的上下文窗口大小，从几千个token（例如4,096）到超过十万个（例如128,000或更多）不等。虽然更大的窗口提供更大的灵活性，但它们通常伴随更高的API费用和可能增加的处理时间（延迟）。
+
+### 管理上下文 (context)长度的策略
+
+有效管理上下文窗口需要确保您的提示包含必要信息且不超过限制。以下是几种常用策略：
+
+1. **提示简洁性：** 这是最直接的方法。审阅您的指令、上下文和示例。能否让它们更清晰、更直接，而不丢失核心含义？删除冗余短语、不必要的客套话或过度冗长的描述。这直接符合之前讨论过的有效提示设计原则。
+2. **总结：** 如果您需要从长篇文档或冗长对话历史中提供背景信息，请考虑先进行总结。
+
+   - **手动总结：** 您或用户明确地创建简洁的摘要。
+   - **LLM辅助总结：** 使用单独的LLM调用来总结文本，然后再将其包含在主提示中。请注意，这会增加一个额外的步骤，从而增加延迟和成本。
+3. **分块：** 当处理需要被处理或查询的非常大的文档时，将文档分解成更小、易于管理的块，每个块都能各自适应上下文窗口。您可以按顺序处理每个块，或使用一些方法（稍后在RAG背景下讨论）来识别并只获取用于特定查询的最相关的块。
+
+   > 将大型文档拆分成更小的块，每个块都在模型的上下文窗口内单独处理。
+4. **滑动窗口（用于对话）：** 在聊天机器人应用或涉及长时间交互的场景中，您可能只在提示中保留对话历史的最近部分。例如，始终包含系统消息、最后的用户查询以及最后的N轮交流。这可以防止提示无限增长，但有丢失对话早期上下文的风险。
+
+   > 滑动窗口方法只保留对话中最近的轮次（例如3轮）作为上下文。
+5. **结构化数据和选择性包含：** 与其包含原始文本，不如以更结构化、token高效的格式（比如简洁的JSON或键值对）表示信息。同时，识别并只包含任务所需的绝对必要的信息片段，而不是提供可能不相关的广泛背景。像语义搜索这样的方法（在第六章中介绍）可以帮助从更大的知识库中自动识别这些相关片段。
+6. **模型选择：** 如果您的任务根本上需要同时处理大量文本，您可能需要选择一个特别设计有更大上下文窗口的模型。评估与这些更大模型相关的成本、延迟和性能权衡。
+
+### 估算Token数量
+
+为了主动管理上下文 (context)限制，在将提示发送到API之前估算其将消耗的token数量是有帮助的。许多LLM提供商为此提供实用工具或指导。例如，OpenAI提供了`tiktoken` Python库，它允许您根据其模型使用的特定编码来计算token。
+
+```python
+# 使用OpenAI的tiktoken示例
+# import tiktoken
+
+# # 加载适用于模型的编码（例如，GPT-4的“cl100k_base”
+# # encoding = tiktoken.get_encoding("cl100k_base")
+
+# # prompt_text = "This is an example prompt."
+# # tokens = encoding.encode(prompt_text)
+# # num_tokens = len(tokens)
+
+# # print(f"Text: '{prompt_text}'")
+# # print(f"Tokens: {tokens}")
+# # print(f"Number of tokens: {num_tokens}")
+
+# # 记住要同时考虑输入token和预期的最大输出token
+# # # total_tokens_needed = num_tokens + max_output_tokens
+# # # if total_tokens_needed > model_context_limit:
+# # #     # 实施管理策略（总结、分块等）
+```
+
+记住要考虑的不仅仅是您的输入提示的token数量，还有您期望模型在其回复中生成的最大token数量。输入和最大输出token的总和必须保持在模型的上下文限制内。
+
+### 平衡考量：上下文 (context)管理中的权衡
+
+选择正确的方法通常涉及到权衡：
+
+- **简洁性：** 可能需要仔细编辑。
+- **总结：** 可能会丢失细节或具体信息；LLM总结会增加成本/延迟。
+- **分块：** 增加应用复杂性；需要逻辑来管理块并可能聚合结果。
+- **滑动窗口：** 可能导致对话中重要长期上下文的丢失。
+- **更大上下文模型：** 通常每次API调用成本更高，且可能更慢。
+
+最佳方法取决于您的具体应用需求、您的数据特性以及您所处的限制条件（成本、延迟、复杂性）。迭代测试（我们接下来将讨论）对于找到有效管理上下文窗口的最佳平衡很重要。
+
+## 参考资料
+
+- [Managing tokens](https://platform.openai.com/docs/guides/text-generation/managing-tokens) — OpenAI (2024)
+  Publisher: OpenAI
+  提供了关于理解和管理OpenAI模型令牌限制的重要指导，包括上下文窗口和令牌估计等概念。
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS 2020); DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  介绍了检索增强生成（RAG），这是一种通过从大型语料库中检索相关信息来扩展LLM知识、解决上下文限制的方法。
+- [Claude 2.1: New features and pricing](https://www.anthropic.com/news/claude-2-1) — Anthropic (2023)
+  Publisher: Anthropic
+  宣布Claude 2.1推出20万令牌的上下文窗口，讨论其处理长篇内容的能力以及在大上下文环境中召回面临的挑战。

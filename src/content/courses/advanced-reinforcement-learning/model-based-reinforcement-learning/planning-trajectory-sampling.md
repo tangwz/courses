@@ -1,0 +1,62 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "model-based-reinforcement-learning"
+lesson: "planning-trajectory-sampling"
+sourceId: 3449
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-5-model-based-reinforcement-learning/planning-trajectory-sampling"
+title: "使用已学习模型进行规划：轨迹采样"
+description: "使用已学习模型模拟轨迹，并改进策略或价值函数。"
+order: 5
+plots: []
+sourceHash: "cbe02d73800ca9cf66e38354724e64231e9502db0f5440a9a8d398180c2f7dd3"
+sourceCorrections: []
+---
+
+构建环境内部模型 $\hat{M}$，通常包括已学习的转移函数 $\hat{P}(s'|s, a)$ 和已学习的奖励函数 $\hat{R}(s, a, s')$，能够使智能体获得对其周围环境的预测性理解。拥有这样一个模型，即使是近似的，也为规划提供了可能。智能体不再仅仅依赖真实交互，而是可以使用其内部模型来模拟未来可能的情况并从中学习。使用已学习模型的一种直接且多用途的方法是**轨迹采样**，有时也称作基于仿真的规划或基于模型的推演。
+
+核心想法很简单：将已学习模型 $\hat{M}$ 视作真实环境，并通过与之交互生成状态、动作和奖励的序列。这些模拟轨迹提供“合成”经验，可用于更新价值函数或策略，通常能大幅提升样本效率，优于纯粹的无模型方法。
+
+### 生成模拟轨迹
+
+从给定状态 $s$ 开始（可以是智能体当前状态、之前遇到的状态，甚至是任意状态），通过轨迹采样进行的规划过程如下进行：
+
+1. **选择动作：** 根据某种策略选择动作 $a$。这可以是智能体当前学习到的策略 $\pi$，或者可能是专门用于规划的不同策略（例如，仿真中的试探策略）。
+2. **预测结果：** 使用已学习模型 $\hat{M}$ 预测下一个状态 $s'$ 和奖励 $r$。
+   - 采样下一个状态：$s' \sim \hat{P}(\cdot | s, a)$。
+   - 确定奖励：$r = \hat{R}(s, a, s')$ (如果奖励函数是随机的，则进行采样：$r \sim \hat{R}(\cdot | s, a, s')$)。
+3. **重复：** 从预测状态 $s'$ 继续此过程，直到达到预设的步数（规划范围 $H$）或仿真中满足终止条件为止。
+
+这将生成一条模拟轨迹：$(s_0, a_0, r_0, s_1, a_1, r_1, \dots, s_H, a_H, r_H)$。注意，$s_0$ 是仿真的起始状态。
+
+> 一个流程图，展示了使用已学习的环境模型 $\hat{M}$ 进行轨迹采样的过程。从状态 $s$ 开始，选择一个动作 $a$，模型预测下一个状态 $s'$ 和奖励 $r$。这个循环持续到规划范围 $H$ 结束，生成用于学习更新的模拟轨迹。
+
+### 使用模拟轨迹进行规划
+
+一旦我们得到从状态 $s$ 开始的一个或多个模拟轨迹，该如何使用它们进行规划呢？有几种常用的方法：
+
+1. **蒙特卡洛评估（价值估计）：** 从状态 $s$ 生成多条轨迹。为每条轨迹计算回报 $G = \sum_{t=0}^{H} \gamma^t r_t$。这些回报的平均值提供了在仿真期间所用策略下状态价值 $V(s)$ 的估计。同样，如果我们在执行特定动作 $a$ 后从状态 $s$ 模拟轨迹，平均回报将估计 $Q(s, a)$。这些估计随后可用于更新智能体的价值函数近似器（例如，神经网络 (neural network)）。这正是 Dyna-Q 规划阶段中使用的机制，由模型生成的模拟经验 $(s, a, r, s')$ 被输入到标准 Q-learning 或 SARSA 更新中。
+2. **通过动作选择改进策略：** 对于给定状态 $s$，为每个可能的动作 $a \in \mathcal{A}$ 模拟轨迹。使用上述方法估计每个动作的 Q 价值 $Q(s, a)$。然后选择估计 Q 价值最高的动作，在真实环境中执行。这种方法使用模型来“向前看”，并在确定某个动作之前评估潜在动作的后果。这类似于将蒙特卡洛控制应用于已学习模型。
+3. **为策略优化生成数据：** 模拟轨迹 $(s_t, a_t, r_t, s_{t+1})$ 可以收集到一个缓冲区中，类似于经验回放缓冲区，但填充的是合成数据。这个缓冲区随后可以直接用于使用策略梯度方法或 Actor-Critic 算法训练策略网络。这使得策略可以基于想象的结果进行改进。
+
+### 轨迹采样的考量
+
+尽管功能强大，但使用轨迹采样进行规划涉及多种设计选择和潜在问题：
+
+- **规划范围 ($H$)：** 较短的规划范围 $H$ 意味着规划速度更快，且不易因不完善的模型累积误差。然而，这限制了“向前看”的“深度”。较长的范围可以考虑更远的后果，但会增加计算成本和对模型不准确性的敏感度。
+- **模型准确性：** 规划的有效性很大程度上依赖于已学习模型 $\hat{M}$ 的质量。如果模型不准确，模拟轨迹可能会与现实情况大幅偏离，导致次优甚至有害的规划结果（通常称为模型偏差）。存在量化 (quantization)模型不确定性并将其纳入规划的技术，但根本问题依然存在。
+- **计算成本：** 生成大量或长轨迹可能会带来高昂的计算成本，特别是当模型本身复杂（例如，大型神经网络 (neural network)）或状态/动作空间宽泛时。这通常需要在规划的深度/广度与计算可行性之间进行权衡。
+- **起始状态的选择：** 仿真应该从何处开始？常见选择包括智能体当前的真实状态、从近期经验中随机采样的状态，或者被识别为特别重要的状态（例如，模型预测误差高的状态）。
+
+“轨迹采样在模型学习和控制之间搭建了一座灵活的桥梁。通过模拟与其已学习的环境模型进行交互，智能体可以扩充其经验，有可能促成更快的学习和更好的决策，尤其是在交互成本高昂或受限的情况下，与纯粹的无模型方法相比。接下来的章节将研究 Dyna-Q 等具体架构以及 MCTS 等规划方法，这些方法都建立在这些核心思路上。”
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  这本基础教材全面介绍了基于模型的强化学习，包括在第八章中对规划、Dyna-Q以及模拟经验利用的详细阐述。
+- [Mastering Atari with Discrete World Models](https://arxiv.org/abs/2010.02193) — Danijar Hafner, Timothy Lillicrap, Mohammad Norouzi, Jimmy Ba (2021)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2010.02193](https://doi.org/10.48550/arXiv.2010.02193)
+  介绍了DreamerV2，这是一种现代的基于模型的强化学习智能体，它有效地利用学习到的世界模型，通过轨迹采样在复杂的视觉环境中执行规划。
+- [Model-based Reinforcement Learning: A Survey](http://dx.doi.org/10.1561/2200000086) — Thomas M. Moerland, Joost Broekens, Aske Plaat, Catholijn M. Jonker (2023)
+  Journal: Foundations and Trends® in Machine Learning; Publisher: Now Publishers; Volume: 16; Pages: 1-118; DOI: [10.1561/2200000086](https://doi.org/10.1561/2200000086)
+  这篇全面的综述涵盖了各种基于模型的强化学习技术，为利用学习模型进行规划及其实际应用提供了广阔的视角。

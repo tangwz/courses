@@ -1,0 +1,92 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-monitoring-observability-maintenance"
+lesson: "llm-performance-metrics"
+sourceId: 3192
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-5-llm-monitoring-observability-maintenance/llm-performance-metrics"
+title: "界定大语言模型特有的性能指标"
+description: "识别并追踪推理延迟、吞吐量和令牌生成速度等重要性能指标。"
+order: 1
+plots: ["plots/3192-0.json"]
+sourceHash: "10a5528299199a6e0a3ca006034317756768c2e8ba24955edcaf8712f7192a14"
+sourceCorrections: []
+---
+
+虽然标准应用性能监测 (APM) 提供基本依据，但大语言模型 (LLM)带来特有的性能特点，直接与其生成特性和计算要求相关联。仅仅追踪平均响应时间或服务器负载是不够的。为有效管理生产环境中的大语言模型，有必要界定并监测能够体现令牌生成、模型大小和硬件交互细节的指标。这些指标不仅对评估用户体验很重要，对于了解资源使用情况和运行成本也很有意义。
+
+### 了解大语言模型 (LLM)中的延迟
+
+延迟，即处理请求所需的时间，对大语言模型而言比传统请求/响应系统更复杂。因为大语言模型逐令牌生成响应，延迟需要更细致地分析。
+
+#### 端到端延迟
+
+这是从用户请求到达推理 (inference)端点，到响应的最后一个令牌生成并发送回来的总耗时。它代表了用户感知到的获取完整答案的全部等待时间。虽然重要，但它并不能说明全部情况，特别是对于响应是流式传输的应用。
+
+#### 首令牌时间 (TTFT)
+
+TTFT 衡量从请求到达直到 *第一个* 输出令牌生成所需的时间。这个指标对于聊天机器人等交互式应用非常必要。较低的 TTFT 让应用感觉响应迅速，即使完整响应的生成时间较长。它包括处理输入提示（预填充阶段）和启动生成过程所花费的时间。提示长度、模型大小和初始排队等因素会显著影响 TTFT。
+
+#### 每输出令牌时间 (TPOT) / 令牌间延迟
+
+第一个令牌生成后，TPOT 衡量生成每个后续令牌所需的平均时间。它反映了模型在解码阶段本身的生成速度。
+
+
+$$
+TPOT = \frac{\text{总生成时间} - \text{TTFT}}{\text{输出令牌数量} - 1}
+$$
+
+
+持续且低的 TPOT 对于流畅的流式传输体验非常必要，防止单词或句子之间出现长时间停顿。它受模型架构、硬件（GPU 速度、内存带宽）以及量化 (quantization)或专用推理服务器等优化措施的影响很大。
+
+监测这些不同的延迟组成部分有助于确定瓶颈位置。高 TTFT 可能表示输入处理或服务器排队存在问题，而高 TPOT 则指向模型解码速度较慢，可能需要硬件升级或量化等模型优化技术。
+
+### 衡量吞吐量 (throughput)
+
+吞吐量衡量大语言模型 (LLM)服务系统的处理能力。像延迟一样，它对大语言模型有特定的细微差别。
+
+#### 请求吞吐量
+
+以每秒请求数 (RPS) 衡量，这个指标表示系统能同时处理多少个独立的用户提示。这是一个标准衡量方式，但如果请求的输入/输出长度差异很大，则对于大语言模型可能产生误导。一个系统可能每秒处理许多短请求，但在面对少量长请求时却表现不佳。
+
+#### 令牌吞吐量
+
+一个更关注大语言模型的衡量方式是令牌吞吐量，通常以每秒令牌数 (TPS) 衡量。这反映了系统在给定一秒内，对所有并发请求能生成的总输出令牌数。它提供了衡量系统实际生成能力和所执行计算工作的更好方式。有时，尤其是在性能分析期间，这会被细分为输入令牌处理速度和输出令牌生成速度。高令牌吞吐量通常与高效的硬件利用率和优化的模型服务配置相关联。
+
+#### 批处理的作用
+
+动态批处理，即将多个传入请求分组并由模型同时处理，是一种提高整体吞吐量（RPS 和 TPS）的常用技术。通过更好地利用 GPU 的并行处理能力，批处理可以显著增加每秒生成的令牌数量。然而，这通常会以增加延迟为代价，特别是 TTFT，因为请求可能需要等待更长时间才能形成批次，然后才开始处理。
+
+### 延迟与吞吐量 (throughput)的权衡
+
+优化大语言模型 (LLM)性能通常需要在低延迟和高吞吐量这两个相互竞争的目标之间取得平衡。提高吞吐量的技术，例如增加批次大小，通常会增加每个请求的延迟。反之，最小化延迟通常需要单独处理请求或以非常小的批次处理，这会降低整体系统吞吐量，并可能由于硬件利用率较低而增加每个令牌的成本。
+
+
+
+![批处理时的延迟与吞吐量权衡](plots/3192-0.json)
+
+
+
+> 该图表显示了一个常见情况，即增加批次大小会提高令牌吞吐量，但同时也会增加平均首令牌时间 (TTFT)。
+
+最佳平衡点在很大程度上取决于具体的应用需求。交互式应用优先考虑低 TTFT，而离线批处理任务可能优先考虑最大化令牌吞吐量以提高成本效益。监测这两组指标对于了解这种权衡并适当配置您的服务基础设施非常必要。
+
+### 将性能与用户体验和成本关联起来
+
+这些大语言模型 (LLM)特有的性能指标不只是技术指示器；它们直接关联到用户满意度和运行费用。
+
+- **用户体验：** 低 TTFT 确保响应迅速，而低且一致的 TPOT 提供流畅的阅读或交互流程。高延迟或可变的 TPOT 会导致令人沮丧的用户体验。
+- **成本：** 令牌吞吐量 (throughput)与昂贵的 GPU 资源利用效率密切相关。吞吐量越高通常意味着每生成令牌或每处理请求的成本越低，前提是硬件规模适当。因此，监测这些性能指标是成本优化工作的前提。
+
+通过仔细界定、追踪和分析 TTFT、TPOT 和令牌吞吐量等指标，您可以获得必要的可见性，以便管理生产环境中大语言模型的性能、用户体验和成本效益。这些指标构成了大语言模型运维生命周期中有效监测、警报和优化的基础。
+
+## 参考资料
+
+- [Efficient Memory Management for Large Language Model Serving with PagedAttention](https://arxiv.org/abs/2309.06180) — Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, Ion Stoica (2023)
+  Journal: SOSP 2023; DOI: [10.48550/arXiv.2309.06180](https://doi.org/10.48550/arXiv.2309.06180)
+  介绍连续批处理和PagedAttention如何优化LLM推理的吞吐量和延迟（如TTFT和TPOT），这对于高效服务至关重要。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready AI](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  涵盖了服务机器学习模型的基本原则，包括延迟和吞吐量等性能指标，以及在生产环境中部署模型的挑战，与LLM性能管理直接相关。
+- [A Survey of Large Language Models](https://arxiv.org/abs/2303.18223) — Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen (2023)
+  Journal: arXiv preprint arXiv:2303.18223; DOI: [10.48550/arXiv.2303.18223](https://doi.org/10.48550/arXiv.2303.18223)
+  提供了LLM的全面概述，其中包括关于推理优化技术（例如，量化、高效解码、批处理）的章节，这些技术直接影响讨论的延迟和吞吐量指标。

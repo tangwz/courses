@@ -1,0 +1,59 @@
+---
+course: "introduction-to-computer-vision"
+chapter: "introduction-object-recognition"
+lesson: "concept-object-recognition"
+sourceId: 1281
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-computer-vision/chapter-5-introduction-object-recognition/concept-object-recognition"
+title: "物体识别的原理"
+description: "理解在图像中识别和定位特定物体的目的。"
+order: 1
+plots: []
+sourceHash: "4be07e890dab21554344fc9393de3d92b69da37ff7ea62570e163f3abed78446"
+sourceCorrections: []
+---
+
+让我们不再只看像素和像边缘这样的基本特征。我们已经了解了图像如何进行数字表示以及如何提取出引人注意的点。现在，我们想问一个更深层的问题：图像中到底有什么？这直接引出了**物体识别**的看法。
+
+物体识别是教计算机系统识别图像或视频序列中特定物体的过程。这里的“物体”可以是多种多样的。它可以是一个普通类别，比如“汽车”、“人”或“树”，也可以是一个非常具体的例子，比如“我的狗Fido”或某个公司标志。
+
+主要目的是让机器以至少部分模仿人类感知的方式来理解视觉场景。我们希望有一个系统能够分析输入图像并输出以下信息：
+
+- “此图像包含一只猫。” (分类)
+- “图像中这些坐标处有一辆自行车。” (检测/定位)
+- “这些特定的像素属于停车标志。” (分割)
+
+对于本入门课程，我们主要关注判断已知物体是否出现以及有时在哪里出现的一般想法。
+
+为什么这有用？物体识别是许多应用的基础能力。请思考：
+
+- **照片管理**：自动标记 (token)照片中的人物或物体。
+- **自动驾驶系统**：帮助自动驾驶汽车识别行人、交通灯和其他车辆。
+- **安全**：在监控录像中检测未经授权的物品或特定个人。
+- **医学影像**：协助医生在扫描中识别肿瘤等异常。
+- **零售**：分析货架库存或顾客行为。
+
+这与我们所学内容有何关联？我们在上一章讨论过的特征，比如边缘和角点，通常与物体的边界或独特之处相对应。颜色分布（来自第二章）和纹理也提供重要的线索。物体识别算法通常通过分析从图像像素数据中提取的这些低层次细节的组合，来推断高层次物体的存在。
+
+然而，使其可靠地工作是有难度的。想象一下尝试识别一个咖啡杯。它可能出现：
+
+- 不同大小（近景与远景）。
+- 以各种角度旋转。
+- 在不同光照条件下（明亮的阳光与昏暗的室内光）。
+- 被其他物体部分遮挡（遮挡）。
+- 在复杂的背景下。
+
+人类可以毫不费力地处理这些变化，但编程让计算机做同样的事情需要细致的方法。在本章后面，我们将更多地讨论这些难题。
+
+首先，我们将介绍一种简单而易懂的方法，叫做模板匹配。这有助于我们初步了解计算机如何系统地在大图像中寻找预设的模式。接下来，我们来看看它是如何运作的。
+
+## 参考资料
+
+- [Computer Vision: Algorithms and Applications](https://szeliski.org/Book/) — Richard Szeliski (2022)
+  Publisher: Springer
+  这本基础教科书系统地涵盖了计算机视觉，包括物体识别原理、各种方法和挑战。
+- [Computer Vision: A Modern Approach](https://www.pearson.com/us/higher-education/product/Forsyth-Computer-Vision-A-Modern-Approach-2nd-edition/9780136085928.html) — David A. Forsyth and Jean Ponce (2011)
+  Publisher: Pearson Education
+  这本书全面介绍了计算机视觉，从现代视角探讨了物体识别问题、特征和方法。
+- [CS231n: Convolutional Neural Networks for Visual Recognition, Lecture 1: Introduction to Computer Vision](http://cs231n.stanford.edu/slides/2017/cs231n_2017_lecture1.pdf) — Fei-Fei Li, Justin Johnson, Serena Yeung (2017)
+  Journal: Stanford University Course Material
+  本入门讲座概述了计算机视觉领域、其历史背景、物体识别等主要问题以及常见挑战。

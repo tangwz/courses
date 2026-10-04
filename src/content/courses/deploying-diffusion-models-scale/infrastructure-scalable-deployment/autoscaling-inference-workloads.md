@@ -1,0 +1,151 @@
+---
+course: "deploying-diffusion-models-scale"
+chapter: "infrastructure-scalable-deployment"
+lesson: "autoscaling-inference-workloads"
+sourceId: 5417
+sourceUrl: "https://apxml.com/zh/courses/deploying-diffusion-models-scale/chapter-3-infrastructure-scalable-deployment/autoscaling-inference-workloads"
+title: "推理工作负载的自动扩缩容策略"
+description: "实施基于自定义指标（例如GPU利用率、队列长度）的水平Pod自动扩缩容（HPA）。"
+order: 5
+plots: []
+sourceHash: "346c596987a01788dd6e7b0aba3a5963df0d543908be7f9eb30d88595182f408"
+sourceCorrections: []
+---
+
+扩散模型推理 (inference)工作负载通常具有高资源需求（尤其是GPU计算和内存）和可变流量模式。为峰值负载静态配置基础设施会导致显著的资源利用不足和不必要的成本，而资源配置不足则会在请求高峰期导致性能下降和请求失败。自动扩缩容提供了一种机制，可以根据实时需求动态调整计算资源（具体来说是运行推理服务的Pod）的数量，从而优化成本和性能。
+
+对于部署在Kubernetes上的工作负载，管理应用扩缩容的主要工具是Horizontal Pod Autoscaler (HPA)。HPA根据观察到的指标，自动调整Deployment、ReplicaSet或StatefulSet中的副本数量。
+
+### 扩散工作负载标准指标的局限性
+
+默认情况下，HPA通常依赖于CPU利用率或内存消耗等基本指标。虽然这些指标对许多应用很有用，但它们通常不足以有效地扩缩容扩散模型推理 (inference)服务：
+
+1. **GPU瓶颈：** 扩散模型通常受限于GPU。一个Pod可能显示较低的CPU利用率，但其GPU已完全饱和，正在处理推理步骤。仅基于CPU进行扩缩容将无法在需要时增加容量。
+2. **内存模式：** 尽管GPU内存很重要，但Pod的总RAM使用量可能与需要更多*并行*处理单元的需求不直接相关，尤其是在模型每个Pod只加载一次的情况下。
+3. **异步处理：** 许多扩散服务通过队列使用异步请求处理。负载并不总是立即反映在工作Pod的CPU/内存中；它通常表现为队列中的积压。
+
+因此，扩散模型的有效自动扩缩容几乎总是需要使用能够更好地反映实际工作负载和瓶颈的*自定义*或*外部*指标。
+
+### 基于GPU利用率的扩缩容
+
+扩缩容受限于GPU的工作负载最直接的方式之一是监控GPU加速器本身的利用率。如果您的Pod的GPU持续高负荷运行，这是一个明确的信号，表明需要更多处理能力。
+
+要实现这一点，您需要：
+
+1. **GPU指标公开：** 一种从每个节点或Pod公开GPU利用率指标的机制。NVIDIA数据中心GPU管理器(DCGM)导出器（`dcgm-exporter`）是常用的工具，它抓取像`DCGM_FI_DEV_GPU_UTIL`（GPU利用率）这样的指标并使其可用于Prometheus。
+2. **自定义指标API：** Kubernetes需要一种查询这些自定义指标的方式。这通常通过安装自定义指标适配器（例如`prometheus-adapter`）来实现，该适配器将Prometheus查询转换为HPA可理解的格式。
+3. **HPA配置：** 定义一个定位GPU利用率指标的HPA对象。
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: diffusion-worker-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: diffusion-worker
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Pods # 使用Pod指标类型来表示每个Pod的GPU利用率
+    pods:
+      metric:
+        name: dcgm_gpu_utilization # 通过适配器公开的指标名称
+      target:
+        type: AverageValue
+        averageValue: 75 # 目标平均利用率（例如，75%）
+```
+
+在此示例中，HPA尝试在所有`diffusion-worker` Pod之间维持75%的平均GPU利用率。如果平均值超过75%，它会扩容；如果显著低于，它会缩容（尊重冷却期）。
+
+> 请注意：高GPU利用率并非总是意味着GPU是*唯一*瓶颈。请确保I/O、模型加载或预处理/后处理不是限制因素。此外，如果GPU正在等待数据或CPU任务，利用率有时也可能具有误导性。
+
+### 基于请求队列长度的扩缩容
+
+对于异步推理 (inference)API，请求在被工作Pod接收之前会放入消息队列（例如RabbitMQ、Kafka、AWS SQS或Google Pub/Sub），此时队列的长度是衡量负载的一个优秀指标。一个不断增长的队列表明当前的工作器数量无法跟上传入的请求速率。
+
+这种方法需要将队列系统的指标集成到Kubernetes扩缩容机制中。虽然可以使用查询队列API的自定义指标适配器来实现，但\*\*KEDA（Kubernetes事件驱动自动扩缩容）\*\*大大简化了这一点。
+
+KEDA通过自定义资源（`ScaledObject`、`TriggerAuthentication`等）和专门为事件驱动扩缩容设计的控制器来扩展Kubernetes。它包含用于多种事件源的内置“扩缩器”，包括消息队列、数据库和监控系统。
+
+要使用KEDA基于SQS队列进行扩缩容：
+
+1. **安装KEDA：** 将KEDA组件添加到您的集群。
+2. **定义`ScaledObject`：** 创建一个`ScaledObject`资源，定位您的部署并指定队列触发器。
+
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: diffusion-worker-scaler
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: diffusion-worker # 要扩缩容的Deployment名称
+  pollingInterval: 15  # 检查队列的频率（秒）
+  cooldownPeriod:  120 # 缩容前的等待时间（秒）
+  minReplicaCount: 1
+  maxReplicaCount: 15
+  triggers:
+  - type: aws-sqs-queue
+    metadata:
+      # 必需：queueURL, awsRegion
+      queueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/diffusion-requests"
+      awsRegion: "us-east-1"
+      # 扩缩容的目标值：每个副本的平均消息数量
+      queueLength: "5"
+      # 可选：认证详情（例如，使用IRSA）
+    # authenticationRef:
+    #   name: keda-trigger-auth-aws-credentials
+```
+
+KEDA监控指定的SQS队列。如果可见消息数量（在SQS术语中为`ApproximateNumberOfMessagesVisible`）除以当前副本数量超过目标`queueLength`（此处为每个Pod 5条消息），KEDA将指示HPA（KEDA在内部管理其以进行Deployment扩缩容）扩容`diffusion-worker`部署。
+
+> 图示KEDA基于队列长度进行扩缩容。KEDA监控队列，公开一个指标，HPA使用该指标调整部署的副本数量。
+
+基于队列的扩缩容特别适合扩散模型，原因如下：
+
+- 它直接衡量待处理工作。
+- 它将请求接收速率与处理速率解耦。
+- 它通过允许请求缓冲来优雅地处理突发流量。
+
+### 其他自定义指标
+
+尽管GPU利用率和队列长度很常见，但其他指标也很有价值：
+
+- **平均推理 (inference)延迟：** 监控每次推理请求所需的时间（例如，P95或P99延迟）。如果延迟超过阈值，则进行扩容。这直接影响用户体验，但可能属于被动响应。需要谨慎实现以避免基于瞬时峰值进行扩缩容。
+- **每个Pod每秒请求数（RPS）：** 定位每个Pod的特定吞吐量 (throughput)。如果传入RPS除以Pod数量超过目标值，则进行扩容。
+
+### 协调Pod和节点扩缩容
+
+Horizontal Pod Autoscaling调整*Pod*的数量。但是，如果您需要的Pod数量超出现有集群节点（尤其是带有GPU的节点）所能容纳的，您还需要扩缩容底层基础设施。这是**Cluster Autoscaler**的职责。
+
+Cluster Autoscaler观察因资源限制（例如缺少可用GPU）而无法调度的Pod。如果它检测到此类Pod，并且在配置的限制和可用节点池类型内可以扩容，它会与云提供商API（AWS、GCP、Azure）交互以配置新节点（例如GPU实例）。反之，如果节点在一段时间内资源利用不足且其Pod可以重新调度到其他地方，它会终止这些节点以节省成本。
+
+有效的自动扩缩容通常涉及调整HPA（用于Pod）和Cluster Autoscaler（用于节点）使其和谐工作。请确保您的GPU节点池已正确配置以便Cluster Autoscaler管理。
+
+### 调优与实践建议
+
+- **设置合理限制：** 为您的HPA/ScaledObject定义合理的`minReplicas`和`maxReplicas`，以控制成本并防止失控扩缩容。
+- **配置冷却期：** 使用`cooldownPeriod`（KEDA）或HPA的稳定窗口设置（`behavior.scaleDown.stabilizationWindowSeconds`）来防止系统过快地扩容和缩容所导致的快速波动（抖动）。
+- **选择合适的指标：** 选择能真正反映系统中瓶颈的指标。对于扩散模型，这通常是GPU利用率或队列长度。有时，结合多个指标（例如，基于队列长度积极扩容，但基于持续低GPU利用率缩容）能提供最佳平衡。
+- **负载测试：** 模拟真实和峰值负载场景，以观察您的自动扩缩容配置的行为。根据这些测试调整阈值、目标值和冷却期。
+- **监控自动扩缩容事件：** 留意Kubernetes中的HPA和Cluster Autoscaler事件，以了解扩缩容决策的原因并解决问题。
+
+通过实施基于GPU利用率或队列长度等相关指标的周密自动扩缩容方案，您可以构建既具成本效益又能响应不同用户需求的扩散模型部署基础设施，确保在需要时资源可用，而无需在空闲期为闲置容量付费。
+
+## 参考资料
+
+- [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscaling/) — Kubernetes Authors (2025)
+  Publisher: Kubernetes
+  Kubernetes Horizontal Pod Autoscaler的官方文档，详细介绍了配置以及对自定义和外部指标的支持。
+- [KEDA Documentation](https://keda.sh/docs/) — KEDA Project Contributors (2024)
+  Kubernetes事件驱动自动扩缩容（KEDA）的官方文档，介绍了其架构、事件源以及如何根据队列长度和其他事件源扩缩应用。
+- [NVIDIA DCGM Exporter GitHub Repository](https://github.com/NVIDIA/dcgm-exporter) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA Corporation
+  NVIDIA DCGM Exporter的官方GitHub存储库，提供了部署该工具以将GPU指标暴露给Prometheus的说明，这对于基于GPU的自动扩缩容至关重要。
+- [Cluster Autoscaler](https://kubernetes.io/docs/concepts/cluster-administration/cluster-autoscaling/) — Kubernetes Authors (2024)
+  Publisher: The Linux Foundation
+  Kubernetes官方文档，解释了Cluster Autoscaler的功能，即根据待调度Pod动态调整节点数量，以及其与云提供商的集成。

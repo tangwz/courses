@@ -1,0 +1,64 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "handling-missing-data"
+lesson: "deleting-rows-missing-data"
+sourceId: 3968
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-2-handling-missing-data/deleting-rows-missing-data"
+title: "策略一：删除行（行删除法）"
+description: "了解何时以及如何移除包含缺失值的完整记录。"
+order: 4
+plots: []
+sourceHash: "728fddafffc1ed33349d829b63f7cbec550daf16400749da732a8a379521ac37"
+sourceCorrections: []
+---
+
+处理缺失数据最直接的方法之一就是简单地移除它们。当我们在行级别应用此策略时，通常称为**行删除法**。这种方法指的是，如果数据集中的**任何**列包含缺失值，就丢弃整行（即观测值或记录）。
+
+列表式删除 (listwise deletion) 是一种直接处理缺失数据的方法。它将数据不完整的行视为不符合准入要求，不允许其进入最终数据集进行分析。如果您的数据集是以表格形式呈现的，那么任何包含空白单元格（或标记 (token)为 `NaN`、`NULL` 等的单元格）的行都会被完全删除。
+
+### 行删除法可能可接受的情况
+
+此策略直接但可能影响很大。它通常在特定条件下被认为是可接受的：
+
+1. **缺失数据量小：** 如果只有极小部分行存在缺失值（例如，少于5%），移除它们可能不会对整体分析造成显著影响。确切的阈值取决于数据集大小和问题的性质，但指导原则是尽量减少数据损失。
+2. **数据集量大：** 如果您的数据集本身就非常大，移除一小部分行可能仍然会留下足够的数据，用于可靠的分析或模型训练。
+3. **缺失数据的随机性：** 这是一个重要的考量。如果缺失值在所有观测中随机出现（通常称为完全随机缺失，即MCAR），那么移除受影响的行引入系统性偏差的可能性较小。简单来说，这意味着某个值缺失的事实，既不依赖于缺失值本身，也不依赖于数据集中任何其他已观测到的值。例如，如果传感器偶尔随机故障，那么缺失的读数可能被认为是MCAR。
+
+### 实现行删除法
+
+大多数数据分析工具都提供了执行行删除法的简单方式。例如，如果您使用流行的Python库Pandas，移除所有包含任何缺失值的行通常只需一个函数调用，例如 `dataframe.dropna()`。具体操作取决于所用的工具，但原理是一致的：识别出包含任何 `NaN` 或 `NULL` 值的行并将其移除。
+
+> 第2行和第3行被移除，因为它们都至少包含一个缺失值（NaN）。
+
+### 删除行的缺点
+
+尽管简单，但行删除法有需要注意的重大缺点：
+
+- **宝贵信息丢失：** 当您因为一个缺失值而删除一行时，您也丢弃了该行中所有其他完全有效的信息。如果一行数据在一个列中缺少信息，但在其他十个列中包含有用的数据，那么删除整行会显得浪费。
+- **数据集规模缩小：** 移除行会使数据集变小。较小的数据集可能导致分析结果的可靠性降低，以及机器学习 (machine learning)模型对新数据的泛化能力变差。您的检验的统计效力可能会下降。
+- **可能引入偏差：** 这通常是最严重的问题。如果缺失数据*并非*随机的（即，它与其他因素有关），删除行可能会引入偏差。例如，设想一项调查，其中收入较低的受访者更少报告其收入。如果您只是简单地删除所有收入缺失的行，您剩余的数据集将过多地代表高收入个体，导致分析结果出现偏差，并可能得出不公平或不准确的结论。剩余的数据不再准确反映您原计划研究的原始群体。
+
+### 如何做决定
+
+行删除法是一种不那么精细的工具。它易于应用，但应谨慎使用。在选择此方法之前，请务必评估：
+
+1. **缺失了多少数据？** 利用之前讨论过的检测技术来量化 (quantization)缺失的程度。
+2. **数据在哪里缺失？** 缺失值是否集中在特定的行或列中？
+3. **数据为何缺失？** 考虑潜在的模式或原因。它们看起来是随机的，还是可能有潜在的原因？
+
+如果缺失数据量小，数据集较大，并且您有理由相信缺失是随机的，那么行删除法可能是一个实用的第一步。但是，如果您丢失了大量数据，或者怀疑缺失会引入偏差，则需要考虑其他策略，例如我们接下来要讨论的插补法。
+
+## 参考资料
+
+- [Statistical Analysis with Missing Data](https://doi.org/10.1002/9781119013563) — Roderick J. A. Little and Donald B. Rubin (2002)
+  Publisher: John Wiley & Sons; DOI: [10.1002/9781119013563](https://doi.org/10.1002/9781119013563)
+  涵盖缺失数据机制、列表式删除及其影响（特别是关于完全随机缺失MCAR）的权威统计学著作。
+- [pandas.DataFrame.dropna](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dropna.html) — pandas development team (2024)
+  Publisher: pandas
+  用于执行列表式删除的 Pandas 函数官方文档。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  使用 Python 和 Pandas 进行数据处理的实用指南，包括如何有效地处理缺失数据。
+- [Applied Predictive Modeling](https://www.springer.com/gp/book/9781461468486) — Max Kuhn, Kjell Johnson (2013)
+  Publisher: Springer; DOI: [10.1007/978-1-4614-6849-3](https://doi.org/10.1007/978-1-4614-6849-3)
+  涵盖数据预处理的实践方面，包括不同缺失数据处理策略对模型性能的影响。

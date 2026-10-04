@@ -1,0 +1,50 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "model-compression-efficient-dl"
+lesson: "motivation-efficient-models"
+sourceId: 2629
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-8-model-compression-efficient-dl/motivation-efficient-models"
+title: "高效模型的动因"
+description: "理解对更小、更快的深度学习模型的需求，以用于在资源受限设备（边缘、移动）上部署。"
+order: 1
+plots: []
+sourceHash: "62f1e4797b7ca7eb4712fb71880df284e19b1c7693b5b5cdd2bc9300b5e3a359"
+sourceCorrections: []
+---
+
+先进卷积神经网络 (neural network) (CNN)架构在复杂的计算机视觉任务上获得了显著准确性。然而，其计算需求常常给实际部署带来重大障碍。当前先进模型可包含数亿甚至数十亿参数 (parameter)，并且在推理 (inference)时需要大量计算资源（以每秒浮点运算次数，即FLOPS衡量）。这种性能代价高昂，在配备强大硬件的科研环境开发出的模型与实际应用中受限条件下的所需模型之间形成差距。
+
+本节概述了促使模型压缩和高效深度学习 (deep learning)技术需求出现的主要动因。理解这些因素对于在不同环境中设计和部署高效的计算机视觉系统非常重要。
+
+### 资源限制的实际情况
+
+许多有吸引力的计算机视觉应用不在数据中心内，而是在资源有限的设备上运行：
+
+- **边缘AI和移动设备：** 智能手机、智能手表、物联网传感器、自主无人机和车载系统拥有受限的计算能力（CPU/GPU/NPU）、有限内存、有限电池寿命以及通常受限的存储容量。由于以下原因，直接在这些设备上运行大型、复杂的CNN通常不可行：
+  - **内存占用：** 模型的参数 (parameter)必须适应设备的存储空间和可用的运行时内存。一个几GB的模型在只有几GB应用可用内存的设备上根本无法加载。
+  - **计算负荷：** 密集的计算会迅速耗尽电池电量，并可能导致热节流，降低性能。推理 (inference)速度可能慢于应用需求。
+- **实时处理需求：** 自动导航、交互式增强现实、安全实时视频分析或机器人控制等应用要求低延迟。模型处理输入（推理延迟）所需的时间必须最小化，通常以毫秒计。大型模型通常具有更高延迟，使其不适合需要即时响应的任务。
+- **功耗：** 对于电池供电设备，能源效率是重要的设计限制。每次计算都会消耗电量。每个推理周期需要数十亿次操作的模型将比更精简、更优化的模型更快耗尽电池。这对于移动应用和充电不便或无法充电的远程物联网部署非常重要。
+- **带宽和更新：** 部署模型通常涉及通过网络传输。大型模型需要大量带宽进行初始部署和后续更新。在连接受限或费用较高（如物联网设备的蜂窝网络）的情况下，频繁更新大型模型变得不切实际。高效模型可减少这种额外负担。
+- **成本：** 虽然云计算提供可扩展性，但持续运行大型模型会产生高昂费用。同样，为边缘设备配备专门的强大硬件加速器会增加单位成本，这对于大众市场产品来说可能过高。高效模型可以在更便宜的硬件上有效运行，从而降低总系统成本。
+
+### 弥合部署差距
+
+上述限制使得使深度学习 (deep learning)模型更小、更快、更节能的策略成为必要。网络剪枝、知识蒸馏 (knowledge distillation)、量化 (quantization)（例如，将精度从 $FP32$ 降低到 $INT8$）以及设计固有高效架构（如 MobileNets）等技术直接应对了这些挑战。它们旨在减少参数 (parameter)数量，最小化所需计算量，并降低内存带宽需求，同时不大幅损害模型的预测准确性。
+
+目标不仅仅是缩小模型，而是为特定应用和部署目标找到性能和效率之间的适当平衡。在本章后续内容中，我们将考察那些使复杂的计算机视觉能力能够部署到资源受限环境中，将强大的AI从实验室带入实际的方法。
+
+## 参考资料
+
+- [Model Compression and Acceleration for Deep Neural Networks: A Comprehensive Survey](https://www.mdpi.com/2076-3417/11/6/2970) — Yang He, Jian Li, Xiangyu Zhang (2021)
+  Journal: Applied Sciences; Publisher: MDPI; Volume: 11; Pages: 2970; DOI: [10.3390/app11062970](https://doi.org/10.3390/app11062970)
+  提供深度学习模型部署挑战及模型压缩加速技术的广泛概述。
+- [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/abs/1704.04861) — Andrew G. Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang, Tobias Weyand, Marco Andreetto, Hartwig Adam (2017)
+  Journal: arXiv preprint arXiv:1704.04861; DOI: [10.48550/arXiv.1704.04861](https://doi.org/10.48550/arXiv.1704.04861)
+  介绍一类使用深度可分离卷积，为移动和嵌入式视觉应用设计的有效模型。
+- [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](https://openaccess.thecvf.com/content_cvpr_2018/papers/Jacob_Quantization_and_Training_CVPR_2018_paper.pdf) — Benoit Jacob, Skirmantas Kligys, Bo Chen, Menglong Zhu, Matthew Tang, Andrew Howard, Hartwig Adam, Dmitry Kalenichenko (2018)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 2704-2713
+  详细说明将神经网络量化为8位整数，以在资源受限设备上有效推理的实用方法。
+- [EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks](https://arxiv.org/abs/1905.11946) — Mingxing Tan, Quoc V. Le (2019)
+  Journal: International Conference on Machine Learning; Pages: 6105-6114; DOI: [10.48550/arXiv.1905.11946](https://doi.org/10.48550/arXiv.1905.11946)
+  提出一种复合缩放方法，可有效扩展基线模型，以更少参数和浮点运算实现更高准确度。

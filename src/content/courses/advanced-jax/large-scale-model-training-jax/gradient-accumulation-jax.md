@@ -1,0 +1,174 @@
+---
+course: "advanced-jax"
+chapter: "large-scale-model-training-jax"
+lesson: "gradient-accumulation-jax"
+sourceId: 2939
+sourceUrl: "https://apxml.com/zh/courses/advanced-jax/chapter-6-large-scale-model-training-jax/gradient-accumulation-jax"
+title: "梯度累积"
+description: "在内存受限时，实现梯度累积以模拟更大的批处理大小。"
+order: 5
+plots: []
+sourceHash: "7a73abdc65289c55bdfa6de642d2d32e73ca08c475eb2d98f2ab6a36a465ac08"
+sourceCorrections: []
+---
+
+训练大型神经网络 (neural network)常需的批处理大小会超出单个加速器（GPU 或 TPU）的可用内存。在多个设备间分发计算（例如使用 `pmap`）有助于缓解此问题，但有时即使是每个设备所需的批处理大小，为了稳定训练或获得最佳性能，也可能超出设备内存。梯度累积为应对此问题提供了一个直接方法。
+
+其主要思路是通过顺序处理多个较小的批次来模拟大批次，累加它们的梯度，然后利用汇总的梯度信息执行一次优化器步骤。这有效地将用于权重 (weight)更新的批处理大小与在任意时刻必须适应内存的批处理大小分离开来。
+
+### 梯度累积的工作原理
+
+假设您希望使用有效批处理大小 $B$ 进行训练，但您的加速器只能处理更小的批处理大小，我们称之为微批处理大小 $b$，其中 $B = N \times b$。梯度累积通过执行以下步骤实现此目标：
+
+1. **初始化累积梯度：** 创建形状与模型参数 (parameter)相同且初始化为零的张量。这些张量将存储微批次的梯度之和。
+2. **微批次循环：** 迭代 $N$ 次（累积步骤的数量）：
+   - 获取下一个微批次数据（大小为 $b$）。
+   - 对此微批次执行前向传播。
+   - 计算损失对模型参数的梯度（针对此微批次）。
+   - 将这些新计算的梯度添加到累积梯度张量中。
+3. **参数更新：** 循环完成后（已处理 $N$ 个微批次，总计 $B$ 个样本）：
+   - 将累积梯度除以 $N$ 以求平均。
+   - 使用平均梯度应用优化器更新步骤（例如 Adam、SGD）来更新模型参数。
+   - 将累积梯度张量重置为零，为下一个累积周期做准备。
+
+此过程计算梯度：
+
+
+$$
+\nabla_\theta L_{eff} = \frac{1}{N} \sum_{i=1}^{N} \nabla_\theta L(\text{微批次}_i; \theta)
+$$
+
+
+这个平均梯度近似于使用完整有效批处理大小 $B$ 计算出的梯度。主要优点是在梯度计算阶段，加速器内存中一次只需要保留一个微批次。
+
+### JAX 中的实现
+
+在 JAX 中实现梯度累积通常涉及修改训练步骤函数。我们不再一次性计算梯度并应用更新，而是分离这些步骤并引入一个循环。
+
+让我们考虑一个典型的 JAX 训练步骤函数，它接收模型状态（参数 (parameter)、优化器状态）和一批数据，计算损失和梯度，然后返回更新后的状态和指标。
+
+```python
+import jax
+import jax.numpy as jnp
+import optax # 示例优化器库
+
+# 假设 'model' 和 'loss_fn' 已在其他地方定义
+# 'params' 是模型参数
+# 'opt_state' 是优化器状态
+
+@jax.jit
+def train_step(params, opt_state, batch):
+  """执行不带梯度累积的单个训练步骤。"""
+  def compute_loss(p):
+    logits = model.apply({'params': p}, batch['image'])
+    loss = loss_fn(logits, batch['label'])
+    return loss
+
+  grad_fn = jax.value_and_grad(compute_loss)
+  loss, grads = grad_fn(params)
+  updates, opt_state = optimizer.update(grads, opt_state, params)
+  params = optax.apply_updates(params, updates)
+  metrics = {'loss': loss}
+  return params, opt_state, metrics
+```
+
+为了纳入梯度累积，我们需要管理累积的梯度并循环处理微批次。
+
+```python
+# 假设 accumulation_steps = N (大于 1 的整数)
+
+@jax.jit
+def micro_batch_step(params, micro_batch):
+  """计算单个微批次的梯度。"""
+  def compute_loss(p):
+    logits = model.apply({'params': p}, micro_batch['image'])
+    loss = loss_fn(logits, micro_batch['label'])
+    return loss, logits # 也返回 logits 用于可能的指标计算
+
+  # 使用 value_and_grad 获取损失和梯度
+  (loss, _), grads = jax.value_and_grad(compute_loss, has_aux=True)(params)
+  # 注意：如果跨步骤求平均，此处返回损失可能比较复杂。
+  # 通常，指标是根据完整的有效批次计算的。
+  return grads, loss
+
+# 此函数现在将处理累积循环和优化器更新
+# 它通常不会完全 JIT 编译，因为循环处理数据加载。
+# 但是，micro_batch_step 是 JIT 编译的。
+def accumulated_train_step(params, opt_state, data_iterator, accumulation_steps):
+  """执行带梯度累积的训练步骤。"""
+
+  # 1. 初始化累积梯度（形状与参数相同，均为零）
+  accumulated_grads = jax.tree_util.tree_map(jnp.zeros_like, params)
+  total_loss = 0.0
+
+  # 2. 微批次循环
+  for _ in range(accumulation_steps):
+    micro_batch = next(data_iterator) # 获取下一个微批次
+    # 计算此微批次的梯度（使用 JIT 编译的函数）
+    grads, loss = micro_batch_step(params, micro_batch)
+    # 累积梯度
+    accumulated_grads = jax.tree_util.tree_map(lambda acc, g: acc + g, accumulated_grads, grads)
+    total_loss += loss
+
+  # 3. 参数更新
+  # 平均梯度
+  averaged_grads = jax.tree_util.tree_map(lambda g: g / accumulation_steps, accumulated_grads)
+  average_loss = total_loss / accumulation_steps
+
+  # 应用优化器更新
+  # 此部分如果需要，通常可以单独进行 JIT 编译
+  @jax.jit
+  def apply_update(p, o_state, avg_grads):
+      updates, new_o_state = optimizer.update(avg_grads, o_state, p)
+      new_p = optax.apply_updates(p, updates)
+      return new_p, new_o_state
+
+  params, opt_state = apply_update(params, opt_state, averaged_grads)
+
+  metrics = {'loss': average_loss} # 报告微批次的平均损失
+  return params, opt_state, metrics
+```
+
+实际上，将其组织在更大的训练循环中涉及创建一个生成微批次的数据迭代器，并调用 `accumulated_train_step`。
+
+使用 `jax.lax.scan` 的更函数式的方法可以将累积循环封装在一个 JIT 编译的函数中，但这需要仔细的状态管理和适当的数据加载结构。为了清晰起见，上面显示的显式循环通常更直接地阐明了此原理。
+
+> 梯度累积过程包括初始化梯度，循环处理微批次以计算并累加梯度，对结果求平均，应用优化器更新，然后重置以进行下一个周期。
+
+### 与 `pmap` 的交互
+
+梯度累积与使用 `pmap` 进行数据并行处理能很好地结合。使用 `pmap` 时，每个设备处理其自己的*微批次*一部分。梯度累积循环在*每个设备上独立进行*。
+
+1. 每个设备接收当前微批次的分片。
+2. 每个设备使用其本地参数 (parameter)副本为其微批次分片计算梯度。
+3. 每个设备在 $N$ 个微批次步骤中局部累积这些梯度。
+4. 在 $N$ 个步骤后，每个设备都有一个累积梯度和，对应于其在该些步骤中处理的总有效批次的部分。
+5. **重要地**：在优化器步骤之前，通常会使用 `lax.pmean` 这样的集体操作来对所有设备上的*累积*梯度进行平均。这确保了所有设备都基于来自*整个*有效批次（$B$）的梯度信息进行更新计算。
+6. 每个设备随后使用此全局平均梯度执行相同的优化器步骤。
+
+这表示每个设备仍然只需要为其单个*微批次*的份额 $b / num\_devices$ 占用内存，而用于梯度更新计算的有效批处理大小是 $B$。
+
+### 权衡与考量
+
+- **内存与计算：** 主要好处是显著降低峰值内存使用，从而允许更大的有效批处理大小。代价是每个有效批次的计算时间增加，因为它需要 $N$ 次前向和后向传播，而不是一次。然而，如果更大的有效批处理大小能带来更快的收敛（总步数更少），则总计算量可能不会增加。
+- **优化器状态内存：** 梯度累积主要节省了前向传播中为梯度计算而存储的激活相关的内存。它不减少模型参数 (parameter)或优化器状态（如 Adam 中的动量缓冲区）所需的内存，这些对于非常大的模型来说仍然可能占用大量空间。可能需要结合使用混合精度训练或优化器状态分片等方法。
+- **批归一化 (normalization)：** 标准批归一化层根据它们处理的批次计算统计信息。在梯度累积中，这些统计信息将按微批次计算，如果微批次很小，这可能产生噪声并阻碍训练。解决方法包括使用替代的归一化层（如层归一化）或在有效批次上跨设备同步批归一化统计信息（这会增加复杂性）。
+- **学习率：** 理论上，由于梯度大小在 $N$ 个步骤中进行平均，因此与直接使用大型有效批处理大小 $B$ 进行训练相比，学习率可能不需要显著调整。然而，根据优化器和问题，仍然可能需要进行经验性调整。
+- **实现复杂性：** 尽管原理简单，但正确实现累积循环、梯度平均以及与 `pmap` 和可能与 Flax 或 Haiku 等框架的集成，需要仔细处理状态和数据流。
+
+梯度累积是当面临内存限制时，用于扩展模型规模的重要技术。它常与其他方法结合使用，如梯度检查点和混合精度，以训练先进模型。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  介绍了小批量梯度下降的概念，并讨论了近似大批量数据的方法。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 33; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  描述了超大型语言模型GPT-3的训练过程，其中梯度累积等技术对于内存管理至关重要。
+- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://arxiv.org/abs/1910.02054) — Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, Yuxiong He (2020)
+  Journal: International Conference for High Performance Computing, Networking, Storage and Analysis (SC); DOI: [10.48550/arXiv.1910.02054](https://doi.org/10.48550/arXiv.1910.02054)
+  提出了一系列内存优化技术，包括利用或补充梯度累积以进行超大规模模型训练的方面。
+- [Large Model Training Best Practices](https://flax.readthedocs.io/en/latest/guides/flax_fundamentals/large_models.html) — Flax Developers (2024)
+  Publisher: Flax
+  Flax 官方指南，详细介绍了训练大型模型的策略，明确涵盖了梯度累积作为核心技术。

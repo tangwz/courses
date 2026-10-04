@@ -1,0 +1,138 @@
+---
+course: "quantized-llm-deployment"
+chapter: "performance-evaluation-quantized-llms"
+lesson: "measuring-inference-latency-throughput"
+sourceId: 4632
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-3-performance-evaluation-quantized-llms/measuring-inference-latency-throughput"
+title: "衡量推理延迟和吞吐量"
+description: "准确测量量化LLM推理速度（延迟和吞吐量）的方法。"
+order: 2
+plots: ["plots/4632-0.json"]
+sourceHash: "601785c18dc156cda29b8427d5c7571736723a4ed77093a9d1e14bc0ee7d4402"
+sourceCorrections: []
+---
+
+对大型语言模型进行量化 (quantization)后，主要目的是通常是加快推理 (inference)速度并减少资源消耗。前一节讨论了通用指标，而本节将专门关注衡量两个基本性能指标：延迟和吞吐量 (throughput)。了解如何准确地对这些方面进行测试，对于评估量化工作的效果以及做出明智的部署决策非常重要。
+
+### 定义LLM的延迟和吞吐量 (throughput)
+
+**延迟** 指的是处理单个推理 (inference)请求所需的时间。对于生成文本的LLM，这可以是：
+
+- **首个Token时间 (TTFT)：** 从发送输入提示到接收到第一个生成token的持续时间。这对于用户期待快速响应的交互式应用来说非常重要。
+- **每输出Token时间 (TPOT)：** 生成第一个token之后，每个后续token的平均生成时间。这表示持续的生成速度。
+- **端到端延迟：** 从请求开始到接收到完整生成序列的总时间。这包括TTFT以及生成所有后续token所花费的时间。
+
+**吞吐量** 衡量系统处理推理请求的速度。它通常表示为：
+
+- **每秒请求数 (RPS)：** 一秒内完成的独立推理请求的数量。
+- **每秒Token数 (TPS)：** 系统每秒在所有并发请求中生成的输出token总数。这对于LLM通常更有意义，特别是在处理可变输出长度和批处理时。
+
+优化延迟通常侧重于最小化单个请求的处理时间，这可能以牺牲整体系统使用率为代价。优化吞吐量旨在最大化并发处理的请求或token数量，这可能涉及批处理等技术，这些技术可能会稍微增加单个请求的延迟。量化 (quantization)直接影响模型内部操作的计算速度，从而影响延迟和吞吐量。
+
+### 衡量延迟的方法
+
+准确衡量延迟需要仔细考量测量范围和潜在的噪声来源。
+
+1. **隔离推理 (inference)时间：** 理想情况下，您希望纯粹测量模型前向传递中花费的时间。这通常不包括数据预处理（分词 (tokenization)）和后处理（逆分词），尽管包含这些步骤的端到端延迟测量对于理解完整的用户体验也很有价值。
+2. **预热运行：** 在开始测量之前，执行几次推理请求。最初的运行可能会产生模型加载、内核编译（尤其是在GPU上）或缓存填充等开销，这些不反映稳定状态的性能。丢弃这些预热迭代的时间数据。
+3. **多次测量和统计：** 单次计时可能存在噪声。对相同的输入运行推理多次（例如，100或1000次迭代），并计算描述性统计数据：
+
+   - **平均值：** 提供性能的一般情况。
+   - **中位数 (P50)：** 比平均值对异常值不那么敏感。
+   - **百分位数 (P95, P99)：** 指示大多数请求所经历的最差延迟，这对于服务水平协议（SLA）来说很重要。
+4. **硬件特定计时：**
+
+   - **CPU：** 使用标准Python库，如 `time.perf_counter()` 进行高精度计时。
+   - **GPU：** 由于其异步特性，基于CPU的计时器（如 `time.perf_counter()`）不足以测量GPU操作的时间。CPU可能在GPU完成工作之前很早就提交完任务。请使用GPU特定的同步机制。例如，在PyTorch中：
+
+   ```python
+   import torch
+   import time
+
+   # 假设模型和输入数据已在目标GPU设备上
+   # model = model.to('cuda')
+   # input_data = input_data.to('cuda')
+
+   # 预热运行
+   for _ in range(10):
+       _ = model(input_data)
+   torch.cuda.synchronize() # 确保预热完成
+
+   # 使用CUDA事件进行精确计时
+   start_event = torch.cuda.Event(enable_timing=True)
+   end_event = torch.cuda.Event(enable_timing=True)
+
+   num_runs = 100
+   latencies = []
+
+   for _ in range(num_runs):
+       start_event.record()
+       _ = model(input_data) # 要计时操作
+       end_event.record()
+
+       # 等待GPU操作完成
+       torch.cuda.synchronize()
+
+       # 计算毫秒级耗时
+       latency_ms = start_event.elapsed_time(end_event)
+       latencies.append(latency_ms)
+
+   avg_latency = sum(latencies) / num_runs
+   print(f"Average latency over {num_runs} runs: {avg_latency:.3f} ms")
+
+   # 如有需要，可以使用numpy或其他库计算P95、P99等
+   # import numpy as np
+   # p95_latency = np.percentile(latencies, 95)
+   # print(f"P95 latency: {p95_latency:.3f} ms")
+   ```
+
+   这种 `torch.cuda.Event` 方法准确测量了GPU上两个记录点之间的时间。请始终记住使用 `torch.cuda.synchronize()`，以确保CPU在记录结束时间或计算统计数据之前等待GPU完成。
+
+### 衡量吞吐量 (throughput)的方法
+
+吞吐量测量通常涉及模拟并发请求或处理批量输入。
+
+1. **并发请求：** 使用多个客户端线程或进程同时向托管量化 (quantization)模型的推理 (inference)服务器发送请求。测量在固定时间段内（例如，60秒）成功完成的请求总数。请注意客户端瓶颈；确保负载生成工具本身没有限制吞吐量。
+2. **批处理：** 增加批量大小（在一次前向传递中一起处理的输入序列数量），并测量所需时间。吞吐量（RPS或TPS）可以按以下方式计算：
+   
+   $$
+   \text{吞吐量} = \frac{\text{批量大小}}{\text{每批次时间}}
+   $$
+   
+   或者对于基于token的吞吐量：
+   
+   $$
+   \text{吞吐量 (TPS)} = \frac{\text{批量大小} \times \text{每个请求的平均输出Token数}}{\text{每批次时间}}
+   $$
+   
+   将吞吐量与批量大小绘图通常会显示一个最佳批量大小，在该大小下，吞吐量会由于内存限制或计算开销而达到饱和甚至下降。
+3. **迭代测试：** 从低负载（例如，少量并发用户或小批量大小）开始，并逐渐增加负载，在每个步骤测量延迟和吞吐量。这有助于确定系统的临界点并理解延迟-吞吐量之间的权衡。
+
+
+
+![量化LLM的吞吐量与批量大小对比](plots/4632-0.json)
+
+
+
+> 这个图表表明，对于基线（FP16）模型和量化（INT8）模型，吞吐量通常会随批量大小的增加而增加，其中量化模型实现了更高的吞吐量，尤其是在更大的批量大小下。饱和可能在图中未显示的最大批量下发生。
+
+### 影响测量的因素
+
+请注意，延迟和吞吐量 (throughput)并非固定数值；它们很大程度上取决于：
+
+- **硬件：** CPU类型、GPU型号（计算能力、内存带宽）、可用RAM。
+- **软件栈：** 具体量化 (quantization)库（例如，`bitsandbytes`、`AutoGPTQ`）、推理 (inference)服务器（例如，`vLLM`、`TensorRT-LLM`、`TGI`）、CUDA版本、驱动版本。TensorRT-LLM等框架中的优化内核可以在支持的硬件上显著提高特定量化格式（如INT4或INT8）的性能。
+- **模型特性：** 架构、大小（参数 (parameter)数量）。
+- **量化细节：** 精度（INT8、INT4、NF4）、量化方案（逐张量、逐通道）、具体算法（GPTQ、AWQ）。
+- **工作负载：** 输入序列长度、输出序列长度（用于生成）、批量大小、并发请求数量。较长的序列通常会增加延迟。
+
+“在报告结果时，务必指明完整的硬件和软件环境、所使用的模型、量化方法以及确切的工作负载参数（输入/输出长度、批量大小、并发级别），以确保可复现性和公平比较。一致且严谨的测量对于理解部署量化LLM的优势和权衡非常重要。”
+
+## 参考资料
+
+- [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323) — Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh (2022)
+  Journal: ICLR 2023; DOI: [10.48550/arXiv.2210.17323](https://doi.org/10.48550/arXiv.2210.17323)
+  介绍一种重要的后训练量化算法，为量化方法如何影响大型语言模型性能指标提供背景信息。
+- [torch.cuda.Event](https://pytorch.org/docs/stable/generated/torch.cuda.Event.html) — PyTorch Authors (2024)
+  Publisher: PyTorch
+  官方文档，说明如何使用CUDA事件进行精确的GPU计时，这是本节代码示例中展示的方法。

@@ -1,0 +1,121 @@
+---
+course: "data-versioning-experiment-tracking"
+chapter: "tracking-experiments-mlflow"
+lesson: "comparing-mlflow-runs"
+sourceId: 4089
+sourceUrl: "https://apxml.com/zh/courses/data-versioning-experiment-tracking/chapter-3-tracking-experiments-mlflow/comparing-mlflow-runs"
+title: "比较实验运行"
+description: "使用MLflow UI和API比较不同运行，并识别表现出色的模型。"
+order: 8
+plots: ["plots/4089-0.json"]
+sourceHash: "e6b7d0ae8b5b45d06a20376d962783131cc9e11f159a19bc75d496801dff3886"
+sourceCorrections: []
+---
+
+比较一个实验中记录的多次运行，对于理解不同参数 (parameter)如何影响结果以及识别最有前景的模型是必不可少的。MLflow为此类分析提供了很好的工具，既可以通过其用户界面进行可视化操作，也可以通过其API进行编程操作。这种比较是有效改进模型的基础。
+
+## MLflow UI中的可视化比较
+
+MLflow UI通常是查看概览和比较实验中不同尝试最快捷的方式。
+
+1. **进入你的实验**：启动MLflow UI（通常在终端中运行`mlflow ui`），然后进入包含你想要比较的运行的特定实验。你会看到一个列出所有运行的表格，其中显示了一些默认参数 (parameter)和指标。
+2. **选择要比较的运行**：勾选你感兴趣的要比较的运行旁边的方框。
+3. **点击“比较”**：一旦你选择了两个或更多运行，“比较”按钮就会在表格顶部附近变为可用。点击此按钮会带你进入一个专门的比较视图。
+
+### 理解比较视图
+
+比较视图提供了几种分析选定运行的方式：
+
+- **参数 (parameter)比较**：一个表格突出显示了选定运行中参数的差异。所有选定运行中相同的参数通常默认隐藏，以便关注变化之处。这有助于快速查看进行了哪些超参数 (hyperparameter)调整。
+- **指标比较**：类似地，一个表格显示了每个选定运行的已记录指标。这允许直接比较准确性、损失、精确度或召回率等性能指标。
+- **平行坐标图**：此图提供了多维视图，可视化不同参数组合如何与结果（指标）关联。每个运行由一条穿过代表所选参数和指标的坐标轴的线表示。这有助于识别关联和权衡。例如，你可能会看到较低的学习率往往会带来更高的准确性，但只在一定程度上。
+- **散点图**：你可以生成散点图来查看任意两个参数、一个参数与一个指标，或两个指标之间的关系。例如，将`learning_rate`与`validation_accuracy`绘图，可以显示此特定超参数如何影响所选运行的性能。
+
+
+
+![超参数与指标比较](plots/4089-0.json)
+
+
+
+> 比较在不同学习率下、多个运行中获得的验证准确性。
+
+- **等高线图**：如果比较涉及三个变量（例如，两个超参数和一个指标）的运行，等高线图可以将指标在参数空间中可视化。
+
+使用这些UI功能，你可以根据参数或指标筛选运行、对它们排序，并直观查看输入（参数、代码版本）和输出（指标、工件）之间的关系。这种交互式查看对于理解模型行为很有帮助。
+
+## 使用MLflow API进行编程比较
+
+虽然UI非常适合交互式查看，但你可能需要进行更复杂的分析、自动化比较或将比较结果整合到报告中。MLflow Python API为此提供了`mlflow.search_runs`函数。
+
+`mlflow.search_runs`允许你根据不同条件在一个或多个实验中查询运行。你可以使用类似SQL的查询语言来筛选应用于参数 (parameter)、指标和运行属性（如标签或开始时间）的运行。
+
+以下是如何使用它：
+
+```python
+import mlflow
+import pandas as pd
+
+# 如果不是本地，请确保已连接到正确的MLflow跟踪服务器
+# mlflow.set_tracking_uri("http://your-mlflow-server:5000")
+
+# 指定要搜索的实验ID
+# 你可以从UI或使用mlflow.get_experiment_by_name获取实验ID
+experiment_name = "MNIST Classification"
+experiment = mlflow.get_experiment_by_name(experiment_name)
+experiment_ids = [experiment.experiment_id] # 可以是ID列表
+
+# 定义过滤字符串（可选）
+# 示例：查找学习率 > 0.001 且准确性 > 0.9 的运行
+filter_string = "params.learning_rate > '0.001' and metrics.accuracy > 0.9"
+
+# 定义排序（可选）
+# 示例：按准确性降序排列
+order_by = ["metrics.accuracy DESC"]
+
+# 将运行结果获取到Pandas DataFrame中
+runs_df = mlflow.search_runs(
+    experiment_ids=experiment_ids,
+    filter_string=filter_string,
+    order_by=order_by
+)
+
+# 显示前几行和选定列
+# 注意：参数以'params.'为前缀，指标以'metrics.'为前缀，标签以'tags.'为前缀
+print(runs_df[['run_id', 'params.learning_rate', 'params.epochs', 'metrics.accuracy', 'metrics.loss']].head())
+
+# 使用Pandas进行进一步分析
+if not runs_df.empty:
+    best_run = runs_df.iloc[0] # 因为我们按准确性降序排列
+    print(f"\n最佳运行ID: {best_run['run_id']}")
+    print(f"  学习率: {best_run['params.learning_rate']}")
+    print(f"  训练轮数: {best_run['params.epochs']}")
+    print(f"  准确性: {best_run['metrics.accuracy']:.4f}")
+    print(f"  损失: {best_run['metrics.loss']:.4f}")
+else:
+    print("没有找到符合条件的运行。")
+```
+
+此代码片段演示了如何：
+
+1. 连接到MLflow（如果未设置，则隐式使用本地）。
+2. 获取你感兴趣的实验ID。
+3. 定义过滤条件以缩小运行范围（例如，特定参数范围、最小指标值）。
+4. 指定结果的排序方式（例如，找出准确性最高的运行）。
+5. 将运行数据检索到Pandas DataFrame中，这便于分析。
+6. 分析DataFrame以找出最佳运行或进行其他比较。
+
+使用`mlflow.search_runs`为你提供了灵活性，可以将实验比较直接整合到你的分析脚本或自动化报告流程中。你可以通过编程轻松比较数百或数千个运行，以识别趋势、最佳参数范围，或根据你定义的条件确定性能最佳的模型。
+
+通过系统地记录你的实验并利用MLflow的比较工具，你将从临时性的试错方式转变为更结构化、数据驱动的模型开发方法。这显著提高了你理解结果的能力、更快地迭代以及复现成功的成果。
+
+## 参考资料
+
+- [MLflow Tracking: Record and Compare Runs](https://mlflow.org/docs/latest/tracking.html) — MLflow Project (2024)
+  Publisher: MLflow Project
+  MLflow跟踪功能的官方文档，包含用于可视化比较的UI和用于程序化分析实验运行的API。
+- [Building Machine Learning Powered Applications: Going from Idea to Product](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHX08wu1dnqSFLjZ9Ykd0iO8e70XaAmrfRjHMe0JbpHNN51ImPF3TEUnVmXmJrJTaD4Iz-TPIURkvXjHbFIOkt2c0HU89rh7_MnN5Xp851IyQNoo2EB-zmLqyx97_y_0p9IiyTlWCug8duwJlXf-yI4RHoeBC0l0x5YPVqn1CtLAjKGmVXMCnjznm90cZxeDuZ_aHkIGsOpWbA6VTv0OQ==) — Emmanuel Ameisen (2020)
+  Publisher: O'Reilly Media
+  一本关于MLOps生命周期的实用指南，强调结构化实验跟踪和比较对于有效模型开发与迭代的重要性。
+- [MLflow: An Open Platform for the Machine Learning Lifecycle](https://dl.acm.org/doi/10.1145/3318534.3329623) — Andrew Chen, Aaron J. Meng, Shreya Makkar, Sue Ann Hong, Michael Armbrust, Sameer Singh, Andrew Fogarty, Matei Zaharia (2020)
+  Journal: Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data (SIGMOD '20); Publisher: ACM; Pages: 1819–1826; DOI: [10.1145/3318534.3329623](https://doi.org/10.1145/3318534.3329623)
+  介绍MLflow的原始论文，详细阐述其架构和功能，包括用于管理和比较机器学习实验的跟踪组件。

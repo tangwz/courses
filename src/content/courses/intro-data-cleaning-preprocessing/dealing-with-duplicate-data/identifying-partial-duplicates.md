@@ -1,0 +1,133 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "dealing-with-duplicate-data"
+lesson: "identifying-partial-duplicates"
+sourceId: 3993
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-3-dealing-with-duplicate-data/identifying-partial-duplicates"
+title: "根据特定列识别重复项"
+description: "学习如何查找在列子集中具有相同值的记录。"
+order: 4
+plots: ["plots/3993-0.json"]
+sourceHash: "2f4f052196e8ac573a0b7a428007ce9bc52611ce79199ed14b58b2ab1b031b8a"
+sourceCorrections: []
+---
+
+有时，重复记录并非是另一行在所有列上的精确复制。相反，重复可能指的是只有*某些*特定列的值完全相同。以客户订单数据集为例。您可能因为同一客户在不同时间下了不同订单，而有该客户（由`customer_id`标识）的多条记录。尽管`order_id`或`order_date`可能不同，但如果您要计算独立客户数量，这些行根据`customer_id`代表的是同一个实体。
+
+识别这些“部分”重复项对于许多分析非常重要。如果您在分析独立客户数量、网站用户会话或单独的产品条目，您需要在为*特定情况*定义唯一性的列中寻找重复。忽略这一点可能导致计数虚高、统计数据偏差以及错误的结论。例如，如果您将每条订单记录都视为一个单独的客户，那么计算每个客户的平均订单价值将是不准确的。
+
+### 选择识别列
+
+第一步是确定哪个列或哪些列的组合能够独立标识您关注的实体。这个决定很大程度上取决于您的数据集和分析目标。
+
+- **用户数据：** `user_id`或`email`列通常作为独立标识符。
+- **产品目录：** `product_sku`或`isbn`可能标识独立产品。
+- **事件日志：** `session_id`和`user_id`之类的组合可能定义一个独立的会话。
+- **人员记录：** 有时，您可能需要`first_name`、`last_name`和`date_of_birth`等多个列来确立唯一性，尤其是在没有单独ID列的情况下。
+
+仔细考虑*针对您的特定任务*，什么才构成唯一记录。
+
+### 使用编程工具查找部分重复项
+
+大多数数据分析库都提供了简单的方法来根据列的子集检查重复项。我们来看看如何使用流行的Python库pandas来完成此操作。
+
+假设您有一个这样的DataFrame：
+
+| customer\_id | name | signup\_date | last\_purchase |
+| --- | --- | --- | --- |
+| 101 | Alice | 2023-01-15 | 2023-05-20 |
+| 102 | Bob | 2023-02-10 | 2023-06-11 |
+| 101 | Alice | 2023-01-15 | 2023-07-01 |
+| 103 | Charlie | 2023-03-05 | 2023-03-05 |
+| 102 | Bob | 2023-02-10 | 2023-08-15 |
+
+这里，第0行和第2行代表同一个客户（ID 101），第1行和第4行代表另一个客户（ID 102）。如果我们对独立客户感兴趣，`customer_id`列就是我们的标识符。
+
+我们可以使用pandas中的`duplicated()`方法，但这次我们指定`subset`参数 (parameter)：
+
+```python
+import pandas as pd
+
+data = {'customer_id': [101, 102, 101, 103, 102],
+        'name': ['Alice', 'Bob', 'Alice', 'Charlie', 'Bob'],
+        'signup_date': ['2023-01-15', '2023-02-10', '2023-01-15', '2023-03-05', '2023-02-10'],
+        'last_purchase': ['2023-05-20', '2023-06-11', '2023-07-01', '2023-03-05', '2023-08-15']}
+df = pd.DataFrame(data)
+
+# 根据'customer_id'检查重复项
+# Keep='first'表示将后续出现的项标记为重复
+duplicates_mask = df.duplicated(subset=['customer_id'], keep='first')
+
+print(duplicates_mask)
+```
+
+此代码将输出一个布尔值Series：
+
+```
+0    False
+1    False
+2     True
+3    False
+4     True
+dtype: bool
+```
+
+这里，`False`表示`customer_id`是首次出现（或在之前的行中是唯一的），而`True`表示此`customer_id`已在较早的行中出现过。第2行被标记 (token)为`True`，因为`customer_id` 101在第0行出现过。第4行被标记为`True`，因为`customer_id` 102在第1行出现过。
+
+您可以使用此布尔掩码来筛选您的DataFrame，并查看基于特定列的重复条目：
+
+```python
+# 显示根据'customer_id'标记为重复的行
+print(df[duplicates_mask])
+```
+
+这会显示：
+
+| customer\_id | name | signup\_date | last\_purchase |
+| --- | --- | --- | --- |
+| 101 | Alice | 2023-01-15 | 2023-07-01 |
+| 102 | Bob | 2023-02-10 | 2023-08-15 |
+
+如果唯一性由组合定义，您也可以在`subset`列表中指定多个列：
+
+```python
+# 示例：根据'name'和'signup_date'同时检查重复项
+duplicates_combo_mask = df.duplicated(subset=['name', 'signup_date'], keep='first')
+print(duplicates_combo_mask)
+
+# 在我们的示例数据中，结果与仅检查'customer_id'相同
+# 因为姓名/注册日期组合对于每个客户也是唯一的。
+# 0    False
+# 1    False
+# 2     True
+# 3    False
+# 4     True
+# dtype: bool
+```
+
+### 可视化影响
+
+根据特定列识别重复项，与查看完整行重复或原始行数相比，通常会呈现出数据的不同面貌。一个简单的可视化可以突显这一点。例如，我们可以计算总行数与根据我们选择的列得到的独立条目数量。
+
+
+
+![总行数与独立客户数对比](plots/3993-0.json)
+
+
+
+> 对比展示了样本数据中记录总数与发现的独立客户ID数量。
+
+这清楚地表明，虽然我们总共有5条记录，但根据`customer_id`列，只有3个独立客户。
+
+根据特定列识别重复项是数据清洗中常见且重要的任务。它让您能够正确计算独立实体，避免重复处理，并确保您的分析反映数据的真实内在结构。下一步，将在下一节中说明，是如何处理这些已识别的重复项，这通常涉及有策略地删除它们。
+
+## 参考资料
+
+- [pandas.DataFrame.duplicated](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.duplicated.html) — pandas development team (2024)
+  pandas `duplicated()` 方法的官方文档，展示其如何使用 `subset` 参数查找部分重复项。
+- [Python for Data Analysis](https://learning.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本关于使用 Python 和 pandas 进行数据分析的常用书籍，涵盖数据清洗的实践方面，包括重复数据检测。
+- [Data Cleaning: Processes for Greater Data Quality](https://link.springer.com/book/10.1007/978-3-030-22164-1) — Ingrid F. Schiefer, Stefan Rueger (2019)
+  Publisher: Springer Nature; DOI: [10.1007/978-3-030-22164-1](https://doi.org/10.1007/978-3-030-22164-1)
+  本书介绍数据清洗原理和方法，为基于特定标准定义和识别重复数据提供背景。

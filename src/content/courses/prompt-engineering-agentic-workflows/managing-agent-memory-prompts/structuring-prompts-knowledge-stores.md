@@ -1,0 +1,194 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "managing-agent-memory-prompts"
+lesson: "structuring-prompts-knowledge-stores"
+sourceId: 6745
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-5-managing-agent-memory-prompts/structuring-prompts-knowledge-stores"
+title: "构建提示以获取知识库信息"
+description: "学习如何构建提示，使智能体能够高效查询外部知识库并与之交互。"
+order: 5
+plots: []
+sourceHash: "50bec9b717324c5a1a211f9f2afe82d7f3114ee66cac1be927285acfba750cd6"
+sourceCorrections: []
+---
+
+智能体常需要即时上下文 (context)窗口或初始训练数据中不包含的信息。为了高效运行，尤其是在需要最新或专业知识的任务中，它们必须访问外部知识库。这些知识库充当一种持久的长期记忆形式，从结构化数据库、文档存储库到专业API。这里，重点在于如何构建提示，使智能体能够成功查询这些外部知识来源，获取相关信息，并将其整合到其操作流程中。
+
+### 指导智能体查询知识库
+
+当智能体需要连接外部知识库时，您的提示的主要作用是连接智能体的内部推理 (inference)与数据检索机制。这包括明确指示何时需要查询、寻求什么信息以及如何与特定知识库交互。
+
+提示需要考虑的重要事项包括：
+
+1. **意图识别**：智能体必须首先理解当前任务或用户查询需要获取外部数据。您的提示可以为此定义条件或触发器。
+2. **查询构建**：智能体需要将其信息需求转换为知识库可理解的有效查询格式。这可以是自然语言、结构化查询语言（如SQL）或API调用的参数 (parameter)。
+3. **工具选择（如适用）**：如果存在多个知识库或检索工具，提示应指导智能体选择最适合的一个。
+4. **结果处理**：数据获取后，必须指示智能体如何解析、理解并使用这些新信息来继续其任务或回答查询。
+
+### 知识库交互的提示技巧
+
+让我们看看构建提示以促进这些交互的具体方法。
+
+#### 1. 工具或函数调用的明确指令
+
+对于具备工具使用能力的智能体，访问知识库通常被抽象为调用特定工具或函数。您的提示必须清楚定义智能体应如何发出使用此类工具的意图以及其参数 (parameter)的格式。
+
+设想一个智能体可以访问名为 `search_product_database` 的工具，该工具接受 `product_query`（字符串）和 `filters`（可选字典）作为输入。
+
+提示可能包含以下指令：
+"如果您需要查找产品信息，请使用 `search_product_database` 工具。您必须提供 `product_query`。您可以选择提供 `filters`，例如 `{'category': 'electronics', 'in_stock': true}`。
+要使用该工具，请按以下格式输出一个JSON对象：
+
+```json
+{
+  "tool_name": "search_product_database",
+  "tool_input": {
+    "product_query": "产品名称或描述",
+    "filters": {
+      "filter_key_1": "value1",
+      "filter_key_2": "value2"
+    }
+  }
+}
+```
+
+"
+
+这种方法要求您定义：
+
+- **工具描述**：工具的作用（例如，“查找产品信息”）。
+- **调用语法**：智能体应如何格式化其使用工具的请求（例如，JSON结构）。
+- **参数指定**：每个输入的名称和预期数据类型或格式（例如，`product_query` 为字符串，`filters` 为字典）。
+
+#### 2. 生成用于语义搜索的自然语言查询
+
+许多现代知识库，特别是向量 (vector)数据库，都针对使用自然语言查询的语义搜索进行了优化。智能体可以形成一个问题或描述性短语，而不是僵硬的SQL。您的提示应指导智能体构建有效的自然语言查询。
+
+例如，如果智能体需要查询公司内部文档（存储在向量数据库中，并通过 `query_internal_docs` 工具访问）：
+
+提示片段：
+"要查找公司内部文档中的相关信息，请使用 `query_internal_docs` 工具。请构建一个清晰具体的疑问或描述性短语，捕捉您要查找的核心内容。
+示例：如果用户问‘我们的育儿假政策是什么？’，则 `query_internal_docs` 的一个好查询将是‘育儿假政策详情’。
+工具使用：
+
+```json
+{
+  "tool_name": "query_internal_docs",
+  "tool_input": {
+    "natural_language_query": "您的详细问题或搜索短语"
+  }
+}
+```
+
+"
+
+提示自然语言查询生成的小提示：
+
+- 鼓励查询具体化。
+- 建议包含区分性术语或概念。
+- 提供良好查询的示例（少样本提示）以说明所需的查询风格。
+
+#### 3. 指导结构化查询语言（SQL）生成
+
+对于关系型数据库，智能体可能需要生成SQL查询。这对大型语言模型而言，是一项要求更高的任务，因为它需要理解数据库架构。您的提示必须提供足够的架构信息，并指导将自然语言意图转换为SQL。
+
+**提供架构信息：**
+您可以在提示中直接包含相关表架构的简化版本。
+
+示例：
+"您可以访问一个包含以下表格的数据库：
+`products` 表：
+
+| Column Name | Data Type | Description |
+| --- | --- | --- |
+| `product_id` | INTEGER | 产品的唯一ID |
+| `name` | TEXT | 产品名称 |
+| `category` | TEXT | 产品类别 |
+| `price` | REAL | 产品价格 |
+| `stock_level` | INTEGER | 当前库存量 |
+
+`orders` 表：
+
+| Column Name | Data Type | Description |
+| --- | --- | --- |
+| `order_id` | INTEGER | 订单的唯一ID |
+| `product_id` | INTEGER | 所订产品的ID |
+| `quantity` | INTEGER | 订购数量 |
+| `customer_id` | INTEGER | 客户的ID |
+
+要查询此数据库，请生成一个SQL查询并将其提供给 `execute_sql_query` 工具。
+示例：如果被问及‘查找所有价格低于500美元的笔记本电脑’，您可能会生成：
+`SELECT name, price FROM products WHERE category = 'laptop' AND price < 500;`
+
+工具使用：
+
+```json
+{
+  "tool_name": "execute_sql_query",
+  "tool_input": {
+    "sql_query": "YOUR_GENERATED_SQL_QUERY"
+  }
+}
+```
+
+"
+
+SQL生成提示的要素：
+
+- **简明架构描述**：提供表名、列名、数据类型和简要描述。避免用不必要的细节使大型语言模型感到负担。
+- **有针对性的示例**：展示少量自然语言问题及其对应的SQL查询示例，且与提供的架构相关。
+- **SQL方言（如果重要）**：如果数据库使用具有独特语法的特定SQL方言，请提及关键方面或提供反映其特点的示例。
+- **安全性**：指示智能体主要生成只读查询（SELECT语句），除非明确打算进行写入操作，并且这些操作由为此类修改设计的安全工具接口管理。
+
+> 智能体访问外部知识库时的交互流程，在从识别需求到处理结果的各个阶段都由提示引导。
+
+#### 4. 处理和整合查询结果
+
+获取数据只是流程的一部分。智能体随后需要理解这些数据。您的提示应指导这个后续阶段：
+
+- **解析**：如果数据以结构化格式返回（例如，来自API的JSON，来自数据库的行），智能体可能需要关于如何解析它的指令。这通常由工具接口本身处理，但智能体需要知道数据结构的预期。
+- **总结或提取**：对于大量的文本或数据，提示智能体总结发现或仅提取与其当前目标相关的特定信息。
+  - 示例：“从获取的文档中，提取贷款产品的主要资格标准并列出。”
+- **回答问题**：如果查询是由用户问题启动的，指示智能体使用获取的信息来构建一个全面且准确的答案。
+- **更新内部状态**：获取的信息可能需要整合到智能体的短期记忆（上下文 (context)）中或影响其正在进行的计划。
+- **错误处理和回退**：
+  - **无结果**：如果查询未返回任何相关信息，智能体应该怎么做？提示它通知用户，尝试用不同的词重构查询，或尝试替代策略。
+    - 示例：“如果 `search_product_database` 工具没有返回结果，请尝试扩大您的 `product_query` 范围或删除一些过滤器。如果仍然不成功，请告知用户根据提供的标准找不到该产品。”
+  - **工具错误**：如果工具本身报告错误（例如，无效的SQL语法，API端点不可用），提示智能体如何响应。这可能涉及修改后重试查询，清楚地报告错误，或者如果原始请求模糊，则请求澄清。
+
+### 大型语言模型架构复杂性管理
+
+在处理SQL数据库或复杂API等结构化知识库时，提供完整的架构或API文档可能会占用智能体有限的上下文 (context)窗口的很大一部分。以下是管理这种情况的策略：
+
+- **相关性过滤**：仅提供与智能体预期执行任务类型直接相关的表或API端点的架构信息。去除不相关的细节。
+- **总结**：使用简洁的自然语言或简化格式描述架构。对于SQL，列出表名及其最重要的列和数据类型，省略不太重要的列或约束，除非任务特别需要。
+
+  ```
+  # 提示的总结性架构示例
+  可用表：
+  - customers (customer_id INT, name TEXT, email TEXT, city TEXT)
+  - orders (order_id INT, customer_id INT, order_date DATE, total_amount REAL)
+  - products (product_id INT, name TEXT, category TEXT, price REAL)
+  ```
+- **多轮架构查看**：对于非常复杂的架构，您可以设计一种交互，让智能体首先请求可用表或API类别的列表，然后请求其认为相关的特定表的详细架构信息。这种迭代方法需要更精细的交互循环，但可以在初始提示中节省宝贵的上下文空间。
+- **带外知识**：对于非常稳定且常用架构，一些结构信息可能在微调 (fine-tuning)期间（如适用）由大型语言模型隐式学习，从而减少在每个提示中传递所有细节的需要。然而，对于与多样化或不断变化的数据源交互的通用智能体，在提示中明确提供架构通常会带来更可靠的表现。
+
+### 安全性考虑
+
+虽然此处重点是构建访问提示，但重要的是要记住，与知识库的实际连接应由安全的工具接口处理。提示不应包含敏感信息，如API密钥、数据库凭据或完整的连接字符串。相反，提示指导智能体使用*工具*，该工具负责实施安全认证和授权机制。但是，您的提示可以指示智能体在构建查询或呈现结果时注意数据敏感性，例如：“除非任务明确需要并且您已通过适当的用户验证步骤确认授权，否则请勿请求或显示个人身份信息（PII），如完整地址或付款详情。”
+
+“通过仔细构建提示，您可以帮助AI智能体获取外部知识库信息。这使它们从孤立的处理器转变为能够获取和使用各种信息以达成目标的知情助手，极大地扩展了它们在需要访问动态或专业数据的复杂任务中的实用性。”
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  该论文介绍了检索增强生成（RAG），一个结合预训练参数和非参数记忆的框架，使模型能够访问和利用外部知识，为许多知识库交互模式奠定了基础。
+- [Toolformer: Language Models That Can Use Tools](https://arxiv.org/abs/2302.04761) — Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom (2023)
+  Journal: arXiv preprint arXiv:2302.04761; DOI: [10.48550/arXiv.2302.04761](https://doi.org/10.48550/arXiv.2302.04761)
+  该论文介绍了Toolformer，一种通过自监督学习教授语言模型使用外部工具的方法，展示了模型如何学习调用API并整合其输出。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: arXiv preprint arXiv:2210.03629; DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  该论文提出了ReAct，一种让语言模型进行推理和采取行动的通用范式，通过交错思考和行动步骤与外部工具和知识库进行交互。
+- [Prompt Engineering Guide](https://www.promptingguide.ai/) — Shubham Kumar, et al. (2023)
+  这份全面的在线指南涵盖了多种提示工程技术，包括工具使用、智能体设计以及与外部系统交互的方法，并提供了实用的例子和最佳实践。

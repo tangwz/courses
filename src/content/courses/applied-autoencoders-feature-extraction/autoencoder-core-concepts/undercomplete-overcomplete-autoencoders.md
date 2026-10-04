@@ -1,0 +1,62 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "autoencoder-core-concepts"
+lesson: "undercomplete-overcomplete-autoencoders"
+sourceId: 6450
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-2-autoencoder-core-concepts/undercomplete-overcomplete-autoencoders"
+title: "欠完备与过完备自动编码器"
+description: "区分欠完备自动编码器（潜空间维度较小）与过完备自动编码器。"
+order: 6
+plots: []
+sourceHash: "cfb578e6f98855452a57ab75b6e4b163c40690ffe881daa76915286034dcb25d"
+sourceCorrections: []
+---
+
+瓶颈层（通常记作 $d_{latent}$）的维度相对于输入数据（$d_{input}$）的维度，是自动编码器的一个决定性特征。这种关系决定了自动编码器被归类为“欠完备”还是“过完备”，每种类型都具有独特的属性和典型应用场景。了解这种区别对于设计一个能有效从数据中习得所需特征的自动编码器十分重要。
+
+### 欠完备自动编码器
+
+**欠完备自动编码器**的特点是其瓶颈层维度小于输入层和输出层。即，$d_{latent} < d_{input}$。
+
+使用欠完备自动编码器的主要目的在于实现降维。通过迫使网络数据通过这个较窄的瓶颈，编码器必须学习将输入压缩成一个低维度表示。这个压缩步骤促使自动编码器捕捉训练数据中那些最显著且重要的变化或模式。解码器随后尝试仅仅通过这种压缩的潜表示来重构原始输入。
+
+可以将其比作创建一篇冗长文本 (long context)的简洁摘要。为了有效，摘要必须保留核心信息和最重要的点，同时丢弃冗余或次要信息。类似地，欠完备自动编码器旨在学习一种紧凑的表示，以保留输入的本质特征。
+
+如果瓶颈维度 $d_{latent}$ 选择得当，自动编码器可以学习到一组有用的、压缩的特征。这些学到的特征通常比原始高维输入更适用于下游任务，因为它们代表了信息的更提炼版本。与主成分分析（PCA）等线性降维技术不同，自动编码器由于其神经网络 (neural network)架构，可以学习复杂的非线性关系。
+
+然而，这存在一种权衡。如果瓶颈设置得太小（即，$d_{latent}$ 限制过多），自动编码器可能难以捕捉足够的信息以充分重构输入。这可能导致高重构误差，并且潜表示丢失了过多有价值的细节，这种情况类似于欠拟合 (underfitting)。网络在其瓶颈中根本没有足够的容量来编码所有必要信息。
+
+### 过完备自动编码器
+
+相反地，**过完备自动编码器**的特点是其瓶颈层的维度大于或等于输入维度，即 $d_{latent} \ge d_{input}$。
+
+乍一看，过完备自动编码器对于特征学习或降维似乎有悖常理。如果瓶颈的维度多于（或等于）输入维度，网络理论上可能只是简单地学习一个“恒等函数”。这意味着它可以直接通过编码器和解码器将输入传递到输出，而不学习数据的任何有意思的结构或紧凑表示。编码器可以直接将输入复制到潜空间，解码器再将其复制回来，从而实现完美重构，但没有有用的特征提取。
+
+那么，为何会使用过完备架构呢？
+无约束的过完备自动编码器自身确实不太适合特征提取。然而，当它们与额外的约束或修改结合时，就会变得强大，这些约束或修改能阻止它们学习一个微不足道的恒等映射。这些约束迫使网络在数据中发现有意思的属性，即使是在高维潜空间中。
+
+使过完备自动编码器变得有用的常见方法包括：
+
+1. **稀疏性正则化 (regularization)**：通过在瓶颈层的激活中添加稀疏性惩罚，我们鼓励网络在处理任何给定输入时，仅使用潜空间中的少量神经元。这会产生稀疏表示。
+2. **去噪自动编码器**：这些自动编码器被训练来从损坏的（有噪声的）版本中重构原始的、干净的输入。即使瓶颈是过完备的，去除噪声的任务也会迫使网络学习特征。
+
+这些正则化技术指导学习过程，确保即使是过完备自动编码器也能提取有意义的信息，而不仅仅是复制数据。我们将在第4章中研究这些更先进的架构，例如稀疏自动编码器和去噪自动编码器。目前，值得注意的是，没有此类约束的过完备自动编码器，不太可能学习到有用的、压缩的特征。
+
+> 欠完备和过完备自动编码器架构的比较，强调了其潜空间（瓶颈）相对于输入和输出维度的相对大小。欠完备自动编码器强制进行压缩，而过完备的则需要额外的约束才能学习到有用的特征。
+
+总而言之，当明确的降维是主要目标时，欠完备自动编码器是首选。它们迫使网络学习一个压缩的表示。另一方面，过完备自动编码器需要正则化（例如稀疏性或去噪目标），以防止它们学习到琐碎的解，并转而学习更分布式的特征。因此，瓶颈维度的选择是一个重要的设计决定，受具体任务和数据性质的影响。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 14: Autoencoders
+  一本全面的教科书，涵盖自动编码器的基本理论，包括维度降低（欠完备）的动机以及正则化在学习有用特征（与过完备相关）中的作用。
+- [Sparse Autoencoders (part of UFLDL Tutorial)](http://ufldl.stanford.edu/wiki/index.php/Sparse_Autoencoder) — Andrew Ng (2012)
+  Publisher: Stanford University
+  一个教育资源，清晰解释了稀疏自动编码器，展示了过完备架构如何通过稀疏正则化学习有意义的、分布式特征。
+- [Extracting and Composing Robust Features with Denoising Autoencoders](https://dl.acm.org/doi/10.1145/1390156.1390294) — Pascal Vincent, Hugo Larochelle, Yoshua Bengio, Pierre-Antoine Manzagol (2008)
+  Journal: Proceedings of the 25th International Conference on Machine Learning (ICML); Publisher: ACM; Pages: 1096-1103; DOI: [10.1145/1390156.1390294](https://doi.org/10.1145/1390156.1390294)
+  一篇基础性论文，介绍了去噪自动编码器，这是一种训练自动编码器（尤其是过完备自动编码器）的重要方法，通过从受损版本重建干净输入来学习鲁棒的特征表示。
+- [Reducing the Dimensionality of Data with Neural Networks](https://pubmed.ncbi.nlm.nih.gov/16873662/) — Geoffrey E. Hinton, Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  一篇开创性论文，展示了深度自动编码器在学习数据低维、压缩表示方面的有效性，为用于维度降低的欠完备自动编码器奠定了基础。

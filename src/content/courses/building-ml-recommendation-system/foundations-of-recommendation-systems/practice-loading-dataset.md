@@ -1,0 +1,240 @@
+---
+course: "building-ml-recommendation-system"
+chapter: "foundations-of-recommendation-systems"
+lesson: "practice-loading-dataset"
+sourceId: 7454
+sourceUrl: "https://apxml.com/zh/courses/building-ml-recommendation-system/chapter-1-foundations-of-recommendation-systems/practice-loading-dataset"
+title: "实践：加载并检查数据集"
+description: "通过上手实践来加载、检查并对样本推荐数据集进行初步分析。"
+order: 7
+plots: ["plots/7454-0.json"]
+sourceHash: "c0fd9194ac5df5ee8149fd1991ec398ae3235c75633bd9c8e766711fa7c0c74d"
+sourceCorrections: []
+---
+
+通过操作经典数据集来理解用户-物品交互数据，并进行模型构建前的初步分析。这类分析能加深对用户行为数据的理解，并为后续章节中实现的算法做好准备。
+
+### MovieLens 数据集
+
+在练习中，我们将使用著名的 **MovieLens 100k** 数据集，该数据集由明尼苏达大学的 GroupLens 研究小组收集并维护。它是推荐系统领域标准的基准数据集。此版本包含 610 名用户对 9,742 部电影的 100,000 条评分。
+
+该数据集包含几个文件，但我们主要关注其中两个：
+
+- `ratings.csv`：包含用户与物品的交互。每一行代表一名用户对一部电影的评分，包括 `userId`（用户 ID）、`movieId`（电影 ID）、`rating`（评分）和 `timestamp`（时间戳）。
+- `movies.csv`：包含物品的元数据。每一行代表一部电影，包括 `movieId`（电影 ID）、`title`（标题）以及用竖线分隔的 `genres`（类型）。
+
+让我们首先使用 pandas 库将这些数据加载到环境中。
+
+### 使用 Pandas 加载数据
+
+假设你已经下载了数据集并将文件放在工作目录中，可以使用以下代码将它们加载到 pandas DataFrame 中。DataFrame 是二维标签化数据结构，非常适合处理像我们这样的表格数据。
+
+```python
+import pandas as pd
+
+# 定义文件路径
+movies_path = 'movies.csv'
+ratings_path = 'ratings.csv'
+
+# 将数据加载到 pandas DataFrame 中
+movies_df = pd.read_csv(movies_path)
+ratings_df = pd.read_csv(ratings_path)
+```
+
+### 初步检查
+
+在任何数据分析任务中，第一步通常是检查数据，以了解其结构、大小和内容。`.head()` 方法非常适合预览 DataFrame 的前几行。
+
+让我们看看 `ratings_df`：
+
+```python
+print("评分 DataFrame:")
+print(ratings_df.head())
+```
+
+**输出：**
+
+```
+Ratings DataFrame:
+   userId  movieId  rating  timestamp
+0       1        1     4.0  964982703
+1       1        3     4.0  964981247
+2       1        6     4.0  964982224
+3       1       47     5.0  964983815
+4       1       50     5.0  964982931
+```
+
+输出结果符合预期：每一行都是特定用户对特定电影的显式评分。`rating`（评分）范围似乎是从 1 到 5。
+
+现在让我们检查 `movies_df`：
+
+```python
+print("\n电影 DataFrame:")
+print(movies_df.head())
+```
+
+**输出：**
+
+```
+Movies DataFrame:
+   movieId                               title                                       genres
+0        1                    Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+1        2                      Jumanji (1995)                   Adventure|Children|Fantasy
+2        3             Grumpier Old Men (1995)                               Comedy|Romance
+3        4            Waiting to Exhale (1995)                         Comedy|Drama|Romance
+4        5  Father of the Bride Part II (1995)                                       Comedy
+```
+
+在这里，我们可以看到电影元数据。`genres` 列包含由竖线 `|` 字符分隔的多个值。在构建基于内容的推荐系统时，我们将学习如何处理这种常见格式。
+
+为了解数据集的规模，我们可以找出唯一用户和电影的数量。
+
+```python
+n_users = ratings_df['userId'].nunique()
+n_movies = ratings_df['movieId'].nunique()
+
+print(f"唯一用户数量: {n_users}")
+print(f"唯一电影数量: {n_movies}")
+```
+
+**输出：**
+
+```
+Number of unique users: 610
+Number of unique movies: 9724
+```
+
+我们的数据集包含 610 名用户对 9,724 部不同电影的交互数据。
+
+### 分析评分分布
+
+了解用户的评分习惯非常有用。用户通常给好评还是差评？某些评分值是否比其他值更常见？我们可以使用 `.describe()` 方法获得 `rating` 列的统计摘要。
+
+```python
+print(ratings_df['rating'].describe())
+```
+
+**输出：**
+
+```
+count    100836.000000
+mean          3.501557
+std           1.042529
+min           0.500000
+max           5.000000
+25%           3.000000
+50%           3.500000
+75%           4.000000
+Name: rating, dtype: float64
+```
+
+平均评分约为 3.5，表明评分略微偏向正面。评分范围为 0.5 到 5.0。让我们将这些评分的分布可视化，以便更直观地观察。
+
+
+
+![电影评分分布](plots/7454-0.json)
+
+
+
+> 直方图显示，整数评分（如 3.0、4.0 和 5.0）比半星评分更常见。它还证实了正向评分偏差，其中 4.0 是出现频率最高的评分。
+
+### 创建统一的 DataFrame
+
+操作两个独立的 DataFrame 并不方便。我们可以使用 `merge`（合并）操作将它们组合成一个 DataFrame，类似于 SQL 中的 join（连接）。我们将根据 `ratings_df` 和 `movies_df` 共有 的 `movieId` 列进行合并。
+
+```python
+# 合并两个 DataFrame
+merged_df = pd.merge(ratings_df, movies_df, on='movieId')
+
+print("合并后的 DataFrame:")
+print(merged_df.head())
+```
+
+**输出：**
+
+```
+Merged DataFrame:
+   userId  movieId  rating   timestamp            title                                       genres
+0       1        1     4.0   964982703  Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+1       5        1     4.0   847434962  Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+2       7        1     4.5  1106635946  Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+3      15        1     2.5  1510577970  Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+4      17        1     4.5  1305696483  Toy Story (1995)  Adventure|Animation|Children|Comedy|Fantasy
+```
+
+这个合并后的 DataFrame 在一个结构中提供了每条评分的所有相关信息，处理起来会方便得多。
+
+### 初探用户-物品矩阵
+
+正如本章前面所讨论的，许多推荐算法都在用户-物品交互矩阵上运行。虽然我们还不会构建完整的模型，但可以创建一个该矩阵的简单版本来观察其结构。行代表用户，列代表电影，单元格的值为评分。
+
+我们可以使用 pandas 的 `.pivot_table()` 方法将数据转换为这种格式。
+
+```python
+# 创建用户-物品矩阵
+user_item_matrix = merged_df.pivot_table(index='userId', columns='title', values='rating')
+
+print("用户-物品矩阵的形状:", user_item_matrix.shape)
+print("\n矩阵的前 5 行和前 5 列:")
+print(user_item_matrix.iloc[:5, :5])
+```
+
+**输出：**
+
+```
+Shape of the user-item matrix: (610, 9719)
+
+First 5 rows and 5 columns of the matrix:
+title   '71 (2014)  'Hellboy': The Seeds of Creation (2004)  'Round Midnight (1986)  'Salem's Lot (2004)  'Til There Was You (1997)
+userId
+1              NaN                                      NaN                     NaN                 NaN                         NaN
+2              NaN                                      NaN                     NaN                 NaN                         NaN
+3              NaN                                      NaN                     NaN                 NaN                         NaN
+4              NaN                                      NaN                     NaN                 NaN                         NaN
+5              NaN                                      NaN                     NaN                 NaN                         NaN
+```
+
+最直接的观察结果是存在大量的 `NaN`（非数值）值。这些代表用户尚未评分的电影。这是**稀疏性问题**的直接体现。大多数用户只对极少比例的电影进行过评分。我们可以量化 (quantization)这种稀疏性：
+
+
+$$
+ext{稀疏性} = 1 - \frac{\text{评分数量}}{\text{用户数量} \times \text{电影数量}}
+$$
+
+
+让我们为我们的数据集计算一下。
+
+```python
+# 计算非 NaN 值的数量（实际评分数）
+num_ratings = user_item_matrix.notna().sum().sum()
+
+# 计算可能的总评分数
+total_possible_ratings = user_item_matrix.shape[0] * user_item_matrix.shape[1]
+
+# 计算稀疏性
+sparsity = 1 - (num_ratings / total_possible_ratings)
+
+print(f"用户-物品矩阵的稀疏性: {sparsity:.4f}")
+```
+
+**输出：**
+
+```
+Sparsity of the user-item matrix: 0.9830
+```
+
+超过 98% 的稀疏性意味着我们用户-物品矩阵中 98% 以上的单元格是空的。这在推荐数据集中非常典型，也是协同过滤算法旨在解决的核心挑战。
+
+这次初步分析让我们对数据的结构、规模和特征有了切实的了解。我们加载了数据，检查了其组成部分，并观察了评分的分布。更重要的是，我们看到了协同过滤基础——稀疏用户-物品交互矩阵的实际示例。在下一章中，我们将使用这些准备好的数据来构建我们的第一个推荐器：一个利用电影类型来寻找相似物品的基于内容的系统。
+
+## 参考资料
+
+- [Recommender Systems: An Introduction](https://books.google.com/books/about/Recommender_Systems.html?id=c33S8x8R6VQC) — Dietmar Jannach, Markus Zanker, Alexander Felfernig, and Gerhard Friedrich (2010)
+  Publisher: Cambridge University Press; DOI: [10.1017/CBO9781316165505](https://doi.org/10.1017/CBO9781316165505)
+  全面概述推荐系统，涵盖数据类型、数据稀疏性等挑战以及常见方法，为读者奠定坚实的理论基础。
+- [The MovieLens Datasets: History and Context](https://dl.acm.org/doi/10.1145/2827872) — F. Maxwell Harper, Joseph A. Konstan (2015)
+  Journal: ACM Transactions on Interactive Intelligent Systems; Publisher: ACM; Volume: 5; Pages: 19:1-19:19; DOI: [10.1145/2827872](https://doi.org/10.1145/2827872)
+  提供了MovieLens数据集的官方描述和历史背景，该数据集是推荐系统研究和开发中广泛使用的基准资源。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  由pandas创建者撰写的权威指南，涵盖使用pandas DataFrames进行数据加载、检查、清洗和转换等基本数据操作技术。

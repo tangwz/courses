@@ -1,0 +1,51 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "efficient-data-handling"
+lesson: "need-specialized-data-loaders"
+sourceId: 2175
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-5-efficient-data-handling/need-specialized-data-loaders"
+title: "对专用数据加载器的需求"
+description: "了解加载大型数据集的挑战以及 PyTorch 数据工具的优势。"
+order: 1
+plots: []
+sourceHash: "4958be428fab8767efc26ed54db727b08fd1f05b8a8a703a853f474d10bf96c3"
+sourceCorrections: []
+---
+
+训练深度学习 (deep learning)模型需要处理大量数据。虽然使用 `torch.nn` 构建模型和使用 Autograd 计算梯度是基本步骤，但一个实际问题随之而来：如何在训练期间高效地将数据输入这些模型？
+
+如果尝试手动处理数据加载，会遇到以下挑战：
+
+1. **内存限制**: 现代数据集，特别是在计算机视觉或自然语言处理等方面，可能非常庞大，常常超出可用内存（RAM），更不用说 GPU 上的显存（VRAM）。一次性将整个数据集加载到内存中通常是不可行的。想象一下，尝试将整个 ImageNet 数据集（超过 1400 万张图像，数百 GB）直接加载到计算机的 RAM 中——对于大多数系统来说，这根本无法容纳。
+2. **I/O 瓶颈**: 从磁盘读取数据的速度比 CPU 或 GPU 上的计算慢几个数量级。如果模型需要数据时你逐个加载数据样本，你速度极快的 GPU 将大部分时间处于空闲状态，等待下一批数据到来。这种顺序磁盘读取会成为一个主要瓶颈，极大地减缓训练过程。
+3. **低效的预处理**: 数据很少以神经网络 (neural network)所需的精确格式存在。它通常需要预处理步骤，例如归一化 (normalization)、调整大小、数据类型转换或数据增强（随机修改样本以提高模型泛化能力）。与主要训练过程同步地逐个样本执行这些转换，会增加进一步的延迟。
+4. **洗牌需求**: 为确保模型泛化能力并防止与数据顺序相关的偏差，标准做法是在每个训练周期前对数据集进行洗牌。实现高效的洗牌，特别是对于无法完全放入内存的数据集，会增加复杂性。
+5. **批处理**: 神经网络通常在数据的小批量上进行训练，而不是单个样本。分批处理数据可以获得更稳定的梯度估计，并更好地使用 GPU 的并行处理能力。手动创建这些批次，确保它们的格式正确，以及处理最后一个可能较小的批次，都需要仔细编写代码。
+6. **并行处理**: 为克服 I/O 瓶颈，高效的数据加载管道通常使用多个工作进程并行加载和预处理数据，在 GPU 忙于处理当前批次时准备未来的批次。正确实现这种并行，管理进程，并确保数据完整性是一项复杂的工程任务。
+
+为每个项目从头解决所有这些问题会非常耗时且容易出错。你每次都相当于在重建一个重要的基础设施部分。
+
+> 比较了导致瓶颈的朴素顺序数据加载方法与 PyTorch 数据工具提供的并行批处理方法。
+
+认识到这些常见且重要的挑战，PyTorch 提供了 `torch.utils.data` 模块。这个模块提供专用工具，专门用于构建高效、灵活和并行的数据加载管道。它封装了洗牌、批处理、内存管理和并行加载的复杂性，让你能专注于定义数据集结构和所需的转换。
+
+通过使用 PyTorch 的 `Dataset` 和 `DataLoader` 类（我们将在后续章节中介绍），你将获得：
+
+- **效率**: 优化数据获取和预处理，通常在 CPU 核心间并行执行，确保 GPU 获得充足数据。
+- **内存管理**: 通过仅在需要时将必要的批次加载到内存中来处理大型数据集。
+- **灵活性**: 轻松集成自定义数据源和复杂的预处理/数据增强步骤。
+- **简洁性**: 用于与数据集交互和创建数据迭代器的标准化 API。
+
+这些工具是使用 PyTorch 构建实际深度学习应用的基本组成部分。让我们从 `Dataset` 类开始，了解它们如何工作。
+
+## 参考资料
+
+- [\`torch.utils.data\` API](https://pytorch.org/docs/stable/data.html) — PyTorch Authors (2025)
+  Publisher: PyTorch Foundation
+  PyTorch数据工具的官方文档，包括`Dataset`和`DataLoader`类，对高效数据处理至关重要。
+- [Dive into Deep Learning](https://d2l.ai/) — Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola (2024)
+  Publisher: Cambridge University Press
+  一本全面的开源书籍，涵盖深度学习概念和实践实现，其中包含与数据加载和训练流程相关的PyTorch示例。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Course Notes](http://cs231n.github.io/) — Andrej Karpathy, Justin Johnson, Serena Yeung, et al. (2017)
+  Publisher: Stanford University
+  为深度神经网络的训练实践方面提供了出色的概念解释，包括数据预处理、批处理和训练流程，尤其与视觉任务相关。

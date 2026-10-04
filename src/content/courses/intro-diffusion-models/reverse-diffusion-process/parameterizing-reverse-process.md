@@ -1,0 +1,82 @@
+---
+course: "intro-diffusion-models"
+chapter: "reverse-diffusion-process"
+lesson: "parameterizing-reverse-process"
+sourceId: 5395
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-3-reverse-diffusion-process/parameterizing-reverse-process"
+title: "使用神经网络参数化逆向过程"
+description: "使用神经网络预测逆向转移的噪声或均值。"
+order: 3
+plots: []
+sourceHash: "cea74534084f1345eedab305e876e80e5b46afdfec963c4327876badd45510b4"
+sourceCorrections: []
+---
+
+真实逆向转移概率 $p(x_{t-1}|x_t)$ 代表了生成数据所需采样的分布，通过从噪声 $x_T$ 逆行至干净样本 $x_0$ 来实现。然而，计算此分布需要知晓原始数据分布 $q(x_0)$，这使其变得难以处理。
+
+我们的方法是使用神经网络 (neural network)来近似这个逆向转移。我们定义一个参数 (parameter)化分布 $p_\theta(x_{t-1}|x_t)$，模型将学习它。由于正向过程添加了高斯噪声，逆向转移的一个合理选择也是高斯分布：
+
+
+$$
+p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
+$$
+
+
+在这里，$\mu_\theta(x_t, t)$ 是高斯分布 $x_{t-1}$ 的均值，$\Sigma_\theta(x_t, t)$ 是其协方差矩阵，给定时间步 $t$ 时的 $x_t$。均值和协方差原则上都可以依赖于噪声数据 $x_t$ 和时间步 $t$，它们由我们神经网络的参数 $\theta$ 决定。
+
+因此，神经网络的任务是预测此高斯分布在每个时间步 $t$ 的参数。
+
+### 预测均值 $\mu_\theta(x_t, t)$
+
+有两种常见的方式来参数 (parameter)化均值 $\mu_\theta(x_t, t)$：
+
+1. **直接预测均值：** 网络可以设计为直接输出 $\mu_\theta(x_t, t)$。
+2. **预测噪声 $\epsilon$：** 网络预测在对应正向步骤 $t$ 中添加的噪声分量 $\epsilon$。这种方式更为普遍，并且常带来更稳定的训练和更简单的目标函数（我们将在下一章看到）。
+
+我们来关注第二种方式，即预测噪声。我们设计一个神经网络 (neural network)，通常表示为 $\epsilon_\theta$，它接收当前的噪声样本 $x_t$ 和时间步 $t$ 作为输入，并输出一个预测的噪声分量 $\epsilon_\theta(x_t, t)$。
+
+为什么预测噪声是有用的？回顾正向过程（第2章，“中间步骤的采样”），后验分布 $q(x_{t-1}|x_t, x_0)$ 是可处理的，并且也是高斯分布。它的均值具有特定形式。尽管在逆向过程中我们不知道 $x_0$，但我们可以使用为 $q(x_{t-1}|x_t, x_0)$ 推导出的关系，并用从 $x_t$ 和*预测*噪声 $\epsilon_\theta(x_t, t)$ 得出的估计值来替代 $x_0$。这给出了我们参数化逆向分布 $p_\theta(x_{t-1}|x_t)$ 均值的以下表达式：
+
+
+$$
+\mu_\theta(x_t, t) = \frac{1}{\sqrt{\alpha_t}} \left( x_t - \frac{\beta_t}{\sqrt{1 - \bar{\alpha}_t}} \epsilon_\theta(x_t, t) \right)
+$$
+
+
+其中：
+
+- $\epsilon_\theta(x_t, t)$ 是我们神经网络的输出。
+- $\alpha_t = 1 - \beta_t$ 和 $\bar{\alpha}_t = \prod_{i=1}^t \alpha_i$ 是从正向过程噪声调度（$\beta_t$）得出的。
+
+这个方程提供了一种直接计算去噪步骤 $x_{t-1}$ 均值的方式，它使用当前状态 $x_t$ 和网络的噪声预测 $\epsilon_\theta(x_t, t)$。神经网络的主要工作是学习在给定结果 $x_t$ 的情况下，在步骤 $t$ 添加的正确噪声 $\epsilon$。
+
+### 固定方差 $\Sigma_\theta(x_t, t)$
+
+协方差矩阵 $\Sigma_\theta(x_t, t)$ 呢？尽管网络*也可以*学习方差，但 Ho 等人（DDPM 的作者）发现，固定方差效果良好并简化了模型。协方差通常设为对角形式，即 $\Sigma_\theta(x_t, t) = \sigma_t^2 \mathbf{I}$，其中 $\mathbf{I}$ 是单位矩阵。方差 $\sigma_t^2$ 通常根据正向过程的方差来选择：
+
+- 选项 1: $\sigma_t^2 = \beta_t$
+- 选项 2: $\sigma_t^2 = \tilde{\beta}_t = \frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t} \beta_t$
+
+两种选项都将逆向过程方差与正向过程中使用的噪声调度相关联。使用 $\tilde{\beta}_t$ 对应于当 $x_0$ 已知时真实后验 $q(x_{t-1}|x_t, x_0)$ 的方差，而使用 $\beta_t$ 在经验上表现良好，特别是对于我们稍后将讨论的 $L_{simple}$ 目标函数。为了简化，$\sigma_t^2 = \beta_t$ 是一个普遍的选择。固定方差意味着神经网络 (neural network)只需预测噪声 $\epsilon_\theta(x_t, t)$ 来定义逆向转移。
+
+### 神经网络 (neural network)结构
+
+神经网络 $\epsilon_\theta(x_t, t)$ 需要处理输入 $x_t$（通常与原始数据具有相同维度，例如图像）和时间步 $t$（一个标量）。然后，它必须输出一个与 $x_t$ 形状相同的张量 $\epsilon_\theta$，表示预测的噪声。
+
+完成此任务的一个非常成功的结构是 **U-Net**，我们将在第4章对其进行详细阐述。U-Net 结构非常适合图像类数据，并能有效整合时间步信息 $t$。
+
+> 示意图展示了神经网络 $\epsilon_\theta$ 在参数 (parameter)化逆向过程中的作用。它接收噪声数据 $x_t$ 和时间步 $t$ 来预测噪声 $\epsilon_\theta$。此预测随后与噪声调度（$\alpha_t, \beta_t, \bar{\alpha}_t$）中的固定参数一同，用于计算近似逆向转移 $p_\theta(x_{t-1}|x_t)$ 的均值 $\mu_\theta$。方差 $\sigma_t^2$ 通常是固定的。
+
+总之，我们使用一个学习到的高斯分布 $p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \sigma_t^2 \mathbf{I})$ 来近似难以处理的逆向分布 $p(x_{t-1}|x_t)$。我们使用神经网络 $\epsilon_\theta(x_t, t)$ 来预测噪声分量，这使我们能够计算均值 $\mu_\theta(x_t, t)$。方差 $\sigma_t^2$ 通常根据正向过程噪声调度固定。这种设置构成了训练扩散模型的依据，我们将在下文介绍。
+
+## 参考资料
+
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  本文介绍了本节核心的特定参数化策略、噪声预测网络和固定方差选择。
+- [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/abs/1503.03585) — Jascha Sohl-Dickstein, Eric A. Weiss, Niru Maheswaranathan, Surya Ganguli (2015)
+  Journal: International Conference on Machine Learning (ICML); Pages: 2296-2305; DOI: [10.48550/arXiv.1503.03585](https://doi.org/10.48550/arXiv.1503.03585)
+  这篇基础性论文介绍了扩散概率模型，定义了正向和反向过程，以及近似反向转换的通用框架。
+- [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://link.springer.com/chapter/10.1007/978-3-319-24574-4_28) — Olaf Ronneberger, Philipp Fischer, Thomas Brox (2015)
+  Journal: Medical Image Computing and Computer-Assisted Intervention (MICCAI); Publisher: Springer, Cham; Pages: 234-241; DOI: [10.1007/978-3-319-24574-4_28](https://doi.org/10.1007/978-3-319-24574-4_28)
+  介绍了U-Net架构，该架构被广泛用作扩散模型中噪声预测网络的骨干。

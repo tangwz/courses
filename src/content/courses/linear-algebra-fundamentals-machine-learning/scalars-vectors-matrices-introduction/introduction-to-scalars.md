@@ -1,0 +1,79 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "scalars-vectors-matrices-introduction"
+lesson: "introduction-to-scalars"
+sourceId: 7803
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-1-scalars-vectors-matrices-introduction/introduction-to-scalars"
+title: "标量：最简单的元素"
+description: "对标量作为单一数值的直接说明及其在计算中的用途。"
+order: 2
+plots: []
+sourceHash: "3a839cf124ad13ce7b02230d42cc92f9acb4a714b609a91c306b142bddbfdc4e"
+sourceCorrections: []
+---
+
+在数据中，最基本的信息单元是一个单一的值。在线性代数中，我们称之为**标量**。你可以把标量看作一个普通的数字。它有大小，但没有方向。它是我们能处理的最简单的数据元素。
+
+例如，当我们测量房间温度时，会得到一个单一数值，比如 21°C。当我们查看商品价格时，会看到一个单一数值，例如 49.95 美元。这些独立的数字就是标量。
+
+### 机器学习 (machine learning)中的标量
+
+在机器学习中，标量随处可见。它们常用于表示特定的单一量：
+
+- **特征值：** 一个人的年龄（例如，34）。
+- **超参数 (parameter) (hyperparameter)：** 模型学习率（例如，0.01）。
+- **测量值：** 灰度图像中单个像素的亮度（例如，182）。
+- **模型输出：** 事件的预测概率（例如，0.85）。
+
+数学上，标量通常写成小写斜体字母，例如 $c$、$k$ 或 $x$。你可能还会看到它们用希腊字母表示，比如 $\alpha$ (阿尔法) 或 $\lambda$ (拉姆达)。例如，我们可以定义一个标量 $s$ 如下：
+
+
+$$
+s = 5
+$$
+
+
+标量不需要任何特殊结构来容纳它；它本身就是一个值。
+
+> 标量是一个单一的数值量。它是构成更复杂数据结构的基本部分。
+
+### 在 Python 中表示标量
+
+在 Python 中，标量由你可能已经熟悉的标准数值数据类型表示：`int` 用于整数，`float` 用于浮点（小数）数。没有特殊的“标量”对象。
+
+以下是如何在 Python 中定义一些标量：
+
+```python
+# 一个整数标量
+sample_count = 150
+
+# 一个浮点标量
+learning_rate = 0.001
+
+# 另一个表示模型参数的标量
+bias_term = -2.5
+
+print(f"Sample count: {sample_count} (Type: {type(sample_count)})")
+print(f"Learning rate: {learning_rate} (Type: {type(learning_rate)})")
+```
+
+输出证实这些只是普通的 Python 数字：
+
+```
+Sample count: 150 (Type: <class 'int'>)
+Learning rate: 0.001 (Type: <class 'float'>)
+```
+
+尽管简单，理解标量是第一步。它们是我们将用来构建向量 (vector)和矩阵的基本单元，这对于表示数据集合和整个数据集是必不可少的。接下来，我们将看到如何将这些标量组合起来形成向量。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](http://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2016)
+  Publisher: Wellesley-Cambridge Press
+  这本重要的教材清晰地介绍了线性代数概念，包括标量的定义和作用。（第5版）
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  该书涵盖了深度学习的数学基础，介绍了标量作为数据和模型表示中的基本数值元素。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  该书展示了在实际机器学习应用中如何使用Python库处理基本数值数据，例如标量。（第3版）

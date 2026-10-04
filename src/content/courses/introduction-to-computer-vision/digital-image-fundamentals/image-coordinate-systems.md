@@ -1,0 +1,61 @@
+---
+course: "introduction-to-computer-vision"
+chapter: "digital-image-fundamentals"
+lesson: "image-coordinate-systems"
+sourceId: 1243
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-computer-vision/chapter-2-digital-image-fundamentals/image-coordinate-systems"
+title: "图像坐标系"
+description: "理解图像中如何使用坐标系引用像素位置。"
+order: 6
+plots: []
+sourceHash: "5c9e46b0c6871c69b87b5720e3f5af3b13e8d5611f1dd29020d163f3f5cc47e3"
+sourceCorrections: []
+---
+
+既然我们理解了图像是由排列成网格的像素组成的，我们就需要一种一致的方法来引用任何特定像素的位置。图像坐标系就在此时发挥作用。可以将其想象为图像网格中每个像素都有一个地址。
+
+大多数图像处理库和计算机视觉应用使用的坐标系可能与你在数学课上学到的笛卡尔坐标系略有不同。这是标准约定：
+
+1. **原点 (0,0)：** 起点位于图像的**左上角**。
+2. **X轴：** 此轴水平方向**从左到右**。x坐标表示列号。
+3. **Y轴：** 此轴垂直方向**从上到下**。y坐标表示行号。
+
+像素的位置通常由一对值 $(x, y)$ 指定，其中 $x$ 是水平位置（列），$y$ 是垂直位置（行），两者均从0开始。
+
+> 图像坐标系的可视化表示。原点 (0,0) 位于左上角。x坐标向右增加，y坐标向下增加。
+
+### 像素索引
+
+访问像素时，需要使用其坐标。如果图像的宽度为 $W$、高度为 $H$，则像素的索引方式如下：
+
+- x坐标范围从 $0$ 到 $W-1$。
+- y坐标范围从 $0$ 到 $H-1$。
+
+例如，在一个宽度为800像素、高度为600像素的图像中 ($W=800, H=600$)：
+
+- 左上角像素位于 $(x, y) = (0, 0)$。
+- 右上角像素位于 $(x, y) = (799, 0)$。
+- 左下角像素位于 $(x, y) = (0, 599)$。
+- 右下角像素位于 $(x, y) = (799, 599)$。
+- 中间某个像素可能位于 $(x, y) = (400, 300)$。
+
+### 编程约定注意事项
+
+尽管 $(x, y)$ 表示法（列，行）很常见，但许多编程库，特别是那些在Python中使用NumPy数组的库（如OpenCV），访问图像数据时，采用数组索引方式，遵循 `(行, 列)` 或 `(y, x)` 约定。
+
+例如，要访问坐标 $(x, y)$ 处的像素值，你可能会使用 `pixel_value = image[y, x]` 这样的代码。
+
+- `image[0, 0]` 访问左上角像素。
+- 在我们800x600的例子中，`image[599, 799]` 访问右下角像素。
+
+坐标 $(x, y)$ 和数组索引 `[y, x]` 之间的这种差异，是初学者经常感到困惑的地方。请务必查阅你所用特定函数或库的文档，以确认其期望的顺序。在本课程中，讨论坐标时我们通常会使用 $(x, y)$，但在展示涉及数组访问的代码示例时，我们将使用与OpenCV和NumPy等库一致的 `[y, x]`（行，列）格式。
+
+理解这个坐标系很重要，因为几乎所有的图像处理操作，从简单的裁剪到复杂的物体检测，都需要你准确地指定和访问像素位置。
+
+## 参考资料
+
+- [Computer Vision: Algorithms and Applications](https://szeliski.org/Book) — Richard Szeliski (2022)
+  Publisher: Springer; Pages: Chapter 2: Image Formation; DOI: [10.1007/978-3-030-34372-9](https://doi.org/10.1007/978-3-030-34372-9)
+  一本全面的计算机视觉教科书，其基础章节详细介绍了图像表示和几何变换。
+- [Basic Operations on Images (Accessing and Manipulating Pixel values)](https://docs.opencv.org/4.x/d3/df2/tutorial_py_basic_ops.html) — OpenCV community (2024)
+  OpenCV官方文档，阐释了计算机视觉库中使用的像素访问和行主序 (y, x) 索引约定。

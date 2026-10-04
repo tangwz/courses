@@ -1,0 +1,76 @@
+---
+course: "evaluating-synthetic-data-quality"
+chapter: "evaluating-ml-utility"
+lesson: "hyperparameter-optimization-effects"
+sourceId: 5673
+sourceUrl: "https://apxml.com/zh/courses/evaluating-synthetic-data-quality/chapter-3-evaluating-ml-utility/hyperparameter-optimization-effects"
+title: "超参数优化带来的影响"
+description: "分析使用合成数据如何影响超参数优化结果。"
+order: 5
+plots: ["plots/5673-0.json"]
+sourceHash: "4eb1dfcd63a613568d576e7746930859fc2288e7a0afd0c97f26f279ac0b6f57"
+sourceCorrections: []
+---
+
+超参数 (parameter) (hyperparameter)优化（HPO）是开发表现良好的机器学习 (machine learning)模型中的常规步骤。我们调整学习率、正则化 (regularization)强度或树深度等参数，以在验证集上使性能最大化。在使用合成数据时，一个主要问题出现了：使用合成数据找到的最佳超参数集是否与使用真实数据找到的超参数集一致？理解这种关系是评估合成数据实用性的一个方面。
+
+如果合成数据完美反映了真实数据的底层结构和复杂性，我们可能会预期使用合成数据执行的HPO（在合成或真实验证集上进行优化）会得到与使用真实数据找到的超参数（$H_{real}$）非常接近或表现相似的超参数（$H_{synth}$）。然而，合成数据生成过程虽然旨在实现高保真度，但可能会平滑某些数据特征，遗漏复杂的相互影响，或引入细微的假象。这些差异会影响HPO过程中进行的优化。
+
+设想一个情况，你为一个分类模型执行HPO。优化过程寻找能使验证集上的损失最小化或某个指标（如AUC或F1分数）最大化的超参数。如果用于训练和验证的合成数据使得HPO算法（例如贝叶斯优化、随机搜索）在超参数空间中识别出的最佳区域与使用真实数据识别出的区域显著不同，我们就会遇到一个潜在的实用性问题。使用合成数据调整的模型在部署时可能会表现不佳，因为其超参数对于真实数据分布来说不是最优的。
+
+### 评估超参数 (parameter) (hyperparameter)一致性
+
+为了评估合成数据对HPO的影响，你可以直接比较结果：
+
+1. **使用真实数据执行HPO：** 使用真实训练数据训练模型，根据真实验证集优化超参数，并记录最佳超参数集（$H_{real}$）及其在真实测试集上的相应性能。这作为你的基准。
+2. **使用合成数据执行HPO：** 仅使用合成训练数据训练模型。你可能根据以下方式优化超参数：
+   - 一个*合成*验证集（如果已生成）。
+   - *真实*验证集（在实践中很常见，模拟了有少量真实数据可用于验证的情况）。
+     记录找到的最佳超参数集（$H_{synth}$），并在**真实测试集**上评估使用合成数据和$H_{synth}$训练的模型。
+3. **比较结果：**
+   - **性能比较：** 模型（合成训练，合成调整 -> $H_{synth}$）在真实测试集上的性能与基准模型（真实训练，真实调整 -> $H_{real}$）相比如何？这直接衡量了同时使用合成数据进行训练*和*HPO所导致的实用性下降。
+   - **超参数集比较：** 检查$H_{real}$和$H_{synth}$。重要参数（例如学习率、正则化 (regularization)强度）的值是否显著不同？大的差异表明合成数据在模型对某些参数的敏感度方面向HPO过程提供了误导性信号。
+
+### 隔离超参数 (parameter) (hyperparameter)的影响
+
+你可以进一步检查使用合成数据找到的超参数（$H_{synth}$）即使在有足够的*真实*训练数据可用时是否不利：
+
+1. **使用$H_{synth}$训练真实数据：** 使用*真实*训练数据训练模型，但明确地将超参数设置为$H_{synth}$（通过合成数据HPO过程找到的）。在真实测试集上评估该模型。
+2. **比较：** 将此性能与基准模型（真实训练，真实调整 -> $H_{real}$）进行比较。如果使用$H_{synth}$在真实数据上的性能比基准差得多，则证实了从合成优化过程中得出的超参数对于真实数据分布来说不是最优的，无论HPO*之后*使用何种训练数据来源。
+
+下图展示了在不同条件下执行HPO后，模型在真实测试集上的性能比较。
+
+
+
+![HPO后的真实测试集性能](plots/5673-0.json)
+
+
+
+> 模型在真实测试集上的性能（AUC）比较。条形图显示了使用真实数据HPO得到的最佳超参数（$H_{real}$）与使用合成数据HPO得到的最佳超参数（$H_{synth}$）的结果。性能显示了使用各自超参数集训练的真实数据模型（蓝色）和合成数据模型（橙色）的表现。注意，即使在真实数据上训练时（蓝色条形图对应$H_{synth}$），使用$H_{synth}$也可能出现性能下降。
+
+### 解释和实际考量
+
+$H_{real}$和$H_{synth}$之间存在显著差异，或者使用$H_{synth}$时出现明显的性能下降，表明合成数据可能未能充分捕捉对模型调整最重要的数据分布方面。这可能发生在合成数据未能重现复杂的特征相互影响或影响模型对超参数 (parameter) (hyperparameter)敏感度的噪声模式时。
+
+如果HPO结果差异很大：
+
+- **风险意识：** 谨慎部署仅使用合成数据训练和调整的模型，除非在真实数据上进行了最终验证或调整。
+- **混合方法：** 考虑使用合成数据进行HPO的初步研究以缩小搜索空间，然后使用少量真实验证数据进行微调 (fine-tuning)。
+- **数据生成重点：** 这种差异可能表明需要重新审视合成数据生成过程，以提高其在影响超参数敏感度方面的保真度。
+
+评估对超参数优化的影响，提供了对合成数据实用性更全面的评估。这不仅仅是简单的使用固定超参数的性能比较（如基本TSTR中那样），它还检查合成数据是否能可靠地指导模型调整过程本身，这在实际应用中通常对于实现最佳性能非常重要。
+
+## 参考资料
+
+- [Hyperparameter Optimization](https://link.springer.com/chapter/10.1007/978-3-030-05318-5_1) — Matthias Feurer and Frank Hutter (2019)
+  Publisher: Springer, Cham; Pages: 3-33; DOI: [10.1007/978-3-030-05318-5_1](https://doi.org/10.1007/978-3-030-05318-5_1)
+  全面介绍了机器学习中的超参数优化方法及其使用。
+- [The Utility of Synthetically Generated Data: A Review](https://arxiv.org/pdf/2106.01428.pdf) — Tianqi Chen and Ruoxuan Zheng and Hui Liu and Cheng Cai (2021)
+  Journal: arXiv preprint arXiv:2106.01428
+  回顾了评估合成数据对下游机器学习任务效用的方法。
+- [Random Search for Hyper-Parameter Optimization](https://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf) — James Bergstra and Yoshua Bengio (2012)
+  Journal: Journal of Machine Learning Research; Publisher: Microtome Publishing; Volume: 13; Pages: 281-305; DOI: [10.5555/2629706.2629721](https://doi.org/10.5555/2629706.2629721)
+  一篇介绍随机搜索作为一种高效且有效的超参数优化策略的论文。
+- [Synthetic Data: A Survey of Challenges and Opportunities](https://arxiv.org/pdf/2208.06454.pdf) — Jian Sun and Ning Zhang and Kui Lu and Chao Zheng and Xuelian Li (2022)
+  Journal: arXiv preprint arXiv:2208.06454; Publisher: arXiv; DOI: [10.48550/arXiv.2208.06454](https://doi.org/10.48550/arXiv.2208.06454)
+  一项调查，确定了生成高质量合成数据方面的挑战，包括保真度和效用方面。

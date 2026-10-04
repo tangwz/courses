@@ -1,0 +1,156 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "checkpointing-fault-tolerance"
+lesson: "checkpoint-frequency-storage-management"
+sourceId: 6047
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-19-checkpointing-fault-tolerance/checkpoint-frequency-storage-management"
+title: "检查点频率与存储管理"
+description: "讨论确定检查点频率和管理检查点存储的策略。"
+order: 5
+plots: []
+sourceHash: "9759d0762e41461557955def33afd3a91522dbd3c2c94e885381f61f13af0a1d"
+sourceCorrections: []
+---
+
+决定保存检查点的频率以及如何管理生成的文件，需要权衡几个相互制约的因素：因故障而丢失计算进度的风险、保存过程本身带来的开销，以及存储的成本和可用性。恰当的平衡对高效、可靠的大规模模型训练很有必要。
+
+### 确定检查点频率
+
+选择检查点频率时，主要的权衡点在于最大限度减少故障时可能丢失的工作量与最大限度减少保存期间产生的开销。
+
+- **高频率（例如，每几百步）：**
+  - **优点：** 减少中断发生时训练进度的损失。您可以在更接近故障点的位置重新开始。
+  - **缺点：** 由于频繁保存操作（磁盘I/O、可能的同步）的累积开销，会增加总训练时间。可能很快生成大量检查点文件。
+- **低频率（例如，每几千步或每隔几小时）：**
+  - **优点：** 最大限度减少检查点开销对整体训练吞吐量 (throughput)的影响。减缓存储消耗的速度。
+  - **缺点：** 如果检查点之间发生故障，会增加丢失大量计算进度的风险。重新启动意味着可能需要重新计算数小时的工作量。
+
+有几个因素会影响您特定设置的最佳频率：
+
+1. **系统稳定性：** 您预期故障多久发生一次？在不太可靠的硬件上或经常发生抢占的环境中进行训练，可能需要更频繁地保存检查点。
+2. **检查点开销：** 保存一个检查点需要多长时间？这取决于模型大小（包括优化器状态）、选择的保存方法（同步或异步）以及存储后端的速率。同步保存到慢速网络存储的大模型会有高得多的开销。请测量您特定配置下的此时间。
+3. **计算成本：** 计算资源的金钱或时间成本是多少？如果计算非常昂贵，丢失哪怕一小时的工作量也可能是不可接受的，这会促使您选择更高的频率。
+4. **训练阶段：** 您可以考虑动态频率。例如，在训练初期（可能不太稳定）阶段更频繁地保存检查点，而在训练稳定后减少频率。
+
+触发检查点的常见策略包括：
+
+- **基于迭代：** 每`N`个训练步保存一次。这提供了训练进度方面的可预测间隔。
+
+  ```python
+  # PyTorch训练循环中的示例
+  import torch
+  import os
+
+  SAVE_EVERY_N_STEPS = 1000
+  checkpoint_dir = "/path/to/checkpoints"
+  global_step = 0 # 假设此计数器在每个训练步骤中递增
+
+  # 在您的训练循环内部...
+  # optimizer.step()
+  # scheduler.step()
+  global_step += 1
+
+  if global_step % SAVE_EVERY_N_STEPS == 0:
+      # 构建检查点状态字典
+      state = {
+          'step': global_step,
+          'model_state_dict': model.state_dict(),
+          'optimizer_state_dict': optimizer.state_dict(),
+          # 添加调度器状态、随机状态等。
+      }
+      checkpoint_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
+      print(f"Saving checkpoint to {checkpoint_path} at step {global_step}")
+      # 在实际场景中，使用保存函数，可能异步
+      # torch.save(state, checkpoint_path)
+      # 考虑在此处添加存储管理逻辑（见下文）
+      pass # 实际保存和管理的占位符
+  ```
+- **基于时间：** 每`H`小时保存一次。这实现起来简单，但在检查点之间训练进度的数量上可预测性较低，因为迭代速率可能变化。
+- **组合方式：** 每`N`步保存一次，*或* 每`H`小时保存一次，以先发生者为准。这为防止进度过慢和长时间未保存提供了保障。
+
+通常需要进行实验。从一个合理的频率开始（例如，每1000-5000步或每1-2小时），并根据观察到的稳定性及测量的开销进行调整。
+
+### 管理检查点存储
+
+LLM检查点，包含模型权重 (weight)、优化器状态，并可能包含梯度统计信息（特别是使用ZeRO Stage 3时），会非常大，根据模型大小和分布式训练策略，可从千兆字节到太兆字节不等。在长时间训练运行中创建的每一个检查点都进行存储通常不切实际，因为有存储成本和容量限制。
+
+**存储位置的权衡：**
+
+- **本地磁盘：** 提供最快的I/O，最大限度减少同步检查点开销。但是，存储受节点容量限制，且不具备容错性；如果节点发生故障，除非在别处有副本，否则检查点可能会丢失。
+- **网络文件系统（NFS、Lustre）：** 提供跨节点的共享访问，对分布式训练来说必不可少，因为任何一个进程都可能保存或加载。I/O性能因系统配置和负载而异。通常比本地SSD慢。
+- **云对象存储（S3、GCS、Azure Blob）：** 提供几乎无限的可扩展性、高持久性和可访问性。通常是存储超大检查点和长期存储的最实用选择。但是，I/O延迟通常高于本地或NFS，使得异步检查点（在后台线程/进程中保存）非常受推崇，以避免阻塞训练。成本基于存储容量和数据传输。
+
+**保留策略：**
+
+由于存储所有检查点不可行，您需要一个策略来决定保留哪些、丢弃哪些。
+
+1. **仅保留最新：** 最简单的策略。保存新检查点后，删除上一个。
+   - **优点：** 存储使用量最小。
+   - **缺点：** 没有历史记录。如果最新检查点损坏或代表短暂的不稳定状态，您无法回滚。
+2. **保留最后`K`个：** 保留最近的`K`个检查点。当保存检查点`N`时，删除检查点`N-K`。
+   - **优点：** 提供有限的回滚能力。平衡存储和安全性。
+   - **缺点：** 需要恰当选择`K`（例如，`K=3`或`K=5`）。仍然主要基于时间，不一定基于性能。
+3. **基于验证保留最佳`M`个：** 定期监控一个验证指标（例如，困惑度）。保存与迄今观察到的`M`个最佳验证分数相关的检查点。这通常补充了保留最新检查点(s)的做法。
+   - **优点：** 保留了表现良好的模型状态，对后续任务或分析有用。
+   - **缺点：** 需要将验证集成到训练循环中，并可能在常规频率计划之外保存检查点。如果验证不频繁，则不能保证保存绝对*最新*的状态。
+4. **保留最新 + 最佳：** 一种常见的混合方法。始终保留最新的检查点以立即恢复，并根据验证指标保留表现最好的前`M`个检查点。
+5. **保留特定里程碑：** 除了基于时间近期的策略外，在特定的重要步骤（例如，1万、5万、10万步）保留检查点，以供长期参考或实验。
+
+实施保留通常包括列出存储位置中现有的检查点，根据所选标准（步数、时间戳、验证分数）对其进行排序，并删除超出保留窗口的检查点。
+
+```python
+# 保留最后K个检查点的示例逻辑
+import os
+import glob
+import re
+
+checkpoint_dir = "/path/to/checkpoints"
+KEEP_LAST_K = 3
+
+def manage_checkpoints(checkpoint_dir, keep_last_k):
+    """删除较旧的检查点，只保留指定数量。"""
+    checkpoints = glob.glob(os.path.join(checkpoint_dir, "step_*.pt"))
+
+    # 提取步数，处理可能不匹配的文件
+    steps = []
+    for ckpt in checkpoints:
+        match = re.search(r"step_(\d+)\.pt$", os.path.basename(ckpt))
+        if match:
+            steps.append((int(match.group(1)), ckpt))
+
+    # 按步数排序（降序）
+    steps.sort(key=lambda x: x[0], reverse=True)
+
+    # 确定要删除的检查点
+    if len(steps) > keep_last_k:
+        checkpoints_to_delete = [ckpt_path for step, ckpt_path in steps[keep_last_k:]]
+        print(f"Found {len(steps)} checkpoints. Deleting {len(checkpoints_to_delete)} older checkpoints.")
+        for ckpt_path in checkpoints_to_delete:
+            try:
+                os.remove(ckpt_path)
+                print(f"Deleted {ckpt_path}")
+            except OSError as e:
+                print(f"Error deleting {ckpt_path}: {e}")
+
+# 在成功保存新检查点后调用此函数
+# manage_checkpoints(checkpoint_dir, KEEP_LAST_K)
+```
+
+> 流程展示了在保存新检查点后进行的检查点保留策略检查。
+
+最终，频率和存储管理的选择取决于对您的训练环境的稳定性、性能特点、计算成本以及对潜在数据丢失的容忍度的仔细评估。使用明确定义的保存机制，结合基于新近度和性能的保留策略，是大型LLM训练的常见做法。
+
+## 参考资料
+
+- [DeepSpeed: System Optimizations for Large-Scale Model Training](https://dl.acm.org/doi/10.5555/3446702.3446726) — Samyam Rajbhandari, Cong Guo, Jeff Rasley, Shaden Smith, Yuxiong He (2020)
+  Journal: OSDI '20: 14th USENIX Symposium on Operating Systems Design and Implementation; Publisher: USENIX Association; Pages: 171-186; DOI: [10.5555/3446702.3446726](https://doi.org/10.5555/3446702.3446726)
+  详细介绍了大规模模型训练的系统优化，包括在分布式环境中管理模型状态和实现容错的策略。
+- [Saving and Loading Checkpoints for Distributed PyTorch Applications](https://pytorch.org/tutorials/recipes/distributed_data_parallel_with_ddp.html#saving-and-loading-checkpoints-for-distributed-pytorch-applications) — PyTorch Documentation (2024)
+  Publisher: PyTorch
+  提供了在分布式PyTorch应用中保存和加载模型检查点的官方指导，涵盖了各种策略和最佳实践。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  提供了设计可靠和可扩展分布式系统的基本见解，其原则直接适用于大规模机器学习中的容错和数据管理。
+- [Best practices for machine learning operations (MLOps) on Google Cloud](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Google Cloud (2024)
+  Publisher: Google Cloud
+  概述了Google Cloud上的MLOps最佳实践，包括如何管理和存储模型检查点等工件，以实现高效可靠的训练工作流。

@@ -1,0 +1,53 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "long-short-term-memory-lstm"
+lesson: "lstm-updating-cell-state"
+sourceId: 2572
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-5-long-short-term-memory-lstm/lstm-updating-cell-state"
+title: "更新细胞状态"
+description: "解释细胞状态如何基于遗忘门和输入门进行修改。"
+order: 5
+plots: []
+sourceHash: "7262a4f638ac09e7bcfb26ee463304e3526639c30b68ea098d19c03ec2d99135"
+sourceCorrections: []
+---
+
+LSTM单元通过结合遗忘门（用于确定从先前状态中舍弃哪些信息）和输入门（用于识别哪些新的相关信息）的信息来更新其细胞状态$C_t$。这个更新过程对LSTM维持长距离依赖的能力非常重要。
+
+回顾一下之前的步骤：
+
+1. **遗忘门** ($f_t$) 为先前的细胞状态$C_{t-1}$中的每个数值计算出0到1之间的值。接近1的值表示“保留此信息”，而接近0的值表示“遗忘此信息”。
+2. **输入门** 决定了要更新哪些值（$i_t$，0到1之间的值），并生成了一个新的候选值向量 (vector)（$\tilde{C}_t$，通常是-1到1之间的值），这些值可能被添加到状态中。
+
+细胞状态更新以直接但有效的方式组合这些部分。首先，旧的细胞状态$C_{t-1}$与遗忘门$f_t$的输出进行逐元素相乘。这会选择性地舍弃标记 (token)为遗忘的信息。
+
+$\text{被遗忘的状态} = f_t \odot C_{t-1}$
+
+其次，候选值$\tilde{C}_t$与输入门$i_t$的输出进行逐元素相乘。这只会选择新候选信息中相关的部分。
+
+$\text{选定的新信息} = i_t \odot \tilde{C}_t$
+
+最后，这两个结果进行逐元素相加，以形成更新后的细胞状态$C_t$：
+
+$C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$
+
+此处，$\odot$表示逐元素相乘（哈达玛积）。
+
+> 图示了LSTM细胞状态($C_t$)的更新运作方式。先前的状态($C_{t-1}$)由遗忘门($f_t$)缩放，候选状态($\tilde{C}_t$)由输入门($i_t$)缩放，然后将结果相加。
+
+这种加性更新机制与简单RNN中的更新规则有很大区别，简单RNN主要包含矩阵乘法。细胞状态的作用类似传送带。如果遗忘门对这些部分设置为接近1，且输入门接近0，则信息可以基本不受干扰地沿着它传输。反之，旧信息可以完全舍弃（$f_t \approx 0$），新信息可以完全融入（$i_t \approx 1$）。这种结构使得梯度更容易在时间上反向传播 (backpropagation)，而不会像简单RNN中那样快速消失或爆炸。通过门控加法和逐元素乘法控制信息流动，LSTM能够保留误差信号更长时间，从而实现对跨越较长时段依赖的学习。细胞状态实质上承载着长期记忆，它在每个时间步都根据当前输入和先前的隐藏状态进行有选择的修改。
+
+## 参考资料
+
+- [Long Short-Term Memory](https://doi.org/10.1162/neco.1997.9.8.1735) — Sepp Hochreiter, Jürgen Schmidhuber (1997)
+  Journal: Neural Computation; Publisher: MIT Press; Volume: 9; Pages: 1735-1780; DOI: [10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735)
+  介绍长短期记忆 (LSTM) 架构的开创性论文，详细阐述了其单元状态更新机制和门控。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本全面的深度学习教科书，涵盖了深度学习的理论基础，包括关于循环神经网络和 LSTM 架构的详细章节。
+- [Recurrent Neural Networks (RNNs) and LSTMs (Lecture Slides)](http://web.stanford.edu/class/cs224n/2023/slides/cs224n-2023-lecture06-rnn-lstm.pdf) — Tatsunori Hashimoto, Christopher Manning (2023)
+  Publisher: Stanford University
+  斯坦福大学 CS224N 课程的讲义清晰深入地解释了 LSTM，包括单元状态更新和梯度流优势。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的指南，包含对 LSTM 架构及其组件的清晰解释，有助于理解其应用和功能。

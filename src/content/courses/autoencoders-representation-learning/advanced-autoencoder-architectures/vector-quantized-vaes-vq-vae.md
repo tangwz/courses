@@ -1,0 +1,107 @@
+---
+course: "autoencoders-representation-learning"
+chapter: "advanced-autoencoder-architectures"
+lesson: "vector-quantized-vaes-vq-vae"
+sourceId: 2879
+sourceUrl: "https://apxml.com/zh/courses/autoencoders-representation-learning/chapter-5-advanced-autoencoder-architectures/vector-quantized-vaes-vq-vae"
+title: "向量量化变分自编码器 (VQ-VAEs)"
+description: "了解VQ-VAEs如何通过向量量化使用离散潜表示。"
+order: 4
+plots: []
+sourceHash: "73e26ba091bd86523ae913358d4f54e6b87f13684ef3634d67f191dcdcf0ad6e"
+sourceCorrections: []
+---
+
+标准变分自编码器（VAEs）处理连续潜变量，通常从高斯分布中采样。然而，在某些情况下，离散的潜表示更为自然或有益。例如，自然语言等领域，基本单位（词、字符）是离散的；或者我们需要更具结构、可能是符号化的潜空间的任务。此外，连续VAEs有时会遇到“后验坍塌”问题，即解码器学会忽略潜变量，尤其是在与强大的自回归 (autoregressive)解码器结合使用时。
+
+向量 (vector)量化 (quantization)变分自编码器（VQ-VAEs）通过向量量化引入离散潜空间来解决此问题。与标准VAE中将输入映射到连续分布的参数 (parameter)（如均值和方差）不同，VQ-VAE编码器将输入映射到连续向量，然后该向量被吸附到学习到的有限码本（也称嵌入 (embedding)空间）中*最近*的向量。
+
+### 架构与机制
+
+VQ-VAE由三个主要组成部分构成：
+
+1. **编码器：** 类似于其他自编码器，该网络 $f$ 接收输入 $x$ 并生成一个连续输出向量 (vector)（或张量）$z_e(x) \in \mathbb{R}^D$。与标准VAE不同， $z_e(x)$ 不被解释为分布的参数 (parameter)，而是D维空间中的一个点。
+2. **码本（嵌入 (embedding)空间）：** 这是一个可学习的集合 $E = \{e_i\}_{i=1}^K$，其中每个 $e_i \in \mathbb{R}^D$ 是一个嵌入向量。码本的大小 $K$ 决定了可能的离散潜状态数量。$D$ 是每个嵌入向量的维度。
+3. **解码器：** 该网络 $g$ 接收码本中的一个向量，旨在重建原始输入 $x$。
+
+核心操作是连接编码器输出与码本的**量化 (quantization)**步骤。对于给定的编码器输出 $z_e(x)$，我们使用欧几里得距离寻找最近码本向量 $e_k$ 的索引 $k$：
+
+
+$$
+k = \arg \min_i \| z_e(x) - e_i \|_2^2
+$$
+
+
+解码器的输入是所选码本向量本身，$z_q(x) = e_k$。这个 $e_k$（或有时仅是索引 $k$）表示输入 $x$ 的离散潜表示。
+
+### 梯度问题与直通估计器
+
+一个重要挑战立即出现：用于量化 (quantization)的 $\arg \min$ 操作是不可微分的。选择最近的向量 (vector)涉及一个硬决策，其梯度几乎处处为零，这会阻止训练期间通过标准反向传播 (backpropagation)从解码器到编码器的梯度流动。
+
+VQ-VAEs 巧妙地通过一种\*\*直通估计器（STE）\*\*的变体来规避此问题。核心思路是：
+
+- **前向传播：** 执行所述的量化：计算 $z_e(x)$，找到最近邻 $e_k$，并将 $z_q(x) = e_k$ 传递给解码器。
+- **反向传播：** 假设量化步骤仅仅是一个恒等函数。将解码器输入（$z_q$）接收到的梯度 $\nabla_{z_q} L$ 直接复制回编码器输出（$z_e$）。即，设置 $\nabla_{z_e} L = \nabla_{z_q} L$。
+
+这使得解码器的重建误差信号能够回流以更新编码器权重 (weight)，尽管量化步骤本身没有可用的梯度。
+
+### VQ-VAE损失函数 (loss function)
+
+训练VQ-VAE涉及同时优化编码器、解码器和码本向量 (vector)。损失函数包含三个项：
+
+1. **重建损失 ($L_{rec}$):** 这是标准的自编码器损失，衡量原始输入 $x$ 与解码器输出 $\hat{x} = g(z_q(x))$ 之间的差异。根据数据类型，这可以是连续数据的均方误差（MSE）或离散数据（如像素值被视为分类的图像）的交叉熵。
+2. **码本损失 ($L_{codebook}$):** 该项更新码本向量 $e_i$。目标是将所选码本向量 $e_k$ 移近选择它的编码器输出 $z_e(x)$。为防止编码器输出任意增大以使该项最小化（因为编码器权重 (weight)不受此特定损失项更新），编码器输出使用停止梯度操作符（`sg`）被视为常数。
+
+   
+   $$
+   L_{码本} = \| \text{sg}[z_e(x)] - e_k \|_2^2
+   $$
+   
+
+   停止梯度 `sg[v]` 在前向传播时不变地传递 `v`，但在反向传播 (backpropagation)时梯度为零，有效截断通过 `v` 的梯度流动。
+3. **承诺损失 ($L_{commit}$):** 该项规范编码器输出，鼓励其保持接近所选码本向量 $e_k$。这可以防止 $z_e(x)$ 波动过大，并确保编码器“承诺”于一个特定的码本向量。它也使用停止梯度操作符，但这次作用于码本向量，因此梯度只影响编码器。此损失通常由超参数 (parameter) (hyperparameter) $\beta$ 加权。
+
+   
+   $$
+   L_{承诺} = \beta \| z_e(x) - \text{sg}[e_k] \|_2^2
+   $$
+   
+
+   $\beta$ 的常见值在0.1到2.0之间。
+
+总损失是这些部分的和：
+
+
+$$
+L = L_{重建} + L_{码本} + L_{承诺}
+$$
+
+
+注意，码本损失使嵌入 (embedding) $e_k$ 靠近编码器输出 $z_e(x)$，而承诺损失使编码器输出 $z_e(x)$ 靠近嵌入 $e_k$。STE 处理重建损失回流到编码器的梯度。
+
+> VQ-VAE的高级架构。前向传播计算编码器输出 $z_e(x)$，通过量化 (quantization)找到最近的码本向量 $e_k$，从而得到 $z_q(x)$，然后进行解码。虚线箭头表示反向传播期间的梯度流动，直通估计器（STE）将重建梯度从 $z_q$ 复制到 $z_e$。独立的梯度更新码本并强制执行承诺。
+
+### 优势与应用
+
+VQ-VAEs 提供以下几点益处：
+
+- **真正的离散潜变量：** 它们学习真正的离散表示，不同于从连续空间采样的标准VAEs。这对于建模固有离散数据或提高可解释性有益。
+- **缓解后验坍塌：** 离散瓶颈迫使模型使用潜代码，使得VQ-VAEs较少出现VAEs中有时观察到的后验坍塌问题，尤其是在与强大解码器结合使用时。
+- **高质量生成：** 尽管VQ-VAE本身通常不直接用于通过随机采样索引进行生成（因为没有像VAE中那样施加先验，如高斯分布），但学习到的离散代码可以作为强大次级生成模型的输入。例如，可以在VQ-VAE编码器生成的离散潜代码序列上训练一个自回归 (autoregressive)模型（如PixelCNN或Transformer）。从这个自回归先验中采样会生成新的代码序列，然后这些序列可以通过训练好的VQ-VAE解码器合成高保真图像、音频（例如，用于WaveNet的变体中）或其他数据类型。这种两阶段方法（VQ-VAE + 自回归先验）在生成任务中产生了先进的结果。VQ-VAE-2模型是一个著名实例。
+
+### 挑战
+
+- **码本大小：** 选择合适的码本大小 $K$ 很重要，且依赖于数据。过小会限制表示能力；过大则增加复杂性并有码本坍塌（许多嵌入 (embedding)向量 (vector)从未被选中）的风险。
+- **超参数 (parameter) (hyperparameter)调优：** 承诺损失权重 (weight) $\beta$ 需要仔细调整。
+- **码本坍塌：** 训练期间，如果某些码本向量从未是任何编码器输出的最近向量，它们可能会变得不活跃或“死亡”。存在缓解此问题的方法，例如定期重置未使用的代码。
+
+总之，VQ-VAEs 通过采用向量量化 (quantization)学习到的离散潜空间，为标准VAEs提供了一个有说服力的替代方案。它们使用直通估计器克服了量化的不可微分性，并依赖于涉及重建、码本和承诺项的特定损失结构。它们学习有意义的离散表示的能力使它们成为强大生成模型的重要构成，特别是在图像和音频合成中。
+
+## 参考资料
+
+- [Neural Discrete Representation Learning](https://arxiv.org/abs/1711.00937) — Aaron van den Oord, Oriol Vinyals, Koray Kavukcuoglu (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1711.00937](https://doi.org/10.48550/arXiv.1711.00937)
+  介绍矢量量化变分自编码器（VQ-VAE）及其架构、训练和理论基础的开创性论文。
+- [Generating Diverse High-Fidelity Images with VQ-VAE-2](https://arxiv.org/abs/1906.00446) — Ali Razavi, Aaron van den Oord, Oriol Vinyals (2019)
+  Journal: Advances in Neural Information Processing Systems 32 (NeurIPS 2019); DOI: [10.48550/arXiv.1906.00446](https://doi.org/10.48550/arXiv.1906.00446)
+  提出一种用于生成高保真图像的多尺度VQ-VAE架构（VQ-VAE-2），展示了先进的结果。

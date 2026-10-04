@@ -1,0 +1,80 @@
+---
+course: "intro-diffusion-models"
+chapter: "conditional-generation-diffusion"
+lesson: "text-conditioning-basics"
+sourceId: 5445
+sourceUrl: "https://apxml.com/zh/courses/intro-diffusion-models/chapter-6-conditional-generation-diffusion/text-conditioning-basics"
+title: "文本条件要点"
+description: "介绍如何将文本嵌入（例如，来自CLIP的）加入扩散模型中。"
+order: 5
+plots: []
+sourceHash: "c0b2c69937a64341397fd5627abc2132e5feff6f8d916ce32bd168270cf7e0b3"
+sourceCorrections: []
+---
+
+文本条件为生成模型提供了强大且灵活的控制方式。与分类器引导和无分类器引导（CFG）等将生成引导至预定义类别的方法不同，文本条件允许更丰富、更灵活的控制。不再仅仅指定“猫”或“狗”这样的类别标签，而是可以提供“一只在雪中玩耍的西伯利亚哈士奇的逼真图像”等详细描述。扩散模型会尝试生成对应的图像。这种能力是DALL-E 2、Imagen和Stable Diffusion等现代文本到图像系统的核心组成部分。
+
+核心难题在于弥合人类语言（文本）与神经网络 (neural network)数值域之间的差异。U-Net模型在表示图像和噪声的张量上运行，它如何理解句子的含义呢？答案在于**文本嵌入 (embedding)**。
+
+### 将文本表示为向量 (vector)
+
+正如我们将图像表示为像素值网格一样，我们也需要一种方法将文本提示转换为有意义的数值向量，或称嵌入 (embedding)。目标是创建这样的嵌入：含义相似的提示在嵌入空间中生成彼此接近的向量。
+
+创建文本嵌入有多种方法，从TF-IDF和Word2Vec等早期方法，到BERT等更先进的基于Transformer的模型。然而，对于条件生成图像模型而言，一种特别有效的方法是使用专门训练来连接文本和图像的模型。
+
+一个重要的例子是**CLIP（对比语言-图像预训练 (pre-training)）**。CLIP在一个包含大量图像-文本对的数据集上进行训练。它的目标是学习图像和文本的转换，使得文本描述的嵌入与其对应图像的嵌入在共享潜在空间中彼此接近。这种联合训练使得CLIP的文本编码器特别适合图像生成任务，因为它的嵌入能够捕捉文本中描述的视觉内容。当我们将“一个红苹果”这样的文本提示输入CLIP的文本编码器时，它会输出一个向量 $y$，该向量以与视觉数据对齐 (alignment)的方式表示该短语的语义。
+
+### 将文本嵌入 (embedding)送入扩散模型
+
+一旦我们有了表示所需输出的文本嵌入 $y$，我们就需要将其整合到扩散模型的U-Net中。回想一下，扩散模型中的标准U-Net通常将带噪声图像 $x_t$ 和当前时间步 $t$ 作为输入来预测噪声 $\epsilon$。对于文本条件，U-Net必须进行调整以接受文本嵌入 $y$ 作为额外输入。
+
+网络的预测任务由此变为估计文本条件下的噪声：
+
+
+$$
+\epsilon_\theta(x_t, t, y)
+$$
+
+
+这里，$\epsilon_\theta$ 表示由权重 (weight) $\theta$ 参数 (parameter)化的U-Net。
+
+在逆向扩散过程（采样）中，工作流程通常如下：
+
+1. **编码提示：** 用户提供文本提示（例如，“一张戴太阳镜猫咪的高分辨率照片”）。该提示被送入预训练 (pre-training)的文本编码器（如CLIP的）以获得条件向量 (vector) $y$。
+2. **迭代去噪：** 从随机噪声 $x_T$ 开始，模型从 $t=T$ 迭代倒退到 $t=1$。
+3. **条件噪声预测：** 在每一步 $t$，U-Net接收当前带噪声图像 $x_t$、时间步 $t$ 的嵌入，以及文本嵌入 $y$。它预测噪声 $\epsilon_\theta(x_t, t, y)$，当此噪声去除后， $x_t$ 可能会更接近与 $y$ 中描述相符的图像。
+4. **去噪步骤：** 使用预测噪声 $\epsilon_\theta(x_t, t, y)$ 于逆向扩散更新规则中（例如，DDPM或DDIM更新）以估计 $x_{t-1}$。
+
+以下图表展示了在逆向过程中，文本嵌入如何在噪声预测步骤中使用：
+
+> 该流程展示了文本提示如何被编码为嵌入 $y$，然后与带噪声图像 $x_t$ 和时间步 $t$ 一同作为U-Net的输入，用于预测条件噪声。
+
+### 与无分类器引导的互动
+
+文本条件本身就很强大，但它通常与我们之前讨论过的无分类器引导（CFG）结合使用。为了启用CFG，扩散模型通常在条件提示 ($y$) 上进行训练，偶尔也会在省略条件信息的情况下进行训练（通常由空提示嵌入 (embedding) $y_{\emptyset}$ 表示）。
+
+在采样过程中，U-Net在每一步执行两次预测：
+
+1. 条件预测：$\epsilon_\theta(x_t, t, y)$
+2. 无条件预测：$\epsilon_\theta(x_t, t, y_{\emptyset})$
+
+用于去噪步骤的最终噪声估计值，通常从这两个预测中推断得出，表达式如下：
+
+
+$$
+\hat{\epsilon} = \epsilon_\theta(x_t, t, y_{\emptyset}) + w \cdot (\epsilon_\theta(x_t, t, y) - \epsilon_\theta(x_t, t, y_{\emptyset}))
+$$
+
+
+其中 $w$ 是引导尺度。这使得采样过程能够更强烈地突出文本提示，通常会生成与描述更匹配的图像。
+
+结合文本条件需要对U-Net架构进行特定修改，以有效地将文本嵌入信息与图像和时间步信息合并。下一节“条件化架构修改”将审视能够实现这种整合的常见技术，如交叉注意力。
+
+## 参考资料
+
+- [Learning Transferable Visual Models From Natural Language Supervision](https://arxiv.org/abs/2103.00020) — Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, and Ilya Sutskever (2021)
+  Journal: arXiv preprint arXiv:2103.00020; DOI: [10.48550/arXiv.2103.00020](https://doi.org/10.48550/arXiv.2103.00020)
+  介绍了CLIP，一个通过大量图像-文本对训练的神经网络，能从自然语言监督中高效学习视觉概念，使其文本编码器在文本到图像条件生成中非常有效。
+- [High-Resolution Image Synthesis with Latent Diffusion Models](https://arxiv.org/abs/2112.10752) — Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, Björn Ommer (2022)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 10674-10685; DOI: [10.48550/arXiv.2112.10752](https://doi.org/10.48550/arXiv.2112.10752)
+  提出了潜在扩散模型，显著降低了高分辨率图像合成的计算需求。详细阐述了通过交叉注意力与文本嵌入（如CLIP）进行条件化的架构，及其与无分类器引导的整合，为Stable Diffusion等模型奠定了基础。

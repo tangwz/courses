@@ -1,0 +1,232 @@
+---
+course: "docker-for-ml-projects"
+chapter: "managing-ml-data-containers"
+lesson: "practice-mounting-data-saving-models"
+sourceId: 5287
+sourceUrl: "https://apxml.com/zh/courses/docker-for-ml-projects/chapter-3-managing-ml-data-containers/practice-mounting-data-saving-models"
+title: "动手实践：挂载数据集和保存模型"
+description: "练习使用卷和绑定挂载为容器提供数据并保存输出成果。"
+order: 7
+plots: []
+sourceHash: "2ee7c138e3ec17cf3a3827d4d7a30ad23e5308dac5c7df1604b5e3ca9e9692a1"
+sourceCorrections: []
+---
+
+此动手练习将绑定挂载和 Docker 卷应用于一个常见的机器学习 (machine learning)流程：使用宿主机上的数据集训练一个简单模型，并将生成的模型成果保存回宿主机或持久卷。
+
+我们将演练一个场景：你本地有一个数据集，以及一个旨在训练模型的 Python 脚本。我们的目标是在容器内部运行这个脚本，为其提供数据并获取训练好的模型，而无需将数据或模型永久嵌入 (embedding)容器镜像本身。
+
+### 前提条件
+
+在开始之前，请确保你已具备：
+
+1. **Docker Desktop 或 Docker Engine 已安装并运行。**
+2. **一个简单的数据集文件。** 在本地目录（例如，`project/data`）中创建一个名为 `data.csv` 的文件，内容如下：
+
+   ```csv
+   feature1,feature2,target
+   1.0,2.0,0
+   1.5,2.5,0
+   3.0,4.0,1
+   3.5,4.5,1
+   ```
+3. **一个基本的 Python 训练脚本。** 在你的项目目录（例如，`project/train.py`）中创建一个名为 `train.py` 的文件：
+
+   ```python
+   import argparse
+   import pandas as pd
+   from sklearn.linear_model import LogisticRegression
+   import joblib
+   import os
+
+   # 设置参数解析器
+   parser = argparse.ArgumentParser(description='Simple scikit-learn model training script.')
+   parser.add_argument('--data_path', type=str, required=True, help='Path to the input CSV dataset.')
+   parser.add_argument('--model_dir', type=str, required=True, help='Directory to save the trained model.')
+
+   # 解析参数
+   args = parser.parse_args()
+
+   # 确保模型目录存在
+   os.makedirs(args.model_dir, exist_ok=True)
+   model_save_path = os.path.join(args.model_dir, 'model.joblib')
+
+   print(f"从以下路径加载数据: {args.data_path}")
+   try:
+       # 加载数据
+       df = pd.read_csv(args.data_path)
+       X = df[['feature1', 'feature2']]
+       y = df['target']
+
+       # 训练一个简单模型
+       print("正在训练模型...")
+       model = LogisticRegression()
+       model.fit(X, y)
+
+       # 保存模型
+       print(f"正在将模型保存到: {model_save_path}")
+       joblib.dump(model, model_save_path)
+
+       print("训练完成，模型已保存。")
+
+   except FileNotFoundError:
+       print(f"错误：数据文件未在 {args.data_path} 找到")
+       exit(1)
+   except Exception as e:
+       print(f"发生错误: {e}")
+       exit(1)
+   ```
+4. **一个 Dockerfile。** 在你的项目目录（例如，`project/Dockerfile`）中创建一个名为 `Dockerfile` 的文件：
+
+   ```dockerfile
+   # 使用标准的 Python 基础镜像
+   FROM python:3.9-slim
+
+   # 设置容器内的工作目录
+   WORKDIR /app
+
+   # 安装必要的 Python 库
+   RUN pip install --no-cache-dir scikit-learn==1.0.2 pandas==1.3.5 joblib==1.1.0
+
+   # 将训练脚本复制到容器中
+   COPY train.py .
+
+   # 定义容器的入口点
+   ENTRYPOINT ["python", "train.py"]
+   ```
+
+你的项目目录应类似于这样：
+
+```
+project/
+├── Dockerfile
+├── train.py
+└── data/
+    └── data.csv
+```
+
+### 构建 Docker 镜像
+
+首先，在你的终端中进入项目目录，并构建 Docker 镜像：
+
+```bash
+cd /path/to/project
+docker build -t ml-data-practice .
+```
+
+此命令会基于你的 `Dockerfile` 构建一个标记 (token)为 `ml-data-practice` 的镜像，其中包含 Python、所需库和 `train.py` 脚本。
+
+### 方法一：使用绑定挂载
+
+绑定挂载直接将宿主机上的目录映射到容器内部。这在开发期间通常很方便，因为宿主机上的更改会立即反映在容器内部。
+
+1. **创建一个输出目录：** 在你的宿主机上，创建一个用于保存模型的目录，例如 `project/models`。
+
+   ```bash
+   mkdir /path/to/project/models
+   ```
+2. **使用绑定挂载运行容器：** 在容器内部执行训练脚本，将本地 `data` 目录挂载到容器内部的 `/app/data`，并将本地 `models` 目录挂载到容器内部的 `/app/output`。
+
+   ```bash
+   docker run --rm \
+     -v "$(pwd)/data":/app/data \
+     -v "$(pwd)/models":/app/output \
+     ml-data-practice \
+     --data_path /app/data/data.csv \
+     --model_dir /app/output
+   ```
+
+   - `--rm`: 容器退出时自动移除。
+   - `-v "$(pwd)/data":/app/data`: 将当前工作目录（宿主机）中的 `data` 子目录挂载到容器中的 `/app/data`。
+   - `-v "$(pwd)/models":/app/output`: 将当前工作目录（宿主机）中的 `models` 子目录挂载到容器中的 `/app/output`。
+   - `ml-data-practice`: 要使用的镜像名称。
+   - `--data_path /app/data/data.csv`: 传递给 `train.py` 的参数 (parameter)，指定数据文件在*容器内部*的挂载路径。
+   - `--model_dir /app/output`: 传递给 `train.py` 的参数，指定模型应保存到*容器内部*的路径。
+3. **验证输出：** 容器完成后，检查你的本地 `project/models` 目录。你应该会在那里找到保存的 `model.joblib` 文件。
+
+   ```bash
+   ls /path/to/project/models
+   # 输出应包含: model.joblib
+   ```
+
+绑定挂载在宿主机和容器之间提供直接链接，使本地开发中的数据访问变得直接。然而，它们会创建对宿主机文件结构的依赖，有时会根据操作系统和用户配置导致权限问题。
+
+### 方法二：使用 Docker 卷
+
+Docker 卷由 Docker 自身管理，是处理容器中持久化数据的优选方式，尤其是在生产环境或当你希望将数据生命周期与宿主机解耦时。
+
+1. **创建 Docker 卷：** 我们需要一个卷用于输入数据，另一个用于输出模型。
+
+   ```bash
+   docker volume create ml-input-data
+   docker volume create ml-output-models
+   ```
+2. **填充输入卷：** 与绑定挂载不同，卷不会自动查看宿主机文件。我们需要将数据集复制到 `ml-input-data` 卷中。一种常见方法是使用临时辅助容器：
+
+   ```bash
+   docker run --rm \
+     -v ml-input-data:/volume_data \
+     -v "$(pwd)/data":/host_data \
+     alpine \
+     cp /host_data/data.csv /volume_data/
+   ```
+
+   - 此命令运行一个轻量级的 `alpine` 容器。
+   - 它将我们新的 `ml-input-data` 卷挂载到 `/volume_data`。
+   - 它*还*绑定挂载了我们本地的 `data` 目录到 `/host_data`。
+   - `cp` 命令将数据集从宿主机绑定挂载路径复制到此临时容器内的卷路径。一旦容器退出（`--rm`），数据将保留在 `ml-input-data` 卷中。
+3. **使用卷运行容器：** 现在，运行训练容器，并挂载 Docker 卷。
+
+   ```bash
+   docker run --rm \
+     -v ml-input-data:/app/data \
+     -v ml-output-models:/app/output \
+     ml-data-practice \
+     --data_path /app/data/data.csv \
+     --model_dir /app/output
+   ```
+
+   - `-v ml-input-data:/app/data`: 将 Docker 卷 `ml-input-data` 挂载到容器内部的 `/app/data`。
+   - `-v ml-output-models:/app/output`: 将 Docker 卷 `ml-output-models` 挂载到容器内部的 `/app/output`。
+4. **验证输出：** 模型现在保存在 `ml-output-models` 卷中，而不是直接在你的宿主机文件系统上。要验证，你可以使用另一个临时容器检查卷的内容：
+
+   ```bash
+   docker run --rm \
+     -v ml-output-models:/volume_data \
+     alpine \
+     ls /volume_data
+   ```
+
+   - 此命令将 `ml-output-models` 卷挂载到临时 `alpine` 容器中的 `/volume_data`，并列出其内容。你应该会看到 `model.joblib`。
+
+卷提供了更好的隔离性，并由 Docker 管理，使它们更具可移植性，且不易出现宿主机特定的问题。与绑定挂载相比，填充卷的初始步骤会增加一些复杂性。
+
+### 清理（可选）
+
+如果你不再需要这些 Docker 卷，可以将其移除：
+
+```bash
+docker volume rm ml-input-data ml-output-models
+```
+
+你也可以移除 Docker 镜像：
+
+```bash
+docker image rm ml-data-practice
+```
+
+本次实践练习演示了如何使用绑定挂载和 Docker 卷为容器化的机器学习 (machine learning)脚本提供输入数据并获取输出模型成果。两者之间的选择取决于你的具体需求：绑定挂载通过直接链接到宿主机文件为开发提供便利，而卷则提供持久性，适用于更结构化的工作流程和部署场景。理解如何管理数据是容器化机器学习应用的重要方面。
+
+## 参考资料
+
+- [Use volumes](https://docs.docker.com/storage/volumes/) — Docker Documentation (2024)
+  Publisher: Docker
+  官方文档，解释了Docker卷、其优势以及如何使用它们进行持久数据存储。
+- [Use bind mounts](https://docs.docker.com/storage/bind-mounts/) — Docker Documentation (2024)
+  官方文档，详细介绍了Docker绑定挂载、其功能以及在容器环境中的常见使用场景。
+- [Docker in Action, Third Edition](https://www.manning.com/books/docker-in-action-third-edition) — Jeff Nickoloff and Stephen Kuenzli (2019)
+  Publisher: Manning Publications
+  一本全面介绍Docker基础知识、容器管理和实际应用的书籍，包含数据处理。
+- [Practical MLOps: How to Design, Build, and Sustain Production Machine Learning Systems](https://www.oreilly.com/library/view/practical-mlops/9781098103001/) — Noah Gift and Alfredo Deza (2021)
+  Publisher: O'Reilly Media
+  探讨了机器学习操作的最佳实践，包含机器学习工作流中数据和模型管理的容器化策略。

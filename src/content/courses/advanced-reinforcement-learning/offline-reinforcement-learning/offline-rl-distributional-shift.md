@@ -1,0 +1,56 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "offline-reinforcement-learning"
+lesson: "offline-rl-distributional-shift"
+sourceId: 3485
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-7-offline-reinforcement-learning/offline-rl-distributional-shift"
+title: "挑战：分布偏移"
+description: "理解评估与行为策略不同的策略如何因数据覆盖范围有限而导致错误。"
+order: 3
+plots: []
+sourceHash: "85bda575ddd485c53794fdb6c27e8a9a3e3649451819cc46f350f6f25a36675e"
+sourceCorrections: []
+---
+
+离线强化学习 (reinforcement learning)（RL）的基本限制是我们无法与环境交互以收集新数据。我们局限于一个静态数据集 $\mathcal{D} = \{(s_i, a_i, r_i, s'_i)\}_{i=1}^N$，该数据集可能由不同的策略（或多种策略的组合）收集，称为*行为策略* $\pi_b$。我们的目标是仅使用 $\mathcal{D}$ 来学习一个新的、可能更好的*目标策略* $\pi$（或评估一个已有的策略）。这就是分布偏移成为一个重要阻碍的地方。
+
+分布偏移指的是离线数据集中遇到的状态-动作对分布 $d^{\pi_b}(s, a)$ 与学习到的策略 $\pi$ 如果部署到环境中会产生的状态-动作对分布 $d^{\pi}(s, a)$ 之间的不匹配。
+
+为什么这种不匹配是一个问题？许多标准RL算法，特别是像Q-learning及其深度变体（DQN）这样的离策略方法，都依赖于评估在给定状态下采取动作的预期回报。考虑Q-learning中使用的贝尔曼更新：
+
+
+$$
+Q(s, a) \leftarrow \mathbb{E}_{r, s' \sim \mathcal{D}}[r + \gamma \max_{a'} Q(s', a')]
+$$
+
+
+或者，更准确地说，在离线、函数近似设置中，我们通常在数据集上最小化像均方贝尔曼误差（MSBE）这样的损失：
+
+
+$$
+L(\theta) = \mathbb{E}_{(s, a, r, s') \sim \mathcal{D}} \left[ \left( r + \gamma \max_{a'} Q_{\bar{\theta}}(s', a') - Q_{\theta}(s, a) \right)^2 \right]
+$$
+
+
+这里，$Q_{\theta}$ 是我们的参数 (parameter)化Q函数，$Q_{\bar{\theta}}$ 是一个目标网络。问题出现在术语 $\max_{a'} Q_{\bar{\theta}}(s', a')$ 中。从 $Q_{\theta}$ 派生出的策略 $\pi$（例如，$\pi(s) = \arg\max_a Q_{\theta}(s, a)$）可能会建议在状态 $s'$ 中采取动作 $a'$，而这些状态-动作对在行为策略 $\pi_b$ 下很少或从未一起访问过。也就是说，对于使学到的 $Q_{\bar{\theta}}(s', \cdot)$ 最大化的动作 $a'$，其概率 $d^{\pi_b}(s', a')$ 可能非常低或为零。
+
+在线和标准离策略RL中，如果智能体开始偏好状态 $s'$ 中的一个新动作 $a'$，探索机制（如epsilon-greedy）使其有机会在真实环境中真正*尝试* $(s', a')$ 并接收反馈（奖励 $r'$ 和下一个状态 $s''$）。这使得Q值估计基于实际经验。在离线设置中，这是不可能的。算法只能从 $\mathcal{D}$ 中存在的转换中学习。
+
+### 分布偏移的后果
+
+1. **外推误差：** 神经网络 (neural network)和其他函数近似器在它们训练过的数据分布内进行*插值*时是有效的。然而，当被要求*外推*到远离该分布的输入时，它们通常表现不佳。对分布外（OOD）动作 $a'$ 评估 $Q(s', a')$ 正是这样一种外推任务。结果Q值可能任意不准确。
+2. **过高估计偏差：** Q-learning目标中的 $\max$ 算子 $\max_{a'} Q(s', a')$ 倾向于选择具有最高Q值的动作。如果这些高值中的一些是由于OOD动作上的外推误差，则目标值本身就会错误地过高。这导致对于那些转换*到*OOD动作看起来很好的状态 $s'$ 的状态-动作对 $(s, a)$ 产生*乐观偏差*。这种偏差可以通过自举在学习过程中传播，系统地夸大许多状态的价值估计。
+3. **策略退化：** 基于这些错误乐观的Q值学习策略是有问题的。策略可能会学会偏好那些根据有缺陷的$Q$-函数看起来很好的动作，但如果在真实环境中执行，这些动作实际上会表现不佳，因为由于分布偏移，它们的价值被高估了。
+
+> 分布偏移的图示。离线数据集包含行为策略 $\pi_b$ 访问的状态-动作对（蓝色节点）。标准离策略算法在更新过程中或在推导学习策略 $\pi$ 时，可能需要为数据集中缺失或稀有的动作（例如状态 $s_1$ 中的 $a_2$，红色节点）估计Q值。这种对分布外估计的依赖会带来重大风险。
+
+因此，有效管理分布偏移是离线RL的一个核心主题。算法必须设计为要么阻止策略查询OOD动作，要么纠正此类动作的价值估计，从而确保学习基于可用数据。后续章节将介绍为应对这一挑战而开发的具体算法技术。
+
+## 参考资料
+
+- [Off-Policy Deep Reinforcement Learning without Catastrophic Forgetting](https://arxiv.org/abs/1812.02900) — Scott Fujimoto, David Meger, Doina Precup (2019)
+  Journal: International Conference on Machine Learning (ICML); Pages: 2059-2068; DOI: [10.48550/arXiv.1812.02900](https://doi.org/10.48550/arXiv.1812.02900)
+  提出了批量受限深度Q学习（BCQ），这是一种有影响力的早期算法，通过明确约束学习策略使其接近行为策略来解决分布偏移问题。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton, Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本关于强化学习的权威教科书，提供了Q学习、离策略方法以及使在线交互有价值的基础知识，为理解离线强化学习的挑战提供了必要的背景。

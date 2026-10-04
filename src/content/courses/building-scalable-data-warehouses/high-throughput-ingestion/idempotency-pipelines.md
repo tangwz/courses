@@ -1,0 +1,130 @@
+---
+course: "building-scalable-data-warehouses"
+chapter: "high-throughput-ingestion"
+lesson: "idempotency-pipelines"
+sourceId: 8032
+sourceUrl: "https://apxml.com/zh/courses/building-scalable-data-warehouses/chapter-3-high-throughput-ingestion/idempotency-pipelines"
+title: "数据管道中的幂等性"
+description: "设计保证精确一次处理逻辑的管道"
+order: 2
+plots: []
+sourceHash: "0bf5dc240624859d488a47f936cd9c588ba300471d82e51ecd49a9beee45d93d"
+sourceCorrections: []
+---
+
+对网络可靠性的假设通常会导致分布式系统工程中的数据损坏。在为Snowflake或BigQuery等MPP（大规模并行处理）系统设计高吞吐量 (throughput)数据摄取管道时，必须假设故障会发生。网络数据包会丢失，工作节点会重启，或者连接会超时。为了从这些故障中恢复，管道依赖于重试机制。
+
+然而，盲目重试数据加载操作会带来一个重大风险：数据重复。如果批量加载部分成功，但因网络分区未能确认成功，编排工具将重新发送数据。如果没有处理这种重复的机制，您的数据仓库将包含重复行，导致聚合结果虚高，并使财务或运营指标失效。
+
+幂等性是解决此问题的架构属性。它确保多次执行同一操作会产生与执行一次相同的效果。在数据仓库中，一个幂等管道保证即使将相同的文件或事件流摄取十次，目标表中也只会有一份准确的数据副本。
+
+### 精确一次处理的实现方式
+
+尽管许多消息队列（如Kafka）或事件总线保证“至少一次”交付，分析型数据库为了准确性需要“精确一次”的语义。严格在传输层实现这一点计算成本高昂且复杂。相反，我们在接收端（数据仓库）或转换层实现幂等性。
+
+为了实现幂等性，必须首先定义身份。进入仓库的每条记录都必须具有确定性的唯一标识符。这使得系统能够区分新记录和先前记录的重播。
+
+如果源系统提供可靠的主键（例如UUID或事务数据库中的自增整数），您应该使用它。然而，在高容量日志流或半结构化数据中，明确的唯一键通常缺失。在这些情况下，必须使用记录内容的加密哈希生成一个合成键。
+
+对于由列 $\{c_1, c_2, ..., c_n\}$ 组成的记录 $r$，键 $K$ 的生成方式如下：
+
+$K = \text{哈希}(c_1 || c_2 || ... || c_n)$
+
+其中 $||$ 表示连接。MD5等算法通常足以满足数据工程中非对抗性冲突抵抗的需求，尽管SHA-256提供了更强的保证，但会稍微增加计算性能开销。此哈希用作幂等键。如果相同的数据载荷到达两次，它会生成相同的哈希值，从而使数据仓库能够检测到重复。
+
+### 暂存与合并模式
+
+在列式存储中实现幂等摄取最有效的模式是**暂存-合并**策略。直接向生产表插入数据在大规模场景下是一种反模式，因为它们缺乏有效对传入批次与现有数据进行去重所需的事务隔离。
+
+工作流程分为三个不同阶段：
+
+1. **加载到暂存区：** 数据原始摄取到临时暂存表或临时表中。此处不进行去重；优先考虑高吞吐量 (throughput)写入速度。
+2. **批次去重：** 在暂存表中，使用窗口函数（如`ROW_NUMBER()`）移除重复记录（这些记录可能存在于单个批次内部）。
+3. **合并到目标表：** 清理后的暂存数据被更新或插入（upserted）到最终目标表。
+
+这个`MERGE`操作是幂等性的实施点。数据库引擎尝试根据幂等键匹配源（暂存）表和目标表中的记录。
+
+> 使用暂存层过滤重复数据，使其在到达生产表之前被处理，这是重试安全摄取的逻辑流程。
+
+### ANSI SQL 实现
+
+在现代MPP系统中，SQL `MERGE` 语句提供了一种原子方式来处理此逻辑。通过将合并操作包装在事务中，确保操作要么完全完成，要么回滚，防止部分状态。
+
+假设有一个处理用户事件的摄取管道。以下SQL模式展示了如何处理一个可能因先前失败的运行而包含目标表中已存在记录的批次。
+
+```sql
+-- 步骤1：在暂存区内对传入批次进行去重
+-- 这处理了重试操作*内部*的重复数据
+WITH CleanBatch AS (
+    SELECT 
+        event_id,
+        event_timestamp,
+        payload,
+        -- 如果event_id不可靠，生成确定性哈希
+        MD5(event_id || event_timestamp) as idempotency_key
+    FROM raw_staging_events
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY event_id 
+        ORDER BY ingestion_time DESC
+    ) = 1
+)
+
+-- 步骤2：原子地合并到目标表
+MERGE INTO production_events AS target
+USING CleanBatch AS source
+ON target.event_id = source.event_id
+
+-- 情况A：记录已存在。仅当新数据更新鲜时才更新。
+WHEN MATCHED AND source.event_timestamp > target.event_timestamp THEN
+    UPDATE SET 
+        target.payload = source.payload,
+        target.event_timestamp = source.event_timestamp,
+        target.updated_at = CURRENT_TIMESTAMP()
+
+-- 情况B：记录是新的。插入它。
+WHEN NOT MATCHED THEN
+    INSERT (event_id, event_timestamp, payload, created_at)
+    VALUES (source.event_id, source.event_timestamp, source.payload, CURRENT_TIMESTAMP());
+```
+
+### 分区修剪下的性能
+
+尽管合并模式保证数据完整性，它会引入性能开销。数据库在传入批次和目标表之间执行`JOIN`操作。随着目标表增长到PB级别，扫描整个表来检查是否存在会变得非常慢。
+
+为了保持高吞吐量 (throughput)，合并语句的`ON`子句必须使用表的集群键或分区列。
+
+如果目标表按`event_date`分区，您的合并条件应明确包含此列。这使得查询优化器能够执行**分区修剪**，只扫描相关的微分区，而不是完整数据集。
+
+$Cost_{合并} \propto \frac{大小_{目标}}{数量_{分区}}$
+
+如果没有分区对齐 (alignment)，合并操作的开销将与历史数据量线性增长，最终导致摄取瓶颈。通过将暂存数据与目标分区对齐，您可以确保幂等性的开销相对于批次大小保持不变，而不是相对于总数据量。
+
+### 写入-审计-发布（WAP）模式
+
+对于需要严苛质量门控以及幂等性的环境，写入-审计-发布（WAP）模式提供了一种标准合并的替代方案。这种方法使用在Snowflake或Delta Lake等系统中可以找到的“零拷贝克隆”或快照功能。
+
+1. **写入：** 将数据摄取到生产表的 branched 版本或隐藏分区中。
+2. **审计：** 对此分支运行自动化测试（例如，检查空值、重复项或参照完整性）。
+3. **发布：** 如果审计通过，原子地将分支交换到生产视图中。如果失败，则删除该分支。
+
+WAP提供了更高程度的隔离。如果重试逻辑有缺陷并发送了错误数据，审计阶段会在其污染主命名空间之前捕获它。这将幂等性检查从行级操作转移到分区级操作，这对于大规模批量加载可能更高效。
+
+### 软删除与墓碑记录
+
+幂等性也适用于删除操作。在仅追加架构中，很少发出硬性`DELETE`命令。相反，源系统会发出“墓碑”记录，表示删除的事件。
+
+为了幂等地处理这些，管道必须将墓碑记录视为另一种状态转换。合并逻辑会更新记录的`is_deleted`标志为`TRUE`，而不是删除该行。如果墓碑事件被重播，系统只会再次将该标志设置为`TRUE`。状态保持一致：$f(已删除) = 已删除$。
+
+通过彻底落实这些模式，您可以将网络的可靠性与数据的准确性解耦，使您的摄取管道能够弹性扩展。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449373320/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  分布式系统的基础资料，详细解释了消息队列、事务处理以及实现幂等操作以进行健壮数据处理。
+- [Apache Kafka Documentation: Semantics](https://kafka.apache.org/documentation/#semantics) — The Apache Software Foundation (2024)
+  Apache Kafka 官方文档，阐明了其交付语义，区分了“至少一次”和“恰好一次”，为在数据摄取管道中实现幂等性提供了背景信息。
+- [MERGE](https://docs.snowflake.com/en/sql-reference/sql/merge) — Snowflake Inc. (2024)
+  Snowflake 官方的 SQL MERGE 语句文档，对于在幂等数据加载和 MPP 数据仓库中的分段合并模式中实现 upsert 逻辑至关重要。
+- [Delta Lake](https://delta.io/) — The Linux Foundation (2024)
+  介绍开源 Delta Lake 项目，它提供 ACID 事务、可扩展的元数据处理，以及使用零拷贝克隆实现高级幂等模式（如写入-审计-发布 (WAP)）的能力。

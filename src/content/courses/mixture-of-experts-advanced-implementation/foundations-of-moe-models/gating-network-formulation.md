@@ -1,0 +1,75 @@
+---
+course: "mixture-of-experts-advanced-implementation"
+chapter: "foundations-of-moe-models"
+lesson: "gating-network-formulation"
+sourceId: 7045
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/gating-network-formulation"
+title: "门控网络：公式与作用"
+description: "了解门控网络将token路由到专家的数学公式和运作方式。"
+order: 2
+plots: []
+sourceHash: "b7101a75137485cd3e71c50818b2a21dec33593794a2345063ac007f7e9a1a6d"
+sourceCorrections: []
+---
+
+门控网络是专家混合层（MoE）的控制中心。它的主要职责是检查每个传入的token，并确定现有专家中哪个最适合处理它。这一路由决策并非固定不变；它是一个在训练过程中不断调整的学习功能，使得模型能够形成复杂的、数据驱动的信息通道。不同于简单的开关，门控网络提供一组连续值分数，这些分数可以被视为将token分配给每个专家的置信度。
+
+### 架构与数学公式
+
+其本质上，门控网络是一个简单的**前馈网络**，通常只是一个应用于token输入嵌入 (embedding)的线性层，之后是一个softmax函数。这种设计使得路由机制计算开销低，这一点很重要，因为它需要在每个MoE层的每个token上执行。
+
+让我们考虑一个由向量 (vector) $x \in \mathbb{R}^d$ 表示的单个输入token，其中 $d$ 是模型的隐藏维度。门控网络有一个可训练的权重 (weight)矩阵 $W_g \in \mathbb{R}^{d \times N}$，其中 $N$ 是该层专家的总数。
+
+第一步是通过将输入token投影到门控权重上来计算每个专家的“logits”或分数：
+
+
+$$
+H = x \cdot W_g
+$$
+
+
+结果 $H$ 是一个长度为 $N$ 的向量，其中每个元素 $H_i$ 代表将token $x$ 分配给专家 $i$ 的原始分数。为了将这些分数转换为概率分布，我们应用softmax函数：
+
+
+$$
+g(x) = \text{softmax}(H) = \frac{\exp(H)}{\sum_{j=1}^{N} \exp(H_j)}
+$$
+
+
+输出向量 $g(x)$ 包含门控权重。每个分量 $g(x)_i$ 是一个介于0和1之间的值，所有分量之和为1。这个向量代表了token在所有专家上的软分配。
+
+> 门控网络处理输入token嵌入，以生成一个权重向量，其中包含每个专家的权重。
+
+### 通过Top-k路由实现稀疏性
+
+尽管softmax函数产生一个密集的概率向量 (vector)，但MoE的一个主要目标是实现稀疏计算，这意味着对于任何给定的token，只有一小部分专家被激活。为了实现这一点，我们应用**top-k选择**机制。门控网络不是使用所有 $N$ 个专家，而是从logits向量 $H$ 中选择分数最高的 `k` 个专家。`k` 的值是一个重要的超参数 (parameter) (hyperparameter)，通常设置为1或2。
+
+例如，当 `k=2` 时，路由模块会识别出logits最高的两个专家。对于这个特定的token，所有其他专家都被忽略，这确保了计算成本与 `k` 成比例，而不是与专家总数 $N$ 成比例。
+
+这种选择过程带来一个问题：`TopK` 操作是不可微分的，这使得通过反向传播 (backpropagation)进行训练变得复杂。实际操作中，梯度仅通过与选定的top-k专家的连接传递。然后，选定专家的门控权重 (weight) $g(x)_i$ 用于缩放其输出。一个常见的方法是重新归一化 (normalization)这些 `k` 个权重，使它们总和为1。MoE层对输入 $x$ 的最终输出是选定专家输出的加权和：
+
+
+$$
+y(x) = \sum_{i \in \text{TopK}(H)} \frac{\exp(H_i)}{\sum_{j \in \text{TopK}(H)} \exp(H_j)} \cdot E_i(x)
+$$
+
+
+### 路由模块的训练
+
+门控网络的权重 (weight)矩阵 $W_g$ 并非固定不变；它与模型的其余部分一起训练。网络的总体训练损失通过选定的 `k` 个专家进行反向传播 (backpropagation)，而且更重要的是，还会反向传播回门控网络本身。
+
+这种端到端的训练过程教导路由模块其作用。如果将特定类型的token路由到特定专家持续降低模型的损失，梯度将更新 $W_g$，以增加未来这种分配的概率。这个反馈循环促使专家们分工。门控网络学会识别token嵌入 (embedding)中的特征，这些特征能预测哪个专家最有效，从而有效地成为一个学习到的交通控制器，优化信息流经模型的专用通道。
+
+然而，这个过程也面临一些问题。简单的训练设置可能导致路由不平衡，即门控网络偏向少数专家，使其他专家未被训练。这个问题通过辅助损失来解决，我们将在“负载均衡与辅助损失”一节中介绍。
+
+## 参考资料
+
+- [Hierarchical mixtures of experts and the EM algorithm](https://doi.org/10.1162/neco.1994.6.2.181) — Michael I. Jordan, Robert A. Jacobs (1994)
+  Journal: Neural Computation; Publisher: MIT Press; Volume: 6; Pages: 181-214; DOI: [10.1162/neco.1994.6.2.181](https://doi.org/10.1162/neco.1994.6.2.181)
+  建立了专家混合模型的基础框架，包括门控网络在数据流导向中的作用。
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了稀疏门控专家混合层，这是对扩展专家混合模型的重要贡献，详细阐述了Top-k路由和负载均衡。
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://www.jmlr.org/papers/volume23/21-0990/21-0990.pdf) — William Fedus, Barret Zoph and Noam Shazeer (2022)
+  Journal: The Journal of Machine Learning Research; Publisher: Microtome Publishing; Volume: 23; Pages: 1-34; DOI: [10.5555/3618408.3618585](https://doi.org/10.5555/3618408.3618585)
+  描述了Transformer模型中稀疏激活专家混合层的实际应用和扩展，提供了关于路由和训练稳定性的见解。

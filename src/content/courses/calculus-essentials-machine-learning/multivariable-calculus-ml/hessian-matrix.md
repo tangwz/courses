@@ -1,0 +1,87 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "multivariable-calculus-ml"
+lesson: "hessian-matrix"
+sourceId: 1378
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-3-multivariable-calculus-ml/hessian-matrix"
+title: "海森矩阵"
+description: "二阶偏导数海森矩阵的介绍以及它在优化中的作用。"
+order: 5
+plots: []
+sourceHash: "2e4ea78320d6ba527bd17ff34157b0d8c2fe94716869d144f8b89f123c76b457"
+sourceCorrections: []
+---
+
+梯度向量 (vector)($\nabla f$)指明多元函数$f$最陡峭的*上升*方向，但它只提供一阶信息。它表示如何迈步才能使函数值增加最多（或者如果我们沿着相反方向移动，即$-\nabla f$，则使其减少）。然而，它没有充分说明函数曲面在给定点的*形状*或*曲率*。曲面是像碗一样向上弯曲，像圆顶一样向下弯曲，还是像马鞍一样扭曲？
+
+为了理解这种曲率，我们需要查看二阶偏导数。正如单变量微积分中的二阶导数$f''(x)$告诉我们曲线的凹凸性一样，多元函数的二阶偏导数能帮助我们了解函数图（通常在高维中被视为曲面）的局部形状。
+
+这些二阶偏导数被组织成一个矩阵，称为**海森矩阵**，通常用$H$或$\nabla^2 f$表示。对于一个具有$n$个输入变量的函数$f(x_1, x_2, ..., x_n)$，海森矩阵是一个$n \times n$的矩阵，定义如下：
+
+
+$$
+H = \nabla^2 f =
+\begin{bmatrix}
+\frac{\partial^2 f}{\partial x_1^2} & \frac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_1 \partial x_n} \\
+\frac{\partial^2 f}{\partial x_2 \partial x_1} & \frac{\partial^2 f}{\partial x_2^2} & \cdots & \frac{\partial^2 f}{\partial x_2 \partial x_n} \\
+\vdots & \vdots & \ddots & \vdots \\
+\frac{\partial^2 f}{\partial x_n \partial x_1} & \frac{\partial^2 f}{\partial x_n \partial x_2} & \cdots & \frac{\partial^2 f}{\partial x_n^2}
+\end{bmatrix}
+$$
+
+
+海森矩阵的每个元素$(H)_{ij}$是二阶偏导数$\frac{\partial^2 f}{\partial x_i \partial x_j}$。这表示偏导数$\frac{\partial f}{\partial x_j}$相对于变量$x_i$的变化率。
+
+- 对角线元素$\frac{\partial^2 f}{\partial x_i^2}$衡量沿着每个坐标轴$x_i$方向的曲率。
+- 非对角线元素$\frac{\partial^2 f}{\partial x_i \partial x_j}$（其中$i \neq j$）被称为*混合偏导数*。它们衡量当您沿着另一个变量($x_i$)的方向移动时，相对于一个变量($x_j$)的变化率如何变化。
+
+### 海森矩阵的对称性
+
+对于机器学习 (machine learning)中遇到的大多数函数（特别是那些具有连续二阶偏导数的函数），混合偏导数的求导顺序无关紧要。这被称为克莱罗定理或施瓦茨定理，说明了混合偏导数相等性：
+
+
+$$
+\frac{\partial^2 f}{\partial x_i \partial x_j} = \frac{\partial^2 f}{\partial x_j \partial x_i}
+$$
+
+
+这意味着海森矩阵是**对称的**，即$H = H^T$。这一性质简化了许多使用海森矩阵的分析和算法。
+
+### 海森矩阵与优化
+
+海森矩阵在分类临界点（梯度$\nabla f = 0$的点）方面的作用类似于单变量微积分中的二阶导数。通过考察在临界点$\mathbf{x}^*$处评估的海森矩阵的性质，我们通常可以判断该点是局部最小值、局部最大值还是鞍点。
+
+主要性质与临界点处海森矩阵的*定性*有关：
+
+1. **正定：** 如果海森矩阵$H(\mathbf{x}^*)$是正定的（意味着对于所有非零向量 (vector)$\mathbf{v}$，$\mathbf{v}^T H \mathbf{v} > 0$），则函数在$\mathbf{x}^*$处有局部最小值。函数在该点周围向所有方向向上弯曲，就像碗的底部。
+2. **负定：** 如果海森矩阵$H(\mathbf{x}^*)$是负定的（意味着对于所有非零向量$\mathbf{v}$，$\mathbf{v}^T H \mathbf{v} < 0$），则函数在$\mathbf{x}^*$处有局部最大值。函数在该点周围向所有方向向下弯曲，就像圆顶的顶部。
+3. **不定：** 如果海森矩阵$H(\mathbf{x}^*)$是不定的（意味着$\mathbf{v}^T H \mathbf{v}$对于某些向量$\mathbf{v}$可以是正的，对于其他向量可以是负的），则函数在$\mathbf{x}^*$处有鞍点。函数在某些方向向上弯曲，在另一些方向向下弯曲，就像马鞍。
+4. **半定（正或负）或零：** 如果海森矩阵是半定的（允许对于某些非零$\mathbf{v}$，$\mathbf{v}^T H \mathbf{v} = 0$）或为零矩阵，则仅基于海森矩阵的测试结果无法确定。需要进一步的分析。
+
+> 基于海森矩阵定性对临界点进行分类。
+
+### 凸性与海森矩阵
+
+海森矩阵对于判断函数是否为*凸函数*也十分重要。如果函数$f$的图像上任意两点连成的线段都位于图像的下方，则函数是凸的。从直观上讲，凸函数处处呈碗状。
+
+在凸集上定义的二阶可微函数$f$是凸的，当且仅当其海森矩阵$H(\mathbf{x})$对于定义域中的所有$\mathbf{x}$都是**半正定**的。半正定意味着对于所有向量 (vector)$\mathbf{v}$，$\mathbf{v}^T H(\mathbf{x}) \mathbf{v} \ge 0$。
+
+凸性是优化问题中一个非常好的性质，包括机器学习 (machine learning)中的优化问题。如果我们要最小化的成本函数是凸的，那么找到的任何局部最小值都可以保证也是全局最小值。这大大简化了优化过程，因为梯度下降 (gradient descent)等算法不太可能永久地陷入次优解。
+
+### 在优化算法中的作用
+
+虽然梯度下降 (gradient descent)只依赖于一阶信息（梯度），但更进一步的*二阶优化方法*，例如牛顿法，直接使用海森矩阵。这些方法在接近最小值时，收敛速度比梯度下降快得多，特别当函数曲面具有复杂的曲率时。然而，计算和求逆海森矩阵在计算上可能非常昂贵，特别是对于有大量变量的函数（例如大型神经网络 (neural network)中的参数 (parameter)）。海森矩阵有$n^2$个元素，对其求逆通常需要$O(n^3)$次运算。这种成本常常使得在大型机器学习 (machine learning)问题中直接使用完整的海森矩阵变得不切实际，从而导致了一阶方法（如梯度下降及其变体）或近似海森信息的方法的普遍应用。
+
+了解海森矩阵，即使不明确计算它，也能为优化提供有用的理解，帮助我们理解鞍点等内容以及优化算法面临的难题。它表示曲率信息，补充了梯度提供的方向信息。
+
+## 参考资料
+
+- [Calculus: Early Transcendentals](https://www.cengage.com/c/calculus-early-transcendentals-8e-stewart/9781305267232/) — James Stewart (2015)
+  Publisher: Cengage Learning; Pages: Chapter 14
+  提供了多变量微积分的详细介绍，涵盖了Hessian矩阵的定义和性质、克莱罗定理以及用于判断极值的二阶导数判别法。
+- [Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/) — Stephen Boyd and Lieven Vandenberghe (2004)
+  Publisher: Cambridge University Press; Pages: Chapter 3; DOI: [10.1017/CBO9780511804441](https://doi.org/10.1017/CBO9780511804441)
+  一本标准教材，阐明了Hessian矩阵与函数凸性之间的关系，这对于理解优化格局至关重要。
+- [Numerical Optimization](https://link.springer.com/book/10.1007/978-0-387-40065-5) — Jorge Nocedal and Stephen J. Wright (2006)
+  Publisher: Springer; Pages: 10-29; DOI: [10.1007/978-0-387-40065-5](https://doi.org/10.1007/978-0-387-40065-5)
+  审视了Hessian矩阵在牛顿法等二阶优化方法中的应用，并讨论了相关的计算考量。

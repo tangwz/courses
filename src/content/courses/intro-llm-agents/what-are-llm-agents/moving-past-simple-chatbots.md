@@ -1,0 +1,43 @@
+---
+course: "intro-llm-agents"
+chapter: "what-are-llm-agents"
+lesson: "moving-past-simple-chatbots"
+sourceId: 6542
+sourceUrl: "https://apxml.com/zh/courses/intro-llm-agents/chapter-1-what-are-llm-agents/moving-past-simple-chatbots"
+title: "不再局限于简单聊天机器人"
+description: "了解基础LLM互动有哪些限制，以及为何需要更强大的AI智能体。"
+order: 2
+plots: []
+sourceHash: "270a972237e9d0aee5a6a83d754467c447c8322a3c79e047253b0ef0c483beb2"
+sourceCorrections: []
+---
+
+大型语言模型（LLM）在理解和生成类人文本方面表现出色。您可能以各种形式接触过它们，其中最常见的是聊天机器人。这些聊天机器人可以回答您的问题、起草电子邮件、总结文章，甚至编写少量代码。它们代表了我们与计算机互动方式的一大进步，从僵硬的指令转向更自然、对话式的交流。
+
+例如，您可能会问聊天机器人：“罗马有哪些著名地标？”它会给您一个结构良好的列表。或者您可以指示它：“写一首关于雨天的短诗。”它会提供一些有创意的回应。这种处理和生成文本的能力是这些系统得以运作的根本所在。
+
+然而，尽管这些文本生成能力令人印象深刻，但它们也限定了*简单*LLM驱动的聊天机器人通常能做到的范围。它们的优势在于基于训练数据的对话和信息检索。但是，当需要执行脱离文本对话的交互任务，或涉及多步骤和实时信息的任务时，我们便开始看到它们的局限性。
+
+请考虑以下简单聊天机器人经常遇到瓶颈的常见情景：
+
+**在现实中采取行动：** 聊天机器人可以告诉您预订航班的最佳方法，甚至可以起草一封*请求*预订航班的电子邮件。但它通常无法*实际为您预订航班*。它不具备与航空公司预订系统互动、处理支付或确认预订的内置能力。它擅长的是信息和文本，而不是直接行动。
+
+2. **使用外部工具或实时数据：** 如果您询问聊天机器人某公司的当前股价或实时天气预报，它可能会提供其训练数据中的信息，而这些信息可能已经过时。它通常没有直接连接到实时股市数据、天气API，甚至没有一个简单的计算器来执行它未明确训练其通过文本来模仿的算术运算。它在其预设的知识范围内运作。
+3. **复杂规划和多步推理 (inference)：** 想象一下，要求一个系统“为我规划一个伦敦三日游，找到博物馆附近的经济型住宿，并建议行程”。一个简单的聊天机器人可能会提供一般性建议或列出一些*您*可以采取的步骤。然而，它通常不具备将这个复杂请求分解成一系列子任务（搜索航班、根据标准搜索酒店、查询博物馆开放时间、创建日程等），执行这些子任务（通常需要使用工具），然后将结果整合为一个连贯的计划的能力。
+4. **跨交互的持久记忆和上下文 (context)：** 尽管现代LLM可以记住当前对话的上下文（在一定限度内），但这种记忆通常是短暂的。如果您开始一个新的聊天会话，聊天机器人通常不会记住您的偏好或您之前单独交互的细节。对于需要长期学习的持续性任务或个性化协助，这可能是一个明显的缺点。
+5. **自主运行：** 聊天机器人主要是被动响应的。它们等待您的指令，然后响应。它们通常不会在后台自主运行以实现您设定的目标，例如监控变化或主动采取行动。
+
+这些局限性并不会削弱聊天机器人在许多应用中的实用性。它们在信息传播、客户支持、内容生成等方面表现出色。然而，为了构建能够更进一步、能够充当更有能力的助手或自动化更复杂流程的系统，我们需要超越这些对话的界限。我们需要不仅能理解和生成文本，还能规划、使用工具、更有效地记忆信息并采取行动的系统。这正是LLM智能体的构想开始形成的地方。
+
+> 一个简单的聊天机器人主要处理用户输入以生成文本响应。对于需要行动、工具使用、规划和持久记忆的更复杂任务，这些系统往往力有不逮，这突显了对更高级智能体能力的需求。
+
+理解这些区别很重要，在我们研究LLM智能体时，它们专门设计用于解决这些局限性并支持更广泛的自动化和智能行为。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHPsTrGNo7Dm73E2iA56wxSU776mWoUD96T44eS78cwtfuundBPOdFHWS8RQK0QhgqqxoK8rv2moFB_Z43MMKrXAiwn3IaJKimGJ5b-4EqNnZfuXPIDLrbs) — Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel Ziegler, Jeffrey Wu, Clemens Winter, Chris Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Volume: 33; Pages: 1877-1901; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍GPT-3模型，展示其在多项任务中理解和生成类人文本的能力，是高级聊天机器人的基础。
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442) — Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S Bernstein (2023)
+  Journal: arXiv preprint arXiv:2304.03442; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  探讨了具有长期记忆并能规划行动、在模拟环境中交互的智能体，解决了持久性和自主性方面的挑战。

@@ -1,0 +1,67 @@
+---
+course: "synthetic-data-gans-diffusion"
+chapter: "generative-modeling-foundations-revisited"
+lesson: "taxonomy-generative-models"
+sourceId: 5630
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-gans-diffusion/chapter-1-generative-modeling-foundations-revisited/taxonomy-generative-models"
+title: "生成模型分类"
+description: "对生成建模的不同方法进行分类（基于似然的、隐式的）。"
+order: 2
+plots: []
+sourceHash: "3ca9c38ae312d67fc8eb5bf6b14939aa7c7bf9b8913261ea1967d869f0d22173"
+sourceCorrections: []
+---
+
+生成模型旨在学习数据集的潜在概率分布$p_{data}(x)$，使我们能够生成与原始数据相似的新样本。然而，模型在表示和学习这种分布的*方式*上差异很大，这带来了不同的优点、缺点和使用范围。了解这种分类有助于为特定任务选择恰当的工具，并理解GANs和扩散模型等背后的设计思路。
+
+我们可以根据生成模型处理它们试图学习的概率密度函数$p_{model}(x)$的方式，对其进行大致分类。
+
+### 显式密度模型
+
+这些模型明确定义并学习由$\theta$参数 (parameter)化的概率密度函数$p_{model}(x; \theta)$。训练期间的目标通常是使该模型下训练数据的似然达到最大。在此类别中，我们主要有两种方法：
+
+1. **可计算显式密度模型：** 这些模型定义的密度函数$p_{model}(x; \theta)$在计算上是可处理的，即我们能够直接计算任何给定数据点$x$的似然$p_{model}(x)$。
+
+   - **例子：**
+     - **自回归 (autoregressive)模型（例如 PixelRNN、PixelCNN）：** 这些模型使用链式法则将维度（例如图像中的像素）上的联合概率分布分解为条件概率的乘积：$p(x) = \prod_i p(x_i | x_1, ..., x_{i-1})$。每个条件概率都由一个神经网络 (neural network)建模。尽管它们可以获得高似然得分，但生成过程是序列的，并且通常较慢，因为预测$x_i$需要所有之前的$x_{1...i-1}$。
+     - **归一化 (normalization)流：** 这些模型使用一系列带有可计算雅可比矩阵的可逆变换$f$，将简单的基本分布（如高斯分布）$p_z(z)$转换为复杂的数据分布$p_x(x)$。变量变换公式允许精确的似然计算：$p_x(x) = p_z(f^{-1}(x)) |\det(\frac{\partial f^{-1}(x)}{\partial x})|$。它们一旦训练完成，便能提供精确的似然评估和高效采样，但设计既具表现力又可逆且雅可比矩阵可计算的变换可能存在挑战。
+   - **特点：** 可直接评估似然；通常获得顶尖的对数似然得分；生成速度可能较慢（自回归模型）或受架构限制（流模型）。
+2. **近似显式密度模型：** 这些模型仍然定义一个显式的$p_{model}(x; \theta)$，但它包含潜在变量$z$，并且通常无法直接计算或优化。相反，它们会优化对数似然的下界（证据下界，即ELBO）或使用其他近似技术。
+
+   - **例子：变分自编码器 (VAEs)：** VAEs 引入潜在变量$z$，并假设数据通过$p(x|z)$生成。它们使用编码器网络$q(z|x)$来近似真实的后验$p(z|x)$，并使用解码器网络$p(x|z)$。训练使ELBO最大化：
+     $\log p(x) \ge \mathbb{E}_{z \sim q(z|x)}[\log p(x|z)] - D_{KL}(q(z|x) || p(z))$
+     其中$p(z)$是先验分布（例如，标准高斯分布），$D_{KL}$是Kullback-Leibler散度。
+   - **特点：** 提供学习到的潜在空间；训练相对稳定；生成/采样速度快；与GANs相比，生成的样本通常略显模糊；仅提供似然的下界。
+
+### 隐式密度模型
+
+这些模型学习从$p_{model}(x)$生成样本，而无需明确定义密度函数本身。相反，它们提供了一种直接从分布中采样的方法。
+
+- **例子：生成对抗网络 (GAN) (GANs)：** 如前所述，GANs使用一个生成器网络$G$，它将一个随机噪声向量 (vector)$z$（从简单的先验$p_z(z)$中采样）映射到数据样本$x = G(z)$。一个判别器网络$D$试图区分真实数据和生成样本。生成器通过试图欺骗判别器，隐式地学习将先验分布$p_z(z)$转换为目标数据分布$p_{data}(x)$。我们从不明确地写出或计算$p_{model}(x)$。
+- **特点：** 可以生成非常清晰、高保真的样本；生成速度通常较快（通过生成器一次前向传播）；训练可能不稳定（模式崩溃、震荡）；通常无法评估$p_{model}(x)$的似然。
+
+### 扩散模型归属何处？
+
+扩散模型代表着一个较新且非常成功的模型族。它们的分类可作详细说明：
+
+- 它们通常通过优化似然的变分下界（类似于VAEs）进行训练，这使得它们看起来像是**近似显式密度模型**。为去噪扩散概率模型（DDPMs）推导出的目标函数确实是ELBO的一种形式。
+- 然而，它们也可以通过**得分匹配**的视角来理解，其中模型学习对数密度的梯度$\nabla_x \log p(x)$，这被称为得分函数。这种关联使它们与潜在的显式密度函数紧密相关，即使密度本身在生成时未直接计算。
+- 生成涉及一个迭代去噪过程，从噪声开始，并根据学习到的得分或条件分布$p(x_{t-1}|x_t)$逐步改进，这与典型VAEs或GANs的单次通过生成显著不同。
+
+扩散模型有效地结合了不同模型族的特点。它们获得的样本质量通常可与GANs媲美或胜过，同时通常提供更稳定的训练，并与基于似然的目标函数有明确（尽管复杂）的关联。它们在历史上主要缺点是由于迭代生成过程导致的采样速度较慢，尽管像DDIM（去噪扩散隐式模型）这样的技术已大幅改善了这一点。
+
+> 基于生成模型处理概率密度函数的方式，对其主要家族进行分类。本课程主要侧重于GANs（隐式密度）和扩散模型（混合特性）中的高级技术。
+
+理解这种分类为我们将重点关注的模型提供了背景信息。GANs和扩散模型已成为生成图像等复杂高维数据的强大工具，尽管它们的基本原理和权衡有所不同，我们将在本课程中详细研究这些。
+
+## 参考资料
+
+- [Generative Adversarial Nets](https://arxiv.org/abs/1406.2661) — Ian J. Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, Yoshua Bengio (2014)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 27; Pages: 2672-2680; DOI: [10.48550/arXiv.1406.2661](https://doi.org/10.48550/arXiv.1406.2661)
+  这篇基础论文介绍了生成对抗网络（GANs），定义了隐式密度建模范式和对抗训练框架。
+- [Variational Inference with Normalizing Flows](https://proceedings.mlr.press/v37/rezende15.pdf) — Danilo Jimenez Rezende and Shakir Mohamed (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); Publisher: PMLR; Volume: 37; Pages: 1530-1538; DOI: [10.48550/arXiv.1505.05770](https://doi.org/10.48550/arXiv.1505.05770)
+  这篇论文介绍了归一化流，这是一类可追踪显式密度模型，通过可逆变换将简单分布转换为复杂分布。
+- [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) — Jonathan Ho, Ajay Jain, Pieter Abbeel (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 33; Pages: 6840-6851; DOI: [10.48550/arXiv.2006.11239](https://doi.org/10.48550/arXiv.2006.11239)
+  这项工作复兴并普及了扩散模型，引入了去噪扩散概率模型（DDPMs）框架，用于高质量图像生成。

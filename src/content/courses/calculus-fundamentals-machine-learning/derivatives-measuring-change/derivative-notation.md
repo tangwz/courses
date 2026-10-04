@@ -1,0 +1,74 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "derivatives-measuring-change"
+lesson: "derivative-notation"
+sourceId: 2254
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-2-derivatives-measuring-change/derivative-notation"
+title: "导数记法（莱布尼茨和拉格朗日）"
+description: "介绍导数的常见记法（dy/dx, f'(x)）。"
+order: 3
+plots: []
+sourceHash: "468b7d5a16a6b7752d397b9c61d98223f7a749388b9863b558c1c61d981b0898"
+sourceCorrections: []
+---
+
+既然我们已经了解导数表示瞬时变化率，或者函数图线上某一点的切线斜率，我们来看看它的写法。就像不同的编程语言对类似事物有不同的语法一样，数学家们也发展出了几种常见的导数表示方法。熟悉这些记法很重要，因为你会在机器学习 (machine learning)的文献和资料中经常遇到它们。
+
+### 拉格朗日记法：撇号
+
+最常见和直接的记法之一由约瑟夫-路易斯·拉格朗日引入。如果你有一个函数，比如 $f(x)$，它的导数通常写成 $f'(x)$。这读作“f 撇 x”（f prime of x）。
+
+撇号（$'$) 只是表示我们正在讨论原始函数 $f$ 的导数。
+
+- 如果函数是 $f(x) = x^2$，那么它的导数是 $f'(x) = 2x$。（我们很快就会学到*如何*计算它）。
+- 如果函数用不同的变量定义，例如 $g(t)$，它的导数是 $g'(t)$。
+- 如果我们在讨论函数的输出 $y = f(x)$，有时导数会写成 $y'$。
+
+这种记法紧凑，并清楚地将导数与原始函数名（$f$，$g$ 等）联系起来。当你在特定点求导数的值时，它特别方便。例如，$f'(3)$ 表示“函数 $f$ 在 $x=3$ 处的导数。”
+
+### 莱布尼茨记法：无穷小量之比
+
+另一种广泛使用的记法来自微积分的发明者之一戈特弗里德·威廉·莱布尼茨。这种记法看起来像一个分数：
+
+
+$$
+\frac{dy}{dx}
+$$
+
+
+你通常把它读作“y 对 x 的导数”，有时也读作“dy dx”。
+
+我们来分析一下：
+
+- 回想一下，直线的斜率是 $y$ 的变化量除以 $x$ 的变化量，通常写成 $\frac{\Delta y}{\Delta x}$（读作“delta y 比 delta x”）。
+- 导数是这个比值的*极限*，当 $x$ 的变化量变得无穷小时。
+- 莱布尼茨使用 $dy$ 和 $dx$（用 'd' 代替 '$\Delta$'）来表示这些无穷小的变化。
+
+因此，$\frac{dy}{dx}$ 直观地表示了 $y$ 发生无穷小变化是由 $x$ 发生无穷小变化所引起的。它强调了输出变量 ($y$) 是*相对于*哪个变量 ($x$) 而变化的。
+
+如果我们的函数明确写为 $f(x)$，例如 $f(x) = x^2$，莱布尼茨记法可能如下所示：
+
+
+$$
+\frac{d}{dx} f(x) \quad \text{或者} \quad \frac{d}{dx} (x^2)
+$$
+
+
+在这里，$\frac{d}{dx}$ 类似于一个运算符，意思是“对后面跟着的表达式求关于 $x$ 的导数。”因此，$\frac{d}{dx} (x^2) = 2x$。
+
+### 为何有两种记法？
+
+这两种记法在不同情境下都有用处：
+
+- **拉格朗日记法（$f'(x)$）：** 在处理函数和计算其在特定点的值时，通常更清晰。它很简洁。
+- **莱布尼茨记法（$\frac{dy}{dx}$）：** 非常清楚我们是*关于*哪个变量进行求导。在处理多变量函数（我们将在后续章节看到）或处理相关变化率时，这会特别有用。例如，如果成本 ($C$) 取决于模型参数 (parameter) ($w$)，$\frac{dC}{dw}$ 清楚地说明了我们关注的是成本随参数 $w$ 变化而变化的状况。
+
+你不需要只选择一种。你会看到两种记法都被使用，有时甚至同时出现。重要的是要识别它们，并明白 $f'(x)$ 和 $\frac{dy}{dx}$（当 $y=f(x)$ 时）指的是同一个基本思想：函数 $f$ 关于其输入 $x$ 的导数。
+
+在接下来的章节中，我们将开始使用这些记法，在我们学习如何实际计算导数的规则时。
+
+## 参考资料
+
+- [18.01SC Single Variable Calculus](https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/) — Jerison, David, Mattuck, Arthur, Miller, Haynes, Brubaker, Benjamin, Orloff, Jeremy, Burgiel, Heidi, Breiner, Christine, Jordan, David, Lewis, Joel (2010)
+  Publisher: Massachusetts Institute of Technology
+  一门免费的在线课程，提供基础微积分概念，包括莱布尼茨和拉格朗日的导数符号。

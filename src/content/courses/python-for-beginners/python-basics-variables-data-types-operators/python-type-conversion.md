@@ -1,0 +1,169 @@
+---
+course: "python-for-beginners"
+chapter: "python-basics-variables-data-types-operators"
+lesson: "python-type-conversion"
+sourceId: 2281
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-2-python-basics-variables-data-types-operators/python-type-conversion"
+title: "类型转换说明"
+description: "了解如何在 Python 中将变量从一种数据类型转换为另一种（例如，字符串转换为整数）。"
+order: 8
+plots: []
+sourceHash: "bf119bc0846fa44caefe2cd3fc07e8fd63f6a12844fc528206b8205c987e94b8"
+sourceCorrections: []
+---
+
+Python 变量可以存储各种数据类型，但在执行操作时，特定的数据类型至关重要。例如，直接对数字和数字的字符串表示进行数学加法（例如 `42 + "10"`）将无法正常工作。Python 会将 `"10"` 解释为文本，而非数字值十。为了使此类操作可行，你需要明确告诉 Python 将 `"10"` 视为一个数字。这种改变值数据类型的过程被称为 **类型转换** 或 **类型强制转换**。
+
+Python 提供了内置函数来处理常见的类型转换。可以将它们看作是工具，用于将数据重塑为特定任务所需的格式。我们已讨论的基本类型之间转换的主要函数有：
+
+- `int()`: 将值转换为整数（整数）。
+- `float()`: 将值转换为浮点数（带小数的数字）。
+- `str()`: 将值转换为字符串（文本）。
+- `bool()`: 将值转换为布尔值（`True` 或 `False`）。
+
+让我们看看每个函数如何工作。
+
+### 转换为整数：`int()`
+
+`int()` 函数尝试从其输入创建一个整数。
+
+- **从浮点数转换：** 当将浮点数转换为整数时，Python 会**截断**小数部分，即将其舍弃。它*不会*四舍五入到最接近的整数。
+
+  ```python
+  count_float = 9.8
+  count_int = int(count_float)
+  print(count_int)  # 输出: 9
+
+  price_float = 15.2
+  price_int = int(price_float)
+  print(price_int) # 输出: 15
+  ```
+- **从字符串转换：** 你可以将仅包含数字的字符串转换为整数。
+
+  ```python
+  num_string = "101"
+  num_int = int(num_string)
+  print(num_int * 2) # 输出: 202
+  ```
+- **可能出现的问题：** 如果你尝试转换一个无法被解释为整数的字符串（如文本或带小数点的数字），Python 将会引发 `ValueError`。
+
+  ```python
+  # 这会引发错误：
+  # value_error_int = int("hello")
+  # ValueError: invalid literal for int() with base 10: 'hello'
+
+  # 这也会引发错误：
+  # value_error_float_string = int("3.14")
+  # ValueError: invalid literal for int() with base 10: '3.14'
+  ```
+
+  处理此类问题我们将在课程后续部分讲解。目前，请注意转换并非总是可行。
+
+### 转换为浮点数：`float()`
+
+`float()` 函数将值转换为浮点数。
+
+- **从整数转换：** 将整数转换为浮点数只是添加一个小数部分（`.0`）。
+
+  ```python
+  whole_number = 50
+  float_number = float(whole_number)
+  print(float_number) # 输出: 50.0
+  ```
+- **从字符串转换：** 你可以转换表示整数或带小数数字的字符串。
+
+  ```python
+  pi_string = "3.14159"
+  pi_float = float(pi_string)
+  print(pi_float) # 输出: 3.14159
+
+  count_string = "100"
+  count_float_from_string = float(count_string)
+  print(count_float_from_string) # 输出: 100.0
+  ```
+- **可能出现的问题：** 与 `int()` 类似，尝试转换一个不表示有效数字的字符串将导致 `ValueError`。
+
+  ```python
+  # 这会引发错误：
+  # value_error_float = float("not a number")
+  # ValueError: could not convert string to float: 'not a number'
+  ```
+
+### 转换为字符串：`str()`
+
+`str()` 函数将其参数 (parameter)转换为字符串表示形式。这对于创建结合文本和变量值的输出消息非常有用。
+
+- **从数字转换：** 整数和浮点数可以轻松转换为字符串。
+
+  ```python
+  item_count = 5
+  message = "You have " + str(item_count) + " items in your cart."
+  print(message) # 输出: You have 5 items in your cart.
+
+  temperature = 22.5
+  weather_report = "The temperature is " + str(temperature) + " degrees Celsius."
+  print(weather_report) # 输出: The temperature is 22.5 degrees Celsius.
+  ```
+
+  如果没有 `str()`，直接连接字符串和数字（例如，`"Value: " + 5`）将会导致 `TypeError`。
+- **从布尔值转换：** 布尔值被转换为字符串 `"True"` 或 `"False"`。
+
+  ```python
+  is_active = True
+  status_message = "User active status: " + str(is_active)
+  print(status_message) # 输出: User active status: True
+  ```
+
+  几乎任何 Python 对象都可以使用 `str()` 转换为某种字符串表示形式，使其成为一个非常多功能的函数。
+
+### 转换为布尔值：`bool()`
+
+`bool()` 函数将值转换为其布尔等效值（`True` 或 `False`）。Python 有“真值”的说法，即某些值在布尔上下文 (context)中被视为固有的假，而大多数其他值被视为真。
+
+- **被视为 `False` 的值：**
+
+  - 整数 `0`
+  - 浮点数 `0.0`
+  - 特殊值 `None`（表示没有值）
+  - 任何空序列（如空字符串 `""`、空列表 `[]`、空元组 `()`）
+  - 任何空映射（如空字典 `{}`）
+- **被视为 `True` 的值：**
+
+  - 任何非零数字（例如，`1`、`-10`、`0.5`）
+  - 任何非空字符串（例如，`"hello"`、`" "`、`"False"`）
+  - 任何非空序列或映射（例如，`[1]`、`(None,)`、`{'a': 1}`）
+
+以下是一些示例：
+
+```python
+print(bool(100))        # 输出: True
+print(bool(-5.5))       # 输出: True
+print(bool("Python"))     # 输出: True
+print(bool([1, 2, 3]))  # 输出: True
+
+print(bool(0))          # 输出: False
+print(bool(0.0))        # 输出: False
+print(bool(""))          # 输出: False
+print(bool([]))         # 输出: False
+print(bool({}))         # 输出: False
+print(bool(None))       # 输出: False
+```
+
+了解真值在我们将开始使用条件语句（`if`/`else`）根据条件真假控制程序流程时很重要。
+
+### 为什么这现在很重要？
+
+类型转换目前直接相关，因为 Python 处理用户输入的方式。当你使用 `input()` 函数（我们接下来会讲到）从键盘获取数据时，它*总是*将数据作为**字符串**返回，无论用户输入了什么。
+
+如果你询问用户年龄，他们输入 `30`，`input()` 函数将给你字符串 `"30"`，而不是整数 `30`。如果你随后想进行计算，比如计算他们五年后的年龄，你需要在使用 `int()` 将该字符串 `"30"` 转换为整数 `30` 之后才能对其加 `5`。
+
+能够使用 `int()`、`float()`、`str()` 和 `bool()` 在类型之间进行显式转换是一项基本能力，它允许你正确处理数据并避免程序中与类型相关的问题。
+
+## 参考资料
+
+- [Python 3 Documentation: Built-in Functions](https://docs.python.org/3/library/functions.html) — Python Software Foundation (2023)
+  Publisher: Python Software Foundation
+  这提供了Python内置类型转换函数（int()、float()、str()、bool()）及其行为的官方权威解释。
+- [Python for Everybody: Exploring Data in Python 3](https://www.py4e.com/book.php) — Charles Severance (2023)
+  Publisher: Charles Severance
+  这本广泛使用的教材及配套课程提供了Python编程的基础知识，其中包含关于数据类型和如何执行类型转换的专门章节。

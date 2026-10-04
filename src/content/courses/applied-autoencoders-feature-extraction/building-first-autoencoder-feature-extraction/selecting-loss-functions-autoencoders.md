@@ -1,0 +1,153 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "building-first-autoencoder-feature-extraction"
+lesson: "selecting-loss-functions-autoencoders"
+sourceId: 6458
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-3-building-first-autoencoder-feature-extraction/selecting-loss-functions-autoencoders"
+title: "为自编码器选择合适的损失函数"
+description: "根据数据类型和自编码器模型的特定目标选择正确的损失函数。"
+order: 5
+plots: ["plots/6458-0.json"]
+sourceHash: "48ebd8bc841e57582d9eff43a74b9ea893c925b2bb258c0e472a4b8ebe33e2f5"
+sourceCorrections: []
+---
+
+一旦您设计好了编码器和解码器的基本结构，并确定了潜在空间的维度，下一步重要环节就是选择一个合适的损失函数 (loss function)。损失函数，也称为成本函数或目标函数，量化 (quantization)了自编码器的重构结果与原始输入之间的差异。在训练过程中，自编码器的权重 (weight)会进行调整以最小化此损失，从而有效地学习产生越来越好的重构，并因此获得更具意义的潜在表示。
+
+损失函数的选择并非随意；它主要取决于您处理的数据的类型和特点，以及重构的期望属性。我们来看看最常见的几种选择。
+
+### 连续数据的损失函数 (loss function)
+
+当您的输入数据包含连续的实数值时，例如图像中的像素强度（归一化 (normalization)后）或表格数据集中的测量值，**均方误差 (MSE)** 是一个非常常用且有效的选择。
+
+#### 均方误差 (MSE)
+
+MSE 衡量原始输入值与重构值之间的平均平方差。对于一个具有 $D$ 个特征的单个数据实例（例如，表格数据中的 $D$ 个像素或 $D$ 列），如果 $x_j$ 是原始输入的第 $j$ 个特征，而 $x'_j$ 是重构输出的第 $j$ 个特征，MSE 的计算方式如下：
+
+$L_{MSE} = \frac{1}{D} \sum_{j=1}^{D} (x_j - x'_j)^2$
+
+一个 $N$ 个数据实例批次的总损失将是这些单个 MSE 值的平均值。
+
+**为何选择 MSE？**
+
+- **直观**: 它直接惩罚偏离原始值的行为。
+- **可微分**: 它平滑且可微分，这对于反向传播 (backpropagation)等基于梯度的优化算法很重要。
+- **侧重于大误差**: 由于误差是平方的，MSE 对大误差的惩罚比小误差更严厉。如果大偏差是特别不期望的，这会带来益处。
+
+使用 MSE 时，如果目标值是无界的或归一化到像 (-1, 1) 这样的范围（在这种情况下，如果输入也类似缩放，输出层也可以使用 `tanh` 激活），解码器的输出层通常使用线性激活函数 (activation function)。如果您的连续数据被归一化到 [0,1] 范围内，也可以将 sigmoid 激活与 MSE 一起使用，尽管在那种特定的 [0,1] 场景中，为了概率解释，二进制交叉熵通常更受青睐。
+
+#### 平均绝对误差 (MAE)
+
+对于连续数据，另一个选择是平均绝对误差 (MAE)。它衡量原始值和重构值之间的平均绝对差：
+
+$L_{MAE} = \frac{1}{D} \sum_{j=1}^{D} |x_j - x'_j|$
+
+**MSE 对比 MAE**
+与 MSE 相比，MAE 通常对异常值不那么敏感。如果您的数据集中包含您不希望过度影响训练过程的显著异常值，MAE 可能是更好的选择。然而，MSE 对大误差更强的惩罚有时能使重构结果在良好数据的平均表现上更接近原始值。选择通常归结为经验测试或特定领域的要求。
+
+以下图表显示了与 MAE 相比，MSE 如何对更大的误差施加更大的惩罚。
+
+
+
+![MSE 和 MAE 惩罚对比](plots/6458-0.json)
+
+
+
+> 此图表显示了 MSE 和 MAE 所归属的损失值，它是单个预测值与其目标（为简化起见假定为 0）之间误差的函数。请注意，MSE 的增长是二次方的，而 MAE 则是线性的。
+
+### 二进制或概率数据的损失函数 (loss function)
+
+当您的输入数据是二进制的（例如，像素为 0 或 1 的黑白图像），或者可以被解释为概率（例如，严格在 0 和 1 之间归一化 (normalization)的像素强度）时，**二进制交叉熵 (BCE)** 通常是更受青睐的损失函数。
+
+#### 二进制交叉熵 (BCE)
+
+二进制交叉熵，也称为对数损失，衡量两个概率分布之间的差异。在自编码器背景下，它比较原始二进制/概率输入数据的分布与重构输出的分布，后者通常通过 sigmoid 激活函数 (activation function)以确保其值也在 0 和 1 之间。
+
+对于一个具有 $D$ 个特征的单个数据实例，其中 $x_j$ 是原始值，而 $x'_j$ 是第 $j$ 个特征的重构概率，BCE 损失为：
+
+$L_{BCE} = - \frac{1}{D} \sum_{j=1}^{D} [x_j \log(x'_j) + (1-x_j) \log(1-x'_j)]$
+
+**为何选择 BCE？**
+
+- **概率解释**: 当输出是概率时，它非常合适。如果原始输入 $x_j$ 为 1，损失项变为 $-\log(x'_j)$。为最小化此项，$x'_j$ 必须接近 1。相反，如果 $x_j$ 为 0，损失项变为 $-\log(1-x'_j)$，为最小化损失，$x'_j$ 必须接近 0。
+- **更强的梯度**: 相比于 MSE 在 sigmoid 输出接近 0 或 1 时的值，BCE 通常提供更强的梯度，这能带来更快的训练。
+
+**BCE 的重要注意事项**:
+
+- **输出激活**: 解码器的输出层*必须*使用 sigmoid 激活函数。这会将输出值压缩到 (0, 1) 范围，使其适合与输入数据（也应缩放到 [0, 1]）进行比较。
+- **输入缩放**: 确保您的输入数据已缩放到 [0, 1] 范围。
+- **数值稳定性**: BCE 的实现通常包含通过将预测值剪裁到距离 0 和 1 一个小的 epsilon 来防止 $\log(0)$ 错误的机制。
+
+### 与输出层激活的关系
+
+如前所述，损失函数 (loss function)的选择与解码器输出层中使用的激活函数 (activation function)紧密关联：
+
+- **MSE**:
+  - 如果您的目标数据可以取任何实数值（归一化 (normalization)后，例如，以零为中心并具有某个标准差的数据），则使用**线性激活**（即无激活）。
+  - 如果您的目标数据归一化到 [-1, 1] 范围，则使用 **`tanh` 激活**。`tanh` 的输出值就在此范围。
+  - 如果您的目标数据归一化到 [0, 1]，您*可以*使用 **sigmoid 激活**，但在此场景中通常更受青睐的是 BCE。
+- **BCE**:
+  - 几乎总是与输出层中的 **sigmoid 激活**配对，因为 BCE 期望输入（目标和预测）都在 [0, 1] 范围内，表示概率。
+
+不匹配的损失函数和输出激活会导致糟糕的训练表现或无意义的结果。例如，将 BCE 与产生 [0,1] 之外值的线性输出层一起使用，会引发错误或导致模型错误地学习。
+
+### 实际实现
+
+大多数深度学习 (deep learning)框架都能方便地指定您选择的损失函数 (loss function)。
+
+- **在 TensorFlow/Keras 中**: 您可以将字符串标识符或类实例传递给模型的 `compile` 方法：
+
+  ```python
+  # 对于 MSE
+  model.compile(optimizer='adam', loss='mean_squared_error')
+  # 或者
+  # model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
+
+  # 对于 BCE
+  model.compile(optimizer='adam', loss='binary_crossentropy')
+  # 或者
+  # model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy())
+  ```
+- **在 PyTorch 中**: 您实例化损失函数类，然后在训练循环中调用它：
+
+  ```python
+  # 对于 MSE
+  criterion = torch.nn.MSELoss()
+  # ... 在训练循环中:
+  # loss = criterion(reconstructions, original_inputs)
+
+  # 对于 BCE
+  criterion = torch.nn.BCELoss()
+  # ... 在训练循环中（确保重构是 sigmoid 输出）：
+  # loss = criterion(reconstructions, original_inputs)
+  ```
+
+### 损失函数 (loss function)选择小结
+
+1. **分析您的输入数据**:
+
+   - 它是连续的吗（例如，归一化 (normalization)到 [-1,1] 或 [0,1] 的图像像素，传感器读数）？
+   - 它是二进制的吗（0 和 1）？
+   - 它是如何归一化的？（例如，[0,1]，[-1,1]，Z-score 归一化）。
+2. **根据数据类型和归一化进行选择**:
+
+   - **归一化到 [0,1] 的连续数据或一般连续数据**: MSE 是一个强有力的默认选择。如果数据特指在 [0,1] 并且您希望从 sigmoid 获得概率输出，BCE 也可以是一个选择。
+   - **归一化到 [-1,1] 的连续数据**: MSE 配合 `tanh` 输出激活。
+   - **二进制数据 (0 或 1)**: BCE 配合 sigmoid 输出激活是标准做法。确保您的输入数据也表示为 0 和 1（或在该范围内的浮点数）。
+3. **与输出层激活保持一致**:
+
+   - MSE: 线性、`tanh` 或有时 sigmoid。
+   - BCE: Sigmoid。
+
+选择正确的损失函数是构建一个有效自编码器的根本步骤。它直接影响模型学习的内容以及它在重构这一主要任务上的表现，进而影响您将从瓶颈层提取的特征质量。在即将到来的实践环节中，您将看到其中一种的实际应用。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本标准教材，广泛涵盖深度学习基础，包括自动编码器、均方误差和二元交叉熵等多种损失函数及其数学特性。
+- [Keras API Reference: Losses](https://www.tensorflow.org/api_docs/python/tf/keras/losses) — TensorFlow Developers (2023)
+  Keras损失函数的官方文档，详细介绍了`MeanSquaredError`和`BinaryCrossentropy`以及它们在TensorFlow/Keras模型中的使用。
+- [PyTorch Documentation: torch.nn Loss Functions](https://pytorch.org/docs/stable/nn.html#loss-functions) — PyTorch Developers (2016)
+  Publisher: PyTorch Foundation
+  PyTorch神经网络损失函数的官方文档，包括`MSELoss`和`BCELoss`，这些对于训练自动编码器是必不可少的。

@@ -1,0 +1,111 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "financial-operations-governance-ai"
+lesson: "cost-attribution-showback-models"
+sourceId: 7027
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-6-financial-operations-governance-ai/cost-attribution-showback-models"
+title: "机器学习团队的成本归因与分摊模型"
+description: "建立标记策略和报告方法，以准确分配成本给具体的项目、团队或模型。"
+order: 2
+plots: ["plots/7027-0.json"]
+sourceHash: "325b2b3f6a9b42729c16b7ef151e3fd941f3139f138cf443b02bccb999cc9d0c"
+sourceCorrections: []
+---
+
+一旦您不再局限于孤立的实验，仅仅停留在“能运行就行”的心态，对于一个可持续的人工智能平台来说是远远不够的。如果不清楚谁在花费什么，以及为什么花费，云账单就会变成一个不透明且令人担忧的数字。建立成本归因模型是您对机器学习 (machine learning)基础设施获得财务控制的首要、不可协商的步骤。其目标是将您的云账单从一个单一庞大的数字，转变为一份详细、可操作的报告，将每一笔花费与特定的团队、项目乃至每一次训练运行关联起来。
+
+### 基础：细粒度的标记 (token)策略
+
+云计算中的成本归因，其根本在于一套严格且全面的标记策略。标记是附加到资源上的简单键值对。对于机器学习 (machine learning)工作负载，通用的标记策略是不够的。您必须设计一个能够反映机器学习开发和操作特定维度的方案。
+
+设计良好的标记方案应通过编程方式强制执行。云服务提供商提供了强制执行标记策略的服务，例如AWS服务控制策略 (SCPs)、Azure策略或GCP组织策略。这些可以配置为阻止创建缺少所需标记的资源。
+
+您的标记策略应至少包含：
+
+- `ml-team`：负责该资源的团队（例如，`fraud-detection`，`personalization`）。
+- `ml-project`：该资源支持的特定项目或模型（例如，`bert-classifier-v2`，`recommendation-engine`）。
+- `ml-workload-type`：正在进行的工作类型（例如，`training`，`inference`，`data-processing`，`notebook`）。
+- `ml-environment`：部署阶段（例如，`dev`，`staging`，`prod`）。
+- `ml-experiment-id`：特定训练运行的唯一标识符，以便对实验成本进行细致分析。
+
+这里是一个策略片段示例，可用于强制所有新的EC2实例都存在 `ml-team` 标记：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnforceTeamTagOnEC2",
+      "Effect": "Deny",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/ml-team": "true"
+        }
+      }
+    }
+  ]
+}
+```
+
+如果请求中不存在 `ml-team` 标记，此策略将拒绝 `ec2:RunInstances` API 调用，从而有效地强制开发人员和自动化脚本遵守标记方案。
+
+### 分摊与内部计费模型
+
+有了标记 (token)策略，您就可以实施一个成本报告系统。主要有两种模型：分摊和内部计费。
+
+- **分摊：** 该模型侧重于成本透明度。您将发生的费用“展示给”相应的团队，但实际上并不在内部转移资金。其目标是通过让团队了解其财务影响，培养责任感并鼓励节约成本的行为。对于大多数组织而言，这是理想的起点。它在文化上造成的干扰较小，侧重于平台团队与机器学习 (machine learning)团队之间的教育和合作。
+- **内部计费：** 这是一种更正式的会计实践，由中央IT或MLOps平台团队直接向其他业务部门收取其资源消耗的费用。这为团队带来了直接的财务激励，促使其进行优化。但是，它需要组织具备高度的成熟度、准确的成本归因以及明确的争议处理流程。有缺陷的内部计费系统可能会造成内部摩擦并阻碍实验。
+
+我们建议从分摊模型开始。一旦归因系统被证明准确并得到所有团队的信任，如果组织结构有此需求，您可以考虑演进到内部计费模型。
+
+### 归因直接成本和共享成本
+
+成本归因并非总是一帆风顺。有些成本直接与单个团队的工作负载相关，而另一些则由惠及多个团队的共享基础设施产生。
+
+#### 直接成本归因
+
+直接成本最易于处理。为特定训练任务配置的GPU实例，如果标记 (token)为`ml-project: fraud-classifier-v3`，其全部成本可以直接分配给该项目。同样，单个团队使用的数据集的存储成本也可以直接归因。您的标记策略是实现这一目标的主要手段。
+
+#### 共享成本归因
+
+共享成本带来了更大的挑战。您如何分配共享Kubernetes控制平面、像Prometheus这样的中央监控堆栈或多租户特征存储的成本？简单地平均分摊账单是不公平的，并且会掩盖真正的成本驱动因素。更公平的方法是根据消耗指标按比例分摊这些共享成本。
+
+以下是一些常见策略：
+
+- **Kubernetes 集群：** 根据每个团队Pod在计费周期内的CPU和内存 `requests` 总量，按比例分摊控制平面和共享节点的成本。此方法将成本与预留容量关联起来。
+- **共享存储/数据库：** 对于共享数据湖，您可以根据团队特定前缀下存储的数据量来归因成本（例如，`s3://my-datalake/fraud-team/`）。对于共享数据库或特征存储，您可以使用每个团队服务发起的读/写操作数量。
+- **网络：** 出口数据传输成本可能尤其难以归因。如果您使用Istio等服务网格，可以使用其遥测数据来跟踪服务间的流量，并将出口成本归因于发起外部请求的特定团队的服务。
+
+下图说明了云账单中的成本如何首先被分流到直接成本和共享成本桶中，然后再分配给各个团队。
+
+> 成本从单一云账单流向多个团队的归因过程，区分直接分配的成本和从共享资源池按比例分摊的成本。
+
+### 构建分摊仪表盘
+
+最后一步是以清晰易懂的格式呈现这些信息。每个团队都应有一个专属仪表盘，用于可视化其支出。这些仪表盘不仅适用于管理者；它们是工程师了解其架构选择和实验成本影响的重要工具。
+
+一个好的分摊仪表盘应允许用户根据您定义的标记 (token)（`ml-project`、`ml-workload-type`和`ml-environment`）过滤和分组成本。堆叠条形图是展示团队支出构成的一种有效方式。
+
+
+
+![欺诈检测团队项目月度成本](plots/7027-0.json)
+
+
+
+> 单个机器学习 (machine learning)团队的月度成本细分，展示了每个项目的总支出如何由不同工作负载类型和共享平台费用构成。
+
+通过实施这些归因和分摊方法，您创建了一个将技术活动与财务结果相联系的反馈循环。这种透明度有助于团队做出更明智、更具成本效益的决策，将财务管理从自上而下的指令转变为共享的工程责任。这是所有后续成本优化工作得以开展的依据。
+
+## 参考资料
+
+- [FinOps: A Guide To Cloud Financial Management](https://www.oreilly.com/library/view/cloud-finops-2nd/9781492098348/) — J.R. Storment, Mike Fuller (2023)
+  Publisher: O'Reilly Media
+  提供云财务管理的基本原则和实践，涵盖FinOps框架内的成本分配、预算、预测以及展示/分摊模型。
+- [What are Service Control Policies?](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scp.html) — Amazon Web Services (2023)
+  Publisher: Amazon Web Services
+  官方文档解释AWS服务控制策略，包含如何对EC2实例等资源强制执行标记策略的示例，支持编程实现成本归因。
+- [AWS Well-Architected Framework - Cost Optimization Pillar](https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/cost-optimization.html) — Amazon Web Services (2023)
+  Publisher: Amazon Web Services
+  概述云架构中实现成本效益的原则和建议，包括成本可见性、归因和基于消费的模型，适用于基于云的机器学习基础设施。

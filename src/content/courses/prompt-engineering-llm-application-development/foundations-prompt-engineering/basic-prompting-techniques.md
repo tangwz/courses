@@ -1,0 +1,173 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "foundations-prompt-engineering"
+lesson: "basic-prompting-techniques"
+sourceId: 2963
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-1-foundations-prompt-engineering/basic-prompting-techniques"
+title: "基本提示技巧"
+description: "开始使用简单提示词进行文本摘要、问答和生成等任务。"
+order: 4
+plots: []
+sourceHash: "848bbe14b4d385cdfbc91212683441d95a80c2356a5d3b3dd4fb9bc83a9b6e5f"
+sourceCorrections: []
+---
+
+此处介绍为常见任务组织提示词 (prompt)的一些基本方法。了解提示词的构成要素以及像 $temperature$ 这样的参数 (parameter)如何影响生成效果，是有效提示工程 (prompt engineering)的基础。这些简单方法是与大型语言模型（LLM）进行更复杂交互的起始。通常，只需清楚地说明希望模型完成什么，就能取得不错的成果。
+
+### 直接指示（零样本任务执行）
+
+最简明的方式是直接向大型语言模型发出指令。这依赖于模型预训练 (pre-training)后所具备的能力，即无需在提示词 (prompt)中提供具体示例，就能理解并执行各种任务指令。这种方式通常被称为“零样本”提示，因为您没有提供如何完成该任务的任何示例。
+
+**示例：文本摘要**
+
+提供您想生成摘要的文本，并明确要求生成摘要。
+
+```markdown
+提示词:
+
+将以下文本总结为两句话:
+
+大型语言模型（LLM）是经过大量文本数据训练的先进人工智能系统。它们能够理解并生成类似人类的文本，用于各种应用，包括翻译、内容创作和问答。它们处理上下文和生成连贯回复的能力使其成为强大的工具，但它们也有局限性，例如可能继承自训练数据的偏见以及偶尔生成不准确信息（幻觉）。细致的提示词工程对于有效引导其行为是必需的。
+
+摘要:
+```
+
+```markdown
+潜在LLM输出:
+
+大型语言模型是经过大量文本数据训练的人工智能系统，能够生成类似人类的文本，用于翻译和内容创作等任务。有效使用它们需要细致的提示词编写，以管理其能力并解决潜在偏见和不准确性等局限。
+```
+
+**示例：简单问答（基于自身知识）**
+
+您可以直接提问一般常识问题。大型语言模型会基于其训练数据中的信息给出回答。
+
+```markdown
+提示词:
+
+法国的首都是哪里？
+```
+
+```markdown
+潜在LLM输出:
+
+法国的首都是巴黎。
+```
+
+**示例：翻译**
+
+指示模型在不同语言之间翻译文本。
+
+```markdown
+提示词:
+
+将以下英文句子翻译成西班牙语:
+
+"The weather is beautiful today."
+```
+
+```markdown
+潜在LLM输出:
+
+"El tiempo está hermoso hoy."
+```
+
+### 文本生成与续写
+
+您可以提示大型语言模型生成创意文本、续写故事、编写代码，或者仅仅是完成您开始的句子或段落。
+
+**示例：创意写作**
+
+```markdown
+提示词:
+
+写一首关于城市雨天的短诗。
+```
+
+```markdown
+潜在LLM输出:
+
+灰云低垂，泪洒窗棂，
+柏油路面，霓虹映景。
+伞花绽放，匆忙步履，
+水洼映照，浮光掠影。
+城市低语，闷声回响，
+雨滴节拍，四处徜徉。
+```
+
+**示例：文本补全**
+
+提供文本的开头，让模型续写。
+
+```markdown
+提示词:
+
+很久很久以前，在一片古树参天、溪流潺潺的森林里，住着一只名叫芬利的好奇小狐狸。一天早上，芬利发现了一条他从未见过的隐蔽小径。这条小径一直深入森林，通向
+```
+
+```markdown
+潜在LLM输出:
+
+很久很久以前，在一片古树参流潺潺的森林里，住着一只名叫芬利的好奇小狐狸。一天早上，芬利发现了一条他从未见过的隐蔽小径。这条小径一直深入森林，通向一束闪烁的光芒，那光芒在一棵巨大的橡树盘根错节的根系间柔和地跳动着。芬利感到好奇，小心翼翼地踏上小径，爪子在长满苔藓的地面上悄无声息。
+```
+
+### 信息提取
+
+您可以指示模型从给定文本中提取具体信息。
+
+**示例：提取细节**
+
+```markdown
+提示词:
+
+从以下句子中提取提及的人名和公司名:
+
+"演示结束后，来自Innovate Solutions的Sarah Lee留下来回答问题。"
+
+人名:
+公司:
+```
+
+```markdown
+潜在LLM输出:
+
+人名: Sarah Lee
+公司: Innovate Solutions
+```
+
+### 简单分类
+
+要求模型基于预定义的标签对一段文本进行分类。
+
+**示例：情感分析**
+
+```markdown
+提示词:
+
+将以下客户评价的情感归类为积极、消极或中立。
+
+评价: "The product arrived on time, but it was damaged during shipping."
+
+情感:
+```
+
+```markdown
+潜在LLM输出:
+
+情感: 消极
+```
+
+这些基本方法展示了提示词 (prompt)工程的核心理念：通过精心设计的输入来指导大型语言模型的输出。尽管简单，但这些方法对许多任务都非常有效。请记住，您的指令清晰度、提供的上下文 (context)数量以及选择的生成参数 (parameter)（如 $temperature$）都将影响回复的质量和特性。正如您在上一节中看到的，较高的 $temperature$ 可能适合创意写作，而较低的 $temperature$ 通常更适合需要精确性的事实性任务，例如信息提取或摘要生成。
+
+在下一章中，我们将介绍在这些方法上进行扩展的更进阶策略，使您能够处理更复杂的问题，并对大型语言模型的行为获得更精细的控制。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: arXiv preprint arXiv:2005.14165; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍并详细阐述了大型语言模型的零样本和少样本学习概念，为直接指令式提示提供了背景知识。
+- [OpenAI Prompt Engineering Guide](https://www.scribd.com/document/700854492/OpenAI-Official-Prompt-Engineering-Guide) — OpenAI (2024)
+  官方且有用的提示工程指南，涵盖了与大型语言模型交互的关键策略。
+- [Prompt Engineering for Everyone](https://www.packtpub.com/product/prompt-engineering-for-everyone/9781805101689) — Leonie Wood (2023)
+  Publisher: Packt Publishing
+  一本入门书籍，解释了核心提示工程方法，适合初学者理解其应用。

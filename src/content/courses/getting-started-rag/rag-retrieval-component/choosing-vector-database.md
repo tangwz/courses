@@ -1,0 +1,86 @@
+---
+course: "getting-started-rag"
+chapter: "rag-retrieval-component"
+lesson: "choosing-vector-database"
+sourceId: 3643
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-2-rag-retrieval-component/choosing-vector-database"
+title: "选择向量数据库：考量因素"
+description: "讨论选择向量数据库时应考虑的因素（例如：伸缩性、性能、云端与本地）。"
+order: 6
+plots: []
+sourceHash: "49e6b4e7f4ed1b515f88e665e8752547379b7976a6e52b55cd53ee075b9a8bae"
+sourceCorrections: []
+---
+
+向量 (vector)数据库用于存储和搜索嵌入 (embedding)。选择一个适合您项目需求的数据库是主要步骤。这不是一个一刀切的决定。您的RAG应用具体要求、运营限制和预算将很大程度上影响最佳选择。以下将概述评估不同向量数据库选项时应权衡的因素。
+
+### 伸缩性要求
+
+考虑您的知识库预期规模及其可能增长的程度。您最初需要存储多少向量 (vector)，以及预计随着时间推移会增加多少？还要考虑查询负载。有多少用户会同时与您的RAG系统交互？您需要支持每秒多少次查询 (QPS)？
+
+- **数据量：** 有些数据库能高效处理数十亿向量，而另一些可能更适合较小的数据集（数百万）。请检查数据库的架构和官方文档中的限制。
+- **查询吞吐量 (throughput)：** 高QPS通常需要分布式架构或优化的索引。了解数据库如何横向扩展（增加更多机器）或纵向扩展（使用更强大的机器）。
+
+### 性能特点
+
+性能通常是权衡的结果，特别是对于近似最近邻 (ANN) 搜索而言，大多数向量 (vector)数据库都使用它来快速找到*大致*相关的向量，而非保证绝对最近的（精确最近邻或ENN）。
+
+- **索引速度：** 新向量能多快添加并变为可搜索？如果您的知识库频繁更新，这一点很重要。
+- **查询延迟：** 数据库对相似性搜索查询返回结果的速度有多快？更低的延迟对于实时应用非常重要。
+- **召回率与速度：** ANN算法通常有参数 (parameter)，让您可以调整搜索准确性（召回率：找到真正最近的邻居）和速度之间的平衡。更快的搜索有时可能会错过最佳匹配。了解所使用的具体ANN算法（例如HNSW、IVF、LSH）及其调优选项。
+
+> 部署选项涉及运营便捷性、成本、控制和包含功能之间的权衡。
+
+### 部署与运营
+
+您将如何运行向量 (vector)数据库？
+
+- **托管云服务：** 这些服务（如Pinecone、Zilliz Cloud、Weaviate Cloud Services，以及Milvus、Qdrant等托管版本）为您处理基础设施、伸缩、备份和维护。这简化了运营，但通常伴随着更高的直接成本，并且对底层环境的控制较少。
+- **自托管：** 您可以在您自己的基础设施上运行开源向量数据库（如Milvus、Weaviate、Qdrant、Chroma）或企业版本，无论是在云端（虚拟机上）还是本地。这赋予您最大的控制权和潜在的成本节约（尤其是在较小规模时），但需要大量的运营工作来处理设置、伸缩、监控和维护。
+
+### 数据管理与功能
+
+考虑以下能力：
+
+- **元数据存储与过滤：** 您能否在向量 (vector)旁边存储元数据（例如，文档来源、时间戳、类别）？您能否在向量搜索*之前*或*期间*根据这些元数据过滤搜索结果？预过滤可以显著加快查询速度并提高相关性（例如，“*只*从上周修改的文档中查找相关向量”）。
+- **CRUD 操作：** 您能多轻松地创建、读取、更新和删除向量及其相关元数据？高效的更新和删除对于动态知识库很重要。
+- **混合搜索：** 有些数据库支持将传统关键词搜索（如BM25）与向量相似性搜索结合，当术语的精确匹配与语义相似性同等重要时，这会很有益。
+- **安全性：** 检查身份验证、授权和数据加密功能，特别是当处理敏感信息时。
+
+### 集成与生态系统
+
+数据库如何很好地适应您现有或计划的MLOps技术栈？
+
+- **语言绑定：** 确保您的主要编程语言（对于大多数RAG工作可能为Python）有维护良好的客户端库。
+- **框架兼容性：** 检查与LangChain和LlamaIndex等流行RAG框架的轻松集成。这些框架通常提供抽象层，简化了与不同向量 (vector)数据库的连接。
+- **嵌入 (embedding)模型兼容性：** 尽管大多数数据库都存储数值向量，无论其来源如何，但有些可能会为特定嵌入模型提供更紧密的集成或优化。
+
+### 成本模型
+
+了解您将如何被收费：
+
+- **托管服务：** 通常基于存储的数据量、用于索引/查询的计算资源或实例类型。成本会随着使用量显著增加。
+- **自托管（开源）：** 没有直接的软件许可费用，但您需要支付底层基础设施（计算、存储、网络）和运营开销（工程时间）的费用。
+- **自托管（企业版）：** 除了基础设施和运营成本外，可能还涉及许可费用，通常提供增强功能或支持。
+
+### 开源与专有
+
+- **开源：** 提供透明度、定制潜力，并且通常有强大的社区支持。您可以在软件层面避免供应商锁定。需要自行管理或寻找基于开源核心的托管服务。
+- **专有/闭源：** 通常提供专门支持，可能提供更完善的开箱即用功能（尤其是在托管服务中），但透明度和灵活性较低。您依赖于供应商的产品路线图和定价结构。
+
+选择向量 (vector)数据库需要根据您的具体项目目标、技术专长、预算和运营能力，仔细权衡这些因素。在决定将某个选项用于生产环境之前，通常建议使用代表性的数据子集对几个选项进行试验。
+
+## 参考资料
+
+- [Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs](https://doi.org/10.1109/TPAMI.2018.2889476) — Yury Malkov, Dmitry Yashunin (2018)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 40; Pages: 2176-2188; DOI: [10.1109/TPAMI.2018.2889476](https://doi.org/10.1109/TPAMI.2018.2889476)
+  关于关键近似最近邻（ANN）算法的基础论文，有助于理解召回率与速度的权衡。
+- [A Survey on Retrieve-Augmented Generation](https://arxiv.org/pdf/2402.19473.pdf) — Lifan Yuan, Chenhao Wang, Wenhao Huang, Wenjie Li, Fandong Meng, Huixing Shao (2024)
+  Journal: arXiv preprint arXiv:2402.19473; DOI: [arXiv:2402.19473](https://doi.org/arXiv%3A2402.19473)
+  检索增强生成（RAG）系统的概述，阐明了向量数据库等检索组件的作用。
+- [A Comprehensive Survey of Approximate Nearest Neighbor Search Algorithms and Systems](https://arxiv.org/pdf/2308.08632.pdf) — Jianqiu Chen, Qi Mao, Kaiwei Li, Mengyan Hu, Chenghao Liu, Yanlei Shang, Xiaoting Shi, Ruobing Huang, Qingyuan Zhang, Yulei Li, Wei Xu, Jinheng Bao, Xiaopeng Li (2023)
+  Journal: arXiv preprint arXiv:2308.08632; DOI: [arXiv:2308.08632](https://doi.org/arXiv%3A2308.08632)
+  一项涵盖各种近似最近邻（ANN）搜索算法和系统的调查，讨论了可伸缩性和性能。
+- [Milvus Architecture Overview](https://milvus.io/docs/architecture_overview.md) — Zilliz (2024)
+  Publisher: Zilliz
+  详细介绍了一个知名开源向量数据库的架构、部署和可伸缩性的官方文档。

@@ -1,0 +1,263 @@
+---
+course: "intermediate-python-programming-ml"
+chapter: "data-manipulation-pandas"
+lesson: "pandas-grouping-aggregation"
+sourceId: 2156
+sourceUrl: "https://apxml.com/zh/courses/intermediate-python-programming-ml/chapter-3-data-manipulation-pandas/pandas-grouping-aggregation"
+title: "分组和聚合操作"
+description: "使用Pandas中功能强大的groupby机制执行按组计算和聚合操作。"
+order: 6
+plots: []
+sourceHash: "4f4d19bebc938fd2870922da7b29b89e2379b0ea4bb153789f511ebb5384957b"
+sourceCorrections: []
+---
+
+在数据分析以及为机器学习 (machine learning)准备数据时，根据特定类别或条件汇总数据是一个常见做法。分组和聚合操作为此变得不可或缺。Pandas提供了一种强大且灵活的`groupby`机制，可让您高效地执行这些任务。
+
+分组操作的核心思想通常遵循一种称为**分治-应用-合并**的模式：
+
+1. **分治 (Split):** 数据根据一个或多个指定列（分组键）中的值被分成不同的组。
+2. **应用 (Apply):** 一个函数独立应用于每个组。此函数可以是聚合（如计算总和或平均值）、转换（如在组内标准化数据）或筛选操作。
+3. **合并 (Combine):** 应用函数到每个组所得的结果被重新组合成一个单一的数据结构（通常是Series或DataFrame）。
+
+接下来我们看看这在Pandas中是如何运作的。
+
+### `groupby()` 方法
+
+Pandas中用于分组的主要工具是`.groupby()`方法。当在一个DataFrame上调用时，它不会立即进行任何计算，而是返回一个`GroupBy`对象。此对象包含对每个组应用操作所需的所有信息。
+
+考虑一个表示销售数据的示例DataFrame：
+
+```python
+import pandas as pd
+import numpy as np
+
+# 示例销售数据
+data = {
+    'Category': ['Electronics', 'Clothing', 'Electronics', 'Groceries', 'Clothing', 'Groceries', 'Electronics', 'Clothing'],
+    'Region': ['North', 'South', 'North', 'West', 'North', 'South', 'West', 'South'],
+    'Sales': [1200, 850, 1500, 300, 700, 450, 1800, 950],
+    'Quantity': [10, 25, 8, 50, 15, 60, 12, 30]
+}
+df = pd.DataFrame(data)
+
+print(df)
+# 输出：
+#       Category Region  Sales  Quantity
+# 0  Electronics  North   1200        10
+# 1     Clothing  South    850        25
+# 2  Electronics  North   1500         8
+# 3    Groceries   West    300        50
+# 4     Clothing  North    700        15
+# 5    Groceries  South    450        60
+# 6  Electronics   West   1800        12
+# 7     Clothing  South    950        30
+```
+
+要根据`Category`对这些数据进行分组，您可以使用：
+
+```python
+grouped_by_category = df.groupby('Category')
+print(grouped_by_category)
+# 输出： <pandas.core.groupby.generic.DataFrameGroupBy object at 0x...>
+```
+
+此`grouped_by_category`对象现在已准备好进行“应用”步骤。您可以查看它已识别的组：
+
+```python
+# 查看属于每个组的索引
+print(grouped_by_category.groups)
+# 输出：
+# {'Clothing': [1, 4, 7], 'Electronics': [0, 2, 6], 'Groceries': [3, 5]}
+
+# 获取一个特定组作为DataFrame
+print(grouped_by_category.get_group('Electronics'))
+# 输出：
+#       Category Region  Sales  Quantity
+# 0  Electronics  North   1200        10
+# 2  Electronics  North   1500         8
+# 6  Electronics   West   1800        12
+```
+
+### 聚合：汇总分组数据
+
+聚合涉及为每个组计算汇总统计量（如总和、平均值、计数）。一旦您有了`GroupBy`对象，就可以直接应用聚合函数。
+
+要计算每个类别的总销售额：
+
+```python
+total_sales_per_category = grouped_by_category['Sales'].sum()
+print(total_sales_per_category)
+# 输出：
+# Category
+# Clothing       2500
+# Electronics    4500
+# Groceries       750
+# Name: Sales, dtype: int64
+```
+
+这里，我们首先从`GroupBy`对象中选择`Sales`列，然后应用`sum()`聚合。Pandas会自动将结果与组名称对齐 (alignment)。
+
+您可以应用各种内置聚合函数：
+
+- `count()`: 每个组中非空条目的数量。
+- `size()`: 每个组中条目的总数（包括空值）。返回一个Series。
+- `sum()`: 值的总和。
+- `mean()`: 值的平均值。
+- `median()`: 值的中位数。
+- `min()`: 最小值。
+- `max()`: 最大值。
+- `std()`: 标准差。
+- `var()`: 方差。
+- `first()`: 第一个值。
+- `last()`: 最后一个值。
+
+如果您在不先选择列的情况下，直接将聚合函数应用于`GroupBy`对象，Pandas将尝试将其应用于所有*数值*列：
+
+```python
+# 计算每个类别的平均销售额和数量
+mean_values_per_category = grouped_by_category.mean(numeric_only=True)
+print(mean_values_per_category)
+# 输出：
+#              Sales  Quantity
+# Category
+# Clothing     833.333333  23.333333
+# Electronics 1500.000000  10.000000
+# Groceries    375.000000  55.000000
+```
+
+请注意，使用`numeric_only=True`是为了避免在“Region”等非数值列上出现警告或错误。
+
+### 应用多个聚合操作
+
+通常，您需要为每个组计算多个汇总统计量。`.agg()`方法提供了一种灵活的方式来完成此任务。
+
+要计算每个类别的销售额总和、平均值和计数：
+
+```python
+sales_summary = grouped_by_category['Sales'].agg(['sum', 'mean', 'count'])
+print(sales_summary)
+# 输出：
+#                sum         mean  count
+# Category
+# Clothing       2500   833.333333      3
+# Electronics    4500  1500.000000      3
+# Groceries       750   375.000000      2
+```
+
+您还可以通过向`.agg()`传递一个字典，将不同的聚合函数应用于不同的列。字典的键是列名，值是要应用于这些列的聚合函数（或函数列表）。
+
+```python
+# 计算每个类别的总销售额和平均数量
+custom_summary = grouped_by_category.agg({
+    'Sales': 'sum',
+    'Quantity': 'mean'
+})
+print(custom_summary)
+# 输出：
+#              Sales  Quantity
+# Category
+# Clothing       2500  23.333333
+# Electronics    4500  10.000000
+# Groceries       750  55.000000
+```
+
+您甚至可以在`.agg()`调用中重命名生成的聚合列：
+
+```python
+# 计算总销售额和平均数量，并重命名列
+named_summary = grouped_by_category.agg(
+    TotalSales=('Sales', 'sum'),
+    AverageQuantity=('Quantity', 'mean')
+)
+print(named_summary)
+# 输出：
+#              TotalSales  AverageQuantity
+# Category
+# Clothing           2500        23.333333
+# Electronics        4500        10.000000
+# Groceries           750        55.000000
+```
+
+### 按多列分组
+
+您可以向`.groupby()`传递一个列名列表，以便按多于一列进行分组。这会在结果中创建一个层级索引（MultiIndex）。
+
+```python
+# 按类别和区域分组
+grouped_multi = df.groupby(['Category', 'Region'])
+
+# 计算每个类别-区域组合的平均销售额
+mean_sales_multi = grouped_multi['Sales'].mean()
+print(mean_sales_multi)
+# 输出：
+# Category     Region
+# Clothing     North      700.0
+#              South      900.0
+# Electronics  North     1350.0
+#              West      1800.0
+# Groceries    South      450.0
+#              West       300.0
+# Name: Sales, dtype: float64
+```
+
+为了更方便地使用结果，您可以重置索引：
+
+```python
+mean_sales_multi_flat = grouped_multi['Sales'].mean().reset_index()
+print(mean_sales_multi_flat)
+# 输出：
+#       Category Region   Sales
+# 0     Clothing  North   700.0
+# 1     Clothing  South   900.0
+# 2  Electronics  North  1350.0
+# 3  Electronics   West  1800.0
+# 4    Groceries  South   450.0
+# 5    Groceries   West   300.0
+```
+
+### 使用`apply`应用自定义函数
+
+虽然聚合操作汇总组数据，但有时您需要对每个组执行更复杂、自定义的操作。`GroupBy`对象上的`.apply()`方法接受一个函数，并将其应用于每个组（作为DataFrame传入）。结果随后被组合。
+
+例如，我们来定义一个函数，计算每个类别内销售额的范围（最大值 - 最小值）：
+
+```python
+def sales_range(group):
+  return group['Sales'].max() - group['Sales'].min()
+
+range_per_category = grouped_by_category.apply(sales_range, include_groups=False)
+print(range_per_category)
+# 输出：
+# Category
+# Clothing        250
+# Electronics     600
+# Groceries       150
+# dtype: int64
+```
+
+注意：`include_groups=False`参数 (parameter)阻止Pandas尝试将分组键再次传递给函数，这有时会根据您的函数逻辑导致问题。由于Pandas 0.23版本之后默认行为正在改变，因此明确指定是一个良好的实践。
+
+`apply`方法非常灵活，但可能比内置聚合或转换慢，因为它通常涉及Python级别的循环，而非优化的C实现。
+
+### 其他GroupBy操作：转换和与筛选
+
+Pandas提供了专用方法：
+
+- `.transform()`: 按组应用函数，但返回一个与原始输入具有相同索引的对象（Series或DataFrame）。这对于在组内标准化数据等操作很有用（例如，计算相对于组平均值和标准差的z分数）。
+- `.filter()`: 允许您根据组级别的计算舍弃整个组。例如，您可以只保留平均销售额超过特定阈值的类别。
+
+我们在这里不会详细介绍这些，但知道它们的存在对更高级的数据操作任务很有用。
+
+分组和聚合是理解和汇总结构化数据的基本操作。它们使您能够从分类数据中获取洞察，比较组间的特征，并为机器学习 (machine learning)模型准备特征（例如，创建基于用户ID或时间窗口的聚合特征）。熟练运用`groupby`显著提升了您使用Pandas高效操作和分析数据的能力。
+
+## 参考资料
+
+- [GroupBy: split-apply-combine](https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html) — The pandas development team (2024)
+  Pandas官方指南，介绍groupby操作，涵盖分拆-应用-合并模式以及多种聚合、转换和过滤方法。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  由Pandas创建者编写的综合指南，深入介绍数据操作，包括groupby和聚合技术。
+- [Introduction to Machine Learning with Python: A Guide for Data Scientists](https://www.oreilly.com/library/view/introduction-to-machine/9781449369880/) — Andreas, Sarah (2016)
+  Publisher: O'Reilly Media
+  提供使用Pandas进行数据预处理和特征工程的实践示例，这些是机器学习的基础。

@@ -1,0 +1,94 @@
+---
+course: "federated-learning"
+chapter: "communication-efficiency-optimization"
+lesson: "optimizing-local-computation-fl"
+sourceId: 3602
+sourceUrl: "https://apxml.com/zh/courses/federated-learning/chapter-5-communication-efficiency-optimization/optimizing-local-computation-fl"
+title: "优化本地计算"
+description: "分析本地计算（本地周期数）与通信频率之间的权衡。"
+order: 5
+plots: ["plots/3602-0.json"]
+sourceHash: "de191ab1b6e9905c5a7e4327bfad0876a40c06d35cc914d56cd3d479a399b584"
+sourceCorrections: []
+---
+
+正如本章引言中所指出的，通信开销，特别是从众多客户端到中央服务器的上行传输，在许多联邦学习情境中是一个重要的性能瓶颈。虽然梯度压缩等技术直接处理消息的*大小*，但另一种辅助方法则侧重于减少通信轮次的*频率*。这通过在同步前优化每个客户端设备上执行的本地计算量来实现。
+
+在标准的联邦平均 (FedAvg) 算法中，通信频率与本地计算量之间存在一个平衡。有两个主要参数 (parameter)决定此平衡点：每轮参与的客户端数量 ($K$)，以及每个选定客户端在发送更新前对其数据执行的本地训练周期数 ($E$)。现在考察 $E$ 的作用以及相关的权衡。
+
+### 权衡：本地工作量与通信轮次
+
+增加本地周期数 ($E$) 使每个客户端能够在通信轮次之间使用自己的数据集执行更多步骤的本地优化（例如，随机梯度下降 (gradient descent)）。直观上，如果客户端在本地取得更多进展，则可能需要更少的通信轮次才能达到目标全局模型精度。每个通信轮次都会产生开销（网络延迟、服务器聚合时间），因此减少总轮次数可以使总体训练在实际时间上更快。
+
+考虑基本的联邦优化目标：
+
+
+$$
+\min_{w} F(w) = \sum_{i=1}^{N} p_i F_i(w)
+$$
+
+
+其中 $w$ 代表全局模型参数 (parameter)，$N$ 是客户端总数，$p_i$ 是客户端 $i$ 的权重 (weight)（通常与其数据集大小成比例），并且 $F_i(w)$ 是客户端 $i$ 的本地目标函数。
+
+当客户端 $i$ 执行 $E$ 个本地周期时，它从当前全局模型 $w_t$ 开始，并使用其本地数据迭代更新它，从而得到本地模型 $w_{t+1}^i$。服务器随后聚合这些本地模型（例如，平均），以生成下一个全局模型 $w_{t+1}$。
+
+如果 $E=1$，客户端只对其本地数据执行一次遍历（或可能只是一次批量更新）。这与在客户端之间分布的大批量同步SGD方法非常相似，通常被称为联邦SGD (FedSGD)。通信发生得比较频繁。
+
+如果 $E > 1$，客户端在本地执行多次更新。这会降低通信频率，但引入了一个潜在的难题：**客户端漂移**。随着客户端在其本地、可能独特（非独立同分布）的数据分布上进行密集优化，它们的本地模型 ($w_{t+1}^i$) 可能会彼此显著偏离，并偏离全局目标 $F(w)$ 的最佳方案。聚合这些偏离的模型可能会减慢收敛速度，甚至阻止全局模型达到良好方案。
+
+### 统计异质性的影响
+
+增加 $E$ 的有效性与客户端之间统计异质性（非独立同分布数据）的程度密切相关，本话题已在第4章中详细讨论。
+
+- **独立同分布数据：** 如果客户端数据分布是独立同分布 (IID) 的，执行更多本地步骤 ($E > 1$) 通常会比 $E=1$ 加速收敛，因为本地更新能很好地近似全局数据分布上的更新。客户端漂移的担忧会较小。
+- **非独立同分布数据：** 对于异构数据，增加 $E$ 变成一种细致的平衡行为。更多本地步骤会加剧客户端漂移。客户端在其特定数据分布上找到的本地最小值可能与全局最小值相距甚远。FedProx（第2章）等算法，通过引入一个近端项使本地更新更接近全局模型，
+  
+  $$
+  w_{t+1}^i = \arg\min_{w} F_i(w) + \frac{\mu}{2} \|w - w_t\|^2
+  $$
+  
+  即使面对非独立同分布数据，也能使训练对于更大的 $E$ 值更有效。类似地，SCAFFOLD（第2章）使用控制变量来纠正客户端漂移，这可能允许更激进的本地计算策略。
+
+### 系统异质性与滞后者
+
+在统计异质性之外，*系统异质性*（客户端硬件、网络连接和可用性的差异）也影响 $E$ 的最佳选择。在同步联邦学习中，服务器会等待所有 $K$ 个选定客户端完成其 $E$ 个本地周期后才继续。如果 $E$ 很大，处理器较慢或电量有限的客户端将需要更长时间，从而延迟整个轮次。这些“滞后者”会严重限制有效的训练速度。
+
+选择较小的 $E$ 可以减少每轮的计算时间，从而减轻同步设置中滞后者的影响。本章稍后讨论的异步协议，提供了处理滞后者的其他方法，而不会严格受限于最慢的设备，这可能使更大的 $E$ 值在异构系统中更具可行性。
+
+### 实际调整与考量
+
+找到 $E$ 的“最佳”值通常是一个经验过程，具体取决于应用程序、模型架构、数据集特性和系统限制。通常会有一个最优点：
+
+- **$E$ 过小：** 高昂的通信开销占据了训练时间的大部分。
+- **$E$ 过大：** 客户端漂移减慢收敛，或者滞后者显著延迟同步轮次。
+
+一种常见的实际方法是，从较小的 $E$ 值（例如1到5）开始，并逐步增加它，同时监测收敛情况。需要关注的重要指标包括：
+
+1. 全局模型精度 vs. 通信轮次。
+2. 全局模型精度 vs. 实际时间。
+
+目标通常是最小化达到所需精度水平所需的实际时间。
+
+
+
+![本地周期数 (E) 对收敛时间的影响](plots/3602-0.json)
+
+
+
+> 此情境说明了增加本地周期数 ($E$) 如何能最初在实际时间上加速收敛（例如，$E=5, E=10$ 比 $E=1$ 更快达到更高精度）。然而，过大的 $E$（例如，$E=20$）可能由于客户端漂移导致收敛变慢或不稳定，尤其是在异构数据上。最优的 $E$ 值可在计算与通信之间取得平衡。
+
+此外，还需考虑 $E$ 与本地学习率之间的关联。执行更多本地更新 ($E > 1$) 可能需要使用比 $E=1$ 情况更小的本地学习率以保持稳定性。
+
+总之，通过调整 $E$ 来优化本地计算是提高联邦学习系统效率的重要手段。它使得本地处理工作量与通信频率之间能够进行权衡。然而，这种调整必须仔细考虑数据的统计特性（非独立同分布）以及参与客户端的系统特性（硬件/网络变异性），以避免客户端漂移和滞后者瓶颈等问题。
+
+## 参考资料
+
+- [Communication-Efficient Learning of Deep Networks from Decentralized Data](https://arxiv.org/abs/1602.05629) — H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, Blaise Agüera y Arcas (2017)
+  Journal: Proceedings of the 20 th International Conference on Artificial Intelligence and Statistics (AISTATS); Publisher: JMLR: W&CP; Volume: 54; DOI: [10.48550/arXiv.1602.05629](https://doi.org/10.48550/arXiv.1602.05629)
+  介绍了联邦平均（FedAvg）算法，并讨论了其通信效率，包括本地训练轮次（E）和客户端采样（K）的作用。
+- [Federated Optimization in Heterogeneous Networks](https://arxiv.org/abs/1812.06127) — Tian Li, Anit Kumar Sahu, Manzil Zaheer, Maziar Sanjabi, Ameet Talwalkar, Virginia Smith (2020)
+  Journal: Proceedings of Machine Learning and Systems (MLSys); DOI: [10.48550/arXiv.1812.06127](https://doi.org/10.48550/arXiv.1812.06127)
+  提出了FedProx算法，通过在本地目标函数中引入近端项来解决联邦学习中的客户端漂移，从而支持在非独立同分布数据上进行更多本地计算。
+- [SCAFFOLD: Stochastic Controlled Averaging for Federated Learning](https://arxiv.org/abs/1910.06378) — Sai Praneeth Karimireddy, Satyen Kale, Mehryar Mohri, Sashank J. Reddi, Sebastian U. Stich, Ananda Theertha Suresh (2020)
+  Journal: Proceedings of the International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1910.06378](https://doi.org/10.48550/arXiv.1910.06378)
+  介绍了SCAFFOLD算法，它利用控制变量来减轻客户端漂移，从而在异构数据联邦学习中实现更高效的本地计算。

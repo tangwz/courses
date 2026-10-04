@@ -1,0 +1,60 @@
+---
+course: "introduction-autoencoders-feature-learning"
+chapter: "autoencoder-anatomy-encoder-decoder"
+lesson: "encoder-activation-functions"
+sourceId: 6407
+sourceUrl: "https://apxml.com/zh/courses/introduction-autoencoders-feature-learning/chapter-2-autoencoder-anatomy-encoder-decoder/encoder-activation-functions"
+title: "编码器中常用的激活函数"
+description: "了解编码器层中常用的激活函数（如ReLU）及其作用。"
+order: 5
+plots: ["plots/6407-0.json"]
+sourceHash: "43b606d87921ce215749928493446c3b30d2f5574caf66907e4955e11c85c508"
+sourceCorrections: []
+---
+
+在自动编码器的编码器部分，每层执行计算（输入乘以权重 (weight)并加上偏置 (bias)）后，会应用一个激活函数 (activation function)。可以将激活函数视为每个神经元的简单“把关者”。它决定哪些信息应该传递给下一层。如果没有这些函数，无论我们堆叠多少层，我们的网络都只能学习简单的线性关系。激活函数引入非线性，使得编码器能够从输入数据中学习更复杂的模式和表示。
+
+**修正线性单元**（简称**ReLU**）是编码器隐藏层中最常用且效果最好的激活函数之一。
+
+### ReLU（修正线性单元）
+
+ReLU函数非常直接。如果函数的输入是正数，它会直接输出该输入值。如果输入是零或负数，则输出零。
+
+从数学角度看，ReLU定义如下：
+
+
+$$
+f(x) = \max(0, x)
+$$
+
+
+这里 $x$ 是神经元的输入。
+
+我们来将其可视化：
+
+
+
+![ReLU激活函数](plots/6407-0.json)
+
+
+
+> ReLU函数在输入为正时直接输出输入值，否则输出零。
+
+那么，为什么ReLU在编码器中如此受欢迎？
+
+1. **简洁与高效：** 它的计算成本非常低。这些操作（最大值比较，然后传递一个值或零）速度很快，从而加快了训练过程。
+2. **减少梯度消失问题：** 在更深的网络中，其他一些激活函数 (activation function)（例如sigmoid或tanh，我们稍后将在解码器部分提及）可能会遇到“梯度消失”问题。这意味着学习信号在通过多层反向传播 (backpropagation)时变得非常小，使得前期的层难以学习。对于正输入，ReLU有助于缓解此问题，因为其导数（变化率）是常数（0或1）。这使得学习信号可以更好地流动。
+3. **稀疏性：** 由于ReLU对任何负输入都输出零，这可能导致层中的一些神经元“不活跃”（输出零）。这被称为稀疏性。稀疏表示可以更高效，并有助于网络学习更鲜明的特征，因为并非所有神经元都会对每个输入一直处于活跃状态。
+
+在构建编码器时，通常会将ReLU激活函数应用于每个隐藏层的输出。例如，如果编码器中的某个隐藏层为一个神经元计算出值 $h_1$，则传递给下一层的实际输出将是 $ReLU(h_1)$。这个过程在层中的所有神经元以及编码器中后续的隐藏层中重复，每一步都有助于将数据转换成更紧凑和抽象的表示。
+
+尽管ReLU是编码器隐藏层的常用选择，但了解其他激活函数也很重要。例如，像“Leaky ReLU”或“参数 (parameter)化ReLU (PReLU)”这样的变体是为了解决“ReLU死亡”问题而开发的（当神经元的输入总是负数时，它们可能会卡在输出零）。然而，作为入门内容，理解ReLU提供了一个坚实的基础，因为它广泛有效且常用。激活函数的选择会影响自动编码器学习数据压缩的效果和速度。
+
+## 参考资料
+
+- [Deep Sparse Rectifier Networks](http://proceedings.mlr.press/v15/glorot11a/glorot11a.pdf) — Xavier Glorot, Antoine Bordes, and Yoshua Bengio (2011)
+  Journal: Proceedings of the Fourteenth International Conference on Artificial Intelligence and Statistics (AISTATS); Volume: 15; Pages: 315-323; DOI: [10.5555/3104322.3104364](https://doi.org/10.5555/3104322.3104364)
+  本文介绍了修正线性单元（ReLU）激活函数，并展示了其在深度神经网络中的优势，尤其是在处理梯度消失问题方面的作用。
+- [Deep Learning](http://www.deeplearningbook.org) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教材，提供关于神经网络的广泛信息，详细解释了ReLU等多种激活函数、其属性以及在增加非线性和解决梯度问题方面的功能。

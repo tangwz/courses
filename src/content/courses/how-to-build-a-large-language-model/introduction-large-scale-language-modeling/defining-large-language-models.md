@@ -1,0 +1,112 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "introduction-large-scale-language-modeling"
+lesson: "defining-large-language-models"
+sourceId: 5947
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-1-introduction-large-scale-language-modeling/defining-large-language-models"
+title: "定义大型语言模型"
+description: "定义大型语言模型，并根据规模和能力将其与较小型模型区分开来。"
+order: 1
+plots: ["plots/5947-0.json"]
+sourceHash: "be01957127b60b6395d7d1e57f9244658bbda411465e899f5371f6eed8009639"
+sourceCorrections: []
+---
+
+其核心是一个语言模型，它是一个统计工具，用来预测词序列的概率，更确切地说，是预测标记（token）序列的概率（标记可以是词、子词 (subword)或字符，我们将在第五章讨论）。给定一个前面的标记序列，模型会尝试预测最可能的下一个标记。这种基本能力可以数学方式表示为计算概率：
+
+
+$$
+P(token_i | token_1, token_2, ..., token_{i-1})
+$$
+
+
+这种预测能力使语言模型能够生成文本、完成句子、翻译语言以及执行各种其他自然语言处理（NLP）任务。传统的语言模型，包括n-gram和早期的神经网络 (neural network)方法，如循环神经网络（RNN），通常操作的参数 (parameter)量从数千到数亿不等。
+
+那么，是什么让一个语言模型“大型”呢？“大型语言模型”（LLM）这个术语特指基于神经网络的语言模型，其特点是规模非常庞大，无论是在所含参数数量还是训练数据量方面。
+
+### 参数 (parameter)：大小的衡量标准
+
+主要区别在于可学习参数的庞大数量。虽然早期模型如BERT-Large有大约3.4亿个参数，但大型语言模型将这一界限大幅拓宽，通常包含数十亿、数百亿、数千亿甚至数万亿个参数。这些参数（神经网络 (neural network)中的权重 (weight)和偏置 (bias)）对从训练数据中学习到的模式、语法、知识和细节进行编码。这种能力的非常大增长是一个决定性特点。
+
+
+
+![语言模型参数量增长图（十亿级）](plots/5947-0.json)
+
+
+
+> 几个知名语言模型的近似参数量，说明了规模差异（注意Y轴是对数刻度）。
+
+### 训练数据：推动规模
+
+相应地，大型语言模型在庞大数据集上进行预训练 (pre-training)，这些数据集通常包含数百TB甚至PB级别的文本数据，抓取自网络、书籍、代码库及其他来源（第6-9章将介绍数据来源和处理）。这与在经过筛选、规模较小、通常以GB计的数据集上训练的较小型模型形成对比。如此规模的数据是有效训练庞大参数 (parameter)量、并让模型接触到广泛语言使用和知识的必要条件。
+
+### 基础架构
+
+早期模型尝试了多种架构，而现代大型语言模型几乎都基于Transformer架构，该架构由Vaswani等人于2017年在论文《Attention Is All You Need》中提出。Transformer的自注意力 (self-attention)机制 (attention mechanism)使模型在进行预测时，能够权衡输入序列中不同标记 (token)的重要性，克服了之前序列架构（如RNN）在处理长距离依赖方面的局限。我们将在第四章详细讨论Transformer。
+
+### 涌现 (emergence)能力：规模效应的结果
+
+也许大型语言模型最令人着迷的一面是，它们涌现出并非明确编程或训练而来的能力，而是作为规模效应的结果而出现。较小型模型通常需要大量针对特定任务的微调 (fine-tuning)，才能在情感分析或问答等下游任务中表现良好。然而，大型语言模型却常表现出卓越的零样本或少样本学习 (few-shot learning)能力。
+
+- **零样本学习 (zero-shot learning)：** 模型能够执行在提示中描述的任务，而无需在训练期间见过该任务的任何具体例子。
+- **少样本学习：** 模型能够在提示本身中给出少量（例如1到32个）例子后执行任务（上下文 (context)学习）。
+
+涌现能力的例子包括算术推理 (inference)、复杂指令遵循、训练数据中未明确配对的语言之间的翻译以及代码生成。这些能力在模型规模超过一定阈值时会显得有些突然地出现，这表明数量（规模）可以带来行为上的质变。
+
+考虑一个简化的交互：
+
+```python
+# 大型语言模型交互
+# 假设'llm'是一个预加载的大型语言模型对象
+
+context = "The capital of Indonesia is"
+next_token_probabilities = llm.predict_next_token_probabilities(context)
+
+# 模型将高概率赋给'Jakarta'
+print(f"最可能的预测: {llm.get_most_likely_token(next_token_probabilities)}")
+# 输出: 最可能的预测: Jakarta
+
+context_few_shot = """
+Translate English to Indonesian:
+sea otter => berang-berang laut
+cheese => keju
+plush toy => boneka
+
+Translate English to Indonesian:
+cloud => ?
+"""
+next_token_probabilities_few_shot = llm.predict_next_token_probabilities(
+    context_few_shot
+)
+
+# 模型利用这些例子进行翻译
+print(f"少样本预测: {llm.get_most_likely_token(
+    next_token_probabilities_few_shot
+)}")
+# 输出: 少样本预测: awan
+```
+
+这种少样本能力得益于模型的规模和广泛的预训练 (pre-training)，它使大型语言模型与之前的模型区别开来，之前的模型通常需要在一个专门的英法翻译数据集上进行微调才能获得类似结果。
+
+### 计算需求
+
+最后，定义大型语言模型必然涉及到对其训练所需庞大计算资源的承认。训练过程通常涉及数千个高端GPU或TPU，运行数周或数月，消耗大量能源并产生高昂成本。这种计算规模是与较小型模型的另一个实际区别。
+
+综上所述，大型语言模型由以下几点定义：
+
+1. **庞大规模：** 数十亿或数万亿参数 (parameter)。
+2. **广泛训练数据：** 在数TB或数PB的多样化文本上进行预训练 (pre-training)。
+3. **Transformer架构：** 通常基于Transformer模型。
+4. **涌现 (emergence)能力：** 表现出零样本和少样本学习 (few-shot learning)能力，这些能力并非其明确的训练目标。
+5. **高昂计算成本：** 训练需要大规模分布式计算资源。
+
+理解这些特点，为探讨构建、训练和部署这些强大模型所涉及的工程挑战和技术奠定了基础，这也是本课程的重点。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，详细说明了其巨大规模、广泛训练数据以及大型语言模型特有的涌现少样本学习能力。
+- [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361) — Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei (2020)
+  Journal: arXiv preprint arXiv:2001.08361; Pages: 1-19; DOI: [10.48550/arXiv.2001.08361](https://doi.org/10.48550/arXiv.2001.08361)
+  系统地研究了语言模型的性能如何随着模型大小、数据集大小和计算预算的增加而提高。

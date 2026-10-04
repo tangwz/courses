@@ -1,0 +1,66 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "scm-identification-strategies"
+lesson: "advanced-graphical-representations"
+sourceId: 4299
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-1-scm-identification-strategies/advanced-graphical-representations"
+title: "高级图形表示：有向无环图"
+description: "分析复杂的有向无环图（DAG）以及因果系统的替代图形模型。"
+order: 2
+plots: []
+sourceHash: "ca19b3618aae7c6193ad1772e24b225c67cdcc3fd609292257ebdc05f9b73405"
+sourceCorrections: []
+---
+
+尽管有向无环图（DAG）是表示结构因果模型（SCM）中因果假设的主要工具，机器学习 (machine learning)系统常有复杂情况，使得基本DAG的表示能力不足。了解更精密的图形表示方法对有效处理隐藏混淆、选择偏差和反馈机制等问题很必要。
+
+### 基础有向无环图的进阶应用
+
+标准DAG通过d-分离编码条件独立关系，这支撑着后门准则和前门准则等识别依据。然而，它们隐含地假设所有相关变量都可观测，并且系统是无环的。当这些假设被违反，或者我们需要表示选择过程等更复杂的机制时，我们会转向扩展的图形框架。
+
+### 表示未观测的混淆：祖先图
+
+常见问题是存在未观测（潜在）的混淆变量。尽管DAG可以包含潜在变量（常用$U$表示），但在边际化这些$U$变量后，分析图会导致结构不再是简单的DAG。对潜在共同原因进行边际化会引入仅凭观测变量之间的有向边无法表示的依赖关系。
+
+**最大祖先图（MAG）：** 这些图将DAGs推广，以包含双向边（$X \leftrightarrow Y$）。双向边表示$X$和$Y$之间存在未观测的共同原因。MAG表示在将底层DAG中的潜在变量边际化后，观测变量之间成立的条件独立结构。MAG中的分离由m-分离定义，这是一个比d-分离更复杂的准则。
+
+**部分祖先图（PAG）：** PAG更为通用。它们产生于基于约束的发现算法（例如第二章中介绍的FCI），当可能存在潜在变量时。PAG可以包含有向边（$X \to Y$）、双向边（$X \leftrightarrow Y$）和部分定向边（例如 $X \circ\!\!-\!\!\!\circ Y$， $X \circ\!\!\to Y$）。这些部分定向边表示由于潜在的隐藏变量或统计等价模型而导致对精确因果结构的不确定性。
+
+> 在DAG中边际化潜在混淆变量$U$，导致相应的MAG中$X$和$Y$之间出现双向边，这表示存在共享的隐藏混淆。
+
+### 显式建模选择偏差：选择图
+
+选择偏差发生在数据点纳入分析时依赖于系统内的变量，通常是通过以碰撞点或碰撞点的后代为条件，这会引起虚假关联。标准DAG不显式表示选择机制本身。
+
+**选择图（通常基于SWIGs - 单一干预图）：** 这些图通过添加一个节点（通常是$S$），表示选择事件（例如，如果被选中，$S=1$；否则，$S=0$），来增强原始DAG。箭头从影响选择的变量指向$S$。以$S=1$为条件分析图（这发生在有偏数据中）使得选择的效果变得显式。
+
+> 这是一个选择图，其中选择$S$依赖于碰撞点$Z$。以$S=1$为条件（仅分析选定的数据）会通过碰撞点$Z$打开路径$T \to Z \to Y$，这可能在$T$和$Y$之间产生虚假关联。
+
+### 其他表示方法
+
+- **链图（CG）：** 这些图结合有向边和无向边，将变量划分为块。有向边连接块间变量，而无向边连接同一块内的变量。它们适用于建模具有因果依赖和对称关联的系统，常出现于特定的统计建模背景（例如LWF链图）。CG的识别理论比DAG更复杂。
+- **带有环的图（有向循环图 - DCG）：** 尽管第一章主要侧重于无环模型，但后续章节和部分会提及带有反馈循环的系统。表示这些系统常需要DCG或随时间展开的动态模型。带有环的SCM的平衡解释提出了独特的识别问题。
+
+### 对识别的影响
+
+这些高级图形表示不只是一种符号便利。它们带有各自的图形准则，用于确定因果效应的可识别性。
+
+- 在MAG和PAG中，m-分离及其变体取代了d-分离。识别通常依赖于寻找特定的图形模式，这些模式可以排除涉及潜在变量的混淆路径。
+- 在选择图中，识别涉及对通过以选择变量$S$为条件而打开或关闭的路径进行推理 (inference)。技术可能涉及在增强图中寻找调整集，或使用敏感性分析来处理选择偏差。
+
+“理解这些表示方法是应用本章后面讨论的高级识别策略的第一步，并运用后续章节中涵盖的因果发现和估计技术，特别是在处理机器学习 (machine learning)系统常见的复杂、高维和可能存在偏差的数据时。它们提供了表达复杂数据生成过程假设所需的正式语言。”
+
+## 参考资料
+
+- [Causation, Prediction, and Search](https://doi.org/10.7551/mitpress/1754.001.0001) — Peter Spirtes, Clark Glymour, Richard Scheines (2000)
+  Publisher: MIT Press; DOI: [10.7551/mitpress/1754.001.0001](https://doi.org/10.7551/mitpress/1754.001.0001)
+  因果推断的基础著作，详细介绍了从观测数据中进行因果发现的方法，包括使用部分祖先图（PAGs）处理潜在混杂因素。
+- [Causality: Models, Reasoning, and Inference](https://www.cambridge.org/9780521895606) — Judea Pearl (2009)
+  Publisher: Cambridge University Press; Pages: 484
+  关于结构因果模型（SCMs）和因果推断图模型的权威著作，提供了关于识别、混杂和偏差的综合理论，包括对需要高级图表示的讨论。
+- [Ancestral graphs](https://doi.org/10.1214/aos/1031689015) — Thomas S. Richardson, Peter Spirtes (2002)
+  Journal: The Annals of Statistics; Publisher: Institute of Mathematical Statistics; Volume: 30; Pages: 962-1030; DOI: [10.1214/aos/1031689015](https://doi.org/10.1214/aos/1031689015)
+  本文正式介绍了最大祖先图（MAGs）及其性质，确立了m-分离作为在存在潜在变量时条件独立性的判据。
+- [Elements of Causal Inference: Foundations and Learning Algorithms](https://mitpress.mit.edu/books/elements-causal-inference) — Jonas Peters, Dominik Janzing, Bernhard Schölkopf (2017)
+  Publisher: MIT Press; Pages: 288
+  从现代机器学习视角阐述因果推断，涵盖结构因果模型的基础概念以及复杂系统中出现的问题，这促使了对高级图模型的需求。

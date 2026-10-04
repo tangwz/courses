@@ -1,0 +1,333 @@
+---
+course: "advanced-python-programming-ml"
+chapter: "metaprogramming-python-internals-ml"
+lesson: "advanced-decorator-applications"
+sourceId: 2296
+sourceUrl: "https://apxml.com/zh/courses/advanced-python-programming-ml/chapter-3-metaprogramming-python-internals-ml/advanced-decorator-applications"
+title: "高级装饰器应用"
+description: "实现带参数和状态的复杂装饰器，用于机器学习系统中的日志记录、验证和行为修改。"
+order: 1
+plots: []
+sourceHash: "a2c48983b51dff6e08332cf80d7293a08ecb7d219733865d0015f13d76d50f49"
+sourceCorrections: []
+---
+
+Python装饰器是包装其他函数的函数，可以在不直接修改原始函数代码的情况下添加行为。它们为日志记录或访问控制等常见任务提供了简洁的语法。装饰器更复杂的应用将被考察，特别是它们如何在构建灵活且可维护的机器学习 (machine learning)系统中发挥作用。这些高级模式可以实现配置、状态管理以及与大型框架的整合。
+
+### 接受参数 (parameter)的装饰器
+
+通常，您需要一个可配置的装饰器。例如，您可能需要一个可以指定日志级别的日志记录装饰器，或者一个可以设置触发警告阈值的计时装饰器。为此，您需要创建一个装饰器*工厂*：一个接受参数并返回实际装饰器函数的函数。
+
+设想一下，您希望对机器学习 (machine learning)管道中重要函数（如特征计算或模型预测）的执行时间进行计时，并且仅当执行时间超过某个限制时才记录警告。
+
+```python
+import time
+import functools
+import logging
+
+# 配置基础日志记录
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def timing_threshold(threshold_seconds):
+    """
+    装饰器工厂：返回一个装饰器，如果被包装函数的执行时间超过“threshold_seconds”，则记录警告。
+    """
+    def decorator(func):
+        @functools.wraps(func) # 保留原始函数元数据
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            end_time = time.perf_counter()
+            duration = end_time - start_time
+            if duration > threshold_seconds:
+                logging.warning(
+                    f"Function '{func.__name__}' took {duration:.4f} seconds, "
+                    f"exceeding the threshold of {threshold_seconds} seconds."
+                )
+            else:
+                 logging.info(
+                    f"Function '{func.__name__}' executed in {duration:.4f} seconds."
+                 )
+            return result
+        return wrapper
+    return decorator
+
+# 使用示例
+@timing_threshold(0.5) # 应用带有0.5秒阈值的装饰器
+def complex_feature_engineering(data):
+    """模拟一个可能耗时的操作。"""
+    # 模拟工作
+    time.sleep(0.7)
+    # 在实际场景中，这将执行复杂的计算
+    processed_data = data * 2 # 占位操作
+    return processed_data
+
+# 调用被装饰的函数
+data_input = list(range(5))
+processed = complex_feature_engineering(data_input)
+# 输出（将显示警告，因为0.7 > 0.5）：
+# 2023-10-27 10:30:00,123 - WARNING - Function 'complex_feature_engineering' took 0.7005 seconds, exceeding the threshold of 0.5 seconds.
+
+@timing_threshold(1.0) # 应用不同阈值
+def quick_data_loading(filepath):
+    """模拟一个更快的操作。"""
+    time.sleep(0.2)
+    logging.info(f"数据已从 {filepath}")
+    return {"data": [1, 2, 3]}
+
+loaded = quick_data_loading("path/to/data.csv")
+# 输出（将显示信息，因为0.2 < 1.0）：
+# 2023-10-27 10:30:01,325 - INFO - Function 'quick_data_loading' executed in 0.2003 seconds.
+```
+
+在这种模式下，`timing_threshold(0.5)` 首先被调用。它返回实际的 `decorator` 函数，然后该函数被应用于 `complex_feature_engineering`。 `decorator` 内部的 `wrapper` 函数包含计时逻辑，并使用了从外部作用域（一个闭包）捕获的 `threshold_seconds` 值。请注意 `functools.wraps(func)` 的使用。这对于保留原始函数的名称（`__name__`）、文档字符串（`__doc__`）和其他元数据非常重要，这对于调试和内省工具来说是必不可少的。
+
+### 有状态的装饰器
+
+有时装饰器需要在调用之间保持状态。设想一下，您需要计算特定预测端点被调用的次数，或者实现一个简单的缓存。虽然您可以使用全局变量（通常不建议这样做），但更清晰的方法是将装饰器实现为一个类。
+
+当一个类被用作装饰器时，它的 `__init__` 方法会接收被装饰的函数（类似于简单装饰器函数接收函数的方式）。为了使被装饰的函数可调用，该类必须实现 `__call__` 方法。当被装饰的函数被调用时，此方法将执行。
+
+以下是一个计算函数调用次数的有状态装饰器示例：
+
+```python
+import functools
+
+class CallCounter:
+    """
+    一个实现为类的有状态装饰器，用于计算函数调用次数。
+    """
+    def __init__(self, func):
+        functools.update_wrapper(self, func) # 保留元数据
+        self.func = func
+        self.call_count = 0
+
+    def __call__(self, *args, **kwargs):
+        self.call_count += 1
+        print(f"Call {self.call_count} to function '{self.func.__name__}'")
+        return self.func(*args, **kwargs)
+
+@CallCounter
+def predict_sentiment(text):
+    """分析文本并返回情感分数。"""
+    # 模拟预测
+    score = len(text) / 100.0 # 占位逻辑
+    print(f"  正在预测情感：'{text[:20]}...' -> 分数: {score:.2f}")
+    return score
+
+# 使用示例
+predict_sentiment("This is a wonderful example!")
+predict_sentiment("Another call to the same function.")
+predict_sentiment("Metaprogramming is powerful.")
+
+# 输出：
+# Call 1 to function 'predict_sentiment'
+#   Predicting sentiment for: 'This is a wonderful ...' -> Score: 0.29
+# Call 2 to function 'predict_sentiment'
+#   Predicting sentiment for: 'Another call to the ...' -> Score: 0.33
+# Call 3 to function 'predict_sentiment'
+#   Predicting sentiment for: 'Metaprogramming is p...' -> Score: 0.27
+```
+
+这里，`CallCounter` 的每个实例都维护自己的 `call_count`。 `functools.update_wrapper` 的使用方式类似于 `functools.wraps`，但更适合类装饰器，用于将元数据从 `func` 复制到装饰器实例 `self`。
+
+### 组合装饰器（堆叠）
+
+您可以将多个装饰器应用于单个函数。顺序很重要：装饰器从下往上应用（最接近函数定义的先应用）。
+
+```python
+import functools
+
+def log_args(func):
+    """记录函数参数的装饰器。"""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__} with args: {args}, kwargs: {kwargs}")
+        return func(*args, **kwargs)
+    return wrapper
+
+def validate_input_shape(expected_dim):
+    """用于验证输入数组维度的装饰器工厂。"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(data_array, *args, **kwargs):
+            if hasattr(data_array, 'ndim') and data_array.ndim == expected_dim:
+                 print(f"输入形状验证通过，针对 {func.__name__}。")
+                 return func(data_array, *args, **kwargs)
+            else:
+                 raise ValueError(
+                     f"函数“{func.__name__}”需要 {expected_dim} 维度输入，但得到 {getattr(data_array, 'ndim', 'N/A')}"
+                 )
+        return wrapper
+    return decorator
+
+# 使用示例
+import numpy as np
+
+@log_args                     # 第二个应用
+@validate_input_shape(2)      # 第一个应用
+def process_matrix(matrix):
+    """处理一个二维numpy数组。"""
+    print(f"  Processing matrix of shape: {matrix.shape}")
+    # 模拟处理
+    return matrix.sum()
+
+matrix_2d = np.array([[1, 2], [3, 4]])
+matrix_1d = np.array([1, 2, 3])
+
+print("处理二维矩阵：")
+process_matrix(matrix_2d)
+
+print("\n处理一维矩阵（将引发错误）：")
+try:
+    process_matrix(matrix_1d)
+except ValueError as e:
+    print(f"捕获到预期错误：{e}")
+
+# 输出：
+# Processing 2D matrix:
+# Calling process_matrix with args: (array([[1, 2], [3, 4]]),), kwargs: {}
+# Input shape validation passed for process_matrix.
+#   Processing matrix of shape: (2, 2)
+#
+# Processing 1D matrix (will raise error):
+# Calling process_matrix with args: (array([1, 2, 3]),), kwargs: {}
+# Caught expected error: Function 'process_matrix' expected input with 2 dimensions, got 1
+```
+
+当调用 `process_matrix(matrix_2d)` 时：
+
+1. `log_args` 的包装器首先执行。它打印参数 (parameter)。
+2. 然后它调用它所包装的函数，即 `validate_input_shape(2)` 返回的包装器。
+3. `validate_input_shape` 的包装器执行。它检查维度（`matrix_2d.ndim` 为 2，与 `expected_dim` 匹配）。
+4. 然后它调用原始的 `process_matrix` 函数。
+
+理解这个执行顺序很重要，特别是当装饰器有副作用或相互依赖时。
+
+### 机器学习 (machine learning)中内置装饰器：`functools.lru_cache`
+
+Python 的标准库提供了有用的装饰器。一个与机器学习特别相关的就是 `functools.lru_cache`。它实现了记忆化技术，缓存函数调用的结果，并在相同输入再次出现时返回缓存结果。这对于耗时、纯粹的函数（对于相同的输入总是返回相同输出且没有副作用的函数）非常有效，这类函数常在特征提取或数据查找任务中出现。
+
+```python
+import functools
+import time
+import requests # Example requires 'requests' library: pip install requests
+
+@functools.lru_cache(maxsize=128) # 缓存多达128个独立调用
+def get_external_data(resource_id):
+    """
+    模拟从外部源（例如API、数据库）获取数据。此操作假设很慢。
+    """
+    print(f"正在获取 resource_id: {resource_id} 的数据...")
+    # 模拟网络延迟或昂贵的计算
+    time.sleep(1.0)
+    # 实际上，您可能会使用 requests.get(f"https://api.example.com/data/{resource_id}")
+    return {"id": resource_id, "value": resource_id * 10}
+
+# 第一次调用 - 将很慢并打印“Fetching...”
+start = time.time()
+data1 = get_external_data(101)
+print(f"First call duration: {time.time() - start:.4f}s, Data: {data1}")
+
+# 第二次调用相同参数 - 应该立即返回（已缓存）
+start = time.time()
+data2 = get_external_data(101)
+print(f"Second call duration: {time.time() - start:.4f}s, Data: {data2}")
+
+# 使用不同参数的调用 - 将再次变慢
+start = time.time()
+data3 = get_external_data(202)
+print(f"Third call duration: {time.time() - start:.4f}s, Data: {data3}")
+
+# 输出：
+# Fetching data for resource_id: 101...
+# First call duration: 1.0012s, Data: {'id': 101, 'value': 1010}
+# Second call duration: 0.0000s, Data: {'id': 101, 'value': 1010}  <- 已缓存！
+# Fetching data for resource_id: 202...
+# Third call duration: 1.0008s, Data: {'id': 202, 'value': 2020}
+```
+
+`lru_cache`（最近最少使用缓存）会根据函数参数 (parameter)（必须是可哈希的）自动存储结果，并在达到 `maxsize` 限制时驱逐最近最少使用的条目。
+
+### 类装饰器
+
+与函数装饰器相比，类装饰器不那么常见，它们修改或替换类定义。它们的工作方式类似：一个函数接收类对象本身，并返回一个（可能已修改的）类对象。
+
+使用场景包括：
+
+- 自动为类添加方法或属性。
+- 在中心注册表中注册类（适用于插件系统或工厂模式）。
+- 对类强制执行某些编码标准或结构。
+
+以下是使用类装饰器进行注册的示例：
+
+```python
+MODEL_REGISTRY = {}
+
+def register_model(cls):
+    """用于注册模型类的类装饰器。"""
+    model_name = cls.__name__
+    if model_name in MODEL_REGISTRY:
+        print(f"警告：正在覆盖注册表中已存在的模型：{model_name}")
+    MODEL_REGISTRY[model_name] = cls
+    print(f"已注册模型：{model_name}")
+    return cls # 返回未修改的原始类
+
+@register_model
+class LogisticRegressionModel:
+    def __init__(self, learning_rate=0.01):
+        self.lr = learning_rate
+
+    def fit(self, X, y):
+        print(f"正在拟合LogisticRegressionModel (lr={self.lr})...")
+        # 实际拟合逻辑在此
+        pass
+
+    def predict(self, X):
+        print("正在使用LogisticRegressionModel进行预测...")
+        # 实际预测逻辑
+        return [0] * len(X) # 占位符
+
+@register_model
+class SupportVectorMachineModel:
+    def __init__(self, kernel='rbf'):
+        self.kernel = kernel
+
+    def fit(self, X, y):
+        print(f"正在拟合SupportVectorMachineModel (kernel={self.kernel})...")
+        pass
+
+    def predict(self, X):
+        print("正在使用SupportVectorMachineModel进行预测...")
+        return [1] * len(X) # 占位符
+
+print("\n注册表中可用模型：", list(MODEL_REGISTRY.keys()))
+
+# 从注册表实例化一个模型
+model_class = MODEL_REGISTRY['LogisticRegressionModel']
+model_instance = model_class(learning_rate=0.05)
+model_instance.fit(None, None) # 传递示例的虚拟数据
+
+# 输出：
+# Registered model: LogisticRegressionModel
+# Registered model: SupportVectorMachineModel
+#
+# Available models in registry: ['LogisticRegressionModel', 'SupportVectorMachineModel']
+# Fitting LogisticRegressionModel (lr=0.05)...
+```
+
+这种模式使您能够创建可扩展的系统，其中新的组件（如模型或数据处理器）只需通过定义并应用装饰器即可添加。
+
+高级装饰器应用为在机器学习 (machine learning)环境中提升Python代码提供了强大的工具。它们允许清晰地实现日志记录、验证、计时、缓存和注册等横切关注点，从而构建更模块化、可重用且易于维护的机器学习系统。随着本章学习的推进，您将看到这些技术如何与描述符和元类等其他元编程功能相互配合，以构建更复杂的框架。
+
+## 参考资料
+
+- [functools - Higher-order functions and operations on callable objects](https://docs.python.org/3/library/functools.html) — Python Software Foundation (2023)
+  Publisher: Python Software Foundation
+  详细介绍了functools模块，包括lru_cache、wraps和update_wrapper，它们对于构建健壮的装饰器至关重要。
+- [Fluent Python: Clear, Concise, and Effective Programming](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media; Pages: 1014
+  对Python装饰器进行了全面解读，涵盖了装饰器工厂函数、基于类的装饰器及其应用。
+- [Python Cookbook](https://www.oreilly.com/library/view/python-cookbook-3rd/9781449340377/) — David Beazley and Brian K. Jones (2013)
+  Publisher: O'Reilly Media; Pages: 706
+  提供了实现和组合装饰器的实用方案和技巧，包括带有参数的装饰器和状态管理。

@@ -1,0 +1,91 @@
+---
+course: "feature-stores-for-ml"
+chapter: "feature-store-architecture"
+lesson: "practice-architecture-design"
+sourceId: 3359
+sourceUrl: "https://apxml.com/zh/courses/feature-stores-for-ml/chapter-1-feature-store-architecture/practice-architecture-design"
+title: "实践：设计可伸缩架构"
+description: "基于特定性能和规模要求的特征存储架构动手设计练习。"
+order: 7
+plots: []
+sourceHash: "117f9544838957768735ba316cf24d0474e7791ea76e14aebfd147d3c1ea8bb3"
+sourceCorrections: []
+---
+
+本节提供动手实践的机会，应用本章讨论的架构原则。您将为一个特定且要求高的机器学习 (machine learning)应用设计一个高级别的特征存储架构，同时考量可伸缩性、延迟和一致性。
+
+## 场景：实时个性化新闻推送
+
+假设您被要求为一个快速增长的新闻平台设计特征存储架构。该平台旨在为全球数百万用户提供高度个性化的新闻推送。个性化依赖于多个机器学习 (machine learning)模型，这些模型根据用户行为、文章内容和上下文 (context)来预测用户参与度（点击、点赞、分享）。
+
+**核心要求：**
+
+1. **用户规模：** 5000万月活跃用户，每年增长20%。高峰期个性化文章排名请求达到10万QPS。
+2. **文章数量：** 每日摄入10000篇新文章。
+3. **特征类型：**
+   - **用户特征：** 历史参与度（1小时、24小时、7天、30天内的计数和比率），用户画像数据（从阅读历史中提取的兴趣主题），用户嵌入 (embedding)。每日和日内更新。
+   - **文章特征：** 内容嵌入（从文本生成），元数据（类别、命名实体），实时热门度指标（过去10分钟、1小时内的浏览量、点击率）。文章摄入时更新，热门度持续更新。
+   - **上下文特征：** 一天中的时间、用户设备类型、地理位置（国家级别）。请求时可用。
+4. **在线服务：** 个性化模型需要给定用户和一组候选文章的特征。特征检索延迟必须极低，以满足整体页面加载时间预算。目标：单个用户和约50篇候选文章的特征检索，$p99$ 延迟 < 20毫秒。
+5. **离线存储：** 系统必须存储至少1年的历史特征值，以支持模型再训练和分析。初始离线存储大小估计约为80TB，随用户规模和历史数据增长。训练数据生成需要用户和文章特征的时间点正确连接。
+6. **数据一致性：** 最小化训练和服务所用特征之间的偏差。实时热门度特征需要在线存储中的近实时更新。用户历史特征可容忍一定延迟（例如，几分钟到一小时）。
+7. **可伸缩性：** 架构必须横向扩展，以适应用户增长和潜在流量高峰（例如，在重大新闻事件期间）。
+8. **可用性：** 在线服务组件需要高可用性（例如，99.95%的正常运行时间）。
+9. **运维：** 考量部署、监控和维护的简易性。假设部署在单个主要云服务商（例如AWS、GCP或Azure）内。
+
+## 您的任务
+
+基于本章所介绍的构想（核心组件、在线/离线存储、元数据管理、解耦与集成架构、多区域考量如果适用），为该特征存储设计一个高级架构。
+
+您的设计文档应包括：
+
+1. **整体架构图：** 一张说明主要组件（注册表、在线存储、离线存储、转换服务、服务API）以及它们之间数据流的示意图。如果没有图表工具，您可以使用文本描述，但优先选择可视化呈现。
+
+> 新闻推送场景下特征存储架构组件及数据流的高级示意图。
+
+2. **组件选择与理由：**
+
+   - **在线存储：** 您会选择哪种类型的数据库技术（例如，键值、内存式、宽列）？为什么？您将如何建模数据以实现用户和文章特征的低延迟检索？
+   - **离线存储：** 哪种存储格式和技术（例如，使用Parquet/Delta Lake的数据湖、数据仓库）是合适的？您将如何组织数据以有效支持时间点查询？
+   - **特征计算：** 您将如何处理批处理和流式特征更新的混合情况？您会考量哪些工具或框架（例如，Spark、Flink、Beam、云原生服务）？
+   - **元数据管理：** 特征注册表中需要存储哪些信息？不同的组件将如何访问它？
+   - **服务API：** 设计API以满足延迟和QPS要求时有哪些考量？（例如，请求批处理、缓存策略）。
+3. **数据流描述：** 简要描述以下流程：
+
+   - 摄入新文章数据并计算初始特征。
+   - 处理实时用户活动以更新参与度特征。
+   - 运行每日批处理作业以进行复杂聚合或嵌入 (embedding)。
+   - 向在线个性化模型提供特征。
+   - 生成时间点一致的训练数据集。
+4. **应对主要挑战：**
+
+   - **可伸缩性：** 您的设计如何处理不断增长的QPS和数据量？
+   - **延迟：** 哪些具体设计选择旨在实现小于20毫秒的在线检索$p99$延迟？
+   - **一致性：** 您计划如何管理在线和离线存储之间的一致性并最小化训练/服务偏差？涉及哪些权衡？
+
+## 讨论要点
+
+准备讨论您设计的以下方面：
+
+- 您所做的主要权衡是什么（例如，成本与性能、复杂性与功能、一致性与可用性）？
+- 您的设计与更紧密集成的系统相比如何？与您可能选择的更解耦的方法相比又如何？
+- 您提出的架构中存在哪些潜在瓶颈？
+- 您将如何处理特征随时间推移的模式演变？
+- 如果平台需要扩展到具有本地化个性化的多个地理区域，您的架构可能需要如何适应？与数据本地性和一致性相关的挑战会是什么？
+
+本练习鼓励您批判性思考所讨论架构模式的实际影响。没有唯一的“正确”答案；目标是创建一个充分论证的设计，依据所学原则满足要求。
+
+## 参考资料
+
+- [Michelangelo: Microsoft's Unified Feature Engineering System](https://dl.acm.org/doi/10.1145/3097983.3098132) — Shreya Singh, Koushik Kumar, Srirupa Datta, Akshay Singhal, Abhishek Singh, Shivani Singh, Rohit Agarwal, Adithya Ganesan, Naman Goyal, Ankur Sharma, Himanshu Gupta, Manish Gupta, Saurabh Singh, Prachi Kumar, Sanchit Agarwal, Anurag Agarwal, Akshat Aggarwal, Vikas Kumar, Ritesh Kumar, Rajesh Parekh, Sameer Shingade, Shanu Singh, Sumit Prakash, Vachaspati Shukla, Shrey Gupta, Vikas Gupta (2017)
+  Journal: Proceedings of the 23rd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining; Publisher: ACM; Pages: 1699–1707; DOI: [10.1145/3097983.3098132](https://doi.org/10.1145/3097983.3098132)
+  描述了一个全面的特征工程和管理系统，涵盖在线/离线特征服务、一致性及元数据。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  一本关于构建可伸缩、可靠且易于维护的数据系统的经典书籍，涵盖分布式数据库、流处理和一致性模型。
+- [Weddell: A scalable and high-performance framework for real-time machine learning](http://www.vldb.org/pvldb/vol13/p2977-meng.pdf) — Peng Meng, Zirui Niu, et al. (2020)
+  Journal: Proceedings of the VLDB Endowment; Publisher: VLDB Endowment; Volume: 13; Pages: 2977-2990; DOI: [10.14778/3407677.3407767](https://doi.org/10.14778/3407677.3407767)
+  介绍了一个用于实时机器学习的框架，侧重于低延迟特征服务、在线推理和特征计算。
+- [Stream Processing for Machine Learning: State-of-the-Art and Future Directions](https://dl.acm.org/doi/10.1145/3546059) — Zülküf Gelen, Stefan R. Spree, Matthias Uflacker (2022)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery; Volume: 55; Pages: Article 113; DOI: [10.1145/3546059](https://doi.org/10.1145/3546059)
+  一篇关于流处理如何应用于机器学习任务的综述文章，包括实时特征工程和在线推理。

@@ -1,0 +1,135 @@
+---
+course: "probability-statistics-fundamentals-ml"
+chapter: "descriptive-statistics"
+lesson: "visualizing-histograms"
+sourceId: 2416
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-fundamentals-ml/chapter-2-descriptive-statistics/visualizing-histograms"
+title: "可视化分布：直方图"
+description: "使用直方图来可视化数值数据集的频率分布。"
+order: 5
+plots: ["plots/2416-0.json"]
+sourceHash: "fa82efb00d5d2b7adac742ff5ec607aee1bd57bb99ff8e9119191a965395927c"
+sourceCorrections: []
+---
+
+尽管计算均值、中位数或标准差等统计量能为您提供有用的数据数值概括，但它们无法描绘出全貌。两个数据集可能拥有相同的均值和标准差，但在值的分布方式上可能显得非常不同。数据可视化在此发挥作用，直方图是理解数值数据*分布*最基本、最有用的工具之一。
+
+直方图提供了数据集频率分布的视觉呈现。可以把它看作是一种条形图，但与表示类别不同，直方图的条形表示数值范围，这些范围通常被称为*数据区间*或*分组区间*。每个条形的高度显示了落入该特定范围的数据点数量。
+
+### 直方图的结构
+
+- **X轴：** 表示您正在绘制变量的值范围，并将其划分为连续、不重叠的数据区间。
+- **Y轴：** 表示频率，即落入每个数据点区间的数据点计数。有时，Y轴可以表示密度（频率除以总计数和数据区间宽度），这在比较数据点数量或数据区间宽度不同的分布时很有用，但对于基本解读，频率通常就足够了。
+
+### 为何使用直方图？
+
+直方图非常适合快速了解数据的基本结构。它们有助于您：
+
+1. **观察形状：** 识别数据分布的整体形状。它是否对称（如钟形曲线）？它是否偏向一侧（即有长尾）？它是否有多个峰值（双峰或多峰）？
+2. **确定中心：** 通过视觉估计数据中心所在位置（在最高条形附近）。
+3. **评估分散度：** 了解数据分散的程度。数值是紧密聚集还是广泛分散？
+4. **发现空隙和异常值：** 发现数据不存在的异常空隙，或远离主体的孤立条形，这可能表示异常值或测量误差。
+
+### 构建直方图的步骤
+
+创建直方图涉及以下步骤：
+
+1. **选择变量：** 选择您想分析的数值列或特征。
+2. **确定范围：** 找出数据集中该变量的最小值和最大值。
+3. **定义数据区间（Bin）：** 决定使用多少个数据区间，或每个数据区间应该有多宽。这是一个重要步骤，因为数据区间数量会影响直方图的外观和解读。
+   - *数据区间过少：* 直方图可能会过度简化数据，从而掩盖重要特征。
+   - *数据区间过多：* 直方图可能看起来过于嘈杂或锯齿状，难以看清整体形状。
+     许多绘图库都有内置算法（如斯特奇斯法则或弗里德曼-迪亚科尼斯法则）来估算合理的数据区间数量，但有时需要进行尝试。
+4. **统计频率：** 统计落入每个数据区间边界内的数据点数量。
+5. **绘制条形：** 为每个数据区间绘制条形。条形的宽度对应于数据区间间隔，高度对应于该数据区间内数据点的频率（计数）。与标准条形图不同，直方图的条形之间通常没有间隙，这表示X轴上区间的连续性。
+
+### Python 中的直方图
+
+我们将使用`NumPy`生成一些样本数据（例如，一群人的身高，单位为厘米），并使用`Matplotlib`（特别是其`pyplot`模块，通常导入为`plt`）来绘制直方图。
+
+````python
+import numpy as np
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import json # 仅用于格式化下方的JSON字符串以便显示
+
+# 生成一些样本数据（例如，身高，单位厘米）
+# 数据服从正态分布，均值约为170厘米，标准差为10厘米
+np.random.seed(42) # 为了可重复性
+heights = np.random.normal(loc=170, scale=10, size=200)
+
+# --- 使用 Matplotlib（常用于直接绘图） ---
+plt.figure(figsize=(8, 5)) # 设置图的大小
+plt.hist(heights, bins=10, color='#228be6', edgecolor='white') # 创建包含10个数据区间的直方图
+plt.title('Distribution of Heights')
+plt.xlabel('Height (cm)')
+plt.ylabel('Frequency')
+plt.grid(axis='y', alpha=0.75)
+# plt.show() # 如果在本地运行，取消此行注释以显示图表
+
+# --- 生成用于网页嵌入的 Plotly JSON ---
+# 使用 NumPy 计算直方图数据
+counts, bin_edges = np.histogram(heights, bins=10)
+bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1]) # 用于绘图的数据区间中心
+
+# 创建 Plotly 图形对象
+fig = go.Figure(data=[go.Bar(
+    x=bin_centers,
+    y=counts,
+    width=np.diff(bin_edges)[0]*0.95, # 将宽度调整为略小于数据区间宽度
+    marker_color='#228be6',
+    marker_line_color='white',
+    marker_line_width=1
+)])
+
+fig.update_layout(
+    title_text='Distribution of Heights',
+    xaxis_title_text='Height (cm)',
+    yaxis_title_text='Frequency',
+    bargap=0.05, # 如果需要，可设置少量间隙以提高视觉清晰度，理想情况下真直方图应为0
+    plot_bgcolor='#e9ecef',
+    yaxis=dict(gridcolor='#adb5bd'),
+    margin=dict(l=20, r=20, t=40, b=20), # 简洁的边距
+    width=600, # 调整用于网页显示的宽度
+    height=400 # 调整用于网页显示的高度
+)
+
+# 生成 JSON 字符串（在实际的 Web 应用中，你会传递 fig 对象）
+plotly_json_string = fig.to_json()
+# 为了在此处显示，我们将按照所需格式打印
+# 通常你会直接嵌入此 JSON 或使用库函数
+# print(f"```plotly\n{plotly_json_string}\n```") # 如何格式化输出
+````
+
+
+
+![身高分布](plots/2416-0.json)
+
+
+
+> 一个直方图，显示了200个模拟身高测量值的频率分布。X轴显示身高范围（数据区间），Y轴显示每个范围内的人数。
+
+### 直方图的解读
+
+观察上面生成的直方图：
+
+- **形状：** 分布大致对称呈钟形，数据聚集在中心附近。这符合我们从正态分布生成数据的预期。数据可能不是完全对称的。
+- **中心：** 最高的条形在165-175厘米左右的范围，这表明数据的中心接近170厘米，与我们可能计算出的均值/中位数一致。
+- **分散度：** 大多数身高介于大约150厘米到190厘米之间，频率随着远离中心而降低。
+- **异常值：** 在此示例中，似乎没有明显的异常值（远离主体的条形）。
+
+如果直方图有一个向右（更高值）延伸的长尾，我们称之为*右偏*。如果尾部向左（更低值）延伸，则为*左偏*。偏度会影响均值和中位数之间的关系。例如，在右偏分布中，均值通常大于中位数。
+
+直方图是初步查看数值数据的重要一步。它们通过提供视觉情境，补充了之前学习的汇总统计量，帮助您以仅凭数字无法传达的方式了解形状、中心和分散度。它们是数据查看和为机器学习 (machine learning)模型准备数据的重要工具。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: With Applications in Python](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani, Jonathan Taylor (2023)
+  Publisher: Springer
+  一本现代入门教材，涵盖统计学习的基础方法，包括描述性统计、数据探索和机器学习相关的可视化技术。
+- [Fundamentals of Data Visualization](https://clauswilke.com/dataviz/) — Claus O. Wilke (2019)
+  Publisher: O'Reilly Media
+  提供了创建有效数据可视化的原则和最佳实践，深入讨论了直方图等常见图表类型，以帮助理解数据分布。
+- [Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本使用Python库（如NumPy和Matplotlib）进行数据处理、操作和可视化的实用指南，包含创建直方图的示例。

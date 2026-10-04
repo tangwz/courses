@@ -1,0 +1,89 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "data-preparation-and-formatting"
+lesson: "structuring-instruction-datasets"
+sourceId: 8502
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-2-data-preparation-and-formatting/structuring-instruction-datasets"
+title: "构建指令数据集"
+description: "将原始文本组织成适合模型使用的标准指令-回答对。"
+order: 1
+plots: []
+sourceHash: "9ae0409c619bbfb6af2954a09e3f7bcbda048ab603cf3dfede454fe515de7a42"
+sourceCorrections: []
+---
+
+教导小语言模型完成特定任务不仅需要原始的非结构化文本。模型必须学习给定命令与相应回答之间的明确关系。这就需要将原始数据构建成指令数据集。监督微调 (fine-tuning)依赖于模型根据特定的提示词 (prompt)格式学习预测下一个 Token，因此初始的数据组织方式是训练流程能否成功的关键因素。
+
+指令数据集由组织良好的示例组成，这些示例展示了模型应当如何表现。模型处理的不是连续的文本块，而是离散的提示词（Prompt）和补全（Completion）对。
+
+### 指令对的组成部分
+
+指令数据集中的每个示例通常包含三个主要字段。你必须将原始数据映射到这些不同的类别中：
+
+1. **指令 (Instruction)：** 你希望模型执行的具体指示或任务。这可以是一个问题、一个总结文本的命令，或者一个生成代码的请求。
+2. **输入 (Input)：** 完成指令所需的可选背景上下文 (context)。如果指令是“总结以下文章”，则输入字段包含文章文本。
+3. **输出 (Output)：** 模型必须生成的准确目标回答。在训练期间，模型会根据其生成的 Token 与此输出的匹配程度来计算损失。
+
+在准备数据集时，这些组件通常存储为结构化的 JSON 对象。Alpaca 格式是这种结构被广泛采用的标准。如果一个数据集包含 $M$ 个示例，则每个示例都被格式化为大型 JSON 数组中的单个字典。
+
+```json
+[
+  {
+    "instruction": "Identify the primary programming language used in the provided code snippet.",
+    "input": "def calculate_area(radius):\n    return 3.14 * radius ** 2",
+    "output": "The primary programming language used in the snippet is Python."
+  }
+]
+```
+
+### 处理对话数据
+
+如果你是在训练一个对话代理，而不是单轮指令遵循者，那么你的数据应该反映多轮对话。ChatML 格式是结构化对话数据集的行业标准。数据按角色进行组织，而不是使用通用的指令和输入字段。
+
+这些角色通常包括定义模型整体行为的 `system`（系统）提示词 (prompt)、代表人类输入的 `user`（用户）提示词，以及代表模型回复的 `assistant`（助手）提示词。
+
+```json
+[
+  {
+    "messages": [
+      {"role": "system", "content": "You are a helpful coding assistant."},
+      {"role": "user", "content": "How do I print a string in Python?"},
+      {"role": "assistant", "content": "You can print a string using the print() function."}
+    ]
+  }
+]
+```
+
+以这种基于角色的格式组织数据，可以确保模型学习来回对话的节奏，识别何时该“倾听”，何时该“发言”。
+
+### 映射到提示词 (prompt)模板
+
+虽然 JSON 非常适合存储和组织数据，但神经网络 (neural network)无法直接处理 JSON 字典。在数据到达分词 (tokenization)器（Tokenizer）之前，结构化字段必须串联成一个单一的连续文本字符串。这是通过提示词模板实现的。
+
+提示词模板会在指令、输入和输出字段之间插入特定的分隔符 Token。这些分隔符起到数学边界的作用，帮助模型的注意力机制 (attention mechanism)区分用户命令和模型自身生成的文本。
+
+> 将结构化 JSON 字段映射为单个文本字符串以进行分词的数据流水线。
+
+如果你正在微调 (fine-tuning)一个已有固定指令格式的基座模型，你必须格式化字符串以匹配该确切模板。如果不使用正确的格式化模板，会导致性能下降，因为模型将无法识别提示词与预期回答之间的边界。
+
+### 数据集质量与分布
+
+数据的结构化格式只是问题的一个方面。这些结构化字段中的实际内容决定了模型的最终表现。
+
+在格式化指令数据集时，保持高质量的数据比单纯堆砌大量文本更有效。一个基于 1,000 个精心挑选、具有多样性的指令对训练的模型，其表现通常会优于基于 50,000 个重复或格式混乱的示例训练的模型。
+
+例如，目标序列长度的分布。设 $N$ 代表给定输出中的 Token 数量。如果你的数据集仅包含 $N$ 较小（例如 10 到 20 个 Token）的示例，微调 (fine-tuning)后的模型会表现出生成短回答的强烈倾向。即使在部署过程中被要求提供详细解释，模型也可能只输出简短的一句话。为了防止这种情况，请确保你的输出字段包含各种长度，并符合你期望模型在生产环境中生成的回答分布。
+
+## 参考资料
+
+- [Self-Instruct: Aligning Language Models with Self-Generated Instructions](https://arxiv.org/abs/2212.10560) — Yizhe Wang, Yeganeh Kordi, Swaroop Mishra, Alisa Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh Hajishirzi (2023)
+  Journal: Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Pages: 13484–13508; DOI: [10.48550/arXiv.2212.10560](https://doi.org/10.48550/arXiv.2212.10560)
+  本文介绍了创建指令遵循数据的方法，为 Alpaca 格式中使用的三元组结构（指令、输入、输出）奠定了基础。
+- [LIMA: Less Is More for Alignment](https://arxiv.org/abs/2305.11206) — Chunting Zhou, Pengfei Liu, Puxin Xu, Srini Iyer, Jiao Sun, Yuning Mao, Xuezhe Fan, Tao Chen, Sneha Kudugunta, and Luke Zettlemoyer (2023)
+  Journal: arXiv preprint arXiv:2305.11206; DOI: [10.48550/arXiv.2305.11206](https://doi.org/10.48550/arXiv.2305.11206)
+  本研究支持了文中强调的数据质量重于数量的观点，证明了少量高质量样本即可产生强大的对齐效果。
+- [Chat Templates](https://huggingface.co/docs/transformers/main/en/chat_templating) — Hugging Face (2024)
+  官方文档解释了如何实现提示词模板，以将结构化对话数据转换为不同模型所需的特定字符串。
+- [Instruction Tuning for Large Language Models: A Survey](https://arxiv.org/abs/2308.10792) — Shengyi Jiang, Cat P. Le, Ruisi Zhang, and others (2023)
+  Journal: arXiv preprint arXiv:2308.10792; DOI: [10.48550/arXiv.2308.10792](https://doi.org/10.48550/arXiv.2308.10792)
+  一份综述性论文，涵盖了数据集构建、通用格式标准以及将数据映射到提示词模板的机制。

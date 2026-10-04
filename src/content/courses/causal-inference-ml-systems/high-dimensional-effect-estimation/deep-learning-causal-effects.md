@@ -1,0 +1,113 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "high-dimensional-effect-estimation"
+lesson: "deep-learning-causal-effects"
+sourceId: 4353
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-3-high-dimensional-effect-estimation/deep-learning-causal-effects"
+title: "深度学习在效应估计中的应用"
+description: "考察适应因果效应估计问题的神经网络架构。"
+order: 4
+plots: []
+sourceHash: "998b2a769208a8558d1d32f40f9ff08183a120b63badd90722c2cb74db3c1859"
+sourceCorrections: []
+---
+
+双重机器学习 (machine learning)和因果森林利用机器学习组件来估计辅助函数（如倾向得分或条件结果期望），而深度学习 (deep learning)则提供了一条不同的路径：专门设计用于因果效应估计的端到端神经网络 (neural network)架构。当处理超高维数据（例如图像、文本）或怀疑混杂因素、处理和结果之间存在复杂的非线性关系时，这些方法尤其具有吸引力。
+
+这种动机源于深度神经网络强大的表示学习能力。深度学习模型可以不依赖于预先指定的特征交互或基扩展，而是可能从高维协变量 $X$ 中学习到为当前因果任务优化的复杂数据表示 $\phi(X)$。
+
+### 用于因果估计的神经网络 (neural network)架构
+
+几种架构调整了标准神经网络，以估计潜在结果和处理效应。TARNet 和 DragonNet 是两个基本例子。
+
+#### 处理无关表示网络 (TARNet)
+
+TARNet 采用了一种简单但有效的架构。它使用一组共享的底层，直接从协变量 $X$ 中学习一个表示 $\phi(X)$。这个共享表示然后馈入两个独立的“头”：浅层网络，分别估计处理组 ($E[Y(1)|X=x]$) 和对照组 ($E[Y(0)|X=x]$) 下的预期潜在结果。
+
+> TARNet 的结构。输入协变量 X 经过共享层学习一个表示 $\phi(X)$。这个表示被独立的头用于预测对照组 ($h_0$) 和处理组 ($h_1$) 下的潜在结果。
+
+该模型通过基于观察到的实际结果最小化经验风险进行端到端训练：
+
+
+$$
+L_{真实} = \frac{1}{n} \sum_{i=1}^n \ell(Y_i, T_i h_1(\phi(X_i)) + (1-T_i) h_0(\phi(X_i)))
+$$
+
+
+其中 $\ell$ 是一个合适的损失函数 (loss function)（例如，用于连续结果的均方误差）。其思路是，强制网络学习一个对于*两个*处理组都能预测结果 $Y$ 的共享表示 $\phi(X)$，这鼓励网络学习与结果预测相关的特征，并隐式地帮助平衡表示空间中处理组和对照组之间的协变量分布。CATE 然后可以估计为：
+
+
+$$
+\widehat{CATE}(x) = h_1(\phi(x)) - h_0(\phi(x))
+$$
+
+
+#### DragonNet
+
+DragonNet 通过明确加入一个倾向得分估计头来扩展 TARNet。它认识到表示 $\phi(X)$ 不仅需要对预测结果有效，还需要对调整混杂偏差有效。该架构包含三个源自共享表示层的组件：
+
+1. **对照组结果头：** $h_0(\phi(X))$ 估计 $E[Y(0)|X=x]$。
+2. **处理组结果头：** $h_1(\phi(X))$ 估计 $E[Y(1)|X=x]$。
+3. **倾向头：** $e(\phi(X))$ 估计倾向得分 $P(T=1|X=x)$。
+
+> DragonNet 的结构。类似于 TARNet，但增加了第三个头来预测倾向得分 $e(\phi(X))$，与结果头 $h_0$ 和 $h_1$ 并列。
+
+DragonNet 的训练目标通常将实际结果损失（如同 TARNet 中一样）与倾向得分预测的损失（例如，二元交叉熵）结合起来：
+
+
+$$
+L_{DragonNet} = L_{真实} + \alpha L_{倾向}
+$$
+
+
+其中 $L_{倾向} = \frac{1}{n} \sum_{i=1}^n \ell_{BCE}(T_i, e(\phi(X_i)))$ 且 $\alpha$ 是一个平衡这两个任务的超参数 (parameter) (hyperparameter)。直观的解释是，强制表示 $\phi(X)$ 也能预测处理分配 $T$ 起到了“有针对性的正则化 (regularization)”作用，确保表示能够有效地捕获混杂信息。这可以带来校准更佳的 CATE 估计：$\widehat{CATE}(x) = h_1(\phi(x)) - h_0(\phi(x))$。一些变体还在损失函数中增加了项，以明确鼓励 $\phi(X)$ 的分布在处理组和对照组之间相似，例如使用最大均值差异 (MMD) 等技术。
+
+#### 其他深度学习 (deep learning)方法
+
+神经网络的灵活性带来了其他架构：
+
+- **因果效应变分自编码器 (CEVAE)：** 这些模型使用变分自编码器，明确地对观测到的和潜在的混杂因素进行建模，试图在某些混杂因素未被观测到的情况下推断因果效应（需要特定假设）。
+- **生成对抗网络 (GAN) (GANs)：** 像 GANITE 这样的架构使用 GAN 来学习直接生成反事实结果，将因果推断视为一个缺失数据问题，其中 GAN 填充了未观测到的潜在结果。
+
+这些模型通常处理更复杂的场景或做出不同的假设，代表了深度学习应用于因果关系方面的持续研究。
+
+### 实现考量
+
+成功应用这些深度学习 (deep learning)模型需要仔细注意几个方面：
+
+- **目标函数：** 如前所述，损失函数 (loss function)通常平衡多个目标：预测实际结果、预测倾向得分，以及有时明确地匹配表示分布。这些项的相对权重 (weight)是一个重要的超参数 (parameter) (hyperparameter)。
+- **正则化 (regularization)：** 标准深度学习正则化技术，如 dropout、权重衰减（L2 正则化）和早停，是防止过拟合 (overfitting)的必要手段，特别是考虑到模型的复杂性以及过拟合处理分配机制的可能性。
+- **超参数调优：** 神经网络 (neural network)架构（层数、每层节点数、激活函数 (activation function)）、学习率、批量大小和正则化强度必须仔细调整。验证需要适用于 CATE 模型的特定策略，正如第 3.6 节（“CATE 估计器的验证与校准”）中稍后讨论的。如果不针对因果估计进行调整，标准交叉验证可能会产生误导。
+- **软件：** 实现通常依赖于标准深度学习框架，例如 TensorFlow 或 PyTorch，有时会使用在其之上构建的专门库，为这些因果架构提供封装器。
+
+### 优点和缺点
+
+深度学习 (deep learning)方法具有明显的优点和缺点：
+
+**优点：**
+
+- **灵活性：** 可以模拟高度复杂、非线性的关系，无需手动特征工程。
+- **表示学习：** 通过学习相关特征，有效处理非结构化或超高维数据（图像、文本）。
+- **端到端训练：** 能够联合优化所有组件（表示、结果预测、倾向估计）。
+
+**缺点：**
+
+- **数据需求：** 通常需要大型数据集才能有效训练并避免过拟合 (overfitting)。
+- **计算成本：** 与 DML 或因果森林相比，训练可能计算密集。
+- **可解释性：** 神经网络 (neural network)常被视为“黑箱”，这使得理解它们*如何*得出特定 CATE 估计变得更难。
+- **敏感性：** 性能可能高度敏感于网络架构、超参数 (parameter) (hyperparameter)和初始化。仔细的调优和验证是必要的。
+- **偏差放大风险：** 如果没有适当的正则化 (regularization)或架构设计（如 DragonNet 的倾向头），它们可能会无意中依赖于那些能预测处理但不能预测结果的变量，从而可能会放大偏差。
+
+深度学习方法代表了一套强大的工具，用于高维数据中的因果效应估计，特别是在处理复杂数据结构和非线性关系时，DML 或因果森林等方法可能不太适用。然而，它们的成功应用需要深度学习和因果推断原则两方面的相当专业知识，以及仔细的实现和验证。
+
+## 参考资料
+
+- [Learning Representations for Counterfactual Inference](https://proceedings.mlr.press/v48/johansson16.pdf) — Fredrik D. Johansson, Uri Shalit, David Sontag (2016)
+  Journal: Proceedings of The 33rd International Conference on Machine Learning (ICML); Publisher: JMLR.org; Volume: 48; Pages: 3020-3029
+  介绍了用于个体治疗效果估计的治疗无关表征网络（TARNet）。
+- [Adapting Neural Networks for the Estimation of Treatment Effects](https://arxiv.org/abs/1906.02120) — Claudia Shi, David M. Blei, Victor Veitch (2019)
+  Journal: arXiv preprint arXiv:1906.02120; DOI: [10.48550/arXiv.1906.02120](https://doi.org/10.48550/arXiv.1906.02120)
+  提出了DragonNet架构，通过整合倾向得分估计扩展了TARNet。
+- [Causal Effect Inference with Deep Latent Variable Models](https://proceedings.neurips.cc/paper_files/paper/2017/file/37693cfc748049e45d87b8c7d8cb26be-Paper.pdf) — Christos Louizos, Uri Shalit, Joris M. Mooij, David Sontag, Richard Zemel, Max Welling (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Neural Information Processing Systems Foundation, Inc. (NeurIPS); Volume: 30; Pages: 6446-56; DOI: [10.48550/arXiv.1705.08821](https://doi.org/10.48550/arXiv.1705.08821)
+  提出了用于带有潜在混杂变量的因果推断的因果效应变分自编码器（CEVAE）。

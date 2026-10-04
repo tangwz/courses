@@ -1,0 +1,260 @@
+---
+course: "applied-autoencoders-feature-extraction"
+chapter: "applying-autoencoder-features-practical-guidance"
+lesson: "practice-autoencoder-features-classification"
+sourceId: 6497
+sourceUrl: "https://apxml.com/zh/courses/applied-autoencoders-feature-extraction/chapter-7-applying-autoencoder-features-practical-guidance/practice-autoencoder-features-classification"
+title: "实践：在分类任务中运用自编码器特征"
+description: "一个实践环节，专注于运用自编码器提取的特征来提高分类模型的表现。"
+order: 9
+plots: ["plots/6497-0.json"]
+sourceHash: "1f95ebd25be1fe2424e07e2f36905591b9253b702dbde6f823584780ed9270c5"
+sourceCorrections: []
+---
+
+本章中，我们已讨论了选择、调整和评估用于特征提取的自编码器的方法。现在，我们将这些思想结合起来，将其运用到一个具体的分类问题上。这里的目标不仅仅是构建一个自编码器，而是要看它学习到的特征如何影响后续监督学习 (supervised learning)模型的表现。我们将逐步完成训练基准分类器、训练自编码器以提取特征，以及最后使用这些新特征训练分类器的过程，并在此过程中比较结果。
+
+### 准备工作：数据集与基准模型
+
+我们将使用一个常见的、适合分类且特征提取可能带来一些优势的数据集。我们考虑scikit-learn中提供的“Digits”（数字）数据集，它包含手写数字（0-9）的8x8像素图像。每张图像表示为一个64维向量 (vector)。我们的目标是分类这些数字。
+
+首先，我们需要建立一个**基准**。这包括在数据集的原始、未经处理的特征上训练一个标准分类模型。这个基准将作为比较点，来评估运用自编码器提取的特征是否带来任何优势。
+
+1. **加载和准备数据**：
+   我们将加载Digits数据集，并将其分为训练集和测试集。将特征缩放到[0, 1]范围也是一个好的做法，这有助于训练神经网络 (neural network)（包括自编码器）和许多分类器。
+
+   ```python
+   from sklearn.datasets import load_digits
+   from sklearn.model_selection import train_test_split
+   from sklearn.preprocessing import MinMaxScaler
+   from sklearn.linear_model import LogisticRegression
+   from sklearn.metrics import accuracy_score
+
+   # 加载数据
+   digits = load_digits()
+   X, y = digits.data, digits.target
+
+   # 将特征缩放到 [0, 1]
+   scaler = MinMaxScaler()
+   X_scaled = scaler.fit_transform(X)
+
+   # 划分数据
+   X_train, X_test, y_train, y_test = train_test_split(
+       X_scaled, y, test_size=0.3, random_state=42, stratify=y
+   )
+   ```
+2. **训练基准分类器**：
+   我们将使用一个简单的逻辑回归模型作为我们的基准分类器。
+
+   ```python
+   # 训练基准逻辑回归模型
+   baseline_model = LogisticRegression(solver='liblinear', multi_class='ovr', random_state=42, max_iter=1000)
+   baseline_model.fit(X_train, y_train)
+
+   # 评估基准模型
+   y_pred_baseline = baseline_model.predict(X_test)
+   baseline_accuracy = accuracy_score(y_test, y_pred_baseline)
+   print(f"Baseline Logistic Regression Accuracy: {baseline_accuracy:.4f}")
+   ```
+
+   假设这会给我们带来一个准确率，比如 **0.9556**。这是我们尝试通过运用自编码器特征来达到或提高的分数，可能会使用更紧凑的特征集。
+
+---
+
+### 构建用于特征提取的自编码器
+
+现在，我们将使用 **PyTorch** 设计和训练一个自编码器。这个自编码器的编码器部分将学习把64维输入转换为低维表示。
+
+1. **自编码器架构**：
+   我们将构建一个简单、全连接的自编码器。潜在空间的维度是一个重要的超参数 (parameter) (hyperparameter)。让我们尝试将64维降低到例如32维。
+
+   ```python
+   import torch
+   import torch.nn as nn
+   import torch.optim as optim
+   from torch.utils.data import TensorDataset, DataLoader
+
+   # 将numpy数组转换为PyTorch张量
+   X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+   X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+
+   # 创建TensorDataset和DataLoader
+   train_dataset = TensorDataset(X_train_tensor, X_train_tensor) # 自编码器将输入作为目标
+   test_dataset = TensorDataset(X_test_tensor, X_test_tensor)
+
+   batch_size = 32
+   train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+   test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+   input_dim = X_train.shape[1] # 应该是 64
+   latent_dim = 32 # 我们选择的潜在空间维度
+
+   # 定义自编码器模型
+   class Autoencoder(nn.Module):
+       def __init__(self, input_dim, latent_dim):
+           super(Autoencoder, self).__init__()
+           # 编码器
+           self.encoder = nn.Sequential(
+               nn.Linear(input_dim, 128),
+               nn.ReLU(),
+               nn.Linear(128, 64),
+               nn.ReLU(),
+               nn.Linear(64, latent_dim), # 瓶颈层
+               nn.ReLU() # 此处的ReLU用于非负特征，在某些自编码器使用中常见
+           )
+           # 解码器
+           self.decoder = nn.Sequential(
+               nn.Linear(latent_dim, 64),
+               nn.ReLU(),
+               nn.Linear(64, 128),
+               nn.ReLU(),
+               nn.Linear(128, input_dim),
+               nn.Sigmoid() # Sigmoid 用于[0,1]缩放的数据
+           )
+
+       def forward(self, x):
+           encoded = self.encoder(x)
+           decoded = self.decoder(encoded)
+           return decoded
+
+   autoencoder = Autoencoder(input_dim, latent_dim)
+   # 设置设备
+   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+   autoencoder.to(device)
+
+   # 定义损失函数和优化器
+   criterion = nn.MSELoss() # MSE 用于重建任务
+   optimizer = optim.Adam(autoencoder.parameters(), lr=1e-3)
+
+   print(autoencoder)
+   ```
+
+   这里，`nn.Sigmoid()` 在解码器最后一层使用，因为我们的输入数据 `X_scaled` 被归一化 (normalization)到 [0, 1] 范围。`nn.MSELoss()`（均方误差）是用于连续值输入的重建任务的常见损失函数 (loss function)。我们还将 `encoder` 部分定义为 `Autoencoder` 类中一个独立的序列模块，以便后续方便提取。
+2. **训练自编码器**：
+   我们训练自编码器来重建输入数据。
+
+   ```python
+   epochs = 50
+   history = {'loss': [], 'val_loss': []}
+
+   for epoch in range(epochs):
+       # 训练
+       autoencoder.train()
+       train_loss = 0
+       for batch_X, _ in train_loader: # _ 是目标，对于自编码器来说它与输入相同
+           batch_X = batch_X.to(device)
+           optimizer.zero_grad()
+           reconstruction = autoencoder(batch_X)
+           loss = criterion(reconstruction, batch_X)
+           loss.backward()
+           optimizer.step()
+           train_loss += loss.item() * batch_X.size(0) # 累加损失总和
+
+       avg_train_loss = train_loss / len(train_loader.dataset)
+       history['loss'].append(avg_train_loss)
+
+       # 验证
+       autoencoder.eval()
+       val_loss = 0
+       with torch.no_grad():
+           for batch_X_test, _ in test_loader:
+               batch_X_test = batch_X_test.to(device)
+               reconstruction = autoencoder(batch_X_test)
+               loss = criterion(reconstruction, batch_X_test)
+               val_loss += loss.item() * batch_X_test.size(0)
+
+       avg_val_loss = val_loss / len(test_loader.dataset)
+       history['val_loss'].append(avg_val_loss)
+
+       print(f"Epoch {epoch+1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+
+   print("Autoencoder training complete.")
+   ```
+
+   监测验证损失非常重要，以防止过拟合 (overfitting)。如果 `val_loss` 开始增加而 `loss` 减少，则是过拟合的迹象。
+
+### 提取特征并训练分类器
+
+自编码器训练完成后，我们现在可以使用它的编码器部分将我们原始的训练和测试数据集转换为它们的潜在表示。
+
+1. **提取特征**：
+   使用我们训练好的 `autoencoder` 中的 `encoder` 模块来获取压缩后的特征。
+
+   ```python
+   autoencoder.eval() # 将自编码器设置为评估模式
+   with torch.no_grad():
+       X_train_encoded = autoencoder.encoder(X_train_tensor.to(device)).cpu().numpy()
+       X_test_encoded = autoencoder.encoder(X_test_tensor.to(device)).cpu().numpy()
+
+   print(f"Original feature shape: {X_train.shape}")
+   print(f"Encoded feature shape: {X_train_encoded.shape}")
+   ```
+
+   这应该显示特征数量已从64减少到 `latent_dim`（在我们的例子中是32）。
+2. **在提取的特征上训练分类器**：
+   现在，我们训练相同的逻辑回归分类器，但这次使用 `X_train_encoded` 和 `X_test_encoded`。
+
+   ```python
+   # 在编码特征上训练逻辑回归模型
+   ae_feature_model = LogisticRegression(solver='liblinear', multi_class='ovr', random_state=42, max_iter=1000)
+   ae_feature_model.fit(X_train_encoded, y_train)
+
+   # 在编码特征上评估模型
+   y_pred_ae_features = ae_feature_model.predict(X_test_encoded)
+   ae_features_accuracy = accuracy_score(y_test, y_pred_ae_features)
+   print(f"Logistic Regression with Autoencoder Features Accuracy: {ae_features_accuracy:.4f}")
+   ```
+
+---
+
+### 比较表现和讨论
+
+假设我们使用自编码器特征的分类器达到了 **0.9611** 的准确率。
+
+这是一个简单比较：
+
+- **基准准确率（64个特征）**：0.9556
+- **自编码器特征准确率（32个特征）**：0.9611
+
+
+
+![分类器准确率比较](plots/6497-0.json)
+
+
+
+> 使用原始特征的分类器准确率与使用自编码器提取特征的分类器准确率的对比。
+
+在这种情况下，我们在准确率上取得了轻微的提高，同时特征数量减半。这是一个积极的结果。自编码器可能学到了更具区分性或降噪的数据表示，对分类器有利。
+
+**可能的结果和考虑事项：**
+
+- **表现提升**：如上所示，**潜在特征**可能对分类任务更具显著性。自编码器可以充当非线性特征学习器，捕获线性模型（如逻辑回归）自身使用原始特征可能遗漏的复杂关系。
+- **维度降低但表现相似**：即使准确率相似（例如，使用自编码器特征得到0.9550），用**更少的特征**（32个对比64个）达到此表现通常很有价值。这可以带来后续分类器更快的训练时间、减少存储空间，并且如果原始特征具有高冗余度，则可能带来更好的泛化能力。
+- **表现变差**：如果准确率显著下降（例如，降至0.9200），这可能表明：
+  - **自编码器训练不佳**：自编码器可能没有得到充分训练，或者其架构（包括潜在维度）可能不是最佳的。重建损失应该合理地低。
+  - **信息丢失**：选择的 `latent_dim` 可能太小，导致分类所需的重要信息在压缩过程中丢失。
+  - **自编码器设计不佳**：也许不同类型的自编码器（例如，如果数据有噪声则使用去噪自编码器，或更深层的架构）会产生更好的特征。
+  - **超参数 (parameter) (hyperparameter)调整**：自编码器的学习率、训练轮数、批次大小以及架构本身（层数、每层神经元数量）都是可能需要调整的**超参数**，如本章前面所讨论的。
+
+**你可以采取的进一步步骤：**
+
+1. **改变潜在维度**：尝试不同大小的 `latent_dim`。极小的潜在维度可能导致信息丢失，而极大的潜在维度可能不会提供太多压缩或特征学习的优势。绘制分类器表现与潜在维度大小的关系图会很有启发性。
+2. **不同分类器**：尝试将提取的特征与其他类型的分类器（例如，支持向量 (vector)机、随机森林，甚至是一个小型多层感知机）一起使用，以查看优势是否适用于不同模型。
+3. **评估特征质量**：在后续任务表现中，你还可以尝试可视化潜在空间（如果 `latent_dim` 是2或3），以查看相同类别的数字是否聚集在一起。
+4. **进阶自编码器**：对于更复杂的数据集，特别是图像，你通常会使用**卷积自编码器**。对于有噪声的数据，**去噪自编码器**可能有利。如果你认为潜在空间需要更多结构，可以尝试**变分自编码器（VAEs）**，尽管它们的特征（通常是均值向量 $\mu$）以相似方式使用。
+
+本次实践环节展示了在监督学习 (supervised learning)背景下运用自编码器进行特征提取的端到端工作流程。重要的是要记住，自编码器是一种工具；它的有效性取决于在你的具体问题和数据背景下进行仔细的设计、训练和评估。它提取的特征不保证一定更好，但它们提供了一种有效方式来转换你的数据，通常会产生更紧凑、信息更丰富的表示。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  为深度学习提供了全面的理论和实践基础，其中第14章专门介绍了自编码器、其变体及其在表示学习和特征提取中的作用。
+- [torch.nn - PyTorch documentation](https://pytorch.org/docs/stable/nn.html) — PyTorch Developers (2024)
+  Publisher: PyTorch Foundation
+  PyTorch神经网络模块的官方API参考，对于理解和实现实践环节中使用的自编码器架构、层、激活函数、损失函数和其他组件至关重要。
+- [Stacked Denoising Autoencoders: Learning Useful Features for Deep Learning](https://www.jmlr.org/papers/v11/vincent10a.html) — Pascal Vincent, Hugo Larochelle, Isabelle Lajoie, Yoshua Bengio, Pierre-Antoine Manzagol (2010)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR; Volume: 11; Pages: 3371-3408; DOI: [10.5555/1756006.1953039](https://doi.org/10.5555/1756006.1953039)
+  介绍了去噪自编码器，本节“后续步骤”中明确提到它有利于从噪声数据中学习鲁棒特征，为特征学习提供了更先进的视角。
+- [scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html) — scikit-learn developers (2023)
+  scikit-learn的官方用户指南，提供了数据集加载、数据划分、特征缩放技术（如`MinMaxScaler`）和线性模型（如逻辑回归）的详细信息，所有这些都在建立基线分类任务时使用。

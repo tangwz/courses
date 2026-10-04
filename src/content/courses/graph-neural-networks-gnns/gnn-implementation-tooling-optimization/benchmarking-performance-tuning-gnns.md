@@ -1,0 +1,154 @@
+---
+course: "graph-neural-networks-gnns"
+chapter: "gnn-implementation-tooling-optimization"
+lesson: "benchmarking-performance-tuning-gnns"
+sourceId: 2758
+sourceUrl: "https://apxml.com/zh/courses/graph-neural-networks-gnns/chapter-5-gnn-implementation-tooling-optimization/benchmarking-performance-tuning-gnns"
+title: "基准测试与性能调优"
+description: "评估 GNN 模型性能的方法以及调整超参数的系统性途径。"
+order: 6
+plots: ["plots/2758-0.json"]
+sourceHash: "428f4a14698e9ff22ee086e48d4f8991dace2d2e0ff5743753465bdeeb9b1889"
+sourceCorrections: []
+---
+
+构建和训练高级图神经网络 (neural network)通常涉及处理模型准确性、计算速度和内存消耗之间的关系。仅仅实现 GNN 架构是不够的；要达到最佳性能，需要进行系统性基准测试和仔细调优。将详细介绍彻底评估 GNN 模型的方法，以及根据具体任务和硬件调整其性能的策略。
+
+### 建立基准测试规程
+
+在调优之前，您需要一种可靠的方法来衡量性能。有效的基准测试为明智的优化决策奠定基础。
+
+#### 性能指标
+
+明确“性能”在您的应用中意味着什么。常用指标包括：
+
+1. **模型准确性：** 这取决于具体任务。
+   - *节点分类：* 准确率，F1-分数（宏观/微观）。
+   - *图分类：* 准确率，AUC。
+   - *链接预测：* AUC，Hits@K。
+2. **训练速度：** 每轮训练时间，达到收敛的总训练时间。
+3. **推理 (inference)速度：** 每批次或每图的延迟。
+4. **内存使用：** 训练/推理期间的 GPU 内存峰值消耗，系统 RAM 使用（特别是数据加载或大型图）。
+
+#### 标准化环境
+
+可复现性必不可少。确保您的基准测试在一致的环境中进行：
+
+- **硬件：** 明确 CPU、GPU 类型（例如 NVIDIA A100, V100）和可用内存（GPU 显存 (VRAM)，系统 RAM）。性能在不同硬件上可能明显不同。
+- **软件：** 记录核心库（PyTorch/TensorFlow, PyG, DGL, CUDA, cuDNN）的版本。微小的版本更改有时会影响性能或数值稳定性。
+- **数据集：** 使用已有的基准数据集（例如，来自 Open Graph Benchmark - OGB，Planetoid 数据集如 Cora/CiteSeer/PubMed），或明确定义您的自定义数据集划分和预处理步骤。
+- **评估规程：** 遵循标准的训练/验证/测试划分和评估流程。对于涉及采样的技术，使用不同的随机种子多次运行实验（例如，3-5 次），并报告指标的平均值和标准差。
+
+#### 日志记录与追踪
+
+使用工具系统地记录每次实验的指标、超参数 (parameter) (hyperparameter)和环境细节。Weights & Biases (W&B) 或 MLflow 等库对于追踪实验、比较运行结果和可视化结果非常有用。
+
+```python
+# 示例：基本日志设置
+# import wandb # Or mlflow
+
+# config = {
+#     "learning_rate": 0.005,
+#     "model_type": "GAT",
+#     "hidden_channels": 128,
+#     "num_layers": 3,
+#     "dataset": "Cora",
+#     # ... other hyperparameters
+# }
+
+# # 初始化日志记录
+# # wandb.init(project="advanced-gnn-benchmarking", config=config)
+
+# # --- 训练循环 ---
+# for epoch in range(num_epochs):
+#     loss = train_step(...)
+#     val_acc = evaluate(...)
+#     # 记录指标
+#     # wandb.log({"epoch": epoch, "loss": loss, "val_acc": val_acc, "gpu_mem": get_gpu_memory_usage()})
+
+# # --- 最终评估 ---
+# test_acc = test(...)
+# # wandb.log({"test_acc": test_acc})
+# # wandb.finish()
+```
+
+### 性能调优策略
+
+一旦您有了扎实的基准测试设置，就可以开始调优。这通常是一个迭代过程，涉及对模型、训练流程和系统配置的调整。
+
+#### 模型超参数 (parameter) (hyperparameter)调优
+
+这些参数定义了 GNN 架构本身：
+
+- **层数：** 更深的模型可以捕获更复杂的关系，但存在过平滑的风险并增加计算量。对不同深度（例如，2、3、5、8 层）的模型进行基准测试，并监控验证准确率和训练时间。第 3 章中讨论的技术（残差连接，跳跃知识）对于更深的模型变得必不可少。
+- **隐藏维度大小：** 更大的隐藏维度会增加模型容量，但会消耗更多内存和计算资源。测试不同大小（例如，64、128、256），并观察对准确率和资源使用的影响。
+- **GNN 层类型：** GCN、GAT、GraphSAGE、PNA 或其他模型之间的选择会影响性能。GAT 引入了注意力计算开销，但可能产生更好的准确率。GCN 或 GraphSAGE 等更简单的模型通常更快。根据您的具体图结构和任务，对相关的层类型进行基准测试。
+- **聚合函数（针对空间 GNN）：** 对于 GraphSAGE 或 PNA 等模型，聚合器（`mean`、`max`、`sum`、`lstm`）的选择会影响性能和表达能力。
+- **注意力头（针对 GAT/图 Transformer）：** 更多的注意力头可以稳定训练并提升性能，但会增加计算量。
+- **归一化 (normalization)和激活：** 尝试使用不同的归一化层（BatchNorm、LayerNorm、InstanceNorm）和激活函数 (activation function)（ReLU、GeLU 等）。
+
+#### 训练超参数调优
+
+这些参数控制优化过程：
+
+- **优化器：** Adam 和 AdamW 是 GNN 的常见起点。评估它们的参数，特别是学习率和权重 (weight)衰减。
+- **学习率（LR）：** 这通常是模型最重要的单个超参数。测试一系列值（例如，1e-4 到 1e-2 对数地）。
+- **学习率调度器：** 在训练期间使用调度器（例如，`StepLR`、`CosineAnnealingLR`）来降低学习率，通常会改善收敛性和最终性能。调优调度器的参数（例如，步长、衰减因子）。
+- **批大小：** 更大的批次可以更好地利用硬件，并可能提供更稳定的梯度，但需要更多内存。对于全批次训练，这不可调。对于小批次方法（采样、聚类），批大小直接影响训练速度和内存；它也影响采样/聚类过程本身。
+- **训练轮数和提前停止：** 训练足够的轮数，但基于验证集性能使用提前停止来防止过拟合 (overfitting)并减少不必要的计算。调优提前停止的耐心参数。
+
+#### 调优可扩展性技术
+
+如果对大型图使用采样或聚类方法（来自第 3 章），它们的参数需要调优：
+
+- **邻居采样（例如，GraphSAGE, ShaDow-GNN）：** 调优每跳每层采样的邻居数量。更少的邻居意味着更快的计算和更少的内存，但可能信息量也更少。
+- **图采样（例如，GraphSAINT）：** 调优采样器参数（例如，节点/边采样预算，随机游走长度）以及每轮的批次数量。这些会影响梯度估计的方差和训练速度。
+- **聚类（例如，Cluster-GCN）：** 调优聚类数量。更多的聚类会形成更小的子图（迭代更快，每批次内存更少），但可能会破坏重要的长距离依赖。
+
+#### 系统级优化
+
+运用您的 GNN 库和硬件的特性：
+
+- **优化过的计算核：** PyG 和 DGL 通常为消息传递等常用操作提供优化过的实现（例如，使用 `torch_sparse` 或自定义 CUDA 计算核）。确保在可能的情况下使用高效版本。
+- **混合精度训练：** 使用 `torch.cuda.amp`（自动混合精度）可以在兼容的 GPU（Tensor Core GPU）上显著加快训练速度并减少内存使用，对准确率影响最小，但需要仔细测试。
+- **数据加载：** 优化图加载和预处理。如果重复加载图，请使用高效的序列化格式。通过后台工作器（DataLoader 中的 `num_workers`）实现数据加载/预处理与 GPU 计算的重叠。
+- **性能分析工具：** 使用 PyTorch Profiler (`torch.profiler`) 或 NVIDIA Nsight Systems 等性能分析工具来识别代码中的瓶颈（CPU 限制操作、慢速 GPU 计算核、数据传输开销）。
+
+### 自动超参数 (parameter) (hyperparameter)优化 (HPO)
+
+手动调优许多超参数既繁琐又非最佳。考虑使用 HPO 框架：
+
+- **工具：** Optuna, Ray Tune, Hyperopt, Ax (通过 BoTorch)。
+- **策略：** 随机搜索通常是一个出奇有效的基线方法。贝叶斯优化（例如，使用高斯过程或树结构帕尔森估计器）试图根据之前的结智能地选择要尝试的下一个超参数。
+- **挑战：** 由于训练每个模型配置的成本较高，GNN 的 HPO 可能计算成本高昂。高效实现和可能的跨多 GPU/机器并行执行通常是必要的。
+
+### 分析结果与迭代
+
+基准测试和调优是周期性的：
+
+1. **运行实验：** 使用不同的配置执行您的基准测试套件。
+2. **收集与可视化：** 使用您的日志记录框架收集结果。创建图表以理解权衡。例如，绘制不同模型架构或超参数 (parameter) (hyperparameter)设置的验证准确率与每轮训练时间的关系图。
+3. **识别瓶颈：** 使用性能分析工具和基准测试结果来确定限制是计算、内存带宽、数据加载还是次优超参数。
+4. **调优：** 根据您的分析进行有针对性的调整。
+5. **重复：** 重新运行基准测试并继续迭代，直到达到性能目标或改进趋于平稳。
+
+
+
+![准确率与层数的关系 (Cora 数据集)](plots/2758-0.json)
+
+
+
+> Cora 数据集上 GCN 和 GAT 模型在不同层数下的验证准确率。GAT 显示出略好的峰值准确率，但两个模型都表现出随着架构加深而性能下降的迹象（潜在的过平滑）。
+
+> 自动超参数优化 (HPO) 的典型工作流程。HPO 工具建议参数，训练并评估 GNN，记录结果，然后该过程重复，直到预算（例如，时间、试验次数）耗尽或达到收敛。
+
+系统性基准测试和迭代调优是有效应用高级 GNN 必不可少的技能。通过仔细衡量性能，理解不同架构和训练选择的权衡，以及运用合适的工具，您可以构建既准确又高效且可扩展的 GNN 解决方案。
+
+## 参考资料
+
+- [Open Graph Benchmark: Datasets for Machine Learning on Graphs](https://arxiv.org/abs/2005.00687) — Weihua Hu, Matthias Fey, Marinka Zitnik, Yuxiao Dong, Hongyu Ren, Bowen Liu, Michele Catasta, Jure Leskovec (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS 2020); DOI: [10.48550/arXiv.2005.00687](https://doi.org/10.48550/arXiv.2005.00687)
+  介绍了一系列基准数据集和评估协议，支持GNN性能的标准化测量。
+- [Optuna: A Next-generation Hyperparameter Optimization Framework](https://www.kdd.org/kdd2019/accepted-papers/view/optuna-a-next-generation-hyperparameter-optimization-framework) — Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, Masanori Koyama (2019)
+  Journal: Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (KDD '19); DOI: [10.1145/3292500.3330705](https://doi.org/10.1145/3292500.3330705)
+  介绍了一个流行的超参数优化框架，具有运行时定义API，适用于GNN调优。

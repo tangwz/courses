@@ -1,0 +1,74 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "foundations-agentic-ai-systems"
+lesson: "function-prompt-engineering-agentic-systems"
+sourceId: 6712
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-1-foundations-agentic-ai-systems/function-prompt-engineering-agentic-systems"
+title: "提示工程在智能体系统中的作用"
+description: "了解提示工程如何指导和控制复杂AI智能体的行为。"
+order: 3
+plots: []
+sourceHash: "8204e32b9676e65fff377dc092c37d73f1dcd6060b0699a06bf92d0c80b184f2"
+sourceCorrections: []
+---
+
+智能体系统中的提示工程 (prompt engineering)超越了在较简单的LLM应用中常见的请求-响应式交互。对于智能体系统而言，提示不单是提问或请求文本的方式。它们是编程、引导并持续调整智能体行为，使其完成复杂多步骤任务的主要机制。提示工程是设计指令的艺术与学问，这些指令能让智能体自主高效地运行。
+
+如果把一个AI智能体比作一个精密的执行者，那么提示工程就提供了它的工作职责、标准操作流程以及持续的指示。它是我们明确智能体目标、设定其个性或角色、规定其运行边界，甚至影响其“思考过程”的方式。没有精心设计的提示，一个智能体，即便拥有强大的LLM核心，也会像一艘没有舵的船，有能力却失去方向。
+
+提示工程在这些系统中的作用是多方面的，涵盖了几个重要方面：
+
+### 定义目标、角色和限制
+
+在最基本层面，提示确定了智能体应完成什么。这不只是简单的命令。对一个智能体来说，一个目标可能涉及需要多步骤和多交互的复杂结果。提示还赋予智能体特定的角色或身份（例如，“你是一个有用的旅行规划助手”），这会影响其语气、决策风格以及它优先处理的信息类型。此外，提示还用于设置限制：智能体*不应该*做什么，*可以*或*不可以使用*哪些资源，以及它必须遵守的道德准则。
+
+### 协调任务执行和工作流程
+
+根据定义，智能体工作流程涉及一系列动作。提示工程 (prompt engineering)是我们设计这些序列的方式。提示可以：
+
+- **分解复杂任务**：引导智能体将大问题分解为更小、更易管理的小任务。例如，一个提示可能会指示智能体先研究某个主题，然后综合研究结果，最后起草一份报告。
+- **引导决策**：在工作流程的不同节点，智能体可能需要做出选择。提示为这些决策提供标准或启发。
+- **管理顺序操作**：确保步骤按正确顺序执行，并且信息从一个步骤适当地流向下一个步骤。
+
+### 支持工具使用和交互
+
+现代智能体通常依赖外部工具，如搜索引擎、代码解释器或API来完成其任务。提示对于这种交互非常重要：
+
+- **工具选择**：指示智能体*何时*需要工具以及从其可用工具集中*选择*哪个特定工具。
+- **输入格式化**：引导智能体为所选工具正确组织数据。
+- **输出解读**：帮助智能体理解并使用工具返回的信息。
+  例如，一个提示可能会告诉智能体：“如果你需要最新信息，请使用网络搜索工具。将你的查询格式化为一个问题。收到搜索结果后，总结前三项发现。”
+
+### 管理记忆与上下文 (context)
+
+为了让智能体在长时间交互或多步骤任务中连贯地执行，它需要管理信息，即“记忆”。提示在这方面起着重要作用：
+
+- **工作记忆（上下文窗口）**：精心构建的提示有助于管理哪些信息保留在LLM有限的上下文窗口内，确保相关细节可用于当前操作。
+- **信息检索**：提示可以引导智能体从外部知识库或长期记忆存储中获取和使用信息。
+- **总结与反思**：指示智能体总结过去的交互或反思其进展，以保持专注和一致性。
+
+### 促进推理 (inference)和规划
+
+复杂的智能体行为通常需要推理和规划能力。提示可以触发并引导这些过程。像思维链（CoT）提示这样的技术，鼓励智能体“一步步思考”，通过特定的提示结构来实现。这使得智能体能够在采取行动前分析问题、评估潜在方案并制定计划。
+
+### 错误处理和自我修正
+
+没有系统是完美的，智能体也会遇到错误或意外情况。提示可以包含关于智能体如何应对失败的指令。这可能涉及重试操作、使用替代工具、请求澄清，或根据遇到的错误尝试自我修正其方法。
+
+下面的图表说明了提示工程 (prompt engineering)如何在智能体架构中充当中心控制系统：
+
+> 一个AI智能体的运行流程，突出显示了提示工程作为指导LLM核心及其与工具和记忆交互的主要界面，以达成用户设定的目标。
+
+本质上，提示工程是开发者（或用户）与智能体核心智能之间的持续对话。这是一个迭代过程。你将设计初始提示，观察智能体的行为，分析其成功与失败，然后优化提示以提升性能。随着本课程的进展，你将学习具体的技巧来掌握这种“对话”，以实现各种智能体功能，如高级控制、工具集成、规划和记忆管理。理解提示的这个基本作用，是构建真正高效AI智能体的第一步。
+
+## 参考资料
+
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/abs/2201.11903) — Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, Denny Zhou (2022)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.2201.11903](https://doi.org/10.48550/arXiv.2201.11903)
+  本文介绍了思维链提示技术，通过明确指示模型展示思考步骤来提升大型语言模型的推理能力，对指导智能体规划有基本作用。
+- [ReAct: Synergistic Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, and Yuan Cao (2023)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  本文提出了ReAct框架，该框架通过言语化和与外部工具的交互，将大型语言模型中的推理和行动结合起来，直接处理智能体中的任务编排和工具使用。
+- [Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442) — Joon Sung Park, Joseph C. O’Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, and Michael S. Bernstein (2023)
+  Journal: arXiv preprint arXiv:2304.03442; DOI: [10.48550/arXiv.2304.03442](https://doi.org/10.48550/arXiv.2304.03442)
+  本文介绍了一种构建生成式智能体以模拟人类行为的系统，展示了提示驱动的架构如何管理内存、规划和交互以完成复杂的智能体任务。

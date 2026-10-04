@@ -1,0 +1,57 @@
+---
+course: "getting-started-with-scikit-learn"
+chapter: "data-preprocessing-feature-engineering"
+lesson: "importance-data-preprocessing"
+sourceId: 1878
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-scikit-learn/chapter-4-data-preprocessing-feature-engineering/importance-data-preprocessing"
+title: "数据预处理的重要性"
+description: "为什么缩放和编码等预处理步骤对许多机器学习算法是必需的。"
+order: 1
+plots: []
+sourceHash: "b385b825d87eb1187a814d454552ded50d668ca8f518a06c33d05b1f37b7722b"
+sourceCorrections: []
+---
+
+正如本章引言中所强调的，将原始数据直接输入到机器学习 (machine learning)算法中，常常会导致不理想的结果甚至彻底失败。实际情况是，从各种过程中收集到的数据集很少是完美无瑕的。它们经常表现出违反许多学习算法假设或要求的数据特点。本节将详细说明为什么通过预处理来处理这些数据特点，不仅仅是一种好的做法，更是构建有效模型的根本需要。
+
+### 为什么算法在原始数据上会遇到困难
+
+机器学习 (machine learning)算法，尽管它们很复杂，但通常基于对输入数据做出假设的数学原理进行操作。让我们考虑一些原始数据导致问题的常见情况：
+
+1. **特征尺度不一致：** 想象一个数据集包含两个特征：`age`（范围从20到70）和`annual_income`（范围从30,000到200,000）。许多算法，特别是那些基于距离计算或梯度下降 (gradient descent)的算法，会受到范围和数值更大的特征（本例中是收入）的不成比例的影响。
+
+   - **基于距离的算法（例如，K-近邻，带RBF核的SVM）：** 这些算法依赖于计算数据点之间的距离（例如，欧几里得距离）。如果一个特征的尺度比另一个大得多，它将主导距离计算。与收入差异相比，年龄差异可能变得几乎无关紧要，导致模型主要根据收入做出决策，即使年龄也具有信息价值。
+   - **基于梯度的算法（例如，线性回归，逻辑回归，神经网络 (neural network)）：** 梯度下降等优化算法通过基于损失函数 (loss function)的梯度迭代调整参数 (parameter)来找到最优模型参数。数值较大的特征会产生较大的梯度，可能导致不稳定的更新和更慢的收敛。将特征标准化为零均值和单位方差（$(X - \mu) / \sigma$），或将其缩放到特定范围（如$[0, 1]$），可以确保所有特征更公平地参与学习过程，并帮助优化算法更平稳地收敛。
+2. **类别数据：** 算法对输入数据执行数学运算。它们从根本上理解数字，而不是像'Red'、'Green'、'Blue'或'New York'、'London'、'Tokyo'这样的文本标签。直接将这类类别文本数据输入到大多数Scikit-learn估计器中会导致错误。我们需要系统的方法将这些非数值特征转换为算法可以处理的数值格式，避免无意中引入误导性信息（例如，如果我们简单地将'Red'和'Blue'映射为1和2，就会暗示它们之间存在顺序）。独热编码等技术就是为此目的而设计的。
+3. **缺失值：** 数据集常有缺失条目，通常表示为`NaN`（非数字）或类似的占位符。大多数机器学习算法本质上未被设计为处理缺失值。尝试使用包含`NaN`的数据训练模型通常会在拟合过程中导致错误。虽然简单地删除包含缺失数据的行或列是一种选择，但这可能导致大量信息丢失，尤其当缺失值普遍存在时。像插补这样的预处理步骤旨在利用可用数据中得出的统计估计来智能地填补这些空白。
+
+### 跳过预处理的后果
+
+忽视数据预处理可能导致几种不良结果：
+
+- **模型性能不佳：** 如前所述，对特征尺度的敏感性或无法处理非数值数据可能会阻止算法有效学习，导致准确率低、错误率高或对新数据的泛化能力差。
+- **模型偏离：** 如果忽略特征缩放，数值较大的特征可能会不公平地主导模型的决策过程，导致预测结果有偏。
+- **收敛速度慢：** 对于迭代优化算法，未缩放的特征会显著减慢向最优解的收敛速度，增加训练时间。
+- **算法错误：** 尝试使用不兼容的数据类型（如字符串）或包含缺失值的数据，通常会导致算法执行因错误而中止。
+
+### 为更干净的数据做准备
+
+数据预处理是机器学习 (machine learning)工作流中的一个必不可少的一步。它涉及将原始数据转换为干净、一致且算法兼容的格式。此处提供使用Scikit-learn强大且一致的`Transformer`接口实现预处理技术的实用指导。
+
+- **特征缩放：** 像`StandardScaler`、`MinMaxScaler`和`RobustScaler`这样的技术，用于将数值特征转换到共同的尺度上。
+- **编码类别特征：** 使用`OneHotEncoder`和`OrdinalEncoder`将类别数据转换为数值表示。
+- **处理缺失值：** 采用像`SimpleImputer`这样的策略来填充缺失数据点。
+
+通过掌握这些技术，使你的模型能够有效学习数据，显著提高你构建准确可靠机器学习解决方案的机会。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实用的指南，涵盖机器学习概念和Scikit-learn实现，包括数据预处理的详细章节。
+- [Preprocessing data](https://scikit-learn.org/stable/modules/preprocessing.html) — scikit-learn developers (2024)
+  Publisher: scikit-learn project
+  Scikit-learn数据预处理模块的官方文档，详细介绍了各种转换器及其用法。
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2013)
+  Publisher: Springer
+  一本广受认可的教材，为统计学习方法提供理论基础，包括数据准备和特征工程的讨论。

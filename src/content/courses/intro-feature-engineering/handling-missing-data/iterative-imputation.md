@@ -1,0 +1,126 @@
+---
+course: "intro-feature-engineering"
+chapter: "handling-missing-data"
+lesson: "iterative-imputation"
+sourceId: 1318
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-2-handling-missing-data/iterative-imputation"
+title: "多元插补：迭代插补器"
+description: "迭代使用回归模型估算并填补缺失值。"
+order: 6
+plots: []
+sourceHash: "939052a50fe5680a0bde39f06c940fb19241e14d59e9101297981905cf959fd6"
+sourceCorrections: []
+---
+
+简单的插补方法（如均值或中位数）速度快，但它们忽略了特征之间的关系。K近邻（KNN）插补器考虑特征相似性，但可能对数据尺度和距离度量的选择敏感。当你认为一个特征中的缺失值可以根据其他特征的值进行预测时，就需要一种更高级的方法。这时，基于模型的插补技术，比如`IterativeImputer`，就能发挥作用。
+
+`IterativeImputer` 在 Scikit-learn 的 `sklearn.impute` 模块中提供，它通过将每个带有缺失值的特征建模为其他特征的函数来处理缺失数据。它将正在插补的特征视为目标变量 ($y$)，并将其他特征视为预测变量 ($X$)。此过程迭代重复，在每个循环中优化插补值。
+
+### 迭代插补的工作方式
+
+设想你有一个在多列中带有缺失值的数据集。`IterativeImputer` 分轮次进行操作：
+
+1. **初始化：** 缺失值最初使用简单策略（例如每列的均值或中位数）进行填充。
+2. **迭代循环：**
+   - 选择一个包含在步骤1中已填充缺失值的特征（列）。我们称之为特征 A。
+   - 将特征 A 的观测值视为目标变量 $y$。
+   - 使用所有其他特征（包括那些在之前步骤或轮次中已插补值的特征）作为预测变量 $X$。
+   - 训练一个回归模型（“估计器”）以从 $X$ 预测 $y$，仅使用特征 A 最初被*观测到*的行。
+   - 使用训练好的模型预测特征 A 中的缺失值。这些预测值会替换特征 A 之前的插补值。
+   - 对每个最初有缺失值的特征重复此过程。
+3. **收敛：** 重复步骤2达到指定的轮次数（`max_iter`），或者直到插补值稳定下来（即，连续轮次插补值之间的差异低于容忍阈值 `tol`）。每轮中特征的插补顺序可以通过 `imputation_order` 控制。
+
+> 这是单轮迭代插补过程的流程。整个循环会重复直到收敛。
+
+### 估计器的选择
+
+`IterativeImputer` 的一个重要方面在于其选择用于预测的底层回归模型的灵活性。这由 `estimator` 参数 (parameter)控制。默认是 `BayesianRidge`，这通常是一个好的起点。然而，你可以传入任何能在预测时处理目标变量中 `NaN` 值的 scikit-learn 回归器（或者你可能需要根据估计器处理该方面）。常见选择包括：
+
+- `BayesianRidge`：默认，常选。
+- `DecisionTreeRegressor`：捕捉非线性关系。
+- `ExtraTreesRegressor`：类似于随机森林，通常更快。
+- `RandomForestRegressor`：集成方法，处理交互作用。
+- `KNeighborsRegressor`：使用类似于 KNNImputer 的邻近信息，但在迭代框架内。
+
+估计器的选择会影响插补的准确性和计算时间。像 `RandomForestRegressor` 这样更复杂的模型可能会捕捉到复杂的模式，但运行时间会更长，尤其是在大型数据集或多次迭代的情况下。
+
+### 使用 Scikit-learn 实现
+
+让我们看看如何使用 `IterativeImputer`。我们将创建一个带有缺失值的小型 DataFrame 并应用此插补器。
+
+```python
+import pandas as pd
+import numpy as np
+from sklearn.experimental import enable_iterative_imputer # 启用实验性功能
+from sklearn.impute import IterativeImputer
+from sklearn.ensemble import RandomForestRegressor # 使用不同估计器的示例
+
+# 带有缺失值的示例数据
+data = {'FeatureA': [1, 2, np.nan, 4, 5, 6, np.nan, 8],
+        'FeatureB': [10, np.nan, 30, 40, 50, np.nan, 70, 80],
+        'FeatureC': [101, 102, 103, 104, 105, 106, 107, np.nan]}
+df = pd.DataFrame(data)
+
+print("原始 DataFrame:")
+print(df)
+
+# 初始化 IterativeImputer（使用默认的 BayesianRidge）
+imputer_br = IterativeImputer(max_iter=10, random_state=0)
+
+# 拟合并转换数据
+df_imputed_br = imputer_br.fit_transform(df)
+
+# 转换回 DataFrame（可选，为了更好的可读性）
+df_imputed_br = pd.DataFrame(df_imputed_br, columns=df.columns)
+
+print("\n迭代插补后（BayesianRidge）的 DataFrame:")
+print(df_imputed_br)
+
+# 使用 RandomForestRegressor 作为估计器的示例
+imputer_rf = IterativeImputer(estimator=RandomForestRegressor(n_estimators=10, random_state=0),
+                              max_iter=10, 
+                              random_state=0)
+
+df_imputed_rf = imputer_rf.fit_transform(df)
+df_imputed_rf = pd.DataFrame(df_imputed_rf, columns=df.columns)
+
+print("\n迭代插补后（RandomForestRegressor）的 DataFrame:")
+print(df_imputed_rf)
+```
+
+运行此代码将首先显示带有 `NaN` 值的原始 DataFrame。然后，它将显示使用默认 `BayesianRidge` 估计器进行插补后的 DataFrame，接着是使用 `RandomForestRegressor` 的结果。你会注意到，插补值（例如索引2处的 `FeatureA` 或索引1处的 `FeatureB`）是根据从其他特征中学到的关系计算得出的。结果可能因所使用的估计器而略有不同。
+
+### 优点与注意事项
+
+**优点：**
+
+- **捕捉关系：** 可以对特征之间复杂的交互作用和关联进行建模，可能比简单方法产生更准确的插补。
+- **灵活性：** 允许使用各种回归模型作为估计器。
+- **应用广泛：** 可以处理不同模式的缺失数据。
+
+**注意事项：**
+
+- **计算成本：** 可能比简单插补或 KNNImputer 明显慢，尤其是在大型数据集、多特征、复杂估计器或高 `max_iter` 值时。
+- **估计器依赖性：** 插补质量严重依赖于所选 `估计器` 的适当性及其调优。
+- **潜在的不稳定性：** 在某些情况下，特别是估计器选择不当或存在共线性时，迭代过程可能无法很好地收敛。
+- **预处理：** 像许多模型一样，底层回归器可能受益于特征缩放（例如，在插补器之前在管道中使用 `StandardScaler`），尽管默认的 `BayesianRidge` 比基于距离的方法敏感度低。
+
+### 何时使用迭代插补器
+
+`IterativeImputer` 是一个强有力的选择，当：
+
+- 你认为缺失值与数据集中的其他特征相关（MAR 机制合理）。
+- 插补的准确性比计算速度更重要。
+- 数据集大小和特征数量对于所选估计器而言是可管理的。
+- 简单插补方法对后续建模任务产生不令人满意的结果。
+
+它代表着从均值/中位数/众数或 KNN 插补的复杂程度提升，提供了一种有效的方式，通过借助数据集本身所具有的预测能力来处理缺失数据。然而，请记住要监控其性能和计算需求，并与更简单、更快的替代方案进行比较。
+
+## 参考资料
+
+- [sklearn.impute.IterativeImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.IterativeImputer.html) — scikit-learn developers (2024)
+  Publisher: scikit-learn project
+  Scikit-learn中IterativeImputer的官方文档，详细介绍了其用法、参数和示例。
+- [Flexible Imputation of Missing Data, Second Edition](https://www.taylorfrancis.com/books/9780429492230) — Stef van Buuren (2018)
+  Publisher: CRC Press; DOI: [10.1201/9780429492230](https://doi.org/10.1201/9780429492230)
+  本书为多重插补链式方程（MICE）提供了全面的理论和实践指导，Scikit-learn的IterativeImputer即基于此。

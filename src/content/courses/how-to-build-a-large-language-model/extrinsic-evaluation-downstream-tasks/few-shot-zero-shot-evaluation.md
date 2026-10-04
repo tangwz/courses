@@ -1,0 +1,284 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "extrinsic-evaluation-downstream-tasks"
+lesson: "few-shot-zero-shot-evaluation"
+sourceId: 6064
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-22-extrinsic-evaluation-downstream-tasks/few-shot-zero-shot-evaluation"
+title: "少量示例和零示例评估"
+description: "在有限或无需特定任务微调数据的情况下评估模型能力。"
+order: 5
+plots: []
+sourceHash: "50665f4bda623ef166ffdc35228e14410eca032b770dbd2e8857b943927f9cfa"
+sourceCorrections: []
+---
+
+虽然微调 (fine-tuning)提供了一种充分定制预训练 (pre-training)模型以适应特定任务的方式，但它需要标注数据和计算资源进行训练。此外，它主要评估模型的*适应性*。通常，我们感兴趣的是评估模型在大规模预训练阶段学到的固有能力，特别是指模型在不进行特定任务梯度更新的情况下理解和遵循指令或执行任务的能力。这就是零示例和少量示例评估方法具有特别的价值之处。这些技术衡量模型如何将预训练知识泛化到新任务，仅通过自然语言提示以及（可能）直接在输入上下文 (context)中提供的少数示例来引导。
+
+### 理解零示例评估
+
+零示例评估评估大语言模型 (LLM)执行从未显式训练过的任务的能力，不使用特定任务的示例。我们不进行微调 (fine-tuning)，而是完全依赖于模型的预训练 (pre-training)知识及其理解提示中提供的任务描述或指令的能力。在评估配置中，模型看不到任何特定下游任务格式的示例（$k=0$）。
+
+考虑评估预训练大语言模型的情感分析能力。在零示例设置中，您不会在情感数据集上微调模型。相反，您可能会提供如下提示：
+
+```
+文本: "这部电影真是太棒了，简直是杰作！"
+情感 (正面/负面):
+```
+
+或者更明确一些：
+
+```
+将以下文本的情感归类为正面或负面。
+
+文本: "航班延误了，服务也很糟糕。"
+情感:
+```
+
+模型应利用其对语言的理解，包括“棒极了”或“糟糕”等词语的语义，生成正确的分类结果（“正面”或“负面”）。
+
+**实现概述：**
+
+使用预训练模型接口（例如，来自 `transformers` 等库），该过程在 PyTorch 中可能如下所示：
+
+```python
+import torch
+from transformers import (
+    AutoModelForCausalLM, AutoTokenizer
+)
+
+# 加载预训练模型和分词器
+# 注意：将 "gpt2" 替换为合适的指令微调模型或
+# 大型基础模型
+model_name = "gpt2" # 示例模型名称
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+# 如有需要，确保填充令牌已设置
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+def classify_sentiment_zero_shot(text):
+    """使用零示例提示对情感进行分类。"""
+    prompt = f"""Classify the sentiment of the following text
+as 'positive' or 'negative'.
+
+Text: "{text}"
+Sentiment:"""
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512
+    )
+
+    # 生成补全 — 关注紧随其后的令牌（或多个）
+    # 用于分类
+    # 对于生成式分类，需要仔细解析输出。
+    # 我们可能会限制生成，或查看“正面”/“负面”的对数。
+    # 这是一个简化示例；生成需要更细致的考虑。
+    with torch.no_grad():
+        outputs = model.generate(
+            inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=3, # 限制生成长度
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+    # 解码提示后生成的令牌（或多个）
+    generated_ids = outputs[0, inputs.input_ids.shape[1]:]
+    result = tokenizer.decode(
+        generated_ids, skip_special_tokens=True
+    ).strip().lower()
+
+    # 简单解析（可以更复杂）
+    if "positive" in result:
+        return "positive"
+    elif "negative" in result:
+        return "negative"
+    else:
+        return "unknown" # 模型可能不遵循指令
+
+# 示例用法
+text_to_classify = "The product broke after just one week."
+sentiment = classify_sentiment_zero_shot(text_to_classify)
+print(f"Text: '{text_to_classify}'")
+print(f"Predicted Sentiment (Zero-Shot): {sentiment}")
+
+# 预期输出（可能因模型而异）：
+# Text: 'The product broke after just one week.'
+# Predicted Sentiment (Zero-Shot): negative
+```
+
+**优点：**
+
+- **无需特定任务数据：** 它直接测试模型的泛化能力，无需目标任务的任何标注示例。
+- **快速评估：** 可以快速评估模型在多项任务上的能力。
+- **基线表现：** 建立模型“开箱即用”的知识基础。
+
+**缺点：**
+
+- **表现较差：** 与微调模型相比，准确性通常较低，因为它缺少特定任务的适应性。
+- **提示敏感性：** 表现高度依赖于提示的确切措辞和格式。微小改变可能导致表现出现较大差异。
+- **指令遵循能力：** 非常依赖于模型理解和遵循所提供指令的能力，这在不同模型之间存在差异（特别是未经指令微调的模型）。
+
+### 理解少量示例评估（上下文 (context)学习）
+
+少量示例评估，通常被称为大语言模型 (LLM)的上下文学习，直接在提示中向模型提供少量 ($k$，通常在 1 到 32 之间) 任务示例。重要的是，模型的权重 (weight)*不会*根据这些示例进行*更新*；它们仅作为上下文或演示，用于引导模型对后续实际查询实例的预测。
+
+继续情感分析的示例，一个单示例 ($k=1$) 提示可能如下所示：
+
+```
+对文本情感进行分类。
+
+文本: "我喜欢这场演唱会，乐队太棒了！"
+情感: positive
+
+文本: "这本书相当无聊且老套。"
+情感:
+```
+
+一个双示例 ($k=2$) 提示：
+
+```
+对文本情感进行分类。
+
+文本: "我喜欢这场演唱会，乐队太棒了！"
+情感: positive
+
+文本: "客户支持态度不佳，响应缓慢。"
+情感: negative
+
+文本: "这家新咖啡店氛围很好，饮品也很美味。"
+情感:
+```
+
+模型观察提供的示例中的模式（输入文本后接期望的输出标签），并将其应用于最终的未标注实例。
+
+**实现概述：**
+
+代码结构与零示例类似，但提示构建会改变以包含示例。
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 假设模型和分词器已按之前方式加载
+# model_name = "gpt2" # 示例模型名称
+# tokenizer = AutoTokenizer.from_pretrained(model_name)
+# model = AutoModelForCausalLM.from_pretrained(model_name)
+# if tokenizer.pad_token is None: tokenizer.pad_token = tokenizer.eos_token
+
+def classify_sentiment_few_shot(text, examples, k):
+    """使用 K 示例提示对情感进行分类。"""
+    prompt = (
+        "Classify the sentiment of the text as 'positive' or 'negative'.\n\n"
+    )
+
+    # 向提示中添加 K 个示例
+    for i in range(min(k, len(examples))):
+        example_text, example_sentiment = examples[i]
+        prompt += f"Text: \"{example_text}\"\n"
+        prompt += f"Sentiment: {example_sentiment}\n\n"
+
+    # 添加查询文本
+    prompt += f"Text: \"{text}\"\nSentiment:"
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=1024 # 增加了 max_length
+    )
+
+    # 生成补全
+    with torch.no_grad():
+        outputs = model.generate(
+            inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=3,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+    generated_ids = outputs[0, inputs.input_ids.shape[1]:]
+    decoded_text = tokenizer.decode(
+        generated_ids, skip_special_tokens=True
+    )
+    result = decoded_text.strip().lower()
+
+    # 简单解析
+    if "positive" in result:
+        return "positive"
+    elif "negative" in result:
+        return "negative"
+    else:
+        return "unknown"
+
+# 示例用法
+few_shot_examples = [
+    ("今天天气晴朗美丽。", "positive"),
+    ("我的订单收到时已损坏且不完整。", "negative")
+]
+text_to_classify = "这部电影视觉效果惊艳但情节薄弱。"
+k_shots = 2
+
+sentiment = classify_sentiment_few_shot(
+    text_to_classify, few_shot_examples, k_shots
+)
+print(f"Text: '{text_to_classify}'")
+print(f"Predicted Sentiment ({k_shots}-Shot): {sentiment}")
+
+# 预期输出（可能因模型而异）：
+# Text: 'The movie had stunning visuals but a weak plot.'
+# Predicted Sentiment (2-Shot): negative
+# # 或者可能是正面，取决于模型偏向
+```
+
+**优点：**
+
+- **表现提升：** 通常明显优于零示例，因为示例明确了任务格式和预期输出。
+- **仍无需微调 (fine-tuning)：** 避免了训练的计算成本和数据要求。
+- **上下文适应性：** 允许模型根据推理 (inference)时提供的特定示例调整其行为。
+
+**缺点：**
+
+- **示例敏感性：** 表现高度依赖于 $k$ 个示例的选择、质量和顺序。糟糕的示例可能降低表现。
+- **上下文长度限制：** 示例数量 ($k$) 受限于模型的最大上下文窗口大小。放入过多长示例可能超出此限制。
+- **每次推理的计算成本：** 由于提示更长，推理与零示例相比略慢且更占用内存。
+- **提示格式：** 仍然需要仔细的提示设计，包括示例的格式和分隔方式。
+
+### 提示工程 (prompt engineering)的考量
+
+零示例和少量示例评估都突出了提示工程的重要性。任务的描述或演示方式可以显著改变模型的输出。重要考量包括：
+
+- **指令清晰度（零示例）：** 指令应清晰明确，并清楚说明所需的任务和输出格式。
+- **示例选择（少量示例）：** 示例应具有任务代表性、多样化且格式正确。示例的选择可能使模型产生偏向。有时平衡正面/负面示例或使用与查询实例相似的示例会有帮助。
+- **格式化：** 指令、输入、输出和分隔符（如换行符）的一致格式非常重要。
+- **高级提示技巧：** 诸如思维链 (CoT) 提示之类的技巧，即提示模型“一步步思考”（通常在少量示例中演示），可以提升推理 (inference)任务的表现，尽管它们通常单独评估。
+
+### 零示例、少量示例与微调 (fine-tuning)之间的选择
+
+- **零示例：** 最适合快速评估模型广泛的固有能力，比较基础模型，或者在绝对没有任务示例可用时使用。它测试纯粹的泛化能力和指令理解。
+- **少量示例（上下文 (context)学习）：** 适用于有少量示例可用时，或者您希望评估模型在不更新权重 (weight)的情况下从上下文学习的水平。通常比零示例能更好地估计潜在表现。
+- **完全微调：** 当目标是最大化特定任务的表现，并且有足够的标注数据和计算资源可用时，这是必要的。它评估模型的适应性和特定化潜力。
+
+零示例和少量示例评估是理解大语言模型 (LLM)的重要工具。它们通过提供对模型一般知识及其仅基于上下文和指令将该知识应用于新任务的能力的认识来补充微调，这反映了模型能力的一个不同维度，区别于通过梯度下降 (gradient descent)进行特定任务的适应。分析 GLUE 或 SuperGLUE 等基准测试时，通常会报告所有三种模式（零示例、少量示例、微调）的结果，以提供模型表现的全面情况。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Volume: 33; Pages: 1877-1901; DOI: [10.55917/gh.2023.0125](https://doi.org/10.55917/gh.2023.0125)
+  这篇基础论文介绍了上下文学习的概念，并展示了GPT-3等大型语言模型的零样本和少样本能力。
+- [Pre-train, Prompt, Predict: A Systematic Survey of Prompting Methods in Pre-trained Language Models](https://doi.org/10.18653/v1/2023.acl-long.91) — Pengfei Liu, Weizhe Yuan, Jinlan Fu, Zhengbao Jiang, Hiroaki Hayashi, and Graham Neubig (2023)
+  Journal: Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Pages: 1274-1301; DOI: [10.18653/v1/2023.acl-long.91](https://doi.org/10.18653/v1/2023.acl-long.91)
+  一篇全面的综述，分类并分析了各种提示技术，包括零样本和少样本提示，提供了该领域的概览。
+- [Chain-of-Thought Prompting Elicits Reasoning in Large Language Models](https://arxiv.org/pdf/2201.11903) — Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi, Quoc V. Le, and Denny Zhou (2022)
+  Journal: arXiv preprint arXiv:2201.11903
+  介绍了思维链提示，一种通过引导模型生成中间推理步骤来提高推理任务上少样本性能的技术。
+- [\`generate\` method](https://huggingface.co/docs/transformers/main_classes/text_generation) — Hugging Face (2024)
+  Publisher: Hugging Face
+  `transformers`库中`generate`方法的官方文档，与零样本和少样本评估的实现示例相关。

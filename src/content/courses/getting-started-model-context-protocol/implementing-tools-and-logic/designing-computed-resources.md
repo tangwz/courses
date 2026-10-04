@@ -1,0 +1,121 @@
+---
+course: "getting-started-model-context-protocol"
+chapter: "implementing-tools-and-logic"
+lesson: "designing-computed-resources"
+sourceId: 7853
+sourceUrl: "https://apxml.com/zh/courses/getting-started-model-context-protocol/chapter-3-implementing-tools-and-logic/designing-computed-resources"
+title: "设计计算资源"
+description: "区分动态计算资源和可执行工具。"
+order: 5
+plots: []
+sourceHash: "60f013fc6b630c725709fd39b9994428e82585429fe50438325fa30592ac15a0"
+sourceCorrections: []
+---
+
+构建一个模型上下文 (context)协议服务器常会遇到一个架构难题：当您需要提供动态数据时，是应该将其包装成一个工具，还是定义为一个资源？在之前的章节中，我们已明确工具是可执行函数，而资源是只读数据。然而，当数据需要即时计算或根据特定参数 (parameter)从数据库中获取时，这种界限就变得模糊了。
+
+计算资源是一种不映射到磁盘上静态文件的资源。相反，其内容是在请求时通过程序生成的。这使您可以使用与静态文本文件相同的标准化URI接口，提供动态系统状态，例如当前内存使用量、数据库表中的最新行或即时的API响应。
+
+### 架构上的区别
+
+决定是实现工具还是计算资源，这会根本性地改变大型语言模型（LLM）与您的数据交互的方式。这个选择取决于交互是作为函数调用（RPC）还是数据获取（类似REST的GET）建模更合适。
+
+当您定义一个**工具**时，您赋予模型自主权。模型明确决定调用该工具，并根据对话上下文 (context)选择参数 (parameter)。这是一个主动过程，适用于可能失败、需要复杂参数或改变系统状态的操作。
+
+当您定义一个**计算资源**时，您为模型提供上下文。模型会看到一个URI（统一资源标识符），并将内容视为参考资料的一部分。这是一个被动过程，适用于标识特定实体且可以安全读取而无副作用的数据。
+
+下面的决策树概括了选择这些基本要素的逻辑。
+
+> 区分工具和资源时的逻辑流程，基于状态修改、参数复杂度和数据标识。
+
+### 实现动态URI
+
+要实现计算资源，您必须依赖URI模板。与每个文件都有固定路径的静态资源不同，计算资源使用模式将请求路由到处理函数。
+
+例如，在Python SDK中，您可以使用通用标识符定义资源模板。如果您正在构建一个监控服务器指标的系统，您可以定义一个URI方案，例如`system://metrics/{host}`。当客户端请求`system://metrics/localhost`时，您的处理程序会解析`{host}`变量，并执行逻辑以获取该特定主机的CPU和内存统计信息。
+
+假设我们要从数据库中提供用户资料。我们可以创建一个名为`get_user_profile(user_id)`的工具，但由于这是一个只读操作，返回标准文档，因此资源模式通常更合适。
+
+实现过程包含两个不同的阶段：列出模式和处理读取请求。
+
+#### 阶段1：提供能力
+
+首先，服务器必须通知客户端它可以处理这些动态请求。这在`resources/list`能力交换期间完成。您提供一个模板，而不是每个可能用户的具体列表。
+
+#### 阶段2：处理请求
+
+当服务器收到`resources/read`请求时，它会将传入的URI与您注册的模板进行匹配。如果找到匹配项，它会提取变量并将它们传递给您的逻辑处理程序。
+
+$URI_{request} = \text{方案} + \text{://} + \text{路径} + \text{变量}$
+
+以下是一个Python中计算资源的结构示例，用于动态获取用户数据：
+
+```python
+from mcp.server.fastmcp import FastMCP
+import sqlite3
+
+mcp = FastMCP("UserDirectory")
+
+@mcp.resource("users://{user_id}/profile")
+def get_user_profile(user_id: str) -> str:
+    """
+    动态地从数据库中获取用户资料。
+    """
+    # 连接到数据库（在生产环境中，请使用连接池）
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    
+    # 安全的参数替换可防止SQL注入
+    cursor.execute("SELECT name, email, role FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return f"Name: {row[0]}\nEmail: {row[1]}\nRole: {row[2]}"
+    else:
+        raise ValueError(f"User {user_id} not found.")
+```
+
+在此示例中，`@mcp.resource`装饰器充当路由器。字符串`users://{user_id}/profile`指示MCP服务器在客户端请求与该模式匹配的URI时调用此函数。
+
+### 上下文 (context)窗口与订阅
+
+使用计算资源而非工具的一个主要益处是它与资源订阅模型的结合。如果数据经常变化，资源允许客户端订阅更新。
+
+如果您使用**工具**获取股票价格，LLM会收到该时刻价格的快照。如果价格在五秒后变化，模型无法知晓，除非它决定再次调用该工具。
+
+如果您使用**计算资源**（例如，`stock://AAPL/price`），客户端可以订阅此URI。当您的内部逻辑检测到价格变化时，您可以向客户端发送通知。客户端随后可以自动获取新内容并更新上下文窗口，而无需LLM采取任何行动。这形成了一个响应式数据循环，仅凭工具难以实现。
+
+### 复杂性与验证
+
+尽管资源功能强大，但它们缺少工具所具有的输入验证模式。工具使用JSON Schema（通常通过Pydantic生成）对参数 (parameter)强制执行严格类型。资源完全依赖于URI的字符串解析。
+
+如果您的数据获取需要复杂的筛选，例如“查找上周注册并拥有高级订阅的所有用户”，将这些参数打包到URI字符串中会变得笨拙且非标准化。
+
+$URI = \text{users://search?after=2023-10-01\&tier=premium}$
+
+尽管上述URI是有效的，但在资源处理程序中手动解析查询字符串与工具定义提供的结构化验证相比，更容易出错。因此，如果数据访问需要一个或两个以上简单的标识符参数，或者参数是可选且组合性的，那么工具是更优的架构选择。
+
+### 混合方法
+
+复杂的MCP实现通常采用混合方法。您可以提供一个用于搜索和发现的工具，它会返回一个资源URI列表。
+
+1. **工具：** `search_users(query="engineering")`返回一个简化对象列表：
+
+   ```json
+   [
+     {"name": "Alice", "uri": "users://101/profile"},
+     {"name": "Bob", "uri": "users://102/profile"}
+   ]
+   ```
+2. **资源：** LLM读取工具的输出，看到URI，然后可以在确定特定细节相关时请求`users://101/profile`的全部内容。
+
+这种职责分离使您的工具侧重于“查找”，资源侧重于“读取”，从而优化了上下文 (context)窗口的使用和应用程序的逻辑流程。
+
+## 参考资料
+
+- [Architectural Styles and the Design of Network-based Software Architectures](https://www.ics.uci.edu/~fielding/pubs/dissertation/fielding_dissertation.pdf) — Roy Thomas Fielding (2000)
+  Publisher: University of California, Irvine
+  定义了REST架构风格、面向资源的原则以及URI在识别网络资源方面的作用。
+- [Function calling](https://platform.openai.com/docs/guides/function-calling) — OpenAI (2024)
+  官方文档解释了大型语言模型如何调用外部函数（工具）以扩展其能力并与外部系统交互。

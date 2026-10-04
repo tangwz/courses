@@ -1,0 +1,128 @@
+---
+course: "building-scalable-data-warehouses"
+chapter: "advanced-data-modeling-scale"
+lesson: "schema-evolution-versioning"
+sourceId: 8029
+sourceUrl: "https://apxml.com/zh/courses/building-scalable-data-warehouses/chapter-2-advanced-data-modeling-scale/schema-evolution-versioning"
+title: "模式演变与版本管理"
+description: "在生产数据管道中管理破坏性更改和模式漂移。"
+order: 4
+plots: ["plots/8029-0.json"]
+sourceHash: "7e69af82969a37e2cdd19712d8c67d6d5ac0d1af5390b229a616a16d8f9bd33f"
+sourceCorrections: []
+---
+
+生产数据管道常遇到上游结构变化，这威胁到数据完整性和可用性。僵硬的架构意味着源系统中简单的列重命名或数据类型修改可能导致摄取作业、转换逻辑和下游BI仪表板的一系列故障。现代MPP数据仓库提供了处理这些变化的机制，但仅仅依赖自动模式推断通常会导致技术债和治理漏洞。
+
+有效的模式演变需要区分附加性更改（这些通常是安全的）和需要干预的破坏性更改。我们将审视将物理存储与逻辑呈现分离的方法，从而实现数据持续交付，不中断服务。
+
+### 模式漂移分类
+
+模式漂移指的是源数据结构随时间与目标数据仓库定义自然偏离的现象。并非所有漂移都具有相同的风险特征。我们根据更改对现有消费者的影响进行分类。
+
+**附加性更改**
+这些发生在新属性被引入源系统时。例如，一个营销系统将 `campaign_source_id` 添加到一个跟踪事件中。在现代列式存储（如Snowflake或BigQuery）中，添加一个可空列是仅涉及元数据的操作。它不需要重写现有的微分区，使其成为一个即时操作，无论数据集大小如何。
+
+**破坏性更改**
+这些包括删除列或更改现有字段的语义。删除一个列会释放存储空间，但会立即使任何选择该字段的查询失效。
+
+**类型变更**
+更改数据类型，例如将 `INTEGER` 扩展为 `FLOAT`，或将 `TIMESTAMP` 转换为 `VARCHAR`，会带来特定的难题。虽然扩展类型通常受支持，但缩小类型或更改类型家族（例如从数字到字符串）通常需要完全重写表，或在旧列旁边创建一个新列。
+
+> 附加性模式演变的流程，其中物理表吸收新列而不会破坏现有数据布局。
+
+### 视图抽象模式
+
+为使下游消费者免受物理模式更改影响，你应很少直接暴露物理表。相反，应利用一层视图作为稳定的契约。这种方法，常被称为“指针视图”或“接口视图”模式，允许底层物理结构发生变化，同时逻辑接口保持一致。
+
+设想一个场景，源系统中 `cust_id` 列被重命名为 `customer_identifier`。如果你更改物理表，现有查询就会失效。通过使用视图，你可以将新的物理列别名为旧的逻辑名称，并将其标记 (token)为最终弃用。
+
+```sql
+-- 物理表（反映源数据实际情况）
+CREATE OR REPLACE TABLE raw.customers (
+    customer_identifier VARCHAR, -- 源系统的新名称
+    email VARCHAR,
+    signup_date TIMESTAMP
+);
+
+-- 接口视图（保持契约）
+CREATE OR REPLACE VIEW analytics.v_customers AS
+SELECT 
+    customer_identifier AS cust_id, -- 别名设置保持向后兼容性
+    email,
+    signup_date
+FROM raw.customers;
+```
+
+这一抽象层为工程团队重构下游依赖关系赢得了时间，同时数据摄取不间断运行。
+
+### 半结构化数据演变处理
+
+在处理模式变化每日发生的高速数据时，维持严格的关系模式变得不可持续。一种混合方法是，将易变属性摄取到 `VARIANT` 或 `JSON` 列中，同时将稳定、高价值的属性提升为一流列。
+
+这种方法减少了 `ALTER TABLE` 命令的使用频率。对于易变属性，你是在读取时而不是写入时提取字段。
+
+$C_{查询} = C_{扫描} + C_{解析}$
+
+在这种成本模型中，以半结构化格式存储数据会增加查询时的 $C_{解析}$ (CPU成本)，但会减少维护开销。提升一个列会将 $C_{解析}$ 降至接近零，但会产生存储演变成本。明确地演变模式的决定应由查询频率驱动。如果一个JSON字段在超过20%的工作负载中被查询，它就有理由被提升为结构化列。
+
+### 数据表的蓝绿部署
+
+对于大规模结构更改，例如更改聚簇键、重新分区PB级表，或实施破坏性类型更改，原位修改具有风险，并且通常会长时间锁定表。
+
+蓝绿部署策略在此处很适用。这涉及创建一个新版本的表（绿色）与活动版本（蓝色）并行。
+
+1. **初始化绿色：** 创建具有所需更改的新表结构（例如，新的聚簇结构）。
+2. **双写（可选）：** 配置摄取管道同时写入蓝色和绿色，或捕获偏移量。
+3. **回填：** 从蓝色表的数据填充绿色表。
+4. **切换：** 原子性地切换视图定义以指向绿色表。
+
+这种切换仅涉及元数据，并且是即时的。如果出现问题，视图可以立即恢复到蓝色表。
+
+
+
+![模式更改策略对可用性的影响](plots/8029-0.json)
+
+
+
+> 比较不同演变策略所需的系统停机时间。深度结构更改（如重新聚簇）如果原位执行，会导致高停机时间，而蓝绿切换则几乎是即时的。
+
+### 数据集的语义版本控制
+
+将软件工程的语义版本控制（SemVer）应用于数据产品，能清楚表明兼容性。数据集标识符可能形如 `sales_summary_v1`。
+
+- **补丁版本 (v1.0.1)：** 数据回填或修正。无模式更改。
+- **次版本 (v1.1.0)：** 附加性模式更改。向后兼容。旧查询仍可运行。
+- **主版本 (v2.0.0)：** 破坏性更改。列被删除或类型已更改。
+
+当引入主版本时，前一版本不会立即删除。`v1` 和 `v2` 会在一个弃用期（例如30天）内并行运行。这让消费者能够按照自己的节奏将查询迁移到新结构。复制存储的成本通常可以忽略不计，与因破坏关键报告而导致的组织中断成本相比。
+
+### 自动化模式演变功能
+
+现代数据平台和表格式（如Delta Lake或Iceberg）提供了自动化模式合并的功能。例如，在合并操作中启用 `schema_evolution` 允许摄取过程自动将源文件中发现的新列添加到目标表。
+
+尽管方便，此功能应在防护措施下使用。无限制的模式演变可能导致“列爆炸”，即由于上游数据格式不正确或一次性测试属性，一个表积累了数千个稀疏列。一个管道会实施“模式注册表”检查。管道会将传入模式与允许列表进行比较。只有批准的更改才被允许自动传播；其他更改会触发警报以供工程审查。
+
+### 实施清单
+
+为了构建弹性系统，确保你的架构支持这些能力：
+
+1. **发现：** 管道在加载数据前检测模式不匹配。
+2. **版本化：** 表通过视图访问，绝不直接访问。
+3. **隔离：** 破坏性更改触发创建新的主版本表。
+4. **可观察性：** 模式更改作为事件被记录，使你能够将性能下降与结构修改相关联。
+
+将你的数据仓库模式视为一个不断演进的API，而非静态存储库，你就能确保平台能随业务速度而扩展。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media; Pages: Chapter 2: Data Models and Query Languages, Chapter 4: Encoding and Evolution
+  涵盖分布式系统中模式演进、数据兼容性和版本控制的基本原则，适用于数据仓库。
+- [Schema Evolution in Apache Iceberg](https://iceberg.apache.org/docs/latest/evolution/) — Apache Iceberg Community (2024)
+  提供Apache Iceberg（一种专为大型分析数据集设计的开放表格式）模式演进能力的官方文档。
+- [Working with Semi-Structured Data in Snowflake](https://docs.snowflake.com/en/user-guide/semistructured-considerations) — Snowflake Documentation (2024)
+  详细介绍了Snowflake处理半结构化数据（使用VARIANT类型）的方法及其对云数据仓库模式演进的影响。
+- [Data Mesh: Delivering Data-Driven Value at Scale](https://learning.oreilly.com/library/view/data-mesh/9781492092384/) — Zhamak Dehghani (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 6: The Inflection Point
+  介绍了数据网格范式，强调数据产品契约、版本控制和解耦，适用于模式演进策略。

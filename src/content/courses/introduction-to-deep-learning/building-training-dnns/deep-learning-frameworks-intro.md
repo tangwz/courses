@@ -1,0 +1,112 @@
+---
+course: "introduction-to-deep-learning"
+chapter: "building-training-dnns"
+lesson: "deep-learning-frameworks-intro"
+sourceId: 5052
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-deep-learning/chapter-5-building-training-dnns/deep-learning-frameworks-intro"
+title: "深度学习框架简介 (TensorFlow/Keras, PyTorch)"
+description: "简要介绍流行的深度学习库，如 TensorFlow/Keras 和 PyTorch。"
+order: 1
+plots: []
+sourceHash: "f40e6d35b8cd2dd414501148378555be863b70135bb5aec7209278e2b6261ad1"
+sourceCorrections: []
+---
+
+构建和训练神经网络 (neural network)涉及定义架构、计算输出（前向传播）、计算梯度（通过反向传播 (backpropagation)进行后向传播），以及使用优化算法更新权重 (weight)。从头实现所有这些步骤，仅使用像 NumPy 这样的基础库，固然可行（也是一次很棒的学习实践），但它会迅速变得复杂且计算量大，特别是对于层数较多的网络和大型数据集。
+
+这就是深度学习 (deep learning)框架发挥作用的地方。它们提供更高层次的抽象，处理许多复杂细节，让您能够更高效地专注于模型的设计、训练和评估。可以将它们视为深度学习实践者的专用工具集。
+
+### 为何使用深度学习 (deep learning)框架？
+
+框架提供多项重要优点：
+
+1. **自动微分 (Autograd)：** 这可以说是最重要的特性。框架自动计算损失函数 (loss function)相对于模型参数 (parameter)的梯度。您定义前向传播（输入如何转换为输出），框架会自行计算反向传播 (backpropagation)所需的梯度，使用计算图和链式法则等技术。这省去了手动推导和实现梯度计算的麻烦，后者既繁琐又容易出错。
+2. **优化过的构建模块：** 框架提供预构建、优化过的常见神经网络 (neural network)组件实现：
+   - **层：** 全连接层、卷积层、循环层、池化层、归一化 (normalization)层、Dropout 层等。
+   - **激活函数 (activation function)：** ReLU、Sigmoid、Tanh、Softmax 等多种。
+   - **损失函数：** 均方误差、交叉熵等。
+   - **优化器：** SGD、Adam、RMSprop、Momentum 等。
+     您可以像堆叠积木一样，组合这些组件来构建复杂的模型。
+3. **GPU 加速：** 训练深度模型计算量大。框架与 GPU（图形处理单元）结合，GPU 能够比 CPU 更快地执行所需的大规模并行计算（特别是矩阵乘法）。它们处理数据在 GPU 之间传输和在其上执行操作的底层细节，通常从您的角度来看，只需最少的代码改动。
+4. **抽象与便利：** 它们抽象了底层硬件交互，并提供用户友好的 API，通常是 Python 编写的，使得模型定义和训练更加直观。
+5. **生态系统与社区：** 流行的框架拥有庞大活跃的社区、丰富的文档、教程、预训练 (pre-training)模型（模型动物园），以及用于可视化（如 TensorBoard）和部署（如 TensorFlow Serving 或 TorchServe）的工具。
+
+### 主流框架：TensorFlow/Keras 和 PyTorch
+
+虽然存在多种深度学习 (deep learning)框架，但有两款已成为研究和工业界使用最广泛的：TensorFlow（常通过其高级 Keras API 使用）和 PyTorch。
+
+#### TensorFlow 和 Keras
+
+- **开发者：** Google Brain。
+- **API：** TensorFlow 提供多个 API 层面。Keras 是其官方高级 API，以用户友好和实现快速原型而闻名。使用 Keras 定义模型通常感觉像描述层序列或图。TensorFlow 2.x 默认采用“即时执行”，使其行为更动态，类似于 Python 代码，与 PyTorch 相似。
+- **优点：** 对生产部署（TensorFlow Serving、用于移动/嵌入 (embedding)式设备的 TensorFlow Lite、用于 Web 的 TensorFlow.js）提供出色支持，可扩展至分布式系统，并通过 TensorBoard 提供强大的可视化工具。Keras 使常见架构的实现非常直接。
+
+#### PyTorch
+
+- **开发者：** Meta AI（前身为 Facebook 的 AI 研究实验室 - FAIR）。
+- **API：** PyTorch 因其“Pythonic”风格而受赞誉。它与 Python 语言及其生态系统（例如 NumPy）紧密结合。定义模型和自定义操作通常感觉更像编写标准面向对象 Python 代码。
+- **计算图：** PyTorch 主要使用动态计算图（即时定义即时运行）。这意味着表示计算的图在代码执行时动态构建。这提供了更大的灵活性，特别是对于具有动态结构的模型（在自然语言处理中常见），并可能使使用标准 Python 调试器进行调试更直接。
+- **优点：** 因其灵活性和易用性而在研究界广泛采用。调试通常被认为更直观。它拥有一个快速增长的生态系统，并在生产环境中得到日益增加的应用。
+
+以下是 PyTorch 中定义一个简单序列模型的示例，体现其面向对象的方法：
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        # 定义层：输入特征=784，隐藏层=128个神经元，输出=10个类别
+        self.fc1 = nn.Linear(784, 128) # 784个输入特征，128个输出特征
+        self.fc2 = nn.Linear(128, 10)  # 128个输入特征，10个输出特征（类别）
+
+    def forward(self, x):
+        # 定义前向传播：输入 x 如何流经各层
+        x = self.fc1(x)
+        x = F.relu(x) # 应用 ReLU 激活
+        x = self.fc2(x)
+        # 注意：用于输出概率的 Softmax 通常包含在损失函数中
+        # 以提高数值稳定性（例如 nn.CrossEntropyLoss）
+        return x
+
+# 实例化模型
+model = SimpleNet()
+print(model)
+```
+
+```text
+SimpleNet(
+  (fc1): Linear(in_features=784, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
+)
+```
+
+> 输出呈现了在 `SimpleNet` 模型中定义的层。
+
+### 框架选择
+
+TensorFlow/Keras 和 PyTorch 都是强大的、成熟的框架，能够构建先进的模型。选择通常取决于以下几点：
+
+- **项目需求：** TensorFlow 在生产部署工具方面历来占优，尽管 PyTorch 正在迅速赶上。
+- **团队/个人偏好：** PyTorch 的即时定义即时运行方法和 Pythonic API 吸引了许多研究人员和开发人员。Keras 简洁的 API 对于标准架构和快速迭代非常出色。
+- **现有生态系统：** 考虑可用的预训练 (pre-training)模型或基于特定框架构建的库。
+
+幸运的是，核心原理（层、激活、损失函数 (loss function)、优化器、张量）大致相同，在一个框架中学到的技能通常可以迁移到另一个框架。在本课程的实践示例中，我们将主要使用 PyTorch，但无论具体框架如何，其基本原理都适用。
+
+这些框架提供了我们将在后续章节中使用的必要工具，用于准备数据、定义模型架构、管理训练过程以及评估深度神经网络 (neural network)的性能。
+
+## 参考资料
+
+- [TensorFlow Documentation](https://www.tensorflow.org/) — TensorFlow Authors (2023)
+  TensorFlow生态系统的官方参考指南，包含其Keras API。
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html) — PyTorch Authors (2023)
+  Publisher: PyTorch Foundation
+  PyTorch功能、API和教程的权威资料。
+- [PyTorch: An Imperative Style, High-Performance Deep Learning Library](https://neurips.cc/Conferences/2019/Paper/pytorch-an-imperative-style-high-performance-deep-learning-library-Paper.pdf) — Adam Paszke, Sam Gross, Francisco Massa, Adam Lerer, James Bradbury, Gregory Chanan, Trevor Killeen, Zeming Lin, Natalia Gimelshein, Luca Antiga, Alban Desmaison, Andreas Köpf, Edward Yang, Zach DeVito, Martin Raison, Alykhan Tejani, Sasank Chilamkurthy, Benoit Steiner, Lu Fang, Junjie Bai, Soumith Chintala (2019)
+  Journal: Advances in Neural Information Processing Systems 32 (NeurIPS 2019); Publisher: NeurIPS; DOI: [10.48550/arXiv.1912.01703](https://doi.org/10.48550/arXiv.1912.01703)
+  这篇权威学术论文介绍了PyTorch及其即时执行（define-by-run）方法。
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python-second-edition) — François Chollet (2021)
+  Publisher: Manning Publications
+  Keras创建者撰写的实践指南，通过具体实例展示深度学习概念。(第二版)

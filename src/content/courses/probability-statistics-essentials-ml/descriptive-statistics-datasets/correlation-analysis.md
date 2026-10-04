@@ -1,0 +1,97 @@
+---
+course: "probability-statistics-essentials-ml"
+chapter: "descriptive-statistics-datasets"
+lesson: "correlation-analysis"
+sourceId: 1400
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-essentials-ml/chapter-3-descriptive-statistics-datasets/correlation-analysis"
+title: "相关性分析"
+description: "使用相关系数衡量变量间的线性关联。"
+order: 5
+plots: ["plots/1400-0.json"]
+sourceHash: "51fbf64209b0e1571fe251fd26e45ba3ec9c39c9b50604156ee456984502978a"
+sourceCorrections: []
+---
+
+均值和方差等指标可以告诉我们单个变量的特点，但我们通常还需要了解数据集中两个或多个变量之间如何相互关联。一个变量的增加是否倾向于对应另一个变量的增加（或减少）？相关性分析提供了一种定量方法来衡量两个定量变量之间*线性*关系的强度和方向。
+
+### 理解皮尔逊相关系数 (r)
+
+理解数据集中两个或多个变量之间如何相互关联非常重要。相关性分析提供了一种定量方法，用于衡量两个定量变量之间*线性*关系的强度和方向。其中，最常用的相关性衡量指标是**皮尔逊相关系数**，通常用 $r$ 表示。它量化 (quantization)了 $X$ 和 $Y$ 这两个变量之间的线性关联。$r$ 的值总是介于 -1 和 +1 之间（包括 -1 和 +1）。
+
+- **$r = +1$**: 表示完美的正线性关系。当 $X$ 增加时，$Y$ 成比例地增加。所有数据点都精确地位于一条正斜率的直线上。
+- **$r = -1$**: 表示完美的负线性关系。当 $X$ 增加时，$Y$ 成比例地减少。所有数据点都精确地位于一条负斜率的直线上。
+- **$r = 0$**: 表示 $X$ 和 $Y$ 之间没有*线性*关系。这不一定意味着完全没有关系，只是没有线性关系。变量可能相互独立，或者它们可能存在非线性关系（例如，U形）。
+- **介于 0 和 +1 之间的值**: 表示不同强度的正线性关系。$r$ 越接近 +1，正线性关联越强（数据点更紧密地聚集在一条假想的正斜率直线周围）。
+- **介于 0 和 -1 之间的值**: 表示不同强度的负线性关系。$r$ 越接近 -1，负线性关联越强（数据点更紧密地聚集在一条假想的负斜率直线周围）。
+
+变量 $X$ 和 $Y$ 之间，以及 $n$ 个数据点 $(x_i, y_i)$ 的样本皮尔逊相关系数 $r$ 的公式为：
+
+
+$$
+r = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n} (x_i - \bar{x})^2} \sqrt{\sum_{i=1}^{n} (y_i - \bar{y})^2}}
+$$
+
+
+其中 $\bar{x}$ 和 $\bar{y}$ 分别是 $X$ 和 $Y$ 的样本均值。此公式计算 $X$ 和 $Y$ 共同变化的程度（协方差），并根据它们的各自变异性（标准差）进行归一化 (normalization)。
+
+### 用散点图可视化相关性
+
+可视化查看两个定量变量之间关系的最好方法是使用散点图。图上的每个点代表一对值 $(x_i, y_i)$。点的整体模式表明了相关性的类型和强度。
+
+
+
+![显示相关性的散点图](plots/1400-0.json)
+
+
+
+> 散点图显示了强正相关（顶部，r ≈ +1）、强负相关（中部，r ≈ -1）以及弱线性或无线性相关（底部，r ≈ 0）的示例。
+
+在顶部的图中，当 X 增加时，Y 持续增加，紧密地聚集在一条向上倾斜的直线周围。在中间的图中，当 X 增加时，Y 持续减少。在底部的图中，没有明显的线性趋势；点分散，没有可辨别的直线。
+
+### 计算相关性
+
+尽管理解公式有帮助，但你通常会使用软件库来计算相关系数。在 Python 中，Pandas 库为 DataFrame 提供了一个方便的 `.corr()` 方法，用于计算所有列之间的成对相关性。
+
+```python
+import pandas as pd
+
+# 示例 DataFrame
+data = {'变量_A': [1, 2, 3, 4, 5, 6],
+        '变量_B': [2, 4, 5, 8, 10, 11],
+        '变量_C': [10, 8, 7, 4, 2, 1]}
+df = pd.DataFrame(data)
+
+# 计算相关矩阵
+correlation_matrix = df.corr()
+
+print(correlation_matrix)
+# 输出：
+#             Variable_A  Variable_B  Variable_C
+# Variable_A    1.000000    0.984916   -0.996205
+# Variable_B    0.984916    1.000000   -0.963823
+# Variable_C   -0.996205   -0.963823    1.000000
+```
+
+此矩阵显示了每对变量的相关系数。例如，`Variable_A` 和 `Variable_B` 之间的相关性约为 0.985，表示非常强的正线性关系。`Variable_A` 和 `Variable_C` 之间的相关性约为 -0.996，表示非常强的负线性关系。对角线元素始终为 1，因为一个变量与自身完美相关。
+
+### 重要考量
+
+1. **线性：** 皮尔逊相关性仅测量*线性*关联。变量可能存在强的*非线性*关系（例如，二次关系），但皮尔逊相关系数可能较低。在仅仅依赖 $r$ 值之前，始终使用散点图可视化你的数据。
+2. **异常值：** 相关系数对异常值可能很敏感。单个异常值可以显著改变 $r$ 的值。
+3. **相关性与因果关系：** 这是一个重要的区别，我们将在稍后更详细地讨论。两个变量之间存在强相关性并*不*自动意味着一个变量导致另一个变量。可能存在影响两者的混杂变量，或者这种关系可能纯属巧合。相关性表明关联，而非因果关系。
+
+在机器学习 (machine learning)中，相关性分析是探索性数据分析（EDA）中的一个基本步骤。它有助于理解特征之间以及特征与目标变量之间的关系。输入特征之间的高度相关性可能表示多重共线性，这可能对某些模型造成问题。特征与目标变量之间的高度相关性表明该特征可能具有预测性。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: With Applications in Python](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani, Jonathan Taylor (2023)
+  Publisher: Springer
+  该书严谨而易懂地介绍了统计学习方法，涵盖了相关性分析作为理解数据中变量关系的基本技术，与机器学习高度相关。
+- [Practical Statistics for Data Scientists: 50 Essential Concepts](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  该书从数据科学的角度实用性地介绍了统计概念，包括相关性、计算、解释以及对异常值和因果关系等方面的考虑，避免了过多的数学理论。
+- [pandas.DataFrame.corr](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.corr.html) — pandas development team (2024)
+  Pandas DataFrame中`corr`方法的官方文档，该方法是Python中计算相关系数矩阵的标准工具，涵盖了其参数和用法。
+- [Probability & Statistics for Engineers & Scientists](https://www.pearson.com/en-us/higher-education/products-titles/walpole-probability-statistics-for-engineers-scientists-global-edition-9th-edition.html) — Ronald E. Walpole, Raymond H. Myers, Sharon L. Myers, Keying Ye (2016)
+  Publisher: Pearson Education
+  一本广泛使用的概率与统计入门教材，提供了相关性分析的基本原则、数学基础，并讨论了解释和局限性，包括相关性和因果关系的区别。

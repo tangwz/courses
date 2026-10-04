@@ -1,0 +1,60 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "dropout-regularization"
+lesson: "dropout-test-time-scaling"
+sourceId: 4929
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-3-dropout-regularization/dropout-test-time-scaling"
+title: "在测试时调整激活值"
+description: "说明在推断/测试期间如何处理Dropout，包括激活值调整。"
+order: 3
+plots: []
+sourceHash: "0cfc41e6ca6669a600481203ab7b707174634e6f49e2c00561ba60dc9913cfc2"
+sourceCorrections: []
+---
+
+将经过Dropout训练的模型应用于对新数据进行预测（推断或测试时），涉及一些特定的考量。
+
+在训练期间，Dropout通过以概率 $p$ 将神经元激活值设为零来引入随机性。这意味着，平均而言，层中只有 $(1-p)$ 比例的神经元对传递到下一层的输出有贡献。因此，与不使用Dropout运行网络相比，前向传播的激活值整体大小或比例会减小。
+
+然而，在测试时，我们希望模型是确定性的。相同的输入通过网络应始终产生相同的输出。在推断期间随机丢弃神经元会违背这一点。因此，在测试时，我们使用*整个*网络——所有神经元都处于激活状态。
+
+但现在存在不匹配的情况：网络是使用由于Dropout而平均规模较小的激活值进行训练的。如果我们在测试期间突然以全强度使用所有神经元，传递给后续层的激活值将明显变大，超过网络在训练期间所遇到的情况。这种规模差异可能导致性能不佳，因为网络未针对这些较大的值进行校准。
+
+### 调整方案
+
+为了解决这一差异，我们需要确保神经元在测试时的预期输出与训练时的预期输出一致。设 $a$ 为神经元的输出激活值。在训练期间，该神经元以 $(1-p)$ 的概率处于激活状态。因此，它对下一层的预期贡献是 $(1-p) \times a$。
+
+在测试时，神经元始终处于激活状态，产生输出 $a$。为了使测试时的输出规模与*预期*的训练时规模一致，我们只需将测试时的激活值按相同因子 $(1-p)$ 进行调整：
+
+
+$$
+a_{\text{测试}} = a_{\text{训练}} \times (1-p)
+$$
+
+
+通过在推断期间将Dropout层中所有神经元的激活值乘以保留概率 $(1-p)$，我们确保*下一*层的输入规模与训练期间平均观察到的情况保持一致。
+
+### 示例：调整的视觉表示
+
+设想一个具有四个神经元的小层，丢弃概率为 $p=0.5$ (即保留概率为 $1-p=0.5$)。
+
+> 在训练期间 (左侧)，随机一部分神经元被停用 (显示为灰色)。预期输出值减小。在测试时 (右侧)，所有神经元都处于激活状态，但其输出会按保留概率 $(1-p)$ 进行调整，以使其规模与训练期间所见的预期规模一致，然后再传递给下一层。
+
+这一调整步骤对于Dropout的正确运行非常重要。没有它，网络的行为在训练和测试阶段之间会明显不同。
+
+### 实现上的说明
+
+在测试阶段执行此调整操作是正确实现Dropout的一种方式。然而，这意味着推断代码需要了解训练期间使用的丢弃概率，并执行这个额外的乘法步骤。
+
+一种常见的替代方法，称为“倒置Dropout”，则是在*训练*阶段进行调整。这使得测试阶段更简单，因为届时不需要调整。我们将在下一节讨论倒置Dropout，因为它是大多数深度学习 (deep learning)框架中的标准实现方式。然而，了解测试时调整的要求，提供了*为什么*调整（无论是在训练还是测试时）是必要的根本原因。
+
+## 参考资料
+
+- [Dropout: A Simple Way to Prevent Overfitting](http://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research; Volume: 15; Pages: 1929-1958; DOI: [10.5555/2627435.2670313](https://doi.org/10.5555/2627435.2670313)
+  引入 Dropout 的原始论文，详细阐述了其机制以及在测试时对激活进行缩放以保持预期输出幅度的必要性。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 7, Section 7.12
+  一本全面的深度学习教科书，解释了 Dropout 及其理论基础，以及在推理时对激活进行缩放的理由。
+- [Dropout](https://cs231n.github.io/neural-networks-2/#reg) — Stanford University CS231n Course Staff (2023)
+  提供清晰解释和直观示例的实用课程笔记，涵盖了 Dropout 及其测试时缩放的实现细节。

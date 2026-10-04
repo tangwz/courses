@@ -1,0 +1,115 @@
+{
+  "layout": {
+    "title": "理想的 FSDP 反向传播重叠",
+    "height": 300,
+    "margin": {
+      "l": 100,
+      "r": 20,
+      "t": 40,
+      "b": 20
+    },
+    "xaxis": {
+      "title": "时间 (微秒)",
+      "showgrid": true,
+      "zeroline": false
+    },
+    "yaxis": {
+      "showgrid": false,
+      "zeroline": false,
+      "ticktext": [
+        "计算流",
+        "NCCL 流"
+      ],
+      "tickvals": [
+        1,
+        0
+      ]
+    },
+    "showlegend": true
+  },
+  "data": [
+    {
+      "type": "bar",
+      "y": [
+        1,
+        1,
+        1
+      ],
+      "x": [
+        300,
+        300,
+        300
+      ],
+      "base": [
+        0,
+        350,
+        700
+      ],
+      "orientation": "h",
+      "name": "计算 (反向)",
+      "marker": {
+        "color": "#339af0"
+      },
+      "text": [
+        "第 N 层",
+        "第 N-1 层",
+        "第 N-2 层"
+      ],
+      "textposition": "auto"
+    },
+    {
+      "type": "bar",
+      "y": [
+        0,
+        0,
+        0
+      ],
+      "x": [
+        200,
+        200,
+        200
+      ],
+      "base": [
+        50,
+        400,
+        750
+      ],
+      "orientation": "h",
+      "name": "通信 (ReduceScatter)",
+      "marker": {
+        "color": "#fa5252"
+      },
+      "text": [
+        "梯度 N",
+        "梯度 N-1",
+        "梯度 N-2"
+      ],
+      "textposition": "auto"
+    },
+    {
+      "type": "bar",
+      "y": [
+        0,
+        0
+      ],
+      "x": [
+        250,
+        250
+      ],
+      "base": [
+        0,
+        350
+      ],
+      "orientation": "h",
+      "name": "通信 (AllGather 预取)",
+      "marker": {
+        "color": "#fcc419"
+      },
+      "text": [
+        "参数 N-1",
+        "参数 N-2"
+      ],
+      "textposition": "auto"
+    }
+  ]
+}

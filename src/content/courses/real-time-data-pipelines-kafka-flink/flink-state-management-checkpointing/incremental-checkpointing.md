@@ -1,0 +1,98 @@
+---
+course: "real-time-data-pipelines-kafka-flink"
+chapter: "flink-state-management-checkpointing"
+lesson: "incremental-checkpointing"
+sourceId: 8105
+sourceUrl: "https://apxml.com/zh/courses/real-time-data-pipelines-kafka-flink/chapter-3-flink-state-management-checkpointing/incremental-checkpointing"
+title: "增量检查点"
+description: "通过 RocksDB 增量检查点，提升快照性能。"
+order: 3
+plots: []
+sourceHash: "150aea94605a13580455c8bb300f1e6117784ee021e22383d1b233d497a0bfb1"
+sourceCorrections: []
+---
+
+当状态数据量达到TB级别时，持久化数据的开销成为流处理的主要瓶颈。通过使用异步屏障快照，Flink 可以在不停止处理的情况下捕获一致状态。然而，每次检查点都天真地将整个状态复制到远程存储（这被称为完整检查点），对于大型应用来说是不可持续的。这会消耗过多的网络带宽，并延长完成检查点所需的时间，从而增加违反服务级别协议 (SLA) 的风险。
+
+为解决此问题，Flink 使用增量检查点。系统不再是在每个间隔都持久化完整状态 $S$，而是只持久化自上次成功检查点以来发生的更改 $\Delta S$。这种方法显著缩短了检查点阶段的持续时间，并减轻了分布式文件系统的负载，从而能够更频繁地进行检查点，并实现更严格的恢复点目标 (RPO)。
+
+### RocksDB 和 LSM 树的作用
+
+Flink 中的增量检查点与状态后端存储格式紧密相关。当前，此功能主要由 RocksDB 状态后端支持。要了解 Flink 如何隔离状态增量，需要理解 RocksDB 使用的底层日志结构合并树 (LSM 树) 架构。
+
+RocksDB 通过在内存中缓冲写入（MemTable）来工作。当此缓冲区满时，它会作为排序字符串表 (SSTable) 刷新到磁盘。这些 SSTable 是不可变文件。一旦写入，SSTable 就不会被修改；更新或删除操作会写入新的 SSTable。后台压缩过程最终会合并这些文件，以回收空间并移除被覆盖的数据。
+
+Flink 利用了这种不可变性。由于现有 SSTable 不会改变，检查点不需要重新上传先前检查点中已持久化的文件。增量检查点只包含：
+
+1. 自上次检查点以来 RocksDB 刷新生成的新 SSTable。
+2. 一个句柄注册表（清单），它引用了新文件以及前一个检查点中仍然有效的现有文件。
+
+下图显示了 RocksDB 的本地文件生成与 Flink 在远程存储（如 S3 或 HDFS）上的共享状态注册表之间的关系。
+
+> 该图说明未更改的文件（SSTable 1 和 2）被引用而不是重新上传，而只有新文件（SSTable 3）在第二次检查点时被物理传输。
+
+### 检查点生命周期与引用计数
+
+当启用增量检查点时，检查点文件的生命周期与完整检查点显著不同。Flink 不再以同样的方式拥有这些文件；相反，它为上传到分布式文件系统的每个 SSTable 管理一个引用计数。
+
+1. **实现**: 当检查点触发时，RocksDB 将其 MemTable 刷新到磁盘。Flink 识别出当前 RocksDB 实例使用的所有 SSTable。
+2. **去重**: Flink 将本地 SSTable 列表与已知共享文件列表进行比较。如果共享注册表中存在文件句柄，Flink 会注册一个新的引用，而不是上传字节数据。
+3. **注册**: 新的 SSTable 被上传。检查点元数据（清单）记录了重建状态所需的完整文件句柄列表。
+4. **垃圾回收**: 当旧的检查点被丢弃（例如，当它超出保留检查点限制时），Flink 会减少与该检查点相关联的文件的引用计数。文件只有在其引用计数降至零时才从分布式存储中物理删除。
+
+这种机制表明检查点元数据的大小会略微增加，因为它跟踪的文件更多，但数据传输量会下降，以匹配应用状态的变更率。
+
+
+$$
+\text{传输大小} \approx \sum_{f \in \text{新文件}} \text{文件大小}(f)
+$$
+
+
+### 压缩与写入放大
+
+这种架构中一个主要的性能考量是 RocksDB 的压缩操作与 Flink 检查点之间的协作。RocksDB 将多个较小的 SSTable 合并成较大的 SSTable，以优化读取性能并移除已删除的键。
+
+当压缩发生时，旧的输入 SSTable 会在本地删除，并被新的合并 SSTable 替换。因此，Flink 会将这个新的合并文件识别为“新数据”，即使它包含现有记录。这导致了一种现象，即在重大压缩事件之后，检查点传输大小可能会急剧增加，而这与实际的流入数据速率无关。
+
+对于高吞吐量 (throughput)系统，通常需要调整 RocksDB 的压缩方式（例如，分层压缩与通用压缩），以平衡读取放大与由这些检查点上传引起的网络带宽峰值。
+
+### 权衡：恢复时间与快照时间
+
+尽管增量检查点优化了运行时性能（快照创建），但它们在恢复阶段（恢复数据）引入了权衡。
+
+- **快照阶段**: 快速。只写入增量数据。
+- **恢复阶段**: 可能较慢。为了重建本地 RocksDB 实例，Flink 可能需要从多个历史检查点下载数据。状态分散在分布式文件系统中存储的许多小型 SSTable 中。
+
+然而，一旦文件下载完成，RocksDB 会迅速启动，因为它只是加载文件句柄。开销主要是在收集碎片化文件时的网络延迟和吞吐量 (throughput)。实际上，与检查点稳定性带来的巨大好处相比，对恢复时间的影响通常可以忽略不计，但操作人员在管理使用慢速分布式存储的系统时应注意此特点。
+
+### 实现与配置
+
+启用增量检查点是一个直接的配置更改，但必须明确地应用此配置，因为默认行为视 Flink 版本和发行版而定。
+
+在 `flink-conf.yaml` 中：
+
+```yaml
+state.backend: rocksdb
+state.backend.incremental: true
+```
+
+或在应用代码中以编程方式设置：
+
+```java
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+EmbeddedRocksDBStateBackend backend = new EmbeddedRocksDBStateBackend(true);
+env.setStateBackend(backend);
+```
+
+当监控启用了增量检查点的管道时，标准指标可能会产生误导。`lastCheckpointSize` 指标报告的是物理传输的数据大小，这个值会很小。要了解所管理状态的总大小，必须监控 `lastCheckpointFullSize`，它报告的是如果执行完整检查点时整个状态的逻辑大小。
+
+`lastCheckpointSize` 和 `lastCheckpointFullSize` 之间日益增长的差异证实了增量机制正在正常运行，节省了网络带宽和存储 I/O。
+
+## 参考资料
+
+- [State Backends](https://nightlies.apache.org/flink/flink-docs-release-1.19/docs/ops/state/state_backends/) — Apache Flink Community (2024)
+  Publisher: Apache Software Foundation
+  官方文档，涵盖 Flink 的状态后端，包括 RocksDB 状态后端和增量检查点的配置。
+- [Stream Processing with Apache Flink: Fundamentals, StreamSQL, and Table API](https://www.oreilly.com/library/view/stream-processing-with/9781492047391/) — Fabian Hueske, Vasia Kalavri (2019)
+  Publisher: O'Reilly Media
+  一本综合性书籍，解释了 Apache Flink 的状态管理、检查点机制及其与 RocksDB 等状态后端的集成。

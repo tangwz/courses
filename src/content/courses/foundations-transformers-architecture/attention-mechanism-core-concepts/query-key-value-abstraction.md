@@ -1,0 +1,51 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "attention-mechanism-core-concepts"
+lesson: "query-key-value-abstraction"
+sourceId: 1934
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-2-attention-mechanism-core-concepts/query-key-value-abstraction"
+title: "通用框架：查询、键、值表示"
+description: "界定注意力的主要要素：查询、键和值。"
+order: 2
+plots: []
+sourceHash: "9f9a45e6700179f4c7187a7f2c26ca3de5280141946fe8e27c80c7ce320482c4"
+sourceCorrections: []
+---
+
+如前所述，传统的序列到序列模型常将整个输入序列压缩成一个固定大小的上下文 (context)向量 (vector)。这种方法在处理较长序列时可能难以保留信息，从而造成信息瓶颈。注意力机制 (attention mechanism)提供了一种更具适应性的替代方案，使模型能够回顾整个输入序列，并有选择地侧重于与生成当前输出最相关部分。
+
+为使这种有选择的关注形式化，注意力机制采用了一种基于三个要素的表示：查询、键和值。设想你在数字图书馆中研究一个主题。
+
+- 你的**查询** ($Q$) 是你目前感兴趣的特定问题或主题。
+- 图书馆中的每份文档都附有**键** ($K$)，它们类似于简洁的摘要或关键词列表，表示文档内容与潜在查询的关联性。
+- 每份文档还包含其实际内容，即**值** ($V$)，这是如果文档相关你希望检索的详细信息。
+
+注意力机制的工作方式与此类似：对于给定的查询，它会将查询与所有可用键进行比较，以确定它们的匹配程度。此匹配过程会生成一组分数，常被称为注意力权重 (weight)。这些权重表明每个键（及其对应的值）与查询的关联性。最后，该机制通过汇总值来得出输出，根据其计算出的注意力分数对每个值进行加权。与查询高度匹配的键所对应的值对最终输出的贡献更大。
+
+在神经网络 (neural network)中，查询、键和值表示为从模型内部表示（嵌入 (embedding)或隐藏状态）派生的向量：
+
+- **查询 ($Q$):** 一个向量，代表当前需要从输入序列中获取信息的上下文或元素。例如，在翻译句子时，查询可能代表解码器在决定下一个要生成的词时的当前状态。它会问：“输入句子的哪些部分现在最相关？”
+- **键 ($K$):** 一组向量，输入序列中的每个元素对应一个。每个键向量都设计用于与查询向量进行比较。它本质上表示其对应的输入元素提供了何种信息。
+- **值 ($V$):** 一组向量，输入序列中的每个元素也对应一个，常与键配对。值向量包含其对应的输入元素的实际内容或表示，如果该元素被查询-键比较判定为相关，则应将其汇总。
+
+> 使用查询、键和值表示的注意力流。查询与所有键进行比较以得出权重，然后这些权重用于形成相应值的加权和。
+
+核心观点是，查询与键互动以了解*何处*进行侧重，而由此产生的注意力分数则决定了每个值对最终输出表示的*贡献程度*。此输出是一个具备上下文感知能力的向量，它概括了与特定查询相关的输入序列元素。
+
+在注意力机制中，查询、键和值向量是核心组成部分，它们的维度通常分别表示为 $d_q$、$d_k$ 和 $d_v$。查询和键之间的兼容性常使用它们的向量表示来计算，通常通过点积，这要求 $d_q = d_k$。维度 $d_k$ 在注意力分数如何计算和缩放方面发挥着重要作用，我们很快会看到。值向量的维度 $d_v$ 决定了在任何最终转换之前的输出上下文向量的维度。
+
+值得注意的是，这些 Q、K 和 V 向量的来源界定了注意力的类型。在变压器 (Transformer)架构中居于核心地位的*自注意力 (self-attention)*中，Q、K 和 V 都源自*同一*序列。这使得单个序列内的不同位置可以相互关注。在编码器-解码器架构中常见的*交叉注意力*中，查询可能来自解码器，而键和值则来自编码器的输出，从而使解码器能够关注输入序列的相关部分。目前，我们侧重于 QKV 的通用表示本身。
+
+这种查询-键-值框架提供了一种适应性强且有效的方法来模拟依赖关系，无论它们在输入序列中的距离如何，直接解决了固定上下文向量的局限性。下一步是审视用于实现这种比较和加权过程的特定数学运算，从缩放点积注意力机制开始。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇基础论文介绍了 Transformer 架构以及查询（Query）、键（Key）、值（Value）注意力机制。
+- [Speech and Language Processing (3rd Edition Draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Pearson
+  一本权威教材，全面解释了注意力机制和 Transformer，包括 QKV 抽象。相关章节包含“注意力与 Transformer”。
+- [Stanford CS224N: Natural Language Processing with Deep Learning](http://web.stanford.edu/class/cs224n/) — Diyi Yang, Tatsunori Hashimoto (2023)
+  Publisher: Stanford University
+  提供关于注意力机制和 Transformer 架构的讲座视频、幻灯片和阅读材料，从教育角度解释了 QKV 框架。

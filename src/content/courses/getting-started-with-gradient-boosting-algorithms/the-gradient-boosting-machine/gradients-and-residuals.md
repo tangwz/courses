@@ -1,0 +1,71 @@
+---
+course: "getting-started-with-gradient-boosting-algorithms"
+chapter: "the-gradient-boosting-machine"
+lesson: "gradients-and-residuals"
+sourceId: 7579
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-gradient-boosting-algorithms/chapter-2-the-gradient-boosting-machine/gradients-and-residuals"
+title: "梯度与残差的作用"
+description: "介绍梯度提升如何使用损失函数的梯度（对于平方误差损失，这简化为残差）来训练序列模型。"
+order: 2
+plots: []
+sourceHash: "4afde1d0aac329c62f5283a791f7caf15a54fa69d5e612ddbbadba33fd32d603"
+sourceCorrections: []
+---
+
+AdaBoost算法侧重于重新加权数据点，以使得后续模型更关注先前分类错误的那些点。梯度提升采取了一种不同且更直接的方法来修正错误。它将提升问题重新定义为优化任务，目标是使指定的损失函数 (loss function)最小化。这种优化的机制是梯度下降 (gradient descent)，但有所不同。不是更新单个复杂模型的参数 (parameter)，而是按顺序添加简单的模型（弱学习器），使我们的总预测朝着正确的方向发展。
+
+“正确方向”很重要。在优化中，达到最小值的最陡峭、最直接的路径是负梯度的方向。梯度提升通过训练每个新的弱学习器来预测损失函数的负梯度来应用这一原则，该负梯度是根据现有集成模型的预测计算的。
+
+### 梯度与残差的关系
+
+这听起来可能有点抽象，所以让我们通过回归中最常见的损失函数 (loss function)——均方误差（MSE）来阐明。单个观测的MSE损失定义为：
+
+
+$$
+L(y, \hat{y}) = \frac{1}{2}(y - \hat{y})^2
+$$
+
+
+这里，$y$ 是真实值，$\hat{y}$ 是我们当前模型的预测。在梯度提升的背景下，$\hat{y}$ 是当前树集成模型产生的预测。
+
+为了改进我们的模型，我们需要知道如何调整预测 $\hat{y}$ 以减少损失。我们通过计算损失函数关于预测 $\hat{y}$ 的梯度（在这种单变量情况下，即导数）来找到这个方向：
+
+
+$$
+\frac{\partial L}{\partial \hat{y}} = \frac{\partial}{\partial \hat{y}} \left( \frac{1}{2}(y - \hat{y})^2 \right) = -(y - \hat{y})
+$$
+
+
+梯度告诉我们最陡峭的*上升*方向。为了最小化损失，我们必须朝相反的方向移动，也就是*负梯度*：
+
+
+$$
+- \left( \frac{\partial L}{\partial \hat{y}} \right) = - \left( -(y - \hat{y}) \right) = y - \hat{y}
+$$
+
+
+这个结果非常简单直观。MSE损失函数的负梯度仅仅是残差，即真实值与当前预测之间的差值。这意味着对于使用MSE的回归问题，每个新的树模型都被训练来预测所有前序树模型所犯的错误。该算法实际上是在追踪自己的错误，在每一步都用一个模型来拟合剩余的错误。
+
+> 梯度提升在MSE回归问题中的迭代过程。每个新的学习器 (h) 都根据前一个集成模型预测 (F) 的残差 (r) 进行训练，并且集成模型得到更新。
+
+### 使用伪残差进行推广
+
+梯度提升真正的优势在于，这个过程适用于*任何*可微分的损失函数 (loss function)，而不仅仅是MSE。对于其他损失函数，负梯度可能不是简单的 $y - \hat{y}$ 残差，但其作用完全相同。它表示每个数据点错误的M方向和大小，是下一个树模型应该尝试修正的目标。
+
+因此，我们在每一步计算的目标（即负梯度）通常被称为**伪残差**。
+
+举几个例子：
+
+- **平均绝对误差 (MAE)：** 梯度就是误差的符号，`sign(y - ŷ)`。伪残差将是 +1 或 -1，指导下一个模型增加或减少其预测。
+- **对数损失（用于分类）：** 计算更复杂，但原理保持不变。伪残差指导下一个树模型调整预测概率，以减少分类错误。
+
+通过将问题定义为通过梯度下降 (gradient descent)最小化损失函数，梯度提升成为一个高度灵活的框架。你可以选择一个能准确反映你特定问题目标的损失函数，而算法机制保持不变。每次迭代的核心任务始终是计算伪残差（负梯度）并用一个新的弱学习器来拟合它们。这种推广使得梯度提升从一个巧妙的回归技巧，成为一个多功能的机器学习 (machine learning)强大工具。
+
+## 参考资料
+
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://statweb.stanford.edu/~jhf/ftp/trebst.pdf) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Publisher: Institute of Mathematical Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  提出了梯度提升机，通过最速下降法形式化了弱学习器的顺序添加以最小化损失函数。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本全面的教科书，详细介绍了提升算法和梯度提升，包括其数学基础和与各种损失函数的关系，尤其是在第10章。

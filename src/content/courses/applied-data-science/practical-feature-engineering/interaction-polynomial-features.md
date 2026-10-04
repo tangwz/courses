@@ -1,0 +1,170 @@
+---
+course: "applied-data-science"
+chapter: "practical-feature-engineering"
+lesson: "interaction-polynomial-features"
+sourceId: 1861
+sourceUrl: "https://apxml.com/zh/courses/applied-data-science/chapter-2-practical-feature-engineering/interaction-polynomial-features"
+title: "交互项与多项式特征"
+description: "了解如何创建交互项和多项式特征以捕捉非线性关系。"
+order: 4
+plots: ["plots/1861-0.json"]
+sourceHash: "63568c513f7fcd7ea0ef8624a0babcf167dc9b3a7793773ab30fb7101df5f6f7"
+sourceCorrections: []
+---
+
+有时，输入特征与目标变量之间的关系并非简单的线性关系。此外，一个特征的影响可能随另一个特征的值而变化。线性模型在其基本形式下难以捕捉这些复杂性。创建交互项和多项式特征，即使是线性模型，也能表示数据中更复杂的模式。
+
+### 多项式特征：捕捉非线性关系
+
+设想您有一个特征 $x$，并且与您的目标 $y$ 的关系更像一条曲线而非直线。一个简单的线性模型假设 $y \approx w_1x + w_0$，这无法很好地拟合曲线。多项式特征通过添加现有特征的幂次方作为新特征来解决此问题。
+
+例如，如果您有一个单特征 $x_1$，生成2次多项式特征将您的特征集从 $[x_1]$ 转换为 $[1, x_1, x_1^2]$。这里的 '1' 表示截距或偏置 (bias)项。如果您有两个特征 $x_1$ 和 $x_2$，进行2次多项式变换将生成 $[1, x_1, x_2, x_1^2, x_1x_2, x_2^2]$。请注意，这包括原始特征、它们的平方项，以及表示它们之间交互的项 ($x_1x_2$)。
+
+通过添加像 $x_1^2$ 这样的项，您使得线性模型能够拟合二次关系：
+
+
+$$
+y \approx w_1x_1 + w_2x_1^2 + w_0
+$$
+
+
+这个等式对于 *系数* ($w_1, w_2, w_0$) 来说仍然是线性的，这是线性模型算法关注的重点。您实际上已经转换了特征空间，因此线性模型可以在原始空间中找到非线性的决策边界或回归曲线。
+
+Scikit-learn 为此提供了 `PolynomialFeatures` 转换器。让我们看一个简单例子：
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import PolynomialFeatures
+
+# 包含一个特征的样本数据
+X = np.arange(6).reshape(6, 1)
+print("原始特征 (X):")
+print(X)
+
+# 创建2次多项式特征
+poly = PolynomialFeatures(degree=2, include_bias=False) # 排除偏置列
+X_poly = poly.fit_transform(X)
+
+print("\n多项式特征 (2次):")
+print(X_poly)
+
+print("\n特征名称:")
+print(poly.get_feature_names_out(['x1']))
+```
+
+Output:
+
+```
+Original Features (X):
+[[0]
+ [1]
+ [2]
+ [3]
+ [4]
+ [5]]
+
+Polynomial Features (degree 2):
+[[ 0.  0.]
+ [ 1.  1.]
+ [ 2.  4.]
+ [ 3.  9.]
+ [ 4. 16.]
+ [ 5. 25.]]
+
+Feature names:
+['x1' 'x1^2']
+```
+
+如您所见，该转换器添加了一个新特征，表示原始特征 $x_1$ 的平方。
+
+让我们看看这如何帮助拟合非线性数据。考虑由二次函数 $y = 0.5x^2 - x + 2 + noise$ 生成的数据。标准线性回归表现会不佳。如果我们首先对 $x$ 应用2次多项式变换，线性回归就能更好地拟合曲线。
+
+
+
+![线性回归与多项式回归拟合](plots/1861-0.json)
+
+
+
+> 标准线性模型（红色虚线）未能捕捉数据点（蓝色点）中的曲线，而应用于2次多项式特征的线性模型（实心绿线）提供了更好的拟合。
+
+尽管功能强大，添加多项式特征会大幅增加数据集的维度。对于 $n$ 个特征的 $d$ 次多项式，可以生成大约 $n^d$ 个新特征。这增加了计算成本，并提高了过拟合 (overfitting)的风险，即模型学习了训练数据中的噪声而非潜在模式。正则化 (regularization)技术或后续的特征选择变得更加重要。
+
+### 交互项：捕捉依赖关系
+
+有时一个特征的影响取决于另一个特征的水平。例如，在预测房价时，额外的卧室（`num_bedrooms`）所增加的价值对于大面积（`sqft`）的房屋可能远高于小面积的房屋。一个简单的加性模型无法捕捉到这一点；它会假设每间卧室的价格增长是恒定的，无论房屋大小。
+
+交互项是通过将两个或多个原始特征相乘创建的特征。在房价示例中，添加特征 `num_bedrooms * sqft` 使得模型能够学习这种组合效应。
+
+我们之前看到的 `PolynomialFeatures` 转换器默认会生成交互项。当我们为 $[x_1, x_2]$ 生成2次特征时，我们得到了 $[1, x_1, x_2, x_1^2, x_1x_2, x_2^2]$。其中 $x_1x_2$ 项就是交互项。
+
+如果您 *只* 想要交互项而不需要多项式项（如 $x_1^2$），可以设置 `interaction_only=True`。
+
+```python
+# 包含两个特征的样本数据
+X_two = np.arange(8).reshape(4, 2)
+print("原始特征:")
+print(pd.DataFrame(X_two, columns=['x1', 'x2']))
+
+# 仅包含交互项（相当于 degree=2, interaction_only=True）
+poly_interact = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+X_interact = poly_interact.fit_transform(X_two)
+
+print("\n仅包含交互项的特征:")
+print(pd.DataFrame(X_interact, columns=poly_interact.get_feature_names_out(['x1', 'x2'])))
+
+# 包含多项式和交互项（degree=2, interaction_only=False）
+poly_full = PolynomialFeatures(degree=2, include_bias=False)
+X_full_poly = poly_full.fit_transform(X_two)
+
+print("\n包含多项式（2次）和交互项的特征:")
+print(pd.DataFrame(X_full_poly, columns=poly_full.get_feature_names_out(['x1', 'x2'])))
+```
+
+Output:
+
+```
+Original Features:
+   x1  x2
+0   0   1
+1   2   3
+2   4   5
+3   6   7
+
+Features with Interactions Only:
+   x1  x2  x1 x2
+0   0   1    0.0
+1   2   3    6.0
+2   4   5   20.0
+3   6   7   42.0
+
+Features with Polynomial (degree 2) and Interactions:
+   x1  x2  x1^2  x1 x2  x2^2
+0   0   1   0.0    0.0   1.0
+1   2   3   4.0    6.0   9.0
+2   4   5  16.0   20.0  25.0
+3   6   7  36.0   42.0  49.0
+```
+
+交互项使得模型能够学习特征如何相互影响，从而在存在此类关系时可能获得更准确的预测。
+
+### 实际考量
+
+- **特征缩放：** 多项式特征（例如 $x^2, x^3$）与原始特征或交互项相比，其尺度可能明显不同。通常建议在生成多项式和交互特征 *之后* 应用特征缩放（例如使用 `StandardScaler` 进行标准化），特别是对于对特征量级敏感的模型（例如正则化 (regularization)线性模型、支持向量 (vector)机、神经网络 (neural network)）。
+- **复杂度管理：** 如前所述，这些技术可以大幅增加特征数量。最初可以从低阶（例如2次）开始，并且只考虑特征对之间的交互。利用领域知识来假设哪些交互可能具有意义。后续讨论的技术，例如正则化（L1可以执行特征选择）和显式特征选择方法，对于管理这些生成特征引入的复杂度非常重要。基于树的模型，如随机森林或梯度提升，本身就能够捕捉某些特征交互，尽管显式交互项有时仍然可以提高它们的性能。
+
+通过深思熟虑地创建多项式和交互特征，您为机器学习 (machine learning)模型提供了理解数据中更复杂关系所需的构建块，这通常会提升预测性能。然而，这种能力也伴随着管理由此产生的模型复杂度的责任。
+
+## 参考资料
+
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  为理解监督学习中的多项式回归和交互效应提供了全面的统计学基础。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一份实用指南，展示了如何使用Scikit-learn实现多项式特征和交互项，以及它们对模型性能的影响。
+- [sklearn.preprocessing.PolynomialFeatures](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PolynomialFeatures.html) — Scikit-learn Developers (2023)
+  Scikit-learn `PolynomialFeatures`转换器的官方文档，详细介绍了其参数和用法。
+- [An Introduction to Statistical Learning: With Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani (2013)
+  Publisher: Springer
+  一份易于理解的统计学习方法介绍，包含线性回归、多项式回归和交互项的章节。

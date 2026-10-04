@@ -1,0 +1,62 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "transformer-encoder-decoder-architecture"
+lesson: "encoder-decoder-attention"
+sourceId: 3012
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-3-transformer-encoder-decoder-architecture/encoder-decoder-attention"
+title: "编码器-解码器注意力机制"
+description: "描述解码器如何关注编码器堆栈的输出。"
+order: 10
+plots: []
+sourceHash: "4bac671b86e8b45ef945e72c062c17d1cfa40f4e3f02be7841a47dda4851c02b"
+sourceCorrections: []
+---
+
+编码器-解码器注意力机制 (attention mechanism)是Transformer解码器堆栈中的一个重要组成部分。解码器的掩码自注意力 (self-attention)使其能够考虑其已生成的标记 (token)。然而，它还需要一种机制来参照提供给编码器的*输入序列*。编码器-解码器注意力机制满足了这一需求，它充当一座桥梁，使解码器在生成每个输出标记时，能够选择性地关注编码输入表示中的相关部分。
+
+设想一个机器翻译的任务。当解码器逐字生成翻译句子时，它需要不断回顾源句子（由编码器处理）以确保准确性和语境。编码器-解码器注意力机制促进了这一过程。
+
+### 编码器-解码器注意力如何运作
+
+结构上，这种机制与我们已讨论过的多头自注意力 (self-attention)层非常相似。它通常使用缩放点积注意力，并常由多个并行运行的头实现。主要区别在于查询（Q）、键（K）和值（V）向量 (vector)的*来源*。
+
+与自注意力中Q、K和V都来自*相同*序列（即前一层的输出）不同，在编码器-解码器注意力中：
+
+1. **查询（Q）向量：** 这些向量来源于解码器堆栈中*前一个子层*的输出。具体来说，它们来自掩码多头自注意力层的输出（经过加法与归一化 (normalization)步骤后）。这个查询代表了解码器当前的状态，以及它生成下一个标记 (token)所需的信息。
+2. **键（K）和值（V）向量：** 这些向量来自于*编码器堆栈的输出*。编码器处理整个输入序列，并生成一组最终表示（每个输入位置一个）。这些表示用于在*每个*解码器层中生成编码器-解码器注意力层的K和V向量。这些键和值包含了整个输入序列的信息。
+
+注意力计算随后按照之前所见的方式进行，通常对每个头使用缩放点积注意力：
+
+
+$$
+\text{注意力}(Q_{\text{解码器}}, K_{\text{编码器}}, V_{\text{编码器}}) = \text{softmax}\left(\frac{Q_{\text{解码器}} K_{\text{编码器}^T}}{\sqrt{d_k}}\right) V_{\text{编码器}}
+$$
+
+
+在这里，$Q_{\text{解码器}}$ 代表来自解码器的查询，而$K_{\text{编码器}}$ 和 $V_{\text{编码器}}$ 代表从编码器输出中得到的键和值。缩放因子$d_k$ 是键向量的维度。
+
+### 信息流动
+
+在解码过程中的每一步，解码器会根据迄今为止生成的输出序列生成一个查询。然后，这个查询会（通过点积）与来自*所有*编码器输出的键进行比较。softmax函数将这些点积转换为注意力分数（权重 (weight)），显示编码输入序列的每个部分与解码器当前查询的相关程度。
+
+这些注意力分数随后用于计算值向量 (vector)（也来自编码器输出）的加权和。结果是一个上下文 (context)向量，它汇总了输入序列中最相关于生成*下一个*输出标记 (token)的信息。
+
+> 编码器-解码器注意力机制 (attention mechanism)中的信息流动。查询来源于解码器的前一个子层，而键和值来自编码器堆栈的最终输出。这种机制使得解码器能够权衡输入序列不同部分的重要性。
+
+### 在解码器层中的集成
+
+这个编码器-解码器注意力子层位于每个解码器层中，通常放置在掩码自注意力 (self-attention)子层及其对应的加法与归一化 (normalization)步骤之后。在编码器-解码器注意力计算之后，会应用另一个加法与归一化步骤，将该注意力机制 (attention mechanism)的输出与其输入（来自掩码自注意力子层的输出）结合，并应用层归一化。
+
+这种结构化方法，通过结合多头注意力 (multi-head attention)（首先是掩码自注意力，然后是编码器-解码器注意力）与残差连接、归一化和前馈网络，使解码器能够有效整合来自其先前生成的标记 (token)以及完整编码输入序列的信息。这种方法是Transformer处理复杂序列到序列任务能力的根本所在。
+
+## 参考资料
+
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 30; Publisher: Curran Associates, Inc.; Pages: 5998-6008; DOI: [10.5555/3295222.3295349](https://doi.org/10.5555/3295222.3295349)
+  这篇奠基性论文介绍了Transformer架构和编码器-解码器注意力机制，提供了原始公式和详细解释。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/10.pdf) — Daniel Jurafsky and James H. Martin (2023)
+  Publisher: Draft; Pages: Chapter 10: Transformer Networks
+  一本关于Transformer网络的综合性教科书，其中包含对编码器-解码器注意力机制的详细教学说明，适合深入学习。
+- [Transformers and Self-Attention (Lecture 11 notes from CS224N)](https://web.stanford.edu/class/cs224n/readings/cs224n-2023-transformers-selfattn.pdf) — John Hewitt, Christopher Manning (2023)
+  Publisher: Stanford University
+  来自一所顶尖大学课程的清晰易懂的讲义，对Transformer架构及其注意力机制提供了教学性解释。

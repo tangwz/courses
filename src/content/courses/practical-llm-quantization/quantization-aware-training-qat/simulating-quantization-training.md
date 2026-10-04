@@ -1,0 +1,67 @@
+---
+course: "practical-llm-quantization"
+chapter: "quantization-aware-training-qat"
+lesson: "simulating-quantization-training"
+sourceId: 4639
+sourceUrl: "https://apxml.com/zh/courses/practical-llm-quantization/chapter-4-quantization-aware-training-qat/simulating-quantization-training"
+title: "训练期间模拟量化影响"
+description: "解释如何在训练期间将伪量化操作插入到模型图中。"
+order: 2
+plots: []
+sourceHash: "dbe68a7096993828f8de2e1dba0e2c594572a7529dffbc656a23943b227570bb"
+sourceCorrections: []
+---
+
+训练后量化 (quantization) (PTQ) 可能导致精度下降，尤其是在较低位深时。为解决这个问题，量化感知训练 (QAT) 提供了一种不同的方法。QAT 不对已完全训练好的模型进行量化，而是在训练或微调 (fine-tuning)过程中引入量化的影响。主要思路不是直接使用低精度算术进行整个训练，因为这会给梯度计算带来困难。相反，QAT 在标准浮点训练框架内模拟量化的影响。
+
+### 伪量化 (quantization)的作用
+
+实现这种模拟的机制通常被称为“伪量化”或“模拟量化”。它涉及在训练期间将特殊节点或操作插入到模型的计算图中。这些伪量化操作在前向传播中执行以下步骤：
+
+1. **量化：** 它们接收输入的浮点张量（表示权重 (weight)或激活），并应用所选的量化方案（例如，使用计算出的比例因子和零点将浮点值映射到8位整数范围）。
+2. **反量化：** 量化后，它们立即使用相同的比例因子和零点，将低精度整数表示形式转换回浮点值。
+
+因此，伪量化节点的输出仍然是浮点张量。但是，它的值现在受到了限制；它们仅表示目标低精度数据类型（例如INT8）能够精确表示的那些特定浮点数。
+
+从数学上看，如果 $x$ 是输入浮点张量，伪量化过程 $x_{fq}$ 可以表示为：
+
+
+$$
+x_{fq} = \text{反量化}(\text{量化}(x, \text{比例}, \text{零点}), \text{比例}, \text{零点})
+$$
+
+
+在这里，$\text{量化}$ 将 $x$ 映射到低精度范围（如INT8），$\text{反量化}$ 将其映射回浮点范围。关键是 $x_{fq}$ 包含了量化过程中固有的误差或信息损失。
+
+### 带伪量化 (quantization)的前向传播
+
+在训练的前向传播过程中，这些伪量化操作被策略性地放置在模型架构内。常见的位置包括：
+
+- **在权重 (weight)张量之后：** 在它们用于矩阵乘法等操作（例如在线性层中）之前。
+- **在激活函数 (activation function)之后：** 用于模拟层之间传递的中间结果的量化。
+
+下图说明了伪量化节点如何改变激活张量在两层之间流动时的前向传播。
+
+> 标准训练与QAT前向传播流程对比。在QAT中，伪量化节点在激活值传递到下一层之前，模拟对激活值进行量化的影响。
+
+通过使用这些略微改变的、“感知量化误差”的张量 ($x_{fq}$) 进行计算，模型在训练期间学会调整其权重。优化过程（如随机梯度下降 (gradient descent)）在考虑真实量化后将存在的精度限制下，隐式地最小化损失函数 (loss function)。模型调整其参数 (parameter)，以更好地抵抗量化过程引入的噪声和信息损失。
+
+### 反向传播 (backpropagation)的难题
+
+尽管前向传播模拟相对简单，但反向传播却带来了一个难题。量化 (quantization)函数本身（从浮点数到整数的映射）涉及舍入或向下取整操作，这些操作在几乎所有地方的梯度都为零。这种不可微性意味着标准反向传播无法通过伪量化节点内的 `quantize` 步骤计算梯度。
+
+为解决此问题，QAT 在反向传播期间依赖于一种梯度计算的近似方法。这种被称为“直通估计器 (STE)”的方法，有效使梯度绕过不可微的量化步骤，从而使模型的权重 (weight)得以更新。我们将在下一节中详细考察STE。
+
+总之，通过伪量化节点在训练期间模拟量化影响是QAT的核心机制。它使模型能够主动适应低精度算术的限制，与PTQ相比，这通常会使最终量化模型获得明显更高的精度，尤其对于激进量化（例如4位）更是如此。
+
+## 参考资料
+
+- [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](https://ieeexplore.ieee.org/document/8578726) — Benoit Jacob, Skirmantas Kligys, Bo Chen, Menglong Zhu, Matthew Tang, Andrew Howard, Hartwig Adam, Dmitry Kalenichenko (2018)
+  Journal: 2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 870-879; DOI: [10.1109/CVPR.2018.00096](https://doi.org/10.1109/CVPR.2018.00096)
+  一篇基础性论文，介绍了量化感知训练 (QAT) 和用于纯整数推理的模拟量化概念。
+- [Learning binary weights for efficient implementation of deep neural networks](https://papers.neurips.cc/paper_files/paper/2015/file/334bff51b53317fd6374070b4353d9e1-Paper.pdf) — Matthieu Courbariaux, Yoshua Bengio, and Jean-Pierre David (2015)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Publisher: Neural Information Processing Systems Foundation; Pages: 3123-3131; DOI: [10.5591/978-1-55860-845-8.3123](https://doi.org/10.5591/978-1-55860-845-8.3123)
+  本文推广了直通估计器 (STE)，用于训练低精度权重的神经网络，与 QAT 中的反向传播挑战直接相关。
+- [Quantization Recipes](https://pytorch.org/docs/stable/quantization.html) — PyTorch Authors (2024)
+  Publisher: PyTorch Foundation
+  PyTorch 官方文档，提供了量化感知训练 (QAT) 的实际实现细节，包括模拟量化模块的使用方法。

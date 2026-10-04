@@ -1,0 +1,170 @@
+---
+course: "getting-started-rag"
+chapter: "building-basic-rag-pipeline"
+lesson: "implementing-retriever"
+sourceId: 3660
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-5-building-basic-rag-pipeline/implementing-retriever"
+title: "实现检索器"
+description: "建立向量存储连接和执行相似度搜索的代码示例。"
+order: 3
+plots: []
+sourceHash: "0995d46df057518d13e0da42fe112c8dcf1674fcae5edeb335a96dd1c896eeec"
+sourceCorrections: []
+---
+
+数据经过准备、分块、向量 (vector)化并存储在向量数据库中，现在可以实现检索增强生成（RAG）流程的第一个活跃组成部分：检索器。检索器负责接收用户查询，理解其语义，并从知识库中获取最相关的信息片段。
+
+这个过程依赖于我们之前生成的向量嵌入 (embedding)。我们将使用与处理文档时*相同*的嵌入模型，将用户查询转换为向量。然后，我们将使用向量数据库，在高维嵌入空间中找到与该查询向量“最近”的文档块向量，通常会使用余弦相似度等相似度指标。
+
+## 搭建检索器环境
+
+首先，请确保安装了必需的库。本例中，我们将使用 `sentence-transformers` 来生成嵌入 (embedding)，并使用 `chromadb` 作为本地向量 (vector)存储客户端。如果尚未安装它们：
+
+```bash
+pip install sentence-transformers chromadb
+```
+
+我们假设在数据准备阶段（第3章），您已经使用分块数据和嵌入填充了一个名为 `"documents"` 的 ChromaDB 集合。您还需要与创建那些已存储嵌入时所用的嵌入模型相同。
+
+## 初始化组件
+
+让我们首先导入所需的库，并初始化嵌入 (embedding)模型和 ChromaDB 客户端。我们需要加载在索引阶段使用的*完全相同*的嵌入模型，以确保查询嵌入和文档嵌入之间的一致性。
+
+```python
+from sentence_transformers import SentenceTransformer
+import chromadb
+
+# 加载嵌入模型（使用与索引时相同的模型）
+# 示例：'all-MiniLM-L6-v2' 是在速度和性能之间取得平衡的常用选择
+try:
+    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    print("嵌入模型加载成功。")
+except Exception as e:
+    print(f"加载句子转换器模型出错: {e}")
+    # 妥善处理错误，可能退出或使用备用方案
+
+# 初始化 ChromaDB 客户端
+# 使用 PersistentClient 将数据保存到磁盘
+client = chromadb.PersistentClient(path="./chroma_db") # 指定一个目录
+
+# 获取现有集合（假设在第3章中已创建）
+try:
+    # 在尝试获取集合之前，确保它存在
+    collections = client.list_collections()
+    if "documents" in [col.name for col in collections]:
+        collection = client.get_collection("documents")
+        print(f"已连接到现有集合 'documents'，包含 {collection.count()} 个项目。")
+    else:
+        print("错误：未找到集合 'documents'。请确保数据已索引。")
+        collection = None # 将 collection 设置为 None 以便后续处理此情况
+except Exception as e:
+    print(f"连接 ChromaDB 集合出错: {e}")
+    collection = None # 如果连接失败，确保 collection 为 None
+```
+
+在这里，我们使用模型名称初始化 `SentenceTransformer`。使用 `chromadb.PersistentClient` 可以让数据库状态在多次运行之间保持。然后，我们尝试连接到我们预先存在的 `"documents"` 集合。包含错误处理很重要，因为模型可能下载失败或数据库连接可能遇到问题。
+
+## 实现检索函数
+
+现在，我们定义一个函数来封装检索逻辑。此函数将接收用户查询和要检索的文档数量 (`top_k`) 作为输入。
+
+> 检索过程：用户查询被转换为向量 (vector)，然后用于在向量数据库中搜索最相似的文档块向量。
+
+```python
+def retrieve_relevant_chunks(query: str, top_k: int = 5):
+    """
+    检索给定查询最相关的 top_k 个文档块。
+
+    参数：
+        query (str): 用户的查询字符串。
+        top_k (int): 要检索的相关块数量。
+
+    返回：
+        list: 检索到的文档块列表（如果出错则为 None）。
+              列表中每个项目可以是文本内容，也可以是包含文本和元数据的字典。
+              如果没有结果，返回空列表。
+    """
+    if collection is None:
+        print("错误：向量数据库集合不可用。")
+        return None
+    if embedding_model is None:
+        print("错误：嵌入模型未加载。")
+        return None
+
+    try:
+        # 1. 为输入查询生成嵌入
+        query_embedding = embedding_model.encode(query).tolist()
+
+        # 2. 查询向量数据库
+        # 我们请求 'documents'，以及可能的 'metadatas' 和 'distances'
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            include=['documents', 'metadatas', 'distances']
+        )
+
+        # 3. 处理并返回结果
+        # 'documents' 字段包含检索到的分块的文本
+        # 结果格式略微取决于客户端库版本，
+        # 但通常在字典中提供列表。
+        retrieved_docs = results.get('documents', [[]])[0]
+        retrieved_metadatas = results.get('metadatas', [[]])[0]
+        retrieved_distances = results.get('distances', [[]])[0]
+
+        # 组合结果以便后续使用
+        processed_results = []
+        for i, doc in enumerate(retrieved_docs):
+            processed_results.append({
+                "text": doc,
+                "metadata": retrieved_metadatas[i] if retrieved_metadatas else {},
+                "distance": retrieved_distances[i] if retrieved_distances else None
+            })
+
+        print(f"已检索到 {len(processed_results)} 个分块。")
+        return processed_results
+
+    except Exception as e:
+        print(f"检索过程中出错: {e}")
+        return None
+
+# 示例用法（假设集合和模型已加载）
+if collection and embedding_model:
+    user_query = "使用RAG有什么好处？"
+    retrieved_information = retrieve_relevant_chunks(user_query, top_k=3)
+
+    if retrieved_information:
+        print(f"\n查询 '{user_query}' 的前 {len(retrieved_information)} 个结果：")
+        for i, info in enumerate(retrieved_information):
+            print(f"排名 {i+1} (距离: {info['distance']:.4f}):")
+            # 限制打印长度以保持简洁
+            print(f"  文本: {info['text'][:250]}...")
+            print(f"  元数据: {info['metadata']}")
+            print("-" * 20)
+    else:
+        print("检索失败或未返回任何结果。")
+```
+
+在这个 `retrieve_relevant_chunks` 函数中：
+
+1. 我们首先使用 `embedding_model.encode()` 为输入 `query` 生成嵌入 (embedding)。重要的是，这必须是用于嵌入存储在 ChromaDB 中文档的相同模型。我们将其转换为列表（`.tolist()`），因为一些客户端期望这种格式。
+2. 我们使用 `collection.query()` 方法。我们传入 `query_embeddings`（注意：它期望一个嵌入列表，即使只有一个查询）。`n_results=top_k` 指定我们想要的结果数量。`include=['documents', 'metadatas', 'distances']` 告诉 ChromaDB 返回与向量关联的原始文本内容，以及随附存储的任何元数据（如源文档名称或页码），以及距离分数（对于欧几里得等指标，较低通常意味着更相似；对于余弦相似度，较高意味着更相似，尽管 Chroma 通常返回的是余弦*距离*，此时越低越好）。
+3. ChromaDB 返回的结果通常以结构化字典形式呈现。我们提取相关部分，如文档文本、元数据和距离。检查这些键是否存在并处理可能的 `None` 或空列表是一个良好的做法。
+4. 我们整齐地打包结果，可能以字典列表的形式，使其更容易被下一个组件（生成器）使用。每个字典包含分块的文本、其关联的元数据以及相似度距离。
+5. 包含了使用 `try...except` 块的错误处理，以捕获嵌入生成或数据库查询过程中可能出现的问题。
+
+示例用法演示了如何调用此函数并打印检索到的文本片段及其元数据。距离分数表明了数据库认为每个分块相对于查询的相关程度。
+
+这个已实现的检索器现在充当了用户查询与已存储知识库之间的桥梁。它返回的相关文本分块列表是重要的上下文 (context)，将在发送给大型语言模型之前被“增强”到原始查询上。
+
+## 参考资料
+
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://proceedings.neurips.cc/paper_files/paper/2020/file/6b493230205f780e1bc26945df7481e5-Paper.pdf) — Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, Douwe Kiela (2020)
+  Journal: Advances in Neural Information Processing Systems 33 (NeurIPS 2020); Publisher: Curran Associates, Inc.; Volume: 33; Pages: 9459--9474; DOI: [10.48550/arXiv.2005.11401](https://doi.org/10.48550/arXiv.2005.11401)
+  阐述了最初的检索增强生成（RAG）框架，详细介绍了其架构以及将外部知识融入语言模型的优势。
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410/) — Nils Reimers and Iryna Gurevych (2019)
+  Journal: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP); Publisher: Association for Computational Linguistics; Pages: 3982-3992; DOI: [10.18653/v1/D19-1410](https://doi.org/10.18653/v1/D19-1410)
+  介绍了Sentence-BERT模型，它能高效生成高质量的句子嵌入，是检索器中使用的`sentence-transformers`等库的基础。
+- [ChromaDB Documentation](https://www.trychroma.com/docs) — Chroma (2024)
+  Chroma官方指南，一个开源嵌入数据库。它提供了安装、客户端使用、集合管理和查询的细节，与检索器的实现相关。
+- [Sentence-Transformers Documentation](https://www.sbert.net/) — Nils Reimers, Iryna Gurevych (2024)
+  `sentence-transformers` Python库的官方指南，详细介绍了如何加载预训练模型和生成句子嵌入，对将查询转换为向量至关重要。

@@ -1,0 +1,64 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "catboost-gradient-boosting"
+lesson: "catboost-feature-combinations"
+sourceId: 2013
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-6-catboost-gradient-boosting/catboost-feature-combinations"
+title: "处理特征组合"
+description: "CatBoost 如何自动生成和使用分类特征的组合。"
+order: 4
+plots: []
+sourceHash: "e4177f8b8476035e0d26852fcacc66aa74c8adc153a52538d304651cdf6b11a0"
+sourceCorrections: []
+---
+
+将单个分类特征数值化表示是一种有效方法。然而，许多数据集中的预测信号通常来自不同特征之间的*交互作用*。例如，知道用户的浏览器可能提供一些信息，知道他们的操作系统也可能有帮助，但同时知道他们使用 `Browser='Safari'` *和* `OS='macOS'` 可能比单独使用任何一个信息都更能显著提高预测能力。
+
+手动构建此类交互特征（例如，创建一个新特征如 `browser_os`）是可行的，但很快就会变得有难度。在分类特征很多的情况下，潜在组合（两两组合、三三组合等）的数量呈指数级增长，使得穷举式创建在计算上不可行，并且需要大量的专业知识才能发现可能有用的交互作用。
+
+CatBoost 通过在树构建过程中自动生成和评估分类特征的组合来解决这个难题。这并非通过预先创建庞大的新特征集来完成；相反，它被贪婪地集成到分裂选择逻辑中。
+
+### 贪婪组合生成
+
+CatBoost 动态构建特征组合。在构建树并为给定节点（或在对称树的情况下，为给定层级）选择最佳分裂时，CatBoost 会考虑包含以下内容的组合：
+
+1. 一个或多个已用于当前节点*上方*节点（即从根节点到当前节点的路径上）的分裂标准的分类特征。
+2. 一个正在考虑用于当前分裂的新分类特征。
+
+本质上，对于每个基于新分类特征 $C_{new}$ 的分裂，CatBoost 还会评估基于诸如 $(C_{ancestor1}, C_{new})$、$(C_{ancestor2}, C_{new})$、$(C_{ancestor1}, C_{ancestor2}, C_{new})$ 等组合的分裂，$C_{ancestor_i}$ 是在祖先节点分裂中使用的分类特征。
+
+这些新形成的组合特征像对待任何其他分类特征一样被对待。它们使用前面描述的相同有序目标统计（Ordered TS）机制进行数值编码，遵循“排序原则”以防止目标泄漏。然后，算法评估分裂这些组合以及原始特征带来的潜在收益（损失减少量），并选择总体最佳分裂。
+
+### 与对称树的集成
+
+此过程与 CatBoost 使用对称树的方式自然集成。回想一下，对称树在相同深度层级的所有节点上使用相同的分裂标准（特征和阈值/类别）。当 CatBoost 决定在某个层级使用特征组合进行分裂时，该特定组合（例如，`Country` 与 `Browser` 的组合）将在该深度层级的所有节点上使用。
+
+这表示组合是随着树的深度增加而逐步构建的。在第 3 层使用的组合可能涉及用于第 1 层和第 2 层分裂的分类特征。
+
+> 特征组合如何被考虑的示例。当决定第 2 层节点的分裂时，CatBoost 直接评估在 `CatFeat_B` 上分裂，但也会考虑在表示祖先分裂（`CatFeat_A`）和 `CatFeat_B` 组合的派生特征上分裂。
+
+### 控制组合复杂度
+
+CatBoost 贪婪地生成组合，不会穷举所有可能性。它通常从考虑两个分类特征的组合开始。如果一个双特征组合证明有效（即被选作分裂），算法可能会考虑将其与另一个分类特征结合，以创建三特征组合用于树中更深层的分裂，等等。
+
+这些自动组合中包含的分类特征的最大数量可以通过 CatBoost 库中的 `max_ctr_complexity` 参数 (parameter)来控制。默认通常考虑最多两个特征的组合（原始特征 + 一个组合特征）。增加此值可以使模型可能捕获更高阶的交互作用，但代价是计算量增加和如果未仔细调优可能出现过拟合 (overfitting)。另一个相关参数 `ctr_max_border_count` 控制了考虑涉及数值特征的组合的分裂数量。
+
+### 自动组合的优势
+
+- **减少手动工作量**：自动化了特征工程的很大一部分，节省了时间并可能发现手动查找遗漏的交互作用。
+- **提高准确性**：捕获分类变量之间通常具有预测性的复杂依赖关系。
+- **原生集成**：与 CatBoost 框架内的有序目标统计和对称树配合使用。
+
+通过自动处理特征组合，CatBoost 进一步增强了从具有大量分类特征的数据集中提取预测能力的能力，使其成为解决此类问题的有力选择。这种能力，结合其分类编码方法，使其区别于其他梯度提升实现。
+
+## 参考资料
+
+- [CatBoost: Unbiased Boosting with Categorical Features](http://papers.nips.cc/paper/7898-catboost-unbiased-boosting-with-categorical-features) — Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Dorogush, Andrey Gulin (2018)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS) 31; Publisher: Neural Information Processing Systems Foundation; Volume: 31; Pages: 6639-6649; DOI: [10.55989/nips.2018.0076](https://doi.org/10.55989/nips.2018.0076)
+  这篇基础论文介绍了CatBoost算法，详细阐述了其处理类别特征的机制，包括在Oblivious Trees中使用有序目标统计自动生成和编码特征组合的方法。
+- [CatBoost Documentation: Categorical Features](https://catboost.ai/docs/concepts/categorical-features.html) — Yandex (2023)
+  Publisher: Yandex
+  官方文档提供了CatBoost如何处理类别特征的实践信息，包括配置自动特征组合参数，例如 `max_ctr_complexity` 和 `ctr_max_border_count`。
+- [Feature Engineering and Selection: A Practical Approach for Predictive Models](https://www.taylorfrancis.com/books/9781315108230) — Max Kuhn, Kjell Johnson (2019)
+  Publisher: CRC Press; Pages: 314; DOI: [10.1201/9781315108230](https://doi.org/10.1201/9781315108230)
+  本书全面概述了特征工程技术，包括交互项的创建及其重要性，有助于读者理解CatBoost自动组合生成方法的价值所在。

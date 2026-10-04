@@ -1,0 +1,119 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "training-evaluating-models"
+lesson: "compiling-loss-functions"
+sourceId: 1729
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-4-training-evaluating-models/compiling-loss-functions"
+title: "编译模型：损失函数"
+description: "为不同机器学习任务（回归、分类）选择合适的损失函数。"
+order: 1
+plots: []
+sourceHash: "5410486ac317d34c342dec68f0973ea0bc32a6a5081ad930273f2a1a953fbada"
+sourceCorrections: []
+---
+
+在 Keras 模型训练前，需要对其进行配置或“编译”。`compile()` 方法用于设置模型以进行训练。您提供给 `compile()` 的一个最主要的参数 (parameter)是 `loss` 函数。
+
+损失函数 (loss function)，也称为目标函数或成本函数，用来衡量模型性能的优劣。在训练过程中，目标是使此函数的值最小化。它计算模型预测值 ($y_{pred}$) 与实际目标值 ($y_{true}$) 之间的差异大小。较小的损失值表示模型的预测值更接近真实值。
+
+损失函数的选择与您正在解决的机器学习 (machine learning)问题的类型直接相关。我们来看一下常见任务的标准选择。
+
+### 回归问题的损失函数 (loss function)
+
+回归问题涉及预测连续值，例如房价或温度。
+
+- **均方误差 (MSE)：** 这可能是回归问题最常用的损失函数。它计算预测值与真实值之间平方差的平均值。对差值进行平方会更严厉地惩罚较大误差，并确保结果始终为正。
+
+  
+  $$
+  MSE = \frac{1}{N} \sum_{i=1}^{N} (y_{true, i} - y_{pred, i})^2
+  $$
+  
+
+  其中 $N$ 是样本数量。在 Keras 中，通常使用字符串标识符 `'mean_squared_error'` 或 `'mse'` 来指定它。
+- **平均绝对误差 (MAE)：** 此损失函数计算预测值与真实值之间绝对差值的平均值。与 MSE 不同，MAE 不会对误差进行平方，这使其对离群值不那么敏感。如果您的数据集中包含您不希望主导损失的显著离群值，MAE 可能是一个更好的选择。
+
+  
+  $$
+  MAE = \frac{1}{N} \sum_{i=1}^{N} |y_{true, i} - y_{pred, i}|
+  $$
+  
+
+  您可以使用 `'mean_absolute_error'` 或 `'mae'` 来指定它。
+
+### 分类问题的损失函数 (loss function)
+
+分类问题涉及预测离散的类别标签，例如识别垃圾邮件或对图像进行分类。
+
+- **二元交叉熵：** 将此损失函数用于二元（两类）分类问题。它衡量真实概率分布（例如 `[0, 1]` 或 `[1, 0]`）与预测概率分布之间的距离。它要求模型的最后一层具有一个带有 sigmoid 激活函数 (activation function)（输出 0 到 1 之间的概率）的单个输出单元，并且目标值应为 0 或 1。单个预测的二元交叉熵公式为：
+
+  
+  $$
+  Loss = - (y_{true} \log(y_{pred}) + (1 - y_{true}) \log(1 - y_{pred}))
+  $$
+  
+
+  最终损失值在所有样本上取平均。使用字符串 `'binary_crossentropy'` 来指定它。
+- **分类交叉熵：** 当您的目标标签是*独热编码*时，这是多类分类的标准损失函数。例如，如果您有三类，目标可能看起来像 `[1, 0, 0]`、`[0, 1, 0]` 或 `[0, 0, 1]`。它要求模型的最后一层具有 $C$ 个输出单元（其中 $C$ 是类别数量）并使用 `softmax` 激活函数，该函数输出所有类别的概率分布。单个样本的公式为：
+
+  
+  $$
+  Loss = - \sum_{c=1}^{C} y_{true, c} \log(y_{pred, c})
+  $$
+  
+
+  其中 $C$ 是类别数量。最终损失值在所有样本上取平均。使用字符串 `'categorical_crossentropy'` 来指定它。
+- **稀疏分类交叉熵：** 此损失函数与分类交叉熵用途相同，但用于目标标签以*整数*形式（例如，三类为 0、1、2）而不是独热编码向量 (vector)形式提供的情况。这通常更方便，因为它避免了将整数标签显式转换为独热向量的需要。模型输出要求（$C$ 个单元，softmax 激活）与分类交叉熵相同。使用 `'sparse_categorical_crossentropy'` 来指定它。与使用带有显式独热编码标签的 `'categorical_crossentropy'` 相比，这通常可以节省内存和计算量，特别是对于大量类别的情况。
+
+### 在 Keras 中指定损失函数 (loss function)
+
+您将选择的损失函数提供给 `model.compile()` 方法中的 `loss` 参数 (parameter)。您通常可以通过两种方式来执行此操作：
+
+1. **使用字符串标识符：** 传入所需损失函数的字符串名称。Keras 识别常见的损失函数，例如 `'mean_squared_error'`、`'binary_crossentropy'`、`'categorical_crossentropy'` 和 `'sparse_categorical_crossentropy'`。这是标准损失最常用的方法。
+
+   ```python
+   # 对于回归问题
+   model.compile(optimizer='adam', loss='mean_squared_error')
+
+   # 对于二元分类问题
+   model.compile(optimizer='rmsprop', loss='binary_crossentropy')
+
+   # 对于多类分类问题（独热标签）
+   model.compile(optimizer='adam', loss='categorical_crossentropy')
+
+   # 对于多类分类问题（整数标签）
+   model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+   ```
+2. **使用损失函数对象：** 从 `tf.keras.losses` 模块实例化一个损失函数对象。如果损失函数接受参数，这允许进行潜在的自定义，尽管标准使用通常不需要这样做。
+
+   ```python
+   import tensorflow as tf
+
+   mse_loss = tf.keras.losses.MeanSquaredError()
+   bce_loss = tf.keras.losses.BinaryCrossentropy()
+   cce_loss = tf.keras.losses.CategoricalCrossentropy()
+   scce_loss = tf.keras.losses.SparseCategoricalCrossentropy()
+
+   # 使用示例：
+   model.compile(optimizer='adam', loss=mse_loss)
+   # 或者直接传入类
+   model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
+   ```
+
+虽然 TensorFlow 提供了广泛的内置损失函数，但如果您的问题需要标准选项未涵盖的特定目标，您也可以定义自己的自定义损失函数。这通常涉及创建一个 Python 函数，该函数以 `y_true` 和 `y_pred` 作为参数，并返回计算出的损失值作为张量。
+
+选择正确的损失函数是模型成功训练的基础。它直接定义了模型在优化过程中尝试实现的目标。定义损失后，编译模型的下一步是选择一个优化器，它规定了*如何*更新模型的权重 (weight)以最小化此损失。
+
+## 参考资料
+
+- [tf.keras.losses](https://www.tensorflow.org/api_docs/python/tf/keras/losses) — TensorFlow Authors (2024)
+  Keras损失函数的官方API文档，详细说明了它们在TensorFlow中的用法和参数。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  涵盖成本函数及其在神经网络中理论基础的经典教材。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  实用指南，演示了如何在Keras和TensorFlow模型中应用损失函数。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Lecture Notes, Training Neural Networks, Part 1](http://cs231n.github.io/neural-networks-3/) — Justin Johnson, Serena Yeung, Karrick McDermott, et al. (Stanford University) (2023)
+  Publisher: Stanford University
+  来自知名课程的综合讲义，解释了用于训练神经网络的各种损失函数。

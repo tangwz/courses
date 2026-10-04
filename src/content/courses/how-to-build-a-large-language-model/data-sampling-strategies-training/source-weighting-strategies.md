@@ -1,0 +1,188 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "data-sampling-strategies-training"
+lesson: "source-weighting-strategies"
+sourceId: 5991
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-9-data-sampling-strategies-training/source-weighting-strategies"
+title: "来源权重策略"
+description: "实现对不同来源数据进行过采样或欠采样的方法。"
+order: 2
+plots: ["plots/5991-0.json"]
+sourceHash: "25fe29a2ef0a143f84094776d47c971f46b8a1ea002ef985bdea8c7049981b45"
+sourceCorrections: []
+---
+
+训练大型语言模型通常涉及从网络爬取数据（例如 Common Crawl）、书籍、代码库和专门语料库等来源收集多样化的文本数据。在此过程中，一个主要考虑因素是确定每种数据来源在训练中的比例贡献。简单地将所有可用数据拼接并均匀打乱，看起来可能是一个直接的方法，但很少能产生最佳结果。这是因为不同的数据来源在质量、相关性和语言风格方面本身就存在差异。来源加权提供了对训练数据组合构成精确的控制，使得模型能够优先学习某些类型的文本而非其他。
+
+主要思路是为每个数据来源分配一个特定的权重 (weight)或概率。在训练期间，当组建一个数据批次时，样本会根据这些预设权重从不同来源中抽样。与权重较低的来源相比，被分配较高权重的来源将随着时间为训练过程提供更多样本。
+
+### 定义抽样概率
+
+假设你有 $k$ 个不同的数据来源，$S_1, S_2, \dots, S_k$。每个来源 $S_i$ 包含 $N_i$ 个文档或样本。我们希望定义在任意给定步骤从来源 $S_i$ 抽样一个样本的概率 $p_i$。一个常见做法是使这个概率与来源的大小和分配的权重 (weight) $w_i$ 成比例：
+
+
+$$
+p_i \propto w_i \cdot N_i
+$$
+
+
+或者，或许更直接的控制方式是，你可以直接为每个来源定义所需的比例（或概率）$p_i$，使得 $\sum_{i=1}^{k} p_i = 1$。这时，权重 $w_i$ 就简单地成为这些目标比例 $p_i$。
+
+例如，你可能会决定采用以下组合方式：
+
+- 网络文本 (来源 1): $p_1 = 0.60$ (60%)
+- 书籍 (来源 2): $p_2 = 0.15$ (15%)
+- 代码 (来源 3): $p_3 = 0.15$ (15%)
+- 维基百科 (来源 4): $p_4 = 0.10$ (10%)
+
+这意味着，平均而言，在每个训练周期（或大量步骤中），模型看到的样本中有 60% 将来自网络文本数据集，15% 来自书籍，以此类推。
+
+
+
+![数据来源比例示例 (%)](plots/5991-0.json)
+
+
+
+> 大型语言模型预训练 (pre-training)期间从不同数据来源抽样的比例示例。
+
+### 设定权重 (weight)的方法和考量
+
+选择合适的权重通常受多种因素影响，需要仔细考虑并进行多次试验：
+
+1. **数据质量：** 维基百科或同行评审文章等高质量、精心整理的来源，相对于其大小，可能会比嘈杂的网络爬取数据获得更高的权重。这能指导模型学习更多事实性强、结构良好的语言。
+2. **领域特化：** 如果你正在构建一个旨在用于特定领域（例如医疗聊天机器人或代码生成助手）的模型，你可能会增加相关领域特定数据集（例如 PubMed 摘要或代码库）的权重。
+3. **数据量与影响：** 如果大型数据集（如 Common Crawl）按其原始大小比例抽样，它们很容易在训练组合中占据主导地位。分配明确的权重可以避免这种情况，确保较小、高质量或领域特定数据集仍能对模型的学习产生重要影响。
+4. **防止数据污染：** 如果在特定基准上进行评估，你可能会降低已知包含这些基准节选的数据来源的权重，或将其排除，以确保公平评估。
+5. **期望的模型能力：** 如果对话文本的流畅性很重要，你可能会包含并合理加权包含对话或论坛讨论的数据集。如果事实基础很重要，结构化文本和百科全书来源可能会获得更高权重。
+
+### 实现方面的考量
+
+实现来源加权通常涉及修改数据加载过程。数据加载器需要了解不同的来源及其相关权重 (weight)，而不是从单一大型数据集中均匀抽样。
+
+在 PyTorch 中，你可以通过创建自定义的 `IterableDataset` 或使用能够适应多个底层数据集加权抽样的采样器来实现这一点。一个简化示例可能如下所示：
+
+```python
+import torch
+import numpy as np
+from torch.utils.data import IterableDataset, DataLoader
+
+# 假设这些是不同来源的占位数据集
+# 实际中，这些会加载实际的 tokenized 数据
+class DummyDataset(IterableDataset):
+    def __init__(self, source_name, size):
+        self.source_name = source_name
+        self.size = size
+
+    def __iter__(self):
+        for i in range(self.size):
+            # 生成虚拟数据：(样本数据, 来源标识符)
+            yield torch.randn(512), self.source_name
+            if i % 1000 == 0 and i > 0 : # 模拟可能的大型数据集
+                 print(f"Yielded {i} from {self.source_name}")
+
+# 定义来源及其期望的抽样概率（权重）
+sources = {
+    "web": {"dataset": DummyDataset("web", 1_000_000), "weight": 0.60},
+    "books": {"dataset": DummyDataset("books", 200_000), "weight": 0.15},
+    "code": {"dataset": DummyDataset("code", 300_000), "weight": 0.15},
+    "wiki": {"dataset": DummyDataset("wiki", 100_000), "weight": 0.10},
+}
+
+source_names = list(sources.keys())
+source_weights = np.array([sources[name]["weight"] for name in source_names])
+# 归一化权重以确保它们总和为 1（如果已归一化则可选）
+# source_weights /= source_weights.sum()
+
+source_iters = {name: iter(sources[name]["dataset"]) for name in source_names}
+
+class WeightedSourceSampler(IterableDataset):
+    def __init__(self, source_names, source_weights, source_iters):
+        self.source_names = source_names
+        self.source_weights = source_weights
+        self.source_iters = source_iters
+
+    def __iter__(self):
+        while True:
+            # 根据权重选择一个来源
+            chosen_source_name = np.random.choice(
+                self.source_names, p=self.source_weights
+            )
+
+            try:
+                # 从所选来源的迭代器中获取下一个项
+                item = next(self.source_iters[chosen_source_name])
+                yield item
+            except StopIteration:
+                # 如果某个来源的迭代器已耗尽，重新创建它（或根据需要处理）
+                print(f"正在重新启动 {chosen_source_name} 的迭代器")
+                self.source_iters[chosen_source_name] = iter(
+                    sources[chosen_source_name]["dataset"]
+                )
+                # 可选地，中断或为有限数据集实现逻辑
+                # 对于大规模预训练，迭代器通常会无限循环
+                # 重置后重新尝试获取：
+                try:
+                   item = next(self.source_iters[chosen_source_name])
+                   yield item
+                except StopIteration:
+                   print(
+                       f"警告：{chosen_source_name} 的迭代器在重置后立即耗尽。"
+                   )
+                   # 决定如何处理这种情况，例如重新抽样来源或引发错误
+                   # 在此示例中，我们可能只是跳过此轮。
+                   continue 
+
+# 创建组合数据集采样器
+weighted_sampler_dataset = WeightedSourceSampler(
+    source_names, source_weights, source_iters
+)
+
+# 与 DataLoader 一起使用
+# 注意：num_workers > 0 需要仔细处理
+# IterableDatasets 和迭代器
+# 为简单起见，这里使用 num_workers=0。
+# 实际实现需要多 worker 支持。
+data_loader = DataLoader(weighted_sampler_dataset, batch_size=4, num_workers=0) 
+
+# 获取一个批次示例
+print("正在获取一个批次...")
+batch = next(iter(data_loader))
+# batch[0] 包含数据张量，batch[1] 包含来源名称
+print(f"批次数据形状：{batch[0].shape}") 
+print(f"批次来源标识符：{batch[1]}")
+
+# 模拟获取更多批次以查看来源分布
+print("\n正在获取更多批次...")
+for i in range(5):
+     batch = next(iter(data_loader))
+     print(f"批次 {i+1} 来源：{batch[1]}")
+```
+
+> PyTorch 实现草图，用于根据预设权重从多个数据来源进行抽样。
+
+本示例演示了基本原理。大型语言模型的生产级数据加载器通常会涉及更复杂的机制，以提高效率、处理分布式训练以及管理无法完全载入内存的超大型数据集，可能还会使用流式传输技术。
+
+### 权衡与考量
+
+来源加权虽然功能强大，但也带来了复杂性：
+
+- **调优难度：** 找到最佳权重 (weight)通常需要大量试验，并在下游任务上进行评估，这可能会带来高昂的计算成本。
+- **偏差放大：** 对某些来源过度加权可能导致模型采纳该数据中存在的偏见。反之，对重要但较小的数据集加权不足可能会阻碍模型在特定方面的表现。
+- **动态加权：** 正如稍后在课程学习和退火的背景下所讨论的，权重可能不会在整个训练过程中固定不变。它们可能根据训练阶段或模型表现动态变化。
+
+来源加权是一种基本方法，用于管理大型语言模型预训练 (pre-training)所用大规模数据集的构成。通过仔细考虑不同数据来源的质量、相关性和数据量，并分配适当的权重，工程师可以更好地指导学习过程，并塑造最终模型的能力。
+
+## 参考资料
+
+- [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) — Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, Guillaume Lample (2023)
+  Journal: arXiv preprint arXiv:2302.13971; DOI: [10.48550/arXiv.2302.13971](https://doi.org/10.48550/arXiv.2302.13971)
+  描述了LLaMA模型训练数据混合的构成，提供了各种来源的特定采样比例。
+- [The Pile: An 800GB Dataset of Diverse Text for Language Modeling](https://arxiv.org/abs/2101.00027) — Leo Gao, Stella Biderman, Sid Black, Laurence Golding, Travis Hoppe, Charles Foster, Jason Phang, Horace He, Anish Thite, Noa Nabeshima, Shawn Presser, Connor Leahy (2020)
+  Journal: arXiv preprint arXiv:2101.00027; DOI: [10.48550/arXiv.2101.00027](https://doi.org/10.48550/arXiv.2101.00027)
+  详细介绍了从22个不同来源构建大型多样化数据集的方法，明确讨论了所用的加权和采样策略。
+- [PaLM: Scaling Language Modeling with Pathways](https://jmlr.org/papers/volume24/22-1144/22-1144.pdf) — Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, Maarten Bosma, Gaurav Mishra, Adam Roberts, Paul Barham, Hyung Won Chung, Charles Sutton, Sebastian Gehrmann, Parker Schuh, Kensen Shi, Sasha Tsvyashchenko, Joshua Maynez, Abhishek Rao, Parker Barnes, Yi Tay, Noam Shazeer, Vinodkumar Prabhakaran, Emily Reif, Shaohan Huang, Zonglin Li, Abe Child, Siqi Mao, Julian Goldwasser, Azade Nova, Ofir Press, Alexandre Passos, Sam Shwetake, Eva Schlinger, Jason Wei, Shixiang Shane Gu, Heng-Tze Cheng, Jeff Dean, Youlong Cheng, Kristen Morrow, Frederick Liu, Anne Verlot, Chandra Baskaran, Ashish Vaswani, Anand Taylor, Swaroop Dutta, Andrew Dai, Thang Luong, Quoc V. Le (2022)
+  Journal: Journal of Machine Learning Research; Volume: 24; Pages: 1-37
+  提出了一种大型语言模型，并描述了其训练数据混合，涉及对高质量文本来源组合的加权。
+- [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer](https://jmlr.org/papers/volume21/20-074/20-074.pdf) — Colin Raffel, Noam Shazeer, Adam Roberts, Katherine Lee, Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, Peter J. Liu (2020)
+  Journal: Journal of Machine Learning Research; Publisher: Journal of Machine Learning Research; Volume: 21; Pages: 1-67; DOI: [10.1613/JMLR.2020.20-074](https://doi.org/10.1613/JMLR.2020.20-074)
+  讨论了C4数据集的创建以及用于预训练的各种公共数据集的组合，指出了数据构成方面的挑战。

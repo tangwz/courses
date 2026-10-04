@@ -1,0 +1,74 @@
+---
+course: "introduction-to-mlops"
+chapter: "foundations-of-mlops"
+lesson: "core-principles-of-mlops"
+sourceId: 7180
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-mlops/chapter-1-foundations-of-mlops/core-principles-of-mlops"
+title: "MLOps 的核心原则"
+description: "简述 MLOps 的指导原则，包括自动化、全面版本化、持续流程以及监控。"
+order: 5
+plots: []
+sourceHash: "e138669cf00aff18bae3ed8e74c0ef18e95de5eadac0d6a844f9f8cc7c7a659e"
+sourceCorrections: []
+---
+
+要构建一个可靠的机器学习 (machine learning)系统，仅有一个出色的模型是不够的。我们需要一套指导工作的规则。这些核心原则是 MLOps 的基石，提供了一个将自动化和可复现性目标转化为现实的框架，直接解决生产环境中的常见挑战。请不要将它们视为死板的规定，而应看作一种共同的理念，帮助团队更快速、更安全地构建更好的机器学习系统。
+
+### 环节自动化
+
+在 MLOps 中，自动化不仅是为了方便，更是为了创建一个可预测、可重复且不易受人为错误影响的系统。目标是尽可能使机器学习 (machine learning)生命周期的各个阶段实现自动化，从最初的数据处理到最终的模型部署。
+
+手动步骤（例如数据科学家手动运行脚本训练模型，或工程师手动将文件部署到服务器）会带来风险。某个步骤可能会被遗忘，参数 (parameter)可能会输入错误，或者不同的环境可能会产生不一致的结果。自动化用一种统一的流程（称为 **流水线**，Pipeline）取代了这些脆弱的手动交接。流水线会自动执行所有必要阶段，确保每个模型每次都以完全相同的方式构建和部署。
+
+例如，自动化流水线可以被触发自动执行，而无需每月手动拉取新数据并重新训练模型。这不仅节省了时间，还保证了流程的一致性并留有记录。
+
+### 全面版本化
+
+可复现性是任何成熟工程学科的基本要求，机器学习 (machine learning)也不例外。如果你无法可靠地复现过去的结果（无论是特定模型的预测，还是实验的性能指标），你就无法完全信任你的系统。全面版本化的原则正是我们实现这一目标的方式。
+
+在传统软件中，我们主要对代码进行版本控制。在机器学习中，系统由三个变动部分组成：代码、数据和模型。
+
+- **代码版本化：** 这是最熟悉的部分。我们使用 Git 等工具来跟踪源代码的更改，包括数据处理脚本、模型架构和训练逻辑。这使我们能够准确知道是哪些代码产生了这个结果。
+- **数据版本化：** 模型表现对训练数据的依赖程度不亚于对代码的依赖。如果训练数据集发生变化，哪怕只是轻微的变化，生成的模型也会有所不同。数据版本化涉及跟踪数据集的变化，因此你始终可以将模型与其对应的特定版本数据关联起来。
+- **模型版本化：** 训练好的模型是一种产物，是训练过程的输出。即使使用相同的代码和数据，每次重新训练模型也可能会得到略有不同的结果。模型版本化意味着存储并编目这些训练好的模型产物。这确保了你可以获取特定模型、分析其表现，或者在模型表现不佳时回滚到之前的版本。
+
+通过对这三个组件进行版本化，你可以为机器学习系统创建一个完整且可审计的历史记录。
+
+### 持续流程：CI、CD 和 CT
+
+基于自动化原则，MLOps 采纳并扩展了 DevOps 中的“持续”实践。这些实践创建了从开发到生产的顺畅自动化流。
+
+> 从代码提交到生产部署的流程，包含了持续训练反馈环。
+
+- **持续集成 (CI)：** 这比单纯测试代码更进一步。在 MLOps 中，CI 还涉及对数据和模型的自动化测试与验证。例如，CI 流水线可能会自动运行测试以检查数据架构的变化，根据基准验证模型性能，或确保模型代码符合标准。
+- **持续交付 (CD)：** 一旦模型完成训练并通过了 CI 阶段的所有测试，持续交付就会自动执行其部署。这确保了验证过的模型可以快速、可靠地发布到生产或预发布环境。重点是将部署变成低风险、高频率的操作。
+- **持续训练 (CT)：** 这是 MLOps 特有的流程。CD 侧重于部署 *新版本的服务*，而 CT 侧重于自动重新训练 *新版本的模型*。CT 流水线由新数据的到来或检测到性能下降的监控系统触发。这使得模型能够在无需人工干预的情况下适应不断变化的模式。
+
+### 全方位监控
+
+模型并非一个“部署后即可不管”的资产。一旦部署，它的工作才刚刚开始。情况会发生变化，数据分布会偏移，昨天还非常准确的模型明天可能表现不佳。这就是为什么监控是 MLOps 的一项基本原则。
+
+我们需要监控系统的两个不同方面：
+
+1. **运行健康状况：** 这与传统软件监控类似。模型服务是否在运行？其请求延迟和错误率是多少？消耗了多少 CPU 和内存？这些指标告诉我们系统在技术上是否正常工作。
+2. **模型表现：** 这是机器学习 (machine learning)特有的。模型的预测准确率是否仍处于可接受范围？输入数据的统计分布是否发生了变化（这种现象称为**数据偏移**）？输入与输出之间的关系是否发生了变化（称为**概念偏移**）？
+
+有效的监控提供了触发警报或激活持续训练流水线所需的信号，从而创建一个反馈环，使模型随着时间的推移保持健康且有效。
+
+### 协作与共同所有权
+
+最后，MLOps 也是一种文化原则。它旨在打破构建模型的科学家团队与部署及维护模型的运维团队之间经常存在的组织隔阂。在传统工作流中，数据科学家可能会将模型“直接甩给”工程师，导致沟通不畅和集成问题。
+
+MLOps 倡导一种共同所有权的文化。数据科学家、机器学习 (machine learning)工程师和运维人员使用一套共同的工具和流程紧密协作。数据科学家可以直观地了解其模型在生产环境中的表现，而工程师则能更好地理解他们所支持的模型。这种协作方式确保了每个人都对机器学习系统的端到端性能和可靠性负责。
+
+## 参考资料
+
+- [MLOps: Continuous delivery and automation pipelines in machine learning](https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Vishnu Rachakonda, Gaurav Chakravorty, and Haryadi Sugiarto (2021)
+  Publisher: Google Cloud
+  一份基础指南，概述了实施 MLOps 的最佳实践，侧重于自动化、持续集成、持续交付和持续训练。
+- [Introducing MLOps: How to go from model to production](https://learning.oreilly.com/library/view/introducing-mlops/9781492061298/) — Mark Treveil, Nicolas Omont, Aurélien Geron, Noah Gift, Alexey Grigorev, Ines Montani, Adam Paszke, and Jeremy Howard (2020)
+  Publisher: O'Reilly Media
+  这本书全面介绍了 MLOps 的原理和实践，涵盖了从开发到部署和监控的整个机器学习生命周期。
+- [Monitoring machine learning models in production: A survey](https://www.researchgate.net/publication/366753303_Monitoring_Machine_Learning_Models_in_Production_A_Survey) — Saqib Ejaz, Muhammad Atif, Nima Dini, and Daniel Rodriguez (2023)
+  Journal: Information and Software Technology; Publisher: Elsevier; Volume: 154; Pages: 107089; DOI: [10.1016/j.infsof.2022.107089](https://doi.org/10.1016/j.infsof.2022.107089)
+  一项近期调查，探讨了机器学习模型部署后有效监控的挑战和技术，包括数据漂移和概念漂移的检测。

@@ -1,0 +1,81 @@
+---
+course: "intro-etl-pipelines"
+chapter: "the-loading-stage"
+lesson: "loading-strategy-incremental"
+sourceId: 5558
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-4-the-loading-stage/loading-strategy-incremental"
+title: "加载策略：增量加载（追加/更新）"
+description: "了解如何在目标系统中添加新记录或更新现有记录。"
+order: 3
+plots: []
+sourceHash: "719873439b1eedd54951530128d043fc951ec96d0ae982e88f702a13ae9c14ed"
+sourceCorrections: []
+---
+
+每次加载所有数据（全量加载）虽然直接，但效率可能很低，尤其是在处理大型数据集时。设想一下，当每天只有一小部分记录实际发生变化时，却需要复制数百万甚至数十亿条记录。这会消耗大量时间、处理能力和网络带宽，给源系统和目标系统都带来不必要的负担。对于许多应用来说，需要一种更高效的方法：增量加载。
+
+增量加载专注于处理自上次ETL运行以来新增或修改过的数据。您无需替换整个目标表，只需选择性地添加新记录（追加）或更新现有记录。这使得加载过程快得多，资源消耗也少得多。设全量加载处理的数据量为 $D_{full}$，增量加载处理的数据量为 $D_{incremental}$。通常对于大型且相对稳定的数据集，$D_{incremental} \ll D_{full}$。
+
+### 识别新增或变化的数据
+
+增量加载的基础是准确识别哪些记录需要处理。常见的方法包括：
+
+1. **时间戳：** 许多源表包含记录行创建时间 (`created_at`) 或最后修改时间 (`updated_at`) 的列。在提取时，您可以只选择时间戳晚于上次成功ETL运行的记录。例如，选择 $timestamp_{record} > timestamp_{last\_load}$ 的记录。对于能够可靠跟踪修改时间的系统来说，这是一种常见且相对简单的方法。
+2. **更改标志：** 有时，源系统会使用专用列（例如 `needs_sync`、`is_dirty`、`status`）明确标记 (token)已更改或需要处理的记录。ETL过程提取带有特定标志的记录，并在成功处理后可能重置该标志。
+3. **源数据比较：** 您可以直接将源数据与目标数据进行比较以识别差异，但这通常计算成本高昂，并抵消了增量加载的许多好处。
+4. **变更数据捕获 (CDC)：** 如第2章简要提及的，CDC系统直接监控源数据库中的更改（插入、更新、删除），通常通过读取事务日志。这提供可靠的变更流，但设置起来通常比时间戳或标志方法更复杂。
+
+### 增量加载方法：追加和更新
+
+一旦您识别出新增或变化的数据，就需要将其加载到目标系统中。有两种主要的增量方式：
+
+#### 追加（仅插入）
+
+这是增量加载最简单的形式。您只向目标表添加新记录。目标中现有的记录从不修改。此策略适用于积累历史记录不变的数据，例如：
+
+- 日志事件（例如，网站点击、传感器读数）
+- 交易记录（例如，销售订单）
+- 不可变事实
+
+可以将其比作在日记中添加条目；您添加新页，但通常不会回去重写旧页。
+
+> 图示显示新记录被添加（追加）到现有目标表中。
+
+#### 更新/插入（Upsert）
+
+通常，源系统中的数据可能发生变化。客户可能会更新他们的地址，或者订单状态可能会改变。在这些情况下，仅仅追加数据是不够的；您需要修改目标系统中的现有记录，并插入新记录。这种组合操作通常称为“Upsert”（更新或插入）。
+
+要执行upsert操作，ETL过程需要：
+
+1. 唯一标识符（例如主键或字段组合），用于将传入记录与目标表中的现有记录进行匹配。
+2. 用于确定传入记录是否与现有目标记 (token)录匹配的逻辑：
+   - 如果找到匹配项，目标中的现有记录将用源中的新值进行更新。
+   - 如果未找到匹配项，传入记录被视为新记录并插入（追加）到目标表中。
+
+Upsert常用于数据仓库中加载维度表（例如客户详情、产品信息），其中属性会随时间变化。
+
+> 图示显示upsert操作如何更新现有记录（ID: 2）并插入新记录（ID: 4）。
+
+### 增量加载的注意事项
+
+虽然高效，但增量加载与全量加载相比引入了一些复杂性：
+
+- **识别更改：** 需要可靠的机制，如时间戳、标志或CDC。不一致的时间戳或遗漏的标志可能导致数据不一致。
+- **处理删除：** 基本的增量方法通常不捕获源中的记录删除。检测并将删除传播到目标通常需要更复杂的方法（如CDC或定期进行完整比较）。
+- **状态管理：** ETL过程需要记住上次运行的状态（例如上次处理的时间戳），以便知道下次从何处开始。
+- **复杂性：** 实现识别更改和执行upsert的逻辑比简单地截断和重新加载表更复杂。
+
+尽管有这些方面，但性能优势通常使增量加载成为在初始全量加载之后处理大型或频繁更新数据集的首选策略。它最大限度地减少系统负载，并允许更频繁的数据更新，使目标系统保持最新。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.oreilly.com/library/view/the-data-warehouse/9781118530801/) — Ralph Kimball, Margy Ross (2013)
+  Publisher: John Wiley & Sons, Inc.
+  涵盖基础ETL概念、维度建模以及与增量更新和插入相关的加载策略。
+- [Fundamentals of Data Engineering: Plan and Build Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/) — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media
+  在现代数据工程管道的背景下，讨论了各种数据加载模式和策略，包括增量方法。
+- [Debezium Documentation: Change Data Capture for various databases](https://debezium.io/documentation/reference/) — Debezium Community (2024)
+  提供了变更数据捕获（CDC）机制的详细信息，这是识别源系统中用于增量加载的变更的技术。
+- [PostgreSQL Documentation: INSERT (ON CONFLICT DO UPDATE/NOTHING)](https://www.postgresql.org/docs/current/sql-insert.html) — The PostgreSQL Global Development Group (2024)
+  解释了`INSERT ... ON CONFLICT`语句，这是许多关系数据库中实现增量更新的upsert操作的直接SQL实现。

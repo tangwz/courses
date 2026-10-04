@@ -1,0 +1,112 @@
+---
+course: "real-time-data-pipelines-kafka-flink"
+chapter: "stream-processing-architectures-semantics"
+lesson: "processing-guarantees-semantics"
+sourceId: 8085
+sourceUrl: "https://apxml.com/zh/courses/real-time-data-pipelines-kafka-flink/chapter-1-stream-processing-architectures-semantics/processing-guarantees-semantics"
+title: "处理保障和含义"
+description: "关于交付保障的技术解析：最多一次、至少一次和恰好一次处理。"
+order: 3
+plots: ["plots/8085-0.json"]
+sourceHash: "fc30e3b5fb5c883dafe262da4d029f4f78e1c167d72aba522498c6499ff0ecfa"
+sourceCorrections: []
+---
+
+分布式流处理系统中的可靠性常常被误认为是网络保障。对于Kafka和Flink这类系统来说，处理含义并非定义网络传输的可靠程度，而是指系统在出现故障时如何管理状态变更。当流处理器崩溃并重启后，应用程序的准确性取决于它如何处理故障发生前已处理的事件。
+
+我们将一个有状态的流处理器建模为一个函数 $\mathcal{F}$，该函数接收当前状态 $S_t$ 和输入事件 $E_t$，生成一个新状态 $S_{t+1}$，并可能产生一个输出 $O_t$：
+
+$(S_{t+1}, O_t) = \mathcal{F}(S_t, E_t)$
+
+当系统在更新 $S_{t+1}$ 后但在向源确认 $E_t$ 前失败，或者在发出 $O_t$ 后但在快照 $S_{t+1}$ 前失败时，问题便出现了。恢复机制决定了 $E_t$ 是否会被重放，以及该重放如何影响 $S$。
+
+### 至少一次和幂等性
+
+至少一次处理是许多高吞吐量 (throughput)数据管道的默认可靠性模式。它确保每个事件 $E_t$ 都会被函数 $\mathcal{F}$ 处理，可能多次，但绝不会是零次。
+
+这通过偏移量管理来完成。消费者读取一个事件，处理它，然后才将偏移量提交给代理。如果工作器在处理 $E_t$ 但在提交前失败，消费者组的再平衡会将分区分配给新的工作器。新的工作器从最后提交的偏移量恢复，重新读取 $E_t$。
+
+尽管这避免了数据丢失，但它带来了重复更新问题。如果 $\mathcal{F}$ 涉及非幂等操作，例如增加计数器 ($S = S + 1$)，重放 $E_t$ 会导致状态损坏 ($S = S + 2$)。
+
+要使至少一次处理足够，应用程序逻辑必须是幂等的。从数学角度看，如果一个操作应用多次产生与应用一次相同的结果，那么它就是幂等的：
+
+$\mathcal{F}(S, E) = \mathcal{F}(\mathcal{F}(S, E), E)$
+
+这对于集合操作（例如，向HyperLogLog添加唯一ID）来说很简单，但对于聚合序列或事务性银行转账则较难。
+
+### 恰好一次处理的含义 (EOS)
+
+恰好一次处理的含义 (EOS) 并非指事件在物理上恰好只被处理一次。在存在网络分区的分布式环境中，物理重试是无法避免的。相反，EOS确保事件对状态和输出的**影响**只作用一次。
+
+Flink在内部通过Chandy-Lamport算法的分布式快照变体来做到这一点。系统将“屏障”标记 (token)注入到数据流中。这些屏障随记录一起流动，在逻辑上将流划分为快照前部分和快照后部分。
+
+当一个操作符收到屏障时，它会执行以下操作：
+
+1. 对齐 (alignment)输入（如果从多个分区读取），等待屏障到达所有通道。
+2. 将其本地状态（例如RocksDB SST文件）快照到持久存储。
+3. 将屏障转发给下游操作符。
+
+这种对齐确保全局状态快照表示在特定逻辑时间点的流执行的一致切片。
+
+> 检查点屏障流经管道，触发每个操作符的状态持久化，以在不停止流的情况下，确保全局一致的视图。
+
+### 端到端一致性与两阶段提交
+
+尽管内部状态一致性由检查点处理，但要确保向外部系统（如Kafka Sink）恰好一次的交付，需要流处理器与输出系统之间的协调。这通过两阶段提交 (2PC) 协议来完成。
+
+在Flink到Kafka的数据管道中，Flink的 `KafkaSink` 作为一个事务性生产者运作。
+
+1. **第一阶段：预提交**：当Flink应用程序在检查点之间处理事件时，它会将数据以事务形式写入Kafka主题。这些消息被发送到代理，但被标记 (token)为“未提交”。配置了 `isolation.level=read_committed` 的消费者暂时不会看到这些消息。
+2. **第二阶段：提交**：当Flink JobManager完成全局检查点后，它会通知KafkaSink。该Sink随后将事务提交到Kafka。
+
+这种机制将输出的可见性与内部状态的持久性关联起来。如果Flink作业在检查点完成前失败，Kafka事务会超时或被中止，下游消费者将无法实际“看到”这些消息。重启后，Flink会回退到上一个检查点并重放事件，生成一个新的事务。
+
+### 延迟与性能考量
+
+采用恰好一次处理的含义，会在准确性与延迟之间带来一个权衡。在事务模型中，写入Kafka的数据在检查点完成之前，对下游消费者是不可见的。
+
+如果您的检查点间隔设置为10秒，那么下游消费者的最低延迟就是10秒，无论网络速度有多快。消费者必须等待“提交”标记 (token)才能读取缓冲的消息。
+
+这种关系提出了调整需求：
+
+- **更短的检查点间隔：** 减少端到端延迟和数据丢失风险，但会增加CPU开销和状态后端上的I/O压力。
+- **更长的检查点间隔：** 通过批量处理更大的事务来提高吞吐量 (throughput)，但会增加延迟和恢复时间。
+
+
+
+![事务处理中的延迟与吞吐量对比](plots/8085-0.json)
+
+
+
+> 缩短检查点间隔可最大程度地降低延迟（蓝色），但会显著增加系统的开销（红色），可能损害最大吞吐量。
+
+### 事件时间与处理时间
+
+分布式流中的准确性也很大程度上取决于时间的定义。当我们谈及保障时，必须区分以下几点：
+
+1. **处理时间 ($t_p$)：** 执行操作的机器的系统时钟时间。
+2. **事件时间 ($t_e$)：** 附加到记录本身的时间戳，表示事件实际发生的时间。
+
+如果数据管道使用处理时间窗口（例如，“统计10:00到10:05之间收到的事件”），结果将是非确定性的。在故障后重放日志会在不同的 $t_p$ 发生，使得事件落入与原始不同的窗口。
+
+要在分析应用程序中做到真正的恰好一次准确性，您必须使用事件时间含义。这使得结果不再受处理器速度的影响。即使系统停机一小时，然后以10倍速度处理积压数据，基于 $t_e$ 的聚合窗口仍保持不变。
+
+然而，使用 $t_e$ 会带来**迟到数据**的问题。由于网络延迟和分布式时钟的差异，$t_e$ 在流中并非单调递增。为了应对此，Flink使用**水印 (Watermarks)**，这是一种类似于检查点屏障的控制流包，它们流经数据流，并声明“从此以后不会有时间戳 $t < T$ 的事件到达”。
+
+水印 (Watermarks)、检查点（状态一致性）和事务（输出一致性）之间的关联构成了现代流处理的核心。
+
+## 参考资料
+
+- [Distributed snapshots: Determining global states of distributed systems](https://doi.org/10.1145/214451.214456) — K. Mani Chandy and Leslie Lamport (1985)
+  Journal: ACM Transactions on Computer Systems; Publisher: Association for Computing Machinery; Volume: 3; Pages: 63-75; DOI: [10.1145/214451.214456](https://doi.org/10.1145/214451.214456)
+  这篇奠基性论文介绍了 Chandy-Lamport 分布式快照算法，这是 Flink 实现精确一次语义的核心机制。
+- [State & Fault Tolerance](https://flink.apache.org/docs/current/docs/concepts/stateful-stream-processing/#state-fault-tolerance) — The Apache Flink Community (2024)
+  Publisher: Apache Software Foundation
+  解释 Flink 状态管理、检查点和恢复机制的官方文档，这些机制实现了精确一次处理。
+- [Event Time](https://ci.apache.org/projects/flink/flink-docs-release-1.7/dev/stream/time_and_watermarks.html#event-time) — The Apache Flink Community (2024)
+  详细说明事件时间、水位线及其在一致、确定性流处理结果中作用的官方文档。
+- [Transactions](https://kafka.apache.org/documentation/#transactions) — The Apache Kafka Community (2024)
+  描述 Kafka 事务 API 的官方文档，这对于与 Flink 等流处理器集成时实现端到端精确一次语义是不可或缺的。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  一本全面的书籍，详细阐述了数据密集型应用程序中的一致性模型、分布式事务和流处理可靠性，包括幂等性和精确一次语义。

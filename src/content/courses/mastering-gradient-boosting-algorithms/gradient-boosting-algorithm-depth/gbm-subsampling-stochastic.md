@@ -1,0 +1,77 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "gradient-boosting-algorithm-depth"
+lesson: "gbm-subsampling-stochastic"
+sourceId: 1944
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-2-gradient-boosting-algorithm-depth/gbm-subsampling-stochastic"
+title: "抽样方法 (随机梯度提升)"
+description: "用于正则化和提高效率的行抽样和列抽样。"
+order: 6
+plots: []
+sourceHash: "ee87ed7f71e4cfdb8b521304b923a17319ce6350386bc7a9eb32142b7c4d4853"
+sourceCorrections: []
+---
+
+标准梯度提升算法迭代地将新树拟合到模型当前预测的伪残差上。然而，这种方法容易出现过拟合 (overfitting)，特别是当单个树被允许生长得较深或进行很多次提升迭代时。为了解决这个问题，引入随机性是提高机器学习 (machine learning)模型稳定性和泛化能力的一种常见策略。类似的概念也可以有效地应用于梯度提升，这种变体通常被称为**随机梯度提升 (SGB)**，由 Friedman 首次提出。
+
+SGB 不使用整个训练数据集来计算伪残差并拟合每个新的基础学习器 (树)，而是在每次迭代中通过对数据进行抽样来引入随机性。这种修改主要有两个目的：通过降低方差来改善泛化能力，并且可能加快计算速度。
+
+在 GBM 框架中，抽样有两种主要的实现方式：
+
+### 行抽样
+
+这是与术语“随机梯度提升”最常见的关联形式。在拟合每棵新树 $h_m(x)$ 之前，会*不放回地*随机选择一部分训练实例（行）。假设所选比例是 $\eta_{subsample}$（在 Scikit-learn 等库中通常由名为 `subsample` 的参数 (parameter)控制）。仅使用 $N \times \eta_{subsample}$ 样本的这个子集来：
+
+1. 基于当前的集成模型 $F_{m-1}(x)$，计算所选实例的伪残差。
+2. 仅使用这些选定的实例及其对应的伪残差，拟合新的决策树 $h_m(x)$。
+
+*未选择*实例的伪残差不直接用于拟合第 $m$ 棵树。
+
+**影响：**
+
+- **正则化 (regularization)：** 每棵树都看到数据的一个略微不同的子集，这使得整个模型不太可能完美地记住训练集的噪声或异常值。这降低了最终模型的方差。
+- **计算：** 在较小的数据集上拟合树在计算上更快。
+- **与收缩的配合：** 抽样通常与小的学习率（收缩）配合使用效果良好。抽样引入的随机性有助于稳定学习过程，尤其当单个树的贡献很小时。
+
+`subsample` 参数的常见范围是 0.5 到 0.8 之间。将 `subsample` 设置为 1.0 会恢复原始的确定性 GBM 算法用于行选择。使用小于 1.0 的值会引入随机性。比例过小可能会阻碍学习过程，增加偏差或需要显著更多的树。
+
+> 随机梯度提升中的行抽样。在每次迭代 (m, m+1, ...) 中，都使用训练实例的一个不同随机子集来计算残差并拟合下一棵树。
+
+### 列抽样 (特征抽样)
+
+除了对行进行抽样，我们在构建每棵树时还可以对特征（列）进行抽样。这类似于随机森林中常用的特征抽样。在每个节点找到最佳分割之前（或有时，每棵树只执行一次），会考虑一个随机的特征子集。
+
+在 Scikit-learn 的 `GradientBoostingClassifier` 和 `GradientBoostingRegressor` 中，这由 `max_features` 参数 (parameter)控制。
+
+**影响：**
+
+- **正则化 (regularization)：** 防止模型过于依赖少数可能占主导地位的特征。鼓励树之间的多样性并提高模型的稳健性。
+- **计算：** 减少了每个节点寻找最佳分割的搜索空间，这可以显著加快训练速度，尤其对于具有许多特征的数据集。
+
+`max_features` 参数通常可以设置为：
+
+- 一个整数：精确使用该数量的特征。
+- 一个浮点数 (比例)：使用 `max_features * n_features` 个特征。
+- 特定字符串：例如 'sqrt' 或 'log2'。
+
+使用 `max_features=None` 或 `max_features=n_features` 意味着所有特征都会被考虑，禁用列抽样。
+
+### 组合抽样方法
+
+行抽样和列抽样并非相互排斥；它们可以一起使用。将它们组合提供了一个强大的正则化 (regularization)机制，并且可以进一步提高计算效率。例如，将 `subsample` 设置为 0.8 且 `max_features` 设置为 0.8 意味着每棵树都使用 80% 的行构建，并在寻找分割时考虑 80% 的特征。
+
+这些方法将确定性 GBM 转换为随机算法。虽然在优化过程中引入随机性可能看起来反直觉，但它通常使模型对未见过的数据表现出更好的泛化能力，这通过防止过拟合 (overfitting)并在提升过程中考察更多不同类型的基础学习器来实现。`subsample` 和 `max_features` 都成为模型开发过程中重要的超参数 (parameter) (hyperparameter)，需要调整，以及学习率 (`learning_rate`) 和树复杂度参数 (`max_depth`, `min_samples_split` 等)。这些参数之间的关系很重要；例如，较低的抽样率可能需要更多的提升迭代 (`n_estimators`) 或对学习率进行调整。
+
+## 参考资料
+
+- [Stochastic Gradient Boosting](https://www.researchgate.net/publication/220261304_Stochastic_Gradient_Boosting) — Jerome H. Friedman (2002)
+  Journal: Computational Statistics & Data Analysis; Publisher: Elsevier; Volume: 38; Pages: 367-378; DOI: [10.1016/S0167-9473(01)00065-2](https://doi.org/10.1016/S0167-9473%2801%2900065-2)
+  引入了随机梯度提升算法，包括行抽样，用于正则化并提高梯度提升机的泛化能力。
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Publisher: Institute of Mathematical Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  正式介绍了梯度提升机（GBM）算法的奠基性论文，为其迭代函数逼近提供了理论基础。随机梯度提升是其直接扩展。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本关于梯度提升、随机森林及相关集成方法的综合性教材，提供了抽样技术的详细理论解释。（第2版）
+- [scikit-learn User Guide: Gradient Boosting](https://scikit-learn.org/stable/modules/ensemble.html#gradient-tree-boosting) — The scikit-learn developers (2024)
+  提供了Scikit-learn中`GradientBoostingClassifier`和`GradientBoostingRegressor`的`subsample`和`max_features`参数的实践细节和解释。

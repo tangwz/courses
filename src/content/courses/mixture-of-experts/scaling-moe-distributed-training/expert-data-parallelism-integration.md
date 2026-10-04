@@ -1,0 +1,71 @@
+---
+course: "mixture-of-experts"
+chapter: "scaling-moe-distributed-training"
+lesson: "expert-data-parallelism-integration"
+sourceId: 4700
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts/chapter-4-scaling-moe-distributed-training/expert-data-parallelism-integration"
+title: "专家并行与数据并行的结合"
+description: "结合专家并行与数据并行，实现高效分布式训练。"
+order: 3
+plots: []
+sourceHash: "85998c36f24e96897831693dc9ea2f6042f48896e415250e3e85c277e379352e"
+sourceCorrections: []
+---
+
+专家并行 (EP) 将 MoE 层中的大量专家分散到多个设备上，有效解决了内存限制问题。然而，EP 自身无法将整体数据处理吞吐量 (throughput)扩展到存放专家的设备的处理能力。对于海量数据集和加快训练时间的需求，我们需要处理更大的全局批次大小。这使得将专家并行与数据并行 (DP) 的方法结合起来变得必要。
+
+数据并行以其标准形式将整个模型复制到多个设备上。每个设备处理输入数据批次的不同部分，在本地计算梯度，然后同步这些梯度（通常通过 All-Reduce 操作），最后更新模型权重 (weight)。然而，正如章节开头所指出的，由于参数 (parameter)数量庞大，即使对于给定输入，许多参数是不活跃的，在每个设备上完整复制大型 MoE 模型会很快变得不可行。
+
+结合 EP 和 DP 提供了一种强大的二维扩展方法。设想您的可用处理单元（例如 GPU）排列成网格状。
+
+- **专家并行维度：** 沿一个维度（例如，网格的行），设备组成一个 EP 组。每个 MoE 层的专家分片存储在该组内的设备上。此组内的通信主要采用 All-to-All 模式，在前向传播期间将令牌（tokens）分发给它们指定的专家，并在反向传播 (backpropagation)期间将梯度分发回来。
+- **数据并行维度：** 沿另一个维度（例如，网格的列），设备组成一个 DP 组。DP 组中的每个设备都持有一个完整的模型*实例*，但重要的是，此实例已经包含了其 EP 组定义的专家分片。每个 DP 副本处理全局数据批次的独特微批次。跨 DP 副本的通信涉及 All-Reduce 操作，以聚合非专家参数（例如注意力层、嵌入 (embedding)和门控网络权重）的梯度，以及由每个 EP 组内的专家计算的梯度。
+
+### 实际运作方式
+
+考虑一个包含 $N$ 个总设备的训练设置，配置为 $N_{dp}$ 个数据并行组，每个组都包含 $N_{ep}$ 个用于专家并行的设备 ($N = N_{dp} \times N_{ep}$)。
+
+1. **数据分发：** 全局输入批次被分割成 $N_{dp}$ 个块。每个 DP 组接收一个块。
+2. **前向传播（在一个 DP 组内）：**
+   - DP 组内的每个设备通过模型的初始层（非 MoE）处理其分配的微批次。
+   - 当遇到 MoE 层时，门控网络（在所有设备上复制）决定每个令牌的目标专家。
+   - 一个 **All-to-All** 通信操作*在 EP 组内*（即在 $N_{ep}$ 个设备之间）发生，以将每个令牌的表示发送到存放其指定专家的设备。
+   - 每个设备使用其本地专家计算其接收到的令牌的输出。
+   - 另一个 **All-to-All** 通信操作*在 EP 组内*发生，根据最初的令牌分发，将专家输出发送回原始设备。
+   - 令牌在 DP 组内其原始设备上通过模型的其余层。
+3. **反向传播 (backpropagation)：**
+   - 梯度流回网络。
+   - 对于 MoE 层，梯度需要被路由回计算前向传播的专家。这涉及在 EP 组内的另一个 **All-to-All** 操作，用于梯度分发。
+   - 专家参数 (parameter)的梯度在存放专家的设备上本地计算。
+   - 共享参数（非专家层和门控网络）的梯度在所有设备上计算。
+4. **梯度聚合：**
+   - 一个 **All-Reduce** 操作发生在 DP 组之间（即在不同 EP 组中对应的 $N_{dp}$ 个设备之间），以平均所有共享参数的梯度。
+   - 重要的是，一个 **All-Reduce** 操作也发生在 DP 组之间，针对专家参数的梯度。尽管每个专家只存在于 EP 组内的一个设备上，但它的梯度需要跨所有使用该对应专家分片的 DP 副本进行聚合。
+5. **优化器步骤：** 每个设备使用聚合后的梯度，更新其本地的共享参数副本及其本地的专家参数分片。
+
+### 配置的可视化
+
+我们可以使用设备网格来表示这种二维并行。例如，使用 8 个 GPU，我们可以有 $N_{dp}=2, N_{ep}=4$ 的配置。
+
+> 一个 2x4 设备配置。GPU 0-3 组成一个使用 4 路 EP 的 DP 副本。GPU 4-7 组成第二个 DP 副本，也使用 4 路 EP。All-to-All 通信发生在行内（EP 组）。All-Reduce 通信发生在列之间（DP 组），连接相同 EP 级别的设备。
+
+### 通信与权衡
+
+这种结合方法带来了 All-to-All（在 EP 组内）和 All-Reduce（在 DP 组之间）两种通信集合操作。效率很大程度上取决于底层硬件互连拓扑以及这些操作的相对成本。
+
+- **增加 $N_{ep}$（更宽的 EP 组）：** 允许每层使用更多专家或更大的专家，扩展模型大小。然而，这会增加 All-to-All 操作的大小和潜在延迟。
+- **增加 $N_{dp}$（更多 DP 副本）：** 增加可以处理的全局批次大小，提高吞吐量 (throughput)。然而，这会增加参与 All-Reduce 操作的设备数量，并且需要更多内存来存储复制的共享参数 (parameter)。
+
+选择最佳的 ($N_{dp}$, $N_{ep}$) 配置需要仔细考量具体模型架构（专家数量、专家与共享层的大小比较）、可用硬件（设备数量、互连带宽/延迟）以及期望的全局批次大小。像 DeepSpeed 这样的框架通常提供工具和抽象来管理这些进程组和通信模式，从而简化用户的配置。然而，理解其基本机制对于性能调优和解决复杂的分布式 MoE 训练运行中的问题是不可或缺的。这种结合为将 MoE 扩展到数百或数千个处理器奠定了基础，使得训练具有数万亿参数的模型成为可能。
+
+## 参考资料
+
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: arXiv preprint arXiv:1701.06538; DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  介绍了稀疏门控混合专家 (MoE) 层，提供了架构基础。
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://arxiv.org/abs/2101.03961) — William Fedus, Barret Zoph, Noam Shazeer (2022)
+  Journal: Journal of Machine Learning Research; Publisher: Microtome Publishing; Volume: 23; Pages: 1-39; DOI: [10.5555/3546030.3546035](https://doi.org/10.5555/3546030.3546035)
+  提出了一种高效的MoE架构，用于扩展至万亿参数模型，并包含实际的训练和分发方法。
+- [GLaM: Efficient Scaling of Language Models with Mixture-of-Experts](https://arxiv.org/abs/2112.06905) — Nan Du, Yanping Huang, Andrew M. Dai, Simon Tong, Dmitry Lepikhin, Yuanzhong Xu, Maxim Krikun, Yanqi Zhou, Adams Wei Yu, Orhan Firat, Barret Zoph, Liam Fedus, Maarten Bosma, Zongwei Zhou, Tao Wang, Yu Emma Wang, Kellie Webster, Marie Pellat, Kevin Robinson, Kathleen Meier-Hellstern, Toju Duke, Lucas Dixon, Kun Zhang, Quoc V Le, Yonghui Wu, Zhifeng Chen, Claire Cui (2021)
+  Journal: ICML 2022; DOI: [10.48550/arXiv.2112.06905](https://doi.org/10.48550/arXiv.2112.06905)
+  讨论了MoE模型扩展至1.2万亿参数，概述了高效分布式训练策略。

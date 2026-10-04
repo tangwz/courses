@@ -1,0 +1,210 @@
+---
+course: "adversarial-machine-learning"
+chapter: "robust-defense-mechanisms"
+lesson: "implementing-adversarial-training-practical"
+sourceId: 4174
+sourceUrl: "https://apxml.com/zh/courses/adversarial-machine-learning/chapter-5-robust-defense-mechanisms/implementing-adversarial-training-practical"
+title: "对抗训练的实现：动手操作"
+description: "练习实现对抗训练，以增强模型对规避攻击的抵御能力。"
+order: 6
+plots: ["plots/4174-0.json"]
+sourceHash: "2b4fbb0034a99d83bed5455e5e396b4bcc9616868d18b524c9b9bbe4cc592f26"
+sourceCorrections: []
+---
+
+好的，现在我们将对抗训练的理论付诸实践。正如本章前文所讨论的，对抗训练旨在通过让模型在训练阶段接触对抗样本，从而使其更能抵御规避攻击。主要思想围绕着解决一个极小极大问题：
+
+
+$$
+\min_{\theta} \mathbb{E}_{(x,y) \sim \mathcal{D}} \left[ \max_{\delta \in S} L(\theta, x+\delta, y) \right]
+$$
+
+
+这里，内部最大化步骤找到给定输入 $x$ 和模型参数 (parameter) $\theta$ 的“最坏情况”扰动 $\delta$，该扰动位于指定的约束集 $S$ 内（通常是一个 $L_p$ 范数球，例如 $S = \{ \delta \mid \|\delta\|_\infty \le \epsilon \}$）。外部最小化步骤随后更新模型参数 $\theta$，使其即使在这些有难度的扰动输入上也能表现良好。投影梯度下降 (gradient descent)（PGD）是用于近似内部最大化步骤的常用算法。
+
+这一实践部分将引导你实现基于PGD的对抗训练，假设你已准备好标准的分类模型和数据集。我们将使用PyTorch进行示例，但这些思想直接适用于TensorFlow或其他深度学习 (deep learning)框架。
+
+### 准备工作
+
+请先确保已安装所需的库：
+
+```bash
+# 使用pip的示例
+pip install torch torchvision numpy
+```
+
+我们假定你有一个标准配置：一个数据集（如CIFAR-10）、一个数据加载器以及一个神经网络 (neural network)模型定义（例如，一个ResNet或一个更简单的CNN）。
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+import numpy as np
+
+# 假定设备已设置（cuda或cpu）
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# --- 数据加载（标准CIFAR-10示例）---
+transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+])
+trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+
+# 假定'Net'是你的模型类定义
+# 示例：model = Net().to(device)
+# 定义损失函数和优化器
+# criterion = nn.CrossEntropyLoss()
+# optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+```
+
+### 在训练中实现PGD攻击
+
+对抗训练的核心是为每个批次动态生成对抗样本。我们需要一个函数，它接受当前模型、一批输入 ($x$) 和标签 ($y$)，并生成对应的对抗样本 ($x_{adv}$)。
+
+这里是一个PGD实现，专门用于在训练期间生成扰动：
+
+```python
+def pgd_attack(model, images, labels, criterion, epsilon=8/255, alpha=2/255, iters=7):
+    """
+    动态生成PGD对抗样本。
+    参数：
+        model: 要攻击的模型。
+        images: 干净的输入图像（批次）。
+        labels: 图像的真实标签。
+        criterion: 损失函数（例如，nn.CrossEntropyLoss）。
+        epsilon: L_无穷范数扰动的最大幅度。
+        alpha: 每次迭代的步长。
+        iters: PGD迭代次数。
+    返回：
+        对抗图像（批次）。
+    """
+    images = images.detach().clone().to(device)
+    labels = labels.detach().clone().to(device)
+
+    # 从随机扰动开始
+    delta = torch.rand_like(images) * (2 * epsilon) - epsilon
+    delta.requires_grad = True
+
+    perturbed_images = torch.clamp(images + delta, min=0, max=1).detach() # 初始扰动图像
+
+    for _ in range(iters):
+        perturbed_images.requires_grad = True
+        outputs = model(perturbed_images)
+        model.zero_grad()
+        loss = criterion(outputs, labels)
+        loss.backward()
+
+        # 使用梯度符号更新扰动
+        grad_sign = perturbed_images.grad.detach().sign()
+        delta = delta.detach() + alpha * grad_sign
+
+        # 将delta投影回L_无穷范数球
+        delta = torch.clamp(delta, -epsilon, epsilon)
+
+        # 添加扰动并将最终图像裁剪到[0, 1]
+        perturbed_images = torch.clamp(images + delta, min=0, max=1).detach()
+
+    return perturbed_images
+```
+
+**`pgd_attack`函数中的注意事项：**
+
+1. **分离输入：** 我们 `detach()` 输入 `images` 和 `labels`，以避免梯度流回前一个训练迭代的计算。我们 `clone()` 它们是为了避免修改原始批次数据。
+2. **随机初始化：** PGD通常在从干净图像周围的$\epsilon$球内随机点开始扰动时效果更好。这有助于避免陷入不佳的局部最优。
+3. **迭代过程：** 攻击会迭代地（步长为 `alpha`）沿着损失函数 (loss function)对*扰动*图像的梯度符号方向进行。
+4. **梯度计算：** 在循环内部，`perturbed_images.requires_grad = True` 对计算当前扰动输入的梯度很重要。
+5. **投影：** 每一步后，扰动 `delta` 会被裁剪（投影）回由 `epsilon` 定义的允许的 $L_\infty$ 球。
+6. **裁剪：** 最终的 `perturbed_images` 会被裁剪到有效的像素范围（例如，归一化 (normalization)图像的 $[0, 1]$）。
+7. **分离输出：** 该函数返回分离的对抗图像，因为它们将作为模型在训练步骤中前向传播的输入，并且在主要模型优化过程中，我们不需要梯度*通过*攻击过程本身回流。
+
+### 修改训练循环
+
+现在，将 `pgd_attack` 函数整合到你的标准训练循环中。你将在PGD生成的对抗版本上计算损失，而不仅仅在干净批次上。
+
+```python
+def train_adversarial(epoch, model, trainloader, optimizer, criterion, epsilon, alpha, iters):
+    """ 执行一个对抗训练的轮次。 """
+    model.train() # 设置模型为训练模式
+    train_loss = 0
+    correct = 0
+    total = 0
+
+    print(f'\nEpoch: {epoch}')
+    for batch_idx, (inputs, targets) in enumerate(trainloader):
+        inputs, targets = inputs.to(device), targets.to(device)
+
+        # 1. 为当前批次生成对抗样本
+        adv_inputs = pgd_attack(model, inputs, targets, criterion,
+                                epsilon=epsilon, alpha=alpha, iters=iters)
+
+        # 2. 使用对抗样本的标准训练步骤
+        optimizer.zero_grad()
+        outputs = model(adv_inputs) # 使用对抗输入
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimizer.step()
+
+        # --- 日志记录 ---
+        train_loss += loss.item()
+        _, predicted = outputs.max(1)
+        total += targets.size(0)
+        correct += predicted.eq(targets).sum().item()
+
+        if batch_idx % 100 == 0: # 每100个批次打印一次进度
+            print(f'Batch: {batch_idx+1}/{len(trainloader)} | Loss: {train_loss/(batch_idx+1):.3f} | Acc: {100.*correct/total:.3f}% ({correct}/{total})')
+
+# --- 训练调用示例 ---
+# 假定模型、优化器、损失函数已定义
+N_EPOCHS = 10 # 示例
+EPSILON = 8/255 # CIFAR-10 L_inf 的标准值
+ALPHA = 2/255
+PGD_ITERS = 7
+
+for epoch in range(N_EPOCHS):
+    train_adversarial(epoch, model, trainloader, optimizer, criterion,
+                      epsilon=EPSILON, alpha=ALPHA, iters=PGD_ITERS)
+    # 在此处添加验证/测试步骤（包括干净和对抗）
+```
+
+### 评估鲁棒性
+
+训练后，你*必须*评估模型在标准干净测试集上的表现，同时也要评估其对抗攻击的能力（最好是强大的攻击，可能与训练期间使用的不同，例如步数更多的PGD或C&W）。
+
+典型的评估包括：
+
+1. 计算在干净测试集上的准确率。
+2. 计算在使用特定攻击（例如 PGD-$k$，其中 $k$ 可能为 20 或更多）从测试集生成的对抗样本上的准确率。
+
+你会观察到，对抗训练大幅提升了模型对抗训练所用攻击（以及通常是相关攻击）的准确率，但通常代价是在干净、未受扰动数据上的准确率略有下降。这是一种众所周知的权衡。
+
+
+
+![对抗训练的典型准确率权衡 (CIFAR-10)](plots/4174-0.json)
+
+
+
+> 模型在干净测试数据和PGD攻击（20次迭代，$\epsilon=8/255$）扰动数据上的准确率比较。对抗训练大幅提升了准确率，但略微降低了干净数据准确率。
+
+### 注意事项
+
+- **超参数 (parameter) (hyperparameter)：** 训练期间 $\epsilon$、$\alpha$ 以及PGD迭代次数（`iters`）的选择显著影响结果。CIFAR-10 $L_\infty$ 的常用值为 $\epsilon=8/255$、$\alpha=2/255$ 以及 $iters=7$ 或 $10$。这些可能需要针对不同的数据集或模型架构进行调整。
+- **计算成本：** 对抗训练比标准训练昂贵得多，因为它需要在每个批次进行多次前向和反向传播 (backpropagation)，仅仅是为了生成对抗样本。
+- **攻击强度：** 在训练期间使用弱攻击（例如 FGSM 或步数很少的PGD）可能会给人一种虚假的安全感。具有足够迭代次数的PGD被认为是一个强大的基准。
+- **混合干净数据和对抗数据：** 对抗训练的一些变体涉及到在每个批次中混合干净和对抗样本进行训练，这可能以不同的方式平衡鲁棒性与干净数据准确率之间的权衡。上述示例仅使用对抗样本，这是一种常见的PGD-AT方法。
+
+这本动手指南介绍了实现对抗训练的要点。通过将PGD等强攻击直接融入学习过程，你可以构建出对推理 (inference)过程中遇到的特定类型对抗性操纵具有更强抵御能力的模型。请记住要严格评估训练好的模型对抗各种攻击的表现，以理解其真正的鲁棒性特点。
+
+## 参考资料
+
+- [Towards Deep Learning Models Resistant to Adversarial Attacks](https://arxiv.org/abs/1706.06083) — Aleksander Madry, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, Adrian Vladu (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1706.06083](https://doi.org/10.48550/arXiv.1706.06083)
+  这篇基础性论文介绍了用于对抗训练的鲁棒优化框架，将其表述为一个 minimax 问题，并展示了基于 PGD 的对抗训练的有效性。
+- [Understanding and Improving Adversarial Training](https://arxiv.org/abs/1901.08573) — Hongyang Zhang, Yaodong Yu, Jiantao Jiao, Eric P. Xing, Laurent El Ghaoui, Michael I. Jordan (2019)
+  Journal: International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1901.08573](https://doi.org/10.48550/arXiv.1901.08573)
+  这篇论文深入探讨了不同的对抗训练策略，包括鲁棒性与干净数据准确性之间的权衡，并提出了改进该过程的方法。

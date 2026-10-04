@@ -1,0 +1,55 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "attention-mechanism-core-concepts"
+lesson: "scaled-dot-product-attention"
+sourceId: 1940
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-2-attention-mechanism-core-concepts/scaled-dot-product-attention"
+title: "缩放点积注意力"
+description: "了解缩放的必要性及其对训练期间梯度稳定性的影响。"
+order: 4
+plots: ["plots/1940-0.json"]
+sourceHash: "1ee0b247fcf462ecae86e5a8104bcbc2bd16c9c714ff857266727ab64a6f263e"
+sourceCorrections: []
+---
+
+缩放点积注意力是对稳定且高效训练的基本改进。它使用查询 ($Q$) 和键 ($K$) 向量 (vector)之间的点积来衡量对齐 (alignment)。
+
+核心的点积注意力机制 (attention mechanism)计算 $QK^T$。思考所涉及的维度。如果查询和键向量的维度是 $d_k$，那么单个查询 $q$ 与单个键 $k$ 之间的点积是 $\sum_{i=1}^{d_k} q_i k_i$。如果我们假设 $q$ 和 $k$ 的分量是均值为零、方差为一的独立随机变量，那么点积的期望值为0，但其方差是 $d_k$。
+
+实际中，特别是在 $d_k$ 值很大时（例如，64、128 或更高，这在 Transformer 中很常见），这些点积的数值会变得非常大。为什么这有问题？这些点积是 softmax 函数的输入，该函数计算注意力权重 (weight)。
+
+$\text{softmax}(z)_i = \frac{e^{z_i}}{\sum_j e^{z_j}}$
+
+softmax 函数表现出饱和行为。如果其输入（点积分数）的数值很大（无论是大的正值还是大的负值），函数会进入梯度极其接近零的区域。想象一下 softmax 函数的导数；随着输入值远离零，它会趋近于零。
+
+
+
+![Softmax 输出与近似梯度](plots/1940-0.json)
+
+
+
+> softmax 函数的梯度在输入值接近零时最大，并且对于大的正输入或负输入，梯度迅速减小。大的点积会将计算推到这些低梯度区域。
+
+小梯度会急剧减慢甚至停止反向传播 (backpropagation)期间的学习过程，因为权重更新变得极其微小。这使得训练深度模型非常困难。
+
+为了抵消这种影响，论文《Attention Is All You Need》引入了一个 $1/\sqrt{d_k}$ 的缩放因子。缩放点积注意力的完整公式是：
+
+$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$
+
+这里，$Q$、$K$ 和 $V$ 是矩阵，分别代表打包的查询、键和值集合。$d_k$ 是键（和查询）向量的维度。
+
+通过将点积 $QK^T$ 除以 $\sqrt{d_k}$，我们有效地调整了它们的数值大小，使 softmax 函数的输入更接近梯度更为显著的区域。这种缩放确保 softmax 输入的方差保持大致不变，无论 $d_k$ 如何选择，这对更稳定的训练过程有很大帮助。它防止注意力权重仅仅因为表示的维度，在训练初期就变得过于集中（集中在单个输入上）或过于分散。
+
+这种缩放不仅仅是一个小的实现细节；它是一个重要组成部分，通过缓解直接源于核心注意力计算的潜在梯度问题，使得深度 Transformer 模型能够成功训练。它使得模型能够有效地学习，即使在使用高维向量表示查询和键时。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构和缩放点积注意力机制的原始论文。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Pearson; Pages: Chapter 9
+  一本关于注意力和Transformer的教科书，其中有专门的章节解释了缩放因子的重要性。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 6
+  本书提供了关于softmax等激活函数以及深度学习中梯度消失现象的背景信息。

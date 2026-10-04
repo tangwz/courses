@@ -1,0 +1,92 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "dealing-with-duplicate-data"
+lesson: "identifying-complete-duplicates"
+sourceId: 3990
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-3-dealing-with-duplicate-data/identifying-complete-duplicates"
+title: "识别完全重复行"
+description: "使用编程方法检测所有列都相同的行。"
+order: 3
+plots: []
+sourceHash: "8b6ff992712f0e19f69aa8b10c32bc8f41515733e85cdd6365bc630de30e8040"
+sourceCorrections: []
+---
+
+有时，数据集里会多次出现完全相同的记录。这可能是因为数据录入错误、数据收集时的系统故障，或者合并不同来源数据时出现问题。这些相同的条目被称为**完全重复行**。它们是指*每一列*中的值都与另一行中的值完全匹配的行。
+
+可以把它想象成你的收藏中有同一个人两张一模一样的名片。它们提供的信息完全相同。在数据集中，这些完全重复的记录不会增加新信息，反而可能使计数虚高，扭曲统计汇总（如平均值或总和），并可能使基于这些数据训练的算法产生偏差。
+
+识别这些行通常是处理重复数据的第一步，因为这是最直接的情况。我们寻找的是整个记录的完全匹配。
+
+### 使用工具查找精确匹配
+
+数据集中可能会出现完全相同的记录。这些重复的条目被称为**完全重复行**，它们的每个列中的值都与另一行中的值完全匹配。大多数数据分析工具都提供函数来检测这些完全重复的行。Python的pandas库常用于数据操作，我们可以在此使用它来演示。例如，以下是一个简单的客户反馈分数数据集：
+
+| 客户ID | 会话ID | 反馈日期 | 分数 | 产品 |
+| --- | --- | --- | --- | --- |
+| C101 | S201 | 2023-10-26 | 8 | WidgetA |
+| C102 | S202 | 2023-10-26 | 9 | WidgetB |
+| C101 | S203 | 2023-10-27 | 7 | WidgetA |
+| C102 | S202 | 2023-10-26 | 9 | WidgetB |
+| C103 | S204 | 2023-10-27 | 10 | WidgetC |
+| C101 | S201 | 2023-10-26 | 8 | WidgetA |
+
+仔细观察，你会发现第二行（索引1：C102, S202, ...）与第四行（索引3）相同。此外，第一行（索引0：C101, S201, ...）与最后一行（索引5）也相同。这些都是完全重复的记录。
+
+如果这些数据加载到一个名为`feedback_df`的pandas DataFrame中，我们可以使用`.duplicated()`方法来识别它们：
+
+```python
+# 如果尚未导入pandas，请先导入
+import pandas as pd
+
+# 示例DataFrame（请替换为你的实际数据加载）
+data = {
+    'CustomerID': ['C101', 'C102', 'C101', 'C102', 'C103', 'C101'],
+    'SessionID': ['S201', 'S202', 'S203', 'S202', 'S204', 'S201'],
+    'FeedbackDate': ['2023-10-26', '2023-10-26', '2023-10-27', '2023-10-26', '2023-10-27', '2023-10-26'],
+    'Score': [8, 9, 7, 9, 10, 8],
+    'Product': ['WidgetA', 'WidgetB', 'WidgetA', 'WidgetB', 'WidgetC', 'WidgetA']
+}
+feedback_df = pd.DataFrame(data)
+
+# 检查完全重复行
+# 默认情况下，它将后续出现的重复项标记为True
+is_duplicate = feedback_df.duplicated()
+
+# 显示每行的布尔结果
+print(is_duplicate)
+```
+
+### 理解输出结果
+
+`duplicated()`方法返回一个包含布尔值（`True`或`False`）的pandas Series。这个Series的长度与原始DataFrame中的行数匹配。
+
+我们示例的输出结果如下：
+
+```
+0    False
+1    False
+2    False
+3     True
+4    False
+5     True
+dtype: bool
+```
+
+解读如下：
+
+- **`False`**: 表示该行在目前检查过的数据集中是唯一的，或者是*一组重复行*中的第一次出现。默认情况下，pandas会将它遇到的第一个实例视为“原始”数据，而不是重复数据。
+- **`True`**: 表示该行是DataFrame中*较早出现*的行的精确副本。在我们的例子中，第3行被识别为`True`，因为它与第1行相同。第5行被标记 (token)为`True`，因为它与第0行相同。
+
+这个布尔Series作为一个标记，指出基于所有列匹配的冗余副本行。在进行下一步之前，这种识别是必不可少的，下一步通常涉及决定是否移除这些标记的重复项以清理数据集。我们将在“移除重复行”一节中介绍移除过程。
+
+## 参考资料
+
+- [pandas.DataFrame.duplicated](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.duplicated.html) — pandas development team (2024)
+  关于如何使用`duplicated()`方法在pandas DataFrame中识别完全重复行的官方文档。
+- [Python for Data Analysis](https://learning.oreilly.com/library/view/python-for-data/9781491957653/) — Wes McKinney (2017)
+  Publisher: O'Reilly Media
+  一本关于使用pandas进行数据操作和清洗的实用指南，包含重复数据检测。
+- [Data Mining: Concepts and Techniques](https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1) — Jiawei Han, Micheline Kamber, and Jian Pei (2011)
+  Publisher: Morgan Kaufmann
+  提供了数据预处理的背景信息，包括处理冗余数据的方法。

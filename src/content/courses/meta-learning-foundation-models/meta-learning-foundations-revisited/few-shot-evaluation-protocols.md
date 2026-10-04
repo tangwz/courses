@@ -1,0 +1,80 @@
+---
+course: "meta-learning-foundation-models"
+chapter: "meta-learning-foundations-revisited"
+lesson: "few-shot-evaluation-protocols"
+sourceId: 4302
+sourceUrl: "https://apxml.com/zh/courses/meta-learning-foundation-models/chapter-1-meta-learning-foundations-revisited/few-shot-evaluation-protocols"
+title: "少量样本学习的评估方法"
+description: "少量样本适应表现的标准基准与严格评估方法。"
+order: 4
+plots: []
+sourceHash: "ea82596b00538d00acb64e6714399a50ef2ff9e5695e9bc2623306be24b11bdd"
+sourceCorrections: []
+---
+
+评估模型从有限数据中学习新任务的能力是元学习研究的核心。与通常涉及单个大型测试集的标准监督学习 (supervised learning)评估不同，少量样本学习评估需要在由*全新*、此前未见过的任务组成的分布上评估表现，每个任务都只有少量训练数据。这要求有特定的方法和基准，以确保结果严格且可比较。
+
+### N-向 K-样本分类任务
+
+评估少量样本学习，特别是在分类方面的最常见框架是*N*-向 *K*-样本任务。
+
+- **N**：表示任务中不同类别的数量。
+- **K**：表示每个类别提供用于适应（学习）的带标签样本数量。这些 $N \times K$ 个样本构成**支持集**（$S$）。
+- **查询集 (Q)**：使用支持集适应后，模型在来自*相同* $N$ 个类别的另一组样本上进行评估。这就是查询集（$Q$），它通常包含的每个类别的样本数量与支持集不同（例如，每个类别15个查询样本）。
+
+目标是在从支持集 $S$ 学习之后，最大化查询集 $Q$ 上的准确率。典型的评估做法是，从一组指定的*元测试类别*（在元训练期间完全保留的类别）中采样大量此类N-向 K-样本任务，并平均其表现。
+
+例如，“5-向 1-样本”任务意味着模型必须在每个类别仅提供1个样本的情况下学习区分5个类别，然后对来自这5个类别的新样本进行分类。“20-向 5-样本”任务涉及20个类别，每个类别有5个样本用于学习。
+
+### 标准基准
+
+有几个基准数据集已成为评估少量样本学习算法的标准，便于不同方法之间的直接比较。虽然最初主要集中在计算机视觉，但相似的原则也适用于适应语言模型或其他大型模型。
+
+- **Omniglot**：一个包含来自50种不同字母手写字符的数据集。常用于20-向或50-向、1-样本或5-样本任务。其类别数量多（总共1623个），但每个类别的实例相对较少，使其适合学习类别表示。
+- **miniImageNet**：ImageNet的一个子集，专为少量样本学习设计。它包含100个类别，每个类别有600张图像。标准划分通常使用64个类别进行元训练，16个用于元验证，20个用于元测试。通常在5-向 1-样本和5-向 5-样本任务上进行评估。
+- **TieredImageNet**：另一个具有层次结构（将类别分组到更宽泛的分类下）的ImageNet子集。它提供的类别数量（总共608个，分为351个训练，97个验证，160个测试）多于miniImageNet，可能减少元测试类别在语义上与元训练类别过于接近的可能性。
+- **Meta-Dataset**：一个更具挑战性的基准，它结合了多个数据集（ImageNet、Omniglot、Aircraft、Birds、Textures、Quick Draw、Fungi、VGG Flower），每个任务的数据特点和可用性各有不同，模拟更真实、异构的学习情况。
+
+尽管这些源自计算机视觉，但适应性评估原则也适用于自然语言处理（NLP）和其他大型模型普遍存在的范围。对于NLP，基准通常涉及从GLUE或SuperGLUE等集合中采样少量样本分类或序列标注任务，尽管构建多样化的任务分布仍然是一个活跃的研究方向。
+
+### 评估步骤
+
+一种有效的评估方法包括以下步骤：
+
+1. **数据划分**：将可用类别分为三个不重叠的集合：元训练集、元验证集和元测试集。这确保了元测试期间遇到的任务使用完全未见的类别。
+2. **元训练**：使用仅从元训练类别中采样的任务来训练元学习算法。元验证集用于超参数 (parameter) (hyperparameter)调整和选择最佳元模型检查点。
+3. **元测试**：在大量*仅*从元测试类别中采样的任务上评估最终的元学习模型（或适应策略）。
+   - 对于每个元测试任务：
+     - 从元测试集中采样 $N$ 个类别。
+     - 每个类别采样 $K$ 个样本，形成支持集 $S_i$。
+     - 从相同的 $N$ 个类别中采样一组不同的样本，形成查询集 $Q_i$。
+     - 使用 $S_i$ 适应模型。
+     - 计算 $Q_i$ 上的准确率（或另一个相关指标）。
+4. **结果报告**：报告所有元测试任务的平均准确率，通常附带95%置信区间，以考虑任务采样的方差。
+
+> 通用元测试步骤：元学习模型在从保留类别中采样的多个独立少量样本任务上进行评估。表现通过这些任务进行平均。
+
+### 大型模型的考量
+
+当评估大型模型的少量样本适应能力时：
+
+- **计算成本**：如果适应涉及为每个任务微调 (fine-tuning)大型模型的一部分，元测试可能仍然计算量大。需要高效的评估方法。
+- **基准相关性**：尽管标准基准很有用，但评估在与大型模型预期应用高度相关的任务上的表现（例如，针对大型语言模型的特定NLP任务，针对视觉Transformer的专业视觉任务）能提供更具实践意义的认识。
+- **参数 (parameter)效率**：评估通常不应只考虑准确率，还应考虑适应所需的计算资源（时间、内存、浮点运算），特别是在将元学习与参数高效微调（PEFT）方法进行比较时。
+
+遵循标准化的评估方法是很重要的，对于了解不同元学习方法的优点与局限很有用，特别是当它们应用于从少量任务特定数据适应大型模型的复杂挑战时。这确保了进展可以衡量，并且技术可以可靠地进行比较。
+
+## 参考资料
+
+- [Human-level concept learning through probabilistic program induction](https://doi.org/10.1126/science.aab3050) — Brenden M. Lake, Ruslan Salakhutdinov, Joshua B. Tenenbaum (2015)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 350; Pages: 1332-1338; DOI: [10.1126/science.aab3050](https://doi.org/10.1126/science.aab3050)
+  这篇基础性论文介绍了 Omniglot 数据集，展示了少样本学习能力，推广了从极少样本中学习的理念以及 N-way K-shot 任务的表述。
+- [Optimization as a Model for Few-Shot Learning](https://openreview.net/pdf?id=rJ6l06YgP) — Sachin Ravi, Hugo Larochelle (2017)
+  Journal: International Conference on Learning Representations (ICLR)
+  这篇论文因引入 miniImageNet 基准测试和元学习框架而广受认可，确立了元学习社区中 N-way K-shot 任务的通用评估实践。
+- [Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few Examples](https://openreview.net/forum?id=rkg-l3C9Fx) — Vincent Triantafillou, Tyler Zhu, Kevin Han, Dian Peng, Andrei Bursuc, Frank Wood, Sergey Levine, Chelsea Finn (2019)
+  Journal: International Conference on Learning Representations (ICLR)
+  引入了 Meta-Dataset，这是一个结合了多个数据集的挑战性基准测试，旨在促进在异构少样本学习场景中评估方法的稳健性，并超越单一数据集的评估。
+- [Generalizing from a Few Examples: A Survey on Few-Shot Learning](https://doi.org/10.1145/3386252) — Yaqing Wang, Quanming Yao, James T. Kwok, Lionel M. Ni (2020)
+  Journal: ACM Computing Surveys; Publisher: ACM; Volume: 53; Pages: 1-34; DOI: [10.1145/3386252](https://doi.org/10.1145/3386252)
+  这篇全面综述对少样本学习方法进行了广泛概述，包括对评估协议、基准数据集以及各种领域中开放挑战的详细讨论。

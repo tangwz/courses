@@ -1,0 +1,158 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "building-simple-rnns"
+lesson: "setting-up-environment"
+sourceId: 2539
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-3-building-simple-rnns/setting-up-environment"
+title: "搭建开发环境"
+description: "关于为RNN开发配置Python和所需库（TensorFlow/PyTorch, NumPy）的指南。"
+order: 1
+plots: []
+sourceHash: "691a42d632deacf4977100c158f5e043bf32d7af99996f5f1cddd2091f0d6a59"
+sourceCorrections: []
+---
+
+配置得当的开发环境对于将循环神经网络 (neural network) (RNN)实现为功能代码至关重要。这包括确保安装了Python，以及数值计算和深度学习 (deep learning)所需的库。环境配置的连贯性有助于避免常见问题，使您可以专注于构建和训练模型。
+
+本节介绍准备工作区所需的必要工具和步骤。我们假设您对在操作系统（Linux、macOS或Windows）上使用命令行或终端有一定了解。
+
+### 核心要求
+
+您至少需要：
+
+1. **Python：** 我们将使用的编程语言。
+2. **包管理器（`pip`）：** 用于安装Python库。
+3. **虚拟环境工具（`venv`或`conda`）：** 用于隔离项目依赖。
+4. **深度学习 (deep learning)框架（TensorFlow或PyTorch）：** 提供用于构建神经网络 (neural network)（包括RNN层）的高级API。
+5. **NumPy：** Python中进行数值运算的基础库，对处理深度学习框架使用的数据张量非常重要。
+
+### Python安装
+
+大多数现代操作系统都预装了Python，但这可能是一个较旧的版本。我们建议使用Python 3.8或更高版本，以兼容当前的深度学习 (deep learning)库。
+
+您可以通过打开终端或命令提示符并运行以下命令来检查已安装的Python版本：
+
+```bash
+python --version
+# or possibly
+python3 --version
+```
+
+如果您需要安装或升级Python，请访问Python官方网站（[python.org](https://python.org/)）并下载适合您操作系统的安装程序。按照安装说明操作，确保在提示时勾选将Python添加到系统PATH环境变量的选项（尤其是在Windows上）。
+
+### 创建虚拟环境
+
+在安装库之前，强烈建议为您的项目创建一个独立的虚拟环境。这种做法可以避免不同项目所需依赖之间的冲突。Python内置的`venv`模块是一个标准选择。
+
+1. **导航到您的项目目录：** 打开终端并进入您计划存储本课程代码的文件夹。
+
+   ```bash
+   cd path/to/your/project_directory
+   ```
+2. **创建虚拟环境：** 运行以下命令。将`rnn_env`替换为您喜欢的环境名称。
+
+   ```bash
+   python -m venv rnn_env
+   # On some systems, you might need python3
+   # 在某些系统上，您可能需要使用 python3
+   # python3 -m venv rnn_env
+   ```
+
+   这会创建一个目录（例如，`rnn_env`），其中包含Python解释器的副本以及一个用于本地安装库的位置。
+3. **激活虚拟环境：**
+
+   - **在macOS/Linux上：**
+
+     ```bash
+     source rnn_env/bin/activate
+     ```
+   - **在Windows上（命令提示符）：**
+
+     ```bash
+     rnn_env\Scripts\activate.bat
+     ```
+   - **在Windows上（PowerShell）：**
+
+     ```bash
+     rnn_env\Scripts\Activate.ps1
+     ```
+
+   激活后，您的终端提示符通常会显示环境名称（例如，`(rnn_env)`），表示`pip`现在会将包安装到这个独立的 Snyder 环境中。
+
+*备选方案：Conda环境*
+如果您使用Anaconda发行版，可以使用`conda`实现相同的隔离：
+
+```bash
+conda create --name rnn_env python=3.9  # Or your desired Python version
+conda create --name rnn_env python=3.9  # 或者您期望的Python版本
+conda activate rnn_env
+```
+
+### 安装核心库
+
+激活虚拟环境后，您现在可以使用Python的包安装程序`pip`来安装必要的库了。
+
+1. **NumPy：** 用于数值计算。
+
+   ```bash
+   pip install numpy
+   ```
+2. **深度学习 (deep learning)框架：** 选择TensorFlow或PyTorch。本课程中讨论的原理和技术适用于两者，尽管具体的代码示例可能会偏向其中一个。
+
+   - **TensorFlow：** 由Google开发。
+
+     ```bash
+     pip install tensorflow
+     ```
+
+     *(注意：这通常安装的是CPU版本。如果您有兼容的NVIDIA GPU并需要GPU加速，请查阅TensorFlow官方文档以获取涉及CUDA和cuDNN的具体安装说明。)*
+   - **PyTorch：** 由Meta（Facebook）开发。
+
+     ```bash
+     # Check the official PyTorch website (pytorch.org) for the
+     # command specific to your OS, package manager (pip/conda),
+     # and CUDA version (if using GPU).
+     # 访问PyTorch官方网站（pytorch.org）以获取
+     # 适合您操作系统、包管理器（pip/conda）和CUDA版本（如果使用GPU）的特定命令。
+     # Example for pip, CPU only on Linux/macOS:
+     # 示例：适用于Linux/macOS上仅CPU的pip安装：
+     pip install torch torchvision torchaudio
+     ```
+
+   您只需为实际练习安装这些框架中的*一个*。
+
+### 验证安装
+
+安装完成后，最好快速验证主要库是否能无错误地导入。直接从已激活的终端中键入`python`（或`python3`）并按Enter键打开Python解释器。然后，尝试导入这些库：
+
+```python
+import numpy as np
+import tensorflow as tf # Or import torch
+import tensorflow as tf # 或 import torch
+
+print(f"NumPy version: {np.__version__}")
+print(f"NumPy 版本: {np.__version__}")
+print(f"TensorFlow version: {tf.__version__}") # Or print(f"PyTorch version: {torch.__version__}")
+print(f"TensorFlow 版本: {tf.__version__}") # 或 print(f"PyTorch 版本: {torch.__version__}")
+
+# Exit the interpreter by typing exit() or pressing Ctrl+D (Linux/macOS) / Ctrl+Z then Enter (Windows)
+# 通过输入 exit() 或按 Ctrl+D (Linux/macOS) / Ctrl+Z 然后 Enter (Windows) 退出解释器
+```
+
+如果这些命令运行没有出现`ImportError`消息，则您的核心环境很可能已正确配置。
+
+> 开发环境堆栈的基本结构，展示了由操作系统管理的Python、使用`venv`等工具创建的虚拟环境，以及使用`pip`安装在该环境中的NumPy和TensorFlow/PyTorch等库。
+
+在独立的 Snyder 环境中安装并验证了这些工具后，您就可以开始使用您选择的深度学习 (deep learning)框架提供的API构建您的第一个循环神经网络 (neural network) (RNN)模型了。接下来的部分将指导您使用这些框架工具来定义和构建简单的RNN。
+
+## 参考资料
+
+- [Virtual Environments and Packages](https://docs.python.org/3/tutorial/venv.html) — Python Software Foundation (2024)
+  解释了如何使用 Python 内置的 `venv` 模块创建和管理独立的虚拟环境。
+- [Getting Started with Anaconda](https://docs.anaconda.com/free/anaconda/getting-started/) — Anaconda Inc. (2024)
+  Publisher: Anaconda Inc.
+  Anaconda 发行版安装和使用 Conda 管理 Python 环境的指南。
+- [Install TensorFlow with pip](https://www.tensorflow.org/install/pip) — TensorFlow Authors (2024)
+  使用 `pip` 安装 TensorFlow 深度学习框架的官方说明。
+- [Get Started with PyTorch](https://pytorch.org/get-started/locally/) — PyTorch Team (2024)
+  在本地系统上安装 PyTorch 深度学习框架的官方说明。

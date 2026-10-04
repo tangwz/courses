@@ -1,0 +1,153 @@
+---
+course: "linear-algebra-fundamentals-machine-learning"
+chapter: "matrix-operations"
+lesson: "matrix-vector-multiplication"
+sourceId: 7816
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-fundamentals-machine-learning/chapter-3-matrix-operations/matrix-vector-multiplication"
+title: "矩阵-向量乘法"
+description: "理解矩阵乘以向量如何将向量转换为新向量。"
+order: 3
+plots: []
+sourceHash: "1a2787761564437038065cd6f748681a9066f33db0b04b8433bf5fdf22050fdc"
+sourceCorrections: []
+---
+
+矩阵加法和标量乘法会改变矩阵内的值，而矩阵-向量 (vector)乘法是一种能根本上转换向量的运算。你可以把矩阵看作一个函数或一台机器：你给它一个向量，它就会输出一个新的向量，这个向量可能有不同的长度并指向新的方向。这种运算是许多机器学习 (machine learning)算法不可或缺的部分，从运行神经网络 (neural network)层到对数据执行几何变换都会用到它。
+
+### 乘法机制
+
+要将矩阵 $A$ 乘以向量 (vector) $v$，有一个必要的兼容规则：矩阵的列数必须等于向量的元素数量。
+
+如果你有一个 $m \times n$ 矩阵（m 行，n 列）和一个 $n \times 1$ 向量（n 行，1 列），结果将是一个新的 $m \times 1$ 向量。
+
+结果向量中的每个元素都是通过取矩阵的一行与输入向量的点积来计算的。让我们通过一个例子来看一下。
+
+假设我们有一个 $2 \times 3$ 矩阵 $A$ 和一个 $3 \times 1$ 向量 $v$：
+
+
+$$
+A = \begin{bmatrix} 3 & 1 & 4 \\ 0 & 2 & 5 \end{bmatrix}, \quad v = \begin{bmatrix} 2 \\ 6 \\ 1 \end{bmatrix}
+$$
+
+
+为了找到新向量的第一个元素，我们取 $A$ 的**第一行**与向量 $v$ 的点积：
+$(3 \cdot 2) + (1 \cdot 6) + (4 \cdot 1) = 6 + 6 + 4 = 16$
+
+为了找到第二个元素，我们取 $A$ 的**第二行**与向量 $v$ 的点积：
+$(0 \cdot 2) + (2 \cdot 6) + (5 \cdot 1) = 0 + 12 + 5 = 17$
+
+因此，结果向量为：
+
+
+$$
+Av = \begin{bmatrix} 16 \\ 17 \end{bmatrix}
+$$
+
+
+请注意我们是如何将一个三维向量转换为一个二维向量的。这种改变数据维度的能力是矩阵-向量乘法的直接结果。
+
+### 另一种看法：列的线性组合
+
+还有另一种看待相同运算的方式，它能提供更多信息。结果向量 (vector)实际上是矩阵各列的**线性组合**，其中输入向量的元素充当权重 (weight)。
+
+使用相同的矩阵 $A$ 和向量 $v$：
+
+
+$$
+A = \begin{bmatrix} 3 & 1 & 4 \\ 0 & 2 & 5 \end{bmatrix}, \quad v = \begin{bmatrix} 2 \\ 6 \\ 1 \end{bmatrix}
+$$
+
+
+我们可以将乘法改写为：
+
+
+$$
+Av = 2 \begin{bmatrix} 3 \\ 0 \end{bmatrix} + 6 \begin{bmatrix} 1 \\ 2 \end{bmatrix} + 1 \begin{bmatrix} 4 \\ 5 \end{bmatrix}
+$$
+
+
+让我们计算一下：
+
+
+$$
+Av = \begin{bmatrix} 6 \\ 0 \end{bmatrix} + \begin{bmatrix} 6 \\ 12 \end{bmatrix} + \begin{bmatrix} 4 \\ 5 \end{bmatrix} = \begin{bmatrix} 6+6+4 \\ 0+12+5 \end{bmatrix} = \begin{bmatrix} 16 \\ 17 \end{bmatrix}
+$$
+
+
+我们得到了完全相同的结果。这种观点很有用，因为它告诉我们，矩阵乘法 $Av$ 是在 $A$ 的列所定义的空间中查找一个点。在机器学习 (machine learning)中，这通常表示根据一些输入权重（向量）来组合特征（列）。
+
+### 几何变换
+
+理解矩阵-向量 (vector)乘法最直观的方式之一是将其视为几何变换。矩阵可以在空间中旋转、缩放或剪切向量。
+
+让我们取一个简单的二维向量和一个执行“剪切”变换的矩阵。剪切变换会使空间倾斜，将正方形变为平行四边形。
+
+我们的向量是 $v = \begin{bmatrix} 2 \\ 3 \end{bmatrix}$，我们的剪切矩阵是 $M = \begin{bmatrix} 1 & 0.5 \\ 0 & 1 \end{bmatrix}$。
+
+让我们计算乘积 $Mv$：
+
+
+$$
+Mv = \begin{bmatrix} 1 & 0.5 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 2 \\ 3 \end{bmatrix} = \begin{bmatrix} (1 \cdot 2) + (0.5 \cdot 3) \\ (0 \cdot 2) + (1 \cdot 3) \end{bmatrix} = \begin{bmatrix} 2 + 1.5 \\ 0 + 3 \end{bmatrix} = \begin{bmatrix} 3.5 \\ 3 \end{bmatrix}
+$$
+
+
+矩阵 $M$ 转换了我们的原始向量，将其头部向右推移，同时保持其 y 坐标不变。
+
+> 向量 $v$ (蓝色) 经矩阵 $M$ 变换后变为向量 $Mv$ (红色)。剪切变换使向量水平移动了。
+
+### 使用 NumPy 实现
+
+NumPy 让矩阵-向量 (vector)乘法变得简单明了。现代且建议使用的运算符是 `@`（矩阵乘法运算符）。
+
+让我们用 Python 执行第一个例子中的相同计算。
+
+```python
+import numpy as np
+
+# 定义2x3矩阵A
+A = np.array([
+    [3, 1, 4],
+    [0, 2, 5]
+])
+
+# 定义3x1向量v
+v = np.array([2, 6, 1])
+
+# 执行矩阵-向量乘法
+result = A @ v
+
+print(f"矩阵 A:\n{A}")
+print(f"\n向量 v:\n{v}")
+print(f"\nA @ v 的结果:\n{result}")
+print(f"\n结果的形状: {result.shape}")
+```
+
+运行这段代码将产生以下输出：
+
+```
+Matrix A:
+[[3 1 4]
+ [0 2 5]]
+
+Vector v:
+[2 6 1]
+
+Result of A @ v:
+[16 17]
+
+Shape of the result: (2,)
+```
+
+这与我们手动计算的结果完全一致。NumPy 会自动处理每行的点积计算。在一些旧的代码库中，你可能还会看到使用 `np.dot(A, v)`，它对于此运算也能达到相同的结果。不过，使用 `@` 通常能让代码更易读，因为它专门用于矩阵乘法。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/linearalgebra/) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  一本基础性教科书，全面解释了线性代数，包括矩阵运算、线性组合以及矩阵向量积的几何方面。
+- [Mathematics for Machine Learning](https://mml-book.com) — Marc Peter Deisenroth, A. Aldo Faisal, and Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press
+  为机器学习提供了扎实的数学基础，涵盖了矩阵向量乘法等线性代数概念及其在数据转换中的应用。
+- [numpy.matmul](https://numpy.org/doc/stable/reference/generated/numpy.matmul.html) — NumPy Developers (2024)
+  NumPy官方的矩阵乘法函数文档，详细说明了其用法、参数和行为，对实际实现至关重要。

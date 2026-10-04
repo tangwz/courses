@@ -1,0 +1,135 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "foundational-text-generation"
+lesson: "handling-streaming-responses"
+sourceId: 7752
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-1-foundational-text-generation/handling-streaming-responses"
+title: "处理流式响应"
+description: "掌握LLM流式响应的处理方式，用于构建即时互动程序，例如聊天机器人。"
+order: 5
+plots: []
+sourceHash: "53342ce4e35119230038bf3cd21b7d4f0bccc2ad85d28300763bc27610c95cf5"
+sourceCorrections: []
+---
+
+文本生成的一种常用做法是进行一次API调用，例如使用 `generate` 函数。这种做法虽然直接，但对于互动程序来说有一个明显缺点：用户必须等到整个响应生成完毕才能看到任何输出。对于短响应，这或许可以接受，但对于较长的响应，体验可能会显得缓慢且无响应。更好的用户体验是逐个令牌地显示正在生成的响应。这便称为流式传输。
+
+流式传输极大地降低了应用程序的 *感知延迟*。用户无需等待几秒钟以获取整个段落，而是几乎即时地看到首批词语出现，并能在其余响应生成时开始阅读。这使得应用程序感觉更快、更具活力，对于聊天机器人、代码助手及其他即时工具来说尤其如此。
+
+标准调用和流式调用之间的区别可以通过它们的时间线来显示。标准调用会等待所有处理完成后才返回数据，而流式调用则在整个处理期间分块返回数据。
+
+> 标准API调用与流式调用之间的时间线比较。流式传输能更早地提供首个内容片段，提升响应速度。
+
+### 使用 `generate_stream` 实现即时响应
+
+为应对流式传输，工具包提供了 `generate_stream` 函数。`generate_stream`不会在完整生成完成后返回单个 `GenerationResponse` 对象，而是返回一个Python生成器。你可以遍历这个生成器，以接收在可用时传回的响应片段。
+
+以下是其基本用法示例：
+
+```python
+from kerb.generation import generate_stream, ModelName
+
+prompt = "用两句话解释Python中async/await的原理。"
+
+print("流式响应:")
+full_content = ""
+for chunk in generate_stream(prompt, model=ModelName.GPT_4O_MINI):
+    # 立即将每个内容片段打印到控制台
+    print(chunk.content, end="", flush=True)
+    full_content += chunk.content
+
+print("\n\n--- 生成完成 ---")
+print(f"最终整合内容: {full_content}")
+```
+
+在这段代码中，`for`循环会处理从API收到的每个`StreamChunk`对象。我们立即打印每个块的`content`，使用`end=""`避免换行，并使用`flush=True`确保输出即时显示。同时，我们将内容拼接至`full_content`变量中，以便在最后获得完整的响应。
+
+### 基于对话上下文 (context)构建
+
+`generate_stream`函数同样适用于处理对话历史。你可以传入`Message`对象列表，模型的响应将以流式传输回来。这种模式非常适合构建互动且吸引人的聊天机器人。
+
+```python
+from kerb.generation import generate_stream, ModelName
+from kerb.core import Message
+from kerb.core.types import MessageRole
+
+messages = [
+    Message(role=MessageRole.SYSTEM, content="你是一位简洁的Python导师。"),
+    Message(role=MessageRole.USER, content="什么是装饰器？"),
+]
+
+print("助手: ", end="", flush=True)
+
+# 响应逐个令牌地流式传输
+for chunk in generate_stream(messages, model=ModelName.GPT_4O_MINI):
+    print(chunk.content, end="", flush=True)
+
+print() # 最终换行
+```
+
+这种方法为用户提供了即时的视觉反馈循环，因为助手的响应看起来像是即时“打出”的。
+
+### 使用回调函数进行高级块处理
+
+有时，你可能想做的不仅仅是打印每个块的内容。例如，你可能希望记录每个块进行分析，检查传入的特定关键词，或更新用户界面。`generate_stream`函数为这些情况接受一个可选的`callback`参数 (parameter)。
+
+回调函数是对从流中收到的每个块执行的函数。
+
+```python
+import time
+from kerb.generation import generate_stream, ModelName
+
+chunks_received = []
+
+def process_chunk(chunk):
+    """处理每个块的回调函数。"""
+    chunks_received.append({
+        "content": chunk.content,
+        "timestamp": time.time(),
+        "finish_reason": chunk.finish_reason
+    })
+    # 你也可以写入日志文件、更新用户界面等。
+
+prompt = "列出5种Python设计模式。"
+
+print("使用回调函数进行流式传输...")
+full_response = ""
+for chunk in generate_stream(
+    prompt,
+    model=ModelName.GPT_4O_MINI,
+    callback=process_chunk
+):
+    print(chunk.content, end="", flush=True)
+    full_response += chunk.content
+
+print("\n\n--- 回调函数分析 ---")
+print(f"收到总块数: {len(chunks_received)}")
+
+if len(chunks_received) > 1:
+    time_span = chunks_received[-1]["timestamp"] - chunks_received[0]["timestamp"]
+    print(f"总流式传输时长: {time_span:.3f}秒")
+    print(f"块之间平均时间: {time_span / len(chunks_received):.4f}秒")
+```
+
+使用回调函数是将会处理每个块的逻辑与应用程序主流程分开的整洁方法。它有助于保持代码结构清晰，特别是当你对每个块执行的操作变得更复杂时。
+
+### 何时使用流式传输
+
+对于涉及直接用户交互的任何程序，强烈推荐使用流式传输。其在感知性能上的改善非常显著。
+
+常见用例包括：
+
+- **聊天机器人：** 提供即时反馈和更自然的对话流程。
+- **代码生成：** 实时显示正在生成的代码，让开发者能及早发现问题。
+- **长篇写作：** 让用户在LLM生成内容时同步查看和编辑。
+- **即时数据分析：** 在处理传入数据流时显示其摘要或洞察。
+
+掌握流式传输，你可以构建出不仅功能强大，而且用户体验快速、响应灵敏、直观的LLM应用程序。
+
+## 参考资料
+
+- [Chat completions](https://platform.openai.com/docs/api-reference/chat/create) — OpenAI (2024)
+  Publisher: OpenAI
+  解释了如何向OpenAI聊天补全API发送流式请求，展示了大型语言模型中逐token生成的常见模式。
+- [\`yield\` expressions](https://docs.python.org/3/reference/expressions.html#yield-expressions) — Python Software Foundation (2024)
+  提供了Python `yield` 关键字和生成器函数的官方解释，这对于实现和理解可迭代的流式响应至关重要。

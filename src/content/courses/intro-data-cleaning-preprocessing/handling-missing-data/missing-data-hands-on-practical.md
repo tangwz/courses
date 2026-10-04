@@ -1,0 +1,189 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "handling-missing-data"
+lesson: "missing-data-hands-on-practical"
+sourceId: 3980
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-2-handling-missing-data/missing-data-hands-on-practical"
+title: "处理缺失数据：动手实践"
+description: "应用识别和处理缺失值的技术，使用示例数据集。"
+order: 8
+plots: ["plots/3980-0.json"]
+sourceHash: "c50d8526f5a313c0b8041fc4fe30b3f31dfb3d3bc9d5856ba0e4193432d74e8d"
+sourceCorrections: []
+---
+
+了解如何识别和处理缺失数据非常重要，而最佳学习方法是亲自动手。我们将使用Python以及数据科学中的标准工具——常用的Pandas库，来处理一个小型示例数据集。如果您以前没有使用过Pandas，不用担心。我们将一步步指导您。
+
+首先，假设我们收集了一些学生数据，但有些信息缺失。让我们在Pandas DataFrame中创建这些数据。我们使用`numpy.nan`来表示缺失值。
+
+```python
+import pandas as pd
+import numpy as np
+
+# 含有缺失值的示例数据
+data = {
+    'StudentID': [101, 102, 103, 104, 105, 106],
+    'Score': [85, np.nan, 70, 95, 88, 78],
+    'Grade': ['B', 'C', np.nan, 'A', 'B', np.nan],
+    'Attendance': [90, 80, 85, np.nan, 95, 88]
+}
+
+df = pd.DataFrame(data)
+
+print("原始DataFrame：")
+print(df)
+```
+
+这段代码创建了一个名为`df`的DataFrame。打印它会显示数据，包括表示缺失信息的`NaN`条目。
+
+### 识别缺失值
+
+如前所述，第一步是找出数据缺失的位置和数量。我们可以使用Pandas中的`isnull()`方法结合`sum()`。`isnull()`返回一个布尔值DataFrame（如果缺失则为True，否则为False），而`sum()`则统计每列中`True`值的数量。
+
+```python
+# 统计每列的缺失值数量
+missing_counts = df.isnull().sum()
+
+print("\n缺失值数量：")
+print(missing_counts)
+```
+
+输出结果将显示：
+`StudentID 0`
+`Score 1`
+`Grade 2`
+`Attendance 1`
+`dtype: int64`
+
+这说明我们有一个`Score`缺失值，两个`Grade`条目缺失，以及一个`Attendance`百分比缺失。`StudentID`没有缺失值。
+
+### 缺失数据可视化
+
+有时，视觉检查有助于了解缺失数据的范围，尤其是在大型数据集中。一个简单的柱状图显示每列缺失值的数量可以很有效。
+
+
+
+![每列缺失值数量](plots/3980-0.json)
+
+
+
+> 柱状图显示在'Score'、'Grade'和'Attendance'列中发现的缺失条目数量。
+
+这个可视化证实了我们通过`isnull().sum()`得到的发现：在这个小型数据集中，'Grade'列的缺失值最多。
+
+### 策略1：删除行（行删除法）
+
+处理缺失数据的一种方法是删除任何包含至少一个缺失值的行。这被称为行删除法。Pandas为此提供了`dropna()`方法。
+
+```python
+# 创建一个副本以避免修改原始DataFrame
+df_dropped_rows = df.copy()
+
+# 删除任何含有NaN值的行
+df_dropped_rows.dropna(inplace=True) # inplace=True 直接修改DataFrame
+
+print("\n删除含有缺失值的行后的DataFrame：")
+print(df_dropped_rows)
+print(f"\n原始形状：{df.shape}")
+print(f"删除行后的形状：{df_dropped_rows.shape}")
+```
+
+您会注意到，索引为1、2和3的行（对应于学生ID 102、103和104）已被删除，因为它们都至少含有一个`NaN`。结果DataFrame `df_dropped_rows`只包含完整记录。
+
+**注意事项：** 这种方法简单，但可能导致大量数据丢失，尤其当缺失值普遍存在时。丢失六名学生中的三名（50%的数据）是一个很大的损失。通常只有当缺失数据行的数量与总数据集大小相比非常小时，才建议采用此方法。
+
+### 策略2：删除列
+
+如果一列含有很大比例的缺失值，它可能提供很少有用信息，并且可以完全删除。我们可以再次使用`dropna()`，但指定`axis=1`以针对列。我们还可以设置一个`thresh`（阈值）参数 (parameter)，该参数指定了保留列所需的*非缺失*值的最小数量。
+
+假设我们决定删除任何非缺失值少于5个的列（我们的DataFrame总共有6行）。
+
+```python
+# 再创建一个副本
+df_dropped_cols = df.copy()
+
+# 删除非缺失值少于5个的列
+threshold = 5
+df_dropped_cols.dropna(axis=1, thresh=threshold, inplace=True)
+
+print("\n删除含有大量缺失值的列后的DataFrame：")
+print(df_dropped_cols)
+print(f"\n原始形状：{df.shape}")
+print(f"删除列后的形状：{df_dropped_cols.shape}")
+```
+
+在我们的例子中，'Grade'只有4个非缺失值（总共6行 - 2个缺失 = 4）。由于4小于我们设定的阈值5，'Grade'列被删除。'Score'和'Attendance'列各有5个非缺失值，达到了阈值，因此被保留。
+
+**注意事项：** 删除列意味着完全失去该特征。只有当该列被认为不重要，或者缺失数据比例过高以至于填补将不可靠时，才执行此操作。
+
+### 策略3：基本填补
+
+我们可以填补空缺，而不是删除数据。这被称为填补。简单的方法包括用相应列的均值、中位数或众数替换缺失值。
+
+- **均值/中位数：** 通常用于数值数据。如果数据存在异常值，中位数通常优于均值，因为它对极端值不那么敏感。
+- **众数：** 通常用于类别数据（如'Grade'）。众数是该列中最常出现的值。
+
+让我们在我们原始的`df`中填补缺失值。
+
+```python
+# 创建一个用于填补的副本
+df_imputed = df.copy()
+
+# 1. 用中位数填补'Score'（数值型）
+median_score = df_imputed['Score'].median()
+print(f"\n用于填补的中位数分数：{median_score}")
+df_imputed['Score'].fillna(median_score, inplace=True)
+
+# 2. 用均值填补'Attendance'（数值型）
+mean_attendance = df_imputed['Attendance'].mean()
+print(f"用于填补的平均出勤率：{mean_attendance:.2f}") # 格式化为2位小数
+df_imputed['Attendance'].fillna(mean_attendance, inplace=True)
+
+# 3. 用众数填补'Grade'（类别型）
+# 注意：如果多个值出现频率相同，mode()可能会返回多个值。我们取第一个 [0]。
+mode_grade = df_imputed['Grade'].mode()[0]
+print(f"用于填补的众数等级：{mode_grade}")
+df_imputed['Grade'].fillna(mode_grade, inplace=True)
+
+print("\n填补后的DataFrame：")
+print(df_imputed)
+
+# 验证是否不再有缺失值
+print("\n填补后的缺失值数量：")
+print(df_imputed.isnull().sum())
+```
+
+输出结果显示计算出的中位数分数、平均出勤率和众数等级。最终填补后的DataFrame中，所有的`NaN`值都已替换：
+
+- 缺失的`Score`（学生ID 102的）被中位数分数替换（根据[85, 70, 95, 88, 78]计算得出86.5）。
+- 缺失的`Attendance`（学生ID 104的）被平均出勤率替换（根据[90, 80, 85, 95, 88]计算得出87.6）。
+- 两个缺失的`Grade`值（学生ID 103和106的）被众数等级替换（'B'，因为它出现得最频繁）。
+
+最后，检查`isnull().sum()`证实了`df_imputed`中没有剩余的缺失值。
+
+**注意事项：** 简单填补保留了数据集大小，但可能会扭曲变量之间的关系并降低方差（尤其是均值填补）。对偏斜的数值数据使用中位数，对类别数据使用众数，是常见的起始方法。
+
+### 选择合适的策略
+
+如您所见，处理缺失数据没有唯一的“最佳”方法。选择取决于：
+
+1. **缺失数据的数量：** 少量数据可能可以删除（行）；一列中大量数据可能需要删除该列或采用更复杂的填补方法。
+2. **数据性质：** 它是数值型还是类别型？是否存在异常值？
+3. **根本原因（如果已知）：** 数据为何缺失？是随机的，还是系统性的？（系统性缺失通常需要更仔细的考虑）。
+4. **分析目标：** 简单填补会影响您的模型性能或分析结论吗？
+
+在本次实践练习中，您应用了基本技术：识别、可视化、删除（行/列）以及基本填补（均值/中位数/众数）。这些方法为数据分析准备工作打下基础。随着学习深入，您会遇到更高级的填补技术，但掌握这些基础知识是重要的第一步。
+
+## 参考资料
+
+- [Working with missing data](https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html) — Wes McKinney, The pandas development team (Current)
+  官方用户指南，详细解释并提供使用 Pandas 识别、理解和处理缺失数据功能的示例。
+- [Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 7
+  Pandas 创建者撰写的入门级教科书，全面涵盖数据操作、清洗和准备技术，并包含处理缺失值的大量示例。
+- [Flexible Imputation of Missing Data, Second Edition](https://doi.org/10.1201/9780429492259) — Stef van Buuren (2018)
+  Publisher: Chapman and Hall/CRC; DOI: [10.1201/9780429492259](https://doi.org/10.1201/9780429492259)
+  一本关于缺失数据插补理论和实践的综合性学术著作，涵盖从简单到高级的各种方法，以及不同缺失机制的影响。
+- [Applied Predictive Modeling](https://www.springer.com/book/9781461468486) — Max Kuhn, Kjell Johnson (2013)
+  Publisher: Springer; Pages: Chapter 3; DOI: [10.1007/978-1-4614-6849-3](https://doi.org/10.1007/978-1-4614-6849-3)
+  为预测建模中的数据预处理提供实用指导，包括处理缺失数据策略及其对模型性能影响的部分。

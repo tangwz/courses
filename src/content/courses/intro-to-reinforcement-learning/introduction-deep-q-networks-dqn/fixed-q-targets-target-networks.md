@@ -1,0 +1,72 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "introduction-deep-q-networks-dqn"
+lesson: "fixed-q-targets-target-networks"
+sourceId: 1661
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-7-introduction-deep-q-networks-dqn/fixed-q-targets-target-networks"
+title: "固定Q目标 (目标网络)"
+description: "描述了使用独立目标网络以稳定Q学习更新的方法。"
+order: 4
+plots: []
+sourceHash: "5b78ded4112435266c4ca0bc8d735199b54d70a8009d44267188b459d30d551e"
+sourceCorrections: []
+---
+
+经验回放有助于打破连续训练样本之间的相关性，从而提高训练的稳定性。然而，在训练Q网络时，另一个主要的不稳定性来源在于时序差分 (TD) 更新中使用的目标值不断变化。
+
+回顾应用于函数近似的标准Q学习更新规则。我们的目标是最小化当前Q值估计 $Q(S_t, A_t; \theta)$ 与目标值之间的差异。这个目标通常使用奖励 $R_{t+1}$ 和*下一*状态 $S_{t+1}$ 的估计值来计算。在Q学习中，这涉及使用当前网络参数 (parameter) $\theta$ 来寻找下一状态的最大Q值：
+
+
+$$
+\text{目标值}_t = R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a'; \theta_t)
+$$
+
+
+损失函数 (loss function)，通常是均方误差 (MSE)，则会是类似如下的形式：
+
+
+$$
+\mathcal{L}(\theta_t) = \mathbb{E} \left[ \left( (R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a'; \theta_t)) - Q(S_t, A_t; \theta_t) \right)^2 \right]
+$$
+
+
+注意到参数 $\theta_t$ 同时出现在目标计算和我们试图调整的值 ($Q(S_t, A_t; \theta_t)$) 中。当我们执行梯度下降 (gradient descent)来更新 $\theta_t$ 时，我们本质上是在追逐一个移动的目标。随着网络权重 (weight) $\theta_t$ 在每一步中变化，目标值本身也会移动。这种相互依赖性可能导致训练期间的震荡甚至发散，使学习不稳定。这就像你每次调整瞄准时，目标也会移动，你很难击中它。
+
+### 使用目标网络稳定目标
+
+为了解决这个“移动目标”问题，DQN算法引入了第二个神经网络 (neural network)：**目标网络**。这个目标网络（我们用 $\theta^-$ 表示其参数 (parameter)）本质上是在线Q网络（我们正在积极训练的那个，参数为 $\theta$）的克隆。
+
+其工作方式如下：
+
+1. **初始化：** 目标网络参数 $\theta^-$ 被初始化为与在线网络参数 $\theta$ 相同。
+2. **目标计算：** 当为损失函数 (loss function)计算TD目标时，我们使用**目标网络** $\theta^-$ 来估计下一状态的值。目标值 $y_t$ 变为：
+   
+   $$
+   y_t = R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a'; \theta^-)
+   $$
+   
+   注意此处使用了 $\theta^-$ 而非 $\theta_t$。
+3. **损失计算：** 损失随后使用这个固定目标 $y_t$ 和在线网络对当前状态-动作对的预测来计算：
+   
+   $$
+   \mathcal{L}(\theta_t) = \mathbb{E}_{(S_t, A_t, R_{t+1}, S_{t+1}) \sim D} \left[ \left( y_t - Q(S_t, A_t; \theta_t) \right)^2 \right]
+   $$
+   
+   这里，$D$ 表示用于采样转换的经验回放缓冲区。
+4. **参数更新：** 只有在线网络参数 $\theta_t$ 会通过使用这个损失进行梯度下降 (gradient descent)来更新。目标网络参数 $\theta^-$ 在这些更新期间保持不变。
+5. **定期更新：** 在固定数量的训练步骤（我们称此频率为 $C$）后，在线网络的权重 (weight)会被复制到目标网络：$\theta^- \leftarrow \theta_t$。
+
+这种机制提供了稳定性，因为在在线网络 $\theta$ 的 $C$ 次连续更新中，目标值 $y_t$ 保持固定。在线网络现在正在学习近似一个静态目标，这大大简化了学习动态，并降低了震荡和发散的可能性。更新目标网络的频率 $C$ 是一个需要选择的超参数 (hyperparameter)；典型值可能从数百到数千步不等，具体取决于特定问题。
+
+> 交互流程图显示了在线网络 ($Q(S_t, A; \theta)$) 和目标网络 ($Q(S_{t+1}, a'; \theta^-)$) 在DQN更新步骤中的使用方式。在线网络参数 $\theta$ 通过梯度下降频繁更新，而目标网络参数 $\theta^-$ 则仅定期通过从 $\theta$ 复制来更新。
+
+通过将固定Q目标与经验回放结合，DQN解决了应用Q学习与深度神经网络等复杂函数近似器时固有的两个主要不稳定性来源。经验回放解除了数据样本的相关性，而目标网络则为学习更新提供了稳定目标。这些技术共同构成了早期DQN从原始像素输入中学习玩Atari游戏取得成功的基础。
+
+## 参考资料
+
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Beattie, Amir Sadik, Ioannis Antonoglou, Helen King, Dharshan Kumaran, Daan Wierstra, Shane Legg, and Demis Hassabis (2015)
+  Journal: Nature; Publisher: Springer Nature; Volume: 518; Pages: 529-533; DOI: [10.1038/nature14236](https://doi.org/10.1038/nature14236)
+  这篇论文介绍了深度Q网络（DQN），首次提出使用独立目标网络来稳定训练。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  一本全面的教材，涵盖了强化学习的理论基础，包括Q学习、时序差分（TD）学习和函数逼近，为DQN的出现奠定了基础。

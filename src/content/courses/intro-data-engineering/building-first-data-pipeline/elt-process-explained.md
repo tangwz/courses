@@ -1,0 +1,72 @@
+---
+course: "intro-data-engineering"
+chapter: "building-first-data-pipeline"
+lesson: "elt-process-explained"
+sourceId: 5530
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-3-building-first-data-pipeline/elt-process-explained"
+title: "ELT流程解析"
+description: "了解提取、加载、转换 (ELT) 数据集成模式所包含的步骤。"
+order: 3
+plots: []
+sourceHash: "6dd7f7aa89c6c7de8f9e8e4a3b97d435f079804ca2fe5c5b479d4689b92e49bf"
+sourceCorrections: []
+---
+
+数据管道中有一种常见模式：**提取、加载、转换 (ELT)**。顾名思义，ELT改变了操作顺序。它不是在数据传输过程中进行转换，而是首先将原始或经过少量处理的数据直接加载到目标系统，然后 *在该* 目标系统内执行转换。
+
+这种方法随着强大、可扩展的云数据仓库和数据湖的兴起而变得更受欢迎。这些系统通常拥有强大的计算能力，能高效地处理大规模转换。
+
+下面我们来分解ELT流程：
+
+### 提取
+
+此步骤与ETL中的“提取”阶段相同。数据从其原始来源获取。这些来源多种多样，包括：
+
+- 关系型数据库（如PostgreSQL、MySQL）
+- NoSQL数据库
+- 应用程序编程接口 (API)
+- 日志文件
+- 存储系统中的文件（如CSV、JSON、Parquet文件）
+
+这里的目的就是将数据从源系统取出。
+
+### 加载
+
+这与ETL的主要不同点。在ELT模式中，提取的数据几乎立即加载到目标存储系统，通常是数据湖或数据仓库。可能会进行少量清理或结构化，但主要的转换工作被推迟。
+
+例如，来自API的原始JSON数据可以直接加载到数据仓库内的暂存表或区域，或者作为文件放入数据湖。在这个阶段，数据结构不一定严格强制执行。这使得数据摄入更快，因为管道无需等待可能耗时的转换。
+
+### 转换
+
+只有当数据存在于目标系统（数据仓库或数据湖）中之后，转换步骤才会发生。数据工程师或分析师随后可以运用目标系统本身的加工能力，对数据进行清洗、丰富、聚合、连接和重塑，使其成为分析或应用程序所需的格式。
+
+通常，此转换步骤是在数据仓库中使用SQL执行，或者使用像Apache Spark这样的处理框架，这些框架可以直接在数据湖或数据仓库中的数据上运行。
+
+> 该图表展示了ELT管道中的操作顺序：从来源提取数据，将其加载到目标系统，然后在该系统内进行转换。
+
+### 为何选择ELT？
+
+ELT方法有诸多优点，尤其是在现代数据环境中：
+
+1. **更快的摄入速度：** 由于转换不在加载前进行，数据能更快地在目标系统中可用。
+2. **灵活性：** 原始数据存储在目标系统中。这意味着您可以稍后为不同目的应用不同的转换，而无需重新提取数据。如果分析需求改变，可以将新的转换逻辑应用于现有原始数据。
+3. **发挥目标系统能力：** 云数据仓库（如Google BigQuery、Amazon Redshift、Snowflake）和数据湖查询引擎设计上能高效处理大规模数据。ELT正是发挥了这种能力进行转换。
+4. **处理多样数据：** ELT很适合数据湖，您可以在其中存储结构化、半结构化和非结构化数据。您可以先加载所有数据，然后决定如何处理和组织它们（有时称为“读时模式”）。
+
+### ELT与ETL：主要区别
+
+根本区别在于转换发生的时间。
+
+- **ETL：** 提取 -> **转换** -> 加载（转换发生在加载到最终目标 *之前*）。
+- **ELT：** 提取 -> **加载** -> 转换（转换发生在加载到目标 *之后*）。
+
+处理大量数据、使用强大的云数据平台以及需要转换灵活时，ELT通常是更优选的方法。您先加载原始材料，然后在您的“厨房”（数据仓库或数据湖）中决定配方。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications](https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  全面介绍数据系统，涵盖数据存储、处理以及ELT等架构模式的相关主题。
+- [Data Engineering with Apache Spark, Delta Lake, and Lakehouse](https://www.oreilly.com/library/view/data-engineering-with/9781098111244/) — Manoj Kukreja (2021)
+  Publisher: O'Reilly Media; Pages: 480
+  详细阐述使用Spark和Delta Lake的现代数据工程实践，涵盖ELT核心的数据湖和湖仓架构。

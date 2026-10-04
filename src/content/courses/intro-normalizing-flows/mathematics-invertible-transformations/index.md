@@ -1,0 +1,20 @@
+---
+course: "intro-normalizing-flows"
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-1-mathematics-invertible-transformations"
+sourceId: 1448
+chapter: "mathematics-invertible-transformations"
+title: "可逆变换的数学原理"
+order: 1
+description: "学习标准化流的数学原理，包括随机变量、变量代换定理以及雅可比行列式。"
+hasQuiz: false
+---
+
+标准化流基于特定的数学前提运行。它们利用一系列可逆函数，将简单的已知概率分布映射到高度复杂的目标分布。为了在 PyTorch 中构建并训练这些模型，我们首先需要明确概率密度在变换过程中的更新规则。
+
+以来自简单基础分布的随机变量 $z$ 为例。如果对其应用一个可逆函数 $f$，我们会得到一个新的随机变量 $x = f(z)$。它们概率密度之间的关系由变量代换定理定义：
+
+$$p(x) = p(z) \left| \det \frac{\partial z}{\partial x} \right|$$
+
+本章重点讲解使该方程生效的数学机制。你将学习如何应用变量代换定理来追踪不同函数间的密度变化。我们将学习雅可比矩阵及其行列式，它用于衡量数学变换过程中空间体积的膨胀或收缩程度。
+
+你还将学会区分流模型的前向运算和逆向运算。前向计算用于评估数据的精确概率密度，而逆向计算则让我们能从学习到的分布中采样新的数据点。本章最后设有一个编程练习，你将编写 Python 代码来计算简单数学函数的雅可比行列式，为后续章节实现完整的流层做好准备。

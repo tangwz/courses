@@ -1,0 +1,80 @@
+---
+course: "intro-large-language-models"
+chapter: "different-llm-types"
+lesson: "general-vs-specialized-models"
+sourceId: 3717
+sourceUrl: "https://apxml.com/zh/courses/intro-large-language-models/chapter-4-different-llm-types/general-vs-specialized-models"
+title: "通用模型与专用模型对比"
+description: "了解为多种任务设计的LLM与为特定功能定制的LLM之间的区别。"
+order: 2
+plots: []
+sourceHash: "c031cb39a7ee7837e806b607476bea7293ca8321e33f68670c5471c8143cc0c1"
+sourceCorrections: []
+---
+
+正如我们所见，并非所有大型语言模型都相同。一个重要的区别在于它们被设计来处理的任务范围。可以将其比作工具箱里的工具：有些是多功能的，而另一些则专为非常具体的任务设计。大型语言模型也遵循类似的模式，大致分为两类：通用模型和专用模型。
+
+### 通用模型：多功能能手
+
+通用大型语言模型旨在具有适应性并能处理各种语言任务。它们之所以能实现这种多功能性，通常是因为它们在极其庞大且极为多样的数据集上进行训练，这些数据集的文本来自网站、书籍、文章以及无数主题的许多其他来源。
+
+**特点：**
+
+- **知识广博：** 它们对许多主题都具有广泛的理解，尽管有时是表层的。
+- **任务灵活：** 它们无需专门的重新训练即可尝试多种任务，包括：
+  - 撰写各种创意文本格式，如诗歌、代码、剧本、音乐作品、电子邮件、信件等。
+  - 以信息丰富的方式回答你的问题，即使问题开放、有难度或比较特别。
+  - 概括长文档或文章。
+  - 翻译语言。
+  - 根据描述生成计算机代码。
+  - 进行开放式对话。
+- **基础特性：** 许多通用模型作为“基础模型”，这意味着它们提供一个立足点，在此之上可以开发出更专业的模型（我们稍后会提到这一点）。
+
+**例子：** 像OpenAI的GPT系列（生成式预训练 (pre-training)Transformer）、谷歌的Gemini或Anthropic的Claude等模型都是通用大型语言模型的知名例子。你可以在前一刻询问它们历史问题，下一刻就让它们起草一封电子邮件。
+
+**权衡：** 它们的优势在于范围广。然而，对于高度具体或技术性任务，通用模型可能不如针对该特定用途训练的模型表现得准确或高效。它可能提供听起来合理但错误的信息，特别是在小众方面。
+
+### 专用模型：专注行家
+
+相比之下，专用大型语言模型针对特定方面或特定类型的任务进行了性能优化。它们通常是通过取一个通用模型，并针对目标方面相关的更小、精选数据集进行进一步训练（一个称为微调 (fine-tuning)的过程）来创建的。或者，它们也可能从头开始以特定目的进行训练。
+
+**特点：**
+
+- **专门知识丰富：** 它们在特定方面（例如，医学、法律、金融、软件开发）拥有丰富的知识。
+- **任务准确度高：** 与通用模型相比，它们在其专长范围内的任务上通常能实现卓越的性能、准确性和可靠性。
+- **效率：** 它们有时会更小、更快地完成特定任务，因为它们无需承担与其功能无关的知识负担。
+
+**例子：**
+
+- **BioBERT：** 为理解生物医学文本而微调，对分析研究论文或临床笔记很有用。
+- **代码生成模型：** 如GitHub Copilot（最初由OpenAI Codex提供支持），这些模型专门针对大量源代码进行训练，以协助开发人员编写和调试代码。
+- **金融LLM：** 针对财务报告、市场数据和经济新闻进行训练，以帮助进行分析或情感检测。
+- **法律LLM：** 针对判例法、法规和法律文件进行训练，以处理合同审查或法律研究协助等任务。
+
+**权衡：** 它们的优势在于在指定用途内的准确度和精确性。然而，如果让一个专业的医疗大型语言模型写诗或翻译斯瓦希里语，它很可能会表现不佳或拒绝，因为那超出了它的专业范围。
+
+> 比较通用LLM和专用LLM在训练数据侧重和任务能力上的区别。
+
+### 哪种模型适合任务？
+
+选择使用通用模型还是专用模型，完全取决于你需要完成的任务。
+
+- 对于**广泛用途、创意写作、一般问答或涉及多个方面的任务**，通用模型因其灵活性通常是合适的起点。
+- 对于**在特定方面需要高准确度的任务，如医疗诊断支持、法律文档分析、复杂代码生成或金融预测**，专用模型几乎总能带来更好、更可靠的结果。
+
+了解这种区别在选择或使用大型语言模型时很重要。知道一个模型是为广泛适用性还是高度专业化而设计，有助于设定预期并选择适合你需求的工具。
+
+## 参考资料
+
+- [On the Opportunities and Risks of Foundation Models](https://arxiv.org/abs/2108.07258) — Rishi Bommasani, Drew A. Hudson, Ehsan Adeli, et al. (2021)
+  Journal: arXiv preprint arXiv:2108.07258; Publisher: Center for Research on Foundation Models (CRFM) at the Stanford Institute for Human-Centered Artificial Intelligence (HAI)
+  定义并讨论了基础模型，这些模型是许多专用大型语言模型的基础，并探讨了它们的特点和社会影响。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS 2020); DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，一个著名的通用大型语言模型，展示了它通过少量示例执行各种任务的能力。
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://aclanthology.org/N19-1423/) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (2019)
+  Journal: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Publisher: Association for Computational Linguistics; Pages: 4171-4186; DOI: [10.18653/v1/N19-1423](https://doi.org/10.18653/v1/N19-1423)
+  介绍了BERT并详细阐述了预训练和微调范式，这是从基础模型创建专用大型语言模型的关键。
+- [BioBERT: a pre-trained biomedical language representation model for biomedical text mining](https://doi.org/10.1093/bioinformatics/btaa682) — Jinhyuk Lee, Wonjin Yoon, Sungwoo Kim, Donghyeon Kim, Sunkyu Kim, and Jounghee Kim (2020)
+  Journal: Bioinformatics; Publisher: Oxford University Press; Volume: 36; Pages: 4006–4012; DOI: [10.1093/bioinformatics/btaa682](https://doi.org/10.1093/bioinformatics/btaa682)
+  介绍了BioBERT，一个针对生物医学领域进行微调的专用模型，说明了通用模型如何适应特定领域。

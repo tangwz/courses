@@ -1,0 +1,236 @@
+---
+course: "julia-for-machine-learning"
+chapter: "julia-ml-pipelines-workflows"
+lesson: "julia-ml-pipelines-practice"
+sourceId: 6896
+sourceUrl: "https://apxml.com/zh/courses/julia-for-machine-learning/chapter-5-julia-ml-pipelines-workflows/julia-ml-pipelines-practice"
+title: "动手实践：构建和管理机器学习流水线"
+description: "使用 MLJ.jl 在一个示例问题上构建、训练、评估和保存完整的机器学习流水线。"
+order: 6
+plots: []
+sourceHash: "ed030f442ce80d7ba5b6d84641f7bb93420aae8ee396308bc8be418be2f1a805"
+sourceCorrections: []
+---
+
+本次实践练习将引导你使用 MLJ.jl 构建、训练、评估和管理一个完整的机器学习 (machine learning)流水线。它展示了流水线如何优化你的工作流程，从最初的数据处理到模型部署。通过封装这些步骤，流水线可以提升你机器学习项目的组织性和可重复性。
+
+我们将使用一个常见的数据集，并逐步构建我们的流水线，使用 Julia 代码说明每个步骤。你将了解到 MLJ.jl 如何轻松地将不同的组成部分（如数据标准化器和分类器）连接成一个统一、连贯的整体。
+
+### 设置环境和数据
+
+首先，请确保你已安装了必要的 Julia 包。本次练习中，我们主要需要 `MLJ` 作为核心框架和模型，以及 `DataFrames` 用于数据处理（如果你的数据尚未采用兼容格式）。我们将使用 Iris 数据集，该数据集可以通过 MLJ 轻松获取。
+
+我们先加载包和数据集：
+
+```julia
+using MLJ
+using DataFrames
+using Random # 用于可重复性
+
+# 设置随机种子以实现可重复性
+Random.seed!(123)
+
+# 加载 Iris 数据集
+X, y = @load_iris; # X 是一个 DataFrame，y 是一个分类向量
+
+# 显示特征和目标的前几行
+first(X, 3)
+```
+
+```
+3×4 Data Frame
+ 行 │ 萼片长度      萼片宽度       花瓣长度       花瓣宽度
+     │ Float64       Float64      Float64       Float64
+───┼───────────────────────────────────────────────────────────
+   1 │          5.1          3.5           1.4          0.2
+   2 │          4.9          3.0           1.4          0.2
+   3 │          5.7          3.8           1.7          0.4
+```
+
+```julia
+first(y, 3)
+```
+
+```
+3-element CategoricalArrays.CategoricalArray{String,1,UInt32}:
+ "setosa"
+ "setosa"
+ "setosa"
+```
+
+Iris 数据集包含 4 个数值特征和一个 3 类分类目标。我们现在将这些数据分为训练集和测试集。
+
+```julia
+# 将数据分为 70% 训练集和 30% 测试集
+train_rows, test_rows = partition(eachindex(y), 0.7, shuffle=true, rng=Random.GLOBAL_RNG);
+
+X_train = X[train_rows, :];
+y_train = y[train_rows];
+X_test = X[test_rows, :];
+y_test = y[test_rows];
+```
+
+### 定义流水线组成部分
+
+流水线由一系列操作组成。对于我们的 Iris 分类任务，我们将使用两个主要组成部分：
+
+1. 一个 `Standardizer` 用于标准化数值特征。
+2. 一个 `DecisionTreeClassifier` 用于执行分类。
+
+我们从 MLJ 的模型注册表中加载这些模型类型。
+
+```julia
+Standardizer = @load Standardizer pkg=MLJModels
+DecisionTreeClassifier = @load DecisionTreeClassifier pkg=DecisionTree verbosity=0
+```
+
+### 构建机器学习 (machine learning)流水线
+
+组成部分定义后，我们现在可以将它们组装成一个流水线。MLJ.jl 的 `@pipeline` 宏提供了一种灵活的方式来定义这些结构。我们将创建一个简单的线性流水线，数据从 `Standardizer` 流向 `DecisionTreeClassifier`。
+
+```julia
+# 定义流水线结构
+IrisPipeline = @pipeline(
+    scaler = Standardizer(),
+    classifier = DecisionTreeClassifier(max_depth=3, rng=Random.GLOBAL_RNG), # 为树设置 rng
+    prediction_type = :deterministic # 我们需要直接的类别预测
+);
+
+# 实例化流水线模型
+pipe_model = IrisPipeline()
+```
+
+这里，`scaler` 和 `classifier` 是我们为步骤起的名字。`prediction_type = :deterministic` 确保当我们对拟合后的流水线调用 `predict` 时，我们得到的是直接的类别标签（例如 "setosa"），而不是概率。如果你需要概率，你会使用 `prediction_type = :probabilistic`。
+
+已定义的 `IrisPipeline` 结构可以可视化以理解其流程：
+
+> 我们简单的 Iris 分类流水线中的数据流程。输入特征首先被标准化，然后送入决策树分类器以生成预测。
+
+### 训练流水线
+
+现在，我们使用流水线模型和训练数据创建一个机器，然后进行拟合。
+
+```julia
+# 使用流水线模型和数据创建一个机器
+mach = machine(pipe_model, X_train, y_train);
+
+# 拟合机器（训练整个流水线）
+fit!(mach, verbosity=0);
+```
+
+当对流水线机器调用 `fit!` 时：
+
+1. `Standardizer`（名为 `scaler`）在 `X_train` 上进行训练。
+2. `X_train` 使用拟合后的 `Standardizer` 进行转换。
+3. `DecisionTreeClassifier`（名为 `classifier`）在转换后的 `X_train` 和 `y_train` 上进行训练。
+
+每个步骤学到的参数 (parameter)都存储在机器中。如果需要，你可以使用 `fitted_params(mach)` 检查各个组成部分的拟合参数。
+
+### 评估流水线
+
+为了评估我们流水线的表现，我们使用交叉验证。MLJ 的 `evaluate!` 函数可以处理此事。
+
+```julia
+# 定义评估指标
+acc = Accuracy()
+f1_micro = MicroF1Score() # 适用于多分类，按样本平均
+
+# 执行 5 折交叉验证
+evaluation_results = evaluate!(mach,
+                               resampling=CV(nfolds=5, shuffle=true, rng=Random.GLOBAL_RNG),
+                               measures=[acc, f1_micro],
+                               verbosity=1);
+
+println(evaluation_results)
+```
+
+这将输出准确度和 F1 分数在交叉验证折叠中的均值和标准差。例如，你可能会看到类似如下内容：
+
+```
+┌───────────────────┬───────────────────┬───────────────────────────────────────────────────────────────────┐
+│ 指标            │ 操作            │ 1.96*标准误差 ± 均值                                         │
+├───────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────┤
+│ 准确度          │ 预测模式          │ 0.063 ± 0.94                                           │
+│ 微F1分数          │ 预测模式          │ 0.063 ± 0.94                                           │
+└───────────────────┴───────────────────┴───────────────────────────────────────────────────────────────────┘
+ 报告.测量值:
+┌───────────────┬────────────────────────────┬───────────────────────────────────────────────┐
+│               │ 1.96*标准误差                │ 均值                                          │
+├───────────────┼────────────────────────────┼───────────────────────────────────────────────┤
+│ 准确度         │ 0.06323891395980072        │ 0.9428571428571428                            │
+│ 微F1分数         │ 0.06323891395980072        │ 0.9428571428571428                            │
+└───────────────┴────────────────────────────┴───────────────────────────────────────────────┘
+ 报告.每折:
+┌───────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬───────────┐
+│               │ 第 1 折             │ 第 2 折             │ 第 3 折             │ 第 4 折    …
+├───────────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┼───────────┤
+│ 准确度         │ 0.9047619047619048  │ 0.9523809523809523  │ 1.0                 │ 0.9047619 …
+│ 微F1分数         │ 0.9047619047619048  │ 0.9523809523809523  │ 1.0                 │ 0.9047619 …
+└───────────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┴───────────┘
+                                                                                 省略 1 列
+```
+
+> `evaluate!` 的输出示例。`Report.measurements` 下的 `mean` 列显示了跨折叠的平均表现。
+
+### 对新数据进行预测
+
+训练和评估后，你可以使用拟合后的流水线对未见数据（例如我们的 `X_test`）进行预测。
+
+```julia
+# 对测试集进行预测
+y_pred = predict(mach, X_test);
+
+# 计算测试集上的准确度
+test_accuracy = accuracy(y_pred, y_test)
+println("Test set accuracy: $(round(test_accuracy, digits=3))")
+
+# 你也可以查看一些预测结果
+first(y_pred, 5)
+```
+
+这将输出测试准确度，例如：`Test set accuracy: 0.956`，以及前几个预测结果。
+
+### 保存和加载已训练的流水线
+
+流水线的一个重要优势是能够保存整个已训练的工作流程，并在稍后加载它用于推理 (inference)或进一步分析。MLJ 为此使用了 Julia 的标准序列化（`.jlso` 格式）。
+
+```julia
+# 保存拟合后的机器（包含已训练的流水线）
+MLJ.save("iris_pipeline_machine.jlso", mach);
+
+# 为了演示加载，我们从文件中加载创建一个新机器
+mach_loaded = machine("iris_pipeline_machine.jlso");
+
+# 使用已加载的机器进行预测
+y_pred_loaded = predict(mach_loaded, X_test);
+
+# 验证预测结果是否相同
+println("来自原始机器和已加载机器的预测结果相同：$(y_pred == y_pred_loaded)")
+```
+
+这证实了加载的机器与原始机器行为一致，保留了所有学到的参数 (parameter)和流水线结构。这对于将模型部署到生产环境或分享可重复的结果非常有用。
+
+### Julia 中可重复机器学习 (machine learning)实验的策略
+
+在整个实践过程中，我们提到了可重复性的各个方面：
+
+1. **环境管理**：使用 Julia 的包管理器 (`Pkg.jl`) 确保你的 `Project.toml` 和 `Manifest.toml` 文件记录所用包的准确版本。这对于他人（或未来的你）重现环境非常重要。这在第 1 章中已有详细介绍。
+2. **随机种子**：设置随机种子（使用 `Random.seed!(integer)`）或将 `rng` 参数 (parameter)传递给具有随机组件的函数（例如 `partition`、`CV` 以及许多集成方法中的 `DecisionTreeClassifier`）对于在不同运行中获得一致结果很重要。我们在设置种子后使用了 `Random.GLOBAL_RNG`，或者在 `rng` 参数可用时传递了一个特定的整数。
+3. **流水线抽象**：流水线本身通过明确定义操作序列来促进可重复性。对流程的任何更改都明确地在流水线定义中进行。
+4. **保存拟合的机器**：正如所示，保存整个 `machine` 对象捕获了你已训练流水线的状态，从而允许其预测行为的精确复制。
+
+通过持续应用这些做法，你可以显著提高机器学习实验的可靠性和可信度。
+
+本次动手实践展示了使用 `Standardizer` 和 `DecisionTreeClassifier` 组成部分构建流水线、训练它、评估其表现、进行预测以及通过保存和加载来管理已训练流水线的核心工作流程。MLJ.jl 的流水线系统，特别是结合 `@pipeline` 宏，提供了一种强大且直观的方式来管理更复杂的机器学习工作流程，你处理更高级问题时可能会遇到这些流程。
+
+## 参考资料
+
+- [The MLJ Manual](https://mlj.sciml.ai/stable/) — The MLJ Developers (2025)
+  Publisher: JuliaAI
+  MLJ.jl的官方文档，介绍了其统一的机器学习接口、通过`@pipeline`宏进行管道构建、模型训练、评估和序列化。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  构建、部署和维护机器学习系统的综合指南，提供设计稳定且可复现ML管道的实用见解。
+- [Pkg.jl Documentation: The Julia Package Manager](https://docs.julialang.org/en/v1/stdlib/Pkg/) — The Julia Language (2023)
+  Publisher: The Julia Language
+  Julia包管理器Pkg.jl的官方文档，解释了环境管理和依赖锁定，以实现可复现的软件开发和ML实验。

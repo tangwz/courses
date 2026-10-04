@@ -1,0 +1,83 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "causal-inference-temporal-dynamic"
+lesson: "granger-causality-shortcomings"
+sourceId: 4393
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-5-causal-inference-temporal-dynamic/granger-causality-shortcomings"
+title: "格兰杰因果关系：表述与局限"
+description: "回顾格兰杰因果关系、其假设、解释以及在建立结构因果关系方面的局限性。"
+order: 2
+plots: []
+sourceHash: "de5bc908e8b4e3b9c7b2ddec3bff2265c5a05e921d2b890d15c5c14142aa0ebb"
+sourceCorrections: []
+---
+
+如章节概述所述，分析时间序列数据中的因果关系需要专门的方法。格兰杰因果关系是分析时间序列间联系的最早且被广泛知晓的观点之一。尽管它影响深远，尤其在计量经济学中，但对于机器学习 (machine learning)系统的实践者而言，理解其准确定义以及更重要的是，在将结果解读为真实因果影响的证明时所存在的显著局限性，非常重要。
+
+### 格兰杰因果关系：预测影响的观点
+
+格兰杰因果关系由诺贝尔奖获得者克莱夫·格兰杰爵士提出，它本质上是对时间序列之间*可预测性*的陈述。当时间序列 $X_t$ 的过去值所包含的信息，在预测 $Y_t$ 方面比 $Y_t$ 自身过去值已包含的信息更有效时，则称 $X_t$ “格兰杰引起”另一个时间序列 $Y_t$。
+
+### 形式化定义
+
+设 $Y_t$ 和 $X_t$ 是两个平稳时间序列。考虑用于预测 $Y_t$ 的两个自回归 (autoregressive)模型：
+
+1. **受限模型：** 仅使用 $Y_t$ 自身的过去值（滞后项）来预测 $Y_t$。
+
+   
+   $$
+   Y_t = \alpha_0 + \sum_{i=1}^{p} \alpha_i Y_{t-i} + \epsilon_{1,t}
+   $$
+   
+
+   其中，$p$ 是包含的滞后项数量，$\alpha_i$ 是系数，而 $\epsilon_{1,t}$ 是该模型的预测误差（残差）。
+2. **非受限模型：** 使用 $Y_t$ 和 $X_t$ 的过去值来预测 $Y_t$。
+
+   
+   $$
+   Y_t = \beta_0 + \sum_{i=1}^{p} \beta_i Y_{t-i} + \sum_{j=1}^{q} \gamma_j X_{t-j} + \epsilon_{2,t}
+   $$
+   
+
+   其中，$q$ 是 $X_t$ 的滞后项数量，$\beta_i$ 和 $\gamma_j$ 是系数，而 $\epsilon_{2,t}$ 是该模型的预测误差。
+
+格兰杰因果关系的定义取决于比较这两个模型预测误差（$\epsilon_{1,t}$ 和 $\epsilon_{2,t}$）的方差。
+
+**定义：** 如果非受限模型的预测误差 $\epsilon_{2,t}$ 的方差在统计上显著小于受限模型的误差 $\epsilon_{1,t}$ 的方差，则 $X_t$ 格兰杰引起 $Y_t$。简单来说，加入过去的 $X_t$ 值会显著改善对 $Y_t$ 的预测。这通常通过对系数 $\gamma_j$ 的联合显著性进行F检验来测试（即 $H_0: \gamma_1 = \gamma_2 = ... = \gamma_q = 0$）。
+
+类似地，通过在上述模型中互换 $X_t$ 和 $Y_t$ 的角色，我们可以测试 $Y_t$ 是否格兰杰引起 $X_t$。
+
+### 显著局限性与误解
+
+尽管预测能力提高的观点有所助益，但将格兰杰因果关系等同于结构因果关系（即断言操纵 $X$ 会导致 $Y$ 的变化）充满危险。对于构建可靠系统的高级实践者来说，认识到这些局限性极其重要。
+
+1. **可预测性与因果关系：** 这是最根本的局限。格兰杰因果关系只是确定过去的 $X$ 是否有助于预测未来的 $Y$。它并不意味着 $X$ 对 $Y$ 施加了物理或结构上的影响。相关性，即使是滞后相关性，也不等于因果关系。
+2. **未观测的混淆：** 导致虚假格兰杰因果关系最常见的原因是存在一个未观测到的共同原因 $Z_t$，它以不同的时间滞后影响 $X_t$ 和 $Y_t$。如果 $Z_t$ 首先影响 $X_t$，然后影响 $Y_t$，那么 $X_t$ 的过去值将显得对 $Y_t$ 具有预测能力，这仅仅是因为它们充当了未观测到的 $Z_t$ 影响的代理。标准格兰杰检验未考虑此类混淆因素。
+
+   > 一个以不同滞后影响 $X_t$ 和 $Y_t$ 的未观测共同原因 $Z_t$ 可能会在 $X_t$ 到 $Y_t$ 之间产生虚假格兰杰因果关系。
+3. **瞬时效应：** 格兰杰因果关系是基于*过去*值定义的。它无法检测 $X_t$ 在同一时间段（$t$）内影响 $Y_t$ 的同期因果关系。这些效应被吸收到误差项的相关性中。
+4. **遗漏变量：** 该检验假设所有相关预测信息都包含在 $X_t$ 和 $Y_t$ 的过去值中。如果第三个已观测变量 $W_t$ 影响 $Y_t$ 并且与过去的 $X_t$ 相关，那么从模型中遗漏 $W_t$ 可能导致关于 $X_t$ 和 $Y_t$ 之间联系的不正确结论。这需要多变量扩展（向量 (vector)自回归 (autoregressive)，VAR）以供实际使用，但即使是基于VAR的格兰杰检验，如果遗漏相关变量，也会受到混淆的影响。
+5. **非线性关系：** 标准表述依赖于线性自回归模型。如果 $X_t$ 和 $Y_t$ 之间的真实联系是非线性的，线性格兰杰检验可能无法检测出预测能力，即使存在因果联系。非线性扩展确实存在，但伴随着自身的复杂性。
+6. **非平稳性：** 支撑格兰杰因果关系的统计检验通常假设时间序列 $X_t$ 和 $Y_t$ 是（协方差）平稳的。将这些检验应用于非平稳数据（例如，带有趋势或单位根的序列）可能会产生虚假结果，表明存在格兰杰因果关系而实际上不存在。通常需要差分等预处理步骤，但这些也可能改变底层联系。
+7. **测量误差：** 对 $X_t$ 或 $Y_t$ 的测量误差可能偏倚系数估计并影响检验结果，可能掩盖真实联系或暗示虚假联系。
+
+### 背景与适用性
+
+尽管从结构因果推断的视角来看存在这些严重局限性，格兰杰因果关系检验有时仍可作为时间序列分析中的初步分析工具。它们可以帮助识别潜在的滞后预测关系，这些关系值得使用本章后面讨论的方法进行进一步更严谨的因果研究，例如结构向量 (vector)自回归 (autoregressive)（SVAR）或时间序列因果发现算法。然而，将显著的格兰杰因果关系结果解释为因果联系的明确证据是一个常见错误，在复杂的机器学习 (machine learning)系统开发中应严格避免。
+
+理解格兰杰因果关系有助于理解为何在时间序列背景下进行因果推断需要更高级的技术。我们现在将注意力转向SVAR等方法，这些方法试图施加更多结构来识别因果效应，尽管它们有自己的一套假设。
+
+## 参考资料
+
+- [Investigating causal relations by econometric models and cross-spectral methods](https://www.jstor.org/stable/1912791) — C. W. J. Granger (1969)
+  Journal: Econometrica: Journal of the Econometric Society; Publisher: The Econometric Society; Volume: 37; Pages: 424-438; DOI: [10.2307/1912791](https://doi.org/10.2307/1912791)
+  这篇论文首次提出了格兰杰因果关系的概念。
+- [Time Series Analysis](https://press.princeton.edu/books/hardcover/9780691042893/time-series-analysis) — James D. Hamilton (1994)
+  Publisher: Princeton University Press
+  这是一本关于时间序列分析的经典综合教材，详细讲解了格兰杰因果关系、VAR模型及相关计量经济学方法。
+- [Causal inference in time series analysis](https://link.springer.com/chapter/10.1007/978-3-642-28876-0_4) — Michael Eichler (2013)
+  Journal: Handbook of Time Series Analysis; Publisher: Springer Berlin Heidelberg; Pages: 75-101; DOI: [10.1007/978-3-642-28876-0_4](https://doi.org/10.1007/978-3-642-28876-0_4)
+  本章节概述了时间序列因果推断方法，从现代视角讨论了格兰杰因果关系的优点与局限性。
+- [Elements of Causal Inference: Foundations and Learning Algorithms](https://mitpress.mit.edu/books/elements-causal-inference) — Jonas Peters, Dominik Janzing, and Bernhard Schölkopf (2017)
+  Publisher: MIT Press; DOI: [10.7551/mitpress/9780262037665.001.0001](https://doi.org/10.7551/mitpress/9780262037665.001.0001)
+  这是一本关于因果推断的教材，对机器学习领域尤为重要，区分了预测与因果关系，并提供了结构因果模型框架。

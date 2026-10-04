@@ -1,0 +1,36 @@
+---
+course: "intro-etl-pipelines"
+chapter: "the-transformation-stage"
+lesson: "why-transform-data"
+sourceId: 5525
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-3-the-transformation-stage/why-transform-data"
+title: "数据转换的必要性"
+description: "了解在将数据载入目标系统前进行转换的原因。"
+order: 1
+plots: []
+sourceHash: "7f55bb0b79fda7c400778c531f377366a8bf78cc0ff2c07f80c1963cdba888cd"
+sourceCorrections: []
+---
+
+你已经成功地从各种来源抽取了数据，但这个过程还没有结束。可以把抽取到的数据想象成从不同供应商那里收集到的原材料：有些可能完全没问题，有些可能有些受损，计量单位不同，或者根本不是你最终成品所需的格式。同样，原始数据也很少能直接用于分析或载入其最终目的地，例如数据仓库或应用程序数据库。
+
+这就是转换阶段的用武之地。这是你清洗、重塑和优化抽取数据的关键步骤。如果没有转换，你就有可能将以下类型的数据提供给下游系统和分析：
+
+- **不一致：** 数据通常来自多个来源，每个来源都有自己的信息表示方式。一个系统可能将州名存储为 'CA'、'NY'、'TX'，而另一个则使用 'California'、'New York'、'Texas'。日期可能被格式化为 `MM/DD/YYYY`、`YYYY-MM-DD` 或 `DD-Mon-YY`。直接使用这些数据会导致混乱和不准确的结果。转换将这些表示标准化为单一、统一的格式。想象一下，当 'CA' 和 'California' 被视为不同地点时，你试图按州统计客户的情况。
+- **不准确：** 原始数据可能包含错误。这些可能是简单的拼写错误（'Unted States' 而不是 'United States'），无效值（售出商品的负数数量），或者可能扭曲分析的异常值（年龄输入为 200）。转换包括根据预定义规则验证数据、纠正可检测的错误或标记 (token)需要进一步审查的数据点。
+- **不完整：** 源数据中可能缺少分析或目标系统所需的字段（空值）。例如，客户的电子邮件地址或电话号码可能未被收集。转换过程定义了处理这些缺失数据的策略，例如用默认值填充、推断缺失信息，或者简单地将其标记为不完整。
+- **结构不佳：** 数据在源系统中的组织方式可能与目标系统所需的结构（或模式）不符。你可能需要将 `first_name` 列和 `last_name` 列合并为一个 `full_name` 列。你可能还需要将地址字段拆分为 `street`、`city`、`state` 和 `zip_code`。数据可能需要聚合，例如在加载前从详细记录中计算总和或平均值。转换重塑数据以完美匹配目标模式。
+- **缺少丰富性：** 有时，原始数据不包含所需的所有信息。你可能需要添加计算字段，例如从客户出生日期推算其年龄，或者根据数量和单价计算总价。你可能还需要通过与其他数据集联接来丰富数据，例如，根据独立参考表中的产品ID查找来添加产品类别信息。转换允许你添加这些有价值的背景信息。
+
+> 在数据转换阶段处理的数据问题。
+
+简而言之，数据转换是连接原始、可能混乱的数据与干净、可靠、结构化信息之间的桥梁。它确保数据质量，强制一致性，应用业务规则，并根据其预期用途对数据进行适当的结构化，无论是驱动仪表盘、训练机器学习 (machine learning)模型还是填充操作型数据库。跳过或敷衍转换往往会导致下游问题，损害你希望从数据中获得的价值。本章后续部分将详细介绍用于执行这些必要数据修改的常用技术。
+
+## 参考资料
+
+- [Building the Data Warehouse, 4th Edition](https://www.wiley.com/en-us/Building+the+Data+Warehouse%2C+4th+Edition-p-9780471774235) — William H. Inmon (2005)
+  Publisher: John Wiley & Sons
+  探讨数据仓库的架构原则，强调转换阶段对数据集成和一致性的重要性。
+- [Data Quality: The Ten Big Problems and How to Avoid Them](https://www.wiley.com/en-us/Data+Quality%3A+The+Ten+Big+Problems+and+How+to+Avoid+Them-p-9780470248672) — Thomas C. Redman Jr. (2008)
+  Publisher: John Wiley & Sons
+  数据质量管理综合指南，提供对常见数据问题（这些问题要求进行强大的转换处理）的详细见解。

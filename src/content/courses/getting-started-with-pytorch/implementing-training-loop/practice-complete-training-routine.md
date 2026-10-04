@@ -1,0 +1,345 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "implementing-training-loop"
+lesson: "practice-complete-training-routine"
+sourceId: 2203
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-6-implementing-training-loop/practice-complete-training-routine"
+title: "动手实践：完整训练流程"
+description: "练习为简单的模型和数据集实现完整的训练和评估循环。"
+order: 11
+plots: []
+sourceHash: "c01722a404220d03e3d489381fcdb36faa39f0b66970ab0d6ee0fa08ced874bc"
+sourceCorrections: []
+---
+
+既然您已经了解了训练的各个组成部分，我们将其整合到一个完整的、可运行的例子中。本实践练习将引导您设置模型、准备数据，并实现训练和评估循环，从而巩固本章讨论的内容。我们还会提到保存训练好的模型状态。
+
+一个使用合成数据的简单线性回归问题将被解决。训练模型的目标是学习 $y \approx 2x + 1$ 的关系。
+
+### 1. 设置：导入与超参数 (parameter) (hyperparameter)
+
+首先，我们导入必要的PyTorch模块，并为训练过程定义一些基本超参数。
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
+
+# 超参数
+learning_rate = 0.01
+num_epochs = 100
+batch_size = 16
+
+# 设备配置（如果可用则使用GPU）
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"正在使用设备: {device}")
+```
+
+### 2. 数据准备
+
+我们将生成用于线性关系的合成数据，并使用 `TensorDataset` 和 `DataLoader` 对其进行包装。
+
+```python
+# 生成合成数据: y = 2x + 1 + 噪声
+true_weight = torch.tensor([[2.0]])
+true_bias = torch.tensor([1.0])
+
+# 生成训练数据
+X_train_tensor = torch.randn(100, 1) * 5 # 100 个样本, 1 个特征
+y_train_tensor = true_weight * X_train_tensor + true_bias + torch.randn(100, 1) * 0.5 # 添加一些噪声
+
+# 生成验证数据（独立数据集）
+X_val_tensor = torch.randn(20, 1) * 5 # 20 个样本, 1 个特征
+y_val_tensor = true_weight * X_val_tensor + true_bias + torch.randn(20, 1) * 0.5
+
+# 创建数据集
+train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
+
+# 创建数据加载器
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False) # 验证数据无需打乱
+```
+
+这里，`TensorDataset` 方便地将输入特征 (`X`) 和目标标签 (`y`) 张量包装起来。`DataLoader` 接着接收此数据集，并提供可迭代的批次，自动处理打乱和批次化。
+
+### 3. 模型、损失与优化器
+
+现在，定义模型架构、损失函数 (loss function)和优化器。由于我们正在模拟线性关系 $y=wx+b$，因此一个简单的线性层就足够了。
+
+```python
+# 定义模型（一个简单的线性层）
+# 输入特征尺寸 = 1, 输出特征尺寸 = 1
+model = nn.Linear(1, 1).to(device) # 将模型移动到选定设备
+
+# 定义损失函数（用于回归的均方误差）
+loss_fn = nn.MSELoss()
+
+# 定义优化器（随机梯度下降）
+optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+print("模型定义:")
+print(model)
+print("\n初始参数:")
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(f"{name}: {param.data.squeeze()}")
+```
+
+我们实例化 `nn.Linear`，它表示操作 $y = Wx + b$。PyTorch 会自动初始化权重 (weight) ($W$) 和偏置 (bias) ($b$) 参数 (parameter)。我们使用均方误差 (`nn.MSELoss`)，因为它是回归任务的标准方法，用于衡量预测值与真实值之间的平均平方差。选择随机梯度下降 (gradient descent) (`optim.SGD`) 来根据计算出的梯度更新模型的参数。请注意，我们将 `model.parameters()` 传递给优化器，以便它知道要更新哪些张量。最后，我们将模型移动到配置好的设备（CPU 或 GPU）上。
+
+### 4. 训练循环
+
+这是模型从数据中迭代学习过程的核心。
+
+```python
+print("\n开始训练...")
+for epoch in range(num_epochs):
+    model.train() # 将模型设置为训练模式
+    running_loss = 0.0
+    num_batches = 0
+
+    # 遍历DataLoader中的批次数据
+    for i, (features, labels) in enumerate(train_loader):
+        # 将批次数据移动到与模型相同的设备上
+        features = features.to(device)
+        labels = labels.to(device)
+
+        # 1. 前向传播：计算模型的预测
+        outputs = model(features)
+
+        # 2. 计算损失
+        loss = loss_fn(outputs, labels)
+
+        # 3. 反向传播：计算梯度
+        # 首先，清除上一步的梯度
+        optimizer.zero_grad()
+        # 然后，执行反向传播
+        loss.backward()
+
+        # 4. 优化器步骤：更新模型权重
+        optimizer.step()
+
+        # 累加损失以便报告
+        running_loss += loss.item()
+        num_batches += 1
+
+    # 打印本轮的平均损失
+    avg_epoch_loss = running_loss / num_batches
+    if (epoch + 1) % 10 == 0: # 每10轮打印一次
+        print(f"Epoch [{epoch+1}/{num_epochs}], Training Loss: {avg_epoch_loss:.4f}")
+
+print("训练完成！")
+```
+
+我们来逐一分析训练轮次循环中的步骤：
+
+1. `model.train()`：将模型设置为训练模式。这对于像 Dropout 或 BatchNorm 这样的层很重要，因为它们在训练和评估期间行为不同。
+2. 我们遍历 `train_loader` 以获取 `features` 和 `labels` 的批次。
+3. 数据被移动到模型所在的 `device` 上。这可以防止运行时错误。
+4. **前向传播**：`outputs = model(features)` 计算模型对输入批次的预测。
+5. **损失计算**：`loss = loss_fn(outputs, labels)` 使用 MSE 准则计算预测与实际标签之间的差异。
+6. **反向传播 (backpropagation)**：
+   - `optimizer.zero_grad()`：清除旧梯度。如果忘记此步骤，梯度将从之前的迭代中累积，导致不正确的更新。
+   - `loss.backward()`：计算损失相对于所有 `requires_grad=True` 的模型参数 (parameter)的梯度。
+7. **优化器步骤**：`optimizer.step()` 使用反向传播中计算的梯度和优化算法（本例中为 SGD）更新模型的参数 (`model.parameters()`)。
+8. 我们跟踪 `running_loss` 来报告本轮的平均损失。
+
+### 5. 评估循环
+
+训练之后（或在训练期间定期，例如每轮结束后），我们需要在不更新模型权重 (weight)的情况下，评估模型在未见数据（验证集）上的表现。
+
+```python
+print("\n开始评估...")
+model.eval() # 将模型设置为评估模式
+total_val_loss = 0.0
+num_val_batches = 0
+
+# 评估时禁用梯度计算
+with torch.no_grad():
+    for features, labels in val_loader:
+        # 将批次数据移动到设备上
+        features = features.to(device)
+        labels = labels.to(device)
+
+        # 前向传播
+        outputs = model(features)
+
+        # 计算损失
+        loss = loss_fn(outputs, labels)
+        total_val_loss += loss.item()
+        num_val_batches += 1
+
+avg_val_loss = total_val_loss / num_val_batches
+print(f"验证损失: {avg_val_loss:.4f}")
+
+# 检查学习到的参数
+print("\n学习到的参数:")
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(f"{name}: {param.data.squeeze()}")
+
+print(f"(真实权重: {true_weight.item():.4f}, 真实偏置: {true_bias.item():.4f})")
+```
+
+评估循环中的主要区别：
+
+1. `model.eval()`：将模型设置为评估模式。
+2. `with torch.no_grad():`：此上下文 (context)管理器在该代码块内禁用梯度计算。这很重要，因为我们在评估时不需要梯度，并且它能减少内存消耗并加快计算速度。
+3. 我们不调用 `loss.backward()` 或 `optimizer.step()`，因为我们只测量性能，而不进行训练。
+4. 我们累加所有验证批次的损失，以获得平均验证损失。
+
+评估后，我们打印学习到的参数 (parameter)。将它们与我们用于生成数据的 `true_weight` (2.0) 和 `true_bias` (1.0) 进行比较。在 100 轮训练后，它们应该相当接近。
+
+### 6. 保存与加载模型状态
+
+保存您训练好的模型非常重要。标准做法是保存模型的 `state_dict`，其中包含所有学习到的参数 (parameter)（权重 (weight)和偏置 (bias)）。
+
+```python
+# 保存模型学习到的参数
+model_save_path = 'linear_regression_model.pth'
+torch.save(model.state_dict(), model_save_path)
+print(f"\n模型 state_dict 已保存到 {model_save_path}")
+
+# 加载模型状态的例子
+# 首先，再次实例化模型架构
+loaded_model = nn.Linear(1, 1).to(device)
+
+# 然后，加载保存的状态字典
+loaded_model.load_state_dict(torch.load(model_save_path))
+print("模型 state_dict 加载成功。")
+
+# 请记住，如果用于推断，请将加载的模型设置为评估模式
+loaded_model.eval()
+
+# 现在您可以使用 loaded_model 进行预测了
+# 使用已加载模型进行预测的例子：
+with torch.no_grad():
+    sample_input = torch.tensor([[10.0]]).to(device) # 示例输入
+    prediction = loaded_model(sample_input)
+    print(f"输入 10.0 的预测值: {prediction.item():.4f}")
+    # 预期输出应接近 2*10 + 1 = 21
+```
+
+通常，保存 `state_dict` 比保存整个模型对象更好，因为它更灵活，且在底层代码更改时更不容易出错。要加载状态，您需要首先创建相同模型架构的实例，然后将字典加载到其中。
+
+### 完整可运行示例
+
+以下是结合所有部分的完整脚本：
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
+
+# 1. 设置：超参数和设备
+learning_rate = 0.01
+num_epochs = 100
+batch_size = 16
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"正在使用设备: {device}")
+
+# 2. 数据准备
+true_weight = torch.tensor([[2.0]])
+true_bias = torch.tensor([1.0])
+X_train_tensor = torch.randn(100, 1, device=device) * 5 # 直接在设备上生成数据
+y_train_tensor = true_weight.to(device) * X_train_tensor + true_bias.to(device) + torch.randn(100, 1, device=device) * 0.5
+X_val_tensor = torch.randn(20, 1, device=device) * 5
+y_val_tensor = true_weight.to(device) * X_val_tensor + true_bias.to(device) + torch.randn(20, 1, device=device) * 0.5
+
+train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False)
+
+# 3. 模型、损失和优化器
+model = nn.Linear(1, 1).to(device)
+loss_fn = nn.MSELoss()
+optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+print("模型定义:")
+print(model)
+print("\n初始参数:")
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(f"{name}: {param.data.squeeze()}")
+
+# 4. 训练循环
+print("\n开始训练...")
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    num_batches = 0
+    for i, (features, labels) in enumerate(train_loader):
+        # 数据已在正确设备上
+        outputs = model(features)
+        loss = loss_fn(outputs, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        num_batches += 1
+
+    avg_epoch_loss = running_loss / num_batches
+    if (epoch + 1) % 10 == 0:
+        print(f"Epoch [{epoch+1}/{num_epochs}], Training Loss: {avg_epoch_loss:.4f}")
+print("训练完成！")
+
+# 5. 评估循环
+print("\n开始评估...")
+model.eval()
+total_val_loss = 0.0
+num_val_batches = 0
+with torch.no_grad():
+    for features, labels in val_loader:
+        # 数据已在正确设备上
+        outputs = model(features)
+        loss = loss_fn(outputs, labels)
+        total_val_loss += loss.item()
+        num_val_batches += 1
+
+avg_val_loss = total_val_loss / num_val_batches
+print(f"验证损失: {avg_val_loss:.4f}")
+
+print("\n学习到的参数:")
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(f"{name}: {param.data.squeeze().item():.4f}") # 单个值使用 .item()
+print(f"(真实权重: {true_weight.item():.4f}, 真实偏置: {true_bias.item():.4f})")
+
+# 6. 保存和加载模型状态
+model_save_path = 'linear_regression_model.pth'
+torch.save(model.state_dict(), model_save_path)
+print(f"\n模型 state_dict 已保存到 {model_save_path}")
+
+loaded_model = nn.Linear(1, 1).to(device)
+loaded_model.load_state_dict(torch.load(model_save_path))
+loaded_model.eval()
+print("模型 state_dict 加载成功。")
+
+with torch.no_grad():
+    sample_input = torch.tensor([[10.0]]).to(device)
+    prediction = loaded_model(sample_input)
+    print(f"输入 10.0 的预测值: {prediction.item():.4f}")
+```
+
+*（注：在合并脚本中，数据生成略有修改，直接在目标 `device` 上创建张量以提高效率，从而无需在循环内部对批次数据使用 `.to(device)`。）*
+
+这个动手示例呈现了在 PyTorch 中训练几乎任何模型的基本结构。您现在有了一个结合数据加载、模型定义、训练迭代、评估和持久化的模板。您可以通过更改步骤3中的模型架构和步骤2中的数据准备来调整此结构以适应更复杂的模型和数据集。训练和评估循环的核心逻辑保持了显著的一致性。
+
+## 参考资料
+
+- [A Gentle Introduction to PyTorch](https://pytorch.org/tutorials/beginner/introyt/introyt1_tutorial.html) — PyTorch team (2024)
+  Publisher: PyTorch Foundation
+  这篇官方教程介绍了PyTorch的核心概念，包括数据处理、模型构建、训练循环和基本的模型保存。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教科书，提供了关于神经网络、线性模型和梯度下降等优化算法的全面理论背景。
+- [Dive into Deep Learning](https://d2l.ai/) — Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola (2024)
+  Publisher: Cambridge University Press
+  一本互动式开源教科书，通过详细的PyTorch代码示例解释了深度学习概念，对实际实现非常有用。
+- [PyTorch Documentation: torch.nn, torch.optim, and torch.utils.data APIs](https://pytorch.org/docs/stable/index.html) — PyTorch team (2024)
+  Publisher: PyTorch Foundation
+  提供了神经网络模块、优化算法和数据加载工具的官方API参考，对于理解PyTorch组件至关重要。

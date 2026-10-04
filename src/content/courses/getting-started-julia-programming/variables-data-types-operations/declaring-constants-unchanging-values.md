@@ -1,0 +1,111 @@
+---
+course: "getting-started-julia-programming"
+chapter: "variables-data-types-operations"
+lesson: "declaring-constants-unchanging-values"
+sourceId: 6774
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-2-variables-data-types-operations/declaring-constants-unchanging-values"
+title: "声明用于固定值的常量"
+description: "如何在 Julia 中定义常量，以表示程序执行期间不应更改的值。"
+order: 8
+plots: []
+sourceHash: "30cdf47196af89512b32d84f69bca93b559949765928bcdcd8393aceb3ca7b39"
+sourceCorrections: []
+---
+
+程序执行期间，经常会遇到需要保持不变的值。比如数学常数 $\pi$，或者像默认端口号或最大尝试次数这样的配置设置。尽管你可以将它们存储在常规变量中，但这样做无法表明它们应有的不变性，并且容易发生意外更改。Julia 提供了一种将此类值声明为常量的方法。
+
+### 什么是常量？
+
+常量是标识符，很像变量，它们绑定到特定的值。主要区别在于，一旦常量被定义并赋值，它就不应再更改。使用常量可以通过为固定值提供描述性名称来提高代码的可读性，并通过表明特定标识符不应被重新赋值来帮助避免错误。
+
+### 使用 `const` 声明常量
+
+在 Julia 中，你使用 `const` 关键字声明常量。约定俗成是将常量名用大写字母表示，如果需要则用下划线分隔单词（例如 `MAX_USERS`、`INTEREST_RATE`）。这个约定不是 Julia 编译器强制要求的，但被广泛采纳并强烈推荐，以提高代码清晰度。
+
+以下是基本语法：
+
+```julia
+const MY_CONSTANT_NAME = value
+```
+
+让我们看几个例子：
+
+```julia
+const PI_APPROX = 3.14159
+const SPEED_OF_LIGHT_MPS = 299792458 # 每秒米数
+const DEFAULT_GREETING = "Hello, Julia User!"
+const MAX_LOGIN_ATTEMPTS = 3
+```
+
+在这些例子中：
+
+- `PI_APPROX` 被赋了一个浮点数。
+- `SPEED_OF_LIGHT_MPS` 被赋了一个整数。
+- `DEFAULT_GREETING` 被赋了一个字符串。
+- `MAX_LOGIN_ATTEMPTS` 被赋了一个表示程序限制的整数。
+
+一旦这些被定义，你就可以像变量一样在代码中使用它们，但要明白它们的值应保持不变。
+
+```julia
+radius = 5.0
+circumference = 2 * PI_APPROX * radius
+println("近似周长: ", circumference)
+
+println(DEFAULT_GREETING)
+```
+
+### `const` 在 Julia 中的行为
+
+理解 `const` 在 Julia 中的行为很重要，因为它可能与其他编程语言中的常量略有不同。
+
+1. **意图声明**：当你用 `const` 声明一个变量时，你是在告诉 Julia（以及阅读你代码的其他程序员）这个标识符旨在永久绑定到其初始值。
+2. **重新赋值警告**：如果你尝试重新赋值一个 `const` 变量，Julia 会允许这样做，但会发出警告。这是一个故意的设计选择。该警告表明你正在执行不寻常且可能导致问题操作。
+
+   ```julia
+   const MY_FIXED_VALUE = 100
+   println(MY_FIXED_VALUE) # 输出: 100
+
+   # 尝试更改值
+   MY_FIXED_VALUE = 200 # 这会产生一个警告
+   println(MY_FIXED_VALUE) # 输出: 200
+   ```
+
+   你将看到类似于：`WARNING: redefining constant MY_FIXED_VALUE` 的警告。尽管值*确实*会改变，但应避免这种做法。`const` 的主要目的是声明一个不变的绑定。
+3. **常量与可变对象**：这一点虽然不明显但很重要。如果 `const` 变量绑定到可变对象（例如数组或字典，我们稍后会详细介绍），那么 `const` 声明意味着该变量将始终指向*那个特定的可变对象*。然而，该可变对象的*内容*仍然可以更改。
+
+   让我们用一个数组（一个有序的项集合）来说明：
+
+   ```julia
+   const MY_SETTINGS = [10, 20, 30]
+   println(MY_SETTINGS) # 输出: [10, 20, 30]
+
+   # 允许修改数组的内容
+   MY_SETTINGS[1] = 99
+   println(MY_SETTINGS) # 输出: [99, 20, 30]
+
+   # 尝试让 MY_SETTINGS 指向一个新数组会引发警告
+   # MY_SETTINGS = [1, 2, 3] # 这会触发“重新定义常量”警告
+   ```
+
+   在这种情况下，`MY_SETTINGS` 将始终指向它初始化时所引用的原始数组对象。你可以更改该数组*内部*的元素（例如 `MY_SETTINGS[1] = 99`），但是你不能让 `MY_SETTINGS` 指向一个完全不同的数组而不发出警告。这是因为名称 `MY_SETTINGS` 与持有该数组的特定内存位置之间的*绑定*是恒定的。
+
+   对于像数字（`Int`、`Float64`）、布尔值（`Bool`）和字符串（`String`）等基本不可变类型，将它们赋值给 `const` 变量会使值在所有意义上都保持不变，因为这些类型一旦创建就不能在内部更改。
+
+### 为什么要使用常量？
+
+在程序中使用常量具有多项优点：
+
+- **可读性**：常量为字面值提供了有意义的名称。`MAX_LOGIN_ATTEMPTS` 比在代码中随处可见的数字 `3` 要清晰得多。
+- **可维护性**：如果需要更新固定值（例如税率变化），你只需在一个地方进行更改：它的 `const` 声明处。这降低了值硬编码在多个位置时可能发生的错误风险。
+- **避免错误**：通过将值声明为 `const`，你表明它不应更改的意图。虽然 Julia 允许在发出警告的情况下重新定义，但警告本身就是开发或调试期间潜在问题的标记 (token)。
+- **潜在的性能优势**：知道一个变量是常量有时可以让 Julia 编译器进行某些优化，从而可能使代码运行更快。这更多是次要的好处，特别是对初学者而言，但了解一下也无妨。
+
+随着你编写更复杂的 Julia 程序，你会发现 `const` 是一个很有价值的工具，用于编写更清晰、更易于管理的代码。这是一个简单的特性，但有助于良好的编程实践。可以将常量视为代码中可靠的指引。
+
+## 参考资料
+
+- [The Julia Language Manual: Variables and Scope](https://docs.julialang.org/en/v1/manual/variables/) — The Julia Language Developers (2024)
+  提供 Julia 中 `const` 的官方和最新解释，包括其声明、重赋值警告行为以及与可变对象的交互。
+- [Think Julia: How to Think Like a Computer Scientist](https://www.oreilly.com/library/view/think-julia/9781492045038/) — Ben Lauwens, Allen B. Downey (2019)
+  Publisher: O'Reilly Media
+  一本易于理解的入门教科书，涵盖 Julia 中的基本编程概念，包括常量使用和目的。

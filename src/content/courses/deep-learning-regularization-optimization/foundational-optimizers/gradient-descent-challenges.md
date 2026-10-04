@@ -1,0 +1,70 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "foundational-optimizers"
+lesson: "gradient-descent-challenges"
+sourceId: 4972
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-5-foundational-optimizers/gradient-descent-challenges"
+title: "标准梯度下降的难题"
+description: "讨论批量梯度下降的局限性，如计算开销和局部最小值。"
+order: 2
+plots: ["plots/4972-0.json"]
+sourceHash: "50a8a56ef5ea987f91a30c2b03b78ec148f4510cfb74c4b94c76ba9c5b98907a"
+sourceCorrections: []
+---
+
+尽管标准梯度下降 (gradient descent)（常被称为批量梯度下降，BGD）为优化提供了坚实的理论依据，但当其应用于深度学习 (deep learning)中常见的大数据集和复杂模型时，会遇到重大的实际障碍。在进行单次参数 (parameter)更新之前，计算梯度需要对训练集中*每一个数据点*的贡献求和。
+
+### 计算开销与内存需求
+
+最直接的难题是巨大的计算开销。深度学习 (deep learning)模型通常在包含数百万甚至数十亿个样本的数据集上进行训练。设想一个包含 $N$ 个样本的数据集。要使用BGD执行一次更新步骤，您需要：
+
+1. 对所有 $N$ 个样本执行前向传播以计算预测值。
+2. 计算所有 $N$ 个样本的损失。
+3. 对所有 $N$ 个样本执行反向传播 (backpropagation)，以计算损失对每个参数 (parameter)的梯度。
+4. 对所有 $N$ 个样本的梯度求平均。
+5. 使用这个平均梯度更新模型参数。
+
+整个过程必须在每个更新步骤（周期）中重复。计算梯度的成本与数据集大小 $N$ 成线性关系。当 $N$ 非常大时，每一步都会变得极其缓慢，导致训练时间过长，难以承受。
+
+此外，根据实现和模型复杂程度，计算整个数据集的梯度可能需要加载大量数据到内存中，这可能超出可用硬件（如GPU）的容量。
+
+### 数据冗余导致的低效
+
+大型数据集通常包含冗余信息。许多数据点可能相似，并产生大致指向相同方向的梯度。即使一小部分样本可能已经提供了对真实梯度方向足够好的估计，BGD仍然在每一步处理所有这些相似的样本。这种对冗余数据的详尽计算使得每个更新步骤的效率低于其应有的水平。设想一下，在调整您对猫的理解之前，您需要看100万张几乎相同的猫的图片来学习识别猫；通过查看一小组更多样化的猫图片，您可能会学得更快。
+
+### 损失函数 (loss function)的规避：局部最小值和鞍点
+
+深度神经网络 (neural network)的损失函数曲面高度复杂且非凸，包含许多局部最小值（在某个邻域内最优但并非全局最优的点）和鞍点（梯度为零但并非最小值的点）。
+
+批量梯度下降 (gradient descent)基于整个数据集计算精确梯度。尽管这为当前参数 (parameter)在整个数据集上的最速下降提供了“真实”方向，但这种平滑的、平均化的梯度可能缺少跳出损失曲面中某些不理想区域所需的“噪声”。
+
+- **局部最小值：** 如果BGD收敛到一个损失远高于全局最小值的局部最小值，模型的性能将不理想。BGD更新的确定性可能无法提供必要的扰动以跳出这种“谷”。
+- **鞍点：** 鞍点在由神经网络参数定义的这类高维空间 (high-dimensional space)中更为常见。在鞍点处，梯度为零，这可能导致BGD停止更新或显著减速，即使它并未达到最小值。某些维度可能向上弯曲（类似于最小值），而其他维度则向下弯曲（类似于最大值）。BGD可能难以有效地从鞍点滑开。
+
+
+
+![简化的损失曲面示意图](plots/4972-0.json)
+
+
+
+> 显示全局最小值（低点）的损失曲面，一个局部最小值（较高的“谷”），和一个鞍点（中心，局部平坦但在一个方向向下弯曲而在另一个方向向上弯曲）。BGD可能会停滞在局部最小值或在鞍点处减速。
+
+虽然优化算法不能保证找到全局最小值，但BGD的确定性使其相较于引入更多随机性的方法，更有可能永久停滞。
+
+### 无法进行在线学习
+
+批量梯度下降 (gradient descent)需要整个数据集可用才能进行任何学习。这使得它不适用于数据按顺序到达的场景，即在线学习。在这种情况下，模型需要随着新数据的到来而调整，而无需为每次更新存储和重新处理所有历史数据。
+
+这些局限性，特别是计算开销和停滞的可能性，凸显了深度学习 (deep learning)中需要更实用的优化算法。这促使我们转向使用更小数据子集进行每次更新的方法，从而引出随机梯度下降和迷你批量梯度下降。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教科书，涵盖优化算法，包括深度学习中批量梯度下降的理论基础和实际困难。
+- [Neural Networks Part 3: Learning and Evaluation](https://cs231n.github.io/neural-networks-3/) — Andrej Karpathy, Justin Johnson, and Fei-Fei Li (2023)
+  Publisher: Stanford University
+  斯坦福CS231n课程笔记提供了关于训练深度神经网络挑战的实用观察，包括批量梯度下降的计算需求和内存限制，以及损失表面的复杂性。
+- [The Loss Landscape of Neural Networks](https://proceedings.mlr.press/v38/choromanska15.html) — Anna Choromanska, Mikael Henaff, Michael Mathieu, Gerard Ben Arous, Yann LeCun (2015)
+  Journal: Proceedings of the Eighteenth International Conference on Artificial Intelligence and Statistics; Publisher: PMLR; Volume: 38; Pages: 192-204
+  展示了对神经网络损失表面的理论和经验分析，表明在高维空间中，局部最小值通常与全局最小值相似，但鞍点是一个更重要的难题。

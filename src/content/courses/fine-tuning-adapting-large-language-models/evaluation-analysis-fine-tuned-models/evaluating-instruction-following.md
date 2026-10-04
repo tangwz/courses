@@ -1,0 +1,117 @@
+---
+course: "fine-tuning-adapting-large-language-models"
+chapter: "evaluation-analysis-fine-tuned-models"
+lesson: "evaluating-instruction-following"
+sourceId: 3065
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-adapting-large-language-models/chapter-6-evaluation-analysis-fine-tuned-models/evaluating-instruction-following"
+title: "评估指令遵循能力"
+description: "衡量模型如何遵循复杂指令的框架和基准。"
+order: 2
+plots: []
+sourceHash: "d171372f4ba172fd0476738e7955bb8bb4d0ea2fb47e54d430eab040ae1be2fa"
+sourceCorrections: []
+---
+
+评估经过微调 (fine-tuning)的大型语言模型（LLM）遵循指令的情况，远比计算简单的准确度或重叠分数复杂得多。指令可以是从直接命令（“将此句子翻译成法语”）到复杂的请求，包含推理 (inference)、创造性、特定格式限制或角色扮演（“编写一个Python函数来计算斐波那瓦数列直到n，包含文档字符串，并以友好、鼓励的语气解释其时间复杂度”）。BLEU或ROUGE等标准指标，用于翻译或摘要等有参考文本的任务，通常无法捕捉指令的*意图*是否得到满足，特别是对于有许多可能的有效输出的生成任务。
+
+指令遵循是使用指令数据集进行监督微调（SFT）等技术的主要目标。因此，严格评估此能力对判断微调过程是否成功以及模型行为是否符合预期很重要。
+
+### 评估指令遵守的挑战
+
+评估指令遵循存在一些固有的困难：
+
+1. **主观性和模糊性：** 指令本身可能模棱两可。判断模型输出是否“正确”遵循指令常需要人工判断，因为可能存在多种解释或有效输出。
+2. **复杂程度范围：** 指令的复杂性差异很大。评估简单命令的遵守情况与评估多步推理 (inference)或复杂创造性限制的遵守情况有很大不同。
+3. **开放式生成：** LLM生成新颖文本。与有预定义输出的分类或提取任务不同，评估生成式指令遵循需要评估自由形式文本的质量、相关性和约束满足情况。
+4. **缺少通用指标：** 没有一个单一的自动化指标能够可靠地捕捉指令遵循的所有方面（正确性、完整性、约束遵守、风格、安全性）。
+
+### 评估方法
+
+考虑到这些挑战，评估指令遵循通常需要多种方法的结合：
+
+#### 人工评估
+
+人工评估仍是评估指令遵循各个方面最可靠的方法。评估员，通常是领域专家或经过严格训练的标注员，根据预定义的标准评估模型输出。常见协议包括：
+
+- **李克特量表：** 评估员根据帮助性、正确性、遵守约束（长度、格式、风格）和安全性等维度，对输出进行评分（例如1-5分）。清晰的评估标准对保持一致性很重要。
+- **配对比较：** 评估员看到相同的指令和来自两个不同模型（或版本）的输出，并被要求选择更好的一个，并常解释其理由。这对比较分析（例如，A/B测试微调 (fine-tuning)策略）有效。
+- **排序：** 评估员对给定指令的多个模型输出进行排序。
+
+虽然能提供深入理解，但人工评估本身缓慢、昂贵、难以扩展，并且可能存在标注员之间意见不一致的问题。它常用于验证自动化指标或评估较小、重要的测试数据子集。
+
+#### 有特定约束的自动化评估
+
+对于要求输出具有特定、可验证的属性的指令，自动化指标会有用：
+
+- **格式检查：** 如果指令指定了格式（例如JSON、Markdown表格、编号列表），自动化检查可以验证是否符合要求。可以使用正则表达式或解析器。
+- **关键词/实体匹配：** 如果指令要求提及特定实体或关键词，简单检查可以验证其存在。
+- **代码评估：** 对于代码生成任务，可以使用单元测试（例如Python的`exec`，检查通过率）来检查功能正确性。CodeBLEU等指标可以评估与参考代码的语法和语义相似性。
+- **提取任务：** 如果指令涉及提取特定信息，可以使用精确匹配（EM）和F1分数等指标与真实提取结果对比。
+
+这些自动化检查快速且可扩展，但只涵盖指令遵循的狭窄方面。它们无法有效评估语义正确性、创造性或风格元素。
+
+#### 基于模型的评估（LLM作为评判者）
+
+一种日益流行的方法是使用另一个强大的LLM（“评判者”）来评估微调模型（“目标”）的输出。评判者LLM接收原始指令、目标模型的响应和特定评估标准作为提示。
+
+> 流程图，描绘了LLM作为评判者的评估过程。
+
+评判者提示可能如下所示：
+
+```text
+你是一个公正的AI助手，评估另一个AI对用户指令响应的质量。根据帮助性、正确性和对指令约束的遵守情况评估响应。给出1到5分（1=差，5=优秀）的分数和简短解释。
+
+用户指令：
+"{{user_instruction}}"
+
+AI响应：
+"{{target_model_output}}"
+
+评估标准：
+- 响应是否直接回应了用户的指令？
+- 提供的信息是否准确且事实正确？
+- 响应是否遵循指令中提到的所有明确约束（例如，长度、格式、语气）？
+- 响应是否书写清晰且易于理解？
+
+分数 (1-5)：
+解释：
+```
+
+**优点：**
+
+- **可扩展性：** 比人工评估快得多，也便宜得多。
+- **评估质量：** 比简单的自动化指标更能捕捉语义含义和细微的不足。
+- **一致性：** 如果评判者模型和提示策略稳定，可以比人工评估员更一致。
+
+**缺点：**
+
+- **评判者偏见：** 评判者LLM可能有其自身的偏见或局限。
+- **对提示的敏感性：** 评估质量在很大程度上取决于评判者提示和标准的清晰度与设计。
+- **成本：** 尽管比人工便宜，但对强大评判者模型进行API调用对于大规模评估仍可能昂贵。
+- **潜在的自我提升：** 对目标和评判者都使用同一模型家族可能导致过于有利的分数。
+
+#### 标准化基准
+
+出现了一些专门用于评估指令遵循能力的基准，常采用基于模型的评估：
+
+- **AlpacaEval：** 一个基于GPT-4的自动化评估器，将模型输出与参考输出（例如来自`text-davinci-003`）进行比较，或使用由GPT-4评判的配对比较。它提供一个指令遵循模型的排行榜。
+- **MT-Bench：** 一个包含有挑战性的多轮对话提示的基准，旨在评估对话语境中的指令遵循、推理 (inference)和写作能力。评估通常使用GPT-4作为评判者完成。
+- **InstructEval：** 侧重于评估各种任务类别（例如，分类、生成、集思广益、提取）中的指令遵循情况。它常结合自动化指标和基于LLM的判断。
+- **HELM（语言模型全面评估）：** 虽然更广泛，HELM包含测试指令遵循的场景，作为其在多个指标和任务上全面评估的一部分。
+
+使用这些基准可以提供与其它模型的标准化比较，但依赖于其评估协议（常是LLM作为评判者）的有效性。
+
+### 实施的实际考虑
+
+- **指令测试集设计：** 创建一个多样化的评估指令集，反映目标使用场景。包含简单和复杂的指令、约束、不同语气，以及可能有对抗性或棘手的提示。确保此集合与微调 (fine-tuning)数据不同。
+- **清晰的评估标准：** 无论是使用人工评估员还是LLM评判者，都要定义明确的评分标准和评估指南。为每个分数级别提供好和坏响应的例子。
+- **多方面方法：** 仅依赖单一方法不足。结合自动化检查（适用时）、基于LLM的评估以实现规模化，以及有针对性的人工评估用于验证和更深入地理解特定失败模式。
+- **分析失败情况：** 不要只看汇总分数。对低分或失败的例子进行定性分析，以了解模型未能遵循指令的*原因*（例如，误解、幻觉 (hallucination)、忽视约束、安全违规）。此分析为进一步的微调或提示工程 (prompt engineering)工作提供依据。
+
+评估指令遵循是一个持续的过程。随着模型发展且新的评估技术出现，调整评估策略对准确地理解微调LLM的能力和局限很重要。
+
+## 参考资料
+
+- [HELM: Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew J. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  提出了一个全面的框架，用于评估跨各种场景的语言模型，包括指令遵循的各个方面。

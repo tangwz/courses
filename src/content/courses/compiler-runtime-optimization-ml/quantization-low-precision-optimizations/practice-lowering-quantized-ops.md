@@ -1,0 +1,180 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "quantization-low-precision-optimizations"
+lesson: "practice-lowering-quantized-ops"
+sourceId: 4585
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-8-quantization-low-precision-optimizations/practice-lowering-quantized-ops"
+title: "动手实践：量化操作的降级处理"
+description: "实践将高级量化操作转换为带有显式缩放的低级表示。"
+order: 8
+plots: []
+sourceHash: "2b2f88dcda051c5ef97de10678fcd0796191f629ea238c7bc51e84e3deb886f5"
+sourceCorrections: []
+---
+
+量化 (quantization)操作在编译器IR中表示。这里重点关注*降级处理*这一主要步骤：将这些高级量化操作转换为一系列低级的、通常是标准整数的算术操作，这些操作明确处理缩放、零点调整和类型转换。此过程对生成可执行代码不可或缺，特别是对于缺乏对任意缩放量化类型直接支持但拥有高效整数算术单元的硬件。
+
+设想在我们的IR中有一个高级量化操作，可能代表一个2D卷积或矩阵乘法。它看起来像这样（使用简化的、受MLIR启发的表示法）：
+
+```mlir
+// 高级表示
+%input_q = "quant.cast"(%input_fp32) : tensor<1xHxWxCinxf32> -> tensor<1xHxWxCin x !quant.uniform<i8:...>>
+%weight_q = "quant.cast"(%weight_fp32) : tensor<CoutxKhxKwxCinxf32> -> tensor<CoutxKhxKwxCin x !quant.uniform<i8:...>>
+%bias_q = "quant.cast"(%bias_fp32) : tensor<Coutxf32> -> tensor<Cout x !quant.uniform<i32:...>> // 偏置通常为INT32
+
+// 代表整个量化卷积，包括输出缩放
+%output_q = "quant.conv2d"(%input_q, %weight_q, %bias_q) {
+    strides = [...], padding = [...],
+    output_scale = ..., output_zero_point = ...
+} : (..., ..., ...) -> tensor<1xHoWxWoxCout x !quant.uniform<i8:...>>
+```
+
+此`quant.conv2d`操作封装了核心计算以及生成最终INT8输出所需的重新量化逻辑。我们的目标是将其降级为标准方言（如MLIR中用于算术的`arith`、用于内存访问的`memref`）中可用的操作，或降级为目标特定的内部函数。
+
+### 降级处理的数学原理
+
+回顾仿射量化 (quantization)公式：$r = S \times (q - Z)$，其中$r$是实际值，$q$是量化整数值，$S$是缩放因子，$Z$是零点。
+
+对于卷积（或矩阵乘法），主要计算涉及乘积累加操作。我们考虑单个输出元素的计算，它是乘积之和：$Output_{real} = \sum (Input_{real} \times Weight_{real}) + Bias_{real}$。
+
+代入量化公式：
+
+
+$$
+S_{out} (Output_q - Z_{out}) \approx \sum [ S_{in} (Input_q - Z_{in}) \times S_{w} (Weight_q - Z_{w}) ] + S_{bias} (Bias_q - Z_{bias})
+$$
+
+
+我们的目标是使用整数算术计算$Output_q$。重新排列方程涉及：
+
+1. 使用整数乘法执行主要累加：$\sum (Input_q \times Weight_q)$。这通常使用更宽的累加器（例如，INT32）。
+2. 计算与零点相关的修正。
+3. 应用最终缩放因子（重新量化缩放）并添加输出零点。
+
+完整展开可能变得复杂：
+
+
+$$
+S_{out} (Output_q - Z_{out}) \approx S_{in} S_{w} \sum (Input_q - Z_{in})(Weight_q - Z_{w}) + S_{bias} (Bias_q - Z_{bias})
+$$
+
+
+$$
+S_{out} (Output_q - Z_{out}) \approx S_{in} S_{w} \sum [ Input_q Weight_q - Input_q Z_{w} - Z_{in} Weight_q + Z_{in} Z_{w} ] + S_{bias} (Bias_q - Z_{bias})
+$$
+
+
+编译器在降级处理期间的任务是生成高效的整数代码，用于计算右侧并解出$Output_q$。
+
+### 降级处理策略示例：带重新量化 (quantization)的整数累加
+
+一种常见策略涉及以下步骤，这会反映在生成的低级IR中：
+
+1. **整数累加：** 使用量化整数输入（$Input_q$, $Weight_q$）执行主要的乘积累加操作。这会产生更宽的中间表示，通常是INT32。
+
+// 降级IR片段 1：整数矩阵乘法/卷积累加
+%acc\_i32 = arith.constant 0 : i32
+// 循环遍历归约维度（例如，输入通道、核空间维度）
+affine.for %k = 0 to K {
+%in\_val\_i8 = memref.load %input\_q[...] : memref<...x!quant.uniform<i8:...>>
+%wt\_val\_i8 = memref.load %weight\_q[...] : memref<...x!quant.uniform<i8:...>>
+// 将i8扩展到i32以进行累加
+%in\_val\_i32 = arith.extsi %in\_val\_i8 : i8 to i32
+%wt\_val\_i32 = arith.extsi %wt\_val\_i8 : i8 to i32
+// 整数乘法
+%mul\_i32 = arith.muli %in\_val\_i32, %wt\_val\_i32 : i32
+// 累加
+%acc\_i32 = arith.addi %acc\_i32, %mul\_i32 : i32
+}
+\`\`\`
+
+2. **零点修正：** 根据输入（$Z_{in}$）和权重 (weight)（$Z_w$）零点应用修正。这可以通过几种方式完成：
+   - **直接在循环中：** 在乘法之前修改加载的值：`(Input_q - Z_in) * (Weight_q - Z_w)`。这在循环内部增加了减法操作。
+   - **累加后修正：** 在主累加循环外部计算涉及输入/权重之和乘以零点的修正项。这通常需要预先计算和。例如，项 $- \sum (Input_q Z_w)$ 变为 $- Z_w \sum Input_q$。编译器可能会根据性能启发式算法进行选择。
+
+// 降级IR片段 2：零点修正（累加后风格）
+// 假设 %sum\_inputs\_i32, %sum\_weights\_i32, %reduction\_size 已经预计算或可用
+%zp\_in\_i32 = arith.constant ... : i32 // Z\_in
+%zp\_wt\_i32 = arith.constant ... : i32 // Z\_w
+
+````
+%correction1 = arith.muli %sum_inputs_i32, %zp_wt_i32 : i32
+%correction2 = arith.muli %sum_weights_i32, %zp_in_i32 : i32
+%correction3 = arith.muli %reduction_size, %zp_in_i32 : i32
+%correction3 = arith.muli %correction3, %zp_wt_i32 : i32 // 项 Z_in * Z_w * K
+
+%acc_i32 = arith.subi %acc_i32, %correction1 : i32
+%acc_i32 = arith.subi %acc_i32, %correction2 : i32
+%acc_i32 = arith.addi %acc_i32, %correction3 : i32
+```
+````
+
+3. **偏置 (bias)添加：** 添加量化偏置项（$Bias_q$）。请记住，为了进行直接INT32加法，偏置缩放因子$S_{bias}$理想情况下必须等于$S_{in} \times S_w$。如果不是，则必须在添加前重新缩放偏置。
+`mlir // 降级IR片段 3：偏置添加 %bias_val_i32 = memref.load %bias_q[...] : memref<...x!quant.uniform<i32:...>> // 假设偏置缩放与 S_in * S_w 匹配，否则此处需要重新缩放 %acc_i32 = arith.addi %acc_i32, %bias_val_i32 : i32`
+
+4. **重新量化缩放：** 应用最终缩放因子，将INT32累加器转换回目标输出精度（例如，INT8）。缩放因子为$M = \frac{S_{in} S_w}{S_{out}}$。这几乎从不是整数或2的幂，因此使用定点乘法实现。编译器计算一个整数乘数$M_0$和一个右移量$N$，使得$M \approx M_0 / 2^N$。
+
+// 降级IR片段 4：重新量化缩放
+%requant\_mult\_i32 = arith.constant ... : i32 // M0
+%requant\_shift\_i32 = arith.constant ... : i32 // N
+
+````
+// 执行定点乘法：(acc * M0) >> N
+// 通常需要扩展到i64以避免乘法期间溢出
+%acc_i64 = arith.extsi %acc_i32 : i32 to i64
+%requant_mult_i64 = arith.extsi %requant_mult_i32 : i32 to i64
+%scaled_acc_i64 = arith.muli %acc_i64, %requant_mult_i64 : i64
+
+// 应用舍入移位（移位前加0.5）
+%rounding_delta = arith.constant (1 << (%N - 1)) : i64
+%scaled_acc_i64 = arith.addi %scaled_acc_i64, %rounding_delta : i64
+
+// 执行移位（算术右移）
+%shifted_acc_i64 = arith.shrsi %scaled_acc_i64, %requant_shift_i32 : i64
+```
+````
+
+5. **输出零点添加：** 添加输出零点$Z_{out}$。
+`mlir // 降级IR片段 5：添加输出零点 %zp_out_i64 = arith.constant ... : i64 // Z_out 扩展到 i64 %final_acc_i64 = arith.addi %shifted_acc_i64, %zp_out_i64 : i64`
+
+6. **钳位与类型转换：** 将结果钳位到目标输出类型的有效范围（例如，INT8的[-128, 127]），并转换为最终类型。
+
+// 降级IR片段 6：钳位与类型转换
+%min\_val\_i64 = arith.constant -128 : i64
+%max\_val\_i64 = arith.constant 127 : i64
+%clamped\_acc\_i64 = arith.maxsi %final\_acc\_i64, %min\_val\_i64 : i64
+%clamped\_acc\_i64 = arith.minsi %clamped\_acc\_i64, %max\_val\_i64 : i64
+
+````
+// 截断回i8
+%output_val_i8 = arith.trunci %clamped_acc_i64 : i64 to i8
+
+// 存储最终结果
+memref.store %output_val_i8, %output_q[...] : memref<...x!quant.uniform<i8:...>>
+```
+````
+
+这个序列取代了单一的高级`quant.conv2d`操作。编译器根据与操作输入和输出相关的特定量化参数 (parameter)（缩放因子、零点）执行此转换。
+
+> 编译器降级处理期间，将高级量化操作转换为一系列低级整数算术和控制操作的流程图。
+
+### 考量与工具
+
+MLIR等编译器框架使用方言转换和重写模式来自动化此降级处理过程。具体的序列和优化（例如，如何处理零点、定点乘法方法的选择）取决于编译器的复杂程度和目标硬件能力。例如，具有英特尔`VNNI`或ARM点积指令等专用指令的硬件，可能产生不同的降级表示，直接映射到这些指令。
+
+这种实践视角表明，“运行量化 (quantization)模型”涉及重要的编译器转换。了解此降级处理过程对于调试性能问题、设计自定义量化操作符或扩展编译器以支持新的低精度数据类型或硬件功能具有重要意义。它将量化的抽象观念与处理器上执行的具体整数算术连接起来。
+
+## 参考资料
+
+- [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](https://ieeexplore.ieee.org/document/8578641) — Benoit Jacob, Skirmantas Kligys, Bo Chen, Menglong Zhu, Matthew Tang, Andrew Howard, Hartwig Adam, Dmitry Kalenichenko (2018)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Publisher: IEEE; Pages: 2704-2713; DOI: [10.1109/CVPR.2018.00898](https://doi.org/10.1109/CVPR.2018.00898)
+  这篇基础论文详细阐述了神经网络中纯整数量化的数学原理和实用技术，包括仿射量化以及如何使用整数算术实现量化乘法和加法等操作。
+- [MLIR Quantization Dialect](https://mlir.llvm.org/docs/Dialects/QuantDialect) — The MLIR Team (2023)
+  Publisher: LLVM Project
+  MLIR量化方言的官方文档，解释了其量化类型和操作的IR表示，为量化模型的编译器降级策略提供了基础。
+- [Quantization overview](https://www.tensorflow.org/lite/performance/quantization_spec) — Google AI Edge, Google AI for Developers (2024)
+  Publisher: Google
+  这份TensorFlow Lite文档提供了量化的全面概述，包括数学公式、训练后量化方法以及量化模型的运行时执行，这些都直接涉及本节讨论的降级过程。
+- [Compiling Deep Learning Models with TVM](https://dl.acm.org/doi/10.1145/3303666.3303730) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: Proceedings of the 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI '18); Publisher: USENIX; Pages: 301-318; DOI: [10.1145/3303666.3303730](https://doi.org/10.1145/3303666.3303730)
+  这篇论文介绍了TVM，一个用于深度学习的编译器堆栈，它能自动优化并为各种硬件后端生成代码，展示了编译器在将高级ML操作（包括低精度数据类型操作）转换为高效低级代码方面的作用。

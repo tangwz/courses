@@ -1,0 +1,72 @@
+---
+course: "synthetic-data-gans-diffusion"
+chapter: "evaluating-synthetic-data-quality"
+lesson: "generative-evaluation-challenges"
+sourceId: 5715
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-gans-diffusion/chapter-5-evaluating-synthetic-data-quality/generative-evaluation-challenges"
+title: "生成模型评估中的难题"
+description: "讨论量化样本质量与多样性的困难。"
+order: 1
+plots: []
+sourceHash: "8335876a45391970bae14c811db3317e65af7c646300bfee5186552227e234f9"
+sourceCorrections: []
+---
+
+与监督学习 (supervised learning)任务相比，评估生成模型的输出带来了一系列特有的困难。分类任务拥有清晰的指标，如准确率、精确率和召回率，可以直接将预测与已知的真实标签进行比较。类似地，回归任务使用均方误差（MSE）等指标来衡量与目标值的偏差。然而，生成模型缺乏这种直接的真实数据比较。当GAN从潜在向量 (vector)$z$生成图像，或者扩散模型通过其逆过程合成数据时，并没有一个唯一的“正确”图像或数据点应该产生。相反，目标是生成在真实数据分布$P_{data}(x)$下*合理*的样本。这种根本区别导致了一些评估难题。
+
+### 质量与多样性困境
+
+一个主要难题在于同时评估两个经常相互竞争的方面：**样本质量**（保真度）和**样本多样性**。
+
+- **质量：** 生成的样本应真实，并且与真实数据点难以区分（或几乎如此）。对于图像，这意味着它们应清晰、连贯且没有伪影。对于其他数据类型，这意味着它们应符合该领域的预期结构和特点。
+- **多样性：** 生成器应捕捉真实数据分布中所有变异范围。它不应只产生少数高质量样本，而应生成覆盖训练集中不同模式、风格和属性的样本。
+
+这两个方面可能相互制约。GAN中一种常见的失败模式，即**模式崩溃**，便说明了这一点。生成器可能只学会生成少数几种输出，这些输出能够可靠地欺骗判别器。这些输出单独看质量可能很高，但模型未能捕捉到真实数据分布的多样性。评估模型需要能够有效衡量这两个方面的指标和方法。仅仅查看少数“最佳”样本是不够的；我们需要理解生成器产生的整体分布$P_G(x)$。
+
+### 主观性与感知判断
+
+对于图像、音频和文本等数据类型，人类感知往往是质量的最终评判标准。自动化指标试图量化 (quantization)这一点，但它们本质上是近似值。一幅图像可能在某个特定指标上得分很高，但仍包含人类观察者显而易见的细微缺陷；反之，一幅被人类认为是高质量的图像，在某些指标上可能得分不高。设计与人类感知判断在不同数据集和模型类型上良好相关的指标，仍然是一个持续的研究方向。
+
+### 高维分布相似性衡量
+
+核心数学难题是比较学习到的分布$P_G(x)$与真实数据分布$P_{data}(x)$。两者通常都是复杂的高维概率分布。直接估计这些密度通常难以处理，特别是对于高分辨率图像或复杂结构化数据，其维度非常大（$D \gg 1000$）。
+
+评估方法通常依赖于比较从$P_G$和$P_{data}$中抽取的样本的统计量或特征。这带来了一系列自身难题：
+
+- **特征选择：** FID或KID（稍后讨论）等指标的有效性在很大程度上取决于所使用的特征空间（例如，预训练 (pre-training)Inception网络的激活）。如果特征未能捕捉数据分布的相关方面，比较结果可能会产生误导。
+- **样本大小：** 在高维空间 (high-dimensional space)中可靠地估计统计量，需要从两个分布中获取足够数量的样本。如果使用的样本过少，评估结果可能会有噪声或有偏差。
+- **维度灾难：** 随着维度的增加，空间的体积呈指数级增长，使得基于有限样本有意义地比较分布变得更加困难。样本变得稀疏，距离指标可能会表现出反直觉的行为。
+
+### 指标可能被规避或有局限
+
+尽管定量指标提供了客观且可重复的分数，但它们并非万无一失。
+
+- **指标优化：** 模型有时可能会过度拟合某个特定的评估指标。生成器可能学会产生在例如FID上得分很高的样本，但并不一定全面生成真正多样或真实的输出。
+- **记忆与泛化：** 一个只是记住并稍微扰动训练样本的模型，可能在某些指标上取得好分数，但未能达到真实生成的目标。评估需要区分记忆和真正的泛化。
+- **指标敏感性：** 有些指标可能对某些类型的伪影（例如模糊）过于敏感，而对其他类型（例如语义不连贯）不敏感。没有单一指标能完美捕捉生成质量的所有方面。
+
+### 计算成本
+
+评估生成模型可能是计算密集型的。涉及使用大型神经网络 (neural network)（如Inception V3用于FID/IS）进行特征提取或比较大量样本的方法，可能需要大量时间和资源，使得训练期间的频繁评估或广泛的超参数 (parameter) (hyperparameter)搜索变得昂贵。存在更快、近似的方法，但通常涉及准确性方面的权衡。
+
+### 依赖于任务的评估
+
+最终，“好”生成模型的定义可能取决于其预期应用。
+
+- **数据增强：** 如果合成数据用于训练下游模型（例如分类器），其有效性最好通过该任务上的性能提升来衡量（即“在合成数据上训练，在真实数据上测试”或TSTR方法）。
+- **域适应：** 对于CycleGAN等模型，评估需要同时考量图像质量和风格迁移的成功程度。
+- **创意应用：** 如果目标是艺术生成，主观的人工评估可能是最相关的衡量标准。
+
+因此，评估生成模型通常需要多方面的方法，将多种定量指标与定性评估结合起来，并在适用情况下，基于下游任务性能进行评估。接下来的部分将介绍为应对这些难题而开发的具体指标，详细说明它们的计算方法、解释、优点和缺点。
+
+## 参考资料
+
+- [GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium](https://proceedings.neurips.cc/paper/2017/hash/8a1d6947076d507c0828417f7b31278f-Abstract.html) — Martin Heusel, Hubert Ramsauer, Thomas Unterthiner, Bernhard Nessler, Sepp Hochreiter (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 6626-6637; DOI: [10.48550/arXiv.1706.08500](https://doi.org/10.48550/arXiv.1706.08500)
+  引入了Fréchet Inception Distance (FID)，这是一种广泛采用的评估生成模型质量和多样性的指标，通过比较真实样本和生成样本的特征统计数据。
+- [Improved Techniques for Training GANs](https://proceedings.neurips.cc/paper_files/paper/2016/hash/8a3791049b4f620e85a6667946a605f6-Paper.pdf) — Tim Salimans, Ian Goodfellow, Wojciech Zaremba, Vicki Cheung, Alec Radford, Xi Chen (2016)
+  Journal: Advances in Neural Information Processing Systems 29; Publisher: Curran Associates, Inc.; Volume: 29; Pages: 2234-2242
+  提出了Inception Score (IS)，作为衡量样本质量和多样性的指标，是生成对抗网络的基石性度量。
+- [Precision and Recall for Measuring Quality and Diversity in Generative Models](https://proceedings.neurips.cc/paper_files/paper/2019/hash/c6735a2b84236a282f6e7243c3d69046-Abstract.html) — Tuomas Kynkäänniemi, Tero Karras, Samuli Laine, Jaakko Lehtinen, Timo Aila (2019)
+  Journal: Advances in Neural Information Processing Systems 32; Publisher: NeurIPS; Pages: 7333-7343; DOI: [10.5591/978-1-7138-0080-6.7333](https://doi.org/10.5591/978-1-7138-0080-6.7333)
+  提出了专为生成模型设计的Precision和Recall指标，提供了一种更明确的方法来分离和量化样本质量（精确度）和多样性（召回率）。

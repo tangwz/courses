@@ -1,0 +1,112 @@
+---
+course: "generative-adversarial-networks-gans"
+chapter: "advanced-gan-architectures"
+lesson: "stylegan2-enhancements"
+sourceId: 2672
+sourceUrl: "https://apxml.com/zh/courses/generative-adversarial-networks-gans/chapter-2-advanced-gan-architectures/stylegan2-enhancements"
+title: "StyleGAN2 改进"
+description: "分析 StyleGAN2 在解决伪影和提升图像质量方面的改进。"
+order: 3
+plots: []
+sourceHash: "6614ddda9b44cd4bcc5e1c96f500440198b301d8c8ebd3b71f04de191e0a292a"
+sourceCorrections: []
+---
+
+虽然最初的 StyleGAN 架构在生成高分辨率、视觉上吸引人的图像以及解耦控制方面取得了重大进步，但实践者很快发现了某些固有的视觉伪影和局限性。StyleGAN2 的开发正是为了应对这些不足，它改进了生成器和训练过程，以获得更高的逼真度和更平滑的结果。
+
+### 解决归一化 (normalization)伪影：调制与解调
+
+StyleGAN 输出中最明显的问题之一是出现了斑点状或“水滴”状伪影。这些伪影可追溯到合成网络中使用的自适应实例归一化 (AdaIN) 操作。回想一下，AdaIN 首先在每个通道内归一化特征图激活（零均值，单位方差），有效地消除了幅度信息，然后应用从样式向量 (vector) $w$ 中学习到的缩放和偏置 (bias)参数 (parameter)。
+
+
+$$
+\text{AdaIN}(x_i, y) = y_{s,i} \frac{x_i - \mu(x_i)}{\sigma(x_i)} + y_{b,i}
+$$
+
+
+假设是，网络在归一化移除幅度信息后，难以仅仅通过学习到的偏置 $y_{b,i}$ 重新引入幅度信息。这有时导致生成器创建过强的局部信号（即“水滴”）来弥补。
+
+StyleGAN2 将 AdaIN 替换为一种称为“调制卷积后接解调”（ModDemod）的技术。
+
+1. **调制：** StyleGAN2 没有在归一化*之后*应用样式信息，而是直接在卷积*之前*将样式整合到卷积权重 (weight)中。对于一个卷积层，其权重为 $w_{ijk}$（输出通道 $j$，输入通道 $i$，空间核位置 $k$），以及一个来自 $w$ 并用于输入通道 $i$ 的输入样式缩放因子 $s_i$，调制后的权重 $w'_{ijk}$ 变为：
+
+   
+   $$
+   w'_{ijk} = s_i \cdot w_{ijk}
+   $$
+   
+
+   这根据样式调整了每个输入特征图的影响力。
+2. **解调：** 应用调制权重可能会大幅改变输出激活的整体尺度。为了抵消这种影响并防止信号放大或消失，在调制卷积*之后*应用解调。它根据用于生成输出特征图 $x'$ 的调制权重的 L2 范数对其进行归一化。对于每个输出特征图 $j$：
+
+   
+   $$
+   x''_j = x'_j / \sqrt{\sum_{i,k} (w'_{ijk})^2 + \epsilon}
+   $$
+   
+
+   这里，$\epsilon$ 是一个用于数值稳定性的小常数。这个解调步骤确保输出激活的标准差大致保持为单位值，有效地*基于学习到的权重本身*标准化信号幅度，而不是通过实例归一化消除信息。
+
+这种组合的 ModDemod 操作消除了对 AdaIN 的需求，从而去除了水滴状伪影的主要来源，获得了更清晰的特征图。
+
+### 消除相位伪影：架构改进
+
+在 StyleGAN 中观察到的另一种伪影与相位有关。在潜在空间中进行插值时（或生成动画时），某些特征如眼睛或牙齿可能看起来“粘”在图像画布上，而不是随着表观姿态或视角变化自然移动。这表明网络表示空间频率和变换的方式存在问题。
+
+StyleGAN2 的作者发现渐进式增长技术（继承自 ProGAN）是一个潜在原因。虽然渐进式增长最初有助于稳定高分辨率训练，但在训练期间动态改变网络架构可能会干扰生成器在不同特征尺度上学习一致的相位行为。
+
+StyleGAN2 放弃了渐进式增长。相反，它从一开始就训练全分辨率网络。为了有效管理从低分辨率到高分辨率的信息流（渐进式增长旨在为此提供帮助），StyleGAN2 采用了：
+
+- **残差连接：** 类似于 ResNet，生成器架构内部使用了跳跃连接。
+- **多尺度输出：** 受 MSG-GAN 启发，该架构使用多个 `toRGB` 层，将中间特征分辨率直接映射到 RGB 输出。这些中间 RGB 输出随后被上采样并求和，以形成最终图像。这使得梯度能更直接地流向早期层，并促使网络同时使用所有分辨率级别上的特征。
+
+> StyleGAN2 生成器架构的简化视图，突出显示了取代渐进式增长的跳跃连接（来自多个分辨率的 `toRGB` 输出）。中间输出被组合以形成最终图像。
+
+移除渐进式增长并采用这种替代的多尺度架构设计大幅减少了相位伪影，带来了看起来更自然的变换和插值。
+
+### 改进潜在空间平滑度：路径长度正则化 (regularization)
+
+为了进一步提高图像质量和潜在空间 $W$ 的平滑度，StyleGAN2 在训练期间引入了路径长度正则化 ($L_{path}$)。目标是促使从 $W$ 到生成图像的映射更规则，这意味着在 $W$ 中固定大小的步长应对应于图像中大致固定幅度的变化，无论在 $W$ 中的位置或步长方向如何。在 $W$ 中小步长导致图像的突然变化是不理想的，并且与较低的视觉质量相关联。
+
+路径长度正则化器惩罚图像空间梯度（雅可比）幅度与常数值的偏差。其公式为：
+
+
+$$
+L_{path} = \mathbb{E}_{w, y \sim N(0,I)} \left[ \left( \| J_w^T y \|_2 - a \right)^2 \right]
+$$
+
+
+- 这里：
+  - $w$ 是从 $W$ 中采样的潜在编码。
+  - $G(w)$ 是生成的图像。
+  - $J_w = \nabla_w G(w)$ 是生成器输出关于潜在编码 $w$ 的雅可比矩阵。
+  - $y$ 是一个具有单位方差正态分布像素值的随机图像（用于将梯度投影到随机图像空间方向，避免计算完整的、可能非常大的雅可比矩阵）。
+  - $\| J_w^T y \|_2$ 表示由 $w$ 中的步长导致的图像变化的幅度。
+  - $a$ 是 $\| J_w^T y \|_2$ 值的动态更新的移动平均值，作为目标常数幅度。
+
+通过最小化此损失，生成器受到激励，使映射 $G: W \rightarrow \text{图像}$ 局部更不“弯曲”且更可预测。这种正则化改善了模型条件，提升了图像质量（通常通过 FID 衡量），并带来了感知上更平滑的插值。
+
+### 降低计算成本：惰性正则化 (regularization)
+
+像 $L_{path}$ 或判别器的 R1 梯度惩罚这样的正则化项会给每个训练迭代增加大量的计算开销。StyleGAN2 引入了“惰性正则化”的思想，即这些计算密集型正则化项的计算和应用频率低于主要的生成器和判别器损失。例如，路径长度正则化可能每 16 个小批量才计算一次，而主要对抗损失则每个小批量都计算。这个简单方法显著降低了这些正则化器带来的训练时间成本，同时没有明显影响它们的有效性或最终模型质量。
+
+### StyleGAN2 改进总结
+
+总的来说，StyleGAN2 中的这些改进带来了显著的提升：
+
+- **伪影减少：** 消除了水滴状伪影（通过 ModDemod）和相位伪影（通过架构改进）。
+- **指标提升：** 与原始 StyleGAN 发布时相比，FID 分数和 PPL 指标都更优异。
+- **视觉逼真度更高：** 生成的图像通常展现更精细的细节和更高的真实感。
+- **插值更平滑：** 潜在空间遍历产生更连贯、感知上更平滑的图像变化。
+- **训练更高效：** 惰性正则化 (regularization)允许复杂的正则化方案，且没有过高的计算成本。
+
+这些改进巩固了 StyleGAN2 作为高分辨率图像合成的基准架构地位，并进一步表明了仔细的架构设计和训练正则化在获得顶级的生成结果方面的重要性。理解这些改进为应对 GAN 开发中的常见难题提供了有益的见解。
+
+## 参考资料
+
+- [A Style-Based Generator Architecture for Generative Adversarial Networks](https://arxiv.org/abs/1812.04948) — Tero Karras, Samuli Laine, and Timo Aila (2019)
+  Journal: IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Pages: 4401-4410; DOI: [10.48550/arXiv.1812.04948](https://doi.org/10.48550/arXiv.1812.04948)
+  原始StyleGAN论文，提出了基于风格的生成器和自适应实例归一化（AdaIN），为StyleGAN2的消除伪影策略提供了背景。
+- [Progressive Growing of GANs for Improved Quality, Stability, and Variation](https://arxiv.org/abs/1710.10196) — Tero Karras, Timo Aila, Samuli Laine, and Jaakko Lehtinen (2018)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1710.10196](https://doi.org/10.48550/arXiv.1710.10196)
+  介绍了用于GAN训练的渐进式增长技术，StyleGAN2后来放弃该技术，转而采用多尺度架构以解决相位伪影问题。

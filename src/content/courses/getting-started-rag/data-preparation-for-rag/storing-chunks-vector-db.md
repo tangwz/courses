@@ -1,0 +1,114 @@
+---
+course: "getting-started-rag"
+chapter: "data-preparation-for-rag"
+lesson: "storing-chunks-vector-db"
+sourceId: 3650
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-3-data-preparation-for-rag/storing-chunks-vector-db"
+title: "将处理后的数据存储到向量数据库中"
+description: "描述为数据块生成嵌入并将其索引到向量数据库中的过程。"
+order: 6
+plots: []
+sourceHash: "8f81f3e2a3b2ad9c29ef859ddcdd043e679a5a18756cbbd26b5cfadfd3dbe107"
+sourceCorrections: []
+---
+
+成功加载、处理、分块文档，并为每个块关联了相关元数据后，下一步重要工作就是准备这些数据，以便高效检索。核心思想是实现语义搜索，让系统能够根据含义而非仅仅关键词匹配来找到数据块。这包括将每个数据块的文本转换成数字表示（即向量 (vector)嵌入 (embedding)），然后将这些嵌入连同原始文本和元数据一起存储到一个专门针对向量操作优化的数据库中：向量数据库。
+
+### 为数据块生成嵌入 (embedding)
+
+在存储之前，每个处理过的数据块都需要转换为向量 (vector)嵌入。嵌入模型（例如 Sentence-BERT、MPNet 或 OpenAI 的 Ada 模型）将文本转换为高维向量，其中语义相似的文本段落会生成在向量空间中彼此靠近的向量。
+
+通常，你会遍历你的数据块集合，将每个数据块的文本内容输入到你选择的嵌入模型中。每个数据块的输出是一个密集向量 (dense vector)，通常有数百或数千个维度。
+
+```python
+# 使用嵌入库的例子
+from embedding_library import EmbeddingModel
+from data_preparation import processed_chunks # 假设这里存放着我们的数据块
+
+embedding_model = EmbeddingModel("sentence-transformers/all-MiniLM-L6-v2") # 示例模型
+
+embeddings = []
+for chunk in processed_chunks:
+    # 为数据块的文本内容生成嵌入
+    vector = embedding_model.embed(chunk['text_content'])
+    embeddings.append({
+        "id": chunk['id'], # 数据块的唯一ID
+        "vector": vector,
+        "metadata": chunk['metadata'], # 相关联的元数据（来源、页码等）
+        "text": chunk['text_content'] # 存储原始文本，以便后续提供上下文
+    })
+
+# 'embeddings' 现在包含一个列表，其中是已准备好用于向量数据库的对象
+```
+
+不仅要存储向量，还要存储数据块的唯一标识符、其原始文本内容以及相关联的元数据（例如源文档名称、页码或章节标题）。原始文本在后续为LLM提供上下文 (context)时是必需的，而元数据对于来源归属和检索时的潜在筛选是不可或缺的。
+
+### 在向量 (vector)数据库中进行数据索引
+
+标准的关系型数据库或NoSQL数据库通常不适合进行高维向量空间中的高效相似度搜索。快速查找与查询向量“最近”的向量需要专门的索引结构和搜索算法。这正是向量数据库表现出色的地方。
+
+在第二章介绍过，向量数据库（如 Pinecone、Weaviate、Chroma、Qdrant、Milvus 等）提供以下基础架构，以实现：
+
+1. **存储：** 长期保存大量高维向量。
+2. **索引：** 构建专门的索引结构（例如 HNSW、IVF），允许进行快速的近似最近邻（ANN）搜索。对于数百万或数十亿个向量，精确最近邻搜索的计算成本可能很高。ANN算法以牺牲完美精度来换取显著的速度提升，这对于RAG应用通常是可以接受的。
+3. **查询：** 高效执行相似度搜索，返回与给定查询向量最相似的向量（及相关数据）。
+4. **管理：** 处理扩展、数据更新，并经常在向量搜索的同时进行元数据筛选。
+
+将处理过的数据添加到向量数据库的过程通常被称为 *索引* 或 *upserting*（更新或插入）。通常，你使用所选向量数据库实例（无论是本地还是云端）的客户端库进行连接，然后添加你准备好的数据，通常是分批添加以提高效率。
+
+```python
+# 使用向量数据库客户端的例子
+from vector_db_client import VectorDatabaseClient
+
+# 假设 'embeddings' 是上一步生成的列表
+vector_db = VectorDatabaseClient(api_key="YOUR_API_KEY", environment="gcp-starter") # 示例连接
+index_name = "my-knowledge-base"
+
+# 确保索引/集合存在（具体的API调用有所不同）
+if not vector_db.index_exists(index_name):
+    vector_db.create_index(
+        name=index_name,
+        dimension=len(embeddings[0]['vector']), # 维度必须与嵌入模型匹配
+        metric='cosine' # 常见的相似度指标
+    )
+
+# 分批添加数据
+batch_size = 100
+for i in range(0, len(embeddings), batch_size):
+    batch = embeddings[i : i + batch_size]
+    # 为特定数据库的API准备批次数据（可能涉及元组、对象等）
+    prepared_batch = [
+        (item['id'], item['vector'], {**item['metadata'], 'text': item['text']})
+        for item in batch
+    ]
+    vector_db.upsert(index_name=index_name, vectors=prepared_batch)
+
+print(f"成功索引了 {len(embeddings)} 个数据块。")
+```
+
+每个被索引的项通常包括：
+
+- 唯一的ID（字符串或整数）。
+- 密集向量 (dense vector)嵌入 (embedding)。
+- 包含元数据和原始文本块的有效载荷。
+
+下图说明了从文档到向量数据库中索引数据的整个流程：
+
+> 这张图显示了文档被处理成带有元数据的数据块。每个数据块的文本都使用嵌入模型转换为向量嵌入。最后，这些嵌入连同它们的ID、元数据和原始文本，都在向量数据库中进行索引。
+
+一旦此索引过程完成，你的知识源就有效转换为可搜索的向量空间。检索器组件（我们之前讨论过并将稍后实现）现在可以使用传入用户问题的嵌入来查询此向量数据库，以便迅速找到最相关的信息块。这构成了LLM提供有依据的、上下文 (context)感知的回复的根本。
+
+## 参考资料
+
+- [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410/) — Nils Reimers and Iryna Gurevych (2019)
+  Journal: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP); Pages: 3971-3981; DOI: [10.18653/v1/D19-1410](https://doi.org/10.18653/v1/D19-1410)
+  介绍Sentence-BERT，一个生成语义丰富的句子嵌入的模型，适合进行相似性比较，这是为向量数据库准备数据的核心技术。
+- [Efficient and Robust Approximate Nearest Neighbor Search Using Hierarchical Navigable Small World Graphs](https://doi.org/10.1109/TPAMI.2018.2889473) — Yu. A. Malkov, D. A. Yashunin (2020)
+  Journal: IEEE Transactions on Pattern Analysis and Machine Intelligence; Publisher: IEEE; Volume: 42; Pages: 824-836; DOI: [10.1109/TPAMI.2018.2889473](https://doi.org/10.1109/TPAMI.2018.2889473)
+  描述HNSW算法，这是一种在高维空间中高效进行近似最近邻搜索的常用方法，是许多向量数据库的核心组成部分。
+- [Weaviate Concepts: Vector Database](https://weaviate.io/developers/weaviate/current/concepts/) — Weaviate Team (2024)
+  Publisher: Weaviate
+  官方文档，清晰解释了向量数据库的架构、功能及其在语义搜索和RAG中的应用。
+- [Vector Embeddings: Applications, Architecture, and Best Practices in Machine Learning](https://www.oreilly.com/library/view/vector-embeddings-applications/9781098135899/) — Nikhil Daniel, Shubham Sarma (2023)
+  Publisher: O'Reilly Media
+  一本书籍，全面介绍向量嵌入，包括其生成、存储和检索，适用于语义搜索和各种机器学习应用。

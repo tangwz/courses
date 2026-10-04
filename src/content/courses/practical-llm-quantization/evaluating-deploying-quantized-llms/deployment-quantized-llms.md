@@ -1,0 +1,97 @@
+---
+course: "practical-llm-quantization"
+chapter: "evaluating-deploying-quantized-llms"
+lesson: "deployment-quantized-llms"
+sourceId: 4673
+sourceUrl: "https://apxml.com/zh/courses/practical-llm-quantization/chapter-6-evaluating-deploying-quantized-llms/deployment-quantized-llms"
+title: "量化大型语言模型的部署策略"
+description: "部署量化大型语言模型在不同环境（云端、边缘端）中的考量。"
+order: 4
+plots: []
+sourceHash: "9bdf3c4cfb84cbf79eeab8b2bc47c2b9d0131b641c4b94d733ad7492497faea0"
+sourceCorrections: []
+---
+
+对大型语言模型 (LLM) 进行量化 (quantization)并仔细评估其性能和准确性之间的权衡之后，将其投入实际使用是主要目的。部署量化模型会引入特定的考量，主要涉及运行时兼容性、硬件加速以及目标环境的限制。所选方案将很大程度上取决于所需延迟、预期吞吐量 (throughput)、预算以及模型是否需要在云端或直接在用户设备上运行。
+
+### 选择合适的部署环境
+
+第一步是明确您的量化 (quantization)大型语言模型将在*哪里*运行。两个主要环境是云端和边缘/设备端，每个环境各有特点和难题。
+
+#### 云端部署
+
+部署到云端提供可扩展性、可用高性能硬件（如 GPU 和 TPU），以及托管基础设施。这通常适用于要求高可用性和服务大量用户的应用。
+
+- **优势：** 弹性伸缩，可用高性能计算，通过托管服务简化基础设施管理。
+- **劣势：** 潜在网络延迟，持续运营成本，敏感应用的数据隐私考量。
+- **方案：**
+  - **托管式机器学习 (machine learning)平台：** 像 AWS SageMaker、Google Vertex AI 和 Azure Machine Learning 这样的服务提供将模型作为端点部署的工具，通常内置支持或集成量化库和优化运行时。
+  - **容器化：** 将您的量化模型和推理 (inference)服务器（如 Nvidia Triton Inference Server、TorchServe）打包到 Docker 容器中，可以在容器编排平台（如 Kubernetes）或云容器服务上部署。这提供灵活性和便携性。
+  - **无服务器函数：** 对于流量间歇的应用，通过无服务器函数（如 AWS Lambda、Google Cloud Functions）部署模型可以成本效益高。然而，对包大小、内存和执行时间的限制可能会限制更大量的量化大型语言模型或需要特定硬件加速的模型部署。
+
+#### 边缘和设备端部署
+
+直接在边缘设备（如智能手机、物联网设备或本地计算机）上运行量化模型可以最小化延迟，通过将数据保留在本地来增强数据隐私，并实现离线功能。由于严格的资源限制，量化通常是边缘部署的必要条件。
+
+- **优势：** 非常低的延迟，增强数据隐私，离线能力，潜在的更低运营成本（无云端计算费用）。
+- **劣势：** 有限的计算和内存资源，硬件碎片化（不同的 CPU 架构、可选加速器），功耗限制，复杂的部署和更新机制。
+- **方案：**
+  - **移动框架：** 将量化模型转换为与移动运行时兼容的格式，如 TensorFlow Lite (.tflite)、Core ML (.mlmodel) 或 ONNX Runtime Mobile。这些框架针对 ARM CPU 和移动 NPU/GPU 进行了优化。
+  - **嵌入 (embedding)式系统：** 对于物联网或专用硬件，模型可能需要使用供应商特定工具链进行进一步编译（例如，高通、联发科的 NPU 工具，或特定嵌入式 Linux 目标）。像 GGUF 这样的格式，常与 `llama.cpp` 一起使用，在各种硬件（包括台式机和服务器）上进行基于 CPU 的推理时很受欢迎。
+  - **WebAssembly/浏览器：** 使用 ONNX Runtime Web 或专用 WebAssembly 构建直接在浏览器中运行推理，可以在没有服务器端处理的情况下实现交互式网络应用，尽管性能通常低于原生执行。
+
+#### 混合方法
+
+有些应用可能受益于混合模型，例如在边缘端运行一个更小、高度量化的模型以实现快速响应或筛选，而复杂查询则路由到云端一个更大型、可能量化程度较低的模型。
+
+### 借助推理 (inference)服务器和运行时
+
+仅仅拥有一个量化 (quantization)模型文件是不够的；您需要一个能够加载并高效执行它的运行时环境。
+
+- **专用推理服务器：** Nvidia Triton Inference Server、TorchServe (PyTorch) 和 TensorFlow Serving 等工具专为高吞吐量 (throughput)、低延迟服务而设计。它们通常支持多种模型格式和后端，包括 TensorRT（用于 Nvidia GPU）、OpenVINO（用于 Intel CPU/GPU）和 ONNX Runtime 等优化运行时，这些运行时可以有效执行量化模型。例如，如果格式兼容，Triton 可以自动使用 TensorRT 处理 INT8 或 FP8 量化模型。
+- **专用运行时：** 对于 CPU 推理，特别是使用 GGUF 格式时，`llama.cpp` 是一个广泛使用的 C++ 库，提供广泛的平台兼容性，并利用 CPU 指令集（AVX、NEON）优化性能。
+- **Python 框架：** 虽然对于开发来说更简单，但与专用 C++ 或优化运行时相比，直接在 Python Web 框架（如 FastAPI 或 Flask）中封装推理逻辑可能无法提供最佳性能，尤其是在高负载下。像 `ctransformers` 或 Hugging Face `optimum` 这样的库提供了到高效后端（如 `llama.cpp` 或 ONNX Runtime）的 Python 绑定，使集成更简便。
+
+### 硬件加速作用明显
+
+正如前一节（“量化 (quantization)推理 (inference)的硬件考量”）讨论的，目标硬件显著影响量化模型的性能。您的部署策略必须与可用硬件匹配，并使用恰当的加速：
+
+- **GPU：** 确保部署环境使用支持模型中使用的低精度操作（INT8、INT4、FP8）的 GPU 驱动程序和库（如 Nvidia 的 CUDA 和 cuDNN）。TensorRT 等库提供的优化内核或 `bitsandbytes` 等框架内的专用内核对实现加速非常重要。
+- **CPU：** 现代 CPU 包含加速整数运算的指令集（例如，x86 的 AVX2、AVX-512；ARM 的 NEON）。ONNX Runtime（带有特定执行提供程序）、OpenVINO 和 `llama.cpp` 等运行时旨在利用这些指令。CPU 代次和架构之间的性能可能差异很大。
+- **专用加速器（NPU、TPU）：** 部署到专用 AI 硬件通常需要将模型转换为特定格式，并使用供应商提供的 SDK 和运行时。量化通常是这些目标的强制要求，并且量化方案可能需要根据硬件的能力进行调整。
+
+### 常见部署模式
+
+您的量化 (quantization)模型如何被暴露和使用，也影响部署策略。
+
+- **通过 API 在线推理 (inference)：** 最常见的模式，模型托管在 API 端点后。请求（例如，提示）通过 HTTP 发送，响应（例如，生成的文本）返回。延迟和吞吐量 (throughput)是这里的主要考量。
+- **批处理：** 对于分析大型数据集或预生成内容等离线任务，模型可以以批处理模式运行。这优化了整体吞吐量，而非每次请求的延迟。
+- **流式推理：** 实时转录或持续监控等应用需要处理数据流。部署需要有效处理状态管理和潜在的部分输入/输出。
+- **嵌入 (embedding)式集成：** 对于设备端部署，模型和推理引擎通常被打包为直接链接到宿主应用程序（例如，移动应用或桌面软件）的库。
+
+> 量化大型语言模型的部署路径简化视图，对比了使用推理服务器的云端 API 部署与将优化运行时直接集成到应用程序中的边缘部署。
+
+### 最终考量
+
+- **格式与运行时兼容性：** 仔细检查您选择的部署运行时是否明确支持模型的量化 (quantization)格式和精度（INT8、INT4、特定的 GPTQ/AWQ 变体、GGUF 版本）。有时，可能需要进行格式转换（例如，将 GPTQ 模型转换为 GGUF 或 ONNX）。
+- **冷启动和加载时间：** 特别是在无服务器或缩减规模的环境中，将量化模型加载到内存并初始化运行时所需的时间会影响首次请求的感知延迟。考虑保持实例活跃或预加载模型等方案。
+  "\* **监控：** 对您部署的量化模型实施监控。追踪运营指标（延迟、吞吐量 (throughput)、错误率、资源使用情况），并定期重新评估任务性能，以发现与基准测试相比的潜在性能下降。在生产环境中进行不同量化级别的 A/B 测试可以提供关于权衡的有价值信息。"
+
+有效部署量化大型语言模型连接了开发与实际使用之间的鸿沟，使得这些强大的模型能够在各种环境中高效使用。通过认真考量目标环境，借助恰当的运行时和硬件加速，并选择合适的部署模式，您可以成功将量化大型语言模型集成到您的应用中。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  关于设计、构建和操作机器学习系统的综合指南，包括模型部署和MLOps实践的重要方面。
+- [llama.cpp GitHub Repository](https://github.com/ggerganov/llama.cpp) — Georgi Gerganov and llama.cpp contributors (2024)
+  `llama.cpp`的官方存储库，一个用于LLM的C/C++推理引擎，针对CPU优化，支持GGUF和多种量化格式，可进行高效的设备上执行。
+- [NVIDIA TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA
+  NVIDIA TensorRT的官方文档，一个用于高性能深度学习推理的软件开发工具包，支持NVIDIA GPU上的量化模型。
+- [TensorFlow Lite Developer Guide](https://www.tensorflow.org/lite/guide) — Google (2024)
+  Publisher: Google
+  TensorFlow Lite的官方开发者指南，提供在移动、边缘和嵌入式设备上部署机器学习模型（包括量化LLM）的工具和方法。
+- [Deploy models for inference with Amazon SageMaker](https://docs.aws.amazon.com/sagemaker/latest/dg/deploy-model.html) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  AWS关于使用Amazon SageMaker部署模型进行推理的官方文档，SageMaker是一个托管服务，用于在云中托管和管理ML模型。

@@ -1,0 +1,122 @@
+---
+course: "quantized-llm-deployment"
+chapter: "advanced-llm-quantization-fundamentals"
+lesson: "quantization-data-types-formats"
+sourceId: 4600
+sourceUrl: "https://apxml.com/zh/courses/quantized-llm-deployment/chapter-1-advanced-llm-quantization-fundamentals/quantization-data-types-formats"
+title: "理解量化数据类型和格式"
+description: "审视量化中使用的不同数值格式（例如：INT4、NF4、E4M3）及其特点。"
+order: 3
+plots: ["plots/4600-0.json"]
+sourceHash: "8856f80699fc3b65ca907e65fea6c0dc302bf0d7fc86404e5145e0cde9f62d26"
+sourceCorrections: []
+---
+
+任何量化 (quantization)技术的有效性都高度依赖于用于表示压缩后的权重 (weight)（有时也包括激活值）的特定数值格式。这一点在将LLM推向量 (vector)化位数低于8位的程度时变得尤为重要，因为标准的整数和浮点类型往往不足或不理想。理解这些低位数据类型的特点、优点和局限性，对于实现GPTQ、AWQ等方法以及有效运用硬件加速来说非常重要。
+
+本节考察LLM量化中常见和新兴的数据类型，侧重于INT8以下的格式。我们将分析它们的结构、表示能力以及它们带来的权衡。
+
+### 整数格式 (INT)
+
+整数格式较为简单，通常涉及一个缩放因子，有时还有一个零点，用于将量化 (quantization)后的整数映射回近似的浮点范围。
+
+#### INT8
+
+尽管本课程侧重于更先进的技术，但INT8（8位整数）常用作基准。使用8位提供 $2^8 = 256$ 个不同的级别。这通常在压缩和精度保持之间提供了良好的平衡，特别是当使用如逐通道缩放等技术时。CPU和GPU对INT8操作的硬件支持广泛，使其成为一个成熟的优化目标。它的表示方法遵循前面讨论的原理：
+
+- **对称:** $x \approx q \times s$
+- **非对称:** $x \approx (q - z) \times s$
+
+这里 $q$ 是INT8值，$s$ 是缩放因子，$z$ 是零点（一个表示浮点零的INT8值）。
+
+#### INT4
+
+将位宽进一步降低到INT4，相比INT8能将内存需求减半，并在兼容硬件上实现快得多的计算。然而，它仅提供 $2^4 = 16$ 个不同的表示级别。这种极度粗糙的量化使保持精度变得更具挑战性。
+
+- **表示:** 通常使用非对称量化 ($x \approx (q - z) \times s$) 以更好地利用有限的级别，其中 $q$ 是一个4位无符号整数（0到15），$s$ 是浮点比例因子，$z$ 是4位整数零点（通常为7或8）。
+- **挑战:** 级别数量少意味着量化误差可能很大。GPTQ和AWQ等算法经过专门设计，通过仔细选择量化哪些权重 (weight)以及如何量化（通常使用校准数据），来减轻INT4的精度损失。
+- **硬件:** 虽然较新架构（如NVIDIA的Hopper和支持稀疏性的Ada Lovelace）上存在对INT4矩阵乘法的直接硬件支持，但高效实现通常依赖于专门的内核，这些内核将多个INT4值打包到更大的寄存器中（例如INT32）并执行位操作。
+
+#### 更低位整数格式 (INT3, INT2)
+
+研究关注INT3 ($2^3 = 8$ 个级别) 和INT2 ($2^4 = 4$ 个级别) 等更低的位宽。这些提供了最大的压缩，但面临严重的精度下降。它们目前在实际部署中不那么常见，并且通常需要先进的技术（如量化感知训练）或高度专业化的算法才能可行，通常限于模型的特定部分。
+
+### 低位浮点格式 (FP)
+
+浮点格式以不同方式分配比特，将一些分配给指数，另一些分配给尾数（或有效数字）。这使得它们能够表示比相同位宽的整数更宽的动态范围，尽管在该范围内精度有所不同。
+
+#### FP8 (E5M2 和 E4M3)
+
+FP8使用8位，类似于INT8，但采用浮点表示。存在两种主要变体，由指数（E）和尾数（M）的位数以及一个符号位定义：
+
+- **E5M2:** 5个指数位，2个尾数位。提供更宽的动态范围（类似于FP16），但精度较低。通常更适合表示训练期间的梯度或可能具有较大变化的激活值。
+- **E4M3:** 4个指数位，3个尾数位。提供更窄的动态范围，但精度高于E5M2，使其通常更适合表示权重 (weight)。它与预训练 (pre-training)模型中权重的典型分布良好吻合。
+
+FP8格式达到了平衡，由于指数位的存在，与INT8相比能更好地处理异常值，同时仍比FP16/BF16提供显著的内存和计算节省。原生FP8支持是NVIDIA H100/L40 GPU等最新硬件的一个特点，使其成为LLM高效推理 (inference)中一个越来越重要的格式。
+
+#### FP4 (例如：E2M1)
+
+FP4在浮点结构中仅使用4位，进一步推进了技术。常见配置是E2M1（1个符号位，2个指数位，1个尾数位）。
+
+- **表示:** 提供极其有限的范围和精度。对于E2M1，只有8个独特的、可表示的值（加上符号位）。可表示的值通常非均匀地聚集。
+- **用例:** FP4是高度激进的。它常用于研究或选择性应用，可能与块级缩放因子结合，或用于已知不那么敏感的参数 (parameter)。达到可接受的精度通常需要专门的量化 (quantization)方案或QAT。
+
+### 专用格式
+
+认识到标准格式的局限性，研究人员开发了根据LLM中观察到的值分布进行定制的专用数据类型。
+
+#### NormalFloat (NF4)
+
+NormalFloat 4位（NF4）是一种非均匀数据类型，随QLoRA方法引入。它的设计基于一个观察结果，即预训练 (pre-training)LLM中的权重 (weight)通常遵循正态分布 $N(\mu, \sigma^2)$，通常集中在零点（$\mu=0$）附近。
+
+- **主要思路:** 与INT4等均匀间隔的量化 (quantization)级别不同，NF4根据标准正态分布 $N(0, 1)$ 的分位数定义其表示级别。它旨在创建 $2^4 = 16$ 个级别，使得每个级别表示 $N(0, 1)$ 分布中等量的概率质量。
+- **优点:** 这在平均值（零）附近提供了更高的精度，因为大多数权重都集中在此处，而在尾部则精度较低。这种映射被认为是信息理论上对正态分布数据最优的。
+- **实现:** NF4需要一个单一的缩放因子，将标准化的 $N(0, 1)$ 分位数映射到正在量化的权重的实际范围。它已显示出强大的实证结果，特别是当与QLoRA中使用的双重量化（对量化参数 (parameter)本身进行量化）等技术结合使用时。
+
+
+
+![可表示值分布（4位格式，缩放到 \[-1, 1\]）](plots/4600-0.json)
+
+
+
+> INT4（均匀间隔）、NF4（非均匀，零附近更密集）以及潜在的FP4 E2M1（非均匀，有限值）在缩放到范围 [-1, 1] 时的可表示值比较。这显示了每种格式提供的不同精度分布。
+
+### 比较与考量
+
+数据类型的选择涉及权衡多个因素：
+
+| 特性 | INT8 | INT4 | FP8 (E4M3) | FP4 (E2M1) | NF4 |
+| --- | --- | --- | --- | --- | --- |
+| 位数 | 8 | 4 | 8 | 4 | 4 |
+| 级别 | 256 | 16 | ~240 独特 | ~14 独特 | 16 |
+| 类型 | 整数 | 整数 | 浮点 | 浮点 | 固定（非均匀） |
+| 均匀性 | 是 | 是 | 否 | 否 | 否 |
+| 精度 | 中等 | 低 | 中等（变化） | 很低（变化） | 零附近高 |
+| 范围 | 有限（受缩放限制） | 非常有限 | 更宽 | 有限 | 有限（受缩放限制） |
+| 硬件 | 常见 | 新兴/内核 | 新兴（GPU） | 研究/内核 | 内核 |
+| 常见用途 | 权重 (weight)/激活值 | 权重（PTQ） | 权重/激活值 | 权重（研究） | 权重（QLoRA） |
+
+**选择格式的因素：**
+
+1. **目标硬件:** CPU或GPU是否对目标格式（例如INT8、FP8、INT4）的有效操作有原生支持？如果没有，可能需要高效的内核，这可能会影响性能或需要特定的库（如bitsandbytes）。
+2. **量化 (quantization)算法:** 某些算法天生与特定格式相关联（例如，QLoRA使用NF4）。PTQ方法（如GPTQ/AWQ）通常以INT4为目标。
+3. **精度要求:** 更激进的格式（INT4、FP4、NF4）增加了精度下降的风险。可接受的精度损失程度决定了你可以降到多低的位数。
+4. **模型敏感性:** LLM的不同部分对量化表现出不同的敏感性。混合精度方法可能会对更敏感的层（如注意力输出）使用INT8或FP8，而对其他层（如线性层）使用INT4。
+5. **值分布:** 如果权重已知呈正态分布，NF4可能是最优的。如果激活值偶尔出现较大的异常点，FP格式（如FP8）可能比INT8更好地处理范围。
+
+总而言之，数据类型不仅是一个细节，更是LLM量化中的一项基本选择。INT4、FP8和NF4等格式能够实现部署大型模型所需的大幅内存和计算节省。然而，必须审慎使用它们，通常结合先进的量化算法和仔细的评估，以平衡性能提升与潜在的精度影响。理解这些格式为选择和实现后续章节中讨论的先进技术提供了支撑。
+
+## 参考资料
+
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314) — Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, Luke Zettlemoyer (2023)
+  Journal: arXiv preprint arXiv:2305.14314; DOI: [10.48550/arXiv.2305.14314](https://doi.org/10.48550/arXiv.2305.14314)
+  介绍了QLoRA，一种使用4位NormalFloat (NF4) 量化和双重量化的内存高效微调方法。
+- [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.01730) — Elias Frantar, Saleh Ashkboos, Maximilian Seidl, Sebastian P. Stich, Torsten Hoefler (2022)
+  Journal: arXiv preprint arXiv:2210.01730; DOI: [10.48550/arXiv.2210.01730](https://doi.org/10.48550/arXiv.2210.01730)
+  介绍了GPTQ，一种针对LLMs的高效训练后量化方法，主要针对4位整数权重。
+- [AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration](https://arxiv.org/abs/2306.00978) — Ji Lin, Jiaming Tang, Haotian Tang, Shang Yang, Wei-Ming Chen, Wei-Chen Wang, Guangxuan Xiao, Xingyu Dang, Chuang Gan, Song Han (2023)
+  Journal: MLSys 2024; DOI: [10.48550/arXiv.2306.00978](https://doi.org/10.48550/arXiv.2306.00978)
+  提出了AWQ，一种激活感知的权重量化方法，根据权重对激活异常值的影响选择性地进行量化，在低位LLM推理中表现出良好的准确性。
+- [Transformer Engine: A Unified Deep Learning Acceleration Library for Transformers](https://arxiv.org/abs/2209.05193) — Oleg Kuchaiev, Jianyu Huang, Brian Catanzaro (2022)
+  Journal: arXiv preprint arXiv:2209.05193; Pages: 15; DOI: [10.48550/arXiv.2209.05193](https://doi.org/10.48550/arXiv.2209.05193)
+  描述了NVIDIA Transformer Engine，它支持高效的大模型训练和推理，包括使用8位浮点（FP8）格式处理激活和权重。

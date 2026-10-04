@@ -1,0 +1,63 @@
+---
+course: "intro-to-multimodal-ai"
+chapter: "components-multimodal-ai-models"
+lesson: "extracting-features-audio-data"
+sourceId: 6526
+sourceUrl: "https://apxml.com/zh/courses/intro-to-multimodal-ai/chapter-4-components-multimodal-ai-models/extracting-features-audio-data"
+title: "从音频数据中提取特征"
+description: "了解从音频数据中提取信息丰富特征的基本方法。"
+order: 3
+plots: []
+sourceHash: "adb4b529769e3940d86aa04d45f9e5f0e26e94fc66216be3108a8703122c111a"
+sourceCorrections: []
+---
+
+正如我们需要处理文本和图像以获取其重要属性一样，音频数据也需要转换成AI模型能够理解和处理的格式。原始音频通常是波形。这个波形是信息的丰富来源，但它也复杂且维度高。将原始音频直接输入模型可能计算成本高昂，并且不总能带来最佳表现。相反，我们提取特征：即音频内容更紧凑、信息量更大的表示形式。
+
+音频特征提取的主要目标是将声音信号转换为数值序列或向量 (vector)，以突出重要的声学属性。这些特征理想情况下应捕捉与当前任务相关的特性，无论是语音理解、声音识别还是音乐分析。
+
+### 我们可以从音频中得到哪些特征？
+
+有几种我们通常从音频中提取的特征。让我们看一下几个基本类型：
+
+1. **时域特征：** 这些是直接根据原始音频信号的随时间变化的振幅值计算得出的。
+
+   - **过零率 (ZCR)：** 这仅仅是音频信号改变其符号（从正到负或反之）的速率。高ZCR通常表示嘈杂或打击乐声（如钹声或静电声），而低ZCR在音调声音或有声语音中很常见。例如，“snake”中的“s”音将比“boat”中的“o”音具有更高的ZCR。
+   - **均方根能量 (RMS)：** 此特征衡量音频信号在短时间内的响度或强度。较高的RMS值对应于更响亮的声音。它对于音频分段或识别静默期与活动期很有用。
+2. **频域（频谱）特征：** 这些特征提供有关音频信号中频率分布的信息。为了获取这些特征，音频通常首先使用傅里叶变换等技术转换为频域。
+
+   - **频谱图：** 如我们在第二章中讨论的，频谱图是信号频率频谱随时间变化的视觉表示。虽然有时直接用作输入（像图像一样），但频谱图内的数据也可以作为其他特征的依据。
+   - **梅尔频率倒谱系数 (MFCCs)：** 这些可能是语音识别和声音分类中应用最广泛的特征。MFCC旨在基于非线性频率尺度（梅尔尺度）来表示声音的短期功率谱，该尺度近似于人类听觉感知。本质上，它们捕捉声音的音色或音质。例如，无论说话者是谁，元音“a”的MFCC都将与“i”的不同。
+   - **色度特征：** 这些对音乐分析特别有用。色度特征表示音频片段中12个标准音高类别（C、C#、D、D#、E、F、F#、G、G#、A、A#、B）中每个音高相关的强度。这有助于识别旋律、和声与和弦，因为它能够很好地应对音色或配器变化。
+   - **谱质心：** 这衡量频谱的“质心”。它表明声音中主导频率的位置。更高的谱质心意味着更多的高频内容，通常与“更明亮”的声音相关。例如，长笛通常比大号有更高的谱质心。
+   - **谱通量：** 这衡量信号的功率谱变化的速度。它对于检测新声音的出现或音频内容的变化很有用。
+
+### 音频特征提取的一般流程
+
+提取这些特征通常包含几个常见步骤：
+
+1. **分帧（或加窗）：** 音频信号是动态的，并且随时间变化。为了捕捉这些变化，音频通常被分成短的、通常重叠的帧。常见的帧大小为20-40毫秒。重叠有助于确保帧之间的平滑过渡。
+2. **每帧特征计算：** 对于这些短帧中的每一个，都会计算所选特征（如ZCR、RMS、MFCC）。这会产生一个特征向量 (vector)序列，其中每个向量对应一个音频帧。
+3. **聚合（可选）：** 有时，特别是对于需要整个音频片段单一表示的任务，这些帧级特征可能会被聚合。这可能涉及计算所有帧中特征值的平均值、中位数、标准差或其他统计量。
+
+下图说明了导出MFCC（一种常见且重要的音频特征）的简化流程。
+
+> 一系列操作，将原始音频波形转换为梅尔频率倒谱系数（MFCC）。每个步骤处理上一步的输出，最终得到一组数值特征。
+
+### 这些特征为何对多模态 (multimodal)系统很重要？
+
+一旦我们有了这些音频数据的数值特征向量 (vector)，它们就准备好输入机器学习 (machine learning)模型了。在多模态系统中，这些音频特征将与从其他模态中提取的特征（如文本嵌入 (embedding)或图像特征向量，我们将在后面讨论）结合使用。例如，如果我们正在构建一个理解视频中情感的系统，我们可能会从音轨中提取MFCC，将它们与视觉帧（如面部表情）的特征以及转录语音的特征结合起来。
+
+通过将复杂的音频信号转换为更易于管理和更有意义的数值表示，我们使AI模型能够有效地从声音中学习并进行预测。这些特征作为原始音频感官输入与我们AI分析能力之间的桥梁。
+
+## 参考资料
+
+- [Speech and Language Processing: An Introduction to Natural Language Processing, Computational Linguistics, and Speech Recognition](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University (Online Draft)
+  一本内容全面的教科书，提供了音频特征提取的基础解释，包括过零率 (ZCR)、均方根 (RMS) 能量，并详细讨论了语音处理中的梅尔频率倒谱系数 (MFCCs)。
+- [Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications](https://www.springerprofessional.de/fundamentals-of-music-processing/20560938) — Meinard Müller (2021)
+  Publisher: Springer International Publishing; DOI: [10.1007/978-3-030-69808-9](https://doi.org/10.1007/978-3-030-69808-9)
+  一本与理解频谱音频特征高度相关的书籍，例如声谱图、频谱质心、频谱通量，尤其是对于音乐分析至关重要的色度特征。
+- [Comparison of Parametric Representations for Monosyllabic Word Recognition in Continuously Spoken Sentences](https://ieeexplore.ieee.org/document/1163420) — S. Davis and P. Mermelstein (1980)
+  Journal: IEEE Transactions on Acoustics, Speech, and Signal Processing; Publisher: IEEE; Volume: 28; Pages: 357-366; DOI: [10.1109/TASSP.1980.1163420](https://doi.org/10.1109/TASSP.1980.1163420)
+  这篇原创论文介绍了梅尔频率倒谱系数 (MFCCs)，这是一种用于语音和声音识别的基本且广泛使用的音频特征提取技术。

@@ -1,0 +1,366 @@
+---
+course: "essential-numpy-pandas"
+chapter: "data-selection-indexing-pandas"
+lesson: "accessing-subsets-practice"
+sourceId: 1799
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-7-data-selection-indexing-pandas/accessing-subsets-practice"
+title: "动手实践：访问特定数据子集"
+description: "使用 .loc、.iloc 和布尔索引从 DataFrame 中选择不同的数据子集。"
+order: 8
+plots: []
+sourceHash: "a1137fd62d73638faf0286454a3d56ef8e845d714f32120cbcbd46778cea8d3f"
+sourceCorrections: []
+---
+
+访问 Pandas DataFrame 中的特定数据子集可以通过主要方法实现，例如按名称选择列，使用 `.loc` 进行基于标签的索引，使用 `.iloc` 进行基于位置的索引，以及使用布尔条件筛选数据。实际练习将巩固对这些方法的理解，并增强应用这些技术的信心。
+
+首先，确保你已导入 Pandas。通常，我们将其以别名 `pd` 导入。
+
+```python
+import pandas as pd
+import numpy as np # 我们稍后可能会使用 numpy 来创建数据
+```
+
+接下来，我们创建一个示例 DataFrame 进行操作。我们将构建一个表示不同类型水果信息的小型数据集。
+
+```python
+# 创建数据字典
+data = {
+    'Fruit': ['Apple', 'Banana', 'Orange', 'Grape', 'Strawberry', 'Blueberry'],
+    'Color': ['Red', 'Yellow', 'Orange', 'Purple', 'Red', 'Blue'],
+    'Price': [1.2, 0.5, 0.8, 4.5, 3.0, 5.5],
+    'Quantity': [100, 150, 80, 200, 120, 90]
+}
+
+# 定义有意义的索引标签
+index_labels = ['F01', 'F02', 'F03', 'F04', 'F05', 'F06']
+
+# 创建 DataFrame
+inventory_df = pd.DataFrame(data, index=index_labels)
+
+# 显示 DataFrame
+print("原始水果库存 DataFrame:")
+print(inventory_df)
+```
+
+这将输出：
+
+```
+Original Fruit Inventory DataFrame:
+         Fruit   Color  Price  Quantity
+F01      Apple     Red    1.2       100
+F02     Banana  Yellow    0.5       150
+F03     Orange  Orange    0.8        80
+F04      Grape  Purple    4.5       200
+F05 Strawberry     Red    3.0       120
+F06  Blueberry    Blue    5.5        90
+```
+
+现在，让我们练习从 `inventory_df` 中选择数据。
+
+### 任务 1：选择列
+
+选择 `Fruit` 列。请记住，访问单个列会返回一个 Pandas Series。
+
+```python
+# 选择 'Fruit' 列
+fruit_column = inventory_df['Fruit']
+print("\n选择 'Fruit' 列（返回 Series）：")
+print(fruit_column)
+```
+
+```
+Selecting the 'Fruit' column (returns a Series):
+F01         Apple
+F02        Banana
+F03        Orange
+F04         Grape
+F05    Strawberry
+F06     Blueberry
+Name: Fruit, dtype: object
+```
+
+现在，同时选择 `Fruit` 和 `Price` 列。访问多个列会返回一个 DataFrame。注意这里使用了双层方括号 `[[]]`。
+
+```python
+# 选择 'Fruit' 和 'Price' 列
+fruit_price_df = inventory_df[['Fruit', 'Price']]
+print("\n选择 'Fruit' 和 'Price' 列（返回 DataFrame）：")
+print(fruit_price_df)
+```
+
+```
+Selecting 'Fruit' and 'Price' columns (returns a DataFrame):
+         Fruit  Price
+F01      Apple    1.2
+F02     Banana    0.5
+F03     Orange    0.8
+F04      Grape    4.5
+F05 Strawberry    3.0
+F06  Blueberry    5.5
+```
+
+### 任务 2：使用 `.loc` 选择（基于标签）
+
+选择标签为 `F03`（橙子）对应的行。
+
+```python
+# 选择标签为 'F03' 的行
+orange_row = inventory_df.loc['F03']
+print("\n使用 .loc 选择标签为 'F03' 的行：")
+print(orange_row)
+```
+
+```
+Selecting row with label 'F03' using .loc:
+Fruit       Orange
+Color       Orange
+Price          0.8
+Quantity        80
+Name: F03, dtype: object
+```
+
+选择标签为 `F05`（草莓）的水果的 `Price`。
+
+```python
+# 选择标签为 'F05' 的 'Price'
+strawberry_price = inventory_df.loc['F05', 'Price']
+print(f"\n使用 .loc 获取水果 'F05' 的价格：{strawberry_price}")
+```
+
+```
+Price of fruit 'F05' using .loc: 3.0
+```
+
+选择标签从 `F02` 到 `F04`（包含）的行，并且只选择 `Fruit` 和 `Quantity` 列。
+
+```python
+# 选择 'F02' 到 'F04' 的行，以及 'Fruit' 和 'Quantity' 列
+subset_loc = inventory_df.loc['F02':'F04', ['Fruit', 'Quantity']]
+print("\n使用 .loc 选择 'F02' 到 'F04' 的行和特定列：")
+print(subset_loc)
+```
+
+```
+Selecting rows 'F02' to 'F04' and specific columns using .loc:
+      Fruit  Quantity
+F02  Banana       150
+F03  Orange        80
+F04   Grape       200
+```
+
+注意 `.loc` 如何在切片中包含结束标签（`F04` 被包含在内）。
+
+### 任务 3：使用 `.iloc` 选择（基于位置）
+
+选择第三行（对应于橙子，索引位置为 2，因为索引从 0 开始）。
+
+```python
+# 选择第三行（索引位置 2）
+third_row_iloc = inventory_df.iloc[2]
+print("\n使用 .iloc 选择第三行（索引 2）：")
+print(third_row_iloc)
+```
+
+```
+Selecting the third row (index 2) using .iloc:
+Fruit       Orange
+Color       Orange
+Price          0.8
+Quantity        80
+Name: F03, dtype: object
+```
+
+选择第 4 行（索引 3）和第 2 列（索引 1）交叉处的值。这应该是颜色 'Purple'。
+
+```python
+# 选择行索引 3，列索引 1 处的值
+value_iloc = inventory_df.iloc[3, 1]
+print(f"\n使用 .iloc 获取行索引 3，列索引 1 处的值：{value_iloc}")
+```
+
+```
+Value at row index 3, column index 1 using .iloc: Purple
+```
+
+选择前三行（索引 0, 1, 2）和前两列（索引 0, 1）。
+
+```python
+# 选择前 3 行和前 2 列
+subset_iloc = inventory_df.iloc[0:3, 0:2] # 注意：这里 3 和 2 是不包含的
+print("\n使用 .iloc 选择前 3 行和前 2 列：")
+print(subset_iloc)
+```
+
+```
+Selecting first 3 rows and first 2 columns using .iloc:
+     Fruit   Color
+F01   Apple     Red
+F02  Banana  Yellow
+F03  Orange  Orange
+```
+
+请记住，使用 `.iloc` 进行切片时会排除结束位置，这与标准的 Python 列表切片类似。
+
+### 任务 4：条件选择（布尔索引）
+
+选择所有红色的水果。
+
+```python
+# 创建布尔条件：颜色为 'Red'
+red_fruits_condition = inventory_df['Color'] == 'Red'
+print("\n'Color' == 'Red' 的布尔 Series：")
+print(red_fruits_condition)
+
+# 将条件应用于 DataFrame
+red_fruits_df = inventory_df[red_fruits_condition]
+print("\n选择颜色为 'Red' 的行：")
+print(red_fruits_df)
+```
+
+```
+Boolean Series for 'Color' == 'Red':
+F01     True
+F02    False
+F03    False
+F04    False
+F05     True
+F06    False
+Name: Color, dtype: bool
+
+Selecting rows where Color is 'Red':
+         Fruit Color  Price  Quantity
+F01      Apple   Red    1.2       100
+F05 Strawberry   Red    3.0       120
+```
+
+选择所有 `Price` 大于 $1.00$ 且 `Quantity` 小于 150 的水果。使用 `&` 运算符组合条件。
+
+```python
+# 条件 1：Price > 1.0
+price_condition = inventory_df['Price'] > 1.0
+# 条件 2：Quantity < 150
+quantity_condition = inventory_df['Quantity'] < 150
+
+# 使用 '&' (AND) 组合条件
+combined_condition = price_condition & quantity_condition
+
+# 应用组合条件
+filtered_df = inventory_df[combined_condition]
+print("\n选择 Price > 1.0 且 Quantity < 150 的行：")
+print(filtered_df)
+```
+
+```
+Selecting rows where Price > 1.0 AND Quantity < 150:
+         Fruit Color  Price  Quantity
+F01      Apple   Red    1.2       100
+F05 Strawberry   Red    3.0       120
+F06  Blueberry  Blue    5.5        90
+```
+
+选择所有红色或 `Price` 小于 $0.60$ 的水果的 `Fruit` 名称和 `Price`。使用 `|` 运算符。
+
+```python
+# 条件 1：颜色为 'Red'
+color_condition = inventory_df['Color'] == 'Red'
+# 条件 2：Price < 0.6
+price_condition_low = inventory_df['Price'] < 0.6
+
+# 使用 '|' (OR) 组合条件
+combined_or_condition = color_condition | price_condition_low
+
+# 应用条件并选择特定列
+filtered_subset = inventory_df.loc[combined_or_condition, ['Fruit', 'Price']]
+print("\n选择颜色为 'Red' 或 Price < 0.6 的 'Fruit' 和 'Price'：")
+print(filtered_subset)
+```
+
+```
+Selecting 'Fruit' and 'Price' where Color is 'Red' OR Price < 0.6:
+         Fruit  Price
+F01      Apple    1.2
+F02     Banana    0.5
+F05 Strawberry    3.0
+```
+
+注意我们如何将布尔索引与 `.loc` 结合使用，以选择筛选后行的特定列。
+
+### 任务 5：设置和重置索引
+
+有时，将其中一列设置为 DataFrame 索引很有用，特别是当它包含唯一标识符时。让我们将 `Fruit` 列设置为索引。
+
+```python
+# 将 'Fruit' 列设为索引
+# inplace=True 直接修改 DataFrame
+# inventory_df.set_index('Fruit', inplace=True)
+
+# 另一种方法是创建一个带有新索引的新 DataFrame
+inventory_df_fruit_index = inventory_df.set_index('Fruit')
+print("\n以 'Fruit' 为索引的 DataFrame：")
+print(inventory_df_fruit_index)
+```
+
+```
+DataFrame with 'Fruit' as index:
+             Color  Price  Quantity
+Fruit                              
+Apple          Red    1.2       100
+Banana      Yellow    0.5       150
+Orange      Orange    0.8        80
+Grape       Purple    4.5       200
+Strawberry     Red    3.0       120
+Blueberry     Blue    5.5        90
+```
+
+现在，尝试使用新的索引，通过 `.loc` 选择 'Orange' 行。
+
+```python
+# 使用新索引选择 'Orange'
+orange_data = inventory_df_fruit_index.loc['Orange']
+print("\n使用新水果索引选择 'Orange' 数据：")
+print(orange_data)
+```
+
+```
+Selecting 'Orange' data using the new fruit index:
+Color       Orange
+Price          0.8
+Quantity        80
+Name: Orange, dtype: object
+```
+
+最后，让我们将索引重置回默认的整数索引，将 'Fruit' 索引变回一个普通列。
+
+```python
+# 重置索引
+inventory_df_reset = inventory_df_fruit_index.reset_index()
+print("\n重置索引后的 DataFrame：")
+print(inventory_df_reset)
+```
+
+```
+DataFrame after resetting the index:
+        Fruit   Color  Price  Quantity
+0       Apple     Red    1.2       100
+1      Banana  Yellow    0.5       150
+2      Orange  Orange    0.8        80
+3       Grape  Purple    4.5       200
+4  Strawberry     Red    3.0       120
+5   Blueberry    Blue    5.5        90
+```
+
+你可以看到 `Fruit` 列又回来了，并且添加了一个默认的整数索引（0, 1, 2...）。
+
+本次动手操作提供了在 Pandas 中应用主要数据选择技术的练习。熟练使用 `[]` 进行列选择、`.loc` 进行基于标签的访问、`.iloc` 进行基于位置的访问以及布尔索引进行条件筛选，对于几乎任何数据分析任务都非常重要。你可以使用 `inventory_df` DataFrame 进行更多练习，或者尝试加载你自己的数据集（如前一章所学），并练习选择不同的数据子集。
+
+## 参考资料
+
+- [Indexing and selecting data](https://pandas.pydata.org/docs/user_guide/indexing.html) — pandas development team (2024)
+  官方指南详细且最新地解释和示例了 Pandas DataFrame 中所有数据选择和索引方法，包括 .loc、.iloc 和布尔索引。
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data/9781098104030/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 5
+  由 Pandas 库的创建者撰写，本书是理解 Pandas 核心功能、数据结构和数据操作技术（对有效数据选择至关重要）的权威资源。
+- [Effective Pandas: Patterns for Data Manipulation](https://www.metasnake.com/products/effective-pandas-digital-book) — Matt Harrison (2021)
+  Publisher: Independently published
+  提供了 Pandas 数据操作的实用模式和最佳实践，包括索引策略和性能考虑，这些都是在基本选择方法之上的补充。

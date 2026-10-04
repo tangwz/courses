@@ -1,0 +1,143 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "integrating-ml-models"
+lesson: "serializing-ml-models"
+sourceId: 5271
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-3-integrating-ml-models/serializing-ml-models"
+title: "机器学习模型的序列化与反序列化"
+description: "保存训练好的机器学习模型的方法（例如，使用pickle、joblib、特定库格式）及其加载方式。"
+order: 1
+plots: []
+sourceHash: "5794442eac776119e2919a11c03c16d85b8a620820496020c24acbaf3b6f1b6d"
+sourceCorrections: []
+---
+
+训练好的机器学习 (machine learning)模型只存在于计算机内存中，且仅限于其活跃会话期间。要以后使用这个训练好的模型，尤其是在像Web API这样的独立应用程序中，你需要一种方法来保存其学习到的状态，并在需要时重新加载。将内存中的模型对象转换为可存储到磁盘或传输的格式的过程称为**序列化**，而从存储格式中重建对象的逆过程称为**反序列化**。
+
+可以把它想象成保存你正在处理的文档。你将它保存到文件（序列化），这样你就可以关闭应用程序并在以后打开完全相同的文档（反序列化），而不会丢失你的工作。对于机器学习模型来说，“保存工作”意味着保存训练过程中获得的学习参数 (parameter)、结构以及所有其他必需的信息。
+
+“如果没有序列化，你的API服务器每次启动时都需要重新训练模型，这会消耗大量计算资源，并且对于大多数应用程序来说是不切实际的。序列化让你只需训练一次模型，将其保存为文件（通常称为模型制品），然后在你的FastAPI应用程序需要进行预测时，简单地加载此文件即可。”
+
+### 常用序列化库
+
+Python提供了几种序列化对象的方法。对于机器学习 (machine learning)模型，以下两个库特别常用：
+
+1. **`pickle`**：Python内置的对象序列化模块。它几乎可以序列化任何Python对象，包括像训练好的scikit-learn模型这样的复杂对象。
+2. **`joblib`**：一个提供Python任务流水线化实用工具的库。它包含对`pickle`的替代方案（`joblib.dump`和`joblib.load`），这些方案对于包含大型NumPy数组的对象通常更高效，而NumPy数组在机器学习模型中非常常见，尤其是scikit-learn模型。
+
+#### 使用`pickle`
+
+让我们看看如何使用`pickle`保存一个简单的scikit-learn模型。假设你有一个名为`model`的训练好的模型对象：
+
+```python
+import pickle
+from sklearn.linear_model import LogisticRegression
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+
+# --- 训练一个示例模型（示意） ---
+X, y = make_classification(n_samples=100, n_features=10, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+# --- 模型现在已“训练好” ---
+
+# 定义保存模型的文件名
+model_filename = 'logistic_regression_model.pkl'
+
+# 序列化（保存）模型到文件
+# 'wb'模式以二进制写入模式打开文件
+with open(model_filename, 'wb') as file:
+    pickle.dump(model, file)
+
+print(f"模型已保存到 {model_filename}")
+
+# --- 稍后，在不同的脚本或会话中 ---
+
+# 反序列化（加载）模型文件
+# 'rb'模式以二进制读取模式打开文件
+try:
+    with open(model_filename, 'rb') as file:
+        loaded_model = pickle.load(file)
+    print(f"模型已从 {model_filename} 加载")
+    # 现在你可以使用loaded_model进行预测
+    # 示例：predictions = loaded_model.predict(X_test)
+except FileNotFoundError:
+    print(f"错误：模型文件 '{model_filename}' 未找到。")
+except Exception as e:
+    print(f"加载模型时出错：{e}")
+```
+
+> **安全提示：**`pickle`功能强大，但存在重要的安全隐患。反序列化pickle文件涉及执行文件中嵌入 (embedding)的代码。绝不要从不可信或未经身份验证的来源加载pickle文件，因为它可能包含恶意代码。`joblib`也有类似的安全考量。
+
+#### 使用`joblib`
+
+`joblib`通常更受scikit-learn模型青睐，因为它能更高效地处理大型NumPy数组，与`pickle`相比，可能生成更小的文件大小和更快的加载时间。其接口非常相似：
+
+```python
+import joblib
+from sklearn.linear_model import LogisticRegression
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+
+# --- 训练一个示例模型（示意） ---
+X, y = make_classification(n_samples=100, n_features=10, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+# --- 模型现在已“训练好” ---
+
+# 定义保存模型的文件名
+model_filename_joblib = 'logistic_regression_model.joblib'
+
+# 使用joblib序列化（保存）模型
+joblib.dump(model, model_filename_joblib)
+print(f"模型已保存到 {model_filename_joblib}")
+
+# --- 稍后，在不同的脚本或会话中 ---
+
+# 使用joblib反序列化（加载）模型
+try:
+    loaded_model_joblib = joblib.load(model_filename_joblib)
+    print(f"模型已从 {model_filename_joblib} 加载")
+    # 现在你可以使用loaded_model_joblib进行预测
+    # 示例：predictions = loaded_model_joblib.predict(X_test)
+except FileNotFoundError:
+    print(f"错误：模型文件 '{model_filename_joblib}' 未找到。")
+except Exception as e:
+    print(f"加载模型时出错：{e}")
+```
+
+对于大多数scikit-learn的使用场景，`joblib`是推荐的选择。
+
+### 库特定格式
+
+尽管`pickle`和`joblib`是通用的Python序列化工具，但许多机器学习 (machine learning)库提供了它们自己专用的函数或格式来保存和加载模型。
+
+- **TensorFlow/Keras：** 通常通过`model.save()`和`tf.keras.models.load_model()`使用SavedModel格式或`.h5`（HDF5）文件。这些格式不仅存储模型权重 (weight)，还存储模型架构和训练配置。
+- **PyTorch：** 通常使用`.pt`或`.pth`文件扩展名。PyTorch允许保存整个模型（`torch.save(model, PATH)`）或仅保存学习到的参数 (parameter)（状态字典 - `torch.save(model.state_dict(), PATH)`），后者因其灵活性而常受青睐。加载通过`torch.load()`完成。
+
+在使用这些框架时，通常最佳做法是使用它们原生的保存/加载机制，因为它们针对这些库的特定结构和要求进行了优化，并且通常能更妥善地处理版本间的兼容性问题。
+
+### 序列化注意事项
+
+- **版本兼容性：** 这是一个重要挑战。使用某个库版本（例如scikit-learn 1.0）序列化的模型，在使用不同版本（例如scikit-learn 1.2）时可能无法正确加载。请确保你的FastAPI应用程序中加载模型所使用的Python环境和库版本与模型最初训练和保存时的环境相符。这是容器化（第6章中讲解）如此有用的原因之一。
+- **文件大小：** 训练好的模型，尤其是深度学习 (deep learning)模型，可能生成大型制品文件（兆字节甚至千兆字节）。如果模型按需加载，请考虑存储影响以及对应用程序启动时间的潜在影响。
+- **序列化内容：** 通常，你序列化的是最终的、训练好的模型对象。如果你的预测流水线涉及单独的预处理步骤（如缩放或编码），你可能需要序列化一个scikit-learn的`Pipeline`对象，该对象包含预处理步骤和模型，确保在预测时应用与训练时完全相同的转换。或者，预处理逻辑也可以直接在你的FastAPI应用程序代码中重新实现。
+
+成功序列化你的模型是第一步。下一步，将在下一节中讲解，是将此序列化制品加载到你运行的FastAPI应用程序中，以便它可以通过你的API端点提供预测服务。
+
+## 参考资料
+
+- [pickle - Python object serialization](https://docs.python.org/3/library/pickle.html) — Python Documentation (2024)
+  Python内置`pickle`模块的官方文档，详细说明其功能、用法和安全注意事项。
+- [Joblib: Running Python functions as pipeline jobs](https://joblib.readthedocs.io/en/latest/) — Joblib Contributors (2024)
+  `joblib`库的官方文档，解释其功能，包括对包含大型NumPy数组的对象的有效序列化。
+- [4.1. Model persistence](https://scikit-learn.org/stable/modules/model_persistence.html) — scikit-learn developers (2024)
+  scikit-learn官方文档关于保存和加载训练好的模型，并推荐使用`joblib`处理scikit-learn对象。
+- [Save and load Keras models](https://www.tensorflow.org/guide/keras/save_and_serialize) — Neel Kovelamudi, Francois Chollet (2024)
+  Keras模型保存和序列化的官方指南，涵盖TensorFlow/Keras模型的SavedModel格式和HDF5文件。
+- [Saving and Loading Models](https://pytorch.org/docs/stable/notes/serialization.html) — PyTorch Documentation (2024)
+  PyTorch官方文档关于模型保存和加载，包括保存整个模型或仅保存状态字典。

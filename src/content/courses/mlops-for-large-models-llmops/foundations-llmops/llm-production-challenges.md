@@ -1,0 +1,80 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "foundations-llmops"
+lesson: "llm-production-challenges"
+sourceId: 3103
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-1-foundations-llmops/llm-production-challenges"
+title: "大语言模型在生产中的特有挑战"
+description: "分析大语言模型带来的具体难题，包括规模、推理延迟、成本和监控复杂性。"
+order: 2
+plots: ["plots/3103-0.json"]
+sourceHash: "47ebb531ad542153711f34216fe45dd9d3299d5c1bcf467834bd93f389968dcf"
+sourceCorrections: []
+---
+
+MLOps的原则，包括自动化、版本控制、监控和协作，是模型部署的基础。然而，将这些原则应用于大语言模型（LLM）时，会带来规模和复杂度的显著变化。当模型参数 (parameter)量$P$达到数十亿（$P \gg 10^9$）甚至数万亿时，其遇到的操作难题与小型模型相比有质的区别，面临着独特的挑战。
+
+### 规模：模型大小与计算需求
+
+大语言模型 (LLM)的主要特点是其庞大的体量。一个拥有数十亿参数 (parameter)的模型，如GPT-3，仅存储其权重 (weight)就需要数百GB，而万亿参数的模型则需要TB级存储。
+
+- **存储：** 管理训练过程中的模型检查点、对最终模型进行版本控制以及处理中间训练产物，都需要可扩展的存储方案，能够高效处理TB级的数据对象。标准的基于Git的工作流程常常会失效；专用的系统，如Git LFS或专用的工件库，变得必不可少，但即使是这些系统也可能面临压力。
+- **内存：** 仅是将大型模型加载到内存中进行推理 (inference)，就需要大量高带宽内存（HBM），这通常只存在于高端GPU或专用加速器上。一个175亿参数的全精度（FP32）模型大约需要700GB（$175 \times 10^9$ 参数 $\times$ 4 字节/参数）。即使使用混合精度（FP16/BF16），这也需要350GB，远超单个加速器的容量。这使得多GPU或多节点服务设置成为必需，从而增加了操作的复杂度。
+- **计算（训练）：** 从零开始训练这些模型是一项需要巨大计算资源的任务，通常涉及数百或数千个GPU/TPU连续运行数周或数月。这直接导致了巨额的基础设施成本和能源消耗。管理这些分布式训练任务需要精密的编排和容错能力。
+- **计算（推理）：** 为实时应用提供大语言模型服务会带来延迟和吞吐量 (throughput)的难题。逐词生成文本的计算强度很高。实现可接受的响应时间（例如，交互式使用小于1-2秒）通常需要积极的优化和强大、昂贵的硬件加速器。扩展以处理高请求量又增加了另一层复杂性和成本。
+
+
+
+![相对操作复杂度：标准机器学习与大语言模型](plots/3103-0.json)
+
+
+
+> 这是典型标准机器学习 (machine learning)模型与大语言模型在不同操作方面的估计相对操作复杂度与成本的比较。请注意y轴的对数刻度，它突显了两者之间数量级的差异。
+
+### 规模化数据管理
+
+大语言模型 (LLM)在庞大数据集上进行训练，这些数据通常从网络抓取，包含数万亿个token（PB级的文本和代码）。
+
+- **数据量：** 获取、存储、清洗和预处理这些海量数据集是一项巨大的工程难题。高效的数据管道非常必要。
+- **版本控制：** 追踪用于训练或微调 (fine-tuning)的确切数据集对于可复现性和调试非常重要，但标准的数据版本控制工具可能难以应对PB级规模的数据。
+- **质量与偏差：** 在这些庞大且通常未经筛选的数据集中，保证数据质量并减轻固有偏差是一个持续的研究和操作问题，直接影响模型的行为和安全性。
+
+### 部署与优化障碍
+
+部署一个数百GB的模型绝非易事。
+
+- **打包：** 创建可移植的部署工件（例如容器）需要仔细管理大型模型文件和依赖项。
+- **推理 (inference)效率：** 量化 (quantization)（降低数值精度，例如到INT8或INT4）、剪枝和知识蒸馏 (knowledge distillation)等技术已成为标准实践，而不仅仅是可选功能，旨在减小模型大小、降低延迟并降低服务成本。实施和验证这些技术会增加操作流程的步骤。
+- **专用服务基础设施：** 标准的机器学习 (machine learning)模型服务器可能未针对大语言模型 (LLM)架构或大型模型所需的张量/管道并行进行优化。通常需要NVIDIA Triton Inference Server与TensorRT-LLM、vLLM等框架或定制解决方案。
+
+### 监控、评估与维护难题
+
+在生产环境中评估和监控大语言模型 (LLM)比监控预测类别或数值的传统模型显著复杂得多。
+
+- **输出质量：** 评估生成文本的质量是主观且多方面的。指标需要涵盖流畅性、连贯性、相关性、事实准确性、毒性、偏差以及幻觉 (hallucination)检测。简单的准确率分数是不足的。
+- **幻觉与事实准确性：** 大语言模型可以生成听起来合理但实际上不正确或无意义的信息（幻觉）。监控和减轻这种情况是一个主要的操作问题，通常需要人工反馈循环或精密的自动化检查。
+- **漂移：** 概念漂移和数据漂移更难确定。漂移可能表现为语气的细微变化、重复性增加或模型事实错误类型的转变。
+- **成本追踪：** 由于推理 (inference)硬件成本高昂，细粒度的成本监控和归因成为重要的操作要求。了解每次查询或每个用户的成本对于预算管理非常重要。
+- **反馈循环：** 实施有效的反馈机制（人工标注员、用户报告）以收集模型失败数据进行持续改进（微调 (fine-tuning)、提示调整）是操作密集型的。
+
+### 涌现 (emergence)行为与不可预测性
+
+大语言模型 (LLM)有时会展示出未明确训练的能力或行为，这些能力或行为在相同架构的较小版本中并不存在。虽然这通常是有益的，但这也意味着在生产中遇到新颖的输入或场景时，可能会出现不可预测的故障模式。因此，需要安全机制、内容过滤和持续的警惕。
+
+### 生态系统快速演变
+
+大型模型方面正以极快的速度进步。新的模型架构、训练技术（如高效微调 (fine-tuning)方法）、优化策略和开源工具不断涌现 (emergence)。构建大语言模型 (LLM)运维（LLMOps）实践需要考虑适应性，以便在无需持续系统重新设计的情况下集成这些新进展。
+
+这些难题使得专门关注大语言模型运维成为必要，需要调整MLOps的原则和工具，以处理大语言模型独特的规模、成本和行为特点。后续章节将讨论应对这些具体操作障碍的策略和技术。
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://proceedings.neurips.cc/paper/2020/file/1457c0d6bfcb4967418bfb8ac142f64a-Paper.pdf) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 33; Pages: 1877-1901; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，强调了其庞大的参数规模，为讨论的许多操作挑战奠定了基础。
+- [TensorRT-LLM Documentation](https://docs.nvidia.com/deeplearning/tensorrt-llm/user-guide/index.html) — NVIDIA Corporation (2025)
+  Publisher: NVIDIA
+  NVIDIA大型语言模型高性能推理库的官方文档，提供了部署和优化的实践见解。
+- [On the Dangers of Stochastic Parrots: Can Language Models Be Too Big? 🦜](https://doi.org/10.1145/3442188.3445922) — Emily M. Bender, Timnit Gebru, Angelina McMillan-Major, and Shmargaret Shmitchell (2021)
+  Journal: Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency; Publisher: Association for Computing Machinery; Pages: 610-623; DOI: [10.1145/3442188.3445922](https://doi.org/10.1145/3442188.3445922)
+  一篇批评性论文，讨论了大型语言模型的伦理和社会风险，尤其关注数据质量、偏见和有害输出的可能性。

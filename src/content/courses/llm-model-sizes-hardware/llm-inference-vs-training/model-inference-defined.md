@@ -1,0 +1,53 @@
+---
+course: "llm-model-sizes-hardware"
+chapter: "llm-inference-vs-training"
+lesson: "model-inference-defined"
+sourceId: 4234
+sourceUrl: "https://apxml.com/zh/courses/llm-model-sizes-hardware/chapter-4-llm-inference-vs-training/model-inference-defined"
+title: "什么是模型推理？"
+description: "定义推理：运用预训练模型进行预测或生成文本。"
+order: 1
+plots: []
+sourceHash: "bb5ccbae3e1f1153fe66c736adc27a1e12e65262c27b1ef3caa42451c075d113"
+sourceCorrections: []
+---
+
+首先，我们来明确“模型推理 (inference)”的定义。设想一个已经学会理解和生成语言的大语言模型（LLM）。这个学习过程，常被称为“训练”，需要大量的精力与计算资源，我们将在后续讨论。推理是模型训练*之后*发生的活动。它是实际*使用*已训练模型来完成特定任务的过程。
+
+当你与AI聊天机器人互动，要求它总结文档、翻译文本或生成代码时，你就是在启动推理过程。你提供一个输入（你的提示或问题），预训练 (pre-training)模型运用其学到的知识（存储在其参数 (parameter)中）来生成输出（答案、摘要、译文或代码）。
+
+### 核心思想：应用知识
+
+在推理 (inference)过程中，模型不会学习任何新知识。它的内部参数 (parameter)代表了模型在训练期间学习到的模式和关系，这些参数基本是“冻结”或固定的。模型接收你的输入，通过其人工神经元层，使用这些固定参数进行处理，并产生一个结果。
+
+想象你有一份组装家具的完整说明书。
+
+- **训练** 就像编写和测试这份说明书，找出最佳的步骤顺序并创建清晰的图表。这是一个复杂、迭代的过程。
+- **推理** 就像依照已完成说明书中的指示来组装一件家具。你阅读步骤（处理输入）并根据预先写好的指南执行动作（生成输出）。你没有修改说明书本身；你只是在应用它的知识。
+
+> 推理过程的简要示意：输入流入预训练 (pre-training)模型，模型运用其固定知识生成输出。
+
+### LLM的常见推理 (inference)任务
+
+推理是LLM可用于日常任务的阶段。一些常见的例子包括：
+
+- **文本生成：** 根据提示创建故事、文章或电子邮件。
+- **问答：** 提供事实性问题的答案。
+- **摘要：** 将长文档浓缩成简短摘要。
+- **翻译：** 将文本从一种语言转换为另一种语言。
+- **代码生成：** 根据描述编写计算机代码。
+- **情感分析：** 判断一段文本的情感基调。
+
+在所有这些情况下，底层机制都是相同的：预训练 (pre-training)模型接收输入，并通过推理生成所需的输出，而不会改变其核心程序。了解推理很重要，因为它是人们与LLM互动最常见的方式，而且它的硬件要求虽然仍旧不小，但通常远低于训练时的要求。接下来我们将研究这些具体的硬件需求。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  介绍深度学习，说明已训练模型如何用于预测。
+- [A Survey of Large Language Models](https://arxiv.org/abs/2303.18223) — Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, Ji-Rong Wen (2023)
+  Journal: arXiv preprint arXiv:2303.18223; DOI: [10.48550/arXiv.2303.18223](https://doi.org/10.48550/arXiv.2303.18223)
+  回顾大型语言模型，讨论其训练及应用，其中包含推断。
+- [Stanford CS230: Deep Learning](https://cs230.stanford.edu/) — Andrew Ng, Kian Katanforoosh (2023)
+  Publisher: Stanford University
+  涵盖深度学习基础，包括使用已训练模型完成任务。

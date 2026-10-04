@@ -1,0 +1,114 @@
+---
+course: "building-llm-apps-with-langchain"
+chapter: "models-prompts-parsers"
+lesson: "practice-structured-data-extractor"
+sourceId: 7416
+sourceUrl: "https://apxml.com/zh/courses/building-llm-apps-with-langchain/chapter-2-models-prompts-parsers/practice-structured-data-extractor"
+title: "动手实践：构建结构化数据提取器"
+description: "一个动手实践，用于构建一个应用，该应用使用提示和输出解析器从非结构化文本中提取结构化信息。"
+order: 5
+plots: []
+sourceHash: "ccb92c236b24242325a8cde078ced2e3e8adbc4cef418276accb4c41a755cf18"
+sourceCorrections: []
+---
+
+本实践练习侧重于通过结合模型和提示来组织数据，从而构建一个一体化的LLM应用。此应用展示了LLM开发中的一种常见模式：将非结构化文本作为输入，并生成结构化、机器可读的数据作为输出。目标是构建一个能够读取简短传记并提取人物姓名、职位和公司等特定信息的应用。
+
+这个过程使用模型原生的结构化输出能力，有效结合了生成和解析。
+
+> 数据提取工作流程。非结构化文本通过提示进行格式化，模型被配置为直接返回结构化的Python对象。
+
+### 第一步：使用Pydantic定义数据模式
+
+在提取信息之前，我们必须首先定义所需的数据结构。模式作为我们输出的契约，确保一致性和可预测性。Pydantic库是Python中数据验证的标准，并与LangChain良好兼容。
+
+我们来定义一个`PersonProfile`模式，包含姓名、职位和公司。我们还可以添加描述来引导LLM准确识别每一项信息。
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional
+
+class PersonProfile(BaseModel):
+    """一个人职业档案的结构化表示。"""
+    name: str = Field(description="此人的全名。")
+    title: str = Field(description="此人的专业职称或职位。")
+    company: str = Field(description="此人所属的公司名称。")
+    years_of_experience: Optional[int] = Field(
+        None, description="专业工作经验的总年数。"
+    )
+```
+
+通过创建这个类，我们为LLM建立了一个清晰的目标格式。`Field`中的描述帮助模型理解每个属性的语义。
+
+### 第二步：配置模型和提示
+
+定义好数据模式后，我们现在可以设置提取器了。像OpenAI的`gpt-4o-mini`这样的现代LLM原生支持结构化输出，这比基于提示的解析更可靠。
+
+我们将使用`.with_structured_output()`方法将我们的Pydantic模式绑定到模型。这会告诉模型将其输出符合`PersonProfile`类。我们还定义了一个简单的提示模板，将输入文本传递给模型。
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+
+# 定义提示模板
+prompt = ChatPromptTemplate.from_template("从以下文本中提取信息。\n文本：{query}")
+
+# 初始化模型
+llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+
+# 配置模型以进行结构化输出
+structured_llm = llm.with_structured_output(PersonProfile)
+```
+
+此配置通过在内部处理模式注入和解析逻辑来简化流程。
+
+### 第三步：将组件组合成一个链
+
+现在，我们使用LangChain表达式语言（LCEL）将组件连接起来，形成一个处理管道。管道符号（`|`）连接元素，创建一个序列，其中一步的输出成为下一步的输入。
+
+```python
+# 创建链
+extractor_chain = prompt | structured_llm
+```
+
+运行这个链很简单。我们只需提供`query`变量。
+
+### 第四步：运行提取器
+
+我们用一段示例文本测试我们的提取器。我们将调用链并检查输出。
+
+```python
+# 输入文本
+text_input = """
+Alex Thompson is the Senior Data Scientist at InnovateCorp, 
+where he has been leading the AI research division for the past 5 years.
+"""
+
+# 调用链
+result = extractor_chain.invoke({"query": text_input})
+
+# 打印结构化输出
+print(result)
+print(f"\n结果类型: {type(result)}")
+```
+
+预期输出将是一个`PersonProfile`对象，而不是一个简单的字符串或字典。
+
+```text
+name='Alex Thompson' title='Senior Data Scientist' company='InnovateCorp' years_of_experience=5
+
+结果类型: <class '__main__.PersonProfile'>
+```
+
+成功。该链正确处理了非结构化句子并返回了一个Pydantic对象。我们现在可以使用标准对象属性（例如`result.name`或`result.company`）可靠地访问数据。此示例表明，使用模型的结构化输出能力建立了从非结构化语言到结构化数据的可靠桥梁。
+
+## 参考资料
+
+- [LangChain Output Parsers Documentation](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCO9WufQGs-hS3hYFbUueyeEDnmLLN2OFxSuzd0ZhyEgIqOPdYu6oo_oXHwtVwFrve8wYIsoPFPGHmmNr7WyCH6g6TzbmoyqwQlE2NhYTUgA_iA9O80GRWeLpwJGYtYB39rpjnRQd1KlwjlKutWxYp5qIoc2k=) — LangChain Developers (2025)
+  Publisher: LangChain Inc.
+  官方指南，关于将LLM输出转换为结构化格式。
+- [Pydantic v2: Models Documentation](https://docs.pydantic.dev/latest/usage/models/) — Pydantic Developers (2024)
+  关于使用Pydantic的`BaseModel`和`Field`定义数据模式的详情。
+- [Prompt Engineering for Developers Course](https://www.deeplearning.ai/courses/chatgpt-prompt-engineering-for-developers/) — Andrew Ng, Isa Fulford (2023)
+  Publisher: DeepLearning.AI
+  提供设计有效LLM提示的实用方法。

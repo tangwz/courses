@@ -1,0 +1,149 @@
+---
+course: "advanced-pytorch"
+chapter: "optimization-training-strategies"
+lesson: "sophisticated-optimizers"
+sourceId: 2707
+sourceUrl: "https://apxml.com/zh/courses/advanced-pytorch/chapter-3-optimization-training-strategies/sophisticated-optimizers"
+title: "高级优化器概述"
+description: "学习 Adam 之外的优化器，包括 AdamW、Lookahead、RAdam 及其具体应用场景。"
+order: 1
+plots: []
+sourceHash: "d6f9298d89e14c27339ec3bdc403b06cf74e355e71c49ef6b923aeb7241d9b97"
+sourceCorrections: []
+---
+
+虽然带有动量的 SGD 和 Adam 等优化器在许多深度学习 (deep learning)任务中表现出色且常用，但要获得最佳性能，尤其是在复杂模型或具有挑战性的数据集上，通常会受益于更完善的优化策略。标准优化器有时会表现出不理想的行为，例如对权重 (weight)衰减的处理不佳或在训练初始阶段不稳定。PyTorch 中可用或常用的几种高级优化器旨在解决这些具体问题。
+
+### AdamW：解耦权重 (weight)衰减
+
+Adam 仍然是一种流行且通常有效的自适应学习率优化器。然而，其标准实现通常将 L2 正则化 (regularization)与真正的*权重衰减*混淆。
+
+回顾一下，L2 正则化根据权重的平方大小向损失函数 (loss function)添加一个惩罚项：
+$L_{\text{总}} = L_{\text{原始}} + \frac{\lambda}{2} ||w||^2$
+在计算梯度时，这会在原始损失的梯度中添加一个与权重本身成比例的项（$\lambda w$）：
+$\nabla_{w} L_{\text{总}} = \nabla_{w} L_{\text{原始}} + \lambda w$
+在 Adam 等优化器中，这个梯度项 $\lambda w$ 会被优化器的内部机制（如梯度和平方梯度的移动平均）调整。
+
+权重衰减，如最初提出，是一种不同的做法。它涉及在更新步骤中，*在*梯度计算*之后*，直接从权重本身中减去一小部分：
+$w_{t+1} = w_t - \eta (\nabla_{w} L_{\text{原始}} + \lambda w_t)$
+或者更准确地说，对于自适应方法，衰减通常是单独应用的：
+$w_{t+1} = w_t - \eta \cdot \text{自适应梯度}(\nabla_{w} L_{\text{原始}}) - \eta \lambda' w_t$
+其中 $\lambda'$ 是权重衰减系数。
+
+主要区别在于，真正的权重衰减不会被 Adam 计算的自适应学习率缩放。在使用 L2 正则化的标准 Adam 实现中，对历史梯度值较大的权重施加的实际衰减可能远小于预期，而梯度值较小的权重可能衰减过快。
+
+AdamW 明确实现了原始的权重衰减思路，将其与梯度自适应机制解耦。这通常比带有 L2 正则化的 Adam 带来更好的泛化性能，特别是对于对正则化强度敏感的模型。
+
+在 PyTorch 中使用 AdamW 简单直接，因为它包含在 `torch.optim` 中：
+
+```python
+import torch
+from torch import nn
+from torch import optim
+
+# 假设 'model' 是你的 nn.Module 实例
+# AdamW 使用示例
+optimizer = optim.AdamW(
+    model.parameters(),
+    lr=1e-4,          # 学习率
+    betas=(0.9, 0.999), # 移动平均的系数
+    eps=1e-8,         # 添加到分母以提高数值稳定性的项
+    weight_decay=1e-2,  # 权重衰减系数（正确应用）
+    amsgrad=False     # 是否使用 AMSGrad 变体
+)
+
+# 典型的训练循环步骤
+# optimizer.zero_grad()
+# loss.backward()
+# optimizer.step()
+```
+
+对于许多应用场景，从 `optim.Adam` 切换到 `optim.AdamW` 并调整 `weight_decay` 参数 (parameter)可以带来显著提升，且代码改动最少。它通常被推荐作为默认的起始选择，优于标准 Adam。
+
+### Lookahead：稳定学习过程
+
+Lookahead 本身不是一个优化器，而是一种封装现有优化器（如 AdamW 或 SGD）的机制。它旨在通过维护两组权重 (weight)：“快”权重和“慢”权重来提高学习的稳定性并减少参数 (parameter)更新的方差。
+
+内部基础优化器（例如 AdamW）更新*快权重* $k$ 步。在这 $k$ 步之后，*慢权重*通过向该序列中最终的快权重方向移动来更新。然后，快权重重置到新的慢权重位置，此过程重复。
+
+设 $w_{slow}$ 为慢权重， $w_{fast}$ 为快权重。设 $\mathcal{O}$ 为内部优化器（例如 AdamW）。
+
+1. 初始化 $w_{fast} \leftarrow w_{slow}$。
+2. 对于 $i = 1$ 到 $k$：使用 $\mathcal{O}$ 根据当前小批量梯度更新 $w_{fast}$。
+3. 更新 $w_{slow}$：$w_{slow} \leftarrow w_{slow} + \alpha (w_{fast} - w_{slow})$，其中 $\alpha$ 是慢步长（通常称为 `la_alpha`）。
+4. 返回步骤 1。
+
+其思路是，内部优化器使用快权重在参数空间中快速移动，而慢权重则提供更稳定、平均的轨迹，降低在最优值附近波动或超越最优值的风险。Lookahead 通常带来更快的收敛速度和更好的最终性能。
+
+Lookahead 不属于标准的 `torch.optim` 包，但相对容易实现，或可以在 `torchcontrib` 等外部库中找到，或可能集成到 PyTorch Lightning 等框架中。
+
+一个实现可能如下所示（简化版）：
+
+```python
+# Lookahead 使用（需要 Lookahead 实现）
+# from some_library import Lookahead # 从某个库导入 Lookahead
+
+# 定义基础优化器
+base_optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
+
+# 使用 Lookahead 封装
+optimizer = Lookahead(base_optimizer, la_steps=5, la_alpha=0.5)
+
+# 训练循环保持不变：
+# optimizer.zero_grad()
+# loss.backward()
+# optimizer.step() # Lookahead 内部管理快/慢权重和 k 步
+```
+
+$k$ (`la_steps`) 的常见取值是 5 或 10，$\alpha$ (`la_alpha`) 的常见取值是 0.5 或 0.8。
+
+### RAdam：用于稳定预热的修正Adam
+
+Adam 的自适应学习率，基于梯度的一阶和二阶矩估计，功能强大，但可能在早期训练阶段出现高方差。当已见样本（小批量）数量较少时，二阶矩 ($v_t$) 的估计可能不可靠。这可能导致初始学习率过大或过小，可能阻碍收敛或导致发散。
+
+修正 Adam (RAdam) 通过引入一个修正项来解决这个问题，该修正项根据二阶矩估计的方差调整自适应学习率。简而言之，它衡量自适应学习率项 ($\hat{m}_t / (\sqrt{\hat{v}_t} + \epsilon)$) 的方差。如果方差估计较高（通常在训练早期），RAdam 会暂时关闭自适应学习率，有效地像带有动量的 SGD 那样运行。随着更多数据处理，方差估计变得更可靠（减小），自适应学习率机制逐渐引入。
+
+自适应部分的这种“预热”行为有助于从一开始就稳定训练，使得 RAdam 相对于标准 Adam 对初始学习率的选择不那么敏感。
+
+与 Lookahead 类似，RAdam 可能不属于核心 `torch.optim`，但在几个流行的扩展库中可用。
+
+```python
+# RAdam 使用（需要 RAdam 实现）
+# from some_library import RAdam # 从某个库导入 RAdam
+
+# RAdam 使用示例
+optimizer = RAdam(
+    model.parameters(),
+    lr=1e-3,
+    betas=(0.9, 0.999),
+    eps=1e-8,
+    weight_decay=0 # RAdam 通常在初始阶段不单独使用权重衰减
+)
+
+# 训练循环保持不变：
+# optimizer.zero_grad()
+# loss.backward()
+# optimizer.step()
+```
+
+RAdam 在训练已知对初始化或学习率选择敏感的模型时，或者在处理小批量数据时（小批量数据本身方差较高），可能特别有益。
+
+### 选择优化器
+
+- **AdamW**：通常是很好的默认选择，替代标准 Adam。提供更合理的权重 (weight)衰减，经常带来更好的泛化能力。
+- **Lookahead**：一种封装器，可能提高*任何*基础优化器（AdamW、SGD）的性能。如果希望在已调优的基础优化器之上获得额外的稳定性或收敛速度，可以考虑它。需要调优 $k$ 和 $\alpha$。
+- **RAdam**：如果在使用 Adam 或 AdamW 训练的初始阶段遇到不稳定情况时有用。它旨在通过修正自适应学习率的方差来提供更平稳的启动。
+
+实验依然重要。虽然这些优化器解决了简单方法的具体理论不足，但它们的实际影响因模型架构、数据集和其他超参数 (parameter) (hyperparameter)而异。在选择和调整这些更高级的优化器时，分析训练动态和验证性能非常重要。
+
+## 参考资料
+
+- [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  介绍了AdamW，阐述了在自适应优化器中将权重衰减与L2正则化分离的方法。
+- [Lookahead Optimizer: k steps forward, 1 step back](https://arxiv.org/abs/1907.08610) — Michael R. Zhang, James Lucas, Geoffrey Hinton, Jimmy Ba (2019)
+  Journal: Advances in Neural Information Processing Systems (NeurIPS); Volume: 32; DOI: [10.48550/arXiv.1907.08610](https://doi.org/10.48550/arXiv.1907.08610)
+  提出了Lookahead优化策略，用以提升训练稳定性和收敛速度。
+- [torch.optim.AdamW](https://pytorch.org/docs/stable/generated/torch.optim.AdamW.html) — PyTorch Contributors (2024)
+  Publisher: PyTorch
+  PyTorch中AdamW的官方文档，包含参数和使用示例。

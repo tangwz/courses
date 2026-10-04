@@ -1,0 +1,75 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "rl-implementation-optimization"
+lesson: "reproducibility-deep-rl"
+sourceId: 3501
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-8-rl-implementation-optimization/reproducibility-deep-rl"
+title: "深度强化学习的可复现性"
+description: "确保深度强化学习实验可复现性的挑战与最佳实践。"
+order: 7
+plots: ["plots/3501-0.json"]
+sourceHash: "a170345ed64d8a96f1165fa26040bb1417a9d9cfb26c447f026b50389b75dbcf"
+sourceCorrections: []
+---
+
+强化学习 (reinforcement learning)，尤其是深度强化学习，在复现实验结果方面带来了特别的难题。虽然前面几节讨论了具体的算法和实现模式，但确保他人（甚至是未来的自己）能够可靠地重现你的发现，是另一个重要的障碍。算法、实现、超参数 (parameter) (hyperparameter)、环境乃至硬件之间错综复杂的关系，可能导致性能出现显著差异，从而使研究之间的直接比较变得困难。本节将分析造成这种不可复现性的原因，并阐述你可以采取的实用方法，以最大化你的工作的可复现性。
+
+### 深度强化学习 (reinforcement learning)中不可复现性的原因
+
+在不同的运行或设置中，深度强化学习要获得完全相同的结果是众所周知的难点。有几个因素造成了这一难题：
+
+1. **算法实现细节：** 高级强化学习算法通常有一些不太明显但很重要的实现细节，在论文中未完全说明。这包括网络初始化方案（例如正交初始化）、梯度裁剪方法、优势的精确计算（如 GAE 参数 (parameter) $\lambda$ 和 $\gamma$），或者目标网络如何更新等选择。这些细节上的微小偏差能显著改变学习动态。
+2. **超参数 (hyperparameter)敏感性：** 深度强化学习算法通常对超参数选择非常敏感。学习率、折扣因子（$\gamma$）、熵正则化 (regularization)系数、批次大小、回放缓冲区大小、更新频率以及网络架构（层数、每层单元数、激活函数 (activation function)）都可能显著影响性能。最佳值通常很大程度上取决于具体的环境和算法变体。
+3. **环境随机性与版本：** 即使是名义上确定的模拟环境，也可能因模拟器版本（例如 MuJoCo, PyBullet）或底层物理引擎更新而产生细微差别。随机环境会引入固有的随机性。此外，标准基准环境（如 Gymnasium 或 Procgen 中的环境）会发展，因此需要指定所使用的确切版本。
+4. **软件依赖：** Python、NumPy、TensorFlow 或 PyTorch 等核心库的版本差异，可能引入细微的数值差异或行为变化，这些变化在训练过程中累积，从而导致结果出现偏差。
+5. **硬件差异：** 尽管硬件差异通常不如其他因素那么明显，但硬件（CPU 与 GPU、具体的 GPU 型号、FP32 与 FP16 等精度设置）和并行化策略的差异有时会影响浮点运算的结果，进而影响训练过程。
+6. **随机性管理：** 深度强化学习涉及多个随机性来源：环境重置、随机环境转换/奖励、随机策略（动作采样）、随机权重 (weight)初始化以及从回放缓冲区随机采样。这些来源中不一致或不完整的种子设置使得精确复现几乎不可能。
+
+### 提高可复现性的最佳实践
+
+尽管完美复现仍然具有挑战性，但采取严谨的做法可以显著提高结果的一致性和可信度：
+
+- **全面报告：** 提供关于你的实验设置的详尽细节。这包括：
+
+  - **算法：** 明确说明所使用的算法。如果它是对标准算法的修改，请详细说明具体修改。伪代码会很有帮助。
+  - **超参数 (parameter) (hyperparameter)：** 列出*所有*相关超参数（参见上面第2点）。不要遗漏看似不重要的参数。
+  - **网络架构：** 描述所使用的神经网络 (neural network)，包括层类型、单元数量、激活函数 (activation function)和初始化方法。
+  - **环境：** 指定确切的环境名称和版本（例如，Gymnasium `0.28.1` 中的 `HalfCheetah-v4`）。包括任何修改或使用的特定奖励结构。
+  - **软件栈：** 列出 Python、主要机器学习 (machine learning)框架（PyTorch/TensorFlow）、强化学习 (reinforcement learning)库（Stable Baselines3, RLlib）、模拟环境（Gymnasium, MuJoCo）以及 NumPy 等主要依赖的版本。
+  - **评估协议：** 描述性能如何测量（例如，最后10个回合的平均回报，每10000步评估一次，在5个随机种子上取平均）。
+- **代码发布：** 确保可复现性的最有效方法是发布用于实验的源代码。使用像 Git 这样的版本控制系统，并标记 (token)用于生成报告结果的特定版本。包含用于运行实验和生成图表的脚本。
+- **依赖管理：** 记录确切的软件环境。
+
+  - 使用 `pip freeze > requirements.txt` 列出 Python 包版本。
+  - 考虑使用 Conda 环境文件（`environment.yml`）。
+  - 为了最大限度的隔离，使用 Docker 容器来封装整个操作系统和软件栈。
+- **彻底的种子设置：** 明确设置并报告所使用的随机种子。对所有潜在的随机性来源设置种子：
+
+  - Python 内置的 `random` 模块。
+  - NumPy（`np.random.seed()`）。
+  - 深度学习 (deep learning)框架（例如，`torch.manual_seed()`、`tf.random.set_seed()`）。
+  - 环境的动作空间和观察空间采样（如果适用）（`env.action_space.seed()`）。
+  - 环境重置函数（`env.reset(seed=...)`）。
+  - 特别地，使用**多个随机种子**（例如 3-10 个）运行实验，并报告性能的聚合统计数据，如均值和标准差（或四分位数范围）。与单次运行相比，这能更清晰地了解预期性能和变异性。
+
+
+
+![不同种子的学习曲线示例](plots/3501-0.json)
+
+
+
+> 相同算法和超参数配置下，三个不同随机种子的性能差异。报告跨种子的聚合结果（例如，均值 ± 标准差）对于可靠比较是必不可少的。
+
+- **标准化基准与库：** 尽可能地使用广泛接受的基准环境，并使用标准指标报告结果。使用像 Stable Baselines3 或 RLlib 这样经过充分验证的库有助于避免细微的实现错误，但请记住报告所使用的具体库版本和配置。
+- **消融实验：** 如果引入修改或特定的实现选择，请进行消融实验，系统地移除或更改这些组件，以展示它们对性能的影响。这有助于分离导致观察到结果的因素。
+
+遵循这些做法需要纪律性，但它是建立该领域可靠知识的根本。它使研究人员能够验证发现，公平比较方法，并自信地基于前人工作进行构建。可复现性不仅仅是关于正确性；它旨在促进深度强化学习社区内透明和累积的科学过程。
+
+## 参考资料
+
+- [Deep Reinforcement Learning that Matters](https://doi.org/10.1609/aaai.v32i1.11694) — Peter Henderson, Riashat Islam, Philip Bachman, Joelle Pineau, Doina Precup, David Meger (2018)
+  Journal: Proceedings of the AAAI Conference on Artificial Intelligence; Publisher: Association for the Advancement of Artificial Intelligence; Volume: 32; Pages: 2800-2807; DOI: [10.1609/aaai.v32i1.11694](https://doi.org/10.1609/aaai.v32i1.11694)
+  这篇基础性论文识别并分析了导致深度强化学习结果不可复现性的关键因素，如超参数敏感性、随机种子和微小的实现差异。
+- [Reproducibility](https://stable-baselines3.readthedocs.io/en/master/guide/reproducibility.html) — Stable Baselines3 Contributors (2023)
+  Publisher: Stable Baselines3 Contributors
+  提供了来自Stable Baselines3库的实用建议和代码示例，用于管理随机性、环境版本和其他因素，以提高实验的可复现性。

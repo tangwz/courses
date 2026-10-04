@@ -1,0 +1,312 @@
+---
+course: "python-llm-workflows"
+chapter: "prompt-engineering-python"
+lesson: "practice-developing-testing-prompts"
+sourceId: 5208
+sourceUrl: "https://apxml.com/zh/courses/python-llm-workflows/chapter-8-prompt-engineering-python/practice-developing-testing-prompts"
+title: "实践：开发和测试提示"
+description: "动手实践，为不同场景设计和改进提示。"
+order: 7
+plots: []
+sourceHash: "2827da8e94f2adda4f3e1dceaf185ac6534be430166a450ea7dab82ab6cca081"
+sourceCorrections: []
+---
+
+提示工程 (prompt engineering)在很大程度上是一个经验过程。虽然理论理解很有价值，但实际应用涉及编写提示、观察大型语言模型（LLM）的输出、发现不足之处，并迭代地调整提示，直到持续产生预期结果。动手实践的提示细化过程使用 Python 进行详细阐述，指导用户开发和测试提示。
+
+我们将完成一项常见任务：从非结构化文本中提取结构化信息。假设你有一些产品描述，你想从中提取出提到的具体功能。
+
+### 场景：提取产品功能
+
+假设我们有以下一个虚构相机的产品描述：
+
+```python
+product_description = """
+Introducing the PhotoMax Pro, a revolutionary new camera for enthusiasts.
+Important specs include a 30MP full-frame sensor, advanced autofocus with 500 points,
+and 8K video capability. It boasts a weather-sealed magnesium alloy body,
+dual SD card slots, and built-in Wi-Fi and Bluetooth for easy sharing.
+The high-resolution electronic viewfinder provides a crystal-clear preview.
+"""
+```
+
+我们的目标是从这段文本中提取一个干净的功能列表。
+
+### 尝试 1：基础零样本提示
+
+我们将从最简单的方法开始：直接向 LLM 提问，不提供示例或具体的格式指示。我们可以使用 OpenAI 库（假设你已安装并按照第 2 章所示配置了 API 密钥）或其他类似的客户端库。
+
+```python
+# 使用 OpenAI 库（示例）
+# 确保已安装 'openai' 并且 API 密钥已设置在环境变量中
+import os
+from openai import OpenAI
+
+# 确保已设置 OPENAI_API_KEY 环境变量
+# client = OpenAI() # 自动读取环境变量
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+def extract_features_attempt_1(text):
+    prompt = f"从以下产品描述中提取主要功能：\n\n{text}"
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo", # 或其他合适的模型
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2 # 降低温度以获得更确定的输出
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"发生 API 错误: {e}")
+        return None
+
+# 运行第一次尝试
+features_v1 = extract_features_attempt_1(product_description)
+print("--- 尝试 1 输出 ---")
+print(features_v1)
+```
+
+**可能输出 (V1):**
+
+```text
+--- 尝试 1 输出 ---
+以下是 PhotoMax Pro 的主要功能：
+- 30MP 全画幅传感器
+- 500 点高级自动对焦
+- 8K 视频功能
+- 防风雨镁合金机身
+- 双 SD 卡槽
+- 内置 Wi-Fi 和蓝牙
+- 高分辨率电子取景器
+```
+
+**分析 (V1):**
+
+这还不错！LLM 理解了请求并提取了大多数重要功能。然而，输出中包含了引导性的文本，如果我们在应用程序中需要直接解析这个列表，这可能不理想。格式还算可以（项目符号），但我们没有明确要求，所以不能指望它在不同输入或模型之间保持一致。
+
+### 尝试 2：添加结构和输出格式指示
+
+让我们调整提示，使其更具体地说明所需的输出格式。我们将明确要求一个逗号分隔的列表。
+
+```python
+# 使用 LangChain 的 PromptTemplate 以获得更好的结构
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+
+# 假设 OPENAI_API_KEY 已设置
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.2)
+
+prompt_template_v2 = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一名从文本中提取产品功能的专业助手。",
+        ),
+        (
+            "human",
+            "从下面的产品描述中提取主要功能。只列出功能，用逗号分隔。不要包含引导性文本。\n\n"
+            "描述：\n{product_desc}",
+        ),
+    ]
+)
+
+chain_v2 = prompt_template_v2 | llm
+
+def extract_features_attempt_2(text):
+    try:
+        response = chain_v2.invoke({"product_desc": text})
+        return response.content
+    except Exception as e:
+        print(f"发生错误: {e}")
+        return None
+
+# 运行第二次尝试
+features_v2 = extract_features_attempt_2(product_description)
+print("\n--- 尝试 2 输出 ---")
+print(features_v2)
+```
+
+**可能输出 (V2):**
+
+```text
+--- 尝试 2 输出 ---
+30MP 全画幅传感器, 500 点高级自动对焦, 8K 视频功能, 防风雨镁合金机身, 双 SD 卡槽, 内置 Wi-Fi, 内置蓝牙, 高分辨率电子取景器
+```
+
+**分析 (V2):**
+
+这对程序化使用来说好很多。我们去掉了引导性短语，实现了所需的逗号分隔格式。使用 `ChatPromptTemplate`（如第 4 章所示）也使提示结构更清晰，将系统指示与用户请求分开。将“Wi-Fi 和蓝牙”分离为独立功能也是一个不错的改进。
+
+### 尝试 3：少样本提示以提高一致性
+
+虽然尝试 2 对于此特定描述效果良好，但 LLM 有时可能难以处理输入风格的细微差别或变体。添加一些示例（少样本提示）可以显著提高稳定性，并引导模型达到完全符合预期的输出风格，特别是对于更复杂的提取任务。
+
+让我们在 LangChain 提示模板中添加一个示例。
+
+```python
+# 使用 LangChain 和少样本示例
+prompt_template_v3 = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是一名从文本中提取产品功能的专业助手。只列出功能，用逗号分隔。不要包含引导性文本。",
+        ),
+        # 少样本示例 1
+        (
+            "human",
+            "描述：\n新款 SoundWave 耳机具有降噪功能和 20 小时电池续航。"
+        ),
+        (
+            "ai",
+            "降噪, 20 小时电池续航"
+        ),
+         # 少样本示例 2（可选，添加更多示例会有帮助）
+        (
+            "human",
+            "描述：\n这款笔记本电脑配有 1TB 固态硬盘、16GB 内存和背光键盘。"
+         ),
+        (
+            "ai",
+            "1TB 固态硬盘, 16GB 内存, 背光键盘"
+        ),
+        # 实际请求
+        (
+            "human",
+            "描述：\n{product_desc}",
+        ),
+    ]
+)
+
+chain_v3 = prompt_template_v3 | llm # llm 已在尝试 2 中定义
+
+def extract_features_attempt_3(text):
+    try:
+        response = chain_v3.invoke({"product_desc": text})
+        return response.content
+    except Exception as e:
+        print(f"发生错误: {e}")
+        return None
+
+# 运行第三次尝试
+features_v3 = extract_features_attempt_3(product_description)
+print("\n--- 尝试 3 输出 ---")
+print(features_v3)
+```
+
+**可能输出 (V3):**
+
+```text
+--- 尝试 3 输出 ---
+30MP 全画幅传感器, 500 点高级自动对焦, 8K 视频功能, 防风雨镁合金机身, 双 SD 卡槽, 内置 Wi-Fi, 内置蓝牙, 高分辨率电子取景器
+```
+
+**分析 (V3):**
+
+在这种情况下，输出可能与尝试 2 相同，因为带有清晰指示的零样本提示在此输入上已经表现良好。然而，少样本示例提供了更强的指导。如果输入描述更复杂、模糊或以不同风格编写，这些示例会显著增加获得正确格式和相关功能的可能性。它们直接向模型展示了预期的输入-输出模式。
+
+### 迭代调整过程
+
+此示例展示了一个常见的工作流程：
+
+1. **从简开始：** 从清晰、直接的提示开始。
+2. **执行并观察：** 使用你的 Python 代码，用代表性的输入数据运行提示。
+3. **分析输出：** 将 LLM 的响应与你的要求进行比较。发现错误、遗漏或格式问题。
+4. **调整提示：** 根据你的分析修改提示。这可能包括：
+   - 添加更具体的指示。
+   - 澄清所需的输出格式。
+   - 提供少样本示例。
+   - 重新措辞指示以提高清晰度。
+   - 调整模型参数 (parameter)，例如 `temperature`。
+5. **重复：** 回到步骤 2，使用调整后的提示再次测试，可能使用不同的输入数据。
+
+> 提示开发的迭代循环：定义、提示、执行、观察、分析和调整，直到目标达成。
+
+### 使用多样化输入进行测试
+
+对一个输入完美运行的提示可能对另一个输入失败。有必要对你调整后的提示（例如 `prompt_template_v3`）进行多样化输入测试：
+
+- **不同产品类型：** 尝试笔记本电脑、手机、软件等描述。
+- **不同长度：** 使用短描述和长描述。
+- **不同风格：** 包含营销导向的文本与技术规格列表。
+- **极端情况：** 测试没有明确功能或措辞模糊的描述。
+
+```python
+test_descriptions = [
+    "Our new coffee maker brews in under a minute and has a programmable timer.", # 简单情况
+    "The TrailSeeker backpack: 50L capacity, integrated rain cover, adjustable torso length, hydration compatible.", # 列表格式
+    "Experience blazing speed with the Quantum Processor X1. Features include 128GB storage, a 6.8-inch AMOLED display, and 5G connectivity.", # 不同产品
+    "Just a basic t-shirt. 100% cotton.", # 少量功能
+    "Innovative solution using next-generation architecture for improved user workflow."
+]
+
+print("\n--- 使用多样化输入测试提示 V3 ---")
+for i, desc in enumerate(test_descriptions):
+    print(f"\n输入 {i+1}: {desc}")
+    features = extract_features_attempt_3(desc) # 使用我们目前最好的提示
+    print(f"输出 {i+1}: {features}")
+```
+
+运行这些测试有助于你衡量提示的稳定性，并找出需要进一步调整的方面。这为更结构化的评估提供了依据，我们将在下一章讨论。
+
+### Python 中的动态提示生成
+
+如前所述，Python 使得动态创建提示变得容易。假设你只想提取与连接性相关的功能：
+
+```python
+def extract_specific_features(text, feature_category):
+    # 注意：这种简单方法可能需要更复杂的提示以提高可靠性
+    # 更好的做法是先提取所有功能，然后进行筛选。
+    # 但这展示了动态插入。
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "你是一名提取特定产品功能的专业助手。",
+            ),
+            (
+                "human",
+                f"只从以下描述中提取与 '{feature_category}' 相关的功能。只列出相关功能，用逗号分隔。\n\n"
+                "描述：\n{product_desc}",
+            ),
+        ]
+    )
+    chain = prompt | llm # llm 之前已定义
+    try:
+        response = chain.invoke({"product_desc": text, "feature_category": feature_category})
+        return response.content
+    except Exception as e:
+        print(f"发生错误: {e}")
+        return None
+
+connectivity_features = extract_specific_features(product_description, "connectivity")
+print("\n--- 动态提示：连接性功能 ---")
+print(connectivity_features)
+
+sensor_features = extract_specific_features(product_description, "sensor or image quality")
+print("\n--- 动态提示：传感器功能 ---")
+print(sensor_features)
+```
+
+**可能输出：**
+
+```text
+--- 动态提示：连接性功能 ---
+内置 Wi-Fi, 内置蓝牙
+
+--- 动态提示：传感器功能 ---
+30MP 全画幅传感器, 500 点高级自动对焦
+```
+
+这展示了如何使用 f-string 或 LangChain 等模板引擎将 Python 变量整合到你的提示中，从而实现与 LLM 的灵活且上下文 (context)感知的互动。这个实践练习表明提示工程 (prompt engineering)是一个活跃的过程。通过在你的 Python 环境中结合清晰的指示、说明性示例和迭代测试，你可以显著提高 LLM 应用程序输出的质量和可靠性。记住要彻底测试，并准备好在遇到新数据或要求时调整你的提示。
+
+## 参考资料
+
+- [Prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2023)
+  Publisher: OpenAI
+  提供设计有效提示的实用指导和策略，包括指令清晰度、少样本示例和迭代优化等技术。
+- [LangChain Documentation](https://python.langchain.com/docs/get_started/introduction) — LangChain (2024)
+  LangChain的官方文档，LangChain是一个用于开发大型语言模型驱动的应用程序的框架，展示了其在结构化提示方面的应用。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems 33 (NeurIPS 2020); Volume: 33; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了大型语言模型少样本学习概念的奠基性论文，是引导模型进行示例学习的关键技术。

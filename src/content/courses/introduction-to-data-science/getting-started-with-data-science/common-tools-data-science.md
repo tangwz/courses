@@ -1,0 +1,81 @@
+---
+course: "introduction-to-data-science"
+chapter: "getting-started-with-data-science"
+lesson: "common-tools-data-science"
+sourceId: 2090
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-data-science/chapter-1-getting-started-with-data-science/common-tools-data-science"
+title: "数据科学常用工具"
+description: "简要介绍数据科学项目中常用的软件类型和编程语言。"
+order: 5
+plots: []
+sourceHash: "212aa32dcf29b85147e85002e3ed292d35fde6f9e81de8e952dbb9b7f4e0e724"
+sourceCorrections: []
+---
+
+为有效分析数据和构建模型，数据科学家依赖多种专业工具。这些工具涵盖了专为数据处理和统计分析设计的编程语言，以及帮助管理、可视化和部署数据驱动解决方案的软件平台。可以把这些工具看作是实践之前讨论技能所必需的工作台和仪器。你无需立即掌握所有工具，但了解主要类别和显著例子对你开始很有帮助。
+
+### 数据科学编程语言
+
+尽管数据科学理念可以抽象地理解，但实际应用常需编程。代码能够让你指示计算机高效地执行复杂数据操作、计算和可视化任务。在数据科学界，有两种语言很突出：
+
+- **Python:** 因其易读性、多功能性和为数据科学任务专门构建的丰富库集合而广受欢迎。*Pandas* 等库用于处理结构化数据（如表格），*NumPy* 用于数值计算，*Scikit-learn* 用于机器学习 (machine learning)算法，以及 *Matplotlib* 或 *Seaborn* 用于制作可视化内容。它的通用性也使其适用于将数据科学模型整合到大型应用中。
+- **R:** 专门为统计计算和图形而开发，R在学术界和研究领域根基深厚。它提供强大的内置统计分析功能和出色的可视化能力，特别通过 *ggplot2* 等包。*Tidyverse* 是R包的集合，包含用于数据处理的 *dplyr*，为数据分析流程提供了一个优雅的架构。
+
+许多数据科学家根据自己的背景或特定需求，先学习这些语言中的一种，尽管两者都掌握会有优势。
+
+### 数据库和查询语言
+
+数据通常存储在数据库中，这些是用于存储、管理和检索信息的有序系统。为了与这些数据库交互，特别是关系型数据库（以行和列的表格形式存储数据），数据科学家经常使用 **SQL（结构化查询语言）**。SQL 允许你选择特定数据、根据条件筛选信息、联结多张表中的数据以及执行聚合操作。熟悉基本的SQL命令是获取分析所需数据的一项非常实用的技能。
+
+尽管SQL是关系型数据库（如PostgreSQL、MySQL、SQL Server）的标准，你也可能会遇到用于非结构化数据的NoSQL数据库（如MongoDB），不过这些通常会在之后介绍。
+
+### 开发环境和Notebooks
+
+编写和运行代码需要开发环境。在数据科学中，特定类型的环境很常见：
+
+- **Jupyter Notebooks (和 JupyterLab):** 这些是交互式、基于Web的环境，允许你将实时代码（如Python或R）、解释性文本、数学公式和可视化内容组合在一个名为“notebook”的文档中。这种格式非常适合探索性分析、分享成果和逐步记录工作流程。
+- **集成开发环境 (IDEs):** 对于大型项目或软件开发任务，传统IDE，如 *Visual Studio Code (VS Code)*、*PyCharm*（用于Python）或 *RStudio*（用于R），常被使用。它们提供高级代码编辑、调试工具和项目管理功能等特性。
+
+Notebooks特别受学习和实验欢迎，而IDEs常用于构建更复杂的应用。
+
+### 数据可视化工具
+
+有效传达见解常需数据可视化。除了Python（Matplotlib、Seaborn、Plotly）和R（ggplot2）中提供的绘图库，还有专门的软件工具：
+
+- **商业智能 (BI) 平台:** *Tableau*、*Power BI* 和 *Qlik* 等工具允许用户创建交互式仪表板和可视化内容，通常通过拖放界面。它们广泛用于业务报告和监控性能指标，使非程序员也能直观地查看数据。
+
+### 云计算平台
+
+现代数据科学常涉及单台笔记本电脑难以处理的超大数据集或过于密集的计算。云平台按需提供可扩展的资源：
+
+"\* **主要提供商:** 亚马逊云计算服务 (AWS)、谷歌云平台 (GCP) 和微软Azure提供广泛的服务，包括用于计算的强大虚拟机、海量数据存储选项以及托管数据科学平台（如AWS SageMaker、Google AI Platform、Azure Machine Learning）。作为初学者，你不需要深厚的云知识，但要了解许多数据科学任务会用到这些平台。"
+
+### 版本控制系统
+
+在项目工作中，尤其是在协作时，追踪代码和文件的变化非常必要。
+
+- **Git:** 这是版本控制的行业标准。它允许你随着时间推移保存项目快照（提交），恢复到以前的版本，并合并不同人所做的更改。
+- **平台:** *GitHub*、*GitLab* 和 *Bitbucket* 等网站托管Git仓库，促进社区和组织内部的协作与项目共享。学习基本的Git命令对任何程序员或数据科学家来说都是一项宝贵的技能。
+
+### 工具概览
+
+所提及的工具构成了数据科学家工具包的核心部分。它们协同工作，使整个数据科学过程得以实现，从数据收集到结果传达。
+
+> 数据科学常用工具类别概览。
+
+不要被工具的数量吓倒。大多数数据科学家会先专注于一种编程语言（如Python）、一个notebook环境（如Jupyter）和一些基础库（如Pandas和Matplotlib/Seaborn），然后根据需要逐步增加工具。你使用的具体工具通常取决于你正在解决的问题、你所处的团队以及你的工作环境。
+
+## 参考资料
+
+- [Python for Data Analysis](https://www.oreilly.com/library/view/python-for-data-analysis/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  使用Python进行数据处理和分析的实用指南，涵盖Pandas、NumPy和其他库。
+- [R for Data Science (2nd Edition)](https://r4ds.hadley.nz/) — Hadley Wickham, Garrett Grolemund, and Mine Çetinkaya-Rundel (2023)
+  Publisher: O'Reilly Media
+  使用R和Tidyverse进行数据科学的入门，专注于数据转换、可视化和建模。
+- [Learning SQL](https://www.oreilly.com/library/view/learning-sql-3rd/9781492057604/) — Alan Beaulieu (2020)
+  Publisher: O'Reilly Media; Pages: 380
+  SQL入门指南，用于在关系数据库中查询和管理数据。
+- [Pro Git](https://git-scm.com/book/en/v2) — Scott Chacon and Ben Straub (2014)
+  Publisher: Apress
+  Git的参考资料，涵盖版本控制的基础概念和实际应用。

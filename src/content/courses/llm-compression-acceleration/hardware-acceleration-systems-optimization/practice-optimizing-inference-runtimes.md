@@ -1,0 +1,303 @@
+---
+course: "llm-compression-acceleration"
+chapter: "hardware-acceleration-systems-optimization"
+lesson: "practice-optimizing-inference-runtimes"
+sourceId: 4418
+sourceUrl: "https://apxml.com/zh/courses/llm-compression-acceleration/chapter-6-hardware-acceleration-systems-optimization/practice-optimizing-inference-runtimes"
+title: "实践操作：使用运行时优化推理"
+description: "使用ONNX Runtime、TensorRT或vLLM等框架优化并加速LLM推理。"
+order: 8
+plots: ["plots/4418-0.json"]
+sourceHash: "ec1c6555a4449e7d74328e00aa991c77caee85e3034d3171a06a56e4c3fded7c"
+sourceCorrections: []
+---
+
+优化目标硬件上的LLM推理 (inference)性能需要专门推理运行时的实践应用。这涉及硬件映射、内存管理、优化过的核函数以及编译器技术等概念。理论模型优化（如量化 (quantization)或剪枝）只有与能够在硬件上高效执行优化后模型图的运行时配合时，才能充分发挥其潜力。我们将考察ONNX Runtime、NVIDIA TensorRT和vLLM等运行时如何将优化后的模型转化为更快的执行。
+
+我们的目标是获取一个预训练 (pre-training)Transformer模型，并使用不同运行时环境衡量其推理性能，同时与标准深度学习 (deep learning)框架（如PyTorch）中的基准实现进行比较。我们将侧重于GPU加速，这是LLM部署的常见情况。
+
+### 准备工作：基准与模型
+
+假设我们有一个中等大小的Transformer模型（例如GPT-2的蒸馏版本或类似架构，可能已使用第二章中的方法量化 (quantization)为INT8），并以PyTorch格式提供。我们的第一步是设定一个基准性能指标。这通常涉及在PyTorch中加载模型，并在目标GPU上对代表性输入数据批次运行推理 (inference)，仔细测量延迟或吞吐量 (throughput)。
+
+```python
+# 占位符：PyTorch基准推理测量
+import torch
+import time
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 假设模型和分词器已加载并位于GPU上
+# model = AutoModelForCausalLM.from_pretrained(...)
+# tokenizer = AutoTokenizer.from_pretrained(...)
+# model.to('cuda')
+# model.eval()
+
+# 示例输入
+# inputs = tokenizer("Example input text", return_tensors="pt").to('cuda')
+# input_ids = inputs['input_ids']
+
+# --- 基准测量 ---
+num_runs = 50
+warmup_runs = 5
+latencies = []
+
+with torch.no_grad():
+    # Warmup
+    for _ in range(warmup_runs):
+        _ = model.generate(input_ids, max_new_tokens=50) # Or model(**inputs) for classification
+
+    # Timed runs
+    for _ in range(num_runs):
+        torch.cuda.synchronize() # 确保GPU上计时准确
+        start_time = time.perf_counter()
+        _ = model.generate(input_ids, max_new_tokens=50) # Or model(**inputs)
+        torch.cuda.synchronize()
+        end_time = time.perf_counter()
+        latencies.append((end_time - start_time) * 1000) # 毫秒
+
+baseline_avg_latency = sum(latencies) / num_runs
+print(f"PyTorch基准平均延迟: {baseline_avg_latency:.2f} 毫秒")
+```
+
+这个基准提供了一个参考点，我们可以据此评估专用运行时带来的改进。
+
+### 使用ONNX Runtime进行优化
+
+ONNX Runtime (ORT) 是一个跨平台推理 (inference)和训练加速器，它通过开放神经网络 (neural network)交换（ONNX）格式支持来自各种框架（PyTorch、TensorFlow、scikit-learn等）的模型。ORT应用图优化并使用称为执行提供程序（EPs）的硬件专用加速库。
+
+1. **模型转换：** 第一步是将我们的PyTorch模型导出为ONNX格式。`torch.onnx.export`函数促进了这一点。我们需要提供一个示例输入来追踪模型的执行图。
+
+   ```python
+   # 占位符：将PyTorch模型导出到ONNX
+   # 假设已定义 'model' 和 'dummy_input'（匹配预期输入形状）
+   # dummy_input = tokenizer("Example input text", return_tensors="pt")['input_ids'].to('cuda')
+
+   torch.onnx.export(model,                  # 运行的模型
+                     dummy_input,            # 模型输入（或多个输入的元组）
+                     "model.onnx",           # 模型保存路径
+                     export_params=True,     # 将训练好的参数权重存储在模型文件中
+                     opset_version=14,       # 导出模型到ONNX的版本
+                     do_constant_folding=True, # 执行常量折叠以进行优化
+                     input_names = ['input_ids'], # 指定输入名称
+                     output_names = ['output'], # 指定输出名称
+                     # dynamic_axes={'input_ids' : {0 : 'batch_size', 1: 'sequence'}, # 使轴动态
+                     #               'output' : {0 : 'batch_size'}})
+   print("模型已导出到 model.onnx")
+   ```
+
+   *注意：* 处理动态轴对于可变输入大小（批次、序列长度）很重要，但这会增加复杂性。为简单起见，我们可能会从固定形状开始。
+2. **使用ONNX Runtime进行推理：** 现在我们可以加载ONNX模型并使用ORT运行推理，指定所需的执行提供程序。对于GPU加速，我们使用`CUDAExecutionProvider`。
+
+   ```python
+   # 占位符：ONNX Runtime推理
+   import onnxruntime as ort
+   import numpy as np
+
+   # 加载ONNX模型
+   sess_options = ort.SessionOptions()
+   # 可选：启用图优化
+   sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+   ort_session = ort.InferenceSession("model.onnx", sess_options, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+
+   # 准备输入（将PyTorch张量转换为NumPy）
+   # numpy_input = inputs['input_ids'].cpu().numpy()
+   ort_inputs = {ort_session.get_inputs()[0].name: numpy_input}
+
+   # --- ONNX Runtime测量 ---
+   ort_latencies = []
+   # Warmup
+   for _ in range(warmup_runs):
+       _ = ort_session.run(None, ort_inputs)
+
+   # Timed runs
+   for _ in range(num_runs):
+       start_time = time.perf_counter()
+       _ = ort_session.run(None, ort_inputs) # ORT通常隐式处理GPU同步
+       end_time = time.perf_counter()
+       ort_latencies.append((end_time - start_time) * 1000)
+
+   ort_avg_latency = sum(ort_latencies) / num_runs
+   print(f"ONNX Runtime (CUDA EP) 平均延迟: {ort_avg_latency:.2f} 毫秒")
+   ```
+
+   ORT自动应用各种图优化（算子融合、常量折叠）并使用CUDA EP提供的优化过的CUDA核函数，通常会带来相比PyTorch基准实现显著的加速。如果导出的模型已经量化 (quantization)，ORT可以使用专门的INT8核函数获得进一步的提升。
+
+### 使用NVIDIA TensorRT进行优化
+
+NVIDIA TensorRT是一款专门用于NVIDIA GPU的高性能深度学习 (deep learning)推理 (inference)优化器和运行时。它执行积极的图优化、层融合、核函数自动调优和精度校准（FP32、FP16、INT8），以最大限度地使用底层硬件，包括Tensor Cores。
+
+1. **构建TensorRT引擎：** TensorRT通常接收ONNX模型（或与TensorFlow/PyTorch等框架集成）。核心步骤是构建一个TensorRT“引擎”，这是模型的某个高度优化版本，特定于目标GPU和TensorRT配置（例如，精度模式）。这个构建过程可能需要时间，因为TensorRT会检查最优核函数和配置。
+
+   ```python
+   # 占位符：构建TensorRT引擎（通常通过'trtexec'命令行工具或Python API完成）
+   # 使用trtexec（命令行示例）：
+   # trtexec --onnx=model.onnx --saveEngine=model.engine --fp16 --workspace=4096
+   ```
+
+# 使用Python API（简化流程）：
+
+````
+import tensorrt as trt
+
+TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
+builder = trt.Builder(TRT_LOGGER)
+network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+config = builder.create_builder_config()
+parser = trt.OnnxParser(network, TRT_LOGGER)
+
+# 解析ONNX模型
+with open("model.onnx", "rb") as model_file:
+    if not parser.parse(model_file.read()):
+        print("ERROR: Failed to parse the ONNX file.")
+        for error in range(parser.num_errors):
+            print(parser.get_error(error))
+        # 适当处理错误
+
+print("ONNX文件解析完成")
+
+# 配置构建器（例如，启用FP16、INT8、设置工作区）
+config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 4 * (1024**3)) # 4GB工作区
+if builder.platform_has_fast_fp16:
+    config.set_flag(trt.BuilderFlag.FP16)
+    print("FP16已启用")
+
+# 构建序列化引擎
+# plan = builder.build_serialized_network(network, config)
+# if not plan:
+#     print("ERROR: Failed to build engine.")
+#     # 处理错误
+#
+# with open("model.engine", "wb") as f:
+#     f.write(plan)
+# print("TensorRT引擎已保存到 model.engine")
+
+```
+*注意：* TensorRT引擎构建需要仔细处理动态形状、INT8精度校准和足够的工作区内存。
+````
+
+2. **TensorRT推理：** 引擎构建完成后，推理涉及加载并使用输入数据执行它。这可以使用TensorRT Python/C++ API完成，或者通常更方便地通过ONNX Runtime的TensorRT执行提供程序进行，后者在后台处理引擎管理。
+
+````
+```python
+# 占位符：使用ONNX Runtime与TensorRT EP进行推理
+import onnxruntime as ort
+import numpy as np
+
+# 确保环境中可访问TensorRT库
+ort_session_trt = ort.InferenceSession("model.onnx", # 从ONNX加载，ORT构建/缓存TRT引擎
+                                       providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'],
+                                       provider_options=[
+                                           {'device_id': 0,
+                                            'trt_fp16_enable': True, # 启用FP16精度
+                                            'trt_engine_cache_enable': True,
+                                            'trt_engine_cache_path': './trt_cache'}, # 缓存目录
+                                           {}, {} # CUDA EP和CPU EP的选项
+                                       ])
+
+# 准备输入（如前所述）
+# ort_inputs = {ort_session_trt.get_inputs()[0].name: numpy_input}
+
+# --- TensorRT测量（通过ORT）---
+trt_latencies = []
+# Warmup
+for _ in range(warmup_runs):
+    _ = ort_session_trt.run(None, ort_inputs)
+
+# Timed runs
+for _ in range(num_runs):
+    start_time = time.perf_counter()
+    _ = ort_session_trt.run(None, ort_inputs)
+    end_time = time.perf_counter()
+    trt_latencies.append((end_time - start_time) * 1000)
+
+trt_avg_latency = sum(trt_latencies) / num_runs
+print(f"ONNX Runtime (TensorRT EP) 平均延迟: {trt_avg_latency:.2f} 毫秒")
+```
+TensorRT通常在NVIDIA GPU上提供最高的性能，这得益于其硬件专用优化，特别是在使用FP16或INT8等降低精度时。
+````
+
+### 使用vLLM进行生成优化
+
+对于文本生成任务，标准批处理方法可能效率低下，因为批次中的序列在不同时间完成，导致对填充令牌的计算浪费。vLLM是一个专门为解决LLM推理 (inference)中此问题而设计的库。其核心创新是**PagedAttention**，它能更高效地管理注意力键和值的内存，类似于操作系统中虚拟内存和分页的工作方式。这使得内存使用接近最优，减少了碎片，并实现了**连续批处理**，即新序列在其他序列完成后立即添加到批次中。
+
+1. **设置与使用：** vLLM提供一个高级Python API，通常允许直接从Hugging Face Hub等来源加载模型。
+
+   ```python
+   # 占位符：用于文本生成的vLLM推理
+   # 确保vllm已安装：pip install vllm
+   from vllm import LLM, SamplingParams
+
+   # 加载模型（vLLM处理优化加载）
+   # 使用与基准相同的模型标识符
+   # llm = LLM(model="gpt2", # 替换为您的模型
+   #           tensor_parallel_size=1) # 根据可用GPU调整
+
+   # 定义采样参数
+   sampling_params = SamplingParams(temperature=0.7, top_p=0.9, max_tokens=50)
+
+   # 准备提示
+   prompts = ["Example input text", "Another prompt for batching"]
+
+   # --- vLLM测量 ---
+   vllm_latencies = [] # 测量每个请求的延迟或批处理的总时间
+   # 预热可能由内部处理或需要几次初始运行
+
+   start_time = time.perf_counter()
+   outputs = llm.generate(prompts, sampling_params)
+   end_time = time.perf_counter()
+
+   total_time_ms = (end_time - start_time) * 1000
+   avg_latency_per_seq = total_time_ms / len(prompts)
+   # 吞吐量计算将取决于令牌数量和时间
+
+   print(f"vLLM每个序列的平均延迟: {avg_latency_per_seq:.2f} 毫秒")
+   # 为了公平比较，测量吞吐量（令牌/秒）
+   # total_output_tokens = sum(len(output.outputs[0].token_ids) for output in outputs)
+   # throughput_tok_sec = total_output_tokens / (total_time_ms / 1000)
+   # print(f"vLLM吞吐量: {throughput_tok_sec:.2f} 令牌/秒")
+
+   # 打印生成文本（可选）
+   # for output in outputs:
+   #     prompt = output.prompt
+   #     generated_text = output.outputs[0].text
+   #     print(f"提示: {prompt!r}, 生成文本: {generated_text!r}")
+   ```
+
+   vLLM在生成任务的吞吐量 (throughput)方面表现出色，特别是在可变输出长度时，这归因于PagedAttention和连续批处理最大限度地减少了GPU空闲时间。
+
+### 基准测试与分析
+
+准确的基准测试是根本。总是在测量前执行预热运行，运行多次迭代以平均结果，并测量相关指标（例如，p50、p90、p99等不同百分位数的延迟，以及每秒令牌数或每秒请求数的吞吐量 (throughput)）。如果构建服务系统，请确保在真实的负载条件下进行测量。
+
+让我们以可视化方式比较这些运行时产生的结果：
+
+
+
+![LLM推理性能比较](plots/4418-0.json)
+
+
+
+> 文本生成任务在不同运行时之间的推理 (inference)性能比较。更低的延迟和更高的吞吐量表示更好的性能。vLLM通常在生成方面表现出显著的吞吐量提升，这归因于优化过的内存管理和批处理。
+
+**分析：**
+
+- **ONNX Runtime (CUDA EP)：** 通常通过使用优化过的核函数和基本图融合，相比基准框架提供良好的加速。它提供广泛的硬件支持。
+- **TensorRT：** 通常在NVIDIA GPU上提供最佳性能，尤其是在FP16/INT8下，这归因于高度专门化的优化和核函数调优。权衡在于硬件特定性和可能更长的引擎构建时间。
+- **vLLM：** 在文本生成任务的吞吐量方面表现出色，从根本上解决了与注意力机制 (attention mechanism)（KV缓存）相关的内存效率低下问题，并实现了连续批处理。其优势在高负载服务场景中最为明显。
+
+### 结论
+
+从理论模型压缩转向，使用专用推理 (inference)运行时对于部署高性能LLMs是必不可少的。ONNX Runtime、TensorRT和vLLM等工具实现了本章讨论的许多硬件感知优化，例如核函数融合、优化过的内存管理（如PagedAttention）、高效硬件映射以及对降低精度的支持。通过转换模型并在这些优化环境中执行它们，可以实现延迟的显著降低和吞吐量 (throughput)的显著增加。这一步弥合了压缩模型文件与高效可部署的AI应用之间的差距。尝试使用这些运行时及其配置选项是LLM部署工作流程的标准部分。
+
+## 参考资料
+
+- [NVIDIA TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html) — NVIDIA Corporation (2024)
+  Publisher: NVIDIA
+  NVIDIA TensorRT的官方指南，详细介绍了其架构、优化方法以及如何在NVIDIA GPU上用于高性能深度学习推理。
+- [ONNX Runtime Documentation](https://onnxruntime.ai/docs/) — Microsoft and ONNX Runtime contributors (2024)
+  Publisher: Microsoft
+  该文档提供了ONNX Runtime的全面信息，包括其图优化、各种执行提供程序（如CUDA）以及从不同框架转换模型的过程。
+- [TVM: An Automated End-to-End Optimizing Compiler for Deep Learning](https://www.usenix.org/conference/osdi18/presentation/chen) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18); Publisher: USENIX Association; Pages: 578-594
+  介绍了TVM，这是深度学习模型自动化编译和优化的早期工作，展示了图优化和硬件专用内核生成如何加速推理。

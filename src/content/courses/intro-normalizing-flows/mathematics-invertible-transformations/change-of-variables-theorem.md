@@ -1,0 +1,61 @@
+---
+course: "intro-normalizing-flows"
+chapter: "mathematics-invertible-transformations"
+lesson: "change-of-variables-theorem"
+sourceId: 8254
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-1-mathematics-invertible-transformations/change-of-variables-theorem"
+title: "变量代换定理"
+description: "应用变量代换定理，通过数学函数实现概率分布的映射。"
+order: 2
+plots: []
+sourceHash: "506c58f88cd3e7f24814ab294b9de4b1a6066580495e49df19c469d3430ecce8"
+sourceCorrections: []
+---
+
+为了从简单分布生成复杂的数据分布，归一化 (normalization)流依赖于一个特定的数学规则。当我们让随机变量通过一个数学函数时，其概率密度会发生变化。变量代换定理告诉了我们如何准确计算这种新的密度。该定理是驱动所有归一化流架构的数学引擎。
+
+我们可以从一维情况开始理解这个定理。假设有一个简单的一维连续随机变量 $z$。我们假定 $z$ 服从标准正态分布。我们希望对 $z$ 应用一个可逆函数 $f$ 来创建一个新的随机变量 $x$，即方程 $x = f(z)$。因为 $f$ 是一个可逆映射，我们也可以使用反函数 $z = f^{-1}(x)$ 进行反向映射。
+
+新变量的概率密度（记为 $p_x(x)$）是多少？一个常见的错误是认为 $p_x(x)$ 简单地等于基础密度 $p_z(z)$。然而，概率是由密度曲线下的面积决定的，且总面积的积分必须始终为 1。当函数 $f$ 拉伸或压缩数轴时，概率密度必须相应地调整以保持总概率不变。
+
+概率守恒规定，微小区域 $dz$ 中的概率质量必须等于对应的转换区域 $dx$ 中的概率质量：
+
+$p_x(x) |dx| = p_z(z) |dz|$
+
+通过对该方程进行移位，我们得到了一维情况下的变量代换公式：
+
+$p_x(x) = p_z(z) \left| \frac{dz}{dx} \right|$
+
+其中 $\frac{dz}{dx}$ 项是反函数 $f^{-1}(x)$ 对 $x$ 的导数。我们取绝对值是因为概率密度必须严格为非负数。如果没有绝对值，斜率为负的函数将计算出数学上不可能存在的负概率密度。
+
+> 随机变量通过可逆变换的流程，显示了正向和逆向映射。
+
+在机器学习 (machine learning)中，我们很少处理一维数据，而是处理代表图像、音频或文本的高维向量 (vector)。如果 $\mathbf{z}$ 和 $\mathbf{x}$ 是 $N$ 维空间 $\mathbb{R}^N$ 中的向量，那么简单的标量导数 $\frac{dz}{dx}$ 就不再适用。我们必须评估 $\mathbf{z}$ 的每一个维度相对于 $\mathbf{x}$ 的每一个维度是如何变化的。这种多维关系由一个称为雅可比矩阵（Jacobian matrix）的偏导数矩阵来刻画。
+
+多元分布的变量代换定理将标量导数替换为雅可比矩阵的行列式：
+
+$p_x(\mathbf{x}) = p_z(\mathbf{z}) \left| \det \left( \frac{\partial \mathbf{z}}{\partial \mathbf{x}} \right) \right|$
+
+我们也可以使用反函数 $\mathbf{z} = f^{-1}(\mathbf{x})$ 显式地写出这个方程：
+
+$p_x(\mathbf{x}) = p_z(f^{-1}(\mathbf{x})) \left| \det \left( \frac{\partial f^{-1}(\mathbf{x})}{\partial \mathbf{x}} \right) \right|$
+
+我们可以拆解该公式的组成部分，以理解密度估计在实践中是如何运行的。
+
+1. $p_x(\mathbf{x})$ 是我们要评估的数据的准确概率密度。
+2. $p_z(f^{-1}(\mathbf{x}))$ 是基础分布的概率密度。我们通过将数据点 $\mathbf{x}$ 反向通过反函数得到 $\mathbf{z}$ 来进行计算。
+3. $\frac{\partial f^{-1}(\mathbf{x})}{\partial \mathbf{x}}$ 是雅可比矩阵。它追踪了逆变换在所有维度上的变化率。
+4. $\det$ 是行列式算子。它衡量了由变换引起的多维空间的体积膨胀或收缩。
+5. 绝对值确保了最终的密度保持为正值。
+
+为了使该定理成立，函数 $f$ 必须是一个双射（bijection）。双射是一个既是单射又是满射的数学函数。这一限制确保了两个特性。首先，每个向量 $\mathbf{z}$ 映射到唯一一个向量 $\mathbf{x}$，且每个 $\mathbf{x}$ 都能映射回唯一一个 $\mathbf{z}$。其次，输入和输出维度是相同的，这保证了雅可比矩阵是一个方阵。行列式只能针对方阵进行计算。如果函数不是双射，概率质量可能会重叠或消失。
+
+有时使用正向变换而不是逆变换来定义变量代换会更方便。利用逆矩阵的性质，我们知道逆雅可比矩阵的行列式等于正向雅可比矩阵行列式的倒数。这给了我们另一种表达方式：
+
+$p_x(\mathbf{x}) = p_z(\mathbf{z}) \left| \det \left( \frac{\partial \mathbf{x}}{\partial \mathbf{z}} \right) \right|^{-1}$
+
+在训练神经网络 (neural network)时，将许多微小的概率相乘会导致数值下溢。为了保持数值稳定性，归一化流计算数据的对数似然（log-likelihood）而不是原始概率密度。对两边取自然对数将乘积转换为求和：
+
+$\log p_x(\mathbf{x}) = \log p_z(\mathbf{z}) - \log \left| \det \left( \frac{\partial \mathbf{x}}{\partial \mathbf{z}} \right) \right|$
+
+这种对数形式正是你在 PyTorch 中训练流模型时要优化的目标函数。第一项评估模型将数据映射到简单基础分布的高概率区域的效果。第二项（即对数行列式）起到惩罚项的作用，防止空间的体积在训练过程中坍缩为零。

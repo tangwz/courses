@@ -1,0 +1,66 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "generalization-challenge"
+lesson: "role-regularization-optimization"
+sourceId: 4884
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-1-generalization-challenge/role-regularization-optimization"
+title: "正则化与优化的作用"
+description: "介绍正则化与优化如何帮助提升模型泛化能力。"
+order: 6
+plots: []
+sourceHash: "4cabfc53f82c3678f17cf7f9c05c8a0914a00e9e29d2508cbb9f327773500514"
+sourceCorrections: []
+---
+
+在明确了泛化、过拟合 (overfitting)和欠拟合 (underfitting)的观念，并看到了学习曲线等工具如何帮助诊断这些问题之后，自然而然的下一个问题是：我们能积极地 *做些什么* 来处理它们？如果我们的模型过拟合，记忆了训练数据中的噪声而不是学习潜在模式，我们如何促使其更好地泛化？反之，如果我们的模型欠拟合，我们又如何帮助它捕捉更复杂的联系？此外，我们如何高效地为复杂的深度学习 (deep learning)模型找到最佳参数 (parameter)集？
+
+这正是本课程的核心主题，**正则化 (regularization)**和**优化**，发挥作用的地方。它们代表着两组相辅相成的技术，对于训练有效的深度学习模型非常重要。
+
+### 正则化 (regularization)：引导模型趋向更简单
+
+正则化技术主要目的是对抗**过拟合 (overfitting)**。其核心思路是限制学习过程，使模型更难完美地拟合训练数据，尤其是那些带有噪声的部分。通过增加约束或惩罚，我们鼓励模型找到更简单的模式，这些模式在未见过的数据上更可能成立。
+
+可以这样理解：一个过拟合模型学习了基于其所见训练实例的过于具体的规则。正则化引入了对更简单、更通用规则的偏好。这可能包括：
+
+- **惩罚复杂性：** 像L1和L2正则化这样的技术根据模型权重 (weight)的大小对损失函数 (loss function)增加惩罚。这阻止大权重，有效地将模型推向更简单的方案，在这些方案中，特征的影响力不那么极端。
+- **注入噪声：** 像Dropout这样的方法在每个训练步骤中随机“关闭”一部分神经元。这防止神经元过度依赖特定其他神经元（协同适应），并迫使网络学习更分散、冗余的表示，使其对任何单个神经元或特征的缺失不那么敏感。
+- **使用验证数据：** 像Early Stopping这样的技术监控模型在单独验证集上的性能，并在验证性能开始下降时停止训练，即使训练性能仍在提升。这直接阻止模型继续过度专门化于训练数据。
+- **数据增强：** 虽然不总是明确地称为正则化，但通过现有数据的修改版本（例如，旋转图像，改变亮度）人工扩展训练数据集，使模型更难记忆特定的训练实例，并迫使它学习更多不变的特征。
+
+从根本上说，正则化方法修改学习目标或学习过程本身，以提升模型的泛化能力，通常通过牺牲偏差（它拟合训练数据的程度）的少量增加来换取方差（其预测随不同训练数据变化的程度）的显著减少。随后的章节（第2、3、4章和第8章的部分内容）将研究这些特定技术的机制和实施。
+
+### 优化：高效寻找良好参数 (parameter)
+
+另一方面，优化算法是驱动学习过程本身的引擎。给定模型架构和损失函数 (loss function)，优化器的任务是迭代更新模型的参数（权重 (weight)和偏置 (bias)）以最小化损失。尽管其基本思路依赖于梯度下降 (gradient descent)（计算损失函数相对于参数的梯度并朝相反方向迈出一步），但朴素的实现面临挑战，尤其是在深度学习 (deep learning)损失函数常见的高维、非凸曲面中。
+
+挑战包括：
+
+- **收敛速度：** 基本梯度下降可能非常慢，尤其是在大型数据集上。
+- **局部最小值和鞍点：** 损失函数包含许多次优的点，在这些点上梯度为零或非常小，可能使优化器被困住。
+- **计算成本：** 在整个数据集上计算梯度（批量梯度下降）可能在计算上非常昂贵。
+
+现代优化算法处理这些问题：
+
+- **随机和小批量方法：** 不使用整个数据集，梯度在单个示例（随机梯度下降 - SGD）或小批量（小批量梯度下降）上计算，从而加快更新速度，并由于有噪声的梯度估计而帮助逃离一些不佳的局部最小值。
+- **动量：** 像动量和Nesterov加速梯度这样的技术引入了一个“速度”项，累积过去的梯度以加速在一致方向上的移动并抑制振荡。
+- **自适应学习率：** 像AdaGrad、RMSprop和Adam这样的算法根据梯度历史自动调整每个参数的学习率，通常可以在无需大量手动调整学习率的情况下加快收敛速度。
+
+尽管优化的主要目标是高效收敛到低损失解决方案，但优化器及其超参数 (hyperparameter)（如学习率）的选择可以间接影响泛化。不同的优化器以不同方式查看参数空间，并可能收敛到不同的局部最小值，部分可能比其他具有更好的泛化能力。此外，优化与正则化 (regularization)彼此关联；例如，权重衰减（L2正则化）的有效性可能取决于所使用的优化算法。我们将研究基本优化器（第5章）、自适应方法（第6章）以及学习率调度和初始化等相关改进（第7章）。
+
+### 协力打造更优模型
+
+正则化 (regularization)与优化并非独立的选择。训练一个成功的深度学习 (deep learning)模型几乎总是需要从这两个类别中选择合适的技术。优化寻找使（可能已正则化的）损失函数 (loss function)最小化的参数 (parameter)，而正则化则引导优化过程趋向那些不仅能很好拟合训练数据，还能有效泛化到新数据的参数值。理解两者对于构建在实践中表现良好的模型非常重要。随后的章节将使您具备有效应用这些技术的知识和实践技能。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  权威的深度学习教材，涵盖泛化、正则化技术（L1/L2、Dropout、提前停止、数据增强）和优化算法（梯度下降、SGD、动量、自适应方法）的综合性章节。
+- [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](http://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research; Volume: 15; Pages: 1929-1958
+  这篇开创性论文介绍了Dropout，一种广泛用于神经网络的正则化技术。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma and Jimmy Ba (2015)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化算法，它结合了AdaGrad和RMSprop的优点，在深度学习中得到广泛应用。
+- [Stanford CS231n: Convolutional Neural Networks for Visual Recognition - Lecture Notes](http://cs231n.github.io/) — Stanford University CS231n Course Staff (2024)
+  来自顶尖大学课程的全面且易于理解的讲义，涵盖深度学习的各种正则化和优化技术。

@@ -1,0 +1,165 @@
+---
+course: "data-visualization-matplotlib-seaborn"
+chapter: "plotting-pandas-dataframes"
+lesson: "preparing-data-plotting-pandas"
+sourceId: 1221
+sourceUrl: "https://apxml.com/zh/courses/data-visualization-matplotlib-seaborn/chapter-8-plotting-pandas-dataframes/preparing-data-plotting-pandas"
+title: "数据筛选与绘图准备"
+description: "学习在可视化前使用 Pandas 进行数据选取、筛选和转换的基本技巧。"
+order: 6
+plots: []
+sourceHash: "e49e1372c986ba0721d18272149e255b6772161e1c57af671dc55f77841feec7"
+sourceCorrections: []
+---
+
+通常，您加载到 Pandas DataFrame 中的原始数据并非立刻适合可视化。对于特定图表，您可能拥有比所需更多的列，或者您可能只想显示满足特定条件的行子集。数据准备涉及选取相关部分并滤除无关信息，以确保您的图表清晰传达预期信息。
+
+### 选取特定列
+
+DataFrames 可以包含许多列，但单个图表通常只显示两三个变量之间的关系。您可以使用方括号表示法轻松选取所需列。
+
+要选取单列（返回 Pandas Series），请使用单方括号：
+
+```python
+# 假设 'df' 是您的 DataFrame
+product_names = df['ProductName']
+sales_data = df['Sales']
+```
+
+要选取多列（返回新的 DataFrame），请在双层方括号内使用列名列表：
+
+```python
+# 选取 'ProductName' 和 'Sales' 列
+product_sales_df = df[['ProductName', 'Sales']]
+
+# 显示新 DataFrame 的前几行
+print(product_sales_df.head())
+```
+
+现在，这个 `product_sales_df` 只包含所需数据，例如，可用于显示每种产品销售额的柱状图，使其更易于传递给绘图函数。
+
+### 根据条件筛选行
+
+正如您可能只需要特定列一样，您通常只想显示满足特定条件的行。这通常称为*布尔索引*或*条件选取*。您创建一个条件（对每行求值为 `True` 或 `False`），并将其放在方括号内来筛选 DataFrame。
+
+**示例 1: 简单条件**
+
+假设您有一个包含销售数据的 DataFrame `df`，并且只想绘制销售额大于 $1000$ 的产品。
+
+```python
+# 创建一个布尔 Series：当 Sales > 1000 时为 True，否则为 False
+high_sales_condition = df['Sales'] > 1000
+
+# 使用此布尔 Series 筛选 DataFrame
+high_sales_df = df[high_sales_condition]
+
+# 或者，更简洁地：
+high_sales_df = df[df['Sales'] > 1000]
+
+# 现在，high_sales_df 只包含满足条件的行
+print(high_sales_df.head())
+```
+
+之后您可以使用 `high_sales_df` 进行绘图。
+
+**示例 2: 多重条件**
+
+您可以使用逻辑运算符组合条件：`&` 表示“与”，`|` 表示“或”。由于 Python 的运算符优先级规则，务必将每个单独的条件用括号 `()` 包裹起来。
+
+假设您想显示属于“电子产品”类别*并且*销售额高于 $500$ 的产品数据。
+
+```python
+# 条件 1: 类别为 'Electronics'
+condition1 = df['Category'] == 'Electronics'
+# 条件 2: 销售额大于 500
+condition2 = df['Sales'] > 500
+
+# 使用 AND (&) 组合条件
+# 注意每个条件周围的括号
+electronics_high_sales_df = df[(condition1) & (condition2)]
+
+# 或者，直接：
+electronics_high_sales_df = df[(df['Category'] == 'Electronics') & (df['Sales'] > 500)]
+
+print(electronics_high_sales_df)
+```
+
+类似地，要选取“电子产品”*或*销售额高于 $1500$ 的产品：
+
+```python
+# 使用 OR (|) 组合条件
+relevant_products_df = df[(df['Category'] == 'Electronics') | (df['Sales'] > 1500)]
+
+print(relevant_products_df)
+```
+
+筛选使您能够将可视化聚焦于数据的特定部分，使您的图表更具针对性和洞察力。
+
+### 处理缺失数据 (基本方法)
+
+"数据集通常包含缺失值，在 Pandas 中表示为 `NaN`（非数字）。绘图函数在遇到 `NaN` 时可能会出现意料之外的行为或产生错误。"
+
+在绘图前处理缺失数据的一个简单策略是移除您打算绘图的列中含有缺失值的行。`.dropna()` 方法在此处很有用。
+
+```python
+# 假设我们要绘制 'Sales' 与 'Profit' 的关系
+# 检查这些列中的缺失值
+print(df[['Sales', 'Profit']].isnull().sum())
+
+# 删除 'Sales' 或 'Profit' 中任一为 NaN 的行
+cleaned_df = df.dropna(subset=['Sales', 'Profit'])
+
+# 验证缺失值是否已处理 (这些列的输出应为 0)
+print(cleaned_df[['Sales', 'Profit']].isnull().sum())
+```
+
+现在，`cleaned_df` 可用于绘图，不会因 'Sales' 或 'Profit' 列中的缺失值引起问题。请注意，删除行意味着丢弃数据，这可能并非总是最佳方法，但它是基本可视化准备的合理起点。
+
+### 综合应用: 为绘图筛选数据
+
+让我们将这些想法结合起来。假设您有一个 DataFrame `customer_df`，包含 'Age'、'City'、'SpendingScore' 等列。您想创建一个 'Age' 与 'SpendingScore' 的散点图，但只针对来自“纽约”且年龄小于 40 岁的客户。
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 示例 DataFrame (替换为加载您的实际数据)
+data = {'Age': [25, 45, 35, 50, 22, 38, 60],
+        'City': ['New York', 'Los Angeles', 'New York', 'Chicago', 'New York', 'Chicago', 'New York'],
+        'SpendingScore': [75, 50, 85, 40, 90, 45, 60]}
+customer_df = pd.DataFrame(data)
+
+# 1. 筛选数据
+filtered_customers = customer_df[(customer_df['City'] == 'New York') & (customer_df['Age'] < 40)]
+
+# 显示筛选后的数据
+print("用于绘图的筛选数据：")
+print(filtered_customers)
+
+# 2. 使用筛选后的数据创建图表
+plt.figure(figsize=(8, 5)) # 设置图表尺寸
+sns.scatterplot(data=filtered_customers, x='Age', y='SpendingScore')
+plt.title('消费分数与年龄的关系 (纽约客户 < 40 岁)')
+plt.xlabel('年龄')
+plt.ylabel('消费分数')
+plt.grid(True) # 添加网格线以增强可读性
+plt.show()
+```
+
+首先筛选 DataFrame，使其只包含感兴趣的行 (`filtered_customers`)，随后的散点图将专门显示该子组内的关系。尝试绘制整个 `customer_df` 再进行心智筛选会效率低得多。
+
+使用 Pandas 的选取和筛选技术准备数据是数据可视化流程中常见的初步步骤。它确保您的图表基于数据的正确子集，从而获得更清晰、更准确的洞察。
+
+## 参考资料
+
+- [Pandas User Guide: Indexing and selecting data](https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html) — The Pandas Development Team (2024)
+  提供了关于使用各种 Pandas 方法（包括布尔索引）选择列和过滤行的权威指南。
+- [Pandas User Guide: Working with missing data](https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html) — The Pandas Development Team (2024)
+  详细介绍了如何识别和处理 DataFrame 中的缺失值，特别是涵盖了用于数据准备的 `dropna()` 方法。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  Pandas 数据操作的权威书籍，全面涵盖了数据选择、过滤和缺失数据处理。（第3版）
+- [Effective Pandas: A Guide to Using the Python Data Analysis Library](https://www.oreilly.com/library/view/effective-pandas/9781492067718/) — Matt Harrison (2021)
+  Publisher: O'Reilly Media
+  提供实用指南，介绍 Pandas 中常见操作（如选择、过滤和清理数据）的最佳实践和高效技术。

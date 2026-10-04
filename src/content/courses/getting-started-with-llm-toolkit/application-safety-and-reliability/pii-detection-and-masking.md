@@ -1,0 +1,168 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "application-safety-and-reliability"
+lesson: "pii-detection-and-masking"
+sourceId: 7794
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-10-application-safety-and-reliability/pii-detection-and-masking"
+title: "检测与遮蔽个人信息"
+description: "实施检测和遮蔽个人身份信息（PII）的机制以保护隐私。"
+order: 3
+plots: []
+sourceHash: "d9679304be92a41e0e7789f82c57abafb97c67a0c0cb38da9759c291e6717fc0"
+sourceCorrections: []
+---
+
+负责任地处理用户数据是构建可信赖应用程序的根本。在使用大型语言模型（这些模型旨在处理和生成自然语言）时，无意中记录、处理或暴露个人身份信息（PII）的风险不小。未能保护这些信息可能导致隐私侵犯、用户信任流失以及GDPR和CCPA等法规下的法律后果。
+
+您的应用程序应设有一个安全层，用于在将PII发送到大型语言模型或存储到日志中之前对其进行检测和处理。该工具包在`safety`模块中提供一系列函数，专门用于此目的。
+
+### 检测个人身份信息
+
+保护敏感数据的第一步是识别它。`detect_pii`函数扫描文本，查找各类个人信息，如电子邮件地址、电话号码、信用卡号等。
+
+设想用户在支持聊天中提供了他们的联系方式。在使用大型语言模型处理此消息之前，您应该扫描它以查找PII。
+
+```python
+from kerb.safety import detect_pii
+
+user_message = "My email is support-user@example.com and my phone is 555-123-4567."
+matches = detect_pii(user_message)
+
+print(f"找到 {len(matches)} 个 PII 实例：")
+for match in matches:
+    print(f"  - 类型: {match.pii_type.value}")
+    print(f"    文本: {match.text}")
+    print(f"    置信度: {match.confidence:.2f}")
+```
+
+这将产生以下输出：
+
+```text
+找到 2 个 PII 实例：
+  - 类型: email
+    文本: support-user@example.com
+    置信度: 0.95
+  - 类型: phone
+    文本: 555-123-4567
+    置信度: 0.90
+```
+
+该函数返回一个匹配对象列表，每个对象都包含检测到的文本、其类型和置信分数。这种结构化输出让您可以根据发现的内容构建处理逻辑。例如，您可以标记 (token)具有高置信度PII匹配的消息，以便进行特殊处理或自动遮蔽。
+
+在某些情况下，您可能只关注特定类型的PII。`detect_pii`函数可以配置为查找一个目标信息集。您也可以使用`detect_email`或`detect_phone`等专用函数进行更直接的检查。
+
+```python
+from kerb.safety import detect_pii, detect_credit_card, PIIType
+
+text = "My email is bob@test.com, but please charge my card 4532 1234 5678 9010."
+
+# 只检测电子邮件和电话
+specific_matches = detect_pii(text, pii_types=[PIIType.EMAIL, PIIType.PHONE])
+print(f"找到 {len(specific_matches)} 个电子邮件/电话实例。")
+
+# 使用专用检测器检测信用卡
+card_matches = detect_credit_card(text)
+if card_matches:
+    print(f"检测到信用卡: {card_matches[0].text}")
+```
+
+这种细粒度控制有助于创建上下文 (context)感知安全规则，例如在特定情境下对财务信息比对电子邮件地址更严格。
+
+### 遮蔽与匿名化
+
+检测到PII后，您有两种主要处理策略：遮蔽和匿名化。
+
+- **遮蔽** 涉及用固定占位符（通常是`[REDACTED]`或`***`）替换敏感信息。这有助于清理日志中不需要用于分析的PII。
+- **匿名化** 将PII替换为描述性占位符，例如`[EMAIL]`或`[PHONE]`。这种方法在不暴露数据本身的情况下，保留了该信息存在的上下文 (context)。它非常适用于为大型语言模型准备用户输入，因为模型可以明白用户提供了电子邮件地址，而无需看到实际地址。
+
+`redact_pii`函数完全移除敏感数据，使其适用于安全日志记录。
+
+```python
+from kerb.safety import redact_pii
+
+sensitive_text = "Please contact jane.doe@company.com or call (555) 987-6543 for details."
+redacted_text = redact_pii(sensitive_text)
+
+print(f"原始文本: {sensitive_text}")
+print(f"遮蔽后: {redacted_text}")
+```
+
+输出显示PII被标准占位符替换：
+
+```text
+原始文本: Please contact jane.doe@company.com or call (555) 987-6543 for details.
+遮蔽后: Please contact [REDACTED] or call [REDACTED] for details.
+```
+
+对于为大型语言模型处理准备数据，`anonymize_text`通常更实用，因为它保留了被移除信息的类型。
+
+```python
+from kerb.safety import anonymize_text
+
+customer_query = "My account email is john.smith@web.com and my credit card is 4532-1234-5678-9010."
+anonymized_query = anonymize_text(customer_query)
+
+print(f"原始文本: {customer_query}")
+print(f"匿名化后: {anonymized_query}")
+```
+
+匿名化输出保持了原始消息的结构上下文：
+
+```text
+原始文本: My account email is john.smith@web.com and my credit card is 4532-1234-5678-9010.
+匿名化后: My account email is [EMAIL] and my credit card is [CREDIT_CARD].
+```
+
+这段匿名化文本可以安全地发送给大型语言模型。模型仍能生成有用的回复，例如“您是在询问与[EMAIL]关联的账户和[CREDIT\_CARD]支付方式吗？我能为您提供什么帮助？”，而无需实际处理敏感数据。
+
+### 大型语言模型对话的实用工作流程
+
+安全层应同时应用于用户输入和模型输出。这可以阻止敏感用户数据被发送给模型提供商，并确保模型不会在回复中无意中泄露任何PII。
+
+以下是在对话应用程序中处理PII的实用工作流程：
+
+1. **扫描用户输入：** 当用户发送消息时，使用`detect_pii`检查敏感信息。
+2. **匿名化以进行处理：** 如果发现PII，使用`anonymize_text`创建输入的安全版本，并将其发送给大型语言模型。
+3. **生成回复：** 大型语言模型根据匿名化输入生成回复。
+4. **扫描模型输出：** 对大型语言模型的回复使用`detect_pii`，以确保它没有生成或重复任何PII。
+5. **安全记录日志：** 在将对话回合存储到日志中之前，对原始用户输入和模型回复应用`redact_pii`，以确保没有敏感数据被长期存储。
+
+```python
+from kerb.safety import detect_pii, anonymize_text, redact_pii
+
+# 包含PII的用户输入
+user_input = "I'm having login issues with my account, user-123@email.com."
+
+# 1. 扫描用户输入
+pii_matches = detect_pii(user_input)
+if pii_matches:
+    print("在用户输入中检测到PII。正在为大型语言模型进行匿名化。")
+
+    # 2. 匿名化以进行处理
+    anonymized_input = anonymize_text(user_input)
+    print(f"供大型语言模型使用的匿名化输入: {anonymized_input}")
+    
+    # 3. 模拟大型语言模型回复（这将是实际的大型语言模型调用）
+    # 大型语言模型可能会不小心重复占位符
+    llm_response = f"I can help with the account associated with {anonymized_input.split()[-1]}"
+    print(f"大型语言模型回复: {llm_response}")
+
+    # 4. 扫描模型输出
+    output_pii = detect_pii(llm_response)
+    if output_pii:
+        print("警告：在大型语言模型输出中发现PII占位符。为安全起见正在遮蔽。")
+
+    # 5. 安全记录日志
+    safe_log_input = redact_pii(user_input)
+    safe_log_output = redact_pii(llm_response)
+    print(f"安全日志条目（输入）: {safe_log_input}")
+    print(f"安全日志条目（输出）: {safe_log_output}")
+```
+
+将这些步骤集成到您的应用程序中，可以创建一个安全边界，在大型语言模型交互的每个阶段保护用户隐私。这不仅履行了法律和道德义务，还建立了对任何成功人工智能应用程序都不可或缺的用户信任。
+
+## 参考资料
+
+- [Privacy-preserving natural language processing: A survey](https://link.springer.com/article/10.1007/s10462-020-09886-w) — Fenglong Xu, Yong Zhang, Minghao Zhang, Mingchen Li, Xinyu Yang, Jin Li (2021)
+  Journal: Artificial Intelligence Review; Publisher: Springer; Volume: 54; Pages: 2289-2322; DOI: [10.1007/s10462-020-09886-w](https://doi.org/10.1007/s10462-020-09886-w)
+  综述了自然语言处理中保护隐私的技术，包括文本数据匿名化和编辑的方法。

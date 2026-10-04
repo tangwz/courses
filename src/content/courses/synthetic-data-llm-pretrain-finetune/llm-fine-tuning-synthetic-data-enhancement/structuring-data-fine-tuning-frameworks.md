@@ -1,0 +1,156 @@
+---
+course: "synthetic-data-llm-pretrain-finetune"
+chapter: "llm-fine-tuning-synthetic-data-enhancement"
+lesson: "structuring-data-fine-tuning-frameworks"
+sourceId: 6138
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-llm-pretrain-finetune/chapter-4-llm-fine-tuning-synthetic-data-enhancement/structuring-data-fine-tuning-frameworks"
+title: "针对不同微调框架的数据组织"
+description: "了解LLM微调常用的数据格式（例如JSONL）和组织要求。"
+order: 5
+plots: []
+sourceHash: "15fefda5c6d54eaf7f22dd928b73f22f0654c33547cdf8384d41305bf10729cf"
+sourceCorrections: []
+---
+
+为大型语言模型（LLM）微调 (fine-tuning)构建合成数据结构是一个必需的实际步骤。微调框架和库不会自动识别任意数据排列，它们要求数据按特定结构和格式组织。正确处理这一点对于成功进行微调训练是根本性的。可以将其想象成调用程序中的一个函数：你需要按照预设的顺序和格式传递参数 (parameter)，函数才能正常运行。将详细介绍LLM微调中常用的数据格式和组织规范。
+
+### 微调 (fine-tuning)常用数据格式
+
+尽管LLM工具一直在演变，一些数据格式因其简洁和实用性而变得流行。
+
+#### JSON行（JSONL）
+
+JSON行，通常简写为JSONL，是微调数据集的一种普遍采用的格式。在JSONL文件中，每一行都是一个完整、独立存在的JSON对象。这种结构具有多项优点：
+
+1. **可流式处理**：你可以逐行处理文件，这对于可能无法完全载入内存的超大数据集来说非常高效。
+2. **易读性**：JSON具有人类可读性，方便检查和调试你的数据。
+3. **灵活性**：每个JSON对象可以拥有复杂的结构，能容纳各种类型的微调数据，例如指令-响应对或对话历史。
+
+对于指令微调，一个典型的JSONL条目可能如下所示：
+
+```json
+{"instruction": "将以下英文句子翻译成法文。", "input": "你好，各位！", "output": "你好，各位！"}
+{"instruction": "总结所提供文本的要点。", "input": "该文本讨论了规律运动的好处，包括改善心血管健康、体重管理和提升精神健康。它还提到了持之以恒的重要性。", "output": "规律运动有益于心脏健康、体重控制和精神状态改善，并且持之以恒很重要。"}
+{"instruction": "编写一个计算数字阶乘的Python函数。", "output": "def factorial(n):\n    if n == 0:\n        return 1\n    else:\n        return n * factorial(n-1)"}
+```
+
+注意，`input`字段是可选的。如果一个指令除了指令本身不需要额外上下文 (context)，`input`字段可以省略或留作空字符串。一些框架可能会使用略有不同的名称，例如`prompt`和`completion`，或者一个包含完整格式化提示（包括指令、输入和响应占位符）的`text`字段。请务必查阅你所使用的特定微调框架的文档。
+
+#### 逗号分隔值（CSV）或制表符分隔值（TSV）
+
+CSV和TSV文件是更简单的文本格式，其中数据按行组织，每行中的值分别用逗号或制表符分隔。尽管对于复杂的嵌套数据，它们的灵活性不如JSONL，但它们适用于直接的提示-补全对。
+
+用于微调的CSV文件可能包含`prompt`和`completion`等列：
+
+```csv
+prompt,completion
+"泰国的首都是哪里？","曼谷"
+"用简单的语言解释光合作用的原理。","光合作用是植物将光能转化为化学能以制造自身食物的过程。"
+```
+
+使用CSV或TSV时，请密切注意文本字段中的换行符和特殊字符的处理方式，因为它们有时会导致解析问题。
+
+### 针对不同微调 (fine-tuning)目标的数据结构化
+
+你在这些格式中组织合成数据的方式很大程度上取决于微调目标。
+
+#### 指令微调（IFT）
+
+如JSONL示例所示，IFT数据集通常由指令-响应对组成。目标是训练LLM有效遵循指示。你生成的合成数据应清晰界定：
+
+- **指令**：模型应执行的特定任务。
+- **输入（可选）**：指令操作的任何上下文 (context)或数据。
+- **输出/响应**：期望的模型生成内容。
+
+许多微调脚本会在内部将这些字段组合成一个单一的格式化提示字符串，供模型在训练时使用。常见的模板模式可能如下所示：
+
+```
+下方是一条描述任务的指令。请编写一个适当完成请求的响应。
+
+### 指令：
+{instruction}
+
+### 输入：
+{input}
+
+### 响应：
+{output}
+```
+
+如果`input`字段为空，模板的该部分将被省略。在应用此类模板时保持一致性对于模型学习模式非常重要。
+
+#### 聊天和对话微调
+
+为了微调模型使其成为高效的聊天机器人或对话代理，数据需要代表多轮对话。数据集中的每个条目，通常是JSONL文件中的一个JSON对象，将代表一个完整的对话或其一部分。在此对象中，你通常会有一个消息列表，其中每条消息都指定了`role`（例如，`system`、`user`、`assistant`）和消息的`content`。
+
+以下是一个用于对话微调的单个JSONL条目示例：
+
+```json
+{
+  "messages": [
+    {"role": "system", "content": "你是一个乐于助人、提供简洁回答的助手。"},
+    {"role": "user", "content": "使用合成数据进行LLM微调的主要好处是什么？"},
+    {"role": "assistant", "content": "它允许创建有针对性、特定任务的数据集，尤其是在数据稀缺或难以获取时。"}
+  ]
+}
+```
+
+这种结构化格式使得模型能够学习对话流程以及根据之前的对话和发言者的角色给出适当的响应。
+
+#### 持续预训练 (pre-training)或方面适配
+
+如果你的目标是将现有LLM适配到特定方面（例如法律文本、医学研究）或特定风格，你的合成数据可能包含代表该方面或风格的大段文本。在这种情况下，结构可以非常简单，通常只是一个JSONL文件，其中每行包含一个带有一个`text`字段的JSON对象：
+
+```json
+{"text": "这是一段以19世纪科学文章风格编写的合成长文本..."}
+{"text": "另一份侧重于法律术语和判例的文件示例..."}
+```
+
+模型随后会在此专业语料库上进一步预训练，使其内部表示和生成模式得到适配。
+
+下图显示了原始合成数据组件如何转换为JSONL条目，以及随后如何将其格式化为指令微调任务的提示字符串。
+
+> 数据从独立组件转换为JSONL条目，再转换为适用于微调框架的格式化提示字符串。
+
+### 分词 (tokenization)和特殊标记 (token)
+
+无论采用何种格式，你准备的文本数据最终都将由LLM的分词器 (tokenizer)转换为标记。尽管原始数据结构通常不直接包含标记，但其设计应便于后续添加任何所需的特殊标记（例如，`<s>`用于序列开始，`</s>`用于序列结束，`[INST]`和`[/INST]`用于Llama 2指令标记）。
+
+例如，如果你使用的是带有`role`和`content`字段的聊天格式，微调 (fine-tuning)脚本通常会遍历消息并应用模型特定的聊天模板，自动在轮次之间或用户/助手消息周围插入特殊标记。如果你正在创建单一的提示字符串，你可能需要在数据生成或模板逻辑中直接包含这些特殊标记。
+
+### 数据划分：训练集、验证集和测试集
+
+尽管这并非严格意义上的单个数据点格式问题，但请记住，你的整体合成数据集需要划分为训练集、验证集，有时还包括测试集。这通常通过创建单独的文件（例如，`train.jsonl`、`validation.jsonl`）或通过在每个数据条目中添加一个字段来指示其归属（尽管对于微调 (fine-tuning)而言，单独文件更常见）来完成。每个文件内部的结构与上述讨论的格式保持一致。
+
+### 运用工具和库
+
+许多流行的LLM库，例如Hugging Face的`datasets`，提供了方便的工具来加载JSONL或CSV等标准格式的数据。它们通常允许你明确定义数据集特征，并能处理大量的解析和预处理工作。使用此类库可以节省你的时间，并有助于确保微调 (fine-tuning)脚本正确加载你的数据。例如，`datasets`库可以通过一个简单命令加载JSONL文件：
+
+```python
+# Python代码示例
+from datasets import load_dataset
+
+# 从JSONL文件加载数据集
+# 假设你的数据位于'my_synthetic_data.jsonl'
+# dataset = load_dataset('json', data_files='my_synthetic_data.jsonl')
+
+# 对于指令微调，你可能需要将其映射到特定格式
+# def format_instruction(example):
+#     if example.get('input'):
+#         return {'text': f"Instruction: {example['instruction']}\nInput: {example['input']}\nOutput: {example['output']}"}
+#     else:
+#         return {'text': f"Instruction: {example['instruction']}\nOutput: {example['output']}"}
+
+# formatted_dataset = dataset.map(format_instruction)
+```
+
+此代码片段展示了你如何加载并转换结构化的JSONL数据，使其符合特定模型或微调脚本所需的精确字符串格式。
+
+总之，恰当地组织合成数据是微调的一个非常重要的准备步骤。尽管JSONL是一种多功能且常用的选择，但请务必参考你所选微调框架或模型的文档，了解具体的格式要求。本章后面的实践环节将为你提供一个通过为特定任务创建和组织合成数据集来应用这些原则的机会。
+
+## 参考资料
+
+- [Fine-tune a large language model](https://huggingface.co/docs/transformers/main/en/llm_tutorial) — Hugging Face (2024)
+  涵盖LLM微调的通用流程，包括数据准备考量和提示词模板的使用。
+- [Loading a dataset](https://huggingface.co/docs/datasets/main/en/loading_methods) — Hugging Face (2024)
+  详细说明加载数据集的各种方法，包括从JSONL和CSV文件加载，这对数据摄取很重要。

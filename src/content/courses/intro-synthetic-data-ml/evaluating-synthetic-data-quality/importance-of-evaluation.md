@@ -1,0 +1,42 @@
+---
+course: "intro-synthetic-data-ml"
+chapter: "evaluating-synthetic-data-quality"
+lesson: "importance-of-evaluation"
+sourceId: 5694
+sourceUrl: "https://apxml.com/zh/courses/intro-synthetic-data-ml/chapter-5-evaluating-synthetic-data-quality/importance-of-evaluation"
+title: "评估的重要性"
+description: "了解在用于机器学习任务之前评估合成数据的重要性。"
+order: 1
+plots: []
+sourceHash: "e4b6cd24bb235852b794292d28000d31ef184ca7a1b8e444ec698ddd17619ed0"
+sourceCorrections: []
+---
+
+你已经了解了生成合成数据的动机以及一些基本的生成技术。然而，生成人工数据集仅仅是事情的一部分。我们能生成数据，但这并不自动意味着这些数据是“好”的或“有用”的。在将合成数据整合到任何机器学习 (machine learning)流程之前，我们必须严格评估其质量。这一评估步骤并非可有可无；它是负责任且有效地使用合成数据的一个基本环节。
+
+“为什么这项评估如此重要？设想一下训练一个机器学习模型。模型的性能和可靠性在很大程度上取决于其学习数据的好坏。这通常可以用“垃圾进，垃圾出”这句格言来概括。如果你用合成数据来训练模型，而这些数据不能很好地体现它本应模仿的模式、分布或限制，那么训练出的模型在部署时很可能会表现不佳。它可能会做出不准确的预测，表现出意想不到的偏见，或者无法泛化到新数据。”
+
+考虑几种未经评估的合成数据可能导致问题的情形：
+
+1. **模型性能不佳：** 如果合成数据未能捕获真实数据中特征之间的重要联系，那么用它训练的模型可能会学到不正确的模式。例如，如果真实的销售数据显示广告支出和收入之间存在很强的关联，但合成数据独立地生成这些值，那么用合成数据训练的模型就不会学到这条重要的业务规则。
+2. **引入偏差：** 生成过程本身可能无意中引入原始数据中不存在（或以不同方式存在）的偏差。例如，在生成合成客户画像时，该过程可能会过度代表某个特定的人口群体，导致模型不公平或具有歧视性。评估有助于发现此类差异。
+   “3. **误导性发现：** 如果合成数据用于分析或考察，其生成中的缺陷可能导致分析师对底层过程得出错误的结论。”
+3. **未能达成目标：** 生成合成数据通常有特定用途，例如扩充小型数据集、保护隐私或模拟罕见事件。评估可确保合成数据确实达到了该目标。扩充后的数据是否提高了模型准确性？保护隐私的合成数据是否真正阻止了再识别？评估提供了答案。
+
+因此，评估具有多项重要作用：
+
+- **建立信任：** 它提供保证，说明合成数据是真实数据的合理代表，或者它符合任务的特定要求。
+- **指导生成：** 评估结果可以指出生成方法中的不足之处，让你得以改进过程或选择更合适的技术。
+- **确保实用性：** 它验证了数据对于预期的机器学习任务确实有帮助。正如我们稍后将讨论的，数据在统计上可能与真实数据相似（高保真）但仍无法提高模型性能（低实用性）。
+- **发现问题：** 它充当质量控制机制，在潜在问题（如偏差或表示不佳）对下游应用产生负面影响之前将其发现。
+
+在接下来的部分中，我们将考察进行这项评估的具体技术，从简单的视觉检查到更正式的统计比较。理解这些方法对于任何希望在机器学习项目中成功运用合成数据的人来说都必不可少。没有适当的评估，你基本上是在盲目工作，冒着浪费精力并可能产生有害结果的风险。
+
+## 参考资料
+
+- [A Survey on Synthetic Data Generation and Evaluation Methods](https://dl.acm.org/doi/10.1145/3547101) — Rui Chen, Ziying Wu, Guanchen Li, Sijie Li, Jiacheng Cao, Yongqiang Zhang, and Hongmei Li (2022)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery; Volume: 55; Pages: 1-36; DOI: [10.1145/3547101](https://doi.org/10.1145/3547101)
+  全面概述了合成数据生成技术，并批判性地审视了评估合成数据质量、保真度和效用的各种度量标准和方法。
+- [Synthetic Data Generation for Machine Learning: A Practical Guide](https://link.springer.com/book/10.1007/978-3-031-29402-9) — Hamid Ghasemi, Mohammad Rezaei, Hamed Ahmadi, and Maryam Ghasemi (2023)
+  Publisher: Springer; DOI: [10.1007/978-3-031-29402-9](https://doi.org/10.1007/978-3-031-29402-9)
+  本书提供了一份指南，内容包括评估用于机器学习的合成数据的实际考量和方法，涵盖了理论和实践实现。

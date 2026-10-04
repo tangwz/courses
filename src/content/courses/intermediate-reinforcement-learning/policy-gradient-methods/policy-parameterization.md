@@ -1,0 +1,61 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "policy-gradient-methods"
+lesson: "policy-parameterization"
+sourceId: 5137
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-4-policy-gradient-methods/policy-parameterization"
+title: "策略直接参数化"
+description: "直接使用参数表示策略，通常采用神经网络。"
+order: 2
+plots: []
+sourceHash: "27313b6e5c849c585f74e0cbc4f33216aad218e2a7bec8e2a6ca92683b9eeba4"
+sourceCorrections: []
+---
+
+尽管功能强大，但像DQN这样的基于价值的方法面临某些局限性。这些方法主要侧重于学习准确的动作价值估计，$Q(s, a)$，然后从这些价值中得出策略（通常是$\epsilon$-贪婪策略）。这种间接方法在具有范围宽泛、连续动作空间的环境中可能会变得困难，在每个决策点，寻找最大Q值都涉及一个优化步骤。此外，有时最优策略本身就具有固有的随机性，这意味着智能体应根据特定的概率分布随机选择动作，而从Q值派生的确定性策略难以自然地表示这种随机性。
+
+策略梯度方法提供了一条不同的途径。我们不再首先学习价值，而是直接学习策略本身。我们引入一个函数，即*策略函数*（或简称为*策略*），它将状态映射到动作（或动作的概率）。该函数拥有一组自己的参数 (parameter)，我们将这些参数统称为$\theta$。我们的目标是调整这些参数$\theta$，以产生尽可能好的行为。
+
+我们将这个参数化的策略表示为$\pi(a|s; \theta)$。这表示在状态$s$下选择动作$a$的概率（或连续动作的概率密度），考虑到策略参数$\theta$。
+
+### 策略的表示
+
+我们如何实际表示这个函数$\pi(a|s; \theta)$？就像我们在DQN中使用神经网络 (neural network)来近似Q值一样，我们通常使用**神经网络**来表示策略。
+
+- **输入：** 网络接收当前状态$s$作为输入。
+- **网络主体：** 一系列隐藏层处理状态信息。
+- **输出：** 网络的输出取决于动作空间的类型：
+  - **离散动作：** 对于具有有限动作集的环境（如CartPole的左/右移动），网络通常输出这些动作的概率分布。最后一层常用的选择是**softmax激活函数 (activation function)**，它输出总和为1的正值，表示执行每个动作的概率。例如，如果有两个动作，网络可能会输出$[0.7, 0.3]$，这意味着执行动作1的概率为70%，执行动作2的概率为30%。
+  - **连续动作：** 对于动作是连续值的环境（例如设置机械臂的角度或汽车的加速度），网络输出定义概率分布的参数 (parameter)。例如，它可能会输出高斯（正态）分布的**均值（$\mu$）和标准差（$\sigma$）**。为了选择一个动作，我们从该分布中采样，$a \sim \mathcal{N}(\mu(s; \theta), \sigma(s; \theta)^2)$。这使得智能体能够在一定范围内平滑地寻找动作。
+
+该神经网络的权重 (weight)和偏置 (bias)构成了参数$\theta$。学习策略意味着寻找$\theta$的值，使得智能体获得尽可能高的累积奖励。
+
+> 一个图表，说明策略网络如何将状态作为输入，并输出定义动作选择策略的参数。参数$\theta$是网络内部的权重和偏置。
+
+### 目标：最大化回报
+
+通过直接参数 (parameter)化策略，我们改变了优化问题。我们不再尝试准确估计Q值。相反，我们寻找使目标函数$J(\theta)$最大化的策略参数$\theta$，该函数通常代表通过遵循策略$\pi(a|s; \theta)$获得的预期总折扣回报。
+
+
+$$
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t R(s_t, a_t) \right]
+$$
+
+
+这里，$\tau$代表一个轨迹（状态和动作的序列），它由遵循策略$\pi_\theta$生成，$\gamma$是折扣因子，而$R(s_t, a_t)$是获得的奖励。我们的目标是找到使$J(\theta)$尽可能大的$\theta$。
+
+这种直接参数化提供了一些优势：
+
+1. **连续动作的自然处理：** 从高斯分布等中采样是直接的。
+2. **随机策略的学习：** 策略可以明确输出概率，使其能够在需要时学习最优的随机行为。
+3. **更简单的动作选择：** 一旦策略被习得，选择动作只需将状态输入网络并从输出分布中采样（或采取最可能的动作），避免了Q学习中所需的`max`操作。
+
+既然我们了解了如何使用参数$\theta$来表示策略，下一步是确定*如何*有效地调整这些参数，以提高智能体的表现。这引出了这些方法的核心数学依据：策略梯度定理。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: A Bradford Book, The MIT Press; Pages: Chapter 13
+  这本经典教材对策略梯度方法进行了全面的理论讨论，涵盖了策略的直接参数化及其相对于基于价值方法的优势。
+- [UCL Course on RL - Lecture 6: Policy Gradient](https://github.com/zyxue/youtube_RL_course_by_David_Silver/blob/master/L7-policy-gradient-methods.pdf) — David Silver (2015)
+  本讲座清晰地解释了策略梯度方法，包括使用神经网络表示离散和连续动作空间的策略，以及策略梯度定理。

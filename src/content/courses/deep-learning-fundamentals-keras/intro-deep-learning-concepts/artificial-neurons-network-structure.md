@@ -1,0 +1,63 @@
+---
+course: "deep-learning-fundamentals-keras"
+chapter: "intro-deep-learning-concepts"
+lesson: "artificial-neurons-network-structure"
+sourceId: 4869
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-fundamentals-keras/chapter-1-intro-deep-learning-concepts/artificial-neurons-network-structure"
+title: "人工神经元与网络结构"
+description: "解释人工神经元的基本组成部分以及它们如何形成网络层。"
+order: 2
+plots: []
+sourceHash: "dc1ab1f4a8963b9fdc2cfd860996541ae6d6c011608d5c38b1e4edd2cf150da8"
+sourceCorrections: []
+---
+
+深度学习 (deep learning)的核心是**人工神经元**的思想，这是一种粗略模仿生物神经元的数学函数。可以将其视为一个更大网络中的基本处理单元。人工神经元接收一个或多个输入，进行计算，并产生一个输出。
+
+让我们分解其组成部分：
+
+1. **输入 ($x_1, x_2, ..., x_n$):** 这些是输入到神经元的数值。它们可以是图像的像素值、数据集中的数值特征，或者前一层神经元的输出。
+2. **权重 (weight) ($w_1, w_2, ..., w_n$):** 每个输入 $x_i$ 都与一个权重 $w_i$ 相关联。权重决定了该特定输入连接的影响或强度。权重较大的输入将对神经元的输出产生更大的影响。这些权重是网络在训练期间学习的主要参数 (parameter)。
+3. **偏置 (bias) ($b$):** 这是添加到输入加权和的额外参数。偏置允许神经元改变其激活函数 (activation function)输出，从而为模型提供更多的适应性。它有助于模型拟合数据，即使所有输入都为零。与权重一样，偏置也在训练期间学习。
+4. **求和:** 神经元计算其输入的加权和加上偏置。在数学上，这通常表示为：
+   
+   $$
+   z = (w_1 x_1 + w_2 x_2 + ... + w_n x_n) + b = \sum_{i=1}^{n} (w_i x_i) + b
+   $$
+   
+5. **激活函数 ($f$):** 求和结果 $z$ 随后经过一个非线性激活函数 $f$。该函数为模型引入非线性，这对于学习无法通过简单线性变换捕获的复杂模式非常必要。如果没有非线性激活函数，一个深度神经网络 (neural network)将表现得像一个单一的线性层，无论其深度如何。常见例子包括ReLU（修正线性单元）、Sigmoid和Tanh（双曲正切）。神经元的最终输出是 $a = f(z)$。
+
+这是一个单一人工神经元的简单示意图：
+
+> 一个单一人工神经元计算其输入的加权和，加上一个偏置，并应用一个激活函数。
+
+**人工神经网络 (ANN)** 是深度学习的核心组成部分，由多个人工神经元组织成层。单个神经元接收输入、执行计算并产生输出，而它们在一起工作时才能发挥主要作用。全连接前馈网络是ANNs的一种基本形式，它拥有一个明确的结构：
+
+1. **输入层:** 从技术上讲，这并不是一个神经元层，而是表示输入到网络的原始数据。“节点”的数量对应于每个数据样本中的特征数量。例如，如果您要对28x28像素的灰度图像进行分类，输入层将有 $28 \times 28 = 784$ 个节点。
+2. **隐藏层:** 这些层位于输入层和输出层之间。每层包含多个神经元。“隐藏”一词表示它们的输出不直接观察；它们表示中间处理阶段，网络在此学习从输入数据中获得日益复杂的表示或特征。一个网络可以有零个、一个或多个隐藏层。具有多个隐藏层的网络正是“深度”学习得名的原因。
+3. **输出层:** 这一最终层产生网络的预测。输出层中神经元的数量和使用的激活函数取决于任务类型：
+   - 对于二分类（例如，猫与狗），您可以使用一个带有Sigmoid激活函数的单个神经元，输出一个介于0和1之间的概率。
+   - 对于多分类（例如，数字识别0-9），您可以使用多个神经元（每个类别一个），带有Softmax激活函数，输出一个跨类别的概率分布。
+   - 对于回归（预测连续值），您可以使用一个没有激活函数（或线性激活）的单个神经元。
+
+在许多标准架构中，特别是对于表格数据，层通常是**全连接**的（在Keras中也称为**密集**层）。这意味着一个层中的每个神经元都接收来自前一层中*每个*神经元的输入。
+
+考虑一个简单的网络，它有一个输入层（3个特征）、一个隐藏层（4个神经元）和一个输出层（2个神经元）：
+
+> 一个简单的全连接前馈神经网络。信息从输入层流经隐藏层，到达输出层。每条线代表一个加权连接。
+
+信息在这个网络中向前流动，从输入到输出。每一层都根据前一层的输出来进行计算。这个过程称为**前向传播**。这些神经元和层的排列定义了网络的**架构**。Keras提供了便捷方式，我们将在下一章介绍，以逐层定义这些架构。在开始构建模型之前，理解神经元和层的这种基本结构很重要。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本基础教科书，提供人工神经元、激活函数和神经网络架构的理论背景。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://books.google.com/books/about/Hands_On_Machine_Learning_with_Scikit_Le.html?id=R6N5EAAAQBAJ) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media, Inc.
+  一本实用指南，清晰讲解神经网络的构建模块，包括神经元和网络结构，侧重于 Keras。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael A. Nielsen (2015)
+  Publisher: Determination Press
+  一本易于理解的在线书籍，从基本原理构建人工神经元和网络结构的概念。
+- [CS231n: Convolutional Neural Networks for Visual Recognition - Lecture Notes](http://cs231n.github.io/neural-networks-1/) — Fei-Fei Li, Justin Johnson, Serena Yeung, and Richard Zhang (2023)
+  大学课程笔记，涵盖人工神经网络的基本组成部分，包括神经元及其排列。

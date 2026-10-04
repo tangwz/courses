@@ -1,0 +1,150 @@
+---
+course: "intro-data-lake-architectures"
+chapter: "file-formats-and-optimization"
+lesson: "practice-optimizing-file-layouts"
+sourceId: 8004
+sourceUrl: "https://apxml.com/zh/courses/intro-data-lake-architectures/chapter-2-file-formats-and-optimization/practice-optimizing-file-layouts"
+title: "实践操作：文件布局优化"
+description: "实践环节，将原始JSON转换为区分存储的Parquet，并将其登记为Iceberg表。"
+order: 6
+plots: ["plots/8004-0.json"]
+sourceHash: "539dbab3026e7dceb2f896a330f1a2d966b17c01904dd10abef76bb958f4e53a"
+sourceCorrections: []
+---
+
+改进存储安排能将缓慢的查询变为高效的分析操作。原始数据湖中的文件通常以松散的JSON或CSV对象集合形式存储。虽然易于查看，但这些格式在分析过程中会导致高昂的输入/输出（I/O）成本，因为查询引擎必须读取每个字节来找到相关数据。将这些数据转换为Apache Parquet等列式格式，进行合理的区分存储，并使用Apache Iceberg等表格式进行登记，可以极大减少查询执行时扫描的数据量。
+
+在此实践环节中，你将模拟一个常见的数据工程处理流程：摄取原始服务器日志，将其转换为更好的存储方式，并衡量其结构上的好处。
+
+### 情况介绍：高容量网络日志
+
+设想一种情况，一个网络应用生成点击流数据。原始数据以JSON Lines格式送达对象存储桶中（如Amazon S3或Azure Data Lake Storage）。每个文件包含数千条跟踪用户互动的数据。
+
+一条数据看起来像这样：
+
+```json
+{"event_id": "u89-12", "timestamp": "2023-10-27T10:00:00Z", "event_type": "view_item", "item_id": "sku_123", "country": "US"}
+```
+
+运行查询来统计特定日期来自“US”的事件，要求引擎打开每个JSON文件，解析文本，并在内存中筛选结果。这就是我们计划消除的“扫描密集型”模式。
+
+### 分析转换流程
+
+我们的目的是将这些数据从原始的“青铜”状态转移到结构化的“白银”状态。该转换包含三个具体改变：
+
+1. **格式转换：** 将JSON（基于行）转换为Parquet（基于列）。
+2. **区分存储：** 根据高层判断条件（例如日期）将文件组织到目录中。
+3. **编目：** 将此布局登记到Apache Iceberg以处理元数据。
+
+> 这个工作流程将无结构的原始数据通过处理引擎传输，以生成由元数据管理的、结构化的、区分存储的目录布局。
+
+### 步骤1：读取并查看原始数据
+
+对于如此大的数据量，使用Apache Spark等分布式处理框架是标准做法。首先，我们读取原始JSON文件以推断其模式。虽然JSON很灵活，但如果数据集很大，模式推断过程可能会非常耗时。
+
+```python
+# PySpark 代码
+raw_path = "s3://bucket/raw/events/*.json"
+df = spark.read.json(raw_path)
+
+# 查看物理计划或模式
+df.printSchema()
+```
+
+在此阶段，数据未压缩且为文本格式。如果数据集为100 GB的JSON，读取完整数据基本上需要100 GB的I/O。
+
+### 步骤2：列式转换和压缩
+
+我们将数据帧转换为Apache Parquet格式。Parquet采用列式存储，这意味着同一列中的值是连续存储的。这使得Snappy或Zstd等高效压缩算法得以应用，因为同类型数据（例如时间戳或整数）比混合类型数据压缩效果更好。
+
+压缩的数学影响很大。压缩比 $R$ 定义为：
+
+$R = \frac{\text{未压缩大小}}{\text{压缩后大小}}$
+
+对于重复的日志数据，$R$ 通常在4:1到10:1之间。这意味着100 GB的JSON数据集，在经过Snappy压缩并转换为Parquet格式后，可能只占用10-25 GB，立即将网络I/O减少75%或更多。
+
+### 步骤3：选择区分存储方案
+
+区分存储是物理布局设计中最为核心的决定。它根据列的不同值将数据分成子目录。这使得**区分存储裁剪**成为可能，查询引擎会跳过与查询过滤器不匹配的整个目录。
+
+不过，你必须小心选择区分存储列，以避免“小文件问题”。
+
+- **高基数（不佳）：** 根据`user_id`进行区分存储（数百万个独立值）会生成数百万个微小目录和文件。列出这些文件的开销会超过读取它们所需的时间。
+- **低基数（较好）：** 根据`event_date`进行区分存储（每天一个值）会生成可控的数据块。
+
+对于我们的网络日志，我们将根据`event_date`进行区分存储。
+
+```python
+# 将数据写入为区分存储的Parquet文件
+output_path = "s3://bucket/silver/events/"
+(df
+ .write
+ .mode("overwrite")
+ .partitionBy("event_date")
+ .format("parquet")
+ .save(output_path))
+```
+
+现在磁盘上的物理布局从扁平的文件列表变为分层结构：
+
+```text
+/silver/events/event_date=2023-10-27/part-001.parquet
+/silver/events/event_date=2023-10-28/part-001.parquet
+```
+
+### 步骤4：向Apache Iceberg登记
+
+虽然目录区分存储有所帮助，但像S3这样的文件系统最终一致，并且列出数千个文件时速度较慢。Apache Iceberg通过维护一个元数据层（清单文件）来应对此情况，该层准确追踪哪些文件属于该表。这使得规划时间为O(1)而不是O(N)的目录列表时间。
+
+我们可以重写之前的操作，使其使用Iceberg格式。这需要你的Spark会话中配置一个Iceberg目录。
+
+```python
+# 写入为Iceberg表
+(df
+ .writeTo("prod.catalog.web_events")
+ .partitionedBy(df.event_date)
+ .createOrReplace())
+```
+
+当你对这张表执行查询时，引擎会首先读取Iceberg元数据。
+
+```sql
+SELECT count(*) 
+FROM prod.catalog.web_events 
+WHERE event_date = '2023-10-27';
+```
+
+因为元数据明确将`event_date='2023-10-27'`关联到特定文件，引擎会忽略所有其他数据，而无需接触那些无关区分存储的存储层。
+
+### 性能比较
+
+下图说明了在查询原始JSON、扁平Parquet和区分存储的Iceberg表之间，对于按单个日期筛选的查询而言，延迟差异。
+
+
+
+![按文件布局划分的查询延迟（越低越好）](plots/8004-0.json)
+
+
+
+> 从原始JSON过渡到区分存储的Iceberg能将查询执行时间减少几个数量级，原因在于数据跳过和高效解码。
+
+### 改进效果概述
+
+通过重构文件布局，你达成了三个结果：
+
+1. **降低存储成本：** Parquet压缩降低了存储占用。
+2. **更快的查询：** 列式存储剥离使得引擎只读取所需列（例如只读取`country`和`event_date`），而忽略庞大的`payload`列。
+3. **扫描效率：** 区分存储和Iceberg元数据确保引擎只打开与所请求特定日期相关的文件。
+
+这个“白银”层现在可以作为后续支撑，供下游分析和机器学习 (machine learning)功能使用。
+
+## 参考资料
+
+- [Apache Parquet](https://parquet.apache.org/) — Apache Software Foundation (2023)
+  Apache Parquet的官方文档，介绍了其列式存储格式、数据类型、压缩以及对数据湖中分析工作负载至关重要的性能优势。
+- [Apache Iceberg: A Table Format for Analytic Datasets](http://www.vldb.org/pvldb/vol13/p3014-blue.pdf) — Ryan Blue, Daniel Weeks, David Rolfe (2020)
+  Journal: Proceedings of the VLDB Endowment; Publisher: VLDB Endowment; Volume: 13; Pages: 3014-3028; DOI: [10.14778/3415494.3415555](https://doi.org/10.14778/3415494.3415555)
+  一篇介绍Apache Iceberg的基础性论文，解释了其架构、元数据存储、快照隔离以及它如何解决大规模数据湖表管理中的挑战。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  这本权威书籍深入剖析了数据存储、检索和分区的基础原则，这些原则是本节讨论的数据湖优化策略的基础。

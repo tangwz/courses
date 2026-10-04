@@ -1,0 +1,94 @@
+---
+course: "evaluating-synthetic-data-quality"
+chapter: "privacy-assessment-techniques"
+lesson: "distance-based-privacy-metrics"
+sourceId: 5690
+sourceUrl: "https://apxml.com/zh/courses/evaluating-synthetic-data-quality/chapter-4-privacy-assessment-techniques/distance-based-privacy-metrics"
+title: "基于距离的隐私度量"
+description: "使用距离度量（例如，最近记录距离）进行隐私评估。"
+order: 4
+plots: ["plots/5690-0.json"]
+sourceHash: "5551cf12fc6854ac0317e958302a4a93997894235ce096d18ad47026d5cb936a"
+sourceCorrections: []
+---
+
+基于距离的度量为隐私评估提供了一个独特的视角。成员推断攻击（MIA）试图直接判断某条记录是否属于训练集，而基于距离的度量则量化 (quantization)了合成记录与原始真实记录之间的接近程度。其基本假设很简单：如果一个合成数据点与训练集中的一个真实数据点非常接近，则会带来更高的隐私风险。这种接近性可能使攻击者能够推断出与附近记录对应的真实个人的信息，甚至有助于再识别。
+
+这些度量不一定需要训练像MIA那样复杂的攻击模型；它们依赖于几何或特征空间距离。
+
+### 最近记录距离 (DCR)
+
+一种基于距离的重要度量是**最近记录距离 (DCR)**。对于合成数据集 ($S$) 中的每条记录，我们计算它到原始真实数据集 ($R$) 中每条记录的距离。合成记录 $s \in S$ 的DCR是这些距离中的最小值：
+
+
+$$
+\text{DCR}(s) = \min_{r \in R} \text{距离}(s, r)
+$$
+
+
+这里，$\text{距离}(s, r)$ 可以是任何合适的距离函数，例如：
+
+- **欧几里得距离：** $\sqrt{\sum_{i=1}^{d} (s_i - r_i)^2}$ (用于数值特征)
+- **曼哈顿距离：** $\sum_{i=1}^{d} |s_i - r_i|$ (通常对异常值更有效)
+- **汉明距离：** 相应符号不同的位置数量 (用于分类特征)。
+- **高尔距离：** 一种可以处理混合数据类型（数值型、分类型）的混合度量。
+
+距离度量的选择很重要，并且在很大程度上取决于您的数据性质和所涉及的特征。请记住，在计算距离之前，要适当缩放数值特征，以防止范围较大的特征主导结果。
+
+#### DCR值的解释
+
+单独的DCR值信息量不大。我们更关注DCR值在所有合成记录中的*分布*。重要的是，我们将此分布与一个基准进行比较：真实数据集内部距离最近记录的分布。也就是说，对于真实数据集 $R$ 中的每条真实记录 $r$，计算它到最近的*其他*真实记录 $r' \in R, r' \neq r$ 的距离。
+
+我们将合成记录的DCR称为 $\text{DCR}_{\text{Syn}}$，将真实数据集内部的DCR称为 $\text{DCR}_{\text{Real}}$。
+
+- **$\text{DCR}_{\text{Syn}}$ 值较低：** 如果许多合成记录的DCR值非常小（明显小于典型的 $\text{DCR}_{\text{Real}}$ 值），则表明可能存在隐私泄露。这些合成记录可能是真实记录的近似副本或轻微扰动。
+- **分布相似：** 如果 $\text{DCR}_{\text{Syn}}$ 的分布与 $\text{DCR}_{\text{Real}}$ 的分布非常相似，这可以表明合成数据保持了与原始数据相似的“唯一性”或点间分离程度。从使用此度量的隐私角度来看，这通常是期望的结果。
+- **$\text{DCR}_{\text{Syn}}$ 值较高：** 如果合成记录普遍比真实记录之间相互的距离更远，这可能意味着在直接记录复制方面的隐私风险较低，但也可能与较低的数据保真度或实用性相关。
+
+下图呈现了一种合成点与真实点危险地接近的情况。
+
+
+
+![合成数据点与真实数据点的接近度](plots/5690-0.json)
+
+
+
+> 散点图显示真实数据点（蓝色圆圈）和合成数据点（红色叉号）。橙色虚线突出显示了与最近真实邻居距离（DCR）非常小的合成点，这表明了潜在的隐私问题。
+
+### 最近邻距离比 (NNDR)
+
+另一个相关度量是**最近邻距离比 (NNDR)**。它旨在通过考虑真实数据集中点之间的典型分离来标准化DCR。对于合成记录 $s$，NNDR通常计算为：
+
+
+$$
+\text{NNDR}(s) = \frac{\text{距离}(s, \text{NN}_R(s))}{\text{R内到k个最近邻的平均距离}}
+$$
+
+
+其中 $\text{NN}_R(s)$ 是 $s$ 在真实数据集 $R$ 中的最近邻。分母表示原始数据中接近点之间的平均距离，这为分子（本质上是DCR）提供了背景信息。
+
+较低的NNDR表明合成点比典型的真实点到其邻居的距离更近，这再次发出了潜在的隐私警示。
+
+### 考量与局限
+
+尽管基于距离的度量提供了有价值的信息，但请记住以下几点：
+
+1. **维度灾难：** 在高维空间 (high-dimensional space)中，“接近性”的理念变得不那么直观。所有点之间的距离趋于更加一致，可能掩盖真实的接近风险。在有效应用这些度量之前，特征选择或降维可能是必要的。
+2. **距离度量的选择：** 结果对所选的距离函数（欧几里得、曼哈顿、高尔等）很敏感。请选择一个适合您数据类型和预期数据几何的函数。
+3. **计算成本：** 计算大型合成数据集和真实数据集之间的所有成对距离可能计算成本很高（基本实现为 $O(|S| \times |R| \times d)$，其中 $d$ 是维度数量）。高效的最近邻搜索算法（如k-d树或局部敏感哈希）可以提供帮助，但可能会引入近似。
+4. **缩放：** 数值特征在计算距离之前通常应进行缩放（例如，使用标准化或最小-最大缩放），以确保特征得到适当加权。
+5. **解释阈值：** DCR或NNDR没有通用的“安全”阈值。解释通常涉及将合成数据的分布与真实数据的基准分布进行比较。明显的偏差，特别是合成点距离非常小的情况，需要进一步考察。
+
+基于距离的度量可作为有用的启发式方法和合理性检查，用于隐私评估。它们经常与MIA和属性推断评估结合使用，以形成对合成数据集隐私特征更全面的理解。它们尤其擅长发现原始记录近乎逐字复制或最小扰动的情况。
+
+## 参考资料
+
+- [Measuring the Privacy of Synthetic Data](https://www.degruyter.com/document/doi/10.2478/tdp-2021-0004/html) — Jyoti D. Shringarpure and C. P. B. M. de Rooij (2021)
+  Journal: Transactions on Data Privacy; Publisher: De Gruyter; Volume: 14; Pages: 1-26; DOI: [10.2478/tdp-2021-0004](https://doi.org/10.2478/tdp-2021-0004)
+  本文对合成数据的距离基隐私指标（如最近记录距离DCR）进行了基础性讨论和形式化，提供了详细的方法和解释。
+- [An Evaluation of Data Synthesis Methods for Privacy Protection](https://www150.statcan.gc.ca/n1/pub/11-633-x/11-633-x2021004-eng.htm) — Simon Beaulieu, Andrew C. T. C. Yip, Andrew G. L. Wong (2021)
+  Publisher: Statistics Canada
+  这份技术报告评估了各种数据合成方法，并广泛使用包括DCR和NNDR在内的距离基指标来评估其在实际场景中的隐私影响。
+- [A survey on data synthesis: From techniques to applications](https://dl.acm.org/doi/10.1145/3547285) — Bingbing Liu, Zhaokun Wang, Zhen Huang, Jianliang Xu, and Yunjun Gao (2022)
+  Journal: ACM Computing Surveys; Volume: 55; Pages: 1-37; DOI: [10.1145/3547285](https://doi.org/10.1145/3547285)
+  这份综合性综述提供了数据合成技术的广泛概述，并有专门的章节讨论隐私评估，将距离基指标置于更广泛的隐私评估方法中。

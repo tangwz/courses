@@ -1,0 +1,63 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "rnn-fundamentals"
+lesson: "unrolling-rnn-training"
+sourceId: 2537
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-2-rnn-fundamentals/unrolling-rnn-training"
+title: "展开网络进行训练"
+description: "描述将循环结构展开为类前馈网络以进行BPTT的思路。"
+order: 7
+plots: []
+sourceHash: "f84db5e5a08b348e94f21ba0c6e2f5efbc7dcff339db1ef1cb4f6c03290ca7a8"
+sourceCorrections: []
+---
+
+循环神经网络 (neural network) (RNN)的训练与标准前馈网络相比，情况特殊。主要难点在于循环连接：一个时间步的输出会作为下一个时间步的输入反馈到网络中。这在计算图中形成了循环，而标准的反向传播 (backpropagation)无法直接处理。那么，当网络在时间 $t$ 的状态依赖于时间 $t-1$ 的状态，而 $t-1$ 又依赖于 $t-2$，以此类推时，我们如何计算梯度呢？
+
+解决方案是一种称为“时间反向传播”（BPTT）的技术。为了理解并实现BPTT，我们首先需要以不同的方式来呈现计算流程。我们通过在时间维度上**展开**网络来做到这一点。
+
+想象一下，将RNN单元的紧凑表示（带循环）沿着序列长度展开。对于长度为 $T$ 的序列，我们创建 $T$ 个单元的副本，每个时间步一个。从时间 $t-1$ 的单元到时间 $t$ 的单元的循环连接，现在表示为副本 $t-1$ 和副本 $t$ 之间的有向连接。
+
+> 这是一个展开了三个时间步的RNN。输入 $x_t$ 和前一个隐藏状态 $h_{t-1}$ 用于计算当前隐藏状态 $h_t$。相同的权重 (weight)矩阵（$W_{xh}$、$W_{hh}$、$W_{hy}$）应用于每个时间步。
+
+这种展开的网络非常类似于一个深度前馈网络。每个时间步都可以看作是一个层，接收来自前一层（即前一个时间步的隐藏状态）和该特定时间步的外部输入。这种转换是纯粹的（概念上的）；我们并没有在内存中实际创建权重的多个副本。这是一种表示梯度计算所需依赖关系的方法。
+
+### 在展开图上执行BPTT
+
+网络展开后，我们现在可以应用反向传播 (backpropagation)的原理。BPTT包括在展开的网络中执行前向传播，计算输出和损失（通常在序列末尾，或根据任务在每个时间步），然后执行后向传播以计算梯度。
+
+在后向传播期间：
+
+1. 在输出处计算误差梯度。
+2. 这个梯度逐层向后传播（在展开视图中意味着逐时间步传播）。
+3. 重要的是，隐藏状态 $h_t$ 的梯度计算需要考虑两条路径： $h_t$ 对输出 $y_t$ 的影响（如果适用）以及它对下一个隐藏状态 $h_{t+1}$ 的影响。
+4. 共享权重 (weight)矩阵（$W_{xh}$、$W_{hh}$、$W_{hy}$）和偏置 (bias)（$b_h$、$b_y$）的梯度在展开图中的每个时间步计算。由于这些权重是共享的，每个权重矩阵的*总梯度*是每个单独时间步计算梯度的总和（或平均值）。
+
+例如，损失 $L$ 对权重矩阵 $W_{hh}$ 的梯度通过汇总其在所有使用它的时间步上的影响来计算：
+
+
+$$
+\frac{\partial L}{\partial W_{hh}} = \sum_{t=1}^{T} \frac{\partial L_t}{\partial W_{hh}}
+$$
+
+
+其中 $L_t$ 表示损失中依赖于时间步 $t$ 计算的部分。这个求和反映了相同的 $W_{hh}$ 影响每个时间步的隐藏状态计算。
+
+### 意义与考量
+
+展开网络使得训练的计算流程更清晰，但也凸显了一些实际考量：
+
+- **内存占用：** BPTT需要存储前向传播中所有参与梯度计算的时间步的激活值（输入 $x_t$、隐藏状态 $h_t$）。对于包含数千个时间步的序列，这可能导致大量的内存消耗。
+- **计算开销：** 后向传播涉及的计算量与梯度传播所经过的时间步数量成比例。
+- **截断式BPTT：** 由于处理非常长的序列在计算上开销大且占用大量内存，因此常用一种称为“截断时间反向传播 (backpropagation)”（TBPTT）的常见改进方法。TBPTT不展开并在整个序列长度上进行反向传播，而是将序列分成较短的片段处理，仅对固定数量的时间步（截断长度）进行回溯反向传播。这使得长序列的训练成为可能，尽管它限制了在单次更新中通过梯度直接学习依赖关系的距离。我们将在第4章讨论这方面的影响，特别是关于长距离依赖。
+
+本质上，展开是一种方法，它使我们能够将源自标准反向传播的基于梯度的优化技术应用于RNN的循环结构。它将时间循环转换为一系列操作，使得通过BPTT计算共享参数 (parameter)的梯度成为可能。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  本书是深度学习的标准参考文献，其中第10章详细解释了循环神经网络，包括网络展开概念和通过时间反向传播（BPTT）算法。
+- [CS224N: Natural Language Processing with Deep Learning, Lecture Notes: Recurrent Neural Networks](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGfXWSqh7nf0XB4liOWxyM-T6wB6vrGpCaM43QyTh4xBhzZbPIfODN4yDoYWPSN3IbcpN7mfbJC7Cd2IKcSDsaIatCmcxucUzB8Y0zagP-dccYJsswZFKo3r6zaU40jTXepEYzB46Vz4RB0_AQ7mz4Z3O6t3Byd5h944tH7gyFY) — Christopher Manning (2023)
+  Publisher: Stanford University
+  斯坦福大学备受推崇的CS224n课程的这些讲义，对循环神经网络、网络展开概念以及通过时间反向传播（BPTT）算法提供了清晰易懂的解释，并附带了实践示例。

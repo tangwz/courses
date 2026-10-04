@@ -1,0 +1,142 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "integrating-ml-models"
+lesson: "creating-prediction-endpoints"
+sourceId: 5275
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-3-integrating-ml-models/creating-prediction-endpoints"
+title: "创建预测端点"
+description: "实现API端点，这些端点接收输入数据，使用已加载的模型进行预测并返回结果。"
+order: 3
+plots: []
+sourceHash: "96d0b59c4e46f7f8ec625ee05c52fe27dfb3fe431272895263809ad814b3e714"
+sourceCorrections: []
+---
+
+在机器学习 (machine learning)模型加载并准备就绪后，接下来很自然的一步是为其创建Web界面。这个界面就是API端点，它是FastAPI应用程序中一个特定的URL，外部客户端或服务可以与它进行交互以获取预测结果。我们将着重于创建接收输入数据、将其传递给模型并返回模型输出的端点。
+
+通常，预测需要将数据发送到服务器进行处理，因此HTTP `POST`方法是预测端点的合适选择。我们还将借助第2章中定义的Pydantic模型，以确保传入数据具有正确的结构和类型，并定义响应的格式。
+
+### 定义预测路由
+
+我们先概述一个基本的预测端点。假设我们有一个Pydantic模型`InputFeatures`，它表示预期的输入数据，以及一个用于响应的`PredictionOutput`模型。我们也假设我们训练好的ML模型对象是可用的，例如为了当前阶段的简化，它可能被加载到一个全局变量`model`中（更高级的加载方法，如依赖注入，将在本章稍后讨论）。
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+import joblib # 或者您偏好的库 (pickle 等)
+import numpy as np
+
+# --- Pydantic 模型 (来自第2章) ---
+class InputFeatures(BaseModel):
+    # 示例特征 - 根据您的模型需求调整
+    feature1: float
+    feature2: int
+    feature3: float
+    category_feature: str # 示例类别特征
+
+class PredictionOutput(BaseModel):
+    prediction: float # 或 int, str, list，取决于您的模型
+
+# --- 应用程序设置 ---
+app = FastAPI()
+
+# --- 加载模型 (简化示例) ---
+# 在实际应用程序中，请更仔细地管理加载 (例如，在启动时)
+try:
+    # 将 'your_model.joblib' 替换为您的模型文件
+    model = joblib.load('your_model.joblib')
+    # 如果您的模型需要预处理器 (例如，用于缩放、编码)
+    # preprocessor = joblib.load('your_preprocessor.joblib')
+except FileNotFoundError:
+    print("错误：模型文件未找到。请确保 'your_model.joblib' 存在。")
+    model = None # 处理模型未加载的情况
+    # preprocessor = None
+
+# --- 预测端点 ---
+@app.post("/predict", response_model=PredictionOutput)
+async def make_prediction(input_data: InputFeatures):
+    """
+    接收输入特征，使用已加载的模型进行预测，
+    并返回预测结果。
+    """
+    if model is None:
+         raise HTTPException(status_code=503, detail="模型未加载")
+
+    # 1. 准备模型输入数据
+    # 将 Pydantic 模型转换为模型期望的格式（例如，DataFrame、NumPy 数组）
+    # 这通常涉及选择特征和可能的预处理
+    # 示例：创建正确顺序/形状的 NumPy 数组
+    # 注意：预处理（如对 'category_feature' 进行独热编码）应与训练时一致
+    # 为简单起见，这里假设模型直接接受这种结构
+    # 或者预处理步骤已集成在已加载的 'model' 对象中（例如，一个 Pipeline）
+
+    # 简单示例，假设模型期望数值列表或 NumPy 数组
+    # 您必须根据您的特定模型的输入要求调整此部分！
+    # Example: features = [[input_data.feature1, input_data.feature2, input_data.feature3]]
+    # 如果预处理是独立的：
+    #   processed_features = preprocessor.transform(features)
+    #   prediction_result = model.predict(processed_features)
+
+    # 占位符：直接特征访问（根据需要调整）
+    # 这高度依赖于您的模型期望的输入格式
+    try:
+        # 示例：假设模型期望 2D 数组状结构
+        model_input = np.array([[
+            input_data.feature1,
+            input_data.feature2,
+            input_data.feature3
+            # 如果需要，添加预处理后的类别特征
+        ]])
+
+        # 2. 执行推断
+        prediction_value = model.predict(model_input)
+
+        # 3. 格式化响应
+        # 模型可能返回 NumPy 数组或列表；提取相关值
+        # 确保类型与 PredictionOutput.prediction 类型匹配
+        result = float(prediction_value[0]) # 示例：获取第一个元素并进行类型转换
+
+        return PredictionOutput(prediction=result)
+
+    except Exception as e:
+        # 处理预处理或预测期间的潜在错误
+        raise HTTPException(status_code=500, detail=f"预测错误：{str(e)}")
+```
+
+我们来拆解一下`make_prediction`函数：
+
+1. **函数签名：**
+
+   - `@app.post("/predict", response_model=PredictionOutput)`: 这个装饰器注册该函数以处理`/predict`路径上的POST请求。`response_model=PredictionOutput`指示FastAPI根据`PredictionOutput`模型验证返回值，并自动生成文档。
+   - `async def make_prediction(input_data: InputFeatures):`: 定义一个异步函数。`input_data: InputFeatures`参数 (parameter)声明起到重要作用。FastAPI使用这个类型提示来：
+     - 期望请求体为JSON。
+     - 根据`InputFeatures` Pydantic模型验证JSON数据。
+     - 如果验证通过，将JSON转换为`InputFeatures`对象并作为`input_data`参数传递。如果验证失败，FastAPI会自动返回一个详细的HTTP 422（不可处理实体）错误响应。
+2. **准备输入数据：**
+
+   - `model_input = np.array(...)`: 这是一个重要步骤，您在此将已验证的`input_data`（一个`InputFeatures`对象）转换为机器学习 (machine learning)模型`predict()`方法所需的精确格式。这可能涉及：
+     - 选择特定字段。
+     - 转换数据类型。
+     - 重塑数据（例如，转换为2D NumPy数组，即使是单次预测）。
+     - 应用与模型训练时*完全相同*的预处理步骤（缩放、编码类别特征等）。通常，这种预处理逻辑会与模型一起保存，可能在一个scikit-learn `Pipeline`对象中，大大简化了这一步骤。**未能匹配训练时的预处理是常见的错误来源。**
+3. **执行推断：**
+
+   - `prediction_value = model.predict(model_input)`: 在这里，准备好的输入被传递给已加载模型的`predict()`方法（如果需要概率，则传递给`predict_proba()`）。实际的机器学习计算发生在此。请注意，如果模型的预测步骤是计算密集型并会阻塞CPU，它可能会阻碍异步应用程序的性能。处理这种情况的方法将在第5章讨论。目前，我们假设推断速度合理。
+4. **格式化响应：**
+
+   - `result = float(prediction_value[0])`: 模型预测方法通常返回NumPy数组或列表，即使是单次预测。您需要提取相关值，并可能转换其类型以匹配您的`PredictionOutput`模型。
+   - `return PredictionOutput(prediction=result)`: 您使用预测结果创建`PredictionOutput`模型的一个实例。FastAPI会自动将这个Pydantic对象序列化为JSON响应返回给客户端。
+
+这种结构提供了一种服务预测的方法：FastAPI处理Web服务器机制和数据验证，而您的代码则侧重于数据准备、推断和响应格式化这些ML特定任务。请记住，务必根据您特定模型的要求和所需的输出，精确调整数据准备和响应格式化步骤。
+
+## 参考资料
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) — Sebastián Ramírez (2024)
+  使用Python构建Web API的官方指南，详细介绍了路径操作、使用Pydantic进行请求体验证和响应模型。
+- [Pydantic Documentation](https://docs.pydantic.dev/) — Samuel Colvin and Pydantic Contributors (2024)
+  使用Python类型提示进行数据验证和设置管理的指南，是FastAPI数据处理的基础。
+- [Model persistence - scikit-learn documentation](https://scikit-learn.org/stable/modules/model_persistence.html) — scikit-learn developers (2023)
+  解释如何保存和加载训练好的机器学习模型（包括使用`joblib`）以进行部署。
+- [FastAPI: From Zero To Production](https://www.packtpub.com/product/fastapi-from-zero-to-production/9781803248383) — Lucas Santos (2023)
+  Publisher: Packt Publishing
+  一本使用FastAPI构建和部署Web API的实用指南，涵盖了端点和数据处理。

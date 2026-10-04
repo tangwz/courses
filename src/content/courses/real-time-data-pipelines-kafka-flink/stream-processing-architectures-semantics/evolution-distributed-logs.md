@@ -1,0 +1,92 @@
+---
+course: "real-time-data-pipelines-kafka-flink"
+chapter: "stream-processing-architectures-semantics"
+lesson: "evolution-distributed-logs"
+sourceId: 8081
+sourceUrl: "https://apxml.com/zh/courses/real-time-data-pipelines-kafka-flink/chapter-1-stream-processing-architectures-semantics/evolution-distributed-logs"
+title: "分布式日志的发展"
+description: "了解分布式日志在服务解耦和数据一致性维护中的作用。"
+order: 1
+plots: ["plots/8081-0.json"]
+sourceHash: "dc9c418e356ef481adda2c2eaa5324cfdaae13264731221e0b2337d7c51b9d13"
+sourceCorrections: []
+---
+
+本质上，分布式日志是一种只追加、整体有序且按时间排序的记录序列。尽管它常被混淆为用于调试或错误追踪的应用日志，但分布式系统中的日志在数据存储和传播中起着根本作用。它作为事件发生及其顺序的最终记录。了解日志是掌握流处理所必需的，因为它连接了短暂消息系统和持久化存储引擎。
+
+### 不可变日志的构成
+
+在分布式日志架构中，每个条目都会被分配一个唯一、连续的数字，称为偏移量。该偏移量作为事件时间序列中的一个坐标。与关系数据库中`UPDATE`操作会就地修改现有数据不同，日志是不可变的。当实体状态改变时，系统追加一条新记录，而不是覆盖旧记录。
+
+这种不可变性简化了并发访问。由于数据永不修改，消费者可以同时从日志的不同位置读取，无需复杂的锁定机制。读取操作变成简单的线性扫描，而写入操作严格来说是在末尾追加。
+
+正式地，我们可以将日志 $L$ 定义为记录 $R$ 的序列：
+
+$L = \{ R_0, R_1, R_2, ..., R_n \}$
+
+其中对于任意两条记录 $R_i$ 和 $R_j$，如果 $i < j$，则 $R_i$ 在 $R_j$ 之前写入。此属性在特定上下文 (context)中提供严格的顺序保证，例如 Kafka 分区。
+
+> 日志结构使得不同消费者可以按自己的速度读取相同数据流，互不干扰。
+
+### 顺序访问与硬件效率
+
+采用日志结构的选择深受存储硬件物理特性的影响。无论是使用磁性硬盘驱动器 (HDD) 还是固态硬盘 (SSD)，顺序I/O操作都比随机I/O快很多。
+
+在HDD中，随机访问需要机械臂移动到特定磁道并等待磁盘旋转（寻道时间 + 旋转延迟）。相比之下，顺序写入最大程度地减少了磁头移动，使驱动器能够以接近接口理论极限的速度写入。即使是SSD，它没有移动部件，顺序访问模式也能减少写入放大并提高垃圾回收效率。
+
+通过将操作限制为只追加写入和顺序读取，像 Kafka 这样的分布式日志可以实现通常会在达到磁盘I/O瓶颈之前使网络接口卡 (NIC) 饱和的吞吐量 (throughput)。这种架构选择将受限于磁盘的问题转变为受限于网络的问题。
+
+
+
+![磁盘 I/O 吞吐量：随机与顺序](plots/8081-0.json)
+
+
+
+> 吞吐能力对比显示了分布式日志使用的顺序访问模式在性能上的优势。
+
+### 异步缓冲实现服务解耦
+
+在复杂的微服务架构中，服务间的同步耦合常引起连锁故障。如果服务 A 直接写入服务 B，而服务 B 出现高延迟或停机，服务 A 会立即受到影响。
+
+分布式日志作为通用缓冲区，将数据的生产与消费解耦。生产者以自己的速率写入日志，消费者以自己的速率从日志读取。
+
+从数学上看，如果 $\lambda_p(t)$ 是时间 $t$ 的生产速率，$\lambda_c(t)$ 是消费速率，没有日志的系统需要 $\lambda_p(t) \le \lambda_c(t)$ 始终满足此条件，以防止数据丢失或拒绝。有日志的情况下，我们只要求在较长时期内，生产的积分不超过消费的积分加上缓冲容量 $B$：
+
+$\int_{0}^{T} \lambda_p(t) dt \le \int_{0}^{T} \lambda_c(t) dt + B$
+
+这种缓冲能力使得系统能够应对在短时间内 $\lambda_p(t) \gg \lambda_c(t)$ 的突发流量。日志吸收反压，使消费者能够在流量高峰消退时赶上。
+
+### 整体顺序与局部顺序
+
+扩展日志以处理巨大的吞吐量 (throughput)需要分区（分片）。单个日志无法无限扩展，因为它受限于单台机器的I/O容量。为解决此问题，分布式日志将数据划分为多个分区。
+
+这在排序方面带来了一个重要的权衡。单个日志确保*整体顺序*（事件 $A$ 明确在事件 $B$ 之前），而分区日志只确保*局部顺序*。分区 1 内的事件严格有序，分区 2 内的事件也严格有序，但在分区 1 和分区 2 的事件之间，如果没有外部协调，则没有全局顺序保证。
+
+这种区别决定了数据必须如何生成。必须按序处理的相关事件（例如，对用户 ID 500 的所有更新）必须被路由到同一分区。这通常通过使用消息键上的一致性哈希函数来实现：
+
+$P = \text{哈希}(\text{键}) \pmod N$
+
+其中 $P$ 是分区号，$N$ 是分区总数。此策略能使特定实体的所有事件落入同一物理日志段，从而保持状态重建所需的因果顺序。
+
+### 日志作为事实源
+
+传统架构常将数据库视为事实源，将消息队列视为短暂管道。在使用了分布式日志的流式架构中，这种关系被颠倒了。
+
+日志成为持久化的事实源。
+
+由于日志持久保存了所有变更历史，它可以实现**数据回放**。如果 Flink 应用存在导致其内部状态损坏的bug，工程师可以修复代码，将应用的偏移量重置到过去某个时间点，并回放输入流。应用会重新处理历史数据，以重建正确的状态。
+
+这种功能在应用设计中常被称为“事件溯源”，实现了高可用性和容错性。如果处理节点发生故障，替换节点可以从上一个已提交的检查点开始读取日志，以恢复内存状态。日志将状态持久性有效地外部化，使得计算层（Flink）可以保持轻量和短暂，而存储层（Kafka）处理持久化。
+
+## 参考资料
+
+- [The Log: What every software engineer should know about real-time data's unifying abstraction](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying-abstraction) — Jay Kreps (2013)
+  Publisher: LinkedIn Engineering
+  阐述了日志在分布式系统中的基本作用，涵盖了其不可变性、排序以及作为流处理和数据集成的事实来源的应用。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG92kom_K-cDRUigpig5mSY9Z_y2G8dg_L_UgCGsFwelRTTx7dz0DXyPQ7rzXi1Jarns2ve9GUfKkhp9dZvKJWmwd2xoGdNsQUWRZ8XZI3w_aHwg65dP-SdX4dBkil5idXO4up5OST-aRMJtUeN3gsBoBuLu7wrhnpF14Z-Od6RmeGFwTQr5E_Ima1QjvVY-TgPoU4=) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  关于数据模型、分布式数据和流处理的章节，全面介绍了以日志为中心的架构、不可变性和事件溯源。
+- [Apache Kafka Documentation](https://kafka.apache.org/documentation/) — The Apache Software Foundation (2024)
+  详细解释了Kafka分布式日志的实现，包括主题、分区、偏移量、消费者组和复制，展示了日志原理的实际应用。
+- [Apache Flink Documentation](https://flink.apache.org/docs/) — The Apache Software Foundation (2025)
+  阐述了Flink如何利用分布式日志在流处理应用中实现容错、状态管理和精确一次处理保证，展示了日志重放能力。

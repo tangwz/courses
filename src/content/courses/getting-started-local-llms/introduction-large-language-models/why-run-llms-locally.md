@@ -1,0 +1,61 @@
+---
+course: "getting-started-local-llms"
+chapter: "introduction-large-language-models"
+lesson: "why-run-llms-locally"
+sourceId: 4202
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-1-introduction-large-language-models/why-run-llms-locally"
+title: "为何在本地运行大型语言模型？"
+description: "了解本地运行大型语言模型的好处，例如数据隐私、成本控制和离线使用。"
+order: 4
+plots: []
+sourceHash: "a5d4d796bd93970fc05747a7eb692421d0b9db5c421fff4f0aa04f5a3872308b"
+sourceCorrections: []
+---
+
+大型语言模型 (LLMs) 是一种人工智能模型，它们使用标记 (token)处理文本并生成回复。通常，与这类强大模型交互涉及使用公司通过互联网提供的基于云的服务。这些服务在高性能服务器上托管模型，并允许您通过API或网页界面访问它们。虽然方便，但也有充分的理由让您可能希望直接在自己的电脑上运行这些模型。本地运行大型语言模型的优点将会被讨论。
+
+### 隐私与数据安全
+
+本地运行大型语言模型最主要的优点可能是隐私性。当您使用基于云的大型语言模型服务时，您作为提示输入的文本，以及模型生成的回复文本，通常会通过互联网发送到第三方拥有的服务器上。根据服务提供商的政策，这些数据可能被存储、分析或用于改进其服务。
+
+对于许多一般查询而言，这可能不是一个大问题。但是，如果您处理的是敏感个人信息、机密商业策略、患者数据或专有代码，将其发送到外部服务会引出隐私和安全方面的考量。在本地运行大型语言模型保证您的提示和模型的输出完全保留在您的机器上。您的交互相关数据无需离开您的电脑，这提供了一种数据控制级别，对于敏感应用通常是不可或缺的。
+
+### 成本控制
+
+基于云的大型语言模型服务通常采用按需付费模式。您通常根据处理的文本量收费，通常以标记（token）为单位，计算您输入的提示和模型生成的输出。虽然每个标记的费用可能看起来很小，但这些费用会迅速累积，尤其是在频繁使用、处理长文档、执行复杂任务或涉及众多用户的应用中。
+
+在本地运行大型语言模型改变了成本构成。如果您的当前硬件不足，可能需要前期投入（我们将在下一章讨论硬件），并且还有运行电脑的持续电费开销。然而，一旦您有了必要的配置并下载了模型，您就可以根据需要随意使用大型语言模型，而无需支付任何直接的按次交互或按标记费用。对于开发应用程序的开发者、进行实验的研究人员或广泛使用大型语言模型的个人而言，长期来看，本地运行会明显更加经济。
+
+### 离线访问与可用性
+
+基于云的大型语言模型本质上需要稳定且活跃的互联网连接才能运行。如果您的互联网访问间歇性、缓慢或完全不可用——例如在旅行中或断网期间——您就无法使用这些服务。
+
+本地大型语言模型一旦模型文件下载到您的电脑上，便可完全独立运行。这意味着您可以随时随地使用它们，无论您的互联网连接状态如何。这提供了可靠性和可访问性，使您即使在完全离线时也能处理项目或获得大型语言模型的帮助。
+
+### 自定义与实验自由
+
+在使用商业云服务时，您通常仅限于服务提供商提供的特定模型和配置设置。虽然这些模型通常包含强大的通用模型，但您尝试不同架构或经过专门微调 (fine-tuning)模型的选项可能会受到限制。
+
+在本地运行模型让您能够接触到更广泛的生态系统。您可以下载并试用各种开源模型，包括不同规模（例如70亿参数 (parameter)与700亿参数）、针对特定任务（如编程或创意写作）进行微调的模型，以及在不同许可下发布的模型。您还可以对影响模型行为的参数以及运行模型的软件环境有更直接的控制，这有助于进行更细致的实验和自定义。
+
+### 学习与理解
+
+在自己的硬件上设置和运行大型语言模型提供了一次有价值的实践学习体验。您将直观了解这些模型所需的计算资源，例如系统内存（RAM）以及CPU或GPU的算力 (compute)。管理模型文件、使用不同的界面工具以及直接在您的系统上观察性能，能够大大提高您对这些人工智能系统在实际中如何运行的理解，而不仅仅是通过网页浏览器进行交互。
+
+### 权衡考量
+
+尽管优点显而易见，但本地运行大型语言模型也伴随着它自己的一系列考量。与简单注册一个网络服务相比，它通常需要更复杂的设置过程。您还需要满足特定最低要求的电脑硬件，这可能需要一些用户升级其设备。此外，本地硬件，特别是消费级电脑上的文本生成速度，可能比您在优化后的云基础设施上体验到的要慢。
+
+我们将在后续章节讨论这些实际方面，尤其是硬件需求和软件配置。了解优点和要求将帮助您决定何时以及为何本地运行大型语言模型是适合您目标的方法。
+
+## 参考资料
+
+- [Data Privacy in the Age of AI](https://ieeexplore.ieee.org/document/9454194) — Alex Kampmann, Kevin K. K. Lee, Yacine Goudiaby, Alex Pentland (2021)
+  Journal: IEEE Security & Privacy Magazine; Publisher: IEEE; Volume: 19; Pages: 66-71; DOI: [10.1109/MSEC.2021.3082980](https://doi.org/10.1109/MSEC.2021.3082980)
+  讨论了随着人工智能技术普及，数据隐私面临的挑战和影响，强调了本地数据处理对于敏感信息的价值。
+- [Transformers: State-of-the-Art Natural Language Processing](https://aclanthology.org/2020.emnlp-demos.6.pdf) — Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clément Delangue, Anthony Moi, Pierric Phillipe, Christophe Simon, Korbinian Stzimmer, Sylvain Gugger (2020)
+  Journal: Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations; Publisher: Association for Computational Linguistics; Pages: 38-45; DOI: [10.18653/v1/2020.emnlp-demos.6](https://doi.org/10.18653/v1/2020.emnlp-demos.6)
+  介绍了Hugging Face Transformers库，该库是本地访问、下载和运行各种开源大型语言模型的基础，支持自定义和实验。
+- [Accelerating Large Language Model Inference](https://www.nvidia.com/en-us/glossary/data-science/accelerating-large-language-model-inference/) — NVIDIA Developer Documentation (2024)
+  Publisher: NVIDIA
+  提供了优化大型语言模型运行性能的见解，包括硬件和软件技术的讨论，这对于在消费级或专用硬件上进行高效本地推理很重要。

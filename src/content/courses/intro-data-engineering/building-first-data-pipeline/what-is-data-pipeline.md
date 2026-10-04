@@ -1,0 +1,44 @@
+---
+course: "intro-data-engineering"
+chapter: "building-first-data-pipeline"
+lesson: "what-is-data-pipeline"
+sourceId: 5524
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-3-building-first-data-pipeline/what-is-data-pipeline"
+title: "数据管道是什么？"
+description: "了解数据工程中数据管道的定义和作用。"
+order: 1
+plots: []
+sourceHash: "6f0f5fc1efb28850d40b9898c37e41f777630f41f3614acc78475e46237a0e99"
+sourceCorrections: []
+---
+
+可以将原始数据想象成从地下开采出来的原油。它有价值，但不能立即使用。它需要经过运输、提炼和加工，才能驱动汽车或发电。同样，应用程序、传感器或用户交互产生的原始数据，需要经过移动、清洗、转换和组织，才能用于支撑仪表板、分析或训练机器学习 (machine learning)模型。**数据管道**就是自动化这一整个过程的系统。
+
+数据管道的核心是一系列自动化步骤，旨在将数据从一个系统（*源*）移动到另一个系统（*目标*或*汇*），过程中通常包含数据转换。它是确保数据从创建地顺畅高效地流向消费地的基础设施。
+
+想象一下工厂里的装配线。原材料从一端进入，经过各个工位进行塑形、组装和检查，然后作为成品从另一端出来。数据管道的功能与之类似：
+
+1. **源:** 这是原始数据的来源。源可以是多种多样的，包括应用程序数据库（如PostgreSQL或MongoDB）、事件流（如Kafka）、日志文件、第三方API（如天气服务），甚至简单的文件（如CSV或JSON）。
+2. **处理/转换:** 这是数据修改的地方。步骤可能包括清洗（处理缺失值、纠正错误）、结构化（解析JSON、转换数据类型）、丰富（根据IP地址添加地理信息）或聚合（计算汇总信息）。
+3. **目标/汇:** 这是处理后的数据存储的目的系统，以便按预期用途使用。目标通常包括用于分析的数据仓库（如BigQuery、Snowflake、Redshift）、用于存储大量不同数据的数据湖（如S3或HDFS），或为应用程序提供支持的操作数据库。
+
+> 一个简化图，说明了数据从源系统、经过管道处理步骤，流向目标系统的过程。
+
+处理步骤的具体顺序和性质决定了数据管道的架构。提取、转换、加载（ETL）和提取、加载、转换（ELT）是两种主要模式，它们规定了转换相对于数据加载到目标的时间和地点。后续内容将详细分析这些模式。
+
+构建和维护这些数据管道是数据工程师的一项核心职责。他们确保数据持续可用、准确，并以正确的格式存在，从而支持数据分析师、数据科学家和商业智能工具等下游用户。如果没有精心设计的数据管道，有效访问和使用数据将成为一项重大挑战，阻碍数据的理解和新想法的产生。
+
+## 参考资料
+
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.blackwells.co.uk/bookshop/product/Fundamentals-of-Data-Engineering-by-Joe-Reis-author-Matt-Housley-author/9781098108304) — Joe Reis and Matt Housley (2022)
+  Publisher: O'Reilly Media; Pages: 447
+  本书全面介绍了数据工程，包括数据管道、其组成部分和设计模式的详细讨论。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  为构建可靠、可扩展的数据系统提供基础知识，这对于理解有效数据管道设计背后的原则至关重要。
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball and Margy Ross (2013)
+  Publisher: John Wiley & Sons
+  一本解释数据仓库和 ETL 过程的奠基性著作，这些是许多数据管道中的核心概念，特别是用于分析目的。
+- [Data Pipelines Pocket Reference: Moving and Processing Data for Analytics](https://books.google.com/books/about/Data_Pipelines_Pocket_Reference.html?id=c7FGEAAAQBAJ) — James Densmore (2021)
+  Publisher: O'Reilly Media
+  一份专门针对数据管道设计、实现和操作的实用指南，涵盖常见模式和技术。

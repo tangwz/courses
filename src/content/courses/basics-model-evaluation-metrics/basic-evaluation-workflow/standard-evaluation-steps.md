@@ -1,0 +1,86 @@
+---
+course: "basics-model-evaluation-metrics"
+chapter: "basic-evaluation-workflow"
+lesson: "standard-evaluation-steps"
+sourceId: 4038
+sourceUrl: "https://apxml.com/zh/courses/basics-model-evaluation-metrics/chapter-5-basic-evaluation-workflow/standard-evaluation-steps"
+title: "标准评估的步骤"
+description: "总结典型模型评估过程中涉及的主要步骤。"
+order: 1
+plots: []
+sourceHash: "1683d1047927b7c5c9e12c750a8aebdeaf25c2bfb53bf5a1bd7aa41c3d38bdf8"
+sourceCorrections: []
+---
+
+让我们把之前学习到的关于指标和数据分割的知识结合起来，形成一个评估机器学习 (machine learning)模型的标准流程。你可以把这看作一个“操作指南”，它能帮助你可靠地检查模型在新数据上的预期表现。遵循这些步骤有助于避免常见错误，例如不小心用模型已经学习过的数据来测试它，这可能会导致你对模型性能产生过于乐观的判断。
+
+以下是通常涉及的步骤概述：
+
+### 1. 理解目标并选择指标
+
+开始之前，请明确你的模型想要实现什么。
+
+- **这是一个分类问题吗？** (分配类别，比如垃圾邮件/非垃圾邮件，猫/狗)
+- **这是一个回归问题吗？** (预测连续数值，比如房价、温度)
+
+根据问题类型，选择合适的评估指标。
+
+- **对于分类问题：** 评估分类模型可以从**准确率（Accuracy）**开始。但是，需要记住它的局限性，尤其是在处理不平衡数据时。像**精确率（Precision）**、**召回率（Recall）**和**F1分数（F1-Score）**这样的指标，通常来自**混淆矩阵（Confusion Matrix）**，能提供更详细的信息。例如，如果正确识别所有阳性案例非常重要（如疾病检测），召回率（$Recall = TP / (TP + FN)$）就可能是一个主要侧重点。
+- **对于回归问题：** 评估回归模型的指标包括**平均绝对误差（MAE）**、**均方误差（MSE）**、**均方根误差（RMSE）**和**R方 ($R^2$)**。MAE ($MAE = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$) 给出原始单位的平均误差大小，而MSE ($MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$) 对较大误差的惩罚更重。$R^2$ 表示模型解释的方差比例。
+
+选择合适的指标取决于具体的应用场景以及哪些性能方面对你的目标最重要。
+
+### 2. 分割数据：训练集和测试集
+
+这是我们在第4章中讨论过的一个基本步骤。绝不能用训练模型的数据来评估模型。你需要模拟模型在从未见过的新数据上的表现。
+
+- **划分数据集：** 将你的可用数据分成两个独立的集合：
+  - **训练集（Training Set）：** 供模型学习模式和关系使用。这通常是数据中较大的部分（例如，数据的70%或80%）。
+  - **测试集（Test Set）：** 保持独立，*仅*在最后用于评估最终模型的性能。这个集合代表未见过的数据。
+- **首先打乱：** 在分割数据之前，通常最好随机打乱数据，以确保训练集和测试集都能代表整体数据分布。
+
+常见的分割比例包括80/20（80%训练，20%测试）或70/30。具体比例取决于你的数据集大小。
+
+### 3. 训练模型
+
+现在，*只*使用**训练集**来训练你的机器学习 (machine learning)模型。这涉及将训练数据（特征和相应的已知结果）输入到你选择的算法中，让它学习潜在模式。训练算法的具体细节超出了本入门课程的范围，但这里的重点是模型*完全*从训练数据中学习。
+
+### 4. 在测试集上生成预测
+
+模型训练完成后，是时候看看它在从未见过的数据上的表现了。使用训练好的模型，对**测试集**中的输入特征进行预测。模型将为测试集中的每个样本生成预测结果（分类问题的类别，回归问题的数值）。
+
+### 5. 计算性能指标
+
+现在，将上一步生成的预测结果与实际的真实结果（你在测试集中预留的数据）进行对比。使用你在第1步选择的指标来量化 (quantization)模型的性能。
+
+- **对于分类问题：** 根据测试集中的预测标签与实际标签，计算准确率、精确率、召回率、F1分数等。为测试集结果构建混淆矩阵通常非常有帮助。
+- **对于回归问题：** 根据测试集中的预测数值与实际数值，计算MAE、MSE、RMSE或R方。
+
+### 6. 解释结果
+
+最后一步是分析计算出的指标值。它们能告诉你关于模型的哪些信息？
+
+- 准确率高吗？误差（MAE/RMSE）低吗？
+- 性能是否满足你的特定应用要求？
+- 如果是分类问题，混淆矩阵是否显示模型经常犯哪些特定类型的错误（例如，许多假阳性）？
+- 回归模型的R方值表现如何？它是否解释了合理比例的方差？
+
+通过这种解释，你可以决定模型是否足够好，或者是否需要进一步改进（这可能涉及尝试不同的模型、调整设置或收集更多数据）。
+
+遵循这些步骤提供了一种结构化且可靠的方式，来评估模型在新数据上的泛化能力。让我们将此流程可视化。
+
+> 此图描绘了机器学习 (machine learning)模型评估流程中的标准步骤，从数据准备到结果解释。
+
+通过持续应用这个流程，你能为理解和比较机器学习模型的性能打下扎实的根基。
+
+## 参考资料
+
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://learning.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  为机器学习模型开发提供了实用指南，涵盖数据准备、针对不同问题类型的评估指标以及使用流行库的整体工作流程（第4版）。
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani (2013)
+  Publisher: Springer
+  提供了统计学习技术的基础知识，详细阐述了模型评估方法、验证过程和各种性能衡量标准。
+- [Model evaluation: quantifying the quality of predictions](https://scikit-learn.org/stable/modules/model_evaluation.html) — scikit-learn developers (2023)
+  Publisher: scikit-learn project
+  官方文档，描述了分类和回归的各种指标，以及如训练/测试分割等模型评估策略。

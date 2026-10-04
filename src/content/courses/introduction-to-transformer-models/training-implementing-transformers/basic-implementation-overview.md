@@ -1,0 +1,68 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "training-implementing-transformers"
+lesson: "basic-implementation-overview"
+sourceId: 3033
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-4-training-implementing-transformers/basic-implementation-overview"
+title: "基本实现概述"
+description: "概述从组件构建和训练一个简单Transformer模型的步骤。"
+order: 6
+plots: []
+sourceHash: "07b70a27556b183a067483e60cc92e23c34efd5d7f9070acf40e3dc54cb5e4ac"
+sourceCorrections: []
+---
+
+训练Transformer需要必要的要素，包括：通过分词 (tokenization)和批处理准备数据，理解损失函数 (loss function)，以及选择合适的优化和正则化 (regularization)策略。一个路线图概述了如何将这些要素与架构组成部分（如编码器和解码器层）组合成一个功能完备的Transformer模型。尽管动手实践练习可能侧重于构建单个组件，但整体实现流程说明了它们如何在 PyTorch 或 TensorFlow 等深度学习 (deep learning)框架中组合起来。
+
+### 构建Transformer模型
+
+实现一个Transformer通常涉及定义一个主模型类，该类封装了各种子模块。可以将其想象成用预制部件建造一个复杂的物体。
+
+1. **模型定义：** 你将首先定义一个类，例如命名为 `Transformer`，它将包含所有必要的层。在其构造函数（Python 中的 `__init__`）中，你将实例化其构建模块：
+   - 源和目标嵌入 (embedding)层：将输入和输出令牌ID转换为密集向量 (vector) (dense vector)。
+   - 位置编码 (positional encoding)：一个用于生成并向嵌入添加位置信息的模块，如第3章所述。
+   - 编码器堆栈：N个相同的编码器层的堆栈。每个编码器层包含多头自注意力 (self-attention)、位置前馈网络，以及残差连接和层归一化 (normalization)。你可以重用实践练习中的 `EncoderLayer` 实现。
+   - 解码器堆栈：N个相同的解码器层的堆栈。每个解码器层包含带掩码的多头自注意力、多头编码器-解码器注意力、前馈网络，也包括残差连接和归一化。
+   - 最终线性层：一个将解码器输出映射到词汇表 (vocabulary)大小的线性层。
+
+- Softmax层：通常在损失函数 (loss function)（如 `CrossEntropyLoss`）中隐式应用，它将线性层的输出转换为概率。
+
+2. **前向传播逻辑：** 核心逻辑位于模型的 `forward` 方法中。此方法定义了数据在训练和推理 (inference)期间如何在模型中流动：
+   - **输入处理：** 接收源序列令牌和目标序列令牌（在训练期间）作为输入。
+   - **掩码生成：** 生成必要的掩码：
+     - *填充掩码：* 在注意力计算期间，忽略源序列和目标序列中的填充令牌。
+     - *前瞻掩码：* 用于解码器的自注意力，阻止其关注目标序列中的未来令牌。
+   - **嵌入和位置编码：** 将源和目标令牌转换为嵌入并添加位置编码。
+   - **编码器传递：** 将源嵌入和填充掩码通过编码器堆栈。输出表示输入序列的编码上下文 (context)。
+   - **解码器传递：** 将目标嵌入（训练期间右移）、编码器输出、前瞻掩码和源填充掩码通过解码器堆栈。
+   - **最终投影：** 对解码器输出应用最终线性层，以获取目标序列中每个位置的 logits。
+
+下图说明了这种数据流。
+
+> 数据在基本Transformer模型的前向传播过程中流动。输入经过处理，生成掩码，通过编码器和解码器堆栈，最终投影到输出概率。
+
+### 训练循环
+
+模型定义好后，训练循环协调学习过程。它通常包含：
+
+1. **迭代：** 遍历数据集，加载批次的源序列、目标序列和相应掩码。
+2. **前向传播：** 将批次输入到模型实例中，以获取输出 logits。
+3. **损失计算：** 使用合适的损失函数 (loss function)（如交叉熵）将模型的输出 logits 与实际目标令牌（排除初始 `<sos>` 令牌并考虑填充）进行比较。请记住，模型预测每个位置的*下一个*令牌，因此你将模型在位置 $i$ 的输出与位置 $i+1$ 的目标令牌进行比较。
+4. **反向传播 (backpropagation)：** 计算损失相对于模型参数 (parameter)的梯度。
+5. **优化步骤：** 使用选择的优化器（例如 Adam）更新模型权重 (weight)，并应用任何学习率调度。
+6. **梯度裁剪（可选但推荐）：** 为防止梯度爆炸，尤其是在训练早期，将梯度裁剪到最大范数。
+7. **日志记录和评估：** 定期记录训练损失，并使用相关指标（例如，语言建模的困惑度，翻译的BLEU分数）在验证集上评估模型，以监控进展并防止过拟合 (overfitting)。
+
+本概述简化了该过程，抽象掉了大部分框架特有的代码。然而，它说明了理论组成部分和训练先决条件如何组合起来。成功实现这一点需要仔细处理张量形状、掩码和训练方案，直接建立在本课程中介绍的知识点和实践步骤之上。下一步通常涉及使用库中预构建的实现，或针对特定任务改进此基本结构以提高性能。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍Transformer架构、多头注意力机制和位置编码的基础论文，这些是其实现的核心。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University
+  一本关于自然语言处理的教材，广泛涵盖了Transformer架构、其组件和训练过程。
+- [Stanford CS224N: Natural Language Processing with Deep Learning](https://web.stanford.edu/class/cs224n/) — Diyi Yang, Tatsunori Hashimoto (2025)
+  Publisher: Stanford University
+  一门大学课程，涵盖了构建和训练神经NLP模型的理论背景和实践方面，包括关于Transformer的详细课程。

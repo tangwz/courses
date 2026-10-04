@@ -1,0 +1,49 @@
+---
+course: "data-versioning-experiment-tracking"
+chapter: "ml-reproducibility-challenges"
+lesson: "defining-ml-reproducibility"
+sourceId: 4052
+sourceUrl: "https://apxml.com/zh/courses/data-versioning-experiment-tracking/chapter-1-ml-reproducibility-challenges/defining-ml-reproducibility"
+title: "定义机器学习中的可复现性"
+description: "阐明机器学习工作流中可复现性的含义。"
+order: 3
+plots: []
+sourceHash: "3078552302e689441a90c2722cda5b49dbcb1b0d49e5d70fd9c5467ac4de7298"
+sourceCorrections: []
+---
+
+如前所述，机器学习 (machine learning)项目是动态的。代码会变动，数据会演进，超参数 (parameter) (hyperparameter)会被调整，甚至底层软件库也会更新。这种持续变动使得回答以下问题变得出乎意料地困难：“我们是如何得到*这个特定*结果的？”或者“我们能否重新创建三个月前部署的模型？”在这种情况下，可复现性变得十分要紧。
+
+传统软件开发的可复现性通常指，给定相同版本的代码和相同输入数据，运行程序会产生完全一致的输出。尽管这是一个好的开始，但机器学习增加了多重复杂性。仅仅拥有代码（例如，你的Python训练脚本）是不够的。
+
+那么，在机器学习中，可复现性意味着什么？它指的是能够使用最初生成特定结果或产出的相同组件，重新生成该机器学习工作流中的结果。这通常需要控制和记录几个相互关联的组成部分：
+
+1. **代码：** 数据处理脚本、特征工程逻辑、模型定义、训练过程和评估代码的特定版本。这通常通过Git进行管理。
+2. **数据：** 用于训练、验证和测试的数据集的精确版本。由于数据集可能很大且经常变化，标准Git通常不足以应对此任务。
+3. **配置 / 参数：** 特定运行中使用的设置，包括超参数（如学习率、层数）、特征选择选项和其他配置细节。
+4. **环境：** 软件环境，包括特定版本的编程语言（例如，Python 3.9.12）、库（例如，scikit-learn 1.1.0, TensorFlow 2.9.1, PyTorch 1.12.0），以及可能的操作系统细节或硬件配置（如GPU类型）。库版本差异有时会导致结果出现不明显的差异。
+5. **随机性：** 明确管理数据分割、权重 (weight)初始化和某些算法中使用的随机种子，对于实现位级数字可复现性通常是必需的，尽管在不同硬件上获得完全相同的结果有时仍具挑战。
+
+这些组成部分的一个简化视图会有帮助：
+
+> 复制机器学习结果所需的几个重要组成部分：特定版本的代码、数据、配置和计算环境。
+
+在机器学习中实现可复现性意味着，如果你（或同事）能够获取过往实验中记录的这些组成部分，你就应该能够：
+
+- **重新运行训练过程：** 获得具有相同或统计上非常相似性能指标的模型。
+- **重新生成模型产物：** 产生相同的已保存模型文件。
+- **验证结果：** 确认报告的评估分数或分析。
+- **有效调试：** 通过从已知、可复现的状态开始，分离出变更的影响。
+- **可靠协作：** 放心地分享工作，让其他人能够准确地在此基础上进行构建。
+- **一致部署：** 确保投入生产的模型与经过测试和验证的模型完全一致。
+
+如果不积极管理这些组成部分，你可能会遇到“在我的机器上能跑”的情况、无法追溯的性能退步，以及无法可靠地验证或部署你的模型。目标不仅仅是学术上的纯粹；它是关于构建可维护和值得信赖的机器学习系统。以下章节将介绍数据版本管理和实验追踪的方法，这些是实现这种可复现性的实用手段。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  这本书为构建稳健的机器学习系统提供了实践指导，包括对实验跟踪、数据版本控制和环境管理的讨论，这些都对可重现性很关键。
+- [Challenges in Data Management for Machine Learning](https://www.vldb.org/pvldb/vol13/p1618-alexiou.pdf) — Karolina Alexiou, Elena Kharlamova, Elena Zheleva (2020)
+  Journal: Proceedings of the VLDB Endowment; Publisher: VLDB Endowment; Volume: 13; Pages: 1618-1630; DOI: [10.14778/3407914.3407918](https://doi.org/10.14778/3407914.3407918)
+  这篇论文识别并分类了机器学习中的数据管理挑战，与数据版本控制和可重现性有直接关联。

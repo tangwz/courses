@@ -1,0 +1,284 @@
+---
+course: "deploying-diffusion-models-scale"
+chapter: "optimizing-diffusion-models-inference"
+lesson: "practice-optimizing-diffusion-model"
+sourceId: 5399
+sourceUrl: "https://apxml.com/zh/courses/deploying-diffusion-models-scale/chapter-2-optimizing-diffusion-models-inference/practice-optimizing-diffusion-model"
+title: "实践操作：优化扩散模型"
+description: "将优化技术（量化、编译器）应用于预训练扩散模型。"
+order: 8
+plots: ["plots/5399-0.json"]
+sourceHash: "1e5959e3432332082af64aee4c8cdec2c9da59fb1c950bc312d5375f1708ff46"
+sourceCorrections: []
+---
+
+将使用一个标准扩散模型，应用多种优化技术，并衡量其对推理 (inference)速度的影响。本文内容将侧重于使用低精度（FP16）、利用ONNX Runtime等优化运行时以及调整采样器设置等常见且有效的方法。
+
+本次练习，我们将使用Hugging Face流行的`diffusers`库和一个预训练 (pre-training)的Stable Diffusion模型。你需要一个支持PyTorch和GPU（CUDA）的Python环境。请确保已安装以下库：
+
+```bash
+pip install --upgrade diffusers transformers accelerate torch torchvision onnx onnxruntime-gpu optimum[onnxruntime-gpu]
+```
+
+我们假设你是在可访问NVIDIA GPU的环境中运行此代码。
+
+### 1. 准备工作和基准测量
+
+首先，我们加载一个标准Stable Diffusion模型（例如v1.5），并建立一个基准性能测量。我们将定义一个简单函数来生成图像并计时推理 (inference)过程。
+
+```python
+import torch
+from diffusers import StableDiffusionPipeline
+import time
+import numpy as np
+
+# --- 配置 ---
+model_id = "runwayml/stable-diffusion-v1-5"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+prompt = "a photograph of an astronaut riding a horse on the moon"
+num_inference_steps = 50
+num_runs = 5 # Number of runs for averaging latency
+
+# --- 加载基准模型 (FP32) ---
+print("正在加载基准FP32模型...")
+pipe_fp32 = StableDiffusionPipeline.from_pretrained(model_id)
+pipe_fp32.to(device)
+print("模型已加载。")
+
+# --- 定义推理函数 ---
+def measure_latency(pipe, prompt, num_steps, num_runs):
+    latencies = []
+    # 预热运行
+    pipe(prompt, num_inference_steps=num_steps)
+    torch.cuda.synchronize() # 确保CUDA操作完成
+
+    for _ in range(num_runs):
+        start_time = time.time()
+        _ = pipe(prompt, num_inference_steps=num_steps)
+        torch.cuda.synchronize() # 等待完成
+        end_time = time.time()
+        latencies.append(end_time - start_time)
+
+    avg_latency = np.mean(latencies)
+    std_latency = np.std(latencies)
+    print(f"平均延迟（{num_runs} 次运行）：{avg_latency:.4f} +/- {std_latency:.4f} 秒")
+    return avg_latency, std_latency
+
+# --- 测量基准性能 ---
+print("\n--- 测量基准 (FP32) 性能 ---")
+baseline_latency, _ = measure_latency(pipe_fp32, prompt, num_inference_steps, num_runs)
+
+# 可选：如果需要，清除内存
+# del pipe_fp32
+# torch.cuda.empty_cache()
+```
+
+运行此代码。它将下载模型（如果尚未缓存），将其加载到GPU上，执行一次预热运行，然后测量多次运行的平均推理时间。记下这个基准延迟。你也可以在另一个终端中使用`nvidia-smi`等工具监控GPU内存使用情况。
+
+### 2. 优化一：半精度（FP16）
+
+最直接的优化之一是切换到半精度浮点数（FP16）。这会减少模型的内存占用，通常会加速现代GPU上的计算，并且对生成质量影响很小。`diffusers`库使其变得简单。
+
+```python
+# --- 加载FP16模型 ---
+print("\n--- 正在加载FP16模型 ---")
+# 注意：如果遇到问题，可以尝试使用torch_dtype=torch.bfloat16（如果支持）
+pipe_fp16 = StableDiffusionPipeline.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    revision="fp16" # 如果可用，使用fp16版本
+)
+pipe_fp16.to(device)
+# 如果模型没有专门的fp16版本，
+# 那么使用torch_dtype=torch.float16加载仍会进行转换。
+print("模型已加载。")
+
+# --- 测量FP16性能 ---
+print("\n--- 测量FP16性能 ---")
+fp16_latency, _ = measure_latency(pipe_fp16, prompt, num_inference_steps, num_runs)
+
+# 可选：清除内存
+# del pipe_fp16
+# torch.cuda.empty_cache()
+```
+
+运行此部分代码。将平均延迟与FP32基准进行比较。你会看到大幅提速和内存使用量减少（再次检查`nvidia-smi`）。生成的图像应与FP32输出非常相似。
+
+### 3. 优化二：ONNX Runtime
+
+ONNX（开放神经网络 (neural network)交换）为模型提供了一种可互操作的格式，ONNX Runtime是一个高性能推理 (inference)引擎，可以执行这些模型，通常还会应用额外的图优化。Hugging Face的`Optimum`库简化了将`diffusers`模型导出到ONNX并运行它们的过程。
+
+```python
+from optimum.onnxruntime import ORTStableDiffusionPipeline
+import os
+
+# --- 导出到ONNX并使用ORT加载 ---
+onnx_dir = "./stable_diffusion_onnx"
+
+# 检查ONNX模型是否已存在以节省时间
+if not os.path.exists(os.path.join(onnx_dir, "model.onnx")):
+    print("\n--- 正在导出模型到ONNX ---")
+    # 导出FP16 PyTorch模型以获得更好的ONNX性能
+    # 如果你之前没有登录过huggingface-cli，可能需要登录
+    ort_pipe = ORTStableDiffusionPipeline.from_pretrained(
+        model_id,
+        export=True,
+        revision="fp16",
+        torch_dtype=torch.float16 # 在导出时指定数据类型
+    )
+    ort_pipe.save_pretrained(onnx_dir)
+    print(f"ONNX模型已保存到 {onnx_dir}")
+    # 可选：清除用于导出的PyTorch模型
+    del ort_pipe
+    torch.cuda.empty_cache()
+else:
+    print("\n--- 发现现有ONNX模型 ---")
+
+# 使用ORT加载已导出的ONNX模型
+print("正在使用ONNX Runtime加载ONNX模型...")
+# 确保provider为'CUDAExecutionProvider'以实现GPU加速
+ort_pipe_loaded = ORTStableDiffusionPipeline.from_pretrained(
+    onnx_dir,
+    provider="CUDAExecutionProvider" # 对于CPU使用'CPUExecutionProvider'
+)
+# ORT管道不需要.to(device)，provider会处理
+print("ONNX模型已加载。")
+
+# --- 测量ONNX Runtime性能 ---
+# 注意：ORT推理函数可能略有不同或需要调整
+# 为简单起见，我们将重用measure_latency，假设API兼容
+# (Optimum的目标是实现这一点)
+print("\n--- 测量ONNX Runtime性能 ---")
+onnx_latency, _ = measure_latency(ort_pipe_loaded, prompt, num_inference_steps, num_runs)
+
+# 可选：清除内存
+# del ort_pipe_loaded
+# torch.cuda.empty_cache()
+```
+
+此步骤涉及将模型组件（UNet、VAE、文本编码器）导出到ONNX格式，这在首次运行时可能需要一些时间。`Optimum`处理此过程。然后，它使用`ORTStableDiffusionPipeline`加载模型，并指定`CUDAExecutionProvider`进行GPU加速。再次测量延迟。ONNX Runtime通常比原生PyTorch提供更快的速度，特别是与硬件特定的执行提供者结合使用时。
+
+**注意：** ONNX导出有时会根据模型架构和opset版本而比较复杂。`Optimum`为许多标准模型大大简化了此过程。
+
+### 4. 优化三：采样器选择和步数减少
+
+扩散模型依赖于迭代采样。使用更高效的采样器或减少步数可以大幅降低延迟，尽管通常会牺牲一些生成质量或细节。让我们尝试切换到更快的采样器，如`DPMSolverMultistepScheduler`，并减少步数。我们将使用FP16管道进行此比较，因为它通常更快。
+
+```python
+from diffusers import DPMSolverMultistepScheduler
+
+# --- 配置更快的采样器 ---
+# 确保FP16管道已加载，或重新加载它
+if 'pipe_fp16' not in locals():
+     print("正在重新加载FP16模型以进行采样器测试...")
+     pipe_fp16 = StableDiffusionPipeline.from_pretrained(
+        model_id,
+        torch_dtype=torch.float16,
+        revision="fp16"
+     ).to(device)
+
+print("\n--- 正在配置更快的采样器 (DPM-Solver++) ---")
+pipe_fp16.scheduler = DPMSolverMultistepScheduler.from_config(pipe_fp16.scheduler.config)
+print("采样器已切换到DPMSolverMultistepScheduler。")
+
+# --- 测量较少步数下的性能 ---
+faster_sampler_steps = 25 # 显著减少步数
+print(f"\n--- 测量FP16 + DPM-Solver++ ({faster_sampler_steps} 步) ---")
+sampler_latency, _ = measure_latency(pipe_fp16, prompt, faster_sampler_steps, num_runs)
+
+# 如果需要，可目视比较图像质量
+# image = pipe_fp16(prompt, num_inference_steps=faster_sampler_steps).images[0]
+# image.save("optimized_sampler_output.png")
+```
+
+运行此部分代码。通过切换到`DPMSolverMultistepScheduler`并将推理 (inference)步数减半（从50步到25步），你应该会看到延迟大幅降低，与原始FP16在50步下的运行相比。检查输出图像（如果你取消保存行的注释，文件为`optimized_sampler_output.png`），并将其质量与使用默认设置生成的图像进行比较。通常，像DPM-Solver++这样的求解器即使在步数大幅减少的情况下也能保持良好的质量。
+
+### 5. 结果汇总
+
+我们来收集延迟结果并将其可视化。
+
+````python
+# --- 汇总结果 ---
+results = {
+    "基准 (FP32, 50步)": baseline_latency,
+    "FP16 (50步)": fp16_latency,
+    "ONNX Runtime (FP16, 50步)": onnx_latency,
+    "FP16 + DPM++ (25步)": sampler_latency
+}
+
+print("\n--- 性能汇总 ---")
+for name, latency in results.items():
+    print(f"{name}: {latency:.4f} 秒")
+
+# 创建一个Plotly图表
+import plotly.graph_objects as go
+
+names = list(results.keys())
+latencies = list(results.values())
+
+# 定义调色板中的颜色
+colors = ['#4263eb', '#1c7ed6', '#15aabf', '#20c997'] # Blue, Cyan, Teal, Green
+
+fig = go.Figure(data=[go.Bar(
+    x=names,
+    y=latencies,
+    marker_color=colors[:len(names)], # 使用定义的颜色
+    text=[f'{l:.3f}s' for l in latencies],
+    textposition='auto',
+)])
+
+fig.update_layout(
+    title_text='扩散模型推理延迟比较',
+    xaxis_title_text='优化技术',
+    yaxis_title_text='平均延迟 (秒)',
+    yaxis_range=[0, max(latencies) * 1.1], # 调整y轴范围
+    font=dict(family="Arial, sans-serif", size=12),
+    plot_bgcolor='#e9ecef', # Light gray background
+    paper_bgcolor='white',
+    bargap=0.2
+)
+
+# 显示图表（或保存为HTML）
+# fig.show()
+
+# 生成用于网页显示的JSON
+chart_json = fig.to_json()
+# 确保在markdown块中是单行
+chart_json_single_line = chart_json.replace('\n', '').replace('\r', '')
+print("\n--- 图表数据 (Plotly JSON) ---")
+print(f"```plotly\n{chart_json_single_line}\n```")
+````
+
+
+
+![扩散模型推理延迟比较](plots/5399-0.json)
+
+
+
+> 应用于Stable Diffusion v1.5模型的不同优化技术的平均推理 (inference)延迟。值越低表示性能越好。结果仅供参考，并且很大程度上取决于硬件和具体的模型版本。
+
+图表清楚地显示了通过应用FP16精度、使用ONNX Runtime以及最终优化采样过程所实现的延迟逐步降低。请记住，这些结果与所使用的硬件（GPU类型、驱动版本）和模型相关。
+
+### 总结
+
+本次实践练习呈现了几种优化扩散模型推理 (inference)的有效技术：
+
+1. **半精度 (FP16)：** 在速度提升和内存减少之间取得了良好平衡，同时质量损失最小。它通常是第一个也是最容易应用的优化。
+2. **ONNX Runtime：** 通过优化计算图和运用高效的执行提供者，可以提供额外的性能提升。它需要导出步骤，但通过`Optimum`等库可以简化。
+3. **采样器优化：** 选择更快的采样器（如DPM-Solver++）并减少推理步数可以大幅降低延迟，但需要仔细调整以保持可接受的输出质量。
+
+我们在此处没有详细讨论高级量化 (quantization)（如INT8）或深度编译器优化（如TensorRT），因为它们通常需要更复杂的校准步骤或专用工具。然而，所介绍的方法提供了显著的改进，并构成了优化扩散模型以进行部署的依据。最佳的技术组合将取决于你具体的延迟、吞吐量 (throughput)、成本和质量要求。始终在你的目标硬件上进行基准测试，以验证任何优化的效果。
+
+## 参考资料
+
+- [High-Resolution Image Synthesis with Latent Diffusion Models](https://arxiv.org/abs/2112.10752) — Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Björn Ommer (2022)
+  Journal: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR); Pages: 10684-10695; DOI: [10.48550/arXiv.2112.10752](https://doi.org/10.48550/arXiv.2112.10752)
+  介绍了包括 Stable Diffusion 在内的潜在扩散模型的架构和训练方法，这是实践中使用的模型。
+- [Mixed-Precision Training for Deep Neural Networks](https://arxiv.org/abs/1710.03740) — Paulius Micikevicius, Sharan Narang, Jonah Alben, Gregory Diamos, Erich Elsen, David Garcia, Boris Ginsburg, Michael Houston, Oleksii Kuchaiev, Ganesh Venkatesh, Hao Wu (2018)
+  Journal: International Conference on Learning Representations (ICLR) 2018; DOI: [10.48550/arXiv.1710.03740](https://doi.org/10.48550/arXiv.1710.03740)
+  详细阐述了使用混合精度（FP16）加速深度学习模型训练和推理的原理和益处。
+- [ONNX Runtime Documentation](https://onnxruntime.ai/docs/) — Microsoft and ONNX Runtime Contributors (2024)
+  ONNX Runtime 的官方指南，用于高性能推理，包括执行提供程序和优化技术的详细信息。
+- [Hugging Face Diffusers Library Documentation](https://huggingface.co/docs/diffusers/index) — Hugging Face (2024)
+  Publisher: Hugging Face
+  以编程方式访问扩散模型的权威资源，涵盖 Diffusers 库中的模型加载、管道使用和自定义。

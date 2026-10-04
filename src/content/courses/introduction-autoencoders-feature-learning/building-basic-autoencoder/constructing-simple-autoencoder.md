@@ -1,0 +1,131 @@
+---
+course: "introduction-autoencoders-feature-learning"
+chapter: "building-basic-autoencoder"
+lesson: "constructing-simple-autoencoder"
+sourceId: 6432
+sourceUrl: "https://apxml.com/zh/courses/introduction-autoencoders-feature-learning/chapter-5-building-basic-autoencoder/constructing-simple-autoencoder"
+title: "构建一个简单的自编码器模型"
+description: "关于如何使用Keras定义基本自编码器模型架构的分步说明。"
+order: 5
+plots: []
+sourceHash: "253e663df9d297fe8d8527cae78e712ddaa6dd63cd9e810fb27dac39dec6ab8c"
+sourceCorrections: []
+---
+
+自编码器模型的构建。它通常涉及神经网络 (neural network)架构，并可使用 MNIST 等数据集进行示例。Keras 使得构建神经网络相当容易实现，因此将用于模型构建。
+
+### 构成要素：Keras 中的层
+
+自编码器其核心是一个神经网络 (neural network)。我们将使用层来构建它。对于这个基本模型，我们将主要使用 `Dense` 层。`Dense` 层是一个全连接层，意味着其中的每个神经元都从上一层的所有神经元接收输入。
+
+我们的自编码器将包含两个主要部分：
+
+1. **编码器 (Encoder)**：这部分接收输入数据，并将其压缩成较小的表示，通常称为“瓶颈层 (bottleneck)”或“潜在空间 (latent space)”。
+2. **解码器 (Decoder)**：这部分接收来自瓶颈层的压缩表示，并尝试从中重建原始输入数据。
+
+我们将使用 Keras 的 `Sequential` 模型，它非常适合以线性层堆栈的形式创建模型。
+
+### 定义编码器
+
+编码器的作用是降低输入数据的维度。如果我们的输入数据是例如一个展平的 MNIST 图像，具有 $28 \\times 28 = 784$ 像素，编码器会将这 784 个维度映射到一个小得多的数字。
+
+1. **输入层**：我们编码器中的第一个层需要知道输入数据的形状。对于展平的 MNIST 图像，这将是 784 个特征。我们通过在第一个 `Dense` 层中使用 `input_shape` 参数 (parameter)来指定这一点。
+2. **隐藏层（编码器）**：我们可以添加一个或多个 `Dense` 层，它们会逐渐减少神经元的数量。例如，从 784 个输入，我们可能会缩减到 128 个神经元。
+3. **瓶颈层**：这是编码器的最后一层，它包含最少数量的神经元。该层生成压缩表示。假设我们将其压缩到 64 个神经元。该层的大小，即 `encoding_dim`，是一个重要参数。
+4. **激活函数 (activation function)**：对于编码器中的隐藏层，包括瓶颈层，我们将使用 ReLU（修正线性单元）激活函数。ReLU 是一种常用选择，因为它有助于训练深度网络且计算高效。它简单地在输入为正时输出输入值，否则输出零：$f(x) = \\max(0, x)$。
+
+### 定义解码器
+
+解码器的任务与编码器相反。它接收来自瓶颈层的压缩表示，并将其扩展回原始输入的维度。
+
+1. **隐藏层（解码器）**：这些层将增加神经元的数量，与编码器相似但顺序相反。例如，从瓶颈层的 64 个神经元，我们可能会扩展到 128 个神经元。
+2. **输出层**：解码器的最后一层必须与原始输入数据（例如 MNIST 的 784 个）具有相同数量的神经元。该层生成重建数据。
+3. **激活函数 (activation function)（输出）**：对于输出层，一个常用选择是 Sigmoid 激活函数，特别是当输入数据（如像素值）被归一化 (normalization)到 0 到 1 之间时。Sigmoid 函数，$f(x) = \\frac{1}{1 + e^{-x}}$，将其输出压缩到 (0, 1) 范围，使其适合重建归一化数据。
+
+### 使用 Keras 代码实现
+
+让我们将其转化为 Keras 代码。首先，请确保您已设置 Keras 后端为 PyTorch，并导入了必要的库。
+
+```python
+import os
+os.environ["KERAS_BACKEND"] = "torch"
+import keras
+from keras import layers
+
+# 定义输入维度。
+# 对于 MNIST，每张图像是 28x28 像素，展平后为 784。
+input_dim = 784
+
+# 定义编码表示（瓶颈层）的大小。
+# 这是一个您可以调整的超参数。我们选择 64。
+encoding_dim = 64
+
+# 使用 Keras Sequential API 定义自编码器模型
+autoencoder = keras.Sequential([
+    # 编码器部分
+    layers.Dense(128, activation='relu', input_shape=(input_dim,)), # 输入层连接到第一个隐藏层
+    layers.Dense(encoding_dim, activation='relu'),                     # 瓶颈层
+
+    # 解码器部分
+    layers.Dense(128, activation='relu'),                          # 解码器的第一个隐藏层
+    layers.Dense(input_dim, activation='sigmoid')                     # 输出层，重建输入
+])
+
+# 显示模型架构
+autoencoder.summary()
+```
+
+当您运行 `autoencoder.summary()` 时，Keras 将打印一个类似下方的表格（参数 (parameter)的确切数量可能因版本而略有不同，但结构将保持一致）：
+
+```text
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ dense (Dense)               (None, 128)               100480    
+
+ dense_1 (Dense)             (None, 64)                8256      
+
+ dense_2 (Dense)             (None, 128)               8320      
+
+ dense_3 (Dense)             (None, 784)               101136    
+
+=================================================================
+Total params: 218,192
+Trainable params: 218,192
+Non-trainable params: 0
+_________________________________________________________________
+```
+
+**理解摘要：**
+
+- **层（类型）**：显示每个层的名称和类型。如果您不指定，Keras 会自动命名。
+- **输出形状**：`(None, 128)` 表示该层输出一个张量，其中第一个维度（`None`）是批量大小（可变），第二个维度是神经元数量（此处为 128）。
+- **参数数量**：这是该层中可训练参数（权重 (weight)和偏置 (bias)）的数量。例如，第一个 `Dense` 层将 784 个输入连接到 128 个神经元。这包含 $784 \\times 128$ 个权重加上 128 个偏置，总计 $100352 + 128 = 100480$ 个参数。
+
+### 模型架构可视化
+
+一张图可以帮助将数据流经自编码器的过程可视化：
+
+> 此图显示了数据从输入层流经编码器（在瓶颈层压缩到 64 个单元），然后通过解码器在输出端重建原始的 784 个单元。
+
+在此结构中：
+
+- 我们使用 `Dense` 层，因为它们多功能且是许多神经网络 (neural network)任务（包括基本自编码器）的良好起点。
+- 隐藏层中使用 ReLU（`activation='relu'`）。它是一种常用选择，有助于模型有效学习。
+- 输出层中使用 Sigmoid（`activation='sigmoid'`）。如果您的输入像素值被缩放到 0 到 1 之间（这是图像的常见预处理步骤），Sigmoid 可以确保输出值也在此范围内，这有助于将重建与原始数据进行比较。
+
+模型架构定义好后，下一步是配置其用于训练。这包括选择一个损失函数 (loss function)（用于衡量自编码器的表现）和一个优化器（用于指示模型如何改进）。我们将在下一节中介绍这一点。
+
+## 参考资料
+
+- [Reducing the Dimensionality of Data with Neural Networks](https://pubmed.ncbi.nlm.nih.gov/16873662/) — Geoffrey E. Hinton and Ruslan R. Salakhutdinov (2006)
+  Journal: Science; Publisher: American Association for the Advancement of Science; Volume: 313; Pages: 504-507; DOI: [10.1126/science.1127647](https://doi.org/10.1126/science.1127647)
+  引入自编码器进行无监督预训练和降维，是该领域的基础性工作。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本综合性教科书，涵盖深度学习的理论基础和实践方面，包括自编码器、神经网络架构和激活函数。
+- [Keras Documentation](https://keras.io/) — Keras team (2024)
+  Keras深度学习框架的官方文档，涵盖使用Sequential API构建模型、全连接层和激活函数。
+- [Keras: Multi-backend support](https://keras.io/) — Keras team (2024)
+  Keras官方指南，介绍如何配置和使用不同的后端，包括代码示例中指定的PyTorch。

@@ -1,0 +1,113 @@
+---
+course: "julia-for-machine-learning"
+chapter: "julia-deep-learning-flux-jl"
+lesson: "neural-networks-fundamentals"
+sourceId: 6898
+sourceUrl: "https://apxml.com/zh/courses/julia-for-machine-learning/chapter-6-julia-deep-learning-flux-jl/neural-networks-fundamentals"
+title: "神经网络基本原理"
+description: "回顾神经网络的主要构成，包括层、激活函数和网络结构。"
+order: 1
+plots: ["plots/6898-0.json"]
+sourceHash: "9febb7d1d7885d0ff1e380c9cecb6fa03b96e478c6937a4a24672afd55da56d9"
+sourceCorrections: []
+---
+
+虽然多种机器学习 (machine learning)模型为许多任务提供了强大工具，但受人脑结构启发而来的神经网络 (neural network)，在图像识别和语音识别等更为复杂的应用中取得了显著进展。这里将介绍神经网络的基本构成要素，以便您使用 Julia 实现这些模型。
+
+## 神经元：基本计算单元
+
+从根本上说，神经网络 (neural network)由相互连接的计算单元（称为神经元或节点）组成。单个神经元接收多个输入值，执行计算，并产生一个输出。可以将其视为一个小型的计算函数。
+
+神经元的每个输入 $x_i$ 都与一个权重 (weight) $w_i$ 相关联。神经元将所有这些加权输入求和，并加上一个偏置 (bias)项 $b$。这个和，通常称为加权和或仿射变换，然后通过一个**激活函数 (activation function)** $f$。神经元的输出 $y$ 可以表示为：
+
+$y = f\left(\sum_{i} (w_i x_i) + b\right)$
+
+权重 $w_i$ 决定了每个输入信号的重要性，而偏置项 $b$ 则充当偏移量，即使所有输入为零也能激活神经元，或改变激活函数的有效范围。这些权重和偏置项是网络在训练过程中“学习”的参数 (parameter)。
+
+> 单个神经元计算其输入的加权和，加上一个偏置，然后应用激活函数来生成输出。
+
+## 层：神经元组织方式
+
+神经元通常被组织成层：
+
+1. **输入层：** 本层接收您的机器学习 (machine learning)任务的原始数据（特征）。输入层中的神经元数量通常与数据集中特征的数量对应。本层不执行任何计算；它只是将数据传递给第一个隐藏层。
+2. **隐藏层：** 这些层位于输入层和输出层之间。隐藏层中的每个神经元对前一层的输出应用一个变换（加权和 + 激活）。一个或多个隐藏层的存在使得网络能够学习数据更复杂的表示。“深度学习 (deep learning)”中的“深度”是指具有多个隐藏层。
+3. **输出层：** 本层产生网络的最终结果。输出层中使用的神经元数量和激活函数 (activation function)取决于您正在解决的问题类型：
+   - 对于回归任务（预测连续值），输出层通常有一个神经元，使用线性激活函数（或无激活函数）。
+   - 对于二分类（预测两个类别之一），它通常有一个神经元，使用 sigmoid 激活函数。
+   - 对于多分类（预测多个类别之一），它通常有 $N$ 个神经元（其中 $N$ 是类别数量），并使用 softmax 激活函数。
+
+> 信息从输入层流向输出层，通过一个或多个隐藏层。神经元之间的每个连接都关联着一个权重 (weight)。
+
+## 激活函数 (activation function)：引入非线性
+
+激活函数是神经网络 (neural network)的重要组成部分。如果神经元只执行加权和，那么整个网络，无论有多少层，都会表现得像一个单一的线性模型。激活函数引入非线性，使得网络能够学习数据中超出简单线性组合的复杂模式和关系。
+
+以下是几种常见的激活函数：
+
+- **Sigmoid：** 如章节介绍所述，sigmoid 函数定义为：
+  $\sigma(x) = \frac{1}{1 + e^{-x}}$
+  它将其输入压缩到0到1的范围。这使其适用于二分类问题中的输出神经元，其中输出可以解释为概率。然而，sigmoid 函数在训练期间可能存在“梯度消失”问题，尤其是在深层网络中，这会减缓学习速度。
+- **双曲正切 (tanh)：**
+  $\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}$
+  tanh 函数与 sigmoid 相似，但将值压缩到 -1 到 1 的范围。它在隐藏层中通常优于 sigmoid，因为其输出以零为中心。它也存在梯度消失问题。
+- **修正线性单元 (ReLU)：**
+  $\text{ReLU}(x) = \max(0, x)$
+  ReLU 是目前隐藏层中最受欢迎的激活函数之一。如果输入为正，它直接输出该输入；否则输出零。它计算效率高，有助于缓解正输入的梯度消失问题。存在 Leaky ReLU 或 Parametric ReLU (PReLU) 等变体来解决“ReLU 死亡”问题（指神经元在输入始终为负时可能变得不活跃）。
+- **Softmax：** 对于多分类问题，softmax 函数常用于输出层。它接收一个任意实数值分数（logits）向量 (vector)，并将其转换为 $K$ 个类别的概率分布，其中每个概率在0到1之间，并且所有概率之和为1。对于输入向量 $z = [z_1, z_2, \ldots, z_K]$，第 $j$ 个元素的 softmax 输出为：
+  $\text{softmax}(z)_j = \frac{e^{z_j}}{\sum_{k=1}^{K} e^{z_k}}$
+
+
+
+![Sigmoid 与 ReLU 激活函数对比](plots/6898-0.json)
+
+
+
+> Sigmoid 和 ReLU 激活函数的对比。Sigmoid 将输入映射到 (0,1) 范围，适用于表示概率。ReLU 输出 $\max(0,x)$，促进稀疏性并缓解正输入的梯度消失问题。
+
+## 信息流：前向传播
+
+在标准前馈神经网络 (neural network)中，信息单向流动：从输入层，通过任何隐藏层，流向输出层。此过程称为**前向传播**。
+
+在前向传播期间：
+
+1. 输入数据被馈入输入层。
+2. 后续层中的每个神经元计算其来自前一层的输入加权和，加上其偏置 (bias)，并应用其激活函数 (activation function)。
+3. 此过程逐层重复，直到输出层产生网络的预测。
+
+例如，输出 $\hat{y}$（即预测）通过网络函数和学习到的参数 (parameter)（权重 (weight) $W$ 和偏置 $b$）处理输入 $X$ 来生成。
+
+## 常见网络结构
+
+虽然上述简单的前馈结构是基本要素，但针对不同类型的数据和任务，已经开发出各种专门结构：
+
+- **前馈神经网络 (neural network) (FFNNs) / 多层感知器 (MLPs)：** 这些是我们到目前为止主要讨论的网络。它们由一个输入层、一个或多个隐藏层以及一个输出层组成，连接通常只向前流动。它们通用性强，用于许多表格数据分类和回归任务。您将首先使用 Flux.jl 构建这些网络。
+- **卷积神经网络 (CNN) (CNNs 或 ConvNets)：** 它们特别适用于网格状数据，例如图像。CNN 使用特殊层（卷积层、池化层）来自动且自适应地从图像中学习特征的空间层次结构。
+- **循环神经网络 (RNN) (RNNs)：** 为顺序数据设计，其中顺序很重要，例如时间序列或自然语言。RNN 具有形成有向循环的连接，使它们能够保持对过去输入的内部状态或“记忆”。像 LSTM（长短期记忆）和 GRU（门控循环单元 (GRU)）这样的变体解决了训练标准 RNN 中的一些难题。
+
+本章将侧重于前馈神经网络，为之后理解更复杂结构提供依据。
+
+## 神经网络 (neural network)如何“学习”
+
+神经网络中的“学习”是指寻找最佳权重 (weight)和偏置 (bias)集的过程，使得网络能够将输入数据映射到正确的输出。这通常通过以下方式实现：
+
+1. **定义损失函数 (loss function)：** 损失函数（或成本函数）衡量网络预测值 ($\hat{y}$) 与实际目标值 ($y$) 之间的偏差。例如，均方误差 (MSE)，$L = \frac{1}{N}\sum_{i=1}^{N}(y_i - \hat{y}_i)^2$，常用于回归任务。
+2. **优化：** 目标是最小化此损失函数。这通常使用优化算法完成，最常见的是**梯度下降 (gradient descent)**的一种形式。
+3. **反向传播 (backpropagation)：** 为了使用梯度下降，我们需要计算损失函数相对于网络中每个权重和偏置的梯度。反向传播是一种高效算法，用于计算这些梯度，它从输出层开始，反向通过网络。
+
+您将在本章后续部分考察损失函数、优化器和训练过程，包括使用 Zygote.jl 进行自动微分。目前，请理解这些基本构成部分——神经元、层、激活函数 (activation function)和信息的前向流动——是学习过程赖以运作的构造单元。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; DOI: [10.7551/mitpress/9780262035613.001.0001](https://doi.org/10.7551/mitpress/9780262035613.001.0001)
+  一本全面且权威的教材，涵盖了深度学习的数学和概念基础，包括神经网络基础、架构和学习算法。
+- [Neural Networks and Deep Learning](http://neuralnetworksanddeeplearning.com/) — Michael A. Nielsen (2015)
+  Publisher: Determination Press
+  一本易于理解的在线书籍，通过交互式示例，从零开始清晰直观地介绍了神经网络和深度学习。
+- [Convolutional Neural Networks for Visual Recognition - Course Notes](https://cs231n.github.io/) — Stanford University (2024)
+  Publisher: Stanford University
+  关于神经网络架构、激活函数和深度学习基础知识的优秀介绍性材料，广泛用于自学。
+- [Deep Sparse Rectifier Networks](http://proceedings.mlr.press/v15/glorot11a/glorot11a.pdf) — Xavier Glorot, Antoine Bordes, Yoshua Bengio (2011)
+  Journal: Proceedings of the Fourteenth International Conference on Artificial Intelligence and Statistics (AISTATS); Volume: 15; Pages: 315-323; DOI: [10.5555/2839210.2839257](https://doi.org/10.5555/2839210.2839257)
+  介绍了并分析了整流线性单元（ReLU）激活函数，解释了其训练深度神经网络的优点。

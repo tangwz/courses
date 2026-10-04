@@ -1,0 +1,69 @@
+---
+course: "intro-etl-pipelines"
+chapter: "understanding-etl-fundamentals"
+lesson: "common-sources-targets"
+sourceId: 5495
+sourceUrl: "https://apxml.com/zh/courses/intro-etl-pipelines/chapter-1-understanding-etl-fundamentals/common-sources-targets"
+title: "常见数据源和数据目标"
+description: "识别典型数据源（数据库、文件、API）和目标系统（数据仓库）。"
+order: 5
+plots: []
+sourceHash: "192149c511c35da1aecd56e0679828f11c08f4ea3e4643051f06a9d99e8045a8"
+sourceCorrections: []
+---
+
+ETL流程的目的是移动数据。但是，这些数据从何而来，又将去往何处？了解典型的数据起点（源）和终点（目标）是掌握ETL工作方式的主要方面。可以把它想象成规划一次旅行：在规划路线之前，你需要知道你的出发地和目的地。
+
+### 常见数据源
+
+数据源是原始数据产生或存储的系统、文件或应用程序。如今，数据可以来自多种多样的位置。以下是一些你将经常遇到的类型：
+
+1. **关系型数据库：** 这些通常是业务应用的核心。它们以结构化形式存储数据，使用表格（按行和列组织）。可以把它们想象成更强大、更可靠的电子表格。例如：
+
+   - PostgreSQL
+   - MySQL
+   - Microsoft SQL Server
+   - Oracle Database
+     你通常使用SQL（结构化查询语言）与这些数据库交互，以提取你需要的数据。
+2. **文件：** 数据经常以文件形式存储，特别是用于系统间信息交换或日志记录。常见的文件类型包括：
+
+   - **结构化文件：** CSV（逗号分隔值）和TSV（制表符分隔值）文件是简单的文本文件，其中数据按行组织，列由分隔符（如逗号或制表符）分隔。它们在从电子表格或数据库导出数据时非常常见。
+   - **半结构化文件：** JSON（JavaScript对象表示法）和XML（可扩展标记 (token)语言）文件使用层次结构、标签或键值对来表示数据。它们广泛应用于Web应用程序、API和配置文件中。虽然不如数据库表那样严格，但它们具有可预测的结构，ETL流程可以对其进行解析。
+   - **非结构化文件：** 此类别包括纯文本文档、电子邮件、图像或原始服务器日志等。从非结构化数据中提取有意义的信息更为复杂，通常需要专门的技术。
+3. **API（应用程序编程接口）：** 许多Web服务和应用程序提供API，允许其他程序请求数据。当ETL流程需要从第三方服务（如天气服务、社交媒体平台或支付网关）获取数据时，它通常与其API进行交互。来自API的数据经常以JSON格式交付。
+4. **流式数据源：** 数据的生成日益连续。考虑物联网设备的传感器读数、网站点击流或金融市场数据。这些“流”与静态数据库或文件相比，需要不同的提取方法，通常涉及Apache Kafka或特定于云的流服务等技术。虽然本入门课程侧重于批处理ETL，但了解这些源的存在是有益的。
+
+### 常见数据目标
+
+数据目标是转换后的数据被加载到的系统或位置。目标的选择很大程度上取决于你打算如何使用这些数据。
+
+1. **数据仓库：** 这可能是专注于分析的ETL流程最传统和常见的目标。数据仓库是专门为报告和数据分析设计的中心存储库。来自各种源的数据在加载前经过清洗、转换和一致性结构化处理。这使得业务分析师和数据科学家更容易查询并获取信息。例如：
+
+   - Snowflake
+   - Amazon Redshift
+   - Google BigQuery
+   - Azure Synapse Analytics
+     数据仓库通常存储历史数据，支持随时间变化的趋势分析。
+2. **数据湖：** 数据湖是一个存储大量原始数据的存储库，数据以其原始格式存储。与数据仓库不同，数据仓库要求数据在加载前就已结构化（写入时模式），而数据湖通常允许数据先加载，然后在需要分析时再进行结构化（读取时模式）。它们提供了灵活性，但如果管理不当，可能会变得难以管理（有时戏称为“数据沼泽”）。像Amazon S3、Azure Data Lake Storage或Google Cloud Storage这样的云存储服务通常构成数据湖的构建基础。
+3. **操作型数据库：** 有时，ETL流程的目标不是数据分析，而是更新或丰富操作系统（如CRM或库存数据库）中的数据。例如，一个ETL流程可能会从多个源提取客户数据，进行清洗，然后将整合后的视图加载回主客户数据库。
+4. **文件：** 正如文件可以是源一样，它们也可以是目标。一个ETL流程可能只是对一组文件中的数据进行清洗和转换，然后将结果输出为新的CSV或JSON文件，可能供另一个系统使用或用于简单的报告。
+
+以下图表展示了数据从常见源通过ETL流程流向典型目标的示意图：
+
+> 数据从数据库、文件和API等各种源流出，经过ETL流程处理，并加载到数据仓库、数据湖或其他系统等目标中。
+
+了解这些常见的数据源和目标为ETL的“提取”和“加载”阶段提供了背景，我们将在后续章节中更详细地研究这些阶段。源和目标的具体组合在很大程度上影响着任何ETL管道的设计和需求。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.oreilly.com/library/view/the-data-warehouse/9781118530801/) — Ralph Kimball and Margy Ross (2013)
+  Publisher: John Wiley & Sons, Inc.; Pages: 608
+  理解数据仓库原则（包括ETL设计中的源和目标系统考量）的经典著作。(第三版)
+- [Database Management Systems](https://www.cs.wisc.edu/~dbbook/) — Raghu Ramakrishnan and Johannes Gehrke (2002)
+  Publisher: McGraw-Hill Education
+  提供数据库系统的全面基础知识，涵盖关系模型、SQL和数据存储。(第三版)
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449327188/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  探讨多种数据存储和处理系统，提供源和目标架构选择的见解，包括批处理和流式处理模式。
+- [Apache Kafka Documentation](https://kafka.apache.org/documentation) — The Apache Software Foundation (2024)
+  Apache Kafka 的官方文档，Kafka 是文中所述流数据源技术的一个重要示例。

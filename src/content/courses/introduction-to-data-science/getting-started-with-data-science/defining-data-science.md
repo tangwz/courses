@@ -1,0 +1,48 @@
+---
+course: "introduction-to-data-science"
+chapter: "getting-started-with-data-science"
+lesson: "defining-data-science"
+sourceId: 2078
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-data-science/chapter-1-getting-started-with-data-science/defining-data-science"
+title: "数据科学的定义"
+description: "了解数据科学的定义，并以简单的方式理解其主要构成和目标。"
+order: 1
+plots: []
+sourceHash: "dd6576c9ad7e5a0442092c84ed52e2c1b30b0176f424aac3c8155e6bf4163b60"
+sourceCorrections: []
+---
+
+你可能经常听到“数据科学”这个词。它是一个备受关注的学科，正如本章所介绍的，理解其基本原理非常重要。但数据科学究竟是什么呢？
+
+数据科学的核心在于从数据中提取知识和洞察。可以将其视为一个过程，它通过数据中的证据来帮助我们理解事物、做出决策或构建实用的应用。它不仅仅关乎数字；它包含各种形式的数据，包括文本、图像等等，我们将在下一章讨论这些。
+
+数据科学并非单一学科，而是一门交叉学科。它结合了多个学科的要素：
+
+1. **统计学：** 提供理解数据、量化 (quantization)不确定性以及检验假设的数学依据。平均值、中位数、方差和概率等观念是统计学中重要的工具。
+2. **计算机科学：** 提供处理大型数据集、编写代码自动化分析和构建模型的工具与技术。这包括编程语言（如Python或R）、数据库管理和算法。
+3. **专业知识：** 指的是你正在研究的特定领域内的知识。如果你分析医疗数据，理解生物学和医疗实践很重要。如果你查看财务数据，了解市场和经济学是必要的。这种背景有助于提出正确的问题并正确解读结果。
+
+你可以将这些学科的交集形象地表示为：
+
+> 数据科学是统计学、计算机科学和特定专业知识相互结合的产物。
+
+数据科学的主要目标通常是以下一项或多项：
+
+- **描述：** 汇总和可视化数据以了解已发生的情况。例如，创建一份显示月度销售趋势的报告。
+- **诊断：** 弄清楚事情发生的原因。这可能包括找出与网站流量下降相关的因素。
+- **预测：** 预测未来可能发生的事情。示例包括预测客户流失或估算未来产品需求。
+- **建议：** 根据预测或洞察提出应采取的行动。这可能包括建议最佳营销策略或优化配送路线。
+
+本质上，数据科学提供了一种系统化的数据问题解决办法。它包括提出问题、收集相关数据、处理和清洗数据、分析以发现模式、构建模型，最后传达发现结果，以帮助做出明智的决策。这是一种从数据中学习并有效应用这些知识的结构化方法。
+
+## 参考资料
+
+- [50 Years of Data Science](https://doi.org/10.1080/10618600.2017.1384734) — David L. Donoho (2017)
+  Journal: Journal of Computational and Graphical Statistics; Volume: 26; Pages: 745-766; DOI: [10.1080/10618600.2017.1384734](https://doi.org/10.1080/10618600.2017.1384734)
+  定义了数据科学，讨论了其起源和跨学科基础。
+- [Data Science for Business: What You Need to Know about Data Mining and Data-Analytic Thinking](https://www.oreilly.com/library/view/data-science-for/9781449374273/) — Foster Provost and Tom Fawcett (2013)
+  Publisher: O'Reilly Media
+  从商业角度介绍了数据科学，解释了其应用和分析思维。
+- [An Introduction to Statistical Learning with Applications in Python](https://link.springer.com/book/10.1007/978-3-031-38747-0) — Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani, Jonathan Taylor (2023)
+  Publisher: Springer; DOI: [10.1007/978-3-031-38747-0](https://doi.org/10.1007/978-3-031-38747-0)
+  介绍了统计学习基本技术，对数据分析方法至关重要。

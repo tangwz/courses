@@ -1,0 +1,58 @@
+---
+course: "intro-data-engineering"
+chapter: "what-is-data-engineering"
+lesson: "role-of-data-engineer"
+sourceId: 5486
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-1-what-is-data-engineering/role-of-data-engineer"
+title: "数据工程师的职责"
+description: "了解数据工程师的常见任务和职责。"
+order: 2
+plots: []
+sourceHash: "a5b90cb42363723043b419ff4e4187c8f9b607712c5d2c758598f9183f5e7780"
+sourceCorrections: []
+---
+
+将数据工程师看作是处理数据所需数字基础设施的架构师和建造者。前面一节定义了数据工程，这一节我们来看看数据工程师日常到底做些什么。他们的主要目标是让组织中的其他人（如数据分析师、数据科学家和机器学习 (machine learning)应用）能够获得高质量、可靠且易于使用的数据。
+
+如果数据是新的石油，数据工程师就是炼油厂、管道和储罐的建造者。他们设计、构建、安装、测试并维护管理数据从各种来源流向最终目的地的系统。
+
+以下是数据工程师的一些常见职责和任务：
+
+### 设计和搭建数据管道
+
+这是这份工作的核心部分。数据工程师创建自动化过程，即数据管道，将数据从生成地（如应用程序数据库、用户活动日志或第三方API）传输到可以存储和分析的系统（如数据仓库或数据湖）。这包括弄清楚如何提取数据、如何清洗或重塑（转换）数据，以及在哪里和如何加载数据。你将在第三章学到更多关于管道的知识，包括ETL（提取、转换、加载）和ELT（提取、加载、转换）。
+
+### 管理数据存储系统
+
+数据不会奇迹般地出现在需要的地方。工程师根据数据类型、访问速度需求以及数据使用方式，选择、配置和管理各种存储方案。这包括使用传统关系型数据库（如PostgreSQL或MySQL）、NoSQL数据库（如MongoDB或Cassandra）、大型分布式存储（如数据仓库，例如Snowflake、BigQuery、Redshift）和数据湖（通常构建在对象存储上，如AWS S3或Google Cloud Storage）。第四章会介绍这些存储选项。
+
+### 确保数据质量和可靠性
+
+原始数据通常是杂乱、不完整或不一致的。数据工程师在他们的管道中实施检查和平衡措施，以清洗数据、验证其准确性并保障其完整性。他们建立监控和警报系统，以检测数据管道或存储系统的问题，从而确保用户依赖的数据值得信赖并在需要时可用。
+
+### 配置数据处理系统
+
+数据通常需要进行处理、汇总或概括。工程师使用不同的处理框架来处理数据上的计算。这可能涉及针对大型周期性任务（如生成每日销售报告）的批处理，或针对实时数据（如分析网站点击发生时的行为）的流处理。第五章将介绍这些处理模式。
+
+### 优化和维护系统
+
+搭建系统只是开始。数据工程师持续监控数据管道和存储系统的性能，寻找瓶颈或低效之处。他们调整数据库、优化查询、重构代码并扩展基础设施，以应对不断增长的数据量和用户需求，确保系统保持高性能和成本效益。
+
+### 与相关方合作
+
+数据工程师并非孤立工作。他们与数据科学家密切合作，以了解模型构建的数据需求；与数据分析师合作，提供报告和仪表盘所需的数据；与软件工程师合作，将数据收集集成到应用程序中。了解这些不同群体的需求对于设计有效的数据方案来说是根本所在。
+
+以下图表说明了数据工程师在组织数据流中的典型位置：
+
+> 数据工程师通过搭建和管理管道、存储和处理系统，将各种数据来源与数据使用者连接起来。
+
+本质上，数据工程师确保数据团队的其他成员能够可靠、高效地获取他们所需的数据，以便获得见解、构建模型或做出决策。他们为复杂数据分析和人工智能的实现奠定了条件。
+
+## 参考资料
+
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108741/) — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media
+  数据工程的现代全面指南，涵盖其原则、实践和技术。
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling, 3rd Edition](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball and Margy Ross (2013)
+  Publisher: John Wiley & Sons
+  数据仓库维度建模的设计指南，是数据管道和存储设计的重要方面。

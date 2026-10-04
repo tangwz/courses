@@ -1,0 +1,170 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "financial-operations-governance-ai"
+lesson: "governance-policies-resource-consumption"
+sourceId: 7035
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-6-financial-operations-governance-ai/governance-policies-resource-consumption"
+title: "资源消耗治理策略"
+description: "实施程序化控制和策略以强制执行预算并防止资源滥用。"
+order: 6
+plots: []
+sourceHash: "9242e9a47550a859c9cc5d89dc3245a9fbcb31cdada97caf79e543107b54d751"
+sourceCorrections: []
+---
+
+成本监控提供可见性，而主动治理则提供控制。从分析账单报告到以编程方式执行财务规范，这是构建可持续AI平台的最终且影响深远的步骤。治理策略是自动化的保护机制，可防止资源滥用，强制执行预算限制，并确保成本优化策略在所有团队和项目中得到一致应用。
+
+实施这些控制需要分层方法，将策略集成到云提供商层面、Kubernetes编排器内部以及通过专门的策略引擎。这创建了一个深度防御模型，引导开发人员高效使用资源，同时不扼杀他们的灵活性。
+
+### 云层面的IAM和服务控制策略
+
+第一层治理在云提供商层面运行。在用户尝试在Kubernetes中配置资源之前，其权限会由云的身份和访问管理 (IAM) 服务检查。对于机器学习 (machine learning)工作负载，这是你对资源消耗设置广泛限制的首次机会。
+
+你可以实施以下策略：
+
+- **限制对昂贵实例系列的访问：** 并非每个数据科学家都需要访问最新、最强劲的`p5`或`h100` GPU实例。你可以使用IAM条件或AWS Organizations中的服务控制策略（SCP）来限制高成本实例类型的供应，仅限于有明确需求和预算的特定角色或项目。
+- **强制标签：** 要求在新创建的资源（如虚拟机或存储桶）上必须存在特定标签（例如，`project-id`、`cost-center`、`owner`）。这不仅仅是建议；它成为资源创建的先决条件，直接为上一节中的成本归因模型提供数据。
+- **限制地理区域：** 为了控制数据传输成本并遵守数据驻留要求，你可以将资源创建限制在特定地理区域。
+
+这些顶层控制作为粗粒度过滤器，设定了团队可供应资源的最高界限。
+
+### Kubernetes原生的资源控制
+
+在云IAM设定的范围之内，Kubernetes提供了自身强大的工具集，用于在集群层面管理资源消耗。这些控制通常限于`命名空间`，因此它们是为共享同一集群的不同团队或项目强制执行预算和公平性的好方法。
+
+#### 资源配额
+
+一个`ResourceQuota`对象对命名空间内可以消耗的资源总量设置了硬性限制。这是在基础设施层面强制执行团队或项目预算的主要机制。你可以为CPU、内存、存储定义配额，并且对机器学习 (machine learning)而言，可以定义特定资源（如NVIDIA GPU）的数量配额。
+
+考虑为数据科学实验团队的命名空间设置一个`ResourceQuota`：
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ds-team-exp-quota
+  namespace: ds-team-exp
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: 200Gi
+    limits.cpu: "200"
+    limits.memory: 400Gi
+    requests.nvidia.com/gpu: "8"
+    pods: "50"
+    persistentvolumeclaims: "20"
+```
+
+此策略确保`ds-team-exp`命名空间的总请求量不会超过8个GPU或200Gi内存，从而防止单个失控实验影响整个集群。
+
+#### 限制范围
+
+`ResourceQuotas`控制总消耗量，而`LimitRanges`则管理单个Pod的资源分配。`LimitRange`可以强制执行最小和最大资源请求，如果用户未指定，则设置默认请求和限制值，并控制请求与限制之间的比率。这可以防止用户提交没有资源请求的Pod（这会使调度器难以放置），或者请求整个节点资源的Pod。
+
+`LimitRange`强制合理默认值的示例：
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-resource-limits
+  namespace: ds-team-exp
+spec:
+  limits:
+  - default:
+      memory: 1Gi
+      cpu: 500m
+    defaultRequest:
+      memory: 512Mi
+      cpu: 250m
+    type: Container
+```
+
+借助此策略，在`ds-team-exp`命名空间中创建的任何未明确定义资源的容器都将自动接收这些基准值，从而提升集群的稳定性和可预测性。
+
+#### 优先级类与抢占
+
+在共享的机器学习平台中，并非所有工作负载都同等。生产推理 (inference)服务的业务重要性高于临时数据分析笔记本。`PriorityClass`对象允许你定义Pod的相对重要程度。当集群资源不足时，Kubernetes调度器可以**抢占**（驱逐）优先级较低的Pod，为优先级较高的Pod腾出空间。
+
+这是一种强大的治理工具，兼顾可靠性和成本。你可以将高优先级类别映射到更昂贵、按需的实例，将低优先级类别映射到更便宜的竞价实例。
+
+1. **定义优先级类：**
+
+   ```yaml
+   apiVersion: scheduling.k8s.io/v1
+   kind: PriorityClass
+   metadata:
+     name: high-priority-prod
+   value: 1000000
+   globalDefault: false
+   description: "用于关键生产推理服务。"
+
+   apiVersion: scheduling.k8s.io/v1
+   kind: PriorityClass
+   metadata:
+     name: low-priority-exp
+   value: 1000
+   globalDefault: false
+   description: "用于可被抢占的实验性任务。"
+   ```
+2. **分配给Pod：**
+
+   ```yaml
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: inference-pod
+   spec:
+     containers:
+     - name: server
+       image: my-model-server
+     priorityClassName: high-priority-prod # 分配高优先级
+   ```
+
+这确保了即使在集群负载很高的情况下，你最重要的工作负载也能保持可用，通过牺牲不那么重要且可能成本较低的任务来实现。
+
+### 策略即代码的高级治理
+
+为了实现最精细和可定制的控制，你可以使用专门的策略引擎，例如Open Policy Agent (OPA) Gatekeeper或Kyverno。这些工具作为**准入控制器**与Kubernetes API服务器集成，允许你根据以代码形式编写的自定义逻辑来验证、修改或阻止任何资源创建或更新请求。
+
+这种方法允许你强制执行Kubernetes原生对象未涵盖的组织规范。
+
+#### OPA Gatekeeper的策略示例：
+
+- **强制成本归因标签：** 策略可以拒绝任何缺少`cost-center`标签的`Pod`或`Deployment`。这使得成本归因不可协商。
+- **限制StorageClass使用：** 策略可以阻止使用高性能的`io2`块存储`StorageClass`，除非Pod也带有`tier: production`标签。
+- **限制公共容器注册表：** 你可以强制执行一项策略，要求所有容器镜像必须从组织私有的、经过扫描的注册表中拉取，从而提升安全性和治理水平。
+
+下图展示了准入控制器如何拦截请求。
+
+> 准入控制的工作流程。用户的请求在被持久化到集群状态存储`etcd`之前，会由策略引擎拦截。
+
+这种“策略即代码”的方法很有效，因为策略本身可以存储在Git中，进行版本控制，并通过CI/CD流水线部署，就像任何其他重要基础设施代码一样。
+
+### 平衡灵活性与控制
+
+有效的治理不是为了构建一个无法逃脱的规则牢笼。过于严格的策略会阻碍开发人员并减缓创新。目标是建立保护机制，使“正确”（即最经济有效和合规）的做法成为最简单的方式。
+
+这需要：
+
+- **清晰沟通：** 团队必须理解策略存在的原因以及如何在其中工作。文档和培训十分必要。
+- **明确的例外流程：** 总是会有绕过策略的合理原因。拥有清晰、有时间限制的例外请求流程是很重要的。
+- **反馈机制：** 使用策略引擎的审计日志来识别哪些策略经常被违反。这可能表明策略过于严格，或者团队需要更好的工具或培训。
+
+通过结合云原生控制、Kubernetes对象和策略即代码引擎，你可以构建一个全面的治理框架。这个框架将财务责任从反应式、手动过程转变为主动的自动化系统，它已融入到你AI平台的结构中。
+
+## 参考资料
+
+- [Resource Quotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/) — Kubernetes Authors (2024)
+  Kubernetes官方文档，解释如何在命名空间内管理聚合资源消耗。
+- [Limit Ranges](https://kubernetes.io/docs/concepts/policy/limit-node-pod-resource/) — Kubernetes Authors (2024)
+  Publisher: The Linux Foundation
+  Kubernetes官方文档，详细说明如何控制单个Pod和容器的资源分配。
+- [Pod Priority and Preemption](https://kubernetes.io/docs/concepts/scheduling-and-priority/pod-priority-preemption/) — Kubernetes Authors (2025)
+  Publisher: The Linux Foundation
+  Kubernetes官方文档，介绍Pod优先级和抢占机制，用于管理工作负载的重要性。
+- [Open Policy Agent Gatekeeper Documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/) — Open Policy Agent Community (2024)
+  Publisher: Cloud Native Computing Foundation (CNCF)
+  Open Policy Agent Gatekeeper的官方文档，介绍通过准入控制器在Kubernetes集群中实施自定义策略。
+- [Service Control Policies (SCPs)](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scp.html) — Amazon Web Services (AWS) (2024)
+  AWS服务控制策略的官方文档，用于跨AWS账户进行集中式、高级别的权限管理。

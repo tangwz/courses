@@ -1,0 +1,47 @@
+---
+course: "deep-learning-fundamentals-keras"
+chapter: "intro-deep-learning-concepts"
+lesson: "what-is-deep-learning"
+sourceId: 4866
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-fundamentals-keras/chapter-1-intro-deep-learning-concepts/what-is-deep-learning"
+title: "什么是深度学习？"
+description: "定义深度学习及其与机器学习和人工智能的关系。"
+order: 1
+plots: []
+sourceHash: "a9b657aece94028f70eb00057ff52941e4180b3d3653a64af337cf1b7671000d"
+sourceCorrections: []
+---
+
+您可能经常遇到人工智能 (AI)、机器学习 (machine learning) (ML) 和深度学习 (deep learning) (DL) 这些术语，有时它们甚至可以互换使用。了解它们之间的关系会很有帮助。可以将它们视为嵌套的层次：AI 是最广泛的范围，包含任何使计算机能够模仿人类智能的方法。机器学习是 AI 的一个子集，侧重于系统从数据中学习规律，而无需为每个任务进行明确编程。深度学习反过来又是机器学习的一个特定子集。
+
+> 人工智能、机器学习和深度学习之间的关系。深度学习是机器学习中的一个专门子方向，而机器学习本身则是更广泛的人工智能范围的一部分。
+
+那么，是什么让深度学习“深”呢？这个术语指的是使用多层（有时数百甚至数千层）堆叠在输入和输出之间的人工神经网络 (neural network) (ANN)。如本章节所述，神经网络受人脑结构启发，由相互连接的节点或“神经元”组成。
+
+在传统机器学习中，特征工程通常需要大量的专业知识和精力。您需要手动识别并从原始数据中提取最相关的特征，以输入到您的学习算法中。例如，在图像分类任务中，您可能会构建像边缘检测器或特定形状模板这样的特征。
+
+深度学习采取了不同的方法。深度神经网络不再依赖于手动设计的特征，而是以分层的方式直接从数据中学习特征。初始层可能会学习简单的模式，例如图像中的边缘或纹理。后续层会组合这些简单的模式，以学习更复杂的特征，例如形状或物体部分。最终层会组合这些高层次特征进行预测，例如识别图像中的特定物体。
+
+这种自动学习大量原始数据中复杂模式和表示的能力，是推动深度学习在各种复杂任务中取得成功的原因，例如：
+
+- **计算机视觉：** 图像分类、物体检测、图像生成。
+- **自然语言处理 (NLP)：** 机器翻译、情感分析、文本生成。
+- **语音识别：** 将口语转录为文本。
+- **推荐系统：** 推荐产品或内容。
+
+训练这些深层网络涉及可能数百万个参数 (parameter)（权重 (weight)和偏置 (bias)），其计算密集度之所以变得可行，是因为算法的改进（例如反向传播 (backpropagation)的改进版本）、大规模数据集的可用性以及现代硬件（特别是图形处理器 (GPU)）提供的并行处理能力。
+
+Keras，本课程的核心库，提供了一个高级、用户友好的接口，用于定义、训练和评估这些深度神经网络。它让您能够专注于架构和训练过程，而无需陷入底层实现细节，并与 TensorFlow、PyTorch 或 JAX 等后端引擎平滑集成（特别是 Keras 3 及更高版本）。随着您在本课程中的学习，您将使用 Keras 构建和训练各种类型的深度学习模型，从即将到来的章节中介绍的基础知识开始。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  深度学习基础理论的权威教材，涵盖神经网络理论、架构和训练方法。
+- [Keras Documentation](https://keras.io/) — Keras team (2024)
+  Keras API、模型构建和训练工作流的官方指南，对于Keras课程至关重要。
+- [Deep Learning](https://www.nature.com/articles/nature14539) — Yann LeCun, Yoshua Bengio, and Geoffrey Hinton (2015)
+  Journal: Nature; Volume: 521; Pages: 436-444; DOI: [10.1038/nature14539](https://doi.org/10.1038/nature14539)
+  深度学习先驱者撰写的高引用综述文章，概述了其原理、历史和在多个领域的成功应用。
+- [Stanford CS230: Deep Learning](http://cs230.stanford.edu/) — Andrew Ng and Stanford CS230 Staff (2018)
+  提供深度学习基础的综合视频讲座和材料，包含神经网络、反向传播和实际应用。

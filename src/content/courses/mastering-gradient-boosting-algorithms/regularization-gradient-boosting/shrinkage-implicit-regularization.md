@@ -1,0 +1,55 @@
+---
+course: "mastering-gradient-boosting-algorithms"
+chapter: "regularization-gradient-boosting"
+lesson: "shrinkage-implicit-regularization"
+sourceId: 1962
+sourceUrl: "https://apxml.com/zh/courses/mastering-gradient-boosting-algorithms/chapter-3-regularization-gradient-boosting/shrinkage-implicit-regularization"
+title: "收缩作为隐式正则化"
+description: "分析学习率如何有助于正则化。"
+order: 3
+plots: ["plots/1962-0.json"]
+sourceHash: "8a2e8c3bd841950b7639ecd506fcddf81feb646fbc38a624294139dcb236cfb1"
+sourceCorrections: []
+---
+
+在梯度提升框架中，模型是按顺序构建的：
+
+模型在梯度提升框架中是顺序构建的：
+
+这里，$F_{m-1}(x)$ 是经过 $m-1$ 轮提升后的模型，$h_m(x)$ 是一个新的基础学习器（通常是决策树），它被训练用于拟合上一阶段的残差误差（或梯度），而 $\nu$（在库中常表示为 `eta` 或 `learning_rate`）是收缩参数 (parameter)，通常是介于 0 和 1 之间的一个小数（例如 0.01，0.1）。
+
+乍一看，$\nu$ 似乎与标准梯度下降 (gradient descent)优化算法中使用的学习率相同。它在这里的作用类似，但作用范围是函数空间。收缩会调整添加到集成模型中每个新树的贡献。通过设置 $\nu < 1$，我们刻意减慢了学习过程。我们不是让每个新树 $h_m(x)$ 完全修正之前模型 $F_{m-1}(x)$ 的误差，而只是添加其预测值的一小部分（即 $\nu$ 乘以其预测值）。
+
+这为什么对正则化 (regularization)有益？
+
+1. **减少单个树的影响：** 一个小的 $\nu$ 会减小每个单个树的影响。这可以防止任何单个树（它可能捕捉到训练数据中特有的噪声或特定模式）对最终预测产生过大的影响。模型对单个基础学习器的特性变得不那么敏感。
+2. **需要更多树：** 减慢学习过程意味着，与使用 $\nu=1$ 训练的模型相比，通常需要更多的提升轮次（即更多的树，$M$）才能在*训练*数据上达到相似的拟合水平。
+3. **通过平均提高泛化能力：** 需要更多树具有一个积极的附带效果。最终预测 $F_M(x)$ 成为大量不同基础学习器的聚合。每棵树都专注于剩余的误差，通过组合许多略有不同的视角（由于 $\nu$ 的存在，每个视角都被赋予较轻的权重 (weight)），模型能够更有效地捕捉潜在信号，同时平均掉噪声。这种由收缩促进的集成效应，使得模型在未见数据上表现出更好的泛化能力。
+
+可以将其视为在函数空间的优化路径上迈出更小、更谨慎的步伐。更大的步伐（高 $\nu$）可能迅速降低训练误差，但有过度拟合最佳函数或过度学习噪声的风险。更小的步伐（低 $\nu$）进展较慢，但允许模型逐渐优化其预测，整合来自多棵树的信息，从而得到一个更平滑、更具泛化能力的最终函数。
+
+这种正则化效果被认为是*隐式*的，因为收缩不会根据模型复杂度向损失函数 (loss function)添加显式惩罚项（如L1/L2正则化那样），也不会直接约束树的结构（如设置 `max_depth`）。相反，它修改了提升*过程*本身，固有地促进了依赖于许多弱学习器协作的解决方案。
+
+下图呈现了这一原理。请注意，较低的学习率 ($\nu = 0.1$) 导致训练集上的收敛速度较慢，但与较高的学习率 ($\nu = 0.8$) 相比，它获得了更好（更低）的验证误差，而后者会迅速过拟合 (overfitting)。
+
+
+
+![收缩（学习率）对过拟合的影响](plots/1962-0.json)
+
+
+
+> 使用高 ($\nu=0.8$) 和低 ($\nu=0.1$) 收缩率训练的模型的训练和验证误差曲线。较低的收缩率需要更多轮次，但会产生更好的验证表现，从而减轻过拟合。
+
+在实践中，收缩几乎总是被使用（通常使用远小于 1.0 的值）。它与提升轮次 ($M$) 的数量形成了一种基本的权衡关系。一种常见做法是将 $\nu$ 设置为一个较小的值（例如 0.01 到 0.1），然后使用验证集确定最佳的 $M$ 值，通常会采用早停法（本章后面会讨论）。虽然非常小的 $\nu$ 值会因为需要大量的 $M$ 而显著增加计算时间，但由此带来的泛化能力提升通常能够弥补这一成本。收缩与其他正则化技术（如树约束和子抽样）配合使用，以构建梯度提升模型。
+
+## 参考资料
+
+- [Greedy Function Approximation: A Gradient Boosting Machine](http://www.jstor.org/stable/2699986) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Publisher: Institute of Mathematical Statistics; Volume: 29; Pages: 1189-1232
+  介绍了梯度提升机算法，详细阐述了学习率（收缩）在控制步长和正则化中的作用。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://hastie.su.domains/ElemStatLearn/ESLII_print12.pdf) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer; Pages: 353-380
+  统计学习领域的标准参考教材，其中专门有一章讨论了提升算法，并详细解释了收缩及其正则化效果。
+- [Ensemble Methods: Foundations and Algorithms](https://doi.org/10.1201/9781003587774) — Zhi-Hua Zhou (2012)
+  Publisher: Chapman and Hall/CRC; Pages: 67-104; DOI: [10.1201/b12196](https://doi.org/10.1201/b12196)
+  对包括提升在内的集成方法进行了详细的学术回顾，涵盖了收缩参数及其对模型泛化能力的影响。

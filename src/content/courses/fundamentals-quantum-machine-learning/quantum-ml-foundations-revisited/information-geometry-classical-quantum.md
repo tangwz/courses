@@ -1,0 +1,83 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-ml-foundations-revisited"
+lesson: "information-geometry-classical-quantum"
+sourceId: 1038
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-1-quantum-ml-foundations-revisited/information-geometry-classical-quantum"
+title: "信息几何在经典与量子模型中"
+description: "信息几何观念介绍，适用于经典统计模型和量子态。"
+order: 6
+plots: []
+sourceHash: "d8ce825bfcc2097e2fb45767a15827ce740ff4f3d86878ad0795a5733da1eed1"
+sourceCorrections: []
+---
+
+回顾了量子力学和机器学习 (machine learning)的核心代数及计算结构后，我们现在通过信息几何引入一种几何视角。这个领域为理解统计模型的结构提供了有力工具，这直接适用于经典机器学习模型（通常由概率分布定义）和量子机器学习模型（由量子态定义）。弄清这种潜在的几何结构可以提供关于模型表达能力、算法优化以及学习基本界限的见解。
+
+### 经典概率分布的几何结构
+
+经典机器学习 (machine learning)模型，特别是像贝叶斯网络或逻辑回归这样的概率模型，定义了一系列由一组变量（例如 $\theta = (\theta_1, \dots, \theta_d)$）参数 (parameter)化的概率分布。通过改变这些参数可以得到的所有可能分布的集合构成了一个统计流形，$M = \{ p(x|\theta) | \theta \in \Theta \}$。
+
+信息几何为这个流形配备了一种源自分布本身的自然度量结构：费舍尔信息矩阵（FIM)。对于模型 $p(x|\theta)$，FIM $I(\theta)$ 是一个 $d \times d$ 矩阵，其元素由以下给出：
+
+
+$$
+I(\theta)_{ij} = E_{\theta} \left[ \left( \frac{\partial}{\partial \theta_i} \log p(x|\theta) \right) \left( \frac{\partial}{\partial \theta_j} \log p(x|\theta) \right) \right]
+$$
+
+
+这里，$E_{\theta}[\cdot]$ 表示关于分布 $p(x|\theta)$ 的期望。FIM 在统计流形上充当黎曼度量张量。直观来看，距离 $ds^2 = \sum_{i,j} I(\theta)_{ij} d\theta_i d\theta_j$ 度量了相邻概率分布 $p(x|\theta)$ 和 $p(x|\theta + d\theta)$ 之间的统计可区分性。距离越大意味着这些分布越容易通过样本进行区分。
+
+费舍尔信息度量与 Kullback-Leibler (KL) 散度有本质关联。虽然 KL 散度 $D_{KL}(p(x|\theta) || p(x|\theta'))$ 度量了两个分布之间的差异，但它不对称且不满足三角不等式，因此它不是一个真正的距离度量。然而，对于无限接近的分布 $\theta' = \theta + d\theta$，KL 散度近似于由费舍尔度量定义的平方距离：
+
+
+$$
+D_{KL}(p(x|\theta) || p(x|\theta + d\theta)) \approx \frac{1}{2} \sum_{i,j} I(\theta)_{ij} d\theta_i d\theta_j
+$$
+
+
+这种几何视角在经典机器学习中很有意义。例如，自然梯度下降 (gradient descent)算法利用费舍尔信息矩阵的逆矩阵来预处理梯度更新，有效地根据分布的几何形状而非参数本身的欧几里得几何形状来调整参数空间。这可以带来更快的收敛速度，特别是在参数敏感度差异很大的情况下。
+
+> 经典统计模型、其参数、由此产生的概率分布流形以及定义其几何结构的费舍尔信息度量之间的关系。
+
+### 量子态的几何结构
+
+同样，我们可以将几何观念应用于量子态空间。量子系统的状态由密度矩阵 $\rho$ 描述，它是一个迹为一的正半定算符（$\text{Tr}(\rho) = 1$）。如果系统依赖于参数 (parameter) $\theta$，我们就会得到一个量子态族 $\rho(\theta)$。这个态族在所有可能的密度矩阵空间中定义了一个流形。
+
+正如费舍尔信息度量经典分布的可区分性一样，量子态也有类似的观念。量子态空间上可以定义多种度量，例如Bures度量或量子Fubini-Study度量（对于纯态会简化）。这些度量量化 (quantization)了相邻量子态 $\rho(\theta)$ 和 $\rho(\theta + d\theta)$ 的可区分程度，同时考虑了量子测量所施加的限制。
+
+量子费舍尔信息（QFI）是一个核心观念。对于单个参数 $\theta$，QFI $F_Q(\theta)$ 界定了从量子态 $\rho(\theta)$ 的测量中估计 $\theta$ 的精度，这由量子 Cramér-Rao 界限正式阐述：
+
+
+$$
+(\Delta \theta)^2 \ge \frac{1}{N F_Q(\theta)}
+$$
+
+
+其中 $N$ 是测量次数。QFI 可以使用对称对数导数 (SLD) 算符 $L_\theta$ 计算，该算符隐式定义为 $\frac{\partial \rho_\theta}{\partial \theta} = \frac{1}{2} (\rho_\theta L_\theta + L_\theta \rho_\theta)$。QFI 随后为 $F_Q(\theta) = \text{Tr}(\rho_\theta L_\theta^2)$。对于多个参数，QFI 变成一个矩阵，类似于经典的 FIM。
+
+这种量子几何视角与QML高度相关：
+
+1. **变分量子算法 (VQAs)：** VQA 优化参数化量子电路 (PQC) $U(\theta)$ 的参数 $\theta$，以使代价函数最小化，该代价函数通常是一个期望值 $\langle H \rangle_{\theta} = \text{Tr}(H \rho(\theta))$，其中 $\rho(\theta) = U(\theta) \rho_0 U^\dagger(\theta)$。优化几何由量子态流形和选定的度量（例如，量子Fubini-Study）决定。我们将在第4章讨论的量子自然梯度 (QNG) 算法，利用 QFI 矩阵作为度量张量，通过沿着态流形上的最速下降路径，实现可能更快、更稳定的收敛，这与经典自然梯度类似。
+2. **量子核方法：** 量子核计算从经典数据编码的量子态之间的内积，$K(x_i, x_j) = |\langle \phi(x_i) | \phi(x_j) \rangle|^2$。特征空间（由态 $|\phi(x)\rangle$ 张成的希尔伯特空间部分）的几何结构决定了核的性质以及 QSVM 等算法的效力。信息几何有助于分析这些特征空间的结构和表达能力。
+3. **表达能力和可训练性：** PQC 可达到的态空间的几何结构影响其表达能力（它可以表示哪些函数）和可训练性（例如，对贫瘠高原的敏感性）。高曲率区域或特定的几何性质可能与优化困难的区域相关联。
+
+通过以信息几何的视角看待经典和量子模型，我们获得了一个统一的框架来分析它们的结构、比较它们的能力，并设计更有效的学习算法。这种几何见解补充了代数和计算视角，提供了一种更丰富的认识，这对理解高级 QML 议题很必要。
+
+## 参考资料
+
+- [Methods of Information Geometry](https://bookstore.ams.org/mmj-30) — Shun-ichi Amari and Hiroshi Nagaoka (2000)
+  Publisher: American Mathematical Society and Oxford University Press
+  奠基性著作，系统介绍信息几何，涵盖经典统计流形、Fisher信息以及统计推断中的几何方法。
+- [Quantum Cramér-Rao bounds](https://doi.org/10.1103/PhysRevLett.72.3439) — Samuel L. Braunstein, Carlton M. Caves (1994)
+  Journal: Physical Review Letters; Publisher: American Physical Society; Volume: 72; Pages: 3439-3443; DOI: [10.1103/PhysRevLett.72.3439](https://doi.org/10.1103/PhysRevLett.72.3439)
+  引入量子Cramér-Rao界和量子Fisher信息的重要论文，对量子计量学和参数估计至关重要。
+- [Natural Gradient Works Efficiently in Learning](https://direct.mit.edu/neco/article-abstract/10/2/251/6604/Natural-Gradient-Works-Efficiently-in-Learning) — Shun-ichi Amari (1998)
+  Journal: Neural Computation; Publisher: The MIT Press; Volume: 10; Pages: 251-276; DOI: [10.1162/089976698300017746](https://doi.org/10.1162/089976698300017746)
+  引入自然梯度下降方法的奠基性论文，解释了其统计学依据以及在统计流形上优化参数化模型的益处。
+- [Quantum natural gradient](https://quantum-journal.org/papers/q-2020-05-25-269/) — James Stokes, Josh Izaac, Nathan Killoran, and Giuseppe Carleo (2020)
+  Journal: Quantum; Publisher: Verein zur Förderung des Open Access Publizierens in den Quantenwissenschaften; Volume: 4; Pages: 269; DOI: [10.22331/q-2020-05-25-269](https://doi.org/10.22331/q-2020-05-25-269)
+  引入用于优化变分量子电路的量子自然梯度算法，展示其相对于标准梯度下降法在收敛速度和稳定性方面的潜力。
+- [Information Geometry for Quantum Technologies](https://doi.org/10.1103/PRXQuantum.3.017001) — Giacomo De Palma, Sune Gammelmark (2022)
+  Journal: PRX Quantum; Publisher: American Physical Society; Volume: 3; Pages: 017001; DOI: [10.1103/PRXQuantum.3.017001](https://doi.org/10.1103/PRXQuantum.3.017001)
+  综合评论，统一视角看待信息几何在量子技术中的应用，包括量子计量学和量子机器学习。

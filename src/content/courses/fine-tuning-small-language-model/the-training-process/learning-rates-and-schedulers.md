@@ -1,0 +1,51 @@
+---
+course: "fine-tuning-small-language-model"
+chapter: "the-training-process"
+lesson: "learning-rates-and-schedulers"
+sourceId: 8518
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-small-language-model/chapter-5-the-training-process/learning-rates-and-schedulers"
+title: "学习率与调度器"
+description: "配置学习率策略和衰减调度，以确保模型稳定收敛。"
+order: 2
+plots: ["plots/8518-0.json"]
+sourceHash: "3a2644458f3a6caa87b9d9d1dfa34957dc86e44d5d017dcee16155b1d8500f9c"
+sourceCorrections: []
+---
+
+在神经网络 (neural network)优化过程中，学习率决定了反向传播 (backpropagation)时权重 (weight)更新的幅度。使用 LoRA 等参数 (parameter)高效技术微调 (fine-tuning)轻量化 (quantization)语言模型，需要一套与从零开始训练模型不同的学习率策略。由于优化过程仅更新新初始化的适配器权重的一个小子集，因此通常使用较高的学习率。LoRA 适配器的常用起始值在 $1e-4$ 到 $3e-4$ 之间，而对所有模型权重进行全量微调可能需要接近 $1e-5$ 的更低速率。
+
+在整个训练循环中应用恒定的学习率往往效果不佳。在微调初期，适配器权重是随机初始化的。这种随机状态会产生较高的初始损失值和相应的较大梯度。如果优化器立即将最大学习率应用于这些大梯度，模型参数可能会出现严重的数学不稳定并导致发散。为了管理这种行为，训练循环依赖于学习率调度器。
+
+调度器根据当前的训练步数动态调整优化器的步长。标准做法是从预热阶段（Warmup）开始。在此阶段，学习率会在特定的步数内，从零线性增加到配置的最大学习率。这种渐进式缩放允许模型在进行较大的优化步骤之前先稳定其初始权重。您可以使用固定步数或总训练时长的百分比来配置此预热期。
+
+在预热阶段结束达到峰值学习率后，学习率必须下降。当模型接近损失函数 (loss function)的最小值时，步长过大可能会导致优化过程在最小值附近反复震荡或完全跳过。衰减策略会逐渐减小步长，帮助模型收敛到最终配置。
+
+回想一下之前介绍的指数衰减公式：
+
+$\alpha_{t} = \alpha_{\text{初始}} \cdot \beta^{t}$
+
+虽然这种数学基础在经典机器学习 (machine learning)中很常见，但现代语言模型训练经常依赖余弦衰减调度。余弦调度器遵循余弦曲线的形状。它起初下降缓慢，在训练中期几乎呈线性下降，最后在接近零时非常缓慢地趋于平稳。这条曲线提供了一个长期的有效训练期，随后是一个平缓的收敛阶段。
+
+
+
+![Interactive chart](plots/8518-0.json)
+
+
+
+> 1000 个训练步数的学习率变化过程，包含 100 步线性预热以及随后的余弦衰减至零。
+
+使用 Hugging Face Transformers 库配置训练循环时，这些调度参数会直接传递到训练参数配置中。您需要指定峰值学习率，将调度器类型定义为余弦（cosine），并设置预热比例。0.03 的预热比例意味着线性增长阶段将占总训练步数的前 3%。将调度定义为比例而非固定步数，可以确保在添加更多数据或增加训练轮数（Epoch）时，预热阶段能够自动缩放。
+
+正确配置这些数值需要观察。如果学习率过高或预热期过短，训练损失可能会飙升至无效值并终止训练。如果学习率过低或衰减过快，损失曲线会过早趋于平缓，模型将无法适应新的指令格式。根据训练日志调整这些调度方案是微调迭代周期中的常规部分。
+
+## 参考资料
+
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://openreview.net/forum?id=n772T1zN_k) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2022)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍 LoRA 的原始论文，为参数高效微调中使用的特定学习率范围提供了实验依据。
+- [SGDR: Stochastic Gradient Descent with Warm Restarts](https://openreview.net/forum?id=SkqvtD5ll) — Ilya Loshchilov, Frank Hutter (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1608.03983](https://doi.org/10.48550/arXiv.1608.03983)
+  本文介绍了余弦退火策略，这是该章节中提到的余弦衰减调优方法的数学基础。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 290-305
+  第 8 章正式解释了学习率和优化算法如何影响神经网络训练的稳定性。

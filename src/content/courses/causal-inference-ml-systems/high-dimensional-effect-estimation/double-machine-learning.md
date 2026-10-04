@@ -1,0 +1,112 @@
+---
+course: "causal-inference-ml-systems"
+chapter: "high-dimensional-effect-estimation"
+lesson: "double-machine-learning"
+sourceId: 4343
+sourceUrl: "https://apxml.com/zh/courses/causal-inference-ml-systems/chapter-3-high-dimensional-effect-estimation/double-machine-learning"
+title: "双重机器学习用于平均治疗效果"
+description: "理解并实施双重机器学习 (DML)，以可靠地估计平均治疗效果。"
+order: 1
+plots: []
+sourceHash: "ead3791566ffd994592fd570f6d28d9640147e06b43e7de413b4c81c5ffb61ec"
+sourceCorrections: []
+---
+
+估计平均治疗效果 (ATE)，即 $E[Y(1) - Y(0)]$，是因果推断中的一个主要目标。然而，在存在高维混杂因素 $X$ 的情况下获得可靠的估计，带来了重要的统计难题。简单地将所有潜在混杂因素纳入标准回归模型，例如 $Y \sim \theta T + f(X)$，通常会失效。高维度可能导致过拟合 (overfitting)、估计不稳定，以及重要的正则化 (regularization)偏差。当使用 Lasso 等方法选择变量或收缩 $f(X)$ 中的系数时，估计的治疗效果 $\hat{\theta}$ 可能会产生偏差，即使 $f(X)$ 的模型被正确设定。此外，当 $X$ 是高维时，正确设定 $f(X)$ 的函数形式很困难。
+
+双重机器学习 (machine learning) (DML) 提供了一个强大的框架来解决这些问题，使得能够使用灵活的机器学习方法进行混杂因素调整，而不会给最终的 ATE 估计引入显著偏差。其核心思想依赖于两个支柱：奈曼正交性和交叉拟合。
+
+### 正交化：隔离治疗效果
+
+DML 的原理来源于正交化，类似于计量经济学中的 Frisch-Waugh-Lovell 定理。DML 不直接将 $Y$ 建模为 $T$ 和 $X$ 的函数，而是侧重于建模 $Y$ 和 $T$ 中 *不能* 由混杂因素 $X$ 解释的部分。
+
+考虑一个简化场景：偏线性模型 (PLM)：
+
+
+$$
+Y = \theta_0 T + g_0(X) + \epsilon, \quad E[\epsilon | X, T] = 0 \\
+T = m_0(X) + \nu, \quad E[\nu | X] = 0
+$$
+
+
+这里， $Y$ 是结果，$T$ 是治疗（通常是二元的，但 DML 也处理连续治疗），$X$ 代表高维混杂因素，$\theta_0$ 是目标因果参数 (parameter)（在假设下的 ATE），$g_0(X) = E[Y | X]$ 捕获混杂因素对结果的影响（如果 $T$ 是二元且影响截距，则以 $T=0$ 为条件），而 $m_0(X) = E[T | X]$ 是倾向得分函数（对于二元 T）或给定 X 的 T 的条件期望（对于连续 T）。误差项 $\epsilon$ 和 $\nu$ 与它们各自的条件变量正交。
+
+通过将 $Y$ 对 $T$ 和一些估计 $\hat{g}(X)$ 进行回归来估计 $\theta_0$ 的简单方法会受到影响，如果 $\hat{g}$ 估计不佳或使用了正则化 (regularization)。DML 通过使用残差来估计 $\theta_0$ 从而避免了这个问题。
+
+定义残差：
+
+- 结果残差： $\tilde{Y} = Y - E[Y | X]$
+- 治疗残差： $\tilde{T} = T - E[T | X]$
+
+代入模型方程（并假设 $E[T \epsilon | X] = 0$），我们可以表明：
+
+
+$$
+\tilde{Y} \approx \theta_0 \tilde{T} + \epsilon'
+$$
+
+
+其中 $\epsilon'$ 是一个近似与 $\tilde{T}$ 正交的误差项。这表明我们可以通过将结果残差 $\tilde{Y}$ 对治疗残差 $\tilde{T}$ 进行回归来估计 $\theta_0$。
+
+### 奈曼正交性与机器学习 (machine learning)的效能
+
+为什么这种残差化有帮助？关键在于**奈曼正交性**。如果估计辅助参数 (parameter)（如 $g_0(X)$ 和 $m_0(X)$）的小误差对目标参数估计（$\hat{\theta}_0$）的一阶影响为零，那么一个统计估计问题就是奈曼正交的。DML 中的最后回归步骤（$\tilde{Y}$ 对 $\tilde{T}$ 的回归）具备这一属性。
+
+这表示我们可以使用复杂的、可能精密的机器学习模型来估计辅助函数 $\hat{g}_0(X) \approx E[Y|X]$ 和 $\hat{m}_0(X) \approx E[T|X]$，而它们的固有偏差（例如，正则化 (regularization)偏差）不会直接污染 $\theta_0$ 的估计。只要我们用于 $\hat{g}_0$ 和 $\hat{m}_0$ 的机器学习模型收敛速度合理（通常在均方误差方面快于 $n^{-1/4}$），最终估计 $\hat{\theta}_0$ 在标准条件下将是一致的并近似正态分布，从而实现有效的统计推断（置信区间、假设检验）。
+
+### 交叉拟合：避免过拟合 (overfitting)偏差
+
+DML 的一个重要组成部分是**交叉拟合**（或样本划分）。如果我们使用*相同*的数据样本来估计辅助函数（$\hat{g}_0$, $\hat{m}_0$），然后计算残差并估计 $\theta_0$，我们会引入过拟合导致的偏差。辅助模型可能会无意中拟合与治疗残差相关的噪声，从而使最终估计产生偏差。
+
+交叉拟合打破了这种依赖性：
+
+1. **数据划分**：将数据集随机划分为 $K$ 个不相交的折（例如， $K=5$ 或 $K=10$）。
+2. **遍历折叠**：对于每个折 $k \in \{1, ..., K\}$：
+   - 使用*除*折 $k$ 中的数据之外的所有数据训练辅助模型 $\hat{g}_0^{(-k)}$ 和 $\hat{m}_0^{(-k)}$。可以使用任何合适的机器学习 (machine learning)模型（Lasso、随机森林、梯度提升等）。
+   - 使用模型 $\hat{g}_0^{(-k)}$ 和 $\hat{m}_0^{(-k)}$ 对折 $k$ *内*的观测值预测 $E[Y|X]$ 和 $E[T|X]$。
+   - 计算折 $k$ 中观测值的残差：
+     $\tilde{Y}_i = Y_i - \hat{g}_0^{(-k)}(X_i)$
+     $\tilde{T}_i = T_i - \hat{m}_0^{(-k)}(X_i)$ for all $i$ in fold $k$.
+3. **估计 $\theta_0$**：遍历所有折叠后，合并所有观测值的残差 $(\tilde{Y}_i, \tilde{T}_i)$。使用 $\tilde{Y}$ 对 $\tilde{T}$ 的简单最终回归（通常是普通最小二乘法 - OLS）来估计 $\theta_0$：
+
+
+$$
+\hat{\theta}_0 = \left( \sum_{i=1}^n \tilde{T}_i^2 \right)^{-1} \left( \sum_{i=1}^n \tilde{T}_i \tilde{Y}_i \right)
+$$
+
+
+或者更一般地，求解正交矩条件： $\frac{1}{n} \sum_{i=1}^n (\tilde{Y}_i - \hat{\theta}_0 \tilde{T}_i) \tilde{T}_i = 0$。
+
+> DML 中 K 折交叉拟合过程的示意图。辅助模型在折外数据上训练，并用于预测当前折的残差，这确保了每个观测值的预测都来自一个未在其上训练过的模型。
+
+### DML 算法概述
+
+1. **选择机器学习 (machine learning)方法**：为估计条件期望 $g_0(X) = E[Y|X]$ 和 $m_0(X) = E[T|X]$ 选择机器学习算法。常见选择包括 Lasso、Ridge、Elastic Net、随机森林、梯度提升或神经网络 (neural network)。选择取决于数据特征和计算预算，但通常更倾向于灵活性。
+2. **交叉拟合设置**：将数据随机划分为 $K$ 个折。
+3. **辅助估计与残差化（循环）**：对于每个折 $k$：
+   - 在不在折 $k$ 中的数据上训练 $\hat{g}_0^{(-k)}$ 和 $\hat{m}_0^{(-k)}$。
+   - 对于折 $k$ 中的 $i$，预测 $\hat{Y}_i = \hat{g}_0^{(-k)}(X_i)$ 和 $\hat{T}_i = \hat{m}_0^{(-k)}(X_i)$。
+   - 对于折 $k$ 中的 $i$，计算残差 $\tilde{Y}_i = Y_i - \hat{Y}_i$ 和 $\tilde{T}_i = T_i - \hat{T}_i$。
+4. **最终估计**：汇集所有折叠中的残差 $(\tilde{Y}_i, \tilde{T}_i)$，并通过 $\tilde{Y}$ 对 $\tilde{T}$ 的回归来估计 $\theta_0$。
+5. **推断**：根据最终回归和影响函数，使用适当的公式计算 $\hat{\theta}_0$ 的标准误差（细节通常由 DML 软件包处理）。
+
+### 注意事项与扩展
+
+- **模型选择**：尽管 DML 对*小*误差具有很强的容忍度，但最终估计的质量仍取决于模型的预测准确性。使用能够很好地捕捉潜在关系的灵活模型很重要。
+- **假设**：DML 仍依赖于标准的因果识别假设，主要是**无混杂性** ($(Y(1), Y(0)) \perp T | X$) 和**重叠性** ($0 < P(T=1|X) < 1$)。DML 通过有效调整 $X$ 有助于在高维数据中满足无混杂性假设，但它不能解决与未测量混杂相关的问题。
+- **泛化**：上述描述侧重于 PLM。DML 可以扩展到处理更通用的模型，包括具有治疗效果异质性的模型（$\theta$ 依赖于 $X$ 的交互模型），尽管估计*平均*效果 $\theta_0$ 通常遵循类似的残差化逻辑。`EconML` 和 `DoubleML` 等库实现了针对不同模型结构的各种 DML 估计器。
+- **计算成本**：在交叉拟合循环中训练多个机器学习 (machine learning)模型可能计算密集，尤其是在大型数据集或复杂模型的情况下。
+
+总之，双重机器学习提供了一种原则性且实用的方法，用于估计高维环境中的平均治疗效果。通过将机器学习的预测能力与奈曼正交性的理论保证以及交叉拟合带来的偏差减少相结合，DML 使得研究人员和实践者能够从复杂的观测数据中获得更可靠的因果估计。该技术为效应估计奠定了基础，之后我们将进一步考虑使用为条件平均治疗效果 (CATE) 设计的方法来分析效应在个体间的差异。
+
+## 参考资料
+
+- [Double/debiased machine learning for treatment and causal parameters](https://doi.org/10.1111/ectj.12097) — Victor Chernozhukov, Denis Chetverikov, Mert Demirer, Esther Duflo, Christian Hansen, Whitney K. Newey, and James Robins (2018)
+  Journal: The Econometrics Journal; Publisher: Oxford University Press on behalf of the Royal Economic Society; Volume: 21; Pages: C1-C68; DOI: [10.1111/ectj.12097](https://doi.org/10.1111/ectj.12097)
+  引入双重机器学习框架的开创性论文，详细阐述了用于因果参数估计的内曼正交性和交叉拟合。
+- [Causal Inference: The Mixtape](https://mixtape.scunning.com/) — Scott Cunningham (2021)
+  Publisher: Yale University Press
+  一本广受认可的书籍，涵盖了现代因果推断方法，包括机器学习在高维环境中的作用，对建立基础理解很有价值。
+- [The Impact of Machine Learning on Econometrics](https://www.nber.org/chapters/c14022) — Susan Athey and Guido W. Imbens (2019)
+  Journal: In The Economics of Artificial Intelligence: An Agenda; Publisher: University of Chicago Press; Pages: 507-533; DOI: [10.7208/chicago/9780226613812.003.0016](https://doi.org/10.7208/chicago/9780226613812.003.0016)
+  本章讨论了机器学习方法如何改变计量经济学分析和因果推断，为 DML 方法提供了更广阔的背景。

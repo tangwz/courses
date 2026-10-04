@@ -1,0 +1,92 @@
+---
+course: "python-for-beginners"
+chapter: "handling-errors-exceptions"
+lesson: "python-raising-exceptions"
+sourceId: 2387
+sourceUrl: "https://apxml.com/zh/courses/python-for-beginners/chapter-9-handling-errors-exceptions/python-raising-exceptions"
+title: "手动引发异常"
+description: "学习如何使用 `raise` 语句在自己的代码中手动引发异常来指示错误情况。"
+order: 7
+plots: []
+sourceHash: "279bf7fe69f449ea5204ef678586d541a38560b361bc7748c98796e36a950095"
+sourceCorrections: []
+---
+
+尽管 Python 在遇到运行时错误（例如除以零或访问不存在的文件）时会自动引发异常，但在某些情况下，程序的逻辑本身需要表明出错了。例如，函数可能接收到类型正确但根据函数要求值不合法的数据。在这种情况下，你可以使用 `raise` 语句主动引发异常。
+
+可以把 `raise` 看作是你的代码在说：“停止！我特意检查的错误情况发生了。” 这是一个确保程序内部规则并清楚指明问题的有力方法。
+
+### 为什么手动引发异常？
+
+在以下几种常见情况下，你可能需要手动引发异常：
+
+1. **输入验证：** 函数可能要求参数 (parameter)符合某些条件。如果参数不合法（例如，函数期望正数却接收到负数），引发异常通常比返回错误代码或像 `None` 这样的特定值更清晰。
+2. **强制状态：** 有时，只有当程序或对象处于特定状态时，某个操作才有效。如果在错误的状态下尝试操作，引发异常可以避免意外行为。
+3. **表明未满足的前提条件：** 如果一段代码依赖于尚未满足的条件（例如，配置文件尚未加载），它可以通过引发异常来指示问题。
+
+### 使用 `raise` 语句
+
+引发异常的语法很简单：
+
+```python
+raise ExceptionType("可选的错误描述信息")
+```
+
+在这里，`ExceptionType` 是你希望引发的异常的类。Python 有多种内置异常类型，适用于不同的错误情况。通常，使用最具体、最合适的内置异常类型是一种推荐做法。可选的字符串参数 (parameter)提供了一个人类可读的消息，解释错误的原因，这对于调试非常有帮助。
+
+让我们看一个例子。设想一个计算矩形面积的函数，它要求尺寸为正数。
+
+```python
+def calculate_rectangle_area(length, width):
+    """计算矩形的面积。"""
+    if length <= 0 or width <= 0:
+        # 如果尺寸为非正数，则引发 ValueError
+        raise ValueError("矩形尺寸必须是正数。")
+    return length * width
+
+# 示例用法
+try:
+    area1 = calculate_rectangle_area(10, 5)
+    print(f"Area 1: {area1}")
+
+    area2 = calculate_rectangle_area(-4, 5) # 这将引发一个异常
+    print(f"Area 2: {area2}")
+
+except ValueError as e:
+    print(f"计算面积出错: {e}")
+
+# 另一个无效输入的例子
+try:
+    area3 = calculate_rectangle_area(10, 0) # 这也会引发一个异常
+    print(f"Area 3: {area3}")
+except ValueError as e:
+    print(f"计算面积出错: {e}")
+```
+
+在这段代码中：
+
+- `calculate_rectangle_area` 函数检查 `length` 或 `width` 是否为零或负数。
+- 如果检查失败，它使用 `raise ValueError(...)` 来表明错误。此处使用 `ValueError` 是合适的，因为参数的*类型*（数字）正确，但*值*不合法。
+- 调用代码使用 `try...except ValueError` 块来捕获这个特定的错误并妥善处理，打印 `raise` 语句中提供的错误消息。
+
+### 选择正确的异常类型
+
+使用正确的异常类型可以使你的错误处理更精确。调用你函数的代码可以选择捕获它知道如何处理的特定异常。你可能引发的一些常见内置异常包括：
+
+- `ValueError`：当函数接收到类型正确但值不合适的参数 (parameter)时使用。（如矩形示例所示）。
+- `TypeError`：当操作或函数应用于不合适类型的对象时使用。例如，尝试将数字和字符串相加可能会隐式地引发此异常，但如果函数期望列表却接收到整数，你也可以显式地引发它。
+- `RuntimeError`：一个更一般化的错误类别，用于那些不恰好归入其他类型的错误，通常指示程序执行期间检测到的问题，而非特定的输入错误。
+- `NotImplementedError`：通常用作抽象方法中的占位符，或用于已计划但尚未实现的功能。
+
+通过引发特定异常，你可以提供关于*哪里*出了问题的更多背景信息，从而允许在应用程序的其他地方采用更复杂的错误处理方法。手动引发异常是一种基本技术，有助于创建功能健全、操作限制明确的程序，并且能够有效应对无效数据或状态。
+
+## 参考资料
+
+- [The \`raise\` statement](https://docs.python.org/3/reference/simple_stmts.html#the-raise-statement) — Python Software Foundation (2024)
+  Publisher: Python Software Foundation
+  关于如何使用 `raise` 语句手动触发异常的官方文档，详细说明了其语法和基本用法。
+- [Built-in Exceptions](https://docs.python.org/3/library/exceptions.html) — Python Software Foundation (2024)
+  Python 标准异常类型的全面指南，对于理解和选择适合各种错误情况的异常至关重要。
+- [Fluent Python, 2nd Edition](https://www.oreilly.com/library/view/fluent-python-2nd-edition/9781492056324/) — Luciano Ramalho (2022)
+  Publisher: O'Reilly Media
+  一本权威书籍，涵盖了 Python 惯用法，包括对有效异常处理实践和设计自定义异常的详细讨论。

@@ -1,0 +1,174 @@
+---
+course: "introduction-to-computer-vision"
+chapter: "getting-started-computer-vision"
+lesson: "hands-on-loading-displaying-image"
+sourceId: 1232
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-computer-vision/chapter-1-getting-started-computer-vision/hands-on-loading-displaying-image"
+title: "实践：加载并显示图像"
+description: "使用Python和OpenCV加载并显示你的第一个数字图像的实用步骤。"
+order: 7
+plots: []
+sourceHash: "e156ec4b0c3ab6aae536bdf17818cd69a5ebd6ea0512d5969626a4afa0aa0c68"
+sourceCorrections: []
+---
+
+Python环境和必要的库，例如OpenCV，是计算机视觉的基础。一项主要任务是从你的电脑加载图像文件并在屏幕上显示它。这个过程在计算机视觉中常被视为‘Hello, World!’的等效，它能确认环境功能正常，并提供通过编程与视觉数据交互的初步体验。
+
+### 导入OpenCV库
+
+首先，我们需要告诉Python脚本我们要使用OpenCV库提供的函数。我们使用`import`语句来完成。按照惯例，OpenCV通常以`cv2`的形式导入。
+
+```python
+# 导入OpenCV库
+import cv2
+import sys # 导入sys模块以处理脚本退出
+```
+
+`import cv2`这行代码使得OpenCV中的所有函数都可以在`cv2`命名空间下使用。我们还导入了`sys`，它提供了访问系统特定参数 (parameter)和函数的功能，在这里对于在发生错误时正常退出脚本很有用。
+
+### 加载图像
+
+OpenCV提供了一个直接的函数`cv2.imread()`，用于从文件加载图像。此函数最重要的参数 (parameter)是你想要加载的图像文件路径。
+
+```python
+# 指定你的图像文件路径
+image_path = 'path/to/your/image.jpg' 
+
+# 从指定文件加载图像
+image = cv2.imread(image_path) 
+```
+
+确保将`'path/to/your/image.jpg'`替换为你系统上图像文件的实际路径。这可以是JPEG、PNG、BMP或其他OpenCV支持的常见图像格式。
+
+`cv2.imread()`函数读取图像并将其作为多维NumPy数组返回。这个数组代表图像的像素。我们将在下一章“数字图像基础”中详细考察这个数组的结构。现在，只需知道`image`变量保存着图像数据即可。
+
+### 检查图像是否加载成功
+
+如果你提供了错误的路径，文件不存在，或者图像文件损坏了怎么办？在这些情况下，`cv2.imread()`不会立即引发错误；相反，它会返回`None`。在尝试对图像进行任何操作之前，检查图像是否成功加载很重要。
+
+```python
+# 检查图像是否加载成功
+if image is None:
+    print(f"错误：无法读取图像文件，路径为 {image_path}")
+    print("请检查文件路径并确保图像格式受支持。")
+    sys.exit() # 如果图像无法加载，则退出脚本
+```
+
+这个`if`语句检查`image`变量是否为`None`。如果是，我们会打印一条提示性错误消息，并使用`sys.exit()`来停止脚本，防止后续出现更多错误。
+
+### 显示图像
+
+现在我们已经成功将图像数据加载到`image`变量中，我们可以使用`cv2.imshow()`函数来显示它。此函数需要两个参数 (parameter)：
+
+1. 一个字符串，代表将显示图像的窗口名称。
+2. 图像变量（我们加载的NumPy数组）。
+
+```python
+# 在名为“我的第一个图像显示”的窗口中显示图像
+cv2.imshow('我的第一个图像显示', image)
+```
+
+执行这行代码通常会在你的屏幕上打开一个新窗口来显示图像。但是，如果你只运行这一行，窗口可能会立即出现并消失。这是因为脚本在显示窗口后立即完成了执行。我们需要一种方法来保持窗口打开，直到我们准备关闭它。
+
+### 保持窗口打开
+
+`cv2.waitKey()`函数用于暂停脚本执行，并等待在显示的窗口上按下按键。
+
+- 将`0`作为参数 (parameter)（`cv2.waitKey(0)`）意味着它将无限期等待，直到按下*任意*键。
+- 传递一个正整数，比如`5000`，则会使其等待5000毫秒（5秒），或者直到按下某个键，以先发生者为准。
+
+对于简单地显示图像直到我们看完它，`cv2.waitKey(0)`是常用的。
+
+```python
+# 无限期等待，直到按下某个键
+print("在图像窗口上按任意键以关闭它...")
+cv2.waitKey(0)
+```
+
+现在，当你运行脚本时，图像窗口将保持打开，等待你按下按键。
+
+### 关闭窗口
+
+最后，完成后，清理并关闭OpenCV创建的任何窗口是好的做法。`cv2.destroyAllWindows()`函数会关闭所有打开的OpenCV窗口。
+
+```python
+# 关闭所有OpenCV窗口
+cv2.destroyAllWindows()
+```
+
+尽管Python通常在脚本结束时会处理窗口关闭，但显式调用此函数能确保它们被关闭，尤其是在更复杂的应用程序中，或者在显示图像后脚本仍在继续运行的情况下。
+
+### 整合所有步骤
+
+以下是结合所有步骤的完整Python脚本：
+
+```python
+# 导入所需的库
+import cv2
+import sys
+
+# --- 配置 ---
+# 指定你的图像文件路径
+# 重要：请将其替换为你的图像的实际路径！
+image_path = 'path/to/your/image.jpg' 
+window_title = '我的第一个图像显示'
+
+# --- 加载图像 ---
+# 从指定的文件路径加载图像
+image = cv2.imread(image_path) 
+
+# --- 错误处理 ---
+# 检查图像是否加载成功
+if image is None:
+    print(f"错误：无法读取图像文件，路径为 {image_path}")
+    print("请检查文件路径并确保图像格式受支持。")
+    sys.exit() # 退出脚本
+
+# --- 显示图像 ---
+# 在窗口中显示加载的图像
+print(f"正在显示图像：{image_path}")
+cv2.imshow(window_title, image)
+
+# --- 等待用户输入 ---
+# 无限期等待，直到用户在窗口上按下任意键
+print(f"当'{window_title}'窗口处于活动状态时，按任意键关闭它。")
+cv2.waitKey(0)
+
+# --- 清理 ---
+# 关闭所有OpenCV打开的窗口
+cv2.destroyAllWindows()
+
+print("图像窗口已关闭。脚本完成。")
+```
+
+### 如何运行代码
+
+1. 将上述代码保存到一个文件中，例如命名为`load_display.py`。
+2. 在你的电脑上找到一个图像文件（例如，`my_photo.jpg`，`logo.png`）。
+3. **务必**更新脚本中的`image_path`变量，使其指向*你的*图像文件的正确位置。可以使用完整路径（例如`/home/user/Pictures/my_photo.jpg`或`C:/Users/User/Pictures/my_photo.jpg`），如果图像与脚本在同一目录下，则可以使用相对路径（例如`'my_photo.jpg'`）。
+4. 打开你的终端或命令提示符。
+5. 切换到你保存`load_display.py`的目录。
+6. 使用Python运行脚本：`python load_display.py`
+
+如果一切设置正确，将出现一个窗口显示你选择的图像。在窗口处于活动状态时，在键盘上按任意键，窗口就会关闭，脚本会在你的终端中打印最终消息。
+
+### 常见问题排查
+
+- **`错误：无法读取图像文件...`**：仔细检查脚本中的`image_path`。确保文件确实存在于该位置，拼写正确（包括`.jpg`或`.png`等文件扩展名），并且你的脚本有读取文件的权限。
+- **`ModuleNotFoundError: 没有名为'cv2'的模块`**：这意味着OpenCV在你使用的Python环境中没有正确安装。回到“设置开发环境”一节，确保安装（`pip install opencv-python`）成功。
+- **窗口立即出现并消失**：确保你在`cv2.imshow()`之后有`cv2.waitKey(0)`这一行代码。
+- **图像显示异常或不显示（但没有错误）**：图像文件本身可能已损坏，或者它可能是你的特定OpenCV版本不支持的格式（尽管JPG、PNG、BMP、TIFF等常见格式通常没有问题）。尝试另一个图像文件。
+
+恭喜！你刚刚完成了你的第一个基本计算机视觉操作：使用Python和OpenCV加载和查看图像。这个简单任务是接下来我们将介绍的所有图像处理和分析技术的基础。在下一章中，我们将更仔细地考察`image`变量实际包含的内容——计算机用来表示图像的像素、颜色和结构。
+
+## 参考资料
+
+- [OpenCV-Python Tutorials: Getting Started with Images](https://docs.opencv.org/4.x/d4/d0d/tutorial_py_image_display.html) — Ana Huamán (2024)
+  Publisher: OpenCV
+  涵盖使用Python的OpenCV中图像输入/输出和显示基本功能的官方文档。
+- [Computer Vision: Algorithms and Applications](https://szeliski.org/Book/) — Richard Szeliski (2022)
+  Publisher: Springer
+  一本标准教科书，解释了图像形成和数字图像表示的基本原理，这是理解计算机如何处理图像的基础。
+- [Hands-On Computer Vision with OpenCV and Python](https://www.packtpub.com/product/hands-on-computer-vision-with-opencv-and-python/9781838827723) — Ritendra Ahuja and Gautam Saini (2020)
+  Publisher: Packt Publishing
+  一本实践指南，展示了如何使用Python中的OpenCV进行图像加载、显示和操作，适合初学者。

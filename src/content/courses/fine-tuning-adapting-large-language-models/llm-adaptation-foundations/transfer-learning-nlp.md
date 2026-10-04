@@ -1,0 +1,54 @@
+---
+course: "fine-tuning-adapting-large-language-models"
+chapter: "llm-adaptation-foundations"
+lesson: "transfer-learning-nlp"
+sourceId: 2962
+sourceUrl: "https://apxml.com/zh/courses/fine-tuning-adapting-large-language-models/chapter-1-llm-adaptation-foundations/transfer-learning-nlp"
+title: "自然语言处理中的迁移学习方法"
+description: "回顾迁移学习理念在自然语言处理和大型语言模型中的应用。"
+order: 3
+plots: []
+sourceHash: "324e2ec90855f9ef98588a12bd212ef85a9e60df5557722119b564e3f2cbcd59"
+sourceCorrections: []
+---
+
+为每个新的机器学习 (machine learning)问题从零开始的想法通常效率低下，尤其是在自然语言处理中，高质量的标注数据可能稀缺且昂贵。迁移学习 (transfer learning)提供了一个有力的替代方案，使我们能够利用从解决一个问题（通常在大型数据集上）获得的知识，并将其应用到不同但相关的问题上。在大语言模型 (LLM)方面，迁移学习不仅仅是一个选项；它是使它们在各类应用中发挥作用的基本准则。
+
+可以将其比作学习物理学。一旦你理解了能量守恒或牛顿定律等基本原理（预训练 (pre-training)），你就不需要从头重新推导它们来解决关于抛体运动或电路分析的特定问题（微调 (fine-tuning)）。你只需调整并应用那些基本知识。
+
+### 从词向量 (vector)到完整模型迁移
+
+自然语言处理中的迁移学习 (transfer learning)早期就以较简单的形式出现。例如，早期的应用包括使用预训练 (pre-training)词向量，如Word2Vec或GloVe。这些模型在大量文本语料库上训练，以学习词语的向量表示，捕捉语义关系（$vector(\text{'king'}) - vector(\text{'man'}) + vector(\text{'woman'}) \approx vector(\text{'queen'})$）。用于情感分析等任务的下游模型可以将其嵌入 (embedding)层初始化为这些预训练向量，而不是从其自身的、通常较小的数据集中学习它们。这显著提升了性能，尤其是在任务特定数据有限的情况下。
+
+然而，这些词向量是静态的；像“bank”这样的词的表示是相同的，无论它指的是金融机构还是河岸。下一个进步是上下文 (context)相关词向量（例如，ELMo、ULMFit）。这些方法生成了依赖于周围上下文的词表示，提供了更丰富的语义信息。ULMFit尤其展现出一种非常有效的三阶段迁移学习流程，用于文本分类：在通用语料库上预训练语言模型，在目标任务的领域数据上微调 (fine-tuning)语言模型，最后，微调连接到语言模型的分类器，以适应特定任务。
+
+现代大语言模型 (LLM)基于Transformer架构，将这个思路推向了极致。我们不再仅仅迁移词向量或特定层，而是迁移几乎整个预训练模型。
+
+### 预训练 (pre-training)-微调 (fine-tuning)方法
+
+大语言模型 (LLM)中主流的迁移学习 (transfer learning)策略是**预训练-微调**方法。
+
+**预训练：** 一个大规模Transformer模型在一个庞大且多样的文本数据语料库（例如，Common Crawl、维基百科、书籍）上进行训练。训练目标通常是自监督的，例如预测被遮蔽的词（如BERT）或预测序列中的下一个词（如GPT）。这个阶段需要大量计算资源，但结果是一个对语言、语法、知识乃至某些推理 (inference)能力有广泛理解的模型。此阶段的损失函数 (loss function)$L_{pretrain}$衡量模型学习语言通用模式的程度。
+
+2. **微调：** 预训练模型及其已学习的参数 (parameter)，随后在一个较小的、任务特定的数据集上进一步训练。该数据集包含与目标应用相关的示例（例如，总结法律文件、分类客户支持工单、生成代码）。微调过程调整预训练模型的权重 (weight)，使其能力适应此特定任务。目标函数现在是针对下游任务定制的，$L_{finetune}$，例如用于分类的交叉熵损失或用于生成任务的序列到序列损失。因为模型已经拥有大量的语言知识，与预训练相比，微调通常需要少得多的数据和计算量。
+
+> 预训练-微调方法的图示。一个单一的大型预训练模型作为构建多个专用模型的根基，通过在任务特定或领域特定的数据集上进行微调来实现。
+
+这种方法直接解决了之前讨论的通用预训练模型的局限性。虽然基础模型具有广泛的能力，但微调使我们能够将其行为引导至特定的下游要求，无论是采用特定风格、理解领域特定术语，还是掌握新的任务格式（如指令遵循）。
+
+这种迁移的效果在很大程度上取决于预训练数据/任务与微调数据/任务之间的关系。值得庆幸的是，用于现代大语言模型的预训练语料库极其多样，这使它们成为各种自然语言处理任务非常适应的起点。之后的章节将介绍执行此微调步骤的不同方式，从更新所有模型参数到仅修改一小部分参数的更高效方法。在考虑影响我们如何调整这些强大模型的特定架构选择之前，理解这一迁移学习的根本方法是重要的。
+
+## 参考资料
+
+- [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781) — Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean (2013)
+  Journal: arXiv preprint arXiv:1301.3781; DOI: [10.48550/arXiv.1301.3781](https://doi.org/10.48550/arXiv.1301.3781)
+  介绍了Word2Vec，一种学习静态词嵌入的方法，能够捕捉语义关系，是自然语言处理中早期的一种迁移学习形式。
+- [Universal Language Model Fine-tuning for Text Classification](https://aclanthology.org/P18-1031/) — Jeremy Howard and Sebastian Ruder (2018)
+  Journal: Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers); Publisher: Association for Computational Linguistics; Pages: 328-339; DOI: [10.18653/v1/P18-1031](https://doi.org/10.18653/v1/P18-1031)
+  提出了ULMFit，一种针对NLP任务的三阶段迁移学习方法，使用预训练语言模型，在有限任务特定数据下展现了性能提升。
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: arXiv preprint arXiv:1706.03762; Pages: 15; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了Transformer架构，它推动了序列建模的发展，并成为现代大型语言模型的基础。
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://aclanthology.org/N19-1423/) — Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (2019)
+  Journal: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers); Publisher: Association for Computational Linguistics; Pages: 4171-4186; DOI: [10.18653/v1/N19-1423](https://doi.org/10.18653/v1/N19-1423)
+  介绍了BERT，一个模型，它通过掩码语言建模将预训练-微调方法应用于深度双向Transformer，用于多种自然语言处理任务。

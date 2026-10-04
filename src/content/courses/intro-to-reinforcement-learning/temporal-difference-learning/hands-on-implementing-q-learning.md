@@ -1,0 +1,175 @@
+---
+course: "intro-to-reinforcement-learning"
+chapter: "temporal-difference-learning"
+lesson: "hands-on-implementing-q-learning"
+sourceId: 1649
+sourceUrl: "https://apxml.com/zh/courses/intro-to-reinforcement-learning/chapter-5-temporal-difference-learning/hands-on-implementing-q-learning"
+title: "动手实践：Q-学习的实现"
+description: "为像Gridworld这样的简单环境实现Q-学习算法。"
+order: 8
+plots: ["plots/1649-0.json"]
+sourceHash: "7ad9a86931148ea84588233f84a9a8c4216492d655139f77a7e0f9f2425221e6"
+sourceCorrections: []
+---
+
+Q-学习作为一种离策略、免模型、时序差分控制算法运行。它的目标是通过迭代更新基于经验转换的估计来找到最优动作价值函数$Q^*$。在这里，我们将逐步讲解使用Python实现Q-学习算法所需的核心组成部分。
+
+我们在这里不会构建一个复杂环境；相反，我们将侧重于智能体的学习逻辑。假设我们有一个环境，它提供必要的交互：给定一个动作，它返回下一个状态、奖励和终止状态。许多强化学习 (reinforcement learning)库，如Gymnasium（原OpenAI Gym），都提供了这类标准化的环境接口。
+
+### Q表
+
+表格型Q-学习的核心是Q表。它只是一个数据结构，通常是矩阵或字典，用于存储每个状态-动作对的估计动作价值$Q(s, a)$。如果我们的环境有$|S|$个状态和$|A|$个动作，Q表的维度将是$|S| \times |A|$。
+
+我们通常会乐观地或悲观地初始化Q表。一个常见方法是将所有Q值初始化为零。在Python中使用NumPy，代码如下：
+
+```python
+import numpy as np
+
+num_states = 10 # 示例：10个离散状态
+num_actions = 4 # 示例：4个可能的动作
+
+q_table = np.zeros((num_states, num_actions))
+```
+
+### Q-学习算法步骤
+
+智能体通过与环境交互多个回合来学习。每个回合由多个步骤组成。以下是单个回合的流程：
+
+1. **初始化状态：** 从环境中获取起始状态$S$。
+2. **循环直到回合结束：** 重复以下步骤：
+   a. **选择动作：** 基于当前的Q表估计，为当前状态$S$选择一个动作$A$。这通常涉及一种尝试策略，例如epsilon-贪婪策略。
+   b. **执行动作：** 在环境中执行所选动作$A$。
+   c. **观察结果：** 接收下一个状态$S'$、奖励$R$以及回合是否已终止。
+   d. **更新Q表：** 应用Q-学习更新规则：
+   $Q(S, A) \leftarrow Q(S, A) + \alpha \left[ R + \gamma \max_{a'} Q(S', a') - Q(S, A) \right]$
+   e. **更新状态：** 将当前状态设为下一个状态：$S \leftarrow S'$。
+
+我们来分解步骤2.d，即更新规则。
+
+- $Q(S, A)$是当前状态$S$下采取动作$A$的价值的当前估计。
+- $\alpha$是学习率（一个介于0和1之间的值），它控制我们根据新信息更新Q值的幅度。
+- $R$是在状态$S$中采取动作$A$后立即获得的奖励。
+- $\gamma$是折扣因子（介于0和1之间），它决定了未来奖励的重要性。
+- $\max_{a'} Q(S', a')$是对于*下一个*状态$S'$，在所有可能的下一个动作$a'$中估计的最大Q值。这是Q-学习离策略特性的核心所在。它估计从下一个状态可能获得的最佳回报，而不管当前策略*实际*会选择哪个动作。
+- 项$R + \gamma \max_{a'} Q(S', a')$通常被称为TD目标。它表示对价值$Q(S, A)$的改进估计。
+- 项$\left[ R + \gamma \max_{a'} Q(S', a') - Q(S, A) \right]$是TD误差，表示估计值（TD目标）与当前值$Q(S, A)$之间的差异。
+
+### 尝试与选择最优：Epsilon-贪婪策略
+
+为确保智能体找到最优策略，它需要充分尝试环境，然后才能确定最佳已知动作。一个常见策略是epsilon-贪婪策略（$\epsilon$-greedy）：
+
+- 以概率$\epsilon$（epsilon）选择一个随机动作（尝试）。
+- 以概率$1 - \epsilon$选择当前状态下Q值最高的动作（选择最优）。
+
+```python
+import random
+
+epsilon = 0.1 # 尝试率
+
+# 假设'state'是当前状态的索引
+if random.uniform(0, 1) < epsilon:
+    action = random.randint(0, num_actions - 1) # 尝试：选择一个随机动作索引
+else:
+    action = np.argmax(q_table[state, :]) # 选择最优：根据Q表选择最佳动作索引
+```
+
+通常，$\epsilon$初始值较高（例如1.0），并随回合逐渐降低（衰减），以便随着智能体学习更多而将平衡从尝试转向选择最优。
+
+### 超参数 (parameter) (hyperparameter)调整
+
+Q-学习的性能很大程度上取决于其超参数：
+
+- **学习率（$\alpha$）：** 控制收敛速度。高$\alpha$意味着学习更快但可能不稳定。低$\alpha$意味着学习较慢但可能更稳定。0.1、0.01或0.001之类的数值是常见的起始点。
+- **折扣因子（$\gamma$）：** 平衡即时奖励与未来奖励。接近1的$\gamma$对未来奖励赋予高重要性，适用于具有延迟满足的任务。接近0的$\gamma$则更侧重于即时奖励。典型值为0.9、0.99。
+- **Epsilon（$\epsilon$）：** 管理尝试与选择最优的权衡。初始值、最终值和衰减率都需要考虑。例如，在1000个回合中将$\epsilon$从1.0线性衰减到0.01。
+
+### 整合代码
+
+以下是Q-学习训练循环的Python结构：
+
+```python
+# 超参数
+learning_rate = 0.1
+discount_factor = 0.99
+epsilon = 1.0
+epsilon_decay_rate = 0.001
+min_epsilon = 0.01
+num_episodes = 1000
+
+# 假设'env'是一个已初始化的环境对象，具有以下方法：
+# env.reset() -> 返回初始状态
+# env.step(action) -> 返回next_state, reward, terminated, truncated, info
+# env.observation_space.n -> 状态数量
+# env.action_space.n -> 动作数量
+
+num_states = env.observation_space.n
+num_actions = env.action_space.n
+q_table = np.zeros((num_states, num_actions))
+
+rewards_per_episode = [] # 用于跟踪学习进度
+
+for episode in range(num_episodes):
+    state, info = env.reset() # 获取初始状态（整数索引）
+    terminated = False
+    truncated = False
+    total_episode_reward = 0
+
+    while not terminated and not truncated:
+        # Epsilon-贪婪动作选择
+        if random.uniform(0, 1) < epsilon:
+            action = env.action_space.sample() # 尝试
+        else:
+            action = np.argmax(q_table[state, :]) # 选择最优
+
+        # 执行动作并观察结果
+        next_state, reward, terminated, truncated, info = env.step(action)
+
+        # Q-学习更新规则
+        best_next_action_value = np.max(q_table[next_state, :])
+        td_target = reward + discount_factor * best_next_action_value
+        td_error = td_target - q_table[state, action]
+        q_table[state, action] = q_table[state, action] + learning_rate * td_error
+
+        # 更新状态和总奖励
+        state = next_state
+        total_episode_reward += reward
+
+    # Epsilon衰减
+    epsilon = max(min_epsilon, epsilon - epsilon_decay_rate)
+
+    # 存储回合奖励（用于后续绘图）
+    rewards_per_episode.append(total_episode_reward)
+
+    if (episode + 1) % 100 == 0:
+        print(f"Episode {episode + 1}: Total Reward: {total_episode_reward}, Epsilon: {epsilon:.3f}")
+
+print("训练完成。")
+
+# 训练完成后，q_table包含了学习到的动作价值。
+# 最优策略可以通过选择每个状态下具有最高Q值的动作来推导。
+```
+
+### 可视化学习进程
+
+跟踪每回合总奖励等指标有助于了解智能体是否正在学习。绘制此图可以显示收敛情况。
+
+
+
+![每回合总奖励（示例数据）](plots/1649-0.json)
+
+
+
+> 智能体在每个训练回合中累积的总奖励。上升趋势通常表示学习成功。（显示示例数据）。
+
+这个动手实践章节提供了实现Q-学习的结构和逻辑。您初始化了一个Q表，实现了核心更新循环，包含了Q-学习规则和epsilon-贪婪尝试，并考虑了超参数 (parameter) (hyperparameter)设置。通过在多个回合中运行此过程，智能体迭代地改进其Q值估计，最终学习到最大化累积奖励的策略。请记住，Q-学习是离策略的，这意味着即使它由于尝试而可能表现出次优行为，它也能学习到最优的$Q^*$函数。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press
+  强化学习理论的标准教材，详细介绍了Q学习、时序差分学习和探索-利用策略。
+- [Q-Learning](https://link.springer.com/article/10.1007/BF00992698) — Christopher J. C. H. Watkins and Peter Dayan (1992)
+  Journal: Machine Learning; Publisher: Springer; Volume: 8; Pages: 279–292; DOI: [10.1007/BF00992698](https://doi.org/10.1007/BF00992698)
+  介绍Q学习算法及其理论基础的原创研究论文。
+- [Gymnasium Documentation](https://gymnasium.farama.org/) — Gymnasium Developers (2023)
+  Gymnasium库的官方文档，该库为强化学习研究和开发提供标准环境。

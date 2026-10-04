@@ -1,0 +1,112 @@
+---
+course: "distributed-training-pytorch-fsdp"
+chapter: "profiling-performance-engineering"
+lesson: "practice-optimization-case-work"
+sourceId: 7911
+sourceUrl: "https://apxml.com/zh/courses/distributed-training-pytorch-fsdp/chapter-6-profiling-performance-engineering/practice-optimization-case-work"
+title: "实践：优化案例工作"
+description: "动手实践，使用性能分析工具诊断并修复性能下降问题。"
+order: 5
+plots: ["plots/7911-0.json"]
+sourceHash: "bbb29a8615742a5639ce5b2ddab225effde92973bad7cc65a337082e46fda4f9"
+sourceCorrections: []
+---
+
+分布式系统中的性能下降很少由单一的灾难性故障引起。相反，它源于内核调度中的微秒级延迟、低效的内存分配模式，或主机CPU与GPU设备之间不明显的同步屏障。在此实战案例中，我们研究了一个70亿参数 (parameter)Transformer模型的训练运行，该模型分布在4个节点（32块A100 GPU）上，功能正确但模型浮点运算利用率（MFU）仅为28%。
+
+目标是使用PyTorch Profiler诊断瓶颈，找出具体的资源争用，并实施配置调整以达到目标45-50%的MFU范围，这对于调优良好的FSDP设置来说是常见的。
+
+### 阶段1：获取基准追踪
+
+在应用优化之前，我们必须建立一个基准性能概况。仅仅依赖“每秒迭代次数”是不够的，因为它将计算、通信和数据加载聚合为一个单一的标量。我们需要一个执行的时间线视图。
+
+我们对训练循环进行插桩，以捕获热身阶段之后的一个步骤。捕获前几个步骤通常会产生误导，因为编译开销和分配器初始化。
+
+```python
+import torch.profiler
+
+# 配置用于性能分析的上下文管理器
+with torch.profiler.profile(
+    activities=[
+        torch.profiler.ProfilerActivity.CPU,
+        torch.profiler.ProfilerActivity.CUDA,
+    ],
+    schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+    on_trace_ready=torch.profiler.tensorboard_trace_handler('./log_dir'),
+    record_shapes=True,
+    profile_memory=True,
+    with_stack=True
+) as prof:
+    for step, batch in enumerate(dataloader):
+        train_step(batch)
+        prof.step()
+```
+
+分析在Chrome Trace Viewer中生成的追踪后，时间线表明GPU内核之间存在明显的间隙。在理想的FSDP执行中，GPU计算流应保持被GEMM（通用矩阵乘法）操作饱和，而NCCL通信发生在单独的CUDA流上。
+
+基准追踪呈现以下模式：
+
+1. **计算流：** `GEMM (第 N 层)` 执行。
+2. **间隙：** GPU空闲15毫秒。
+3. **计算流：** `GEMM (第 N+1 层)` 执行。
+
+此间隙表明当第N层完成时，第N+1层的参数 (parameter)尚未备妥。计算被阻塞，等待`AllGather`集体操作完成。这是通信与计算重叠的失败。
+
+### 阶段2：诊断重叠失败
+
+FSDP试图通过在当前层计算时预取下一组分片参数 (parameter)来隐藏通信延迟。当我们观察到间隙时，这意味着预取触发过晚，或网络带宽不足以在计算所需时间内完成传输。
+
+我们可以将串行执行和最佳重叠之间的差异可视化。以下图表详细说明了我们力求达成的流交互与基准追踪所展现的情况。
+
+> 该图表比较了基准中观察到的串行执行流程与目标并行流执行（其中通信与计算并发发生）之间的差异。
+
+追踪分析确认，尽管`backward_prefetch=BackwardPrefetch.BACKWARD_PRE`已启用，但`limit_all_gathers`设置过于严格。FSDP限制并发AllGather的数量，以防止内存不足（OOM）错误。如果此限制设置为`true`（在某些版本中是默认值），FSDP会等待当前块完成计算并释放内存后，再获取下一个块。这节省了内存，但强制了串行化。
+
+### 阶段3：调整吞吐量 (throughput)与内存
+
+为了弥补此间隙，我们必须放宽内存限制，以允许网络调度器提前获取。然而，仅仅启用激进的预取可能导致内存碎片化。如果堆已碎片化，PyTorch缓存分配器可能无法为传入参数 (parameter)找到连续块，从而触发昂贵的`cudaFree`和`cudaMalloc`调用。
+
+在追踪中，查看“内存”时间线。如果您发现分配内存中频繁出现垂直峰值，与短时间CPU侧间隙同时发生，则表明分配器正在频繁工作。
+
+**优化措施：**
+
+1. **调整FSDP策略：** 如果VRAM允许，明确设置`limit_all_gathers=False`。这使得下一层的参数可以在当前层完成*之前*在内存中实例化。
+2. **分配器调整：** 设置`PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512`。这可避免分配器将大块拆分成无法使用的小碎片，从而减少关键路径中内存管理的开销。
+
+我们应用这些更改并重新进行性能分析。
+
+### 阶段4：计算MFU与最终验证
+
+应用配置更改后，我们再次执行训练运行。我们重新计算模型浮点运算利用率（MFU）以验证改进效果。
+
+MFU的公式由所达成的吞吐量 (throughput)（每秒令牌数）和模型架构决定。对于Transformer模型，每个令牌的大致FLOPs计算方式如下：
+
+$\text{每个令牌的FLOPs} \approx 6 \times P$
+
+其中 $P$ 是参数 (parameter)数量。对于一个70亿参数的模型 ($7 \times 10^9$)：
+
+$\text{每个令牌的FLOPs} \approx 42 \times 10^9$
+
+如果我们优化后的运行达到每秒2200个令牌/GPU的吞吐量，计算如下：
+
+1. **达成的TFLOPS：**
+   $\text{达成} = \frac{2200 \times 42 \times 10^9}{10^{12}} \approx 92.4 \text{ TFLOPS}$
+2. **MFU：**
+   使用NVIDIA A100 (SXM4) 峰值BF16张量核心性能约为312 TFLOPS（不考虑稀疏性）：
+   $\text{MFU} = \frac{92.4}{312} \approx 29.6\%$
+
+*注意：尽管29.6%相对于基准有所提升，但要达到50%通常需要激活检查点（减少内存I/O）并确保内核融合（使用`torch.compile`）。*
+
+下图显示了从我们未调优的基准到优化步骤的性能进展。
+
+
+
+![优化对吞吐量的影响（A100-80GB）](plots/7911-0.json)
+
+
+
+> 吞吐量在三个阶段的改进测量：初始基准、修复通信重叠后，以及解决内存碎片化并启用编译后。
+
+### 结果总结
+
+在此案例工作中，最初MFU较低并非因为计算内核缓慢，而是由于串行化通信造成的空闲时间。通过使用性能分析器检查时间线，我们确认GPU缺乏数据。调整预取策略使得NCCL流能够与计算流并发运行，从而恢复了损失的周期。最后，稳定内存分配器确保此重叠不会被内存管理开销打断。这些调整与模型大小和可用VRAM之间的关系相关；更大的模型可能需要重新启用`limit_all_gathers`并接受轻微的性能损失以避免OOM。

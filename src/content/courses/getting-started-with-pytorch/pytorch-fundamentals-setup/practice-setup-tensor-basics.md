@@ -1,0 +1,216 @@
+---
+course: "getting-started-with-pytorch"
+chapter: "pytorch-fundamentals-setup"
+lesson: "practice-setup-tensor-basics"
+sourceId: 2098
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-pytorch/chapter-1-pytorch-fundamentals-setup/practice-setup-tensor-basics"
+title: "动手实践：环境配置与张量基本操作"
+description: "练习安装PyTorch，创建张量，并执行基本操作。"
+order: 7
+plots: []
+sourceHash: "e91670d4e46e175be0741f77fe1c200442d65058ad98f6ef7203bf5c28378ff8"
+sourceCorrections: []
+---
+
+这些实践练习将提供PyTorch安装和基本张量对象的实践经验。它们将巩固对环境配置和执行基本张量操作的理解，这些都是使用PyTorch构建任何深度学习 (deep learning)模型的前提条件。
+
+### 验证你的PyTorch安装
+
+首先，让我们确保PyTorch已正确安装并在你的Python环境中可用。打开你的Python解释器或Jupyter Notebook并运行以下命令：
+
+```python
+import torch
+import numpy as np # 之后我们将用NumPy进行比较
+
+# 打印PyTorch版本
+print(f"PyTorch Version: {torch.__version__}")
+
+# 检查CUDA（GPU支持）是否可用
+if torch.cuda.is_available():
+    print(f"CUDA is available. Device: {torch.cuda.get_device_name(0)}")
+    # 获取PyTorch将使用的默认设备
+    device = torch.device("cuda")
+else:
+    print("CUDA not available. Using CPU.")
+    device = torch.device("cpu")
+
+print(f"Default device: {device}")
+```
+
+执行这段代码可以确认`torch`库能够被导入并显示其版本。它还会检查GPU的可用性，这对于后续章节中加速计算很重要。如果你有兼容的NVIDIA GPU并且安装了正确的PyTorch版本，应该会看到CUDA被报告为可用。目前，我们将主要使用CPU，但知道如何检查GPU也很重要。
+
+### 创建张量
+
+让我们练习使用之前介绍的多种方法创建张量。
+
+**1. 从Python列表创建：**
+从一个嵌套的Python列表创建一个2x3的张量。
+
+```python
+# 从Python列表创建张量
+data = [[1, 2, 3], [4, 5, 6]]
+tensor_from_list = torch.tensor(data)
+
+print("从列表创建的张量：")
+print(tensor_from_list)
+print(f"形状: {tensor_from_list.shape}")
+print(f"数据类型: {tensor_from_list.dtype}") # 通常默认为int64
+```
+
+**2. 指定数据类型：**
+创建相同的张量，但显式地将其数据类型设置为32位浮点数。
+
+```python
+# 创建指定数据类型的张量
+tensor_float32 = torch.tensor(data, dtype=torch.float32)
+
+print("\nfloat32数据类型的张量：")
+print(tensor_float32)
+print(f"形状: {tensor_float32.shape}")
+print(f"数据类型: {tensor_float32.dtype}")
+```
+
+注意`dtype`的变化以及数字的表示方式（例如，`1.` 而不是 `1`）。
+
+**3. 使用工厂函数：**
+创建具有特定形状和初始值的张量。
+
+```python
+# 创建一个3x4的全零张量
+zeros_tensor = torch.zeros(3, 4)
+print("\n全零张量 (3x4)：")
+print(zeros_tensor)
+
+# 创建一个2x2的全一张量，类型为整数
+ones_tensor_int = torch.ones(2, 2, dtype=torch.int32)
+print("\n全一张量 (2x2, int32)：")
+print(ones_tensor_int)
+
+# 创建一个表示数字范围的一维张量
+range_tensor = torch.arange(start=0, end=5, step=1) # 类似于Python的range函数
+print("\n范围张量 (0到4)：")
+print(range_tensor)
+
+# 创建一个包含随机值（0到1均匀分布）的2x3张量
+rand_tensor = torch.rand(2, 3)
+print("\n随机张量 (2x3)：")
+print(rand_tensor)
+```
+
+这些工厂函数便于初始化张量，无需使用像列表这样的预先存在的数据结构。
+
+### 张量基本操作
+
+现在，让我们对已创建的张量执行一些基本操作。
+
+```python
+# 使用之前创建的float32张量
+a = torch.tensor([[1, 2], [3, 4]], dtype=torch.float32)
+b = torch.ones(2, 2) # 默认为float32
+
+print("张量 'a'：")
+print(a)
+print("张量 'b'：")
+print(b)
+
+# 元素级加法
+sum_tensor = a + b
+# 另一种写法：sum_tensor = torch.add(a, b)
+print("\n元素级和 (a + b)：")
+print(sum_tensor)
+
+# 元素级乘法
+prod_tensor = a * b
+# 另一种写法：prod_tensor = torch.mul(a, b)
+print("\n元素级积 (a * b)：")
+print(prod_tensor)
+
+# 标量乘法
+scalar_mult = a * 3
+print("\n标量乘法 (a * 3)：")
+print(scalar_mult)
+
+# 就地加法（修改张量'a'）
+print(f"\n就地加法前 'a'：ID {id(a)}")
+a.add_(b) # 注意就地操作的下划线后缀
+print("就地加法后 'a' (a.add_(b))：")
+print(a)
+print(f"就地加法后 'a'：ID {id(a)}") # ID保持不变
+
+# 矩阵乘法
+# 确保维度兼容矩阵乘法
+# 让我们创建兼容的张量：x (2x3), y (3x2)
+x = torch.rand(2, 3)
+y = torch.rand(3, 2)
+matmul_result = torch.matmul(x, y)
+# 另一种写法：matmul_result = x @ y
+print("\n矩阵乘法 (x @ y)：")
+print(f"张量 x 的形状: {x.shape}, 张量 y 的形状: {y.shape}")
+print(f"结果形状: {matmul_result.shape}")
+print(matmul_result)
+```
+
+请注意元素级操作（如`+`、`*`）与矩阵乘法（`torch.matmul`或`@`）之间的区别。此外，还要注意就地操作（如`add_`）如何直接修改张量，而不创建新对象。
+
+### 与NumPy的交互
+
+PyTorch与NumPy良好配合。让我们练习在NumPy数组和PyTorch张量之间进行转换。
+
+```python
+# 1. NumPy数组到PyTorch张量
+numpy_array = np.array([[1.0, 2.0], [3.0, 4.0]])
+print("\nNumPy数组：")
+print(numpy_array)
+print(f"类型: {type(numpy_array)}")
+
+# 转换为PyTorch张量
+tensor_from_numpy = torch.from_numpy(numpy_array)
+print("\n从NumPy数组创建的张量：")
+print(tensor_from_numpy)
+print(f"类型: {type(tensor_from_numpy)}")
+
+# 重要提示：在CPU上，torch.from_numpy与NumPy数组共享内存
+# 修改其中一个会影响另一个
+numpy_array[0, 0] = 99.0
+print("\n修改后的NumPy数组：")
+print(numpy_array)
+print("修改NumPy数组后的张量（共享内存）：")
+print(tensor_from_numpy)
+
+# 2. PyTorch张量到NumPy数组
+# 让我们使用不同的张量，以避免之前的修改
+another_tensor = torch.tensor([[5, 6], [7, 8]], dtype=torch.float64)
+print("\n另一个PyTorch张量：")
+print(another_tensor)
+
+# 转换为NumPy数组
+numpy_from_tensor = another_tensor.numpy()
+print("\n从张量创建的NumPy数组：")
+print(numpy_from_tensor)
+print(f"类型: {type(numpy_from_tensor)}")
+
+# 同样，在CPU上内存是共享的
+another_tensor[1, 1] = 100.0
+print("\n修改后的张量：")
+print(another_tensor)
+print("修改张量后的NumPy数组（共享内存）：")
+print(numpy_from_tensor)
+```
+
+NumPy数组和CPU张量之间的这种内存共享行为效率高，但需要谨慎处理，因为可能会发生意外修改。如果你需要一个独立的副本，可以在转换之前使用张量的`.clone()`方法，或者使用标准的Python/NumPy复制机制。
+
+本实践环节涵盖了验证你的配置、以多种方式创建张量、执行基本的算术和矩阵操作，以及在PyTorch张量和NumPy数组之间进行转换。掌握这些基础知识很重要，因为我们将在后续章节转向自动微分和构建神经网络 (neural network)模块等更复杂的主题。
+
+## 参考资料
+
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html) — PyTorch Contributors (2024)
+  涵盖安装、张量API、操作以及与NumPy的互操作性，是PyTorch用户的主要技术参考。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  为深度学习提供了全面的理论基础，包括与PyTorch等框架相关的张量及其操作的数学概念。
+- [Dive into Deep Learning](https://d2l.ai/) — Aston Zhang, Zachary C. Lipton, Mu Li, and Alexander J. Smola (2024)
+  Publisher: Cambridge University Press
+  一本交互式开源教材，使用PyTorch示例解释深度学习概念，包括关于张量及其基本操作的详细章节。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  深入介绍了NumPy数组和操作，这对于理解PyTorch与NumPy的互操作性以及内存共享行为很重要。

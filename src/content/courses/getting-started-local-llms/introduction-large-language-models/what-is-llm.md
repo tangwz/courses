@@ -1,0 +1,49 @@
+---
+course: "getting-started-local-llms"
+chapter: "introduction-large-language-models"
+lesson: "what-is-llm"
+sourceId: 4193
+sourceUrl: "https://apxml.com/zh/courses/getting-started-local-llms/chapter-1-introduction-large-language-models/what-is-llm"
+title: "什么是大型语言模型（LLM）？"
+description: "了解大型语言模型的内涵以及它们为何“大”。"
+order: 1
+plots: []
+sourceHash: "a1d6b4ef32aeda73efde4109a8c9e45141dd08ac9706759a0a69aad6b12b24c5"
+sourceCorrections: []
+---
+
+其核心是，大型语言模型（LLM）是一种先进的人工智能（AI）程序，专门设计用于理解、生成和处理人类语言。可以把它想象成一个非常先进的文本处理器，能够执行各种涉及词语和句子的任务。
+
+让我们来细说“大型语言模型”这个术语：
+
+### 语言模型
+
+“语言模型”部分指的是其核心功能：预测序列中的下一个词。想象一下你开始输入“The quick brown fox jumps over the...”（敏捷的棕色狐狸跳过……）。语言模型的基本职责是找出最有可能的下一个词（在这种情况下，很可能是“lazy”即“懒惰的”）。它通过在海量文本数据——书籍、文章、网站、代码等——上进行训练来学习这样做。通过分析这些数据中的模式、语法、语境和常用短语，模型会构建对语言运作方式的内部表示。这种预测能力是生成连贯句子、段落乃至完整文档的基础。
+
+### 大型
+
+“大型”这一方面是现代LLM与众不同的原因。它主要指两点：
+
+1. **训练数据量：** LLM在包含数千亿甚至数万亿词汇的数据集上进行训练。这种大量的接触使它们能够学习精细的语言模式、信息（如文本中所示）以及不同的写作风格。
+2. **参数 (parameter)数量：** 参数是模型在训练过程中调整的内部变量。你可以将它们想象成模型用于存储从训练数据中获取的知识的旋钮和刻度盘。LLM拥有大量的参数，通常从数十亿到数万亿不等。例如，你可能会遇到被称为“7B”（70亿参数）或“70B”（700亿参数）的模型。通常，参数数量越多，模型能够捕捉语言中更复杂的模式和细节，从而获得更精密的文本理解和生成能力。
+
+大量的训练数据和庞大的参数数量相结合，使LLM能够执行远远超出简单下一个词预测的任务。它们可以：
+
+- 根据所训练的信息回答问题。
+- 总结长篇文档。
+- 翻译语言。
+- 撰写不同类型的创意文本，如诗歌、代码、脚本或电子邮件。
+- 进行对话。
+
+本质上，LLM是一种强大的AI工具，在大量的文本数据集上进行训练，使用数十亿内部参数来理解语境并为各种应用生成类人文本。理解这个基本定义是您了解它们如何运作以及如何在自己的电脑上运行它们的第一步。
+
+## 参考资料
+
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  一本全面、持续更新的教材，提供自然语言处理的基础知识，包括对语言模型的详细解释。
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, and Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008
+  介绍了Transformer架构，通过其注意力机制，为现代大型语言模型的规模和能力奠定了基础。
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: arXiv; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  介绍了GPT-3，一个里程碑式的大型语言模型，展示了参数和训练数据的极端规模如何带来令人印象深刻的少样本学习和多样的语言生成能力。

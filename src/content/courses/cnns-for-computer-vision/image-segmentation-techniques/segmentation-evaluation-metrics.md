@@ -1,0 +1,95 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "image-segmentation-techniques"
+lesson: "segmentation-evaluation-metrics"
+sourceId: 2581
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-4-image-segmentation-techniques/segmentation-evaluation-metrics"
+title: "分割的评估指标"
+description: "了解图像分割的常用评估指标，包括交并比 (IoU) 和Dice系数。"
+order: 7
+plots: []
+sourceHash: "0c9a9108e2e2cbd68cfe7096780c21a1ad3d542d3370cac049be1c8cc262bb8c"
+sourceCorrections: []
+---
+
+开发分割模型后，准确评估其性能非常重要。与图像分类中简单准确度可能就足够不同，分割任务需要评判模型能否正确区分*每个像素*并精确描绘物体边缘的能力。标准的像素级准确度可能产生误导，特别是在类别分布不均衡（例如，大量背景类别的数量远超小的前景物体）的情况下。因此，通常会采用专门的度量标准。
+
+### 交并比 (IoU)
+
+语义分割中最常用的度量标准是交并比 (IoU)，也称为Jaccard系数。对于给定类别，IoU衡量预测分割掩码 ($A$) 与真实掩码 ($B$) 之间的重叠程度。计算方式是它们交集的面积除以并集的面积：
+
+
+$$
+J(A, B) = \text{交并比}(A, B) = \frac{|A \cap B|}{|A \cup B|}
+$$
+
+
+这里，$|A \cap B|$ 表示被正确分类为该类别的像素数量（真阳性），而 $|A \cup B|$ 表示在预测或真实掩码中属于该类别的像素总数。分母也可以表示为 $|A| + |B| - |A \cap B|$，这与真阳性、假阳性及假阴性有关联。
+
+IoU分数范围从0（无重叠）到1（完全重叠）。IoU分数越高，表示该类别的分割效果越好。
+
+> 示意图：在IoU计算中使用的交集（重叠区域）和并集（任一掩码覆盖的总区域）。
+
+通常会为每个类别单独计算IoU，然后对所有类别取平均值，得到平均交并比 (mIoU)。这提供了一个单一的、全面的分数，用于衡量模型在整个数据集或图像上的性能。
+
+
+$$
+\text{平均交并比} = \frac{1}{C} \sum_{i=1}^{C} \text{交并比}_i
+$$
+
+
+其中 $C$ 是类别数量，$\text{交并比}_i$ 是第 $i$ 个类别的交并比。mIoU 是在Pascal VOC、Cityscapes和ADE20K等数据集上评估语义分割模型的标准指标。
+
+### Dice 系数 (F1 分数)
+
+另一个常用的度量标准，特别是在医学图像分析中，是Dice系数，也称为为分割任务调整的F1分数。它与IoU相似，但在数学上略有差异。它衡量预测掩码 ($A$) 与真实掩码 ($B$) 之间的重叠程度，计算方式为：
+
+
+$$
+\text{Dice}(A, B) = \frac{2 |A \cap B|}{|A| + |B|}
+$$
+
+
+Dice系数也范围从0到1，其中1表示完全重叠。请注意，分子是交集的两倍，分母是两个集合（掩码）大小的总和。与IoU类似，它有效忽略了真阴性（正确识别的背景像素），侧重于正类别的吻合度。
+
+Dice和IoU之间存在直接关联：
+
+
+$$
+\text{Dice} = \frac{2 \times \text{交并比}}{1 + \text{交并比}} \quad \text{且} \quad \text{交并比} = \frac{\text{Dice}}{2 - \text{Dice}}
+$$
+
+
+这意味着它们是单调相关的，但Dice倾向于产生比IoU略高的分数，尤其是在中等重叠的情况下。它们之间的选择通常取决于社区惯例或所需的特定属性（Dice与精度和召回率的调和平均值有关）。与mIoU类似，可以通过对所有类别的Dice系数求平均值来计算平均Dice分数。
+
+### 其他度量标准
+
+虽然mIoU和平均Dice是主要的，但其他度量标准提供了更多信息：
+
+- **像素准确度:** 最简单的度量标准，计算总体上正确分类的像素百分比。如前所述，这对于不均衡数据集可能产生误导。
+  
+  $$
+  \text{像素准确度} = \frac{\text{正确分类像素数量}}{\text{总像素数量}}
+  $$
+  
+- **每类准确度:** 针对每个类别单独计算的准确度，通常取平均值得到平均准确度。这比总体像素准确度更能体现少数类别的性能。
+- **精度和召回率:** 为分割任务调整的标准度量标准。对于给定类别，精度衡量的是正确预测像素的比例 ($TP / (TP + FP)$)，而召回率衡量的是被正确识别的真实像素的比例 ($TP / (FN + TP)$)。Dice系数等同于F1分数，它是精度和召回率的调和平均值。
+- **边界度量标准:** 像边界F1分数（BF分数）这样的度量标准专门评估预测物体边界的准确度，这在需要精确轮廓的应用中可能比较重要。
+
+### 实例分割的度量标准
+
+评估实例分割需要同时考虑检测准确度（找到物体）和分割质量（掩码准确度）。度量标准通常从物体检测中调整而来，例如平均精度（AP），但会加入掩码IoU。通常，只有当预测边界框与真实边界框充分重叠*且*预测掩码与真实掩码之间的掩码IoU超过某个阈值（例如0.5）时，该预测才被视为真阳性。然后，AP通过对不同召回率水平上的精度进行平均计算得到，通常还会跨越多个掩码IoU阈值（例如，在COCO挑战赛中，对IoU阈值从0.5到0.95，以0.05的步长取平均AP）。
+
+选择正确的度量标准取决于具体的应用需求。然而，对于一般的语义分割任务，mIoU仍然是最常用且信息量大的评估基准。理解这些度量标准如何计算及其细节，对于正确理解模型性能和比较不同的分割方法非常重要。
+
+## 参考资料
+
+- [Fully Convolutional Networks for Semantic Segmentation](https://arxiv.org/abs/1411.4038) — Jonathan Long, Evan Shelhamer, Trevor Darrell (2015)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Pages: 3431-3440; DOI: [10.48550/arXiv.1411.4038](https://doi.org/10.48550/arXiv.1411.4038)
+  介绍全卷积网络（FCNs）的基础论文，确立了平均交并比（mIoU）作为语义分割的主要基准指标。
+- [Microsoft COCO: Common Objects in Context](https://arxiv.org/abs/1405.0312) — Tsung-Yi Lin, Michael Maire, Serge Belongie, Lubomir Bourdev, Ross Girshick, James Hays, Pietro Perona, Deva Ramanan, C. Lawrence Zitnick, Piotr Dollár (2014)
+  Journal: European Conference on Computer Vision (ECCV); Pages: 740-755; DOI: [10.48550/arXiv.1405.0312](https://doi.org/10.48550/arXiv.1405.0312)
+  介绍了COCO数据集及其广泛使用的物体检测和实例分割指标，包括基于掩码交并比阈值的平均精度（AP）。
+- [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597) — Olaf Ronneberger, Philipp Fischer, Thomas Brox (2015)
+  Journal: MICCAI 2015; Pages: 234-241; DOI: [10.48550/arXiv.1505.04597](https://doi.org/10.48550/arXiv.1505.04597)
+  一篇医学图像分割领域的里程碑论文，广泛使用并讨论了Dice系数作为关键评估指标。

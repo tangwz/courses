@@ -1,0 +1,177 @@
+---
+course: "basics-model-evaluation-metrics"
+chapter: "basic-evaluation-workflow"
+lesson: "calculating-performance-metrics"
+sourceId: 4043
+sourceUrl: "https://apxml.com/zh/courses/basics-model-evaluation-metrics/chapter-5-basic-evaluation-workflow/calculating-performance-metrics"
+title: "计算性能指标"
+description: "将选定的评估指标应用于测试集上的预测。"
+order: 6
+plots: []
+sourceHash: "8a14d0a4f64a2ae4df055680a6ddbc1f76cc1b23d5aa9c0db6e8b804b4dcb87a"
+sourceCorrections: [{"kind": "currency-table-boundary", "line": 133}, {"kind": "currency-table-boundary", "line": 133}, {"kind": "currency-table-boundary", "line": 133}, {"kind": "currency-table-boundary", "line": 133}, {"kind": "currency-table-boundary", "line": 134}, {"kind": "currency-table-boundary", "line": 134}, {"kind": "currency-table-boundary", "line": 134}, {"kind": "currency-table-boundary", "line": 134}, {"kind": "currency-table-boundary", "line": 135}, {"kind": "currency-table-boundary", "line": 135}, {"kind": "currency-table-boundary", "line": 135}, {"kind": "currency-table-boundary", "line": 135}, {"kind": "currency-table-boundary", "line": 136}, {"kind": "currency-table-boundary", "line": 136}, {"kind": "currency-table-boundary", "line": 136}, {"kind": "currency-table-boundary", "line": 136}, {"kind": "currency-table-boundary", "line": 137}, {"kind": "currency-table-boundary", "line": 137}, {"kind": "currency-table-boundary", "line": 137}, {"kind": "currency-table-boundary", "line": 137}]
+---
+
+衡量模型在测试集（模型之前未见过的数据）上的表现是评估的必要步骤。这一过程涉及将模型的预测结果（`y_pred`）与测试集中真实已知的值（`y_true`）进行直接比较。常用的评估指标提供了进行这种比较的数学工具。
+
+可以把这想象成批改考试。学生（您的模型）对从未见过的题目（测试集）提供了答案（预测结果）。您手上有标准答案（真实值）。计算性能指标的过程，就是应用评分标准（选择的指标，如准确率或平均绝对误差）来量化 (quantization)有多少答案是正确的，或者答案的接近程度。
+
+### 计算分类指标
+
+如果您处理的是分类问题（比如预测垃圾邮件与非垃圾邮件，或识别不同类型的物体），您会使用为分类结果设计的指标。我们来回顾一下常见的指标：
+
+1. **混淆矩阵组成部分（TP, FP, TN, FN）：** 通常第一步是对测试集上的每个预测进行分类：
+
+   - **真阳性 (TP)：** 实际值为正，模型预测为正。
+   - **假阳性 (FP)：** 实际值为负，但模型预测为正（“误报”）。
+   - **真阴性 (TN)：** 实际值为负，模型预测为负。
+   - **假阴性 (FN)：** 实际值为正，但模型预测为负（“漏报”）。
+     您可以通过比较 `y_pred` 中的每个预测与其在 `y_true` 中的对应值来获得这些计数。
+2. **准确率：** 这是最直接的指标。它是正确预测占总预测的比例。
+
+   
+   $$
+   \text{准确率} = \frac{\text{正确预测数}}{\text{总预测数}} = \frac{TP + TN}{TP + FP + TN + FN}
+   $$
+   
+
+   您可以通过将TP和TN的计数相加，然后除以测试集中的总预测数来计算此值。
+3. **精确率：** 衡量阳性预测的准确性。在模型预测为阳性的所有情况下，实际为阳性的有多少？
+
+   
+   $$
+   \text{精确率} = \frac{TP}{TP + FP}
+   $$
+   
+
+   使用比较 `y_pred` 和 `y_true` 得出的TP和FP计数。
+4. **召回率（敏感度）：** 衡量模型正确识别出实际阳性案例的数量。
+
+   
+   $$
+   \text{召回率} = \frac{TP}{TP + FN}
+   $$
+   
+
+   使用TP和FN计数。
+5. **F1-分数：** 精确率和召回率的调和平均值，提供一个平衡两者的单一分数。
+
+   
+   $$
+   F1 = 2 \times \frac{\text{精确率} \times \text{召回率}}{\text{精确率} + \text{召回率}}
+   $$
+   
+
+   首先计算精确率和召回率，然后将它们代入此公式。
+
+**计算示例：**
+
+假设您的测试集有10个实例。运行模型后，您将预测结果（`y_pred`）与实际值（`y_true`）进行比较：
+
+| 实例 | 实际值 (`y_true`) | 预测值 (`y_pred`) | 结果 |
+| --- | --- | --- | --- |
+| 1 | 正 | 正 | TP |
+| 2 | 正 | 负 | FN |
+| 3 | 负 | 负 | TN |
+| 4 | 正 | 正 | TP |
+| 5 | 负 | 正 | FP |
+| 6 | 负 | 负 | TN |
+| 7 | 正 | 正 | TP |
+| 8 | 负 | 负 | TN |
+| 9 | 正 | 负 | FN |
+| 10 | 负 | 负 | TN |
+
+通过此比较：
+
+- TP = 3（实例 1, 4, 7）
+- FP = 1（实例 5）
+- TN = 4（实例 3, 6, 8, 10）
+- FN = 2（实例 2, 9）
+- 总数 = 10
+
+现在您可以计算这些指标了：
+
+- 准确率 = (3 + 4) / 10 = 7/10 = 0.70 或 70%
+- 精确率 = 3 / (3 + 1) = 3/4 = 0.75
+- 召回率 = 3 / (3 + 2) = 3/5 = 0.60
+- F1-分数 = 2 \* (0.75 \* 0.60) / (0.75 + 0.60) ≈ 0.67
+
+### 计算回归指标
+
+对于回归问题，模型预测的是连续数值（如房价或温度），您会使用衡量预测值（`y_pred`）与实际值（`y_true`）之间误差大小的指标。
+
+1. **计算误差：** 大多数回归指标的基础是每个预测的误差或残差：$e_i = y_{\text{真实}, i} - y_{\text{预测}, i}$。您需要为测试集中的每个数据点计算此差值。
+2. **平均绝对误差 (MAE)：** 绝对误差的平均值。它告诉您，平均而言，您的预测与目标变量的原始单位有多少偏差。
+
+   
+   $$
+   \text{平均绝对误差} = \frac{1}{n} \sum_{i=1}^{n} |y_{\text{真实}, i} - y_{\text{预测}, i}|
+   $$
+   
+
+   计算每个点的绝对误差 $|e_i|$，将它们加起来，然后除以测试点的数量 ($n$)。
+3. **均方误差 (MSE)：** 平方误差的平均值。误差平方化会使较大的错误受到比小错误更重的惩罚。
+
+   
+   $$
+   \text{均方误差} = \frac{1}{n} \sum_{i=1}^{n} (y_{\text{真实}, i} - y_{\text{预测}, i})^2
+   $$
+   
+
+   计算每个点的平方误差 $e_i^2$，将它们加起来，然后除以 $n$。请注意，单位是平方后的（例如，如果预测价格，单位是平方美元）。
+4. **均方根误差 (RMSE)：** 均方误差的平方根。取平方根可以将指标带回目标变量的原始单位，使其比均方误差更容易理解，同时仍能惩罚大错误。
+
+   
+   $$
+   \text{均方根误差} = \sqrt{\text{均方误差}} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_{\text{真实}, i} - y_{\text{预测}, i})^2}
+   $$
+   
+
+   先计算均方误差，然后取其平方根。
+5. **决定系数（R方， $R^2$）：** 表示因变量（实际值）的方差中，可以通过自变量（模型使用的特征）预测的部分所占的比例。它的范围从负无穷到1。值为1表示模型完美预测数据。值为0表示模型表现不比简单预测实际值的平均值更好。它通常使用均方误差计算：
+
+   
+   $$
+   R^2 = 1 - \frac{\sum_{i=1}^{n} (y_{\text{真实}, i} - y_{\text{预测}, i})^2}{\sum_{i=1}^{n} (y_{\text{真实}, i} - \bar{y}_{\text{真实}})^2} = 1 - \frac{\text{均方误差}}{y_{\text{真实}}\text{ 的方差}}
+   $$
+   
+
+   其中 $\bar{y}_{\text{真实}}$ 是测试集中真实值的平均值。
+
+**计算示例：**
+
+假设您的测试集有5个房价预测：
+
+| 实例 | 实际价格 (`y_true`) | 预测价格 (`y_pred`) | 误差 ($e_i$) | 绝对误差 ($\vert e_i\vert $) | 平方误差 ($e_i^2$) |
+| :------- | :---------------------- | :------------------------- | :------------ | :------------------------ | :---------------------- |
+| 1 | \$250k                   |\$260k | -\$10k         |\$10k | 100M |
+| 2 | \$300k                   |\$295k | \$5k           |\$5k | 25M |
+| 3 | \$210k                   |\$225k | -\$15k         |\$15k | 225M |
+| 4 | \$450k                   |\$440k | \$10k          |\$10k | 100M |
+| 5 | \$320k                   |\$310k | \$10k          |\$10k | 100M |
+| **总和** | | | | **\$50k** | **550M** |
+
+现在计算指标（$n=5$）：
+
+- MAE = $50k / 5 =$10k$（平均而言，预测偏差为$10k）
+- MSE = 550,000,000 / 5 = 110,000,000（$k^2$）
+- RMSE = $\sqrt{110,000,000} \approx$10,488$（与MAE有相似的解释，但受$15k 误差的影响更大）
+
+计算R方需要实际价格的方差，但其过程涉及将平方误差的总和（550M）与实际价格的总方差进行比较。
+
+### 使用软件库
+
+虽然理解公式很重要，但对于大型数据集，您通常不会手动计算这些指标。像Python中的scikit-learn这样的编程库提供了高效计算这些指标的函数。您只需提供测试集的真实值（`y_true`）和模型的预测值（`y_pred`），库就会处理计算。例如，您可以使用 `accuracy_score(y_true, y_pred)`、`precision_score(y_true, y_pred)`、`mean_squared_error(y_true, y_pred)` 或 `r2_score(y_true, y_pred)` 等函数。
+
+这一步为您提供了具体的数值，总结了模型在未见过数据上的表现。下一个重要步骤是根据您具体的问题，理解这些数字的含义。
+
+## 参考资料
+
+- [An Introduction to Statistical Learning: With Applications in R](http://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani (2021)
+  Publisher: Springer; Pages: Chapters 3-4
+  提供对机器学习统计基础的严谨而易懂的介绍，包括分类和回归指标的详细解释。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media; Pages: Chapters 3-4
+  一本实用指南，涵盖使用流行的Python库（如scikit-learn）实现各种机器学习模型及其评估指标。
+- [Metrics and scoring: quantifying prediction quality](https://scikit-learn.org/stable/modules/model_evaluation.html) — scikit-learn developers (2024)
+  scikit-learn的官方文档，详细介绍了各种分类和回归指标的实现和使用，对实际应用非常有用。

@@ -1,0 +1,281 @@
+---
+course: "langchain-production-llm"
+chapter: "advanced-memory-management"
+lesson: "practice-vector-store-memory"
+sourceId: 3886
+sourceUrl: "https://apxml.com/zh/courses/langchain-production-llm/chapter-3-advanced-memory-management/practice-vector-store-memory"
+title: "动手实践：实现向量存储记忆"
+description: "设置和使用基于向量存储的记忆系统，以实现长期的对话回忆。"
+order: 7
+plots: []
+sourceHash: "d728d4826b33b2f37737c7da40da9a39e65cbb58f035ea6651c3a15878c89b0b"
+sourceCorrections: []
+---
+
+随着对话变长，有效地管理对话历史变得有难度。基本的缓冲区记忆最终会超出上下文 (context)窗口，而总结记忆可能会丢失重要信息。向量 (vector)存储记忆提供了一种有吸引力的方法，它将过去的交互存储为向量数据库中的嵌入 (embedding)（embeddings），并在生成新回复时语义检索最相关的信息。这种方式使得模型能够从可能很长的历史记录中回忆起相关信息，即使这些信息最近没有被提及。
+
+在这一实践部分，我们将使用FAISS（一个用于高效相似性搜索的流行库）以及OpenAI的嵌入模型来实现 `VectorStoreRetrieverMemory`。
+
+### 前提条件与设置
+
+首先，请确保您已安装所需的库。我们将需要 `langchain`、`langchain-community`、特定的集成 (`langchain-openai`)、一个向量 (vector)存储实现 (`faiss-cpu` 或 `faiss-gpu`)，以及用于文本处理的 `tiktoken`。
+
+```bash
+pip install langchain langchain-community langchain-openai faiss-cpu tiktoken
+```
+
+您还需要在环境中配置一个OpenAI API密钥，通常命名为 `OPENAI_API_KEY`。
+
+现在，让我们导入所需的组件：
+
+```python
+import os
+from langchain_openai import OpenAIEmbeddings, OpenAI
+from langchain.memory import VectorStoreRetrieverMemory
+from langchain.chains import ConversationChain
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+
+# 确保您的 OPENAI_API_KEY 已在环境变量中设置
+# 示例：os.environ["OPENAI_API_KEY"] = "您的API密钥"
+
+# 检查API密钥是否可用
+if not os.getenv("OPENAI_API_KEY"):
+    raise ValueError("OPENAI_API_KEY environment variable not set.")
+```
+
+### 使用FAISS实现向量 (vector)存储记忆
+
+主要思路是使用向量存储来保存对话历史。对话的每一轮（输入和输出）都将被嵌入 (embedding)并存储。在生成下一个回复时，我们将使用当前输入来查询向量存储，以获取相关的过去交流。
+
+1. **初始化组件：** 我们需要一个嵌入模型和一个空的FAISS向量存储。向量存储需要嵌入模型和一个 `index` 名称（这里只是一个标签）。
+
+   ```python
+   # 1. 初始化嵌入模型
+   # 我们使用高效的text-embedding-3-small模型
+   embedding_model = OpenAIEmbeddings(model="text-embedding-3-small")
+
+   # 2. 初始化一个空的FAISS向量存储
+   # 维度取决于嵌入模型（text-embedding-3-small 使用 1536 维）
+   embedding_size = 1536
+   index = FAISS.from_texts(["_initial_"], embedding_model, metadatas=[{"hnsw:space": "ip"}]) # 对OpenAI嵌入使用内积空间
+   ```
+
+   *请注意：* 我们使用一个虚拟文本 `_initial_` 来初始化FAISS，因为它无法通过 `from_texts` 完全空初始化。这个初始条目不会对检索产生明显作用。我们在元数据中指定 `"hnsw:space": "ip"`（内积），这对于OpenAI嵌入来说常建议，尽管余弦相似度是默认值且效果也很好。
+2. **创建检索器：** 记忆模块不直接与向量存储交互；它使用LangChain的 `Retriever`。我们从FAISS索引创建一个检索器。参数 (parameter) `search_kwargs={'k': 2}` 告诉检索器根据与当前输入的语义相似度，获取前2个最相关的文档（对话片段）。
+
+   ```python
+   # 3. 创建检索器
+   # 我们将检索最相关的2个对话片段
+   retriever = index.as_retriever(search_kwargs=dict(k=2))
+   ```
+
+   选择合适的 `k` 值很要紧。较大的 `k` 会带来更多上下文 (context)，但会增加令牌使用量并带来包含不相关信息的风险。较小的 `k` 更简洁，但可能会遗漏有用的上下文。常常需要进行测试。
+3. **实例化 VectorStoreRetrieverMemory：** 现在，我们创建记忆对象本身，传入检索器。
+
+   ```python
+   # 4. 实例化记忆模块
+   memory = VectorStoreRetrieverMemory(retriever=retriever, memory_key="history")
+   ```
+
+   `memory_key="history"` 指定了在提示中保存检索到的上下文的变量名。
+
+### 整合到对话链中
+
+让我们将此记忆整合到一个标准的 `ConversationChain` 中。我们需要一个LLM和一个提示模板，其中包含 `history` 变量（由我们的记忆模块管理）和 `input` 变量（用户当前的讯息）。
+
+```python
+# 5. 初始化LLM
+# 我们使用 gpt-3.5-turbo-instruct 来兼容文本补全提示
+llm = OpenAI(temperature=0, model="gpt-3.5-turbo-instruct")
+
+# 6. 定义提示模板
+# 请注意 "{history}" 变量，它将由 VectorStoreRetrieverMemory 填充
+_DEFAULT_TEMPLATE = """以下是人类与AI之间的一次友好对话。AI健谈，并提供来自其上下文的许多具体细节。如果AI不知道问题的答案，它会如实说明不知道。
+
+以前对话中的相关部分：
+{history}
+
+（如果这些信息不相关，您无需使用它们）
+
+当前对话：
+人类：{input}
+AI:"""
+
+PROMPT = PromptTemplate(
+    input_variables=["history", "input"], template=_DEFAULT_TEMPLATE
+)
+
+# 7. 创建对话链
+conversation_with_vectorstore_memory = ConversationChain(
+    llm=llm,
+    prompt=PROMPT,
+    memory=memory,
+    verbose=True # 设置为 True 以查看内部步骤
+)
+```
+
+### 运行对话
+
+现在，让我们模拟一次对话。请注意记忆模块如何自动保存输入/输出并为后续轮次检索相关历史。
+
+```python
+# 第一次交互
+response = conversation_with_vectorstore_memory.predict(input="My favorite programming language is Python because it's versatile.")
+print(response)
+
+# 第二次交互 - 不相关
+response = conversation_with_vectorstore_memory.predict(input="The weather today is sunny.")
+print(response)
+
+# 第三次交互 - 隐含地回溯到第一次发言
+response = conversation_with_vectorstore_memory.predict(input="Why did I mention I liked Python?")
+print(response)
+```
+
+如果您以 `verbose=True` 运行此代码，您将看到第三次交互的类似以下（简化）输出：
+
+```
+> 进入新的 ConversationChain 链...
+格式化后的提示：
+以下是人类与AI之间的一次友好对话。 ...
+
+以前对话中的相关部分：
+人类：我最喜欢的编程语言是Python，因为它多功能。
+AI：太棒了！Python确实以其多功能性、可读性和丰富的库而闻名。它用于网络开发、数据科学、人工智能、脚本编写等等。
+
+（如果这些信息不相关，您无需使用它们）
+
+当前对话：
+人类：我为什么提到我喜欢Python？
+AI:
+
+> 链结束。
+ 您提到您喜欢Python是因为它的多功能性。
+```
+
+请注意，`VectorStoreRetrieverMemory` 如何根据第三个输入（“我为什么提到我喜欢Python？”）的语义内容检索第一次交互，从而填充 `Relevant pieces of previous conversation:` 部分。关于天气的第二次不相关交互可能没有被检索到（或排名较低），因为它在语义上不相似。
+
+### 向量 (vector)存储记忆的工作方式：检索流程
+
+在使用 `VectorStoreRetrieverMemory` 时，链内部的过程可以如下所示：
+
+> 此流程图展示了在 ConversationChain 中使用向量存储记忆所涉及的步骤。用户输入在提示格式化之前触发检索，而输入/输出对在回复生成之后保存。
+
+### 调整与持久化
+
+- **检索参数 (parameter) (`k`)：** `as_retriever(search_kwargs=dict(k=k))` 中的 `k` 值是一个主要的调整参数。增加 `k` 会提供更多上下文 (context)，但会增加提示大小和成本。减小它会节省令牌，但可能会遗漏相关信息。您还可以考察其他 `search_type` 选项，例如 `"mmr"`（最大边际相关性），以平衡检索文档的相关性和多样性。
+- **持久化：** 我们示例中的FAISS索引是内存中的，脚本结束后会丢失。对于生产用途，您通常会希望实现持久化。您可以在本地保存和加载FAISS索引：
+
+  ```python
+  # 保存索引
+  index.save_local("my_faiss_index")
+
+  # 稍后加载索引（需要嵌入模型）
+  loaded_index = FAISS.load_local("my_faiss_index", embedding_model, allow_dangerous_deserialization=True)
+  retriever = loaded_index.as_retriever(search_kwargs=dict(k=2))
+  memory = VectorStoreRetrieverMemory(retriever=retriever, memory_key="history")
+  # ... 使用此记忆重新创建链
+  ```
+
+  *安全提示：* 如果索引文件来自不可信来源，加载通过 `save_local` 保存的FAISS索引可能存在安全隐患，因此需要 `allow_dangerous_deserialization=True` 标志。对于与可能不可信数据交互的生产系统，请考虑更安全的序列化方法或托管式向量 (vector)数据库服务。或者，可以使用前面讨论过的云端向量存储（Pinecone、Weaviate等），它们会自动处理持久化和扩展。
+
+### 完整示例脚本
+
+这是结合所有步骤的完整脚本：
+
+```python
+import os
+from langchain_openai import OpenAIEmbeddings, OpenAI
+from langchain.memory import VectorStoreRetrieverMemory
+from langchain.chains import ConversationChain
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+
+# 确保您的 OPENAI_API_KEY 已设置
+if not os.getenv("OPENAI_API_KEY"):
+    raise ValueError("OPENAI_API_KEY environment variable not set.")
+
+# 1. 初始化嵌入
+embedding_model = OpenAIEmbeddings(model="text-embedding-3-small")
+
+# 2. 初始化FAISS向量存储
+# 使用一个小技巧通过 from_texts 进行初始化，因为它需要一些文本
+try:
+    # 如果存在，尝试加载
+    index = FAISS.load_local("my_faiss_index", embedding_model, allow_dangerous_deserialization=True)
+    print("已加载现有FAISS索引。")
+except Exception:
+    print("正在创建新的FAISS索引。")
+    # embedding_size = 1536 # 通常从嵌入中推断
+    index = FAISS.from_texts(["_initial_"], embedding_model, metadatas=[{"hnsw:space": "ip"}])
+
+# 3. 创建检索器（检索前2个相关片段）
+retriever = index.as_retriever(search_kwargs=dict(k=2))
+
+# 4. 实例化记忆
+memory = VectorStoreRetrieverMemory(retriever=retriever, memory_key="history")
+
+# 5. 初始化LLM
+llm = OpenAI(temperature=0, model="gpt-3.5-turbo-instruct")
+
+# 6. 定义提示模板
+_DEFAULT_TEMPLATE = """以下是人类与AI之间的一次友好对话。AI健谈，并提供来自其上下文的许多具体细节。如果AI不知道问题的答案，它会如实说明不知道。
+
+以前对话中的相关部分：
+{history}
+
+（如果这些信息不相关，您无需使用它们）
+
+当前对话：
+人类：{input}
+AI:"""
+
+PROMPT = PromptTemplate(
+    input_variables=["history", "input"], template=_DEFAULT_TEMPLATE
+)
+
+# 7. 创建对话链
+conversation_with_vectorstore_memory = ConversationChain(
+    llm=llm,
+    prompt=PROMPT,
+    memory=memory,
+    verbose=False # 设置为 True 以查看详细日志
+)
+
+# --- 运行对话 ---
+print("开始对话（输入 'quit' 退出）：")
+while True:
+    user_input = input("人类：")
+    if user_input.lower() == 'quit':
+        break
+    response = conversation_with_vectorstore_memory.predict(input=user_input)
+    print(f"AI：{response}")
+
+# --- 退出前保存索引 ---
+try:
+    index.save_local("my_faiss_index")
+    print("已保存FAISS索引。")
+except Exception as e:
+    print(f"保存FAISS索引时出错: {e}")
+
+print("对话结束。")
+```
+
+### 记忆考量
+
+- **嵌入 (embedding)成本：** 每一个保存的输入/输出对都会产生生成其嵌入的成本。这在长时间对话中可能会累积。
+- **检索相关性：** 记忆的质量很大程度上受检索步骤有效性的影响。糟糕的检索（由于 `k` 不理想、嵌入模型较弱或历史记录噪声）会导致不相关的上下文 (context)被提供给LLM。诸如重排或查询转换（第4章讨论）等技术有时会有所帮助。
+- **上下文大小：** 尽管向量 (vector)存储记忆有助于*选择*相关历史，但检索到的片段仍需与当前输入和提示指令一同适应LLM的上下文窗口。
+
+## 参考资料
+
+- [Faiss: A library for efficient similarity search](https://arxiv.org/abs/1702.08734) — Jeff Johnson, Matthijs Douze, Hervé Jégou (2017)
+  Journal: arXiv preprint arXiv:1702.08734; DOI: [10.48550/arXiv.1702.08734](https://doi.org/10.48550/arXiv.1702.08734)
+  介绍FAISS的基础论文，详细阐述其用于稠密向量高性能相似性搜索的算法和架构。
+- [OpenAI API Reference: Embeddings](https://platform.openai.com/docs/guides/embeddings) — OpenAI (2024)
+  Publisher: OpenAI
+  官方指南，说明如何使用OpenAI的文本嵌入模型完成各种任务，包括为语义相似性生成嵌入。
+- [Retrieval-Augmented Generation for Large Language Models: A Survey](https://arxiv.org/abs/2312.10997) — Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang (2023)
+  Journal: arXiv preprint arXiv:2312.10997; DOI: [10.48550/arXiv.2312.10997](https://doi.org/10.48550/arXiv.2312.10997)
+  关于检索增强生成（RAG）的全面调查，为使用向量存储扩展LLM记忆提供了理论和实践背景。

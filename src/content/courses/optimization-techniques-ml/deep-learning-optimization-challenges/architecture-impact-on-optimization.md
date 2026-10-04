@@ -1,0 +1,73 @@
+---
+course: "optimization-techniques-ml"
+chapter: "deep-learning-optimization-challenges"
+lesson: "architecture-impact-on-optimization"
+sourceId: 1303
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-6-deep-learning-optimization-challenges/architecture-impact-on-optimization"
+title: "网络架构对优化的影响"
+description: "讨论深度、宽度和连接方式等选择如何影响优化过程。"
+order: 2
+plots: []
+sourceHash: "86e0b47bcc8d9ce8349b21ee5936fced5a5b5d6fc5073158c355384b0f214d12"
+sourceCorrections: []
+---
+
+神经网络 (neural network)的设计，即其架构，决定了其表示函数的理论能力。架构选择直接影响优化过程，塑造损失曲面的几何形状并影响基于梯度方法的行为。理解这种关联对成功训练深度模型十分重要。深度、宽度、连接模式甚至激活函数 (activation function)的选择等因素，对优化器能否有效找到一组良好参数 (parameter)有显著影响。
+
+### 深度与梯度消失/爆炸问题
+
+增加网络层数，即增加深度，使得学习更复杂、分层级的特征成为可能。然而，增加深度会带来显著的优化障碍，主要是梯度消失和梯度爆炸问题。
+
+考虑反向传播 (backpropagation)过程。梯度通过链式法则逐层计算。在深度网络中，这涉及将多个雅可比矩阵相乘。如果这些雅可比矩阵的特征值大小始终小于1，梯度信号在反向传播时会指数级缩小，最终变得太小而无法有效更新早期层的权重 (weight)（梯度消失）。相反，如果大小始终大于1，梯度信号会指数级增长，导致更新不稳定（梯度爆炸）。
+
+网络的深度是影响梯度计算和传播的重要因素。对于一个由$L$层组成的简单变换链 $h_L(h_{L-1}(...h_1(x)...))$，损失 $L$ 对第一层参数 (parameter) $heta_1$ 的梯度表达式如下：
+
+深度网络本身往往具有更复杂的损失曲面，可能包含大量梯度很小的鞍点和平台，进一步减缓优化速度。尽管最初认为糟糕的局部最小值是主要问题，但研究表明，鞍点是高维深度学习 (deep learning)优化中更普遍的障碍。稍后讨论的技术，如恰当的初始化、归一化 (normalization)层和特定架构（例如，ResNets），专门用于缓解这些与深度相关的优化困难。
+
+### 宽度与过参数 (parameter)化
+
+网络的宽度指其层中的神经元或通道数量。更宽的网络通常具有更强的表示能力。从优化角度看，增加宽度有时是有益的。
+
+更宽的层可能导致更平滑的损失曲面，具有更少的尖锐最小值。过参数化（参数数量多于训练数据点），通常通过增加宽度实现，有时能简化优化问题。直观上看，参数越多，可能存在更多通向低损失的“路径”或配置，使得SGD等优化器更容易找到一个良好解。
+
+然而，宽度的优势也伴随着代价：
+
+- **计算开销：** 更宽的层在前向和反向传播 (backpropagation)过程中需要更多计算。
+- **内存占用：** 存储宽层的激活和参数会消耗更多内存。
+- **过拟合 (overfitting)风险：** 尽管优化可能变得更容易，但若未进行适当正则化 (regularization)，非常宽的网络更容易过拟合训练数据。
+
+找到深度和宽度之间的恰当平衡通常是一个经验性过程，取决于具体问题和数据集。
+
+### 连接模式：促进梯度流动
+
+层如何连接对优化发挥重要作用，尤其是在深度网络中。
+
+- **残差连接 (ResNets)：** 为应对极深网络中的性能退化问题而引入，残差连接提供“快捷连接”或“跳跃连接”，使梯度能更直接地流向早期层。一个残差块计算 $H(x) = F(x) + x$，其中 $x$ 是块的输入，而 $F(x)$ 是块内卷积层的输出。在反向传播 (backpropagation)期间，梯度可以流经恒等路径（$+ x$），绕过变换 $F(x)$。这种结构显著缓解了梯度消失问题，并使得训练数百甚至数千层的网络成为可能。
+
+> 残差连接示意图。恒等路径允许梯度绕过层，有助于在深度网络中流动。
+
+- **密集连接 (DenseNets)：** DenseNets在一个密集块内，以直连方式将每个层连接到所有其他层。这鼓励特征重用并增强梯度流动，因为每个层都直接从损失函数 (loss function)和所有后续层接收梯度。尽管有效，这种密集连接增加了内存需求，因为需要存储许多特征图进行拼接。
+- **卷积层 (CNNs)：** 卷积层固有的参数 (parameter)共享，与对相同输入尺寸（例如，图像）操作的全连接网络相比，大幅减少了总参数数量。这种架构选择通过降低搜索空间维度，使高维输入的优化变得可行。
+- **循环连接 (RNNs)：** 训练RNN涉及时间反向传播（BPTT），它实质上将循环连接展开成一个深度前馈网络（每个时间步一层）。这使得RNN易受与深度相关的相同梯度消失/爆炸问题影响，但发生于时间序列长度上。LSTMs和GRUs等架构引入了门控机制，其作用类似于动态残差连接，有助于随时间控制梯度流动并缓解这些问题。
+
+### 激活函数 (activation function)
+
+非线性激活函数的选择也影响优化动态：
+
+- **Sigmoid 和 Tanh：** 这些函数在输入过大或过小时会饱和（输出接近常数，导数接近零）。当神经元在这些饱和区域运行时，局部梯度变得非常小，阻碍学习（促成梯度消失）。
+- **ReLU (Rectified Linear Unit)：** 定义为 $f(x) = \max(0, x)$，ReLU避免了正输入的饱和，并且计算效率高。然而，如果神经元的输入持续为负，其输出将为零，流经它的梯度也将为零。这种“死亡ReLU”问题可能阻止权重 (weight)更新。
+- **ReLU 变体 (Leaky ReLU, ELU, SELU)：** 开发这些是为了解决“死亡ReLU”问题，方法是允许负输入有小的非零梯度（Leaky ReLU: $f(x) = \max(0.01x, x)$），或具有负输出，这有助于将平均激活值移近零（ELU，SELU），有可能提升优化稳定性。
+
+总之，网络架构并非独立于优化过程。深度网络需要残差连接和仔细选择激活函数（如ReLU）等机制来抵消梯度消失。宽度影响计算成本和损失曲面的可能平滑度。卷积等连接模式通过减少参数 (parameter)使得特定数据类型的优化成为可能，而循环结构则引入了时间梯度困难。有效的深度学习 (deep learning)实践涉及选择其结构有助于而非阻碍基于梯度优化的架构。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍深度学习基础知识，包括网络架构、优化挑战和各种深度学习模型。
+- [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (2015)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); DOI: [10.48550/arXiv.1512.03385](https://doi.org/10.48550/arXiv.1512.03385)
+  引入残差连接，使极深神经网络的训练成为可能，直接缓解了梯度消失问题。
+- [Long Short-Term Memory](https://www.bioinf.jku.at/publications/older/2604.pdf) — Sepp Hochreiter and Jürgen Schmidhuber (1997)
+  Journal: Neural Computation; Volume: 9; Pages: 1735-1780; DOI: [10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735)
+  引入长短期记忆（LSTM）网络的奠基性论文，旨在解决循环神经网络中的梯度消失和梯度爆炸问题。

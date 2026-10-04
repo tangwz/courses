@@ -1,0 +1,120 @@
+---
+course: "planning-optimizing-ai-infrastructure"
+chapter: "strategies-for-performance-optimization"
+lesson: "model-quantization-efficient-inference"
+sourceId: 7028
+sourceUrl: "https://apxml.com/zh/courses/planning-optimizing-ai-infrastructure/chapter-5-strategies-for-performance-optimization/model-quantization-efficient-inference"
+title: "模型量化以实现高效推理"
+description: "应用模型量化技术，以减小模型尺寸并加快推理速度，同时最大程度保持准确性。"
+order: 4
+plots: ["plots/7028-0.json"]
+sourceHash: "9e4c76ffa9b9b6e0f539b2adb8932995c25156d7840561288ab351fd294811dc"
+sourceCorrections: []
+---
+
+对模型进行优化，使其最终用于推理 (inference)，是AI基础设施中的一个主要考虑因素。将大型的32位浮点数（$FP32$）模型直接部署到生产环境中可能会效率不高。此类模型占用大量内存，导致推理延迟较高，并增加运营成本，尤其是在处理数百万次请求时。对于智能手机或嵌入 (embedding)式系统等边缘设备上的应用，由于严格的功耗和存储限制，大型$FP32$模型通常不是一个可行的选择。
+
+模型量化 (quantization)是一种直接解决这些问题的有效技术。它是将模型的权重 (weight)，有时包括激活值，从像$FP32$这样的高精度表示转换为低精度表示（最常见的是8位整数（$INT8$））的过程。这种转换显著减少了模型的占用空间，并可在兼容硬件上大幅加速计算。
+
+主要优势来自两个方面：
+
+1. **模型尺寸减小：** 一个$INT8$值仅使用8位内存，而一个$FP32$值使用32位。通过量化权重，您可以立即实现模型尺寸高达4倍的减小。这意味着更快的下载速度、更少的磁盘存储需求以及执行时更小的内存占用。
+2. **计算速度加快：** 现代CPU和GPU对整数运算进行了高度优化。$INT8$数据上的操作比浮点计算快得多且更节能。像NVIDIA的Tensor Cores和Google的TPUs等专用硬件加速器，设计用于以极高的速度执行低精度矩阵乘法，从而带来巨大的性能提升。
+
+### 量化 (quantization)原理
+
+量化将一系列浮点数映射到范围小得多的整数。最常见的方法是仿射映射，它使用比例因子和零点来关联这两个域。
+
+它们之间的关系由以下公式定义：
+
+
+$$
+\text{真实值} \approx (\text{量化值} - \text{零点}) \times \text{比例}
+$$
+
+
+- **比例 (Scale)：** 一个正浮点数，定义量化的步长。它决定了整数值的变化如何映射到真实浮点值的变化。
+- **零点 (Zero-Point)：** 一个整数值，精确对应于真实值0.0。这对于准确表示非对称于零的值范围是必需的。对于$INT8$量化，整数值的范围是-128到127。
+
+这个过程包括找到您想要量化的浮点张量中的最小值 ($r_{min}$) 和最大值 ($r_{max}$)，并将它们映射到整数范围，例如 $INT8$ 的 [$q_{min}, q_{max}$]。
+
+> 将浮点值映射到其对应的8位整数表示。
+
+这种转换本质上是信息有损的，类似于将高分辨率图像压缩为JPEG格式。重要的是要智能地执行这种映射，以使模型准确性潜在的下降最小化，并保持在应用程序可接受的范围内。
+
+### 常用量化 (quantization)策略
+
+应用量化主要有两种方法，每种方法在实现简易性和最终模型准确性之间都有不同的权衡。
+
+#### 训练后量化 (PTQ)
+
+训练后量化是最直接的方法。您可以获取一个经过完全训练的$FP32$模型，并在不进行任何再训练的情况下将其转换为低精度格式。这是一种很有吸引力的选择，因为它速度快，并且不需要访问原始训练流程或数据集。
+
+PTQ主要有两种变体：
+
+- **动态量化：** 在这种模式下，模型权重 (weight)离线量化，但激活值在推理 (inference)过程中“即时”量化。这是最容易应用的方法，对于激活分布变化显著的模型（如LSTMs和Transformers）效果良好。然而，在运行时量化激活值的开销可能会限制性能提升。
+- **静态量化：** 此方法离线量化权重和激活值。为了有效地对激活值进行量化，它需要一个校准步骤。您将一小部分具有代表性的数据样本（校准数据集）通过模型，以收集有关激活值分布的统计信息。框架随后使用这些统计信息来计算每个激活张量的最佳比例和零点。静态量化通常比动态量化带来更大的性能提升，因为计算开销已移出推理路径。
+
+#### 量化感知训练 (QAT)
+
+当PTQ导致模型准确性下降到不可接受的程度时，量化感知训练是推荐的解决方案。QAT在训练或微调 (fine-tuning)过程中模拟低精度推理的效果。它在模型图中插入“假”量化和反量化操作。
+
+这使得模型能够使其权重适应精度损失，从而有效地学习如何抵御量化带来的影响。尽管训练的前向和后向传播仍使用浮点数，但模型针对最终作为纯整数模型的部署进行了优化。QAT需要更多精力，因为它涉及一个训练循环，但它几乎总是能恢复PTQ所损失的准确性，有时甚至可以在原始$FP32$基线上略有提高。
+
+> 选择量化策略的决策流程。从更简单的PTQ方法开始，仅当未达到准确性要求时才转向QAT。
+
+### 量化 (quantization)实践
+
+大多数现代深度学习 (deep learning)框架都提供内置工具，以简化量化过程。例如，PyTorch为PTQ和QAT提供了全面的API。以下代码片段说明了在PyTorch中应用静态PTQ的一般步骤：
+
+```python
+import torch
+import torch.quantization
+
+# 假设 `model_fp32` 是您已训练的FP32模型
+# 并且 `calibration_loader` 提供代表性数据
+model_fp32.eval()
+
+# 步骤1：融合Conv-BN-ReLU等模块以提高准确性和性能
+# 此步骤将经常一起执行的层组合起来
+torch.quantization.fuse_modules(model_fp32, [['conv', 'relu']], inplace=True)
+
+# 步骤2：准备模型进行静态量化
+# 这将插入观察者模块以收集激活统计信息
+model_fp32.qconfig = torch.quantization.get_default_qconfig('fbgemm')
+model_quantized_prepared = torch.quantization.prepare(model_fp32)
+
+# 步骤3：通过数据运行模型进行校准
+with torch.no_grad():
+    for data, _ in calibration_loader:
+        model_quantized_prepared(data)
+
+# 步骤4：将模型转换为最终量化形式
+model_quantized = torch.quantization.convert(model_quantized_prepared)
+
+# 得到的 `model_quantized` 已准备好部署
+```
+
+得到的 `model_quantized` 对象现在包含$INT8$权重 (weight)，并配置为使用整数运算执行计算，从而带来如下所示的性能优势。
+
+
+
+![FP32 与 INT8 模型性能对比](plots/7028-0.json)
+
+
+
+> 典型视觉模型的性能对比。INT8量化版本在推理 (inference)时尺寸减小近4倍，速度提升超过3倍。
+
+最终，模型量化是部署高效AI服务的一个重要优化步骤。通过减小模型尺寸和加速计算，它使得在资源受限的环境中运行复杂模型以及在云端以更低成本提供模型服务成为可能。务必在独立的测试集上验证量化模型的准确性，以确保它持续满足您的应用需求。
+
+## 参考资料
+
+- [Post Training Quantization (PTQ) and Quantization Aware Training (QAT)](https://pytorch.org/docs/stable/quantization.html) — PyTorch Contributors (2019)
+  Publisher: PyTorch Foundation
+  PyTorch量化API的官方文档，提供了在PyTorch中实现训练后量化（PTQ）和量化感知训练（QAT）的实用指南和示例。
+- [A Survey of Quantization Methods for Efficient Neural Network Inference](https://arxiv.org/abs/2103.01533) — Amir Gholami, Song Han, Sheng Shen, Kaiyuan Yang, Shangyu Sun, Lu Hou, Zhuang Liu, Sehoon Kim, Bichen Wu, Matthew Yao, Michael W. Mahoney, Kurt Keutzer (2021)
+  Journal: arXiv preprint arXiv:2103.01533; DOI: [10.48550/arXiv.2103.01533](https://doi.org/10.48550/arXiv.2103.01533)
+  一篇全面的学术综述，详细介绍了各种量化方法、其理论基础以及高效神经网络推理的实践考量。
+- [NVIDIA Deep Learning Performance Guide](https://docs.nvidia.com/deeplearning/performance/index.html) — NVIDIA Corporation (2023)
+  Publisher: NVIDIA Corporation
+  一份官方指南，提供了在NVIDIA GPU上优化深度学习模型性能的最佳实践，包括使用Tensor Cores进行混合精度训练和INT8推理的策略。

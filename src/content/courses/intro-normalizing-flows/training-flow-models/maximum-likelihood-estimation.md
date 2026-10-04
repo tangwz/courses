@@ -1,0 +1,39 @@
+---
+course: "intro-normalizing-flows"
+chapter: "training-flow-models"
+lesson: "maximum-likelihood-estimation"
+sourceId: 8273
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-5-training-flow-models/maximum-likelihood-estimation"
+title: "极大似然估计"
+description: "构建使用精确极大似然训练标准化流的目标函数。"
+order: 1
+plots: []
+sourceHash: "2a160b11ea6ceb6a6bd8be6cf6aa93782dbfad69a1030849e5baf62670d46119"
+sourceCorrections: []
+---
+
+训练生成模型需要一种可靠的方法来衡量其对数据真实分布的逼近程度。许多流行的生成框架，如生成对抗网络（GAN）或变分自编码器（VAE），依赖隐式生成技术或近似下界来训练网络。标准化流在这一方面提供了显著的数学优势。由于流中的变换是严格可逆的，并且可以通过雅可比行列式追踪精确的体积变化，因此标准化流允许进行精确的概率密度评估。这一特性意味着这些模型可以直接使用精确的极大似然估计进行训练。
+
+极大似然估计是一种标准的统计方法，用于寻找最能解释观测数据的概率分布参数 (parameter)。目标是确定神经网络 (neural network)的具体权重 (weight)和偏置 (bias)，从而使生成训练集的概率最大化。因为我们将数据点映射到一个连续空间，所以最大化该概率等同于最大化分配给训练样本的概率密度。
+
+为了应用极大似然估计，我们评估模型下数据点的对数似然。设 $x$ 为训练集中的单个数据点，$f$ 为由神经网络参数化的可逆变换，$Z$ 为简单的基础概率分布。根据变量代换定理，观测到 $x$ 的精确对数似然定义为：
+
+$\log p_X(x) = \log p_Z(f(x)) + \log \left| \det \frac{\partial f(x)}{\partial x} \right|$
+
+该方程包含两个在训练过程中协同工作的不同部分。第一项 $\log p_Z(f(x))$ 衡量变换后的数据点在基础分布下的对数似然。如果我们使用标准多元高斯分布作为基础分布，这一项评估的是钟形曲线的密度。如果网络将输入数据映射到潜在空间中远离原点的地方，该项就会对网络进行惩罚。网络以此学习将输入的模式映射成整齐、标准化的分布。
+
+第二项 $\log \left| \det \frac{\partial f(x)}{\partial x} \right|$ 是对数绝对雅可比行列式。这一项起到了体积修正因子的作用。它衡量了变换 $f$ 在数据点 $x$ 周围对数学空间的拉伸或压缩程度。如果没有这一项，网络可能会通过将所有数据点剧烈压缩到基础分布原点附近的极小区域，来轻而易举地使第一项最大化。对数雅可比行列式对过度压缩进行惩罚，确保概率质量守恒且密度映射保持有效。
+
+像 PyTorch 这样的深度学习 (deep learning)框架旨在最小化损失函数 (loss function)而非最大化。我们翻转对数似然的符号，以创建称为负对数似然的目标函数。对于包含 $N$ 个独立样本的训练数据集 $D$，训练目标是所有样本的平均负对数似然。
+
+$\mathcal{L}(\theta) = - \frac{1}{N} \sum_{i=1}^{N} \left( \log p_Z(f_\theta(x_i)) + \log \left| \det \frac{\partial f_\theta(x_i)}{\partial x_i} \right| \right)$
+
+在这里，$\theta$ 代表构成流的神经网络层的可训练权重。通过使用 Adam 等梯度下降 (gradient descent)算法最小化 $\mathcal{L}(\theta)$，我们迫使模型为训练样本分配更高的概率密度。
+
+> 标准化流前向传播过程中计算负对数似然损失的计算图。
+
+在代码中实现时，你会以小批量（mini-batches）的形式处理数据。标准化流的前向传播必须为每个批次返回两个输出。第一个输出是变换后的潜在变量 $z = f(x)$。第二个输出是所有应用的变换的对数雅可比行列式之和。标准化流通常由多个简单的层堆叠而成。整个网络的总对数雅可比行列式就是每个单独层的对数行列式之和。
+
+$\log \left| \det \frac{\partial f(x)}{\partial x} \right| = \sum_{k=1}^{K} \log \left| \det \frac{\partial f_k(z_{k-1})}{\partial z_{k-1}} \right|$
+
+一旦获得了最终的潜在变量 $z$ 和网络累积的对数行列式，就可以将 $z$ 传递给基础分布对象来评估其对数概率密度。将这两个标量张量相加，即可得到该批次的精确对数似然。最后，计算批次维度的平均值并乘以负一。得到的标量就是最终的损失值，传递给反向传播 (backpropagation)引擎以更新网络权重。

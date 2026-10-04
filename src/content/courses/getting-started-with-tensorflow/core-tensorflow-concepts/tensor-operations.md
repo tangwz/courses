@@ -1,0 +1,279 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "core-tensorflow-concepts"
+lesson: "tensor-operations"
+sourceId: 1691
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-2-core-tensorflow-concepts/tensor-operations"
+title: "张量运算"
+description: "对张量执行数学、逻辑和处理操作。"
+order: 2
+plots: []
+sourceHash: "3bc81ea326f00df512b20189023d3ec37f5228ba7b4c2aee6470f36be9b48ceb"
+sourceCorrections: []
+---
+
+TensorFlow 提供了一套完整的运算功能，用于处理张量。其中许多运算与 NumPy 函数类似，但针对 GPU 加速和自动微分进行了优化。这些运算构成了任何使用 TensorFlow 构建的机器学习 (machine learning)模型的计算核心。
+
+### 基本数学运算
+
+TensorFlow 支持标准的逐元素数学运算。如果两个张量的形状相同，你可以直接进行算术运算。
+
+```python
+import tensorflow as tf
+
+# 创建一些张量
+a = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+b = tf.constant([[5.0, 6.0], [7.0, 8.0]])
+c = tf.constant(2.0)
+
+# 加法
+print("Addition (a + b):\n", a + b)
+# 使用 TensorFlow 函数的另一种方式
+print("Addition (tf.add(a, b)):\n", tf.add(a, b))
+
+# 减法
+print("Subtraction (b - a):\n", b - a)
+print("Subtraction (tf.subtract(b, a)):\n", tf.subtract(b, a))
+
+# 逐元素乘法
+print("Element-wise Multiplication (a * b):\n", a * b)
+print("Element-wise Multiplication (tf.multiply(a, b)):\n", tf.multiply(a, b))
+
+# 逐元素除法
+print("Element-wise Division (b / a):\n", b / a)
+print("Element-wise Division (tf.divide(b, a)):\n", tf.divide(b, a))
+
+# 与标量的运算
+print("Scalar Multiplication (a * c):\n", a * c)
+print("Scalar Addition (a + c):\n", a + c)
+```
+
+这些运算都是逐元素执行的。例如，在 `a + b` 中，结果中 (0, 0) 位置的元素是 `a` 和 `b` 中 (0, 0) 位置元素的和 (1.0 + 5.0 = 6.0)。
+
+### 广播
+
+如果你尝试对形状不同的张量进行逐元素运算，会发生什么？TensorFlow 使用一种称为**广播**的机制，它与 NumPy 中的类似。如果满足某些规则，TensorFlow 会在运算过程中自动将较小的张量“广播”成与较大张量匹配的形状。
+
+通常，如果每个维度（从末尾维度开始）满足以下条件，运算就是允许的：
+
+1. 维度大小相等，或者
+2. 其中一个维度大小为 1。
+
+```python
+import tensorflow as tf
+
+# 示例 1：将标量（形状 ()）添加到矩阵（形状 (2, 2)）
+matrix = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+scalar = tf.constant(10.0)
+result = matrix + scalar # 标量广播为 [[10.0, 10.0], [10.0, 10.0]]
+print("Matrix + Scalar:\n", result)
+
+# 示例 2：将向量（形状 (3,)）添加到矩阵（形状 (2, 3)）
+matrix = tf.constant([[1, 2, 3], [4, 5, 6]]) # 形状 (2, 3)
+vector = tf.constant([10, 20, 30])          # 形状 (3,)
+result = matrix + vector # 向量跨行广播
+# 向量变为 [[10, 20, 30], [10, 20, 30]]
+print("Matrix + Vector:\n", result)
+
+# 示例 3：将列向量（形状 (2, 1)）添加到矩阵（形状 (2, 3)）
+matrix = tf.constant([[1, 2, 3], [4, 5, 6]])       # 形状 (2, 3)
+col_vector = tf.constant([[10], [20]])             # 形状 (2, 1)
+result = matrix + col_vector # 列向量跨列广播
+# 列向量变为 [[10, 10, 10], [20, 20, 20]]
+print("Matrix + Column Vector:\n", result)
+
+# 示例 4：不兼容的形状（错误）
+# matrix = tf.constant([[1, 2], [3, 4]]) # 形状 (2, 2)
+# vector = tf.constant([10, 20, 30])      # 形状 (3,)
+# try:
+#     result = matrix + vector
+# except tf.errors.InvalidArgumentError as e:
+#     print("\nError (Incompatible shapes):\n", e)
+```
+
+广播功能非常实用，因为它通常避免了手动平铺或重复张量以使形状兼容的需要，从而使代码更简洁，并可能提高内存效率。
+
+### 矩阵乘法
+
+矩阵乘法是机器学习 (machine learning)中，尤其在神经网络 (neural network)中，最基础的运算之一。这**不是**逐元素乘法。使用 `tf.matmul()` 函数或 `@` 运算符。
+
+对于 `tf.matmul(a, b)`，如果 `a` 的形状为 $(m, n)$ 且 `b` 的形状为 $(n, p)$，则结果的形状将为 $(m, p)$。内部维度必须匹配（即 $n$）。
+
+```python
+import tensorflow as tf
+
+a = tf.constant([[1, 2], [3, 4]])   # 形状 (2, 2)
+b = tf.constant([[5, 6], [7, 8]])   # 形状 (2, 2)
+c = tf.constant([[1, 2, 3], [4, 5, 6]]) # 形状 (2, 3)
+
+# 使用 tf.matmul 进行矩阵乘法
+matmul_ab = tf.matmul(a, b)
+print("Matrix Multiplication (tf.matmul(a, b)):\n", matmul_ab)
+
+# 使用 @ 运算符进行矩阵乘法
+matmul_ab_operator = a @ b
+print("Matrix Multiplication (a @ b):\n", matmul_ab_operator)
+
+# 不同兼容形状的矩阵乘法
+matmul_ac = tf.matmul(a, c) # (2, 2) @ (2, 3) -> (2, 3)
+print("Matrix Multiplication (a @ c):\n", matmul_ac)
+
+# 尝试使用不兼容的形状将引发错误
+# try:
+#    tf.matmul(c, a) # (2, 3) @ (2, 2) - 不兼容
+# except tf.errors.InvalidArgumentError as e:
+#    print("\nError (Incompatible shapes for matmul):\n", e)
+
+# 与逐元素乘法对比
+elementwise_ab = a * b
+print("\nElement-wise Multiplication (a * b):\n", elementwise_ab)
+```
+
+请记住这个区别：`*` 执行逐元素乘法，而 `tf.matmul` 或 `@` 执行标准矩阵乘法。
+
+### 缩减运算
+
+缩减运算通过对指定维度（轴）进行操作来减少张量中的元素数量。常见的例子包括 `tf.reduce_sum`、`tf.reduce_mean`、`tf.reduce_max` 和 `tf.reduce_min`。
+
+`axis` 参数 (parameter)指定了进行缩减的维度（或多个维度）。如果未提供 `axis`，则缩减会在所有维度上进行，从而得到一个标量张量。
+
+```python
+import tensorflow as tf
+
+tensor = tf.constant([[1.0, 2.0, 3.0],
+                      [4.0, 5.0, 6.0]]) # 形状 (2, 3)
+
+# 跨所有维度缩减（求和）
+total_sum = tf.reduce_sum(tensor)
+print("Total sum (reduce_sum without axis):\n", total_sum) # 1+2+3+4+5+6 = 21
+
+# 沿轴 0 缩减（列求和）
+sum_axis_0 = tf.reduce_sum(tensor, axis=0)
+print("Sum along axis 0:\n", sum_axis_0) # [1+4, 2+5, 3+6] = [5, 7, 9] - 形状 (3,)
+
+# 沿轴 1 缩减（行求和）
+sum_axis_1 = tf.reduce_sum(tensor, axis=1)
+print("Sum along axis 1:\n", sum_axis_1) # [1+2+3, 4+5+6] = [6, 15] - 形状 (2,)
+
+# 计算所有维度的平均值
+mean_val = tf.reduce_mean(tensor)
+print("Mean of all elements:\n", mean_val) # 21 / 6 = 3.5
+
+# 查找沿轴 1 的最大值
+max_axis_1 = tf.reduce_max(tensor, axis=1)
+print("Max along axis 1:\n", max_axis_1) # [3, 6] - 形状 (2,)
+```
+
+理解轴非常重要：
+
+- 轴 0 通常指代表行（或许多机器学习 (machine learning)上下文 (context)中的批次大小）的维度。
+- 轴 1 通常指列（或特征）。
+- 对于更高维度的张量，轴依此类推。
+
+### 索引和切片
+
+TensorFlow 张量支持 Python 风格的索引和切片，非常类似于 NumPy 数组。这使你能够访问或修改张量的特定部分。
+
+```python
+import tensorflow as tf
+
+tensor = tf.constant([[1, 2, 3, 4],
+                      [5, 6, 7, 8],
+                      [9, 10, 11, 12]]) # 形状 (3, 4)
+
+# 获取单个元素（第 0 行，第 1 列）
+print("Element at (0, 1):", tensor[0, 1]) # Output: tf.Tensor(2, shape=(), dtype=int32)
+
+# 获取第一行
+print("First row:", tensor[0]) # Output: tf.Tensor([1 2 3 4], shape=(4,), dtype=int32)
+
+# 获取前两行
+print("First two rows:\n", tensor[0:2]) # 标准 Python 切片
+
+# 获取第二列（所有行，列索引 1）
+print("Second column:\n", tensor[:, 1]) # Output: tf.Tensor([ 2  6 10], shape=(3,), dtype=int32)
+
+# 获取子矩阵（第 1 到 2 行，第 1 到 3 列）
+print("Sub-matrix (rows 1:3, cols 1:3):\n", tensor[1:3, 1:3])
+
+# 使用负索引获取最后一个元素
+print("Last element:", tensor[-1, -1]) # Output: tf.Tensor(12, shape=(), dtype=int32)
+
+# 使用 tf.gather 进行更复杂的索引（收集特定索引）
+indices = [0, 2] # 收集第 0 行和第 2 行
+gathered_rows = tf.gather(tensor, indices=indices, axis=0)
+print("Gathered rows (0 and 2):\n", gathered_rows)
+
+# 使用多轴索引收集特定元素
+indices = [[0, 0], [1, 1], [2, 3]] # 坐标：(0,0), (1,1), (2,3)
+gathered_elements = tf.gather_nd(tensor, indices=indices)
+print("Gathered elements at (0,0), (1,1), (2,3):", gathered_elements)
+```
+
+### 形状操作
+
+通常，你需要改变张量的形状而不改变其数据。
+
+- `tf.reshape(tensor, new_shape)`: 重塑张量，前提是元素总数保持不变。
+  \*   `tf.transpose(tensor, perm=...)`: **置换张量的维度。对于二维矩阵（行、列），默认行为或 `perm=[1, 0]` 会交换行和列。** 对于在乘法前对齐 (alignment)矩阵等操作来说必不可少。
+- `tf.expand_dims(tensor, axis)`: 在指定轴上添加一个大小为 1 的新维度。
+- `tf.squeeze(tensor, axis=None)`: 删除大小为 1 的维度。如果指定了 `axis`，则只压缩该轴（如果其大小为 1）。
+
+```python
+import tensorflow as tf
+
+tensor = tf.range(6) # [0, 1, 2, 3, 4, 5], 形状 (6,)
+print("Original tensor:", tensor)
+
+# 重塑为 (2, 3)
+reshaped = tf.reshape(tensor, (2, 3))
+print("Reshaped to (2, 3):\n", reshaped)
+
+# 重塑为 (3, 2)
+reshaped_alt = tf.reshape(reshaped, (3, 2))
+print("Reshaped to (3, 2):\n", reshaped_alt)
+
+# 转置矩阵（交换二维张量的行和列）
+matrix = tf.constant([[1, 2, 3], [4, 5, 6]]) # 形状 (2, 3)
+print("Original matrix:\n", matrix)
+transposed = tf.transpose(matrix) # 2D 张量的默认 perm=[1, 0]
+# 注：tf.transpose(matrix, perm=[1, 0]) 对于 2D 效果相同
+print("Transposed matrix (shape {}):\n{}".format(transposed.shape, transposed)) # 形状 (3, 2)
+
+# 扩展维度
+# 原始形状 (6,)
+expanded = tf.expand_dims(tensor, axis=0) # 在开头添加维度
+print("Expanded dims (axis=0): {} 形状: {}".format(expanded, expanded.shape)) # 形状 (1, 6)
+expanded_end = tf.expand_dims(tensor, axis=-1) # 在末尾添加维度
+print("Expanded dims (axis=-1): {} 形状: {}".format(expanded_end, expanded_end.shape)) # 形状 (6, 1)
+
+# 压缩维度
+squeezed = tf.squeeze(expanded) # 移除大小为 1 的维度
+print("Squeezed tensor: {} 形状: {}".format(squeezed, squeezed.shape)) # 形状 (6,)
+```
+
+### 与 NumPy 的比较
+
+如果你熟悉 NumPy，你会发现 TensorFlow 的张量运算非常熟悉。许多函数拥有相同的名称和相似的行为（如 `tf.add`、`tf.multiply`、`tf.matmul`、`tf.reduce_sum`、`tf.reshape`、索引/切片）。
+
+然而，存在重要的差异：
+
+1. **硬件加速**：TensorFlow 运算可以自动在 GPU 或 TPU 上运行，实现显著的加速，而标准的 NumPy 主要在 CPU 上运行。
+2. **自动微分**：TensorFlow 张量与 `tf.GradientTape` 集成，用于计算梯度，这对于训练机器学习 (machine learning)模型至关重要。NumPy 数组本身不支持此功能。
+3. **图构建**：运算可以通过 `tf.function` 集成到 TensorFlow 图中，以进行优化和部署。
+
+虽然你可以在 TensorFlow 张量和 NumPy 数组之间轻松转换（`tensor.numpy()` 和 `tf.convert_to_tensor(numpy_array)`），但在构建和训练模型时，通常更推荐直接在 TensorFlow 内部执行计算，以利用其加速和微分能力。
+
+掌握这些核心运算提供了表达复杂计算所需的“词汇”，构成了在 Keras 中定义层和模型的根本所在，我们将在下一章中看到这一点。
+
+## 参考资料
+
+- [Tensors](https://www.tensorflow.org/guide/tensor) — TensorFlow Authors (2024)
+  这份官方指南解释了张量是什么以及如何在 TensorFlow 中使用各种操作，例如数学函数、广播和形状操作。
+- [Broadcasting](https://numpy.org/doc/stable/user/basics.broadcasting.html) — NumPy Developers (2023)
+  这份 NumPy 文档解释了广播的规则和应用，这是与 TensorFlow 共享的数组操作概念。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  第2章“线性代数”为向量和矩阵操作提供了理论背景，这是理解张量操作的基础。
+- [Automatic differentiation with tf.GradientTape](https://www.tensorflow.org/guide/autodiff) — TensorFlow Authors (2023)
+  描述了 TensorFlow 的自动微分功能，这是其与 NumPy 的区别之一，也是机器学习模型训练的核心。

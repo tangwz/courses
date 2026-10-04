@@ -1,0 +1,89 @@
+---
+course: "rnns-and-sequence-modeling"
+chapter: "sequence-modeling-applications"
+lesson: "text-classification-models"
+sourceId: 2637
+sourceUrl: "https://apxml.com/zh/courses/rnns-and-sequence-modeling/chapter-9-sequence-modeling-applications/text-classification-models"
+title: "文本分类模型"
+description: "详细说明使用 RNN 最终隐藏状态或池化输出来进行文本分类的常见模式。"
+order: 4
+plots: []
+sourceHash: "ba6c88071e4ea1444a8367ab5cf36d4a7cc1ac2dfa836bc539bfdc945315f526"
+sourceCorrections: []
+---
+
+循环神经网络 (neural network) (RNN)，特别是 LSTM 和 GRU，是如何构建用于文本分类任务的。这些模型的目标是获取可变长度的文本序列（例如产品评论、新闻标题或电子邮件），并将其分配到一个或多个预设类别（例如正面/负面情绪、主题标签或垃圾邮件/非垃圾邮件）。
+
+循环模型擅长顺序读取文本，在每个词语或标记 (token)处更新其内部状态（隐藏状态）。这个隐藏状态是目前已处理序列的持续摘要。为了分类，我们需要一种机制将这个不断变化的摘要压缩成一个固定的尺寸表示，然后可以输入到标准的分类层（例如带有 softmax 或 sigmoid 激活函数 (activation function)的全连接层）。
+
+### 使用最终隐藏状态
+
+最直接和常见的方法是使用 RNN 在处理完*整个*序列后的隐藏状态。直觉是，这个最终隐藏状态 $h_T$（其中 $T$ 是序列的长度）包含了完整文本对于分类任务的含义或核心。
+
+想象一下阅读一篇电影评论。当你逐字阅读时，你的理解会不断变化。当你读到最后一个词时，你通常对整体情感有一个很好的把握。RNN 的最终隐藏状态旨在数值化地捕获这种最终理解。
+
+为了实现这一点，您将 RNN 层（LSTM 或 GRU）配置为只返回对应于最后一个时间步的输出。在 TensorFlow/Keras 等框架中，这通常是默认行为，或者可以明确设置（例如，`return_sequences=False`）。这个最终隐藏状态向量 (vector)随后直接传递到一个或多个全连接层。最终的全连接层将拥有与类别数量相等的单元，并使用合适的激活函数 (activation function)（例如，用于二分类或多标签分类的 `sigmoid`，用于多类别分类的 `softmax`）。
+
+### 池化 RNN 输出
+
+另一种策略涉及使用*所有*时间步的隐藏状态，而不仅仅是最终的一个。这需要配置 RNN 层返回完整的隐藏状态序列（例如，在 Keras 中设置 `return_sequences=True`）。由于后续的全连接层需要每个输入序列一个固定尺寸的向量 (vector)，我们需要汇集这些时间步的输出。常见的池化方法包含：
+
+1. **平均池化 (Average Pooling)：** 计算所有隐藏状态向量在时间步上的元素级平均值。这提供了一个摘要表示，平等考虑序列每个部分的贡献。
+   
+   $$
+   h_{avg} = \frac{1}{T} \sum_{t=1}^{T} h_t
+   $$
+   
+2. **最大池化 (Max Pooling)：** 取所有隐藏状态向量的元素级最大值。这种方法侧重于 RNN 在序列中任何点检测到的最突出特征。如果分类依赖于强烈指示类别的特定关键词或短语，它会很有效。
+   
+   $$
+   h_{max} = \max_{t=1..T} (h_t) \quad \text{(元素级最大值)}
+   $$
+   
+
+使用最终状态还是池化策略的选择通常取决于文本和任务的具体性质。对于情感分析，结尾短语可能非常重要，倾向于使用最终状态。对于主题分类，相关关键词可能出现在任何地方，可能倾向于池化。您可能需要尝试以找到针对您具体问题的最佳方法。
+
+### 使用掩码处理填充
+
+回顾第 8 章，我们经常对序列进行填充，以确保它们在批次内具有相同长度。当使用池化时（或者有时甚至在依赖于框架的情况下隐式使用最终状态时），这些填充标记 (token)不影响最终表示这一点很重要。这就是掩码的作用。通过向 RNN 和后续的池化层提供掩码，我们指示它们在计算期间（例如平均或寻找最大值时）忽略对应于填充时间步的输出。如果您使用带有 `mask_zero=True` 和兼容 RNN/池化层的标准嵌入 (embedding)层，大多数深度学习 (deep learning)框架都会自动处理掩码。
+
+### 双向 RNN 的作用
+
+对于许多文本分类任务，理解上下文 (context)需要向前和向后查看序列。例如，在句子“The movie was not bad, actually it was great!”中，“not”这个词最初暗示负面情绪，但后来的上下文改变了这种意思。
+
+A双向 RNN (Bi-LSTM 或 Bi-GRU) 以两个方向处理输入序列：一个从开始到结束的前向传递，一个从结束到开始的反向传递。在每个时间步，来自这两个传递的隐藏状态通常进行拼接（或有时求和或平均）。
+
+- 当在双向 RNN 中使用**最终隐藏状态**方法时，您通常会拼接前向传递的最终隐藏状态（处理序列直到最后一个标记 (token)）和反向传递的最终隐藏状态（从最后一个标记开始处理序列，因此其“最终”状态对应于原始序列的*第一个*标记）。
+- 当在双向 RNN 中使用**池化**时，您将池化操作（平均或最大）应用于所有时间步拼接后的隐藏状态。
+
+双向处理通常会带来更好的文本分类性能，因为它允许模型更有效地捕获上下文。
+
+### 典型模型架构
+
+使用 RNN 进行文本分类的常见架构组合了这些元素：
+
+1. **输入层：** 接收整数编码的序列。
+2. **嵌入 (embedding)层：** 将整数映射为稠密向量 (vector)，可能生成掩码（`mask_zero=True`）。
+3. **RNN 层：** 一个或多个 LSTM 或 GRU 层，通常是双向的。配置为返回完整序列或仅返回最终状态。
+4. **池化层（可选）：** 如果 RNN 返回完整序列，则 GlobalAveragePooling1D 或 GlobalMaxPooling1D 层将汇集输出。
+5. **全连接层：** 一个或多个用于分类的全连接层，可能带有 Dropout 用于正则化 (regularization)。
+6. **输出层：** 最终的全连接层，带有合适的单元数量和激活函数 (activation function)（sigmoid/softmax）。
+
+> RNN 文本分类的典型架构。输入序列被嵌入，由循环层（通常是双向的）处理，可能进行池化，最后由全连接层进行分类。
+
+通过结合嵌入、LSTM 或 GRU 等强大的循环单元、可选的双向性以及合适的池化或状态选择，您可以构建针对各种文本分类问题的有效模型。具体的选择，例如使用 LSTM 还是 GRU、池化还是最终状态，或是否添加双向处理，通常通过基于验证性能的实验来确定。
+
+## 参考资料
+
+- [Long Short-Term Memory](https://doi.org/10.1162/neco.1997.9.8.1735) — Sepp Hochreiter and Jürgen Schmidhuber (1997)
+  Journal: Neural Computation; Publisher: MIT Press; Volume: 9; Pages: 1735-1780; DOI: [10.1162/neco.1997.9.8.1735](https://doi.org/10.1162/neco.1997.9.8.1735)
+  介绍了长短期记忆（LSTM）架构，该架构解决了循环神经网络中的梯度消失问题，并广泛用于文本分类等序列建模任务。
+- [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078) — Kyunghyun Cho, Bart van Merrienboer, Caglar Gulcehre, Dzmitry Bahdanau, Fethi Bougares, Holger Schwenk, Yoshua Bengio (2014)
+  Journal: Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP); Pages: 1724-1734; DOI: [10.48550/arXiv.1406.1078](https://doi.org/10.48550/arXiv.1406.1078)
+  介绍了门控循环单元（GRU），它是LSTM的一种简化且计算效率更高的变体，为序列建模提供了另一种选择。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  讨论了循环神经网络，包括LSTM、GRU和双向RNN，为它们在序列建模和文本分类中的应用提供了重要信息。
+- [Keras API: tf.keras.layers.LSTM](https://www.tensorflow.org/api_docs/python/tf/keras/layers/LSTM) — TensorFlow Authors (2024)
+  Publisher: TensorFlow
+  Keras LSTM层的官方文档，详细说明了`return_sequences`、`mask_zero`等参数，以及它如何与Keras中文本分类架构中的其他层集成。这在概念上适用于GRU和双向封装器。

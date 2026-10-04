@@ -1,0 +1,247 @@
+---
+course: "time-series-analysis-forecasting"
+chapter: "decomposition-stationarity"
+lesson: "practice-decomposition-stationarity"
+sourceId: 3401
+sourceUrl: "https://apxml.com/zh/courses/time-series-analysis-forecasting/chapter-2-decomposition-stationarity/practice-decomposition-stationarity"
+title: "动手练习：分解与平稳性检验"
+description: "使用Python应用分解技术并对样本数据执行ADF检验。"
+order: 7
+plots: []
+sourceHash: "d7588e34df284d3686d4acebdeec26647a0159d89071134a23b1567f76c76f72"
+sourceCorrections: []
+---
+
+让我们将分解和平稳性检验的思想付诸实践。我们将使用一个常见的时序数据集，分析其组成部分，检验其平稳性，并应用转换使其平稳。这个动手练习将加强你对这些在构建预测模型前的重要准备步骤的认识。
+
+需要一个可用的Python环境，并安装`pandas`、`matplotlib`和`statsmodels`等库。
+
+### 1. 加载和准备数据
+
+首先，我们来加载一个数据集。一个展现趋势和季节性的典型例子是“AirPassengers”数据集，它包含每月的国际航空旅客数量。我们将模拟将这类数据加载到Pandas DataFrame中，并确保索引正确设置为日期时间对象。
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import adfuller
+
+# 加载数据（如果使用自己的文件，请替换为实际路径）
+# 为了可重现性，我们在这里创建一个类似的合成数据集
+date_rng = pd.date_range(start='1949-01-01', end='1960-12-01', freq='MS')
+# 生成具有趋势和季节性，与AirPassengers类似的数据
+base = 100
+trend_factor = np.linspace(1, 3, len(date_rng))
+seasonal_factor = (np.sin(np.arange(len(date_rng)) * (2 * np.pi / 12)) + 1) * 0.5 + 0.75 # 最小值0.75，最大值1.75
+noise = np.random.normal(1, 0.05, len(date_rng))
+passengers = base * trend_factor * seasonal_factor * noise
+
+data = pd.DataFrame(passengers.astype(int), index=date_rng, columns=['Passengers'])
+
+print("数据集前5行:")
+print(data.head())
+
+print("\n数据集后5行:")
+print(data.tail())
+
+# 绘制原始数据
+plt.figure(figsize=(12, 5))
+plt.plot(data.index, data['Passengers'])
+plt.title('模拟月度航空旅客数量')
+plt.xlabel('日期')
+plt.ylabel('旅客数量')
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.show()
+```
+
+最初的图表清楚地显示出上升趋势（旅客数量随时间增加）和重复的年度模式（季节性）。方差也似乎随时间增加，这表明组成部分之间存在乘性关系。
+
+### 2. 时序分解
+
+让我们分解这个序列，以明确地显示趋势、季节性和残差组成部分。由于季节性和方差似乎随着序列水平的提高而增长，乘性分解可能更合适。
+
+```python
+# 执行乘性分解
+decomposition = seasonal_decompose(data['Passengers'], model='multiplicative', period=12) # 月度数据周期为12
+
+# 绘制分解后的组成部分
+fig = decomposition.plot()
+fig.set_size_inches(10, 8)
+fig.suptitle('乘性分解', y=1.02) # 调整标题位置
+plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # 调整布局以防止重叠
+plt.show()
+```
+
+> 分解图将原始序列（“观察值”）分离成其估计的趋势、季节模式和残差（“剩余”）组成部分。这证实了强烈的上升趋势和一致的年度季节性。残差看起来相对随机地围绕1.0波动，尽管它们的方差也可能随时间略有增加。
+
+### 3. 平稳性检验
+
+现在，我们将正式检查原始序列是否平稳。
+
+#### 目视检查
+
+一种常见的目视检查方法是绘制滚动统计量（均值和标准差）。如果这些统计量随时间显著变化，则该序列很可能是不平稳的。
+
+```python
+# 计算滚动统计量
+rolling_mean = data['Passengers'].rolling(window=12).mean()
+rolling_std = data['Passengers'].rolling(window=12).std()
+
+# 绘制滚动统计量
+plt.figure(figsize=(12, 5))
+plt.plot(data['Passengers'], color='#228be6', label='原始数据')
+plt.plot(rolling_mean, color='#f03e3e', label='滚动均值 (12个月)')
+plt.plot(rolling_std, color='#0ca678', label='滚动标准差 (12个月)')
+plt.legend(loc='best')
+plt.title('滚动均值与标准差')
+plt.xlabel('日期')
+plt.ylabel('旅客数量')
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.show()
+```
+
+> 滚动均值明显跟随上升趋势，滚动标准差随时间增加。两者都表明不平稳性。
+
+#### 增广迪基-富勒 (ADF) 检验
+
+让我们使用ADF检验进行统计确认。ADF检验的零假设（$H_0$）是时序具有单位根，这意味着它不平稳。我们希望拒绝$H_0$。常用的显著性水平是5%（即0.05）。
+
+```python
+# 执行并打印ADF检验结果的函数
+def perform_adf_test(series, series_name=""):
+    print(f"--- {series_name} 的ADF检验结果 ---")
+    # 差分后可能出现NA值，需要删除
+    result = adfuller(series.dropna())
+    print(f'ADF统计量: {result[0]:.4f}')
+    print(f'p-值: {result[1]:.4f}')
+    print('临界值:')
+    for key, value in result[4].items():
+        print(f'\t{key}: {value:.4f}')
+
+    if result[1] <= 0.05:
+        print("\n结果: 拒绝零假设 (H0)。数据可能平稳。")
+    else:
+        print("\n结果: 未能拒绝零假设 (H0)。数据可能不平稳。")
+    print("-" * 40)
+
+# 对原始序列执行ADF检验
+perform_adf_test(data['Passengers'], "原始旅客序列")
+```
+
+你应该会看到类似以下的输出（确切值取决于合成数据生成）：
+
+```text
+--- 原始旅客序列 的ADF检验结果 ---
+ADF Statistic: 0.8350
+p-value: 0.9922
+Critical Values:
+	1%: -3.4817
+	5%: -2.8840
+	10%: -2.5788
+
+Result: Fail to reject the null hypothesis (H0). Data is likely Non-Stationary.
+----------------------------------------
+```
+
+p-值（例如0.9922）远大于0.05。因此，我们未能拒绝零假设，并得出结论：原始旅客序列不平稳，这证实了我们的目视检查。
+
+### 4. 通过差分实现平稳性
+
+为了使序列平稳，我们可以应用差分。让我们从一阶差分开始，以消除趋势。这计算连续观察值之间的差值：$y'_t = y_t - y_{t-1}$。
+
+```python
+# 应用一阶差分
+data['Passengers_diff1'] = data['Passengers'].diff()
+
+# 绘制一阶差分后的序列
+plt.figure(figsize=(12, 5))
+plt.plot(data.index, data['Passengers_diff1'])
+plt.title('一阶差分旅客序列（趋势已移除）')
+plt.xlabel('日期')
+plt.ylabel('差值')
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.show()
+
+# 对一阶差分序列执行ADF检验
+perform_adf_test(data['Passengers_diff1'], "一阶差分序列")
+```
+
+该图显示趋势已基本消除，但强烈的季节模式依然存在。ADF检验结果可能如下：
+
+```text
+--- 一阶差分序列 的ADF检验结果 ---
+ADF Statistic: -2.7171
+p-value: 0.0711
+Critical Values:
+	1%: -3.4825
+	5%: -2.8844
+	10%: -2.5789
+
+Result: Fail to reject the null hypothesis (H0). Data is likely Non-Stationary.
+----------------------------------------
+```
+
+p-值（例如0.0711）更低，但仍高于0.05。由于剩余的季节性，该序列可能仍不平稳。我们需要使用季节性差分来处理这个问题。季节性差分计算一个观察值与前一个季节的观察值（例如，月度数据为12个月前）之间的差值：$y''_t = y_t - y_{t-m}$，其中$m$是季节周期。
+
+通常，我们需要同时应用常规差分和季节性差分。让我们对*一阶差分*后的序列应用季节性差分。
+
+```python
+# 对一阶差分后的序列应用季节性差分（周期=12）
+data['Passengers_diff1_seasonal12'] = data['Passengers_diff1'].diff(12)
+
+# 绘制组合差分后的序列
+plt.figure(figsize=(12, 5))
+plt.plot(data.index, data['Passengers_diff1_seasonal12'])
+plt.title('一阶和季节性差分旅客序列 (d=1, D=1, m=12)')
+plt.xlabel('日期')
+plt.ylabel('组合差值')
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.show()
+
+# 对组合差分序列执行ADF检验
+perform_adf_test(data['Passengers_diff1_seasonal12'], "组合差分序列")
+```
+
+组合差分序列的图表应该更像平稳的白噪声，在零附近波动，方差相对恒定。ADF检验结果应该证实平稳性：
+
+```text
+--- 组合差分序列 的ADF检验结果 ---
+ADF Statistic: -10.5349 # 示例值，会有所不同
+p-value: 0.0000   # 示例值，可能非常小
+Critical Values:
+	1%: -3.4891
+	5%: -2.8873
+	10%: -2.5805
+
+Result: Reject the null hypothesis (H0). Data is likely Stationary.
+----------------------------------------
+```
+
+由于p值非常小（例如，远小于0.05），我们拒绝零假设，并得出结论：应用一阶差分和季节性差分（$m=12$）已成功使序列平稳。
+
+### 总结
+
+在本次练习中，我们：
+
+1. 加载并观察了具有趋势和季节性的时序数据。
+2. 使用`seasonal_decompose`将序列分离成其潜在的组成部分。
+3. 通过目视检查（滚动统计量）和增广迪基-富勒（ADF）检验确认了不平稳性。
+4. 应用一阶差分以消除趋势。
+5. 应用季节性差分（结合一阶差分）以消除季节性。
+6. 通过ADF检验验证了结果差分序列是平稳的。
+
+拥有平稳序列通常是应用ARIMA和SARIMA等模型的前提条件，我们将在后续章节中讲解这些模型。分解过程有助于理解数据的结构，而平稳性检验和差分则为建模做好了准备。
+
+## 参考资料
+
+- [Forecasting: Principles and Practice](https://otexts.com/fpp3/) — Rob J Hyndman and George Athanasopoulos (2021)
+  Publisher: OTexts
+  一本全面且易于理解的在线教材，为时间序列分析提供了坚实的基础，包括对分解、平稳性和差分方法的详细讨论。
+- [\`statsmodels.tsa.seasonal.seasonal_decompose\`](https://www.statsmodels.org/stable/generated/statsmodels.tsa.seasonal.seasonal_decompose.html) — Statsmodels Developers (2023)
+  `statsmodels` Python库中`seasonal_decompose`函数的官方文档，提供了其使用方法、参数和分解模型的详细信息。
+- [\`statsmodels.tsa.stattools.adfuller\`](https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.adfuller.html) — Statsmodels Developers (2023)
+  `statsmodels`中`adfuller`函数的官方文档，该函数实现了增强迪基-福勒（ADF）检验，用于检查时间序列的平稳性。
+- [Time Series Analysis](https://press.princeton.edu/books/hardcover/9780691042893/time-series-analysis) — James D. Hamilton (1994)
+  Publisher: Princeton University Press
+  一本经典的、研究生级别的教材，对时间序列计量经济学进行了严格的论述，包括对平稳性和单位根检验的深入理论解释。

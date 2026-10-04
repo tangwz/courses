@@ -1,0 +1,93 @@
+---
+course: "monitoring-managing-ml-models-production"
+chapter: "scalable-monitoring-infrastructure"
+lesson: "distributed-monitoring-architectures"
+sourceId: 3307
+sourceUrl: "https://apxml.com/zh/courses/monitoring-managing-ml-models-production/chapter-5-scalable-monitoring-infrastructure/distributed-monitoring-architectures"
+title: "监控流程的分布式架构"
+description: "设计能够水平扩展以处理大量数据和复杂计算的监控系统。"
+order: 3
+plots: []
+sourceHash: "a3823cee9949e9bddd54b1b99e2690884ed62a08b7f55bec70dd80020208589d"
+sourceCorrections: []
+---
+
+生产机器学习 (machine learning)模型的监控通常涉及处理大量数据。预测日志、输入特征分布和性能指标很快就会让单机监控配置不堪重负，导致瓶颈、处理延迟，并且无法及时响应模型漂移或性能下降等问题。为了应对生产ML系统中固有的数据规模和速度，针对监控流程采用分布式架构是必需的。
+
+基本做法是将监控工作负载、数据摄取、计算、存储和告警，分布到多个相互连接的计算资源（节点）上。这种分布可以实现并行处理、提高吞吐量 (throughput)，并增强容错能力，优于单体式方法。
+
+### 运用流处理实现实时观测
+
+许多监控任务，尤其是与近实时检测异常或漂移相关的任务，显著得益于流处理。Apache Kafka、Apache Flink、Spark Streaming、Google Cloud Dataflow 或 AWS Kinesis 等框架使得数据流在到达时可以进行持续处理。
+
+考虑一个典型场景：
+
+1. 你的模型服务终端将预测请求和响应（包括输入特征和模型输出）记录到 Kafka 或 Google Cloud Pub/Sub 这样的消息队列中。这将日志记录与服务应用程序分离，防止监控负载影响预测延迟。
+2. 一个分布式流处理作业（例如，在 Flink 或 Spark Streaming 集群上运行）从队列中消费消息。
+3. 该作业可以在其工作节点上并行执行各种监控计算：
+   - 计算传入特征（最小值、最大值、平均值、分位数）在每个时间窗口内的基本统计数据。
+   - 运行轻量级漂移检测算法（例如，跟踪重要特征的人口稳定性指数 (PSI)）并与参考分布进行对比。
+   - 如果真实标签在预测后不久到达，计算实时性能指标（例如，点击率）。
+   - 验证数据模式并检测数据质量问题。
+4. 结果（指标、漂移分数、告警）被推送到下游的时序数据库、告警系统或其他存储。
+
+> 一个运用分布式流处理架构的实时监控流程图。
+
+这种架构使得监控系统能够通过增加更多处理工作节点或对消息队列主题进行分区来实现水平扩展。它确保监控计算能够跟上高容量的预测流量。
+
+### 引入批处理进行更深入的分析
+
+尽管流处理擅长实时检查，但一些监控任务计算密集或需要在更长的历史时期上进行分析。这些任务通常更适合分布式批处理框架，例如 Apache Spark、Dask，或 Google BigQuery 和 AWS Athena 等服务。
+
+示例包括：
+
+- **复杂漂移检测：** 运行多变量漂移检测算法（例如，使用最大均值差异或对抗性分类器），跨大量数据集比较不同的时间窗口（例如，当前周与训练数据）。
+- **性能分析：** 计算详细的性能指标，按不同特征或群体在较长时间段内进行细分（例如，按用户人口统计数据划分的月度性能细分）。
+- **可解释性分析：** 为大量近期预测样本生成 SHAP 或 LIME 解释，以了解模型行为变化。
+- **再训练数据收集：** 定期收集和处理基于监控触发条件（例如，检测到显著漂移）的数据，以准备模型再训练所需的数据集。
+
+这些批处理作业通常从持久存储中读取数据，日志和特征数据在此处归档（例如，Amazon S3、Google Cloud Storage、Azure Data Lake Storage 等数据湖，或数据仓库）。它们利用框架的分布式特性在集群中并行执行计算，高效处理数 TB 的数据。结果可能更新仪表盘、生成报告、输入到模型治理系统或触发再训练流程。
+
+### 混合架构：结合流处理与批处理
+
+实际中，监控系统通常采用混合方法，结合流处理和批处理的优势。
+
+- **流处理：** 处理即时检查、基本指标计算、针对关键偏差的实时告警以及数据验证。
+- **批处理：** 执行计算开销大的分析、历史数据对比、详细报告以及由流处理层发现所触发的任务。
+
+例如，一个流处理作业可能会检测到某个特定特征的持续漂移分数超过阈值。此事件可能会触发告警，*并*启动一个更全面的批处理作业，对数据湖中存储的过去 24 小时数据进行多变量漂移分析，从而提供更深入的诊断信息。
+
+### 设计分布式组件
+
+构建这样的系统需要仔细考量每个组件：
+
+- **数据摄取：** 使用可扩展的消息队列（Kafka、Pulsar、Kinesis、Pub/Sub）并进行适当分区，以处理可能来自众多预测服务实例的高写入量。考虑在你的服务中使用异步日志记录库。
+- **计算：** 选择一个处理框架（流处理选择 Flink、Spark Streaming、Dataflow；批处理选择 Spark、Dask、BigQuery），该框架需符合你的延迟要求、团队专业知识和现有基础设施。借助集群管理器（Kubernetes、YARN）或托管云服务进行资源分配和扩展。
+- **存储：** 选择分布式存储解决方案，适用于数据类型和访问模式。
+  - **指标：** 分布式时序数据库（M3DB、Cortex、Thanos、InfluxDB Enterprise）经过优化，适用于处理高容量、带时间戳的指标数据，以及为仪表盘（如 Grafana）提供高效查询。
+  - **日志/原始数据：** 数据湖（S3、GCS、ADLS）提供经济高效、可扩展的原始日志和特征数据存储，可供批处理框架访问。
+  - **元数据/状态：** 数据库（例如 PostgreSQL、Cassandra）可能存储参考分布、模型版本或监控作业状态。
+- **编排：** Apache Airflow、Kubeflow Pipelines 或 Argo Workflows 等工具变得重要，用于调度定期批处理作业、管理任务之间的依赖关系（例如，数据收集 -> 漂移计算 -> 报告），以及处理监控流程本身的故障。
+
+### 考量与权衡
+
+分布式监控架构提供可扩展性和弹性，但也引入了自身的复杂性：
+
+- **运维开销：** 部署、管理和监控分布式系统（消息队列、处理集群、分布式数据库）相较于单节点配置，需要大量工程投入和专业知识。
+- **一致性模型：** 理解不同组件（尤其是数据库和流处理器）的一致性保证很重要。最终一致性可能适用于某些指标，但对另一些指标可能带来问题。
+- **调试：** 在多阶段分布式流程中识别和解决问题可能具有挑战性。组件间的集中式日志记录和追踪变得必不可少。
+- **成本：** 运行多个服务和集群会产生基础设施成本，尽管高效的资源利用和自动伸缩有助于管理此项成本。
+
+通过谨慎选择合适的技术和架构模式，通常结合流处理和批处理，你可以构建能够处理大规模生产机器学习 (machine learning)系统需求的监控流程，提供关于模型健康状况和性能的及时而全面的观察。
+
+## 参考资料
+
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://books.google.com/books/about/Designing_Data_Intensive_Applications.html?id=lVf_DgAAQBAJ) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  本书提供了构建分布式数据系统的基本概念和挑战的全面概述，涵盖了与数据摄取、处理、存储和一致性相关的可扩展监控管道主题。
+- [Learning Spark: Lightning-Fast Data Analytics](https://www.oreilly.com/library/view/learning-spark-2nd/9781492050049/) — Jules S. Damji, Brooke Wenig, Tathagata Das, Denny Lee (2020)
+  Publisher: O'Reilly Media
+  Apache Spark指南，解释了其架构和API，用于分布式批处理和流处理，这对于扩展监控计算和详细的历史分析至关重要。
+- [MLOps Engineering at Scale](https://www.oreilly.com/library/view/mlops-engineering-at/9781098115622/) — Carl Osipov, Nick Schwendeman, Benjamin Shaver (2022)
+  Publisher: O'Reilly Media; Pages: 344
+  本书提供了MLOps的当前实践，包括为生产中的机器学习模型构建可扩展和可靠的监控系统的方法，涵盖了架构模式和相关工具。

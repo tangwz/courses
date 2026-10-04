@@ -1,0 +1,83 @@
+---
+course: "probability-statistics-essentials-ml"
+chapter: "common-probability-distributions"
+lesson: "poisson-distribution"
+sourceId: 1362
+sourceUrl: "https://apxml.com/zh/courses/probability-statistics-essentials-ml/chapter-2-common-probability-distributions/poisson-distribution"
+title: "泊松分布"
+description: "了解泊松分布，它用于在给定时间或空间间隔内对事件发生次数进行建模。"
+order: 2
+plots: ["plots/1362-0.json"]
+sourceHash: "36a1111bc736e39f94459b2697a7d998b929d4cd67e869b2318535913d29f369"
+sourceCorrections: []
+---
+
+在考察常见分布时，我们转向另一个重要的离散分布：泊松分布。二项分布对固定次数试验中的成功次数进行建模，而泊松分布则对事件在指定时间或空间间隔内发生的次数进行建模。可以考虑以下计数情况：每小时收件箱中收到的电子邮件数量、一分钟内通过高速公路上某点的汽车数量，或者印刷页面上的错别字数量。
+
+泊松分布由单一参数 (parameter) $\lambda$ (lambda) 定义，该参数表示事件在间隔内发生的平均速率或预期次数。此 $\lambda$ 必须为正值 ($\lambda > 0$)。
+
+当其概率质量函数 (PMF) 如下所示时，离散随机变量 $X$ 服从参数为 $\lambda$ 的泊松分布，记作 $X \sim \text{Poisson}(\lambda)$：
+
+$P(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}$
+
+其中：
+
+- $k$ 是发生次数（非负整数：$k = 0, 1, 2, ...$）
+- $\lambda$ 是平均发生率（事件的预期次数）
+- $e$ 是自然对数的底（约等于 2.71828）
+- $k!$ 是 $k$ 的阶乘
+
+此公式计算在给定平均速率为 $\lambda$ 的情况下，在间隔中观察到恰好 $k$ 个事件的概率。
+
+### 泊松分布的性质
+
+泊松分布具有一些独特的性质：
+
+1. **均值：** 期望值（均值）等于速率参数 (parameter)：$E[X] = \lambda$。这在直观上说得通；我们期望看到的平均事件数 *就是* 速率 $\lambda$。
+2. **方差：** 方差也等于速率参数：$\text{Var}(X) = \lambda$。这是一个独特的特性。这意味着随着平均事件数的增加，事件数的分散或变异性也随之增加。
+3. **形状：** 分布的形状取决于 $\lambda$。当 $\lambda$ 较小时，分布高度右偏。随着 $\lambda$ 增加，分布变得更加对称，并近似于正态分布（这是与中心极限定理有关的结果，我们将在后面讨论）。
+
+### 泊松分布何时适用？
+
+当以下条件在所计数的事件中得到合理满足时，泊松分布是一个好的模型：
+
+- **独立性：** 事件彼此独立发生。一个事件的发生不影响另一个事件发生的概率。
+- **恒定速率：** 事件发生的平均速率 ($\lambda$) 在整个间隔内是恒定的。
+- **非同时性：** 事件不能在同一时刻发生。
+- **比例性：** 在一个非常小的间隔内事件发生的概率与该间隔的长度成比例。
+
+### 泊松分布的可视化
+
+让我们可视化不同 $\lambda$ 值的 PMF。请看随着 $\lambda$ 增加，形状如何变化。
+
+
+
+![泊松概率质量函数 (PMF)](plots/1362-0.json)
+
+
+
+> 泊松分布的概率质量函数，参数 (parameter)为 $\lambda = 3$、$\lambda = 7$ 和 $\lambda = 15$。随着 $\lambda$ 增加，分布向右移动并变得更分散、更对称。
+
+### 机器学习 (machine learning)和数据分析中的应用
+
+泊松分布常用于：
+
+- **计数数据建模：** 直接对表示计数的变量进行建模，例如广告点击次数、网站流量或设备故障。
+- **排队论：** 分析等待队列，例如客户到达服务台或任务进入计算队列。
+- **风险建模：** 估计罕见事件的发生频率，例如保险索赔或事故。
+- **特征工程：** 有时，泊松分布的计数可作为机器学习模型中的特征使用。
+- **泊松回归：** 一种广义线性模型，当响应变量为计数时使用。
+
+“了解泊松分布为对基于计数的现象进行建模奠定了基础，这些现象经常出现在数据集中。它的简单性，仅由一个参数 (parameter) $\lambda$ 定义，使其成为许多计数数据问题的有用起点。我们将在本章后面看到如何在 Python 中通过计算使用此分布。”
+
+## 参考资料
+
+- [Introduction to Probability](https://www.athenasc.com/probbook.html) — Dimitri P. Bertsekas and John N. Tsitsiklis (2008)
+  Publisher: Athena Scientific
+  一本广泛使用的严谨的概率论入门教材，对泊松分布及其数学基础提供了详细的学术解释。
+- [An Introduction to Statistical Learning with Applications in R](https://www.statlearning.com/) — Gareth James, Daniela Witten, Trevor Hastie, Rob Tibshirani (2013)
+  Publisher: Springer
+  这本书从统计学习的角度出发，为泊松等分布在建模中的应用提供了背景，并在机器学习环境中讨论了泊松回归。
+- [Generalized Linear Models](https://www.taylorfrancis.com/books/mono/10.1201/9780203753736) — P. McCullagh, J. A. Nelder (1989)
+  Publisher: Chapman and Hall; Volume: 37; Pages: 532; DOI: [10.1201/9780203753736](https://doi.org/10.1201/9780203753736)
+  广义线性模型（GLM）的权威参考文献，其中包括泊松回归，这是课程中提到的用于建模计数数据的主要应用。

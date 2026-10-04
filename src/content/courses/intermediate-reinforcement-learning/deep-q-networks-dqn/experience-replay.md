@@ -1,0 +1,65 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "deep-q-networks-dqn"
+lesson: "experience-replay"
+sourceId: 5104
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-2-deep-q-networks-dqn/experience-replay"
+title: "经验回放机制"
+description: "存储和采样过往经验如何提升稳定性和数据效率。"
+order: 4
+plots: []
+sourceHash: "c607dd546bd89836e6fdbbfb04b88464d94de0af971842a936713021ab92fdb1"
+sourceCorrections: []
+---
+
+标准监督学习 (supervised learning)通常假设训练数据样本是独立同分布的（i.i.d.）。这个假设对于基于梯度的优化方法的稳定性很重要。然而，当强化学习 (reinforcement learning)智能体与环境交互时，它会生成一系列高度相关的经验 $(s_t, a_t, r_{t+1}, s_{t+1}), (s_{t+1}, a_{t+1}, r_{t+2}, s_{t+2}), \dots$。如果Q网络在这些经验按顺序到来时直接进行训练，将会遇到两个主要问题：
+
+1. **相关更新：** 在连续样本上进行训练违反了i.i.d.假设。从这些相关样本计算出的梯度可能具有高方差，或者可能根据最近的、可能不具代表性的经验，持续地将网络权重 (weight)推向次优方向。这可能导致训练不稳定和收敛不良。试想智能体卡在环境的特定部分；顺序更新会反复强化在该有限上下文 (context)中所采取的动作，可能导致网络“忘记”状态空间的其他部分。
+2. **数据效率低下：** 每个生成的经验只用于一次梯度更新，然后就被丢弃了。这是低效的，特别是考虑到与环境的交互可能耗费高昂（在时间或计算方面）。有些经验可能特别有用或稀有，只学习一次会限制它们的影响。
+
+为解决这些问题，深度Q网络引入了一种名为**经验回放**的技术。
+
+### 回放缓冲区
+
+核心思想简单：我们不直接在最新经验上训练网络，而是将智能体的经验存储在一个大型缓冲区中，通常称为**回放缓冲区**或**回放记忆**。这个缓冲区通常具有固定容量（比如 $N$）。
+
+一个“经验”通常存储为元组：$e_t = (s_t, a_t, r_{t+1}, s_{t+1})$。通常，还会包含一个指示 $s_{t+1}$ 是否为终止状态的标志。
+
+过程如下：
+
+1. **交互与存储：** 智能体使用其当前策略（例如，基于当前Q网络的 $\epsilon$-贪心策略）与环境交互。在每个时间步 $t$，它观察到转换 $(s_t, a_t, r_{t+1}, s_{t+1})$ 并将此经验元组 $e_t$ 存储在回放缓冲区 $\mathcal{D}$ 中。如果缓冲区已满，通常会移除最旧的经验以腾出空间（先进先出）。
+2. **采样：** 在学习阶段（可能在每一步之后，或每隔几步之后进行），我们不使用最新的转换 $e_t$，而是从整个回放缓冲区 $\mathcal{D}$ 中均匀随机地采样一个*小批量*经验。例如，我们可能采样 $k$ 个经验：$\{(s_j, a_j, r_{j+1}, s_{j+1})\}_{j=1}^k \sim U(\mathcal{D})$。
+3. **训练：** 然后，这个随机选择的经验小批量被用来计算损失（如即将到来的关于DQN损失函数 (loss function)的部分所讨论），并执行梯度下降 (gradient descent)步骤以更新Q网络参数 (parameter) $\theta$。
+
+> 图示经验从智能体与环境交互流向回放缓冲区，然后随机采样小批量以训练Q网络的过程。
+
+### 经验回放的优点
+
+使用回放缓冲区提供以下几个重要益处：
+
+- **降低相关性：** 通过从大量历史经验中随机采样，小批量内样本之间的相关性大大降低。这使得更新更接近标准随机梯度下降 (gradient descent)所假定的i.i.d.设置，从而带来更稳定、可靠的训练。
+- **提高数据效率：** 每个经验元组都可能用于多次权重 (weight)更新。这使得网络能够从每次交互中更充分地学习，这对于稀有但对学习最优策略很重要的经验特别有用。
+- **平滑学习：** 在小批量上进行训练可以平均多个不同转换的梯度。这种平均效应可以平滑学习过程，防止仅基于最新、可能特异的经验进行训练时可能发生的大幅、可能具有破坏性的更新。
+
+### 实现考量
+
+- **缓冲区大小：** 回放缓冲区 $N$ 的容量是一个重要的超参数 (parameter) (hyperparameter)。非常大的缓冲区包含多样化的历史经验集合，可能包括来自更旧、相关性较低的策略的转换。较小的缓冲区能更快地适应智能体策略的变化，但可能缺乏多样性并容易对近期经验过拟合 (overfitting)。常见大小范围为 $10^4$ 到 $10^6$ 次转换，取决于环境的复杂性和可用内存。
+- **采样：** 虽然均匀随机采样是DQN引入的标准方法，但后来的研究发展出更复杂的采样策略，例如优先经验回放（我们将在第3章简要提及），其中导致较大学习误差的经验会被更频繁地采样。
+- **数据结构：** Python中带固定 `maxlen` 的 `collections.deque` 是实现缓冲区的一种常用且高效的方法，它能自动处理当缓冲区满时旧经验的移除。
+
+经验回放是一种基础技术，它使训练深度Q网络变为可能。通过打破相关性并重用过去的数据，它显著稳定并提高了学习过程的效率。然而，仅靠经验回放还不足够。另一个挑战源于这样一个事实：网络试图预测一个目标值（$R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a'; \theta)$），而这个目标值本身依赖于网络*当前*的权重 (weight) $\theta$。这导致了一个“移动目标”问题，我们接下来将通过引入目标网络来解决这个问题。
+
+## 参考资料
+
+- [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236) — Volodymyr Mnih, Koray Kavukcuoglu, David Silver, Andrei A. Rusu, Joel Veness, Marc G. Bellemare, Alex Graves, Martin Riedmiller, Andreas K. Fidjeland, Georg Ostrovski, Stig Petersen, Charles Gimel, Andriy Blun, Daan Wierstra, John Wenzeslav, Remi Munos (2015)
+  Journal: Nature; Volume: 518; Pages: 529-533; DOI: [10.1038/nature14236](https://doi.org/10.1038/nature14236)
+  这篇基础论文介绍了深度Q网络（DQN）算法，其中包括经验回放机制，该机制解决了深度强化学习中数据相关性和学习不稳定性等问题。
+- [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952) — Tom Schaul, John Quan, Ioannis Antonoglou, David Silver (2016)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1511.05952](https://doi.org/10.48550/arXiv.1511.05952)
+  本文提出了一种通过优先处理重要转换来改进经验回放的方法，使学习过程比均匀采样更高效和有效。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本全面的教科书，提供了强化学习的基础概念，包括对深度Q网络和经验回放作用的详尽解释。第二版。
+- [David Silver's Reinforcement Learning Course - Lecture 6: Value Function Approximation](https://www.youtube.com/watch?v=sO4ZgS5LgT8) — David Silver (2015)
+  Publisher: University College London (UCL)
+  这次来自著名课程的讲座解释了价值函数逼近的原理，其中包括对深度Q网络（DQN）和经验回放功能的清晰讨论。

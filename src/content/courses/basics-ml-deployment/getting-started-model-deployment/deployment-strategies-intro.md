@@ -1,0 +1,95 @@
+---
+course: "basics-ml-deployment"
+chapter: "getting-started-model-deployment"
+lesson: "deployment-strategies-intro"
+sourceId: 3949
+sourceUrl: "https://apxml.com/zh/courses/basics-ml-deployment/chapter-1-getting-started-model-deployment/deployment-strategies-intro"
+title: "部署策略的类型 (简介)"
+description: "简要介绍模型可以部署的不同方式，例如批量预测和在线推理。"
+order: 4
+plots: []
+sourceHash: "2b42b4c567a5339ead803030a93248bd12faf05663efb89c3026f649b249c94c"
+sourceCorrections: []
+---
+
+你已经训练好了模型，并且它在测试数据集上表现良好。但你如何才能在开发环境之外，真正*应用*它来对新数据进行预测呢？这就是部署策略发挥作用的地方。部署模型不止一种方式；最好的方法很大程度上取决于你需要预测的方式和时间。让我们看看模型投入使用的最常见方法。
+
+### 批量预测 (离线推理 (inference))
+
+设想你有一大量数据需要预测，但你不需要即时获得这些预测结果。也许你想每周为所有客户预测客户流失，或者为所有门店生成每日销售预测。这种情形非常适合**批量预测**，也称为离线推理。
+
+在批量预测中，模型根据预设的时间表（例如，每小时、每天、每周）处理大量数据或“批次”数据。
+
+以下是其工作原理的简化视图：
+
+1. **数据收集：** 在一段时间内收集输入数据（例如，过去24小时的所有交易）。
+2. **计划运行：** 在设定时间，一个程序启动。
+3. **加载模型与数据：** 加载保存的模型和批量输入数据。
+4. **预测：** 模型为整个批次数据生成预测。
+5. **存储结果：** 预测结果被存储，通常在数据库或文件系统中，供其他应用程序后续使用或进行分析。
+
+> 批量预测的典型工作流，其中数据定期处理。
+
+**何时适用批量预测？**
+
+- 当不需要实时预测时。
+- 当你需要高效处理大量数据时。
+- 当预测用于报告、规划或定期运行的下游程序时。
+
+可以将其想象为处理工资。你不是持续计算工资；而是在每个发薪期批量处理。
+
+### 在线预测 (实时推理 (inference))
+
+现在，考虑你需要*即时*获得预测的情形。例如：
+
+- 在信用卡交易批准*之前*检测其是否为欺诈。
+- 当用户浏览你的网站*时*为其推荐产品。
+- 在收到电子邮件*后立即*将其识别为垃圾邮件或非垃圾邮件。
+
+这些使用情况需要**在线预测**，也称为实时推理。在这种情况下，模型通常作为一项服务持续运行，等待接收预测请求。当带有新输入数据的请求到达时（通常只是单个数据点或少量数据点），服务会迅速加载模型（如果尚未加载），生成预测，并立即将其返回。
+
+这通常涉及搭建一个预测服务，常用Flask或FastAPI等Web框架（我们将在本课程后面部分介绍）。应用程序通过应用程序编程接口（API）与此服务交互。
+
+> 在线预测的典型工作流，其中预测结果通过API按需提供。
+
+**何时适用在线预测？**
+
+- 当需要即时预测时（低延迟要求）。
+- 适用于需要根据用户操作或传入事件即时反馈的交互式应用程序。
+- 当输入数据单独且不可预测地到达时。
+
+可以将其想象为一次网页搜索。你输入一个查询，并期望几乎立即得到结果。
+
+### 嵌入 (embedding)式部署
+
+第三种不那么常见但很重要的方法是将模型直接嵌入到应用程序或设备中。模型不再是调用单独的服务，而是在用户设备（如智能手机或物联网传感器）上本地运行，或作为大型软件应用程序的一部分。
+
+例子有：
+
+- 人脸识别直接在智能手机摄像头应用中运行。
+- 智能音箱上的关键词识别（“嘿，Google”、“Alexa”）。
+- 工业设备上运行的预测性维护模型。
+
+当网络连接不可靠、需要极低延迟或数据隐私是一个主要问题（数据无需离开设备）时，这种方法很有用。然而，这通常要求模型经过专门优化以减小尺寸和提高计算效率，从而在资源受限的设备上运行。
+
+### 选择合适的策略
+
+批量、在线或嵌入 (embedding)式部署的选择完全取决于你的应用程序需求：
+
+- **需要即时预测？** 倾向于在线预测。
+- **定期处理大量数据集？** 批量预测通常更高效。
+- **需要在没有网络访问的设备上运行？** 嵌入式部署可能是必需的。
+
+通常，问题本身的性质决定了策略。在本课程中，我们将主要侧重于**在线预测**所需的技术，因为构建预测服务是MLOps中一项常见且基本的能力。我们将学习如何保存模型，使用Flask将其封装成Web服务，并打包该服务以供部署。了解这些不同的策略有助于理解我们为何构建这些服务，以及它们如何适应机器学习 (machine learning)实用化的整体考量。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready ML Applications](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  本书为构建和部署机器学习系统提供了指南，其中包含模型服务策略的专门章节，如批量、在线和流式推理。
+- [Machine Learning Engineering](https://leanpub.com/machine-learning-engineering) — Andriy Burkov (2020)
+  Publisher: True Positive Inc.; Pages: 310
+  这是一本实用书籍，讨论了将机器学习模型投入生产的工程方面，涵盖了模型服务和不同部署环境等主题。
+- [Batch prediction vs. online prediction](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEsx3RQUGUE7kWfleq6iNuPZzzj2-hc_9Y678ytifnQ1pFYvnVtPptnUp07L32R7VqPGa7fZJ0n73geDDGx_Xy3NGCUdStKsmubk78xTwQF1Wt32LIgU4jEi5Ere7s_oXQnb6QMjbNljv1u4nent2q2LHlghQlGRh9hZ1dlJ16ueLCw7FeKrAw-ag4qoheK_F3rxQ==) — Google Cloud (2024)
+  Publisher: Google Cloud
+  官方文档解释了批量和在线预测服务的区别、用例和典型工作流程，为这些部署策略提供了清晰的行业视角。

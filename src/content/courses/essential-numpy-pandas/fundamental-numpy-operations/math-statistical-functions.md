@@ -1,0 +1,211 @@
+---
+course: "essential-numpy-pandas"
+chapter: "fundamental-numpy-operations"
+lesson: "math-statistical-functions"
+sourceId: 1736
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-4-fundamental-numpy-operations/math-statistical-functions"
+title: "数学和统计函数"
+description: "计算数组的总和、平均值、标准差、最小值、最大值及其他聚合值。"
+order: 3
+plots: ["plots/1736-0.json"]
+sourceHash: "02b23fa9f40f323bbaa44aedd0d8028a01fd7b27776873d150a7c93bb69cd56f"
+sourceCorrections: []
+---
+
+在处理NumPy数组时，通常需要对数据进行汇总。你通常不需要查看每个单独的值，而是需要一个数字来表示数组的某个属性，例如总和、平均值或最大值与最小值之间的范围。NumPy提供了一系列专门用于这些数学和统计聚合的优化函数。
+
+### 基本聚合函数
+
+我们从一些基础聚合函数开始。这些函数接受一个数组作为输入，并返回一个汇总数组内容的单一值。考虑一个简单的一维数组：
+
+```python
+import numpy as np
+
+arr1d = np.arange(1, 10)
+print(f"Original array: {arr1d}")
+# 输出: Original array: [1 2 3 4 5 6 7 8 9]
+```
+
+我们可以轻松计算其总和、最小值、最大值和平均值：
+
+```python
+print(f"Sum: {np.sum(arr1d)}")          # 计算所有元素的总和
+# 输出: Sum: 45
+print(f"Minimum: {np.min(arr1d)}")        # 查找最小值
+# 输出: Minimum: 1
+print(f"Maximum: {np.max(arr1d)}")        # 查找最大值
+# 输出: Maximum: 9
+print(f"Mean: {np.mean(arr1d)}")         # 计算平均值
+# 输出: Mean: 5.0
+print(f"Standard Deviation: {np.std(arr1d)}") # 计算标准差
+# 输出: Standard Deviation: 2.581988897471611
+print(f"Variance: {np.var(arr1d)}")       # 计算方差
+# 输出: Variance: 6.666666666666667
+```
+
+请注意，这些函数将整个数组归约为一个单一的标量值。许多这些聚合函数也可以作为数组对象上的方法直接使用，这有时能让代码稍微更易读：
+
+```python
+print(f"Sum (method): {arr1d.sum()}")
+# 输出: Sum (method): 45
+print(f"Mean (method): {arr1d.mean()}")
+# 输出: Mean (method): 5.0
+```
+
+`np.sum(arr1d)` 和 `arr1d.sum()` 都实现相同的效果。两者之间的选择通常取决于个人偏好或编码风格。使用方法形式（`arr.sum()`）非常常见。
+
+### 沿轴操作
+
+这些函数的实际用处在处理多维数组时变得清晰。聚合可以对整个数组进行（如上所示，得到一个单一值），也可以沿着特定的*轴*进行。
+
+请记住，对于二维数组（如矩阵）：
+
+- `axis=0` 指的是*沿列*执行的操作。压缩行。
+- `axis=1` 指的是*沿行*执行的操作。压缩列。
+
+这乍一看可能有些反直觉。把它理解为被“压缩”或聚合的轴。如果你沿着 `axis=0` 求和，你会压缩行以获得每列的总和。如果你沿着 `axis=1` 求和，你会压缩列以获得每行的总和。
+
+让我们通过一个二维数组来看一下：
+
+```python
+arr2d = np.array([[1, 2, 3],
+                  [4, 5, 6],
+                  [7, 8, 9]])
+
+print("原始二维数组:")
+print(arr2d)
+# 输出:
+# 原始二维数组:
+# [[1 2 3]
+#  [4 5 6]
+#  [7 8 9]]
+
+# 所有元素的总和（未指定轴）
+print(f"\nSum of all elements: {arr2d.sum()}")
+# 输出: Sum of all elements: 45
+
+# 沿轴0求和（沿列方向）
+# 结果形状为 (3,) -> (1+4+7, 2+5+8, 3+6+9)
+print(f"Sum along axis 0 (columns): {arr2d.sum(axis=0)}")
+# 输出: Sum along axis 0 (columns): [12 15 18]
+
+# 沿轴1求和（沿行方向）
+# 结果形状为 (3,) -> (1+2+3, 4+5+6, 7+8+9)
+print(f"Sum along axis 1 (rows): {arr2d.sum(axis=1)}")
+# 输出: Sum along axis 1 (rows): [ 6 15 24]
+
+# 沿轴0的平均值（每列的平均值）
+print(f"Mean along axis 0 (columns): {arr2d.mean(axis=0)}")
+# 输出: Mean along axis 0 (columns): [4. 5. 6.]
+
+# 沿轴1的平均值（每行的平均值）
+print(f"Mean along axis 1 (rows): {arr2d.mean(axis=1)}")
+# 输出: Mean along axis 1 (rows): [2. 5. 8.]
+```
+
+指定 `axis` 参数 (parameter)是进行计算的基础方法，例如在用NumPy数组表示的成绩矩阵中，查找每个作业的平均分数（跨学生，需要沿 `axis=0` 聚合）或者每个学生的平均分数（跨作业，需要沿 `axis=1` 聚合）。
+
+这是示例中列和（`axis=0`）的可视化效果：
+
+
+
+![每列元素的总和 (axis=0)](plots/1736-0.json)
+
+
+
+> 条形图显示了沿着 `axis=0` 计算的总和。第一个条形代表第一列的总和（1+4+7=12），第二个条形代表第二列的总和（2+5+8=15），第三个条形代表第三列的总和（3+6+9=18）。
+
+### 其他实用函数
+
+除了基础聚合之外，NumPy 还提供其他有助于数组分析的函数：
+
+- `argmin()` 和 `argmax()`: 这些函数不返回最小值或最大值，而是返回最小值或最大值的*索引*（位置）。这对于查找数据中特定特征出现的位置很有用。
+- `cumsum()`: 计算元素的累积和。输出数组中的每个元素都是输入数组中沿指定轴的所有先前元素（包括其自身）到该点的总和。
+- `cumprod()`: 类似 `cumsum`，计算累积乘积。
+
+以下是使用一维数组的快速示例：
+
+```python
+arr = np.array([3, 1, 4, 1, 5, 9, 2, 6])
+
+print(f"Array: {arr}")
+# 输出: Array: [3 1 4 1 5 9 2 6]
+
+# 最小值的索引（如果存在重复项，则为第一次出现的索引）
+print(f"Index of minimum (argmin): {np.argmin(arr)}")
+# 输出: Index of minimum (argmin): 1 (因为 arr[1] 是最小值 1 的第一次出现)
+
+# 最大值的索引
+print(f"Index of maximum (argmax): {np.argmax(arr)}")
+# 输出: Index of maximum (argmax): 5 (因为 arr[5] 是 9)
+
+# 累积和
+print(f"Cumulative sum (cumsum): {np.cumsum(arr)}")
+# 输出: Cumulative sum (cumsum): [ 3  4  8  9 14 23 25 31]
+# 解释: [3, 3+1, 3+1+4, 3+1+4+1, ...]
+
+# 累积乘积可能很有用，但要小心大数字或零
+arr_prod = np.array([1, 2, 3, 4])
+print(f"\nArray for product: {arr_prod}")
+# 输出: Array for product: [1 2 3 4]
+print(f"Cumulative product (cumprod): {np.cumprod(arr_prod)}")
+# 输出: Cumulative product (cumprod): [ 1  2  6 24]
+# 解释: [1, 1*2, 1*2*3, 1*2*3*4]
+```
+
+这些函数，像基础聚合函数一样，也支持多维数组的 `axis` 参数 (parameter)，让你可以计算诸如列的累计总和或行的累计总和等。
+
+### 处理缺失值：NaN安全聚合
+
+"实际数据通常包含缺失值。在 NumPy（以及随后的 Pandas）中，缺失的浮点值通常由一个特殊值表示：`np.nan`（非数字）。标准聚合函数通常会传播 `NaN` 值。如果聚合中涉及的某个元素是 `NaN`，结果也通常会是 `NaN`。"
+
+```python
+arr_nan = np.array([1.0, 2.0, np.nan, 4.0, 5.0])
+print(f"Array with NaN: {arr_nan}")
+# 输出: Array with NaN: [ 1.  2. nan  4.  5.]
+
+print(f"Sum with NaN using np.sum: {np.sum(arr_nan)}")
+# 输出: Sum with NaN using np.sum: nan
+print(f"Mean with NaN using np.mean: {np.mean(arr_nan)}")
+# 输出: Mean with NaN using np.mean: nan
+```
+
+这种行为可能并非总是合乎预期。你通常希望在计算时忽略缺失值。为此，NumPy 提供了一组 `NaN` 安全函数，通常以 `nan` 为前缀：
+
+- `np.nansum()`
+- `np.nanmean()`
+- `np.nanmin()`
+- `np.nanmax()`
+- `np.nanstd()`
+- `np.nanvar()`
+
+这些函数在计算结果时，会将 `NaN` 值视为数组中不存在的元素。
+
+```python
+# 使用与上一个示例相同的 arr_nan
+print(f"Array with NaN: {arr_nan}")
+# 输出: Array with NaN: [ 1.  2. nan  4.  5.]
+
+print(f"Sum ignoring NaN using np.nansum: {np.nansum(arr_nan)}")
+# 输出: Sum ignoring NaN using np.nansum: 12.0  (1.0 + 2.0 + 4.0 + 5.0)
+
+print(f"Mean ignoring NaN using np.nanmean: {np.nanmean(arr_nan)}")
+# 输出: Mean ignoring NaN using np.nanmean: 3.0  (12.0 / 4 个有效元素)
+
+print(f"Max ignoring NaN using np.nanmax: {np.nanmax(arr_nan)}")
+# 输出: Max ignoring NaN using np.nanmax: 5.0
+```
+
+使用这些 `NaN` 安全函数是处理预期存在缺失值的数据集时的重要做法，可确保你的汇总统计数据准确反映可用数据。
+
+NumPy 的数学和统计函数提供了高效的工具，用于汇总数组中的数据。你可以计算整个数组的简单聚合值，如总和和平均值，或者在多维数组中沿着特定轴（行或列）执行这些计算。像 `argmin`、`argmax` 和 `cumsum` 这样的函数提供了额外的方法来分析数组内容。重要的是，NumPy 提供了许多聚合函数的 `NaN` 安全版本，让你可以在计算过程中妥善处理缺失数据。这些功能是使用 NumPy 执行许多数据分析任务的核心。
+
+## 参考资料
+
+- [Statistical Routines](https://numpy.org/doc/stable/reference/routines.statistics.html) — NumPy Developers (2024)
+  提供了NumPy统计函数的全面信息，包括sum、mean、std、var、min、max、argmin、argmax、cumsum、cumprod等聚合函数、其NaN感知版本以及axis参数的说明。
+- [The N-dimensional array (ndarray)](https://numpy.org/doc/stable/reference/arrays.ndarray.html) — NumPy Developers (2024)
+  描述了NumPy核心数组对象及其聚合方法，提供了本节中讨论的顶级函数的替代语法。
+- [Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本关于Python数据处理的著作，其中有专门章节介绍NumPy数组、其聚合函数以及有效管理缺失数据的方法。

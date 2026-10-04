@@ -1,0 +1,157 @@
+---
+course: "data-governance-quality-observability-production"
+chapter: "foundations-data-governance-code"
+lesson: "data-classification-tagging-strategies"
+sourceId: 8077
+sourceUrl: "https://apxml.com/zh/courses/data-governance-quality-observability-production/chapter-1-foundations-data-governance-code/data-classification-tagging-strategies"
+title: "数据分类与标记方法"
+description: "通过程序对敏感数据资产进行分类和标记的方法。"
+order: 2
+plots: []
+sourceHash: "6056ff8894112fa897e63e4cb39597311933fa43f6ece2c64ad9639888ef557c"
+sourceCorrections: []
+---
+
+有效的数据管理依托于元数据。生产工程的核心要求是，有效管理需要说明管理对象。将管理规则应用于数据资产的实际做法不再侧重于手动表格追踪。数据通过程序在管道内进行分类和标记 (token)的方法，对于现代数据管理来说非常要紧。
+
+数据分类是根据数据的敏感度和业务价值对其进行归类的过程。标记是将这些标签附加到数据对象、表、列或流上的技术操作，以便下游系统能够理解。
+
+### 数据工程分类体系
+
+在编写代码标记 (token)数据之前，您必须建立一个机器可读的分类体系。数据平台中常见的问题是允许随意文本标签，这会导致不一致（例如，使用“PII”、“个人”和“敏感”来表示相同的意思）。为此，我们定义了敏感级别的一个严格列表，直接对应于基础设施配置。
+
+一个规范的技术分类体系通常采用四级模型：
+
+1. **公开 (L1):** 明确允许公开发布的数据。无需访问控制。
+2. **内部 (L2):** 业务数据的默认级别。员工可访问，非公开。
+3. **保密 (L3):** 需特定授权的数据。包含个人身份信息（PII），例如电子邮件地址或用户ID。
+4. **受限 (L4):** 高度敏感数据。包含凭证、金融账号或健康数据。访问需记录和审计。
+
+这些级别并非纸上谈兵；它们决定了存储和加密参数 (parameter)。例如，一个L4标签可能会激活一项策略，强制进行静态列级加密，而一个L1标签可能允许数据导出到公共存储桶。
+
+> 分类级别直接对应于加密和访问控制列表等技术执行机制。
+
+### 数据程序化标记 (token)的方法
+
+在一个可扩展的架构中，我们运用三种主要方法来应用这些标签：显式定义、自动化发现和血缘传递。
+
+#### 通过基础设施即代码进行显式定义
+
+最明确的方法是在模式定义的同时声明标签。当使用Terraform、dbt或SQLAlchemy等工具时，您可以在配置文件中明确列的敏感度。这遵循GitOps原则：分类在部署前经过版本控制和审查。
+
+假设有一个数据表的配置文件。我们不仅仅是定义数据类型，还会额外添加一个 `policy_tags` 属性。
+
+```yaml
+# table_schema.yaml
+columns:
+  - name: user_id
+    type: string
+    description: "用户的唯一标识符"
+    tags: 
+      - sensitivity:L2
+      - domain:identity
+  - name: email_address
+    type: string
+    tags: 
+      - sensitivity:L3
+      - pii:true
+```
+
+部署管道运行时，它会解析此YAML并应用标签到云数据仓库（例如Snowflake对象标记或Google BigQuery策略标签）。这保证了新创建的表都已分类。
+
+#### 自动化发现与模式匹配
+
+显式定义需要人为自觉。为发现工程师可能遗漏的敏感数据，我们引入自动化扫描器。这些扫描器在数据摄取阶段对数据进行抽样，或按计划对已存储数据运行扫描。
+
+我们采用正则表达式（Regex）和逻辑检查来识别与敏感信息相关的模式。如果扫描器在一个标记为“description”的列中检测到匹配信用卡号或电子邮件地址的模式，它会自动应用一个临时的L3或L4标签。
+
+基础扫描器的机制包括遍历模式并验证样本行。
+
+```python
+import re
+from typing import List, Dict
+
+# 常见敏感数据类型的正则表达式模式
+PATTERNS = {
+    "email": r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$",
+    "ssn": r"^\d{3}-\d{2}-\d{4}$",
+    "ipv4": r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+}
+
+def scan_sample_data(samples: List[str]) -> List[str]:
+    """
+    分析数据样本列表并返回检测到的标签。
+    """
+    detected_tags = []
+    match_counts = {k: 0 for k in PATTERNS.keys()}
+    threshold = 0.8  # 80%的非空数据必须匹配才能应用标签
+
+    valid_samples = [s for s in samples if s is not None]
+    if not valid_samples:
+        return []
+
+    for sample in valid_samples:
+        for tag_type, pattern in PATTERNS.items():
+            if re.match(pattern, str(sample)):
+                match_counts[tag_type] += 1
+
+    # 计算置信度并应用标签
+    for tag_type, count in match_counts.items():
+        if (count / len(valid_samples)) >= threshold:
+            detected_tags.append(f"detected_{tag_type}")
+
+    return detected_tags
+```
+
+此函数计算匹配项与总行数的比例。我们采用一个阈值（$0.8$或80%），而不是仅凭一次匹配，以防止因数据质量问题引起的误报。
+
+#### 标签传递
+
+数据在管道中流动时会改变形态。一个包含L3数据的原始表可能与一个L2表连接以形成一个新的派生视图。一个管理系统利用血缘关系将标签向下游传递。
+
+标签传递的原则通常遵循“高水位线”原则：派生资产的敏感度等于其上游依赖项中最高的敏感级别。
+
+数学上，如果一个派生列 $C_{输出}$ 是输入列 $C_1, C_2, \dots, C_n$ 的函数，其敏感度级别 $L$ 为：
+
+$L(C_{输出}) = \max(L(C_1), L(C_2), \dots, L(C_n))$
+
+如果您连接一个公开数据集（$L1$）与一个保密数据集（$L3$），除非在转换过程中应用了明确的去标识化功能（例如哈希或屏蔽），否则产生的数据集必须被视为保密（$L3$）。
+
+### 元数据存储与目录整合
+
+标签必须存储在查询引擎可见的地方。将标签存储在外部电子表格会导致策略与执行脱节。现代数据仓库支持直接在表对象上存储键值对。
+
+当您执行查询时，引擎会检查这些内置标签，以判断请求用户是否具备所需权限。例如，一个动态脱敏策略可能会在查询时检查列上的标签：
+
+```sql
+-- 数据库引擎在运行时应用的逻辑
+CASE 
+    WHEN current_role() IN ('ANALYST_FULL') THEN email_address
+    WHEN tag_value(email_address, 'sensitivity') = 'L3' THEN '***MASKED***'
+    ELSE email_address
+END
+```
+
+这构建了一个自执行系统。扫描器检测数据，应用标签，数据库引擎执行与该标签相关的策略。
+
+> 自动化的工作流程，扫描器识别敏感度，更新目录，并通知策略引擎在查询时限制或屏蔽数据。
+
+### 应对误报与漏报
+
+自动化标记 (token)并非万无一失。“误报”是指当扫描器将产品ID标记为信用卡号时发生，这可能不必要地阻止访问。“漏报”是指敏感数据未被标记而流出。
+
+为应对此情况，我们引入“隔离与审查”的工作流程。当扫描器在一个以前低敏感度的列上检测到新的高敏感度标签（L3或L4）时，如果流量至关重要，不应立即阻断生产流量。相反，应通知数据所有者，并可能将数据集标记为“待审查”。
+
+然而，对于新进入系统的数据集，默认策略应为“默认拒绝”。在数据集被扫描和分类之前，应将其视为受限（L4）。这能保证扫描机制失效时，结果是数据被封闭而非数据泄露。
+
+## 参考资料
+
+- [The DAMA Guide to the Data Management Body of Knowledge (DAMA-DMBOK 2)](https://www.booksrun.com/DAMA-DMBOK-Data-Management-Body-of-Knowledge-2nd/9781634622349) — DAMA International (2017)
+  Publisher: Technics Publications; Pages: 590
+  提供了一个全面的数据管理框架，涵盖数据治理、元数据管理和数据分类原则，对于建立一个强大的数据治理项目至关重要。
+- [Understanding Policy Tags and Access Policies](https://docs.snowflake.com/en/user-guide/object-tagging-introduction) — Snowflake Documentation (2023)
+  Publisher: Snowflake Inc.
+  解释如何在Snowflake数据平台中实施数据分类、标签和相关访问控制策略的官方文档。与敏感度级别的程序化强制执行直接相关。
+- [Model Properties & Tags](https://docs.getdbt.com/reference/resource-properties/tags) — dbt Labs Documentation (2023)
+  Publisher: dbt Labs
+  官方文档，详细说明如何使用dbt为数据模型定义元数据（包括自定义标签）。这支持在数据转换管道中通过“基础设施即代码”方法进行明确的数据分类。

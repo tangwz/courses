@@ -1,0 +1,120 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "deep-q-networks"
+lesson: "prioritized-experience-replay"
+sourceId: 3373
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-2-deep-q-networks/prioritized-experience-replay"
+title: "优先经验回放 (PER)"
+description: "通过PER更频繁地回放有用的转移来提高学习效果。"
+order: 7
+plots: []
+sourceHash: "a6a2cd30de598e29480aafb90a473e2fb4f55b6a9c2ab6c6194257f7cfe4462e"
+sourceCorrections: []
+---
+
+标准经验回放将回放缓冲区中存储的所有转移视为同等重要。在抽取用于训练的小批量时，每个转移 $(s, a, r, s')$ 被选中的概率是均等的。然而，直观上看，并非所有经验都提供相同的学习潜力。有些转移可能只是例行公事，或者确认了智能体已熟知的内容，而另一些则可能代表令人意外的结果，或者智能体当前Q值估计明显不准确的紧要关头。从这些“令人意外的”转移中学习可以带来更快、更有效的更新。
+
+优先经验回放（PER）建立在这一想法之上，通过根据转移的重要性进行采样，优先选择那些智能体能学到最多的转移。其主要思想是使用时序差分（TD）误差的大小作为衡量转移“令人意外”或提供多少有益信息的替代指标。回忆一下，使用目标网络参数 (parameter) $\theta^-$ 和当前网络参数 $\theta$ 计算转移 $(s, a, r, s')$ 的TD误差：
+
+
+$$
+\delta = r + \gamma \max_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta)
+$$
+
+
+较大的绝对TD误差 $|\delta|$ 表明预测的Q值 $Q(s, a; \theta)$ 与估计的目标值 $r + \gamma \max_{a'} Q(s', a'; \theta^-)$ 之间存在很大差异。此类转移表示当前Q函数可能不准确的情况，因此提供了有力的学习信号。
+
+### 分配优先级
+
+在PER中，我们不采用均匀采样，而是为回放缓冲区中的每个转移 $i$ 分配一个优先级 $p_i$。这种优先级的一个常见选择与绝对TD误差直接相关：
+
+
+$$
+p_i = |\delta_i| + \epsilon
+$$
+
+
+其中，$\epsilon$ 是一个小的正常量，用于以保证TD误差为零的转移仍然有非零的采样概率。这可以防止它们永远不会被回放。
+
+一旦分配了优先级，我们就将其转换为每个转移 $i$ 的采样概率 $P(i)$：
+
+
+$$
+P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}
+$$
+
+
+指数 $\alpha \ge 0$ 控制优先级的程度。
+
+- 如果 $\alpha = 0$，那么对于所有 $i$，$p_i^\alpha = 1$（假设 $p_i > 0$），我们就恢复了均匀采样：$P(i) = 1/N$，其中 $N$ 是缓冲区中的转移数量。
+- 如果 $\alpha = 1$，我们得到基于 $p_i$ 的直接比例优先级。
+- $\alpha$ 在0到1之间的值允许在均匀采样和完全优先级之间进行插值，提供了一种调节对高优先级样本关注度的方式。
+
+### 使用SumTree进行高效采样
+
+如果采用简单方法，计算归一化 (normalization)项 $\sum_k p_k^\alpha$ 并从可能数百万的转移中按比例采样，其计算代价会很高。PER通常采用一种名为 **SumTree** 的专用数据结构（一种线段树的变体）来快速实施。
+
+SumTree是一种二叉树，其中每个叶节点存储单个转移的优先级 $p_i^\alpha$。每个内部节点存储其子节点的优先级之和。因此，根节点存储总和 $\sum_k p_k^\alpha$。
+
+> 一个简化的SumTree结构。叶节点保存转移优先级（例如，$p_i^\alpha$）。父节点保存其子节点优先级的总和。根节点保存总和。采样涉及在 $[0, \text{根总和}]$ 范围内抽取一个随机值，然后遍历树以找到对应的叶节点/转移。
+
+这个结构允许：
+
+1. **快速采样：** 要采样一个转移，生成一个介于0和根节点存储的总和之间的随机数 $z$。然后，向下遍历树。在每个节点，如果 $z$ 小于左子节点的总和，则向左走；否则，从 $z$ 中减去左子节点的总和，然后向右走。这个过程在 $O(\log N)$ 时间内找到与采样值 $z$ 对应的转移。
+2. **快速优先级更新：** 当一个转移的TD误差（及其优先级）在用于训练后被更新时，只需要更新其在树中的祖先节点的优先级。这同样需要 $O(\log N)$ 时间。
+
+### 使用重要性采样纠正偏差
+
+优先采样并非没有影响。通过优先选择TD误差高的转移，我们引入了偏差。网络将主要看到其表现不佳的转移，这可能扭曲了预期值更新，因为采样分布不再与经验生成时的分布匹配。
+
+为了抵消这种偏差，PER将\*\*重要性采样（IS）\*\*权重 (weight)纳入学习更新中。其思想是降低那些比在均匀采样下更频繁被采样的转移的更新权重。转移 $i$ 的IS权重 $w_i$ 计算如下：
+
+
+$$
+w_i = \left( \frac{1}{N} \cdot \frac{1}{P(i)} \right)^\beta
+$$
+
+
+其中，$N$ 是回放缓冲区的大小，$P(i)$ 是在优先方案下采样转移 $i$ 的概率，$\beta \ge 0$ 是一个控制应用多少校正的指数。
+
+- 如果 $\beta = 0$，则不应用校正 ($w_i = 1$)。
+- 如果 $\beta = 1$，则优先化引入的偏差被完全校正。
+
+在实践中，$\beta$ 通常在训练过程中从一个初始值（例如0.4）线性退火到1。从较小的 $\beta$ 开始，使得智能体能在Q函数估计尚不准确的早期阶段从高优先级样本中获得更多益处，而后期增加 $\beta$ 则有助于在估计变得更准确时减少偏差。
+
+为了保持稳定性，这些权重通常通过除以小批量中的最大权重进行归一化 (normalization)：
+
+
+$$
+w_i \leftarrow \frac{w_i}{\max_j w_j}
+$$
+
+
+这以保证更新只会被按比例缩小，而不是可能被大幅增加。然后，归一化权重 $w_i$ 用于在梯度更新步骤中缩放转移 $i$ 的TD误差（或损失）。例如，使用均方误差损失时，转移 $i$ 的贡献将被加权：
+
+
+$$
+\text{损失}_i = w_i \cdot \delta_i^2
+$$
+
+
+### PER总结
+
+优先经验回放修改了标准DQN训练循环，具体如下：
+
+1. **存储优先级：** 将新转移添加到回放缓冲区时，最初为其分配最高优先级，以保证它至少被采样一次。将优先级与转移一起存储，通常使用SumTree。
+2. **优先采样：** 使用从存储的优先级导出的概率 $P(i) \propto p_i^\alpha$ 从缓冲区中采样小批量。
+3. **计算IS权重 (weight)：** 对于每个采样的转移 $i$，计算其重要性采样权重 $w_i = (N \cdot P(i))^{-\beta}$。归一化 (normalization)这些权重。
+4. **加权更新：** 计算小批量中每个转移的TD误差 $\delta_i$。在对Q网络执行梯度下降 (gradient descent)步骤时，使用加权TD误差 $w_i \cdot \delta_i$（或将 $w_i$ 纳入损失计算）。
+5. **更新优先级：** 使用新计算的绝对TD误差 $|\delta_i|$ 更新SumTree中采样转移的优先级 $p_i$。
+
+通过将学习重点放在最令人意外或最有用的转移上，PER与标准均匀采样的经验回放相比，通常能显著提升数据利用率并加快收敛速度。然而，它在实现上增加了额外的难度（SumTree管理），并引入了需要调整的新超参数 (parameter) (hyperparameter)（$\alpha$，$\beta$，$\epsilon$）。它是一种精巧的改进，直接应对了DQN中从存储经验中学习的有效性问题。
+
+## 参考资料
+
+- [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952) — Tom Schaul, John Quan, Ioannis Antonoglou, and David Silver (2016)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1511.05952](https://doi.org/10.48550/arXiv.1511.05952)
+  介绍优先经验回放的开创性论文，详细阐述了其理论基础、使用SumTree的高效实现以及重要性采样校正机制。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: The MIT Press; Pages: Chapter 17, Section 17.6
+  一本关于强化学习的综合性教科书，在深度Q网络的背景下详细解释了优先经验回放。

@@ -1,0 +1,95 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "matrices-data-representation-transformations"
+lesson: "matrix-multiplication-explained"
+sourceId: 1465
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-2-matrices-data-representation-transformations/matrix-multiplication-explained"
+title: "矩阵乘法说明"
+description: "详细说明矩阵乘法的规则、过程及其重要性。"
+order: 3
+plots: []
+sourceHash: "42adfa123ef90b984f725d8aea1226492f2ed6a3cc26103ca6e65f19ceaa7a04"
+sourceCorrections: []
+---
+
+矩阵乘法是线性代数中最基本的运算之一，尤其是在数据变换和机器学习 (machine learning)模型中。与逐元素乘法（通常称为哈达玛积）不同，矩阵乘法有一个特定定义，允许我们将线性变换结合起来，或以更巧妙的方式处理数据。
+
+### 行乘列规则
+
+将两个矩阵（例如 $A$ 和 $B$）相乘得到乘积 $C = AB$ 的主要思路是，计算 $A$ 的行与 $B$ 的列之间的点积。
+
+要定义此乘法，第一个矩阵 ($A$) 的列数必须与第二个矩阵 ($B$) 的行数完全相同。如果 $A$ 是一个 $m \times n$ 矩阵（表示有 $m$ 行和 $n$ 列），而 $B$ 是一个 $n \times p$ 矩阵（$n$ 行和 $p$ 列），那么它们的乘积 $C = AB$ 将是一个 $m \times p$ 矩阵。“内维度”（$n$）必须匹配，“外维度”（$m$ 和 $p$）决定了结果的形状。
+
+所得矩阵 $C$ 的第 $i$ 行第 $j$ 列的元素（表示为 $C_{ij}$）是通过取 $A$ 的第 $i$ 行与 $B$ 的第 $j$ 列的点积来计算的。
+
+数学上，如果 $A = [a_{ik}]$ 且 $B = [b_{kj}]$，则乘积 $C = AB$ 的元素 $C_{ij}$ 由下式给出：
+$C_{ij} = \sum_{k=1}^{n} a_{ik} b_{kj}$
+这意味着您将 $A$ 的第 $i$ 行与 $B$ 的第 $j$ 列中对应元素相乘，然后将这些乘积相加。
+
+### 一个具体示例
+
+我们来计算两个矩阵 $A$ 和 $B$ 的乘积：
+
+$A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}, \quad B = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix}$
+
+这里，$A$ 是 $2 \times 2$ 矩阵，$B$ 是 $2 \times 2$ 矩阵。内维度匹配（都是 2），所以乘法是可定义的。所得矩阵 $C = AB$ 将是 $2 \times 2$ 矩阵。
+
+我们来计算 $C = \begin{bmatrix} c_{11} & c_{12} \\ c_{21} & c_{22} \end{bmatrix}$ 的元素：
+
+- **$c_{11}$**: $A$ 的第 1 行与 $B$ 的第 1 列的点积。
+  $c_{11} = (1 \times 5) + (2 \times 7) = 5 + 14 = 19$
+- **$c_{12}$**: $A$ 的第 1 行与 $B$ 的第 2 列的点积。
+  $c_{12} = (1 \times 6) + (2 \times 8) = 6 + 16 = 22$
+- **$c_{21}$**: $A$ 的第 2 行与 $B$ 的第 1 列的点积。
+  $c_{21} = (3 \times 5) + (4 \times 7) = 15 + 28 = 43$
+- **$c_{22}$**: $A$ 的第 2 行与 $B$ 的第 2 列的点积。
+  $c_{22} = (3 \times 6) + (4 \times 8) = 18 + 32 = 50$
+
+因此，所得矩阵为：
+$C = AB = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$
+
+### 过程可视化
+
+我们可以将单个元素（如 $c_{11}$）的计算可视化为 $A$ 的第一行和 $B$ 的第一列的组合：
+
+> 通过取 A 的第一行（蓝色）和 B 的第一列（红色）的点积来计算左上角元素 (C₁₁)。
+
+### 重要属性与注意事项
+
+1. **维度兼容性：** 请记住，乘积 $AB$ 只有当 $A$ 的列数等于 $B$ 的行数时才定义。如果维度不匹配，则无法执行乘法。
+2. **不可交换性：** 与标量乘法不同，矩阵乘法通常**不**可交换。也就是说，在大多数情况下 $AB \neq BA$。我们来交换示例矩阵 $A$ 和 $B$ 的顺序：
+
+   $BA = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix} \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}$
+
+   - 元素 (1,1): $(5 \times 1) + (6 \times 3) = 5 + 18 = 23$
+   - 元素 (1,2): $(5 \times 2) + (6 \times 4) = 10 + 24 = 34$
+   - 元素 (2,1): $(7 \times 1) + (8 \times 3) = 7 + 24 = 31$
+   - 元素 (2,2): $(7 \times 2) + (8 \times 4) = 14 + 32 = 46$
+
+   $BA = \begin{bmatrix} 23 & 34 \\ 31 & 46 \end{bmatrix}$
+   显然，$AB = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix} \neq \begin{bmatrix} 23 & 34 \\ 31 & 46 \end{bmatrix} = BA$。乘法的顺序非常重要。
+3. **结合律：** 矩阵乘法*是*结合的：$(AB)C = A(BC)$，前提是所有乘法的维度都兼容。此属性很有用，因为它表示我们可以将一系列矩阵乘法分组而不改变最终结果。
+4. **分配律：** 矩阵乘法对矩阵加法具有分配性：$A(B + C) = AB + AC$ 和 $(A + B)C = AC + BC$，同样假设维度兼容。
+
+### 机器学习 (machine learning)中的意义
+
+矩阵乘法不仅是一个抽象的数学规则；它在许多机器学习运算中都处于中心作用：
+
+- **应用线性变换：** 如下一节所述，将矩阵 $A$ 乘以向量 (vector) $x$（仅仅是一个 $n \times 1$ 矩阵）会产生一个新向量 $y = Ax$。这表示将 $A$ 定义的线性变换应用于向量 $x$。如果您的数据集由矩阵 $X$ 表示（其中每列是一个数据点），那么计算 $AX$ 会将变换 $A$ 同时应用于*所有*数据点。
+- **变换的组合：** 如果需要先应用变换 $B$ 再应用变换 $A$，则组合变换由单个矩阵乘积 $AB$ 表示。这在神经网络 (neural network)中大量使用，数据通过多层，每一层执行一个线性变换（通常后接一个非线性激活）。
+- **求解线性系统：** 方程 $Ax = b$ 表示一个线性方程组。矩阵乘法定义了 $A$ 中的系数如何与 $x$ 中的变量结合以产生 $b$ 中的结果。
+- **计算协方差矩阵：** 在统计学和像 PCA 这样的技术中，计算协方差矩阵通常涉及矩阵乘法（例如，在数据 $X$ 居中后计算 $X^T X$）。
+
+因此，理解矩阵乘法的机制和属性对于掌握许多机器学习算法如何处理和变换数据是必要的。在接下来的实践部分中，您将使用像 NumPy 这样的库，它们高效地实现了这些运算。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](http://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2016)
+  Publisher: Wellesley-Cambridge Press
+  一本广受推崇的教材，对线性代数进行了全面处理，包括矩阵乘法的定义和性质。
+- [Deep Learning](https://www.deeplearningbook.org/contents/linear_algebra.html) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 2
+  本书第二章清晰地解释了线性代数基础知识，特别为机器学习从业者定制，包括矩阵运算及其作用。
+- [Linear Algebra (18.06SC)](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  麻省理工学院开放课程资源，提供线性代数视频讲座和课程材料，其中一节专门讲解矩阵乘法。

@@ -1,0 +1,74 @@
+---
+course: "advanced-reinforcement-learning"
+chapter: "advanced-policy-gradients-actor-critic"
+lesson: "policy-gradient-challenges"
+sourceId: 3381
+sourceUrl: "https://apxml.com/zh/courses/advanced-reinforcement-learning/chapter-3-advanced-policy-gradients-actor-critic/policy-gradient-challenges"
+title: "基本策略梯度面临的挑战"
+description: "讨论 REINFORCE 算法相关的高方差和样本效率低下问题。"
+order: 1
+plots: ["plots/3381-0.json"]
+sourceHash: "f9bfa687853c948aff707ac96847f568539f92cbf541b99b53a9f53e7cf3dfeb"
+sourceCorrections: []
+---
+
+策略梯度方法，例如 REINFORCE，提供了一种直接优化参数 (parameter)化策略的方式。然而，这些方法在实践中，尤其是在复杂环境中，常常面临显著的实际困难。应对这些挑战推动了更先进的 Actor-Critic 算法的创建。
+
+回顾源自策略梯度定理的基本策略梯度更新。对于表示预期总回报的目标函数 $J(\theta)$，梯度估计如下:
+
+
+$$
+\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t|s_t) G_t \right]
+$$
+
+
+此处，$\tau$ 是由遵循策略 $\pi_\theta$ 生成的轨迹 $(s_0, a_0, r_1, s_1, a_1, ..., s_{T-1}, a_{T-1}, r_T, s_T)$，而 $G_t = \sum_{k=t}^{T-1} \gamma^{k-t} R_{k+1}$ 是从时间步 $t$ 开始的折扣回报。实际操作中，这个期望值通过蒙特卡洛采样来近似，即对使用当前策略 $\pi_\theta$ 收集的多个轨迹的梯度分量进行平均。
+
+### 梯度估计中的高方差
+
+像 REINFORCE 这样的基本策略梯度方法最主要的问题是梯度估计的**高方差**。这种方差直接源于使用蒙特卡洛回报 $G_t$ 作为策略梯度项 $\nabla_\theta \log \pi_\theta(a_t|s_t)$ 的缩放因子。
+
+思考为什么 $G_t$ 会有噪声：
+
+1. **随机性：** 回报 $G_t$ 取决于所有后续动作 $a_k$ (对于 $k \ge t$) 和状态转移 $p(s_{k+1}|s_k, a_k)$ (对于 $k \ge t$)，这些往往是随机的。即使从相同的状态 $s_t$ 出发，执行相同的策略也可能由于环境或策略本身的随机性而导致非常不同的轨迹和累积回报。
+2. **长轨迹：** 在回合较长的环境中，回报 $G_t$ 会累积多个时间步的奖励。随机性的影响会随着时间累积，使最终回报变得高度可变。单个早期随机事件可以大幅改变轨迹的其余部分及其总回报。
+
+这种高方差意味着从有限批次的轨迹中获得的梯度估计可能非常嘈杂。估计的梯度方向可能与真实梯度方向相去甚远，导致以下几个问题:
+
+- **收敛缓慢：** 学习需要对许多轨迹进行平均以获得可靠的信号，这大大减缓了学习过程。
+- **不稳定：** 有噪声的更新可能导致策略性能剧烈波动甚至发散。策略在找到改进路径之前可能会暂时大幅恶化。
+- **敏感性：** 学习过程对学习率和初始化参数 (parameter)的选择变得高度敏感。
+
+
+
+![梯度更新方差对比](plots/3381-0.json)
+
+
+
+> 学习进展的示意性比较，包括高方差梯度更新（基本策略梯度典型情况）与更平滑、低方差的更新。高方差可能导致不稳定且总体改进缓慢。
+
+### 样本效率低下
+
+高方差直接导致了**样本效率低下**。因为每个采样轨迹都提供了如此嘈杂的梯度估计，必须在当前策略下收集大量轨迹才能获得一个合理准确的更新方向。这使得学习在交互时间和数据需求方面变得昂贵，特别是与某些基于价值的方法相比，这些方法可以凭借自举从单个转移中更有效地学习（尽管自举会引入其自身的偏差）。
+
+此外，标准 REINFORCE 通常会等到回合结束才计算回报 $G_t$ 并执行更新。这意味着学习信号被延迟，并且中间奖励的信息未能像时序差分 (TD) 方法那样及时使用。
+
+### 信用分配问题
+
+另一个相关的困难是**信用分配问题**。基本 REINFORCE 算法根据轨迹的*总*回报 $G_t$（或通常只是 $G_0$）来更新轨迹中*所有*已采取动作的概率。如果一条轨迹产生了很高的总回报，那么该轨迹中的所有动作都会得到强化，即使其中一些特定动作实际上是有害的，但被后来的幸运情况或良好动作所抵消。相反，单个导致整体回报不佳的坏动作可能会不公平地惩罚之前的良好动作。
+
+使用从当前时间步开始的回报 $G_t$，而不是总回报 $G_0$，通过仅根据后续奖励强化动作来帮助缓解此问题。然而，$G_t$ 仍然汇集了可能多个时间步的奖励，这使得很难单独判断动作 $a_t$ 的即时后果。方差问题依然存在，因为 $G_t$ 仍然是对动作真实价值的带噪声估计。
+
+这些挑战，即高方差、样本效率低下和困难的信用分配，使得基本策略梯度形式需要改进。Actor-Critic 方法，我们接下来会进行研究，通过引入一个已学习的价值函数（评论家）来直接解决高方差问题，从而提供对行动者动作更稳定和信息量更大的评估，替换或增强嘈杂的蒙特卡洛回报 $G_t$。这作为开发更稳定和高效的策略优化算法的根本。
+
+## 参考资料
+
+- [Simple statistical gradient-following algorithms for connectionist reinforcement learning](https://link.springer.com/article/10.1007/BF00992696) — Ronald J. Williams (1992)
+  Journal: Machine Learning; Publisher: Kluwer Academic Publishers; Volume: 8; Pages: 229-256; DOI: [10.1007/BF00992696](https://doi.org/10.1007/BF00992696)
+  介绍了原始的REINFORCE算法，这是一种基础的策略梯度方法，其固有的方差问题是本节的主要内容。
+- [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本综合性教材，深入解释了策略梯度方法，包括REINFORCE、其局限性以及通过引入Actor-Critic方法来降低方差的概念性过渡。(第2版)
+- [Actor-Critic Algorithms](https://papers.nips.cc/paper/1999/file/a87ff679a2f3e71d9181a67b7542122c-Paper.pdf) — Vijay R. Konda, John N. Tsitsiklis (1999)
+  Journal: Advances in Neural Information Processing Systems; Publisher: The MIT Press; Volume: 12; Pages: 1008-1014
+  提供了Actor-Critic算法的早期理论论述，强调了它们在策略梯度估计中相对于蒙特卡洛方法降低方差的潜在优势。

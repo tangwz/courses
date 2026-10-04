@@ -1,0 +1,134 @@
+---
+course: "prompt-engineering-agentic-workflows"
+chapter: "prompt-engineering-tool-use"
+lesson: "prompting-agent-tool-selection-operation"
+sourceId: 6726
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-agentic-workflows/chapter-3-prompt-engineering-tool-use/prompting-agent-tool-selection-operation"
+title: "引导代理选择和使用工具"
+description: "设计提示，指导代理如何选择合适的工具并正确操作。"
+order: 2
+plots: []
+sourceHash: "03f0093fc02e17a5287ebb16e5ee9b5850cc35c435e8547cf45b34a6f36cf143"
+sourceCorrections: []
+---
+
+引导AI代理正确选择和操作工具是构建有能力的代理系统的一个重要组成部分。仅仅让代理“了解”工具有限；您的提示必须使其核心的大型语言模型（LLM）能够判断何时需要工具、从可用集合中选择哪个具体工具以及如何格式化向该工具发出的请求。这一过程将LLM从一个纯粹的文本生成器转变为一个可以与外部系统或专用功能交互的调度器。
+
+主要挑战在于弥合LLM基于文本的理解与工具结构化（通常是程序化）性质之间的差距。LLM本身不理解什么是“天气API”或如何查询“计算器功能”。您的提示充当了说明书和决策框架。
+
+### 提示代理进行工具选择
+
+当代理遇到无法凭借其固有知识完成的任务或查询时，它需要考虑使用工具。您的提示负责促成这一决策。
+
+**1. 清晰定义可用工具**
+
+最常见的方法是在代理的系统提示中或作为特定任务指令的一部分，直接向代理提供可用工具列表。对于每个工具，您必须提供：
+
+- **名称：** 工具的独特、清晰的标识符。保持其简洁且具描述性（例如，`web_search`、`calculator`、`database_query`）。
+- **描述：** 一两句话解释该工具的作用以及何时应使用它。这对于LLM的选择逻辑非常重要。例如，对于`web_search`工具：“搜索互联网以获取最新信息或回答一般知识问题。” 对于`product_database_lookup`工具：“从公司产品目录中检索产品详情，如价格、库存水平和规格。用于具体产品查询。”
+- **输入模式：** 工具预期参数 (parameter)的描述。指定每个参数的名称、类型，以及它是必需的还是可选的。类似JSON模式的描述通常有效。
+- **输出模式（可选但建议）：** 对工具预期输出类型的简要说明。这可以帮助代理理解如何处理工具的响应。
+
+以下是一个您可能包含在提示中以描述工具的示例片段：
+
+```text
+您可以使用以下工具：
+
+工具名称：query_user_database
+描述：使用此工具根据用户ID或电子邮件地址获取用户信息，例如他们的购买历史或联系方式。
+输入：{"user_identifier": "字符串 (用户ID或电子邮件)", "information_needed": "字符串 (例如，'purchase_history', 'contact_details')"}
+
+工具名称：knowledge_base_search
+描述：使用此工具在公司内部知识库中搜索文章、常见问题和故障排除指南。
+输入：{"search_query": "字符串 (要搜索的问题或关键词)"}
+
+工具名称：schedule_meeting
+描述：使用此工具在用户日历中安排会议。
+输入：{"attendees": "字符串列表 (电子邮件地址)", "start_time": "字符串 (ISO 8601 格式)", "duration_minutes": "整数", "subject": "字符串"}
+```
+
+**2. 引导选择过程**
+
+您的提示应指导LLM如何决定使用哪个工具。这通常涉及让它进行以下操作：
+
+- 分析用户的请求或当前任务。
+- 判断是否有可用的工具可以帮助实现目标或子目标。
+- 如果多个工具看似相关，根据其描述选择最合适的。
+- 如果没有合适的工具，则自然地回应或表明无法满足请求。
+
+一条指令可能如下所示：
+“根据用户的查询，首先判断是否有任何可用工具可以提供帮助。如果能，识别最适合该任务的工具。然后您必须为该工具准备输入。”
+
+ReAct（思考与行动）框架以及类似的推理 (inference)模式在此处有重要影响。代理可能会先生成一个关于需要工具的“思考”，然后生成一个指定工具及其输入的“动作”。您的提示结构可以鼓励这种明确的推理。
+
+### 提示代理进行工具操作
+
+一旦工具被选中，代理需要为它准备输入并理解如何“调用”它。
+
+**1. 参数 (parameter)提取和格式化**
+
+LLM必须从当前对话或其工作记忆中提取工具参数所需的值。您的提示应隐式或显式地指导这一点。
+
+- **隐式引导：** 如果工具输入模式在工具描述中定义明确（如上所示），LLM通常可以推断如何填充它。例如，如果用户说：“巴黎天气怎么样？”并且`get_weather`工具预期`{"location": "string"}`，LLM应该识别“巴黎”作为`location`的值。
+- **显式指令：** 有时，您可能需要更直接：“使用`get_weather`工具时，从用户消息中提取城市名称并将其用作'location'参数。”
+
+输入的格式也很重要。如果工具预期JSON格式，则LLM必须被指示或能够生成有效的JSON。
+
+**2. 指定行动格式**
+
+代理需要一种标准化方式来传达其使用工具的意图并提供其输入。这通常是一种结构化格式，常为JSON，您的外部系统可以解析它。
+
+一种常见方法是指示代理在决定使用工具时输出一个特定的JSON对象。例如：
+
+```text
+如果您决定使用工具，您必须输出一个具有以下结构的JSON对象：
+{
+  "tool_name": "要使用的工具名称",
+  "tool_input": {
+    "parameter1_name": "值1",
+    "parameter2_name": "值2"
+  }
+}
+如果您不使用工具，请直接回复用户。
+```
+
+当LLM生成与此结构匹配的输出时，您的代理的控制循环可以拦截它，使用提供的输入执行指定的工具，然后将结果反馈给LLM以便进行下一步操作。
+
+例如，如果代理决定使用`query_user_database`工具，其输出可能如下：
+
+```json
+{
+  "tool_name": "query_user_database",
+  "tool_input": {
+    "user_identifier": "user123@example.com",
+    "information_needed": "购买历史"
+  }
+}
+```
+
+下面的图表说明了代理在您的提示指导下，决定使用工具时的总体流程：
+
+> 代理处理用户请求，如果需要外部操作或信息，则查阅可用工具描述，选择合适的工具，格式化其输入，并发出调用工具的信号。然后将工具的输出反馈给代理。
+
+### 工具选择和操作提示的最佳实践
+
+- **明确且清晰：** 提供关于工具及其参数 (parameter)的清晰描述。LLM完全依赖于您提供的信息。
+- **使用一致的结构：** 描述多个工具时，对每个工具使用相同的格式（名称、描述、输入参数）。这有助于LLM有效解析和比较它们。
+- **强调输出格式：** 明确指定代理在调用工具时应使用的确切格式（例如，前面所示的JSON结构）。您可能需要提供示例。
+- **处理“无工具”场景：** 指导代理在当前查询或任务没有合适工具时应如何处理（例如，“如果没有工具可以处理该请求，请解释原因并在需要时请求澄清。”）。
+- **迭代和测试：** 您的工具相关提示的有效性将取决于具体的LLM和工具的复杂程度。在各种场景下进行测试，并根据代理的行为优化您的提示。如果代理未能选择正确的工具或输入格式不正确，分析其推理 (inference)（如果通过思维链提示等技术可用）并调整您的指令。
+- **从简入手：** 从一个或两个简单工具开始，逐步增加复杂性。这让您能够隔离问题并了解LLM如何解释您关于工具使用的指令。
+
+通过精心设计详细说明可用工具并指导其选择和操作决策过程的提示，您可以帮助AI代理执行更广泛的任务，有效地拓宽其能力范围，超出LLM固有的局限。
+
+## 参考资料
+
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://doi.org/10.48550/arXiv.2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2022)
+  Journal: International Conference on Learning Representations (ICLR 2023); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了ReAct框架，结合了推理和行动步骤，帮助代理解决需要与外部环境交互的任务，与工具选择和操作直接相关。
+- [Toolformer: Language Models That Can Use Tools](https://arxiv.org/abs/2302.04761) — Timo Schick, Jane Dwivedi-Yu, Roberto Dessì, Roberta Raileanu, Maria Lomeli, Luke Zettlemoyer, Nicola Cancedda, Thomas Scialom (2023)
+  Journal: arXiv; DOI: [10.48550/arXiv.2302.04761](https://doi.org/10.48550/arXiv.2302.04761)
+  提出了一种通过自监督学习训练语言模型使用外部工具的方法，展示了模型如何学习决定何时使用哪个工具以及传递哪些参数。
+- [Function calling](https://platform.openai.com/docs/guides/function-calling) — OpenAI (2024)
+  Publisher: OpenAI
+  官方指南，介绍如何使用OpenAI模型实现函数调用，提供了定义工具和将其集成到代理工作流程的实用示例和实践。

@@ -1,0 +1,222 @@
+---
+course: "essential-numpy-pandas"
+chapter: "fundamental-numpy-operations"
+lesson: "basic-arithmetic-operations"
+sourceId: 1728
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-4-fundamental-numpy-operations/basic-arithmetic-operations"
+title: "基本算术运算"
+description: "在 NumPy 数组上执行按元素加法、减法、乘法和除法。"
+order: 1
+plots: []
+sourceHash: "f0730486a3309502b85a8267991688cef304e3ad1cf73e597331c3feb99ff7b6"
+sourceCorrections: []
+---
+
+NumPy 在数值计算方面表现出色的主要原因之一，在于它能够对数据执行批量操作，而无需使用 Python `for` 循环。这些操作是*按元素*应用的，这意味着操作是独立地对数组中每个对应的元素执行的。
+
+我们从基本算术开始：加法、减法、乘法和除法。当您在 NumPy 数组上使用标准算术运算符（`+`、`-`、`*`、`/`）时，NumPy 会自动将操作应用到每个元素。
+
+### 数组间的算术运算
+
+如果您有两个相同形状的数组，可以直接在它们之间执行算术运算。操作将按元素应用。
+
+考虑两个简单数组：
+
+```python
+import numpy as np
+
+arr1 = np.array([1, 2, 3, 4])
+arr2 = np.array([10, 20, 30, 40])
+
+print(f"arr1: {arr1}")
+print(f"arr2: {arr2}")
+```
+
+输出：
+
+```
+arr1: [1 2 3 4]
+arr2: [10 20 30 40]
+```
+
+现在，我们执行一些算术运算：
+
+**加法：**
+
+```python
+sum_arr = arr1 + arr2
+print(f"arr1 + arr2: {sum_arr}")
+```
+
+输出：
+
+```
+arr1 + arr2: [11 22 33 44]
+```
+
+这里，`arr1` 的第一个元素 (1) 与 `arr2` 的第一个元素 (10) 相加，`arr1` 的第二个元素 (2) 与 `arr2` 的第二个元素 (20) 相加，依此类推。
+
+**减法：**
+
+```python
+diff_arr = arr2 - arr1
+print(f"arr2 - arr1: {diff_arr}")
+```
+
+输出：
+
+```
+arr2 - arr1: [ 9 18 27 36]
+```
+
+**乘法：**
+
+```python
+prod_arr = arr1 * arr2
+print(f"arr1 * arr2: {prod_arr}")
+```
+
+输出：
+
+```
+arr1 * arr2: [ 10  40  90 160]
+```
+
+> **注意：** 这是按元素乘法，而非矩阵乘法。对于矩阵乘法，您将使用 `@` 运算符或 `np.dot()` 函数。
+
+**除法：**
+
+```python
+div_arr = arr2 / arr1
+print(f"arr2 / arr1: {div_arr}")
+```
+
+输出：
+
+```
+arr2 / arr1: [10. 10. 10. 10.]
+```
+
+请注意，即使 `arr1` 和 `arr2` 包含整数，除法结果也是浮点数。NumPy 通常会将除法结果提升为浮点类型以保持精度。
+
+这些操作对于多维数组也类似地起作用，只要它们的形状匹配：
+
+```python
+mat1 = np.array([[1, 2], [3, 4]])
+mat2 = np.array([[5, 6], [7, 8]])
+
+print(f"mat1:\n{mat1}\n")
+print(f"mat2:\n{mat2}\n")
+
+prod_mat = mat1 * mat2
+print(f"mat1 * mat2:\n{prod_mat}")
+```
+
+输出：
+
+```
+mat1:
+[[1 2]
+ [3 4]]
+
+mat2:
+[[5 6]
+ [7 8]]
+
+mat1 * mat2:
+[[ 5 12]
+ [21 32]]
+```
+
+### 数组与标量间的算术运算
+
+NumPy 也允许您在数组和单个数字（标量）之间执行算术运算。在这种情况下，NumPy 会将操作应用于标量与数组中的*每个元素*之间。这是一种简单的*广播*形式，我们稍后会更正式地介绍这个。
+
+```python
+arr = np.array([1, 2, 3, 4])
+scalar = 10
+
+print(f"Array: {arr}")
+print(f"Scalar: {scalar}\n")
+
+add_scalar = arr + scalar
+print(f"arr + scalar: {add_scalar}")
+
+mul_scalar = arr * scalar
+print(f"arr * scalar: {mul_scalar}")
+
+pow_scalar = arr ** 2 # 按元素平方
+print(f"arr ** 2: {pow_scalar}")
+```
+
+输出：
+
+```
+Array: [1 2 3 4]
+Scalar: 10
+
+arr + scalar: [11 12 13 14]
+arr * scalar: [10 20 30 40]
+arr ** 2: [ 1  4  9 16]
+```
+
+### 操作会创建新数组
+
+务必记住，对 NumPy 数组执行算术运算会生成包含结果的*新*数组。原始数组保持不变。
+
+```python
+arr_a = np.array([5, 10, 15])
+arr_b = np.array([1, 2, 3])
+
+print(f"Original arr_a: {arr_a}")
+print(f"Original arr_b: {arr_b}\n")
+
+result = arr_a / arr_b
+
+print(f"Result of division: {result}")
+print(f"arr_a after division: {arr_a}") # 未改变
+print(f"arr_b after division: {arr_b}") # 未改变
+```
+
+输出：
+
+```
+Original arr_a: [ 5 10 15]
+Original arr_b: [1 2 3]
+
+Result of division: [5. 5. 5.]
+arr_a after division: [ 5 10 15]
+arr_b after division: [1 2 3]
+```
+
+如果您想就地修改数组，可以使用增广赋值运算符，如 `+=`、`-=`、`*=`、`/=`，尽管这不太常见，并且需要仔细考虑，特别是在数据类型方面。
+
+```python
+arr_a = np.array([5.0, 10.0, 15.0]) # 使用浮点数以避免除法引起的类型问题
+arr_b = np.array([1.0, 2.0, 3.0])
+
+print(f"arr_a before in-place division: {arr_a}")
+
+arr_a /= arr_b # 就地修改 arr_a
+
+print(f"arr_a after in-place division: {arr_a}")
+```
+
+输出：
+
+```
+arr_a before in-place division: [ 5. 10. 15.]
+arr_a after in-place division: [5. 5. 5.]
+```
+
+这些基本算术运算是 NumPy 数值计算的根本。它们的按元素应用以及与标量一起工作的能力，与在 Python 中编写显式循环相比，提供了一种简洁高效的计算方法。接下来，我们将介绍通用函数 (ufuncs)，它们在此功能的基础上，支持更广范围的数学运算。
+
+## 参考资料
+
+- [Broadcasting](https://numpy.org/doc/stable/user/basics.broadcasting.html) — NumPy Developers (2024)
+  解释了 NumPy 如何处理不同形状数组之间的操作，包括数组与标量操作，这是广播的一种简单形式。
+- [Universal functions (ufunc)](https://numpy.org/doc/stable/reference/ufuncs.html) — NumPy Developers (2024)
+  描述了 NumPy 中元素级操作的底层机制，其中包括所讨论的基本算术运算符。
+- [Python for Data Analysis](https://learning.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  一本基础性书籍，全面介绍了 NumPy 数组及其操作，包括元素级算术和广播。

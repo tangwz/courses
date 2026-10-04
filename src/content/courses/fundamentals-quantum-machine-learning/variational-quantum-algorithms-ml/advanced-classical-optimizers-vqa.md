@@ -1,0 +1,130 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "variational-quantum-algorithms-ml"
+lesson: "advanced-classical-optimizers-vqa"
+sourceId: 1059
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-4-variational-quantum-algorithms-ml/advanced-classical-optimizers-vqa"
+title: "变分量子算法的进阶经典优化器"
+description: "在变分量子算法训练中使用进阶经典优化算法（Adam、SPSA、基于梯度的方法）。"
+order: 5
+plots: ["plots/1059-0.json"]
+sourceHash: "9065e90349134b7235917f4121cb97165c82ffcd3f76579a161929e81a7109b8"
+sourceCorrections: []
+---
+
+当您定义了参数 (parameter)化量子电路（PQC）和表示您的机器学习 (machine learning)目标的合适成本函数 $C(\theta)$ 后，训练变分量子算法（VQA）的主要任务就变成找到使该成本函数最小化的最优参数 $\theta^*$：
+
+
+$$
+\theta^* = \arg \min_{\theta} C(\theta)
+$$
+
+
+这个优化问题通常由经典计算机处理，它与量子处理器（或模拟器）进行迭代交互。经典优化器提出新的参数值 $\theta$，量子设备估算 $C(\theta)$（并可能其梯度 $\nabla_{\theta} C(\theta)$），然后这些信息反馈给优化器，以建议下一组参数。
+
+虽然可以使用标准梯度下降 (gradient descent)法，但变分量子算法的特点通常得益于更精密的经典优化技术。成本函数可能复杂（非凸），并且通过量子测量估算成本函数及其梯度会引入固有的统计噪声（散粒噪声）。因此，选择合适的优化器对于高效且成功的训练非常重要。本节考察了几种常用于变分量子算法的进阶经典优化器。
+
+> 变分量子算法的混合量子-经典循环。经典优化器使用量子测量的结果迭代更新 PQC 的参数。
+
+## 基于梯度的优化器
+
+这些优化器依赖于获取成本函数关于电路参数 (parameter)的梯度 $\nabla_{\theta} C(\theta)$。如前一节（“梯度计算方法”）所述，参数位移规则等技术允许在量子硬件上进行解析梯度计算，尽管这会以额外的电路评估为代价。
+
+### 随机梯度下降 (gradient descent)（SGD）变体
+
+普通SGD根据来自一小批数据（或在最小化量子电路期望值的情形下甚至单个数据点）的梯度估算来更新参数 (parameter)。虽然简单，但它可能存在收敛速度慢和振荡的问题。更进阶的变体引入了动量或自适应学习率。
+
+**Adam（自适应矩估计）**：Adam是经典深度学习 (deep learning)中广泛使用的优化器，并且通常作为变分量子算法的稳固基准。它通过存储过去平方梯度的指数衰减平均值（类似RMSProp）和过去梯度的指数衰减平均值（类似动量）来计算每个参数的自适应学习率。
+
+更新规则涉及计算有偏一阶矩 ($m_t$) 和二阶矩 ($v_t$) 的估算值：
+
+
+$$
+m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t \\
+v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2
+$$
+
+
+其中 $g_t$ 是第 $t$ 步的梯度，$\beta_1, \beta_2$ 是超参数 (hyperparameter)（通常接近1，例如0.9和0.999）。计算偏差校正的估算值 $\hat{m}_t$ 和 $\hat{v}_t$，并更新参数：
+
+
+$$
+\theta_{t+1} = \theta_t - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+$$
+
+
+这里，$\eta$ 是学习率，$\epsilon$ 是一个用于数值稳定的小常数。
+
+- **优点：** 通常比普通SGD收敛更快，相对容易实现和调整（默认超参数通常效果良好）。
+- **缺点：** 可能对量子测量中固有的噪声梯度估算敏感。有时可能收敛到次优解或表现出不稳定性，特别是在变分量子算法中常见的非凸函数曲面。与无梯度方法相比，需要计算梯度，从而增加了电路评估的次数。
+
+### 拟牛顿法（例如，BFGS）
+
+BFGS（Broyden–Fletcher–Goldfarb–Shanno）等方法属于拟牛顿法系列。它们旨在仅使用在连续迭代中收集的梯度信息来近似逆海森矩阵（二阶导数矩阵）。这使得它们能够估算损失的曲率并采取更明智的步长，可能导致更快的收敛，特别是在局部最小值附近。
+
+更新方向计算为 $p_k = -B_k g_k$，其中 $B_k$ 是第 $k$ 次迭代时逆海森矩阵的近似值。通常沿着此方向执行线搜索，以找到合适的步长。
+
+- **优点：** 在某些条件下，在最小值附近可以实现超线性收敛速度。在不显式计算海森矩阵的情况下包含曲率信息。
+- **缺点：** 需要可靠的梯度信息；在梯度有噪声的情况下，性能可能明显下降。由于需要存储和更新海森近似矩阵 $B_k$（对于 $N$ 个参数 (parameter)，大小为 $N \times N$）并执行线搜索（这可能需要多次函数/梯度评估），每次迭代的计算成本可能比SGD或Adam更高。可能不适用于维度非常高的参数空间。
+
+## 无梯度优化器
+
+这些优化器不需要显式计算梯度 $\nabla_{\theta} C(\theta)$。它们通常通过在参数 (parameter)空间中的不同点评估成本函数 $C(\theta)$，并使用这些信息来指导搜索。当梯度难以或昂贵计算时，或者当成本函数不可微分或噪声极大时，它们可能具有优势。
+
+### SPSA（同步扰动随机近似）
+
+SPSA特别适合于优化评估有噪声的函数，这在变分量子算法中是由于有限的测量统计数据而出现的常见情况。其最重要特点是，它仅使用*两次*成本函数评估来估算梯度方向，无论参数 (parameter)数量 $N$ 是多少。
+
+在每次迭代 $k$ 中，SPSA 按以下步骤进行：
+
+1. 生成一个随机扰动向量 (vector) $\Delta_k$，其中每个分量通常独立地从简单分布（如Rademacher，即 $\pm 1$）中抽取。
+2. 选择围绕当前参数向量 $\theta_k$ 对称扰动的两个点：$\theta_k^+ = \theta_k + c_k \Delta_k$ 和 $\theta_k^- = \theta_k - c_k \Delta_k$。
+3. 在这两个点评估成本函数：$C(\theta_k^+)$ 和 $C(\theta_k^-)$。
+4. 分量地估算梯度：$(g_k)_i \approx \frac{C(\theta_k^+) - C(\theta_k^-)}{2 c_k (\Delta_k)_i}$。
+5. 更新参数：$\theta_{k+1} = \theta_k - a_k g_k$。
+
+序列 $a_k$（步长）和 $c_k$（扰动大小）是预定义的递减序列，它们必须满足某些收敛条件。
+
+- **优点：** 每次迭代仅需两次函数评估，当函数评估（电路执行）是主要成本时，这使其很高效。与依赖精确梯度估算的基于梯度的方法相比，对噪声相对稳定。不需要实现梯度计算逻辑（如参数位移）。
+- **缺点：** 收敛速度可能比基于梯度的方法慢，特别是在高维或接近最小值时。性能可能对超参数 (hyperparameter) $a_k, c_k$ 的选择和扰动分布敏感。梯度估算本质上是随机的。
+
+### 其他无梯度方法
+
+有时会使用 **COBYLA**（通过线性近似的约束优化）和 **Nelder-Mead** 等其他方法。COBYLA 构建目标和约束的线性近似，而Nelder-Mead 使用一个适应局部地形的单纯形（一种几何图形）。这些方法可能有用，但与SPSA相比，在参数 (parameter)数量较多或评估有噪声的情况下可能难以处理。
+
+## 为您的变分量子算法选择优化器
+
+优化器的最佳选择在很大程度上取决于具体的变分量子算法应用、PQC的特性、参数 (parameter)数量、可用的量子资源（模拟器对比硬件，噪声水平），以及函数/梯度评估的成本。
+
+- **噪声敏感性：** 如果在有噪声的硬件上运行或使用较少测量次数，SPSA等方法可能更可取。Adam有时可以处理中等噪声，而BFGS等方法通常更敏感。
+- **评估成本：** 如果通过参数位移进行梯度计算（对于 $N$ 个参数需要 $2N$ 个额外电路）是可行的，并且梯度相对干净，那么Adam或其他基于梯度的方法可能收敛更快。如果电路评估是瓶颈，SPSA的每步两次评估方法则具有吸引力。
+- **参数数量：** 对于参数数量非常多的情况，BFGS的内存需求可能变得难以承受。SPSA的每次迭代成本随参数数量的扩展性良好。
+- **问题结构：** 对于可能表现出贫瘠高原（稍后讨论）的高度非凸曲面，不同优化器的搜索行为和噪声处理会明显影响它们能否找到好的解决方案或陷入困境。
+
+
+
+![优化器收敛性示意比较](plots/1059-0.json)
+
+
+
+> 不同优化器在变分量子算法成本函数上的收敛行为示意性比较。Adam可能显示出快速的初始进展，而SPSA则表现出稳定且抗噪声的收敛。普通SGD通常收敛慢得多。实际性能因问题而异。
+
+通常需要进行实验。PennyLane和Qiskit等标准量子计算库提供了许多这些优化器的实现，使得在它们之间切换并比较它们在您的特定变分量子算法任务上的性能相对直接。请记住，这些经典优化器纯粹以经典方式运行；它们只是使用从量子系统获得的成本函数值（以及可能的梯度）作为其经典优化程序的输入。下一节将介绍量子自然梯度，这是一种明确考虑量子态空间几何结构的优化技术，提供了一种量子感知的替代方案。
+
+## 参考资料
+
+- [Variational quantum algorithms](https://www.nature.com/articles/s42254-021-00348-9) — M. Cerezo, Andrew Arrasmith, Ryan Babbush, Simon C. Benjamin, Suguru Endo, Keisuke Fujii, Jarrod R. McClean, H. Tang, J. van Rooij, and Liang Jiang (2021)
+  Journal: Nature Reviews Physics; Volume: 3; Pages: 625-645; DOI: [10.1038/s42254-021-00348-9](https://doi.org/10.1038/s42254-021-00348-9)
+  全面回顾了变分量子算法，讨论了其组成部分、应用和挑战，包括经典优化。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma, Jimmy Ba (2014)
+  Journal: 3rd International Conference for Learning Representations; DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器，一种广泛用于训练深度神经网络的自适应学习率优化算法。
+- [Numerical Optimization](https://link.springer.com/book/10.1007/978-0-387-40065-5) — Jorge Nocedal and Stephen J. Wright (2006)
+  Publisher: Springer; DOI: [10.1007/978-0-387-40065-5](https://doi.org/10.1007/978-0-387-40065-5)
+  一本关于优化的标准教科书，深入介绍了BFGS和其他拟牛顿算法（第二版）。
+- [Multivariate Stochastic Approximation Using a Simultaneous Perturbation Gradient Approximation](https://ieeexplore.ieee.org/document/119632) — James C. Spall (1992)
+  Journal: IEEE Transactions on Automatic Control; Publisher: IEEE; Volume: 37; Pages: 332-341; DOI: [10.1109/9.119632](https://doi.org/10.1109/9.119632)
+  介绍了同步扰动随机近似（SPSA）的基础论文，一种高效的无梯度优化方法。
+- [Benchmarking variational quantum algorithms for chemistry](https://www.nature.com/articles/s41534-020-00287-7) — Kishor Bharti, Anna Cervera-Lierta, Thi Ha Kyaw, Tobias Haug, Andreas Mekemech, Jacob Shabani, and Alán Aspuru-Guzik (2020)
+  Journal: npj Quantum Information; Publisher: Nature Publishing Group (part of Springer Nature); Volume: 6; Pages: 51; DOI: [10.1038/s41534-020-00287-7](https://doi.org/10.1038/s41534-020-00287-7)
+  这篇论文在量子化学问题的变分量子算法背景下，对各种经典优化器进行了实用比较和分析。

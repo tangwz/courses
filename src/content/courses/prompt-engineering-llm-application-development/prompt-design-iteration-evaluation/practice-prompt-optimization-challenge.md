@@ -1,0 +1,165 @@
+---
+course: "prompt-engineering-llm-application-development"
+chapter: "prompt-design-iteration-evaluation"
+lesson: "practice-prompt-optimization-challenge"
+sourceId: 3016
+sourceUrl: "https://apxml.com/zh/courses/prompt-engineering-llm-application-development/chapter-3-prompt-design-iteration-evaluation/practice-prompt-optimization-challenge"
+title: "动手实践：提示词优化挑战"
+description: "动手实践，优化效果不佳的提示词，以提升LLM输出的质量和一致性。"
+order: 7
+plots: []
+sourceHash: "80e170b94be232595c7b4dc671c184c4b30b132849d3570ee6da451230c24a3d"
+sourceCorrections: []
+---
+
+本次动手实践练习将迭代设计和评估应用于提示工程 (prompt engineering)的实际情境。通常，第一次尝试的提示词 (prompt)不会产生理想的结果。此过程包括获取一个效果不佳的提示词，分析其不足之处，并系统地完善它，以提高大型语言模型（LLM）输出的质量、一致性和结构。
+
+### 挑战：提取结构化信息
+
+假设您有一些客户反馈邮件，需要从中提取特定信息：客户的主要情感（正面、负面、中立）、提及的产品（如果有），以及对反馈核心问题或赞扬的简要总结。
+
+**初始情境：**
+
+您将从包含多封客户邮件的一大段文本开始。以下是代表一封邮件的片段：
+
+```text
+主题：喜欢新的Xylos功能！
+
+团队您好，
+
+只想说Xylos平台的最新更新，尤其是仪表板自定义功能，非常棒！它让我的工作流程顺畅了许多。我确实注意到一个小毛病，日期筛选器有时会意外重置，但总体来说，这是一个巨大的改进。请继续保持出色的工作！
+
+此致，
+Alex Chen
+```
+
+**效果不佳的提示词 (prompt)（尝试1）：**
+
+```text
+这是一些客户反馈：
+[在此插入邮件文本]
+
+这份反馈是关于什么的？
+```
+
+**典型输出（尝试1）：**
+
+LLM可能会回应如下内容：
+
+```text
+这份反馈是关于Xylos平台更新的。客户喜欢仪表板自定义功能，但发现日期筛选器有一个小毛病。他们认为总体来说这是一个很大的改进。
+```
+
+**尝试1的分析：**
+
+尽管LLM理解了基本内容，但其输出在我们的目标方面存在几个问题：
+
+1. **缺乏结构：** 这是一个自由格式的文本摘要。我们想要特定的字段（情感、产品、摘要）。
+2. **隐式信息：** 情感（“正面”）是暗示的，但未按要求明确说明。产品（“Xylos”）有提及，但未明确提取为数据点。
+3. **缺少限制：** 提示词没有指导LLM*如何*呈现信息。
+
+### 第一次迭代：添加指示和结构
+
+让我们完善提示词 (prompt)，使其对任务和期望的输出格式更具体。我们将使用清晰的指示，并要求采用像JSON这样的结构化格式，这更容易让应用程序解析。
+
+**改进的提示词（尝试2）：**
+
+```text
+分析以下客户反馈邮件。提取主要情感（正面、负面或中立）、提及的具体产品（如果有，否则使用“无”），以及反馈核心要点的简洁总结（1-2句话）。将输出格式化为JSON对象，包含键：“sentiment”、“product”和“summary”。
+
+反馈邮件：
+'''
+主题：喜欢新的Xylos功能！
+
+团队您好，
+
+只想说Xylos平台的最新更新，尤其是仪表板自定义功能，非常棒！它让我的工作流程顺畅了许多。我确实注意到一个小毛病，日期筛选器有时会意外重置，但总体来说，这是一个巨大的改进。请继续保持出色的工作！
+
+此致，
+Alex Chen
+'''
+
+输出：
+```
+
+**预期输出（尝试2）：**
+
+```json
+{
+  "sentiment": "Positive",
+  "product": "Xylos",
+  "summary": "客户赞赏Xylos平台更新中的仪表板自定义功能，但报告了日期筛选器重置的小错误。"
+}
+```
+
+**尝试2的分析：**
+
+这明显更好了！
+
+- **结构化输出：** JSON格式正是我们进行后续处理所需的。
+- **明确提取：** 情感和产品都清晰地识别出来了。
+- **简洁性：** 总结侧重于核心要点。
+- **清晰指示：** 提示词清晰地定义了任务、所需字段和输出格式。
+
+### 第二次迭代：处理模糊情况和特殊情况（可选优化）
+
+如果反馈更模糊或者没有提及产品怎么办？让我们考虑这样的反馈：
+
+```text
+主题：登录问题
+
+我今天早上似乎无法访问我的账户。它一直在转圈。是不是有什么问题？- Sam
+```
+
+使用提示词 (prompt)2可能会产生：
+
+```json
+{
+  "sentiment": "Negative",
+  "product": "None",
+  "summary": "客户无法登录账户，遇到了无限加载的问题。"
+}
+```
+
+这很好，但也许我们想确保总结*总是*捕捉负面反馈的主要*问题*或正面反馈的主要*亮点*。我们可以稍微调 (fine-tuning)整指示。
+
+**进一步改进的提示词（尝试3）：**
+
+```text
+您是一位分析反馈的客户支持助理。分析以下客户反馈邮件。确定主要情感（严格分类为“正面”、“负面”或“中立”）。识别提及的具体产品（如果没有提及特定产品，则使用“无”）。创建一个简洁的总结（1-2句话），如果情感是负面/中立，则侧重于核心问题；如果是正面，则侧重于主要赞扬。
+
+将结果输出为JSON对象，包含键：“sentiment”、“product”和“summary”。
+
+反馈邮件：
+'''
+[在此插入邮件文本]
+'''
+
+JSON 输出：
+```
+
+此版本增加了一个“角色”（`客户支持助理`），并根据`情感`稍微调整了`总结`的指示。这增加了可靠性，能更精确地引导LLM处理不同类型的反馈。
+
+### 评估
+
+我们如何知道我们的提示词 (prompt)正在变好？
+
+1. **准确性：** 提取的信息是否正确反映了邮件内容？情感分类是否准确？是否识别出正确的产品？
+2. **完整性：** 输出中是否包含所有要求的字段？
+3. **格式遵循：** 输出是否始终符合要求的JSON结构？
+4. **简洁性：** 总结是否简明扼要？
+5. **一致性：** 提示词是否能可靠地处理不同的示例邮件（正面、负面、中立、提及产品、未提及产品）？
+
+您可以创建一组包含不同邮件的小型测试集，并针对它们运行每个提示词版本，将输出与手动创建的“理想”提取结果进行比较。这构成了系统评估的依据，这对于构建可靠的LLM应用程序来说非常重要。
+
+> 提示词优化的迭代过程包括生成输出、分析其不足、根据分析完善提示词，并评估新的输出。
+
+这种动手实践的过程表明，提示词工程并不总是立即找到一个“神奇”的提示词。它通常是一个有条不紊的循环过程，包括创建、测试、分析和完善，以引导LLM生成您的应用程序所需的精确输出。在构建自己的提示词时，请牢记这些迭代完善和仔细评估的原则。
+
+## 参考资料
+
+- [Prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) — OpenAI (2023)
+  针对有效提示词设计的实用指南，涵盖清晰性、特异性以及LLM交互的迭代优化。
+- [Holistic Evaluation of Language Models](https://arxiv.org/abs/2211.09110) — Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Kumar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D. Manning, Christopher Ré, Diana Acosta-Navas, Drew E. Hudson, Eric Zelikman, Esin Durmus, Faisal Ladhak, Frieda Rong, Hongyu Ren, Huaxiu Yao, Jue Wang, Keshav Santhanam, Laurel Orr, Lucia Zheng, Mert Yuksekgonul, Mirac Suzgun, Nathan Kim, Neel Guha, Niladri Chatterji, Omar Khattab, Peter Henderson, Qian Huang, Ryan Chi, Sang Michael Xie, Shibani Santurkar, Surya Ganguli, Tatsunori Hashimoto, Thomas Icard, Tianyi Zhang, Vishrav Chaudhary, William Wang, Xuechen Li, Yifan Mai, Yuhui Zhang, Yuta Koreeda (2023)
+  Journal: Transactions on Machine Learning Research (TMLR); DOI: [10.48550/arXiv.2211.09110](https://doi.org/10.48550/arXiv.2211.09110)
+  介绍了一个评估语言模型的综合框架，涵盖各种任务和指标，适用于评估提示词的效果。

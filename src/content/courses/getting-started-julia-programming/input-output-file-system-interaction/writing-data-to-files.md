@@ -1,0 +1,211 @@
+---
+course: "getting-started-julia-programming"
+chapter: "input-output-file-system-interaction"
+lesson: "writing-data-to-files"
+sourceId: 6815
+sourceUrl: "https://apxml.com/zh/courses/getting-started-julia-programming/chapter-7-input-output-file-system-interaction/writing-data-to-files"
+title: "写入数据到文件"
+description: "理解如何在Julia中向文件写入数据、创建新文件或向现有文件追加数据。"
+order: 6
+plots: []
+sourceHash: "cbca26965afab2e9fdf9725d11e387217b6f36b47c92a6cd302203e4d5ba8f12"
+sourceCorrections: []
+---
+
+将数据写入文件是许多编程应用的一项基本功能。这项功能对许多应用来说很重要，使您的Julia程序能够保存计算结果、创建日志文件来记录事件、生成报告，或存储可在以后会话中使用的配置。当您的程序向文件写入数据时，它会创建一个持久记录，即使程序运行结束后也依然可用。
+
+要在Julia中写入文件，您首先需要使用`open()`函数打开它，并指定允许写入的模式。这与您打开文件进行读取的方式类似，但模式字符串会有所不同。
+
+最常用的写入模式是`"w"`。当您以`"w"`模式打开文件时：
+
+- 如果文件（例如，`my_output.txt`）不存在，Julia将创建它。
+- 如果文件*确实*存在，Julia将**覆盖**它。这意味着文件中任何之前的内容都将被擦除。如果您不想丢失现有数据，使用此模式时务必小心。
+
+示例：
+
+```julia
+open("my_output.txt", "w") do io
+    # 写入文件 'io' 的代码在这里
+end
+```
+
+如果您想向现有文件的末尾添加新数据，或者在文件不存在时创建它，您应该使用追加模式，即`"a"`。
+当您以`"a"`模式打开文件时：
+
+- 如果文件（例如，`log.txt`）不存在，它将被创建。
+- 如果文件存在，新数据将被写入末尾，保留其现有内容。
+
+示例：
+
+```julia
+open("log.txt", "a") do io
+    # 追加到文件 'io' 的代码在这里
+end
+```
+
+使用`open()`函数配合`do ... end`块是一种强烈建议的做法。这确保了当块执行完毕时，文件会自动关闭，无论内部操作是否成功或是否发生错误。`open`函数会将一个I/O流对象（通常习惯上命名为`io`）传递给`do`块。您将使用这个`io`对象进行实际的写入操作。
+
+向文件写入数据的一般过程可以如下所示：
+
+> 此图展示了典型顺序：您的程序以允许写入的模式打开文件，然后使用`println`或`write`等函数通过文件流发送数据，最后关闭文件，确保数据保存到磁盘。
+
+一旦文件打开并可写入，您可以使用多个函数向其发送数据。
+
+### 使用 `write()`
+
+`write(io, data)`函数是写入数据的基本工具。它可以写入字符串、单个字符，甚至字节序列。当写入文本时，您通常提供一个字符串。
+
+```julia
+open("greeting.txt", "w") do io
+    write(io, "Hello, Julia programmers!\n") # \n 是换行符
+    write(io, "File writing.")
+    # 注意：第二次写入后没有换行符。
+end
+```
+
+运行此代码后，`greeting.txt`文件将包含：
+
+```text
+Hello, Julia programmers!
+File writing.
+```
+
+需要注意的是，`write`不会在输出末尾自动添加换行符（`\n`）。如果您希望后续写入的内容或行在文件中出现在新行上，则必须在字符串中明确包含`\n`。
+
+### 使用 `println()`
+
+对于写入文本行，`println(io, data...)`函数通常更方便。它的工作方式很像您用于控制台输出的`println()`函数：它将其参数 (parameter)的字符串表示写入指定的I/O流（`io`），然后自动追加一个换行符。
+
+```julia
+name = "Alice"
+score = 95
+open("report.txt", "w") do io
+    println(io, "User Report")
+    println(io, "Name: ", name)       # println 可以接受多个参数
+    println(io, "Score: ", score)     # 它将非字符串参数转换为字符串
+    println(io, "--- End of Report ---")
+end
+```
+
+`report.txt`文件将包含：
+
+```text
+User Report
+Name: Alice
+Score: 95
+--- End of Report ---
+```
+
+如您所见，`println`在每次调用后都会自动添加换行符，这使其非常适合逐行生成文本文件。它还通过在写入前将各种数据类型转换为其字符串表示形式，从而方便地进行处理。
+
+### 写入数据集合
+
+通常，您会想写入多段数据，例如数组的元素。您可以通过遍历集合并写入每个项来完成此操作，如果每个项都应在新行上，通常为了简单起见使用`println`。
+
+```julia
+lines_to_write = ["First line of my data.", "Second line here.", "And a third line."]
+filename = "my_lines.txt"
+
+open(filename, "w") do io
+    for line in lines_to_write
+        println(io, line) # 数组中的每个字符串在文件中独占一行
+    end
+end
+```
+
+如果您的集合包含数字或其他非字符串类型，`println`会自动为您将它们转换为字符串。如果您使用`write`进行更多控制，您可能需要使用`string()`函数显式转换它们，例如`write(io, string(my_number))`。
+
+```julia
+numbers = [10, 20, 30.5, 40]
+open("numbers.txt", "w") do io
+    for num in numbers
+        println(io, num) # println 处理字符串转换
+    end
+end
+```
+
+这个脚本会创建`numbers.txt`，每个数字占据新的一行。
+
+对于更结构化的数据格式，例如CSV（逗号分隔值）或JSON（JavaScript对象表示），Julia拥有出色的包，如`CSV.jl`和`JSON.jl`。虽然对这些包的详细讨论超出了本入门部分，但了解它们的存在对于您需要处理更复杂的数据序列化任务时是有帮助的。我们目前关注的仍然是纯文本文件。
+
+### 缓冲和确保数据写入
+
+当您指示Julia向文件写入数据时，数据可能不会立即传输到物理磁盘。操作系统通常会为了效率使用一种称为缓冲的技术。这意味着它们会在内存中收集输出数据（一个缓冲区），然后以更大、更优化的块写入磁盘。
+
+Julia的I/O系统与操作系统协调，管理着这种缓冲。重要的是，当您关闭文件时（`do`块会自动为您完成此操作），所有缓冲的数据都会被“刷新”到磁盘。这种刷新操作可确保所有写入操作完成，并且数据在文件完全关闭之前安全存储。
+
+在不太常见但您可能需要确保数据在关闭文件*之前*写入磁盘的场景中，Julia提供了`flush(io)`函数。调用`flush(io)`将尝试强制将流`io`的任何缓冲输出写入底层存储。然而，对于大多数标准文件写入任务，依赖于通过`do`块关闭文件时发生的自动刷新就足够了，也更简单。
+
+### 覆盖与追加：快速回顾
+
+重申写入模式（`"w"`）和追加模式（`"a"`）之间的主要区别：
+
+- 当您的目标是创建新文件或完全替换现有文件内容时，请使用`"w"`。这对于保存文档的最新版本或一组新的结果很有用。
+
+  ```julia
+  # 如果 report.txt 存在，这将覆盖它；如果不存在，则创建它。
+  open("latest_report.txt", "w") do io
+      println(io, "Today's updated report data...")
+      # ... 更多报告内容
+  end
+  ```
+- 当您需要在不删除现有内容的情况下向现有文件末尾添加新信息时，请使用`"a"。`这非常适合像向日志文件添加新条目或扩展列表这样的任务。
+
+  ```julia
+  # 这将向 activity_log.txt 添加新行，
+  # 或者在 activity_log.txt 不存在时创建它。
+  open("activity_log.txt", "a") do io
+      # 对于实际的时间戳，您可以使用 Dates 模块：
+      # import Dates
+      # current_event_time = Dates.format(Dates.now(), "yyyy-mm-dd HH:MM:SS")
+      # println(io, current_event_time, ": 记录了新事件。")
+      println(io, "A new event was logged at this time.")
+  end
+  ```
+
+如果您多次运行`activity_log.txt`的追加示例，您会注意到每次执行都会向文件中添加新行。反之，如果您多次运行`latest_report.txt`的写入示例，文件将始终只包含最新运行的数据。
+
+### 完整示例：保存待办事项列表
+
+让我们在一个实际示例中结合这些方法。假设我们有一个任务列表，想要将其保存到一个名为`tasks.txt`的文件中。
+
+```julia
+tasks = ["Review Chapter 7 notes", "Practice file writing in Julia", "Prepare for upcoming quiz"]
+filename = "tasks.txt"
+
+# 将初始任务列表写入文件。
+# 如果 tasks.txt 存在，这将覆盖它。
+open(filename, "w") do file_stream
+    println(file_stream, "我的待办事项列表:")
+    println(file_stream, "----------------")
+    for (index, task) in enumerate(tasks)
+        println(file_stream, "$index. $task")
+    end
+    println(file_stream, "----------------")
+    println(file_stream, "初始列表结束。")
+end
+
+println("任务已成功写入 $filename")
+
+# 现在，让我们向同一个文件追加一个紧急任务。
+open(filename, "a") do file_stream
+    println(file_stream, "紧急：在商店关门前购买杂货！")
+end
+
+println("紧急任务已追加到 $filename")
+```
+
+运行此脚本后，您可以使用任何文本编辑器打开`tasks.txt`文件。您应该会看到您的初始待办事项列表，后面跟着追加的紧急任务。此示例有效地展示了如何使用`"w"`进行初始创建（或覆盖），以及使用`"a"`添加更多内容而不丢失已有内容。
+
+向文件写入数据是一种有效的方法，可让您的程序持久地存储信息。通过理解如何在不同模式下打开文件（`"w"`用于写入/覆盖，`"a"`用于追加），以及如何将`write`和`println`等函数与文件流结合使用，您现在可以保存程序输出、用户生成的数据或您的应用程序需要保留的任何文本信息。始终记住使用`open`函数配合`do`块语法的益处，因为它确保文件得到正确管理并自动关闭，这对于数据完整性和良好的编程实践是必不可少的。在您继续编程的过程中，您会遇到处理结构化数据的更专业方法，但这些文本文件写入的基本技能将始终保持其价值。
+
+## 参考资料
+
+- [I/O and Networking](https://docs.julialang.org/en/latest/manual/io-network/) — The Julia Language (2024)
+  Publisher: The Julia Language
+  提供了Julia标准库中文件操作、I/O流和模式的全面概述。
+- [\`open\` Function](https://docs.julialang.org/en/v1/base/io-network/#Base.open) — The Julia Language (2024)
+  提供了`open`函数的详细API参考，包括其各种模式以及与`do`块结合使用进行文件管理。
+- [Hands-On Julia Programming: Learn the language fundamentals and apply them to solve real-world problems](https://www.packtpub.com/product/hands-on-julia-programming-9781800569431) — Stefan Karpinski, Erik Engheim, and John Myrstad (2021)
+  Publisher: Packt Publishing
+  提供了Julia编程概念的实际示例和深入解释，包括文件输入/输出操作。

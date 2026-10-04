@@ -1,0 +1,63 @@
+---
+course: "fundamentals-quantum-machine-learning"
+chapter: "quantum-neural-networks-architectures-training"
+lesson: "quantum-neurons-layers"
+sourceId: 1063
+sourceUrl: "https://apxml.com/zh/courses/fundamentals-quantum-machine-learning/chapter-5-quantum-neural-networks-architectures-training/quantum-neurons-layers"
+title: "量子神经元和层模型"
+description: "研究量子神经元的不同提议以及它们如何组合成量子层。"
+order: 1
+plots: []
+sourceHash: "dab90081b33dbb27c15f9eba6bbf8a4027618fb5e107774b1a6946d8deaf7168"
+sourceCorrections: []
+---
+
+从前面讨论的变分算法一般原理出发，我们现在研究如何构建参数 (parameter)化量子电路（PQC）以模拟经典神经网络 (neural network)的分层结构。这涉及到定义量子域中“神经元”和“层”的对应想法，形成量子神经网络（QNN）的基本组成部分。
+
+### 从经典神经元到量子电路
+
+回想一下经典神经元：它接收输入，计算加权和，并应用非线性激活函数 (activation function)以产生输出。将此直接转换为量子力学带来了挑战。量子演化本质上是线性的（由酉算符描述），而测量引入了非线性，但也会导致量子态塌缩。
+
+最常见的方法是将参数 (parameter)化量子电路本身视为核心处理单元，其作用有点像一个复杂的神经元，甚至是小型层。我们来分析这个基于PQC的模型：
+
+1. **输入：** 输入通常是经典数据点 $x$，它们被编码为量子态 $|\phi(x)\rangle$，通常使用第二章中介绍的方法。另外，输入也可以是前一个量子层输出的量子态。
+2. **处理（权重 (weight)和变换）：** 一个PQC，由酉算符 $U(\theta)$ 表示，作用于输入态。电路门内（如旋转角）的参数 $\theta$ 作为这个量子神经元或层段的可训练“权重”。这些是我们在训练过程中优化的参数，第四章对此有所讨论。
+3. **输出（激活）：** 为了与后续层（经典或量子）交互，或为了生成最终预测，我们对输出态 $U(\theta)|\phi(x)\rangle$ 进行测量。通常，这涉及测量特定可观测量 $M$ 的期望值。期望值 $\langle M \rangle = \langle \phi(x) | U^\dagger(\theta) M U(\theta) | \phi(x) \rangle$ 提供一个经典输出值。这种测量和期望值计算有效地引入了一种非线性形式，将高维量子态空间映射到标量或向量 (vector)输出。可观测量 $M$ 的选择是模型设计的一部分。
+
+我们可以这样描述这个基本单元：
+
+> QNN中基于PQC的处理单元图示。经典数据 $x$ 被编码为 $|\phi(x)\rangle$，由参数化电路 $U(\theta)$ 处理，并通过可观测量 $M$ 测量，得到经典输出 $\langle M \rangle$。
+
+PQC $U(\theta)$ 的具体结构，通常称为*拟设*（ansatz），是一个重要的设计决定。它决定了量子“神经元”能执行的变换类型，并严重影响模型的表达能力和可训练性（包括容易出现如贫瘠高原等问题，第四章中讨论过）。
+
+### 构建量子层
+
+正如经典神经元分组为层一样，这些基于PQC的单元可以排列起来形成量子层。一个量子层通常由作用于系统量子比特的多个PQC组成。
+
+量子层设计的重要方面包括：
+
+- **连接性：** 层内PQC中的门如何连接量子比特？层通常包含纠缠门（如CNOTs），作用于不同量子比特线之间。这种纠缠使得层内的量子神经元能够相互影响，以经典模拟无法直接实现的方式，可能有助于表示复杂的关联。
+- **结构：**
+  - **并行处理：** 一种常见结构是并行地将相似或相同的PQC模块应用于量子比特的不同子集，或重复使用相同的PQC结构。
+  - **参数 (parameter)共享：** 受经典卷积网络的启发，一些架构（如QCNNs，稍后讨论）可能会在层内的不同PQC单元之间强制执行参数共享。
+- **深度：** 层可以顺序堆叠，其中一个层（测量前）的输出态作为下一个层的输入。然而，在当前硬件上实现深度QNN面临与噪声和可训练性相关的挑战。
+
+下面展示了一个简单的量子层视图，由作用于四个量子比特的两个PQC单元构成，可能具有共享参数或单元间的纠缠：
+
+> 量子层结构，其中PQC（可能具有不同的参数 $\theta_1, \theta_2$ 或共享参数）应用于输入量子比特的子集。纠缠操作可能存在于PQC内部或PQC之间。输出通常通过测量获得。
+
+这些量子层通常构成更大的*混合量子-经典*模型中的组成部分。典型模式包括使用输入经典层，然后是一个或多个执行核心特征变换的量子层，最后是用于后处理和预测的输出经典层。
+
+这些量子神经元和层的设计，特别是PQC拟设和测量可观测量选择，直接影响QNN能学习的功能。我们使用基于梯度或无梯度方法（第四章已涵盖）优化参数 $\theta$，以最小化源自最终测量结果的成本函数，目标是解决分类或回归等任务。我们现在将介绍由这些基本单元构建的特定QNN架构。
+
+## 参考资料
+
+- [A variational eigenvalue solver on a photonic quantum processor](https://www.nature.com/articles/ncomms5213) — Alberto Peruzzo, Jarrod McClean, Peter Shadbolt, Man-Hong Yung, Xiao-Qi Zhou, Peter J. Love, Alán Aspuru-Guzik, Jeremy L. O'Brien (2014)
+  Journal: Nature Communications; Volume: 5; DOI: [10.1038/ncomms5213](https://doi.org/10.1038/ncomms5213)
+  介绍了变分量子算法 (VQA) 和优化参数化量子电路的概念，是所讨论的训练范式的基础论文。
+- [Expressibility and entangling capability of parameterized quantum circuits for hybrid quantum-classical algorithms](https://doi.org/10.1103/PhysRevA.100.012302) — Soonwon Sim, Peter D. Johnson, J. K. Kim (2019)
+  Journal: Physical Review A; Volume: 100; Pages: 012302; DOI: [10.1103/PhysRevA.100.012302](https://doi.org/10.1103/PhysRevA.100.012302)
+  研究了参数化量子电路的结构（拟设）如何影响其表示函数和产生纠缠的能力，这与量子层设计和模型容量直接相关。
+- [Machine Learning with Quantum Computers](https://link.springer.com/book/10.1007/978-3-030-83098-4) — Maria Schuld, Francesco Petruccione (2021)
+  Publisher: Springer; Pages: 312; DOI: [10.1007/978-3-030-83098-4](https://doi.org/10.1007/978-3-030-83098-4)
+  一本综合性教科书，涵盖了量子机器学习的基础概念，包括参数化量子电路、量子神经网络及其架构和训练。第二版。

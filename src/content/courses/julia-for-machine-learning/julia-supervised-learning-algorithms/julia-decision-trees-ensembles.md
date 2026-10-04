@@ -1,0 +1,183 @@
+---
+course: "julia-for-machine-learning"
+chapter: "julia-supervised-learning-algorithms"
+lesson: "julia-decision-trees-ensembles"
+sourceId: 6862
+sourceUrl: "https://apxml.com/zh/courses/julia-for-machine-learning/chapter-3-julia-supervised-learning-algorithms/julia-decision-trees-ensembles"
+title: "实现决策树和集成方法"
+description: "使用 MLJ.jl 通过 Julia 包构建决策树模型，并了解随机森林和梯度提升等集成方法。"
+order: 3
+plots: []
+sourceHash: "9418c276b76ba0229f13af9ad02d2fcb8677e3722f91d289e42ec32b51d1e8c4"
+sourceCorrections: []
+---
+
+虽然线性模型为许多监督学习 (supervised learning)任务提供了良好基础，但决策树提供了一种不同且通常更直观的预测方式。它们通过基于特征值创建决策的树状模型来运作，从而在叶节点得到预测结果。这些模型因其可解释性以及能够捕捉非线性关系的能力而受到欢迎。
+
+### 了解决策树
+
+决策树将特征空间划分为一系列矩形区域，然后在每个区域拟合一个简单模型（如常数）。要预测一个新的数据点，你从树的根部开始，根据数据点的特征值沿着分支向下，直到到达叶节点，其中包含预测结果。对于分类问题，这通常是该区域的多数类别；对于回归问题，通常是目标值的平均值。
+
+决策树的主要优点之一是其透明度。树学习到的规则可以轻松可视化和理解。然而，单个决策树容易过拟合 (overfitting)，特别是当它们很深时。这意味着它们可能过度学习训练数据，包括其中的噪声，并在新数据上表现不佳。
+
+这是一个决策树结构的简化图示：
+
+> 一个简单的决策树，说明特征如何被使用来做连续决策，从而得到类别预测。
+
+### 在 MLJ.jl 中实现决策树
+
+Julia 通过 MLJ.jl 框架提供了使用决策树算法的途径，这些算法主要来自 `DecisionTree.jl` 包。
+
+首先，你需要从相应的包中加载模型类型。MLJ 使用 `@load` 宏来完成此操作，这也有助于确保包含模型的包在你的环境中可用。
+
+```julia
+using MLJ
+import RDatasets # 用于示例数据
+
+# 加载决策树分类器模型
+DecisionTreeClassifier = @load DecisionTreeClassifier pkg=DecisionTree
+
+# 准备一些数据（使用鸢尾花数据集的例子）
+iris = RDatasets.dataset("datasets", "iris")
+X = select(iris, Not(:Species)) # 特征
+y = iris.Species # 目标变量
+
+# 初始化模型
+tree_model = DecisionTreeClassifier()
+```
+
+模型初始化后，你可以使用机器学习 (machine learning)器上的 `fit!` 方法对其进行训练，这会将模型与数据绑定：
+
+```julia
+# 创建一个机器学习器（模型 + 数据）
+mach_tree = machine(tree_model, X, y)
+
+# 拟合机器学习器
+fit!(mach_tree)
+```
+
+拟合之后，你可以对新数据（或训练数据本身）进行预测：
+
+```julia
+predictions = predict(mach_tree, X)
+# 对于分类器，predict_mode 会给出最可能的类别
+predicted_classes = predict_mode(mach_tree, X)
+```
+
+决策树常用的超参数 (parameter) (hyperparameter)包括：
+
+- `max_depth`：树的最大深度。限制深度有助于避免过拟合 (overfitting)。
+- `min_samples_split`：拆分内部节点所需的最小样本数。
+- `min_samples_leaf`：叶节点所需的最小样本数。
+- `pruning_purity_threshold` (或 `DecisionTree.jl` 中的 `post_prune` 和 `merge_purity_threshold`)：控制后剪枝的参数，以简化树并提高泛化能力。例如，`DecisionTreeClassifier(post_prune=true, merge_purity_threshold=0.1)` 将启用剪枝功能。
+
+调整这些超参数通常通过超参数调优完成，你将在“MLJ.jl 中的交叉验证和超参数调优”一节中了解更多。
+
+### 集体的优势：集成方法
+
+虽然单个决策树具有可解释性，但它们容易过拟合 (overfitting)是一个明显的缺点。集成方法通过结合多个决策树（或其它类型模型）的预测结果来解决这个问题，从而产生更准确的总体预测。
+
+两种著名的基于决策树的集成技术是随机森林和梯度提升机。
+
+核心思想是许多多样化、单独较弱的学习器可以组合形成一个强大的学习器。这种方法通常能显著提升预测性能，并与单一复杂模型相比，对新数据具有更好的泛化能力。
+
+### 随机森林：多棵树的平均
+
+随机森林在训练时构建多棵决策树。对于分类问题，输出是大多数树选择的类别；对于回归问题，则是单个树预测结果的平均值。
+
+随机森林中树的多样性主要来自两个方面：
+
+1. **自助采样聚合（Bagging）**：每棵树都在训练数据的随机样本（通过有放回抽样得到的自助样本）上进行训练。这意味着一些数据点可能在训练一棵树时被多次使用，而另一些则可能完全不被使用。
+2. **特征随机性**：在构建树时，当拆分节点时，只考虑特征的一个随机子集以寻找最佳拆分。这使得树之间去相关，从而增强了集成模型的性能。
+
+这些机制有助于减少模型的方差，而不会大幅增加偏差。
+
+在 MLJ.jl 中，你可以使用来自 `DecisionTree.jl` 的 `RandomForestClassifier`（或 `RandomForestRegressor`）。
+
+```julia
+# 加载随机森林分类器模型
+RandomForestClassifier = @load RandomForestClassifier pkg=DecisionTree
+
+# 初始化模型
+# n_trees: 森林中的树的数量
+# mtry_ratio: 每次拆分时考虑的特征比例 (mtry / n_features)
+#   或者，mtry: 考虑的特征数量。如果 mtry < 0，则使用 mtry_ratio。
+#   对于分类问题，mtry 的常见起始值是 sqrt(特征数量)。
+# sampling_fraction: 用于训练每棵树的样本比例
+rf_model = RandomForestClassifier(
+    n_trees=100,
+    sampling_fraction=0.7,
+    mtry_ratio=0.5
+)
+
+# 创建并拟合机器学习器
+mach_rf = machine(rf_model, X, y)
+fit!(mach_rf)
+
+# 进行预测
+rf_predictions = predict_mode(mach_rf, X)
+```
+
+随机森林通常比单个决策树更不容易过拟合 (overfitting)，并且通常需要较少的超参数 (parameter) (hyperparameter)调优以获得良好的性能。
+
+### 梯度提升机：从错误中学习
+
+梯度提升机（GBMs）也构建决策树集成，但它们是按顺序进行的。每棵新树都尝试纠正之前训练过的树所犯的错误。梯度提升中的“梯度”是指使用梯度下降 (gradient descent)，通过迭代添加预测当前集成模型残差（回归）或伪残差（分类）的树来最小化损失函数 (loss function)。
+
+GBMs 性能强大，经常在表格数据上提供当前最佳结果。流行的实现包括 XGBoost、LightGBM 和 CatBoost。Julia 有自己的高性能梯度提升库 `EvoTrees.jl`，它与 MLJ.jl 很好地结合。此外，也有 XGBoost 的封装器可供使用。
+
+我们来看一个使用 `EvoTrees.jl` 中的 `EvoTreesClassifier` 的例子。
+
+```julia
+# 加载 EvoTrees 分类器模型
+EvoTreesClassifier = @load EvoTreesClassifier pkg=EvoTrees
+
+# 初始化模型
+# nrounds: 提升轮数（树的数量）
+# eta: 学习率（缩小每棵树的贡献）
+# max_depth: 单个树的最大深度
+evo_model = EvoTreesClassifier(
+    nrounds=100,
+    eta=0.1,
+    max_depth=6
+)
+
+# 创建并拟合机器学习器
+mach_evo = machine(evo_model, X, y)
+fit!(mach_evo)
+
+# 进行预测
+evo_predictions = predict_mode(mach_evo, X)
+```
+
+GBM 的重要超参数 (parameter) (hyperparameter)通常包括：
+
+- `nrounds` (或 `n_estimators`)：要构建的树的数量。
+- `learning_rate` (或 `eta`)：控制每棵树的贡献。较小的学习率通常需要更多的树，但可以带来更好的泛化能力。
+- `max_depth`：每棵单独树的最大深度，控制其复杂度。
+- `subsample`：用于增长每棵树的训练数据比例（随机梯度提升）。
+- `colsample_bytree`：每棵树考虑的特征比例。
+
+梯度提升模型非常有效，但与随机森林相比，可能需要更仔细地调整超参数以避免过拟合 (overfitting)，特别是当树的数量很多或学习率很高时。
+
+### 如何选择树模型和集成方法
+
+- **单个决策树**：当性能是次要考量，或作为基线模型时，选择它以获得高可解释性。注意过拟合 (overfitting)问题并考虑剪枝。
+- **随机森林**：一种很好的通用算法。通常在较少调优的情况下提供强大性能。可解释性低于单棵树，但更稳定。有利于减少方差。
+- **梯度提升机**：通常在结构化/表格数据上表现最佳。可能对超参数 (parameter) (hyperparameter)更敏感，训练时间可能更长。非常适合比赛和以预测准确性为主要目标的情况。
+
+随机森林和梯度提升机与单个决策树一样，都符合 MLJ.jl 的工作流程，用于模型评估、交叉验证和超参数调优，这些内容将在后续章节中介绍。通过了解它们的工作原理以及如何在 Julia 中实现它们，你可以扩展你的工具集，以应对各种监督学习 (supervised learning)问题。
+
+## 参考资料
+
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  一本经典的教科书，对决策树、随机森林和梯度提升提供了统计学处理。
+- [Random Forests](https://www.stat.berkeley.edu/~breiman/randomforest2001.pdf) — Leo Breiman (2001)
+  Journal: Machine Learning; Volume: 45; Pages: 5-32; DOI: [10.1023/A:1010933404324](https://doi.org/10.1023/A%3A1010933404324)
+  这篇是介绍随机森林算法的原始研究论文。
+- [Greedy Function Approximation: A Gradient Boosting Machine](https://doi.org/10.1214/aos/1013203451) — Jerome H. Friedman (2001)
+  Journal: The Annals of Statistics; Publisher: The Institute of Mathematical Statistics; Volume: 29; Pages: 1189-1232; DOI: [10.1214/aos/1013203451](https://doi.org/10.1214/aos/1013203451)
+  这篇是描述梯度提升机算法的奠基性论文。
+- [MLJ.jl Documentation](https://juliaai.github.io/MLJ.jl/dev/) — Anthony F. Nolan, Franz Kiraly, Samuel O. B. N. Breeding, Thibaut Lienart, Joshua Agar, Adam B. Lewandowski, Simon Byrne, Ludovic Prot, Michael Herbst, Valentin Chabriel, and Diego Arenas (2025)
+  MLJ.jl 框架的官方文档，提供了在 Julia 中实现和使用机器学习模型（包括决策树和集成方法）的指导。

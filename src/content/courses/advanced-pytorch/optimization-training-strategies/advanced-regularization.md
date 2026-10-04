@@ -1,0 +1,180 @@
+---
+course: "advanced-pytorch"
+chapter: "optimization-training-strategies"
+lesson: "advanced-regularization"
+sourceId: 2713
+sourceUrl: "https://apxml.com/zh/courses/advanced-pytorch/chapter-3-optimization-training-strategies/advanced-regularization"
+title: "正则化方法"
+description: "应用如高级权重衰减方法、标签平滑和随机深度等技术。"
+order: 3
+plots: []
+sourceHash: "f4a529b858c24c13fe34c2086e3df492f43cec6fa07a7e1aad2afa16a0f52a37"
+sourceCorrections: []
+---
+
+虽然优化器和学习率调度器引导训练过程趋向最小值，但正则化 (regularization)技术对于确保所学模型能够很好地泛化到未见过的数据，从而防止过拟合 (overfitting)非常重要。基本的 L1 或 L2 权重 (weight)衰减虽然有用，但有时会显得不足，尤其是在处理复杂架构和大型数据集时。这里将讨论 PyTorch 生态系统中更高级的正则化方法。
+
+### 解耦权重 (weight)衰减 (AdamW)
+
+在 Adam 等自适应优化器中，L2 正则化 (regularization)的常见实现通常将权重衰减项与梯度计算耦合。这意味着衰减效果受到优化器计算的自适应学习率的影响（具体来说是梯度平方的历史记录 $v_t$）。这种耦合可能导致次优性能，尤其是在出现大梯度时，因为有效的权重衰减可能比预期小。
+
+AdamW 优化器由 Loshchilov 和 Hutter (2019) 提出，它通过将权重衰减与梯度更新解耦来解决这个问题。AdamW 不会将衰减项添加到梯度中，而是在主要优化步骤*之后*直接对权重施加衰减。
+
+带有 L2 正则化的标准 Adam 更新如下：
+$g_t' = \nabla f(w_t) + \lambda w_t$
+$w_{t+1} = w_t - \eta \cdot \text{AdamUpdate}(g_t')$
+
+而 AdamW 执行如下操作：
+$g_t = \nabla f(w_t)$
+$w'_{t+1} = w_t - \eta \cdot \text{AdamUpdate}(g_t)$
+$w_{t+1} = w'_{t+1} - \eta \lambda w_t$
+
+（注意：这里的 $\eta$ 代表可能被 Adam 自适应组件修改过的学习率）。重要的区别在于，衰减项 $\eta \lambda w_t$ 是单独应用的，并且不受 `AdamUpdate` 中自适应学习率项的缩放。
+
+在 PyTorch 中，使用 AdamW 很简单：
+
+```python
+import torch
+import torch.optim as optim
+
+# 假设模型已定义
+model = ... 
+
+# 使用 AdamW 代替 Adam
+optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2) 
+
+# 训练循环保持不变
+# ...
+# optimizer.zero_grad()
+# loss.backward()
+# optimizer.step()
+# ...
+```
+
+为 AdamW 选择合适的 `weight_decay` 值通常需要进行实验，但 `1e-2` 到 `1e-1` 之间的值是常见的起始值，通常高于标准 Adam 耦合 L2 正则化所用的值。AdamW 已成为训练许多现代架构（尤其是 Transformer）的标准选择。
+
+### 标签平滑
+
+分类模型通常使用交叉熵损失和独热编码的目标标签（例如 `[0, 0, 1, 0]`）进行训练。这鼓励模型对正确类别产生极高的置信度，而对不正确类别产生非常低的置信度。虽然这促使模型完美拟合训练数据，但它可能导致过度自信和泛化能力差。模型可能对训练数据中的特定特征过于敏感，未能捕捉更广泛的模式。
+
+标签平滑正则化 (regularization)（LSR）通过稍微软化目标标签来解决这个问题。它不是要求模型对正确类别预测为 1、对其他类别预测为 0，而是鼓励模型为不正确的类别分配一个小的概率质量 $\epsilon$ (epsilon)。
+
+对于一个有 $K$ 个类别的分类问题，如果样本的原始独热标签是 $y_k$ （真实类别为 1，否则为 0），则平滑后的标签 $y'_{k}$ 变为：
+
+
+$$
+y'_{k} = y_k(1 - \epsilon) + \frac{\epsilon}{K}
+$$
+
+
+其中，$y_k$ 在 $k$ 是真实类别索引时为 1，否则为 0。项 $y_k(1 - \epsilon)$ 将正确类别的目标概率从 1.0 降低到 $1 - \epsilon$。项 $\epsilon / K$ 将剩余的概率质量 $\epsilon$ 均匀地分布到所有 $K$ 个类别中（包括正确类别，尽管其主要作用是增加不正确类别的概率）。
+
+例如，当 $K=5$ 个类别且 $\epsilon=0.1$ 时，独热标签 `[0, 0, 1, 0, 0]` 变为：
+`[0.02, 0.02, 0.9, 0.02, 0.02]`
+
+这鼓励模型的输出对数（在最终 softmax 之前）对于正确类别而言，相对于不正确类别的对数不那么极端。它通过防止模型变得过度自信来充当正则化器。
+
+PyTorch 的 `torch.nn.CrossEntropyLoss` 通过 `label_smoothing` 参数 (parameter)直接支持标签平滑：
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例用法
+num_classes = 10
+smoothing_factor = 0.1
+
+criterion = nn.CrossEntropyLoss(label_smoothing=smoothing_factor)
+
+# 在训练循环中
+# outputs = model(inputs) # 形状: [batch_size, num_classes]
+# targets = ... # 形状: [batch_size]，包含类别索引
+# loss = criterion(outputs, targets)
+# loss.backward()
+```
+
+$\epsilon$ 的常见值通常很小，通常在 0.05 到 0.1 之间。
+
+### 随机深度 (DropPath)
+
+Dropout 是一种广泛使用的正则化 (regularization)技术，它在训练期间随机将单个神经元激活设置为零。随机深度，也称为 DropPath，提供了一种不同的方法，在具有残差连接的网络（如 ResNets 或 Transformer）中特别有效。随机深度不是丢弃单个神经元，而是在训练期间随机丢弃整个残差块或层。
+
+考虑一个残差块，其输出为 $x_{l+1} = x_l + f_l(x_l)$。使用随机深度时，此变换在训练期间进行修改：
+
+
+$$
+x_{l+1} = x_l + b_l \cdot f_l(x_l)
+$$
+
+
+其中，$b_l$ 是一个伯努利随机变量，取值可为 0 或 1。它以 $1 - p_l$ 的概率取值 0（丢弃块），以 $p_l$ 的概率取值 1（保留块）。概率 $p_l$ 是块 $l$ 的*生存概率*。
+
+通常，网络中较深层的生存概率会线性降低。对于一个有 $L$ 个块的网络，块 $l$ （其中 $l$ 的范围从 1 到 $L$）的生存概率可以设置为：
+
+
+$$
+p_l = 1 - \frac{l}{L}(1 - p_L)
+$$
+
+
+其中，$p_L$ 是最终块的目标生存概率。这种方案意味着较早的层（更接近输入）更可能被保留，而较深的层更可能被丢弃。
+
+在推理 (inference)时，所有块都被保留，但它们的输出可能按其各自的生存概率 $p_l$ 进行缩放，以补偿它们在训练期间出现频率较低的事实。然而，许多实现隐式处理此缩放或认为其没有必要。
+
+随机深度的优点包括：
+
+1. **正则化：** 充当强大的正则化器，通过防止网络过度依赖残差块中的任何单一路径来提高泛化能力。
+2. **减少训练时间：** 在前向和后向传播期间跳过块可以减少计算。
+3. **隐式集成：** 使用随机深度进行训练可以看作是训练一个由不同深度的网络组成的隐式集成。
+
+实现随机深度通常涉及使用专门的层。像 `timm`（PyTorch 图像模型）这样的库提供了方便的 `DropPath` 模块：
+
+```python
+# 使用 timm 的 DropPath 示例
+# 确保已安装 timm：pip install timm
+
+from timm.models.layers import DropPath
+
+class MyResidualBlock(nn.Module):
+    def __init__(self, dim, drop_prob=0.):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(dim)
+        self.linear1 = nn.Linear(dim, dim * 4)
+        self.activation = nn.GELU()
+        self.linear2 = nn.Linear(dim * 4, dim)
+        # 随机深度层
+        self.drop_path = DropPath(drop_prob) if drop_prob > 0. else nn.Identity()
+
+    def forward(self, x):
+        shortcut = x
+        x = self.norm1(x)
+        x = self.linear1(x)
+        x = self.activation(x)
+        x = self.linear2(x)
+        # 将 DropPath 应用于残差函数的输出
+        x = shortcut + self.drop_path(x) 
+        return x
+
+# 在大型模型中的使用示例
+# drop_probabilities = torch.linspace(0, 0.1, num_layers) # 线性衰减
+# block = MyResidualBlock(dim=embed_dim, drop_prob=drop_probabilities[i].item())
+```
+
+传递给 `DropPath` 的 `drop_prob` 对应于 $1 - p_l$。选择丢弃概率的范围（例如，从 0 线性增加到 0.1 或 0.2）是另一个需要调整的超参数 (parameter) (hyperparameter)。
+
+这些高级正则化技术通常结合使用，为提高使用 PyTorch 训练的深度学习 (deep learning)模型的稳健性和泛化能力提供了强大的方法。通常需要通过实验为特定任务和架构找到最佳组合和超参数。
+
+## 参考资料
+
+- [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101) — Ilya Loshchilov, Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  介绍了自适应优化器的解耦权重衰减，解决了Adam中L2正则化的局限性。
+- [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Christian Szegedy, Vincent Vanhoucke, Sergey Ioffe, Jonathon Shlens, Zbigniew Wojna (2015)
+  Journal: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR); Pages: 2818-2826; DOI: [10.48550/arXiv.1512.00567](https://doi.org/10.48550/arXiv.1512.00567)
+  引入了标签平滑正则化，作为提高分类模型泛化能力的方法。
+- [torch.optim.AdamW](https://pytorch.org/docs/stable/generated/torch.optim.AdamW.html) — PyTorch Authors (2023)
+  Publisher: PyTorch
+  PyTorch官方关于`AdamW`优化器的文档，详细说明了其用法和参数。
+- [torch.nn.CrossEntropyLoss](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) — PyTorch Authors (2023)
+  Publisher: PyTorch
+  PyTorch官方关于`CrossEntropyLoss`模块的文档，包括对标签平滑的支持。

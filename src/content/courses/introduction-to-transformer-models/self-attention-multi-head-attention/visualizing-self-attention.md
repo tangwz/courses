@@ -1,0 +1,77 @@
+---
+course: "introduction-to-transformer-models"
+chapter: "self-attention-multi-head-attention"
+lesson: "visualizing-self-attention"
+sourceId: 2977
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-transformer-models/chapter-2-self-attention-multi-head-attention/visualizing-self-attention"
+title: "自注意力得分可视化"
+description: "说明注意力得分如何显示序列中不同位置间的关联。"
+order: 4
+plots: ["plots/2977-0.json"]
+sourceHash: "fdf1ad1ebfc25af81c9e4a2ed9603c8c50482899093f41719f082a1a21100e76"
+sourceCorrections: []
+---
+
+缩放点积注意力公式用于计算注意力得分：$\text{注意力}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$。观察这些得分在序列中的分布，有助于理解模型的内部运作方式。自注意力 (self-attention)得分的可视化有助于阐明模型在处理某个词时，输入序列的哪些部分被认为信息量最丰富。
+
+回顾一下，自注意力允许输入序列中的每个位置关注同一序列中的所有位置（包括自身）。由公式中的 $\text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)$ 部分产生的计算出的注意力得分，反映了这些关联。词 $i$ 和词 $j$ 之间的得分越高，表明模型在计算词 $i$ 的表示时，对词 $j$ 给予了更高的关注。
+
+### 注意力得分矩阵
+
+可视化这些得分的常见方式是使用热图或注意力矩阵。在这种可视化中：
+
+- 每行通常对应生成查询 ($Q$) 的序列中的一个词元 (token)。这是当前正在计算其表示的词元。
+- 每列对应提供键 ($K$) 和值 ($V$) 的序列中的一个词元。这些是被关注的词元。
+- 单元格在第 $i$ 行、第 $j$ 列的强度或颜色代表从词元 $i$ 到词元 $j$ 的注意力得分。较深或较亮的颜色通常表示更高的注意力得分。
+
+我们来看一个简单的示例序列：“The quick brown fox”。当模型计算词语“quick”的更新表示时，它计算注意力得分，表明它应该在多大程度上关注“The”、“quick”、“brown”和“fox”。同样地，在处理“fox”时，它会计算关注序列中其他每个词的得分。
+
+想象一下，我们正在计算示例句子中词语“quick”的注意力得分。模型可能会生成这样的得分：
+
+- “quick”关注“The”：0.10
+- “quick”关注“quick”：0.35
+- “quick”关注“brown”：0.45
+- “quick”关注“fox”：0.10
+
+这表明在处理“quick”时，模型最关注“brown”和自身（“quick”），而对“The”和“fox”关注较少。
+
+### 可视化示例
+
+我们可以将整个序列“The quick brown fox”的注意力得分表示为一个矩阵。下面是序列中每个词关注所有其他词的注意力得分可视化。
+
+
+
+![自注意力得分示例](plots/2977-0.json)
+
+
+
+> 序列“The quick brown fox”的自注意力 (self-attention)得分。每行显示该词（查询）对序列中所有词（键）的注意力分布。颜色越深，表示注意力得分越高。
+
+在此示例中：
+
+- 第1行（“The”）：最强烈地关注自身。
+- 第2行（“quick”）：强烈关注“brown”和自身。
+- 第3行（“brown”）：强烈关注自身，适度关注“quick”和“fox”。
+- 第4行（“fox”）：最强烈地关注自身，适度关注“brown”。
+
+### 理解模式
+
+通过查看这些可视化，我们通常可以识别出有趣的模式：
+
+- **自身关注：** 词语通常会强烈关注自身。
+- **局部语境：** 词语可能强烈关注相邻词语，捕捉局部依赖关系。
+- **句法关联：** 动词可能关注它们的主语或宾语，即使它们在序列中相距较远。名词可能关注修饰它们的形容词。
+- **全局语境：** 有时，特定的词语（或像 BERT 模型中的 `[CLS]` 特殊词元 (token)）可能会广泛关注整个序列，充当信息聚合器。
+
+需要记住的是，这种可视化通常只展示*一个*注意力头。在多头注意力 (multi-head attention)中，每个注意力头都会计算自己的一组注意力得分。可视化不同的注意力头常常会显示，每个注意力头会学习同时关注不同类型的关联或表示子空间。例如，一个注意力头可能关注局部句法，而另一个则捕捉更长距离的语义依赖关系。
+
+可视化注意力得分不仅具有视觉吸引力；它还是一个有价值的诊断工具。它提供了一个窗口，使我们得以了解模型的推理 (inference)过程，有助于我们理解模型如何关联输入的不同部分以形成有意义的表示，这项任务在早期的序列模型（如RNN）中解释起来要困难得多。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Volume: 30; DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  介绍了Transformer架构和自注意力机制，包括Scaled Dot-Product Attention公式。
+- [Natural Language Processing with Transformers](https://www.oreilly.com/library/view/natural-language-processing/9781098136789/) — Lewis Tunstall, Leandro von Werra, Thomas Wolf (2022)
+  Publisher: O'Reilly Media
+  提供了关于Transformer模型的实用指导，包含注意力可视化的讨论和示例。

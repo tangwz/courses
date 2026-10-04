@@ -1,0 +1,105 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "matrices-data-representation-transformations"
+lesson: "representing-systems-linear-equations"
+sourceId: 1471
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-2-matrices-data-representation-transformations/representing-systems-linear-equations"
+title: "表示线性方程组"
+description: "以紧凑的矩阵形式 Ax = b 表示线性方程组。"
+order: 6
+plots: []
+sourceHash: "2868b119d8a1bfd8df64df9b1936c056b25a7fbdef90078e78cb36901a1d29c3"
+sourceCorrections: []
+---
+
+我们已经了解矩阵如何组织数据，例如将多个特征向量 (vector)作为行来存储。我们也研究了矩阵乘以向量如何变换该向量。现在，我们将这些想法结合起来，看看矩阵如何提供一种强大而简洁的方式来表示线性方程组。这种表示方法在许多方面都非常重要，包括在机器学习 (machine learning)模型中求解参数 (parameter)。
+
+### 什么是线性方程组？
+
+线性方程组由多个共享相同变量集的方程组成。例如，考虑找到两个未知值 $x_1$ 和 $x_2$，它们同时满足以下两个条件：
+
+
+$$
+\begin{cases}
+2x_1 + 3x_2 = 7 \\
+1x_1 - 1x_2 = 1
+\end{cases}
+$$
+
+
+这是一个包含两个方程和两个变量的简单系统。随着系统变大，方程和变量增多，这样写出来会变得很麻烦。
+
+### 从系统到矩阵方程：$Ax = b$
+
+线性代数提供了一种更简洁的方法，可以使用矩阵乘法来表示这类系统。我们可以将系统分为三个不同的组成部分：
+
+1. **系数：** 乘以变量的数字。我们将这些排列成一个矩阵，通常用 $A$ 表示。矩阵中的每一行对应一个方程，每一列对应一个变量。
+   对于我们的例子：
+   $A = \begin{bmatrix} 2 & 3 \\ 1 & -1 \end{bmatrix}$
+2. **变量：** 我们想要求解的未知值。我们将这些排列成一个列向量 (vector)，通常用 $x$ 表示。
+   对于我们的例子：
+   $x = \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}$
+3. **常数：** 方程右侧的值。我们将这些排列成另一个列向量，通常用 $b$ 表示。
+   对于我们的例子：
+   $b = \begin{bmatrix} 7 \\ 1 \end{bmatrix}$
+
+现在，我们可以使用一个矩阵方程来表示整个方程组：
+
+$Ax = b$
+
+代入我们的矩阵和向量：
+
+$\begin{bmatrix} 2 & 3 \\ 1 & -1 \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} = \begin{bmatrix} 7 \\ 1 \end{bmatrix}$
+
+### 验证此表示方法
+
+让我们根据之前学过的规则（行乘列的点积）执行矩阵乘法 $Ax$：
+
+结果向量 (vector)的第一个元素是矩阵 $A$ 的第一行与向量 $x$ 的点积：$(2 \times x_1) + (3 \times x_2)$。
+第二个元素是矩阵 $A$ 的第二行与向量 $x$ 的点积：$(1 \times x_1) + (-1 \times x_2)$。
+
+因此，矩阵乘法得出：
+
+$\begin{bmatrix} 2x_1 + 3x_2 \\ 1x_1 - 1x_2 \end{bmatrix}$
+
+将其设为等于向量 $b$，我们得到：
+
+$\begin{bmatrix} 2x_1 + 3x_2 \\ 1x_1 - 1x_2 \end{bmatrix} = \begin{bmatrix} 7 \\ 1 \end{bmatrix}$
+
+两个向量相等，它们的对应元素必须相等。这使我们回到了原始方程组：
+
+
+$$
+\begin{cases}
+2x_1 + 3x_2 = 7 \\
+1x_1 - 1x_2 = 1
+\end{cases}
+$$
+
+
+这确认了矩阵方程 $Ax = b$ 确实是原始系统的一种紧凑表示。
+
+### 为什么使用 $Ax = b$ 形式？
+
+以 $Ax = b$ 形式表示线性方程组具有以下优点：
+
+1. **简洁性：** 它提供了一种紧凑的数学符号，更易于处理，尤其对于大型系统。
+2. **结构清晰：** 它清楚地分离了已知系数 ($A$)、未知变量 ($x$) 和常数 ($b$)。
+3. **计算框架：** 这种形式是为高效求解线性系统而设计的高度优化的数值库（如 NumPy 和 SciPy）的标准输入。您通常可以直接将 $A$ 和 $b$ 传递给库函数，而无需手动实现高斯消元法等算法。
+4. **理论优势：** 它使我们能够充分运用线性代数理论。矩阵逆、行列式和矩阵分解（我们稍后会介绍）等思想为求解这些系统和理解它们的特性提供了方法和见解。
+
+在机器学习 (machine learning)中，当对数据进行模型拟合时，线性方程组经常出现。例如，为线性回归模型找到最佳权重 (weight)通常涉及求解 $Ax = b$ 形式的方程，其中 $A$ 与输入特征相关， $x$ 表示我们希望找到的模型权重，而 $b$ 与目标值相关。
+
+本节主要说明了如何使用矩阵来*表示*线性方程组。在下一章中，我们将研究实际*求解*方程 $Ax = b$ 以找到未知向量 (vector) $x$ 的方法。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](https://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  一本基础教材，清晰地介绍了线性方程组及其Ax=b形式的表示。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press
+  将线性代数概念（包括线性系统的矩阵表示）直接与机器学习应用联系起来。
+- [18.06SC Linear Algebra](https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/) — Gilbert Strang (2011)
+  Publisher: MIT OpenCourseWare
+  本开放课程提供了视频讲座和补充材料，对线性方程组及其矩阵形式进行了易于理解的解释。

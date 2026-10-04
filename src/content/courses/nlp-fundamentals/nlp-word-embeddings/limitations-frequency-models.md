@@ -1,0 +1,60 @@
+---
+course: "nlp-fundamentals"
+chapter: "nlp-word-embeddings"
+lesson: "limitations-frequency-models"
+sourceId: 2495
+sourceUrl: "https://apxml.com/zh/courses/nlp-fundamentals/chapter-4-nlp-word-embeddings/limitations-frequency-models"
+title: "基于频率的模型的局限性"
+description: "理解为何词袋模型和TF-IDF等方法未能捕捉语义。"
+order: 1
+plots: []
+sourceHash: "04824f621386b02740c89a2027a77c4940ace0c67a1e7ce5536e5cb6ec6824fa"
+sourceCorrections: []
+---
+
+词袋模型（BoW）和词频-逆文档频率（TF-IDF）是将文本转换为适用于机器学习 (machine learning)算法的数字表示方法。这些技术依赖于词语频率和文档统计。虽然它们对于词语出现或缺失是明显信号的任务（如基础文档分类）很有用，但在理解语言的完整含义和语境方面存在显著的局限。
+
+基于频率的模型的基本问题在于它们**缺乏语义理解能力**。它们在假设下运行，认为文本的含义可以主要通过其包含的词语集合来捕捉，而忽略了词语*之间*的关系。
+
+请思考以下几点：
+
+1. **忽略词语相似性：** 词袋模型和TF-IDF将每个独特的词语视为一个独立、独立的特征。这意味着含义非常相似的词语，如“car”和“automobile”或“happy”和“joyful”，在向量 (vector)空间中被表示为完全独立的维度。这些模型没有内在的方法来知道这些词语通常表示同一个思想。如果训练数据中没有足够的例子表明这两个词语出现在高度相似的语境中，模型会将它们视为不相关的。即使文档讨论的是同一主题，包含一个词语而非另一个词语的文档所产生的向量也可能相距甚远。
+2. **忽略词序和语境：** 这些模型丢弃了词语的序列。像“狗咬人”这样的句子在简单的词袋模型中与“人咬狗”的表示是相同的，尽管它们的含义截然不同。尽管N-gram（在第2章中介绍）可以通过将“New York”这样的序列视为单一单元来捕捉一些局部语境，但它们并不能完全解决问题，并导致特征空间维度的庞大增加。更复杂的句法关系和长距离依赖仍然难以捕捉。
+3. **多义性（多重含义的词语）：** 基于频率的方法难以处理具有多重含义的词语（多义性）。例如，“bank”一词可以指金融机构或河流的岸边。词袋模型和TF-IDF通常为“bank”分配一个单一的表示，而不考虑其在特定语境中的预期含义。这种混淆使所得的向量表示变得模糊不清。
+4. **稀疏性和高维度：** TF-IDF向量虽然通常比原始计数包含更多信息，但通常是维度非常高的（词汇表 (vocabulary)中每个独特的词语对应一个维度）且稀疏的（大多数条目为零）。这种高维度会使计算成本高昂，有时会妨碍下游机器学习模型的表现，通常需要降维技术（如第2章所述）。然而，对稀疏频率向量进行降维并不会奇迹般地引入语义理解；它只是压缩了现有的频率信息。
+
+让我们来看看稀疏性。设想一个只有10个词语的小词汇表和两个短文档：
+
+- 文档 1：“the cat sat”
+- 文档 2：“the dog ran”
+
+一个简单的词袋模型表示可能如下所示（为简化起见忽略停用词）：
+
+| 词语 | 文档 1 | 文档 2 |
+| --- | --- | --- |
+| cat | 1 | 0 |
+| sat | 1 | 0 |
+| dog | 0 | 1 |
+| ran | 0 | 1 |
+
+“即使是这个微小的例子，一半的条目也是零。在词汇量达到数万或数十万词语的场景中，向量变得极其稀疏。TF-IDF有助于对词语进行加权，但并未改变这种基本的稀疏结构。”
+
+这些局限性妨碍了自然语言处理系统在需要细致理解的任务上的表现，例如：
+
+- **情感分析：** 区分语气或讽刺的细微差别。
+- **机器翻译：** 准确传达语言间的含义和词语选择。
+- **问答系统：** 理解问题所涉思想与文本段落中信息的关系。
+- **信息检索：** 查找语义相关的文档，即使它们没有使用查询中的确切关键词。
+
+由于基于频率的模型将词语视为孤立的单元，并且未能捕捉它们之间丰富的语义关系，我们需要不同的方法。本章引入了基于*分布式语义*思想的方法，该思想认为一个词语的含义与其频繁出现的语境相关。这引导我们得到密集向量 (dense vector)表示，即词嵌入 (embedding)，它们克服了稀疏的、基于频率的模型的许多局限性。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd Edition Draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  本书全面介绍了传统的基于频率的模型及其局限性，以及向分布式语义模型和词嵌入的转变。
+- [Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781) — Tomas Mikolov, Kai Chen, Greg Corrado, Jeffrey Dean (2013)
+  Journal: ICLR Workshop Paper; DOI: [10.48550/arXiv.1301.3781](https://doi.org/10.48550/arXiv.1301.3781)
+  这篇基础性论文介绍了Word2Vec模型，该模型将词表示为密集向量（嵌入），以捕捉语义关系，解决了基于频率方法的主要局限性。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/information-retrieval-book.html) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  本书详细解释了向量空间模型和TF-IDF，阐明了导致本节讨论的局限性的固有假设和结构特性。

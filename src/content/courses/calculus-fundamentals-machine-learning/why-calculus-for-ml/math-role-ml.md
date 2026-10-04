@@ -1,0 +1,46 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "why-calculus-for-ml"
+lesson: "math-role-ml"
+sourceId: 2233
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-1-why-calculus-for-ml/math-role-ml"
+title: "数学在机器学习中的地位"
+description: "简要概述数学思想如何支撑机器学习算法。"
+order: 1
+plots: []
+sourceHash: "d73e33b33af16eed5416adbf1914a8b1c795b3961b53be43b3471ac732165b7d"
+sourceCorrections: []
+---
+
+你可能听说机器学习 (machine learning)常涉及复杂的数学，确实如此。但这是为什么呢？我们为什么不能简单地把机器学习模型当成黑箱，只向它们输入数据并获取结果呢？虽然库和框架隐藏了许多细节，但理解其背后的数学原理非常重要，原因有以下几点。
+
+其核心，机器学习就是从数据中发现规律，并运用这些规律进行预测或决策。“规律”和“进行预测”的部分都是通过数学来定义和执行的。可以将机器学习模型视为一个精密的数学函数。它接受输入（你的数据，例如房屋的特点）并产生输出（一个预测，例如房屋的价格）。
+
+> 机器学习模型作为一个数学过程，将输入转换为输出的简化视图。
+
+数学提供了以下功能：
+
+1. **表示数据：** 数据需要以数字方式组织（通常为向量 (vector)或矩阵），以便算法能够处理它。线性代数在此处十分必要，不过在本课程中我们不会着重讲解。
+2. **定义模型：** 模型的内部运作方式，例如线性回归线（$y = mx + b$）或神经网络 (neural network)的复杂层，都通过数学方程和结构来描述。
+3. **衡量性能：** 我们需要一种方法来量化 (quantization)模型的表现如何。它的预测是否接近实际值？误差或损失函数 (loss function)等思想是进行这种衡量的数学工具。
+4. **改进模型（优化）：** 微积分在此处变得非常重要。找到模型“最佳”版本通常涉及最小化误差。微积分为我们提供了工具（例如导数和梯度），以系统地调整模型的参数 (parameter)（例如$y=mx+b$中的$m$和$b$），从而达到尽可能低的误差。这种调整过程称为优化，它是训练机器学习模型的一个构成部分。
+
+虽然你*可以*在没有深入数学理解的情况下使用预构建的机器学习库，但了解基本知识能帮助你：
+
+- **选择合适的算法：** 不同模型基于不同的数学假设。理解这些有助于你为任务选择适当的工具。
+- **调整模型参数：** 优化中的“学习率”等思想直接与微积分相关。了解数学有助于你理解调整这些参数如何影响模型训练。
+- **排查问题：** 当模型未按预期工作时，理解其数学根源可以帮助诊断问题，例如数据缩放、梯度消失或收敛不良。
+- **理解研究论文：** 机器学习的进展常以数学符号和思想来描述。
+
+本课程专门讲解优化部分所需的微积分基本知识，这可以说是训练许多常见机器学习模型非常重要的数学方面之一。如果这听起来令人望而生畏，请不必担心；我们将逐步讲解函数、极限和导数等所需思想，从你需要掌握的如何让机器从数据中学习的基本知识开始。
+
+## 参考资料
+
+- [Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/) — Christopher M. Bishop (2006)
+  Publisher: Springer
+  一本基础性教材，全面地从数学角度讲解机器学习，涵盖统计方法、模型定义和优化原理。
+- [Mathematics for Machine Learning](https://mml-book.github.io/book/mml-book.pdf) — Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong (2019)
+  Publisher: Cambridge University Press; DOI: [10.1017/9781108679908](https://doi.org/10.1017/9781108679908)
+  一本直接讲解机器学习数学预备知识的教材，包括用于数据表示的线性代数和用于优化技术的微积分。
+- [CS229 Lecture Notes](https://cs229.stanford.edu/main_notes.pdf) — Andrew Ng, Tengyu Ma (2023)
+  斯坦福大学知名机器学习课程的讲义，详细阐述了各种算法的数学基础，尤其强调了微积分在基于梯度的优化中的应用。

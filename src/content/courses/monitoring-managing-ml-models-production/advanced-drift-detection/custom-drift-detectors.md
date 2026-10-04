@@ -1,0 +1,135 @@
+---
+course: "monitoring-managing-ml-models-production"
+chapter: "advanced-drift-detection"
+lesson: "custom-drift-detectors"
+sourceId: 3270
+sourceUrl: "https://apxml.com/zh/courses/monitoring-managing-ml-models-production/chapter-2-advanced-drift-detection/custom-drift-detectors"
+title: "实施自定义漂移检测逻辑"
+description: "设计并实施根据特定模型和数据特点定制的自定义漂移检测算法。"
+order: 7
+plots: []
+sourceHash: "08c0ebc9a945a92079af866e221b182f92dec86c70d1eb92a5d06f7277eea097"
+sourceCorrections: []
+---
+
+虽然前面讨论的统计检验与方法为检测多种形式的漂移提供了有用的工具，但它们通常是通用解决方案。在复杂的生产系统中，你可能遇到这些标准技术不足或缺乏你的特定应用所需专门性的情况。数据类型可能不寻常，关注的漂移模式可能不明显且特定于应用，或者性能限制可能需要高度优化的检测逻辑。这就是实施自定义漂移检测逻辑变得必要之处。
+
+开发自定义漂移检测器使你能够根据模型的上下文 (context)、数据特点和操作要求精确调整监控过程。并非仅仅依赖通用的分布变化，你可以加入专业知识，侧重于特定的故障模式，或以新颖方式结合信号。
+
+### 为何要实施自定义漂移检测器？
+
+标准漂移检测方法虽然有价值，但在以下情况可能不够：
+
+1. **独特的数据类型：** 你的模型使用的数据类型标准方法处理不佳，例如图数据、复杂的时间序列依赖关系或特定应用结构化格式。监控嵌入 (embedding)空间中的漂移（前面有简要提及）通常需要自定义逻辑，也许侧重于密度变化或最近邻图拓扑。
+2. **特定业务规则：** 漂移只有在影响到特定业务规则或性能指标时才值得关注。例如，用户人口统计的变化在统计上可能显著但无关紧要，除非它影响特定群体的转化率。自定义检测器可以直接纳入这些业务限制。
+3. **侧重于特征间关系：** 标准单变量或一些多变量检验可能遗漏主要发生在特征之间*关系*或*关联*中的漂移，即使单个特征分布保持相对稳定。自定义逻辑可设计用于监控特定相关性、条件概率或交互项。
+4. **对罕见事件的敏感度：** 你需要检测与罕见类别或事件的出现或频率变化相关的漂移，这在整体分布检验中可能被掩盖。
+5. **性能限制：** 标准方法对于实时或高吞吐量 (throughput)系统来说计算成本过高。自定义逻辑有时可以通过侧重于轻量统计或特定数据子集来针对速度进行优化。
+6. **含义漂移指标：** 你可以获取外部信号或先行指标，提示潜在含义漂移（例如，市场状况变化、竞争对手行动、新法规）。自定义逻辑可以将这些外部信号与数据监控结合。
+7. **定向监控：** 你想仅监控通过性能分析（将在下一章讨论）或公平性评估确定的特定、重要数据段内的漂移。
+
+### 设计自定义漂移逻辑
+
+构建自定义漂移检测器涉及几个步骤：
+
+1. **定义目标漂移：** 清楚说明你试图检测*哪种*漂移。是特定特征统计数据（均值、方差、分位数）的变化吗？相关性的变化？新模式的出现？特定区域预测不确定性增加？具体说明。
+2. **选择相关信号：** 识别最能反映目标漂移的数据点、特征、元数据或外部信息。这可能涉及专门为监控目的进行特征工程。
+3. **选择比较方法：** 确定如何将当前数据信号与参考基线进行比较。这可能涉及：
+   - **基于规则的系统：** 定义明确的规则和阈值（例如，“如果特征A和B之间的相关性变化超过0.2，则触发警报”）。
+   - **统计建模：** 构建统计模型（例如，时间序列预测、对特定指标的异常检测）以捕捉预期行为并检测偏差。
+   - **辅助机器学习 (machine learning)模型：** 训练一个专门用于漂移检测的简单机器学习模型。例如，训练一个分类器来区分来自参考窗口和当前窗口的数据。如果分类器达到高准确度，则表示存在显著差异（漂移）。这与对抗性验证的精神类似，但可以自定义。
+   - **领域启发式：** 将专家知识或已确立的物理/业务限制编码到逻辑中。
+4. **建立参考基线：** 定义“正常”状态。这通常基于训练数据或生产数据的稳定时期。决定如何维护或更新此基线。
+5. **设置触发阈值：** 确定触发漂移警报所需变化的幅度或重要性。这通常涉及平衡灵敏度（快速检测真实漂移）和特异性（避免误报）。如果及早检测很要紧，请考虑在自定义逻辑中使用序列分析（SPRT）等技术。
+6. **开发实施方案：** 编写逻辑代码，确保其高效、可测试，并与你的日志和监控基础设施集成。
+
+### 示例方法
+
+让我们看几个例子：
+
+#### 示例1：监控特征交互漂移
+
+假设你有一个欺诈检测模型，其中 `transaction_amount` 和 `time_since_last_login` 之间的交互被认为是主要指标。对每个特征进行标准单变量漂移检测可能无法揭示不明显的变化，即欺诈者在登录后不久开始进行小额交易，从而改变特定值范围内的相关结构。
+
+- **自定义逻辑：**
+  1. 定义参考窗口数据（例如，生产的第一个月）。
+  2. 计算参考窗口中 `transaction_amount` 和 `time_since_last_login` 之间的相关系数 $\rho_{ref}$。如果那是关注的范围，或许只侧重于低于特定金额阈值的交易。
+  3. 在随后的监控窗口（例如，每日），计算相关性 $\rho_{current}$。
+  4. 计算差值 $\Delta\rho = |\rho_{current} - \rho_{ref}|$。
+  5. 如果 $\Delta\rho$ 超过预定义阈值（例如，0.15），则触发警报。你可以使用费舍尔z变换进行更严格的相关性统计比较。
+
+```python
+import numpy as np
+import pandas as pd
+
+# 假设 'ref_df' 和 'current_df' 是带有 'transaction_amount' 和 'time_since_last_login' 列的 pandas DataFrame
+
+def check_correlation_drift(ref_df, current_df, feature1, feature2, threshold=0.15):
+    """检查两个特征之间相关性的漂移。"""
+
+    # 如果需要，考虑过滤数据（例如，特定交易金额）
+    # ref_filtered = ref_df[ref_df['transaction_amount'] < 100]
+    # current_filtered = current_df[current_df['transaction_amount'] < 100]
+
+    ref_corr = ref_df[[feature1, feature2]].corr().iloc[0, 1]
+    current_corr = current_df[[feature1, feature2]].corr().iloc[0, 1]
+
+    # 如果方差为零，处理潜在的 NaN 相关性
+    if np.isnan(ref_corr) or np.isnan(current_corr):
+        print(f"警告：无法计算相关性（可能方差为零）。")
+        return False, 0.0 
+
+    corr_diff = abs(current_corr - ref_corr)
+    drift_detected = corr_diff > threshold
+
+    print(f"参考相关性 ({feature1}, {feature2}): {ref_corr:.4f}")
+    print(f"当前相关性 ({feature1}, {feature2}): {current_corr:.4f}")
+    print(f"绝对差值: {corr_diff:.4f}, 阈值: {threshold}")
+    print(f"检测到漂移: {drift_detected}")
+
+    return drift_detected, corr_diff
+
+# 示例用法：
+# drift_alert, difference = check_correlation_drift(
+#     reference_data, 
+#     incoming_data_window, 
+#     'transaction_amount', 
+#     'time_since_last_login'
+# )
+# if drift_alert:
+#     # 触发通知或进一步调查
+#     pass 
+```
+
+#### 示例2：通过重构误差监控漂移
+
+对于高维数据，例如嵌入 (embedding)或传感器读数，在参考数据上训练自编码器可以作为自定义漂移检测的依据。
+
+- **自定义逻辑：**
+  1. 在参考数据分布上训练一个自编码器模型（例如，神经网络 (neural network)），以学习压缩表示以及如何从中学得重构原始数据。
+  2. 在参考数据的保留集上建立重构误差 ($||x - \text{decoder}(\text{encoder}(x))||^2$) 的基线分布。计算此误差的均值或95百分位数等统计量。
+  3. 对于传入的数据窗口，将数据通过训练好的自编码器并计算重构误差。
+  4. 将当前重构误差的分布或主要统计量（均值、百分位数）与基线进行比较。
+  5. 如果当前误差从已建立的基线阈值显著增加，则触发警报，表明自编码器难以重构新数据，暗示数据分布已发生变化。
+
+### 验证与集成
+
+重要是，任何自定义漂移检测逻辑本身都需要验证。
+
+- **测试：** 使用模拟漂移场景或已知变化发生过的历史数据测试你的检测器。评估其灵敏度、特异性和检测延迟。
+- **阈值调整：** 根据历史性能和可接受的误报率调整阈值。这通常是一个迭代过程。
+- **集成：** 确保自定义检测器在你的监控管道中高效运行，一致地记录其结果，并适当地触发警报或下游操作（如重新训练管道）。
+
+实施自定义漂移检测逻辑需要对你的数据和模型上下文 (context)有更充分的理解，相比使用现成工具。然而，这项投入可以带来明显更具针对性、更相关且更有效的监控，以确保你的生产机器学习 (machine learning)系统的长期健康，特别是在处理非标准问题或追求更高水平的性能和可靠性时。
+
+## 参考资料
+
+- [A Kernel Two-Sample Test](http://www.jmlr.org/papers/volume13/gretton12a/gretton12a.pdf) — Arthur Gretton, Karsten M. Borgwardt, Malte J. Rasch, Bernhard Schölkopf, and Alex Smola (2012)
+  Journal: The Journal of Machine Learning Research; Volume: 13; Pages: 723-773
+  介绍了最大平均差异（MMD）用于数据分布的非参数比较，这是定制漂移检测的基本方法。
+- [Autoencoder-based Anomaly Detection: A Survey](https://arxiv.org/pdf/1901.03407.pdf) — Raghu Chalapathy and Sanjay Chawla (2019)
+  Journal: arXiv preprint arXiv:1901.03407; Publisher: arXiv; DOI: [10.48550/arXiv.1901.03407](https://doi.org/10.48550/arXiv.1901.03407)
+  调查了自编码器在异常检测中的应用，与使用重建误差进行高维数据定制漂移检测直接相关。
+- [Designing Machine Learning Systems](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  为构建和监控机器学习系统提供了实践指导，包括对不同类型漂移和有效监控策略的讨论。

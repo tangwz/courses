@@ -1,0 +1,173 @@
+---
+course: "fastapi-ml-deployment"
+chapter: "data-validation-pydantic"
+lesson: "handling-path-query-parameters"
+sourceId: 5259
+sourceUrl: "https://apxml.com/zh/courses/fastapi-ml-deployment/chapter-2-data-validation-pydantic/handling-path-query-parameters"
+title: "处理路径参数和查询参数"
+description: "了解如何在FastAPI端点中定义和验证路径参数和查询参数。"
+order: 5
+plots: []
+sourceHash: "bb29b16b099b748091db4d1f5fa39fe0b7e57c3a8f1f035df4de9d831a8f4310"
+sourceCorrections: []
+---
+
+API通常通过URL直接接收信息。FastAPI提供了一种清晰高效的方式来处理两种主要类型的URL参数 (parameter)：路径参数和查询参数。Python类型提示支持自动数据验证和转换，并常与Pydantic模型结合使用，以实现全面的数据结构化和验证。
+
+### 定义和验证路径参数 (parameter)
+
+路径参数是URL路径中嵌入 (embedding)的可变部分。它们对于识别特定资源很有用。比如，在`/models/{model_id}/predict`中，`model_id`是一个路径参数，用于指定要使用的机器学习 (machine learning)模型。
+
+在FastAPI中，您可以使用与Python f-string相同的花括号语法，直接在路由装饰器的路径字符串中定义路径参数。然后，您在路径操作函数中使用相同的名称并添加类型提示来声明该参数。
+
+```python
+from fastapi import FastAPI, Path, HTTPException
+
+app = FastAPI()
+
+# 一个简单的字典，用作模型元数据的数据库
+model_db = {
+    "resnet50": {"framework": "PyTorch", "task": "Image Classification"},
+    "bert-base-uncased": {"framework": "Transformers", "task": "NLP"},
+    "linear-reg-v1": {"framework": "Scikit-learn", "task": "Regression"}
+}
+
+@app.get("/models/{model_id}")
+async def get_model_metadata(model_id: str):
+    """
+    获取特定模型ID的元数据。
+    路径参数'model_id'会自动验证为字符串。
+    """
+    if model_id not in model_db:
+        raise HTTPException(status_code=404, detail=f"Model ID '{model_id}' not found.")
+    return model_db[model_id]
+```
+
+在此示例中：
+
+1. 路径`@app.get("/models/{model_id}")`将`model_id`定义为路径参数。
+2. 函数签名`async def get_model_metadata(model_id: str):`声明`model_id`为带类型提示`str`的参数。
+
+FastAPI自动使用类型提示`str`来验证URL路径段中对应`{model_id}`的值确实是字符串（尽管路径参数最初总是字符串，但FastAPI使用类型提示是为了文档和未来可能的功能）。如果您使用`int`（`model_id: int`），FastAPI会自动尝试将路径段转换为整数，如果转换失败则会抛出验证错误（HTTP 422 Unprocessable Entity）。
+
+对于更复杂的验证，您可以结合类型注解使用FastAPI的`Path`函数。这使您能够指定如最小/最大长度、数字限制（大于、小于）、正则表达式等约束，并为文档提供元数据。
+
+```python
+@app.get("/items/{item_id}")
+async def read_item(
+    item_id: int = Path(
+        ..., # '...' 表示该参数是必需的
+        title="要获取的项目ID",
+        ge=1 # 'ge' 表示 '大于或等于' 1
+    )
+):
+    """
+    根据ID获取项目。
+    'item_id'必须是大于等于1的整数。
+    """
+    # 示例：替换为实际的项目获取逻辑
+    if item_id > 100: # 模拟ID大于100时未找到的情况
+         raise HTTPException(status_code=404, detail=f"Item ID {item_id} not found.")
+    return {"item_id": item_id, "name": f"Sample Item {item_id}"}
+```
+
+在这里，`Path(..., ge=1)`确保`item_id`是必需的，并且必须是大于等于1的整数。FastAPI甚至在您的函数代码运行之前就处理了验证。
+
+### 定义和验证查询参数 (parameter)
+
+查询参数是可选的键值对，附加在URL问号（`?`）之后，并由和号（`&`）分隔。它们通常用于过滤、排序或分页。例如，在`/predictions?model_id=bert-base&limit=10`中，`model_id`和`limit`是查询参数。
+
+在FastAPI中，您的路径操作函数中声明的任何*不*属于路径定义的函数参数都会自动被解释为查询参数。
+
+```python
+from fastapi import FastAPI
+from typing import Optional, List
+
+app = FastAPI()
+
+# 示例数据
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+@app.get("/items/")
+async def read_items(skip: int = 0, limit: int = 10):
+    """
+    使用查询参数获取带可选分页的项目。
+    'skip'默认为0，'limit'默认为10。
+    """
+    return fake_items_db[skip : skip + limit]
+
+@app.get("/search/")
+async def search_items(query: Optional[str] = None):
+    """
+    根据可选的查询字符串搜索项目。
+    'query'是一个可选的查询参数。
+    """
+    results = fake_items_db
+    if query:
+        results = [item for item in fake_items_db if query.lower() in item["item_name"].lower()]
+    return {"query": query, "results": results}
+```
+
+关于查询参数的要点：
+
+- **声明：** `skip: int`和`limit: int`之类的参数不在路径`/items/`中，因此FastAPI将它们视为查询参数。
+- **类型提示：** 类型提示（`int`、`str`、`bool`、`float`等）的工作方式与路径参数和请求体类似，提供自动数据转换和验证。如果用户发送`/items/?skip=abc`，FastAPI将返回422错误，因为"abc"无法转换为`int`。
+- **默认值：** 提供默认值（例如`skip: int = 0`）会使查询参数变为可选。如果客户端未提供，则使用默认值。
+- **可选参数：** 使用`Optional[Type]`或`Union[Type, None]`（在较新的Python版本中等效）并将默认值设置为`None`，可以使参数显式可选，而没有除`None`以外的特定默认值。（`query: Optional[str] = None`）。
+- **布尔转换：** FastAPI会智能地将`true`、`True`、`1`、`on`、`yes`等值转换为`True`，并将`false`、`False`、`0`、`off`、`no`等值转换为`False`，用于`bool`类型提示。
+
+与`Path`类似，FastAPI提供了`Query`函数，用于为查询参数添加更多验证规则和元数据。
+
+```python
+from fastapi import FastAPI, Query
+from typing import Optional, List
+
+app = FastAPI()
+
+@app.get("/models/search/")
+async def search_models(
+    task: Optional[str] = None,
+    framework: Optional[str] = Query(
+        None, # 默认值为None，使其可选
+        min_length=3,
+        max_length=50,
+        regex="^(PyTorch|TensorFlow|Scikit-learn|Transformers)$", # 示例正则表达式
+        title="ML框架",
+        description="按ML框架过滤模型（区分大小写）。"
+    ),
+    tags: List[str] = Query(
+        [], # 默认是空列表，用于多个值
+        title="标签",
+        description="提供标签以过滤模型（例如，?tags=nlp&tags=text-generation）"
+    )
+):
+    """
+    根据任务、框架和标签搜索模型。
+    演示了高级查询验证和列表参数。
+    """
+    # 在实际应用中，您会根据这些已验证的参数进行筛选
+    return {
+        "filters": {
+            "task": task,
+            "framework": framework,
+            "tags": tags
+        },
+        "results": ["Model A", "Model B"] # 占位符结果
+    }
+```
+
+在此示例中：
+
+- `framework`使用`Query`添加长度限制和允许值的正则表达式。它还包含`title`和`description`，这些可以提升自动生成的文档。
+- `tags`使用`List[str]`接受同一查询参数的多个值（例如，`/models/search/?tags=cv&tags=classification`）。如果未提供`tags`参数，`Query([])`会将默认值设置为空列表。
+
+通过使用类型提示、默认值、`Optional`、`Path`和`Query`，您可以为API通过URL期望的数据定义精确要求，确保输入在到达您的核心逻辑之前是有效的，当这些参数决定如何查询或使用您的ML模型时，这一点尤为重要。FastAPI会自动将这些声明转化为验证和清晰的API文档。
+
+## 参考资料
+
+- [Path Parameters](https://fastapi.tiangolo.com/tutorial/path-params/) — Sebastián Ramírez (2024)
+  官方文档，涵盖使用 FastAPI 的 Path 函数定义、类型转换和高级路径参数验证。
+- [Query Parameters and String Validations](https://fastapi.tiangolo.com/tutorial/query-params-str-validations/) — Sebastián Ramírez (2024)
+  官方文档，详细说明如何定义查询参数、管理可选参数和默认值，以及使用 FastAPI 的 Query 函数进行验证。
+- [Fields](https://docs.pydantic.dev/latest/api/fields/) — Samuel Colvin and Pydantic contributors (2024)
+  Pydantic 官方文档，解释如何使用类型提示定义数据字段以及如何应用验证规则，这是 FastAPI 数据处理的基础。

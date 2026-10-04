@@ -1,0 +1,120 @@
+---
+course: "intro-normalizing-flows"
+chapter: "mathematics-invertible-transformations"
+lesson: "calculating-jacobians-practice"
+sourceId: 8257
+sourceUrl: "https://apxml.com/zh/courses/intro-normalizing-flows/chapter-1-mathematics-invertible-transformations/calculating-jacobians-practice"
+title: "雅可比矩阵计算实践"
+description: "通过编写 Python 代码为简单的数学变换计算雅可比行列式，应用所学知识。"
+order: 5
+plots: []
+sourceHash: "8504bbf6b2499b02133426a20bf57dfdc2e85b6d48e2a3b19e51ab756f5ee81b"
+sourceCorrections: []
+---
+
+在训练标准化流时，计算雅可比矩阵的行列式是一项必须的操作，因为它记录了概率体积在变换过程中是如何膨胀或收缩的。这个过程涉及使用 PyTorch 实现变量替换定理的数学基础。
+
+在实践中，手动为复杂的神经网络 (neural network)层计算解析导数很容易出错。PyTorch 提供了自动微分功能，使我们能够通过编程方式计算精确的雅可比矩阵。我们将使用 `torch.autograd.functional.jacobian` 函数来计算变换的偏导数。
+
+### 计算一维变换的雅可比矩阵
+
+让我们从一个简单的仿射变换开始。例如，定义如下标量函数：
+
+$f(x) = 3x + 2$
+
+该函数对 $x$ 的导数为 3。由于这是一个一维变换，雅可比矩阵是一个 $1 \times 1$ 的矩阵，其行列式就是数值 3。我们可以使用 PyTorch 来验证这一点。
+
+```python
+import torch
+from torch.autograd.functional import jacobian
+
+def affine_transform(x):
+    return 3 * x + 2
+
+# 定义一个标量输入张量并要求梯度
+x = torch.tensor([1.0], requires_grad=True)
+
+# 计算雅可比矩阵
+J = jacobian(affine_transform, x)
+print("雅可比矩阵:\n", J)
+
+# 计算行列式
+det_J = torch.det(J)
+print("行列式:", det_J.item())
+```
+
+运行这段代码会得到一个包含数值 3.0 的 $1 \times 1$ 矩阵，行列式的计算结果完全吻合。
+
+### 扩展到多变量变换
+
+标准化流处理的是多变量数据，例如图像或连续的时间序列向量 (vector)。此时，雅可比矩阵变成一个方阵，其中每个元素代表输出维度对输入维度的偏导数。
+
+例如，一个将输入向量 $x = [x_1, x_2]$ 映射到输出向量 $y = [y_1, y_2]$ 的二维非线性函数：
+
+$y_1 = 2x_1$
+
+$y_2 = x_1^2 + 3x_2$
+
+该变换的雅可比矩阵 $J$ 的数学表达式为：
+
+$J = \begin{bmatrix} \frac{\partial y_1}{\partial x_1} & \frac{\partial y_1}{\partial x_2} \\ \frac{\partial y_2}{\partial x_1} & \frac{\partial y_2}{\partial x_2} \end{bmatrix} = \begin{bmatrix} 2 & 0 \\ 2x_1 & 3 \end{bmatrix}$
+
+由于这是一个下三角矩阵，其行列式是主对角线元素的乘积，即 $2 \times 3 = 6$。在这个特定的结构中，$x_1$ 的值不会影响行列式。让我们用 PyTorch 来计算：
+
+```python
+def nonlinear_transform(x):
+    y1 = 2 * x[0]
+    y2 = x[0]**2 + 3 * x[1]
+    return torch.stack([y1, y2])
+
+# 定义一个二维输入向量
+x_2d = torch.tensor([4.0, 1.0], requires_grad=True)
+
+# 计算雅可比矩阵
+J_2d = jacobian(nonlinear_transform, x_2d)
+print("二维雅可比矩阵:\n", J_2d)
+
+# 计算行列式
+det_J_2d = torch.det(J_2d)
+print("行列式:", det_J_2d.item())
+```
+
+输出矩阵将是一个等同于 `[[2.0, 0.0], [8.0, 3.0]]` 的张量，行列式计算结果为 6.0。
+
+### 使用对数行列式提高稳定性
+
+当连接多个变换来构建深度标准化流时，我们必须将它们各自雅可比矩阵的行列式相乘。在浮点数表示中，将许多极小或极大的数字相乘通常会导致数值下溢或上溢。
+
+为了解决这个问题，我们计算行列式绝对值的自然对数。通过在对数空间中操作，乘法变为了加法，这在数学上要稳定得多。变量替换公式的对数密度更新如下：
+
+$\log p(x) = \log p(z) + \log \left| \det \frac{\partial z}{\partial x} \right|$
+
+PyTorch 提供了 `torch.linalg.slogdet`，它可以计算方阵行列式的符号和绝对值的自然对数。这完全避免了计算原始行列式，从而在溢出发生前就将其阻止。
+
+```python
+def compute_log_det_jacobian(func, x):
+    # 计算雅可比矩阵
+    J = jacobian(func, x)
+
+    # 计算符号和对数绝对行列式
+    sign, log_abs_det = torch.linalg.slogdet(J)
+
+    return log_abs_det
+
+log_det = compute_log_det_jacobian(nonlinear_transform, x_2d)
+print("对数行列式:", log_det.item())
+```
+
+对于之前行列式为 6.0 的例子，对数行列式的值约为 1.7917。
+
+> 在 PyTorch 中使用自动微分和 slogdet 计算雅可比矩阵对数行列式以保证数值稳定性的流程图。
+
+### 精确雅可比计算的局限性
+
+虽然 `torch.autograd.functional.jacobian` 有助于理解原理和验证实现，但对于训练大型机器学习 (machine learning)模型来说，它的速度通常太慢。该函数通过多次执行反向传播 (backpropagation)来计算矩阵，其耗时随输出维度的大小线性增长。对于 1000 维的输入，评估完整的稠密雅可比矩阵需要 1000 次反向传播。
+
+为了使标准化流在计算上可行，我们会设计特定的神经网络 (neural network)架构，使雅可比矩阵特意构建为对角矩阵或三角矩阵。正如我们的二维示例所示，三角矩阵的行列式只是其对角线元素的乘积。因此，对数行列式就是对角线元素绝对值的对数之和：
+
+$\log |\det(J)| = \sum_{i} \log |J_{ii}|$
+
+通过强制执行这种结构，我们可以完全绕过计算完整的稠密雅可比矩阵。行列式可以在单次前向或反向传播中完成计算，将计算复杂度从 $O(D^3)$ 降低到 $O(D)$，其中 $D$ 是数据的维度。你将在后续章节中实现这些高效的结构，例如自回归 (autoregressive)网络和耦合层。

@@ -1,0 +1,89 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "ml-execution-stack-challenges"
+lesson: "ml-hardware-landscape"
+sourceId: 4441
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-1-ml-execution-stack-challenges/ml-hardware-landscape"
+title: "ML加速硬件"
+description: "概述用于ML工作负载的CPU、GPU、TPU、FPGA和定制ASIC的特点。"
+order: 4
+plots: ["plots/4441-0.json"]
+sourceHash: "47ba6920843e547f987d96b7f09257aa359766184e23282377457a3ad95d4916"
+sourceCorrections: []
+---
+
+了解底层硬件的特点是优化机器学习 (machine learning)工作负载所必需的。与计算、内存和延迟相关的性能瓶颈在不同的处理器架构上表现不同。通用编译器常会遇到困难，因为为特定硬件目标进行优化需要充分了解其独特的能力和局限。多种主要的硬件平台用于ML加速，并带来不同的编译器和运行时设计考量。
+
+### 中央处理器（CPU）
+
+CPU依然普遍存在，并常是默认的执行目标，特别是对于对延迟敏感的推理 (inference)任务或模型中不适合大规模并行的部分。现代服务器级CPU拥有多个核心、复杂的缓存层次结构以及强大的单指令多数据（SIMD）单元。
+
+- **架构：** 多核设计，带有深度缓存层次结构（L1、L2、L3）。利用指令级并行（ILP）和线程级并行（TLP）。配备宽SIMD单元（例如Intel AVX-512、Arm NEON/SVE），能够对数据向量 (vector)（通常是4-16个单精度浮点数）执行并行操作。
+- **优点：** 卓越的单线程性能，串行任务延迟低，内存容量大，通用性好，编译器工具链成熟（GCC、Clang/LLVM、ICC）。对稀疏计算、控制流密集的模型以及预处理/后处理阶段有效。
+- **缺点：** 相对于密集矩阵/张量操作的专用硬件，并行度有限。尽管缓存很大，内存带宽仍可能成为大型模型的瓶颈。SIMD的利用需要仔细的代码生成或使用优化库（例如Intel oneDNN、OpenBLAS）。密集计算的功耗效率通常低于加速器。
+- **编译器/运行时考量：** 优化高度依赖于针对SIMD单元的自动向量化 (quantization)、用于缓存局部性的循环转换、多核并行的线程管理以及高效的指令调度。运行时需要管理核心亲和性和NUMA效应。
+
+### 图形处理器（GPU）
+
+由于其大规模并行架构（最初为图形渲染而设计），GPU已成为深度学习 (deep learning)训练的主力，并越来越多地用于推理 (inference)。
+
+- **架构：** 由数千个更简单的核心组成，这些核心被分组到流式多处理器（SM）中。采用单指令多线程（SIMT）执行模型。拥有高带宽内存（HBM），提供比CPU显著更高的内存吞吐量 (throughput)。配备专用的单元，例如张量核心（NVIDIA）或矩阵核心（AMD），它们加速混合精度矩阵乘法（$D = A \times B + C$），这是深度学习中的一项核心操作。
+- **优点：** 极高的峰值浮点吞吐量（TFLOPS），特别是对于密集线性代数。高内存带宽对大型模型很重要。专用张量/矩阵单元为特定操作（例如FP16/INT8矩阵乘累加）提供显著加速。成熟的生态系统（NVIDIA CUDA、AMD ROCm）提供编程模型和库（cuDNN、cuBLAS、rocBLAS、MIOpen）。
+- **缺点：** 相比CPU，单个任务的延迟更高。性能高度依赖于高占用率和并行效率的实现；对稀疏或控制流密集型工作负载效果较差。功耗可能很高。编程需要专门知识（CUDA/ROCm核函数、管理线程块、共享内存）。
+- **编译器/运行时考量：** 编译器必须生成目标特定代码（例如NVIDIA的PTX，AMD的GCN ISA），管理复杂的内存层次结构（全局、共享、寄存器），高效地将计算映射到SIMT执行模型（线程块、warp/wavefront），并协调专用矩阵单元的使用。运行时处理核函数启动、通过流进行的异步执行、内存管理（包括CPU主机和GPU设备之间的数据传输）以及同步。
+
+### 张量处理器（TPU）
+
+TPU由Google开发，是应用专用集成电路（ASIC），专门设计用于加速神经网络 (neural network)计算，特别是大规模矩阵操作。
+
+- **架构：** 主要特征是用于矩阵乘法的大型脉动阵列。这种硬件结构通过在乘累加（MAC）单元网格中传输数据，实现高效的数据复用和高计算密度。常积极使用BFloat16等低精度格式。通过高速互连进行连接，用于大规模分布式训练。
+- **优点：** 对于其设计目标——密集矩阵和卷积操作，具有极高的性能和功耗效率。为特定数值格式（BFloat16）优化。可扩展的架构，适用于大型分布式系统。
+- **缺点：** 不如CPU或GPU灵活；对于不适合脉动阵列的操作（例如稀疏计算、非GEMM类操作），性能可能显著下降。主要在Google的云生态系统或特定硬件产品中提供。编程模型（例如通过XLA）抽象了硬件细节，但需要编译器支持。
+- **编译器/运行时考量：** 编译器（如XLA）在将高级图操作转换为脉动阵列和其他TPU功能单元的指令序列方面作用非常重要。优化涉及针对脉动阵列尺寸的分块策略、管理片上内存（高带宽内存和向量 (vector)/标量内存）以及协调数据传输。
+
+### 现场可编程门阵列（FPGA）
+
+FPGA提供了一种制造后可重新配置的硬件平台，在通用处理器和固定功能ASIC之间提供了一个中间地带。
+
+- **架构：** 由可配置逻辑块（CLB）、内存块（BRAM）和DSP块（用于算术）阵列组成，通过可编程路由通道互连。可以实现根据特定算法定制的自定义数据流架构。
+- **优点：** 高度的并行化定制能力。在特定应用中潜力在于极低延迟。可重配置性允许硬件适应不断演进的模型或工作负载。对于某些专用任务，可以提供比CPU/GPU更好的功耗效率。
+- **缺点：** 编程/设计周期显著更难，常需要硬件描述语言（HDL，如Verilog或VHDL）或专用高级综合（HLS）工具。与CPU/GPU/ASIC相比，时钟速度更低。对于密集计算，峰值理论性能通常低于GPU或ASIC。与CPU/GPU相比，ML的工具链和生态系统成熟度较低。
+- **编译器/运行时考量：** 编译涉及复杂的综合、布局和布线过程，以将ML模型映射到FPGA架构上。HLS工具试图弥合从C++/OpenCL到硬件实现的鸿沟。优化侧重于设计高效的自定义数据流路径、管理片上内存资源以及流水线化计算。运行时管理FPGA配置和主机-设备通信。
+
+### 定制AI加速器（ASIC/NPU）
+
+越来越多的公司正在设计定制ASIC（常被称为神经网络 (neural network)处理器——NPU，或AI处理器——APU），专门用于ML推理 (inference)或训练，目标是边缘设备、数据中心或特定应用场景。
+
+- **架构：** 高度多样化，但通常包括专用数据路径、专用内存结构、大型MAC单元阵列以及对低精度算术（INT8、INT4、二进制）的支持。架构可以从带有ML特定指令集扩展的多核设计到数据流处理器不等。
+- **优点：** 对于其设计的特定工作负载，可能具有最高的性能和功耗效率。可以紧密集成到边缘设备的片上系统（SoC）中。
+- **缺点：** 灵活性最低；性能与硬件加速的特定操作和数据类型高度相关。设计和制造成本中的非经常性工程（NRE）成本高昂。常需要专有编译器工具链和运行时库，可能导致厂商锁定。软件生态系统成熟度差异很大。
+- **编译器/运行时考量：** 编译器非常重要，且高度特定于ASIC架构。它们必须为独特的硬件单元执行指令选择，管理专用的片上内存缓冲区，在并行计算单元间调度操作，并显式处理数据类型转换。优化常由详细的硬件性能模型指导。运行时管理硬件上下文 (context)、调度任务并处理与主机系统的交互。
+
+### 硬件对比与权衡
+
+选择合适的硬件涉及平衡性能、功耗效率、成本、灵活性和可编程性。没有一种架构对所有ML工作负载都是最佳的。
+
+
+
+![ML工作负载的硬件权衡](plots/4441-0.json)
+
+
+
+> 比较不同硬件架构在ML工作负载中的表现，涵盖峰值性能潜力（针对目标任务）、对多种操作的灵活性和功耗效率。数值仅供参考。
+
+这种多样化的硬件要求复杂的编译器和运行时系统。针对GPU的编译器需要与针对CPU（例如自动向量 (vector)化、缓存分块）或ASIC（例如映射到专用MAC阵列、管理暂存器内存）的编译器不同的优化策略（例如最大化线程级并行、优化共享内存使用）。运行时系统必须高效管理资源，在可能异构的设备集合中调度任务，并处理通信和同步。后续章节将介绍用于弥合高级ML模型与在这种多样化硬件上高效执行之间差距的技术。
+
+## 参考资料
+
+- [A Survey of Machine Learning Accelerators](https://dl.acm.org/doi/10.1145/3472061) — Mengying Wei, Jacob Reagen (2021)
+  Journal: ACM Computing Surveys; Publisher: ACM; Volume: 54; Pages: 1-36; DOI: [10.1145/3472061](https://doi.org/10.1145/3472061)
+  全面调查了机器学习加速器，涵盖了本节中讨论的各种硬件类型。
+- [CUDA C++ Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html) — NVIDIA Corporation (2023)
+  Publisher: NVIDIA Corporation
+  提供了NVIDIA GPU架构和编程模型的全面细节，对理解GPU优化至关重要。
+- [A Domain-Specific Architecture for Deep Neural Networks](https://dl.acm.org/doi/10.1145/3133917) — Norman P. Jouppi, Cliff Young, David Patil, Motohiro Saito, Edward Horowitz, Jeremy Ren, Anna Chen, Zhiyu Li, David Patterson, Ganesh Venkataramanan, Greg Judah, Kevin LaFayette, Aloke Singh, Rajankumar Vaidya, Felix Von Dollen, James Wilcox, Jonathon Wimmer, Brian Yoon (2017)
+  Journal: Communications of the ACM; Publisher: Association for Computing Machinery; Volume: 60; Pages: 85-94; DOI: [10.1145/3133917](https://doi.org/10.1145/3133917)
+  描述了谷歌第一代张量处理单元（TPU）的架构，是特定领域ML ASIC的基础论文。
+- [TVM: An Automated End-to-End Optimizing Compiler for Deep Learning](https://www.usenix.org/conference/osdi18/presentation/chen) — Tianqi Chen, Thierry Moreau, Ziheng Jiang, Lianmin Zheng, Eddie Yan, Haichen Shen, Meghan Cowan, Leyuan Wang, Yuwei Hu, Luis Ceze, Carlos Guestrin, Arvind Krishnamurthy (2018)
+  Journal: Proceedings of the 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI '18); Publisher: USENIX Association; Pages: 578-594
+  介绍了TVM，这是一个为多种硬件后端优化和生成代码的深度学习编译器框架，展示了ML加速器面临的编译器设计挑战。

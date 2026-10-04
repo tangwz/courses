@@ -1,0 +1,62 @@
+---
+course: "practical-llm-quantization"
+chapter: "foundations-model-quantization"
+lesson: "overview-quantization-techniques"
+sourceId: 4608
+sourceUrl: "https://apxml.com/zh/courses/practical-llm-quantization/chapter-1-foundations-model-quantization/overview-quantization-techniques"
+title: "量化方法的概述"
+description: "训练后量化（PTQ）与量化感知训练（QAT）的概览性比较。"
+order: 8
+plots: []
+sourceHash: "0e8298ffa833018e53183318f803f2a628ce337ed37d36ae3a65cfa557e0eae9"
+sourceCorrections: []
+---
+
+模型量化 (quantization)主要采用两种主要策略：训练后量化（PTQ）和量化感知训练（QAT）。这些方法在量化过程相对于模型训练阶段的应用方式和时间上有显著不同。在分析后续章节中的具体算法之前，对它们的核心思想的理解是必要的，这些思想根植于数字表示、量化方案和粒度等概念。
+
+### 训练后量化 (quantization)（PTQ）
+
+训练后量化，顾名思义，是指在模型已经使用标准高精度浮点数（通常是$FP32$）训练完成后，对其进行量化。这通常是应用量化最简单快捷的方法。
+
+PTQ 的一般流程如下：
+
+1. 从一个预训练 (pre-training)的高精度模型（例如$FP32$大语言模型 (LLM)）开始。
+2. 确定将$FP32$范围映射到目标低精度整数范围（例如$INT8$）所需的量化参数 (parameter)（比例因子$S$和零点$Z$）。这通常涉及分析权重 (weight)以及有时激活值的分布。
+3. 应用此映射，将模型的权重（有时是激活值，取决于具体的PTQ方法）转换为低精度格式。
+
+许多PTQ方法中的一个常见步骤是**校准**。这涉及将一个有代表性的小数据集（校准数据集）通过$FP32$模型，以观察激活值的典型范围和分布。然后使用这些观察到的范围来计算激活值更准确的量化参数（$S$和$Z$），旨在减少引入的量化误差。无需校准步骤，基于运行时统计数据对激活值进行量化的方法通常被称为**动态量化**；而使用校准集预先计算的统计数据的方法则被称为**静态量化**。
+
+PTQ 的主要优点是易于实施。它不需要访问原始训练数据集或训练基础设施，因此即使您只拥有预训练模型文件，也能使用。然而，在训练后应用量化有时会导致模型精度明显下降，特别是当量化到非常低的位宽（如$INT4$或更低）时，或者对于对精度变化敏感的模型而言。当基本的PTQ方法不足时，可能需要更高级的PTQ方法（将在第3章讲解）或QAT。
+
+### 量化 (quantization)感知训练（QAT）
+
+量化感知训练采用不同方法，它在模型训练或微调 (fine-tuning)过程中整合量化效果。QAT不是对一个完全训练好的模型进行量化，而是在模型权重 (weight)仍在更新的同时模拟低精度行为。
+
+核心思想是在模型的计算图中插入操作，以模拟量化和反量化步骤（$FP32 \rightarrow INT8 \rightarrow FP32$）。这些通常被称为“伪量化”节点。在训练的前向传播过程中，权重和/或激活值在用于后续操作之前被量化，然后立即反量化。这迫使模型学习能够处理量化过程引入的噪声和信息损失的参数 (parameter)。
+
+由于标准量化函数（如舍入）不可微分，因此常用一种被称为\*\*直通估计器（STE）\*\*的方法。STE在反向传播 (backpropagation)过程中本质上近似量化函数的梯度，使得梯度能够回传通过模拟的量化节点，从而使得模型权重可以通过SGD或Adam等标准优化算法进行更新。
+
+QAT 通常从一个预训练 (pre-training)的$FP32$模型开始，然后以相对较少的训练轮次对其进行微调，同时激活这些伪量化操作。QAT 的主要优点是，与PTQ相比，它通常能获得更高精度，特别是对于激进的量化目标（例如$INT4$）。模型在训练过程中学习补偿量化误差。
+
+然而，QAT也伴随着其自身的难题。它需要访问有代表性的训练（或微调）数据集和训练基础设施。训练过程本身比简单应用PTQ更复杂且计算成本更高。可能还需要仔细的超参数 (hyperparameter)调整，以保证训练稳定。
+
+### PTQ与QAT的选择
+
+PTQ与QAT的选择通常取决于您的应用程序的具体要求：
+
+- **简便性与速度：** PTQ通常更快且更易于实施，仅需预训练 (pre-training)模型，可能还需要一个小的校准集。
+- **精度：** QAT通常能获得更高精度，特别是在较低位宽下，因为模型在训练期间适应量化 (quantization)。
+- **资源：** QAT需要训练数据和计算资源用于微调 (fine-tuning)，而PTQ不需要。
+
+> 训练后量化（PTQ）与量化感知训练（QAT）流程的比较。PTQ在训练后应用量化，常使用校准数据，而QAT在微调阶段使用训练数据模拟量化。
+
+在后续章节中，我们将研习PTQ（第2和第3章）和QAT（第4章）的具体算法和实际实现，为您提供所需方法，以选择并应用最适合您大语言模型 (LLM)量化需求的技术。
+
+## 参考资料
+
+- [Binarized Neural Networks: Training Deep Neural Networks with Weights and Activations Constrained to +1 or -1](https://proceedings.neurips.cc/paper_files/paper/2016/file/5a628867566166a8775f535805828464-Paper.pdf) — Matthieu Courbariaux, Itay Hubara, Daniel Soudry, Ran El-Yaniv, Yoshua Bengio (2016)
+  Journal: Advances in Neural Information Processing Systems (NIPS); Publisher: NeurIPS; Volume: 29; Pages: 3123-3131; DOI: [10.5598/Erlangen_Mendeley_Data_v1.0.2_2022_10_26_15_22_38](https://doi.org/10.5598/Erlangen_Mendeley_Data_v1.0.2_2022_10_26_15_22_38)
+  一篇基础论文，提出了用于训练量化权重和激活网络的直通估计器（STE），这是量化感知训练的一个关键组成部分。
+- [LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale](https://arxiv.org/abs/2208.07339) — Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer (2022)
+  Journal: NeurIPS 2022; DOI: [10.48550/arXiv.2208.07339](https://doi.org/10.48550/arXiv.2208.07339)
+  本文提出了一种专为大型语言模型设计的8位训练后量化方法，解决了量化大型Transformer模型的挑战。

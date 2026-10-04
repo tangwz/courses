@@ -1,0 +1,144 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "intrinsic-evaluation-metrics"
+lesson: "perplexity-definition-calculation"
+sourceId: 6056
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-21-intrinsic-evaluation-metrics/perplexity-definition-calculation"
+title: "困惑度：定义与计算"
+description: "说明困惑度与交叉熵损失的关系，并衡量预测的不确定性。"
+order: 2
+plots: []
+sourceHash: "012d8c9fc3bcfe84ca5c088d75a55bbf1243c876764779a9d8312e55970353b2"
+sourceCorrections: []
+---
+
+如前所述，内部评估衡量语言模型的核心能力：预测序列中下一个词元 (token)。我们不需要为此进行特定的下游任务；我们直接衡量模型对所训练语言的统计模式的理解程度，使用一个保留的测试数据集。这方面的标准衡量指标是**困惑度**。
+
+### 了解困惑度
+
+困惑度（PPL）量化 (quantization)了语言模型在预测序列中下一个词元 (token)时的不确定性。可以将其视为模型对于下一个词元所拥有的有效选择数量，在整个序列上取平均值。困惑度较低表明模型对其在给定测试数据上的预测更具信心和准确性。这表示模型对测试集中实际出现的词元赋予了更高的概率。
+
+从数学上讲，对于一个词元序列 $W = w_1, w_2, ..., w_N$，困惑度定义为该序列的平均负对数似然的指数化值：
+
+
+$$
+PPL(W) = \exp\left(-\frac{1}{N}\sum_{i=1}^N \log p(w_i | w_{<i}; \theta)\right)
+$$
+
+
+这里，$p(w_i | w_{<i}; \theta)$ 是由模型（参数 (parameter)为 $\theta$）赋予词元 $w_i$ 的概率，已知前面的词元 $w_{<i} = w_1, ..., w_{i-1}$。$N$ 是序列中的词元总数。
+
+### 与交叉熵损失的关系
+
+如果你训练过语言模型，你会认出指数内部的这一项。平均负对数似然正是训练期间通常最小化的**交叉熵损失**。
+
+
+$$
+\text{交叉熵损失}(W) = -\frac{1}{N}\sum_{i=1}^N \log p(w_i | w_{<i}; \theta)
+$$
+
+
+因此，困惑度就是测试集上计算的交叉熵损失的指数值：
+
+
+$$
+PPL(W) = \exp(\text{交叉熵损失}(W))
+$$
+
+
+这种直接关系很方便。如果你在训练期间监控验证集上的交叉熵损失，你实际上是在监控一个其指数是困惑度的值。一个训练目标是最小化交叉熵损失的模型，实际上也在训练中隐式地最小化困惑度。
+
+### 实际计算困惑度
+
+要计算训练好的大型语言模型的困惑度，你需要一个具有代表性的保留测试集——模型在训练期间*未曾*见过的数据。过程通常遵循以下步骤：
+
+1. **准备测试集：** 使用模型训练期间使用的*相同*分词 (tokenization)器 (tokenizer)对测试数据进行分词。
+2. **处理测试集：** 将分词后的测试序列输入到训练好的语言模型中。对于序列中的每个词元 (token)，获取模型对*下一个*词元在整个词汇表 (vocabulary)上的预测概率分布。通常，模型输出的是 logits，即未归一化 (normalization)的对数概率。
+3. **计算对数概率：** 提取与测试序列中观察到的*实际*下一个词元对应的对数概率。这通常涉及对 logits 应用 softmax 函数以获得概率，然后取对数；或者更直接地使用 `log_softmax` 输出并收集相关的对数概率。
+4. **取平均：** 计算测试集中所有词元的这些负对数概率的平均值。这给出了测试集的交叉熵损失。
+5. **取指数：** 计算平均负对数概率（即交叉熵损失）的指数值，以获得最终的困惑度分数。
+
+我们用一个简化的 PyTorch 示例来说明。假设 `model` 是你训练好的语言模型，`test_loader` 提供来自测试集的词元 ID 批次，而 `loss_fn` 通常是 `torch.nn.CrossEntropyLoss`（它结合了 LogSoftmax 和 NLLLoss）。
+
+```python
+import torch
+import math
+
+# 假设 model 是你训练好的大型语言模型，test_loader 提供 input_ids 的批次数据
+# 示例损失函数（如果手动计算，请调整 reduction 参数）
+# 如果批次处理正确，使用 reduction='mean' 直接给出每个词元的平均损失。
+loss_fn = torch.nn.CrossEntropyLoss(
+    ignore_index=model.config.pad_token_id
+) # 忽略填充
+
+model.eval() # 将模型设置为评估模式
+total_loss = 0.0
+total_tokens = 0
+
+with torch.no_grad(): # 禁用推理时的梯度计算
+    for batch in test_loader:
+        # 假设 batch 是一个字典，例如
+        # {'input_ids': tensor, 'attention_mask': tensor}
+        # 准备用于因果语言模型损失计算的输入和标签
+        input_ids = batch['input_ids'].to(model.device)
+        attention_mask = batch['attention_mask'].to(model.device)
+
+        # 移动标签以进行下一个词元预测评估
+        # input_ids[..., i] 的 logits 预测 input_ids[..., i+1]
+        labels = input_ids.clone()
+        # 对于 CrossEntropyLoss，主序列之外的标签应被忽略。
+        # 通常通过在 attention_mask 为 0 的地方将标签设置为 ignore_index 来处理。
+        # 或者更简单地，相互移动 logits 和标签。
+
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+        logits = outputs.logits
+
+        # 移动 logits 和标签，使得 tokens < n 预测 token n
+        # Logits 形状: (批大小, 序列长度, 词汇表大小)
+        # 标签形状: (批大小, 序列长度)
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+
+        # 计算此批次的损失
+        # 展平词元以用于 CrossEntropyLoss
+        loss = loss_fn(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_labels.view(-1)
+        )
+
+        # 累加损失，根据评估的非填充词元数量进行加权
+        # 计算非忽略词元（根据你的填充/掩码策略调整）
+        num_tokens_in_batch = (
+            shift_labels != loss_fn.ignore_index
+        ).sum().item()
+
+        # 聚合按词元数量加权的损失
+        total_loss += loss.item() * num_tokens_in_batch
+        total_tokens += num_tokens_in_batch
+
+if total_tokens > 0:
+    average_loss = total_loss / total_tokens
+    perplexity = math.exp(average_loss)
+    print(f"测试集交叉熵损失: {average_loss:.4f}")
+    print(f"测试集困惑度: {perplexity:.4f}")
+else:
+    print("没有评估任何词元。")
+```
+
+> 此代码片段演示了如何使用 PyTorch 的 `CrossEntropyLoss` 计算困惑度。它处理批次数据，仅对非填充词元计算损失，聚合总损失，并通过对每个词元的平均损失取指数来计算最终困惑度。
+
+较低的困惑度值表明模型在测试集上的概率分布更“集中”，并赋予观测到的序列更高的概率。这表示模型对测试数据感到更不“困惑”或更不“惊讶”，说明根据这种内部衡量指标，语言建模表现更好。
+
+## 参考资料
+
+- [Speech and Language Processing](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Prentice Hall
+  一本全面的教材，涵盖了统计语言模型和作为核心评估指标的困惑度。
+- [A Neural Probabilistic Language Model](http://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf) — Yoshua Bengio, Réjean Ducharme, Pascal Vincent, and Christian Jauvin (2003)
+  Journal: Journal of Machine Learning Research; Volume: 3; Pages: 1137-1155; DOI: [10.1162/jmlr.2003.3.nov.1137](https://doi.org/10.1162/jmlr.2003.3.nov.1137)
+  一篇介绍神经概率语言模型的开创性论文，它使用困惑度作为主要评估指标。
+- [Perplexity calculation for language models](https://huggingface.co/docs/transformers/perplexity) — Hugging Face (2024)
+  提供了使用Hugging Face Transformers库计算困惑度的实用指南和示例，与现代LLM评估相关。

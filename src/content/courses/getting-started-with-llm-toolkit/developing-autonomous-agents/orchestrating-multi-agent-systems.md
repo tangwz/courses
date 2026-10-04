@@ -1,0 +1,181 @@
+---
+course: "getting-started-with-llm-toolkit"
+chapter: "developing-autonomous-agents"
+lesson: "orchestrating-multi-agent-systems"
+sourceId: 7787
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-llm-toolkit/chapter-8-developing-autonomous-agents/orchestrating-multi-agent-systems"
+title: "协调多智能体系统"
+description: "学习构建多智能体系统以协作达成共同目标的原则。"
+order: 6
+plots: []
+sourceHash: "2d4062220555ed87d68de1c9ef6e832b2e3171796190f97057e586a099451eb2"
+sourceCorrections: []
+---
+
+尽管单个自主智能体能够完成令人赞叹的任务，但其能力常受限于其单一的“思考路径”。对于单个智能体而言过于庞大或复杂的问题，您可以协调一个智能体团队，它们共同努力以达成一个共同目标。这种方法类似人类团队的工作方式，不同成员各司其职，并通过沟通解决问题。
+
+多智能体系统让您可以将一个复杂任务分解为更小、更易处理的子任务，并将每个子任务分配给一个专业智能体。例如，您可以不再使用单个“研究助理”智能体，而是组建一个团队，包含负责查找信息的`研究员`、负责起草内容的`撰稿人`和负责修改润色的`编辑`。
+
+`kerb.agent`模块提供了构建和管理这些协作系统的工具。核心组件是`AgentTeam`类，它协调多智能体之间的交互。
+
+### 创建智能体团队
+
+`AgentTeam`是一组独立的智能体实例。团队中的每个智能体都可以有自己独特的提示、工具集和配置，从而让您能够定义专业化的角色。
+
+我们首先定义几个专业智能体，并将它们组成一个团队。
+
+```python
+from kerb.agent.patterns import ReActAgent as Agent
+from kerb.agent.teams import AgentTeam
+
+# 为每个智能体的专业功能定义模拟的LLM函数
+def researcher_llm(prompt: str) -> str:
+    """研究员智能体的LLM。"""
+    return "我找到了以下信息：Python是一种流行的编程语言。"
+
+def writer_llm(prompt: str) -> str:
+    """撰稿人智能体的LLM。"""
+    return "我根据研究结果撰写了一篇全面的文章。"
+
+def editor_llm(prompt: str) -> str:
+    """编辑智能体的LLM。"""
+    return "我已审阅并编辑了内容。现在它已润色完毕，可以使用了。"
+
+# 创建具有专业角色的独立智能体
+researcher = Agent(name="Researcher", llm_func=researcher_llm)
+writer = Agent(name="Writer", llm_func=writer_llm)
+editor = Agent(name="Editor", llm_func=editor_llm)
+
+# 创建一个AgentTeam
+writing_team = AgentTeam(agents=[researcher, writer, editor])
+
+print(f"已创建包含{len(writing_team.agents)}个智能体的团队。")
+```
+
+组建好团队后，您可以运用不同的模式来协调它们的协作，例如顺序管道或并行工作流。
+
+### 管道的顺序执行
+
+一种常见的多智能体模式是顺序管道，智能体按照预设的顺序工作，如同装配线一般。一个智能体的输出成为下一个智能体的输入。这对于结构化的多步骤任务很有用，例如我们的研究和撰写例子。
+
+> 一个顺序管道，其中每个智能体的输出都会传递给下一个智能体。
+
+`run_sequential`方法按照智能体被添加到团队的顺序执行它们。整个过程的最终输出是序列中最后一个智能体的输出。
+
+```python
+goal_sequential = "撰写一篇关于Python的文章"
+print(f"目标：{goal_sequential}")
+print("正在顺序执行智能体（研究员 -> 撰稿人 -> 编辑）...")
+
+sequential_results = writing_team.run_sequential(goal_sequential)
+
+# 显示每一步的结果
+for i, result in enumerate(sequential_results):
+    agent_name = writing_team.agents[i-1].name
+    print(f"\n[步骤 {i}] {agent_name}：")
+    print(f"  输出：{result.output[:100]}...")
+    if i < len(sequential_results):
+        print(f"  -> 已传递给下一个智能体")
+```
+
+这种管道结构确保了信息流清晰顺畅，并且对于阶段明确的过程非常有效。
+
+### 并行执行与结果汇总
+
+另一种方法是并行执行，即多个智能体同时处理同一目标。这种模式对于收集不同观点或针对同一问题的解决方案很有用。每个智能体独立完成任务，它们的结果可以被审阅或汇总，以形成更全面的最终输出。
+
+> 一个并行工作流，其中多个智能体处理同一目标。
+
+`run_parallel`方法将目标广播给团队中的所有智能体，并收集它们各自的结果。
+
+```python
+from kerb.agent.teams import aggregate_results
+
+goal_parallel = "研究使用Python进行AI的好处"
+print(f"目标：{goal_parallel}")
+
+parallel_results = writing_team.run_parallel(goal_parallel)
+
+print("\n各自结果：")
+for i, result in enumerate(parallel_results):
+    agent_name = writing_team.agents[i-1].name
+    print(f"  - {agent_name}：{result.output[:60]}...")
+
+# 将各自的输出汇总为一个结果
+aggregated_result = aggregate_results(parallel_results)
+
+print("\n汇总结果：")
+print(f"  合并输出：{aggregated_result.output[:100]}...")
+```
+
+`aggregate_results`函数将所有智能体的输出合并为一个`AgentResult`对象。这使您能够展示所有观点，或将合并后的结果传递给另一个智能体进行综合。
+
+### 分层委派
+
+更为复杂的系统常采用分层结构，其中“经理”或“协调者”智能体分解一个大问题，并将子任务委派给专业“工作者”智能体。`delegate_task`函数方便了这种直接的智能体到智能体的任务分配。
+
+```python
+from kerb.agent.teams import delegate_task
+
+# 定义另一个专业智能体
+def analyst_llm(prompt: str) -> str:
+    return "分析完成：数据显示出积极趋势。"
+
+analyst = Agent(name="Analyst", llm_func=analyst_llm)
+
+print(f"\n{researcher.name} 向 {analyst.name} 委派任务")
+
+delegated_task = "分析研究成果中的市场趋势"
+delegation_result = delegate_task(
+    task=delegated_task,
+    from_agent=researcher,
+    to_agent=analyst,
+    context={'source': 'research_data.csv'}
+)
+
+print(f"\n委派完成：")
+print(f"  任务：{delegated_task}")
+print(f"  来自 {analyst.name} 的结果：{delegation_result.output}")
+```
+
+委派实现了动态且自适应的工作流，在此工作流中，智能体可以根据主任务不断变化的状态向其他智能体寻求帮助。
+
+### 带有对话历史的沟通
+
+为了智能体能有效协作，它们需要一种沟通和共享状态的方式。`Conversation`类充当共享消息日志，让智能体能够查看交互历史。这种共享背景有助于做出明智的决策。
+
+```python
+from kerb.agent.teams import Conversation
+
+# 团队共享的对话
+conversation = Conversation()
+
+# 模拟智能体之间的对话
+conversation.add_message(researcher.name, "我已完成关于Python在AI中的研究。")
+conversation.add_message(writer.name, "太好了！我将用它来撰写文章。")
+conversation.add_message(writer.name, "文章已起草完成，可以审阅了。")
+conversation.add_message(editor.name, "我现在就审阅并提供反馈。")
+
+print("\n对话历史：")
+for msg in conversation.get_history():
+    print(f"  [{msg['timestamp']}] {msg['agent']}：{msg['content']}")
+```
+
+这种对话历史可以被包含在智能体的上下文 (context)中，使其能够了解已经讨论和决定的内容。
+
+通过结合专业智能体、清晰的协调模式以及共享的通信渠道，您可以构建精巧的多智能体系统，它们能够解决单个智能体无法企及的问题。
+
+## 参考资料
+
+- [An Introduction to MultiAgent Systems](https://www.wiley.com/en-us/An+Introduction+to+MultiAgent+Systems%2C+3rd+Edition-p-9781119736931) — Michael Wooldridge (2020)
+  Publisher: John Wiley & Sons
+  一本关于多智能体系统原理、架构和应用的全面指南，涵盖了协调与通信。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2022)
+  Journal: arXiv preprint arXiv:2210.03629; DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍了ReAct框架，该框架将推理轨迹与语言模型的特定任务动作相结合，是自主智能体的核心模式。
+- [AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation](https://arxiv.org/abs/2308.08155) — Qingyun Wu, Gagan Bansal, Jieyu Zhang, Yiran Wu, Beibin Li, Erkang Zhu, Li Jiang, Xiaoyun Zhang, Shaokun Zhang, Jiale Liu, Ahmed Hassan Awadallah, Ryen W White, Doug Burger, Chi Wang (2023)
+  Journal: arXiv preprint arXiv:2308.08155; DOI: [10.48550/arXiv.2308.08155](https://doi.org/10.48550/arXiv.2308.08155)
+  提出了一个可定制的框架，用于构建多智能体对话，展示了LLM智能体编排和协作的实用模式。
+- [MetaGPT: Meta Programming for AGI](https://arxiv.org/abs/2308.00352) — Sirui Hong, Mingchen Zhuge, Jiaqi Chen, Xiawu Zheng, Yuheng Cheng, Ceyao Zhang, Jinlin Wang, Zili Wang, Steven Ka Shing Yau, Zijuan Lin, Liyang Zhou, Chenyu Ran, Lingfeng Xiao, Chenglin Wu, Jürgen Schmidhuber (2023)
+  Journal: arXiv preprint arXiv:2308.00352; DOI: [10.48550/arXiv.2308.00352](https://doi.org/10.48550/arXiv.2308.00352)
+  提出了一种多智能体框架，为协作式软件开发分配结构化角色，展示了复杂的编排模式和工作流。

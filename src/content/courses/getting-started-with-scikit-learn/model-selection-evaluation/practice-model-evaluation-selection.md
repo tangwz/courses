@@ -1,0 +1,243 @@
+---
+course: "getting-started-with-scikit-learn"
+chapter: "model-selection-evaluation"
+lesson: "practice-model-evaluation-selection"
+sourceId: 1896
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-scikit-learn/chapter-5-model-selection-evaluation/practice-model-evaluation-selection"
+title: "动手实践：模型评估与选择"
+description: "运用训练-测试集划分、交叉验证和网格搜索来评估和选择模型。"
+order: 7
+plots: ["plots/1896-0.json", "plots/1896-1.json", "plots/1896-2.json"]
+sourceHash: "dd9c251cd1af882eb491a4f6d9b3b7c128440541e18a98e3a88223044f9c01b0"
+sourceCorrections: []
+---
+
+Scikit-learn 用于进行训练-测试集划分、运用交叉验证，并使用网格搜索调整超参数 (parameter) (hyperparameter)。这种动手方法将巩固您对如何可靠评估和改进模型性能的理解。
+
+我们将使用 Iris 数据集，这是一个经典的分类任务数据集。我们的目标是构建并评估能够根据鸢尾花的萼片和花瓣测量数据预测其类别的模型。
+
+### 设置与数据加载
+
+首先，让我们导入所需的库并加载 Iris 数据集。我们需要从 Scikit-learn 中导入 `train_test_split`、`cross_val_score` 和 `GridSearchCV`，以及一个分类器（如 `KNeighborsClassifier`）和评估指标。
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.pipeline import Pipeline
+import plotly.express as px
+import plotly.graph_objects as go
+
+# 加载 Iris 数据集
+iris = load_iris()
+X = iris.data
+y = iris.target
+feature_names = iris.feature_names
+target_names = iris.target_names
+
+# 转换为 Pandas DataFrame 以便更方便地查看（可选）
+df = pd.DataFrame(X, columns=feature_names)
+df['species'] = pd.Categorical.from_codes(y, target_names)
+print("Iris 数据的前 5 行:")
+print(df.head())
+print(f"\n特征: {feature_names}")
+print(f"目标类别: {target_names}")
+```
+
+### 1. 将数据拆分为训练集和测试集
+
+在进行任何模型训练之前，我们先拆分数据。这确保我们有一个单独、未曾使用过的数据集（测试集）来评估最终模型的泛化性能。我们将使用 `train_test_split`。在分类任务中，使用 `stratify=y` 很重要，以保持训练集和测试集中每个类别的比例。我们还设置 `random_state` 以获得可重现的结果。
+
+```python
+# 将数据拆分为训练集（80%）和测试集（20%）
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42, # 用于结果的可重现性
+    stratify=y       # 保持类别比例
+)
+
+print(f"\n训练集形状: X_train={X_train.shape}, y_train={y_train.shape}")
+print(f"测试集形状: X_test={X_test.shape}, y_test={y_test.shape}")
+
+# 检查训练集和测试集中的类别分布
+print("\n训练集中的类别分布:")
+print(np.bincount(y_train))
+print("测试集中的类别分布:")
+print(np.bincount(y_test))
+```
+
+如您所见，`stratify` 参数 (parameter)有助于在两个拆分中保持每种鸢尾花（setosa、versicolor、virginica）的均衡代表性。
+
+### 2. 初始模型训练与评估（使用训练-测试集划分）
+
+让我们在训练数据上训练一个 K 近邻（KNN）分类器，并在测试集上对其进行评估。通常，对特征进行缩放是一个好的做法，特别是对于像 KNN 这样的基于距离的算法。我们将为此创建一个简单的流水线。
+
+```python
+# 创建一个包含缩放和 KNN 分类器的流水线
+knn_pipeline_simple = Pipeline([
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(n_neighbors=5)) # 初始使用默认 k=5
+])
+
+# 训练模型
+knn_pipeline_simple.fit(X_train, y_train)
+
+# 在测试集上进行预测
+y_pred = knn_pipeline_simple.predict(X_test)
+
+# 评估模型
+accuracy = accuracy_score(y_test, y_pred)
+print(f"\n初始 KNN 模型 (k=5) 在测试集上的准确率: {accuracy:.4f}")
+
+print("\n分类报告:")
+print(classification_report(y_test, y_pred, target_names=target_names))
+
+# 计算并显示混淆矩阵
+cm = confusion_matrix(y_test, y_pred)
+```
+
+
+
+![混淆矩阵 (k=5, 测试集)](plots/1896-0.json)
+
+
+
+> 初始 KNN 模型 (k=5) 在测试集上评估的混淆矩阵。行表示真实标签，列表示预测标签。
+
+初始模型在此特定测试拆分上取得了完美准确率。然而，依赖单一的训练-测试集划分可能会因为数据划分方式而显得过于乐观或悲观。
+
+### 3. 使用交叉验证评估性能
+
+交叉验证通过在数据的多个不同子集上训练和评估模型，从而提供对模型性能更准确的估计。我们将使用 `StratifiedKFold`，因为这是一个分类问题，它确保在每个折叠中都保持类别比例。`cross_val_score` 简化了这一过程。
+
+让我们在*整个*数据集上使用 5 折分层交叉验证来评估相同的流水线（Scaler + KNN，k=5）。注意：在实践中，您通常在模型开发阶段只在*训练*集上进行交叉验证，保留测试集用于最终的、无偏的评估。此处，我们使用完整数据集来清楚地演示 `cross_val_score` 函数。
+
+```python
+# 定义交叉验证策略
+cv_strategy = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# 创建流水线（与之前相同）
+knn_pipeline_cv = Pipeline([
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier(n_neighbors=5))
+])
+
+# 执行交叉验证
+# 注意: cross_val_score 为每个折叠克隆评估器，确保独立性
+cv_scores = cross_val_score(knn_pipeline_cv, X, y, cv=cv_strategy, scoring='accuracy')
+
+print(f"\n交叉验证得分 (k=5): {cv_scores}")
+print(f"平均交叉验证准确率: {cv_scores.mean():.4f}")
+print(f"交叉验证准确率的标准差: {cv_scores.std():.4f}")
+
+# 可视化每个折叠的得分
+fold_indices = [f'折叠 {i+1}' for i in range(len(cv_scores))]
+```
+
+
+
+![5 折交叉验证准确率 (k=5)](plots/1896-1.json)
+
+
+
+> KNN 模型 (k=5) 在 5 折分层交叉验证中每个折叠的准确率得分以及各折叠的平均准确率。
+
+交叉验证结果显示，平均准确率约为 96.7%，各折叠之间存在一定差异（标准差约 0.027）。这略低于我们单次测试拆分中的完美得分，突显了交叉验证对于获得更实际性能估计的价值。
+
+### 4. 使用 GridSearchCV 调整超参数 (parameter) (hyperparameter)
+
+我们的 KNN 模型使用了 `n_neighbors=5`。这是 `k` 的最优值吗？我们可以使用 `GridSearchCV` 系统地搜索一系列超参数值，并根据交叉验证性能找到最优的。
+
+`GridSearchCV` 将超参数调整与交叉验证相结合。它尝试网格中指定的每种参数组合，使用训练数据上的交叉验证评估每种组合，并识别出产生最佳平均得分的组合。
+
+我们将为流水线中的 `n_neighbors` 参数定义一个参数网格。请注意我们如何指定参数名称：`step_name__parameter_name`（例如，`knn__n_neighbors`）。
+
+```python
+# 再次定义流水线（对 GridSearch 很重要）
+pipeline_gs = Pipeline([
+    ('scaler', StandardScaler()),
+    ('knn', KNeighborsClassifier())
+])
+
+# 定义要搜索的参数网格
+# 我们将为 KNN 步骤搜索最优的 'k' (n_neighbors) 值
+param_grid = {
+    'knn__n_neighbors': np.arange(1, 16) # 测试 k 值从 1 到 15
+}
+
+# 为 GridSearchCV 定义交叉验证策略
+cv_strategy_gs = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# 设置 GridSearchCV
+# 它将使用 cv_strategy_gs 进行内部交叉验证
+grid_search = GridSearchCV(
+    estimator=pipeline_gs,
+    param_grid=param_grid,
+    cv=cv_strategy_gs,
+    scoring='accuracy',
+    n_jobs=-1 # 使用所有可用的 CPU 核心
+)
+
+# 在训练数据上拟合 GridSearchCV
+# 注意: 在训练数据 (X_train, y_train) 上拟合 GridSearchCV
+# 测试集 (X_test, y_test) 保留用于最终评估
+print("\n正在运行 GridSearchCV...")
+grid_search.fit(X_train, y_train)
+print("GridSearchCV 完成。")
+
+# 获取最优参数和最优得分
+print(f"\nGridSearchCV 找到的最优参数: {grid_search.best_params_}")
+print(f"最佳交叉验证准确率得分: {grid_search.best_score_:.4f}")
+
+# 'grid_search' 对象现在是一个已训练好的模型，带有找到的最优参数
+# 让我们在保留的测试集上评估这个最优模型
+best_model = grid_search.best_estimator_
+y_pred_best = best_model.predict(X_test)
+
+accuracy_best = accuracy_score(y_test, y_pred_best)
+print(f"\n最优模型在测试集上的准确率: {accuracy_best:.4f}")
+
+print("\n最优模型的分类报告:")
+print(classification_report(y_test, y_pred_best, target_names=target_names))
+
+# 可选：可视化 GridSearchCV 的交叉验证结果
+results_df = pd.DataFrame(grid_search.cv_results_)
+best_k = grid_search.best_params_['knn__n_neighbors']
+```
+
+
+
+![网格搜索交叉验证结果：准确率 vs. n_neighbors](plots/1896-2.json)
+
+
+
+> 网格搜索过程中针对不同 `k` 值（邻居数量）获得的平均交叉验证准确率得分。表现最优的值，k=7，已标出。
+
+GridSearchCV 发现，在训练数据上的内部交叉验证过程中，`n_neighbors=7` 产生了最高的平均准确率（约 96.7%）。在此特定情况下，在我们的保留测试集上评估这个优化模型，再次获得了完美准确率。虽然这里与 k=5 相比，测试准确率没有太大变化，但在许多情况下，调整超参数会明显提高模型在未见过数据上的性能。
+
+### 总结
+
+在本次实践练习中，您学习了如何：
+
+1. 使用带有分层功能的 `train_test_split` 拆分数据，以进行可靠的初始评估。
+2. 使用 `cross_val_score` 执行 K 折（特别是分层 K 折）交叉验证，以获得模型性能的更好估计。
+3. 使用 `GridSearchCV` 系统地搜索最优超参数 (parameter) (hyperparameter)，它将参数调整与内部交叉验证结合。
+4. 在保留的测试集上评估最终的、已调整的模型，以估计其泛化能力。
+
+这些技术是构建可信赖机器学习 (machine learning)模型的基本。通过严格评估性能和选择适当的超参数，您可以避免过拟合 (overfitting)等常见问题，并构建在新的、未见过数据上表现良好的模型。
+
+## 参考资料
+
+- [Scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html) — scikit-learn developers (2023)
+  Scikit-learn 用户指南，涵盖了模型选择、交叉验证和超参数调优等讨论的所有功能。
+- [Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems](https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125974/) — Aurélien Géron (2022)
+  Publisher: O'Reilly Media
+  一本实践指南，通过 Scikit-learn 示例介绍模型评估、交叉验证和超参数调优。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://link.springer.com/book/10.1007/978-0-387-84858-7) — Trevor Hastie, Robert Tibshirani, Jerome Friedman (2009)
+  Publisher: Springer New York; DOI: [10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7)
+  提供机器学习统计学和理论基础的教科书，包括模型评估和交叉验证等选择技术。

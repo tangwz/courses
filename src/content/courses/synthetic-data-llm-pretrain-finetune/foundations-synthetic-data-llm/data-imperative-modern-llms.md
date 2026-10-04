@@ -1,0 +1,81 @@
+---
+course: "synthetic-data-llm-pretrain-finetune"
+chapter: "foundations-synthetic-data-llm"
+lesson: "data-imperative-modern-llms"
+sourceId: 6114
+sourceUrl: "https://apxml.com/zh/courses/synthetic-data-llm-pretrain-finetune/chapter-1-foundations-synthetic-data-llm/data-imperative-modern-llms"
+title: "现代LLM的数据需求"
+description: "了解大型多样化数据集在训练高效大型语言模型中的重要作用。"
+order: 2
+plots: ["plots/6114-0.json"]
+sourceHash: "6bfdb72cef827f23417dce02853e35bf9c04b7d05b77a171c7fc656b432b67e5"
+sourceCorrections: []
+---
+
+大型语言模型（简称LLM）并非天生具备其令人印象深刻的能力。相反，它们是从数据中学习的，而这些数据的**大量**和多样性是其能力的基础。可以把它想象成一个学徒学习手艺：他们接触的例子、练习和不同材料越多，就会变得越熟练和多才多艺。对于LLM来说，数据是它们对语言、语境乃至初步推理 (inference)能力建立起来的根本。
+
+### 为何需要如此多数据？学习的机制
+
+本质上，LLM是复杂的模式匹配系统。它们由数十亿甚至数万亿个相互连接的参数 (parameter)网络组成。在训练过程中，这些参数会根据输入数据进行调整。以下是为何此过程需要如此多信息的原因：
+
+1. **学习复杂模式**：人类语言极其丰富且复杂。它充满了语法、语义、依赖语境的含义、文化指涉以及事实信息中不易察觉的细节。为了有效吸收这些模式，LLM需要处理海量的例子。一个小型数据集只会让它学习到表面上的关联，从而导致理解和生成能力不足。
+2. **参数规模**：现代LLM中庞大的参数数量意味着其学习能力有巨大的容量。然而，为了有效调整这些参数并避免模型仅仅记住训练数据（即过拟合 (overfitting)），就需要一个相应庞大且多样的数据集。简单来说，每个参数都需要来自数据的充足“证据”来找到其最佳值。
+3. **泛化能力**：训练LLM的最终目的是使其能很好地适应新的、未见过输入。这意味着它不仅要擅长预测已见过句子中的下一个词，还要能理解并为全新的提示和任务生成连贯的文本。在训练期间接触多种多样的主题、风格和语言结构是实现这种泛化能力的关键。
+
+### 定义“大量”：LLM的数据需求规模
+
+当我们谈论LLM的“大量”数据时，我们指的是那些规模远超前几代自然语言处理模型常见的数据集。我们通常讨论的是：
+
+- **数千亿到数万亿个标记（token）**：一个标记可以理解为一个单词或一个子词 (subword)单元。例如，GPT-3模型大约在5000亿个标记上进行训练。
+- **数TB的文本数据**：原始文本数据在未压缩时可以占用数TB的存储空间。
+
+这些数据来自众多来源，包括大规模网络抓取（如Common Crawl）、数字化书籍、百科全书（如维基百科）、新闻文章、科学论文和代码库。目标是创建一个尽可能代表人类语言和知识广度的数据集。
+
+### “多样性”数据的重要性
+
+仅有数量是不够的；数据多样性同样重要。多样化的数据集有助于LLM减少偏见，并在更广泛的应用中表现更好。多样性包含以下几个方面：
+
+- **来源**：来自网页、书籍、学术文章、对话、代码等的数据，确保模型接触到语言使用的不同方式。
+- **风格和语气**：包含正式写作、非正式对话、技术文档、创意故事和说服性论点，有助于模型掌握并生成适用于不同语境的文本。
+- **主题**：涵盖科学技术、历史、艺术和时事等广泛的学科，构建出更具知识性和多功能的模型。
+- **人口统计和文化**：尽管难以完美实现，但努力争取反映多样化人类经验和视角的数据，有助于减轻偏见并提高公平性。数据多样性的缺乏可能导致模型在特定群体上表现不佳或延续有害的刻板印象。
+
+### 缩放法则：数据、模型大小和性能
+
+对LLM“缩放法则”的研究，更系统地说明了数据集大小、模型大小（参数 (parameter)数量）和性能之间的关系。一项普遍的发现，尤其被DeepMind的Chinchilla论文等研究强调，是在给定计算预算下，模型性能会随着模型大小和训练数据集大小可预测地变化。实际上，许多现代模型在训练时常侧重于增加数据集大小，有时甚至比模型参数更多，以达到所用计算资源下的最佳性能。
+
+观察到的普遍规律是，随着数据集大小的增加，模型性能（通常通过损失的减少来衡量，损失是错误的一种度量）会提高。
+
+
+
+![数据集大小对LLM性能的影响](plots/6114-0.json)
+
+
+
+> 模型性能通常随数据集大小的增加而提升，尽管提升速度可能会有所不同。
+
+这些缩放法则强调，数据不仅仅是一个偶然的组成部分，更是LLM能力的主要驱动力。为了开发更强大的模型，我们几乎总是需要更多（和更好的）数据。
+
+### 数据稀缺的风险
+
+当LLM在不足或低质量的数据上训练时会发生什么？其后果可能很大：
+
+- **泛化能力差**：模型可能在其训练集类似的数据上表现良好，但在新颖的输入或任务上失败。
+- **偏见加剧**：如果训练数据代表性不足或过度代表特定观点，模型很可能会继承并放大这些偏见。
+- **事实不准确（幻觉 (hallucination)）**：有限的事实信息接触可能导致模型生成听起来合理但错误的陈述。
+- **理解不足**：模型可能难以进行复杂推理 (inference)、掌握语境或在长篇幅中保持连贯性。
+- **过拟合 (overfitting)**：模型可能本质上“记住”训练示例，而非学习底层原则，使其变得脆弱且不灵活。
+
+“对多样化高质量数据的强烈需求带来了巨大的困难。数据获取可能昂贵，许可可能困难，伴随着隐私问题，或者在特定领域或语言中根本不可用。正是这些困难促使我们考虑将合成数据作为训练现代LLM的补充性资源，有时甚至是主要资源。正如您将在本课程中看到的，合成数据提供了一条途径，可以增加、多样化，甚至创建支持下一代语言模型所需的数据集。”
+
+## 参考资料
+
+- [Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165) — Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, Dario Amodei (2020)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 33; Pages: 1877-1901; DOI: [10.48550/arXiv.2005.14165](https://doi.org/10.48550/arXiv.2005.14165)
+  描述了GPT-3的架构和训练，详细说明了其训练数据集的规模和多样性，确立了大型语言模型对数据的需求。
+- [Scaling Laws for Neural Language Models](https://arxiv.org/abs/2001.08361) — Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, Dario Amodei (2020)
+  Journal: International Conference on Learning Representations (ICLR 2020); Publisher: OpenReview Foundation; DOI: [10.48550/arXiv.2001.08361](https://doi.org/10.48550/arXiv.2001.08361)
+  提出了语言模型扩展定律的基础研究，定量描述了性能如何随模型大小、数据集大小和计算资源的增加而提高，强调了数据的重要性。
+- [Training Compute-Optimal Large Language Models](https://arxiv.org/abs/2203.15556) — Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, Aurelia Guy, Laurent Sifre, Simon Osindero, Karen Simonyan, Erich Elsen, Jack W. Rae, Timothy Lillicrap, Ross Clark, Oriol Vinyals, Chris Dyer, Simon Lacoste-Julien, Geoffrey Hinton (2022)
+  Journal: International Conference on Learning Representations (ICLR 2022); Publisher: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2203.15556](https://doi.org/10.48550/arXiv.2203.15556)
+  提出了“Chinchilla”扩展定律，通过证明计算最优训练在给定模型大小下需要比以前认为的更多数据，从而完善了先前的研究成果。

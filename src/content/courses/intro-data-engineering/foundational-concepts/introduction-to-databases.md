@@ -1,0 +1,94 @@
+---
+course: "intro-data-engineering"
+chapter: "foundational-concepts"
+lesson: "introduction-to-databases"
+sourceId: 5509
+sourceUrl: "https://apxml.com/zh/courses/intro-data-engineering/chapter-2-foundational-concepts/introduction-to-databases"
+title: "数据库简介"
+description: "对数据库进行基本介绍，对比关系型（SQL）和NoSQL类型。"
+order: 3
+plots: []
+sourceHash: "7b9f9100787b9c0beb6b29912dbe2d2e941ad2591792f9f6a934a07bf104f80c"
+sourceCorrections: []
+---
+
+在讨论了数据可能采用的不同形态（结构化、半结构化、非结构化）以及数据来源之后，我们需要考虑这些数据实际存放在何处。仅仅收集数据是不够的；数据需要以有组织的方式存储，以便能有效地访问、管理和分析。这就是数据库的作用。
+
+可以把数据库看作一个数字文件柜，但它功能更强大、更有序。这是一个专门用于存储、获取和管理数据集合的系统。数据工程师会花费大量时间与数据库交互，确保数据正确流入并能高效取出，用于各种目的。
+
+数据库类型多种多样。关系型数据库和NoSQL数据库是两种广泛应用且重要的类别。
+
+### 关系型数据库 (SQL)
+
+几十年来，关系型数据库一直是数据存储的主力。它们将数据组织成表，这些表看起来很像电子表格。每个表都由行和列组成。
+
+- **表：** 表示实体（如`客户`、`产品`或`订单`）。
+- **行：** 表示表中的单个记录（例如，某个特定客户、某个特定产品）。
+- **列：** 表示这些记录的属性或特性（例如，`客户`表中的`customer_id`、`first_name`、`email`）。
+
+“关系型”的含义来自于通过称为键的公共列来连接不同表之间数据的能力。例如，`订单`表可能有一个`customer_id`列，用于将每个订单链接回在`客户`表中下订单的特定客户。
+
+> 一个简单的可视化图表，显示了两个相关的表：《客户》和《订单》，它们通过`customer_id`关联。主键（PK）代表主键（表中行的唯一标识符），外键（FK）代表外键（用于关联到另一个表的键）。
+
+关系型数据库强制执行一种预定义的结构，称为**模式（schema）**。在存储数据之前，必须定义表、每个表中的列、每列的数据类型（例如，整数、文本、日期）以及表之间的关系。这种结构保证了数据的一致性和完整性。
+
+要与这些数据库交互，通常使用**SQL（结构化查询语言）**。SQL是关系型数据库中查询、插入、更新和删除数据的标准语言。例如，要获取ID为1的客户的所有信息，您可以编写：
+
+```sql
+SELECT *
+FROM Customers
+WHERE customer_id = 1;
+```
+
+**常见示例：** PostgreSQL、MySQL、SQL Server、Oracle Database。
+
+**何时使用？** 当数据一致性非常重要、数据结构明确且不常变动，以及需要涉及多个表的复杂查询时，关系型数据库表现出色。例如，金融交易、库存系统或用户账户管理。
+
+### NoSQL数据库
+
+随着应用程序的发展，特别是互联网、Web应用和大数据的兴起，新的问题随之出现。有时数据无法整齐地放入表中，或者数据的巨大体量和速度使传统关系型系统不堪重负。这促成了**NoSQL数据库**的开发。
+
+NoSQL代表“不只是SQL”。它是一个总称，指代那些与关系型模型相比，提供不同数据存储和获取方式的数据库。它们通常在数据结构方面提供更大的灵活性，并且设计为可轻松地跨多台服务器进行扩展。
+
+NoSQL数据库有多种类型，每种都适合不同类型的问题：
+
+1. **文档数据库：** 以文档式结构存储数据，通常使用JSON（JavaScript Object Notation）或BSON等格式。每个文档可以有自己的结构。这非常适合半结构化数据。
+   - *示例：* MongoDB, Couchbase
+2. **键值存储：** 最简单的一种。数据以唯一键和关联值的形式存储，类似于字典或哈希映射。通过键查找速度非常快。
+   - *示例：* Redis, Amazon DynamoDB (在其键值模式下)
+3. **列族存储：** 按列而非按行存储数据。对于只需要大型数据集中特定列的查询效率很高。常用于大数据场景。
+   - *示例：* Apache Cassandra, HBase
+4. **图数据库：** 专门用于存储网络和关系数据。数据以节点（实体）和边（实体间的连接）的形式存储。非常适合推荐系统、社交网络和欺诈检测。
+   - *示例：* Neo4j, Amazon Neptune
+
+与关系型数据库的一个主要区别是，许多NoSQL数据库具有**灵活的模式**或**无模式**。这意味着您不一定需要提前定义数据的确切结构，从而可以更轻松地处理多样或不断演变的数据。
+
+**何时使用？** NoSQL数据库通常被选用，以满足需要高可扩展性（处理海量数据或用户）、数据格式灵活性或非常高速的读写操作的应用程序。用例包括实时分析、内容管理系统、移动应用程序以及存储来自物联网设备的数据。
+
+### 关系型与NoSQL：快速对比
+
+以下是主要区别的总结：
+
+> 典型的关系型（SQL）数据库与NoSQL数据库之间的主要区别。请注意，这些是概括性说明，具体数据库可能存在差异。
+
+关系型数据库和NoSQL数据库之间的选择并非总是明确的，有时两者会在同一个大型系统中使用（这种模式称为多语言持久化）。该决定很大程度上取决于应用程序的具体需求：
+
+- 数据结构化程度如何？
+- 严格一致性有多重要？
+- 您预期的数据量有多大？
+- 数据或其结构变化的速度有多快？
+- 您需要运行哪些类型的查询？
+
+理解这些主要的数据库类型很重要。作为数据工程师，您将处理从各种数据库中提取数据并加载数据到其中的系统。了解它们的特点有助于设计高效的数据管道并选择合适的存储方案，这些内容我们将在后续章节中进一步讨论。
+
+## 参考资料
+
+- [Database System Concepts](https://www.db-book.com/) — Avi Silberschatz, Henry F. Korth, S. Sudarshan (2019)
+  Publisher: McGraw-Hill
+  这本综合性教材涵盖数据库管理系统的基础主题，包括关系模型、SQL和NoSQL等现代数据库趋势。
+- [Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781449373320/) — Martin Kleppmann (2017)
+  Publisher: O'Reilly Media
+  本书分析了现代数据系统背后的原理，提供了关于存储、处理和系统设计的深入见解，涵盖了传统数据库和分布式（NoSQL）数据库。
+- [NoSQL Distilled: A Brief Guide to the Emerging World of Polyglot Persistence](https://www.informit.com/store/nosql-distilled-brief-guide-to-emerging-world-of-9780321826626) — Pramod J. Sadalage and Martin Fowler (2012)
+  Publisher: Addison-Wesley Professional
+  本书简要介绍了各种NoSQL数据库及其使用场景，解释了其发展背后的原理。

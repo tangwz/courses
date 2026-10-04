@@ -1,0 +1,237 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "weight-regularization"
+lesson: "practice-applying-l1-l2"
+sourceId: 4920
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-2-weight-regularization/practice-applying-l1-l2"
+title: "动手实践：将L1/L2应用于网络"
+description: "实践环节：在神经网络中运用L1和L2正则化。"
+order: 9
+plots: ["plots/4920-0.json", "plots/4920-1.json"]
+sourceHash: "b554145cd0de4873f1b2e44983494e25c496be8d4ce769caccd889aa0c23e2bb"
+sourceCorrections: []
+---
+
+L1和L2正则化 (regularization)可应用于实践以提升神经网络 (neural network)性能。一个简单的神经网络将在此构建，并使用旨在促进过拟合 (overfitting)的数据进行训练。随后，将应用L1和L2正则化，亲眼观察它们的效果。PyTorch用于实现，但这些思路同样适用于其他框架。
+
+### 场景设置
+
+假设我们有一个二分类问题。我们将生成一些合成数据，其中决策边界并非完全线性，这使得灵活的模型容易对训练噪声过拟合 (overfitting)。
+
+首先，让我们导入必要的库并生成一些数据：
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 生成合成数据
+X, y = make_moons(n_samples=500, noise=0.3, random_state=42)
+
+# 划分数据
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# 缩放数据
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_val = scaler.transform(X_val)
+
+# 转换为PyTorch张量
+X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
+X_val_tensor = torch.tensor(X_val, dtype=torch.float32)
+y_val_tensor = torch.tensor(y_val, dtype=torch.float32).unsqueeze(1)
+```
+
+### 定义一个基础神经网络 (neural network)
+
+我们将使用一个带两个隐藏层的简单前馈网络。此架构足够复杂，可能对我们的合成数据过拟合 (overfitting)。
+
+```python
+class SimpleNet(nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.layer1 = nn.Linear(2, 128)
+        self.relu1 = nn.ReLU()
+        self.layer2 = nn.Linear(128, 64)
+        self.relu2 = nn.ReLU()
+        self.output_layer = nn.Linear(64, 1) # 用于二分类的输出层
+
+    def forward(self, x):
+        x = self.relu1(self.layer1(x))
+        x = self.relu2(self.layer2(x))
+        x = self.output_layer(x) # 此处没有sigmoid，使用BCEWithLogitsLoss
+        return x
+```
+
+### 训练循环辅助函数
+
+我们来定义一个函数来处理训练过程。这将使我们更容易为不同的正则化 (regularization)设置复用训练逻辑。
+
+```python
+def train_model(model, optimizer, criterion, X_train, y_train, X_val, y_val, epochs=500, l1_lambda=0.0):
+    train_losses = []
+    val_losses = []
+    val_accuracies = []
+
+    for epoch in range(epochs):
+        model.train() # 将模型设置为训练模式
+
+        # 前向传播
+        outputs = model(X_train)
+        loss = criterion(outputs, y_train)
+
+        # --- L1 正则化 (如果适用) ---
+        if l1_lambda > 0:
+            l1_penalty = 0
+            for param in model.parameters():
+                # 检查参数是否需要梯度（即是否可学习）
+                if param.requires_grad:
+                    l1_penalty += torch.norm(param, 1) # 计算L1范数
+            loss = loss + l1_lambda * l1_penalty
+        # --- L1 正则化结束 ---
+
+        # 反向传播和优化
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # --- 验证 ---
+        model.eval() # 将模型设置为评估模式
+        with torch.no_grad():
+            val_outputs = model(X_val)
+            val_loss = criterion(val_outputs, y_val)
+
+            # 计算准确率
+            predicted = torch.sigmoid(val_outputs) >= 0.5
+            correct = (predicted == y_val.byte()).sum().item() # 确保比较类型正确
+            val_accuracy = correct / y_val.size(0)
+
+        train_losses.append(loss.item())
+        val_losses.append(val_loss.item())
+        val_accuracies.append(val_accuracy)
+
+        if (epoch + 1) % 100 == 0:
+            print(f'Epoch [{epoch+1}/{epochs}], Train Loss: {loss.item():.4f}, Val Loss: {val_loss.item():.4f}, Val Acc: {val_accuracy:.4f}')
+
+    return train_losses, val_losses, val_accuracies
+```
+
+请注意专门用于添加L1惩罚的这个部分。我们手动遍历模型的参数 (parameter)，计算L1范数（`torch.norm(param, 1)`），将它们加总，乘以L1强度（`l1_lambda`），然后在反向传播 (backpropagation)之前将其添加到原始损失中。
+
+### 基准模型：无正则化 (regularization)
+
+我们首先训练一个不带任何正则化的模型，以建立基准。我们将使用Adam优化器和二元交叉熵损失（带logits，因为我们的模型没有最终的sigmoid层）。
+
+```python
+# 实例化模型、损失函数和优化器（无正则化）
+model_base = SimpleNet()
+criterion = nn.BCEWithLogitsLoss()
+optimizer_base = optim.Adam(model_base.parameters(), lr=0.001)
+
+print("正在训练基准模型（无正则化）...")
+base_train_loss, base_val_loss, base_val_acc = train_model(
+    model_base, optimizer_base, criterion,
+    X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor,
+    epochs=500
+)
+```
+
+通常情况下，您会观察到训练损失稳定下降，而验证损失最初下降，但随后开始上升，这表明过拟合 (overfitting)。验证准确率可能会趋于平稳甚至下降。
+
+### 应用L2正则化 (regularization)（权重 (weight)衰减）
+
+添加L2正则化通常很简单，因为许多优化器都包含一个内置参数 (parameter)，通常称为`weight_decay`。此参数对应于L2惩罚项 $\frac{\lambda}{2} ||w||_2^2$ 中的 $\lambda$。
+
+```python
+# 实例化带L2正则化的模型、损失函数和优化器
+model_l2 = SimpleNet()
+# 注意：如果损失函数有状态，则需重新实例化，尽管BCEWithLogitsLoss是无状态的
+criterion_l2 = nn.BCEWithLogitsLoss()
+l2_lambda = 0.01 # 正则化强度
+optimizer_l2 = optim.Adam(model_l2.parameters(), lr=0.001, weight_decay=l2_lambda)
+
+print("\n正在训练带L2正则化的模型...")
+l2_train_loss, l2_val_loss, l2_val_acc = train_model(
+    model_l2, optimizer_l2, criterion_l2,
+    X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor,
+    epochs=500
+)
+```
+
+在使用L2正则化训练时，您应该会注意到训练损失与验证损失之间的差距小于基准模型。验证损失可能达到更低的最小值，并且验证准确率可能提高或更稳定。L2通常能防止权重变得过大，从而形成更平滑的决策边界。
+
+### 应用L1正则化 (regularization)
+
+正如我们在`train_model`函数中看到的，实现L1需要手动将惩罚项添加到损失中。我们来使用这种方法训练一个模型。
+
+```python
+# 实例化带L1正则化的模型、损失函数和优化器
+model_l1 = SimpleNet()
+criterion_l1 = nn.BCEWithLogitsLoss()
+optimizer_l1 = optim.Adam(model_l1.parameters(), lr=0.001) # 此处无weight_decay
+l1_lambda = 0.001 # L1正则化强度（通常小于L2）
+
+print("\n正在训练带L1正则化的模型...")
+l1_train_loss, l1_val_loss, l1_val_acc = train_model(
+    model_l1, optimizer_l1, criterion_l1,
+    X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor,
+    epochs=500, l1_lambda=l1_lambda # 将L1 lambda传递给训练函数
+)
+```
+
+使用L1正则化，我们也预期会看到过拟合 (overfitting)减少，这与L2类似。然而，L1的特点是可能使某些权重 (weight)恰好变为零。这在全连接网络中不总是表现得很明显，但能促使模型更简单。最优的`l1_lambda`可能与最优的`l2_lambda`有明显不同。
+
+### 结果比较
+
+可视化所有三个模型的验证损失曲线是观察正则化 (regularization)效果的最佳方式。
+
+
+
+![验证损失比较](plots/4920-0.json)
+
+
+
+> 500个周期内基准模型、L1正则化模型和L2正则化模型的验证损失曲线。请注意基准损失如何开始增加（过拟合 (overfitting)），而L1和L2保持较低的验证损失。（示意数据）
+
+You可以类似地绘制验证准确率。正则化模型可能会显示出比基准模型更高或更稳定的验证准确率，基准模型可能在最初达到峰值后性能下降。
+
+
+
+![验证准确率比较](plots/4920-1.json)
+
+
+
+> 对应上述损失图的验证准确率曲线。正则化模型在未见过的数据上实现了更好、更持续的准确率。（示意数据）
+
+### 调整正则化 (regularization)强度
+
+$\lambda$（即`weight_decay`或`l1_lambda`值）的选择很重要。
+
+- **$\lambda$过小：** 正则化效果会很小，模型可能仍会过拟合 (overfitting)。
+- **$\lambda$过大：** 权重 (weight)的惩罚项将占主导地位，可能迫使权重过小（或对L1而言为零），导致模型欠拟合 (underfitting)（高偏差）。它将无法很好地学习潜在模式。
+
+找到合适的$\lambda$通常涉及超参数 (parameter) (hyperparameter)调优，常用网格搜索或随机搜索等技术在验证集上进行，我们将在本课程后面讨论这些。
+
+### 总结
+
+本次实践展示了如何在典型的PyTorch训练流程中实现L1和L2权重 (weight)正则化 (regularization)。我们看到了将这些惩罚项添加到损失函数 (loss function)（L1直接添加，L2通过优化器的`weight_decay`）如何帮助对抗过拟合 (overfitting)，从而带来更好的泛化性能，这由改进的验证损失和准确率所证明。请记住，效果和最佳强度（$\lambda$）取决于具体的模型、数据集和任务。通常需要进行尝试以找到最佳配置。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  全面介绍正则化技术，包括L1和L2，其理论基础以及它们在防止神经网络过拟合中的作用。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, Jerome Friedman (2009)
+  Publisher: Springer
+  经典著作，详细阐述了岭回归（L2惩罚）和Lasso（L1惩罚）的统计基础，解释了它们在变量选择和收缩等方面的特性。
+- [torch.optim documentation](https://pytorch.org/docs/stable/optim.html) — PyTorch Core Team (2025)
+  了解PyTorch优化器的必备文档，特别是实践示例中用于L2正则化的`weight_decay`参数。
+- [Deep Learning with PyTorch](https://www.manning.com/books/deep-learning-with-pytorch) — Eli Stevens, Luca Antiga, Thomas Viehmann (2020)
+  Publisher: Manning Publications
+  PyTorch深度学习模型构建和训练的实践指南，涵盖模型设计、训练循环和常见的正则化技术。

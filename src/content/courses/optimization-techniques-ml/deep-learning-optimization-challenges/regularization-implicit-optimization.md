@@ -1,0 +1,87 @@
+---
+course: "optimization-techniques-ml"
+chapter: "deep-learning-optimization-challenges"
+lesson: "regularization-implicit-optimization"
+sourceId: 1312
+sourceUrl: "https://apxml.com/zh/courses/optimization-techniques-ml/chapter-6-deep-learning-optimization-challenges/regularization-implicit-optimization"
+title: "正则化方法：优化过程的隐性作用"
+description: "从优化目标角度看正则化方法（L1、L2、Dropout）。"
+order: 6
+plots: ["plots/1312-0.json"]
+sourceHash: "d1cdfd40a2b050940e02d6e23daf94322a85897042724c2a12255ef5e0200d46"
+sourceCorrections: []
+---
+
+虽然L1、L2和Dropout等正则化 (regularization)方法通常被视为对抗过拟合 (overfitting)和提高模型泛化能力的方法，但它们在塑造优化过程本身方面也发挥着显著作用。弄清这种关联对于应对深度神经网络 (neural network)训练中遇到的挑战性损失曲面是很有益的。从优化角度看，正则化方法能改变目标函数或训练动态，从而使学习稳定下来，并引导优化器找到具有良好特性的解。
+
+### L1和L2正则化 (regularization)：修改目标函数
+
+正则化与优化最直接的关联方式是改变优化器试图最小化的损失函数 (loss function)。L1（Lasso）和L2（Ridge或权重 (weight)衰减）正则化在原始损失函数$L_{orig}(\mathbf{w})$中添加一个基于模型权重 $\mathbf{w}$ 大小的惩罚项。
+
+修改后的目标函数变为：
+$L(\mathbf{w}) = L_{orig}(\mathbf{w}) + \lambda R(\mathbf{w})$
+其中 $R(\mathbf{w})$ 是正则化项，$\lambda$ 是正则化强度。
+
+- **L2正则化 ($R(\mathbf{w}) = ||\mathbf{w}||_2^2 = \sum_i w_i^2$):**
+  L2正则化项的梯度是 $2 \lambda \mathbf{w}$。将其添加到原始梯度中，更新规则会在每一步中有效地将权重收缩至零，这种现象常被称为**权重衰减**：
+  $\nabla_{\mathbf{w}} L(\mathbf{w}) = \nabla_{\mathbf{w}} L_{orig}(\mathbf{w}) + 2 \lambda \mathbf{w}$
+  从优化角度看，添加二次惩罚项有多方面作用：
+
+  - **平滑损失曲面：** 它在目标函数中添加了一个凸二次项。这可以使整体损失曲面在局部“更凸”，有助于平滑掉小的、尖锐的局部最小值，从而使优化问题变得更容易。
+  - **改善Hessian矩阵条件：** L2项的Hessian矩阵是 $2 \lambda I$，其中 $I$ 是单位矩阵。将其添加到原始Hessian矩阵 $H_{orig}$ 中，使组合后的Hessian矩阵 $H = H_{orig} + 2 \lambda I$ 更可能是正定的且条件更好（其特征值被 $2\lambda$ 偏移）。这对二阶方法有益，并有助于梯度下降 (gradient descent)的稳定。
+  - **偏好更小的权重：** 惩罚明确地抑制大权重，使优化器偏向于参数 (parameter)空间中权重较小区域的解。
+- **L1正则化 ($R(\mathbf{w}) = ||\mathbf{w}||_1 = \sum_i |w_i|$):**
+  L1惩罚项在 $w_i = 0$ 处不可微。它的梯度（更确切地说，它的次梯度）是 $\lambda \text{sgn}(\mathbf{w})$，其中 $\text{sgn}(w_i)$ 在 $w_i > 0$ 时为+1，在 $w_i < 0$ 时为-1，如果 $w_i = 0$，则可以是 $[-1, 1]$ 中的任意值。
+  $\nabla_{\mathbf{w}} L(\mathbf{w}) \in \nabla_{\mathbf{w}} L_{orig}(\mathbf{w}) + \lambda \text{sgn}(\mathbf{w})$
+  对优化的影响与L2有很大不同：
+
+  - **促使稀疏性：** 不论权重大小（与L2不同）恒定向零的推力促使权重变为精确的零。这在优化过程中起到一种隐式特征选择的作用，从而简化了模型。
+  - **优化上的困难：** 由于不可微性，标准的梯度下降法无法直接应用。在理论上需要近端梯度方法或次梯度方法，尽管在深度学习 (deep learning)框架中通常会使用其变体。L1惩罚项可能导致优化路径在权重为零的轴上“跳动”。
+
+下图显示了L2正则化如何平滑损失等高线并相对于原始损失移动最小值。
+
+
+
+![L2正则化对损失等高线的影响](plots/1312-0.json)
+
+
+
+> L2正则化添加了一个二次惩罚项（$||\mathbf{w}||_2^2$），将最小值拉向原点，并且与原始损失相比，通常会产生更平滑、更接近圆形的等高线。
+
+### Dropout：随机性与隐式集成
+
+Dropout的运作方式不同。它不是在损失函数 (loss function)中添加惩罚项，而是在训练期间随机修改网络结构。在每个训练步骤中，一小部分神经元激活（以及前向和后向传播中它们对应的权重 (weight)）会被暂时设为零。
+
+从优化角度看，Dropout产生了多种效果：
+
+- **噪声注入：** 随机丢弃单元会将噪声注入到反向传播 (backpropagation)过程中计算的梯度中。这种随机性类似于SGD中的噪声，帮助优化器更有效地查看损失曲面，并可能避免陷入确定性梯度下降 (gradient descent)可能受困的尖锐局部最小值或鞍点。
+- **隐式集成平均：** 使用Dropout进行训练可以被理解为训练一个由共享权重组成的庞大“精简”网络集合。每个训练步骤都使用一个不同的随机抽样子网络。在测试时，使用经过Dropout概率缩放的完整网络，近似于对这种指数级数量子网络预测的平均。这种集成平均通常会带来泛化能力更好的解。
+- **防止协同适应：** 通过强制单元即使在邻近单元被随机丢弃时也能有效运行，Dropout阻止了多个单元相互之间强烈依赖的复杂协同适应。这促使每个单元学习到更有独立用途的特征，这有助于获得更好的整体解。
+- **修改梯度流：** 尽管不直接改变目标函数 $L(\mathbf{w})$，但Dropout在每一步中明显改变了梯度计算 $\nabla_{\mathbf{w}} L(\mathbf{w})$，因为梯度仅通过当前子网络中的活跃单元进行计算。
+
+### 正则化 (regularization)、优化与泛化
+
+正则化对优化的影响与其对泛化的作用关联紧密。L2正则化和Dropout等方法通常会使优化器偏向于在损失曲面中找到“更宽”或“更平坦”的最小值。这些更平坦的最小值通常被认为泛化能力更佳，因为与尖锐、狭窄的最小值相比，输入数据或模型权重 (weight)的细微扰动不太可能导致输出预测出现大变化。
+
+此外，通过添加惩罚项（L1/L2）或注入噪声（Dropout），正则化有效地限制了优化器搜索的空间。这种简化可以使优化问题更易于处理，并且减少了对训练数据中噪声的拟合倾向。
+
+### 与优化器的配合考量
+
+需要注意的是，优化器的选择可能与正则化 (regularization)方式有配合影响。例如：
+
+- **L2与Adam：** Adam的标准实现通常与带有权重 (weight)衰减的普通SGD采用不同的L2正则化方式。自适应的每参数 (parameter)学习率与全局权重衰减项之间的关联需要仔细考量（参见AdamW等方法）。
+- **L1与可微性：** 配合L1正则化使用的优化器最好能处理零点处的不可微性，例如使用近端算子。
+
+总而言之，正则化方法不仅仅是提高泛化能力的附加项；它们是深度学习 (deep learning)优化过程中不可或缺的部分。它们重塑损失曲面，引入有益的偏差或随机性，并引导优化器找到解，这些解不仅在训练集上准确，而且在未见过的数据上表现良好。认识到这种双重作用，对于有效训练大型神经网络 (neural network)是很有帮助的。
+
+## 参考资料
+
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  深度学习的综合教科书，提供了正则化方法及其对优化影响的基础知识。
+- [Dropout: A Simple Way to Prevent Overfitting Neural Networks](https://www.jmlr.org/papers/v15/srivastava14a.html) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research; Volume: 15; Pages: 1929-1958; DOI: [10.5555/2627435.2670313](https://doi.org/10.5555/2627435.2670313)
+  介绍Dropout的原始论文，解释了其机制和在防止过拟合方面的有效性。
+- [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101) — Ilya Loshchilov and Frank Hutter (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1711.05101](https://doi.org/10.48550/arXiv.1711.05101)
+  介绍了分离式权重衰减（AdamW），阐明了L2正则化与自适应优化器结合的正确应用。

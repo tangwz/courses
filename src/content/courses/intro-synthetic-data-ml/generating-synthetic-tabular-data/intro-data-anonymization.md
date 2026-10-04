@@ -1,0 +1,65 @@
+---
+course: "intro-synthetic-data-ml"
+chapter: "generating-synthetic-tabular-data"
+lesson: "intro-data-anonymization"
+sourceId: 5669
+sourceUrl: "https://apxml.com/zh/courses/intro-synthetic-data-ml/chapter-3-generating-synthetic-tabular-data/intro-data-anonymization"
+title: "数据匿名化方法概述"
+description: "简要介绍合成数据与数据匿名化和隐私保护的关系。"
+order: 5
+plots: []
+sourceHash: "ef69ee3f423ce6d66b7b95e889a57ee8561aa7db2340f8038aa1f1b414d4a039"
+sourceCorrections: []
+---
+
+表格数据，特别是涉及个人或敏感业务操作的数据，通常包含因隐私原因而无法直接共享或使用的信息。例如客户数据库、患者记录或金融交易。直接使用这些数据进行分析或训练机器学习 (machine learning)模型，可能会违反隐私法规（如GDPR或HIPAA）或道德准则。在这种情况下，数据匿名化的想法就变得有意义了。
+
+## 什么是数据匿名化？
+
+数据匿名化是从数据集中修改或移除个人可识别信息（PII）的过程。其目标是使数据极难，最好是不可能，重新关联到特定个人。PII可以包括姓名、地址、社会安全号码、电话号码，甚至是看似无害的属性组合，例如邮政编码、出生日期和性别，这些组合可以唯一地识别某人。
+
+用于匿名化真实数据的常见方法包括：
+
+- **掩码处理：** 用通用字符替换敏感数据的一部分（例如，仅显示信用卡号码的后四位）。
+- **泛化处理：** 降低数据的精确度（例如，将确切年龄替换为30-40岁等年龄段，或将特定邮政编码替换为更广的区域）。
+- **扰动处理：** 向数值添加随机噪声，或以受控方式在记录之间交换值。
+
+尽管这些方法修改原始数据以降低隐私风险，但它们通常伴随着一种权衡。过于激进的匿名化可能会显著降低数据用于分析或机器学习 (machine learning)的质量和可用性。此外，即使是匿名化后的数据，有时也可以通过复杂的攻击手段，将其与其他可用数据集关联起来并重新识别。
+
+## 作为匿名化策略的合成数据
+
+这让我们回到合成数据生成的话题。相比于修改真实数据，我们生成全新的、人工的数据点，这些数据点模仿原始数据集中存在的统计模式和关系。
+
+这如何帮助保护隐私？
+
+1. **与真实个人无直接关联：** 从定义上讲，合成数据记录不对应于原始数据集中的实际个人或事件。它们是根据学到的模式伪造的。如果生成得当，则无法将它们一对一地映射回源数据。
+2. **保留模式而非具体细节：** 目标是捕捉真实数据中存在的整体结构、分布和相关性（可用性），而不复制任何单个真实记录的特定敏感细节（隐私）。
+3. **更强的隐私保护潜力：** 与修改真实数据相比，从头开始创建数据提供了一种根本不同的隐私保护方法。它避免了对真实记录应用传统匿名化方法后可能残留的风险。
+
+> 数据匿名化方法比较。路径1修改真实数据，存在潜在的重新识别风险。路径2根据真实数据中的模式生成新数据，旨在保留可用性而不包含真实记录。
+
+## 可用性与隐私的平衡
+
+有必要了解，为匿名化生成合成数据并非万灵丹。这之间仍需要找到一个精细的平衡点：
+
+- **高保真度，潜在风险：** 如果合成数据完美复制了*所有*模式，包括原始数据中非常罕见或独特的组合，它可能会在无意中泄露信息或允许对真实数据集进行推断。
+- **高隐私性，低可用性：** 如果生成过程过于平滑化了太多细节，或未能捕获列之间重要的关系以最大化隐私，生成的合成数据可能就没有用，无法用于训练准确的机器学习 (machine learning)模型或得出有效的分析结论。
+
+我们在本章中讨论的方法，例如独立生成列或试图保持基本相关性，都是初步的步骤。实现强大的隐私保证同时保持高数据可用性，通常需要更先进的生成模型（例如基于深度学习 (deep learning)的模型，这些超出了本入门课程的范围）以及专门用于衡量隐私风险的严谨评估方法（例如差分隐私）。
+
+然而，了解合成数据生成与数据匿名化之间的这种关联意义重大。它说明了另一个重要原因，即为什么生成人工数据变得越来越重要，尤其是在处理敏感表格数据集时。在你学习生成合成表格时，请记住这一潜在用途，即在保护隐私的同时仍然能够获得数据驱动的分析结果。
+
+## 参考资料
+
+- [k-Anonymity: A model for protecting privacy](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaUAqHCpapAEdZho0MtTZ3UvffrYraZa-Y7aPYk6-MxLtESy0S8bI0ohHs9rElK4nih6NL1cg-7q6ZhD2qb7TSgJa-BcgR2O6uSWZml3oAa2eRZYZWbdH4cJPe2g9grtr86VSX_ztkdi7qMIaTtRC2YLfOEd2tgzk=) — Latanya Sweeney (2002)
+  Journal: International Journal on Uncertainty, Fuzziness and Knowledge-based Systems; Volume: 10; Pages: 557-570; DOI: [10.1142/S0218488502001658](https://doi.org/10.1142/S0218488502001658)
+  介绍了基础的k-匿名模型，这是一种常见的数据匿名化方法，通过确保每条记录与至少k-1条其他记录无法区分，与泛化技术相关。
+- [Privacy-Preserving Data Publishing: An Overview](https://doi.org/10.2200/S00237ED1V01Y201003DTM002) — Raymond Chi-Wing Wong, Ada Wai-Chee Fu (2010)
+  Journal: Synthesis Lectures on Data Management; Publisher: Morgan & Claypool Publishers; Volume: 2; Pages: 1-138; DOI: [10.2200/S00237ED1V01Y201003DTM002](https://doi.org/10.2200/S00237ED1V01Y201003DTM002)
+  全面概述了各种传统的隐私保护数据发布技术，包括数据屏蔽、泛化和扰动，并讨论了其效用与隐私的权衡。
+- [A Survey of Privacy-Preserving Synthetic Data Generation](https://doi.org/10.1145/3631481) — Zhaohang Cao, Zhe Li, Chuan Wang, Ke Lyu, Yuzhen Wang, and Bing Yuan (2023)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery (ACM); Volume: 56; Pages: Article 28, pp. 1–38; DOI: [10.1145/3631481](https://doi.org/10.1145/3631481)
+  近期关于隐私保护合成数据生成方法的一篇全面综述，与理解合成数据作为匿名化策略直接相关。
+- [The Algorithmic Foundations of Differential Privacy](https://doi.org/10.1561/0400000042) — Cynthia Dwork and Aaron Roth (2014)
+  Journal: Foundations and Trends® in Theoretical Computer Science; Publisher: Now Publishers Inc.; Volume: 9; Pages: 211-407; DOI: [10.1561/0400000042](https://doi.org/10.1561/0400000042)
+  一本基础性著作，介绍了差分隐私，这是一种严格的隐私数学定义，对于构建稳健的隐私保护系统和评估合成数据中的隐私风险至关重要。

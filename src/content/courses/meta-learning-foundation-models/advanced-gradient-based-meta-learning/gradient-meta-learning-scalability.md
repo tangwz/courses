@@ -1,0 +1,80 @@
+---
+course: "meta-learning-foundation-models"
+chapter: "advanced-gradient-based-meta-learning"
+lesson: "gradient-meta-learning-scalability"
+sourceId: 4317
+sourceUrl: "https://apxml.com/zh/courses/meta-learning-foundation-models/chapter-2-advanced-gradient-based-meta-learning/gradient-meta-learning-scalability"
+title: "基础模型的可扩展性考量"
+description: "将基于梯度的方法应用于高维参数空间的策略。"
+order: 5
+plots: []
+sourceHash: "b1451e096968efacf615024667d0bc44549f5aac6f7977df700465a332092612"
+sourceCorrections: []
+---
+
+将基于梯度的元学习算法（例如 MAML、FOMAML 和 Reptile）直接应用于数十亿参数 (parameter)的大型语言模型 (LLM) 或视觉 Transformer 等大规模基础模型时，会带来显著的可扩展性难题。尽管这些方法为学习可快速适应的初始设置提供了有说服力的理论框架，但面对现代基础模型的庞大体量，其计算和内存需求可能变得难以承受。
+
+### 维度和计算的挑战
+
+基础模型在极高维度的参数 (parameter)空间 $\theta \in \mathbb{R}^D$ 中运行，其中 $D$ 可以达到数十亿。这种规模从多个方面深刻影响着基于梯度的元学习：
+
+1. **内循环成本：** 即使内循环中只有少量梯度步 $k$，也需要在元批次中的*每个任务*中，计算梯度并更新所有 $D$ 个参数 $k$ 次。虽然单次前向/反向传播 (backpropagation)对于推理 (inference)或标准微调 (fine-tuning)是可行的，但对每个任务重复多次会显著增加计算量。
+2. **外循环成本（元梯度）：** 计算元梯度 $\nabla_\theta \mathcal{L}_{\text{meta}}$ 是主要瓶颈，尤其对于 MAML 而言。
+   - **MAML 的二阶导数：** 回顾一下，MAML 需要通过内循环优化过程进行微分。这涉及为内循环损失函数 (loss function)计算 Hessian 向量 (vector)积（或其近似值）。对于 $D$ 维参数空间，计算甚至近似 Hessian $D \times D$ 矩阵是不可行的。即使是隐式方法 (iMAML) 也需要求解大型线性系统，这仍然是计算密集型的。
+   - **FOMAML/Reptile：** 这些一阶方法通过近似元梯度来避免昂贵的二阶导数。尽管这大幅降低了计算成本，但近似质量可能下降，可能影响所学初始设置的效用，尤其对于大型模型中固有的复杂适应动态而言。元更新仍需累积元批次中所有任务的梯度，这在分布式设置中涉及显著的通信开销。
+3. **内存占用：** 存储模型参数、激活值、梯度以及可能的优化器状态会占用大量内存。
+   - **MAML：** 需要存储内循环更新的计算图以计算二阶梯度，这导致内存使用量随内循环步数 $k$ 线性增长。梯度检查点等技术可以提供帮助，但它们会引入重新计算的开销。
+   - **FOMAML/Reptile：** 比 MAML 更节省内存，因为它们不需要完整的内循环图进行反向传播。然而，存储多个模型副本（在元批次内每个任务更新一个，然后进行平均或应用元更新）或累积大型元批次中的梯度，对于数十亿参数的模型仍带来显著的内存难题。前向传播期间的激活值也是主要的内存消耗者。
+
+### 基于梯度的元学习的扩展策略
+
+应对这些挑战需要专门的策略，这些策略通常涉及对标准算法进行近似或修改：
+
+#### 1. 采用一阶近似
+
+考虑到二阶导数的巨大成本，FOMAML 和 Reptile 是将基于梯度的元学习原则应用于基础模型的最实际起点。尽管承认其近似局限性，但它们保留了通过梯度下降 (gradient descent)优化初始设置以实现快速适应的核心思想。研究通常侧重于通过精心调优超参数 (parameter) (hyperparameter)（元学习率、内循环步数）和优化后的实现，提高这些一阶方法在大型模型场景中的稳定性和效用。
+
+#### 2. 参数高效元学习
+
+我们可以不元学习全部 $D$ 个参数，而只将基于梯度的元学习应用于一小部分*适应特定*参数。这与参数高效微调 (fine-tuning) (PEFT) 的思想相符，PEFT 将在第 5 章详细说明。核心思想是结合 PEFT 的高效性与元学习的自适应初始设置目标。
+
+- **元学习适配器：** 使用元学习目标训练适配器模块（插入到基础模型架构中的小型神经网络 (neural network)）。元学习优化这些适配器的初始权重 (weight)（或初始化它们的过程），以便它们可以仅使用少量示例就能在新任务上快速微调。
+- **元学习提示/前缀：** 应用 MAML 或 FOMAML 来学习一组初始的提示嵌入 (embedding)或前缀参数，作为下游任务上进行提示微调的良好起点。
+- **元学习 LoRA 参数：** 元学习低秩适应 (LoRA) 中使用的低秩矩阵 $A$ 和 $B$ 的初始化。外循环根据它们在内循环中对任务特定数据的更新期间的适应速度，优化这些初始低秩矩阵。
+
+这种参数高效的方法大幅降低了元优化问题的维度，使计算和内存需求更易管理。元梯度仅针对一小部分可调参数（例如适配器权重、LoRA 矩阵）计算，而不是针对基础模型的全部权重，基础模型的全部权重在元训练期间保持冻结。
+
+#### 3. 梯度与优化工程
+
+即使使用一阶方法或参数高效方法，优化基础模型的元目标也需要仔细考量：
+
+- **梯度裁剪：** 在内循环和外循环中应用梯度裁剪是必要的，可以防止由潜在大梯度引起的不稳定性，尤其是在训练初期或处理多样化任务分布时。
+- **学习率调度：** 对于元优化器（外循环）采用精密的学习率调度通常是必要的，以确保在高维、可能非凸的元损失函数 (loss function)空间中实现稳定收敛。
+- **元优化器选择：** 尽管 Adam 比较常用，但考察其他为大规模训练或元学习目标特定属性而设计的优化器可能会带来益处。
+
+#### 4. 高效实现技术
+
+扩展任何基础模型的训练过程都需要运用优化后的实现：
+
+- **混合精度训练：** 使用 BFloat16 或 FP16 等格式可显著减少参数、梯度和激活值的内存消耗，并能加速在兼容硬件（如 TPU 和现代 GPU）上的计算。需要仔细考虑数值稳定性（例如，损失缩放）。
+- **梯度检查点（激活值重新计算）：** 通过避免在前向传播期间存储整个模型的激活值，实现了以计算换内存。取而代之，在反向传播 (backpropagation)期间重新计算激活值。即使对于模型本身很深的 FOMAML，这一点也很重要。
+- **分布式训练：** 元学习自然适合任务并行，即元批次内的不同任务在不同设备（GPU/TPU）上处理。参数分片技术（如 ZeRO 或 FSDP）通常需要用来分布模型参数和优化器状态本身，尤其是在元学习完整模型或大型 PEFT 模块时。这些技术将在第 6 章进一步讨论。
+
+> 将基于梯度的元学习应用于基础模型的策略通常涉及使用一阶近似（FOMAML/Reptile），仅针对一小部分参数高效模块（PEFT 元学习），以及依靠高效实现技术。
+
+最终，将基于梯度的元学习应用于基础模型需要仔细权衡适应性能、计算成本和内存使用。参数高效元学习当前代表了一个有前景的方向，它平衡了学习到的初始设置的益处与大型模型训练的实际限制。随着研究的进展，我们期望在算法和实现技术方面有更多发展，这些技术是专门为大规模基础模型时代的元学习而定制的。
+
+## 参考资料
+
+- [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](http://proceedings.mlr.press/v70/finn17a/finn17a.pdf) — Chelsea Finn, Pieter Abbeel, and Sergey Levine (2017)
+  Journal: Proceedings of the 34th International Conference on Machine Learning (ICML); Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 70; Pages: 1126-1135; DOI: [10.5555/3305890.3306019](https://doi.org/10.5555/3305890.3306019)
+  介绍了模型无关元学习（MAML），这是一种基础的基于梯度的元学习算法，其二阶导数计算和内存需求是扩展到基础模型时的主要挑战。
+- [On First-Order Meta-Learning Algorithms](https://arxiv.org/pdf/1803.02999.pdf) — Alex Nichol, Joshua Achiam, and John Schulman (2018)
+  Journal: arXiv preprint arXiv:1803.02999; Publisher: arXiv
+  提出了Reptile，一种一阶元学习算法，相较于MAML提供了计算上更高效的替代方案，使其更适用于大规模应用，直接解决了可扩展性问题。
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/pdf/2106.09685.pdf) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen (2021)
+  Journal: International Conference on Learning Representations (ICLR 2022); Publisher: OpenReview.net; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了低秩适应（LoRA），一种重要的参数高效微调技术，通过减少可训练参数的数量，对于基础模型上的参数高效元学习至关重要。
+- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models](https://doi.org/10.1109/SC41405.2020.00078) — Samyam Rajbhandari, Cong Guo, Jeff Rasley, Shaden Smith, and Yuxiong He (2020)
+  Journal: Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis (SC); Publisher: IEEE; Pages: 74-88; DOI: [10.1109/SC41405.2020.00078](https://doi.org/10.1109/SC41405.2020.00078)
+  详细介绍了ZeRO，一种用于大规模分布式训练的内存高效优化器，直接解决了基础模型巨大的内存占用和计算需求，这对于可扩展的元学习至关重要。

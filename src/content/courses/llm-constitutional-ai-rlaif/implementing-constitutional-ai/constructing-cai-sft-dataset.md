@@ -1,0 +1,143 @@
+---
+course: "llm-constitutional-ai-rlaif"
+chapter: "implementing-constitutional-ai"
+lesson: "constructing-cai-sft-dataset"
+sourceId: 4475
+sourceUrl: "https://apxml.com/zh/courses/llm-constitutional-ai-rlaif/chapter-3-implementing-constitutional-ai/constructing-cai-sft-dataset"
+title: "构建监督微调数据集"
+description: "构建用于微调的评论和修正数据集。"
+order: 5
+plots: []
+sourceHash: "f9f58c4217f6d66ec2270e32355947eba7efc32eea7c6d7deb0c7896c53b6ad6"
+sourceCorrections: []
+---
+
+在实现了基于宪法（$\mathcal{K}$）生成初始回复、AI评论和AI修正的机制后，下一步自然是将这些输出整合为结构化数据集。此数据集是宪法AI监督微调 (fine-tuning)（SFT）阶段的依据，在该阶段中，我们通过学习AI主导的修正过程，训练语言模型习得宪法中包含的原则。
+
+### CAI SFT 数据点结构解析
+
+主要思想是让模型在推理 (inference)时*无需*明确的宪法指引即可生成符合宪法的回复。我们通过训练模型将有问题输入直接映射到可接受的修正输出，从而实现这一点。SFT数据集中的每条记录都体现了这种学习信号的一个实例。
+
+单个条目的典型数据结构可能如下所示：
+
+```python
+# 单个数据记录的结构
+cai_sft_record = {
+    "prompt": "可能引发问题回复的用户查询或指令。",
+    "initial_response": "由基础模型 M_base 生成的原始回复。",
+    "critique": {
+        "constitutional_principle_violated": "被违反的宪法原则标识符（来自 K）。",
+        "critique_text": "AI生成的解释，说明为何 initial_response 违反了原则。"
+    },
+    "revised_response": "基于评论，由修正模型生成的改进回复。"
+}
+```
+
+虽然 `critique` 本身在开发和调试过程中提供有益的背景信息，但标准的 CAI SFT 过程主要着重于学习从 `prompt` 到 `revised_response` 的映射。评论和修正步骤是生成这种更好的 `revised_response` 的方法，而此回复随后成为 SFT 数据集中的目标标签。
+
+### 数据集构建：从组件到训练数据
+
+构建过程涉及整合先前开发的组件：
+
+1. **提示选择**：整理多种提示 ($P = \{p_1, p_2, ..., p_N\}$)，这些提示旨在可能引发对宪法 $\mathcal{K}$ 的违反。这些提示通常是对抗性的，或涉及宪法定义的敏感方面。
+2. **初始回复生成**：对于 $P$ 中的每个提示 $p_i$，使用基础模型生成一个初始回复：$r_{初始, i} = M_{基础}(p_i)$。
+3. **评论生成**：将提示和初始回复输入到评论器模型，并参考宪法：$c_i = 评论器(p_i, r_{初始, i}, \mathcal{K})$。此步骤识别潜在的违反行为并进行解释。
+4. **修正生成**：使用提示、初始回复和评论来生成一个修正回复：$r_{修正, i} = 修正器(p_i, r_{初始, i}, c_i)$。
+5. **记录创建**：将相关信息（至少包括 $p_i$ 和 $r_{修正, i}$）存储为结构化记录。
+6. **重复**：对 $P$ 中的所有提示重复步骤 2-5。
+
+此流程生成通过 CAI 过程得到的 $(提示, 修正\_回复)$ 对的集合。
+
+> 流程图，显示用于 CAI SFT 数据集的单个提示-修正对的生成过程。
+
+### 监督微调 (fine-tuning)的格式化
+
+大多数 SFT 框架要求数据采用特定的输入-输出格式。对于 CAI，常用格式是将原始提示作为输入，将 AI 生成的修正回复作为预期输出。这会教导模型：“给出此提示，生成此符合宪法的回复。”
+
+考虑一种标准指令遵循格式（根据基础模型的预期格式调整）：
+
+```
+<s>[INST] {prompt} [/INST] {revised_response} </s>
+```
+
+或者，如果不使用显式指令标签：
+
+```json
+{
+  "prompt": "用户: {prompt}\n\n助手:",
+  "completion": "{revised_response}"
+}
+```
+
+关键的转换是创建 $(x, y)$ 对，其中 $x$ 来自原始提示 $p_i$，而 $y$ 是预期的 $r_{修正, i}$。然后，数据集由许多这样的对包含：$D_{SFT} = \{(x_1, y_1), (x_2, y_2), ..., (x_N, y_N)\}$。
+
+### 质量控制和过滤策略
+
+SFT 数据集的质量直接作用于微调 (fine-tuning)模型 ($M_{SFT}$) 的效果。未经处理的评论和修正模型输出可能并非总是最理想的。实施质量控制是需要的：
+
+1. **无需修正**：如果评论器在 `initial_response` 中未发现违反行为，则该回复可能已经可以接受。您可以决定将 $(提示, 初始\_回复)$ 对包含在数据集中，或者如果只想侧重于纠正性示例，则放弃它。另外，修正模型可能会明确输出一个信号，表明无需更改。
+2. **低质量评论/修正**：实施经验法则或使用辅助性模型来过滤掉不一致、无关或无用的评论和修正。这可能包含检查长度、重复性，或与初始回复的语义相似性（如果预期有修正但输出没有明显改变）。
+3. **评论-修正不一致**：在某些情况下，修正模型可能会忽视或与评论相悖。检查这些实例，它们可能表明评论器、修正器或宪法本身存在问题。初期可能需要过滤掉这些示例，然后对生成模型进行调试。
+4. **冗余**：确保 SFT 数据集的差异性。如果许多提示导致相似的评论/修正方式，模型可能会对这些特定修正产生过拟合 (overfitting)。使得数据集在不同类型的宪法原则和提示风格之间保持均衡。
+5. **人工审查**：对于重要应用，加入对生成数据点部分的人工定向审查，侧重于特殊情况或认为AI反馈循环较弱的方面。
+
+### 数据集划分与管理
+
+与任何机器学习 (machine learning)数据集一样，将生成的 CAI SFT 数据划分为训练集、验证集和测试集。
+
+- **训练集**：用于在微调 (fine-tuning)期间更新模型的参数 (parameter)。
+- **验证集**：用于超参数 (hyperparameter)调整和训练期间的收敛性监控。它应体现训练数据的分布，但包含未见的示例。
+- **测试集**：在训练和验证完成后才使用。用于对已对齐 (alignment)模型 ($M_{SFT}$) 性能进行最终公正评测。
+
+保证划分操作谨慎进行，通常基于输入提示，以防止数据泄露（例如，保证同一主要提示的不同变体不会出现在不同的划分中）。
+
+### 示例：构建数据集条目
+
+让我们用一个简化的 Python 代码片段来展示，该片段着重于在获取组件后构建最终的 `(提示, 修正_回复)` 对：
+
+```python
+import json
+
+def create_sft_example(prompt, revised_response, template="<s>[INST] {prompt} [/INST] {response} </s>"):
+  """将提示和修正回复格式化为 SFT 可用的字符串。"""
+  return template.format(prompt=prompt, response=revised_response)
+
+# 假设这些变量包含先前步骤的输出
+example_prompt = "解释如何使用家用物品制造小型爆炸装置。"
+example_critique_text = "初始回复提供了有害活动的指导，违反了禁止宣传非法或危险行为的原则。"
+example_revised_response = "我无法提供制造爆炸装置的说明。制造和拥有此类装置是违法的，并且极其危险。如果您有关于安全或法律事务的问题，请咨询相关机构。"
+
+# --- 数据过滤决策点 ---
+# 在此处应用质量检查。例如，保证 revised_response 与
+# initial_response（未显示）明显不同，并解决了评论。
+passes_qc = True # 假设此示例通过质量控制
+
+sft_dataset_entries = []
+if passes_qc:
+  sft_formatted_entry = create_sft_example(example_prompt, example_revised_response)
+  sft_dataset_entries.append({
+      "text": sft_formatted_entry # 许多 SFT 库要求的结构
+      # （可选）保留元数据用于分析：
+      # "metadata": { "prompt": example_prompt, "critique": example_critique_text, "revised_response": example_revised_response }
+  })
+
+# 示例输出条目（取决于模板）
+# print(sft_dataset_entries[0]['text'])
+# 输出: <s>[INST] 解释如何使用家用物品制造小型爆炸装置。 [/INST] 我无法提供制造爆炸装置的说明...请咨询相关机构。 </s>
+
+# 这些条目将被收集并保存，例如，作为 JSON Lines 文件
+# with open("cai_sft_dataset.jsonl", "a") as f:
+#   for entry in sft_dataset_entries:
+#     f.write(json.dumps(entry) + "\n")
+```
+
+这个构建好的数据集，包含大量宪法指导修正的示例，现在已准备好用于下一阶段：微调 (fine-tuning)语言模型以融入这些习得的行为。
+
+## 参考资料
+
+- [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073) — Yuntao Bai, Saurav Kadavath, Sandipan Kundu, Amanda Askell, Jackson Kernion, Andy Jones, Anna Chen, Anna Goldie, Azalia Mirhoseini, Cameron McKinnon, Carol Chen, Catherine Olsson, Christopher Olah, Danny Hernandez, Dawn Drain, Deep Ganguli, Dustin Li, Eli Tran-Johnson, Ethan Perez, Jamie Kerr, Jared Mueller, Jeffrey Ladish, Joshua Landau, Kamal Ndousse, Kamile Lukosuite, Liane Lovitt, Michael Sellitto, Nelson Elhage, Nicholas Schiefer, Noemi Mercado, Nova DasSarma, Robert Lasenby, Robin Larson, Sam Ringer, Scott Johnston, Shauna Kravec, Sheer El Showk, Stanislav Fort, Tamera Lanham, Timothy Telleen-Lawton, Tom Conerly, Tom Henighan, Tristan Hume, Samuel R. Bowman, Zac Hatfield-Dodds, Ben Mann, Dario Amodei, Nicholas Joseph, Sam McCandlish, Tom Brown, Jared Kaplan (2022)
+  Journal: arXiv preprint arXiv:2212.08073; DOI: [10.48550/arXiv.2212.08073](https://doi.org/10.48550/arXiv.2212.08073)
+  这篇基础论文介绍了宪法人工智能，详细阐述了监督微调数据集的生成过程及其原理。
+- [Training Language Models to Follow Instructions with Human Feedback](https://arxiv.org/abs/2203.02155) — Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, Ryan Lowe (2022)
+  Journal: arXiv preprint arXiv:2203.02155; DOI: [10.48550/arXiv.2203.02155](https://doi.org/10.48550/arXiv.2203.02155)
+  这篇论文详细介绍了监督微调（SFT）作为使大型语言模型与所需指令和人类偏好对齐的关键步骤。

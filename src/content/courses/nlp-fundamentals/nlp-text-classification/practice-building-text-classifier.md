@@ -1,0 +1,251 @@
+---
+course: "nlp-fundamentals"
+chapter: "nlp-text-classification"
+lesson: "practice-building-text-classifier"
+sourceId: 2494
+sourceUrl: "https://apxml.com/zh/courses/nlp-fundamentals/chapter-3-nlp-text-classification/practice-building-text-classifier"
+title: "实践：构建文本分类器"
+description: "在示例数据集上构建、训练与评估文本分类模型。"
+order: 7
+plots: ["plots/2494-0.json"]
+sourceHash: "adc4e9eedc2d3e48512cd1f5e427876ea4c43934ea3a1960914b5d0b6c847d12"
+sourceCorrections: []
+---
+
+好的，让我们将理论付诸实践。在此实操练习中，您将搭建一个完整的文本分类流程，运用本章及前几章所学知识。我们将使用一个数据集，进行预处理、特征提取、训练分类器并评估其表现。
+
+我们的目标是制作一个简单的垃圾邮件检测器。我们将使用一个包含被标记 (token)为“垃圾邮件”或“正常邮件”的小型短信数据集。
+
+### 环境准备与数据加载
+
+首先，请确保已安装所需的库，特别是 `scikit-learn` 和 `pandas`。如果尚未安装，通常可以使用 pip 进行安装：
+
+```bash
+pip install scikit-learn pandas
+```
+
+假设我们的数据集位于一个名为 `spam_data.csv` 的简单 CSV 文件中，包含两列：`label`（'正常邮件' 或 '垃圾邮件'）和 `text`。
+
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression # 另一种分类器的例子
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import plotly.graph_objects as go
+import numpy as np
+
+# 加载数据集（如果路径不同，请将 'spam_data.csv' 替换为实际文件路径）
+# 为了演示，我们创建一个小型样本DataFrame
+data = {'label': ['ham', 'spam', 'ham', 'spam', 'ham', 'ham', 'spam', 'ham', 'spam', 'ham'],
+        'text': ['Go until jurong point, crazy.. Available only in bugis n great la e buffet... Cine there got amore wat...',
+                 'Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C apply 08452810075over18s',
+                 'U dun say so early hor... U c already then say...',
+                 'WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.',
+                 'Nah I dont think he goes to usf, he lives around here though',
+                 'Even my brother is not like to speak with me. They treat me like aids patent.',
+                 'URGENT! You have won a 1 week FREE membership in our £100,000 Prize Jackpot! Txt the word: CLAIM to No: 81010 T&C www.dbuk.net LCCLTD POBOX 4403LDNW1A7RW18',
+                 'I am gonna be home soon and i dont want to talk about this stuff anymore tonight, k? Ive cried enough today.',
+                 'SIX chances to win CASH! From 100 to 20,000 pounds txt> CSH11 and send to 87575. Cost 150p/day, 6days, 16+ TsandCs apply Reply HL 4 info',
+                 'I have been searching for the right words to thank you for this breather. I promise i wont take your help for granted and will fulfil my promise.']}
+df = pd.DataFrame(data)
+
+# 显示前几行并检查类别分布
+print("数据集头部：")
+print(df.head())
+print("\n类别分布：")
+print(df['label'].value_counts())
+
+# 分离特征（文本）和目标（标签）
+X = df['text']
+y = df['label']
+
+# 将数据分成训练集和测试集
+# 对于这个示例数据集，使用较小的 test_size
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+print(f"\nTraining set size: {len(X_train)}")
+print(f"Test set size: {len(X_test)}")
+```
+
+这里，我们使用 pandas 加载数据，检查它，然后使用 `train_test_split` 将其分成训练集和测试集。使用 `stratify=y` 是一个良好的做法，特别是对于可能不平衡的数据集，因为它能确保训练集和测试集中标签的比例大致相同。
+
+### 构建流程
+
+如前所述，如果在训练前直接应用预处理和特征提取步骤而不小心操作，可能会导致数据泄漏（例如，在分割数据集之前，在整个数据集上拟合 `TfidfVectorizer`）。`scikit-learn` 的 `Pipeline` 对象非常适合将这些步骤串联起来，确保仅从训练数据中学习转换。
+
+我们将创建一个流程，首先应用 TF-IDF 向量 (vector)化，然后训练一个多项式朴素贝叶斯（MNB）分类器。MNB 通常是文本分类任务的一个良好基准模型。
+
+```python
+# 创建一个包含 TF-IDF 向量化器和多项式朴素贝叶斯的流程
+text_clf_nb = Pipeline([
+    ('tfidf', TfidfVectorizer(stop_words='english')), # 添加停用词去除
+    ('clf', MultinomialNB()),
+])
+
+# 在训练数据上训练整个流程
+print("\n正在训练朴素贝叶斯流程...")
+text_clf_nb.fit(X_train, y_train)
+print("训练完成。")
+```
+
+在此流程中：
+
+1. `TfidfVectorizer(stop_words='english')`：将文本文档转换为 TF-IDF 特征矩阵。我们还在向量化 (quantization)器中直接包含基本的英语停用词去除功能。当调用 `fit` 时，它将*只*从 `X_train` 中学习词汇表 (vocabulary)和 IDF 权重 (weight)。
+2. `MultinomialNB()`：将在 TF-IDF 特征上训练的分类器。
+
+当 `text_clf_nb.fit(X_train, y_train)` 执行时，训练数据 `X_train` 会流经整个流程：首先，`tfidf` 步骤对其进行转换，然后将生成的特征用于训练 `clf` 步骤（朴素贝叶斯）。
+
+### 进行预测与评估
+
+现在，我们使用训练好的流程在保留的测试集（`X_test`）上进行预测，并使用前面讨论过的指标评估表现。
+
+```python
+# 在测试集上进行预测
+print("\n在测试集上进行预测...")
+y_pred_nb = text_clf_nb.predict(X_test)
+
+# 评估朴素贝叶斯模型
+print("\n朴素贝叶斯模型评估：")
+accuracy_nb = accuracy_score(y_test, y_pred_nb)
+print(f"Accuracy: {accuracy_nb:.4f}")
+
+print("\n分类报告：")
+print(classification_report(y_test, y_pred_nb))
+
+print("\n混淆矩阵：")
+cm_nb = confusion_matrix(y_test, y_pred_nb, labels=text_clf_nb.classes_)
+print(cm_nb)
+
+# 创建 Plotly 混淆矩阵图的函数
+def plot_confusion_matrix(cm, labels):
+    # 使用蓝色配色
+    colorscale = [
+        [0.0, '#e9ecef'], # 0 对应浅灰色
+        [0.5, '#74c0fc'], # 浅蓝色
+        [1.0, '#1c7ed6']  # 最大值对应深蓝色
+    ]
+    fig = go.Figure(data=go.Heatmap(
+                    z=cm,
+                    x=labels,
+                    y=labels,
+                    hoverongaps=False,
+                    colorscale=colorscale,
+                    showscale=False # 为简化隐藏颜色条
+                   ))
+
+    # 添加单元格数值标注
+    annotations = []
+    for i, row in enumerate(cm):
+        for j, value in enumerate(row):
+            annotations.append(
+                go.layout.Annotation(
+                    text=str(value),
+                    x=labels[j],
+                    y=labels[i],
+                    xref="x1",
+                    yref="y1",
+                    showarrow=False,
+                    font=dict(color="black" if value < (cm.max() / 2) else "white") # 调整文本颜色以获得对比度
+                )
+            )
+
+    fig.update_layout(
+        title='混淆矩阵（朴素贝叶斯）',
+        xaxis_title="预测标签",
+        yaxis_title="真实标签",
+        xaxis=dict(side='bottom'), # 将 x 轴标签放在底部
+        yaxis=dict(autorange='reversed'), # 从上到下显示真实标签
+        width=450, height=400, # 根据需要调整大小
+        margin=dict(l=50, r=50, t=50, b=50),
+        annotations=annotations
+    )
+    return fig
+
+# 生成并显示混淆矩阵图
+fig_nb = plot_confusion_matrix(cm_nb, text_clf_nb.classes_)
+# 在真实的网页环境或 Notebook 中，您将在此处显示 fig_nb。
+# 对于此格式，我们输出 JSON 表示。
+print("\nPlotly 混淆矩阵 JSON：")
+print(fig_nb.to_json(pretty=False))
+```
+
+
+
+![混淆矩阵（朴素贝叶斯）](plots/2494-0.json)
+
+
+
+> 使用朴素贝叶斯模型进行垃圾邮件分类任务的混淆矩阵，显示预测标签与真实标签的对照。基于这个非常小的样本，模型正确识别了“正常邮件”，但错误分类了“垃圾邮件”。
+
+**结果解读（基于输出的示例）：**
+
+- **准确率（Accuracy）：** 正确预测的总体百分比。虽然简单，但对于不平衡数据集可能会产生误导。
+- **分类报告：**
+  - **精确率（Precision）（针对“垃圾邮件”）：** 在所有被预测为垃圾邮件的消息中，有多少比例确实是垃圾邮件？(真阳性 / (真阳性 + 假阳性))
+  - **召回率（Recall）（针对“垃圾邮件”）：** 在所有实际垃圾邮件消息中，模型正确识别了多少比例？(真阳性 / (真阳性 + 假阴性))
+  - **F1 值：** 精确率和召回率的调和平均值，提供了一个平衡两者的单一指标。
+  - **支持数（Support）：** 测试集中每个类别的实际出现次数。
+- **混淆矩阵：** 提供了每个类别正确和错误预测的详细分类。对角线元素代表正确分类，而非对角线元素代表错误（例如，当实际是“垃圾邮件”时预测为“正常邮件”）。*注意：上面示例图中显示的具体数字是基于小数据集的，可能表现不佳。*
+
+### 尝试不同的分类器
+
+流程使得更换组件变得容易。让我们尝试使用逻辑回归而不是朴素贝叶斯。
+
+```python
+# 创建并训练一个包含逻辑回归的流程
+text_clf_lr = Pipeline([
+    ('tfidf', TfidfVectorizer(stop_words='english')),
+    ('clf', LogisticRegression(solver='liblinear', random_state=42)), # 使用适用于小数据集的 liblinear 求解器
+])
+
+print("\n正在训练逻辑回归流程...")
+text_clf_lr.fit(X_train, y_train)
+print("训练完成。")
+
+# 进行预测与评估
+print("\n使用逻辑回归进行预测...")
+y_pred_lr = text_clf_lr.predict(X_test)
+
+print("\n逻辑回归模型评估：")
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+print(f"Accuracy: {accuracy_lr:.4f}")
+print("\n分类报告：")
+print(classification_report(y_test, y_pred_lr))
+print("\n混淆矩阵：")
+cm_lr = confusion_matrix(y_test, y_pred_lr, labels=text_clf_lr.classes_)
+print(cm_lr)
+
+# 您可以在此处为逻辑回归生成另一个 Plotly 混淆矩阵
+# fig_lr = plot_confusion_matrix(cm_lr, text_clf_lr.classes_)
+# print(fig_lr.to_json(pretty=False))
+```
+
+通过比较两个模型的评估指标（准确率、精确率、召回率、F1 值、混淆矩阵），您可以判断哪个分类器在此特定任务和数据集上表现更好。
+
+### 后续步骤
+
+本练习演示了构建和评估文本分类器的基本流程。为了在此基准上改进，您可以：
+
+1. **使用更大的数据集：** 表现需要更多数据。
+2. **尝试特征工程：** 尝试不同的 `TfidfVectorizer` 参数 (parameter)（例如，`ngram_range=(1, 2)` 以包含二元词，`max_df`，`min_df`）。
+3. **尝试其他分类器：** 尝试支持向量 (vector)机（`LinearSVC` 通常对文本有效）。
+4. **超参数 (hyperparameter)调优：** 使用 `GridSearchCV` 或 `RandomizedSearchCV` 等方法寻找向量化 (quantization)器和分类器的最佳设置（本章前面已介绍）。
+5. **交叉验证：** 使用 `cross_val_score` 来获得比单一训练-测试分割更好的模型表现估计。
+6. **错误分析：** 检查被错误分类的具体消息，以了解模型的不足。
+
+这一实际应用巩固了将文本转换为分类的过程，这是自然语言处理中一项常见且有价值的任务。
+
+## 参考资料
+
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  涵盖文本分类基础、特征工程和包括朴素贝叶斯在内的各种分类算法。
+- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/) — Christopher D. Manning, Prabhakar Raghavan, and Hinrich Schütze (2008)
+  Publisher: Cambridge University Press
+  关于TF-IDF权重和文本朴素贝叶斯分类的详细背景。
+- [6.2. Text feature extraction](https://scikit-learn.org/stable/modules/feature_extraction.html#text-feature-extraction) — Scikit-learn developers (2023)
+  关于TfidfVectorizer及其参数以及scikit-learn中文本预处理的指南。
+- [3.1. Chaining estimators together](https://scikit-learn.org/stable/modules/compose.html#pipeline) — Scikit-learn developers (2023)
+  描述Pipeline对象，用于链接预处理和分类步骤，并防止数据泄漏。

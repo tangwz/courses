@@ -1,0 +1,42 @@
+---
+course: "getting-started-with-git"
+chapter: "branching-merging-basics"
+lesson: "fast-forward-merges"
+sourceId: 1019
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-git/chapter-4-branching-merging-basics/fast-forward-merges"
+title: "理解快进合并"
+description: "了解最简单的合并类型——快进合并，它发生在没有分歧提交的情况下。"
+order: 7
+plots: []
+sourceHash: "b36ecc4cd3524e37e247637d6d26ed9cfbe964491692c941a42d8b20ad3c58ee"
+sourceCorrections: []
+---
+
+将已添加提交的特性分支上的改动整合回主开发线（例如 `main` 分支），是Git中的一项常见任务。`git merge` 命令用于执行此整合。“快进”合并是各种合并类型中最简单的一种。
+
+快进合并发生在特定条件下：你正在合并*到*的分支（比如 `main`）自从你正在合并的分支（我们称之为 `feature`）创建以来，没有新的提交。换句话说，`main` 分支的最新提交是 `feature` 分支最新提交的直接祖先。从 `main` 所指的提交到 `feature` 所指的提交，存在一条线性路径。
+
+考虑以下历史记录：
+
+> 合并前的提交历史。`feature` 分支在提交 C2 处从 `main` 分出，并有一个额外的提交 C3。`main` 自 `feature` 创建以来没有移动。
+
+在此情形下，`main` 指向提交 `C2`，`feature` 指向提交 `C3`。重要地，`C2` 是 `C3` 的直接祖先。在 `feature` 上进行工作时，`main` 没有新增提交。
+
+当你在 `main` 分支并运行 `git merge feature` 时，Git 会看到这条线性路径。它明白合并 `feature` 分支不涉及复杂的整合工作。从 `feature` 可达的所有提交都已包含 `main` 的所有历史。
+
+因此，Git 不会创建新的“合并提交”来连接历史记录，而是执行快进。它只是将 `main` 分支指针向前移动，使其指向 `feature` 所指的相同提交（`C3`）。
+
+> 快进合并后的提交历史。`main` 分支指针向前移动，直接指向 C3，与 `feature` 所指的提交相同。
+
+结果就好像 `feature` 分支上的所有工作都是直接在 `main` 分支上完成的。历史记录保持完全线性。之所以称为“快进”，是因为 Git 只是将分支指针向前移动，而不会创建任何新的提交。
+
+快进合并在可行时是默认行为，因为它们使项目历史记录保持简单和线性。但是，如果 `feature` 分支分出后，`main` 上*已*有提交，快进将无法进行，Git 将执行不同类型的合并，通常会创建一个合并提交（我们将在后面单独说明）。
+
+## 参考资料
+
+- [Pro Git Book, Chapter 3: Git Branching - Basic Branching and Merging](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging) — Scott Chacon and Ben Straub (2024)
+  介绍快进合并作为 Git 分支的基础概念。
+- [git-merge(1) Manual Page](https://git-scm.com/docs/git-merge) — The Git Community (2024)
+  官方 `git merge` 命令文档，描述其行为，包括快进合并。
+- [Merging Branches - Atlassian Git Tutorial](https://www.atlassian.com/git/tutorials/using-branches/git-merge) — Atlassian (2024)
+  解释不同的 Git 合并策略，其中包含快进合并的清晰说明。

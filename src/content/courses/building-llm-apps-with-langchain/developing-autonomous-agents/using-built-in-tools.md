@@ -1,0 +1,135 @@
+---
+course: "building-llm-apps-with-langchain"
+chapter: "developing-autonomous-agents"
+lesson: "using-built-in-tools"
+sourceId: 7437
+sourceUrl: "https://apxml.com/zh/courses/building-llm-apps-with-langchain/chapter-6-developing-autonomous-agents/using-built-in-tools"
+title: "应用内置工具"
+description: "关于应用 LangChain 中预构建工具的说明，像是 Google Search、Wikipedia 和 Python REPL。"
+order: 3
+plots: []
+sourceHash: "dc609b1e193fb5e07381c7e03a0ae96044e687dcbdbdcaad68e8039a6944110f"
+sourceCorrections: []
+---
+
+一个智能体的行动能力全靠它手头的工具。LangChain 提供了一个丰富的预构建工具库，可以将智能体连接到多种外部服务和数据源，从搜索引擎到科学计算器。凭借这些工具，您无需重新编写底层集成代码，即可让您的智能体具备强大的功用。
+
+### 加载和应用简单工具
+
+最直接的开始方法是动用一个无需外部配置的工具。`DuckDuckGoSearchRun` 工具就是一个很好的例子，因为它提供网页搜索服务，不需要 API 密钥。
+
+我们来初始化一个智能体，并为其提供这个搜索工具。智能体的推理 (inference)引擎——LLM，将可以判断何时及怎样动用搜索工具来回复询问。
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain import hub
+from langchain.agents import create_react_agent, AgentExecutor
+from langchain_community.agent_toolkits import load_tools
+
+# 初始化LLM
+# 确保您的OPENAI_API_KEY已在环境中设定
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+
+# 加载内置工具
+# LangChain提供了方便的辅助函数'load_tools'
+tools = load_tools(["ddg-search", "llm-math"], llm=llm)
+
+# 获取要应用的提示 - 您可以修改它！
+# 我们从LangChain Hub拉取标准的ReAct提示
+prompt = hub.pull("hwchase17/react")
+
+# 初始化智能体
+# 我们使用create_react_agent构造函数来创建ReAct智能体
+agent = create_react_agent(llm, tools, prompt)
+
+# 创建一个智能体执行器来管理执行循环
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# 使用查询运行智能体
+query = "What was the score of the 2022 FIFA World Cup final, and what is that score raised to the power of 0.25?"
+agent_executor.invoke({"input": query})
+```
+
+执行此代码时，`verbose=True` 参数 (parameter)可以让您看到智能体的推理步骤。您会看到类似以下内容的输出：
+
+```text
+> Entering new AgentExecutor chain...
+Thought: 我得找出2022年国际足联世界杯决赛的比分，接着算出该比分0.25次方的值。我将先搜索比分，再动用计算器做数学运算。
+Action: duckduckgo_search
+2022 FIFA Cup final score
+Observation: 2022年国际足联世界杯决赛比分为阿根廷 3–3 法国。阿根廷通过点球大战以 4–2 获胜。
+Thought: 比赛期间的比分是3-3，这意味着总共进了6个球。我将计算6的0.25次方。
+Action: Calculator
+Action Input: 6^0.25
+Observation: 答案: 1.56508458007
+Thought: 我现在有了最后回复。
+Final Answer: 2022年国际足联世界杯决赛比分为3-3（阿根廷点球获胜）。总比分6的0.25次方约等于1.565。
+
+> Finished chain.
+```
+
+此输出显示了智能体的内部思维过程。它准确地辨认出两个子任务，为每一步选用了合适的工具，并将观察结果汇总成一个完整、合理的回复。
+
+> 此图显示了一个智能体如何接收用户查询，利用其LLM推理引擎挑选合适的工具（搜索），运行工具以获取观察结果，然后得出最后回复。
+
+### 处理须用 API 密钥的工具
+
+LangChain 许多功能强大的内置工具都是对第三方 API 的封装，像是 Google、Wikipedia 或 WolframAlpha 的 API。若要动用这些，您通常须安装提供商的 Python SDK 并将 API 密钥设定为环境变量。
+
+例如，若要动用 WolframAlpha 工具进行计算查询，您首先得从其开发者门户获取一个 AppID。
+
+1. **安装所需软件包：**
+
+   ```bash
+   pip install wolframalpha
+   ```
+2. **设定环境变量：**
+   在您的终端或 `.env` 文件中，设定您的 AppID。
+
+   ```bash
+   export WOLFRAM_ALPHA_APPID="YOUR_APP_ID_HERE"
+   ```
+
+环境变量设定好后，LangChain 的工具加载器即可自行配置该工具。
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain import hub
+from langchain.agents import create_react_agent, AgentExecutor
+from langchain_community.agent_toolkits import load_tools
+import os
+
+# 确保您的密钥已设为环境变量
+# os.environ["OPENAI_API_KEY"] = "sk-..."
+# os.environ["WOLFRAM_ALPHA_APPID"] = "YOUR_APP_ID"
+
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+
+# 加载WolframAlpha工具
+# LangChain 自行查找并动用 WOLFRAM_ALPHA_APPID 环境变量
+tools = load_tools(["wolfram-alpha"], llm=llm)
+
+prompt = hub.pull("hwchase17/react")
+
+agent = create_react_agent(llm, tools, prompt)
+
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+agent_executor.invoke({"input": "What is the second derivative of x^4 * sin(x)?"})
+```
+
+智能体会明白此数学问题最适合由 WolframAlpha 处理，并将任务交由其处理。这种安装软件包并设定环境变量的做法适用于 LangChain 中大多数基于 API 的工具，这让增强智能体功用有了一个统一的方法。
+
+尽管内置工具能处理多种常见任务，但您通常需要让智能体使用您自己的内部 API 或专有数据源。下一节会讲怎样制作自定义工具，以赋予智能体这些特定功用。
+
+## 参考资料
+
+- [Agents](https://www.langchain.com/docs/concepts/agents/) — LangChain (2024)
+  Publisher: LangChain
+  为读者提供了使用 LangChain 构建和理解自主代理的全面指导，包括各种代理类型及其底层机制。
+- [Tools](https://python.langchain.com/docs/modules/agents/tools/) — LangChain (2025)
+  Publisher: LangChain
+  官方文档，详细说明了如何在 LangChain 代理中使用预构建工具与外部服务和数据源进行交互。
+- [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629) — Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, Yuan Cao (2023)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.2210.03629](https://doi.org/10.48550/arXiv.2210.03629)
+  介绍 ReAct 框架的基础研究论文，该框架结合了推理和行动以增强代理能力，与 AgentType.ZERO_SHOT_REACT_DESCRIPTION 直接相关。

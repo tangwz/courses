@@ -1,0 +1,53 @@
+---
+course: "getting-started-rag"
+chapter: "data-preparation-for-rag"
+lesson: "content-aware-chunking"
+sourceId: 3648
+sourceUrl: "https://apxml.com/zh/courses/getting-started-rag/chapter-3-data-preparation-for-rag/content-aware-chunking"
+title: "内容感知的分块方法"
+description: "介绍基于文档结构（段落、章节）的更细致分块方法。"
+order: 4
+plots: []
+sourceHash: "4483e2656104e1c5562b243da002b5ab5504c742ce60b4217147c3d03fc4cf60"
+sourceCorrections: []
+---
+
+虽然固定大小分块提供了一种直接划分文档的方式，但它常常随意分割文本，可能在句子或段落中间截断思绪。这会妨碍检索器查找真正相关且连贯的信息，因为语义可能分散在多个分块中。为解决这个问题，我们可以使用依据文档固有结构的内容感知分块方法。
+
+内容感知分块的主要目标是创建代表完整语义单元的分块，从而提高检索到的分块包含准确回答查询所需上下文 (context)的可能性。这些方法不是仅仅依靠字符或词元 (token)计数，而是寻找文本中的自然边界。
+
+### 常见内容感知策略
+
+根据文档内容和结构分割文档，存在几种方法：
+
+1. **段落分割：** 这通常是一个不错的起点。大多数文档使用段落来组织相关想法。沿着段落中断处分割（通常由双换行符表示，例如 `\n\n`），可以产生包含相对独立思想或主题的分块。这种方法在一定程度上尊重作者预期的结构。然而，段落长度差异很大；有些可能仍然超出上下文 (context)窗口或嵌入 (embedding)模型的合理尺寸限制，而有些可能非常短。
+2. **句子分割：** 为实现更细粒度的控制，可以将文本分割成独立的句子。NLTK（自然语言工具包）或spaCy之类的库提供句子边界检测工具，能够处理标点符号的复杂情况（例如缩写中的句点）。句子分块高度连贯，但可能非常小。检索单个句子有时可能缺少足够的周围上下文。一种常见做法是将几个连续的句子组合成一个分块，或将句子分割与重叠结合使用。
+3. **按文档章节分割：** 对于具有明确结构（例如HTML、Markdown或LaTeX文件）的文档，根据章节、标题或特定标签进行分割会非常有效。例如，您可以将HTML中 `<h2>` 标签下的每个章节或Markdown中 `##` 标题下的内容视为一个潜在分块。这通常与文档的主题结构很好地吻合，创建出主题集中的分块。实施此方法需要解析文档格式以识别这些结构元素。
+4. **递归分割：** 这种方法尝试使用按优先级排序的分隔符列表来分割文本。它首先尝试依据最高优先级的分隔符（例如，段落中断符）进行分割。如果生成的分块仍然太大，它就对这些过大的分块应用列表中的下一个分隔符（例如，句子中断符），依此类推。常见的分隔符列表可能包括 `["\n\n", "\n", ". ", " ", ""]`。这种方法旨在通过优先处理较大的语义单元，然后再转向较小的单元，从而尽可能将相关文本保持在一起。LangChain之类的框架提供了这种策略的实现（例如，`RecursiveCharacterTextSplitter`）。
+
+> 固定大小分块与基于段落的内容感知分块的比较。固定大小分割可以随意打断句子和段落，而使用段落分隔符（`\n\n`）的内容感知方法能保持逻辑单元的完整性。
+
+### 选择合适的策略
+
+最佳的内容感知策略取决于：
+
+- **文档类型：** 高度结构化的文档（如代码文档或具有明确章节的文章）从基于结构的分割中受益。结构性较差的文本可能更适合段落或递归分割。
+- **内容粒度：** 如果查询预期与非常具体的事件相关，较小的分块（如句子）可能更有利。如果查询范围较广，较大的分块（如段落或章节）可能提供更好的上下文 (context)。
+- **下游模型限制：** 考虑在生成步骤中使用的LLM的上下文窗口大小。分块需要足够小以适应提示和其他检索到的上下文。
+
+通常需要进行实验。您可以针对您的文档和查询的代表性样本，比较使用不同分块策略时的检索效果。目标始终是寻找平衡点，即生成的分块既足够小以便处理，又足够大以包含与潜在用户查询相关的有意义、连贯的信息。这有利于实现有效检索，并最终促成更准确且有上下文依据的生成。
+
+## 参考资料
+
+- [Text Splitters](https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHypdsKpFE5ky8cCIdo9c19rnMtPdlXhOhZBheY1wwkJF8kU1UC0TM4mkCFA58S0l8a5Xb-xpvnmXSZaqOwSrpGZi9rRFKuqTZboHOJekDMn5j6pW-hZtjD7S-PBFLIFkjH3j4sMXdqlKxkBQcfEx13LPQLPw=) — LangChain (2024)
+  Publisher: LangChain
+  RAG 应用中文本分割策略（包括递归分割）的实用指南。
+- [NLTK Book, Chapter 3: Processing Raw Text](https://www.nltk.org/book/ch03.html) — Steven Bird, Ewan Klein, and Edward Loper (2009)
+  Publisher: O'Reilly Media
+  全面解释了基本的文本处理技术，包括句子分词。
+- [Speech and Language Processing (3rd ed. draft)](https://web.stanford.edu/~jurafsky/slp3/) — Daniel Jurafsky and James H. Martin (2025)
+  Publisher: Stanford University
+  权威教材，涵盖文本分割、分词以及其他信息检索和自然语言处理必不可少的预处理步骤。
+- [Retrieval-Augmented Generation for Large Language Models: A Survey](https://arxiv.org/abs/2312.10997) — Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, Haofen Wang (2024)
+  Journal: arXiv preprint arXiv:2312.10997; DOI: [10.48550/arXiv.2312.10997](https://doi.org/10.48550/arXiv.2312.10997)
+  对 RAG 的全面综述，讨论了文档预处理策略（如分块）以实现有效的检索。

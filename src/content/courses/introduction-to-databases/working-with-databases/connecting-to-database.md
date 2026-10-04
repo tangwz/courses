@@ -1,0 +1,66 @@
+---
+course: "introduction-to-databases"
+chapter: "working-with-databases"
+lesson: "connecting-to-database"
+sourceId: 1630
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-databases/chapter-5-working-with-databases/connecting-to-database"
+title: "连接到数据库"
+description: "说明建立数据库连接的一般过程，包括凭据和连接字符串。"
+order: 3
+plots: []
+sourceHash: "747c9861f79a18c18a7fd12a767baab1645374c7f030b1623740194feb01a5e1"
+sourceCorrections: []
+---
+
+建立连接是使用数据库时的主要步骤。您可以把这个连接看作是您的应用程序或管理工具（客户端）与存放数据的数据库服务器之间的一条活跃通信线路。没有这个连接，您就无法发送诸如 SQL 查询之类的指令，也无法接收数据。大多数数据库交互都遵循客户端-服务器模型：您的软件充当客户端，向数据库服务器请求服务。
+
+### 必要的连接信息
+
+要成功连接到数据库，您通常需要几项信息，这些信息常被称为连接参数 (parameter)。尽管不同数据库系统（如 PostgreSQL、MySQL、SQLite 或 MongoDB）的具体名称可能略有不同，但核心思想保持一致。
+
+1. **主机名或服务器地址：** 这告诉您的客户端数据库服务器在网络上的*位置*。
+
+   - 如果数据库运行在您自己的计算机上，您通常会使用 `localhost` 或 `127.0.0.1`。这些是标准名称，指代您当前使用的机器。
+   - 如果数据库在另一台机器上（在 Web 应用程序或公司网络中很常见），您将使用其网络名称（例如 `db.mycompany.com`）或其 IP 地址（例如 `192.168.1.105`）。
+2. **端口号：** 网络上的计算机使用端口将流量导向特定应用程序。您可以将主机名视为建筑物地址，端口号视为数据库服务的具体房间号。服务器上运行的每项服务都在一个指定的端口上监听。数据库系统有默认端口（例如 PostgreSQL 的 5432，MySQL/MariaDB 的 3306，MongoDB 的 27017），但管理员有时会出于安全或组织原因将其配置为使用不同的端口。您需要知道数据库服务器正在监听的正确端口号。
+3. **数据库名称：** 单个数据库服务器可以管理多个独立的数据库。您需要指定要使用哪个具体的数据库。例如，您可能在同一个服务器实例上运行着名为 `customers`、`inventory` 或 `webapp_data` 的数据库。
+4. **凭据（用户名和密码）：** 数据库通常受到保护，以确保只有授权用户才能访问或修改数据。您几乎总是需要一个用户名和对应的密码，这些凭据已在数据库系统中获得权限。某些系统可能提供其他身份验证方法（如安全证书或操作系统身份验证），但用户名/密码是最常见的起始方式。像对待其他任何密码一样，安全地处理这些凭据。
+
+### 连接字符串
+
+通常，这些参数 (parameter)会组合成一个单独的文本字符串，被称为**连接字符串**或**连接 URI（统一资源标识符）**。这为应用程序指定连接细节提供了一种标准化方式。尽管具体格式有所不同，但通常看起来像这样：
+
+`database_type://username:password@hostname:port/database_name`
+
+例如：
+
+`postgresql://app_user:secret123@db.example.com:5432/production_data`
+
+使用连接字符串可以很方便，尤其是在配置应用程序时，因为它将所有必要信息捆绑在一起。
+
+### 连接如何建立
+
+建立连接涉及以下步骤：
+
+1. **请求：** 您的客户端软件（图形用户界面工具、命令行界面或您的应用程序代码）使用提供的参数 (parameter)（主机名、端口、数据库名称、凭据），通过网络向指定的服务器地址和端口发送连接请求。
+2. **验证：** 数据库服务器监听该端口，接收到请求。它检查提供的用户名和密码（或其他凭据）是否有效，以及该用户是否有权访问指定的数据库。
+3. **响应：**
+   - 如果一切正常，服务器会与客户端建立连接会话并发送确认信息。通信通道现在已打开。
+   - 如果存在问题（密码错误、用户未知、数据库不存在、服务器未运行、防火墙阻止端口），服务器会拒绝请求并发送解释问题的错误消息。
+4. **交互：** 连接建立后，客户端可以通过此会话向服务器发送命令（如 SQL 的 `SELECT`、`INSERT`、`UPDATE`、`DELETE` 语句）。服务器处理这些命令并将结果或状态消息发送回客户端。
+5. **终止：** 当客户端完成与数据库的交互后，它应明确关闭连接。这会释放客户端和服务器上的资源。不必要地保持连接开放可能会消耗内存并可能锁定资源。
+
+> 建立数据库连接的基本流程。客户端使用参数通过网络请求连接，服务器进行验证，然后建立通信通道或返回错误。
+
+理解这些参数和一般的连接过程是基础。无论是使用带有输入字段的图形工具，还是为应用程序编写配置文件，这些都是必要的核心信息，用于在您的软件和数据库之间建立桥梁。在下一节中，我们将介绍如何设置一个简单的环境，让您可以将这些付诸实践。
+
+## 参考资料
+
+- [Database System Concepts](http://www.db-book.com/db7/index.html) — Abraham Silberschatz, Henry F. Korth, S. Sudarshan (2019)
+  Publisher: McGraw-Hill Education; Pages: Chapter 1
+  本教材全面介绍了数据库系统，包括数据库架构和客户端-服务器模型的基础解释，与连接建立相关。
+- [PostgreSQL 16.2 Documentation: Client Authentication](https://www.postgresql.org/docs/current/client-authentication.html) — The PostgreSQL Global Development Group (2024)
+  官方文档详细说明了PostgreSQL如何管理客户端连接、认证以及访问权限的配置。
+- [MySQL 8.0 Reference Manual: Connecting to the MySQL Server](https://dev.mysql.com/doc/refman/8.0/en/connecting.html) — Oracle and/or its affiliates (2024)
+  Publisher: Oracle
+  提供了连接到MySQL服务器的说明和示例，涵盖了连接参数和客户端工具。

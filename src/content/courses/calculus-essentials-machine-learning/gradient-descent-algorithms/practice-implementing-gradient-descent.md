@@ -1,0 +1,138 @@
+---
+course: "calculus-essentials-machine-learning"
+chapter: "gradient-descent-algorithms"
+lesson: "practice-implementing-gradient-descent"
+sourceId: 1406
+sourceUrl: "https://apxml.com/zh/courses/calculus-essentials-machine-learning/chapter-4-gradient-descent-algorithms/practice-implementing-gradient-descent"
+title: "动手实践：实现简单的梯度下降"
+description: "使用 Python 实现一个基本的梯度下降算法，以使一个简单函数最小化。"
+order: 8
+plots: ["plots/1406-0.json"]
+sourceHash: "3691f94a4beb8a1f605f9fbe339f29b2e63545c60b5acd3c35f7057612eeeb4f"
+sourceCorrections: []
+---
+
+从头开始使用 Python 实现基本的梯度下降 (gradient descent)算法。这个实践练习展示了迭代优化过程的实际运行。
+
+我们将应用梯度下降来寻找一个简单单变量函数的最小值。虽然机器学习 (machine learning)问题涉及成千上万或数百万个变量（参数 (parameter)）的函数，但从一个变量开始，可以更容易地掌握核心更新机制并观察该过程。
+
+### 问题：使一个简单二次函数最小化
+
+我们来考虑函数 $f(x) = x^2 - 4x + 5$。这是一个向上开口的抛物线，因此它有一个单一的全局最小值。
+
+我们的目标是使用梯度下降 (gradient descent)找到使 $f(x)$ 最小化的 $x$ 值。
+
+### 第一步：定义函数及其梯度
+
+首先，我们需要函数本身及其导数（梯度）。
+函数为：
+$f(x) = x^2 - 4x + 5$
+
+导数（在此一维情况下为梯度）告诉我们任意点 $x$ 的斜率：
+$\nabla f(x) = f'(x) = \frac{d}{dx}(x^2 - 4x + 5) = 2x - 4$
+
+我们可以在 Python 中定义这些：
+
+```python
+import numpy as np
+
+# 定义函数
+def f(x):
+  return x**2 - 4*x + 5
+
+# 定义函数的梯度（导数）
+def gradient(x):
+  return 2*x - 4
+```
+
+### 第二步：实现梯度下降 (gradient descent)算法
+
+梯度下降的核心是迭代应用的更新规则：
+$x_{\text{新}} = x_{\text{旧}} - \alpha \nabla f(x_{\text{旧}})$
+其中 $\alpha$ 是学习率。
+
+我们来实现它。我们需要：
+
+1. $x$ 的初始猜测值。
+2. 一个学习率 $\alpha$。
+3. 算法运行的迭代次数。
+
+```python
+def gradient_descent(start_x, learning_rate, n_iterations):
+  """
+  执行梯度下降以找到 f(x) 的最小值。
+
+  参数：
+    start_x: x 的初始猜测值。
+    learning_rate: 步长 alpha。
+    n_iterations: 要执行的迭代次数。
+
+  返回值：
+    一个包含以下内容的元组：
+      - x 的最终估计值。
+      - 每次迭代时 x 值的列表（历史记录）。
+  """
+  x = start_x
+  history = [x] # Store history for visualization
+
+  print(f"从 x = {x:.4f} 开始梯度下降")
+  print("迭代 | 当前 x | 梯度 | 下一个 x")
+  print("--------------------------------------")
+
+  for i in range(n_iterations):
+    grad = gradient(x)
+    next_x = x - learning_rate * grad
+
+    print(f"{i+1:4} | {x:9.4f} | {grad:8.4f} | {next_x:9.4f}")
+
+    x = next_x
+    history.append(x)
+
+  print("--------------------------------------")
+  print(f"梯度下降在 {n_iterations} 次迭代后完成。")
+  print(f"估计的最小值出现在 x = {x:.4f}")
+  print(f"f(x) 在最小值处的值：{f(x):.4f}")
+
+  return x, history
+
+# --- 设置参数并运行 ---
+initial_x = 0.0       # 起始点
+alpha = 0.1           # 学习率
+iterations = 25       # 步数
+
+final_x, x_history = gradient_descent(initial_x, alpha, iterations)
+```
+
+运行这段代码将打印算法在每一步的进展，展示 $x$ 的值如何接近最小值。您应该观察到，当 $x$ 接近最小值时，梯度会趋近于零（我们通过解析方法知道，最小值在 $x=2$ 处，因为 $2x-4=0$ 意味着 $x=2$）。
+
+### 第三步：可视化下降过程
+
+可视化该过程可以提供更清晰的认识。我们可以绘制函数 $f(x)$ 并叠加梯度下降 (gradient descent)算法所采取的步骤。
+
+
+
+![f(x) 上的梯度下降路径](plots/1406-0.json)
+
+
+
+> 该图显示了二次函数 $f(x)$ 和梯度下降从 $x=0$ 开始，学习率为 $0.1$ 时所采取的路径。每个标记 (token)代表迭代中 $x$ 的值，逐步向 $x=2$ 处的最小值移动。上述代码片段手动包含了路径的示例值；您应该将其替换为 `gradient_descent` 函数返回的 `x_history` 值，并使用 `f(x)` 计算相应的 `y` 值。
+
+### 参数 (parameter)调整实践
+
+尝试更改 `initial_x`、`learning_rate` (alpha) 和 `iterations`。观察这些变化如何影响收敛：
+
+- **不同的 `initial_x`：** 对于这个凸函数，算法仍应收敛到相同的最小值。
+- **更大的 `learning_rate`（例如 0.8）：** 可能收敛更快，但如果过大（例如对于此函数为 1.1），算法可能会越过最小值并发生发散（$x$ 值将越来越大）。
+- **更小的 `learning_rate`（例如 0.01）：** 收敛将更慢，需要更多迭代才能接近最小值。
+- **更少的 `iterations`：** 算法可能在达到最小值之前停止。
+
+这个简单实现展示了核心思想。在机器学习 (machine learning)中，$f(x)$ 代表成本函数 $J(\theta)$，$x$ 代表整个模型参数集 $\theta$，而 $\nabla f(x)$ 代表梯度向量 (vector) $\nabla J(\theta)$。梯度计算通常涉及反向传播 (backpropagation)等技术（下一章将介绍），但基本的更新步骤保持不变：沿与梯度相反的方向调整参数以最小化成本。
+
+## 参考资料
+
+- [Machine Learning (CS229) Lecture Notes, Part I: Supervised Learning](http://cs229.stanford.edu/notes/cs229-notes1.pdf) — Andrew Ng, Christopher Ré, Moses Charikar, Tengyu Ma, Anand Avati, Kian Katanforoosh, Yoann Le Calonnec, John Duchi (2008)
+  Publisher: Stanford University; Pages: 3-15
+  从基本原理介绍梯度下降，阐述其在最小化监督学习模型（如线性回归）成本函数中的应用。涵盖迭代更新规则、学习率和收敛标准。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press; Pages: 79-91 (Chapter 4: Numerical Computation)
+  提供了梯度优化算法的严谨数学处理，包括梯度下降及其变体的理论基础。对于理解机器学习中优化的更广泛背景很实用。

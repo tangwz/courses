@@ -1,0 +1,60 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "multi-head-self-attention"
+lesson: "parallel-attention-computation"
+sourceId: 1961
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-3-multi-head-self-attention/parallel-attention-computation"
+title: "并行注意力计算"
+description: "多个注意力头如何并行计算注意力权重和输出。"
+order: 5
+plots: []
+sourceHash: "4dff43291bf07f91509b8b2993b4c5aef7cf8e799df13b87d3e5391f51939f5b"
+sourceCorrections: []
+---
+
+并行注意力计算涉及将原始的查询 ($Q$)、键 ($K$) 和值 ($V$) 投影到 $h$ 个不同的子空间中，对每个头 $i$ 使用不同的学习到的线性变换 $W^Q_i, W^K_i, W^V_i$。对于每个头，注意力计算独立且同时地进行。这种并行处理是多头注意力 (multi-head attention)的一种明确特征，并且对它的效率和计算特性有很大的贡献。
+
+对于每个头 $i$（$i$ 的范围从 1 到 $h$），我们准确地按照之前定义的方式计算带缩放的点积注意力，但使用的是该头特有的*投影*矩阵 $Q_i$、$K_i$ 和 $V_i$:
+
+
+$$
+\text{head}_i = \text{Attention}(Q_i, K_i, V_i) = \text{softmax}\left(\frac{Q_i K_i^T}{\sqrt{d_{k_i}}}\right) V_i
+$$
+
+
+这里:
+
+- $Q_i = Q W^Q_i$ 表示为头 $i$ 投影的查询。
+- $K_i = K W^K_i$ 表示为头 $i$ 投影的键。
+- $V_i = V W^V_i$ 表示为头 $i$ 投影的值。
+- $d_{k_i}$ 是头 $i$ *内部*键（和查询）的维度。这个缩放因子，类似于单头带缩放点积注意力中使用的，能在训练期间稳定梯度。
+
+正确管理维度是很重要的。如果输入嵌入 (embedding)维度是 $d_{\text{model}}$ 并且我们使用 $h$ 个头，投影通常被设计成使每个头的键、查询 ($d_{k_i}$) 和值 ($d_{v_i}$) 的维度相等：$d_{k_i} = d_{v_i} = d_{\text{model}} / h$。这种划分确保了总计算成本与使用完整 $d_{\text{model}}$ 维度的单头注意力机制 (attention mechanism)相似，同时将表示能力分配到多个头。此外，它保证了当所有头的输出稍后被拼接时，结果维度与后续层所需的输入维度 $d_{\text{model}}$ 相匹配，从而保持了模型架构的统一性。
+
+假设输入序列的长度为 $N$（词元 (token)数量），为了简化，忽略批处理维度，头 $i$ 的矩阵形状通常是：
+
+- $Q_i$: $N \times d_{k_i}$
+- $K_i$: $N \times d_{k_i}$ （因为在自注意力 (self-attention)中，键和查询来自相同的输入序列）
+- $V_i$: $N \times d_{v_i}$
+
+因此，头 $i$ 的注意力计算输出，记为 $\text{head}_i$，将具有形状 $N \times d_{v_i}$。由于我们通常设置 $d_{v_i} = d_{k_i} = d_{\text{model}} / h$，输出形状为 $N \times (d_{\text{model}} / h)$。
+
+从计算角度看，这种结构非常适合并行处理。现代深度学习 (deep learning)框架和像 GPU 这样的硬件擅长执行大型矩阵乘法。所有 $h$ 个头的计算通常可以并行执行，而不是顺序地迭代每个头。这通常通过在注意力计算之前重塑投影的 Q、K 和 V 张量来实现，使其包含一个独立的“头”维度。例如，表示批处理查询的张量可以从 `(batch_size, seq_len, d_model)` 重塑为 `(batch_size, num_heads, seq_len, d_k_i)`。用于 $\frac{Q_i K_i^T}{\sqrt{d_{k_i}}}$ 项的批量矩阵乘法（`matmul`），然后是 `softmax` 和与 $V_i$ 的最终 `matmul`，可以同时高效地在批处理和头维度上运行。
+
+> 对每个头，使用其特有的投影 Q、K、V 矩阵 ($Q_i, K_i, V_i$) 执行独立的带缩放点积注意力计算。输出（$\text{head}_1, ..., \text{head}_h$），每个的维度为 $N \times d_{v_i}$，在传递到下一阶段之前并行生成。注意，$d_{k_i}$ 和 $d_{v_i}$ 代表 $d_{\text{model}}/h$。
+
+这种并行结构的主要优点不限于计算效率。它允许每个注意力头可能专门学习不同类型的关系，或者同时关注来自不同表示子空间的信息。例如，一个头可以学习侧重于局部的句法依赖（如形容词与名词的一致性），而另一个头则捕捉更远距离的语义联系（如跨句子的指代消解），还有一个头可能侧重于位置关系。单个注意力机制将被迫平均这些可能不同的信号，这可能会稀释信息。多头注意力为信息流提供了多个独立的“通道”，让模型能够汇集多样化的关系信息，并最终构建更丰富、更具上下文 (context)意识的表示。
+
+这些并行计算的输出，$\text{head}_1, \text{head}_2, ..., \text{head}_h$，捕获了输入序列内部关系的不同方面。它们现在已准备好在下一步中组合：先拼接，再进行最终的线性投影。
+
+## 参考资料
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems 30 (NIPS 2017); DOI: [10.48550/arXiv.1706.03762](https://doi.org/10.48550/arXiv.1706.03762)
+  这篇基础论文介绍了Transformer架构和多头自注意力机制，详细阐述了其数学公式和并行处理的优点。
+- [Dive into Deep Learning](https://d2l.ai/chapter_attention-mechanisms/multihead-attention.html) — Aston Zhang, Zachary C. Lipton, Mu Li, Alex Smola (2024)
+  Publisher: Cambridge University Press
+  一本易于理解的在线教科书章节，清晰且实用地解释了多头注意力机制，包括其并行计算和实现细节。
+- [CS224N: Natural Language Processing with Deep Learning - Lecture Notes: Transformers and Large Language Models](https://web.stanford.edu/class/cs224n/slides/cs224n-2023-lecture8-transformers-llms.pdf) — Christopher Manning, John Hewitt (2023)
+  Pages: 37-45
+  斯坦福大学的课程讲义，清晰地解释了多头注意力机制、其并行结构以及在Transformer架构中的作用。

@@ -1,0 +1,255 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "model-compression-efficient-dl"
+lesson: "pruning-quantization-practical"
+sourceId: 2640
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-8-model-compression-efficient-dl/pruning-quantization-practical"
+title: "动手实践：应用剪枝与量化"
+description: "实践环节，应用模型剪枝或量化技术到预训练的CNN模型上。"
+order: 7
+plots: ["plots/2640-0.json", "plots/2640-1.json"]
+sourceHash: "4a42c48efab68d37d6fbda35231e61d476cb12ee14d3a59913dda264823b6546"
+sourceCorrections: []
+---
+
+介绍如何使用常用深度学习 (deep learning)框架工具，对预训练 (pre-training)的卷积神经网络 (neural network)（CNN）应用基于幅度的权重 (weight)剪枝和训练后量化 (quantization)。此方法的主要目标是显著减小模型尺寸，同时仔细监控其对预测性能的影响。
+
+我们假设您已配置好包含 Python、TensorFlow 和 TensorFlow 模型优化工具包的工作环境。您还需要一个预训练的 Keras 模型。为进行演示，假设我们有一个可用的 `tf.keras.Model` 对象，例如 MobileNetV2 或一个在 CIFAR-10 等数据集上训练的自定义 CNN，并将其存储在一个名为 `original_model` 的变量中。
+
+### 前提条件
+
+- 一个预训练 (pre-training)的 `tf.keras.Model`。我们假设它已加载到 `original_model` 变量中。
+- 一个用于校准（针对量化 (quantization)）和评估的代表性数据集。我们将其称为 `eval_dataset`。
+- 已安装 TensorFlow (`tensorflow`) 和 TensorFlow 模型优化工具包 (`tensorflow_model_optimization`)。
+
+```python
+# 示例设置
+import tensorflow as tf
+import tensorflow_model_optimization as tfmot
+import numpy as np
+
+# 假设 original_model 是一个预训练的 tf.keras.Model
+# 假设 eval_dataset 是一个用于评估的 tf.data.Dataset 或类似结构
+# 示例：加载模型（替换为实际的模型加载代码）
+# original_model = tf.keras.models.load_model('path/to/your/model.h5')
+
+# 示例：准备一个模拟评估数据集（替换为您的实际数据）
+def representative_dataset_gen():
+  for _ in range(100):
+    # 生成一个代表模型输入的样本
+    # 相应调整形状和数据类型
+    yield [np.random.rand(1, 96, 96, 3).astype(np.float32)]
+
+eval_dataset = tf.data.Dataset.from_generator(
+    representative_dataset_gen,
+    output_signature=tf.TensorSpec(shape=(1, 96, 96, 3), dtype=tf.float32)
+)
+
+# 模型精度评估函数（替换为您的具体评估逻辑）
+def evaluate_model(interpreter, dataset):
+    # 精度评估逻辑的占位符
+    # 通常，您会遍历数据集，运行推理，
+    # 将预测与真实值进行比较，并计算精度。
+    print("评估模型中...（替换为实际评估）")
+    # 示例：对少量样本运行推理
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    num_samples = 0
+    for sample in dataset.take(5): # 对少量样本进行评估以进行演示
+        interpreter.set_tensor(input_details[0]['index'], sample)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+        # 在此处添加您的精度计算逻辑
+        num_samples += 1
+    print(f"已在 {num_samples} 个样本上进行评估。")
+    return np.random.rand() # 返回模拟精度
+
+# 获取模型大小的函数
+import os
+def get_gzipped_model_size(file):
+  # 返回 gzip 压缩后模型的大小，近似于可部署大小
+  import zipfile
+  zipped_file = file + '.zip'
+  with zipfile.ZipFile(zipped_file, 'w', compression=zipfile.ZIP_DEFLATED) as f:
+    f.write(file)
+  return os.path.getsize(zipped_file) / float(1024*1024)
+
+# 保存原始模型以测量其大小
+original_model_file = './original_model.h5'
+original_model.save(original_model_file, include_optimizer=False)
+print(f"原始模型大小：{os.path.getsize(original_model_file) / float(1024*1024):.3f} MB")
+```
+
+### 应用网络剪枝
+
+我们将使用基于幅度的剪枝，它会移除绝对值最小的权重 (weight)。TensorFlow 模型优化工具包提供包装器，使模型可以通过剪枝进行训练。
+
+1. **定义剪枝参数 (parameter)：** 指定目标稀疏度水平（例如，50% 的稀疏度表示一半的权重将被剪枝）和剪枝计划。多项式衰减是一种常用计划。
+
+   ```python
+   # 定义剪枝参数
+   pruning_params = {
+         'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(initial_sparsity=0.0,
+                                                                  final_sparsity=0.50,
+                                                                  begin_step=0, # 立即开始剪枝
+                                                                  end_step=1000) # 在1000步后结束剪枝
+   }
+   ```
+
+   \*注意：`end_step` 通常应与微调 (fine-tuning)阶段的步数对应。
+2. **应用剪枝包装器：** 使用剪枝配置包装原始模型。
+
+   ```python
+   # 应用剪枝包装器
+   pruned_model = tfmot.sparsity.keras.prune_low_magnitude(original_model, **pruning_params)
+
+   # 剪枝需要在训练/微调期间使用步进回调
+   callbacks = [
+       tfmot.sparsity.keras.UpdatePruningStep()
+   ]
+
+   # 编译剪枝模型（使用与原始训练/微调相同的优化器设置）
+   pruned_model.compile(optimizer='adam',
+                        loss='categorical_crossentropy', # 根据需要调整损失函数
+                        metrics=['accuracy']) # 根据需要调整评估指标
+
+   # 摘要显示原始层周围的PrunableWrapper
+   # pruned_model.summary()
+   ```
+3. **微调剪枝模型：** 训练模型几个周期。在此阶段，剪枝计划会主动移除权重，剩余权重会进行调整以弥补移除，理想情况下恢复精度。
+
+   ```python
+   # 微调模型（需要训练数据）
+   # 假设 train_dataset 和 validation_dataset 可用
+   # print("正在微调剪枝模型...")
+   # pruned_model.fit(train_dataset,
+   #                  epochs=5, # 调整周期数
+   #                  validation_data=validation_dataset,
+   #                  callbacks=callbacks)
+   print("微调步骤模拟（为简洁起见，跳过实际训练）。")
+   ```
+
+   \*注意：有效的微调需要您的实际训练数据集和适当的超参数 (hyperparameter)。
+4. **移除剪枝包装器：** 微调后，移除剪枝包装器，以获得一个更小的标准 Keras 模型，因为许多权重现在为零。
+
+   ```python
+   # 移除剪枝包装器，得到一个标准的、更小的模型
+   model_for_export = tfmot.sparsity.keras.strip_pruning(pruned_model)
+
+   # 保存剪枝模型
+   pruned_model_file = './pruned_model.h5'
+   model_for_export.save(prun
+   ```
+
+ed\_model\_file, include\_optimizer=False)
+print(f"剪枝模型大小 (H5)：{os.path.getsize(pruned\_model\_file) / float(1024\*1024):.3f} MB")
+\`\`\`
+观察 `.h5` 文件大小与原始文件相比的减小。压缩模型（例如使用 gzip）通常会显示出更大幅度的尺寸减小，因为零权重可以很好地压缩。
+
+### 应用训练后量化 (quantization)
+
+量化会降低权重 (weight)和可能激活的精度。训练后量化更容易应用，因为它不需要重新训练，尽管与量化感知训练相比，它可能导致更大的精度下降。我们将使用 TensorFlow Lite 的转换器。
+
+1. **转换为 TensorFlow Lite (FP32)：** 首先，将*剪枝后的* Keras 模型（如果跳过剪枝，则为原始模型）转换为标准的 TensorFlow Lite 格式（浮点）。
+
+   ```python
+   # 将剪枝后的Keras模型转换为TFLite FP32
+   converter = tf.lite.TFLiteConverter.from_keras_model(model_for_export)
+   tflite_fp32_model = converter.convert()
+
+   # 保存FP32 TFLite模型
+   tflite_fp32_file = './pruned_model_fp32.tflite'
+   with open(tflite_fp32_file, 'wb') as f:
+       f.write(tflite_fp32_model)
+   print(f"剪枝后的FP32 TFLite大小：{os.path.getsize(tflite_fp32_file) / float(1024*1024):.3f} MB")
+   print(f"剪枝后的FP32 TFLite（gzipped）：{get_gzipped_model_size(tflite_fp32_file):.3f} MB")
+   ```
+2. **应用训练后整数（INT8）量化：** 再次使用 TFLite 转换器，但这次启用 INT8 量化的优化。这需要一个代表性数据集来校准激活的范围。
+
+   ```python
+   # 使用INT8量化进行转换
+   converter = tf.lite.TFLiteConverter.from_keras_model(model_for_export)
+   converter.optimizations = [tf.lite.Optimize.DEFAULT] # 启用默认优化（包括INT8）
+   converter.representative_dataset = representative_dataset_gen # 提供校准数据
+
+   # 确保仅进行整数量化以兼容硬件
+   # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+   # converter.inference_input_type = tf.int8 # or tf.uint8
+   # converter.inference_output_type = tf.int8 # or tf.uint8
+
+   tflite_int8_model = converter.convert()
+
+   # 保存INT8 TFLite模型
+   tflite_int8_file = './pruned_quantized_int8.tflite'
+   with open(tflite_int8_file, 'wb') as f:
+       f.write(tflite_int8_model)
+   print(f"剪枝后的INT8 TFLite大小：{os.path.getsize(tflite_int8_file) / float(1024*1024):.3f} MB")
+   print(f"剪枝后的INT8 TFLite（gzipped）：{get_gzipped_model_size(tflite_int8_file):.3f} MB")
+   ```
+
+   您应该会看到尺寸大幅减小（通常是 FP32 TFLite 模型的约4倍），因为权重现在使用8位整数而不是32位浮点数存储。
+
+### 评估优化模型
+
+评估优化模型的精度非常必要，以理解其中的权衡。您将需要 TensorFlow Lite 解释器。
+
+```python
+# 加载TFLite模型并分配张量
+interpreter_fp32 = tf.lite.Interpreter(model_path=tflite_fp32_file)
+interpreter_fp32.allocate_tensors()
+
+interpreter_int8 = tf.lite.Interpreter(model_path=tflite_int8_file)
+interpreter_int8.allocate_tensors()
+
+# 评估精度（使用您的评估数据集和逻辑）
+# 注意：如果INT8模型在转换期间指定，则输入/输出类型可能会改变
+# 您可能需要手动量化输入数据和反量化输出数据。
+print("\n正在评估FP32 TFLite模型：")
+accuracy_fp32 = evaluate_model(interpreter_fp32, eval_dataset)
+print(f"FP32 TFLite精度：{accuracy_fp32:.4f}")
+
+print("\n正在评估INT8 TFLite模型：")
+accuracy_int8 = evaluate_model(interpreter_int8, eval_dataset) # 如果需要，调整INT8的评估方式
+print(f"INT8 TFLite精度：{accuracy_int8:.4f}")
+
+# 您也应评估原始模型的精度以进行比较
+# original_accuracy = original_model.evaluate(eval_dataset)[1] # Keras评估示例
+original_accuracy = np.random.rand() + 0.1 # 模拟原始精度
+print(f"\n原始模型精度（模拟）：{original_accuracy:.4f}")
+```
+
+### 分析与权衡
+
+比较结果：模型大小（原始、剪枝H5、FP32 TFLite、INT8 TFLite）和精度（原始、FP32 TFLite、INT8 TFLite）。通常，您会看到：
+
+- **剪枝：** 减小尺寸（尤其是压缩后尺寸），微调 (fine-tuning)后精度损失可能较小。
+- **量化 (quantization) (INT8)：** 大幅减小尺寸（与FP32相比约4倍），但可能导致精度明显下降，尤其是在训练后量化中。代表性数据集的质量在此处很重要。
+
+
+
+![模型大小比较](plots/2640-0.json)
+
+
+
+> 模型文件大小在应用剪枝和量化技术前后的比较。请注意INT8量化实现的大幅减小。
+
+
+
+![精度与模型大小的权衡](plots/2640-1.json)
+
+
+
+> 不同优化阶段的模型精度与尺寸关系。INT8量化能提供最小的尺寸，但可能会带来较高的精度损失。
+
+本次实践练习展示了剪枝和量化如何能让复杂的CNN模型效率大幅提升。请记住，最佳策略通常取决于具体的模型、任务和部署限制。通常需要尝试不同的稀疏度水平、量化方法（如量化感知训练）和微调策略，以在效率和性能之间取得最佳平衡。
+
+## 参考资料
+
+- [Pruning in TensorFlow Model Optimization](https://www.tensorflow.org/model_optimization/guide/pruning/overview) — TensorFlow Authors (2024)
+  Publisher: TensorFlow
+  TensorFlow模型优化工具包中应用剪枝技术（包括基于幅度的剪枝）的官方指南。
+- [Post-training quantization](https://www.tensorflow.org/lite/performance/post_training_quantization) — TensorFlow Authors (2023)
+  关于将模型转换为TensorFlow Lite并应用训练后量化（包括整数量化）的官方指南。
+- [Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding](https://arxiv.org/abs/1510.00149) — Song Han, Huizi Mao, William J. Dally (2016)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1510.00149](https://doi.org/10.48550/arXiv.1510.00149)
+  一篇开创性论文，提出了模型压缩方法，其中包括本节介绍的基于幅度的剪枝技术。

@@ -1,0 +1,164 @@
+---
+course: "how-to-build-a-large-language-model"
+chapter: "building-managing-large-scale-datasets"
+lesson: "dataset-versioning-reproducibility"
+sourceId: 5988
+sourceUrl: "https://apxml.com/zh/courses/how-to-build-a-large-language-model/chapter-8-building-managing-large-scale-datasets/dataset-versioning-reproducibility"
+title: "数据集版本管理与复现性"
+description: "实施数据集版本管理策略，确保训练复现性。"
+order: 4
+plots: []
+sourceHash: "7fcc6b0a6737f3d3e7315d0721db501240a64a3b5537f4379468239bf561c928"
+sourceCorrections: []
+---
+
+训练大型语言模型是一个资源消耗大的过程，通常需要在昂贵的硬件集群上运行数周或数月。因此，复现性不仅是一个科学上的理想，更是工程上的必然要求。如果一次训练运行产生了意想不到的结果，或者你需要回顾几个月前某个特定的模型检查点，你必须能够精确重构该次运行所使用的确切数据集状态。仅仅存储数TB的数据是不够的；你需要数据集版本管理的方法。
+
+与Git等系统能很好地处理代码不同，数据集由于其庞大的体积，带来了独有的版本管理难题。在版本控制系统中直接存储多TB数据集的多个完整副本是不切实际且成本过高的。此外，数据集的“版本”不仅仅是原始文件；它包括用于创建最终训练就绪数据的特定预处理代码、筛选参数 (parameter)、分词 (tokenization)设置和抽样策略。
+
+### 为何要进行数据集版本管理？
+
+有效的数据集版本管理在LLM开发背景下提供了几项重要益处：
+
+1. **复现性：** 主要目标。能够重新创建特定训练运行所使用的确切数据，可以让你可靠地复现结果、排查问题（如第24章讨论的损失峰值），并公平地比较不同的实验。
+2. **追踪数据演变：** LLM数据集很少是静态的。你可能会引入新的数据源、改进清洗启发式规则，或者修复预处理流程中的错误。版本管理追踪这些变化，让你能够理解数据漂移或修改如何随时间影响模型性能。
+3. **协作：** 大型项目通常涉及多位工程师进行数据准备工作。版本管理提供了一个清晰的参考点，确保每个人都使用预期的版本数据来完成他们的任务。
+4. **审计和合规性：** 在某些情况下，为了审计或法规目的，可能需要追溯用于训练特定模型版本的确切数据。
+
+### 数据集版本的组成部分
+
+当我们谈论LLM数据集的版本管理时，我们通常需要追踪几个相互关联的组成部分：
+
+- **处理后的数据文件：** 实际的分词 (tokenization)数据文件，通常是分片的，存放在分布式文件系统或对象存储中。
+- **预处理代码：** 用于清洗、筛选、归一化 (normalization)和分词的代码的特定版本（例如，Git提交哈希）。
+- **配置：** 预处理期间使用的参数 (parameter)，如质量阈值、去重设置、词汇量大小和特殊标记 (token)定义。
+- **源数据标识符：** 用于原始数据源的指针或标识符（例如，Common Crawl快照ID、网络抓取日期、源数据集名称和版本）。
+- **元数据：** 处理后的数据文件的校验和或哈希值，以确保数据完整性；数据集统计信息（文档数量、标记数量）；以及可能的数据划分信息（训练集/验证集）。
+
+### 数据集版本管理策略
+
+考虑到数据集的规模，版本管理通常涉及管理元数据和指针，而不是直接复制数据本身。以下是一些常见策略：
+
+#### 1. 命名约定和清单文件
+
+一种基本方法是为目录或存储前缀采用规范的命名约定，其中包含版本标识符、时间戳或相关的配置哈希值。例如，处理后的数据集可能位于`s3://my-llm-datasets/processed/v2.1_vocab32k_cc-2023-03/`这样的路径中。
+
+作为补充，你可以创建清单文件（例如，JSON或YAML格式），列出属于特定版本的所有数据文件及其校验和与重要元数据。这个清单文件很小，可以与预处理代码一起轻松地使用Git进行追踪。
+
+```python
+import hashlib
+import json
+import os
+from glob import glob
+
+def calculate_sha256(filepath):
+  """计算文件的SHA256哈希值。"""
+  sha256_hash = hashlib.sha256()
+  with open(filepath, "rb") as f:
+    # 以4K块读取并更新哈希字符串值
+    for byte_block in iter(lambda: f.read(4096), b""):
+      sha256_hash.update(byte_block)
+  return sha256_hash.hexdigest()
+
+def create_dataset_manifest(data_dir, manifest_path, version_info):
+  """为目录中的文件创建清单文件。"""
+  manifest = {
+      "version_info": version_info,
+      "files": []
+  }
+  
+  # 示例：假设数据文件是.arrow格式
+  data_files = sorted(glob(os.path.join(data_dir, "*.arrow"))) 
+  
+  print(f"正在为 {len(data_files)} 个文件在 {data_dir} 中生成清单...")
+  
+  for filepath in data_files:
+    filename = os.path.basename(filepath)
+    checksum = calculate_sha256(filepath)
+    manifest["files"].append({
+        "filename": filename,
+        "sha256": checksum,
+        "size_bytes": os.path.getsize(filepath) 
+    })
+    
+  with open(manifest_path, 'w') as f:
+    json.dump(manifest, f, indent=2)
+    
+  print(f"清单已保存至 {manifest_path}")
+
+# --- 示例用法 ---
+dataset_directory = "/path/to/processed_data/v2.1_vocab32k_cc-2023-03" 
+output_manifest = "/path/to/repo/dataset_manifests/v2.1.json"
+git_commit_hash = "a1b2c3d4e5f6" # 在实际流程中以编程方式获取此值
+
+version_metadata = {
+    "dataset_version": "2.1",
+    "preprocessing_code_commit": git_commit_hash,
+    "source_info": "Common Crawl 2023年3月快照",
+    "tokenizer_vocab_size": 32000
+}
+
+# 确保输出目录存在
+os.makedirs(os.path.dirname(output_manifest), exist_ok=True) 
+
+# create_dataset_manifest(dataset_directory, output_manifest, version_metadata) 
+# 注意：取消注释以上行并替换路径以运行； 
+# 这仅作说明用途，并假定数据文件存在于指定路径。
+print("说明性清单生成设置已完成。")
+print(f"将处理的文件位于: {dataset_directory}")
+print(f"将清单保存至: {output_manifest}")
+print(f"相关元数据: {version_metadata}")
+```
+
+这个清单（`v2.1.json`）随后可以提交到Git。要使用这个数据集版本，你的训练流程会读取清单，（可选地）验证校验和，并从其存储位置加载列出的文件。
+
+#### 2. 专用数据版本控制工具
+
+DVC（数据版本控制）、Pachyderm和LakeFS等工具是专门设计用于结合Git处理大型数据文件的。它们的操作原理是在Git中存储元数据和指针，而实际数据则存放在外部存储中（如S3、GCS、HDFS，甚至是本地驱动器）。
+
+例如，DVC通过创建小的`.dvc`元文件来工作，这些文件包含有关实际数据文件的信息，包括它们的哈希值和存储位置。这些元文件会提交到Git。
+
+一个典型的工作流程可能如下所示：
+
+1. **追踪数据：** `dvc add s3://my-llm-datasets/processed/v2.1_vocab32k_cc-2023-03`
+   - 此命令分析数据、计算哈希值、创建一个`.dvc`文件（例如，`v2.1_vocab32k_cc-2023-03.dvc`），如果数据尚未存在，还可能将其上传到已配置的DVC远程存储。
+2. **提交元数据到Git：** `git add v2.1_vocab32k_cc-2023-03.dvc .gitignore; git commit -m "Add dataset v2.1"`
+   - 这个小的`.dvc`文件被添加到Git，将这个特定的数据版本与代码库版本关联起来。
+3. **获取数据：** `dvc pull v2.1_vocab32k_cc-2023-03.dvc`（或者直接 `dvc pull`）
+   - 在另一台机器上或稍后，检出Git提交并运行`dvc pull`会从远程存储下载`.dvc`文件中列出的相应数据文件。
+
+这些工具通常提供超越基本版本管理的功能，例如数据管道和实验追踪集成。
+
+> DVC如何将Git追踪与大型文件存储分离的概述。
+
+#### 3. 云存储版本管理功能
+
+许多云存储服务（如Amazon S3或Google Cloud Storage）提供内置的对象版本管理功能。启用此功能后，当对象被覆盖或删除时，会自动保留其先前版本。尽管启用简单，但这种方法通常缺少清单文件或DVC等专用工具所提供的与代码版本和预处理步骤的明确关联。它主要作为备份和恢复机制，而非用于复杂机器学习 (machine learning)流程的完整成熟数据集版本管理系统。在没有额外追踪机制的情况下，更难识别究竟哪一组对象版本对应于特定的训练运行。
+
+### 关联数据集、代码和实验
+
+真正的复现性需要将版本化数据集与用于训练的特定代码提交以及生成的模型产物和指标关联起来。MLflow、Weights & Biases、Comet ML等实验追踪平台在此处非常有价值。在记录实验时，你应该包含：
+
+- 训练代码的Git提交哈希。
+- 所用数据集版本的标识符（例如，清单文件的路径、DVC标签或存储前缀）。
+- 该次运行使用的超参数 (parameter) (hyperparameter)。
+- 输出模型检查点路径。
+- 评估指标。
+
+这创建了一个完整的、可审计的记录，将输入（代码、数据、配置）与输出（模型、指标）连接起来。
+
+总而言之，管理用于LLM训练的庞大数据集不仅仅是存储问题。实施清晰的数据集版本管理方法，无论是通过规范命名和清单还是通过专用工具，对于复现性、调试、协作以及构建可靠的大型语言模型都十分根本。它确保你对数据准备和训练计算的大量投入能够带来可理解和可重复的结果。
+
+## 参考资料
+
+- [Data Version Control (DVC) Documentation](https://dvc.org/doc) — Iterative, Inc. (2024)
+  Data Version Control (DVC) 的官方文档，DVC 是一种用于对数据集和机器学习模型进行版本控制的开源工具，可与 Git 集成。
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready AI](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  本书提供了构建生产级机器学习系统的策略，包括在大规模机器学习中数据管理、版本控制和再现性的实践。
+- [Data Management for Machine Learning: A Survey](http://www.vldb.org/pvldb/vol13/p1801-zhang.pdf) — Ce Zhang, Xin Luna Dong, and Anand P. Rajaraman (2020)
+  Journal: Proceedings of the VLDB Endowment; Publisher: VLDB Endowment; Volume: 13; Pages: 1801-1813; DOI: [10.14778/3400735.3400736](https://doi.org/10.14778/3400735.3400736)
+  机器学习中数据管理挑战和技术的调查，涵盖数据准备、版本控制和血缘等对再现性很重要的内容。
+- [lakeFS Documentation](https://docs.lakefs.io/) — Treeverse (2024)
+  Publisher: Treeverse
+  lakeFS 的官方文档，这是一个开源工具，为数据湖提供类似 Git 的分支和版本控制，从而实现数据实验的原子事务和隔离环境。

@@ -1,0 +1,136 @@
+---
+course: "vae-representation-learning"
+chapter: "vae-inference-techniques"
+lesson: "auxiliary-variables-semi-amortized-vi"
+sourceId: 6344
+sourceUrl: "https://apxml.com/zh/courses/vae-representation-learning/chapter-4-vae-inference-techniques/auxiliary-variables-semi-amortized-vi"
+title: "辅助变量与半分摊变分推断"
+description: "在 VAE 中使用辅助变量和半分摊推断方案。"
+order: 5
+plots: []
+sourceHash: "47997fc7cb8aacdb4098700f7af66739d02928131121edd9c034ce4af1b7d2a8"
+sourceCorrections: []
+---
+
+VAE 中标准的摊销推断网络虽然高效，但通常为 $q_\phi(z|x)$ 使用简单的分布（例如对角高斯分布）。这种简单性可能成为瓶颈，阻碍 $q_\phi(z|x)$ 准确地逼近潜在的复杂真实后验分布 $p_\theta(z|x)$。有两种策略可以生成更具表现力和更准确的近似后验：使用辅助变量和采用半分摊推断方案。
+
+### 利用辅助变量增强推断
+
+一种在不使近似后验 $q_\phi(z|x)$ 的直接函数形式过于复杂的前提下，提升其灵活性的方式是引入辅助随机变量。这些变量并非原始生成模型 $p_\theta(x|z)$ 的一部分，但它们在推断网络内部被用来帮助形成 $z$ 的更丰富分布。
+
+我们用 $a$ 表示这些辅助变量。我们不是直接定义 $q_\phi(z|x)$，而是定义一个关于原始潜在变量 $z$ 和这些新辅助变量 $a$ 的联合分布 $q_\phi(z, a|x)$。这种联合分布的一种常见分解方式是分层的：
+
+
+$$
+q_\phi(z,a|x) = q_\phi(z|x,a) q_\phi(a|x)
+$$
+
+
+这里，$q_\phi(a|x)$ 是一个推断网络，它将输入 $x$ 映射到关于 $a$ 分布的参数 (parameter)。接着，$q_\phi(z|x,a)$ 是另一个推断网络，它将 $x$ 和来自 $a \sim q_\phi(a|x)$ 的样本映射到关于 $z$ 分布的参数。
+
+由此产生的 $z$ 的边际分布，$q_\phi(z|x) = \int q_\phi(z|x,a) q_\phi(a|x) da$，可以比我们直接用简单族（例如单个高斯分布）来建模 $q_\phi(z|x)$ 时显著更复杂和灵活。可以将其视为使用 $a$ 来“引导”或“微调 (fine-tuning)” $z$ 的推断过程。例如，$q_\phi(a|x)$ 可以捕捉后验的一些高层特征，而 $q_\phi(z|x,a)$ 随后可以根据这些特征建模更细致的信息。
+
+为了将此方法整合到 VAE 框架中，我们调整证据下界（ELBO）。我们将 $a$ 视为额外的潜在变量，并为它们假设一个简单的先验 $p(a)$（例如，标准正态分布，$p(a) = \mathcal{N}(0,I)$）。此增强系统的 ELBO 为：
+
+
+$$
+\mathcal{L}(x; \theta, \phi) = \mathbb{E}_{q_\phi(z,a|x)} [\log p_\theta(x|z)] - D_{KL}(q_\phi(z,a|x) || p(z)p(a))
+$$
+
+
+请注意，生成模型 $p_\theta(x|z)$ 仍然只依赖于 $z$。辅助变量 $a$ 仅由推断机制和先验 $p(a)$ “感知”。
+使用我们选择的分解 $q_\phi(z,a|x) = q_\phi(z|x,a)q_\phi(a|x)$，并假设 $p(z,a) = p(z)p(a)$（即 $z$ 和 $a$ 在先验中是独立的），KL 散度项可以被分解为：
+
+
+$$
+D_{KL}(q_\phi(z,a|x) || p(z)p(a)) = \mathbb{E}_{q_\phi(a|x)}[D_{KL}(q_\phi(z|x,a) || p(z))] + D_{KL}(q_\phi(a|x) || p(a))
+$$
+
+
+所以，ELBO 变为：
+
+
+$$
+\mathcal{L} = \mathbb{E}_{q_\phi(a|x)} \left[ \mathbb{E}_{q_\phi(z|x,a)}[\log p_\theta(x|z)] - D_{KL}(q_\phi(z|x,a) || p(z)) \right] - D_{KL}(q_\phi(a|x) || p(a))
+$$
+
+
+这个表达式看起来像一个 VAE 目标，$q_\phi(a|x)$ 充当 $a$ 的“编码器”，然后，在以 $a$ 为条件的情况下，$q_\phi(z|x,a)$ 充当 $z$ 的另一个“编码器”。整体结构使得 $q_\phi(z|x)$ 能够隐式表示更简单分布的混合，从而为近似后验生成一个更丰富的分布族。
+
+**优势：**
+
+- **表现力增强：** 主要优势在于 $q_\phi(z|x)$ 更加灵活，能够更好地与真实后验匹配。
+- **ELBO 更紧：** 更好的后验近似通常会带来更紧的 ELBO，这可以同时提升重建质量和习得的表示。
+
+**成本：**
+
+- **复杂度增加：** 推断网络变得更为复杂，涉及更多参数和计算步骤。
+- **优化难题：** 训练这些更复杂的推断网络有时会更具挑战性。
+
+辅助深度生成模型（ADGM）和分层 VAE 的一些变体（当应用于推断侧时）是这种方法的一些实例。此技术与归一化 (normalization)流（Normalizing Flows）（它使用可逆函数将简单的噪声分布转换为复杂的后验）不同，但可以互补。
+
+### 半分摊变分推断：对每个数据点细化后验
+
+摊销变分推断（单个神经网络 (neural network) $q_\phi(z|x)$ 直接输出给定 $x$ 的近似后验参数 (parameter)）在计算上是高效的。然而，它有一个强烈的假设：即单组网络参数 $\phi$ 可以为所有数据点提供最优（或接近最优）的变分参数。这可能导致“摊销差距”，即完全摊销的 $q_\phi(z|x)$ 所能达到的 ELBO 质量与若我们为每个数据点单独优化变分参数所能达到的质量之间的差异。
+
+半分摊变分推断旨在弥合这一差距。核心思路是使用摊销推断网络，为特定数据点 $x_i$ 的变分参数提供一个良好的*初始化*。然后，通过几步优化来细化这些初始参数，特别是针对该 $x_i$，通过直接最大化该实例的变分参数对应的 ELBO。
+
+令 $\lambda$ 表示单个数据点 $x_i$ 的近似后验参数（例如，如果 $q(z|x_i)$ 是高斯分布，则 $\lambda = (\mu_i, \sigma_i)$）。
+过程如下：
+
+1. **初始化：** 使用摊销编码器获取初始变分参数 $\lambda_0$：
+   
+   $$
+   \lambda_0 = \text{编码器}_\phi(x_i)
+   $$
+   
+2. **细化：** 迭代更新 $\lambda$ 以最大化实例特定的 ELBO，$\mathcal{L}(x_i, \lambda)$：
+   对于 $t = 0, \dots, T-1$：
+   
+   $$
+   \lambda_{t+1} = \lambda_t + \eta \nabla_{\lambda_t} \mathcal{L}(x_i, \lambda_t)
+   $$
+   
+   其中 $\eta$ 是此细化过程的学习率，$T$ 是细化步骤的数量。
+3. **最终后验：** 使用细化后的参数 $\lambda_T$ 定义近似后验 $q(z|x_i; \lambda_T)$ 以用于后续任务（例如，计算用于训练 VAE 生成模型 $p_\theta(x|z)$ 的 ELBO）。
+
+以下图示说明了此细化过程：
+
+> 半分摊推断过程：摊销网络提供后验参数的初始估计，这些参数随后通过实例特定的优化进行细化。
+
+**优势：**
+
+- **后验拟合改进：** 通过为每个数据点优化参数，半分摊 VI 可以为特定实例更好地拟合真实后验 $p_\theta(z|x_i)$。
+- **ELBO 更紧：** 这种改进的拟合通常意味着更紧的 ELBO。
+- **灵活性：** 允许模型更精确地调整其推断以适应单个数据特征。
+
+**成本：**
+
+- **推断时间增加：** 迭代细化过程使得推断比纯粹的摊销方法显著慢得多，因为每个数据点都需要执行优化步骤。
+- **训练复杂度：** 如果要训练摊销编码器的参数 $\phi$ 以产生良好的初始化 $\lambda_0$，从而带来快速有效的细化，则可能需要通过 $T$ 步优化进行微分。这可能计算量大且复杂（尽管存在近似方法或更简单的训练方案，例如，仅训练 $\phi$ 以产生良好的 $\lambda_0$，而不进行细化过程的反向传播 (backpropagation)）。
+
+当真实后验在不同数据点之间具有高方差，使得单个摊销网络难以普遍表现良好时，此方法特别有用。细化步骤的数量 $T$ 是一个超参数 (hyperparameter)；即使是少量步骤（例如 $T=5$ 到 $10$）也通常能带来显著改进。
+
+### 结合考量与实际考虑
+
+辅助变量和半分摊推断并非相互排斥。例如，可以使用辅助变量定义一个富有表现力的后验族，然后使用半分摊推断来为每个数据点微调 (fine-tuning)这个更丰富的后验参数 (parameter)。
+
+在决定是否采用这些高级推断技术时，请考虑以下几点：
+
+- **性能与计算：** 这两种方法通常都能提升 VAE 性能（ELBO 更紧，潜在地更好的样本或表示），但代价是增加了计算量，特别是对于预测/生成时的半分摊推断。
+- **真实后验的复杂度：** 如果您怀疑真实后验 $p_\theta(z|x)$ 非常复杂或在数据间差异很大，这些方法是很合适的选择。
+- **实现难度：** 实现半分摊推断，特别是涉及通过优化进行反向传播 (backpropagation)的训练部分，可能更复杂。辅助变量模型也会为推断网络设计增加一层复杂度。
+
+在实践中，如果需要进一步提升后验近似的质量，从一个经过良好调优的标准 VAE 开始，然后研究这些技术，会是一个不错的策略。选择哪种方法取决于具体应用、可用的计算资源以及模型性能与推断速度之间的权衡。这两种方法都提供了有价值的工具，通过实现更准确和灵活的后验推断，来拓展 VAE 能力的边界。
+
+## 参考资料
+
+- [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114) — Diederik P Kingma, Max Welling (2014)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1312.6114](https://doi.org/10.48550/arXiv.1312.6114)
+  介绍了变分自编码器（VAE）框架，包括摊销推断的概念，为本节讨论的高级技术奠定了基础。
+- [Auxiliary Deep Generative Models](https://proceedings.mlr.press/v48/maaloe16.html) — Lars Maaløe, Casper Kaae Sønderby, Søren Kaae Sønderby, Ole Winther (2016)
+  Journal: Proceedings of The 33rd International Conference on Machine Learning; Publisher: PMLR; Volume: 48; Pages: 1445-1453
+  介绍了在推断网络中使用辅助变量的概念，以提高VAE中近似后验分布的灵活性和表达能力。
+- [Semi-Amortized Variational Autoencoders](https://proceedings.mlr.press/v86/kim18a.pdf) — Dongho Kim, Wonkyung Kim, Jeongwoo Kim, Daeho Kim and Seung-won Hwang (2018)
+  Journal: Proceedings of the 2nd Workshop on Deep Learning Approaches for Unsupervised and Semi-Supervised Learning (DLASS 2018); Publisher: Proceedings of Machine Learning Research; Volume: 86; Pages: 1-11; DOI: [10.48550/arXiv.1805.02100](https://doi.org/10.48550/arXiv.1805.02100)
+  提出并形式化了半摊销变分自编码器框架，将摊销推断与针对每个实例的优化相结合，以改进后验近似。

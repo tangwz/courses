@@ -1,0 +1,70 @@
+---
+course: "calculus-fundamentals-machine-learning"
+chapter: "optimization-with-derivatives"
+lesson: "visualizing-gradient-descent"
+sourceId: 2282
+sourceUrl: "https://apxml.com/zh/courses/calculus-fundamentals-machine-learning/chapter-3-optimization-with-derivatives/visualizing-gradient-descent"
+title: "梯度下降的可视化"
+description: "在一简单函数上直观演示梯度下降的过程。"
+order: 7
+plots: ["plots/2282-0.json"]
+sourceHash: "c8eb4833dad75c1fa3b37feb0abfc8d5c67748616e245f6b0b342a989145ffdd"
+sourceCorrections: []
+---
+
+了解梯度下降 (gradient descent)很有帮助，但看到其运作过程能让想法更清晰。让我们直观地看看，如何根据导数迈出步子来找到函数的最小值点。
+
+想象我们的成本函数就像一个山谷或碗的形状。我们的目标是找到这个山谷的最低点。设想你正站在山谷的某个斜坡上。你如何才能到达底部？你会看看脚下的地面，判断哪边是下坡，然后朝着那个方向迈一步。
+
+函数的导数 $f'(x)$ 描述了其在当前位置 $x$ 处的斜率，这对于理解函数的增减趋势至关重要：
+
+- 如果斜率 $f'(x)$ 为负，函数在该点正在减小。为了进一步下坡，需要朝着正 $x$ 方向移动（增加 $x$）。
+- 如果斜率 $f'(x)$ 为正，函数正在增加。为了下坡，需要朝着负 $x$ 方向移动（减小 $x$）。
+- 如果斜率 $f'(x)$ 为零，则处于一个平坦点，可能是最小值点（或最大值点，或鞍点）。在许多优化任务中，主要目标是找到函数的最小值点。
+
+梯度下降会借助这些斜率信息来执行迭代步骤。在每一步中，它会计算当前点 $x_{old}$ 处的导数，并使用以下规则更新位置：
+
+
+$$
+x_{new} = x_{old} - \eta \times f'(x_{old})
+$$
+
+
+在此处，$\eta$ (eta) 是*学习率*，这是一个我们之前讨论过的小正数，它控制着每一步的大小。请注意负号：
+
+- 如果 $f'(x_{old})$ 为正（斜率向上），我们减去一个正值，将 $x$ 向左移动（减小 $x$）。
+- 如果 $f'(x_{old})$ 为负（斜率向下），我们减去一个负值（这意味着加上），将 $x$ 向右移动（增加 $x$）。
+
+在这两种情况下，更新都会使 $x$ 向下坡方向移动。
+
+让我们用一个简单的二次函数来演示这个过程，例如 $f(x) = (x-3)^2 + 2$。我们知道它的最小值在 $x=3$ 处。导数是 $f'(x) = 2(x-3)$。让我们从 $x=0$ 开始，并使用学习率 $\eta = 0.2$。
+
+
+
+![梯度下降步骤](plots/2282-0.json)
+
+
+
+> 蓝线表示函数 $f(x)=(x-3)^2+2$。橙色的点和虚线显示了从 $x=0$ 开始的梯度下降所经过的路径。每一步都更接近 $x=3$ 处的最小值点。
+
+在上面的图表中：
+
+1. 我们从 $x=0$ 开始。函数值 $f(0)=11$。斜率 $f'(0) = 2(0-3) = -6$（陡峭下坡）。
+2. 第一次更新是 $x_{new} = 0 - 0.2 \times (-6) = 0 + 1.2 = 1.2$。我们移到 $x=1.2$。
+3. 在 $x=1.2$ 处，函数值 $f(1.2) \approx 5.24$。斜率 $f'(1.2) = 2(1.2-3) = -3.6$（坡度减小，但仍是下坡）。
+4. 下一次更新是 $x_{new} = 1.2 - 0.2 \times (-3.6) = 1.2 + 0.72 = 1.92$。我们移到 $x=1.92$。
+5. 这个过程持续进行。请注意，当我们接近最小值时，步长会变小。之所以如此，是因为在山谷底部附近，斜率 $f'(x)$ 趋近于零。
+
+这个可视化展现了主要思想：梯度下降反复使用导数（斜率）来确定下一步的方向，迭代地朝着函数的最小值点移动。在机器学习 (machine learning)中，被最小化的函数是成本函数，位置 $x$ 代表模型的参数 (parameter)。通过找到使成本最小的参数，我们就能找到最适合数据的模型。
+
+## 参考资料
+
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 4: Numerical Computation (specifically 4.3 Gradient-Based Optimization)
+  为寻求详细了解梯度下降算法的数学基础及其在深度学习中实际应用的读者提供全面的学术论述。
+- [Machine Learning Course Notes, Lecture 2: Linear Regression, Gradient Descent](https://cs229.stanford.edu/notes/cs229-notes1.pdf) — Andrew Ng (2022)
+  Publisher: Stanford University
+  为梯度下降作为优化算法提供清晰直观的介绍，常用于机器学习入门课程。
+- [Mathematics for Machine Learning](https://mml-book.github.io/) — Marc Peter Deisenroth, A. Aldo Faisal, and Cheng Soon Ong (2020)
+  Publisher: Cambridge University Press; Pages: Continuous Optimization
+  连接基础数学与机器学习，其专门章节关于优化和导数，对理解梯度下降至关重要。

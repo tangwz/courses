@@ -1,0 +1,116 @@
+---
+course: "data-governance-quality-observability-production"
+chapter: "automated-reliability-ci-pipelines"
+lesson: "pre-commit-hooks-data-code"
+sourceId: 8112
+sourceUrl: "https://apxml.com/zh/courses/data-governance-quality-observability-production/chapter-5-automated-reliability-ci-pipelines/pre-commit-hooks-data-code"
+title: "数据代码的预提交钩子"
+description: "为 SQL 和 Python 数据代码设置本地验证钩子。"
+order: 1
+plots: []
+sourceHash: "62aacf9c2199efd9de71e8bedeb93c7706316d166e04638b847210ef550afa66"
+sourceCorrections: []
+---
+
+可靠性工程提倡“左移”理念。这种方法指出，缺陷在交付流程中传播得越远，修复成本呈指数级增长。当一个模式错误或格式不正确的 SQL 查询到达生产数据仓库时，它可能已经破坏了下游的仪表板或机器学习 (machine learning)模型。预提交钩子作为第一道防线，在代码和配置进入版本控制系统之前，对其进行本地工作站上的验证。
+
+### Git 钩子的运作方式
+
+Git 钩子是 Git 在 `commit`、`push` 或 `receive` 等事件之前或之后执行的脚本。在数据工程场景中，`pre-commit` 钩子是主要的。当工程师尝试提交更改时，此钩子会针对暂存文件触发一系列自动化检查。如果任何检查失败，提交将被拒绝。工程师必须解决问题并再次尝试提交。
+
+这种机制在团队中推行了规范标准，而无需在代码审查期间进行人工干预。系统会在作者的机器上立即拒绝代码，而不是由高级工程师在拉取请求中指出末尾空格或无效的 YAML 语法。
+
+从数学角度看，我们可以将预提交过程视为应用于一组暂存文件 $S$ 的过滤函数 $f(x)$。提交被接受当且仅当：
+
+
+$$
+\forall file \in S, f(file) = \text{真}
+$$
+
+
+如果任何文件返回假，则仓库状态保持不变。
+
+> 预提交钩子的工作流程。此过程拦截提交命令，充当守门员，确保只有符合要求的代码才能进入本地历史记录。
+
+### 预提交框架
+
+尽管您可以使用 Bash 脚本手动编写 Git 钩子，但在团队中维护它们很困难。行业标准的方案是 `pre-commit` 框架，这是一个用于预提交钩子的多语言包管理器。它允许您在仓库根目录下的一个 YAML 配置文件 (`.pre-commit-config.yaml`) 中定义检查项。
+
+当开发者克隆仓库并运行 `pre-commit install` 时，该框架会将 Git 钩子配置指向此设置。这可以保证每个团队成员都使用相同版本的验证工具运行完全相同的检查。
+
+### 使用静态分析验证 SQL
+
+SQL 是数据工程中的主要语言，但其对工具的要求不如 Python 或 Java 严格。数据团队中一个常见问题是“SQL 漂移”，即不一致的格式和语法风格使代码审查困难且调试繁琐。
+
+为此，我们将 `sqlfluff` 等 SQL 代码检查工具集成到预提交配置中。这些工具将 SQL 文件解析成抽象语法树 (AST)，以验证结构、关键字，甚至特定方言的规则（例如，确保符合 BigQuery 或 Snowflake 规范）。
+
+一项配置可确保除非 SQL 文件满足特定条件，否则不会提交：
+
+1. **语法有效性：** 查询必须可解析。
+2. **安全性：** 防止危险模式，例如生产视图中的 `SELECT *`，如果模式发生变化，这可能会破坏下游依赖项。
+3. **格式化：** 一致的缩进和大小写。
+
+例如，钩子可能会强制所有关键字都大写，并且逗号位于行尾。如果开发者提交的查询中包含小写关键字，钩子可以自动修改文件以更正大小写，然后阻止提交，提示用户暂存已更正的文件。
+
+### Python 代码质量和类型检查
+
+用 Python 编写的数据管道（例如 Airflow DAG 或 PySpark 作业）需要标准的软件工程验证。遵循 PEP 8 标准的代码更易读、更易维护。
+
+用于 Python 数据可靠性的常见钩子包括：
+
+- **Black：** 一个不妥协的代码格式化工具，它会就地重写代码以遵循一致的风格。
+- **Flake8：** 一个检查工具的封装，用于验证逻辑错误和代码复杂度。
+- **MyPy：** 执行静态类型检查。这在数据工程中很有用，可确保期望 `DataFrame` 的函数不会收到 `Dict` 或 `None`。
+
+在数据环境中，我们还会验证配置文件。管道通常由 YAML 或 JSON 配置驱动。YAML 文件中的语法错误可能导致编排服务器崩溃。预提交钩子可以验证 YAML 语法，并确保在文件离开本地环境之前遵循特定的模式。
+
+### 防止安全事件
+
+预提交钩子的主要作用之一是安全性。工程师意外提交访问密钥、密码或内部 API 令牌是很常见的。一旦这些秘密被推送到远程仓库，就必须认为它们已被泄露。
+
+`detect-secrets` 或 `gitleaks` 等工具会扫描暂存的更改，以查找高熵字符串和已知 API 密钥模式（例如，AWS 以 `AKIA` 开头的密钥）。如果检测到潜在的秘密，提交将被阻止。
+
+此外，钩子还应防止意外提交大型数据文件。数据工程师经常在本地处理 CSV 或 Parquet 提取文件。将 500MB 的 CSV 文件提交到 Git 会使仓库大小膨胀，并减慢所有人的克隆速度。`check-added-large-files` 钩子对文件大小强制执行硬性限制（例如 10MB）。
+
+### 实施配置
+
+要使这些检查投入运行，您需要创建一个配置文件，其中列出要运行的仓库和特定的钩子。执行顺序很重要；通常，格式化工具首先运行以修复简单问题，然后是代码检查工具和安全检查。
+
+下面是一个配置示例，展示了如何配置以确保数据管道仓库的安全。请注意，我们为每个工具定义了特定版本 (rev) 以确保确定性；所有工程师都根据相同版本的规则进行检查。
+
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 2.1.0
+    hooks:
+      - id: sqlfluff-lint
+        args: ['--dialect', 'snowflake']
+```
+
+此配置实现了三个目标：它维护基本的文件规范，强制 Python 代码采用标准格式，并根据 Snowflake 语法规则验证 SQL。通过在本地自动化这些断言，我们减少了持续集成 (CI) 环境中的干扰。CI 服务器充当最终守门员，但预提交钩子为工程师提供了即时反馈循环。
+
+## 参考资料
+
+- [Git Hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) — Git SCM Contributors (2023)
+  解释了Git钩子的基本机制以及如何使用它们进行自定义自动化。
+- [\`pre-commit\` framework documentation](https://pre-commit.com/) — Anthony Sottile and `pre-commit` contributors (2023)
+  设置和管理多语言预提交钩子的官方指南。
+- [The DevOps Handbook: How to Create World-Class Agility, Reliability, & Security in Technology Organizations](https://itrevolution.com/devops-handbook) — Gene Kim, Patrick Debois, John Willis, and Jez Humble (2016)
+  Publisher: IT Revolution Press
+  提供了DevOps的基本原则，包括“左移”和持续集成，与自动化质量和可靠性相关。
+- Fundamentals of Data Engineering: Planning and Building Robust Data Systems — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media
+  涵盖了构建健壮数据系统的最佳实践，包括数据质量、测试和数据管道的CI/CD，这强调了早期验证的重要性。

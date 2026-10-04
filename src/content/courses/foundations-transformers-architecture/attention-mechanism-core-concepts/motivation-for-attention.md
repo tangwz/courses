@@ -1,0 +1,41 @@
+---
+course: "foundations-transformers-architecture"
+chapter: "attention-mechanism-core-concepts"
+lesson: "motivation-for-attention"
+sourceId: 1931
+sourceUrl: "https://apxml.com/zh/courses/foundations-transformers-architecture/chapter-2-attention-mechanism-core-concepts/motivation-for-attention"
+title: "动机：克服固定长度上下文向量的不足"
+description: "理解早期编码器-解码器模型中固定上下文向量的限制。"
+order: 1
+plots: []
+sourceHash: "ce7a9ccfcfc1798a1d77435cc403692b3ee937ce8f6ef8218bdec716a1773c56"
+sourceCorrections: []
+---
+
+循环神经网络 (neural network)（RNN）及其变体，如LSTM和GRU，通过维护一个隐藏状态来处理序列。尽管这些模型对许多序列任务有效，但一个主要限制源于其核心机制：无论输入序列长度如何，都将其所有信息压缩成一个固定大小的隐藏状态向量 (vector)（或在编码-解码器设置中的上下文 (context)向量）。
+
+以标准序列到序列（seq2seq）模型为例，它常用于机器翻译等任务。编码器逐步处理输入序列，并在每一步更新其隐藏状态。编码器的最终隐藏状态，通常称为上下文向量，旨在总结整个输入序列。这个单一向量随后被传递给解码器，解码器将其用作初始状态来生成输出序列。
+
+> 传统编码器-解码器架构的简化视图。编码器输出一个固定大小的上下文向量`C`，它表示整个输入，并成为解码器获取输入信息的唯一来源。
+
+这个固定大小的上下文向量代表着一个固有的信息瓶颈。想象一下，尝试将冗长的段落或文档总结成一个简短的句子；细节必然会丢失。同样，随着序列长度的增加，迫使模型将长输入序列（例如，翻译中的复杂句子）的所有细节编码到一个向量中，变得越来越困难。解码器的性能根本上受到这个单一总结向量的质量和完整性的制约。在编码器的序列处理过程中，来自输入序列早期部分的信息可能会被后续输入“覆盖”或稀释。
+
+这个瓶颈使得解码器在生成输出的不同部分时，难以访问输入中特定且相关的信息片段。例如，在翻译句子时，特定输出词的选择可能严重依赖于*输入*句子开头附近的一个特定词语或短语。仅仅依赖最终压缩的上下文向量，使得访问这种特定且远距离的信息变得不可靠。
+
+为了克服这一限制，我们需要一种机制，它允许模型（特别是解码器）在输出生成过程的每一步“回看”编码器隐藏状态的整个序列（或输入的表示）。模型不应仅仅依赖一个单一的静态总结，而应能够根据它当时试图预测的内容，动态地为输入序列的不同部分分配不同程度的重要性。
+
+这就是**注意力机制 (attention mechanism)**背后的主要原因。它提供了一种方法，可以创建针对每个输出步骤专门定制的动态的、依赖于上下文的输入序列总结。与其将所有内容压缩到一个固定向量中，注意力机制允许模型选择性地关注最相关的输入元素，从而有效地绕过固定上下文瓶颈。
+
+接下来各部分将详细说明这种注意力机制的实现方式，从查询（Queries）、键（Keys）和值（Values）的基本抽象开始，最终形成在Transformer架构中被普遍使用的缩放点积注意力公式。
+
+## 参考资料
+
+- [Sequence to Sequence Learning with Neural Networks](https://neurips.cc/paper/2014/file/a14ac55a4f27472c86fdcdba2aebf3a3-Paper.pdf) — Ilya Sutskever, Oriol Vinyals, Quoc V. Le (2014)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 27
+  介绍了使用固定长度上下文向量的序列到序列模型，明确了本节讨论的架构限制。
+- [Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/pdf/1409.0473) — Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio (2014)
+  Journal: International Conference on Learning Representations (ICLR 2015); DOI: [10.48550/arXiv.1409.0473](https://doi.org/10.48550/arXiv.1409.0473)
+  提出了注意力机制，用以解决序列到序列模型中固定长度上下文向量的瓶颈问题。
+- [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) — Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Łukasz Kaiser, Illia Polosukhin (2017)
+  Journal: Advances in Neural Information Processing Systems; Publisher: Curran Associates, Inc.; Volume: 30; Pages: 5998-6008
+  介绍了Transformer架构，该架构完全采用注意力机制，无需循环即可高效处理序列。

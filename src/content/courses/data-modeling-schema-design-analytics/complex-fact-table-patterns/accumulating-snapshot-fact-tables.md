@@ -1,0 +1,87 @@
+---
+course: "data-modeling-schema-design-analytics"
+chapter: "complex-fact-table-patterns"
+lesson: "accumulating-snapshot-fact-tables"
+sourceId: 7987
+sourceUrl: "https://apxml.com/zh/courses/data-modeling-schema-design-analytics/chapter-4-complex-fact-table-patterns/accumulating-snapshot-fact-tables"
+title: "累加快照事实表"
+description: "使用累加快照建模业务流程。"
+order: 3
+plots: ["plots/7987-0.json"]
+sourceHash: "d937bd1550816ef2114ba8da08d3f5b5d5fc3d970750619534dedde841bb431c"
+sourceCorrections: []
+---
+
+事务事实表记录实时发生的事件，而周期快照以固定间隔捕获状态。但这两种结构都不太适合分析业务流程的速率。当您需要了解一个实体通过流程所需的时间时，累加快照事实表就是标准的设计模式。
+
+这种模式最常用于有明确起点和终点的流程。常见例子包括订单履行、保险理赔和抵押贷款申请。在这些情况下，业务方对离散事件的兴趣较小，更关注里程碑之间的时间长度。
+
+### 单行架构
+
+累加快照的主要特点是，一行代表一个业务实体的整个生命周期。在事务模型中，一个订单经过“已创建”、“已发货”和“已送达”阶段会生成三条独立的记录。而在累加快照中，这会生成一条带有多个列的记录，这些列表示这些日期。
+
+随着流程的推进，系统会更新这一行记录。我们不会为后续步骤插入新记录。相反，当达到里程碑时，我们会用新数据填充空字段。
+
+> 累加快照事实表中单行记录的生命周期。该记录保留在表中，并随着业务流程的推进而接收更新。
+
+这种结构创建了一个表，该表物理上比事务表更短但更宽。它包含更少的行，因为每个订单我们只有一条记录；但它有明显更多的列，以适应与每个阶段关联的各种日期和度量。
+
+### 管理多个日期维度
+
+这种模式的一个显著特点是存在指向日期维度的多个外键。订单履行流程的典型模式可能包括：
+
+- `订单日期键`
+- `打包日期键`
+- `发货日期键`
+- `送达日期键`
+
+在上一章中，我们讨论了角色扮演维度。这是该技术的主要应用场景。您维护一个物理上的单一`Dim_Date`表，但事实表多次与之连接。每次连接代表一个不同的作用：订单日期、发货日期等。
+
+当一行首次创建时，只有`订单日期键`是已知的。其他日期键通常设置为默认的“未知”代理键（通常是 -1 或 0），或保留为 NULL，依据您的物理数据库限制。随着工作流的推进，ETL 过程会更新这些键以反映实际日期。
+
+### 分析流程延迟
+
+从这种设计中获得的主要分析能力是延迟的计算。延迟表示两个里程碑之间经过的时间。因为所有相关日期都存在于单行中，计算步骤之间的时间长度变成了一个简单的跨列算术运算。
+
+如果您使用事务模式，计算“订单”和“发货”之间的时间将需要复杂的自连接或窗口函数，以找到两个不同的事件行。在累加快照中，查询很简单：
+
+$Lag_{发货} = Date_{发货} - Date_{订单}$
+
+您可以在 ETL 过程中预先计算这些延迟，并将它们作为可加事实存储在表中。这使得分析师可以轻松地平均延迟时间。例如，您可以计算特定区域所有订单的平均发货时间，而无需在查询时执行昂贵的日期计算。
+
+
+
+![各流程阶段的平均延迟时间（天）](plots/7987-0.json)
+
+
+
+> 履行不同阶段的平均延迟时间比较。使用累加快照时，这种分析的计算成本较低。
+
+### 物理实现
+
+尽管累加快照对于分析来说效力强大，但它们在现代数据仓库中带来技术开销。大多数分析型数据库（如 Snowflake、BigQuery 或 Redshift）使用针对读取和追加数据优化的列式存储。它们未针对行级更新进行优化。
+
+累加快照非常依赖 `UPDATE` 语句。每次订单进入下一阶段时，流程必须找到现有行并修改它。在高并发环境中，这可能导致性能瓶颈。
+
+为了缓解这种情况，数据工程师通常采用特定的策略：
+
+1. **完全重新加载：** 如果数据集足够小，每天截断并重建表可能更快，而不是处理单独的更新。
+2. **混合方法：** 近期活动在一个频繁更新的区域中跟踪，而已完成的记录则写入主历史表。
+3. **合并优化：** 使用高性能的 `MERGE` 语句，能高效处理批量更新，而不是逐行修改。
+
+### 何时不宜使用此模式
+
+识别何时不需要累加快照很重要。如果工作流没有明确的结束状态，或者如果实体之间的路径差异很大，这种模式就会失效。
+
+例如，分析网站用户会话通常更适合使用事务模型。一个用户可能访问三页或三百页。他们可能会来回跳转。尝试将变长活动流扁平化成为累加快照中固定的列集合，将导致稀疏、难以管理的表结构。
+
+累加快照仅适用于那些具有标准、可预测里程碑序列的流程，其主要分析目标是衡量流程的效率和速率。
+
+## 参考资料
+
+- [The Data Warehouse Toolkit: The Definitive Guide to Dimensional Modeling](https://www.wiley.com/en-us/The+Data+Warehouse+Toolkit%3A+The+Definitive+Guide+to+Dimensional+Modeling%2C+3rd+Edition-p-9781118530801) — Ralph Kimball, Margy Ross (2013)
+  Publisher: Wiley
+  这本维度建模的基础著作提供了事实表设计的全面指导，包括对累积快照事实表的架构及其分析用途的详细说明。
+- [C-Store: A Column-oriented DBMS](http://www.vldb.org/archives/website/2005/program/paper/thu/p553-stonebraker.pdf) — Michael Stonebraker, Daniel J. Abadi, Adam Batkin, Xuedong Chen, Mitch Cherniack, Miguel Ferreira, Edmond Lau, Amerson Lin, Samuel Madden, Elizabeth J. O'Neil, Patrick E. O'Neil, Alexander Rasin, Nga Tran, Stanley B. Zdonik (2005)
+  Journal: Proceedings of the 31st International Conference on Very Large Data Bases; Publisher: ACM; Volume: 2; Pages: 553-564; DOI: [10.1109/VLDB.2005.150](https://doi.org/10.1109/VLDB.2005.150)
+  这篇开创性论文介绍了列式数据库系统的设计和优势，解释了其架构如何影响分析工作负载中更新等操作的性能特点。

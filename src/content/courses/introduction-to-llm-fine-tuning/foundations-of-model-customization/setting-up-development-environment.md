@@ -1,0 +1,127 @@
+---
+course: "introduction-to-llm-fine-tuning"
+chapter: "foundations-of-model-customization"
+lesson: "setting-up-development-environment"
+sourceId: 7267
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-llm-fine-tuning/chapter-1-foundations-of-model-customization/setting-up-development-environment"
+title: "配置开发环境"
+description: "配置 PyTorch、Transformers 和 Hugging Face 生态环境的分步指南。"
+order: 6
+plots: []
+sourceHash: "49447b4cffe7567db1bae3d98c2531a8e08e040d3dbd558a0d243afda6a6b24d"
+sourceCorrections: []
+---
+
+为了开始微调 (fine-tuning)模型，一个适当配置且可复现的环境是必需的。此配置为模型微调的实践操作提供基础。它确保代码按预期运行，并且能够管理处理大型语言模型所需的特定库版本。必要的硬件考量以及 PyTorch 和 Hugging Face 生态系统的分步安装都将详述。
+
+### 微调 (fine-tuning)环境的构成
+
+一个典型的 LLM 微调环境建立在多层软件和硬件之上。底层是硬件，最好是 GPU，它提供计算能力。在此之上，我们安装一个深度学习 (deep learning)框架，例如 PyTorch。最后，我们使用 Hugging Face 生态系统中的专用库来简化模型加载、数据准备以及训练流程。
+
+> 用于微调的核心软件组件之间的关系。PyTorch 提供基本的张量操作，而 Hugging Face 库则为模型、数据和训练加速提供高级抽象。
+
+### 硬件考量：GPU 的作用
+
+微调 (fine-tuning)大型语言模型是一项计算密集型任务。虽然在 CPU 上运行技术上可行，但过程会慢到不实用。为实现高效微调，强烈建议使用配备足够显存 (VRAM) 的强大 NVIDIA GPU。
+
+- **GPU**：NVIDIA GPU 是深度学习 (deep learning)的常用配置，得益于其 CUDA (Compute Unified Device Architecture) 平台，PyTorch 等深度学习框架正是利用此平台进行加速。
+- **VRAM**：显存大小是一个主要考虑因素。它决定了模型最大尺寸和训练时可用的批处理大小。对于完全微调，您通常需要配备 24 GB 或更多显存的 GPU。对于更高效的方法，例如我们将在后续章节介绍的 LoRA，您通常可以使用配备 8 GB 至 16 GB 显存的 GPU。
+
+如果您无法使用本地 NVIDIA GPU，Google Colab、Kaggle Notebooks 等云平台，或 AWS、GCP 或 Azure 提供的专用云 GPU 实例都是很好的替代方案。
+
+### 步骤 1：创建 Python 虚拟环境
+
+在安装任何软件包之前，最佳实践是创建一个独立的虚拟环境。这可以避免与其他项目或系统级 Python 包的冲突。我们建议使用 Python 3.10 或更新版本。
+
+使用 Python 内置的 `venv` 模块，在您的终端中运行以下命令来创建并激活新环境：
+
+```bash
+# 创建名为 'llm-finetune-env' 的虚拟环境
+python -m venv llm-finetune-env
+
+# 激活环境
+# 在 macOS 和 Linux 上:
+source llm-finetune-env/bin/activate
+
+# 在 Windows 上:
+.\llm-finetune-env\Scripts\activate
+```
+
+激活后，您的终端提示符会改变，表明您当前正在 `llm-finetune-env` 环境中操作。
+
+### 步骤 2：安装支持 CUDA 的 PyTorch
+
+PyTorch 的安装命令取决于您的操作系统和 GPU 的 CUDA 版本。请务必安装与您已安装的 CUDA 版本相匹配的 PyTorch 版本。
+
+1. **检查您的 CUDA 版本**：如果您已安装 NVIDIA GPU 和驱动程序，可以通过在终端中运行 `nvidia-smi` 来检查您的 CUDA 版本。
+2. **从 PyTorch 官网获取命令**：访问 [PyTorch 官方网站](https://pytorch.org/get-started/locally/) 并使用配置工具为您的系统生成正确的 `pip` 或 `conda` 命令。
+
+例如，要安装支持 CUDA 12.1 的 PyTorch，命令通常是：
+
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+安装完成后，您可以运行此 Python 小脚本来检查 PyTorch 是否正确安装以及能否检测到您的 GPU。
+
+```python
+import torch
+
+if torch.cuda.is_available():
+    print(f"PyTorch 版本: {torch.__version__}")
+    print(f"CUDA 是否可用: {torch.cuda.is_available()}")
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+else:
+    print("PyTorch 未安装 CUDA 支持。")
+```
+
+成功的输出表明您的设置已为 GPU 加速训练做好准备。
+
+### 步骤 3：安装 Hugging Face 库
+
+PyTorch 安装完成后，下一步是添加 Hugging Face 生态系统的核心库。这些库提供工具来下载模型、管理数据集并高效执行微调 (fine-tuning)过程。
+
+使用单个 `pip` 命令安装所需库：
+
+```bash
+pip install transformers datasets accelerate peft
+```
+
+我们简要回顾一下各软件包的作用：
+
+- `transformers`：提供对数千个预训练 (pre-training)模型及其分词 (tokenization)器 (tokenizer)的访问，以及用于简化训练循环的 `Trainer` API。
+- `datasets`：一个高效库，用于加载、处理和缓存大型数据集，这对于管理微调中使用的数据是必需的。
+- `accelerate`：一个库，它简化 PyTorch 代码在不同硬件配置（CPU、单 GPU、多 GPU）上的运行，只需少量代码改动。
+- `peft`：参数 (parameter)高效微调库，包含 LoRA 和 QLoRA 等方法的实现，我们将在第 4 章中使用这些方法。
+
+### 步骤 4：在 Hugging Face Hub 进行认证
+
+尽管 Hugging Face Hub 上的许多模型和数据集都是公开的，但有些（例如 Llama 系列模型）是“受限的”，要求您接受使用条款才能访问。使用访问令牌对环境进行认证，允许您的代码下载这些资源。
+
+1. 在 [HuggingFace.co](https://huggingface.co/) 上创建账户。
+2. 前往您的“设置”页面，然后找到“访问令牌”部分。
+3. 生成新令牌，如果您计划稍后上传自己的模型，最好具有“写入”权限。
+
+获得令牌后，在终端中运行以下命令并在提示时粘贴令牌：
+
+```bash
+huggingface-cli login
+```
+
+此命令在本地安全存储您的令牌，允许库在需要时自动使用它。
+
+您的开发环境现已完全配置完毕。您已安装必要的深度学习 (deep learning)框架和用于调整语言模型的专用库。有了这样的配置，您已准备好进入下一章，我们将在其中开始准备用于微调 (fine-tuning)的数据集的实践工作。
+
+## 参考资料
+
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html) — PyTorch Contributors (2023)
+  Publisher: PyTorch Foundation
+  提供 PyTorch 安装、张量操作和 CUDA GPU 加速的全面指南。
+- [Hugging Face Transformers Documentation](https://huggingface.co/docs/transformers/index) — Hugging Face (2023)
+  使用 Transformers 库的权威指南，涵盖模型加载、分词和 Trainer API。
+- [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen (2021)
+  Journal: arXiv preprint arXiv:2106.09685; DOI: [10.48550/arXiv.2106.09685](https://doi.org/10.48550/arXiv.2106.09685)
+  介绍了低秩适应 (LoRA)，一种在内容中直接提及的参数高效微调方法。
+- [NVIDIA CUDA Toolkit Documentation](https://developer.nvidia.com/cuda-toolkit) — NVIDIA Corporation (2023)
+  Publisher: NVIDIA Corporation
+  提供安装和使用 CUDA 工具包的官方信息和指南，对于 PyTorch 的 GPU 加速至关重要。

@@ -1,0 +1,179 @@
+---
+course: "mlops-for-large-models-llmops"
+chapter: "llm-training-finetuning-ops"
+lesson: "checkpointing-fault-tolerance"
+sourceId: 3154
+sourceUrl: "https://apxml.com/zh/courses/mlops-for-large-models-llmops/chapter-3-llm-training-finetuning-ops/checkpointing-fault-tolerance"
+title: "检查点与容错机制"
+description: "为长期运行的训练任务实施稳定的检查点策略与容错功能。"
+order: 7
+plots: []
+sourceHash: "73e2591d997c324dea5452fc9838bf61914daeace99ba3e5ac429214d69c1511"
+sourceCorrections: []
+---
+
+训练大型语言模型通常是一场资源密集型持久战，而非短跑。任务可能在数百或数千个加速器上运行数天、数周甚至数月。在这些长期运行、复杂的分布式环境中，故障不仅可能发生，而且很有可能发生。硬件可能出故障，网络可能中断，抢占式实例可能被回收，或者软件错误可能意外出现。如果没有机制来平稳地处理这些中断，单次故障可能导致数周的计算白费，造成无法接受的延迟和成本超支。在这种情况下，检查点与容错机制成为您大模型运维策略中必不可少的组成部分。
+
+检查点是指定期保存训练任务状态的做法。这种状态通常不仅包括模型的参数 (parameter)（权重 (weight)），还包括优化器的状态（例如，Adam中的动量缓冲区）、当前的训练周期或步数、学习率调度器的状态，甚至可能包括数据加载器和随机数生成器的状态。保存这个完整的状态允许训练过程从中断的确切点恢复，而不是从头开始。
+
+### 检查点的重要性
+
+有效的检查点在大规模训练中提供了几项显著好处：
+
+1. **弹性：** 这是主要原因。如果训练任务因硬件故障、抢占式实例回收或其他临时问题而崩溃，您可以从最近的检查点重新启动任务，只丢失自该点以来的进度。这大大减少了计算时间的浪费和成本。
+2. **试验：** 检查点捕获模型在其训练过程中的特定点状态。这允许您从中间点分支出来，试用不同的超参数 (parameter) (hyperparameter)设置、微调 (fine-tuning)策略或学习率调度方案，无需从头开始重新训练。
+3. **模型评估与选择：** 可以对中间检查点在验证集上进行评估，以跟踪性能随时间的变化。这有助于选择性能最佳的模型版本或实施早期停止标准。
+4. **调试：** 如果训练后期出现问题（例如，训练发散，NaN损失），检查点允许您检查模型和优化器在导致问题出现前各个阶段的状态。
+
+### 检查点策略与考量
+
+实施有效的检查点策略涉及几个决定：
+
+- **频率：** 您应该多久保存一次检查点？这需要权衡。
+
+  - *频繁检查点（例如，每几百步或每小时）：* 最大限度减少故障发生时丢失的工作量，但由于保存所需的时间和I/O操作，会带来更高的开销。存储成本也会增加。
+  - *不频繁检查点（例如，每个周期一次或每12小时一次）：* 减少开销，但如果在下一个检查点即将到来之前发生故障，会增加可能丢失的工作量。
+    最佳频率取决于训练时长、集群稳定性、存储性能以及对丢失工作的容忍度。一种常见的方法是每N步*以及*在每个周期结束时保存检查点。
+- **存储：** 大型模型的检查点容量很大，从几十吉字节到数太字节不等。
+
+  - *位置：* 将检查点保存在训练节点本地存在风险，因为节点故障可能意味着丢失检查点。通常需要可靠、高吞吐量 (throughput)的分布式存储（例如，NFS、Lustre、S3/GCS/Azure Blob Storage 等云存储桶），特别是对于所有进程都需要访问的分布式训练。
+  - *性能：* 保存检查点所需的时间直接影响训练吞吐量，因为训练可能会在保存操作期间暂停（除非使用异步检查点）。高性能存储是有利的。
+  - *成本：* 存储大量大型检查点会产生高昂的存储成本。实施保留策略（例如，保留最近的N个检查点，每M步保留一个检查点，根据验证指标保留表现最佳的检查点）。
+- **格式与内容：** 具体保存什么？
+
+  - *模型状态：* PyTorch中的`state_dict()`或等效的模型参数 (parameter)。
+  - *优化器状态：* 对于正确恢复非常重要，特别是对于Adam等带有动量的优化器。
+  - *训练进度：* 当前周期、步/迭代计数。
+  - *调度器状态：* 学习率调度器的当前状态。
+  - *随机数生成器状态：* 随机数生成器（Python、NumPy、CUDA）的状态，用于可重现性。
+  - *框架特定内容：* 像DeepSpeed这样的框架可能会保存与其内部状态管理相关的额外信息（例如，分区信息）。相比于旧PyTorch检查点中使用的Python pickle格式，像SafeTensors这样的标准格式因其安全性和互操作性而受到更多关注。
+- **异步检查点：** 为了最大限度减少对训练时间的影响，一些框架允许检查点在后台异步进行，将I/O操作与正在进行的计算重叠。这需要仔细实施以确保状态一致性。
+
+### 容错：检查点
+
+检查点是基础，但一个真正容错的系统涉及更多：
+
+- **检测：** 编排系统（例如，Kubernetes、Slurm、Ray）必须检测故障（节点崩溃、进程退出）。
+- **恢复：** 检测到故障后，编排系统理想情况下应自动重新启动失败的进程或整个任务。
+- **继续：** 重新启动的任务必须配置为加载最新的有效检查点并继续训练。
+- **分布式框架支持：** 为大规模训练设计的框架通常具有内置的容错功能。例如，DeepSpeed包含处理节点故障并将重新启动的节点重新整合到训练组中的机制，自动加载必要的分片检查点数据。PyTorch FSDP也提供了用于保存和加载分布式检查点的API。
+- **处理部分故障：** 在大型集群中，一部分节点可能出现故障。系统可能会尝试在可能的情况下使用剩余节点继续训练，或者平稳地暂停，等待替换节点，然后继续。
+
+### 检查点实际操作：保存与加载
+
+以下是使用PyTorch类似语法的示例：
+
+```python
+# --- 保存检查点 ---
+def save_checkpoint(model, optimizer, scheduler, epoch, step, save_dir, is_best=False):
+    """保存模型、优化器、调度器和训练进度。"""
+    os.makedirs(save_dir, exist_ok=True)
+    checkpoint_path = os.path.join(save_dir, f"checkpoint_step_{step}.pt")
+    
+    # 收集状态字典
+    # 注意：对于分布式模型（DDP、FSDP、DeepSpeed），请使用相应的API
+    # 在秩0上收集完整状态字典或以分片格式保存。
+    model_state = model.state_dict() 
+    optimizer_state = optimizer.state_dict()
+    scheduler_state = scheduler.state_dict()
+    
+    torch.save({
+        'model_state_dict': model_state,
+        'optimizer_state_dict': optimizer_state,
+        'scheduler_state_dict': scheduler_state,
+        'epoch': epoch,
+        'step': step,
+        # 可以添加随机数生成器状态、损失值等。
+    }, checkpoint_path)
+    
+    print(f"检查点已保存到 {checkpoint_path}")
+
+    if is_best:
+        best_path = os.path.join(save_dir, "checkpoint_best.pt")
+        shutil.copyfile(checkpoint_path, best_path)
+        print(f"最佳检查点已更新到步数 {step}")
+
+# --- 加载检查点 ---
+def load_checkpoint(model, optimizer, scheduler, load_path):
+    """从检查点文件加载状态。"""
+    if not os.path.exists(load_path):
+        print(f"检查点文件未找到: {load_path}")
+        return 0, 0 # 返回起始周期和步数
+
+    # 将检查点加载到合适的设备上
+    # 使用 map_location 实现灵活性（例如，将GPU检查点加载到CPU）
+    checkpoint = torch.load(load_path, map_location=torch.device('cpu')) 
+    
+    # 加载状态
+    # 同样，如果适用，请使用分布式框架API
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    
+    start_epoch = checkpoint['epoch']
+    start_step = checkpoint['step'] + 1 # 从下一步继续
+    
+    print(f"已从 {load_path} 加载检查点。从周期 {start_epoch}，步数 {start_step} 继续。")
+    return start_epoch, start_step
+
+# --- 训练循环中的使用示例 ---
+# 初始化模型、优化器、调度器...
+start_epoch = 0
+global_step = 0
+checkpoint_dir = "/path/to/checkpoints"
+resume_from_checkpoint = "/path/to/checkpoints/checkpoint_latest.pt" # 或找到最新逻辑
+
+if os.path.exists(resume_from_checkpoint):
+   start_epoch, global_step = load_checkpoint(model, optimizer, scheduler, resume_from_checkpoint)
+
+for epoch in range(start_epoch, num_epochs):
+    for batch in dataloader:
+        # 训练步骤...
+        loss = train_step(model, batch)
+        
+        # 更新优化器、调度器...
+        optimizer.step()
+        scheduler.step()
+        
+        if global_step % checkpoint_interval == 0:
+            save_checkpoint(model, optimizer, scheduler, epoch, global_step, checkpoint_dir)
+            # 如果需要，更新最新检查点的符号链接/标记
+            # 可选：根据保留策略删除旧检查点
+            
+        if global_step % validation_interval == 0:
+            validation_loss = evaluate(model, validation_dataloader)
+            if validation_loss < best_validation_loss:
+                 best_validation_loss = validation_loss
+                 save_checkpoint(model, optimizer, scheduler, epoch, global_step, checkpoint_dir, is_best=True)
+                 
+        global_step += 1
+```
+
+*请注意：上述代码仅供参考。实际实现，特别是对于使用DeepSpeed或FSDP等框架进行的分布式训练，需要那些框架提供的特定API才能正确处理分片状态。* 例如，DeepSpeed提供了`model_engine.save_checkpoint(save_dir)`和`model_engine.load_checkpoint(load_dir)`。
+
+### 处理大模型特点
+
+大型语言模型的庞大体积给检查点带来了特定的挑战：
+
+- **检查点大小与I/O：** 保存数太字节的检查点可能需要相当长的时间，可能导致训练暂停。高性能、并行文件系统很重要。云存储可能会引入延迟，除非使用优化的访问模式。
+- **分片检查点：** 分布式训练框架通常以分片格式保存检查点。每个进程（秩）将其部分的模型参数 (parameter)和优化器状态保存到检查点目录中的一个单独文件。这允许并行保存和加载，相比于先将整个状态收集到单个节点，这大大加快了过程。加载分片检查点需要与保存时相同的集群拓扑（秩的数量）。
+
+> 分片检查点保存示意图。每个秩将其部分的模型和优化器状态保存到共享存储上检查点目录中的一个专用文件。元数据协调这些分片。
+
+- **检查点管理：** 由于庞大的存储占用，清理旧检查点的策略变得更加重要。通常使用自动化脚本或大模型运维平台功能来实施保留策略。
+
+总之，检查点与容错对于严肃的大模型训练和微调 (fine-tuning)操作来说并非可选项。它们是有效管理长期运行、资源密集型任务的基本要求。通过实施全面的状态保存和恢复策略，与容错分布式框架集成，并高效管理检查点存储，您可以显著提高您大模型运维流程的可靠性和成本效益。
+
+## 参考资料
+
+- [DeepSpeed: Training large models with ease, speed and efficiency](https://www.deepspeed.ai/) — Microsoft (2024)
+  Publisher: Microsoft
+  提供使用 DeepSpeed 框架实现高效检查点和容错的官方文档与教程，对于深度学习模型的大规模分布式训练至关重要。
+- [FSDP: Fully Sharded Data Parallel](https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html) — Wei Feng, Will Constable, Yifan Mao (2024)
+  Publisher: PyTorch Foundation
+  提供 PyTorch 关于使用完全分片数据并行 (FSDP) 的官方指南，包括如何保存和加载分片检查点，这对于大规模模型扩展至关重要。
+- [Machine Learning Design Patterns](https://www.oreilly.com/library/view/machine-learning-design/9781098115777/) — Valliappa Lakshmanan, Sara Robinson, and Michael Munn (2020)
+  Publisher: O'Reilly Media; Pages: 267-272
+  本书的“检查点”设计模式章节从架构角度阐述如何在机器学习流程中实现检查点以提高弹性和可管理性。
+- [SafeTensors: A more secure and faster way to store and load tensors](https://huggingface.co/docs/safetensors/index) — Hugging Face (2024)
+  阐释 SafeTensors 格式，该格式解决保存和加载大型模型状态时的安全性和效率问题，为传统序列化方法提供一个稳健的替代方案。

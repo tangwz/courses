@@ -1,0 +1,220 @@
+---
+course: "getting-started-with-tensorflow"
+chapter: "training-evaluating-models"
+lesson: "practice-training-monitoring"
+sourceId: 1752
+sourceUrl: "https://apxml.com/zh/courses/getting-started-with-tensorflow/chapter-4-training-evaluating-models/practice-training-monitoring"
+title: "实践：训练与监控"
+description: "动手实践模型的编译、训练、评估以及使用回调和TensorBoard。"
+order: 9
+plots: ["plots/1752-0.json"]
+sourceHash: "010aa2f391d23862a61fa44274d6a5127c5353eafebe910e9adfba28ebdb7ad8"
+sourceCorrections: []
+---
+
+将演示模型编译、使用`model.fit()`进行训练、评估其表现、进行预测，以及使用回调函数进行更好的训练管理和监控等理念。一个简单的分类器将在Fashion-MNIST等标准数据集上构建并训练，并结合使用`ModelCheckpoint`、`EarlyStopping`和`TensorBoard`。
+
+本次实践假定您已安装TensorFlow并熟悉基本的NumPy操作。我们将使用Fashion-MNIST数据集，该数据集可通过`tf.keras.datasets`方便地获取。
+
+### 1. 加载并准备数据
+
+首先，加载Fashion-MNIST数据集并进行预处理。预处理通常包括归一化 (normalization)（缩放像素值），以及在必要时为模型的输入层重塑数据。我们还需要对标签进行独热编码，以用于分类交叉熵损失。
+
+```python
+import tensorflow as tf
+import numpy as np
+import os
+import datetime
+
+# 加载Fashion MNIST数据集
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
+
+# 将像素值归一化到0到1之间
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# 如果首先使用全连接网络，则重塑输入数据（稍后为卷积层添加通道维度）
+# 对于全连接层，我们将图像展平
+x_train_flat = x_train.reshape((x_train.shape[0], 28 * 28))
+x_test_flat = x_test.reshape((x_test.shape[0], 28 * 28))
+
+# 对标签进行独热编码
+num_classes = 10
+y_train_cat = tf.keras.utils.to_categorical(y_train, num_classes)
+y_test_cat = tf.keras.utils.to_categorical(y_test, num_classes)
+
+print(f"x_train shape: {x_train_flat.shape}") # Shape: (60000, 784)
+print(f"y_train shape: {y_train_cat.shape}") # Shape: (60000, 10)
+print(f"x_test shape: {x_test_flat.shape}")   # Shape: (10000, 784)
+print(f"y_test shape: {y_test_cat.shape}")   # Shape: (10000, 10)
+```
+
+### 2. 构建一个简单的Keras模型
+
+我们将定义一个直接的顺序模型，包含几个全连接层。
+
+```python
+def build_simple_model(input_shape, num_classes):
+  model = tf.keras.models.Sequential([
+      tf.keras.layers.Input(shape=input_shape), # 为清晰起见使用Input层
+      tf.keras.layers.Dense(128, activation='relu', name='dense_1'),
+      tf.keras.layers.Dropout(0.3, name='dropout_1'), # 添加Dropout层进行正则化
+      tf.keras.layers.Dense(64, activation='relu', name='dense_2'),
+      tf.keras.layers.Dense(num_classes, activation='softmax', name='output')
+  ])
+  return model
+
+input_shape = (28 * 28,) # 展平后的图像形状
+model = build_simple_model(input_shape, num_classes)
+model.summary()
+```
+
+### 3. 编译模型
+
+接下来，编译模型，指定优化器、损失函数 (loss function)以及在训练过程中要跟踪的指标。
+
+```python
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+              loss=tf.keras.losses.CategoricalCrossentropy(),
+              metrics=['accuracy'])
+
+print("模型已编译。")
+```
+
+### 4. 配置回调函数
+
+现在，我们来设置之前讨论过的回调函数：
+
+- `ModelCheckpoint`: 用于在训练期间根据验证准确率保存观察到的最佳模型权重 (weight)。
+- `EarlyStopping`: 如果验证损失停止改善，则停止训练，以防止过拟合 (overfitting)。
+- `TensorBoard`: 用于记录指标和图结构以供可视化。
+
+```python
+# 定义TensorBoard的日志目录（每次运行独立）
+log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+print(f"TensorBoard 日志目录: {log_dir}")
+
+# 定义检查点路径和文件名
+checkpoint_filepath = 'models/best_fashion_mnist_model.weights.h5'
+os.makedirs(os.path.dirname(checkpoint_filepath), exist_ok=True)
+print(f"模型检查点将保存到: {checkpoint_filepath}")
+
+# 创建回调函数
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=checkpoint_filepath,
+    save_weights_only=True, # 只保存权重
+    monitor='val_accuracy', # 监控验证准确率
+    mode='max',             # 保存验证准确率最高的模型
+    save_best_only=True)    # 仅在当前为“最佳”时保存
+
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss',     # 监控验证损失
+    patience=10,            # 训练将在指定数量的周期内性能无提升后停止
+    verbose=1,              # 停止时打印信息
+    restore_best_weights=True) # 从监控指标值最佳的周期恢复模型权重。
+
+callbacks_list = [tensorboard_callback, model_checkpoint_callback, early_stopping_callback]
+```
+
+注意：`EarlyStopping`中的`restore_best_weights=True`很方便，因为当训练停止时，模型对象会自动保留最佳权重。如果设置为`False`，您通常需要在训练结束后手动加载由`ModelCheckpoint`保存的权重。
+
+### 5. 使用回调函数训练模型
+
+我们现在准备好使用`model.fit()`训练模型。我们将传入训练数据，指定周期数、批大小、验证数据（使用训练集的分割），以及我们的回调函数列表。
+
+```python
+print("开始模型训练...")
+batch_size = 64
+epochs = 50 # 设置一个较大的数值，EarlyStopping可能会提前停止训练
+
+history = model.fit(x_train_flat, y_train_cat,
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    validation_split=0.2, # 使用20%的训练数据作为验证集
+                    callbacks=callbacks_list,
+                    verbose=1) # 设置verbose=1或2以查看每个周期的进度
+
+print("模型训练完成。")
+```
+
+在训练过程中，您将看到每个周期的输出，包括训练集和验证集的损失与准确率。如果`EarlyStopping`停止训练运行，请留意其消息。每当验证准确率提高时，`ModelCheckpoint`将静默保存最佳权重 (weight)。
+
+### 6. 使用TensorBoard监控训练
+
+当模型正在训练时（或训练完成后），您可以启动TensorBoard来可视化指标。打开您的终端或命令提示符，导航到*包含*`logs`文件夹的目录（或提供完整路径），然后运行：
+
+```bash
+tensorboard --logdir logs/fit
+```
+
+TensorBoard通常会在`http://localhost:6006`启动一个Web服务器。在浏览器中打开此URL。您应该会看到：
+
+- **标量：** 训练和验证集的损失与准确率随周期变化的图表。这有助于识别过拟合 (overfitting)（验证损失增加而训练损失减少）或评估收敛情况。
+- **图表：** 您的Keras模型架构的可视化。
+- **直方图/分布图：** 权重 (weight)和偏差随时间变化的直方图/分布图（如果设置了`histogram_freq`）。
+
+
+
+![训练与验证损失](plots/1752-0.json)
+
+
+
+> 在TensorBoard中可能看到的训练和验证损失曲线。注意验证损失如何开始趋于平稳或增加，而训练损失持续下降，这表示可能存在过拟合。早期停止会在大约10-12周期左右停止训练。
+
+### 7. 评估模型
+
+训练结束后，使用`model.evaluate()`评估模型在未见过测试集上的表现。由于我们在`EarlyStopping`中使用了`restore_best_weights=True`，因此`model`对象已包含验证损失最佳的周期的权重 (weight)。如果您没有使用该选项或希望专门从`ModelCheckpoint`文件加载，您将首先加载权重：
+
+```python
+# 可选：加载ModelCheckpoint保存的最佳权重
+# model.load_weights(checkpoint_filepath)
+# print("已从检查点加载最佳权重。")
+
+print("正在评估测试数据上的模型...")
+test_loss, test_acc = model.evaluate(x_test_flat, y_test_cat, verbose=0)
+print(f"\n测试损失: {test_loss:.4f}")
+print(f"测试准确率: {test_acc:.4f}")
+```
+
+这为您提供了模型在训练或验证期间从未见过的数据上的最终性能指标。
+
+### 8. 生成预测
+
+最后，使用`model.predict()`在新数据上获取预测（这里我们将使用测试集中的几个例子）。Softmax层的输出给出每个类别的概率。
+
+```python
+# 获取前5张测试图像的预测
+predictions = model.predict(x_test_flat[:5])
+
+# 打印每张图像的预测类别概率
+print("\n前5张测试图像的预测（概率）:")
+print(predictions)
+
+# 获取每张图像中概率最高的类别
+predicted_classes = np.argmax(predictions, axis=1)
+print("\n预测类别:", predicted_classes)
+
+# 获取实际类别以便比较
+actual_classes = y_test[:5]
+print("实际类别:   ", actual_classes)
+```
+
+输出显示了5张输入图像中每张图像在10个类别上的概率分布，后面是概率最高的索引（类别标签）。
+
+本次演练说明了在TensorFlow中训练Keras模型的标准流程。您使用必要的组件编译了模型，使用`model.fit`以及回调函数高效地管理训练过程（保存最佳模型、提前停止、记录以便可视化），评估了最终性能，并进行了预测。这些步骤构成了您将适用于各种机器学习 (machine learning)任务的核心过程。
+
+## 参考资料
+
+- [Train and evaluate models](https://www.tensorflow.org/guide/keras/train_and_evaluate) — TensorFlow Developers (2023)
+  Keras模型编译、使用`model.fit()`进行训练、评估以及`ModelCheckpoint`、`EarlyStopping`和`TensorBoard`等回调函数的官方指南。
+- [Deep Learning with Python](https://www.manning.com/books/deep-learning-with-python-second-edition) — François Chollet (2021)
+  Publisher: Manning Publications
+  Keras创建者撰写的实用指南，涵盖数据准备、神经网络构建与训练、正则化和模型监控技术。
+- [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Diederik P. Kingma, Jimmy Ba (2015)
+  Journal: 3rd International Conference for Learning Representations; DOI: [10.48550/arXiv.1412.6980](https://doi.org/10.48550/arXiv.1412.6980)
+  介绍了Adam优化器的原始学术论文，该优化器用于训练深度神经网络，并应用于本节的实践中。
+- [Fashion-MNIST: A Novel Image Dataset for Benchmarking Machine Learning Algorithms](https://arxiv.org/abs/1708.07747) — Han Xiao, Kashif Rasul, and Roland Vollgraf (2017)
+  Journal: ArXiv; DOI: [10.48550/arXiv.1708.07747](https://doi.org/10.48550/arXiv.1708.07747)
+  介绍了Fashion-MNIST数据集，该数据集是图像分类的基准，并在实践示例中用作数据集。

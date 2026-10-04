@@ -1,0 +1,66 @@
+---
+course: "intermediate-reinforcement-learning"
+chapter: "actor-critic-methods"
+lesson: "combining-policy-value"
+sourceId: 5153
+sourceUrl: "https://apxml.com/zh/courses/intermediate-reinforcement-learning/chapter-5-actor-critic-methods/combining-policy-value"
+title: "结合策略和价值评估"
+description: "行动者-评论者方法的原因：利用价值估计来改进策略更新。"
+order: 1
+plots: []
+sourceHash: "e1804e27dd81f038638fe9151099ef63ea4a16de40e74c93531b992fc4d0103f"
+sourceCorrections: []
+---
+
+基于价值的方法，如DQN，在学习动作价值方面表现出色，但可能面临一些问题，尤其是在连续动作空间的环境中。另一方面，策略梯度方法，如REINFORCE，直接学习策略，使它们适合连续动作，但它们的学习过程可能受到梯度估计高方差的阻碍。这种方差出现的原因是学习信号通常基于整个回合的回报，而回报可能因所采取的动作而大幅波动。
+
+如果我们能以某种方式结合这两种方法的优点，岂不是非常有效？设想一下，使用策略梯度的直接策略学习能力，并通过基于价值方法的评估性信息来改进学习信号。这正是行动者-评论者（Actor-Critic）架构的背后原因。
+
+核心思想是保持两个不同的组成部分，通常作为独立的神经网络 (neural network)实现（或有时共享较低层）：
+
+1. **行动者（Actor）**: 该组件学习并实现策略，$\pi_\theta(a|s)$。给定状态 $s$，行动者决定采取哪个动作 $a$。它的目标是优化策略参数 (parameter) $\theta$ 以获得更高的奖励。
+2. **评论者（Critic）**: 该组件学习一个价值函数，用于评估行动者遇到的状态或状态-动作对。它通常估计状态价值函数 $V_\phi(s)$ 或动作价值函数 $Q_\phi(s, a)$，参数化为 $\phi$。它的作用不是选择动作，而是通过提供对这些动作或结果状态的评价，来*评论*行动者所选择的动作。
+
+### 交互如何改进学习
+
+主要的交互发生在更新步骤。行动者不再基于简单REINFORCE中使用的噪声大、高方差的蒙特卡洛回报（$G_t$）来更新其策略，而是使用评论者提供的反馈。评论者在学习了价值函数后，能够为行动者动作的质量提供更稳定、低方差的估计。
+
+例如，评论者可能估计状态价值函数 $V_\phi(s)$。当行动者在状态 $s$ 中采取动作 $a$，获得奖励 $R$，并转换到状态 $s'$ 时，评论者可以计算时序差分（TD）误差：
+
+
+$$
+\delta_t = R_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)
+$$
+
+
+这个TD误差表示结果与评论者之前对状态 $s_t$ 的预期相比好或坏了多少。正的 $\delta_t$ 表明所采取的动作导致了比预期更好的结果，而负的 $\delta_t$ 则表示相反。
+
+行动者随后使用这个TD误差 $\delta_t$（或相关衡量指标，如优势函数，我们稍后将讨论）作为信号来更新其策略参数 (parameter) $\theta$。更新规则如下：
+
+
+$$
+\theta \leftarrow \theta + \alpha \nabla_\theta \log \pi_\theta(a_t|s_t) \delta_t
+$$
+
+
+同时，评论者更新其自身参数 $\phi$ 以改进其价值估计，通常使用相同的TD误差来最小化预测不准确性，例如，通过最小化 $\delta_t^2$。
+
+> 图示行动者、评论者和环境之间的交互。行动者根据状态选择动作，环境提供反馈，评论者评估结果，并向行动者提供学习信号。两个组件都更新其内部参数。
+
+### 协作的优点
+
+这种协作结构提供了显著的益处：
+
+- **方差降低：** 评论者的估计（如TD误差）通常比REINFORCE中使用的完整蒙特卡洛回报噪声小得多。这会导致更稳定的梯度，并可能使行动者策略更快地收敛。
+- **学习加速：** 更新可以在每个步骤进行（如TD学习中），而不是等到回合结束（如基本REINFORCE中）。
+- **灵活性：** 行动者-评论者方法自然地处理连续动作空间（通过行动者的策略），同时从评论者提供的自举估计中获得益处。
+
+通过将策略搜索与学到的价值函数结合，行动者-评论者方法提供了一个强大的框架，解决了单独使用任何一种方法的固有局限性。接下来的部分将考察特定的算法，如优势行动者-评论者（A2C）和异步优势行动者-评论者（A3C），它们改进了这种基本结构，以提升性能和效率。
+
+## 参考资料
+
+- [Reinforcement Learning: An Introduction](http://www.incompleteideas.net/book/the-book-2nd.html) — Richard S. Sutton and Andrew G. Barto (2018)
+  Publisher: MIT Press
+  一本全面权威的强化学习教材，涵盖了策略梯度、基于价值的方法以及Actor-Critic架构的详细解释。
+- [Policy Gradients and Actor-Critic](https://rail.eecs.berkeley.edu/deeprlcourse-fa20/) — Sergey Levine (2021)
+  来自领先大学深度强化学习课程的讲义，提供了策略梯度方法和Actor-Critic算法基本原理的清晰学术解释。

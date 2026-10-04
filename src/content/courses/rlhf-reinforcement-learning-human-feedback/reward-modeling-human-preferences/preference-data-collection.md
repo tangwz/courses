@@ -1,0 +1,71 @@
+---
+course: "rlhf-reinforcement-learning-human-feedback"
+chapter: "reward-modeling-human-preferences"
+lesson: "preference-data-collection"
+sourceId: 5118
+sourceUrl: "https://apxml.com/zh/courses/rlhf-reinforcement-learning-human-feedback/chapter-3-reward-modeling-human-preferences/preference-data-collection"
+title: "人类偏好数据收集"
+description: "用于收集人类比较反馈的方法和界面。"
+order: 2
+plots: []
+sourceHash: "32f920a53723a8c8095493de19deaac5677883c8c2c871f28c4d96db33942483"
+sourceCorrections: []
+---
+
+训练一个能体现人类偏好的奖励模型 ($RM$) 是主要目标。随之而来的问题是：如何获得代表这些偏好的数据？$RM$ 通过人类认为“好”或“坏”的AI行为示例来学习，这些行为是针对特定提示而产生的。收集人类偏好数据的实际过程在此阐述，这些数据是训练有效奖励模型的依据。
+
+最普遍的做法是采用**成对比较**。我们不要求标注员给单一回复打上绝对质量分（这会非常主观且不一致），而是向他们展示一个提示和两个由语言模型生成的不同回复。标注员的任务仅仅是选择他们偏好哪个回复。这种相对判断对人类而言通常更容易，也更便于保持一致。
+
+### 成对比较的工作流程
+
+"1. **提示选择：** 输入提示的来源通常是与先前模型版本的互动，或是经过整理的数据集，这些数据集旨在包含各种主题和风格（例如：问题、指令、创意写作提示）。提示的分布会显著影响所生成奖励模型的覆盖范围。"
+2. **回复生成：** 对于每个提示，会生成多个回复。这些回复通常来自：
+\* 正在微调 (fine-tuning)的语言模型的不同版本（例如：基础SFT模型与早期RLHF调优检查点）。
+\* 同一模型采用不同的解码策略（例如：改变温度或top-p采样）。
+\* 不同语言模型的输出。
+3. **人工标注：** 标注员会收到提示，以及一对生成的回复（通常会匿名化，并随机排序为回复A和回复B）。他们根据预设的评判标准（例如：有用性、无害性、准确性、遵循指令的情况）选择偏好的回复。通常也包含“质量相同”或“无法判断”的选项。
+
+> 这是一个成对偏好标注任务的简化示意图。标注员比较针对单个提示的两个回复，并标明其偏好。
+
+这种成对方法直接支持了前述的布拉德利-特里模型等训练目标，其中奖励模型学会分配分数 $RM(\text{提示}, \text{回复})$，使得分数差异能预测一个回复比另一个更受偏好的可能性。
+
+### 其他收集方法
+
+尽管成对比较是主要方式，但也存在其他方法：
+
+- **K向排序：** 标注员对两个以上回复进行排序（例如，将3或4个回复从最佳到最差排序）。这能为每个提示收集更多信息，但会增加标注员的认知负担。
+- **绝对评分：** 标注员给每个回复分配一个分数（例如，1-5星，或李克特量表上的数值分数）。尽管看似直接，但用绝对分数来实现标注员之间的校准和一致性是出了名的困难。这些分数通常无论如何都需要后期处理才能转换为相对偏好。
+
+对于RLHF中训练奖励模型而言，成对比较通常能在标注效率和数据质量之间提供良好的平衡。
+
+### 标注员管理与指导
+
+偏好数据的质量取决于人工标注员。需要考量的事项有：
+
+- **标注员来源：** 标注员可以是内部专家、专业的承包团队，或是众包工作者。选择取决于预算、规模、所需专业知识和质量控制需求。高级RLHF通常会受益于熟悉特定对齐 (alignment)目标（例如：识别不易察觉的有害性或提高事实准确性）的训练有素的标注员。
+- **清晰的指令：** 详细的指导说明不可或缺。这些说明必须明确偏好的评判标准（例如：“回复A是否比回复B更有用且无害？”）。好的和坏的回复示例、边缘情况以及如何处理不明确之处都是必要的。
+- **培训与校准：** 标注员需要接受关于指导说明的培训，并可能进行校准练习，其中他们的判断将与黄金标准或专家共识进行比较。持续监测标注员之间的一致性，有助于发现不协调或误解。
+- **界面设计：** 标注工具应清晰、高效，并尽量减少偏差。随机化回复的顺序（A与B）可以避免位置偏见。界面应流畅地展示提示和回复对，记录选择，最好还能允许添加可选评论，解释偏好的理由，这对于分析很有价值。
+
+### 数据质量与偏差
+
+收集偏好数据容易遇到多种挑战：
+
+- **标注员分歧：** 人类自然会有分歧。高分歧率可能表明指导说明不清晰、提示不明确，或偏好确实主观。分析分歧模式很重要。
+- **标注员偏差：** 个别标注员可能存在固有的偏见，体现在他们的偏好中。汇集来自不同标注员的判断有助于减少这种情况。
+- **提示代表性：** 如果用于数据收集的提示不能反映最终模型将遇到的提示分布，那么学习到的奖励模型可能无法很好地推广。
+- **系统钻空子：** 标注员可能会形成与预期偏好标准不一致的启发式方法，尤其是在按任务付费且缺乏足够质量控制的情况下。
+
+周密的规划、清晰的指导、严格的标注员培训和持续的质量监控，对于收集高保真度的偏好数据是必要的，这些数据能支持训练出有用的奖励模型。该数据集通常包含（提示、选中回复、驳回回复）元组，它将成为下一阶段——训练奖励模型本身的输入。
+
+## 参考资料
+
+- [Deep Reinforcement Learning from Human Preferences](https://proceedings.neurips.cc/paper/2017/file/d5e2c0adad503c91f91df240d0cd4e49-Paper.pdf) — Paul F Christiano, Jan Leike, Tom Brown, Miljan Martic, Shane Legg, Dario Amodei (2017)
+  Journal: Advances in Neural Information Processing Systems 30; Publisher: Curran Associates, Inc.; Volume: 30
+  这篇开创性论文介绍了通过人类反馈学习奖励函数的方法，特别是成对比较，这是后来应用于语言模型对齐的核心技术。
+- [Learning to summarize with human feedback](https://arxiv.org/abs/2009.01325) — Nisan Stiennon, Long Ouyang, Jeff Wu, Daniel M. Ziegler, Ryan Lowe, Chelsea Voss, Alec Radford, Dario Amodei, Paul Christiano (2020)
+  Journal: NeurIPS 2020; DOI: [10.48550/arXiv.2009.01325](https://doi.org/10.48550/arXiv.2009.01325)
+  这篇基础性论文展示了如何应用人类反馈强化学习，通过成对偏好训练奖励模型以实现文本摘要。
+- [Machine Learning: A Probabilistic Perspective](https://books.google.com/books/about/Machine_Learning_A_Probabilistic_Perspect.html?id=yC3L0oXy_ZgC) — Kevin P. Murphy (2012)
+  Publisher: The MIT Press; Pages: Chapter 28
+  第28章全面讨论了用于排序和序数回归的概率模型，包括用于成对偏好的Bradley-Terry模型。

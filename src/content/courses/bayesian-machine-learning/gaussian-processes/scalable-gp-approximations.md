@@ -1,0 +1,127 @@
+---
+course: "bayesian-machine-learning"
+chapter: "gaussian-processes"
+lesson: "scalable-gp-approximations"
+sourceId: 3604
+sourceUrl: "https://apxml.com/zh/courses/bayesian-machine-learning/chapter-4-gaussian-processes/scalable-gp-approximations"
+title: "高斯过程的可扩展近似方法"
+description: "研究稀疏高斯过程（诱导点）等方法以处理大型数据集。"
+order: 7
+plots: ["plots/3604-0.json"]
+sourceHash: "c9913a0d295b10be7dd28034afc37e74d4fe1f5dcdad4eaf7bfd0106de0e5dbe"
+sourceCorrections: []
+---
+
+标准高斯过程（GP）方法为回归和分类等任务提供了一种强大的非参数 (parameter)贝叶斯方法，不仅提供预测，还提供有原则的不确定性估计。然而，随着数据集规模的增长，其实际应用常受到计算需求的阻碍。
+
+### 标准高斯过程的计算瓶颈
+
+回顾高斯过程回归公式化一节，核心计算涉及 $N \times N$ 协方差矩阵 $K_{NN}$，该矩阵通过评估所有 $N$ 个训练数据点对之间的核函数来构建。重要操作包括：
+
+1. **训练（超参数 (parameter) (hyperparameter)优化）：** 寻找最优核超参数通常涉及最大化边际似然，这需要计算逆矩阵 $K_{NN}^{-1}$ 和行列式 $|K_{NN}|$。矩阵求逆运算通常以 $O(N^3)$ 的复杂度进行。
+2. **预测：** 计算新点 $x_*$ 的预测均值和方差需要解涉及 $K_{NN}$ 的线性系统或乘以 $K_{NN}^{-1}$。这些操作通常每个测试点以 $O(N)$ 到 $O(N^2)$ 的复杂度进行，取决于 $K_{NN}^{-1}$ 是否预先计算并复用。
+
+训练的 $O(N^3)$ 复杂度使得标准高斯过程在 $N$ 超过几千个数据点的数据集上变得计算上不可行。现代数据集常包含数十万或数百万个样本，这使得需要近似方法来让高斯过程适用于大规模应用。
+
+### 高斯过程的扩展策略
+
+主要的计算瓶颈是密集 $N \times N$ 协方差矩阵 $K_{NN}$ 的处理。近似方法旨在规避此瓶颈，主要通过减少模型所依赖的有效点数或通过在协方差矩阵中引入结构假设。最成功且被广泛使用的一类技术依赖于*稀疏近似*。
+
+稀疏方法引入了一组较小的 $M$ 个*诱导点*（$M \ll N$），记为 $Z = \{z_1, ..., z_M\}$，它们充当代表点或整个数据集的摘要。核心思想是函数在整个输入空间的行为可以通过其在这些 $M$ 个位置的函数值 $u = f(Z)$ 来充分表示。推断和预测过程随后被重新构建，使其计算上依赖于 $M$ 而非 $N$。
+
+### 通过诱导变量进行稀疏近似
+
+稀疏高斯过程方法不对完整数据集 $\mathbf{y}$ 直接进行条件化，而是对高斯过程 $f$ 基于诱导位置 $Z$ 处的函数值 $u$ 进行条件化。近似的效果取决于 $u$ 和 $\mathbf{y}$ 之间关系的处理方式。诱导位置 $Z$ 本身可以通过多种方式选择：可以是训练输入 $X$ 的一个子集，可以放置在网格上，随机选择，或者最有效的方法是作为模型训练过程的一部分进行优化。
+
+接下来我们考察一些常见的稀疏近似技术。
+
+#### 数据点子集 (SoD)
+
+这是最直接的基线方法：只需从原始 $N$ 个数据点中随机选择 $M$ 个数据点的子集，并仅使用此子集执行精确的高斯过程推断。
+
+- **优点：** 易于实现。将训练复杂度降低到 $O(M^3)$。
+- **缺点：** 丢弃了来自被忽略的 $N-M$ 个数据点的潜在有用信息。子集的选择会显著影响性能，而随机子集通常不是最优的。
+
+#### 回归器子集 (SoR)
+
+SoR 方法使用 $M$ 个诱导点 $Z$（不一定是 $X$ 的子集），并基于这些点进行预测。预测均值近似为 $\mathbb{E}[f_* | \mathbf{y}] \approx K_{*M} K_{MM}^{-1} u_M$，$u_M$ 表示 $Z$ 处的高斯过程值。存在多种方法可以从训练数据 $\mathbf{y}$ 中估计 $u_M$，这些方法本身常涉及近似。
+
+- **优点：** 将预测成本降低到 $O(M^2)$（计算 $K_{MM}^{-1}$ 后）。如果 $Z$ 选择得当，性能可以优于 SoD。
+- **缺点：** 理论依据不如变分方法充分。最优的 $Z$ 选择或优化不是原始公式固有的。
+
+#### 完全独立训练条件 (FITC)
+
+FITC 引入了一个特定的结构假设：给定诱导变量 $u$，训练输出 $y_i$ 是条件独立的。这用一个低秩项和一个对角矩阵的和来近似真实的协方差矩阵 $K_{NN}$：$K_{NN} \approx Q_{NN} + \text{diag}(\Lambda)$，$Q_{NN}$ 等于 $K_{NM} K_{MM}^{-1} K_{MN}$。
+
+- **优点：** 允许更快地计算，训练复杂度常在 $O(NM^2)$ 左右。在许多情况下，它提供比 SoR 更好的性能。
+- **缺点：** 条件独立性假设可能不准确，可能导致不准确的不确定性估计。
+
+#### 变分自由能 (VFE) / 稀疏变分高斯过程 (SVGP)
+
+现代稀疏高斯过程方法主要基于变分推断（VI）。这些方法不直接近似协方差矩阵，而是近似后验分布 $p(f | \mathbf{y})$。它们引入了一个关于诱导变量 $u = f(Z)$ 的变分分布 $q(u)$，$q(u)$ 通常选择为多元高斯分布 $\mathcal{N}(m, S)$。目标是最小化近似后验 $q(f) = \int p(f|u) q(u) du$ 与真实后验 $p(f | \mathbf{y})$ 之间的KL散度。
+
+这种最小化通过最大化边际似然 $\log p(\mathbf{y})$ 的证据下界（ELBO）来实现：
+
+
+$$
+\mathcal{L}( \theta, Z, m, S) = \mathbb{E}_{q(f)}[\log p(\mathbf{y} | f)] - \text{KL}[q(u) || p(u)]
+$$
+
+
+这里，$p(u) = \mathcal{N}(0, K_{MM})$ 是在诱导点 $Z$ 处评估的高斯过程先验。$\theta$ 表示核超参数 (parameter) (hyperparameter)。这种变分框架的一个显著优点是，诱导点位置 $Z$ 可以被视为变分参数，并与核超参数 $\theta$ 以及 $q(u)$ 的参数（即 $m$ 和 $S$）一起，通过使用基于梯度的最大化 ELBO 方法进行优化。这使得模型能够学习诱导点的最佳位置，从而最好地总结数据。
+
+#### 随机变分高斯过程 (SVGP)
+
+VFE 框架自然地引向随机优化，使其具有高度的可扩展性。ELBO 中的第一项，即期望对数似然，可以写成对 $N$ 个数据点的求和：$\sum_{i=1}^N \mathbb{E}_{q(f_i)}[\log p(y_i | f_i)]$。这种结构适合于第 3 章介绍的随机变分推断（SVI）技术。
+
+不再在每一步计算对完整数据集的期望，我们可以使用小批量 $B \subset \{1, ..., N\}$ 来计算 ELBO 梯度的有噪声但无偏的估计：
+
+
+$$
+\nabla \mathcal{L} \approx \frac{N}{|B|} \sum_{i \in B} \nabla \mathbb{E}_{q(f_i)}[\log p(y_i | f_i)] - \nabla \text{KL}[q(u) || p(u)]
+$$
+
+
+这些随机梯度随后用于使用 Adam 或 RMSprop 等优化器更新参数 $(\theta, Z, m, S)$。
+
+- **优点：** 将高斯过程训练扩展到非常大的数据集（数百万个点）。每次迭代的成本取决于小批量大小 $|B|$ 和诱导点数量 $M$，通常为 $O(|B|M^2 + M^3)$。通过变分推断提供了一个重要支撑。允许诱导位置、变分参数和超参数的联合优化。
+- **缺点：** 需要仔细调整优化参数（学习率、批量大小）。收敛有时对初始化敏感。近似的质量仍取决于 $M$。
+
+### 诱导点数量 $M$ 的选择
+
+诱导点数量 $M$ 是稀疏高斯过程方法中一个重要的超参数 (parameter) (hyperparameter)。它直接控制着计算效率与对完整高斯过程近似的准确性之间的平衡。
+
+- **计算成本：** 随 $M$ 呈多项式增长。对于 SVGP，每次迭代的成本大致为 $O(M^3 + |B|M^2)$，每个点的预测成本为 $O(M^2)$。内存使用量也随 $M^2$ 扩展。
+- **近似准确性：** 通常随 $M$ 增加而提高。较大的 $M$ 允许变分分布 $q(u)$ 更好地捕获真实后验 $p(u|\mathbf{y})$ 的复杂性。当 $M$ 接近 $N$ 时，VFE 近似在理论上收敛到精确高斯过程。
+
+在实践中，$M$ 通常由可用的计算预算（时间和内存）决定，并通过验证集上的性能进行监控。常见选择范围从 $M=100$ 到 $M=1000$ 或略高，取决于数据集规模和复杂性。可视化学习到的诱导点位置 $Z$ 有时能提供一些理解。
+
+
+
+![精确高斯过程与稀疏高斯过程 (SVGP) 拟合对比](plots/3604-0.json)
+
+
+
+> 精确高斯过程拟合与稀疏近似（SVGP）在一维回归任务上的比较，其中使用了 M=5 个优化后的诱导点（紫色叉号）。稀疏高斯过程通过学习诱导点的最佳位置，有效近似了精确高斯过程的均值和不确定性，从而以一小部分计算成本达到此目的。
+
+### 总结与权衡
+
+近似方法，特别是像 SVGP 这样的稀疏变分技术，对于将高斯过程应用于大规模问题是不可或缺的。
+
+- **可扩展性：** 它们打破了精确高斯过程的 $O(N^3)$ 限制，常能实现与 $N$ 呈线性关系（使用随机优化）和与诱导点数量 $M$ 呈多项式关系的复杂度。
+- **近似质量：** 准确性取决于方法和诱导点数量 $M$。变分方法提供了一个有原则的优化框架（最大化 ELBO），它平衡了模型拟合与复杂度控制，常能产生高质量的近似。优化诱导点位置 $Z$ 是 VFE/SVGP 等方法的一个显著优点。
+- **实际应用：** GPflow (TensorFlow)、GPyTorch (PyTorch) 和 scikit-learn 中的 GP 模块（提供一些基本近似）等库提供了这些可扩展方法的实现，使其易于使用。
+
+虽然对于计算不成为限制的小型数据集，精确高斯过程是首选，但稀疏近似使得实践者能够在大规模数据集中应用高斯过程的灵活性、非参数 (parameter)性和不确定性感知特性，这在当代机器学习 (machine learning)中很常见。稀疏方法之间的选择通常涉及考虑数据集规模、期望的准确性以及可用的计算资源，SVGP 可作为处理超大型数据集的有力默认选择。
+
+## 参考资料
+
+- [Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/) — Carl Edward Rasmussen and Christopher K. I. Williams (2006)
+  Publisher: The MIT Press
+  一本关于高斯过程的全面教材，涵盖其理论、应用和计算方面。它为理解近似方法解决的计算挑战奠定了基础。
+- [Variational Learning of Inducing Variables in Sparse Gaussian Processes](http://proceedings.mlr.press/v5/titsias09a/titsias09a.pdf) — Michalis K. Titsias (2009)
+  Journal: Proceedings of the Twelfth International Conference on Artificial Intelligence and Statistics (AISTATS); Publisher: PMLR (Proceedings of Machine Learning Research); Volume: 5; Pages: 567-574
+  提出了稀疏高斯过程的变分自由能 (VFE) 框架，通过联合优化诱导变量位置和超参数，构成了现代可扩展高斯过程方法的基础。
+- [GPyTorch: Blackbox Matrix-Matrix Gaussian Process Inference with GPU Acceleration](https://arxiv.org/abs/1809.11165) — Jacob Gardner, Geoff Pleiss, Kilian Q. Weinberger, David Bindel, Andrew G Wilson (2018)
+  Journal: Advances in Neural Information Processing Systems; Publisher: NeurIPS; Volume: 31
+  描述了GPyTorch，一个基于PyTorch的库，它利用GPU加速，为稀疏高斯过程方法提供高效且可扩展的实现，适用于实际的大规模应用。

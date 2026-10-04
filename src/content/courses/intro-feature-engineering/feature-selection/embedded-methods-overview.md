@@ -1,0 +1,62 @@
+---
+course: "intro-feature-engineering"
+chapter: "feature-selection"
+lesson: "embedded-methods-overview"
+sourceId: 1413
+sourceUrl: "https://apxml.com/zh/courses/intro-feature-engineering/chapter-6-feature-selection/embedded-methods-overview"
+title: "嵌入式方法概览"
+description: "嵌入式方法简介，其中特征选择是模型训练过程的一部分。"
+order: 9
+plots: []
+sourceHash: "fa117130aa9bfed75ea63f621afb049a2a466073f3f99e118c40c385f54beed2"
+sourceCorrections: []
+---
+
+与独立评估特征的过滤方法或在不同子集上重复训练模型的封装方法不同，**嵌入 (embedding)式方法**将特征选择作为模型训练过程的组成部分。可以将其想象为构建一个模型，该模型在一次训练运行中就内在地学习到哪些特征是重要的，哪些可以被忽略。
+
+这些方法通常比封装方法的计算成本更低，因为它们不需要训练大量模型。它们结合了过滤方法和封装方法的优点：它们考虑特征间的关联（像封装方法一样），但通常更快。选择过程“嵌入”在模型自身的学习算法中。
+
+### 嵌入 (embedding)式方法的工作原理
+
+主要思想是模型算法有一个内置机制，在拟合过程中惩罚复杂性或为特征分配重要性分数。根据模型的标准，被认为影响力较小的特征要么被赋予非常小的权重 (weight)（有效地被忽略），要么完全被赋予零权重，从而将它们从最终模型中移除。
+
+### 嵌入 (embedding)式方法的优点
+
+1. **效率：** 通常比封装方法更快，因为它们将特征选择与模型训练整合在一起，通常只需要训练一个模型（或数量与标准模型训练相当）。
+2. **关联感知：** 在做出选择决策时，它们内在地考虑特征间的关系，因为选择发生在模型学习过程的背景下。
+3. **模型特定性：** 特征选择是针对正在训练的特定模型定制的，与模型无关的过滤方法选择的特征相比，这可能为该特定模型带来更好的性能。
+
+### 常见嵌入 (embedding)式技术
+
+我们将在后续章节中仔细研究嵌入式方法的两个流行类别：
+
+1. **正则化 (regularization)方法：** 像L1正则化（用于Lasso回归）这样的技术根据系数的大小向模型的损失函数 (loss function)添加一个惩罚项。L1惩罚鼓励稀疏性，这意味着它倾向于将不太重要特征的系数精确地收缩到零。系数为零的特征被有效地剔除。
+   惩罚损失函数通常看起来像：
+
+   
+   $$
+   \text{损失} = \text{原始损失} + \lambda \sum_{j=1}^{p} |\beta_j|
+   $$
+   
+
+   这里，$\beta_j$代表第$j$个特征的系数，$\lambda$是正则化强度。更大的$\lambda$会导致更多的系数收缩到零。
+2. **基于树的重要性：** 像随机森林和梯度提升这样的集成方法在训练过程中自然地计算特征重要性分数。这些分数通常衡量一个特征对减少不纯度（例如，分类中的基尼不纯度或熵在分类中）或方差（在回归中）在集成中所有树上的贡献程度。重要性分数较低的特征可以被认为相关性较低并可能被移除。
+
+尽管强大，嵌入式方法是模型依赖的；选择的特征针对所使用的特定算法（例如Lasso或随机森林）进行了优化。其有效性也可能取决于超参数 (parameter) (hyperparameter)调优，例如Lasso中的正则化强度$\lambda$。
+
+后续章节将提供使用Scikit-learn实施L1正则化和使用基于树的特征重要性进行特征选择的实践细节。
+
+## 参考资料
+
+- [Regression Shrinkage and Selection Via the Lasso](https://www.jstor.org/stable/2346178) — Robert Tibshirani (1996)
+  Journal: Journal of the Royal Statistical Society. Series B (Methodological); Publisher: Royal Statistical Society; Volume: 58; Pages: 267-288; DOI: [10.1111/j.2517-6161.1996.tb02080.x](https://doi.org/10.1111/j.2517-6161.1996.tb02080.x)
+  介绍Lasso的原始论文，这是一种基础的正则化技术，广泛应用于嵌入式特征选择。
+- [The Elements of Statistical Learning: Data Mining, Inference, and Prediction](https://web.stanford.edu/~hastie/ElemStatLearn/) — Trevor Hastie, Robert Tibshirani, and Jerome Friedman (2009)
+  Publisher: Springer
+  权威教材，包含正则化方法（包括Lasso）和基于树模型的详细章节，为嵌入式特征选择提供了统计学背景。
+- [Feature importance with ensembles](https://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html) — The scikit-learn developers (2024)
+  Publisher: scikit-learn project
+  scikit-learn官方文档，展示了随机森林等集成方法如何计算和使用特征重要性进行选择，这是一种常见的嵌入式技术。
+- [A survey on feature selection methods](https://link.springer.com/article/10.1007/s11390-018-1807-7) — Jian Cai, Jiuyong Luo, Shuxin Wang, and Siheng Meng (2018)
+  Journal: Journal of Computer Science and Technology; Publisher: Springer Science and Business Media LLC; Volume: 33; Pages: 609–620; DOI: [10.1007/s11390-018-1807-7](https://doi.org/10.1007/s11390-018-1807-7)
+  一篇近期综述论文，全面概述了特征选择技术，包括对嵌入式方法的讨论及其在机器学习中的作用。

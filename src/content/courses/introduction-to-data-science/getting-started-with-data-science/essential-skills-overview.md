@@ -1,0 +1,65 @@
+---
+course: "introduction-to-data-science"
+chapter: "getting-started-with-data-science"
+lesson: "essential-skills-overview"
+sourceId: 2087
+sourceUrl: "https://apxml.com/zh/courses/introduction-to-data-science/chapter-1-getting-started-with-data-science/essential-skills-overview"
+title: "必备技能概览"
+description: "简要概览数据科学所需的核心能力，如编程、统计和专业知识。"
+order: 4
+plots: []
+sourceHash: "6a3cb7d1930a021a0b889c94cd23d690748a6199d5145fe35e86e2877f10ec3c"
+sourceCorrections: []
+---
+
+数据科学结合了多个学科的知识与技术。不妨将其视为不同专业能力交汇之处，而非单一科目。为有效处理数据，您需培养一套综合能力。下面我们看看主要类别。
+
+### 编程与技术基本功
+
+数据科学的核心在于处理和分析数据，这通常涉及海量数据。手动操作不切实际，因此编程能力必不可少。您无需成为软件开发大师，但需要熟练编写代码来处理数据任务。
+
+- **编程语言：** Python和R等语言被广泛应用。它们拥有大量专门用于数据分析、统计建模和创建可视化的预编写代码（库）。Python及其库，如Pandas（用于数据操作）和Scikit-learn（用于机器学习 (machine learning)），尤其受欢迎。R则受到统计界的青睐。掌握其中一种的入门知识是常见的起步方式。
+- **数据处理：** 您常常需要从数据库中获取数据。了解结构化查询语言（SQL）通常是必需的，用于从关系型数据库（许多机构常见的存储系统）中提取和筛选数据。
+- **命令行基础：** 熟悉计算机上的命令行或终端，有助于管理文件、运行程序以及与各类数据科学工具进行交互。
+
+### 数学与统计理解
+
+数据科学应用数学原理来发现规律和构建模型。虽然深厚的理论知识对入门工作并非总是必需，但牢固掌握某些基本知识十分重要。
+
+- **描述性统计：** 理解均值（平均值）、中位数（中间值）和众数（最常出现值）等有助于概括数据。方差或标准差等离散程度指标能说明您的数据有多分散。我们将在第5章介绍这些内容。
+- **概率基础：** 许多数据科学技术依赖概率来理解不确定性并进行预测。随机变量和概率分布是其基本构成。
+- **线性代数知识点：** 在更高级别，线性代数（如向量 (vector)和矩阵）的内容变得重要，尤其在机器学习 (machine learning)算法中。目前，可将其视为用于高效处理组织好的数字表格的数学方法。
+
+### 专业知识
+
+数据并非凭空存在。它代表着特定行业（如商业、医疗、物理或金融）内的真实事件、过程或观察结果。专业知识指对所处理数据背景的理解。
+
+- **提出相关问题：** 了解主题方向有助于您提出数据可能回答的有意义问题。
+- **结果解读：** 理解所属行业能让您正确解读分析结果并评估其实际意义。例如，在医疗数据中发现两个变量间的统计关系，需要医学背景来判断该发现是否有意义，抑或只是巧合。
+- **特征工程：** 行业知识常常指导选择或创建用于分析的相关数据特征（变量）的过程。
+
+### 沟通与可视化能力
+
+发现数据中的见解仅仅是过程的一部分。您还需要将这些发现有效传达给他人，尤其是那些可能没有技术背景的人。
+
+- **数据可视化：** 创建清晰且信息丰富的图表对于简单阐释复杂数据规律非常重要。我们将在第6章介绍常见图表类型和原则。选择合适的图表类型对于准确传达您的信息很重要。
+- **数据叙述：** 呈现您的发现通常涉及构建一个叙述，解释问题、所用方法、结果以及结论或建议。
+- **协作：** 数据科学常常是团队合作。能够与同事协作、解释您的方法并理解不同观点是很有价值的。
+- **批判性思维与解决问题：** 识别核心问题、分解问题、评估潜在方法以及批判性评估结果是工作流程中持续的部分。
+
+这些能力相互配合。编程有助于实现统计想法，专业知识指导分析，而沟通能力则使结果产生影响。在您学习本课程的过程中，您将看到这些不同能力方向如何在典型数据科学流程中应用。
+
+## 参考资料
+
+- [Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython](https://www.oreilly.com/library/view/python-for-data/9781098104023/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media
+  涵盖Pandas和NumPy等核心Python库，用于高效的数据处理和分析，对实践数据科学工作至关重要。
+- [Practical Statistics for Data Scientists: 50+ Essential Concepts Using R and Python](https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/) — Peter Bruce, Andrew Bruce, and Peter Gedeck (2020)
+  Publisher: O'Reilly Media
+  提供数据科学统计概念的实践介绍，包括描述性统计和概率，专为使用R和Python的数据科学家设计。
+- [Storytelling with Data: A Data Visualization Guide for Business Professionals](https://www.wiley.com/en-us/Storytelling+with+Data%3A+A+Data+Visualization+Guide+for+Business+Professionals-p-9781119002253) — Cole Nussbaumer Knaflic (2015)
+  Publisher: Wiley
+  一本关于创建有效数据可视化并通过叙事传达见解的指南，这是展示数据科学成果的关键技能。
+- [Learning SQL: Master SQL Fundamentals](https://www.oreilly.com/library/view/learning-sql-3rd/9781492057611/) — Alan Beaulieu (2020)
+  Publisher: O'Reilly Media
+  一本学习SQL的重要资源，涵盖关系数据库中的数据查询、操作和管理。

@@ -1,0 +1,80 @@
+---
+course: "feature-stores-for-ml"
+chapter: "evaluating-operating-solutions"
+lesson: "analyzing-managed-services"
+sourceId: 3442
+sourceUrl: "https://apxml.com/zh/courses/feature-stores-for-ml/chapter-6-evaluating-operating-solutions/analyzing-managed-services"
+title: "云端托管特征存储服务分析"
+description: "评估主要云供应商（AWS SageMaker、Google Vertex AI、Azure ML）的托管式特征存储服务。"
+order: 2
+plots: []
+sourceHash: "56f7ca745402c77756611195cdbda81b12fbbf24e31ef6960d30f167192fabe7"
+sourceCorrections: []
+---
+
+虽然开源解决方案提供了最大的灵活性和控制权，但主要云供应商提供的托管式特征存储服务提供了一个有吸引力的选择，特别是对于旨在加快开发并减轻运营负担的组织而言。这些服务抽象化了大部分底层基础设施管理，使团队能够更多地专注于特征定义、构建以及在更广泛的MLOps生命周期中的整合。了解它们的功能、局限性及其集成方式是做出明智决策的必要条件，特别是在考虑特征存储解决方案的构建与购买策略时。
+
+来自Amazon Web Services (AWS)、Google Cloud Platform (GCP) 和 Microsoft Azure 等供应商的托管式特征存储旨在紧密集成在其各自的云生态系统内。这种集成通常是它们的主要价值所在，它简化了与原生数据源、机器学习 (machine learning)平台和监控工具的连接。然而，这种紧密耦合也带来了供应商锁定以及相较于定制或开源解决方案可能存在的局限性等方面的考虑。
+
+### 评估托管式云特征存储
+
+在评估托管式特征存储服务时，请从您特定需求的视角审视它们，并关注以下几个重要方面：
+
+#### 1. 核心功能与架构
+
+- **在线/离线存储：** 考察用于在线（低延迟服务）和离线（大规模训练/批处理）存储的底层技术。供应商通常为在线存储使用托管式数据库（如DynamoDB、Bigtable或托管的Cassandra/Redis），为离线存储使用对象存储（S3、GCS、ADLS Gen2）或数据仓库（BigQuery、Synapse）。了解其性能特点（延迟、吞吐量 (throughput)）、一致性模型（在线/离线之间的最终一致性与强一致性）以及可用的配置选项。
+- **数据类型与转换：** 评估对各种数据类型的支持，包括标量、列表，以及越来越常见的向量 (vector)嵌入 (embedding)。评估特征转换的处理方式。它们是否与原生数据处理服务（例如 AWS Glue、GCP Dataflow、Azure Data Factory/Synapse Spark）集成？您能否使用熟悉的SDK（通常是Python）定义转换？是否支持按需特征计算？
+- **时间点准确性：** 该服务如何确保生成训练数据集时的时间点准确性？这是避免数据泄露的必要条件。寻找内置功能，用于基于时间戳将实体事件日志与特征值历史记录连接起来。
+- **流式摄取：** 评估从流式源（例如 Kinesis、Pub/Sub、Event Hubs）摄取和处理实时特征更新的机制。该服务更新在线存储值并可能执行流式聚合的效率如何？
+
+#### 2. 云生态系统内的集成
+
+- **API/SDK支持：** 通常期望提供全面且文档完善的Python SDK。评估其在定义特征、摄取数据、检索用于训练的特征以及获取在线特征方面的易用性。如果您的技术栈中需要，请检查其他语言的API支持。
+- **数据源连接：** 它在云环境中连接您现有数据湖、数据仓库、数据库和流式平台的便捷程度如何？寻找原生连接器和身份验证集成（例如 IAM 角色/服务账户）。
+- **机器学习 (machine learning)平台集成：** 这通常是一个主要驱动因素。它如何与供应商的机器学习训练（SageMaker、Vertex AI Training、Azure ML Training）、服务（SageMaker Endpoints、Vertex AI Prediction、Azure ML Endpoints）以及管道编排（Step Functions、Vertex AI Pipelines、Azure ML Pipelines）服务集成？检索用于训练或推理 (inference)的特征是否需要最少的样板代码？
+
+> 数据源、托管式特征存储组件（摄取、存储、注册表、API）与下游ML消费者在典型云环境中的集成点。
+
+#### 3. 运营特点
+
+- **可伸缩性与性能：** 评估文档中记载的在线服务（每秒查询次数、P99延迟）和离线存储/计算（数据量、作业吞吐量）的限制和自动扩展能力。是否有明确的服务水平协议（SLA）？
+- **监控与日志：** 检查与云供应商标准监控服务（CloudWatch、Cloud Monitoring、Azure Monitor）的集成。相关指标（延迟、错误率、数据新鲜度）是否自动公开？
+- **安全：** 如何控制访问？寻找与云身份和访问管理（IAM）系统集成的细粒度权限。验证静态数据和传输中数据的加密。评估网络安全选项（例如，私有端点、VPC集成）。
+- **定价：** 了解成本结构。这通常涉及存储量（在线/离线）、API请求计数、摄取/转换过程中处理的数据量，如果使用了集成转换服务，还可能涉及计算实例小时数。仔细模拟您预期的使用模式。
+
+#### 4. 治理与MLOps特性
+
+- **元数据与发现：** 该服务是否提供UI或API，用于浏览、搜索和理解特征定义、所有者及相关元数据？
+- **版本控制：** 特征定义的变更如何追踪？是否可以根据模型训练期间使用的特定特征版本来检索数据？
+- **血缘：** 自动提供何种程度的血缘追踪？您能否将特征追溯到其源数据或转换过程？它如何与生态系统中更广泛的数据血缘工具集成？
+- **CI/CD集成：** 特征定义更新以及可能的转换逻辑如何通过自动化CI/CD管道进行管理？
+
+### 供应商特定考量（示例）
+
+尽管功能发展迅速，以下是主要云供应商通常具有的一般特点：
+
+- **AWS SageMaker Feature Store：** 运用成熟的SageMaker生态系统。常以其性能著称，特别是在线服务方面，底层可能使用了DynamoDB。与SageMaker Studio、训练和端点的集成是其主要优势。成本，特别是高吞吐量 (throughput)在线服务的成本，需要仔细监控。
+- **Google Cloud Vertex AI Feature Store：** 与BigQuery紧密集成，用于离线存储；与Vertex AI管道集成，用于MLOps编排。非常注重统一的AI平台体验。采用谷歌的基础设施实现低延迟服务（例如，使用Bigtable或优化后的基础设施）。时间点查找功能集成良好。
+- **Azure Machine Learning Managed Feature Store：** 作为Azure ML工作区的一部分，促进协作与治理。与Azure数据服务（如ADLS Gen2）以及可能的Synapse Analytics集成。侧重于企业需求，包括访问控制和在Azure治理框架内的集成。
+
+### 权衡考量再议
+
+选择托管服务意味着接受某些权衡：
+
+- **供应商锁定：** 深度集成使得迁移到其他云或开源解决方案更加复杂且成本更高。抽象层可能有所帮助，但会增加复杂性。
+- **成本：** 可能会超出自行管理开源解决方案的成本，特别是在API调用、高吞吐量 (throughput)服务或大量数据处理方面。需要进行细致的成本分析。
+- **灵活性与功能滞后：** 您受限于供应商的路线图和架构选择。开源工具中可用的特定配置或高级功能可能无法立即获得或自定义。
+
+归根结底，分析托管式特征存储服务需要将其特定产品、集成优势、运营特点和定价模型与您组织的技术要求、现有云策略、团队专业知识和MLOps成熟度进行对照。在决定采用特定托管服务之前，进行全面评估（可能涉及概念验证实施）非常重要。这种分析直接为“构建与购买”决策提供了依据，从而明确了降低运营开销和加快集成所带来的好处是否超过托管解决方案的潜在成本和限制。
+
+## 参考资料
+
+- [Designing Machine Learning Systems: An Iterative Process for Production-Ready ML Applications](https://learning.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Chip Huyen (2022)
+  Publisher: O'Reilly Media
+  此书涵盖完整的机器学习系统设计生命周期，包括专门的特征存储章节，将其置于 MLOps 环境中并讨论自建与采购的决策。
+- [What is Amazon SageMaker Feature Store?](https://docs.aws.amazon.com/sagemaker/latest/dg/feature-store.html) — Amazon Web Services (2024)
+  Publisher: Amazon Web Services
+  亚马逊云科技托管特征存储产品的官方文档，提供了其功能、与 SageMaker 生态系统的集成以及操作方面的详细信息。
+- [Vertex AI Feature Store Overview](https://cloud.google.com/vertex-ai/docs/featurestore/overview) — Google Cloud (2024)
+  Publisher: Google Cloud
+  来自 Google Cloud 的官方文档，概述了 Vertex AI Feature Store 在 Google Cloud 生态系统内用于机器学习工作流的功能和集成模式。

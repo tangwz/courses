@@ -1,0 +1,107 @@
+---
+course: "compiler-runtime-optimization-ml"
+chapter: "quantization-low-precision-optimizations"
+lesson: "low-precision-kernel-generation"
+sourceId: 4582
+sourceUrl: "https://apxml.com/zh/courses/compiler-runtime-optimization-ml/chapter-8-quantization-low-precision-optimizations/low-precision-kernel-generation"
+title: "生成低精度核函数"
+description: "讨论使用专用低精度指令（例如，DP4A、HMMA）生成高效代码的技术。"
+order: 5
+plots: ["plots/4582-0.json"]
+sourceHash: "04784124f520e3623b0f1d2922c646d45403e70a232ceea366efd0d7ad6771d9"
+sourceCorrections: []
+---
+
+将低精度操作转换为高效机器代码是优化模型的核心任务。这些操作通常通过QAT或PTQ量化 (quantization)产生，并在编译器的IR中表示，需要转化为能够有效运用现代硬件提供的专用低精度能力的执行代码。这些硬件包括具有高级SIMD扩展的CPU、具有Tensor Core或Matrix Core的GPU，以及专用的AI加速器。仅仅使用较小数据类型进行计算是不够的；实现性能提升需要生成使用为加速低精度算术而设计的特定硬件指令的代码。
+
+### 将量化 (quantization)操作映射到硬件指令
+
+高级量化操作通常在IR中通过专用方言或属性表示（如“在IR中表示量化操作”中所述），需要被降级为目标特定的指令序列。这个过程不仅仅是把浮点操作替换为整数或低精度浮点操作。它还必须正确处理相关的量化参数 (parameter)（尺度和零点）。
+
+考虑一个常见操作，例如INT8矩阵乘法，然后重新量化为INT8输出。核心计算可能涉及到在更宽的整数格式（通常是32位整数，$INT32$）中累积乘积，以防止溢出：
+
+
+$$
+Acc_{int32} = \sum (A_{int8} - A_{zp}) \times (B_{int8} - B_{zp})
+$$
+
+
+这里，$A_{int8}$ 和 $B_{int8}$ 是输入操作数，$A_{zp}$ 和 $B_{zp}$ 是它们各自的零点。许多硬件指令隐式处理或假设零中心输入，这要求编译器有时相应地调整计算或零点。
+
+累加后，结果 ($Acc_{int32}$) 需要重新缩放，并可能通过输出零点 ($C_{zp}$) 进行偏移，以生成最终的INT8输出 ($C_{int8}$)。这通常涉及乘以一个融合的尺度因子（源自 $Scale_A$, $Scale_B$, 和 $Scale_C$），并可能对定点算术进行右移，然后钳位到有效的INT8范围 [-128, 127]：
+
+
+$$
+C_{int8} = \text{钳位}(\text{四舍五入}(Acc_{int32} \times \text{融合尺度}) + C_{zp})
+$$
+
+
+编译器的任务是将整个序列，包括操作数加载、零点调整（如果需要）、核心乘加操作和最终的重新量化步骤，映射到最有效的可用硬件指令上。
+
+### 运用专用硬件指令
+
+现代处理器包含专门设计用于加速低精度计算的指令。有效的代码生成依赖于识别和使用这些指令。
+
+#### 整数指令 (INT8, INT4)
+
+- **CPU：** Intel x86 等架构通过AVX512-VNNI（向量 (vector)神经网络 (neural network)指令）提供诸如 `VPDPBUSD` 之类的指令，可以在单个指令内对四对8位无符号和有符号整数执行点积，并将结果累积到32位整数中，所有这些操作都在宽向量寄存器上进行。同样，ARM Neon提供点积指令（`SDOT`，`UDOT`）以加速INT8/UINT8计算。编译器必须在IR中进行计算序列的模式匹配，以生成这些强大的指令。
+- **GPU：** 从Volta开始的NVIDIA GPU具有Tensor Core，它们可以在一个周期内对FP16、BF16、TF32、INT8甚至INT4/FP8数据类型的小矩阵（例如，$4 \times 4$ 或 $16 \times 8 \times 16$）执行矩阵乘加操作。对于INT8，像 `IMMA`（整数矩阵乘加）这样的指令作用于整数数据块，并累积到INT32寄存器中。AMD的CDNA架构包含Matrix Core Engine，对低精度类型执行类似的矩阵操作。为这些单元生成代码需要调整循环和数据布局，以便高效地向这些矩阵单元提供数据。
+- **AI加速器：** 定制ASIC（例如Google TPU、Apple Neural Engine）通常包含专门针对低精度整数（主要是INT8）算术优化的、大型脉动阵列或矩阵乘法单元。针对这些目标的编译涉及将张量操作直接映射到这些硬件单元，管理通过局部内存缓冲的数据流，并调度脉动阵列的执行。
+
+#### 低精度浮点指令 (FP8)
+
+新兴硬件，例如NVIDIA的Hopper架构（H100 GPU）和AMD的MI300，引入了对8位浮点格式（FP8）的支持，通常是E4M3（4位指数，3位尾数）和E5M2（5位指数，2位尾数）。
+
+- **硬件支持：** 这些格式在FP16的范围和INT8的效率之间提供了一个折衷。例如，Hopper GPU包含专门的 `mma`（矩阵乘加）指令，直接对FP8数据进行操作，通常使用FP32累加器以提高数值稳定性。
+- **编译器面临的挑战：** 为FP8生成代码带来了独特的挑战：
+  - **格式转换：** 需要显式指令或编译器遍，以便在FP32/FP16与目标FP8格式（E4M3或E5M2）之间进行转换。
+  - **缩放：** FP8格式的动态范围非常有限。数值稳定性通常需要由编译器或运行时管理的、精心的缩放因子（类似于量化 (quantization)尺度）。这些尺度可能需要动态应用。
+  - **NaN/Inf 处理：** 减少的指数位影响特殊值的处理。
+  - **指令映射：** 编译器需要特定的后端来针对新的FP8 `mma` 指令，将计算组织成合适的矩阵分块大小。
+
+### 低精度代码生成策略
+
+生成高效的低精度核函数需要调整现有的编译器优化技术，并引入针对这些数据类型和硬件功能而定制的新技术。
+
+- **指令选择：** 编译器后端必须详细了解目标架构的低精度指令集（例如，VNNI、`IMMA`、FP8 `mma`）。模式匹配用于在IR中识别将更简单操作序列替换为这些更强大、专用指令的机会。
+- **寄存器分配：** 低精度操作通常涉及混合精度方面（例如，INT8乘以INT32累加）。寄存器分配器必须管理不同类型的寄存器文件（向量 (vector)、矩阵、标量），并高效处理可能更大的累加器寄存器。寄存器压力可能会增加，尤其是在为矩阵单元进行分块时。
+- **循环分块和向量化 (quantization)：** 标准循环分块（第四章）非常重要，但必须进行调整。分块大小应选择为与硬件低精度矩阵单元期望的维度相匹配（例如，对于使用 $16 \times 8 \times 16$ MMA 指令的目标，将矩阵乘法循环分块，使其操作于 $A$ 的 $16 \times 8$ 块和 $B$ 的 $8 \times 16$ 块）。向量化针对VNNI或Neon点积等SIMD指令。
+- **重新量化/反量化优化：** 在重新量化或反量化期间进行缩放、移位和钳位的代码可能会引入开销。编译器尝试：
+  - 将这些操作与前面的计算核函数融合。
+  - 对缩放和钳位步骤进行向量化。
+  - 如果可用，使用专用硬件指令进行这些转换。
+  - 最小化这些操作的频率，例如，通过在融合算子序列中保持中间结果在累加器精度（例如，INT32）中。
+- **内存布局：** 数据布局转换（例如，NCHW对比NHWC对比更专业的平铺布局如NCHWc[x]）变得更加重要。布局应有利于向量指令的连续访问和高效加载到矩阵单元。一些硬件需要特定的内存布局，才能在低精度单元上达到最佳性能。
+
+
+
+![相对理论吞吐量 (Ops/周期)](plots/4582-0.json)
+
+
+
+> 针对不同精度和硬件单元的理论峰值吞吐量 (throughput)相对于基准FP32性能的增长。实际加速效果在很大程度上取决于内存带宽、核函数实现和问题大小。
+
+### 编译器后端集成
+
+生成低精度代码的过程通常由编译器后端处理。
+
+1. **IR 表示：** 高级ML方言通过中间方言（如MLIR的 `linalg`、`vector`、`arith`）降级，其中量化 (quantization)类型和操作仍然显式表示。
+2. **降级到目标内联函数：** 目标特定的遍进一步降级这些操作，通常生成目标特定的IR构造，或直接发出与硬件低精度指令对应的LLVM内联函数（或其他后端IR内联函数）（例如，`@llvm.x86.avx512.vpdpbusd`，NVIDIA PTX `mma` 指令）。
+3. **最终代码生成：** 后端的指令选择器将这些内联函数映射到机器指令，进行寄存器分配时考虑目标的能力，并调度指令。
+
+成功生成高性能低精度核函数需要编译器优化遍与其对目标硬件专用单元和指令集的理解进行深度集成。它将抽象转化为具体的、高效的机器代码，从而在现代硬件上提供所需的性能优势。
+
+## 参考资料
+
+- [NVIDIA H100 Tensor Core GPU Architecture](https://resources.nvidia.com/en-us-data-center-overview/gtc22-whitepaper-hopper) — NVIDIA Corporation (2022)
+  Publisher: NVIDIA
+  提供了Hopper GPU的架构细节，包括FP8格式（E4M3, E5M2）、Tensor Core以及用于低精度推理的矩阵乘加指令。
+- [Intel 64 and IA-32 Architectures Optimization Reference Manual](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-optimization-reference-manual.html) — Intel Corporation (2023)
+  Publisher: Intel Corporation; Volume: 1
+  详细介绍了优化技术和指令集，包括AVX512-VNNI指令（如VPDPBUSD），用于加速CPU上的整数点积运算。
+- [MLIR: A Compiler Infrastructure for the End of Moore's Law](https://dl.acm.org/doi/10.1145/3475737) — Chris Lattner, Vinay Pidatala, Mehdi Amini, and Albert Cohen (2021)
+  Journal: ACM Transactions on Programming Languages and Systems (TOPLAS); Publisher: ACM; Volume: 43; Pages: 1-30; DOI: [10.1145/3475737](https://doi.org/10.1145/3475737)
+  介绍了MLIR编译器基础设施，它提供了多级IR和方言，适用于将高级机器学习操作表示并转换为针对特定目标的低精度指令。
+- [Deep Learning Compilers: A Comprehensive Survey](https://doi.org/10.1145/3544547) — Yongwei Zhao, Kaiqi Chen, Peng Li, Jiasheng Xu, Pengcheng Wang, and Shuaiwen Leon Song (2023)
+  Journal: ACM Computing Surveys; Publisher: Association for Computing Machinery; Volume: 55; Pages: 1-37; DOI: [10.1145/3544547](https://doi.org/10.1145/3544547)
+  提供了深度学习编译器的一个广泛概述，包括对中间表示、优化技术以及与生成高效低精度内核相关的硬件后端进行讨论。

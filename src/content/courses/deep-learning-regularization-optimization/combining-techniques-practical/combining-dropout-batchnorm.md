@@ -1,0 +1,94 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "combining-techniques-practical"
+lesson: "combining-dropout-batchnorm"
+sourceId: 5013
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-8-combining-techniques-practical/combining-dropout-batchnorm"
+title: "结合 Dropout 与批归一化"
+description: "讨论同时使用 Dropout 和批归一化时的考量和常见做法。"
+order: 5
+plots: []
+sourceHash: "cbef5f1254e9e0c7c85b21de9f9cdd6c80ef65f66dc468155faa5b4fc137f9c9"
+sourceCorrections: []
+---
+
+Dropout 和批归一化 (normalization)是深度学习 (deep learning)工具箱中的有效手段。Dropout 通过随机将神经元激活值置零来避免过拟合 (overfitting)，促使网络学习更多表示。批归一化通过在小批量中归一化激活值来稳定训练并加速收敛，同时提供轻微的正则化 (regularization)效果。一个常见问题是：我们能否以及是否应该将它们一起使用？
+
+结合这两种方法并非总是简单直接，关于它们的相互影响，存在争论且理解不断演变。让我们审视一下需要考虑的因素和常见做法。
+
+### 潜在的相互影响和冲突
+
+核心问题源于每种方法如何修改网络的激活值：
+
+1. **批归一化 (normalization)的目的：** 批归一化旨在维持流入后续层的激活值分布的一致性（均值接近0，标准差接近1）。它通过在训练期间使用小批量统计数据和在推断期间使用运行平均值来实现此目的。这种归一化减少了内部协变量偏移并平滑了优化过程。
+2. **Dropout 的目的：** Dropout 通过在训练期间随机将激活值置零来引入噪声。这避免了神经元之间出现复杂的相互适应，并作为一种强的正则器。
+
+潜在冲突出现的原因是 Dropout 在其应用点之后改变了激活值的统计量（均值和方差）。如果在批归一化 *之后* 应用 Dropout，它需要不断适应由 Dropout 引起的这些随机变化的统计量。这可能会削弱批归一化的稳定作用，或干扰 Dropout 预期的噪声注入。此外，训练（带 Dropout）和测试（不带 Dropout）之间的激活值方差有所不同，这会使批归一化放置在 Dropout 之后时，其运行统计量的使用变得复杂。
+
+### 推荐顺序：激活函数 (activation function) -> 批归一化 (normalization) -> Dropout？还是批归一化 -> 激活函数 -> Dropout？
+
+历史上，提出了不同的排序方案。然而，一种常见且通常有效的方法是，在典型的层块内，在 Dropout *之前*应用批归一化。考虑一个全连接层的标准序列：
+
+`线性变换 -> 批归一化 -> 激活函数 -> Dropout`
+
+让我们分析一下为何这种顺序经常被优先选择：
+
+1. **批归一化的稳定输入：** 线性变换产生的输出，其统计量在训练期间可能会发生偏移。将批归一化紧接在线性层之后，使其能够在输出通过非线性激活函数 *之前* 对这些输出进行归一化。
+2. **一致的归一化：** 批归一化作用于线性层（或卷积层）的确定性输出。其计算出的小批量统计量（均值和方差）以及学习到的缩放（$\gamma$）和偏移（$\beta$）参数 (parameter)提供稳定的归一化效果。
+3. **对归一化数据进行激活：** 激活函数（如 ReLU）然后对这些归一化值进行操作。
+4. **对激活后的输出进行 Dropout：** 最后，Dropout 应用于激活函数的输出。它随机地将一些已经归一化和激活的输出置零，从而有效地发挥其正则化 (regularization)作用，而不直接干扰批归一化在序列早期试图稳定的统计量。
+5. **测试时的一致性：** 在推断期间，Dropout 会被关闭（或激活值被缩放）。批归一化使用其计算出的运行均值和方差。由于批归一化在训练期间是在 Dropout 之前应用的，这些运行统计量反映了 Dropout 之前激活值的分布，从而在测试时带来更一致的表现。
+
+在批归一化 *之前* 应用 Dropout (`线性 -> 激活函数 -> Dropout -> 批归一化`) 意味着批归一化将接收到因 Dropout 随机置零而统计量不断变化的输入。尽管有一些研究对此进行探讨，但通常认为这稳定性较差，并使批归一化运行统计量在推断时的作用复杂化。
+
+### 实际操作 (PyTorch 示例)
+
+以下是如何在 PyTorch 中使用这种推荐顺序构建一个块的示例：
+
+```python
+import torch
+import torch.nn as nn
+
+# 示例参数
+input_features = 128
+output_features = 64
+dropout_rate = 0.5
+
+# 定义层序列
+layer_block = nn.Sequential(
+    nn.Linear(input_features, output_features),
+    nn.BatchNorm1d(output_features), # 在线性层之后，激活函数之前应用批归一化
+    nn.ReLU(),                     # 应用激活函数
+    nn.Dropout(p=dropout_rate)      # 在激活函数之后应用 Dropout
+)
+
+# 假定输入示例
+dummy_input = torch.randn(32, input_features) # 批量大小 32
+output = layer_block(dummy_input)
+
+print("Output shape:", output.shape)
+# 输出形状：torch.Size([32, 64])
+```
+
+> 这个 PyTorch 代码片段显示了一个常见序列：线性层，接着是批归一化 (normalization)（针对全连接层使用 BatchNorm1d），然后是 ReLU 激活函数 (activation function)，最后是 Dropout。
+
+### 考量和指导方针
+
+- **Dropout 仍有必要吗？** 批归一化 (normalization)自身具有温和的正则化 (regularization)效果，因为小批量统计量会引入一些噪声。在某些情况下，特别是在大型数据集上，批归一化可能提供足够的正则化，使激进的 Dropout 不那么重要，甚至略微有害。然而，Dropout 的机制（避免相互适应）是不同的，并且它们通常可以互补。
+- **调整 Dropout 比率：** 如果您同时使用批归一化和 Dropout，您可能会发现，相比单独使用 Dropout，较低的 dropout 比率就足够了。需要进行实验。
+- **放置位置：** `线性/卷积 -> 批归一化 -> 激活函数 -> Dropout` 顺序是一个好的起点。始终监控您的训练和验证曲线，以查看这种组合对于您的特定模型和数据集是否有效。
+- **替代方案：** 如果您遇到问题，考虑像层归一化这样的替代方案，它在单个示例的特征维度上进行归一化，而不是在批次维度上。层归一化与 Dropout 的相互影响通常被认为更简单，因为它不依赖于批次统计量。
+
+总之，在现代深度学习 (deep learning)中，结合批归一化和 Dropout 是一种常见做法。尽管潜在的相互影响确实存在，但仔细构建层，通常是在一个处理块内，在 Dropout 之前应用批归一化 (`线性/卷积 -> 批归一化 -> 激活函数 -> Dropout`)，这通常能带来稳定的训练和有效的正则化。一如既往，通过监控训练动态和验证表现进行经验验证，对于确认其对您特定应用的好处是必要的。
+
+## 参考资料
+
+- [Dropout: A Simple Way to Prevent Overfitting Neural Networks](http://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf) — Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov (2014)
+  Journal: Journal of Machine Learning Research; Volume: 15; Pages: 1929-1958
+  介绍了用于神经网络的Dropout正则化技术。
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](http://proceedings.mlr.press/v37/ioffe15.pdf) — Sergey Ioffe, Christian Szegedy (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning; DOI: [10.5555/3045118.3045145](https://doi.org/10.5555/3045118.3045145)
+  介绍了批量归一化技术，以稳定和加速深度神经网络训练。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)
+  Publisher: MIT Press
+  涵盖深度学习基础概念的综合教科书，包括正则化和优化技术。

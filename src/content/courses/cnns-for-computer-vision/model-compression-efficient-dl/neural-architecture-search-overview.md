@@ -1,0 +1,69 @@
+---
+course: "cnns-for-computer-vision"
+chapter: "model-compression-efficient-dl"
+lesson: "neural-architecture-search-overview"
+sourceId: 2638
+sourceUrl: "https://apxml.com/zh/courses/cnns-for-computer-vision/chapter-8-model-compression-efficient-dl/neural-architecture-search-overview"
+title: "神经网络架构搜索概览"
+description: "介绍神经网络架构搜索（NAS）技术，用于自动寻找高效的网络结构。"
+order: 6
+plots: []
+sourceHash: "d94564cf93b93824be86c4f5b31ec6e5915149cfc8c9aeaa8853cdfc51d6c203"
+sourceCorrections: []
+---
+
+剪枝、量化 (quantization)和知识蒸馏 (knowledge distillation)等技术旨在提高*现有*架构的效率，而神经网络 (neural network)架构搜索（NAS）则从另一个角度处理问题：自动*设计*网络架构本身，通常将效率作为与准确性并列的主要目标。NAS不再仅仅依赖人类直觉和反复试验，而是采用算法来搜索大量可能的网络结构空间，并找出针对特定任务和约束进行优化的有潜力的候选方案。
+
+### 自动化设计的动因
+
+手动设计先进的CNN架构是一个复杂、耗时且需要大量专业知识的过程。即使经验丰富的设计者也可能无法找到针对特定数据集、任务和硬件限制（如移动CPU上的推理 (inference)延迟或嵌入 (embedding)式系统上的内存占用）的最佳配置。NAS旨在自动化这个寻找过程，系统地在各种架构可能性中进行搜索，以找到满足预期性能和效率目标的模型。这对于为资源受限环境设计专用网络尤其有利，因为在这些环境中，标准架构可能不是最优的。
+
+### NAS的核心组成部分
+
+一个典型的NAS框架包含三个主要组成部分：
+
+1. **搜索空间：** 这定义了搜索算法能够搜索到的所有可能架构的集合。设计搜索空间非常重要；一个定义良好的空间能够平衡灵活性和可处理性。搜索空间可以从*宏观层面*（定义整体网络结构，如层序列）到*基于单元*（设计可重复的模式或块，如ResNet块或Inception模块，然后进行堆叠）。基于单元的搜索空间通常能降低复杂性并提高可迁移性。该空间包括卷积操作类型（标准、深度可分离）、核大小、连接（跳跃连接、密集连接）、通道数量和层排列等选择。
+2. **搜索策略：** 这是用于在搜索空间中进行搜索的算法。早期方法常使用强化学习 (reinforcement learning)（RL），其中代理学习策略以生成有潜力的架构；或使用演化算法（EA），它根据适应度分数演化架构群体。最近的方法包括基于梯度的方案（例如，可微分架构搜索 - DARTS），这些方法将离散的架构选择松弛到连续空间中，从而允许通过梯度下降 (gradient descent)进行优化。这些方法可以明显更快，但可能需要仔细处理以避免不稳定或找到退化解。搜索策略的选择会影响计算成本和搜索的有效性。
+3. **性能评估策略：** 评估每个候选架构的真实性能需要对其进行完整训练，考虑到典型搜索空间庞大，这在计算上是不可行的。因此，NAS方法依赖于高效的性能评估策略。这些策略包括：
+
+   - *低保真度训练：* 对候选架构进行更少周期的训练，或在数据子集上训练，或使用更小的模型容量进行训练。
+   - *参数 (parameter)共享：* 诸如ENAS（高效NAS）或DARTS之类的技术训练一个大型“超网络”，该网络包含搜索空间中所有可能的架构。候选架构通过从该超网络继承权重 (weight)来评估，从而避免了单独训练。
+   - *代理指标：* 使用易于计算的指标（如在较小代理任务上的性能），这些指标与最终性能具有良好的相关性。
+
+> 一个典型的NAS框架包括一个搜索策略，它搜索预定义的搜索空间，提出候选架构，这些架构会进行性能和效率评估，并提供反馈来指导搜索。
+
+### 使用NAS优化效率
+
+NAS的一个重要优势是它能够将效率约束直接纳入搜索过程。目标函数不再仅仅最大化准确性，而是可以被公式化为多目标问题，旨在优化准确性和效率指标之间的权衡，例如：
+
+- **FLOPs（浮点运算次数）：** 计算复杂度的衡量标准。
+- **参数 (parameter)数量：** 与模型大小和内存使用情况有关。
+- **延迟：** 在目标硬件（例如，移动CPU、GPU、边缘TPU）上测得的实际推理 (inference)时间。
+
+例如，搜索策略可以最大化一个目标，如$准确性 - \lambda \times 延迟$或在$FLOPs < 目标预算$的条件下最大化$准确性$。这使得NAS能够找到像MobileNetV3或EfficientNet这样的架构，它们在特定计算预算内实现了最先进的性能。性能评估器组件不仅会评估候选架构的预测准确性，还会评估其估计或测得的效率得分。
+
+### 挑战与考量
+
+虽然强大，但NAS并非万灵药。需要注意的方面包括：
+
+- **计算成本：** 即使采用高效的评估策略，NAS仍可能需要大量的计算资源（某些方法需要数百或数千个GPU日）。基于梯度的方法更快，但有其自身的稳定性问题。
+- **搜索空间设计：** 找到的架构的质量在很大程度上取决于搜索空间的设计。设计不当的空间可能会排除真正好的架构，或者因为过大而无法有效搜索。
+- **可迁移性：** 在一个数据集或任务上找到的架构可能无法完美地泛化到其他数据集或任务，尽管基于单元的方法通常具有更好的可迁移性。
+- **验证：** 通过代理指标或权重 (weight)共享找到的架构需要通过完整训练进行彻底验证，以确认其性能。
+
+NAS代表了一种寻找高度优化神经网络 (neural network)架构的复杂方法。通过自动化设计过程并明确考虑效率指标，它提供了一条开发紧凑、快速、准确模型的途径，这些模型适用于在多样化、通常资源受限的环境中部署。它通过可能找到那些本身更适合后续剪枝或量化 (quantization)的架构，来补充其他效率技术。
+
+## 参考资料
+
+- [Neural Architecture Search with Reinforcement Learning](https://arxiv.org/abs/1611.01578) — Barret Zoph, Quoc V. Le (2017)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1611.01578](https://doi.org/10.48550/arXiv.1611.01578)
+  介绍了如何使用强化学习来自动化设计神经网络架构。
+- [Efficient Neural Architecture Search via Parameter Sharing](https://arxiv.org/abs/1802.03268) — Hieu Pham, Melody Y. Guan, Barret Zoph, Quoc V. Le, Jeff Dean (2018)
+  Journal: International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1802.03268](https://doi.org/10.48550/arXiv.1802.03268)
+  提出了ENAS，一种通过参数共享显著降低NAS计算成本的方法。
+- [DARTS: Differentiable Architecture Search](https://arxiv.org/abs/1806.09055) — Hanxiao Liu, Karen Simonyan, Yiming Yang (2019)
+  Journal: International Conference on Learning Representations (ICLR); DOI: [10.48550/arXiv.1806.09055](https://doi.org/10.48550/arXiv.1806.09055)
+  提出了DARTS，一种基于梯度的NAS算法，可以通过梯度下降实现高效的架构搜索。
+- [Neural Architecture Search: A Survey](https://arxiv.org/abs/1808.05377) — Thomas Elsken, Jan Hendrik Metzen, Frank Hutter (2019)
+  Journal: Journal of Machine Learning Research (JMLR); Volume: 20; Pages: 1-21; DOI: [10.48550/arXiv.1808.05377](https://doi.org/10.48550/arXiv.1808.05377)
+  对NAS的组成部分、策略和挑战进行了全面的分类和讨论。

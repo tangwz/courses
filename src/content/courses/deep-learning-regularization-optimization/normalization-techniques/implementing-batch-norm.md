@@ -1,0 +1,194 @@
+---
+course: "deep-learning-regularization-optimization"
+chapter: "normalization-techniques"
+lesson: "implementing-batch-norm"
+sourceId: 4966
+sourceUrl: "https://apxml.com/zh/courses/deep-learning-regularization-optimization/chapter-4-normalization-techniques/implementing-batch-norm"
+title: "实现批量归一化"
+description: "展示如何在深度学习框架中添加批量归一化层。"
+order: 9
+plots: []
+sourceHash: "bf60d5db0cb082fed703f76f8db2bc4ce28016b92f04d51a8c93bb477b48469a"
+sourceCorrections: []
+---
+
+批量归一化 (normalization)（BN）旨在处理深度学习 (deep learning)模型中的内部协变量偏移并稳定训练。其在常见深度学习框架中的实现利用了PyTorch和TensorFlow等框架提供的内置层。这些内置层能够处理前向传播、反向传播 (backpropagation)的复杂计算，以及推理 (inference)时所需的运行统计数据的跟踪。
+
+### 批量归一化 (normalization)层的集成
+
+批量归一化通常作为神经网络 (neural network)模型中的一个独立层添加。主要考量是根据BN层将接收的输入数据选择正确的维度，并决定相对于激活函数 (activation function)的放置位置。
+
+大多数深度学习 (deep learning)库提供不同的BN变体：
+
+1. **1D 批量归一化**：用于全连接层输出等输入。预期输入形状为 `(N, C)` 或 `(N, C, L)`，其中 `N` 为批量大小，`C` 为特征数量，`L` 为序列长度（可选）。归一化发生在每个特征 `C` 的批量维度上。
+2. **2D 批量归一化**：卷积神经网络（CNN）处理图像类数据的标准选择。预期输入形状为 `(N, C, H, W)`，其中 `C` 为通道数，`H` 为高度，`W` 为宽度。归一化发生在每个通道 `C` 的批量、高度和宽度维度上。
+3. **3D 批量归一化**：用于体数据，例如3D医学扫描或视频帧。预期输入形状为 `(N, C, D, H, W)`，其中 `D` 为深度。归一化发生在每个通道 `C` 的批量、深度、高度和宽度维度上。
+
+### 在PyTorch中的实现
+
+在PyTorch中，您可以轻松使用 `torch.nn` 模块添加批量归一化 (normalization)。让我们看看如何引入 `BatchNorm1d` 和 `BatchNorm2d`。
+
+#### 示例：全连接网络中的批量归一化
+
+考虑一个简单的多层感知机（MLP）。您通常会在线性变换之后，*激活函数 (activation function)之前*应用 `BatchNorm1d`。
+
+```python
+import torch
+import torch.nn as nn
+
+# 假设输入特征 = 784，隐藏单元 = 100，输出类别 = 10
+input_features = 784
+hidden_units = 100
+output_classes = 10
+
+model = nn.Sequential(
+    nn.Linear(input_features, hidden_units),
+    # 在线性层之后应用 BatchNorm1d
+    # num_features 应与上一层的输出大小匹配
+    nn.BatchNorm1d(num_features=hidden_units),
+    nn.ReLU(), # 在归一化之后应用激活
+    nn.Linear(hidden_units, output_classes)
+    # 注意：分类任务的最终输出层通常不使用BN或激活
+)
+
+print(model)
+
+# 假数据使用示例
+# 批量大小 N = 64
+dummy_input = torch.randn(64, input_features)
+output = model(dummy_input)
+print("输出形状:", output.shape) # 预期: torch.Size([64, 10])
+```
+
+#### 示例：卷积网络中的批量归一化
+
+在CNN中，使用 `BatchNorm2d`，通常放置在卷积之后和激活之前。
+
+```python
+import torch
+import torch.nn as nn
+
+# 假设输入图像：3通道，32x32像素
+in_channels = 3
+out_channels_conv1 = 16
+out_channels_conv2 = 32
+
+model_cnn = nn.Sequential(
+    # 卷积层 1
+    nn.Conv2d(in_channels=in_channels, out_channels=out_channels_conv1, kernel_size=3, padding=1),
+    # 在卷积之后应用 BatchNorm2d
+    # num_features 应与 Conv2d 的输出通道数匹配
+    nn.BatchNorm2d(num_features=out_channels_conv1),
+    nn.ReLU(), # 在归一化之后应用激活
+    nn.MaxPool2d(kernel_size=2, stride=2),
+
+    # 卷积层 2
+    nn.Conv2d(in_channels=out_channels_conv1, out_channels=out_channels_conv2, kernel_size=3, padding=1),
+    nn.BatchNorm2d(num_features=out_channels_conv2),
+    nn.ReLU(),
+    nn.MaxPool2d(kernel_size=2, stride=2)
+
+    # ... 后面可能跟着展平层和线性层
+)
+
+print(model_cnn)
+
+# 假数据使用示例
+# 批量大小 N = 16
+dummy_input_cnn = torch.randn(16, in_channels, 32, 32)
+output_cnn = model_cnn(dummy_input_cnn)
+# 输出形状取决于层，这里是经过两个 2x2 最大池化后：
+# H_out = 32 / 2 / 2 = 8
+# W_out = 32 / 2 / 2 = 8
+print("CNN 输出形状:", output_cnn.shape) # 预期: torch.Size([16, 32, 8, 8])
+```
+
+### 参数 (parameter)说明
+
+创建批量归一化 (normalization)层时，您会遇到几个参数：
+
+- `num_features`：这是最主要的参数。它指定被归一化维度的尺寸。对于 `BatchNorm1d`，它是特征数量 `C`。对于 `BatchNorm2d`，它是通道数 `C`。您必须根据前一层的输出形状正确设置此项。
+- `eps` (epsilon)：一个添加到归一化过程中分母（方差）上的小值 ($\epsilon$)：$\hat{x}_i = \frac{x_i - \mu_{\mathcal{B}}}{\sqrt{\sigma^2_{\mathcal{B}} + \epsilon}}$ 这确保了数值稳定性，防止除以零，如果小批量方差非常接近零。一个典型的默认值是 `1e-5`。
+- `momentum`：此参数控制运行平均值 ($\mu$) 和方差 ($\sigma^2$) 估计值的更新规则，这些估计值用于评估/推理 (inference)阶段。更新通常是一个指数移动平均：
+  $\mu_{running} = (1 - momentum) \times \mu_{running} + momentum \times \mu_{\mathcal{B}}$
+  $\sigma^2_{running} = (1 - momentum) \times \sigma^2_{running} + momentum \times \sigma^2_{\mathcal{B}}$
+  动量值越高，表示运行估计值越依赖于*当前*小批量 $\mathcal{B}$ 的统计数据。PyTorch中的默认值是 `0.1`。
+- `affine`：一个布尔值（默认为 `True`）。如果设为 `True`，批量归一化层包含可学习的仿射变换参数：缩放 ($\gamma$) 和平移 ($\beta$)。这些参数在训练期间像其他网络权重 (weight)一样被学习。归一化步骤的输出如下：
+  $y_i = \gamma \hat{x}_i + \beta$
+  保持 `affine=True` 允许网络在有利于学习的情况下潜在地取消归一化，从而给模型更大的灵活性。禁用它（`affine=False`）意味着 $\gamma$ 固定为1，$\beta$ 固定为0。
+- `track_running_stats`：一个布尔值（默认为 `True`）。当为 `True` 时，层在训练期间保持均值和方差的运行估计值。这些运行估计值随后在评估期间用于归一化。如果设为 `False`，即使在评估期间，层也会使用当前小批量统计数据进行归一化，这通常不理想，除非用于特定的高级使用情形。
+
+### 放置位置：在激活函数 (activation function)之前还是之后？
+
+一个常见的讨论点是批量归一化 (normalization)层应放置在激活函数（如ReLU）之前还是之后。
+
+- **在激活函数之前（传统做法）：** `Linear/Conv -> BN -> Activation`
+  - 这是原始批量归一化论文中使用的放置位置。
+  - 基本原理是归一化*输入到*激活函数的值，确保它们在一个激活函数不太可能饱和的范围内（例如，对于sigmoid/tanh），或者梯度能良好流动（例如，对于ReLU，防止产生零梯度的大的负输入）。
+- **在激活函数之后：** `Linear/Conv -> Activation -> BN`
+  - 一些研究人员认为，激活函数（特别是ReLU）可能会改变层输出的均值和方差，因此，在激活函数*之后*进行归一化可能更有效地控制输入到下一层的分布。
+
+实践中，将BN放置在激活函数**之前**是更常见的惯例，并在许多有影响力的架构（如ResNets）中是标准做法。它通常会产生良好的结果。然而，像深度学习 (deep learning)架构设计的许多方面一样，最佳放置位置可能取决于具体任务，实验有时会显示出放置在激活函数之后也有益处。对于大多数目的，遵循传统的 `Conv/Linear -> BN -> Activation` 顺序是一个可靠的起点。
+
+### 训练模式与评估模式：一个重要的区别
+
+使用批量归一化 (normalization)最重要的实践方面之一是确保您的模型在训练和评估模式之间正确切换。
+
+- **训练期间（PyTorch中为 `model.train()`）：**
+
+  - BN 层使用**当前小批量**的统计数据计算均值 $\mu_{\mathcal{B}}$ 和方差 $\sigma^2_{\mathcal{B}}$。
+  - 这些小批量统计数据用于归一化该批次内的激活值。
+  - 如果 `track_running_stats=True`，层会使用指定的 `momentum` 更新其均值和方差的运行估计值。
+  - 如果 `affine=True`，则 $\gamma$ 和 $\beta$ 参数 (parameter)通过反向传播 (backpropagation)更新。
+- **评估/推理 (inference)期间（PyTorch中为 `model.eval()`）：**
+
+  - BN 层**不**使用当前小批量的统计数据（当前批量可能只包含一个样本或具有不同的统计特性）。
+  - 相反，它们使用在训练期间估计和累积的**运行均值和方差** ($\mu_{running}, \sigma^2_{running}$)。
+  - 这些固定的运行统计数据用于归一化激活值。
+  - $\gamma$ 和 $\beta$ 参数是固定的（不更新）。
+
+这种切换对于在测试和部署期间获得一致且可复现的结果很有必要。未设置 `model.eval()` 可能导致在推理时使用批量统计数据，从而根据测试批量的组成出现潜在的不可预测行为。
+
+```python
+import torch
+import torch.nn as nn
+
+# 假设一个带有 BN 的简单模型
+model = nn.Sequential(
+    nn.Linear(10, 20),
+    nn.BatchNorm1d(20),
+    nn.ReLU()
+)
+
+# --- 训练阶段 ---
+model.train() # 将模型设置为训练模式
+print(f"模型在训练期间的模式：{'训练' if model.training else '评估'}")
+# 前向传播使用小批量统计数据，更新运行统计数据
+
+# --- 评估/推理阶段 ---
+model.eval() # 将模型设置为评估模式
+print(f"模型在评估期间的模式：{'训练' if model.training else '评估'}")
+# 前向传播使用运行统计数据，不更新运行统计数据
+
+# 用于演示的假输入
+dummy_input = torch.randn(4, 10) # 批量大小 4
+with torch.no_grad(): # 推理时禁用梯度计算
+    output_eval = model(dummy_input)
+
+print("评估期间的输出形状:", output_eval.shape)
+```
+
+通过正确实现批量归一化层并管理它们的训练/评估状态，您可以利用它们的能力来稳定训练，允许更高的学习率，并加速深度学习 (deep learning)模型的收敛。
+
+## 参考资料
+
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Sergey Ioffe, Christian Szegedy (2015)
+  Journal: Proceedings of the 32nd International Conference on Machine Learning (ICML); DOI: [10.48550/arXiv.1502.03167](https://doi.org/10.48550/arXiv.1502.03167)
+  引入批归一化、其理论基础和实验结果的原始研究论文。
+- [BatchNorm1d](https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html) — PyTorch Development Team (2024)
+  PyTorch `BatchNorm1d` 的官方文档，详细说明其用法、参数以及在训练和评估模式下的行为。此文档也适用于 `BatchNorm2d` 和 `BatchNorm3d`。
+- [Deep Learning](https://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  一本关于深度学习的标准教科书，其中包含批归一化的专门章节，涵盖其机制和益处。
+- [CS231n Lecture Notes: Batch Normalization, Different Normalization Layers](https://cs231n.github.io/convolutional-networks/#bn) — Justin Johnson, Fei-Fei Li, Serena Yeung, and others (2023)
+  斯坦福大学 CS231n 课程的综合讲义，为批归一化实现提供了清晰的解释和实际考虑。

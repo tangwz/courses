@@ -1,0 +1,105 @@
+---
+course: "intro-data-cleaning-preprocessing"
+chapter: "dealing-with-duplicate-data"
+lesson: "removing-duplicate-rows"
+sourceId: 3995
+sourceUrl: "https://apxml.com/zh/courses/intro-data-cleaning-preprocessing/chapter-3-dealing-with-duplicate-data/removing-duplicate-rows"
+title: "移除重复行"
+description: "应用函数来移除重复条目，保留第一个或最后一个出现项。"
+order: 5
+plots: []
+sourceHash: "fcc22115df80c6bfbe1f0f7df1540190e8b5bd8c288b2626a07c732e2844d994"
+sourceCorrections: []
+---
+
+既然我们已经知道如何识别重复行，无论是完全匹配还是基于特定列，下一步就是将它们移除。保留冗余数据可能导致分析结果不准确、统计汇总（如平均值或计数）出现偏差，以及处理效率低下。移除重复数据可确保每个独特的实体或事件只出现一次，从而获得更准确的分析。
+
+大多数数据处理工具和库都提供了直接的功能来清除这些不必要的行。这个过程通常需要指定是检查所有列的重复项，还是只检查选定的几列，并决定保留哪一个重复行的实例。
+
+### 重复数据移除的工作原理
+
+当您指示工具移除重复数据时，它会根据您提供的条件扫描数据集：
+
+1. **检查所有列（默认）：** 默认情况下，移除功能通常会比较整行。如果两行或多行在所有列中都完全相同，那么除了其中一行之外，其余的都将被标记 (token)为移除。
+2. **检查部分列：** 您通常可以指定一个列名列表。在这种情况下，函数只检查这些特定列中的匹配值。如果行在指定的列中具有相同的组合值，则被视为重复项，即使其他列不同。
+
+### 选择保留哪个重复项
+
+移除重复数据的一个重要方面是，当发现重复项时，决定*保留哪一行*。常见选项包括：
+
+- **保留第一个 (`keep='first'`)：** 这通常是默认行为。当发现重复行时，数据集中遇到的第一个重复行将被保留，所有后续相同的行都将被移除。如果数据录入顺序表明第一个记录是原始或最相关的，此选项很有用。
+- **保留最后一个 (`keep='last'`)：** 此选项保留重复行的最后一个出现实例，并移除所有先前的实例。如果较晚的条目代表更新或更近期的数据，此选项可能适用。
+- **移除所有重复项 (`keep=False`)：** 此选项会移除属于任何重复集的所有行。如果一行在数据集中的其他位置有任何一个重复项，则这两个（或所有）实例都将被移除。这只留下那些从一开始就独特的行。使用此选项时要谨慎，因为它可能会大幅减小数据集的大小。
+
+### 实际示例：移除完全重复项
+
+设想一个表示客户订单的简单数据集：
+
+```
+   OrderID  CustomerID Product  Quantity
+0      101         A54   Apple         5
+1      102         B12  Orange         3
+2      103         A54   Apple         5  # 第0行的重复项
+3      104         C89   Banana         2
+4      105         B12  Orange         3  # 第1行的重复项
+```
+
+如果我们移除重复项并保留第一个实例 (`keep='first'`)，结果将是：
+
+```
+   OrderID  CustomerID Product  Quantity
+0      101         A54   Apple         5
+1      102         B12  Orange         3
+4      104         C89   Banana         2
+```
+
+索引为2和4的行被移除了，因为它们分别与先前出现的第0行和第1行相同。
+
+### 实际示例：基于特定列移除重复项
+
+现在，考虑一个场景：我们只关注相同客户和产品的重复*订单*，而不考虑 `OrderID`（`OrderID` 可能只是一个内部跟踪号，我们希望得到唯一的客户-产品购买记录）。
+
+原始数据：
+
+```
+   OrderID  CustomerID Product  Quantity
+0      101         A54   Apple         5
+1      102         B12  Orange         3
+2      205         A54   Apple         8  # 与第0行的CustomerID和Product相同
+3      104         C89   Banana         2
+4      310         B12   Grape         1
+```
+
+如果我们基于 `CustomerID` 和 `Product` 移除重复项并保留第一个实例：
+
+```
+   OrderID  CustomerID Product  Quantity
+0      101         A54   Apple         5
+1      102         B12  Orange         3
+3      104         C89   Banana         2
+4      310         B12   Grape         1
+```
+
+索引为2的行被移除了，因为它的 `CustomerID` ('A54') 和 `Product` ('Apple') 与第0行匹配。`Quantity` 和 `OrderID` 的差异被忽略了，因为我们只指定了 `CustomerID` 和 `Product` 列进行重复项检查。
+
+### 重要考量
+
+- **哪些列定义了唯一性？** 在基于部分列移除重复项之前，请仔细思考在您的上下文 (context)中，什么才是真正定义唯一记录的。基于过少的列移除行可能会丢弃数据中有意义的变化。
+- **保留哪条记录？** 选择保留第一个还是最后一个重复项可能很重要。如果您的数据包含时间成分，保留最后一个可能可以保留最新状态。如果不是，保留第一个是常见的默认做法。
+- **不可逆性：** 在当前工作流程状态下，数据移除通常是永久性的。在执行移除操作之前，通常明智的做法是先检查重复项，或在数据副本上操作，尤其是在您首次查看数据集时。
+
+有效移除重复行可以清理您的数据集，确保后续的分析和建模任务都在独特、有意义的记录上运行。下一步是在动手实践练习中应用这些识别和移除技术。
+
+## 参考资料
+
+- [pandas.DataFrame.drop_duplicates](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html) — pandas development team (2023)
+  Pandas函数官方文档，说明其参数和去除重复行的行为。
+- [Data Cleaning: A Practical Guide](https://www.taylorfrancis.com/books/mono/10.1201/b17234/data-cleaning-ingrid-schiefer-jose-alarcon) — Ingrid F. Schiefer and Jose R. L. Alarcon (2014)
+  Publisher: Auerbach Publications; DOI: [10.1201/b17234](https://doi.org/10.1201/b17234)
+  一本专注于数据清洗实用技术的书籍，包含识别和解决重复记录的方法。
+- [Data Mining: Concepts and Techniques](https://www.elsevier.com/books/data-mining-concepts-and-techniques/han/978-0-12-381479-1) — Jiawei Han, Micheline Kamber, and Jian Pei (2011)
+  Publisher: Elsevier
+  一本综合性教科书，在数据挖掘背景下涵盖数据预处理技术，包含数据清洗和重复数据处理。第三版。
+- [Fundamentals of Data Engineering: Planning and Building Robust Data Systems](https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/) — Joe Reis, Matt Housley (2022)
+  Publisher: O'Reilly Media; Pages: 447
+  一本关于现代数据工程实践的新书，其中有数据质量和清洗方法的部分。

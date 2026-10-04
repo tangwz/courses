@@ -1,0 +1,108 @@
+---
+course: "mixture-of-experts"
+chapter: "advanced-moe-architectures"
+lesson: "router-stabilization-techniques"
+sourceId: 4689
+sourceUrl: "https://apxml.com/zh/courses/mixture-of-experts/chapter-2-advanced-moe-architectures/router-stabilization-techniques"
+title: "路由器稳定化技术"
+description: "提升门控网络的稳定性和学习机制的方法。"
+order: 5
+plots: ["plots/4689-0.json"]
+sourceHash: "23c3705ff8bf49741e5a4ba7b2d4cda9900733d18f25decf0fd942384fb40880"
+sourceCorrections: []
+---
+
+尽管精巧的门控网络能够培养高度专业化的专家，但其训练有时可能不稳定。路由器本身作为神经网络 (neural network)，在训练过程中容易出现梯度消失或爆炸、对初始化敏感以及不良反馈循环等问题。不稳定的路由器可能导致不规则的路由决策、收敛不良，甚至专家坍塌，即只有少数专家被选用。因此，确保路由器有效且稳定地学习是MoE训练成功的一个重要部分。
+
+已发展出多种技术，专门解决门控网络的稳定性问题。这些技术通常与下一章讨论的负载均衡机制相辅相成，因为稳定的路由器通常更容易平衡。
+
+### 处理路由器不稳定性
+
+门控网络的不稳定性常表现为路由决策的高方差（尤其在训练早期），或者过度自信的路由，即网络过早地对特定专家赋予近乎确定的权重 (weight)，从而阻碍试探和适应。以下是一些常见的稳定方法：
+
+#### 路由器参数 (parameter)正则化 (regularization)与裁剪
+
+标准的深度学习 (deep learning)技术可以直接应用于路由器的参数。
+
+- **权重正则化：** 对路由器线性层（如果使用）的权重应用L1或L2正则化，可以防止权重增长过大，这通常与过度尖锐或不稳定的路由决策相关联。
+- **梯度裁剪：** 裁剪路由器参数的梯度范数，可以防止大的梯度更新，从而避免训练不稳定，尤其是在处理噪声梯度或复杂损失地形时。其应用方式与循环神经网络 (neural network) (RNN)或其他敏感架构中的用法类似。
+
+#### 噪声门控
+
+在门控机制中引入噪声是一种鼓励试探并防止过早收敛的常用技术。通常，高斯噪声被添加到路由器的logits值中，在softmax和top-k选择*之前*：
+
+
+$$
+\text{加噪的对数} = \text{对数} + \epsilon, \quad \text{且 } \epsilon \sim \mathcal{N}(0, \sigma^2 \mathbf{I})
+$$
+
+
+噪声方差 $\sigma^2$ 是一个超参数 (hyperparameter)。较高的噪声起初会促进更均匀的选择，可能有助于所有专家接收到一些tokens并开始学习。这种噪声在训练过程中通常会衰减（减少），使路由器随着专家专业化而变得更加确定。噪声的加入有助于打破确定性反馈循环，否则某些专家可能仅因初始化或微小的初始优势而在早期路由中占据主导地位。
+
+> 噪声门控的简化视图，其中噪声在计算初始路由器logits之后、最终选择过程之前被注入。
+
+#### 路由器Z-损失
+
+路由器Z-损失（或logits损失）在Switch Transformer论文 (Fedus 等人，2021) 中提出，旨在控制路由器计算的logits值的量级。较大的logits值可能导致过度自信的路由以及潜在的数值不稳定。Z-损失惩罚每个token的logits的平方log-sum-exp值：
+
+
+$$
+L_z = \lambda_z \cdot \frac{1}{N \cdot T} \sum_{i=1}^{N \cdot T} (\text{logsumexp}(\text{对数}_i))^2
+$$
+
+
+此处 $N$ 为批次大小，$T$ 为序列长度，$\text{对数}_i$ 是第 $i$ 个token的路由器对数，$\lambda_z$ 是一个小的系数（例如，0.001或0.01）。最小化此损失会促使路由器保持其输出对数的总体量级较小，从而有助于更稳定的训练过程。
+
+
+
+![训练期间路由器对数方差](plots/4689-0.json)
+
+
+
+> 比较说明了像Z-损失这样的稳定化技术与标准设置相比，如何在训练步数上减少路由器对数的方差。
+
+#### 熵正则化
+
+尽管负载均衡损失（接下来讨论）侧重于平衡发送给每个专家的*总*token数量，但熵正则化可以应用于路由器*每个token*的输出分布。熵惩罚会促使softmax在专家之间产生的概率分布更平坦（熵更高）：
+
+
+$$
+L_{\text{熵}} = -\lambda_e \cdot \frac{1}{N \cdot T} \sum_{i=1}^{N \cdot T} \sum_{j=1}^{E} g_{ij} \log(g_{ij} + \epsilon)
+$$
+
+
+此处，$g_{ij}$ 是分配给专家 $j$ 的token $i$ 的门控概率，$E$ 是专家数量，$\epsilon$ 是用于数值稳定的小常数，$\lambda_e$ 是正则化系数。此损失促使路由器在其决策中保持一定的不确定性，这对于初始阶段的试探性学习有益，尤其是在训练早期。和噪声类似，权重 $\lambda_e$ 可能随时间衰减。
+
+#### 调整专家容量
+
+专家容量因子 $C$ 也与路由器稳定性相关。回忆一下，容量决定了一个专家每批次可以处理的最大token数量。
+
+- **低容量：** 如果 $C$ 相对于路由到某个专家的token数量过低，tokens将会被丢弃。这会给路由器的梯度信号引入噪声和潜在的不稳定性，因为它不会收到关于被丢弃token对主任务损失贡献的反馈。这还可能加剧负载均衡问题。
+- **高容量：** 如果 $C$ 非常高，被丢弃的token会更少，可能促使路由器获得更平滑的梯度。然而，过高的容量可能会减少专家专业化的压力，并增加计算成本和内存使用。
+
+寻找合适的容量因子通常涉及平衡路由器稳定性、计算效率以及最小化token丢弃。通常将 $C$ 设置得略高于理想的均匀分布（例如，$C = 1.25 \times \frac{\text{令牌数}}{\text{专家数量}}$）作为起始点。
+
+### 相互作用与实际监控
+
+这些稳定化技术并非互斥，常结合使用。例如，噪声门控可以与Z-损失和梯度裁剪结合使用。最佳组合取决于具体的MoE架构、数据集和训练设置。
+
+在训练期间监控路由器行为对于诊断不稳定性很重要。重要的指标包括：
+
+- 路由器对数的平均量级。
+- 路由器对数在tokens间的方差。
+- 每个token的平均门控分布的熵。
+- 与负载均衡相关的统计数据（第3章涵盖），例如专家利用率的变异系数。
+
+对数量级或方差出现突然峰值或持续高值，或训练早期持续低熵，都可能表明存在需要通过这些技术来解决的不稳定性。有效稳定路由器通常是大型MoE模型中实现良好负载均衡和专家专业化的先决条件。
+
+## 参考资料
+
+- [Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity](https://www.jmlr.org/papers/v23/21-0990.html) — William Fedus, Barret Zoph, Noam Shazeer (2022)
+  Journal: Journal of Machine Learning Research; Publisher: JMLR, Inc. and Microtome Publishing; Volume: 23; Pages: 1-39; DOI: [10.5555/3547466.3547565](https://doi.org/10.5555/3547466.3547565)
+  介绍了路由器Z-Loss，并讨论了专家容量，这对训练稳定的MoE模型至关重要。
+- [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, Jeff Dean (2017)
+  Journal: International Conference on Learning Representations (ICLR 2017); DOI: [10.48550/arXiv.1701.06538](https://doi.org/10.48550/arXiv.1701.06538)
+  一篇关于现代稀疏MoE层的基础性论文，概述了门控网络的早期挑战和负载均衡方法。
+- [Deep Learning](http://www.deeplearningbook.org/) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press
+  详细介绍了正则化方法和梯度裁剪，这些通用技术适用于路由器稳定性。

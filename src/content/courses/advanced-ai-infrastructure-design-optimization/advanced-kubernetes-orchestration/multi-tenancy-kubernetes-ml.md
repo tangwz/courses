@@ -1,0 +1,169 @@
+---
+course: "advanced-ai-infrastructure-design-optimization"
+chapter: "advanced-kubernetes-orchestration"
+lesson: "multi-tenancy-kubernetes-ml"
+sourceId: 6996
+sourceUrl: "https://apxml.com/zh/courses/advanced-ai-infrastructure-design-optimization/chapter-3-advanced-kubernetes-orchestration/multi-tenancy-kubernetes-ml"
+title: "通过命名空间、配额和优先级类实现多租户"
+description: "在单个机器学习平台内隔离资源并管理多个团队或项目的访问。"
+order: 5
+plots: []
+sourceHash: "8d775bc7b9271c337545c8ddcabf0ca4eb224bb34c10f57037778a68e0861357"
+sourceCorrections: []
+---
+
+随着机器学习 (machine learning)平台扩展以服务多个团队和项目，对GPU等宝贵资源的竞争变得不可避免。生产系统不能按先来先服务的原则运行。它需要机制来强制隔离、确保公平的资源访问并优先处理重要工作负载。Kubernetes提供了一套强大的原语来构建一个完善的多租户环境：命名空间用于隔离，ResourceQuota用于容量管理，PriorityClass用于调度优先权。
+
+### 使用命名空间进行逻辑隔离
+
+创建多租户集群的第一步是逻辑分区。Kubernetes `Namespace` 为资源提供了一个作用域，有效地在您的物理集群内创建了一个虚拟集群。这可以防止一个团队意外干扰另一个团队的工作；例如，两个团队可以各自部署一个名为 `resnet-finetune` 的训练任务，而不会发生冲突，因为它们存在于不同的命名空间中。
+
+除了名称作用域之外，命名空间是安全和访问控制的基本单位。使用基于角色的访问控制（RBAC），您可以按命名空间定义权限。这允许您授予数据科学团队对其自己的开发命名空间的完全控制权，同时给予他们对共享生产命名空间的只读访问权。
+
+> 团队在其各自的命名空间中隔离，防止资源名称冲突并实现细粒度访问控制。
+
+考虑一个授予管理常见机器学习 (machine learning)工作负载资源权限的 `Role`。这个在 `team-alpha` 命名空间中定义的角色，仅适用于该特定命名空间。
+
+```yaml
+# role-team-alpha.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: team-alpha
+  name: ml-developer
+rules:
+- apiGroups: ["", "apps", "batch"]
+  resources: ["pods", "deployments", "jobs", "services"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+```
+
+接着，您使用 `RoleBinding` 将此角色绑定到特定的用户或组。
+
+```yaml
+# rolebinding-team-alpha.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: team-alpha-binding
+  namespace: team-alpha
+subjects:
+- kind: Group
+  name: "data-science-alpha" # 来自您的身份提供者的组名
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: ml-developer
+  apiGroup: rbac.authorization.k8s.io
+```
+
+通过这种配置，`data-science-alpha` 组的成员可以在其命名空间中管理任务，但不能查看或影响 `team-beta` 命名空间中的任何资源。
+
+### 使用配额管理资源消耗
+
+命名空间提供了逻辑分离，但它们不能阻止一个团队消耗所有可用的物理资源。`team-alpha` 中的单个用户可能会无意中请求所有可用的GPU，导致 `team-beta` 和其他用户无法获得资源。在这种情况下，`ResourceQuota` 对象变得非常重要。
+
+`ResourceQuota` 对命名空间内所有 Pod 可以消耗的计算和存储资源总量设置了硬性限制。对于机器学习 (machine learning)平台，最重要的受限资源是CPU、内存和GPU等专用硬件。
+
+这是一个开发命名空间的 `ResourceQuota` 示例，限制了其总消耗量：
+
+```yaml
+# quota-team-alpha.yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: team-alpha
+spec:
+  hard:
+    requests.cpu: "20"           # 总共请求的最大CPU核心数：20
+    requests.memory: "100Gi"     # 总共请求的最大内存：100 GiB
+    limits.cpu: "40"             # 硬性限制的最大CPU核心数：40
+    limits.memory: "200Gi"       # 硬性限制的最大内存：200 GiB
+    requests.nvidia.com/gpu: "4" # 总共请求的最大GPU数量：4
+    pods: "10"                   # 同时运行的最大Pod数量：10
+```
+
+当 `team-alpha` 中的用户尝试创建一个会超出这些总限制的 Pod 时，Kubernetes API 服务器将拒绝该请求。这确保了没有单个命名空间能够垄断集群资源，为所有租户保障公平的份额。
+
+一个相关对象 `LimitRange` 可用于在命名空间内对单个 Pod 强制执行资源请求和限制。这是一种良好的实践，可以防止用户创建没有任何资源声明的 Pod，这会导致调度变得困难且效率低下。
+
+### 使用优先级和抢占来优先处理工作负载
+
+有了配额，您就实现了公平共享。但并非所有工作负载都具有同等重要性。一个用于生产发布的最终模型训练任务比一个实验性数据分析笔记本更为重要。当集群达到容量时，您需要一种方法来确保高优先级任务能够运行，即使这意味着中断不那么重要的任务。这可以通过 `PriorityClass` 来完成。
+
+`PriorityClass` 是一个集群范围的对象，它定义了一个命名的优先级级别。Pod 可以通过名称引用 `PriorityClass`。Kubernetes 调度器以两种方式使用此信息：
+
+1. **调度顺序**：当多个 Pod 处于等待（挂起）状态时，调度器将尝试首先调度优先级最高的 Pod。
+2. **抢占**：如果一个高优先级 Pod 因资源不足无法调度，调度器可以从节点驱逐（抢占）低优先级 Pod 以腾出空间。
+
+让我们为我们的机器学习 (machine learning)平台定义几个优先级级别：
+
+```yaml
+# priorityclasses.yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-prod
+value: 1000000
+globalDefault: false
+description: "用于关键的生产训练和服务工作负载。"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority-research
+value: 500000
+globalDefault: false
+description: "用于重要的研究实验和验证运行。"
+
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: low-priority-dev
+value: 100000
+globalDefault: true # 如果未指定，则将其设为默认值
+description: "用于开发、笔记本和其他非紧急任务。"
+```
+
+现在，提交生产训练任务的用户可以在其 Pod 规范中指定 `critical-prod` 优先级：
+
+```yaml
+# prod-training-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prod-training-job-1
+  namespace: team-alpha
+spec:
+  priorityClassName: critical-prod # <-- 引用优先级类
+  containers:
+  - name: training-container
+    image: pytorch/pytorch:latest
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+      limits:
+        nvidia.com/gpu: 1
+```
+
+如果集群没有可用的GPU，调度器将识别一个运行低优先级 Pod（例如 `low-priority-dev` Pod）的节点并驱逐它。被抢占的 Pod 会优雅地终止，从而允许 `critical-prod` Pod 在其位置进行调度。
+
+> 挂起队列中的高优先级 Pod 触发对运行中的低优先级 Pod 的抢占，以释放必要的 GPU 资源。
+
+通过结合用于隔离的命名空间、用于公平性的资源配额和用于抢占的优先级类，您可以将一个混乱、资源竞争的集群转变为一个有序高效的多租户机器学习平台。这种结构化方法不仅提高了资源利用率，而且还提供了生产机器学习操作所需的预测性和控制能力。
+
+## 参考资料
+
+- [Kubernetes Concepts Documentation](https://kubernetes.io/docs/concepts/) — Kubernetes Authors (2020)
+  Kubernetes 核心概念的官方文档，涵盖了命名空间、资源配额、优先级类和 RBAC，这些是多租户和资源管理的基础。
+- [Kubernetes in Action, Second Edition](https://www.manning.com/books/kubernetes-in-action-second-edition) — Marko Lukša, Kevin Conner (2026)
+  Publisher: Manning Publications
+  一本全面介绍 Kubernetes 架构及其核心功能的书籍，对命名空间、RBAC、资源配额和优先级类提供了实用的解释。
+- [Practical MLOps: How to Get Models into Production and Keep Them There](https://www.oreilly.com/library/view/practical-mlops/9781098103002/) — Noah Gift and Alfredo Deza (2021)
+  Publisher: O'Reilly Media
+  提供了使用 Kubernetes 部署和管理机器学习系统的最佳实践，处理了 MLOps 背景下的资源管理和多租户问题。

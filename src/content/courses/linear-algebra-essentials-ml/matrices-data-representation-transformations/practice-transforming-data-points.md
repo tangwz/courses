@@ -1,0 +1,250 @@
+---
+course: "linear-algebra-essentials-ml"
+chapter: "matrices-data-representation-transformations"
+lesson: "practice-transforming-data-points"
+sourceId: 1475
+sourceUrl: "https://apxml.com/zh/courses/linear-algebra-essentials-ml/chapter-2-matrices-data-representation-transformations/practice-transforming-data-points"
+title: "动手实践：数据点变换"
+description: "运用矩阵乘法在NumPy中变换数据集中的数据点。"
+order: 8
+plots: ["plots/1475-0.json", "plots/1475-1.json", "plots/1475-2.json", "plots/1475-3.json"]
+sourceHash: "f6f2e5156ee844e5b0865162d9ab9dfe1ea036d93c17c056e0d3d3fce1cf4eda"
+sourceCorrections: []
+---
+
+矩阵可以表示线性变换。使用NumPy对一组数据点应用缩放和旋转等变换。此应用说明了矩阵乘法在处理几何数据方面的作用，这是计算机图形学和机器学习 (machine learning)数据预处理等方面的常见任务。
+
+### 准备工作
+
+首先，确保已安装并导入NumPy。我们将定义一个由二维点组成的小型数据集。为使变换易于观察，我们使用构成简单形状（如“L”形）的点。
+
+```python
+import numpy as np
+import math
+
+# 将数据点定义为矩阵中的行向量
+# 每行是一个点 (x, y)
+data_points = np.array([
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [1, 2]
+])
+
+print("原始数据点（每行是一个点）：")
+print(data_points)
+```
+
+我们的`data_points`矩阵有4行（表示点）和2列（表示x和y坐标）。
+
+### 可视化原始数据
+
+在进行变换前，我们先可视化这些起始点。散点图适用于此。
+
+
+
+![原始数据点](plots/1475-0.json)
+
+
+
+> 我们的数据点形成的初始L形。
+
+### 变换1：缩放
+
+让我们应用一个缩放变换。我们将x坐标缩放1.5倍，y坐标缩放0.5倍。为此的缩放矩阵$S$为：
+
+
+$$
+S = \begin{bmatrix} 1.5 & 0 \\ 0 & 0.5 \end{bmatrix}
+$$
+
+
+当我们用这个缩放矩阵$S$乘以我们的数据矩阵$D$（点以行表示），即$D' = D @ S$，每个点$(x, y)$将变为$(1.5x, 0.5y)$。
+
+```python
+# 定义缩放矩阵
+scaling_matrix = np.array([
+    [1.5, 0],
+    [0,   0.5]
+])
+
+# 应用变换
+# 数据点是行 (n x 2)，缩放矩阵是 (2 x 2)
+# 结果是 (n x 2) @ (2 x 2) = (n x 2)
+scaled_data = data_points @ scaling_matrix
+
+print("\n缩放后的数据点：")
+print(scaled_data)
+```
+
+让我们可视化结果并与原始点一起显示。
+
+
+
+![缩放变换](plots/1475-1.json)
+
+
+
+> L形水平拉伸（x轴缩放1.5倍）并垂直压缩（y轴缩放0.5倍）。
+
+### 变换2：旋转
+
+现在，让我们将原始点逆时针旋转45度（${\pi}/{4}$弧度）。角度为$\theta$的逆时针旋转矩阵$R$为：
+
+
+$$
+R = \begin{bmatrix} \cos(\theta) & \sin(\theta) \\ -\sin(\theta) & \cos(\theta) \end{bmatrix}
+$$
+
+
+我们将其应用为$D' = D @ R$。
+
+```python
+# 以弧度定义旋转角度
+angle_degrees = 45
+angle_radians = math.radians(angle_degrees)
+cos_theta = math.cos(angle_radians)
+sin_theta = math.sin(angle_radians)
+
+# 定义旋转矩阵
+rotation_matrix = np.array([
+    [cos_theta, sin_theta],
+    [-sin_theta, cos_theta]
+])
+
+# 对原始数据应用变换
+rotated_data = data_points @ rotation_matrix
+
+print(f"\n旋转矩阵（{angle_degrees}度逆时针）：")
+print(rotation_matrix)
+print("\n旋转后的数据点：")
+print(rotated_data)
+```
+
+让我们可视化旋转结果。
+
+
+
+![旋转变换（45° 逆时针）](plots/1475-2.json)
+
+
+
+> L形围绕原点(0,0)逆时针旋转45度。请注意，坐标根据旋转矩阵中的三角函数而变化。
+
+### 组合变换
+
+线性变换可以组合使用。对数据$D$应用变换$T_1$后再应用$T_2$的效果，等同于应用一个单一的组合变换$T_{combined} = T_1 @ T_2$。顺序很重要！我们先应用缩放，然后应用旋转。
+
+$D'' = (D @ S) @ R = D @ (S @ R)$
+
+```python
+# 组合变换：先缩放，后旋转
+# 选项1：按顺序应用
+temp_data = data_points @ scaling_matrix # 先应用缩放
+scaled_then_rotated_data = temp_data @ rotation_matrix # 然后应用旋转
+
+# 选项2：先组合矩阵
+combined_matrix_SR = scaling_matrix @ rotation_matrix
+scaled_then_rotated_data_combined = data_points @ combined_matrix_SR
+
+print("\n组合矩阵（先缩放后旋转）：")
+print(combined_matrix_SR)
+print("\n先缩放后旋转的数据（按顺序）：")
+print(scaled_then_rotated_data)
+print("\n先缩放后旋转的数据（组合矩阵）：")
+print(scaled_then_rotated_data_combined)
+
+# 验证它们在数值上接近
+assert np.allclose(scaled_then_rotated_data, scaled_then_rotated_data_combined)
+```
+
+让我们可视化先缩放后旋转的最终结果。
+
+
+
+![组合：先缩放后旋转（45° 逆时针）](plots/1475-3.json)
+
+
+
+> L形经过缩放（水平拉伸、垂直压缩）然后逆时针旋转45度后的结果。将其与先旋转后缩放的效果进行比较（供读者练习！）。
+
+### 总结与关联
+
+本次动手练习说明了矩阵乘法如何提供一种简洁且计算高效的方式，来对数据应用几何变换。我们使用NumPy的`@`运算符进行矩阵乘法，以对一组二维点执行缩放和旋转操作。
+
+理解这些操作对以下方面很有意义：
+
+- **数据扩充：** 在计算机视觉中，图像（像素数据集合）常被旋转、缩放或剪切，以人工增加训练数据集的大小和多样性，从而帮助模型更好地泛化。
+- **特征工程：** 使用矩阵操作变换现有特征有时能为机器学习 (machine learning)模型创建新的、更具信息量的特征。
+- **降维：** 主成分分析（PCA）等技术（我们将在后面了解）在很大程度上依赖于由数据结构指导的线性变换（特别是旋转），以减少特征数量同时保留重要信息。
+- **理解模型内部运作：** 有些模型会对输入数据隐式执行线性变换。可视化这些变换有助于对数据如何在模型中流动形成直觉。
+
+以下是完整的Python代码供参考：
+
+```python
+import numpy as np
+import math
+
+# 1. 定义原始数据
+data_points = np.array([
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [1, 2]
+])
+print("原始数据点:\n", data_points)
+
+# 2. 定义缩放变换
+scaling_factor_x = 1.5
+scaling_factor_y = 0.5
+scaling_matrix = np.array([
+    [scaling_factor_x, 0],
+    [0,                scaling_factor_y]
+])
+scaled_data = data_points @ scaling_matrix
+print("\n缩放矩阵:\n", scaling_matrix)
+print("缩放后的数据:\n", scaled_data)
+
+# 3. 定义旋转变换
+angle_degrees = 45
+angle_radians = math.radians(angle_degrees)
+cos_theta = math.cos(angle_radians)
+sin_theta = math.sin(angle_radians)
+rotation_matrix = np.array([
+    [cos_theta,  sin_theta],
+    [-sin_theta, cos_theta]
+])
+rotated_data = data_points @ rotation_matrix
+print(f"\n旋转矩阵 ({angle_degrees} 度逆时针):\n", rotation_matrix)
+print("旋转后的数据:\n", rotated_data)
+
+# 4. 组合变换 (先缩放后旋转)
+# 选项1: 按顺序
+scaled_then_rotated_data = (data_points @ scaling_matrix) @ rotation_matrix
+# 选项2: 先组合矩阵
+combined_matrix_SR = scaling_matrix @ rotation_matrix
+scaled_then_rotated_data_combined = data_points @ combined_matrix_SR
+
+print("\n组合矩阵 (缩放 @ 旋转):\n", combined_matrix_SR)
+print("先缩放后旋转的数据:\n", scaled_then_rotated_data)
+
+# 验证
+assert np.allclose(scaled_then_rotated_data, scaled_then_rotated_data_combined)
+print("\n按顺序和组合矩阵应用的结果是一致的。")
+```
+
+尝试使用不同的变换矩阵（例如，剪切、反射、不同的缩放因子或旋转角度），并观察它们对数据点的影响。考虑以不同顺序应用变换，看看结果如何变化。
+
+## 参考资料
+
+- [Introduction to Linear Algebra](http://math.mit.edu/~gs/linearalgebra/) — Gilbert Strang (2023)
+  Publisher: Wellesley-Cambridge Press
+  一本基础教材，为线性变换、矩阵及其性质提供了全面的数学基础，对于理解数据变换的理论基础至关重要。
+- [NumPy User Guide](https://numpy.org/doc/stable/user/index.html) — NumPy Developers (2023)
+  官方文档，解释如何创建和操作数组，包括使用`@`运算符进行矩阵乘法，这对于实践练习的实现至关重要。
+- [Deep Learning](https://www.deeplearningbook.org/contents/linear_algebra.html) — Ian Goodfellow, Yoshua Bengio, and Aaron Courville (2016)
+  Publisher: MIT Press; Pages: Chapter 2: Linear Algebra
+  这本教材提供了线性代数在机器学习中的强大背景知识，详细介绍了数据表示、变换及其在数据增强等领域的应用。
+- [Fundamentals of Computer Graphics](https://www.cs.utah.edu/~shirley/books/FundamentalsOfCG4.html) — Peter Shirley, Michael Ashikhmin, Steve Marschner (2016)
+  Publisher: CRC Press; Pages: Chapter 6: Transformation Matrices
+  一份全面的参考文献，详细介绍了计算机图形学中几何变换（如缩放和旋转）的数学基础和实际应用，为处理视觉数据提供了背景。

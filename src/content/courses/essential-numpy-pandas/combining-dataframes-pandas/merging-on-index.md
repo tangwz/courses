@@ -1,0 +1,238 @@
+---
+course: "essential-numpy-pandas"
+chapter: "combining-dataframes-pandas"
+lesson: "merging-on-index"
+sourceId: 1842
+sourceUrl: "https://apxml.com/zh/courses/essential-numpy-pandas/chapter-10-combining-dataframes-pandas/merging-on-index"
+title: "基于索引的合并"
+description: "使用DataFrame索引进行合并，而非仅仅依靠列或作为列的补充。"
+order: 5
+plots: []
+sourceHash: "f9b835f4b66a7d1d4e5a43514b463939c99ce42d63105afd0a7860efdf701144"
+sourceCorrections: []
+---
+
+当组合DataFrame时，连接信息有时存在于其索引中，而非公共列值。Pandas提供了灵活的方法来处理这些场景，包括`pd.merge`函数和专门的`.join`方法。
+
+假设您有两个数据集：一个包含员工详细信息，以员工ID作为索引；另一个包含绩效评估分数，也以相同的员工ID作为索引。要将它们结合起来，您会希望根据它们的索引进行对齐 (alignment)。
+
+### 使用带索引标志的`pd.merge`
+
+`pd.merge`函数通过`left_index`和`right_index`布尔参数 (parameter)支持基于索引的合并。
+
+- `left_index=True`：使用左侧DataFrame的索引作为其连接键。
+- `right_index=True`：使用右侧DataFrame的索引作为其连接键。
+
+我们创建两个简单DataFrame来演示：
+
+```python
+import pandas as pd
+
+# DataFrame 1：以员工ID作为索引的员工信息
+employees = pd.DataFrame({'name': ['Alice', 'Bob', 'Charlie'],
+                          'department': ['HR', 'Engineering', 'Sales']},
+                         index=['E101', 'E102', 'E103'])
+
+# DataFrame 2：以员工ID作为索引的薪资信息
+salaries = pd.DataFrame({'salary': [70000, 85000, 78000]},
+                        index=['E101', 'E102', 'E103'])
+
+print("员工信息 DataFrame:")
+print(employees)
+print("\n薪资信息 DataFrame:")
+print(salaries)
+```
+
+输出：
+
+```
+Employees DataFrame:
+           name department
+E101    Alice         HR
+E102      Bob Engineering
+E103  Charlie       Sales
+
+Salaries DataFrame:
+      salary
+E101   70000
+E102   85000
+E103   78000
+```
+
+要根据它们的共同索引（员工ID）合并这些数据，我们将`left_index`和`right_index`都设为`True`：
+
+```python
+# 使用两个DataFrame的索引进行合并
+employee_data = pd.merge(employees, salaries, left_index=True, right_index=True)
+
+print("\n合并后的DataFrame（使用索引）：")
+print(employee_data)
+```
+
+输出：
+
+```
+Merged DataFrame (using index):
+           name department  salary
+E101    Alice         HR   70000
+E102      Bob Engineering   85000
+E103  Charlie       Sales   78000
+```
+
+合并操作根据共享的索引值（'E101'、'E102'、'E103'）正确地对齐 (alignment)了行。
+
+### 混合索引和列合并
+
+您也可以混合使用索引和列键。假设薪资信息使用的是名为`emp_id`的列而不是索引：
+
+```python
+# 包含'emp_id'列的薪资信息
+salaries_col = pd.DataFrame({'emp_id': ['E101', 'E102', 'E104'], # 注意：E104 代替了 E103
+                             'salary': [70000, 85000, 92000]})
+
+print("\n薪资信息 DataFrame（带列）：")
+print(salaries_col)
+
+# 合并员工信息（使用索引）和薪资信息（使用'emp_id'列）
+employee_data_mixed = pd.merge(employees, salaries_col,
+                               left_index=True, right_on='emp_id',
+                               how='left') # 使用左连接保留所有员工
+
+print("\n合并后的DataFrame（混合索引/列，左连接）：")
+print(employee_data_mixed)
+```
+
+输出：
+
+```
+Salaries DataFrame (with column):
+  emp_id  salary
+0   E101   70000
+1   E102   85000
+2   E104   92000
+
+Merged DataFrame (mixed index/column, left join):
+           name department emp_id   salary
+E101    Alice         HR   E101  70000.0
+E102      Bob Engineering   E102  85000.0
+E103  Charlie       Sales    NaN      NaN
+```
+
+这里，`left_index=True`告诉`merge`使用`employees` DataFrame的索引，而`right_on='emp_id'`指定`salaries_col`中的`emp_id`列应作为右侧DataFrame的键。我们使用了`how='left'`连接，以保留左侧DataFrame（`employees`）中的所有员工；请注意，'Charlie' (E103) 的`emp_id`和`salary`值为`NaN`，因为`salaries_col`的`emp_id`列中不存在'E103'。同样，`salaries_col`中的'E104'被丢弃了，因为它在左连接过程中未匹配到`employees`中的任何索引。
+
+### 基于索引合并的`.join()`方法
+
+Pandas DataFrames有一个便捷方法`.join()`，专门用于基于索引的合并。它默认执行左连接，但可以通过`how`参数 (parameter)配置为其他连接类型。
+
+对于索引合并，其语法通常更简洁：`left_df.join(right_df, how='...')`
+
+我们用`.join()`重新看第一个例子：
+
+```python
+# 使用.join()进行索引对索引的合并（默认左连接）
+employee_data_join = employees.join(salaries)
+
+print("\n合并后的DataFrame（使用.join()）：")
+print(employee_data_join)
+```
+
+输出：
+
+```
+Merged DataFrame (using .join()):
+           name department  salary
+E101    Alice         HR   70000
+E102      Bob Engineering   85000
+E103  Charlie       Sales   78000
+```
+
+这产生了与`pd.merge`调用`left_index=True`和`right_index=True`相同的结果（在第一个`merge`示例中隐式使用了默认的内连接，或者显式指定`how='left'`，由于索引完全匹配，在此处效果相同）。
+
+`.join()`方法还可以将一个DataFrame的索引与另一个DataFrame中的列连接起来，如果您将列名传递给`on`参数：
+
+```python
+# 对于此特定连接示例，需要在salaries_col上设置索引
+salaries_col_indexed = salaries_col.set_index('emp_id')
+
+print("\n薪资信息 DataFrame（以emp_id为索引）：")
+print(salaries_col_indexed)
+
+# 将员工信息（索引）与已索引的薪资信息（索引）连接
+# 这等同于第一个.join()示例
+employee_data_join_indexed = employees.join(salaries_col_indexed, how='inner') # 内连接
+
+print("\n合并后的DataFrame（使用.join()在索引上，内连接）：")
+print(employee_data_join_indexed)
+
+# 将员工信息索引与薪资信息的'emp_id'列连接
+# 注意：与pd.merge相比，此特定用例对.join()而言不太常见
+#       它要求*左侧*DataFrame (employees) 中存在'emp_id'列
+#       我们暂时添加它来展示语法（并非典型用法）
+employees_with_id = employees.reset_index().rename(columns={'index': 'emp_id'})
+print("\n带有emp_id列的员工信息：")
+print(employees_with_id)
+
+# 对于此基于'emp_id'列的连接，薪资数据需要*不*带索引
+print("\n带有emp_id列的薪资信息（原始）：")
+print(salaries_col)
+
+# 使用employees_with_id中的'emp_id'列执行连接
+# 右侧DataFrame (salaries_col) 必须被恰当地索引
+# 才能按预期工作。让我们重新索引salaries_col：
+employee_data_join_on = employees_with_id.join(salaries_col.set_index('emp_id'), on='emp_id', how='left')
+
+print("\n合并后的DataFrame（使用.join()带'on'参数）：")
+print(employee_data_join_on)
+```
+
+输出：
+
+```
+Salaries DataFrame (indexed by emp_id):
+        salary
+emp_id
+E101     70000
+E102     85000
+E104     92000
+
+Merged DataFrame (using .join() on indices, inner):
+           name department  salary
+E101    Alice         HR   70000
+E102      Bob Engineering   85000
+
+Employees with emp_id column:
+  emp_id     name department
+0   E101    Alice         HR
+1   E102      Bob Engineering
+2   E103  Charlie       Sales
+
+Salaries with emp_id column (original):
+  emp_id  salary
+0   E101   70000
+1   E102   85000
+2   E104   92000
+
+Merged DataFrame (using .join() with 'on'):
+  emp_id     name department   salary
+0   E101    Alice         HR  70000.0
+1   E102      Bob Engineering  85000.0
+2   E103  Charlie       Sales      NaN
+```
+
+**何时使用 `pd.merge` 与 `.join`：**
+
+- 当您需要最大的灵活性时，请使用`pd.merge()`：合并列与列、索引与索引，或者混合列和索引。它是通用的合并函数。
+- 将`.join()`用作便捷的简写方式，主要用于基于索引的合并（左侧DataFrame的索引与右侧DataFrame的索引）。它默认执行左连接，这很常见。虽然它*可以*使用`on`关键字进行列连接，但对于基于列或混合的合并，`pd.merge`通常更清晰。
+
+掌握基于索引的合并很重要，以便高效地组合唯一标识符存储为索引标签的数据集，这在时间序列数据和其他结构化数据集中是一种常见模式。
+
+## 参考资料
+
+- [Merge, join, concatenate and compare](https://pandas.pydata.org/docs/user_guide/merging.html) — pandas development team (2024)
+  合并DataFrames的首要且最新的文档，涵盖`pd.merge`和`DataFrame.join`方法，并提供全面的示例。
+- [Python for Data Analysis](https://wesmckinney.com/book/) — Wes McKinney (2022)
+  Publisher: O'Reilly Media; Pages: Chapter 8: Data Wrangling: Join, Combine, and Reshape
+  Pandas创建者的基础著作，提供数据合并操作（包括基于索引的合并）的清晰说明和实际应用。
+- [Effective Pandas: Patterns for Better Use of DataFrames](https://pragprog.com/titles/mhpandas/) — Matt Harrison (2021)
+  Publisher: Pragmatic Bookshelf
+  提供使用Pandas的实用模式和高效技术，其中包含专门介绍如何使用`merge`和`join`有效组合DataFrame的章节。
