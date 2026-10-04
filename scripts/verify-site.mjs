@@ -1,6 +1,8 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { load } from 'cheerio';
+import { createMarkdownProcessor } from '@astrojs/markdown-remark';
+import { visit } from 'unist-util-visit';
 
 const manifest = JSON.parse(
   await readFile('reports/content-manifest.json', 'utf8'),
@@ -46,6 +48,61 @@ const frequency = (values) => {
 };
 const containsCounts = (expected, actual) =>
   [...expected].every(([value, count]) => (actual.get(value) || 0) >= count);
+
+async function projectPlots(body) {
+  const definitions = [];
+  const processor = await createMarkdownProcessor({
+    syntaxHighlight: false,
+    remarkPlugins: [
+      () => (tree) => {
+        visit(tree, 'code', (node) => {
+          if (node.lang === 'plotly') definitions.push(JSON.parse(node.value));
+        });
+      },
+    ],
+  });
+  await processor.render(body);
+  return definitions;
+}
+
+async function verifyPlots(plots, metadata, content, $, project = false) {
+  const actualPlots = content.find('[data-plot-url]').toArray();
+  if (
+    plots.length !== metadata.plots.length ||
+    plots.length !== actualPlots.length
+  )
+    errors.push(
+      `Plot coverage mismatch: ${metadata.course}:${metadata.sourceId}`,
+    );
+  for (const [index, reference] of metadata.plots.entries()) {
+    const pattern = project
+      ? /^plots\/project-\d+-\d+\.json$/
+      : /^plots\/\d+-\d+\.json$/;
+    if (!pattern.test(reference)) {
+      errors.push(`Invalid plot ownership: ${metadata.sourceId}`);
+      continue;
+    }
+    const contentPath = `src/content/courses/${metadata.course}/${reference}`;
+    const targetPath = `dist/courses/${metadata.course}/${reference}`;
+    try {
+      const data = JSON.parse(await readFile(contentPath, 'utf8'));
+      const generated = JSON.parse(await readFile(targetPath, 'utf8'));
+      if (
+        JSON.stringify(data) !== JSON.stringify(plots[index]) ||
+        JSON.stringify(generated) !== JSON.stringify(data)
+      )
+        errors.push(`Plot fidelity mismatch: ${metadata.sourceId}:${index}`);
+      if (
+        $(actualPlots[index]).attr('data-plot-url') !==
+        `${base}/courses/${metadata.course}/${reference}`
+      )
+        errors.push(`Plot URL mismatch: ${metadata.sourceId}:${index}`);
+    } catch {
+      errors.push(`Missing plot: ${contentPath}`);
+    }
+    counts.plots++;
+  }
+}
 
 const sources = [];
 for (const entry of manifest.entries) {
@@ -119,6 +176,18 @@ for (const { entry, metadata, route } of sources) {
       )
     )
       errors.push(`Learning outcome mismatch: ${metadata.course}`);
+  }
+  if (entry.kind === 'project') {
+    const source = JSON.parse(
+      await readFile(`.crawl/cache/courses/${metadata.course}.json`, 'utf8'),
+    );
+    await verifyPlots(
+      await projectPlots(source.project.content),
+      metadata,
+      $('#lesson-content'),
+      $,
+      true,
+    );
   }
   if (entry.kind !== 'lesson') continue;
   const sameBook = sources.filter(
@@ -219,37 +288,7 @@ for (const { entry, metadata, route } of sources) {
   const plots = raw('[data-plot-definition]')
     .toArray()
     .map((el) => JSON.parse(raw(el).attr('data-plot-definition')));
-  const actualPlots = content.find('[data-plot-url]').toArray();
-  if (
-    plots.length !== metadata.plots.length ||
-    plots.length !== actualPlots.length
-  )
-    errors.push(`Plot coverage mismatch: ${entry.sourceId}`);
-  for (const [index, reference] of metadata.plots.entries()) {
-    if (!/^plots\/\d+-\d+\.json$/.test(reference)) {
-      errors.push(`Invalid plot ownership: ${entry.sourceId}`);
-      continue;
-    }
-    const contentPath = `src/content/courses/${metadata.course}/${reference}`;
-    const targetPath = `dist/courses/${metadata.course}/${reference}`;
-    try {
-      const data = JSON.parse(await readFile(contentPath, 'utf8'));
-      const generated = JSON.parse(await readFile(targetPath, 'utf8'));
-      if (
-        JSON.stringify(data) !== JSON.stringify(plots[index]) ||
-        JSON.stringify(generated) !== JSON.stringify(data)
-      )
-        errors.push(`Plot fidelity mismatch: ${entry.sourceId}:${index}`);
-      if (
-        $(actualPlots[index]).attr('data-plot-url') !==
-        `${base}/courses/${metadata.course}/${reference}`
-      )
-        errors.push(`Plot URL mismatch: ${entry.sourceId}:${index}`);
-    } catch {
-      errors.push(`Missing plot: ${contentPath}`);
-    }
-    counts.plots++;
-  }
+  await verifyPlots(plots, metadata, content, $);
 }
 const catalog = JSON.parse(await readFile('.crawl/cache/catalog.json', 'utf8'));
 if (!manifest.partial && !courseScope) {

@@ -5,6 +5,7 @@ title: "Optimizing Large Language Models for Domain Specific Edge Deployment"
 sourceId: 168
 description: ""
 order: 1
+plots: ["plots/project-168-0.json"]
 ---
 
 ## Project Overview
@@ -116,36 +117,7 @@ Construct a comprehensive comparison of all the models you have generated (FP16 
 
 The following 3D visualization demonstrates how you might analyze these conflicting metrics. Create a similar analysis for your own results.
 
-```plotly
-{
-  "layout": {
-    "title": "Trade-off Analysis: Size vs. Latency vs. Perplexity",
-    "scene": {
-      "xaxis": { "title": "Model Size (GB)" },
-      "yaxis": { "title": "Inference Latency (ms/token)" },
-      "zaxis": { "title": "Perplexity (Lower is Better)" }
-    },
-    "margin": { "l": 0, "r": 0, "b": 0, "t": 40 }
-  },
-  "data": [
-    {
-      "type": "scatter3d",
-      "mode": "markers+text",
-      "x": [14, 7, 5.5, 4.2, 3.9],
-      "y": [120, 85, 60, 45, 40],
-      "z": [5.2, 5.3, 5.8, 6.5, 8.1],
-      "text": ["FP16", "INT8", "Q5_K_M", "GPTQ-4bit", "Q3_K_S"],
-      "textposition": "top center",
-      "marker": {
-        "size": 8,
-        "color": [14, 7, 5.5, 4.2, 3.9],
-        "colorscale": "Viridis",
-        "opacity": 0.8
-      }
-    }
-  ]
-}
-```
+![Trade-off Analysis: Size vs. Latency vs. Perplexity](plots/project-168-0.json)
 
 > This 3D scatter plot illustrates the relationship between storage requirements, processing speed, and model quality. Ideally, you want models located in the corner representing low size, low latency, and low perplexity.
 

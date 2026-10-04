@@ -44,6 +44,7 @@ src/content/courses/
     project.md
     plots/
       <section-id>-<plot-index>.json
+      project-<course-id>-<plot-index>.json
     <chapter-slug>/
       index.md
       <lesson-slug>.md
@@ -67,7 +68,7 @@ src/content/courses/
 
 ## 从原始归档重新转换
 
-只有更新抓取数据后才需要转换。该命令会重新生成 `src/content/courses/`，因此手动修改课程内容前应备份，或先将修改同步到原始归档。`dev` 和 `build` 不会自动重新转换课程。
+只有更新抓取数据后才需要转换。该命令会重新生成 `src/content/courses/`，并在成功完成后删除不在当前缓存中的旧课程、章节、正文和图表。因此手动修改课程内容前应备份，或先将修改同步到原始归档。`dev` 和 `build` 不会自动重新转换课程。
 
 ```bash
 python3 -m venv .venv

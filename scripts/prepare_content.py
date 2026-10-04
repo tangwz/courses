@@ -112,19 +112,55 @@ def extract_plots(body, source_html, owner, folder):
     replacements = []
     for index, (match, element) in enumerate(zip(matches, plots)):
         definition = json.loads(element['data-plot-definition'])
-        if not isinstance(definition.get('data'), list):
-            raise ValueError(f'Invalid plot data: {owner}-{index}')
-        filename = f'{owner}-{index}.json'
-        title = definition.get('layout', {}).get('title') or 'Interactive chart'
-        title = title.get('text', 'Interactive chart') if isinstance(title, dict) else title
-        save(folder / 'plots' / filename, json.dumps(definition, ensure_ascii=False, indent=2) + '\n')
-        reference = 'plots/' + filename
+        reference, alt = save_plot(definition, owner, index, folder)
         references.append(reference)
-        alt = re.sub(r'<[^>]+>', '', str(title)).replace('[', '\\[').replace(']', '\\]')
         replacements.append((match.start(), match.end(), match['prefix'] + f'![{alt}]({reference})'))
     for start, end, replacement in reversed(replacements):
         body = body[:start] + replacement + body[end:]
     return body, references
+
+
+def save_plot(definition, owner, index, folder):
+    if not isinstance(definition, dict) or not isinstance(definition.get('data'), list):
+        raise ValueError(f'Invalid plot data: {owner}-{index}')
+    filename = f'{owner}-{index}.json'
+    title = definition.get('layout', {}).get('title') or 'Interactive chart'
+    title = title.get('text', 'Interactive chart') if isinstance(title, dict) else title
+    save(folder / 'plots' / filename, json.dumps(definition, ensure_ascii=False, indent=2) + '\n')
+    alt = re.sub(r'<[^>]+>', '', str(title)).replace('[', '\\[').replace(']', '\\]')
+    return 'plots/' + filename, alt
+
+
+def extract_project_plots(body, owner, folder):
+    from markdown_it import MarkdownIt
+    lines = body.splitlines(keepends=True)
+    references = []
+    replacements = []
+    for token in MarkdownIt('commonmark').parse(body):
+        if token.type != 'fence' or token.info.strip() != 'plotly':
+            continue
+        reference, alt = save_plot(json.loads(token.content), owner, len(references), folder)
+        references.append(reference)
+        start, end = token.map
+        prefix = re.match(r'^[ \t>]*', lines[start]).group()
+        replacements.append((start, end, prefix + f'![{alt}]({reference})\n'))
+    for start, end, replacement in reversed(replacements):
+        lines[start:end] = [replacement]
+    return ''.join(lines), references
+
+
+def prune_generated_content(manifest):
+    # A failed generation must not prune existing content.
+    expected = {ROOT / entry['path'] for entry in manifest}
+    for entry in manifest:
+        folder = DESTINATION / (ROOT / entry['path']).relative_to(DESTINATION).parts[0]
+        expected.update(folder / reference for reference in entry.get('plots', []))
+    for path in sorted(DESTINATION.rglob('*'), key=lambda p: len(p.parts), reverse=True):
+        if path.is_dir() and not path.is_symlink():
+            if not any(path.iterdir()):
+                path.rmdir()
+        elif path not in expected:
+            path.unlink()
 
 
 def rewrite_links(body, source_file, source_url, local_paths, source_urls):
@@ -238,15 +274,19 @@ def main():
                 counts['plots'] += len(plots)
         project = course.get('project') or {}
         if project.get('content'):
-            body = rewrite_links(project['content'], archive / 'PROJECT.md', source_url, local_paths, source_urls)
+            body, plots = extract_project_plots(project['content'], f'project-{course["id"]}', folder)
+            body = rewrite_links(body, archive / 'PROJECT.md', source_url, local_paths, source_urls)
             save(folder / 'project.md', frontmatter(dict(
                 **common, title=project.get('title') or course['title'], sourceId=course['id'],
-                description='', order=1,
+                description='', order=1, plots=plots,
             ), body))
-            manifest.append(dict(path=str((folder / 'project.md').relative_to(ROOT)), sourceId=course['id'], kind='project'))
+            manifest.append(dict(path=str((folder / 'project.md').relative_to(ROOT)), sourceId=course['id'], kind='project', plots=plots))
             counts['projects'] += 1
+            counts['plots'] += len(plots)
     if args.course and not counts['courses']:
         raise ValueError(f'Unknown course: {args.course}')
+    if not args.course:
+        prune_generated_content(manifest)
     save(ROOT / 'reports' / 'content-manifest.json', json.dumps(dict(counts=counts, partial=bool(args.course), entries=manifest), ensure_ascii=False, indent=2) + '\n')
     print(json.dumps(counts))
 

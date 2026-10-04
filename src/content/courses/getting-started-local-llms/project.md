@@ -5,6 +5,7 @@ title: "Building a Customized Local AI Assistant"
 sourceId: 159
 description: ""
 order: 1
+plots: ["plots/project-159-0.json"]
 ---
 
 This project focuses on the practical implementation of a Large Language Model (LLM) on your personal hardware. Configure a local inference environment, select models appropriate for your specific hardware constraints, and optimize them for a domain or task of your choice. This process requires analyzing trade-offs between model size, quantization, and inference speed, providing a grounded understanding of how these systems operate outside of managed server environments.
@@ -83,38 +84,7 @@ Run a series of identical queries through both models related to your chosen top
 
 Create a visualization of your findings. You can rate the models on a scale of 1-10 for different attributes relevant to your use case (e.g., reasoning capability, speed, instruction following, creativity).
 
-```plotly
-{
-  "data": [
-    {
-      "type": "scatterpolar",
-      "r": [8, 7, 9, 6, 8],
-      "theta": ["Speed", "Reasoning", "Creativity", "Memory Efficiency", "Instruction Following"],
-      "fill": "toself",
-      "name": "Model A (e.g., 7B Q4)",
-      "line": {"color": "#4dabf7"}
-    },
-    {
-      "type": "scatterpolar",
-      "r": [4, 9, 8, 3, 9],
-      "theta": ["Speed", "Reasoning", "Creativity", "Memory Efficiency", "Instruction Following"],
-      "fill": "toself",
-      "name": "Model B (e.g., 13B Q8)",
-      "line": {"color": "#ff6b6b"}
-    }
-  ],
-  "layout": {
-    "polar": {
-      "radialaxis": {
-        "visible": true,
-        "range": [0, 10]
-      }
-    },
-    "showlegend": true,
-    "margin": {"t": 20, "b": 20, "l": 40, "r": 40}
-  }
-}
-```
+![Interactive chart](plots/project-159-0.json)
 
 > Comparison of two models across various performance metrics. Replace the data values with your own observations.
 

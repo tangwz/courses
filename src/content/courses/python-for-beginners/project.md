@@ -5,6 +5,7 @@ title: "Custom Data Tracker and Analysis Application"
 sourceId: 116
 description: ""
 order: 1
+plots: ["plots/project-116-0.json"]
 ---
 
 Building a custom software application provides an excellent opportunity to apply foundational programming concepts. You will develop a command-line application designed to track, store, and analyze records specific to a topic you are interested in. This project integrates variables, control structures, data structures, file operations, error handling, and basic object-oriented principles into a single, cohesive program.
@@ -82,9 +83,7 @@ Incorporate exception handling blocks specifically around your file operations. 
 
 As you collect more data in the domain you are interested in, you can eventually pass your stored datasets into visualization libraries. The following represents how structured, multi-dimensional data extracted from an application like yours can be mapped spatially. 
 
-```plotly
-{"layout": {"scene": {"xaxis": {"title": "Time Interval"}, "yaxis": {"title": "Category Index"}, "zaxis": {"title": "Metric Value"}}, "margin": {"l": 0, "r": 0, "b": 0, "t": 0}, "paper_bgcolor": "white", "plot_bgcolor": "white"}, "data": [{"type": "scatter3d", "x": [1, 2, 3, 4, 5, 6, 7], "y": [1, 2, 1, 3, 2, 1, 3], "z": [10, 15, 13, 17, 20, 18, 22], "mode": "markers", "marker": {"size": 6, "color": [10, 15, 13, 17, 20, 18, 22], "colorscale": "Blues", "opacity": 0.9}}]}
-```
+![Interactive chart](plots/project-116-0.json)
 > Three-dimensional mapping of custom data attributes showing variations across time intervals and category indices.
 
 ### Review and Refine

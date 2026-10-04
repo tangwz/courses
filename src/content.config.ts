@@ -51,6 +51,6 @@ export const collections = {
   }),
   projects: defineCollection({
     loader: loader('*/project.md'),
-    schema: common,
+    schema: common.extend({ plots: z.array(z.string()) }),
   }),
 };

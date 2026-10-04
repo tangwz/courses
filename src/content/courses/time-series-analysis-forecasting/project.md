@@ -5,6 +5,7 @@ title: "Forecasting Future Trends in a Selected Domain"
 sourceId: 137
 description: ""
 order: 1
+plots: ["plots/project-137-0.json"]
 ---
 
 ### Project Overview
@@ -70,9 +71,7 @@ If your data exhibits seasonality, you will need to examine lags at multiples of
 
 Construct a grid search strategy to test combinations of parameters around your initial estimates. Use the Akaike Information Criterion (AIC) to compare model fit. The AIC penalizes complexity, helping to prevent overfitting.
 
-```plotly
-{"layout": {"title": "Model Performance Surface (AIC) by Parameter", "scene": {"xaxis": {"title": "AR Term (p)"}, "yaxis": {"title": "MA Term (q)"}, "zaxis": {"title": "AIC Score"}}, "margin": {"l": 0, "r": 0, "b": 0, "t": 50}, "height": 500}, "data": [{"type": "mesh3d", "x": [0, 0, 0, 1, 1, 1, 2, 2, 2], "y": [0, 1, 2, 0, 1, 2, 0, 1, 2], "z": [1200, 1150, 1180, 1140, 1110, 1130, 1160, 1125, 1145], "intensity": [1200, 1150, 1180, 1140, 1110, 1130, 1160, 1125, 1145], "colorscale": "Viridis", "opacity": 0.8}]}
-```
+![Model Performance Surface (AIC) by Parameter](plots/project-137-0.json)
 > Visualization of a grid search result where lower AIC values (darker regions) indicate a better trade-off between model fit and complexity.
 
 ### Part 4: Forecasting and Evaluation

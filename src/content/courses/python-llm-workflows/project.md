@@ -5,6 +5,7 @@ title: "Domain Specific Intelligent Knowledge Assistant Construction"
 sourceId: 180
 description: ""
 order: 1
+plots: ["plots/project-180-0.json"]
 ---
 
 ## Project Overview
@@ -85,33 +86,7 @@ To understand how the model perceives your data, it is helpful to visualize the 
 
 Generate a visualization of your document chunks. If you implemented two different chunking strategies in Part 2, compare how they populate the vector space.
 
-```plotly
-{
-  "layout": {
-    "title": "3D Visualization of Document Embeddings",
-    "scene": {
-      "xaxis": {"title": "Component 1"},
-      "yaxis": {"title": "Component 2"},
-      "zaxis": {"title": "Component 3"}
-    },
-    "margin": {"l": 0, "r": 0, "b": 0, "t": 40}
-  },
-  "data": [
-    {
-      "type": "scatter3d",
-      "mode": "markers",
-      "x": [1, 2, 3, 4, 5, 2, 3, 4],
-      "y": [5, 4, 3, 2, 1, 5, 4, 3],
-      "z": [2, 3, 4, 5, 1, 1, 2, 3],
-      "marker": {
-        "size": 5,
-        "color": ["#1c7ed6", "#1c7ed6", "#1c7ed6", "#fa5252", "#fa5252", "#fab005", "#fab005", "#fab005"],
-        "opacity": 0.8
-      }
-    }
-  ]
-}
-```
+![3D Visualization of Document Embeddings](plots/project-180-0.json)
 > Representation of document chunks in 3D space after dimensionality reduction. Clusters typically indicate shared semantic topics.
 
 ## Part 4: Workflow Orchestration with LangChain

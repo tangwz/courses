@@ -5,6 +5,7 @@ title: "Building an End-to-End PyTorch Training Pipeline"
 sourceId: 113
 description: ""
 order: 1
+plots: ["plots/project-113-0.json"]
 ---
 
 ## Project Overview
@@ -84,9 +85,7 @@ Training a model is rarely a straight line to success. It involves finding a min
 
 > The visualization below represents a 3D loss landscape. In practice, you want your optimizer to descend into the 'valleys' (low loss) without getting stuck in local minima.
 
-```plotly
-{"layout": {"title": "3D Loss Landscape Visualization", "autosize": true, "scene": {"xaxis": {"title": "Weight 1"}, "yaxis": {"title": "Weight 2"}, "zaxis": {"title": "Loss"}}, "margin": {"l": 0, "r": 0, "b": 0, "t": 40}}, "data": [{"type": "surface", "colorscale": "Viridis", "z": [[10, 9, 8, 9, 10], [9, 6, 5, 6, 9], [8, 5, 2, 5, 8], [9, 6, 5, 6, 9], [10, 9, 8, 9, 10]]}]}
-```
+![3D Loss Landscape Visualization](plots/project-113-0.json)
 
 Analyze the behavior of your model. If the loss fails to decrease, investigate your data normalization or learning rate. If the model overfits, explore regularization techniques like Dropout. Save your best-performing model using `torch.save` to ensure your work is persistent.
 

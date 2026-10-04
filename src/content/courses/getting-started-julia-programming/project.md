@@ -5,6 +5,7 @@ title: "Simulating Dynamic Systems with Julia"
 sourceId: 212
 description: ""
 order: 1
+plots: ["plots/project-212-0.json"]
 ---
 
 ## Project Overview
@@ -73,9 +74,7 @@ Once the rules are established, wrap them in a main simulation loop. You need to
 
 > 3D Surface representation of simulation density or magnitude distribution.
 
-```plotly
-{"layout": {"height": 500, "margin": {"t": 0, "b": 0, "l": 0, "r": 0}, "scene": {"xaxis": {"title": "X Coordinate"}, "yaxis": {"title": "Y Coordinate"}, "zaxis": {"title": "Magnitude"}}}, "data": [{"type": "surface", "z": [[10, 10.6, 12.5, 15, 12, 11], [11, 13, 16, 18, 15, 12], [12, 16, 22, 24, 18, 13], [11, 15, 20, 22, 17, 12], [10, 12, 15, 16, 13, 11]], "colorscale": "Viridis"}]}
-```
+![Interactive chart](plots/project-212-0.json)
 
 ## Part 4: Robustness and I/O Operations
 

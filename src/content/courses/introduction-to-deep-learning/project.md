@@ -5,6 +5,7 @@ title: "Designing and Optimizing a Deep Neural Network from Scratch"
 sourceId: 177
 description: ""
 order: 1
+plots: ["plots/project-177-0.json", "plots/project-177-1.json"]
 ---
 
 ### Defining the Problem Space
@@ -19,9 +20,7 @@ Before feeding data into a network, it is helpful to visualize how separable you
 
 > 3D Scatter plot showing the relationship between three input features and a target classification, helping to assess if a non-linear boundary is necessary.
 
-```plotly
-{"layout": {"title": "Feature Interaction Analysis", "scene": {"xaxis": {"title": "Feature 1"}, "yaxis": {"title": "Feature 2"}, "zaxis": {"title": "Feature 3"}}, "margin": {"l": 0, "r": 0, "b": 0, "t": 30}}, "data": [{"type": "scatter3d", "mode": "markers", "x": [1, 2, 3, 4, 5, 5, 4, 3, 2, 1], "y": [5, 4, 3, 2, 1, 1, 2, 3, 4, 5], "z": [2, 3, 4, 5, 1, 5, 4, 3, 2, 1], "marker": {"size": 5, "color": [0, 0, 1, 1, 0, 1, 0, 1, 0, 1], "colorscale": "Viridis"}}]}
-```
+![Feature Interaction Analysis](plots/project-177-0.json)
 
 ### Architecture and Topology Design
 
@@ -86,9 +85,7 @@ To understand what is happening mathematically, visualize the loss surface. Whil
 
 Surface plot representing a non-convex loss landscape, showing local minima and the global minimum.
 
-```plotly
-{"layout": {"title": "Loss Landscape Visualization", "scene": {"xaxis": {"title": "Weight 1"}, "yaxis": {"title": "Weight 2"}, "zaxis": {"title": "Loss"}}}, "data": [{"type": "surface", "z": [[10, 8, 6, 8, 10], [8, 4, 2, 4, 8], [6, 2, 0.5, 2, 6], [8, 4, 2, 4, 8], [10, 8, 6, 8, 10]], "colorscale": "Jet"}]}
-```
+![Loss Landscape Visualization](plots/project-177-1.json)
 
 ### Regularization and Generalization
 
