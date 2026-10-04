@@ -49,6 +49,7 @@ function fixture(partial: boolean) {
     '<div class="book-card"></div><div class="book-card"></div>',
   );
   write('dist/pagefind/pagefind.js', '');
+  write('dist/search-index.json', []);
   return root;
 }
 

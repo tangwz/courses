@@ -303,6 +303,18 @@ for (const { entry, metadata, route } of sources) {
     .toArray()
     .map((el) => JSON.parse(raw(el).attr('data-plot-definition')));
   await verifyPlots(plots, metadata, content, $);
+  const expectedImages = raw('img[src]')
+    .toArray()
+    .map((image) => ({
+      src: new URL(raw(image).attr('src'), metadata.sourceUrl).href,
+      alt: raw(image).attr('alt') || '\u56fe\u7247',
+    }));
+  const actualImages = content
+    .find('img[src]')
+    .toArray()
+    .map((image) => ({ src: $(image).attr('src'), alt: $(image).attr('alt') }));
+  if (JSON.stringify(expectedImages) !== JSON.stringify(actualImages))
+    errors.push(`Image fidelity mismatch: ${metadata.sourceId}`);
 }
 const catalog = JSON.parse(await readFile('.crawl/cache/catalog.json', 'utf8'));
 if (!manifest.partial && !courseScope) {
@@ -336,6 +348,32 @@ try {
   await stat('dist/pagefind/pagefind.js');
 } catch {
   errors.push('Missing search index');
+}
+try {
+  const index = JSON.parse(await readFile('dist/search-index.json', 'utf8'));
+  const scoped = index.filter(
+    (item) => !courseScope || item.course === courseScope,
+  );
+  const expected = sources.filter(
+    ({ entry, metadata }) =>
+      entry.kind !== 'course' &&
+      (!courseScope || metadata.course === courseScope),
+  );
+  const byUrl = new Map(scoped.map((item) => [item.url, item]));
+  if (scoped.length !== expected.length || byUrl.size !== expected.length)
+    errors.push('Fallback search coverage mismatch');
+  for (const { metadata, route } of expected) {
+    const item = byUrl.get(base + route);
+    if (
+      !item ||
+      item.course !== metadata.course ||
+      item.title !== metadata.title ||
+      item.excerpt !== metadata.description
+    )
+      errors.push(`Fallback search entry mismatch: ${route}`);
+  }
+} catch {
+  errors.push('Missing or invalid fallback search index');
 }
 if (!counts.courses) errors.push('No courses verified');
 const report = {
