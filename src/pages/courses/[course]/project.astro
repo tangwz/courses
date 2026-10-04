@@ -1,0 +1,26 @@
+---
+import { render } from 'astro:content';
+import ReaderLayout from '../../../layouts/ReaderLayout.astro';
+import { getBooks } from '../../../lib/catalog';
+export async function getStaticPaths() {
+  return (await getBooks())
+    .filter((book) => book.project)
+    .map((book) => ({
+      params: { course: book.course.data.course },
+      props: { book, project: book.project! },
+    }));
+}
+const { book, project } = Astro.props;
+const { Content, headings } = await render(project);
+---
+
+<ReaderLayout
+  book={book}
+  title={project.data.title}
+  description={project.data.description}
+  sourceUrl={project.data.sourceUrl}
+  headings={headings}
+  pageId={-project.data.sourceId}
+>
+  <Content />
+</ReaderLayout>

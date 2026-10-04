@@ -1,0 +1,287 @@
+---
+import type { MarkdownHeading } from 'astro';
+import type { Book, Lesson } from '../lib/catalog';
+import { lessonUrl, courseUrl, chapterUrl, url } from '../lib/catalog';
+import SiteLayout from './SiteLayout.astro';
+import ReaderControls from '../components/ReaderControls';
+import { ui } from '../lib/ui';
+import ReaderIcon from '../components/ReaderIcon';
+import '../styles/reader.css';
+interface Props {
+  book: Book;
+  title: string;
+  description: string;
+  sourceUrl: string;
+  chapter?: string;
+  lesson?: Lesson;
+  headings: MarkdownHeading[];
+  pageId: number;
+}
+const {
+  book,
+  title,
+  description,
+  sourceUrl,
+  chapter,
+  lesson,
+  headings,
+  pageId,
+} = Astro.props;
+const { course, chapters, lessons, project } = book;
+const index = lesson ? lessons.findIndex((l) => l.id === lesson.id) : -1;
+const previous = index > 0 ? lessons[index - 1] : undefined;
+const next =
+  index >= 0
+    ? lessons[index + 1]
+    : lessons.find((l) => l.data.chapter === chapter);
+const activeChapter = chapters.find((ch) => ch.data.chapter === chapter);
+const headingDepth = Math.min(...headings.map((heading) => heading.depth));
+---
+
+<SiteLayout
+  title={title}
+  description={description}
+  reader
+  course={course.data.course}
+>
+  <div class="reader-reading-line" id="reading-line" aria-hidden="true"></div>
+  <button
+    class="sidebar-backdrop"
+    data-close-sidebar
+    aria-label={ui.close}
+  ></button>
+  <aside class="reader-sidebar" id="reader-sidebar" data-pagefind-ignore>
+    <div class="reader-sidebar-header">
+      <div class="reader-brand-row">
+        <a class="reader-brand" href={courseUrl(course.data.course)}>
+          <span class="reader-brand-symbol">
+            <ReaderIcon name="book" />
+          </span>
+          <span class="reader-book-title">{course.data.title}</span>
+        </a>
+        <button
+          class="icon-button"
+          data-collapse-sidebar
+          aria-label={ui.collapseSidebar}
+          title={ui.collapseSidebar}
+        >
+          <ReaderIcon name="sidebar" />
+        </button>
+      </div>
+      <button class="sidebar-search" data-open-search>
+        <ReaderIcon name="search" /> {ui.search}
+        <kbd>/</kbd>
+      </button>
+    </div>
+    <ReaderControls
+      client:load
+      course={course.data.course}
+      lessonId={pageId}
+      total={lessons.length}
+    />
+    <div class="reader-catalog-heading">
+      <span>{ui.course}</span>
+    </div>
+    <div class="reader-sidebar-scroll">
+      <nav
+        class="course-navigation"
+        id="course-navigation"
+        aria-label={ui.catalog}
+      >
+        {chapters.map((ch) => (
+          <section class="reader-chapter">
+            <h2>
+              <a href={chapterUrl(course.data.course, ch.data.chapter)}>
+                {ch.data.title}
+              </a>
+              <span>CHAPTER {String(ch.data.order).padStart(2, '0')}</span>
+            </h2>
+            <ol>
+              {lessons
+                .filter((l) => l.data.chapter === ch.data.chapter)
+                .map((l) => (
+                  <li>
+                    <a
+                      class:list={[l.id === lesson?.id && 'current']}
+                      aria-current={l.id === lesson?.id ? 'page' : undefined}
+                      href={lessonUrl(l)}
+                      title={l.data.title}
+                      data-lesson-id={l.data.sourceId}
+                    >
+                      <span class="lesson-number">
+                        {ch.data.order}.{l.data.order}
+                      </span>
+                      <span class="nav-lesson-title">{l.data.title}</span>
+                      <i class="completion-dot"></i>
+                    </a>
+                  </li>
+                ))}
+            </ol>
+          </section>
+        ))}
+        {project && (
+          <a
+            class="nav-project"
+            href={courseUrl(course.data.course) + 'project/'}
+          >
+            {ui.project} ↗
+          </a>
+        )}
+      </nav>
+    </div>
+    <footer class="reader-sidebar-footer">
+      <a class="reader-utility" href={courseUrl(course.data.course)}>
+        <ReaderIcon name="arrow" /> {ui.overview}
+      </a>
+      <div id="reader-course-progress"></div>
+      <div class="reader-footer-tools">
+        <button
+          class="icon-button"
+          data-reader-theme
+          aria-label={ui.theme}
+          title={ui.theme}
+        >
+          <ReaderIcon name="theme" />
+        </button>
+        <button
+          class="icon-button"
+          data-reader-settings
+          aria-label={ui.settings}
+          title={ui.settings}
+        >
+          <ReaderIcon name="settings" />
+        </button>
+        <a
+          class="icon-button"
+          href={url()}
+          aria-label={ui.library}
+          title={ui.library}
+        >
+          <ReaderIcon name="book" />
+        </a>
+      </div>
+    </footer>
+  </aside>
+  <div class="reader-body">
+    <header class="reader-topbar" data-pagefind-ignore>
+      <button
+        class="icon-button mobile-menu"
+        data-open-sidebar
+        aria-label={ui.toggleSidebar}
+        aria-controls="reader-sidebar"
+      >
+        <ReaderIcon name="sidebar" />
+      </button>
+      <nav class="reader-breadcrumb">
+        <a href={courseUrl(course.data.course)}>{course.data.title}</a>
+        {activeChapter && (
+          <>
+            <span>/</span>
+            <a
+              href={chapterUrl(course.data.course, activeChapter.data.chapter)}
+            >
+              {activeChapter.data.title}
+            </a>
+          </>
+        )}
+      </nav>
+      <button class="icon-button" data-open-search aria-label={ui.search}>
+        <ReaderIcon name="search" />
+      </button>
+      <button class="icon-button" data-reader-settings aria-label={ui.settings}>
+        <ReaderIcon name="settings" />
+      </button>
+      <button
+        class="toc-toggle"
+        data-toggle-toc
+        aria-label={ui.toggleToc}
+        aria-controls="reader-toc"
+      >
+        <ReaderIcon name="outline" /> <span>{ui.outline}</span>
+      </button>
+    </header>
+    <div class="reader-columns">
+      <main id="main" class="reading-main">
+        <header class="lesson-header">
+          <p class="eyebrow">
+            {activeChapter
+              ? `${String(activeChapter.data.order).padStart(2, '0')} / ${activeChapter.data.title}`
+              : 'COURSE PROJECT'}
+          </p>
+          <h1 data-pagefind-meta="title">{title}</h1>
+          <div class="lesson-tools" data-pagefind-ignore>
+            {pageId > 0 && <div id="reader-actions"></div>}
+            <a href={sourceUrl} target="_blank" rel="noopener">
+              <ReaderIcon name="external" /> {ui.source}
+            </a>
+          </div>
+        </header>
+        <div class="reader-paper">
+          <header class="reader-paper-heading" data-pagefind-ignore>
+            <h2>{title}</h2>
+          </header>
+          <article
+            id="lesson-content"
+            class="prose lesson-content"
+            data-pagefind-body
+            data-pagefind-filter={`course:${course.data.course}`}
+          >
+            <slot />
+          </article>
+        </div>
+        <nav
+          class="lesson-pagination"
+          data-pagefind-ignore
+          aria-label={ui.catalog}
+        >
+          {previous ? (
+            <a href={lessonUrl(previous)}>
+              <small>← {ui.previous}</small>
+              <strong>{previous.data.title}</strong>
+            </a>
+          ) : (
+            <a href={courseUrl(course.data.course)}>
+              <small>← {ui.overview}</small>
+              <strong>{course.data.title}</strong>
+            </a>
+          )}
+          {next && (
+            <a href={lessonUrl(next)}>
+              <small>{ui.next} →</small>
+              <strong>{next.data.title}</strong>
+            </a>
+          )}
+        </nav>
+        <footer class="lesson-footer" data-pagefind-ignore>
+          <span>KNOWLEDGE LIBRARY</span>
+          <button data-back-top>{ui.backToTop} ↑</button>
+        </footer>
+      </main>
+      <aside class="reader-toc" id="reader-toc" data-pagefind-ignore>
+        <h2>{ui.outline}</h2>
+        <nav>
+          {headings
+            .filter((h) => h.depth <= 4)
+            .map((heading) => (
+              <a
+                href={'#' + heading.slug}
+                class={`toc-depth-${heading.depth - headingDepth + 2}`}
+              >
+                {heading.text}
+              </a>
+            ))}
+        </nav>
+        <div class="toc-progress">
+          <span id="reading-percent">0%</span>
+          <span>{ui.progress}</span>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script>
+    import { initReader } from '../lib/reader-runtime';
+    import { initPlots } from '../lib/plots';
+    initReader();
+    initPlots();
+  </script>
+</SiteLayout>

@@ -1,0 +1,163 @@
+---
+import { render } from 'astro:content';
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import BookCover from '../../../components/BookCover.astro';
+import {
+  getBooks,
+  courseUrl,
+  lessonUrl,
+  categoryNames,
+  levelNames,
+  url,
+} from '../../../lib/catalog';
+import { ui } from '../../../lib/ui';
+export async function getStaticPaths() {
+  return (await getBooks()).map((book) => ({
+    params: { course: book.course.data.course },
+    props: { book },
+  }));
+}
+const { book } = Astro.props;
+const { course, chapters, lessons, project } = book;
+const { Content } = await render(course);
+const first = lessons[0];
+---
+
+<SiteLayout
+  title={course.data.title}
+  description={course.data.description}
+  course={course.data.course}
+>
+  <main id="main" class="course-overview">
+    <a class="back-link" href={url()}>
+      ← {ui.library}
+    </a>
+    <section class="course-hero">
+      <BookCover
+        title={course.data.title}
+        category={course.data.category}
+        order={course.data.order}
+        color={course.data.color}
+        large
+      />
+      <div class="course-hero-copy">
+        <p class="eyebrow">
+          COURSE {String(course.data.order).padStart(3, '0')}
+        </p>
+        <div class="tags">
+          <span>
+            {categoryNames[course.data.category] || course.data.category}
+          </span>
+          <span class="level-tag">{levelNames[course.data.level]}</span>
+        </div>
+        <h1>{course.data.title}</h1>
+        <p class="course-description">{course.data.description}</p>
+        <div class="course-stat-row">
+          <span>
+            {chapters.length} {ui.chapter}
+          </span>
+          <span>
+            {lessons.length} {ui.lesson}
+          </span>
+          <span>
+            ◷ {course.data.duration} {ui.hours}
+          </span>
+        </div>
+        <a
+          class="primary-button"
+          href={lessonUrl(first)}
+          data-resume-course={course.data.course}
+          data-course-root={courseUrl(course.data.course)}
+        >
+          {ui.start}
+        </a>
+        <a
+          class="text-button"
+          href={course.data.sourceUrl}
+          target="_blank"
+          rel="noopener"
+        >
+          {ui.originalCourse} ↗
+        </a>
+      </div>
+    </section>
+    <div class="overview-columns">
+      <div>
+        <section class="overview-section">
+          <h2>{ui.overview}</h2>
+          <div class="prose">
+            <Content />
+          </div>
+        </section>
+        <section class="overview-section">
+          <h2>
+            {ui.catalog}
+            <span class="section-count">
+              {chapters.length} {ui.chapter} / {lessons.length} {ui.lesson}
+            </span>
+          </h2>
+          <div class="chapter-list">
+            {chapters.map((chapter) => (
+              <details open={chapter.data.order === 1}>
+                <summary>
+                  <span class="chapter-number">
+                    {String(chapter.data.order).padStart(2, '0')}
+                  </span>
+                  <strong>{chapter.data.title}</strong>
+                  <span>
+                    {
+                      lessons.filter(
+                        (l) => l.data.chapter === chapter.data.chapter,
+                      ).length
+                    }{' '}
+                    {ui.lesson}
+                  </span>
+                </summary>
+                <ol>
+                  {lessons
+                    .filter((l) => l.data.chapter === chapter.data.chapter)
+                    .map((lesson) => (
+                      <li>
+                        <a href={lessonUrl(lesson)}>
+                          <span>
+                            {chapter.data.order}.{lesson.data.order}
+                          </span>
+                          {lesson.data.title}
+                          <span>→</span>
+                        </a>
+                      </li>
+                    ))}
+                </ol>
+              </details>
+            ))}
+          </div>
+          {project && (
+            <a
+              class="project-link"
+              href={courseUrl(course.data.course) + 'project/'}
+            >
+              {ui.project} →
+            </a>
+          )}
+        </section>
+      </div>
+      <aside class="course-facts">
+        <section>
+          <h3>{ui.prerequisites}</h3>
+          <p>{course.data.prerequisites}</p>
+        </section>
+        <section>
+          <h3>{ui.outcomes}</h3>
+          <ul>
+            {course.data.outcomes.map((outcome) => (
+              <li>
+                <strong>{outcome.topic}</strong>
+                <p>{outcome.description}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+</SiteLayout>

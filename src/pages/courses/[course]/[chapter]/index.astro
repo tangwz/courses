@@ -1,0 +1,45 @@
+---
+import { render } from 'astro:content';
+import ReaderLayout from '../../../../layouts/ReaderLayout.astro';
+import { getBooks, lessonUrl } from '../../../../lib/catalog';
+import { ui } from '../../../../lib/ui';
+export async function getStaticPaths() {
+  return (await getBooks()).flatMap((book) =>
+    book.chapters.map((chapter) => ({
+      params: { course: chapter.data.course, chapter: chapter.data.chapter },
+      props: { book, chapter },
+    })),
+  );
+}
+const { book, chapter } = Astro.props;
+const { Content, headings } = await render(chapter);
+---
+
+<ReaderLayout
+  book={book}
+  chapter={chapter.data.chapter}
+  title={chapter.data.title}
+  description={chapter.data.description}
+  sourceUrl={chapter.data.sourceUrl}
+  headings={headings}
+  pageId={-chapter.data.sourceId}
+>
+  <Content />
+  <h2 id="chapter-lessons">{ui.catalog}</h2>
+  <ol>
+    {book.lessons
+      .filter((lesson) => lesson.data.chapter === chapter.data.chapter)
+      .map((lesson) => (
+        <li>
+          <a href={lessonUrl(lesson)}>{lesson.data.title}</a>
+        </li>
+      ))}
+  </ol>
+  {chapter.data.hasQuiz && (
+    <p data-pagefind-ignore>
+      <a href={chapter.data.sourceUrl + '/quiz'} target="_blank" rel="noopener">
+        {ui.quiz} ↗
+      </a>
+    </p>
+  )}
+</ReaderLayout>

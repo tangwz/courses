@@ -1,0 +1,54 @@
+---
+interface Props {
+  title: string;
+  category: string;
+  order: number;
+  color: string;
+  large?: boolean;
+}
+const { title, category, order, color, large = false } = Astro.props;
+const palettes: Record<string, string> = {
+  pink: '#ce98b4',
+  red: '#bd786a',
+  orange: '#d8a16b',
+  purple: '#a998d2',
+  blue: '#8dacc6',
+  green: '#8fad92',
+  yellow: '#c5b27d',
+  teal: '#7cacaa',
+};
+---
+
+<div
+  class:list={['book-cover', large && 'book-cover-large']}
+  style={`--cover-color: ${palettes[color] || palettes.purple}`}
+  aria-hidden="true"
+>
+  <div class="cover-top">
+    <span>
+      KNOWLEDGE
+      <br />
+      LIBRARY
+    </span>
+    <span>{String(order).padStart(3, '0')}</span>
+  </div>
+  <svg class="cover-art" viewBox="0 0 200 100" fill="none">
+    <path
+      d="M12 82L55 14L98 82L141 14L184 82"
+      stroke="currentColor"
+      stroke-width="1"
+    />
+    <path
+      d="M12 18L55 86L98 18L141 86L184 18"
+      stroke="currentColor"
+      stroke-width="1"
+    />
+    <ellipse cx="100" cy="50" rx="58" ry="34" stroke="currentColor" />
+    <ellipse cx="100" cy="50" rx="30" ry="46" stroke="currentColor" />
+    <path d="M0 50H200M100 0V100" stroke="currentColor" opacity=".35" />
+  </svg>
+  <div class="cover-bottom">
+    <strong>{title}</strong>
+    <span>{category}</span>
+  </div>
+</div>

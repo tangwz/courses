@@ -1,0 +1,32 @@
+---
+import { render } from 'astro:content';
+import ReaderLayout from '../../../../layouts/ReaderLayout.astro';
+import { getBooks } from '../../../../lib/catalog';
+export async function getStaticPaths() {
+  return (await getBooks()).flatMap((book) =>
+    book.lessons.map((lesson) => ({
+      params: {
+        course: lesson.data.course,
+        chapter: lesson.data.chapter,
+        lesson: lesson.data.lesson,
+      },
+      props: { book, lesson },
+    })),
+  );
+}
+const { book, lesson } = Astro.props;
+const { Content, headings } = await render(lesson);
+---
+
+<ReaderLayout
+  book={book}
+  lesson={lesson}
+  chapter={lesson.data.chapter}
+  title={lesson.data.title}
+  description={lesson.data.description}
+  sourceUrl={lesson.data.sourceUrl}
+  headings={headings}
+  pageId={lesson.data.sourceId}
+>
+  <Content />
+</ReaderLayout>
