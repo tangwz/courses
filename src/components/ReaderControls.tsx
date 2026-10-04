@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ui } from '../lib/ui';
+import {
+  completionStorageKey,
+  readCompletion,
+  toggleCompletion,
+} from '../lib/completion';
 import ReaderIcon from './ReaderIcon';
 
 type Props = {
@@ -37,13 +42,25 @@ export default function ReaderControls(props: Props) {
         ...defaults,
         ...JSON.parse(localStorage.getItem('course-reader-settings') || '{}'),
       });
-      setCompleted(
-        JSON.parse(
-          localStorage.getItem('course-reader-completed-' + props.course) ||
-            '[]',
-        ),
-      );
+      setCompleted(readCompletion(localStorage, props.course));
     } catch {}
+    const synchronizeCompletion = (event: StorageEvent) => {
+      if (
+        event.storageArea !== localStorage ||
+        (event.key !== null && event.key !== completionStorageKey(props.course))
+      )
+        return;
+      try {
+        const latest = readCompletion(localStorage, props.course);
+        setCompleted(latest);
+        document.dispatchEvent(
+          new CustomEvent('reader-completion', { detail: latest }),
+        );
+      } catch {
+        setError(ui.storageError);
+      }
+    };
+    window.addEventListener('storage', synchronizeCompletion);
     const openSettings = () => setSettingsOpen(true);
     const toggleTheme = () =>
       setSettings((current) => ({
@@ -58,6 +75,7 @@ export default function ReaderControls(props: Props) {
     );
     settingsButton?.addEventListener('click', openSettings);
     return () => {
+      window.removeEventListener('storage', synchronizeCompletion);
       themeButtons.forEach((button) =>
         button.removeEventListener('click', toggleTheme),
       );
@@ -96,14 +114,8 @@ export default function ReaderControls(props: Props) {
   }, [settingsOpen, ready]);
 
   function toggleCompleted() {
-    const next = isComplete
-      ? completed.filter((id) => id !== props.lessonId)
-      : [...completed, props.lessonId];
     try {
-      localStorage.setItem(
-        'course-reader-completed-' + props.course,
-        JSON.stringify(next),
-      );
+      const next = toggleCompletion(localStorage, props.course, props.lessonId);
       setCompleted(next);
       document.dispatchEvent(
         new CustomEvent('reader-completion', { detail: next }),
