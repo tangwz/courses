@@ -143,6 +143,49 @@ class CurriculumFailureTests(unittest.TestCase):
         self.assertIn('sections', report['errors'][0]['error'])
         self.assertEqual(readme.read_bytes(), original)
 
+    def verify_cached_section_failure(self, failure):
+        first = {**self.catalog[0], 'chapters': []}
+        detail = copy.deepcopy(self.detail)
+        detail['chapters'][0]['sections'].insert(0, {
+            'id': 100, 'order': 0, 'slug': 'broken', 'title': 'Broken lesson',
+        })
+        crawler.save_json(self.cache / 'courses' / 'first.json', first)
+        crawler.save_json(self.cache / 'courses' / 'second.json', detail)
+        broken_cache = self.cache / 'sections' / '100.json'
+        if failure == 'json':
+            broken_cache.write_text('{broken', encoding='utf-8')
+        else:
+            crawler.save_json(broken_cache, {})
+        render = crawler.render_section
+
+        def render_or_fail(task, section):
+            if failure == 'write' and task['id'] == 100:
+                raise PermissionError('Cannot write cached lesson')
+            return render(task, section)
+
+        with (
+            patch('sys.argv', ['crawl_apxml.py', '--phase', 'render']),
+            patch.object(crawler, 'render_section', side_effect=render_or_fail),
+        ):
+            crawler.main()
+        report = json.loads((self.root / '.crawl' / 'report.json').read_text())
+        self.assertEqual(report['total_sections'], 2)
+        self.assertEqual(report['completed_sections'], 1)
+        self.assertEqual(len(report['errors']), 1)
+        self.assertTrue(report['errors'][0]['url'].endswith('/broken'))
+        folder = crawler.course_dir(2, detail) / '01-Introduction'
+        self.assertIn('Verified lesson', (folder / '01-Lesson.md').read_text())
+        self.browser.fetch.assert_not_called()
+
+    def test_malformed_cached_json_does_not_abort_later_sections(self):
+        self.verify_cached_section_failure('json')
+
+    def test_invalid_cached_data_does_not_abort_later_sections(self):
+        self.verify_cached_section_failure('data')
+
+    def test_cached_render_failure_does_not_abort_later_sections(self):
+        self.verify_cached_section_failure('write')
+
 
 if __name__ == '__main__':
     unittest.main()

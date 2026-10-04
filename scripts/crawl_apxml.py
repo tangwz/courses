@@ -566,8 +566,12 @@ def crawl_sections(browser, catalog, details, report, fetch_missing=True):
     pending = []
     for task in tasks:
         if task['cache'].exists():
-            render_section(task, load_json(task['cache']))
-            report['completed_sections'] += 1
+            try:
+                render_section(task, load_json(task['cache']))
+                report['completed_sections'] += 1
+            except Exception as error:
+                report['errors'].append({'url': task['url'], 'error': str(error)})
+                print(f'ERROR {task["url"]}: {error}', flush=True)
         else:
             pending.append(task)
     print(f'Sections: {len(tasks)} total, {len(pending)} pending', flush=True)
