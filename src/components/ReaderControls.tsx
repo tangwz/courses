@@ -7,23 +7,17 @@ import {
   toggleCompletion,
 } from '../lib/completion';
 import ReaderIcon from './ReaderIcon';
+import {
+  defaultReaderSettings as defaults,
+  readerSettingLimits,
+  readReaderSettings,
+  type ReaderSettings,
+} from '../lib/reader-settings';
 
 type Props = {
   course: string;
   lessonId: number;
   total: number;
-};
-type Settings = {
-  theme: 'system' | 'light' | 'dark';
-  fontSize: number;
-  lineHeight: number;
-  width: number;
-};
-const defaults: Settings = {
-  theme: 'system',
-  fontSize: 17,
-  lineHeight: 1.85,
-  width: 780,
 };
 
 export default function ReaderControls(props: Props) {
@@ -38,10 +32,7 @@ export default function ReaderControls(props: Props) {
   useEffect(() => {
     setReady(true);
     try {
-      setSettings({
-        ...defaults,
-        ...JSON.parse(localStorage.getItem('course-reader-settings') || '{}'),
-      });
+      setSettings(readReaderSettings(localStorage));
       setCompleted(readCompletion(localStorage, props.course));
     } catch {}
     const synchronizeCompletion = (event: StorageEvent) => {
@@ -69,17 +60,21 @@ export default function ReaderControls(props: Props) {
           document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark',
       }));
     const themeButtons = document.querySelectorAll('[data-reader-theme]');
-    const settingsButton = document.querySelector('[data-reader-settings]');
+    const settingsButtons = document.querySelectorAll('[data-reader-settings]');
     themeButtons.forEach((button) =>
       button.addEventListener('click', toggleTheme),
     );
-    settingsButton?.addEventListener('click', openSettings);
+    settingsButtons.forEach((button) =>
+      button.addEventListener('click', openSettings),
+    );
     return () => {
       window.removeEventListener('storage', synchronizeCompletion);
       themeButtons.forEach((button) =>
         button.removeEventListener('click', toggleTheme),
       );
-      settingsButton?.removeEventListener('click', openSettings);
+      settingsButtons.forEach((button) =>
+        button.removeEventListener('click', openSettings),
+      );
     };
   }, [props.course]);
   useEffect(() => {
@@ -190,7 +185,7 @@ export default function ReaderControls(props: Props) {
                   onChange={(event) =>
                     setSettings({
                       ...settings,
-                      theme: event.target.value as Settings['theme'],
+                      theme: event.target.value as ReaderSettings['theme'],
                     })
                   }
                 >
@@ -204,8 +199,8 @@ export default function ReaderControls(props: Props) {
                 <input
                   aria-label={ui.fontSize}
                   type="range"
-                  min="14"
-                  max="23"
+                  min={readerSettingLimits.fontSize.min}
+                  max={readerSettingLimits.fontSize.max}
                   value={settings.fontSize}
                   onChange={(event) =>
                     setSettings({
@@ -221,8 +216,8 @@ export default function ReaderControls(props: Props) {
                 <input
                   aria-label={ui.lineHeight}
                   type="range"
-                  min="1.5"
-                  max="2.2"
+                  min={readerSettingLimits.lineHeight.min}
+                  max={readerSettingLimits.lineHeight.max}
                   step="0.05"
                   value={settings.lineHeight}
                   onChange={(event) =>
@@ -239,8 +234,8 @@ export default function ReaderControls(props: Props) {
                 <input
                   aria-label={ui.width}
                   type="range"
-                  min="620"
-                  max="1000"
+                  min={readerSettingLimits.width.min}
+                  max={readerSettingLimits.width.max}
                   step="20"
                   value={settings.width}
                   onChange={(event) =>
