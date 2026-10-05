@@ -208,7 +208,7 @@ def load_json(path):
 
 
 def course_dir(index, course):
-    return ROOT / f'{index:03d}-{safe_name(course["title"])}'
+    return ROOT / 'courses' / f'{index:03d}-{safe_name(course["title"])}'
 
 
 def chapter_dir(course_path, chapter):
@@ -418,7 +418,10 @@ def write_index(catalog, details, report):
     text = ['# ApX \u4e2d\u6587\u8bfe\u7a0b', '', f'\u6765\u6e90\uff1a[ApX \u8bfe\u7a0b\u76ee\u5f55]({BASE}/zh/courses)', '',
             '\u8bfe\u7a0b\u6309\u6293\u53d6\u65f6\u7f51\u7ad9\u7684\u201c\u6700\u53d7\u6b22\u8fce\u201d\u6392\u5e8f\uff1b\u7ae0\u8282\u4e0e\u5c0f\u8282\u6309\u539f\u8bfe\u7a0b\u7f16\u53f7\u6392\u5217\u3002\u56fe\u7247\u4fdd\u7559\u8fdc\u7a0b\u94fe\u63a5\uff0c\u672a\u4e0b\u8f7d\u3002\u4ea4\u4e92\u56fe\u8868\u4fdd\u7559\u5728\u7ebf\u5165\u53e3\u548c\u539f\u59cb JSON \u6570\u636e\u3002', '',
             f'\u8bfe\u7a0b\uff1a{len(catalog)} \u95e8\uff1b\u5df2\u83b7\u53d6\u76ee\u5f55\uff1a{len(details)} \u95e8\uff1b\u5df2\u4fdd\u5b58\u6b63\u6587\uff1a{report.get("completed_sections", 0)} \u8282\u3002', '',
+            '\u8bfe\u7a0b\u5f52\u6863\u7edf\u4e00\u6536\u7eb3\u5728 `courses/` \u76ee\u5f55\u4e0b\uff0c\u4fdd\u7559\u539f\u6709\u7f16\u53f7\u548c\u5185\u90e8\u7ed3\u6784\u3002', '',
             '## \u8bfe\u7a0b\u7d22\u5f15', '']
+    if (ROOT / 'WEBSITE.md').is_file():
+        text[:0] = ['\u7f51\u7ad9\u9879\u76ee\u8fd0\u884c\u4e0e\u67b6\u6784\u8bf4\u660e\uff1a[WEBSITE.md](WEBSITE.md)\u3002', '']
     for index, course in enumerate(catalog, 1):
         path = course_dir(index, course)
         detail = details.get(course['slug'])

@@ -74,7 +74,10 @@ def main():
             if targets != expected:
                 errors.append(f'Lesson adjacency mismatch: {file.relative_to(ROOT)}')
             lesson_count += 1
-    if local_targets(ROOT / 'README.md') != course_indexes + [ROOT / 'CRAWL_STATUS.md']:
+    root_indexes = course_indexes + [ROOT / 'CRAWL_STATUS.md']
+    if (ROOT / 'WEBSITE.md').is_file():
+        root_indexes.insert(0, ROOT / 'WEBSITE.md')
+    if local_targets(ROOT / 'README.md') != root_indexes:
         errors.append('Root course index/order mismatch')
     result = {'verified_at': datetime.now(timezone.utc).isoformat(),
               'courses_checked': len(catalog), 'lessons_checked': lesson_count, 'errors': errors}

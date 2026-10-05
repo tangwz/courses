@@ -134,13 +134,14 @@ def main():
                         missing_code = source_code - saved_code
                         if missing_code:
                             errors.append(f'Code block mismatch ({sum(missing_code.values())}): {sp}')
-    actual_folders = {folder for folder in ROOT.glob('[0-9][0-9][0-9]-*') if folder.is_dir()}
+    archive_root = ROOT / 'courses'
+    actual_folders = {folder for folder in archive_root.glob('[0-9][0-9][0-9]-*') if folder.is_dir()}
     if actual_folders != expected_folders:
         errors.append('Course folders differ from catalog')
     actual_ids = {int(path.stem) for path in (CACHE / 'sections').glob('*.json')}
     if actual_ids - expected_ids:
         errors.append(f'Unexpected cached sections: {sorted(actual_ids - expected_ids)}')
-    files = list(ROOT.glob('*.md')) + list(ROOT.glob('[0-9][0-9][0-9]-*/**/*.md'))
+    files = list(ROOT.glob('*.md')) + list(archive_root.glob('[0-9][0-9][0-9]-*/**/*.md'))
     local_links = 0
     for file in files:
         text = file.read_text(encoding='utf-8')
